@@ -1323,6 +1323,119 @@ static void eap_fast_process_phase2(struct eap_sm *sm,
 }
 
 
+static int eap_fast_process_version(struct eap_fast_data *data,
+				    int peer_version)
+{
+	data->peer_version = peer_version;
+
+	if (data->force_version >= 0 && peer_version != data->force_version) {
+		wpa_printf(MSG_INFO, "EAP-FAST: peer did not select the forced"
+			   " version (forced=%d peer=%d) - reject",
+			   data->force_version, peer_version);
+		eap_fast_state(data, FAILURE);
+		return -1;
+	}
+
+	if (peer_version < data->fast_version) {
+		wpa_printf(MSG_DEBUG, "EAP-FAST: peer ver=%d, own ver=%d; "
+			   "use version %d",
+			   peer_version, data->fast_version, peer_version);
+		data->fast_version = peer_version;
+	}
+
+	return 0;
+}
+
+
+static int eap_fast_process_length(struct eap_fast_data *data,
+				   const u8 **pos, size_t *left)
+{
+	u32 tls_msg_len;
+
+	if (*left < 4) {
+		wpa_printf(MSG_INFO, "EAP-FAST: Short frame with TLS "
+			   "length");
+		eap_fast_state(data, FAILURE);
+		return -1;
+	}
+
+	tls_msg_len = WPA_GET_BE32(*pos);
+	wpa_printf(MSG_DEBUG, "EAP-FAST: TLS Message Length: %d",
+		   tls_msg_len);
+
+	if (data->ssl.tls_in_left == 0) {
+		data->ssl.tls_in_total = tls_msg_len;
+		data->ssl.tls_in_left = tls_msg_len;
+		os_free(data->ssl.tls_in);
+		data->ssl.tls_in = NULL;
+		data->ssl.tls_in_len = 0;
+	}
+
+	*pos += 4;
+	*left -= 4;
+
+	return 0;
+}
+
+
+static int eap_fast_process_phase1(struct eap_sm *sm,
+				   struct eap_fast_data *data,
+				   const u8 *pos, size_t left)
+{
+	if (eap_server_tls_process_helper(sm, &data->ssl, pos, left) < 0) {
+		wpa_printf(MSG_INFO, "EAP-FAST: TLS processing failed");
+		eap_fast_state(data, FAILURE);
+		return -1;
+	}
+
+	if (!tls_connection_established(sm->ssl_ctx, data->ssl.conn) ||
+	    data->ssl.tls_out_len > 0)
+		return 1;
+
+	/*
+	 * Phase 1 was completed with the received message (e.g., when using
+	 * abbreviated handshake), so Phase 2 can be started immediately
+	 * without having to send through an empty message to the peer.
+	 */
+
+	return eap_fast_phase1_done(sm, data);
+}
+
+
+static void eap_fast_process_phase2_start(struct eap_sm *sm,
+					  struct eap_fast_data *data)
+{
+	u8 next_type;
+
+	if (data->identity) {
+		os_free(sm->identity);
+		sm->identity = data->identity;
+		data->identity = NULL;
+		sm->identity_len = data->identity_len;
+		data->identity_len = 0;
+		if (eap_user_get(sm, sm->identity, sm->identity_len, 1) != 0) {
+			wpa_hexdump_ascii(MSG_DEBUG, "EAP-FAST: "
+					  "Phase2 Identity not found "
+					  "in the user database",
+					  sm->identity, sm->identity_len);
+			next_type = eap_fast_req_failure(sm, data);
+		} else {
+			wpa_printf(MSG_DEBUG, "EAP-FAST: Identity already "
+				   "known - skip Phase 2 Identity Request");
+			next_type = sm->user->methods[0].method;
+			sm->user_eap_method_index = 1;
+		}
+
+		eap_fast_state(data, PHASE2_METHOD);
+	} else {
+		eap_fast_state(data, PHASE2_ID);
+		next_type = EAP_TYPE_IDENTITY;
+	}
+
+	eap_fast_phase2_init(sm, data, next_type);
+}
+
+
 static void eap_fast_process(struct eap_sm *sm, void *priv,
 			     struct wpabuf *respData)
 {
@@ -1330,9 +1443,6 @@ static void eap_fast_process(struct eap_sm *sm, void *priv,
 	const u8 *pos;
 	u8 flags;
 	size_t left;
-	unsigned int tls_msg_len;
-	int peer_version;
-	u8 next_type;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_FAST, respData,
 			       &left);
@@ -1343,95 +1453,22 @@ static void eap_fast_process(struct eap_sm *sm, void *priv,
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Received packet(len=%lu) - "
 		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
 		   flags);
-	data->peer_version = peer_version = flags & EAP_PEAP_VERSION_MASK;
-	if (data->force_version >= 0 && peer_version != data->force_version) {
-		wpa_printf(MSG_INFO, "EAP-FAST: peer did not select the forced"
-			   " version (forced=%d peer=%d) - reject",
-			   data->force_version, peer_version);
-		eap_fast_state(data, FAILURE);
+
+	if (eap_fast_process_version(data, flags & EAP_PEAP_VERSION_MASK))
 		return;
-	}
-	if (peer_version < data->fast_version) {
-		wpa_printf(MSG_DEBUG, "EAP-FAST: peer ver=%d, own ver=%d; "
-			   "use version %d",
-			   peer_version, data->fast_version, peer_version);
-		data->fast_version = peer_version;
-	}
-	if (flags & EAP_TLS_FLAGS_LENGTH_INCLUDED) {
-		if (left < 4) {
-			wpa_printf(MSG_INFO, "EAP-FAST: Short frame with TLS "
-				   "length");
-			eap_fast_state(data, FAILURE);
-			return;
-		}
-		tls_msg_len = WPA_GET_BE32(pos);
-		wpa_printf(MSG_DEBUG, "EAP-FAST: TLS Message Length: %d",
-			   tls_msg_len);
-		if (data->ssl.tls_in_left == 0) {
-			data->ssl.tls_in_total = tls_msg_len;
-			data->ssl.tls_in_left = tls_msg_len;
-			os_free(data->ssl.tls_in);
-			data->ssl.tls_in = NULL;
-			data->ssl.tls_in_len = 0;
-		}
-		pos += 4;
-		left -= 4;
-	}
+
+	if ((flags & EAP_TLS_FLAGS_LENGTH_INCLUDED) &&
+	    eap_fast_process_length(data, &pos, &left))
+		return;
 
 	switch (data->state) {
 	case PHASE1:
-		if (eap_server_tls_process_helper(sm, &data->ssl, pos, left) <
-		    0) {
-			wpa_printf(MSG_INFO, "EAP-FAST: TLS processing "
-				   "failed");
-			eap_fast_state(data, FAILURE);
-		}
-
-		if (!tls_connection_established(sm->ssl_ctx, data->ssl.conn) ||
-		    data->ssl.tls_out_len > 0)
-			break;
-
-		/*
-		 * Phase 1 was completed with the received message (e.g., when
-		 * using abbreviated handshake), so Phase 2 can be started
-		 * immediately without having to send through an empty message
-		 * to the peer.
-		 */
-
-		if (eap_fast_phase1_done(sm, data) < 0)
+		if (eap_fast_process_phase1(sm, data, pos, left))
 			break;
 
 		/* fall through to PHASE2_START */
 	case PHASE2_START:
-		if (data->identity) {
-			os_free(sm->identity);
-			sm->identity = data->identity;
-			data->identity = NULL;
-			sm->identity_len = data->identity_len;
-			data->identity_len = 0;
-			if (eap_user_get(sm, sm->identity, sm->identity_len, 1)
-			    != 0) {
-				wpa_hexdump_ascii(MSG_DEBUG, "EAP-FAST: "
-						  "Phase2 Identity not found "
-						  "in the user database",
-						  sm->identity,
-						  sm->identity_len);
-				next_type = eap_fast_req_failure(sm, data);
-			} else {
-				wpa_printf(MSG_DEBUG, "EAP-FAST: Identity "
-					   "already known - skip Phase 2 "
-					   "Identity Request");
-				next_type = sm->user->methods[0].method;
-				sm->user_eap_method_index = 1;
-			}
-
-			eap_fast_state(data, PHASE2_METHOD);
-		} else {
-			eap_fast_state(data, PHASE2_ID);
-			next_type = EAP_TYPE_IDENTITY;
-		}
-
-		eap_fast_phase2_init(sm, data, next_type);
+		eap_fast_process_phase2_start(sm, data);
 		break;
 	case PHASE2_ID:
 	case PHASE2_METHOD:

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+for i in minimal noeap full freebsd x86_64 gcc-cvs arm; do
+	./compile hostapd-config/$i $1
+done

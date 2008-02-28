@@ -1,0 +1,35 @@
+#MAKE:make
+
+CC=/opt/crosstool/x86_64-unknown-linux-gnu/gcc-3.4.1-glibc-2.3.3/bin/x86_64-unknown-linux-gnu-gcc
+
+CONFIG_DRIVER_HOSTAP=y
+CONFIG_DRIVER_WIRED=y
+CONFIG_DRIVER_MADWIFI=y
+CFLAGS += -I/home/jm/work/madwifi-BSD
+CONFIG_DRIVER_PRISM54=y
+
+CONFIG_IAPP=y
+CONFIG_RSN_PREAUTH=y
+CONFIG_EAP=y
+CONFIG_EAP_MD5=y
+CONFIG_EAP_TLS=y
+CONFIG_EAP_MSCHAPV2=y
+CONFIG_EAP_PEAP=y
+CONFIG_EAP_GTC=y
+CONFIG_EAP_TTLS=y
+CONFIG_EAP_SIM=y
+CONFIG_EAP_AKA=y
+CONFIG_EAP_PAX=y
+CONFIG_EAP_PSK=y
+CONFIG_EAP_SAKE=y
+CONFIG_PKCS12=y
+CONFIG_RADIUS_SERVER=y
+
+
+CFLAGS += -I/opt/crosstool/x86_64-unknown-linux-gnu/gcc-3.4.1-glibc-2.3.3/x86_64-unknown-linux-gnu/sys-root/local/openssl/include
+LIBS += -L/opt/crosstool/x86_64-unknown-linux-gnu/gcc-3.4.1-glibc-2.3.3/x86_64-unknown-linux-gnu/sys-root/local/openssl/lib
+LIBS_p += -L/opt/crosstool/x86_64-unknown-linux-gnu/gcc-3.4.1-glibc-2.3.3/x86_64-unknown-linux-gnu/sys-root/local/openssl/lib
+
+
+CFLAGS += -Werror
+LIBS += -ldl

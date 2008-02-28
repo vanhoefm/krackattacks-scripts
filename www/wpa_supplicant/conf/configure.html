@@ -1,0 +1,240 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>wpa_supplicant configuration wizard</title>
+    <script type="text/javascript" src="configure.js"></script>
+    <link rel="stylesheet" type="text/css" href="configure.css" />
+  </head>
+
+  <body>
+<div id="navig">
+<a href="../">wpa_supplicant</a> /
+<a href="index.html">configuration</a> /
+wizard
+</div>
+
+    <h1>wpa_supplicant configuration wizard</h1>
+
+<p><a href="../">wpa_supplicant</a> supports large range of security
+modes and authentication types. Just looking at the reference
+information of available configuration options may not provide enough
+high level understanding to select which options are needed. This page
+provides information about configuring wpa_supplicant and a wizard for
+generating example configuration files to make it easier to understand
+different security policies and how they should be configured for
+wpa_supplicant.</p>
+
+<p>The wizard goes through steps to select suitable options based on
+your input. An example configuration file is updated at each
+step. This example can be seen at the bottom of this page.</p>
+
+<h2>Step 1/5: Operating system and driver</h2>
+
+<p>wpa_supplicant can be used with multiple operating systems and
+network drivers. Most of the configuration parameters do not depend on
+this, but some of the parameters may need to be changed based on
+OS/driver capabilities.</p>
+
+<form name="os_driver">
+<select name="os" onChange="configure_os()" onBlur="configure_os()">
+<option value="select">Select your operating system</option>
+<option value="linux">Linux</option>
+<option value="windows">Windows 2000/NT/XP</option>
+<option value="bsd">FreeBSD/NetBSD</option>
+<option value="other">Other</option>
+</select>
+<select name="driver" onChange="configure_driver()" disabled="disabled">
+</select>
+</form>
+
+<div id="os_desc" class="confdesc"></div>
+
+
+<h2>Step 2/5: Network name</h2>
+
+<p>
+Wireless networks have a "network name" (SSID = Service Set
+Identifier). This is a sequence of up to 32 characters. This name is
+used to select which access points (AP) can be used and as such, it
+must match with the SSID configured for the desired AP.
+</p>
+
+<p>
+Some APs allow SSIDs to be "hidden" which requires that the client is
+specifically searching for the configured to SSID to be able to
+connect. This may require some additional options in wpa_supplicant
+configuration, so enable those here by checking "hidden SSID" if your
+AP is configured to hide the SSID. This may show up as "brodcast SSID
+disabled" or "hidden SSID" or something similar in the AP
+configuration. Hidden SSID configuration does not prevent
+wpa_supplicant from connecting to APs that do not hide SSID, so it can
+be enabled for all cases.
+</p>
+
+<form name="network">
+SSID: <input type="text" name="ssid" onChange="update_conf()">
+<input type="checkbox" name="hidden_ssid" onChange="update_conf()">hidden SSID
+</form>
+
+
+<h2>Step 3/5: Authentication mode</h2>
+
+<p class="todo">TODO: write explanation for different modes</p>
+
+<form name="authmode">
+<select name="auth" onChange="configure_auth()" onBlur="configure_auth()">
+<option value="select">Select authentication mode</option>
+<option value="open">None (unencrypted, open network)</option>
+<option value="wep">None (encrypted network, static WEP keys)</option><
+<option value="ieee8021x">IEEE 802.1X/EAP without WPA</option>
+<option value="wpa-psk">WPA/WPA2-Personal (PSK) (IEEE 802.11i)</option>
+<option value="wpa-eap">WPA/WPA2-Enterprise (EAP) (IEEE 802.11i)</option>
+</select>
+<select name="auth2" onChange="configure_auth2()" disabled="auth2">
+</select>
+</form>
+
+<div id="auth_desc" class="confdesc"></div>
+
+
+<h2>Step 4/5: Encryption</h2>
+
+<p class="todo">TODO: different group cipher for WPA/WPA2</p>
+
+<form name="encrmode">
+<select name="encr" onChange="configure_encr()" onBlur="configure_encr()">
+<option value="select">Select encryption</option>
+<option value="none">None (unencrypted open network)</option>
+<option value="wep">WEP (Wired Equivalent Privacy)</option>
+<option value="tkip">TKIP (Temporal Key Integrity Protocol)</option>
+<option value="ccmp">CCMP (AES Counter-Mode/CBC-MAC Protocol)</option>
+</select>
+</form>
+
+<div id="encr_desc" class="confdesc"></div>
+
+
+<h2>Step 5/5: Authentication credentials</h2>
+
+<div id="cred_unknown">
+Authentication mode (Step 3) must be selected first.
+</div>
+
+<div id="cred_open" class="credlayer">
+No credentials needed for open network.
+</div>
+
+<div id="cred_wep" class="credlayer">
+<p>
+Static WEP keys requires that at least one key is configured. Up to
+four keys can be configured and one of them needs to be selected to be
+used for transmitted frames. All configured keys can be used when
+decrypting received frames.
+</p>
+
+<p>
+WEP can be used with different key length. In most cases, either
+40-bit or 104-bit keys are used. These key lengths may also be shown
+as 64-bit and 128-bit in some cases since WEP adds 24-bit
+initialization vector into the keys. 40-bit keys can be entered as
+five character string surrounded with double quotation marks, e.g.,
+"abcde". Alternatively, they can be entered as a hex string of ten
+characters without quotation marks, e.g., 6162636465. Both of these
+options configure the same key. 104-bit keys are entered similarly,
+with 13-character text string or 26-character hex string.
+</p>
+
+<p>
+wpa_supplicant uses indexes 0 .. 3 for the WEP keys. Some other user
+interfaces may use indexes 1 .. 4, so this needs to be taken into
+account when determining which index to use here.
+</p>
+
+<form name="cred_wep_form">
+WEP key 0: <input type="text" name="wep0" onChange="configure_wep()"><br>
+WEP key 1: <input type="text" name="wep1" onChange="configure_wep()"><br>
+WEP key 2: <input type="text" name="wep2" onChange="configure_wep()"><br>
+WEP key 3: <input type="text" name="wep3" onChange="configure_wep()"><br>
+Transmit key <select name="wep_tx_idx">
+<option value="0">0
+<option value="1">1
+<option value="2">2
+<option value="3">3
+</select>
+</form>
+</div>
+
+<div id="cred_psk" class="credlayer">
+<p>
+Passphrase (string of 8 to 63 characters) needs to be configured for
+WPA/WPA2-Personal. This passphrase is then converted into a 256-bit
+pre-shared key (PSK). Alternatively, a 256-bit PSK can be entered as
+64-character hex string into the PSK field. Only one of these options
+should be used.
+</p>
+<form name="cred_psk_form">
+Passphrase: <input type="text" name="passphrase" onChange="configure_passphrase()">
+PSK: <input type="text" name="psk" size=64 onChange="configure_passphrase()">
+</form>
+</div>
+
+<div id="cred_eap" class="credlayer">
+<p class="todo">TODO: write introduction text for each EAP method</p>
+<form name="cred_eap_form">
+EAP method: <select name="eap" onChange="update_eap()">
+<option value="select">Select EAP method</option>
+<option value="TLS">EAP-TLS</option>
+<option value="PEAP">EAP-PEAP</option>
+<option value="TTLS">EAP-TTLS</option>
+<option value="FAST">EAP-FAST</option>
+<option value="LEAP">LEAP</option>
+<option value="MD5">EAP-MD5</option>
+<option value="GTC">EAP-GTC</option>
+<option value="OTP">EAP-OTP</option>
+<option value="MSCHAPV2">EAP-MSCHAPv2</option>
+</select>
+Tunneled method (phase 2): <select name="phase2" disabled="disabled" onChange="update_eap2()">
+</select><br>
+Identity (user name): <input type="text" name="identity" onChange="configure_eap()"><br>
+Anonymous identity (user name): <input type="text" name="anon_identity" onChange="configure_eap()" disabled="disabled"><br>
+Password: <input type="text" name="password" onChange="configure_eap()" disabled="disabled"><br>
+CA certificate: <input type="text" name="ca_cert" onChange="configure_eap()" disabled="disabled"><br>
+User certificate: <input type="text" name="client_cert" onChange="configure_eap()" disabled="disabled"><br>
+User private key: <input type="text" name="private_key" onChange="configure_eap()" disabled="disabled"><br>
+User private key passphrase: <input type="text" name="private_key_passwd" onChange="configure_eap()" disabled="disabled"><br>
+EAP-FAST PAC file: <input type="text" name="pac_file" onChange="configure_eap()" disabled="disabled"><br>
+</form>
+</div>
+
+<div id="cred_desc" class="confdesc"></div>
+
+
+<h2>Example configuration</h2>
+
+<form>
+Configuration example is updated automatically when modifying
+information above. However, if it is not updated in some cases (e.g.,
+after reloading the page), you can force an update with this button.<br>
+<input type="button" value="Update configuration" onClick="update_conf()">
+</form>
+
+<p>
+This configuration file can be copied to a text file that
+wpa_supplicant will then be asked to use with <i>-c&lt;full path to
+configuration file&gt;</i> command line option.
+</p>
+
+<div id="exampleconf" class="exampleconf">
+# example configuration will be generated here<br>
+</div>
+
+<br>
+
+    <hr>
+    <address><a href="mailto:j@w1.fi">Jouni Malinen</a></address>
+<!-- Created: Sat Feb 25 17:07:35 PST 2006 -->
+<!-- hhmts start -->
+Last modified: Sun Feb 26 13:47:30 PST 2006
+<!-- hhmts end -->
+  </body>
+</html>

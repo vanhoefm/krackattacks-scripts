@@ -1,0 +1,272 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>hostapd: IEEE 802.11 AP, IEEE 802.1X/WPA/WPA2/EAP/RADIUS Authenticator</title>
+    <meta name="description" content="hostapd (IEEE 802.1X, WPA, WPA2, RSN, IEEE 802.11i Authenticator and RADIUS authentication server)">
+    <meta name="keywords" content="WPA, WPA2, IEEE 802.11i, IEEE 802.1X, WPA Authenticator, hostapd, TKIP, CCMP, EAP-PEAP, EAP-TLS, EAP-TTLS, EAP-SIM, EAP-AKA, EAP-GTC, EAP-MSCHAPv2, EAP-MD5, EAP-PAX, EAP-PSK, EAP-FAST, IEEE 802.1X Supplicant, IEEE 802.1aa, EAPOL, RSN, pre-authentication, PMKSA caching, BSD WPA Authenticator, FreeBSD WPA Authenticator, RADIUS authentication server, EAP authenticator, EAP server">
+    <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  </head>
+
+  <body>
+    <h2>hostapd: IEEE 802.11 AP, IEEE 802.1X/WPA/WPA2/EAP/RADIUS Authenticator</h2>
+
+<p>hostapd is a user space daemon for access point and authentication
+servers. It implements IEEE 802.11 access point management, IEEE
+802.1X/WPA/WPA2/EAP Authenticators, RADIUS client, EAP server, and
+RADIUS authentication server. The current version supports Linux (Host
+AP, madwifi, Prism54 drivers) and FreeBSD (net80211).</p>
+
+<p>hostapd is designed to be a "daemon" program that runs in the
+background and acts as the backend component controlling
+authentication.  hostapd supports separate frontend programs and an
+example text-based frontend, hostapd_cli, is included with
+hostapd.</p>
+
+<h4>Supported WPA/IEEE 802.11i/EAP/IEEE 802.1X features</h4>
+
+<ul>
+<li>WPA-PSK ("WPA-Personal")</li>
+<li>WPA with EAP (with integrated EAP server or an external
+RADIUS backend authentication server) ("WPA-Enterprise")</li>
+<li>key management for CCMP, TKIP, WEP104, WEP40</li>
+<li>WPA and full IEEE 802.11i/RSN/WPA2</li>
+<li>RSN: PMKSA caching, pre-authentication</li>
+<li>RADIUS accounting</li>
+<li>RADIUS authentication server with EAP</li>
+</ul>
+
+<h4>Supported EAP methods (integrated EAP server and RADIUS authentication server)</h4>
+
+<ul>
+<li>EAP-TLS</li>
+<li>EAP-PEAP/MSCHAPv2 (both PEAPv0 and PEAPv1)</li>
+<li>EAP-PEAP/TLS (both PEAPv0 and PEAPv1)</li>
+<li>EAP-PEAP/GTC (both PEAPv0 and PEAPv1)</li>
+<li>EAP-PEAP/MD5-Challenge (both PEAPv0 and PEAPv1)</li>
+<li>EAP-TTLS/EAP-MD5-Challenge</li>
+<li>EAP-TTLS/EAP-GTC</li>
+<li>EAP-TTLS/EAP-MSCHAPv2</li>
+<li>EAP-TTLS/MSCHAPv2</li>
+<li>EAP-TTLS/EAP-TLS</li>
+<li>EAP-TTLS/MSCHAP</li>
+<li>EAP-TTLS/PAP</li>
+<li>EAP-TTLS/CHAP</li>
+<li>EAP-SIM</li>
+<li>EAP-AKA</li>
+<li>EAP-PAX</li>
+<li>EAP-PSK</li>
+<li>EAP-SAKE</li>
+<li>EAP-FAST</li>
+<li>EAP-IKEv2</li>
+<li>EAP-GPSK (experimental)</li>
+</ul>
+
+<p>Following methods are also supported, but since they do not generate keying
+material, they cannot be used with WPA or IEEE 802.1X WEP keying.</p>
+
+<ul>
+<li>EAP-MD5-Challenge</li>
+<li>EAP-MSCHAPv2</li>
+<li>EAP-GTC</li>
+</ul>
+
+<p>More information about EAP methods and interoperability testing is
+available in <a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=hostapd/eap_testing.txt">eap_testing.txt</a>.</p>
+
+
+<h4>Supported wireless cards/drivers</h4>
+
+<ul>
+<li><a href="http://hostap.epitest.fi/">Host AP driver for Prism2/2.5/3</a></li>
+<li><a href="http://sourceforge.net/projects/madwifi/">madwifi (Atheros ar521x)</a></li>
+<li><a href="http://www.prism54.org/">Prism54.org (Prism GT/Duette/Indigo)</a></li>
+<li>BSD net80211 layer (e.g., Atheros driver) (FreeBSD 6-CURRENT)</li>
+</ul>
+
+<h3><a name="download">Download</a></h3>
+
+<p>
+<b>hostapd</b><br>
+Copyright (c) 2002-2008, Jouni Malinen &lt;j@w1.fi&gt;
+and contributors.
+</p>
+
+<p>
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License version 2 as
+published by the Free Software Foundation. See
+<a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=COPYING">COPYING</a>
+for more details.
+</p>
+
+<p>Alternatively, this software may be distributed, used, and modified
+under the terms of BSD license. See <a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=hostapd/README">README</a>
+for more details.</p>
+
+<p>
+<b>Please see
+<a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=hostapd/README">README</a>
+for the current documentation.</b></p>
+
+
+<ul>
+<li><a href="../releases.html">Release graph</a></li>
+<li>Latest stable release:
+<ul>
+<li><a href="../releases/hostapd-0.5.10.tar.gz">hostapd-0.5.10.tar.gz</a></li>
+</ul>
+<li>Older stable release:
+<ul>
+<li><a href="../releases/hostapd-0.4.10.tar.gz">hostapd-0.4.10.tar.gz</a></li>
+</ul>
+<li>Older stable release:
+<ul>
+<li><a href="../releases/hostapd-0.3.11.tar.gz">hostapd-0.3.11.tar.gz</a></li>
+</ul>
+<li>Obsolete stable release<BR>
+(note: 0.2.x branch is not supported anymore - please upgrade to 0.4.x or 0.5.x):
+<ul>
+<li><a href="../releases/hostapd-0.2.8.tar.gz">hostapd-0.2.8.tar.gz</a></li>
+</ul>
+<li>Latest development release:
+<ul>
+<li><a href="../releases/hostapd-0.6.3.tar.gz">hostapd-0.6.3.tar.gz</a></li>
+</ul>
+<li>ChangeLog:
+<ul>
+<li><a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=hostapd/ChangeLog">development branch</a></li>
+<li><a href="/cgi-bin/viewcvs.cgi/*checkout*/hostap/hostapd/ChangeLog?rev=stable&amp;content-type=text/plain">stable branch</a>
+</ul>
+<li><a href="../releases/">Old releases</a></li>
+<li><a href="http://lists.shmoo.com/mailman/listinfo/hostap">Mailing list</a></li>
+<li><a href="http://lists.shmoo.com/pipermail/hostap/">New mailing list archives</a></li>
+<li><a href="/gitweb/gitweb.cgi">Web interface to GIT repository (0.6.x and newer)</a></li>
+<li><a href="/cgi-bin/viewcvs.cgi/hostap/">Web interface to CVS repository (0.5.x and older)</a></li>
+<li><a href="../releases/snapshots/">Snapshot releases from all active branches</a>
+<li><a href="../cvs.html">GIT and read-only anonymous CVS access (pserver)</a></li>
+<li><a href="../bugz/">Bug and feature request tracking</a></li>
+<li><a href="devel/">Developers' documentation for hostapd</a></li>
+</ul>
+
+<h3>WPA</h3>
+
+<p>The original security mechanism of IEEE 802.11 standard was not
+designed to be strong and has proven to be insufficient for most
+networks that require some kind of security. Task group I (Security)
+of <a href="http://www.ieee802.org/11/">IEEE 802.11 working group</a>
+has worked to address the flaws of the base standard and in
+practice completed its work in May 2004. The IEEE 802.11i amendment to
+the IEEE 802.11 standard was approved in June 2004 and published in
+July 2004.</p>
+
+<p><a href="http://www.wi-fi.org/">Wi-Fi Alliance</a> used a draft
+version of the IEEE 802.11i work (draft 3.0) to define a subset of the
+security enhancements that can be implemented with existing wlan
+hardware. This is called Wi-Fi Protected Access (WPA). This has
+now become a mandatory component of interoperability testing and
+certification done by Wi-Fi Alliance. Wi-Fi has
+<a href="http://www.wi-fi.org/OpenSection/protected_access.asp">information
+about WPA</a> at its web site.</p>
+
+<p>IEEE 802.11 standard defined wired equivalent privacy (WEP) algorithm
+for protecting wireless networks. WEP uses RC4 with 40-bit keys,
+24-bit initialization vector (IV), and CRC32 to protect against packet
+forgery. All these choices have proven to be insufficient: key space is
+too small against current attacks, RC4 key scheduling is insufficient
+(beginning of the pseudorandom stream should be skipped), IV space is
+too small and IV reuse makes attacks easier, there is no replay
+protection, and non-keyed authentication does not protect against bit
+flipping packet data.</p>
+
+<p>WPA is an intermediate solution for the security issues. It uses
+Temporal Key Integrity Protocol (TKIP) to replace WEP. TKIP is a
+compromise on strong security and possibility to use existing
+hardware. It still uses RC4 for the encryption like WEP, but with
+per-packet RC4 keys. In addition, it implements replay protection,
+keyed packet authentication mechanism (Michael MIC).</p>
+
+<p>Keys can be managed using two different mechanisms. WPA can either use
+an external authentication server (e.g., RADIUS) and EAP just like
+IEEE 802.1X is using or pre-shared keys without need for additional
+servers. Wi-Fi calls these "WPA-Enterprise" and "WPA-Personal",
+respectively. Both mechanisms will generate a master session key for
+the Authenticator (AP) and Supplicant (client station).</p>
+
+<p>WPA implements a new key handshake (4-Way Handshake and Group Key
+Handshake) for generating and exchanging data encryption keys between
+the Authenticator and Supplicant. This handshake is also used to
+verify that both Authenticator and Supplicant know the master session
+key. These handshakes are identical regardless of the selected key
+management mechanism (only the method for generating master session
+key changes).</p>
+
+
+<h3>IEEE 802.11i / RSN / WPA2</h3>
+
+<p>The design for parts of IEEE 802.11i that were not included in WPA
+has finished (May 2004) and this amendment to IEEE 802.11 was approved
+in June 2004. Wi-Fi Alliance is using the final IEEE 802.11i as a new
+version of WPA called WPA2. This included, e.g., support for more
+robust encryption algorithm (CCMP: AES in Counter mode with CBC-MAC)
+to replace TKIP, optimizations for handoff (reduced number of messages
+in initial key handshake, pre-authentication, and PMKSA caching).</p>
+
+<h4>Configuration file</h4>
+
+<p>hostapd is configured using a text file that lists all the configuration
+parameters. See an example configuration file,
+<a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=hostapd/hostapd.conf">hostapd.conf</a>,
+for detailed information about the configuration format and supported
+fields.</p>
+
+<h3>Feedback, comments, mailing list</h3>
+
+<p>
+Any comments, reports on success/failure, ideas for further
+improvement, feature requests, etc. are welcome at j@w1.fi.
+Please note, that I often receive more email than I have time to answer.
+Unfortunately, some messages may not get a reply, but I'll try to go
+through my mail whenever time permits.
+</p>
+
+<p>
+Host AP mailing list can also be used for topics related to
+hostapd. Since this list has a broader audience, your likelyhood of
+getting responses is higher. This list is recommended for general
+questions about hostapd and its development. In addition, I
+will send release notes to it whenever a new version is available.
+</p>
+
+<p>
+The mailing list information and web archive is at <a
+href="http://lists.shmoo.com/mailman/listinfo/hostap">http://lists.shmoo.com/mailman/listinfo/hostap</a>.
+Messages to hostap@shmoo.com will be delivered to the
+subscribers. Please note, that due to large number of spam and virus
+messages sent to the list address, the list is configured to accept
+messages only from subscribed addresses. Messages from unsubscribed addresses
+may be accepted manually, but their delivery will be delayed.
+</p>
+
+<p>
+If you want to make sure your bug report of feature request does not
+get lost, please report it through the bug tracking system as
+<a href="../bugz/enter_bug.cgi">a new
+bug/feature request</a>.
+</p>
+
+<hr>
+
+The server and hosting for hostap.epitest.fi is kindly provided by
+Internet Systems Consortium (ISC).
+<a href="http://www.isc.org/"><img src="../isc.png" border="0"></a>
+
+    <hr>
+    <div>
+    <address><a href="mailto:j@w1.fi">Jouni Malinen</a></address>
+<!-- Created: Sun Jan  2 17:20:17 PST 2005 -->
+<!-- hhmts start -->
+Last modified: Fri Feb 22 18:39:39 PST 2008
+<!-- hhmts end -->
+    </div>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+REGEDIT4
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant]
+"debug_level"=dword:00000000
+"debug_show_keys"=dword:00000001
+"debug_use_file"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test]
+"ap_scan"=dword:00000002
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\blobs]
+"testblob"=hex:01,02,03,04,05
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\networks]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\networks\0000]
+"ssid"="\"example network\""
+"key_mgmt"="WPA-PSK"
+"psk"="\"secret password\""
+"pairwise"="CCMP"
+"group"="CCMP"
+"proto"="WPA"
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\interfaces]
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\interfaces\0000]
+"adapter"="{A7627643-C310-49E5-BD89-7E77709C04AB}"
+"config"="test"
+"ctrl_interface"=""
+

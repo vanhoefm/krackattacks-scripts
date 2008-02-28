@@ -1,0 +1,181 @@
+Host AP driver - Frequently Asked Questions
+===========================================
+
+1. What does "GetNextTuple: No more items" mean in hostap_cs initialization?
+2. Why RX does not work?
+   What does "NETDEV WATCHDOG: wlan0: transmit timed out" mean?
+   (interrupt delivery problems)
+3. What is wrong with Host AP mode in secondary (station) firmware v1.4.2?
+4. What is causing 'Unresolved symbols' in depmod/modprobe?
+5. How can I upgrade Prism2/2.5/3 firmware?
+6. Why did I get two network interfaces (wlan0 and wifi0) even when I have
+   only one wireless card?
+7. Why does my D-Link DWL-650 rev. P1 or D-Link DWL-520 rev. E1 (or any other
+   card with small flash) card fail?
+8. Does Host AP driver support IEEE 802.11a and 802.11g? Does it support
+   chipsets other than Prism 2/2.5/3?
+
+
+
+1. What does "GetNextTuple: No more items" mean in hostap_cs initialization?
+
+This is one of the most often reported problems in getting the
+hostap_cs.o driver working. It is usually reported for D-Link DWL-650
+PC Card, e.g., on ISA-to-PCMCIA adapter. Later versions of the driver
+report this also with "Vcc mismatch - skipping this entry".
+
+Most common reason for getting this is a mismatch in voltage
+configuration. The driver tries to make sure that the voltage (Vcc)
+configuration in CIS and the slot match each other. It refuses to
+initialize the card if the card CIS does not include a CFTABLE entry
+with a matching Vcc value. This seems to be a problem for some cases
+since the CIS is invalid or the reported voltage is incorrect.
+
+As a workaround, the driver supports a module parameter ignore_cis_vcc
+that can be used to skip this verification. This can be enabled by
+setting ignore_cis_vcc=1 in /etc/pcmcia/hostap_cs.conf (commented
+example line in the end of file). This can also be tested by manually
+loading the module with 'modprobe hostap_cs ignore_cis_vcc=1' before
+inserting the card).
+
+
+
+2. Why RX does not work?
+   What does "NETDEV WATCHDOG: wlan0: transmit timed out" mean?
+   (interrupt delivery problems)
+
+If the driver does not seem to receive any packets or sending packets
+results in "NETDEV WATCHDOG: wlan0: transmit timed out", the reason is
+probably in interrupt delivery problems. This is quite common with
+PCI-to-PCMCIA adapters. Newer than 2002-05-19 of the driver have a
+test that will report this after the initialization ("wlan: Possible
+interrupt delivery problem"). Another method for checking this is to
+observer whether interrupt counters in /proc/interrupts increase for
+hostap_cs/wlan0 entry.
+
+Adding suitable irq_mode=# setting in PCIC_OPTS line of
+pcmcia-configuration is the most common fix for this. pcmcia-cs HOWTO
+has more information on how to debug and fix interrupt delivery
+problems at
+http://pcmcia-cs.sourceforge.net/ftp/doc/PCMCIA-HOWTO-5.html#irqmode
+
+
+
+3. What is wrong with Host AP mode in secondary (station) firmware v1.4.2?
+
+It looks like secondary firmware v1.4.2 sends beacon frames properly,
+but does not respond to probe requests. With most station cards, this
+prevents authentication and association and thus, in practice, no data
+frames can be sent. It has been reported that at least some Cisco
+Aironet 350 cards can associate with Host AP mode even with firmware
+v1.4.2 (i.e., without receiving probe response), but Prism2 and
+Lucent/ORiNOCO/Agere seem to require probe response and they do not
+thus associate with AP using v1.4.2 firmware.
+
+This is fixed in later secondary firmware versions; probably already
+in 1.4.3, but at least 1.4.9 has been tested to work. In other words,
+this problem can be fixed by upgrading card firmware.
+
+
+
+4. What is causing 'Unresolved symbols' in depmod/modprobe?
+
+Installation of Host AP driver (e.g, 'make install_pccard') may report
+unresolved symbols when running depmod. These are usually caused with
+mismatch in kernel configuration for modversions.
+
+Example:
+
+depmod reports unresolved symbol 'eth_type_trans' (this is without
+modversions):
+depmod:         eth_type_trans
+
+but kernel was really configured with CONFIG_MODVERSIONS:
+
+# grep eth_type_trans /proc/ksyms
+c01b66c0 eth_type_trans_Rdb9cd26f
+
+(notice the _R... postfix)
+
+This happens if the kernel configuration given to Host AP driver's
+Makefile (.config in KERNEL_PATH) has not CONFIG_MODVERSIONS, but the
+running kernel is compiled with it.
+If the kernel were configured without modversions, /proc/ksyms would
+show the symbols with _R... postfix:
+
+
+Mismatches in kernel configuration can be fixed by using the same
+configuration (i.e., Linux kernel .config) for both the kernel and the
+driver. If you are using a kernel from a distribution installation
+(i.e., you have not compiled it yourself), you will need to create a
+matching .config file somehow. This depends on the distribution you
+are using, but 'make oldconfig' in kernel source directory might work
+with some distributions. If you compile the kernel yourself, it will
+be easier, since you already have to have created the correct .config
+file.
+
+
+
+5. How can I upgrade Prism2/2.5/3 firmware?
+
+Prism2/2.5/3 cards and Host AP driver support two different mechanism
+of upgrading the card firmware. Firmware images (primary and station)
+can be downloaded either into volatile memory (RAM download) or
+non-volatile memory (flash upgrade). Firmware images downloaded into
+volatile memory are lost when the card is resetted, so they are quite
+safe. Flash upgrade with incorrect images may cause permanent problems
+(i.e., render the card useless), so certain amount of caution is
+always recommended for this.
+
+Note! Some of the older versions of Host AP driver or prism2_srec had
+fatal bugs in flash upgrade. Only versions 0.1.0 or newer should be
+used when performing non-volatile flash upgrade!
+
+utils/prism2_srec (run 'make' in utils directory to build this) is a
+tool that can be instructed Host AP driver to download firmware image
+into the wlan card. Brief usage information is available by running
+this program without any command line parameters. Please note, that
+the downloading support is disabled in the default Host AP driver
+build. You will need to change this by defining
+PRISM2_DOWNLOAD_SUPPORT (and PRISM2_NON_VOLATILE_DOWNLOAD if you want
+to update flash); see driver/modules/hostap_config.h for more details.
+
+Jun Sun has written a mini-howto on flashing Intersil Prism
+Chipsets. This is available at http://linux.junsun.net/intersil-prism/.
+
+
+
+6. Why did I get two network interfaces (wlan0 and wifi0) even when I have
+   only one wireless card?
+
+Host AP driver supports multiple virtual interfaces per wireless
+card. wifi0 is the master radio interface and wlan0 is the first
+virtual interface for this radio. Other virtual interfaces are wlan0ap
+(for hostapd), and one interface per WDS link.
+
+In most cases, one should ignore wifi0 interface and just use wlan0
+interface. In other words, assign IP address to wlan0, not wifi0 and
+in general, just ignore the wifi0 interface.
+
+
+
+7. Why does my D-Link DWL-650 rev. P1 or D-Link DWL-520 rev. E1 (or any other
+   card with small flash) card fail?
+
+Some of the new Prism3-based cards use a smaller flash chip that does
+not include full firmware for the card. For example, D-Link DWL-650
+rev. P1 and D-Link DWL-520 rev. E1 are such cards. These cards require
+that the firmware is downloaded to the card during initialization. See
+utils/hostap_fw_load for example commands on doing this.
+
+
+
+8. Does Host AP driver support IEEE 802.11a and 802.11g? Does it support
+   chipsets other than Prism 2/2.5/3?
+
+Host AP driver supports only Intersil Prism chipsets, versions 2, 2.5,
+and 3. Those chipsets support IEEE 802.11b only; other chipsets are
+not supported. All utilities distributed with Host AP driver except
+wpa_supplicant work only with Host AP driver, so they are limited to
+the same hardware. wpa_supplicant works with other drivers, including
+those that support 802.11a and 802.11g.

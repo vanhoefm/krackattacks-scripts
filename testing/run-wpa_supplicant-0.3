@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# freebsd gcc-cvs
+for i in minimal minimal-wpa default-0.3 windows-0.3 windows2-0.3 x86_64 arm; do
+	./compile wpa_supplicant-config/$i $1
+done

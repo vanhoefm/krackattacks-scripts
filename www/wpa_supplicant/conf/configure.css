@@ -1,0 +1,49 @@
+body{
+  font: normal 80% Verdana, Helvetica;
+}
+
+.confdesc{
+  width: 80%;
+  border: 1px solid black;
+  background-color: #ededed;
+  padding: 5px;
+  font-size: 90%;
+  visibility: hidden;
+  margin-left: 30px;
+}
+
+.exampleconf{ 
+  width: 98%;
+  border: 1px solid black;
+  background-color: #ededed;
+  padding: 5px;
+  font-family: Courier;
+  font-size: 100%;
+}
+
+.todo{
+  font-style: italic;
+  color: red;
+}
+
+.error{
+  color: red;
+}
+
+.credlayer{
+  display: none;
+}
+
+#navig{ 
+  font: normal 100% Verdana, Helvetica;
+  margin-left: 0px;
+  margin-top: 0px;
+  padding: 0px;
+  margin: 0px;
+  display: inline;
+}
+
+#navig a {
+  text-decoration: none;
+  color: navy;
+}

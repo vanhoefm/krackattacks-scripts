@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# freebsd gcc-cvs
+for i in minimal-0.4 noeap-0.4 full-0.4 x86_64 arm-0.4; do
+	./compile hostapd-config/$i $1
+done

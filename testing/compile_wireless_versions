@@ -1,0 +1,39 @@
+#!/bin/sh
+
+TMP=tmp.compile_wireless_versions
+
+if [ ! -r $TMP ]; then
+    cvs export -D now -d $TMP hostap
+    pushd $TMP/driver/modules
+    for f in hostap_hw hostap_cs hostap_pci hostap_plx; do
+	mv $f.c $f.c.orig
+	cat $f.c.orig |
+	sed "s%^#include <linux/wireless.h>%#include "\"wireless-test.h\""%" |
+	sed "s%^#include <net/iw_handler.h>%#include "\"iw_handler-test.h\""%" \
+	> $f.c
+    done
+    popd
+fi
+
+cd $TMP
+
+for i in ../wireless/wireless-*.h; do
+    echo $i
+    ver=`echo $i | sed "s%.*wireless-\([0-9]*\).*%\1%"`
+    cp $i driver/modules/wireless-test.h
+    case $ver in
+	13)
+	    cp ../wireless/iw_handler-2.h driver/modules/iw_handler-test.h
+	    ;;
+	14 | 15)
+	    cp ../wireless/iw_handler-3.h driver/modules/iw_handler-test.h
+	    ;;
+	*)
+	    rm -f driver/modules/iw_handler-test.h
+	    ;;
+    esac
+    make clean > /dev/null
+    if ! make pccard pci plx > log.$ver 2>&1; then
+	echo "Errors while compiling version $ver"
+    fi
+done

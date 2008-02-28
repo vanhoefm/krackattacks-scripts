@@ -611,8 +611,10 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 					   "receive ReqIEs !!!");
 				drv->assoc_req_ies =
 					os_malloc(iwe->u.data.length);
-				if (drv->assoc_req_ies == NULL)
+				if (drv->assoc_req_ies == NULL) {
+					os_free(buf);
 					return;
+				}
 
 				drv->assoc_req_ies_len = iwe->u.data.length;
 				os_memcpy(drv->assoc_req_ies, custom,
@@ -625,6 +627,7 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 				if (drv->assoc_resp_ies == NULL) {
 					os_free(drv->assoc_req_ies);
 					drv->assoc_req_ies = NULL;
+					os_free(buf);
 					return;
 				}
 

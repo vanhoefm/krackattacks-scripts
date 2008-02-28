@@ -1448,6 +1448,7 @@ static void eap_fast_process_phase2_start(struct eap_sm *sm,
 		data->identity = NULL;
 		sm->identity_len = data->identity_len;
 		data->identity_len = 0;
+		sm->require_identity_match = 1;
 		if (eap_user_get(sm, sm->identity, sm->identity_len, 1) != 0) {
 			wpa_hexdump_ascii(MSG_DEBUG, "EAP-FAST: "
 					  "Phase2 Identity not found "

@@ -134,14 +134,26 @@ static void eap_gtc_process(struct eap_sm *sm, void *priv,
 
 		wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-GTC: Response user",
 				  pos, pos2 - pos);
-		os_free(sm->identity);
-		sm->identity_len = pos2 - pos;
-		sm->identity = os_malloc(sm->identity_len);
-		if (sm->identity == NULL) {
+		if (sm->identity && sm->require_identity_match &&
+		    (pos2 - pos != (int) sm->identity_len ||
+		     os_memcmp(pos, sm->identity, sm->identity_len))) {
+			wpa_printf(MSG_DEBUG, "EAP-GTC: Phase 2 Identity did "
+				   "not match with required Identity");
+			wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-GTC: Expected "
+					  "identity",
+					  sm->identity, sm->identity_len);
 			data->state = FAILURE;
 			return;
+		} else {
+			os_free(sm->identity);
+			sm->identity_len = pos2 - pos;
+			sm->identity = os_malloc(sm->identity_len);
+			if (sm->identity == NULL) {
+				data->state = FAILURE;
+				return;
+			}
+			os_memcpy(sm->identity, pos, sm->identity_len);
 		}
-		os_memcpy(sm->identity, pos, sm->identity_len);
 
 		if (eap_user_get(sm, sm->identity, sm->identity_len, 1) != 0) {
 			wpa_hexdump_ascii(MSG_DEBUG, "EAP-GTC: Phase2 "

@@ -242,7 +242,10 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	timeout = os_malloc(sizeof(*timeout));
 	if (timeout == NULL)
 		return -1;
-	os_get_time(&timeout->time);
+	if (os_get_time(&timeout->time) < 0) {
+		os_free(timeout);
+		return -1;
+	}
 	timeout->time.sec += secs;
 	timeout->time.usec += usecs;
 	while (timeout->time.usec >= 1000000) {

@@ -423,9 +423,11 @@ ifdef CONFIG_EAP_FAST
 ifeq ($(CONFIG_EAP_FAST), dyn)
 CFLAGS += -DEAP_FAST_DYNAMIC
 EAPDYN += ../src/eap_peer/eap_fast.so
+EAPDYN += ../src/eap_common/eap_fast_common.o
 else
 CFLAGS += -DEAP_FAST
 OBJS += ../src/eap_peer/eap_fast.o ../src/eap_peer/eap_fast_pac.o
+OBJS += ../src/eap_common/eap_fast_common.o
 OBJS_h += ../src/eap_server/eap_fast.o
 endif
 TLS_FUNCS=y

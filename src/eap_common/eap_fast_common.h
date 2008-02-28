@@ -82,4 +82,13 @@ struct eap_fast_key_block_provisioning {
 	u8 client_challenge[16]; /* MSCHAPv2 ClientChallenge */
 };
 
+
+struct wpabuf;
+
+void eap_fast_put_tlv_hdr(struct wpabuf *buf, u16 type, u16 len);
+void eap_fast_put_tlv(struct wpabuf *buf, u16 type, const void *data,
+		      u16 len);
+void eap_fast_put_tlv_buf(struct wpabuf *buf, u16 type,
+			  const struct wpabuf *data);
+
 #endif /* EAP_FAST_H */

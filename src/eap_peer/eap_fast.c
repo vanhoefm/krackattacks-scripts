@@ -599,24 +599,21 @@ static struct wpabuf * eap_fast_tlv_pac_ack(void)
 static struct wpabuf * eap_fast_tlv_eap_payload(struct wpabuf *buf)
 {
 	struct wpabuf *msg;
-	struct eap_tlv_hdr *tlv;
 
 	if (buf == NULL)
 		return NULL;
 
 	/* Encapsulate EAP packet in EAP Payload TLV */
-	msg = wpabuf_alloc(sizeof(*tlv) + wpabuf_len(buf));
+	msg = wpabuf_alloc(sizeof(struct pac_tlv_hdr) + wpabuf_len(buf));
 	if (msg == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to allocate memory "
 			   "for TLV encapsulation");
 		wpabuf_free(buf);
 		return NULL;
 	}
-	tlv = wpabuf_put(msg, sizeof(*tlv));
-	tlv->tlv_type = host_to_be16(EAP_TLV_TYPE_MANDATORY |
-				     EAP_TLV_EAP_PAYLOAD_TLV);
-	tlv->length = host_to_be16(wpabuf_len(buf));
-	wpabuf_put_buf(msg, buf);
+	eap_fast_put_tlv_buf(msg,
+			     EAP_TLV_TYPE_MANDATORY | EAP_TLV_EAP_PAYLOAD_TLV,
+			     buf);
 	wpabuf_free(buf);
 	return msg;
 }

@@ -246,6 +246,7 @@ endif
 ifdef CONFIG_EAP_FAST
 CFLAGS += -DEAP_FAST
 OBJS += ../src/eap_server/eap_fast.o
+OBJS += ../src/eap_common/eap_fast_common.o
 TLS_FUNCS=y
 NEED_T_PRF=y
 endif

@@ -546,11 +546,10 @@ static struct wpabuf * eap_fast_build_start(struct eap_sm *sm,
 					    struct eap_fast_data *data, u8 id)
 {
 	struct wpabuf *req;
-	struct pac_tlv_hdr *a_id;
 	size_t srv_id_len = os_strlen(data->srv_id);
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_FAST,
-			    1 + sizeof(*a_id) + srv_id_len,
+			    1 + sizeof(struct pac_tlv_hdr) + srv_id_len,
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL) {
 		wpa_printf(MSG_ERROR, "EAP-FAST: Failed to allocate memory for"
@@ -560,10 +559,9 @@ static struct wpabuf * eap_fast_build_start(struct eap_sm *sm,
 	}
 
 	wpabuf_put_u8(req, EAP_TLS_FLAGS_START | data->fast_version);
-	a_id = wpabuf_put(req, sizeof(*a_id));
-	a_id->type = host_to_be16(PAC_TYPE_A_ID);
-	a_id->len = host_to_be16(srv_id_len);
-	wpabuf_put_data(req, data->srv_id, srv_id_len);
+
+	/* RFC 4851, 4.1.1. Authority ID Data */
+	eap_fast_put_tlv(req, PAC_TYPE_A_ID, data->srv_id, srv_id_len);
 
 	eap_fast_state(data, PHASE1);
 
@@ -658,25 +656,22 @@ static struct wpabuf * eap_fast_encrypt(struct eap_sm *sm,
 static struct wpabuf * eap_fast_tlv_eap_payload(struct wpabuf *buf)
 {
 	struct wpabuf *e;
-	struct eap_tlv_hdr *tlv;
 
 	if (buf == NULL)
 		return NULL;
 
 	/* Encapsulate EAP packet in EAP-Payload TLV */
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Add EAP-Payload TLV");
-	e = wpabuf_alloc(sizeof(*tlv) + wpabuf_len(buf));
+	e = wpabuf_alloc(sizeof(struct pac_tlv_hdr) + wpabuf_len(buf));
 	if (e == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to allocate memory "
 			   "for TLV encapsulation");
 		wpabuf_free(buf);
 		return NULL;
 	}
-	tlv = wpabuf_put(e, sizeof(*tlv));
-	tlv->tlv_type = host_to_be16(EAP_TLV_TYPE_MANDATORY |
-				     EAP_TLV_EAP_PAYLOAD_TLV);
-	tlv->length = host_to_be16(wpabuf_len(buf));
-	wpabuf_put_buf(e, buf);
+	eap_fast_put_tlv_buf(e,
+			     EAP_TLV_TYPE_MANDATORY | EAP_TLV_EAP_PAYLOAD_TLV,
+			     buf);
 	wpabuf_free(buf);
 	return e;
 }
@@ -783,7 +778,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	u8 *pos;
 	size_t buf_len, srv_id_len, pac_len;
 	struct eap_tlv_hdr *pac_tlv;
-	struct pac_tlv_hdr *hdr, *pac_info;
+	struct pac_tlv_hdr *pac_info;
 	struct eap_tlv_result_tlv *result;
 	struct os_time now;
 
@@ -843,8 +838,8 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 		    pac_opaque, pac_len);
 
 	buf_len = sizeof(*pac_tlv) +
-		sizeof(*hdr) + EAP_FAST_PAC_KEY_LEN +
-		sizeof(*hdr) + pac_len +
+		sizeof(struct pac_tlv_hdr) + EAP_FAST_PAC_KEY_LEN +
+		sizeof(struct pac_tlv_hdr) + pac_len +
 		2 * srv_id_len + 100 + sizeof(*result);
 	buf = wpabuf_alloc(buf_len);
 	if (buf == NULL) {
@@ -859,16 +854,10 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 					 EAP_TLV_PAC_TLV);
 
 	/* PAC-Key */
-	hdr = wpabuf_put(buf, sizeof(*hdr));
-	hdr->type = host_to_be16(PAC_TYPE_PAC_KEY);
-	hdr->len = host_to_be16(EAP_FAST_PAC_KEY_LEN);
-	wpabuf_put_data(buf, pac_key, EAP_FAST_PAC_KEY_LEN);
+	eap_fast_put_tlv(buf, PAC_TYPE_PAC_KEY, pac_key, EAP_FAST_PAC_KEY_LEN);
 
 	/* PAC-Opaque */
-	hdr = wpabuf_put(buf, sizeof(*hdr));
-	hdr->type = host_to_be16(PAC_TYPE_PAC_OPAQUE);
-	hdr->len = host_to_be16(pac_len);
-	wpabuf_put_data(buf, pac_opaque, pac_len);
+	eap_fast_put_tlv(buf, PAC_TYPE_PAC_OPAQUE, pac_opaque, pac_len);
 	os_free(pac_opaque);
 
 	/* PAC-Info */
@@ -876,29 +865,19 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	pac_info->type = host_to_be16(PAC_TYPE_PAC_INFO);
 
 	/* PAC-Lifetime (inside PAC-Info) */
-	hdr = wpabuf_put(buf, sizeof(*hdr));
-	hdr->type = host_to_be16(PAC_TYPE_CRED_LIFETIME);
-	hdr->len = host_to_be16(4);
+	eap_fast_put_tlv_hdr(buf, PAC_TYPE_CRED_LIFETIME, 4);
 	wpabuf_put_be32(buf, now.sec + PAC_KEY_LIFETIME);
 
 	/* A-ID (inside PAC-Info) */
-	hdr = wpabuf_put(buf, sizeof(*hdr));
-	hdr->type = host_to_be16(PAC_TYPE_A_ID);
-	hdr->len = host_to_be16(srv_id_len);
-	wpabuf_put_data(buf, data->srv_id, srv_id_len);
+	eap_fast_put_tlv(buf, PAC_TYPE_A_ID, data->srv_id, srv_id_len);
 	
 	/* Note: headers may be misaligned after A-ID */
 
 	/* A-ID-Info (inside PAC-Info) */
-	hdr = wpabuf_put(buf, sizeof(*hdr));
-	WPA_PUT_BE16((u8 *) &hdr->type, PAC_TYPE_A_ID_INFO);
-	WPA_PUT_BE16((u8 *) &hdr->len, srv_id_len);
-	wpabuf_put_data(buf, data->srv_id, srv_id_len);
+	eap_fast_put_tlv(buf, PAC_TYPE_A_ID_INFO, data->srv_id, srv_id_len);
 
 	/* PAC-Type (inside PAC-Info) */
-	hdr = wpabuf_put(buf, sizeof(*hdr));
-	WPA_PUT_BE16((u8 *) &hdr->type, PAC_TYPE_PAC_TYPE);
-	WPA_PUT_BE16((u8 *) &hdr->len, 2);
+	eap_fast_put_tlv_hdr(buf, PAC_TYPE_PAC_TYPE, 2);
 	wpabuf_put_be16(buf, PAC_TYPE_TUNNEL_PAC);
 
 	/* Update PAC-Info and PAC TLV Length fields */

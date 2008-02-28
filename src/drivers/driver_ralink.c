@@ -640,7 +640,7 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 					   "receive ASSOCINFO_EVENT !!!");
 
 				assoc_info_buf =
-					os_malloc(drv->assoc_req_ies_len +
+					os_zalloc(drv->assoc_req_ies_len +
 						  drv->assoc_resp_ies_len + 1);
 
 				if (assoc_info_buf == NULL) {
@@ -652,18 +652,26 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 					return;
 				}
 
-				os_memcpy(assoc_info_buf, drv->assoc_req_ies,
-					  drv->assoc_req_ies_len);
+				if (drv->assoc_req_ies) {
+					os_memcpy(assoc_info_buf,
+						  drv->assoc_req_ies,
+						  drv->assoc_req_ies_len);
+				}
 				info_pos = assoc_info_buf +
 					drv->assoc_req_ies_len;
-				os_memcpy(info_pos, drv->assoc_resp_ies,
-					  drv->assoc_resp_ies_len);
+				if (drv->assoc_resp_ies) {
+					os_memcpy(info_pos,
+						  drv->assoc_resp_ies,
+						  drv->assoc_resp_ies_len);
+				}
 				assoc_info_buf[drv->assoc_req_ies_len +
 					       drv->assoc_resp_ies_len] = '\0';
 				wpa_driver_ralink_event_wireless_custom(
 					drv, ctx, assoc_info_buf);
 				os_free(drv->assoc_req_ies);
+				drv->assoc_req_ies = NULL;
 				os_free(drv->assoc_resp_ies);
+				drv->assoc_resp_ies = NULL;
 				os_free(assoc_info_buf);
 			} else if (iwe->u.data.flags == RT_DISASSOC_EVENT_FLAG)
 			{

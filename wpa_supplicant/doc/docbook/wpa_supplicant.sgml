@@ -530,9 +530,9 @@ wpa_supplicant \
 	snapshot/v0.2.x)</term>
 	<listitem>
 	  <para> (http://hostap.epitest.fi/) Driver needs to be set in
-	Managed mode ('iwconfig wlan0 mode managed').  Please note
-	that station firmware version needs to be 1.7.0 or newer to
-	work in WPA mode.</para>
+	  Managed mode (<emphasis>iwconfig wlan0 mode managed</emphasis>).
+	  Please note that station firmware version needs to be 1.7.0 or
+	  newer to work in WPA mode.</para>
 	</listitem>
       </varlistentry>
 
@@ -736,8 +736,8 @@ wpa_supplicant -iwlan0 -c/etc/wpa_supplicant.conf -B
     <para>Add MODE="Managed" and WPA="y" to the network scheme in
     <filename>/etc/pcmcia/wireless.opts</filename>.</para>
 
-    <para>Add the following block to the end of 'start' action handler
-    in <filename>/etc/pcmcia/wireless</filename>:</para>
+    <para>Add the following block to the end of <emphasis>start</emphasis>
+    action handler in <filename>/etc/pcmcia/wireless</filename>:</para>
 
     <blockquote><programlisting>
 if [ "$WPA" = "y" -a -x /usr/local/bin/wpa_supplicant ]; then
@@ -746,8 +746,8 @@ fi
     </programlisting></blockquote>
 
 
-    <para>Add the following block to the end of 'stop' action handler
-    (may need to be separated from other actions) in
+    <para>Add the following block to the end of <emphasis>stop</emphasis>
+    action handler (may need to be separated from other actions) in
     <filename>/etc/pcmcia/wireless</filename>:</para>
 
     <blockquote><programlisting>

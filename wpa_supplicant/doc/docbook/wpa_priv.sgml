@@ -49,9 +49,9 @@
     <title>Example configuration</title>
 
     <para>The following steps are an example of how to configure
-    <command>wpa_priv</command> to allow users in the 'wpapriv' group
-    to communicate with <command>wpa_supplicant</command> with privilege
-    separation:</para>
+    <command>wpa_priv</command> to allow users in the
+    <emphasis>wpapriv</emphasis> group to communicate with
+    <command>wpa_supplicant</command> with privilege separation:</para>
 
     <para>Create user group (e.g., wpapriv) and assign users that
     should be able to use wpa_supplicant into that group.</para>
@@ -111,7 +111,7 @@ wpa_supplicant -i ath0 -c wpa_supplicant.conf
 	supported <command>wpa_supplicant</command> driver backends is to be
 	used. To get a list of supported driver types see wpa_supplicant help
 	(e.g, wpa_supplicant -h). The driver backend supported by most good
-	drivers is 'wext'.</para>
+	drivers is <emphasis>wext</emphasis>.</para>
 
 	<para>The &lt;ifname&gt; string specifies which network
 	interface is to be managed by <command>wpa_supplicant</command>

@@ -1,6 +1,6 @@
 /*
  * Dynamic data buffer
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -122,4 +122,41 @@ void * wpabuf_put(struct wpabuf *buf, size_t len)
 		wpabuf_overflow(buf, len);
 	}
 	return tmp;
+}
+
+
+/**
+ * wpabuf_concat - Concatenate two buffers into a newly allocated one
+ * @a: First buffer
+ * @b: Second buffer
+ * Returns: wpabuf with concatenated a + b data or %NULL on failure
+ *
+ * Both buffers a and b will be freed regardless of the return value. Input
+ * buffers can be %NULL which is interpreted as an empty buffer.
+ */
+struct wpabuf * wpabuf_concat(struct wpabuf *a, struct wpabuf *b)
+{
+	struct wpabuf *n = NULL;
+	size_t len = 0;
+
+	if (b == NULL)
+		return a;
+
+	if (a)
+		len += wpabuf_len(a);
+	if (b)
+		len += wpabuf_len(b);
+
+	n = wpabuf_alloc(len);
+	if (n) {
+		if (a)
+			wpabuf_put_buf(n, a);
+		if (b)
+			wpabuf_put_buf(n, b);
+	}
+
+	wpabuf_free(a);
+	wpabuf_free(b);
+
+	return n;
 }

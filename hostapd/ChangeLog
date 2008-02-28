@@ -3,6 +3,7 @@ ChangeLog for hostapd
 ????-??-?? - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2
 	  Identity Request if identity is already known
+	* added support for EAP Sequences in EAP-FAST Phase 2
 
 2008-02-22 - v0.6.3
 	* fixed Reassociation Response callback processing when using internal

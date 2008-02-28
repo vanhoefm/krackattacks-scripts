@@ -1,5 +1,8 @@
 ChangeLog for wpa_supplicant
 
+????-??-?? - v0.6.4
+	* added support for EAP Sequences in EAP-FAST Phase 2
+
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were
 	  previously used for configuring user identity and key for EAP-PSK,

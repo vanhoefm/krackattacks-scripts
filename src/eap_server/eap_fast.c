@@ -74,6 +74,7 @@ struct eap_fast_data {
 	struct wpabuf *pending_phase2_resp;
 	u8 *identity; /* from PAC-Opaque */
 	size_t identity_len;
+	int eap_seq;
 };
 
 
@@ -614,26 +615,39 @@ static struct wpabuf * eap_fast_build_crypto_binding(
 	struct wpabuf *buf;
 	struct eap_tlv_result_tlv *result;
 	struct eap_tlv_crypto_binding_tlv *binding;
-	int type;
 
-	buf = wpabuf_alloc(sizeof(*result) + sizeof(*binding));
+	buf = wpabuf_alloc(2 * sizeof(*result) + sizeof(*binding));
 	if (buf == NULL)
 		return NULL;
 
-	if (data->send_new_pac || data->anon_provisioning) {
-		type = EAP_TLV_INTERMEDIATE_RESULT_TLV;
+	if (data->send_new_pac || data->anon_provisioning ||
+	    data->phase2_method)
 		data->final_result = 0;
-	} else {
-		type = EAP_TLV_RESULT_TLV;
+	else
 		data->final_result = 1;
+
+	if (!data->final_result || data->eap_seq > 1) {
+		/* Intermediate-Result */
+		wpa_printf(MSG_DEBUG, "EAP-FAST: Add Intermediate-Result TLV "
+			   "(status=SUCCESS)");
+		result = wpabuf_put(buf, sizeof(*result));
+		result->tlv_type = host_to_be16(
+			EAP_TLV_TYPE_MANDATORY |
+			EAP_TLV_INTERMEDIATE_RESULT_TLV);
+		result->length = host_to_be16(2);
+		result->status = host_to_be16(EAP_TLV_RESULT_SUCCESS);
 	}
 
-	/* Result TLV */
-	wpa_printf(MSG_DEBUG, "EAP-FAST: Add Result TLV (status=SUCCESS)");
-	result = wpabuf_put(buf, sizeof(*result));
-	result->tlv_type = host_to_be16(EAP_TLV_TYPE_MANDATORY | type);
-	result->length = host_to_be16(2);
-	result->status = host_to_be16(EAP_TLV_RESULT_SUCCESS);
+	if (data->final_result) {
+		/* Result TLV */
+		wpa_printf(MSG_DEBUG, "EAP-FAST: Add Result TLV "
+			   "(status=SUCCESS)");
+		result = wpabuf_put(buf, sizeof(*result));
+		result->tlv_type = host_to_be16(EAP_TLV_TYPE_MANDATORY |
+						EAP_TLV_RESULT_TLV);
+		result->length = host_to_be16(2);
+		result->status = host_to_be16(EAP_TLV_RESULT_SUCCESS);
+	}
 
 	/* Crypto-Binding TLV */
 	binding = wpabuf_put(buf, sizeof(*binding));
@@ -828,6 +842,16 @@ static struct wpabuf * eap_fast_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		break;
 	case CRYPTO_BINDING:
 		req = eap_fast_build_crypto_binding(sm, data);
+		if (data->phase2_method) {
+			/*
+			 * Include the start of the next EAP method in the
+			 * sequence in the same message with Crypto-Binding to
+			 * save a round-trip.
+			 */
+			struct wpabuf *eap;
+			eap = eap_fast_build_phase2_req(sm, data, id);
+			req = wpabuf_concat(req, eap);
+		}
 		break;
 	case REQUEST_PAC:
 		req = eap_fast_build_pac(sm, data);
@@ -981,9 +1005,13 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "EAP-FAST: try EAP type %d", next_type);
 		break;
 	case PHASE2_METHOD:
+	case CRYPTO_BINDING:
 		eap_fast_update_icmk(sm, data);
 		eap_fast_state(data, CRYPTO_BINDING);
+		data->eap_seq++;
 		next_type = EAP_TYPE_NONE;
+		/* TODO: could start another EAP method in sequence by setting
+		 * next_type to the selected method */
 		break;
 	case FAILURE:
 		break;
@@ -1199,11 +1227,6 @@ static void eap_fast_process_phase2_tlvs(struct eap_sm *sm,
 		return;
 	}
 
-	if (tlv.eap_payload_tlv) {
-		eap_fast_process_phase2_eap(sm, data, tlv.eap_payload_tlv,
-					    tlv.eap_payload_tlv_len);
-	}
-
 	if (check_crypto_binding) {
 		if (tlv.crypto_binding == NULL) {
 			wpa_printf(MSG_DEBUG, "EAP-FAST: No Crypto-Binding "
@@ -1235,7 +1258,11 @@ static void eap_fast_process_phase2_tlvs(struct eap_sm *sm,
 		}
 
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Valid Crypto-Binding TLV "
-			   "received - authentication completed successfully");
+			   "received");
+		if (data->final_result) {
+			wpa_printf(MSG_DEBUG, "EAP-FAST: Authentication "
+				   "completed successfully");
+		}
 
 		if (data->anon_provisioning ||
 		    (tlv.request_action == EAP_TLV_ACTION_PROCESS_TLV &&
@@ -1248,8 +1275,13 @@ static void eap_fast_process_phase2_tlvs(struct eap_sm *sm,
 			wpa_printf(MSG_DEBUG, "EAP-FAST: Server triggered "
 				   "re-keying of Tunnel PAC");
 			eap_fast_state(data, REQUEST_PAC);
-		} else
+		} else if (data->final_result)
 			eap_fast_state(data, SUCCESS);
+	}
+
+	if (tlv.eap_payload_tlv) {
+		eap_fast_process_phase2_eap(sm, data, tlv.eap_payload_tlv,
+					    tlv.eap_payload_tlv_len);
 	}
 }
 

@@ -31,6 +31,7 @@ static void eap_fast_reset(struct eap_sm *sm, void *priv);
 #define PAC_OPAQUE_TYPE_PAD 0
 #define PAC_OPAQUE_TYPE_KEY 1
 #define PAC_OPAQUE_TYPE_LIFETIME 2
+#define PAC_OPAQUE_TYPE_IDENTITY 3
 
 /* PAC-Key lifetime in seconds (hard limit) */
 #define PAC_KEY_LIFETIME (7 * 24 * 60 * 60)
@@ -71,6 +72,8 @@ struct eap_fast_data {
 	int anon_provisioning;
 	int send_new_pac; /* server triggered re-keying of Tunnel PAC */
 	struct wpabuf *pending_phase2_resp;
+	u8 *identity; /* from PAC-Opaque */
+	size_t identity_len;
 };
 
 
@@ -133,6 +136,8 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 	u8 *buf, *pos, *end, *pac_key = NULL;
 	os_time_t lifetime = 0;
 	struct os_time now;
+	u8 *identity = NULL;
+	size_t identity_len = 0;
 
 	wpa_printf(MSG_DEBUG, "EAP-FAST: SessionTicket callback");
 	wpa_hexdump(MSG_DEBUG, "EAP-FAST: SessionTicket (PAC-Opaque)",
@@ -217,6 +222,10 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 			}
 			lifetime = WPA_GET_BE32(pos + 2);
 			break;
+		case PAC_OPAQUE_TYPE_IDENTITY:
+			identity = pos + 2;
+			identity_len = pos[1];
+			break;
 		}
 
 		pos += 2 + pos[1];
@@ -227,6 +236,17 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 			   "PAC-Opaque");
 		os_free(buf);
 		return -1;
+	}
+
+	if (identity) {
+		wpa_hexdump_ascii(MSG_DEBUG, "EAP-FAST: Identity from "
+				  "PAC-Opaque", identity, identity_len);
+		os_free(data->identity);
+		data->identity = os_malloc(identity_len);
+		if (data->identity) {
+			os_memcpy(data->identity, identity, identity_len);
+			data->identity_len = identity_len;
+		}
 	}
 
 	if (os_get_time(&now) < 0 || lifetime <= 0 || now.sec > lifetime) {
@@ -517,6 +537,7 @@ static void eap_fast_reset(struct eap_sm *sm, void *priv)
 	os_free(data->srv_id);
 	os_free(data->key_block_p);
 	wpabuf_free(data->pending_phase2_resp);
+	os_free(data->identity);
 	os_free(data);
 }
 
@@ -756,45 +777,80 @@ static struct wpabuf * eap_fast_build_crypto_binding(
 static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 					  struct eap_fast_data *data)
 {
-	u8 pac_key[2 + EAP_FAST_PAC_KEY_LEN + 6];
-	u8 pac_opaque[8 + EAP_FAST_PAC_KEY_LEN + 8];
+	u8 pac_key[EAP_FAST_PAC_KEY_LEN];
+	u8 *pac_buf, *pac_opaque;
 	struct wpabuf *buf;
 	u8 *pos;
-	size_t buf_len, srv_id_len;
+	size_t buf_len, srv_id_len, pac_len;
 	struct eap_tlv_hdr *pac_tlv;
 	struct pac_tlv_hdr *hdr, *pac_info;
 	struct eap_tlv_result_tlv *result;
 	struct os_time now;
 
-	srv_id_len = os_strlen(data->srv_id);
-
-	pac_key[0] = PAC_OPAQUE_TYPE_KEY;
-	pac_key[1] = EAP_FAST_PAC_KEY_LEN;
-	if (os_get_random(pac_key + 2, EAP_FAST_PAC_KEY_LEN) < 0)
-		return NULL;
-	if (os_get_time(&now) < 0)
+	if (os_get_random(pac_key, EAP_FAST_PAC_KEY_LEN) < 0 ||
+	    os_get_time(&now) < 0)
 		return NULL;
 	wpa_hexdump_key(MSG_DEBUG, "EAP-FAST: Generated PAC-Key",
-			pac_key + 2, EAP_FAST_PAC_KEY_LEN);
-	pos = pac_key + 2 + EAP_FAST_PAC_KEY_LEN;
+			pac_key, EAP_FAST_PAC_KEY_LEN);
+
+	pac_len = (2 + EAP_FAST_PAC_KEY_LEN) + (2 + 4) +
+		(2 + sm->identity_len) + 8;
+	pac_buf = os_malloc(pac_len);
+	if (pac_buf == NULL)
+		return NULL;
+
+	srv_id_len = os_strlen(data->srv_id);
+
+	pos = pac_buf;
+	*pos++ = PAC_OPAQUE_TYPE_KEY;
+	*pos++ = EAP_FAST_PAC_KEY_LEN;
+	os_memcpy(pos, pac_key, EAP_FAST_PAC_KEY_LEN);
+	pos += EAP_FAST_PAC_KEY_LEN;
+
 	*pos++ = PAC_OPAQUE_TYPE_LIFETIME;
 	*pos++ = 4;
 	WPA_PUT_BE32(pos, now.sec + PAC_KEY_LIFETIME);
+	pos += 4;
 
-	if (aes_wrap(data->pac_opaque_encr, sizeof(pac_key) / 8, pac_key,
-		     pac_opaque) < 0)
+	if (sm->identity) {
+		*pos++ = PAC_OPAQUE_TYPE_IDENTITY;
+		*pos++ = sm->identity_len;
+		os_memcpy(pos, sm->identity, sm->identity_len);
+		pos += sm->identity_len;
+	}
+
+	pac_len = pos - pac_buf;
+	if (pac_len % 8) {
+		*pos++ = PAC_OPAQUE_TYPE_PAD;
+		pac_len++;
+	}
+
+	pac_opaque = os_malloc(pac_len + 8);
+	if (pac_opaque == NULL) {
+		os_free(pac_buf);
 		return NULL;
+	}
+	if (aes_wrap(data->pac_opaque_encr, pac_len / 8, pac_buf,
+		     pac_opaque) < 0) {
+		os_free(pac_buf);
+		os_free(pac_opaque);
+		return NULL;
+	}
+	os_free(pac_buf);
 
+	pac_len += 8;
 	wpa_hexdump(MSG_DEBUG, "EAP-FAST: PAC-Opaque",
-		    pac_opaque, sizeof(pac_opaque));
+		    pac_opaque, pac_len);
 
 	buf_len = sizeof(*pac_tlv) +
 		sizeof(*hdr) + EAP_FAST_PAC_KEY_LEN +
-		sizeof(*hdr) + sizeof(pac_opaque) +
+		sizeof(*hdr) + pac_len +
 		2 * srv_id_len + 100 + sizeof(*result);
 	buf = wpabuf_alloc(buf_len);
-	if (buf == NULL)
+	if (buf == NULL) {
+		os_free(pac_opaque);
 		return NULL;
+	}
 
 	/* PAC TLV */
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Add PAC TLV");
@@ -806,13 +862,14 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	hdr = wpabuf_put(buf, sizeof(*hdr));
 	hdr->type = host_to_be16(PAC_TYPE_PAC_KEY);
 	hdr->len = host_to_be16(EAP_FAST_PAC_KEY_LEN);
-	wpabuf_put_data(buf, pac_key + 2, EAP_FAST_PAC_KEY_LEN);
+	wpabuf_put_data(buf, pac_key, EAP_FAST_PAC_KEY_LEN);
 
 	/* PAC-Opaque */
 	hdr = wpabuf_put(buf, sizeof(*hdr));
 	hdr->type = host_to_be16(PAC_TYPE_PAC_OPAQUE);
-	hdr->len = host_to_be16(sizeof(pac_opaque));
-	wpabuf_put_data(buf, pac_opaque, sizeof(pac_opaque));
+	hdr->len = host_to_be16(pac_len);
+	wpabuf_put_data(buf, pac_opaque, pac_len);
+	os_free(pac_opaque);
 
 	/* PAC-Info */
 	pac_info = wpabuf_put(buf, sizeof(*pac_info));
@@ -1524,6 +1581,7 @@ static void eap_fast_process(struct eap_sm *sm, void *priv,
 	size_t left;
 	unsigned int tls_msg_len;
 	int peer_version;
+	u8 next_type;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_FAST, respData,
 			       &left);
@@ -1594,8 +1652,35 @@ static void eap_fast_process(struct eap_sm *sm, void *priv,
 
 		/* fall through to PHASE2_START */
 	case PHASE2_START:
-		eap_fast_state(data, PHASE2_ID);
-		eap_fast_phase2_init(sm, data, EAP_TYPE_IDENTITY);
+		if (data->identity) {
+			os_free(sm->identity);
+			sm->identity = data->identity;
+			data->identity = NULL;
+			sm->identity_len = data->identity_len;
+			data->identity_len = 0;
+			if (eap_user_get(sm, sm->identity, sm->identity_len, 1)
+			    != 0) {
+				wpa_hexdump_ascii(MSG_DEBUG, "EAP-FAST: "
+						  "Phase2 Identity not found "
+						  "in the user database",
+						  sm->identity,
+						  sm->identity_len);
+				next_type = eap_fast_req_failure(sm, data);
+			} else {
+				wpa_printf(MSG_DEBUG, "EAP-FAST: Identity "
+					   "already known - skip Phase 2 "
+					   "Identity Request");
+				next_type = sm->user->methods[0].method;
+				sm->user_eap_method_index = 1;
+			}
+
+			eap_fast_state(data, PHASE2_METHOD);
+		} else {
+			eap_fast_state(data, PHASE2_ID);
+			next_type = EAP_TYPE_IDENTITY;
+		}
+
+		eap_fast_phase2_init(sm, data, next_type);
 		break;
 	case PHASE2_ID:
 	case PHASE2_METHOD:

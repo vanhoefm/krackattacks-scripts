@@ -57,7 +57,8 @@ digraph versions {
 	v047 [label="0.4.7  duhw\n2005-11-20"]
 	v048 [label="0.4.8  hw\n2006-02-08"]
 	v049 [label="0.4.9  dhw\n2006-05-06"]
-	v0410 [label="0.4.10  dhw\n2007-02-19"]
+	v0410 [label="0.4.10  hw\n2007-02-19"]
+	v0411 [label="0.4.11  hw\n2008-02-23"]
 	v057 [label="0.5.7  hw\n2006-12-31"]
 	v058 [label="0.5.8  hw\n2007-05-28"]
 	v059 [label="0.5.9  hw\n2007-12-02"]
@@ -82,12 +83,12 @@ digraph versions {
 
 	v024 -> v025 -> v026 -> v027 -> v028
 	v037 -> v038 -> v039 -> v0310 -> v0311
-	v047 -> v048 -> v049 -> v0410
+	v047 -> v048 -> v049 -> v0410 -> v0411
 	v057 -> v058 -> v059 -> v0510
 
 	{rank=same; v024 v025 v026 v027 v028}
 	{rank=same; v037 v038 v039 v0310 v0311}
-	{rank=same; v047 v048 v049 v0410}
+	{rank=same; v047 v048 v049 v0410 v0411}
 	{rank=same; v057 v058 v059 v0510}
 
 #	edge [style=dashed,color=red]

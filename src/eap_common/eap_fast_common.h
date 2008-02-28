@@ -1,6 +1,6 @@
 /*
  * EAP-FAST definitions (RFC 4851)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,6 +19,7 @@
 #define EAP_FAST_KEY_LEN 64
 #define EAP_FAST_SIMCK_LEN 40
 #define EAP_FAST_SKS_LEN 40
+#define EAP_FAST_CMK_LEN 20
 
 #define TLS_EXT_PAC_OPAQUE 35
 

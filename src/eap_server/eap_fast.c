@@ -63,7 +63,7 @@ struct eap_fast_data {
 	struct eap_fast_key_block_provisioning *key_block_p;
 
 	u8 simck[EAP_FAST_SIMCK_LEN];
-	u8 cmk[20];
+	u8 cmk[EAP_FAST_CMK_LEN];
 	int simck_idx;
 
 	u8 pac_opaque_encr[16];
@@ -382,8 +382,9 @@ static int eap_fast_update_icmk(struct eap_sm *sm, struct eap_fast_data *data)
 	os_memcpy(data->simck, imck, EAP_FAST_SIMCK_LEN);
 	wpa_hexdump_key(MSG_MSGDUMP, "EAP-FAST: S-IMCK[j]",
 			data->simck, EAP_FAST_SIMCK_LEN);
-	os_memcpy(data->cmk, imck + EAP_FAST_SIMCK_LEN, 20);
-	wpa_hexdump_key(MSG_MSGDUMP, "EAP-FAST: CMK[j]", data->cmk, 20);
+	os_memcpy(data->cmk, imck + EAP_FAST_SIMCK_LEN, EAP_FAST_CMK_LEN);
+	wpa_hexdump_key(MSG_MSGDUMP, "EAP-FAST: CMK[j]",
+			data->cmk, EAP_FAST_CMK_LEN);
 
 	return 0;
 }
@@ -663,7 +664,8 @@ static struct wpabuf * eap_fast_build_crypto_binding(
 	 * Compound-MAC = HMAC-SHA1( CMK, Crypto-Binding TLV )
 	 */
 
-	hmac_sha1(data->cmk, 20, (u8 *) binding, sizeof(*binding),
+	hmac_sha1(data->cmk, EAP_FAST_CMK_LEN,
+		  (u8 *) binding, sizeof(*binding),
 		  binding->compound_mac);
 
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Add Crypto-Binding TLV: Version %d "
@@ -1082,7 +1084,7 @@ static int eap_fast_validate_crypto_binding(
 	struct eap_fast_data *data, struct eap_tlv_crypto_binding_tlv *b,
 	size_t bind_len)
 {
-	u8 cmac[20];
+	u8 cmac[SHA1_MAC_LEN];
 
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Reply Crypto-Binding TLV: "
 		   "Version %d Received Version %d SubType %d",
@@ -1119,7 +1121,8 @@ static int eap_fast_validate_crypto_binding(
 	wpa_hexdump(MSG_MSGDUMP, "EAP-FAST: Crypto-Binding TLV for "
 		    "Compound MAC calculation",
 		    (u8 *) b, bind_len);
-	hmac_sha1(data->cmk, 20, (u8 *) b, bind_len, b->compound_mac);
+	hmac_sha1(data->cmk, EAP_FAST_CMK_LEN, (u8 *) b, bind_len,
+		  b->compound_mac);
 	if (os_memcmp(cmac, b->compound_mac, sizeof(cmac)) != 0) {
 		wpa_hexdump(MSG_MSGDUMP,
 			    "EAP-FAST: Calculated Compound MAC",

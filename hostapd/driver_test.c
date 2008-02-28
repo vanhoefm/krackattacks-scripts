@@ -993,15 +993,17 @@ static int test_driver_set_sta_vlan(void *priv, const u8 *addr,
 
 static int test_driver_sta_add(const char *ifname, void *priv, const u8 *addr,
 			       u16 aid, u16 capability, u8 *supp_rates,
-			       size_t supp_rates_len, int flags)
+			       size_t supp_rates_len, int flags,
+			       u16 listen_interval)
 {
 	struct test_driver_data *drv = priv;
 	struct test_client_socket *cli;
 	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s addr=" MACSTR " aid=%d "
-		   "capability=0x%x flags=0x%x",
-		   __func__, ifname, MAC2STR(addr), aid, capability, flags);
+		   "capability=0x%x flags=0x%x listen_interval=%d)",
+		   __func__, ifname, MAC2STR(addr), aid, capability, flags,
+		   listen_interval);
 	wpa_hexdump(MSG_DEBUG, "test_driver_sta_add - supp_rates",
 		    supp_rates, supp_rates_len);
 

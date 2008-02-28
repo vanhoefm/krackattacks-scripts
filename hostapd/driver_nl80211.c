@@ -755,7 +755,7 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 
 static int i802_sta_add(const char *ifname, void *priv, const u8 *addr,
 			u16 aid, u16 capability, u8 *supp_rates,
-			size_t supp_rates_len, int flags)
+			size_t supp_rates_len, int flags, u16 listen_interval)
 {
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
@@ -774,7 +774,7 @@ static int i802_sta_add(const char *ifname, void *priv, const u8 *addr,
 	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, aid);
 	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, supp_rates_len,
 		supp_rates);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, 0);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, listen_interval);
 
 	ret = nl_send_auto_complete(drv->nl_handle, msg);
 	if (ret < 0)

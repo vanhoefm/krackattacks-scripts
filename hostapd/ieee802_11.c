@@ -855,6 +855,15 @@ static void handle_assoc(struct hostapd_data *hapd,
 		goto fail;
 	}
 
+	if (listen_interval > hapd->conf->max_listen_interval) {
+		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "Too large Listen Interval (%d)",
+			       listen_interval);
+		resp = WLAN_STATUS_ASSOC_DENIED_LISTEN_INT_TOO_LARGE;
+		goto fail;
+	}
+
 	if (reassoc) {
 		os_memcpy(sta->previous_ap, mgmt->u.reassoc_req.current_ap,
 			  ETH_ALEN);

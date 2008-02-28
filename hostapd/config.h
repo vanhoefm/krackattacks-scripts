@@ -262,6 +262,13 @@ struct hostapd_bss_config {
 	struct hostapd_vlan *vlan, *vlan_tail;
 
 	macaddr bssid;
+
+	/*
+	 * Maximum listen interval that STAs can use when associating with this
+	 * BSS. If a STA tries to use larger value, the association will be
+	 * denied with status code 51.
+	 */
+	u16 max_listen_interval;
 };
 
 

@@ -178,6 +178,8 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->radius_server_auth_port = 1812;
 	bss->ap_max_inactivity = AP_MAX_INACTIVITY;
 	bss->eapol_version = EAPOL_VERSION;
+
+	bss->max_listen_interval = 65535;
 }
 
 
@@ -1927,6 +1929,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "ieee80211w") == 0) {
 			bss->ieee80211w = atoi(pos);
 #endif /* CONFIG_IEEE80211W */
+		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
+			bss->max_listen_interval = atoi(pos);
 		} else {
 			printf("Line %d: unknown configuration item '%s'\n",
 			       line, buf);

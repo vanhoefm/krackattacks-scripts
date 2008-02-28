@@ -89,7 +89,7 @@ struct tls_connection;
 struct eap_fast_tlv_parse {
 	u8 *eap_payload_tlv;
 	size_t eap_payload_tlv_len;
-	struct eap_tlv_crypto_binding__tlv *crypto_binding;
+	struct eap_tlv_crypto_binding_tlv *crypto_binding;
 	size_t crypto_binding_len;
 	int iresult;
 	int result;

@@ -73,7 +73,7 @@ struct eap_tlv_intermediate_result_tlv {
 } STRUCT_PACKED;
 
 /* RFC 4851, Section 4.2.8 - Crypto-Binding TLV */
-struct eap_tlv_crypto_binding__tlv {
+struct eap_tlv_crypto_binding_tlv {
 	be16 tlv_type;
 	be16 length;
 	u8 reserved;

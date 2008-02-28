@@ -262,7 +262,7 @@ int eap_fast_parse_tlv(struct eap_fast_tlv_parse *tlv,
 			tlv->iresult = EAP_TLV_RESULT_FAILURE;
 			return -2;
 		}
-		tlv->crypto_binding = (struct eap_tlv_crypto_binding__tlv *)
+		tlv->crypto_binding = (struct eap_tlv_crypto_binding_tlv *)
 			(pos - sizeof(struct eap_tlv_hdr));
 		break;
 	case EAP_TLV_REQUEST_ACTION_TLV:

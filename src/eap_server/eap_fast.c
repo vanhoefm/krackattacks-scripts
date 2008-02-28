@@ -612,7 +612,7 @@ static struct wpabuf * eap_fast_build_crypto_binding(
 {
 	struct wpabuf *buf;
 	struct eap_tlv_result_tlv *result;
-	struct eap_tlv_crypto_binding__tlv *binding;
+	struct eap_tlv_crypto_binding_tlv *binding;
 	int type;
 
 	buf = wpabuf_alloc(sizeof(*result) + sizeof(*binding));
@@ -1079,7 +1079,7 @@ static int eap_fast_parse_tlvs(u8 *data, size_t data_len,
 
 
 static int eap_fast_validate_crypto_binding(
-	struct eap_fast_data *data, struct eap_tlv_crypto_binding__tlv *b,
+	struct eap_fast_data *data, struct eap_tlv_crypto_binding_tlv *b,
 	size_t bind_len)
 {
 	u8 cmac[20];

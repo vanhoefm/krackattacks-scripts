@@ -558,7 +558,7 @@ static struct wpabuf * eap_fast_process_eap_payload_tlv(
 
 
 static int eap_fast_validate_crypto_binding(
-	struct eap_tlv_crypto_binding__tlv *_bind)
+	struct eap_tlv_crypto_binding_tlv *_bind)
 {
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Crypto-Binding TLV: Version %d "
 		   "Received Version %d SubType %d",
@@ -584,8 +584,8 @@ static int eap_fast_validate_crypto_binding(
 
 
 static void eap_fast_write_crypto_binding(
-	struct eap_tlv_crypto_binding__tlv *rbind,
-	struct eap_tlv_crypto_binding__tlv *_bind, const u8 *cmk)
+	struct eap_tlv_crypto_binding_tlv *rbind,
+	struct eap_tlv_crypto_binding_tlv *_bind, const u8 *cmk)
 {
 	rbind->tlv_type = host_to_be16(EAP_TLV_TYPE_MANDATORY |
 				       EAP_TLV_CRYPTO_BINDING_TLV);
@@ -704,7 +704,7 @@ static u8 * eap_fast_write_pac_request(u8 *pos, u16 pac_type)
 static struct wpabuf * eap_fast_process_crypto_binding(
 	struct eap_sm *sm, struct eap_fast_data *data,
 	struct eap_method_ret *ret,
-	struct eap_tlv_crypto_binding__tlv *_bind, size_t bind_len, int final)
+	struct eap_tlv_crypto_binding_tlv *_bind, size_t bind_len, int final)
 {
 	struct wpabuf *resp;
 	u8 *pos;
@@ -752,7 +752,7 @@ static struct wpabuf * eap_fast_process_crypto_binding(
 		req_tunnel_pac = 1;
 	}
 
-	len = sizeof(*rresult) + sizeof(struct eap_tlv_crypto_binding__tlv);
+	len = sizeof(*rresult) + sizeof(struct eap_tlv_crypto_binding_tlv);
 	if (req_tunnel_pac)
 		len += sizeof(struct eap_tlv_hdr) +
 			sizeof(struct eap_tlv_request_action_tlv) +
@@ -781,8 +781,8 @@ static struct wpabuf * eap_fast_process_crypto_binding(
 		data->phase2_success = 0;
 	}
 
-	pos = wpabuf_put(resp, sizeof(struct eap_tlv_crypto_binding__tlv));
-	eap_fast_write_crypto_binding((struct eap_tlv_crypto_binding__tlv *)
+	pos = wpabuf_put(resp, sizeof(struct eap_tlv_crypto_binding_tlv));
+	eap_fast_write_crypto_binding((struct eap_tlv_crypto_binding_tlv *)
 				      pos, _bind, cmk);
 
 	if (req_tunnel_pac) {

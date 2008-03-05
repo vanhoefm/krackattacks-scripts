@@ -14,6 +14,7 @@ typedef QValueList<WpaMsg> WpaMsgList;
 
 class WpaMsg {
 public:
+    WpaMsg() {}
     WpaMsg(const QString &_msg, int _priority = 2)
 	: msg(_msg), priority(_priority)
     {

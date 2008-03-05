@@ -674,7 +674,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 	/* Zero-length arrays are valid. */
 	if (entry->array_len == 0) {
 		free(entry->bytearray_value);
-		entry->strarray_value = NULL;
+		entry->bytearray_value = NULL;
 	}
 
 	success = TRUE;

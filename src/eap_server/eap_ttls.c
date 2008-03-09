@@ -55,6 +55,7 @@ struct eap_ttls_data {
 	u8 mschapv2_ident;
 	int tls_ia_configured;
 	struct wpabuf *pending_phase2_eap_resp;
+	int tnc_started;
 };
 
 
@@ -1244,6 +1245,15 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 		}
 	}
 
+#ifdef EAP_TNC
+	if (data->tnc_started && parse.eap == NULL) {
+		wpa_printf(MSG_DEBUG, "EAP-TTLS: TNC started but no EAP "
+			   "response from peer");
+		eap_ttls_state(data, FAILURE);
+		goto done;
+	}
+#endif /* EAP_TNC */
+
 	if (parse.eap) {
 		eap_ttls_process_phase2_eap(sm, data, parse.eap,
 					    parse.eap_len);
@@ -1273,6 +1283,25 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 done:
 	os_free(in_decrypted);
 	os_free(parse.eap);
+}
+
+
+static void eap_ttls_start_tnc(struct eap_sm *sm, struct eap_ttls_data *data)
+{
+#ifdef EAP_TNC
+	if (!sm->tnc || data->state != SUCCESS || data->tnc_started)
+		return;
+
+	wpa_printf(MSG_DEBUG, "EAP-TTLS: Initialize TNC");
+	if (eap_ttls_phase2_eap_init(sm, data, EAP_TYPE_TNC)) {
+		wpa_printf(MSG_DEBUG, "EAP-TTLS: Failed to initialize TNC");
+		eap_ttls_state(data, FAILURE);
+		return;
+	}
+
+	data->tnc_started = 1;
+	eap_ttls_state(data, PHASE2_METHOD);
+#endif /* EAP_TNC */
 }
 
 
@@ -1348,6 +1377,7 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 	case PHASE_FINISHED:
 		/* FIX: get rid of const->non-const typecast */
 		eap_ttls_process_phase2(sm, data, (u8 *) pos, left);
+		eap_ttls_start_tnc(sm, data);
 		break;
 	case PHASE2_MSCHAPV2_RESP:
 		if (data->mschapv2_resp_ok && left == 0) {
@@ -1366,6 +1396,7 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 				   (unsigned long) left);
 			eap_ttls_state(data, FAILURE);
 		}
+		eap_ttls_start_tnc(sm, data);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: Unexpected state %d in %s",

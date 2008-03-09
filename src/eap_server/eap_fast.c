@@ -75,6 +75,7 @@ struct eap_fast_data {
 	u8 *identity; /* from PAC-Opaque */
 	size_t identity_len;
 	int eap_seq;
+	int tnc_started;
 };
 
 
@@ -851,6 +852,7 @@ static struct wpabuf * eap_fast_buildReq(struct eap_sm *sm, void *priv, u8 id)
 			struct wpabuf *eap;
 			eap = eap_fast_build_phase2_req(sm, data, id);
 			req = wpabuf_concat(req, eap);
+			eap_fast_state(data, PHASE2_METHOD);
 		}
 		break;
 	case REQUEST_PAC:
@@ -943,6 +945,16 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 		left = in_len - sizeof(*hdr);
 		wpa_hexdump(MSG_DEBUG, "EAP-FAST: Phase2 type Nak'ed; "
 			    "allowed types", pos + 1, left - 1);
+#ifdef EAP_TNC
+		if (m && m->vendor == EAP_VENDOR_IETF &&
+		    m->method == EAP_TYPE_TNC) {
+			wpa_printf(MSG_DEBUG, "EAP-FAST: Peer Nak'ed required "
+				   "TNC negotiation");
+			next_type = eap_fast_req_failure(sm, data);
+			eap_fast_phase2_init(sm, data, next_type);
+			return;
+		}
+#endif /* EAP_TNC */
 		eap_sm_process_nak(sm, pos + 1, left - 1);
 		if (sm->user && sm->user_eap_method_index < EAP_MAX_METHODS &&
 		    sm->user->methods[sm->user_eap_method_index].method !=
@@ -1010,8 +1022,13 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 		eap_fast_state(data, CRYPTO_BINDING);
 		data->eap_seq++;
 		next_type = EAP_TYPE_NONE;
-		/* TODO: could start another EAP method in sequence by setting
-		 * next_type to the selected method */
+#ifdef EAP_TNC
+		if (sm->tnc && !data->tnc_started) {
+			wpa_printf(MSG_DEBUG, "EAP-FAST: Initialize TNC");
+			next_type = EAP_TYPE_TNC;
+			data->tnc_started = 1;
+		}
+#endif /* EAP_TNC */
 		break;
 	case FAILURE:
 		break;

@@ -991,7 +991,7 @@ static int eap_ttls_phase2_request(struct eap_sm *sm,
 		}
 	}
 
-	switch (data->phase2_type) {
+	switch (phase2_type) {
 	case EAP_TTLS_PHASE2_EAP:
 		res = eap_ttls_phase2_request_eap(sm, data, ret, hdr, resp);
 		break;
@@ -1334,6 +1334,15 @@ static int eap_ttls_process_phase2_mschapv2(struct eap_sm *sm,
 	}
 
 	if (parse->mschapv2 == NULL) {
+#ifdef EAP_TNC
+		if (data->phase2_success && parse->eapdata) {
+			/*
+			 * Allow EAP-TNC to be started after successfully
+			 * completed MSCHAPV2.
+			 */
+			return 1;
+		}
+#endif /* EAP_TNC */
 		wpa_printf(MSG_WARNING, "EAP-TTLS: no MS-CHAP2-Success AVP "
 			   "received for Phase2 MSCHAPV2");
 		return -1;
@@ -1435,9 +1444,7 @@ static int eap_ttls_process_decrypted(struct eap_sm *sm,
 	case EAP_TTLS_PHASE2_MSCHAPV2:
 		res = eap_ttls_process_phase2_mschapv2(sm, data, ret, parse);
 #ifdef EAP_TNC
-		if (res == 1 && parse->eapdata &&
-		    ret->methodState == METHOD_DONE &&
-		    ret->decision == DECISION_UNCOND_SUCC) {
+		if (res == 1 && parse->eapdata && data->phase2_success) {
 			/*
 			 * TNC may be required as the next
 			 * authentication method within the tunnel.

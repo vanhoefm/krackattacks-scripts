@@ -358,12 +358,27 @@ static int eap_fast_select_phase2_method(struct eap_fast_data *data, u8 type)
 {
 	size_t i;
 
+	/* TODO: TNC with anonymous provisioning; need to require both
+	 * completed MSCHAPv2 and TNC */
+
 	if (data->anon_provisioning && type != EAP_TYPE_MSCHAPV2) {
 		wpa_printf(MSG_INFO, "EAP-FAST: Only EAP-MSCHAPv2 is allowed "
 			   "during unauthenticated provisioning; reject phase2"
 			   " type %d", type);
 		return -1;
 	}
+
+#ifdef EAP_TNC
+	if (type == EAP_TYPE_TNC) {
+		data->phase2_type.vendor = EAP_VENDOR_IETF;
+		data->phase2_type.method = EAP_TYPE_TNC;
+		wpa_printf(MSG_DEBUG, "EAP-FAST: Selected Phase 2 EAP "
+			   "vendor %d method %d for TNC",
+			   data->phase2_type.vendor,
+			   data->phase2_type.method);
+		return 0;
+	}
+#endif /* EAP_TNC */
 
 	for (i = 0; i < data->num_phase2_types; i++) {
 		if (data->phase2_types[i].vendor != EAP_VENDOR_IETF ||
@@ -408,6 +423,17 @@ static int eap_fast_phase2_request(struct eap_sm *sm,
 	if (*pos == EAP_TYPE_IDENTITY) {
 		*resp = eap_sm_buildIdentity(sm, hdr->identifier, 1);
 		return 0;
+	}
+
+	if (data->phase2_priv && data->phase2_method &&
+	    *pos != data->phase2_type.method) {
+		wpa_printf(MSG_DEBUG, "EAP-FAST: Phase 2 EAP sequence - "
+			   "deinitialize previous method");
+		data->phase2_method->deinit(sm, data->phase2_priv);
+		data->phase2_method = NULL;
+		data->phase2_priv = NULL;
+		data->phase2_type.vendor = EAP_VENDOR_IETF;
+		data->phase2_type.method = EAP_TYPE_NONE;
 	}
 
 	if (data->phase2_type.vendor == EAP_VENDOR_IETF &&

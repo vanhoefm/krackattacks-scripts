@@ -4,6 +4,10 @@ ChangeLog for hostapd
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2
 	  Identity Request if identity is already known
 	* added support for EAP Sequences in EAP-FAST Phase 2
+	* added support for EAP-TNC (Trusted Network Connect)
+	  (this version implements the EAP-TNC method and EAP-TTLS/EAP-FAST
+	  changes needed to run two methods in sequence (IF-T) and the IF-IMV
+	  and IF-TNCCS interfaces from TNCS)
 
 2008-02-22 - v0.6.3
 	* fixed Reassociation Response callback processing when using internal

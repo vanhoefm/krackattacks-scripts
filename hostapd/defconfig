@@ -101,6 +101,9 @@ CONFIG_EAP_TTLS=y
 # EAP-IKEv2
 #CONFIG_EAP_IKEV2=y
 
+# Trusted Network Connect (EAP-TNC)
+#CONFIG_EAP_TNC=y
+
 # PKCS#12 (PFX) support (used to read private key and certificate file from
 # a file that usually has extension .p12 or .pfx)
 CONFIG_PKCS12=y

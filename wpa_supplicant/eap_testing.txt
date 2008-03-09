@@ -91,6 +91,7 @@ EAP-TTLS/EAP-PSK	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-TTLS/EAP-PAX	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-TTLS/EAP-SAKE	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-TTLS/EAP-GPSK	-   -   -   -   -   -   -   -   -   -   +   -
+EAP-TTLS + TNC		-   -   -   -   -   +   -   -   -   -   +   -
 EAP-SIM			+   -   -   ?   -   +   -   ?   -   -   +   -
 EAP-AKA			-   -   -   -   -   +   -   -   -   -   +   -
 EAP-PSK			+7  -   -   -   -   +   -   -   -   -   +   -
@@ -110,8 +111,9 @@ EAP-FAST/MD5(auth)	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-FAST/TLS(auth)	-   -   -   -   -   -   -   -   -   -   +   +
 EAP-FAST/SIM(auth)	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-FAST/AKA(auth)	-   -   -   -   -   -   -   -   -   -   +   -
+EAP-FAST + TNC		-   -   -   -   -   -   -   -   -   -   +   -
 LEAP			+   -   +   +   +   +   F   +6  -   +   -   +
-EAP-TNC			+9  -   -   -   -   +   -   -   -   -   -   -
+EAP-TNC			+9  -   -   -   -   +   -   -   -   -   +   -
 EAP-IKEv2		+10 -   -   -   -   -   -   -   -   -   +   -
 
 1) PEAPv1 required new label, "client PEAP encryption" instead of "client EAP

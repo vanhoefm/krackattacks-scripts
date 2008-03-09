@@ -49,6 +49,7 @@ EAP-TTLS/EAP-MSCHAPv2	+   +   -   -   -
 EAP-TTLS/EAP-TLS	+   F   -   -   -
 EAP-TTLS/EAP-SIM	+   +   -   -   -
 EAP-TTLS/EAP-AKA	+   +   -   -   -
+EAP-TTLS + TNC		+   -   -   -   -
 EAP-SIM			+   +   -   -   +
 EAP-AKA			+   +   -   -   -
 EAP-PAX			+   -   -   -   -
@@ -67,7 +68,9 @@ EAP-FAST/MD5(auth)	+   -   +   -   -
 EAP-FAST/TLS(auth)	+   -   -   -   -
 EAP-FAST/SIM(auth)	+   -   -   -   -
 EAP-FAST/AKA(auth)	+   -   -   -   -
+EAP-FAST + TNC		+   -   -   -   -
 EAP-IKEv2		+   -   -   -   -
+EAP-TNC			+   -   -   -   -
 
 1) EAP-TLS itself worked, but peer certificate validation failed at
    least when using the internal TLS server (peer included incorrect

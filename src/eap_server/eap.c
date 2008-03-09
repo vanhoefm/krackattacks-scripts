@@ -1154,6 +1154,7 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	if (conf->eap_fast_a_id)
 		sm->eap_fast_a_id = os_strdup(conf->eap_fast_a_id);
 	sm->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
+	sm->tnc = conf->tnc;
 
 	wpa_printf(MSG_DEBUG, "EAP: Server state machine created");
 

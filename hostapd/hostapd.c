@@ -1140,6 +1140,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd,
 	srv.pac_opaque_encr_key = conf->pac_opaque_encr_key;
 	srv.eap_fast_a_id = conf->eap_fast_a_id;
 	srv.eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
+	srv.tnc = conf->tnc;
 	srv.ipv6 = conf->radius_server_ipv6;
 	srv.get_eap_user = hostapd_radius_get_eap_user;
 

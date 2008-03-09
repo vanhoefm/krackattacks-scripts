@@ -258,6 +258,13 @@ OBJS += ../src/eap_common/eap_ikev2_common.o ../src/eap_common/ikev2_common.o
 NEED_DH_GROUPS=y
 endif
 
+ifdef CONFIG_EAP_TNC
+CFLAGS += -DEAP_TNC
+OBJS += ../src/eap_server/eap_tnc.o
+OBJS += ../src/eap_server/tncs.o
+NEED_BASE64=y
+endif
+
 # Basic EAP functionality is needed for EAPOL
 OBJS += ../src/eap_server/eap.o
 OBJS += ../src/eap_common/eap_common.o

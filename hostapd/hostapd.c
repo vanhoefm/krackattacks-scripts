@@ -41,6 +41,7 @@
 #include "tls.h"
 #include "eap_server/eap_sim_db.h"
 #include "eap_server/eap.h"
+#include "eap_server/tncs.h"
 #include "version.h"
 #include "l2_packet/l2_packet.h"
 
@@ -1854,7 +1855,7 @@ int main(int argc, char *argv[])
 	struct hapd_interfaces interfaces;
 	int ret = 1, k;
 	size_t i, j;
-	int c, debug = 0, daemonize = 0;
+	int c, debug = 0, daemonize = 0, tnc = 0;
 	const char *pid_file = NULL;
 
 	hostapd_logger_register_cb(hostapd_logger_cb);
@@ -1940,7 +1941,19 @@ int main(int argc, char *argv[])
 						    setup_interface_done);
 		if (ret)
 			goto out;
+
+		for (k = 0; k < (int) interfaces.iface[i]->num_bss; k++) {
+			if (interfaces.iface[i]->bss[0]->conf->tnc)
+				tnc++;
+		}
 	}
+
+#ifdef EAP_TNC
+	if (tnc && tncs_global_init() < 0) {
+		wpa_printf(MSG_ERROR, "Failed to initialize TNCS");
+		goto out;
+	}
+#endif /* EAP_TNC */
 
 	if (daemonize && os_daemonize(pid_file)) {
 		perror("daemon");
@@ -1985,6 +1998,10 @@ int main(int argc, char *argv[])
 		hostapd_cleanup_iface(interfaces.iface[i]);
 	}
 	os_free(interfaces.iface);
+
+#ifdef EAP_TNC
+	tncs_global_deinit();
+#endif /* EAP_TNC */
 
 	eloop_destroy();
 

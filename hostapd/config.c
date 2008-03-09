@@ -1474,6 +1474,10 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "eap_sim_aka_result_ind") == 0) {
 			bss->eap_sim_aka_result_ind = atoi(pos);
 #endif /* EAP_SIM */
+#ifdef EAP_TNC
+		} else if (os_strcmp(buf, "tnc") == 0) {
+			bss->tnc = atoi(pos);
+#endif /* EAP_TNC */
 #endif /* EAP_SERVER */
 		} else if (os_strcmp(buf, "eap_message") == 0) {
 			char *term;

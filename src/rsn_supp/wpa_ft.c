@@ -536,7 +536,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name",
 		    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
 
-	bssid = ft_action ? sm->target_ap : sm->bssid;
+	bssid = target_ap;
 	wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, ftie->anonce, sm->own_addr,
 			  bssid, sm->pmk_r1_name,
 			  (u8 *) &sm->ptk, sizeof(sm->ptk), ptk_name);
@@ -582,7 +582,7 @@ int wpa_ft_is_completed(struct wpa_sm *sm)
 
 
 int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
-				 size_t ies_len)
+				 size_t ies_len, const u8 *src_addr)
 {
 	struct wpa_ft_ies parse;
 	struct rsn_mdie *mdie;
@@ -665,7 +665,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (wpa_ft_mic(sm->ptk.kck, sm->own_addr, sm->bssid, 6,
+	if (wpa_ft_mic(sm->ptk.kck, sm->own_addr, src_addr, 6,
 		       parse.mdie - 2, parse.mdie_len + 2,
 		       parse.ftie - 2, parse.ftie_len + 2,
 		       parse.rsn - 2, parse.rsn_len + 2, NULL, 0,

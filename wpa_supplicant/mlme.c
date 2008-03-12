@@ -356,7 +356,7 @@ static void ieee80211_sta_wmm_params(struct wpa_supplicant *wpa_s,
 
 static void ieee80211_set_associated(struct wpa_supplicant *wpa_s, int assoc)
 {
-	if (wpa_s->mlme.associated == assoc)
+	if (wpa_s->mlme.associated == assoc && !assoc)
 		return;
 
 	wpa_s->mlme.associated = assoc;
@@ -1051,6 +1051,7 @@ static void ieee80211_rx_mgmt_auth(struct wpa_supplicant *wpa_s,
 		data.ft_ies.ies = mgmt->u.auth.variable;
 		data.ft_ies.ies_len = len -
 			(mgmt->u.auth.variable - (u8 *) mgmt);
+		os_memcpy(data.ft_ies.target_ap, wpa_s->bssid, ETH_ALEN);
 		wpa_supplicant_event(wpa_s, EVENT_FT_RESPONSE, &data);
 		ieee80211_auth_completed(wpa_s);
 		break;
@@ -1258,7 +1259,8 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 			return;
 		}
 		if (wpa_ft_validate_reassoc_resp(
-			    wpa_s->wpa, pos, len - (pos - (u8 *) mgmt)) < 0) {
+			    wpa_s->wpa, pos, len - (pos - (u8 *) mgmt),
+			    mgmt->sa) < 0) {
 			wpa_printf(MSG_DEBUG, "MLME: FT validation of Reassoc"
 				   "Resp failed");
 			return;

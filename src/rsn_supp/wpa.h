@@ -280,7 +280,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			    int ft_action, const u8 *target_ap);
 int wpa_ft_is_completed(struct wpa_sm *sm);
 int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
-				 size_t ies_len);
+				 size_t ies_len, const u8 *src_addr);
 int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap);
 
 #else /* CONFIG_IEEE80211R */
@@ -310,7 +310,8 @@ static inline int wpa_ft_is_completed(struct wpa_sm *sm)
 }
 
 static inline int
-wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
+wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
+			     const u8 *src_addr)
 {
 	return -1;
 }

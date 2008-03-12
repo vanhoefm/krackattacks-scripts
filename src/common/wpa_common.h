@@ -87,8 +87,8 @@
 
 #define WPA_OUI_TYPE RSN_SELECTOR(0x00, 0x50, 0xf2, 1)
 
-#define RSN_SELECTOR_PUT(a, val) WPA_PUT_BE32((a), (val))
-#define RSN_SELECTOR_GET(a) WPA_GET_BE32((a))
+#define RSN_SELECTOR_PUT(a, val) WPA_PUT_BE32((u8 *) (a), (val))
+#define RSN_SELECTOR_GET(a) WPA_GET_BE32((const u8 *) (a))
 
 #define RSN_NUM_REPLAY_COUNTERS_1 0
 #define RSN_NUM_REPLAY_COUNTERS_2 1

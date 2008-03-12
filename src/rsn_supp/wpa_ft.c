@@ -121,7 +121,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 			       const u8 *kck, const u8 *target_ap)
 {
 	size_t buf_len;
-	u8 *buf, *pos, *ftie_len;
+	u8 *buf, *pos, *ftie_len, *ftie_pos;
 	struct rsn_mdie *mdie;
 	struct rsn_ftie *ftie;
 	struct rsn_ie_hdr *rsnie;
@@ -226,6 +226,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	mdie->ft_capab = 0; /* FIX: copy from the target AP's MDIE */
 
 	/* FTIE[SNonce, R0KH-ID] */
+	ftie_pos = pos;
 	*pos++ = WLAN_EID_FAST_BSS_TRANSITION;
 	ftie_len = pos++;
 	ftie = (struct rsn_ftie *) pos;
@@ -255,7 +256,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		ftie->mic_control[1] = 3; /* Information element count */
 		if (wpa_ft_mic(kck, sm->own_addr, target_ap, 5,
 			       ((u8 *) mdie) - 2, 2 + sizeof(*mdie),
-			       ((u8 *) ftie) - 2, 2 + *ftie_len,
+			       ftie_pos, 2 + *ftie_len,
 			       (u8 *) rsnie, 2 + rsnie->len, NULL, 0,
 			       ftie->mic) < 0) {
 			wpa_printf(MSG_INFO, "FT: Failed to calculate MIC");

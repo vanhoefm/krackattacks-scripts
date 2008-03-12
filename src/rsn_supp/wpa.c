@@ -1859,6 +1859,8 @@ void wpa_sm_deinit(struct wpa_sm *sm)
  */
 void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
 {
+	int clear_ptk = 1;
+
 	if (sm == NULL)
 		return;
 
@@ -1871,15 +1873,25 @@ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
 		rsn_preauth_deinit(sm);
 
 #ifdef CONFIG_IEEE80211R
-	if ((sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	     sm->key_mgmt == WPA_KEY_MGMT_FT_PSK) &&
-	    wpa_ft_is_completed(sm)) {
+	if (wpa_ft_is_completed(sm)) {
 		wpa_supplicant_key_neg_complete(sm, sm->bssid, 1);
 
 		/* Prepare for the next transition */
 		wpa_ft_prepare_auth_request(sm);
+
+		clear_ptk = 0;
 	}
 #endif /* CONFIG_IEEE80211R */
+
+	if (clear_ptk) {
+		/*
+		 * IEEE 802.11, 8.4.10: Delete PTK SA on (re)association if
+		 * this is not part of a Fast BSS Transition.
+		 */
+		wpa_printf(MSG_DEBUG, "WPA: Clear old PTK");
+		sm->ptk_set = 0;
+		sm->tptk_set = 0;
+	}
 }
 
 

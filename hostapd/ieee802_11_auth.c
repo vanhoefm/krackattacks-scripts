@@ -74,8 +74,12 @@ static int hostapd_acl_cache_get(struct hostapd_data *hapd, const u8 *addr,
 			if (now - entry->timestamp > RADIUS_ACL_TIMEOUT)
 				return -1; /* entry has expired */
 			if (entry->accepted == HOSTAPD_ACL_ACCEPT_TIMEOUT)
-				*session_timeout = entry->session_timeout;
-			*acct_interim_interval = entry->acct_interim_interval;
+				if (session_timeout)
+					*session_timeout =
+						entry->session_timeout;
+			if (acct_interim_interval)
+				*acct_interim_interval =
+					entry->acct_interim_interval;
 			if (vlan_id)
 				*vlan_id = entry->vlan_id;
 			return entry->accepted;
@@ -192,8 +196,10 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    const u8 *msg, size_t len, u32 *session_timeout,
 			    u32 *acct_interim_interval, int *vlan_id)
 {
-	*session_timeout = 0;
-	*acct_interim_interval = 0;
+	if (session_timeout)
+		*session_timeout = 0;
+	if (acct_interim_interval)
+		*acct_interim_interval = 0;
 	if (vlan_id)
 		*vlan_id = 0;
 

@@ -22,6 +22,7 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eloop.h"
+#include "driver.h"
 
 #define RADIUS_ACL_TIMEOUT 30
 
@@ -293,7 +294,9 @@ static void hostapd_acl_expire_cache(struct hostapd_data *hapd, time_t now)
 				prev->next = entry->next;
 			else
 				hapd->acl_cache = entry->next;
-
+#ifdef CONFIG_DRIVER_RADIUS_ACL
+			hostapd_set_radius_acl_expire(hapd, entry->addr);
+#endif /* CONFIG_DRIVER_RADIUS_ACL */
 			tmp = entry;
 			entry = entry->next;
 			os_free(tmp);
@@ -417,11 +420,16 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	cache->next = hapd->acl_cache;
 	hapd->acl_cache = cache;
 
+#ifdef CONFIG_DRIVER_RADIUS_ACL
+	hostapd_set_radius_acl_auth(hapd, query->addr, cache->accepted,
+				    cache->session_timeout);
+#else /* CONFIG_DRIVER_RADIUS_ACL */
 	/* Re-send original authentication frame for 802.11 processing */
 	wpa_printf(MSG_DEBUG, "Re-sending authentication frame after "
 		   "successful RADIUS ACL query");
 	ieee802_11_mgmt(hapd, query->auth_msg, query->auth_msg_len,
 			WLAN_FC_STYPE_AUTH, NULL);
+#endif /* CONFIG_DRIVER_RADIUS_ACL */
 
  done:
 	if (prev == NULL)

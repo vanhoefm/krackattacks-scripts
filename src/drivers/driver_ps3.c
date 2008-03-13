@@ -30,7 +30,7 @@ static int wpa_driver_ps3_set_wpa_key(struct wpa_driver_wext_data *drv,
 	char *buf, *str;
 
 	if (!params->psk && !params->passphrase) {
-		wpa_printf(MSG_INFO, "%s:no PSK error\n", __FUNCTION__);
+		wpa_printf(MSG_INFO, "%s:no PSK error", __func__);
 		return -EINVAL;
 	}
 
@@ -49,14 +49,16 @@ static int wpa_driver_ps3_set_wpa_key(struct wpa_driver_wext_data *drv,
 	} else if (params->passphrase) {
 		/* including quotations and null */
 		iwr.u.data.length = strlen(params->passphrase) + 3;
+		buf = os_malloc(iwr.u.data.length);
 		if (!buf)
 			return -ENOMEM;
 		buf[0] = '"';
 		os_memcpy(buf + 1, params->passphrase, iwr.u.data.length - 3);
 		buf[iwr.u.data.length - 2] = '"';
 		buf[iwr.u.data.length - 1] = '\0';
-	}
-	iwr.u.data.pointer = (caddr_t)buf;
+	} else
+		return -EINVAL;
+	iwr.u.data.pointer = (caddr_t) buf;
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 	ret = ioctl(drv->ioctl_sock, SIOCIWFIRSTPRIV, &iwr);
 	os_free(buf);
@@ -93,9 +95,9 @@ static int wpa_driver_ps3_associate(void *priv,
 				    struct wpa_driver_associate_params *params)
 {
 	struct wpa_driver_wext_data *drv = priv;
-	int ret, i, value;
+	int ret, value;
 
-	wpa_printf(MSG_DEBUG, "%s: <-\n", __func__);
+	wpa_printf(MSG_DEBUG, "%s: <-", __func__);
 
 	/* clear BSSID */
 	if (!params->bssid &&
@@ -123,8 +125,7 @@ static int wpa_driver_ps3_associate(void *priv,
 					   IW_AUTH_CIPHER_GROUP, value) < 0)
 		ret = -1;
 	value = wpa_driver_wext_keymgmt2wext(params->key_mgmt_suite);
-	if (wpa_driver_wext_set_auth_param(drv,
-					   IW_AUTH_KEY_MGMT, value) < 0)
+	if (wpa_driver_wext_set_auth_param(drv, IW_AUTH_KEY_MGMT, value) < 0)
 		ret = -1;
 
 	/* set selected BSSID */
@@ -149,7 +150,7 @@ static int wpa_driver_ps3_associate(void *priv,
 	/* start to associate */
 	ret = wpa_driver_wext_set_ssid(drv, params->ssid, params->ssid_len);
 
-	wpa_printf(MSG_DEBUG, "%s: ->\n", __func__);
+	wpa_printf(MSG_DEBUG, "%s: ->", __func__);
 
 	return ret;
 }
@@ -157,17 +158,17 @@ static int wpa_driver_ps3_associate(void *priv,
 static int wpa_driver_ps3_get_capa(void *priv, struct wpa_driver_capa *capa)
 {
 	int ret;
-	wpa_printf(MSG_DEBUG, "%s:<-\n", __func__);
+	wpa_printf(MSG_DEBUG, "%s:<-", __func__);
 
 	ret = wpa_driver_wext_get_capa(priv, capa);
 	if (ret) {
-		wpa_printf(MSG_INFO, "%s: base wext returns error %d\n", __func__,
-			   ret);
+		wpa_printf(MSG_INFO, "%s: base wext returns error %d",
+			   __func__, ret);
 		return ret;
 	}
 	/* PS3 hypervisor does association and 4way handshake by itself */
 	capa->flags |= WPA_DRIVER_FLAGS_4WAY_HANDSHAKE;
-	wpa_printf(MSG_DEBUG, "%s:->\n", __func__);
+	wpa_printf(MSG_DEBUG, "%s:->", __func__);
 	return 0;
 }
 

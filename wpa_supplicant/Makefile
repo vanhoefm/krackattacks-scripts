@@ -210,6 +210,12 @@ LDFLAGS += -framework CoreFoundation
 LDFLAGS += -F/System/Library/PrivateFrameworks -framework Apple80211
 endif
 
+ifdef CONFIG_DRIVER_PS3
+CFLAGS += -DCONFIG_DRIVER_PS3 -m64
+OBJS_d += ../src/drivers/driver_ps3.o
+LDFLAGS += -m64
+endif
+
 ifdef CONFIG_DRIVER_IPHONE
 CFLAGS += -DCONFIG_DRIVER_IPHONE
 OBJS_d += ../src/drivers/driver_iphone.o

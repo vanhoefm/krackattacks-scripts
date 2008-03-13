@@ -15,7 +15,34 @@
 #ifndef DRIVER_WEXT_H
 #define DRIVER_WEXT_H
 
-struct wpa_driver_wext_data;
+#include <net/if.h>
+
+struct wpa_driver_wext_data {
+	void *ctx;
+	int event_sock;
+	int ioctl_sock;
+	int mlme_sock;
+	char ifname[IFNAMSIZ + 1];
+	int ifindex;
+	int ifindex2;
+	u8 *assoc_req_ies;
+	size_t assoc_req_ies_len;
+	u8 *assoc_resp_ies;
+	size_t assoc_resp_ies_len;
+	struct wpa_driver_capa capa;
+	int has_capability;
+	int we_version_compiled;
+
+	/* for set_auth_alg fallback */
+	int use_crypt;
+	int auth_alg_fallback;
+
+	int operstate;
+
+	char mlmedev[IFNAMSIZ + 1];
+
+	int scan_complete_events;
+};
 
 int wpa_driver_wext_get_ifflags(struct wpa_driver_wext_data *drv, int *flags);
 int wpa_driver_wext_set_ifflags(struct wpa_driver_wext_data *drv, int flags);
@@ -42,5 +69,13 @@ void wpa_driver_wext_deinit(void *priv);
 
 int wpa_driver_wext_set_operstate(void *priv, int state);
 int wpa_driver_wext_get_version(struct wpa_driver_wext_data *drv);
+
+int wpa_driver_wext_associate(void *priv,
+			      struct wpa_driver_associate_params *params);
+int wpa_driver_wext_get_capa(void *priv, struct wpa_driver_capa *capa);
+int wpa_driver_wext_set_auth_param(struct wpa_driver_wext_data *drv,
+				   int idx, u32 value);
+int wpa_driver_wext_cipher2wext(int cipher);
+int wpa_driver_wext_keymgmt2wext(int keymgmt);
 
 #endif /* DRIVER_WEXT_H */

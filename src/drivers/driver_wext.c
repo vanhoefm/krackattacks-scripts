@@ -149,32 +149,6 @@ enum {
 #endif /* CONFIG_CLIENT_MLME */
 
 
-struct wpa_driver_wext_data {
-	void *ctx;
-	int event_sock;
-	int ioctl_sock;
-	int mlme_sock;
-	char ifname[IFNAMSIZ + 1];
-	int ifindex;
-	int ifindex2;
-	u8 *assoc_req_ies;
-	size_t assoc_req_ies_len;
-	u8 *assoc_resp_ies;
-	size_t assoc_resp_ies_len;
-	struct wpa_driver_capa capa;
-	int has_capability;
-	int we_version_compiled;
-
-	/* for set_auth_alg fallback */
-	int use_crypt;
-	int auth_alg_fallback;
-
-	int operstate;
-
-	char mlmedev[IFNAMSIZ + 1];
-
-	int scan_complete_events;
-};
 
 
 static int wpa_driver_wext_flush_pmkid(void *priv);
@@ -239,8 +213,8 @@ static int wpa_driver_wext_send_oper_ifla(struct wpa_driver_wext_data *drv,
 }
 
 
-static int wpa_driver_wext_set_auth_param(struct wpa_driver_wext_data *drv,
-					  int idx, u32 value)
+int wpa_driver_wext_set_auth_param(struct wpa_driver_wext_data *drv,
+				   int idx, u32 value)
 {
 	struct iwreq iwr;
 	int ret = 0;
@@ -1977,7 +1951,7 @@ static int wpa_driver_wext_set_gen_ie(void *priv, const u8 *ie,
 }
 
 
-static int wpa_driver_wext_cipher2wext(int cipher)
+int wpa_driver_wext_cipher2wext(int cipher)
 {
 	switch (cipher) {
 	case CIPHER_NONE:
@@ -1996,7 +1970,7 @@ static int wpa_driver_wext_cipher2wext(int cipher)
 }
 
 
-static int wpa_driver_wext_keymgmt2wext(int keymgmt)
+int wpa_driver_wext_keymgmt2wext(int keymgmt)
 {
 	switch (keymgmt) {
 	case KEY_MGMT_802_1X:
@@ -2054,9 +2028,8 @@ wpa_driver_wext_auth_alg_fallback(struct wpa_driver_wext_data *drv,
 }
 
 
-static int
-wpa_driver_wext_associate(void *priv,
-			  struct wpa_driver_associate_params *params)
+int wpa_driver_wext_associate(void *priv,
+			      struct wpa_driver_associate_params *params)
 {
 	struct wpa_driver_wext_data *drv = priv;
 	int ret = 0;
@@ -2239,7 +2212,7 @@ static int wpa_driver_wext_flush_pmkid(void *priv)
 }
 
 
-static int wpa_driver_wext_get_capa(void *priv, struct wpa_driver_capa *capa)
+int wpa_driver_wext_get_capa(void *priv, struct wpa_driver_capa *capa)
 {
 	struct wpa_driver_wext_data *drv = priv;
 	if (!drv->has_capability)

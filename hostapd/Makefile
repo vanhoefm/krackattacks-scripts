@@ -166,7 +166,6 @@ ifdef CONFIG_EAP_PEAP
 CFLAGS += -DEAP_PEAP
 OBJS += ../src/eap_server/eap_peap.o
 TLS_FUNCS=y
-CONFIG_EAP_TLV=y
 CONFIG_EAP_MSCHAPV2=y
 endif
 
@@ -236,11 +235,6 @@ endif
 ifdef CONFIG_EAP_VENDOR_TEST
 CFLAGS += -DEAP_VENDOR_TEST
 OBJS += ../src/eap_server/eap_vendor_test.o
-endif
-
-ifdef CONFIG_EAP_TLV
-CFLAGS += -DEAP_TLV
-OBJS += ../src/eap_server/eap_tlv.o
 endif
 
 ifdef CONFIG_EAP_FAST

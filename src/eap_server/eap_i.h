@@ -157,7 +157,6 @@ struct eap_sm {
 	int user_eap_method_index;
 	int init_phase2;
 	void *ssl_ctx;
-	enum { TLV_REQ_NONE, TLV_REQ_SUCCESS, TLV_REQ_FAILURE } tlv_request;
 	void *eap_sim_db_priv;
 	Boolean backend_auth;
 	Boolean update_user;

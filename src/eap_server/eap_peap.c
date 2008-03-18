@@ -45,6 +45,7 @@ struct eap_peap_data {
 	void *phase2_priv;
 	int force_version;
 	struct wpabuf *pending_phase2_resp;
+	enum { TLV_REQ_NONE, TLV_REQ_SUCCESS, TLV_REQ_FAILURE } tlv_request;
 };
 
 
@@ -115,43 +116,37 @@ static struct wpabuf * eap_peapv2_tlv_eap_payload(struct wpabuf *buf)
 }
 
 
-static EapType eap_peap_req_success(struct eap_sm *sm,
-				    struct eap_peap_data *data)
+static void eap_peap_req_success(struct eap_sm *sm,
+				 struct eap_peap_data *data)
 {
 	if (data->state == FAILURE || data->state == FAILURE_REQ) {
 		eap_peap_state(data, FAILURE);
-		return EAP_TYPE_NONE;
+		return;
 	}
 
 	if (data->peap_version == 0) {
-		sm->tlv_request = TLV_REQ_SUCCESS;
+		data->tlv_request = TLV_REQ_SUCCESS;
 		eap_peap_state(data, PHASE2_TLV);
-		return EAP_TYPE_TLV;
 	} else {
 		eap_peap_state(data, SUCCESS_REQ);
-		return EAP_TYPE_NONE;
 	}
 }
 
 
-static EapType eap_peap_req_failure(struct eap_sm *sm,
-				    struct eap_peap_data *data)
+static void eap_peap_req_failure(struct eap_sm *sm,
+				 struct eap_peap_data *data)
 {
 	if (data->state == FAILURE || data->state == FAILURE_REQ ||
-	    data->state == SUCCESS_REQ ||
-	    (data->phase2_method &&
-	     data->phase2_method->method == EAP_TYPE_TLV)) {
+	    data->state == SUCCESS_REQ || data->tlv_request != TLV_REQ_NONE) {
 		eap_peap_state(data, FAILURE);
-		return EAP_TYPE_NONE;
+		return;
 	}
 
 	if (data->peap_version == 0) {
-		sm->tlv_request = TLV_REQ_FAILURE;
+		data->tlv_request = TLV_REQ_FAILURE;
 		eap_peap_state(data, PHASE2_TLV);
-		return EAP_TYPE_TLV;
 	} else {
 		eap_peap_state(data, FAILURE_REQ);
-		return EAP_TYPE_NONE;
 	}
 }
 
@@ -308,6 +303,36 @@ static struct wpabuf * eap_peap_build_phase2_req(struct eap_sm *sm,
 }
 
 
+static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
+						 struct eap_peap_data *data,
+						 u8 id)
+{
+	struct wpabuf *buf, *encr_req;
+
+	buf = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TLV, 6,
+			    EAP_CODE_REQUEST, id);
+	if (buf == NULL)
+		return NULL;
+
+	wpabuf_put_u8(buf, 0x80); /* Mandatory */
+	wpabuf_put_u8(buf, EAP_TLV_RESULT_TLV);
+	/* Length */
+	wpabuf_put_be16(buf, 2);
+	/* Status */
+	wpabuf_put_be16(buf, data->tlv_request == TLV_REQ_SUCCESS ?
+			EAP_TLV_RESULT_SUCCESS : EAP_TLV_RESULT_FAILURE);
+
+	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-PEAP: Encrypting Phase 2 TLV data",
+			    buf);
+
+	encr_req = eap_peap_encrypt(sm, data, id, wpabuf_head(buf),
+				    wpabuf_len(buf));
+	wpabuf_free(buf);
+
+	return encr_req;
+}
+
+
 static struct wpabuf * eap_peap_build_phase2_term(struct eap_sm *sm,
 						  struct eap_peap_data *data,
 						  u8 id, int success)
@@ -347,8 +372,9 @@ static struct wpabuf * eap_peap_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		return eap_peap_build_req(sm, data, id);
 	case PHASE2_ID:
 	case PHASE2_METHOD:
-	case PHASE2_TLV:
 		return eap_peap_build_phase2_req(sm, data, id);
+	case PHASE2_TLV:
+		return eap_peap_build_phase2_tlv(sm, data, id);
 	case SUCCESS_REQ:
 		return eap_peap_build_phase2_term(sm, data, id, 1);
 	case FAILURE_REQ:
@@ -397,6 +423,103 @@ static int eap_peap_phase2_init(struct eap_sm *sm, struct eap_peap_data *data,
 }
 
 
+static void eap_peap_process_phase2_tlv(struct eap_sm *sm,
+					struct eap_peap_data *data,
+					struct wpabuf *in_data)
+{
+	const u8 *pos;
+	size_t left;
+	const u8 *result_tlv = NULL;
+	size_t result_tlv_len = 0;
+	int tlv_type, mandatory, tlv_len;
+
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TLV, in_data, &left);
+	if (pos == NULL) {
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Invalid EAP-TLV header");
+		return;
+	}
+
+	/* Parse TLVs */
+	wpa_hexdump(MSG_DEBUG, "EAP-TLV: Received TLVs", pos, left);
+	while (left >= 4) {
+		mandatory = !!(pos[0] & 0x80);
+		tlv_type = pos[0] & 0x3f;
+		tlv_type = (tlv_type << 8) | pos[1];
+		tlv_len = ((int) pos[2] << 8) | pos[3];
+		pos += 4;
+		left -= 4;
+		if ((size_t) tlv_len > left) {
+			wpa_printf(MSG_DEBUG, "EAP-TLV: TLV underrun "
+				   "(tlv_len=%d left=%lu)", tlv_len,
+				   (unsigned long) left);
+			eap_peap_state(data, FAILURE);
+			return;
+		}
+		switch (tlv_type) {
+		case EAP_TLV_RESULT_TLV:
+			result_tlv = pos;
+			result_tlv_len = tlv_len;
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "EAP-TLV: Unsupported TLV Type "
+				   "%d%s", tlv_type,
+				   mandatory ? " (mandatory)" : "");
+			if (mandatory) {
+				eap_peap_state(data, FAILURE);
+				return;
+			}
+			/* Ignore this TLV, but process other TLVs */
+			break;
+		}
+
+		pos += tlv_len;
+		left -= tlv_len;
+	}
+	if (left) {
+		wpa_printf(MSG_DEBUG, "EAP-TLV: Last TLV too short in "
+			   "Request (left=%lu)", (unsigned long) left);
+		eap_peap_state(data, FAILURE);
+		return;
+	}
+
+	/* Process supported TLVs */
+	if (result_tlv) {
+		int status;
+		const char *requested;
+
+		wpa_hexdump(MSG_DEBUG, "EAP-TLV: Result TLV",
+			    result_tlv, result_tlv_len);
+		if (result_tlv_len < 2) {
+			wpa_printf(MSG_INFO, "EAP-TLV: Too short Result TLV "
+				   "(len=%lu)",
+				   (unsigned long) result_tlv_len);
+			eap_peap_state(data, FAILURE);
+			return;
+		}
+		requested = data->tlv_request == TLV_REQ_SUCCESS ? "Success" :
+			"Failure";
+		status = WPA_GET_BE16(result_tlv);
+		if (status == EAP_TLV_RESULT_SUCCESS) {
+			wpa_printf(MSG_INFO, "EAP-TLV: TLV Result - Success "
+				   "- requested %s", requested);
+			if (data->tlv_request == TLV_REQ_SUCCESS)
+				eap_peap_state(data, SUCCESS);
+			else
+				eap_peap_state(data, FAILURE);
+			
+		} else if (status == EAP_TLV_RESULT_FAILURE) {
+			wpa_printf(MSG_INFO, "EAP-TLV: TLV Result - Failure - "
+				   "requested %s", requested);
+			eap_peap_state(data, FAILURE);
+		} else {
+			wpa_printf(MSG_INFO, "EAP-TLV: Unknown TLV Result "
+				   "Status %d", status);
+			eap_peap_state(data, FAILURE);
+		}
+	}
+}
+
+
 static void eap_peap_process_phase2_response(struct eap_sm *sm,
 					     struct eap_peap_data *data,
 					     struct wpabuf *in_data)
@@ -405,6 +528,11 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 	const struct eap_hdr *hdr;
 	const u8 *pos;
 	size_t left;
+
+	if (data->state == PHASE2_TLV) {
+		eap_peap_process_phase2_tlv(sm, data, in_data);
+		return;
+	}
 
 	if (data->phase2_priv == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: %s - Phase2 not "
@@ -428,7 +556,8 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d",
 				   next_type);
 		} else {
-			next_type = eap_peap_req_failure(sm, data);
+			eap_peap_req_failure(sm, data);
+			next_type = EAP_TYPE_NONE;
 		}
 		eap_peap_phase2_init(sm, data, next_type);
 		return;
@@ -454,7 +583,8 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 
 	if (!data->phase2_method->isSuccess(sm, data->phase2_priv)) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: Phase2 method failed");
-		next_type = eap_peap_req_failure(sm, data);
+		eap_peap_req_failure(sm, data);
+		next_type = EAP_TYPE_NONE;
 		eap_peap_phase2_init(sm, data, next_type);
 		return;
 	}
@@ -467,7 +597,8 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 					  "Identity not found in the user "
 					  "database",
 					  sm->identity, sm->identity_len);
-			next_type = eap_peap_req_failure(sm, data);
+			eap_peap_req_failure(sm, data);
+			next_type = EAP_TYPE_NONE;
 			break;
 		}
 
@@ -477,15 +608,8 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d", next_type);
 		break;
 	case PHASE2_METHOD:
-		next_type = eap_peap_req_success(sm, data);
-		break;
-	case PHASE2_TLV:
-		if (sm->tlv_request == TLV_REQ_SUCCESS ||
-		    data->state == SUCCESS_REQ) {
-			eap_peap_state(data, SUCCESS);
-		} else {
-			eap_peap_state(data, FAILURE);
-		}
+		eap_peap_req_success(sm, data);
+		next_type = EAP_TYPE_NONE;
 		break;
 	case FAILURE:
 		break;

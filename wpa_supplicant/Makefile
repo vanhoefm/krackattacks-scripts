@@ -274,7 +274,6 @@ OBJS_h += ../src/eap_server/eap_peap.o
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
-CONFIG_EAP_TLV=y
 endif
 
 ifdef CONFIG_EAP_TTLS
@@ -415,13 +414,6 @@ OBJS += ../src/eap_common/eap_sim_common.o
 OBJS_h += ../src/eap_server/eap_sim_db.o
 NEED_AES=y
 NEED_FIPS186_2_PRF=y
-endif
-
-ifdef CONFIG_EAP_TLV
-# EAP-TLV
-CFLAGS += -DEAP_TLV
-OBJS += ../src/eap_peer/eap_tlv.o
-OBJS_h += ../src/eap_server/eap_tlv.o
 endif
 
 ifdef CONFIG_EAP_FAST

@@ -19,7 +19,7 @@
 #include "eap_tls_common.h"
 #include "eap_config.h"
 #include "tls.h"
-#include "eap_tlv.h"
+#include "eap_common/eap_tlv_common.h"
 #include "sha1.h"
 #include "eap_fast_pac.h"
 

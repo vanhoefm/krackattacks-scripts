@@ -117,7 +117,7 @@ static void * eap_peap_init(struct eap_sm *sm)
 	data->peap_version = EAP_PEAP_VERSION;
 	data->force_peap_version = -1;
 	data->peap_outer_success = 2;
-	data->crypto_binding = NO_BINDING;
+	data->crypto_binding = OPTIONAL_BINDING;
 
 	if (config && config->phase1 &&
 	    eap_peap_parse_phase1(data, config->phase1) < 0) {
@@ -1249,9 +1249,14 @@ static u8 * eap_peap_getKey(struct eap_sm *sm, void *priv, size_t *len)
 
 	if (data->crypto_binding_used) {
 		u8 csk[128];
+		/*
+		 * Note: It looks like Microsoft implementation requires null
+		 * termination for this label while the one used for deriving
+		 * IPMK|CMK did not use null termination.
+		 */
 		peap_prfplus(data->peap_version, data->ipmk, 40,
 			     "Session Key Generating Function",
-			     (u8 *) "", 0, csk, sizeof(csk));
+			     (u8 *) "\00", 1, csk, sizeof(csk));
 		wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: CSK", csk, sizeof(csk));
 		os_memcpy(key, csk, EAP_TLS_KEY_LEN);
 		wpa_hexdump(MSG_DEBUG, "EAP-PEAP: Derived key",

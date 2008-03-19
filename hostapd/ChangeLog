@@ -8,6 +8,7 @@ ChangeLog for hostapd
 	  (this version implements the EAP-TNC method and EAP-TTLS/EAP-FAST
 	  changes needed to run two methods in sequence (IF-T) and the IF-IMV
 	  and IF-TNCCS interfaces from TNCS)
+	* added support for optional cryptobinding with PEAPv0
 
 2008-02-22 - v0.6.3
 	* fixed Reassociation Response callback processing when using internal

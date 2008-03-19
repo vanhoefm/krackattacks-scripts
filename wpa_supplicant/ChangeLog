@@ -4,6 +4,7 @@ ChangeLog for wpa_supplicant
 	* added support for EAP Sequences in EAP-FAST Phase 2
 	* added support for using TNC with EAP-FAST
 	* added driver_ps3 for the PS3 Linux wireless driver
+	* added support for optional cryptobinding with PEAPv0
 
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were

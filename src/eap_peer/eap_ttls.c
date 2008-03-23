@@ -669,7 +669,7 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 
 	/* MS-CHAP-Challenge */
 	challenge = eap_ttls_implicit_challenge(
-		sm, data, EAP_TTLS_MSCHAPV2_CHALLENGE_LEN * 2 + 1);
+		sm, data, EAP_TTLS_MSCHAPV2_CHALLENGE_LEN + 1);
 	if (challenge == NULL) {
 		wpabuf_free(msg);
 		wpa_printf(MSG_ERROR, "EAP-TTLS/MSCHAPV2: Failed to derive "
@@ -753,7 +753,8 @@ static int eap_ttls_phase2_request_mschap(struct eap_sm *sm,
 			       identity, identity_len);
 
 	/* MS-CHAP-Challenge */
-	challenge = eap_ttls_implicit_challenge(sm, data, EAP_TLS_KEY_LEN);
+	challenge = eap_ttls_implicit_challenge(
+		sm, data, EAP_TTLS_MSCHAP_CHALLENGE_LEN + 1);
 	if (challenge == NULL) {
 		wpabuf_free(msg);
 		wpa_printf(MSG_ERROR, "EAP-TTLS/MSCHAP: Failed to derive "
@@ -901,7 +902,8 @@ static int eap_ttls_phase2_request_chap(struct eap_sm *sm,
 			       identity, identity_len);
 
 	/* CHAP-Challenge */
-	challenge = eap_ttls_implicit_challenge(sm, data, EAP_TLS_KEY_LEN);
+	challenge = eap_ttls_implicit_challenge(
+		sm, data, EAP_TTLS_CHAP_CHALLENGE_LEN + 1);
 	if (challenge == NULL) {
 		wpabuf_free(msg);
 		wpa_printf(MSG_ERROR, "EAP-TTLS/CHAP: Failed to derive "

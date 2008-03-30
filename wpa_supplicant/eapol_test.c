@@ -66,6 +66,8 @@ struct eapol_test_data {
 
 	char *connect_info;
 	u8 own_addr[ETH_ALEN];
+	int cui_flag;
+	char *cui_str;
 };
 
 static struct eapol_test_data eapol_test;
@@ -162,6 +164,23 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 				 (u8 *) buf, os_strlen(buf))) {
 		printf("Could not add Connect-Info\n");
 		goto fail;
+	}
+
+	if (e->cui_flag) {
+		int l = 0;
+		if (e->cui_flag == 1) {
+			l = 1;
+			buf[0] = '\0';
+		} else if (e->cui_flag == 2) {
+			os_snprintf(buf, sizeof(buf), "%s", e->cui_str);
+			l = os_strlen(buf);
+		}
+		if (!radius_msg_add_attr(msg,
+					 RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+					 (u8 *) buf, l)) {
+			printf("Could not add Chargeable-User-Identity\n");
+			goto fail;
+		}
 	}
 
 	if (eap && !radius_msg_add_eap(msg, eap, len)) {
@@ -848,7 +867,8 @@ static void usage(void)
 	       "eapol_test [-nWS] -c<conf> [-a<AS IP>] [-p<AS port>] "
 	       "[-s<AS secret>] \\\n"
 	       "           [-r<count>] [-t<timeout>] [-C<Connect-Info>] \\\n"
-	       "           [-M<client MAC address>]\n"
+	       "           [-M<client MAC address>] \\\n"
+	       "           [-I<CUI>] [-i]\n"
 	       "eapol_test scard\n"
 	       "eapol_test sim <PIN> <num triplets> [debug]\n"
 	       "\n");
@@ -869,7 +889,10 @@ static void usage(void)
 	       "CONNECT 11Mbps 802.11b)\n"
 	       "  -M<client MAC address> = Set own MAC address "
 	       "(Calling-Station-Id,\n"
-	       "                           default: 02:00:00:00:00:01)\n");
+	       "                           default: 02:00:00:00:00:01)\n"
+	       "  -I<CUI> = send Chargeable-User-Identity containing the "
+	       "value of CUI\n"
+	       "  -i = send NUL value in Chargeable-User-Identity\n");
 }
 
 
@@ -896,7 +919,7 @@ int main(int argc, char *argv[])
 	wpa_debug_show_keys = 1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:c:C:M:np:r:s:St:W");
+		c = getopt(argc, argv, "a:c:C:iI:M:np:r:s:St:W");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -908,6 +931,13 @@ int main(int argc, char *argv[])
 			break;
 		case 'C':
 			eapol_test.connect_info = optarg;
+			break;
+		case 'i':
+			eapol_test.cui_flag = 1;
+			break;
+		case 'I':
+			eapol_test.cui_flag = 2;
+			eapol_test.cui_str = optarg;
 			break;
 		case 'M':
 			if (hwaddr_aton(optarg, eapol_test.own_addr)) {

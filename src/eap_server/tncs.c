@@ -1,5 +1,5 @@
 /*
- * EAP-TNC - TNCS (IF-IMV and IF-TNCCS)
+ * EAP-TNC - TNCS (IF-IMV, IF-TNCCS, and IF-TNCCS-SOH)
  * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,6 +18,8 @@
 #include "common.h"
 #include "base64.h"
 #include "tncs.h"
+#include "eap_common/eap_tlv_common.h"
+#include "eap_common/eap_defs.h"
 
 
 /* TODO: TNCS must be thread-safe; review the code and add locking etc. if
@@ -1229,4 +1231,42 @@ void tncs_global_deinit(void)
 	}
 
 	os_free(tncs_global_data);
+}
+
+
+struct wpabuf * tncs_build_soh_request(void)
+{
+	struct wpabuf *buf;
+
+	/*
+	 * Build a SoH Request TLV (to be used inside SoH EAP Extensions
+	 * Method)
+	 */
+
+	buf = wpabuf_alloc(8 + 4);
+	if (buf == NULL)
+		return NULL;
+
+	/* Vendor-Specific TLV (Microsoft) - SoH Request */
+	wpabuf_put_be16(buf, EAP_TLV_VENDOR_SPECIFIC_TLV); /* TLV Type */
+	wpabuf_put_be16(buf, 8); /* Length */
+
+	wpabuf_put_be32(buf, EAP_VENDOR_MICROSOFT); /* Vendor_Id */
+
+	wpabuf_put_be16(buf, 0x02); /* TLV Type - SoH Request TLV */
+	wpabuf_put_be16(buf, 0); /* Length */
+
+	return buf;
+}
+
+
+struct wpabuf * tncs_process_soh(const u8 *soh_tlv, size_t soh_tlv_len,
+				 int *failure)
+{
+	wpa_hexdump(MSG_DEBUG, "TNC: SoH TLV", soh_tlv, soh_tlv_len);
+	*failure = 0;
+
+	/* TODO: return MS-SoH Response TLV */
+
+	return NULL;
 }

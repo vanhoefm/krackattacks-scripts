@@ -1,5 +1,5 @@
 /*
- * EAP-TNC - TNCS (IF-IMV and IF-TNCCS)
+ * EAP-TNC - TNCS (IF-IMV, IF-TNCCS, and IF-TNCCS-SOH)
  * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -41,5 +41,9 @@ enum tncs_process_res tncs_process_if_tnccs(struct tncs_data *tncs,
 
 int tncs_global_init(void);
 void tncs_global_deinit(void);
+
+struct wpabuf * tncs_build_soh_request(void);
+struct wpabuf * tncs_process_soh(const u8 *soh_tlv, size_t soh_tlv_len,
+				 int *failure);
 
 #endif /* TNCS_H */

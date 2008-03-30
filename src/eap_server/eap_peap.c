@@ -20,6 +20,7 @@
 #include "eap_tls_common.h"
 #include "eap_common/eap_tlv_common.h"
 #include "tls.h"
+#include "tncs.h"
 
 
 /* Maximum supported PEAP version
@@ -37,7 +38,7 @@ struct eap_peap_data {
 	struct eap_ssl_data ssl;
 	enum {
 		START, PHASE1, PHASE1_ID2, PHASE2_START, PHASE2_ID,
-		PHASE2_METHOD,
+		PHASE2_METHOD, PHASE2_SOH,
 		PHASE2_TLV, SUCCESS_REQ, FAILURE_REQ, SUCCESS, FAILURE
 	} state;
 
@@ -56,6 +57,7 @@ struct eap_peap_data {
 	u8 cmk[20];
 	u8 *phase2_key;
 	size_t phase2_key_len;
+	struct wpabuf *soh_response;
 };
 
 
@@ -74,6 +76,8 @@ static const char * eap_peap_state_txt(int state)
 		return "PHASE2_ID";
 	case PHASE2_METHOD:
 		return "PHASE2_METHOD";
+	case PHASE2_SOH:
+		return "PHASE2_SOH";
 	case PHASE2_TLV:
 		return "PHASE2_TLV";
 	case SUCCESS_REQ:
@@ -199,6 +203,7 @@ static void eap_peap_reset(struct eap_sm *sm, void *priv)
 	eap_server_tls_ssl_deinit(sm, &data->ssl);
 	wpabuf_free(data->pending_phase2_resp);
 	os_free(data->phase2_key);
+	wpabuf_free(data->soh_response);
 	os_free(data);
 }
 
@@ -291,6 +296,10 @@ static struct wpabuf * eap_peap_build_phase2_req(struct eap_sm *sm,
 	const u8 *req;
 	size_t req_len;
 
+	if (data->phase2_method == NULL || data->phase2_priv == NULL) {
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Phase 2 method not ready");
+		return NULL;
+	}
 	buf = data->phase2_method->buildReq(sm, data->phase2_priv, id);
 	if (data->peap_version >= 2 && buf)
 		buf = eap_peapv2_tlv_eap_payload(buf);
@@ -313,6 +322,45 @@ static struct wpabuf * eap_peap_build_phase2_req(struct eap_sm *sm,
 
 	return encr_req;
 }
+
+
+#ifdef EAP_TNC
+static struct wpabuf * eap_peap_build_phase2_soh(struct eap_sm *sm,
+						 struct eap_peap_data *data,
+						 u8 id)
+{
+	struct wpabuf *buf1, *buf, *encr_req;
+	const u8 *req;
+	size_t req_len;
+
+	buf1 = tncs_build_soh_request();
+	if (buf1 == NULL)
+		return NULL;
+
+	buf = eap_msg_alloc(EAP_VENDOR_MICROSOFT, 0x21, wpabuf_len(buf1),
+			    EAP_CODE_REQUEST, id);
+	if (buf == NULL) {
+		wpabuf_free(buf1);
+		return NULL;
+	}
+	wpabuf_put_buf(buf, buf1);
+	wpabuf_free(buf1);
+
+	req = wpabuf_head(buf);
+	req_len = wpabuf_len(buf);
+
+	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: Encrypting Phase 2 SOH data",
+			req, req_len);
+
+	req += sizeof(struct eap_hdr);
+	req_len -= sizeof(struct eap_hdr);
+
+	encr_req = eap_peap_encrypt(sm, data, id, req, req_len);
+	wpabuf_free(buf);
+
+	return encr_req;
+}
+#endif /* EAP_TNC */
 
 
 static void eap_peap_get_isk(struct eap_peap_data *data,
@@ -454,6 +502,10 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 	len = 6; /* Result TLV */
 	if (data->crypto_binding != NO_BINDING)
 		len += 60; /* Cryptobinding TLV */
+#ifdef EAP_TNC
+	if (data->soh_response)
+		len += wpabuf_len(data->soh_response);
+#endif /* EAP_TNC */
 
 	buf = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TLV, len,
 			    EAP_CODE_REQUEST, id);
@@ -475,6 +527,16 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 		const u8 *addr[2];
 		size_t len[2];
 		u16 tlv_type;
+
+#ifdef EAP_TNC
+		if (data->soh_response) {
+			wpa_printf(MSG_DEBUG, "EAP-PEAP: Adding MS-SOH "
+				   "Response TLV");
+			wpabuf_put_buf(buf, data->soh_response);
+			wpabuf_free(data->soh_response);
+			data->soh_response = NULL;
+		}
+#endif /* EAP_TNC */
 
 		if (eap_peap_derive_cmk(sm, data) < 0 ||
 		    os_get_random(data->binding_nonce, 32)) {
@@ -563,6 +625,10 @@ static struct wpabuf * eap_peap_buildReq(struct eap_sm *sm, void *priv, u8 id)
 	case PHASE2_ID:
 	case PHASE2_METHOD:
 		return eap_peap_build_phase2_req(sm, data, id);
+#ifdef EAP_TNC
+	case PHASE2_SOH:
+		return eap_peap_build_phase2_soh(sm, data, id);
+#endif /* EAP_TNC */
 	case PHASE2_TLV:
 		return eap_peap_build_phase2_tlv(sm, data, id);
 	case SUCCESS_REQ:
@@ -782,6 +848,137 @@ static void eap_peap_process_phase2_tlv(struct eap_sm *sm,
 }
 
 
+#ifdef EAP_TNC
+static void eap_peap_process_phase2_soh(struct eap_sm *sm,
+					struct eap_peap_data *data,
+					struct wpabuf *in_data)
+{
+	const u8 *pos, *vpos;
+	size_t left;
+	const u8 *soh_tlv = NULL;
+	size_t soh_tlv_len = 0;
+	int tlv_type, mandatory, tlv_len, vtlv_len;
+	u8 next_type;
+	u32 vendor_id;
+
+	pos = eap_hdr_validate(EAP_VENDOR_MICROSOFT, 0x21, in_data, &left);
+	if (pos == NULL) {
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Not a valid SoH EAP "
+			   "Extensions Method header - skip TNC");
+		goto auth_method;
+	}
+
+	/* Parse TLVs */
+	wpa_hexdump(MSG_DEBUG, "EAP-PEAP: Received TLVs (SoH)", pos, left);
+	while (left >= 4) {
+		mandatory = !!(pos[0] & 0x80);
+		tlv_type = pos[0] & 0x3f;
+		tlv_type = (tlv_type << 8) | pos[1];
+		tlv_len = ((int) pos[2] << 8) | pos[3];
+		pos += 4;
+		left -= 4;
+		if ((size_t) tlv_len > left) {
+			wpa_printf(MSG_DEBUG, "EAP-PEAP: TLV underrun "
+				   "(tlv_len=%d left=%lu)", tlv_len,
+				   (unsigned long) left);
+			eap_peap_state(data, FAILURE);
+			return;
+		}
+		switch (tlv_type) {
+		case EAP_TLV_VENDOR_SPECIFIC_TLV:
+			if (tlv_len < 4) {
+				wpa_printf(MSG_DEBUG, "EAP-PEAP: Too short "
+					   "vendor specific TLV (len=%d)",
+					   (int) tlv_len);
+				eap_peap_state(data, FAILURE);
+				return;
+			}
+
+			vendor_id = WPA_GET_BE32(pos);
+			if (vendor_id != EAP_VENDOR_MICROSOFT) {
+				if (mandatory) {
+					eap_peap_state(data, FAILURE);
+					return;
+				}
+				break;
+			}
+
+			vpos = pos + 4;
+			mandatory = !!(vpos[0] & 0x80);
+			tlv_type = vpos[0] & 0x3f;
+			tlv_type = (tlv_type << 8) | vpos[1];
+			vtlv_len = ((int) vpos[2] << 8) | vpos[3];
+			vpos += 4;
+			if (vpos + vtlv_len > pos + left) {
+				wpa_printf(MSG_DEBUG, "EAP-PEAP: Vendor TLV "
+					   "underrun");
+				eap_peap_state(data, FAILURE);
+				return;
+			}
+
+			if (tlv_type == 1) {
+				soh_tlv = vpos;
+				soh_tlv_len = vtlv_len;
+				break;
+			}
+
+			wpa_printf(MSG_DEBUG, "EAP-PEAP: Unsupported MS-TLV "
+				   "Type %d%s", tlv_type,
+				   mandatory ? " (mandatory)" : "");
+			if (mandatory) {
+				eap_peap_state(data, FAILURE);
+				return;
+			}
+			/* Ignore this TLV, but process other TLVs */
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "EAP-PEAP: Unsupported TLV Type "
+				   "%d%s", tlv_type,
+				   mandatory ? " (mandatory)" : "");
+			if (mandatory) {
+				eap_peap_state(data, FAILURE);
+				return;
+			}
+			/* Ignore this TLV, but process other TLVs */
+			break;
+		}
+
+		pos += tlv_len;
+		left -= tlv_len;
+	}
+	if (left) {
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Last TLV too short in "
+			   "Request (left=%lu)", (unsigned long) left);
+		eap_peap_state(data, FAILURE);
+		return;
+	}
+
+	/* Process supported TLVs */
+	if (soh_tlv) {
+		int failure = 0;
+		wpabuf_free(data->soh_response);
+		data->soh_response = tncs_process_soh(soh_tlv, soh_tlv_len,
+						      &failure);
+		if (failure) {
+			eap_peap_state(data, FAILURE);
+			return;
+		}
+	} else {
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: No SoH TLV received");
+		eap_peap_state(data, FAILURE);
+		return;
+	}
+
+auth_method:
+	eap_peap_state(data, PHASE2_METHOD);
+	next_type = sm->user->methods[0].method;
+	sm->user_eap_method_index = 1;
+	wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d", next_type);
+	eap_peap_phase2_init(sm, data, next_type);
+}
+#endif /* EAP_TNC */
+
+
 static void eap_peap_process_phase2_response(struct eap_sm *sm,
 					     struct eap_peap_data *data,
 					     struct wpabuf *in_data)
@@ -795,6 +992,13 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 		eap_peap_process_phase2_tlv(sm, data, in_data);
 		return;
 	}
+
+#ifdef EAP_TNC
+	if (data->state == PHASE2_SOH) {
+		eap_peap_process_phase2_soh(sm, data, in_data);
+		return;
+	}
+#endif /* EAP_TNC */
 
 	if (data->phase2_priv == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: %s - Phase2 not "
@@ -882,6 +1086,7 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 	switch (data->state) {
 	case PHASE1_ID2:
 	case PHASE2_ID:
+	case PHASE2_SOH:
 		if (eap_user_get(sm, sm->identity, sm->identity_len, 1) != 0) {
 			wpa_hexdump_ascii(MSG_DEBUG, "EAP_PEAP: Phase2 "
 					  "Identity not found in the user "
@@ -891,6 +1096,17 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			next_type = EAP_TYPE_NONE;
 			break;
 		}
+
+#ifdef EAP_TNC
+		if (data->state != PHASE2_SOH && sm->tnc &&
+		    data->peap_version == 0) {
+			eap_peap_state(data, PHASE2_SOH);
+			wpa_printf(MSG_DEBUG, "EAP-PEAP: Try to initialize "
+				   "TNC (NAP SOH)");
+			next_type = EAP_TYPE_NONE;
+			break;
+		}
+#endif /* EAP_TNC */
 
 		eap_peap_state(data, PHASE2_METHOD);
 		next_type = sm->user->methods[0].method;
@@ -1231,6 +1447,7 @@ static void eap_peap_process(struct eap_sm *sm, void *priv,
 	case PHASE1_ID2:
 	case PHASE2_ID:
 	case PHASE2_METHOD:
+	case PHASE2_SOH:
 	case PHASE2_TLV:
 		eap_peap_process_phase2(sm, data, respData, pos, left);
 		break;

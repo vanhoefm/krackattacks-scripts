@@ -57,6 +57,9 @@ struct hostapd_radius_servers {
 	int acct_interim_interval;
 
 	int msg_dumps;
+
+	struct hostapd_ip_addr client_addr;
+	int force_client_addr;
 };
 
 

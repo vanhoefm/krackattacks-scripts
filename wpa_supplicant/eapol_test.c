@@ -635,7 +635,8 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 
 static void wpa_init_conf(struct eapol_test_data *e,
 			  struct wpa_supplicant *wpa_s, const char *authsrv,
-			  int port, const char *secret)
+			  int port, const char *secret,
+			  const char *cli_addr)
 {
 	struct hostapd_radius_server *as;
 	int res;
@@ -671,6 +672,16 @@ static void wpa_init_conf(struct eapol_test_data *e,
 	e->radius_conf->auth_server = as;
 	e->radius_conf->auth_servers = as;
 	e->radius_conf->msg_dumps = 1;
+	if (cli_addr) {
+		if (hostapd_parse_ip_addr(cli_addr,
+					  &e->radius_conf->client_addr) == 0)
+			e->radius_conf->force_client_addr = 1;
+		else {
+			wpa_printf(MSG_ERROR, "Invalid IP address '%s'",
+				   cli_addr);
+			assert(0);
+		}
+	}
 
 	e->radius = radius_client_init(wpa_s, e->radius_conf);
 	assert(e->radius != NULL);
@@ -865,10 +876,10 @@ static void usage(void)
 {
 	printf("usage:\n"
 	       "eapol_test [-nWS] -c<conf> [-a<AS IP>] [-p<AS port>] "
-	       "[-s<AS secret>] \\\n"
+	       "[-s<AS secret>]\\\n"
 	       "           [-r<count>] [-t<timeout>] [-C<Connect-Info>] \\\n"
 	       "           [-M<client MAC address>] \\\n"
-	       "           [-I<CUI>] [-i]\n"
+	       "           [-I<CUI>] [-i] [-A<client IP>]\n"
 	       "eapol_test scard\n"
 	       "eapol_test sim <PIN> <num triplets> [debug]\n"
 	       "\n");
@@ -880,6 +891,8 @@ static void usage(void)
 	       "default 1812\n"
 	       "  -s<AS secret> = shared secret with the authentication "
 	       "server, default 'radius'\n"
+	       "  -A<client IP> = IP address of the client, default: select "
+	       "automatically\n"
 	       "  -r<count> = number of re-authentications\n"
 	       "  -W = wait for a control interface monitor before starting\n"
 	       "  -S = save configuration after authentiation\n"
@@ -903,6 +916,7 @@ int main(int argc, char *argv[])
 	char *as_addr = "127.0.0.1";
 	int as_port = 1812;
 	char *as_secret = "radius";
+	char *cli_addr = NULL;
 	char *conf = NULL;
 	int timeout = 30;
 
@@ -919,12 +933,15 @@ int main(int argc, char *argv[])
 	wpa_debug_show_keys = 1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:c:C:iI:M:np:r:s:St:W");
+		c = getopt(argc, argv, "a:A:c:C:iI:M:np:r:s:St:W");
 		if (c < 0)
 			break;
 		switch (c) {
 		case 'a':
 			as_addr = optarg;
+			break;
+		case 'A':
+			cli_addr = optarg;
 			break;
 		case 'c':
 			conf = optarg;
@@ -1009,7 +1026,8 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	wpa_init_conf(&eapol_test, &wpa_s, as_addr, as_port, as_secret);
+	wpa_init_conf(&eapol_test, &wpa_s, as_addr, as_port, as_secret,
+		      cli_addr);
 	wpa_s.ctrl_iface = wpa_supplicant_ctrl_iface_init(&wpa_s);
 	if (wpa_s.ctrl_iface == NULL) {
 		printf("Failed to initialize control interface '%s'.\n"

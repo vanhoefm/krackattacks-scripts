@@ -238,7 +238,11 @@
 
   <refsect1>
     <title>Available Drivers</title>
-    <para>The available drivers to specify with the -D option are:</para>
+    <para>A summary of available driver backends is below. Support for each
+    of the driver backends is chosen at wpa_supplicant compile time. For a
+    list of supported driver backends that may be used with the -D option on
+    your system, refer to the help output of wpa_supplicant
+    (<emphasis>wpa_supplicant -h</emphasis>).</para>
 
     <variablelist>
       <varlistentry>

@@ -39,7 +39,7 @@ static void usage(void)
 	int i;
 	printf("%s\n\n%s\n"
 	       "usage:\n"
-	       "  wpa_supplicant [-BddhKLqqtuvwW] [-P<pid file>] "
+	       "  wpa_supplicant [-BddhKLqqtuvW] [-P<pid file>] "
 	       "[-g<global ctrl>] \\\n"
 	       "        -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] "
 	       "[-p<driver_param>] \\\n"

@@ -736,7 +736,7 @@ static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
 		   (ifi->ifi_flags & IFF_UP) ? "[UP]" : "",
 		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
-		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT" : "");
+		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
 	/*
 	 * Some drivers send the association event before the operup event--in
 	 * this case, lifting operstate in wpa_driver_wext_set_operstate()

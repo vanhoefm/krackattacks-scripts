@@ -37,4 +37,6 @@ enum tncc_process_res {
 enum tncc_process_res tncc_process_if_tnccs(struct tncc_data *tncc,
 					    const u8 *msg, size_t len);
 
+struct wpabuf * tncc_process_soh_request(const u8 *data, size_t len);
+
 #endif /* TNCC_H */

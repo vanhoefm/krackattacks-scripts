@@ -20,6 +20,8 @@
 #include "common.h"
 #include "base64.h"
 #include "tncc.h"
+#include "eap_common/eap_tlv_common.h"
+#include "eap_common/eap_defs.h"
 
 
 #ifdef UNICODE
@@ -1201,4 +1203,117 @@ void tncc_deinit(struct tncc_data *tncc)
 	}
 
 	os_free(tncc);
+}
+
+
+static struct wpabuf * tncc_build_soh(void)
+{
+	struct wpabuf *buf;
+	u8 *tlv_len, *tlv_len2, *outer_len, *inner_len, *ssoh_len, *end;
+	u8 correlation_id[24];
+	int ver = 2;
+
+	if (os_get_random(correlation_id, sizeof(correlation_id)))
+		return NULL;
+	wpa_hexdump(MSG_DEBUG, "TNC: SoH Correlation ID",
+		    correlation_id, sizeof(correlation_id));
+
+	buf = wpabuf_alloc(200);
+	if (buf == NULL)
+		return NULL;
+
+	/* Vendor-Specific TLV (Microsoft) - SoH */
+	wpabuf_put_be16(buf, EAP_TLV_VENDOR_SPECIFIC_TLV); /* TLV Type */
+	tlv_len = wpabuf_put(buf, 2); /* Length */
+	wpabuf_put_be32(buf, EAP_VENDOR_MICROSOFT); /* Vendor_Id */
+	wpabuf_put_be16(buf, 0x01); /* TLV Type - SoH TLV */
+	tlv_len2 = wpabuf_put(buf, 2); /* Length */
+
+	/* SoH Header */
+	wpabuf_put_be16(buf, EAP_TLV_VENDOR_SPECIFIC_TLV); /* Outer Type */
+	outer_len = wpabuf_put(buf, 2);
+	wpabuf_put_be32(buf, EAP_VENDOR_MICROSOFT); /* IANA SMI Code */
+	wpabuf_put_be16(buf, ver); /* Inner Type */
+	inner_len = wpabuf_put(buf, 2);
+
+	if (ver == 2) {
+		/* SoH Mode Sub-Header */
+		/* Outer Type */
+		wpabuf_put_be16(buf, EAP_TLV_VENDOR_SPECIFIC_TLV);
+		wpabuf_put_be16(buf, 4 + 24 + 1 + 1); /* Length */
+		wpabuf_put_be32(buf, EAP_VENDOR_MICROSOFT); /* IANA SMI Code */
+		/* Value: */
+		wpabuf_put_data(buf, correlation_id, sizeof(correlation_id));
+		wpabuf_put_u8(buf, 0x01); /* Intent Flag - Request */
+		wpabuf_put_u8(buf, 0x00); /* Content-Type Flag */
+	}
+
+	/* SSoH TLV */
+	/* System-Health-Id */
+	wpabuf_put_be16(buf, 0x0002); /* Type */
+	wpabuf_put_be16(buf, 4); /* Length */
+	wpabuf_put_be32(buf, 79616);
+	/* Vendor-Specific Attribute */
+	wpabuf_put_be16(buf, EAP_TLV_VENDOR_SPECIFIC_TLV);
+	ssoh_len = wpabuf_put(buf, 2);
+	wpabuf_put_be32(buf, EAP_VENDOR_MICROSOFT); /* IANA SMI Code */
+	/* TODO: MS-Machine-Inventory */
+	/* TODO: MS-Quarantine-State */
+	/* MS-Packet-Info */
+	wpabuf_put_u8(buf, 0x03);
+	wpabuf_put_u8(buf, 0x11); /* r=request, vers=1 */
+	/* TODO: MS-MachineName */
+	/* MS-CorrelationId */
+	wpabuf_put_u8(buf, 0x06);
+	wpabuf_put_data(buf, correlation_id, sizeof(correlation_id));
+	end = wpabuf_put(buf, 0);
+	WPA_PUT_BE16(ssoh_len, end - ssoh_len - 2);
+
+	/* TODO: SoHReportEntry TLV (zero or more) */
+
+	/* Update length fields */
+	end = wpabuf_put(buf, 0);
+	WPA_PUT_BE16(tlv_len, end - tlv_len - 2);
+	WPA_PUT_BE16(tlv_len2, end - tlv_len2 - 2);
+	WPA_PUT_BE16(outer_len, end - outer_len - 2);
+	WPA_PUT_BE16(inner_len, end - inner_len - 2);
+
+	return buf;
+}
+
+
+struct wpabuf * tncc_process_soh_request(const u8 *data, size_t len)
+{
+	const u8 *pos;
+
+	wpa_hexdump(MSG_DEBUG, "TNC: SoH Request", data, len);
+
+	if (len < 12)
+		return NULL;
+
+	/* SoH Request */
+	pos = data;
+
+	/* TLV Type */
+	if (WPA_GET_BE16(pos) != EAP_TLV_VENDOR_SPECIFIC_TLV)
+		return NULL;
+	pos += 2;
+
+	/* Length */
+	if (WPA_GET_BE16(pos) < 8)
+		return NULL;
+	pos += 2;
+
+	/* Vendor_Id */
+	if (WPA_GET_BE32(pos) != EAP_VENDOR_MICROSOFT)
+		return NULL;
+	pos += 4;
+
+	/* TLV Type */
+	if (WPA_GET_BE16(pos) != 0x02 /* SoH request TLV */)
+		return NULL;
+
+	wpa_printf(MSG_DEBUG, "TNC: SoH Request TLV received");
+
+	return tncc_build_soh();
 }

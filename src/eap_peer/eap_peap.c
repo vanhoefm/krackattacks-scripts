@@ -21,6 +21,7 @@
 #include "eap_config.h"
 #include "tls.h"
 #include "eap_common/eap_tlv_common.h"
+#include "tncc.h"
 
 
 /* Maximum supported PEAP version
@@ -65,6 +66,8 @@ struct eap_peap_data {
 	int crypto_binding_used;
 	u8 ipmk[40];
 	u8 cmk[20];
+	int soh; /* Whether IF-TNCCS-SOH (Statement of Health; Microsoft NAP)
+		  * is enabled. */
 };
 
 
@@ -111,6 +114,13 @@ static int eap_peap_parse_phase1(struct eap_peap_data *data,
 		data->crypto_binding = REQUIRE_BINDING;
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: Require cryptobinding");
 	}
+
+#ifdef EAP_TNC
+	if (os_strstr(phase1, "tnc=soh")) {
+		data->soh = 1;
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: SoH enabled");
+	}
+#endif /* EAP_TNC */
 
 	return 0;
 }
@@ -697,6 +707,38 @@ static int eap_peap_phase2_request(struct eap_sm *sm,
 			data->phase2_success = 1;
 		}
 		break;
+	case EAP_TYPE_EXPANDED:
+#ifdef EAP_TNC
+		if (data->soh) {
+			const u8 *epos;
+			size_t eleft;
+
+			epos = eap_hdr_validate(EAP_VENDOR_MICROSOFT, 0x21,
+						req, &eleft);
+			if (epos) {
+				struct wpabuf *buf;
+				wpa_printf(MSG_DEBUG,
+					   "EAP-PEAP: SoH EAP Extensions");
+				buf = tncc_process_soh_request(epos, eleft);
+				if (buf) {
+					*resp = eap_msg_alloc(
+						EAP_VENDOR_MICROSOFT, 0x21,
+						wpabuf_len(buf),
+						EAP_CODE_RESPONSE,
+						hdr->identifier);
+					if (*resp == NULL) {
+						ret->methodState = METHOD_DONE;
+						ret->decision = DECISION_FAIL;
+						return -1;
+					}
+					wpabuf_put_buf(*resp, buf);
+					wpabuf_free(buf);
+					break;
+				}
+			}
+		}
+#endif /* EAP_TNC */
+		/* fall through */
 	default:
 		if (data->phase2_type.vendor == EAP_VENDOR_IETF &&
 		    data->phase2_type.method == EAP_TYPE_NONE) {

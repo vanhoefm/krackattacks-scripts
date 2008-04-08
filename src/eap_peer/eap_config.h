@@ -350,6 +350,12 @@ struct eap_peer_config {
 	 * fast_pac_format=binary option can be used to select binary format
 	 * for storing PAC entires in order to save some space (the default
 	 * text format uses about 2.5 times the size of minimal binary format).
+	 *
+	 * crypto_binding option can be used to control PEAPv0 cryptobinding
+	 * behavior:
+	 * 0 = do not use cryptobinding
+	 * 1 = use cryptobinding if server supports it (default)
+	 * 2 = require cryptobinding
 	 */
 	char *phase1;
 

@@ -101,6 +101,17 @@ static int eap_peap_parse_phase1(struct eap_peap_data *data,
 			   "receiving tunneled EAP-Success");
 	}
 
+	if (os_strstr(phase1, "crypto_binding=0")) {
+		data->crypto_binding = NO_BINDING;
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Do not use cryptobinding");
+	} else if (os_strstr(phase1, "crypto_binding=1")) {
+		data->crypto_binding = OPTIONAL_BINDING;
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Optional cryptobinding");
+	} else if (os_strstr(phase1, "crypto_binding=2")) {
+		data->crypto_binding = REQUIRE_BINDING;
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: Require cryptobinding");
+	}
+
 	return 0;
 }
 

@@ -66,7 +66,7 @@ struct i802_driver_data {
 	struct nl_handle *nl_handle;
 	struct nl_cache *nl_cache;
 	struct genl_family *nl80211;
-	int dtim_period;
+	int dtim_period, beacon_int;
 	unsigned int beacon_set:1;
 	unsigned int ieee802_1x_active:1;
 };
@@ -1060,7 +1060,7 @@ static int i802_set_beacon(const char *iface, void *priv,
 	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, head_len, head);
 	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, tail_len, tail);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
-	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, 1000);
+	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, drv->beacon_int);
 
 	if (!drv->dtim_period)
 		drv->dtim_period = 2;
@@ -1148,6 +1148,8 @@ static int i802_set_beacon_int(void *priv, int value)
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 	int ret = -1;
+
+	drv->beacon_int = value;
 
 	msg = nlmsg_alloc();
 	if (!msg)

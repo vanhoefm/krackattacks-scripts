@@ -1152,6 +1152,9 @@ static int i802_set_beacon_int(void *priv, int value)
 
 	drv->beacon_int = value;
 
+	if (!drv->beacon_set)
+		return 0;
+
 	msg = nlmsg_alloc();
 	if (!msg)
 		goto out;

@@ -220,7 +220,7 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
 	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
 	    (err = nl_wait_for_ack(drv->nl_handle)) < 0) {
 		if (err != -ENOENT) {
-			err = 0;
+			ret = 0;
 			goto out;
 		}
 	}
@@ -249,7 +249,7 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
 	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
 	    (err = nl_wait_for_ack(drv->nl_handle)) < 0) {
 		if (err != -ENOENT) {
-			err = 0;
+			ret = 0;
 			goto out;
 		}
 	}

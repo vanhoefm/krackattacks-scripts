@@ -1864,7 +1864,7 @@ static int nl80211_set_master_mode(struct i802_driver_data *drv,
 
 	return 0;
 }
-  
+
 
 static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 {
@@ -1956,12 +1956,12 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 		return -1;
 	}
 
-        memset(&ifr, 0, sizeof(ifr));
-        os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
-        if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr) != 0) {
+	memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
+	if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr) != 0) {
 		perror("ioctl(SIOCGIFHWADDR)");
 		return -1;
-        }
+	}
 
 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
 		printf("Invalid HW-addr family 0x%04x\n",

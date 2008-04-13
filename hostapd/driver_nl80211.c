@@ -574,7 +574,7 @@ static int i802_flush(void *priv)
 		goto out;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_NEW_STATION, 0);
+		    0, NL80211_CMD_DEL_STATION, 0);
 
 	/*
 	 * XXX: FIX! this needs to flush all VLANs too

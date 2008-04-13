@@ -65,6 +65,7 @@ struct i802_driver_data {
 	int we_version;
 	struct nl_handle *nl_handle;
 	struct nl_cache *nl_cache;
+	struct nl_cb *nl_cb;
 	struct genl_family *nl80211;
 	int dtim_period, beacon_int;
 	unsigned int beacon_set:1;
@@ -1895,7 +1896,13 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 	/*
 	 * initialise generic netlink and nl80211
 	 */
-	drv->nl_handle = nl_handle_alloc();
+	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!drv->nl_cb) {
+		printf("Failed to allocate netlink callbacks.\n");
+		return -1;
+	}
+
+	drv->nl_handle = nl_handle_alloc_cb(drv->nl_cb);
 	if (!drv->nl_handle) {
 		printf("Failed to allocate netlink handle.\n");
 		return -1;
@@ -2330,6 +2337,7 @@ static void i802_deinit(void *priv)
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
 	nl_handle_destroy(drv->nl_handle);
+	nl_cb_put(drv->nl_cb);
 
 	if (drv->if_indices != drv->default_if_indices)
 		free(drv->if_indices);

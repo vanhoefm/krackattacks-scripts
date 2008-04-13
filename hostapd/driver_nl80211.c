@@ -1416,7 +1416,7 @@ static struct hostapd_hw_modes *i802_get_hw_feature_data(void *priv,
 	struct nl_msg *msg;
 	int err = -1;
 	struct nl_cb *cb = NULL;
-	int finished;
+	int finished = 0;
 	struct phy_info_arg result = {
 		.num_modes = num_modes,
 		.modes = NULL,

@@ -314,7 +314,7 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
 
-	cb = nl_cb_alloc(NL_CB_CUSTOM);
+	cb = nl_cb_clone(drv->nl_cb);
 	if (!cb)
 		goto out;
 
@@ -661,7 +661,7 @@ static int i802_read_sta_data(void *priv, struct hostap_sta_driver_data *data,
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
 
-	cb = nl_cb_alloc(NL_CB_CUSTOM);
+	cb = nl_cb_clone(drv->nl_cb);
 	if (!cb)
 		goto out;
 
@@ -1435,7 +1435,7 @@ static struct hostapd_hw_modes *i802_get_hw_feature_data(void *priv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
 
-	cb = nl_cb_alloc(NL_CB_CUSTOM);
+	cb = nl_cb_clone(drv->nl_cb);
 	if (!cb)
 		goto out;
 

@@ -5,6 +5,8 @@ ChangeLog for wpa_supplicant
 	* added support for using TNC with EAP-FAST
 	* added driver_ps3 for the PS3 Linux wireless driver
 	* added support for optional cryptobinding with PEAPv0
+	* fixed the OpenSSL patches (0.9.8g and 0.9.9) for EAP-FAST to
+	  allow fallback to full handshake if server rejects PAC-Opaque
 
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were

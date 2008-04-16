@@ -166,17 +166,18 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 
 static void hostapd_deauth_all_stas(struct hostapd_data *hapd)
 {
-#if 0
 	u8 addr[ETH_ALEN];
 
-	os_memset(addr, 0xff, ETH_ALEN);
-	hostapd_sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
-#else
 	/* New Prism2.5/3 STA firmware versions seem to have issues with this
 	 * broadcast deauth frame. This gets the firmware in odd state where
-	 * nothing works correctly, so let's skip sending this for a while
-	 * until the issue has been resolved. */
-#endif
+	 * nothing works correctly, so let's skip sending this for the hostap
+	 * driver. */
+
+	if (os_strcmp(hapd->driver->name, "hostap") != 0) {
+		os_memset(addr, 0xff, ETH_ALEN);
+		hostapd_sta_deauth(hapd, addr,
+				   WLAN_REASON_PREV_AUTH_NOT_VALID);
+	}
 }
 
 

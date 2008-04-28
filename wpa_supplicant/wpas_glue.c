@@ -619,8 +619,10 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 		os_memset(&conf, 0, sizeof(conf));
 		conf.peerkey_enabled = ssid->peerkey;
 		conf.allowed_pairwise_cipher = ssid->pairwise_cipher;
+#ifdef IEEE8021X_EAPOL
 		conf.eap_workaround = ssid->eap_workaround;
 		conf.eap_conf_ctx = &ssid->eap;
+#endif /* IEEE8021X_EAPOL */
 		conf.ssid = ssid->ssid;
 		conf.ssid_len = ssid->ssid_len;
 	}

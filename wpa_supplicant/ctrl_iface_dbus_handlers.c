@@ -22,6 +22,8 @@
 #include "eap_peer/eap_methods.h"
 #include "dbus_dict_helpers.h"
 #include "ieee802_11_defs.h"
+#include "wpas_glue.h"
+#include "eapol_supp/eapol_supp_sm.h"
 
 
 /**
@@ -1177,6 +1179,74 @@ out:
 	return reply;
 }
 
+
+/**
+ * wpas_dbus_iface_set_smartcard_modules - Set smartcard related module paths
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A dbus message containing a UINT32 indicating success (1) or
+ *          failure (0)
+ *
+ * Handler function for "setSmartcardModules" method call.
+ */
+DBusMessage * wpas_dbus_iface_set_smartcard_modules(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	DBusMessageIter iter, iter_dict;
+	char *opensc_engine_path = NULL;
+	char *pkcs11_engine_path = NULL;
+	char *pkcs11_module_path = NULL;
+	struct wpa_dbus_dict_entry entry;
+
+	if (!dbus_message_iter_init(message, &iter))
+		goto error;
+
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+		goto error;
+
+	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
+		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
+			goto error;
+		if (!strcmp(entry.key, "opensc_engine_path") &&
+		    (entry.type == DBUS_TYPE_STRING)) {
+			opensc_engine_path = os_strdup(entry.str_value);
+			if (opensc_engine_path == NULL)
+				goto error;
+		} else if (!strcmp(entry.key, "pkcs11_engine_path") &&
+			   (entry.type == DBUS_TYPE_STRING)) {
+			pkcs11_engine_path = os_strdup(entry.str_value);
+			if (pkcs11_engine_path == NULL)
+				goto error;
+		} else if (!strcmp(entry.key, "pkcs11_module_path") &&
+				 (entry.type == DBUS_TYPE_STRING)) {
+			pkcs11_module_path = os_strdup(entry.str_value);
+			if (pkcs11_module_path == NULL)
+				goto error;
+		} else {
+			wpa_dbus_dict_entry_clear(&entry);
+			goto error;
+		}
+		wpa_dbus_dict_entry_clear(&entry);
+	}
+
+	os_free(wpa_s->conf->opensc_engine_path);
+	wpa_s->conf->opensc_engine_path = opensc_engine_path;
+	os_free(wpa_s->conf->pkcs11_engine_path);
+	wpa_s->conf->pkcs11_engine_path = pkcs11_engine_path;
+	os_free(wpa_s->conf->pkcs11_module_path);
+	wpa_s->conf->pkcs11_module_path = pkcs11_module_path;
+
+	eapol_sm_deinit(wpa_s->eapol);
+	wpa_supplicant_init_eapol(wpa_s);
+
+	return wpas_dbus_new_success_reply(message);
+
+error:
+	os_free(opensc_engine_path);
+	os_free(pkcs11_engine_path);
+	os_free(pkcs11_module_path);
+	return wpas_dbus_new_invalid_opts_error(message, NULL);
+}
 
 /**
  * wpas_dbus_iface_get_state - Get interface state

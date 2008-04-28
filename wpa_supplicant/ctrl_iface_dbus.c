@@ -534,6 +534,9 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 			reply = wpas_dbus_iface_disconnect(message, wpa_s);
 		else if (!strcmp(method, "setAPScan"))
 			reply = wpas_dbus_iface_set_ap_scan(message, wpa_s);
+		else if (!strcmp(method, "setSmartcardModules"))
+			reply = wpas_dbus_iface_set_smartcard_modules(message,
+								      wpa_s);
 		else if (!strcmp(method, "state"))
 			reply = wpas_dbus_iface_get_state(message, wpa_s);
 		else if (!strcmp(method, "setBlobs"))

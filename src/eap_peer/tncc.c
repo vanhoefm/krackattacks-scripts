@@ -39,7 +39,7 @@
 "xmlns=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/IF_TNCCS#\" " \
 "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" " \
 "xsi:schemaLocation=\"http://www.trustedcomputinggroup.org/IWG/TNC/1_0/" \
-"IF_TNCCS#https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd\">\n"
+"IF_TNCCS# https://www.trustedcomputinggroup.org/XML/SCHEMA/TNCCS_1.0.xsd\">\n"
 #define IF_TNCCS_END "\n</TNCCS-Batch>"
 
 /* TNC IF-IMC */

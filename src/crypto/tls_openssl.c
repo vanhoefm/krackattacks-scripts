@@ -892,7 +892,7 @@ struct tls_connection * tls_connection_init(void *ssl_ctx)
 	SSL_set_app_data(conn->ssl, conn);
 	SSL_set_options(conn->ssl,
 			SSL_OP_NO_SSLv2 | SSL_OP_NO_SSLv3 |
-			SSL_OP_SINGLE_DH_USE);
+			SSL_OP_SINGLE_DH_USE | SSL_OP_NO_COMPRESSION);
 
 	conn->ssl_in = BIO_new(BIO_s_mem());
 	if (!conn->ssl_in) {

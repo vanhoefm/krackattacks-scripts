@@ -63,7 +63,10 @@ struct tls_config {
  * @engine_id: engine id string (this is OpenSSL specific for now)
  * @ppin: pointer to the pin variable in the configuration
  * (this is OpenSSL specific for now)
- * @key_id: the private key's key id (this is OpenSSL specific for now)
+ * @key_id: the private key's id when using engine (this is OpenSSL
+ * specific for now)
+ * @cert_id: the certificate's id when using engine
+ * @ca_cert_id: the CA certificate's id when using engine
  * @tls_ia: Whether to enable TLS/IA (for EAP-TTLSv1)
  *
  * TLS connection parameters to be configured with tls_connection_set_params()
@@ -98,6 +101,8 @@ struct tls_connection_params {
 	const char *engine_id;
 	const char *pin;
 	const char *key_id;
+	const char *cert_id;
+	const char *ca_cert_id;
 };
 
 

@@ -303,6 +303,12 @@ fields. In addition, simpler example configurations are available for
 <a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=wpa_supplicant/examples/ieee8021x.conf">IEEE 802.1X with dynamic WEP (EAP-PEAP/MSCHAPv2)</a>,
 <a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=wpa_supplicant/examples/wpa-psk-tkip.conf">WPA-PSK/TKIP</a>, and
 <a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=wpa_supplicant/examples/wpa2-eap-ccmp.conf">WPA2-EAP/CCMP (EAP-TLS)</a>.
+In addition, wpa_supplicant can use OpenSSL engine to avoid need for
+exposing private keys in the file system. This can be used for EAP-TLS
+authentication with smartcards and TPM tokens.
+<a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=wpa_supplicant/examples/openCryptoki.conf">Example configuration for using openCryptoki</a>
+shows an example network block and related parameters for EAP-TLS
+authentication using PKCS#11 TPM token.
 </p>
 
 <h3>Feedback, comments, mailing list</h3>
@@ -350,7 +356,7 @@ Internet Systems Consortium (ISC).
     <address><a href="mailto:j@w1.fi">Jouni Malinen</a></address>
 <!-- Created: Sat May 22 21:41:58 PDT 2004 -->
 <!-- hhmts start -->
-Last modified: Sat Feb 23 15:47:15 PST 2008
+Last modified: Fri May 23 19:39:40 EEST 2008
 <!-- hhmts end -->
     </div>
   </body>

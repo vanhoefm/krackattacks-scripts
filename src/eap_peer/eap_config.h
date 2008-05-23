@@ -417,6 +417,44 @@ struct eap_peer_config {
 	char *key_id;
 
 	/**
+	 * cert_id - Cert ID for OpenSSL engine
+	 *
+	 * This is used if the certificate operations for EAP-TLS are performed
+	 * using a smartcard.
+	 */
+	char *cert_id;
+
+	/**
+	 * ca_cert_id - CA Cert ID for OpenSSL engine
+	 *
+	 * This is used if the CA certificate for EAP-TLS is on a smartcard.
+	 */
+	char *ca_cert_id;
+
+	/**
+	 * key2_id - Key ID for OpenSSL engine (phase2)
+	 *
+	 * This is used if private key operations for EAP-TLS are performed
+	 * using a smartcard.
+	 */
+	char *key2_id;
+
+	/**
+	 * cert2_id - Cert ID for OpenSSL engine (phase2)
+	 *
+	 * This is used if the certificate operations for EAP-TLS are performed
+	 * using a smartcard.
+	 */
+	char *cert2_id;
+
+	/**
+	 * ca_cert2_id - CA Cert ID for OpenSSL engine (phase2)
+	 *
+	 * This is used if the CA certificate for EAP-TLS is on a smartcard.
+	 */
+	char *ca_cert2_id;
+
+	/**
 	 * otp - One-time-password
 	 *
 	 * This field should not be set in configuration step. It is only used

@@ -754,6 +754,11 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	STR(pin);
 	STR(engine_id);
 	STR(key_id);
+	STR(cert_id);
+	STR(ca_cert_id);
+	STR(key2_id);
+	STR(cert2_id);
+	STR(ca_cert2_id);
 	INTe(engine);
 	INT_DEF(eapol_flags, DEFAULT_EAPOL_FLAGS);
 #endif /* IEEE8021X_EAPOL */

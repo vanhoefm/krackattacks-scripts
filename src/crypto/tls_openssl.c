@@ -1512,11 +1512,11 @@ static int tls_read_pkcs12_blob(SSL_CTX *ssl_ctx, SSL *ssl,
 }
 
 
+#ifndef OPENSSL_NO_ENGINE
 static int tls_engine_get_cert(struct tls_connection *conn,
 			       const char *cert_id,
 			       X509 **cert)
 {
-#ifndef OPENSSL_NO_ENGINE
 	/* this runs after the private key is loaded so no PIN is required */
 	struct {
 		const char *cert_id;
@@ -1539,10 +1539,8 @@ static int tls_engine_get_cert(struct tls_connection *conn,
 	}
 	*cert = params.cert;
 	return 0;
-#else /* OPENSSL_NO_ENGINE */
-	return -1;
-#endif /* OPENSSL_NO_ENGINE */
 }
+#endif /* OPENSSL_NO_ENGINE */
 
 
 static int tls_connection_engine_client_cert(struct tls_connection *conn,

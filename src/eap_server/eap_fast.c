@@ -1334,6 +1334,14 @@ static void eap_fast_process_phase2(struct eap_sm *sm,
 	buf_len = in_len;
 	if (data->ssl.tls_in_total > buf_len)
 		buf_len = data->ssl.tls_in_total;
+	/*
+	 * Even though we try to disable TLS compression, it is possible that
+	 * this cannot be done with all TLS libraries. Add extra buffer space
+	 * to handle the possibility of the decrypted data being longer than
+	 * input data.
+	 */
+	buf_len += 500;
+	buf_len *= 3;
 	in_decrypted = os_malloc(buf_len);
 	if (in_decrypted == NULL) {
 		os_free(data->ssl.tls_in);

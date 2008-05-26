@@ -827,6 +827,14 @@ int eap_peer_tls_decrypt(struct eap_sm *sm, struct eap_ssl_data *data,
 	buf_len = wpabuf_len(in_data);
 	if (data->tls_in_total > buf_len)
 		buf_len = data->tls_in_total;
+	/*
+	 * Even though we try to disable TLS compression, it is possible that
+	 * this cannot be done with all TLS libraries. Add extra buffer space
+	 * to handle the possibility of the decrypted data being longer than
+	 * input data.
+	 */
+	buf_len += 500;
+	buf_len *= 3;
 	*in_decrypted = wpabuf_alloc(buf_len ? buf_len : 1);
 	if (*in_decrypted == NULL) {
 		eap_peer_tls_reset_input(data);

@@ -7,6 +7,7 @@ ChangeLog for wpa_supplicant
 	* added support for optional cryptobinding with PEAPv0
 	* fixed the OpenSSL patches (0.9.8g and 0.9.9) for EAP-FAST to
 	  allow fallback to full handshake if server rejects PAC-Opaque
+	* added fragmentation support for EAP-TNC
 
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were

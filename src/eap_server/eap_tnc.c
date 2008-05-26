@@ -21,9 +21,14 @@
 
 
 struct eap_tnc_data {
-	enum { START, CONTINUE, RECOMMENDATION, DONE, FAIL } state;
+	enum { START, CONTINUE, RECOMMENDATION, FRAG_ACK, WAIT_FRAG_ACK, DONE,
+	       FAIL } state;
 	enum { ALLOW, ISOLATE, NO_ACCESS, NO_RECOMMENDATION } recommendation;
 	struct tncs_data *tncs;
+	struct wpabuf *in_buf;
+	struct wpabuf *out_buf;
+	size_t out_used;
+	size_t fragment_size;
 };
 
 
@@ -50,6 +55,8 @@ static void * eap_tnc_init(struct eap_sm *sm)
 		return NULL;
 	}
 
+	data->fragment_size = 1300;
+
 	return data;
 }
 
@@ -57,6 +64,8 @@ static void * eap_tnc_init(struct eap_sm *sm)
 static void eap_tnc_reset(struct eap_sm *sm, void *priv)
 {
 	struct eap_tnc_data *data = priv;
+	wpabuf_free(data->in_buf);
+	wpabuf_free(data->out_buf);
 	tncs_deinit(data->tncs);
 	os_free(data);
 }
@@ -161,6 +170,77 @@ static struct wpabuf * eap_tnc_build_recommendation(struct eap_sm *sm,
 }
 
 
+static struct wpabuf * eap_tnc_build_frag_ack(u8 id, u8 code)
+{
+	struct wpabuf *msg;
+
+	msg = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TNC, 0, code, id);
+	if (msg == NULL) {
+		wpa_printf(MSG_ERROR, "EAP-TNC: Failed to allocate memory "
+			   "for fragment ack");
+		return NULL;
+	}
+
+	wpa_printf(MSG_DEBUG, "EAP-TNC: Send fragment ack");
+
+	return msg;
+}
+
+
+static struct wpabuf * eap_tnc_build_msg(struct eap_tnc_data *data, u8 id)
+{
+	struct wpabuf *req;
+	u8 flags;
+	size_t send_len, plen;
+
+	wpa_printf(MSG_DEBUG, "EAP-TNC: Generating Request");
+
+	flags = EAP_TNC_VERSION;
+	send_len = wpabuf_len(data->out_buf) - data->out_used;
+	if (1 + send_len > data->fragment_size) {
+		send_len = data->fragment_size - 1;
+		flags |= EAP_TNC_FLAGS_MORE_FRAGMENTS;
+		if (data->out_used == 0) {
+			flags |= EAP_TNC_FLAGS_LENGTH_INCLUDED;
+			send_len -= 4;
+		}
+	}
+
+	plen = 1 + send_len;
+	if (flags & EAP_TNC_FLAGS_LENGTH_INCLUDED)
+		plen += 4;
+	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TNC, plen,
+			    EAP_CODE_REQUEST, id);
+	if (req == NULL)
+		return NULL;
+
+	wpabuf_put_u8(req, flags); /* Flags */
+	if (flags & EAP_TNC_FLAGS_LENGTH_INCLUDED)
+		wpabuf_put_be32(req, wpabuf_len(data->out_buf));
+
+	wpabuf_put_data(req, wpabuf_head_u8(data->out_buf) + data->out_used,
+			send_len);
+	data->out_used += send_len;
+
+	if (data->out_used == wpabuf_len(data->out_buf)) {
+		wpa_printf(MSG_DEBUG, "EAP-TNC: Sending out %lu bytes "
+			   "(message sent completely)",
+			   (unsigned long) send_len);
+		wpabuf_free(data->out_buf);
+		data->out_buf = NULL;
+		data->out_used = 0;
+	} else {
+		wpa_printf(MSG_DEBUG, "EAP-TNC: Sending out %lu bytes "
+			   "(%lu more to send)", (unsigned long) send_len,
+			   (unsigned long) wpabuf_len(data->out_buf) -
+			   data->out_used);
+		data->state = WAIT_FRAG_ACK;
+	}
+
+	return req;
+}
+
+
 static struct wpabuf * eap_tnc_buildReq(struct eap_sm *sm, void *priv, u8 id)
 {
 	struct eap_tnc_data *data = priv;
@@ -170,9 +250,32 @@ static struct wpabuf * eap_tnc_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		tncs_init_connection(data->tncs);
 		return eap_tnc_build_start(sm, data, id);
 	case CONTINUE:
-		return eap_tnc_build(sm, data, id);
+		if (data->out_buf == NULL) {
+			data->out_buf = eap_tnc_build(sm, data, id);
+			if (data->out_buf == NULL) {
+				wpa_printf(MSG_DEBUG, "EAP-TNC: Failed to "
+					   "generate message");
+				return NULL;
+			}
+			data->out_used = 0;
+		}
+		return eap_tnc_build_msg(data, id);
 	case RECOMMENDATION:
-		return eap_tnc_build_recommendation(sm, data, id);
+		if (data->out_buf == NULL) {
+			data->out_buf = eap_tnc_build_recommendation(sm, data,
+								     id);
+			if (data->out_buf == NULL) {
+				wpa_printf(MSG_DEBUG, "EAP-TNC: Failed to "
+					   "generate recommendation message");
+				return NULL;
+			}
+			data->out_used = 0;
+		}
+		return eap_tnc_build_msg(data, id);
+	case WAIT_FRAG_ACK:
+		return eap_tnc_build_msg(data, id);
+	case FRAG_ACK:
+		return eap_tnc_build_frag_ack(id, EAP_CODE_REQUEST);
 	case DONE:
 	case FAIL:
 		return NULL;
@@ -185,15 +288,24 @@ static struct wpabuf * eap_tnc_buildReq(struct eap_sm *sm, void *priv, u8 id)
 static Boolean eap_tnc_check(struct eap_sm *sm, void *priv,
 			     struct wpabuf *respData)
 {
+	struct eap_tnc_data *data = priv;
 	const u8 *pos;
 	size_t len;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TNC, respData,
 			       &len);
-	if (pos == NULL || len == 0) {
+	if (pos == NULL) {
 		wpa_printf(MSG_INFO, "EAP-TNC: Invalid frame");
 		return TRUE;
 	}
+
+	if (len == 0 && data->state != WAIT_FRAG_ACK) {
+		wpa_printf(MSG_INFO, "EAP-TNC: Invalid frame (empty)");
+		return TRUE;
+	}
+
+	if (len == 0)
+		return FALSE; /* Fragment ACK does not include flags */
 
 	if ((*pos & EAP_TNC_VERSION_MASK) != EAP_TNC_VERSION) {
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Unsupported version %d",
@@ -210,27 +322,12 @@ static Boolean eap_tnc_check(struct eap_sm *sm, void *priv,
 }
 
 
-static void eap_tnc_process(struct eap_sm *sm, void *priv,
-			    struct wpabuf *respData)
+static void tncs_process(struct eap_tnc_data *data, struct wpabuf *inbuf)
 {
-	struct eap_tnc_data *data = priv;
-	const u8 *pos;
-	size_t len;
 	enum tncs_process_res res;
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TNC, respData, &len);
-	if (pos == NULL || len == 0)
-		return; /* Should not happen; message already verified */
-
-	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-TNC: Received payload", pos, len);
-
-	if (len == 1 && (data->state == DONE || data->state == FAIL)) {
-		wpa_printf(MSG_DEBUG, "EAP-TNC: Peer acknowledged the last "
-			   "message");
-		return;
-	}
-
-	res = tncs_process_if_tnccs(data->tncs, pos + 1, len - 1);
+	res = tncs_process_if_tnccs(data->tncs, wpabuf_head(inbuf),
+				    wpabuf_len(inbuf));
 	switch (res) {
 	case TNCCS_RECOMMENDATION_ALLOW:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: TNCS allowed access");
@@ -259,6 +356,148 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 	default:
 		break;
 	}
+}
+
+
+static int eap_tnc_process_cont(struct eap_tnc_data *data,
+				const u8 *buf, size_t len)
+{
+	/* Process continuation of a pending message */
+	if (len > wpabuf_tailroom(data->in_buf)) {
+		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment overflow");
+		data->state = FAIL;
+		return -1;
+	}
+
+	wpabuf_put_data(data->in_buf, buf, len);
+	wpa_printf(MSG_DEBUG, "EAP-TNC: Received %lu bytes, waiting for %lu "
+		   "bytes more", (unsigned long) len,
+		   (unsigned long) wpabuf_tailroom(data->in_buf));
+
+	return 0;
+}
+
+
+static int eap_tnc_process_fragment(struct eap_tnc_data *data,
+				    u8 flags, u32 message_length,
+				    const u8 *buf, size_t len)
+{
+	/* Process a fragment that is not the last one of the message */
+	if (data->in_buf == NULL && !(flags & EAP_TNC_FLAGS_LENGTH_INCLUDED)) {
+		wpa_printf(MSG_DEBUG, "EAP-TNC: No Message Length field in a "
+			   "fragmented packet");
+		return -1;
+	}
+
+	if (data->in_buf == NULL) {
+		/* First fragment of the message */
+		data->in_buf = wpabuf_alloc(message_length);
+		if (data->in_buf == NULL) {
+			wpa_printf(MSG_DEBUG, "EAP-TNC: No memory for "
+				   "message");
+			return -1;
+		}
+		wpabuf_put_data(data->in_buf, buf, len);
+		wpa_printf(MSG_DEBUG, "EAP-TNC: Received %lu bytes in first "
+			   "fragment, waiting for %lu bytes more",
+			   (unsigned long) len,
+			   (unsigned long) wpabuf_tailroom(data->in_buf));
+	}
+
+	return 0;
+}
+
+
+static void eap_tnc_process(struct eap_sm *sm, void *priv,
+			    struct wpabuf *respData)
+{
+	struct eap_tnc_data *data = priv;
+	const u8 *pos, *end;
+	size_t len;
+	u8 flags;
+	u32 message_length = 0;
+	struct wpabuf tmpbuf;
+
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TNC, respData, &len);
+	if (pos == NULL)
+		return; /* Should not happen; message already verified */
+
+	end = pos + len;
+
+	if (len == 1 && (data->state == DONE || data->state == FAIL)) {
+		wpa_printf(MSG_DEBUG, "EAP-TNC: Peer acknowledged the last "
+			   "message");
+		return;
+	}
+
+	if (len == 0) {
+		/* fragment ack */
+		flags = 0;
+	} else
+		flags = *pos++;
+
+	if (flags & EAP_TNC_FLAGS_LENGTH_INCLUDED) {
+		if (end - pos < 4) {
+			wpa_printf(MSG_DEBUG, "EAP-TNC: Message underflow");
+			data->state = FAIL;
+			return;
+		}
+		message_length = WPA_GET_BE32(pos);
+		pos += 4;
+
+		if (message_length < (u32) (end - pos)) {
+			wpa_printf(MSG_DEBUG, "EAP-TNC: Invalid Message "
+				   "Length (%d; %ld remaining in this msg)",
+				   message_length, (long) (end - pos));
+			data->state = FAIL;
+			return;
+		}
+	}
+	wpa_printf(MSG_DEBUG, "EAP-TNC: Received packet: Flags 0x%x "
+		   "Message Length %u", flags, message_length);
+
+	if (data->state == WAIT_FRAG_ACK) {
+		if (len != 0) {
+			wpa_printf(MSG_DEBUG, "EAP-TNC: Unexpected payload "
+				   "in WAIT_FRAG_ACK state");
+			data->state = FAIL;
+			return;
+		}
+		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment acknowledged");
+		data->state = CONTINUE;
+		return;
+	}
+
+	if (data->in_buf && eap_tnc_process_cont(data, pos, end - pos) < 0) {
+		data->state = FAIL;
+		return;
+	}
+		
+	if (flags & EAP_TNC_FLAGS_MORE_FRAGMENTS) {
+		if (eap_tnc_process_fragment(data, flags, message_length,
+					     pos, end - pos) < 0)
+			data->state = FAIL;
+		else
+			data->state = FRAG_ACK;
+		return;
+	} else if (data->state == FRAG_ACK) {
+		wpa_printf(MSG_DEBUG, "EAP-TNC: All fragments received");
+		data->state = CONTINUE;
+	}
+
+	if (data->in_buf == NULL) {
+		/* Wrap unfragmented messages as wpabuf without extra copy */
+		wpabuf_set(&tmpbuf, pos, end - pos);
+		data->in_buf = &tmpbuf;
+	}
+
+	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-TNC: Received payload",
+			  wpabuf_head(data->in_buf), wpabuf_len(data->in_buf));
+	tncs_process(data, data->in_buf);
+
+	if (data->in_buf != &tmpbuf)
+		wpabuf_free(data->in_buf);
+	data->in_buf = NULL;
 }
 
 

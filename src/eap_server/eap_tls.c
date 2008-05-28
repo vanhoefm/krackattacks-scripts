@@ -29,6 +29,32 @@ struct eap_tls_data {
 };
 
 
+static const char * eap_tls_state_txt(int state)
+{
+	switch (state) {
+	case START:
+		return "START";
+	case CONTINUE:
+		return "CONTINUE";
+	case SUCCESS:
+		return "SUCCESS";
+	case FAILURE:
+		return "FAILURE";
+	default:
+		return "Unknown?!";
+	}
+}
+
+
+static void eap_tls_state(struct eap_tls_data *data, int state)
+{
+	wpa_printf(MSG_DEBUG, "EAP-TLS: %s -> %s",
+		   eap_tls_state_txt(data->state),
+		   eap_tls_state_txt(state));
+	data->state = state;
+}
+
+
 static void * eap_tls_init(struct eap_sm *sm)
 {
 	struct eap_tls_data *data;
@@ -68,13 +94,13 @@ static struct wpabuf * eap_tls_build_start(struct eap_sm *sm,
 	if (req == NULL) {
 		wpa_printf(MSG_ERROR, "EAP-TLS: Failed to allocate memory for "
 			   "request");
-		data->state = FAILURE;
+		eap_tls_state(data, FAILURE);
 		return NULL;
 	}
 
 	wpabuf_put_u8(req, EAP_TLS_FLAGS_START);
 
-	data->state = CONTINUE;
+	eap_tls_state(data, CONTINUE);
 
 	return req;
 }
@@ -100,7 +126,7 @@ static struct wpabuf * eap_tls_buildReq(struct eap_sm *sm, void *priv, u8 id)
 	case CONTINUE:
 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
 			wpa_printf(MSG_DEBUG, "EAP-TLS: Done");
-			data->state = SUCCESS;
+			eap_tls_state(data, SUCCESS);
 		}
 		break;
 	default:
@@ -134,7 +160,7 @@ static void eap_tls_process_msg(struct eap_sm *sm, void *priv,
 {
 	struct eap_tls_data *data = priv;
 	if (eap_server_tls_phase1(sm, &data->ssl) < 0)
-		data->state = FAILURE;
+		eap_tls_state(data, FAILURE);
 }
 
 
@@ -145,7 +171,7 @@ static void eap_tls_process(struct eap_sm *sm, void *priv,
 	if (eap_server_tls_process(sm, &data->ssl, respData, data,
 				   EAP_TYPE_TLS, NULL, eap_tls_process_msg) <
 	    0)
-		data->state = FAILURE;
+		eap_tls_state(data, FAILURE);
 }
 
 

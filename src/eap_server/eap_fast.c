@@ -1435,7 +1435,7 @@ static void eap_fast_process(struct eap_sm *sm, void *priv,
 		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
 		   flags);
 
-	if (eap_fast_process_version(data, flags & EAP_PEAP_VERSION_MASK))
+	if (eap_fast_process_version(data, flags & EAP_TLS_VERSION_MASK))
 		return;
 
 	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);

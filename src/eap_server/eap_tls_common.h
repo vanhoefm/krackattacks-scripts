@@ -36,7 +36,7 @@ struct eap_ssl_data {
 #define EAP_TLS_FLAGS_LENGTH_INCLUDED 0x80
 #define EAP_TLS_FLAGS_MORE_FRAGMENTS 0x40
 #define EAP_TLS_FLAGS_START 0x20
-#define EAP_PEAP_VERSION_MASK 0x07
+#define EAP_TLS_VERSION_MASK 0x07
 
  /* could be up to 128 bytes, but only the first 64 bytes are used */
 #define EAP_TLS_KEY_LEN 64
@@ -48,10 +48,8 @@ void eap_server_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data);
 u8 * eap_server_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 			       char *label, size_t len);
 struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
-					 int eap_type, int peap_version,
-					 u8 id);
-struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type,
-					 int peap_version);
+					 int eap_type, int version, u8 id);
+struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int version);
 int eap_server_tls_phase1(struct eap_sm *sm, struct eap_ssl_data *data);
 int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
 			      const u8 **pos, size_t *left);

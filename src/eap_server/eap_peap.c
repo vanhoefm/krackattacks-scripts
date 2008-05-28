@@ -1351,7 +1351,7 @@ static void eap_peap_process(struct eap_sm *sm, void *priv,
 	wpa_printf(MSG_DEBUG, "EAP-PEAP: Received packet(len=%lu) - "
 		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
 		   flags);
-	data->recv_version = peer_version = flags & EAP_PEAP_VERSION_MASK;
+	data->recv_version = peer_version = flags & EAP_TLS_VERSION_MASK;
 	if (data->force_version >= 0 && peer_version != data->force_version) {
 		wpa_printf(MSG_INFO, "EAP-PEAP: peer did not select the forced"
 			   " version (forced=%d peer=%d) - reject",

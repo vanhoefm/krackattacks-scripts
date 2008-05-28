@@ -1314,7 +1314,7 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
 		   flags);
 
-	eap_ttls_process_version(sm, data, flags & EAP_PEAP_VERSION_MASK);
+	eap_ttls_process_version(sm, data, flags & EAP_TLS_VERSION_MASK);
 
 	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);
 	if (ret < 0) {

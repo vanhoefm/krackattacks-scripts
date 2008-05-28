@@ -107,7 +107,7 @@ fail:
 
 
 struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
-					 int eap_type, int peap_version, u8 id)
+					 int eap_type, int version, u8 id)
 {
 	struct wpabuf *req;
 	u8 flags;
@@ -115,7 +115,7 @@ struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 
 	wpa_printf(MSG_DEBUG, "SSL: Generating Request");
 
-	flags = peap_version;
+	flags = version;
 	send_len = wpabuf_len(data->out_buf) - data->out_used;
 	if (1 + send_len > data->tls_out_limit) {
 		send_len = data->tls_out_limit - 1;
@@ -163,7 +163,7 @@ struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 }
 
 
-struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int peap_version)
+struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int version)
 {
 	struct wpabuf *req;
 
@@ -172,7 +172,7 @@ struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int peap_version)
 	if (req == NULL)
 		return NULL;
 	wpa_printf(MSG_DEBUG, "SSL: Building ACK");
-	wpabuf_put_u8(req, peap_version); /* Flags */
+	wpabuf_put_u8(req, version); /* Flags */
 	return req;
 }
 

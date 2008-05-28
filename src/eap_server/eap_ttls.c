@@ -1272,10 +1272,10 @@ static void eap_ttls_start_tnc(struct eap_sm *sm, struct eap_ttls_data *data)
 }
 
 
-static void eap_ttls_process_version(struct eap_sm *sm,
-				     struct eap_ttls_data *data,
-				     int peer_version)
+static int eap_ttls_process_version(struct eap_sm *sm, void *priv,
+				    int peer_version)
 {
+	struct eap_ttls_data *data = priv;
 	if (peer_version < data->ttls_version) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: peer ver=%d, own ver=%d; "
 			   "use version %d",
@@ -1287,41 +1287,19 @@ static void eap_ttls_process_version(struct eap_sm *sm,
 		if (tls_connection_set_ia(sm->ssl_ctx, data->ssl.conn, 1)) {
 			wpa_printf(MSG_INFO, "EAP-TTLS: Failed to enable "
 				   "TLS/IA");
-			eap_ttls_state(data, FAILURE);
-			return;
+			return -1;
 		}
 		data->tls_ia_configured = 1;
 	}
+
+	return 0;
 }
 
 
-static void eap_ttls_process(struct eap_sm *sm, void *priv,
-			     struct wpabuf *respData)
+static void eap_ttls_process_msg(struct eap_sm *sm, void *priv,
+				 const struct wpabuf *respData)
 {
 	struct eap_ttls_data *data = priv;
-	const u8 *pos;
-	u8 flags;
-	size_t left;
-	int ret;
-
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TTLS, respData,
-			       &left);
-	if (pos == NULL || left < 1)
-		return;
-	flags = *pos++;
-	left--;
-	wpa_printf(MSG_DEBUG, "EAP-TTLS: Received packet(len=%lu) - "
-		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
-		   flags);
-
-	eap_ttls_process_version(sm, data, flags & EAP_TLS_VERSION_MASK);
-
-	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);
-	if (ret < 0) {
-		eap_ttls_state(data, FAILURE);
-		return;
-	} else if (ret == 1)
-		return;
 
 	switch (data->state) {
 	case PHASE1:
@@ -1335,7 +1313,8 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 		eap_ttls_start_tnc(sm, data);
 		break;
 	case PHASE2_MSCHAPV2_RESP:
-		if (data->mschapv2_resp_ok && left == 0) {
+		if (data->mschapv2_resp_ok && wpabuf_len(data->ssl.in_buf) ==
+		    0) {
 			wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Peer "
 				   "acknowledged response");
 			eap_ttls_state(data, data->ttls_version > 0 ?
@@ -1348,7 +1327,8 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 			wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Unexpected "
 				   "frame from peer (payload len %lu, "
 				   "expected empty frame)",
-				   (unsigned long) left);
+				   (unsigned long)
+				   wpabuf_len(data->ssl.in_buf));
 			eap_ttls_state(data, FAILURE);
 		}
 		eap_ttls_start_tnc(sm, data);
@@ -1358,14 +1338,17 @@ static void eap_ttls_process(struct eap_sm *sm, void *priv,
 			   data->state, __func__);
 		break;
 	}
+}
 
-	if (tls_connection_get_write_alerts(sm->ssl_ctx, data->ssl.conn) > 1) {
-		wpa_printf(MSG_INFO, "EAP-TTLS: Locally detected fatal error "
-			   "in TLS processing");
+
+static void eap_ttls_process(struct eap_sm *sm, void *priv,
+			     struct wpabuf *respData)
+{
+	struct eap_ttls_data *data = priv;
+	if (eap_server_tls_process(sm, &data->ssl, respData, data,
+				   EAP_TYPE_TTLS, eap_ttls_process_version,
+				   eap_ttls_process_msg) < 0)
 		eap_ttls_state(data, FAILURE);
-	}
-
-	eap_server_tls_free_in_buf(&data->ssl);
 }
 
 

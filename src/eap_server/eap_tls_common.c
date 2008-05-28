@@ -263,8 +263,8 @@ int eap_server_tls_phase1(struct eap_sm *sm, struct eap_ssl_data *data)
 }
 
 
-int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
-			      const u8 **pos, size_t *left)
+static int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
+				     const u8 **pos, size_t *left)
 {
 	unsigned int tls_msg_len = 0;
 	const u8 *end = *pos + *left;
@@ -323,7 +323,7 @@ int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
 }
 
 
-void eap_server_tls_free_in_buf(struct eap_ssl_data *data)
+static void eap_server_tls_free_in_buf(struct eap_ssl_data *data)
 {
 	if (data->in_buf != &data->tmpbuf)
 		wpabuf_free(data->in_buf);
@@ -354,4 +354,51 @@ struct wpabuf * eap_server_tls_encrypt(struct eap_sm *sm,
 	wpabuf_put(buf, res);
 
 	return buf;
+}
+
+
+int eap_server_tls_process(struct eap_sm *sm, struct eap_ssl_data *data,
+			   struct wpabuf *respData, void *priv, int eap_type,
+			   int (*proc_version)(struct eap_sm *sm, void *priv,
+					       int peer_version),
+			   void (*proc_msg)(struct eap_sm *sm, void *priv,
+					    const struct wpabuf *respData))
+{
+	const u8 *pos;
+	u8 flags;
+	size_t left;
+	int ret, res = 0;
+
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, eap_type, respData, &left);
+	if (pos == NULL || left < 1)
+		return 0; /* Should not happen - frame already validated */
+	flags = *pos++;
+	left--;
+	wpa_printf(MSG_DEBUG, "SSL: Received packet(len=%lu) - Flags 0x%02x",
+		   (unsigned long) wpabuf_len(respData), flags);
+
+	if (proc_version &&
+	    proc_version(sm, priv, flags & EAP_TLS_VERSION_MASK) < 0)
+		return -1;
+
+	ret = eap_server_tls_reassemble(data, flags, &pos, &left);
+	if (ret < 0) {
+		res = -1;
+		goto done;
+	} else if (ret == 1)
+		return 0;
+
+	if (proc_msg)
+		proc_msg(sm, priv, respData);
+
+	if (tls_connection_get_write_alerts(sm->ssl_ctx, data->conn) > 1) {
+		wpa_printf(MSG_INFO, "SSL: Locally detected fatal error in "
+			   "TLS processing");
+		res = -1;
+	}
+
+done:
+	eap_server_tls_free_in_buf(data);
+
+	return res;
 }

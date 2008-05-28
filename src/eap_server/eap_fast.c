@@ -1334,16 +1334,17 @@ static void eap_fast_process_phase2(struct eap_sm *sm,
 }
 
 
-static int eap_fast_process_version(struct eap_fast_data *data,
+static int eap_fast_process_version(struct eap_sm *sm, void *priv,
 				    int peer_version)
 {
+	struct eap_fast_data *data = priv;
+
 	data->peer_version = peer_version;
 
 	if (data->force_version >= 0 && peer_version != data->force_version) {
 		wpa_printf(MSG_INFO, "EAP-FAST: peer did not select the forced"
 			   " version (forced=%d peer=%d) - reject",
 			   data->force_version, peer_version);
-		eap_fast_state(data, FAILURE);
 		return -1;
 	}
 
@@ -1416,34 +1417,10 @@ static void eap_fast_process_phase2_start(struct eap_sm *sm,
 }
 
 
-static void eap_fast_process(struct eap_sm *sm, void *priv,
-			     struct wpabuf *respData)
+static void eap_fast_process_msg(struct eap_sm *sm, void *priv,
+				 const struct wpabuf *respData)
 {
 	struct eap_fast_data *data = priv;
-	const u8 *pos;
-	u8 flags;
-	size_t left;
-	int ret;
-
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_FAST, respData,
-			       &left);
-	if (pos == NULL || left < 1)
-		return;
-	flags = *pos++;
-	left--;
-	wpa_printf(MSG_DEBUG, "EAP-FAST: Received packet(len=%lu) - "
-		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
-		   flags);
-
-	if (eap_fast_process_version(data, flags & EAP_TLS_VERSION_MASK))
-		return;
-
-	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);
-	if (ret < 0) {
-		eap_fast_state(data, FAILURE);
-		return;
-	} else if (ret == 1)
-		return;
 
 	switch (data->state) {
 	case PHASE1:
@@ -1465,14 +1442,17 @@ static void eap_fast_process(struct eap_sm *sm, void *priv,
 			   data->state, __func__);
 		break;
 	}
+}
 
-	if (tls_connection_get_write_alerts(sm->ssl_ctx, data->ssl.conn) > 1) {
-		wpa_printf(MSG_INFO, "EAP-FAST: Locally detected fatal error "
-			   "in TLS processing");
+
+static void eap_fast_process(struct eap_sm *sm, void *priv,
+			     struct wpabuf *respData)
+{
+	struct eap_fast_data *data = priv;
+	if (eap_server_tls_process(sm, &data->ssl, respData, data,
+				   EAP_TYPE_FAST, eap_fast_process_version,
+				   eap_fast_process_msg) < 0)
 		eap_fast_state(data, FAILURE);
-	}
-
-	eap_server_tls_free_in_buf(&data->ssl);
 }
 
 

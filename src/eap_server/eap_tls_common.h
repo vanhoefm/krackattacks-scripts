@@ -51,11 +51,14 @@ struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 					 int eap_type, int version, u8 id);
 struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int version);
 int eap_server_tls_phase1(struct eap_sm *sm, struct eap_ssl_data *data);
-int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
-			      const u8 **pos, size_t *left);
-void eap_server_tls_free_in_buf(struct eap_ssl_data *data);
 struct wpabuf * eap_server_tls_encrypt(struct eap_sm *sm,
 				       struct eap_ssl_data *data,
 				       const u8 *plain, size_t plain_len);
+int eap_server_tls_process(struct eap_sm *sm, struct eap_ssl_data *data,
+			   struct wpabuf *respData, void *priv, int eap_type,
+			   int (*proc_version)(struct eap_sm *sm, void *priv,
+					       int peer_version),
+			   void (*proc_msg)(struct eap_sm *sm, void *priv,
+					    const struct wpabuf *respData));
 
 #endif /* EAP_TLS_COMMON_H */

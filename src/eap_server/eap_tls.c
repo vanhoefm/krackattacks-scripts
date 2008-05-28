@@ -129,41 +129,23 @@ static Boolean eap_tls_check(struct eap_sm *sm, void *priv,
 }
 
 
+static void eap_tls_process_msg(struct eap_sm *sm, void *priv,
+				const struct wpabuf *respData)
+{
+	struct eap_tls_data *data = priv;
+	if (eap_server_tls_phase1(sm, &data->ssl) < 0)
+		data->state = FAILURE;
+}
+
+
 static void eap_tls_process(struct eap_sm *sm, void *priv,
 			    struct wpabuf *respData)
 {
 	struct eap_tls_data *data = priv;
-	const u8 *pos;
-	u8 flags;
-	size_t left;
-	int ret;
-
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TLS, respData, &left);
-	if (pos == NULL || left < 1)
-		return; /* Should not happen - frame already validated */
-	flags = *pos++;
-	left--;
-	wpa_printf(MSG_DEBUG, "EAP-TLS: Received packet(len=%lu) - "
-		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
-		   flags);
-
-	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);
-	if (ret < 0) {
+	if (eap_server_tls_process(sm, &data->ssl, respData, data,
+				   EAP_TYPE_TLS, NULL, eap_tls_process_msg) <
+	    0)
 		data->state = FAILURE;
-		return;
-	} else if (ret == 1)
-		return;
-
-	if (eap_server_tls_phase1(sm, &data->ssl) < 0)
-		data->state = FAILURE;
-
-	if (tls_connection_get_write_alerts(sm->ssl_ctx, data->ssl.conn) > 1) {
-		wpa_printf(MSG_INFO, "EAP-TLS: Locally detected fatal error "
-			   "in TLS processing");
-		data->state = FAILURE;
-	}
-
-	eap_server_tls_free_in_buf(&data->ssl);
 }
 
 

@@ -1110,12 +1110,17 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 static void eap_peap_process_phase2(struct eap_sm *sm,
 				    struct eap_peap_data *data,
 				    const struct wpabuf *respData,
-				    const u8 *in_data, size_t in_len)
+				    struct wpabuf *in_buf)
 {
 	struct wpabuf *in_decrypted;
 	int len_decrypted;
 	const struct eap_hdr *hdr;
 	size_t buf_len, len;
+	u8 *in_data;
+	size_t in_len;
+
+	in_data = wpabuf_mhead(in_buf);
+	in_len = wpabuf_len(in_buf);
 
 	wpa_printf(MSG_DEBUG, "EAP-PEAP: received %lu bytes encrypted data for"
 		   " Phase 2", (unsigned long) in_len);
@@ -1332,32 +1337,17 @@ static int eap_peapv2_start_phase2(struct eap_sm *sm,
 }
 
 
-static void eap_peap_process(struct eap_sm *sm, void *priv,
-			     struct wpabuf *respData)
+static int eap_peap_process_version(struct eap_sm *sm, void *priv,
+				    int peer_version)
 {
 	struct eap_peap_data *data = priv;
-	const u8 *pos;
-	u8 flags;
-	size_t left;
-	int peer_version;
-	int ret;
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_PEAP, respData,
-			       &left);
-	if (pos == NULL || left < 1)
-		return;
-	flags = *pos++;
-	left--;
-	wpa_printf(MSG_DEBUG, "EAP-PEAP: Received packet(len=%lu) - "
-		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
-		   flags);
-	data->recv_version = peer_version = flags & EAP_TLS_VERSION_MASK;
+	data->recv_version = peer_version;
 	if (data->force_version >= 0 && peer_version != data->force_version) {
 		wpa_printf(MSG_INFO, "EAP-PEAP: peer did not select the forced"
 			   " version (forced=%d peer=%d) - reject",
 			   data->force_version, peer_version);
-		eap_peap_state(data, FAILURE);
-		return;
+		return -1;
 	}
 	if (peer_version < data->peap_version) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: peer ver=%d, own ver=%d; "
@@ -1366,12 +1356,14 @@ static void eap_peap_process(struct eap_sm *sm, void *priv,
 		data->peap_version = peer_version;
 	}
 
-	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);
-	if (ret < 0) {
-		eap_peap_state(data, FAILURE);
-		return;
-	} else if (ret == 1)
-		return;
+	return 0;
+}
+
+
+static void eap_peap_process_msg(struct eap_sm *sm, void *priv,
+				 const struct wpabuf *respData)
+{
+	struct eap_peap_data *data = priv;
 
 	switch (data->state) {
 	case PHASE1:
@@ -1397,7 +1389,7 @@ static void eap_peap_process(struct eap_sm *sm, void *priv,
 	case PHASE2_METHOD:
 	case PHASE2_SOH:
 	case PHASE2_TLV:
-		eap_peap_process_phase2(sm, data, respData, pos, left);
+		eap_peap_process_phase2(sm, data, respData, data->ssl.in_buf);
 		break;
 	case SUCCESS_REQ:
 		eap_peap_state(data, SUCCESS);
@@ -1410,14 +1402,17 @@ static void eap_peap_process(struct eap_sm *sm, void *priv,
 			   data->state, __func__);
 		break;
 	}
+}
 
-	if (tls_connection_get_write_alerts(sm->ssl_ctx, data->ssl.conn) > 1) {
-		wpa_printf(MSG_INFO, "EAP-PEAP: Locally detected fatal error "
-			   "in TLS processing");
+
+static void eap_peap_process(struct eap_sm *sm, void *priv,
+			     struct wpabuf *respData)
+{
+	struct eap_peap_data *data = priv;
+	if (eap_server_tls_process(sm, &data->ssl, respData, data,
+				   EAP_TYPE_PEAP, eap_peap_process_version,
+				   eap_peap_process_msg) < 0)
 		eap_peap_state(data, FAILURE);
-	}
-
-	eap_server_tls_free_in_buf(&data->ssl);
 }
 
 

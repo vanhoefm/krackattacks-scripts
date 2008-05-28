@@ -10,6 +10,8 @@ ChangeLog for hostapd
 	  and IF-TNCCS interfaces from TNCS)
 	* added support for optional cryptobinding with PEAPv0
 	* added fragmentation support for EAP-TNC
+	* added support for fragmenting EAP-TTLS/PEAP/FAST Phase 2 (tunneled)
+	  data
 
 2008-02-22 - v0.6.3
 	* fixed Reassociation Response callback processing when using internal

@@ -1,6 +1,6 @@
 /*
  * hostapd / EAP-TLS (RFC 2716)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -80,40 +80,36 @@ static struct wpabuf * eap_tls_build_start(struct eap_sm *sm,
 }
 
 
-static struct wpabuf * eap_tls_build_req(struct eap_sm *sm,
-					 struct eap_tls_data *data, u8 id)
-{
-	int res;
-	struct wpabuf *req;
-
-	res = eap_server_tls_buildReq_helper(sm, &data->ssl, EAP_TYPE_TLS, 0,
-					     id, &req);
-
-	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
-		wpa_printf(MSG_DEBUG, "EAP-TLS: Done");
-		data->state = SUCCESS;
-	}
-
-	if (res == 1)
-		return eap_server_tls_build_ack(id, EAP_TYPE_TLS, 0);
-	return req;
-}
-
-
 static struct wpabuf * eap_tls_buildReq(struct eap_sm *sm, void *priv, u8 id)
 {
 	struct eap_tls_data *data = priv;
+
+
+	if (data->ssl.state == FRAG_ACK) {
+		return eap_server_tls_build_ack(id, EAP_TYPE_TLS, 0);
+	}
+
+	if (data->ssl.state == WAIT_FRAG_ACK) {
+		return eap_server_tls_build_msg(&data->ssl, EAP_TYPE_TLS, 0,
+						id);
+	}
 
 	switch (data->state) {
 	case START:
 		return eap_tls_build_start(sm, data, id);
 	case CONTINUE:
-		return eap_tls_build_req(sm, data, id);
+		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
+			wpa_printf(MSG_DEBUG, "EAP-TLS: Done");
+			data->state = SUCCESS;
+		}
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP-TLS: %s - unexpected state %d",
 			   __func__, data->state);
 		return NULL;
 	}
+
+	return eap_server_tls_build_msg(&data->ssl, EAP_TYPE_TLS, 0, id);
 }
 
 
@@ -140,50 +136,34 @@ static void eap_tls_process(struct eap_sm *sm, void *priv,
 	const u8 *pos;
 	u8 flags;
 	size_t left;
-	unsigned int tls_msg_len;
+	int ret;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_TLS, respData, &left);
 	if (pos == NULL || left < 1)
 		return; /* Should not happen - frame already validated */
-
 	flags = *pos++;
 	left--;
 	wpa_printf(MSG_DEBUG, "EAP-TLS: Received packet(len=%lu) - "
 		   "Flags 0x%02x", (unsigned long) wpabuf_len(respData),
 		   flags);
-	if (flags & EAP_TLS_FLAGS_LENGTH_INCLUDED) {
-		if (left < 4) {
-			wpa_printf(MSG_INFO, "EAP-TLS: Short frame with TLS "
-				   "length");
-			data->state = FAILURE;
-			return;
-		}
-		tls_msg_len = WPA_GET_BE32(pos);
-		wpa_printf(MSG_DEBUG, "EAP-TLS: TLS Message Length: %d",
-			   tls_msg_len);
-		if (data->ssl.tls_in_left == 0) {
-			data->ssl.tls_in_total = tls_msg_len;
-			data->ssl.tls_in_left = tls_msg_len;
-			os_free(data->ssl.tls_in);
-			data->ssl.tls_in = NULL;
-			data->ssl.tls_in_len = 0;
-		}
-		pos += 4;
-		left -= 4;
-	}
 
-	if (eap_server_tls_process_helper(sm, &data->ssl, pos, left) < 0) {
-		wpa_printf(MSG_INFO, "EAP-TLS: TLS processing failed");
+	ret = eap_server_tls_reassemble(&data->ssl, flags, &pos, &left);
+	if (ret < 0) {
 		data->state = FAILURE;
 		return;
-	}
+	} else if (ret == 1)
+		return;
+
+	if (eap_server_tls_phase1(sm, &data->ssl) < 0)
+		data->state = FAILURE;
 
 	if (tls_connection_get_write_alerts(sm->ssl_ctx, data->ssl.conn) > 1) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Locally detected fatal error "
 			   "in TLS processing");
 		data->state = FAILURE;
-		return;
 	}
+
+	eap_server_tls_free_in_buf(&data->ssl);
 }
 
 

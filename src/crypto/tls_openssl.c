@@ -1282,6 +1282,8 @@ static int tls_connection_set_subject_match(struct tls_connection *conn,
 int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 			      int verify_peer)
 {
+	static int counter = 0;
+
 	if (conn == NULL)
 		return -1;
 
@@ -1294,6 +1296,19 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 	}
 
 	SSL_set_accept_state(conn->ssl);
+
+	/*
+	 * Set session id context in order to avoid fatal errors when client
+	 * tries to resume a session. However, set the context to a unique
+	 * value in order to effectively disable session resumption for now
+	 * since not all areas of the server code are ready for it (e.g.,
+	 * EAP-TTLS needs special handling for Phase 2 after abbreviated TLS
+	 * handshake).
+	 */
+	counter++;
+	SSL_set_session_id_context(conn->ssl,
+				   (const unsigned char *) &counter,
+				   sizeof(counter));
 
 	return 0;
 }
@@ -2101,8 +2116,11 @@ u8 * tls_connection_server_handshake(void *ssl_ctx,
 {
 	int res;
 	u8 *out_data;
-	char buf[10];
 
+	/*
+	 * Give TLS handshake data from the client (if available) to OpenSSL
+	 * for processing.
+	 */
 	if (in_data &&
 	    BIO_write(conn->ssl_in, in_data, in_len) < 0) {
 		tls_show_errors(MSG_INFO, __func__,
@@ -2110,12 +2128,23 @@ u8 * tls_connection_server_handshake(void *ssl_ctx,
 		return NULL;
 	}
 
-	res = SSL_read(conn->ssl, buf, sizeof(buf));
-	if (res >= 0) {
-		wpa_printf(MSG_DEBUG, "SSL: Unexpected data from SSL_read "
-			   "(res=%d)", res);
+	/* Initiate TLS handshake or continue the existing handshake */
+	res = SSL_accept(conn->ssl);
+	if (res != 1) {
+		int err = SSL_get_error(conn->ssl, res);
+		if (err == SSL_ERROR_WANT_READ)
+			wpa_printf(MSG_DEBUG, "SSL: SSL_accept - want "
+				   "more data");
+		else if (err == SSL_ERROR_WANT_WRITE)
+			wpa_printf(MSG_DEBUG, "SSL: SSL_accept - want to "
+				   "write");
+		else {
+			tls_show_errors(MSG_INFO, __func__, "SSL_accept");
+			return NULL;
+		}
 	}
 
+	/* Get the TLS handshake data to be sent to the client */
 	res = BIO_ctrl_pending(conn->ssl_out);
 	wpa_printf(MSG_DEBUG, "SSL: %d bytes pending from ssl_out", res);
 	out_data = os_malloc(res == 0 ? 1 : res);

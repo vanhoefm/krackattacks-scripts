@@ -76,6 +76,7 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef IEEE8021X_EAPOL
 static int wpa_supplicant_ctrl_iface_preauth(struct wpa_supplicant *wpa_s,
 					     char *addr)
 {
@@ -95,6 +96,7 @@ static int wpa_supplicant_ctrl_iface_preauth(struct wpa_supplicant *wpa_s,
 
 	return 0;
 }
+#endif /* IEEE8021X_EAPOL */
 
 
 #ifdef CONFIG_PEERKEY
@@ -1396,9 +1398,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			wpa_s->reassociate = 1;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
+#ifdef IEEE8021X_EAPOL
 	} else if (os_strncmp(buf, "PREAUTH ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_preauth(wpa_s, buf + 8))
 			reply_len = -1;
+#endif /* IEEE8021X_EAPOL */
 #ifdef CONFIG_PEERKEY
 	} else if (os_strncmp(buf, "STKSTART ", 9) == 0) {
 		if (wpa_supplicant_ctrl_iface_stkstart(wpa_s, buf + 9))

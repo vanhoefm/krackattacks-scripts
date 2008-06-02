@@ -1294,8 +1294,15 @@ static void wext_get_scan_freq(struct iw_event *iwe,
 		/*
 		 * Some drivers do not report frequency, but a channel.
 		 * Try to map this to frequency by assuming they are using
-		 * IEEE 802.11b/g.
+		 * IEEE 802.11b/g.  But don't overwrite a previously parsed
+		 * frequency if the driver sends both frequency and channel,
+		 * since the driver may be sending an A-band channel that we
+		 * don't handle here.
 		 */
+
+		if (res->res.freq)
+			return;
+
 		if (iwe->u.freq.m >= 1 && iwe->u.freq.m <= 13) {
 			res->res.freq = 2407 + 5 * iwe->u.freq.m;
 			return;

@@ -315,6 +315,25 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 }
 
 
+int eloop_is_timeout_registered(eloop_timeout_handler handler,
+				void *eloop_data, void *user_data)
+{
+	struct eloop_timeout *tmp;
+
+	tmp = eloop.timeout;
+	while (tmp != NULL) {
+		if (tmp->handler == handler &&
+		    tmp->eloop_data == eloop_data &&
+		    tmp->user_data == user_data)
+			return 1;
+
+		tmp = tmp->next;
+	}
+
+	return 0;
+}
+
+
 #ifndef CONFIG_NATIVE_WINDOWS
 static void eloop_handle_alarm(int sig)
 {

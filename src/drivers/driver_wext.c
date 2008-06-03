@@ -631,9 +631,8 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 			wpa_printf(MSG_DEBUG, "Wireless event: new AP: "
 				   MACSTR,
 				   MAC2STR((u8 *) iwe->u.ap_addr.sa_data));
-			if (os_memcmp(iwe->u.ap_addr.sa_data,
-				      "\x00\x00\x00\x00\x00\x00", ETH_ALEN) ==
-			    0 ||
+			if (is_zero_ether_addr(
+				    (const u8 *) iwe->u.ap_addr.sa_data) ||
 			    os_memcmp(iwe->u.ap_addr.sa_data,
 				      "\x44\x44\x44\x44\x44\x44", ETH_ALEN) ==
 			    0) {

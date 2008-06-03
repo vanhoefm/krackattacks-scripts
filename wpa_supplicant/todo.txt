@@ -59,7 +59,6 @@ To do:
   could very well be done before EAP has been started
 - try to work around race in receiving association event and first EAPOL
   message
-- helper function to do memcmp(addr, "\x00\x00\x00\x00\x00\x00", ETH_ALEN)
 - add wpa_secure_memzero() macro and secure implementation (volatile u8*) to
   clear memory; this would be used to clear temporary buffers containing
   private data (e.g., keys); the macro can be defined to NOP in order to save

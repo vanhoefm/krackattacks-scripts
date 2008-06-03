@@ -187,7 +187,7 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	const u8 *bssid = wpa_s->bssid;
-	if (os_memcmp(bssid, "\x00\x00\x00\x00\x00\x00", ETH_ALEN) == 0)
+	if (is_zero_ether_addr(bssid))
 		bssid = wpa_s->pending_bssid;
 	wpa_msg(wpa_s, MSG_INFO, "Authentication with " MACSTR " timed out.",
 		MAC2STR(bssid));
@@ -1131,8 +1131,7 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 				 int reason_code)
 {
 	u8 *addr = NULL;
-	if (os_memcmp(wpa_s->bssid, "\x00\x00\x00\x00\x00\x00", ETH_ALEN) != 0)
-	{
+	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		if (wpa_s->use_client_mlme)
 			ieee80211_sta_disassociate(wpa_s, reason_code);
 		else
@@ -1160,8 +1159,7 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 {
 	u8 *addr = NULL;
 	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
-	if (os_memcmp(wpa_s->bssid, "\x00\x00\x00\x00\x00\x00", ETH_ALEN) != 0)
-	{
+	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		if (wpa_s->use_client_mlme)
 			ieee80211_sta_deauthenticate(wpa_s, reason_code);
 		else

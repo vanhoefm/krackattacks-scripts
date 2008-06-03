@@ -1317,8 +1317,7 @@ static void wpa_driver_ndis_poll_timeout(void *eloop_ctx, void *timeout_ctx)
 
 	if (wpa_driver_ndis_get_bssid(drv, bssid)) {
 		/* Disconnected */
-		if (os_memcmp(drv->bssid, "\x00\x00\x00\x00\x00\x00", ETH_ALEN)
-		    != 0) {
+		if (!is_zero_ether_addr(drv->bssid)) {
 			os_memset(drv->bssid, 0, ETH_ALEN);
 			wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 		}

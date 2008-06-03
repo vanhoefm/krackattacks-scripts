@@ -369,7 +369,7 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 			ret = -1;
 			break;
 		}
-		if (os_memcmp(addr, "\x00\x00\x00\x00\x00\x00", ETH_ALEN) == 0)
+		if (is_zero_ether_addr(addr))
 			psk->group = 1;
 		else
 			os_memcpy(psk->addr, addr, ETH_ALEN);

@@ -68,8 +68,7 @@ static void rsn_preauth_receive(void *ctx, const u8 *src_addr,
 	wpa_hexdump(MSG_MSGDUMP, "RX pre-auth", buf, len);
 
 	if (sm->preauth_eapol == NULL ||
-	    os_memcmp(sm->preauth_bssid, "\x00\x00\x00\x00\x00\x00",
-		      ETH_ALEN) == 0 ||
+	    is_zero_ether_addr(sm->preauth_bssid) ||
 	    os_memcmp(sm->preauth_bssid, src_addr, ETH_ALEN) != 0) {
 		wpa_printf(MSG_WARNING, "RSN pre-auth frame received from "
 			   "unexpected source " MACSTR " - dropped",

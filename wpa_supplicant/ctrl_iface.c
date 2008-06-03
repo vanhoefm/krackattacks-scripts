@@ -330,9 +330,7 @@ static int wpa_supplicant_ctrl_iface_bssid(struct wpa_supplicant *wpa_s,
 	}
 
 	os_memcpy(ssid->bssid, bssid, ETH_ALEN);
-	ssid->bssid_set =
-		os_memcmp(bssid, "\x00\x00\x00\x00\x00\x00", ETH_ALEN) != 0;
-		
+	ssid->bssid_set = !is_zero_ether_addr(bssid);
 
 	return 0;
 }

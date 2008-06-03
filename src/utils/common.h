@@ -428,6 +428,10 @@ TCHAR * wpa_strdup_tchar(const char *str);
 
 const char * wpa_ssid_txt(const u8 *ssid, size_t ssid_len);
 
+static inline int is_zero_ether_addr(const u8 *a)
+{
+	return !(a[0] | a[1] | a[2] | a[3] | a[4] | a[5]);
+}
 
 #include "wpa_debug.h"
 

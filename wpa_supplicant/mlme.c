@@ -2455,8 +2455,7 @@ int ieee80211_sta_associate(struct wpa_supplicant *wpa_s,
 	wpa_s->mlme.freq = params->freq;
 	if (params->bssid) {
 		os_memcpy(wpa_s->bssid, params->bssid, ETH_ALEN);
-		if (os_memcmp(params->bssid, "\x00\x00\x00\x00\x00\x00",
-			      ETH_ALEN))
+		if (!is_zero_ether_addr(params->bssid))
 			wpa_s->mlme.bssid_set = 1;
 		bss = ieee80211_bss_get(wpa_s, wpa_s->bssid);
 		if (bss) {

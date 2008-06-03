@@ -19,6 +19,11 @@
 #include <sys/select.h>
 
 #ifdef USE_KERNEL_HEADERS
+/* compat-wireless does not include linux/compiler.h to define __user, so
+ * define it here */
+#ifndef __user
+#define __user
+#endif /* __user */
 #include <asm/types.h>
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>   /* The L2 protocols */

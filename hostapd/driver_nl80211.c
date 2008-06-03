@@ -27,7 +27,7 @@
 #include <net/if.h>
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>   /* The L2 protocols */
-#include <linux/wireless.h>
+#include "wireless_copy.h"
 #include <net/if_arp.h>
 
 #include "hostapd.h"

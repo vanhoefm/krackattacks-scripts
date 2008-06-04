@@ -2151,17 +2151,54 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 {
 	struct wpa_driver_wext_data *drv = priv;
 	struct iwreq iwr;
-	int ret = 0;
+	int ret = -1, flags;
+	unsigned int new_mode = mode ? IW_MODE_ADHOC : IW_MODE_INFRA;
 
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.mode = mode ? IW_MODE_ADHOC : IW_MODE_INFRA;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWMODE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWMODE]");
-		ret = -1;
+	iwr.u.mode = new_mode;
+	if (ioctl(drv->ioctl_sock, SIOCSIWMODE, &iwr) == 0) {
+		ret = 0;
+		goto done;
 	}
 
+	if (errno != EBUSY) {
+		perror("ioctl[SIOCSIWMODE]");
+		goto done;
+	}
+
+	/* mac80211 doesn't allow mode changes while the device is up, so if
+	 * the device isn't in the mode we're about to change to, take device
+	 * down, try to set the mode again, and bring it back up.
+	 */
+	if (ioctl(drv->ioctl_sock, SIOCGIWMODE, &iwr) < 0) {
+		perror("ioctl[SIOCGIWMODE]");
+		goto done;
+	}
+
+	if (iwr.u.mode == new_mode) {
+		ret = 0;
+		goto done;
+	}
+
+	if (wpa_driver_wext_get_ifflags(drv, &flags) == 0) {
+		(void) wpa_driver_wext_set_ifflags(drv, flags & ~IFF_UP);
+
+		/* Try to set the mode again while the interface is down */
+		iwr.u.mode = new_mode;
+		if (ioctl(drv->ioctl_sock, SIOCSIWMODE, &iwr) < 0)
+			perror("ioctl[SIOCSIWMODE]");
+		else
+			ret = 0;
+
+		/* Ignore return value of get_ifflags to ensure that the device
+		 * is always up like it was before this function was called.
+		 */
+		(void) wpa_driver_wext_get_ifflags(drv, &flags);
+		(void) wpa_driver_wext_set_ifflags(drv, flags | IFF_UP);
+	}
+
+done:
 	return ret;
 }
 

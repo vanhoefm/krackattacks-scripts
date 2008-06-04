@@ -4,14 +4,11 @@
  * http://math.libtomcrypt.com/files/ltm-0.39.tar.bz2
  * This library was released in public domain by Tom St Denis.
  *
- * The combination in this file is not using many of the optimized algorithms
- * (e.g., Montgomery reduction) and is considerable slower than the LibTomMath
- * with its default of SC_RSA_1 settins. The main purpose of having this
- * version here is to make it easier to build bignum.c wrapper without having
- * to install and build an external library. However, it is likely worth the
- * effort to use the full library with SC_RSA_1 instead of this minimized copy.
- * Including the optimized algorithms may increase the size requirements by
- * 15 kB or so (measured with x86 build).
+ * The combination in this file may not use all of the optimized algorithms
+ * from LibTomMath and may be considerable slower than the LibTomMath with its
+ * default settings. The main purpose of having this version here is to make it
+ * easier to build bignum.c wrapper without having to install and build an
+ * external library.
  *
  * If CONFIG_INTERNAL_LIBTOMMATH is defined, bignum.c includes this
  * libtommath.c file instead of using the external LibTomMath library.

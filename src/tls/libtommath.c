@@ -30,6 +30,15 @@
 #define BN_S_MP_MUL_HIGH_DIGS_C /* Note: #undef in tommath_superclass.h; this
 				 * would require other than mp_reduce */
 
+#ifdef LTM_FAST_EXPTMOD
+/* Include faster exptmod (Montgomery) at the cost of about 2.5 kB in code */
+#define BN_MP_EXPTMOD_FAST_C
+#define BN_MP_MONTGOMERY_SETUP_C
+#define BN_FAST_MP_MONTGOMERY_REDUCE_C
+#define BN_MP_MONTGOMERY_CALC_NORMALIZATION_C
+#define BN_MP_MUL_2_C
+#endif /* LTM_FAST_EXPTMOD */
+
 /* Current uses do not require support for negative exponent in exptmod, so we
  * can save about 1.5 kB in leaving out invmod. */
 #define LTM_NO_NEG_EXP
@@ -144,6 +153,9 @@ static int mp_2expt(mp_int * a, int b);
 static int mp_reduce_setup(mp_int * a, mp_int * b);
 static int mp_reduce(mp_int * x, mp_int * m, mp_int * mu);
 static int mp_init_size(mp_int * a, int size);
+#ifdef BN_MP_EXPTMOD_FAST_C
+static int mp_exptmod_fast (mp_int * G, mp_int * X, mp_int * P, mp_int * Y, int redmode);
+#endif /* BN_MP_EXPTMOD_FAST_C */
 
 
 
@@ -2383,3 +2395,599 @@ static int s_mp_mul_high_digs (mp_int * a, mp_int * b, mp_int * c, int digs)
   mp_clear (&t);
   return MP_OKAY;
 }
+
+
+#ifdef BN_MP_MONTGOMERY_SETUP_C
+/* setups the montgomery reduction stuff */
+static int
+mp_montgomery_setup (mp_int * n, mp_digit * rho)
+{
+  mp_digit x, b;
+
+/* fast inversion mod 2**k
+ *
+ * Based on the fact that
+ *
+ * XA = 1 (mod 2**n)  =>  (X(2-XA)) A = 1 (mod 2**2n)
+ *                    =>  2*X*A - X*X*A*A = 1
+ *                    =>  2*(1) - (1)     = 1
+ */
+  b = n->dp[0];
+
+  if ((b & 1) == 0) {
+    return MP_VAL;
+  }
+
+  x = (((b + 2) & 4) << 1) + b; /* here x*a==1 mod 2**4 */
+  x *= 2 - b * x;               /* here x*a==1 mod 2**8 */
+#if !defined(MP_8BIT)
+  x *= 2 - b * x;               /* here x*a==1 mod 2**16 */
+#endif
+#if defined(MP_64BIT) || !(defined(MP_8BIT) || defined(MP_16BIT))
+  x *= 2 - b * x;               /* here x*a==1 mod 2**32 */
+#endif
+#ifdef MP_64BIT
+  x *= 2 - b * x;               /* here x*a==1 mod 2**64 */
+#endif
+
+  /* rho = -1/m mod b */
+  *rho = (unsigned long)(((mp_word)1 << ((mp_word) DIGIT_BIT)) - x) & MP_MASK;
+
+  return MP_OKAY;
+}
+#endif
+
+
+#ifdef BN_FAST_MP_MONTGOMERY_REDUCE_C
+/* computes xR**-1 == x (mod N) via Montgomery Reduction
+ *
+ * This is an optimized implementation of montgomery_reduce
+ * which uses the comba method to quickly calculate the columns of the
+ * reduction.
+ *
+ * Based on Algorithm 14.32 on pp.601 of HAC.
+*/
+int fast_mp_montgomery_reduce (mp_int * x, mp_int * n, mp_digit rho)
+{
+  int     ix, res, olduse;
+  mp_word W[MP_WARRAY];
+
+  /* get old used count */
+  olduse = x->used;
+
+  /* grow a as required */
+  if (x->alloc < n->used + 1) {
+    if ((res = mp_grow (x, n->used + 1)) != MP_OKAY) {
+      return res;
+    }
+  }
+
+  /* first we have to get the digits of the input into
+   * an array of double precision words W[...]
+   */
+  {
+    register mp_word *_W;
+    register mp_digit *tmpx;
+
+    /* alias for the W[] array */
+    _W   = W;
+
+    /* alias for the digits of  x*/
+    tmpx = x->dp;
+
+    /* copy the digits of a into W[0..a->used-1] */
+    for (ix = 0; ix < x->used; ix++) {
+      *_W++ = *tmpx++;
+    }
+
+    /* zero the high words of W[a->used..m->used*2] */
+    for (; ix < n->used * 2 + 1; ix++) {
+      *_W++ = 0;
+    }
+  }
+
+  /* now we proceed to zero successive digits
+   * from the least significant upwards
+   */
+  for (ix = 0; ix < n->used; ix++) {
+    /* mu = ai * m' mod b
+     *
+     * We avoid a double precision multiplication (which isn't required)
+     * by casting the value down to a mp_digit.  Note this requires
+     * that W[ix-1] have  the carry cleared (see after the inner loop)
+     */
+    register mp_digit mu;
+    mu = (mp_digit) (((W[ix] & MP_MASK) * rho) & MP_MASK);
+
+    /* a = a + mu * m * b**i
+     *
+     * This is computed in place and on the fly.  The multiplication
+     * by b**i is handled by offseting which columns the results
+     * are added to.
+     *
+     * Note the comba method normally doesn't handle carries in the
+     * inner loop In this case we fix the carry from the previous
+     * column since the Montgomery reduction requires digits of the
+     * result (so far) [see above] to work.  This is
+     * handled by fixing up one carry after the inner loop.  The
+     * carry fixups are done in order so after these loops the
+     * first m->used words of W[] have the carries fixed
+     */
+    {
+      register int iy;
+      register mp_digit *tmpn;
+      register mp_word *_W;
+
+      /* alias for the digits of the modulus */
+      tmpn = n->dp;
+
+      /* Alias for the columns set by an offset of ix */
+      _W = W + ix;
+
+      /* inner loop */
+      for (iy = 0; iy < n->used; iy++) {
+          *_W++ += ((mp_word)mu) * ((mp_word)*tmpn++);
+      }
+    }
+
+    /* now fix carry for next digit, W[ix+1] */
+    W[ix + 1] += W[ix] >> ((mp_word) DIGIT_BIT);
+  }
+
+  /* now we have to propagate the carries and
+   * shift the words downward [all those least
+   * significant digits we zeroed].
+   */
+  {
+    register mp_digit *tmpx;
+    register mp_word *_W, *_W1;
+
+    /* nox fix rest of carries */
+
+    /* alias for current word */
+    _W1 = W + ix;
+
+    /* alias for next word, where the carry goes */
+    _W = W + ++ix;
+
+    for (; ix <= n->used * 2 + 1; ix++) {
+      *_W++ += *_W1++ >> ((mp_word) DIGIT_BIT);
+    }
+
+    /* copy out, A = A/b**n
+     *
+     * The result is A/b**n but instead of converting from an
+     * array of mp_word to mp_digit than calling mp_rshd
+     * we just copy them in the right order
+     */
+
+    /* alias for destination word */
+    tmpx = x->dp;
+
+    /* alias for shifted double precision result */
+    _W = W + n->used;
+
+    for (ix = 0; ix < n->used + 1; ix++) {
+      *tmpx++ = (mp_digit)(*_W++ & ((mp_word) MP_MASK));
+    }
+
+    /* zero oldused digits, if the input a was larger than
+     * m->used+1 we'll have to clear the digits
+     */
+    for (; ix < olduse; ix++) {
+      *tmpx++ = 0;
+    }
+  }
+
+  /* set the max used and clamp */
+  x->used = n->used + 1;
+  mp_clamp (x);
+
+  /* if A >= m then A = A - m */
+  if (mp_cmp_mag (x, n) != MP_LT) {
+    return s_mp_sub (x, n, x);
+  }
+  return MP_OKAY;
+}
+#endif
+
+
+#ifdef BN_MP_MUL_2_C
+/* b = a*2 */
+static int mp_mul_2(mp_int * a, mp_int * b)
+{
+  int     x, res, oldused;
+
+  /* grow to accomodate result */
+  if (b->alloc < a->used + 1) {
+    if ((res = mp_grow (b, a->used + 1)) != MP_OKAY) {
+      return res;
+    }
+  }
+
+  oldused = b->used;
+  b->used = a->used;
+
+  {
+    register mp_digit r, rr, *tmpa, *tmpb;
+
+    /* alias for source */
+    tmpa = a->dp;
+    
+    /* alias for dest */
+    tmpb = b->dp;
+
+    /* carry */
+    r = 0;
+    for (x = 0; x < a->used; x++) {
+    
+      /* get what will be the *next* carry bit from the 
+       * MSB of the current digit 
+       */
+      rr = *tmpa >> ((mp_digit)(DIGIT_BIT - 1));
+      
+      /* now shift up this digit, add in the carry [from the previous] */
+      *tmpb++ = ((*tmpa++ << ((mp_digit)1)) | r) & MP_MASK;
+      
+      /* copy the carry that would be from the source 
+       * digit into the next iteration 
+       */
+      r = rr;
+    }
+
+    /* new leading digit? */
+    if (r != 0) {
+      /* add a MSB which is always 1 at this point */
+      *tmpb = 1;
+      ++(b->used);
+    }
+
+    /* now zero any excess digits on the destination 
+     * that we didn't write to 
+     */
+    tmpb = b->dp + b->used;
+    for (x = b->used; x < oldused; x++) {
+      *tmpb++ = 0;
+    }
+  }
+  b->sign = a->sign;
+  return MP_OKAY;
+}
+#endif
+
+
+#ifdef BN_MP_MONTGOMERY_CALC_NORMALIZATION_C
+/*
+ * shifts with subtractions when the result is greater than b.
+ *
+ * The method is slightly modified to shift B unconditionally upto just under
+ * the leading bit of b.  This saves alot of multiple precision shifting.
+ */
+static int mp_montgomery_calc_normalization (mp_int * a, mp_int * b)
+{
+  int     x, bits, res;
+
+  /* how many bits of last digit does b use */
+  bits = mp_count_bits (b) % DIGIT_BIT;
+
+  if (b->used > 1) {
+     if ((res = mp_2expt (a, (b->used - 1) * DIGIT_BIT + bits - 1)) != MP_OKAY) {
+        return res;
+     }
+  } else {
+     mp_set(a, 1);
+     bits = 1;
+  }
+
+
+  /* now compute C = A * B mod b */
+  for (x = bits - 1; x < (int)DIGIT_BIT; x++) {
+    if ((res = mp_mul_2 (a, a)) != MP_OKAY) {
+      return res;
+    }
+    if (mp_cmp_mag (a, b) != MP_LT) {
+      if ((res = s_mp_sub (a, b, a)) != MP_OKAY) {
+        return res;
+      }
+    }
+  }
+
+  return MP_OKAY;
+}
+#endif
+
+
+#ifdef BN_MP_EXPTMOD_FAST_C
+/* computes Y == G**X mod P, HAC pp.616, Algorithm 14.85
+ *
+ * Uses a left-to-right k-ary sliding window to compute the modular exponentiation.
+ * The value of k changes based on the size of the exponent.
+ *
+ * Uses Montgomery or Diminished Radix reduction [whichever appropriate]
+ */
+
+static int mp_exptmod_fast (mp_int * G, mp_int * X, mp_int * P, mp_int * Y, int redmode)
+{
+  mp_int  M[TAB_SIZE], res;
+  mp_digit buf, mp;
+  int     err, bitbuf, bitcpy, bitcnt, mode, digidx, x, y, winsize;
+
+  /* use a pointer to the reduction algorithm.  This allows us to use
+   * one of many reduction algorithms without modding the guts of
+   * the code with if statements everywhere.
+   */
+  int     (*redux)(mp_int*,mp_int*,mp_digit);
+
+  /* find window size */
+  x = mp_count_bits (X);
+  if (x <= 7) {
+    winsize = 2;
+  } else if (x <= 36) {
+    winsize = 3;
+  } else if (x <= 140) {
+    winsize = 4;
+  } else if (x <= 450) {
+    winsize = 5;
+  } else if (x <= 1303) {
+    winsize = 6;
+  } else if (x <= 3529) {
+    winsize = 7;
+  } else {
+    winsize = 8;
+  }
+
+#ifdef MP_LOW_MEM
+  if (winsize > 5) {
+     winsize = 5;
+  }
+#endif
+
+  /* init M array */
+  /* init first cell */
+  if ((err = mp_init(&M[1])) != MP_OKAY) {
+     return err;
+  }
+
+  /* now init the second half of the array */
+  for (x = 1<<(winsize-1); x < (1 << winsize); x++) {
+    if ((err = mp_init(&M[x])) != MP_OKAY) {
+      for (y = 1<<(winsize-1); y < x; y++) {
+        mp_clear (&M[y]);
+      }
+      mp_clear(&M[1]);
+      return err;
+    }
+  }
+
+  /* determine and setup reduction code */
+  if (redmode == 0) {
+#ifdef BN_MP_MONTGOMERY_SETUP_C     
+     /* now setup montgomery  */
+     if ((err = mp_montgomery_setup (P, &mp)) != MP_OKAY) {
+        goto LBL_M;
+     }
+#else
+     err = MP_VAL;
+     goto LBL_M;
+#endif
+
+     /* automatically pick the comba one if available (saves quite a few calls/ifs) */
+#ifdef BN_FAST_MP_MONTGOMERY_REDUCE_C
+     if (((P->used * 2 + 1) < MP_WARRAY) &&
+          P->used < (1 << ((CHAR_BIT * sizeof (mp_word)) - (2 * DIGIT_BIT)))) {
+        redux = fast_mp_montgomery_reduce;
+     } else 
+#endif
+     {
+#ifdef BN_MP_MONTGOMERY_REDUCE_C
+        /* use slower baseline Montgomery method */
+        redux = mp_montgomery_reduce;
+#else
+        err = MP_VAL;
+        goto LBL_M;
+#endif
+     }
+  } else if (redmode == 1) {
+#if defined(BN_MP_DR_SETUP_C) && defined(BN_MP_DR_REDUCE_C)
+     /* setup DR reduction for moduli of the form B**k - b */
+     mp_dr_setup(P, &mp);
+     redux = mp_dr_reduce;
+#else
+     err = MP_VAL;
+     goto LBL_M;
+#endif
+  } else {
+#if defined(BN_MP_REDUCE_2K_SETUP_C) && defined(BN_MP_REDUCE_2K_C)
+     /* setup DR reduction for moduli of the form 2**k - b */
+     if ((err = mp_reduce_2k_setup(P, &mp)) != MP_OKAY) {
+        goto LBL_M;
+     }
+     redux = mp_reduce_2k;
+#else
+     err = MP_VAL;
+     goto LBL_M;
+#endif
+  }
+
+  /* setup result */
+  if ((err = mp_init (&res)) != MP_OKAY) {
+    goto LBL_M;
+  }
+
+  /* create M table
+   *
+
+   *
+   * The first half of the table is not computed though accept for M[0] and M[1]
+   */
+
+  if (redmode == 0) {
+#ifdef BN_MP_MONTGOMERY_CALC_NORMALIZATION_C
+     /* now we need R mod m */
+     if ((err = mp_montgomery_calc_normalization (&res, P)) != MP_OKAY) {
+       goto LBL_RES;
+     }
+#else 
+     err = MP_VAL;
+     goto LBL_RES;
+#endif
+
+     /* now set M[1] to G * R mod m */
+     if ((err = mp_mulmod (G, &res, P, &M[1])) != MP_OKAY) {
+       goto LBL_RES;
+     }
+  } else {
+     mp_set(&res, 1);
+     if ((err = mp_mod(G, P, &M[1])) != MP_OKAY) {
+        goto LBL_RES;
+     }
+  }
+
+  /* compute the value at M[1<<(winsize-1)] by squaring M[1] (winsize-1) times */
+  if ((err = mp_copy (&M[1], &M[1 << (winsize - 1)])) != MP_OKAY) {
+    goto LBL_RES;
+  }
+
+  for (x = 0; x < (winsize - 1); x++) {
+    if ((err = mp_sqr (&M[1 << (winsize - 1)], &M[1 << (winsize - 1)])) != MP_OKAY) {
+      goto LBL_RES;
+    }
+    if ((err = redux (&M[1 << (winsize - 1)], P, mp)) != MP_OKAY) {
+      goto LBL_RES;
+    }
+  }
+
+  /* create upper table */
+  for (x = (1 << (winsize - 1)) + 1; x < (1 << winsize); x++) {
+    if ((err = mp_mul (&M[x - 1], &M[1], &M[x])) != MP_OKAY) {
+      goto LBL_RES;
+    }
+    if ((err = redux (&M[x], P, mp)) != MP_OKAY) {
+      goto LBL_RES;
+    }
+  }
+
+  /* set initial mode and bit cnt */
+  mode   = 0;
+  bitcnt = 1;
+  buf    = 0;
+  digidx = X->used - 1;
+  bitcpy = 0;
+  bitbuf = 0;
+
+  for (;;) {
+    /* grab next digit as required */
+    if (--bitcnt == 0) {
+      /* if digidx == -1 we are out of digits so break */
+      if (digidx == -1) {
+        break;
+      }
+      /* read next digit and reset bitcnt */
+      buf    = X->dp[digidx--];
+      bitcnt = (int)DIGIT_BIT;
+    }
+
+    /* grab the next msb from the exponent */
+    y     = (mp_digit)(buf >> (DIGIT_BIT - 1)) & 1;
+    buf <<= (mp_digit)1;
+
+    /* if the bit is zero and mode == 0 then we ignore it
+     * These represent the leading zero bits before the first 1 bit
+     * in the exponent.  Technically this opt is not required but it
+     * does lower the # of trivial squaring/reductions used
+     */
+    if (mode == 0 && y == 0) {
+      continue;
+    }
+
+    /* if the bit is zero and mode == 1 then we square */
+    if (mode == 1 && y == 0) {
+      if ((err = mp_sqr (&res, &res)) != MP_OKAY) {
+        goto LBL_RES;
+      }
+      if ((err = redux (&res, P, mp)) != MP_OKAY) {
+        goto LBL_RES;
+      }
+      continue;
+    }
+
+    /* else we add it to the window */
+    bitbuf |= (y << (winsize - ++bitcpy));
+    mode    = 2;
+
+    if (bitcpy == winsize) {
+      /* ok window is filled so square as required and multiply  */
+      /* square first */
+      for (x = 0; x < winsize; x++) {
+        if ((err = mp_sqr (&res, &res)) != MP_OKAY) {
+          goto LBL_RES;
+        }
+        if ((err = redux (&res, P, mp)) != MP_OKAY) {
+          goto LBL_RES;
+        }
+      }
+
+      /* then multiply */
+      if ((err = mp_mul (&res, &M[bitbuf], &res)) != MP_OKAY) {
+        goto LBL_RES;
+      }
+      if ((err = redux (&res, P, mp)) != MP_OKAY) {
+        goto LBL_RES;
+      }
+
+      /* empty window and reset */
+      bitcpy = 0;
+      bitbuf = 0;
+      mode   = 1;
+    }
+  }
+
+  /* if bits remain then square/multiply */
+  if (mode == 2 && bitcpy > 0) {
+    /* square then multiply if the bit is set */
+    for (x = 0; x < bitcpy; x++) {
+      if ((err = mp_sqr (&res, &res)) != MP_OKAY) {
+        goto LBL_RES;
+      }
+      if ((err = redux (&res, P, mp)) != MP_OKAY) {
+        goto LBL_RES;
+      }
+
+      /* get next bit of the window */
+      bitbuf <<= 1;
+      if ((bitbuf & (1 << winsize)) != 0) {
+        /* then multiply */
+        if ((err = mp_mul (&res, &M[1], &res)) != MP_OKAY) {
+          goto LBL_RES;
+        }
+        if ((err = redux (&res, P, mp)) != MP_OKAY) {
+          goto LBL_RES;
+        }
+      }
+    }
+  }
+
+  if (redmode == 0) {
+     /* fixup result if Montgomery reduction is used
+      * recall that any value in a Montgomery system is
+      * actually multiplied by R mod n.  So we have
+      * to reduce one more time to cancel out the factor
+      * of R.
+      */
+     if ((err = redux(&res, P, mp)) != MP_OKAY) {
+       goto LBL_RES;
+     }
+  }
+
+  /* swap res with Y */
+  mp_exch (&res, Y);
+  err = MP_OKAY;
+LBL_RES:mp_clear (&res);
+LBL_M:
+  mp_clear(&M[1]);
+  for (x = 1<<(winsize-1); x < (1 << winsize); x++) {
+    mp_clear (&M[x]);
+  }
+  return err;
+}
+#endif

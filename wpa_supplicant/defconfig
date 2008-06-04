@@ -307,6 +307,9 @@ CONFIG_PEERKEY=y
 #LIBS += -L$(LTM_PATH)
 #LIBS_p += -L$(LTM_PATH)
 #endif
+# Add a cost of about 2.5 kB of additional cost, the internal LibTomMath can be
+# configured to include fast exptmod routine to speed up DH and RSA.
+#CONFIG_INTERNAL_LIBTOMMATH_FAST_EXPTMOD=y
 
 # Include NDIS event processing through WMI into wpa_supplicant/wpasvc.
 # This is only for Windows builds and requires WMI-related header files and

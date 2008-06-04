@@ -30,6 +30,9 @@
 #define BN_S_MP_MUL_HIGH_DIGS_C /* Note: #undef in tommath_superclass.h; this
 				 * would require other than mp_reduce */
 
+/* Current uses do not require support for negative exponent in exptmod, so we
+ * can save about 1.5 kB in leaving out invmod. */
+#define LTM_NO_NEG_EXP
 
 /* from tommath.h */
 
@@ -122,16 +125,18 @@ static int mp_mod_2d(mp_int * a, int b, mp_int * c);
 static int mp_div_2d(mp_int * a, int b, mp_int * c, mp_int * d);
 static int mp_init_copy(mp_int * a, mp_int * b);
 static int mp_mul_2d(mp_int * a, int b, mp_int * c);
+#ifndef LTM_NO_NEG_EXP
 static int mp_div_2(mp_int * a, mp_int * b);
+static int mp_invmod(mp_int * a, mp_int * b, mp_int * c);
+static int mp_invmod_slow(mp_int * a, mp_int * b, mp_int * c);
+#endif /* LTM_NO_NEG_EXP */
 static int mp_copy(mp_int * a, mp_int * b);
 static int mp_count_bits(mp_int * a);
 static int mp_div(mp_int * a, mp_int * b, mp_int * c, mp_int * d);
 static int mp_mod(mp_int * a, mp_int * b, mp_int * c);
 static int mp_grow(mp_int * a, int size);
 static int mp_cmp_mag(mp_int * a, mp_int * b);
-static int mp_invmod(mp_int * a, mp_int * b, mp_int * c);
 static int mp_abs(mp_int * a, mp_int * b);
-static int mp_invmod_slow(mp_int * a, mp_int * b, mp_int * c);
 static int mp_sqr(mp_int * a, mp_int * b);
 static int mp_reduce_2k_l(mp_int *a, mp_int *n, mp_int *d);
 static int mp_reduce_2k_setup_l(mp_int *a, mp_int *d);
@@ -546,6 +551,9 @@ static int mp_exptmod (mp_int * G, mp_int * X, mp_int * P, mp_int * Y)
 
   /* if exponent X is negative we have to recurse */
   if (X->sign == MP_NEG) {
+#ifdef LTM_NO_NEG_EXP
+        return MP_VAL;
+#else /* LTM_NO_NEG_EXP */
 #ifdef BN_MP_INVMOD_C
      mp_int tmpG, tmpX;
      int err;
@@ -578,6 +586,7 @@ static int mp_exptmod (mp_int * G, mp_int * X, mp_int * P, mp_int * Y)
      /* no invmod */
      return MP_VAL;
 #endif
+#endif /* LTM_NO_NEG_EXP */
   }
 
 /* modified diminished radix reduction */
@@ -668,6 +677,7 @@ static int mp_cmp_d(mp_int * a, mp_digit b)
 }
 
 
+#ifndef LTM_NO_NEG_EXP
 /* hac 14.61, pp608 */
 static int mp_invmod (mp_int * a, mp_int * b, mp_int * c)
 {
@@ -694,6 +704,7 @@ static int mp_invmod (mp_int * a, mp_int * b, mp_int * c)
 #endif
   return MP_VAL;
 }
+#endif /* LTM_NO_NEG_EXP */
 
 
 /* get the size for an unsigned equivalent */
@@ -704,6 +715,7 @@ static int mp_unsigned_bin_size (mp_int * a)
 }
 
 
+#ifndef LTM_NO_NEG_EXP
 /* hac 14.61, pp608 */
 static int mp_invmod_slow (mp_int * a, mp_int * b, mp_int * c)
 {
@@ -857,6 +869,7 @@ top:
 LBL_ERR:mp_clear_multi (&x, &y, &u, &v, &A, &B, &C, &D, NULL);
   return res;
 }
+#endif /* LTM_NO_NEG_EXP */
 
 
 /* compare maginitude of two ints (unsigned) */
@@ -1264,6 +1277,7 @@ static void mp_set (mp_int * a, mp_digit b)
 }
 
 
+#ifndef LTM_NO_NEG_EXP
 /* b = a/2 */
 static int mp_div_2(mp_int * a, mp_int * b)
 {
@@ -1310,6 +1324,7 @@ static int mp_div_2(mp_int * a, mp_int * b)
   mp_clamp (b);
   return MP_OKAY;
 }
+#endif /* LTM_NO_NEG_EXP */
 
 
 /* shift left by a certain bit count */

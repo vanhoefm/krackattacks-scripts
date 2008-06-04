@@ -1090,13 +1090,15 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 	} else {
 		/* Timeout for IEEE 802.11 authentication and association */
-		int timeout;
-		if (assoc_failed)
-			timeout = 5;
-		else if (wpa_s->conf->ap_scan == 1)
-			timeout = 10;
-		else
-			timeout = 60;
+		int timeout = 60;
+
+		if (assoc_failed) {
+			/* give IBSS a bit more time */
+ 			timeout = ssid->mode ? 10 : 5;
+		} else if (wpa_s->conf->ap_scan == 1) {
+			/* give IBSS a bit more time */
+ 			timeout = ssid->mode ? 20 : 10;
+		}
 		wpa_supplicant_req_auth_timeout(wpa_s, timeout, 0);
 	}
 

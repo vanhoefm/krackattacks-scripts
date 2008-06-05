@@ -188,8 +188,7 @@ struct wpa_ptk {
 struct wpa_ie_hdr {
 	u8 elem_id;
 	u8 len;
-	u8 oui[3];
-	u8 oui_type;
+	u8 oui[4]; /* 24-bit OUI followed by 8-bit OUI type */
 	u8 version[2]; /* little endian */
 } STRUCT_PACKED;
 

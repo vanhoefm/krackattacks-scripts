@@ -114,6 +114,10 @@ struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 	size_t send_len, plen;
 
 	wpa_printf(MSG_DEBUG, "SSL: Generating Request");
+	if (data->out_buf == NULL) {
+		wpa_printf(MSG_ERROR, "SSL: out_buf NULL in %s", __func__);
+		return NULL;
+	}
 
 	flags = version;
 	send_len = wpabuf_len(data->out_buf) - data->out_used;
@@ -342,6 +346,8 @@ struct wpabuf * eap_server_tls_encrypt(struct eap_sm *sm,
 	/* reserve some extra room for encryption overhead */
 	buf_len = plain_len + 200;
 	buf = wpabuf_alloc(buf_len);
+	if (buf == NULL)
+		return NULL;
 	res = tls_connection_encrypt(sm->ssl_ctx, data->conn,
 				     plain, plain_len, wpabuf_put(buf, 0),
 				     buf_len);

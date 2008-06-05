@@ -742,7 +742,7 @@ radius_change_server(struct radius_client_data *radius,
 #ifdef CONFIG_IPV6
 	struct sockaddr_in6 serv6, claddr6;
 #endif /* CONFIG_IPV6 */
-	struct sockaddr *addr;
+	struct sockaddr *addr, *cl_addr;
 	socklen_t addrlen, claddrlen;
 	char abuf[50];
 	int sel_sock;
@@ -824,6 +824,7 @@ radius_change_server(struct radius_client_data *radius,
 			claddr.sin_family = AF_INET;
 			claddr.sin_addr.s_addr = conf->client_addr.u.v4.s_addr;
 			claddr.sin_port = htons(0);
+			cl_addr = (struct sockaddr *) &claddr;
 			claddrlen = sizeof(claddr);
 			break;
 #ifdef CONFIG_IPV6
@@ -833,6 +834,7 @@ radius_change_server(struct radius_client_data *radius,
 			os_memcpy(&claddr6.sin6_addr, &conf->client_addr.u.v6,
 				  sizeof(struct in6_addr));
 			claddr6.sin6_port = htons(0);
+			cl_addr = (struct sockaddr *) &claddr6;
 			claddrlen = sizeof(claddr6);
 			break;
 #endif /* CONFIG_IPV6 */
@@ -840,8 +842,7 @@ radius_change_server(struct radius_client_data *radius,
 			return -1;
 		}
 
-		if (bind(sel_sock, (struct sockaddr *) &claddr, claddrlen) < 0)
-		{
+		if (bind(sel_sock, cl_addr, claddrlen) < 0) {
 			perror("bind[radius]");
 			return -1;
 		}

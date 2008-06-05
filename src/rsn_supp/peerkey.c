@@ -867,8 +867,8 @@ static void wpa_supplicant_process_stk_3_of_4(struct wpa_sm *sm,
 	if (peerkey->cipher == WPA_CIPHER_TKIP) {
 		/* Swap Tx/Rx keys for Michael MIC */
 		os_memcpy(key_buf, _key, 16);
-		os_memcpy(key_buf + 16, _key + 24, 8);
-		os_memcpy(key_buf + 24, _key + 16, 8);
+		os_memcpy(key_buf + 16, peerkey->stk.u.auth.rx_mic_key, 8);
+		os_memcpy(key_buf + 24, peerkey->stk.u.auth.tx_mic_key, 8);
 		_key = key_buf;
 		key_len = 32;
 	} else

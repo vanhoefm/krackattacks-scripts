@@ -26,29 +26,29 @@
 #define BN_S_MP_SQR_C
 #define BN_S_MP_MUL_HIGH_DIGS_C /* Note: #undef in tommath_superclass.h; this
 				 * would require other than mp_reduce */
-#ifdef LTM_FAST_DIV
+
+#ifdef LTM_FAST
+
 /* Use faster div at the cost of about 1 kB */
 #define BN_MP_MUL_D_C
-#else /* LTM_FAST_DIV */
-#define BN_MP_DIV_SMALL
-#define BN_MP_INIT_MULTI_C
-#define BN_MP_CLEAR_MULTI_C
-#define BN_MP_ABS_C
-#endif /* LTM_FAST_DIV */
 
-#ifdef LTM_FAST_EXPTMOD
 /* Include faster exptmod (Montgomery) at the cost of about 2.5 kB in code */
 #define BN_MP_EXPTMOD_FAST_C
 #define BN_MP_MONTGOMERY_SETUP_C
 #define BN_FAST_MP_MONTGOMERY_REDUCE_C
 #define BN_MP_MONTGOMERY_CALC_NORMALIZATION_C
 #define BN_MP_MUL_2_C
-#endif /* LTM_FAST_EXPTMOD */
 
-#ifdef LTM_FAST_SQR
 /* Include faster sqr at the cost of about 0.5 kB in code */
 #define BN_FAST_S_MP_SQR_C
-#endif /* LTM_FAST_SQR */
+
+#else /* LTM_FAST */
+
+#define BN_MP_DIV_SMALL
+#define BN_MP_INIT_MULTI_C
+#define BN_MP_CLEAR_MULTI_C
+#define BN_MP_ABS_C
+#endif /* LTM_FAST */
 
 /* Current uses do not require support for negative exponent in exptmod, so we
  * can save about 1.5 kB in leaving out invmod. */

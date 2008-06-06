@@ -11,6 +11,9 @@ ChangeLog for wpa_supplicant
 	* added support for parsing PKCS #8 formatted private keys into the
 	  internal TLS implementation (both PKCS #1 RSA key and PKCS #8
 	  encapsulated RSA key can now be used)
+	* added option of using faster, but larger, routines in the internal
+	  LibTomMath (for internal TLS implementation) to speed up DH and RSA
+	  calculations (CONFIG_INTERNAL_LIBTOMMATH_FAST=y)
 
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were

@@ -307,17 +307,11 @@ CONFIG_PEERKEY=y
 #LIBS += -L$(LTM_PATH)
 #LIBS_p += -L$(LTM_PATH)
 #endif
-# At the cost of about 2.5 kB of additional binarysize, the internal LibTomMath
-# can be configured to include fast exptmod routine to speed up DH and RSA.
-#CONFIG_INTERNAL_LIBTOMMATH_FAST_EXPTMOD=y
-# At the cost of about 0.5 kB of additional binary size, the internal
-# LibTomMath can be configured to include faster sqr routine to speed up DH and
-# RSA.
-#CONFIG_INTERNAL_LIBTOMMATH_FAST_SQR=y
-# At the cost of about 1 kB of additional binary size, the internal
-# LibTomMath can be configured to include faster div routine to speed up DH and
-# RSA.
-#CONFIG_INTERNAL_LIBTOMMATH_FAST_DIV=y
+# At the cost of about 4 kB of additional binary size, the internal LibTomMath
+# can be configured to include faster routines for exptmod, sqr, and div to
+# speed up DH and RSA calculation considerably (around 20% time removed on
+# Pentium 4)
+#CONFIG_INTERNAL_LIBTOMMATH_FAST=y
 
 # Include NDIS event processing through WMI into wpa_supplicant/wpasvc.
 # This is only for Windows builds and requires WMI-related header files and

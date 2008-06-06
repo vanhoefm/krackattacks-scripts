@@ -273,7 +273,7 @@ static inline int min_int(int a, int b)
 
 static int get_key_handler(struct nl_msg *msg, void *arg)
 {
-	struct nlattr *tb[NL80211_ATTR_MAX];
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),

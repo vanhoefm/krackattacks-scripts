@@ -26,6 +26,15 @@
 #define BN_S_MP_SQR_C
 #define BN_S_MP_MUL_HIGH_DIGS_C /* Note: #undef in tommath_superclass.h; this
 				 * would require other than mp_reduce */
+#ifdef LTM_FAST_DIV
+/* Use faster div at the cost of about 1 kB */
+#define BN_MP_MUL_D_C
+#else /* LTM_FAST_DIV */
+#define BN_MP_DIV_SMALL
+#define BN_MP_INIT_MULTI_C
+#define BN_MP_CLEAR_MULTI_C
+#define BN_MP_ABS_C
+#endif /* LTM_FAST_DIV */
 
 #ifdef LTM_FAST_EXPTMOD
 /* Include faster exptmod (Montgomery) at the cost of about 2.5 kB in code */
@@ -124,8 +133,12 @@ static int s_mp_mul_high_digs(mp_int * a, mp_int * b, mp_int * c, int digs);
 
 static int fast_s_mp_mul_digs (mp_int * a, mp_int * b, mp_int * c, int digs);
 
+#ifdef BN_MP_INIT_MULTI_C
 static int mp_init_multi(mp_int *mp, ...);
+#endif
+#ifdef BN_MP_CLEAR_MULTI_C
 static void mp_clear_multi(mp_int *mp, ...);
+#endif
 static int mp_lshd(mp_int * a, int b);
 static void mp_set(mp_int * a, mp_digit b);
 static void mp_clamp(mp_int * a);
@@ -147,7 +160,9 @@ static int mp_div(mp_int * a, mp_int * b, mp_int * c, mp_int * d);
 static int mp_mod(mp_int * a, mp_int * b, mp_int * c);
 static int mp_grow(mp_int * a, int size);
 static int mp_cmp_mag(mp_int * a, mp_int * b);
+#ifdef BN_MP_ABS_C
 static int mp_abs(mp_int * a, mp_int * b);
+#endif
 static int mp_sqr(mp_int * a, mp_int * b);
 static int mp_reduce_2k_l(mp_int *a, mp_int *n, mp_int *d);
 static int mp_reduce_2k_setup_l(mp_int *a, mp_int *d);
@@ -161,6 +176,9 @@ static int mp_exptmod_fast (mp_int * G, mp_int * X, mp_int * P, mp_int * Y, int 
 #ifdef BN_FAST_S_MP_SQR_C
 static int fast_s_mp_sqr (mp_int * a, mp_int * b);
 #endif /* BN_FAST_S_MP_SQR_C */
+#ifdef BN_MP_MUL_D_C
+static int mp_mul_d (mp_int * a, mp_digit b, mp_int * c);
+#endif /* BN_MP_MUL_D_C */
 
 
 
@@ -1263,6 +1281,7 @@ static int mp_grow (mp_int * a, int size)
 }
 
 
+#ifdef BN_MP_ABS_C
 /* b = |a| 
  *
  * Simple function copies the input and fixes the sign to positive
@@ -1283,6 +1302,7 @@ static int mp_abs (mp_int * a, mp_int * b)
 
   return MP_OKAY;
 }
+#endif
 
 
 /* set to a digit */
@@ -1409,6 +1429,7 @@ static int mp_mul_2d (mp_int * a, int b, mp_int * c)
 }
 
 
+#ifdef BN_MP_INIT_MULTI_C
 static int mp_init_multi(mp_int *mp, ...) 
 {
     mp_err res = MP_OKAY;      /* Assume ok until proven otherwise */
@@ -1444,8 +1465,10 @@ static int mp_init_multi(mp_int *mp, ...)
     va_end(args);
     return res;                /* Assumed ok, if error flagged above. */
 }
+#endif
 
 
+#ifdef BN_MP_CLEAR_MULTI_C
 static void mp_clear_multi(mp_int *mp, ...) 
 {
     mp_int* next_mp = mp;
@@ -1457,6 +1480,7 @@ static void mp_clear_multi(mp_int *mp, ...)
     }
     va_end(args);
 }
+#endif
 
 
 /* shift left a certain amount of digits */
@@ -1564,6 +1588,8 @@ static int mp_mod_2d (mp_int * a, int b, mp_int * c)
 }
 
 
+#ifdef BN_MP_DIV_SMALL
+
 /* slower bit-bang division... also smaller */
 static int mp_div(mp_int * a, mp_int * b, mp_int * c, mp_int * d)
 {
@@ -1631,6 +1657,206 @@ LBL_ERR:
    mp_clear_multi(&ta, &tb, &tq, &q, NULL);
    return res;
 }
+
+#else
+
+/* integer signed division. 
+ * c*b + d == a [e.g. a/b, c=quotient, d=remainder]
+ * HAC pp.598 Algorithm 14.20
+ *
+ * Note that the description in HAC is horribly 
+ * incomplete.  For example, it doesn't consider 
+ * the case where digits are removed from 'x' in 
+ * the inner loop.  It also doesn't consider the 
+ * case that y has fewer than three digits, etc..
+ *
+ * The overall algorithm is as described as 
+ * 14.20 from HAC but fixed to treat these cases.
+*/
+static int mp_div (mp_int * a, mp_int * b, mp_int * c, mp_int * d)
+{
+  mp_int  q, x, y, t1, t2;
+  int     res, n, t, i, norm, neg;
+
+  /* is divisor zero ? */
+  if (mp_iszero (b) == 1) {
+    return MP_VAL;
+  }
+
+  /* if a < b then q=0, r = a */
+  if (mp_cmp_mag (a, b) == MP_LT) {
+    if (d != NULL) {
+      res = mp_copy (a, d);
+    } else {
+      res = MP_OKAY;
+    }
+    if (c != NULL) {
+      mp_zero (c);
+    }
+    return res;
+  }
+
+  if ((res = mp_init_size (&q, a->used + 2)) != MP_OKAY) {
+    return res;
+  }
+  q.used = a->used + 2;
+
+  if ((res = mp_init (&t1)) != MP_OKAY) {
+    goto LBL_Q;
+  }
+
+  if ((res = mp_init (&t2)) != MP_OKAY) {
+    goto LBL_T1;
+  }
+
+  if ((res = mp_init_copy (&x, a)) != MP_OKAY) {
+    goto LBL_T2;
+  }
+
+  if ((res = mp_init_copy (&y, b)) != MP_OKAY) {
+    goto LBL_X;
+  }
+
+  /* fix the sign */
+  neg = (a->sign == b->sign) ? MP_ZPOS : MP_NEG;
+  x.sign = y.sign = MP_ZPOS;
+
+  /* normalize both x and y, ensure that y >= b/2, [b == 2**DIGIT_BIT] */
+  norm = mp_count_bits(&y) % DIGIT_BIT;
+  if (norm < (int)(DIGIT_BIT-1)) {
+     norm = (DIGIT_BIT-1) - norm;
+     if ((res = mp_mul_2d (&x, norm, &x)) != MP_OKAY) {
+       goto LBL_Y;
+     }
+     if ((res = mp_mul_2d (&y, norm, &y)) != MP_OKAY) {
+       goto LBL_Y;
+     }
+  } else {
+     norm = 0;
+  }
+
+  /* note hac does 0 based, so if used==5 then its 0,1,2,3,4, e.g. use 4 */
+  n = x.used - 1;
+  t = y.used - 1;
+
+  /* while (x >= y*b**n-t) do { q[n-t] += 1; x -= y*b**{n-t} } */
+  if ((res = mp_lshd (&y, n - t)) != MP_OKAY) { /* y = y*b**{n-t} */
+    goto LBL_Y;
+  }
+
+  while (mp_cmp (&x, &y) != MP_LT) {
+    ++(q.dp[n - t]);
+    if ((res = mp_sub (&x, &y, &x)) != MP_OKAY) {
+      goto LBL_Y;
+    }
+  }
+
+  /* reset y by shifting it back down */
+  mp_rshd (&y, n - t);
+
+  /* step 3. for i from n down to (t + 1) */
+  for (i = n; i >= (t + 1); i--) {
+    if (i > x.used) {
+      continue;
+    }
+
+    /* step 3.1 if xi == yt then set q{i-t-1} to b-1, 
+     * otherwise set q{i-t-1} to (xi*b + x{i-1})/yt */
+    if (x.dp[i] == y.dp[t]) {
+      q.dp[i - t - 1] = ((((mp_digit)1) << DIGIT_BIT) - 1);
+    } else {
+      mp_word tmp;
+      tmp = ((mp_word) x.dp[i]) << ((mp_word) DIGIT_BIT);
+      tmp |= ((mp_word) x.dp[i - 1]);
+      tmp /= ((mp_word) y.dp[t]);
+      if (tmp > (mp_word) MP_MASK)
+        tmp = MP_MASK;
+      q.dp[i - t - 1] = (mp_digit) (tmp & (mp_word) (MP_MASK));
+    }
+
+    /* while (q{i-t-1} * (yt * b + y{t-1})) > 
+             xi * b**2 + xi-1 * b + xi-2 
+     
+       do q{i-t-1} -= 1; 
+    */
+    q.dp[i - t - 1] = (q.dp[i - t - 1] + 1) & MP_MASK;
+    do {
+      q.dp[i - t - 1] = (q.dp[i - t - 1] - 1) & MP_MASK;
+
+      /* find left hand */
+      mp_zero (&t1);
+      t1.dp[0] = (t - 1 < 0) ? 0 : y.dp[t - 1];
+      t1.dp[1] = y.dp[t];
+      t1.used = 2;
+      if ((res = mp_mul_d (&t1, q.dp[i - t - 1], &t1)) != MP_OKAY) {
+        goto LBL_Y;
+      }
+
+      /* find right hand */
+      t2.dp[0] = (i - 2 < 0) ? 0 : x.dp[i - 2];
+      t2.dp[1] = (i - 1 < 0) ? 0 : x.dp[i - 1];
+      t2.dp[2] = x.dp[i];
+      t2.used = 3;
+    } while (mp_cmp_mag(&t1, &t2) == MP_GT);
+
+    /* step 3.3 x = x - q{i-t-1} * y * b**{i-t-1} */
+    if ((res = mp_mul_d (&y, q.dp[i - t - 1], &t1)) != MP_OKAY) {
+      goto LBL_Y;
+    }
+
+    if ((res = mp_lshd (&t1, i - t - 1)) != MP_OKAY) {
+      goto LBL_Y;
+    }
+
+    if ((res = mp_sub (&x, &t1, &x)) != MP_OKAY) {
+      goto LBL_Y;
+    }
+
+    /* if x < 0 then { x = x + y*b**{i-t-1}; q{i-t-1} -= 1; } */
+    if (x.sign == MP_NEG) {
+      if ((res = mp_copy (&y, &t1)) != MP_OKAY) {
+        goto LBL_Y;
+      }
+      if ((res = mp_lshd (&t1, i - t - 1)) != MP_OKAY) {
+        goto LBL_Y;
+      }
+      if ((res = mp_add (&x, &t1, &x)) != MP_OKAY) {
+        goto LBL_Y;
+      }
+
+      q.dp[i - t - 1] = (q.dp[i - t - 1] - 1UL) & MP_MASK;
+    }
+  }
+
+  /* now q is the quotient and x is the remainder 
+   * [which we have to normalize] 
+   */
+  
+  /* get sign before writing to c */
+  x.sign = x.used == 0 ? MP_ZPOS : a->sign;
+
+  if (c != NULL) {
+    mp_clamp (&q);
+    mp_exch (&q, c);
+    c->sign = neg;
+  }
+
+  if (d != NULL) {
+    mp_div_2d (&x, norm, &x, NULL);
+    mp_exch (&x, d);
+  }
+
+  res = MP_OKAY;
+
+LBL_Y:mp_clear (&y);
+LBL_X:mp_clear (&x);
+LBL_T2:mp_clear (&t2);
+LBL_T1:mp_clear (&t1);
+LBL_Q:mp_clear (&q);
+  return res;
+}
+
+#endif
 
 
 #ifdef MP_LOW_MEM
@@ -3089,6 +3315,67 @@ static int fast_s_mp_sqr (mp_int * a, mp_int * b)
     }
   }
   mp_clamp (b);
+  return MP_OKAY;
+}
+#endif
+
+
+#ifdef BN_MP_MUL_D_C
+/* multiply by a digit */
+static int
+mp_mul_d (mp_int * a, mp_digit b, mp_int * c)
+{
+  mp_digit u, *tmpa, *tmpc;
+  mp_word  r;
+  int      ix, res, olduse;
+
+  /* make sure c is big enough to hold a*b */
+  if (c->alloc < a->used + 1) {
+    if ((res = mp_grow (c, a->used + 1)) != MP_OKAY) {
+      return res;
+    }
+  }
+
+  /* get the original destinations used count */
+  olduse = c->used;
+
+  /* set the sign */
+  c->sign = a->sign;
+
+  /* alias for a->dp [source] */
+  tmpa = a->dp;
+
+  /* alias for c->dp [dest] */
+  tmpc = c->dp;
+
+  /* zero carry */
+  u = 0;
+
+  /* compute columns */
+  for (ix = 0; ix < a->used; ix++) {
+    /* compute product and carry sum for this term */
+    r       = ((mp_word) u) + ((mp_word)*tmpa++) * ((mp_word)b);
+
+    /* mask off higher bits to get a single digit */
+    *tmpc++ = (mp_digit) (r & ((mp_word) MP_MASK));
+
+    /* send carry into next iteration */
+    u       = (mp_digit) (r >> ((mp_word) DIGIT_BIT));
+  }
+
+  /* store final carry [if any] and increment ix offset  */
+  *tmpc++ = u;
+  ++ix;
+
+  /* now zero digits above the top */
+  while (ix++ < olduse) {
+     *tmpc++ = 0;
+  }
+
+  /* set used count */
+  c->used = a->used + 1;
+  mp_clamp(c);
+
   return MP_OKAY;
 }
 #endif

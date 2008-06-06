@@ -314,6 +314,10 @@ CONFIG_PEERKEY=y
 # LibTomMath can be configured to include faster sqr routine to speed up DH and
 # RSA.
 #CONFIG_INTERNAL_LIBTOMMATH_FAST_SQR=y
+# At the cost of about 1 kB of additional binary size, the internal
+# LibTomMath can be configured to include faster div routine to speed up DH and
+# RSA.
+#CONFIG_INTERNAL_LIBTOMMATH_FAST_DIV=y
 
 # Include NDIS event processing through WMI into wpa_supplicant/wpasvc.
 # This is only for Windows builds and requires WMI-related header files and

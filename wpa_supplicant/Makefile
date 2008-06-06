@@ -627,6 +627,9 @@ endif
 ifdef CONFIG_INTERNAL_LIBTOMMATH_FAST_SQR
 CFLAGS += -DLTM_FAST_SQR
 endif
+ifdef CONFIG_INTERNAL_LIBTOMMATH_FAST_DIV
+CFLAGS += -DLTM_FAST_DIV
+endif
 else
 LIBS += -ltommath
 LIBS_p += -ltommath

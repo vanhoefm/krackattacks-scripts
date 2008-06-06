@@ -18,6 +18,9 @@
 #ifdef CONFIG_DRIVER_WEXT
 extern struct wpa_driver_ops wpa_driver_wext_ops; /* driver_wext.c */
 #endif /* CONFIG_DRIVER_WEXT */
+#ifdef CONFIG_DRIVER_NL80211
+extern struct wpa_driver_ops wpa_driver_nl80211_ops; /* driver_nl80211.c */
+#endif /* CONFIG_DRIVER_NL80211 */
 #ifdef CONFIG_DRIVER_HOSTAP
 extern struct wpa_driver_ops wpa_driver_hostap_ops; /* driver_hostap.c */
 #endif /* CONFIG_DRIVER_HOSTAP */
@@ -74,6 +77,9 @@ struct wpa_driver_ops *wpa_supplicant_drivers[] =
 #ifdef CONFIG_DRIVER_WEXT
 	&wpa_driver_wext_ops,
 #endif /* CONFIG_DRIVER_WEXT */
+#ifdef CONFIG_DRIVER_NL80211
+	&wpa_driver_nl80211_ops,
+#endif /* CONFIG_DRIVER_NL80211 */
 #ifdef CONFIG_DRIVER_HOSTAP
 	&wpa_driver_hostap_ops,
 #endif /* CONFIG_DRIVER_HOSTAP */

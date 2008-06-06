@@ -1,7 +1,7 @@
 /*
- * Minimal code for RSA support from LibTomMath 0.3.9
- * http://math.libtomcrypt.com/
- * http://math.libtomcrypt.com/files/ltm-0.39.tar.bz2
+ * Minimal code for RSA support from LibTomMath 0.41
+ * http://libtom.org/
+ * http://libtom.org/files/ltm-0.41.tar.bz2
  * This library was released in public domain by Tom St Denis.
  *
  * The combination in this file may not use all of the optimized algorithms

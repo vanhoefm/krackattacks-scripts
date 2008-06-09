@@ -450,7 +450,6 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 		MACSTR " [PTK=%s GTK=%s]", MAC2STR(addr),
 		wpa_cipher_txt(sm->pairwise_cipher),
 		wpa_cipher_txt(sm->group_cipher));
-	wpa_sm_cancel_scan(sm);
 	wpa_sm_cancel_auth_timeout(sm);
 	wpa_sm_set_state(sm, WPA_COMPLETED);
 
@@ -782,7 +781,6 @@ static void wpa_report_ie_mismatch(struct wpa_sm *sm,
 	}
 
 	wpa_sm_disassociate(sm, WLAN_REASON_IE_IN_4WAY_DIFFERS);
-	wpa_sm_req_scan(sm, 0, 0);
 }
 
 
@@ -1790,7 +1788,6 @@ static void wpa_sm_pmksa_free_cb(struct rsn_pmksa_cache_entry *entry,
 
 		os_memset(sm->pmk, 0, sizeof(sm->pmk));
 		wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
-		wpa_sm_req_scan(sm, 0, 0);
 	}
 }
 

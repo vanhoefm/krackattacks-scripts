@@ -14,6 +14,8 @@ ChangeLog for wpa_supplicant
 	* added option of using faster, but larger, routines in the internal
 	  LibTomMath (for internal TLS implementation) to speed up DH and RSA
 	  calculations (CONFIG_INTERNAL_LIBTOMMATH_FAST=y)
+	* fixed race condition between disassociation event and group key
+	  handshake to avoid getting stuck in incorrect state [Bug 261]
 
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were

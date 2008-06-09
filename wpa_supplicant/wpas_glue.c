@@ -269,7 +269,6 @@ static void wpa_supplicant_notify_eapol_done(void *ctx)
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) {
 		wpa_supplicant_set_state(wpa_s, WPA_4WAY_HANDSHAKE);
 	} else {
-		wpa_supplicant_cancel_scan(wpa_s);
 		wpa_supplicant_cancel_auth_timeout(wpa_s);
 		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 	}
@@ -353,18 +352,6 @@ static int _wpa_ether_send(void *wpa_s, const u8 *dest, u16 proto,
 }
 
 
-static void _wpa_supplicant_req_scan(void *wpa_s, int sec, int usec)
-{
-	wpa_supplicant_req_scan(wpa_s, sec, usec);
-}
-
-
-static void _wpa_supplicant_cancel_scan(void *wpa_s)
-{
-	wpa_supplicant_cancel_scan(wpa_s);
-}
-
-
 static void _wpa_supplicant_cancel_auth_timeout(void *wpa_s)
 {
 	wpa_supplicant_cancel_auth_timeout(wpa_s);
@@ -397,12 +384,16 @@ static wpa_states _wpa_supplicant_get_state(void *wpa_s)
 static void _wpa_supplicant_disassociate(void *wpa_s, int reason_code)
 {
 	wpa_supplicant_disassociate(wpa_s, reason_code);
+	/* Schedule a scan to make sure we continue looking for networks */
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }
 
 
 static void _wpa_supplicant_deauthenticate(void *wpa_s, int reason_code)
 {
 	wpa_supplicant_deauthenticate(wpa_s, reason_code);
+	/* Schedule a scan to make sure we continue looking for networks */
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }
 
 
@@ -574,8 +565,6 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->ctx = wpa_s;
 	ctx->set_state = _wpa_supplicant_set_state;
 	ctx->get_state = _wpa_supplicant_get_state;
-	ctx->req_scan = _wpa_supplicant_req_scan;
-	ctx->cancel_scan = _wpa_supplicant_cancel_scan;
 	ctx->deauthenticate = _wpa_supplicant_deauthenticate;
 	ctx->disassociate = _wpa_supplicant_disassociate;
 	ctx->set_key = wpa_supplicant_set_key;

@@ -276,6 +276,7 @@ EAPDYN += ../src/eap_peer/eap_peap.so
 else
 CFLAGS += -DEAP_PEAP
 OBJS += ../src/eap_peer/eap_peap.o
+OBJS += ../src/eap_common/eap_peap_common.o
 OBJS_h += ../src/eap_server/eap_peap.o
 endif
 TLS_FUNCS=y

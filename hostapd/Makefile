@@ -165,6 +165,7 @@ endif
 ifdef CONFIG_EAP_PEAP
 CFLAGS += -DEAP_PEAP
 OBJS += ../src/eap_server/eap_peap.o
+OBJS += ../src/eap_common/eap_peap_common.o
 TLS_FUNCS=y
 CONFIG_EAP_MSCHAPV2=y
 endif

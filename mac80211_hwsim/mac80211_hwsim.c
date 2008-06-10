@@ -185,14 +185,14 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 		if (nskb == NULL)
 			continue;
 
-		ieee80211_rx(hwsim_radios[i], nskb, &rx_status);
+		ieee80211_rx_irqsafe(hwsim_radios[i], nskb, &rx_status);
 	}
 
 	memset(&tx_status, 0, sizeof(tx_status));
 	memcpy(&tx_status.control, control, sizeof(*control));
 	/* TODO: proper ACK determination */
 	tx_status.flags = IEEE80211_TX_STATUS_ACK;
-	ieee80211_tx_status(hw, skb, &tx_status);
+	ieee80211_tx_status_irqsafe(hw, skb, &tx_status);
 	return NETDEV_TX_OK;
 }
 

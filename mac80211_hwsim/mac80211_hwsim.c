@@ -80,6 +80,7 @@ struct mac80211_hwsim_data {
 	int radio_enabled;
 	int beacon_int;
 	unsigned int rx_filter;
+	int started;
 };
 
 
@@ -176,7 +177,8 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 		if (hwsim_radios[i] == NULL || hwsim_radios[i] == hw)
 			continue;
 		data2 = hwsim_radios[i]->priv;
-		if (!data2->radio_enabled || data->freq != data2->freq)
+		if (!data2->started || !data2->radio_enabled ||
+		    data->freq != data2->freq)
 			continue;
 
 		nskb = skb_copy(skb, GFP_ATOMIC);
@@ -197,13 +199,17 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 
 static int mac80211_hwsim_start(struct ieee80211_hw *hw)
 {
+	struct mac80211_hwsim_data *data = hw->priv;
 	printk(KERN_DEBUG "%s:%s\n", wiphy_name(hw->wiphy), __func__);
+	data->started = 1;
 	return 0;
 }
 
 
 static void mac80211_hwsim_stop(struct ieee80211_hw *hw)
 {
+	struct mac80211_hwsim_data *data = hw->priv;
+	data->started = 0;
 	printk(KERN_DEBUG "%s:%s\n", wiphy_name(hw->wiphy), __func__);
 }
 

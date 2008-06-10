@@ -9,7 +9,6 @@
 
 /*
  * TODO:
- * - periodic Beacon transmission in AP mode
  * - IBSS mode simulation (Beacon transmission with competition for "air time")
  * - IEEE 802.11a and 802.11n modes
  */

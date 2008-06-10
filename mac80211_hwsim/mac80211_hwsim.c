@@ -15,6 +15,9 @@
  */
 
 #include <net/mac80211.h>
+#include <net/ieee80211_radiotap.h>
+#include <linux/if_arp.h>
+#include <linux/rtnetlink.h>
 
 MODULE_AUTHOR("Jouni Malinen");
 MODULE_DESCRIPTION("Software simulator of 802.11 radio(s) for mac80211");
@@ -29,6 +32,7 @@ static struct class *hwsim_class;
 
 static struct ieee80211_hw **hwsim_radios;
 static int hwsim_radio_count;
+static struct net_device *hwsim_mon; /* global monitor netdev */
 
 
 static const struct ieee80211_channel hwsim_channels[] = {
@@ -79,6 +83,66 @@ struct mac80211_hwsim_data {
 };
 
 
+struct hwsim_radiotap_hdr {
+	struct ieee80211_radiotap_header hdr;
+	u8 rt_flags;
+	u8 rt_rate;
+	__le16 rt_channel;
+	__le16 rt_chbitmask;
+} __attribute__ ((packed));
+
+
+static int hwsim_mon_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+	/* TODO: allow packet injection */
+	dev_kfree_skb(skb);
+	return 0;
+}
+
+
+static void mac80211_hwsim_monitor_rx(struct mac80211_hwsim_data *data,
+				      struct sk_buff *tx_skb,
+				      struct ieee80211_tx_control *control)
+{
+	struct sk_buff *skb;
+	struct hwsim_radiotap_hdr *hdr;
+	u16 flags;
+
+	if (!netif_running(hwsim_mon))
+		return;
+
+	skb = skb_copy_expand(tx_skb, sizeof(*hdr), 0, GFP_ATOMIC);
+	if (skb == NULL)
+		return;
+
+	hdr = (struct hwsim_radiotap_hdr *) skb_push(skb, sizeof(*hdr));
+	hdr->hdr.it_version = PKTHDR_RADIOTAP_VERSION;
+	hdr->hdr.it_pad = 0;
+	hdr->hdr.it_len = cpu_to_le16(sizeof(*hdr));
+	hdr->hdr.it_present = __constant_cpu_to_le32(
+	     (1 << IEEE80211_RADIOTAP_FLAGS) |
+	     (1 << IEEE80211_RADIOTAP_RATE) |
+	     (1 << IEEE80211_RADIOTAP_CHANNEL));
+	hdr->rt_flags = 0;
+	hdr->rt_rate = control->tx_rate / 5;
+	hdr->rt_channel = data->freq;
+	flags = IEEE80211_CHAN_2GHZ;
+	if (control->rate->flags & IEEE80211_RATE_OFDM)
+		flags |= IEEE80211_CHAN_OFDM;
+	if (control->rate->flags & IEEE80211_RATE_CCK)
+		flags |= IEEE80211_CHAN_CCK;
+	hdr->rt_chbitmask = cpu_to_le16(flags);
+
+	skb->dev = hwsim_mon;
+	skb_set_mac_header(skb, 0);
+	skb->ip_summed = CHECKSUM_UNNECESSARY;
+	skb->pkt_type = PACKET_OTHERHOST;
+	skb->protocol = __constant_htons(ETH_P_802_2);
+	memset(skb->cb, 0, sizeof(skb->cb));
+	netif_rx(skb);
+}
+
+
 static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 			     struct ieee80211_tx_control *control)
 {
@@ -86,6 +150,8 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 	struct ieee80211_tx_status tx_status;
 	struct ieee80211_rx_status rx_status;
 	int i;
+
+	mac80211_hwsim_monitor_rx(data, skb, control);
 
 	if (!data->radio_enabled) {
 		printk(KERN_DEBUG "%s: dropped TX frame since radio "
@@ -233,6 +299,18 @@ static struct device_driver mac80211_hwsim_driver = {
 };
 
 
+static void hwsim_mon_setup(struct net_device *dev)
+{
+	dev->hard_start_xmit = hwsim_mon_xmit;
+	dev->destructor = free_netdev;
+	ether_setup(dev);
+	dev->tx_queue_len = 0;
+	dev->type = ARPHRD_IEEE80211_RADIOTAP;
+	memset(dev->dev_addr, 0, ETH_ALEN);
+	dev->dev_addr[0] = 0x12;
+}
+
+
 static int __init init_mac80211_hwsim(void)
 {
 	int i, err = 0;
@@ -317,7 +395,28 @@ static int __init init_mac80211_hwsim(void)
 		       print_mac(mac, hw->wiphy->perm_addr));
 	}
 
+	hwsim_mon = alloc_netdev(0, "hwsim%d", hwsim_mon_setup);
+	if (hwsim_mon == NULL)
+		goto failed;
+
+	rtnl_lock();
+
+	err = dev_alloc_name(hwsim_mon, hwsim_mon->name);
+	if (err < 0) {
+		goto failed_mon;
+	}
+
+	err = register_netdevice(hwsim_mon);
+	if (err < 0)
+		goto failed_mon;
+
+	rtnl_unlock();
+
 	return 0;
+
+failed_mon:
+	rtnl_unlock();
+	free_netdev(hwsim_mon);
 
 failed:
 	mac80211_hwsim_free();
@@ -330,6 +429,7 @@ static void __exit exit_mac80211_hwsim(void)
 	printk(KERN_DEBUG "mac80211_hwsim: unregister %d radios\n",
 	       hwsim_radio_count);
 
+	unregister_netdev(hwsim_mon);
 	mac80211_hwsim_free();
 }
 

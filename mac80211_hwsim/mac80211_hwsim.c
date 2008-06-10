@@ -18,6 +18,7 @@
 #include <net/ieee80211_radiotap.h>
 #include <linux/if_arp.h>
 #include <linux/rtnetlink.h>
+#include <linux/etherdevice.h>
 
 MODULE_AUTHOR("Jouni Malinen");
 MODULE_DESCRIPTION("Software simulator of 802.11 radio(s) for mac80211");
@@ -150,9 +151,16 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 	struct mac80211_hwsim_data *data = hw->priv;
 	struct ieee80211_tx_status tx_status;
 	struct ieee80211_rx_status rx_status;
-	int i;
+	int i, ack = 0;
+	struct ieee80211_hdr *hdr;
 
 	mac80211_hwsim_monitor_rx(data, skb, control);
+
+	if (skb->len < 10) {
+		/* Should not happen; just a sanity check for addr1 use */
+		dev_kfree_skb(skb);
+		return NETDEV_TX_OK;
+	}
 
 	if (!data->radio_enabled) {
 		printk(KERN_DEBUG "%s: dropped TX frame since radio "
@@ -160,6 +168,10 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 		dev_kfree_skb(skb);
 		return NETDEV_TX_OK;
 	}
+
+	hdr = (struct ieee80211_hdr *) skb->data;
+	if (is_multicast_ether_addr(hdr->addr1))
+		ack = 1;
 
 	memset(&rx_status, 0, sizeof(rx_status));
 	/* TODO: set mactime */
@@ -185,13 +197,15 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 		if (nskb == NULL)
 			continue;
 
+		if (memcmp(hdr->addr1, hwsim_radios[i]->wiphy->perm_addr,
+			   ETH_ALEN) == 0)
+			ack = 1;
 		ieee80211_rx_irqsafe(hwsim_radios[i], nskb, &rx_status);
 	}
 
 	memset(&tx_status, 0, sizeof(tx_status));
 	memcpy(&tx_status.control, control, sizeof(*control));
-	/* TODO: proper ACK determination */
-	tx_status.flags = IEEE80211_TX_STATUS_ACK;
+	tx_status.flags = ack ? IEEE80211_TX_STATUS_ACK : 0;
 	ieee80211_tx_status_irqsafe(hw, skb, &tx_status);
 	return NETDEV_TX_OK;
 }

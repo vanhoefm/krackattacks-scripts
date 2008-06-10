@@ -113,7 +113,7 @@ static int mac80211_hwsim_tx(struct ieee80211_hw *hw, struct sk_buff *skb,
 		if (!data2->radio_enabled || data->freq != data2->freq)
 			continue;
 
-		nskb = skb_copy(skb, GFP_KERNEL);
+		nskb = skb_copy(skb, GFP_ATOMIC);
 		if (nskb == NULL)
 			continue;
 

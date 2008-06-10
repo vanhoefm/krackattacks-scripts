@@ -10,7 +10,7 @@
 /*
  * TODO:
  * - periodic Beacon transmission in AP mode
- * - IBSS mode simulation (Beacon transmission with competion for "air time")
+ * - IBSS mode simulation (Beacon transmission with competition for "air time")
  * - IEEE 802.11a and 802.11n modes
  */
 
@@ -79,9 +79,10 @@ struct mac80211_hwsim_data {
 	int channel;
 	enum ieee80211_phymode phymode;
 	int radio_enabled;
-	int beacon_int;
+	unsigned long beacon_int; /* in jiffies unit */
 	unsigned int rx_filter;
 	int started;
+	struct timer_list beacon_timer;
 };
 
 
@@ -231,7 +232,10 @@ static void mac80211_hwsim_stop(struct ieee80211_hw *hw)
 static int mac80211_hwsim_add_interface(struct ieee80211_hw *hw,
 					struct ieee80211_if_init_conf *conf)
 {
-	printk(KERN_DEBUG "%s:%s\n", wiphy_name(hw->wiphy), __func__);
+	DECLARE_MAC_BUF(mac);
+	printk(KERN_DEBUG "%s:%s (type=%d mac_addr=%s)\n",
+	       wiphy_name(hw->wiphy), __func__, conf->type,
+	       print_mac(mac, conf->mac_addr));
 	return 0;
 }
 
@@ -239,7 +243,75 @@ static int mac80211_hwsim_add_interface(struct ieee80211_hw *hw,
 static void mac80211_hwsim_remove_interface(
 	struct ieee80211_hw *hw, struct ieee80211_if_init_conf *conf)
 {
-	printk(KERN_DEBUG "%s:%s\n", wiphy_name(hw->wiphy), __func__);
+	DECLARE_MAC_BUF(mac);
+	printk(KERN_DEBUG "%s:%s (type=%d mac_addr=%s)\n",
+	       wiphy_name(hw->wiphy), __func__, conf->type,
+	       print_mac(mac, conf->mac_addr));
+}
+
+
+static void mac80211_hwsim_beacon_tx(void *arg, u8 *mac,
+				     struct ieee80211_vif *vif)
+{
+	struct ieee80211_hw *hw = arg;
+	struct mac80211_hwsim_data *data = hw->priv;
+	struct ieee80211_tx_control control;
+	struct sk_buff *skb;
+	struct ieee80211_rx_status rx_status;
+	int i;
+
+	if (vif->type != IEEE80211_IF_TYPE_AP)
+		return;
+
+	skb = ieee80211_beacon_get(hw, vif, &control);
+	if (skb == NULL)
+		return;
+
+	mac80211_hwsim_monitor_rx(data, skb, &control);
+
+	memset(&rx_status, 0, sizeof(rx_status));
+	/* TODO: set mactime */
+	rx_status.freq = data->freq;
+	rx_status.channel = data->channel;
+	rx_status.phymode = data->phymode;
+	rx_status.rate = control.tx_rate;
+	/* TODO: simulate signal strength (and optional packet drop) */
+
+	/* Copy skb to all enabled radios that are on the current frequency */
+	for (i = 0; i < hwsim_radio_count; i++) {
+		struct mac80211_hwsim_data *data2;
+		struct sk_buff *nskb;
+
+		if (hwsim_radios[i] == NULL || hwsim_radios[i] == hw)
+			continue;
+		data2 = hwsim_radios[i]->priv;
+		if (!data2->started || !data2->radio_enabled ||
+		    data->freq != data2->freq)
+			continue;
+
+		nskb = skb_copy(skb, GFP_ATOMIC);
+		if (nskb == NULL)
+			continue;
+
+		ieee80211_rx_irqsafe(hwsim_radios[i], nskb, &rx_status);
+	}
+
+	dev_kfree_skb(skb);
+}
+
+
+static void mac80211_hwsim_beacon(unsigned long arg)
+{
+	struct ieee80211_hw *hw = (struct ieee80211_hw *) arg;
+	struct mac80211_hwsim_data *data = hw->priv;
+
+	if (!data->started || !data->radio_enabled)
+		return;
+
+	ieee80211_iterate_active_interfaces(hw, mac80211_hwsim_beacon_tx, hw);
+
+	data->beacon_timer.expires = jiffies + data->beacon_int;
+	add_timer(&data->beacon_timer);
 }
 
 
@@ -256,7 +328,14 @@ static int mac80211_hwsim_config(struct ieee80211_hw *hw,
 	data->channel = conf->channel;
 	data->phymode = conf->phymode;
 	data->radio_enabled = conf->radio_enabled;
-	data->beacon_int = conf->beacon_int;
+	data->beacon_int = 1024 * conf->beacon_int / 1000 * HZ / 1000;
+	if (data->beacon_int < 1)
+		data->beacon_int = 1;
+
+	if (!data->started || !data->radio_enabled)
+		del_timer(&data->beacon_timer);
+	else
+		mod_timer(&data->beacon_timer, jiffies + data->beacon_int);
 
 	return 0;
 }
@@ -413,6 +492,9 @@ static int __init init_mac80211_hwsim(void)
 		printk(KERN_DEBUG "%s: hwaddr %s registered\n",
 		       wiphy_name(hw->wiphy),
 		       print_mac(mac, hw->wiphy->perm_addr));
+
+		setup_timer(&data->beacon_timer, mac80211_hwsim_beacon,
+			    (unsigned long) hw);
 	}
 
 	hwsim_mon = alloc_netdev(0, "hwsim%d", hwsim_mon_setup);

@@ -38,6 +38,10 @@ radio. Software encryption in mac80211 is used so that the frames are
 actually encrypted over the virtual air interface to allow more
 complete testing of encryption.
 
+A global monitoring netdev, hwsim#, is created independent of
+mac80211. This interface can be used to monitor all transmitted frames
+regardless of channel.
+
 
 Simple example
 

@@ -208,8 +208,13 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC02);
 		else if (strcmp(alg, "CCMP") == 0)
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC04);
-		else
+		else if (strcmp(alg, "IGTK") == 0)
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC06);
+		else {
+			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
+				   "algorithm '%s'", __func__, alg);
 			goto out;
+		}
 	}
 
 	if (addr)

@@ -996,6 +996,12 @@ static void handle_assoc(struct hostapd_data *hapd,
 			resp = WLAN_STATUS_INVALID_IE;
 		if (resp != WLAN_STATUS_SUCCESS)
 			goto fail;
+#ifdef CONFIG_IEEE80211W
+		if (wpa_auth_uses_mfp(sta->wpa_sm))
+			sta->flags |= WLAN_STA_MFP;
+		else
+			sta->flags &= ~WLAN_STA_MFP;
+#endif /* CONFIG_IEEE80211W */
 
 #ifdef CONFIG_IEEE80211R
 		if (sta->auth_alg == WLAN_AUTH_FT) {

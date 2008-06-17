@@ -783,3 +783,9 @@ int wpa_parse_kde_ies(const u8 *buf, size_t len, struct wpa_eapol_ie_parse *ie)
 
 	return ret;
 }
+
+
+int wpa_auth_uses_mfp(struct wpa_state_machine *sm)
+{
+	return sm ? sm->mgmt_frame_prot : 0;
+}

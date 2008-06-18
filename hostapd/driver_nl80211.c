@@ -177,11 +177,10 @@ static int hostapd_set_iface_flags(struct i802_driver_data *drv,
 }
 
 
-static int i802_set_encryption(const char *iface, void *priv, const char *alg,
-			       const u8 *addr, int idx, const u8 *key,
-			       size_t key_len, int txkey)
+static int nl_set_encr(int ifindex, struct i802_driver_data *drv,
+		       const char *alg, const u8 *addr, int idx, const u8 *key,
+		       size_t key_len, int txkey)
 {
-	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 	int ret = -1;
 	int err = 0;
@@ -220,7 +219,7 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
 	if (addr)
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
 
 	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
 	    (err = nl_wait_for_ack(drv->nl_handle)) < 0) {
@@ -248,8 +247,15 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_SET_KEY, 0);
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
+#ifdef NL80211_MFP_PENDING
+	if (strcmp(alg, "IGTK") == 0)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT_MGMT);
+	else
+		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
+#else /* NL80211_MFP_PENDING */
 	NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
+#endif /* NL80211_MFP_PENDING */
 
 	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
 	    (err = nl_wait_for_ack(drv->nl_handle)) < 0) {
@@ -264,6 +270,27 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
  out:
  nla_put_failure:
 	nlmsg_free(msg);
+	return ret;
+}
+
+
+static int i802_set_encryption(const char *iface, void *priv, const char *alg,
+			       const u8 *addr, int idx, const u8 *key,
+			       size_t key_len, int txkey)
+{
+	struct i802_driver_data *drv = priv;
+	int ret;
+
+	ret = nl_set_encr(if_nametoindex(iface), drv, alg, addr, idx, key,
+			  key_len, txkey);
+	if (ret < 0)
+		return ret;
+
+	if (strcmp(alg, "IGTK") == 0) {
+		ret = nl_set_encr(drv->monitor_ifidx, drv, alg, addr, idx, key,
+				  key_len, txkey);
+	}
+
 	return ret;
 }
 
@@ -865,6 +892,11 @@ static int i802_sta_set_flags(void *priv, const u8 *addr,
 
 	if (total_flags & WLAN_STA_SHORT_PREAMBLE)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_SHORT_PREAMBLE);
+
+#ifdef NL80211_MFP_PENDING
+	if (total_flags & WLAN_STA_MFP)
+		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_MFP);
+#endif /* NL80211_MFP_PENDING */
 
 	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))
 		goto nla_put_failure;

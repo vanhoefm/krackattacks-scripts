@@ -29,6 +29,7 @@
 #include "priv_netlink.h"
 #include "driver_wext.h"
 #include "ieee802_11_defs.h"
+#include "wpa_common.h"
 
 #ifdef CONFIG_CLIENT_MLME
 #include <netpacket/packet.h>
@@ -1677,8 +1678,12 @@ static int wpa_driver_wext_get_range(void *priv)
 			drv->capa.enc |= WPA_DRIVER_CAPA_ENC_TKIP;
 		if (range->enc_capa & IW_ENC_CAPA_CIPHER_CCMP)
 			drv->capa.enc |= WPA_DRIVER_CAPA_ENC_CCMP;
-		wpa_printf(MSG_DEBUG, "  capabilities: key_mgmt 0x%x enc 0x%x",
-			   drv->capa.key_mgmt, drv->capa.enc);
+		if (range->enc_capa & IW_ENC_CAPA_4WAY_HANDSHAKE)
+			drv->capa.flags |= WPA_DRIVER_FLAGS_4WAY_HANDSHAKE;
+
+		wpa_printf(MSG_DEBUG, "  capabilities: key_mgmt 0x%x enc 0x%x "
+			   "flags 0x%x",
+			   drv->capa.key_mgmt, drv->capa.enc, drv->capa.flags);
 	} else {
 		wpa_printf(MSG_DEBUG, "SIOCGIWRANGE: too old (short) data - "
 			   "assuming WPA is not supported");
@@ -1696,6 +1701,43 @@ static int wpa_driver_wext_set_wpa(void *priv, int enabled)
 
 	return wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED,
 					      enabled);
+}
+
+
+static int wpa_driver_wext_set_psk(struct wpa_driver_wext_data *drv,
+				   const u8 *psk)
+{
+	struct iw_encode_ext *ext;
+	struct iwreq iwr;
+	int ret;
+
+	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE))
+		return 0;
+
+	if (!psk)
+		return 0;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+
+	ext = os_zalloc(sizeof(*ext) + PMK_LEN);
+	if (ext == NULL)
+		return -1;
+
+	iwr.u.encoding.pointer = (caddr_t) ext;
+	iwr.u.encoding.length = sizeof(*ext) + PMK_LEN;
+	ext->key_len = PMK_LEN;
+	os_memcpy(&ext->key, psk, ext->key_len);
+	ext->alg = IW_ENCODE_ALG_PMK;
+
+	ret = ioctl(drv->ioctl_sock, SIOCSIWENCODEEXT, &iwr);
+	if (ret < 0)
+		perror("ioctl[SIOCSIWENCODEEXT] PMK");
+	os_free(ext);
+
+	return ret;
 }
 
 
@@ -1754,6 +1796,9 @@ static int wpa_driver_wext_set_key_ext(void *priv, wpa_alg alg,
 		break;
 	case WPA_ALG_CCMP:
 		ext->alg = IW_ENCODE_ALG_CCMP;
+		break;
+	case WPA_ALG_PMK:
+		ext->alg = IW_ENCODE_ALG_PMK;
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "%s: Unknown algorithm %d",
@@ -2101,7 +2146,9 @@ int wpa_driver_wext_associate(void *priv,
 		allow_unencrypted_eapol = 0;
 	else
 		allow_unencrypted_eapol = 1;
-	
+
+	if (wpa_driver_wext_set_psk(drv, params->psk) < 0)
+		ret = -1;
 	if (wpa_driver_wext_set_auth_param(drv,
 					   IW_AUTH_RX_UNENCRYPTED_EAPOL,
 					   allow_unencrypted_eapol) < 0)

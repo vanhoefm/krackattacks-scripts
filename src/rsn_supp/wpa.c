@@ -1993,8 +1993,8 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 	if (!sm)
 		return;
 
-	sm->network_ctx = config;
 	if (config) {
+		sm->network_ctx = config->network_ctx;
 		sm->peerkey_enabled = config->peerkey_enabled;
 		sm->allowed_pairwise_cipher = config->allowed_pairwise_cipher;
 		sm->proactive_key_caching = config->proactive_key_caching;
@@ -2006,6 +2006,7 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 		} else
 			sm->ssid_len = 0;
 	} else {
+		sm->network_ctx = NULL;
 		sm->peerkey_enabled = 0;
 		sm->allowed_pairwise_cipher = 0;
 		sm->proactive_key_caching = 0;

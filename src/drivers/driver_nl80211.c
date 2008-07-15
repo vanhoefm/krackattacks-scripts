@@ -1237,7 +1237,11 @@ static void wext_get_scan_rate(struct iw_event *iwe,
 		clen -= sizeof(struct iw_param);
 		custom += sizeof(struct iw_param);
 	}
-	res->maxrate = maxrate;
+
+	/* Convert the maxrate from WE-style (b/s units) to
+	 * 802.11 rates (500000 b/s units).
+	 */
+	res->maxrate = maxrate / 500000;
 }
 
 

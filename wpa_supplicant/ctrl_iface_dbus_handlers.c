@@ -435,7 +435,7 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 	if (!wpa_dbus_dict_append_int32(&iter_dict, "level", res->level))
 		goto error;
 	if (!wpa_dbus_dict_append_int32(&iter_dict, "maxrate",
-					wpa_scan_get_max_rate(res)))
+					wpa_scan_get_max_rate(res) * 500000))
 		goto error;
 
 	if (!wpa_dbus_dict_close_write(&iter, &iter_dict))

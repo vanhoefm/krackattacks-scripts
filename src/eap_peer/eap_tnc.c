@@ -206,7 +206,7 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 	struct eap_tnc_data *data = priv;
 	struct wpabuf *resp;
 	const u8 *pos, *end;
-	u8 *rpos, *rpos1, *start;
+	u8 *rpos, *rpos1;
 	size_t len, rlen;
 	size_t imc_len;
 	char *start_buf, *end_buf;
@@ -380,17 +380,14 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 	}
 	end_len = os_strlen(end_buf);
 
-	rlen = 1 + start_len + imc_len + end_len;
-	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TNC, rlen,
-			     EAP_CODE_RESPONSE, eap_get_id(reqData));
+	rlen = start_len + imc_len + end_len;
+	resp = wpabuf_alloc(rlen);
 	if (resp == NULL) {
 		os_free(start_buf);
 		os_free(end_buf);
 		return NULL;
 	}
 
-	start = wpabuf_put(resp, 0);
-	wpabuf_put_u8(resp, EAP_TNC_VERSION);
 	wpabuf_put_data(resp, start_buf, start_len);
 	os_free(start_buf);
 
@@ -401,7 +398,8 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 	wpabuf_put_data(resp, end_buf, end_len);
 	os_free(end_buf);
 
-	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-TNC: Response", start, rlen);
+	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-TNC: Response",
+			  wpabuf_head(resp), wpabuf_len(resp));
 
 	data->out_buf = resp;
 	data->state = MSG;

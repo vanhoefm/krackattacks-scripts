@@ -94,10 +94,10 @@ static struct wpabuf * eap_tnc_build_start(struct eap_sm *sm,
 
 
 static struct wpabuf * eap_tnc_build(struct eap_sm *sm,
-				     struct eap_tnc_data *data, u8 id)
+				     struct eap_tnc_data *data)
 {
 	struct wpabuf *req;
-	u8 *rpos, *rpos1, *start;
+	u8 *rpos, *rpos1;
 	size_t rlen;
 	char *start_buf, *end_buf;
 	size_t start_len, end_len;
@@ -116,17 +116,14 @@ static struct wpabuf * eap_tnc_build(struct eap_sm *sm,
 	}
 	end_len = os_strlen(end_buf);
 
-	rlen = 1 + start_len + imv_len + end_len;
-	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TNC, rlen,
-			    EAP_CODE_REQUEST, id);
+	rlen = start_len + imv_len + end_len;
+	req = wpabuf_alloc(rlen);
 	if (req == NULL) {
 		os_free(start_buf);
 		os_free(end_buf);
 		return NULL;
 	}
 
-	start = wpabuf_put(req, 0);
-	wpabuf_put_u8(req, EAP_TNC_VERSION);
 	wpabuf_put_data(req, start_buf, start_len);
 	os_free(start_buf);
 
@@ -137,15 +134,15 @@ static struct wpabuf * eap_tnc_build(struct eap_sm *sm,
 	wpabuf_put_data(req, end_buf, end_len);
 	os_free(end_buf);
 
-	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-TNC: Request", start, rlen);
+	wpa_hexdump_ascii(MSG_MSGDUMP, "EAP-TNC: Request",
+			  wpabuf_head(req), wpabuf_len(req));
 
 	return req;
 }
 
 
 static struct wpabuf * eap_tnc_build_recommendation(struct eap_sm *sm,
-						    struct eap_tnc_data *data,
-						    u8 id)
+						    struct eap_tnc_data *data)
 {
 	switch (data->recommendation) {
 	case ALLOW:
@@ -166,7 +163,7 @@ static struct wpabuf * eap_tnc_build_recommendation(struct eap_sm *sm,
 		return NULL;
 	}
 
-	return eap_tnc_build(sm, data, id);
+	return eap_tnc_build(sm, data);
 }
 
 
@@ -251,7 +248,7 @@ static struct wpabuf * eap_tnc_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		return eap_tnc_build_start(sm, data, id);
 	case CONTINUE:
 		if (data->out_buf == NULL) {
-			data->out_buf = eap_tnc_build(sm, data, id);
+			data->out_buf = eap_tnc_build(sm, data);
 			if (data->out_buf == NULL) {
 				wpa_printf(MSG_DEBUG, "EAP-TNC: Failed to "
 					   "generate message");
@@ -262,8 +259,7 @@ static struct wpabuf * eap_tnc_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		return eap_tnc_build_msg(data, id);
 	case RECOMMENDATION:
 		if (data->out_buf == NULL) {
-			data->out_buf = eap_tnc_build_recommendation(sm, data,
-								     id);
+			data->out_buf = eap_tnc_build_recommendation(sm, data);
 			if (data->out_buf == NULL) {
 				wpa_printf(MSG_DEBUG, "EAP-TNC: Failed to "
 					   "generate recommendation message");

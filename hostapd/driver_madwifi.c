@@ -1204,7 +1204,7 @@ madwifi_init(struct hostapd_data *hapd)
 	drv = os_zalloc(sizeof(struct madwifi_driver_data));
 	if (drv == NULL) {
 		printf("Could not allocate memory for madwifi driver data\n");
-		goto bad;
+		return NULL;
 	}
 
 	drv->hapd = hapd;

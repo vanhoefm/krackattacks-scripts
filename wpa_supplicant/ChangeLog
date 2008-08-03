@@ -16,6 +16,7 @@ ChangeLog for wpa_supplicant
 	  calculations (CONFIG_INTERNAL_LIBTOMMATH_FAST=y)
 	* fixed race condition between disassociation event and group key
 	  handshake to avoid getting stuck in incorrect state [Bug 261]
+	* fixed opportunistic key caching (proactive_key_caching)
 
 2008-02-22 - v0.6.3
 	* removed 'nai' and 'eappsk' network configuration variables that were

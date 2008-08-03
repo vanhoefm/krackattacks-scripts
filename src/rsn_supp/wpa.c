@@ -2014,7 +2014,8 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 		sm->eap_conf_ctx = NULL;
 		sm->ssid_len = 0;
 	}
-	pmksa_cache_notify_reconfig(sm->pmksa);
+	if (config == NULL || config->network_ctx != sm->network_ctx)
+		pmksa_cache_notify_reconfig(sm->pmksa);
 }
 
 

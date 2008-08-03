@@ -298,6 +298,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->eapol_version = conf->eapol_version;
 	wconf->peerkey = conf->peerkey;
 	wconf->wme_enabled = conf->wme_enabled;
+	wconf->okc = conf->okc;
 #ifdef CONFIG_IEEE80211W
 	wconf->ieee80211w = conf->ieee80211w;
 #endif /* CONFIG_IEEE80211W */
@@ -891,6 +892,26 @@ static int hostapd_wpa_auth_for_each_sta(
 }
 
 
+static int hostapd_wpa_auth_for_each_auth(
+	void *ctx, int (*cb)(struct wpa_authenticator *sm, void *ctx),
+	void *cb_ctx)
+{
+	struct hostapd_data *ohapd;
+	size_t i, j;
+	struct hapd_interfaces *interfaces = eloop_get_user_data();
+
+	for (i = 0; i < interfaces->count; i++) {
+		for (j = 0; j < interfaces->iface[i]->num_bss; j++) {
+			ohapd = interfaces->iface[i]->bss[j];
+			if (cb(ohapd->wpa_auth, cb_ctx))
+				return 1;
+		}
+	}
+
+	return 0;
+}
+
+
 static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 				       const u8 *data, size_t data_len)
 {
@@ -1095,6 +1116,7 @@ static int hostapd_setup_wpa(struct hostapd_data *hapd)
 	cb.get_seqnum_igtk = hostapd_wpa_auth_get_seqnum_igtk;
 	cb.send_eapol = hostapd_wpa_auth_send_eapol;
 	cb.for_each_sta = hostapd_wpa_auth_for_each_sta;
+	cb.for_each_auth = hostapd_wpa_auth_for_each_auth;
 	cb.send_ether = hostapd_wpa_auth_send_ether;
 #ifdef CONFIG_IEEE80211R
 	cb.send_ft_action = hostapd_wpa_auth_send_ft_action;

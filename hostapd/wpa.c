@@ -151,6 +151,16 @@ int wpa_auth_for_each_sta(struct wpa_authenticator *wpa_auth,
 }
 
 
+int wpa_auth_for_each_auth(struct wpa_authenticator *wpa_auth,
+			   int (*cb)(struct wpa_authenticator *a, void *ctx),
+			   void *cb_ctx)
+{
+	if (wpa_auth->cb.for_each_auth == NULL)
+		return 0;
+	return wpa_auth->cb.for_each_auth(wpa_auth->cb.ctx, cb, cb_ctx);
+}
+
+
 void wpa_auth_logger(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		     logger_level level, const char *txt)
 {

@@ -270,6 +270,8 @@ struct hostapd_bss_config {
 	 * denied with status code 51.
 	 */
 	u16 max_listen_interval;
+
+	int okc; /* Opportunistic Key Caching */
 };
 
 

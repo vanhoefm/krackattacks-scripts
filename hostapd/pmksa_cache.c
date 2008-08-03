@@ -208,6 +208,37 @@ void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 }
 
 
+static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
+				   struct rsn_pmksa_cache_entry *entry)
+{
+	struct rsn_pmksa_cache_entry *pos, *prev;
+
+	/* Add the new entry; order by expiration time */
+	pos = pmksa->pmksa;
+	prev = NULL;
+	while (pos) {
+		if (pos->expiration > entry->expiration)
+			break;
+		prev = pos;
+		pos = pos->next;
+	}
+	if (prev == NULL) {
+		entry->next = pmksa->pmksa;
+		pmksa->pmksa = entry;
+	} else {
+		entry->next = prev->next;
+		prev->next = entry;
+	}
+	entry->hnext = pmksa->pmkid[PMKID_HASH(entry->pmkid)];
+	pmksa->pmkid[PMKID_HASH(entry->pmkid)] = entry;
+
+	pmksa->pmksa_count++;
+	wpa_printf(MSG_DEBUG, "RSN: added PMKSA cache entry for " MACSTR,
+		   MAC2STR(entry->spa));
+	wpa_hexdump(MSG_DEBUG, "RSN: added PMKID", entry->pmkid, PMKID_LEN);
+}
+
+
 /**
  * pmksa_cache_add - Add a PMKSA cache entry
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
@@ -229,7 +260,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		const u8 *aa, const u8 *spa, int session_timeout,
 		struct eapol_state_machine *eapol)
 {
-	struct rsn_pmksa_cache_entry *entry, *pos, *prev;
+	struct rsn_pmksa_cache_entry *entry, *pos;
 	struct os_time now;
 
 	if (pmk_len > PMK_LEN)
@@ -265,29 +296,44 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		pmksa_cache_free_entry(pmksa, pmksa->pmksa);
 	}
 
-	/* Add the new entry; order by expiration time */
-	pos = pmksa->pmksa;
-	prev = NULL;
-	while (pos) {
-		if (pos->expiration > entry->expiration)
-			break;
-		prev = pos;
-		pos = pos->next;
-	}
-	if (prev == NULL) {
-		entry->next = pmksa->pmksa;
-		pmksa->pmksa = entry;
-	} else {
-		entry->next = prev->next;
-		prev->next = entry;
-	}
-	entry->hnext = pmksa->pmkid[PMKID_HASH(entry->pmkid)];
-	pmksa->pmkid[PMKID_HASH(entry->pmkid)] = entry;
+	pmksa_cache_link_entry(pmksa, entry);
 
-	pmksa->pmksa_count++;
-	wpa_printf(MSG_DEBUG, "RSN: added PMKSA cache entry for " MACSTR,
-		   MAC2STR(entry->spa));
-	wpa_hexdump(MSG_DEBUG, "RSN: added PMKID", entry->pmkid, PMKID_LEN);
+	return entry;
+}
+
+
+struct rsn_pmksa_cache_entry *
+pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
+		    const struct rsn_pmksa_cache_entry *old_entry,
+		    const u8 *aa, const u8 *pmkid)
+{
+	struct rsn_pmksa_cache_entry *entry;
+
+	entry = os_zalloc(sizeof(*entry));
+	if (entry == NULL)
+		return NULL;
+	os_memcpy(entry->pmkid, pmkid, PMKID_LEN);
+	os_memcpy(entry->pmk, old_entry->pmk, old_entry->pmk_len);
+	entry->pmk_len = old_entry->pmk_len;
+	entry->expiration = old_entry->expiration;
+	entry->akmp = old_entry->akmp;
+	os_memcpy(entry->spa, old_entry->spa, ETH_ALEN);
+	entry->opportunistic = 1;
+	if (old_entry->identity) {
+		entry->identity = os_malloc(old_entry->identity_len);
+		if (entry->identity) {
+			entry->identity_len = old_entry->identity_len;
+			os_memcpy(entry->identity, old_entry->identity,
+				  old_entry->identity_len);
+		}
+	}
+	ieee802_1x_copy_radius_class(&entry->radius_class,
+				     &old_entry->radius_class);
+	entry->eap_type_authsrv = old_entry->eap_type_authsrv;
+	entry->vlan_id = old_entry->vlan_id;
+	entry->opportunistic = 1;
+
+	pmksa_cache_link_entry(pmksa, entry);
 
 	return entry;
 }
@@ -341,6 +387,35 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
 		     os_memcmp(entry->pmkid, pmkid, PMKID_LEN) == 0))
 			return entry;
 		entry = pmkid ? entry->hnext : entry->next;
+	}
+	return NULL;
+}
+
+
+/**
+ * pmksa_cache_get_okc - Fetch a PMKSA cache entry using OKC
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * @spa: Supplicant address
+ * @pmkid: PMKID
+ * Returns: Pointer to PMKSA cache entry or %NULL if no match was found
+ *
+ * Use opportunistic key caching (OKC) to find a PMK for a supplicant.
+ */
+struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
+	struct rsn_pmksa_cache *pmksa, const u8 *aa, const u8 *spa,
+	const u8 *pmkid)
+{
+	struct rsn_pmksa_cache_entry *entry;
+	u8 new_pmkid[PMKID_LEN];
+
+	entry = pmksa->pmksa;
+	while (entry) {
+		if (os_memcmp(entry->spa, spa, ETH_ALEN) != 0)
+			continue;
+		rsn_pmkid(entry->pmk, entry->pmk_len, aa, spa, new_pmkid);
+		if (os_memcmp(new_pmkid, pmkid, PMKID_LEN) == 0)
+			return entry;
+		entry = entry->next;
 	}
 	return NULL;
 }

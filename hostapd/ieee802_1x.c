@@ -873,7 +873,7 @@ void ieee802_1x_free_radius_class(struct radius_class_data *class)
 
 
 int ieee802_1x_copy_radius_class(struct radius_class_data *dst,
-				 struct radius_class_data *src)
+				 const struct radius_class_data *src)
 {
 	size_t i;
 

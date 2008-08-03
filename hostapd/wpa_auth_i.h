@@ -189,6 +189,9 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 int wpa_auth_for_each_sta(struct wpa_authenticator *wpa_auth,
 			  int (*cb)(struct wpa_state_machine *sm, void *ctx),
 			  void *cb_ctx);
+int wpa_auth_for_each_auth(struct wpa_authenticator *wpa_auth,
+			   int (*cb)(struct wpa_authenticator *a, void *ctx),
+			   void *cb_ctx);
 
 #ifdef CONFIG_PEERKEY
 int wpa_stsl_remove(struct wpa_authenticator *wpa_auth,

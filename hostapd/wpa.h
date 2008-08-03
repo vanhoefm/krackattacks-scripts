@@ -140,6 +140,7 @@ struct wpa_auth_config {
 	int eapol_version;
 	int peerkey;
 	int wme_enabled;
+	int okc;
 #ifdef CONFIG_IEEE80211W
 	enum {
 		WPA_NO_IEEE80211W = 0,
@@ -192,6 +193,8 @@ struct wpa_auth_callbacks {
 			  size_t data_len, int encrypt);
 	int (*for_each_sta)(void *ctx, int (*cb)(struct wpa_state_machine *sm,
 						 void *ctx), void *cb_ctx);
+	int (*for_each_auth)(void *ctx, int (*cb)(struct wpa_authenticator *a,
+						  void *ctx), void *cb_ctx);
 	int (*send_ether)(void *ctx, const u8 *dst, u16 proto, const u8 *data,
 			  size_t data_len);
 #ifdef CONFIG_IEEE80211R

@@ -12,6 +12,7 @@ ChangeLog for hostapd
 	* added fragmentation support for EAP-TNC
 	* added support for fragmenting EAP-TTLS/PEAP/FAST Phase 2 (tunneled)
 	  data
+	* added support for opportunistic key caching (OKC)
 
 2008-02-22 - v0.6.3
 	* fixed Reassociation Response callback processing when using internal

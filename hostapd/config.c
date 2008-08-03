@@ -1935,6 +1935,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #endif /* CONFIG_IEEE80211W */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);
+		} else if (os_strcmp(buf, "okc") == 0) {
+			bss->okc = atoi(pos);
 		} else {
 			printf("Line %d: unknown configuration item '%s'\n",
 			       line, buf);

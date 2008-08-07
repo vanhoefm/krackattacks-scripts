@@ -1245,21 +1245,63 @@ static int i802_set_dtim_period(const char *iface, void *priv, int value)
 }
 
 
+static int i802_set_bss(void *priv, int cts, int preamble, int slot)
+{
+#ifdef NL80211_CMD_SET_BSS
+	struct i802_driver_data *drv = priv;
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto out;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_BSS, 0);
+
+	if (cts >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_BSS_CTS_PROT, cts);
+	if (preamble >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_PREAMBLE, preamble);
+	if (slot >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_SLOT_TIME, slot);
+
+	ret = 0;
+
+	/* TODO: multi-BSS support */
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
+
+	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
+	    nl_wait_for_ack(drv->nl_handle) < 0) {
+		ret = -1;
+	}
+
+nla_put_failure:
+	nlmsg_free(msg);
+
+out:
+	return ret;
+#else /* NL80211_CMD_SET_BSS */
+	return -1;
+#endif /* NL80211_CMD_SET_BSS */
+}
+
+
 static int i802_set_cts_protect(void *priv, int value)
 {
-	return -1;
+	return i802_set_bss(priv, value, -1, -1);
 }
 
 
 static int i802_set_preamble(void *priv, int value)
 {
-	return -1;
+	return i802_set_bss(priv, -1, value, -1);
 }
 
 
 static int i802_set_short_slot_time(void *priv, int value)
 {
-	return -1;
+	return i802_set_bss(priv, -1, -1, value);
 }
 
 

@@ -173,7 +173,7 @@ static void hostapd_deauth_all_stas(struct hostapd_data *hapd)
 	 * nothing works correctly, so let's skip sending this for the hostap
 	 * driver. */
 
-	if (os_strcmp(hapd->driver->name, "hostap") != 0) {
+	if (hapd->driver && os_strcmp(hapd->driver->name, "hostap") != 0) {
 		os_memset(addr, 0xff, ETH_ALEN);
 		hostapd_sta_deauth(hapd, addr,
 				   WLAN_REASON_PREV_AUTH_NOT_VALID);

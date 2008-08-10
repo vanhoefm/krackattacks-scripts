@@ -21,7 +21,7 @@
 
 
 struct eap_tnc_data {
-	enum { WAIT_START, MSG, WAIT_FRAG_ACK, DONE, FAIL } state;
+	enum { WAIT_START, PROC_MSG, WAIT_FRAG_ACK, DONE, FAIL } state;
 	struct tncc_data *tncc;
 	struct wpabuf *in_buf;
 	struct wpabuf *out_buf;
@@ -269,7 +269,7 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 			return NULL;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment acknowledged");
-		data->state = MSG;
+		data->state = PROC_MSG;
 		return eap_tnc_build_msg(data, ret, id);
 	}
 
@@ -300,7 +300,7 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 
 		tncc_init_connection(data->tncc);
 
-		data->state = MSG;
+		data->state = PROC_MSG;
 	} else {
 		enum tncc_process_res res;
 
@@ -351,7 +351,7 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 	ret->allowNotifications = TRUE;
 
 	if (data->out_buf) {
-		data->state = MSG;
+		data->state = PROC_MSG;
 		return eap_tnc_build_msg(data, ret, id);
 	}
 
@@ -402,7 +402,7 @@ static struct wpabuf * eap_tnc_process(struct eap_sm *sm, void *priv,
 			  wpabuf_head(resp), wpabuf_len(resp));
 
 	data->out_buf = resp;
-	data->state = MSG;
+	data->state = PROC_MSG;
 	return eap_tnc_build_msg(data, ret, id);
 }
 

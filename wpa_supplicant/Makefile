@@ -131,6 +131,9 @@ ifdef CONFIG_DRIVER_NL80211
 CFLAGS += -DCONFIG_DRIVER_NL80211
 OBJS_d += ../src/drivers/driver_nl80211.o
 LIBS += -lnl
+ifdef CONFIG_CLIENT_MLME
+OBJS_d += ../src/drivers/radiotap.o
+endif
 endif
 
 ifdef CONFIG_DRIVER_PRISM54

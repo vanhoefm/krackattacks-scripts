@@ -1961,7 +1961,8 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_SET_INTERFACE, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, NL80211_IFTYPE_AP);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE,
+		    mode ? NL80211_IFTYPE_ADHOC : NL80211_IFTYPE_STATION);
 
 	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
 	    nl_wait_for_ack(drv->nl_handle) < 0)

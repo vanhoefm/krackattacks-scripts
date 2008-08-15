@@ -47,6 +47,7 @@ struct wpa_driver_nl80211_data {
 	int ioctl_sock;
 	char ifname[IFNAMSIZ + 1];
 	int ifindex;
+	int if_removed;
 	u8 *assoc_req_ies;
 	size_t assoc_req_ies_len;
 	u8 *assoc_resp_ies;
@@ -77,6 +78,9 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 static int wpa_driver_nl80211_set_mode(void *priv, int mode);
 static int wpa_driver_nl80211_flush_pmkid(void *priv);
 static int wpa_driver_nl80211_get_range(void *priv);
+static void
+wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
+
 
 static int wpa_driver_nl80211_send_oper_ifla(
 	struct wpa_driver_nl80211_data *drv,
@@ -583,8 +587,9 @@ static void wpa_driver_nl80211_event_wireless(struct wpa_driver_nl80211_data *dr
 }
 
 
-static void wpa_driver_nl80211_event_link(void *ctx, char *buf, size_t len,
-				       int del)
+static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
+					  void *ctx, char *buf, size_t len,
+					  int del)
 {
 	union wpa_event_data event;
 
@@ -600,7 +605,65 @@ static void wpa_driver_nl80211_event_link(void *ctx, char *buf, size_t len,
 		   event.interface_status.ifname,
 		   del ? "removed" : "added");
 
+	if (os_strcmp(drv->ifname, event.interface_status.ifname) == 0) {
+		if (del)
+			drv->if_removed = 1;
+		else
+			drv->if_removed = 0;
+	}
+
 	wpa_supplicant_event(ctx, EVENT_INTERFACE_STATUS, &event);
+}
+
+
+static int wpa_driver_nl80211_own_ifname(struct wpa_driver_nl80211_data *drv,
+					 struct nlmsghdr *h)
+{
+	struct ifinfomsg *ifi;
+	int attrlen, _nlmsg_len, rta_len;
+	struct rtattr *attr;
+
+	ifi = NLMSG_DATA(h);
+
+	_nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
+
+	attrlen = h->nlmsg_len - _nlmsg_len;
+	if (attrlen < 0)
+		return 0;
+
+	attr = (struct rtattr *) (((char *) ifi) + _nlmsg_len);
+
+	rta_len = RTA_ALIGN(sizeof(struct rtattr));
+	while (RTA_OK(attr, attrlen)) {
+		if (attr->rta_type == IFLA_IFNAME) {
+			if (os_strcmp(((char *) attr) + rta_len, drv->ifname)
+			    == 0)
+				return 1;
+			else
+				break;
+		}
+		attr = RTA_NEXT(attr, attrlen);
+	}
+
+	return 0;
+}
+
+
+static int wpa_driver_nl80211_own_ifindex(struct wpa_driver_nl80211_data *drv,
+					  int ifindex, struct nlmsghdr *h)
+{
+	if (drv->ifindex == ifindex)
+		return 1;
+
+	if (drv->if_removed && wpa_driver_nl80211_own_ifname(drv, h)) {
+		drv->ifindex = if_nametoindex(drv->ifname);
+		wpa_printf(MSG_DEBUG, "nl80211: Update ifindex for a removed "
+			   "interface");
+		wpa_driver_nl80211_finish_drv_init(drv);
+		return 1;
+	}
+
+	return 0;
 }
 
 
@@ -617,7 +680,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(struct wpa_driver_nl80211_data 
 
 	ifi = NLMSG_DATA(h);
 
-	if (drv->ifindex != ifi->ifi_index) {
+	if (!wpa_driver_nl80211_own_ifindex(drv, ifi->ifi_index, h)) {
 		wpa_printf(MSG_DEBUG, "Ignore event for foreign ifindex %d",
 			   ifi->ifi_index);
 		return;
@@ -656,9 +719,10 @@ static void wpa_driver_nl80211_event_rtm_newlink(struct wpa_driver_nl80211_data 
 				drv, ctx, ((char *) attr) + rta_len,
 				attr->rta_len - rta_len);
 		} else if (attr->rta_type == IFLA_IFNAME) {
-			wpa_driver_nl80211_event_link(ctx,
-						   ((char *) attr) + rta_len,
-						   attr->rta_len - rta_len, 0);
+			wpa_driver_nl80211_event_link(
+				drv, ctx,
+				((char *) attr) + rta_len,
+				attr->rta_len - rta_len, 0);
 		}
 		attr = RTA_NEXT(attr, attrlen);
 	}
@@ -689,9 +753,10 @@ static void wpa_driver_nl80211_event_rtm_dellink(struct wpa_driver_nl80211_data 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
 		if (attr->rta_type == IFLA_IFNAME) {
-			wpa_driver_nl80211_event_link(ctx,
-						   ((char *) attr) + rta_len,
-						   attr->rta_len - rta_len, 1);
+			wpa_driver_nl80211_event_link(
+				drv, ctx,
+				((char *) attr) + rta_len,
+				attr->rta_len - rta_len, 1);
 		}
 		attr = RTA_NEXT(attr, attrlen);
 	}
@@ -833,7 +898,7 @@ static int wpa_driver_nl80211_set_ifflags(struct wpa_driver_nl80211_data *drv,
  */
 void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 {
-	int s, flags;
+	int s;
 	struct sockaddr_nl local;
 	struct wpa_driver_nl80211_data *drv;
 
@@ -902,6 +967,31 @@ void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 				 ctx);
 	drv->event_sock = s;
 
+	wpa_driver_nl80211_finish_drv_init(drv);
+
+	return drv;
+
+err6:
+	close(drv->ioctl_sock);
+err5:
+	genl_family_put(drv->nl80211);
+err4:
+	nl_cache_free(drv->nl_cache);
+err3:
+	nl_handle_destroy(drv->nl_handle);
+err2:
+	nl_cb_put(drv->nl_cb);
+err1:
+	os_free(drv);
+	return NULL;
+}
+
+
+static void
+wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
+{
+	int flags;
+
 	if (wpa_driver_nl80211_get_ifflags(drv, &flags) != 0)
 		printf("Could not get interface '%s' flags\n", drv->ifname);
 	else if (!(flags & IFF_UP)) {
@@ -936,22 +1026,6 @@ void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 	drv->ifindex = if_nametoindex(drv->ifname);
 
 	wpa_driver_nl80211_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
-
-	return drv;
-
-err6:
-	close(drv->ioctl_sock);
-err5:
-	genl_family_put(drv->nl80211);
-err4:
-	nl_cache_free(drv->nl_cache);
-err3:
-	nl_handle_destroy(drv->nl_handle);
-err2:
-	nl_cb_put(drv->nl_cb);
-err1:
-	os_free(drv);
-	return NULL;
 }
 
 

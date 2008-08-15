@@ -394,7 +394,7 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 /**
  * wpa_derive_pmk_r0 - Derive PMK-R0 and PMKR0Name
  *
- * IEEE 802.11r/D9.0 - 8.5.1.5.3
+ * IEEE Std 802.11r-2008 - 8.5.1.5.3
  */
 void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 		       const u8 *ssid, size_t ssid_len,
@@ -449,7 +449,7 @@ void wpa_derive_pmk_r0(const u8 *xxkey, size_t xxkey_len,
 /**
  * wpa_derive_pmk_r1_name - Derive PMKR1Name
  *
- * IEEE 802.11r/D9.0 - 8.5.1.5.4
+ * IEEE Std 802.11r-2008 - 8.5.1.5.4
  */
 void wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
 			    const u8 *s1kh_id, u8 *pmk_r1_name)
@@ -479,7 +479,7 @@ void wpa_derive_pmk_r1_name(const u8 *pmk_r0_name, const u8 *r1kh_id,
 /**
  * wpa_derive_pmk_r1 - Derive PMK-R1 and PMKR1Name from PMK-R0
  *
- * IEEE 802.11r/D9.0 - 8.5.1.5.4
+ * IEEE Std 802.11r-2008 - 8.5.1.5.4
  */
 void wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
 		       const u8 *r1kh_id, const u8 *s1kh_id,
@@ -504,7 +504,7 @@ void wpa_derive_pmk_r1(const u8 *pmk_r0, const u8 *pmk_r0_name,
 /**
  * wpa_pmk_r1_to_ptk - Derive PTK and PTKName from PMK-R1
  *
- * IEEE 802.11r/D9.0 - 8.5.1.5.5
+ * IEEE Std 802.11r-2008 - 8.5.1.5.5
  */
 void wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 		       const u8 *sta_addr, const u8 *bssid,

@@ -353,10 +353,7 @@ CONFIG_PEERKEY=y
 #WIRELESS_DEV=/usr/src/wireless-dev
 #CFLAGS += -I$(WIRELESS_DEV)/net/mac80211
 
-# IEEE 802.11r/D4.1 (Fast BSS Transition)
-# This enables an experimental implementation of a draft version of
-# IEEE 802.11r. This draft is still subject to change, so it should be noted
-# that this version may not comply with the final standard.
+# IEEE Std 802.11r-2008 (Fast BSS Transition)
 #CONFIG_IEEE80211R=y
 
 # Add support for writing debug log to a file (/tmp/wpa_supplicant-log-#.txt)

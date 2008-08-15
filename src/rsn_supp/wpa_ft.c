@@ -243,7 +243,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 
 	if (kck) {
 		/*
-		 * IEEE 802.11r/D9.0, 11A.8.4
+		 * IEEE Std 802.11r-2008, 11A.8.4
 		 * MIC shall be calculated over:
 		 * non-AP STA MAC address
 		 * Target AP MAC address

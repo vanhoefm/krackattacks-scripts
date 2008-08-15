@@ -22,7 +22,8 @@
 #pragma pack(push, 1)
 #endif /* _MSC_VER */
 
-/* IEEE 802.11r/D8.0, 11A.10.3 - Remote request/response frame definition */
+/* IEEE Std 802.11r-2008, 11A.10.3 - Remote request/response frame definition
+ */
 struct ft_rrb_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
 	u8 packet_type; /* FT_PACKET_REQUEST/FT_PACKET_RESPONSE */

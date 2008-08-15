@@ -1274,7 +1274,7 @@ int wpa_ft_rrb_rx(struct wpa_authenticator *wpa_auth, const u8 *src_addr,
 		   MAC2STR(frame->ap_address));
 
 	if (frame->frame_type != RSN_REMOTE_FRAME_TYPE_FT_RRB) {
-		/* Discard frame per IEEE 802.11r/D8.0, 10A.10.3 */
+		/* Discard frame per IEEE Std 802.11r-2008, 11A.10.3 */
 		wpa_printf(MSG_DEBUG, "FT: RRB discarded frame with "
 			   "unrecognized type %d", frame->frame_type);
 		return -1;

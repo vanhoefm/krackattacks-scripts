@@ -1,5 +1,5 @@
 /*
- * hostapd / EAP-TTLS (draft-ietf-pppext-eap-ttls-05.txt)
+ * hostapd / EAP-TTLS (RFC 5281)
  * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 
 
 /* Maximum supported TTLS version
- * 0 = draft-ietf-pppext-eap-ttls-03.txt / draft-funk-eap-ttls-v0-00.txt
+ * 0 = RFC 5281
  * 1 = draft-funk-eap-ttls-v1-00.txt
  */
 #ifndef EAP_TTLS_VERSION

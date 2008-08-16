@@ -1,5 +1,5 @@
 /*
- * EAP peer method: EAP-TTLS (draft-ietf-pppext-eap-ttls-03.txt)
+ * EAP peer method: EAP-TTLS (RFC 5281)
  * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -27,7 +27,7 @@
 
 
 /* Maximum supported TTLS version
- * 0 = draft-ietf-pppext-eap-ttls-03.txt / draft-funk-eap-ttls-v0-00.txt
+ * 0 = RFC 5281
  * 1 = draft-funk-eap-ttls-v1-00.txt
  */
 #ifndef EAP_TTLS_VERSION
@@ -1810,10 +1810,10 @@ static struct wpabuf * eap_ttls_process(struct eap_sm *sm, void *priv,
 		if (eap_ttls_process_start(sm, data, flags, ret) < 0)
 			return NULL;
 
-		/* draft-ietf-pppext-eap-ttls-03.txt, Ch. 8.1:
-		 * EAP-TTLS Start packet may, in a future specification, be
-		 * allowed to contain data. Client based on this draft version
-		 * must ignore such data but must not reject the Start packet.
+		/* RFC 5281, Ch. 9.2:
+		 * "This packet MAY contain additional information in the form
+		 * of AVPs, which may provide useful hints to the client"
+		 * For now, ignore any potential extra data.
 		 */
 		left = 0;
 	} else if (!data->ssl_initialized) {

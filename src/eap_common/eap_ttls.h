@@ -1,5 +1,5 @@
 /*
- * EAP server/peer: EAP-TTLS (draft-ietf-pppext-eap-ttls-03.txt)
+ * EAP server/peer: EAP-TTLS (RFC 5281)
  * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify

@@ -776,8 +776,14 @@ ifdef CONFIG_IEEE80211R
 NEED_SHA256=y
 endif
 
+ifdef CONFIG_IEEE80211W
+CFLAGS += -DCONFIG_IEEE80211W
+NEED_SHA256=y
+endif
+
 ifdef NEED_SHA256
 OBJS += ../src/crypto/sha256.o
+CFLAGS += -DNEED_SHA256
 endif
 
 ifdef CONFIG_WIRELESS_EXTENSION
@@ -859,11 +865,6 @@ endif
 
 ifdef CONFIG_PEERKEY
 CFLAGS += -DCONFIG_PEERKEY
-endif
-
-ifdef CONFIG_IEEE80211W
-CFLAGS += -DCONFIG_IEEE80211W
-NEED_SHA256=y
 endif
 
 ifdef CONFIG_IEEE80211R
@@ -1036,6 +1037,7 @@ OBJSx=tests/test_x509v3.o ../src/tls/asn1.o ../src/tls/x509v3.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o \
 	../src/crypto/md5.o ../src/crypto/sha1.o ../src/crypto/aes.o \
 	../src/crypto/rc4.o ../src/crypto/des.o ../src/crypto/aes_wrap.o \
+	../src/crypto/sha256.o \
 	../src/tls/bignum.o ../src/tls/rsa.o
 test_x509v3: $(OBJSx)
 	$(LDO) $(LDFLAGS) -o test_x509v3 $(OBJSx)

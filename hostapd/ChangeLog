@@ -1,5 +1,9 @@
 ChangeLog for hostapd
 
+????-??-?? - v0.6.5
+	* added support for SHA-256 as X.509 certificate digest when using the
+	  internal X.509/TLSv1 implementation
+
 2008-08-10 - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2
 	  Identity Request if identity is already known

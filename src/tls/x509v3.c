@@ -1185,6 +1185,21 @@ static int x509_sha1_oid(struct asn1_oid *oid)
 }
 
 
+static int x509_sha256_oid(struct asn1_oid *oid)
+{
+	return oid->len == 9 &&
+		oid->oid[0] == 2 /* joint-iso-itu-t */ &&
+		oid->oid[1] == 16 /* country */ &&
+		oid->oid[2] == 840 /* us */ &&
+		oid->oid[3] == 1 /* organization */ &&
+		oid->oid[4] == 101 /* gov */ &&
+		oid->oid[5] == 3 /* csor */ &&
+		oid->oid[6] == 4 /* nistAlgorithm */ &&
+		oid->oid[7] == 2 /* hashAlgs */ &&
+		oid->oid[8] == 1 /* sha256 */;
+}
+
+
 /**
  * x509_certificate_parse - Parse a X.509 certificate in DER format
  * @buf: Pointer to the X.509 certificate in DER format
@@ -1309,7 +1324,7 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 	size_t data_len;
 	struct asn1_hdr hdr;
 	struct asn1_oid oid;
-	u8 hash[20];
+	u8 hash[32];
 	size_t hash_len;
 
 	if (!x509_pkcs_oid(&cert->signature.oid) ||
@@ -1408,6 +1423,19 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 		goto skip_digest_oid;
 	}
 
+	if (x509_sha256_oid(&oid)) {
+		if (cert->signature.oid.oid[6] !=
+		    11 /* sha2561WithRSAEncryption */) {
+			wpa_printf(MSG_DEBUG, "X509: digestAlgorithm SHA256 "
+				   "does not match with certificate "
+				   "signatureAlgorithm (%lu)",
+				   cert->signature.oid.oid[6]);
+			os_free(data);
+			return -1;
+		}
+		goto skip_digest_oid;
+	}
+
 	if (!x509_digest_oid(&oid)) {
 		wpa_printf(MSG_DEBUG, "X509: Unrecognized digestAlgorithm");
 		os_free(data);
@@ -1466,8 +1494,20 @@ skip_digest_oid:
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA1)",
 			    hash, hash_len);
 		break;
-	case 2: /* md2WithRSAEncryption */
 	case 11: /* sha256WithRSAEncryption */
+#ifdef NEED_SHA256
+		sha256_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
+			      hash);
+		hash_len = 32;
+		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA256)",
+			    hash, hash_len);
+		break;
+#else /* NEED_SHA256 */
+		wpa_printf(MSG_INFO, "X509: SHA256 support disabled");
+		os_free(data);
+		return -1;
+#endif /* NEED_SHA256 */
+	case 2: /* md2WithRSAEncryption */
 	case 12: /* sha384WithRSAEncryption */
 	case 13: /* sha512WithRSAEncryption */
 	default:

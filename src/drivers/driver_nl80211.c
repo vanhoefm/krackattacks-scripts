@@ -2769,6 +2769,77 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 	return 0;
 }
 
+
+static int wpa_driver_nl80211_mlme_add_sta(void *priv, const u8 *addr,
+					   const u8 *supp_rates,
+					   size_t supp_rates_len)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto out;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_NEW_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+	/* TODO: Get proper Association ID and listen interval */
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, 1);
+	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, supp_rates_len,
+		supp_rates);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, 1);
+
+	ret = nl_send_auto_complete(drv->nl_handle, msg);
+	if (ret < 0)
+		goto nla_put_failure;
+
+	ret = nl_wait_for_ack(drv->nl_handle);
+	/* ignore EEXIST, this happens if a STA associates while associated */
+	if (ret == -EEXIST || ret >= 0)
+		ret = 0;
+
+ nla_put_failure:
+	nlmsg_free(msg);
+
+ out:
+	return ret;
+}
+
+
+static int wpa_driver_nl80211_mlme_remove_sta(void *priv, const u8 *addr)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto out;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_DEL_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+
+	ret = 0;
+
+	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
+	    nl_wait_for_ack(drv->nl_handle) < 0) {
+		ret = -1;
+	}
+
+ nla_put_failure:
+	nlmsg_free(msg);
+
+ out:
+	return ret;
+}
+
 #endif /* CONFIG_CLIENT_MLME */
 
 
@@ -2801,5 +2872,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_ssid = wpa_driver_nl80211_set_ssid,
 	.set_bssid = wpa_driver_nl80211_set_bssid,
 	.send_mlme = wpa_driver_nl80211_send_mlme,
+	.mlme_add_sta = wpa_driver_nl80211_mlme_add_sta,
+	.mlme_remove_sta = wpa_driver_nl80211_mlme_remove_sta,
 #endif /* CONFIG_CLIENT_MLME */
 };

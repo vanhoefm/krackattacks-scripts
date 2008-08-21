@@ -1908,6 +1908,11 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				printf("Line %d: invalid rate list\n", line);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "preamble") == 0) {
+			if (atoi(pos))
+				conf->preamble = SHORT_PREAMBLE;
+			else
+				conf->preamble = LONG_PREAMBLE;
 		} else if (os_strcmp(buf, "ignore_broadcast_ssid") == 0) {
 			bss->ignore_broadcast_ssid = atoi(pos);
 		} else if (os_strcmp(buf, "bridge_packets") == 0) {

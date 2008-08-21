@@ -18,6 +18,9 @@
 #include "defs.h"
 #include "ip_addr.h"
 #include "wpa_common.h"
+#ifdef CONFIG_IEEE80211N
+#include "ieee802_11_defs.h"
+#endif /* CONFIG_IEEE80211N */
 
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
@@ -272,6 +275,16 @@ struct hostapd_bss_config {
 	u16 max_listen_interval;
 
 	int okc; /* Opportunistic Key Caching */
+
+#ifdef CONFIG_IEEE80211N
+	int ieee80211n;
+	/* TODO: these structures should not really be used here; move to
+	 * struct hostapd_data or struct hostapd_iface and just include the
+	 * needed values here for generating IEs elsewhere */
+	struct ht_cap_ie ht_capabilities;
+	struct ht_operation_ie ht_operation;
+	int ht_op_mode_fixed;
+#endif /* CONFIG_IEEE80211N */
 };
 
 

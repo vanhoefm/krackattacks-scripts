@@ -285,6 +285,13 @@ void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	if (hapd->conf->wme_enabled)
 		pos = hostapd_eid_wme(hapd, pos);
 
+#ifdef CONFIG_IEEE80211N
+	if (hapd->conf->ieee80211n) {
+		pos = hostapd_eid_ht_capabilities_info(hapd, pos);
+		pos = hostapd_eid_ht_operation(hapd, pos);
+	}
+#endif /* CONFIG_IEEE80211N */
+
 	if (hostapd_send_mgmt_frame(hapd, resp, pos - (u8 *) resp, 0) < 0)
 		perror("handle_probe_req: send");
 
@@ -375,6 +382,25 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	/* Wi-Fi Wireless Multimedia Extensions */
 	if (hapd->conf->wme_enabled)
 		tailpos = hostapd_eid_wme(hapd, tailpos);
+
+#ifdef CONFIG_IEEE80211N
+	if (hapd->conf->ieee80211n) {
+		tailpos = hostapd_eid_ht_capabilities_info(hapd, tailpos);
+		tailpos = hostapd_eid_ht_operation(hapd, tailpos);
+
+		if (hostapd_set_ht_capability(
+			    hapd->conf->iface, hapd,
+			    &hapd->conf->ht_capabilities.data)) {
+			wpa_printf(MSG_ERROR, "Could not set HT capabilities "
+				   "for kernel driver");
+		}
+		if (hostapd_set_ht_operation(
+			    hapd->conf->iface, hapd,
+			    &hapd->conf->ht_operation.data))
+			wpa_printf(MSG_ERROR, "Could not set HT operation for "
+				   "kernel driver");
+	}
+#endif /* CONFIG_IEEE80211N */
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 

@@ -100,6 +100,113 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+#ifdef CONFIG_IEEE80211N
+
+u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+	os_memcpy(pos, &hapd->conf->ht_capabilities, sizeof(struct ht_cap_ie));
+ 	pos += sizeof(struct ht_cap_ie);
+	return pos;
+}
+
+
+u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+	os_memcpy(pos, &hapd->conf->ht_operation,
+		  sizeof(struct ht_operation_ie));
+	pos += sizeof(struct ht_operation_ie);
+	return pos;
+}
+
+
+/*
+op_mode
+Set to 0 (HT pure) under the followign conditions
+	- all STAs in the BSS are 20/40 MHz HT in 20/40 MHz BSS or
+	- all STAs in the BSS are 20 MHz HT in 20 MHz BSS
+Set to 1 (HT non-member protection) if there may be non-HT STAs
+	in both the primary and the secondary channel
+Set to 2 if only HT STAs are associated in BSS,
+	however and at least one 20 MHz HT STA is associated
+Set to 3 (HT mixed mode) when one or more non-HT STAs are associated
+	(currently non-GF HT station is considered as non-HT STA also)
+*/
+int hostapd_ht_operation_update(struct hostapd_iface *iface)
+{
+	struct ht_operation_ie *ht_operation;
+	u16 operation_mode = 0;
+	u16 cur_op_mode, new_op_mode;
+	int op_mode_changes = 0;
+	struct hostapd_data *hapd = iface->bss[0];
+
+	/* TODO: should hapd pointer really be used here? This should most
+	 * likely be per radio, not per BSS.. */
+
+	if (!hapd->conf->ieee80211n || hapd->conf->ht_op_mode_fixed)
+		return 0;
+
+	ht_operation = &hapd->conf->ht_operation;
+	operation_mode = le_to_host16(ht_operation->data.operation_mode);
+	wpa_printf(MSG_DEBUG, "%s current operation mode=0x%X",
+		   __func__, operation_mode);
+
+	if ((operation_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT) == 0
+	    && iface->num_sta_ht_no_gf) {
+		operation_mode |= HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
+		op_mode_changes++;
+	} else if ((operation_mode &
+		    HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT) &&
+		   iface->num_sta_ht_no_gf == 0) {
+		operation_mode &= ~HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
+		op_mode_changes++;
+	}
+
+	if ((operation_mode & HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT) == 0
+	    && (iface->num_sta_no_ht || iface->olbc_ht)) {
+		operation_mode |= HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
+		op_mode_changes++;
+	} else if ((operation_mode & HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT)
+		   && (iface->num_sta_no_ht == 0 && iface->olbc_ht == 0)) {
+		operation_mode &= ~HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
+		op_mode_changes++;
+	}
+
+	/* Note: currently we switch to the MIXED op mode if HT non-greenfield
+	 * station is associated. Probably it's a theoretical case, since
+	 * it looks like all known HT STAs support greenfield.
+	 */
+	new_op_mode = 0;
+	if (iface->num_sta_no_ht ||
+	    (operation_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT))
+		new_op_mode = OP_MODE_MIXED;
+	else if ((hapd->conf->ht_capabilities.data.capabilities_info &
+		  HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
+		  iface->num_sta_ht_20mhz)
+		new_op_mode = OP_MODE_20MHZ_HT_STA_ASSOCED;
+	else if (iface->olbc_ht)
+		new_op_mode = OP_MODE_MAY_BE_LEGACY_STAS;
+	else
+		new_op_mode = OP_MODE_PURE;
+
+	cur_op_mode = operation_mode & HT_INFO_OPERATION_MODE_OP_MODE_MASK;
+	if (cur_op_mode != new_op_mode) {
+		operation_mode &= ~HT_INFO_OPERATION_MODE_OP_MODE_MASK;
+		operation_mode |= new_op_mode;
+		op_mode_changes++;
+	}
+
+	wpa_printf(MSG_DEBUG, "%s new operation mode=0x%X changes=%d",
+		   __func__, operation_mode, op_mode_changes);
+	ht_operation->data.operation_mode = host_to_le16(operation_mode);
+
+	return op_mode_changes;
+}
+
+#endif /* CONFIG_IEEE80211N */
+
+
 u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 			   int probe)
 {
@@ -325,6 +432,14 @@ ParseRes ieee802_11_parse_elems(struct hostapd_data *hapd, u8 *start,
 		case WLAN_EID_FAST_BSS_TRANSITION:
 			elems->ftie = pos;
 			elems->ftie_len = elen;
+			break;
+		case WLAN_EID_HT_CAP:
+			elems->ht_capabilities = pos;
+			elems->ht_capabilities_len = elen;
+			break;
+		case WLAN_EID_HT_OPERATION:
+			elems->ht_operation = pos;
+			elems->ht_operation_len = elen;
 			break;
 		default:
 			unknown++;
@@ -871,7 +986,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 	sta->capability = capab_info;
 
-	/* followed by SSID and Supported rates */
+	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
+	 * is used */
 	if (ieee802_11_parse_elems(hapd, pos, left, &elems, 1) == ParseFailed
 	    || !elems.ssid) {
 		printf("STA " MACSTR " sent invalid association request\n",
@@ -942,6 +1058,24 @@ static void handle_assoc(struct hostapd_data *hapd,
 			  elems.ext_supp_rates, elems.ext_supp_rates_len);
 		sta->supported_rates_len += elems.ext_supp_rates_len;
 	}
+
+#ifdef CONFIG_IEEE80211N
+	/* save HT capabilities in the sta object */
+	os_memset(&sta->ht_capabilities, 0, sizeof(sta->ht_capabilities));
+	if (elems.ht_capabilities &&
+	    elems.ht_capabilities_len >= sizeof(struct ieee80211_ht_capability)
+	    && (sta->flags & WLAN_STA_WME)) {
+		/* note: without WMM capability, treat the sta as non-HT */
+		sta->flags |= WLAN_STA_HT;
+		sta->ht_capabilities.id = WLAN_EID_HT_CAP;
+		sta->ht_capabilities.length =
+			sizeof(struct ieee80211_ht_capability);
+		os_memcpy(&sta->ht_capabilities.data,
+			  elems.ht_capabilities,
+			  sizeof(struct ieee80211_ht_capability));
+	} else
+		sta->flags &= ~WLAN_STA_HT;
+#endif /* CONFIG_IEEE80211N */
 
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems.rsn_ie) {
 		wpa_ie = elems.rsn_ie;
@@ -1074,6 +1208,38 @@ static void handle_assoc(struct hostapd_data *hapd,
 			ieee802_11_set_beacons(hapd->iface);
 	}
 
+#ifdef CONFIG_IEEE80211N
+	if (sta->flags & WLAN_STA_HT) {
+		if ((sta->ht_capabilities.data.capabilities_info &
+		     HT_CAP_INFO_GREEN_FIELD) == 0) {
+			hapd->iface->num_sta_ht_no_gf++;
+			wpa_printf(MSG_DEBUG, "%s STA " MACSTR " - no "
+				   "greenfield, num of non-gf stations %d",
+				   __func__, MAC2STR(sta->addr),
+				   hapd->iface->num_sta_ht_no_gf);
+		}
+		if ((sta->ht_capabilities.data.capabilities_info &
+		     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) == 0) {
+			hapd->iface->num_sta_ht_20mhz++;
+			wpa_printf(MSG_DEBUG, "%s STA " MACSTR " - 20 MHz HT, "
+				   "num of 20MHz HT STAs %d",
+				   __func__, MAC2STR(sta->addr),
+				   hapd->iface->num_sta_ht_20mhz);
+		}
+	} else {
+		hapd->iface->num_sta_no_ht++;
+		if (hapd->conf->ieee80211n) {
+			wpa_printf(MSG_DEBUG, "%s STA " MACSTR
+				   " - no HT, num of non-HT stations %d",
+				   __func__, MAC2STR(sta->addr),
+				   hapd->iface->num_sta_no_ht);
+		}
+	}
+
+	if (hostapd_ht_operation_update(hapd->iface) > 0)
+		ieee802_11_set_beacons(hapd->iface);
+#endif /* CONFIG_IEEE80211N */
+
 	/* get a unique AID */
 	if (sta->aid > 0) {
 		wpa_printf(MSG_DEBUG, "  old AID %d", sta->aid);
@@ -1138,6 +1304,13 @@ static void handle_assoc(struct hostapd_data *hapd,
 		p = hostapd_eid_ext_supp_rates(hapd, p);
 		if (sta->flags & WLAN_STA_WME)
 			p = hostapd_eid_wme(hapd, p);
+
+#ifdef CONFIG_IEEE80211N
+		if (hapd->conf->ieee80211n) {
+			p = hostapd_eid_ht_capabilities_info(hapd, p);
+			p = hostapd_eid_ht_operation(hapd, p);
+		}
+#endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211R
 		if (resp == WLAN_STATUS_SUCCESS) {
@@ -1552,6 +1725,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	u16 status;
 	struct sta_info *sta;
 	int new_assoc = 1;
+	struct ht_cap_ie *ht_cap = NULL;
 
 	if (!ok) {
 		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
@@ -1602,9 +1776,15 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	else
 		mlme_associate_indication(hapd, sta);
 
+#ifdef CONFIG_IEEE80211N
+	if (sta->flags & WLAN_STA_HT)
+		ht_cap = &sta->ht_capabilities;
+#endif /* CONFIG_IEEE80211N */
+
 	if (hostapd_sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,
 			    sta->capability, sta->supported_rates,
-			    sta->supported_rates_len, 0, sta->listen_interval))
+			    sta->supported_rates_len, 0, sta->listen_interval,
+			    ht_cap))
 	{
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,

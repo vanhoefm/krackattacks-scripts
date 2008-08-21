@@ -183,6 +183,54 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 }
 
 
+#ifdef CONFIG_IEEE80211N
+static int hostapd_config_defaults_bss_80211n(struct hostapd_bss_config *bss)
+{
+	u16 capabilities_info = 0;
+	u16 operation_mode = 0;
+
+	if (bss == NULL)
+		return -1;
+
+	/* add default values to HT capabilities parameters */
+	os_memset(&bss->ht_capabilities, 0, sizeof(struct ht_cap_ie));
+	bss->ht_capabilities.id = WLAN_EID_HT_CAP;
+	bss->ht_capabilities.length = HT_CAPABILITIES_LEN;
+
+#if 0 /* FIX: remove? was commented out */
+	bss->ht_capabilities.mac_ht_param_info.max_rx_ampdu_factor =
+		MAX_RX_AMPDU_FACTOR_64KB;
+#endif
+	SET_2BIT_U8(&bss->ht_capabilities.data.mac_ht_params_info,
+		    MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET,
+		    MAX_RX_AMPDU_FACTOR_64KB);
+
+	SET_2BIT_LE16(&capabilities_info,
+		      HT_CAP_INFO_MIMO_PWR_SAVE_OFFSET,
+		      MIMO_PWR_NO_LIMIT_ON_MIMO_SEQS);
+
+	capabilities_info |= HT_CAP_INFO_GREEN_FIELD;
+
+	bss->ht_capabilities.data.capabilities_info =
+		host_to_le16(capabilities_info);
+
+	bss->ht_capabilities.data.supported_mcs_set[0] = 0xff;
+	bss->ht_capabilities.data.supported_mcs_set[1] = 0xff;
+
+	/* add default values to HT operation parameters */
+	os_memset(&bss->ht_operation, 0, sizeof(struct ht_operation_ie));
+	bss->ht_operation.id = WLAN_EID_HT_OPERATION;
+	bss->ht_operation.length = HT_OPERATION_LEN;
+	SET_2BIT_LE16(&operation_mode,
+		      HT_INFO_OPERATION_MODE_OP_MODE_OFFSET,
+		      OP_MODE_PURE);
+	bss->ht_operation.data.operation_mode = host_to_le16(operation_mode);
+
+	return 0;
+}
+#endif /* CONFIG_IEEE80211N */
+
+
 static struct hostapd_config * hostapd_config_defaults(void)
 {
 	struct hostapd_config *conf;
@@ -243,6 +291,10 @@ static struct hostapd_config * hostapd_config_defaults(void)
 	conf->wme_ac_params[1] = ac_bk;
 	conf->wme_ac_params[2] = ac_vi;
 	conf->wme_ac_params[3] = ac_vo;
+
+#ifdef CONFIG_IEEE80211N
+	hostapd_config_defaults_bss_80211n(bss);
+#endif /* CONFIG_IEEE80211N */
 
 	return conf;
 }
@@ -1933,6 +1985,10 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "ieee80211w") == 0) {
 			bss->ieee80211w = atoi(pos);
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_IEEE80211N
+		} else if (os_strcmp(buf, "ieee80211n") == 0) {
+			bss->ieee80211n = atoi(pos);
+#endif /* CONFIG_IEEE80211N */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);
 		} else if (os_strcmp(buf, "okc") == 0) {

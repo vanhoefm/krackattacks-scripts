@@ -55,6 +55,10 @@ struct ieee802_11_elems {
 	u8 mdie_len;
 	u8 *ftie;
 	u8 ftie_len;
+	u8 *ht_capabilities;
+	u8 ht_capabilities_len;
+	u8 *ht_operation;
+	u8 ht_operation_len;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
@@ -69,6 +73,7 @@ struct hostapd_frame_info {
 	unsigned int passive_scan:1;
 };
 
+struct hostapd_iface;
 struct hostapd_data;
 struct sta_info;
 
@@ -91,5 +96,8 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 			   int probe);
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid);
+int hostapd_ht_operation_update(struct hostapd_iface *iface);
 
 #endif /* IEEE802_11_H */

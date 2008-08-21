@@ -186,12 +186,18 @@
 #define WLAN_EID_IBSS_DFS 41
 /* EIDs defined by IEEE 802.11h - END */
 #define WLAN_EID_ERP_INFO 42
+#define WLAN_EID_HT_CAP 45
 #define WLAN_EID_RSN 48
 #define WLAN_EID_EXT_SUPP_RATES 50
 #define WLAN_EID_MOBILITY_DOMAIN 54
 #define WLAN_EID_FAST_BSS_TRANSITION 55
 #define WLAN_EID_TIMEOUT_INTERVAL 56
 #define WLAN_EID_RIC_DATA 57
+#define WLAN_EID_HT_OPERATION 61
+#define WLAN_EID_SECONDARY_CHANNEL_OFFSET 62
+#define WLAN_EID_20_40_BSS_COEXISTENCE 72
+#define WLAN_EID_20_40_BSS_INTOLERANT 73
+#define WLAN_EID_OVERLAPPING_BSS_SCAN_PARAMS 74
 #define WLAN_EID_VENDOR_SPECIFIC 221
 
 
@@ -311,5 +317,228 @@ struct ieee80211_mgmt {
 #define ERP_INFO_NON_ERP_PRESENT BIT(0)
 #define ERP_INFO_USE_PROTECTION BIT(1)
 #define ERP_INFO_BARKER_PREAMBLE_MODE BIT(2)
+
+
+/* HT Capability element */
+
+#define MIMO_PWR_DONT_SEND_MIMO_SEQS            0
+#define MIMO_PWR_NEED2PRECEDE_MIMO_SEQS_BY_RTS  1
+#define MIMO_PWR_NO_LIMIT_ON_MIMO_SEQS          3
+
+enum {
+	MAX_RX_AMPDU_FACTOR_8KB = 0,
+	MAX_RX_AMPDU_FACTOR_16KB,
+	MAX_RX_AMPDU_FACTOR_32KB,
+	MAX_RX_AMPDU_FACTOR_64KB
+};
+
+enum {
+	CALIBRATION_NOT_SUPPORTED = 0,
+	CALIBRATION_CANNOT_INIT,
+	CALIBRATION_CAN_INIT,
+	CALIBRATION_FULL_SUPPORT
+};
+
+enum {
+	MCS_FEEDBACK_NOT_PROVIDED = 0,
+	MCS_FEEDBACK_UNSOLICITED,
+	MCS_FEEDBACK_MRQ_RESPONSE
+};
+
+
+struct ieee80211_ht_capability {
+	le16 capabilities_info;
+	u8 mac_ht_params_info;
+	u8 supported_mcs_set[16];
+	le16 extended_ht_capability_info;
+	le32 tx_BF_capability_info;
+	u8 antenna_selection_info;
+} STRUCT_PACKED;
+
+
+struct ieee80211_ht_operation {
+	u8 control_chan;
+	u8 ht_param;
+	le16 operation_mode;
+	le16 stbc_param;
+	u8 basic_set[16];
+} STRUCT_PACKED;
+
+/* auxiliary bit manipulation macros FIXME: move it to common later... */
+#define SET_2BIT_U8(_ptr_, _shift_, _val_)				\
+	((*(_ptr_) &= ~(3 << (_shift_))),				\
+	 (*(_ptr_) |= (*(_ptr_) & (((u8)3) << (_shift_))) |		\
+		      (((u8)(_val_) & 3) << _shift_)))
+
+#define GET_2BIT_U8(_var_, _shift_)	\
+	(((_var_) & (((u8)3) << (_shift_))) >> (_shift_))
+
+#define SET_2BIT_LE16(_u16ptr_, _shift_, _val_)				\
+	((*(_u16ptr_) &= ~(3 << (_shift_))),				\
+	 (*(_u16ptr_) |= 						\
+		(((*(_u16ptr_)) & (((u16)3) << ((u16)_shift_))) |	\
+		(((u16)(_val_) & (u16)3) << (u16)(_shift_)))))
+
+#define GET_2BIT_LE16(_var_, _shift_)	\
+	(((_var_) & (((u16)3) << (_shift_))) >> (_shift_))
+
+#define SET_2BIT_LE32(_u32ptr_, _shift_, _val_)				\
+	((*(_u32ptr_) &= ~(3 << (_shift_))),				\
+	 (*(_u32ptr_) |= (((*(_u32ptr_)) & (((u32)3) << (_shift_))) |	\
+			(((u32)(_val_) & 3) << _shift_))))
+
+#define GET_2BIT_LE32(_var_, _shift_)	\
+	(((_var_) & (((u32)3) << (_shift_))) >> (_shift_))
+
+#define SET_3BIT_LE16(_u16ptr_, _shift_, _val_)				\
+	((*(_u16ptr_) &= ~(7 << (_shift_))),				\
+	(*(_u16ptr_) |= (((*(_u16ptr_)) & (((u16)7) << (_shift_))) |	\
+			(((u16)(_val_) & 7) << _shift_))))
+
+#define GET_3BIT_LE16(_var_, _shift_)	\
+	(((_var_) & (((u16)7) << (_shift_))) >> (_shift_))
+
+#define SET_3BIT_LE32(_u32ptr_, _shift_, _val_)				\
+	((*(_u32ptr_) &= ~(7 << (_shift_))),				\
+	 (*(_u32ptr_) |= (((*(_u32ptr_)) & (((u32)7) << (_shift_))) |	\
+			(((u32)(_val_) & 7) << _shift_))))
+
+#define GET_3BIT_LE32(_var_, _shift_)	\
+	(((_var_) & (((u32)7) << (_shift_))) >> (_shift_))
+
+
+#define HT_CAP_INFO_ADVANCED_CODDING_CAP	((u16) BIT(0))
+#define HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET	((u16) BIT(1))
+#define HT_CAP_INFO_MIMO_PWR_SAVE_OFFSET	2
+#define HT_CAP_INFO_GREEN_FIELD			((u16) BIT(4))
+#define HT_CAP_INFO_SHORT_GI20MHZ		((u16) BIT(5))
+#define HT_CAP_INFO_SHORT_GI40MHZ		((u16) BIT(6))
+#define HT_CAP_INFO_TX_STBC			((u16) BIT(7))
+#define HT_CAP_INFO_RX_STBC_OFFSET		8
+#define HT_CAP_INFO_DELAYED_BA			((u16) BIT(10))
+#define HT_CAP_INFO_MAX_AMSDU_SIZE		((u16) BIT(11))
+#define HT_CAP_INFO_DSSS_CCK40MHZ		((u16) BIT(12))
+#define HT_CAP_INFO_PSMP_SUPP			((u16) BIT(13))
+#define HT_CAP_INFO_STBC_CTRL_FRAME_SUPP	((u16) BIT(14))
+#define HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT	((u16) BIT(15))
+
+
+#define MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET	0
+#define MAC_HT_PARAM_INFO_MAX_MPDU_DENSITY_OFFSET	2
+
+#define EXT_HT_CAP_INFO_PCO			((u16) BIT(0))
+#define EXT_HT_CAP_INFO_TRANS_TIME_OFFSET	1
+#define EXT_HT_CAP_INFO_MCS_FEEDBACK_OFFSET	8
+#define EXT_HT_CAP_INFO_HTC_SUPPORTED		((u16) BIT(10))
+#define EXT_HT_CAP_INFO_RD_RESPONDER		((u16) BIT(11))
+
+
+#define TX_BEAMFORM_CAP_TXBF_CAP ((u32) BIT(0))
+#define TX_BEAMFORM_CAP_RX_STAGGERED_SOUNDING_CAP ((u32) BIT(1))
+#define TX_BEAMFORM_CAP_TX_STAGGERED_SOUNDING_CAP ((u32) BIT(2))
+#define TX_BEAMFORM_CAP_RX_ZLF_CAP ((u32) BIT(3))
+#define TX_BEAMFORM_CAP_TX_ZLF_CAP ((u32) BIT(4))
+#define TX_BEAMFORM_CAP_IMPLICIT_ZLF_CAP ((u32) BIT(5))
+#define TX_BEAMFORM_CAP_CALIB_OFFSET 6
+#define TX_BEAMFORM_CAP_EXPLICIT_CSI_TXBF_CAP ((u32) BIT(8))
+#define TX_BEAMFORM_CAP_EXPLICIT_UNCOMPR_STEERING_MATRIX_CAP ((u32) BIT(9))
+#define TX_BEAMFORM_CAP_EXPLICIT_BF_CSI_FEEDBACK_CAP ((u32) BIT(10))
+#define TX_BEAMFORM_CAP_EXPLICIT_BF_CSI_FEEDBACK_OFFSET 11
+#define TX_BEAMFORM_CAP_EXPLICIT_UNCOMPR_STEERING_MATRIX_FEEDBACK_OFFSET 13
+#define TX_BEAMFORM_CAP_EXPLICIT_COMPRESSED_STEERING_MATRIX_FEEDBACK_OFFSET 15
+#define TX_BEAMFORM_CAP_MINIMAL_GROUPING_OFFSET 17
+#define TX_BEAMFORM_CAP_CSI_NUM_BEAMFORMER_ANT_OFFSET 19
+#define TX_BEAMFORM_CAP_UNCOMPRESSED_STEERING_MATRIX_BEAMFORMER_ANT_OFFSET 21
+#define TX_BEAMFORM_CAP_COMPRESSED_STEERING_MATRIX_BEAMFORMER_ANT_OFFSET 23
+#define TX_BEAMFORM_CAP_SCI_MAX_OF_ROWS_BEANFORMER_SUPPORTED_OFFSET 25
+
+
+#define ASEL_CAPABILITY_ASEL_CAPABLE ((u8) BIT(0))
+#define ASEL_CAPABILITY_EXPLICIT_CSI_FEEDBACK_BASED_TX_AS_CAP ((u8) BIT(1))
+#define ASEL_CAPABILITY_ANT_INDICES_FEEDBACK_BASED_TX_AS_CAP ((u8) BIT(2))
+#define ASEL_CAPABILITY_EXPLICIT_CSI_FEEDBACK_CAP ((u8) BIT(3))
+#define ASEL_CAPABILITY_ANT_INDICES_FEEDBACK_CAP ((u8) BIT(4))
+#define ASEL_CAPABILITY_RX_AS_CAP ((u8) BIT(5))
+#define ASEL_CAPABILITY_TX_SOUND_PPDUS_CAP ((u8) BIT(6))
+
+
+struct ht_cap_ie {
+	u8 id;
+	u8 length;
+	struct ieee80211_ht_capability data;
+} STRUCT_PACKED;
+
+
+#define EXT_CHNL_OFF_NONE   0
+#define EXT_CHNL_OFF_ABOVE  1
+#define EXT_CHNL_OFF_BELOW  3
+
+#define REC_TRANS_CHNL_WIDTH_20     0
+#define REC_TRANS_CHNL_WIDTH_ANY    1
+
+#define OP_MODE_PURE                    0
+#define OP_MODE_MAY_BE_LEGACY_STAS      1
+#define OP_MODE_20MHZ_HT_STA_ASSOCED    2
+#define OP_MODE_MIXED                   3
+
+#define HT_INFO_HT_PARAM_EXT_CHNL_OFF_OFFSET		0
+#define HT_INFO_HT_PARAM_REC_TRANS_CHNL_WIDTH		((u8) BIT(2))
+#define HT_INFO_HT_PARAM_RIFS_MODE			((u8) BIT(3))
+#define HT_INFO_HT_PARAM_CTRL_ACCESS_ONLY		((u8) BIT(4))
+#define HT_INFO_HT_PARAM_SRV_INTERVAL_GRANULARITY	((u8) BIT(5))
+
+#define HT_INFO_OPERATION_MODE_OP_MODE_MASK	\
+		((le16) (0x0001 | 0x0002))
+#define HT_INFO_OPERATION_MODE_OP_MODE_OFFSET		0
+#define HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT	((u8) BIT(2))
+#define HT_INFO_OPERATION_MODE_TRANSMIT_BURST_LIMIT	((u8) BIT(3))
+#define HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT	((u8) BIT(4))
+
+#define HT_INFO_STBC_PARAM_DUAL_BEACON			((u16) BIT(6))
+#define HT_INFO_STBC_PARAM_DUAL_STBC_PROTECT		((u16) BIT(7))
+#define HT_INFO_STBC_PARAM_SECONDARY_BCN		((u16) BIT(8))
+#define HT_INFO_STBC_PARAM_LSIG_TXOP_PROTECT_ALLOWED	((u16) BIT(9))
+#define HT_INFO_STBC_PARAM_PCO_ACTIVE			((u16) BIT(10))
+#define HT_INFO_STBC_PARAM_PCO_PHASE			((u16) BIT(11))
+
+struct ht_operation_ie {
+	u8 id;
+	u8 length;
+	struct ieee80211_ht_operation data;
+} STRUCT_PACKED;
+
+
+#define HT_CAPABILITIES_LEN (sizeof(struct ht_cap_ie) - 2)
+#define HT_OPERATION_LEN (sizeof(struct ht_operation_ie) - 2)
+
+/* Secondary channel offset element */
+#define SECONDARY_CHANNEL_OFFSET_NONE	0
+#define SECONDARY_CHANNEL_OFFSET_ABOVE	1
+#define SECONDARY_CHANNEL_OFFSET_BELOW	3
+struct secondary_channel_offset_ie {
+	u8 id;
+	u8 length;
+	u8 secondary_offset_offset;
+} STRUCT_PACKED;
+
+
+/* body of Recommended Transmit Channel Width action frame */
+#define CHANNEL_WIDTH_20	0
+#define CHANNEL_WIDTH_ANY	1
+struct recommended_tx_channel_width_action {
+	u8 category;
+	u8 action;
+	u8 channel_width;
+} STRUCT_PACKED;
+
+/* body of MIMO Power Save action frame */
+#define PWR_SAVE_MODE_STATIC	0
+#define PWR_SAVE_MODE_DYNAMIC	1
+struct mimo_pwr_save_action {
+	u8 category;
+	u8 action;
+	u8 enable;
+	u8 mode;
+} STRUCT_PACKED;
 
 #endif /* IEEE802_11_DEFS_H */

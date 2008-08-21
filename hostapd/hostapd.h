@@ -221,6 +221,18 @@ struct hostapd_iface {
 
 	int olbc; /* Overlapping Legacy BSS Condition */
 
+	/* Number of HT associated stations that do not support greenfield */
+	int num_sta_ht_no_gf;
+
+	/* Number of associated non-HT stations */
+	int num_sta_no_ht;
+
+	/* Number of HT associated stations 20 MHz */
+	int num_sta_ht_20mhz;
+
+	/* Overlapping BSS information */
+	int olbc_ht;
+
 	int dfs_enable;
 	u8 pwr_const;
 	unsigned int tx_power;

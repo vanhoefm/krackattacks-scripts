@@ -386,18 +386,19 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 #ifdef CONFIG_IEEE80211N
 	if (hapd->conf->ieee80211n) {
+		u8 *start;
+		start = tailpos;
 		tailpos = hostapd_eid_ht_capabilities_info(hapd, tailpos);
-		tailpos = hostapd_eid_ht_operation(hapd, tailpos);
-
-		if (hostapd_set_ht_capability(
-			    hapd->conf->iface, hapd,
-			    &hapd->conf->ht_capabilities.data)) {
+		if (hostapd_set_ht_capability(hapd->conf->iface, hapd,
+					      start + 2)) {
 			wpa_printf(MSG_ERROR, "Could not set HT capabilities "
 				   "for kernel driver");
 		}
-		if (hostapd_set_ht_operation(
-			    hapd->conf->iface, hapd,
-			    &hapd->conf->ht_operation.data))
+
+		start = tailpos;
+		tailpos = hostapd_eid_ht_operation(hapd, tailpos);
+		if (hostapd_set_ht_operation(hapd->conf->iface, hapd,
+					     start + 2))
 			wpa_printf(MSG_ERROR, "Could not set HT operation for "
 				   "kernel driver");
 	}

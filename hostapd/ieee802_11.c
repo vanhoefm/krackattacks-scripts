@@ -105,19 +105,50 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 
 u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
 {
+	struct ieee80211_ht_capability *cap;
 	u8 *pos = eid;
-	os_memcpy(pos, &hapd->conf->ht_capabilities, sizeof(struct ht_cap_ie));
- 	pos += sizeof(struct ht_cap_ie);
+
+	if (!hapd->conf->ieee80211n)
+		return eid;
+
+	*pos++ = WLAN_EID_HT_CAP;
+	*pos++ = sizeof(*cap);
+
+	cap = (struct ieee80211_ht_capability *) pos;
+	os_memset(cap, 0, sizeof(*cap));
+	SET_2BIT_U8(&cap->mac_ht_params_info,
+		    MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET,
+		    MAX_RX_AMPDU_FACTOR_64KB);
+
+	cap->capabilities_info = host_to_le16(hapd->conf->ht_capab);
+
+	cap->supported_mcs_set[0] = 0xff;
+	cap->supported_mcs_set[1] = 0xff;
+
+ 	pos += sizeof(*cap);
+
 	return pos;
 }
 
 
 u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
 {
+	struct ieee80211_ht_operation *oper;
 	u8 *pos = eid;
-	os_memcpy(pos, &hapd->conf->ht_operation,
-		  sizeof(struct ht_operation_ie));
-	pos += sizeof(struct ht_operation_ie);
+
+	if (!hapd->conf->ieee80211n)
+		return eid;
+
+	*pos++ = WLAN_EID_HT_OPERATION;
+	*pos++ = sizeof(*oper);
+
+	oper = (struct ieee80211_ht_operation *) pos;
+	os_memset(oper, 0, sizeof(*oper));
+
+	oper->operation_mode = host_to_le16(hapd->iface->ht_op_mode);
+
+	pos += sizeof(*oper);
+
 	return pos;
 }
 
@@ -136,8 +167,6 @@ Set to 3 (HT mixed mode) when one or more non-HT STAs are associated
 */
 int hostapd_ht_operation_update(struct hostapd_iface *iface)
 {
-	struct ht_operation_ie *ht_operation;
-	u16 operation_mode = 0;
 	u16 cur_op_mode, new_op_mode;
 	int op_mode_changes = 0;
 	struct hostapd_data *hapd = iface->bss[0];
@@ -148,29 +177,31 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 	if (!hapd->conf->ieee80211n || hapd->conf->ht_op_mode_fixed)
 		return 0;
 
-	ht_operation = &hapd->conf->ht_operation;
-	operation_mode = le_to_host16(ht_operation->data.operation_mode);
 	wpa_printf(MSG_DEBUG, "%s current operation mode=0x%X",
-		   __func__, operation_mode);
+		   __func__, iface->ht_op_mode);
 
-	if ((operation_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT) == 0
+	if (!(iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT)
 	    && iface->num_sta_ht_no_gf) {
-		operation_mode |= HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
+		iface->ht_op_mode |=
+			HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
 		op_mode_changes++;
-	} else if ((operation_mode &
+	} else if ((iface->ht_op_mode &
 		    HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT) &&
 		   iface->num_sta_ht_no_gf == 0) {
-		operation_mode &= ~HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
+		iface->ht_op_mode &=
+			~HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT;
 		op_mode_changes++;
 	}
 
-	if ((operation_mode & HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT) == 0
-	    && (iface->num_sta_no_ht || iface->olbc_ht)) {
-		operation_mode |= HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
+	if (!(iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT) &&
+	    (iface->num_sta_no_ht || iface->olbc_ht)) {
+		iface->ht_op_mode |= HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
 		op_mode_changes++;
-	} else if ((operation_mode & HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT)
-		   && (iface->num_sta_no_ht == 0 && iface->olbc_ht == 0)) {
-		operation_mode &= ~HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
+	} else if ((iface->ht_op_mode &
+		    HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT) &&
+		   (iface->num_sta_no_ht == 0 && !iface->olbc_ht)) {
+		iface->ht_op_mode &=
+			~HT_INFO_OPERATION_MODE_NON_HT_STA_PRESENT;
 		op_mode_changes++;
 	}
 
@@ -180,27 +211,25 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 	 */
 	new_op_mode = 0;
 	if (iface->num_sta_no_ht ||
-	    (operation_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT))
+	    (iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT))
 		new_op_mode = OP_MODE_MIXED;
-	else if ((hapd->conf->ht_capabilities.data.capabilities_info &
-		  HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
-		  iface->num_sta_ht_20mhz)
+	else if ((hapd->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
+		 iface->num_sta_ht_20mhz)
 		new_op_mode = OP_MODE_20MHZ_HT_STA_ASSOCED;
 	else if (iface->olbc_ht)
 		new_op_mode = OP_MODE_MAY_BE_LEGACY_STAS;
 	else
 		new_op_mode = OP_MODE_PURE;
 
-	cur_op_mode = operation_mode & HT_INFO_OPERATION_MODE_OP_MODE_MASK;
+	cur_op_mode = iface->ht_op_mode & HT_INFO_OPERATION_MODE_OP_MODE_MASK;
 	if (cur_op_mode != new_op_mode) {
-		operation_mode &= ~HT_INFO_OPERATION_MODE_OP_MODE_MASK;
-		operation_mode |= new_op_mode;
+		iface->ht_op_mode &= ~HT_INFO_OPERATION_MODE_OP_MODE_MASK;
+		iface->ht_op_mode |= new_op_mode;
 		op_mode_changes++;
 	}
 
 	wpa_printf(MSG_DEBUG, "%s new operation mode=0x%X changes=%d",
-		   __func__, operation_mode, op_mode_changes);
-	ht_operation->data.operation_mode = host_to_le16(operation_mode);
+		   __func__, iface->ht_op_mode, op_mode_changes);
 
 	return op_mode_changes;
 }

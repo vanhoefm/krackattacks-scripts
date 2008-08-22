@@ -244,6 +244,10 @@ struct hostapd_iface {
 	struct hostapd_config_change *change;
 	hostapd_iface_cb reload_iface_cb;
 	hostapd_iface_cb config_reload_cb;
+
+#ifdef CONFIG_IEEE80211N
+	u16 ht_op_mode;
+#endif /* CONFIG_IEEE80211N */
 };
 
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,

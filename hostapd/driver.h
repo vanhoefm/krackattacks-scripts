@@ -743,25 +743,25 @@ hostapd_set_radius_acl_expire(struct hostapd_data *hapd, const u8 *mac)
 #ifdef CONFIG_IEEE80211N
 static inline int
 hostapd_set_ht_capability(const char *ifname, struct hostapd_data *hapd,
-			  const struct ieee80211_ht_capability *ht_cap)
+			  const u8 *ht_cap)
 {
 	if (hapd->driver == NULL || hapd->driver->set_ht_capability == NULL ||
 	    ht_cap == NULL)
 		return 0;
 	return hapd->driver->set_ht_capability(
-		ifname, hapd->drv_priv, (const u8 *) ht_cap,
+		ifname, hapd->drv_priv, ht_cap,
 		sizeof(struct ieee80211_ht_capability));
 }
 
 static inline int
 hostapd_set_ht_operation(const char *ifname, struct hostapd_data *hapd,
-			 const struct ieee80211_ht_operation *ht_operation)
+			 const u8 *ht_operation)
 {
 	if (hapd->driver == NULL || hapd->driver->set_ht_operation == NULL ||
 	    ht_operation == NULL)
 		return 0;
 	return hapd->driver->set_ht_operation(
-		ifname, hapd->drv_priv, (const u8 *) ht_operation,
+		ifname, hapd->drv_priv, ht_operation,
 		sizeof(struct ieee80211_ht_operation));
 }
 #endif /* CONFIG_IEEE80211N */

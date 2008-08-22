@@ -19,9 +19,6 @@
 #include "defs.h"
 #include "ip_addr.h"
 #include "wpa_common.h"
-#ifdef CONFIG_IEEE80211N
-#include "ieee802_11_defs.h"
-#endif /* CONFIG_IEEE80211N */
 
 #ifndef IFNAMSIZ
 #define IFNAMSIZ 16
@@ -279,12 +276,8 @@ struct hostapd_bss_config {
 
 #ifdef CONFIG_IEEE80211N
 	int ieee80211n;
-	/* TODO: these structures should not really be used here; move to
-	 * struct hostapd_data or struct hostapd_iface and just include the
-	 * needed values here for generating IEs elsewhere */
-	struct ht_cap_ie ht_capabilities;
-	struct ht_operation_ie ht_operation;
 	int ht_op_mode_fixed;
+	u16 ht_capab;
 #endif /* CONFIG_IEEE80211N */
 };
 

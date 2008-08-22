@@ -101,14 +101,13 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-#ifdef CONFIG_IEEE80211N
-
 u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
 {
+#ifdef CONFIG_IEEE80211N
 	struct ieee80211_ht_capability *cap;
 	u8 *pos = eid;
 
-	if (!hapd->conf->ieee80211n)
+	if (!hapd->iconf->ieee80211n)
 		return eid;
 
 	*pos++ = WLAN_EID_HT_CAP;
@@ -120,7 +119,7 @@ u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
 		    MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET,
 		    MAX_RX_AMPDU_FACTOR_64KB);
 
-	cap->capabilities_info = host_to_le16(hapd->conf->ht_capab);
+	cap->capabilities_info = host_to_le16(hapd->iconf->ht_capab);
 
 	cap->supported_mcs_set[0] = 0xff;
 	cap->supported_mcs_set[1] = 0xff;
@@ -128,15 +127,19 @@ u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
  	pos += sizeof(*cap);
 
 	return pos;
+#else /* CONFIG_IEEE80211N */
+	return eid;
+#endif /* CONFIG_IEEE80211N */
 }
 
 
 u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
 {
+#ifdef CONFIG_IEEE80211N
 	struct ieee80211_ht_operation *oper;
 	u8 *pos = eid;
 
-	if (!hapd->conf->ieee80211n)
+	if (!hapd->iconf->ieee80211n)
 		return eid;
 
 	*pos++ = WLAN_EID_HT_OPERATION;
@@ -150,8 +153,13 @@ u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
 	pos += sizeof(*oper);
 
 	return pos;
+#else /* CONFIG_IEEE80211N */
+	return eid;
+#endif /* CONFIG_IEEE80211N */
 }
 
+
+#ifdef CONFIG_IEEE80211N
 
 /*
 op_mode
@@ -169,12 +177,8 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 {
 	u16 cur_op_mode, new_op_mode;
 	int op_mode_changes = 0;
-	struct hostapd_data *hapd = iface->bss[0];
 
-	/* TODO: should hapd pointer really be used here? This should most
-	 * likely be per radio, not per BSS.. */
-
-	if (!hapd->conf->ieee80211n || hapd->conf->ht_op_mode_fixed)
+	if (!iface->conf->ieee80211n || iface->conf->ht_op_mode_fixed)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "%s current operation mode=0x%X",
@@ -213,8 +217,8 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 	if (iface->num_sta_no_ht ||
 	    (iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT))
 		new_op_mode = OP_MODE_MIXED;
-	else if ((hapd->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
-		 iface->num_sta_ht_20mhz)
+	else if ((iface->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)
+		 && iface->num_sta_ht_20mhz)
 		new_op_mode = OP_MODE_20MHZ_HT_STA_ASSOCED;
 	else if (iface->olbc_ht)
 		new_op_mode = OP_MODE_MAY_BE_LEGACY_STAS;
@@ -1258,7 +1262,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		}
 	} else {
 		hapd->iface->num_sta_no_ht++;
-		if (hapd->conf->ieee80211n) {
+		if (hapd->iconf->ieee80211n) {
 			wpa_printf(MSG_DEBUG, "%s STA " MACSTR
 				   " - no HT, num of non-HT stations %d",
 				   __func__, MAC2STR(sta->addr),
@@ -1335,12 +1339,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 		if (sta->flags & WLAN_STA_WME)
 			p = hostapd_eid_wme(hapd, p);
 
-#ifdef CONFIG_IEEE80211N
-		if (hapd->conf->ieee80211n) {
-			p = hostapd_eid_ht_capabilities_info(hapd, p);
-			p = hostapd_eid_ht_operation(hapd, p);
-		}
-#endif /* CONFIG_IEEE80211N */
+		p = hostapd_eid_ht_capabilities_info(hapd, p);
+		p = hostapd_eid_ht_operation(hapd, p);
 
 #ifdef CONFIG_IEEE80211R
 		if (resp == WLAN_STATUS_SUCCESS) {

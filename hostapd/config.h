@@ -273,12 +273,6 @@ struct hostapd_bss_config {
 	u16 max_listen_interval;
 
 	int okc; /* Opportunistic Key Caching */
-
-#ifdef CONFIG_IEEE80211N
-	int ieee80211n;
-	int ht_op_mode_fixed;
-	u16 ht_capab;
-#endif /* CONFIG_IEEE80211N */
 };
 
 
@@ -352,6 +346,12 @@ struct hostapd_config {
 		INTERNAL_BRIDGE_DISABLED = 0,
 		INTERNAL_BRIDGE_ENABLED = 1
 	} bridge_packets;
+
+#ifdef CONFIG_IEEE80211N
+	int ieee80211n;
+	int ht_op_mode_fixed;
+	u16 ht_capab;
+#endif /* CONFIG_IEEE80211N */
 };
 
 

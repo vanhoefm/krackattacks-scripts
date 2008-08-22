@@ -246,11 +246,11 @@ static struct hostapd_config * hostapd_config_defaults(void)
 	conf->wme_ac_params[3] = ac_vo;
 
 #ifdef CONFIG_IEEE80211N
-	SET_2BIT_LE16(&bss->ht_capab,
+	SET_2BIT_LE16(&conf->ht_capab,
 		      HT_CAP_INFO_MIMO_PWR_SAVE_OFFSET,
 		      MIMO_PWR_NO_LIMIT_ON_MIMO_SEQS);
 
-	bss->ht_capab |= HT_CAP_INFO_GREEN_FIELD;
+	conf->ht_capab |= HT_CAP_INFO_GREEN_FIELD;
 #endif /* CONFIG_IEEE80211N */
 
 	return conf;
@@ -1949,7 +1949,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211N
 		} else if (os_strcmp(buf, "ieee80211n") == 0) {
-			bss->ieee80211n = atoi(pos);
+			conf->ieee80211n = atoi(pos);
 #endif /* CONFIG_IEEE80211N */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);

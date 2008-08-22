@@ -283,15 +283,10 @@ void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	pos = hostapd_eid_wpa(hapd, pos, epos - pos, sta);
 
 	/* Wi-Fi Wireless Multimedia Extensions */
-	if (hapd->conf->wme_enabled)
-		pos = hostapd_eid_wme(hapd, pos);
+	pos = hostapd_eid_wme(hapd, pos);
 
-#ifdef CONFIG_IEEE80211N
-	if (hapd->conf->ieee80211n) {
-		pos = hostapd_eid_ht_capabilities_info(hapd, pos);
-		pos = hostapd_eid_ht_operation(hapd, pos);
-	}
-#endif /* CONFIG_IEEE80211N */
+	pos = hostapd_eid_ht_capabilities_info(hapd, pos);
+	pos = hostapd_eid_ht_operation(hapd, pos);
 
 	if (hostapd_send_mgmt_frame(hapd, resp, pos - (u8 *) resp, 0) < 0)
 		perror("handle_probe_req: send");
@@ -381,11 +376,10 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 				  tailpos, NULL);
 
 	/* Wi-Fi Wireless Multimedia Extensions */
-	if (hapd->conf->wme_enabled)
-		tailpos = hostapd_eid_wme(hapd, tailpos);
+	tailpos = hostapd_eid_wme(hapd, tailpos);
 
 #ifdef CONFIG_IEEE80211N
-	if (hapd->conf->ieee80211n) {
+	if (hapd->iconf->ieee80211n) {
 		u8 *start;
 		start = tailpos;
 		tailpos = hostapd_eid_ht_capabilities_info(hapd, tailpos);

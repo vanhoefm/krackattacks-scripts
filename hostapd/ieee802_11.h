@@ -1,6 +1,7 @@
 /*
  * hostapd / IEEE 802.11 Management
  * Copyright (c) 2002-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as

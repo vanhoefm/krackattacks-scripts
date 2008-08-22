@@ -502,15 +502,6 @@ struct ht_cap_ie {
 #define HT_INFO_STBC_PARAM_PCO_ACTIVE			((u16) BIT(10))
 #define HT_INFO_STBC_PARAM_PCO_PHASE			((u16) BIT(11))
 
-struct ht_operation_ie {
-	u8 id;
-	u8 length;
-	struct ieee80211_ht_operation data;
-} STRUCT_PACKED;
-
-
-#define HT_CAPABILITIES_LEN (sizeof(struct ht_cap_ie) - 2)
-#define HT_OPERATION_LEN (sizeof(struct ht_operation_ie) - 2)
 
 /* Secondary channel offset element */
 #define SECONDARY_CHANNEL_OFFSET_NONE	0

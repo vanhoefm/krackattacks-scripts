@@ -5,6 +5,8 @@ ChangeLog for hostapd
 	  internal X.509/TLSv1 implementation
 	* fixed EAP-FAST PAC-Opaque padding (0.6.4 broke this for some peer
 	  identity lengths)
+	* fixed internal TLSv1 implementation for abbreviated handshake (used
+	  by EAP-FAST server)
 
 2008-08-10 - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2

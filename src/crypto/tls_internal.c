@@ -366,8 +366,10 @@ u8 * tls_connection_server_handshake(void *tls_ctx,
 	wpa_printf(MSG_DEBUG, "TLS: %s(in_data=%p in_len=%lu)",
 		   __func__, in_data, (unsigned long) in_len);
 	out = tlsv1_server_handshake(conn->server, in_data, in_len, out_len);
-	if (out == NULL && tlsv1_server_established(conn->server))
+	if (out == NULL && tlsv1_server_established(conn->server)) {
 		out = os_malloc(1);
+		*out_len = 0;
+	}
 	return out;
 #else /* CONFIG_TLS_INTERNAL_SERVER */
 	return NULL;

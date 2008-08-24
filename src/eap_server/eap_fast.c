@@ -685,7 +685,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	}
 
 	pac_len = pos - pac_buf;
-	if (pac_len % 8) {
+	while (pac_len % 8) {
 		*pos++ = PAC_OPAQUE_TYPE_PAD;
 		pac_len++;
 	}

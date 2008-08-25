@@ -813,6 +813,16 @@ static int i802_sta_add2(const char *ifname, void *priv,
 	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
 		    params->listen_interval);
 
+#ifdef CONFIG_IEEE80211N
+#ifdef NL80211_ATTR_HT_CAPABILITY
+	if (params->ht_capabilities) {
+		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
+			params->ht_capabilities->length,
+			&params->ht_capabilities->data);
+	}
+#endif /* NL80211_ATTR_HT_CAPABILITY */
+#endif /* CONFIG_IEEE80211N */
+
 	ret = nl_send_auto_complete(drv->nl_handle, msg);
 	if (ret < 0)
 		goto nla_put_failure;

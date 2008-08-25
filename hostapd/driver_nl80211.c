@@ -790,9 +790,8 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 }
 
 
-static int i802_sta_add(const char *ifname, void *priv, const u8 *addr,
-			u16 aid, u16 capability, u8 *supp_rates,
-			size_t supp_rates_len, int flags, u16 listen_interval)
+static int i802_sta_add2(const char *ifname, void *priv,
+			 struct hostapd_sta_add_params *params)
 {
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
@@ -807,11 +806,12 @@ static int i802_sta_add(const char *ifname, void *priv, const u8 *addr,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
 		    if_nametoindex(drv->iface));
-	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, aid);
-	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, supp_rates_len,
-		supp_rates);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, listen_interval);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
+	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, params->supp_rates_len,
+		params->supp_rates);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
+		    params->listen_interval);
 
 	ret = nl_send_auto_complete(drv->nl_handle, msg);
 	if (ret < 0)
@@ -2448,7 +2448,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_remove = i802_sta_remove,
 	.set_ssid = i802_set_ssid,
 	.send_mgmt_frame = i802_send_mgmt_frame,
-	.sta_add = i802_sta_add,
+	.sta_add2 = i802_sta_add2,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_freq = i802_set_freq,

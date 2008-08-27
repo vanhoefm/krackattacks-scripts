@@ -1618,6 +1618,9 @@ static void wext_get_scan_iwevgenie(struct iw_event *iwe,
 	char *genie, *gpos, *gend;
 	u8 *tmp;
 
+	if (iwe->u.data.length == 0)
+		return;
+
 	gpos = genie = custom;
 	gend = genie + iwe->u.data.length;
 	if (gend > end) {
@@ -1650,7 +1653,7 @@ static void wext_get_scan_custom(struct iw_event *iwe,
 		int bytes;
 		spos = custom + 7;
 		bytes = custom + clen - spos;
-		if (bytes & 1)
+		if (bytes & 1 || bytes == 0)
 			return;
 		bytes /= 2;
 		tmp = os_realloc(res->ie, res->ie_len + bytes);
@@ -1664,7 +1667,7 @@ static void wext_get_scan_custom(struct iw_event *iwe,
 		int bytes;
 		spos = custom + 7;
 		bytes = custom + clen - spos;
-		if (bytes & 1)
+		if (bytes & 1 || bytes == 0)
 			return;
 		bytes /= 2;
 		tmp = os_realloc(res->ie, res->ie_len + bytes);

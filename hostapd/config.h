@@ -26,6 +26,11 @@
 
 typedef u8 macaddr[ETH_ALEN];
 
+struct mac_acl_entry {
+	macaddr addr;
+	int vlan_id;
+};
+
 struct hostapd_radius_servers;
 struct ft_remote_r0kh;
 struct ft_remote_r1kh;
@@ -192,9 +197,9 @@ struct hostapd_bss_config {
 		DENY_UNLESS_ACCEPTED = 1,
 		USE_EXTERNAL_RADIUS_AUTH = 2
 	} macaddr_acl;
-	macaddr *accept_mac;
+	struct mac_acl_entry *accept_mac;
 	int num_accept_mac;
-	macaddr *deny_mac;
+	struct mac_acl_entry *deny_mac;
 	int num_deny_mac;
 
 	int auth_algs; /* bitfield of allowed IEEE 802.11 authentication
@@ -359,7 +364,8 @@ int hostapd_mac_comp(const void *a, const void *b);
 int hostapd_mac_comp_empty(const void *a);
 struct hostapd_config * hostapd_config_read(const char *fname);
 void hostapd_config_free(struct hostapd_config *conf);
-int hostapd_maclist_found(macaddr *list, int num_entries, const u8 *addr);
+int hostapd_maclist_found(struct mac_acl_entry *list, int num_entries,
+			  const u8 *addr, int *vlan_id);
 int hostapd_rate_found(int *list, int rate);
 int hostapd_wep_key_cmp(struct hostapd_wep_keys *a,
 			struct hostapd_wep_keys *b);

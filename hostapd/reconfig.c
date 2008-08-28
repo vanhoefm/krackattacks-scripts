@@ -211,13 +211,14 @@ static int hostapd_acl_diff(struct hostapd_bss_config *a,
 		return 1;
 
 	for (i = 0; i < a->num_accept_mac; i++) {
-		if (os_memcmp(a->accept_mac[i], b->accept_mac[i], ETH_ALEN) !=
-		    0)
+		if (os_memcmp(a->accept_mac[i].addr, b->accept_mac[i].addr,
+			      ETH_ALEN) != 0)
 			return 1;
 	}
 
 	for (i = 0; i < a->num_deny_mac; i++) {
-		if (os_memcmp(a->deny_mac[i], b->deny_mac[i], ETH_ALEN) != 0)
+		if (os_memcmp(a->deny_mac[i].addr, b->deny_mac[i].addr,
+			      ETH_ALEN) != 0)
 			return 1;
 	}
 

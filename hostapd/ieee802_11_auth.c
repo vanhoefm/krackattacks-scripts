@@ -205,11 +205,11 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 		*vlan_id = 0;
 
 	if (hostapd_maclist_found(hapd->conf->accept_mac,
-				  hapd->conf->num_accept_mac, addr))
+				  hapd->conf->num_accept_mac, addr, vlan_id))
 		return HOSTAPD_ACL_ACCEPT;
 
 	if (hostapd_maclist_found(hapd->conf->deny_mac,
-				  hapd->conf->num_deny_mac, addr))
+				  hapd->conf->num_deny_mac, addr, vlan_id))
 		return HOSTAPD_ACL_REJECT;
 
 	if (hapd->conf->macaddr_acl == ACCEPT_UNLESS_DENIED)

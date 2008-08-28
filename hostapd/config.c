@@ -270,14 +270,23 @@ int hostapd_mac_comp_empty(const void *a)
 }
 
 
-static int hostapd_config_read_maclist(const char *fname, macaddr **acl,
-				       int *num)
+static int hostapd_acl_comp(const void *a, const void *b)
+{
+	const struct mac_acl_entry *aa = a;
+	const struct mac_acl_entry *bb = b;
+	return os_memcmp(aa->addr, bb->addr, sizeof(macaddr));
+}
+
+
+static int hostapd_config_read_maclist(const char *fname,
+				       struct mac_acl_entry **acl, int *num)
 {
 	FILE *f;
 	char buf[128], *pos;
 	int line = 0;
 	u8 addr[ETH_ALEN];
-	macaddr *newacl;
+	struct mac_acl_entry *newacl;
+	int vlan_id;
 
 	if (!fname)
 		return 0;
@@ -311,7 +320,16 @@ static int hostapd_config_read_maclist(const char *fname, macaddr **acl,
 			return -1;
 		}
 
-		newacl = os_realloc(*acl, (*num + 1) * ETH_ALEN);
+		vlan_id = 0;
+		pos = buf;
+		while (*pos != '\0' && *pos != ' ' && *pos != '\t')
+			pos++;
+		while (*pos == ' ' || *pos == '\t')
+			pos++;
+		if (*pos != '\0')
+			vlan_id = atoi(pos);
+
+		newacl = os_realloc(*acl, (*num + 1) * sizeof(**acl));
 		if (newacl == NULL) {
 			printf("MAC list reallocation failed\n");
 			fclose(f);
@@ -319,13 +337,14 @@ static int hostapd_config_read_maclist(const char *fname, macaddr **acl,
 		}
 
 		*acl = newacl;
-		os_memcpy((*acl)[*num], addr, ETH_ALEN);
+		os_memcpy((*acl)[*num].addr, addr, ETH_ALEN);
+		(*acl)[*num].vlan_id = vlan_id;
 		(*num)++;
 	}
 
 	fclose(f);
 
-	qsort(*acl, *num, sizeof(macaddr), hostapd_mac_comp);
+	qsort(*acl, *num, sizeof(**acl), hostapd_acl_comp);
 
 	return 0;
 }
@@ -2167,7 +2186,8 @@ void hostapd_config_free(struct hostapd_config *conf)
 
 /* Perform a binary search for given MAC address from a pre-sorted list.
  * Returns 1 if address is in the list or 0 if not. */
-int hostapd_maclist_found(macaddr *list, int num_entries, const u8 *addr)
+int hostapd_maclist_found(struct mac_acl_entry *list, int num_entries,
+			  const u8 *addr, int *vlan_id)
 {
 	int start, end, middle, res;
 
@@ -2176,9 +2196,12 @@ int hostapd_maclist_found(macaddr *list, int num_entries, const u8 *addr)
 
 	while (start <= end) {
 		middle = (start + end) / 2;
-		res = os_memcmp(list[middle], addr, ETH_ALEN);
-		if (res == 0)
+		res = os_memcmp(list[middle].addr, addr, ETH_ALEN);
+		if (res == 0) {
+			if (vlan_id)
+				*vlan_id = list[middle].vlan_id;
 			return 1;
+		}
 		if (res < 0)
 			start = middle + 1;
 		else

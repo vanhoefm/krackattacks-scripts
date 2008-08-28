@@ -1,0 +1,7 @@
+# WPA2-Personal (PSK) with CCMP, AP and single client
+
+modprobe mac80211_hwsim
+
+hostapd hostapd.conf
+
+wpa_supplicant -Dwext -iwlan1 -c wpa_supplicant.conf

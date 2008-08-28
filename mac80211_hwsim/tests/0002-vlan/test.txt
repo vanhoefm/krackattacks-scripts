@@ -1,0 +1,15 @@
+# Plaintext connection, two clients, different VLANs
+
+modprobe mac80211_hwsim radios=3
+
+hostapd hostapd.conf
+
+ifconfig wlan1 up
+iwconfig wlan1 essid "mac80211 test"
+
+ifconfig wlan2 up
+iwconfig wlan2 essid "mac80211 test"
+
+# Expected results:
+# STA1(wlan1) is bound to vlan1
+# STA2(wlan2) is bound to vlan2

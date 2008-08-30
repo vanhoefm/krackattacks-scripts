@@ -1013,11 +1013,6 @@ static void handle_assoc(struct hostapd_data *hapd,
 		goto fail;
 	}
 
-	if (reassoc) {
-		os_memcpy(sta->previous_ap, mgmt->u.reassoc_req.current_ap,
-			  ETH_ALEN);
-	}
-
 	sta->capability = capab_info;
 
 	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
@@ -1297,6 +1292,11 @@ static void handle_assoc(struct hostapd_data *hapd,
 		       "association OK (aid %d)", sta->aid);
 	/* Station will be marked associated, after it acknowledges AssocResp
 	 */
+
+	if (reassoc) {
+		os_memcpy(sta->previous_ap, mgmt->u.reassoc_req.current_ap,
+			  ETH_ALEN);
+	}
 
 	if (sta->last_assoc_req)
 		os_free(sta->last_assoc_req);

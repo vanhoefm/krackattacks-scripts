@@ -193,7 +193,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	capab = 0;
 #ifdef CONFIG_IEEE80211W
 	if (sm->mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC)
-		capab |= WPA_CAPABILITY_MGMT_FRAME_PROTECTION;
+		capab |= WPA_CAPABILITY_MFPC;
 #endif /* CONFIG_IEEE80211W */
 	WPA_PUT_LE16(pos, capab);
 	pos += 2;

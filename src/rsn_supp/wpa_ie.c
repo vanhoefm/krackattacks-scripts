@@ -327,7 +327,7 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 	capab = 0;
 #ifdef CONFIG_IEEE80211W
 	if (mgmt_group_cipher == WPA_CIPHER_AES_128_CMAC)
-		capab |= WPA_CAPABILITY_MGMT_FRAME_PROTECTION;
+		capab |= WPA_CAPABILITY_MFPC;
 #endif /* CONFIG_IEEE80211W */
 	WPA_PUT_LE16(pos, capab);
 	pos += 2;

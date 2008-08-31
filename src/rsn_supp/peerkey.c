@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - PeerKey for Direct Link Setup (DLS)
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +18,7 @@
 
 #include "common.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "eloop.h"
 #include "wpa.h"
 #include "wpa_i.h"
@@ -239,15 +240,19 @@ static int wpa_supplicant_process_smk_m2(
 	/* TODO: find existing entry and if found, use that instead of adding
 	 * a new one; how to handle the case where both ends initiate at the
 	 * same time? */
-	peerkey = os_malloc(sizeof(*peerkey));
+	peerkey = os_zalloc(sizeof(*peerkey));
 	if (peerkey == NULL)
 		return -1;
-	os_memset(peerkey, 0, sizeof(*peerkey));
 	os_memcpy(peerkey->addr, kde.mac_addr, ETH_ALEN);
 	os_memcpy(peerkey->inonce, key->key_nonce, WPA_NONCE_LEN);
 	os_memcpy(peerkey->rsnie_i, kde.rsn_ie, kde.rsn_ie_len);
 	peerkey->rsnie_i_len = kde.rsn_ie_len;
 	peerkey->cipher = cipher;
+#ifdef CONFIG_IEEE80211W
+	if (ie.key_mgmt & (WPA_KEY_MGMT_IEEE8021X_SHA256 |
+			   WPA_KEY_MGMT_PSK_SHA256))
+		peerkey->use_sha256 = 1;
+#endif /* CONFIG_IEEE80211W */
 
 	if (os_get_random(peerkey->pnonce, WPA_NONCE_LEN)) {
 		wpa_msg(sm->ctx->ctx, MSG_WARNING,
@@ -294,18 +299,20 @@ static int wpa_supplicant_process_smk_m2(
  * @mac_p: Peer MAC address
  * @inonce: Initiator Nonce
  * @mac_i: Initiator MAC address
+ * @use_sha256: Whether to use SHA256-based KDF
  *
  * 8.5.1.4 Station to station (STK) key hierarchy
  * SMKID = HMAC-SHA1-128(SMK, "SMK Name" || PNonce || MAC_P || INonce || MAC_I)
  */
 static void rsn_smkid(const u8 *smk, const u8 *pnonce, const u8 *mac_p,
-		      const u8 *inonce, const u8 *mac_i, u8 *smkid)
+		      const u8 *inonce, const u8 *mac_i, u8 *smkid,
+		      int use_sha256)
 {
 	char *title = "SMK Name";
 	const u8 *addr[5];
 	const size_t len[5] = { 8, WPA_NONCE_LEN, ETH_ALEN, WPA_NONCE_LEN,
 				ETH_ALEN };
-	unsigned char hash[SHA1_MAC_LEN];
+	unsigned char hash[SHA256_MAC_LEN];
 
 	addr[0] = (u8 *) title;
 	addr[1] = pnonce;
@@ -313,7 +320,12 @@ static void rsn_smkid(const u8 *smk, const u8 *pnonce, const u8 *mac_p,
 	addr[3] = inonce;
 	addr[4] = mac_i;
 
-	hmac_sha1_vector(smk, PMK_LEN, 5, addr, len, hash);
+#ifdef CONFIG_IEEE80211W
+	if (use_sha256)
+		hmac_sha256_vector(smk, PMK_LEN, 5, addr, len, hash);
+	else
+#endif /* CONFIG_IEEE80211W */
+		hmac_sha1_vector(smk, PMK_LEN, 5, addr, len, hash);
 	os_memcpy(smkid, hash, PMKID_LEN);
 }
 
@@ -578,11 +590,13 @@ static int wpa_supplicant_process_smk_m45(
 
 	if (peerkey->initiator) {
 		rsn_smkid(peerkey->smk, peerkey->pnonce, peerkey->addr,
-			  peerkey->inonce, sm->own_addr, peerkey->smkid);
+			  peerkey->inonce, sm->own_addr, peerkey->smkid,
+			  peerkey->use_sha256);
 		wpa_supplicant_send_stk_1_of_4(sm, peerkey);
 	} else {
 		rsn_smkid(peerkey->smk, peerkey->pnonce, sm->own_addr,
-			  peerkey->inonce, peerkey->addr, peerkey->smkid);
+			  peerkey->inonce, peerkey->addr, peerkey->smkid,
+			  peerkey->use_sha256);
 	}
 	wpa_hexdump(MSG_DEBUG, "RSN: SMKID", peerkey->smkid, PMKID_LEN);
 
@@ -695,7 +709,8 @@ static void wpa_supplicant_process_stk_1_of_4(struct wpa_sm *sm,
 	wpa_pmk_to_ptk(peerkey->smk, PMK_LEN, "Peer key expansion",
 		       sm->own_addr, peerkey->addr,
 		       peerkey->pnonce, key->key_nonce,
-		       (u8 *) stk, sizeof(*stk));
+		       (u8 *) stk, sizeof(*stk),
+		       peerkey->use_sha256);
 	/* Supplicant: swap tx/rx Mic keys */
 	os_memcpy(buf, stk->u.auth.tx_mic_key, 8);
 	os_memcpy(stk->u.auth.tx_mic_key, stk->u.auth.rx_mic_key, 8);
@@ -927,7 +942,8 @@ int peerkey_verify_eapol_key_mic(struct wpa_sm *sm,
 		wpa_pmk_to_ptk(peerkey->smk, PMK_LEN, "Peer key expansion",
 			       sm->own_addr, peerkey->addr,
 			       peerkey->inonce, key->key_nonce,
-			       (u8 *) &peerkey->stk, sizeof(peerkey->stk));
+			       (u8 *) &peerkey->stk, sizeof(peerkey->stk),
+			       peerkey->use_sha256);
 		peerkey->stk_set = 1;
 	}
 
@@ -1016,12 +1032,15 @@ int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
 
 	/* TODO: find existing entry and if found, use that instead of adding
 	 * a new one */
-	peerkey = os_malloc(sizeof(*peerkey));
+	peerkey = os_zalloc(sizeof(*peerkey));
 	if (peerkey == NULL)
 		return -1;
-	os_memset(peerkey, 0, sizeof(*peerkey));
 	peerkey->initiator = 1;
 	os_memcpy(peerkey->addr, peer, ETH_ALEN);
+#ifdef CONFIG_IEEE80211W
+	if (wpa_key_mgmt_sha256(sm->key_mgmt))
+		peerkey->use_sha256 = 1;
+#endif /* CONFIG_IEEE80211W */
 
 	/* SMK M1:
 	 * EAPOL-Key(S=1, M=1, A=0, I=0, K=0, SM=1, KeyRSC=0, Nonce=INonce,

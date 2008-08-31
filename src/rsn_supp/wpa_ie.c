@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - WPA/RSN IE and KDE processing
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -316,6 +316,12 @@ static int wpa_gen_wpa_ie_rsn(u8 *rsn_ie, size_t rsn_ie_len,
 	} else if (key_mgmt == WPA_KEY_MGMT_FT_PSK) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_FT_PSK);
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	} else if (key_mgmt == WPA_KEY_MGMT_IEEE8021X_SHA256) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_802_1X_SHA256);
+	} else if (key_mgmt == WPA_KEY_MGMT_PSK_SHA256) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_PSK_SHA256);
+#endif /* CONFIG_IEEE80211W */
 	} else {
 		wpa_printf(MSG_WARNING, "Invalid key management type (%d).",
 			   key_mgmt);

@@ -58,8 +58,9 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 		   "AP");
 	if (ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_IEEE8021X |
 			      WPA_KEY_MGMT_WPA_NONE |
-			      WPA_KEY_MGMT_FT_PSK | WPA_KEY_MGMT_FT_IEEE8021X))
-	{
+			      WPA_KEY_MGMT_FT_PSK | WPA_KEY_MGMT_FT_IEEE8021X |
+			      WPA_KEY_MGMT_PSK_SHA256 |
+			      WPA_KEY_MGMT_IEEE8021X_SHA256)) {
 		u8 wpa_ie[80];
 		size_t wpa_ie_len = sizeof(wpa_ie);
 		wpa_supplicant_set_suites(wpa_s, NULL, ssid,
@@ -99,8 +100,7 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 	eapol_sm_notify_portEnabled(wpa_s->eapol, FALSE);
 	eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
-	if (wpa_s->key_mgmt == WPA_KEY_MGMT_PSK ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_FT_PSK)
+	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt))
 		eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
 	wpa_s->ap_ies_from_associnfo = 0;
 }
@@ -500,7 +500,10 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 			}
 
 			if ((ssid->key_mgmt & 
-			     (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK)) &&
+			     (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
+			      WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_FT_PSK |
+			      WPA_KEY_MGMT_IEEE8021X_SHA256 |
+			      WPA_KEY_MGMT_PSK_SHA256)) &&
 			    (wpa_ie_len != 0 || rsn_ie_len != 0)) {
 				wpa_printf(MSG_DEBUG, "   skip - "
 					   "WPA network");
@@ -750,8 +753,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_portEnabled(wpa_s->eapol, FALSE);
 		eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
 	}
-	if (wpa_s->key_mgmt == WPA_KEY_MGMT_PSK ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_FT_PSK || ft_completed)
+	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) || ft_completed)
 		eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
 	/* 802.1X::portControl = Auto */
 	eapol_sm_notify_portEnabled(wpa_s->eapol, TRUE);
@@ -767,8 +769,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_cancel_scan(wpa_s);
 
 	if (wpa_s->driver_4way_handshake &&
-	    (wpa_s->key_mgmt == WPA_KEY_MGMT_PSK ||
-	     wpa_s->key_mgmt == WPA_KEY_MGMT_FT_PSK)) {
+	    wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		/*
 		 * We are done; the driver will take care of RSN 4-way
 		 * handshake.
@@ -797,8 +798,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s)
 	}
 
 	if (wpa_s->wpa_state == WPA_4WAY_HANDSHAKE &&
-	    (wpa_s->key_mgmt == WPA_KEY_MGMT_PSK ||
-	     wpa_s->key_mgmt == WPA_KEY_MGMT_FT_PSK)) {
+	    wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
 			"pre-shared key may be incorrect");
 	}

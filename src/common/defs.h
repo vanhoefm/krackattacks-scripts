@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Common definitions
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -40,6 +40,35 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 #define WPA_KEY_MGMT_WPA_NONE BIT(4)
 #define WPA_KEY_MGMT_FT_IEEE8021X BIT(5)
 #define WPA_KEY_MGMT_FT_PSK BIT(6)
+#define WPA_KEY_MGMT_IEEE8021X_SHA256 BIT(7)
+#define WPA_KEY_MGMT_PSK_SHA256 BIT(8)
+
+static inline int wpa_key_mgmt_wpa_ieee8021x(int akm)
+{
+	return akm == WPA_KEY_MGMT_IEEE8021X ||
+		akm == WPA_KEY_MGMT_FT_IEEE8021X ||
+		akm == WPA_KEY_MGMT_IEEE8021X_SHA256;
+}
+
+static inline int wpa_key_mgmt_wpa_psk(int akm)
+{
+	return akm == WPA_KEY_MGMT_PSK ||
+		akm == WPA_KEY_MGMT_FT_PSK ||
+		akm == WPA_KEY_MGMT_PSK_SHA256;
+}
+
+static inline int wpa_key_mgmt_ft(int akm)
+{
+	return akm == WPA_KEY_MGMT_FT_PSK ||
+		akm == WPA_KEY_MGMT_FT_IEEE8021X;
+}
+
+static inline int wpa_key_mgmt_sha256(int akm)
+{
+	return akm == WPA_KEY_MGMT_PSK_SHA256 ||
+		akm == WPA_KEY_MGMT_IEEE8021X_SHA256;
+}
+
 
 #define WPA_PROTO_WPA BIT(0)
 #define WPA_PROTO_RSN BIT(1)
@@ -55,7 +84,8 @@ typedef enum { CIPHER_NONE, CIPHER_WEP40, CIPHER_TKIP, CIPHER_CCMP,
 	       CIPHER_WEP104 } wpa_cipher;
 typedef enum { KEY_MGMT_802_1X, KEY_MGMT_PSK, KEY_MGMT_NONE,
 	       KEY_MGMT_802_1X_NO_WPA, KEY_MGMT_WPA_NONE,
-	       KEY_MGMT_FT_802_1X, KEY_MGMT_FT_PSK
+	       KEY_MGMT_FT_802_1X, KEY_MGMT_FT_PSK,
+	       KEY_MGMT_802_1X_SHA256, KEY_MGMT_PSK_SHA256
 } wpa_key_mgmt;
 
 /**

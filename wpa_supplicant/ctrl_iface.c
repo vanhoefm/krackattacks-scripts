@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -285,9 +285,8 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		pos += ret;
 	}
 
-	if (wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) {
+	if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		res = eapol_sm_get_status(wpa_s->eapol, pos, end - pos,
 					  verbose);
 		if (res >= 0)
@@ -493,6 +492,24 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 		first = 0;
 	}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
+		ret = os_snprintf(pos, end - pos, "%sEAP-SHA256",
+				  first ? "" : "+");
+		if (ret < 0 || ret >= end - pos)
+			return pos;
+		pos += ret;
+		first = 0;
+	}
+	if (data.key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
+		ret = os_snprintf(pos, end - pos, "%sPSK-SHA256",
+				  first ? "" : "+");
+		if (ret < 0 || ret >= end - pos)
+			return pos;
+		pos += ret;
+		first = 0;
+	}
+#endif /* CONFIG_IEEE80211W */
 
 	pos = wpa_supplicant_cipher_txt(pos, end, data.pairwise_cipher);
 

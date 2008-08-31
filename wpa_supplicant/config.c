@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Configuration parser and common functions
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -500,6 +500,12 @@ static int wpa_config_parse_key_mgmt(const struct parse_data *data,
 		else if (os_strcmp(start, "FT-EAP") == 0)
 			val |= WPA_KEY_MGMT_FT_IEEE8021X;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+		else if (os_strcmp(start, "WPA-PSK-SHA256") == 0)
+			val |= WPA_KEY_MGMT_PSK_SHA256;
+		else if (os_strcmp(start, "WPA-EAP-SHA256") == 0)
+			val |= WPA_KEY_MGMT_IEEE8021X_SHA256;
+#endif /* CONFIG_IEEE80211W */
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
 				   line, start);
@@ -595,6 +601,16 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 		pos += os_snprintf(pos, end - pos, "%sFT-EAP",
 				   pos == buf ? "" : " ");
 #endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_IEEE80211W
+	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
+		pos += os_snprintf(pos, end - pos, "%sWPA-PSK-SHA256",
+				   pos == buf ? "" : " ");
+
+	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
+		pos += os_snprintf(pos, end - pos, "%sWPA-EAP-SHA256",
+				   pos == buf ? "" : " ");
+#endif /* CONFIG_IEEE80211W */
 
 	return buf;
 }

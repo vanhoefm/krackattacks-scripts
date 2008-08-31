@@ -1,6 +1,6 @@
 /*
  * hostapd - PMKSA cache for IEEE 802.11i RSN
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +20,7 @@
 #include "common.h"
 #include "eloop.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "ieee802_1x.h"
 #include "eapol_sm.h"
 #include "pmksa_cache.h"
@@ -46,23 +47,29 @@ struct rsn_pmksa_cache {
  * @pmk_len: Length of pmk in bytes
  * @aa: Authenticator address
  * @spa: Supplicant address
+ * @use_sha256: Whether to use SHA256-based KDF
  *
  * IEEE Std 802.11i-2004 - 8.5.1.2 Pairwise key hierarchy
  * PMKID = HMAC-SHA1-128(PMK, "PMK Name" || AA || SPA)
  */
 void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
-	       u8 *pmkid)
+	       u8 *pmkid, int use_sha256)
 {
 	char *title = "PMK Name";
 	const u8 *addr[3];
 	const size_t len[3] = { 8, ETH_ALEN, ETH_ALEN };
-	unsigned char hash[SHA1_MAC_LEN];
+	unsigned char hash[SHA256_MAC_LEN];
 
 	addr[0] = (u8 *) title;
 	addr[1] = aa;
 	addr[2] = spa;
 
-	hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+#ifdef CONFIG_IEEE80211W
+	if (use_sha256)
+		hmac_sha256_vector(pmk, pmk_len, 3, addr, len, hash);
+	else
+#endif /* CONFIG_IEEE80211W */
+		hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
 	os_memcpy(pmkid, hash, PMKID_LEN);
 }
 
@@ -248,6 +255,7 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
  * @spa: Supplicant address
  * @session_timeout: Session timeout
  * @eapol: Pointer to EAPOL state machine data
+ * @akmp: WPA_KEY_MGMT_* used in key derivation
  * Returns: Pointer to the added PMKSA cache entry or %NULL on error
  *
  * This function create a PMKSA entry for a new PMK and adds it to the PMKSA
@@ -258,7 +266,7 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
 struct rsn_pmksa_cache_entry *
 pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		const u8 *aa, const u8 *spa, int session_timeout,
-		struct eapol_state_machine *eapol)
+		struct eapol_state_machine *eapol, int akmp)
 {
 	struct rsn_pmksa_cache_entry *entry, *pos;
 	struct os_time now;
@@ -271,14 +279,15 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		return NULL;
 	os_memcpy(entry->pmk, pmk, pmk_len);
 	entry->pmk_len = pmk_len;
-	rsn_pmkid(pmk, pmk_len, aa, spa, entry->pmkid);
+	rsn_pmkid(pmk, pmk_len, aa, spa, entry->pmkid,
+		  wpa_key_mgmt_sha256(akmp));
 	os_get_time(&now);
 	entry->expiration = now.sec;
 	if (session_timeout > 0)
 		entry->expiration += session_timeout;
 	else
 		entry->expiration += dot11RSNAConfigPMKLifetime;
-	entry->akmp = WPA_KEY_MGMT_IEEE8021X;
+	entry->akmp = akmp;
 	os_memcpy(entry->spa, spa, ETH_ALEN);
 	pmksa_cache_from_eapol_data(entry, eapol);
 
@@ -412,7 +421,8 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
 	while (entry) {
 		if (os_memcmp(entry->spa, spa, ETH_ALEN) != 0)
 			continue;
-		rsn_pmkid(entry->pmk, entry->pmk_len, aa, spa, new_pmkid);
+		rsn_pmkid(entry->pmk, entry->pmk_len, aa, spa, new_pmkid,
+			  wpa_key_mgmt_sha256(entry->akmp));
 		if (os_memcmp(new_pmkid, pmkid, PMKID_LEN) == 0)
 			return entry;
 		entry = entry->next;

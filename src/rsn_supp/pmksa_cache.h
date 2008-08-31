@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - WPA2/RSN PMKSA cache functions
- * Copyright (c) 2003-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -56,7 +56,7 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
 int pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len);
 struct rsn_pmksa_cache_entry *
 pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
-		const u8 *aa, const u8 *spa, void *network_ctx);
+		const u8 *aa, const u8 *spa, void *network_ctx, int akmp);
 void pmksa_cache_notify_reconfig(struct rsn_pmksa_cache *pmksa);
 struct rsn_pmksa_cache_entry * pmksa_cache_get_current(struct wpa_sm *sm);
 void pmksa_cache_clear_current(struct wpa_sm *sm);
@@ -100,7 +100,7 @@ static inline int pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
 
 static inline struct rsn_pmksa_cache_entry *
 pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
-		const u8 *aa, const u8 *spa, void *network_ctx)
+		const u8 *aa, const u8 *spa, void *network_ctx, int akmp)
 {
 	return NULL;
 }

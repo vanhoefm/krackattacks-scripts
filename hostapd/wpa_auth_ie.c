@@ -1,6 +1,6 @@
 /*
  * hostapd - WPA/RSN IE and KDE definitions
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -189,6 +189,18 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		num_suites++;
 	}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_802_1X_SHA256);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
+		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_PSK_SHA256);
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_IEEE80211W */
 
 	if (num_suites == 0) {
 		wpa_printf(MSG_DEBUG, "Invalid key management type (%d).",
@@ -470,6 +482,12 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		else if (data.key_mgmt & WPA_KEY_MGMT_FT_PSK)
 			selector = RSN_AUTH_KEY_MGMT_FT_PSK;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+		else if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
+			selector = RSN_AUTH_KEY_MGMT_802_1X_SHA256;
+		else if (data.key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
+			selector = RSN_AUTH_KEY_MGMT_PSK_SHA256;
+#endif /* CONFIG_IEEE80211W */
 		else if (data.key_mgmt & WPA_KEY_MGMT_IEEE8021X)
 			selector = RSN_AUTH_KEY_MGMT_UNSPEC_802_1X;
 		else if (data.key_mgmt & WPA_KEY_MGMT_PSK)
@@ -564,6 +582,12 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	else if (key_mgmt & WPA_KEY_MGMT_FT_PSK)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_FT_PSK;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	else if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X_SHA256;
+	else if (key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
+		sm->wpa_key_mgmt = WPA_KEY_MGMT_PSK_SHA256;
+#endif /* CONFIG_IEEE80211W */
 	else if (key_mgmt & WPA_KEY_MGMT_IEEE8021X)
 		sm->wpa_key_mgmt = WPA_KEY_MGMT_IEEE8021X;
 	else
@@ -610,8 +634,7 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_IEEE80211W */
 
 #ifdef CONFIG_IEEE80211R
-	if (sm->wpa_key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	    sm->wpa_key_mgmt == WPA_KEY_MGMT_FT_PSK) {
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
 		if (mdie == NULL || mdie_len < MOBILITY_DOMAIN_ID_LEN + 1) {
 			wpa_printf(MSG_DEBUG, "RSN: Trying to use FT, but "
 				   "MDIE not included");

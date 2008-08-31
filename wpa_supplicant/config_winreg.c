@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Configuration backend: Windows registry
- * Copyright (c) 2003-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -264,7 +264,8 @@ static struct wpa_ssid * wpa_config_read_network(HKEY hk, const TCHAR *netw,
 		wpa_config_update_psk(ssid);
 	}
 
-	if ((ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK)) &&
+	if ((ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK |
+			       WPA_KEY_MGMT_PSK_SHA256)) &&
 	    !ssid->psk_set) {
 		wpa_printf(MSG_ERROR, "WPA-PSK accepted for key management, "
 			   "but no PSK configured for network '" TSTR "'.",

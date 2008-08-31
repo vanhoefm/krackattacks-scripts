@@ -817,6 +817,12 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 		else if (os_strcmp(start, "FT-EAP") == 0)
 			val |= WPA_KEY_MGMT_FT_IEEE8021X;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+		else if (os_strcmp(start, "WPA-PSK-SHA256") == 0)
+			val |= WPA_KEY_MGMT_PSK_SHA256;
+		else if (os_strcmp(start, "WPA-EAP-SHA256") == 0)
+			val |= WPA_KEY_MGMT_IEEE8021X_SHA256;
+#endif /* CONFIG_IEEE80211W */
 		else {
 			printf("Line %d: invalid key_mgmt '%s'\n",
 			       line, start);

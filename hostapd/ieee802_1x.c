@@ -719,8 +719,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	}
 
 	if (!hapd->conf->ieee802_1x ||
-	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_PSK ||
-	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_FT_PSK)
+	    wpa_key_mgmt_wpa_psk(wpa_auth_sta_key_mgmt(sta->wpa_sm)))
 		return;
 
 	if (!sta->eapol_sm) {
@@ -802,8 +801,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	int force_1x = 0;
 
 	if ((!force_1x && !hapd->conf->ieee802_1x) ||
-	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_PSK ||
-	    wpa_auth_sta_key_mgmt(sta->wpa_sm) == WPA_KEY_MGMT_FT_PSK)
+	    wpa_key_mgmt_wpa_psk(wpa_auth_sta_key_mgmt(sta->wpa_sm)))
 		return;
 
 	if (sta->eapol_sm == NULL) {
@@ -1938,10 +1936,9 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  "dot1xAuthSessionTerminateCause=999\n"
 			  "dot1xAuthSessionUserName=%s\n",
 			  sta->acct_session_id_hi, sta->acct_session_id_lo,
-			  (wpa_auth_sta_key_mgmt(sta->wpa_sm) ==
-			   WPA_KEY_MGMT_IEEE8021X ||
-			   wpa_auth_sta_key_mgmt(sta->wpa_sm) ==
-			   WPA_KEY_MGMT_FT_IEEE8021X) ? 1 : 2,
+			  (wpa_key_mgmt_wpa_ieee8021x(
+				   wpa_auth_sta_key_mgmt(sta->wpa_sm))) ?
+			  1 : 2,
 			  (unsigned int) (time(NULL) -
 					  sta->acct_session_start),
 			  sm->identity);

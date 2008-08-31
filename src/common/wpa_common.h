@@ -1,6 +1,6 @@
 /*
  * WPA definitions shared between hostapd and wpa_supplicant
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -294,7 +294,7 @@ int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
 void wpa_pmk_to_ptk(const u8 *pmk, size_t pmk_len, const char *label,
 		    const u8 *addr1, const u8 *addr2,
 		    const u8 *nonce1, const u8 *nonce2,
-		    u8 *ptk, size_t ptk_len);
+		    u8 *ptk, size_t ptk_len, int use_sha256);
 
 #ifdef CONFIG_IEEE80211R
 int wpa_ft_mic(const u8 *kck, const u8 *sta_addr, const u8 *ap_addr,

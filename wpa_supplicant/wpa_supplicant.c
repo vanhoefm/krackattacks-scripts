@@ -251,8 +251,7 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	struct eapol_config eapol_conf;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	if (wpa_s->key_mgmt == WPA_KEY_MGMT_PSK ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_FT_PSK) {
+	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
 		eapol_sm_notify_eap_fail(wpa_s->eapol, FALSE);
 	}
@@ -282,8 +281,8 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	if (wpa_s->conf)
 		eapol_conf.fast_reauth = wpa_s->conf->fast_reauth;
 	eapol_conf.workaround = ssid->eap_workaround;
-	eapol_conf.eap_disabled = wpa_s->key_mgmt != WPA_KEY_MGMT_IEEE8021X &&
-		wpa_s->key_mgmt != WPA_KEY_MGMT_FT_IEEE8021X &&
+	eapol_conf.eap_disabled =
+		!wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) &&
 		wpa_s->key_mgmt != WPA_KEY_MGMT_IEEE8021X_NO_WPA;
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
 #endif /* IEEE8021X_EAPOL */
@@ -562,8 +561,7 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	 * TODO: should notify EAPOL SM about changes in opensc_engine_path,
 	 * pkcs11_engine_path, pkcs11_module_path.
 	 */
-	if (wpa_s->key_mgmt == WPA_KEY_MGMT_PSK ||
-	    wpa_s->key_mgmt == WPA_KEY_MGMT_FT_PSK) {
+	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		/*
 		 * Clear forced success to clear EAP state for next
 		 * authentication.
@@ -634,6 +632,10 @@ static wpa_key_mgmt key_mgmt2driver(int key_mgmt)
 		return KEY_MGMT_FT_802_1X;
 	case WPA_KEY_MGMT_FT_PSK:
 		return KEY_MGMT_FT_PSK;
+	case WPA_KEY_MGMT_IEEE8021X_SHA256:
+		return KEY_MGMT_802_1X_SHA256;
+	case WPA_KEY_MGMT_PSK_SHA256:
+		return KEY_MGMT_PSK_SHA256;
 	case WPA_KEY_MGMT_PSK:
 	default:
 		return KEY_MGMT_PSK;
@@ -822,6 +824,16 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		wpa_s->key_mgmt = WPA_KEY_MGMT_FT_PSK;
 		wpa_msg(wpa_s, MSG_DEBUG, "WPA: using KEY_MGMT FT/PSK");
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	} else if (sel & WPA_KEY_MGMT_IEEE8021X_SHA256) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_IEEE8021X_SHA256;
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"WPA: using KEY_MGMT 802.1X with SHA256");
+	} else if (sel & WPA_KEY_MGMT_PSK_SHA256) {
+		wpa_s->key_mgmt = WPA_KEY_MGMT_PSK_SHA256;
+		wpa_msg(wpa_s, MSG_DEBUG,
+			"WPA: using KEY_MGMT PSK with SHA256");
+#endif /* CONFIG_IEEE80211W */
 	} else if (sel & WPA_KEY_MGMT_IEEE8021X) {
 		wpa_s->key_mgmt = WPA_KEY_MGMT_IEEE8021X;
 		wpa_msg(wpa_s, MSG_DEBUG, "WPA: using KEY_MGMT 802.1X");
@@ -864,7 +876,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	if (ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK))
+	if (ssid->key_mgmt &
+	    (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK | WPA_KEY_MGMT_PSK_SHA256))
 		wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN);
 	else
 		wpa_sm_set_pmk_from_pmksa(wpa_s->wpa);
@@ -950,7 +963,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		    wpa_scan_get_ie(bss, WLAN_EID_RSN)) &&
 	    (ssid->key_mgmt & (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
 			       WPA_KEY_MGMT_FT_IEEE8021X |
-			       WPA_KEY_MGMT_FT_PSK))) {
+			       WPA_KEY_MGMT_FT_PSK |
+			       WPA_KEY_MGMT_IEEE8021X_SHA256 |
+			       WPA_KEY_MGMT_PSK_SHA256))) {
 		int try_opportunistic;
 		try_opportunistic = ssid->proactive_key_caching &&
 			(ssid->proto & WPA_PROTO_RSN);
@@ -968,7 +983,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	} else if (ssid->key_mgmt &
 		   (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_IEEE8021X |
 		    WPA_KEY_MGMT_WPA_NONE | WPA_KEY_MGMT_FT_PSK |
-		    WPA_KEY_MGMT_FT_IEEE8021X)) {
+		    WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_PSK_SHA256 |
+		    WPA_KEY_MGMT_IEEE8021X_SHA256)) {
 		wpa_ie_len = sizeof(wpa_ie);
 		if (wpa_supplicant_set_suites(wpa_s, NULL, ssid,
 					      wpa_ie, &wpa_ie_len)) {
@@ -1428,15 +1444,13 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 	if (wpa_s->eapol_received == 0 &&
 	    (!wpa_s->driver_4way_handshake ||
-	     (wpa_s->key_mgmt != WPA_KEY_MGMT_PSK &&
-	      wpa_s->key_mgmt != WPA_KEY_MGMT_FT_PSK) ||
+	     !wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
 	     wpa_s->wpa_state != WPA_COMPLETED)) {
 		/* Timeout for completing IEEE 802.1X and WPA authentication */
 		wpa_supplicant_req_auth_timeout(
 			wpa_s,
-			(wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
-			 wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA ||
-			 wpa_s->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) ?
+			(wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
+			 wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) ?
 			70 : 10, 0);
 	}
 	wpa_s->eapol_received++;
@@ -1454,15 +1468,13 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	 * still sent to the current BSSID (if available), though. */
 
 	os_memcpy(wpa_s->last_eapol_src, src_addr, ETH_ALEN);
-	if (wpa_s->key_mgmt != WPA_KEY_MGMT_PSK &&
-	    wpa_s->key_mgmt != WPA_KEY_MGMT_FT_PSK &&
+	if (!wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) &&
 	    eapol_sm_rx_eapol(wpa_s->eapol, src_addr, buf, len) > 0)
 		return;
 	wpa_drv_poll(wpa_s);
 	if (!wpa_s->driver_4way_handshake)
 		wpa_sm_rx_eapol(wpa_s->wpa, src_addr, buf, len);
-	else if (wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
-		 wpa_s->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) {
+	else if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt)) {
 		/*
 		 * Set portValid = TRUE here since we are going to skip 4-way
 		 * handshake processing which would normally set portValid. We

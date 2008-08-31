@@ -1,6 +1,6 @@
 /*
  * hostapd - PeerKey for Direct Link Setup (DLS)
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,6 +17,7 @@
 #include "common.h"
 #include "eloop.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "wpa.h"
 #include "defs.h"
 #include "wpa_auth_i.h"
@@ -309,8 +310,13 @@ void wpa_smk_m3(struct wpa_authenticator *wpa_auth,
 	os_memcpy(pos, kde.nonce, WPA_NONCE_LEN);
 	pos += WPA_NONCE_LEN;
 	os_memcpy(pos, key->key_nonce, WPA_NONCE_LEN);
+#ifdef CONFIG_IEEE80211W
+	sha256_prf(smk, PMK_LEN, "SMK Derivation", buf, sizeof(buf),
+		   smk, PMK_LEN);
+#else /* CONFIG_IEEE80211W */
 	sha1_prf(smk, PMK_LEN, "SMK Derivation", buf, sizeof(buf),
 		 smk, PMK_LEN);
+#endif /* CONFIG_IEEE80211W */
 
 	wpa_hexdump_key(MSG_DEBUG, "RSN: SMK", smk, PMK_LEN);
 

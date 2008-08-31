@@ -1,6 +1,6 @@
 /*
  * hostapd - PMKSA cache for IEEE 802.11i RSN
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -49,7 +49,7 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
 struct rsn_pmksa_cache_entry *
 pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		const u8 *aa, const u8 *spa, int session_timeout,
-		struct eapol_state_machine *eapol);
+		struct eapol_state_machine *eapol, int akmp);
 struct rsn_pmksa_cache_entry *
 pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 		    const struct rsn_pmksa_cache_entry *old_entry,
@@ -57,6 +57,6 @@ pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 			       struct eapol_state_machine *eapol);
 void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
-	       u8 *pmkid);
+	       u8 *pmkid, int use_sha256);
 
 #endif /* PMKSA_CACHE_H */

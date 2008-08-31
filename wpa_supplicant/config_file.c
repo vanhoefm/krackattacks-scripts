@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Configuration backend: text file
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -104,7 +104,8 @@ static int wpa_config_validate_network(struct wpa_ssid *ssid, int line)
 		wpa_config_update_psk(ssid);
 	}
 
-	if ((ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK)) &&
+	if ((ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK |
+			       WPA_KEY_MGMT_PSK_SHA256)) &&
 	    !ssid->psk_set) {
 		wpa_printf(MSG_ERROR, "Line %d: WPA-PSK accepted for key "
 			   "management, but no PSK configured.", line);

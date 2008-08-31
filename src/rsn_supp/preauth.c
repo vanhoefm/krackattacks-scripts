@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - RSN pre-authentication
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -104,7 +104,8 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol, int success,
 			sm->pmk_len = pmk_len;
 			pmksa_cache_add(sm->pmksa, pmk, pmk_len,
 					sm->preauth_bssid, sm->own_addr,
-					sm->network_ctx);
+					sm->network_ctx,
+					WPA_KEY_MGMT_IEEE8021X);
 		} else {
 			wpa_msg(sm->ctx->ctx, MSG_INFO, "RSN: failed to get "
 				"master session key from pre-auth EAPOL state "
@@ -304,7 +305,8 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 	if (sm->preauth_eapol ||
 	    sm->proto != WPA_PROTO_RSN ||
 	    wpa_sm_get_state(sm) != WPA_COMPLETED ||
-	    sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X) {
+	    (sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X &&
+	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SHA256)) {
 		wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: not in suitable state "
 			"for new pre-authentication");
 		return; /* invalid state for new pre-auth */

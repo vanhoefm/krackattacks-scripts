@@ -77,6 +77,12 @@ static const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 	case WPA_KEY_MGMT_FT_PSK:
 		return "FT-PSK";
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	case WPA_KEY_MGMT_IEEE8021X_SHA256:
+		return "WPA2-EAP-SHA256";
+	case WPA_KEY_MGMT_PSK_SHA256:
+		return "WPA2-PSK-SHA256";
+#endif /* CONFIG_IEEE80211W */
 	default:
 		return "UNKNOWN";
 	}
@@ -140,8 +146,7 @@ void wpa_sm_key_request(struct wpa_sm *sm, int error, int pairwise)
 	int key_info, ver;
 	u8 bssid[ETH_ALEN], *rbuf;
 
-	if (sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	    sm->key_mgmt == WPA_KEY_MGMT_FT_PSK)
+	if (wpa_key_mgmt_ft(sm->key_mgmt) || wpa_key_mgmt_sha256(sm->key_mgmt))
 		ver = WPA_KEY_INFO_TYPE_AES_128_CMAC;
 	else if (sm->pairwise_cipher == WPA_CIPHER_CCMP)
 		ver = WPA_KEY_INFO_TYPE_HMAC_SHA1_AES;
@@ -216,8 +221,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 #ifdef CONFIG_IEEE80211R
 		sm->xxkey_len = 0;
 #endif /* CONFIG_IEEE80211R */
-	} else if ((sm->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
-		    sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) && sm->eapol) {
+	} else if (wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) && sm->eapol) {
 		int res, pmk_len;
 		pmk_len = PMK_LEN;
 		res = eapol_sm_get_key(sm->eapol, sm->pmk, PMK_LEN);
@@ -244,7 +248,8 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 					"machines", sm->pmk, pmk_len);
 			sm->pmk_len = pmk_len;
 			pmksa_cache_add(sm->pmksa, sm->pmk, pmk_len, src_addr,
-					sm->own_addr, sm->network_ctx);
+					sm->own_addr, sm->network_ctx,
+					sm->key_mgmt);
 			if (!sm->cur_pmksa && pmkid &&
 			    pmksa_cache_get(sm->pmksa, src_addr, pmkid)) {
 				wpa_printf(MSG_DEBUG, "RSN: the new PMK "
@@ -268,8 +273,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 		}
 	}
 
-	if (abort_cached && (sm->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
-			     sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X)) {
+	if (abort_cached && wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt)) {
 		/* Send EAPOL-Start to trigger full EAP authentication. */
 		u8 *buf;
 		size_t buflen;
@@ -356,14 +360,14 @@ static int wpa_derive_ptk(struct wpa_sm *sm, const unsigned char *src_addr,
 			  struct wpa_ptk *ptk)
 {
 #ifdef CONFIG_IEEE80211R
-	if (sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	    sm->key_mgmt == WPA_KEY_MGMT_FT_PSK)
+	if (wpa_key_mgmt_ft(sm->key_mgmt))
 		return wpa_derive_ptk_ft(sm, src_addr, key, ptk);
 #endif /* CONFIG_IEEE80211R */
 
 	wpa_pmk_to_ptk(sm->pmk, sm->pmk_len, "Pairwise key expansion",
 		       sm->own_addr, sm->bssid, sm->snonce, key->key_nonce,
-		       (u8 *) ptk, sizeof(*ptk));
+		       (u8 *) ptk, sizeof(*ptk),
+		       wpa_key_mgmt_sha256(sm->key_mgmt));
 	return 0;
 }
 
@@ -458,8 +462,7 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 			sm, addr, MLME_SETPROTECTION_PROTECT_TYPE_RX_TX,
 			MLME_SETPROTECTION_KEY_TYPE_PAIRWISE);
 		eapol_sm_notify_portValid(sm->eapol, TRUE);
-		if (sm->key_mgmt == WPA_KEY_MGMT_PSK ||
-		    sm->key_mgmt == WPA_KEY_MGMT_FT_PSK)
+		if (wpa_key_mgmt_wpa_psk(sm->key_mgmt))
 			eapol_sm_notify_eap_success(sm->eapol, TRUE);
 		/*
 		 * Start preauthentication after a short wait to avoid a
@@ -478,8 +481,7 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	    sm->key_mgmt == WPA_KEY_MGMT_FT_PSK) {
+	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		/* Prepare for the next transition */
 		wpa_ft_prepare_auth_request(sm);
 	}
@@ -834,8 +836,7 @@ static int wpa_supplicant_validate_ie(struct wpa_sm *sm,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	    sm->key_mgmt == WPA_KEY_MGMT_FT_PSK) {
+	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		struct rsn_mdie *mdie;
 		/* TODO: verify that full MDIE matches with the one from scan
 		 * results, not only mobility domain */
@@ -1463,8 +1464,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X ||
-	    sm->key_mgmt == WPA_KEY_MGMT_FT_PSK) {
+	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		/* IEEE 802.11r uses a new key_info type (AES-128-CMAC). */
 		if (ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 			wpa_printf(MSG_INFO, "FT: AP did not use "
@@ -1473,6 +1473,15 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		}
 	} else
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	if (wpa_key_mgmt_sha256(sm->key_mgmt)) {
+		if (ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
+			wpa_printf(MSG_INFO, "WPA: AP did not use the "
+				   "negotiated AES-128-CMAC.");
+			goto out;
+		}
+	} else
+#endif /* CONFIG_IEEE80211W */
 	if (sm->pairwise_cipher == WPA_CIPHER_CCMP &&
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		wpa_printf(MSG_INFO, "WPA: CCMP is used, but EAPOL-Key "
@@ -1651,6 +1660,12 @@ static u32 wpa_key_mgmt_suite(struct wpa_sm *sm)
 	case WPA_KEY_MGMT_FT_PSK:
 		return RSN_AUTH_KEY_MGMT_FT_PSK;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	case WPA_KEY_MGMT_IEEE8021X_SHA256:
+		return RSN_AUTH_KEY_MGMT_802_1X_SHA256;
+	case WPA_KEY_MGMT_PSK_SHA256:
+		return RSN_AUTH_KEY_MGMT_PSK_SHA256;
+#endif /* CONFIG_IEEE80211W */
 	case WPA_KEY_MGMT_WPA_NONE:
 		return WPA_AUTH_KEY_MGMT_NONE;
 	default:
@@ -1708,10 +1723,8 @@ int wpa_sm_get_mib(struct wpa_sm *sm, char *buf, size_t buflen)
 	} else
 		pmkid_txt[0] = '\0';
 
-	if ((sm->key_mgmt == WPA_KEY_MGMT_PSK ||
-	     sm->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
-	     sm->key_mgmt == WPA_KEY_MGMT_FT_PSK ||
-	     sm->key_mgmt == WPA_KEY_MGMT_FT_IEEE8021X) &&
+	if ((wpa_key_mgmt_wpa_psk(sm->key_mgmt) ||
+	     wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt)) &&
 	    sm->proto == WPA_PROTO_RSN)
 		rsna = 1;
 	else

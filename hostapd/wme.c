@@ -141,7 +141,7 @@ static void wme_send_action(struct hostapd_data *hapd, const u8 *addr,
 	os_memcpy(m->da, addr, ETH_ALEN);
 	os_memcpy(m->sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(m->bssid, hapd->own_addr, ETH_ALEN);
-	m->u.action.category = WME_ACTION_CATEGORY;
+	m->u.action.category = WLAN_ACTION_WMM;
 	m->u.action.u.wme_action.action_code = action_code;
 	m->u.action.u.wme_action.dialog_token = dialogue_token;
 	m->u.action.u.wme_action.status_code = status_code;

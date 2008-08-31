@@ -1672,7 +1672,7 @@ static void handle_action(struct hostapd_data *hapd,
 		return;
 	}
 #endif /* CONFIG_IEEE80211R */
-	case WME_ACTION_CATEGORY:
+	case WLAN_ACTION_WMM:
 		hostapd_wme_action(hapd, mgmt, len);
 		return;
 #ifdef CONFIG_IEEE80211W

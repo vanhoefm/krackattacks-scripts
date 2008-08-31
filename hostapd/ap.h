@@ -93,6 +93,14 @@ struct sta_info {
 #ifdef CONFIG_IEEE80211N
 	struct ht_cap_ie ht_capabilities; /* IEEE 802.11n capabilities */
 #endif /* CONFIG_IEEE80211N */
+
+#ifdef CONFIG_IEEE80211W
+	int ping_count; /* number of pending ping requests;
+			 * 0 = no ping in progress */
+	int ping_timed_out;
+	u8 *ping_trans_id; /* buffer of WLAN_PING_TRANS_ID_LEN * ping_count
+			    * octets of pending ping transaction identifiers */
+#endif /* CONFIG_IEEE80211W */
 };
 
 

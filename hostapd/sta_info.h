@@ -36,5 +36,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 reason);
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		     int old_vlanid);
+void ap_sta_start_ping(struct hostapd_data *hapd, struct sta_info *sta);
+void ap_sta_stop_ping(struct hostapd_data *hapd, struct sta_info *sta);
 
 #endif /* STA_INFO_H */

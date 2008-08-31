@@ -3,6 +3,7 @@ ChangeLog for wpa_supplicant
 ????-??-?? - v0.6.5
 	* added support for SHA-256 as X.509 certificate digest when using the
 	  internal X.509/TLSv1 implementation
+	* updated management frame protection to use IEEE 802.11w/D6.0
 
 2008-08-10 - v0.6.4
 	* added support for EAP Sequences in EAP-FAST Phase 2

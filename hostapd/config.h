@@ -213,6 +213,10 @@ struct hostapd_bss_config {
 		IEEE80211W_OPTIONAL = 1,
 		IEEE80211W_REQUIRED = 2
 	} ieee80211w;
+	/* dot11AssociationPingResponseTimeout (in TU) */
+	unsigned int assoc_ping_timeout;
+	/* dot11AssociationMaximumPingAttempts */
+	int assoc_ping_attempts;
 #endif /* CONFIG_IEEE80211W */
 	int wpa_pairwise;
 	int wpa_group;

@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration file
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
@@ -181,6 +181,11 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->eapol_version = EAPOL_VERSION;
 
 	bss->max_listen_interval = 65535;
+
+#ifdef CONFIG_IEEE80211W
+	bss->assoc_ping_timeout = 1000;
+	bss->assoc_ping_attempts = 3;
+#endif /* CONFIG_IEEE80211W */
 }
 
 
@@ -1965,6 +1970,21 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #ifdef CONFIG_IEEE80211W
 		} else if (os_strcmp(buf, "ieee80211w") == 0) {
 			bss->ieee80211w = atoi(pos);
+		} else if (os_strcmp(buf, "assoc_ping_timeout") == 0) {
+			bss->assoc_ping_timeout = atoi(pos);
+			if (bss->assoc_ping_timeout == 0) {
+				printf("Line %d: invalid assoc_ping_timeout\n",
+					line);
+				errors++;
+			}
+		} else if (os_strcmp(buf, "assoc_ping_attempts") == 0) {
+			bss->assoc_ping_timeout = atoi(pos);
+			if (bss->assoc_ping_timeout == 0) {
+				printf("Line %d: invalid assoc_ping_attempts "
+				       "(valid range: 1..255)\n",
+				       line);
+				errors++;
+			}
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211N
 		} else if (os_strcmp(buf, "ieee80211n") == 0) {

@@ -218,6 +218,12 @@
 #define WLAN_ACTION_FT 6
 #define WLAN_ACTION_PING 8
 
+/* Ping Action frame (IEEE 802.11w/D6.0, 7.4.9) */
+#define WLAN_PING_REQUEST 0
+#define WLAN_PING_RESPONSE 1
+
+#define WLAN_PING_TRANS_ID_LEN 16
+
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -316,11 +322,11 @@ struct ieee80211_mgmt {
 				} STRUCT_PACKED ft_action_resp;
 				struct {
 					u8 action;
-					u8 transaction_id[16];
+					u8 trans_id[WLAN_PING_TRANS_ID_LEN];
 				} STRUCT_PACKED ping_req;
 				struct {
-					u8 action;
-					u8 transaction_id[16];
+					u8 action; /* */
+					u8 trans_id[WLAN_PING_TRANS_ID_LEN];
 				} STRUCT_PACKED ping_resp;
 			} u;
 		} STRUCT_PACKED action;

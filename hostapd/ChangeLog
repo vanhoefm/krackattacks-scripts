@@ -10,6 +10,9 @@ ChangeLog for hostapd
 	* added support for setting VLAN ID for STAs based on local MAC ACL
 	  (accept_mac_file) as an alternative for RADIUS server-based
 	  configuration
+	* updated management frame protection to use IEEE 802.11w/D6.0
+	  (adds a new association ping to protect against unauthenticated
+	  authenticate or (re)associate request frames dropping association)
 
 2008-08-10 - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2

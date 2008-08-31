@@ -1081,6 +1081,8 @@ void wpa_remove_ptk(struct wpa_state_machine *sm)
 
 void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 {
+	int remove_ptk = 1;
+
 	if (sm == NULL)
 		return;
 
@@ -1113,11 +1115,18 @@ void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 	sm->ft_completed = 0;
 #endif /* CONFIG_IEEE80211R */
 
-	sm->PTK_valid = FALSE;
-	os_memset(&sm->PTK, 0, sizeof(sm->PTK));
+#ifdef CONFIG_IEEE80211W
+	if (sm->mgmt_frame_prot && event == WPA_AUTH)
+		remove_ptk = 0;
+#endif /* CONFIG_IEEE80211W */
 
-	if (event != WPA_REAUTH_EAPOL)
-		wpa_remove_ptk(sm);
+	if (remove_ptk) {
+		sm->PTK_valid = FALSE;
+		os_memset(&sm->PTK, 0, sizeof(sm->PTK));
+
+		if (event != WPA_REAUTH_EAPOL)
+			wpa_remove_ptk(sm);
+	}
 
 	wpa_sm_step(sm);
 }

@@ -58,7 +58,7 @@ void mlme_authenticate_indication(struct hostapd_data *hapd,
 		       HOSTAPD_LEVEL_DEBUG,
 		       "MLME-AUTHENTICATE.indication(" MACSTR ", %s)",
 		       MAC2STR(sta->addr), mlme_auth_alg_str(sta->auth_alg));
-	if (sta->auth_alg != WLAN_AUTH_FT)
+	if (sta->auth_alg != WLAN_AUTH_FT && !(sta->flags & WLAN_STA_MFP))
 		mlme_deletekeys_request(hapd, sta);
 }
 

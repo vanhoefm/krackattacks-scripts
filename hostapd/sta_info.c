@@ -279,7 +279,6 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		os_memset(&hdr, 0, sizeof(hdr));
 		hdr.frame_control =
 			IEEE80211_FC(WLAN_FC_TYPE_DATA, WLAN_FC_STYPE_DATA);
-		hdr.frame_control |= host_to_le16(BIT(1));
 		hdr.frame_control |= host_to_le16(WLAN_FC_FROMDS);
 		os_memcpy(hdr.IEEE80211_DA_FROMDS, sta->addr, ETH_ALEN);
 		os_memcpy(hdr.IEEE80211_BSSID_FROMDS, hapd->own_addr,

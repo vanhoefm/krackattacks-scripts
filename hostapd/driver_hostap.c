@@ -324,8 +324,15 @@ static int hostap_send_mgmt_frame(void *priv, const void *msg, size_t len,
 				  int flags)
 {
 	struct hostap_driver_data *drv = priv;
-	
-	return send(drv->sock, msg, len, flags);
+	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *) msg;
+	int res;
+
+	/* Request TX callback */
+	hdr->frame_control |= host_to_le16(BIT(1));
+	res = send(drv->sock, msg, len, flags);
+	hdr->frame_control &= ~host_to_le16(BIT(1));
+
+	return res;
 }
 
 
@@ -349,8 +356,6 @@ static int hostap_send_eapol(void *priv, const u8 *addr, const u8 *data,
 	hdr->frame_control =
 		IEEE80211_FC(WLAN_FC_TYPE_DATA, WLAN_FC_STYPE_DATA);
 	hdr->frame_control |= host_to_le16(WLAN_FC_FROMDS);
-	/* Request TX callback */
-	hdr->frame_control |= host_to_le16(BIT(1));
 	if (encrypt)
 		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
 	memcpy(hdr->IEEE80211_DA_FROMDS, addr, ETH_ALEN);

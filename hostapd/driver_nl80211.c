@@ -408,7 +408,6 @@ static int i802_set_ssid(const char *ifname, void *priv, const u8 *buf,
 static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 				int flags)
 {
-	struct ieee80211_hdr *hdr = (void*) data;
 	__u8 rtap_hdr[] = {
 		0x00, 0x00, /* radiotap version */
 		0x0e, 0x00, /* radiotap length */
@@ -439,11 +438,6 @@ static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 		.msg_flags = 0,
 	};
 
-	/*
-	 * ugh, guess what, the generic code sets one of the version
-	 * bits to request tx callback
-	 */
-	hdr->frame_control &= ~host_to_le16(BIT(1));
 	return sendmsg(drv->monitor_sock, &msg, flags);
 }
 

@@ -569,8 +569,6 @@ static void ieee802_11_sta_authenticate(void *eloop_ctx, void *timeout_ctx)
 	os_memset(&mgmt, 0, sizeof(mgmt));
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_AUTH);
-	/* Request TX callback */
-	mgmt.frame_control |= host_to_le16(BIT(1));
 	os_memcpy(mgmt.da, hapd->conf->assoc_ap_addr, ETH_ALEN);
 	os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(mgmt.bssid, hapd->conf->assoc_ap_addr, ETH_ALEN);
@@ -607,8 +605,6 @@ static void ieee802_11_sta_associate(void *eloop_ctx, void *timeout_ctx)
 	os_memset(mgmt, 0, sizeof(*mgmt));
 	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_ASSOC_REQ);
-	/* Request TX callback */
-	mgmt->frame_control |= host_to_le16(BIT(1));
 	os_memcpy(mgmt->da, hapd->conf->assoc_ap_addr, ETH_ALEN);
 	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(mgmt->bssid, hapd->conf->assoc_ap_addr, ETH_ALEN);
@@ -707,8 +703,6 @@ static void send_auth_reply(struct hostapd_data *hapd,
 	reply = (struct ieee80211_mgmt *) buf;
 	reply->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					    WLAN_FC_STYPE_AUTH);
-	/* Request TX callback */
-	reply->frame_control |= host_to_le16(BIT(1));
 	os_memcpy(reply->da, dst, ETH_ALEN);
 	os_memcpy(reply->sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(reply->bssid, bssid, ETH_ALEN);
@@ -1390,9 +1384,6 @@ static void handle_assoc(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211W */
 
 		send_len += p - reply->u.assoc_resp.variable;
-
-		/* Request TX callback */
-		reply->frame_control |= host_to_le16(BIT(1));
 	}
 
 	if (hostapd_send_mgmt_frame(hapd, reply, send_len, 0) < 0)

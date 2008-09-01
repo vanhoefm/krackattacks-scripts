@@ -6,6 +6,8 @@ ChangeLog for wpa_supplicant
 	* updated management frame protection to use IEEE 802.11w/D6.0
 	* added support for using SHA256-based stronger key derivation for WPA2
 	  (IEEE 802.11w)
+	* fixed FT (IEEE 802.11r) authentication after a failed association to
+	  use correct FTIE
 
 2008-08-10 - v0.6.4
 	* added support for EAP Sequences in EAP-FAST Phase 2

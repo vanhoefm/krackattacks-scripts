@@ -371,6 +371,17 @@ static inline int wpa_auth_get_seqnum(struct wpa_authenticator *wpa_auth,
 }
 
 
+#ifdef CONFIG_IEEE80211W
+static inline int wpa_auth_get_seqnum_igtk(struct wpa_authenticator *wpa_auth,
+					   const u8 *addr, int idx, u8 *seq)
+{
+	if (wpa_auth->cb.get_seqnum_igtk == NULL)
+		return -1;
+	return wpa_auth->cb.get_seqnum_igtk(wpa_auth->cb.ctx, addr, idx, seq);
+}
+#endif /* CONFIG_IEEE80211W */
+
+
 static u8 * wpa_ft_gtk_subelem(struct wpa_state_machine *sm, size_t *len)
 {
 	u8 *subelem;
@@ -426,6 +437,38 @@ static u8 * wpa_ft_gtk_subelem(struct wpa_state_machine *sm, size_t *len)
 }
 
 
+#ifdef CONFIG_IEEE80211W
+static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
+{
+	u8 *subelem, *pos;
+	struct wpa_group *gsm = sm->group;
+	size_t subelem_len;
+
+	/* Sub-elem ID[1] | Length[1] | KeyID[2] | PN[6] | Key[16+8] */
+	subelem_len = 1 + 1 + 2 + 6 + WPA_IGTK_LEN + 8;
+	subelem = os_zalloc(subelem_len);
+	if (subelem == NULL)
+		return NULL;
+
+	pos = subelem;
+	*pos++ = FTIE_SUBELEM_IGTK;
+	*pos++ = subelem_len - 2;
+	WPA_PUT_LE16(pos, gsm->GN_igtk);
+	pos += 2;
+	wpa_auth_get_seqnum_igtk(sm->wpa_auth, NULL, gsm->GN_igtk, pos);
+	pos += 6;
+	if (aes_wrap(sm->PTK.kek, WPA_IGTK_LEN / 8,
+		     gsm->IGTK[gsm->GN_igtk - 4], pos)) {
+		os_free(subelem);
+		return NULL;
+	}
+
+	*len = subelem_len;
+	return subelem;
+}
+#endif /* CONFIG_IEEE80211W */
+
+
 u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 				 size_t max_len, int auth_alg)
 {
@@ -467,6 +510,28 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 		subelem = wpa_ft_gtk_subelem(sm, &subelem_len);
 		r0kh_id = sm->r0kh_id;
 		r0kh_id_len = sm->r0kh_id_len;
+#ifdef CONFIG_IEEE80211W
+		if (sm->mgmt_frame_prot) {
+			u8 *igtk;
+			size_t igtk_len;
+			u8 *nbuf;
+			igtk = wpa_ft_igtk_subelem(sm, &igtk_len);
+			if (igtk == NULL) {
+				os_free(subelem);
+				return pos;
+			}
+			nbuf = os_realloc(subelem, subelem_len + igtk_len);
+			if (nbuf == NULL) {
+				os_free(subelem);
+				os_free(igtk);
+				return pos;
+			}
+			subelem = nbuf;
+			os_memcpy(subelem + subelem_len, igtk, igtk_len);
+			subelem_len += igtk_len;
+			os_free(igtk);
+		}
+#endif /* CONFIG_IEEE80211W */
 	} else {
 		r0kh_id = conf->r0_key_holder;
 		r0kh_id_len = conf->r0_key_holder_len;

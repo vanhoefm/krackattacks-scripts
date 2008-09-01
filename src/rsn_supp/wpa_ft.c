@@ -286,6 +286,8 @@ struct wpa_ft_ies {
 	const u8 *rsn_pmkid;
 	const u8 *tie;
 	size_t tie_len;
+	const u8 *igtk;
+	size_t igtk_len;
 };
 
 
@@ -323,6 +325,12 @@ static int wpa_ft_parse_ftie(const u8 *ie, size_t ie_len,
 			parse->r0kh_id = pos + 2;
 			parse->r0kh_id_len = pos[1];
 			break;
+#ifdef CONFIG_IEEE80211W
+		case FTIE_SUBELEM_IGTK:
+			parse->igtk = pos + 2;
+			parse->igtk_len = pos[1];
+			break;
+#endif /* CONFIG_IEEE80211W */
 		}
 
 		pos += 2 + pos[1];
@@ -581,17 +589,147 @@ int wpa_ft_is_completed(struct wpa_sm *sm)
 }
 
 
+static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
+				      size_t gtk_elem_len)
+{
+	u8 gtk[32];
+	int keyidx;
+	wpa_alg alg;
+	size_t gtk_len, keylen, rsc_len;
+
+	if (gtk_elem == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No GTK included in FTIE");
+		return 0;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "FT: Received GTK in Reassoc Resp",
+			gtk_elem, gtk_elem_len);
+
+	if (gtk_elem_len < 10 + 24 || (gtk_elem_len - 10) % 8 ||
+	    gtk_elem_len - 18 > sizeof(gtk)) {
+		wpa_printf(MSG_DEBUG, "FT: Invalid GTK sub-elem "
+			   "length %lu", (unsigned long) gtk_elem_len);
+		return -1;
+	}
+	gtk_len = gtk_elem_len - 18;
+	if (aes_unwrap(sm->ptk.kek, gtk_len / 8, gtk_elem + 10, gtk)) {
+		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
+			   "decrypt GTK");
+		return -1;
+	}
+
+	switch (sm->group_cipher) {
+	case WPA_CIPHER_CCMP:
+		keylen = 16;
+		rsc_len = 6;
+		alg = WPA_ALG_CCMP;
+		break;
+	case WPA_CIPHER_TKIP:
+		keylen = 32;
+		rsc_len = 6;
+		alg = WPA_ALG_TKIP;
+		break;
+	case WPA_CIPHER_WEP104:
+		keylen = 13;
+		rsc_len = 0;
+		alg = WPA_ALG_WEP;
+		break;
+	case WPA_CIPHER_WEP40:
+		keylen = 5;
+		rsc_len = 0;
+		alg = WPA_ALG_WEP;
+		break;
+	default:
+		wpa_printf(MSG_WARNING, "WPA: Unsupported Group Cipher %d",
+			   sm->group_cipher);
+		return -1;
+	}
+
+	if (gtk_len < keylen) {
+		wpa_printf(MSG_DEBUG, "FT: Too short GTK in FTIE");
+		return -1;
+	}
+
+	/* Key Info[1] | Key Length[1] | RSC[8] | Key[5..32]. */
+
+	keyidx = gtk_elem[0] & 0x03;
+
+	if (gtk_elem[1] != keylen) {
+		wpa_printf(MSG_DEBUG, "FT: GTK length mismatch: received %d "
+			   "negotiated %lu",
+			   gtk_elem[1], (unsigned long) keylen);
+		return -1;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "FT: GTK from Reassoc Resp", gtk, keylen);
+	if (wpa_sm_set_key(sm, alg, (u8 *) "\xff\xff\xff\xff\xff\xff",
+			   keyidx, 0, gtk_elem + 2, rsc_len, gtk, keylen) <
+	    0) {
+		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to the "
+			   "driver.");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+#ifdef CONFIG_IEEE80211W
+static int wpa_ft_process_igtk_subelem(struct wpa_sm *sm, const u8 *igtk_elem,
+				       size_t igtk_elem_len)
+{
+	u8 igtk[WPA_IGTK_LEN];
+	u16 keyidx;
+
+	if (sm->mgmt_group_cipher != WPA_CIPHER_AES_128_CMAC)
+		return 0;
+
+	if (igtk_elem == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No IGTK included in FTIE");
+		return 0;
+	}
+
+	wpa_hexdump_key(MSG_DEBUG, "FT: Received IGTK in Reassoc Resp",
+			igtk_elem, igtk_elem_len);
+
+	if (igtk_elem_len != 2 + 6 + 24) {
+		wpa_printf(MSG_DEBUG, "FT: Invalid IGTK sub-elem "
+			   "length %lu", (unsigned long) igtk_elem_len);
+		return -1;
+	}
+	if (aes_unwrap(sm->ptk.kek, WPA_IGTK_LEN / 8, igtk_elem + 8, igtk)) {
+		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
+			   "decrypt IGTK");
+		return -1;
+	}
+
+	/* KeyID[2] | PN[6] | Key[16+8] */
+
+	keyidx = WPA_GET_LE16(igtk_elem);
+
+	wpa_hexdump_key(MSG_DEBUG, "FT: IGTK from Reassoc Resp", igtk,
+			WPA_IGTK_LEN);
+	if (wpa_sm_set_key(sm, WPA_ALG_IGTK, (u8 *) "\xff\xff\xff\xff\xff\xff",
+			   keyidx, 0, igtk_elem + 2, 6, igtk, WPA_IGTK_LEN) <
+	    0) {
+		wpa_printf(MSG_WARNING, "WPA: Failed to set IGTK to the "
+			   "driver.");
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_IEEE80211W */
+
+
 int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 				 size_t ies_len, const u8 *src_addr)
 {
 	struct wpa_ft_ies parse;
 	struct rsn_mdie *mdie;
 	struct rsn_ftie *ftie;
-	size_t count, gtk_len, keylen, rsc_len;
+	size_t count;
 	u8 mic[16];
-	u8 gtk[32];
-	int keyidx;
-	wpa_alg alg;
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
 
@@ -681,78 +819,13 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 		return -1;
 	}
 
-	if (parse.gtk == NULL) {
-		wpa_printf(MSG_DEBUG, "FT: No GTK included in FTIE");
-		return 0;
-	}
-
-	wpa_hexdump_key(MSG_DEBUG, "FT: Received GTK in Reassoc Resp",
-			parse.gtk, parse.gtk_len);
-
-	if (parse.gtk_len < 10 + 24 || (parse.gtk_len - 10) % 8 ||
-	    parse.gtk_len - 18 > sizeof(gtk)) {
-		wpa_printf(MSG_DEBUG, "FT: Invalid GTK sub-elem "
-			   "length %lu", (unsigned long) parse.gtk_len);
+	if (wpa_ft_process_gtk_subelem(sm, parse.gtk, parse.gtk_len) < 0)
 		return -1;
-	}
-	gtk_len = parse.gtk_len - 18;
-	if (aes_unwrap(sm->ptk.kek, gtk_len / 8, parse.gtk + 10, gtk)) {
-		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
-			   "decrypt GTK");
+
+#ifdef CONFIG_IEEE80211W
+	if (wpa_ft_process_igtk_subelem(sm, parse.igtk, parse.igtk_len) < 0)
 		return -1;
-	}
-
-	switch (sm->group_cipher) {
-	case WPA_CIPHER_CCMP:
-		keylen = 16;
-		rsc_len = 6;
-		alg = WPA_ALG_CCMP;
-		break;
-	case WPA_CIPHER_TKIP:
-		keylen = 32;
-		rsc_len = 6;
-		alg = WPA_ALG_TKIP;
-		break;
-	case WPA_CIPHER_WEP104:
-		keylen = 13;
-		rsc_len = 0;
-		alg = WPA_ALG_WEP;
-		break;
-	case WPA_CIPHER_WEP40:
-		keylen = 5;
-		rsc_len = 0;
-		alg = WPA_ALG_WEP;
-		break;
-	default:
-		wpa_printf(MSG_WARNING, "WPA: Unsupported Group Cipher %d",
-			   sm->group_cipher);
-		return -1;
-	}
-
-	if (gtk_len < keylen) {
-		wpa_printf(MSG_DEBUG, "FT: Too short GTK in FTIE");
-		return -1;
-	}
-
-	/* Key Info[1] | Key Length[1] | RSC[8] | Key[5..32]. */
-
-	keyidx = parse.gtk[0] & 0x03;
-
-	if (parse.gtk[1] != keylen) {
-		wpa_printf(MSG_DEBUG, "FT: GTK length mismatch: received %d "
-			   "negotiated %lu",
-			   parse.gtk[1], (unsigned long) keylen);
-		return -1;
-	}
-
-	wpa_hexdump_key(MSG_DEBUG, "FT: GTK from Reassoc Resp", gtk, keylen);
-	if (wpa_sm_set_key(sm, alg, (u8 *) "\xff\xff\xff\xff\xff\xff",
-			   keyidx, 0, parse.gtk + 2, rsc_len, gtk, keylen) < 0)
-	{
-		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to the "
-			   "driver.");
-		return -1;
-	}
+#endif /* CONFIG_IEEE80211W */
 
 	return 0;
 }

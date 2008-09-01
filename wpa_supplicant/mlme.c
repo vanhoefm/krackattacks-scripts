@@ -129,6 +129,8 @@ struct ieee802_11_elems {
 	u8 mdie_len;
 	u8 *ftie;
 	u8 ftie_len;
+	u8 *assoc_comeback;
+	u8 assoc_comeback_len;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
@@ -230,6 +232,10 @@ static ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 		case WLAN_EID_FAST_BSS_TRANSITION:
 			elems->ftie = pos;
 			elems->ftie_len = elen;
+			break;
+		case WLAN_EID_ASSOC_COMEBACK_TIME:
+			elems->assoc_comeback = pos;
+			elems->assoc_comeback_len = elen;
 			break;
 		default:
 #if 0
@@ -1231,16 +1237,32 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 		   reassoc ? "Rea" : "A", MAC2STR(mgmt->sa),
 		   capab_info, status_code, aid);
 
-	if (status_code != WLAN_STATUS_SUCCESS) {
-		wpa_printf(MSG_DEBUG, "MLME: AP denied association (code=%d)",
-			   status_code);
-		return;
-	}
-
 	pos = mgmt->u.assoc_resp.variable;
 	if (ieee802_11_parse_elems(pos, len - (pos - (u8 *) mgmt), &elems)
 	    == ParseFailed) {
 		wpa_printf(MSG_DEBUG, "MLME: failed to parse AssocResp");
+		return;
+	}
+
+	if (status_code != WLAN_STATUS_SUCCESS) {
+		wpa_printf(MSG_DEBUG, "MLME: AP denied association (code=%d)",
+			   status_code);
+#ifdef CONFIG_IEEE80211W
+		if (status_code == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY &&
+		    elems.assoc_comeback && elems.assoc_comeback_len == 4) {
+			u32 tu, ms;
+			tu = WPA_GET_LE32(elems.assoc_comeback);
+			ms = tu * 1024 / 1000;
+			wpa_printf(MSG_DEBUG, "MLME: AP rejected association "
+				   "temporarily; comeback duration %u TU "
+				   "(%u ms)", tu, ms);
+			if (ms > IEEE80211_ASSOC_TIMEOUT) {
+				wpa_printf(MSG_DEBUG, "MLME: Update timer "
+					   "based on comeback duration");
+				ieee80211_reschedule_timer(wpa_s, ms);
+			}
+		}
+#endif /* CONFIG_IEEE80211W */
 		return;
 	}
 

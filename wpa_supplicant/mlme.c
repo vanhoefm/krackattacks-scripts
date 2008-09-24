@@ -1986,10 +1986,10 @@ static void ieee80211_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 		ieee80211_rx_mgmt_ft_action(wpa_s, mgmt, len, rx_status);
 		break;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
 	case WLAN_ACTION_PING:
 		ieee80211_rx_mgmt_ping_action(wpa_s, mgmt, len, rx_status);
 		break;
-#ifdef CONFIG_IEEE80211W
 #endif /* CONFIG_IEEE80211W */
 	default:
 		wpa_printf(MSG_DEBUG, "MLME: unknown Action Category %d",

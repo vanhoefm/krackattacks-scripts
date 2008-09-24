@@ -137,6 +137,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
 	    !wpa_s->use_client_mlme) {
 		wpa_s->scan_res_tried++;
+		wpa_s->scan_req = scan_req;
 		wpa_printf(MSG_DEBUG, "Trying to get current scan results "
 			   "first without requesting a new scan to speed up "
 			   "initial association");

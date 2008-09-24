@@ -551,9 +551,18 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 		goto req_scan;
 	}
 
-	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
-
-	wpa_supplicant_dbus_notify_scan_results(wpa_s);
+	/*
+	 * Don't post the results if this was the initial cached
+	 * and there were no results.
+	 */
+	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1 &&
+	    wpa_s->scan_res->num == 0) {
+		wpa_msg(wpa_s, MSG_DEBUG, "Cached scan results are "
+			"empty - not posting");
+	} else {
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+		wpa_supplicant_dbus_notify_scan_results(wpa_s);
+	}
 
 	if (wpa_s->conf->ap_scan == 2 || wpa_s->disconnected)
 		return;

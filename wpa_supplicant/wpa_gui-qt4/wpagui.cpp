@@ -37,7 +37,7 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 		SLOT(eventHistory()));
 	connect(fileSaveConfigAction, SIGNAL(triggered()), this,
 		SLOT(saveConfig()));
-	connect(fileExitAction, SIGNAL(triggered()), this, SLOT(close()));
+	connect(fileExitAction, SIGNAL(triggered()), this, SLOT(fileExit()));
 	connect(networkAddAction, SIGNAL(triggered()), this,
 		SLOT(addNetwork()));
 	connect(networkEditAction, SIGNAL(triggered()), this,
@@ -79,11 +79,15 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	eh = NULL;
 	scanres = NULL;
 	udr = NULL;
+	tray_icon = NULL;
 	ctrl_iface = NULL;
 	ctrl_conn = NULL;
 	monitor_conn = NULL;
 	msgNotifier = NULL;
 	ctrl_iface_dir = strdup("/var/run/wpa_supplicant");
+
+	if (QSystemTrayIcon::isSystemTrayAvailable())
+		createTrayIcon();
 
 	parse_argv();
 
@@ -101,6 +105,9 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	updateStatus();
 	networkMayHaveChanged = true;
 	updateNetworks();
+
+	if (tray_icon)
+		tray_icon->show();
 }
 
 
@@ -588,6 +595,9 @@ void WpaGui::scan()
 		delete scanres;
 	}
 
+	if (!isVisible())
+		show();
+
 	scanres = new ScanResults();
 	if (scanres == NULL)
 		return;
@@ -603,6 +613,9 @@ void WpaGui::eventHistory()
 		eh->close();
 		delete eh;
 	}
+
+	if (!isVisible())
+		show();
 
 	eh = new EventHistory();
 	if (eh == NULL)
@@ -710,6 +723,14 @@ void WpaGui::processMsg(char *msg)
 		processCtrlReq(pos + strlen(WPA_CTRL_REQ));
 	else if (str_match(pos, WPA_EVENT_SCAN_RESULTS) && scanres)
 		scanres->updateResults();
+	else if (str_match(pos, WPA_EVENT_DISCONNECTED))
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Disconnected from network.");
+	else if (str_match(pos, WPA_EVENT_CONNECTED)) {
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Connection to network established.");
+		QTimer::singleShot(5 * 1000, this, SLOT(showTrayStatus()));
+	}
 }
 
 
@@ -1070,6 +1091,134 @@ void WpaGui::selectAdapter( const QString & sel )
 }
 
 
+void WpaGui::createTrayIcon()
+{
+	tray_icon = new QSystemTrayIcon(this);
+	tray_icon->setToolTip(qAppName() + " - wpa_supplicant user interface");
+	tray_icon->setIcon(QIcon(":/icons/wpa_gui.svg"));
+
+	connect(tray_icon,
+		SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
+		this, SLOT(trayActivated(QSystemTrayIcon::ActivationReason)));
+
+	ackTrayIcon = false;
+
+	tray_menu = new QMenu(this);
+
+	disconnectAction = new QAction("&Disconnect", this);
+	reconnectAction = new QAction("Re&connect", this);
+	connect(disconnectAction, SIGNAL(triggered()), this,
+		SLOT(disconnect()));
+	connect(reconnectAction, SIGNAL(triggered()), this,
+		SLOT(connectB()));
+	tray_menu->addAction(disconnectAction);
+	tray_menu->addAction(reconnectAction);
+	tray_menu->addSeparator();
+
+	eventAction = new QAction("&Event History", this);
+	scanAction = new QAction("Scan &Results", this);
+	statAction = new QAction("S&tatus", this);
+	connect(eventAction, SIGNAL(triggered()), this, SLOT(eventHistory()));
+	connect(scanAction, SIGNAL(triggered()), this, SLOT(scan()));
+	connect(statAction, SIGNAL(triggered()), this, SLOT(showTrayStatus()));
+	tray_menu->addAction(eventAction);
+	tray_menu->addAction(scanAction);
+	tray_menu->addAction(statAction);
+	tray_menu->addSeparator();
+
+	showAction = new QAction("&Show Window", this);
+	hideAction = new QAction("&Hide Window", this);
+	quitAction = new QAction("&Quit", this);
+	connect(showAction, SIGNAL(triggered()), this, SLOT(show()));
+	connect(hideAction, SIGNAL(triggered()), this, SLOT(hide()));
+	connect(quitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
+	tray_menu->addAction(showAction);
+	tray_menu->addAction(hideAction);
+	tray_menu->addSeparator();
+	tray_menu->addAction(quitAction);
+
+	tray_icon->setContextMenu(tray_menu);
+}
+
+
+void WpaGui::showTrayMessage(QSystemTrayIcon::MessageIcon type, int sec,
+			     const QString & msg)
+{
+	if (!QSystemTrayIcon::supportsMessages())
+		return;
+
+	if (isVisible() || !tray_icon || !tray_icon->isVisible())
+		return;
+
+	tray_icon->showMessage(qAppName(), msg, type, sec * 1000);
+}
+
+
+void WpaGui::trayActivated(QSystemTrayIcon::ActivationReason how)
+ {
+	switch (how) {
+	/* use close() here instead of hide() and allow the
+	 * custom closeEvent handler take care of children */
+	case QSystemTrayIcon::Trigger:
+		if (isVisible())
+			close();
+		else
+			show();
+		break;
+	case QSystemTrayIcon::MiddleClick:
+		showTrayStatus();
+		break;
+	default:
+		break;
+	}
+}
+
+
+void WpaGui::showTrayStatus()
+{
+	char buf[2048];
+	size_t len;
+
+	len = sizeof(buf) - 1;
+	if (ctrlRequest("STATUS", buf, &len) < 0)
+		return;
+	buf[len] = '\0';
+
+	QString msg, status(buf);
+
+	QStringList lines = status.split(QRegExp("\\n"));
+	for (QStringList::Iterator it = lines.begin();
+	     it != lines.end(); it++) {
+		int pos = (*it).indexOf('=') + 1;
+		if (pos < 1)
+			continue;
+
+		if ((*it).startsWith("bssid="))
+			msg.append("BSSID:\t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("ssid="))
+			msg.append("SSID: \t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("pairwise_cipher="))
+			msg.append("PAIR: \t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("group_cipher="))
+			msg.append("GROUP:\t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("key_mgmt="))
+			msg.append("AUTH: \t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("ip_address="))
+			msg.append("IP:   \t" + (*it).mid(pos) + "\n");
+	}
+
+	showTrayMessage(QSystemTrayIcon::Information, 10, msg);
+}
+
+void WpaGui::fileExit()
+{
+	if (tray_icon)
+		tray_icon->hide();
+
+	close();
+}
+
+
 void WpaGui::closeEvent(QCloseEvent *event)
 {
 	if (eh) {
@@ -1088,6 +1237,27 @@ void WpaGui::closeEvent(QCloseEvent *event)
 		udr->close();
 		delete udr;
 		udr = NULL;
+	}
+
+	if (tray_icon && tray_icon->isVisible()) {
+		/* give user a visual hint that the tray icon exists */
+		if (QSystemTrayIcon::supportsMessages()) {
+			hide();
+			QTimer::singleShot(1 * 1000, this,
+					   SLOT(showTrayStatus()));
+		} else if (!ackTrayIcon) {
+			QMessageBox::information(this, qAppName() + " systray",
+						 "The program will keep "
+						 "running in the system tray."
+						 " To terminate the program, "
+						 "choose <b>Quit</b> in the "
+						 "context menu of the system "
+						 "tray icon.");
+			ackTrayIcon = true;
+			hide();
+		}
+		event->ignore();
+		return;
 	}
 
 	event->accept();

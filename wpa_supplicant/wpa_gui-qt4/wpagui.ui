@@ -410,7 +410,7 @@
   </action>
  </widget>
  <layoutdefault spacing="6" margin="11" />
- <pixmapfunction>qPixmapFromMimeSource</pixmapfunction>
+ <pixmapfunction></pixmapfunction>
  <includes>
   <include location="global" >qtimer.h</include>
   <include location="global" >qsocketnotifier.h</include>

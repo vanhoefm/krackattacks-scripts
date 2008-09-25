@@ -33,7 +33,6 @@ int main(int argc, char *argv[])
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 	w.show();
-	app.connect(&app, SIGNAL(lastWindowClosed()), &app, SLOT(quit()));
 	ret = app.exec();
 
 #ifdef CONFIG_NATIVE_WINDOWS

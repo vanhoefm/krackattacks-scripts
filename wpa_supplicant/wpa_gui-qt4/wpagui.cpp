@@ -595,9 +595,6 @@ void WpaGui::scan()
 		delete scanres;
 	}
 
-	if (!isVisible())
-		show();
-
 	scanres = new ScanResults();
 	if (scanres == NULL)
 		return;
@@ -613,9 +610,6 @@ void WpaGui::eventHistory()
 		eh->close();
 		delete eh;
 	}
-
-	if (!isVisible())
-		show();
 
 	eh = new EventHistory();
 	if (eh == NULL)
@@ -1093,6 +1087,8 @@ void WpaGui::selectAdapter( const QString & sel )
 
 void WpaGui::createTrayIcon()
 {
+	QApplication::setQuitOnLastWindowClosed(false);
+
 	tray_icon = new QSystemTrayIcon(this);
 	tray_icon->setToolTip(qAppName() + " - wpa_supplicant user interface");
 	tray_icon->setIcon(QIcon(":/icons/wpa_gui.svg"));
@@ -1219,10 +1215,7 @@ void WpaGui::showTrayStatus()
 
 void WpaGui::fileExit()
 {
-	if (tray_icon)
-		tray_icon->hide();
-
-	close();
+	qApp->quit();
 }
 
 
@@ -1267,5 +1260,5 @@ void WpaGui::closeEvent(QCloseEvent *event)
 		return;
 	}
 
-	event->accept();
+	qApp->quit();
 }

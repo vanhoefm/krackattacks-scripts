@@ -18,7 +18,7 @@
    sodipodi:docname="wpa_gui.svg"
    inkscape:output_extension="org.inkscape.output.svg.inkscape">
   <metadata
-     id="metadata59">
+     id="metadata47">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
@@ -44,7 +44,7 @@
      inkscape:zoom="4.2421875"
      inkscape:cx="64"
      inkscape:cy="64"
-     inkscape:window-x="0"
+     inkscape:window-x="634"
      inkscape:window-y="0"
      inkscape:current-layer="svg2" />
   <defs
@@ -55,7 +55,7 @@
        inkscape:vp_y="0 : 1000 : 0"
        inkscape:vp_z="128 : 64 : 1"
        inkscape:persp3d-origin="64 : 42.666667 : 1"
-       id="perspective61" />
+       id="perspective49" />
     <linearGradient
        id="linearGradient39133">
       <stop
@@ -136,39 +136,6 @@
          offset="1" />
     </linearGradient>
     <linearGradient
-       id="linearGradient39039">
-      <stop
-         id="stop39041"
-         style="stop-color:#5f5f5f;stop-opacity:1"
-         offset="0" />
-      <stop
-         id="stop39043"
-         style="stop-color:#ffffff;stop-opacity:0"
-         offset="1" />
-    </linearGradient>
-    <linearGradient
-       id="linearGradient39031">
-      <stop
-         id="stop39033"
-         style="stop-color:#000000;stop-opacity:1"
-         offset="0" />
-      <stop
-         id="stop39035"
-         style="stop-color:#000000;stop-opacity:0"
-         offset="1" />
-    </linearGradient>
-    <linearGradient
-       id="linearGradient3404">
-      <stop
-         id="stop3406"
-         style="stop-color:#ffffff;stop-opacity:0.68803418"
-         offset="0" />
-      <stop
-         id="stop3408"
-         style="stop-color:#ffffff;stop-opacity:0"
-         offset="1" />
-    </linearGradient>
-    <linearGradient
        x1="4"
        y1="40"
        x2="124"
@@ -190,8 +157,8 @@
        cx="100.44444"
        cy="34.363636"
        r="32"
-       fx="82.947372"
-       fy="35.588516"
+       fx="83.18"
+       fy="34.228985"
        id="radialGradient39104"
        xlink:href="#linearGradient39106"
        gradientUnits="userSpaceOnUse"
@@ -229,13 +196,6 @@
          inkscape:collect="always"
          stdDeviation="1.68"
          id="feGaussianBlur39161" />
-    </filter>
-    <filter
-       id="filter3508">
-      <feGaussianBlur
-         id="feGaussianBlur3510"
-         stdDeviation="0.81465094"
-         inkscape:collect="always" />
     </filter>
   </defs>
   <g
@@ -293,7 +253,4 @@
        id="path2622"
        style="opacity:1;fill:none;stroke:#ffffff;stroke-width:10.26852894;stroke-linecap:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
   </g>
-  <g
-     id="layer2"
-     style="display:inline" />
 </svg>

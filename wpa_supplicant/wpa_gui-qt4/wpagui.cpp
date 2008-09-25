@@ -1203,11 +1203,18 @@ void WpaGui::showTrayStatus()
 			msg.append("GROUP:\t" + (*it).mid(pos) + "\n");
 		else if ((*it).startsWith("key_mgmt="))
 			msg.append("AUTH: \t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("wpa_state="))
+			msg.append("STATE:\t" + (*it).mid(pos) + "\n");
 		else if ((*it).startsWith("ip_address="))
 			msg.append("IP:   \t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("Supplicant PAE state="))
+			msg.append("PAE:  \t" + (*it).mid(pos) + "\n");
+		else if ((*it).startsWith("EAP state="))
+			msg.append("EAP:  \t" + (*it).mid(pos) + "\n");
 	}
 
-	showTrayMessage(QSystemTrayIcon::Information, 10, msg);
+	if (!msg.isEmpty())
+		showTrayMessage(QSystemTrayIcon::Information, 10, msg);
 }
 
 void WpaGui::fileExit()

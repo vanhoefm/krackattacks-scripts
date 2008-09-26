@@ -1156,6 +1156,7 @@ void WpaGui::trayActivated(QSystemTrayIcon::ActivationReason how)
 	/* use close() here instead of hide() and allow the
 	 * custom closeEvent handler take care of children */
 	case QSystemTrayIcon::Trigger:
+		ackTrayIcon = true;
 		if (isVisible())
 			close();
 		else
@@ -1241,21 +1242,24 @@ void WpaGui::closeEvent(QCloseEvent *event)
 
 	if (tray_icon && tray_icon->isVisible()) {
 		/* give user a visual hint that the tray icon exists */
-		if (QSystemTrayIcon::supportsMessages()) {
+		if (!ackTrayIcon && QSystemTrayIcon::supportsMessages()) {
 			hide();
-			QTimer::singleShot(1 * 1000, this,
-					   SLOT(showTrayStatus()));
+			showTrayMessage(QSystemTrayIcon::Information, 3,
+					qAppName() + " will keep running in "
+					"the system tray.");
 		} else if (!ackTrayIcon) {
 			QMessageBox::information(this, qAppName() + " systray",
 						 "The program will keep "
-						 "running in the system tray."
-						 " To terminate the program, "
-						 "choose <b>Quit</b> in the "
-						 "context menu of the system "
-						 "tray icon.");
-			ackTrayIcon = true;
+						 "running in the system "
+						 "tray.");
 			hide();
 		}
+
+		if (ackTrayIcon)
+			hide();
+		else
+			ackTrayIcon = true;
+
 		event->ignore();
 		return;
 	}

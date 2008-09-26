@@ -365,23 +365,18 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_ssid *ssid,
 
 
 static struct wpa_scan_res *
-wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
-			  struct wpa_ssid **selected_ssid)
+wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *group,
+			      struct wpa_ssid **selected_ssid)
 {
 	struct wpa_ssid *ssid;
-	struct wpa_scan_res *bss, *selected = NULL;
+	struct wpa_scan_res *bss;
 	size_t i;
 	struct wpa_blacklist *e;
 	const u8 *ie;
 
-	wpa_printf(MSG_DEBUG, "Selecting BSS from priority group %d",
-		   group->priority);
-
-	bss = NULL;
-	ssid = NULL;
-	/* First, try to find WPA-enabled AP */
 	wpa_printf(MSG_DEBUG, "Try to find WPA-enabled AP");
-	for (i = 0; i < wpa_s->scan_res->num && !selected; i++) {
+	for (i = 0; i < wpa_s->scan_res->num; i++) {
 		const u8 *ssid_;
 		u8 wpa_ie_len, rsn_ie_len, ssid_len;
 		bss = wpa_s->scan_res->res[i];
@@ -401,6 +396,7 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 			   (int) i, MAC2STR(bss->bssid),
 			   wpa_ssid_txt(ssid_, ssid_len),
 			   wpa_ie_len, rsn_ie_len, bss->caps);
+
 		e = wpa_blacklist_get(wpa_s, bss->bssid);
 		if (e && e->count > 1) {
 			wpa_printf(MSG_DEBUG, "   skip - blacklisted");
@@ -417,12 +413,14 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 				wpa_printf(MSG_DEBUG, "   skip - disabled");
 				continue;
 			}
+
 			if (ssid_len != ssid->ssid_len ||
 			    os_memcmp(ssid_, ssid->ssid, ssid_len) != 0) {
 				wpa_printf(MSG_DEBUG, "   skip - "
 					   "SSID mismatch");
 				continue;
 			}
+
 			if (ssid->bssid_set &&
 			    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) != 0)
 			{
@@ -430,22 +428,36 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 					   "BSSID mismatch");
 				continue;
 			}
-			if (wpa_supplicant_ssid_bss_match(ssid, bss)) {
-				selected = bss;
-				*selected_ssid = ssid;
-				wpa_printf(MSG_DEBUG, "   selected WPA AP "
-					   MACSTR " ssid='%s'",
-					   MAC2STR(bss->bssid),
-					   wpa_ssid_txt(ssid_, ssid_len));
-				break;
-			}
+
+			if (!wpa_supplicant_ssid_bss_match(ssid, bss))
+				continue;
+
+			wpa_printf(MSG_DEBUG, "   selected WPA AP "
+				   MACSTR " ssid='%s'",
+				   MAC2STR(bss->bssid),
+				   wpa_ssid_txt(ssid_, ssid_len));
+			*selected_ssid = ssid;
+			return bss;
 		}
 	}
 
-	/* If no WPA-enabled AP found, try to find non-WPA AP, if configuration
-	 * allows this. */
+	return NULL;
+}
+
+
+static struct wpa_scan_res *
+wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
+				  struct wpa_ssid *group,
+				  struct wpa_ssid **selected_ssid)
+{
+	struct wpa_ssid *ssid;
+	struct wpa_scan_res *bss;
+	size_t i;
+	struct wpa_blacklist *e;
+	const u8 *ie;
+
 	wpa_printf(MSG_DEBUG, "Try to find non-WPA AP");
-	for (i = 0; i < wpa_s->scan_res->num && !selected; i++) {
+	for (i = 0; i < wpa_s->scan_res->num; i++) {
 		const u8 *ssid_;
 		u8 wpa_ie_len, rsn_ie_len, ssid_len;
 		bss = wpa_s->scan_res->res[i];
@@ -465,16 +477,19 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 			   (int) i, MAC2STR(bss->bssid),
 			   wpa_ssid_txt(ssid_, ssid_len),
 			   wpa_ie_len, rsn_ie_len, bss->caps);
+
 		e = wpa_blacklist_get(wpa_s, bss->bssid);
 		if (e && e->count > 1) {
 			wpa_printf(MSG_DEBUG, "   skip - blacklisted");
 			continue;
 		}
+
 		for (ssid = group; ssid; ssid = ssid->pnext) {
 			if (ssid->disabled) {
 				wpa_printf(MSG_DEBUG, "   skip - disabled");
 				continue;
 			}
+
 			if (ssid->ssid_len != 0 &&
 			    (ssid_len != ssid->ssid_len ||
 			     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
@@ -522,17 +537,36 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 				continue;
 			}
 
-			selected = bss;
-			*selected_ssid = ssid;
 			wpa_printf(MSG_DEBUG, "   selected non-WPA AP "
 				   MACSTR " ssid='%s'",
 				   MAC2STR(bss->bssid),
 				   wpa_ssid_txt(ssid_, ssid_len));
-			break;
+			*selected_ssid = ssid;
+			return bss;
 		}
 	}
 
-	return selected;
+	return NULL;
+}
+
+
+static struct wpa_scan_res *
+wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
+			  struct wpa_ssid **selected_ssid)
+{
+	struct wpa_scan_res *selected;
+
+	wpa_printf(MSG_DEBUG, "Selecting BSS from priority group %d",
+		   group->priority);
+
+	/* First, try to find WPA-enabled AP */
+	selected = wpa_supplicant_select_bss_wpa(wpa_s, group, selected_ssid);
+	if (selected)
+		return selected;
+
+	/* If no WPA-enabled AP found, try to find non-WPA AP, if configuration
+	 * allows this. */
+	return wpa_supplicant_select_bss_non_wpa(wpa_s, group, selected_ssid);
 }
 
 

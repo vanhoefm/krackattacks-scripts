@@ -123,7 +123,7 @@ static int eap_gpsk_derive_keys_helper(u32 csuite_specifier,
 {
 	u8 mk[32], *pos, *data;
 	size_t data_len, mk_len;
-	int (*gkdf)(const u8 *psk, const u8 *data, size_t data_len,
+	int (*gkdf)(const u8 *_psk, const u8 *_data, size_t _data_len,
 		    u8 *buf, size_t len);
 
 	gkdf = NULL;
@@ -377,8 +377,8 @@ static int eap_gpsk_compute_mic_aes(const u8 *sk, size_t sk_len,
 				    const u8 *data, size_t len, u8 *mic)
 {
 	if (sk_len != 16) {
-		wpa_printf(MSG_DEBUG, "EAP-GPSK: Invalid SK length %d for "
-			   "AES-CMAC MIC", sk_len);
+		wpa_printf(MSG_DEBUG, "EAP-GPSK: Invalid SK length %lu for "
+			   "AES-CMAC MIC", (unsigned long) sk_len);
 		return -1;
 	}
 

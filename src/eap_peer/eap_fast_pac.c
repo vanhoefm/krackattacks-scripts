@@ -834,8 +834,8 @@ int eap_fast_load_pac_bin(struct eap_sm *sm, struct eap_fast_pac **pac_root,
 	if (blob == NULL)
 		os_free(buf);
 
-	wpa_printf(MSG_DEBUG, "EAP-FAST: Read %d PAC entries from '%s' (bin)",
-		   count, pac_file);
+	wpa_printf(MSG_DEBUG, "EAP-FAST: Read %lu PAC entries from '%s' (bin)",
+		   (unsigned long) count, pac_file);
 
 	return 0;
 
@@ -909,8 +909,8 @@ int eap_fast_save_pac_bin(struct eap_sm *sm, struct eap_fast_pac *pac_root,
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "EAP-FAST: Wrote %d PAC entries into '%s' (bin)",
-		   count, pac_file);
+	wpa_printf(MSG_DEBUG, "EAP-FAST: Wrote %lu PAC entries into '%s' "
+		   "(bin)", (unsigned long) count, pac_file);
 
 	return 0;
 }

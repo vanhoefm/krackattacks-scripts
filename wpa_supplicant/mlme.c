@@ -3123,8 +3123,8 @@ int ieee80211_sta_send_ft_action(struct wpa_supplicant *wpa_s, u8 action,
 	len += 1 + sizeof(mgmt->u.action.u.ft_action_req) + ies_len;
 
 	wpa_printf(MSG_DEBUG, "MLME: Send FT Action Frame: Action=%d "
-		   "Target AP=" MACSTR " body_len=%d",
-		   action, MAC2STR(target_ap), ies_len);
+		   "Target AP=" MACSTR " body_len=%lu",
+		   action, MAC2STR(target_ap), (unsigned long) ies_len);
 
 	res = ieee80211_sta_tx(wpa_s, buf, len);
 	os_free(buf);

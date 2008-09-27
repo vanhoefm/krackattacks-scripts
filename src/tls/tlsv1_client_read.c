@@ -422,8 +422,8 @@ static int tlsv1_process_diffie_hellman(struct tlsv1_client *conn,
 	conn->dh_p_len = WPA_GET_BE16(pos);
 	pos += 2;
 	if (conn->dh_p_len == 0 || end - pos < (int) conn->dh_p_len) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Invalid dh_p length %d",
-			   conn->dh_p_len);
+		wpa_printf(MSG_DEBUG, "TLSv1: Invalid dh_p length %lu",
+			   (unsigned long) conn->dh_p_len);
 		goto fail;
 	}
 	conn->dh_p = os_malloc(conn->dh_p_len);

@@ -288,8 +288,9 @@ static void wpa_driver_ralink_event_pmkid(struct wpa_driver_ralink_data *drv,
 	os_memset(&event, 0, sizeof(event));
 	for (i = 0; i < pmkid->NumCandidates; i++) {
 		PMKID_CANDIDATE *p = &pmkid->CandidateList[i];
-		wpa_printf(MSG_DEBUG, "RALINK: %d: " MACSTR " Flags 0x%x",
-			   i, MAC2STR(p->BSSID), (int) p->Flags);
+		wpa_printf(MSG_DEBUG, "RALINK: %lu: " MACSTR " Flags 0x%x",
+			   (unsigned long) i, MAC2STR(p->BSSID),
+			   (int) p->Flags);
 		os_memcpy(event.pmkid_candidate.bssid, p->BSSID, ETH_ALEN);
 		event.pmkid_candidate.index = i;
 		event.pmkid_candidate.preauth =

@@ -652,12 +652,20 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 			}
 			break;
 		case IWEVMICHAELMICFAILURE:
+			if (custom + iwe->u.data.length > end) {
+				wpa_printf(MSG_DEBUG, "WEXT: Invalid "
+					   "IWEVMICHAELMICFAILURE length");
+				return;
+			}
 			wpa_driver_wext_event_wireless_michaelmicfailure(
 				ctx, custom, iwe->u.data.length);
 			break;
 		case IWEVCUSTOM:
-			if (custom + iwe->u.data.length > end)
+			if (custom + iwe->u.data.length > end) {
+				wpa_printf(MSG_DEBUG, "WEXT: Invalid "
+					   "IWEVCUSTOM length");
 				return;
+			}
 			buf = os_malloc(iwe->u.data.length + 1);
 			if (buf == NULL)
 				return;
@@ -673,14 +681,29 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 			wpa_supplicant_event(ctx, EVENT_SCAN_RESULTS, NULL);
 			break;
 		case IWEVASSOCREQIE:
+			if (custom + iwe->u.data.length > end) {
+				wpa_printf(MSG_DEBUG, "WEXT: Invalid "
+					   "IWEVASSOCREQIE length");
+				return;
+			}
 			wpa_driver_wext_event_wireless_assocreqie(
 				drv, custom, iwe->u.data.length);
 			break;
 		case IWEVASSOCRESPIE:
+			if (custom + iwe->u.data.length > end) {
+				wpa_printf(MSG_DEBUG, "WEXT: Invalid "
+					   "IWEVASSOCRESPIE length");
+				return;
+			}
 			wpa_driver_wext_event_wireless_assocrespie(
 				drv, custom, iwe->u.data.length);
 			break;
 		case IWEVPMKIDCAND:
+			if (custom + iwe->u.data.length > end) {
+				wpa_printf(MSG_DEBUG, "WEXT: Invalid "
+					   "IWEVPMKIDCAND length");
+				return;
+			}
 			wpa_driver_wext_event_wireless_pmkidcand(
 				drv, custom, iwe->u.data.length);
 			break;

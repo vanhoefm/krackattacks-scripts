@@ -453,9 +453,11 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 				 socklen_t fromlen,
 				 const u8 *data, size_t data_len)
 {
+#ifdef CONFIG_CLIENT_MLME
 	struct ieee80211_rx_status rx_status;
 	os_memset(&rx_status, 0, sizeof(rx_status));
 	wpa_supplicant_sta_rx(drv->ctx, data, data_len, &rx_status);
+#endif /* CONFIG_CLIENT_MLME */
 }
 
 

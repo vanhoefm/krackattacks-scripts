@@ -937,6 +937,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	 * previous association. */
 	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
+	if (wpa_drv_set_mode(wpa_s, ssid->mode)) {
+		wpa_printf(MSG_WARNING, "Failed to set operating mode");
+		assoc_failed = 1;
+	}
+
 #ifdef IEEE8021X_EAPOL
 	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (ssid->leap) {

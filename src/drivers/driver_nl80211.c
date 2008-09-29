@@ -2226,8 +2226,6 @@ static int wpa_driver_nl80211_associate(
 	    wpa_driver_nl80211_set_bssid(drv, NULL) < 0)
 		ret = -1;
 
-	if (wpa_driver_nl80211_set_mode(drv, params->mode) < 0)
-		ret = -1;
 	/* TODO: should consider getting wpa version and cipher/key_mgmt suites
 	 * from configuration, not from here, where only the selected suite is
 	 * available */
@@ -2859,6 +2857,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
 	.disassociate = wpa_driver_nl80211_disassociate,
+	.set_mode = wpa_driver_nl80211_set_mode,
 	.associate = wpa_driver_nl80211_associate,
 	.set_auth_alg = wpa_driver_nl80211_set_auth_alg,
 	.init = wpa_driver_nl80211_init,

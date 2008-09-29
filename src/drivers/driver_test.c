@@ -982,5 +982,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* update_ft_ies */,
 	NULL /* send_ft_action */,
 	wpa_driver_test_get_scan_results2,
-	NULL /* set_probe_req_ie */
+	NULL /* set_probe_req_ie */,
+	NULL /* set_mode */
 };

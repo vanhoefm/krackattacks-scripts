@@ -2829,5 +2829,7 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* mlme_remove_sta */,
 	NULL /* update_ft_ies */,
 	NULL /* send_ft_action */,
-	wpa_driver_ndis_get_scan_results
+	wpa_driver_ndis_get_scan_results,
+	NULL /* set_probe_req_ie */,
+	NULL /* set_mode */
 };

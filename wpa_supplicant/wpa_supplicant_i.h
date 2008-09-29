@@ -448,6 +448,14 @@ static inline int wpa_drv_set_wpa(struct wpa_supplicant *wpa_s, int enabled)
 	return 0;
 }
 
+static inline int wpa_drv_set_mode(struct wpa_supplicant *wpa_s, int mode)
+{
+	if (wpa_s->driver->set_mode) {
+		return wpa_s->driver->set_mode(wpa_s->drv_priv, mode);
+	}
+	return 0;
+}
+
 static inline int wpa_drv_associate(struct wpa_supplicant *wpa_s,
 				    struct wpa_driver_associate_params *params)
 {

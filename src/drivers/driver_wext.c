@@ -2206,8 +2206,6 @@ int wpa_driver_wext_associate(void *priv,
 	    wpa_driver_wext_set_bssid(drv, NULL) < 0)
 		ret = -1;
 
-	if (wpa_driver_wext_set_mode(drv, params->mode) < 0)
-		ret = -1;
 	/* TODO: should consider getting wpa version and cipher/key_mgmt suites
 	 * from configuration, not from here, where only the selected suite is
 	 * available */
@@ -2782,6 +2780,7 @@ const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.get_scan_results2 = wpa_driver_wext_get_scan_results,
 	.deauthenticate = wpa_driver_wext_deauthenticate,
 	.disassociate = wpa_driver_wext_disassociate,
+	.set_mode = wpa_driver_wext_set_mode,
 	.associate = wpa_driver_wext_associate,
 	.set_auth_alg = wpa_driver_wext_set_auth_alg,
 	.init = wpa_driver_wext_init,

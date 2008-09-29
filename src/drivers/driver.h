@@ -929,6 +929,20 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_probe_req_ie)(void *, const u8 *ies, size_t ies_len);
+
+ 	/**
+	 * set_mode - Request driver to set the operating mode
+	 * @priv: private driver interface data
+	 * @mode: Operation mode (infra/ibss) IEEE80211_MODE_*
+	 *
+	 * This handler will be called before any key configuration and call to
+	 * associate() handler in order to allow the operation mode to be
+	 * configured as early as possible. This information is also available
+	 * in associate() params and as such, some driver wrappers may not need
+	 * to implement set_mode() handler.
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*set_mode)(void *priv, int mode);
 };
 
 /**

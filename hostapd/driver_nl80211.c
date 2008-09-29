@@ -405,14 +405,14 @@ static int i802_set_ssid(const char *ifname, void *priv, const u8 *buf,
 }
 
 
-static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
-				int flags)
+static int i802_send_frame(void *priv, const void *data, size_t len,
+			   int encrypt, int flags)
 {
 	__u8 rtap_hdr[] = {
 		0x00, 0x00, /* radiotap version */
 		0x0e, 0x00, /* radiotap length */
 		0x02, 0xc0, 0x00, 0x00, /* bmap: flags, tx and rx flags */
-		0x0c,       /* F_WEP | F_FRAG (encrypt/fragment if required) */
+		IEEE80211_RADIOTAP_F_FRAG, /* F_FRAG (fragment if required) */
 		0x00,       /* padding */
 		0x00, 0x00, /* RX and TX flags to indicate that */
 		0x00, 0x00, /* this is the injected frame directly */
@@ -438,9 +438,17 @@ static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 		.msg_flags = 0,
 	};
 
+	if (encrypt)
+		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
+
 	return sendmsg(drv->monitor_sock, &msg, flags);
 }
 
+static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
+				int flags)
+{
+	return i802_send_frame(priv, data, len, 1, flags);
+}
 
 /* Set kernel driver on given frequency (MHz) */
 static int i802_set_freq(void *priv, int mode, int freq)
@@ -771,7 +779,7 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = i802_send_mgmt_frame(drv, (u8 *) hdr, len, 0);
+	res = i802_send_frame(drv, (u8 *) hdr, len, encrypt, 0);
 	free(hdr);
 
 	if (res < 0) {

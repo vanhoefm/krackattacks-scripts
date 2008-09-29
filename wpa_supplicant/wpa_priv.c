@@ -564,6 +564,17 @@ static void wpa_priv_cmd_l2_send(struct wpa_priv_interface *iface,
 }
 
 
+static void wpa_priv_cmd_set_mode(struct wpa_priv_interface *iface,
+				  void *buf, size_t len)
+{
+	if (iface->drv_priv == NULL || iface->driver->set_mode == NULL ||
+	    len != sizeof(int))
+		return;
+
+	iface->driver->set_mode(iface->drv_priv, *((int *) buf));
+}
+
+
 static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wpa_priv_interface *iface = eloop_ctx;
@@ -634,6 +645,9 @@ static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case PRIVSEP_CMD_L2_SEND:
 		wpa_priv_cmd_l2_send(iface, &from, cmd_buf, cmd_len);
+		break;
+	case PRIVSEP_CMD_SET_MODE:
+		wpa_priv_cmd_set_mode(iface, cmd_buf, cmd_len);
 		break;
 	}
 }

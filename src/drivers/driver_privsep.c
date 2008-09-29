@@ -726,6 +726,15 @@ static const u8 * wpa_driver_privsep_get_mac_addr(void *priv)
 }
 
 
+static int wpa_driver_privsep_set_mode(void *priv, int mode)
+{
+	struct wpa_driver_privsep_data *drv = priv;
+	wpa_printf(MSG_DEBUG, "%s mode=%d", __func__, mode);
+	return wpa_priv_cmd(drv, PRIVSEP_CMD_SET_MODE, &mode, sizeof(mode),
+			    NULL, NULL);
+}
+
+
 struct wpa_driver_ops wpa_driver_privsep_ops = {
 	"privsep",
 	"wpa_supplicant privilege separated driver",
@@ -763,7 +772,9 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	NULL /* mlme_remove_sta */,
 	NULL /* update_ft_ies */,
 	NULL /* send_ft_action */,
-	wpa_driver_privsep_get_scan_results2
+	wpa_driver_privsep_get_scan_results2,
+	NULL /* set_probe_req_ie */,
+	wpa_driver_privsep_set_mode
 };
 
 

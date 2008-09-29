@@ -30,6 +30,7 @@ enum privsep_cmd {
 	PRIVSEP_CMD_L2_UNREGISTER,
 	PRIVSEP_CMD_L2_NOTIFY_AUTH_START,
 	PRIVSEP_CMD_L2_SEND,
+	PRIVSEP_CMD_SET_MODE,
 };
 
 struct privsep_cmd_associate

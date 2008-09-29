@@ -923,8 +923,10 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
 			md = ie + 2;
 		wpa_sm_set_ft_params(wpa_s->wpa, md, NULL, 0, NULL);
-		/* Prepare for the next transition */
-		wpa_ft_prepare_auth_request(wpa_s->wpa);
+		if (md) {
+			/* Prepare for the next transition */
+			wpa_ft_prepare_auth_request(wpa_s->wpa);
+		}
 #endif /* CONFIG_IEEE80211R */
 	} else {
 		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with SSID '%s'",

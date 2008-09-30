@@ -93,6 +93,62 @@ static void
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 
 
+/* nl80211 code */
+static int ack_handler(struct nl_msg *msg, void *arg)
+{
+	int *err = arg;
+	*err = 0;
+	return NL_STOP;
+}
+
+static int finish_handler(struct nl_msg *msg, void *arg)
+{
+	return NL_SKIP;
+}
+
+static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
+			 void *arg)
+{
+	int *ret = arg;
+	*ret = err->error;
+	return NL_SKIP;
+}
+
+static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
+			      struct nl_msg *msg,
+			      int (*valid_handler)(struct nl_msg *, void *),
+			      void *valid_data)
+{
+	struct nl_cb *cb;
+	int err = -ENOMEM;
+
+	cb = nl_cb_clone(drv->nl_cb);
+	if (!cb)
+		goto out;
+
+	err = nl_send_auto_complete(drv->nl_handle, msg);
+	if (err < 0)
+		goto out;
+
+	err = 1;
+
+	nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
+	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, NULL);
+	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
+
+	if (valid_handler)
+		nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM,
+			  valid_handler, valid_data);
+
+	while (err > 0)
+		nl_recvmsgs(drv->nl_handle, cb);
+ out:
+	nl_cb_put(cb);
+	nlmsg_free(msg);
+	return err;
+}
+
+
 static int wpa_driver_nl80211_send_oper_ifla(
 	struct wpa_driver_nl80211_data *drv,
 	int linkmode, int operstate)
@@ -911,7 +967,7 @@ static int nl80211_set_vif(struct wpa_driver_nl80211_data *drv,
 
 	msg = nlmsg_alloc();
 	if (!msg)
-		goto out;
+		return -ENOMEM;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
 		    NL80211_CMD_SET_VIF, 0);
@@ -927,16 +983,11 @@ static int nl80211_set_vif(struct wpa_driver_nl80211_data *drv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-	    nl_wait_for_ack(drv->nl_handle) < 0) {
-		ret = -1;
-	}
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	return ret;
 
 nla_put_failure:
-	nlmsg_free(msg);
-
-out:
-	return ret;
+	return -ENOBUFS;
 #else /* NL80211_CMD_SET_VIF */
 	return -1;
 #endif /* NL80211_CMD_SET_VIF */
@@ -962,12 +1013,10 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_DEL_INTERFACE, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifidx);
-	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-	    nl_wait_for_ack(drv->nl_handle) < 0) {
-	nla_put_failure:
-		wpa_printf(MSG_ERROR, "nl80211: Failed to remove interface.");
-	}
-	nlmsg_free(msg);
+	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+		return;
+nla_put_failure:
+	wpa_printf(MSG_ERROR, "nl80211: Failed to remove interface.");
 }
 
 
@@ -976,6 +1025,7 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 {
 	struct nl_msg *msg, *flags = NULL;
 	int ifidx, err;
+	int ret = -ENOBUFS;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -1002,25 +1052,13 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 			goto nla_put_failure;
 	}
 
-	err = nl_send_auto_complete(drv->nl_handle, msg);
-	if (err < 0)
-		wpa_printf(MSG_ERROR, "nl80211: nl_send_auto_complete failed: "
-			   "%d (create_iface)", err);
-	else {
-		err = nl_wait_for_ack(drv->nl_handle);
-		if (err < 0)
-			wpa_printf(MSG_ERROR, "nl80211: nl_wait_for_ack "
-				   "failed: %d (create_iface)", err);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+	nla_put_failure:
+		wpa_printf(MSG_ERROR, "nl80211: Failed to create interface %d",
+			   ret);
+		return ret;
 	}
-	if (err < 0) {
- nla_put_failure:
-		wpa_printf(MSG_ERROR, "nl80211: Failed to create interface "
-			   "%s.", ifname);
-		nlmsg_free(msg);
-		return -1;
-	}
-
-	nlmsg_free(msg);
 
 	ifidx = if_nametoindex(ifname);
 	if (ifidx <= 0)
@@ -1953,7 +1991,7 @@ static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 				      const u8 *key, size_t key_len)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	int ret = -1, err;
+	int err;
 	struct nl_msg *msg;
 
 	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%p key_idx=%d set_tx=%d "
@@ -2001,16 +2039,13 @@ static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_idx);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	err = 0;
-	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-	    (err = nl_wait_for_ack(drv->nl_handle)) < 0) {
+	err = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (err) {
 		wpa_printf(MSG_DEBUG, "nl80211: set_key failed; err=%d", err);
-		nlmsg_free(msg);
 		return -1;
 	}
 
 	if (set_tx && alg != WPA_ALG_NONE) {
-		nlmsg_free(msg);
 		msg = nlmsg_alloc();
 		if (msg == NULL)
 			return -1;
@@ -2021,21 +2056,18 @@ static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
 
-		err = 0;
-		if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-		    (err = nl_wait_for_ack(drv->nl_handle)) < 0) {
+		err = send_and_recv_msgs(drv, msg, NULL, NULL);
+		if (err) {
 			wpa_printf(MSG_DEBUG, "nl80211: set default key "
 				   "failed; err=%d", err);
-			nlmsg_free(msg);
 			return -1;
 		}
 	}
 
-	ret = 0;
+	return 0;
 
 nla_put_failure:
-	nlmsg_free(msg);
-	return ret;
+	return -ENOBUFS;
 }
 
 
@@ -2331,15 +2363,14 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE,
 		    mode ? NL80211_IFTYPE_ADHOC : NL80211_IFTYPE_STATION);
 
-	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-	    nl_wait_for_ack(drv->nl_handle) < 0)
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (!ret)
+		return 0;
+	else
 		goto try_again;
 
-	nlmsg_free(msg);
-	return 0;
-
 nla_put_failure:
-	nlmsg_free(msg);
+	wpa_printf(MSG_ERROR, "nl80211: Failed to set interface mode");
 	return -1;
 
 try_again:
@@ -2351,12 +2382,21 @@ try_again:
 		(void) wpa_driver_nl80211_set_ifflags(drv, flags & ~IFF_UP);
 
 		/* Try to set the mode again while the interface is down */
-		if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-		    nl_wait_for_ack(drv->nl_handle) < 0) {
+		msg = nlmsg_alloc();
+		if (!msg)
+			return -1;
+
+		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+			    0, NL80211_CMD_SET_INTERFACE, 0);
+		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+		NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE,
+			    mode ? NL80211_IFTYPE_ADHOC :
+			    NL80211_IFTYPE_STATION);
+		ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+		if (ret) {
 			wpa_printf(MSG_ERROR, "Failed to set interface %s "
 				   "mode", drv->ifname);
-		} else
-			ret = 0;
+		}
 
 		/* Ignore return value of get_ifflags to ensure that the device
 		 * is always up like it was before this function was called.
@@ -2365,7 +2405,6 @@ try_again:
 		(void) wpa_driver_nl80211_set_ifflags(drv, flags | IFF_UP);
 	}
 
-	nlmsg_free(msg);
 	return ret;
 }
 
@@ -2488,19 +2527,9 @@ static int wpa_driver_nl80211_set_param(void *priv, const char *param)
 
 #ifdef CONFIG_CLIENT_MLME
 
-static int ack_wait_handler(struct nl_msg *msg, void *arg)
-{
-	int *finished = arg;
-
-	*finished = 1;
-	return NL_STOP;
-}
-
-
 struct phy_info_arg {
 	u16 *num_modes;
 	struct wpa_hw_modes *modes;
-	int error;
 };
 
 
@@ -2660,8 +2689,6 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		}
 	}
 
-	phy_info->error = 0;
-
 	return NL_SKIP;
 }
 
@@ -2671,13 +2698,9 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct nl_msg *msg;
-	int err = -1;
-	struct nl_cb *cb = NULL;
-	int finished = 0;
 	struct phy_info_arg result = {
 		.num_modes = num_modes,
 		.modes = NULL,
-		.error = 1,
 	};
 
 	*num_modes = 0;
@@ -2692,33 +2715,10 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	cb = nl_cb_clone(drv->nl_cb);
-	if (!cb)
-		goto out;
-
-	if (nl_send_auto_complete(drv->nl_handle, msg) < 0)
-		goto out;
-
-	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, phy_info_handler, &result);
-	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_wait_handler, &finished);
-
-	err = nl_recvmsgs(drv->nl_handle, cb);
-
-	if (!finished)
-		err = nl_wait_for_ack(drv->nl_handle);
-
-	if (err < 0 || result.error) {
-		wpa_supplicant_sta_free_hw_features(result.modes, *num_modes);
-		result.modes = NULL;
-	}
-
- out:
-	nl_cb_put(cb);
- nla_put_failure:
-	if (err)
-		fprintf(stderr, "failed to get information: %d\n", err);
-	nlmsg_free(msg);
-	return result.modes;
+	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0)
+		return result.modes;
+nla_put_failure:
+	return NULL;
 }
 
 
@@ -2781,7 +2781,7 @@ static int wpa_driver_nl80211_mlme_add_sta(void *priv, const u8 *addr,
 
 	msg = nlmsg_alloc();
 	if (!msg)
-		goto out;
+		return -ENOMEM;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_NEW_STATION, 0);
@@ -2794,19 +2794,12 @@ static int wpa_driver_nl80211_mlme_add_sta(void *priv, const u8 *addr,
 		supp_rates);
 	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL, 1);
 
-	ret = nl_send_auto_complete(drv->nl_handle, msg);
-	if (ret < 0)
-		goto nla_put_failure;
-
-	ret = nl_wait_for_ack(drv->nl_handle);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	/* ignore EEXIST, this happens if a STA associates while associated */
 	if (ret == -EEXIST || ret >= 0)
 		ret = 0;
 
- nla_put_failure:
-	nlmsg_free(msg);
-
- out:
+nla_put_failure:
 	return ret;
 }
 
@@ -2819,7 +2812,7 @@ static int wpa_driver_nl80211_mlme_remove_sta(void *priv, const u8 *addr)
 
 	msg = nlmsg_alloc();
 	if (!msg)
-		goto out;
+		return -ENOMEM;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_DEL_STATION, 0);
@@ -2829,16 +2822,11 @@ static int wpa_driver_nl80211_mlme_remove_sta(void *priv, const u8 *addr)
 
 	ret = 0;
 
-	if (nl_send_auto_complete(drv->nl_handle, msg) < 0 ||
-	    nl_wait_for_ack(drv->nl_handle) < 0) {
-		ret = -1;
-	}
-
- nla_put_failure:
-	nlmsg_free(msg);
-
- out:
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	return ret;
+
+nla_put_failure:
+	return -ENOBUFS;
 }
 
 #endif /* CONFIG_CLIENT_MLME */

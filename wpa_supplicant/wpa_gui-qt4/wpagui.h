@@ -43,7 +43,6 @@ public slots:
 	virtual void parse_argv();
 	virtual void updateStatus();
 	virtual void updateNetworks();
-	virtual void fileExit();
 	virtual void helpIndex();
 	virtual void helpContents();
 	virtual void helpAbout();

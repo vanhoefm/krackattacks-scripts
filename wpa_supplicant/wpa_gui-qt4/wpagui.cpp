@@ -37,7 +37,7 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 		SLOT(eventHistory()));
 	connect(fileSaveConfigAction, SIGNAL(triggered()), this,
 		SLOT(saveConfig()));
-	connect(fileExitAction, SIGNAL(triggered()), this, SLOT(fileExit()));
+	connect(fileExitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
 	connect(networkAddAction, SIGNAL(triggered()), this,
 		SLOT(addNetwork()));
 	connect(networkEditAction, SIGNAL(triggered()), this,
@@ -1214,11 +1214,6 @@ void WpaGui::showTrayStatus()
 		showTrayMessage(QSystemTrayIcon::Information, 10, msg);
 }
 
-void WpaGui::fileExit()
-{
-	qApp->quit();
-}
-
 
 void WpaGui::closeEvent(QCloseEvent *event)
 {
@@ -1240,29 +1235,21 @@ void WpaGui::closeEvent(QCloseEvent *event)
 		udr = NULL;
 	}
 
-	if (tray_icon && tray_icon->isVisible()) {
+	if (tray_icon && !ackTrayIcon) {
 		/* give user a visual hint that the tray icon exists */
-		if (!ackTrayIcon && QSystemTrayIcon::supportsMessages()) {
+		if (QSystemTrayIcon::supportsMessages()) {
 			hide();
 			showTrayMessage(QSystemTrayIcon::Information, 3,
 					qAppName() + " will keep running in "
 					"the system tray.");
-		} else if (!ackTrayIcon) {
+		} else {
 			QMessageBox::information(this, qAppName() + " systray",
 						 "The program will keep "
 						 "running in the system "
 						 "tray.");
-			hide();
 		}
-
-		if (ackTrayIcon)
-			hide();
-		else
-			ackTrayIcon = true;
-
-		event->ignore();
-		return;
+		ackTrayIcon = true;
 	}
 
-	qApp->quit();
+	event->accept();
 }

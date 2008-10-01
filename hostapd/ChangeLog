@@ -15,6 +15,8 @@ ChangeLog for hostapd
 	  authenticate or (re)associate request frames dropping association)
 	* added support for using SHA256-based stronger key derivation for WPA2
 	  (IEEE 802.11w)
+	* added new "driver wrapper" for RADIUS-only configuration
+	  (driver=none in hostapd.conf; CONFIG_DRIVER_NONE=y in .config)
 
 2008-08-10 - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2

@@ -35,6 +35,9 @@ CONFIG_DRIVER_HOSTAP=y
 #CFLAGS += -I/usr/local/include
 #LIBS += -L/usr/local/lib
 
+# Driver interface for no driver (e.g., RADIUS server only)
+#CONFIG_DRIVER_NONE=y
+
 # IEEE 802.11F/IAPP
 CONFIG_IAPP=y
 

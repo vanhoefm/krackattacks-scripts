@@ -80,16 +80,19 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	scanres = NULL;
 	udr = NULL;
 	tray_icon = NULL;
+	startInTray = false;
 	ctrl_iface = NULL;
 	ctrl_conn = NULL;
 	monitor_conn = NULL;
 	msgNotifier = NULL;
 	ctrl_iface_dir = strdup("/var/run/wpa_supplicant");
 
-	if (QSystemTrayIcon::isSystemTrayAvailable())
-		createTrayIcon();
-
 	parse_argv();
+
+	if (QSystemTrayIcon::isSystemTrayAvailable())
+		createTrayIcon(startInTray);
+	else
+		show();
 
 	textStatus->setText("connecting to wpa_supplicant");
 	timer = new QTimer(this);
@@ -105,9 +108,6 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	updateStatus();
 	networkMayHaveChanged = true;
 	updateNetworks();
-
-	if (tray_icon)
-		tray_icon->show();
 }
 
 
@@ -161,7 +161,7 @@ void WpaGui::parse_argv()
 {
 	int c;
 	for (;;) {
-		c = getopt(qApp->argc(), qApp->argv(), "i:p:");
+		c = getopt(qApp->argc(), qApp->argv(), "i:p:t");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -172,6 +172,9 @@ void WpaGui::parse_argv()
 		case 'p':
 			free(ctrl_iface_dir);
 			ctrl_iface_dir = strdup(optarg);
+			break;
+		case 't':
+			startInTray = true;
 			break;
 		}
 	}
@@ -1085,7 +1088,7 @@ void WpaGui::selectAdapter( const QString & sel )
 }
 
 
-void WpaGui::createTrayIcon()
+void WpaGui::createTrayIcon(bool trayOnly)
 {
 	QApplication::setQuitOnLastWindowClosed(false);
 
@@ -1134,6 +1137,11 @@ void WpaGui::createTrayIcon()
 	tray_menu->addAction(quitAction);
 
 	tray_icon->setContextMenu(tray_menu);
+
+	tray_icon->show();
+
+	if (!trayOnly)
+		show();
 }
 
 

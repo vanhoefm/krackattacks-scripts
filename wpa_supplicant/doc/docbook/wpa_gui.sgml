@@ -16,6 +16,7 @@
       <command>wpa_gui</command>
       <arg>-p <replaceable>path to ctrl sockets</replaceable></arg>
       <arg>-i <replaceable>ifname</replaceable></arg>
+      <arg>-t</arg>
     </cmdsynopsis>
   </refsynopsisdiv>
 
@@ -47,6 +48,14 @@
         <listitem><para>Specify the interface that is being
 	configured. By default, choose the first interface found with
 	a control socket in the socket path.</para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+	<term>-t</term>
+
+        <listitem><para>Start program in the system tray only (if the window
+	manager supports it). By default the main status window is
+	shown.</para></listitem>
       </varlistentry>
     </variablelist>
   </refsect1>

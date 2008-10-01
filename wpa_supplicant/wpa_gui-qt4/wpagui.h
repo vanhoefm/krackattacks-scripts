@@ -100,8 +100,9 @@ private:
 	QAction *quitAction;
 	QMenu *tray_menu;
 	QSystemTrayIcon *tray_icon;
-	void createTrayIcon();
+	void createTrayIcon(bool);
 	bool ackTrayIcon;
+	bool startInTray;
 
 	int openCtrlConnection(const char *ifname);
 };

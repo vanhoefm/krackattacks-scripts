@@ -32,7 +32,6 @@ int main(int argc, char *argv[])
 	}
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-	w.show();
 	ret = app.exec();
 
 #ifdef CONFIG_NATIVE_WINDOWS

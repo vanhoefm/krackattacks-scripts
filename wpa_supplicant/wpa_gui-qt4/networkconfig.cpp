@@ -230,10 +230,13 @@ void NetworkConfig::addNetwork()
 		setNetworkParam(id, "psk",
 				pskEdit->text().toAscii().constData(),
 				psklen != 64);
-	if (eapSelect->isEnabled())
-		setNetworkParam(id, "eap",
-				eapSelect->currentText().toAscii().constData(),
-				false);
+	if (eapSelect->isEnabled()) {
+		const char *eap =
+			eapSelect->currentText().toAscii().constData();
+		setNetworkParam(id, "eap", eap, false);
+		if (strcmp(eap, "SIM") == 0 || strcmp(eap, "AKA") == 0)
+			setNetworkParam(id, "pcsc", "", true);
+	}
 	if (identityEdit->isEnabled())
 		setNetworkParam(id, "identity",
 				identityEdit->text().toAscii().constData(),

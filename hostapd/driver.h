@@ -766,4 +766,10 @@ hostapd_set_ht_operation(const char *ifname, struct hostapd_data *hapd,
 }
 #endif /* CONFIG_IEEE80211N */
 
+static inline int
+hostapd_drv_none(struct hostapd_data *hapd)
+{
+	return hapd->driver && os_strcmp(hapd->driver->name, "none") == 0;
+}
+
 #endif /* DRIVER_H */

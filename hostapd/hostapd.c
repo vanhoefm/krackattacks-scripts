@@ -677,6 +677,9 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 {
 	int ret = 0;
 
+	if (hostapd_drv_none(hapd))
+		return 0;
+
 	wpa_printf(MSG_DEBUG, "Flushing old station entries");
 	if (hostapd_flush(hapd)) {
 		printf("Could not connect to kernel driver.\n");
@@ -1006,6 +1009,9 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	unsigned int i = iface->conf->num_bss, bits = 0, j;
 	int res;
 
+	if (hostapd_drv_none(hapd))
+		return 0;
+
 	/* Generate BSSID mask that is large enough to cover the BSSIDs. */
 
 	/* Determine the bits necessary to cover the number of BSSIDs. */
@@ -1253,9 +1259,12 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		conf->ssid.ssid[conf->ssid.ssid_len] = '\0';
 	}
 
-	printf("Using interface %s with hwaddr " MACSTR " and ssid '%s'\n",
-	       hapd->conf->iface, MAC2STR(hapd->own_addr),
-	       hapd->conf->ssid.ssid);
+	if (!hostapd_drv_none(hapd)) {
+		printf("Using interface %s with hwaddr " MACSTR
+		       " and ssid '%s'\n",
+		       hapd->conf->iface, MAC2STR(hapd->own_addr),
+		       hapd->conf->ssid.ssid);
+	}
 
 	if (hostapd_setup_wpa_psk(conf)) {
 		printf("WPA-PSK setup failed.\n");
@@ -1320,18 +1329,21 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (vlan_init(hapd)) {
+	if (!hostapd_drv_none(hapd) && vlan_init(hapd)) {
 		printf("VLAN initialization failed.\n");
 		return -1;
 	}
 
 #ifdef CONFIG_IEEE80211R
-	hapd->l2 = l2_packet_init(hapd->conf->iface, NULL, ETH_P_RRB,
-				  hostapd_rrb_receive, hapd, 0);
-	if (hapd->l2 == NULL &&
-	    (hapd->driver == NULL || hapd->driver->send_ether == NULL)) {
-		printf("Failed to open l2_packet interface\n");
-		return -1;
+	if (!hostapd_drv_none(hapd)) {
+		hapd->l2 = l2_packet_init(hapd->conf->iface, NULL, ETH_P_RRB,
+					  hostapd_rrb_receive, hapd, 0);
+		if (hapd->l2 == NULL &&
+		    (hapd->driver == NULL ||
+		     hapd->driver->send_ether == NULL)) {
+			printf("Failed to open l2_packet interface\n");
+			return -1;
+		}
 	}
 #endif /* CONFIG_IEEE80211R */
 
@@ -1876,7 +1888,7 @@ static void setup_interface_done(struct hostapd_iface *iface, int status)
 		wpa_printf(MSG_DEBUG, "%s: Unable to setup interface.",
 			   iface->bss[0]->conf->iface);
 		eloop_terminate();
-	} else
+	} else if (!hostapd_drv_none(iface->bss[0]))
 		wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
 			   iface->bss[0]->conf->iface);
 }

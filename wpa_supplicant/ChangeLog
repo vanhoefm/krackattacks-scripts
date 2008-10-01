@@ -8,6 +8,8 @@ ChangeLog for wpa_supplicant
 	  (IEEE 802.11w)
 	* fixed FT (IEEE 802.11r) authentication after a failed association to
 	  use correct FTIE
+	* added support for configuring Phase 2 (inner/tunneled) authentication
+	  method with wpa_gui-qt4
 
 2008-08-10 - v0.6.4
 	* added support for EAP Sequences in EAP-FAST Phase 2

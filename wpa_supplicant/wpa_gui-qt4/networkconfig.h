@@ -42,6 +42,7 @@ public slots:
 	virtual void encrChanged(const QString &sel);
 	virtual void writeWepKey(int network_id, QLineEdit *edit, int id);
 	virtual void removeNetwork();
+	virtual void eapChanged(int sel);
 
 protected slots:
 	virtual void languageChange();

@@ -95,6 +95,14 @@ static int wpa_config_parse_str(const struct parse_data *data,
 	size_t res_len, *dst_len;
 	char **dst, *tmp;
 
+	if (os_strcmp(value, "NULL") == 0) {
+		wpa_printf(MSG_DEBUG, "Unset configuration string '%s'",
+			   data->name);
+		tmp = NULL;
+		res_len = 0;
+		goto set;
+	}
+
 	tmp = wpa_config_parse_string(value, &res_len);
 	if (tmp == NULL) {
 		wpa_printf(MSG_ERROR, "Line %d: failed to parse %s '%s'.",
@@ -127,6 +135,7 @@ static int wpa_config_parse_str(const struct parse_data *data,
 		return -1;
 	}
 
+set:
 	dst = (char **) (((u8 *) ssid) + (long) data->param1);
 	dst_len = (size_t *) (((u8 *) ssid) + (long) data->param2);
 	os_free(*dst);
@@ -1006,6 +1015,14 @@ static int wpa_config_parse_password(const struct parse_data *data,
 				     const char *value)
 {
 	u8 *hash;
+
+	if (os_strcmp(value, "NULL") == 0) {
+		wpa_printf(MSG_DEBUG, "Unset configuration string 'password'");
+		os_free(ssid->eap.password);
+		ssid->eap.password = NULL;
+		ssid->eap.password_len = 0;
+		return 0;
+	}
 
 	if (os_strncmp(value, "hash:", 5) != 0) {
 		char *tmp;

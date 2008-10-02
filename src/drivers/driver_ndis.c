@@ -1177,6 +1177,7 @@ static int wpa_driver_ndis_flush_pmkid(void *priv)
 	struct wpa_driver_ndis_data *drv = priv;
 	NDIS_802_11_PMKID p;
 	struct ndis_pmkid_entry *pmkid, *prev;
+	int prev_authmode, ret;
 
 	if (drv->no_of_pmkid == 0)
 		return 0;
@@ -1189,12 +1190,25 @@ static int wpa_driver_ndis_flush_pmkid(void *priv)
 		os_free(prev);
 	}
 
+	/*
+	 * Some drivers may refuse OID_802_11_PMKID if authMode is not set to
+	 * WPA2, so change authMode temporarily, if needed.
+	 */
+	prev_authmode = ndis_get_auth_mode(drv);
+	if (prev_authmode != Ndis802_11AuthModeWPA2)
+		ndis_set_auth_mode(drv, Ndis802_11AuthModeWPA2);
+
 	os_memset(&p, 0, sizeof(p));
 	p.Length = 8;
 	p.BSSIDInfoCount = 0;
 	wpa_hexdump(MSG_MSGDUMP, "NDIS: OID_802_11_PMKID (flush)",
 		    (char *) &p, 8);
-	return ndis_set_oid(drv, OID_802_11_PMKID, (char *) &p, 8);
+	ret = ndis_set_oid(drv, OID_802_11_PMKID, (char *) &p, 8);
+
+	if (prev_authmode != Ndis802_11AuthModeWPA2)
+		ndis_set_auth_mode(drv, prev_authmode);
+
+	return ret;
 }
 
 

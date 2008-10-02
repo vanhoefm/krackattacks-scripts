@@ -228,6 +228,15 @@ static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol, int success,
 	wpa_printf(MSG_DEBUG, "EAPOL authentication completed %ssuccessfully",
 		   success ? "" : "un");
 
+	if (!success) {
+		/*
+		 * Make sure we do not get stuck here waiting for long EAPOL
+		 * timeout if the AP does not disconnect in case of
+		 * authentication failure.
+		 */
+		wpa_supplicant_req_auth_timeout(wpa_s, 2, 0);
+	}
+
 	if (!success || !wpa_s->driver_4way_handshake)
 		return;
 

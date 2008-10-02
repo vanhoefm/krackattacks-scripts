@@ -314,7 +314,7 @@ void NetworkConfig::addNetwork()
 			} else if (inner.compare("GTC(auth) + MSCHAPv2(prov)")
 				   == 0) {
 				snprintf(phase2, sizeof(phase2),
-					 "auth=GTC MSCHAPV2");
+					 "auth=GTC auth=MSCHAPV2");
 				provisioning = "fast_provisioning=1";
 			}
 			if (provisioning) {
@@ -643,7 +643,7 @@ void NetworkConfig::paramsFromConfig(int network_id)
 	case FAST_INNER:
 		if (strncmp(reply, "\"auth=", 6))
 			break;
-		if (strcmp(reply + 6, "GTC MSCHAPV2") == 0) {
+		if (strcmp(reply + 6, "GTC auth=MSCHAPV2") == 0) {
 			val = "GTC(auth) + MSCHAPv2(prov)";
 			break;
 		}

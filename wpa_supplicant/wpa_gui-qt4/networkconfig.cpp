@@ -305,14 +305,25 @@ void NetworkConfig::addNetwork()
 				snprintf(phase2, sizeof(phase2), "auth=%s",
 					 inner.toAscii().constData());
 		} else if (eap.compare("FAST") == 0) {
-			if (inner.startsWith("EAP-"))
+			char *provisioning = NULL;
+			if (inner.startsWith("EAP-")) {
 				snprintf(phase2, sizeof(phase2), "auth=%s",
 					 inner.right(inner.size() - 4).
 					 toAscii().constData());
-			else if (inner.compare("GTC(auth) + MSCHAPv2(prov)") ==
-				 0) {
+				provisioning = "fast_provisioning=2";
+			} else if (inner.compare("GTC(auth) + MSCHAPv2(prov)")
+				   == 0) {
 				snprintf(phase2, sizeof(phase2),
 					 "auth=GTC MSCHAPV2");
+				provisioning = "fast_provisioning=1";
+			}
+			if (provisioning) {
+				char blob[32];
+				setNetworkParam(id, "phase1", provisioning,
+						true);
+				snprintf(blob, sizeof(blob),
+					 "blob://fast-pac-%d", id);
+				setNetworkParam(id, "pac_file", blob, true);
 			}
 		}
 		if (phase2[0])

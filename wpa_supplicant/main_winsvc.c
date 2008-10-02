@@ -162,6 +162,13 @@ static int wpa_supplicant_thread(void)
 	}
 
 	buflen = sizeof(val);
+	ret = RegQueryValueEx(hk, TEXT("debug_timestamp"), NULL, NULL,
+			      (LPBYTE) &val, &buflen);
+	if (ret == ERROR_SUCCESS && buflen == sizeof(val)) {
+		params.wpa_debug_timestamp = val;
+	}
+
+	buflen = sizeof(val);
 	ret = RegQueryValueEx(hk, TEXT("debug_use_file"), NULL, NULL,
 			      (LPBYTE) &val, &buflen);
 	if (ret == ERROR_SUCCESS && buflen == sizeof(val) && val) {

@@ -3,6 +3,7 @@ REGEDIT4
 [HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant]
 "debug_level"=dword:00000000
 "debug_show_keys"=dword:00000001
+"debug_timestamp"=dword:00000000
 "debug_use_file"=dword:00000000
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs]

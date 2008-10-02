@@ -1274,10 +1274,11 @@ static struct wpabuf * tncc_build_soh(void)
 
 	/* MS-Packet-Info */
 	wpabuf_put_u8(buf, SSOH_MS_PACKET_INFO);
-	/* FIX: What is correct value here? IF-TNCCS-SOH v1.0 r8 claims this
-	 * field to be: Reserved(4 bits) r(1 bit) Vers(3 bits), but Windows XP
+	/* Note: IF-TNCCS-SOH v1.0 r8 claims this field to be:
+	 * Reserved(4 bits) r(1 bit) Vers(3 bits), but Windows XP
 	 * SP3 seems to be sending 0x11 for SSoH, i.e., r(request/response) bit
 	 * would not be in the specified location.
+	 * [MS-SOH] 4.0.2: Reserved(3 bits) r(1 bit) Vers(4 bits)
 	 */
 	wpabuf_put_u8(buf, 0x11); /* r=request, vers=1 */
 

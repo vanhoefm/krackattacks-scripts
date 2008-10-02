@@ -283,6 +283,8 @@ void NetworkConfig::addNetwork()
 		setNetworkParam(id, "eap", eap, false);
 		if (strcmp(eap, "SIM") == 0 || strcmp(eap, "AKA") == 0)
 			setNetworkParam(id, "pcsc", "", true);
+		else
+			setNetworkParam(id, "pcsc", "NULL", false);
 	}
 	if (phase2Select->isEnabled()) {
 		QString eap = eapSelect->currentText();
@@ -313,22 +315,32 @@ void NetworkConfig::addNetwork()
 					 "auth=GTC MSCHAPV2");
 			}
 		}
-		setNetworkParam(id, "phase2", phase2, true);
-	}
-	if (identityEdit->isEnabled())
+		if (phase2[0])
+			setNetworkParam(id, "phase2", phase2, true);
+		else
+			setNetworkParam(id, "phase2", "NULL", false);
+	} else
+		setNetworkParam(id, "phase2", "NULL", false);
+	if (identityEdit->isEnabled() && identityEdit->text().length() > 0)
 		setNetworkParam(id, "identity",
 				identityEdit->text().toAscii().constData(),
 				true);
-	if (passwordEdit->isEnabled() &&
+	else
+		setNetworkParam(id, "identity", "NULL", false);
+	if (passwordEdit->isEnabled() && passwordEdit->text().length() > 0 &&
 	    strcmp(passwordEdit->text().toAscii().constData(),
 		   WPA_GUI_KEY_DATA) != 0)
 		setNetworkParam(id, "password",
 				passwordEdit->text().toAscii().constData(),
 				true);
-	if (cacertEdit->isEnabled())
+	else if (passwordEdit->text().length() == 0)
+		setNetworkParam(id, "password", "NULL", false);
+	if (cacertEdit->isEnabled() && cacertEdit->text().length() > 0)
 		setNetworkParam(id, "ca_cert",
 				cacertEdit->text().toAscii().constData(),
 				true);
+	else
+		setNetworkParam(id, "ca_cert", "NULL", false);
 	writeWepKey(id, wep0Edit, 0);
 	writeWepKey(id, wep1Edit, 1);
 	writeWepKey(id, wep2Edit, 2);
@@ -343,10 +355,12 @@ void NetworkConfig::addNetwork()
 	else if (wep3Radio->isEnabled() && wep3Radio->isChecked())
 		setNetworkParam(id, "wep_tx_keyidx", "3", false);
 
-	if (idstrEdit->isEnabled())
+	if (idstrEdit->isEnabled() && idstrEdit->text().length() > 0)
 		setNetworkParam(id, "id_str",
 				idstrEdit->text().toAscii().constData(),
 				true);
+	else
+		setNetworkParam(id, "id_str", "NULL", false);
 
 	if (prioritySpinBox->isEnabled()) {
 		QString prio;

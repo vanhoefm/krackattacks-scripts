@@ -348,7 +348,7 @@ struct eap_peer_config {
 	 * number of PAC entries to store in a PAC list (default: 10).
 	 *
 	 * fast_pac_format=binary option can be used to select binary format
-	 * for storing PAC entires in order to save some space (the default
+	 * for storing PAC entries in order to save some space (the default
 	 * text format uses about 2.5 times the size of minimal binary format).
 	 *
 	 * crypto_binding option can be used to control PEAPv0 cryptobinding

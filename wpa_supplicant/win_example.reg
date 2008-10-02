@@ -9,6 +9,7 @@ REGEDIT4
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test]
 "ap_scan"=dword:00000002
+"update_config"=dword:00000001
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\blobs]
 "testblob"=hex:01,02,03,04,05

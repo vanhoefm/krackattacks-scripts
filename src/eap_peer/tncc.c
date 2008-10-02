@@ -1305,8 +1305,8 @@ static struct wpabuf * tncc_build_soh(void)
 	wpabuf_put_be16(buf, 1); /* Flags: ExtState=0, f=0, qState=1 */
 	wpabuf_put_be32(buf, 0xffffffff); /* ProbTime (hi) */
 	wpabuf_put_be32(buf, 0xffffffff); /* ProbTime (lo) */
-	wpabuf_put_be16(buf, 0); /* urlLenInBytes */
-	/* followed by url */
+	wpabuf_put_be16(buf, 1); /* urlLenInBytes */
+	wpabuf_put_u8(buf, 0); /* null termination for the url */
 
 	/* MS-Machine-Inventory-Ex */
 	wpabuf_put_u8(buf, SSOH_MS_MACHINE_INVENTORY_EX);

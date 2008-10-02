@@ -94,6 +94,18 @@ typedef TNC_Result (*TNC_TNCC_BindFunctionPointer)(
 #define TNC_TNCCS_REASONSTRINGS			0x00000004
 
 
+/* IF-TNCCS-SOH - SSoH and SSoHR Attributes */
+enum {
+	SSOH_MS_MACHINE_INVENTORY = 1,
+	SSOH_MS_QUARANTINE_STATE = 2,
+	SSOH_MS_PACKET_INFO = 3,
+	SSOH_MS_SYSTEMGENERATED_IDS = 4,
+	SSOH_MS_MACHINENAME = 5,
+	SSOH_MS_CORRELATIONID = 6,
+	SSOH_MS_INSTALLED_SHVS = 7,
+	SSOH_MS_MACHINE_INVENTORY_EX = 8
+};
+
 struct tnc_if_imc {
 	struct tnc_if_imc *next;
 	char *name;
@@ -1212,6 +1224,8 @@ static struct wpabuf * tncc_build_soh(void)
 	u8 *tlv_len, *tlv_len2, *outer_len, *inner_len, *ssoh_len, *end;
 	u8 correlation_id[24];
 	int ver = 2;
+	/* TODO: get correct name */
+	char *machinename = "wpa_supplicant@w1.fi";
 
 	if (os_get_random(correlation_id, sizeof(correlation_id)))
 		return NULL;
@@ -1257,15 +1271,50 @@ static struct wpabuf * tncc_build_soh(void)
 	wpabuf_put_be16(buf, EAP_TLV_VENDOR_SPECIFIC_TLV);
 	ssoh_len = wpabuf_put(buf, 2);
 	wpabuf_put_be32(buf, EAP_VENDOR_MICROSOFT); /* IANA SMI Code */
-	/* TODO: MS-Machine-Inventory */
-	/* TODO: MS-Quarantine-State */
+
 	/* MS-Packet-Info */
-	wpabuf_put_u8(buf, 0x03);
+	wpabuf_put_u8(buf, SSOH_MS_PACKET_INFO);
+	/* FIX: What is correct value here? IF-TNCCS-SOH v1.0 r8 claims this
+	 * field to be: Reserved(4 bits) r(1 bit) Vers(3 bits), but Windows XP
+	 * SP3 seems to be sending 0x11 for SSoH, i.e., r(request/response) bit
+	 * would not be in the specified location.
+	 */
 	wpabuf_put_u8(buf, 0x11); /* r=request, vers=1 */
-	/* TODO: MS-MachineName */
+
+	/* MS-Machine-Inventory */
+	/* TODO: get correct values; 0 = not applicable for OS */
+	wpabuf_put_u8(buf, SSOH_MS_MACHINE_INVENTORY);
+	wpabuf_put_be32(buf, 0); /* osVersionMajor */
+	wpabuf_put_be32(buf, 0); /* osVersionMinor */
+	wpabuf_put_be32(buf, 0); /* osVersionBuild */
+	wpabuf_put_be16(buf, 0); /* spVersionMajor */
+	wpabuf_put_be16(buf, 0); /* spVersionMinor */
+	wpabuf_put_be16(buf, 0); /* procArch */
+
+	/* MS-MachineName */
+	wpabuf_put_u8(buf, SSOH_MS_MACHINENAME);
+	wpabuf_put_be16(buf, os_strlen(machinename) + 1);
+	wpabuf_put_data(buf, machinename, os_strlen(machinename) + 1);
+
 	/* MS-CorrelationId */
-	wpabuf_put_u8(buf, 0x06);
+	wpabuf_put_u8(buf, SSOH_MS_CORRELATIONID);
 	wpabuf_put_data(buf, correlation_id, sizeof(correlation_id));
+
+	/* MS-Quarantine-State */
+	wpabuf_put_u8(buf, SSOH_MS_QUARANTINE_STATE);
+	wpabuf_put_be16(buf, 1); /* Flags: ExtState=0, f=0, qState=1 */
+	wpabuf_put_be32(buf, 0xffffffff); /* ProbTime (hi) */
+	wpabuf_put_be32(buf, 0xffffffff); /* ProbTime (lo) */
+	wpabuf_put_be16(buf, 0); /* urlLenInBytes */
+	/* followed by url */
+
+	/* MS-Machine-Inventory-Ex */
+	wpabuf_put_u8(buf, SSOH_MS_MACHINE_INVENTORY_EX);
+	wpabuf_put_be32(buf, 0); /* Reserved
+				  * (note: Windows XP SP3 uses 0xdecafbad) */
+	wpabuf_put_u8(buf, 1); /* ProductType: Client */
+
+	/* Update SSoH Length */
 	end = wpabuf_put(buf, 0);
 	WPA_PUT_BE16(ssoh_len, end - ssoh_len - 2);
 

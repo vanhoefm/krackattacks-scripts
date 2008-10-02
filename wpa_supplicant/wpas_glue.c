@@ -36,6 +36,13 @@ static void wpa_supplicant_set_config_blob(void *ctx,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	wpa_config_set_blob(wpa_s->conf, blob);
+	if (wpa_s->conf->update_config) {
+		int ret = wpa_config_write(wpa_s->confname, wpa_s->conf);
+		if (ret) {
+			wpa_printf(MSG_DEBUG, "Failed to update config after "
+				   "blob set");
+		}
+	}
 }
 
 

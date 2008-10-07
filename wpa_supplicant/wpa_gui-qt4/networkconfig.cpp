@@ -316,7 +316,8 @@ void NetworkConfig::addNetwork()
 				snprintf(phase2, sizeof(phase2),
 					 "auth=GTC auth=MSCHAPV2");
 				provisioning = "fast_provisioning=1";
-			}
+			} else
+				provisioning = "fast_provisioning=3";
 			if (provisioning) {
 				char blob[32];
 				setNetworkParam(id, "phase1", provisioning,

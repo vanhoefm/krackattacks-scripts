@@ -33,17 +33,6 @@ static void eap_fast_reset(struct eap_sm *sm, void *priv);
 #define PAC_OPAQUE_TYPE_LIFETIME 2
 #define PAC_OPAQUE_TYPE_IDENTITY 3
 
-/* PAC-Key lifetime in seconds (hard limit) */
-#define PAC_KEY_LIFETIME (7 * 24 * 60 * 60)
-
-/*
- * PAC-Key refresh time in seconds (soft limit on remaining hard limit). The
- * server will generate a new PAC-Key when this number of seconds (or fewer)
- * of the lifetime.
- */
-#define PAC_KEY_REFRESH_TIME (1 * 24 * 60 * 60)
-
-
 struct eap_fast_data {
 	struct eap_ssl_data ssl;
 	enum {
@@ -76,6 +65,9 @@ struct eap_fast_data {
 	size_t identity_len;
 	int eap_seq;
 	int tnc_started;
+
+	int pac_key_lifetime;
+	int pac_key_refresh_time;
 };
 
 
@@ -251,7 +243,7 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 		return 0;
 	}
 
-	if (lifetime - now.sec < PAC_KEY_REFRESH_TIME)
+	if (lifetime - now.sec < data->pac_key_refresh_time)
 		data->send_new_pac = 1;
 
 	eap_fast_derive_master_secret(pac_key, server_random, client_random,
@@ -458,6 +450,16 @@ static void * eap_fast_init(struct eap_sm *sm)
 		eap_fast_reset(sm, data);
 		return NULL;
 	}
+
+	/* PAC-Key lifetime in seconds (hard limit) */
+	data->pac_key_lifetime = sm->pac_key_lifetime;
+
+	/*
+	 * PAC-Key refresh time in seconds (soft limit on remaining hard
+	 * limit). The server will generate a new PAC-Key when this number of
+	 * seconds (or fewer) of the lifetime remains.
+	 */
+	data->pac_key_refresh_time = sm->pac_key_refresh_time;
 
 	return data;
 }
@@ -674,7 +676,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 
 	*pos++ = PAC_OPAQUE_TYPE_LIFETIME;
 	*pos++ = 4;
-	WPA_PUT_BE32(pos, now.sec + PAC_KEY_LIFETIME);
+	WPA_PUT_BE32(pos, now.sec + data->pac_key_lifetime);
 	pos += 4;
 
 	if (sm->identity) {
@@ -744,7 +746,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 
 	/* PAC-Lifetime (inside PAC-Info) */
 	eap_fast_put_tlv_hdr(buf, PAC_TYPE_CRED_LIFETIME, 4);
-	wpabuf_put_be32(buf, now.sec + PAC_KEY_LIFETIME);
+	wpabuf_put_be32(buf, now.sec + data->pac_key_lifetime);
 
 	/* A-ID (inside PAC-Info) */
 	eap_fast_put_tlv(buf, PAC_TYPE_A_ID, data->srv_id, srv_id_len);

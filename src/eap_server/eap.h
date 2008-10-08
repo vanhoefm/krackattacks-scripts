@@ -97,6 +97,8 @@ struct eap_config {
 	u8 *pac_opaque_encr_key;
 	char *eap_fast_a_id;
 	int eap_fast_prov;
+	int pac_key_lifetime;
+	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
 };

@@ -175,6 +175,8 @@ struct eap_sm {
 	enum {
 		NO_PROV, ANON_PROV, AUTH_PROV, BOTH_PROV
 	} eap_fast_prov;
+	int pac_key_lifetime;
+	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
 };

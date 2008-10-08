@@ -189,6 +189,8 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 #ifdef EAP_FAST
 	 /* both anonymous and authenticated provisioning */
 	bss->eap_fast_prov = 3;
+	bss->pac_key_lifetime = 7 * 24 * 60 * 60;
+	bss->pac_key_refresh_time = 1 * 24 * 60 * 60;
 #endif /* EAP_FAST */
 }
 
@@ -1511,6 +1513,10 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->eap_fast_a_id = os_strdup(pos);
 		} else if (os_strcmp(buf, "eap_fast_prov") == 0) {
 			bss->eap_fast_prov = atoi(pos);
+		} else if (os_strcmp(buf, "pac_key_lifetime") == 0) {
+			bss->pac_key_lifetime = atoi(pos);
+		} else if (os_strcmp(buf, "pac_key_refresh_time") == 0) {
+			bss->pac_key_refresh_time = atoi(pos);
 #endif /* EAP_FAST */
 #ifdef EAP_SIM
 		} else if (os_strcmp(buf, "eap_sim_db") == 0) {

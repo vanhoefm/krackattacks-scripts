@@ -806,6 +806,8 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.pac_opaque_encr_key = eapol->conf.pac_opaque_encr_key;
 	eap_conf.eap_fast_a_id = eapol->conf.eap_fast_a_id;
 	eap_conf.eap_fast_prov = eapol->conf.eap_fast_prov;
+	eap_conf.pac_key_lifetime = eapol->conf.pac_key_lifetime;
+	eap_conf.pac_key_refresh_time = eapol->conf.pac_key_refresh_time;
 	eap_conf.eap_sim_aka_result_ind = eapol->conf.eap_sim_aka_result_ind;
 	eap_conf.tnc = eapol->conf.tnc;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
@@ -1239,6 +1241,8 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	else
 		dst->eap_fast_a_id = NULL;
 	dst->eap_fast_prov = src->eap_fast_prov;
+	dst->pac_key_lifetime = src->pac_key_lifetime;
+	dst->pac_key_refresh_time = src->pac_key_refresh_time;
 	dst->eap_sim_aka_result_ind = src->eap_sim_aka_result_ind;
 	dst->tnc = src->tnc;
 	return 0;

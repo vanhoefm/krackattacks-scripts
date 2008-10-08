@@ -87,6 +87,8 @@ struct radius_server_data {
 	u8 *pac_opaque_encr_key;
 	char *eap_fast_a_id;
 	int eap_fast_prov;
+	int pac_key_lifetime;
+	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
 	int ipv6;
@@ -313,6 +315,8 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.pac_opaque_encr_key = data->pac_opaque_encr_key;
 	eap_conf.eap_fast_a_id = data->eap_fast_a_id;
 	eap_conf.eap_fast_prov = data->eap_fast_prov;
+	eap_conf.pac_key_lifetime = data->pac_key_lifetime;
+	eap_conf.pac_key_refresh_time = data->pac_key_refresh_time;
 	eap_conf.eap_sim_aka_result_ind = data->eap_sim_aka_result_ind;
 	eap_conf.tnc = data->tnc;
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
@@ -1019,6 +1023,8 @@ radius_server_init(struct radius_server_conf *conf)
 	if (conf->eap_fast_a_id)
 		data->eap_fast_a_id = os_strdup(conf->eap_fast_a_id);
 	data->eap_fast_prov = conf->eap_fast_prov;
+	data->pac_key_lifetime = conf->pac_key_lifetime;
+	data->pac_key_refresh_time = conf->pac_key_refresh_time;
 	data->get_eap_user = conf->get_eap_user;
 	data->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	data->tnc = conf->tnc;

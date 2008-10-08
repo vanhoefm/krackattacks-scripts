@@ -251,6 +251,7 @@ struct hostapd_bss_config {
 	char *dh_file;
 	u8 *pac_opaque_encr_key;
 	char *eap_fast_a_id;
+	int eap_fast_prov;
 	int eap_sim_aka_result_ind;
 	int tnc;
 

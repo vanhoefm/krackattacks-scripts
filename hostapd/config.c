@@ -186,6 +186,10 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->assoc_ping_timeout = 1000;
 	bss->assoc_ping_attempts = 3;
 #endif /* CONFIG_IEEE80211W */
+#ifdef EAP_FAST
+	 /* both anonymous and authenticated provisioning */
+	bss->eap_fast_prov = 3;
+#endif /* EAP_FAST */
 }
 
 
@@ -1505,6 +1509,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "eap_fast_a_id") == 0) {
 			os_free(bss->eap_fast_a_id);
 			bss->eap_fast_a_id = os_strdup(pos);
+		} else if (os_strcmp(buf, "eap_fast_prov") == 0) {
+			bss->eap_fast_prov = atoi(pos);
 #endif /* EAP_FAST */
 #ifdef EAP_SIM
 		} else if (os_strcmp(buf, "eap_sim_db") == 0) {

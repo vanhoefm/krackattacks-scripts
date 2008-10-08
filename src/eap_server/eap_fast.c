@@ -1241,6 +1241,28 @@ static void eap_fast_process_phase2_tlvs(struct eap_sm *sm,
 				   "completed successfully");
 		}
 
+		if (data->anon_provisioning &&
+		    sm->eap_fast_prov != ANON_PROV &&
+		    sm->eap_fast_prov != BOTH_PROV) {
+			wpa_printf(MSG_DEBUG, "EAP-FAST: Client is trying to "
+				   "use unauthenticated provisioning which is "
+				   "disabled");
+			eap_fast_state(data, FAILURE);
+			return;
+		}
+
+		if (sm->eap_fast_prov != AUTH_PROV &&
+		    sm->eap_fast_prov != BOTH_PROV &&
+		    tlv.request_action == EAP_TLV_ACTION_PROCESS_TLV &&
+		    eap_fast_pac_type(tlv.pac, tlv.pac_len,
+				      PAC_TYPE_TUNNEL_PAC)) {
+			wpa_printf(MSG_DEBUG, "EAP-FAST: Client is trying to "
+				   "use authenticated provisioning which is "
+				   "disabled");
+			eap_fast_state(data, FAILURE);
+			return;
+		}
+
 		if (data->anon_provisioning ||
 		    (tlv.request_action == EAP_TLV_ACTION_PROCESS_TLV &&
 		     eap_fast_pac_type(tlv.pac, tlv.pac_len,

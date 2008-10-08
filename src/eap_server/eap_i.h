@@ -172,6 +172,9 @@ struct eap_sm {
 
 	u8 *pac_opaque_encr_key;
 	char *eap_fast_a_id;
+	enum {
+		NO_PROV, ANON_PROV, AUTH_PROV, BOTH_PROV
+	} eap_fast_prov;
 	int eap_sim_aka_result_ind;
 	int tnc;
 };

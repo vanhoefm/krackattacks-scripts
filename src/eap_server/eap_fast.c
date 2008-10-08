@@ -717,6 +717,14 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 		return NULL;
 	}
 
+	/* Result TLV */
+	wpa_printf(MSG_DEBUG, "EAP-FAST: Add Result TLV (status=SUCCESS)");
+	result = wpabuf_put(buf, sizeof(*result));
+	WPA_PUT_BE16((u8 *) &result->tlv_type,
+		     EAP_TLV_TYPE_MANDATORY | EAP_TLV_RESULT_TLV);
+	WPA_PUT_BE16((u8 *) &result->length, 2);
+	WPA_PUT_BE16((u8 *) &result->status, EAP_TLV_RESULT_SUCCESS);
+
 	/* PAC TLV */
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Add PAC TLV");
 	pac_tlv = wpabuf_put(buf, sizeof(*pac_tlv));
@@ -754,14 +762,6 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	pos = wpabuf_put(buf, 0);
 	pac_info->len = host_to_be16(pos - (u8 *) (pac_info + 1));
 	pac_tlv->length = host_to_be16(pos - (u8 *) (pac_tlv + 1));
-
-	/* Result TLV */
-	wpa_printf(MSG_DEBUG, "EAP-FAST: Add Result TLV (status=SUCCESS)");
-	result = wpabuf_put(buf, sizeof(*result));
-	WPA_PUT_BE16((u8 *) &result->tlv_type,
-		     EAP_TLV_TYPE_MANDATORY | EAP_TLV_RESULT_TLV);
-	WPA_PUT_BE16((u8 *) &result->length, 2);
-	WPA_PUT_BE16((u8 *) &result->status, EAP_TLV_RESULT_SUCCESS);
 
 	return buf;
 }

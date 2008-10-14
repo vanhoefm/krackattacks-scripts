@@ -305,7 +305,7 @@ void NetworkConfig::addNetwork()
 				snprintf(phase2, sizeof(phase2), "auth=%s",
 					 inner.toAscii().constData());
 		} else if (eap.compare("FAST") == 0) {
-			char *provisioning = NULL;
+			const char *provisioning = NULL;
 			if (inner.startsWith("EAP-")) {
 				snprintf(phase2, sizeof(phase2), "auth=%s",
 					 inner.right(inner.size() - 4).

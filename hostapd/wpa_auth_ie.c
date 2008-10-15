@@ -470,6 +470,12 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	else
 		version = WPA_PROTO_WPA;
 
+	if (!(wpa_auth->conf.wpa & version)) {
+		wpa_printf(MSG_DEBUG, "Invalid WPA proto (%d) from " MACSTR,
+			   version, MAC2STR(sm->addr));
+		return WPA_INVALID_PROTO;
+	}
+
 	if (version == WPA_PROTO_RSN) {
 		res = wpa_parse_wpa_ie_rsn(wpa_ie, wpa_ie_len, &data);
 

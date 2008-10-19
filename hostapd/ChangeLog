@@ -19,6 +19,10 @@ ChangeLog for hostapd
 	  (driver=none in hostapd.conf; CONFIG_DRIVER_NONE=y in .config)
 	* fixed WPA/RSN IE validation to verify that the proto (WPA vs. WPA2)
 	  is enabled in configuration
+	* changed EAP-FAST configuration to use separate fields for A-ID and
+	  A-ID-Info (eap_fast_a_id_info) to allow A-ID to be set to a fixed
+	  16-octet len binary value for better interoperability with some peer
+	  implementations; eap_fast_a_id is now configured as a hex string
 
 2008-08-10 - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2

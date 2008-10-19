@@ -56,7 +56,9 @@ struct eap_fast_data {
 	int simck_idx;
 
 	u8 pac_opaque_encr[16];
-	char *srv_id;
+	u8 *srv_id;
+	size_t srv_id_len;
+	char *srv_id_info;
 
 	int anon_provisioning;
 	int send_new_pac; /* server triggered re-keying of Tunnel PAC */
@@ -445,8 +447,21 @@ static void * eap_fast_init(struct eap_sm *sm)
 		eap_fast_reset(sm, data);
 		return NULL;
 	}
-	data->srv_id = os_strdup(sm->eap_fast_a_id);
+	data->srv_id = os_malloc(sm->eap_fast_a_id_len);
 	if (data->srv_id == NULL) {
+		eap_fast_reset(sm, data);
+		return NULL;
+	}
+	os_memcpy(data->srv_id, sm->eap_fast_a_id, sm->eap_fast_a_id_len);
+	data->srv_id_len = sm->eap_fast_a_id_len;
+
+	if (sm->eap_fast_a_id_info == NULL) {
+		wpa_printf(MSG_INFO, "EAP-FAST: No A-ID-Info configured");
+		eap_fast_reset(sm, data);
+		return NULL;
+	}
+	data->srv_id_info = os_strdup(sm->eap_fast_a_id_info);
+	if (data->srv_id_info == NULL) {
 		eap_fast_reset(sm, data);
 		return NULL;
 	}
@@ -474,6 +489,7 @@ static void eap_fast_reset(struct eap_sm *sm, void *priv)
 		data->phase2_method->reset(sm, data->phase2_priv);
 	eap_server_tls_ssl_deinit(sm, &data->ssl);
 	os_free(data->srv_id);
+	os_free(data->srv_id_info);
 	os_free(data->key_block_p);
 	wpabuf_free(data->pending_phase2_resp);
 	os_free(data->identity);
@@ -485,10 +501,9 @@ static struct wpabuf * eap_fast_build_start(struct eap_sm *sm,
 					    struct eap_fast_data *data, u8 id)
 {
 	struct wpabuf *req;
-	size_t srv_id_len = os_strlen(data->srv_id);
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_FAST,
-			    1 + sizeof(struct pac_tlv_hdr) + srv_id_len,
+			    1 + sizeof(struct pac_tlv_hdr) + data->srv_id_len,
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL) {
 		wpa_printf(MSG_ERROR, "EAP-FAST: Failed to allocate memory for"
@@ -500,7 +515,7 @@ static struct wpabuf * eap_fast_build_start(struct eap_sm *sm,
 	wpabuf_put_u8(req, EAP_TLS_FLAGS_START | data->fast_version);
 
 	/* RFC 4851, 4.1.1. Authority ID Data */
-	eap_fast_put_tlv(req, PAC_TYPE_A_ID, data->srv_id, srv_id_len);
+	eap_fast_put_tlv(req, PAC_TYPE_A_ID, data->srv_id, data->srv_id_len);
 
 	eap_fast_state(data, PHASE1);
 
@@ -648,7 +663,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	u8 *pac_buf, *pac_opaque;
 	struct wpabuf *buf;
 	u8 *pos;
-	size_t buf_len, srv_id_len, pac_len;
+	size_t buf_len, srv_id_info_len, pac_len;
 	struct eap_tlv_hdr *pac_tlv;
 	struct pac_tlv_hdr *pac_info;
 	struct eap_tlv_result_tlv *result;
@@ -666,7 +681,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	if (pac_buf == NULL)
 		return NULL;
 
-	srv_id_len = os_strlen(data->srv_id);
+	srv_id_info_len = os_strlen(data->srv_id_info);
 
 	pos = pac_buf;
 	*pos++ = PAC_OPAQUE_TYPE_KEY;
@@ -712,7 +727,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	buf_len = sizeof(*pac_tlv) +
 		sizeof(struct pac_tlv_hdr) + EAP_FAST_PAC_KEY_LEN +
 		sizeof(struct pac_tlv_hdr) + pac_len +
-		2 * srv_id_len + 100 + sizeof(*result);
+		data->srv_id_len + srv_id_info_len + 100 + sizeof(*result);
 	buf = wpabuf_alloc(buf_len);
 	if (buf == NULL) {
 		os_free(pac_opaque);
@@ -749,12 +764,13 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	wpabuf_put_be32(buf, now.sec + data->pac_key_lifetime);
 
 	/* A-ID (inside PAC-Info) */
-	eap_fast_put_tlv(buf, PAC_TYPE_A_ID, data->srv_id, srv_id_len);
+	eap_fast_put_tlv(buf, PAC_TYPE_A_ID, data->srv_id, data->srv_id_len);
 	
 	/* Note: headers may be misaligned after A-ID */
 
 	/* A-ID-Info (inside PAC-Info) */
-	eap_fast_put_tlv(buf, PAC_TYPE_A_ID_INFO, data->srv_id, srv_id_len);
+	eap_fast_put_tlv(buf, PAC_TYPE_A_ID_INFO, data->srv_id_info,
+			 srv_id_info_len);
 
 	/* PAC-Type (inside PAC-Info) */
 	eap_fast_put_tlv_hdr(buf, PAC_TYPE_PAC_TYPE, 2);

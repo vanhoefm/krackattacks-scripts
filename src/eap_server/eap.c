@@ -1151,8 +1151,16 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 				  conf->pac_opaque_encr_key, 16);
 		}
 	}
-	if (conf->eap_fast_a_id)
-		sm->eap_fast_a_id = os_strdup(conf->eap_fast_a_id);
+	if (conf->eap_fast_a_id) {
+		sm->eap_fast_a_id = os_malloc(conf->eap_fast_a_id_len);
+		if (sm->eap_fast_a_id) {
+			os_memcpy(sm->eap_fast_a_id, conf->eap_fast_a_id,
+				  conf->eap_fast_a_id_len);
+			sm->eap_fast_a_id_len = conf->eap_fast_a_id_len;
+		}
+	}
+	if (conf->eap_fast_a_id_info)
+		sm->eap_fast_a_id_info = os_strdup(conf->eap_fast_a_id_info);
 	sm->eap_fast_prov = conf->eap_fast_prov;
 	sm->pac_key_lifetime = conf->pac_key_lifetime;
 	sm->pac_key_refresh_time = conf->pac_key_refresh_time;
@@ -1186,6 +1194,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 	os_free(sm->identity);
 	os_free(sm->pac_opaque_encr_key);
 	os_free(sm->eap_fast_a_id);
+	os_free(sm->eap_fast_a_id_info);
 	wpabuf_free(sm->eap_if.aaaEapReqData);
 	wpabuf_free(sm->eap_if.aaaEapRespData);
 	os_free(sm->eap_if.aaaEapKeyData);

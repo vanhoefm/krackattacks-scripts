@@ -95,7 +95,9 @@ struct eap_config {
 	Boolean backend_auth;
 	int eap_server;
 	u8 *pac_opaque_encr_key;
-	char *eap_fast_a_id;
+	u8 *eap_fast_a_id;
+	size_t eap_fast_a_id_len;
+	char *eap_fast_a_id_info;
 	int eap_fast_prov;
 	int pac_key_lifetime;
 	int pac_key_refresh_time;

@@ -1509,8 +1509,26 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				errors++;
 			}
 		} else if (os_strcmp(buf, "eap_fast_a_id") == 0) {
-			os_free(bss->eap_fast_a_id);
-			bss->eap_fast_a_id = os_strdup(pos);
+			size_t idlen = os_strlen(pos);
+			if (idlen & 1) {
+				printf("Line %d: Invalid eap_fast_a_id\n",
+				       line);
+				errors++;
+			} else {
+				os_free(bss->eap_fast_a_id);
+				bss->eap_fast_a_id = os_malloc(idlen / 2);
+				if (bss->eap_fast_a_id == NULL ||
+				    hexstr2bin(pos, bss->eap_fast_a_id,
+					       idlen / 2)) {
+					printf("Line %d: Failed to parse "
+					       "eap_fast_a_id\n", line);
+					errors++;
+				} else
+					bss->eap_fast_a_id_len = idlen / 2;
+			}
+		} else if (os_strcmp(buf, "eap_fast_a_id_info") == 0) {
+			os_free(bss->eap_fast_a_id_info);
+			bss->eap_fast_a_id_info = os_strdup(pos);
 		} else if (os_strcmp(buf, "eap_fast_prov") == 0) {
 			bss->eap_fast_prov = atoi(pos);
 		} else if (os_strcmp(buf, "pac_key_lifetime") == 0) {
@@ -2164,6 +2182,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->dh_file);
 	os_free(conf->pac_opaque_encr_key);
 	os_free(conf->eap_fast_a_id);
+	os_free(conf->eap_fast_a_id_info);
 	os_free(conf->eap_sim_db);
 	os_free(conf->radius_server_clients);
 	os_free(conf->test_socket);

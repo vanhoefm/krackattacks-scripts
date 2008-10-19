@@ -171,7 +171,9 @@ struct eap_sm {
 	u8 *peer_challenge;
 
 	u8 *pac_opaque_encr_key;
-	char *eap_fast_a_id;
+	u8 *eap_fast_a_id;
+	size_t eap_fast_a_id_len;
+	char *eap_fast_a_id_info;
 	enum {
 		NO_PROV, ANON_PROV, AUTH_PROV, BOTH_PROV
 	} eap_fast_prov;

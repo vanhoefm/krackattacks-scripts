@@ -1109,6 +1109,15 @@ void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 		break;
 	case WPA_REAUTH:
 	case WPA_REAUTH_EAPOL:
+		if (sm->GUpdateStationKeys) {
+			/*
+			 * Reauthentication cancels the pending group key
+			 * update for this STA.
+			 */
+			sm->group->GKeyDoneStations--;
+			sm->GUpdateStationKeys = FALSE;
+			sm->PtkGroupInit = TRUE;
+		}
 		sm->ReAuthenticationRequest = TRUE;
 		break;
 	case WPA_ASSOC_FT:
@@ -1760,9 +1769,10 @@ SM_STATE(WPA_PTK_GROUP, KEYERROR)
 
 SM_STEP(WPA_PTK_GROUP)
 {
-	if (sm->Init)
+	if (sm->Init || sm->PtkGroupInit) {
 		SM_ENTER(WPA_PTK_GROUP, IDLE);
-	else switch (sm->wpa_ptk_group_state) {
+		sm->PtkGroupInit = FALSE;
+	} else switch (sm->wpa_ptk_group_state) {
 	case WPA_PTK_GROUP_IDLE:
 		if (sm->GUpdateStationKeys ||
 		    (sm->wpa == WPA_VERSION_WPA && sm->PInitAKeys))
@@ -1844,8 +1854,18 @@ static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 				"Not in PTKINITDONE; skip Group Key update");
 		return 0;
 	}
-	sm->group->GKeyDoneStations++;
-	sm->GUpdateStationKeys = TRUE;
+	if (sm->GUpdateStationKeys) {
+		/*
+		 * This should not really happen, but just in case, make sure
+		 * we do not count the same STA twice in GKeyDoneStations.
+		 */
+		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+				"GUpdateStationKeys already set - do not "
+				"increment GKeyDoneStations");
+	} else {
+		sm->group->GKeyDoneStations++;
+		sm->GUpdateStationKeys = TRUE;
+	}
 	wpa_sm_step(sm);
 	return 0;
 }

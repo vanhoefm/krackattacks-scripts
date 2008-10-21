@@ -71,6 +71,7 @@ struct wpa_state_machine {
 	Boolean PInitAKeys; /* WPA only, not in IEEE 802.11i */
 	Boolean PTKRequest; /* not in IEEE 802.11i state machine */
 	Boolean has_GTK;
+	Boolean PtkGroupInit; /* init request for PTK Group state machine */
 
 	u8 *last_rx_eapol_key; /* starting from IEEE 802.1X header */
 	size_t last_rx_eapol_key_len;

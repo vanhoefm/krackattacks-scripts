@@ -103,6 +103,8 @@ static int ack_handler(struct nl_msg *msg, void *arg)
 
 static int finish_handler(struct nl_msg *msg, void *arg)
 {
+	int *ret = arg;
+	*ret = 0;
 	return NL_SKIP;
 }
 
@@ -133,7 +135,7 @@ static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 	err = 1;
 
 	nl_cb_err(cb, NL_CB_CUSTOM, error_handler, &err);
-	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, NULL);
+	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, finish_handler, &err);
 	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, ack_handler, &err);
 
 	if (valid_handler)

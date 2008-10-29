@@ -433,7 +433,9 @@ static void eap_gpsk_process_gpsk_2(struct eap_sm *sm,
 	miclen = eap_gpsk_mic_len(data->vendor, data->specifier);
 	if (end - pos < (int) miclen) {
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Message too short for MIC "
-			   "(left=%d miclen=%d)", end - pos, miclen);
+			   "(left=%lu miclen=%lu)",
+			   (unsigned long) (end - pos),
+			   (unsigned long) miclen);
 		eap_gpsk_state(data, FAILURE);
 		return;
 	}
@@ -454,8 +456,9 @@ static void eap_gpsk_process_gpsk_2(struct eap_sm *sm,
 	pos += miclen;
 
 	if (pos != end) {
-		wpa_printf(MSG_DEBUG, "EAP-GPSK: Ignored %d bytes of extra "
-			   "data in the end of GPSK-2", end - pos);
+		wpa_printf(MSG_DEBUG, "EAP-GPSK: Ignored %lu bytes of extra "
+			   "data in the end of GPSK-2",
+			   (unsigned long) (end - pos));
 	}
 
 	eap_gpsk_state(data, GPSK_3);
@@ -499,7 +502,9 @@ static void eap_gpsk_process_gpsk_4(struct eap_sm *sm,
 	miclen = eap_gpsk_mic_len(data->vendor, data->specifier);
 	if (end - pos < (int) miclen) {
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Message too short for MIC "
-			   "(left=%d miclen=%d)", end - pos, miclen);
+			   "(left=%lu miclen=%lu)",
+			   (unsigned long) (end - pos),
+			   (unsigned long) miclen);
 		eap_gpsk_state(data, FAILURE);
 		return;
 	}
@@ -520,8 +525,9 @@ static void eap_gpsk_process_gpsk_4(struct eap_sm *sm,
 	pos += miclen;
 
 	if (pos != end) {
-		wpa_printf(MSG_DEBUG, "EAP-GPSK: Ignored %d bytes of extra "
-			   "data in the end of GPSK-4", end - pos);
+		wpa_printf(MSG_DEBUG, "EAP-GPSK: Ignored %lu bytes of extra "
+			   "data in the end of GPSK-4",
+			   (unsigned long) (end - pos));
 	}
 
 	eap_gpsk_state(data, SUCCESS);

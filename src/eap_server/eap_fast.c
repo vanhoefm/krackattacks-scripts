@@ -1030,20 +1030,21 @@ static void eap_fast_process_phase2_eap(struct eap_sm *sm,
 	hdr = (struct eap_hdr *) in_data;
 	if (in_len < (int) sizeof(*hdr)) {
 		wpa_printf(MSG_INFO, "EAP-FAST: Too short Phase 2 "
-			   "EAP frame (len=%d)", in_len);
+			   "EAP frame (len=%lu)", (unsigned long) in_len);
 		eap_fast_req_failure(sm, data);
 		return;
 	}
 	len = be_to_host16(hdr->length);
 	if (len > in_len) {
 		wpa_printf(MSG_INFO, "EAP-FAST: Length mismatch in "
-			   "Phase 2 EAP frame (len=%d hdr->length=%d)",
-			   in_len, len);
+			   "Phase 2 EAP frame (len=%lu hdr->length=%lu)",
+			   (unsigned long) in_len, (unsigned long) len);
 		eap_fast_req_failure(sm, data);
 		return;
 	}
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Received Phase 2: code=%d "
-		   "identifier=%d length=%d", hdr->code, hdr->identifier, len);
+		   "identifier=%d length=%lu", hdr->code, hdr->identifier,
+		   (unsigned long) len);
 	switch (hdr->code) {
 	case EAP_CODE_RESPONSE:
 		eap_fast_process_phase2_response(sm, data, (u8 *) hdr, len);

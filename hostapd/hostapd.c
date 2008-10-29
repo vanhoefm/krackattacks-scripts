@@ -1362,6 +1362,28 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 }
 
 
+static void hostapd_tx_queue_params(struct hostapd_iface *iface)
+{
+	struct hostapd_data *hapd = iface->bss[0];
+	int i;
+	struct hostapd_tx_queue_params *p;
+
+	for (i = 0; i < NUM_TX_QUEUES; i++) {
+		p = &iface->conf->tx_queue[i];
+
+		if (!p->configured)
+			continue;
+
+		if (hostapd_set_tx_queue_params(hapd, i, p->aifs, p->cwmin,
+						p->cwmax, p->burst)) {
+			printf("Failed to set TX queue parameters for queue %d"
+			       ".\n", i);
+			/* Continue anyway */
+		}
+	}
+}
+
+
 /**
  * setup_interface2 - Setup (initialize) an interface (part 2)
  * @iface: Pointer to interface data.
@@ -1424,6 +1446,8 @@ static int setup_interface2(struct hostapd_iface *iface)
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0)
 			prev_addr = hapd->own_addr;
 	}
+
+	hostapd_tx_queue_params(iface);
 
 	ap_list_init(iface);
 

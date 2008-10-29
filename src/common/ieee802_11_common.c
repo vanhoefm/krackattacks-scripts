@@ -199,6 +199,10 @@ ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 			elems->ht_operation = pos;
 			elems->ht_operation_len = elen;
 			break;
+		case WLAN_EID_ASSOC_COMEBACK_TIME:
+			elems->assoc_comeback = pos;
+			elems->assoc_comeback_len = elen;
+			break;
 		default:
 			unknown++;
 			if (!show_errors)

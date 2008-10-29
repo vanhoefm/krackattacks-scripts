@@ -23,6 +23,7 @@
 #include "wpa.h"
 #include "drivers/driver.h"
 #include "ieee802_11_defs.h"
+#include "ieee802_11_common.h"
 #include "mlme.h"
 
 
@@ -93,169 +94,6 @@ static int ieee80211_sta_find_ibss(struct wpa_supplicant *wpa_s);
 static int ieee80211_sta_wep_configured(struct wpa_supplicant *wpa_s);
 static void ieee80211_sta_timer(void *eloop_ctx, void *timeout_ctx);
 static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx);
-
-
-/* Parsed Information Elements */
-struct ieee802_11_elems {
-	u8 *ssid;
-	u8 ssid_len;
-	u8 *supp_rates;
-	u8 supp_rates_len;
-	u8 *fh_params;
-	u8 fh_params_len;
-	u8 *ds_params;
-	u8 ds_params_len;
-	u8 *cf_params;
-	u8 cf_params_len;
-	u8 *tim;
-	u8 tim_len;
-	u8 *ibss_params;
-	u8 ibss_params_len;
-	u8 *challenge;
-	u8 challenge_len;
-	u8 *wpa;
-	u8 wpa_len;
-	u8 *rsn;
-	u8 rsn_len;
-	u8 *erp_info;
-	u8 erp_info_len;
-	u8 *ext_supp_rates;
-	u8 ext_supp_rates_len;
-	u8 *wmm_info;
-	u8 wmm_info_len;
-	u8 *wmm_param;
-	u8 wmm_param_len;
-	u8 *mdie;
-	u8 mdie_len;
-	u8 *ftie;
-	u8 ftie_len;
-	u8 *assoc_comeback;
-	u8 assoc_comeback_len;
-};
-
-typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
-
-
-static ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
-				       struct ieee802_11_elems *elems)
-{
-	size_t left = len;
-	u8 *pos = start;
-	int unknown = 0;
-
-	os_memset(elems, 0, sizeof(*elems));
-
-	while (left >= 2) {
-		u8 id, elen;
-
-		id = *pos++;
-		elen = *pos++;
-		left -= 2;
-
-		if (elen > left) {
-#if 0
-			wpa_printf(MSG_MSGDUMP, "MLME: IEEE 802.11 element "
-				   "parse failed (id=%d elen=%d left=%d)",
-				   id, elen, left);
-#endif
-			return ParseFailed;
-		}
-
-		switch (id) {
-		case WLAN_EID_SSID:
-			elems->ssid = pos;
-			elems->ssid_len = elen;
-			break;
-		case WLAN_EID_SUPP_RATES:
-			elems->supp_rates = pos;
-			elems->supp_rates_len = elen;
-			break;
-		case WLAN_EID_FH_PARAMS:
-			elems->fh_params = pos;
-			elems->fh_params_len = elen;
-			break;
-		case WLAN_EID_DS_PARAMS:
-			elems->ds_params = pos;
-			elems->ds_params_len = elen;
-			break;
-		case WLAN_EID_CF_PARAMS:
-			elems->cf_params = pos;
-			elems->cf_params_len = elen;
-			break;
-		case WLAN_EID_TIM:
-			elems->tim = pos;
-			elems->tim_len = elen;
-			break;
-		case WLAN_EID_IBSS_PARAMS:
-			elems->ibss_params = pos;
-			elems->ibss_params_len = elen;
-			break;
-		case WLAN_EID_CHALLENGE:
-			elems->challenge = pos;
-			elems->challenge_len = elen;
-			break;
-		case WLAN_EID_VENDOR_SPECIFIC:
-			if (elen >= 4 && pos[0] == 0x00 && pos[1] == 0x50 &&
-			    pos[2] == 0xf2) {
-				/* Microsoft OUI (00:50:F2) */
-				if (pos[3] == 1) {
-					/* OUI Type 1 - WPA IE */
-					elems->wpa = pos;
-					elems->wpa_len = elen;
-				} else if (elen >= 5 && pos[3] == 2) {
-					if (pos[4] == 0) {
-						elems->wmm_info = pos;
-						elems->wmm_info_len = elen;
-					} else if (pos[4] == 1) {
-						elems->wmm_param = pos;
-						elems->wmm_param_len = elen;
-					}
-				}
-			}
-			break;
-		case WLAN_EID_RSN:
-			elems->rsn = pos;
-			elems->rsn_len = elen;
-			break;
-		case WLAN_EID_ERP_INFO:
-			elems->erp_info = pos;
-			elems->erp_info_len = elen;
-			break;
-		case WLAN_EID_EXT_SUPP_RATES:
-			elems->ext_supp_rates = pos;
-			elems->ext_supp_rates_len = elen;
-			break;
-		case WLAN_EID_MOBILITY_DOMAIN:
-			elems->mdie = pos;
-			elems->mdie_len = elen;
-			break;
-		case WLAN_EID_FAST_BSS_TRANSITION:
-			elems->ftie = pos;
-			elems->ftie_len = elen;
-			break;
-		case WLAN_EID_ASSOC_COMEBACK_TIME:
-			elems->assoc_comeback = pos;
-			elems->assoc_comeback_len = elen;
-			break;
-		default:
-#if 0
-			wpa_printf(MSG_MSGDUMP "MLME: IEEE 802.11 element "
-				   "parse ignored unknown element (id=%d "
-				   "elen=%d)", id, elen);
-#endif
-			unknown++;
-			break;
-		}
-
-		left -= elen;
-		pos += elen;
-	}
-
-	if (left)
-		return ParseFailed;
-
-	return unknown ? ParseUnknown : ParseOK;
-}
 
 
 static int ieee80211_sta_set_channel(struct wpa_supplicant *wpa_s,
@@ -906,7 +744,7 @@ static void ieee80211_auth_challenge(struct wpa_supplicant *wpa_s,
 
 	wpa_printf(MSG_DEBUG, "MLME: replying to auth challenge");
 	pos = mgmt->u.auth.variable;
-	if (ieee802_11_parse_elems(pos, len - (pos - (u8 *) mgmt), &elems)
+	if (ieee802_11_parse_elems(pos, len - (pos - (u8 *) mgmt), &elems, 0)
 	    == ParseFailed) {
 		wpa_printf(MSG_DEBUG, "MLME: failed to parse Auth(challenge)");
 		return;
@@ -1238,7 +1076,7 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 		   capab_info, status_code, aid);
 
 	pos = mgmt->u.assoc_resp.variable;
-	if (ieee802_11_parse_elems(pos, len - (pos - (u8 *) mgmt), &elems)
+	if (ieee802_11_parse_elems(pos, len - (pos - (u8 *) mgmt), &elems, 0)
 	    == ParseFailed) {
 		wpa_printf(MSG_DEBUG, "MLME: failed to parse AssocResp");
 		return;
@@ -1336,10 +1174,9 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 #if 0 /* FIX? */
 	sta->assoc_ap = 1;
 
-	if (elems.wmm_param && wpa_s->mlme.wmm_enabled) {
+	if (elems.wme && wpa_s->mlme.wmm_enabled) {
 		sta->flags |= WLAN_STA_WME;
-		ieee80211_sta_wmm_params(wpa_s, elems.wmm_param,
-					 elems.wmm_param_len);
+		ieee80211_sta_wmm_params(wpa_s, elems.wme, elems.wme_len);
 	}
 #endif
 
@@ -1492,7 +1329,7 @@ static void ieee80211_bss_info(struct wpa_supplicant *wpa_s,
 
 	ie_pos = mgmt->u.beacon.variable;
 	ie_len = len - baselen;
-	if (ieee802_11_parse_elems(ie_pos, ie_len, &elems) == ParseFailed)
+	if (ieee802_11_parse_elems(ie_pos, ie_len, &elems, 0) == ParseFailed)
 		invalid = 1;
 
 #if 0 /* FIX */
@@ -1616,52 +1453,52 @@ static void ieee80211_bss_info(struct wpa_supplicant *wpa_s,
 		bss->supp_rates_len += clen;
 	}
 
-	if (elems.wpa &&
-	    (bss->wpa_ie == NULL || bss->wpa_ie_len != elems.wpa_len ||
-	     os_memcmp(bss->wpa_ie, elems.wpa, elems.wpa_len))) {
+	if (elems.wpa_ie &&
+	    (bss->wpa_ie == NULL || bss->wpa_ie_len != elems.wpa_ie_len ||
+	     os_memcmp(bss->wpa_ie, elems.wpa_ie, elems.wpa_ie_len))) {
 		os_free(bss->wpa_ie);
-		bss->wpa_ie = os_malloc(elems.wpa_len + 2);
+		bss->wpa_ie = os_malloc(elems.wpa_ie_len + 2);
 		if (bss->wpa_ie) {
-			os_memcpy(bss->wpa_ie, elems.wpa - 2,
-				  elems.wpa_len + 2);
-			bss->wpa_ie_len = elems.wpa_len + 2;
+			os_memcpy(bss->wpa_ie, elems.wpa_ie - 2,
+				  elems.wpa_ie_len + 2);
+			bss->wpa_ie_len = elems.wpa_ie_len + 2;
 		} else
 			bss->wpa_ie_len = 0;
-	} else if (!elems.wpa && bss->wpa_ie) {
+	} else if (!elems.wpa_ie && bss->wpa_ie) {
 		os_free(bss->wpa_ie);
 		bss->wpa_ie = NULL;
 		bss->wpa_ie_len = 0;
 	}
 
-	if (elems.rsn &&
-	    (bss->rsn_ie == NULL || bss->rsn_ie_len != elems.rsn_len ||
-	     os_memcmp(bss->rsn_ie, elems.rsn, elems.rsn_len))) {
+	if (elems.rsn_ie &&
+	    (bss->rsn_ie == NULL || bss->rsn_ie_len != elems.rsn_ie_len ||
+	     os_memcmp(bss->rsn_ie, elems.rsn_ie, elems.rsn_ie_len))) {
 		os_free(bss->rsn_ie);
-		bss->rsn_ie = os_malloc(elems.rsn_len + 2);
+		bss->rsn_ie = os_malloc(elems.rsn_ie_len + 2);
 		if (bss->rsn_ie) {
-			os_memcpy(bss->rsn_ie, elems.rsn - 2,
-				  elems.rsn_len + 2);
-			bss->rsn_ie_len = elems.rsn_len + 2;
+			os_memcpy(bss->rsn_ie, elems.rsn_ie - 2,
+				  elems.rsn_ie_len + 2);
+			bss->rsn_ie_len = elems.rsn_ie_len + 2;
 		} else
 			bss->rsn_ie_len = 0;
-	} else if (!elems.rsn && bss->rsn_ie) {
+	} else if (!elems.rsn_ie && bss->rsn_ie) {
 		os_free(bss->rsn_ie);
 		bss->rsn_ie = NULL;
 		bss->rsn_ie_len = 0;
 	}
 
-	if (elems.wmm_param &&
-	    (bss->wmm_ie == NULL || bss->wmm_ie_len != elems.wmm_param_len ||
-	     os_memcmp(bss->wmm_ie, elems.wmm_param, elems.wmm_param_len))) {
+	if (elems.wme &&
+	    (bss->wmm_ie == NULL || bss->wmm_ie_len != elems.wme_len ||
+	     os_memcmp(bss->wmm_ie, elems.wme, elems.wme_len))) {
 		os_free(bss->wmm_ie);
-		bss->wmm_ie = os_malloc(elems.wmm_param_len + 2);
+		bss->wmm_ie = os_malloc(elems.wme_len + 2);
 		if (bss->wmm_ie) {
-			os_memcpy(bss->wmm_ie, elems.wmm_param - 2,
-				  elems.wmm_param_len + 2);
-			bss->wmm_ie_len = elems.wmm_param_len + 2;
+			os_memcpy(bss->wmm_ie, elems.wme - 2,
+				  elems.wme_len + 2);
+			bss->wmm_ie_len = elems.wme_len + 2;
 		} else
 			bss->wmm_ie_len = 0;
-	} else if (!elems.wmm_param && bss->wmm_ie) {
+	} else if (!elems.wme && bss->wmm_ie) {
 		os_free(bss->wmm_ie);
 		bss->wmm_ie = NULL;
 		bss->wmm_ie_len = 0;
@@ -1739,7 +1576,7 @@ static void ieee80211_rx_mgmt_beacon(struct wpa_supplicant *wpa_s,
 		return;
 
 	if (ieee802_11_parse_elems(mgmt->u.beacon.variable, len - baselen,
-				   &elems) == ParseFailed)
+				   &elems, 0) == ParseFailed)
 		return;
 
 	use_protection = 0;
@@ -1757,9 +1594,9 @@ static void ieee80211_rx_mgmt_beacon(struct wpa_supplicant *wpa_s,
 		wpa_s->mlme.cts_protect_erp_frames = use_protection;
 	}
 
-	if (elems.wmm_param && wpa_s->mlme.wmm_enabled) {
-		ieee80211_sta_wmm_params(wpa_s, elems.wmm_param,
-					 elems.wmm_param_len);
+	if (elems.wme && wpa_s->mlme.wmm_enabled) {
+		ieee80211_sta_wmm_params(wpa_s, elems.wme,
+					 elems.wme_len);
 	}
 }
 

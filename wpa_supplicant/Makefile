@@ -925,7 +925,7 @@ OBJS += ../src/utils/base64.o
 endif
 
 ifdef CONFIG_CLIENT_MLME
-OBJS += mlme.o
+OBJS += mlme.o ../src/common/ieee802_11_common.o
 CFLAGS += -DCONFIG_CLIENT_MLME
 endif
 

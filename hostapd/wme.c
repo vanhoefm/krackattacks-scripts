@@ -212,8 +212,7 @@ void hostapd_wme_action(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	}
 
 	/* extract the tspec info element */
-	if (ieee802_11_parse_elems(hapd, pos, left, &elems, 1) == ParseFailed)
-	{
+	if (ieee802_11_parse_elems(pos, left, &elems, 1) == ParseFailed) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
 			       "hostapd_wme_action - could not parse wme "

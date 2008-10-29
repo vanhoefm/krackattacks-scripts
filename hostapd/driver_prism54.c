@@ -757,7 +757,7 @@ static void prism54_handle_assoc(struct prism54_driver_data *drv,
 			resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
 			goto fail;
 		}
-		if (ieee802_11_parse_elems(drv->hapd, cb + ieofs,
+		if (ieee802_11_parse_elems(cb + ieofs,
 					   le_to_host16(mlme->size) - ieofs,
 					   &elems, 1) == ParseFailed) {
 			printf("STA " MACSTR " sent invalid association "

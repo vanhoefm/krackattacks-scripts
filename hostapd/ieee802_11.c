@@ -293,8 +293,7 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 #define OUI_MICROSOFT 0x0050f2 /* Microsoft (also used in Wi-Fi specs)
 				* 00:50:F2 */
 
-static int ieee802_11_parse_vendor_specific(struct hostapd_data *hapd,
-					    u8 *pos, size_t elen,
+static int ieee802_11_parse_vendor_specific(u8 *pos, size_t elen,
 					    struct ieee802_11_elems *elems,
 					    int show_errors)
 {
@@ -390,8 +389,7 @@ static u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211W */
 
 
-ParseRes ieee802_11_parse_elems(struct hostapd_data *hapd, u8 *start,
-				size_t len,
+ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 				struct ieee802_11_elems *elems,
 				int show_errors)
 {
@@ -461,7 +459,7 @@ ParseRes ieee802_11_parse_elems(struct hostapd_data *hapd, u8 *start,
 			elems->ext_supp_rates_len = elen;
 			break;
 		case WLAN_EID_VENDOR_SPECIFIC:
-			if (ieee802_11_parse_vendor_specific(hapd, pos, elen,
+			if (ieee802_11_parse_vendor_specific(pos, elen,
 							     elems,
 							     show_errors))
 				unknown++;
@@ -1028,8 +1026,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
 	 * is used */
-	if (ieee802_11_parse_elems(hapd, pos, left, &elems, 1) == ParseFailed
-	    || !elems.ssid) {
+	if (ieee802_11_parse_elems(pos, left, &elems, 1) == ParseFailed ||
+	    !elems.ssid) {
 		printf("STA " MACSTR " sent invalid association request\n",
 		       MAC2STR(sta->addr));
 		resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -1561,7 +1559,7 @@ static void handle_beacon(struct hostapd_data *hapd,
 		return;
 	}
 
-	(void) ieee802_11_parse_elems(hapd, mgmt->u.beacon.variable,
+	(void) ieee802_11_parse_elems(mgmt->u.beacon.variable,
 				      len - (IEEE80211_HDRLEN +
 					     sizeof(mgmt->u.beacon)), &elems,
 				      0);

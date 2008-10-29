@@ -189,8 +189,7 @@ void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	if (!hapd->iconf->send_probe_response)
 		return;
 
-	if (ieee802_11_parse_elems(hapd, ie, ie_len, &elems, 0) == ParseFailed)
-	{
+	if (ieee802_11_parse_elems(ie, ie_len, &elems, 0) == ParseFailed) {
 		wpa_printf(MSG_DEBUG, "Could not parse ProbeReq from " MACSTR,
 			   MAC2STR(mgmt->sa));
 		return;

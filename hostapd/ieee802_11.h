@@ -83,8 +83,7 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,
 		     u16 stype, struct hostapd_frame_info *fi);
 void ieee802_11_mgmt_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok);
-ParseRes ieee802_11_parse_elems(struct hostapd_data *hapd, u8 *start,
-				size_t len,
+ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 				struct ieee802_11_elems *elems,
 				int show_errors);
 void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len);

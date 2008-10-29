@@ -384,7 +384,34 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 			      int mode)
 {
+#ifdef NL80211_ATTR_BSS_BASIC_RATES
+	struct i802_driver_data *drv = priv;
+	struct nl_msg *msg;
+	u8 rates[NL80211_MAX_SUPP_RATES];
+	u8 rates_len = 0;
+	int i;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_BSS, 0);
+
+	for (i = 0; i < NL80211_MAX_SUPP_RATES && basic_rates[i] >= 0; i++)
+		rates[rates_len++] = basic_rates[i] / 5;
+
+	NLA_PUT(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len, rates);
+
+	/* TODO: multi-BSS support */
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+#else /* NL80211_ATTR_BSS_BASIC_RATES */
 	return -1;
+#endif /* NL80211_ATTR_BSS_BASIC_RATES */
 }
 
 

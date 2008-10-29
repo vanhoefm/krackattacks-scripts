@@ -23,6 +23,11 @@
 #include "ieee802_11_defs.h"
 #include "wireless_copy.h"
 
+/*
+ * Avoid conflicts with wpa_supplicant definitions by undefining a definition.
+ */
+#undef WME_OUI_TYPE
+
 #include <include/compat.h>
 #include <net80211/ieee80211.h>
 #ifdef WME_NUM_AC
@@ -32,6 +37,7 @@
 #endif /* WME_NUM_AC */
 #include <net80211/ieee80211_crypto.h>
 #include <net80211/ieee80211_ioctl.h>
+
 
 #ifdef IEEE80211_IOCTL_SETWMMPARAMS
 /* Assume this is built against madwifi-ng */

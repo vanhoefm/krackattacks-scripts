@@ -920,7 +920,48 @@ static int i802_set_regulatory_domain(void *priv, unsigned int rd)
 static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 				    int cw_min, int cw_max, int burst_time)
 {
+#ifdef NL80211_ATTR_WIPHY_TXQ_PARAMS
+	struct i802_driver_data *drv = priv;
+	struct nl_msg *msg;
+	struct nlattr *txq, *params;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_WIPHY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
+
+	txq = nla_nest_start(msg, NL80211_ATTR_WIPHY_TXQ_PARAMS);
+	if (!txq)
+		goto nla_put_failure;
+
+	/* We are only sending parameters for a single TXQ at a time */
+	params = nla_nest_start(msg, 1);
+	if (!params)
+		goto nla_put_failure;
+
+	NLA_PUT_U8(msg, NL80211_TXQ_ATTR_QUEUE, queue);
+	/* Burst time is configured in units of 0.1 msec and TXOP parameter in
+	 * 32 usec, so need to convert the value here. */
+	NLA_PUT_U16(msg, NL80211_TXQ_ATTR_TXOP, (burst_time * 100 + 16) / 32);
+	NLA_PUT_U16(msg, NL80211_TXQ_ATTR_CWMIN, cw_min);
+	NLA_PUT_U16(msg, NL80211_TXQ_ATTR_CWMAX, cw_max);
+	NLA_PUT_U8(msg, NL80211_TXQ_ATTR_AIFS, aifs);
+
+	nla_nest_end(msg, params);
+
+	nla_nest_end(msg, txq);
+
+	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+		return 0;
+ nla_put_failure:
 	return -1;
+#else /* NL80211_ATTR_WIPHY_TXQ_PARAMS */
+	return -1;
+#endif /* NL80211_ATTR_WIPHY_TXQ_PARAMS */
 }
 
 

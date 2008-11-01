@@ -23,6 +23,9 @@ ChangeLog for hostapd
 	  A-ID-Info (eap_fast_a_id_info) to allow A-ID to be set to a fixed
 	  16-octet len binary value for better interoperability with some peer
 	  implementations; eap_fast_a_id is now configured as a hex string
+	* driver_nl80211: Updated to match the current Linux mac80211 AP mode
+	  configuration (wireless-testing.git and Linux kernel releases
+	  starting from 2.6.29)
 
 2008-08-10 - v0.6.4
 	* added peer identity into EAP-FAST PAC-Opaque and skip Phase 2

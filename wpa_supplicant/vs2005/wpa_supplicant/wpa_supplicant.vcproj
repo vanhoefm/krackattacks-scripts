@@ -271,15 +271,15 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\eap_common\eap_peap_common.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\eap_peer\eap_tls.c"
 				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\eap_peer\eap_tls_common.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\eap_peer\eap_tlv.c"
 				>
 			</File>
 			<File
@@ -320,6 +320,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\crypto\ms_funcs.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\eap_peer\mschapv2.c"
 				>
 			</File>
 			<File

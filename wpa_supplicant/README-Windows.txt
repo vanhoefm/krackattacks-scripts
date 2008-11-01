@@ -67,10 +67,11 @@ Studio 2005 using the included nmake.mak as a Makefile for nmake. IDE
 can also be used by creating a project that includes the files and
 defines mentioned in nmake.mak. Example VS2005 solution and project
 files are included in vs2005 subdirectory. This can be used as a
-starting point for building the programs with VS2005 IDE.
+starting point for building the programs with VS2005 IDE. Visual Studio
+2008 Express Edition is also able to use these project files.
 
 WinPcap development package is needed for the build and this can be
-downloaded from http://www.winpcap.org/install/bin/WpdPack_3_1.zip. The
+downloaded from http://www.winpcap.org/install/bin/WpdPack_4_0_2.zip. The
 default nmake.mak expects this to be unpacked into C:\dev\WpdPack so
 that Include and Lib directories are in this directory. The files can be
 stored elsewhere as long as the WINPCAPDIR in nmake.mak is updated to
@@ -79,10 +80,10 @@ used, these Include and Lib directories need to be added to project
 properties as additional include/library directories.
 
 OpenSSL source package can be downloaded from
-http://www.openssl.org/source/openssl-0.9.8b.tar.gz and built and
+http://www.openssl.org/source/openssl-0.9.8i.tar.gz and built and
 installed following instructions in INSTALL.W32. Note that if EAP-FAST
 support will be included in the wpa_supplicant, OpenSSL needs to be
-patched to# support it openssl-tls-extensions.patch. The example
+patched to# support it openssl-0.9.8i-tls-extensions.patch. The example
 nmake.mak file expects OpenSSL to be installed into C:\dev\openssl, but
 this directory can be modified by changing OPENSSLDIR variable in
 nmake.mak.

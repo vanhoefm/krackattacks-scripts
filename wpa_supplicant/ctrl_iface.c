@@ -1250,6 +1250,10 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	char *pos, *end;
 	const u8 *ie, *ie2;
 
+	if (wpa_s->scan_res == NULL &&
+	    wpa_supplicant_get_scan_results(wpa_s) < 0)
+		return 0;
+
 	results = wpa_s->scan_res;
 	if (results == NULL)
 		return 0;

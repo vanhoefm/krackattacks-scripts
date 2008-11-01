@@ -533,8 +533,6 @@ static void eap_fast_write(char **buf, char **pos, size_t *buf_len,
 static int eap_fast_write_pac(struct eap_sm *sm, const char *pac_file,
 			      char *buf, size_t len)
 {
-	int ret = 0;
-
 	if (os_strncmp(pac_file, "blob://", 7) == 0) {
 		struct wpa_config_blob *blob;
 		blob = os_zalloc(sizeof(*blob));
@@ -560,13 +558,14 @@ static int eap_fast_write_pac(struct eap_sm *sm, const char *pac_file,
 		if (fwrite(buf, 1, len, f) != len) {
 			wpa_printf(MSG_INFO, "EAP-FAST: Failed to write all "
 				   "PACs into '%s'", pac_file);
-			ret = -1;
+			fclose(f);
+			return -1;
 		}
 		os_free(buf);
 		fclose(f);
 	}
 
-	return ret;
+	return 0;
 }
 
 

@@ -1269,32 +1269,32 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	bss = results->res[i];
 	pos = buf;
 	end = buf + buflen;
-	ret = snprintf(pos, end - pos,
-		       "bssid=" MACSTR "\n"
-		       "freq=%d\n"
-		       "beacon_int=%d\n"
-		       "capabilities=0x%04x\n"
-		       "qual=%d\n"
-		       "noise=%d\n"
-		       "level=%d\n"
-		       "tsf=%016llu\n"
-		       "ie=",
-		       MAC2STR(bss->bssid), bss->freq, bss->beacon_int,
-		       bss->caps, bss->qual, bss->noise, bss->level,
-		       (unsigned long long) bss->tsf);
+	ret = os_snprintf(pos, end - pos,
+			  "bssid=" MACSTR "\n"
+			  "freq=%d\n"
+			  "beacon_int=%d\n"
+			  "capabilities=0x%04x\n"
+			  "qual=%d\n"
+			  "noise=%d\n"
+			  "level=%d\n"
+			  "tsf=%016llu\n"
+			  "ie=",
+			  MAC2STR(bss->bssid), bss->freq, bss->beacon_int,
+			  bss->caps, bss->qual, bss->noise, bss->level,
+			  (unsigned long long) bss->tsf);
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;
 
 	ie = (const u8 *) (bss + 1);
 	for (i = 0; i < bss->ie_len; i++) {
-		ret = snprintf(pos, end - pos, "%02x", *ie++);
+		ret = os_snprintf(pos, end - pos, "%02x", *ie++);
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
 	}
 
-	ret = snprintf(pos, end - pos, "\n");
+	ret = os_snprintf(pos, end - pos, "\n");
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;
@@ -1323,7 +1323,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		pos += ret;
 	}
 
-	ret = snprintf(pos, end - pos, "\n");
+	ret = os_snprintf(pos, end - pos, "\n");
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;

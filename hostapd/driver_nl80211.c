@@ -415,28 +415,6 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 }
 
 
-static int i802_set_ssid(const char *ifname, void *priv, const u8 *buf,
-			 int len)
-{
-	struct i802_driver_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, ifname, IFNAMSIZ);
-	iwr.u.essid.flags = 1; /* SSID active */
-	iwr.u.essid.pointer = (caddr_t) buf;
-	iwr.u.essid.length = len;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCSIWESSID]");
-		printf("len=%d\n", len);
-		return -1;
-	}
-
-	return 0;
-}
-
-
 static int i802_send_frame(void *priv, const void *data, size_t len,
 			   int encrypt, int flags)
 {
@@ -2385,7 +2363,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
 	.sta_remove = i802_sta_remove,
-	.set_ssid = i802_set_ssid,
 	.send_mgmt_frame = i802_send_mgmt_frame,
 	.sta_add2 = i802_sta_add2,
 	.get_inact_sec = i802_get_inact_sec,

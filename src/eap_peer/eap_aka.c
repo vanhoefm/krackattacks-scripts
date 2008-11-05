@@ -20,6 +20,10 @@
 #include "eap_common/eap_sim_common.h"
 #include "sha1.h"
 #include "crypto.h"
+#include "eap_peer/eap_config.h"
+#ifdef CONFIG_USIM_SIMULATOR
+#include "hlr_auc_gw/milenage.h"
+#endif /* CONFIG_USIM_SIMULATOR */
 
 
 struct eap_aka_data {
@@ -116,12 +120,58 @@ static void eap_aka_deinit(struct eap_sm *sm, void *priv)
 
 static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 {
+	struct eap_peer_config *conf;
+
 	wpa_printf(MSG_DEBUG, "EAP-AKA: UMTS authentication algorithm");
-#ifdef PCSC_FUNCS
-	return scard_umts_auth(sm->scard_ctx, data->rand,
-			       data->autn, data->res, &data->res_len,
-			       data->ik, data->ck, data->auts);
-#else /* PCSC_FUNCS */
+
+	conf = eap_get_config(sm);
+	if (conf == NULL)
+		return -1;
+	if (conf->pcsc) {
+		return scard_umts_auth(sm->scard_ctx, data->rand,
+				       data->autn, data->res, &data->res_len,
+				       data->ik, data->ck, data->auts);
+	}
+
+#ifdef CONFIG_USIM_SIMULATOR
+	if (conf->password) {
+		u8 opc[16], k[16], sqn[6];
+		const char *pos;
+		wpa_printf(MSG_DEBUG, "EAP-AKA: Use internal Milenage "
+			   "implementation for UMTS authentication");
+		if (conf->password_len < 78) {
+			wpa_printf(MSG_DEBUG, "EAP-AKA: invalid Milenage "
+				   "password");
+			return -1;
+		}
+		pos = (const char *) conf->password;
+		if (hexstr2bin(pos, k, 16))
+			return -1;
+		pos += 32;
+		if (*pos != ':')
+			return -1;
+		pos++;
+
+		if (hexstr2bin(pos, opc, 16))
+			return -1;
+		pos += 32;
+		if (*pos != ':')
+			return -1;
+		pos++;
+
+		if (hexstr2bin(pos, sqn, 6))
+			return -1;
+
+		return milenage_check(opc, k, sqn, data->rand, data->autn,
+				      data->ik, data->ck,
+				      data->res, &data->res_len, data->auts);
+	}
+#endif /* CONFIG_USIM_SIMULATOR */
+
+#ifdef CONFIG_USIM_HARDCODED
+	wpa_printf(MSG_DEBUG, "EAP-AKA: Use hardcoded Kc and SRES values for "
+		   "testing");
+
 	/* These hardcoded Kc and SRES values are used for testing.
 	 * Could consider making them configurable. */
 	os_memset(data->res, '2', EAP_AKA_RES_MAX_LEN);
@@ -148,7 +198,14 @@ static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 	}
 #endif
 	return 0;
-#endif /* PCSC_FUNCS */
+
+#else /* CONFIG_USIM_HARDCODED */
+
+	wpa_printf(MSG_DEBUG, "EAP-AKA: No UMTS authentication algorith "
+		   "enabled");
+	return -1;
+
+#endif /* CONFIG_USIM_HARDCODED */
 }
 
 

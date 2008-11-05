@@ -153,6 +153,9 @@ CONFIG_EAP_LEAP=y
 # EAP-AKA (enable CONFIG_PCSC, if EAP-AKA is used)
 #CONFIG_EAP_AKA=y
 
+# Enable USIM simulator (Milenage) for EAP-AKA
+#CONFIG_USIM_SIMULATOR=y
+
 # EAP-SAKE
 #CONFIG_EAP_SAKE=y
 

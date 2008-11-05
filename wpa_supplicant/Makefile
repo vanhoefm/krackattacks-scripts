@@ -578,6 +578,11 @@ LIBS += -lpcsclite -lpthread
 endif
 endif
 
+ifdef CONFIG_USIM_SIMULATOR
+CFLAGS += -DCONFIG_USIM_SIMULATOR
+OBJS += ../src/hlr_auc_gw/milenage.o
+endif
+
 ifndef CONFIG_TLS
 CONFIG_TLS=openssl
 endif

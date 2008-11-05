@@ -1,5 +1,11 @@
 ChangeLog for wpa_supplicant
 
+????-??-?? - v0.6.6
+	* added Milenage USIM emulator for EAP-AKA (can be used to simulate
+	  test USIM card with a known private key; enable with
+	  CONFIG_USIM_SIMULATOR in .config and password="Ki:OPc:SQN" in
+	  network configuration)
+
 2008-11-01 - v0.6.5
 	* added support for SHA-256 as X.509 certificate digest when using the
 	  internal X.509/TLSv1 implementation

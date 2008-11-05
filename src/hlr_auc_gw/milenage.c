@@ -52,9 +52,9 @@ static int milenage_f1(const u8 *opc, const u8 *k, const u8 *_rand,
 		return -1;
 
 	/* tmp2 = IN1 = SQN || AMF || SQN || AMF */
-	memcpy(tmp2, sqn, 6);
-	memcpy(tmp2 + 6, amf, 2);
-	memcpy(tmp2 + 8, tmp2, 8);
+	os_memcpy(tmp2, sqn, 6);
+	os_memcpy(tmp2 + 6, amf, 2);
+	os_memcpy(tmp2 + 8, tmp2, 8);
 
 	/* OUT1 = E_K(TEMP XOR rot(IN1 XOR OP_C, r1) XOR c1) XOR OP_C */
 
@@ -72,9 +72,9 @@ static int milenage_f1(const u8 *opc, const u8 *k, const u8 *_rand,
 	for (i = 0; i < 16; i++)
 		tmp1[i] ^= opc[i];
 	if (mac_a)
-		memcpy(mac_a, tmp1, 8); /* f1 */
+		os_memcpy(mac_a, tmp1, 8); /* f1 */
 	if (mac_s)
-		memcpy(mac_s, tmp1 + 8, 8); /* f1* */
+		os_memcpy(mac_s, tmp1 + 8, 8); /* f1* */
 	return 0;
 }
 
@@ -119,9 +119,9 @@ static int milenage_f2345(const u8 *opc, const u8 *k, const u8 *_rand,
 	for (i = 0; i < 16; i++)
 		tmp3[i] ^= opc[i];
 	if (res)
-		memcpy(res, tmp3 + 8, 8); /* f2 */
+		os_memcpy(res, tmp3 + 8, 8); /* f2 */
 	if (ak)
-		memcpy(ak, tmp3, 6); /* f5 */
+		os_memcpy(ak, tmp3, 6); /* f5 */
 
 	/* f3 */
 	if (ck) {
@@ -181,7 +181,7 @@ void milenage_generate(const u8 *opc, const u8 *amf, const u8 *k,
 		       u8 *ck, u8 *res, size_t *res_len)
 {
 	int i;
-	u8 mac_a[16], ak[6];
+	u8 mac_a[8], ak[6];
 
 	if (*res_len < 8) {
 		*res_len = 0;
@@ -197,8 +197,8 @@ void milenage_generate(const u8 *opc, const u8 *amf, const u8 *k,
 	/* AUTN = (SQN ^ AK) || AMF || MAC */
 	for (i = 0; i < 6; i++)
 		autn[i] = sqn[i] ^ ak[i];
-	memcpy(autn + 6, amf, 2);
-	memcpy(autn + 8, mac_a, 8);
+	os_memcpy(autn + 6, amf, 2);
+	os_memcpy(autn + 8, mac_a, 8);
 }
 
 
@@ -250,11 +250,81 @@ int gsm_milenage(const u8 *opc, const u8 *k, const u8 *_rand, u8 *sres, u8 *kc)
 		kc[i] = ck[i] ^ ck[i + 8] ^ ik[i] ^ ik[i + 8];
 
 #ifdef GSM_MILENAGE_ALT_SRES
-	memcpy(sres, res, 4);
+	os_memcpy(sres, res, 4);
 #else /* GSM_MILENAGE_ALT_SRES */
 	for (i = 0; i < 4; i++)
 		sres[i] = res[i] ^ res[i + 4];
 #endif /* GSM_MILENAGE_ALT_SRES */
+	return 0;
+}
+
+
+/**
+ * milenage_generate - Generate AKA AUTN,IK,CK,RES
+ * @opc: OPc = 128-bit operator variant algorithm configuration field (encr.)
+ * @k: K = 128-bit subscriber key
+ * @sqn: SQN = 48-bit sequence number
+ * @_rand: RAND = 128-bit random challenge
+ * @autn: AUTN = 128-bit authentication token
+ * @ik: Buffer for IK = 128-bit integrity key (f4), or %NULL
+ * @ck: Buffer for CK = 128-bit confidentiality key (f3), or %NULL
+ * @res: Buffer for RES = 64-bit signed response (f2), or %NULL
+ * @res_len: Variable that will be set to RES length
+ * @auts: 112-bit buffer for AUTS
+ * Returns: 0 on success, -1 on failure, or -2 on synchronization failure
+ */
+int milenage_check(const u8 *opc, const u8 *k, const u8 *sqn, const u8 *_rand,
+		   const u8 *autn, u8 *ik, u8 *ck, u8 *res, size_t *res_len,
+		   u8 *auts)
+{
+	int i;
+	u8 mac_a[8], ak[6], rx_sqn[6];
+	const u8 *amf;
+
+	wpa_hexdump(MSG_DEBUG, "Milenage: AUTN", autn, 16);
+	wpa_hexdump(MSG_DEBUG, "Milenage: RAND", _rand, 16);
+
+	if (milenage_f2345(opc, k, _rand, res, ck, ik, ak, NULL))
+		return -1;
+
+	*res_len = 8;
+	wpa_hexdump_key(MSG_DEBUG, "Milenage: RES", res, *res_len);
+	wpa_hexdump_key(MSG_DEBUG, "Milenage: CK", ck, 6);
+	wpa_hexdump_key(MSG_DEBUG, "Milenage: IK", ik, 6);
+	wpa_hexdump_key(MSG_DEBUG, "Milenage: AK", ak, 6);
+
+	/* AUTN = (SQN ^ AK) || AMF || MAC */
+	for (i = 0; i < 6; i++)
+		rx_sqn[i] = autn[i] ^ ak[i];
+	wpa_hexdump(MSG_DEBUG, "Milenage: SQN", rx_sqn, 6);
+
+	if (os_memcmp(rx_sqn, sqn, 6) <= 0) {
+		u8 auts_amf[2] = { 0x00, 0x00 }; /* TS 33.102 v7.0.0, 6.3.3 */
+		if (milenage_f2345(opc, k, _rand, NULL, NULL, NULL, NULL, ak))
+			return -1;
+		wpa_hexdump_key(MSG_DEBUG, "Milenage: AK*", ak, 6);
+		for (i = 0; i < 6; i++)
+			auts[i] = sqn[i] ^ ak[i];
+		if (milenage_f1(opc, k, _rand, sqn, auts_amf, NULL, auts + 6))
+			return -1;
+		wpa_hexdump(MSG_DEBUG, "Milenage: AUTS", auts, 14);
+		return -2;
+	}
+
+	amf = autn + 6;
+	wpa_hexdump(MSG_DEBUG, "Milenage: AMF", amf, 2);
+	if (milenage_f1(opc, k, _rand, rx_sqn, amf, mac_a, NULL))
+		return -1;
+
+	wpa_hexdump(MSG_DEBUG, "Milenage: MAC_A", mac_a, 8);
+
+	if (os_memcmp(mac_a, autn + 8, 8) != 0) {
+		wpa_printf(MSG_DEBUG, "Milenage: MAC mismatch");
+		wpa_hexdump(MSG_DEBUG, "Milenage: Received MAC_A",
+			    autn + 8, 8);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -1006,17 +1076,18 @@ int main(int argc, char *argv[])
 	}
 
 	printf("milenage_auts test:\n");
-	memcpy(auts, "\x4f\x20\x39\x39\x2d\xdd", 6);
-	memcpy(auts + 6, "\x4b\xb4\x31\x6e\xd4\xa1\x46\x88", 8);
+	os_memcpy(auts, "\x4f\x20\x39\x39\x2d\xdd", 6);
+	os_memcpy(auts + 6, "\x4b\xb4\x31\x6e\xd4\xa1\x46\x88", 8);
 	res = milenage_auts(t->opc, t->k, t->rand, auts, buf);
 	printf("AUTS for test set %d: %d / SQN=%02x%02x%02x%02x%02x%02x\n",
 	       i, res, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
 	if (res)
 		ret++;
 
-	memset(_rand, 0xaa, sizeof(_rand));
-	memcpy(auts,
-	       "\x43\x68\x1a\xd3\xda\xf0\x06\xbc\xde\x40\x5a\x20\x72\x67", 14);
+	os_memset(_rand, 0xaa, sizeof(_rand));
+	os_memcpy(auts,
+		  "\x43\x68\x1a\xd3\xda\xf0\x06\xbc\xde\x40\x5a\x20\x72\x67",
+		  14);
 	res = milenage_auts(t->opc, t->k, _rand, auts, buf);
 	printf("AUTS from a test USIM: %d / SQN=%02x%02x%02x%02x%02x%02x\n",
 	       res, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
@@ -1024,9 +1095,9 @@ int main(int argc, char *argv[])
 		ret++;
 
 	printf("milenage_generate test:\n");
-	memcpy(sqn, "\x00\x00\x00\x00\x40\x44", 6);
-	memcpy(_rand, "\x12\x69\xb8\x23\x41\x39\x35\x66\xfb\x99\x41\xe9\x84"
-	       "\x4f\xe6\x2f", 16);
+	os_memcpy(sqn, "\x00\x00\x00\x00\x40\x44", 6);
+	os_memcpy(_rand, "\x12\x69\xb8\x23\x41\x39\x35\x66\xfb\x99\x41\xe9\x84"
+		  "\x4f\xe6\x2f", 16);
 	res_len = 8;
 	milenage_generate(t->opc, t->amf, t->k, sqn, _rand, buf, buf2, buf3,
 			  buf4, &res_len);

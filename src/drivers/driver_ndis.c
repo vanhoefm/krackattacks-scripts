@@ -731,6 +731,32 @@ static int wpa_driver_ndis_scan(void *priv, const u8 *ssid, size_t ssid_len)
 }
 
 
+static struct wpa_scan_res * wpa_driver_ndis_add_scan_ssid(
+	struct wpa_scan_res *r, NDIS_802_11_SSID *ssid)
+{
+	struct wpa_scan_res *nr;
+	u8 *pos;
+
+	if (wpa_scan_get_ie(r, WLAN_EID_SSID))
+		return r; /* SSID IE already present */
+
+	if (ssid->SsidLength == 0 || ssid->SsidLength > 32)
+		return r; /* No valid SSID inside scan data */
+
+	nr = os_realloc(r, sizeof(*r) + r->ie_len + 2 + ssid->SsidLength);
+	if (nr == NULL)
+		return r;
+
+	pos = ((u8 *) (nr + 1)) + nr->ie_len;
+	*pos++ = WLAN_EID_SSID;
+	*pos++ = ssid->SsidLength;
+	os_memcpy(pos, ssid->Ssid, ssid->SsidLength);
+	nr->ie_len += 2 + ssid->SsidLength;
+
+	return nr;
+}
+
+
 static struct wpa_scan_results * wpa_driver_ndis_get_scan_results(void *priv)
 {
 	struct wpa_driver_ndis_data *drv = priv;
@@ -804,6 +830,7 @@ static struct wpa_scan_results * wpa_driver_ndis_get_scan_results(void *priv)
 		os_memcpy(r + 1, bss->IEs + sizeof(NDIS_802_11_FIXED_IEs),
 			  bss->IELength - sizeof(NDIS_802_11_FIXED_IEs));
 		r->ie_len = bss->IELength - sizeof(NDIS_802_11_FIXED_IEs);
+		r = wpa_driver_ndis_add_scan_ssid(r, &bss->Ssid);
 
 		results->res[results->num++] = r;
 

@@ -43,6 +43,7 @@ static int wpa_verify_key_mic(struct wpa_ptk *PTK, u8 *data, size_t data_len);
 static void wpa_sm_call_step(void *eloop_ctx, void *timeout_ctx);
 static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 			      struct wpa_group *group);
+static void wpa_request_new_ptk(struct wpa_state_machine *sm);
 
 /* Default timeouts are 100 ms, but this seems to be a bit too fast for most
  * WPA Supplicants, so use a bit longer timeout. */
@@ -257,6 +258,17 @@ static void wpa_rekey_gtk(void *eloop_ctx, void *timeout_ctx)
 		eloop_register_timeout(wpa_auth->conf.wpa_group_rekey,
 				       0, wpa_rekey_gtk, wpa_auth, NULL);
 	}
+}
+
+
+static void wpa_rekey_ptk(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_authenticator *wpa_auth = eloop_ctx;
+	struct wpa_state_machine *sm = timeout_ctx;
+
+	wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG, "rekeying PTK");
+	wpa_request_new_ptk(sm);
+	wpa_sm_step(sm);
 }
 
 
@@ -528,6 +540,7 @@ void wpa_auth_sta_deinit(struct wpa_state_machine *sm)
 
 	eloop_cancel_timeout(wpa_send_eapol_timeout, sm->wpa_auth, sm);
 	eloop_cancel_timeout(wpa_sm_call_step, sm, NULL);
+	eloop_cancel_timeout(wpa_rekey_ptk, sm->wpa_auth, sm);
 	if (sm->in_step_loop) {
 		/* Must not free state machine while wpa_sm_step() is running.
 		 * Freeing will be completed in the end of wpa_sm_step(). */
@@ -1086,6 +1099,7 @@ void wpa_remove_ptk(struct wpa_state_machine *sm)
 	os_memset(&sm->PTK, 0, sizeof(sm->PTK));
 	wpa_auth_set_key(sm->wpa_auth, 0, "none", sm->addr, 0, (u8 *) "", 0);
 	sm->pairwise_set = FALSE;
+	eloop_cancel_timeout(wpa_rekey_ptk, sm->wpa_auth, sm);
 }
 
 
@@ -1552,6 +1566,13 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 		}
 		/* FIX: MLME-SetProtection.Request(TA, Tx_Rx) */
 		sm->pairwise_set = TRUE;
+
+		if (sm->wpa_auth->conf.wpa_ptk_rekey) {
+			eloop_cancel_timeout(wpa_rekey_ptk, sm->wpa_auth, sm);
+			eloop_register_timeout(sm->wpa_auth->conf.
+					       wpa_ptk_rekey, 0, wpa_rekey_ptk,
+					       sm->wpa_auth, sm);
+		}
 
 		if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
 			wpa_auth_set_eapol(sm->wpa_auth, sm->addr,

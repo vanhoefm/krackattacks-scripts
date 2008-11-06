@@ -60,6 +60,7 @@ struct wpa_sm {
 	void *eap_conf_ctx;
 	u8 ssid[32];
 	size_t ssid_len;
+	int wpa_ptk_rekey;
 
 	u8 own_addr[ETH_ALEN];
 	const char *ifname;

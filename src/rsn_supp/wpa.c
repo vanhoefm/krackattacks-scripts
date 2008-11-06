@@ -133,7 +133,6 @@ void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
  * @error: Indicate whether this is an Michael MIC error report
  * @pairwise: 1 = error report for pairwise packet, 0 = for group packet
- * Returns: Pointer to the current network structure or %NULL on failure
  *
  * Send an EAPOL-Key Request to the current authenticator. This function is
  * used to request rekeying and it is usually called when a local Michael MIC
@@ -489,6 +488,14 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 }
 
 
+static void wpa_sm_rekey_ptk(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_sm *sm = eloop_ctx;
+	wpa_printf(MSG_DEBUG, "WPA: Request PTK rekeying");
+	wpa_sm_key_request(sm, 0, 1);
+}
+
+
 static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 				      const struct wpa_eapol_key *key)
 {
@@ -533,6 +540,13 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 			   "driver.");
 		return -1;
 	}
+
+	if (sm->wpa_ptk_rekey) {
+		eloop_cancel_timeout(wpa_sm_rekey_ptk, sm, NULL);
+		eloop_register_timeout(sm->wpa_ptk_rekey, 0, wpa_sm_rekey_ptk,
+				       sm, NULL);
+	}
+
 	return 0;
 }
 
@@ -1849,6 +1863,7 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 		return;
 	pmksa_cache_deinit(sm->pmksa);
 	eloop_cancel_timeout(wpa_sm_start_preauth, sm, NULL);
+	eloop_cancel_timeout(wpa_sm_rekey_ptk, sm, NULL);
 	os_free(sm->assoc_wpa_ie);
 	os_free(sm->ap_wpa_ie);
 	os_free(sm->ap_rsn_ie);
@@ -2018,6 +2033,7 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 			sm->ssid_len = config->ssid_len;
 		} else
 			sm->ssid_len = 0;
+		sm->wpa_ptk_rekey = config->wpa_ptk_rekey;
 	} else {
 		sm->network_ctx = NULL;
 		sm->peerkey_enabled = 0;
@@ -2026,6 +2042,7 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 		sm->eap_workaround = 0;
 		sm->eap_conf_ctx = NULL;
 		sm->ssid_len = 0;
+		sm->wpa_ptk_rekey = 0;
 	}
 	if (config == NULL || config->network_ctx != sm->network_ctx)
 		pmksa_cache_notify_reconfig(sm->pmksa);

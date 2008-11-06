@@ -1697,6 +1697,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->wpa_strict_rekey = atoi(pos);
 		} else if (os_strcmp(buf, "wpa_gmk_rekey") == 0) {
 			bss->wpa_gmk_rekey = atoi(pos);
+		} else if (os_strcmp(buf, "wpa_ptk_rekey") == 0) {
+			bss->wpa_ptk_rekey = atoi(pos);
 		} else if (os_strcmp(buf, "wpa_passphrase") == 0) {
 			int len = os_strlen(pos);
 			if (len < 8 || len > 63) {

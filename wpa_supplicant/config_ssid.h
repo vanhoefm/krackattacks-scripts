@@ -334,6 +334,14 @@ struct wpa_ssid {
 	 * will be used instead of this configured value.
 	 */
 	int frequency;
+
+	/**
+	 * wpa_ptk_rekey - Maximum lifetime for PTK in seconds
+	 *
+	 * This value can be used to enforce rekeying of PTK to mitigate some
+	 * attacks against TKIP deficiencies.
+	 */
+	int wpa_ptk_rekey;
 };
 
 #endif /* CONFIG_SSID_H */

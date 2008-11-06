@@ -626,6 +626,7 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 #endif /* IEEE8021X_EAPOL */
 		conf.ssid = ssid->ssid;
 		conf.ssid_len = ssid->ssid_len;
+		conf.wpa_ptk_rekey = ssid->wpa_ptk_rekey;
 	}
 	wpa_sm_set_config(wpa_s->wpa, ssid ? &conf : NULL);
 }

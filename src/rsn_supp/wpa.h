@@ -85,6 +85,7 @@ struct rsn_supp_config {
 	void *eap_conf_ctx;
 	const u8 *ssid;
 	size_t ssid_len;
+	int wpa_ptk_rekey;
 };
 
 #ifndef CONFIG_NO_WPA

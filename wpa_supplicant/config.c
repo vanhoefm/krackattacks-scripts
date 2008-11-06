@@ -1357,7 +1357,8 @@ static const struct parse_data ssid_fields[] = {
 #endif /* CONFIG_IEEE80211W */
 	{ INT_RANGE(peerkey, 0, 1) },
 	{ INT_RANGE(mixed_cell, 0, 1) },
-	{ INT_RANGE(frequency, 0, 10000) }
+	{ INT_RANGE(frequency, 0, 10000) },
+	{ INT(wpa_ptk_rekey) }
 };
 
 #undef OFFSET

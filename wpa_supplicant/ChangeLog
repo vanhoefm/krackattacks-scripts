@@ -5,6 +5,9 @@ ChangeLog for wpa_supplicant
 	  (can be used to simulate test SIM/USIM card with a known private key;
 	  enable with CONFIG_SIM_SIMULATOR=y/CONFIG_USIM_SIMULATOR=y in .config
 	  and password="Ki:OPc"/password="Ki:OPc:SQN" in network configuration)
+	* added a new network configuration option, wpa_ptk_rekey, that can be
+	  used to enforce frequent PTK rekeying, e.g., to mitigate some attacks
+	  against TKIP deficiencies
 
 2008-11-01 - v0.6.5
 	* added support for SHA-256 as X.509 certificate digest when using the

@@ -1194,7 +1194,9 @@ static int eap_fast_process_decrypted(struct eap_sm *sm,
 	}
 
 	if (data->current_pac == NULL && data->provisioning &&
-	    !data->anon_provisioning && !tlv.pac) {
+	    !data->anon_provisioning && !tlv.pac &&
+	    (tlv.iresult == EAP_TLV_RESULT_SUCCESS ||
+	     tlv.result == EAP_TLV_RESULT_SUCCESS)) {
 		/*
 		 * Need to request Tunnel PAC when using authenticated
 		 * provisioning.

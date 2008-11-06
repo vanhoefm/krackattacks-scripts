@@ -241,12 +241,20 @@ static int eap_fast_session_ticket_cb(void *ctx, const u8 *ticket, size_t len,
 	if (os_get_time(&now) < 0 || lifetime <= 0 || now.sec > lifetime) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: PAC-Key not valid anymore "
 			   "(lifetime=%ld now=%ld)", lifetime, now.sec);
-		os_free(buf);
-		return 0;
-	}
-
-	if (lifetime - now.sec < data->pac_key_refresh_time)
+		data->send_new_pac = 2;
+		/*
+		 * Allow PAC to be used to allow a PAC update with some level
+		 * of server authentication (i.e., do not fall back to full TLS
+		 * handshake since we cannot be sure that the peer would be
+		 * able to validate server certificate now). However, reject
+		 * the authentication since the PAC was not valid anymore. Peer
+		 * can connect again with the newly provisioned PAC after this.
+		 */
+	} else if (lifetime - now.sec < data->pac_key_refresh_time) {
+		wpa_printf(MSG_DEBUG, "EAP-FAST: PAC-Key soft timeout; send "
+			   "an update if authentication succeeds");
 		data->send_new_pac = 1;
+	}
 
 	eap_fast_derive_master_secret(pac_key, server_random, client_random,
 				      master_secret);
@@ -1218,7 +1226,8 @@ static void eap_fast_process_phase2_tlvs(struct eap_sm *sm,
 
 		wpa_printf(MSG_DEBUG, "EAP-FAST: PAC-Acknowledgement received "
 			   "- PAC provisioning succeeded");
-		eap_fast_state(data, data->anon_provisioning ?
+		eap_fast_state(data, (data->anon_provisioning ||
+				      data->send_new_pac == 2) ?
 			       FAILURE : SUCCESS);
 		return;
 	}

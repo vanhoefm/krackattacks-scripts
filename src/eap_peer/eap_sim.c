@@ -19,6 +19,9 @@
 #include "eap_config.h"
 #include "pcsc_funcs.h"
 #include "eap_common/eap_sim_common.h"
+#ifdef CONFIG_SIM_SIMULATOR
+#include "hlr_auc_gw/milenage.h"
+#endif /* CONFIG_SIM_SIMULATOR */
 
 
 struct eap_sim_data {
@@ -142,26 +145,76 @@ static void eap_sim_deinit(struct eap_sm *sm, void *priv)
 
 static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 {
+	struct eap_peer_config *conf;
+
 	wpa_printf(MSG_DEBUG, "EAP-SIM: GSM authentication algorithm");
-#ifdef PCSC_FUNCS
-	if (scard_gsm_auth(sm->scard_ctx, data->rand[0],
-			   data->sres[0], data->kc[0]) ||
-	    scard_gsm_auth(sm->scard_ctx, data->rand[1],
-			   data->sres[1], data->kc[1]) ||
-	    (data->num_chal > 2 &&
-	     scard_gsm_auth(sm->scard_ctx, data->rand[2],
-			    data->sres[2], data->kc[2]))) {
-		wpa_printf(MSG_DEBUG, "EAP-SIM: GSM SIM authentication could "
-			   "not be completed");
+
+	conf = eap_get_config(sm);
+	if (conf == NULL)
 		return -1;
+	if (conf->pcsc) {
+		if (scard_gsm_auth(sm->scard_ctx, data->rand[0],
+				   data->sres[0], data->kc[0]) ||
+		    scard_gsm_auth(sm->scard_ctx, data->rand[1],
+				   data->sres[1], data->kc[1]) ||
+		    (data->num_chal > 2 &&
+		     scard_gsm_auth(sm->scard_ctx, data->rand[2],
+				    data->sres[2], data->kc[2]))) {
+			wpa_printf(MSG_DEBUG, "EAP-SIM: GSM SIM "
+				   "authentication could not be completed");
+			return -1;
+		}
+		return 0;
 	}
-#else /* PCSC_FUNCS */
+
+#ifdef CONFIG_SIM_SIMULATOR
+	if (conf->password) {
+		u8 opc[16], k[16];
+		const char *pos;
+		wpa_printf(MSG_DEBUG, "EAP-SIM: Use internal GSM-Milenage "
+			   "implementation for authentication");
+		if (conf->password_len < 65) {
+			wpa_printf(MSG_DEBUG, "EAP-SIM: invalid GSM-Milenage "
+				   "password");
+			return -1;
+		}
+		pos = (const char *) conf->password;
+		if (hexstr2bin(pos, k, 16))
+			return -1;
+		pos += 32;
+		if (*pos != ':')
+			return -1;
+		pos++;
+
+		if (hexstr2bin(pos, opc, 16))
+			return -1;
+
+		if (gsm_milenage(opc, k, data->rand[0],
+				 data->sres[0], data->kc[0]) ||
+		    gsm_milenage(opc, k, data->rand[1],
+				 data->sres[1], data->kc[1]) ||
+		    (data->num_chal > 2 &&
+		     gsm_milenage(opc, k, data->rand[2],
+				  data->sres[2], data->kc[2]))) {
+			wpa_printf(MSG_DEBUG, "EAP-SIM: GSM-Milenage "
+				   "authentication could not be completed");
+			return -1;
+		}
+		return 0;
+	}
+#endif /* CONFIG_SIM_SIMULATOR */
+
+#ifdef CONFIG_SIM_HARDCODED
 	/* These hardcoded Kc and SRES values are used for testing. RAND to
 	 * KC/SREC mapping is very bogus as far as real authentication is
 	 * concerned, but it is quite useful for cases where the AS is rotating
 	 * the order of pre-configured values. */
 	{
 		size_t i;
+
+		wpa_printf(MSG_DEBUG, "EAP-SIM: Use hardcoded Kc and SRES "
+			   "values for testing");
+
 		for (i = 0; i < data->num_chal; i++) {
 			if (data->rand[i][0] == 0xaa) {
 				os_memcpy(data->kc[i],
@@ -184,8 +237,16 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 			}
 		}
 	}
-#endif /* PCSC_FUNCS */
+
 	return 0;
+
+#else /* CONFIG_SIM_HARDCODED */
+
+	wpa_printf(MSG_DEBUG, "EAP-SIM: No GSM authentication algorithm "
+		   "enabled");
+	return -1;
+
+#endif /* CONFIG_SIM_HARDCODED */
 }
 
 

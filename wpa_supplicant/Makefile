@@ -578,8 +578,17 @@ LIBS += -lpcsclite -lpthread
 endif
 endif
 
+ifdef CONFIG_SIM_SIMULATOR
+CFLAGS += -DCONFIG_SIM_SIMULATOR
+NEED_MILENAGE=y
+endif
+
 ifdef CONFIG_USIM_SIMULATOR
 CFLAGS += -DCONFIG_USIM_SIMULATOR
+NEED_MILENAGE=y
+endif
+
+ifdef NEED_MILENAGE
 OBJS += ../src/hlr_auc_gw/milenage.o
 endif
 

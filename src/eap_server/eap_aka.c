@@ -666,10 +666,19 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 		return;
 	}
 
-	if (attr->res == NULL || attr->res_len != data->res_len ||
+	/*
+	 * AT_RES is padded, so verify that there is enough room for RES and
+	 * that the RES length in bits matches with the expected RES.
+	 */
+	if (attr->res == NULL || attr->res_len < data->res_len ||
+	    attr->res_len_bits != data->res_len * 8 ||
 	    os_memcmp(attr->res, data->res, data->res_len) != 0) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Challenge message did not "
-			   "include valid AT_RES");
+			   "include valid AT_RES (attr len=%lu, res len=%lu "
+			   "bits, expected %lu bits)",
+			   (unsigned long) attr->res_len,
+			   (unsigned long) attr->res_len_bits,
+			   (unsigned long) data->res_len);
 		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
 		eap_aka_state(data, NOTIFICATION);
 		return;

@@ -137,6 +137,7 @@ struct eap_sim_attrs {
 	const u8 *checkcode;
 	size_t num_chal, version_list_len, encr_data_len;
 	size_t next_pseudonym_len, next_reauth_id_len, identity_len, res_len;
+	size_t res_len_bits;
 	size_t checkcode_len;
 	enum eap_sim_id_req id_req;
 	int notification, counter, selected_version, client_error_code;

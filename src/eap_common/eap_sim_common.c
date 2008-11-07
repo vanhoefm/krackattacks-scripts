@@ -517,6 +517,7 @@ int eap_sim_parse_attr(const u8 *start, const u8 *end,
 			break;
 		case EAP_SIM_AT_RES:
 			wpa_printf(MSG_DEBUG, "EAP-SIM: AT_RES");
+			attr->res_len_bits = WPA_GET_BE16(apos);
 			apos += 2;
 			alen -= 2;
 			if (!aka || alen < EAP_AKA_MIN_RES_LEN ||

@@ -906,8 +906,8 @@ static int eap_sm_imsi_identity(struct eap_sm *sm,
 #endif /* PCSC_FUNCS */
 
 
-static int eap_sm_get_scard_identity(struct eap_sm *sm,
-				     struct eap_peer_config *conf)
+static int eap_sm_set_scard_pin(struct eap_sm *sm,
+				struct eap_peer_config *conf)
 {
 #ifdef PCSC_FUNCS
 	if (scard_set_pin(sm->scard_ctx, conf->pin)) {
@@ -922,6 +922,18 @@ static int eap_sm_get_scard_identity(struct eap_sm *sm,
 		eap_sm_request_pin(sm);
 		return -1;
 	}
+	return 0;
+#else /* PCSC_FUNCS */
+	return -1;
+#endif /* PCSC_FUNCS */
+}
+
+static int eap_sm_get_scard_identity(struct eap_sm *sm,
+				     struct eap_peer_config *conf)
+{
+#ifdef PCSC_FUNCS
+	if (eap_sm_set_scard_pin(sm, conf))
+		return -1;
 
 	return eap_sm_imsi_identity(sm, conf);
 #else /* PCSC_FUNCS */
@@ -985,6 +997,9 @@ struct wpabuf * eap_sm_buildIdentity(struct eap_sm *sm, int id, int encrypted)
 			eap_sm_request_identity(sm);
 			return NULL;
 		}
+	} else if (config->pcsc) {
+		if (eap_sm_set_scard_pin(sm, config) < 0)
+			return NULL;
 	}
 
 	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_IDENTITY, identity_len,

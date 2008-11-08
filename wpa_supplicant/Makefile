@@ -951,6 +951,10 @@ ifdef CONFIG_DEBUG_FILE
 CFLAGS += -DCONFIG_DEBUG_FILE
 endif
 
+ifdef CONFIG_DELAYED_MIC_ERROR_REPORT
+CFLAGS += -DCONFIG_DELAYED_MIC_ERROR_REPORT
+endif
+
 OBJS += ../src/drivers/scan_helpers.o
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o

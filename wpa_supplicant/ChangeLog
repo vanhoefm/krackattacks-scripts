@@ -8,6 +8,10 @@ ChangeLog for wpa_supplicant
 	* added a new network configuration option, wpa_ptk_rekey, that can be
 	  used to enforce frequent PTK rekeying, e.g., to mitigate some attacks
 	  against TKIP deficiencies
+	* added an optional mitigation mechanism for certain attacks against
+	  TKIP by delaying Michael MIC error reports by a random amount of time
+	  between 0 and 60 seconds; this can be enabled with a build option
+	  CONFIG_DELAYED_MIC_ERROR_REPORT=y in .config
 	* fixed EAP-AKA to use RES Length field in AT_RES as length in bits,
 	  not bytes
 

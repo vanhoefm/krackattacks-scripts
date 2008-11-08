@@ -427,11 +427,16 @@ static int wpa_supplicant_get_bssid(void *ctx, u8 *bssid)
 }
 
 
-static int wpa_supplicant_set_key(void *wpa_s, wpa_alg alg,
+static int wpa_supplicant_set_key(void *_wpa_s, wpa_alg alg,
 				  const u8 *addr, int key_idx, int set_tx,
 				  const u8 *seq, size_t seq_len,
 				  const u8 *key, size_t key_len)
 {
+	struct wpa_supplicant *wpa_s = _wpa_s;
+	if (alg == WPA_ALG_TKIP && key_idx == 0 && key_len == 32) {
+		/* Clear the MIC error counter when setting a new PTK. */
+		wpa_s->mic_errors_seen = 0;
+	}
 	return wpa_drv_set_key(wpa_s, alg, addr, key_idx, set_tx, seq, seq_len,
 			       key, key_len);
 }

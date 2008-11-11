@@ -12,6 +12,8 @@
  * See README and COPYING for more details.
  */
 
+#include <cstdio>
+
 #include "scanresults.h"
 #include "wpagui.h"
 #include "networkconfig.h"

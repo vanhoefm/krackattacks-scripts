@@ -58,7 +58,7 @@ EAP-PEAPv0/MSCHAPv2	+   +   +   +   +   +   +   +   +   -   +   +
 EAP-PEAPv0/GTC		+   -   +   -   +   +   +   +   -   -   +   +
 EAP-PEAPv0/OTP		-   -   -   -   -   +   -   -   -   -   -   -
 EAP-PEAPv0/MD5		+   -   -   +   +   +   +   +   -   -   +   -
-EAP-PEAPv0/TLS		+   +   -   +   +   +   F   +   -   -   +   -
+EAP-PEAPv0/TLS		+   +   -   +   +   +   F   +   -   -   +   +
 EAP-PEAPv0/SIM		-   -   -   -   -   -   -   -   -   -   +   -
 EAP-PEAPv0/AKA		-   -   -   -   -   -   -   -   -   -   +   -
 EAP-PEAPv0/PSK		-   -   -   -   -   -   -   -   -   -   +   -
@@ -69,7 +69,7 @@ EAP-PEAPv1/MSCHAPv2	-   -   +   +   +   +1  +   +5  +8  -   +   +
 EAP-PEAPv1/GTC		-   -   +   +   +   +1  +   +5  +8  -   +   +
 EAP-PEAPv1/OTP		-   -   -   -   -   +1  -   -   -   -   -   -
 EAP-PEAPv1/MD5		-   -   -   +   +   +1  +   +5  -   -   +   -
-EAP-PEAPv1/TLS		-   -   -   +   +   +1  F   +5  -   -   +   -
+EAP-PEAPv1/TLS		-   -   -   +   +   +1  F   +5  -   -   +   +
 EAP-PEAPv1/SIM		-   -   -   -   -   -   -   -   -   -   +   -
 EAP-PEAPv1/AKA		-   -   -   -   -   -   -   -   -   -   +   -
 EAP-PEAPv1/PSK		-   -   -   -   -   -   -   -   -   -   +   -
@@ -353,13 +353,6 @@ hostapd v0.3.3
 - EAP-TTLS / EAP-MSCHAPv2
 - EAP-SIM
 - EAP-PAX
-
-Cisco Secure ACS 3.3(1) for Windows Server
-- PEAPv1/GTC worked, but PEAPv0/GTC failed in the end after password was
-  sent successfully; ACS is replying with empty PEAP packet (TLS ACK);
-  wpa_supplicant tries to decrypt this.. Replying with TLS ACK and and
-  marking the connection completed was enough to make this work.
-
 
 PEAPv1:
 

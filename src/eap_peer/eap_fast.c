@@ -1208,10 +1208,10 @@ static int eap_fast_process_decrypted(struct eap_sm *sm,
 
 	if (tlv.result == EAP_TLV_RESULT_SUCCESS && !failed) {
 		tmp = eap_fast_tlv_result(EAP_TLV_RESULT_SUCCESS, 0);
-		resp = wpabuf_concat(resp, tmp);
+		resp = wpabuf_concat(tmp, resp);
 	} else if (failed) {
 		tmp = eap_fast_tlv_result(EAP_TLV_RESULT_FAILURE, 0);
-		resp = wpabuf_concat(resp, tmp);
+		resp = wpabuf_concat(tmp, resp);
 	}
 
 	if (resp && tlv.result == EAP_TLV_RESULT_SUCCESS && !failed &&

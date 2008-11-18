@@ -8,6 +8,12 @@ ChangeLog for hostapd
 	  session ticket overriding API that was included into the upstream
 	  OpenSSL 0.9.9 tree on 2008-11-15 (no additional OpenSSL patch is
 	  needed with that version anymore)
+	* changed channel flags configuration to read the information from
+	  the driver (e.g., via driver_nl80211 when using mac80211) instead of
+	  using hostapd as the source of the regulatory information (i.e.,
+	  information from CRDA is now used with mac80211); this allows 5 GHz
+	  channels to be used with hostapd (if allowed in the current
+	  regulatory domain)
 
 2008-11-01 - v0.6.5
 	* added support for SHA-256 as X.509 certificate digest when using the

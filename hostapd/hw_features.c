@@ -68,26 +68,26 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 		/* set flag for channels we can use in current regulatory
 		 * domain */
 		for (j = 0; j < feature->num_channels; j++) {
-			/* TODO: add regulatory domain lookup */
-			unsigned char power_level = 0;
-			unsigned char antenna_max = 0;
-
-			if ((feature->mode == HOSTAPD_MODE_IEEE80211G ||
-			     feature->mode == HOSTAPD_MODE_IEEE80211B) &&
-			    feature->channels[j].chan >= 1 &&
-			    feature->channels[j].chan <= 11) {
-				power_level = 20;
+			/*
+			 * Disable all channels that are marked not to allow
+			 * IBSS operation or active scanning. In addition,
+			 * disable all channels that require radar detection,
+			 * since that (in addition to full DFS) is not yet
+			 * supported.
+			 */
+			if (feature->channels[j].flag &
+			    (HOSTAPD_CHAN_NO_IBSS |
+			     HOSTAPD_CHAN_PASSIVE_SCAN |
+			     HOSTAPD_CHAN_RADAR))
 				feature->channels[j].flag |=
-					HOSTAPD_CHAN_W_SCAN;
-			} else
-				feature->channels[j].flag &=
-					~HOSTAPD_CHAN_W_SCAN;
-
-			hostapd_set_channel_flag(hapd, feature->mode,
-						 feature->channels[j].chan,
-						 feature->channels[j].flag,
-						 power_level,
-						 antenna_max);
+					HOSTAPD_CHAN_DISABLED;
+			if (feature->channels[j].flag & HOSTAPD_CHAN_DISABLED)
+				continue;
+			wpa_printf(MSG_MSGDUMP, "Allowed channel: mode=%d "
+				   "chan=%d freq=%d MHz",
+				   feature->mode,
+				   feature->channels[j].chan,
+				   feature->channels[j].freq);
 		}
 	}
 
@@ -296,7 +296,7 @@ static int select_hw_mode1(struct hostapd_iface *iface)
 	for (j = 0; j < iface->current_mode->num_channels; j++) {
 		struct hostapd_channel_data *chan =
 			&iface->current_mode->channels[j];
-		if ((chan->flag & HOSTAPD_CHAN_W_SCAN) &&
+		if (!(chan->flag & HOSTAPD_CHAN_DISABLED) &&
 		    (chan->chan == iface->conf->channel)) {
 			ok = 1;
 			break;

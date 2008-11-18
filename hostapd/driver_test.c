@@ -785,8 +785,7 @@ test_driver_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	}
 	modes[0].channels[0].chan = 1;
 	modes[0].channels[0].freq = 2412;
-	modes[0].channels[0].flag = HOSTAPD_CHAN_W_SCAN |
-		HOSTAPD_CHAN_W_ACTIVE_SCAN;
+	modes[0].channels[0].flag = 0;
 	modes[0].rates[0].rate = 10;
 	modes[0].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
 		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
@@ -802,8 +801,7 @@ test_driver_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	}
 	modes[1].channels[0].chan = 1;
 	modes[1].channels[0].freq = 2412;
-	modes[1].channels[0].flag = HOSTAPD_CHAN_W_SCAN |
-		HOSTAPD_CHAN_W_ACTIVE_SCAN;
+	modes[1].channels[0].flag = 0;
 	modes[1].rates[0].rate = 10;
 	modes[1].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
 		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
@@ -819,8 +817,7 @@ test_driver_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	}
 	modes[2].channels[0].chan = 60;
 	modes[2].channels[0].freq = 5300;
-	modes[2].channels[0].flag = HOSTAPD_CHAN_W_SCAN |
-		HOSTAPD_CHAN_W_ACTIVE_SCAN;
+	modes[2].channels[0].flag = 0;
 	modes[2].rates[0].rate = 60;
 	modes[2].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
 		HOSTAPD_RATE_MANDATORY;

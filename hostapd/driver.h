@@ -111,9 +111,6 @@ struct wpa_driver_ops {
 			     int total_flags, int flags_or, int flags_and);
 	int (*set_rate_sets)(void *priv, int *supp_rates, int *basic_rates,
 			     int mode);
-	int (*set_channel_flag)(void *priv, int mode, int chan, int flag,
-				unsigned char power_level,
-				unsigned char antenna_max);
 	int (*set_regulatory_domain)(void *priv, unsigned int rd);
 	int (*set_country)(void *priv, const char *country);
 	int (*set_ieee80211d)(void *priv, int enabled);
@@ -495,17 +492,6 @@ hostapd_set_rate_sets(struct hostapd_data *hapd, int *supp_rates,
 		return 0;
 	return hapd->driver->set_rate_sets(hapd->drv_priv, supp_rates,
 					   basic_rates, mode);
-}
-
-static inline int
-hostapd_set_channel_flag(struct hostapd_data *hapd, int mode, int chan,
-			 int flag, unsigned char power_level,
-			 unsigned char antenna_max)
-{
-	if (hapd->driver == NULL || hapd->driver->set_channel_flag == NULL)
-		return 0;
-	return hapd->driver->set_channel_flag(hapd->drv_priv, mode, chan, flag,
-					      power_level, antenna_max);
 }
 
 static inline int

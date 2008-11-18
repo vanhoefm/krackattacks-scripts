@@ -881,14 +881,6 @@ static int i802_sta_set_flags(void *priv, const u8 *addr,
 }
 
 
-static int i802_set_channel_flag(void *priv, int mode, int chan, int flag,
-				 unsigned char power_level,
-				 unsigned char antenna_max)
-{
-	return -1;
-}
-
-
 static int i802_set_regulatory_domain(void *priv, unsigned int rd)
 {
 	return -1;
@@ -1381,9 +1373,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 				continue;
 
 			mode->channels[idx].freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
-			mode->channels[idx].flag |= HOSTAPD_CHAN_W_SCAN |
-						    HOSTAPD_CHAN_W_ACTIVE_SCAN |
-						    HOSTAPD_CHAN_W_IBSS;
+			mode->channels[idx].flag = 0;
 
 			if (!mode_is_set) {
 				/* crude heuristic */
@@ -1404,11 +1394,17 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 				mode->channels[idx].chan = mode->channels[idx].freq/5 - 1000;
 
 			if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
-				mode->channels[idx].flag &= ~HOSTAPD_CHAN_W_SCAN;
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_DISABLED;
 			if (tb_freq[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN])
-				mode->channels[idx].flag &= ~HOSTAPD_CHAN_W_ACTIVE_SCAN;
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_PASSIVE_SCAN;
 			if (tb_freq[NL80211_FREQUENCY_ATTR_NO_IBSS])
-				mode->channels[idx].flag &= ~HOSTAPD_CHAN_W_IBSS;
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_NO_IBSS;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_RADAR;
 			idx++;
 		}
 
@@ -2375,7 +2371,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_retry = i802_set_retry,
 	.get_retry = i802_get_retry,
 	.set_rate_sets = i802_set_rate_sets,
-	.set_channel_flag = i802_set_channel_flag,
 	.set_regulatory_domain = i802_set_regulatory_domain,
 	.set_beacon = i802_set_beacon,
 	.set_internal_bridge = i802_set_internal_bridge,

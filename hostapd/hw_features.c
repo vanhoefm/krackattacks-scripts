@@ -234,8 +234,13 @@ static void select_hw_mode2(struct hostapd_iface *iface, int status)
 				   iface->conf->passive_scan_listen,
 				   NULL, NULL);
 	if (ret) {
-		wpa_printf(MSG_ERROR, "Could not set passive scanning: %s",
-			   strerror(ret));
+		if (ret == -1) {
+			wpa_printf(MSG_DEBUG, "Passive scanning not "
+				   "supported");
+		} else {
+			wpa_printf(MSG_ERROR, "Could not set passive "
+				   "scanning: %s", strerror(ret));
+		}
 		ret = 0;
 	}
 

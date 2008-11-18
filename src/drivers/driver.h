@@ -711,7 +711,7 @@ struct wpa_driver_ops {
 	 * @priv: private driver interface data
 	 *
 	 * Returns: Pointer to the interface name. This can differ from the
-	 * interface name used in init() call.
+	 * interface name used in init() call. Init() is called first.
 	 *
 	 * This optional function can be used to allow the driver interface to
 	 * replace the interface name with something else, e.g., based on an
@@ -944,6 +944,13 @@ struct wpa_driver_ops {
 	 */
 	int (*set_mode)(void *priv, int mode);
 };
+
+/* Function to check whether a driver is for wired connections */
+static inline int IS_WIRED(const struct wpa_driver_ops *drv)
+{
+	return os_strcmp(drv->name, "wired") == 0 ||
+		os_strcmp(drv->name, "roboswitch") == 0;
+}
 
 /**
  * enum wpa_event_type - Event type for wpa_supplicant_event() calls

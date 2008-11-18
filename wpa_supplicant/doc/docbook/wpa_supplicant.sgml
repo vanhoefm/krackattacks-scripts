@@ -310,6 +310,13 @@
       </varlistentry>
 
       <varlistentry>
+	<term>roboswitch</term>
+	<listitem>
+	  <para>wpa_supplicant Broadcom switch driver</para>
+	</listitem>
+      </varlistentry>
+
+      <varlistentry>
 	<term>bsd</term>
 	<listitem>
 	  <para>BSD 802.11 support (Atheros, etc.).</para>

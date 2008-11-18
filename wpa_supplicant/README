@@ -525,6 +525,7 @@ drivers:
   broadcom = Broadcom wl.o driver
   ipw = Intel ipw2100/2200 driver (old; use wext with Linux 2.6.13 or newer)
   wired = wpa_supplicant wired Ethernet driver
+  roboswitch = wpa_supplicant Broadcom switch driver
   bsd = BSD 802.11 support (Atheros, etc.)
   ndis = Windows NDIS driver
 
@@ -694,8 +695,8 @@ network={
 }
 
 
-6) Authentication for wired Ethernet. This can be used with 'wired' interface
-   (-Dwired on command line).
+6) Authentication for wired Ethernet. This can be used with 'wired' or
+   'roboswitch' interface (-Dwired or -Droboswitch on command line).
 
 ctrl_interface=/var/run/wpa_supplicant
 ctrl_interface_group=wheel

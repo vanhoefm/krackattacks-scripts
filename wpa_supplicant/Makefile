@@ -235,6 +235,11 @@ OBJS_d += ../src/drivers/MobileApple80211.o
 LIBS += -framework CoreFoundation
 endif
 
+ifdef CONFIG_DRIVER_ROBOSWITCH
+CFLAGS += -DCONFIG_DRIVER_ROBOSWITCH
+OBJS_d += ../src/drivers/driver_roboswitch.o
+endif
+
 ifndef CONFIG_L2_PACKET
 CONFIG_L2_PACKET=linux
 endif

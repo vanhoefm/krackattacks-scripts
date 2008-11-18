@@ -106,6 +106,9 @@ CONFIG_DRIVER_WEXT=y
 # Driver interface for wired Ethernet drivers
 CONFIG_DRIVER_WIRED=y
 
+# Driver interface for the Broadcom RoboSwitch family
+#CONFIG_DRIVER_ROBOSWITCH=y
+
 # Enable IEEE 802.1X Supplicant (automatically included if any EAP method is
 # included)
 CONFIG_IEEE8021X_EAPOL=y

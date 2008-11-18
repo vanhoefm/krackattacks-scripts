@@ -70,6 +70,10 @@ extern struct wpa_driver_ops wpa_driver_ps3_ops; /* driver_ps3.c */
 #ifdef CONFIG_DRIVER_IPHONE
 extern struct wpa_driver_ops wpa_driver_iphone_ops; /* driver_iphone.m */
 #endif /* CONFIG_DRIVER_IPHONE */
+#ifdef CONFIG_DRIVER_ROBOSWITCH
+/* driver_roboswitch.c */
+extern struct wpa_driver_ops wpa_driver_roboswitch_ops;
+#endif /* CONFIG_DRIVER_ROBOSWITCH */
 
 
 struct wpa_driver_ops *wpa_supplicant_drivers[] =
@@ -128,5 +132,8 @@ struct wpa_driver_ops *wpa_supplicant_drivers[] =
 #ifdef CONFIG_DRIVER_IPHONE
 	&wpa_driver_iphone_ops,
 #endif /* CONFIG_DRIVER_IPHONE */
+#ifdef CONFIG_DRIVER_ROBOSWITCH
+	&wpa_driver_roboswitch_ops,
+#endif /* CONFIG_DRIVER_ROBOSWITCH */
 	NULL
 };

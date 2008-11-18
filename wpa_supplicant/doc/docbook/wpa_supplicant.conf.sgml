@@ -174,7 +174,8 @@ network={
 
       <listitem>
 	<para>Authentication for wired Ethernet. This can be used with
-       <emphasis>wired</emphasis> interface (-Dwired on command line).</para>
+        <emphasis>wired</emphasis> or <emphasis>roboswitch</emphasis> interface
+        (-Dwired or -Droboswitch on command line).</para>
 
 <blockquote><programlisting>
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=wheel

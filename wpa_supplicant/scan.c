@@ -70,9 +70,9 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	wpa_s->scan_req = 0;
 
 	if (wpa_s->conf->ap_scan != 0 &&
-	    wpa_s->driver && os_strcmp(wpa_s->driver->name, "wired") == 0) {
-		wpa_printf(MSG_DEBUG, "Using wired driver - overriding "
-			   "ap_scan configuration");
+	    wpa_s->driver && IS_WIRED(wpa_s->driver)) {
+		wpa_printf(MSG_DEBUG, "Using wired authentication - "
+			   "overriding ap_scan configuration");
 		wpa_s->conf->ap_scan = 0;
 	}
 

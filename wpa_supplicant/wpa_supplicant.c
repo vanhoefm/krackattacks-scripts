@@ -212,7 +212,7 @@ void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec)
 {
 	if (wpa_s->conf && wpa_s->conf->ap_scan == 0 &&
-	    wpa_s->driver && os_strcmp(wpa_s->driver->name, "wired") == 0)
+	    wpa_s->driver && IS_WIRED(wpa_s->driver))
 		return;
 
 	wpa_msg(wpa_s, MSG_DEBUG, "Setting authentication timeout: %d sec "
@@ -273,8 +273,7 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 				EAPOL_REQUIRE_KEY_BROADCAST;
 		}
 
-		if (wpa_s->conf && wpa_s->driver &&
-		    os_strcmp(wpa_s->driver->name, "wired") == 0) {
+		if (wpa_s->conf && wpa_s->driver && IS_WIRED(wpa_s->driver)) {
 			eapol_conf.required_keys = 0;
 		}
 	}
@@ -1388,7 +1387,7 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 	}
 
 	wired = wpa_s->conf->ap_scan == 0 && wpa_s->driver &&
-		os_strcmp(wpa_s->driver->name, "wired") == 0;
+		IS_WIRED(wpa_s->driver);
 
 	entry = wpa_s->conf->ssid;
 	while (entry) {

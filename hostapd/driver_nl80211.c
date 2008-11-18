@@ -1925,10 +1925,10 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 		return -1;
 
 	if (nl80211_set_master_mode(drv, drv->iface))
-		return -1;
+		goto fail1;
 
 	if (hostapd_set_iface_flags(drv, drv->iface, 1))
-		return -1;
+		goto fail1;
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sll_family = AF_PACKET;
@@ -1939,7 +1939,7 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));
 	if (drv->eapol_sock < 0) {
 		perror("socket(PF_PACKET, SOCK_DGRAM, ETH_P_PAE)");
-		return -1;
+		goto fail1;
 	}
 
 	if (eloop_register_read_sock(drv->eapol_sock, handle_eapol, drv, NULL))
@@ -1952,17 +1952,21 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
 	if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr) != 0) {
 		perror("ioctl(SIOCGIFHWADDR)");
-		return -1;
+		goto fail1;
 	}
 
 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
 		printf("Invalid HW-addr family 0x%04x\n",
 		       ifr.ifr_hwaddr.sa_family);
-		return -1;
+		goto fail1;
 	}
 	memcpy(drv->hapd->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	return 0;
+
+fail1:
+	nl80211_remove_iface(drv, drv->monitor_ifidx);
+	return -1;
 }
 
 

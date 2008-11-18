@@ -56,6 +56,7 @@ static void eap_tls_params_from_conf1(struct tls_connection_params *params,
 	params->dh_file = (char *) config->dh_file;
 	params->subject_match = (char *) config->subject_match;
 	params->altsubject_match = (char *) config->altsubject_match;
+	params->engine = config->engine;
 	params->engine_id = config->engine_id;
 	params->pin = config->pin;
 	params->key_id = config->key_id;
@@ -75,8 +76,9 @@ static void eap_tls_params_from_conf2(struct tls_connection_params *params,
 	params->dh_file = (char *) config->dh_file2;
 	params->subject_match = (char *) config->subject_match2;
 	params->altsubject_match = (char *) config->altsubject_match2;
-	params->engine_id = config->engine_id;
-	params->pin = config->pin;
+	params->engine = config->engine2;
+	params->engine_id = config->engine2_id;
+	params->pin = config->pin2;
 	params->key_id = config->key2_id;
 	params->cert_id = config->cert2_id;
 	params->ca_cert_id = config->ca_cert2_id;
@@ -89,11 +91,13 @@ static int eap_tls_params_from_conf(struct eap_sm *sm,
 				    struct eap_peer_config *config, int phase2)
 {
 	os_memset(params, 0, sizeof(*params));
-	params->engine = config->engine;
-	if (phase2)
+	if (phase2) {
+		wpa_printf(MSG_DEBUG, "TLS: using phase2 config options");
 		eap_tls_params_from_conf2(params, config);
-	else
+	} else {
+		wpa_printf(MSG_DEBUG, "TLS: using phase1 config options");
 		eap_tls_params_from_conf1(params, config);
+	}
 	params->tls_ia = data->tls_ia;
 
 	/*

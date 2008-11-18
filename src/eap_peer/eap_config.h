@@ -409,6 +409,47 @@ struct eap_peer_config {
 	char *engine_id;
 
 	/**
+	 * engine2 - Enable OpenSSL engine (e.g., for smartcard) (Phase 2)
+	 *
+	 * This is used if private key operations for EAP-TLS are performed
+	 * using a smartcard.
+	 *
+	 * This field is like engine, but used for phase 2 (inside
+	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
+	 */
+	int engine2;
+
+
+	/**
+	 * pin2 - PIN for USIM, GSM SIM, and smartcards (Phase 2)
+	 *
+	 * This field is used to configure PIN for SIM and smartcards for
+	 * EAP-SIM and EAP-AKA. In addition, this is used with EAP-TLS if a
+	 * smartcard is used for private key operations.
+	 *
+	 * This field is like pin2, but used for phase 2 (inside
+	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
+	 *
+	 * If left out, this will be asked through control interface.
+	 */
+	char *pin2;
+
+	/**
+	 * engine2_id - Engine ID for OpenSSL engine (Phase 2)
+	 *
+	 * "opensc" to select OpenSC engine or "pkcs11" to select PKCS#11
+	 * engine.
+	 *
+	 * This is used if private key operations for EAP-TLS are performed
+	 * using a smartcard.
+	 *
+	 * This field is like engine_id, but used for phase 2 (inside
+	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
+	 */
+	char *engine2_id;
+
+
+	/**
 	 * key_id - Key ID for OpenSSL engine
 	 *
 	 * This is used if private key operations for EAP-TLS are performed

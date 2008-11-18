@@ -770,9 +770,12 @@ static int wpa_config_write_network(HKEY hk, struct wpa_ssid *ssid, int id)
 	STR(cert_id);
 	STR(ca_cert_id);
 	STR(key2_id);
+	STR(pin2);
+	STR(engine2_id);
 	STR(cert2_id);
 	STR(ca_cert2_id);
 	INTe(engine);
+	INTe(engine2);
 	INT_DEF(eapol_flags, DEFAULT_EAPOL_FLAGS);
 #endif /* IEEE8021X_EAPOL */
 	for (i = 0; i < 4; i++)

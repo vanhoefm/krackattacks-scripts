@@ -36,7 +36,8 @@ static void * eap_tls_init(struct eap_sm *sm)
 	struct eap_peer_config *config = eap_get_config(sm);
 	if (config == NULL ||
 	    ((sm->init_phase2 ? config->private_key2 : config->private_key)
-	    == NULL && config->engine == 0)) {
+	     == NULL &&
+	     (sm->init_phase2 ? config->engine2 : config->engine) == 0)) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Private key not configured");
 		return NULL;
 	}

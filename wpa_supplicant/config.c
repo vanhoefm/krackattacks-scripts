@@ -1331,10 +1331,13 @@ static const struct parse_data ssid_fields[] = {
 	{ STRe(key_id) },
 	{ STRe(cert_id) },
 	{ STRe(ca_cert_id) },
+	{ STR_KEYe(pin2) },
+	{ STRe(engine2_id) },
 	{ STRe(key2_id) },
 	{ STRe(cert2_id) },
 	{ STRe(ca_cert2_id) },
 	{ INTe(engine) },
+	{ INTe(engine2) },
 	{ INT(eapol_flags) },
 #endif /* IEEE8021X_EAPOL */
 	{ FUNC_KEY(wep_key0) },
@@ -1497,6 +1500,8 @@ static void eap_peer_config_free(struct eap_peer_config *eap)
 	os_free(eap->key2_id);
 	os_free(eap->cert2_id);
 	os_free(eap->ca_cert2_id);
+	os_free(eap->pin2);
+	os_free(eap->engine2_id);
 	os_free(eap->otp);
 	os_free(eap->pending_req_otp);
 	os_free(eap->pac_file);

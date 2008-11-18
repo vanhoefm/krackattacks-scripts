@@ -346,14 +346,15 @@ CONFIG_PEERKEY=y
 #CONFIG_DYNAMIC_EAP_METHODS=y
 
 # Include client MLME (management frame processing).
-# This can be used to move MLME processing of Devicescape IEEE 802.11 stack
-# into user space.
+# This can be used to move MLME processing of Linux mac80211 stack into user
+# space.
 #CONFIG_CLIENT_MLME=y
-# Currently, driver_devicescape.c build requires some additional parameters
-# to be able to include some of the kernel header files. Following lines can
-# be used to set these (WIRELESS_DEV must point to the root directory of the
-# wireless-dev.git tree).
-#WIRELESS_DEV=/usr/src/wireless-dev
+# Currently, driver_nl80211.c build requires some additional parameters to be
+# able to include some of the kernel header files. Following lines can be used
+# to set these (WIRELESS_DEV must point to the root directory of the
+# wireless-testing.git tree). In addition, mac80211 may need external patches
+# to enable userspace MLME support.
+#WIRELESS_DEV=/usr/src/wireless-testing
 #CFLAGS += -I$(WIRELESS_DEV)/net/mac80211
 
 # IEEE Std 802.11r-2008 (Fast BSS Transition)

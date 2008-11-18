@@ -18,6 +18,9 @@ ChangeLog for wpa_supplicant
 	  session ticket overriding API that was included into the upstream
 	  OpenSSL 0.9.9 tree on 2008-11-15 (no additional OpenSSL patch is
 	  needed with that version anymore)
+	* updated userspace MLME instructions to match with the current Linux
+	  mac80211 implementation; please also note that this can only be used
+	  with driver_nl80211.c (the old code from driver_wext.c was removed)
 
 2008-11-01 - v0.6.5
 	* added support for SHA-256 as X.509 certificate digest when using the

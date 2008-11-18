@@ -71,7 +71,7 @@ static inline struct mii_ioctl_data *if_mii(struct ifreq *rq)
 
 
 static u16 wpa_driver_roboswitch_mdio_read(
-		struct wpa_driver_roboswitch_data *drv, u8 reg)
+	struct wpa_driver_roboswitch_data *drv, u8 reg)
 {
 	struct mii_ioctl_data *mii = if_mii(&drv->ifr);
 
@@ -87,7 +87,7 @@ static u16 wpa_driver_roboswitch_mdio_read(
 
 
 static void wpa_driver_roboswitch_mdio_write(
-		struct wpa_driver_roboswitch_data *drv, u8 reg, u16 val)
+	struct wpa_driver_roboswitch_data *drv, u8 reg, u16 val)
 {
 	struct mii_ioctl_data *mii = if_mii(&drv->ifr);
 
@@ -114,10 +114,9 @@ static int wpa_driver_roboswitch_reg(struct wpa_driver_roboswitch_data *drv,
 
 	/* check if operation completed */
 	for (i = 0; i < ROBO_MII_RETRY_MAX; ++i) {
-		if ((wpa_driver_roboswitch_mdio_read(drv, ROBO_MII_ADDR) & 3) ==
-		    0) {
+		if ((wpa_driver_roboswitch_mdio_read(drv, ROBO_MII_ADDR) & 3)
+		    == 0)
 			return 0;
-		}
 	}
 	/* timeout */
 	return -1;
@@ -130,13 +129,14 @@ static int wpa_driver_roboswitch_read(struct wpa_driver_roboswitch_data *drv,
 	int i;
 
 	if (len > ROBO_MII_DATA_MAX ||
-	    wpa_driver_roboswitch_reg(drv, page, reg, ROBO_MII_ADDR_READ) < 0) {
+	    wpa_driver_roboswitch_reg(drv, page, reg, ROBO_MII_ADDR_READ) < 0)
 		return -1;
-	}
+
 	for (i = 0; i < len; ++i) {
-		val[i] = wpa_driver_roboswitch_mdio_read(drv,
-						      ROBO_MII_DATA_OFFSET + i);
+		val[i] = wpa_driver_roboswitch_mdio_read(
+			drv, ROBO_MII_DATA_OFFSET + i);
 	}
+
 	return 0;
 }
 
@@ -183,30 +183,31 @@ static int wpa_driver_roboswitch_join(struct wpa_driver_roboswitch_data *drv,
 	int i;
 	u16 _read, zero = 0;
 	/* For reasons of simplicity we assume ETH_ALEN is even. */
-	u16 addr_word[ETH_ALEN/2];
+	u16 addr_word[ETH_ALEN / 2];
 	/* RoboSwitch uses 16-bit Big Endian addresses.			*/
 	/* The ordering of the words is reversed in the MII registers.	*/
-	for (i = 0; i < ETH_ALEN; i += 2) {
+	for (i = 0; i < ETH_ALEN; i += 2)
 		addr_word[(ETH_ALEN - i) / 2 - 1] = WPA_GET_BE16(addr + i);
-	}
 
 	/* check if multiport addresses are not yet enabled */
 	if (wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-				       ROBO_ARLCTRL_CONF, &_read, 1) < 0) {
+				       ROBO_ARLCTRL_CONF, &_read, 1) < 0)
 		return -1;
-	}
-	if (!(_read & (1 << 4))){
+
+	if (!(_read & (1 << 4))) {
 		_read |= 1 << 4;
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 					    ROBO_ARLCTRL_ADDR_1, addr_word, 3);
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
-					    ROBO_ARLCTRL_VEC_1, &drv->ports, 1);
+					    ROBO_ARLCTRL_VEC_1, &drv->ports,
+					    1);
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 					    ROBO_ARLCTRL_VEC_2, &zero, 1);
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 					    ROBO_ARLCTRL_CONF, &_read, 1);
 		return 0;
 	}
+
 	/* check if multiport address 1 is free */
 	wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE, ROBO_ARLCTRL_VEC_1,
 				   &_read, 1);
@@ -214,7 +215,8 @@ static int wpa_driver_roboswitch_join(struct wpa_driver_roboswitch_data *drv,
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 					    ROBO_ARLCTRL_ADDR_1, addr_word, 3);
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
-					    ROBO_ARLCTRL_VEC_1, &drv->ports, 1);
+					    ROBO_ARLCTRL_VEC_1, &drv->ports,
+					    1);
 		return 0;
 	}
 	/* check if multiport address 2 is free */
@@ -224,9 +226,11 @@ static int wpa_driver_roboswitch_join(struct wpa_driver_roboswitch_data *drv,
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 					    ROBO_ARLCTRL_ADDR_2, addr_word, 3);
 		wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
-					    ROBO_ARLCTRL_VEC_2, &drv->ports, 1);
+					    ROBO_ARLCTRL_VEC_2, &drv->ports,
+					    1);
 		return 0;
 	}
+
 	/* out of free multiport addresses */
 	return -1;
 }
@@ -240,10 +244,10 @@ static int wpa_driver_roboswitch_leave(struct wpa_driver_roboswitch_data *drv,
 			ROBO_ARLCTRL_VEC_2, ROBO_ARLCTRL_ADDR_2 };
 	u16 _read[3], zero = 0;
 	/* same as at join */
-	u16 addr_word[ETH_ALEN/2];
-	for (i = 0; i < ETH_ALEN; i += 2) {
+	u16 addr_word[ETH_ALEN / 2];
+
+	for (i = 0; i < ETH_ALEN; i += 2)
 		addr_word[(ETH_ALEN - i) / 2 - 1] = WPA_GET_BE16(addr + i);
-	}
 
 	/* find our address/vector pair */
 	for (i = 0; i < 4; i += 2) {
@@ -257,8 +261,10 @@ static int wpa_driver_roboswitch_leave(struct wpa_driver_roboswitch_data *drv,
 		}
 	}
 	/* check if we found our address/vector pair and deactivate it */
-	if (i == 4) return -1;
-	wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE, mport[i], &zero, 1);
+	if (i == 4)
+		return -1;
+	wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE, mport[i], &zero,
+				    1);
 
 	/* leave the multiport registers in a sane state */
 	wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE, ROBO_ARLCTRL_VEC_1,
@@ -268,10 +274,12 @@ static int wpa_driver_roboswitch_leave(struct wpa_driver_roboswitch_data *drv,
 					   ROBO_ARLCTRL_VEC_2, _read, 1);
 		if (_read[0] == 0) {
 			wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-						   ROBO_ARLCTRL_CONF, _read, 1);
+						   ROBO_ARLCTRL_CONF, _read,
+						   1);
 			_read[0] &= ~(1 << 4);
 			wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
-						    ROBO_ARLCTRL_CONF, _read, 1);
+						    ROBO_ARLCTRL_CONF, _read,
+						    1);
 		} else {
 			wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
 						   ROBO_ARLCTRL_ADDR_2, _read,
@@ -280,7 +288,8 @@ static int wpa_driver_roboswitch_leave(struct wpa_driver_roboswitch_data *drv,
 						    ROBO_ARLCTRL_ADDR_1, _read,
 						    3);
 			wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-						   ROBO_ARLCTRL_VEC_2, _read, 1);
+						   ROBO_ARLCTRL_VEC_2, _read,
+						   1);
 			wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
 						    ROBO_ARLCTRL_VEC_1, _read,
 						    1);
@@ -303,15 +312,18 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 	if (drv == NULL) return NULL;
 	drv->ctx = ctx;
 
-	while (ifname[++len]) if (ifname[len] == '.') sep = len;
+	while (ifname[++len]) {
+		if (ifname[len] == '.')
+			sep = len;
+	}
 	if (sep < 0 || sep >= len - 1) {
 		wpa_printf(MSG_INFO, "%s: No <interface>.<vlan> pair in "
-			   "interfacename %s", __func__, ifname);
+			   "interface name %s", __func__, ifname);
 		os_free(drv);
 		return NULL;
 	}
 	if (sep > IFNAMSIZ) {
-		wpa_printf(MSG_INFO, "%s: Interfacename %s is too long",
+		wpa_printf(MSG_INFO, "%s: Interface name %s is too long",
 			   __func__, ifname);
 		os_free(drv);
 		return NULL;
@@ -321,7 +333,7 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 	while (++sep < len) {
 		if (ifname[sep] < '0' || ifname[sep] > '9') {
 			wpa_printf(MSG_INFO, "%s: Invalid vlan specification "
-				   "in interfacename %s", __func__, ifname);
+				   "in interface name %s", __func__, ifname);
 			os_free(drv);
 			return NULL;
 		}
@@ -329,7 +341,7 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 		vlan += ifname[sep] - '0';
 		if (vlan > 255) {
 			wpa_printf(MSG_INFO, "%s: VLAN out of range in "
-				   "interfacename %s", __func__, ifname);
+				   "interface name %s", __func__, ifname);
 			os_free(drv);
 			return NULL;
 		}
@@ -377,7 +389,7 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 		return NULL;
 	} else {
 		wpa_printf(MSG_DEBUG, "%s: Added PAE group address to "
-				      "RoboSwitch ARL", __func__);
+			   "RoboSwitch ARL", __func__);
 	}
 
 	return drv;

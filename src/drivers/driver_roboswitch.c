@@ -256,7 +256,7 @@ static int wpa_driver_roboswitch_leave(struct wpa_driver_roboswitch_data *drv,
 		if (_read[0] == drv->ports) {
 			wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
 						   mport[i + 1], _read, 3);
-			if (os_memcmp(read, addr_word, 6) == 0)
+			if (os_memcmp(_read, addr_word, 6) == 0)
 				break;
 		}
 	}

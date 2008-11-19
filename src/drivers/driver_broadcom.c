@@ -488,8 +488,9 @@ wpa_driver_broadcom_get_scan_results(void *priv,
 		wbi = (wl_bss_info_t *) ((u8 *) wbi + wbi->length);
 	}
 
-	wpa_printf(MSG_MSGDUMP, "Received %d bytes of scan results (%d BSSes)",
-		   wsr->buflen, ap_num);
+	wpa_printf(MSG_MSGDUMP, "Received %d bytes of scan results (%lu "
+		   "BSSes)",
+		   wsr->buflen, (unsigned long) ap_num);
 	
 	os_free(buf);
 	return ap_num;

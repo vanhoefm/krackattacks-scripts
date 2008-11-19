@@ -65,6 +65,7 @@ struct eap_peap_data {
 	struct wpabuf *pending_phase2_req;
 	enum { NO_BINDING, OPTIONAL_BINDING, REQUIRE_BINDING } crypto_binding;
 	int crypto_binding_used;
+	u8 binding_nonce[32];
 	u8 ipmk[40];
 	u8 cmk[20];
 	int soh; /* Whether IF-TNCCS-SOH (Statement of Health; Microsoft NAP)
@@ -304,11 +305,6 @@ static int eap_tlv_add_cryptobinding(struct eap_sm *sm,
 	const u8 *addr[2];
 	size_t len[2];
 	u16 tlv_type;
-	u8 binding_nonce[32];
-
-	/* FIX: should binding_nonce be copied from request? */
-	if (os_get_random(binding_nonce, 32))
-		return -1;
 
 	/* Compound_MAC: HMAC-SHA1-160(cryptobinding TLV | EAP type) */
 	addr[0] = wpabuf_put(buf, 0);
@@ -326,7 +322,7 @@ static int eap_tlv_add_cryptobinding(struct eap_sm *sm,
 	wpabuf_put_u8(buf, data->peap_version); /* Version */
 	wpabuf_put_u8(buf, data->peap_version); /* RecvVersion */
 	wpabuf_put_u8(buf, 1); /* SubType: 0 = Request, 1 = Response */
-	wpabuf_put_data(buf, binding_nonce, 32); /* Nonce */
+	wpabuf_put_data(buf, data->binding_nonce, 32); /* Nonce */
 	mac = wpabuf_put(buf, 20); /* Compound_MAC */
 	wpa_hexdump(MSG_MSGDUMP, "EAP-PEAP: Compound_MAC CMK", data->cmk, 20);
 	wpa_hexdump(MSG_MSGDUMP, "EAP-PEAP: Compound_MAC data 1",
@@ -417,17 +413,24 @@ static int eap_tlv_validate_cryptobinding(struct eap_sm *sm,
 		return -1;
 	}
 	pos += 4;
+	os_memcpy(data->binding_nonce, pos, 32);
 	pos += 32; /* Nonce */
 
 	/* Compound_MAC: HMAC-SHA1-160(cryptobinding TLV | EAP type) */
 	os_memcpy(buf, crypto_tlv, 60);
 	os_memset(buf + 4 + 4 + 32, 0, 20); /* Compound_MAC */
 	buf[60] = EAP_TYPE_PEAP;
+	wpa_hexdump(MSG_DEBUG, "EAP-PEAP: Compound_MAC data",
+		    buf, sizeof(buf));
 	hmac_sha1(data->cmk, 20, buf, sizeof(buf), mac);
 
 	if (os_memcmp(mac, pos, SHA1_MAC_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: Invalid Compound_MAC in "
 			   "cryptobinding TLV");
+		wpa_hexdump(MSG_DEBUG, "EAP-PEAP: Received MAC",
+			    pos, SHA1_MAC_LEN);
+		wpa_hexdump(MSG_DEBUG, "EAP-PEAP: Expected MAC",
+			    mac, SHA1_MAC_LEN);
 		return -1;
 	}
 
@@ -523,6 +526,9 @@ static int eap_tlv_process(struct eap_sm *sm, struct eap_peap_data *data,
 			if (result_tlv == NULL)
 				return -1;
 			force_failure = 1;
+			crypto_tlv = NULL; /* do not include Cryptobinding TLV
+					    * in response, if the received
+					    * cryptobinding was invalid. */
 		}
 	} else if (!crypto_tlv && data->crypto_binding == REQUIRE_BINDING) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: No cryptobinding TLV");

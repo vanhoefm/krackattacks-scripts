@@ -353,8 +353,8 @@ struct eap_peer_config {
 	 *
 	 * crypto_binding option can be used to control PEAPv0 cryptobinding
 	 * behavior:
-	 * 0 = do not use cryptobinding
-	 * 1 = use cryptobinding if server supports it (default)
+	 * 0 = do not use cryptobinding (default)
+	 * 1 = use cryptobinding if server supports it
 	 * 2 = require cryptobinding
 	 */
 	char *phase1;

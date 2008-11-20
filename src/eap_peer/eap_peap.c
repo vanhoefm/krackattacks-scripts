@@ -140,7 +140,7 @@ static void * eap_peap_init(struct eap_sm *sm)
 	data->peap_version = EAP_PEAP_VERSION;
 	data->force_peap_version = -1;
 	data->peap_outer_success = 2;
-	data->crypto_binding = OPTIONAL_BINDING;
+	data->crypto_binding = NO_BINDING;
 
 	if (config && config->phase1 &&
 	    eap_peap_parse_phase1(data, config->phase1) < 0) {

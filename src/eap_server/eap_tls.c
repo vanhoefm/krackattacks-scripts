@@ -26,6 +26,7 @@ static void eap_tls_reset(struct eap_sm *sm, void *priv);
 struct eap_tls_data {
 	struct eap_ssl_data ssl;
 	enum { START, CONTINUE, SUCCESS, FAILURE } state;
+	int established;
 };
 
 
@@ -109,25 +110,24 @@ static struct wpabuf * eap_tls_build_start(struct eap_sm *sm,
 static struct wpabuf * eap_tls_buildReq(struct eap_sm *sm, void *priv, u8 id)
 {
 	struct eap_tls_data *data = priv;
-
+	struct wpabuf *res;
 
 	if (data->ssl.state == FRAG_ACK) {
 		return eap_server_tls_build_ack(id, EAP_TYPE_TLS, 0);
 	}
 
 	if (data->ssl.state == WAIT_FRAG_ACK) {
-		return eap_server_tls_build_msg(&data->ssl, EAP_TYPE_TLS, 0,
-						id);
+		res = eap_server_tls_build_msg(&data->ssl, EAP_TYPE_TLS, 0,
+					       id);
+		goto check_established;
 	}
 
 	switch (data->state) {
 	case START:
 		return eap_tls_build_start(sm, data, id);
 	case CONTINUE:
-		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
-			wpa_printf(MSG_DEBUG, "EAP-TLS: Done");
-			eap_tls_state(data, SUCCESS);
-		}
+		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn))
+			data->established = 1;
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP-TLS: %s - unexpected state %d",
@@ -135,7 +135,17 @@ static struct wpabuf * eap_tls_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		return NULL;
 	}
 
-	return eap_server_tls_build_msg(&data->ssl, EAP_TYPE_TLS, 0, id);
+	res = eap_server_tls_build_msg(&data->ssl, EAP_TYPE_TLS, 0, id);
+
+check_established:
+	if (data->established && data->ssl.state != WAIT_FRAG_ACK) {
+		/* TLS handshake has been completed and there are no more
+		 * fragments waiting to be sent out. */
+		wpa_printf(MSG_DEBUG, "EAP-TLS: Done");
+		eap_tls_state(data, SUCCESS);
+	}
+
+	return res;
 }
 
 

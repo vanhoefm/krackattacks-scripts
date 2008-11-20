@@ -678,7 +678,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 			   "bits, expected %lu bits)",
 			   (unsigned long) attr->res_len,
 			   (unsigned long) attr->res_len_bits,
-			   (unsigned long) data->res_len);
+			   (unsigned long) data->res_len * 8);
 		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
 		eap_aka_state(data, NOTIFICATION);
 		return;

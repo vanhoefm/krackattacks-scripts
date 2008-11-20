@@ -289,8 +289,8 @@ int milenage_check(const u8 *opc, const u8 *k, const u8 *sqn, const u8 *_rand,
 
 	*res_len = 8;
 	wpa_hexdump_key(MSG_DEBUG, "Milenage: RES", res, *res_len);
-	wpa_hexdump_key(MSG_DEBUG, "Milenage: CK", ck, 6);
-	wpa_hexdump_key(MSG_DEBUG, "Milenage: IK", ik, 6);
+	wpa_hexdump_key(MSG_DEBUG, "Milenage: CK", ck, 16);
+	wpa_hexdump_key(MSG_DEBUG, "Milenage: IK", ik, 16);
 	wpa_hexdump_key(MSG_DEBUG, "Milenage: AK", ak, 6);
 
 	/* AUTN = (SQN ^ AK) || AMF || MAC */

@@ -28,6 +28,15 @@
 #include "userdatarequest.h"
 #include "networkconfig.h"
 
+#if 1
+/* Silence stdout */
+#define printf wpagui_printf
+static int wpagui_printf(const char *, ...)
+{
+	return 0;
+}
+#endif
+
 WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	: QMainWindow(parent)
 {

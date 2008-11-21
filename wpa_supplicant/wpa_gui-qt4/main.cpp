@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 #ifdef CONFIG_NATIVE_WINDOWS
 	WSADATA wsaData;
 	if (WSAStartup(MAKEWORD(2, 0), &wsaData)) {
-		printf("Could not find a usable WinSock.dll\n");
+		/* printf("Could not find a usable WinSock.dll\n"); */
 		return -1;
 	}
 #endif /* CONFIG_NATIVE_WINDOWS */

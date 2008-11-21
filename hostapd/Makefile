@@ -42,7 +42,7 @@ OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
 	ieee802_11.o config.o ieee802_11_auth.o accounting.o \
 	sta_info.o wpa.o ctrl_iface.o \
 	drivers.o preauth.o pmksa_cache.o beacon.o \
-	hw_features.o wme.o ap_list.o reconfig.o \
+	hw_features.o wme.o ap_list.o \
 	mlme.o vlan_init.o ieee802_11h.o wpa_auth_ie.o
 
 OBJS += ../src/utils/eloop.o

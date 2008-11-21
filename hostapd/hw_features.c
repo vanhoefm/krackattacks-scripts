@@ -2,6 +2,7 @@
  * hostapd / Hardware feature query and different modes
  * Copyright 2002-2003, Instant802 Networks, Inc.
  * Copyright 2005-2006, Devicescape Software, Inc.
+ * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,7 +20,6 @@
 #include "hw_features.h"
 #include "driver.h"
 #include "config.h"
-#include "eloop.h"
 
 
 void hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,
@@ -169,111 +169,17 @@ static int hostapd_prepare_rates(struct hostapd_data *hapd,
 }
 
 
-static void select_hw_mode_start(void *eloop_data, void *user_ctx);
-static void select_hw_mode2_handler(void *eloop_data, void *user_ctx);
-
 /**
- * select_hw_mode_finalize - Finish select HW mode & call the callback
+ * hostapd_select_hw_mode - Select the hardware mode
  * @iface: Pointer to interface data.
- * @status: Status of the select HW mode (0 on success; -1 on failure).
- * Returns: 0 on success; -1 on failure (e.g., was not in progress).
- */
-static int select_hw_mode_finalize(struct hostapd_iface *iface, int status)
-{
-	hostapd_iface_cb cb;
-
-	if (!iface->hw_mode_sel_cb)
-		return -1;
-
-	eloop_cancel_timeout(select_hw_mode_start, iface, NULL);
-	eloop_cancel_timeout(select_hw_mode2_handler, iface, NULL);
-
-	cb = iface->hw_mode_sel_cb;
-
-	iface->hw_mode_sel_cb = NULL;
-
-	cb(iface, status);
-
-	return 0;
-}
-
-
-/**
- * select_hw_mode2 - Select the hardware mode (part 2)
- * @iface: Pointer to interface data.
- * @status: Status of auto chanel selection.
+ * Returns: 0 on success, -1 on failure
  *
- * Setup the rates and passive scanning based on the configuration.
+ * Sets up the hardware mode, channel, rates, and passive scanning
+ * based on the configuration.
  */
-static void select_hw_mode2(struct hostapd_iface *iface, int status)
+int hostapd_select_hw_mode(struct hostapd_iface *iface)
 {
-	int ret = status;
-	if (ret)
-		goto fail;
-
-	if (iface->current_mode == NULL) {
-		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_WARNING,
-			       "Hardware does not support configured channel");
-		ret = -1;
-		goto fail;
-	}
-
-	if (hostapd_prepare_rates(iface->bss[0], iface->current_mode)) {
-		wpa_printf(MSG_ERROR, "Failed to prepare rates table.");
-		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
-					   HOSTAPD_LEVEL_WARNING,
-					   "Failed to prepare rates table.");
-		ret = -1;
-		goto fail;
-	}
-
-	ret = hostapd_passive_scan(iface->bss[0], 0,
-				   iface->conf->passive_scan_mode,
-				   iface->conf->passive_scan_interval,
-				   iface->conf->passive_scan_listen,
-				   NULL, NULL);
-	if (ret) {
-		if (ret == -1) {
-			wpa_printf(MSG_DEBUG, "Passive scanning not "
-				   "supported");
-		} else {
-			wpa_printf(MSG_ERROR, "Could not set passive "
-				   "scanning: %s", strerror(ret));
-		}
-		ret = 0;
-	}
-
-fail:
-	select_hw_mode_finalize(iface, ret);
-}
-
-
-/**
- * select_hw_mode2_handler - Calls select_hw_mode2 when auto chan isn't used
- * @eloop_data: Stores the struct hostapd_iface * for the interface.
- * @user_ctx: Unused.
- */
-static void select_hw_mode2_handler(void *eloop_data, void *user_ctx)
-{
-	struct hostapd_iface *iface = eloop_data;
-
-	select_hw_mode2(iface, 0);
-}
-
-
-/**
- * select_hw_mode1 - Select the hardware mode (part 1)
- * @iface: Pointer to interface data.
- * Returns: 0 on success; -1 on failure.
- *
- * Setup the hardware mode and channel based on the configuration.
- * Schedules select_hw_mode2() to be called immediately or after automatic
- * channel selection takes place.
- */
-static int select_hw_mode1(struct hostapd_iface *iface)
-{
-	int i, j, ok;
+	int i, j, ok, ret;
 
 	if (iface->num_hw_features < 1)
 		return -1;
@@ -319,72 +225,38 @@ static int select_hw_mode1(struct hostapd_iface *iface)
 		iface->current_mode = NULL;
 	}
 
-	/*
-	 * Calls select_hw_mode2() via a handler, so that the function is
-	 * always executed from eloop.
-	 */
-	eloop_register_timeout(0, 0, select_hw_mode2_handler, iface, NULL);
-	return 0;
-}
-
-
-/**
- * select_hw_mode_start - Handler to start select HW mode
- * @eloop_data: Stores the struct hostapd_iface * for the interface.
- * @user_ctx: Unused.
- *
- * An eloop handler is used so that all errors can be processed by the
- * callback without introducing stack recursion.
- */
-static void select_hw_mode_start(void *eloop_data, void *user_ctx)
-{
-	struct hostapd_iface *iface = (struct hostapd_iface *)eloop_data;
-
-	int ret;
-
-	ret = select_hw_mode1(iface);
-	if (ret)
-		select_hw_mode_finalize(iface, ret);
-}
-
-
-/**
- * hostapd_select_hw_mode_start - Start selection of the hardware mode
- * @iface: Pointer to interface data.
- * @cb: The function to callback when done.
- * Returns:  0 if it starts successfully; cb will be called when done.
- *          -1 on failure; cb will not be called.
- *
- * Sets up the hardware mode, channel, rates, and passive scanning
- * based on the configuration.
- */
-int hostapd_select_hw_mode_start(struct hostapd_iface *iface,
-				 hostapd_iface_cb cb)
-{
-	if (iface->hw_mode_sel_cb) {
-		wpa_printf(MSG_DEBUG,
-			   "%s: Hardware mode select already in progress.",
-			   iface->bss[0]->conf->iface);
+	if (iface->current_mode == NULL) {
+		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_WARNING,
+			       "Hardware does not support configured channel");
 		return -1;
 	}
 
-	iface->hw_mode_sel_cb = cb;
+	if (hostapd_prepare_rates(iface->bss[0], iface->current_mode)) {
+		wpa_printf(MSG_ERROR, "Failed to prepare rates table.");
+		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
+					   HOSTAPD_LEVEL_WARNING,
+					   "Failed to prepare rates table.");
+		return -1;
+	}
 
-	eloop_register_timeout(0, 0, select_hw_mode_start, iface, NULL);
+	ret = hostapd_passive_scan(iface->bss[0], 0,
+				   iface->conf->passive_scan_mode,
+				   iface->conf->passive_scan_interval,
+				   iface->conf->passive_scan_listen,
+				   NULL, NULL);
+	if (ret) {
+		if (ret == -1) {
+			wpa_printf(MSG_DEBUG, "Passive scanning not "
+				   "supported");
+		} else {
+			wpa_printf(MSG_ERROR, "Could not set passive "
+				   "scanning: %s", strerror(ret));
+		}
+		ret = 0;
+	}
 
-	return 0;
-}
-
-
-/**
- * hostapd_auto_chan_select_stop - Stops automatic channel selection
- * @iface: Pointer to interface data.
- * Returns:  0 if successfully stopped;
- *          -1 on failure (i.e., was not in progress)
- */
-int hostapd_select_hw_mode_stop(struct hostapd_iface *iface)
-{
-	return select_hw_mode_finalize(iface, -1);
+	return ret;
 }
 
 

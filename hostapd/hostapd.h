@@ -1,7 +1,7 @@
 /*
  * hostapd / Initialization and configuration
  * Host AP kernel driver
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
@@ -173,23 +173,11 @@ struct hostapd_data {
 
 
 /**
- * hostapd_iface_cb - Generic callback type for per-iface asynchronous requests
- * @iface: the interface the event occured on.
- * @status: 0 if the request succeeded; -1 if the request failed.
- */
-typedef void (*hostapd_iface_cb)(struct hostapd_iface *iface, int status);
-
-
-struct hostapd_config_change;
-
-/**
  * struct hostapd_iface - hostapd per-interface data structure
  */
 struct hostapd_iface {
 	char *config_fname;
 	struct hostapd_config *conf;
-
-	hostapd_iface_cb setup_cb;
 
 	size_t num_bss;
 	struct hostapd_data **bss;
@@ -206,7 +194,6 @@ struct hostapd_iface {
 	 * current_mode->channels */
 	int num_rates;
 	struct hostapd_rate_data *current_rates;
-	hostapd_iface_cb hw_mode_sel_cb;
 
 	u16 hw_flags;
 

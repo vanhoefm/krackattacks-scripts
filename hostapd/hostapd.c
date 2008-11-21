@@ -1385,21 +1385,122 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 }
 
 
-/**
- * setup_interface2 - Setup (initialize) an interface (part 2)
- * @iface: Pointer to interface data.
- * Returns: 0 on success; -1 on failure.
- *
- * Flushes old stations, sets the channel, DFS parameters, encryption,
- * beacons, and WDS links based on the configuration.
- */
-static int setup_interface2(struct hostapd_iface *iface)
+static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
+				       size_t identity_len, int phase2,
+				       struct eap_user *user)
+{
+	const struct hostapd_eap_user *eap_user;
+	int i, count;
+
+	eap_user = hostapd_get_eap_user(ctx, identity, identity_len, phase2);
+	if (eap_user == NULL)
+		return -1;
+
+	if (user == NULL)
+		return 0;
+
+	os_memset(user, 0, sizeof(*user));
+	count = EAP_USER_MAX_METHODS;
+	if (count > EAP_MAX_METHODS)
+		count = EAP_MAX_METHODS;
+	for (i = 0; i < count; i++) {
+		user->methods[i].vendor = eap_user->methods[i].vendor;
+		user->methods[i].method = eap_user->methods[i].method;
+	}
+
+	if (eap_user->password) {
+		user->password = os_malloc(eap_user->password_len);
+		if (user->password == NULL)
+			return -1;
+		os_memcpy(user->password, eap_user->password,
+			  eap_user->password_len);
+		user->password_len = eap_user->password_len;
+		user->password_hash = eap_user->password_hash;
+	}
+	user->force_version = eap_user->force_version;
+	user->ttls_auth = eap_user->ttls_auth;
+
+	return 0;
+}
+
+
+static int setup_interface(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
+	struct hostapd_bss_config *conf = hapd->conf;
+	size_t i;
+	char country[4];
+	u8 *b = conf->bssid;
 	int freq;
 	size_t j;
 	int ret = 0;
 	u8 *prev_addr;
+
+	/*
+	 * Initialize the driver interface and make sure that all BSSes get
+	 * configured with a pointer to this driver interface.
+	 */
+	if (b[0] | b[1] | b[2] | b[3] | b[4] | b[5]) {
+		hapd->drv_priv = hostapd_driver_init_bssid(hapd, b);
+	} else {
+		hapd->drv_priv = hostapd_driver_init(hapd);
+	}
+
+	if (hapd->drv_priv == NULL) {
+		printf("%s driver initialization failed.\n",
+			hapd->driver ? hapd->driver->name : "Unknown");
+		hapd->driver = NULL;
+		return -1;
+	}
+	for (i = 0; i < iface->num_bss; i++) {
+		iface->bss[i]->driver = hapd->driver;
+		iface->bss[i]->drv_priv = hapd->drv_priv;
+	}
+
+	if (hostapd_validate_bssid_configuration(iface))
+		return -1;
+
+#ifdef CONFIG_IEEE80211N
+	SET_2BIT_LE16(&iface->ht_op_mode,
+		      HT_INFO_OPERATION_MODE_OP_MODE_OFFSET,
+		      OP_MODE_PURE);
+#endif /* CONFIG_IEEE80211N */
+
+	os_memcpy(country, hapd->iconf->country, 3);
+	country[3] = '\0';
+	if (hostapd_set_country(hapd, country) < 0) {
+		printf("Failed to set country code\n");
+		return -1;
+	}
+
+	if (hapd->iconf->ieee80211d &&
+	    hostapd_set_ieee80211d(hapd, 1) < 0) {
+		printf("Failed to set ieee80211d (%d)\n",
+		       hapd->iconf->ieee80211d);
+		return -1;
+	}
+
+	if (hapd->iconf->bridge_packets != INTERNAL_BRIDGE_DO_NOT_CONTROL &&
+	    hostapd_set_internal_bridge(hapd, hapd->iconf->bridge_packets)) {
+		printf("Failed to set bridge_packets for kernel driver\n");
+		return -1;
+	}
+
+	/* TODO: merge with hostapd_driver_init() ? */
+	if (hostapd_wireless_event_init(hapd) < 0)
+		return -1;
+
+	if (hostapd_get_hw_features(iface)) {
+		/* Not all drivers support this yet, so continue without hw
+		 * feature data. */
+	} else {
+		int ret = hostapd_select_hw_mode(iface);
+		if (ret < 0) {
+			printf("Could not select hw_mode and channel. (%d)\n",
+			       ret);
+			return -1;
+		}
+	}
 
 	hostapd_flush_old_stations(hapd);
 	hostapd_set_privacy(hapd, 0);
@@ -1462,251 +1563,32 @@ static int setup_interface2(struct hostapd_iface *iface)
 }
 
 
-static void setup_interface_start(void *eloop_data, void *user_ctx);
-static void setup_interface2_handler(void *eloop_data, void *user_ctx);
-
 /**
- * setup_interface_finalize - Finish setup interface & call the callback
+ * hostapd_setup_interface - Setup of an interface
  * @iface: Pointer to interface data.
- * @status: Status of the setup interface (0 on success; -1 on failure).
- * Returns: 0 on success; -1 on failure (e.g., was not in progress).
- */
-static int setup_interface_finalize(struct hostapd_iface *iface, int status)
-{
-	hostapd_iface_cb cb;
-
-	if (!iface->setup_cb)
-		return -1;
-	
-	eloop_cancel_timeout(setup_interface_start, iface, NULL);
-	eloop_cancel_timeout(setup_interface2_handler, iface, NULL);
-	hostapd_select_hw_mode_stop(iface);
-
-	cb = iface->setup_cb;
-
-	iface->setup_cb = NULL;
-
-	cb(iface, status);
-
-	return 0;
-}
-
-
-/**
- * setup_interface2_wrapper - Wrapper for setup_interface2()
- * @iface: Pointer to interface data.
- * @status: Status of the hw mode select.
- *
- * Wrapper for setup_interface2() to calls finalize function upon completion.
- */
-static void setup_interface2_wrapper(struct hostapd_iface *iface, int status)
-{
-	int ret = status;
-	if (ret)
-		printf("Could not select hw_mode and channel. (%d)\n", ret);
-	else
-		ret = setup_interface2(iface);
-
-	setup_interface_finalize(iface, ret);
-}
-
-
-/**
- * setup_interface2_handler - Used for immediate call of setup_interface2
- * @eloop_data: Stores the struct hostapd_iface * for the interface.
- * @user_ctx: Unused.
- */
-static void setup_interface2_handler(void *eloop_data, void *user_ctx)
-{
-	struct hostapd_iface *iface = eloop_data;
-
-	setup_interface2_wrapper(iface, 0);
-}
-
-
-static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
-				       size_t identity_len, int phase2,
-				       struct eap_user *user)
-{
-	const struct hostapd_eap_user *eap_user;
-	int i, count;
-
-	eap_user = hostapd_get_eap_user(ctx, identity, identity_len, phase2);
-	if (eap_user == NULL)
-		return -1;
-
-	if (user == NULL)
-		return 0;
-
-	os_memset(user, 0, sizeof(*user));
-	count = EAP_USER_MAX_METHODS;
-	if (count > EAP_MAX_METHODS)
-		count = EAP_MAX_METHODS;
-	for (i = 0; i < count; i++) {
-		user->methods[i].vendor = eap_user->methods[i].vendor;
-		user->methods[i].method = eap_user->methods[i].method;
-	}
-
-	if (eap_user->password) {
-		user->password = os_malloc(eap_user->password_len);
-		if (user->password == NULL)
-			return -1;
-		os_memcpy(user->password, eap_user->password,
-			  eap_user->password_len);
-		user->password_len = eap_user->password_len;
-		user->password_hash = eap_user->password_hash;
-	}
-	user->force_version = eap_user->force_version;
-	user->ttls_auth = eap_user->ttls_auth;
-
-	return 0;
-}
-
-
-/**
- * setup_interface1 - Setup (initialize) an interface (part 1)
- * @iface: Pointer to interface data
  * Returns: 0 on success, -1 on failure
  *
  * Initializes the driver interface, validates the configuration,
  * and sets driver parameters based on the configuration.
- * Schedules setup_interface2() to be called immediately or after
- * hardware mode setup takes place. 
- */
-static int setup_interface1(struct hostapd_iface *iface)
-{
-	struct hostapd_data *hapd = iface->bss[0];
-	struct hostapd_bss_config *conf = hapd->conf;
-	size_t i;
-	char country[4];
-	u8 *b = conf->bssid;
-
-	/*
-	 * Initialize the driver interface and make sure that all BSSes get
-	 * configured with a pointer to this driver interface.
-	 */
-	if (b[0] | b[1] | b[2] | b[3] | b[4] | b[5]) {
-		hapd->drv_priv = hostapd_driver_init_bssid(hapd, b);
-	} else {
-		hapd->drv_priv = hostapd_driver_init(hapd);
-	}
-
-	if (hapd->drv_priv == NULL) {
-		printf("%s driver initialization failed.\n",
-			hapd->driver ? hapd->driver->name : "Unknown");
-		hapd->driver = NULL;
-		return -1;
-	}
-	for (i = 0; i < iface->num_bss; i++) {
-		iface->bss[i]->driver = hapd->driver;
-		iface->bss[i]->drv_priv = hapd->drv_priv;
-	}
-
-	if (hostapd_validate_bssid_configuration(iface))
-		return -1;
-
-#ifdef CONFIG_IEEE80211N
-	SET_2BIT_LE16(&iface->ht_op_mode,
-		      HT_INFO_OPERATION_MODE_OP_MODE_OFFSET,
-		      OP_MODE_PURE);
-#endif /* CONFIG_IEEE80211N */
-
-	os_memcpy(country, hapd->iconf->country, 3);
-	country[3] = '\0';
-	if (hostapd_set_country(hapd, country) < 0) {
-		printf("Failed to set country code\n");
-		return -1;
-	}
-
-	if (hapd->iconf->ieee80211d &&
-	    hostapd_set_ieee80211d(hapd, 1) < 0) {
-		printf("Failed to set ieee80211d (%d)\n",
-		       hapd->iconf->ieee80211d);
-		return -1;
-	}
-
-	if (hapd->iconf->bridge_packets != INTERNAL_BRIDGE_DO_NOT_CONTROL &&
-	    hostapd_set_internal_bridge(hapd, hapd->iconf->bridge_packets)) {
-		printf("Failed to set bridge_packets for kernel driver\n");
-		return -1;
-	}
-
-	/* TODO: merge with hostapd_driver_init() ? */
-	if (hostapd_wireless_event_init(hapd) < 0)
-		return -1;
-
-	if (hostapd_get_hw_features(iface)) {
-		/* Not all drivers support this yet, so continue without hw
-		 * feature data. */
-	} else {
-		return hostapd_select_hw_mode_start(iface,
-						    setup_interface2_wrapper);
-	}
-
-	eloop_register_timeout(0, 0, setup_interface2_handler, iface, NULL);
-	return 0;
-}
-
-
-/**
- * setup_interface_start - Handler to start setup interface
- * @eloop_data: Stores the struct hostapd_iface * for the interface.
- * @user_ctx: Unused.
- *
- * An eloop handler is used so that all errors can be processed by the
- * callback without introducing stack recursion.
- */
-static void setup_interface_start(void *eloop_data, void *user_ctx)
-{
-	struct hostapd_iface *iface = eloop_data;
-
-	int ret;
-
-	ret = setup_interface1(iface);
-	if (ret)
-		setup_interface_finalize(iface, ret);
-}
-
-
-/**
- * hostapd_setup_interface_start - Start the setup of an interface
- * @iface: Pointer to interface data.
- * @cb: The function to callback when done.
- * Returns:  0 if it starts successfully; cb will be called when done.
- *          -1 on failure; cb will not be called.
- *
- * Initializes the driver interface, validates the configuration,
- * and sets driver parameters based on the configuration.
- * Flushes old stations, sets the channel, DFS parameters, encryption,
+ * Flushes old stations, sets the channel, encryption,
  * beacons, and WDS links based on the configuration.
  */
-int hostapd_setup_interface_start(struct hostapd_iface *iface,
-				  hostapd_iface_cb cb)
+static int hostapd_setup_interface(struct hostapd_iface *iface)
 {
-	if (iface->setup_cb) {
-		wpa_printf(MSG_DEBUG,
-			   "%s: Interface setup already in progress.\n",
+	int ret;
+
+	ret = setup_interface(iface);
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "%s: Unable to setup interface.",
 			   iface->bss[0]->conf->iface);
+		eloop_terminate();
 		return -1;
+	} else if (!hostapd_drv_none(iface->bss[0])) {
+		wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
+			   iface->bss[0]->conf->iface);
 	}
 
-	iface->setup_cb = cb;
-
-	eloop_register_timeout(0, 0, setup_interface_start, iface, NULL);
-
 	return 0;
-}
-
-
-/**
- * hostapd_setup_interace_stop - Stops the setup of an interface
- * @iface: Pointer to interface data
- * Returns:  0 if successfully stopped;
- *          -1 on failure (i.e., was not in progress)
- */
-int hostapd_setup_interface_stop(struct hostapd_iface *iface)
-{
-	return setup_interface_finalize(iface, -1);
 }
 
 
@@ -1897,23 +1779,6 @@ fail:
 }
 
 
-/**
- * setup_interface_done - Callback when an interface is done being setup.
- * @iface: Pointer to interface data.
- * @status: Status of the interface setup (0 on success; -1 on failure).
- */
-static void setup_interface_done(struct hostapd_iface *iface, int status)
-{
-	if (status) {
-		wpa_printf(MSG_DEBUG, "%s: Unable to setup interface.",
-			   iface->bss[0]->conf->iface);
-		eloop_terminate();
-	} else if (!hostapd_drv_none(iface->bss[0]))
-		wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
-			   iface->bss[0]->conf->iface);
-}
-
-
 int main(int argc, char *argv[])
 {
 	struct hapd_interfaces interfaces;
@@ -2001,8 +1866,7 @@ int main(int argc, char *argv[])
 					logger_stdout_level--;
 		}
 
-		ret = hostapd_setup_interface_start(interfaces.iface[i],
-						    setup_interface_done);
+		ret = hostapd_setup_interface(interfaces.iface[i]);
 		if (ret)
 			goto out;
 
@@ -2047,7 +1911,6 @@ int main(int argc, char *argv[])
 	for (i = 0; i < interfaces.count; i++) {
 		if (!interfaces.iface[i])
 			continue;
-		hostapd_setup_interface_stop(interfaces.iface[i]);
 		hostapd_cleanup_iface_pre(interfaces.iface[i]);
 		for (j = 0; j < interfaces.iface[i]->num_bss; j++) {
 			struct hostapd_data *hapd =

@@ -11,7 +11,7 @@ win32 {
   SOURCES += ../../src/utils/os_win32.c
 } else:win32-g++ {
   # cross compilation to win32
-  LIBS += -lws2_32 -static
+  LIBS += -lws2_32 -static -mwindows
   DEFINES += CONFIG_NATIVE_WINDOWS CONFIG_CTRL_IFACE_NAMED_PIPE
   SOURCES += ../../src/utils/os_win32.c
   RESOURCES += icons_png.qrc

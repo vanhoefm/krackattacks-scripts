@@ -138,12 +138,6 @@ struct hostapd_data {
 
 	struct iapp_data *iapp;
 
-	enum { DO_NOT_ASSOC = 0, WAIT_BEACON, AUTHENTICATE, ASSOCIATE,
-	       ASSOCIATED } assoc_ap_state;
-	char assoc_ap_ssid[33];
-	int assoc_ap_ssid_len;
-	u16 assoc_ap_aid;
-
 	struct hostapd_cached_radius_acl *acl_cache;
 	struct hostapd_acl_query_data *acl_queries;
 

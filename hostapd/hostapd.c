@@ -1700,9 +1700,6 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	}
 #endif /* EAP_SERVER */
 
-	if (hapd->conf->assoc_ap)
-		hapd->assoc_ap_state = WAIT_BEACON;
-
 	hapd->driver = hapd->iconf->driver;
 
 	return hapd;

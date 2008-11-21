@@ -340,84 +340,6 @@ void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason)
 }
 
 
-static void ieee802_11_sta_authenticate(void *eloop_ctx, void *timeout_ctx)
-{
-	struct hostapd_data *hapd = eloop_ctx;
-	struct ieee80211_mgmt mgmt;
-	char ssid_txt[33];
-
-	if (hapd->assoc_ap_state == WAIT_BEACON)
-		hapd->assoc_ap_state = AUTHENTICATE;
-	if (hapd->assoc_ap_state != AUTHENTICATE)
-		return;
-
-	ieee802_11_print_ssid(ssid_txt, (u8 *) hapd->assoc_ap_ssid,
-			      hapd->assoc_ap_ssid_len);
-	printf("Authenticate with AP " MACSTR " SSID=%s (as station)\n",
-	       MAC2STR(hapd->conf->assoc_ap_addr), ssid_txt);
-
-	os_memset(&mgmt, 0, sizeof(mgmt));
-	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_AUTH);
-	os_memcpy(mgmt.da, hapd->conf->assoc_ap_addr, ETH_ALEN);
-	os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(mgmt.bssid, hapd->conf->assoc_ap_addr, ETH_ALEN);
-	mgmt.u.auth.auth_alg = host_to_le16(WLAN_AUTH_OPEN);
-	mgmt.u.auth.auth_transaction = host_to_le16(1);
-	mgmt.u.auth.status_code = host_to_le16(0);
-	if (hostapd_send_mgmt_frame(hapd, &mgmt, IEEE80211_HDRLEN +
-				    sizeof(mgmt.u.auth), 0) < 0)
-		perror("ieee802_11_sta_authenticate: send");
-
-	/* Try to authenticate again, if this attempt fails or times out. */
-	eloop_register_timeout(5, 0, ieee802_11_sta_authenticate, hapd, NULL);
-}
-
-
-static void ieee802_11_sta_associate(void *eloop_ctx, void *timeout_ctx)
-{
-	struct hostapd_data *hapd = eloop_ctx;
-	u8 buf[256];
-	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *) buf;
-	u8 *p;
-	char ssid_txt[33];
-
-	if (hapd->assoc_ap_state == AUTHENTICATE)
-		hapd->assoc_ap_state = ASSOCIATE;
-	if (hapd->assoc_ap_state != ASSOCIATE)
-		return;
-
-	ieee802_11_print_ssid(ssid_txt, (u8 *) hapd->assoc_ap_ssid,
-			      hapd->assoc_ap_ssid_len);
-	printf("Associate with AP " MACSTR " SSID=%s (as station)\n",
-	       MAC2STR(hapd->conf->assoc_ap_addr), ssid_txt);
-
-	os_memset(mgmt, 0, sizeof(*mgmt));
-	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_ASSOC_REQ);
-	os_memcpy(mgmt->da, hapd->conf->assoc_ap_addr, ETH_ALEN);
-	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(mgmt->bssid, hapd->conf->assoc_ap_addr, ETH_ALEN);
-	mgmt->u.assoc_req.capab_info = host_to_le16(0);
-	mgmt->u.assoc_req.listen_interval = host_to_le16(1);
-	p = &mgmt->u.assoc_req.variable[0];
-
-	*p++ = WLAN_EID_SSID;
-	*p++ = hapd->assoc_ap_ssid_len;
-	os_memcpy(p, hapd->assoc_ap_ssid, hapd->assoc_ap_ssid_len);
-	p += hapd->assoc_ap_ssid_len;
-
-	p = hostapd_eid_supp_rates(hapd, p);
-	p = hostapd_eid_ext_supp_rates(hapd, p);
-
-	if (hostapd_send_mgmt_frame(hapd, mgmt, p - (u8 *) mgmt, 0) < 0)
-		perror("ieee802_11_sta_associate: send");
-
-	/* Try to authenticate again, if this attempt fails or times out. */
-	eloop_register_timeout(5, 0, ieee802_11_sta_associate, hapd, NULL);
-}
-
-
 static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 auth_transaction, u8 *challenge, int iswep)
 {
@@ -577,22 +499,6 @@ static void handle_auth(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 		   MAC2STR(mgmt->sa), auth_alg, auth_transaction,
 		   status_code, !!(fc & WLAN_FC_ISWEP),
 		   challenge ? " challenge" : "");
-
-	if (hapd->assoc_ap_state == AUTHENTICATE && auth_transaction == 2 &&
-	    os_memcmp(mgmt->sa, hapd->conf->assoc_ap_addr, ETH_ALEN) == 0 &&
-	    os_memcmp(mgmt->bssid, hapd->conf->assoc_ap_addr, ETH_ALEN) == 0) {
-		if (status_code != 0) {
-			printf("Authentication (as station) with AP "
-			       MACSTR " failed (status_code=%d)\n",
-			       MAC2STR(hapd->conf->assoc_ap_addr),
-			       status_code);
-			return;
-		}
-		printf("Authenticated (as station) with AP " MACSTR "\n",
-		       MAC2STR(hapd->conf->assoc_ap_addr));
-		ieee802_11_sta_associate(hapd, NULL);
-		return;
-	}
 
 	if (hapd->tkip_countermeasures) {
 		resp = WLAN_REASON_MICHAEL_MIC_FAILURE;
@@ -1167,57 +1073,6 @@ static void handle_assoc(struct hostapd_data *hapd,
 }
 
 
-static void handle_assoc_resp(struct hostapd_data *hapd,
-			      struct ieee80211_mgmt *mgmt, size_t len)
-{
-	u16 status_code, aid;
-
-	if (hapd->assoc_ap_state != ASSOCIATE) {
-		printf("Unexpected association response received from " MACSTR
-		       "\n", MAC2STR(mgmt->sa));
-		return;
-	}
-
-	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.assoc_resp)) {
-		printf("handle_assoc_resp - too short payload (len=%lu)\n",
-		       (unsigned long) len);
-		return;
-	}
-
-	if (os_memcmp(mgmt->sa, hapd->conf->assoc_ap_addr, ETH_ALEN) != 0 ||
-	    os_memcmp(mgmt->bssid, hapd->conf->assoc_ap_addr, ETH_ALEN) != 0) {
-		printf("Received association response from unexpected address "
-		       "(SA=" MACSTR " BSSID=" MACSTR "\n",
-		       MAC2STR(mgmt->sa), MAC2STR(mgmt->bssid));
-		return;
-	}
-
-	status_code = le_to_host16(mgmt->u.assoc_resp.status_code);
-	aid = le_to_host16(mgmt->u.assoc_resp.aid);
-	aid &= ~(BIT(14) | BIT(15));
-
-	if (status_code != 0) {
-		printf("Association (as station) with AP " MACSTR " failed "
-		       "(status_code=%d)\n",
-		       MAC2STR(hapd->conf->assoc_ap_addr), status_code);
-		/* Try to authenticate again */
-		hapd->assoc_ap_state = AUTHENTICATE;
-		eloop_register_timeout(5, 0, ieee802_11_sta_authenticate,
-				       hapd, NULL);
-	}
-
-	printf("Associated (as station) with AP " MACSTR " (aid=%d)\n",
-	       MAC2STR(hapd->conf->assoc_ap_addr), aid);
-	hapd->assoc_ap_aid = aid;
-	hapd->assoc_ap_state = ASSOCIATED;
-
-	if (hostapd_set_assoc_ap(hapd, hapd->conf->assoc_ap_addr)) {
-		printf("Could not set associated AP address to kernel "
-		       "driver.\n");
-	}
-}
-
-
 static void handle_disassoc(struct hostapd_data *hapd,
 			    struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -1232,19 +1087,6 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	wpa_printf(MSG_DEBUG, "disassocation: STA=" MACSTR " reason_code=%d",
 		   MAC2STR(mgmt->sa),
 		   le_to_host16(mgmt->u.disassoc.reason_code));
-
-	if (hapd->assoc_ap_state != DO_NOT_ASSOC &&
-	    os_memcmp(mgmt->sa, hapd->conf->assoc_ap_addr, ETH_ALEN) == 0) {
-		printf("Assoc AP " MACSTR " sent disassociation "
-		       "(reason_code=%d) - try to authenticate\n",
-		       MAC2STR(hapd->conf->assoc_ap_addr),
-		       le_to_host16(mgmt->u.disassoc.reason_code));
-		hapd->assoc_ap_state = AUTHENTICATE;
-		ieee802_11_sta_authenticate(hapd, NULL);
-		eloop_register_timeout(0, 500000, ieee802_11_sta_authenticate,
-				       hapd, NULL);
-		return;
-	}
 
 	sta = ap_get_sta(hapd, mgmt->sa);
 	if (sta == NULL) {
@@ -1294,18 +1136,6 @@ static void handle_deauth(struct hostapd_data *hapd,
 		   MAC2STR(mgmt->sa),
 		   le_to_host16(mgmt->u.deauth.reason_code));
 
-	if (hapd->assoc_ap_state != DO_NOT_ASSOC &&
-	    os_memcmp(mgmt->sa, hapd->conf->assoc_ap_addr, ETH_ALEN) == 0) {
-		printf("Assoc AP " MACSTR " sent deauthentication "
-		       "(reason_code=%d) - try to authenticate\n",
-		       MAC2STR(hapd->conf->assoc_ap_addr),
-		       le_to_host16(mgmt->u.deauth.reason_code));
-		hapd->assoc_ap_state = AUTHENTICATE;
-		eloop_register_timeout(0, 500000, ieee802_11_sta_authenticate,
-				       hapd, NULL);
-		return;
-	}
-
 	sta = ap_get_sta(hapd, mgmt->sa);
 	if (sta == NULL) {
 		printf("Station " MACSTR " trying to deauthenticate, but it "
@@ -1341,17 +1171,6 @@ static void handle_beacon(struct hostapd_data *hapd,
 				      len - (IEEE80211_HDRLEN +
 					     sizeof(mgmt->u.beacon)), &elems,
 				      0);
-
-	if (hapd->assoc_ap_state == WAIT_BEACON &&
-	    os_memcmp(mgmt->sa, hapd->conf->assoc_ap_addr, ETH_ALEN) == 0) {
-		if (elems.ssid && elems.ssid_len <= 32) {
-			os_memcpy(hapd->assoc_ap_ssid, elems.ssid,
-				  elems.ssid_len);
-			hapd->assoc_ap_ssid[elems.ssid_len] = '\0';
-			hapd->assoc_ap_ssid_len = elems.ssid_len;
-		}
-		ieee802_11_sta_authenticate(hapd, NULL);
-	}
 
 	ap_list_process_beacon(hapd->iface, mgmt, &elems, fi);
 }
@@ -1505,10 +1324,7 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len, u16 stype,
 		mgmt->bssid[4] == 0xff && mgmt->bssid[5] == 0xff;
 
 	if (!broadcast &&
-	    os_memcmp(mgmt->bssid, hapd->own_addr, ETH_ALEN) != 0 &&
-	    (hapd->assoc_ap_state == DO_NOT_ASSOC ||
-	     os_memcmp(mgmt->bssid, hapd->conf->assoc_ap_addr, ETH_ALEN) != 0))
-	{
+	    os_memcmp(mgmt->bssid, hapd->own_addr, ETH_ALEN) != 0) {
 		printf("MGMT: BSSID=" MACSTR " not our address\n",
 		       MAC2STR(mgmt->bssid));
 		return;
@@ -1536,10 +1352,6 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len, u16 stype,
 	case WLAN_FC_STYPE_ASSOC_REQ:
 		wpa_printf(MSG_DEBUG, "mgmt::assoc_req");
 		handle_assoc(hapd, mgmt, len, 0);
-		break;
-	case WLAN_FC_STYPE_ASSOC_RESP:
-		wpa_printf(MSG_DEBUG, "mgmt::assoc_resp");
-		handle_assoc_resp(hapd, mgmt, len);
 		break;
 	case WLAN_FC_STYPE_REASSOC_REQ:
 		wpa_printf(MSG_DEBUG, "mgmt::reassoc_req");

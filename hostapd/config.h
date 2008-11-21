@@ -189,9 +189,6 @@ struct hostapd_bss_config {
 	char iapp_iface[IFNAMSIZ + 1]; /* interface used with IAPP broadcast
 					* frames */
 
-	u8 assoc_ap_addr[ETH_ALEN];
-	int assoc_ap; /* whether assoc_ap_addr is set */
-
 	enum {
 		ACCEPT_UNLESS_DENIED = 0,
 		DENY_UNLESS_ACCEPTED = 1,

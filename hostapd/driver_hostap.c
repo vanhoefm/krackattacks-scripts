@@ -1095,15 +1095,6 @@ static void * hostap_init(struct hostapd_data *hapd)
 		return NULL;
 	}
 
-	if (hapd->conf->assoc_ap &&
-	    hostap_ioctl_prism2param(drv, PRISM2_PARAM_HOSTAPD_STA, 1)) {
-		printf("Could not enable hostapd STA mode for interface %s\n",
-		       drv->iface);
-		close(drv->ioctl_sock);
-		free(drv);
-		return NULL;
-	}
-
 	if (hostap_init_sockets(drv)) {
 		close(drv->ioctl_sock);
 		free(drv);

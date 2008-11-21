@@ -1445,13 +1445,6 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			conf->country[2] = ' ';
 		} else if (os_strcmp(buf, "ieee80211d") == 0) {
 			conf->ieee80211d = atoi(pos);
-		} else if (os_strcmp(buf, "assoc_ap_addr") == 0) {
-			if (hwaddr_aton(pos, bss->assoc_ap_addr)) {
-				printf("Line %d: invalid MAC address '%s'\n",
-				       line, pos);
-				errors++;
-			}
-			bss->assoc_ap = 1;
 		} else if (os_strcmp(buf, "ieee8021x") == 0) {
 			bss->ieee802_1x = atoi(pos);
 		} else if (os_strcmp(buf, "eapol_version") == 0) {

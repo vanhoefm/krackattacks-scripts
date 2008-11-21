@@ -27,7 +27,6 @@
 #include "hw_features.h"
 #include "driver.h"
 #include "sta_info.h"
-#include "ieee802_11h.h"
 
 
 static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
@@ -101,8 +100,7 @@ static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
 {
 	u8 *pos = eid;
 
-	if ((!hapd->iconf->ieee80211d && !hapd->iface->dfs_enable) ||
-	    max_len < 6)
+	if (!hapd->iconf->ieee80211d || max_len < 6)
 		return eid;
 
 	*pos++ = WLAN_EID_COUNTRY;
@@ -116,45 +114,6 @@ static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
 	eid[1] = (pos - eid) - 2;
 
 	return pos;
-}
-
-
-static u8 * hostapd_eid_power_constraint(struct hostapd_data *hapd, u8 *eid)
-
-{
-	if (!hapd->iface->dfs_enable)
-		return eid;
-	*eid++ = WLAN_EID_PWR_CONSTRAINT;
-	*eid++ = 1;
-	*eid++ = hapd->iface->pwr_const;
-	return eid;
-}
-
-
-static u8 * hostapd_eid_tpc_report(struct hostapd_data *hapd, u8 *eid)
-
-{
-	if (!hapd->iface->dfs_enable)
-		return eid;
-	*eid++ = WLAN_EID_TPC_REPORT;
-	*eid++ = 2;
-	*eid++ = hapd->iface->tx_power; /* TX POWER */
-	*eid++ = 0; /* Link Margin */
-	return eid;
-}
-
-static u8 * hostapd_eid_channel_switch(struct hostapd_data *hapd, u8 *eid)
-
-{
-	if (!hapd->iface->dfs_enable || !hapd->iface->channel_switch)
-		return eid;
-	*eid++ = WLAN_EID_CHANNEL_SWITCH;
-	*eid++ = 3;
-	*eid++ = CHAN_SWITCH_MODE_QUIET;
-	*eid++ = hapd->iface->channel_switch; /* New channel */
-	/* 0 - very soon; 1 - before next TBTT; num - after num beacons */
-	*eid++ = 0;
-	return eid;
 }
 
 
@@ -270,9 +229,6 @@ void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 
 	pos = hostapd_eid_country(hapd, pos, epos - pos);
 
-	pos = hostapd_eid_power_constraint(hapd, pos);
-	pos = hostapd_eid_tpc_report(hapd, pos);
-
 	/* ERP Information element */
 	pos = hostapd_eid_erp_info(hapd, pos);
 
@@ -360,10 +316,6 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	tailpos = hostapd_eid_country(hapd, tailpos,
 				      tail + BEACON_TAIL_BUF_SIZE - tailpos);
-
-	tailpos = hostapd_eid_power_constraint(hapd, tailpos);
-	tailpos = hostapd_eid_channel_switch(hapd, tailpos);
-	tailpos = hostapd_eid_tpc_report(hapd, tailpos);
 
 	/* ERP Information element */
 	tailpos = hostapd_eid_erp_info(hapd, tailpos);

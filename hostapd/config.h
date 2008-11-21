@@ -343,7 +343,6 @@ struct hostapd_config {
 			  */
 
 	int ieee80211d;
-	unsigned int ieee80211h; /* Enable/Disable 80211h */
 
 	struct hostapd_tx_queue_params tx_queue[NUM_TX_QUEUES];
 

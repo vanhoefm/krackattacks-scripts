@@ -35,7 +35,6 @@
 #include "ap_list.h"
 #include "accounting.h"
 #include "driver.h"
-#include "ieee802_11h.h"
 #include "mlme.h"
 
 
@@ -282,9 +281,6 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G &&
 	    hapd->iface->num_sta_no_short_slot_time == 0)
 		capab |= WLAN_CAPABILITY_SHORT_SLOT_TIME;
-
-	if (hapd->iface->dfs_enable) 
-		capab |= WLAN_CAPABILITY_SPECTRUM_MGMT;
 
 	return capab;
 }
@@ -1002,20 +998,6 @@ static void handle_assoc(struct hostapd_data *hapd,
 				goto fail;
 		}
 #endif /* CONFIG_IEEE80211R */
-	}
-
-	if (hapd->iface->dfs_enable &&
-	    hapd->iconf->ieee80211h == SPECT_STRICT_BINDING) {
-		if (hostapd_check_power_cap(hapd, elems.power_cap,
-					    elems.power_cap_len)) {
-			resp = WLAN_STATUS_PWR_CAPABILITY_NOT_VALID;
-			hostapd_logger(hapd, sta->addr,
-				       HOSTAPD_MODULE_IEEE80211,
-				       HOSTAPD_LEVEL_DEBUG,
-				       "Power capabilities of the station not "
-				       "acceptable");
-			goto fail;
-		}
 	}
 
 	if (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G)

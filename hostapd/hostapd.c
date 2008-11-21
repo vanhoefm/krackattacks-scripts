@@ -1618,12 +1618,11 @@ static int setup_interface1(struct hostapd_iface *iface)
 		return -1;
 	}
 
-	if (hapd->iconf->ieee80211d || hapd->iconf->ieee80211h) {
-		if (hostapd_set_ieee80211d(hapd, 1) < 0) {
-			printf("Failed to set ieee80211d (%d)\n",
-			       hapd->iconf->ieee80211d);
-			return -1;
-		}
+	if (hapd->iconf->ieee80211d &&
+	    hostapd_set_ieee80211d(hapd, 1) < 0) {
+		printf("Failed to set ieee80211d (%d)\n",
+		       hapd->iconf->ieee80211d);
+		return -1;
 	}
 
 	if (hapd->iconf->bridge_packets != INTERNAL_BRIDGE_DO_NOT_CONTROL &&

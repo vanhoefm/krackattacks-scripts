@@ -234,13 +234,6 @@ struct hostapd_iface {
 	/* Overlapping BSS information */
 	int olbc_ht;
 
-	int dfs_enable;
-	u8 pwr_const;
-	unsigned int tx_power;
-	unsigned int sta_max_power;
-
-	unsigned int channel_switch;
-
 #ifdef CONFIG_IEEE80211N
 	u16 ht_op_mode;
 #endif /* CONFIG_IEEE80211N */

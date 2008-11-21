@@ -266,7 +266,7 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 					   "caching attempt");
 				sm->cur_pmksa = NULL;
 				abort_cached = 1;
-			} else {
+			} else if (!abort_cached) {
 				return -1;
 			}
 		}

@@ -9,7 +9,9 @@ This program is dual-licensed under both the GPL version 2 and BSD
 license. Either license may be used at your option.
 
 This product includes software developed by the OpenSSL Project
-for use in the OpenSSL Toolkit (http://www.openssl.org/)
+for use in the OpenSSL Toolkit (http://www.openssl.org/). This
+product includes cryptographic software written by Eric Young
+(eay@cryptsoft.com).
 
 
 wpa_supplicant has support for being used as a WPA/WPA2/IEEE 802.1X

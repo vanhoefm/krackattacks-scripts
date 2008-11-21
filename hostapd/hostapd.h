@@ -241,10 +241,6 @@ struct hostapd_iface {
 
 	unsigned int channel_switch;
 
-	struct hostapd_config_change *change;
-	hostapd_iface_cb reload_iface_cb;
-	hostapd_iface_cb config_reload_cb;
-
 #ifdef CONFIG_IEEE80211N
 	u16 ht_op_mode;
 #endif /* CONFIG_IEEE80211N */

@@ -9,3 +9,5 @@ cat Makefile.Release |
     sed s%/usr/lib/qt4%/q/jm/qt4-win/4.3.3/lib%g |
     sed s%/usr/include/qt4%/q/jm/qt4-win/4.3.3/include%g > tmp.Makefile.Release &&
 mv -f tmp.Makefile.Release Makefile.Release
+
+make -C icons

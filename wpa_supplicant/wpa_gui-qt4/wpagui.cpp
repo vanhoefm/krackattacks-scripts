@@ -20,6 +20,7 @@
 #include <cstdio>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QImageReader>
 
 #include "wpagui.h"
 #include "dirent.h"
@@ -1095,7 +1096,10 @@ void WpaGui::createTrayIcon(bool trayOnly)
 
 	tray_icon = new QSystemTrayIcon(this);
 	tray_icon->setToolTip(qAppName() + " - wpa_supplicant user interface");
-	tray_icon->setIcon(QIcon(":/icons/wpa_gui.svg"));
+	if (QImageReader::supportedImageFormats().contains(QByteArray("svg")))
+		tray_icon->setIcon(QIcon(":/icons/wpa_gui.svg"));
+	else
+		tray_icon->setIcon(QIcon(":/icons/wpa_gui.png"));
 
 	connect(tray_icon,
 		SIGNAL(activated(QSystemTrayIcon::ActivationReason)),

@@ -14,6 +14,7 @@ win32 {
   LIBS += -lws2_32 -static
   DEFINES += CONFIG_NATIVE_WINDOWS CONFIG_CTRL_IFACE_NAMED_PIPE
   SOURCES += ../../src/utils/os_win32.c
+  RESOURCES += icons_png.qrc
 } else {
   DEFINES += CONFIG_CTRL_IFACE_UNIX
   SOURCES += ../../src/utils/os_unix.c

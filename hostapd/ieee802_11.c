@@ -721,6 +721,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 	}
 
 	sta->capability = capab_info;
+	sta->listen_interval = listen_interval;
 
 	/* followed by SSID and Supported rates; and HT capabilities if 802.11n
 	 * is used */

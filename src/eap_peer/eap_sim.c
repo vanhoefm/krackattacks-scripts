@@ -171,6 +171,7 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 	if (conf->password) {
 		u8 opc[16], k[16];
 		const char *pos;
+		size_t i;
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Use internal GSM-Milenage "
 			   "implementation for authentication");
 		if (conf->password_len < 65) {
@@ -189,16 +190,20 @@ static int eap_sim_gsm_auth(struct eap_sm *sm, struct eap_sim_data *data)
 		if (hexstr2bin(pos, opc, 16))
 			return -1;
 
-		if (gsm_milenage(opc, k, data->rand[0],
-				 data->sres[0], data->kc[0]) ||
-		    gsm_milenage(opc, k, data->rand[1],
-				 data->sres[1], data->kc[1]) ||
-		    (data->num_chal > 2 &&
-		     gsm_milenage(opc, k, data->rand[2],
-				  data->sres[2], data->kc[2]))) {
-			wpa_printf(MSG_DEBUG, "EAP-SIM: GSM-Milenage "
-				   "authentication could not be completed");
-			return -1;
+		for (i = 0; i < data->num_chal; i++) {
+			if (gsm_milenage(opc, k, data->rand[i],
+					 data->sres[i], data->kc[i])) {
+				wpa_printf(MSG_DEBUG, "EAP-SIM: "
+					   "GSM-Milenage authentication "
+					   "could not be completed");
+				return -1;
+			}
+			wpa_hexdump(MSG_DEBUG, "EAP-SIM: RAND",
+				    data->rand[i], GSM_RAND_LEN);
+			wpa_hexdump_key(MSG_DEBUG, "EAP-SIM: SRES",
+					data->sres[i], EAP_SIM_SRES_LEN);
+			wpa_hexdump_key(MSG_DEBUG, "EAP-SIM: Kc",
+					data->kc[i], EAP_SIM_KC_LEN);
 		}
 		return 0;
 	}

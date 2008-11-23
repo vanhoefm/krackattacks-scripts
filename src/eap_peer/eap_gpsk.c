@@ -444,6 +444,7 @@ const u8 * eap_gpsk_validate_id_server(struct eap_gpsk_data *data,
 				  data->id_server, data->id_server_len);
 		wpa_hexdump_ascii(MSG_DEBUG, "EAP-GPSK: ID_Server in GPSK-3",
 				  pos, len);
+		return NULL;
 	}
 
 	pos += len;

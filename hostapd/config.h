@@ -285,6 +285,22 @@ struct hostapd_bss_config {
 	u16 max_listen_interval;
 
 	int okc; /* Opportunistic Key Caching */
+
+	int wps_state;
+#ifdef CONFIG_WPS
+	int ap_setup_locked;
+	u8 uuid[16];
+	char *wps_pin_requests;
+	char *device_name;
+	char *manufacturer;
+	char *model_name;
+	char *model_number;
+	char *serial_number;
+	char *device_type;
+	char *config_methods;
+	u8 os_version[4];
+	char *ap_pin;
+#endif /* CONFIG_WPS */
 };
 
 

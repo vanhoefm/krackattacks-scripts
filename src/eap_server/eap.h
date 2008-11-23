@@ -103,6 +103,7 @@ struct eap_config {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	struct wps_context *wps;
 };
 
 

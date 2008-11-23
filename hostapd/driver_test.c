@@ -28,6 +28,7 @@
 #include "l2_packet/l2_packet.h"
 #include "ieee802_11.h"
 #include "hw_features.h"
+#include "wps_hostapd.h"
 
 
 struct test_client_socket {
@@ -44,6 +45,10 @@ struct test_driver_bss {
 	u8 bssid[ETH_ALEN];
 	u8 *ie;
 	size_t ielen;
+	u8 *wps_beacon_ie;
+	size_t wps_beacon_ie_len;
+	u8 *wps_probe_resp_ie;
+	size_t wps_probe_resp_ie_len;
 	u8 ssid[32];
 	size_t ssid_len;
 	int privacy;
@@ -62,6 +67,8 @@ struct test_driver_data {
 static void test_driver_free_bss(struct test_driver_bss *bss)
 {
 	free(bss->ie);
+	free(bss->wps_beacon_ie);
+	free(bss->wps_probe_resp_ie);
 	free(bss);
 }
 
@@ -321,13 +328,43 @@ static int test_driver_send_mgmt_frame(void *priv, const void *buf,
 
 
 static void test_driver_scan(struct test_driver_data *drv,
-			     struct sockaddr_un *from, socklen_t fromlen)
+			     struct sockaddr_un *from, socklen_t fromlen,
+			     char *data)
 {
 	char buf[512], *pos, *end;
 	int ret;
 	struct test_driver_bss *bss;
+	u8 sa[ETH_ALEN];
+	u8 ie[512];
+	size_t ielen;
+
+	/* data: optional [ ' ' | STA-addr | ' ' | IEs(hex) ] */
 
 	wpa_printf(MSG_DEBUG, "test_driver: SCAN");
+
+	if (*data) {
+		if (*data != ' ' ||
+		    hwaddr_aton(data + 1, sa)) {
+			wpa_printf(MSG_DEBUG, "test_driver: Unexpected SCAN "
+				   "command format");
+			return;
+		}
+
+		data += 18;
+		while (*data == ' ')
+			data++;
+		ielen = os_strlen(data) / 2;
+		if (ielen > sizeof(ie))
+			ielen = sizeof(ie);
+		if (hexstr2bin(data, ie, ielen) < 0)
+			ielen = 0;
+
+		wpa_printf(MSG_DEBUG, "test_driver: Scan from " MACSTR,
+			   MAC2STR(sa));
+		wpa_hexdump(MSG_MSGDUMP, "test_driver: scan IEs", ie, ielen);
+
+		hostapd_wps_probe_req_rx(drv->hapd, sa, ie, ielen);
+	}
 
 	for (bss = drv->bss; bss; bss = bss->next) {
 		pos = buf;
@@ -346,6 +383,8 @@ static void test_driver_scan(struct test_driver_data *drv,
 			return;
 		pos += ret;
 		pos += wpa_snprintf_hex(pos, end - pos, bss->ie, bss->ielen);
+		pos += wpa_snprintf_hex(pos, end - pos, bss->wps_probe_resp_ie,
+					bss->wps_probe_resp_ie_len);
 
 		if (bss->privacy) {
 			ret = snprintf(pos, end - pos, " PRIVACY");
@@ -653,8 +692,8 @@ static void test_driver_receive_unix(int sock, void *eloop_ctx, void *sock_ctx)
 
 	wpa_printf(MSG_DEBUG, "test_driver: received %u bytes", res);
 
-	if (strcmp(buf, "SCAN") == 0) {
-		test_driver_scan(drv, &from, fromlen);
+	if (strncmp(buf, "SCAN", 4) == 0) {
+		test_driver_scan(drv, &from, fromlen, buf + 4);
 	} else if (strncmp(buf, "ASSOC ", 6) == 0) {
 		test_driver_assoc(drv, &from, fromlen, buf + 6);
 	} else if (strcmp(buf, "DISASSOC") == 0) {
@@ -713,6 +752,66 @@ static int test_driver_set_generic_elem(const char *ifname, void *priv,
 
 	memcpy(bss->ie, elem, elem_len);
 	bss->ielen = elem_len;
+	return 0;
+}
+
+
+static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
+					 const u8 *ie, size_t len)
+{
+	struct test_driver_data *drv = priv;
+	struct test_driver_bss *bss;
+
+	bss = test_driver_get_bss(drv, ifname);
+	if (bss == NULL)
+		return -1;
+
+	free(bss->wps_beacon_ie);
+
+	if (ie == NULL) {
+		bss->wps_beacon_ie = NULL;
+		bss->wps_beacon_ie_len = 0;
+		return 0;
+	}
+
+	bss->wps_beacon_ie = malloc(len);
+	if (bss->wps_beacon_ie == NULL) {
+		bss->wps_beacon_ie_len = 0;
+		return -1;
+	}
+
+	memcpy(bss->wps_beacon_ie, ie, len);
+	bss->wps_beacon_ie_len = len;
+	return 0;
+}
+
+
+static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
+					     const u8 *ie, size_t len)
+{
+	struct test_driver_data *drv = priv;
+	struct test_driver_bss *bss;
+
+	bss = test_driver_get_bss(drv, ifname);
+	if (bss == NULL)
+		return -1;
+
+	free(bss->wps_probe_resp_ie);
+
+	if (ie == NULL) {
+		bss->wps_probe_resp_ie = NULL;
+		bss->wps_probe_resp_ie_len = 0;
+		return 0;
+	}
+
+	bss->wps_probe_resp_ie = malloc(len);
+	if (bss->wps_probe_resp_ie == NULL) {
+		bss->wps_probe_resp_ie_len = 0;
+		return -1;
+	}
+
+	memcpy(bss->wps_probe_resp_ie, ie, len);
+	bss->wps_probe_resp_ie_len = len;
 	return 0;
 }
 
@@ -1162,4 +1261,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.set_sta_vlan = test_driver_set_sta_vlan,
 	.sta_add = test_driver_sta_add,
 	.send_ether = test_driver_send_ether,
+	.set_wps_beacon_ie = test_driver_set_wps_beacon_ie,
+	.set_wps_probe_resp_ie = test_driver_set_wps_probe_resp_ie,
 };

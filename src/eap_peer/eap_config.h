@@ -356,6 +356,9 @@ struct eap_peer_config {
 	 * 0 = do not use cryptobinding (default)
 	 * 1 = use cryptobinding if server supports it
 	 * 2 = require cryptobinding
+	 *
+	 * EAP-WSC (WPS) uses following options: pin=<Device Password> and
+	 * uuid=<Device UUID>
 	 */
 	char *phase1;
 

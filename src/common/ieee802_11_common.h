@@ -45,6 +45,8 @@ struct ieee802_11_elems {
 	u8 wme_len;
 	u8 *wme_tspec;
 	u8 wme_tspec_len;
+	u8 *wps_ie;
+	u8 wps_ie_len;
 	u8 *power_cap;
 	u8 power_cap_len;
 	u8 *supp_channels;

@@ -101,6 +101,9 @@ CONFIG_EAP_TTLS=y
 # to add the needed functions.
 #CONFIG_EAP_FAST=y
 
+# Wi-Fi Protected Setup (WPS)
+#CONFIG_WPS=y
+
 # EAP-IKEv2
 #CONFIG_EAP_IKEV2=y
 

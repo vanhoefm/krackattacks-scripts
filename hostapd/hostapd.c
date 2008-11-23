@@ -44,11 +44,15 @@
 #include "eap_server/tncs.h"
 #include "version.h"
 #include "l2_packet/l2_packet.h"
+#include "wps_hostapd.h"
 
 
 static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 				       size_t identity_len, int phase2,
 				       struct eap_user *user);
+static int hostapd_flush_old_stations(struct hostapd_data *hapd);
+static int hostapd_setup_wpa(struct hostapd_data *hapd);
+static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
 
 struct hapd_interfaces {
 	size_t count;
@@ -326,40 +330,71 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 }
 
 
+int hostapd_reload_config(struct hostapd_iface *iface)
+{
+	struct hostapd_data *hapd = iface->bss[0];
+	struct hostapd_config *newconf, *oldconf;
+	struct wpa_auth_config wpa_auth_conf;
+
+	newconf = hostapd_config_read(iface->config_fname);
+	if (newconf == NULL)
+		return -1;
+
+	/*
+	 * Deauthenticate all stations since the new configuration may not
+	 * allow them to use the BSS anymore.
+	 */
+	hostapd_flush_old_stations(hapd);
+
+	/* TODO: update dynamic data based on changed configuration
+	 * items (e.g., open/close sockets, etc.) */
+	radius_client_flush(hapd->radius, 0);
+
+	oldconf = hapd->iconf;
+	hapd->iconf = newconf;
+	hapd->conf = &newconf->bss[0];
+	iface->conf = newconf;
+
+	if (hostapd_setup_wpa_psk(hapd->conf)) {
+		wpa_printf(MSG_ERROR, "Failed to re-configure WPA PSK "
+			   "after reloading configuration");
+	}
+
+	if (hapd->conf->wpa && hapd->wpa_auth == NULL)
+		hostapd_setup_wpa(hapd);
+	else if (hapd->conf->wpa) {
+		hostapd_wpa_auth_conf(&newconf->bss[0], &wpa_auth_conf);
+		wpa_reconfig(hapd->wpa_auth, &wpa_auth_conf);
+	} else if (hapd->wpa_auth) {
+		wpa_deinit(hapd->wpa_auth);
+		hapd->wpa_auth = NULL;
+		hostapd_set_privacy(hapd, 0);
+		hostapd_setup_encryption(hapd->conf->iface, hapd);
+	}
+
+	ieee802_11_set_beacon(hapd);
+
+	hostapd_config_free(oldconf);
+
+	wpa_printf(MSG_DEBUG, "Reconfigured interface %s", hapd->conf->iface);
+
+	return 0;
+}
+
+
 #ifndef CONFIG_NATIVE_WINDOWS
 static void handle_reload(int sig, void *eloop_ctx, void *signal_ctx)
 {
 	struct hapd_interfaces *hapds = (struct hapd_interfaces *) eloop_ctx;
-	struct hostapd_config *newconf;
 	size_t i;
-	struct wpa_auth_config wpa_auth_conf;
 
 	printf("Signal %d received - reloading configuration\n", sig);
 
 	for (i = 0; i < hapds->count; i++) {
-		struct hostapd_data *hapd = hapds->iface[i]->bss[0];
-		newconf = hostapd_config_read(hapds->iface[i]->config_fname);
-		if (newconf == NULL) {
+		if (hostapd_reload_config(hapds->iface[i]) < 0) {
 			printf("Failed to read new configuration file - "
 			       "continuing with old.\n");
 			continue;
-		}
-		/* TODO: update dynamic data based on changed configuration
-		 * items (e.g., open/close sockets, remove stations added to
-		 * deny list, etc.) */
-		radius_client_flush(hapd->radius, 0);
-		hostapd_config_free(hapd->iconf);
-
-		hostapd_wpa_auth_conf(&newconf->bss[0], &wpa_auth_conf);
-		wpa_reconfig(hapd->wpa_auth, &wpa_auth_conf);
-
-		hapd->iconf = newconf;
-		hapd->conf = &newconf->bss[0];
-		hapds->iface[i]->conf = newconf;
-
-		if (hostapd_setup_wpa_psk(hapd->conf)) {
-			wpa_printf(MSG_ERROR, "Failed to re-configure WPA PSK "
-				   "after reloading configuration");
 		}
 	}
 }
@@ -400,7 +435,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 		fprintf(f, "\nSTA=" MACSTR "\n", MAC2STR(sta->addr));
 
 		fprintf(f,
-			"  AID=%d flags=0x%x %s%s%s%s%s%s%s%s%s%s%s%s\n"
+			"  AID=%d flags=0x%x %s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			"  capability=0x%x listen_interval=%d\n",
 			sta->aid,
 			sta->flags,
@@ -418,6 +453,8 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 			(sta->flags & WLAN_STA_PREAUTH ? "[PREAUTH]" : ""),
 			(sta->flags & WLAN_STA_WME ? "[WME]" : ""),
 			(sta->flags & WLAN_STA_MFP ? "[MFP]" : ""),
+			(sta->flags & WLAN_STA_WPS ? "[WPS]" : ""),
+			(sta->flags & WLAN_STA_MAYBE_WPS ? "[MAYBE_WPS]" : ""),
 			(sta->flags & WLAN_STA_NONERP ? "[NonERP]" : ""),
 			sta->capability,
 			sta->listen_interval);
@@ -587,6 +624,8 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 #ifdef CONFIG_IEEE80211R
 	l2_packet_deinit(hapd->l2);
 #endif /* CONFIG_IEEE80211R */
+
+	hostapd_deinit_wps(hapd);
 
 	hostapd_wireless_event_deinit(hapd);
 
@@ -1178,6 +1217,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd,
 	srv.pac_key_refresh_time = conf->pac_key_refresh_time;
 	srv.eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	srv.tnc = conf->tnc;
+	srv.wps = hapd->wps;
 	srv.ipv6 = conf->radius_server_ipv6;
 	srv.get_eap_user = hostapd_radius_get_eap_user;
 
@@ -1310,6 +1350,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		printf("ACL initialization failed.\n");
 		return -1;
 	}
+	if (hostapd_init_wps(hapd, conf))
+		return -1;
 
 	if (ieee802_1x_init(hapd)) {
 		printf("IEEE 802.1X initialization failed.\n");

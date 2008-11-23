@@ -22,6 +22,7 @@
 struct eap_sm;
 struct wpa_config_blob;
 struct wpabuf;
+struct wps_credential;
 
 struct eap_method_type {
 	int vendor;
@@ -214,6 +215,17 @@ struct eapol_callbacks {
 	void (*notify_pending)(void *ctx);
 
 	/**
+	 * wps_cred - Notify that new credential was received from WPS
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * Returns: 0 on success (credential stored), -1 on failure
+	 *
+	 * This callback is only needed when using WPS Enrollee to configure
+	 * new credentials. This can be left %NULL if no WPS functionality is
+	 * enabled.
+	 */
+	int (*wps_cred)(void *ctx, struct wps_credential *cred);
+
+	/**
 	 * eap_param_needed - Notify that EAP parameter is needed
 	 * @ctx: eapol_ctx from eap_peer_sm_init() call
 	 * @field: Field name (e.g., "IDENTITY")
@@ -248,7 +260,7 @@ struct eap_config {
 	/**
 	 * mac_addr - MAC address of the peer
 	 *
-	 * This can be left %NULL if not available.
+	 * This is only used by EAP-WSC and can be left %NULL if not available.
 	 */
 	const u8 *mac_addr;
 };
@@ -282,6 +294,9 @@ const u8 * eap_get_eapKeyData(struct eap_sm *sm, size_t *len);
 struct wpabuf * eap_get_eapRespData(struct eap_sm *sm);
 void eap_register_scard_ctx(struct eap_sm *sm, void *ctx);
 void eap_invalidate_cached_session(struct eap_sm *sm);
+
+int eap_is_wps_pbc_enrollee(struct eap_peer_config *conf);
+int eap_is_wps_pin_enrollee(struct eap_peer_config *conf);
 
 #endif /* IEEE8021X_EAPOL */
 

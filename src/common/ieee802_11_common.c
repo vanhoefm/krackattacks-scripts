@@ -75,6 +75,11 @@ static int ieee802_11_parse_vendor_specific(u8 *pos, size_t elen,
 				return -1;
 			}
 			break;
+		case 4:
+			/* Wi-Fi Protected Setup (WPS) IE */
+			elems->wps_ie = pos;
+			elems->wps_ie_len = elen;
+			break;
 		default:
 			wpa_printf(MSG_MSGDUMP, "Unknown Microsoft "
 				   "information element ignored "

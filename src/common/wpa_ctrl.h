@@ -49,6 +49,12 @@ extern "C" {
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
 
+#define WPS_EVENT_OVERLAP "WPS-OVERLAP-DETECTED "
+
+/* hostapd control interface - fixed message prefixes */
+#define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "
+#define WPS_EVENT_NEW_AP_SETTINGS "WPS-NEW-AP-SETTINGS "
+
 
 /* wpa_supplicant/hostapd control interface access */
 

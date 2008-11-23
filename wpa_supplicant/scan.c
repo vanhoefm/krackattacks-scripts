@@ -20,6 +20,7 @@
 #include "wpa_supplicant_i.h"
 #include "mlme.h"
 #include "uuid.h"
+#include "wps/wps.h"
 
 
 static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
@@ -41,13 +42,45 @@ static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 }
 
 
+#ifdef CONFIG_WPS
+static int wpas_wps_in_use(struct wpa_config *conf, u8 *uuid)
+{
+	struct wpa_ssid *ssid;
+	int wps = 0;
+	const char *pos;
+
+	for (ssid = conf->ssid; ssid; ssid = ssid->next) {
+		if (!(ssid->key_mgmt & WPA_KEY_MGMT_WPS))
+			continue;
+
+		wps = 1;
+		if (!ssid->eap.phase1)
+			continue;
+
+		pos = os_strstr(ssid->eap.phase1, "uuid=");
+		if (pos)
+			uuid_str2bin(pos + 5, uuid);
+
+		if (os_strstr(ssid->eap.phase1, "pbc=1"))
+			return 2;
+	}
+
+	return wps;
+}
+#endif /* CONFIG_WPS */
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
 	int enabled, scan_req = 0, ret;
+	struct wpabuf *wps_ie = NULL;
 	const u8 *extra_ie = NULL;
 	size_t extra_ie_len = 0;
+	int wps = 0;
+#ifdef CONFIG_WPS
+	u8 uuid[UUID_LEN];
+#endif /* CONFIG_WPS */
 
 	if (wpa_s->disconnected && !wpa_s->scan_req)
 		return;
@@ -134,8 +167,12 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	} else
 		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
 
+#ifdef CONFIG_WPS
+	wps = wpas_wps_in_use(wpa_s->conf, uuid);
+#endif /* CONFIG_WPS */
+
 	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
-	    !wpa_s->use_client_mlme) {
+	    !wpa_s->use_client_mlme && wps != 2) {
 		wpa_s->scan_res_tried++;
 		wpa_s->scan_req = scan_req;
 		wpa_printf(MSG_DEBUG, "Trying to get current scan results "
@@ -144,6 +181,16 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_supplicant_event(wpa_s, EVENT_SCAN_RESULTS, NULL);
 		return;
 	}
+
+#ifdef CONFIG_WPS
+	if (wps) {
+		wps_ie = wps_enrollee_build_probe_req_ie(wps == 2, uuid);
+		if (wps_ie) {
+			extra_ie = wpabuf_head(wps_ie);
+			extra_ie_len = wpabuf_len(wps_ie);
+		}
+	}
+#endif /* CONFIG_WPS */
 
 	if (wpa_s->use_client_mlme) {
 		ieee80211_sta_set_probe_req_ie(wpa_s, extra_ie, extra_ie_len);
@@ -154,6 +201,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		ret = wpa_drv_scan(wpa_s, ssid ? ssid->ssid : NULL,
 				   ssid ? ssid->ssid_len : 0);
 	}
+
+	wpabuf_free(wps_ie);
 
 	if (ret) {
 		wpa_printf(MSG_WARNING, "Failed to initiate AP scan.");

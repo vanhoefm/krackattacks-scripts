@@ -456,11 +456,11 @@ int wpa_reconfig(struct wpa_authenticator *wpa_auth,
 		return 0;
 
 	os_memcpy(&wpa_auth->conf, conf, sizeof(*conf));
-	/*
-	 * TODO:
-	 * Disassociate stations if configuration changed
-	 * Update WPA/RSN IE
-	 */
+	if (wpa_auth_gen_wpa_ie(wpa_auth)) {
+		wpa_printf(MSG_ERROR, "Could not generate WPA IE.");
+		return -1;
+	}
+
 	return 0;
 }
 

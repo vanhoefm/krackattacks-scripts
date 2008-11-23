@@ -56,6 +56,7 @@ struct eapol_auth_config {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	struct wps_context *wps;
 
 	/*
 	 * Pointer to hostapd data. This is a temporary workaround for

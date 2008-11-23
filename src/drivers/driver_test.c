@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - testing driver interface
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -44,6 +44,8 @@ struct wpa_driver_test_data {
 	size_t assoc_wpa_ie_len;
 	int use_mlme;
 	int associated;
+	u8 *probe_req_ie;
+	size_t probe_req_ie_len;
 };
 
 
@@ -85,10 +87,27 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 	struct dirent *dent;
 	DIR *dir;
 	struct sockaddr_un addr;
+	char cmd[512], *pos, *end;
+	int ret;
 
 	dir = opendir(path);
 	if (dir == NULL)
 		return;
+
+	end = cmd + sizeof(cmd);
+	pos = cmd;
+	ret = os_snprintf(pos, end - pos, "SCAN " MACSTR,
+			  MAC2STR(drv->own_addr));
+	if (ret >= 0 && ret < end - pos)
+		pos += ret;
+	if (drv->probe_req_ie) {
+		ret = os_snprintf(pos, end - pos, " ");
+		if (ret >= 0 && ret < end - pos)
+			pos += ret;
+		pos += wpa_snprintf_hex(pos, end - pos, drv->probe_req_ie,
+					drv->probe_req_ie_len);
+	}
+	end[-1] = '\0';
 
 	while ((dent = readdir(dir))) {
 		if (os_strncmp(dent->d_name, "AP-", 3) != 0)
@@ -100,7 +119,7 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 		os_snprintf(addr.sun_path, sizeof(addr.sun_path), "%s/%s",
 			    path, dent->d_name);
 
-		if (sendto(drv->test_socket, "SCAN", 4, 0,
+		if (sendto(drv->test_socket, cmd, os_strlen(cmd), 0,
 			   (struct sockaddr *) &addr, sizeof(addr)) < 0) {
 			perror("sendto(test_socket)");
 		}
@@ -564,6 +583,7 @@ static void wpa_driver_test_deinit(void *priv)
 	os_free(drv->test_dir);
 	for (i = 0; i < MAX_SCAN_RESULTS; i++)
 		os_free(drv->scanres[i]);
+	os_free(drv->probe_req_ie);
 	os_free(drv);
 }
 
@@ -936,6 +956,27 @@ int wpa_driver_test_set_bssid(void *priv, const u8 *bssid)
 #endif /* CONFIG_CLIENT_MLME */
 
 
+int wpa_driver_set_probe_req_ie(void *priv, const u8 *ies, size_t ies_len)
+{
+	struct wpa_driver_test_data *drv = priv;
+
+	os_free(drv->probe_req_ie);
+	if (ies) {
+		drv->probe_req_ie = os_malloc(ies_len);
+		if (drv->probe_req_ie == NULL) {
+			drv->probe_req_ie_len = 0;
+			return -1;
+		}
+		os_memcpy(drv->probe_req_ie, ies, ies_len);
+		drv->probe_req_ie_len = ies_len;
+	} else {
+		drv->probe_req_ie = NULL;
+		drv->probe_req_ie_len = 0;
+	}
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
@@ -984,6 +1025,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* update_ft_ies */,
 	NULL /* send_ft_action */,
 	wpa_driver_test_get_scan_results2,
-	NULL /* set_probe_req_ie */,
+	wpa_driver_set_probe_req_ie,
 	NULL /* set_mode */
 };

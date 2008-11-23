@@ -455,6 +455,13 @@ int eap_peer_register_methods(void)
 	}
 #endif /* EAP_GPSK */
 
+#ifdef EAP_WSC
+	if (ret == 0) {
+		int eap_peer_wsc_register(void);
+		ret = eap_peer_wsc_register();
+	}
+#endif /* EAP_WSC */
+
 #ifdef EAP_IKEV2
 	if (ret == 0) {
 		int eap_peer_ikev2_register(void);

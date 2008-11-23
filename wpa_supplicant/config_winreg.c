@@ -874,6 +874,8 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 
 	wpa_config_delete_subkeys(hk, TEXT("networks"));
 	for (ssid = config->ssid, id = 0; ssid; ssid = ssid->next, id++) {
+		if (ssid->key_mgmt == WPA_KEY_MGMT_WPS)
+			continue; /* do not save temporary WPS networks */
 		if (wpa_config_write_network(hk, ssid, id))
 			errors++;
 	}

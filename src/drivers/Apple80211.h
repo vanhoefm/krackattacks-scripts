@@ -105,11 +105,13 @@ WirelessError WirelessDisassociate(WirelessRef ref);
  * channel: CFNumber(kCFNumberSInt32Type)
  * signal: CFNumber(kCFNumberSInt32Type)
  * appleIE: CFData
+ * WPSNOPINRequired: CFBoolean
  * noise: CFNumber(kCFNumberSInt32Type)
  * capability: CFNumber(kCFNumberSInt32Type)
  * uniCipher: CFArray of CFNumber(kCFNumberSInt32Type)
  * appleIE_Version: CFNumber(kCFNumberSInt32Type)
  * appleIE_Robust: CFBoolean
+ * WPSConfigured: CFBoolean
  * scanWasDirected: CFBoolean
  * appleIE_Product: CFNumber(kCFNumberSInt32Type)
  * authModes: CFArray of CFNumber(kCFNumberSInt32Type)

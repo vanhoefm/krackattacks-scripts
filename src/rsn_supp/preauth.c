@@ -223,6 +223,7 @@ int rsn_preauth_init(struct wpa_sm *sm, const u8 *dst,
 	ctx->eapol_send_ctx = sm;
 	ctx->set_config_blob = sm->ctx->set_config_blob;
 	ctx->get_config_blob = sm->ctx->get_config_blob;
+	ctx->mac_addr = sm->own_addr;
 
 	sm->preauth_eapol = eapol_sm_init(ctx);
 	if (sm->preauth_eapol == NULL) {

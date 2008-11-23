@@ -33,6 +33,7 @@ struct radius_server_conf {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	struct wps_context *wps;
 	int ipv6;
 	int (*get_eap_user)(void *ctx, const u8 *identity, size_t identity_len,
 			    int phase2, struct eap_user *user);

@@ -258,6 +258,21 @@ TLS_FUNCS=y
 NEED_T_PRF=y
 endif
 
+ifdef CONFIG_WPS
+CFLAGS += -DCONFIG_WPS -DEAP_WSC
+OBJS += ../src/utils/uuid.o
+OBJS += wps_hostapd.o
+OBJS += ../src/eap_server/eap_wsc.o ../src/eap_common/eap_wsc_common.o
+OBJS += ../src/wps/wps.o
+OBJS += ../src/wps/wps_common.o
+OBJS += ../src/wps/wps_dev_attr.o
+OBJS += ../src/wps/wps_enrollee.o
+OBJS += ../src/wps/wps_registrar.o
+NEED_DH_GROUPS=y
+NEED_SHA256=y
+NEED_CRYPTO=y
+endif
+
 ifdef CONFIG_EAP_IKEV2
 CFLAGS += -DEAP_IKEV2
 OBJS += ../src/eap_server/eap_ikev2.o ../src/eap_server/ikev2.o

@@ -93,6 +93,7 @@ struct radius_server_data {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	struct wps_context *wps;
 	int ipv6;
 	struct os_time start_time;
 	struct radius_server_counters counters;
@@ -323,6 +324,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.pac_key_refresh_time = data->pac_key_refresh_time;
 	eap_conf.eap_sim_aka_result_ind = data->eap_sim_aka_result_ind;
 	eap_conf.tnc = data->tnc;
+	eap_conf.wps = data->wps;
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
 				       &eap_conf);
 	if (sess->eap == NULL) {
@@ -1040,6 +1042,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->get_eap_user = conf->get_eap_user;
 	data->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	data->tnc = conf->tnc;
+	data->wps = conf->wps;
 
 	data->clients = radius_server_read_clients(conf->client_file,
 						   conf->ipv6);

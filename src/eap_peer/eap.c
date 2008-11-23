@@ -31,6 +31,7 @@
 #include "pcsc_funcs.h"
 #include "wpa_ctrl.h"
 #include "state_machine.h"
+#include "eap_common/eap_wsc_common.h"
 
 #define STATE_MACHINE_DATA struct eap_sm
 #define STATE_MACHINE_DEBUG_PREFIX "EAP"
@@ -2042,4 +2043,30 @@ void eap_invalidate_cached_session(struct eap_sm *sm)
 {
 	if (sm)
 		eap_deinit_prev_method(sm, "invalidate");
+}
+
+
+int eap_is_wps_pbc_enrollee(struct eap_peer_config *conf)
+{
+	if (conf->identity_len != WSC_ID_ENROLLEE_LEN ||
+	    os_memcmp(conf->identity, WSC_ID_ENROLLEE, WSC_ID_ENROLLEE_LEN))
+		return 0; /* Not a WPS Enrollee */
+
+	if (conf->phase1 == NULL || os_strstr(conf->phase1, "pbc=1") == NULL)
+		return 0; /* Not using PBC */
+
+	return 1;
+}
+
+
+int eap_is_wps_pin_enrollee(struct eap_peer_config *conf)
+{
+	if (conf->identity_len != WSC_ID_ENROLLEE_LEN ||
+	    os_memcmp(conf->identity, WSC_ID_ENROLLEE, WSC_ID_ENROLLEE_LEN))
+		return 0; /* Not a WPS Enrollee */
+
+	if (conf->phase1 == NULL || os_strstr(conf->phase1, "pin=") == NULL)
+		return 0; /* Not using PIN */
+
+	return 1;
 }

@@ -170,6 +170,9 @@ CONFIG_EAP_LEAP=y
 # EAP-TNC and related Trusted Network Connect support (experimental)
 #CONFIG_EAP_TNC=y
 
+# Wi-Fi Protected Setup (WPS)
+#CONFIG_WPS=y
+
 # EAP-IKEv2
 #CONFIG_EAP_IKEV2=y
 

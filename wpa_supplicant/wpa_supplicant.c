@@ -38,6 +38,7 @@
 #include "ieee802_11_defs.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
+#include "wps/wps.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -282,7 +283,8 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	eapol_conf.workaround = ssid->eap_workaround;
 	eapol_conf.eap_disabled =
 		!wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) &&
-		wpa_s->key_mgmt != WPA_KEY_MGMT_IEEE8021X_NO_WPA;
+		wpa_s->key_mgmt != WPA_KEY_MGMT_IEEE8021X_NO_WPA &&
+		wpa_s->key_mgmt != WPA_KEY_MGMT_WPS;
 	eapol_sm_notify_config(wpa_s->eapol, &ssid->eap, &eapol_conf);
 #endif /* IEEE8021X_EAPOL */
 }
@@ -302,7 +304,9 @@ void wpa_supplicant_set_non_wpa_policy(struct wpa_supplicant *wpa_s,
 {
 	int i;
 
-	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)
+	if (ssid->key_mgmt & WPA_KEY_MGMT_WPS)
+		wpa_s->key_mgmt = WPA_KEY_MGMT_WPS;
+	else if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)
 		wpa_s->key_mgmt = WPA_KEY_MGMT_IEEE8021X_NO_WPA;
 	else
 		wpa_s->key_mgmt = WPA_KEY_MGMT_NONE;
@@ -635,6 +639,8 @@ static wpa_key_mgmt key_mgmt2driver(int key_mgmt)
 		return KEY_MGMT_802_1X_SHA256;
 	case WPA_KEY_MGMT_PSK_SHA256:
 		return KEY_MGMT_PSK_SHA256;
+	case WPA_KEY_MGMT_WPS:
+		return KEY_MGMT_WPS;
 	case WPA_KEY_MGMT_PSK:
 	default:
 		return KEY_MGMT_PSK;
@@ -1001,6 +1007,16 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 				   "results)");
 			return;
 		}
+#ifdef CONFIG_WPS
+	} else if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
+		struct wpabuf *wps_ie = wps_enrollee_build_assoc_req_ie();
+		if (wps_ie && wpabuf_len(wps_ie) <= sizeof(wpa_ie)) {
+			wpa_ie_len = wpabuf_len(wps_ie);
+			os_memcpy(wpa_ie, wpabuf_head(wps_ie), wpa_ie_len);
+		}
+		wpabuf_free(wps_ie);
+		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
+#endif /* CONFIG_WPS */
 	} else {
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 		wpa_ie_len = 0;
@@ -1019,6 +1035,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			wep_keys_set = 1;
 		}
 	}
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS)
+		use_crypt = 0;
 
 #ifdef IEEE8021X_EAPOL
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {

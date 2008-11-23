@@ -493,6 +493,26 @@ endif
 NEED_SHA256=y
 endif
 
+ifdef CONFIG_WPS
+# EAP-WSC
+ifeq ($(CONFIG_EAP_WSC), dyn)
+CFLAGS += -DCONFIG_WPS -DEAP_WSC_DYNAMIC
+EAPDYN += ../src/eap_peer/eap_wsc.so
+else
+CFLAGS += -DCONFIG_WPS -DEAP_WSC
+OBJS += ../src/utils/uuid.o
+OBJS += ../src/eap_peer/eap_wsc.o ../src/eap_common/eap_wsc_common.o
+OBJS += ../src/wps/wps.o
+OBJS += ../src/wps/wps_common.o
+OBJS += ../src/wps/wps_dev_attr.o
+OBJS += ../src/wps/wps_enrollee.o
+OBJS += ../src/wps/wps_registrar.o
+OBJS_h += ../src/eap_server/eap_wsc.o
+endif
+CONFIG_IEEE8021X_EAPOL=y
+NEED_DH_GROUPS=y
+endif
+
 ifdef CONFIG_EAP_IKEV2
 # EAP-IKEv2
 ifeq ($(CONFIG_EAP_IKEV2), dyn)
@@ -1079,6 +1099,10 @@ eap_pax.so: ../src/eap_peer/eap_pax.c ../src/eap_common/eap_pax_common.c
 eap_sake.so: ../src/eap_peer/eap_sake.c ../src/eap_common/eap_sake_common.c
 	$(CC) -o $@ $(CFLAGS) -shared -rdynamic -fPIC $^ \
 		-Deap_peer_sake_register=eap_peer_method_dynamic_init
+
+eap_wsc.so: ../src/eap_peer/eap_wsc.c ../src/eap_common/eap_wsc_common.c ../src/wps/wps.c
+	$(CC) -o $@ $(CFLAGS) -shared -rdynamic -fPIC $^ \
+		-Deap_peer_wsc_register=eap_peer_method_dynamic_init
 
 eap_ikev2.so: ../src/eap_peer/eap_ikev2.c ../src/eap_peer/ikev2.c ../src/eap_common/eap_ikev2_common.o ../src/eap_common/ikev2_common.c
 	$(CC) -o $@ $(CFLAGS) -shared -rdynamic -fPIC $^ \

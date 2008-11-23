@@ -515,6 +515,10 @@ static int wpa_config_parse_key_mgmt(const struct parse_data *data,
 		else if (os_strcmp(start, "WPA-EAP-SHA256") == 0)
 			val |= WPA_KEY_MGMT_IEEE8021X_SHA256;
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_WPS
+		else if (os_strcmp(start, "WPS") == 0)
+			val |= WPA_KEY_MGMT_WPS;
+#endif /* CONFIG_WPS */
 		else {
 			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
 				   line, start);

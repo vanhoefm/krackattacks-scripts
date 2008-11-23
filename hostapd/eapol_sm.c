@@ -812,6 +812,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.pac_key_refresh_time = eapol->conf.pac_key_refresh_time;
 	eap_conf.eap_sim_aka_result_ind = eapol->conf.eap_sim_aka_result_ind;
 	eap_conf.tnc = eapol->conf.tnc;
+	eap_conf.wps = eapol->conf.wps;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
 	if (sm->eap == NULL) {
 		eapol_auth_free(sm);
@@ -1263,6 +1264,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	dst->pac_key_refresh_time = src->pac_key_refresh_time;
 	dst->eap_sim_aka_result_ind = src->eap_sim_aka_result_ind;
 	dst->tnc = src->tnc;
+	dst->wps = src->wps;
 	return 0;
 }
 

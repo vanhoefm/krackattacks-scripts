@@ -29,6 +29,7 @@
 #include "ctrl_iface.h"
 #include "sta_info.h"
 #include "accounting.h"
+#include "wps_hostapd.h"
 
 
 struct wpa_ctrl_dst {
@@ -217,6 +218,18 @@ static int hostapd_ctrl_iface_new_sta(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_WPS
+static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
+{
+	char *pin = os_strchr(txt, ' ');
+	if (pin == NULL)
+		return -1;
+	*pin++ = '\0';
+	return hostapd_wps_add_pin(hapd, txt, pin);
+}
+#endif /* CONFIG_WPS */
+
+
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -300,6 +313,14 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "NEW_STA ", 8) == 0) {
 		if (hostapd_ctrl_iface_new_sta(hapd, buf + 8))
 			reply_len = -1;
+#ifdef CONFIG_WPS
+	} else if (os_strncmp(buf, "WPS_PIN ", 8) == 0) {
+		if (hostapd_ctrl_iface_wps_pin(hapd, buf + 8))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "WPS_PBC") == 0) {
+		if (hostapd_wps_button_pushed(hapd))
+			reply_len = -1;
+#endif /* CONFIG_WPS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

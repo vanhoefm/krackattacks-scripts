@@ -670,7 +670,8 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	u16 datalen;
 	struct rsn_pmksa_cache_entry *pmksa;
 
-	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa)
+	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa &&
+	    !hapd->conf->wps_state)
 		return;
 
 	wpa_printf(MSG_DEBUG, "IEEE 802.1X: %lu bytes from " MACSTR,
@@ -718,7 +719,8 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		return;
 	}
 
-	if (!hapd->conf->ieee802_1x ||
+	if ((!hapd->conf->ieee802_1x &&
+	     !(sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS))) ||
 	    wpa_key_mgmt_wpa_psk(wpa_auth_sta_key_mgmt(sta->wpa_sm)))
 		return;
 
@@ -728,6 +730,18 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 						 sta);
 		if (!sta->eapol_sm)
 			return;
+
+#ifdef CONFIG_WPS
+		if (!hapd->conf->ieee802_1x &&
+		    ((sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS)) ==
+		     WLAN_STA_MAYBE_WPS)) {
+			/*
+			 * Delay EAPOL frame transmission until a possible WPS
+			 * STA initiates the handshake with EAPOL-Start.
+			 */
+			sta->eapol_sm->flags |= EAPOL_SM_WAIT_START;
+		}
+#endif /* CONFIG_WPS */
 	}
 
 	/* since we support version 1, we can ignore version field and proceed
@@ -801,6 +815,18 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	int reassoc = 1;
 	int force_1x = 0;
 
+#ifdef CONFIG_WPS
+	if (hapd->conf->wps_state &&
+	    (sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS))) {
+		/*
+		 * Need to enable IEEE 802.1X/EAPOL state machines for possible
+		 * WPS handshake even if IEEE 802.1X/EAPOL is not used for
+		 * authentication in this BSS.
+		 */
+		force_1x = 1;
+	}
+#endif /* CONFIG_WPS */
+
 	if ((!force_1x && !hapd->conf->ieee802_1x) ||
 	    wpa_key_mgmt_wpa_psk(wpa_auth_sta_key_mgmt(sta->wpa_sm)))
 		return;
@@ -820,6 +846,16 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 		}
 		reassoc = 0;
 	}
+
+#ifdef CONFIG_WPS
+	if (!hapd->conf->ieee802_1x && !(sta->flags & WLAN_STA_WPS)) {
+		/*
+		 * Delay EAPOL frame transmission until a possible WPS
+		 * initiates the handshake with EAPOL-Start.
+		 */
+		sta->eapol_sm->flags |= EAPOL_SM_WAIT_START;
+	}
+#endif /* CONFIG_WPS */
 
 	sta->eapol_sm->eap_if->portEnabled = TRUE;
 
@@ -1613,6 +1649,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	conf.pac_key_refresh_time = hapd->conf->pac_key_refresh_time;
 	conf.eap_sim_aka_result_ind = hapd->conf->eap_sim_aka_result_ind;
 	conf.tnc = hapd->conf->tnc;
+	conf.wps = hapd->wps;
 
 	os_memset(&cb, 0, sizeof(cb));
 	cb.eapol_send = ieee802_1x_eapol_send;

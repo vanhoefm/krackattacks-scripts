@@ -33,6 +33,8 @@
 #define WLAN_STA_WME BIT(9)
 #define WLAN_STA_MFP BIT(10)
 #define WLAN_STA_HT BIT(11)
+#define WLAN_STA_WPS BIT(12)
+#define WLAN_STA_MAYBE_WPS BIT(13)
 #define WLAN_STA_NONERP BIT(31)
 
 /* Maximum number of supported rates (from both Supported Rates and Extended

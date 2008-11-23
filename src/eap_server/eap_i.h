@@ -181,6 +181,7 @@ struct eap_sm {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	struct wps_context *wps;
 };
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,

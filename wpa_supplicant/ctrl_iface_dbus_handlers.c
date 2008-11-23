@@ -420,6 +420,14 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 			goto error;
 	}
 
+	ie = wpa_scan_get_vendor_ie(res, WPS_IE_VENDOR_TYPE);
+	if (ie) {
+		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "wpsie",
+						     (const char *) ie,
+						     ie[1] + 2))
+			goto error;
+	}
+
 	if (res->freq) {
 		if (!wpa_dbus_dict_append_int32(&iter_dict, "frequency",
 						res->freq))

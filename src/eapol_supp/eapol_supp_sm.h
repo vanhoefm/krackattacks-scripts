@@ -63,6 +63,7 @@ struct eapol_config {
 
 struct eapol_sm;
 struct wpa_config_blob;
+struct wps_credential;
 
 /**
  * struct eapol_ctx - Global (for all networks) EAPOL state machine context
@@ -199,6 +200,23 @@ struct eapol_ctx {
 	 */
 	const char *pkcs11_module_path;
 #endif /* EAP_TLS_OPENSSL */
+	/**
+	 * mac_addr - MAC address of the peer
+	 *
+	 * This is only used by EAP-WSC and can be left %NULL if not available.
+	 */
+	const u8 *mac_addr;
+
+	/**
+	 * wps_cred - Notify that new credential was received from WPS
+	 * @ctx: Callback context (ctx)
+	 * Returns: 0 on success (credential stored), -1 on failure
+	 *
+	 * This callback is only needed when using WPS Enrollee to configure
+	 * new credentials. This can be left %NULL if no WPS functionality is
+	 * enabled.
+	 */
+	int (*wps_cred)(void *ctx, struct wps_credential *cred);
 
 	/**
 	 * eap_param_needed - Notify that EAP parameter is needed

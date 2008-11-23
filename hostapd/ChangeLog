@@ -1,5 +1,16 @@
 ChangeLog for hostapd
 
+????-??-?? - v0.6.7
+	* added support for Wi-Fi Protected Setup (WPS)
+	  (hostapd can now be configured to act as an integrated WPS Registrar
+	  and provision credentials for WPS Enrollees using PIN and PBC
+	  methods; external WPS Registrars are not supported); WPS support can
+	  be enabled by adding CONFIG_WPS=y into .config and setting the
+	  runtime configuration variables in hostapd.conf (see WPS section in
+	  the example configuration file); new hostapd_cli commands wps_pin and
+	  wps_pbc are used to configuration WPS negotiation; see README-WPS for
+	  more details
+
 2008-11-23 - v0.6.6
 	* added a new configuration option, wpa_ptk_rekey, that can be used to
 	  enforce frequent PTK rekeying, e.g., to mitigate some attacks against

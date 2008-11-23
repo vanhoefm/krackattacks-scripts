@@ -31,6 +31,7 @@
 #include "ieee802_11_defs.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
+#include "wps/wps.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -276,6 +277,53 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_ssid *ssid,
 	int proto_match = 0;
 	const u8 *rsn_ie, *wpa_ie;
 
+#ifdef CONFIG_WPS
+	if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
+		const u8 *wps_ie;
+		wps_ie = wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
+		if (eap_is_wps_pbc_enrollee(&ssid->eap)) {
+			if (!wps_ie) {
+				wpa_printf(MSG_DEBUG, "   skip - non-WPS AP");
+				return 0;
+			}
+
+			if (!wps_is_selected_pbc_registrar(wps_ie + 6,
+							   wps_ie[1] - 4)) {
+				wpa_printf(MSG_DEBUG, "   skip - WPS AP "
+					   "without active PBC Registrar");
+				return 0;
+			}
+
+			/* TODO: overlap detection */
+			wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
+				   "(Active PBC)");
+			return 1;
+		}
+
+		if (eap_is_wps_pin_enrollee(&ssid->eap)) {
+			if (!wps_ie) {
+				wpa_printf(MSG_DEBUG, "   skip - non-WPS AP");
+				return 0;
+			}
+
+			if (!wps_is_selected_pin_registrar(wps_ie + 6,
+							   wps_ie[1] - 4)) {
+				wpa_printf(MSG_DEBUG, "   skip - WPS AP "
+					   "without active PIN Registrar");
+				return 0;
+			}
+			wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
+				   "(Active PIN)");
+			return 1;
+		}
+
+		if (wps_ie) {
+			wpa_printf(MSG_DEBUG, "   selected based on WPS IE");
+			return 1;
+		}
+	}
+#endif /* CONFIG_WPS */
+
 	rsn_ie = wpa_scan_get_ie(bss, WLAN_EID_RSN);
 	while ((ssid->proto & WPA_PROTO_RSN) && rsn_ie) {
 		proto_match++;
@@ -364,6 +412,34 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_ssid *ssid,
 }
 
 
+#ifdef CONFIG_WPS
+static int wps_ssid_wildcard_ok(struct wpa_ssid *ssid,
+				struct wpa_scan_res *bss)
+{
+	const u8 *wps_ie;
+
+	if (eap_is_wps_pbc_enrollee(&ssid->eap)) {
+		wps_ie = wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
+		if (wps_ie &&
+		    wps_is_selected_pbc_registrar(wps_ie + 6, wps_ie[1] - 4)) {
+			/* allow wildcard SSID for WPS PBC */
+			return 1;
+		}
+	}
+
+	if (eap_is_wps_pin_enrollee(&ssid->eap)) {
+		wps_ie = wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
+		if (wps_ie &&
+		    wps_is_selected_pin_registrar(wps_ie + 6, wps_ie[1] - 4)) {
+			/* allow wildcard SSID for WPS PIN */
+			return 1;
+		}
+	}
+
+	return 0;
+}
+#endif /* CONFIG_WPS */
+
 static struct wpa_scan_res *
 wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *group,
@@ -409,13 +485,22 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 		}
 
 		for (ssid = group; ssid; ssid = ssid->pnext) {
+			int check_ssid = 1;
+
 			if (ssid->disabled) {
 				wpa_printf(MSG_DEBUG, "   skip - disabled");
 				continue;
 			}
 
-			if (ssid_len != ssid->ssid_len ||
-			    os_memcmp(ssid_, ssid->ssid, ssid_len) != 0) {
+#ifdef CONFIG_WPS
+			if (ssid->ssid_len == 0 &&
+			    wps_ssid_wildcard_ok(ssid, bss))
+				check_ssid = 0;
+#endif /* CONFIG_WPS */
+
+			if (check_ssid &&
+			    (ssid_len != ssid->ssid_len ||
+			     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
 				wpa_printf(MSG_DEBUG, "   skip - "
 					   "SSID mismatch");
 				continue;
@@ -485,12 +570,26 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 		}
 
 		for (ssid = group; ssid; ssid = ssid->pnext) {
+			int check_ssid = ssid->ssid_len != 0;
+
 			if (ssid->disabled) {
 				wpa_printf(MSG_DEBUG, "   skip - disabled");
 				continue;
 			}
 
-			if (ssid->ssid_len != 0 &&
+#ifdef CONFIG_WPS
+			if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
+				/* Only allow wildcard SSID match if an AP
+				 * advertises active WPS operation that matches
+				 * with our mode. */
+				check_ssid = 1;
+				if (ssid->ssid_len == 0 &&
+				    wps_ssid_wildcard_ok(ssid, bss))
+					check_ssid = 0;
+			}
+#endif /* CONFIG_WPS */
+
+			if (check_ssid &&
 			    (ssid_len != ssid->ssid_len ||
 			     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
 				wpa_printf(MSG_DEBUG, "   skip - "
@@ -507,6 +606,7 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 			}
 			
 			if (!(ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
+			    !(ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
 			    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA))
 			{
 				wpa_printf(MSG_DEBUG, "   skip - "
@@ -570,6 +670,65 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 }
 
 
+#ifdef CONFIG_WPS
+
+static int wpa_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
+				struct wpa_scan_res *selected,
+				struct wpa_ssid *ssid)
+{
+	const u8 *sel_uuid, *uuid;
+	size_t i;
+	const u8 *wps_ie;
+
+	if (!eap_is_wps_pbc_enrollee(&ssid->eap))
+		return 0;
+
+	/* Make sure that only one AP is in active PBC mode */
+	wps_ie = wpa_scan_get_vendor_ie(selected, WPS_IE_VENDOR_TYPE);
+	if (wps_ie)
+		sel_uuid = wps_get_uuid_e(wps_ie + 6, wps_ie[1] - 4);
+	else
+		sel_uuid = NULL;
+	if (!sel_uuid) {
+		wpa_printf(MSG_DEBUG, "WPS: UUID-E not "
+			   "available for PBC overlap "
+			   "detection");
+		return 1;
+	}
+
+	for (i = 0; i < wpa_s->scan_res->num; i++) {
+		struct wpa_scan_res *bss = wpa_s->scan_res->res[i];
+		if (bss == selected)
+			continue;
+		wps_ie = wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
+		if (!wps_ie)
+			continue;
+		if (!wps_is_selected_pbc_registrar(wps_ie + 6,
+						   wps_ie[1] - 4))
+			continue;
+		uuid = wps_get_uuid_e(wps_ie + 6, wps_ie[1] - 4);
+		if (uuid == NULL) {
+			wpa_printf(MSG_DEBUG, "WPS: UUID-E not "
+				   "available for PBC overlap "
+				   "detection (other BSS)");
+			return 1;
+		}
+		if (os_memcmp(sel_uuid, uuid, 16) != 0)
+			return 1; /* PBC overlap */
+
+		/* TODO: verify that this is reasonable dual-band situation */
+	}
+
+	return 0;
+}
+
+#else /* CONFIG_WPS */
+
+#define wpa_scan_pbc_overlap(w, s, i) 0
+
+#endif /* CONFIG_WPS */
+
+
 static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 {
 	int prio, timeout;
@@ -619,6 +778,13 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 	}
 
 	if (selected) {
+		if (wpa_scan_pbc_overlap(wpa_s, selected, ssid)) {
+			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
+				"PBC session overlap");
+			timeout = 10;
+			goto req_scan;
+		}
+
 		/* Do not trigger new association unless the BSSID has changed
 		 * or if reassociation is requested. If we are in process of
 		 * associating with the selected BSSID, do not trigger new

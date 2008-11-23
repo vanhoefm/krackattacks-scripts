@@ -1166,6 +1166,7 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	sm->pac_key_refresh_time = conf->pac_key_refresh_time;
 	sm->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	sm->tnc = conf->tnc;
+	sm->wps = conf->wps;
 
 	wpa_printf(MSG_DEBUG, "EAP: Server state machine created");
 

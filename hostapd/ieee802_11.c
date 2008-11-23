@@ -825,6 +825,21 @@ static void handle_assoc(struct hostapd_data *hapd,
 		wpa_ie = NULL;
 		wpa_ie_len = 0;
 	}
+#ifdef CONFIG_WPS
+	if (hapd->conf->wps_state && wpa_ie == NULL) {
+		if (elems.wps_ie) {
+			wpa_printf(MSG_DEBUG, "STA included WPS IE in "
+				   "(Re)Association Request - assume WPS is "
+				   "used");
+			sta->flags |= WLAN_STA_WPS;
+		} else {
+			wpa_printf(MSG_DEBUG, "STA did not include WPA/RSN IE "
+				   "in (Re)Association Request - possible WPS "
+				   "use");
+			sta->flags |= WLAN_STA_MAYBE_WPS;
+		}
+	} else
+#endif /* CONFIG_WPS */
 	if (hapd->conf->wpa && wpa_ie == NULL) {
 		printf("STA " MACSTR ": No WPA/RSN IE in association "
 		       "request\n", MAC2STR(sta->addr));

@@ -28,6 +28,16 @@
 #include <net80211/ieee80211_crypto.h>
 #include <net80211/ieee80211_ioctl.h>
 
+#ifdef CONFIG_WPS
+#ifdef IEEE80211_IOCTL_FILTERFRAME
+#include <netpacket/packet.h>
+
+#ifndef ETH_P_80211_RAW
+#define ETH_P_80211_RAW 0x0019
+#endif
+#endif /* IEEE80211_IOCTL_FILTERFRAME */
+#endif /* CONFIG_WPS */
+
 /*
  * Avoid conflicts with hostapd definitions by undefining couple of defines
  * from madwifi header files.
@@ -58,6 +68,7 @@
 #include "ieee802_11.h"
 #include "accounting.h"
 #include "common.h"
+#include "wps_hostapd.h"
 
 
 struct madwifi_driver_data {
@@ -729,6 +740,61 @@ madwifi_sta_disassoc(void *priv, const u8 *addr, int reason_code)
 	return ret;
 }
 
+#ifdef CONFIG_WPS
+#ifdef IEEE80211_IOCTL_FILTERFRAME
+static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
+				size_t len)
+{
+	struct madwifi_driver_data *drv = ctx;
+	const struct ieee80211_mgmt *mgmt;
+	const u8 *end, *ie;
+	u16 fc;
+	size_t ie_len;
+
+	/* Send Probe Request information to WPS processing */
+
+	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
+		return;
+	mgmt = (const struct ieee80211_mgmt *) buf;
+
+	fc = le_to_host16(mgmt->frame_control);
+	if (WLAN_FC_GET_TYPE(fc) != WLAN_FC_TYPE_MGMT ||
+	    WLAN_FC_GET_STYPE(fc) != WLAN_FC_STYPE_PROBE_REQ)
+		return;
+
+	end = buf + len;
+	ie = mgmt->u.probe_req.variable;
+	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
+
+	hostapd_wps_probe_req_rx(drv->hapd, mgmt->sa, ie, ie_len);
+}
+#endif /* IEEE80211_IOCTL_FILTERFRAME */
+#endif /* CONFIG_WPS */
+
+static int madwifi_receive_probe_req(struct madwifi_driver_data *drv)
+{
+	int ret = 0;
+#ifdef CONFIG_WPS
+#ifdef IEEE80211_IOCTL_FILTERFRAME
+	struct ieee80211req_set_filter filt;
+
+	wpa_printf(MSG_DEBUG, "%s Enter", __func__);
+	filt.app_filterype = IEEE80211_FILTER_TYPE_PROBE_REQ;
+
+	ret = set80211priv(drv, IEEE80211_IOCTL_FILTERFRAME, &filt,
+			   sizeof(struct ieee80211req_set_filter));
+	if (ret)
+		return ret;
+
+	drv->sock_raw = l2_packet_init(drv->iface, NULL, ETH_P_80211_RAW,
+				       madwifi_raw_receive, drv, 1);
+	if (drv->sock_raw == NULL)
+		return -1;
+#endif /* IEEE80211_IOCTL_FILTERFRAME */
+#endif /* CONFIG_WPS */
+	return ret;
+}
+
 static int
 madwifi_del_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
@@ -748,6 +814,45 @@ madwifi_del_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 	}
 	return 0;
 }
+
+#ifdef CONFIG_WPS
+static int
+madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
+{
+	struct madwifi_driver_data *drv = priv;
+	u8 buf[256];
+	struct ieee80211req_getset_appiebuf *beac_ie;
+
+	wpa_printf(MSG_DEBUG, "%s buflen = %lu", __func__,
+		   (unsigned long) len);
+
+	beac_ie = (struct ieee80211req_getset_appiebuf *) buf;
+	beac_ie->app_frmtype = frametype;
+	beac_ie->app_buflen = len;
+	memcpy(&(beac_ie->app_buf[0]), ie, len);
+
+	return set80211priv(drv, IEEE80211_IOCTL_SET_APPIEBUF, beac_ie,
+			    sizeof(struct ieee80211req_getset_appiebuf) + len);
+}
+
+static int
+madwifi_set_wps_beacon_ie(const char *ifname, void *priv, const u8 *ie,
+			  size_t len)
+{
+	return madwifi_set_wps_ie(priv, ie, len, IEEE80211_APPIE_FRAME_BEACON);
+}
+
+static int
+madwifi_set_wps_probe_resp_ie(const char *ifname, void *priv, const u8 *ie,
+			      size_t len)
+{
+	return madwifi_set_wps_ie(priv, ie, len,
+				  IEEE80211_APPIE_FRAME_PROBE_RESP);
+}
+#else /* CONFIG_WPS */
+#define madwifi_set_wps_beacon_ie NULL
+#define madwifi_set_wps_probe_resp_ie NULL
+#endif /* CONFIG_WPS */
 
 static int
 madwifi_process_wpa_ie(struct madwifi_driver_data *drv, struct sta_info *sta)
@@ -788,6 +893,15 @@ madwifi_process_wpa_ie(struct madwifi_driver_data *drv, struct sta_info *sta)
 #endif /* MADWIFI_NG */
 	ielen = iebuf[1];
 	if (ielen == 0) {
+#ifdef CONFIG_WPS
+		if (hapd->conf->wps_state) {
+			wpa_printf(MSG_DEBUG, "STA did not include WPA/RSN IE "
+				   "in (Re)Association Request - possible WPS "
+				   "use");
+			sta->flags |= WLAN_STA_MAYBE_WPS;
+			return 0;
+		}
+#endif /* CONFIG_WPS */
 		printf("No WPA/RSN information element for station!?\n");
 		return -1;		/* XXX not right */
 	}
@@ -1254,6 +1368,8 @@ madwifi_init(struct hostapd_data *hapd)
 	madwifi_set_iface_flags(drv, 0);	/* mark down during setup */
 	madwifi_set_privacy(drv->iface, drv, 0); /* default to no privacy */
 
+	madwifi_receive_probe_req(drv);
+
 	return drv;
 bad:
 	if (drv->sock_xmit != NULL)
@@ -1360,4 +1476,6 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.set_countermeasures	= madwifi_set_countermeasures,
 	.sta_clear_stats        = madwifi_sta_clear_stats,
 	.commit			= madwifi_commit,
+	.set_wps_beacon_ie	= madwifi_set_wps_beacon_ie,
+	.set_wps_probe_resp_ie	= madwifi_set_wps_probe_resp_ie,
 };

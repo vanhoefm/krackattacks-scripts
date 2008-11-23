@@ -356,15 +356,15 @@ SM_STEP(AUTH_PAE)
 {
 	if ((sm->portControl == Auto && sm->portMode != sm->portControl) ||
 	    sm->initialize || !sm->eap_if->portEnabled)
-		SM_ENTER(AUTH_PAE, INITIALIZE);
+		SM_ENTER_GLOBAL(AUTH_PAE, INITIALIZE);
 	else if (sm->portControl == ForceAuthorized &&
 		 sm->portMode != sm->portControl &&
 		 !(sm->initialize || !sm->eap_if->portEnabled))
-		SM_ENTER(AUTH_PAE, FORCE_AUTH);
+		SM_ENTER_GLOBAL(AUTH_PAE, FORCE_AUTH);
 	else if (sm->portControl == ForceUnauthorized &&
 		 sm->portMode != sm->portControl &&
 		 !(sm->initialize || !sm->eap_if->portEnabled))
-		SM_ENTER(AUTH_PAE, FORCE_UNAUTH);
+		SM_ENTER_GLOBAL(AUTH_PAE, FORCE_UNAUTH);
 	else {
 		switch (sm->auth_pae_state) {
 		case AUTH_PAE_INITIALIZE:
@@ -520,7 +520,7 @@ SM_STATE(BE_AUTH, IGNORE)
 SM_STEP(BE_AUTH)
 {
 	if (sm->portControl != Auto || sm->initialize || sm->authAbort) {
-		SM_ENTER(BE_AUTH, INITIALIZE);
+		SM_ENTER_GLOBAL(BE_AUTH, INITIALIZE);
 		return;
 	}
 
@@ -605,7 +605,7 @@ SM_STEP(REAUTH_TIMER)
 {
 	if (sm->portControl != Auto || sm->initialize ||
 	    sm->authPortStatus == Unauthorized || !sm->reAuthEnabled) {
-		SM_ENTER(REAUTH_TIMER, INITIALIZE);
+		SM_ENTER_GLOBAL(REAUTH_TIMER, INITIALIZE);
 		return;
 	}
 
@@ -643,7 +643,7 @@ SM_STATE(AUTH_KEY_TX, KEY_TRANSMIT)
 SM_STEP(AUTH_KEY_TX)
 {
 	if (sm->initialize || sm->portControl != Auto) {
-		SM_ENTER(AUTH_KEY_TX, NO_KEY_TRANSMIT);
+		SM_ENTER_GLOBAL(AUTH_KEY_TX, NO_KEY_TRANSMIT);
 		return;
 	}
 
@@ -684,7 +684,7 @@ SM_STATE(KEY_RX, KEY_RECEIVE)
 SM_STEP(KEY_RX)
 {
 	if (sm->initialize || !sm->eap_if->portEnabled) {
-		SM_ENTER(KEY_RX, NO_KEY_RECEIVE);
+		SM_ENTER_GLOBAL(KEY_RX, NO_KEY_RECEIVE);
 		return;
 	}
 
@@ -721,7 +721,7 @@ SM_STATE(CTRL_DIR, IN_OR_BOTH)
 SM_STEP(CTRL_DIR)
 {
 	if (sm->initialize) {
-		SM_ENTER(CTRL_DIR, IN_OR_BOTH);
+		SM_ENTER_GLOBAL(CTRL_DIR, IN_OR_BOTH);
 		return;
 	}
 

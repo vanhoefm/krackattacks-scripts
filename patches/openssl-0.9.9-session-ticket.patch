@@ -4,6 +4,10 @@ the parts used by EAP-FAST (RFC 4851).
 This is based on the patch from Alexey Kobozev <akobozev@cisco.com>
 (sent to openssl-dev mailing list on Tue, 07 Jun 2005 15:40:58 +0300).
 
+NOTE: This patch (without SSL_set_hello_extension() wrapper) was
+merged into the upstream OpenSSL 0.9.9 tree and as such, an external
+patch for EAP-FAST support is not needed anymore.
+
 
 
 Index: openssl-SNAP-20081111/ssl/s3_clnt.c

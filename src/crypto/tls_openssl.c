@@ -37,7 +37,7 @@
 #define OPENSSL_d2i_TYPE unsigned char **
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x00909000L
+#ifdef SSL_F_SSL_SET_SESSION_TICKET_EXT
 #ifdef SSL_OP_NO_TICKET
 /*
  * Session ticket override patch was merged into OpenSSL 0.9.9 tree on

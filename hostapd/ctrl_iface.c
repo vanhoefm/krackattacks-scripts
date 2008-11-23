@@ -213,7 +213,6 @@ static int hostapd_ctrl_iface_new_sta(struct hostapd_data *hapd,
 		return -1;
 
 	hostapd_new_assoc_sta(hapd, sta, 0);
-	accounting_sta_get_id(hapd, sta);
 	return 0;
 }
 

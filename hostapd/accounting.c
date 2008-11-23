@@ -1,6 +1,6 @@
 /*
  * hostapd / RADIUS Accounting
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -31,6 +31,9 @@
 /* from ieee802_1x.c */
 const char *radius_mode_txt(struct hostapd_data *hapd);
 int radius_sta_rate(struct hostapd_data *hapd, struct sta_info *sta);
+
+static void accounting_sta_get_id(struct hostapd_data *hapd,
+				  struct sta_info *sta);
 
 
 static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
@@ -234,6 +237,12 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 	if (sta->acct_session_started)
 		return;
 
+	accounting_sta_get_id(hapd, sta);
+	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
+		       HOSTAPD_LEVEL_INFO,
+		       "starting accounting session %08X-%08X",
+		       sta->acct_session_id_hi, sta->acct_session_id_lo);
+
 	time(&sta->acct_session_start);
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
 	sta->acct_input_gigawords = sta->acct_output_gigawords = 0;
@@ -370,12 +379,18 @@ void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta)
 	if (sta->acct_session_started) {
 		accounting_sta_report(hapd, sta, 1);
 		eloop_cancel_timeout(accounting_interim_update, hapd, sta);
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
+			       HOSTAPD_LEVEL_INFO,
+			       "stopped accounting session %08X-%08X",
+			       sta->acct_session_id_hi,
+			       sta->acct_session_id_lo);
 		sta->acct_session_started = 0;
 	}
 }
 
 
-void accounting_sta_get_id(struct hostapd_data *hapd, struct sta_info *sta)
+static void accounting_sta_get_id(struct hostapd_data *hapd,
+				  struct sta_info *sta)
 {
 	sta->acct_session_id_lo = hapd->acct_session_id_lo++;
 	if (hapd->acct_session_id_lo == 0) {

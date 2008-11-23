@@ -410,7 +410,6 @@ static int test_driver_new_sta(struct test_driver_data *drv,
 		if (sta == NULL)
 			return -1;
 	}
-	accounting_sta_get_id(hapd, sta);
 
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {

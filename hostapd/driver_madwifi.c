@@ -831,7 +831,6 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 		memset(drv->acct_mac, 0, ETH_ALEN);
 		memset(&drv->acct_data, 0, sizeof(drv->acct_data));
 	}
-	accounting_sta_get_id(hapd, sta);
 
 	if (hapd->conf->wpa) {
 		if (madwifi_process_wpa_ie(drv, sta))

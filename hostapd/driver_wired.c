@@ -85,7 +85,6 @@ static void wired_possible_new_sta(struct hostapd_data *hapd, u8 *addr)
 	sta = ap_sta_add(hapd, addr);
 	if (sta) {
 		hostapd_new_assoc_sta(hapd, sta, 0);
-		accounting_sta_get_id(hapd, sta);
 	} else {
 		wpa_printf(MSG_DEBUG, "Failed to add STA entry for " MACSTR,
 			   MAC2STR(addr));

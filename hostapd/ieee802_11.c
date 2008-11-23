@@ -1461,13 +1461,11 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	/* Stop previous accounting session, if one is started, and allocate
 	 * new session id for the new session. */
 	accounting_sta_stop(hapd, sta);
-	accounting_sta_get_id(hapd, sta);
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO,
-		       "associated (aid %d, accounting session %08X-%08X)",
-		       sta->aid, sta->acct_session_id_hi,
-		       sta->acct_session_id_lo);
+		       "associated (aid %d)",
+		       sta->aid);
 
 	if (sta->flags & WLAN_STA_ASSOC)
 		new_assoc = 0;

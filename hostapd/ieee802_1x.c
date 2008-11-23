@@ -767,7 +767,6 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		sta->acct_terminate_cause =
 			RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
 		accounting_sta_stop(hapd, sta);
-		accounting_sta_get_id(hapd, sta);
 		sta->eapol_sm->eapolLogoff = TRUE;
 		sta->eapol_sm->dot1xAuthEapolLogoffFramesRx++;
 		break;

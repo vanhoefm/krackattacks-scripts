@@ -1,6 +1,6 @@
 ChangeLog for wpa_supplicant
 
-????-??-?? - v0.6.6
+2008-11-23 - v0.6.6
 	* added Milenage SIM/USIM emulator for EAP-SIM/EAP-AKA
 	  (can be used to simulate test SIM/USIM card with a known private key;
 	  enable with CONFIG_SIM_SIMULATOR=y/CONFIG_USIM_SIMULATOR=y in .config

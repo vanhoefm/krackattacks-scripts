@@ -963,16 +963,18 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT) {
-		if ((sta->ht_capabilities.data.capabilities_info &
-		     HT_CAP_INFO_GREEN_FIELD) == 0) {
+		u16 ht_capab = le_to_host16(
+			sta->ht_capabilities.data.capabilities_info);
+		wpa_printf(MSG_DEBUG, "HT: STA " MACSTR " HT Capabilities "
+			   "Info: 0x%04x", MAC2STR(sta->addr), ht_capab);
+		if ((ht_capab & HT_CAP_INFO_GREEN_FIELD) == 0) {
 			hapd->iface->num_sta_ht_no_gf++;
 			wpa_printf(MSG_DEBUG, "%s STA " MACSTR " - no "
 				   "greenfield, num of non-gf stations %d",
 				   __func__, MAC2STR(sta->addr),
 				   hapd->iface->num_sta_ht_no_gf);
 		}
-		if ((sta->ht_capabilities.data.capabilities_info &
-		     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) == 0) {
+		if ((ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) == 0) {
 			hapd->iface->num_sta_ht_20mhz++;
 			wpa_printf(MSG_DEBUG, "%s STA " MACSTR " - 20 MHz HT, "
 				   "num of 20MHz HT STAs %d",

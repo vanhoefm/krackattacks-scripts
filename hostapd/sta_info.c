@@ -156,11 +156,11 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT) {
-		if ((sta->ht_capabilities.data.capabilities_info &
-		     HT_CAP_INFO_GREEN_FIELD) == 0)
+		u16 ht_capab = le_to_host16(
+			sta->ht_capabilities.data.capabilities_info);
+		if ((ht_capab & HT_CAP_INFO_GREEN_FIELD) == 0)
 			hapd->iface->num_sta_ht_no_gf--;
-		if ((sta->ht_capabilities.data.capabilities_info &
-		     HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) == 0)
+		if ((ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) == 0)
 			hapd->iface->num_sta_ht_20mhz--;
 	} else
 		hapd->iface->num_sta_no_ht--;

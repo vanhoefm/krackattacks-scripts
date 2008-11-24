@@ -431,7 +431,7 @@ struct ieee80211_ht_operation {
 	(((_var_) & (((u32)7) << (_shift_))) >> (_shift_))
 
 
-#define HT_CAP_INFO_ADVANCED_CODDING_CAP	((u16) BIT(0))
+#define HT_CAP_INFO_LDPC_CODING_CAP		((u16) BIT(0))
 #define HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET	((u16) BIT(1))
 #define HT_CAP_INFO_MIMO_PWR_SAVE_OFFSET	2
 #define HT_CAP_INFO_GREEN_FIELD			((u16) BIT(4))
@@ -443,7 +443,7 @@ struct ieee80211_ht_operation {
 #define HT_CAP_INFO_MAX_AMSDU_SIZE		((u16) BIT(11))
 #define HT_CAP_INFO_DSSS_CCK40MHZ		((u16) BIT(12))
 #define HT_CAP_INFO_PSMP_SUPP			((u16) BIT(13))
-#define HT_CAP_INFO_STBC_CTRL_FRAME_SUPP	((u16) BIT(14))
+#define HT_CAP_INFO_40MHZ_INTOLERANT		((u16) BIT(14))
 #define HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT	((u16) BIT(15))
 
 

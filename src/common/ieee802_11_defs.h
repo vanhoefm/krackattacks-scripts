@@ -345,10 +345,6 @@ struct ieee80211_mgmt {
 
 /* HT Capability element */
 
-#define MIMO_PWR_DONT_SEND_MIMO_SEQS            0
-#define MIMO_PWR_NEED2PRECEDE_MIMO_SEQS_BY_RTS  1
-#define MIMO_PWR_NO_LIMIT_ON_MIMO_SEQS          3
-
 enum {
 	MAX_RX_AMPDU_FACTOR_8KB = 0,
 	MAX_RX_AMPDU_FACTOR_16KB,
@@ -433,12 +429,18 @@ struct ieee80211_ht_operation {
 
 #define HT_CAP_INFO_LDPC_CODING_CAP		((u16) BIT(0))
 #define HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET	((u16) BIT(1))
-#define HT_CAP_INFO_MIMO_PWR_SAVE_OFFSET	2
+#define HT_CAP_INFO_SMPS_MASK			((u16) (BIT(2) | BIT(3)))
+#define HT_CAP_INFO_SMPS_STATIC			((u16) 0)
+#define HT_CAP_INFO_SMPS_DYNAMIC		((u16) BIT(2))
+#define HT_CAP_INFO_SMPS_DISABLED		((u16) (BIT(2) | BIT(3)))
 #define HT_CAP_INFO_GREEN_FIELD			((u16) BIT(4))
 #define HT_CAP_INFO_SHORT_GI20MHZ		((u16) BIT(5))
 #define HT_CAP_INFO_SHORT_GI40MHZ		((u16) BIT(6))
 #define HT_CAP_INFO_TX_STBC			((u16) BIT(7))
-#define HT_CAP_INFO_RX_STBC_OFFSET		8
+#define HT_CAP_INFO_RX_STBC_MASK		((u16) (BIT(8) | BIT(9)))
+#define HT_CAP_INFO_RX_STBC_1			((u16) BIT(8))
+#define HT_CAP_INFO_RX_STBC_12			((u16) BIT(9))
+#define HT_CAP_INFO_RX_STBC_123			((u16) (BIT(8) | BIT(9)))
 #define HT_CAP_INFO_DELAYED_BA			((u16) BIT(10))
 #define HT_CAP_INFO_MAX_AMSDU_SIZE		((u16) BIT(11))
 #define HT_CAP_INFO_DSSS_CCK40MHZ		((u16) BIT(12))

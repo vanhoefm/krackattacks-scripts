@@ -258,11 +258,7 @@ static struct hostapd_config * hostapd_config_defaults(void)
 	conf->wme_ac_params[3] = ac_vo;
 
 #ifdef CONFIG_IEEE80211N
-	SET_2BIT_LE16(&conf->ht_capab,
-		      HT_CAP_INFO_MIMO_PWR_SAVE_OFFSET,
-		      MIMO_PWR_NO_LIMIT_ON_MIMO_SEQS);
-
-	conf->ht_capab |= HT_CAP_INFO_GREEN_FIELD;
+	conf->ht_capab = HT_CAP_INFO_SMPS_DISABLED;
 #endif /* CONFIG_IEEE80211N */
 
 	return conf;
@@ -1313,6 +1309,58 @@ static int add_r1kh(struct hostapd_bss_config *bss, char *value)
 #endif /* CONFIG_IEEE80211R */
 
 
+#ifdef CONFIG_IEEE80211N
+static int hostapd_config_ht_capab(struct hostapd_config *conf,
+				   const char *capab)
+{
+	if (os_strstr(capab, "[LDPC]"))
+		conf->ht_capab |= HT_CAP_INFO_LDPC_CODING_CAP;
+	if (os_strstr(capab, "[40HT]"))
+		conf->ht_capab |= HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
+	if (os_strstr(capab, "[SMPS-STATIC]")) {
+		conf->ht_capab &= ~HT_CAP_INFO_SMPS_MASK;
+		conf->ht_capab |= HT_CAP_INFO_SMPS_STATIC;
+	}
+	if (os_strstr(capab, "[SMPS-DYNAMIC]")) {
+		conf->ht_capab &= ~HT_CAP_INFO_SMPS_MASK;
+		conf->ht_capab |= HT_CAP_INFO_SMPS_DYNAMIC;
+	}
+	if (os_strstr(capab, "[GF]"))
+		conf->ht_capab |= HT_CAP_INFO_GREEN_FIELD;
+	if (os_strstr(capab, "[SHORT-GI-20]"))
+		conf->ht_capab |= HT_CAP_INFO_SHORT_GI20MHZ;
+	if (os_strstr(capab, "[SHORT-GI-40]"))
+		conf->ht_capab |= HT_CAP_INFO_SHORT_GI40MHZ;
+	if (os_strstr(capab, "[TX-STBC]"))
+		conf->ht_capab |= HT_CAP_INFO_TX_STBC;
+	if (os_strstr(capab, "[RX-STBC1]")) {
+		conf->ht_capab &= ~HT_CAP_INFO_RX_STBC_MASK;
+		conf->ht_capab |= HT_CAP_INFO_RX_STBC_1;
+	}
+	if (os_strstr(capab, "[RX-STBC12]")) {
+		conf->ht_capab &= ~HT_CAP_INFO_RX_STBC_MASK;
+		conf->ht_capab |= HT_CAP_INFO_RX_STBC_12;
+	}
+	if (os_strstr(capab, "[RX-STBC123]")) {
+		conf->ht_capab &= ~HT_CAP_INFO_RX_STBC_MASK;
+		conf->ht_capab |= HT_CAP_INFO_RX_STBC_123;
+	}
+	if (os_strstr(capab, "[DELAYED-BA]"))
+		conf->ht_capab |= HT_CAP_INFO_DELAYED_BA;
+	if (os_strstr(capab, "[MAX-AMSDU-7935]"))
+		conf->ht_capab |= HT_CAP_INFO_MAX_AMSDU_SIZE;
+	if (os_strstr(capab, "[DSSS_CCK-40]"))
+		conf->ht_capab |= HT_CAP_INFO_DSSS_CCK40MHZ;
+	if (os_strstr(capab, "[PSMP]"))
+		conf->ht_capab |= HT_CAP_INFO_PSMP_SUPP;
+	if (os_strstr(capab, "[LSIG-TXOP-PROT]"))
+		conf->ht_capab |= HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT;
+
+	return 0;
+}
+#endif /* CONFIG_IEEE80211N */
+
+
 struct hostapd_config * hostapd_config_read(const char *fname)
 {
 	struct hostapd_config *conf;
@@ -2019,6 +2067,11 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #ifdef CONFIG_IEEE80211N
 		} else if (os_strcmp(buf, "ieee80211n") == 0) {
 			conf->ieee80211n = atoi(pos);
+		} else if (os_strcmp(buf, "ht_capab") == 0) {
+			if (hostapd_config_ht_capab(conf, pos) < 0) {
+				printf("Line %d: invalid ht_capab\n", line);
+				errors++;
+			}
 #endif /* CONFIG_IEEE80211N */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);

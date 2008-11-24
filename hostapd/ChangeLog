@@ -10,6 +10,7 @@ ChangeLog for hostapd
 	  the example configuration file); new hostapd_cli commands wps_pin and
 	  wps_pbc are used to configuration WPS negotiation; see README-WPS for
 	  more details
+	* added IEEE 802.11n HT capability configuration (ht_capab)
 
 2008-11-23 - v0.6.6
 	* added a new configuration option, wpa_ptk_rekey, that can be used to

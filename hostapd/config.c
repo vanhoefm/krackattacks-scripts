@@ -1315,7 +1315,7 @@ static int hostapd_config_ht_capab(struct hostapd_config *conf,
 {
 	if (os_strstr(capab, "[LDPC]"))
 		conf->ht_capab |= HT_CAP_INFO_LDPC_CODING_CAP;
-	if (os_strstr(capab, "[40HT]"))
+	if (os_strstr(capab, "[HT40]"))
 		conf->ht_capab |= HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
 	if (os_strstr(capab, "[SMPS-STATIC]")) {
 		conf->ht_capab &= ~HT_CAP_INFO_SMPS_MASK;

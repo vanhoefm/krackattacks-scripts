@@ -378,6 +378,7 @@ struct hostapd_config {
 	int ieee80211n;
 	int ht_op_mode_fixed;
 	u16 ht_capab;
+	int secondary_channel;
 #endif /* CONFIG_IEEE80211N */
 };
 

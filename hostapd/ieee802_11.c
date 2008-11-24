@@ -147,7 +147,12 @@ u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
 	oper = (struct ieee80211_ht_operation *) pos;
 	os_memset(oper, 0, sizeof(*oper));
 
+	oper->control_chan = hapd->iconf->channel;
 	oper->operation_mode = host_to_le16(hapd->iface->ht_op_mode);
+	if (hapd->iconf->secondary_channel == 1)
+		oper->ht_param |= HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE;
+	if (hapd->iconf->secondary_channel == -1)
+		oper->ht_param |= HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW;
 
 	pos += sizeof(*oper);
 

@@ -176,10 +176,9 @@ struct wpa_driver_ops {
 				   u32 session_timeout);
 	int (*set_radius_acl_expire)(void *priv, const u8 *mac);
 
-	int (*set_ht_capability)(const char *ifname, void *priv,
-				 const u8 *data, size_t data_len);
-	int (*set_ht_operation)(const char *ifname, void *priv,
-				const u8 *data, size_t data_len);
+	int (*set_ht_params)(const char *ifname, void *priv,
+			     const u8 *ht_capab, size_t ht_capab_len,
+			     const u8 *ht_oper, size_t ht_oper_len);
 
 	int (*set_wps_beacon_ie)(const char *ifname, void *priv,
 				 const u8 *ie, size_t len);
@@ -733,27 +732,16 @@ hostapd_set_radius_acl_expire(struct hostapd_data *hapd, const u8 *mac)
 
 #ifdef CONFIG_IEEE80211N
 static inline int
-hostapd_set_ht_capability(const char *ifname, struct hostapd_data *hapd,
-			  const u8 *ht_cap)
+hostapd_set_ht_params(const char *ifname, struct hostapd_data *hapd,
+		      const u8 *ht_capab, size_t ht_capab_len,
+		      const u8 *ht_oper, size_t ht_oper_len)
 {
-	if (hapd->driver == NULL || hapd->driver->set_ht_capability == NULL ||
-	    ht_cap == NULL)
+	if (hapd->driver == NULL || hapd->driver->set_ht_params == NULL ||
+	    ht_capab == NULL || ht_oper == NULL)
 		return 0;
-	return hapd->driver->set_ht_capability(
-		ifname, hapd->drv_priv, ht_cap,
-		sizeof(struct ieee80211_ht_capability));
-}
-
-static inline int
-hostapd_set_ht_operation(const char *ifname, struct hostapd_data *hapd,
-			 const u8 *ht_operation)
-{
-	if (hapd->driver == NULL || hapd->driver->set_ht_operation == NULL ||
-	    ht_operation == NULL)
-		return 0;
-	return hapd->driver->set_ht_operation(
-		ifname, hapd->drv_priv, ht_operation,
-		sizeof(struct ieee80211_ht_operation));
+	return hapd->driver->set_ht_params(
+		ifname, hapd->drv_priv, ht_capab, ht_capab_len,
+		ht_oper, ht_oper_len);
 }
 #endif /* CONFIG_IEEE80211N */
 

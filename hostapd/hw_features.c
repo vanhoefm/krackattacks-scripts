@@ -170,6 +170,73 @@ static int hostapd_prepare_rates(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_IEEE80211N
+static int ieee80211n_allowed_ht40_channel_pair(struct hostapd_iface *iface)
+{
+	int sec_chan, ok, j, first;
+	int allowed[] = { 36, 44, 52, 60, 100, 108, 116, 124, 132, 149, 157,
+			  184, 192 };
+	size_t k;
+
+	if (!iface->conf->secondary_channel)
+		return 1; /* HT40 not used */
+
+	sec_chan = iface->conf->channel + iface->conf->secondary_channel * 4;
+	wpa_printf(MSG_DEBUG, "HT40: control channel: %d  "
+		   "secondary channel: %d",
+		   iface->conf->channel, sec_chan);
+
+	/* Verify that HT40 secondary channel is an allowed 20 MHz
+	 * channel */
+	ok = 0;
+	for (j = 0; j < iface->current_mode->num_channels; j++) {
+		struct hostapd_channel_data *chan =
+			&iface->current_mode->channels[j];
+		if (!(chan->flag & HOSTAPD_CHAN_DISABLED) &&
+		    chan->chan == sec_chan) {
+			ok = 1;
+			break;
+		}
+	}
+	if (!ok) {
+		wpa_printf(MSG_ERROR, "HT40 secondary channel %d not allowed",
+			   sec_chan);
+		return 0;
+	}
+
+	/*
+	 * Verify that HT40 primary,secondary channel pair is allowed per
+	 * IEEE 802.11n Annex J. This is only needed for 5 GHz band since
+	 * 2.4 GHz rules allow all cases where the secondary channel fits into
+	 * the list of allowed channels (already checked above).
+	 */
+	if (iface->current_mode->mode != HOSTAPD_MODE_IEEE80211A)
+		return 1;
+
+	if (iface->conf->secondary_channel > 0)
+		first = iface->conf->channel;
+	else
+		first = sec_chan;
+
+	ok = 0;
+	for (k = 0; k < sizeof(allowed) / sizeof(allowed[0]); k++) {
+		if (first == allowed[k]) {
+			ok = 1;
+			break;
+		}
+	}
+	if (!ok) {
+		wpa_printf(MSG_ERROR, "HT40 channel pair (%d, %d) not allowed",
+			   iface->conf->channel,
+			   iface->conf->secondary_channel);
+		return 0;
+	}
+
+	return 1;
+}
+#endif /* CONFIG_IEEE80211N */
+
+
 /**
  * hostapd_select_hw_mode - Select the hardware mode
  * @iface: Pointer to interface data.
@@ -232,6 +299,11 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 			       "Hardware does not support configured channel");
 		return -1;
 	}
+
+#ifdef CONFIG_IEEE80211N
+	if (!ieee80211n_allowed_ht40_channel_pair(iface))
+		return -1;
+#endif /* CONFIG_IEEE80211N */
 
 	if (hostapd_prepare_rates(iface->bss[0], iface->current_mode)) {
 		wpa_printf(MSG_ERROR, "Failed to prepare rates table.");

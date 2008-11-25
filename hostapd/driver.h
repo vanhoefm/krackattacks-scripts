@@ -27,6 +27,14 @@ struct hostapd_sta_add_params {
 	const struct ht_cap_ie *ht_capabilities;
 };
 
+struct hostapd_freq_params {
+	int mode;
+	int freq;
+	int sec_channel_offset; /* 0 = HT40 disabled, -1 = HT40 enabled,
+				 * secondary channel below primary, 1 = HT40
+				 * enabled, secondary channel above primary */
+};
+
 enum hostapd_driver_if_type {
 	HOSTAPD_IF_VLAN, HOSTAPD_IF_WDS
 };
@@ -99,7 +107,9 @@ struct wpa_driver_ops {
 	int (*get_inact_sec)(void *priv, const u8 *addr);
 	int (*sta_clear_stats)(void *priv, const u8 *addr);
 
+	/* note: set_freq() is deprecated; use sta_freq() instead */
 	int (*set_freq)(void *priv, int mode, int freq);
+	int (*set_freq2)(void *priv, struct hostapd_freq_params *freq);
 	int (*set_rts)(void *priv, int rts);
 	int (*get_rts)(void *priv, int *rts);
 	int (*set_frag)(void *priv, int frag);
@@ -421,9 +431,21 @@ hostapd_get_inact_sec(struct hostapd_data *hapd, const u8 *addr)
 }
 
 static inline int
-hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq)
+hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
+		 int sec_channel_offset)
 {
-	if (hapd->driver == NULL || hapd->driver->set_freq == NULL)
+	if (hapd->driver == NULL)
+		return 0;
+	if (hapd->driver->set_freq2) {
+		struct hostapd_freq_params data;
+		os_memset(&data, 0, sizeof(data));
+		data.mode = mode;
+		data.freq = freq;
+		data.sec_channel_offset = sec_channel_offset;
+		return hapd->driver->set_freq2(hapd->drv_priv, &data);
+	}
+
+	if (hapd->driver->set_freq == NULL)
 		return 0;
 	return hapd->driver->set_freq(hapd->drv_priv, mode, freq);
 }

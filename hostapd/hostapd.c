@@ -1553,7 +1553,8 @@ static int setup_interface(struct hostapd_iface *iface)
 		       hostapd_hw_mode_txt(hapd->iconf->hw_mode),
 		       hapd->iconf->channel, freq);
 
-		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, freq)) {
+		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, freq,
+				     hapd->iconf->secondary_channel)) {
 			printf("Could not set channel for kernel driver\n");
 			return -1;
 		}

@@ -461,14 +461,43 @@ static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 }
 
 /* Set kernel driver on given frequency (MHz) */
-static int i802_set_freq(void *priv, int mode, int freq)
+static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 {
+#ifdef NL80211_ATTR_WIPHY_FREQ
+	struct i802_driver_data *drv = priv;
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_WIPHY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq->freq);
+	switch (freq->sec_channel_offset) {
+	case -1:
+		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+			   NL80211_SEC_CHAN_BELOW);
+		break;
+	case 1:
+		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+			   NL80211_SEC_CHAN_ABOVE);
+		break;
+	}
+
+	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+		return 0;
+ nla_put_failure:
+	return -1;
+#else /* NL80211_ATTR_WIPHY_FREQ */
 	struct i802_driver_data *drv = priv;
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
-	iwr.u.freq.m = freq;
+	iwr.u.freq.m = freq->freq;
 	iwr.u.freq.e = 6;
 
 	if (ioctl(drv->ioctl_sock, SIOCSIWFREQ, &iwr) < 0) {
@@ -477,6 +506,7 @@ static int i802_set_freq(void *priv, int mode, int freq)
 	}
 
 	return 0;
+#endif /* NL80211_ATTR_WIPHY_FREQ */
 }
 
 
@@ -2402,7 +2432,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_add2 = i802_sta_add2,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
-	.set_freq = i802_set_freq,
+	.set_freq2 = i802_set_freq2,
 	.set_rts = i802_set_rts,
 	.get_rts = i802_get_rts,
 	.set_frag = i802_set_frag,

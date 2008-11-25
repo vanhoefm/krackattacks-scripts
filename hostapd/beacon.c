@@ -96,12 +96,36 @@ static u8 * hostapd_eid_erp_info(struct hostapd_data *hapd, u8 *eid)
 }
 
 
+static u8 * hostapd_eid_country_add(u8 *pos, u8 *end, int chan_spacing,
+				    struct hostapd_channel_data *start,
+				    struct hostapd_channel_data *prev)
+{
+	if (end - pos < 3)
+		return pos;
+
+	/* first channel number */
+	*pos++ = start->chan;
+	/* number of channels */
+	*pos++ = (prev->chan - start->chan) / chan_spacing + 1;
+	/* maximum transmit power level */
+	*pos++ = start->max_tx_power;
+
+	return pos;
+}
+
+
 static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
 				int max_len)
 {
 	u8 *pos = eid;
+	u8 *end = eid + max_len;
+	int i;
+	struct hostapd_hw_modes *mode;
+	struct hostapd_channel_data *start, *prev;
+	int chan_spacing = 1;
 
-	if (!hapd->iconf->ieee80211d || max_len < 6)
+	if (!hapd->iconf->ieee80211d || max_len < 6 ||
+	    hapd->iface->current_mode == NULL)
 		return eid;
 
 	*pos++ = WLAN_EID_COUNTRY;
@@ -109,8 +133,42 @@ static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
 	os_memcpy(pos, hapd->iconf->country, 3); /* e.g., 'US ' */
 	pos += 3;
 
-	if ((pos - eid) & 1)
+	mode = hapd->iface->current_mode;
+	if (mode->mode == HOSTAPD_MODE_IEEE80211A)
+		chan_spacing = 4;
+
+	start = prev = NULL;
+	for (i = 0; i < mode->num_channels; i++) {
+		struct hostapd_channel_data *chan = &mode->channels[i];
+		if (chan->flag & HOSTAPD_CHAN_DISABLED)
+			continue;
+		if (start && prev &&
+		    prev->chan + chan_spacing == chan->chan &&
+		    start->max_tx_power == chan->max_tx_power) {
+			prev = chan;
+			continue; /* can use same entry */
+		}
+
+		if (start) {
+			pos = hostapd_eid_country_add(pos, end, chan_spacing,
+						      start, prev);
+			start = NULL;
+		}
+
+		/* Start new group */
+		start = prev = chan;
+	}
+
+	if (start) {
+		pos = hostapd_eid_country_add(pos, end, chan_spacing,
+					      start, prev);
+	}
+
+	if ((pos - eid) & 1) {
+		if (end - pos < 1)
+			return eid;
 		*pos++ = 0; /* pad for 16-bit alignment */
+	}
 
 	eid[1] = (pos - eid) - 2;
 

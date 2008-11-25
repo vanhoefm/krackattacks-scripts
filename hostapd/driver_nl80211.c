@@ -1316,6 +1316,9 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_NO_IBSS] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
+#ifdef NL80211_FREQUENCY_ATTR_MAX_TX_POWER
+		[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
+#endif /* NL80211_FREQUENCY_ATTR_MAX_TX_POWER */
 	};
 
 	struct nlattr *tb_rate[NL80211_BITRATE_ATTR_MAX + 1];
@@ -1405,6 +1408,14 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
 				mode->channels[idx].flag |=
 					HOSTAPD_CHAN_RADAR;
+
+#ifdef NL80211_FREQUENCY_ATTR_MAX_TX_POWER
+			if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
+			    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+				mode->channels[idx].max_tx_power =
+					nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
+#endif /* NL80211_FREQUENCY_ATTR_MAX_TX_POWER */
+
 			idx++;
 		}
 

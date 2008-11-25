@@ -25,6 +25,7 @@ struct hostapd_channel_data {
 	short chan; /* channel number (IEEE 802.11) */
 	short freq; /* frequency in MHz */
 	int flag; /* flag for hostapd use (HOSTAPD_CHAN_*) */
+	u8 max_tx_power; /* maximum transmit power in dBm */
 };
 
 #define HOSTAPD_RATE_ERP 0x00000001

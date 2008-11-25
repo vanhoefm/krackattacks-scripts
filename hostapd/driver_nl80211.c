@@ -1510,6 +1510,30 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 }
 
 
+static int i802_set_country(void *priv, const char *country)
+{
+	struct i802_driver_data *drv = priv;
+	struct nl_msg *msg;
+	char alpha2[3];
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_REQ_SET_REG, 0);
+
+	alpha2[0] = country[0];
+	alpha2[1] = country[1];
+	alpha2[2] = '\0';
+	NLA_PUT_STRING(msg, NL80211_ATTR_REG_ALPHA2, alpha2);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static void handle_unknown_sta(struct hostapd_data *hapd, u8 *ta)
 {
 	struct sta_info *sta;
@@ -2402,4 +2426,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.if_remove = i802_if_remove,
 	.get_hw_feature_data = i802_get_hw_feature_data,
 	.set_sta_vlan = i802_set_sta_vlan,
+	.set_country = i802_set_country,
 };

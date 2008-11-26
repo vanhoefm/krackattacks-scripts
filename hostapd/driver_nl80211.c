@@ -485,16 +485,16 @@ static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 	if (freq->ht_enabled) {
 		switch (freq->sec_channel_offset) {
 		case -1:
-			NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
-				   NL80211_SEC_CHAN_BELOW);
+			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+				    NL80211_SEC_CHAN_BELOW);
 			break;
 		case 1:
-			NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
-				   NL80211_SEC_CHAN_ABOVE);
+			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+				    NL80211_SEC_CHAN_ABOVE);
 			break;
 		default:
-			NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
-				   NL80211_SEC_CHAN_DISABLED);
+			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+				    NL80211_SEC_CHAN_DISABLED);
 			break;
 		}
 	}

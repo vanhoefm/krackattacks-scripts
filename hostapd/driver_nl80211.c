@@ -485,6 +485,10 @@ static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
 			   NL80211_SEC_CHAN_ABOVE);
 		break;
+	default:
+		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+			   NL80211_SEC_CHAN_DISABLED);
+		break;
 	}
 
 	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)

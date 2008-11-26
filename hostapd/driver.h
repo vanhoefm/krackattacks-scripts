@@ -30,6 +30,7 @@ struct hostapd_sta_add_params {
 struct hostapd_freq_params {
 	int mode;
 	int freq;
+	int ht_enabled;
 	int sec_channel_offset; /* 0 = HT40 disabled, -1 = HT40 enabled,
 				 * secondary channel below primary, 1 = HT40
 				 * enabled, secondary channel above primary */
@@ -431,7 +432,7 @@ hostapd_get_inact_sec(struct hostapd_data *hapd, const u8 *addr)
 }
 
 static inline int
-hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
+hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq, int ht_enabled,
 		 int sec_channel_offset)
 {
 	if (hapd->driver == NULL)
@@ -441,6 +442,7 @@ hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq,
 		os_memset(&data, 0, sizeof(data));
 		data.mode = mode;
 		data.freq = freq;
+		data.ht_enabled = ht_enabled;
 		data.sec_channel_offset = sec_channel_offset;
 		return hapd->driver->set_freq2(hapd->drv_priv, &data);
 	}

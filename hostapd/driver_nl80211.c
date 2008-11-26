@@ -70,6 +70,9 @@ struct i802_driver_data {
 	int dtim_period, beacon_int;
 	unsigned int beacon_set:1;
 	unsigned int ieee802_1x_active:1;
+
+	int last_freq;
+	int last_freq_ht;
 };
 
 
@@ -470,6 +473,9 @@ static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -1;
+
+	drv->last_freq = freq->freq;
+	drv->last_freq_ht = freq->ht_enabled;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
 		    NL80211_CMD_SET_WIPHY, 0);
@@ -2383,6 +2389,14 @@ static void *i802_init(struct hostapd_data *hapd)
 static void i802_deinit(void *priv)
 {
 	struct i802_driver_data *drv = priv;
+
+	if (drv->last_freq_ht) {
+		/* Clear HT flags from the driver */
+		struct hostapd_freq_params freq;
+		os_memset(&freq, 0, sizeof(freq));
+		freq.freq = drv->last_freq;
+		i802_set_freq2(priv, &freq);
+	}
 
 	i802_del_beacon(drv);
 

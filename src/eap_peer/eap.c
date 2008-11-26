@@ -1180,6 +1180,8 @@ struct eap_sm * eap_peer_sm_init(void *eapol_ctx,
 	sm->ClientTimeout = 60;
 	if (conf->mac_addr)
 		os_memcpy(sm->mac_addr, conf->mac_addr, ETH_ALEN);
+	if (conf->uuid)
+		os_memcpy(sm->uuid, conf->uuid, 16);
 
 	os_memset(&tlsconf, 0, sizeof(tlsconf));
 	tlsconf.opensc_engine_path = conf->opensc_engine_path;

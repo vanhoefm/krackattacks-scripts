@@ -107,7 +107,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	size_t identity_len;
 	int registrar;
 	struct wps_config cfg;
-	u8 uuid[UUID_LEN];
 	const char *pos;
 	const char *phase1;
 	struct wps_context *wps = NULL;
@@ -201,23 +200,10 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		return NULL;
 	}
 
-	pos = os_strstr(phase1, "uuid=");
-	if (pos == NULL) {
-		wpa_printf(MSG_INFO, "EAP-WSC: UUID not set in phase1 "
-			   "configuration data");
-		os_free(data);
-		return NULL;
-	}
-	if (uuid_str2bin(pos + 5, uuid)) {
-		wpa_printf(MSG_INFO, "EAP-WSC: Invalid UUID in phase1 "
-			   "configuration data");
-		os_free(data);
-		return NULL;
-	}
 	if (registrar && wps)
-		os_memcpy(wps->uuid, uuid, UUID_LEN);
+		os_memcpy(wps->uuid, sm->uuid, UUID_LEN);
 	else
-		cfg.uuid = uuid;
+		cfg.uuid = sm->uuid;
 	cfg.wps_cred_cb = sm->eapol_cb->wps_cred;
 	cfg.cb_ctx = sm->eapol_ctx;
 	data->wps = wps_init(&cfg);

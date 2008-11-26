@@ -32,6 +32,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "uuid.h"
 #include "config.h"
 
 #ifndef WPA_KEY_ROOT
@@ -161,6 +162,26 @@ static char * wpa_config_read_reg_string(HKEY hk, const TCHAR *name)
 }
 
 
+#ifdef CONFIG_WPS
+static int wpa_config_read_global_uuid(struct wpa_config *config, HKEY hk)
+{
+	char *str;
+	int ret = 0;
+
+	str = wpa_config_read_reg_string(hk, TEXT("uuid"));
+	if (str == NULL)
+		return 0;
+
+	if (uuid_str2bin(str, config->uuid))
+		ret = -1;
+
+	os_free(str);
+
+	return ret;
+}
+#endif /* CONFIG_WPS */
+
+
 static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 {
 	int errors = 0;
@@ -190,6 +211,11 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 
 	config->ctrl_interface = wpa_config_read_reg_string(
 		hk, TEXT("ctrl_interface"));
+
+#ifdef CONFIG_WPS
+	if (wpa_config_read_global_uuid(config, hk))
+		errors++;
+#endif /* CONFIG_WPS */
 
 	return errors ? -1 : 0;
 }
@@ -492,6 +518,13 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 	wpa_config_write_reg_dword(hk, TEXT("update_config"),
 				   config->update_config,
 				   0);
+#ifdef CONFIG_WPS
+	if (is_nil_uuid(config->uuid)) {
+		char buf[40];
+		uuid_bin2str(config->uuid, buf, sizeof(buf));
+		wpa_config_write_reg_string(hk, "uuid", buf);
+	}
+#endif /* CONFIG_WPS */
 
 	return 0;
 }

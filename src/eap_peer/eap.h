@@ -263,6 +263,12 @@ struct eap_config {
 	 * This is only used by EAP-WSC and can be left %NULL if not available.
 	 */
 	const u8 *mac_addr;
+	/**
+	 * uuid - Device UUID
+	 *
+	 * This is only used by EAP-WSC and can be left %NULL if not available.
+	 */
+	const u8 *uuid;
 };
 
 struct eap_sm * eap_peer_sm_init(void *eapol_ctx,

@@ -247,6 +247,11 @@ struct wpa_config {
 	 * blobs - Configuration blobs
 	 */
 	struct wpa_config_blob *blobs;
+
+	/**
+	 * uuid - Universally Unique IDentifier (UUID; see RFC 4122) for WPS
+	 */
+	u8 uuid[16];
 };
 
 

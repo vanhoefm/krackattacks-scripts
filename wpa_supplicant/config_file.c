@@ -21,6 +21,7 @@
 #include "common.h"
 #include "config.h"
 #include "base64.h"
+#include "uuid.h"
 #include "eap_peer/eap_methods.h"
 
 
@@ -427,6 +428,22 @@ static int wpa_config_process_load_dynamic_eap(int line, char *so)
 }
 
 
+#ifdef CONFIG_WPS
+static int wpa_config_process_uuid(struct wpa_config *config, int line,
+				   char *pos)
+{
+	char buf[40];
+	if (uuid_str2bin(pos, config->uuid)) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid UUID", line);
+		return -1;
+	}
+	uuid_bin2str(config->uuid, buf, sizeof(buf));
+	wpa_printf(MSG_DEBUG, "uuid=%s", buf);
+	return 0;
+}
+#endif /* CONFIG_WPS */
+
+
 static int wpa_config_process_global(struct wpa_config *config, char *pos,
 				     int line)
 {
@@ -480,6 +497,11 @@ static int wpa_config_process_global(struct wpa_config *config, char *pos,
 
 	if (os_strncmp(pos, "load_dynamic_eap=", 17) == 0)
 		return wpa_config_process_load_dynamic_eap(line, pos + 17);
+
+#ifdef CONFIG_WPS
+	if (os_strncmp(pos, "uuid=", 5) == 0)
+		return wpa_config_process_uuid(config, line, pos + 5);
+#endif /* CONFIG_WPS */
 
 	return -1;
 }
@@ -845,6 +867,13 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 			config->dot11RSNAConfigSATimeout);
 	if (config->update_config)
 		fprintf(f, "update_config=%d\n", config->update_config);
+#ifdef CONFIG_WPS
+	if (is_nil_uuid(config->uuid)) {
+		char buf[40];
+		uuid_bin2str(config->uuid, buf, sizeof(buf));
+		fprintf(f, "uuid=%s\n", buf);
+	}
+#endif /* CONFIG_WPS */
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

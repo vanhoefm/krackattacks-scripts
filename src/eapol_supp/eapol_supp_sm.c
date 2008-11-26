@@ -1820,6 +1820,7 @@ struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 	conf.pkcs11_module_path = ctx->pkcs11_module_path;
 #endif /* EAP_TLS_OPENSSL */
 	conf.mac_addr = ctx->mac_addr;
+	conf.uuid = ctx->uuid;
 
 	sm->eap = eap_peer_sm_init(sm, &eapol_cb, sm->ctx->msg_ctx, &conf);
 	if (sm->eap == NULL) {

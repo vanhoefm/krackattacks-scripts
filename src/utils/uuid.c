@@ -65,3 +65,13 @@ int uuid_bin2str(const u8 *bin, char *str, size_t max_len)
 		return -1;
 	return 0;
 }
+
+
+int is_nil_uuid(const u8 *uuid)
+{
+	int i;
+	for (i = 0; i < UUID_LEN; i++)
+		if (uuid[i])
+			return 0;
+	return 1;
+}

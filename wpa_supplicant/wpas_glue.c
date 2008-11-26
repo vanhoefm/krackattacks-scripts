@@ -703,6 +703,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->pkcs11_module_path = wpa_s->conf->pkcs11_module_path;
 #endif /* EAP_TLS_OPENSSL */
 	ctx->mac_addr = wpa_s->own_addr;
+	ctx->uuid = wpa_s->conf->uuid;
 	ctx->wps_cred = wpa_supplicant_wps_cred;
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
 	ctx->cb = wpa_supplicant_eapol_cb;

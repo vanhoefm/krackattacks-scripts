@@ -19,7 +19,6 @@
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "mlme.h"
-#include "uuid.h"
 #include "wps/wps.h"
 
 
@@ -43,11 +42,10 @@ static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 
 
 #ifdef CONFIG_WPS
-static int wpas_wps_in_use(struct wpa_config *conf, u8 *uuid)
+static int wpas_wps_in_use(struct wpa_config *conf)
 {
 	struct wpa_ssid *ssid;
 	int wps = 0;
-	const char *pos;
 
 	for (ssid = conf->ssid; ssid; ssid = ssid->next) {
 		if (!(ssid->key_mgmt & WPA_KEY_MGMT_WPS))
@@ -56,10 +54,6 @@ static int wpas_wps_in_use(struct wpa_config *conf, u8 *uuid)
 		wps = 1;
 		if (!ssid->eap.phase1)
 			continue;
-
-		pos = os_strstr(ssid->eap.phase1, "uuid=");
-		if (pos)
-			uuid_str2bin(pos + 5, uuid);
 
 		if (os_strstr(ssid->eap.phase1, "pbc=1"))
 			return 2;
@@ -78,9 +72,6 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	const u8 *extra_ie = NULL;
 	size_t extra_ie_len = 0;
 	int wps = 0;
-#ifdef CONFIG_WPS
-	u8 uuid[UUID_LEN];
-#endif /* CONFIG_WPS */
 
 	if (wpa_s->disconnected && !wpa_s->scan_req)
 		return;
@@ -168,7 +159,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
 
 #ifdef CONFIG_WPS
-	wps = wpas_wps_in_use(wpa_s->conf, uuid);
+	wps = wpas_wps_in_use(wpa_s->conf);
 #endif /* CONFIG_WPS */
 
 	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
@@ -184,7 +175,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 #ifdef CONFIG_WPS
 	if (wps) {
-		wps_ie = wps_enrollee_build_probe_req_ie(wps == 2, uuid);
+		wps_ie = wps_enrollee_build_probe_req_ie(wps == 2,
+							 wpa_s->conf->uuid);
 		if (wps_ie) {
 			extra_ie = wpabuf_head(wps_ie);
 			extra_ie_len = wpabuf_len(wps_ie);

@@ -60,6 +60,7 @@ struct eap_peap_data {
 				 * EAP-Success and expect AS to send outer
 				 * (unencrypted) EAP-Success after this */
 	int resuming; /* starting a resumed session */
+	int reauth; /* reauthentication */
 	u8 *key_data;
 
 	struct wpabuf *pending_phase2_req;
@@ -269,6 +270,18 @@ static int eap_peap_derive_cmk(struct eap_sm *sm, struct eap_peap_data *data)
 		return -1;
 	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: TK", tk, 60);
 
+	if (data->reauth &&
+	    tls_connection_resumed(sm->ssl_ctx, data->ssl.conn)) {
+		/* Fast-connect: IPMK|CMK = TK */
+		os_memcpy(data->ipmk, tk, 40);
+		wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: IPMK from TK",
+				data->ipmk, 40);
+		os_memcpy(data->cmk, tk + 40, 20);
+		wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: CMK from TK",
+				data->cmk, 20);
+		return 0;
+	}
+
 	if (eap_peap_get_isk(sm, data, isk, sizeof(isk)) < 0)
 		return -1;
 	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: ISK", isk, sizeof(isk));
@@ -286,7 +299,6 @@ static int eap_peap_derive_cmk(struct eap_sm *sm, struct eap_peap_data *data)
 	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: IMCK (IPMKj)",
 			imck, sizeof(imck));
 
-	/* TODO: fast-connect: IPMK|CMK = TK */
 	os_memcpy(data->ipmk, imck, 40);
 	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: IPMK (S-IPMKj)", data->ipmk, 40);
 	os_memcpy(data->cmk, imck + 40, 20);
@@ -1191,6 +1203,7 @@ static void * eap_peap_init_for_reauth(struct eap_sm *sm, void *priv)
 	data->phase2_eap_success = 0;
 	data->phase2_eap_started = 0;
 	data->resuming = 1;
+	data->reauth = 1;
 	sm->peap_done = FALSE;
 	return priv;
 }

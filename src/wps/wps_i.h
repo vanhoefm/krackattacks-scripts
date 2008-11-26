@@ -112,6 +112,8 @@ struct wps_parse_attr {
 	const u8 *key_prov_auto; /* 1 octet (Bool) */
 	const u8 *dot1x_enabled; /* 1 octet (Bool) */
 	const u8 *selected_registrar; /* 1 octet (Bool) */
+	const u8 *request_type; /* 1 octet */
+	const u8 *response_type; /* 1 octet */
 
 	/* variable length fields */
 	const u8 *manufacturer;

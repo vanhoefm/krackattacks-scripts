@@ -314,6 +314,22 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->selected_registrar = pos;
 		break;
+	case ATTR_REQUEST_TYPE:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Request Type "
+				   "length %u", len);
+			return -1;
+		}
+		attr->request_type = pos;
+		break;
+	case ATTR_RESPONSE_TYPE:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Response Type "
+				   "length %u", len);
+			return -1;
+		}
+		attr->request_type = pos;
+		break;
 	case ATTR_MANUFACTURER:
 		attr->manufacturer = pos;
 		attr->manufacturer_len = len;

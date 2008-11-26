@@ -482,19 +482,21 @@ static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq->freq);
-	switch (freq->sec_channel_offset) {
-	case -1:
-		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
-			   NL80211_SEC_CHAN_BELOW);
-		break;
-	case 1:
-		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
-			   NL80211_SEC_CHAN_ABOVE);
-		break;
-	default:
-		NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
-			   NL80211_SEC_CHAN_DISABLED);
-		break;
+	if (freq->ht_enabled) {
+		switch (freq->sec_channel_offset) {
+		case -1:
+			NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+				   NL80211_SEC_CHAN_BELOW);
+			break;
+		case 1:
+			NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+				   NL80211_SEC_CHAN_ABOVE);
+			break;
+		default:
+			NLA_PUT_U8(msg, NL80211_ATTR_WIPHY_SEC_CHAN_OFFSET,
+				   NL80211_SEC_CHAN_DISABLED);
+			break;
+		}
 	}
 
 	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)

@@ -171,6 +171,10 @@ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_conn_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_assoc_state(struct wps_data *wps, struct wpabuf *msg);
+int wps_process_cred(struct wps_parse_attr *attr,
+		     struct wps_credential *cred);
+int wps_process_ap_settings(struct wps_parse_attr *attr,
+			    struct wps_credential *cred);
 
 /* wps_enrollee.c */
 struct wpabuf * wps_enrollee_get_msg(struct wps_data *wps, u8 *op_code);

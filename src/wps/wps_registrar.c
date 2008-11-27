@@ -1983,6 +1983,13 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		wps->new_psk = NULL;
 	}
 
+	if (!wps->wps->ap) {
+		wpa_printf(MSG_DEBUG, "WPS: Update local configuration based "
+			   "on the modified AP configuration");
+		if (wps->wps_cred_cb)
+			wps->wps_cred_cb(wps->cb_ctx, &wps->cred);
+	}
+
 	if (wps->new_psk) {
 		if (wps_cb_new_psk(wps->registrar, wps->mac_addr_e,
 				   wps->new_psk, wps->new_psk_len)) {

@@ -142,11 +142,8 @@ static void * eap_wsc_init(struct eap_sm *sm)
 
 		wps->cb_ctx = data;
 
-		/* TODO: configure.. */
-		wps->auth_types = WPS_AUTH_WPA2PSK;
-		wps->encr_types = WPS_ENCR_AES;
-		os_memcpy(wps->ssid, "test", 4);
-		wps->ssid_len = 4;
+		wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;
+		wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;
 
 		os_memset(&rcfg, 0, sizeof(rcfg));
 		rcfg.new_psk_cb = eap_wsc_new_psk_cb;

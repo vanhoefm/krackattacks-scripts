@@ -1656,6 +1656,40 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 }
 
 
+static int wps_process_ap_settings_r(struct wps_data *wps,
+				     struct wps_parse_attr *attr)
+{
+	struct wps_credential cred;
+
+	if (wps->wps->ap)
+		return 0;
+
+	/* AP Settings Attributes in M7 when Enrollee is an AP */
+	if (wps_process_ap_settings(attr, &cred) < 0)
+		return -1;
+
+	wpa_printf(MSG_INFO, "WPS: Received old AP configuration from AP");
+
+	/*
+	 * TODO: Provide access to AP settings and allow changes before sending
+	 * out M8. For now, just copy the settings unchanged into M8.
+	 */
+	wps->auth_type = cred.auth_type;
+	wps->encr_type = cred.encr_type;
+	os_memcpy(wps->wps->ssid, cred.ssid, cred.ssid_len);
+	wps->wps->ssid_len = cred.ssid_len;
+	os_memcpy(wps->mac_addr_e, cred.mac_addr, ETH_ALEN);
+	os_free(wps->wps->network_key);
+	wps->wps->network_key = os_malloc(cred.key_len);
+	if (wps->wps->network_key) {
+		os_memcpy(wps->wps->network_key, cred.key, cred.key_len);
+		wps->wps->network_key_len = cred.key_len;
+	}
+
+	return 0;
+}
+
+
 static enum wps_process_res wps_process_m7(struct wps_data *wps,
 					   const struct wpabuf *msg,
 					   struct wps_parse_attr *attr)
@@ -1687,10 +1721,12 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 		   "attribute");
 	if (wps_parse_msg(decrypted, &eattr) < 0 ||
 	    wps_process_key_wrap_auth(wps, decrypted, eattr.key_wrap_auth) ||
-	    wps_process_e_snonce2(wps, eattr.e_snonce2)) {
+	    wps_process_e_snonce2(wps, eattr.e_snonce2) ||
+	    wps_process_ap_settings_r(wps, &eattr)) {
 		wpabuf_free(decrypted);
 		return WPS_FAILURE;
 	}
+
 	wpabuf_free(decrypted);
 
 	wps->state = SEND_M8;

@@ -758,7 +758,8 @@ static int wps_build_r_snonce2(struct wps_data *wps, struct wpabuf *msg)
 }
 
 
-static int wps_build_cred_network_idx(struct wps_data *wps, struct wpabuf *msg)
+static int wps_build_cred_network_idx(struct wpabuf *msg,
+				      struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Index");
 	wpabuf_put_be16(msg, ATTR_NETWORK_INDEX);
@@ -768,96 +769,73 @@ static int wps_build_cred_network_idx(struct wps_data *wps, struct wpabuf *msg)
 }
 
 
-static int wps_build_cred_ssid(struct wps_data *wps, struct wpabuf *msg)
+static int wps_build_cred_ssid(struct wpabuf *msg,
+			       struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * SSID");
 	wpabuf_put_be16(msg, ATTR_SSID);
-	wpabuf_put_be16(msg, wps->wps->ssid_len);
-	wpabuf_put_data(msg, wps->wps->ssid, wps->wps->ssid_len);
+	wpabuf_put_be16(msg, cred->ssid_len);
+	wpabuf_put_data(msg, cred->ssid, cred->ssid_len);
 	return 0;
 }
 
 
-static int wps_build_cred_auth_type(struct wps_data *wps, struct wpabuf *msg)
+static int wps_build_cred_auth_type(struct wpabuf *msg,
+				    struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type (0x%x)",
-		   wps->auth_type);
+		   cred->auth_type);
 	wpabuf_put_be16(msg, ATTR_AUTH_TYPE);
 	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, wps->auth_type);
+	wpabuf_put_be16(msg, cred->auth_type);
 	return 0;
 }
 
 
-static int wps_build_cred_encr_type(struct wps_data *wps, struct wpabuf *msg)
+static int wps_build_cred_encr_type(struct wpabuf *msg,
+				    struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type (0x%x)",
-		   wps->encr_type);
+		   cred->encr_type);
 	wpabuf_put_be16(msg, ATTR_ENCR_TYPE);
 	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, wps->encr_type);
+	wpabuf_put_be16(msg, cred->encr_type);
 	return 0;
 }
 
 
-static int wps_build_cred_network_key(struct wps_data *wps, struct wpabuf *msg)
+static int wps_build_cred_network_key(struct wpabuf *msg,
+				      struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Key");
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);
-	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->wps->ap) {
-		u8 r[16];
-		/* Generate a random passphrase */
-		if (os_get_random(r, sizeof(r)) < 0)
-			return -1;
-		os_free(wps->new_psk);
-		wps->new_psk = base64_encode(r, sizeof(r), &wps->new_psk_len);
-		if (wps->new_psk == NULL)
-			return -1;
-		wps->new_psk_len--; /* remove newline */
-		while (wps->new_psk_len &&
-		       wps->new_psk[wps->new_psk_len - 1] == '=')
-			wps->new_psk_len--;
-		wpa_hexdump_ascii_key(MSG_DEBUG, "WPS: Generated passphrase",
-				      wps->new_psk, wps->new_psk_len);
-		wpabuf_put_be16(msg, wps->new_psk_len);
-		wpabuf_put_data(msg, wps->new_psk, wps->new_psk_len);
-	} else if (wps->wps->network_key) {
-		wpabuf_put_be16(msg, wps->wps->network_key_len);
-		wpabuf_put_data(msg, wps->wps->network_key,
-				wps->wps->network_key_len);
-	} else if (wps->auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) {
-		char hex[65];
-		/* Generate a random per-device PSK */
-		os_free(wps->new_psk);
-		wps->new_psk_len = 32;
-		wps->new_psk = os_malloc(wps->new_psk_len);
-		if (wps->new_psk == NULL)
-			return -1;
-		if (os_get_random(wps->new_psk, wps->new_psk_len) < 0) {
-			os_free(wps->new_psk);
-			wps->new_psk = NULL;
-			return -1;
-		}
-		wpa_hexdump_key(MSG_DEBUG, "WPS: Generated per-device PSK",
-				wps->new_psk, wps->new_psk_len);
-		wpa_snprintf_hex(hex, sizeof(hex), wps->new_psk,
-				 wps->new_psk_len);
-		wpabuf_put_be16(msg, wps->new_psk_len * 2);
-		wpabuf_put_data(msg, hex, wps->new_psk_len * 2);
-	} else {
-		/* No Network Key */
-		wpabuf_put_be16(msg, 0);
-	}
+	wpabuf_put_be16(msg, cred->key_len);
+	wpabuf_put_data(msg, cred->key, cred->key_len);
 	return 0;
 }
 
 
-static int wps_build_cred_mac_addr(struct wps_data *wps, struct wpabuf *msg)
+static int wps_build_cred_mac_addr(struct wpabuf *msg,
+				   struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address");
 	wpabuf_put_be16(msg, ATTR_MAC_ADDR);
 	wpabuf_put_be16(msg, ETH_ALEN);
-	wpabuf_put_data(msg, wps->mac_addr_e, ETH_ALEN);
+	wpabuf_put_data(msg, cred->mac_addr, ETH_ALEN);
+	return 0;
+}
+
+
+static int wps_build_credential(struct wpabuf *msg,
+				struct wps_credential *cred)
+{
+	if (wps_build_cred_network_idx(msg, cred) ||
+	    wps_build_cred_ssid(msg, cred) ||
+	    wps_build_cred_auth_type(msg, cred) ||
+	    wps_build_cred_encr_type(msg, cred) ||
+	    wps_build_cred_network_key(msg, cred) ||
+	    wps_build_cred_mac_addr(msg, cred))
+		return -1;
 	return 0;
 }
 
@@ -865,14 +843,12 @@ static int wps_build_cred_mac_addr(struct wps_data *wps, struct wpabuf *msg)
 static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 {
 	struct wpabuf *cred;
-	int ap_settings;
 
-	ap_settings = !wps->wps->ap;
+	wpa_printf(MSG_DEBUG, "WPS:  * Credential");
+	os_memset(&wps->cred, 0, sizeof(wps->cred));
 
-	if (ap_settings)
-		wpa_printf(MSG_DEBUG, "WPS:  * AP Settings");
-	else
-		wpa_printf(MSG_DEBUG, "WPS:  * Credential");
+	os_memcpy(wps->cred.ssid, wps->wps->ssid, wps->wps->ssid_len);
+	wps->cred.ssid_len = wps->wps->ssid_len;
 
 	/* Select the best authentication and encryption type */
 	if (wps->auth_type & WPS_AUTH_WPA2PSK)
@@ -888,6 +864,7 @@ static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 			   wps->auth_type);
 		return -1;
 	}
+	wps->cred.auth_type = wps->auth_type;
 
 	if (wps->auth_type == WPS_AUTH_WPA2PSK ||
 	    wps->auth_type == WPS_AUTH_WPAPSK) {
@@ -911,30 +888,75 @@ static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 			return -1;
 		}
 	}
+	wps->cred.encr_type = wps->encr_type;
+	os_memcpy(wps->cred.mac_addr, wps->mac_addr_e, ETH_ALEN);
+
+	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->wps->ap) {
+		u8 r[16];
+		/* Generate a random passphrase */
+		if (os_get_random(r, sizeof(r)) < 0)
+			return -1;
+		os_free(wps->new_psk);
+		wps->new_psk = base64_encode(r, sizeof(r), &wps->new_psk_len);
+		if (wps->new_psk == NULL)
+			return -1;
+		wps->new_psk_len--; /* remove newline */
+		while (wps->new_psk_len &&
+		       wps->new_psk[wps->new_psk_len - 1] == '=')
+			wps->new_psk_len--;
+		wpa_hexdump_ascii_key(MSG_DEBUG, "WPS: Generated passphrase",
+				      wps->new_psk, wps->new_psk_len);
+		os_memcpy(wps->cred.key, wps->new_psk, wps->new_psk_len);
+		wps->cred.key_len = wps->new_psk_len;
+	} else if (wps->wps->network_key) {
+		os_memcpy(wps->cred.key, wps->wps->network_key,
+			  wps->wps->network_key_len);
+		wps->cred.key_len = wps->wps->network_key_len;
+	} else if (wps->auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) {
+		char hex[65];
+		/* Generate a random per-device PSK */
+		os_free(wps->new_psk);
+		wps->new_psk_len = 32;
+		wps->new_psk = os_malloc(wps->new_psk_len);
+		if (wps->new_psk == NULL)
+			return -1;
+		if (os_get_random(wps->new_psk, wps->new_psk_len) < 0) {
+			os_free(wps->new_psk);
+			wps->new_psk = NULL;
+			return -1;
+		}
+		wpa_hexdump_key(MSG_DEBUG, "WPS: Generated per-device PSK",
+				wps->new_psk, wps->new_psk_len);
+		wpa_snprintf_hex(hex, sizeof(hex), wps->new_psk,
+				 wps->new_psk_len);
+		os_memcpy(wps->cred.key, hex, wps->new_psk_len * 2);
+		wps->cred.key_len = wps->new_psk_len * 2;
+	}
 
 	cred = wpabuf_alloc(200);
 	if (cred == NULL)
 		return -1;
 
-	if (wps_build_cred_network_idx(wps, cred) ||
-	    wps_build_cred_ssid(wps, cred) ||
-	    wps_build_cred_auth_type(wps, cred) ||
-	    wps_build_cred_encr_type(wps, cred) ||
-	    wps_build_cred_network_key(wps, cred) ||
-	    wps_build_cred_mac_addr(wps, cred)) {
+	if (wps_build_credential(cred, &wps->cred)) {
 		wpabuf_free(cred);
 		return -1;
 	}
 
-	if (ap_settings) {
-		wpabuf_put_buf(msg, cred);
-		wpabuf_free(cred);
-	} else {
-		wpabuf_put_be16(msg, ATTR_CRED);
-		wpabuf_put_be16(msg, wpabuf_len(cred));
-		wpabuf_put_buf(msg, cred);
-		wpabuf_free(cred);
-	}
+	wpabuf_put_be16(msg, ATTR_CRED);
+	wpabuf_put_be16(msg, wpabuf_len(cred));
+	wpabuf_put_buf(msg, cred);
+	wpabuf_free(cred);
+
+	return 0;
+}
+
+
+static int wps_build_ap_settings(struct wps_data *wps, struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * AP Settings");
+
+	if (wps_build_credential(msg, &wps->cred))
+		return -1;
 
 	return 0;
 }
@@ -1106,7 +1128,8 @@ static struct wpabuf * wps_build_m8(struct wps_data *wps)
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_M8) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
-	    wps_build_cred(wps, plain) ||
+	    (wps->wps->ap && wps_build_cred(wps, plain)) ||
+	    (!wps->wps->ap && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
 	    wps_build_authenticator(wps, msg)) {
@@ -1659,13 +1682,11 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 static int wps_process_ap_settings_r(struct wps_data *wps,
 				     struct wps_parse_attr *attr)
 {
-	struct wps_credential cred;
-
 	if (wps->wps->ap)
 		return 0;
 
 	/* AP Settings Attributes in M7 when Enrollee is an AP */
-	if (wps_process_ap_settings(attr, &cred) < 0)
+	if (wps_process_ap_settings(attr, &wps->cred) < 0)
 		return -1;
 
 	wpa_printf(MSG_INFO, "WPS: Received old AP configuration from AP");
@@ -1674,17 +1695,6 @@ static int wps_process_ap_settings_r(struct wps_data *wps,
 	 * TODO: Provide access to AP settings and allow changes before sending
 	 * out M8. For now, just copy the settings unchanged into M8.
 	 */
-	wps->auth_type = cred.auth_type;
-	wps->encr_type = cred.encr_type;
-	os_memcpy(wps->wps->ssid, cred.ssid, cred.ssid_len);
-	wps->wps->ssid_len = cred.ssid_len;
-	os_memcpy(wps->mac_addr_e, cred.mac_addr, ETH_ALEN);
-	os_free(wps->wps->network_key);
-	wps->wps->network_key = os_malloc(cred.key_len);
-	if (wps->wps->network_key) {
-		os_memcpy(wps->wps->network_key, cred.key, cred.key_len);
-		wps->wps->network_key_len = cred.key_len;
-	}
 
 	return 0;
 }

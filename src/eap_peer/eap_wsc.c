@@ -70,8 +70,8 @@ static int eap_wsc_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
 {
 	/* struct eap_wsc_data *data = ctx; */
 
-	wpa_printf(MSG_DEBUG, "EAP-SC: Received new WPA/WPA2-PSK from WPS for "
-		   "STA " MACSTR, MAC2STR(mac_addr));
+	wpa_printf(MSG_DEBUG, "EAP-WSC: Received new WPA/WPA2-PSK from WPS for"
+		   " STA " MACSTR, MAC2STR(mac_addr));
 	wpa_hexdump_key(MSG_DEBUG, "Per-device PSK", psk, psk_len);
 
 	/* TODO */

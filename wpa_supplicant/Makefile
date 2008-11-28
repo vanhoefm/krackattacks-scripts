@@ -500,6 +500,7 @@ CFLAGS += -DCONFIG_WPS -DEAP_WSC_DYNAMIC
 EAPDYN += ../src/eap_peer/eap_wsc.so
 else
 CFLAGS += -DCONFIG_WPS -DEAP_WSC
+OBJS += wps_supplicant.o
 OBJS += ../src/utils/uuid.o
 OBJS += ../src/eap_peer/eap_wsc.o ../src/eap_common/eap_wsc_common.o
 OBJS += ../src/wps/wps.o

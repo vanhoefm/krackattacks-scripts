@@ -25,10 +25,9 @@
 #include "pmksa_cache.h"
 #include "mlme.h"
 #include "ieee802_11_defs.h"
-#include "wps/wps.h"
-#include "wps/wps_defs.h"
 #include "wpa_ctrl.h"
 #include "wpas_glue.h"
+#include "wps_supplicant.h"
 
 
 #ifndef CONFIG_NO_CONFIG_BLOBS
@@ -230,18 +229,8 @@ static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol, int success,
 	wpa_printf(MSG_DEBUG, "EAPOL authentication completed %ssuccessfully",
 		   success ? "" : "un");
 
-#ifdef CONFIG_WPS
-	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && wpa_s->current_ssid &&
-	    !(wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
-		wpa_printf(MSG_DEBUG, "WPS: Network configuration replaced - "
-			   "try to associate with the received credential");
-		wpa_supplicant_deauthenticate(wpa_s,
-					      WLAN_REASON_DEAUTH_LEAVING);
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	if (wpas_wps_eapol_cb(wpa_s) > 0)
 		return;
-	}
-#endif /* CONFIG_WPS */
 
 	if (!success) {
 		/*
@@ -506,139 +495,6 @@ static int wpa_supplicant_send_ft_action(void *ctx, u8 action,
 #endif /* CONFIG_NO_WPA */
 
 
-#ifdef CONFIG_WPS
-static int wpa_supplicant_wps_cred(void *ctx, struct wps_credential *cred)
-{
-	struct wpa_supplicant *wpa_s = ctx;
-	struct wpa_ssid *ssid = wpa_s->current_ssid;
-
-	wpa_msg(wpa_s, MSG_INFO, "WPS: New credential received");
-
-	if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
-		wpa_printf(MSG_DEBUG, "WPS: Replace WPS network block based "
-			   "on the received credential");
-		os_free(ssid->eap.identity);
-		ssid->eap.identity = NULL;
-		ssid->eap.identity_len = 0;
-		os_free(ssid->eap.phase1);
-		ssid->eap.phase1 = NULL;
-		os_free(ssid->eap.eap_methods);
-		ssid->eap.eap_methods = NULL;
-	} else {
-		wpa_printf(MSG_DEBUG, "WPS: Create a new network based on the "
-			   "received credential");
-		ssid = wpa_config_add_network(wpa_s->conf);
-		if (ssid == NULL)
-			return -1;
-	}
-
-	wpa_config_set_network_defaults(ssid);
-
-	os_free(ssid->ssid);
-	ssid->ssid = os_malloc(cred->ssid_len);
-	if (ssid->ssid) {
-		os_memcpy(ssid->ssid, cred->ssid, cred->ssid_len);
-		ssid->ssid_len = cred->ssid_len;
-	}
-
-	switch (cred->encr_type) {
-	case WPS_ENCR_NONE:
-		ssid->pairwise_cipher = ssid->group_cipher = WPA_CIPHER_NONE;
-		break;
-	case WPS_ENCR_WEP:
-		ssid->pairwise_cipher = ssid->group_cipher =
-			WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104;
-		if (cred->key_len > 0 && cred->key_len <= MAX_WEP_KEY_LEN &&
-		    cred->key_idx < NUM_WEP_KEYS) {
-			os_memcpy(ssid->wep_key[cred->key_idx], cred->key,
-				  cred->key_len);
-			ssid->wep_key_len[cred->key_idx] = cred->key_len;
-			ssid->wep_tx_keyidx = cred->key_idx;
-		}
-		break;
-	case WPS_ENCR_TKIP:
-		ssid->pairwise_cipher = WPA_CIPHER_TKIP;
-		ssid->group_cipher = WPA_CIPHER_TKIP;
-		break;
-	case WPS_ENCR_AES:
-		ssid->pairwise_cipher = WPA_CIPHER_CCMP;
-		ssid->group_cipher = WPA_CIPHER_CCMP | WPA_CIPHER_TKIP;
-		break;
-	}
-
-	switch (cred->auth_type) {
-	case WPS_AUTH_OPEN:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_NONE;
-		ssid->proto = 0;
-		break;
-	case WPS_AUTH_SHARED:
-		ssid->auth_alg = WPA_AUTH_ALG_SHARED;
-		ssid->key_mgmt = WPA_KEY_MGMT_NONE;
-		ssid->proto = 0;
-		break;
-	case WPS_AUTH_WPAPSK:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_PSK;
-		ssid->proto = WPA_PROTO_WPA;
-		break;
-	case WPS_AUTH_WPA:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_IEEE8021X;
-		ssid->proto = WPA_PROTO_WPA;
-		break;
-	case WPS_AUTH_WPA2:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_IEEE8021X;
-		ssid->proto = WPA_PROTO_RSN;
-		break;
-	case WPS_AUTH_WPA2PSK:
-		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
-		ssid->key_mgmt = WPA_KEY_MGMT_PSK;
-		ssid->proto = WPA_PROTO_RSN;
-		break;
-	}
-
-	if (ssid->key_mgmt == WPA_KEY_MGMT_PSK) {
-		if (cred->key_len == 2 * PMK_LEN) {
-			if (hexstr2bin((const char *) cred->key, ssid->psk,
-				       PMK_LEN)) {
-				wpa_printf(MSG_ERROR, "WPS: Invalid Network "
-					   "Key");
-				return -1;
-			}
-			ssid->psk_set = 1;
-		} else if (cred->key_len >= 8 && cred->key_len < 2 * PMK_LEN) {
-			os_free(ssid->passphrase);
-			ssid->passphrase = os_malloc(cred->key_len + 1);
-			if (ssid->passphrase == NULL)
-				return -1;
-			os_memcpy(ssid->passphrase, cred->key, cred->key_len);
-			ssid->passphrase[cred->key_len] = '\0';
-			wpa_config_update_psk(ssid);
-		} else {
-			wpa_printf(MSG_ERROR, "WPS: Invalid Network Key "
-				   "length %lu",
-				   (unsigned long) cred->key_len);
-			return -1;
-		}
-	}
-
-#ifndef CONFIG_NO_CONFIG_WRITE
-	if (wpa_s->conf->update_config &&
-	    wpa_config_write(wpa_s->confname, wpa_s->conf)) {
-		wpa_printf(MSG_DEBUG, "WPS: Failed to update configuration");
-		return -1;
-	}
-#endif /* CONFIG_NO_CONFIG_WRITE */
-
-	return 0;
-}
-#else /* CONFIG_WPS */
-#define wpa_supplicant_wps_cred NULL
-#endif /* CONFIG_WPS */
-
-
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
 					    const char *txt)
@@ -704,7 +560,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 #endif /* EAP_TLS_OPENSSL */
 	ctx->mac_addr = wpa_s->own_addr;
 	ctx->uuid = wpa_s->conf->uuid;
-	ctx->wps_cred = wpa_supplicant_wps_cred;
+	ctx->wps_cred = wpas_wps_get_cred_cb();
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
 	ctx->cb = wpa_supplicant_eapol_cb;
 	ctx->cb_ctx = wpa_s;

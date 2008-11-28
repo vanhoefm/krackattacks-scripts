@@ -18,6 +18,7 @@
 #include "sha256.h"
 #include "ieee802_11_defs.h"
 #include "wps_i.h"
+#include "wps_dev_attr.h"
 
 
 static int wps_build_req_type(struct wpabuf *msg, enum wps_request_type type)
@@ -70,70 +71,6 @@ static int wps_build_wps_state(struct wps_data *wps, struct wpabuf *msg)
 }
 
 
-static int wps_build_manufacturer(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Manufacturer");
-	wpabuf_put_be16(msg, ATTR_MANUFACTURER);
-	wpabuf_put_be16(msg, 5);
-	wpabuf_put_data(msg, "manuf", 5); /* FIX */
-	return 0;
-}
-
-
-static int wps_build_model_name(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Model Name");
-	wpabuf_put_be16(msg, ATTR_MODEL_NAME);
-	wpabuf_put_be16(msg, 10);
-	wpabuf_put_data(msg, "model name", 10); /* FIX */
-	return 0;
-}
-
-
-static int wps_build_model_number(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Model Number");
-	wpabuf_put_be16(msg, ATTR_MODEL_NUMBER);
-	wpabuf_put_be16(msg, 12);
-	wpabuf_put_data(msg, "model number", 12); /* FIX */
-	return 0;
-}
-
-
-static int wps_build_serial_number(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Serial Number");
-	wpabuf_put_be16(msg, ATTR_SERIAL_NUMBER);
-	wpabuf_put_be16(msg, 5);
-	wpabuf_put_data(msg, "12345", 5); /* FIX */
-	return 0;
-}
-
-
-static int wps_build_primary_dev_type(struct wps_data *wps, struct wpabuf *msg)
-{
-	struct wps_dev_type *dev;
-	wpa_printf(MSG_DEBUG, "WPS:  * Primary Device Type");
-	wpabuf_put_be16(msg, ATTR_PRIMARY_DEV_TYPE);
-	wpabuf_put_be16(msg, sizeof(*dev));
-	dev = wpabuf_put(msg, sizeof(*dev));
-	WPA_PUT_BE16(dev->categ_id, WPS_DEV_COMPUTER);
-	WPA_PUT_BE32(dev->oui, WPS_DEV_OUI_WFA);
-	WPA_PUT_BE16(dev->sub_categ_id, WPS_DEV_COMPUTER_PC);
-	return 0;
-}
-
-
-static int wps_build_dev_name(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Device Name");
-	wpabuf_put_be16(msg, ATTR_DEV_NAME);
-	wpabuf_put_be16(msg, 8);
-	wpabuf_put_data(msg, "dev name", 8); /* FIX */
-	return 0;
-}
-
-
 static int wps_build_rf_bands(struct wps_data *wps, struct wpabuf *msg)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands");
@@ -163,16 +100,6 @@ static int wps_build_config_error(struct wps_data *wps, struct wpabuf *msg)
 		err = WPS_CFG_SETUP_LOCKED;
 	wpa_printf(MSG_DEBUG, "WPS:  * Configuration Error (%d)", err);
 	wpabuf_put_be16(msg, err);
-	return 0;
-}
-
-
-static int wps_build_os_version(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * OS Version");
-	wpabuf_put_be16(msg, ATTR_OS_VERSION);
-	wpabuf_put_be16(msg, 4);
-	wpabuf_put_be32(msg, 0x80000000); /* FIX */
 	return 0;
 }
 
@@ -276,17 +203,12 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_conn_type_flags(wps, msg) ||
 	    wps_build_config_methods(msg, methods) ||
 	    wps_build_wps_state(wps, msg) ||
-	    wps_build_manufacturer(wps, msg) ||
-	    wps_build_model_name(wps, msg) ||
-	    wps_build_model_number(wps, msg) ||
-	    wps_build_serial_number(wps, msg) ||
-	    wps_build_primary_dev_type(wps, msg) ||
-	    wps_build_dev_name(wps, msg) ||
+	    wps_build_device_attrs(&wps->wps->dev, msg) ||
 	    wps_build_rf_bands(wps, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_config_error(wps, msg) ||
-	    wps_build_os_version(wps, msg)) {
+	    wps_build_os_version(&wps->wps->dev, msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1223,8 +1145,16 @@ struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc, const u8 *uuid)
 	struct wpabuf *ie;
 	u8 *len;
 	u16 methods;
+	struct wps_device_data dev;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
+
+	/* TODO: get device data from caller */
+	os_memset(&dev, 0, sizeof(dev));
+	dev.categ = WPS_DEV_COMPUTER;
+	dev.oui = WPS_DEV_OUI_WFA;
+	dev.sub_categ = WPS_DEV_COMPUTER_PC;
+
 	ie = wpabuf_alloc(200);
 	if (ie == NULL)
 		return NULL;
@@ -1243,7 +1173,7 @@ struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc, const u8 *uuid)
 	    wps_build_req_type(ie, WPS_REQ_ENROLLEE) ||
 	    wps_build_config_methods(ie, methods) ||
 	    wps_build_uuid_e(ie, uuid) ||
-	    wps_build_primary_dev_type(NULL, ie) ||
+	    wps_build_primary_dev_type(&dev, ie) ||
 	    wps_build_rf_bands(NULL, ie) ||
 	    wps_build_assoc_state(NULL, ie) ||
 	    wps_build_config_error(NULL, ie) ||

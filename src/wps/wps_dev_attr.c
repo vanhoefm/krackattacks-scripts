@@ -71,8 +71,7 @@ static int wps_build_serial_number(struct wps_device_data *dev,
 }
 
 
-static int wps_build_primary_dev_type(struct wps_device_data *dev,
-				      struct wpabuf *msg)
+int wps_build_primary_dev_type(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	struct wps_dev_type *d;
 	wpa_printf(MSG_DEBUG, "WPS:  * Primary Device Type");

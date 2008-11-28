@@ -131,16 +131,28 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	data->state = registrar ? MSG : WAIT_START;
 	data->registrar = registrar;
 
+	wps = os_zalloc(sizeof(*wps));
+	if (wps == NULL) {
+		os_free(data);
+		return NULL;
+	}
+
+	data->wps_ctx = wps;
+	wps->cb_ctx = data;
+
+	/* TODO: store wps_context at higher layer and make the device data
+	 * configurable */
+	wps->dev.device_name = "dev name";
+	wps->dev.manufacturer = "manuf";
+	wps->dev.model_name = "model name";
+	wps->dev.model_number = "model number";
+	wps->dev.serial_number = "12345";
+	wps->dev.categ = WPS_DEV_COMPUTER;
+	wps->dev.oui = WPS_DEV_OUI_WFA;
+	wps->dev.sub_categ = WPS_DEV_COMPUTER_PC;
+
 	if (registrar) {
 		struct wps_registrar_config rcfg;
-
-		wps = os_zalloc(sizeof(*wps));
-		if (wps == NULL) {
-			os_free(data);
-			return NULL;
-		}
-
-		wps->cb_ctx = data;
 
 		wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;
 		wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;
@@ -160,7 +172,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			return NULL;
 		}
 
-		data->wps_ctx = wps;
 	}
 
 	os_memset(&cfg, 0, sizeof(cfg));

@@ -560,7 +560,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 #endif /* EAP_TLS_OPENSSL */
 	ctx->mac_addr = wpa_s->own_addr;
 	ctx->uuid = wpa_s->conf->uuid;
-	ctx->wps_cred = wpas_wps_get_cred_cb();
+	ctx->wps = wpa_s->wps;
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
 	ctx->cb = wpa_supplicant_eapol_cb;
 	ctx->cb_ctx = wpa_s;

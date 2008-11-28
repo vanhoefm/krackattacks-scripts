@@ -175,3 +175,41 @@ void * wpas_wps_get_cred_cb(void)
 {
 	return wpa_supplicant_wps_cred;
 }
+
+
+int wpas_wps_init(struct wpa_supplicant *wpa_s)
+{
+	struct wps_context *wps;
+
+	wps = os_zalloc(sizeof(*wps));
+	if (wps == NULL)
+		return -1;
+
+	wps->cred_cb = wpa_supplicant_wps_cred;
+	wps->cb_ctx = wpa_s;
+
+	/* TODO: make the device data configurable */
+	wps->dev.device_name = "dev name";
+	wps->dev.manufacturer = "manuf";
+	wps->dev.model_name = "model name";
+	wps->dev.model_number = "model number";
+	wps->dev.serial_number = "12345";
+	wps->dev.categ = WPS_DEV_COMPUTER;
+	wps->dev.oui = WPS_DEV_OUI_WFA;
+	wps->dev.sub_categ = WPS_DEV_COMPUTER_PC;
+
+	wpa_s->wps = wps;
+
+	return 0;
+}
+
+
+void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->wps == NULL)
+		return;
+
+	os_free(wpa_s->wps->network_key);
+	os_free(wpa_s->wps);
+	wpa_s->wps = NULL;
+}

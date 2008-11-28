@@ -335,6 +335,7 @@ struct eap_sm {
 
 	u8 mac_addr[ETH_ALEN];
 	u8 uuid[16];
+	struct wps_context *wps;
 };
 
 const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len);

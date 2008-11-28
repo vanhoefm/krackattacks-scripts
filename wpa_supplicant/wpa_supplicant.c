@@ -39,6 +39,7 @@
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps/wps.h"
+#include "wps_supplicant.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -386,6 +387,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_supplicant_cancel_auth_timeout(wpa_s);
 
 	ieee80211_sta_deinit(wpa_s);
+
+	wpas_wps_deinit(wpa_s);
 }
 
 
@@ -1788,6 +1791,9 @@ static int wpa_supplicant_init_iface2(struct wpa_supplicant *wpa_s)
 		return -1;
 
 	wpa_sm_set_own_addr(wpa_s->wpa, wpa_s->own_addr);
+
+	if (wpas_wps_init(wpa_s))
+		return -1;
 
 	if (wpa_supplicant_init_eapol(wpa_s) < 0)
 		return -1;

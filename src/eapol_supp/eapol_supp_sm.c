@@ -1742,20 +1742,6 @@ static void eapol_sm_notify_pending(void *ctx)
 }
 
 
-#ifdef CONFIG_WPS
-static int eapol_sm_wps_cred(void *ctx, const struct wps_credential *cred)
-{
-	struct eapol_sm *sm = ctx;
-	wpa_printf(MSG_DEBUG, "EAPOL: received new WPS credential");
-	if (sm->ctx->wps_cred)
-		return sm->ctx->wps_cred(sm->ctx->ctx, cred);
-	return 0;
-}
-#else /* CONFIG_WPS */
-#define eapol_sm_wps_cred NULL
-#endif /* CONFIG_WPS */
-
-
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 static void eapol_sm_eap_param_needed(void *ctx, const char *field,
 				      const char *txt)
@@ -1781,7 +1767,6 @@ static struct eapol_callbacks eapol_cb =
 	eapol_sm_set_config_blob,
 	eapol_sm_get_config_blob,
 	eapol_sm_notify_pending,
-	eapol_sm_wps_cred,
 	eapol_sm_eap_param_needed
 };
 
@@ -1821,6 +1806,7 @@ struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 #endif /* EAP_TLS_OPENSSL */
 	conf.mac_addr = ctx->mac_addr;
 	conf.uuid = ctx->uuid;
+	conf.wps = ctx->wps;
 
 	sm->eap = eap_peer_sm_init(sm, &eapol_cb, sm->ctx->msg_ctx, &conf);
 	if (sm->eap == NULL) {

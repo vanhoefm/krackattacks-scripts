@@ -106,7 +106,13 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	struct wps_config cfg;
 	const char *pos;
 	const char *phase1;
-	struct wps_context *wps = NULL;
+	struct wps_context *wps;
+
+	wps = sm->wps;
+	if (wps == NULL) {
+		wpa_printf(MSG_ERROR, "EAP-WSC: WPS context not available");
+		return NULL;
+	}
 
 	identity = eap_get_config_identity(sm, &identity_len);
 
@@ -127,27 +133,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		return NULL;
 	data->state = registrar ? MSG : WAIT_START;
 	data->registrar = registrar;
-
-	wps = os_zalloc(sizeof(*wps));
-	if (wps == NULL) {
-		os_free(data);
-		return NULL;
-	}
-
 	data->wps_ctx = wps;
-	wps->cb_ctx = sm->eapol_ctx;
-	wps->cred_cb = sm->eapol_cb->wps_cred;
-
-	/* TODO: store wps_context at higher layer and make the device data
-	 * configurable */
-	wps->dev.device_name = "dev name";
-	wps->dev.manufacturer = "manuf";
-	wps->dev.model_name = "model name";
-	wps->dev.model_number = "model number";
-	wps->dev.serial_number = "12345";
-	wps->dev.categ = WPS_DEV_COMPUTER;
-	wps->dev.oui = WPS_DEV_OUI_WFA;
-	wps->dev.sub_categ = WPS_DEV_COMPUTER_PC;
 
 	if (registrar) {
 		struct wps_registrar_config rcfg;
@@ -175,7 +161,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	os_memset(&cfg, 0, sizeof(cfg));
 	cfg.authenticator = 0;
 	cfg.wps = wps;
-	cfg.registrar = data->wps_ctx ? data->wps_ctx->registrar : NULL;
+	cfg.registrar = registrar ? data->wps_ctx->registrar : NULL;
 	cfg.enrollee_mac_addr = sm->mac_addr;
 
 	phase1 = eap_get_config_phase1(sm);
@@ -238,11 +224,9 @@ static void eap_wsc_deinit(struct eap_sm *sm, void *priv)
 	wpabuf_free(data->in_buf);
 	wpabuf_free(data->out_buf);
 	wps_deinit(data->wps);
-	if (data->wps_ctx) {
-		wps_registrar_deinit(data->wps_ctx->registrar);
-		os_free(data->wps_ctx->network_key);
-		os_free(data->wps_ctx);
-	}
+	wps_registrar_deinit(data->wps_ctx->registrar);
+	os_free(data->wps_ctx->network_key);
+	data->wps_ctx->network_key = NULL;
 	os_free(data);
 }
 

@@ -338,6 +338,8 @@ struct wpa_supplicant {
 	int pending_mic_error_report;
 	int pending_mic_error_pairwise;
 	int mic_errors_seen; /* Michael MIC errors with the current PTK */
+
+	struct wps_context *wps;
 };
 
 

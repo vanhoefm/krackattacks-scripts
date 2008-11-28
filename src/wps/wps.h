@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -91,6 +91,12 @@ struct wps_registrar_config {
 };
 
 
+/**
+ * struct wps_context - Long term WPS context data
+ *
+ * This data is stored at the higher layer Authenticator or Supplicant data
+ * structures and it is maintained over multiple registration protocol runs.
+ */
 struct wps_context {
 	int ap;
 	struct wps_registrar *registrar;

@@ -18,6 +18,12 @@
 #include "wps.h"
 #include "wps_defs.h"
 
+/**
+ * struct wps_data - WPS registration protocol data
+ *
+ * This data is stored at the EAP-WSC server/peer method and it is kept for a
+ * single registration protocol run.
+ */
 struct wps_data {
 	int authenticator;
 	struct wps_context *wps;

@@ -223,7 +223,7 @@ struct eapol_callbacks {
 	 * new credentials. This can be left %NULL if no WPS functionality is
 	 * enabled.
 	 */
-	int (*wps_cred)(void *ctx, struct wps_credential *cred);
+	int (*wps_cred)(void *ctx, const struct wps_credential *cred);
 
 	/**
 	 * eap_param_needed - Notify that EAP parameter is needed

@@ -41,7 +41,8 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 }
 
 
-static int wpa_supplicant_wps_cred(void *ctx, struct wps_credential *cred)
+static int wpa_supplicant_wps_cred(void *ctx,
+				   const struct wps_credential *cred)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;

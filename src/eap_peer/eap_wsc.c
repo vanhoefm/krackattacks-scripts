@@ -68,8 +68,6 @@ static void eap_wsc_state(struct eap_wsc_data *data, int state)
 static int eap_wsc_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
 			      size_t psk_len)
 {
-	/* struct eap_wsc_data *data = ctx; */
-
 	wpa_printf(MSG_DEBUG, "EAP-WSC: Received new WPA/WPA2-PSK from WPS for"
 		   " STA " MACSTR, MAC2STR(mac_addr));
 	wpa_hexdump_key(MSG_DEBUG, "Per-device PSK", psk, psk_len);
@@ -83,7 +81,6 @@ static int eap_wsc_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
 static void eap_wsc_pin_needed_cb(void *ctx, const u8 *uuid_e,
 				  const struct wps_device_data *dev)
 {
-	/* struct eap_wsc_data *data = ctx; */
 	char uuid[40], txt[400];
 	int len;
 	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
@@ -138,7 +135,8 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	}
 
 	data->wps_ctx = wps;
-	wps->cb_ctx = data;
+	wps->cb_ctx = sm->eapol_ctx;
+	wps->cred_cb = sm->eapol_cb->wps_cred;
 
 	/* TODO: store wps_context at higher layer and make the device data
 	 * configurable */
@@ -212,8 +210,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		os_memcpy(wps->uuid, sm->uuid, UUID_LEN);
 	else
 		cfg.uuid = sm->uuid;
-	cfg.wps_cred_cb = sm->eapol_cb->wps_cred;
-	cfg.cb_ctx = sm->eapol_ctx;
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);

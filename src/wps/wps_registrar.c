@@ -1986,8 +1986,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	if (!wps->wps->ap) {
 		wpa_printf(MSG_DEBUG, "WPS: Update local configuration based "
 			   "on the modified AP configuration");
-		if (wps->wps_cred_cb)
-			wps->wps_cred_cb(wps->cb_ctx, &wps->cred);
+		if (wps->wps->cred_cb)
+			wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
 	}
 
 	if (wps->new_psk) {

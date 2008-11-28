@@ -47,9 +47,6 @@ struct wps_config {
 	size_t pin_len;
 	const u8 *uuid; /* 128-bit Enrollee UUID (NULL for Registrar) */
 	int pbc;
-
-	int (*wps_cred_cb)(void *ctx, struct wps_credential *cred);
-	void *cb_ctx;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);

@@ -1743,7 +1743,7 @@ static void eapol_sm_notify_pending(void *ctx)
 
 
 #ifdef CONFIG_WPS
-static int eapol_sm_wps_cred(void *ctx, struct wps_credential *cred)
+static int eapol_sm_wps_cred(void *ctx, const struct wps_credential *cred)
 {
 	struct eapol_sm *sm = ctx;
 	wpa_printf(MSG_DEBUG, "EAPOL: received new WPS credential");

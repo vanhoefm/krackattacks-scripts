@@ -58,9 +58,6 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		data->dev_password_len = 8;
 	}
 
-	data->wps_cred_cb = cfg->wps_cred_cb;
-	data->cb_ctx = cfg->cb_ctx;
-
 	data->state = data->registrar ? RECV_M1 : SEND_M1;
 
 	return data;

@@ -674,8 +674,8 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 	    wps_process_cred(&attr, &wps->cred))
 		return -1;
 
-	if (wps->wps_cred_cb)
-		wps->wps_cred_cb(wps->cb_ctx, &wps->cred);
+	if (wps->wps->cred_cb)
+		wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
 
 	return 0;
 }

@@ -67,9 +67,6 @@ struct wps_data {
 	int wps_pin_revealed;
 	struct wps_credential cred;
 
-	int (*wps_cred_cb)(void *ctx, struct wps_credential *cred);
-	void *cb_ctx;
-
 	struct wps_device_data peer_dev;
 };
 

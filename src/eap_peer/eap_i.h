@@ -333,8 +333,6 @@ struct eap_sm {
 	int num_rounds;
 	int force_disabled;
 
-	u8 mac_addr[ETH_ALEN];
-	u8 uuid[16];
 	struct wps_context *wps;
 };
 

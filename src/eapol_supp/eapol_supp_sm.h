@@ -199,19 +199,6 @@ struct eapol_ctx {
 	 */
 	const char *pkcs11_module_path;
 #endif /* EAP_TLS_OPENSSL */
-	/**
-	 * mac_addr - MAC address of the peer
-	 *
-	 * This is only used by EAP-WSC and can be left %NULL if not available.
-	 */
-	const u8 *mac_addr;
-
-	/**
-	 * uuid - Device UUID
-	 *
-	 * This is only used by EAP-WSC and can be left %NULL if not available.
-	 */
-	const u8 *uuid;
 
 	/**
 	 * wps - WPS context data

@@ -197,6 +197,8 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->dev.categ = WPS_DEV_COMPUTER;
 	wps->dev.oui = WPS_DEV_OUI_WFA;
 	wps->dev.sub_categ = WPS_DEV_COMPUTER_PC;
+	os_memcpy(wps->dev.mac_addr, wpa_s->own_addr, ETH_ALEN);
+	os_memcpy(wps->uuid, wpa_s->conf->uuid, 16);
 
 	wpa_s->wps = wps;
 

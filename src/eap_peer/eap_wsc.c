@@ -162,7 +162,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	cfg.authenticator = 0;
 	cfg.wps = wps;
 	cfg.registrar = registrar ? data->wps_ctx->registrar : NULL;
-	cfg.enrollee_mac_addr = sm->mac_addr;
+	cfg.enrollee_mac_addr = registrar ? NULL : wps->dev.mac_addr;
 
 	phase1 = eap_get_config_phase1(sm);
 	if (phase1 == NULL) {
@@ -192,10 +192,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		return NULL;
 	}
 
-	if (registrar && wps)
-		os_memcpy(wps->uuid, sm->uuid, UUID_LEN);
-	else
-		cfg.uuid = sm->uuid;
+	cfg.uuid = registrar ? NULL : wps->uuid;
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);

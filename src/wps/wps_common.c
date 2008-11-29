@@ -19,7 +19,6 @@
 #include "sha256.h"
 #include "aes_wrap.h"
 #include "crypto.h"
-#include "ieee802_11_defs.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 
@@ -59,76 +58,6 @@ void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
 		} else
 			os_memcpy(opos, hash, left);
 	}
-}
-
-
-struct wpabuf * wps_build_assoc_req_ie(void)
-{
-	struct wpabuf *ie;
-	u8 *len;
-
-	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for (Re)Association "
-		   "Request");
-	ie = wpabuf_alloc(100);
-	if (ie == NULL)
-		return NULL;
-
-	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-	len = wpabuf_put(ie, 1);
-	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
-
-	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, WPS_REQ_ENROLLEE)) {
-		wpabuf_free(ie);
-		return NULL;
-	}
-
-	*len = wpabuf_len(ie) - 2;
-
-	return ie;
-}
-
-
-struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
-				       const u8 *uuid)
-{
-	struct wpabuf *ie;
-	u8 *len;
-	u16 methods;
-
-	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
-
-	ie = wpabuf_alloc(200);
-	if (ie == NULL)
-		return NULL;
-
-	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-	len = wpabuf_put(ie, 1);
-	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
-
-	if (pbc)
-		methods = WPS_CONFIG_PUSHBUTTON;
-	else
-		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
-			WPS_CONFIG_KEYPAD;
-
-	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, WPS_REQ_ENROLLEE) ||
-	    wps_build_config_methods(ie, methods) ||
-	    wps_build_uuid_e(ie, uuid) ||
-	    wps_build_primary_dev_type(dev, ie) ||
-	    wps_build_rf_bands(dev, ie) ||
-	    wps_build_assoc_state(NULL, ie) ||
-	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
-	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
-				      DEV_PW_DEFAULT)) {
-		wpabuf_free(ie);
-		return NULL;
-	}
-
-	*len = wpabuf_len(ie) - 2;
-
-	return ie;
 }
 
 

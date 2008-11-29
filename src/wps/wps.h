@@ -37,6 +37,20 @@ struct wps_credential {
 	u8 mac_addr[ETH_ALEN];
 };
 
+struct wps_device_data {
+	u8 mac_addr[ETH_ALEN];
+	char *device_name;
+	char *manufacturer;
+	char *model_name;
+	char *model_number;
+	char *serial_number;
+	u16 categ;
+	u32 oui;
+	u16 sub_categ;
+	u32 os_version;
+	u8 rf_bands; /* WPS_RF_* */
+};
+
 struct wps_config {
 	int authenticator;
 	struct wps_context *wps;
@@ -65,21 +79,9 @@ struct wpabuf * wps_get_msg(struct wps_data *wps, u8 *op_code);
 int wps_is_selected_pbc_registrar(const u8 *buf, size_t len);
 int wps_is_selected_pin_registrar(const u8 *buf, size_t len);
 const u8 * wps_get_uuid_e(const u8 *buf, size_t len);
-
-
-struct wps_device_data {
-	u8 mac_addr[ETH_ALEN];
-	char *device_name;
-	char *manufacturer;
-	char *model_name;
-	char *model_number;
-	char *serial_number;
-	u16 categ;
-	u32 oui;
-	u16 sub_categ;
-	u32 os_version;
-	u8 rf_bands; /* WPS_RF_* */
-};
+struct wpabuf * wps_build_assoc_req_ie(void);
+struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
+				       const u8 *uuid);
 
 
 struct wps_registrar_config {
@@ -130,9 +132,5 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid);
 int wps_registrar_button_pushed(struct wps_registrar *reg);
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data);
-
-struct wpabuf * wps_build_assoc_req_ie(void);
-struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
-				       const u8 *uuid);
 
 #endif /* WPS_H */

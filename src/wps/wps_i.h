@@ -155,25 +155,26 @@ struct wps_parse_attr {
 };
 
 /* wps_common.c */
-int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
 void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
 	     const char *label, u8 *res, size_t res_len);
-int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg);
-int wps_build_config_methods(struct wpabuf *msg, u16 methods);
-int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid);
-int wps_build_dev_password_id(struct wpabuf *msg, u16 id);
-int wps_build_config_error(struct wpabuf *msg, u16 err);
 int wps_derive_keys(struct wps_data *wps);
 int wps_derive_mgmt_keys(struct wps_data *wps);
-int wps_build_authenticator(struct wps_data *wps, struct wpabuf *msg);
-int wps_process_authenticator(struct wps_data *wps, const u8 *authenticator,
-			      const struct wpabuf *msg);
 void wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
 		    size_t dev_passwd_len);
 struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 					  size_t encr_len);
-int wps_process_key_wrap_auth(struct wps_data *wps, struct wpabuf *msg,
-			      const u8 *key_wrap_auth);
+
+/* wps_attr_parse.c */
+int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
+
+/* wps_attr_build.c */
+int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg);
+int wps_build_req_type(struct wpabuf *msg, enum wps_request_type type);
+int wps_build_config_methods(struct wpabuf *msg, u16 methods);
+int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid);
+int wps_build_dev_password_id(struct wpabuf *msg, u16 id);
+int wps_build_config_error(struct wpabuf *msg, u16 err);
+int wps_build_authenticator(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_key_wrap_auth(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 			    struct wpabuf *plain);
@@ -185,6 +186,12 @@ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_conn_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_assoc_state(struct wps_data *wps, struct wpabuf *msg);
+
+/* wps_attr_process.c */
+int wps_process_authenticator(struct wps_data *wps, const u8 *authenticator,
+			      const struct wpabuf *msg);
+int wps_process_key_wrap_auth(struct wps_data *wps, struct wpabuf *msg,
+			      const u8 *key_wrap_auth);
 int wps_process_cred(struct wps_parse_attr *attr,
 		     struct wps_credential *cred);
 int wps_process_ap_settings(struct wps_parse_attr *attr,

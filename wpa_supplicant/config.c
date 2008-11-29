@@ -630,6 +630,12 @@ static char * wpa_config_write_key_mgmt(const struct parse_data *data,
 				   pos == buf ? "" : " ");
 #endif /* CONFIG_IEEE80211W */
 
+#ifdef CONFIG_WPS
+	if (ssid->key_mgmt & WPA_KEY_MGMT_WPS)
+		pos += os_snprintf(pos, end - pos, "%sWPS",
+				   pos == buf ? "" : " ");
+#endif /* CONFIG_WPS */
+
 	return buf;
 }
 #endif /* NO_CONFIG_WRITE */

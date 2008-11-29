@@ -133,4 +133,8 @@ int wps_registrar_button_pushed(struct wps_registrar *reg);
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data);
 
+unsigned int wps_pin_checksum(unsigned int pin);
+unsigned int wps_pin_valid(unsigned int pin);
+unsigned int wps_generate_pin(void);
+
 #endif /* WPS_H */

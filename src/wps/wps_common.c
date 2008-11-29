@@ -247,3 +247,54 @@ struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 
 	return decrypted;
 }
+
+
+/**
+ * wps_pin_checksum - Compute PIN checksum
+ * @pin: Seven digit PIN (i.e., eight digit PIN without the checksum digit)
+ * Returns: Checksum digit
+ */
+unsigned int wps_pin_checksum(unsigned int pin)
+{
+	unsigned int accum = 0;
+	while (pin) {
+		accum += 3 * (pin % 10);
+		pin /= 10;
+		accum += pin % 10;
+		pin /= 10;
+	}
+
+	return (10 - accum % 10) % 10;
+}
+
+
+/**
+ * wps_pin_valid - Check whether a PIN has a valid checksum
+ * @pin: Eight digit PIN (i.e., including the checksum digit)
+ * Returns: 1 if checksum digit is valid, or 0 if not
+ */
+unsigned int wps_pin_valid(unsigned int pin)
+{
+	return wps_pin_checksum(pin / 10) == (pin % 10);
+}
+
+
+/**
+ * wps_generate_pin - Generate a random PIN
+ * Returns: Eight digit PIN (i.e., including the checksum digit)
+ */
+unsigned int wps_generate_pin(void)
+{
+	unsigned int val;
+
+	/* Generate seven random digits for the PIN */
+	if (os_get_random((unsigned char *) &val, sizeof(val)) < 0) {
+		struct os_time now;
+		os_get_time(&now);
+		val = os_random() ^ now.sec ^ now.usec;
+	}
+	val %= 10000000;
+
+	/* Append checksum digit */
+	return val * 10 + wps_pin_checksum(val);
+}

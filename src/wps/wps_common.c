@@ -19,7 +19,9 @@
 #include "sha256.h"
 #include "aes_wrap.h"
 #include "crypto.h"
+#include "ieee802_11_defs.h"
 #include "wps_i.h"
+#include "wps_dev_attr.h"
 
 
 static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
@@ -496,6 +498,136 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 	}
 
 	return 0;
+}
+
+
+static int wps_build_req_type(struct wpabuf *msg, enum wps_request_type type)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Request Type");
+	wpabuf_put_be16(msg, ATTR_REQUEST_TYPE);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, type);
+	return 0;
+}
+
+
+int wps_build_config_methods(struct wpabuf *msg, u16 methods)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Config Methods (%x)", methods);
+	wpabuf_put_be16(msg, ATTR_CONFIG_METHODS);
+	wpabuf_put_be16(msg, 2);
+	wpabuf_put_be16(msg, methods);
+	return 0;
+}
+
+
+int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * UUID-E");
+	wpabuf_put_be16(msg, ATTR_UUID_E);
+	wpabuf_put_be16(msg, WPS_UUID_LEN);
+	wpabuf_put_data(msg, uuid, WPS_UUID_LEN);
+	return 0;
+}
+
+
+int wps_build_rf_bands(struct wpabuf *msg, u8 rf_bands)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", rf_bands);
+	wpabuf_put_be16(msg, ATTR_RF_BANDS);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, rf_bands);
+	return 0;
+}
+
+
+int wps_build_dev_password_id(struct wpabuf *msg, u16 id)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Device Password ID (%d)", id);
+	wpabuf_put_be16(msg, ATTR_DEV_PASSWORD_ID);
+	wpabuf_put_be16(msg, 2);
+	wpabuf_put_be16(msg, id);
+	return 0;
+}
+
+
+int wps_build_config_error(struct wpabuf *msg, u16 err)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Configuration Error (%d)", err);
+	wpabuf_put_be16(msg, ATTR_CONFIG_ERROR);
+	wpabuf_put_be16(msg, 2);
+	wpabuf_put_be16(msg, err);
+	return 0;
+}
+
+
+struct wpabuf * wps_build_assoc_req_ie(void)
+{
+	struct wpabuf *ie;
+	u8 *len;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for (Re)Association "
+		   "Request");
+	ie = wpabuf_alloc(100);
+	if (ie == NULL)
+		return NULL;
+
+	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+	len = wpabuf_put(ie, 1);
+	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
+
+	if (wps_build_version(ie) ||
+	    wps_build_req_type(ie, WPS_REQ_ENROLLEE)) {
+		wpabuf_free(ie);
+		return NULL;
+	}
+
+	*len = wpabuf_len(ie) - 2;
+
+	return ie;
+}
+
+
+struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
+				       const u8 *uuid)
+{
+	struct wpabuf *ie;
+	u8 *len;
+	u16 methods;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
+
+	ie = wpabuf_alloc(200);
+	if (ie == NULL)
+		return NULL;
+
+	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+	len = wpabuf_put(ie, 1);
+	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
+
+	if (pbc)
+		methods = WPS_CONFIG_PUSHBUTTON;
+	else
+		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
+			WPS_CONFIG_KEYPAD;
+
+	if (wps_build_version(ie) ||
+	    wps_build_req_type(ie, WPS_REQ_ENROLLEE) ||
+	    wps_build_config_methods(ie, methods) ||
+	    wps_build_uuid_e(ie, uuid) ||
+	    wps_build_primary_dev_type(dev, ie) ||
+	    wps_build_rf_bands(ie, WPS_RF_24GHZ | WPS_RF_50GHZ) ||
+	    wps_build_assoc_state(NULL, ie) ||
+	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
+	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
+				      DEV_PW_DEFAULT)) {
+		wpabuf_free(ie);
+		return NULL;
+	}
+
+	*len = wpabuf_len(ie) - 2;
+
+	return ie;
 }
 
 

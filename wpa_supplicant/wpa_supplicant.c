@@ -1012,7 +1012,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		}
 #ifdef CONFIG_WPS
 	} else if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
-		struct wpabuf *wps_ie = wps_enrollee_build_assoc_req_ie();
+		struct wpabuf *wps_ie = wps_build_assoc_req_ie();
 		if (wps_ie && wpabuf_len(wps_ie) <= sizeof(wpa_ie)) {
 			wpa_ie_len = wpabuf_len(wps_ie);
 			os_memcpy(wpa_ie, wpabuf_head(wps_ie), wpa_ie_len);

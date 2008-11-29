@@ -130,9 +130,8 @@ int wps_registrar_button_pushed(struct wps_registrar *reg);
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data);
 
-struct wpabuf * wps_enrollee_build_assoc_req_ie(void);
-struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc,
-						struct wps_device_data *dev,
-						const u8 *uuid);
+struct wpabuf * wps_build_assoc_req_ie(void);
+struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
+				       const u8 *uuid);
 
 #endif /* WPS_H */

@@ -16,29 +16,8 @@
 
 #include "common.h"
 #include "sha256.h"
-#include "ieee802_11_defs.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
-
-
-static int wps_build_req_type(struct wpabuf *msg, enum wps_request_type type)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Request Type");
-	wpabuf_put_be16(msg, ATTR_REQUEST_TYPE);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, type);
-	return 0;
-}
-
-
-static int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * UUID-E");
-	wpabuf_put_be16(msg, ATTR_UUID_E);
-	wpabuf_put_be16(msg, WPS_UUID_LEN);
-	wpabuf_put_data(msg, uuid, WPS_UUID_LEN);
-	return 0;
-}
 
 
 static int wps_build_mac_addr(struct wps_data *wps, struct wpabuf *msg)
@@ -51,55 +30,12 @@ static int wps_build_mac_addr(struct wps_data *wps, struct wpabuf *msg)
 }
 
 
-static int wps_build_config_methods(struct wpabuf *msg, u16 methods)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Config Methods");
-	wpabuf_put_be16(msg, ATTR_CONFIG_METHODS);
-	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, methods);
-	return 0;
-}
-
-
 static int wps_build_wps_state(struct wps_data *wps, struct wpabuf *msg)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Wi-Fi Protected Setup State");
 	wpabuf_put_be16(msg, ATTR_WPS_STATE);
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, WPS_STATE_CONFIGURED);
-	return 0;
-}
-
-
-static int wps_build_rf_bands(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands");
-	wpabuf_put_be16(msg, ATTR_RF_BANDS);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, WPS_RF_24GHZ | WPS_RF_50GHZ);
-	return 0;
-}
-
-
-static int wps_build_dev_password_id(struct wpabuf *msg, u16 id)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Device Password ID");
-	wpabuf_put_be16(msg, ATTR_DEV_PASSWORD_ID);
-	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, id);
-	return 0;
-}
-
-
-static int wps_build_config_error(struct wps_data *wps, struct wpabuf *msg)
-{
-	u16 err = WPS_CFG_NO_ERROR;
-	wpabuf_put_be16(msg, ATTR_CONFIG_ERROR);
-	wpabuf_put_be16(msg, 2);
-	if (wps && wps->authenticator && wps->wps->ap_setup_locked)
-		err = WPS_CFG_SETUP_LOCKED;
-	wpa_printf(MSG_DEBUG, "WPS:  * Configuration Error (%d)", err);
-	wpabuf_put_be16(msg, err);
 	return 0;
 }
 
@@ -204,10 +140,10 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_config_methods(msg, methods) ||
 	    wps_build_wps_state(wps, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(wps, msg) ||
+	    wps_build_rf_bands(msg, WPS_RF_24GHZ | WPS_RF_50GHZ) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
-	    wps_build_config_error(wps, msg) ||
+	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_os_version(&wps->wps->dev, msg)) {
 		wpabuf_free(msg);
 		return NULL;
@@ -420,6 +356,7 @@ static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
 static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 {
 	struct wpabuf *msg;
+	u16 err = WPS_CFG_NO_ERROR;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building Message WSC_NACK");
 
@@ -427,11 +364,14 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 	if (msg == NULL)
 		return NULL;
 
+	if (wps->authenticator && wps->wps->ap_setup_locked)
+		err = WPS_CFG_SETUP_LOCKED;
+
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_WSC_NACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_config_error(wps, msg)) {
+	    wps_build_config_error(msg, err)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1117,75 +1057,4 @@ enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps, u8 op_code,
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported op_code %d", op_code);
 		return WPS_FAILURE;
 	}
-}
-
-
-struct wpabuf * wps_enrollee_build_assoc_req_ie(void)
-{
-	struct wpabuf *ie;
-	u8 *len;
-
-	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for (Re)Association "
-		   "Request");
-	ie = wpabuf_alloc(100);
-	if (ie == NULL)
-		return NULL;
-
-	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-	len = wpabuf_put(ie, 1);
-	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
-
-	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, WPS_REQ_ENROLLEE)) {
-		wpabuf_free(ie);
-		return NULL;
-	}
-
-	*len = wpabuf_len(ie) - 2;
-
-	return ie;
-}
-
-
-struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc,
-						struct wps_device_data *dev,
-						const u8 *uuid)
-{
-	struct wpabuf *ie;
-	u8 *len;
-	u16 methods;
-
-	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
-
-	ie = wpabuf_alloc(200);
-	if (ie == NULL)
-		return NULL;
-
-	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-	len = wpabuf_put(ie, 1);
-	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
-
-	if (pbc)
-		methods = WPS_CONFIG_PUSHBUTTON;
-	else
-		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
-			WPS_CONFIG_KEYPAD;
-
-	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, WPS_REQ_ENROLLEE) ||
-	    wps_build_config_methods(ie, methods) ||
-	    wps_build_uuid_e(ie, uuid) ||
-	    wps_build_primary_dev_type(dev, ie) ||
-	    wps_build_rf_bands(NULL, ie) ||
-	    wps_build_assoc_state(NULL, ie) ||
-	    wps_build_config_error(NULL, ie) ||
-	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
-				      DEV_PW_DEFAULT)) {
-		wpabuf_free(ie);
-		return NULL;
-	}
-
-	*len = wpabuf_len(ie) - 2;
-
-	return ie;
 }

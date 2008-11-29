@@ -275,39 +275,14 @@ static int wps_build_probe_config_methods(struct wps_registrar *reg,
 }
 
 
-static int wps_build_config_methods(struct wps_registrar *reg,
-				    struct wpabuf *msg)
+static int wps_build_config_methods_r(struct wps_registrar *reg,
+				      struct wpabuf *msg)
 {
 	u16 methods;
 	methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
 	if (reg->pbc)
 		methods |= WPS_CONFIG_PUSHBUTTON;
-	wpa_printf(MSG_DEBUG, "WPS:  * Config Methods (%x)", methods);
-	wpabuf_put_be16(msg, ATTR_CONFIG_METHODS);
-	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, methods);
-	return 0;
-}
-
-
-static int wps_build_rf_bands(struct wps_registrar *reg, struct wpabuf *msg)
-{
-	u8 bands = WPS_RF_24GHZ /* TODO: | WPS_RF_50GHZ */;
-	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", bands);
-	wpabuf_put_be16(msg, ATTR_RF_BANDS);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, bands);
-	return 0;
-}
-
-
-static int wps_build_uuid_e(struct wps_registrar *reg, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * UUID-E");
-	wpabuf_put_be16(msg, ATTR_UUID_E);
-	wpabuf_put_be16(msg, WPS_UUID_LEN);
-	wpabuf_put_data(msg, reg->wps->uuid, WPS_UUID_LEN);
-	return 0;
+	return wps_build_config_methods(msg, methods);
 }
 
 
@@ -606,10 +581,10 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_sel_reg_dev_password_id(reg, probe) ||
 	    wps_build_sel_reg_config_methods(reg, probe) ||
 	    wps_build_resp_type(reg, probe) ||
-	    wps_build_uuid_e(reg, probe) ||
+	    wps_build_uuid_e(probe, reg->wps->uuid) ||
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
-	    wps_build_rf_bands(reg, probe)) {
+	    wps_build_rf_bands(probe, WPS_RF_24GHZ /* TODO:|WPS_RF_50GHZ */)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
@@ -665,26 +640,6 @@ static int wps_build_uuid_r(struct wps_data *wps, struct wpabuf *msg)
 	wpabuf_put_be16(msg, ATTR_UUID_R);
 	wpabuf_put_be16(msg, WPS_UUID_LEN);
 	wpabuf_put_data(msg, wps->uuid_r, WPS_UUID_LEN);
-	return 0;
-}
-
-
-static int wps_build_dev_password_id(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Device Password ID");
-	wpabuf_put_be16(msg, ATTR_DEV_PASSWORD_ID);
-	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, DEV_PW_DEFAULT);
-	return 0;
-}
-
-
-static int wps_build_config_error(struct wps_data *wps, struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * Configuration Error");
-	wpabuf_put_be16(msg, ATTR_CONFIG_ERROR);
-	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, WPS_CFG_NO_ERROR);
 	return 0;
 }
 
@@ -988,12 +943,12 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_auth_type_flags(wps, msg) ||
 	    wps_build_encr_type_flags(wps, msg) ||
 	    wps_build_conn_type_flags(wps, msg) ||
-	    wps_build_config_methods(wps->registrar, msg) ||
+	    wps_build_config_methods_r(wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(wps->registrar, msg) ||
+	    wps_build_rf_bands(msg, WPS_RF_24GHZ /* TODO:|WPS_RF_50GHZ */) ||
 	    wps_build_assoc_state(wps, msg) ||
-	    wps_build_config_error(wps, msg) ||
-	    wps_build_dev_password_id(wps, msg) ||
+	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
+	    wps_build_dev_password_id(msg, DEV_PW_DEFAULT) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);
@@ -1008,11 +963,15 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 {
 	struct wpabuf *msg;
+	u16 err = WPS_CFG_NO_ERROR;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building Message M2D");
 	msg = wpabuf_alloc(1000);
 	if (msg == NULL)
 		return NULL;
+
+	if (wps->authenticator && wps->wps->ap_setup_locked)
+		err = WPS_CFG_SETUP_LOCKED;
 
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_M2D) ||
@@ -1022,11 +981,11 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	    wps_build_auth_type_flags(wps, msg) ||
 	    wps_build_encr_type_flags(wps, msg) ||
 	    wps_build_conn_type_flags(wps, msg) ||
-	    wps_build_config_methods(wps->registrar, msg) ||
+	    wps_build_config_methods_r(wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(wps->registrar, msg) ||
+	    wps_build_rf_bands(msg, WPS_RF_24GHZ /* TODO:|WPS_RF_50GHZ */) ||
 	    wps_build_assoc_state(wps, msg) ||
-	    wps_build_config_error(wps, msg) ||
+	    wps_build_config_error(msg, err) ||
 	    wps_build_os_version(&wps->wps->dev, msg)) {
 		wpabuf_free(msg);
 		return NULL;

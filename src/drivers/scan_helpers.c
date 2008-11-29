@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Helper functions for scan result processing
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -56,6 +56,37 @@ const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,
 	}
 
 	return NULL;
+}
+
+
+struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
+					     u32 vendor_type)
+{
+	struct wpabuf *buf;
+	const u8 *end, *pos;
+
+	buf = wpabuf_alloc(res->ie_len);
+	if (buf == NULL)
+		return NULL;
+
+	pos = (const u8 *) (res + 1);
+	end = pos + res->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			wpabuf_put_data(buf, pos + 2 + 4, pos[1] - 4);
+		pos += 2 + pos[1];
+	}
+
+	if (wpabuf_len(buf) == 0) {
+		wpabuf_free(buf);
+		buf = NULL;
+	}
+
+	return buf;
 }
 
 

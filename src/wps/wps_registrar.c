@@ -542,31 +542,54 @@ static int wps_cb_set_ie(struct wps_registrar *reg,
 }
 
 
+/* Encapsulate WPS IE data with one (or more, if needed) IE headers */
+static struct wpabuf * wps_ie_encapsulate(struct wpabuf *data)
+{
+	struct wpabuf *ie;
+	const u8 *pos, *end;
+
+	ie = wpabuf_alloc(wpabuf_len(data) + 100);
+	if (ie == NULL) {
+		wpabuf_free(data);
+		return NULL;
+	}
+
+	pos = wpabuf_head(data);
+	end = pos + wpabuf_len(data);
+
+	while (end > pos) {
+		size_t frag_len = end - pos;
+		if (frag_len > 251)
+			frag_len = 251;
+		wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+		wpabuf_put_u8(ie, 4 + frag_len);
+		wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
+		wpabuf_put_data(ie, pos, frag_len);
+		pos += frag_len;
+	}
+
+	wpabuf_free(data);
+
+	return ie;
+}
+
+
 static int wps_set_ie(struct wps_registrar *reg)
 {
 	struct wpabuf *beacon;
 	struct wpabuf *probe;
 	int ret;
-	u8 *blen, *plen;
 
 	wpa_printf(MSG_DEBUG, "WPS: Build Beacon and Probe Response IEs");
 
 	beacon = wpabuf_alloc(300);
 	if (beacon == NULL)
 		return -1;
-	probe = wpabuf_alloc(300);
+	probe = wpabuf_alloc(400);
 	if (probe == NULL) {
 		wpabuf_free(beacon);
 		return -1;
 	}
-
-	wpabuf_put_u8(beacon, WLAN_EID_VENDOR_SPECIFIC);
-	blen = wpabuf_put(beacon, 1);
-	wpabuf_put_be32(beacon, WPS_DEV_OUI_WFA);
-
-	wpabuf_put_u8(probe, WLAN_EID_VENDOR_SPECIFIC);
-	plen = wpabuf_put(probe, 1);
-	wpabuf_put_be32(probe, WPS_DEV_OUI_WFA);
 
 	if (wps_build_version(beacon) ||
 	    wps_build_wps_state(reg->wps, beacon) ||
@@ -590,8 +613,14 @@ static int wps_set_ie(struct wps_registrar *reg)
 		return -1;
 	}
 
-	*blen = wpabuf_len(beacon) - 2;
-	*plen = wpabuf_len(probe) - 2;
+	beacon = wps_ie_encapsulate(beacon);
+	probe = wps_ie_encapsulate(probe);
+
+	if (!beacon || !probe) {
+		wpabuf_free(beacon);
+		wpabuf_free(probe);
+		return -1;
+	}
 
 	ret = wps_cb_set_ie(reg, beacon, probe);
 	wpabuf_free(beacon);

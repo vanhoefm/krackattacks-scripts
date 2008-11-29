@@ -26,6 +26,11 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin);
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin);
+int wpas_wps_ssid_bss_match(struct wpa_ssid *ssid, struct wpa_scan_res *bss);
+int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid, struct wpa_scan_res *bss);
+int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
+			      struct wpa_scan_res *selected,
+			      struct wpa_ssid *ssid);
 
 #else /* CONFIG_WPS */
 
@@ -43,7 +48,26 @@ static inline int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 	return 0;
 }
 
-u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
+static inline u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
+{
+	return 0;
+}
+
+static inline int wpas_wps_ssid_bss_match(struct wpa_ssid *ssid,
+					  struct wpa_scan_res *bss)
+{
+	return -1;
+}
+
+static inline int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid,
+					    struct wpa_scan_res *bss)
+{
+	return 0;
+}
+
+static inline int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
+					    struct wpa_scan_res *selected,
+					    struct wpa_ssid *ssid)
 {
 	return 0;
 }

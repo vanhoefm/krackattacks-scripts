@@ -124,13 +124,11 @@ struct wpabuf * wps_get_msg(struct wps_data *wps, u8 *op_code)
 }
 
 
-int wps_is_selected_pbc_registrar(const u8 *buf, size_t len)
+int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
-	struct wpabuf msg;
 
-	wpabuf_set(&msg, buf, len);
-	if (wps_parse_msg(&msg, &attr) < 0 ||
+	if (wps_parse_msg(msg, &attr) < 0 ||
 	    !attr.selected_registrar || *attr.selected_registrar == 0 ||
 	    !attr.sel_reg_config_methods ||
 	    !(WPA_GET_BE16(attr.sel_reg_config_methods) &
@@ -143,13 +141,11 @@ int wps_is_selected_pbc_registrar(const u8 *buf, size_t len)
 }
 
 
-int wps_is_selected_pin_registrar(const u8 *buf, size_t len)
+int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
-	struct wpabuf msg;
 
-	wpabuf_set(&msg, buf, len);
-	if (wps_parse_msg(&msg, &attr) < 0 ||
+	if (wps_parse_msg(msg, &attr) < 0 ||
 	    !attr.selected_registrar || *attr.selected_registrar == 0 ||
 	    !attr.sel_reg_config_methods ||
 	    !(WPA_GET_BE16(attr.sel_reg_config_methods) &
@@ -162,13 +158,11 @@ int wps_is_selected_pin_registrar(const u8 *buf, size_t len)
 }
 
 
-const u8 * wps_get_uuid_e(const u8 *buf, size_t len)
+const u8 * wps_get_uuid_e(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
-	struct wpabuf msg;
 
-	wpabuf_set(&msg, buf, len);
-	if (wps_parse_msg(&msg, &attr) < 0)
+	if (wps_parse_msg(msg, &attr) < 0)
 		return NULL;
 	return attr.uuid_e;
 }

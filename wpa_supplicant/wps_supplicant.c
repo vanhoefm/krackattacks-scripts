@@ -391,3 +391,145 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->wps);
 	wpa_s->wps = NULL;
 }
+
+
+int wpas_wps_ssid_bss_match(struct wpa_ssid *ssid, struct wpa_scan_res *bss)
+{
+	struct wpabuf *wps_ie;
+
+	if (!(ssid->key_mgmt & WPA_KEY_MGMT_WPS))
+		return -1;
+
+	wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+	if (eap_is_wps_pbc_enrollee(&ssid->eap)) {
+		if (!wps_ie) {
+			wpa_printf(MSG_DEBUG, "   skip - non-WPS AP");
+			return 0;
+		}
+
+		if (!wps_is_selected_pbc_registrar(wps_ie)) {
+			wpa_printf(MSG_DEBUG, "   skip - WPS AP "
+				   "without active PBC Registrar");
+			wpabuf_free(wps_ie);
+			return 0;
+		}
+
+		/* TODO: overlap detection */
+		wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
+			   "(Active PBC)");
+		wpabuf_free(wps_ie);
+		return 1;
+	}
+
+	if (eap_is_wps_pin_enrollee(&ssid->eap)) {
+		if (!wps_ie) {
+			wpa_printf(MSG_DEBUG, "   skip - non-WPS AP");
+			return 0;
+		}
+
+		if (!wps_is_selected_pin_registrar(wps_ie)) {
+			wpa_printf(MSG_DEBUG, "   skip - WPS AP "
+				   "without active PIN Registrar");
+			wpabuf_free(wps_ie);
+			return 0;
+		}
+		wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
+			   "(Active PIN)");
+		wpabuf_free(wps_ie);
+		return 1;
+	}
+
+	if (wps_ie) {
+		wpa_printf(MSG_DEBUG, "   selected based on WPS IE");
+		wpabuf_free(wps_ie);
+		return 1;
+	}
+
+	return -1;
+}
+
+
+int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid,
+			      struct wpa_scan_res *bss)
+{
+	struct wpabuf *wps_ie = NULL;
+	int ret = 0;
+
+	if (eap_is_wps_pbc_enrollee(&ssid->eap)) {
+		wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		if (wps_ie && wps_is_selected_pbc_registrar(wps_ie)) {
+			/* allow wildcard SSID for WPS PBC */
+			ret = 1;
+		}
+	} else if (eap_is_wps_pin_enrollee(&ssid->eap)) {
+		wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		if (wps_ie && wps_is_selected_pin_registrar(wps_ie)) {
+			/* allow wildcard SSID for WPS PIN */
+			ret = 1;
+		}
+	}
+
+	wpabuf_free(wps_ie);
+
+	return ret;
+}
+
+
+int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
+			      struct wpa_scan_res *selected,
+			      struct wpa_ssid *ssid)
+{
+	const u8 *sel_uuid, *uuid;
+	size_t i;
+	struct wpabuf *wps_ie;
+	int ret = 0;
+
+	if (!eap_is_wps_pbc_enrollee(&ssid->eap))
+		return 0;
+
+	/* Make sure that only one AP is in active PBC mode */
+	wps_ie = wpa_scan_get_vendor_ie_multi(selected, WPS_IE_VENDOR_TYPE);
+	if (wps_ie)
+		sel_uuid = wps_get_uuid_e(wps_ie);
+	else
+		sel_uuid = NULL;
+	if (!sel_uuid) {
+		wpa_printf(MSG_DEBUG, "WPS: UUID-E not available for PBC "
+			   "overlap detection");
+		wpabuf_free(wps_ie);
+		return 1;
+	}
+
+	for (i = 0; i < wpa_s->scan_res->num; i++) {
+		struct wpa_scan_res *bss = wpa_s->scan_res->res[i];
+		struct wpabuf *ie;
+		if (bss == selected)
+			continue;
+		ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		if (!ie)
+			continue;
+		if (!wps_is_selected_pbc_registrar(ie)) {
+			wpabuf_free(ie);
+			continue;
+		}
+		uuid = wps_get_uuid_e(ie);
+		if (uuid == NULL) {
+			wpa_printf(MSG_DEBUG, "WPS: UUID-E not available for "
+				   "PBC overlap detection (other BSS)");
+			ret = 1;
+			wpabuf_free(ie);
+			break;
+		}
+		if (os_memcmp(sel_uuid, uuid, 16) != 0) {
+			ret = 1; /* PBC overlap */
+			wpabuf_free(ie);
+			break;
+		}
+
+		/* TODO: verify that this is reasonable dual-band situation */
+	}
+
+	wpabuf_free(wps_ie);
+
+	return ret;
+}

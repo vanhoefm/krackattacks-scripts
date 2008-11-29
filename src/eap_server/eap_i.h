@@ -182,6 +182,7 @@ struct eap_sm {
 	int eap_sim_aka_result_ind;
 	int tnc;
 	struct wps_context *wps;
+	struct wpabuf *assoc_wps_ie;
 };
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,

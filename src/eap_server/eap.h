@@ -104,6 +104,7 @@ struct eap_config {
 	int eap_sim_aka_result_ind;
 	int tnc;
 	struct wps_context *wps;
+	const struct wpabuf *assoc_wps_ie;
 };
 
 

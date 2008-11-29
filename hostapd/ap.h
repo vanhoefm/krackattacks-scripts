@@ -103,6 +103,8 @@ struct sta_info {
 	u8 *ping_trans_id; /* buffer of WLAN_PING_TRANS_ID_LEN * ping_count
 			    * octets of pending ping transaction identifiers */
 #endif /* CONFIG_IEEE80211W */
+
+	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */
 };
 
 

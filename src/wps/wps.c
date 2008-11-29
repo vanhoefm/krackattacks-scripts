@@ -60,6 +60,24 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 
 	data->state = data->registrar ? RECV_M1 : SEND_M1;
 
+	if (cfg->assoc_wps_ie) {
+		struct wps_parse_attr attr;
+		wpa_hexdump_buf(MSG_DEBUG, "WPS: WPS IE from (Re)AssocReq",
+				cfg->assoc_wps_ie);
+		if (wps_parse_msg(cfg->assoc_wps_ie, &attr) < 0) {
+			wpa_printf(MSG_DEBUG, "WPS: Failed to parse WPS IE "
+				   "from (Re)AssocReq");
+		} else if (attr.request_type == NULL) {
+			wpa_printf(MSG_DEBUG, "WPS: No Request Type attribute "
+				   "in (Re)AssocReq WPS IE");
+		} else {
+			wpa_printf(MSG_DEBUG, "WPS: Request Type (from WPS IE "
+				   "in (Re)AssocReq WPS IE): %d",
+				   *attr.request_type);
+			data->request_type = *attr.request_type;
+		}
+	}
+
 	return data;
 }
 

@@ -433,11 +433,12 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 }
 
 
-void wps_kdf(const u8 *key, const char *label, u8 *res, size_t res_len)
+void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
+	     const char *label, u8 *res, size_t res_len)
 {
 	u8 i_buf[4], key_bits[4];
-	const u8 *addr[3];
-	size_t len[3];
+	const u8 *addr[4];
+	size_t len[4];
 	int i, iter;
 	u8 hash[SHA256_MAC_LEN], *opos;
 	size_t left;
@@ -446,10 +447,12 @@ void wps_kdf(const u8 *key, const char *label, u8 *res, size_t res_len)
 
 	addr[0] = i_buf;
 	len[0] = sizeof(i_buf);
-	addr[1] = (const u8 *) label;
-	len[1] = os_strlen(label);
-	addr[2] = key_bits;
-	len[2] = sizeof(key_bits);
+	addr[1] = label_prefix;
+	len[1] = label_prefix_len;
+	addr[2] = (const u8 *) label;
+	len[2] = os_strlen(label);
+	addr[3] = key_bits;
+	len[3] = sizeof(key_bits);
 
 	iter = (res_len + SHA256_MAC_LEN - 1) / SHA256_MAC_LEN;
 	opos = res;
@@ -457,7 +460,7 @@ void wps_kdf(const u8 *key, const char *label, u8 *res, size_t res_len)
 
 	for (i = 1; i <= iter; i++) {
 		WPA_PUT_BE32(i_buf, i);
-		hmac_sha256_vector(key, SHA256_MAC_LEN, 3, addr, len, hash);
+		hmac_sha256_vector(key, SHA256_MAC_LEN, 4, addr, len, hash);
 		if (i < iter) {
 			os_memcpy(opos, hash, SHA256_MAC_LEN);
 			opos += SHA256_MAC_LEN;
@@ -545,7 +548,7 @@ int wps_derive_keys(struct wps_data *wps)
 	hmac_sha256_vector(dhkey, sizeof(dhkey), 3, addr, len, kdk);
 	wpa_hexdump_key(MSG_DEBUG, "WPS: KDK", kdk, sizeof(kdk));
 
-	wps_kdf(kdk, "Wi-Fi Easy and Secure Key Derivation",
+	wps_kdf(kdk, NULL, 0, "Wi-Fi Easy and Secure Key Derivation",
 		keys, sizeof(keys));
 	os_memcpy(wps->authkey, keys, WPS_AUTHKEY_LEN);
 	os_memcpy(wps->keywrapkey, keys + WPS_AUTHKEY_LEN, WPS_KEYWRAPKEY_LEN);
@@ -557,6 +560,56 @@ int wps_derive_keys(struct wps_data *wps)
 	wpa_hexdump_key(MSG_DEBUG, "WPS: KeyWrapKey",
 			wps->keywrapkey, WPS_KEYWRAPKEY_LEN);
 	wpa_hexdump_key(MSG_DEBUG, "WPS: EMSK", wps->emsk, WPS_EMSK_LEN);
+
+	return 0;
+}
+
+
+int wps_derive_mgmt_keys(struct wps_data *wps)
+{
+	u8 nonces[2 * WPS_NONCE_LEN];
+	u8 keys[WPS_MGMTAUTHKEY_LEN + WPS_MGMTENCKEY_LEN];
+	u8 hash[SHA256_MAC_LEN];
+	const u8 *addr[2];
+	size_t len[2];
+	const char *auth_label = "WFA-WLAN-Management-MgmtAuthKey";
+	const char *enc_label = "WFA-WLAN-Management-MgmtEncKey";
+
+	/* MgmtAuthKey || MgmtEncKey =
+	 * kdf(EMSK, N1 || N2 || "WFA-WLAN-Management-Keys", 384) */
+	os_memcpy(nonces, wps->nonce_e, WPS_NONCE_LEN);
+	os_memcpy(nonces + WPS_NONCE_LEN, wps->nonce_r, WPS_NONCE_LEN);
+	wps_kdf(wps->emsk, nonces, sizeof(nonces), "WFA-WLAN-Management-Keys",
+		keys, sizeof(keys));
+	os_memcpy(wps->mgmt_auth_key, keys, WPS_MGMTAUTHKEY_LEN);
+	os_memcpy(wps->mgmt_enc_key, keys + WPS_MGMTAUTHKEY_LEN,
+		  WPS_MGMTENCKEY_LEN);
+
+	addr[0] = nonces;
+	len[0] = sizeof(nonces);
+
+	/* MgmtEncKeyID = first 128 bits of
+	 * SHA-256(N1 || N2 || "WFA-WLAN-Management-MgmtAuthKey") */
+	addr[1] = (const u8 *) auth_label;
+	len[1] = os_strlen(auth_label);
+	sha256_vector(2, addr, len, hash);
+	os_memcpy(wps->mgmt_auth_key_id, hash, WPS_MGMT_KEY_ID_LEN);
+
+	/* MgmtEncKeyID = first 128 bits of
+	 * SHA-256(N1 || N2 || "WFA-WLAN-Management-MgmtEncKey") */
+	addr[1] = (const u8 *) enc_label;
+	len[1] = os_strlen(enc_label);
+	sha256_vector(2, addr, len, hash);
+	os_memcpy(wps->mgmt_enc_key_id, hash, WPS_MGMT_KEY_ID_LEN);
+
+	wpa_hexdump_key(MSG_DEBUG, "WPS: MgmtAuthKey",
+			wps->mgmt_auth_key, WPS_MGMTAUTHKEY_LEN);
+	wpa_hexdump(MSG_DEBUG, "WPS: MgmtAuthKeyID",
+		    wps->mgmt_auth_key_id, WPS_MGMT_KEY_ID_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "WPS: MgmtEncKey",
+			wps->mgmt_enc_key, WPS_MGMTENCKEY_LEN);
+	wpa_hexdump(MSG_DEBUG, "WPS: MgmtEncKeyID",
+		    wps->mgmt_enc_key_id, WPS_MGMT_KEY_ID_LEN);
 
 	return 0;
 }

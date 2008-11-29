@@ -47,6 +47,7 @@ struct wps_config {
 	size_t pin_len;
 	const u8 *uuid; /* 128-bit Enrollee UUID (NULL for Registrar) */
 	int pbc;
+	const struct wpabuf *assoc_wps_ie; /* (Re)AssocReq WPS IE (in AP) */
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);

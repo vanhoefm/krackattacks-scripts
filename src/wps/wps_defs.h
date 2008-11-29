@@ -30,6 +30,9 @@
 #define WPS_SECRET_NONCE_LEN 16
 #define WPS_HASH_LEN 32
 #define WPS_KWA_LEN 8
+#define WPS_MGMTAUTHKEY_LEN 32
+#define WPS_MGMTENCKEY_LEN 16
+#define WPS_MGMT_KEY_ID_LEN 16
 
 /* Attribute Types */
 enum wps_attribute {

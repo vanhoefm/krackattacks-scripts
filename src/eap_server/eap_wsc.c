@@ -1,6 +1,6 @@
 /*
  * EAP-WSC server for Wi-Fi Protected Setup
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -109,6 +109,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		cfg.pin = sm->user->password;
 		cfg.pin_len = sm->user->password_len;
 	}
+	cfg.assoc_wps_ie = sm->assoc_wps_ie;
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);

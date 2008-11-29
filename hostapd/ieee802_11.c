@@ -839,6 +839,9 @@ static void handle_assoc(struct hostapd_data *hapd,
 				   "(Re)Association Request - assume WPS is "
 				   "used");
 			sta->flags |= WLAN_STA_WPS;
+			wpabuf_free(sta->wps_ie);
+			sta->wps_ie = wpabuf_alloc_copy(elems.wps_ie + 4,
+							elems.wps_ie_len - 4);
 		} else {
 			wpa_printf(MSG_DEBUG, "STA did not include WPA/RSN IE "
 				   "in (Re)Association Request - possible WPS "

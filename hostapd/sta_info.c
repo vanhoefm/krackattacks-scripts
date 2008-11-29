@@ -188,6 +188,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	eloop_cancel_timeout(ap_ping_timer, hapd, sta);
 #endif /* CONFIG_IEEE80211W */
 
+	wpabuf_free(sta->wps_ie);
+
 	os_free(sta);
 }
 

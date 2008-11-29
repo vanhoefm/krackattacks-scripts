@@ -1167,6 +1167,8 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	sm->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	sm->tnc = conf->tnc;
 	sm->wps = conf->wps;
+	if (conf->assoc_wps_ie)
+		sm->assoc_wps_ie = wpabuf_dup(conf->assoc_wps_ie);
 
 	wpa_printf(MSG_DEBUG, "EAP: Server state machine created");
 
@@ -1200,6 +1202,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 	wpabuf_free(sm->eap_if.aaaEapRespData);
 	os_free(sm->eap_if.aaaEapKeyData);
 	eap_user_free(sm->user);
+	wpabuf_free(sm->assoc_wps_ie);
 	os_free(sm);
 }
 

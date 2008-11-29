@@ -813,6 +813,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.eap_sim_aka_result_ind = eapol->conf.eap_sim_aka_result_ind;
 	eap_conf.tnc = eapol->conf.tnc;
 	eap_conf.wps = eapol->conf.wps;
+	eap_conf.assoc_wps_ie = sta->wps_ie;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
 	if (sm->eap == NULL) {
 		eapol_auth_free(sm);

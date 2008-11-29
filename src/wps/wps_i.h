@@ -56,6 +56,10 @@ struct wps_data {
 	u8 authkey[WPS_AUTHKEY_LEN];
 	u8 keywrapkey[WPS_KEYWRAPKEY_LEN];
 	u8 emsk[WPS_EMSK_LEN];
+	u8 mgmt_auth_key[WPS_MGMTAUTHKEY_LEN];
+	u8 mgmt_auth_key_id[WPS_MGMT_KEY_ID_LEN];
+	u8 mgmt_enc_key[WPS_MGMTENCKEY_LEN];
+	u8 mgmt_enc_key_id[WPS_MGMT_KEY_ID_LEN];
 
 	struct wpabuf *last_msg;
 
@@ -63,6 +67,7 @@ struct wps_data {
 	size_t dev_password_len;
 	u16 dev_pw_id;
 	int pbc;
+	u8 request_type; /* Request Type attribute from (Re)AssocReq */
 
 	u16 encr_type; /* available encryption types */
 	u16 auth_type; /* available authentication types */
@@ -151,9 +156,11 @@ struct wps_parse_attr {
 
 /* wps_common.c */
 int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
-void wps_kdf(const u8 *key, const char *label, u8 *res, size_t res_len);
+void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
+	     const char *label, u8 *res, size_t res_len);
 int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg);
 int wps_derive_keys(struct wps_data *wps);
+int wps_derive_mgmt_keys(struct wps_data *wps);
 int wps_build_authenticator(struct wps_data *wps, struct wpabuf *msg);
 int wps_process_authenticator(struct wps_data *wps, const u8 *authenticator,
 			      const struct wpabuf *msg);

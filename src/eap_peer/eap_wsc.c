@@ -207,8 +207,10 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			   "yet fully supported - using test values");
 		u8 uuid_e[UUID_LEN];
 		os_memset(uuid_e, 0, UUID_LEN);
-		wps_registrar_add_pin(data->wps_ctx->registrar, uuid_e,
-				      (const u8 *) "12345670", 8);
+		if (cfg.pin) {
+			wps_registrar_add_pin(data->wps_ctx->registrar, uuid_e,
+					      cfg.pin, cfg.pin_len);
+		}
 	}
 
 	return data;

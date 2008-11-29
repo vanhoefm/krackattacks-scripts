@@ -762,6 +762,7 @@ static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
 	struct test_driver_data *drv = priv;
 	struct test_driver_bss *bss;
 
+	wpa_hexdump(MSG_DEBUG, "test_driver: Beacon WPS IE", ie, len);
 	bss = test_driver_get_bss(drv, ifname);
 	if (bss == NULL)
 		return -1;
@@ -792,6 +793,7 @@ static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
 	struct test_driver_data *drv = priv;
 	struct test_driver_bss *bss;
 
+	wpa_hexdump(MSG_DEBUG, "test_driver: ProbeResp WPS IE", ie, len);
 	bss = test_driver_get_bss(drv, ifname);
 	if (bss == NULL)
 		return -1;

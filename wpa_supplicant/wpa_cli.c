@@ -132,6 +132,10 @@ static const char *commands_help =
 "  ap_scan <value> = set ap_scan parameter\n"
 "  stkstart <addr> = request STK negotiation with <addr>\n"
 "  ft_ds <addr> = request over-the-DS FT with <addr>\n"
+"  wps_pbc [BSSID] = start Wi-Fi Protected Setup: Push Button Configuration\n"
+"  wps_pin <BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
+"hardcoded)\n"
+"  wps_reg <BSSID> <AP PIN> = start WPS Registrar to configure an AP\n"
 "  terminate = terminate wpa_supplicant\n"
 "  quit = exit wpa_cli\n";
 
@@ -432,6 +436,80 @@ static int wpa_cli_cmd_ft_ds(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	res = os_snprintf(cmd, sizeof(cmd), "FT_DS %s", argv[0]);
 	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
 		printf("Too long FT_DS command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_wps_pbc(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc == 0) {
+		/* Any BSSID */
+		return wpa_ctrl_command(ctrl, "WPS_PBC");
+	}
+
+	/* Specific BSSID */
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_PBC %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_PBC command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc == 0) {
+		printf("Invalid WPS_PIN command: need one or two arguments:\n"
+		       "- BSSID: use 'any' to select any\n"
+		       "- PIN: optional, used only with devices that have no "
+		       "display\n");
+		return -1;
+	}
+
+	if (argc == 1) {
+		/* Use dynamically generated PIN (returned as reply) */
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_PIN %s", argv[0]);
+		if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+			printf("Too long WPS_PIN command.\n");
+			return -1;
+		}
+		return wpa_ctrl_command(ctrl, cmd);
+	}
+
+	/* Use hardcoded PIN from a label */
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_PIN %s %s", argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_PIN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid WPS_REG command: need two arguments:\n"
+		       "- BSSID: use 'any' to select any\n"
+		       "- AP PIN\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_REG %s %s", argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_REG command.\n");
 		return -1;
 	}
 	return wpa_ctrl_command(ctrl, cmd);
@@ -1091,6 +1169,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "ap_scan", wpa_cli_cmd_ap_scan },
 	{ "stkstart", wpa_cli_cmd_stkstart },
 	{ "ft_ds", wpa_cli_cmd_ft_ds },
+	{ "wps_pbc", wpa_cli_cmd_wps_pbc },
+	{ "wps_pin", wpa_cli_cmd_wps_pin },
+	{ "wps_reg", wpa_cli_cmd_wps_reg },
 	{ NULL, NULL }
 };
 

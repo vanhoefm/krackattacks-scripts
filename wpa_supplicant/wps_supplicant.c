@@ -20,13 +20,20 @@
 #include "config.h"
 #include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
+#include "eloop.h"
+#include "eap_common/eap_wsc_common.h"
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 #include "wps_supplicant.h"
 
 
+static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx);
+
+
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 {
+	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
+
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && wpa_s->current_ssid &&
 	    !(wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS: Network configuration replaced - "
@@ -182,6 +189,166 @@ u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
 }
 
 
+static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
+{
+	int id;
+	struct wpa_ssid *ssid;
+
+	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
+
+	/* Remove any existing WPS network from configuration */
+	ssid = wpa_s->conf->ssid;
+	while (ssid) {
+		if (ssid->key_mgmt & WPA_KEY_MGMT_WPS)
+			id = ssid->id;
+		else
+			id = -1;
+		ssid = ssid->next;
+		if (id >= 0)
+			wpa_config_remove_network(wpa_s->conf, id);
+	}
+}
+
+
+static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	wpa_printf(MSG_DEBUG, "WPS: Requested operation timed out");
+	wpas_clear_wps(wpa_s);
+}
+
+
+static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
+					      int registrar, const u8 *bssid)
+{
+	struct wpa_ssid *ssid;
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (ssid == NULL)
+		return NULL;
+	wpa_config_set_network_defaults(ssid);
+	if (wpa_config_set(ssid, "key_mgmt", "WPS", 0) < 0 ||
+	    wpa_config_set(ssid, "eap", "WSC", 0) < 0 ||
+	    wpa_config_set(ssid, "identity", registrar ?
+			   "\"" WSC_ID_REGISTRAR "\"" :
+			   "\"" WSC_ID_ENROLLEE "\"", 0) < 0) {
+		wpa_config_remove_network(wpa_s->conf, ssid->id);
+		return NULL;
+	}
+
+	if (bssid) {
+		size_t i;
+		struct wpa_scan_res *res;
+
+		os_memcpy(ssid->bssid, bssid, ETH_ALEN);
+
+		/* Try to get SSID from scan results */
+		if (wpa_s->scan_res == NULL &&
+		    wpa_supplicant_get_scan_results(wpa_s) < 0)
+			return ssid; /* Could not find any scan results */
+
+		for (i = 0; i < wpa_s->scan_res->num; i++) {
+			const u8 *ie;
+
+			res = wpa_s->scan_res->res[i];
+			if (os_memcmp(bssid, res->bssid, ETH_ALEN) != 0)
+				continue;
+
+			ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
+			if (ie == NULL)
+				break;
+			os_free(ssid->ssid);
+			ssid->ssid = os_malloc(ie[1]);
+			if (ssid->ssid == NULL)
+				break;
+			os_memcpy(ssid->ssid, ie + 2, ie[1]);
+			ssid->ssid_len = ie[1];
+			break;
+		}
+	}
+
+	return ssid;
+}
+
+
+static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
+			     struct wpa_ssid *selected)
+{
+	struct wpa_ssid *ssid;
+
+	/* Mark all other networks disabled and trigger reassociation */
+	ssid = wpa_s->conf->ssid;
+	while (ssid) {
+		ssid->disabled = ssid != selected;
+		ssid = ssid->next;
+	}
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+}
+
+
+int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
+{
+	struct wpa_ssid *ssid;
+	wpas_clear_wps(wpa_s);
+	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
+	if (ssid == NULL)
+		return -1;
+	wpa_config_set(ssid, "phase1", "\"pbc=1\"", 0);
+	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
+			       wpa_s, NULL);
+	wpas_wps_reassoc(wpa_s, ssid);
+	return 0;
+}
+
+
+int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       const char *pin)
+{
+	struct wpa_ssid *ssid;
+	char val[30];
+	unsigned int rpin = 0;
+
+	wpas_clear_wps(wpa_s);
+	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
+	if (ssid == NULL)
+		return -1;
+	if (pin)
+		os_snprintf(val, sizeof(val), "\"pin=%s\"", pin);
+	else {
+		rpin = wps_generate_pin();
+		os_snprintf(val, sizeof(val), "\"pin=%08d\"", rpin);
+	}
+	wpa_config_set(ssid, "phase1", val, 0);
+	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
+			       wpa_s, NULL);
+	wpas_wps_reassoc(wpa_s, ssid);
+	return rpin;
+}
+
+
+int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       const char *pin)
+{
+	struct wpa_ssid *ssid;
+	char val[30];
+
+	if (!pin)
+		return -1;
+	wpas_clear_wps(wpa_s);
+	ssid = wpas_wps_add_network(wpa_s, 1, bssid);
+	if (ssid == NULL)
+		return -1;
+	os_snprintf(val, sizeof(val), "\"pin=%s\"", pin);
+	wpa_config_set(ssid, "phase1", val, 0);
+	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
+			       wpa_s, NULL);
+	wpas_wps_reassoc(wpa_s, ssid);
+	return 0;
+}
+
+
 int wpas_wps_init(struct wpa_supplicant *wpa_s)
 {
 	struct wps_context *wps;
@@ -215,6 +382,8 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 
 void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 {
+	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
+
 	if (wpa_s->wps == NULL)
 		return;
 

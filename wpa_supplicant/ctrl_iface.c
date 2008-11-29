@@ -27,6 +27,7 @@
 #include "wpa_ctrl.h"
 #include "eap_peer/eap.h"
 #include "ieee802_11_defs.h"
+#include "wps_supplicant.h"
 
 
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
@@ -137,6 +138,91 @@ static int wpa_supplicant_ctrl_iface_ft_ds(
 	return wpa_ft_start_over_ds(wpa_s->wpa, target_ap);
 }
 #endif /* CONFIG_IEEE80211R */
+
+
+#ifdef CONFIG_WPS
+static int wpa_supplicant_ctrl_iface_wps_pbc(struct wpa_supplicant *wpa_s,
+					     char *cmd)
+{
+	u8 bssid[ETH_ALEN];
+
+	if (cmd == NULL || os_strcmp(cmd, "any") == 0)
+		return wpas_wps_start_pbc(wpa_s, NULL);
+
+	if (hwaddr_aton(cmd, bssid)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_PBC: invalid BSSID '%s'",
+			   cmd);
+		return -1;
+	}
+
+	return wpas_wps_start_pbc(wpa_s, bssid);
+}
+
+
+static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
+					     char *cmd, char *buf,
+					     size_t buflen)
+{
+	u8 bssid[ETH_ALEN], *_bssid = bssid;
+	char *pin;
+	int ret;
+
+	pin = os_strchr(cmd, ' ');
+	if (pin)
+		*pin++ = '\0';
+
+	if (os_strcmp(cmd, "any") == 0)
+		_bssid = NULL;
+	else if (hwaddr_aton(cmd, bssid)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_REG: invalid BSSID '%s'",
+			   cmd);
+		return -1;
+	}
+
+	if (pin) {
+		ret = wpas_wps_start_pin(wpa_s, _bssid, pin);
+		if (ret < 0)
+			return -1;
+		ret = os_snprintf(buf, buflen, "%s", pin);
+		if (ret < 0 || (size_t) ret >= buflen)
+			return -1;
+		return ret;
+	}
+
+	ret = wpas_wps_start_pin(wpa_s, _bssid, NULL);
+	if (ret < 0)
+		return -1;
+
+	/* Return the generated PIN */
+	ret = os_snprintf(buf, buflen, "%08d", ret);
+	if (ret < 0 || (size_t) ret >= buflen)
+		return -1;
+	return ret;
+}
+
+
+static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
+					     char *cmd)
+{
+	u8 bssid[ETH_ALEN], *_bssid = bssid;
+	char *pin;
+
+	pin = os_strchr(cmd, ' ');
+	if (pin == NULL)
+		return -1;
+	*pin++ = '\0';
+
+	if (os_strcmp(cmd, "any") == 0)
+		_bssid = NULL;
+	else if (hwaddr_aton(cmd, bssid)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_REG: invalid BSSID '%s'",
+			   cmd);
+		return -1;
+	}
+
+	return wpas_wps_start_reg(wpa_s, _bssid, pin);
+}
+#endif /* CONFIG_WPS */
 
 
 static int wpa_supplicant_ctrl_iface_ctrl_rsp(struct wpa_supplicant *wpa_s,
@@ -1432,6 +1518,21 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_ft_ds(wpa_s, buf + 6))
 			reply_len = -1;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_WPS
+	} else if (os_strcmp(buf, "WPS_PBC") == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_pbc(wpa_s, NULL))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_PBC ", 8) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_pbc(wpa_s, buf + 8))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_PIN ", 8) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_wps_pin(wpa_s, buf + 8,
+							      reply,
+							      reply_size);
+	} else if (os_strncmp(buf, "WPS_REG ", 8) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_reg(wpa_s, buf + 8))
+			reply_len = -1;
+#endif /* CONFIG_WPS */
 	} else if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0)
 	{
 		if (wpa_supplicant_ctrl_iface_ctrl_rsp(

@@ -1147,20 +1147,15 @@ struct wpabuf * wps_enrollee_build_assoc_req_ie(void)
 }
 
 
-struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc, const u8 *uuid)
+struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc,
+						struct wps_device_data *dev,
+						const u8 *uuid)
 {
 	struct wpabuf *ie;
 	u8 *len;
 	u16 methods;
-	struct wps_device_data dev;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
-
-	/* TODO: get device data from caller */
-	os_memset(&dev, 0, sizeof(dev));
-	dev.categ = WPS_DEV_COMPUTER;
-	dev.oui = WPS_DEV_OUI_WFA;
-	dev.sub_categ = WPS_DEV_COMPUTER_PC;
 
 	ie = wpabuf_alloc(200);
 	if (ie == NULL)
@@ -1180,7 +1175,7 @@ struct wpabuf * wps_enrollee_build_probe_req_ie(int pbc, const u8 *uuid)
 	    wps_build_req_type(ie, WPS_REQ_ENROLLEE) ||
 	    wps_build_config_methods(ie, methods) ||
 	    wps_build_uuid_e(ie, uuid) ||
-	    wps_build_primary_dev_type(&dev, ie) ||
+	    wps_build_primary_dev_type(dev, ie) ||
 	    wps_build_rf_bands(NULL, ie) ||
 	    wps_build_assoc_state(NULL, ie) ||
 	    wps_build_config_error(NULL, ie) ||

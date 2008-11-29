@@ -161,7 +161,6 @@ void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
 int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_config_methods(struct wpabuf *msg, u16 methods);
 int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid);
-int wps_build_rf_bands(struct wpabuf *msg, u8 rf_bands);
 int wps_build_dev_password_id(struct wpabuf *msg, u16 id);
 int wps_build_config_error(struct wpabuf *msg, u16 err);
 int wps_derive_keys(struct wps_data *wps);

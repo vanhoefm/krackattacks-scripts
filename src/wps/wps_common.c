@@ -531,16 +531,6 @@ int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid)
 }
 
 
-int wps_build_rf_bands(struct wpabuf *msg, u8 rf_bands)
-{
-	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", rf_bands);
-	wpabuf_put_be16(msg, ATTR_RF_BANDS);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, rf_bands);
-	return 0;
-}
-
-
 int wps_build_dev_password_id(struct wpabuf *msg, u16 id)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Device Password ID (%d)", id);
@@ -616,7 +606,7 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_config_methods(ie, methods) ||
 	    wps_build_uuid_e(ie, uuid) ||
 	    wps_build_primary_dev_type(dev, ie) ||
-	    wps_build_rf_bands(ie, WPS_RF_24GHZ | WPS_RF_50GHZ) ||
+	    wps_build_rf_bands(dev, ie) ||
 	    wps_build_assoc_state(NULL, ie) ||
 	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :

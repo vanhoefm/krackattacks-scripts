@@ -432,6 +432,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		wps->dev.sub_categ = atoi(pos);
 	}
 	wps->dev.os_version = WPA_GET_BE32(hapd->conf->os_version);
+	wps->dev.rf_bands = hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?
+		WPS_RF_50GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */
 
 	if (conf->wpa & WPA_PROTO_RSN) {
 		if (conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK)

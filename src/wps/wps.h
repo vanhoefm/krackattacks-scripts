@@ -78,6 +78,7 @@ struct wps_device_data {
 	u32 oui;
 	u16 sub_categ;
 	u32 os_version;
+	u8 rf_bands; /* WPS_RF_* */
 };
 
 

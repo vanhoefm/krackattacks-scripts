@@ -584,7 +584,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_uuid_e(probe, reg->wps->uuid) ||
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
-	    wps_build_rf_bands(probe, WPS_RF_24GHZ /* TODO:|WPS_RF_50GHZ */)) {
+	    wps_build_rf_bands(&reg->wps->dev, probe)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
@@ -945,7 +945,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_conn_type_flags(wps, msg) ||
 	    wps_build_config_methods_r(wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(msg, WPS_RF_24GHZ /* TODO:|WPS_RF_50GHZ */) ||
+	    wps_build_rf_bands(&wps->wps->dev, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(msg, DEV_PW_DEFAULT) ||
@@ -983,7 +983,7 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	    wps_build_conn_type_flags(wps, msg) ||
 	    wps_build_config_methods_r(wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
-	    wps_build_rf_bands(msg, WPS_RF_24GHZ /* TODO:|WPS_RF_50GHZ */) ||
+	    wps_build_rf_bands(&wps->wps->dev, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, err) ||
 	    wps_build_os_version(&wps->wps->dev, msg)) {
@@ -1471,19 +1471,6 @@ static int wps_process_wps_state(struct wps_data *wps, const u8 *state)
 }
 
 
-static int wps_process_rf_bands(struct wps_data *wps, const u8 *bands)
-{
-	if (bands == NULL) {
-		wpa_printf(MSG_DEBUG, "WPS: No RF Bands received");
-		return -1;
-	}
-
-	wpa_printf(MSG_DEBUG, "WPS: Enrollee RF Bands 0x%x", *bands);
-
-	return 0;
-}
-
-
 static int wps_process_assoc_state(struct wps_data *wps, const u8 *assoc)
 {
 	u16 a;
@@ -1537,7 +1524,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	    wps_process_config_methods(wps, attr->config_methods) ||
 	    wps_process_wps_state(wps, attr->wps_state) ||
 	    wps_process_device_attrs(&wps->peer_dev, attr) ||
-	    wps_process_rf_bands(wps, attr->rf_bands) ||
+	    wps_process_rf_bands(&wps->peer_dev, attr->rf_bands) ||
 	    wps_process_assoc_state(wps, attr->assoc_state) ||
 	    wps_process_dev_password_id(wps, attr->dev_password_id) ||
 	    wps_process_config_error(wps, attr->config_error) ||

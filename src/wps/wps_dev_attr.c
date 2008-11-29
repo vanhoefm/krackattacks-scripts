@@ -120,6 +120,16 @@ int wps_build_os_version(struct wps_device_data *dev, struct wpabuf *msg)
 }
 
 
+int wps_build_rf_bands(struct wps_device_data *dev, struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", dev->rf_bands);
+	wpabuf_put_be16(msg, ATTR_RF_BANDS);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, dev->rf_bands);
+	return 0;
+}
+
+
 static int wps_process_manufacturer(struct wps_device_data *dev, const u8 *str,
 				    size_t str_len)
 {
@@ -280,6 +290,20 @@ int wps_process_os_version(struct wps_device_data *dev, const u8 *ver)
 }
 
 
+int wps_process_rf_bands(struct wps_device_data *dev, const u8 *bands)
+{
+	if (bands == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No RF Bands received");
+		return -1;
+	}
+
+	dev->rf_bands = *bands;
+	wpa_printf(MSG_DEBUG, "WPS: Enrollee RF Bands 0x%x", dev->rf_bands);
+
+	return 0;
+}
+
+
 void wps_device_data_dup(struct wps_device_data *dst,
 			 const struct wps_device_data *src)
 {
@@ -297,6 +321,7 @@ void wps_device_data_dup(struct wps_device_data *dst,
 	dst->oui = src->oui;
 	dst->sub_categ = src->sub_categ;
 	dst->os_version = src->os_version;
+	dst->rf_bands = src->rf_bands;
 }
 
 

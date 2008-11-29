@@ -174,7 +174,7 @@ const u8 * wps_get_uuid_e(const u8 *buf, size_t len)
 }
 
 
-struct wpabuf * wps_build_assoc_req_ie(void)
+struct wpabuf * wps_build_assoc_req_ie(u8 req_type)
 {
 	struct wpabuf *ie;
 	u8 *len;
@@ -190,7 +190,7 @@ struct wpabuf * wps_build_assoc_req_ie(void)
 	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
 
 	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, WPS_REQ_ENROLLEE)) {
+	    wps_build_req_type(ie, req_type)) {
 		wpabuf_free(ie);
 		return NULL;
 	}
@@ -202,7 +202,7 @@ struct wpabuf * wps_build_assoc_req_ie(void)
 
 
 struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
-				       const u8 *uuid)
+				       const u8 *uuid, u8 req_type)
 {
 	struct wpabuf *ie;
 	u8 *len;
@@ -225,7 +225,7 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 			WPS_CONFIG_KEYPAD;
 
 	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, WPS_REQ_ENROLLEE) ||
+	    wps_build_req_type(ie, req_type) ||
 	    wps_build_config_methods(ie, methods) ||
 	    wps_build_uuid_e(ie, uuid) ||
 	    wps_build_primary_dev_type(dev, ie) ||

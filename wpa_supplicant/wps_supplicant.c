@@ -18,6 +18,7 @@
 #include "ieee802_11_defs.h"
 #include "wpa_common.h"
 #include "config.h"
+#include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
@@ -171,9 +172,13 @@ static int wpa_supplicant_wps_cred(void *ctx,
 }
 
 
-void * wpas_wps_get_cred_cb(void)
+u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
 {
-	return wpa_supplicant_wps_cred;
+	if (eap_is_wps_pbc_enrollee(&ssid->eap) ||
+	    eap_is_wps_pin_enrollee(&ssid->eap))
+		return WPS_REQ_ENROLLEE;
+	else
+		return WPS_REQ_REGISTRAR;
 }
 
 

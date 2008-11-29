@@ -20,7 +20,7 @@
 int wpas_wps_init(struct wpa_supplicant *wpa_s);
 void wpas_wps_deinit(struct wpa_supplicant *wpa_s);
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s);
-void * wpas_wps_get_cred_cb(void);
+u8 wpas_wps_get_req_type(struct wpa_ssid *ssid);
 
 #else /* CONFIG_WPS */
 
@@ -38,9 +38,9 @@ static inline int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 	return 0;
 }
 
-static inline void * wpas_wps_get_cred_cb(void)
+u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
 {
-	return NULL;
+	return 0;
 }
 
 #endif /* CONFIG_WPS */

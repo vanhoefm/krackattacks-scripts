@@ -60,14 +60,19 @@ struct parse_data {
 static char * wpa_config_parse_string(const char *value, size_t *len)
 {
 	if (*value == '"') {
-		char *pos;
+		const char *pos;
+		char *str;
 		value++;
 		pos = os_strrchr(value, '"');
 		if (pos == NULL || pos[1] != '\0')
 			return NULL;
-		*pos = '\0';
-		*len = os_strlen(value);
-		return os_strdup(value);
+		*len = pos - value;
+		str = os_malloc(*len + 1);
+		if (str == NULL)
+			return NULL;
+		os_memcpy(str, value, *len);
+		str[*len] = '\0';
+		return str;
 	} else {
 		u8 *str;
 		size_t tlen, hlen = os_strlen(value);

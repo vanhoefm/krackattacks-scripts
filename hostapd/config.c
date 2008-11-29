@@ -2100,14 +2100,39 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "wps_pin_requests") == 0) {
 			bss->wps_pin_requests = os_strdup(pos);
 		} else if (os_strcmp(buf, "device_name") == 0) {
+			if (os_strlen(pos) > 32) {
+				printf("Line %d: Too long device_name\n",
+				       line);
+				errors++;
+			}
 			bss->device_name = os_strdup(pos);
 		} else if (os_strcmp(buf, "manufacturer") == 0) {
+			if (os_strlen(pos) > 64) {
+				printf("Line %d: Too long manufacturer\n",
+				       line);
+				errors++;
+			}
 			bss->manufacturer = os_strdup(pos);
 		} else if (os_strcmp(buf, "model_name") == 0) {
+			if (os_strlen(pos) > 32) {
+				printf("Line %d: Too long model_name\n",
+				       line);
+				errors++;
+			}
 			bss->model_name = os_strdup(pos);
 		} else if (os_strcmp(buf, "model_number") == 0) {
+			if (os_strlen(pos) > 32) {
+				printf("Line %d: Too long model_number\n",
+				       line);
+				errors++;
+			}
 			bss->model_number = os_strdup(pos);
 		} else if (os_strcmp(buf, "serial_number") == 0) {
+			if (os_strlen(pos) > 32) {
+				printf("Line %d: Too long serial_number\n",
+				       line);
+				errors++;
+			}
 			bss->serial_number = os_strdup(pos);
 		} else if (os_strcmp(buf, "device_type") == 0) {
 			bss->device_type = os_strdup(pos);

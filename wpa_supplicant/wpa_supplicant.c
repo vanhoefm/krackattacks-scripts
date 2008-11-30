@@ -253,10 +253,9 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	struct eapol_config eapol_conf;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
-		eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
-		eapol_sm_notify_eap_fail(wpa_s->eapol, FALSE);
-	}
+	eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
+	eapol_sm_notify_eap_fail(wpa_s->eapol, FALSE);
+
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_WPA_NONE)
 		eapol_sm_notify_portControl(wpa_s->eapol, ForceAuthorized);

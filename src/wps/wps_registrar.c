@@ -26,6 +26,7 @@
 struct wps_uuid_pin {
 	struct wps_uuid_pin *next;
 	u8 uuid[WPS_UUID_LEN];
+	int wildcard_uuid;
 	u8 *pin;
 	size_t pin_len;
 	int locked;
@@ -339,7 +340,10 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 	p = os_zalloc(sizeof(*p));
 	if (p == NULL)
 		return -1;
-	os_memcpy(p->uuid, uuid, WPS_UUID_LEN);
+	if (uuid == NULL)
+		p->wildcard_uuid = 1;
+	else
+		os_memcpy(p->uuid, uuid, WPS_UUID_LEN);
 	p->pin = os_malloc(pin_len);
 	if (p->pin == NULL) {
 		os_free(p);
@@ -394,26 +398,43 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 
 	pin = reg->pins;
 	while (pin) {
-		if (os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0) {
-			/*
-			 * Lock the PIN to avoid attacks based on concurrent
-			 * re-use of the PIN that could otherwise avoid PIN
-			 * invalidations.
-			 */
-			if (pin->locked) {
-				wpa_printf(MSG_DEBUG, "WPS: Selected PIN "
-					   "locked - do not allow concurrent "
-					   "re-use");
-				return NULL;
-			}
-			*pin_len = pin->pin_len;
-			pin->locked = 1;
-			return pin->pin;
-		}
+		if (!pin->wildcard_uuid &&
+		    os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0)
+			break;
 		pin = pin->next;
 	}
 
-	return NULL;
+	if (!pin) {
+		/* Check for wildcard UUIDs since none of the UUID-specific
+		 * PINs matched */
+		pin = reg->pins;
+		while (pin) {
+			if (pin->wildcard_uuid == 1) {
+				wpa_printf(MSG_DEBUG, "WPS: Found a wildcard "
+					   "PIN. Assigned it for this UUID-E");
+				pin->wildcard_uuid = 2;
+				os_memcpy(pin->uuid, uuid, WPS_UUID_LEN);
+				break;
+			}
+			pin = pin->next;
+		}
+	}
+
+	if (!pin)
+		return NULL;
+
+	/*
+	 * Lock the PIN to avoid attacks based on concurrent re-use of the PIN
+	 * that could otherwise avoid PIN invalidations.
+	 */
+	if (pin->locked) {
+		wpa_printf(MSG_DEBUG, "WPS: Selected PIN locked - do not "
+			   "allow concurrent re-use");
+		return NULL;
+	}
+	*pin_len = pin->pin_len;
+	pin->locked = 1;
+	return pin->pin;
 }
 
 
@@ -424,6 +445,11 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid)
 	pin = reg->pins;
 	while (pin) {
 		if (os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0) {
+			if (pin->wildcard_uuid == 2) {
+				wpa_printf(MSG_DEBUG, "WPS: Invalidating used "
+					   "wildcard PIN");
+				return wps_registrar_invalidate_pin(reg, uuid);
+			}
 			pin->locked = 0;
 			return 0;
 		}

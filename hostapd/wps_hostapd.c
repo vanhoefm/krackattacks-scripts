@@ -543,9 +543,15 @@ int hostapd_wps_add_pin(struct hostapd_data *hapd, const char *uuid,
 			const char *pin)
 {
 	u8 u[UUID_LEN];
-	if (hapd->wps == NULL || uuid_str2bin(uuid, u))
+	int any = 0;
+
+	if (hapd->wps == NULL)
 		return -1;
-	return wps_registrar_add_pin(hapd->wps->registrar, u,
+	if (os_strcmp(uuid, "any") == 0)
+		any = 1;
+	else if (uuid_str2bin(uuid, u))
+		return -1;
+	return wps_registrar_add_pin(hapd->wps->registrar, any ? NULL : u,
 				     (const u8 *) pin, os_strlen(pin));
 }
 

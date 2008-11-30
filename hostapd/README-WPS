@@ -154,6 +154,12 @@ Example command to add a PIN (12345670) for an Enrollee:
 
 hostapd_cli wps_pin 53b63a98-d29e-4457-a2ed-094d7e6a669c 12345670
 
+If the UUID-E is not available (e.g., Enrollee waits for the Registrar
+to be selected before connecting), wildcard UUID may be used to allow the PIN to be used once with any UUID:
+
+hostapd_cli wps_pin any 12345670
+
+
 After this, the Enrollee can connect to the AP again and complete WPS
 negotiation. At that point, a new, random WPA PSK is generated for the
 client device and the client can then use that key to connect to the

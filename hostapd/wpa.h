@@ -229,6 +229,7 @@ struct wpa_state_machine *
 wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr);
 void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 			     struct wpa_state_machine *sm);
+void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm);
 void wpa_auth_sta_deinit(struct wpa_state_machine *sm);
 void wpa_receive(struct wpa_authenticator *wpa_auth,
 		 struct wpa_state_machine *sm,

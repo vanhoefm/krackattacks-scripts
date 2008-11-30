@@ -848,6 +848,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	}
 
 #ifdef CONFIG_WPS
+	sta->eapol_sm->flags &= ~EAPOL_SM_WAIT_START;
 	if (!hapd->conf->ieee802_1x && !(sta->flags & WLAN_STA_WPS)) {
 		/*
 		 * Delay EAPOL frame transmission until a possible WPS

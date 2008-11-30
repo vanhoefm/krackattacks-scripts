@@ -516,6 +516,18 @@ void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 }
 
 
+void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm)
+{
+	/* WPA/RSN was not used - clear WPA state. This is needed if the STA
+	 * reassociates back to the same AP while the previous entry for the
+	 * STA has not yet been removed. */
+	if (sm == NULL)
+		return;
+
+	sm->wpa_key_mgmt = 0;
+}
+
+
 static void wpa_free_sta_sm(struct wpa_state_machine *sm)
 {
 	os_free(sm->last_rx_eapol_key);

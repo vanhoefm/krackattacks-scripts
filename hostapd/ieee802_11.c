@@ -833,6 +833,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		wpa_ie_len = 0;
 	}
 #ifdef CONFIG_WPS
+	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS);
 	if (hapd->conf->wps_state && wpa_ie == NULL) {
 		if (elems.wps_ie) {
 			wpa_printf(MSG_DEBUG, "STA included WPS IE in "
@@ -930,7 +931,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 				goto fail;
 		}
 #endif /* CONFIG_IEEE80211R */
-	}
+	} else
+		wpa_auth_sta_no_wpa(sta->wpa_sm);
 
 	if (hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G)
 		sta->flags |= WLAN_STA_NONERP;

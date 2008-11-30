@@ -8,7 +8,7 @@ ChangeLog for hostapd
 	  be enabled by adding CONFIG_WPS=y into .config and setting the
 	  runtime configuration variables in hostapd.conf (see WPS section in
 	  the example configuration file); new hostapd_cli commands wps_pin and
-	  wps_pbc are used to configuration WPS negotiation; see README-WPS for
+	  wps_pbc are used to configure WPS negotiation; see README-WPS for
 	  more details
 	* added IEEE 802.11n HT capability configuration (ht_capab)
 	* added support for generating Country IE based on nl80211 regulatory

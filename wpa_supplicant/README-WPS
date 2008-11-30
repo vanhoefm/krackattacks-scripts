@@ -76,6 +76,14 @@ The network configuration blocks needed for WPS are added
 automatically based on control interface commands, so they do not need
 to be added explicitly in the configuration file.
 
+WPS registration will generate new network blocks for the acquired
+credentials. If these are to be stored for future use (after
+restarting wpa_supplicant), wpa_supplicant will need to be configured
+to allow configuration file updates:
+
+update_config=1
+
+
 
 External operations
 -------------------

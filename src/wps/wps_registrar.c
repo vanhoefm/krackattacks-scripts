@@ -1420,7 +1420,8 @@ static int wps_process_auth_type_flags(struct wps_data *wps, const u8 *auth)
 	wps->auth_type = wps->wps->auth_types & auth_types;
 	if (wps->auth_type == 0) {
 		wpa_printf(MSG_DEBUG, "WPS: No match in supported "
-			   "authentication types");
+			   "authentication types (own 0x%x Enrollee 0x%x)",
+			   wps->wps->auth_types, auth_types);
 		return -1;
 	}
 

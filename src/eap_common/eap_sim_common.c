@@ -1,5 +1,5 @@
 /*
- * EAP peer/server: EAP-SIM/AKA shared routines
+ * EAP peer/server: EAP-SIM/AKA/AKA' shared routines
  * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -554,7 +554,8 @@ int eap_sim_parse_attr(const u8 *start, const u8 *end,
 			}
 			apos += 2;
 			alen -= 2;
-			if (alen != 0 && alen != EAP_AKA_CHECKCODE_LEN) {
+			if (alen != 0 && alen != EAP_AKA_CHECKCODE_LEN &&
+			    alen != EAP_AKA_PRIME_CHECKCODE_LEN) {
 				wpa_printf(MSG_INFO, "EAP-AKA: Invalid "
 					   "AT_CHECKCODE (len %lu)",
 					   (unsigned long) alen);

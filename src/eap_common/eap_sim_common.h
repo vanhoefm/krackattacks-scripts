@@ -1,6 +1,6 @@
 /*
- * EAP peer/server: EAP-SIM/AKA shared routines
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * EAP peer/server: EAP-SIM/AKA/AKA' shared routines
+ * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -70,6 +70,7 @@
 #define EAP_AKA_MIN_RES_LEN 4
 #define EAP_AKA_MAX_RES_LEN 16
 #define EAP_AKA_CHECKCODE_LEN 20
+#define EAP_AKA_PRIME_CHECKCODE_LEN 32
 
 struct wpabuf;
 

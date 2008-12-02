@@ -19,6 +19,7 @@
 #include "pcsc_funcs.h"
 #include "eap_common/eap_sim_common.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "crypto.h"
 #include "eap_peer/eap_config.h"
 #ifdef CONFIG_USIM_SIMULATOR
@@ -309,7 +310,7 @@ static void eap_aka_add_checkcode(struct eap_aka_data *data,
 {
 	const u8 *addr;
 	size_t len;
-	u8 hash[SHA1_MAC_LEN];
+	u8 hash[SHA256_MAC_LEN];
 
 	wpa_printf(MSG_DEBUG, "   AT_CHECKCODE");
 
@@ -322,14 +323,18 @@ static void eap_aka_add_checkcode(struct eap_aka_data *data,
 		return;
 	}
 
-	/* Checkcode is SHA1 hash over all EAP-AKA/Identity packets. */
+	/* Checkcode is SHA1/SHA256 hash over all EAP-AKA/Identity packets. */
 	addr = wpabuf_head(data->id_msgs);
 	len = wpabuf_len(data->id_msgs);
 	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA: AT_CHECKCODE data", addr, len);
-	sha1_vector(1, &addr, &len, hash);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME)
+		sha256_vector(1, &addr, &len, hash);
+	else
+		sha1_vector(1, &addr, &len, hash);
 
 	eap_sim_msg_add(msg, EAP_SIM_AT_CHECKCODE, 0, hash,
-			EAP_AKA_CHECKCODE_LEN);
+			data->eap_method == EAP_TYPE_AKA_PRIME ?
+			EAP_AKA_PRIME_CHECKCODE_LEN : EAP_AKA_CHECKCODE_LEN);
 }
 
 
@@ -338,7 +343,8 @@ static int eap_aka_verify_checkcode(struct eap_aka_data *data,
 {
 	const u8 *addr;
 	size_t len;
-	u8 hash[SHA1_MAC_LEN];
+	u8 hash[SHA256_MAC_LEN];
+	size_t hash_len;
 
 	if (checkcode == NULL)
 		return -1;
@@ -353,19 +359,25 @@ static int eap_aka_verify_checkcode(struct eap_aka_data *data,
 		return 0;
 	}
 
-	if (checkcode_len != EAP_AKA_CHECKCODE_LEN) {
+	hash_len = data->eap_method == EAP_TYPE_AKA_PRIME ?
+		EAP_AKA_PRIME_CHECKCODE_LEN : EAP_AKA_CHECKCODE_LEN;
+
+	if (checkcode_len != hash_len) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Checkcode from server "
 			   "indicates that AKA/Identity message were not "
 			   "used, but they were");
 		return -1;
 	}
 
-	/* Checkcode is SHA1 hash over all EAP-AKA/Identity packets. */
+	/* Checkcode is SHA1/SHA256 hash over all EAP-AKA/Identity packets. */
 	addr = wpabuf_head(data->id_msgs);
 	len = wpabuf_len(data->id_msgs);
-	sha1_vector(1, &addr, &len, hash);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME)
+		sha256_vector(1, &addr, &len, hash);
+	else
+		sha1_vector(1, &addr, &len, hash);
 
-	if (os_memcmp(hash, checkcode, EAP_AKA_CHECKCODE_LEN) != 0) {
+	if (os_memcmp(hash, checkcode, hash_len) != 0) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Mismatch in AT_CHECKCODE");
 		return -1;
 	}

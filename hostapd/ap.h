@@ -56,6 +56,9 @@ struct sta_info {
 	unsigned int nonerp_set:1;
 	unsigned int no_short_slot_time_set:1;
 	unsigned int no_short_preamble_set:1;
+	unsigned int no_ht_gf_set:1;
+	unsigned int no_ht_set:1;
+	unsigned int ht_20mhz_set:1;
 
 	u16 auth_alg;
 	u8 previous_ap[6];

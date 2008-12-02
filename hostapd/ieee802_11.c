@@ -980,21 +980,30 @@ static void handle_assoc(struct hostapd_data *hapd,
 		wpa_printf(MSG_DEBUG, "HT: STA " MACSTR " HT Capabilities "
 			   "Info: 0x%04x", MAC2STR(sta->addr), ht_capab);
 		if ((ht_capab & HT_CAP_INFO_GREEN_FIELD) == 0) {
-			hapd->iface->num_sta_ht_no_gf++;
+			if (!sta->no_ht_gf_set) {
+				sta->no_ht_gf_set = 1;
+				hapd->iface->num_sta_ht_no_gf++;
+			}
 			wpa_printf(MSG_DEBUG, "%s STA " MACSTR " - no "
 				   "greenfield, num of non-gf stations %d",
 				   __func__, MAC2STR(sta->addr),
 				   hapd->iface->num_sta_ht_no_gf);
 		}
 		if ((ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) == 0) {
-			hapd->iface->num_sta_ht_20mhz++;
+			if (!sta->ht_20mhz_set) {
+				sta->ht_20mhz_set = 1;
+				hapd->iface->num_sta_ht_20mhz++;
+			}
 			wpa_printf(MSG_DEBUG, "%s STA " MACSTR " - 20 MHz HT, "
 				   "num of 20MHz HT STAs %d",
 				   __func__, MAC2STR(sta->addr),
 				   hapd->iface->num_sta_ht_20mhz);
 		}
 	} else {
-		hapd->iface->num_sta_no_ht++;
+		if (!sta->no_ht_set) {
+			sta->no_ht_set = 1;
+			hapd->iface->num_sta_no_ht++;
+		}
 		if (hapd->iconf->ieee80211n) {
 			wpa_printf(MSG_DEBUG, "%s STA " MACSTR
 				   " - no HT, num of non-HT stations %d",

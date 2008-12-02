@@ -49,6 +49,7 @@ struct eap_aka_data {
 
 	struct wpabuf *id_msgs;
 	int pending_id;
+	u8 eap_method;
 };
 
 
@@ -80,7 +81,8 @@ static const char * eap_aka_state_txt(int state)
 
 static void eap_aka_state(struct eap_aka_data *data, int state)
 {
-	wpa_printf(MSG_DEBUG, "EAP-AKA: %s -> %s",
+	wpa_printf(MSG_DEBUG, "EAP-AKA%s: %s -> %s",
+		   data->eap_method == EAP_TYPE_AKA_PRIME ? "'" : "",
 		   eap_aka_state_txt(data->state),
 		   eap_aka_state_txt(state));
 	data->state = state;
@@ -99,6 +101,12 @@ static void * eap_aka_init(struct eap_sm *sm)
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
+
+	if (1)
+		data->eap_method = EAP_TYPE_AKA_PRIME;
+	else
+		data->eap_method = EAP_TYPE_AKA;
+
 	data->state = IDENTITY;
 	eap_aka_determine_identity(sm, data, 1, 0);
 	data->pending_id = -1;
@@ -213,7 +221,7 @@ static struct wpabuf * eap_aka_build_identity(struct eap_sm *sm,
 	struct wpabuf *buf;
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Generating Identity");
-	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_IDENTITY);
 	if (eap_sim_db_identity_known(sm->eap_sim_db_priv, sm->identity,
 				      sm->identity_len)) {
@@ -309,7 +317,7 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 	struct eap_sim_msg *msg;
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Generating Challenge");
-	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_CHALLENGE);
 	wpa_printf(MSG_DEBUG, "   AT_RAND");
 	eap_sim_msg_add(msg, EAP_SIM_AT_RAND, 0, data->rand, EAP_AKA_RAND_LEN);
@@ -351,7 +359,7 @@ static struct wpabuf * eap_aka_build_reauth(struct eap_sm *sm,
 				   sm->identity_len, data->nonce_s, data->mk,
 				   data->msk, data->emsk);
 
-	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_REAUTHENTICATION);
 
 	if (eap_aka_build_encr(sm, data, msg, data->counter, data->nonce_s)) {
@@ -379,7 +387,7 @@ static struct wpabuf * eap_aka_build_notification(struct eap_sm *sm,
 	struct eap_sim_msg *msg;
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Generating Notification");
-	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_NOTIFICATION);
 	wpa_printf(MSG_DEBUG, "   AT_NOTIFICATION (%d)", data->notification);
 	eap_sim_msg_add(msg, EAP_SIM_AT_NOTIFICATION, data->notification,
@@ -437,10 +445,11 @@ static struct wpabuf * eap_aka_buildReq(struct eap_sm *sm, void *priv, u8 id)
 static Boolean eap_aka_check(struct eap_sm *sm, void *priv,
 			     struct wpabuf *respData)
 {
+	struct eap_aka_data *data = priv;
 	const u8 *pos;
 	size_t len;
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_AKA_PRIME, respData,
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, data->eap_method, respData,
 			       &len);
 	if (pos == NULL || len < 3) {
 		wpa_printf(MSG_INFO, "EAP-AKA: Invalid frame");
@@ -899,7 +908,7 @@ static void eap_aka_process(struct eap_sm *sm, void *priv,
 	size_t len;
 	struct eap_sim_attrs attr;
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_AKA_PRIME, respData,
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, data->eap_method, respData,
 			       &len);
 	if (pos == NULL || len < 3)
 		return;

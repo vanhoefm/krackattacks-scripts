@@ -54,6 +54,7 @@ struct eap_aka_data {
 	struct wpabuf *id_msgs;
 	int prev_id;
 	int result_ind, use_result_ind;
+	u8 eap_method;
 };
 
 
@@ -80,7 +81,8 @@ static const char * eap_aka_state_txt(int state)
 
 static void eap_aka_state(struct eap_aka_data *data, int state)
 {
-	wpa_printf(MSG_DEBUG, "EAP-AKA: %s -> %s",
+	wpa_printf(MSG_DEBUG, "EAP-AKA%s: %s -> %s",
+		   data->eap_method == EAP_TYPE_AKA_PRIME ? "'" : "",
 		   eap_aka_state_txt(data->state),
 		   eap_aka_state_txt(state));
 	data->state = state;
@@ -95,6 +97,11 @@ static void * eap_aka_init(struct eap_sm *sm)
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
+
+	if (1)
+		data->eap_method = EAP_TYPE_AKA_PRIME;
+	else
+		data->eap_method = EAP_TYPE_AKA;
 
 	eap_aka_state(data, CONTINUE);
 	data->prev_id = -1;
@@ -376,7 +383,7 @@ static struct wpabuf * eap_aka_client_error(struct eap_aka_data *data, u8 id,
 	data->num_id_req = 0;
 	data->num_notification = 0;
 
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_CLIENT_ERROR);
 	eap_sim_msg_add(msg, EAP_SIM_AT_CLIENT_ERROR_CODE, err, NULL, 0);
 	return eap_sim_msg_finish(msg, NULL, NULL, 0);
@@ -394,7 +401,7 @@ static struct wpabuf * eap_aka_authentication_reject(struct eap_aka_data *data,
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Authentication-Reject "
 		   "(id=%d)", id);
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_AUTHENTICATION_REJECT);
 	return eap_sim_msg_finish(msg, NULL, NULL, 0);
 }
@@ -410,7 +417,7 @@ static struct wpabuf * eap_aka_synchronization_failure(
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Synchronization-Failure "
 		   "(id=%d)", id);
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_SYNCHRONIZATION_FAILURE);
 	wpa_printf(MSG_DEBUG, "   AT_AUTS");
 	eap_sim_msg_add_full(msg, EAP_SIM_AT_AUTS, data->auts,
@@ -449,7 +456,7 @@ static struct wpabuf * eap_aka_response_identity(struct eap_sm *sm,
 		eap_aka_clear_identities(data, CLEAR_EAP_ID);
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Identity (id=%d)", id);
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_IDENTITY);
 
 	if (identity) {
@@ -469,7 +476,7 @@ static struct wpabuf * eap_aka_response_challenge(struct eap_aka_data *data,
 	struct eap_sim_msg *msg;
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Challenge (id=%d)", id);
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_CHALLENGE);
 	wpa_printf(MSG_DEBUG, "   AT_RES");
 	eap_sim_msg_add(msg, EAP_SIM_AT_RES, data->res_len * 8,
@@ -494,7 +501,7 @@ static struct wpabuf * eap_aka_response_reauth(struct eap_aka_data *data,
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Reauthentication (id=%d)",
 		   id);
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_REAUTHENTICATION);
 	wpa_printf(MSG_DEBUG, "   AT_IV");
 	wpa_printf(MSG_DEBUG, "   AT_ENCR_DATA");
@@ -535,7 +542,7 @@ static struct wpabuf * eap_aka_response_notification(struct eap_aka_data *data,
 	u8 *k_aut = (notification & 0x4000) == 0 ? data->k_aut : NULL;
 
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Notification (id=%d)", id);
-	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, EAP_TYPE_AKA_PRIME,
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_NOTIFICATION);
 	if (k_aut && data->reauth) {
 		wpa_printf(MSG_DEBUG, "   AT_IV");
@@ -955,7 +962,7 @@ static struct wpabuf * eap_aka_process(struct eap_sm *sm, void *priv,
 		return NULL;
 	}
 
-	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_AKA_PRIME, reqData,
+	pos = eap_hdr_validate(EAP_VENDOR_IETF, data->eap_method, reqData,
 			       &len);
 	if (pos == NULL || len < 1) {
 		ret->ignore = TRUE;

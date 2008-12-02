@@ -427,6 +427,20 @@ CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
 endif
 
+ifdef CONFIG_EAP_AKA_PRIME
+# EAP-AKA'
+ifeq ($(CONFIG_EAP_AKA_PRIME), dyn)
+CFLAGS += -DEAP_AKA_PRIME_DYNAMIC
+EAPDYN += ../src/eap_peer/eap_aka_prime.so
+else
+CFLAGS += -DEAP_AKA_PRIME
+OBJS += ../src/eap_peer/eap_aka_prime.o
+OBJS_h += ../src/eap_server/eap_aka_prime.o
+endif
+CONFIG_IEEE8021X_EAPOL=y
+CONFIG_EAP_SIM_COMMON=y
+endif
+
 ifdef CONFIG_EAP_SIM_COMMON
 OBJS += ../src/eap_common/eap_sim_common.o
 OBJS_h += ../src/eap_server/eap_sim_db.o

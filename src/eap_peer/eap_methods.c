@@ -427,6 +427,13 @@ int eap_peer_register_methods(void)
 	}
 #endif /* EAP_AKA */
 
+#ifdef EAP_AKA_PRIME
+	if (ret == 0) {
+		int eap_peer_aka_prime_register(void);
+		ret = eap_peer_aka_prime_register();
+	}
+#endif /* EAP_AKA_PRIME */
+
 #ifdef EAP_FAST
 	if (ret == 0) {
 		int eap_peer_fast_register(void);

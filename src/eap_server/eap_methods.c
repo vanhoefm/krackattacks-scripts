@@ -212,6 +212,13 @@ int eap_server_register_methods(void)
 	}
 #endif /* EAP_AKA */
 
+#ifdef EAP_AKA_PRIME
+	if (ret == 0) {
+		int eap_server_aka_prime_register(void);
+		ret = eap_server_aka_prime_register();
+	}
+#endif /* EAP_AKA_PRIME */
+
 #ifdef EAP_PAX
 	if (ret == 0) {
 		int eap_server_pax_register(void);

@@ -212,6 +212,12 @@ OBJS += ../src/eap_server/eap_aka.o
 CONFIG_EAP_SIM_COMMON=y
 endif
 
+ifdef CONFIG_EAP_AKA_PRIME
+CFLAGS += -DEAP_AKA_PRIME
+OBJS += ../src/eap_server/eap_aka_prime.o
+CONFIG_EAP_SIM_COMMON=y
+endif
+
 ifdef CONFIG_EAP_SIM_COMMON
 OBJS += ../src/eap_common/eap_sim_common.o
 # Example EAP-SIM/AKA interface for GSM/UMTS authentication. This can be

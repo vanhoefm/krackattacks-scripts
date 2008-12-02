@@ -70,6 +70,8 @@
 #define EAP_AKA_MIN_RES_LEN 4
 #define EAP_AKA_MAX_RES_LEN 16
 #define EAP_AKA_CHECKCODE_LEN 20
+
+#define EAP_AKA_PRIME_K_AUT_LEN 32
 #define EAP_AKA_PRIME_CHECKCODE_LEN 32
 
 struct wpabuf;
@@ -90,6 +92,11 @@ int eap_sim_verify_mac(const u8 *k_aut, const struct wpabuf *req,
 		       const u8 *mac, const u8 *extra, size_t extra_len);
 void eap_sim_add_mac(const u8 *k_aut, const u8 *msg, size_t msg_len, u8 *mac,
 		     const u8 *extra, size_t extra_len);
+int eap_sim_verify_mac_sha256(const u8 *k_aut, const struct wpabuf *req,
+			      const u8 *mac, const u8 *extra,
+			      size_t extra_len);
+void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
+			    u8 *mac, const u8 *extra, size_t extra_len);
 
 
 /* EAP-SIM/AKA Attributes (0..127 non-skippable) */

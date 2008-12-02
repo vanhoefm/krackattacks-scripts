@@ -17,6 +17,7 @@
 #include "common.h"
 #include "eap_common/eap_defs.h"
 #include "sha1.h"
+#include "sha256.h"
 #include "crypto.h"
 #include "aes_wrap.h"
 #include "wpabuf.h"
@@ -230,6 +231,74 @@ void eap_sim_add_mac(const u8 *k_aut, const u8 *msg, size_t msg_len, u8 *mac,
 	wpa_hexdump(MSG_MSGDUMP, "EAP-SIM: Add MAC: MAC",
 		    mac, EAP_SIM_MAC_LEN);
 }
+
+
+#ifdef EAP_AKA_PRIME
+int eap_sim_verify_mac_sha256(const u8 *k_aut, const struct wpabuf *req,
+			      const u8 *mac, const u8 *extra, size_t extra_len)
+{
+	unsigned char hmac[SHA256_MAC_LEN];
+	const u8 *addr[2];
+	size_t len[2];
+	u8 *tmp;
+
+	if (mac == NULL || wpabuf_len(req) < EAP_SIM_MAC_LEN ||
+	    mac < wpabuf_head_u8(req) ||
+	    mac > wpabuf_head_u8(req) + wpabuf_len(req) - EAP_SIM_MAC_LEN)
+		return -1;
+
+	tmp = os_malloc(wpabuf_len(req));
+	if (tmp == NULL)
+		return -1;
+
+	addr[0] = tmp;
+	len[0] = wpabuf_len(req);
+	addr[1] = extra;
+	len[1] = extra_len;
+
+	/* HMAC-SHA-256-128 */
+	os_memcpy(tmp, wpabuf_head(req), wpabuf_len(req));
+	os_memset(tmp + (mac - wpabuf_head_u8(req)), 0, EAP_SIM_MAC_LEN);
+	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Verify MAC - msg",
+		    tmp, wpabuf_len(req));
+	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Verify MAC - extra data",
+		    extra, extra_len);
+	wpa_hexdump_key(MSG_MSGDUMP, "EAP-AKA': Verify MAC - K_aut",
+			k_aut, EAP_AKA_PRIME_K_AUT_LEN);
+	hmac_sha256_vector(k_aut, EAP_AKA_PRIME_K_AUT_LEN, 2, addr, len, hmac);
+	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Verify MAC: MAC",
+		    hmac, EAP_SIM_MAC_LEN);
+	os_free(tmp);
+
+	return (os_memcmp(hmac, mac, EAP_SIM_MAC_LEN) == 0) ? 0 : 1;
+}
+
+
+void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
+			    u8 *mac, const u8 *extra, size_t extra_len)
+{
+	unsigned char hmac[SHA256_MAC_LEN];
+	const u8 *addr[2];
+	size_t len[2];
+
+	addr[0] = msg;
+	len[0] = msg_len;
+	addr[1] = extra;
+	len[1] = extra_len;
+
+	/* HMAC-SHA-256-128 */
+	os_memset(mac, 0, EAP_SIM_MAC_LEN);
+	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Add MAC - msg", msg, msg_len);
+	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Add MAC - extra data",
+		    extra, extra_len);
+	wpa_hexdump_key(MSG_MSGDUMP, "EAP-AKA': Add MAC - K_aut",
+			k_aut, EAP_AKA_PRIME_K_AUT_LEN);
+	hmac_sha256_vector(k_aut, EAP_AKA_PRIME_K_AUT_LEN, 2, addr, len, hmac);
+	os_memcpy(mac, hmac, EAP_SIM_MAC_LEN);
+	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Add MAC: MAC",
+		    mac, EAP_SIM_MAC_LEN);
+}
+#endif /* EAP_AKA_PRIME */
 
 
 int eap_sim_parse_attr(const u8 *start, const u8 *end,
@@ -642,6 +711,7 @@ u8 * eap_sim_parse_encr(const u8 *k_encr, const u8 *encr_data,
 struct eap_sim_msg {
 	struct wpabuf *buf;
 	size_t mac, iv, encr; /* index from buf */
+	int type;
 };
 
 
@@ -655,6 +725,7 @@ struct eap_sim_msg * eap_sim_msg_init(int code, int id, int type, int subtype)
 	if (msg == NULL)
 		return NULL;
 
+	msg->type = type;
 	msg->buf = wpabuf_alloc(EAP_SIM_INIT_LEN);
 	if (msg->buf == NULL) {
 		os_free(msg);
@@ -686,6 +757,14 @@ struct wpabuf * eap_sim_msg_finish(struct eap_sim_msg *msg, const u8 *k_aut,
 	eap = wpabuf_mhead(msg->buf);
 	eap->length = host_to_be16(wpabuf_len(msg->buf));
 
+#ifdef EAP_AKA_PRIME
+	if (k_aut && msg->mac && msg->type == EAP_TYPE_AKA_PRIME) {
+		eap_sim_add_mac_sha256(k_aut, (u8 *) wpabuf_head(msg->buf),
+				       wpabuf_len(msg->buf),
+				       (u8 *) wpabuf_mhead(msg->buf) +
+				       msg->mac, extra, extra_len);
+	} else
+#endif /* EAP_AKA_PRIME */
 	if (k_aut && msg->mac) {
 		eap_sim_add_mac(k_aut, (u8 *) wpabuf_head(msg->buf),
 				wpabuf_len(msg->buf),

@@ -32,7 +32,7 @@ struct eap_aka_data {
 	size_t res_len;
 	u8 nonce_s[EAP_SIM_NONCE_S_LEN];
 	u8 mk[EAP_SIM_MK_LEN];
-	u8 k_aut[EAP_SIM_K_AUT_LEN];
+	u8 k_aut[EAP_AKA_PRIME_K_AUT_LEN];
 	u8 k_encr[EAP_SIM_K_ENCR_LEN];
 	u8 msk[EAP_SIM_KEYING_DATA_LEN];
 	u8 emsk[EAP_EMSK_LEN];
@@ -630,6 +630,18 @@ static struct wpabuf * eap_aka_process_identity(struct eap_sm *sm,
 }
 
 
+static int eap_aka_verify_mac(struct eap_aka_data *data,
+			      const struct wpabuf *req,
+			      const u8 *mac, const u8 *extra,
+			      size_t extra_len)
+{
+	if (data->eap_method == EAP_TYPE_AKA_PRIME)
+		return eap_sim_verify_mac_sha256(data->k_aut, req, mac, extra,
+						 extra_len);
+	return eap_sim_verify_mac(data->k_aut, req, mac, extra, extra_len);
+}
+
+
 static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 						 struct eap_aka_data *data,
 						 u8 id,
@@ -693,8 +705,7 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 			  data->mk);
 	eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut, data->msk,
 			    data->emsk);
-	if (eap_sim_verify_mac(data->k_aut, reqData, attr->mac, (u8 *) "", 0))
-	{
+	if (eap_aka_verify_mac(data, reqData, attr->mac, (u8 *) "", 0)) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Challenge message "
 			   "used invalid AT_MAC");
 		return eap_aka_client_error(data, id,
@@ -782,8 +793,7 @@ static int eap_aka_process_notification_auth(struct eap_aka_data *data,
 		return -1;
 	}
 
-	if (eap_sim_verify_mac(data->k_aut, reqData, attr->mac, (u8 *) "", 0))
-	{
+	if (eap_aka_verify_mac(data, reqData, attr->mac, (u8 *) "", 0)) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Notification message "
 			   "used invalid AT_MAC");
 		return -1;
@@ -861,8 +871,7 @@ static struct wpabuf * eap_aka_process_reauthentication(
 	}
 
 	data->reauth = 1;
-	if (eap_sim_verify_mac(data->k_aut, reqData, attr->mac, (u8 *) "", 0))
-	{
+	if (eap_aka_verify_mac(data, reqData, attr->mac, (u8 *) "", 0)) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Reauthentication "
 			   "did not have valid AT_MAC");
 		return eap_aka_client_error(data, id,

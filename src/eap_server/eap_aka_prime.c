@@ -26,7 +26,7 @@
 struct eap_aka_data {
 	u8 mk[EAP_SIM_MK_LEN];
 	u8 nonce_s[EAP_SIM_NONCE_S_LEN];
-	u8 k_aut[EAP_SIM_K_AUT_LEN];
+	u8 k_aut[EAP_AKA_PRIME_K_AUT_LEN];
 	u8 k_encr[EAP_SIM_K_ENCR_LEN];
 	u8 msk[EAP_SIM_KEYING_DATA_LEN];
 	u8 emsk[EAP_EMSK_LEN];
@@ -660,6 +660,18 @@ static void eap_aka_process_identity(struct eap_sm *sm,
 }
 
 
+static int eap_aka_verify_mac(struct eap_aka_data *data,
+			      const struct wpabuf *req,
+			      const u8 *mac, const u8 *extra,
+			      size_t extra_len)
+{
+	if (data->eap_method == EAP_TYPE_AKA_PRIME)
+		return eap_sim_verify_mac_sha256(data->k_aut, req, mac, extra,
+						 extra_len);
+	return eap_sim_verify_mac(data->k_aut, req, mac, extra, extra_len);
+}
+
+
 static void eap_aka_process_challenge(struct eap_sm *sm,
 				      struct eap_aka_data *data,
 				      struct wpabuf *respData,
@@ -680,7 +692,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 		return;
 	}
 	if (attr->mac == NULL ||
-	    eap_sim_verify_mac(data->k_aut, respData, attr->mac, NULL, 0)) {
+	    eap_aka_verify_mac(data, respData, attr->mac, NULL, 0)) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Challenge message "
 			   "did not include valid AT_MAC");
 		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
@@ -785,7 +797,7 @@ static void eap_aka_process_reauth(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Processing Reauthentication");
 
 	if (attr->mac == NULL ||
-	    eap_sim_verify_mac(data->k_aut, respData, attr->mac, data->nonce_s,
+	    eap_aka_verify_mac(data, respData, attr->mac, data->nonce_s,
 			       EAP_SIM_NONCE_S_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Re-authentication message "
 			   "did not include valid AT_MAC");

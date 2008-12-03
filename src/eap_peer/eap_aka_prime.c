@@ -100,16 +100,23 @@ static void * eap_aka_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 
-	if (1)
-		data->eap_method = EAP_TYPE_AKA_PRIME;
-	else
-		data->eap_method = EAP_TYPE_AKA;
+	data->eap_method = EAP_TYPE_AKA;
 
 	eap_aka_state(data, CONTINUE);
 	data->prev_id = -1;
 
 	data->result_ind = phase1 && os_strstr(phase1, "result_ind=1") != NULL;
 
+	return data;
+}
+
+
+static void * eap_aka_prime_init(struct eap_sm *sm)
+{
+	struct eap_aka_data *data = eap_aka_init(sm);
+	if (data == NULL)
+		return NULL;
+	data->eap_method = EAP_TYPE_AKA_PRIME;
 	return data;
 }
 
@@ -1177,6 +1184,31 @@ int eap_peer_aka_prime_register(void)
 	if (eap == NULL)
 		return -1;
 
+	eap->init = eap_aka_prime_init;
+	eap->deinit = eap_aka_deinit;
+	eap->process = eap_aka_process;
+	eap->isKeyAvailable = eap_aka_isKeyAvailable;
+	eap->getKey = eap_aka_getKey;
+	eap->has_reauth_data = eap_aka_has_reauth_data;
+	eap->deinit_for_reauth = eap_aka_deinit_for_reauth;
+	eap->init_for_reauth = eap_aka_init_for_reauth;
+	eap->get_identity = eap_aka_get_identity;
+	eap->get_emsk = eap_aka_get_emsk;
+
+	ret = eap_peer_method_register(eap);
+	if (ret)
+		eap_peer_method_free(eap);
+
+#ifdef EAP_AKA_PRIME_BOTH
+	if (ret)
+		return ret;
+
+	eap = eap_peer_method_alloc(EAP_PEER_METHOD_INTERFACE_VERSION,
+				    EAP_VENDOR_IETF, EAP_TYPE_AKA,
+				    "AKA");
+	if (eap == NULL)
+		return -1;
+
 	eap->init = eap_aka_init;
 	eap->deinit = eap_aka_deinit;
 	eap->process = eap_aka_process;
@@ -1191,5 +1223,7 @@ int eap_peer_aka_prime_register(void)
 	ret = eap_peer_method_register(eap);
 	if (ret)
 		eap_peer_method_free(eap);
+#endif /* EAP_AKA_PRIME_BOTH */
+
 	return ret;
 }

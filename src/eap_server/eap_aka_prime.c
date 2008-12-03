@@ -91,6 +91,7 @@ static void eap_aka_state(struct eap_aka_data *data, int state)
 }
 
 
+#ifdef EAP_AKA_PRIME_BOTH
 static void * eap_aka_init(struct eap_sm *sm)
 {
 	struct eap_aka_data *data;
@@ -104,10 +105,31 @@ static void * eap_aka_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 
-	if (1)
-		data->eap_method = EAP_TYPE_AKA_PRIME;
-	else
-		data->eap_method = EAP_TYPE_AKA;
+	data->eap_method = EAP_TYPE_AKA;
+
+	data->state = IDENTITY;
+	eap_aka_determine_identity(sm, data, 1, 0);
+	data->pending_id = -1;
+
+	return data;
+}
+#endif /* EAP_AKA_PRIME_BOTH */
+
+
+static void * eap_aka_prime_init(struct eap_sm *sm)
+{
+	struct eap_aka_data *data;
+
+	if (sm->eap_sim_db_priv == NULL) {
+		wpa_printf(MSG_WARNING, "EAP-AKA: eap_sim_db not configured");
+		return NULL;
+	}
+
+	data = os_zalloc(sizeof(*data));
+	if (data == NULL)
+		return NULL;
+
+	data->eap_method = EAP_TYPE_AKA_PRIME;
 
 	data->state = IDENTITY;
 	eap_aka_determine_identity(sm, data, 1, 0);
@@ -1109,6 +1131,30 @@ int eap_server_aka_prime_register(void)
 	if (eap == NULL)
 		return -1;
 
+	eap->init = eap_aka_prime_init;
+	eap->reset = eap_aka_reset;
+	eap->buildReq = eap_aka_buildReq;
+	eap->check = eap_aka_check;
+	eap->process = eap_aka_process;
+	eap->isDone = eap_aka_isDone;
+	eap->getKey = eap_aka_getKey;
+	eap->isSuccess = eap_aka_isSuccess;
+	eap->get_emsk = eap_aka_get_emsk;
+
+	ret = eap_server_method_register(eap);
+	if (ret)
+		eap_server_method_free(eap);
+
+#ifdef EAP_AKA_PRIME_BOTH
+	if (ret)
+		return ret;
+
+	eap = eap_server_method_alloc(EAP_SERVER_METHOD_INTERFACE_VERSION,
+				      EAP_VENDOR_IETF, EAP_TYPE_AKA,
+				      "AKA");
+	if (eap == NULL)
+		return -1;
+
 	eap->init = eap_aka_init;
 	eap->reset = eap_aka_reset;
 	eap->buildReq = eap_aka_buildReq;
@@ -1122,5 +1168,7 @@ int eap_server_aka_prime_register(void)
 	ret = eap_server_method_register(eap);
 	if (ret)
 		eap_server_method_free(eap);
+#endif /* EAP_AKA_PRIME_BOTH */
+
 	return ret;
 }

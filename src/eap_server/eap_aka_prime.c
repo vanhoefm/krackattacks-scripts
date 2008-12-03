@@ -28,6 +28,7 @@ struct eap_aka_data {
 	u8 nonce_s[EAP_SIM_NONCE_S_LEN];
 	u8 k_aut[EAP_AKA_PRIME_K_AUT_LEN];
 	u8 k_encr[EAP_SIM_K_ENCR_LEN];
+	u8 k_re[EAP_AKA_PRIME_K_RE_LEN];
 	u8 msk[EAP_SIM_KEYING_DATA_LEN];
 	u8 emsk[EAP_EMSK_LEN];
 	u8 rand[EAP_AKA_RAND_LEN];
@@ -365,11 +366,19 @@ static struct wpabuf * eap_aka_build_reauth(struct eap_sm *sm,
 	wpa_hexdump_key(MSG_MSGDUMP, "EAP-AKA: NONCE_S",
 			data->nonce_s, EAP_SIM_NONCE_S_LEN);
 
-	eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut, data->msk,
-			    data->emsk);
-	eap_sim_derive_keys_reauth(data->counter, sm->identity,
-				   sm->identity_len, data->nonce_s, data->mk,
-				   data->msk, data->emsk);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		eap_aka_prime_derive_keys_reauth(data->k_re, data->counter,
+						 sm->identity,
+						 sm->identity_len,
+						 data->nonce_s,
+						 data->msk, data->emsk);
+	} else {
+		eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut,
+				    data->msk, data->emsk);
+		eap_sim_derive_keys_reauth(data->counter, sm->identity,
+					   sm->identity_len, data->nonce_s,
+					   data->mk, data->msk, data->emsk);
+	}
 
 	msg = eap_sim_msg_init(EAP_CODE_REQUEST, id, data->eap_method,
 			       EAP_AKA_SUBTYPE_REAUTHENTICATION);
@@ -545,14 +554,33 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 			data->reauth = eap_sim_db_get_reauth_entry(
 				sm->eap_sim_db_priv, sm->identity,
 				sm->identity_len);
+			if (data->reauth &&
+			    data->reauth->aka_prime !=
+			    (data->eap_method == EAP_TYPE_AKA_PRIME)) {
+				wpa_printf(MSG_DEBUG, "EAP-AKA: Reauth data "
+					   "was for different AKA version");
+				data->reauth = NULL;
+			}
 			if (data->reauth) {
 				wpa_printf(MSG_DEBUG, "EAP-AKA: Using fast "
 					   "re-authentication");
 				identity = data->reauth->identity;
 				identity_len = data->reauth->identity_len;
 				data->counter = data->reauth->counter;
-				os_memcpy(data->mk, data->reauth->mk,
-					  EAP_SIM_MK_LEN);
+				if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+					os_memcpy(data->k_encr,
+						  data->reauth->k_encr,
+						  EAP_SIM_K_ENCR_LEN);
+					os_memcpy(data->k_aut,
+						  data->reauth->k_aut,
+						  EAP_AKA_PRIME_K_AUT_LEN);
+					os_memcpy(data->k_re,
+						  data->reauth->k_re,
+						  EAP_AKA_PRIME_K_RE_LEN);
+				} else {
+					os_memcpy(data->mk, data->reauth->mk,
+						  EAP_SIM_MK_LEN);
+				}
 			}
 		}
 	}
@@ -618,10 +646,16 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-AKA: Identity for MK derivation",
 			  sm->identity, identity_len);
 
-	eap_aka_derive_mk(sm->identity, identity_len, data->ik, data->ck,
-			  data->mk);
-	eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut, data->msk,
-			    data->emsk);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		eap_aka_prime_derive_keys(identity, identity_len, data->ik,
+					  data->ck, data->k_encr, data->k_aut,
+					  data->k_re, data->msk, data->emsk);
+	} else {
+		eap_aka_derive_mk(sm->identity, identity_len, data->ik,
+				  data->ck, data->mk);
+		eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut,
+				    data->msk, data->emsk);
+	}
 
 	eap_aka_state(data, CHALLENGE);
 }
@@ -741,10 +775,21 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 		data->next_pseudonym = NULL;
 	}
 	if (data->next_reauth_id) {
-		eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
-				      identity_len,
-				      data->next_reauth_id, data->counter + 1,
-				      data->mk);
+		if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+			eap_sim_db_add_reauth_prime(sm->eap_sim_db_priv,
+						    identity,
+						    identity_len,
+						    data->next_reauth_id,
+						    data->counter + 1,
+						    data->k_encr, data->k_aut,
+						    data->k_re);
+		} else {
+			eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
+					      identity_len,
+					      data->next_reauth_id,
+					      data->counter + 1,
+					      data->mk);
+		}
 		data->next_reauth_id = NULL;
 	}
 }
@@ -867,9 +912,21 @@ static void eap_aka_process_reauth(struct eap_sm *sm,
 		data->next_pseudonym = NULL;
 	}
 	if (data->next_reauth_id) {
-		eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
-				      identity_len, data->next_reauth_id,
-				      data->counter + 1, data->mk);
+		if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+			eap_sim_db_add_reauth_prime(sm->eap_sim_db_priv,
+						    identity,
+						    identity_len,
+						    data->next_reauth_id,
+						    data->counter + 1,
+						    data->k_encr, data->k_aut,
+						    data->k_re);
+		} else {
+			eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
+					      identity_len,
+					      data->next_reauth_id,
+					      data->counter + 1,
+					      data->mk);
+		}
 		data->next_reauth_id = NULL;
 	} else {
 		eap_sim_db_remove_reauth(sm->eap_sim_db_priv, data->reauth);

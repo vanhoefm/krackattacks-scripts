@@ -54,6 +54,10 @@ int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
 int eap_sim_db_add_reauth(void *priv, const u8 *identity,
 			  size_t identity_len, char *reauth_id, u16 counter,
 			  const u8 *mk);
+int eap_sim_db_add_reauth_prime(void *priv, const u8 *identity,
+				size_t identity_len, char *reauth_id,
+				u16 counter, const u8 *k_encr, const u8 *k_aut,
+				const u8 *k_re);
 
 const u8 * eap_sim_db_get_permanent(void *priv, const u8 *identity,
 				    size_t identity_len, size_t *len);
@@ -64,7 +68,11 @@ struct eap_sim_reauth {
 	size_t identity_len;
 	char *reauth_id;
 	u16 counter;
+	int aka_prime;
 	u8 mk[EAP_SIM_MK_LEN];
+	u8 k_encr[EAP_SIM_K_ENCR_LEN];
+	u8 k_aut[EAP_AKA_PRIME_K_AUT_LEN];
+	u8 k_re[EAP_AKA_PRIME_K_RE_LEN];
 };
 
 struct eap_sim_reauth *

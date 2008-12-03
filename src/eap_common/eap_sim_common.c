@@ -234,6 +234,134 @@ void eap_sim_add_mac(const u8 *k_aut, const u8 *msg, size_t msg_len, u8 *mac,
 
 
 #ifdef EAP_AKA_PRIME
+static void prf_prime(const u8 *k, const char *seed1,
+		      const u8 *seed2, size_t seed2_len,
+		      const u8 *seed3, size_t seed3_len,
+		      u8 *res, size_t res_len)
+{
+	const u8 *addr[5];
+	size_t len[5];
+	u8 hash[SHA256_MAC_LEN];
+	u8 iter;
+
+	/*
+	 * PRF'(K,S) = T1 | T2 | T3 | T4 | ...
+	 * T1 = HMAC-SHA-256 (K, S | 0x01)
+	 * T2 = HMAC-SHA-256 (K, T1 | S | 0x02)
+	 * T3 = HMAC-SHA-256 (K, T2 | S | 0x03)
+	 * T4 = HMAC-SHA-256 (K, T3 | S | 0x04)
+	 * ...
+	 */
+
+	addr[0] = hash;
+	len[0] = 0;
+	addr[1] = (const u8 *) seed1;
+	len[1] = os_strlen(seed1);
+	addr[2] = seed2;
+	len[2] = seed2_len;
+	addr[3] = seed3;
+	len[3] = seed3_len;
+	addr[4] = &iter;
+	len[4] = 1;
+
+	iter = 0;
+	while (res_len) {
+		size_t hlen;
+		iter++;
+		hmac_sha256_vector(k, 32, 5, addr, len, hash);
+		len[0] = SHA256_MAC_LEN;
+		hlen = res_len > SHA256_MAC_LEN ? SHA256_MAC_LEN : res_len;
+		os_memcpy(res, hash, hlen);
+		res += hlen;
+		res_len -= hlen;
+	}
+}
+
+
+void eap_aka_prime_derive_keys(const u8 *identity, size_t identity_len,
+			       const u8 *ik, const u8 *ck, u8 *k_encr,
+			       u8 *k_aut, u8 *k_re, u8 *msk, u8 *emsk)
+{
+	u8 key[EAP_AKA_IK_LEN + EAP_AKA_CK_LEN];
+	u8 keys[EAP_SIM_K_ENCR_LEN + EAP_AKA_PRIME_K_AUT_LEN +
+		EAP_AKA_PRIME_K_RE_LEN + EAP_MSK_LEN + EAP_EMSK_LEN];
+	u8 *pos;
+
+	/*
+	 * MK = PRF'(IK'|CK',"EAP-AKA'"|Identity)
+	 * K_encr = MK[0..127]
+	 * K_aut  = MK[128..383]
+	 * K_re   = MK[384..639]
+	 * MSK    = MK[640..1151]
+	 * EMSK   = MK[1152..1663]
+	 */
+
+	os_memcpy(key, ik, EAP_AKA_IK_LEN);
+	os_memcpy(key + EAP_AKA_IK_LEN, ck, EAP_AKA_CK_LEN);
+
+	prf_prime(key, "EAP-AKA'", identity, identity_len, NULL, 0,
+		  keys, sizeof(keys));
+
+	pos = keys;
+	os_memcpy(k_encr, pos, EAP_SIM_K_ENCR_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': K_encr",
+			k_encr, EAP_SIM_K_ENCR_LEN);
+	pos += EAP_SIM_K_ENCR_LEN;
+
+	os_memcpy(k_aut, pos, EAP_AKA_PRIME_K_AUT_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': K_aut",
+			k_aut, EAP_AKA_PRIME_K_AUT_LEN);
+	pos += EAP_AKA_PRIME_K_AUT_LEN;
+
+	os_memcpy(k_re, pos, EAP_AKA_PRIME_K_RE_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': K_re",
+			k_re, EAP_AKA_PRIME_K_RE_LEN);
+	pos += EAP_AKA_PRIME_K_RE_LEN;
+
+	os_memcpy(msk, pos, EAP_MSK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': MSK", msk, EAP_MSK_LEN);
+	pos += EAP_MSK_LEN;
+
+	os_memcpy(emsk, pos, EAP_EMSK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': EMSK", emsk, EAP_EMSK_LEN);
+}
+
+
+int eap_aka_prime_derive_keys_reauth(const u8 *k_re, u16 counter,
+				     const u8 *identity, size_t identity_len,
+				     const u8 *nonce_s, u8 *msk, u8 *emsk)
+{
+	u8 seed3[2 + EAP_SIM_NONCE_S_LEN];
+	u8 keys[EAP_MSK_LEN + EAP_EMSK_LEN];
+	u8 *pos;
+
+	/*
+	 * MK = PRF'(K_re,"EAP-AKA' re-auth"|Identity|counter|NONCE_S)
+	 * MSK  = MK[0..511]
+	 * EMSK = MK[512..1023]
+	 */
+
+	WPA_PUT_BE16(seed3, counter);
+	os_memcpy(seed3 + 2, nonce_s, EAP_SIM_NONCE_S_LEN);
+
+	prf_prime(k_re, "EAP-AKA' re-auth", identity, identity_len,
+		  seed3, sizeof(seed3),
+		  keys, sizeof(keys));
+
+	pos = keys;
+	os_memcpy(msk, pos, EAP_MSK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': MSK", msk, EAP_MSK_LEN);
+	pos += EAP_MSK_LEN;
+
+	os_memcpy(emsk, pos, EAP_EMSK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': EMSK", emsk, EAP_EMSK_LEN);
+
+	os_memset(keys, 0, sizeof(keys));
+
+	return 0;
+}
+
+
 int eap_sim_verify_mac_sha256(const u8 *k_aut, const struct wpabuf *req,
 			      const u8 *mac, const u8 *extra, size_t extra_len)
 {

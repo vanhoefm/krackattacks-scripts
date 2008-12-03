@@ -73,6 +73,7 @@
 
 #define EAP_AKA_PRIME_K_AUT_LEN 32
 #define EAP_AKA_PRIME_CHECKCODE_LEN 32
+#define EAP_AKA_PRIME_K_RE_LEN 32
 
 struct wpabuf;
 
@@ -92,6 +93,13 @@ int eap_sim_verify_mac(const u8 *k_aut, const struct wpabuf *req,
 		       const u8 *mac, const u8 *extra, size_t extra_len);
 void eap_sim_add_mac(const u8 *k_aut, const u8 *msg, size_t msg_len, u8 *mac,
 		     const u8 *extra, size_t extra_len);
+
+void eap_aka_prime_derive_keys(const u8 *identity, size_t identity_len,
+			       const u8 *ik, const u8 *ck, u8 *k_encr,
+			       u8 *k_aut, u8 *k_re, u8 *msk, u8 *emsk);
+int eap_aka_prime_derive_keys_reauth(const u8 *k_re, u16 counter,
+				     const u8 *identity, size_t identity_len,
+				     const u8 *nonce_s, u8 *msk, u8 *emsk);
 int eap_sim_verify_mac_sha256(const u8 *k_aut, const struct wpabuf *req,
 			      const u8 *mac, const u8 *extra,
 			      size_t extra_len);

@@ -942,27 +942,12 @@ int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
 }
 
 
-/**
- * eap_sim_db_add_reauth - EAP-SIM DB: Add new re-authentication entry
- * @priv: Private data pointer from eap_sim_db_init()
- * @identity: Identity of the user (may be permanent identity or pseudonym)
- * @identity_len: Length of identity
- * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
- * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
- * free it.
- * @mk: 16-byte MK from the previous full authentication
- * Returns: 0 on success, -1 on failure
- *
- * This function adds a new re-authentication entry for an EAP-SIM user.
- * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
- * anymore.
- */
-int eap_sim_db_add_reauth(void *priv, const u8 *identity,
-			  size_t identity_len, char *reauth_id, u16 counter,
-			  const u8 *mk)
+static struct eap_sim_reauth *
+eap_sim_db_add_reauth_data(struct eap_sim_db_data *data, const u8 *identity,
+			   size_t identity_len, char *reauth_id, u16 counter)
 {
-	struct eap_sim_db_data *data = priv;
 	struct eap_sim_reauth *r;
+
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: Add reauth_id for identity",
 			  identity, identity_len);
 	wpa_printf(MSG_DEBUG, "EAP-SIM DB: reauth_id: %s", reauth_id);
@@ -980,7 +965,7 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
 		r = os_zalloc(sizeof(*r));
 		if (r == NULL) {
 			os_free(reauth_id);
-			return -1;
+			return NULL;
 		}
 
 		r->next = data->reauths;
@@ -988,7 +973,7 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
 		if (r->identity == NULL) {
 			os_free(r);
 			os_free(reauth_id);
-			return -1;
+			return NULL;
 		}
 		os_memcpy(r->identity, identity, identity_len);
 		r->identity_len = identity_len;
@@ -998,10 +983,82 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
 	}
 
 	r->counter = counter;
+
+	return r;
+}
+
+
+/**
+ * eap_sim_db_add_reauth - EAP-SIM DB: Add new re-authentication entry
+ * @priv: Private data pointer from eap_sim_db_init()
+ * @identity: Identity of the user (may be permanent identity or pseudonym)
+ * @identity_len: Length of identity
+ * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
+ * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
+ * free it.
+ * @mk: 16-byte MK from the previous full authentication or %NULL
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function adds a new re-authentication entry for an EAP-SIM user.
+ * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
+ * anymore.
+ */
+int eap_sim_db_add_reauth(void *priv, const u8 *identity,
+			  size_t identity_len, char *reauth_id, u16 counter,
+			  const u8 *mk)
+{
+	struct eap_sim_db_data *data = priv;
+	struct eap_sim_reauth *r;
+
+	r = eap_sim_db_add_reauth_data(data, identity, identity_len, reauth_id,
+				       counter);
+	if (r == NULL)
+		return -1;
+
 	os_memcpy(r->mk, mk, EAP_SIM_MK_LEN);
+	r->aka_prime = 0;
 
 	return 0;
 }
+
+
+#ifdef EAP_AKA_PRIME
+/**
+ * eap_sim_db_add_reauth_prime - EAP-AKA' DB: Add new re-authentication entry
+ * @priv: Private data pointer from eap_sim_db_init()
+ * @identity: Identity of the user (may be permanent identity or pseudonym)
+ * @identity_len: Length of identity
+ * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
+ * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
+ * free it.
+ * @k_re: 32-byte K_re from the previous full authentication or %NULL
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function adds a new re-authentication entry for an EAP-AKA' user.
+ * EAP-SIM DB is responsible of freeing reauth_id buffer once it is not needed
+ * anymore.
+ */
+int eap_sim_db_add_reauth_prime(void *priv, const u8 *identity,
+				size_t identity_len, char *reauth_id,
+				u16 counter, const u8 *k_encr, const u8 *k_aut,
+				const u8 *k_re)
+{
+	struct eap_sim_db_data *data = priv;
+	struct eap_sim_reauth *r;
+
+	r = eap_sim_db_add_reauth_data(data, identity, identity_len, reauth_id,
+				       counter);
+	if (r == NULL)
+		return -1;
+
+	r->aka_prime = 1;
+	os_memcpy(r->k_encr, k_encr, EAP_SIM_K_ENCR_LEN);
+	os_memcpy(r->k_aut, k_aut, EAP_AKA_PRIME_K_AUT_LEN);
+	os_memcpy(r->k_re, k_re, EAP_AKA_PRIME_K_RE_LEN);
+
+	return 0;
+}
+#endif /* EAP_AKA_PRIME */
 
 
 /**

@@ -34,6 +34,7 @@ struct eap_aka_data {
 	u8 mk[EAP_SIM_MK_LEN];
 	u8 k_aut[EAP_AKA_PRIME_K_AUT_LEN];
 	u8 k_encr[EAP_SIM_K_ENCR_LEN];
+	u8 k_re[EAP_AKA_PRIME_K_RE_LEN];
 	u8 msk[EAP_SIM_KEYING_DATA_LEN];
 	u8 emsk[EAP_EMSK_LEN];
 	u8 rand[EAP_AKA_RAND_LEN], autn[EAP_AKA_AUTN_LEN];
@@ -701,10 +702,16 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 		identity = eap_get_config_identity(sm, &identity_len);
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-AKA: Selected identity for MK "
 			  "derivation", identity, identity_len);
-	eap_aka_derive_mk(identity, identity_len, data->ik, data->ck,
-			  data->mk);
-	eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut, data->msk,
-			    data->emsk);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		eap_aka_prime_derive_keys(identity, identity_len, data->ik,
+					  data->ck, data->k_encr, data->k_aut,
+					  data->k_re, data->msk, data->emsk);
+	} else {
+		eap_aka_derive_mk(identity, identity_len, data->ik, data->ck,
+				  data->mk);
+		eap_sim_derive_keys(data->mk, data->k_encr, data->k_aut,
+				    data->msk, data->emsk);
+	}
 	if (eap_aka_verify_mac(data, reqData, attr->mac, (u8 *) "", 0)) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: Challenge message "
 			   "used invalid AT_MAC");
@@ -910,10 +917,6 @@ static struct wpabuf * eap_aka_process_reauthentication(
 			   "(%d <= %d)", eattr.counter, data->counter);
 		data->counter_too_small = eattr.counter;
 
-		eap_sim_derive_keys_reauth(eattr.counter, data->reauth_id,
-					   data->reauth_id_len, eattr.nonce_s,
-					   data->mk, NULL, NULL);
-
 		/* Reply using Re-auth w/ AT_COUNTER_TOO_SMALL. The current
 		 * reauth_id must not be used to start a new reauthentication.
 		 * However, since it was used in the last EAP-Response-Identity
@@ -936,10 +939,18 @@ static struct wpabuf * eap_aka_process_reauthentication(
 	wpa_hexdump(MSG_DEBUG, "EAP-AKA: (encr) AT_NONCE_S",
 		    data->nonce_s, EAP_SIM_NONCE_S_LEN);
 
-	eap_sim_derive_keys_reauth(data->counter,
-				   data->reauth_id, data->reauth_id_len,
-				   data->nonce_s, data->mk, data->msk,
-				   data->emsk);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		eap_aka_prime_derive_keys_reauth(data->k_re, data->counter,
+						 data->reauth_id,
+						 data->reauth_id_len,
+						 data->nonce_s,
+						 data->msk, data->emsk);
+	} else {
+		eap_sim_derive_keys_reauth(data->counter, data->reauth_id,
+					   data->reauth_id_len,
+					   data->nonce_s, data->mk,
+					   data->msk, data->emsk);
+	}
 	eap_aka_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 	eap_aka_learn_ids(data, &eattr);
 

@@ -1497,6 +1497,80 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 	return NL_SKIP;
 }
 
+static struct hostapd_hw_modes *i802_add_11b(struct hostapd_hw_modes *modes,
+					     u16 *num_modes)
+{
+	u16 m;
+	struct hostapd_hw_modes *mode11g = NULL, *nmodes, *mode;
+	int i, mode11g_idx = -1;
+
+	/* If only 802.11g mode is included, use it to construct matching
+	 * 802.11b mode data. */
+
+	for (m = 0; m < *num_modes; m++) {
+		if (modes[m].mode == HOSTAPD_MODE_IEEE80211B)
+			return modes; /* 802.11b already included */
+		if (modes[m].mode == HOSTAPD_MODE_IEEE80211G)
+			mode11g_idx = m;
+	}
+
+	if (mode11g_idx < 0)
+		return modes; /* 2.4 GHz band not supported at all */
+
+	nmodes = os_realloc(modes, (*num_modes + 1) * sizeof(*nmodes));
+	if (nmodes == NULL)
+		return modes; /* Could not add 802.11b mode */
+
+	mode = &nmodes[*num_modes];
+	os_memset(mode, 0, sizeof(*mode));
+	(*num_modes)++;
+	modes = nmodes;
+
+	mode->mode = HOSTAPD_MODE_IEEE80211B;
+
+	mode11g = &modes[mode11g_idx];
+	mode->num_channels = mode11g->num_channels;
+	mode->channels = os_malloc(mode11g->num_channels *
+				   sizeof(struct hostapd_channel_data));
+	if (mode->channels == NULL) {
+		(*num_modes)--;
+		return modes; /* Could not add 802.11b mode */
+	}
+	os_memcpy(mode->channels, mode11g->channels,
+		  mode11g->num_channels * sizeof(struct hostapd_channel_data));
+
+	mode->num_rates = 0;
+	mode->rates = os_malloc(4 * sizeof(struct hostapd_rate_data));
+	if (mode->rates == NULL) {
+		os_free(mode->channels);
+		(*num_modes)--;
+		return modes; /* Could not add 802.11b mode */
+	}
+
+	for (i = 0; i < mode11g->num_rates; i++) {
+		if (mode11g->rates[i].rate > 110 ||
+		    mode11g->rates[i].flags &
+		    (HOSTAPD_RATE_ERP | HOSTAPD_RATE_OFDM))
+			continue;
+		mode->rates[mode->num_rates] = mode11g->rates[i];
+		mode->num_rates++;
+		if (mode->num_rates == 4)
+			break;
+	}
+
+	if (mode->num_rates == 0) {
+		os_free(mode->channels);
+		os_free(mode->rates);
+		(*num_modes)--;
+		return modes; /* No 802.11b rates */
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Added 802.11b mode based on 802.11g "
+		   "information");
+
+	return modes;
+}
+
 static struct hostapd_hw_modes *i802_get_hw_feature_data(void *priv,
 							 u16 *num_modes,
 							 u16 *flags)
@@ -1521,7 +1595,7 @@ static struct hostapd_hw_modes *i802_get_hw_feature_data(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
 
 	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0)
-		return result.modes;
+		return i802_add_11b(result.modes, num_modes);
  nla_put_failure:
 	return NULL;
 }

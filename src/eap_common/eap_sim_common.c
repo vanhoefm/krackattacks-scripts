@@ -554,8 +554,20 @@ int eap_sim_parse_attr(const u8 *start, const u8 *end,
 			break;
 		case EAP_SIM_AT_IDENTITY:
 			wpa_printf(MSG_DEBUG, "EAP-SIM: AT_IDENTITY");
-			attr->identity = apos + 2;
-			attr->identity_len = alen - 2;
+			plen = WPA_GET_BE16(apos);
+			apos += 2;
+			alen -= 2;
+			if (plen > alen) {
+				wpa_printf(MSG_INFO, "EAP-SIM: Invalid "
+					   "AT_IDENTITY (Actual Length %lu, "
+					   "remaining length %lu)",
+					   (unsigned long) plen,
+					   (unsigned long) alen);
+				return -1;
+			}
+
+			attr->identity = apos;
+			attr->identity_len = plen;
 			break;
 		case EAP_SIM_AT_VERSION_LIST:
 			if (aka) {

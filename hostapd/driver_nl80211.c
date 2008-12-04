@@ -1845,7 +1845,6 @@ static void handle_frame(struct hostapd_iface *iface, u8 *buf, size_t len,
 		handle_unknown_sta(hapd, hdr->addr2);
 		break;
 	case WLAN_FC_TYPE_DATA:
-		wpa_printf(MSG_DEBUG, "DATA");
 		handle_unknown_sta(hapd, hdr->addr2);
 		break;
 	}

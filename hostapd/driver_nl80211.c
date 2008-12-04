@@ -460,7 +460,29 @@ static int i802_send_frame(void *priv, const void *data, size_t len,
 static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 				int flags)
 {
-	return i802_send_frame(priv, data, len, 1, flags);
+	struct ieee80211_mgmt *mgmt;
+	int do_not_encrypt = 0;
+	u16 fc;
+
+	mgmt = (struct ieee80211_mgmt *) data;
+	fc = le_to_host16(mgmt->frame_control);
+
+	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_AUTH) {
+		/*
+		 * Only one of the authentication frame types is encrypted.
+		 * In order for static WEP encryption to work properly (i.e.,
+		 * to not encrypt the frame), we need to tell mac80211 about
+		 * the frames that must not be encrypted.
+		 */
+		u16 auth_alg = le_to_host16(mgmt->u.auth.auth_alg);
+		u16 auth_trans = le_to_host16(mgmt->u.auth.auth_transaction);
+		if (auth_alg == WLAN_AUTH_OPEN ||
+		    (auth_alg == WLAN_AUTH_SHARED_KEY && auth_trans != 3))
+			do_not_encrypt = 1;
+	}
+
+	return i802_send_frame(priv, data, len, !do_not_encrypt, flags);
 }
 
 /* Set kernel driver on given frequency (MHz) */

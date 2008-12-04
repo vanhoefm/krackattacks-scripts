@@ -13,6 +13,8 @@ ChangeLog for hostapd
 	* added IEEE 802.11n HT capability configuration (ht_capab)
 	* added support for generating Country IE based on nl80211 regulatory
 	  information (added if ieee80211d=1 in configuration)
+	* fixed WEP authentication (both Open System and Shared Key) with
+	  mac80211
 
 2008-11-23 - v0.6.6
 	* added a new configuration option, wpa_ptk_rekey, that can be used to

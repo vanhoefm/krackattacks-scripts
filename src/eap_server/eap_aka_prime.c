@@ -122,6 +122,8 @@ static void * eap_aka_init(struct eap_sm *sm)
 static void * eap_aka_prime_init(struct eap_sm *sm)
 {
 	struct eap_aka_data *data;
+	/* TODO: make ANID configurable; see 3GPP TS 24.302 */
+	char *network_name = "WLAN";
 
 	if (sm->eap_sim_db_priv == NULL) {
 		wpa_printf(MSG_WARNING, "EAP-AKA: eap_sim_db not configured");
@@ -133,13 +135,14 @@ static void * eap_aka_prime_init(struct eap_sm *sm)
 		return NULL;
 
 	data->eap_method = EAP_TYPE_AKA_PRIME;
-	data->network_name = os_malloc(3);
+	data->network_name = os_malloc(os_strlen(network_name));
 	if (data->network_name == NULL) {
 		os_free(data);
 		return NULL;
 	}
-	os_memcpy(data->network_name, "FOO", 3); /* FIX: 3GPP.24.302 */
-	data->network_name_len = 3;
+
+	data->network_name_len = os_strlen(network_name);
+	os_memcpy(data->network_name, network_name, data->network_name_len);
 
 	data->state = IDENTITY;
 	eap_aka_determine_identity(sm, data, 1, 0);
@@ -665,6 +668,17 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 		sm->method_pending = METHOD_PENDING_WAIT;
 		return;
 	}
+
+#ifdef EAP_AKA_PRIME
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		/* Note: AUTN = (SQN ^ AK) || AMF || MAC which gives us the
+		 * needed 6-octet SQN ^AK for CK',IK' derivation */
+		eap_aka_prime_derive_ck_ik_prime(data->ck, data->ik,
+						 data->autn,
+						 data->network_name,
+						 data->network_name_len);
+	}
+#endif /* EAP_AKA_PRIME */
 
 	data->reauth = NULL;
 	data->counter = 0; /* reset re-auth counter since this is full auth */

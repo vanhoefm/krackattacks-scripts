@@ -820,6 +820,16 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 		return eap_aka_client_error(data, id,
 					    EAP_AKA_UNABLE_TO_PROCESS_PACKET);
 	}
+#ifdef EAP_AKA_PRIME
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		/* Note: AUTN = (SQN ^ AK) || AMF || MAC which gives us the
+		 * needed 6-octet SQN ^AK for CK',IK' derivation */
+		eap_aka_prime_derive_ck_ik_prime(data->ck, data->ik,
+						 data->autn,
+						 data->network_name,
+						 data->network_name_len);
+	}
+#endif /* EAP_AKA_PRIME */
 	if (data->last_eap_identity) {
 		identity = data->last_eap_identity;
 		identity_len = data->last_eap_identity_len;

@@ -106,6 +106,10 @@ int eap_sim_verify_mac_sha256(const u8 *k_aut, const struct wpabuf *req,
 void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
 			    u8 *mac, const u8 *extra, size_t extra_len);
 
+void eap_aka_prime_derive_ck_ik_prime(u8 *ck, u8 *ik, const u8 *sqn_ak,
+				      const u8 *network_name,
+				      size_t network_name_len);
+
 
 /* EAP-SIM/AKA Attributes (0..127 non-skippable) */
 #define EAP_SIM_AT_RAND 1

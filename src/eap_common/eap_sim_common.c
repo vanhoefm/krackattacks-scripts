@@ -426,6 +426,76 @@ void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
 	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA': Add MAC: MAC",
 		    mac, EAP_SIM_MAC_LEN);
 }
+
+
+void eap_aka_prime_derive_ck_ik_prime(u8 *ck, u8 *ik, const u8 *sqn_ak,
+				      const u8 *network_name,
+				      size_t network_name_len)
+{
+	u8 key[EAP_AKA_CK_LEN + EAP_AKA_IK_LEN];
+	u8 hash[SHA256_MAC_LEN];
+	const u8 *addr[5];
+	size_t len[5];
+	u8 fc;
+	u8 l0[2], l1[2];
+
+	/* 3GPP TS 33.402 V8.0.0
+	 * (CK', IK') = F(CK, IK, <access network identity>)
+	 */
+	/* TODO: CK', IK' generation should really be moved into the actual
+	 * AKA procedure with network name passed in there and option to use
+	 * AMF separation bit = 1 (3GPP TS 33.401). */
+
+	/* Change Request 334.02 CR 0033 to version 8.1.1 from
+	 * 3GPP TSG-SA WG3 Meeting #53 in September 2008:
+	 *
+	 * CK' || IK' = HMAC-SHA-256(Key, S)
+	 * S = FC || P0 || L0 || P1 || L1 || ... || Pn || Ln
+	 * Key = CK || IK
+	 * FC = 0x20
+	 * P0 = access network identity (3GPP TS 24.302)
+	 * L0 = length of acceess network identity (2 octets, big endian)
+	 * P1 = SQN xor AK (if AK is not used, AK is treaded as 000..0
+	 * L1 = 0x00 0x06
+	 */
+
+	fc = 0x20;
+
+	wpa_printf(MSG_DEBUG, "EAP-AKA': Derive (CK',IK') from (CK,IK)");
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': CK", ck, EAP_AKA_CK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': IK", ik, EAP_AKA_IK_LEN);
+	wpa_printf(MSG_DEBUG, "EAP-AKA': FC = 0x%x", fc);
+	wpa_hexdump_ascii(MSG_DEBUG, "EAP-AKA': P0 = Access network identity",
+			  network_name, network_name_len);
+	wpa_hexdump(MSG_DEBUG, "EAP-AKA': P1 = SQN xor AK", sqn_ak, 6);
+
+	os_memcpy(key, ck, EAP_AKA_CK_LEN);
+	os_memcpy(key + EAP_AKA_CK_LEN, ik, EAP_AKA_IK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': Key = CK || IK",
+			key, sizeof(key));
+
+	addr[0] = &fc;
+	len[0] = 1;
+	addr[1] = network_name;
+	len[1] = network_name_len;
+	WPA_PUT_BE16(l0, network_name_len);
+	addr[2] = l0;
+	len[2] = 2;
+	addr[3] = sqn_ak;
+	len[3] = 6;
+	WPA_PUT_BE16(l1, 6);
+	addr[4] = l1;
+	len[4] = 2;
+
+	hmac_sha256_vector(key, sizeof(key), 5, addr, len, hash);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': KDF output (CK' || IK')",
+			hash, sizeof(hash));
+
+	os_memcpy(ck, hash, EAP_AKA_CK_LEN);
+	os_memcpy(ik, hash + EAP_AKA_CK_LEN, EAP_AKA_IK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': CK'", ck, EAP_AKA_CK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "EAP-AKA': IK'", ik, EAP_AKA_IK_LEN);
+}
 #endif /* EAP_AKA_PRIME */
 
 

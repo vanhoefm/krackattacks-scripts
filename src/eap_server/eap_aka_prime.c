@@ -761,6 +761,9 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Processing Challenge");
 
+#if 0
+	/* KDF negotiation; to be enabled only after more than one KDF is
+	 * supported */
 	if (data->eap_method == EAP_TYPE_AKA_PRIME &&
 	    attr->kdf_count == 1 && attr->mac == NULL) {
 		if (attr->kdf[0] != EAP_AKA_PRIME_KDF) {
@@ -779,6 +782,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "EAP-AKA': KDF %d selected", data->kdf);
 		return;
 	}
+#endif
 
 	if (attr->checkcode &&
 	    eap_aka_verify_checkcode(data, attr->checkcode,

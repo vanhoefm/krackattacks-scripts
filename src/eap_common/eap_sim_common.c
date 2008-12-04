@@ -788,6 +788,52 @@ int eap_sim_parse_attr(const u8 *start, const u8 *end,
 			wpa_printf(MSG_DEBUG, "EAP-SIM: AT_RESULT_IND");
 			attr->result_ind = 1;
 			break;
+#ifdef EAP_AKA_PRIME
+		case EAP_SIM_AT_KDF_INPUT:
+			if (aka != 2) {
+				wpa_printf(MSG_INFO, "EAP-AKA: Unexpected "
+					   "AT_KDF_INPUT");
+				return -1;
+			}
+
+			wpa_printf(MSG_DEBUG, "EAP-AKA: AT_KDF_INPUT");
+			plen = WPA_GET_BE16(apos);
+			apos += 2;
+			alen -= 2;
+			if (plen > alen) {
+				wpa_printf(MSG_INFO, "EAP-AKA': Invalid "
+					   "AT_KDF_INPUT (Actual Length %lu, "
+					   "remaining length %lu)",
+					   (unsigned long) plen,
+					   (unsigned long) alen);
+				return -1;
+			}
+			attr->kdf_input = apos;
+			attr->kdf_input_len = plen;
+			break;
+		case EAP_SIM_AT_KDF:
+			if (aka != 2) {
+				wpa_printf(MSG_INFO, "EAP-AKA: Unexpected "
+					   "AT_KDF");
+				return -1;
+			}
+
+			wpa_printf(MSG_DEBUG, "EAP-AKA: AT_KDF");
+			if (alen != 2) {
+				wpa_printf(MSG_INFO, "EAP-AKA': Invalid "
+					   "AT_KDF (len %lu)",
+					   (unsigned long) alen);
+				return -1;
+			}
+			if (attr->kdf_count == EAP_AKA_PRIME_KDF_MAX) {
+				wpa_printf(MSG_DEBUG, "EAP-AKA': Too many "
+					   "AT_KDF attributes - ignore this");
+				continue;
+			}
+			attr->kdf[attr->kdf_count] = WPA_GET_BE16(apos);
+			attr->kdf_count++;
+			break;
+#endif /* EAP_AKA_PRIME */
 		default:
 			if (pos[0] < 128) {
 				wpa_printf(MSG_INFO, "EAP-SIM: Unrecognized "

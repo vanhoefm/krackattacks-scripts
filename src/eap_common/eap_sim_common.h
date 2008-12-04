@@ -126,6 +126,8 @@ void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
 #define EAP_SIM_AT_COUNTER_TOO_SMALL 20 /* only encrypted */
 #define EAP_SIM_AT_NONCE_S 21 /* only encrypted */
 #define EAP_SIM_AT_CLIENT_ERROR_CODE 22 /* only send */
+#define EAP_SIM_AT_KDF_INPUT 23 /* only AKA' */
+#define EAP_SIM_AT_KDF 24 /* only AKA' */
 #define EAP_SIM_AT_IV 129
 #define EAP_SIM_AT_ENCR_DATA 130
 #define EAP_SIM_AT_NEXT_PSEUDONYM 132 /* only encrypted */
@@ -140,6 +142,8 @@ void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
 #define EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH 16384
 #define EAP_SIM_SUCCESS 32768
 
+/* EAP-AKA' AT_KDF Key Derivation Function values */
+#define EAP_AKA_PRIME_KDF 1
 
 enum eap_sim_id_req {
 	NO_ID_REQ, ANY_ID, FULLAUTH_ID, PERMANENT_ID
@@ -151,14 +155,19 @@ struct eap_sim_attrs {
 	const u8 *next_pseudonym, *next_reauth_id;
 	const u8 *nonce_mt, *identity, *res, *auts;
 	const u8 *checkcode;
+	const u8 *kdf_input;
 	size_t num_chal, version_list_len, encr_data_len;
 	size_t next_pseudonym_len, next_reauth_id_len, identity_len, res_len;
 	size_t res_len_bits;
 	size_t checkcode_len;
+	size_t kdf_input_len;
 	enum eap_sim_id_req id_req;
 	int notification, counter, selected_version, client_error_code;
 	int counter_too_small;
 	int result_ind;
+#define EAP_AKA_PRIME_KDF_MAX 10
+	u16 kdf[EAP_AKA_PRIME_KDF_MAX];
+	size_t kdf_count;
 };
 
 int eap_sim_parse_attr(const u8 *start, const u8 *end,

@@ -57,6 +57,9 @@ struct eap_aka_data {
 	int prev_id;
 	int result_ind, use_result_ind;
 	u8 eap_method;
+	u8 *network_name;
+	size_t network_name_len;
+	u16 kdf;
 };
 
 
@@ -129,6 +132,7 @@ static void eap_aka_deinit(struct eap_sm *sm, void *priv)
 		os_free(data->reauth_id);
 		os_free(data->last_eap_identity);
 		wpabuf_free(data->id_msgs);
+		os_free(data->network_name);
 		os_free(data);
 	}
 }
@@ -650,6 +654,89 @@ static int eap_aka_verify_mac(struct eap_aka_data *data,
 }
 
 
+#ifdef EAP_AKA_PRIME
+static struct wpabuf * eap_aka_prime_kdf_select(struct eap_aka_data *data,
+						u8 id, u16 kdf)
+{
+	struct eap_sim_msg *msg;
+
+	data->kdf = kdf;
+	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Challenge (id=%d) (KDF "
+		   "select)", id);
+	msg = eap_sim_msg_init(EAP_CODE_RESPONSE, id, data->eap_method,
+			       EAP_AKA_SUBTYPE_CHALLENGE);
+	wpa_printf(MSG_DEBUG, "   AT_KDF");
+	eap_sim_msg_add(msg, EAP_SIM_AT_KDF, kdf, NULL, 0);
+	return eap_sim_msg_finish(msg, NULL, NULL, 0);
+}
+
+
+static struct wpabuf * eap_aka_prime_kdf_neg(struct eap_aka_data *data,
+					     u8 id, struct eap_sim_attrs *attr)
+{
+	size_t i;
+
+	for (i = 0; i < attr->kdf_count; i++) {
+		if (attr->kdf[i] == EAP_AKA_PRIME_KDF)
+			return eap_aka_prime_kdf_select(data, id,
+							EAP_AKA_PRIME_KDF);
+	}
+
+	/* No matching KDF found - fail authentication as if AUTN had been
+	 * incorrect */
+	return eap_aka_authentication_reject(data, id);
+}
+
+
+static int eap_aka_prime_kdf_valid(struct eap_aka_data *data,
+				   struct eap_sim_attrs *attr)
+{
+	size_t i, j;
+
+	if (attr->kdf_count == 0)
+		return 0;
+
+	/* The only allowed (and required) duplication of a KDF is the addition
+	 * of the selected KDF into the beginning of the list. */
+
+	if (data->kdf) {
+		if (attr->kdf[0] != data->kdf) {
+			wpa_printf(MSG_WARNING, "EAP-AKA': The server did not "
+				   "accept the selected KDF");
+			return 0;
+		}
+
+		for (i = 1; i < attr->kdf_count; i++) {
+			if (attr->kdf[i] == data->kdf)
+				break;
+		}
+		if (i == attr->kdf_count &&
+		    attr->kdf_count < EAP_AKA_PRIME_KDF_MAX) {
+			wpa_printf(MSG_WARNING, "EAP-AKA': The server did not "
+				   "duplicate the selected KDF");
+			return 0;
+		}
+
+		/* TODO: should check that the list is identical to the one
+		 * used in the previous Challenge message apart from the added
+		 * entry in the beginning. */
+	}
+
+	for (i = data->kdf ? 1 : 0; i < attr->kdf_count; i++) {
+		for (j = i + 1; j < attr->kdf_count; j++) {
+			if (attr->kdf[i] == attr->kdf[j]) {
+				wpa_printf(MSG_WARNING, "EAP-AKA': The server "
+					   "included a duplicated KDF");
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+#endif /* EAP_AKA_PRIME */
+
+
 static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 						 struct eap_aka_data *data,
 						 u8 id,
@@ -671,6 +758,40 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 		return eap_aka_client_error(data, id,
 					    EAP_AKA_UNABLE_TO_PROCESS_PACKET);
 	}
+
+#ifdef EAP_AKA_PRIME
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		if (!attr->kdf_input || attr->kdf_input_len == 0) {
+			wpa_printf(MSG_WARNING, "EAP-AKA': Challenge message "
+				   "did not include non-empty AT_KDF_INPUT");
+			/* Fail authentication as if AUTN had been incorrect */
+			return eap_aka_authentication_reject(data, id);
+		}
+		os_free(data->network_name);
+		data->network_name = os_malloc(attr->kdf_input_len);
+		if (data->network_name == NULL) {
+			wpa_printf(MSG_WARNING, "EAP-AKA': No memory for "
+				   "storing Network Name");
+			return eap_aka_authentication_reject(data, id);
+		}
+		os_memcpy(data->network_name, attr->kdf_input,
+			  attr->kdf_input_len);
+		data->network_name_len = attr->kdf_input_len;
+		wpa_hexdump_ascii(MSG_DEBUG, "EAP-AKA': Network Name "
+				  "(AT_KDF_INPUT)",
+				  data->network_name, data->network_name_len);
+		/* TODO: check Network Name per 3GPP.33.402 */
+
+		if (!eap_aka_prime_kdf_valid(data, attr))
+			return eap_aka_authentication_reject(data, id);
+
+		if (attr->kdf[0] != EAP_AKA_PRIME_KDF)
+			return eap_aka_prime_kdf_neg(data, id, attr);
+
+		data->kdf = EAP_AKA_PRIME_KDF;
+		wpa_printf(MSG_DEBUG, "EAP-AKA': KDF %d selected", data->kdf);
+	}
+#endif /* EAP_AKA_PRIME */
 
 	data->reauth = 0;
 	if (!attr->mac || !attr->rand || !attr->autn) {
@@ -1020,7 +1141,8 @@ static struct wpabuf * eap_aka_process(struct eap_sm *sm, void *priv,
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Subtype=%d", subtype);
 	pos += 2; /* Reserved */
 
-	if (eap_sim_parse_attr(pos, wpabuf_head_u8(reqData) + len, &attr, 1,
+	if (eap_sim_parse_attr(pos, wpabuf_head_u8(reqData) + len, &attr,
+			       data->eap_method == EAP_TYPE_AKA_PRIME ? 2 : 1,
 			       0)) {
 		res = eap_aka_client_error(data, id,
 					   EAP_AKA_UNABLE_TO_PROCESS_PACKET);

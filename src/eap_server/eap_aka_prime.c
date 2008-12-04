@@ -52,6 +52,9 @@ struct eap_aka_data {
 	struct wpabuf *id_msgs;
 	int pending_id;
 	u8 eap_method;
+	u8 *network_name;
+	size_t network_name_len;
+	u16 kdf;
 };
 
 
@@ -130,6 +133,13 @@ static void * eap_aka_prime_init(struct eap_sm *sm)
 		return NULL;
 
 	data->eap_method = EAP_TYPE_AKA_PRIME;
+	data->network_name = os_malloc(3);
+	if (data->network_name == NULL) {
+		os_free(data);
+		return NULL;
+	}
+	os_memcpy(data->network_name, "FOO", 3); /* FIX: 3GPP.24.302 */
+	data->network_name_len = 3;
 
 	data->state = IDENTITY;
 	eap_aka_determine_identity(sm, data, 1, 0);
@@ -145,6 +155,7 @@ static void eap_aka_reset(struct eap_sm *sm, void *priv)
 	os_free(data->next_pseudonym);
 	os_free(data->next_reauth_id);
 	wpabuf_free(data->id_msgs);
+	os_free(data->network_name);
 	os_free(data);
 }
 
@@ -357,6 +368,18 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 	wpa_printf(MSG_DEBUG, "   AT_RAND");
 	eap_sim_msg_add(msg, EAP_SIM_AT_RAND, 0, data->rand, EAP_AKA_RAND_LEN);
 	eap_sim_msg_add(msg, EAP_SIM_AT_AUTN, 0, data->autn, EAP_AKA_AUTN_LEN);
+	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+		if (data->kdf) {
+			/* Add the selected KDF into the beginning */
+			eap_sim_msg_add(msg, EAP_SIM_AT_KDF, data->kdf,
+					NULL, 0);
+		}
+		eap_sim_msg_add(msg, EAP_SIM_AT_KDF, EAP_AKA_PRIME_KDF,
+				NULL, 0);
+		eap_sim_msg_add(msg, EAP_SIM_AT_KDF_INPUT,
+				data->network_name_len,
+				data->network_name, data->network_name_len);
+	}
 
 	if (eap_aka_build_encr(sm, data, msg, 0, NULL)) {
 		eap_sim_msg_free(msg);
@@ -738,6 +761,25 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Processing Challenge");
 
+	if (data->eap_method == EAP_TYPE_AKA_PRIME &&
+	    attr->kdf_count == 1 && attr->mac == NULL) {
+		if (attr->kdf[0] != EAP_AKA_PRIME_KDF) {
+			wpa_printf(MSG_WARNING, "EAP-AKA': Peer selected "
+				   "unknown KDF");
+			data->notification =
+				EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
+			eap_aka_state(data, NOTIFICATION);
+			return;
+		}
+
+		data->kdf = attr->kdf[0];
+
+		/* Allow negotiation to continue with the selected KDF by
+		 * sending another Challenge message */
+		wpa_printf(MSG_DEBUG, "EAP-AKA': KDF %d selected", data->kdf);
+		return;
+	}
+
 	if (attr->checkcode &&
 	    eap_aka_verify_checkcode(data, attr->checkcode,
 				     attr->checkcode_len)) {
@@ -1028,7 +1070,9 @@ static void eap_aka_process(struct eap_sm *sm, void *priv,
 		return;
 	}
 
-	if (eap_sim_parse_attr(pos, end, &attr, 1, 0)) {
+	if (eap_sim_parse_attr(pos, end, &attr,
+			       data->eap_method == EAP_TYPE_AKA_PRIME ? 2 : 1,
+			       0)) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: Failed to parse attributes");
 		data->notification = EAP_SIM_GENERAL_FAILURE_BEFORE_AUTH;
 		eap_aka_state(data, NOTIFICATION);

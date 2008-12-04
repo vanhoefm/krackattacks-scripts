@@ -446,7 +446,7 @@ void eap_aka_prime_derive_ck_ik_prime(u8 *ck, u8 *ik, const u8 *sqn_ak,
 	 * AKA procedure with network name passed in there and option to use
 	 * AMF separation bit = 1 (3GPP TS 33.401). */
 
-	/* Change Request 334.02 CR 0033 to version 8.1.1 from
+	/* Change Request 33.402 CR 0033 to version 8.1.1 from
 	 * 3GPP TSG-SA WG3 Meeting #53 in September 2008:
 	 *
 	 * CK' || IK' = HMAC-SHA-256(Key, S)

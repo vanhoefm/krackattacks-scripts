@@ -61,6 +61,8 @@ struct ieee802_11_elems {
 	u8 ht_operation_len;
 	u8 *assoc_comeback;
 	u8 assoc_comeback_len;
+	u8 *vendor_ht_cap;
+	u8 vendor_ht_cap_len;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;

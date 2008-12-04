@@ -89,6 +89,21 @@ static int ieee802_11_parse_vendor_specific(u8 *pos, size_t elen,
 		}
 		break;
 
+	case OUI_BROADCOM:
+		switch (pos[3]) {
+		case VENDOR_HT_CAPAB_OUI_TYPE:
+			elems->vendor_ht_cap = pos;
+			elems->vendor_ht_cap_len = elen;
+			break;
+		default:
+			wpa_printf(MSG_MSGDUMP, "Unknown Broadcom "
+				   "information element ignored "
+				   "(type=%d len=%lu)\n",
+				   pos[3], (unsigned long) elen);
+			return -1;
+		}
+		break;
+
 	default:
 		wpa_printf(MSG_MSGDUMP, "unknown vendor specific information "
 			   "element ignored (vendor OUI %02x:%02x:%02x "

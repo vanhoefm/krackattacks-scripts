@@ -578,4 +578,9 @@ struct mimo_pwr_save_action {
 #define WME_TSPEC_DIRECTION_DOWNLINK 1
 #define WME_TSPEC_DIRECTION_BI_DIRECTIONAL 3
 
+
+#define OUI_BROADCOM 0x00904c /* Broadcom (Epigram) */
+
+#define VENDOR_HT_CAPAB_OUI_TYPE 0x33 /* 00-90-4c:0x33 */
+
 #endif /* IEEE802_11_DEFS_H */

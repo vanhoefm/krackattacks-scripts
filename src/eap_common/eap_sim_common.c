@@ -903,6 +903,16 @@ int eap_sim_parse_attr(const u8 *start, const u8 *end,
 			attr->kdf[attr->kdf_count] = WPA_GET_BE16(apos);
 			attr->kdf_count++;
 			break;
+		case EAP_SIM_AT_BIDDING:
+			wpa_printf(MSG_DEBUG, "EAP-AKA: AT_BIDDING");
+			if (alen != 2) {
+				wpa_printf(MSG_INFO, "EAP-AKA: Invalid "
+					   "AT_BIDDING (len %lu)",
+					   (unsigned long) alen);
+				return -1;
+			}
+			attr->bidding = apos;
+			break;
 #endif /* EAP_AKA_PRIME */
 		default:
 			if (pos[0] < 128) {

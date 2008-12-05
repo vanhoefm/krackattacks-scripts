@@ -349,5 +349,6 @@ void eap_set_config_blob(struct eap_sm *sm, struct wpa_config_blob *blob);
 const struct wpa_config_blob *
 eap_get_config_blob(struct eap_sm *sm, const char *name);
 void eap_notify_pending(struct eap_sm *sm);
+int eap_allowed_method(struct eap_sm *sm, int vendor, u32 method);
 
 #endif /* EAP_I_H */

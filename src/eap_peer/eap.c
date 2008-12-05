@@ -106,7 +106,7 @@ static void eap_deinit_prev_method(struct eap_sm *sm, const char *txt)
  * @method: EAP type
  * Returns: 1 = allowed EAP method, 0 = not allowed
  */
-static int eap_allowed_method(struct eap_sm *sm, int vendor, u32 method)
+int eap_allowed_method(struct eap_sm *sm, int vendor, u32 method)
 {
 	struct eap_peer_config *config = eap_get_config(sm);
 	int i;

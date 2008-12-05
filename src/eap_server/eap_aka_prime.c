@@ -396,6 +396,35 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 		eap_sim_msg_add(msg, EAP_SIM_AT_RESULT_IND, 0, NULL, 0);
 	}
 
+#ifdef EAP_AKA_PRIME
+	if (data->eap_method == EAP_TYPE_AKA) {
+		u16 flags = 0;
+		int i;
+		int aka_prime_preferred = 0;
+
+		i = 0;
+		while (sm->user && i < EAP_MAX_METHODS &&
+		       (sm->user->methods[i].vendor != EAP_VENDOR_IETF ||
+			sm->user->methods[i].method != EAP_TYPE_NONE)) {
+			if (sm->user->methods[i].vendor == EAP_VENDOR_IETF) {
+				if (sm->user->methods[i].method ==
+				    EAP_TYPE_AKA)
+					break;
+				if (sm->user->methods[i].method ==
+				    EAP_TYPE_AKA_PRIME) {
+					aka_prime_preferred = 1;
+					break;
+				}
+			}
+			i++;
+		}
+
+		if (aka_prime_preferred)
+			flags |= EAP_AKA_BIDDING_FLAG_D;
+		eap_sim_msg_add(msg, EAP_SIM_AT_BIDDING, flags, NULL, 0);
+	}
+#endif /* EAP_AKA_PRIME */
+
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
 	return eap_sim_msg_finish(msg, data->k_aut, NULL, 0);

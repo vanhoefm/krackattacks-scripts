@@ -791,6 +791,18 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 		data->kdf = EAP_AKA_PRIME_KDF;
 		wpa_printf(MSG_DEBUG, "EAP-AKA': KDF %d selected", data->kdf);
 	}
+
+	if (data->eap_method == EAP_TYPE_AKA && attr->bidding) {
+		u16 flags = WPA_GET_BE16(attr->bidding);
+		if ((flags & EAP_AKA_BIDDING_FLAG_D) &&
+		    eap_allowed_method(sm, EAP_VENDOR_IETF,
+				       EAP_TYPE_AKA_PRIME)) {
+			wpa_printf(MSG_WARNING, "EAP-AKA: Bidding down from "
+				   "AKA' to AKA detected");
+			/* Fail authentication as if AUTN had been incorrect */
+			return eap_aka_authentication_reject(data, id);
+		}
+	}
 #endif /* EAP_AKA_PRIME */
 
 	data->reauth = 0;

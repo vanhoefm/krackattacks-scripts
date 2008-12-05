@@ -138,6 +138,7 @@ void eap_aka_prime_derive_ck_ik_prime(u8 *ck, u8 *ik, const u8 *sqn_ak,
 #define EAP_SIM_AT_NEXT_REAUTH_ID 133 /* only encrypted */
 #define EAP_SIM_AT_CHECKCODE 134 /* only AKA */
 #define EAP_SIM_AT_RESULT_IND 135
+#define EAP_SIM_AT_BIDDING 136
 
 /* AT_NOTIFICATION notification code values */
 #define EAP_SIM_GENERAL_FAILURE_AFTER_AUTH 0
@@ -148,6 +149,10 @@ void eap_aka_prime_derive_ck_ik_prime(u8 *ck, u8 *ik, const u8 *sqn_ak,
 
 /* EAP-AKA' AT_KDF Key Derivation Function values */
 #define EAP_AKA_PRIME_KDF 1
+
+/* AT_BIDDING flags */
+#define EAP_AKA_BIDDING_FLAG_D 0x8000
+
 
 enum eap_sim_id_req {
 	NO_ID_REQ, ANY_ID, FULLAUTH_ID, PERMANENT_ID
@@ -160,6 +165,7 @@ struct eap_sim_attrs {
 	const u8 *nonce_mt, *identity, *res, *auts;
 	const u8 *checkcode;
 	const u8 *kdf_input;
+	const u8 *bidding;
 	size_t num_chal, version_list_len, encr_data_len;
 	size_t next_pseudonym_len, next_reauth_id_len, identity_len, res_len;
 	size_t res_len_bits;

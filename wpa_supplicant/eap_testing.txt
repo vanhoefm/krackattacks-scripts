@@ -99,16 +99,16 @@ EAP-PSK			+7  -   -   -   -   +   -   -   -   -   +   -
 EAP-PAX			-   -   -   -   -   +   -   -   -   -   +   -
 EAP-SAKE		-   -   -   -   -   -   -   -   -   -   +   -
 EAP-GPSK		-   -   -   -   -   -   -   -   -   -   +   -
-EAP-FAST/MSCHAPv2(prov)	-   -   -   +   -   -   -   -   -   +   +   +
-EAP-FAST/GTC(auth)	-   -   -   +   -   -   -   -   -   +   +   +
-EAP-FAST/MSCHAPv2(aprov)-   -   -   -   -   -   -   -   -   -   +   +
-EAP-FAST/GTC(aprov)	-   -   -   -   -   -   -   -   -   -   +   +
-EAP-FAST/MD5(aprov)	-   -   -   -   -   -   -   -   -   -   +   -
+EAP-FAST/MSCHAPv2(prov)	-   -   -   +   -   +   -   -   -   +   +   +
+EAP-FAST/GTC(auth)	-   -   -   +   -   +   -   -   -   +   +   +
+EAP-FAST/MSCHAPv2(aprov)-   -   -   -   -   +   -   -   -   -   +   +
+EAP-FAST/GTC(aprov)	-   -   -   -   -   +   -   -   -   -   +   +
+EAP-FAST/MD5(aprov)	-   -   -   -   -   +   -   -   -   -   +   -
 EAP-FAST/TLS(aprov)	-   -   -   -   -   -   -   -   -   -   +   +
 EAP-FAST/SIM(aprov)	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-FAST/AKA(aprov)	-   -   -   -   -   -   -   -   -   -   +   -
-EAP-FAST/MSCHAPv2(auth)	-   -   -   -   -   -   -   -   -   -   +   +
-EAP-FAST/MD5(auth)	-   -   -   -   -   -   -   -   -   -   +   -
+EAP-FAST/MSCHAPv2(auth)	-   -   -   -   -   +   -   -   -   -   +   +
+EAP-FAST/MD5(auth)	-   -   -   -   -   +   -   -   -   -   +   -
 EAP-FAST/TLS(auth)	-   -   -   -   -   -   -   -   -   -   +   +
 EAP-FAST/SIM(auth)	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-FAST/AKA(auth)	-   -   -   -   -   -   -   -   -   -   +   -

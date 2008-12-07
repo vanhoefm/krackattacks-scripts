@@ -94,6 +94,7 @@ int eap_sim_verify_mac(const u8 *k_aut, const struct wpabuf *req,
 void eap_sim_add_mac(const u8 *k_aut, const u8 *msg, size_t msg_len, u8 *mac,
 		     const u8 *extra, size_t extra_len);
 
+#ifdef EAP_AKA_PRIME
 void eap_aka_prime_derive_keys(const u8 *identity, size_t identity_len,
 			       const u8 *ik, const u8 *ck, u8 *k_encr,
 			       u8 *k_aut, u8 *k_re, u8 *msk, u8 *emsk);
@@ -109,6 +110,32 @@ void eap_sim_add_mac_sha256(const u8 *k_aut, const u8 *msg, size_t msg_len,
 void eap_aka_prime_derive_ck_ik_prime(u8 *ck, u8 *ik, const u8 *sqn_ak,
 				      const u8 *network_name,
 				      size_t network_name_len);
+#else /* EAP_AKA_PRIME */
+static inline void eap_aka_prime_derive_keys(const u8 *identity,
+					     size_t identity_len,
+					     const u8 *ik, const u8 *ck,
+					     u8 *k_encr, u8 *k_aut, u8 *k_re,
+					     u8 *msk, u8 *emsk)
+{
+}
+
+static inline int eap_aka_prime_derive_keys_reauth(const u8 *k_re, u16 counter,
+						   const u8 *identity,
+						   size_t identity_len,
+						   const u8 *nonce_s, u8 *msk,
+						   u8 *emsk)
+{
+	return -1;
+}
+
+static inline int eap_sim_verify_mac_sha256(const u8 *k_aut,
+					    const struct wpabuf *req,
+					    const u8 *mac, const u8 *extra,
+					    size_t extra_len)
+{
+	return -1;
+}
+#endif /* EAP_AKA_PRIME */
 
 
 /* EAP-SIM/AKA Attributes (0..127 non-skippable) */

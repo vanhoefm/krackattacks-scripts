@@ -94,6 +94,7 @@ EAP-TTLS/EAP-GPSK	-   -   -   -   -   -   -   -   -   -   +   -
 EAP-TTLS + TNC		-   -   -   -   -   +   -   -   -   -   +   -
 EAP-SIM			+   -   -   ?   -   +   -   ?   -   -   +   -
 EAP-AKA			-   -   -   -   -   +   -   -   -   -   +   -
+EAP-AKA'		-   -   -   -   -   -   -   -   -   -   +   -
 EAP-PSK			+7  -   -   -   -   +   -   -   -   -   +   -
 EAP-PAX			-   -   -   -   -   +   -   -   -   -   +   -
 EAP-SAKE		-   -   -   -   -   -   -   -   -   -   +   -

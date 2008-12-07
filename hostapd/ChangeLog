@@ -15,6 +15,7 @@ ChangeLog for hostapd
 	  information (added if ieee80211d=1 in configuration)
 	* fixed WEP authentication (both Open System and Shared Key) with
 	  mac80211
+	* added support for EAP-AKA' (draft-arkko-eap-aka-kdf)
 
 2008-11-23 - v0.6.6
 	* added a new configuration option, wpa_ptk_rekey, that can be used to

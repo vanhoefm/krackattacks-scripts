@@ -214,8 +214,6 @@ endif
 
 ifdef CONFIG_EAP_AKA_PRIME
 CFLAGS += -DEAP_AKA_PRIME
-OBJS += ../src/eap_server/eap_aka_prime.o
-CONFIG_EAP_SIM_COMMON=y
 endif
 
 ifdef CONFIG_EAP_SIM_COMMON

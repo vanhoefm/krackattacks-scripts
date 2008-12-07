@@ -80,6 +80,10 @@ CONFIG_EAP_TTLS=y
 # EAP-AKA for the integrated EAP server
 #CONFIG_EAP_AKA=y
 
+# EAP-AKA' for the integrated EAP server
+# This requires CONFIG_EAP_AKA to be enabled, too.
+#CONFIG_EAP_AKA_PRIME=y
+
 # EAP-PAX for the integrated EAP server
 #CONFIG_EAP_PAX=y
 

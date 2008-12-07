@@ -1218,12 +1218,11 @@ void tncc_deinit(struct tncc_data *tncc)
 }
 
 
-static struct wpabuf * tncc_build_soh(void)
+static struct wpabuf * tncc_build_soh(int ver)
 {
 	struct wpabuf *buf;
 	u8 *tlv_len, *tlv_len2, *outer_len, *inner_len, *ssoh_len, *end;
 	u8 correlation_id[24];
-	int ver = 2;
 	/* TODO: get correct name */
 	char *machinename = "wpa_supplicant@w1.fi";
 
@@ -1332,7 +1331,7 @@ static struct wpabuf * tncc_build_soh(void)
 }
 
 
-struct wpabuf * tncc_process_soh_request(const u8 *data, size_t len)
+struct wpabuf * tncc_process_soh_request(int ver, const u8 *data, size_t len)
 {
 	const u8 *pos;
 
@@ -1365,5 +1364,5 @@ struct wpabuf * tncc_process_soh_request(const u8 *data, size_t len)
 
 	wpa_printf(MSG_DEBUG, "TNC: SoH Request TLV received");
 
-	return tncc_build_soh();
+	return tncc_build_soh(2);
 }

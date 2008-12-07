@@ -119,9 +119,15 @@ static int eap_peap_parse_phase1(struct eap_peap_data *data,
 	}
 
 #ifdef EAP_TNC
-	if (os_strstr(phase1, "tnc=soh")) {
+	if (os_strstr(phase1, "tnc=soh2")) {
+		data->soh = 2;
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: SoH version 2 enabled");
+	} else if (os_strstr(phase1, "tnc=soh1")) {
 		data->soh = 1;
-		wpa_printf(MSG_DEBUG, "EAP-PEAP: SoH enabled");
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: SoH version 1 enabled");
+	} else if (os_strstr(phase1, "tnc=soh")) {
+		data->soh = 2;
+		wpa_printf(MSG_DEBUG, "EAP-PEAP: SoH version 2 enabled");
 	}
 #endif /* EAP_TNC */
 
@@ -668,7 +674,8 @@ static int eap_peap_phase2_request(struct eap_sm *sm,
 				struct wpabuf *buf;
 				wpa_printf(MSG_DEBUG,
 					   "EAP-PEAP: SoH EAP Extensions");
-				buf = tncc_process_soh_request(epos, eleft);
+				buf = tncc_process_soh_request(data->soh,
+							       epos, eleft);
 				if (buf) {
 					*resp = eap_msg_alloc(
 						EAP_VENDOR_MICROSOFT, 0x21,

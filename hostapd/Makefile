@@ -125,6 +125,10 @@ ifdef CONFIG_DRIVER_NL80211
 CFLAGS += -DCONFIG_DRIVER_NL80211
 OBJS += driver_nl80211.o radiotap.o
 LIBS += -lnl
+ifdef CONFIG_LIBNL20
+LIBS += -lnl-genl
+CFLAGS += -DCONFIG_LIBNL20
+endif
 endif
 
 ifdef CONFIG_DRIVER_BSD

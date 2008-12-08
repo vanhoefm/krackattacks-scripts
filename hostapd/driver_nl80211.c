@@ -40,6 +40,12 @@
 #include "radiotap.h"
 #include "radiotap_iter.h"
 
+#ifdef CONFIG_LIBNL20
+/* libnl 2.0 compatibility code */
+#define nl_handle_alloc_cb nl_socket_alloc_cb
+#define nl_handle_destroy nl_socket_free
+#endif /* CONFIG_LIBNL20 */
+
 enum ieee80211_msg_type {
 	ieee80211_msg_normal = 0,
 	ieee80211_msg_tx_callback_ack = 1,
@@ -2044,11 +2050,18 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 		return -1;
 	}
 
+#ifdef CONFIG_LIBNL20
+	if (genl_ctrl_alloc_cache(drv->nl_handle, &drv->nl_cache) < 0) {
+		printf("Failed to allocate generic netlink cache.\n");
+		return -1;
+	}
+#else /* CONFIG_LIBNL20 */
 	drv->nl_cache = genl_ctrl_alloc_cache(drv->nl_handle);
 	if (!drv->nl_cache) {
 		printf("Failed to allocate generic netlink cache.\n");
 		return -1;
 	}
+#endif /* CONFIG_LIBNL20 */
 
 	drv->nl80211 = genl_ctrl_search_by_name(drv->nl_cache, "nl80211");
 	if (!drv->nl80211) {

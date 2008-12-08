@@ -66,7 +66,7 @@
 
     <para>Before wpa_supplicant can do its work, the network interface
     must be available.  That means that the physical device must be
-    present and enabled, and the driver for the device must have be
+    present and enabled, and the driver for the device must be
     loaded. The daemon will exit immediately if the device is not already
     available.</para>
 

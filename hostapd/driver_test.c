@@ -449,9 +449,15 @@ static int test_driver_new_sta(struct test_driver_data *drv,
 		if (sta == NULL)
 			return -1;
 	}
+	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS);
 
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {
+			if (hapd->conf->wps_state) {
+				sta->flags |= WLAN_STA_WPS;
+				goto skip_wpa_check;
+			}
+
 			printf("test_driver: no IE from STA\n");
 			return -1;
 		}
@@ -471,6 +477,7 @@ static int test_driver_new_sta(struct test_driver_data *drv,
 			return -1;
 		}
 	}
+skip_wpa_check:
 
 	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
 	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;

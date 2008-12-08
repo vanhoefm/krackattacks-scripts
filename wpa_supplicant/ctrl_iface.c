@@ -28,6 +28,7 @@
 #include "eap_peer/eap.h"
 #include "ieee802_11_defs.h"
 #include "wps_supplicant.h"
+#include "wps/wps.h"
 
 
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
@@ -614,6 +615,34 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 	return pos;
 }
 
+static char * wpa_supplicant_wps_ie_txt(char *pos, char *end,
+					const struct wpa_scan_res *res)
+{
+#ifdef CONFIG_WPS
+	struct wpabuf *wps_ie;
+	int ret;
+	const char *txt;
+
+	wps_ie = wpa_scan_get_vendor_ie_multi(res, WPS_IE_VENDOR_TYPE);
+	if (wps_ie == NULL)
+		return pos;
+
+	if (wps_is_selected_pbc_registrar(wps_ie))
+		txt = "[WPS-PBC]";
+	else if (wps_is_selected_pin_registrar(wps_ie))
+		txt = "[WPS-PIN]";
+	else
+		txt = "[WPS]";
+
+	ret = os_snprintf(pos, end - pos, "%s", txt);
+	if (ret >= 0 && ret < end - pos)
+		pos += ret;
+	wpabuf_free(wps_ie);
+#endif /* CONFIG_WPS */
+
+	return pos;
+}
+
 
 /* Format one result on one text line into a buffer. */
 static int wpa_supplicant_ctrl_iface_scan_result(
@@ -637,6 +666,7 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 	ie2 = wpa_scan_get_ie(res, WLAN_EID_RSN);
 	if (ie2)
 		pos = wpa_supplicant_ie_txt(pos, end, "WPA2", ie2, 2 + ie2[1]);
+	pos = wpa_supplicant_wps_ie_txt(pos, end, res);
 	if (!ie && !ie2 && res->caps & IEEE80211_CAP_PRIVACY) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
 		if (ret < 0 || ret >= end - pos)
@@ -1400,6 +1430,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	ie2 = wpa_scan_get_ie(bss, WLAN_EID_RSN);
 	if (ie2)
 		pos = wpa_supplicant_ie_txt(pos, end, "WPA2", ie2, 2 + ie2[1]);
+	pos = wpa_supplicant_wps_ie_txt(pos, end, bss);
 	if (!ie && !ie2 && bss->caps & IEEE80211_CAP_PRIVACY) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
 		if (ret < 0 || ret >= end - pos)

@@ -23,10 +23,9 @@
 #include <netlink/genl/ctrl.h>
 #include <netlink/msg.h>
 #include <netlink/attr.h>
-#include <linux/nl80211.h>
+#include "nl80211_copy.h"
 #include <net/if.h>
-#include <linux/if_packet.h>
-#include <linux/if_ether.h>   /* The L2 protocols */
+#include <netpacket/packet.h>
 #include "wireless_copy.h"
 #include <net/if_arp.h>
 
@@ -387,7 +386,6 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 			      int mode)
 {
-#ifdef NL80211_ATTR_BSS_BASIC_RATES
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 	u8 rates[NL80211_MAX_SUPP_RATES];
@@ -412,9 +410,6 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
-#else /* NL80211_ATTR_BSS_BASIC_RATES */
-	return -1;
-#endif /* NL80211_ATTR_BSS_BASIC_RATES */
 }
 
 
@@ -488,7 +483,6 @@ static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 /* Set kernel driver on given frequency (MHz) */
 static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 {
-#ifdef NL80211_ATTR_WIPHY_FREQ
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 
@@ -525,22 +519,6 @@ static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
 		return 0;
  nla_put_failure:
 	return -1;
-#else /* NL80211_ATTR_WIPHY_FREQ */
-	struct i802_driver_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
-	iwr.u.freq.m = freq->freq;
-	iwr.u.freq.e = 6;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWFREQ, &iwr) < 0) {
-		perror("ioctl[SIOCSIWFREQ]");
-		return -1;
-	}
-
-	return 0;
-#endif /* NL80211_ATTR_WIPHY_FREQ */
 }
 
 
@@ -853,13 +831,11 @@ static int i802_sta_add2(const char *ifname, void *priv,
 		    params->listen_interval);
 
 #ifdef CONFIG_IEEE80211N
-#ifdef NL80211_ATTR_HT_CAPABILITY
 	if (params->ht_capabilities) {
 		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
 			params->ht_capabilities->length,
 			&params->ht_capabilities->data);
 	}
-#endif /* NL80211_ATTR_HT_CAPABILITY */
 #endif /* CONFIG_IEEE80211N */
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -954,7 +930,6 @@ static int i802_set_regulatory_domain(void *priv, unsigned int rd)
 static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 				    int cw_min, int cw_max, int burst_time)
 {
-#ifdef NL80211_ATTR_WIPHY_TXQ_PARAMS
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 	struct nlattr *txq, *params;
@@ -993,9 +968,6 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 		return 0;
  nla_put_failure:
 	return -1;
-#else /* NL80211_ATTR_WIPHY_TXQ_PARAMS */
-	return -1;
-#endif /* NL80211_ATTR_WIPHY_TXQ_PARAMS */
 }
 
 
@@ -1274,7 +1246,6 @@ static int i802_set_dtim_period(const char *iface, void *priv, int value)
 
 static int i802_set_bss(void *priv, int cts, int preamble, int slot)
 {
-#ifdef NL80211_CMD_SET_BSS
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 
@@ -1298,9 +1269,6 @@ static int i802_set_bss(void *priv, int cts, int preamble, int slot)
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
-#else /* NL80211_CMD_SET_BSS */
-	return -1;
-#endif /* NL80211_CMD_SET_BSS */
 }
 
 
@@ -1380,9 +1348,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_NO_IBSS] = { .type = NLA_FLAG },
 		[NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
-#ifdef NL80211_FREQUENCY_ATTR_MAX_TX_POWER
 		[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
-#endif /* NL80211_FREQUENCY_ATTR_MAX_TX_POWER */
 	};
 
 	struct nlattr *tb_rate[NL80211_BITRATE_ATTR_MAX + 1];
@@ -1473,12 +1439,10 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 				mode->channels[idx].flag |=
 					HOSTAPD_CHAN_RADAR;
 
-#ifdef NL80211_FREQUENCY_ATTR_MAX_TX_POWER
 			if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
 			    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
 				mode->channels[idx].max_tx_power =
 					nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
-#endif /* NL80211_FREQUENCY_ATTR_MAX_TX_POWER */
 
 			idx++;
 		}

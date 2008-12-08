@@ -18,7 +18,7 @@
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
-#include <linux/nl80211.h>
+#include "nl80211_copy.h"
 #ifdef CONFIG_CLIENT_MLME
 #include <netpacket/packet.h>
 #include <linux/if_ether.h>

@@ -375,10 +375,10 @@ struct hostapd_config {
 	} bridge_packets;
 
 #ifdef CONFIG_IEEE80211N
-	int ieee80211n;
 	int ht_op_mode_fixed;
 	u16 ht_capab;
 #endif /* CONFIG_IEEE80211N */
+	int ieee80211n;
 	int secondary_channel;
 };
 

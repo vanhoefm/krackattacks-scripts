@@ -24,8 +24,9 @@ CONFIG_DRIVER_HOSTAP=y
 
 # Driver interface for drivers using the nl80211 kernel interface
 #CONFIG_DRIVER_NL80211=y
-# driver_nl80211.c requires a rather new libnl, probably not
-# shipped with your distribution yet
+# driver_nl80211.c requires a rather new libnl (version 1.1) which may not be
+# shipped with your distribution yet. If that is the case, you need to build
+# newer libnl version and point the hostapd build to use it.
 #LIBNL=/usr/src/libnl
 #CFLAGS += -I$(LIBNL)/include
 #LIBS += -L$(LIBNL)/lib

@@ -1790,6 +1790,12 @@ static int wpa_supplicant_init_iface2(struct wpa_supplicant *wpa_s)
 	if (wpa_supplicant_driver_init(wpa_s) < 0)
 		return -1;
 
+	if (wpa_s->conf->alpha2[0] && wpa_s->conf->alpha2[1] &&
+	    wpa_drv_set_country(wpa_s, wpa_s->conf->alpha2)) {
+		wpa_printf(MSG_DEBUG, "Failed to set country");
+		return -1;
+	}
+
 	wpa_sm_set_own_addr(wpa_s->wpa, wpa_s->own_addr);
 
 	if (wpas_wps_init(wpa_s))

@@ -676,6 +676,14 @@ static inline int wpa_drv_set_bssid(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_set_country(struct wpa_supplicant *wpa_s,
+				      const char *alpha2)
+{
+	if (wpa_s->driver->set_country)
+		return wpa_s->driver->set_country(wpa_s->drv_priv, alpha2);
+	return 0;
+}
+
 static inline int wpa_drv_send_mlme(struct wpa_supplicant *wpa_s,
 				    const u8 *data, size_t data_len)
 {

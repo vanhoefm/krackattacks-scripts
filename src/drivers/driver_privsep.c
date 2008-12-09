@@ -774,7 +774,8 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	NULL /* send_ft_action */,
 	wpa_driver_privsep_get_scan_results2,
 	NULL /* set_probe_req_ie */,
-	wpa_driver_privsep_set_mode
+	wpa_driver_privsep_set_mode,
+	NULL /* set_country */
 };
 
 

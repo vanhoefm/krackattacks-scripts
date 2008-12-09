@@ -2872,5 +2872,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* send_ft_action */,
 	wpa_driver_ndis_get_scan_results,
 	NULL /* set_probe_req_ie */,
-	NULL /* set_mode */
+	NULL /* set_mode */,
+	NULL /* set_country */
 };

@@ -945,6 +945,17 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_mode)(void *priv, int mode);
+
+	/**
+	 * set_country - Set country
+	 * @priv: Private driver interface data
+	 * @alpha2: country to which to switch to
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function is for drivers which support some form
+	 * of setting a regulatory domain.
+	 */
+	int (*set_country)(void *priv, const char *alpha2);
 };
 
 /* Function to check whether a driver is for wired connections */

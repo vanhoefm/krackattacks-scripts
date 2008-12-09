@@ -958,6 +958,41 @@ static int wpa_driver_nl80211_set_ifflags(struct wpa_driver_nl80211_data *drv,
 }
 
 
+/**
+ * wpa_driver_nl80211_set_country - ask nl80211 to set the regulatory domain
+ * @priv: driver_nl80211 private data
+ * @alpha2_arg: country to which to switch to
+ * Returns: 0 on success, -1 on failure
+ *
+ * This asks nl80211 to set the regulatory domain for given
+ * country ISO / IEC alpha2.
+ */
+static int wpa_driver_nl80211_set_country(void *priv, const char *alpha2_arg)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	char alpha2[3];
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto nla_put_failure;
+
+	alpha2[0] = alpha2_arg[0];
+	alpha2[1] = alpha2_arg[1];
+	alpha2[2] = '\0';
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_REQ_SET_REG, 0);
+
+	NLA_PUT_STRING(msg, NL80211_ATTR_REG_ALPHA2, alpha2);
+	if (send_and_recv_msgs(drv, msg, NULL, NULL))
+		return -EINVAL;
+	return 0;
+nla_put_failure:
+	return -EINVAL;
+}
+
+
 #ifdef CONFIG_CLIENT_MLME
 
 static int nl80211_set_vif(struct wpa_driver_nl80211_data *drv,
@@ -2858,6 +2893,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.flush_pmkid = wpa_driver_nl80211_flush_pmkid,
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
+	.set_country = wpa_driver_nl80211_set_country,
 #ifdef CONFIG_CLIENT_MLME
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 	.set_channel = wpa_driver_nl80211_set_channel,

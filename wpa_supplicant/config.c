@@ -1049,8 +1049,8 @@ static int wpa_config_parse_password(const struct parse_data *data,
 				   "password.", line);
 			return -1;
 		}
-		wpa_hexdump_ascii(MSG_MSGDUMP, data->name,
-				  (u8 *) tmp, res_len);
+		wpa_hexdump_ascii_key(MSG_MSGDUMP, data->name,
+				      (u8 *) tmp, res_len);
 
 		os_free(ssid->eap.password);
 		ssid->eap.password = (u8 *) tmp;
@@ -1321,7 +1321,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(eap) },
 	{ STR_LENe(identity) },
 	{ STR_LENe(anonymous_identity) },
-	{ FUNC(password) },
+	{ FUNC_KEY(password) },
 	{ STRe(ca_cert) },
 	{ STRe(ca_path) },
 	{ STRe(client_cert) },

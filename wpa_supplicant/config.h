@@ -254,12 +254,12 @@ struct wpa_config {
 	u8 uuid[16];
 
 	/**
-	 * alpha2 - Country code
+	 * country - Country code
 	 *
 	 * This is the ISO/IEC alpha2 country code for which we are operating
 	 * in
 	 */
-	char alpha2[2];
+	char country[2];
 };
 
 

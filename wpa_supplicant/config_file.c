@@ -276,10 +276,10 @@ static int wpa_config_process_country(struct wpa_config *config, char *pos)
 		wpa_printf(MSG_DEBUG, "Invalid country set");
 		return -1;
 	}
-	config->alpha2[0] = pos[0];
-	config->alpha2[1] = pos[1];
+	config->country[0] = pos[0];
+	config->country[1] = pos[1];
 	wpa_printf(MSG_DEBUG, "country='%c%c'",
-		   config->alpha2[0], config->alpha2[1]);
+		   config->country[0], config->country[1]);
 	return 0;
 }
 
@@ -891,9 +891,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "uuid=%s\n", buf);
 	}
 #endif /* CONFIG_WPS */
-	if (config->alpha2[0] && config->alpha2[1]) {
+	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",
-			config->alpha2[0], config->alpha2[1]);
+			config->country[0], config->country[1]);
 	}
 }
 

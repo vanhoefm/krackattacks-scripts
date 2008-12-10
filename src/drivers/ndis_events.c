@@ -281,7 +281,7 @@ static void ndis_events_media_specific(struct ndis_events_data *events,
 		SafeArrayGetElement(V_ARRAY(&vt), &k, &ch);
 		*pos++ = ch;
 	}
-	wpa_hexdump(MSG_DEBUG, "MediaSpecificEvent", data, data_len);
+	wpa_hexdump(MSG_DEBUG, "MediaSpecificEvent", (u8 *) data, data_len);
 
 	VariantClear(&vt);
 
@@ -752,7 +752,8 @@ ndis_events_init(HANDLE *read_pipe, HANDLE *event_avail,
 	}
 
 	hr = CoCreateInstance(&CLSID_WbemLocator, 0, CLSCTX_INPROC_SERVER,
-			      &IID_IWbemLocator, (LPVOID *) &events->pLoc);
+			      &IID_IWbemLocator,
+			      (LPVOID *) (void *) &events->pLoc);
 	if (FAILED(hr)) {
 		wpa_printf(MSG_ERROR, "CoCreateInstance() failed - returned "
 			   "0x%x", (int) hr);

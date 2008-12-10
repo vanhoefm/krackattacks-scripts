@@ -412,7 +412,8 @@ static int ctrl_iface_parse(struct ctrl_iface_priv *priv, const char *params)
 		return -1;
 	if (!ConvertStringSecurityDescriptorToSecurityDescriptor(
 		    t_sddl, SDDL_REVISION_1,
-		    (PSECURITY_DESCRIPTOR *) &priv->attr.lpSecurityDescriptor,
+		    (PSECURITY_DESCRIPTOR *) (void *)
+		    &priv->attr.lpSecurityDescriptor,
 		    NULL)) {
 		os_free(t_sddl);
 		wpa_printf(MSG_ERROR, "CTRL: SDDL='%s' - could not convert to "

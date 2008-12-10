@@ -659,7 +659,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 static int wps_get_dev_password(struct wps_data *wps)
 {
 	const u8 *pin;
-	size_t pin_len;
+	size_t pin_len = 0;
 
 	os_free(wps->dev_password);
 	wps->dev_password = NULL;

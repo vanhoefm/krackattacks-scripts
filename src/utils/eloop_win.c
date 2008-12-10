@@ -463,12 +463,11 @@ void eloop_run(void)
 	while (!eloop.terminate &&
 	       (eloop.timeout || eloop.reader_count > 0 ||
 		eloop.event_count > 0)) {
+		tv.sec = tv.usec = 0;
 		if (eloop.timeout) {
 			os_get_time(&now);
 			if (os_time_before(&now, &eloop.timeout->time))
 				os_time_sub(&eloop.timeout->time, &now, &tv);
-			else
-				tv.sec = tv.usec = 0;
 		}
 
 		count = 0;

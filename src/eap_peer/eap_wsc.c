@@ -23,7 +23,7 @@
 
 
 struct eap_wsc_data {
-	enum { WAIT_START, MSG, FRAG_ACK, WAIT_FRAG_ACK, DONE, FAIL } state;
+	enum { WAIT_START, MESG, FRAG_ACK, WAIT_FRAG_ACK, DONE, FAIL } state;
 	int registrar;
 	struct wpabuf *in_buf;
 	struct wpabuf *out_buf;
@@ -40,8 +40,8 @@ static const char * eap_wsc_state_txt(int state)
 	switch (state) {
 	case WAIT_START:
 		return "WAIT_START";
-	case MSG:
-		return "MSG";
+	case MESG:
+		return "MESG";
 	case FRAG_ACK:
 		return "FRAG_ACK";
 	case WAIT_FRAG_ACK:
@@ -131,7 +131,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
-	data->state = registrar ? MSG : WAIT_START;
+	data->state = registrar ? MESG : WAIT_START;
 	data->registrar = registrar;
 	data->wps_ctx = wps;
 
@@ -284,7 +284,7 @@ static struct wpabuf * eap_wsc_build_msg(struct eap_wsc_data *data,
 			eap_wsc_state(data, FAIL);
 			ret->methodState = METHOD_DONE;
 		} else
-			eap_wsc_state(data, MSG);
+			eap_wsc_state(data, MESG);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-WSC: Sending out %lu bytes "
 			   "(%lu more to send)", (unsigned long) send_len,
@@ -413,7 +413,7 @@ static struct wpabuf * eap_wsc_process(struct eap_sm *sm, void *priv,
 			return NULL;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-WSC: Fragment acknowledged");
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 		return eap_wsc_build_msg(data, ret, id);
 	}
 
@@ -433,7 +433,7 @@ static struct wpabuf * eap_wsc_process(struct eap_sm *sm, void *priv,
 			return NULL;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-WSC: Received start");
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 		/* Start message has empty payload, skip processing */
 		goto send_msg;
 	} else if (op_code == WSC_Start) {
@@ -469,7 +469,7 @@ static struct wpabuf * eap_wsc_process(struct eap_sm *sm, void *priv,
 		eap_wsc_state(data, FAIL);
 		break;
 	case WPS_CONTINUE:
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 		break;
 	case WPS_FAILURE:
 		wpa_printf(MSG_DEBUG, "EAP-WSC: WPS processing failed");
@@ -498,7 +498,7 @@ send_msg:
 		data->out_used = 0;
 	}
 
-	eap_wsc_state(data, MSG);
+	eap_wsc_state(data, MESG);
 	return eap_wsc_build_msg(data, ret, id);
 }
 

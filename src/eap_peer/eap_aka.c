@@ -340,9 +340,11 @@ static void eap_aka_add_checkcode(struct eap_aka_data *data,
 	addr = wpabuf_head(data->id_msgs);
 	len = wpabuf_len(data->id_msgs);
 	wpa_hexdump(MSG_MSGDUMP, "EAP-AKA: AT_CHECKCODE data", addr, len);
+#ifdef EAP_AKA_PRIME
 	if (data->eap_method == EAP_TYPE_AKA_PRIME)
 		sha256_vector(1, &addr, &len, hash);
 	else
+#endif /* EAP_AKA_PRIME */
 		sha1_vector(1, &addr, &len, hash);
 
 	eap_sim_msg_add(msg, EAP_SIM_AT_CHECKCODE, 0, hash,
@@ -385,9 +387,11 @@ static int eap_aka_verify_checkcode(struct eap_aka_data *data,
 	/* Checkcode is SHA1/SHA256 hash over all EAP-AKA/Identity packets. */
 	addr = wpabuf_head(data->id_msgs);
 	len = wpabuf_len(data->id_msgs);
+#ifdef EAP_AKA_PRIME
 	if (data->eap_method == EAP_TYPE_AKA_PRIME)
 		sha256_vector(1, &addr, &len, hash);
 	else
+#endif /* EAP_AKA_PRIME */
 		sha1_vector(1, &addr, &len, hash);
 
 	if (os_memcmp(hash, checkcode, hash_len) != 0) {

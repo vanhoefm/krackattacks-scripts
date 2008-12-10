@@ -120,10 +120,12 @@ static BOOL WINAPI
 				     DWORD *pdwKeySpec, BOOL *pfCallerFreeProv)
 = NULL; /* to be loaded from crypt32.dll */
 
+#ifdef CONFIG_MINGW32_LOAD_CERTENUM
 static PCCERT_CONTEXT WINAPI
 (*CertEnumCertificatesInStore)(HCERTSTORE hCertStore,
 			       PCCERT_CONTEXT pPrevCertContext)
 = NULL; /* to be loaded from crypt32.dll */
+#endif /* CONFIG_MINGW32_LOAD_CERTENUM */
 
 static int mingw_load_crypto_func(void)
 {
@@ -151,6 +153,7 @@ static int mingw_load_crypto_func(void)
 		return -1;
 	}
 
+#ifdef CONFIG_MINGW32_LOAD_CERTENUM
 	CertEnumCertificatesInStore = (void *) GetProcAddress(
 		dll, "CertEnumCertificatesInStore");
 	if (CertEnumCertificatesInStore == NULL) {
@@ -159,6 +162,7 @@ static int mingw_load_crypto_func(void)
 			   "crypt32 library");
 		return -1;
 	}
+#endif /* CONFIG_MINGW32_LOAD_CERTENUM */
 
 	return 0;
 }

@@ -434,6 +434,7 @@ CFLAGS += -DEAP_AKA_PRIME_DYNAMIC
 else
 CFLAGS += -DEAP_AKA_PRIME
 endif
+NEED_SHA256=y
 endif
 
 ifdef CONFIG_EAP_SIM_COMMON
@@ -524,6 +525,7 @@ OBJS_h += ../src/eap_server/eap_wsc.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
+NEED_SHA256=y
 endif
 
 ifdef CONFIG_EAP_IKEV2

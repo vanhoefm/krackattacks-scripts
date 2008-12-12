@@ -462,6 +462,12 @@ static int test_driver_new_sta(struct test_driver_data *drv,
 			printf("test_driver: no IE from STA\n");
 			return -1;
 		}
+		if (hapd->conf->wps_state && ie[0] == 0xdd && ie[1] >= 4 &&
+		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
+			sta->flags |= WLAN_STA_WPS;
+			goto skip_wpa_check;
+		}
+
 		if (sta->wpa_sm == NULL)
 			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
 							sta->addr);
@@ -475,6 +481,7 @@ static int test_driver_new_sta(struct test_driver_data *drv,
 		if (res != WPA_IE_OK) {
 			printf("WPA/RSN information element rejected? "
 			       "(res %u)\n", res);
+			wpa_hexdump(MSG_DEBUG, "IE", ie, ielen);
 			return -1;
 		}
 	}

@@ -61,6 +61,7 @@ struct test_driver_data {
 	struct test_driver_bss *bss;
 	char *socket_dir;
 	char *own_socket_path;
+	int udp_port;
 };
 
 
@@ -1142,7 +1143,10 @@ static int test_driver_sta_add(const char *ifname, void *priv, const u8 *addr,
 static void * test_driver_init(struct hostapd_data *hapd)
 {
 	struct test_driver_data *drv;
-	struct sockaddr_un addr;
+	struct sockaddr_un addr_un;
+	struct sockaddr_in addr_in;
+	struct sockaddr *addr;
+	socklen_t alen;
 
 	drv = os_zalloc(sizeof(struct test_driver_data));
 	if (drv == NULL) {
@@ -1169,7 +1173,8 @@ static void * test_driver_init(struct hostapd_data *hapd)
 	memcpy(drv->bss->bssid, hapd->own_addr, ETH_ALEN);
 
 	if (hapd->conf->test_socket) {
-		if (strlen(hapd->conf->test_socket) >= sizeof(addr.sun_path)) {
+		if (strlen(hapd->conf->test_socket) >=
+		    sizeof(addr_un.sun_path)) {
 			printf("Too long test_socket path\n");
 			test_driver_free_priv(drv);
 			return NULL;
@@ -1184,30 +1189,43 @@ static void * test_driver_init(struct hostapd_data *hapd)
 					 hapd->conf->test_socket + 4,
 					 MAC2STR(hapd->own_addr));
 			}
+		} else if (strncmp(hapd->conf->test_socket, "UDP:", 4) == 0) {
+			drv->udp_port = atoi(hapd->conf->test_socket + 4);
 		} else {
 			drv->own_socket_path = strdup(hapd->conf->test_socket);
 		}
-		if (drv->own_socket_path == NULL) {
+		if (drv->own_socket_path == NULL && drv->udp_port == 0) {
 			test_driver_free_priv(drv);
 			return NULL;
 		}
 
-		drv->test_socket = socket(PF_UNIX, SOCK_DGRAM, 0);
+		drv->test_socket = socket(drv->udp_port ? PF_INET : PF_UNIX,
+					  SOCK_DGRAM, 0);
 		if (drv->test_socket < 0) {
-			perror("socket(PF_UNIX)");
+			perror("socket");
 			test_driver_free_priv(drv);
 			return NULL;
 		}
 
-		memset(&addr, 0, sizeof(addr));
-		addr.sun_family = AF_UNIX;
-		os_strlcpy(addr.sun_path, drv->own_socket_path,
-			   sizeof(addr.sun_path));
-		if (bind(drv->test_socket, (struct sockaddr *) &addr,
-			 sizeof(addr)) < 0) {
+		if (drv->udp_port) {
+			os_memset(&addr_in, 0, sizeof(addr_in));
+			addr_in.sin_family = AF_INET;
+			addr_in.sin_port = htons(drv->udp_port);
+			addr = (struct sockaddr *) &addr_in;
+			alen = sizeof(addr_in);
+		} else {
+			os_memset(&addr_un, 0, sizeof(addr_un));
+			addr_un.sun_family = AF_UNIX;
+			os_strlcpy(addr_un.sun_path, drv->own_socket_path,
+				   sizeof(addr_un.sun_path));
+			addr = (struct sockaddr *) &addr_un;
+			alen = sizeof(addr_un);
+		}
+		if (bind(drv->test_socket, addr, alen) < 0) {
 			perror("bind(PF_UNIX)");
 			close(drv->test_socket);
-			unlink(drv->own_socket_path);
+			if (drv->own_socket_path)
+				unlink(drv->own_socket_path);
 			test_driver_free_priv(drv);
 			return NULL;
 		}
@@ -1235,7 +1253,8 @@ static void test_driver_deinit(void *priv)
 	if (drv->test_socket >= 0) {
 		eloop_unregister_read_sock(drv->test_socket);
 		close(drv->test_socket);
-		unlink(drv->own_socket_path);
+		if (drv->own_socket_path)
+			unlink(drv->own_socket_path);
 	}
 
 	/* There should be only one BSS remaining at this point. */

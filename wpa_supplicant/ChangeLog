@@ -11,6 +11,7 @@ ChangeLog for wpa_supplicant
 	  file); new wpa_cli commands wps_pin, wps_pbc, and wps_reg are used to
 	  manage WPS negotiation; see README-WPS for more details
 	* added support for EAP-AKA' (draft-arkko-eap-aka-kdf)
+	* added support for using driver_test over UDP socket
 
 2008-11-23 - v0.6.6
 	* added Milenage SIM/USIM emulator for EAP-SIM/EAP-AKA

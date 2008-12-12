@@ -31,6 +31,8 @@ struct wpa_driver_test_data {
 	int test_socket;
 	struct sockaddr_un hostapd_addr;
 	int hostapd_addr_set;
+	struct sockaddr_in hostapd_addr_udp;
+	int hostapd_addr_udp_set;
 	char *own_socket_path;
 	char *test_dir;
 	u8 bssid[ETH_ALEN];
@@ -145,6 +147,13 @@ static int wpa_driver_test_scan(void *priv, const u8 *ssid, size_t ssid_len)
 		perror("sendto(test_socket)");
 	}
 
+	if (drv->test_socket >= 0 && drv->hostapd_addr_udp_set &&
+	    sendto(drv->test_socket, "SCAN", 4, 0,
+		   (struct sockaddr *) &drv->hostapd_addr_udp,
+		   sizeof(drv->hostapd_addr_udp)) < 0) {
+		perror("sendto(test_socket)");
+	}
+
 	eloop_cancel_timeout(wpa_driver_test_scan_timeout, drv, drv->ctx);
 	eloop_register_timeout(1, 0, wpa_driver_test_scan_timeout, drv,
 			       drv->ctx);
@@ -242,7 +251,8 @@ static int wpa_driver_test_associate(
 		drv->hostapd_addr_set = 1;
 	}
 
-	if (drv->test_socket >= 0 && drv->hostapd_addr_set) {
+	if (drv->test_socket >= 0 &&
+	    (drv->hostapd_addr_set || drv->hostapd_addr_udp_set)) {
 		char cmd[200], *pos, *end;
 		int ret;
 		end = cmd + sizeof(cmd);
@@ -259,9 +269,17 @@ static int wpa_driver_test_associate(
 		pos += wpa_snprintf_hex(pos, end - pos, params->wpa_ie,
 					params->wpa_ie_len);
 		end[-1] = '\0';
-		if (sendto(drv->test_socket, cmd, os_strlen(cmd), 0,
+		if (drv->hostapd_addr_set &&
+		    sendto(drv->test_socket, cmd, os_strlen(cmd), 0,
 			   (struct sockaddr *) &drv->hostapd_addr,
 			   sizeof(drv->hostapd_addr)) < 0) {
+			perror("sendto(test_socket)");
+			return -1;
+		}
+		if (drv->hostapd_addr_udp_set &&
+		    sendto(drv->test_socket, cmd, os_strlen(cmd), 0,
+			   (struct sockaddr *) &drv->hostapd_addr_udp,
+			   sizeof(drv->hostapd_addr_udp)) < 0) {
 			perror("sendto(test_socket)");
 			return -1;
 		}
@@ -640,6 +658,50 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 }
 
 
+static int wpa_driver_test_attach_udp(struct wpa_driver_test_data *drv,
+				      char *dst)
+{
+	char *pos;
+
+	pos = os_strchr(dst, ':');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+	wpa_printf(MSG_DEBUG, "%s: addr=%s port=%s", __func__, dst, pos);
+
+	drv->test_socket = socket(PF_INET, SOCK_DGRAM, 0);
+	if (drv->test_socket < 0) {
+		perror("socket(PF_INET)");
+		return -1;
+	}
+
+	os_memset(&drv->hostapd_addr_udp, 0, sizeof(drv->hostapd_addr_udp));
+	drv->hostapd_addr_udp.sin_family = AF_INET;
+#if defined(CONFIG_NATIVE_WINDOWS) || defined(CONFIG_ANSI_C_EXTRA)
+	{
+		int a[4];
+		u8 *pos;
+		sscanf(dst, "%d.%d.%d.%d", &a[0], &a[1], &a[2], &a[3]);
+		pos = (u8 *) &drv->hostapd_addr_udp.sin_addr;
+		*pos++ = a[0];
+		*pos++ = a[1];
+		*pos++ = a[2];
+		*pos++ = a[3];
+	}
+#else /* CONFIG_NATIVE_WINDOWS or CONFIG_ANSI_C_EXTRA */
+	inet_aton(dst, &drv->hostapd_addr_udp.sin_addr);
+#endif /* CONFIG_NATIVE_WINDOWS or CONFIG_ANSI_C_EXTRA */
+	drv->hostapd_addr_udp.sin_port = htons(atoi(pos));
+
+	drv->hostapd_addr_udp_set = 1;
+
+	eloop_register_read_sock(drv->test_socket,
+				 wpa_driver_test_receive_unix, drv, NULL);
+
+	return 0;
+}
+
+
 static int wpa_driver_test_set_param(void *priv, const char *param)
 {
 	struct wpa_driver_test_data *drv = priv;
@@ -677,9 +739,24 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 		end = os_strchr(drv->test_dir, ' ');
 		if (end)
 			*end = '\0';
-		wpa_driver_test_attach(drv, drv->test_dir);
-	} else
-		wpa_driver_test_attach(drv, NULL);
+		if (wpa_driver_test_attach(drv, drv->test_dir))
+			return -1;
+	} else {
+		pos = os_strstr(param, "test_udp=");
+		if (pos) {
+			char *dst, *epos;
+			dst = os_strdup(pos + 9);
+			if (dst == NULL)
+				return -1;
+			epos = os_strchr(dst, ' ');
+			if (epos)
+				*epos = '\0';
+			if (wpa_driver_test_attach_udp(drv, dst))
+				return -1;
+			os_free(dst);
+		} else if (wpa_driver_test_attach(drv, NULL))
+			return -1;
+	}
 
 	if (os_strstr(param, "use_associnfo=1")) {
 		wpa_printf(MSG_DEBUG, "test_driver: Use AssocInfo events");
@@ -733,8 +810,13 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 	msg.msg_iovlen = 3;
 	if (os_memcmp(dest, drv->bssid, ETH_ALEN) == 0 ||
 	    drv->test_dir == NULL) {
-		msg.msg_name = &drv->hostapd_addr;
-		msg.msg_namelen = sizeof(drv->hostapd_addr);
+		if (drv->hostapd_addr_udp_set) {
+			msg.msg_name = &drv->hostapd_addr_udp;
+			msg.msg_namelen = sizeof(drv->hostapd_addr_udp);
+		} else {
+			msg.msg_name = &drv->hostapd_addr;
+			msg.msg_namelen = sizeof(drv->hostapd_addr);
+		}
 	} else {
 		struct stat st;
 		os_memset(&addr, 0, sizeof(addr));

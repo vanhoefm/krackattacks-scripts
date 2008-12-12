@@ -12,10 +12,20 @@
  * See README and COPYING for more details.
  */
 
+/* Make dure we get winsock2.h for Windows build to get sockaddr_storage */
+#include "build_config.h"
+#ifdef CONFIG_NATIVE_WINDOWS
+#include <winsock2.h>
+#endif /* CONFIG_NATIVE_WINDOWS */
+
 #include "includes.h"
+
+#ifndef CONFIG_NATIVE_WINDOWS
 #include <sys/un.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#define DRIVER_TEST_UNIX
+#endif /* CONFIG_NATIVE_WINDOWS */
 
 #include "common.h"
 #include "driver.h"
@@ -29,7 +39,9 @@ struct wpa_driver_test_data {
 	void *ctx;
 	u8 own_addr[ETH_ALEN];
 	int test_socket;
+#ifdef DRIVER_TEST_UNIX
 	struct sockaddr_un hostapd_addr;
+#endif /* DRIVER_TEST_UNIX */
 	int hostapd_addr_set;
 	struct sockaddr_in hostapd_addr_udp;
 	int hostapd_addr_udp_set;
@@ -55,6 +67,7 @@ static void wpa_driver_test_poll(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_driver_test_data *drv = eloop_ctx;
 
+#ifdef DRIVER_TEST_UNIX
 	if (drv->associated && drv->hostapd_addr_set) {
 		struct stat st;
 		if (stat(drv->hostapd_addr.sun_path, &st) < 0) {
@@ -64,6 +77,7 @@ static void wpa_driver_test_poll(void *eloop_ctx, void *timeout_ctx)
 			wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 		}
 	}
+#endif /* DRIVER_TEST_UNIX */
 
 	eloop_register_timeout(1, 0, wpa_driver_test_poll, drv, NULL);
 }
@@ -83,6 +97,7 @@ static void wpa_driver_test_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+#ifdef DRIVER_TEST_UNIX
 static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 				const char *path)
 {
@@ -128,6 +143,7 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 	}
 	closedir(dir);
 }
+#endif /* DRIVER_TEST_UNIX */
 
 
 static int wpa_driver_test_scan(void *priv, const u8 *ssid, size_t ssid_len)
@@ -137,6 +153,7 @@ static int wpa_driver_test_scan(void *priv, const u8 *ssid, size_t ssid_len)
 
 	drv->num_scanres = 0;
 
+#ifdef DRIVER_TEST_UNIX
 	if (drv->test_socket >= 0 && drv->test_dir)
 		wpa_driver_scan_dir(drv, drv->test_dir);
 
@@ -146,6 +163,7 @@ static int wpa_driver_test_scan(void *priv, const u8 *ssid, size_t ssid_len)
 		   sizeof(drv->hostapd_addr)) < 0) {
 		perror("sendto(test_socket)");
 	}
+#endif /* DRIVER_TEST_UNIX */
 
 	if (drv->test_socket >= 0 && drv->hostapd_addr_udp_set &&
 	    sendto(drv->test_socket, "SCAN", 4, 0,
@@ -241,6 +259,7 @@ static int wpa_driver_test_associate(
 	} else
 		drv->assoc_wpa_ie_len = 0;
 
+#ifdef DRIVER_TEST_UNIX
 	if (drv->test_dir && params->bssid) {
 		os_memset(&drv->hostapd_addr, 0, sizeof(drv->hostapd_addr));
 		drv->hostapd_addr.sun_family = AF_UNIX;
@@ -250,6 +269,7 @@ static int wpa_driver_test_associate(
 			    drv->test_dir, MAC2STR(params->bssid));
 		drv->hostapd_addr_set = 1;
 	}
+#endif /* DRIVER_TEST_UNIX */
 
 	if (drv->test_socket >= 0 &&
 	    (drv->hostapd_addr_set || drv->hostapd_addr_udp_set)) {
@@ -269,6 +289,7 @@ static int wpa_driver_test_associate(
 		pos += wpa_snprintf_hex(pos, end - pos, params->wpa_ie,
 					params->wpa_ie_len);
 		end[-1] = '\0';
+#ifdef DRIVER_TEST_UNIX
 		if (drv->hostapd_addr_set &&
 		    sendto(drv->test_socket, cmd, os_strlen(cmd), 0,
 			   (struct sockaddr *) &drv->hostapd_addr,
@@ -276,6 +297,7 @@ static int wpa_driver_test_associate(
 			perror("sendto(test_socket)");
 			return -1;
 		}
+#endif /* DRIVER_TEST_UNIX */
 		if (drv->hostapd_addr_udp_set &&
 		    sendto(drv->test_socket, cmd, os_strlen(cmd), 0,
 			   (struct sockaddr *) &drv->hostapd_addr_udp,
@@ -313,10 +335,19 @@ static int wpa_driver_test_get_ssid(void *priv, u8 *ssid)
 
 static int wpa_driver_test_send_disassoc(struct wpa_driver_test_data *drv)
 {
+#ifdef DRIVER_TEST_UNIX
 	if (drv->test_socket >= 0 &&
 	    sendto(drv->test_socket, "DISASSOC", 8, 0,
 		   (struct sockaddr *) &drv->hostapd_addr,
 		   sizeof(drv->hostapd_addr)) < 0) {
+		perror("sendto(test_socket)");
+		return -1;
+	}
+#endif /* DRIVER_TEST_UNIX */
+	if (drv->test_socket >= 0 && drv->hostapd_addr_udp_set &&
+	    sendto(drv->test_socket, "DISASSOC", 8, 0,
+		   (struct sockaddr *) &drv->hostapd_addr_udp,
+		   sizeof(drv->hostapd_addr_udp)) < 0) {
 		perror("sendto(test_socket)");
 		return -1;
 	}
@@ -351,7 +382,7 @@ static int wpa_driver_test_disassociate(void *priv, const u8 *addr,
 
 
 static void wpa_driver_test_scanresp(struct wpa_driver_test_data *drv,
-				     struct sockaddr_un *from,
+				     struct sockaddr *from,
 				     socklen_t fromlen,
 				     const char *data)
 {
@@ -438,7 +469,7 @@ static void wpa_driver_test_scanresp(struct wpa_driver_test_data *drv,
 
 
 static void wpa_driver_test_assocresp(struct wpa_driver_test_data *drv,
-				      struct sockaddr_un *from,
+				      struct sockaddr *from,
 				      socklen_t fromlen,
 				      const char *data)
 {
@@ -460,7 +491,7 @@ static void wpa_driver_test_assocresp(struct wpa_driver_test_data *drv,
 
 
 static void wpa_driver_test_disassoc(struct wpa_driver_test_data *drv,
-				     struct sockaddr_un *from,
+				     struct sockaddr *from,
 				     socklen_t fromlen)
 {
 	drv->associated = 0;
@@ -469,7 +500,7 @@ static void wpa_driver_test_disassoc(struct wpa_driver_test_data *drv,
 
 
 static void wpa_driver_test_eapol(struct wpa_driver_test_data *drv,
-				  struct sockaddr_un *from,
+				  struct sockaddr *from,
 				  socklen_t fromlen,
 				  const u8 *data, size_t data_len)
 {
@@ -486,7 +517,7 @@ static void wpa_driver_test_eapol(struct wpa_driver_test_data *drv,
 
 
 static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
-				 struct sockaddr_un *from,
+				 struct sockaddr *from,
 				 socklen_t fromlen,
 				 const u8 *data, size_t data_len)
 {
@@ -504,7 +535,7 @@ static void wpa_driver_test_receive_unix(int sock, void *eloop_ctx,
 	struct wpa_driver_test_data *drv = eloop_ctx;
 	char *buf;
 	int res;
-	struct sockaddr_un from;
+	struct sockaddr_storage from;
 	socklen_t fromlen = sizeof(from);
 	const size_t buflen = 2000;
 
@@ -523,18 +554,22 @@ static void wpa_driver_test_receive_unix(int sock, void *eloop_ctx,
 	wpa_printf(MSG_DEBUG, "test_driver: received %u bytes", res);
 
 	if (os_strncmp(buf, "SCANRESP ", 9) == 0) {
-		wpa_driver_test_scanresp(drv, &from, fromlen, buf + 9);
+		wpa_driver_test_scanresp(drv, (struct sockaddr *) &from,
+					 fromlen, buf + 9);
 	} else if (os_strncmp(buf, "ASSOCRESP ", 10) == 0) {
-		wpa_driver_test_assocresp(drv, &from, fromlen, buf + 10);
+		wpa_driver_test_assocresp(drv, (struct sockaddr *) &from,
+					  fromlen, buf + 10);
 	} else if (os_strcmp(buf, "DISASSOC") == 0) {
-		wpa_driver_test_disassoc(drv, &from, fromlen);
+		wpa_driver_test_disassoc(drv, (struct sockaddr *) &from,
+					 fromlen);
 	} else if (os_strcmp(buf, "DEAUTH") == 0) {
-		wpa_driver_test_disassoc(drv, &from, fromlen);
+		wpa_driver_test_disassoc(drv, (struct sockaddr *) &from,
+					 fromlen);
 	} else if (os_strncmp(buf, "EAPOL ", 6) == 0) {
-		wpa_driver_test_eapol(drv, &from, fromlen,
+		wpa_driver_test_eapol(drv, (struct sockaddr *) &from, fromlen,
 				      (const u8 *) buf + 6, res - 6);
 	} else if (os_strncmp(buf, "MLME ", 5) == 0) {
-		wpa_driver_test_mlme(drv, &from, fromlen,
+		wpa_driver_test_mlme(drv, (struct sockaddr *) &from, fromlen,
 				     (const u8 *) buf + 5, res - 5);
 	} else {
 		wpa_hexdump_ascii(MSG_DEBUG, "Unknown test_socket command",
@@ -609,6 +644,7 @@ static void wpa_driver_test_deinit(void *priv)
 static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 				  const char *dir)
 {
+#ifdef DRIVER_TEST_UNIX
 	static unsigned int counter = 0;
 	struct sockaddr_un addr;
 	size_t len;
@@ -655,6 +691,9 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 				 wpa_driver_test_receive_unix, drv, NULL);
 
 	return 0;
+#else /* DRIVER_TEST_UNIX */
+	return -1;
+#endif /* DRIVER_TEST_UNIX */
 }
 
 
@@ -705,16 +744,20 @@ static int wpa_driver_test_attach_udp(struct wpa_driver_test_data *drv,
 static int wpa_driver_test_set_param(void *priv, const char *param)
 {
 	struct wpa_driver_test_data *drv = priv;
-	const char *pos, *pos2;
-	size_t len;
+	const char *pos;
 
 	wpa_printf(MSG_DEBUG, "%s: param='%s'", __func__, param);
 	if (param == NULL)
 		return 0;
 
 	wpa_driver_test_close_test_socket(drv);
+
+#ifdef DRIVER_TEST_UNIX
 	pos = os_strstr(param, "test_socket=");
 	if (pos) {
+		const char *pos2;
+		size_t len;
+
 		pos += 12;
 		pos2 = os_strchr(pos, ' ');
 		if (pos2)
@@ -728,6 +771,7 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 		os_memcpy(drv->hostapd_addr.sun_path, pos, len);
 		drv->hostapd_addr_set = 1;
 	}
+#endif /* DRIVER_TEST_UNIX */
 
 	pos = os_strstr(param, "test_dir=");
 	if (pos) {
@@ -786,10 +830,11 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 				      const u8 *data, size_t data_len)
 {
 	struct wpa_driver_test_data *drv = priv;
-	struct msghdr msg;
-	struct iovec io[3];
+	char *msg;
+	size_t msg_len;
 	struct l2_ethhdr eth;
-	struct sockaddr_un addr;
+	struct sockaddr *addr;
+	socklen_t alen;
 
 	wpa_hexdump(MSG_MSGDUMP, "test_send_eapol TX frame", data, data_len);
 
@@ -798,45 +843,56 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 	os_memcpy(eth.h_source, drv->own_addr, ETH_ALEN);
 	eth.h_proto = host_to_be16(proto);
 
-	io[0].iov_base = "EAPOL ";
-	io[0].iov_len = 6;
-	io[1].iov_base = (u8 *) &eth;
-	io[1].iov_len = sizeof(eth);
-	io[2].iov_base = (u8 *) data;
-	io[2].iov_len = data_len;
+	msg_len = 6 + sizeof(eth) + data_len;
+	msg = os_malloc(msg_len);
+	if (msg == NULL)
+		return -1;
+	os_memcpy(msg, "EAPOL ", 6);
+	os_memcpy(msg + 6, &eth, sizeof(eth));
+	os_memcpy(msg + 6 + sizeof(eth), data, data_len);
 
-	os_memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = io;
-	msg.msg_iovlen = 3;
 	if (os_memcmp(dest, drv->bssid, ETH_ALEN) == 0 ||
 	    drv->test_dir == NULL) {
 		if (drv->hostapd_addr_udp_set) {
-			msg.msg_name = &drv->hostapd_addr_udp;
-			msg.msg_namelen = sizeof(drv->hostapd_addr_udp);
+			addr = (struct sockaddr *) &drv->hostapd_addr_udp;
+			alen = sizeof(drv->hostapd_addr_udp);
 		} else {
-			msg.msg_name = &drv->hostapd_addr;
-			msg.msg_namelen = sizeof(drv->hostapd_addr);
+#ifdef DRIVER_TEST_UNIX
+			addr = (struct sockaddr *) &drv->hostapd_addr;
+			alen = sizeof(drv->hostapd_addr);
+#else /* DRIVER_TEST_UNIX */
+			os_free(msg);
+			return -1;
+#endif /* DRIVER_TEST_UNIX */
 		}
 	} else {
+#ifdef DRIVER_TEST_UNIX
+		struct sockaddr_un addr_un;
 		struct stat st;
-		os_memset(&addr, 0, sizeof(addr));
-		addr.sun_family = AF_UNIX;
-		os_snprintf(addr.sun_path, sizeof(addr.sun_path),
+		os_memset(&addr_un, 0, sizeof(addr_un));
+		addr_un.sun_family = AF_UNIX;
+		os_snprintf(addr_un.sun_path, sizeof(addr_un.sun_path),
 			    "%s/STA-" MACSTR, drv->test_dir, MAC2STR(dest));
-		if (stat(addr.sun_path, &st) < 0) {
-			os_snprintf(addr.sun_path, sizeof(addr.sun_path),
+		if (stat(addr_un.sun_path, &st) < 0) {
+			os_snprintf(addr_un.sun_path, sizeof(addr_un.sun_path),
 				    "%s/AP-" MACSTR,
 				    drv->test_dir, MAC2STR(dest));
 		}
-		msg.msg_name = &addr;
-		msg.msg_namelen = sizeof(addr);
+		addr = (struct sockaddr *) &addr_un;
+		alen = sizeof(addr_un);
+#else /* DRIVER_TEST_UNIX */
+		os_free(msg);
+		return -1;
+#endif /* DRIVER_TEST_UNIX */
 	}
 
-	if (sendmsg(drv->test_socket, &msg, 0) < 0) {
+	if (sendto(drv->test_socket, msg, msg_len, 0, addr, alen) < 0) {
 		perror("sendmsg(test_socket)");
+		os_free(msg);
 		return -1;
 	}
 
+	os_free(msg);
 	return 0;
 }
 
@@ -948,8 +1004,15 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	msg.msg_iovlen = 2;
 	if (os_memcmp(dest, drv->bssid, ETH_ALEN) == 0 ||
 	    drv->test_dir == NULL) {
-		msg.msg_name = &drv->hostapd_addr;
-		msg.msg_namelen = sizeof(drv->hostapd_addr);
+		if (drv->hostapd_addr_udp_set) {
+			msg.msg_name = &drv->hostapd_addr_udp;
+			msg.msg_namelen = sizeof(drv->hostapd_addr_udp);
+		} else {
+#ifdef DRIVER_TEST_UNIX
+			msg.msg_name = &drv->hostapd_addr;
+			msg.msg_namelen = sizeof(drv->hostapd_addr);
+#endif /* DRIVER_TEST_UNIX */
+		}
 	} else if (os_memcmp(dest, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) == 0)
 	{
 		dir = opendir(drv->test_dir);

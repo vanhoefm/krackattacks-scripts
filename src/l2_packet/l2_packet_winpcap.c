@@ -336,5 +336,6 @@ int l2_packet_get_ip_addr(struct l2_packet_data *l2, char *buf, size_t len)
 
 void l2_packet_notify_auth_start(struct l2_packet_data *l2)
 {
-	SetEvent(l2->rx_notify);
+	if (l2)
+		SetEvent(l2->rx_notify);
 }

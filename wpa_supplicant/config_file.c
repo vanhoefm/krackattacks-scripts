@@ -274,7 +274,20 @@ struct global_parse_data {
 	char *name;
 	int (*parser)(const struct global_parse_data *data,
 		      struct wpa_config *config, int line, const char *value);
+	void *param1;
 };
+
+
+static int wpa_config_parse_int(const struct global_parse_data *data,
+				struct wpa_config *config, int line,
+				const char *pos)
+{
+	int *dst;
+	dst = (int *) (((u8 *) config) + (long) data->param1);
+	*dst = atoi(pos);
+	wpa_printf(MSG_DEBUG, "%s=%d", data->name, *dst);
+	return 0;
+}
 
 
 static int wpa_config_process_country(const struct global_parse_data *data,
@@ -333,26 +346,6 @@ static int wpa_config_process_eapol_version(
 }
 
 
-static int wpa_config_process_ap_scan(const struct global_parse_data *data,
-				      struct wpa_config *config, int line,
-				      const char *pos)
-{
-	config->ap_scan = atoi(pos);
-	wpa_printf(MSG_DEBUG, "ap_scan=%d", config->ap_scan);
-	return 0;
-}
-
-
-static int wpa_config_process_fast_reauth(const struct global_parse_data *data,
-					  struct wpa_config *config, int line,
-					  const char *pos)
-{
-	config->fast_reauth = atoi(pos);
-	wpa_printf(MSG_DEBUG, "fast_reauth=%d", config->fast_reauth);
-	return 0;
-}
-
-
 #ifdef EAP_TLS_OPENSSL
 
 static int wpa_config_process_opensc_engine_path(
@@ -402,51 +395,6 @@ static int wpa_config_process_driver_param(
 	wpa_printf(MSG_DEBUG, "driver_param='%s'", config->driver_param);
 	return 0;
 }
-
-
-static int wpa_config_process_dot11RSNAConfigPMKLifetime(
-	const struct global_parse_data *data,
-	struct wpa_config *config, int line, const char *pos)
-{
-	config->dot11RSNAConfigPMKLifetime = atoi(pos);
-	wpa_printf(MSG_DEBUG, "dot11RSNAConfigPMKLifetime=%d",
-		   config->dot11RSNAConfigPMKLifetime);
-	return 0;
-}
-
-
-static int wpa_config_process_dot11RSNAConfigPMKReauthThreshold(
-	const struct global_parse_data *data,
-	struct wpa_config *config, int line, const char *pos)
-{
-	config->dot11RSNAConfigPMKReauthThreshold = atoi(pos);
-	wpa_printf(MSG_DEBUG, "dot11RSNAConfigPMKReauthThreshold=%d",
-		   config->dot11RSNAConfigPMKReauthThreshold);
-	return 0;
-}
-
-
-static int wpa_config_process_dot11RSNAConfigSATimeout(
-	const struct global_parse_data *data,
-	struct wpa_config *config, int line, const char *pos)
-{
-	config->dot11RSNAConfigSATimeout = atoi(pos);
-	wpa_printf(MSG_DEBUG, "dot11RSNAConfigSATimeout=%d",
-		   config->dot11RSNAConfigSATimeout);
-	return 0;
-}
-
-
-#ifndef CONFIG_NO_CONFIG_WRITE
-static int wpa_config_process_update_config(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	config->update_config = atoi(pos);
-	wpa_printf(MSG_DEBUG, "update_config=%d", config->update_config);
-	return 0;
-}
-#endif /* CONFIG_NO_CONFIG_WRITE */
 
 
 static int wpa_config_process_load_dynamic_eap(
@@ -578,7 +526,15 @@ static int wpa_config_process_os_version(const struct global_parse_data *data,
 #endif /* CONFIG_WPS */
 
 
-#define FUNC(f) #f, wpa_config_process_ ## f
+#ifdef OFFSET
+#undef OFFSET
+#endif /* OFFSET */
+/* OFFSET: Get offset of a variable within the wpa_config structure */
+#define OFFSET(v) ((void *) &((struct wpa_config *) 0)->v)
+
+#define FUNC(f) #f, wpa_config_process_ ## f, OFFSET(f)
+#define FUNC_NO_VAR(f) #f, wpa_config_process_ ## f, 0
+#define INT(f) #f, wpa_config_parse_int, OFFSET(f)
 
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE
@@ -586,21 +542,21 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(ctrl_interface_group) },
 #endif /* CONFIG_CTRL_IFACE */
 	{ FUNC(eapol_version) },
-	{ FUNC(ap_scan) },
-	{ FUNC(fast_reauth) },
+	{ INT(ap_scan) },
+	{ INT(fast_reauth) },
 #ifdef EAP_TLS_OPENSSL
 	{ FUNC(opensc_engine_path) },
 	{ FUNC(pkcs11_engine_path) },
 	{ FUNC(pkcs11_module_path) },
 #endif /* EAP_TLS_OPENSSL */
 	{ FUNC(driver_param) },
-	{ FUNC(dot11RSNAConfigPMKLifetime) },
-	{ FUNC(dot11RSNAConfigPMKReauthThreshold) },
-	{ FUNC(dot11RSNAConfigSATimeout) },
+	{ INT(dot11RSNAConfigPMKLifetime) },
+	{ INT(dot11RSNAConfigPMKReauthThreshold) },
+	{ INT(dot11RSNAConfigSATimeout) },
 #ifndef CONFIG_NO_CONFIG_WRITE
-	{ FUNC(update_config) },
+	{ INT(update_config) },
 #endif /* CONFIG_NO_CONFIG_WRITE */
-	{ FUNC(load_dynamic_eap) },
+	{ FUNC_NO_VAR(load_dynamic_eap) },
 #ifdef CONFIG_WPS
 	{ FUNC(uuid) },
 	{ FUNC(device_name) },
@@ -613,6 +569,9 @@ static const struct global_parse_data global_fields[] = {
 #endif /* CONFIG_WPS */
 	{ FUNC(country) }
 };
+
+#undef FUNC
+#undef INT
 #define NUM_GLOBAL_FIELDS (sizeof(global_fields) / sizeof(global_fields[0]))
 
 

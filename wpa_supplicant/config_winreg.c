@@ -179,6 +179,25 @@ static int wpa_config_read_global_uuid(struct wpa_config *config, HKEY hk)
 
 	return ret;
 }
+
+
+static int wpa_config_read_global_os_version(struct wpa_config *config,
+					     HKEY hk)
+{
+	char *str;
+	int ret = 0;
+
+	str = wpa_config_read_reg_string(hk, TEXT("os_version"));
+	if (str == NULL)
+		return 0;
+
+	if (hexstr2bin(str, config->os_version, 4))
+		ret = -1;
+
+	os_free(str);
+
+	return ret;
+}
 #endif /* CONFIG_WPS */
 
 
@@ -190,12 +209,13 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 	wpa_config_read_reg_dword(hk, TEXT("fast_reauth"),
 				  &config->fast_reauth);
 	wpa_config_read_reg_dword(hk, TEXT("dot11RSNAConfigPMKLifetime"),
-				  &config->dot11RSNAConfigPMKLifetime);
+				  (int *) &config->dot11RSNAConfigPMKLifetime);
 	wpa_config_read_reg_dword(hk,
 				  TEXT("dot11RSNAConfigPMKReauthThreshold"),
+				  (int *)
 				  &config->dot11RSNAConfigPMKReauthThreshold);
 	wpa_config_read_reg_dword(hk, TEXT("dot11RSNAConfigSATimeout"),
-				  &config->dot11RSNAConfigSATimeout);
+				  (int *) &config->dot11RSNAConfigSATimeout);
 	wpa_config_read_reg_dword(hk, TEXT("update_config"),
 				  &config->update_config);
 
@@ -214,6 +234,18 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 
 #ifdef CONFIG_WPS
 	if (wpa_config_read_global_uuid(config, hk))
+		errors++;
+	config->device_name = wpa_config_read_reg_string(
+		hk, TEXT("device_name"));
+	config->manufacturer = wpa_config_read_reg_string(
+		hk, TEXT("manufacturer"));
+	config->model_name = wpa_config_read_reg_string(
+		hk, TEXT("model_name"));
+	config->serial_number = wpa_config_read_reg_string(
+		hk, TEXT("serial_number"));
+	config->device_type = wpa_config_read_reg_string(
+		hk, TEXT("device_type"));
+	if (wpa_config_read_global_os_version(config, hk))
 		errors++;
 #endif /* CONFIG_WPS */
 
@@ -523,6 +555,19 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 		char buf[40];
 		uuid_bin2str(config->uuid, buf, sizeof(buf));
 		wpa_config_write_reg_string(hk, "uuid", buf);
+	}
+	wpa_config_write_reg_string(hk, "device_name", config->device_name);
+	wpa_config_write_reg_string(hk, "manufacturer", config->manufacturer);
+	wpa_config_write_reg_string(hk, "model_name", config->model_name);
+	wpa_config_write_reg_string(hk, "model_number", config->model_number);
+	wpa_config_write_reg_string(hk, "serial_number",
+				    config->serial_number);
+	wpa_config_write_reg_string(hk, "device_type", config->device_type);
+	if (WPA_GET_BE32(config->os_version)) {
+		char vbuf[10];
+		os_snprintf(vbuf, sizeof(vbuf), "%08x",
+			    WPA_GET_BE32(config->os_version));
+		wpa_config_write_reg_string(hk, "os_version", vbuf);
 	}
 #endif /* CONFIG_WPS */
 

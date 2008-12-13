@@ -443,6 +443,7 @@ static int wpa_config_process_load_dynamic_eap(int line, char *so)
 
 
 #ifdef CONFIG_WPS
+
 static int wpa_config_process_uuid(struct wpa_config *config, int line,
 				   char *pos)
 {
@@ -455,6 +456,87 @@ static int wpa_config_process_uuid(struct wpa_config *config, int line,
 	wpa_printf(MSG_DEBUG, "uuid=%s", buf);
 	return 0;
 }
+
+
+static int wpa_config_process_device_name(struct wpa_config *config, char *pos)
+{
+	if (os_strlen(pos) > 32)
+		return -1;
+	os_free(config->device_name);
+	config->device_name = os_strdup(pos);
+	wpa_printf(MSG_DEBUG, "device_name='%s'", config->device_name);
+	return 0;
+}
+
+
+static int wpa_config_process_manufacturer(struct wpa_config *config,
+					   char *pos)
+{
+	if (os_strlen(pos) > 64)
+		return -1;
+	os_free(config->manufacturer);
+	config->manufacturer = os_strdup(pos);
+	wpa_printf(MSG_DEBUG, "manufacturer='%s'", config->manufacturer);
+	return 0;
+}
+
+
+static int wpa_config_process_model_name(struct wpa_config *config, char *pos)
+{
+	if (os_strlen(pos) > 32)
+		return -1;
+	os_free(config->model_name);
+	config->model_name = os_strdup(pos);
+	wpa_printf(MSG_DEBUG, "model_name='%s'", config->model_name);
+	return 0;
+}
+
+
+static int wpa_config_process_model_number(struct wpa_config *config,
+					   char *pos)
+{
+	if (os_strlen(pos) > 32)
+		return -1;
+	os_free(config->model_number);
+	config->model_number = os_strdup(pos);
+	wpa_printf(MSG_DEBUG, "model_number='%s'", config->model_number);
+	return 0;
+}
+
+
+static int wpa_config_process_serial_number(struct wpa_config *config,
+					    char *pos)
+{
+	if (os_strlen(pos) > 32)
+		return -1;
+	os_free(config->serial_number);
+	config->serial_number = os_strdup(pos);
+	wpa_printf(MSG_DEBUG, "serial_number='%s'", config->serial_number);
+	return 0;
+}
+
+
+static int wpa_config_process_device_type(struct wpa_config *config, char *pos)
+{
+	os_free(config->device_type);
+	config->device_type = os_strdup(pos);
+	wpa_printf(MSG_DEBUG, "device_type='%s'", config->device_type);
+	return 0;
+}
+
+
+static int wpa_config_process_os_version(struct wpa_config *config, int line,
+					 char *pos)
+{
+	if (hexstr2bin(pos, config->os_version, 4)) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid os_version", line);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "os_version=%08x",
+		   WPA_GET_BE32(config->os_version));
+	return 0;
+}
+
 #endif /* CONFIG_WPS */
 
 
@@ -515,6 +597,20 @@ static int wpa_config_process_global(struct wpa_config *config, char *pos,
 #ifdef CONFIG_WPS
 	if (os_strncmp(pos, "uuid=", 5) == 0)
 		return wpa_config_process_uuid(config, line, pos + 5);
+	if (os_strncmp(pos, "device_name=", 12) == 0)
+		return wpa_config_process_device_name(config, pos + 12);
+	if (os_strncmp(pos, "manufacturer=", 13) == 0)
+		return wpa_config_process_manufacturer(config, pos + 13);
+	if (os_strncmp(pos, "model_name=", 11) == 0)
+		return wpa_config_process_model_name(config, pos + 11);
+	if (os_strncmp(pos, "model_number=", 13) == 0)
+		return wpa_config_process_model_number(config, pos + 13);
+	if (os_strncmp(pos, "serial_number=", 14) == 0)
+		return wpa_config_process_serial_number(config, pos + 14);
+	if (os_strncmp(pos, "device_type=", 12) == 0)
+		return wpa_config_process_device_type(config, pos + 12);
+	if (os_strncmp(pos, "os_version=", 11) == 0)
+		return wpa_config_process_os_version(config, line, pos + 11);
 #endif /* CONFIG_WPS */
 
 	if (os_strncmp(pos, "country=", 8) == 0)
@@ -890,6 +986,21 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		uuid_bin2str(config->uuid, buf, sizeof(buf));
 		fprintf(f, "uuid=%s\n", buf);
 	}
+	if (config->device_name)
+		fprintf(f, "device_name=%s\n", config->device_name);
+	if (config->manufacturer)
+		fprintf(f, "manufacturer=%s\n", config->manufacturer);
+	if (config->model_name)
+		fprintf(f, "model_name=%s\n", config->model_name);
+	if (config->model_number)
+		fprintf(f, "model_number=%s\n", config->model_number);
+	if (config->serial_number)
+		fprintf(f, "serial_number=%s\n", config->serial_number);
+	if (config->device_type)
+		fprintf(f, "device_type=%s\n", config->device_type);
+	if (config->os_version)
+		fprintf(f, "os_version=%08x\n",
+			WPA_GET_BE32(config->os_version));
 #endif /* CONFIG_WPS */
 	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",

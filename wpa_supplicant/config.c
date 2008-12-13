@@ -1582,6 +1582,12 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->pkcs11_module_path);
 #endif /* EAP_TLS_OPENSSL */
 	os_free(config->driver_param);
+	os_free(config->device_name);
+	os_free(config->manufacturer);
+	os_free(config->model_name);
+	os_free(config->model_number);
+	os_free(config->serial_number);
+	os_free(config->device_type);
 	os_free(config->pssid);
 	os_free(config);
 }

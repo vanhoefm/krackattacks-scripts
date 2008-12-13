@@ -360,17 +360,40 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->cred_cb = wpa_supplicant_wps_cred;
 	wps->cb_ctx = wpa_s;
 
-	/* TODO: make the device data configurable */
-	wps->dev.device_name = "dev name";
-	wps->dev.manufacturer = "manuf";
-	wps->dev.model_name = "model name";
-	wps->dev.model_number = "model number";
-	wps->dev.serial_number = "12345";
-	wps->dev.categ = WPS_DEV_COMPUTER;
-	wps->dev.oui = WPS_DEV_OUI_WFA;
-	wps->dev.sub_categ = WPS_DEV_COMPUTER_PC;
-	wps->dev.os_version = 0;
-	wps->dev.rf_bands = WPS_RF_24GHZ | WPS_RF_50GHZ;
+	wps->dev.device_name = wpa_s->conf->device_name;
+	wps->dev.manufacturer = wpa_s->conf->manufacturer;
+	wps->dev.model_name = wpa_s->conf->model_name;
+	wps->dev.model_number = wpa_s->conf->model_number;
+	wps->dev.serial_number = wpa_s->conf->serial_number;
+	if (wpa_s->conf->device_type) {
+		char *pos;
+		u8 oui[4];
+		/* <categ>-<OUI>-<subcateg> */
+		wps->dev.categ = atoi(wpa_s->conf->device_type);
+		pos = os_strchr(wpa_s->conf->device_type, '-');
+		if (pos == NULL) {
+			wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
+			os_free(wps);
+			return -1;
+		}
+		pos++;
+		if (hexstr2bin(pos, oui, 4)) {
+			wpa_printf(MSG_ERROR, "WPS: Invalid device_type OUI");
+			os_free(wps);
+			return -1;
+		}
+		wps->dev.oui = WPA_GET_BE32(oui);
+		pos = os_strchr(pos, '-');
+		if (pos == NULL) {
+			wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
+			os_free(wps);
+			return -1;
+		}
+		pos++;
+		wps->dev.sub_categ = atoi(pos);
+	}
+	wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
+	wps->dev.rf_bands = WPS_RF_24GHZ | WPS_RF_50GHZ; /* TODO: config */
 	os_memcpy(wps->dev.mac_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(wps->uuid, wpa_s->conf->uuid, 16);
 

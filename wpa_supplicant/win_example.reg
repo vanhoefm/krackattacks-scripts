@@ -11,6 +11,13 @@ REGEDIT4
 [HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test]
 "ap_scan"=dword:00000002
 "update_config"=dword:00000001
+"uuid"="12345678-9abc-def0-1234-56789abcdef0"
+"device_name"="Wireless Client"
+"manufacturer"="Company"
+"model_name"="cmodel"
+"serial_number"="12345"
+"device_type"="1-0050F204-1"
+"os_version"="01020300"
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\blobs]
 "testblob"=hex:01,02,03,04,05

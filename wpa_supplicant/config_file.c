@@ -270,7 +270,16 @@ static int wpa_config_process_blob(struct wpa_config *config, FILE *f,
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 
 
-static int wpa_config_process_country(struct wpa_config *config, char *pos)
+struct global_parse_data {
+	char *name;
+	int (*parser)(const struct global_parse_data *data,
+		      struct wpa_config *config, int line, const char *value);
+};
+
+
+static int wpa_config_process_country(const struct global_parse_data *data,
+				      struct wpa_config *config, int line,
+				      const char *pos)
 {
 	if (!pos[0] || !pos[1]) {
 		wpa_printf(MSG_DEBUG, "Invalid country set");
@@ -285,8 +294,9 @@ static int wpa_config_process_country(struct wpa_config *config, char *pos)
 
 
 #ifdef CONFIG_CTRL_IFACE
-static int wpa_config_process_ctrl_interface(struct wpa_config *config,
-					     char *pos)
+static int wpa_config_process_ctrl_interface(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	os_free(config->ctrl_interface);
 	config->ctrl_interface = os_strdup(pos);
@@ -295,8 +305,9 @@ static int wpa_config_process_ctrl_interface(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_ctrl_interface_group(struct wpa_config *config,
-						   char *pos)
+static int wpa_config_process_ctrl_interface_group(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	os_free(config->ctrl_interface_group);
 	config->ctrl_interface_group = os_strdup(pos);
@@ -307,8 +318,9 @@ static int wpa_config_process_ctrl_interface_group(struct wpa_config *config,
 #endif /* CONFIG_CTRL_IFACE */
 
 
-static int wpa_config_process_eapol_version(struct wpa_config *config,
-					    int line, char *pos)
+static int wpa_config_process_eapol_version(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	config->eapol_version = atoi(pos);
 	if (config->eapol_version < 1 || config->eapol_version > 2) {
@@ -321,7 +333,9 @@ static int wpa_config_process_eapol_version(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_ap_scan(struct wpa_config *config, char *pos)
+static int wpa_config_process_ap_scan(const struct global_parse_data *data,
+				      struct wpa_config *config, int line,
+				      const char *pos)
 {
 	config->ap_scan = atoi(pos);
 	wpa_printf(MSG_DEBUG, "ap_scan=%d", config->ap_scan);
@@ -329,7 +343,9 @@ static int wpa_config_process_ap_scan(struct wpa_config *config, char *pos)
 }
 
 
-static int wpa_config_process_fast_reauth(struct wpa_config *config, char *pos)
+static int wpa_config_process_fast_reauth(const struct global_parse_data *data,
+					  struct wpa_config *config, int line,
+					  const char *pos)
 {
 	config->fast_reauth = atoi(pos);
 	wpa_printf(MSG_DEBUG, "fast_reauth=%d", config->fast_reauth);
@@ -339,8 +355,9 @@ static int wpa_config_process_fast_reauth(struct wpa_config *config, char *pos)
 
 #ifdef EAP_TLS_OPENSSL
 
-static int wpa_config_process_opensc_engine_path(struct wpa_config *config,
-						 char *pos)
+static int wpa_config_process_opensc_engine_path(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	os_free(config->opensc_engine_path);
 	config->opensc_engine_path = os_strdup(pos);
@@ -350,8 +367,9 @@ static int wpa_config_process_opensc_engine_path(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_pkcs11_engine_path(struct wpa_config *config,
-						 char *pos)
+static int wpa_config_process_pkcs11_engine_path(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	os_free(config->pkcs11_engine_path);
 	config->pkcs11_engine_path = os_strdup(pos);
@@ -361,8 +379,9 @@ static int wpa_config_process_pkcs11_engine_path(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_pkcs11_module_path(struct wpa_config *config,
-						 char *pos)
+static int wpa_config_process_pkcs11_module_path(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	os_free(config->pkcs11_module_path);
 	config->pkcs11_module_path = os_strdup(pos);
@@ -374,8 +393,9 @@ static int wpa_config_process_pkcs11_module_path(struct wpa_config *config,
 #endif /* EAP_TLS_OPENSSL */
 
 
-static int wpa_config_process_driver_param(struct wpa_config *config,
-					   char *pos)
+static int wpa_config_process_driver_param(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	os_free(config->driver_param);
 	config->driver_param = os_strdup(pos);
@@ -384,8 +404,9 @@ static int wpa_config_process_driver_param(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_pmk_lifetime(struct wpa_config *config,
-					   char *pos)
+static int wpa_config_process_dot11RSNAConfigPMKLifetime(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
 {
 	config->dot11RSNAConfigPMKLifetime = atoi(pos);
 	wpa_printf(MSG_DEBUG, "dot11RSNAConfigPMKLifetime=%d",
@@ -394,8 +415,9 @@ static int wpa_config_process_pmk_lifetime(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_pmk_reauth_threshold(struct wpa_config *config,
-						   char *pos)
+static int wpa_config_process_dot11RSNAConfigPMKReauthThreshold(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
 {
 	config->dot11RSNAConfigPMKReauthThreshold = atoi(pos);
 	wpa_printf(MSG_DEBUG, "dot11RSNAConfigPMKReauthThreshold=%d",
@@ -404,7 +426,9 @@ static int wpa_config_process_pmk_reauth_threshold(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_sa_timeout(struct wpa_config *config, char *pos)
+static int wpa_config_process_dot11RSNAConfigSATimeout(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
 {
 	config->dot11RSNAConfigSATimeout = atoi(pos);
 	wpa_printf(MSG_DEBUG, "dot11RSNAConfigSATimeout=%d",
@@ -414,8 +438,9 @@ static int wpa_config_process_sa_timeout(struct wpa_config *config, char *pos)
 
 
 #ifndef CONFIG_NO_CONFIG_WRITE
-static int wpa_config_process_update_config(struct wpa_config *config,
-					    char *pos)
+static int wpa_config_process_update_config(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	config->update_config = atoi(pos);
 	wpa_printf(MSG_DEBUG, "update_config=%d", config->update_config);
@@ -424,7 +449,9 @@ static int wpa_config_process_update_config(struct wpa_config *config,
 #endif /* CONFIG_NO_CONFIG_WRITE */
 
 
-static int wpa_config_process_load_dynamic_eap(int line, char *so)
+static int wpa_config_process_load_dynamic_eap(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *so)
 {
 	int ret;
 	wpa_printf(MSG_DEBUG, "load_dynamic_eap=%s", so);
@@ -444,8 +471,9 @@ static int wpa_config_process_load_dynamic_eap(int line, char *so)
 
 #ifdef CONFIG_WPS
 
-static int wpa_config_process_uuid(struct wpa_config *config, int line,
-				   char *pos)
+static int wpa_config_process_uuid(const struct global_parse_data *data,
+				   struct wpa_config *config, int line,
+				   const char *pos)
 {
 	char buf[40];
 	if (uuid_str2bin(pos, config->uuid)) {
@@ -458,7 +486,9 @@ static int wpa_config_process_uuid(struct wpa_config *config, int line,
 }
 
 
-static int wpa_config_process_device_name(struct wpa_config *config, char *pos)
+static int wpa_config_process_device_name(const struct global_parse_data *data,
+					  struct wpa_config *config, int line,
+					  const char *pos)
 {
 	if (os_strlen(pos) > 32)
 		return -1;
@@ -469,8 +499,9 @@ static int wpa_config_process_device_name(struct wpa_config *config, char *pos)
 }
 
 
-static int wpa_config_process_manufacturer(struct wpa_config *config,
-					   char *pos)
+static int wpa_config_process_manufacturer(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	if (os_strlen(pos) > 64)
 		return -1;
@@ -481,7 +512,9 @@ static int wpa_config_process_manufacturer(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_model_name(struct wpa_config *config, char *pos)
+static int wpa_config_process_model_name(const struct global_parse_data *data,
+					 struct wpa_config *config, int line,
+					 const char *pos)
 {
 	if (os_strlen(pos) > 32)
 		return -1;
@@ -492,8 +525,9 @@ static int wpa_config_process_model_name(struct wpa_config *config, char *pos)
 }
 
 
-static int wpa_config_process_model_number(struct wpa_config *config,
-					   char *pos)
+static int wpa_config_process_model_number(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	if (os_strlen(pos) > 32)
 		return -1;
@@ -504,8 +538,9 @@ static int wpa_config_process_model_number(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_serial_number(struct wpa_config *config,
-					    char *pos)
+static int wpa_config_process_serial_number(
+	const struct global_parse_data *data, struct wpa_config *config,
+	int line, const char *pos)
 {
 	if (os_strlen(pos) > 32)
 		return -1;
@@ -516,7 +551,9 @@ static int wpa_config_process_serial_number(struct wpa_config *config,
 }
 
 
-static int wpa_config_process_device_type(struct wpa_config *config, char *pos)
+static int wpa_config_process_device_type(const struct global_parse_data *data,
+					  struct wpa_config *config, int line,
+					  const char *pos)
 {
 	os_free(config->device_type);
 	config->device_type = os_strdup(pos);
@@ -525,8 +562,9 @@ static int wpa_config_process_device_type(struct wpa_config *config, char *pos)
 }
 
 
-static int wpa_config_process_os_version(struct wpa_config *config, int line,
-					 char *pos)
+static int wpa_config_process_os_version(const struct global_parse_data *data,
+					 struct wpa_config *config, int line,
+					 const char *pos)
 {
 	if (hexstr2bin(pos, config->os_version, 4)) {
 		wpa_printf(MSG_ERROR, "Line %d: invalid os_version", line);
@@ -540,83 +578,71 @@ static int wpa_config_process_os_version(struct wpa_config *config, int line,
 #endif /* CONFIG_WPS */
 
 
+#define FUNC(f) #f, wpa_config_process_ ## f
+
+static const struct global_parse_data global_fields[] = {
+#ifdef CONFIG_CTRL_IFACE
+	{ FUNC(ctrl_interface) },
+	{ FUNC(ctrl_interface_group) },
+#endif /* CONFIG_CTRL_IFACE */
+	{ FUNC(eapol_version) },
+	{ FUNC(ap_scan) },
+	{ FUNC(fast_reauth) },
+#ifdef EAP_TLS_OPENSSL
+	{ FUNC(opensc_engine_path) },
+	{ FUNC(pkcs11_engine_path) },
+	{ FUNC(pkcs11_module_path) },
+#endif /* EAP_TLS_OPENSSL */
+	{ FUNC(driver_param) },
+	{ FUNC(dot11RSNAConfigPMKLifetime) },
+	{ FUNC(dot11RSNAConfigPMKReauthThreshold) },
+	{ FUNC(dot11RSNAConfigSATimeout) },
+#ifndef CONFIG_NO_CONFIG_WRITE
+	{ FUNC(update_config) },
+#endif /* CONFIG_NO_CONFIG_WRITE */
+	{ FUNC(load_dynamic_eap) },
+#ifdef CONFIG_WPS
+	{ FUNC(uuid) },
+	{ FUNC(device_name) },
+	{ FUNC(manufacturer) },
+	{ FUNC(model_name) },
+	{ FUNC(model_number) },
+	{ FUNC(serial_number) },
+	{ FUNC(device_type) },
+	{ FUNC(os_version) },
+#endif /* CONFIG_WPS */
+	{ FUNC(country) }
+};
+#define NUM_GLOBAL_FIELDS (sizeof(global_fields) / sizeof(global_fields[0]))
+
+
 static int wpa_config_process_global(struct wpa_config *config, char *pos,
 				     int line)
 {
-#ifdef CONFIG_CTRL_IFACE
-	if (os_strncmp(pos, "ctrl_interface=", 15) == 0)
-		return wpa_config_process_ctrl_interface(config, pos + 15);
+	size_t i;
+	int ret = 0;
 
-	if (os_strncmp(pos, "ctrl_interface_group=", 21) == 0)
-		return wpa_config_process_ctrl_interface_group(config,
-							       pos + 21);
-#endif /* CONFIG_CTRL_IFACE */
+	for (i = 0; i < NUM_GLOBAL_FIELDS; i++) {
+		const struct global_parse_data *field = &global_fields[i];
+		size_t flen = os_strlen(field->name);
+		if (os_strncmp(pos, field->name, flen) != 0 ||
+		    pos[flen] != '=')
+			continue;
 
-	if (os_strncmp(pos, "eapol_version=", 14) == 0)
-		return wpa_config_process_eapol_version(config, line,
-							pos + 14);
+		if (field->parser(field, config, line, pos + flen + 1)) {
+			wpa_printf(MSG_ERROR, "Line %d: failed to "
+				   "parse '%s'.", line, pos);
+			ret = -1;
+		}
+		break;
+	}
+	if (i == NUM_GLOBAL_FIELDS) {
+		wpa_printf(MSG_ERROR, "Line %d: unknown global field '%s'.",
+			   line, pos);
+		ret = -1;
+	}
 
-	if (os_strncmp(pos, "ap_scan=", 8) == 0)
-		return wpa_config_process_ap_scan(config, pos + 8);
-
-	if (os_strncmp(pos, "fast_reauth=", 12) == 0)
-		return wpa_config_process_fast_reauth(config, pos + 12);
-
-#ifdef EAP_TLS_OPENSSL
-	if (os_strncmp(pos, "opensc_engine_path=", 19) == 0)
-		return wpa_config_process_opensc_engine_path(config, pos + 19);
-
-	if (os_strncmp(pos, "pkcs11_engine_path=", 19) == 0)
-		return wpa_config_process_pkcs11_engine_path(config, pos + 19);
-
-	if (os_strncmp(pos, "pkcs11_module_path=", 19) == 0)
-		return wpa_config_process_pkcs11_module_path(config, pos + 19);
-#endif /* EAP_TLS_OPENSSL */
-
-	if (os_strncmp(pos, "driver_param=", 13) == 0)
-		return wpa_config_process_driver_param(config, pos + 13);
-
-	if (os_strncmp(pos, "dot11RSNAConfigPMKLifetime=", 27) == 0)
-		return wpa_config_process_pmk_lifetime(config, pos + 27);
-
-	if (os_strncmp(pos, "dot11RSNAConfigPMKReauthThreshold=", 34) == 0)
-		return wpa_config_process_pmk_reauth_threshold(config,
-							       pos + 34);
-
-	if (os_strncmp(pos, "dot11RSNAConfigSATimeout=", 25) == 0)
-		return wpa_config_process_sa_timeout(config, pos + 25);
-
-#ifndef CONFIG_NO_CONFIG_WRITE
-	if (os_strncmp(pos, "update_config=", 14) == 0)
-		return wpa_config_process_update_config(config, pos + 14);
-#endif /* CONFIG_NO_CONFIG_WRITE */
-
-	if (os_strncmp(pos, "load_dynamic_eap=", 17) == 0)
-		return wpa_config_process_load_dynamic_eap(line, pos + 17);
-
-#ifdef CONFIG_WPS
-	if (os_strncmp(pos, "uuid=", 5) == 0)
-		return wpa_config_process_uuid(config, line, pos + 5);
-	if (os_strncmp(pos, "device_name=", 12) == 0)
-		return wpa_config_process_device_name(config, pos + 12);
-	if (os_strncmp(pos, "manufacturer=", 13) == 0)
-		return wpa_config_process_manufacturer(config, pos + 13);
-	if (os_strncmp(pos, "model_name=", 11) == 0)
-		return wpa_config_process_model_name(config, pos + 11);
-	if (os_strncmp(pos, "model_number=", 13) == 0)
-		return wpa_config_process_model_number(config, pos + 13);
-	if (os_strncmp(pos, "serial_number=", 14) == 0)
-		return wpa_config_process_serial_number(config, pos + 14);
-	if (os_strncmp(pos, "device_type=", 12) == 0)
-		return wpa_config_process_device_type(config, pos + 12);
-	if (os_strncmp(pos, "os_version=", 11) == 0)
-		return wpa_config_process_os_version(config, line, pos + 11);
-#endif /* CONFIG_WPS */
-
-	if (os_strncmp(pos, "country=", 8) == 0)
-		return wpa_config_process_country(config, pos + 8);
-
-	return -1;
+	return ret;
 }
 
 

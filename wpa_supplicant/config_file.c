@@ -274,7 +274,7 @@ struct global_parse_data {
 	char *name;
 	int (*parser)(const struct global_parse_data *data,
 		      struct wpa_config *config, int line, const char *value);
-	void *param1;
+	void *param1, *param2, *param3;
 };
 
 
@@ -286,6 +286,41 @@ static int wpa_config_parse_int(const struct global_parse_data *data,
 	dst = (int *) (((u8 *) config) + (long) data->param1);
 	*dst = atoi(pos);
 	wpa_printf(MSG_DEBUG, "%s=%d", data->name, *dst);
+	return 0;
+}
+
+
+static int wpa_config_parse_str(const struct global_parse_data *data,
+				struct wpa_config *config, int line,
+				const char *pos)
+{
+	size_t len;
+	char **dst, *tmp;
+
+	len = os_strlen(pos);
+	if (data->param2 && len < (size_t) data->param2) {
+		wpa_printf(MSG_ERROR, "Line %d: too short %s (len=%lu "
+			   "min_len=%ld)", line, data->name,
+			   (unsigned long) len, (long) data->param2);
+		return -1;
+	}
+
+	if (data->param3 && len > (size_t) data->param3) {
+		wpa_printf(MSG_ERROR, "Line %d: too long %s (len=%lu "
+			   "max_len=%ld)", line, data->name,
+			   (unsigned long) len, (long) data->param3);
+		return -1;
+	}
+
+	tmp = os_strdup(pos);
+	if (tmp == NULL)
+		return -1;
+
+	dst = (char **) (((u8 *) config) + (long) data->param1);
+	os_free(*dst);
+	*dst = tmp;
+	wpa_printf(MSG_DEBUG, "%s='%s'", data->name, *dst);
+
 	return 0;
 }
 
@@ -306,31 +341,6 @@ static int wpa_config_process_country(const struct global_parse_data *data,
 }
 
 
-#ifdef CONFIG_CTRL_IFACE
-static int wpa_config_process_ctrl_interface(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	os_free(config->ctrl_interface);
-	config->ctrl_interface = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "ctrl_interface='%s'", config->ctrl_interface);
-	return 0;
-}
-
-
-static int wpa_config_process_ctrl_interface_group(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	os_free(config->ctrl_interface_group);
-	config->ctrl_interface_group = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "ctrl_interface_group='%s' (DEPRECATED)",
-		   config->ctrl_interface_group);
-	return 0;
-}
-#endif /* CONFIG_CTRL_IFACE */
-
-
 static int wpa_config_process_eapol_version(
 	const struct global_parse_data *data, struct wpa_config *config,
 	int line, const char *pos)
@@ -342,57 +352,6 @@ static int wpa_config_process_eapol_version(
 		return -1;
 	}
 	wpa_printf(MSG_DEBUG, "eapol_version=%d", config->eapol_version);
-	return 0;
-}
-
-
-#ifdef EAP_TLS_OPENSSL
-
-static int wpa_config_process_opensc_engine_path(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	os_free(config->opensc_engine_path);
-	config->opensc_engine_path = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "opensc_engine_path='%s'",
-		   config->opensc_engine_path);
-	return 0;
-}
-
-
-static int wpa_config_process_pkcs11_engine_path(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	os_free(config->pkcs11_engine_path);
-	config->pkcs11_engine_path = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "pkcs11_engine_path='%s'",
-		   config->pkcs11_engine_path);
-	return 0;
-}
-
-
-static int wpa_config_process_pkcs11_module_path(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	os_free(config->pkcs11_module_path);
-	config->pkcs11_module_path = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "pkcs11_module_path='%s'",
-		   config->pkcs11_module_path);
-	return 0;
-}
-
-#endif /* EAP_TLS_OPENSSL */
-
-
-static int wpa_config_process_driver_param(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	os_free(config->driver_param);
-	config->driver_param = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "driver_param='%s'", config->driver_param);
 	return 0;
 }
 
@@ -434,82 +393,6 @@ static int wpa_config_process_uuid(const struct global_parse_data *data,
 }
 
 
-static int wpa_config_process_device_name(const struct global_parse_data *data,
-					  struct wpa_config *config, int line,
-					  const char *pos)
-{
-	if (os_strlen(pos) > 32)
-		return -1;
-	os_free(config->device_name);
-	config->device_name = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "device_name='%s'", config->device_name);
-	return 0;
-}
-
-
-static int wpa_config_process_manufacturer(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	if (os_strlen(pos) > 64)
-		return -1;
-	os_free(config->manufacturer);
-	config->manufacturer = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "manufacturer='%s'", config->manufacturer);
-	return 0;
-}
-
-
-static int wpa_config_process_model_name(const struct global_parse_data *data,
-					 struct wpa_config *config, int line,
-					 const char *pos)
-{
-	if (os_strlen(pos) > 32)
-		return -1;
-	os_free(config->model_name);
-	config->model_name = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "model_name='%s'", config->model_name);
-	return 0;
-}
-
-
-static int wpa_config_process_model_number(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	if (os_strlen(pos) > 32)
-		return -1;
-	os_free(config->model_number);
-	config->model_number = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "model_number='%s'", config->model_number);
-	return 0;
-}
-
-
-static int wpa_config_process_serial_number(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	if (os_strlen(pos) > 32)
-		return -1;
-	os_free(config->serial_number);
-	config->serial_number = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "serial_number='%s'", config->serial_number);
-	return 0;
-}
-
-
-static int wpa_config_process_device_type(const struct global_parse_data *data,
-					  struct wpa_config *config, int line,
-					  const char *pos)
-{
-	os_free(config->device_type);
-	config->device_type = os_strdup(pos);
-	wpa_printf(MSG_DEBUG, "device_type='%s'", config->device_type);
-	return 0;
-}
-
-
 static int wpa_config_process_os_version(const struct global_parse_data *data,
 					 struct wpa_config *config, int line,
 					 const char *pos)
@@ -532,24 +415,27 @@ static int wpa_config_process_os_version(const struct global_parse_data *data,
 /* OFFSET: Get offset of a variable within the wpa_config structure */
 #define OFFSET(v) ((void *) &((struct wpa_config *) 0)->v)
 
-#define FUNC(f) #f, wpa_config_process_ ## f, OFFSET(f)
-#define FUNC_NO_VAR(f) #f, wpa_config_process_ ## f, 0
-#define INT(f) #f, wpa_config_parse_int, OFFSET(f)
+#define FUNC(f) #f, wpa_config_process_ ## f, OFFSET(f), NULL, NULL
+#define FUNC_NO_VAR(f) #f, wpa_config_process_ ## f, NULL, NULL, NULL
+#define INT(f) #f, wpa_config_parse_int, OFFSET(f), NULL, NULL
+#define _STR(f) #f, wpa_config_parse_str, OFFSET(f)
+#define STR(f) _STR(f), NULL, NULL
+#define STR_RANGE(f, min, max) _STR(f), (void *) min, (void *) max
 
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE
-	{ FUNC(ctrl_interface) },
-	{ FUNC(ctrl_interface_group) },
+	{ STR(ctrl_interface) },
+	{ STR(ctrl_interface_group) } /* deprecated */,
 #endif /* CONFIG_CTRL_IFACE */
 	{ FUNC(eapol_version) },
 	{ INT(ap_scan) },
 	{ INT(fast_reauth) },
 #ifdef EAP_TLS_OPENSSL
-	{ FUNC(opensc_engine_path) },
-	{ FUNC(pkcs11_engine_path) },
-	{ FUNC(pkcs11_module_path) },
+	{ STR(opensc_engine_path) },
+	{ STR(pkcs11_engine_path) },
+	{ STR(pkcs11_module_path) },
 #endif /* EAP_TLS_OPENSSL */
-	{ FUNC(driver_param) },
+	{ STR(driver_param) },
 	{ INT(dot11RSNAConfigPMKLifetime) },
 	{ INT(dot11RSNAConfigPMKReauthThreshold) },
 	{ INT(dot11RSNAConfigSATimeout) },
@@ -559,12 +445,12 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC_NO_VAR(load_dynamic_eap) },
 #ifdef CONFIG_WPS
 	{ FUNC(uuid) },
-	{ FUNC(device_name) },
-	{ FUNC(manufacturer) },
-	{ FUNC(model_name) },
-	{ FUNC(model_number) },
-	{ FUNC(serial_number) },
-	{ FUNC(device_type) },
+	{ STR_RANGE(device_name, 0, 32) },
+	{ STR_RANGE(manufacturer, 0, 64) },
+	{ STR_RANGE(model_name, 0, 32) },
+	{ STR_RANGE(model_number, 0, 32) },
+	{ STR_RANGE(serial_number, 0, 32) },
+	{ STR(device_type) },
 	{ FUNC(os_version) },
 #endif /* CONFIG_WPS */
 	{ FUNC(country) }
@@ -572,6 +458,9 @@ static const struct global_parse_data global_fields[] = {
 
 #undef FUNC
 #undef INT
+#undef _STR
+#undef STR
+#undef STR_RANGE
 #define NUM_GLOBAL_FIELDS (sizeof(global_fields) / sizeof(global_fields[0]))
 
 

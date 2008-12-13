@@ -286,6 +286,23 @@ static int wpa_config_parse_int(const struct global_parse_data *data,
 	dst = (int *) (((u8 *) config) + (long) data->param1);
 	*dst = atoi(pos);
 	wpa_printf(MSG_DEBUG, "%s=%d", data->name, *dst);
+
+	if (data->param2 && *dst < (long) data->param2) {
+		wpa_printf(MSG_ERROR, "Line %d: too small %s (value=%d "
+			   "min_value=%ld)", line, data->name, *dst,
+			   (long) data->param2);
+		*dst = (long) data->param2;
+		return -1;
+	}
+
+	if (data->param3 && *dst > (long) data->param3) {
+		wpa_printf(MSG_ERROR, "Line %d: too large %s (value=%d "
+			   "max_value=%ld)", line, data->name, *dst,
+			   (long) data->param3);
+		*dst = (long) data->param3;
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -337,21 +354,6 @@ static int wpa_config_process_country(const struct global_parse_data *data,
 	config->country[1] = pos[1];
 	wpa_printf(MSG_DEBUG, "country='%c%c'",
 		   config->country[0], config->country[1]);
-	return 0;
-}
-
-
-static int wpa_config_process_eapol_version(
-	const struct global_parse_data *data, struct wpa_config *config,
-	int line, const char *pos)
-{
-	config->eapol_version = atoi(pos);
-	if (config->eapol_version < 1 || config->eapol_version > 2) {
-		wpa_printf(MSG_ERROR, "Line %d: Invalid EAPOL version (%d): "
-			   "'%s'.", line, config->eapol_version, pos);
-		return -1;
-	}
-	wpa_printf(MSG_DEBUG, "eapol_version=%d", config->eapol_version);
 	return 0;
 }
 
@@ -417,7 +419,9 @@ static int wpa_config_process_os_version(const struct global_parse_data *data,
 
 #define FUNC(f) #f, wpa_config_process_ ## f, OFFSET(f), NULL, NULL
 #define FUNC_NO_VAR(f) #f, wpa_config_process_ ## f, NULL, NULL, NULL
-#define INT(f) #f, wpa_config_parse_int, OFFSET(f), NULL, NULL
+#define _INT(f) #f, wpa_config_parse_int, OFFSET(f)
+#define INT(f) _INT(f), NULL, NULL
+#define INT_RANGE(f, min, max) _INT(f), (void *) min, (void *) max
 #define _STR(f) #f, wpa_config_parse_str, OFFSET(f)
 #define STR(f) _STR(f), NULL, NULL
 #define STR_RANGE(f, min, max) _STR(f), (void *) min, (void *) max
@@ -427,7 +431,7 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(ctrl_interface) },
 	{ STR(ctrl_interface_group) } /* deprecated */,
 #endif /* CONFIG_CTRL_IFACE */
-	{ FUNC(eapol_version) },
+	{ INT_RANGE(eapol_version, 1, 2) },
 	{ INT(ap_scan) },
 	{ INT(fast_reauth) },
 #ifdef EAP_TLS_OPENSSL
@@ -457,7 +461,9 @@ static const struct global_parse_data global_fields[] = {
 };
 
 #undef FUNC
+#undef _INT
 #undef INT
+#undef INT_RANGE
 #undef _STR
 #undef STR
 #undef STR_RANGE

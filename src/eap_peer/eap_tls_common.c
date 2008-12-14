@@ -501,6 +501,17 @@ static int eap_tls_process_output(struct eap_ssl_data *data, EapType eap_type,
 	length_included = data->tls_out_pos == 0 &&
 		(data->tls_out_len > data->tls_out_limit ||
 		 data->include_tls_length);
+	if (!length_included &&
+	    eap_type == EAP_TYPE_PEAP && peap_version == 0 &&
+	    !tls_connection_established(data->eap->ssl_ctx, data->conn)) {
+		/*
+		 * Windows Server 2008 NPS really wants to have the TLS Message
+		 * length included in phase 0 even for unfragmented frames or
+		 * it will get very confused with Compound MAC calculation and
+		 * Outer TLVs.
+		 */
+		length_included = 1;
+	}
 
 	*out_data = eap_msg_alloc(EAP_VENDOR_IETF, eap_type,
 				  1 + length_included * 4 + len,

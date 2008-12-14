@@ -12,6 +12,8 @@ ChangeLog for wpa_supplicant
 	  manage WPS negotiation; see README-WPS for more details
 	* added support for EAP-AKA' (draft-arkko-eap-aka-kdf)
 	* added support for using driver_test over UDP socket
+	* fixed PEAPv0 Cryptobinding interoperability issue with Windows Server
+	  2008 NPS; optional cryptobinding is now enabled (again) by default
 
 2008-11-23 - v0.6.6
 	* added Milenage SIM/USIM emulator for EAP-SIM/EAP-AKA

@@ -560,6 +560,16 @@ static void ieee802_1x_get_keys(struct eapol_test_data *e,
 				keys->recv_len;
 			os_memcpy(e->authenticator_pmk, keys->recv,
 				  e->authenticator_pmk_len);
+			if (e->authenticator_pmk_len == 16 && keys->send &&
+			    keys->send_len == 16) {
+				/* MS-CHAP-v2 derives 16 octet keys */
+				wpa_printf(MSG_DEBUG, "Use MS-MPPE-Send-Key "
+					   "to extend PMK to 32 octets");
+				os_memcpy(e->authenticator_pmk +
+					  e->authenticator_pmk_len,
+					  keys->send, keys->send_len);
+				e->authenticator_pmk_len += keys->send_len;
+			}
 		}
 
 		os_free(keys->send);

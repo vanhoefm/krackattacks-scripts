@@ -238,21 +238,6 @@ static int eap_peap_get_isk(struct eap_sm *sm, struct eap_peap_data *data,
 		return -1;
 	}
 
-	if (key_len == 32 &&
-	    data->phase2_method->vendor == EAP_VENDOR_IETF &&
-	    data->phase2_method->method == EAP_TYPE_MSCHAPV2) {
-		/*
-		 * Microsoft uses reverse order for MS-MPPE keys in
-		 * EAP-PEAP when compared to EAP-FAST derivation of
-		 * ISK. Swap the keys here to get the correct ISK for
-		 * EAP-PEAPv0 cryptobinding.
-		 */
-		u8 tmp[16];
-		os_memcpy(tmp, key, 16);
-		os_memcpy(key, key + 16, 16);
-		os_memcpy(key + 16, tmp, 16);
-	}
-
 	if (key_len > isk_len)
 		key_len = isk_len;
 	os_memcpy(isk, key, key_len);
@@ -731,11 +716,9 @@ static int eap_peap_phase2_request(struct eap_sm *sm,
 				data->phase2_type.method);
 			if (data->phase2_method) {
 				sm->init_phase2 = 1;
-				sm->mschapv2_full_key = 1;
 				data->phase2_priv =
 					data->phase2_method->init(sm);
 				sm->init_phase2 = 0;
-				sm->mschapv2_full_key = 0;
 			}
 		}
 		if (data->phase2_priv == NULL || data->phase2_method == NULL) {

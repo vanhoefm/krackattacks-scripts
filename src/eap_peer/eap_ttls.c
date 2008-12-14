@@ -558,10 +558,8 @@ static int eap_ttls_phase2_request_eap_method(struct eap_sm *sm,
 			EAP_VENDOR_IETF, method);
 		if (data->phase2_method) {
 			sm->init_phase2 = 1;
-			sm->mschapv2_full_key = 1;
 			data->phase2_priv = data->phase2_method->init(sm);
 			sm->init_phase2 = 0;
-			sm->mschapv2_full_key = 0;
 		}
 	}
 	if (data->phase2_priv == NULL || data->phase2_method == NULL) {

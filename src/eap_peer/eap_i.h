@@ -328,7 +328,6 @@ struct eap_sm {
 
 	/* Optional challenges generated in Phase 1 (EAP-FAST) */
 	u8 *peer_challenge, *auth_challenge;
-	int mschapv2_full_key; /* Request full MSCHAPv2 key */
 
 	int num_rounds;
 	int force_disabled;

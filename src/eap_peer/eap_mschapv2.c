@@ -93,7 +93,6 @@ struct eap_mschapv2_data {
 	 */
 	u8 *peer_challenge;
 	u8 *auth_challenge;
-	int full_key;
 
 	int phase2;
 	u8 master_key[MSCHAPV2_MASTER_KEY_LEN];
@@ -114,10 +113,7 @@ static void * eap_mschapv2_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 
-	data->full_key = sm->mschapv2_full_key;
-
 	if (sm->peer_challenge) {
-		data->full_key = 1;
 		data->peer_challenge = os_malloc(MSCHAPV2_CHAL_LEN);
 		if (data->peer_challenge == NULL) {
 			eap_mschapv2_deinit(sm, data);
@@ -830,27 +826,17 @@ static u8 * eap_mschapv2_getKey(struct eap_sm *sm, void *priv, size_t *len)
 	if (!data->master_key_valid || !data->success)
 		return NULL;
 
-	if (data->full_key) {
-		/* EAP-FAST needs both send and receive keys */
-		key_len = 2 * MSCHAPV2_KEY_LEN;
-	} else {
-		key_len = MSCHAPV2_KEY_LEN;
-	}
+	key_len = 2 * MSCHAPV2_KEY_LEN;
 
 	key = os_malloc(key_len);
 	if (key == NULL)
 		return NULL;
 
-	if (data->full_key) {
-		get_asymetric_start_key(data->master_key, key,
-					MSCHAPV2_KEY_LEN, 0, 0);
-		get_asymetric_start_key(data->master_key,
-					key + MSCHAPV2_KEY_LEN,
-					MSCHAPV2_KEY_LEN, 1, 0);
-	} else {
-		get_asymetric_start_key(data->master_key, key,
-					MSCHAPV2_KEY_LEN, 1, 0);
-	}
+	/* MSK = server MS-MPPE-Recv-Key | MS-MPPE-Send-Key, i.e.,
+	 *	peer MS-MPPE-Send-Key | MS-MPPE-Recv-Key */
+	get_asymetric_start_key(data->master_key, key, MSCHAPV2_KEY_LEN, 1, 0);
+	get_asymetric_start_key(data->master_key, key + MSCHAPV2_KEY_LEN,
+				MSCHAPV2_KEY_LEN, 0, 0);
 
 	wpa_hexdump_key(MSG_DEBUG, "EAP-MSCHAPV2: Derived key",
 			key, key_len);

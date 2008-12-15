@@ -21,6 +21,7 @@
 #include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
 #include "eloop.h"
+#include "wpa_ctrl.h"
 #include "eap_common/eap_wsc_common.h"
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
@@ -557,4 +558,29 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 	wpabuf_free(wps_ie);
 
 	return ret;
+}
+
+
+void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
+{
+	size_t i;
+
+	if (wpa_s->disconnected || wpa_s->wpa_state >= WPA_ASSOCIATED)
+		return;
+
+	for (i = 0; i < wpa_s->scan_res->num; i++) {
+		struct wpa_scan_res *bss = wpa_s->scan_res->res[i];
+		struct wpabuf *ie;
+		ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		if (!ie)
+			continue;
+		if (wps_is_selected_pbc_registrar(ie))
+			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_PBC);
+		else if (wps_is_selected_pin_registrar(ie))
+			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_PIN);
+		else
+			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE);
+		wpabuf_free(ie);
+		break;
+	}
 }

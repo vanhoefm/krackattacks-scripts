@@ -31,6 +31,7 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid, struct wpa_scan_res *bss);
 int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 			      struct wpa_scan_res *selected,
 			      struct wpa_ssid *ssid);
+void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s);
 
 #else /* CONFIG_WPS */
 
@@ -70,6 +71,10 @@ static inline int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 					    struct wpa_ssid *ssid)
 {
 	return 0;
+}
+
+static inline void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
+{
 }
 
 #endif /* CONFIG_WPS */

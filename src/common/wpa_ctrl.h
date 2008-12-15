@@ -49,7 +49,15 @@ extern "C" {
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
 
+/** WPS overlap detected in PBC mode */
 #define WPS_EVENT_OVERLAP "WPS-OVERLAP-DETECTED "
+/** Available WPS AP with active PBC found in scan results */
+#define WPS_EVENT_AP_AVAILABLE_PBC "WPS-AP-AVAILABLE-PBC "
+/** Available WPS AP with recently selected PIN registrar found in scan results
+ */
+#define WPS_EVENT_AP_AVAILABLE_PIN "WPS-AP-AVAILABLE-PIN "
+/** Available WPS AP found in scan results */
+#define WPS_EVENT_AP_AVAILABLE "WPS-AP-AVAILABLE "
 
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "

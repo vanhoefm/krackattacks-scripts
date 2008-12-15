@@ -56,7 +56,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	wpa_msg(wpa_s, MSG_INFO, "WPS: New credential received");
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_CRED_RECEIVED);
 
 	if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS: Replace WPS network block based "

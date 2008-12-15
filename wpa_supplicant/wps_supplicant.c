@@ -550,6 +550,8 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 		}
 
 		/* TODO: verify that this is reasonable dual-band situation */
+
+		wpabuf_free(ie);
 	}
 
 	wpabuf_free(wps_ie);

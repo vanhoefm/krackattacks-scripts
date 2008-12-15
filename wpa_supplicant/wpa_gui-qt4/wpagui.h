@@ -71,6 +71,10 @@ public slots:
 	virtual void showTrayMessage(QSystemTrayIcon::MessageIcon type,
 				     int sec, const QString &msg);
 	virtual void showTrayStatus();
+	virtual void wpsDialog();
+	virtual void tabChanged(int index);
+	virtual void wpsPbc();
+	virtual void wpsGeneratePin();
 
 protected slots:
 	virtual void languageChange();
@@ -105,6 +109,8 @@ private:
 	bool startInTray;
 
 	int openCtrlConnection(const char *ifname);
+
+	bool wpsRunning;
 };
 
 #endif /* WPAGUI_H */

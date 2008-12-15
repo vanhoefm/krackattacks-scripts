@@ -289,6 +289,105 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="wpsTab" >
+       <attribute name="title" >
+        <string>WPS</string>
+       </attribute>
+       <widget class="QPushButton" name="wpsPbcButton" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>40</y>
+          <width>141</width>
+          <height>28</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>PBC - push button</string>
+        </property>
+       </widget>
+       <widget class="QPushButton" name="wpsPinButton" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>90</y>
+          <width>141</width>
+          <height>28</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Generate PIN</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label" >
+        <property name="geometry" >
+         <rect>
+          <x>160</x>
+          <y>100</y>
+          <width>21</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>PIN</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="wpsPinEdit" >
+        <property name="enabled" >
+         <bool>false</bool>
+        </property>
+        <property name="geometry" >
+         <rect>
+          <x>190</x>
+          <y>90</y>
+          <width>113</width>
+          <height>28</height>
+         </rect>
+        </property>
+        <property name="readOnly" >
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_2" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>10</y>
+          <width>41</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string>Status:</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="wpsStatusText" >
+        <property name="geometry" >
+         <rect>
+          <x>70</x>
+          <y>10</y>
+          <width>231</width>
+          <height>18</height>
+         </rect>
+        </property>
+        <property name="text" >
+         <string/>
+        </property>
+       </widget>
+       <widget class="QTextEdit" name="wpsInstructions" >
+        <property name="geometry" >
+         <rect>
+          <x>10</x>
+          <y>130</y>
+          <width>301</width>
+          <height>91</height>
+         </rect>
+        </property>
+        <property name="readOnly" >
+         <bool>true</bool>
+        </property>
+       </widget>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -308,6 +407,7 @@
     </property>
     <addaction name="fileEventHistoryAction" />
     <addaction name="fileSaveConfigAction" />
+    <addaction name="actionWPS" />
     <addaction name="separator" />
     <addaction name="fileExitAction" />
    </widget>
@@ -406,6 +506,14 @@
   <action name="helpAboutAction" >
    <property name="text" >
     <string>&amp;About</string>
+   </property>
+  </action>
+  <action name="actionWPS" >
+   <property name="enabled" >
+    <bool>false</bool>
+   </property>
+   <property name="text" >
+    <string>&amp;Wi-Fi Protected Setup</string>
    </property>
   </action>
  </widget>

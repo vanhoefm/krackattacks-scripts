@@ -48,6 +48,7 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 		SLOT(eventHistory()));
 	connect(fileSaveConfigAction, SIGNAL(triggered()), this,
 		SLOT(saveConfig()));
+	connect(actionWPS, SIGNAL(triggered()), this, SLOT(wpsDialog()));
 	connect(fileExitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
 	connect(networkAddAction, SIGNAL(triggered()), this,
 		SLOT(addNetwork()));
@@ -86,6 +87,10 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	connect(scanNetworkButton, SIGNAL(clicked()), this, SLOT(scan()));
 	connect(networkList, SIGNAL(itemDoubleClicked(QListWidgetItem *)),
 		this, SLOT(editListedNetwork()));
+	connect(wpaguiTab, SIGNAL(currentChanged(int)), this,
+		SLOT(tabChanged(int)));
+	connect(wpsPbcButton, SIGNAL(clicked()), this, SLOT(wpsPbc()));
+	connect(wpsPinButton, SIGNAL(clicked()), this, SLOT(wpsGeneratePin()));
 
 	eh = NULL;
 	scanres = NULL;
@@ -338,6 +343,16 @@ int WpaGui::openCtrlConnection(const char *ifname)
 			else
 				break;
 		}
+	}
+
+	len = sizeof(buf) - 1;
+	if (wpa_ctrl_request(ctrl_conn, "GET_CAPABILITY eap", 18, buf, &len,
+			     NULL) >= 0) {
+		buf[len] = '\0';
+
+		QString res(buf);
+		QStringList types = res.split(QChar(' '));
+		actionWPS->setEnabled(types.contains("WSC"));
 	}
 
 	return 0;
@@ -599,6 +614,14 @@ void WpaGui::disconnect()
 	char reply[10];
 	size_t reply_len = sizeof(reply);
 	ctrlRequest("DISCONNECT", reply, &reply_len);
+
+	if (wpsRunning)
+		wpsStatusText->setText("Stopped");
+	else
+		wpsStatusText->setText("");
+	wpsPinEdit->setEnabled(false);
+	wpsInstructions->setText("");
+	wpsRunning = false;
 }
 
 
@@ -738,6 +761,48 @@ void WpaGui::processMsg(char *msg)
 		showTrayMessage(QSystemTrayIcon::Information, 3,
 				"Connection to network established.");
 		QTimer::singleShot(5 * 1000, this, SLOT(showTrayStatus()));
+		if (wpsRunning) {
+			wpsStatusText->setText("Connected to the network");
+			wpsPinEdit->setEnabled(false);
+			wpsInstructions->setText("");
+			wpsRunning = false;
+		}
+	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE_PBC)) {
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Wi-Fi Protected Setup (WPS) AP\n"
+				"in active PBC mode found.");
+		wpsStatusText->setText("WPS AP in active PBC mode found");
+		wpaguiTab->setCurrentWidget(wpsTab);
+		wpsInstructions->setText("Press the PBC button on the screen "
+					 "to start registration");
+	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE_PIN)) {
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Wi-Fi Protected Setup (WPS) AP\n"
+				" in active PIN mode found.");
+		wpsStatusText->setText("WPS AP with recently selected "
+				       "registrar");
+		wpaguiTab->setCurrentWidget(wpsTab);
+	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE)) {
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Wi-Fi Protected Setup (WPS)\n"
+				"AP detected.");
+		wpsStatusText->setText("WPS AP detected");
+		wpaguiTab->setCurrentWidget(wpsTab);
+	} else if (str_match(pos, WPS_EVENT_OVERLAP)) {
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Wi-Fi Protected Setup (WPS)\n"
+				"PBC mode overlap detected.");
+		wpsStatusText->setText("PBC mode overlap detected");
+		wpsInstructions->setText("More than one AP is currently in "
+					 "active WPS PBC mode. Wait couple of "
+					 "minutes and try again");
+		wpaguiTab->setCurrentWidget(wpsTab);
+	} else if (str_match(pos, WPS_EVENT_CRED_RECEIVED)) {
+		wpsStatusText->setText("Network configuration received");
+		wpaguiTab->setCurrentWidget(wpsTab);
+	} else if (str_match(pos, WPA_EVENT_EAP_METHOD)) {
+		if (strstr(pos, "(WSC)"))
+			wpsStatusText->setText("Registration started");
 	}
 }
 
@@ -804,6 +869,14 @@ void WpaGui::selectNetwork( const QString &sel )
 	cmd.prepend("SELECT_NETWORK ");
 	ctrlRequest(cmd.toAscii().constData(), reply, &reply_len);
 	triggerUpdate();
+
+	if (wpsRunning)
+		wpsStatusText->setText("Stopped");
+	else
+		wpsStatusText->setText("");
+	wpsPinEdit->setEnabled(false);
+	wpsInstructions->setText("");
+	wpsRunning = false;
 }
 
 
@@ -1274,4 +1347,65 @@ void WpaGui::closeEvent(QCloseEvent *event)
 	}
 
 	event->accept();
+}
+
+
+void WpaGui::wpsDialog()
+{
+	wpaguiTab->setCurrentWidget(wpsTab);
+}
+
+
+void WpaGui::tabChanged(int index)
+{
+	if (index != 2)
+		return;
+
+	if (wpsRunning)
+		return;
+
+	/* TODO: Update WPS status based on latest scan results and
+	 * availability of WPS APs */
+}
+
+
+void WpaGui::wpsPbc()
+{
+	char reply[20];
+	size_t reply_len = sizeof(reply);
+
+	if (ctrlRequest("WPS_PBC", reply, &reply_len) < 0)
+		return;
+
+	wpsPinEdit->setEnabled(false);
+	if (wpsStatusText->text().compare("WPS AP in active PBC mode found")) {
+		wpsInstructions->setText("Press the push button on the AP to "
+					 "start the PBC mode.");
+	} else {
+		wpsInstructions->setText("If you have not yet done so, press "
+					 "the push button on the AP to start "
+					 "the PBC mode.");
+	}
+	wpsStatusText->setText("Waiting for Registrar");
+	wpsRunning = true;
+}
+
+
+void WpaGui::wpsGeneratePin()
+{
+	char reply[20];
+	size_t reply_len = sizeof(reply) - 1;
+
+	if (ctrlRequest("WPS_PIN any", reply, &reply_len) < 0)
+		return;
+
+	reply[reply_len] = '\0';
+
+	wpsPinEdit->setText(reply);
+	wpsPinEdit->setEnabled(true);
+	wpsInstructions->setText("Enter the generated PIN into the Registrar "
+				 "(either the internal one in the AP or an "
+				 "external one).");
+	wpsStatusText->setText("Waiting for Registrar");
+	wpsRunning = true;
 }

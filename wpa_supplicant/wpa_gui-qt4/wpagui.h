@@ -38,6 +38,7 @@ public:
 	virtual void enableNetwork(const QString &sel);
 	virtual void disableNetwork(const QString &sel);
 	virtual int getNetworkDisabled(const QString &sel);
+	void setBssFromScan(const QString &bssid);
 
 public slots:
 	virtual void parse_argv();
@@ -75,6 +76,8 @@ public slots:
 	virtual void tabChanged(int index);
 	virtual void wpsPbc();
 	virtual void wpsGeneratePin();
+	virtual void wpsApPinChanged(const QString &text);
+	virtual void wpsApPin();
 
 protected slots:
 	virtual void languageChange();
@@ -111,6 +114,10 @@ private:
 	int openCtrlConnection(const char *ifname);
 
 	bool wpsRunning;
+
+	QString bssFromScan;
+
+	void stopWpsRun(bool success);
 };
 
 #endif /* WPAGUI_H */

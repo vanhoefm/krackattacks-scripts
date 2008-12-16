@@ -91,6 +91,9 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 		SLOT(tabChanged(int)));
 	connect(wpsPbcButton, SIGNAL(clicked()), this, SLOT(wpsPbc()));
 	connect(wpsPinButton, SIGNAL(clicked()), this, SLOT(wpsGeneratePin()));
+	connect(wpsApPinEdit, SIGNAL(textChanged(const QString &)), this,
+		SLOT(wpsApPinChanged(const QString &)));
+	connect(wpsApPinButton, SIGNAL(clicked()), this, SLOT(wpsApPin()));
 
 	eh = NULL;
 	scanres = NULL;
@@ -614,14 +617,7 @@ void WpaGui::disconnect()
 	char reply[10];
 	size_t reply_len = sizeof(reply);
 	ctrlRequest("DISCONNECT", reply, &reply_len);
-
-	if (wpsRunning)
-		wpsStatusText->setText("Stopped");
-	else
-		wpsStatusText->setText("");
-	wpsPinEdit->setEnabled(false);
-	wpsInstructions->setText("");
-	wpsRunning = false;
+	stopWpsRun(false);
 }
 
 
@@ -769,12 +765,7 @@ void WpaGui::processMsg(char *msg)
 		showTrayMessage(QSystemTrayIcon::Information, 3,
 				"Connection to network established.");
 		QTimer::singleShot(5 * 1000, this, SLOT(showTrayStatus()));
-		if (wpsRunning) {
-			wpsStatusText->setText("Connected to the network");
-			wpsPinEdit->setEnabled(false);
-			wpsInstructions->setText("");
-			wpsRunning = false;
-		}
+		stopWpsRun(true);
 	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE_PBC)) {
 		showTrayMessage(QSystemTrayIcon::Information, 3,
 				"Wi-Fi Protected Setup (WPS) AP\n"
@@ -877,14 +868,7 @@ void WpaGui::selectNetwork( const QString &sel )
 	cmd.prepend("SELECT_NETWORK ");
 	ctrlRequest(cmd.toAscii().constData(), reply, &reply_len);
 	triggerUpdate();
-
-	if (wpsRunning)
-		wpsStatusText->setText("Stopped");
-	else
-		wpsStatusText->setText("");
-	wpsPinEdit->setEnabled(false);
-	wpsInstructions->setText("");
-	wpsRunning = false;
+	stopWpsRun(false);
 }
 
 
@@ -1372,8 +1356,9 @@ void WpaGui::tabChanged(int index)
 	if (wpsRunning)
 		return;
 
-	/* TODO: Update WPS status based on latest scan results and
-	 * availability of WPS APs */
+	wpsApPinEdit->setEnabled(!bssFromScan.isEmpty());
+	if (bssFromScan.isEmpty())
+		wpsApPinButton->setEnabled(false);
 }
 
 
@@ -1416,4 +1401,52 @@ void WpaGui::wpsGeneratePin()
 				 "external one).");
 	wpsStatusText->setText("Waiting for Registrar");
 	wpsRunning = true;
+}
+
+
+void WpaGui::setBssFromScan(const QString &bssid)
+{
+	bssFromScan = bssid;
+	wpsApPinEdit->setEnabled(!bssFromScan.isEmpty());
+	wpsApPinButton->setEnabled(wpsApPinEdit->text().length() == 8);
+	wpsStatusText->setText("WPS AP selected from scan results");
+	wpsInstructions->setText("If you want to use an AP device PIN, e.g., "
+				 "from a label in the device, enter the eight "
+				 "digit AP PIN and click Use AP PIN button.");
+}
+
+
+void WpaGui::wpsApPinChanged(const QString &text)
+{
+	wpsApPinButton->setEnabled(text.length() == 8);
+}
+
+
+void WpaGui::wpsApPin()
+{
+	char reply[20];
+	size_t reply_len = sizeof(reply);
+
+	QString cmd("WPS_REG " + bssFromScan + " " + wpsApPinEdit->text());
+	if (ctrlRequest(cmd.toAscii().constData(), reply, &reply_len) < 0)
+		return;
+
+	wpsStatusText->setText("Waiting for AP/Enrollee");
+	wpsRunning = true;
+}
+
+
+void WpaGui::stopWpsRun(bool success)
+{
+	if (wpsRunning)
+		wpsStatusText->setText(success ? "Connected to the network" :
+				       "Stopped");
+	else
+		wpsStatusText->setText("");
+	wpsPinEdit->setEnabled(false);
+	wpsInstructions->setText("");
+	wpsRunning = false;
+	bssFromScan = "";
+	wpsApPinEdit->setEnabled(false);
+	wpsApPinButton->setEnabled(false);
 }

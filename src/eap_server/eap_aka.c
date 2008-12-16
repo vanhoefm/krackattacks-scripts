@@ -888,6 +888,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 	}
 	if (data->next_reauth_id) {
 		if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+#ifdef EAP_AKA_PRIME
 			eap_sim_db_add_reauth_prime(sm->eap_sim_db_priv,
 						    identity,
 						    identity_len,
@@ -895,6 +896,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 						    data->counter + 1,
 						    data->k_encr, data->k_aut,
 						    data->k_re);
+#endif /* EAP_AKA_PRIME */
 		} else {
 			eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
 					      identity_len,
@@ -1025,6 +1027,7 @@ static void eap_aka_process_reauth(struct eap_sm *sm,
 	}
 	if (data->next_reauth_id) {
 		if (data->eap_method == EAP_TYPE_AKA_PRIME) {
+#ifdef EAP_AKA_PRIME
 			eap_sim_db_add_reauth_prime(sm->eap_sim_db_priv,
 						    identity,
 						    identity_len,
@@ -1032,6 +1035,7 @@ static void eap_aka_process_reauth(struct eap_sm *sm,
 						    data->counter + 1,
 						    data->k_encr, data->k_aut,
 						    data->k_re);
+#endif /* EAP_AKA_PRIME */
 		} else {
 			eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
 					      identity_len,

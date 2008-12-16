@@ -498,7 +498,7 @@ void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_IEEE80211R */
 
 	if (sm->started) {
-		os_memset(sm->key_replay_counter, 0, WPA_REPLAY_COUNTER_LEN);
+		os_memset(&sm->key_replay, 0, sizeof(sm->key_replay));
 		sm->ReAuthenticationRequest = TRUE;
 		wpa_sm_step(sm);
 		return;
@@ -571,6 +571,21 @@ static void wpa_request_new_ptk(struct wpa_state_machine *sm)
 
 	sm->PTKRequest = TRUE;
 	sm->PTK_valid = 0;
+}
+
+
+static int wpa_replay_counter_valid(struct wpa_state_machine *sm,
+				    const u8 *replay_counter)
+{
+	int i;
+	for (i = 0; i < RSNA_MAX_EAPOL_RETRIES; i++) {
+		if (!sm->key_replay[i].valid)
+			break;
+		if (os_memcmp(replay_counter, sm->key_replay[i].counter,
+			      WPA_REPLAY_COUNTER_LEN) == 0)
+			return 1;
+	}
+	return 0;
 }
 
 
@@ -672,14 +687,18 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	}
 
 	if (!(key_info & WPA_KEY_INFO_REQUEST) &&
-	    (!sm->key_replay_counter_valid ||
-	     os_memcmp(key->replay_counter, sm->key_replay_counter,
-		       WPA_REPLAY_COUNTER_LEN) != 0)) {
+	    !wpa_replay_counter_valid(sm, key->replay_counter)) {
+		int i;
 		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
 				 "received EAPOL-Key %s with unexpected "
 				 "replay counter", msgtxt);
-		wpa_hexdump(MSG_DEBUG, "expected replay counter",
-			    sm->key_replay_counter, WPA_REPLAY_COUNTER_LEN);
+		for (i = 0; i < RSNA_MAX_EAPOL_RETRIES; i++) {
+			if (!sm->key_replay[i].valid)
+				break;
+			wpa_hexdump(MSG_DEBUG, "pending replay counter",
+				    sm->key_replay[i].counter,
+				    WPA_REPLAY_COUNTER_LEN);
+		}
 		wpa_hexdump(MSG_DEBUG, "received replay counter",
 			    key->replay_counter, WPA_REPLAY_COUNTER_LEN);
 		return;
@@ -842,8 +861,12 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			wpa_rekey_gtk(wpa_auth, NULL);
 		}
 	} else {
-		/* Do not allow the same key replay counter to be reused. */
-		sm->key_replay_counter_valid = FALSE;
+		/* Do not allow the same key replay counter to be reused. This
+		 * does also invalidate all other pending replay counters if
+		 * retransmissions were used, i.e., we will only process one of
+		 * the pending replies and ignore rest if more than one is
+		 * received. */
+		sm->key_replay[0].valid = FALSE;
 	}
 
 #ifdef CONFIG_PEERKEY
@@ -914,6 +937,7 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	int key_data_len, pad_len = 0;
 	u8 *buf, *pos;
 	int version, pairwise;
+	int i;
 
 	len = sizeof(struct ieee802_1x_hdr) + sizeof(struct wpa_eapol_key);
 
@@ -986,10 +1010,16 @@ void __wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 		WPA_PUT_BE16(key->key_length, 0);
 
 	/* FIX: STSL: what to use as key_replay_counter? */
-	inc_byte_array(sm->key_replay_counter, WPA_REPLAY_COUNTER_LEN);
-	os_memcpy(key->replay_counter, sm->key_replay_counter,
+	for (i = RSNA_MAX_EAPOL_RETRIES - 1; i > 0; i--) {
+		sm->key_replay[i].valid = sm->key_replay[i - 1].valid;
+		os_memcpy(sm->key_replay[i].counter,
+			  sm->key_replay[i - 1].counter,
+			  WPA_REPLAY_COUNTER_LEN);
+	}
+	inc_byte_array(sm->key_replay[0].counter, WPA_REPLAY_COUNTER_LEN);
+	os_memcpy(key->replay_counter, sm->key_replay[0].counter,
 		  WPA_REPLAY_COUNTER_LEN);
-	sm->key_replay_counter_valid = TRUE;
+	sm->key_replay[0].valid = TRUE;
 
 	if (nonce)
 		os_memcpy(key->key_nonce, nonce, WPA_NONCE_LEN);

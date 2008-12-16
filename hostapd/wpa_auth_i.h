@@ -15,6 +15,9 @@
 #ifndef WPA_AUTH_I_H
 #define WPA_AUTH_I_H
 
+/* max(dot11RSNAConfigGroupUpdateCount,dot11RSNAConfigPairwiseUpdateCount) */
+#define RSNA_MAX_EAPOL_RETRIES 3
+
 struct wpa_group;
 
 struct wpa_stsl_negotiation {
@@ -66,8 +69,10 @@ struct wpa_state_machine {
 	Boolean pairwise_set;
 	int keycount;
 	Boolean Pair;
-	u8 key_replay_counter[WPA_REPLAY_COUNTER_LEN];
-	Boolean key_replay_counter_valid;
+	struct {
+		u8 counter[WPA_REPLAY_COUNTER_LEN];
+		Boolean valid;
+	} key_replay[RSNA_MAX_EAPOL_RETRIES];
 	Boolean PInitAKeys; /* WPA only, not in IEEE 802.11i */
 	Boolean PTKRequest; /* not in IEEE 802.11i state machine */
 	Boolean has_GTK;

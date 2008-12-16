@@ -702,6 +702,14 @@ void WpaGui::ping()
 		updateStatus();
 		updateNetworks();
 	}
+
+#ifndef CONFIG_CTRL_IFACE_NAMED_PIPE
+	/* Use less frequent pings and status updates when the main window is
+	 * hidden (running in taskbar). */
+	int interval = isHidden() ? 5000 : 1000;
+	if (timer->interval() != interval)
+		timer->setInterval(interval);
+#endif /* CONFIG_CTRL_IFACE_NAMED_PIPE */
 }
 
 

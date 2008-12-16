@@ -1180,6 +1180,29 @@ static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
 }
 
 
+static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
+{
+	struct wpabuf *msg;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building Message WSC_NACK");
+
+	msg = wpabuf_alloc(1000);
+	if (msg == NULL)
+		return NULL;
+
+	if (wps_build_version(msg) ||
+	    wps_build_msg_type(msg, WPS_WSC_NACK) ||
+	    wps_build_enrollee_nonce(wps, msg) ||
+	    wps_build_registrar_nonce(wps, msg) ||
+	    wps_build_config_error(msg, wps->config_error)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+	return msg;
+}
+
+
 struct wpabuf * wps_registrar_get_msg(struct wps_data *wps, u8 *op_code)
 {
 	struct wpabuf *msg;
@@ -1211,6 +1234,10 @@ struct wpabuf * wps_registrar_get_msg(struct wps_data *wps, u8 *op_code)
 	case RECV_DONE:
 		msg = wps_build_wsc_ack(wps);
 		*op_code = WSC_ACK;
+		break;
+	case SEND_WSC_NACK:
+		msg = wps_build_wsc_nack(wps);
+		*op_code = WSC_NACK;
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported state %d for building "
@@ -1345,6 +1372,7 @@ static int wps_process_e_snonce1(struct wps_data *wps, const u8 *e_snonce1)
 	if (os_memcmp(wps->peer_hash1, hash, WPS_HASH_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "WPS: E-Hash1 derived from E-S1 does "
 			   "not match with the pre-committed value");
+		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
 		return -1;
 	}
 
@@ -1384,6 +1412,7 @@ static int wps_process_e_snonce2(struct wps_data *wps, const u8 *e_snonce2)
 		wpa_printf(MSG_DEBUG, "WPS: E-Hash2 derived from E-S2 does "
 			   "not match with the pre-committed value");
 		wps_registrar_invalidate_pin(wps->registrar, wps->uuid_e);
+		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
 		return -1;
 	}
 
@@ -1625,14 +1654,17 @@ static enum wps_process_res wps_process_m3(struct wps_data *wps,
 	if (wps->state != RECV_M3) {
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving M3", wps->state);
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	if (wps_process_registrar_nonce(wps, attr->registrar_nonce) ||
 	    wps_process_authenticator(wps, attr->authenticator, msg) ||
 	    wps_process_e_hash1(wps, attr->e_hash1) ||
-	    wps_process_e_hash2(wps, attr->e_hash2))
-		return WPS_FAILURE;
+	    wps_process_e_hash2(wps, attr->e_hash2)) {
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
 
 	wps->state = SEND_M4;
 	return WPS_CONTINUE;
@@ -1651,19 +1683,23 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 	if (wps->state != RECV_M5) {
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving M5", wps->state);
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	if (wps_process_registrar_nonce(wps, attr->registrar_nonce) ||
-	    wps_process_authenticator(wps, attr->authenticator, msg))
-		return WPS_FAILURE;
+	    wps_process_authenticator(wps, attr->authenticator, msg)) {
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
 
 	decrypted = wps_decrypt_encr_settings(wps, attr->encr_settings,
 					      attr->encr_settings_len);
 	if (decrypted == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to decrypted Encrypted "
 			   "Settings attribute");
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	wpa_printf(MSG_DEBUG, "WPS: Processing decrypted Encrypted Settings "
@@ -1672,7 +1708,8 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 	    wps_process_key_wrap_auth(wps, decrypted, eattr.key_wrap_auth) ||
 	    wps_process_e_snonce1(wps, eattr.e_snonce1)) {
 		wpabuf_free(decrypted);
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 	wpabuf_free(decrypted);
 
@@ -1714,19 +1751,23 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 	if (wps->state != RECV_M7) {
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving M7", wps->state);
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	if (wps_process_registrar_nonce(wps, attr->registrar_nonce) ||
-	    wps_process_authenticator(wps, attr->authenticator, msg))
-		return WPS_FAILURE;
+	    wps_process_authenticator(wps, attr->authenticator, msg)) {
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
 
 	decrypted = wps_decrypt_encr_settings(wps, attr->encr_settings,
 					      attr->encr_settings_len);
 	if (decrypted == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to decrypted Encrypted "
 			   "Settings attribute");
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	wpa_printf(MSG_DEBUG, "WPS: Processing decrypted Encrypted Settings "
@@ -1736,7 +1777,8 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 	    wps_process_e_snonce2(wps, eattr.e_snonce2) ||
 	    wps_process_ap_settings_r(wps, &eattr)) {
 		wpabuf_free(decrypted);
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	wpabuf_free(decrypted);
@@ -1864,6 +1906,8 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 	struct wps_parse_attr attr;
 
 	wpa_printf(MSG_DEBUG, "WPS: Received WSC_NACK");
+
+	wps->state = SEND_WSC_NACK;
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;

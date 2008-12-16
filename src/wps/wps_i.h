@@ -79,6 +79,8 @@ struct wps_data {
 	struct wps_credential cred;
 
 	struct wps_device_data peer_dev;
+
+	u16 config_error; /* Configuration Error value to be used in NACK. */
 };
 
 

@@ -200,9 +200,11 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	/* Remove any existing WPS network from configuration */
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
-		if (ssid->key_mgmt & WPA_KEY_MGMT_WPS)
+		if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
+			if (ssid == wpa_s->current_ssid)
+				wpa_s->current_ssid = NULL;
 			id = ssid->id;
-		else
+		} else
 			id = -1;
 		ssid = ssid->next;
 		if (id >= 0)

@@ -224,6 +224,7 @@ static void eap_wsc_deinit(struct eap_sm *sm, void *priv)
 	wpabuf_free(data->out_buf);
 	wps_deinit(data->wps);
 	wps_registrar_deinit(data->wps_ctx->registrar);
+	data->wps_ctx->registrar = NULL;
 	os_free(data->wps_ctx->network_key);
 	data->wps_ctx->network_key = NULL;
 	os_free(data);

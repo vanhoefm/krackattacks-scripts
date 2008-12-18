@@ -278,7 +278,7 @@ void NetworkConfig::addNetwork()
 		setNetworkParam(id, "group", "TKIP CCMP WEP104 WEP40", false);
 	}
 	if (pskEdit->isEnabled() &&
-	    strcmp(passwordEdit->text().toAscii().constData(),
+	    strcmp(pskEdit->text().toAscii().constData(),
 		   WPA_GUI_KEY_DATA) != 0)
 		setNetworkParam(id, "psk",
 				pskEdit->text().toAscii().constData(),

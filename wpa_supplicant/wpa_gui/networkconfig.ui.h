@@ -179,7 +179,7 @@ void NetworkConfig::addNetwork()
 	setNetworkParam(id, "group", "TKIP CCMP WEP104 WEP40", false);
     }
     if (pskEdit->isEnabled() &&
-	strcmp(passwordEdit->text().ascii(), WPA_GUI_KEY_DATA) != 0)
+	strcmp(pskEdit->text().ascii(), WPA_GUI_KEY_DATA) != 0)
 	setNetworkParam(id, "psk", pskEdit->text().ascii(), psklen != 64);
     if (eapSelect->isEnabled())
 	setNetworkParam(id, "eap", eapSelect->currentText().ascii(), false);

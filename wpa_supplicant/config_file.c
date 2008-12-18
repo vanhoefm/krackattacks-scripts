@@ -861,7 +861,7 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->update_config)
 		fprintf(f, "update_config=%d\n", config->update_config);
 #ifdef CONFIG_WPS
-	if (is_nil_uuid(config->uuid)) {
+	if (!is_nil_uuid(config->uuid)) {
 		char buf[40];
 		uuid_bin2str(config->uuid, buf, sizeof(buf));
 		fprintf(f, "uuid=%s\n", buf);
@@ -878,7 +878,7 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "serial_number=%s\n", config->serial_number);
 	if (config->device_type)
 		fprintf(f, "device_type=%s\n", config->device_type);
-	if (config->os_version)
+	if (WPA_GET_BE32(config->os_version))
 		fprintf(f, "os_version=%08x\n",
 			WPA_GET_BE32(config->os_version));
 #endif /* CONFIG_WPS */

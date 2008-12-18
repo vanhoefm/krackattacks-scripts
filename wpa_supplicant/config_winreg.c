@@ -551,7 +551,7 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 				   config->update_config,
 				   0);
 #ifdef CONFIG_WPS
-	if (is_nil_uuid(config->uuid)) {
+	if (!is_nil_uuid(config->uuid)) {
 		char buf[40];
 		uuid_bin2str(config->uuid, buf, sizeof(buf));
 		wpa_config_write_reg_string(hk, "uuid", buf);

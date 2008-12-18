@@ -45,12 +45,10 @@ static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 			      struct wpa_group *group);
 static void wpa_request_new_ptk(struct wpa_state_machine *sm);
 
-/* Default timeouts are 100 ms, but this seems to be a bit too fast for most
- * WPA Supplicants, so use a bit longer timeout. */
-static const u32 dot11RSNAConfigGroupUpdateTimeOut = 1000; /* ms */
-static const u32 dot11RSNAConfigGroupUpdateCount = 3;
-static const u32 dot11RSNAConfigPairwiseUpdateTimeOut = 1000; /* ms */
-static const u32 dot11RSNAConfigPairwiseUpdateCount = 3;
+static const u32 dot11RSNAConfigGroupUpdateCount = 4;
+static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
+static const u32 eapol_key_timeout_first = 100; /* ms */
+static const u32 eapol_key_timeout_subseq = 1000; /* ms */
 
 /* TODO: make these configurable */
 static const int dot11RSNAConfigPMKLifetime = 43200;
@@ -1096,6 +1094,7 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 {
 	int timeout_ms;
 	int pairwise = key_info & WPA_KEY_INFO_KEY_TYPE;
+	int ctr;
 
 	if (sm == NULL)
 		return;
@@ -1103,8 +1102,11 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 	__wpa_send_eapol(wpa_auth, sm, key_info, key_rsc, nonce, kde, kde_len,
 			 keyidx, encr, 0);
 
-	timeout_ms = pairwise ? dot11RSNAConfigPairwiseUpdateTimeOut :
-		dot11RSNAConfigGroupUpdateTimeOut;
+	ctr = pairwise ? sm->TimeoutCtr : sm->GTimeoutCtr;
+	if (ctr == 1)
+		timeout_ms = eapol_key_timeout_first;
+	else
+		timeout_ms = eapol_key_timeout_subseq;
 	eloop_register_timeout(timeout_ms / 1000, (timeout_ms % 1000) * 1000,
 			       wpa_send_eapol_timeout, wpa_auth, sm);
 }
@@ -1357,6 +1359,14 @@ SM_STATE(WPA_PTK, PTKSTART)
 	SM_ENTRY_MA(WPA_PTK, PTKSTART, wpa_ptk);
 	sm->PTKRequest = FALSE;
 	sm->TimeoutEvt = FALSE;
+
+	sm->TimeoutCtr++;
+	if (sm->TimeoutCtr > (int) dot11RSNAConfigPairwiseUpdateCount) {
+		/* No point in sending the EAPOL-Key - we will disconnect
+		 * immediately following this. */
+		return;
+	}
+
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			"sending 1/4 msg of 4-Way Handshake");
 	/*
@@ -1386,7 +1396,6 @@ SM_STATE(WPA_PTK, PTKSTART)
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       WPA_KEY_INFO_ACK | WPA_KEY_INFO_KEY_TYPE, NULL,
 		       sm->ANonce, pmkid, pmkid_len, 0, 0);
-	sm->TimeoutCtr++;
 }
 
 
@@ -1526,6 +1535,14 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 
 	SM_ENTRY_MA(WPA_PTK, PTKINITNEGOTIATING, wpa_ptk);
 	sm->TimeoutEvt = FALSE;
+
+	sm->TimeoutCtr++;
+	if (sm->TimeoutCtr > (int) dot11RSNAConfigPairwiseUpdateCount) {
+		/* No point in sending the EAPOL-Key - we will disconnect
+		 * immediately following this. */
+		return;
+	}
+
 	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, GTK[GN])
 	 */
 	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
@@ -1583,7 +1600,6 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		       WPA_KEY_INFO_KEY_TYPE,
 		       _rsc, sm->ANonce, kde, pos - kde, keyidx, encr);
 	os_free(kde);
-	sm->TimeoutCtr++;
 }
 
 
@@ -1765,6 +1781,14 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 	size_t kde_len;
 
 	SM_ENTRY_MA(WPA_PTK_GROUP, REKEYNEGOTIATING, wpa_ptk_group);
+
+	sm->GTimeoutCtr++;
+	if (sm->GTimeoutCtr > (int) dot11RSNAConfigGroupUpdateCount) {
+		/* No point in sending the EAPOL-Key - we will disconnect
+		 * immediately following this. */
+		return;
+	}
+
 	if (sm->wpa == WPA_VERSION_WPA)
 		sm->PInitAKeys = FALSE;
 	sm->TimeoutEvt = FALSE;
@@ -1800,7 +1824,6 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 		       rsc, gsm->GNonce, kde, pos - kde, gsm->GN, 1);
 	if (sm->wpa == WPA_VERSION_WPA2)
 		os_free(kde);
-	sm->GTimeoutCtr++;
 }
 
 

@@ -16,7 +16,7 @@
 #define WPA_AUTH_I_H
 
 /* max(dot11RSNAConfigGroupUpdateCount,dot11RSNAConfigPairwiseUpdateCount) */
-#define RSNA_MAX_EAPOL_RETRIES 3
+#define RSNA_MAX_EAPOL_RETRIES 4
 
 struct wpa_group;
 

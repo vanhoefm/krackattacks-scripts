@@ -733,10 +733,32 @@ static enum wps_process_res wps_process_m2d(struct wps_data *wps,
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: Device Name",
 			  attr->dev_name, attr->dev_name_len);
 
-	/*
-	 * TODO: notify monitor programs (cli/gui/etc.) of the M2D and provide
-	 * user information about the registrar properties.
-	 */
+	if (wps->wps->event_cb) {
+		union wps_event_data data;
+		struct wps_event_m2d *m2d = &data.m2d;
+		os_memset(&data, 0, sizeof(data));
+		if (attr->config_methods)
+			m2d->config_methods =
+				WPA_GET_BE16(attr->config_methods);
+		m2d->manufacturer = attr->manufacturer;
+		m2d->manufacturer_len = attr->manufacturer_len;
+		m2d->model_name = attr->model_name;
+		m2d->model_name_len = attr->model_name_len;
+		m2d->model_number = attr->model_number;
+		m2d->model_number_len = attr->model_number_len;
+		m2d->serial_number = attr->serial_number;
+		m2d->serial_number_len = attr->serial_number_len;
+		m2d->dev_name = attr->dev_name;
+		m2d->dev_name_len = attr->dev_name_len;
+		m2d->primary_dev_type = attr->primary_dev_type;
+		if (attr->config_error)
+			m2d->config_error =
+				WPA_GET_BE16(attr->config_error);
+		if (attr->dev_password_id)
+			m2d->dev_password_id =
+				WPA_GET_BE16(attr->dev_password_id);
+		wps->wps->event_cb(wps->wps->cb_ctx, WPS_EV_M2D, &data);
+	}
 
 	wps->state = RECEIVED_M2D;
 	return WPS_CONTINUE;

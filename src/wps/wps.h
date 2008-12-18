@@ -95,6 +95,29 @@ struct wps_registrar_config {
 };
 
 
+enum wps_event {
+	WPS_EV_M2D
+};
+
+union wps_event_data {
+	struct wps_event_m2d {
+		u16 config_methods;
+		const u8 *manufacturer;
+		size_t manufacturer_len;
+		const u8 *model_name;
+		size_t model_name_len;
+		const u8 *model_number;
+		size_t model_number_len;
+		const u8 *serial_number;
+		size_t serial_number_len;
+		const u8 *dev_name;
+		size_t dev_name_len;
+		const u8 *primary_dev_type; /* 8 octets */
+		u16 config_error;
+		u16 dev_password_id;
+	} m2d;
+};
+
 /**
  * struct wps_context - Long term WPS context data
  *
@@ -117,6 +140,8 @@ struct wps_context {
 	size_t network_key_len;
 
 	int (*cred_cb)(void *ctx, const struct wps_credential *cred);
+	void (*event_cb)(void *ctx, enum wps_event event,
+			 union wps_event_data *data);
 	void *cb_ctx;
 };
 

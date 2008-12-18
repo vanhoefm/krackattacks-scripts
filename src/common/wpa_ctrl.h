@@ -60,6 +60,8 @@ extern "C" {
 #define WPS_EVENT_AP_AVAILABLE "WPS-AP-AVAILABLE "
 /** A new credential received */
 #define WPS_EVENT_CRED_RECEIVED "WPS-CRED-RECEIVED "
+/** M2D received */
+#define WPS_EVENT_M2D "WPS-M2D "
 
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "

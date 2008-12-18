@@ -180,6 +180,27 @@ static int wpa_supplicant_wps_cred(void *ctx,
 }
 
 
+static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
+					 struct wps_event_m2d *m2d)
+{
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_M2D
+		"dev_password_id=%d config_error=%d",
+		m2d->dev_password_id, m2d->config_error);
+}
+
+
+static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
+				     union wps_event_data *data)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	switch (event) {
+	case WPS_EV_M2D:
+		wpa_supplicant_wps_event_m2d(wpa_s, &data->m2d);
+		break;
+	}
+}
+
+
 u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
 {
 	if (eap_is_wps_pbc_enrollee(&ssid->eap) ||
@@ -361,6 +382,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 		return -1;
 
 	wps->cred_cb = wpa_supplicant_wps_cred;
+	wps->event_cb = wpa_supplicant_wps_event;
 	wps->cb_ctx = wpa_s;
 
 	wps->dev.device_name = wpa_s->conf->device_name;

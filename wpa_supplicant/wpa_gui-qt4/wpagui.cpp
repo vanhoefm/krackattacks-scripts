@@ -802,6 +802,8 @@ void WpaGui::processMsg(char *msg)
 	} else if (str_match(pos, WPA_EVENT_EAP_METHOD)) {
 		if (strstr(pos, "(WSC)"))
 			wpsStatusText->setText("Registration started");
+	} else if (str_match(pos, WPS_EVENT_M2D)) {
+		wpsStatusText->setText("Registrar does not yet know PIN");
 	}
 }
 

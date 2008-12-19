@@ -311,3 +311,12 @@ void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg)
 	data.fail.msg = msg;
 	wps->event_cb(wps->cb_ctx, WPS_EV_FAIL, &data);
 }
+
+
+void wps_success_event(struct wps_context *wps)
+{
+	if (wps->event_cb == NULL)
+		return;
+
+	wps->event_cb(wps->cb_ctx, WPS_EV_SUCCESS, NULL);
+}

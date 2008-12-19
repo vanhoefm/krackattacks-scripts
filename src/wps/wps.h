@@ -97,7 +97,8 @@ struct wps_registrar_config {
 
 enum wps_event {
 	WPS_EV_M2D,
-	WPS_EV_FAIL
+	WPS_EV_FAIL,
+	WPS_EV_SUCCESS
 };
 
 union wps_event_data {

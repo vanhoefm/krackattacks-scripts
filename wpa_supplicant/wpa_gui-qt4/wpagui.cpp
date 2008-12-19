@@ -806,6 +806,8 @@ void WpaGui::processMsg(char *msg)
 		wpsStatusText->setText("Registrar does not yet know PIN");
 	} else if (str_match(pos, WPS_EVENT_FAIL)) {
 		wpsStatusText->setText("Registration failed");
+	} else if (str_match(pos, WPS_EVENT_SUCCESS)) {
+		wpsStatusText->setText("Registration succeeded");
 	}
 }
 

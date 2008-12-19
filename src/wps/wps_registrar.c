@@ -2077,6 +2077,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		wps_registrar_pbc_completed(wps->registrar);
 	}
 
+	wps_success_event(wps->wps);
+
 	return WPS_DONE;
 }
 

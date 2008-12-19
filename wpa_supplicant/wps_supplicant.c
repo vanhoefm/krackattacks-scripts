@@ -198,6 +198,12 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
+{
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);
+}
+
+
 static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 				     union wps_event_data *data)
 {
@@ -208,6 +214,9 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 		break;
 	case WPS_EV_FAIL:
 		wpa_supplicant_wps_event_fail(wpa_s, &data->fail);
+		break;
+	case WPS_EV_SUCCESS:
+		wpa_supplicant_wps_event_success(wpa_s);
 		break;
 	}
 }

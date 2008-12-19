@@ -326,7 +326,12 @@ static struct wpabuf * wps_build_wsc_done(struct wps_data *wps)
 		return NULL;
 	}
 
-	wps->state = wps->authenticator ? RECV_ACK : WPS_FINISHED;
+	if (wps->authenticator)
+		wps->state = RECV_ACK;
+	else {
+		wps_success_event(wps->wps);
+		wps->state = WPS_FINISHED;
+	}
 	return msg;
 }
 
@@ -1020,6 +1025,7 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 	if (wps->state == RECV_ACK && wps->authenticator) {
 		wpa_printf(MSG_DEBUG, "WPS: External Registrar registration "
 			   "completed successfully");
+		wps_success_event(wps->wps);
 		wps->state = WPS_FINISHED;
 		return WPS_DONE;
 	}

@@ -64,6 +64,8 @@ extern "C" {
 #define WPS_EVENT_M2D "WPS-M2D "
 /** WPS registration failed after M2/M2D */
 #define WPS_EVENT_FAIL "WPS-FAIL "
+/** WPS registration completed successfully */
+#define WPS_EVENT_SUCCESS "WPS-SUCCESS "
 
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "

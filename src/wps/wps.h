@@ -96,7 +96,8 @@ struct wps_registrar_config {
 
 
 enum wps_event {
-	WPS_EV_M2D
+	WPS_EV_M2D,
+	WPS_EV_FAIL
 };
 
 union wps_event_data {
@@ -116,6 +117,9 @@ union wps_event_data {
 		u16 config_error;
 		u16 dev_password_id;
 	} m2d;
+	struct wps_event_fail {
+		int msg; /* enum wps_msg_type */
+	} fail;
 };
 
 /**

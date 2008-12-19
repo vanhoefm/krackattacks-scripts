@@ -947,12 +947,18 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		break;
 	case WPS_M4:
 		ret = wps_process_m4(wps, msg, &attr);
+		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
+			wps_fail_event(wps->wps, WPS_M4);
 		break;
 	case WPS_M6:
 		ret = wps_process_m6(wps, msg, &attr);
+		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
+			wps_fail_event(wps->wps, WPS_M6);
 		break;
 	case WPS_M8:
 		ret = wps_process_m8(wps, msg, &attr);
+		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
+			wps_fail_event(wps->wps, WPS_M8);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -1078,6 +1084,24 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 
 	wpa_printf(MSG_DEBUG, "WPS: Registrar terminated negotiation with "
 		   "Configuration Error %d", WPA_GET_BE16(attr.config_error));
+
+	switch (wps->state) {
+	case RECV_M4:
+		wps_fail_event(wps->wps, WPS_M3);
+		break;
+	case RECV_M6:
+		wps_fail_event(wps->wps, WPS_M5);
+		break;
+	case RECV_M8:
+		wps_fail_event(wps->wps, WPS_M7);
+		break;
+	default:
+		break;
+	}
+
+	/* Followed by NACK if Enrollee is Supplicant or EAP-Failure if
+	 * Enrollee is Authenticator */
+	wps->state = SEND_WSC_NACK;
 
 	return WPS_FAILURE;
 }

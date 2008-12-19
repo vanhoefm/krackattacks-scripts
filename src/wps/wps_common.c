@@ -298,3 +298,16 @@ unsigned int wps_generate_pin(void)
 	/* Append checksum digit */
 	return val * 10 + wps_pin_checksum(val);
 }
+
+
+void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg)
+{
+	union wps_event_data data;
+
+	if (wps->event_cb == NULL)
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	data.fail.msg = msg;
+	wps->event_cb(wps->cb_ctx, WPS_EV_FAIL, &data);
+}

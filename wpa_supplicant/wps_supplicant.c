@@ -29,6 +29,7 @@
 
 
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx);
+static void wpas_clear_wps(struct wpa_supplicant *wpa_s);
 
 
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
@@ -189,6 +190,14 @@ static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
+					  struct wps_event_fail *fail)
+{
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_FAIL "msg=%d", fail->msg);
+	wpas_clear_wps(wpa_s);
+}
+
+
 static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 				     union wps_event_data *data)
 {
@@ -196,6 +205,9 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 	switch (event) {
 	case WPS_EV_M2D:
 		wpa_supplicant_wps_event_m2d(wpa_s, &data->m2d);
+		break;
+	case WPS_EV_FAIL:
+		wpa_supplicant_wps_event_fail(wpa_s, &data->fail);
 		break;
 	}
 }

@@ -1824,12 +1824,18 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		break;
 	case WPS_M3:
 		ret = wps_process_m3(wps, msg, &attr);
+		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
+			wps_fail_event(wps->wps, WPS_M3);
 		break;
 	case WPS_M5:
 		ret = wps_process_m5(wps, msg, &attr);
+		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
+			wps_fail_event(wps->wps, WPS_M5);
 		break;
 	case WPS_M7:
 		ret = wps_process_m7(wps, msg, &attr);
+		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
+			wps_fail_event(wps->wps, WPS_M7);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -1904,9 +1910,11 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 						 const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
+	int old_state;
 
 	wpa_printf(MSG_DEBUG, "WPS: Received WSC_NACK");
 
+	old_state = wps->state;
 	wps->state = SEND_WSC_NACK;
 
 	if (wps_parse_msg(msg, &attr) < 0)
@@ -1950,6 +1958,23 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 
 	wpa_printf(MSG_DEBUG, "WPS: Enrollee terminated negotiation with "
 		   "Configuration Error %d", WPA_GET_BE16(attr.config_error));
+
+	switch (old_state) {
+	case RECV_M3:
+		wps_fail_event(wps->wps, WPS_M2);
+		break;
+	case RECV_M5:
+		wps_fail_event(wps->wps, WPS_M4);
+		break;
+	case RECV_M7:
+		wps_fail_event(wps->wps, WPS_M6);
+		break;
+	case RECV_DONE:
+		wps_fail_event(wps->wps, WPS_M8);
+		break;
+	default:
+		break;
+	}
 
 	return WPS_FAILURE;
 }
@@ -2060,6 +2085,7 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 					       u8 op_code,
 					       const struct wpabuf *msg)
 {
+	enum wps_process_res ret;
 
 	wpa_printf(MSG_DEBUG, "WPS: Processing received message (len=%lu "
 		   "op_code=%d)",
@@ -2073,7 +2099,12 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 	case WSC_NACK:
 		return wps_process_wsc_nack(wps, msg);
 	case WSC_Done:
-		return wps_process_wsc_done(wps, msg);
+		ret = wps_process_wsc_done(wps, msg);
+		if (ret == WPS_FAILURE) {
+			wps->state = SEND_WSC_NACK;
+			wps_fail_event(wps->wps, WPS_WSC_DONE);
+		}
+		return ret;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported op_code %d", op_code);
 		return WPS_FAILURE;

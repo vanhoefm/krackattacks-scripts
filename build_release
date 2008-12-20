@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# Path to the Windows cross compiler (mingw)
-WINCROSS=/opt/xmingw/bin
 WINLOCAL=/home/jm/H-win/local
 
 set -e
@@ -54,8 +52,8 @@ if [ "$2" == "nobin" ]; then
     exit 0
 fi
 
-if [ -d $WINCROSS ]; then
-    pushd $RELDIR
+
+cd $RELDIR
 
     PDIR=wpa_supplicant-$VER
     WDIR=wpa_supplicant-windows-bin-$VER
@@ -66,9 +64,8 @@ if [ -d $WINCROSS ]; then
 CONFIG_DRIVER_NDIS=y
 CONFIG_NATIVE_WINDOWS=y
 
-CFLAGS += -I/opt/xmingw/i386-mingw32msvc/include/ddk
-CC=i386-mingw32msvc-gcc
-STRIP=i386-mingw32msvc-strip
+CC=i586-mingw32msvc-gcc
+STRIP=i586-mingw32msvc-strip
 PLATFORMSDKLIB=$WINLOCAL/lib
 CONFIG_NDIS_EVENTS_INTEGRATED=y
 
@@ -107,7 +104,7 @@ CFLAGS += -DCONFIG_DEBUG_FILE
 EOF
 
     # First, build the Windows service & registry version and rename it
-    PATH=$PATH:$WINCROSS make windows-bin
+    make windows-bin
     mv wpa_supplicant.exe wpasvc.exe
 
     # Then, build "the standard" wpa_supplicant.exe
@@ -116,7 +113,7 @@ CONFIG_MAIN=main
 CONFIG_BACKEND=file
 EOF
 
-    PATH=$PATH:$WINCROSS make windows-bin
+    make windows-bin
 
     for i in COPYING; do
 	unix2dos < ../$i > ../../"$WDIR"/$i
@@ -128,16 +125,15 @@ EOF
     cp win_example.reg ../../"$WDIR"
 
     cd wpa_gui-qt4
-    PATH=$PATH:$WINCROSS ./setup-mingw-cross-compiling
-    PATH=$PATH:$WINCROSS make
+    qmake -spec win32-x-g++
+    make
     cp release/wpa_gui.exe ../../../"$WDIR"
     cd ../../..
     rm -rf "$PDIR"
     zip "$WDIR.zip" "$WDIR"/*
     rm -rf "$WDIR"
 
-    popd
-fi
+cd $RELDIR/..
 
 ls -l $RELDIR/*$VER*
 

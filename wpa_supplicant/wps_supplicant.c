@@ -286,6 +286,7 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 		struct wpa_scan_res *res;
 
 		os_memcpy(ssid->bssid, bssid, ETH_ALEN);
+		ssid->bssid_set = 1;
 
 		/* Try to get SSID from scan results */
 		if (wpa_s->scan_res == NULL &&
@@ -538,6 +539,12 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid,
 		}
 	}
 
+	if (!ret && ssid->bssid_set &&
+	    os_memcmp(ssid->bssid, bss->bssid, ETH_ALEN) == 0) {
+		/* allow wildcard SSID due to hardcoded BSSID match */
+		ret = 1;
+	}
+
 	wpabuf_free(wps_ie);
 
 	return ret;
@@ -628,4 +635,17 @@ void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 		wpabuf_free(ie);
 		break;
 	}
+}
+
+
+int wpas_wps_searching(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if ((ssid->key_mgmt & WPA_KEY_MGMT_WPS) && !ssid->disabled)
+			return 1;
+	}
+
+	return 0;
 }

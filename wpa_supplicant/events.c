@@ -629,7 +629,8 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 		wpas_wps_notify_scan_results(wpa_s);
 	}
 
-	if (wpa_s->conf->ap_scan == 2 || wpa_s->disconnected)
+	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s)) ||
+	    wpa_s->disconnected)
 		return;
 
 	while (selected == NULL) {

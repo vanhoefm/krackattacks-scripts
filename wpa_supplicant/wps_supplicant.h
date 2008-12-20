@@ -32,6 +32,7 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 			      struct wpa_scan_res *selected,
 			      struct wpa_ssid *ssid);
 void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s);
+int wpas_wps_searching(struct wpa_supplicant *wpa_s);
 
 #else /* CONFIG_WPS */
 
@@ -75,6 +76,11 @@ static inline int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 
 static inline void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 {
+}
+
+static inline int wpas_wps_searching(struct wpa_supplicant *wpa_s)
+{
+	return 0;
 }
 
 #endif /* CONFIG_WPS */

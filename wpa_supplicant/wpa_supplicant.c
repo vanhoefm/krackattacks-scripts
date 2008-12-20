@@ -935,6 +935,17 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			wpa_ft_prepare_auth_request(wpa_s->wpa);
 		}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_WPS
+	} else if ((ssid->ssid == NULL || ssid->ssid_len == 0) &&
+		   wpa_s->conf->ap_scan == 2 &&
+		   (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
+		/* Use ap_scan==1 style network selection to find the network
+		 */
+		wpa_s->scan_req = 2;
+		wpa_s->reassociate = 1;
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		return;
+#endif /* CONFIG_WPS */
 	} else {
 		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with SSID '%s'",
 			wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
@@ -1418,6 +1429,14 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 		    (!entry->bssid_set ||
 		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
 			return entry;
+#ifdef CONFIG_WPS
+		if (!entry->disabled &&
+		    (entry->key_mgmt & WPA_KEY_MGMT_WPS) &&
+		    (entry->ssid == NULL || entry->ssid_len == 0) &&
+		    (!entry->bssid_set ||
+		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
+			return entry;
+#endif /* CONFIG_WPS */
 		entry = entry->next;
 	}
 

@@ -126,6 +126,7 @@ EOF
 
     cd wpa_gui-qt4
     qmake -spec win32-x-g++
+    make -C icons
     make
     cp release/wpa_gui.exe ../../../"$WDIR"
     cd ../../..

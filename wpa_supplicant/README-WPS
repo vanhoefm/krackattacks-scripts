@@ -147,4 +147,18 @@ the AP support WPS, but has not recently activated a Registrar, [WPS]
 flag will be included. If PIN method has been recently selected,
 [WPS-PIN] is shown instead. Similarly, [WPS-PBC] is shown if PBC mode
 is in progress. GUI programs can use these as triggers for suggesting
-a guided WPS configuration to the user.
+a guided WPS configuration to the user. In addition, control interface
+monitor events WPS-AP-AVAILABLE{,-PBC,-PIN} can be used to find out if
+there are WPS enabled APs in scan results without having to go through
+all the details in the GUI. These notification could be used, e.g., to
+suggest possible WPS connection to the user.
+
+
+wpa_gui
+-------
+
+wpa_gui-qt4 directory contains a sample GUI that shows an example of
+how WPS support can be integrated into the GUI. Its main window has a
+WPS tab that guides user through WPS registration with automatic AP
+selection. In addition, it shows how WPS can be started manually by
+selecting an AP from scan results.

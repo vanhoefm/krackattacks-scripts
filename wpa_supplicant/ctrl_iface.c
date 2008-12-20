@@ -175,7 +175,7 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 	if (os_strcmp(cmd, "any") == 0)
 		_bssid = NULL;
 	else if (hwaddr_aton(cmd, bssid)) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_REG: invalid BSSID '%s'",
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_PIN: invalid BSSID '%s'",
 			   cmd);
 		return -1;
 	}

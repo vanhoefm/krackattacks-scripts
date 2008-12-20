@@ -104,7 +104,7 @@ CFLAGS += -DCONFIG_DEBUG_FILE
 EOF
 
     # First, build the Windows service & registry version and rename it
-    make windows-bin
+    make -j2 windows-bin
     mv wpa_supplicant.exe wpasvc.exe
 
     # Then, build "the standard" wpa_supplicant.exe
@@ -113,7 +113,7 @@ CONFIG_MAIN=main
 CONFIG_BACKEND=file
 EOF
 
-    make windows-bin
+    make -j2 windows-bin
 
     for i in COPYING; do
 	unix2dos < ../$i > ../../"$WDIR"/$i
@@ -127,7 +127,7 @@ EOF
     cd wpa_gui-qt4
     qmake -spec win32-x-g++
     make -C icons
-    make
+    make -j2
     cp release/wpa_gui.exe ../../../"$WDIR"
     cd ../../..
     rm -rf "$PDIR"

@@ -98,6 +98,10 @@ Current hardware/software requirements:
 	Prism54 driver for Intersil/Conexant Prism GT/Duette/Indigo
 	(http://www.prism54.org/)
 
+	mac80211-based drivers that support AP mode (with driver=nl80211).
+	This includes drivers for Atheros (ath9k) and Broadcom (b43)
+	chipsets.
+
 	Any wired Ethernet driver for wired IEEE 802.1X authentication
 	(experimental code)
 

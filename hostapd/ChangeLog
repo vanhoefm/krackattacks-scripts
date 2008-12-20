@@ -17,6 +17,7 @@ ChangeLog for hostapd
 	  mac80211
 	* added support for EAP-AKA' (draft-arkko-eap-aka-kdf)
 	* added support for using driver_test over UDP socket
+	* changed EAP-GPSK to use the IANA assigned EAP method type 51
 
 2008-11-23 - v0.6.6
 	* added a new configuration option, wpa_ptk_rekey, that can be used to

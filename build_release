@@ -136,6 +136,9 @@ EOF
 
 cd $RELDIR/..
 
+./build_nsis.sh "$RELDIR/$WDIR.zip"
+mv wpa_supplicant-$VER.exe $RELDIR
+
 ls -l $RELDIR/*$VER*
 
 exit 0

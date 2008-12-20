@@ -45,12 +45,16 @@ section
 		"DisplayName" "wpa_supplicant"
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\wpa_supplicant" \
 		"UninstallString" "$INSTDIR\uninstall.exe"
+
+	ExecWait "$INSTDIR\wpasvc.exe reg"
 sectionEnd
 
 
 section "uninstall"
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\wpa_supplicant"
 	delete "$INSTDIR\uninstall.exe"
+
+	ExecWait "$INSTDIR\wpasvc.exe unreg"
 
 	delete "$INSTDIR\wpa_gui.exe"
 	delete "$INSTDIR\wpa_cli.exe"

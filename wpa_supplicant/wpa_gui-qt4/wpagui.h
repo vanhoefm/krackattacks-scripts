@@ -78,6 +78,10 @@ public slots:
 	virtual void wpsGeneratePin();
 	virtual void wpsApPinChanged(const QString &text);
 	virtual void wpsApPin();
+#ifdef CONFIG_NATIVE_WINDOWS
+	virtual void startService();
+	virtual void stopService();
+#endif /* CONFIG_NATIVE_WINDOWS */
 
 protected slots:
 	virtual void languageChange();
@@ -118,6 +122,13 @@ private:
 	QString bssFromScan;
 
 	void stopWpsRun(bool success);
+
+#ifdef CONFIG_NATIVE_WINDOWS
+	QAction *fileStartServiceAction;
+	QAction *fileStopServiceAction;
+
+	bool serviceRunning();
+#endif /* CONFIG_NATIVE_WINDOWS */
 };
 
 #endif /* WPAGUI_H */

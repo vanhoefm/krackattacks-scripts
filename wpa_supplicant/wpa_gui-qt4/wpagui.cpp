@@ -17,6 +17,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef CONFIG_NATIVE_WINDOWS
+#include <windows.h>
+#endif /* CONFIG_NATIVE_WINDOWS */
+
 #include <cstdio>
 #include <QMessageBox>
 #include <QCloseEvent>
@@ -41,6 +45,23 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	: QMainWindow(parent)
 {
 	setupUi(this);
+
+#ifdef CONFIG_NATIVE_WINDOWS
+	fileStopServiceAction = new QAction(this);
+	fileStopServiceAction->setObjectName("Stop Service");
+	fileStopServiceAction->setIconText("Stop Service");
+	fileMenu->insertAction(actionWPS, fileStopServiceAction);
+
+	fileStartServiceAction = new QAction(this);
+	fileStartServiceAction->setObjectName("Start Service");
+	fileStartServiceAction->setIconText("Start Service");
+	fileMenu->insertAction(fileStopServiceAction, fileStartServiceAction);
+
+	connect(fileStartServiceAction, SIGNAL(triggered()), this,
+		SLOT(startService()));
+	connect(fileStopServiceAction, SIGNAL(triggered()), this,
+		SLOT(stopService()));
+#endif /* CONFIG_NATIVE_WINDOWS */
 
 	(void) statusBar();
 
@@ -269,8 +290,22 @@ int WpaGui::openCtrlConnection(const char *ifname)
 #endif /* CONFIG_CTRL_IFACE_NAMED_PIPE */
 	}
 
-	if (ctrl_iface == NULL)
+	if (ctrl_iface == NULL) {
+#ifdef CONFIG_NATIVE_WINDOWS
+		static bool first = true;
+		if (first && !serviceRunning()) {
+			first = false;
+			if (QMessageBox::warning(
+				    this, qAppName(),
+				    "wpa_supplicant service is not running.\n"
+				    "Do you want to start it?",
+				    QMessageBox::Yes | QMessageBox::No) ==
+			    QMessageBox::Yes)
+				startService();
+		}
+#endif /* CONFIG_NATIVE_WINDOWS */
 		return -1;
+	}
 
 #ifdef CONFIG_CTRL_IFACE_UNIX
 	flen = strlen(ctrl_iface_dir) + strlen(ctrl_iface) + 2;
@@ -1456,3 +1491,132 @@ void WpaGui::stopWpsRun(bool success)
 	wpsApPinEdit->setEnabled(false);
 	wpsApPinButton->setEnabled(false);
 }
+
+
+#ifdef CONFIG_NATIVE_WINDOWS
+
+#ifndef WPASVC_NAME
+#define WPASVC_NAME TEXT("wpasvc")
+#endif
+
+class ErrorMsg : public QMessageBox {
+public:
+	ErrorMsg(QWidget *parent, DWORD last_err = GetLastError());
+	void showMsg(QString msg);
+private:
+	DWORD err;
+};
+
+ErrorMsg::ErrorMsg(QWidget *parent, DWORD last_err) :
+	QMessageBox(parent), err(last_err)
+{
+	setWindowTitle("wpa_gui error");
+	setIcon(QMessageBox::Warning);
+}
+
+void ErrorMsg::showMsg(QString msg)
+{
+	LPTSTR buf;
+
+	setText(msg);
+	if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+			  FORMAT_MESSAGE_FROM_SYSTEM,
+			  NULL, err, 0, (LPTSTR) (void *) &buf,
+			  0, NULL) > 0) {
+		QString msg = QString::fromWCharArray(buf);
+		setInformativeText(QString("[%1] %2").arg(err).arg(msg));
+		LocalFree(buf);
+	} else {
+		setInformativeText(QString("[%1]").arg(err));
+	}
+
+	exec();
+}
+
+
+void WpaGui::startService()
+{
+	SC_HANDLE svc, scm;
+
+	scm = OpenSCManager(0, 0, SC_MANAGER_CONNECT);
+	if (!scm) {
+		ErrorMsg(this).showMsg("OpenSCManager failed");
+		return;
+	}
+
+	svc = OpenService(scm, WPASVC_NAME, SERVICE_START);
+	if (!svc) {
+		ErrorMsg(this).showMsg("OpenService failed");
+		CloseServiceHandle(scm);
+		return;
+	}
+
+	if (!StartService(svc, 0, NULL)) {
+		ErrorMsg(this).showMsg("Failed to start wpa_supplicant "
+				       "service");
+	}
+
+	CloseServiceHandle(svc);
+	CloseServiceHandle(scm);
+}
+
+
+void WpaGui::stopService()
+{
+	SC_HANDLE svc, scm;
+	SERVICE_STATUS status;
+
+	scm = OpenSCManager(0, 0, SC_MANAGER_CONNECT);
+	if (!scm) {
+		ErrorMsg(this).showMsg("OpenSCManager failed");
+		return;
+	}
+
+	svc = OpenService(scm, WPASVC_NAME, SERVICE_STOP);
+	if (!svc) {
+		ErrorMsg(this).showMsg("OpenService failed");
+		CloseServiceHandle(scm);
+		return;
+	}
+
+	if (!ControlService(svc, SERVICE_CONTROL_STOP, &status)) {
+		ErrorMsg(this).showMsg("Failed to stop wpa_supplicant "
+				       "service");
+	}
+
+	CloseServiceHandle(svc);
+	CloseServiceHandle(scm);
+}
+
+
+bool WpaGui::serviceRunning()
+{
+	SC_HANDLE svc, scm;
+	SERVICE_STATUS status;
+	bool running = false;
+
+	scm = OpenSCManager(0, 0, SC_MANAGER_CONNECT);
+	if (!scm) {
+		printf("OpenSCManager failed: %d\n", (int) GetLastError());
+		return false;
+	}
+
+	svc = OpenService(scm, WPASVC_NAME, SERVICE_QUERY_STATUS);
+	if (!svc) {
+		printf("OpenService failed: %d\n\n", (int) GetLastError());
+		CloseServiceHandle(scm);
+		return false;
+	}
+
+	if (QueryServiceStatus(svc, &status)) {
+		if (status.dwCurrentState != SERVICE_STOPPED)
+			running = true;
+	}
+
+	CloseServiceHandle(svc);
+	CloseServiceHandle(scm);
+
+	return running;
+}
+
+#endif /* CONFIG_NATIVE_WINDOWS */

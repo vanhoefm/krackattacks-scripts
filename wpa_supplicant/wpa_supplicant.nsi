@@ -46,9 +46,19 @@ section
 WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\wpa_supplicant" \
 		"UninstallString" "$INSTDIR\uninstall.exe"
 
+	CreateDirectory "$SMPROGRAMS\wpa_supplicant"
+	CreateShortCut "$SMPROGRAMS\wpa_supplicant\wpa_gui.lnk" "$INSTDIR\wpa_gui.exe"
+	CreateShortCut "$SMPROGRAMS\wpa_supplicant\Uninstall.lnk" "$INSTDIR\uninstall.exe"
+
 	ExecWait "$INSTDIR\wpasvc.exe reg"
 sectionEnd
 
+
+Function un.onInit
+	MessageBox MB_YESNO "This will uninstall wpa_supplicant. Continue?" IDYES NoAbort
+	Abort
+  NoAbort:
+FunctionEnd
 
 section "uninstall"
 	DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\wpa_supplicant"
@@ -76,4 +86,8 @@ section "uninstall"
 	rmdir "$INSTDIR\Prerequisites"
 
 	rmdir "$INSTDIR"
+
+	delete "$SMPROGRAMS\wpa_supplicant\wpa_gui.lnk"
+	delete "$SMPROGRAMS\wpa_supplicant\Uninstall.lnk"
+	rmdir "$SMPROGRAMS\wpa_supplicant"
 sectionEnd

@@ -569,12 +569,6 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 		sel_uuid = wps_get_uuid_e(wps_ie);
 	else
 		sel_uuid = NULL;
-	if (!sel_uuid) {
-		wpa_printf(MSG_DEBUG, "WPS: UUID-E not available for PBC "
-			   "overlap detection");
-		wpabuf_free(wps_ie);
-		return 1;
-	}
 
 	for (i = 0; i < wpa_s->scan_res->num; i++) {
 		struct wpa_scan_res *bss = wpa_s->scan_res->res[i];
@@ -589,14 +583,8 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 		uuid = wps_get_uuid_e(ie);
-		if (uuid == NULL) {
-			wpa_printf(MSG_DEBUG, "WPS: UUID-E not available for "
-				   "PBC overlap detection (other BSS)");
-			ret = 1;
-			wpabuf_free(ie);
-			break;
-		}
-		if (os_memcmp(sel_uuid, uuid, 16) != 0) {
+		if (sel_uuid == NULL || uuid == NULL ||
+		    os_memcmp(sel_uuid, uuid, 16) != 0) {
 			ret = 1; /* PBC overlap */
 			wpabuf_free(ie);
 			break;

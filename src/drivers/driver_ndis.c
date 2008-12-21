@@ -1043,6 +1043,11 @@ wpa_driver_ndis_associate(void *priv,
 			auth_mode = Ndis802_11AuthModeWPA2PSK;
 		else
 			auth_mode = Ndis802_11AuthModeWPA2;
+#ifdef CONFIG_WPS
+	} else if (params->key_mgmt_suite == KEY_MGMT_WPS) {
+		auth_mode = Ndis802_11AuthModeOpen;
+		priv_mode = Ndis802_11PrivFilterAcceptAll;
+#endif /* CONFIG_WPS */
 	} else {
 		priv_mode = Ndis802_11PrivFilter8021xWEP;
 		if (params->key_mgmt_suite == KEY_MGMT_WPA_NONE)

@@ -651,7 +651,7 @@ void NetworkConfig::paramsFromConfig(int network_id)
 		if (strncmp(reply, "\"auth=", 6))
 			break;
 		if (strcmp(reply + 6, "GTC auth=MSCHAPV2") == 0) {
-			val = "GTC(auth) + MSCHAPv2(prov)";
+			val = (char *) "GTC(auth) + MSCHAPv2(prov)";
 			break;
 		}
 		val = reply + 2;

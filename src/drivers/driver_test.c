@@ -976,8 +976,8 @@ wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 }
 
 
-int wpa_driver_test_set_channel(void *priv, wpa_hw_mode phymode, int chan,
-				int freq)
+static int wpa_driver_test_set_channel(void *priv, wpa_hw_mode phymode,
+				       int chan, int freq)
 {
 	wpa_printf(MSG_DEBUG, "%s: phymode=%d chan=%d freq=%d",
 		   __func__, phymode, chan, freq);
@@ -1093,14 +1093,15 @@ static int wpa_driver_test_mlme_remove_sta(void *priv, const u8 *addr)
 }
 
 
-int wpa_driver_test_set_ssid(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_test_set_ssid(void *priv, const u8 *ssid,
+				    size_t ssid_len)
 {
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	return 0;
 }
 
 
-int wpa_driver_test_set_bssid(void *priv, const u8 *bssid)
+static int wpa_driver_test_set_bssid(void *priv, const u8 *bssid)
 {
 	wpa_printf(MSG_DEBUG, "%s: bssid=" MACSTR, __func__, MAC2STR(bssid));
 	return 0;
@@ -1108,7 +1109,8 @@ int wpa_driver_test_set_bssid(void *priv, const u8 *bssid)
 #endif /* CONFIG_CLIENT_MLME */
 
 
-int wpa_driver_set_probe_req_ie(void *priv, const u8 *ies, size_t ies_len)
+static int wpa_driver_test_set_probe_req_ie(void *priv, const u8 *ies,
+					    size_t ies_len)
 {
 	struct wpa_driver_test_data *drv = priv;
 
@@ -1193,7 +1195,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* update_ft_ies */,
 	NULL /* send_ft_action */,
 	wpa_driver_test_get_scan_results2,
-	wpa_driver_set_probe_req_ie,
+	wpa_driver_test_set_probe_req_ie,
 	NULL /* set_mode */,
 	NULL /* set_country */,
 	wpa_driver_test_global_init,

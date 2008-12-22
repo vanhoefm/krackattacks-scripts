@@ -156,6 +156,8 @@ struct wpa_global {
 	struct wpa_params params;
 	struct ctrl_iface_global_priv *ctrl_iface;
 	struct ctrl_iface_dbus_priv *dbus_ctrl_iface;
+	void **drv_priv;
+	size_t drv_count;
 };
 
 
@@ -396,6 +398,8 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);
 static inline void * wpa_drv_init(struct wpa_supplicant *wpa_s,
 				  const char *ifname)
 {
+	if (wpa_s->driver->init2)
+		return wpa_s->driver->init2(wpa_s, ifname, wpa_s->global);
 	if (wpa_s->driver->init) {
 		return wpa_s->driver->init(wpa_s, ifname);
 	}

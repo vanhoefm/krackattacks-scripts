@@ -35,7 +35,12 @@
 #include "ieee802_11_defs.h"
 
 
+struct wpa_driver_test_global {
+	int dummy;
+};
+
 struct wpa_driver_test_data {
+	struct wpa_driver_test_global *global;
 	void *ctx;
 	u8 own_addr[ETH_ALEN];
 	int test_socket;
@@ -579,13 +584,15 @@ static void wpa_driver_test_receive_unix(int sock, void *eloop_ctx,
 }
 
 
-static void * wpa_driver_test_init(void *ctx, const char *ifname)
+static void * wpa_driver_test_init2(void *ctx, const char *ifname,
+				    void *global_priv)
 {
 	struct wpa_driver_test_data *drv;
 
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
+	drv->global = global_priv;
 	drv->ctx = ctx;
 	drv->test_socket = -1;
 
@@ -1122,6 +1129,22 @@ int wpa_driver_set_probe_req_ie(void *priv, const u8 *ies, size_t ies_len)
 }
 
 
+static void * wpa_driver_test_global_init(void)
+{
+	struct wpa_driver_test_global *global;
+
+	global = os_zalloc(sizeof(*global));
+	return global;
+}
+
+
+static void wpa_driver_test_global_deinit(void *priv)
+{
+	struct wpa_driver_test_global *global = priv;
+	os_free(global);
+}
+
+
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
@@ -1129,7 +1152,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	wpa_driver_test_get_ssid,
 	wpa_driver_test_set_wpa,
 	wpa_driver_test_set_key,
-	wpa_driver_test_init,
+	NULL /* init */,
 	wpa_driver_test_deinit,
 	wpa_driver_test_set_param,
 	NULL /* set_countermeasures */,
@@ -1172,5 +1195,8 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	wpa_driver_test_get_scan_results2,
 	wpa_driver_set_probe_req_ie,
 	NULL /* set_mode */,
-	NULL /* set_country */
+	NULL /* set_country */,
+	wpa_driver_test_global_init,
+	wpa_driver_test_global_deinit,
+	wpa_driver_test_init2
 };

@@ -956,6 +956,41 @@ struct wpa_driver_ops {
 	 * of setting a regulatory domain.
 	 */
 	int (*set_country)(void *priv, const char *alpha2);
+
+	/**
+	 * global_init - Global driver initialization
+	 * Returns: Pointer to private data (global), %NULL on failure
+	 *
+	 * This optional function is called to initialize the driver wrapper
+	 * for global data, i.e., data that applies to all interfaces. If this
+	 * function is implemented, global_deinit() will also need to be
+	 * implemented to free the private data. The driver will also likely
+	 * use init2() function instead of init() to get the pointer to global
+	 * data available to per-interface initializer.
+	 */
+	void * (*global_init)(void);
+
+	/**
+	 * global_deinit - Global driver deinitialization
+	 * @priv: private driver global data from global_init()
+	 *
+	 * Terminate any global driver related functionality and free the
+	 * global data structure.
+	 */
+	void (*global_deinit)(void *priv);
+
+	/**
+	 * init2 - Initialize driver interface (with global data)
+	 * @ctx: context to be used when calling wpa_supplicant functions,
+	 * e.g., wpa_supplicant_event()
+	 * @ifname: interface name, e.g., wlan0
+	 * @global_priv: private driver global data from global_init()
+	 * Returns: Pointer to private data, %NULL on failure
+	 *
+	 * This function can be used instead of init() if the driver wrapper
+	 * uses global data.
+	 */
+	void * (*init2)(void *ctx, const char *ifname, void *global_priv);
 };
 
 /* Function to check whether a driver is for wired connections */

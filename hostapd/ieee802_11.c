@@ -807,9 +807,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 	/* save HT capabilities in the sta object */
 	os_memset(&sta->ht_capabilities, 0, sizeof(sta->ht_capabilities));
 	if (elems.ht_capabilities &&
-	    elems.ht_capabilities_len >= sizeof(struct ieee80211_ht_capability)
-	    && (sta->flags & WLAN_STA_WME)) {
-		/* note: without WMM capability, treat the sta as non-HT */
+	    elems.ht_capabilities_len >=
+	    sizeof(struct ieee80211_ht_capability)) {
 		sta->flags |= WLAN_STA_HT;
 		sta->ht_capabilities.id = WLAN_EID_HT_CAP;
 		sta->ht_capabilities.length =

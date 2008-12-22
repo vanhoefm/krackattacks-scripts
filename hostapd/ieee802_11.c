@@ -930,6 +930,16 @@ static void handle_assoc(struct hostapd_data *hapd,
 				goto fail;
 		}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211N
+		if ((sta->flags & WLAN_STA_HT) &&
+		    wpa_auth_get_pairwise(sta->wpa_sm) == WPA_CIPHER_TKIP) {
+			wpa_printf(MSG_DEBUG, "HT: " MACSTR " tried to "
+				   "use TKIP with HT association",
+				   MAC2STR(sta->addr));
+			resp = WLAN_STATUS_CIPHER_REJECTED_PER_POLICY;
+			goto fail;
+		}
+#endif /* CONFIG_IEEE80211N */
 	} else
 		wpa_auth_sta_no_wpa(sta->wpa_sm);
 

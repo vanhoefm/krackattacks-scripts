@@ -126,6 +126,23 @@ struct wpa_scan_results {
 };
 
 /**
+ * struct wpa_interface_info - Network interface information
+ * @next: Pointer to the next interface or NULL if this is the last one
+ * @ifname: Interface name that can be used with init() or init2()
+ * @desc: Human readable adapter description (e.g., vendor/model) or NULL if
+ *	not available
+ * @drv_bame: struct wpa_driver_ops::name (note: unlike other strings, this one
+ *	is not an allocated copy, i.e., get_interfaces() caller will not free
+ *	this)
+ */
+struct wpa_interface_info {
+	struct wpa_interface_info *next;
+	char *ifname;
+	char *desc;
+	const char *drv_name;
+};
+
+/**
  * struct wpa_driver_associate_params - Association parameters
  * Data for struct wpa_driver_ops::associate().
  */
@@ -991,6 +1008,15 @@ struct wpa_driver_ops {
 	 * uses global data.
 	 */
 	void * (*init2)(void *ctx, const char *ifname, void *global_priv);
+
+	/**
+	 * get_interfaces - Get information about available interfaces
+	 * @global_priv: private driver global data from global_init()
+	 * Returns: Allocated buffer of interface information (caller is
+	 * responsible for freeing the data structure) on success, NULL on
+	 * failure
+	 */
+	struct wpa_interface_info * (*get_interfaces)(void *global_priv);
 };
 
 /* Function to check whether a driver is for wired connections */

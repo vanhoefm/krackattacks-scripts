@@ -1120,6 +1120,13 @@ static int wpa_cli_cmd_interface_remove(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_interface_list(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "INTERFACE_LIST");
+}
+
+
 struct wpa_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -1166,6 +1173,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "terminate", wpa_cli_cmd_terminate },
 	{ "interface_add", wpa_cli_cmd_interface_add },
 	{ "interface_remove", wpa_cli_cmd_interface_remove },
+	{ "interface_list", wpa_cli_cmd_interface_list },
 	{ "ap_scan", wpa_cli_cmd_ap_scan },
 	{ "stkstart", wpa_cli_cmd_stkstart },
 	{ "ft_ds", wpa_cli_cmd_ft_ds },

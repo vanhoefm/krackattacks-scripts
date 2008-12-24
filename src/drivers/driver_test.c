@@ -1147,6 +1147,29 @@ static void wpa_driver_test_global_deinit(void *priv)
 }
 
 
+static struct wpa_interface_info *
+wpa_driver_test_get_interfaces(void *global_priv)
+{
+	/* struct wpa_driver_test_global *global = priv; */
+	struct wpa_interface_info *iface;
+
+	iface = os_zalloc(sizeof(*iface));
+	if (iface == NULL)
+		return iface;
+	iface->ifname = os_strdup("sta0");
+	iface->desc = os_strdup("test interface 0");
+	iface->drv_name = "test";
+	iface->next = os_zalloc(sizeof(*iface));
+	if (iface->next) {
+		iface->next->ifname = os_strdup("sta1");
+		iface->next->desc = os_strdup("test interface 1");
+		iface->next->drv_name = "test";
+	}
+
+	return iface;
+}
+
+
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
@@ -1200,5 +1223,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* set_country */,
 	wpa_driver_test_global_init,
 	wpa_driver_test_global_deinit,
-	wpa_driver_test_init2
+	wpa_driver_test_init2,
+	wpa_driver_test_get_interfaces
 };

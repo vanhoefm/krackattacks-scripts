@@ -30,7 +30,10 @@
 #include "wps_supplicant.h"
 #include "wps/wps.h"
 
+extern struct wpa_driver_ops *wpa_supplicant_drivers[];
 
+static int wpa_supplicant_global_iface_list(struct wpa_global *global,
+					    char *buf, int len);
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
 						  char *buf, int len);
 
@@ -1624,6 +1627,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "AP_SCAN ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_ap_scan(wpa_s, buf + 8))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "INTERFACE_LIST") == 0) {
+		reply_len = wpa_supplicant_global_iface_list(
+			wpa_s->global, reply, reply_size);
 	} else if (os_strcmp(buf, "INTERFACES") == 0) {
 		reply_len = wpa_supplicant_global_iface_interfaces(
 			wpa_s->global, reply, reply_size);
@@ -1739,6 +1745,63 @@ static int wpa_supplicant_global_iface_remove(struct wpa_global *global,
 }
 
 
+static void wpa_free_iface_info(struct wpa_interface_info *iface)
+{
+	struct wpa_interface_info *prev;
+
+	while (iface) {
+		prev = iface;
+		iface = iface->next;
+
+		os_free(prev->ifname);
+		os_free(prev->desc);
+		os_free(prev);
+	}
+}
+
+
+static int wpa_supplicant_global_iface_list(struct wpa_global *global,
+					    char *buf, int len)
+{
+	int i, res;
+	struct wpa_interface_info *iface = NULL, *last = NULL, *tmp;
+	char *pos, *end;
+
+	for (i = 0; wpa_supplicant_drivers[i]; i++) {
+		struct wpa_driver_ops *drv = wpa_supplicant_drivers[i];
+		if (drv->get_interfaces == NULL)
+			continue;
+		tmp = drv->get_interfaces(global->drv_priv);
+		if (tmp == NULL)
+			continue;
+
+		if (last == NULL)
+			iface = last = tmp;
+		else
+			last->next = tmp;
+		while (last->next)
+			last = last->next;
+	}
+
+	pos = buf;
+	end = buf + len;
+	for (tmp = iface; tmp; tmp = tmp->next) {
+		res = os_snprintf(pos, end - pos, "%s\t%s\t%s\n",
+				  tmp->drv_name, tmp->ifname,
+				  tmp->desc ? tmp->desc : "");
+		if (res < 0 || res >= end - pos) {
+			*pos = '\0';
+			break;
+		}
+		pos += res;
+	}
+
+	wpa_free_iface_info(iface);
+
+	return pos - buf;
+}
+
+
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
 						  char *buf, int len)
 {
@@ -1791,6 +1854,9 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 	} else if (os_strncmp(buf, "INTERFACE_REMOVE ", 17) == 0) {
 		if (wpa_supplicant_global_iface_remove(global, buf + 17))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "INTERFACE_LIST") == 0) {
+		reply_len = wpa_supplicant_global_iface_list(
+			global, reply, reply_size);
 	} else if (os_strcmp(buf, "INTERFACES") == 0) {
 		reply_len = wpa_supplicant_global_iface_interfaces(
 			global, reply, reply_size);

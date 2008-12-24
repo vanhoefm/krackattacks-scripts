@@ -38,4 +38,5 @@ REGEDIT4
 "adapter"="{A7627643-C310-49E5-BD89-7E77709C04AB}"
 "config"="test"
 "ctrl_interface"=""
+"skip_on_error"=dword:00000000
 

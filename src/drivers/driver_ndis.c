@@ -493,7 +493,7 @@ static int ndis_set_oid(struct wpa_driver_ndis_data *drv, unsigned int oid,
 	char txt[50];
 
 	os_snprintf(txt, sizeof(txt), "NDIS: Set OID %08x", oid);
-	wpa_hexdump_key(MSG_MSGDUMP, txt, data, len);
+	wpa_hexdump_key(MSG_MSGDUMP, txt, (const u8 *) data, len);
 
 	buflen = sizeof(*o) + len;
 	reallen = buflen - sizeof(o->Data);
@@ -2844,6 +2844,240 @@ static void wpa_driver_ndis_deinit(void *priv)
 }
 
 
+static struct wpa_interface_info *
+wpa_driver_ndis_get_interfaces(void *global_priv)
+{
+	struct wpa_interface_info *iface = NULL, *niface;
+
+#ifdef CONFIG_USE_NDISUIO
+	NDISUIO_QUERY_BINDING *b;
+	size_t blen = sizeof(*b) + 1024;
+	int i, error;
+	DWORD written;
+	char name[256], desc[256];
+	WCHAR *pos;
+	size_t j, len;
+	HANDLE ndisuio;
+
+	ndisuio = CreateFile(NDISUIO_DEVICE_NAME,
+			     GENERIC_READ | GENERIC_WRITE, 0, NULL,
+			     OPEN_EXISTING,
+			     FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
+			     INVALID_HANDLE_VALUE);
+	if (ndisuio == INVALID_HANDLE_VALUE) {
+		wpa_printf(MSG_ERROR, "NDIS: Failed to open connection to "
+			   "NDISUIO: %d", (int) GetLastError());
+		return NULL;
+	}
+
+#ifndef _WIN32_WCE
+	if (!DeviceIoControl(ndisuio, IOCTL_NDISUIO_BIND_WAIT, NULL, 0,
+			     NULL, 0, &written, NULL)) {
+		wpa_printf(MSG_ERROR, "NDIS: IOCTL_NDISUIO_BIND_WAIT failed: "
+			   "%d", (int) GetLastError());
+		CloseHandle(ndisuio);
+		return NULL;
+	}
+#endif /* _WIN32_WCE */
+
+	b = os_malloc(blen);
+	if (b == NULL) {
+		CloseHandle(ndisuio);
+		return NULL;
+	}
+
+	for (i = 0; ; i++) {
+		os_memset(b, 0, blen);
+		b->BindingIndex = i;
+		if (!DeviceIoControl(ndisuio, IOCTL_NDISUIO_QUERY_BINDING,
+				     b, sizeof(NDISUIO_QUERY_BINDING), b, blen,
+				     &written, NULL)) {
+			error = (int) GetLastError();
+			if (error == ERROR_NO_MORE_ITEMS)
+				break;
+			wpa_printf(MSG_DEBUG, "IOCTL_NDISUIO_QUERY_BINDING "
+				   "failed: %d", error);
+			break;
+		}
+
+		pos = (WCHAR *) ((char *) b + b->DeviceNameOffset);
+		len = b->DeviceNameLength;
+		if (len >= sizeof(name))
+			len = sizeof(name) - 1;
+		for (j = 0; j < len; j++)
+			name[j] = (char) pos[j];
+		name[len] = '\0';
+
+		pos = (WCHAR *) ((char *) b + b->DeviceDescrOffset);
+		len = b->DeviceDescrLength;
+		if (len >= sizeof(desc))
+			len = sizeof(desc) - 1;
+		for (j = 0; j < len; j++)
+			desc[j] = (char) pos[j];
+		desc[len] = '\0';
+
+		wpa_printf(MSG_DEBUG, "NDIS: %d - %s - %s", i, name, desc);
+
+		niface = os_zalloc(sizeof(*niface));
+		if (niface == NULL)
+			break;
+		niface->drv_name = "ndis";
+		if (os_strncmp(name, "\\DEVICE\\", 8) == 0)
+			niface->ifname = os_strdup(name + 8);
+		else
+			niface->ifname = os_strdup(name);
+		if (niface->ifname == NULL) {
+			os_free(niface);
+			break;
+		}
+		niface->desc = os_strdup(desc);
+		niface->next = iface;
+		iface = niface;
+	}
+
+	os_free(b);
+	CloseHandle(ndisuio);
+#else /* CONFIG_USE_NDISUIO */
+	PTSTR _names;
+	char *names, *pos, *pos2;
+	ULONG len;
+	BOOLEAN res;
+	char *name[MAX_ADAPTERS];
+	char *desc[MAX_ADAPTERS];
+	int num_name, num_desc, i;
+
+	wpa_printf(MSG_DEBUG, "NDIS: Packet.dll version: %s",
+		   PacketGetVersion());
+
+	len = 8192;
+	_names = os_zalloc(len);
+	if (_names == NULL)
+		return NULL;
+
+	res = PacketGetAdapterNames(_names, &len);
+	if (!res && len > 8192) {
+		os_free(_names);
+		_names = os_zalloc(len);
+		if (_names == NULL)
+			return NULL;
+		res = PacketGetAdapterNames(_names, &len);
+	}
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "NDIS: Failed to get adapter list "
+			   "(PacketGetAdapterNames)");
+		os_free(_names);
+		return NULL;
+	}
+
+	names = (char *) _names;
+	if (names[0] && names[1] == '\0' && names[2] && names[3] == '\0') {
+		wpa_printf(MSG_DEBUG, "NDIS: Looks like adapter names are in "
+			   "UNICODE");
+		/* Convert to ASCII */
+		pos2 = pos = names;
+		while (pos2 < names + len) {
+			if (pos2[0] == '\0' && pos2[1] == '\0' &&
+			    pos2[2] == '\0' && pos2[3] == '\0') {
+				pos2 += 4;
+				break;
+			}
+			*pos++ = pos2[0];
+			pos2 += 2;
+		}
+		os_memcpy(pos + 2, names, pos - names);
+		pos += 2;
+	} else
+		pos = names;
+
+	num_name = 0;
+	while (pos < names + len) {
+		name[num_name] = pos;
+		while (*pos && pos < names + len)
+			pos++;
+		if (pos + 1 >= names + len) {
+			os_free(names);
+			return NULL;
+		}
+		pos++;
+		num_name++;
+		if (num_name >= MAX_ADAPTERS) {
+			wpa_printf(MSG_DEBUG, "NDIS: Too many adapters");
+			os_free(names);
+			return NULL;
+		}
+		if (*pos == '\0') {
+			wpa_printf(MSG_DEBUG, "NDIS: %d adapter names found",
+				   num_name);
+			pos++;
+			break;
+		}
+	}
+
+	num_desc = 0;
+	while (pos < names + len) {
+		desc[num_desc] = pos;
+		while (*pos && pos < names + len)
+			pos++;
+		if (pos + 1 >= names + len) {
+			os_free(names);
+			return NULL;
+		}
+		pos++;
+		num_desc++;
+		if (num_desc >= MAX_ADAPTERS) {
+			wpa_printf(MSG_DEBUG, "NDIS: Too many adapter "
+				   "descriptions");
+			os_free(names);
+			return NULL;
+		}
+		if (*pos == '\0') {
+			wpa_printf(MSG_DEBUG, "NDIS: %d adapter descriptions "
+				   "found", num_name);
+			pos++;
+			break;
+		}
+	}
+
+	/*
+	 * Windows 98 with Packet.dll 3.0 alpha3 does not include adapter
+	 * descriptions. Fill in dummy descriptors to work around this.
+	 */
+	while (num_desc < num_name)
+		desc[num_desc++] = "dummy description";
+
+	if (num_name != num_desc) {
+		wpa_printf(MSG_DEBUG, "NDIS: mismatch in adapter name and "
+			   "description counts (%d != %d)",
+			   num_name, num_desc);
+		os_free(names);
+		return NULL;
+	}
+
+	for (i = 0; i < num_name; i++) {
+		niface = os_zalloc(sizeof(*niface));
+		if (niface == NULL)
+			break;
+		niface->drv_name = "ndis";
+		if (os_strncmp(name[i], "\\Device\\NPF_", 12) == 0)
+			niface->ifname = os_strdup(name[i] + 12);
+		else
+			niface->ifname = os_strdup(name[i]);
+		if (niface->ifname == NULL) {
+			os_free(niface);
+			break;
+		}
+		niface->desc = os_strdup(desc[i]);
+		niface->next = iface;
+		iface = niface;
+	}
+
+#endif /* CONFIG_USE_NDISUIO */
+
+	return iface;
+}
+
+
 const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	"ndis",
 	"Windows NDIS driver",
@@ -2888,5 +3122,5 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* global_init */,
 	NULL /* global_deinit */,
 	NULL /* init2 */,
-	NULL /* get_interfaces */
+	wpa_driver_ndis_get_interfaces
 };

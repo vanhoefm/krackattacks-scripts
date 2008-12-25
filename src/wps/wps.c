@@ -128,11 +128,15 @@ int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
 
+	/*
+	 * In theory, this could also verify that attr.sel_reg_config_methods
+	 * includes WPS_CONFIG_PUSHBUTTON, but some deployed AP implementations
+	 * do not set Selected Registrar Config Methods attribute properly, so
+	 * it is safer to just use Device Password ID here.
+	 */
+
 	if (wps_parse_msg(msg, &attr) < 0 ||
 	    !attr.selected_registrar || *attr.selected_registrar == 0 ||
-	    !attr.sel_reg_config_methods ||
-	    !(WPA_GET_BE16(attr.sel_reg_config_methods) &
-	      WPS_CONFIG_PUSHBUTTON) ||
 	    !attr.dev_password_id ||
 	    WPA_GET_BE16(attr.dev_password_id) != DEV_PW_PUSHBUTTON)
 		return 0;
@@ -145,11 +149,16 @@ int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
 
+	/*
+	 * In theory, this could also verify that attr.sel_reg_config_methods
+	 * includes WPS_CONFIG_LABEL, WPS_CONFIG_DISPLAY, or WPS_CONFIG_KEYPAD,
+	 * but some deployed AP implementations do not set Selected Registrar
+	 * Config Methods attribute properly, so it is safer to just use
+	 * Device Password ID here.
+	 */
+
 	if (wps_parse_msg(msg, &attr) < 0 ||
 	    !attr.selected_registrar || *attr.selected_registrar == 0 ||
-	    !attr.sel_reg_config_methods ||
-	    !(WPA_GET_BE16(attr.sel_reg_config_methods) &
-	      (WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD)) ||
 	    !attr.dev_password_id ||
 	    WPA_GET_BE16(attr.dev_password_id) == DEV_PW_PUSHBUTTON)
 		return 0;

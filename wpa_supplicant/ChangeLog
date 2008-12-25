@@ -16,6 +16,10 @@ ChangeLog for wpa_supplicant
 	  2008 NPS; optional cryptobinding is now enabled (again) by default
 	* fixed PSK editing in wpa_gui
 	* changed EAP-GPSK to use the IANA assigned EAP method type 51
+	* added a Windows installer that includes WinPcap and all the needed
+	  DLLs; in addition, it set up the registry automatically so that user
+	  will only need start wpa_gui to get prompted to start the wpasvc
+	  servide and add a new interface if needed through wpa_gui dialog
 
 2008-11-23 - v0.6.6
 	* added Milenage SIM/USIM emulator for EAP-SIM/EAP-AKA

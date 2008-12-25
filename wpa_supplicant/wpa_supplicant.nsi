@@ -39,6 +39,19 @@ section
 	File /opt/Qt-Win/files/QtCore4.dll
 	File /opt/Qt-Win/files/QtGui4.dll
 
+	WriteRegDWORD HKLM "Software\wpa_supplicant" "debug_level" 0
+	WriteRegDWORD HKLM "Software\wpa_supplicant" "debug_show_keys" 0
+	WriteRegDWORD HKLM "Software\wpa_supplicant" "debug_timestamp" 0
+	WriteRegDWORD HKLM "Software\wpa_supplicant" "debug_use_file" 0
+
+	WriteRegDWORD HKLM "Software\wpa_supplicant\configs\default" "ap_scan" 2
+	WriteRegDWORD HKLM "Software\wpa_supplicant\configs\default" "update_config" 1
+	WriteRegDWORD HKLM "Software\wpa_supplicant\configs\default\networks" "dummy" 1
+	DeleteRegValue HKLM "Software\wpa_supplicant\configs\default\networks" "dummy"
+
+	WriteRegDWORD HKLM "Software\wpa_supplicant\interfaces" "dummy" 1
+	DeleteRegValue HKLM "Software\wpa_supplicant\interfaces" "dummy"
+
 	writeUninstaller "$INSTDIR\uninstall.exe"
 
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\wpa_supplicant" \
@@ -65,6 +78,8 @@ section "uninstall"
 	delete "$INSTDIR\uninstall.exe"
 
 	ExecWait "$INSTDIR\wpasvc.exe unreg"
+
+	DeleteRegKey HKLM "Software\wpa_supplicant"
 
 	delete "$INSTDIR\wpa_gui.exe"
 	delete "$INSTDIR\wpa_cli.exe"

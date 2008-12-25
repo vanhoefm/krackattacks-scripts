@@ -34,7 +34,8 @@ HEADERS	+= wpamsg.h \
 	eventhistory.h \
 	scanresults.h \
 	userdatarequest.h \
-	networkconfig.h
+	networkconfig.h \
+	addinterface.h
 
 SOURCES	+= main.cpp \
 	wpagui.cpp \
@@ -42,6 +43,7 @@ SOURCES	+= main.cpp \
 	scanresults.cpp \
 	userdatarequest.cpp \
 	networkconfig.cpp \
+	addinterface.cpp \
 	../../src/common/wpa_ctrl.c
 
 RESOURCES += icons.qrc

@@ -18,6 +18,7 @@
 #include <QSystemTrayIcon>
 #include <QObject>
 #include "ui_wpagui.h"
+#include "addinterface.h"
 
 class UserDataRequest;
 
@@ -82,6 +83,7 @@ public slots:
 	virtual void startService();
 	virtual void stopService();
 #endif /* CONFIG_NATIVE_WINDOWS */
+	virtual void addInterface();
 
 protected slots:
 	virtual void languageChange();
@@ -129,6 +131,9 @@ private:
 
 	bool serviceRunning();
 #endif /* CONFIG_NATIVE_WINDOWS */
+
+	QAction *addInterfaceAction;
+	AddInterface *add_iface;
 };
 
 #endif /* WPAGUI_H */

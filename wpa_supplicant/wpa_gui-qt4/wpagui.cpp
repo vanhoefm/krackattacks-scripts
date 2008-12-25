@@ -61,6 +61,13 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 		SLOT(startService()));
 	connect(fileStopServiceAction, SIGNAL(triggered()), this,
 		SLOT(stopService()));
+
+	addInterfaceAction = new QAction(this);
+	addInterfaceAction->setIconText("Add Interface");
+	fileMenu->insertAction(fileStartServiceAction, addInterfaceAction);
+
+	connect(addInterfaceAction, SIGNAL(triggered()), this,
+		SLOT(addInterface()));
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 	(void) statusBar();
@@ -118,6 +125,7 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 
 	eh = NULL;
 	scanres = NULL;
+	add_iface = NULL;
 	udr = NULL;
 	tray_icon = NULL;
 	startInTray = false;
@@ -175,6 +183,12 @@ WpaGui::~WpaGui()
 		scanres->close();
 		delete scanres;
 		scanres = NULL;
+	}
+
+	if (add_iface) {
+		add_iface->close();
+		delete add_iface;
+		add_iface = NULL;
 	}
 
 	if (udr) {
@@ -438,6 +452,20 @@ void WpaGui::updateStatus()
 		textSsid->clear();
 		textBssid->clear();
 		textIpAddress->clear();
+
+#ifdef CONFIG_NATIVE_WINDOWS
+		static bool first = true;
+		if (first && (ctrl_iface == NULL || *ctrl_iface == '\0')) {
+			first = false;
+			if (QMessageBox::information(
+				    this, qAppName(),
+				    "No network interfaces in use.\n"
+				    "Would you like to add one?",
+				    QMessageBox::Yes | QMessageBox::No) ==
+			    QMessageBox::Yes)
+				addInterface();
+		}
+#endif /* CONFIG_NATIVE_WINDOWS */
 		return;
 	}
 
@@ -1620,3 +1648,15 @@ bool WpaGui::serviceRunning()
 }
 
 #endif /* CONFIG_NATIVE_WINDOWS */
+
+
+void WpaGui::addInterface()
+{
+	if (add_iface) {
+		add_iface->close();
+		delete add_iface;
+	}
+	add_iface = new AddInterface(this, this);
+	add_iface->show();
+	add_iface->exec();
+}

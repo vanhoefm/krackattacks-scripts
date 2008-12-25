@@ -134,6 +134,8 @@ private:
 
 	QAction *addInterfaceAction;
 	AddInterface *add_iface;
+
+	bool connectedToService;
 };
 
 #endif /* WPAGUI_H */

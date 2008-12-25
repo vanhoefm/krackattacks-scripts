@@ -142,6 +142,7 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	else
 		show();
 
+	connectedToService = false;
 	textStatus->setText("connecting to wpa_supplicant");
 	timer = new QTimer(this);
 	connect(timer, SIGNAL(timeout()), SLOT(ping()));
@@ -293,6 +294,7 @@ int WpaGui::openCtrlConnection(const char *ifname)
 			ret = wpa_ctrl_request(ctrl, "INTERFACES", 10, buf,
 					       &len, NULL);
 			if (ret >= 0) {
+				connectedToService = true;
 				buf[len] = '\0';
 				pos = strchr(buf, '\n');
 				if (pos)
@@ -455,7 +457,8 @@ void WpaGui::updateStatus()
 
 #ifdef CONFIG_NATIVE_WINDOWS
 		static bool first = true;
-		if (first && (ctrl_iface == NULL || *ctrl_iface == '\0')) {
+		if (first && connectedToService &&
+		    (ctrl_iface == NULL || *ctrl_iface == '\0')) {
 			first = false;
 			if (QMessageBox::information(
 				    this, qAppName(),

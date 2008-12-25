@@ -205,7 +205,7 @@ void AddInterface::interfaceSelected(QTreeWidgetItem *sel)
 		 sel->text(1).toAscii().constData(),
 		 "default",
 		 sel->text(0).toAscii().constData(),
-		 "", "", "");
+		 "yes", "", "");
 	cmd[sizeof(cmd) - 1] = '\0';
 
 	ctrl = wpa_ctrl_open(NULL);

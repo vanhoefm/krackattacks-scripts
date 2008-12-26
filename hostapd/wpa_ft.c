@@ -444,8 +444,9 @@ static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
 	struct wpa_group *gsm = sm->group;
 	size_t subelem_len;
 
-	/* Sub-elem ID[1] | Length[1] | KeyID[2] | PN[6] | Key[16+8] */
-	subelem_len = 1 + 1 + 2 + 6 + WPA_IGTK_LEN + 8;
+	/* Sub-elem ID[1] | Length[1] | KeyID[2] | IPN[6] | Key Length[1] |
+	 * Key[16+8] */
+	subelem_len = 1 + 1 + 2 + 6 + 1 + WPA_IGTK_LEN + 8;
 	subelem = os_zalloc(subelem_len);
 	if (subelem == NULL)
 		return NULL;
@@ -457,6 +458,7 @@ static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
 	pos += 2;
 	wpa_auth_get_seqnum_igtk(sm->wpa_auth, NULL, gsm->GN_igtk, pos);
 	pos += 6;
+	*pos++ = WPA_IGTK_LEN;
 	if (aes_wrap(sm->PTK.kek, WPA_IGTK_LEN / 8,
 		     gsm->IGTK[gsm->GN_igtk - 4], pos)) {
 		os_free(subelem);

@@ -692,18 +692,24 @@ static int wpa_ft_process_igtk_subelem(struct wpa_sm *sm, const u8 *igtk_elem,
 	wpa_hexdump_key(MSG_DEBUG, "FT: Received IGTK in Reassoc Resp",
 			igtk_elem, igtk_elem_len);
 
-	if (igtk_elem_len != 2 + 6 + 24) {
+	if (igtk_elem_len != 2 + 6 + 1 + WPA_IGTK_LEN + 8) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid IGTK sub-elem "
 			   "length %lu", (unsigned long) igtk_elem_len);
 		return -1;
 	}
-	if (aes_unwrap(sm->ptk.kek, WPA_IGTK_LEN / 8, igtk_elem + 8, igtk)) {
+	if (igtk_elem[8] != WPA_IGTK_LEN) {
+		wpa_printf(MSG_DEBUG, "FT: Invalid IGTK sub-elem Key Length "
+			   "%d", igtk_elem[8]);
+		return -1;
+	}
+
+	if (aes_unwrap(sm->ptk.kek, WPA_IGTK_LEN / 8, igtk_elem + 9, igtk)) {
 		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
 			   "decrypt IGTK");
 		return -1;
 	}
 
-	/* KeyID[2] | PN[6] | Key[16+8] */
+	/* KeyID[2] | IPN[6] | Key Length[1] | Key[16+8] */
 
 	keyidx = WPA_GET_LE16(igtk_elem);
 

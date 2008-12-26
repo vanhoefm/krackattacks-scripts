@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2004, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -36,7 +36,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 reason);
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		     int old_vlanid);
-void ap_sta_start_ping(struct hostapd_data *hapd, struct sta_info *sta);
-void ap_sta_stop_ping(struct hostapd_data *hapd, struct sta_info *sta);
+void ap_sta_start_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
+void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta);
 
 #endif /* STA_INFO_H */

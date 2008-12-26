@@ -302,7 +302,7 @@ static u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 
 	*pos++ = WLAN_EID_ASSOC_COMEBACK_TIME;
 	*pos++ = 4;
-	timeout = (hapd->conf->assoc_ping_attempts - sta->ping_count + 1) *
+	timeout = (hapd->conf->assoc_ping_attempts - sta->sa_query_count + 1) *
 		hapd->conf->assoc_ping_timeout;
 	WPA_PUT_LE32(pos, timeout);
 	pos += 4;
@@ -893,16 +893,16 @@ static void handle_assoc(struct hostapd_data *hapd,
 		if (resp != WLAN_STATUS_SUCCESS)
 			goto fail;
 #ifdef CONFIG_IEEE80211W
-		if ((sta->flags & WLAN_STA_MFP) && !sta->ping_timed_out) {
+		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out) {
 			/*
-			 * STA has already been associated with MFP and ping
-			 * timeout has not been reached. Reject the
-			 * association attempt temporarily and start ping, if
-			 * one is not pending.
+			 * STA has already been associated with MFP and SA
+			 * Query timeout has not been reached. Reject the
+			 * association attempt temporarily and start SA Query,
+			 * if one is not pending.
 			 */
 
-			if (sta->ping_count == 0)
-				ap_sta_start_ping(hapd, sta);
+			if (sta->sa_query_count == 0)
+				ap_sta_start_sa_query(hapd, sta);
 
 			resp = WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY;
 			goto fail;
@@ -1225,51 +1225,54 @@ static void handle_beacon(struct hostapd_data *hapd,
 
 
 #ifdef CONFIG_IEEE80211W
-static void hostapd_ping_action(struct hostapd_data *hapd,
-				struct ieee80211_mgmt *mgmt, size_t len)
+static void hostapd_sa_query_action(struct hostapd_data *hapd,
+				    struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct sta_info *sta;
 	u8 *end;
 	int i;
 
-	end = mgmt->u.action.u.ping_resp.trans_id + WLAN_PING_TRANS_ID_LEN;
+	end = mgmt->u.action.u.sa_query_resp.trans_id +
+		WLAN_SA_QUERY_TR_ID_LEN;
 	if (((u8 *) mgmt) + len < end) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: Too short Ping Action "
+		wpa_printf(MSG_DEBUG, "IEEE 802.11: Too short SA Query Action "
 			   "frame (len=%lu)", (unsigned long) len);
 		return;
 	}
 
-	if (mgmt->u.action.u.ping_resp.action != WLAN_PING_RESPONSE) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: Unexpected Ping Action %d",
-			   mgmt->u.action.u.ping_resp.action);
+	if (mgmt->u.action.u.sa_query_resp.action != WLAN_SA_QUERY_RESPONSE) {
+		wpa_printf(MSG_DEBUG, "IEEE 802.11: Unexpected SA Query "
+			   "Action %d", mgmt->u.action.u.sa_query_resp.action);
 		return;
 	}
 
-	/* MLME-PING.confirm */
+	/* MLME-SAQuery.confirm */
 
 	sta = ap_get_sta(hapd, mgmt->sa);
-	if (sta == NULL || sta->ping_trans_id == NULL) {
+	if (sta == NULL || sta->sa_query_trans_id == NULL) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: No matching STA with "
-			   "pending ping request found");
+			   "pending SA Query request found");
 		return;
 	}
 
-	for (i = 0; i < sta->ping_count; i++) {
-		if (os_memcmp(sta->ping_trans_id + i * WLAN_PING_TRANS_ID_LEN,
-			      mgmt->u.action.u.ping_resp.trans_id,
-			      WLAN_PING_TRANS_ID_LEN) == 0)
+	for (i = 0; i < sta->sa_query_count; i++) {
+		if (os_memcmp(sta->sa_query_trans_id +
+			      i * WLAN_SA_QUERY_TR_ID_LEN,
+			      mgmt->u.action.u.sa_query_resp.trans_id,
+			      WLAN_SA_QUERY_TR_ID_LEN) == 0)
 			break;
 	}
 
-	if (i >= sta->ping_count) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: No matching ping "
+	if (i >= sta->sa_query_count) {
+		wpa_printf(MSG_DEBUG, "IEEE 802.11: No matching SA Query "
 			   "transaction identifier found");
 		return;
 	}
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
-		       HOSTAPD_LEVEL_DEBUG, "Reply to pending ping received");
-	ap_sta_stop_ping(hapd, sta);
+		       HOSTAPD_LEVEL_DEBUG,
+		       "Reply to pending SA Query received");
+	ap_sta_stop_sa_query(hapd, sta);
 }
 #endif /* CONFIG_IEEE80211W */
 
@@ -1310,8 +1313,8 @@ static void handle_action(struct hostapd_data *hapd,
 		hostapd_wme_action(hapd, mgmt, len);
 		return;
 #ifdef CONFIG_IEEE80211W
-	case WLAN_ACTION_PING:
-		hostapd_ping_action(hapd, mgmt, len);
+	case WLAN_ACTION_SA_QUERY:
+		hostapd_sa_query_action(hapd, mgmt, len);
 		return;
 #endif /* CONFIG_IEEE80211W */
 	}
@@ -1529,7 +1532,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211W
-	sta->ping_timed_out = 0;
+	sta->sa_query_timed_out = 0;
 #endif /* CONFIG_IEEE80211W */
 
 	if (hostapd_sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,

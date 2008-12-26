@@ -35,7 +35,7 @@ static int ap_sta_in_other_bss(struct hostapd_data *hapd,
 			       struct sta_info *sta, u32 flags);
 static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx);
 #ifdef CONFIG_IEEE80211W
-static void ap_ping_timer(void *eloop_ctx, void *timeout_ctx);
+static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx);
 #endif /* CONFIG_IEEE80211W */
 
 int ap_for_each_sta(struct hostapd_data *hapd,
@@ -189,8 +189,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	os_free(sta->challenge);
 
 #ifdef CONFIG_IEEE80211W
-	os_free(sta->ping_trans_id);
-	eloop_cancel_timeout(ap_ping_timer, hapd, sta);
+	os_free(sta->sa_query_trans_id);
+	eloop_cancel_timeout(ap_sa_query_timer, hapd, sta);
 #endif /* CONFIG_IEEE80211W */
 
 	wpabuf_free(sta->wps_ie);
@@ -613,9 +613,9 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 
 #ifdef CONFIG_IEEE80211W
 
-/* MLME-PING.request */
-static void ieee802_11_send_ping_req(struct hostapd_data *hapd, const u8 *addr,
-				     const u8 *trans_id)
+/* MLME-SAQuery.request */
+static void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
+					 const u8 *addr, const u8 *trans_id)
 {
 	struct ieee80211_mgmt mgmt;
 	u8 *end;
@@ -626,70 +626,70 @@ static void ieee802_11_send_ping_req(struct hostapd_data *hapd, const u8 *addr,
 	os_memcpy(mgmt.da, addr, ETH_ALEN);
 	os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
 	os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-	mgmt.u.action.category = WLAN_ACTION_PING;
-	mgmt.u.action.u.ping_req.action = WLAN_PING_REQUEST;
-	os_memcpy(mgmt.u.action.u.ping_req.trans_id, trans_id,
-		  WLAN_PING_TRANS_ID_LEN);
-	end = mgmt.u.action.u.ping_req.trans_id + WLAN_PING_TRANS_ID_LEN;
+	mgmt.u.action.category = WLAN_ACTION_SA_QUERY;
+	mgmt.u.action.u.sa_query_req.action = WLAN_SA_QUERY_REQUEST;
+	os_memcpy(mgmt.u.action.u.sa_query_req.trans_id, trans_id,
+		  WLAN_SA_QUERY_TR_ID_LEN);
+	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
 	if (hostapd_send_mgmt_frame(hapd, &mgmt, IEEE80211_HDRLEN +
 				    end - (u8 *) &mgmt, 0) < 0)
-		perror("ieee802_11_send_ping_req: send");
+		perror("ieee802_11_send_sa_query_req: send");
 }
 
 
-static void ap_ping_timer(void *eloop_ctx, void *timeout_ctx)
+static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
 	struct sta_info *sta = timeout_ctx;
 	unsigned int timeout, sec, usec;
 	u8 *trans_id, *nbuf;
 
-	if (sta->ping_count >= hapd->conf->assoc_ping_attempts) {
+	if (sta->sa_query_count >= hapd->conf->assoc_ping_attempts) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
-			       "association ping timed out");
-		sta->ping_timed_out = 1;
-		os_free(sta->ping_trans_id);
-		sta->ping_trans_id = NULL;
-		sta->ping_count = 0;
+			       "association SA Query timed out");
+		sta->sa_query_timed_out = 1;
+		os_free(sta->sa_query_trans_id);
+		sta->sa_query_trans_id = NULL;
+		sta->sa_query_count = 0;
 		return;
 	}
 
-	nbuf = os_realloc(sta->ping_trans_id,
-			  (sta->ping_count + 1) * WLAN_PING_TRANS_ID_LEN);
+	nbuf = os_realloc(sta->sa_query_trans_id,
+			  (sta->sa_query_count + 1) * WLAN_SA_QUERY_TR_ID_LEN);
 	if (nbuf == NULL)
 		return;
-	trans_id = nbuf + sta->ping_count * WLAN_PING_TRANS_ID_LEN;
-	sta->ping_trans_id = nbuf;
-	sta->ping_count++;
+	trans_id = nbuf + sta->sa_query_count * WLAN_SA_QUERY_TR_ID_LEN;
+	sta->sa_query_trans_id = nbuf;
+	sta->sa_query_count++;
 
-	os_get_random(trans_id, WLAN_PING_TRANS_ID_LEN);
+	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG,
-		       "association ping attempt %d", sta->ping_count);
+		       "association SA Query attempt %d", sta->sa_query_count);
 
-	ieee802_11_send_ping_req(hapd, sta->addr, trans_id);
+	ieee802_11_send_sa_query_req(hapd, sta->addr, trans_id);
 
 	timeout = hapd->conf->assoc_ping_timeout;
 	sec = ((timeout / 1000) * 1024) / 1000;
 	usec = (timeout % 1000) * 1024;
-	eloop_register_timeout(sec, usec, ap_ping_timer, hapd, sta);
+	eloop_register_timeout(sec, usec, ap_sa_query_timer, hapd, sta);
 }
 
 
-void ap_sta_start_ping(struct hostapd_data *hapd, struct sta_info *sta)
+void ap_sta_start_sa_query(struct hostapd_data *hapd, struct sta_info *sta)
 {
-	ap_ping_timer(hapd, sta);
+	ap_sa_query_timer(hapd, sta);
 }
 
 
-void ap_sta_stop_ping(struct hostapd_data *hapd, struct sta_info *sta)
+void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta)
 {
-	eloop_cancel_timeout(ap_ping_timer, hapd, sta);
-	os_free(sta->ping_trans_id);
-	sta->ping_trans_id = NULL;
-	sta->ping_count = 0;
+	eloop_cancel_timeout(ap_sa_query_timer, hapd, sta);
+	os_free(sta->sa_query_trans_id);
+	sta->sa_query_trans_id = NULL;
+	sta->sa_query_count = 0;
 }
 
 #endif /* CONFIG_IEEE80211W */

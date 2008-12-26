@@ -214,14 +214,14 @@
 #define WLAN_ACTION_BLOCK_ACK 3
 #define WLAN_ACTION_RADIO_MEASUREMENT 5
 #define WLAN_ACTION_FT 6
-#define WLAN_ACTION_PING 8
+#define WLAN_ACTION_SA_QUERY 7
 #define WLAN_ACTION_WMM 17
 
-/* Ping Action frame (IEEE 802.11w/D6.0, 7.4.9) */
-#define WLAN_PING_REQUEST 0
-#define WLAN_PING_RESPONSE 1
+/* SA Query Action frame (IEEE 802.11w/D7.0, 7.4.9) */
+#define WLAN_SA_QUERY_REQUEST 0
+#define WLAN_SA_QUERY_RESPONSE 1
 
-#define WLAN_PING_TRANS_ID_LEN 16
+#define WLAN_SA_QUERY_TR_ID_LEN 16
 
 
 #ifdef _MSC_VER
@@ -321,12 +321,12 @@ struct ieee80211_mgmt {
 				} STRUCT_PACKED ft_action_resp;
 				struct {
 					u8 action;
-					u8 trans_id[WLAN_PING_TRANS_ID_LEN];
-				} STRUCT_PACKED ping_req;
+					u8 trans_id[WLAN_SA_QUERY_TR_ID_LEN];
+				} STRUCT_PACKED sa_query_req;
 				struct {
 					u8 action; /* */
-					u8 trans_id[WLAN_PING_TRANS_ID_LEN];
-				} STRUCT_PACKED ping_resp;
+					u8 trans_id[WLAN_SA_QUERY_TR_ID_LEN];
+				} STRUCT_PACKED sa_query_resp;
 			} u;
 		} STRUCT_PACKED action;
 	} u;

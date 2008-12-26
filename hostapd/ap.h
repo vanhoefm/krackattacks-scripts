@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table data structures
- * Copyright (c) 2002-2004, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
@@ -100,11 +100,12 @@ struct sta_info {
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211W
-	int ping_count; /* number of pending ping requests;
-			 * 0 = no ping in progress */
-	int ping_timed_out;
-	u8 *ping_trans_id; /* buffer of WLAN_PING_TRANS_ID_LEN * ping_count
-			    * octets of pending ping transaction identifiers */
+	int sa_query_count; /* number of pending SA Query requests;
+			     * 0 = no SA Query in progress */
+	int sa_query_timed_out;
+	u8 *sa_query_trans_id; /* buffer of WLAN_SA_QUERY_TR_ID_LEN *
+				* sa_query_count octets of pending SA Query
+				* transaction identifiers */
 #endif /* CONFIG_IEEE80211W */
 
 	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */

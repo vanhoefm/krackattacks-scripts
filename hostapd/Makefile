@@ -282,6 +282,7 @@ OBJS += ../src/wps/wps_registrar.o
 NEED_DH_GROUPS=y
 NEED_SHA256=y
 NEED_CRYPTO=y
+NEED_BASE64=y
 endif
 
 ifdef CONFIG_EAP_IKEV2

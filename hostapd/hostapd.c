@@ -1221,6 +1221,8 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd,
 	srv.wps = hapd->wps;
 	srv.ipv6 = conf->radius_server_ipv6;
 	srv.get_eap_user = hostapd_radius_get_eap_user;
+	srv.eap_req_id_text = conf->eap_req_id_text;
+	srv.eap_req_id_text_len = conf->eap_req_id_text_len;
 
 	hapd->radius_srv = radius_server_init(&srv);
 	if (hapd->radius_srv == NULL) {

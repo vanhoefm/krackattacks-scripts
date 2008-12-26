@@ -125,6 +125,8 @@ static void eap_identity_process(struct eap_sm *sm, void *priv,
 		return; /* Should not happen - frame already validated */
 
 	wpa_hexdump_ascii(MSG_DEBUG, "EAP-Identity: Peer identity", pos, len);
+	if (sm->identity)
+		sm->update_user = TRUE;
 	os_free(sm->identity);
 	sm->identity = os_malloc(len ? len : 1);
 	if (sm->identity == NULL) {

@@ -1051,9 +1051,28 @@ static int eap_sm_Policy_getDecision(struct eap_sm *sm)
 	}
 
 	if ((sm->user == NULL || sm->update_user) && sm->identity) {
+		/*
+		 * Allow Identity method to be started once to allow identity
+		 * selection hint to be sent from the authentication server,
+		 * but prevent a loop of Identity requests by only allowing
+		 * this to happen once.
+		 */
+		int id_req = 0;
+		if (sm->user && sm->currentMethod == EAP_TYPE_IDENTITY &&
+		    sm->user->methods[0].vendor == EAP_VENDOR_IETF &&
+		    sm->user->methods[0].method == EAP_TYPE_IDENTITY)
+			id_req = 1;
 		if (eap_user_get(sm, sm->identity, sm->identity_len, 0) != 0) {
 			wpa_printf(MSG_DEBUG, "EAP: getDecision: user not "
 				   "found from database -> FAILURE");
+			return DECISION_FAILURE;
+		}
+		if (id_req && sm->user &&
+		    sm->user->methods[0].vendor == EAP_VENDOR_IETF &&
+		    sm->user->methods[0].method == EAP_TYPE_IDENTITY) {
+			wpa_printf(MSG_DEBUG, "EAP: getDecision: stop "
+				   "identity request loop -> FAILURE");
+			sm->update_user = TRUE;
 			return DECISION_FAILURE;
 		}
 		sm->update_user = FALSE;

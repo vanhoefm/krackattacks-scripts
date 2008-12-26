@@ -99,6 +99,8 @@ struct radius_server_data {
 	struct radius_server_counters counters;
 	int (*get_eap_user)(void *ctx, const u8 *identity, size_t identity_len,
 			    int phase2, struct eap_user *user);
+	char *eap_req_id_text;
+	size_t eap_req_id_text_len;
 };
 
 
@@ -1043,6 +1045,14 @@ radius_server_init(struct radius_server_conf *conf)
 	data->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	data->tnc = conf->tnc;
 	data->wps = conf->wps;
+	if (conf->eap_req_id_text) {
+		data->eap_req_id_text = os_malloc(conf->eap_req_id_text_len);
+		if (data->eap_req_id_text) {
+			os_memcpy(data->eap_req_id_text, conf->eap_req_id_text,
+				  conf->eap_req_id_text_len);
+			data->eap_req_id_text_len = conf->eap_req_id_text_len;
+		}
+	}
 
 	data->clients = radius_server_read_clients(conf->client_file,
 						   conf->ipv6);
@@ -1090,6 +1100,7 @@ void radius_server_deinit(struct radius_server_data *data)
 	os_free(data->pac_opaque_encr_key);
 	os_free(data->eap_fast_a_id);
 	os_free(data->eap_fast_a_id_info);
+	os_free(data->eap_req_id_text);
 	os_free(data);
 }
 
@@ -1217,9 +1228,19 @@ static int radius_server_get_eap_user(void *ctx, const u8 *identity,
 }
 
 
+static const char * radius_server_get_eap_req_id_text(void *ctx, size_t *len)
+{
+	struct radius_session *sess = ctx;
+	struct radius_server_data *data = sess->server;
+	*len = data->eap_req_id_text_len;
+	return data->eap_req_id_text;
+}
+
+
 static struct eapol_callbacks radius_server_eapol_cb =
 {
 	.get_eap_user = radius_server_get_eap_user,
+	.get_eap_req_id_text = radius_server_get_eap_req_id_text,
 };
 
 

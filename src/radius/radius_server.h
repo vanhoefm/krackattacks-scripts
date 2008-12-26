@@ -37,6 +37,8 @@ struct radius_server_conf {
 	int ipv6;
 	int (*get_eap_user)(void *ctx, const u8 *identity, size_t identity_len,
 			    int phase2, struct eap_user *user);
+	const char *eap_req_id_text;
+	size_t eap_req_id_text_len;
 };
 
 

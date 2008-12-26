@@ -1061,6 +1061,19 @@ static void handle_assoc(struct hostapd_data *hapd,
 	/* Station will be marked associated, after it acknowledges AssocResp
 	 */
 
+#ifdef CONFIG_IEEE80211W
+	if ((sta->flags & WLAN_STA_MFP) && sta->sa_query_timed_out) {
+		wpa_printf(MSG_DEBUG, "Allowing %sassociation after timed out "
+			   "SA Query procedure", reassoc ? "re" : "");
+		/* TODO: Send a protected Disassociate frame to the STA using
+		 * the old key and Reason Code "Previous Authentication no
+		 * longer valid". Make sure this is only sent protected since
+		 * unprotected frame would be received by the STA that is now
+		 * trying to associate.
+		 */
+	}
+#endif /* CONFIG_IEEE80211W */
+
 	if (reassoc) {
 		os_memcpy(sta->previous_ap, mgmt->u.reassoc_req.current_ap,
 			  ETH_ALEN);

@@ -18,6 +18,7 @@ ChangeLog for hostapd
 	* added support for EAP-AKA' (draft-arkko-eap-aka-kdf)
 	* added support for using driver_test over UDP socket
 	* changed EAP-GPSK to use the IANA assigned EAP method type 51
+	* updated management frame protection to use IEEE 802.11w/D7.0
 
 2008-11-23 - v0.6.6
 	* added a new configuration option, wpa_ptk_rekey, that can be used to

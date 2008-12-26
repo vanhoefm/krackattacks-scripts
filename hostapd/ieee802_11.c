@@ -298,12 +298,20 @@ static u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 					    struct sta_info *sta, u8 *eid)
 {
 	u8 *pos = eid;
-	u32 timeout;
+	u32 timeout, tu;
+	struct os_time now, passed;
 
 	*pos++ = WLAN_EID_ASSOC_COMEBACK_TIME;
 	*pos++ = 4;
-	timeout = (hapd->conf->assoc_ping_attempts - sta->sa_query_count + 1) *
-		hapd->conf->assoc_ping_timeout;
+	os_get_time(&now);
+	os_time_sub(&now, &sta->sa_query_start, &passed);
+	tu = (passed.sec * 1000000 + passed.usec) / 1024;
+	if (hapd->conf->assoc_sa_query_max_timeout > tu)
+		timeout = hapd->conf->assoc_sa_query_max_timeout - tu;
+	else
+		timeout = 0;
+	if (timeout < hapd->conf->assoc_sa_query_max_timeout)
+		timeout++; /* add some extra time for local timers */
 	WPA_PUT_LE32(pos, timeout);
 	pos += 4;
 
@@ -893,6 +901,9 @@ static void handle_assoc(struct hostapd_data *hapd,
 		if (resp != WLAN_STATUS_SUCCESS)
 			goto fail;
 #ifdef CONFIG_IEEE80211W
+		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out &&
+		    sta->sa_query_count > 0)
+			ap_check_sa_query_timeout(hapd, sta);
 		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out) {
 			/*
 			 * STA has already been associated with MFP and SA

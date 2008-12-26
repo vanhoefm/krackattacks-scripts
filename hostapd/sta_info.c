@@ -637,6 +637,30 @@ static void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 }
 
 
+int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	u32 tu;
+	struct os_time now, passed;
+	os_get_time(&now);
+	os_time_sub(&now, &sta->sa_query_start, &passed);
+	tu = (passed.sec * 1000000 + passed.usec) / 1024;
+	if (hapd->conf->assoc_sa_query_max_timeout < tu) {
+		hostapd_logger(hapd, sta->addr,
+			       HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "association SA Query timed out");
+		sta->sa_query_timed_out = 1;
+		os_free(sta->sa_query_trans_id);
+		sta->sa_query_trans_id = NULL;
+		sta->sa_query_count = 0;
+		eloop_cancel_timeout(ap_sa_query_timer, hapd, sta);
+		return 1;
+	}
+
+	return 0;
+}
+
+
 static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
@@ -644,37 +668,34 @@ static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	unsigned int timeout, sec, usec;
 	u8 *trans_id, *nbuf;
 
-	if (sta->sa_query_count >= hapd->conf->assoc_ping_attempts) {
-		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
-			       HOSTAPD_LEVEL_DEBUG,
-			       "association SA Query timed out");
-		sta->sa_query_timed_out = 1;
-		os_free(sta->sa_query_trans_id);
-		sta->sa_query_trans_id = NULL;
-		sta->sa_query_count = 0;
+	if (sta->sa_query_count > 0 &&
+	    ap_check_sa_query_timeout(hapd, sta))
 		return;
-	}
 
 	nbuf = os_realloc(sta->sa_query_trans_id,
 			  (sta->sa_query_count + 1) * WLAN_SA_QUERY_TR_ID_LEN);
 	if (nbuf == NULL)
 		return;
+	if (sta->sa_query_count == 0) {
+		/* Starting a new SA Query procedure */
+		os_get_time(&sta->sa_query_start);
+	}
 	trans_id = nbuf + sta->sa_query_count * WLAN_SA_QUERY_TR_ID_LEN;
 	sta->sa_query_trans_id = nbuf;
 	sta->sa_query_count++;
 
 	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
 
+	timeout = hapd->conf->assoc_sa_query_retry_timeout;
+	sec = ((timeout / 1000) * 1024) / 1000;
+	usec = (timeout % 1000) * 1024;
+	eloop_register_timeout(sec, usec, ap_sa_query_timer, hapd, sta);
+
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG,
 		       "association SA Query attempt %d", sta->sa_query_count);
 
 	ieee802_11_send_sa_query_req(hapd, sta->addr, trans_id);
-
-	timeout = hapd->conf->assoc_ping_timeout;
-	sec = ((timeout / 1000) * 1024) / 1000;
-	usec = (timeout % 1000) * 1024;
-	eloop_register_timeout(sec, usec, ap_sa_query_timer, hapd, sta);
 }
 
 

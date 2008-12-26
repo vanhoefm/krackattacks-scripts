@@ -184,8 +184,8 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->max_listen_interval = 65535;
 
 #ifdef CONFIG_IEEE80211W
-	bss->assoc_ping_timeout = 1000;
-	bss->assoc_ping_attempts = 3;
+	bss->assoc_sa_query_max_timeout = 1000;
+	bss->assoc_sa_query_retry_timeout = 201;
 #endif /* CONFIG_IEEE80211W */
 #ifdef EAP_FAST
 	 /* both anonymous and authenticated provisioning */
@@ -2064,18 +2064,20 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #ifdef CONFIG_IEEE80211W
 		} else if (os_strcmp(buf, "ieee80211w") == 0) {
 			bss->ieee80211w = atoi(pos);
-		} else if (os_strcmp(buf, "assoc_ping_timeout") == 0) {
-			bss->assoc_ping_timeout = atoi(pos);
-			if (bss->assoc_ping_timeout == 0) {
-				printf("Line %d: invalid assoc_ping_timeout\n",
-					line);
+		} else if (os_strcmp(buf, "assoc_sa_query_max_timeout") == 0) {
+			bss->assoc_sa_query_max_timeout = atoi(pos);
+			if (bss->assoc_sa_query_max_timeout == 0) {
+				printf("Line %d: invalid "
+				       "assoc_sa_query_max_timeout\n",
+				       line);
 				errors++;
 			}
-		} else if (os_strcmp(buf, "assoc_ping_attempts") == 0) {
-			bss->assoc_ping_timeout = atoi(pos);
-			if (bss->assoc_ping_timeout == 0) {
-				printf("Line %d: invalid assoc_ping_attempts "
-				       "(valid range: 1..255)\n",
+		} else if (os_strcmp(buf, "assoc_sa_query_retry_timeout") == 0)
+		{
+			bss->assoc_sa_query_retry_timeout = atoi(pos);
+			if (bss->assoc_sa_query_retry_timeout == 0) {
+				printf("Line %d: invalid "
+				       "assoc_sa_query_retry_timeout\n",
 				       line);
 				errors++;
 			}

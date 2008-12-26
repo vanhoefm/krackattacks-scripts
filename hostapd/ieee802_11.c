@@ -904,7 +904,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out &&
 		    sta->sa_query_count > 0)
 			ap_check_sa_query_timeout(hapd, sta);
-		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out) {
+		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out &&
+		    (!reassoc || sta->auth_alg != WLAN_AUTH_FT)) {
 			/*
 			 * STA has already been associated with MFP and SA
 			 * Query timeout has not been reached. Reject the

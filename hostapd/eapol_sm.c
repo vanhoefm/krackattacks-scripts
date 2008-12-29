@@ -174,6 +174,15 @@ static void eapol_port_timers_tick(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 
+	if (state->eap_if->retransWhile > 0) {
+		state->eap_if->retransWhile--;
+		if (state->eap_if->retransWhile == 0) {
+			wpa_printf(MSG_DEBUG, "IEEE 802.1X: " MACSTR
+				   " - (EAP) retransWhile --> 0",
+				   MAC2STR(state->addr));
+		}
+	}
+
 	eapol_sm_step_run(state);
 
 	eloop_register_timeout(1, 0, eapol_port_timers_tick, eloop_ctx, state);

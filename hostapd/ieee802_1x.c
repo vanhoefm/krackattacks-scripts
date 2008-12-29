@@ -105,19 +105,6 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 }
 
 
-static void ieee802_1x_eap_timeout(void *eloop_ctx, void *timeout_ctx)
-{
-	struct sta_info *sta = eloop_ctx;
-	struct eapol_state_machine *sm = sta->eapol_sm;
-	if (sm == NULL)
-		return;
-	hostapd_logger(sm->hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
-		       HOSTAPD_LEVEL_DEBUG, "EAP timeout");
-	sm->eap_if->eapTimeout = TRUE;
-	eapol_auth_step(sm);
-}
-
-
 static void ieee802_1x_tx_key_one(struct hostapd_data *hapd,
 				  struct sta_info *sta,
 				  int idx, int broadcast,
@@ -594,7 +581,6 @@ static void handle_eap_response(struct hostapd_data *hapd,
 	}
 
 	sm->eap_type_supp = type = data[0];
-	eloop_cancel_timeout(ieee802_1x_eap_timeout, sta, NULL);
 
 	hostapd_logger(hapd, sm->addr, HOSTAPD_MODULE_IEEE8021X,
 		       HOSTAPD_LEVEL_DEBUG, "received EAP packet (code=%d "
@@ -940,8 +926,6 @@ void ieee802_1x_free_station(struct sta_info *sta)
 {
 	struct eapol_state_machine *sm = sta->eapol_sm;
 
-	eloop_cancel_timeout(ieee802_1x_eap_timeout, sta, NULL);
-
 	if (sm == NULL)
 		return;
 
@@ -1211,7 +1195,6 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	struct sta_info *sta;
 	u32 session_timeout = 0, termination_action, acct_interim_interval;
 	int session_timeout_set, old_vlanid = 0;
-	int eap_timeout;
 	struct eapol_state_machine *sm;
 	int override_eapReq = 0;
 
@@ -1337,18 +1320,20 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		sm->eap_if->aaaEapReq = TRUE;
 		if (session_timeout_set) {
 			/* RFC 2869, Ch. 2.3.2; RFC 3580, Ch. 3.17 */
-			eap_timeout = session_timeout;
-		} else
-			eap_timeout = 30;
-		hostapd_logger(hapd, sm->addr, HOSTAPD_MODULE_IEEE8021X,
-			       HOSTAPD_LEVEL_DEBUG,
-			       "using EAP timeout of %d seconds%s",
-			       eap_timeout,
-			       session_timeout_set ? " (from RADIUS)" : "");
-		eloop_cancel_timeout(ieee802_1x_eap_timeout, sta, NULL);
-		eloop_register_timeout(eap_timeout, 0, ieee802_1x_eap_timeout,
-				       sta, NULL);
-		sm->eap_if->eapTimeout = FALSE;
+			sm->eap_if->aaaMethodTimeout = session_timeout;
+			hostapd_logger(hapd, sm->addr,
+				       HOSTAPD_MODULE_IEEE8021X,
+				       HOSTAPD_LEVEL_DEBUG,
+				       "using EAP timeout of %d seconds (from "
+				       "RADIUS)",
+				       sm->eap_if->aaaMethodTimeout);
+		} else {
+			/*
+			 * Use dynamic retransmission behavior per EAP
+			 * specification.
+			 */
+			sm->eap_if->aaaMethodTimeout = 0;
+		}
 		break;
 	}
 

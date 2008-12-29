@@ -792,10 +792,51 @@ static int eap_sm_calculateTimeout(struct eap_sm *sm, int retransCount,
 				   int eapSRTT, int eapRTTVAR,
 				   int methodTimeout)
 {
-	/* For now, retransmission is done in EAPOL state machines, so make
-	 * sure EAP state machine does not end up trying to retransmit packets.
+	int rto, i;
+
+	if (methodTimeout) {
+		/*
+		 * EAP method (either internal or through AAA server, provided
+		 * timeout hint. Use that as-is as a timeout for retransmitting
+		 * the EAP request if no response is received.
+		 */
+		wpa_printf(MSG_DEBUG, "EAP: retransmit timeout %d seconds "
+			   "(from EAP method hint)", methodTimeout);
+		return methodTimeout;
+	}
+
+	/*
+	 * RFC 3748 recommends algorithms described in RFC 2988 for estimation
+	 * of the retransmission timeout. This should be implemented once
+	 * round-trip time measurements are available. For nowm a simple
+	 * backoff mechanism is used instead if there are no EAP method
+	 * specific hints.
+	 *
+	 * SRTT = smoothed round-trip time
+	 * RTTVAR = round-trip time variation
+	 * RTO = retransmission timeout
 	 */
-	return 1;
+
+	/*
+	 * RFC 2988, 2.1: before RTT measurement, set RTO to 3 seconds for
+	 * initial retransmission and then double the RTO to provide back off
+	 * per 5.5. Limit the maximum RTO to 20 seconds per RFC 3748, 4.3
+	 * modified RTOmax.
+	 */
+	rto = 3;
+	for (i = 0; i < retransCount; i++) {
+		rto *= 2;
+		if (rto >= 20) {
+			rto = 20;
+			break;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG, "EAP: retransmit timeout %d seconds "
+		   "(from dynamic back off; retransCount=%d)",
+		   rto, retransCount);
+
+	return rto;
 }
 
 
@@ -1158,7 +1199,7 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 		return NULL;
 	sm->eapol_ctx = eapol_ctx;
 	sm->eapol_cb = eapol_cb;
-	sm->MaxRetrans = 10;
+	sm->MaxRetrans = 5; /* RFC 3748: max 3-5 retransmissions suggested */
 	sm->ssl_ctx = conf->ssl_ctx;
 	sm->eap_sim_db_priv = conf->eap_sim_db_priv;
 	sm->backend_auth = conf->backend_auth;

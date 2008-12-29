@@ -1361,6 +1361,22 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 		os_free(sm->last_recv_radius);
 		sm->last_recv_radius = NULL;
 	}
+
+	if (sm->eap_if->eapTimeout) {
+		/*
+		 * Disconnect the STA since it did not reply to the last EAP
+		 * request and we cannot continue EAP processing (EAP-Failure
+		 * could only be sent if the EAP peer actually replied).
+		 */
+		sm->eap_if->portEnabled = FALSE;
+		hostapd_sta_deauth(hapd, sta->addr,
+				   WLAN_REASON_PREV_AUTH_NOT_VALID);
+		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
+				WLAN_STA_AUTHORIZED);
+		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
+		eloop_register_timeout(0, 0, ap_handle_timer, hapd, sta);
+		sta->timeout_next = STA_REMOVE;
+	}
 }
 
 

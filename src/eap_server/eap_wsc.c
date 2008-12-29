@@ -436,6 +436,15 @@ static Boolean eap_wsc_isSuccess(struct eap_sm *sm, void *priv)
 }
 
 
+static int eap_wsc_getTimeout(struct eap_sm *sm, void *priv)
+{
+	/* Recommended retransmit times: retransmit timeout 5 seconds,
+	 * per-message timeout 15 seconds, i.e., 3 tries. */
+	sm->MaxRetrans = 2; /* total 3 attempts */
+	return 5;
+}
+
+
 int eap_server_wsc_register(void)
 {
 	struct eap_method *eap;
@@ -454,6 +463,7 @@ int eap_server_wsc_register(void)
 	eap->process = eap_wsc_process;
 	eap->isDone = eap_wsc_isDone;
 	eap->isSuccess = eap_wsc_isSuccess;
+	eap->getTimeout = eap_wsc_getTimeout;
 
 	ret = eap_server_method_register(eap);
 	if (ret)

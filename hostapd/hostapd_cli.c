@@ -83,6 +83,9 @@ static const char *commands_help =
 "   sta <addr>           get MIB variables for one station\n"
 "   all_sta              get MIB variables for all stations\n"
 "   new_sta <addr>       add a new station\n"
+#ifdef CONFIG_IEEE80211W
+"   sa_query <addr>      send SA Query to a station\n"
+#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 "   wps_pin <uuid> <pin> add WPS Enrollee PIN (Device Password)\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
@@ -232,6 +235,22 @@ static int hostapd_cli_cmd_new_sta(struct wpa_ctrl *ctrl, int argc,
 	snprintf(buf, sizeof(buf), "NEW_STA %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
 }
+
+
+#ifdef CONFIG_IEEE80211W
+static int hostapd_cli_cmd_sa_query(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	char buf[64];
+	if (argc != 1) {
+		printf("Invalid 'sa_query' command - exactly one argument, "
+		       "STA address, is required.\n");
+		return -1;
+	}
+	snprintf(buf, sizeof(buf), "SA_QUERY %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+#endif /* CONFIG_IEEE80211W */
 
 
 #ifdef CONFIG_WPS
@@ -405,6 +424,9 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "sta", hostapd_cli_cmd_sta },
 	{ "all_sta", hostapd_cli_cmd_all_sta },
 	{ "new_sta", hostapd_cli_cmd_new_sta },
+#ifdef CONFIG_IEEE80211W
+	{ "sa_query", hostapd_cli_cmd_sa_query },
+#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 	{ "wps_pin", hostapd_cli_cmd_wps_pin },
 	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },

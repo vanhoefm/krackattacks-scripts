@@ -218,6 +218,26 @@ static int hostapd_ctrl_iface_new_sta(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_IEEE80211W
+static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
+				       const char *txtaddr)
+{
+	u8 addr[ETH_ALEN];
+	u8 trans_id[WLAN_SA_QUERY_TR_ID_LEN];
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE SA_QUERY %s", txtaddr);
+
+	if (hwaddr_aton(txtaddr, addr))
+		return -1;
+
+	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+	ieee802_11_send_sa_query_req(hapd, addr, trans_id);
+
+	return 0;
+}
+#endif /* CONFIG_IEEE80211W */
+
+
 #ifdef CONFIG_WPS
 static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
 {
@@ -313,6 +333,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "NEW_STA ", 8) == 0) {
 		if (hostapd_ctrl_iface_new_sta(hapd, buf + 8))
 			reply_len = -1;
+#ifdef CONFIG_IEEE80211W
+	} else if (os_strncmp(buf, "SA_QUERY ", 9) == 0) {
+		if (hostapd_ctrl_iface_sa_query(hapd, buf + 9))
+			reply_len = -1;
+#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 	} else if (os_strncmp(buf, "WPS_PIN ", 8) == 0) {
 		if (hostapd_ctrl_iface_wps_pin(hapd, buf + 8))

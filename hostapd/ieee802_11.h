@@ -50,5 +50,7 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid);
 int hostapd_ht_operation_update(struct hostapd_iface *iface);
+void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
+				  const u8 *addr, const u8 *trans_id);
 
 #endif /* IEEE802_11_H */

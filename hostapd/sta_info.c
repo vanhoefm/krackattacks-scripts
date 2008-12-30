@@ -613,30 +613,6 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 
 #ifdef CONFIG_IEEE80211W
 
-/* MLME-SAQuery.request */
-static void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
-					 const u8 *addr, const u8 *trans_id)
-{
-	struct ieee80211_mgmt mgmt;
-	u8 *end;
-
-	os_memset(&mgmt, 0, sizeof(mgmt));
-	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_ACTION);
-	os_memcpy(mgmt.da, addr, ETH_ALEN);
-	os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-	mgmt.u.action.category = WLAN_ACTION_SA_QUERY;
-	mgmt.u.action.u.sa_query_req.action = WLAN_SA_QUERY_REQUEST;
-	os_memcpy(mgmt.u.action.u.sa_query_req.trans_id, trans_id,
-		  WLAN_SA_QUERY_TR_ID_LEN);
-	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hostapd_send_mgmt_frame(hapd, &mgmt, IEEE80211_HDRLEN +
-				    end - (u8 *) &mgmt, 0) < 0)
-		perror("ieee802_11_send_sa_query_req: send");
-}
-
-
 int ap_check_sa_query_timeout(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	u32 tu;

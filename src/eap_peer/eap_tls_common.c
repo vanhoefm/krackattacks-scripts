@@ -749,8 +749,21 @@ const u8 * eap_peer_tls_process_init(struct eap_sm *sm,
 		ret->ignore = TRUE;
 		return NULL;
 	}
-	*flags = *pos++;
-	left--;
+	if (left == 0) {
+		wpa_printf(MSG_DEBUG, "SSL: Invalid TLS message: no Flags "
+			   "octet included");
+		if (!sm->workaround) {
+			ret->ignore = TRUE;
+			return NULL;
+		}
+
+		wpa_printf(MSG_DEBUG, "SSL: Workaround - assume no Flags "
+			   "indicates ACK frame");
+		*flags = 0;
+	} else {
+		*flags = *pos++;
+		left--;
+	}
 	wpa_printf(MSG_DEBUG, "SSL: Received packet(len=%lu) - "
 		   "Flags 0x%02x", (unsigned long) wpabuf_len(reqData),
 		   *flags);

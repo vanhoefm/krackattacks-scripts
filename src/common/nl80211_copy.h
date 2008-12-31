@@ -72,8 +72,8 @@
  *
  * @NL80211_CMD_GET_KEY: Get sequence counter information for a key specified
  *	by %NL80211_ATTR_KEY_IDX and/or %NL80211_ATTR_MAC.
- * @NL80211_CMD_SET_KEY: Set key attributes %NL80211_ATTR_KEY_DEFAULT or
- *	%NL80211_ATTR_KEY_THRESHOLD.
+ * @NL80211_CMD_SET_KEY: Set key attributes %NL80211_ATTR_KEY_DEFAULT,
+ *	%NL80211_ATTR_KEY_DEFAULT_MGMT, or %NL80211_ATTR_KEY_THRESHOLD.
  * @NL80211_CMD_NEW_KEY: add a key with given %NL80211_ATTR_KEY_DATA,
  *	%NL80211_ATTR_KEY_IDX, %NL80211_ATTR_MAC and %NL80211_ATTR_KEY_CIPHER
  *	attributes.
@@ -346,6 +346,8 @@ enum nl80211_attrs {
 	NL80211_ATTR_WIPHY_FREQ,
 	NL80211_ATTR_WIPHY_CHANNEL_TYPE,
 
+	NL80211_ATTR_KEY_DEFAULT_MGMT,
+
 	/* add attributes here, update the policy in nl80211.c */
 
 	__NL80211_ATTR_AFTER_LAST,
@@ -412,12 +414,14 @@ enum nl80211_iftype {
  * @NL80211_STA_FLAG_SHORT_PREAMBLE: station is capable of receiving frames
  *	with short barker preamble
  * @NL80211_STA_FLAG_WME: station is WME/QoS capable
+ * @NL80211_STA_FLAG_MFP: station uses management frame protection
  */
 enum nl80211_sta_flags {
 	__NL80211_STA_FLAG_INVALID,
 	NL80211_STA_FLAG_AUTHORIZED,
 	NL80211_STA_FLAG_SHORT_PREAMBLE,
 	NL80211_STA_FLAG_WME,
+	NL80211_STA_FLAG_MFP,
 
 	/* keep last */
 	__NL80211_STA_FLAG_AFTER_LAST,

@@ -295,14 +295,10 @@ static int nl_set_encr(int ifindex, struct i802_driver_data *drv,
 		    0, NL80211_CMD_SET_KEY, 0);
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
-#ifdef NL80211_MFP_PENDING
 	if (strcmp(alg, "IGTK") == 0)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT_MGMT);
 	else
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
-#else /* NL80211_MFP_PENDING */
-	NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
-#endif /* NL80211_MFP_PENDING */
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret == -ENOENT)
@@ -905,10 +901,8 @@ static int i802_sta_set_flags(void *priv, const u8 *addr,
 	if (total_flags & WLAN_STA_SHORT_PREAMBLE)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_SHORT_PREAMBLE);
 
-#ifdef NL80211_MFP_PENDING
 	if (total_flags & WLAN_STA_MFP)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_MFP);
-#endif /* NL80211_MFP_PENDING */
 
 	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))
 		goto nla_put_failure;

@@ -1122,6 +1122,18 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		params.mgmt_frame_protection = MGMT_FRAME_PROTECTION_REQUIRED;
 		break;
 	}
+	if (ssid->ieee80211w != NO_IEEE80211W && bss) {
+		const u8 *rsn = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+		struct wpa_ie_data ie;
+		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ie) == 0 &&
+		    ie.capabilities &
+		    (WPA_CAPABILITY_MFPC | WPA_CAPABILITY_MFPR)) {
+			wpa_printf(MSG_DEBUG, "WPA: Selected AP supports MFP: "
+				   "require MFP");
+			params.mgmt_frame_protection =
+				MGMT_FRAME_PROTECTION_REQUIRED;
+		}
+	}
 #endif /* CONFIG_IEEE80211W */
 
 	if (wpa_s->use_client_mlme)

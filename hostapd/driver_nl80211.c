@@ -325,11 +325,6 @@ static int i802_set_encryption(const char *iface, void *priv, const char *alg,
 	if (ret < 0)
 		return ret;
 
-	if (strcmp(alg, "IGTK") == 0) {
-		ret = nl_set_encr(drv->monitor_ifidx, drv, alg, addr, idx, key,
-				  key_len, txkey);
-	}
-
 	return ret;
 }
 

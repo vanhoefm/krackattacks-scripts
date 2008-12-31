@@ -1269,8 +1269,7 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 	os_memcpy(mgmt.u.action.u.sa_query_req.trans_id, trans_id,
 		  WLAN_SA_QUERY_TR_ID_LEN);
 	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hostapd_send_mgmt_frame(hapd, &mgmt, IEEE80211_HDRLEN +
-				    end - (u8 *) &mgmt, 0) < 0)
+	if (hostapd_send_mgmt_frame(hapd, &mgmt, end - (u8 *) &mgmt, 0) < 0)
 		perror("ieee802_11_send_sa_query_req: send");
 }
 

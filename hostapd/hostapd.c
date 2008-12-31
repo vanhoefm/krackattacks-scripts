@@ -525,6 +525,19 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 			       "(ifname=%s keyidx=%d)\n", ifname, i);
 		}
 	}
+#ifdef CONFIG_IEEE80211W
+	if (hapd->conf->ieee80211w) {
+		for (i = NUM_WEP_KEYS; i < NUM_WEP_KEYS + 2; i++) {
+			if (hostapd_set_encryption(ifname, hapd, "none", NULL,
+						   i, NULL, 0,
+						   i == 0 ? 1 : 0)) {
+				printf("Failed to clear default mgmt "
+				       "encryption keys (ifname=%s keyidx=%d)"
+				       "\n", ifname, i);
+			}
+		}
+	}
+#endif /* CONFIG_IEEE80211W */
 }
 
 

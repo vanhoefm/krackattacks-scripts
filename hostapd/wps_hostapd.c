@@ -383,7 +383,12 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	os_memset(&cfg, 0, sizeof(cfg));
 	wps->wps_state = hapd->conf->wps_state;
 	wps->ap_setup_locked = hapd->conf->ap_setup_locked;
-	os_memcpy(wps->uuid, hapd->conf->uuid, UUID_LEN);
+	if (is_nil_uuid(hapd->conf->uuid)) {
+		uuid_gen_mac_addr(hapd->own_addr, wps->uuid);
+		wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC address",
+			    wps->uuid, UUID_LEN);
+	} else
+		os_memcpy(wps->uuid, hapd->conf->uuid, UUID_LEN);
 	wps->ssid_len = hapd->conf->ssid.ssid_len;
 	os_memcpy(wps->ssid, hapd->conf->ssid.ssid, wps->ssid_len);
 	wps->ap = 1;

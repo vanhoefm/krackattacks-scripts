@@ -21,6 +21,7 @@
 #include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
 #include "eloop.h"
+#include "uuid.h"
 #include "wpa_ctrl.h"
 #include "eap_common/eap_wsc_common.h"
 #include "wps/wps.h"
@@ -442,7 +443,12 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
 	wps->dev.rf_bands = WPS_RF_24GHZ | WPS_RF_50GHZ; /* TODO: config */
 	os_memcpy(wps->dev.mac_addr, wpa_s->own_addr, ETH_ALEN);
-	os_memcpy(wps->uuid, wpa_s->conf->uuid, 16);
+	if (is_nil_uuid(wpa_s->conf->uuid)) {
+		uuid_gen_mac_addr(wpa_s->own_addr, wps->uuid);
+		wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC address",
+			    wps->uuid, WPS_UUID_LEN);
+	} else
+		os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 
 	wpa_s->wps = wps;
 

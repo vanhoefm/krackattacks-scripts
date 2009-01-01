@@ -181,7 +181,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 #ifdef CONFIG_WPS
 	if (wps) {
 		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
-						wpa_s->conf->uuid, req_type);
+						wpa_s->wps->uuid, req_type);
 		if (wps_ie) {
 			extra_ie = wpabuf_head(wps_ie);
 			extra_ie_len = wpabuf_len(wps_ie);

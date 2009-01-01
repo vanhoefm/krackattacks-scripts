@@ -94,6 +94,7 @@ eap_server=1
 # WPS configuration (AP configured, do not allow external WPS Registrars)
 wps_state=2
 ap_setup_locked=1
+# If UUID is not configured, it will be generated based on local MAC address.
 uuid=87654321-9abc-def0-1234-56789abc0000
 wps_pin_requests=/var/run/hostapd.pin-req
 device_name=Wireless AP

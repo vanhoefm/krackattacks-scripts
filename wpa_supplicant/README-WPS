@@ -67,7 +67,8 @@ CONFIG_WPS=y
 
 WPS needs the Universally Unique IDentifier (UUID; see RFC 4122) for
 the device. This is configured in the runtime configuration for
-wpa_supplicant:
+wpa_supplicant (if not set, UUID will be generated based on local MAC
+address):
 
 # example UUID for WPS
 uuid=12345678-9abc-def0-1234-56789abcdef0

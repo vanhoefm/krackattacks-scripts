@@ -28,11 +28,11 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 	data->authenticator = cfg->authenticator;
 	data->wps = cfg->wps;
 	data->registrar = cfg->registrar;
-	if (cfg->enrollee_mac_addr)
-		os_memcpy(data->mac_addr_e, cfg->enrollee_mac_addr, ETH_ALEN);
-	if (cfg->uuid) {
-		os_memcpy(cfg->registrar ? data->uuid_r : data->uuid_e,
-			  cfg->uuid, WPS_UUID_LEN);
+	if (cfg->registrar) {
+		os_memcpy(data->uuid_r, cfg->wps->uuid, WPS_UUID_LEN);
+	} else {
+		os_memcpy(data->mac_addr_e, cfg->wps->dev.mac_addr, ETH_ALEN);
+		os_memcpy(data->uuid_e, cfg->wps->uuid, WPS_UUID_LEN);
 	}
 	if (cfg->pin) {
 		data->dev_pw_id = DEV_PW_DEFAULT;

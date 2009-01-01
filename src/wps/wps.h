@@ -55,11 +55,9 @@ struct wps_config {
 	int authenticator;
 	struct wps_context *wps;
 	struct wps_registrar *registrar; /* NULL for Enrollee */
-	const u8 *enrollee_mac_addr; /* NULL for Registrar */
 	const u8 *pin; /* Enrollee Device Password (NULL for Registrar or PBC)
 			*/
 	size_t pin_len;
-	const u8 *uuid; /* 128-bit Enrollee UUID (NULL for Registrar) */
 	int pbc;
 	const struct wpabuf *assoc_wps_ie; /* (Re)AssocReq WPS IE (in AP) */
 };

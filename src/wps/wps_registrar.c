@@ -980,7 +980,6 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 		return NULL;
 	wpa_hexdump(MSG_DEBUG, "WPS: Registrar Nonce",
 		    wps->nonce_r, WPS_NONCE_LEN);
-	os_memcpy(wps->uuid_r, wps->wps->uuid, WPS_UUID_LEN);
 	wpa_hexdump(MSG_DEBUG, "WPS: UUID-R", wps->uuid_r, WPS_UUID_LEN);
 
 	wpa_printf(MSG_DEBUG, "WPS: Building Message M2");

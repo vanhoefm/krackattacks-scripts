@@ -842,6 +842,9 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 	struct l2_ethhdr eth;
 	struct sockaddr *addr;
 	socklen_t alen;
+#ifdef DRIVER_TEST_UNIX
+	struct sockaddr_un addr_un;
+#endif /* DRIVER_TEST_UNIX */
 
 	wpa_hexdump(MSG_MSGDUMP, "test_send_eapol TX frame", data, data_len);
 
@@ -874,7 +877,6 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 		}
 	} else {
 #ifdef DRIVER_TEST_UNIX
-		struct sockaddr_un addr_un;
 		struct stat st;
 		os_memset(&addr_un, 0, sizeof(addr_un));
 		addr_un.sun_family = AF_UNIX;

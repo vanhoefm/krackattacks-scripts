@@ -1027,7 +1027,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		if (wps_ie && wpabuf_len(wps_ie) <= sizeof(wpa_ie)) {
 			wpa_ie_len = wpabuf_len(wps_ie);
 			os_memcpy(wpa_ie, wpabuf_head(wps_ie), wpa_ie_len);
-		}
+		} else
+			wpa_ie_len = 0;
 		wpabuf_free(wps_ie);
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 #endif /* CONFIG_WPS */

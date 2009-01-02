@@ -48,7 +48,7 @@ tar czf $RELDIR/wpa_supplicant-$VER.tar.gz wpa_supplicant-$VER
 cd ..
 rm -r $TMP
 
-if [ "$2" == "nobin" ]; then
+if [ "$2" = "nobin" ]; then
     exit 0
 fi
 

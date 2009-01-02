@@ -90,7 +90,8 @@ INPUT                  = wpa_supplicant \
 	src/l2_packet \
 	src/rsn_supp \
 	src/tls \
-	src/utils
+	src/utils \
+	src/wps
 FILE_PATTERNS          = *.c *.h *.cpp *.m *.doxygen
 RECURSIVE              = YES
 EXCLUDE                = 

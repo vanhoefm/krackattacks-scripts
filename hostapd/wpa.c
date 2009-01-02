@@ -345,6 +345,7 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
  * wpa_init - Initialize WPA authenticator
  * @addr: Authenticator address
  * @conf: Configuration for WPA authenticator
+ * @cb: Callback functions for WPA authenticator
  * Returns: Pointer to WPA authenticator data or %NULL on failure
  */
 struct wpa_authenticator * wpa_init(const u8 *addr,

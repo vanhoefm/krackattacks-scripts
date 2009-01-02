@@ -996,6 +996,7 @@ eap_sim_db_add_reauth_data(struct eap_sim_db_data *data, const u8 *identity,
  * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
  * free it.
+ * @counter: AT_COUNTER value for fast re-authentication
  * @mk: 16-byte MK from the previous full authentication or %NULL
  * Returns: 0 on success, -1 on failure
  *
@@ -1031,7 +1032,10 @@ int eap_sim_db_add_reauth(void *priv, const u8 *identity,
  * @reauth_id: reauth_id for this user. This needs to be an allocated buffer,
  * e.g., return value from eap_sim_db_get_next_reauth_id(). Caller must not
  * free it.
- * @k_re: 32-byte K_re from the previous full authentication or %NULL
+ * @counter: AT_COUNTER value for fast re-authentication
+ * @k_encr: K_encr from the previous full authentication
+ * @k_aut: K_aut from the previous full authentication
+ * @k_re: 32-byte K_re from the previous full authentication
  * Returns: 0 on success, -1 on failure
  *
  * This function adds a new re-authentication entry for an EAP-AKA' user.
@@ -1095,7 +1099,6 @@ const u8 * eap_sim_db_get_permanent(void *priv, const u8 *identity,
  * @identity: Identity of the user (may be permanent identity, pseudonym, or
  * reauth_id)
  * @identity_len: Length of identity
- * @len: Buffer for length of the returned permanent identity
  * Returns: Pointer to the re-auth entry, or %NULL if not found
  */
 struct eap_sim_reauth *

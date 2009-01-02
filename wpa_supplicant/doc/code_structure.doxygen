@@ -148,7 +148,7 @@ tls_gnutls.c
 	TLS library wrapper for GnuTLS
 
 
-\section crypto_func Cryptographic functions
+\section tls_func TLS library
 
 asn1.c and asn1.h
 	ASN.1 DER parsing

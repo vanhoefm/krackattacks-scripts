@@ -920,7 +920,6 @@ void wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface)
 
 /**
  * wpas_dbus_register_new_iface - Register a new interface with dbus
- * @global: Global %wpa_supplicant data
  * @wpa_s: %wpa_supplicant interface description structure to register
  * Returns: 0 on success, -1 on error
  *

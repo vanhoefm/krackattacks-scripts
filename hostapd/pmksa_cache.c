@@ -47,6 +47,7 @@ struct rsn_pmksa_cache {
  * @pmk_len: Length of pmk in bytes
  * @aa: Authenticator address
  * @spa: Supplicant address
+ * @pmkid: Buffer for PMKID
  * @use_sha256: Whether to use SHA256-based KDF
  *
  * IEEE Std 802.11i-2004 - 8.5.1.2 Pairwise key hierarchy
@@ -404,6 +405,7 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
 /**
  * pmksa_cache_get_okc - Fetch a PMKSA cache entry using OKC
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * @aa: Authenticator address
  * @spa: Supplicant address
  * @pmkid: PMKID
  * Returns: Pointer to PMKSA cache entry or %NULL if no match was found

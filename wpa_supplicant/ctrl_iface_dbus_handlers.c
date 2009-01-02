@@ -1287,7 +1287,7 @@ DBusMessage * wpas_dbus_iface_get_state(DBusMessage *message,
 /**
  * wpas_dbus_iface_set_blobs - Store named binary blobs (ie, for certificates)
  * @message: Pointer to incoming dbus message
- * @global: %wpa_supplicant global data structure
+ * @wpa_s: %wpa_supplicant data structure
  * Returns: A dbus message containing a UINT32 indicating success (1) or
  *          failure (0)
  *
@@ -1370,7 +1370,7 @@ DBusMessage * wpas_dbus_iface_set_blobs(DBusMessage *message,
 /**
  * wpas_dbus_iface_remove_blob - Remove named binary blobs
  * @message: Pointer to incoming dbus message
- * @global: %wpa_supplicant global data structure
+ * @wpa_s: %wpa_supplicant data structure
  * Returns: A dbus message containing a UINT32 indicating success (1) or
  *          failure (0)
  *

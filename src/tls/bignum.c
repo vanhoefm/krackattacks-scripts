@@ -97,7 +97,7 @@ int bignum_get_unsigned_bin(const struct bignum *n, u8 *buf, size_t *len)
 
 /**
  * bignum_set_unsigned_bin - Set bignum based on unsigned binary buffer
- * @a: Bignum from bignum_init(); to be set to the given value
+ * @n: Bignum from bignum_init(); to be set to the given value
  * @buf: Buffer with unsigned binary value
  * @len: Length of buf in octets
  * Returns: 0 on success, -1 on failure

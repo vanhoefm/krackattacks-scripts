@@ -1399,6 +1399,7 @@ static void handle_action(struct hostapd_data *hapd,
  * @buf: management frame data (starting from IEEE 802.11 header)
  * @len: length of frame data in octets
  * @stype: management frame subtype from frame control field
+ * @fi: meta data about received frame (signal level, etc.)
  *
  * Process all incoming IEEE 802.11 management frames. This will be called for
  * each frame received from the kernel driver through wlan#ap interface. In

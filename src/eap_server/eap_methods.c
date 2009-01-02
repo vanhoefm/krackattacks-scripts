@@ -68,7 +68,7 @@ EapType eap_server_get_type(const char *name, int *vendor)
  * EAP_SERVER_METHOD_INTERFACE_VERSION)
  * @vendor: EAP Vendor-ID (EAP_VENDOR_*) (0 = IETF)
  * @method: EAP type number (EAP_TYPE_*)
- * name: Name of the method (e.g., "TLS")
+ * @name: Name of the method (e.g., "TLS")
  * Returns: Allocated EAP method structure or %NULL on failure
  *
  * The returned structure should be freed with eap_server_method_free() when it

@@ -124,6 +124,8 @@ int tls_derive_keys(struct tlsv1_client *conn,
  * @in_data: Input data from TLS peer
  * @in_len: Input data length
  * @out_len: Length of the output buffer.
+ * @appl_data: Pointer to application data pointer, or %NULL if dropped
+ * @appl_data_len: Pointer to variable that is set to appl_data length
  * Returns: Pointer to output data, %NULL on failure
  */
 u8 * tlsv1_client_handshake(struct tlsv1_client *conn,

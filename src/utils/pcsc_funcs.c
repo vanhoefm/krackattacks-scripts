@@ -611,7 +611,7 @@ failed:
 /**
  * scard_set_pin - Set PIN (CHV1/PIN1) code for accessing SIM/USIM commands
  * @scard: Pointer to private data from scard_init()
- * pin: PIN code as an ASCII string (e.g., "1234")
+ * @pin: PIN code as an ASCII string (e.g., "1234")
  * Returns: 0 on success, -1 on failure
  */
 int scard_set_pin(struct scard_data *scard, const char *pin)

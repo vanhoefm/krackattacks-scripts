@@ -345,7 +345,7 @@ static void pbkdf2_sha1_f(const char *passphrase, const char *ssid,
  * @passphrase: ASCII passphrase
  * @ssid: SSID
  * @ssid_len: SSID length in bytes
- * @interations: Number of iterations to run
+ * @iterations: Number of iterations to run
  * @buf: Buffer for the generated key
  * @buflen: Length of the buffer in bytes
  *

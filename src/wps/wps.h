@@ -91,11 +91,9 @@ struct wps_config {
 	struct wps_context *wps;
 
 	/**
-	 * registrar - Pointer to WPS registrar data from wps_registrar_init()
-	 * This is only used if the local end is Registrar; set to %NULL for
-	 * Enrollee.
+	 * registrar - Whether this end is a Registrar
 	 */
-	struct wps_registrar *registrar;
+	int registrar;
 
 	/**
 	 * pin - Enrollee Device Password (%NULL for Registrar or PBC)

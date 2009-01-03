@@ -685,13 +685,14 @@ static int wps_get_dev_password(struct wps_data *wps)
 		pin = (const u8 *) "00000000";
 		pin_len = 8;
 	} else {
-		pin = wps_registrar_get_pin(wps->registrar, wps->uuid_e,
+		pin = wps_registrar_get_pin(wps->wps->registrar, wps->uuid_e,
 					    &pin_len);
 	}
 	if (pin == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Device Password available for "
 			   "the Enrollee");
-		wps_cb_pin_needed(wps->registrar, wps->uuid_e, &wps->peer_dev);
+		wps_cb_pin_needed(wps->wps->registrar, wps->uuid_e,
+				  &wps->peer_dev);
 		return -1;
 	}
 
@@ -1013,7 +1014,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_auth_type_flags(wps, msg) ||
 	    wps_build_encr_type_flags(wps, msg) ||
 	    wps_build_conn_type_flags(wps, msg) ||
-	    wps_build_config_methods_r(wps->registrar, msg) ||
+	    wps_build_config_methods_r(wps->wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
 	    wps_build_rf_bands(&wps->wps->dev, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
@@ -1051,7 +1052,7 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	    wps_build_auth_type_flags(wps, msg) ||
 	    wps_build_encr_type_flags(wps, msg) ||
 	    wps_build_conn_type_flags(wps, msg) ||
-	    wps_build_config_methods_r(wps->registrar, msg) ||
+	    wps_build_config_methods_r(wps->wps->registrar, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
 	    wps_build_rf_bands(&wps->wps->dev, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
@@ -1427,7 +1428,7 @@ static int wps_process_e_snonce2(struct wps_data *wps, const u8 *e_snonce2)
 	if (os_memcmp(wps->peer_hash2, hash, WPS_HASH_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "WPS: E-Hash2 derived from E-S2 does "
 			   "not match with the pre-committed value");
-		wps_registrar_invalidate_pin(wps->registrar, wps->uuid_e);
+		wps_registrar_invalidate_pin(wps->wps->registrar, wps->uuid_e);
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
 		return -1;
 	}
@@ -1435,7 +1436,7 @@ static int wps_process_e_snonce2(struct wps_data *wps, const u8 *e_snonce2)
 	wpa_printf(MSG_DEBUG, "WPS: Enrollee proved knowledge of the second "
 		   "half of the device password");
 	wps->wps_pin_revealed = 0;
-	wps_registrar_unlock_pin(wps->registrar, wps->uuid_e);
+	wps_registrar_unlock_pin(wps->wps->registrar, wps->uuid_e);
 
 	return 0;
 }
@@ -1636,7 +1637,8 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	    wps->dev_pw_id != DEV_PW_USER_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_MACHINE_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_REGISTRAR_SPECIFIED &&
-	    (wps->dev_pw_id != DEV_PW_PUSHBUTTON || !wps->registrar->pbc)) {
+	    (wps->dev_pw_id != DEV_PW_PUSHBUTTON ||
+	     !wps->wps->registrar->pbc)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Device Password ID %d",
 			   wps->dev_pw_id);
 		wps->state = SEND_M2D;
@@ -1644,15 +1646,15 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	}
 
 	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON) {
-		if (wps_registrar_pbc_overlap(wps->registrar, wps->mac_addr_e,
-					      wps->uuid_e)) {
+		if (wps_registrar_pbc_overlap(wps->wps->registrar,
+					      wps->mac_addr_e, wps->uuid_e)) {
 			wpa_printf(MSG_DEBUG, "WPS: PBC overlap - deny PBC "
 				   "negotiation");
 			wps->state = SEND_M2D;
 			return WPS_CONTINUE;
 		}
-		wps_registrar_add_pbc_session(wps->registrar, wps->mac_addr_e,
-					      wps->uuid_e);
+		wps_registrar_add_pbc_session(wps->wps->registrar,
+					      wps->mac_addr_e, wps->uuid_e);
 		wps->pbc = 1;
 	}
 
@@ -2078,7 +2080,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	}
 
 	if (wps->new_psk) {
-		if (wps_cb_new_psk(wps->registrar, wps->mac_addr_e,
+		if (wps_cb_new_psk(wps->wps->registrar, wps->mac_addr_e,
 				   wps->new_psk, wps->new_psk_len)) {
 			wpa_printf(MSG_DEBUG, "WPS: Failed to configure the "
 				   "new PSK");
@@ -2088,9 +2090,9 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	}
 
 	if (wps->pbc) {
-		wps_registrar_remove_pbc_session(wps->registrar,
+		wps_registrar_remove_pbc_session(wps->wps->registrar,
 						 wps->mac_addr_e, wps->uuid_e);
-		wps_registrar_pbc_completed(wps->registrar);
+		wps_registrar_pbc_completed(wps->wps->registrar);
 	}
 
 	wps_success_event(wps->wps);

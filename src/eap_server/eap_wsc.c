@@ -90,6 +90,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 
 	os_memset(&cfg, 0, sizeof(cfg));
 	cfg.wps = sm->wps;
+	cfg.registrar = registrar;
 	if (registrar) {
 		if (sm->wps == NULL || sm->wps->registrar == NULL) {
 			wpa_printf(MSG_INFO, "EAP-WSC: WPS Registrar not "
@@ -97,7 +98,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			os_free(data);
 			return NULL;
 		}
-		cfg.registrar = sm->wps->registrar;
 	} else {
 		if (sm->user == NULL || sm->user->password == NULL) {
 			wpa_printf(MSG_INFO, "EAP-WSC: No AP PIN (password) "

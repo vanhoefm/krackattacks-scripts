@@ -102,10 +102,10 @@ void wps_deinit(struct wps_data *data)
 		wpa_printf(MSG_DEBUG, "WPS: Full PIN information revealed and "
 			   "negotiation failed");
 		if (data->registrar)
-			wps_registrar_invalidate_pin(data->registrar,
+			wps_registrar_invalidate_pin(data->wps->registrar,
 						     data->uuid_e);
 	} else if (data->registrar)
-		wps_registrar_unlock_pin(data->registrar, data->uuid_e);
+		wps_registrar_unlock_pin(data->wps->registrar, data->uuid_e);
 
 	wpabuf_free(data->dh_privkey);
 	wpabuf_free(data->dh_pubkey_e);

@@ -30,10 +30,9 @@ struct wps_data {
 	struct wps_context *wps;
 
 	/**
-	 * registrar - Pointer to WPS registrar data from wps_registrar_init()
-	 * This is only used if the local end is Registrar.
+	 * registrar - Whether this end is a Registrar
 	 */
-	struct wps_registrar *registrar;
+	int registrar;
 
 	enum {
 		/* Enrollee states */

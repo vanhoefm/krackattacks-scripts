@@ -160,7 +160,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 
 	os_memset(&cfg, 0, sizeof(cfg));
 	cfg.wps = wps;
-	cfg.registrar = registrar ? data->wps_ctx->registrar : NULL;
+	cfg.registrar = registrar;
 
 	phase1 = eap_get_config_phase1(sm);
 	if (phase1 == NULL) {

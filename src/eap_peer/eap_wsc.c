@@ -65,38 +65,6 @@ static void eap_wsc_state(struct eap_wsc_data *data, int state)
 }
 
 
-static int eap_wsc_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
-			      size_t psk_len)
-{
-	wpa_printf(MSG_DEBUG, "EAP-WSC: Received new WPA/WPA2-PSK from WPS for"
-		   " STA " MACSTR, MAC2STR(mac_addr));
-	wpa_hexdump_key(MSG_DEBUG, "Per-device PSK", psk, psk_len);
-
-	/* TODO */
-
-	return 0;
-}
-
-
-static void eap_wsc_pin_needed_cb(void *ctx, const u8 *uuid_e,
-				  const struct wps_device_data *dev)
-{
-	char uuid[40], txt[400];
-	int len;
-	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
-		return;
-	wpa_printf(MSG_DEBUG, "EAP-WSC: PIN needed for E-UUID %s", uuid);
-	len = os_snprintf(txt, sizeof(txt), "WPS-EVENT-PIN-NEEDED "
-			  "%s " MACSTR " [%s|%s|%s|%s|%s|%d-%08X-%d]",
-			  uuid, MAC2STR(dev->mac_addr), dev->device_name,
-			  dev->manufacturer, dev->model_name,
-			  dev->model_number, dev->serial_number,
-			  dev->categ, dev->oui, dev->sub_categ);
-	if (len > 0 && len < (int) sizeof(txt))
-		wpa_printf(MSG_INFO, "%s", txt);
-}
-
-
 static void * eap_wsc_init(struct eap_sm *sm)
 {
 	struct eap_wsc_data *data;
@@ -134,29 +102,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	data->state = registrar ? MESG : WAIT_START;
 	data->registrar = registrar;
 	data->wps_ctx = wps;
-
-	if (registrar) {
-		struct wps_registrar_config rcfg;
-
-		wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;
-		wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;
-
-		os_memset(&rcfg, 0, sizeof(rcfg));
-		rcfg.new_psk_cb = eap_wsc_new_psk_cb;
-		rcfg.pin_needed_cb = eap_wsc_pin_needed_cb;
-		rcfg.cb_ctx = data;
-
-		wps->registrar = wps_registrar_init(wps, &rcfg);
-		if (wps->registrar == NULL) {
-			wpa_printf(MSG_DEBUG, "EAP-WSC: Failed to initialize "
-				   "WPS Registrar");
-			os_free(wps->network_key);
-			os_free(wps);
-			os_free(data);
-			return NULL;
-		}
-
-	}
 
 	os_memset(&cfg, 0, sizeof(cfg));
 	cfg.wps = wps;
@@ -212,8 +157,6 @@ static void eap_wsc_deinit(struct eap_sm *sm, void *priv)
 	wpabuf_free(data->in_buf);
 	wpabuf_free(data->out_buf);
 	wps_deinit(data->wps);
-	wps_registrar_deinit(data->wps_ctx->registrar);
-	data->wps_ctx->registrar = NULL;
 	os_free(data->wps_ctx->network_key);
 	data->wps_ctx->network_key = NULL;
 	os_free(data);

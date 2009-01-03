@@ -394,9 +394,42 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
+static int wpas_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
+			       size_t psk_len)
+{
+	wpa_printf(MSG_DEBUG, "WPS: Received new WPA/WPA2-PSK from WPS for "
+		   "STA " MACSTR, MAC2STR(mac_addr));
+	wpa_hexdump_key(MSG_DEBUG, "Per-device PSK", psk, psk_len);
+
+	/* TODO */
+
+	return 0;
+}
+
+
+static void wpas_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
+				   const struct wps_device_data *dev)
+{
+	char uuid[40], txt[400];
+	int len;
+	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
+		return;
+	wpa_printf(MSG_DEBUG, "WPS: PIN needed for UUID-E %s", uuid);
+	len = os_snprintf(txt, sizeof(txt), "WPS-EVENT-PIN-NEEDED %s " MACSTR
+			  " [%s|%s|%s|%s|%s|%d-%08X-%d]",
+			  uuid, MAC2STR(dev->mac_addr), dev->device_name,
+			  dev->manufacturer, dev->model_name,
+			  dev->model_number, dev->serial_number,
+			  dev->categ, dev->oui, dev->sub_categ);
+	if (len > 0 && len < (int) sizeof(txt))
+		wpa_printf(MSG_INFO, "%s", txt);
+}
+
+
 int wpas_wps_init(struct wpa_supplicant *wpa_s)
 {
 	struct wps_context *wps;
+	struct wps_registrar_config rcfg;
 
 	wps = os_zalloc(sizeof(*wps));
 	if (wps == NULL)
@@ -448,6 +481,21 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	} else
 		os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 
+	wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;
+	wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;
+
+	os_memset(&rcfg, 0, sizeof(rcfg));
+	rcfg.new_psk_cb = wpas_wps_new_psk_cb;
+	rcfg.pin_needed_cb = wpas_wps_pin_needed_cb;
+	rcfg.cb_ctx = wpa_s;
+
+	wps->registrar = wps_registrar_init(wps, &rcfg);
+	if (wps->registrar == NULL) {
+		wpa_printf(MSG_DEBUG, "Failed to initialize WPS Registrar");
+		os_free(wps);
+		return -1;
+	}
+
 	wpa_s->wps = wps;
 
 	return 0;
@@ -461,6 +509,7 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wps == NULL)
 		return;
 
+	wps_registrar_deinit(wpa_s->wps->registrar);
 	os_free(wpa_s->wps->network_key);
 	os_free(wpa_s->wps);
 	wpa_s->wps = NULL;

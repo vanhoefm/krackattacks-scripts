@@ -1040,7 +1040,7 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	if (msg == NULL)
 		return NULL;
 
-	if (wps->authenticator && wps->wps->ap_setup_locked)
+	if (wps->wps->ap && wps->wps->ap_setup_locked)
 		err = WPS_CFG_SETUP_LOCKED;
 
 	if (wps_build_version(msg) ||

@@ -35,7 +35,6 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 	struct wps_data *data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
-	data->authenticator = cfg->authenticator;
 	data->wps = cfg->wps;
 	data->registrar = cfg->registrar;
 	if (cfg->registrar) {

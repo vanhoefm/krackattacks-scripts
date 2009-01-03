@@ -288,7 +288,7 @@ static struct wpabuf * wps_build_m7(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_M7) ||
 	    wps_build_registrar_nonce(wps, msg) ||
 	    wps_build_e_snonce2(wps, plain) ||
-	    (wps->authenticator &&
+	    (wps->wps->ap &&
 	     (wps_build_cred_ssid(wps, plain) ||
 	      wps_build_cred_mac_addr(wps, plain) ||
 	      wps_build_cred_auth_type(wps, plain) ||
@@ -326,7 +326,7 @@ static struct wpabuf * wps_build_wsc_done(struct wps_data *wps)
 		return NULL;
 	}
 
-	if (wps->authenticator)
+	if (wps->wps->ap)
 		wps->state = RECV_ACK;
 	else {
 		wps_success_event(wps->wps);
@@ -404,7 +404,7 @@ struct wpabuf * wps_enrollee_get_msg(struct wps_data *wps,
 		*op_code = WSC_MSG;
 		break;
 	case RECEIVED_M2D:
-		if (wps->authenticator) {
+		if (wps->wps->ap) {
 			msg = wps_build_wsc_nack(wps);
 			*op_code = WSC_NACK;
 			break;
@@ -642,7 +642,7 @@ static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
 {
 	size_t i;
 
-	if (wps->authenticator)
+	if (wps->wps->ap)
 		return 0;
 
 	if (num_cred == 0) {
@@ -665,7 +665,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 {
 	struct wps_credential cred;
 
-	if (!wps->authenticator)
+	if (!wps->wps->ap)
 		return 0;
 
 	if (wps_process_ap_settings(attr, &cred) < 0)
@@ -703,7 +703,7 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps->authenticator && wps->wps->ap_setup_locked) {
+	if (wps->wps->ap && wps->wps->ap_setup_locked) {
 		wpa_printf(MSG_DEBUG, "WPS: AP Setup is locked - refuse "
 			   "registration of a new Registrar");
 		wps->config_error = WPS_CFG_SETUP_LOCKED;
@@ -1023,7 +1023,7 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 		return WPS_FAILURE;
 	}
 
-	if (wps->state == RECV_ACK && wps->authenticator) {
+	if (wps->state == RECV_ACK && wps->wps->ap) {
 		wpa_printf(MSG_DEBUG, "WPS: External Registrar registration "
 			   "completed successfully");
 		wps_success_event(wps->wps);

@@ -159,7 +159,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	}
 
 	os_memset(&cfg, 0, sizeof(cfg));
-	cfg.authenticator = 0;
 	cfg.wps = wps;
 	cfg.registrar = registrar ? data->wps_ctx->registrar : NULL;
 

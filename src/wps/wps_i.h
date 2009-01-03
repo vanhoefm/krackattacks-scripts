@@ -25,12 +25,6 @@
  */
 struct wps_data {
 	/**
-	 * authenticator - Whether the local end is Authenticator
-	 * 1 = Authenticator, 0 = Supplicant
-	 */
-	int authenticator;
-
-	/**
 	 * wps - Pointer to long term WPS context
 	 */
 	struct wps_context *wps;

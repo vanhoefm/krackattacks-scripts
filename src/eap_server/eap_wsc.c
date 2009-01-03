@@ -89,7 +89,6 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	data->registrar = registrar;
 
 	os_memset(&cfg, 0, sizeof(cfg));
-	cfg.authenticator = 1;
 	cfg.wps = sm->wps;
 	if (registrar) {
 		if (sm->wps == NULL || sm->wps->registrar == NULL) {

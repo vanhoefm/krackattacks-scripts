@@ -5,7 +5,7 @@
 #---------------------------------------------------------------------------
 PROJECT_NAME           = hostapd
 PROJECT_NUMBER         = 0.6.x
-OUTPUT_DIRECTORY       = doc
+OUTPUT_DIRECTORY       = hostapd/doc
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
@@ -65,7 +65,7 @@ GENERATE_DEPRECATEDLIST= YES
 ENABLED_SECTIONS       = 
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
-SHOW_DIRECTORIES       = NO
+SHOW_DIRECTORIES       = YES
 FILE_VERSION_FILTER    = 
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
@@ -80,17 +80,17 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = . \
-	../src/common \
-	../src/crypto \
-	../src/eap_common \
-	../src/eap_server \
-	../src/l2_packet \
-	../src/radius \
-	../src/rsn_supp \
-	../src/tls \
-	../src/utils \
-	../src/wps
+INPUT                  = hostapd \
+	src/common \
+	src/crypto \
+	src/eap_common \
+	src/eap_server \
+	src/l2_packet \
+	src/radius \
+	src/rsn_supp \
+	src/tls \
+	src/utils \
+	src/wps
 FILE_PATTERNS          = *.c *.h *.doxygen
 RECURSIVE              = YES
 EXCLUDE                = 

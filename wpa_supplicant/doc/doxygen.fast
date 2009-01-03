@@ -5,7 +5,7 @@
 #---------------------------------------------------------------------------
 PROJECT_NAME           = wpa_supplicant
 PROJECT_NUMBER         = 0.6.x
-OUTPUT_DIRECTORY       = doc
+OUTPUT_DIRECTORY       = wpa_supplicant/doc
 CREATE_SUBDIRS         = NO
 OUTPUT_LANGUAGE        = English
 BRIEF_MEMBER_DESC      = YES
@@ -65,7 +65,7 @@ GENERATE_DEPRECATEDLIST= YES
 ENABLED_SECTIONS       = 
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
-SHOW_DIRECTORIES       = NO
+SHOW_DIRECTORIES       = YES
 FILE_VERSION_FILTER    = 
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
@@ -80,20 +80,19 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = . \
-	../src/common \
-	../src/crypto \
-	../src/drivers/driver.h \
-	../src/drivers/drivers.c \
-	../src/eap_common \
-	../src/eapol_supp \
-	../src/eap_peer \
-	../src/l2_packet \
-	../src/rsn_supp \
-	../src/tls \
-	../src/utils \
-	../src/wps
-FILE_PATTERNS          = *.c *.h *.doxygen
+INPUT                  = wpa_supplicant \
+	src/common \
+	src/crypto \
+	src/drivers \
+	src/eap_common \
+	src/eapol_supp \
+	src/eap_peer \
+	src/l2_packet \
+	src/rsn_supp \
+	src/tls \
+	src/utils \
+	src/wps
+FILE_PATTERNS          = *.c *.h *.cpp *.m *.doxygen
 RECURSIVE              = YES
 EXCLUDE                = 
 EXCLUDE_SYMLINKS       = NO

@@ -552,16 +552,16 @@ clean:
 docs-pics: doc/hostapd.png doc/hostapd.eps
 
 docs: docs-pics
-	doxygen doc/doxygen.full
+	(cd ..; doxygen hostapd/doc/doxygen.full; cd hostapd)
 	$(MAKE) -C doc/latex
 	cp doc/latex/refman.pdf hostapd-devel.pdf
 
 docs-fast: docs-pics
-	doxygen doc/doxygen.fast
+	(cd ..; doxygen hostapd/doc/doxygen.fast; cd hostapd)
 
 clean-docs:
 	rm -rf doc/latex doc/html
-	rm -f doc/hosta.d{eps,png} hostapd-devel.pdf
+	rm -f doc/hostapd.{eps,png} hostapd-devel.pdf
 
 TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes_wrap.c ../src/crypto/aes.c ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
 test-milenage: $(TEST_SRC_MILENAGE)

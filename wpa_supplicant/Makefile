@@ -1224,7 +1224,7 @@ docs: docs-pics
 	cp doc/latex/refman.pdf wpa_supplicant-devel.pdf
 
 docs-fast: docs-pics
-	doxygen doc/doxygen.fast
+	(cd ..; doxygen wpa_supplicant/doc/doxygen.fast; cd wpa_supplicant)
 
 clean-docs:
 	rm -rf doc/latex doc/html

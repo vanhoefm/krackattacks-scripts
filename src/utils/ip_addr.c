@@ -53,8 +53,7 @@ int hostapd_ip_diff(struct hostapd_ip_addr *a, struct hostapd_ip_addr *b)
 		break;
 #ifdef CONFIG_IPV6
 	case AF_INET6:
-		if (os_memcpy(&a->u.v6, &b->u.v6, sizeof(a->u.v6))
-		    != 0)
+		if (os_memcmp(&a->u.v6, &b->u.v6, sizeof(a->u.v6)) != 0)
 			return 1;
 		break;
 #endif /* CONFIG_IPV6 */

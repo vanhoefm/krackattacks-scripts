@@ -411,7 +411,7 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 			os_memcpy(psk->addr, addr, ETH_ALEN);
 
 		pos = buf + 17;
-		if (pos == '\0') {
+		if (*pos == '\0') {
 			printf("No PSK on line %d in '%s'\n", line, fname);
 			os_free(psk);
 			ret = -1;
@@ -800,7 +800,7 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 		return -1;
 	start = buf;
 
-	while (start != '\0') {
+	while (*start != '\0') {
 		while (*start == ' ' || *start == '\t')
 			start++;
 		if (*start == '\0')
@@ -858,7 +858,7 @@ static int hostapd_config_parse_cipher(int line, const char *value)
 		return -1;
 	start = buf;
 
-	while (start != '\0') {
+	while (*start != '\0') {
 		while (*start == ' ' || *start == '\t')
 			start++;
 		if (*start == '\0')

@@ -571,10 +571,4 @@ test-milenage: $(TEST_SRC_MILENAGE)
 	./test-milenage
 	rm test-milenage
 
-hostapd-sparse: $(OBJS)
-	@echo Sparse run completed
-
-run-sparse:
-	CC="sparse -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ -D__INT_MAX__=2147483647 -D__SHRT_MAX__=32767 -D__LONG_MAX__=2147483647 -D__SCHAR_MAX__=127 -Wbitwise" $(MAKE) hostapd-sparse
-
 -include $(OBJS:%.o=%.d)

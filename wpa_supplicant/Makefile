@@ -1230,10 +1230,4 @@ clean-docs:
 	rm -rf doc/latex doc/html
 	rm -f doc/wpa_supplicant.{eps,png} wpa_supplicant-devel.pdf
 
-wpa_supplicant-sparse: .config $(OBJS)
-	@echo Sparse run completed
-
-run-sparse:
-	CC="sparse -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ -D__INT_MAX__=2147483647 -D__SHRT_MAX__=32767 -D__LONG_MAX__=2147483647 -D__SCHAR_MAX__=127 -Wbitwise" $(MAKE) wpa_supplicant-sparse
-
 -include $(OBJS:%.o=%.d)

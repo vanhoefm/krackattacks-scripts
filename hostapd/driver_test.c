@@ -139,7 +139,7 @@ static int test_driver_send_eapol(void *priv, const u8 *addr, const u8 *data,
 
 	memcpy(eth.h_dest, addr, ETH_ALEN);
 	memcpy(eth.h_source, own_addr, ETH_ALEN);
-	eth.h_proto = htons(ETH_P_EAPOL);
+	eth.h_proto = host_to_be16(ETH_P_EAPOL);
 
 	io[0].iov_base = "EAPOL ";
 	io[0].iov_len = 6;
@@ -182,7 +182,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 
 	memcpy(eth.h_dest, dst, ETH_ALEN);
 	memcpy(eth.h_source, src, ETH_ALEN);
-	eth.h_proto = htons(proto);
+	eth.h_proto = host_to_be16(proto);
 
 	io[0].iov_base = "ETHER ";
 	io[0].iov_len = 6;

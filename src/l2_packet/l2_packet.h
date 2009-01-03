@@ -38,7 +38,7 @@ struct l2_packet_data;
 struct l2_ethhdr {
 	u8 h_dest[ETH_ALEN];
 	u8 h_source[ETH_ALEN];
-	u16 h_proto;
+	be16 h_proto;
 } STRUCT_PACKED;
 
 #ifdef _MSC_VER

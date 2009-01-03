@@ -27,7 +27,7 @@
 struct ft_rrb_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
 	u8 packet_type; /* FT_PACKET_REQUEST/FT_PACKET_RESPONSE */
-	u16 action_length; /* little endian length of action_frame */
+	le16 action_length; /* little endian length of action_frame */
 	u8 ap_address[ETH_ALEN];
 	/*
 	 * Followed by action_length bytes of FT Action frame (from Category
@@ -55,7 +55,7 @@ struct ft_rrb_frame {
 struct ft_r0kh_r1kh_pull_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
 	u8 packet_type; /* FT_PACKET_R0KH_R1KH_PULL */
-	u16 data_length; /* little endian length of data (44) */
+	le16 data_length; /* little endian length of data (44) */
 	u8 ap_address[ETH_ALEN];
 
 	u8 nonce[16];
@@ -69,7 +69,7 @@ struct ft_r0kh_r1kh_pull_frame {
 struct ft_r0kh_r1kh_resp_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
 	u8 packet_type; /* FT_PACKET_R0KH_R1KH_RESP */
-	u16 data_length; /* little endian length of data (76) */
+	le16 data_length; /* little endian length of data (76) */
 	u8 ap_address[ETH_ALEN];
 
 	u8 nonce[16]; /* copied from pull */
@@ -84,7 +84,7 @@ struct ft_r0kh_r1kh_resp_frame {
 struct ft_r0kh_r1kh_push_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
 	u8 packet_type; /* FT_PACKET_R0KH_R1KH_PUSH */
-	u16 data_length; /* little endian length of data (80) */
+	le16 data_length; /* little endian length of data (80) */
 	u8 ap_address[ETH_ALEN];
 
 	/* Encrypted with AES key-wrap */

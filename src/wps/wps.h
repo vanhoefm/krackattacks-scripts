@@ -145,12 +145,7 @@ enum wps_process_res {
 	/**
 	 * WPS_FAILURE - Processing failed
 	 */
-	WPS_FAILURE,
-
-	/**
-	 * WPS_PENDING - Processing pending
-	 */
-	WPS_PENDING
+	WPS_FAILURE
 };
 enum wps_process_res wps_process_msg(struct wps_data *wps,
 				     enum wsc_op_code op_code,

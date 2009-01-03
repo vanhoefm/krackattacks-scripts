@@ -466,12 +466,6 @@ static struct wpabuf * eap_wsc_process(struct eap_sm *sm, void *priv,
 		wpa_printf(MSG_DEBUG, "EAP-WSC: WPS processing failed");
 		eap_wsc_state(data, FAIL);
 		break;
-	case WPS_PENDING:
-		wpa_printf(MSG_DEBUG, "EAP-WSC: WPS processing pending");
-		ret->ignore = TRUE;
-		if (data->in_buf == &tmpbuf)
-			data->in_buf = NULL;
-		return NULL;
 	}
 
 	if (data->in_buf != &tmpbuf)

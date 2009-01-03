@@ -153,7 +153,7 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 	 * Try to get the wpa_supplicant record for this iface, return
 	 * an error if we already control it.
 	 */
-	if (wpa_supplicant_get_iface(global, iface.ifname) != 0) {
+	if (wpa_supplicant_get_iface(global, iface.ifname) != NULL) {
 		reply = dbus_message_new_error(message,
 					       WPAS_ERROR_EXISTS_ERROR,
 					       "wpa_supplicant already "

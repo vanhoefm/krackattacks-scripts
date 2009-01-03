@@ -20,6 +20,16 @@
 #include "ieee802_11_defs.h"
 
 
+/**
+ * wps_init - Initialize WPS Registration protocol data
+ * @cfg: WPS configuration
+ * Returns: Pointer to allocated data or %NULL on failure
+ *
+ * This function is used to initialize WPS data for a registration protocol
+ * instance (i.e., each run of registration protocol as a Registrar of
+ * Enrollee. The caller is responsible for freeing this data after the
+ * registration run has been completed by calling wps_deinit().
+ */
 struct wps_data * wps_init(const struct wps_config *cfg)
 {
 	struct wps_data *data = os_zalloc(sizeof(*data));
@@ -83,6 +93,10 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 }
 
 
+/**
+ * wps_deinit - Deinitialize WPS Registration protocol data
+ * @data: WPS Registration protocol data from wps_init()
+ */
 void wps_deinit(struct wps_data *data)
 {
 	if (data->wps_pin_revealed) {
@@ -105,7 +119,20 @@ void wps_deinit(struct wps_data *data)
 }
 
 
-enum wps_process_res wps_process_msg(struct wps_data *wps, u8 op_code,
+/**
+ * wps_process_msg - Process a WPS message
+ * @wps: WPS Registration protocol data from wps_init()
+ * @op_code: Message OP Code
+ * @msg: Message data
+ * Returns: Processing result
+ *
+ * This function is used to process WPS messages with OP Codes WSC_ACK,
+ * WSC_NACK, WSC_MSG, and WSC_Done. The caller (e.g., EAP server/peer) is
+ * responsible for reassembling the messages before calling this function.
+ * Response to this message is built by calling wps_get_msg().
+ */
+enum wps_process_res wps_process_msg(struct wps_data *wps,
+				     enum wsc_op_code op_code,
 				     const struct wpabuf *msg)
 {
 	if (wps->registrar)
@@ -115,7 +142,16 @@ enum wps_process_res wps_process_msg(struct wps_data *wps, u8 op_code,
 }
 
 
-struct wpabuf * wps_get_msg(struct wps_data *wps, u8 *op_code)
+/**
+ * wps_get_msg - Build a WPS message
+ * @wps: WPS Registration protocol data from wps_init()
+ * @op_code: Buffer for returning message OP Code
+ * Returns: The generated WPS message or %NULL on failure
+ *
+ * This function is used to build a response to a message processed by calling
+ * wps_process_msg(). The caller is responsible for freeing the buffer.
+ */
+struct wpabuf * wps_get_msg(struct wps_data *wps, enum wsc_op_code *op_code)
 {
 	if (wps->registrar)
 		return wps_registrar_get_msg(wps, op_code);
@@ -124,6 +160,11 @@ struct wpabuf * wps_get_msg(struct wps_data *wps, u8 *op_code)
 }
 
 
+/**
+ * wps_is_selected_pbc_registrar - Check whether WPS IE indicates active PBC
+ * @msg: WPS IE contents from Beacon or Probe Response frame
+ * Returns: 1 if PBC Registrar is active, 0 if not
+ */
 int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
@@ -145,6 +186,11 @@ int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 }
 
 
+/**
+ * wps_is_selected_pbc_registrar - Check whether WPS IE indicates active PIN
+ * @msg: WPS IE contents from Beacon or Probe Response frame
+ * Returns: 1 if PIN Registrar is active, 0 if not
+ */
 int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
@@ -167,6 +213,14 @@ int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 }
 
 
+/**
+ * wps_get_uuid_e - Get UUID-E from WPS IE
+ * @msg: WPS IE contents from Beacon or Probe Response frame
+ * Returns: Pointer to UUID-E or %NULL if not included
+ *
+ * The returned pointer is to the msg contents and it remains valid only as
+ * long as the msg buffer is valid.
+ */
 const u8 * wps_get_uuid_e(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
@@ -177,7 +231,14 @@ const u8 * wps_get_uuid_e(const struct wpabuf *msg)
 }
 
 
-struct wpabuf * wps_build_assoc_req_ie(u8 req_type)
+/**
+ * wps_build_assoc_req_ie - Build WPS IE for (Re)Association Request
+ * @req_type: Value for Request Type attribute
+ * Returns: WPS IE or %NULL on failure
+ *
+ * The caller is responsible for freeing the buffer.
+ */
+struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type)
 {
 	struct wpabuf *ie;
 	u8 *len;
@@ -204,8 +265,19 @@ struct wpabuf * wps_build_assoc_req_ie(u8 req_type)
 }
 
 
+/**
+ * wps_build_probe_req_ie - Build WPS IE for Probe Request
+ * @pbc: Whether searching for PBC mode APs
+ * @dev: Device attributes
+ * @uuid: Own UUID
+ * @req_type: Value for Request Type attribute
+ * Returns: WPS IE or %NULL on failure
+ *
+ * The caller is responsible for freeing the buffer.
+ */
 struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
-				       const u8 *uuid, u8 req_type)
+				       const u8 *uuid,
+				       enum wps_request_type req_type)
 {
 	struct wpabuf *ie;
 	u8 *len;

@@ -19,7 +19,6 @@
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "mlme.h"
-#include "wps/wps.h"
 #include "wps_supplicant.h"
 
 
@@ -43,7 +42,8 @@ static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 
 
 #ifdef CONFIG_WPS
-static int wpas_wps_in_use(struct wpa_config *conf, u8 *req_type)
+static int wpas_wps_in_use(struct wpa_config *conf,
+			   enum wps_request_type *req_type)
 {
 	struct wpa_ssid *ssid;
 	int wps = 0;
@@ -75,7 +75,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	size_t extra_ie_len = 0;
 	int wps = 0;
 #ifdef CONFIG_WPS
-	u8 req_type = 0;
+	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
 #endif /* CONFIG_WPS */
 
 	if (wpa_s->disconnected && !wpa_s->scan_req)

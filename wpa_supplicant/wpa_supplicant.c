@@ -38,7 +38,6 @@
 #include "ieee802_11_defs.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
-#include "wps/wps.h"
 #include "wps_supplicant.h"
 
 const char *wpa_supplicant_version =

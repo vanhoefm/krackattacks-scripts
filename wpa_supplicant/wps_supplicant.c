@@ -24,8 +24,6 @@
 #include "uuid.h"
 #include "wpa_ctrl.h"
 #include "eap_common/eap_wsc_common.h"
-#include "wps/wps.h"
-#include "wps/wps_defs.h"
 #include "wps_supplicant.h"
 
 
@@ -223,7 +221,7 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 }
 
 
-u8 wpas_wps_get_req_type(struct wpa_ssid *ssid)
+enum wps_request_type wpas_wps_get_req_type(struct wpa_ssid *ssid)
 {
 	if (eap_is_wps_pbc_enrollee(&ssid->eap) ||
 	    eap_is_wps_pin_enrollee(&ssid->eap))

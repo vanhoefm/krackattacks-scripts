@@ -381,7 +381,8 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 }
 
 
-struct wpabuf * wps_enrollee_get_msg(struct wps_data *wps, u8 *op_code)
+struct wpabuf * wps_enrollee_get_msg(struct wps_data *wps,
+				     enum wsc_op_code *op_code)
 {
 	struct wpabuf *msg;
 
@@ -1113,7 +1114,8 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 }
 
 
-enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps, u8 op_code,
+enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps,
+					      enum wsc_op_code op_code,
 					      const struct wpabuf *msg)
 {
 

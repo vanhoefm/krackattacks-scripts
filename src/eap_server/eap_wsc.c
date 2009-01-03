@@ -25,7 +25,7 @@ struct eap_wsc_data {
 	int registrar;
 	struct wpabuf *in_buf;
 	struct wpabuf *out_buf;
-	u8 in_op_code, out_op_code;
+	enum wsc_op_code in_op_code, out_op_code;
 	size_t out_used;
 	size_t fragment_size;
 	struct wps_data *wps;

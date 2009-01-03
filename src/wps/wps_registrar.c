@@ -298,6 +298,18 @@ static int wps_build_resp_type(struct wps_registrar *reg, struct wpabuf *msg)
 }
 
 
+/**
+ * wps_registrar_init - Initialize WPS Registrar data
+ * @wps: Pointer to longterm WPS context
+ * @cfg: Registrar configuration
+ * Returns: Pointer to allocated Registrar data or %NULL on failure
+ *
+ * This function is used to initialize WPS Registrar functionality. It can be
+ * used for a single Registrar run (e.g., when run in a supplicant) or multiple
+ * runs (e.g., when run as an internal Registrar in an AP). Caller is
+ * responsible for freeing the returned data with wps_registrar_deinit() when
+ * Registrar functionality is not needed anymore.
+ */
 struct wps_registrar *
 wps_registrar_init(struct wps_context *wps,
 		   const struct wps_registrar_config *cfg)
@@ -321,6 +333,10 @@ wps_registrar_init(struct wps_context *wps,
 }
 
 
+/**
+ * wps_registrar_deinit - Deinitialize WPS Registrar data
+ * @reg: Registrar data from wps_registrar_deinit()
+ */
 void wps_registrar_deinit(struct wps_registrar *reg)
 {
 	if (reg == NULL)
@@ -1202,7 +1218,8 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 }
 
 
-struct wpabuf * wps_registrar_get_msg(struct wps_data *wps, u8 *op_code)
+struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
+				      enum wsc_op_code *op_code)
 {
 	struct wpabuf *msg;
 
@@ -2083,7 +2100,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 
 
 enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
-					       u8 op_code,
+					       enum wsc_op_code op_code,
 					       const struct wpabuf *msg)
 {
 	enum wps_process_res ret;

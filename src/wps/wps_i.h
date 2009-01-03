@@ -16,7 +16,6 @@
 #define WPS_I_H
 
 #include "wps.h"
-#include "wps_defs.h"
 
 /**
  * struct wps_data - WPS registration protocol data
@@ -25,9 +24,23 @@
  * single registration protocol run.
  */
 struct wps_data {
+	/**
+	 * authenticator - Whether the local end is Authenticator
+	 * 1 = Authenticator, 0 = Supplicant
+	 */
 	int authenticator;
+
+	/**
+	 * wps - Pointer to long term WPS context
+	 */
 	struct wps_context *wps;
+
+	/**
+	 * registrar - Pointer to WPS registrar data from wps_registrar_init()
+	 * This is only used if the local end is Registrar.
+	 */
 	struct wps_registrar *registrar;
+
 	enum {
 		/* Enrollee states */
 		SEND_M1, RECV_M2, SEND_M3, RECV_M4, SEND_M5, RECV_M6, SEND_M7,
@@ -67,10 +80,21 @@ struct wps_data {
 	size_t dev_password_len;
 	u16 dev_pw_id;
 	int pbc;
-	u8 request_type; /* Request Type attribute from (Re)AssocReq */
 
-	u16 encr_type; /* available encryption types */
-	u16 auth_type; /* available authentication types */
+	/**
+	 * request_type - Request Type attribute from (Re)AssocReq
+	 */
+	u8 request_type;
+
+	/**
+	 * encr_type - Available encryption types
+	 */
+	u16 encr_type;
+
+	/**
+	 * auth_type - Available authentication types
+	 */
+	u16 auth_type;
 
 	u8 *new_psk;
 	size_t new_psk_len;
@@ -80,7 +104,10 @@ struct wps_data {
 
 	struct wps_device_data peer_dev;
 
-	u16 config_error; /* Configuration Error value to be used in NACK. */
+	/**
+	 * config_error - Configuration Error value to be used in NACK
+	 */
+	u16 config_error;
 };
 
 
@@ -202,14 +229,17 @@ int wps_process_ap_settings(struct wps_parse_attr *attr,
 			    struct wps_credential *cred);
 
 /* wps_enrollee.c */
-struct wpabuf * wps_enrollee_get_msg(struct wps_data *wps, u8 *op_code);
-enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps, u8 op_code,
+struct wpabuf * wps_enrollee_get_msg(struct wps_data *wps,
+				     enum wsc_op_code *op_code);
+enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps,
+					      enum wsc_op_code op_code,
 					      const struct wpabuf *msg);
 
 /* wps_registrar.c */
-struct wpabuf * wps_registrar_get_msg(struct wps_data *wps, u8 *op_code);
+struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
+				      enum wsc_op_code *op_code);
 enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
-					       u8 op_code,
+					       enum wsc_op_code op_code,
 					       const struct wpabuf *msg);
 
 #endif /* WPS_I_H */

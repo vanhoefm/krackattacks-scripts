@@ -28,10 +28,6 @@
  * input/output octets and updates Acct-{Input,Output}-Gigawords. */
 #define ACCT_DEFAULT_UPDATE_INTERVAL 300
 
-/* from ieee802_1x.c */
-const char *radius_mode_txt(struct hostapd_data *hapd);
-int radius_sta_rate(struct hostapd_data *hapd, struct sta_info *sta);
-
 static void accounting_sta_get_id(struct hostapd_data *hapd,
 				  struct sta_info *sta);
 
@@ -266,8 +262,8 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
-void accounting_sta_report(struct hostapd_data *hapd, struct sta_info *sta,
-			   int stop)
+static void accounting_sta_report(struct hostapd_data *hapd,
+				  struct sta_info *sta, int stop)
 {
 	struct radius_msg *msg;
 	int cause = sta->acct_terminate_cause;

@@ -17,6 +17,19 @@
 
 #include "drivers/driver.h"
 
+extern const char *wpa_supplicant_version;
+extern const char *wpa_supplicant_license;
+#ifndef CONFIG_NO_STDOUT_DEBUG
+extern const char *wpa_supplicant_full_license1;
+extern const char *wpa_supplicant_full_license2;
+extern const char *wpa_supplicant_full_license3;
+extern const char *wpa_supplicant_full_license4;
+extern const char *wpa_supplicant_full_license5;
+#endif /* CONFIG_NO_STDOUT_DEBUG */
+
+extern struct wpa_driver_ops *wpa_supplicant_drivers[];
+
+
 struct wpa_scan_result;
 struct wpa_sm;
 struct wpa_supplicant;

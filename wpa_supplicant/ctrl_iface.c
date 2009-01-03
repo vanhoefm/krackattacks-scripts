@@ -30,8 +30,6 @@
 #include "wps_supplicant.h"
 #include "wps/wps.h"
 
-extern struct wpa_driver_ops *wpa_supplicant_drivers[];
-
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
 static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,

@@ -108,8 +108,6 @@ const char *wpa_supplicant_full_license5 =
 "\n";
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
-extern struct wpa_driver_ops *wpa_supplicant_drivers[];
-
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;

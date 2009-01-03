@@ -712,9 +712,9 @@ void radius_client_flush(struct radius_client_data *radius, int only_auth)
 }
 
 
-void radius_client_update_acct_msgs(struct radius_client_data *radius,
-				    u8 *shared_secret,
-				    size_t shared_secret_len)
+static void radius_client_update_acct_msgs(struct radius_client_data *radius,
+					   u8 *shared_secret,
+					   size_t shared_secret_len)
 {
 	struct radius_msg_list *entry;
 

@@ -84,4 +84,7 @@ void ieee802_1x_free_radius_class(struct radius_class_data *class);
 int ieee802_1x_copy_radius_class(struct radius_class_data *dst,
 				 const struct radius_class_data *src);
 
+const char *radius_mode_txt(struct hostapd_data *hapd);
+int radius_sta_rate(struct hostapd_data *hapd, struct sta_info *sta);
+
 #endif /* IEEE802_1X_H */

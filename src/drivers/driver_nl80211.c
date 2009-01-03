@@ -1246,13 +1246,13 @@ static int wpa_driver_nl80211_create_monitor_interface(
 
 
 /**
- * wpa_driver_nl80211_init - Initialize WE driver interface
+ * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
  * e.g., wpa_supplicant_event()
  * @ifname: interface name, e.g., wlan0
  * Returns: Pointer to private data, %NULL on failure
  */
-void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
+static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 {
 	int s;
 	struct sockaddr_nl local;
@@ -1386,13 +1386,13 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 
 
 /**
- * wpa_driver_nl80211_deinit - Deinitialize WE driver interface
- * @priv: Pointer to private wext data from wpa_driver_nl80211_init()
+ * wpa_driver_nl80211_deinit - Deinitialize nl80211 driver interface
+ * @priv: Pointer to private nl80211 data from wpa_driver_nl80211_init()
  *
  * Shut down driver interface and processing of driver events. Free
  * private data buffer if one was allocated in wpa_driver_nl80211_init().
  */
-void wpa_driver_nl80211_deinit(void *priv)
+static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	int flags;
@@ -1849,7 +1849,8 @@ static void wpa_driver_nl80211_add_scan_entry(struct wpa_scan_results *res,
  * @priv: Pointer to private wext data from wpa_driver_nl80211_init()
  * Returns: Scan results on success, -1 on failure
  */
-struct wpa_scan_results * wpa_driver_nl80211_get_scan_results(void *priv)
+static struct wpa_scan_results *
+wpa_driver_nl80211_get_scan_results(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	size_t ap_num = 0, len;

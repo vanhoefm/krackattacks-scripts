@@ -130,8 +130,8 @@ static void eap_gpsk_deinit(struct eap_sm *sm, void *priv)
 }
 
 
-const u8 * eap_gpsk_process_id_server(struct eap_gpsk_data *data,
-				      const u8 *pos, const u8 *end)
+static const u8 * eap_gpsk_process_id_server(struct eap_gpsk_data *data,
+					     const u8 *pos, const u8 *end)
 {
 	u16 alen;
 
@@ -161,8 +161,8 @@ const u8 * eap_gpsk_process_id_server(struct eap_gpsk_data *data,
 }
 
 
-const u8 * eap_gpsk_process_rand_server(struct eap_gpsk_data *data,
-					const u8 *pos, const u8 *end)
+static const u8 * eap_gpsk_process_rand_server(struct eap_gpsk_data *data,
+					       const u8 *pos, const u8 *end)
 {
 	if (pos == NULL)
 		return NULL;
@@ -219,10 +219,11 @@ static int eap_gpsk_select_csuite(struct eap_sm *sm,
 }
 
 
-const u8 * eap_gpsk_process_csuite_list(struct eap_sm *sm,
-					struct eap_gpsk_data *data,
-					const u8 **list, size_t *list_len,
-					const u8 *pos, const u8 *end)
+static const u8 * eap_gpsk_process_csuite_list(struct eap_sm *sm,
+					       struct eap_gpsk_data *data,
+					       const u8 **list,
+					       size_t *list_len,
+					       const u8 *pos, const u8 *end)
 {
 	if (pos == NULL)
 		return NULL;
@@ -374,8 +375,8 @@ static struct wpabuf * eap_gpsk_send_gpsk_2(struct eap_gpsk_data *data,
 }
 
 
-const u8 * eap_gpsk_validate_rand(struct eap_gpsk_data *data, const u8 *pos,
-				  const u8 *end)
+static const u8 * eap_gpsk_validate_rand(struct eap_gpsk_data *data,
+					 const u8 *pos, const u8 *end)
 {
 	if (end - pos < EAP_GPSK_RAND_LEN) {
 		wpa_printf(MSG_DEBUG, "EAP-GPSK: Message too short for "
@@ -413,8 +414,8 @@ const u8 * eap_gpsk_validate_rand(struct eap_gpsk_data *data, const u8 *pos,
 }
 
 
-const u8 * eap_gpsk_validate_id_server(struct eap_gpsk_data *data,
-				       const u8 *pos, const u8 *end)
+static const u8 * eap_gpsk_validate_id_server(struct eap_gpsk_data *data,
+					      const u8 *pos, const u8 *end)
 {
 	size_t len;
 
@@ -453,8 +454,8 @@ const u8 * eap_gpsk_validate_id_server(struct eap_gpsk_data *data,
 }
 
 
-const u8 * eap_gpsk_validate_csuite(struct eap_gpsk_data *data, const u8 *pos,
-				    const u8 *end)
+static const u8 * eap_gpsk_validate_csuite(struct eap_gpsk_data *data,
+					   const u8 *pos, const u8 *end)
 {
 	int vendor, specifier;
 	const struct eap_gpsk_csuite *csuite;
@@ -482,8 +483,8 @@ const u8 * eap_gpsk_validate_csuite(struct eap_gpsk_data *data, const u8 *pos,
 }
 
 
-const u8 * eap_gpsk_validate_pd_payload_2(struct eap_gpsk_data *data,
-					  const u8 *pos, const u8 *end)
+static const u8 * eap_gpsk_validate_pd_payload_2(struct eap_gpsk_data *data,
+						 const u8 *pos, const u8 *end)
 {
 	u16 alen;
 
@@ -509,9 +510,9 @@ const u8 * eap_gpsk_validate_pd_payload_2(struct eap_gpsk_data *data,
 }
 
 
-const u8 * eap_gpsk_validate_gpsk_3_mic(struct eap_gpsk_data *data,
-					const u8 *payload,
-					const u8 *pos, const u8 *end)
+static const u8 * eap_gpsk_validate_gpsk_3_mic(struct eap_gpsk_data *data,
+					       const u8 *payload,
+					       const u8 *pos, const u8 *end)
 {
 	size_t miclen;
 	u8 mic[EAP_GPSK_MAX_MIC_LEN];

@@ -169,8 +169,8 @@ static void wps_registrar_remove_pbc_session(struct wps_registrar *reg,
 }
 
 
-int wps_registrar_pbc_overlap(struct wps_registrar *reg,
-			      const u8 *addr, const u8 *uuid_e)
+static int wps_registrar_pbc_overlap(struct wps_registrar *reg,
+				     const u8 *addr, const u8 *uuid_e)
 {
 	int count = 0;
 	struct wps_pbc_session *pbc;

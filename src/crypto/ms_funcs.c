@@ -164,7 +164,7 @@ void generate_nt_response_pwhash(const u8 *auth_challenge,
  * @username: 0-to-256-char UserName (IN)
  * @username_len: Length of username
  * @response: 20-octet AuthenticatorResponse (OUT) (note: this value is usually
- * encoded as a 42-octet ASCII string (S=<hexdump of response>)
+ * encoded as a 42-octet ASCII string (S=hexdump_of_response)
  */
 void generate_authenticator_response_pwhash(
 	const u8 *password_hash,
@@ -219,7 +219,7 @@ void generate_authenticator_response_pwhash(
  * @username: 0-to-256-char UserName (IN)
  * @username_len: Length of username
  * @response: 20-octet AuthenticatorResponse (OUT) (note: this value is usually
- * encoded as a 42-octet ASCII string (S=<hexdump of response>)
+ * encoded as a 42-octet ASCII string (S=hexdump_of_response)
  */
 void generate_authenticator_response(const u8 *password, size_t password_len,
 				     const u8 *peer_challenge,

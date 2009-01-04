@@ -12,7 +12,7 @@
  * See README and COPYING for more details.
  *
  * This header file is included into all C files so that commonly used header
- * files can be selected with OS specific #ifdefs in one place instead of
+ * files can be selected with OS specific ifdef blocks in one place instead of
  * having to have OS/C library specific selection in many files.
  */
 

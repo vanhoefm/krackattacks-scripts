@@ -941,7 +941,7 @@ struct wpa_driver_ops {
 	 struct wpa_scan_results * (*get_scan_results2)(void *priv);
 
 	/**
-	 * * set_probe_req_ie - Set information element(s) for Probe Request
+	 * set_probe_req_ie - Set information element(s) for Probe Request
 	 * @priv: private driver interface data
 	 * @ies: Information elements to append or %NULL to remove extra IEs
 	 * @ies_len: Length of the IE buffer in octets

@@ -154,7 +154,7 @@ struct wpa_config {
 	 * ctrl_interface_group - Control interface group (DEPRECATED)
 	 *
 	 * This variable is only used for backwards compatibility. Group for
-	 * UNIX domain sockets should now be specified using GROUP=<group> in
+	 * UNIX domain sockets should now be specified using GROUP=group in
 	 * ctrl_interface variable.
 	 */
 	char *ctrl_interface_group;
@@ -286,7 +286,7 @@ struct wpa_config {
 
 	/**
 	 * device_type - Primary Device Type (WPS)
-	 * Used format: <categ>-<OUI>-<subcateg>
+	 * Used format: categ-OUI-subcateg
 	 * categ = Category as an integer value
 	 * OUI = OUI and type octet as a 4-octet hex-encoded value;
 	 *	0050F204 for default WPS OUI

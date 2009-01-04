@@ -14,7 +14,7 @@
  * This file includes a set of pre-processor macros that can be used to
  * implement a state machine. In addition to including this header file, each
  * file implementing a state machine must define STATE_MACHINE_DATA to be the
- * data structure including state variables (enum <machine>_state,
+ * data structure including state variables (enum machine_state,
  * Boolean changed), and STATE_MACHINE_DEBUG_PREFIX to be a string that is used
  * as a prefix for all debug messages. If SM_ENTRY_MA macro is used to define
  * a group of state machines with shared data structure, STATE_MACHINE_ADDR
@@ -61,7 +61,7 @@ sm->machine ## _state = machine ## _ ## state;
  * SM_ENTRY_M - State machine function entry point for state machine group
  * @machine: State machine name
  * @_state: State machine state
- * @data: State variable prefix (full variable: <prefix>_state)
+ * @data: State variable prefix (full variable: prefix_state)
  *
  * This macro is like SM_ENTRY, but for state machine groups that use a shared
  * data structure for more than one state machine. Both machine and prefix
@@ -80,7 +80,7 @@ sm->data ## _ ## state = machine ## _ ## _state;
  * SM_ENTRY_MA - State machine function entry point for state machine group
  * @machine: State machine name
  * @_state: State machine state
- * @data: State variable prefix (full variable: <prefix>_state)
+ * @data: State variable prefix (full variable: prefix_state)
  *
  * This macro is like SM_ENTRY_M, but a MAC address is included in debug
  * output. STATE_MACHINE_ADDR has to be defined to point to the MAC address to

@@ -43,7 +43,7 @@ void wpa_debug_close_file(void);
 /**
  * wpa_debug_printf_timestamp - Print timestamp for debug output
  *
- * This function prints a timestamp in <seconds from 1970>.<microsoconds>
+ * This function prints a timestamp in seconds_from_1970.microsoconds
  * format if debug output has been configured to include timestamps in debug
  * messages.
  */

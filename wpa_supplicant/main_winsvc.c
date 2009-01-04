@@ -12,7 +12,7 @@
  * See README and COPYING for more details.
  *
  * The root of wpa_supplicant configuration in registry is
- * HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant. This level includes global
+ * HKEY_LOCAL_MACHINE\\SOFTWARE\\%wpa_supplicant. This level includes global
  * parameters and a 'interfaces' subkey with all the interface configuration
  * (adapter to confname mapping). Each such mapping is a subkey that has
  * 'adapter' and 'config' values.

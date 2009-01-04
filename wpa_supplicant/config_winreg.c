@@ -11,12 +11,13 @@
  *
  * See README and COPYING for more details.
  *
- * This file implements a configuration backend for Windows registry.. All the
+ * This file implements a configuration backend for Windows registry. All the
  * configuration information is stored in the registry and the format for
  * network configuration fields is same as described in the sample
  * configuration file, wpa_supplicant.conf.
  *
- * Configuration data is in HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs
+ * Configuration data is in
+ * \a HKEY_LOCAL_MACHINE\\SOFTWARE\\%wpa_supplicant\\configs
  * key. Each configuration profile has its own key under this. In terms of text
  * files, each profile would map to a separate text file with possibly multiple
  * networks. Under each profile, there is a networks key that lists all
@@ -24,9 +25,12 @@
  * network block in the configuration file. In addition, blobs subkey has
  * possible blobs as values.
  *
- * HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\networks\0000
- *    ssid="example"
- *    key_mgmt=WPA-PSK
+ * Example network configuration block:
+ * \verbatim
+HKEY_LOCAL_MACHINE\SOFTWARE\wpa_supplicant\configs\test\networks\0000
+   ssid="example"
+   key_mgmt=WPA-PSK
+\endverbatim
  */
 
 #include "includes.h"

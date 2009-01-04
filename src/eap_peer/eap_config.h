@@ -83,10 +83,10 @@ struct eap_peer_config {
 	 * wpa_supplicant is run in the background.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 *
 	 * On Windows, trusted CA certificates can be loaded from the system
-	 * certificate store by setting this to cert_store://<name>, e.g.,
+	 * certificate store by setting this to cert_store://name, e.g.,
 	 * ca_cert="cert_store://CA" or ca_cert="cert_store://ROOT".
 	 * Note that when running wpa_supplicant as an application, the user
 	 * certificate store (My user account) is used, whereas computer store
@@ -115,7 +115,7 @@ struct eap_peer_config {
 	 * wpa_supplicant is run in the background.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *client_cert;
 
@@ -142,7 +142,7 @@ struct eap_peer_config {
 	 * (Computer account) is used when running wpasvc as a service.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *private_key;
 
@@ -167,7 +167,7 @@ struct eap_peer_config {
 	 * wpa_supplicant is run in the background.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *dh_file;
 
@@ -215,7 +215,7 @@ struct eap_peer_config {
 	 * EAP-TTLS/PEAP/FAST tunnel) authentication.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *ca_cert2;
 
@@ -242,7 +242,7 @@ struct eap_peer_config {
 	 * wpa_supplicant is run in the background.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *client_cert2;
 
@@ -255,7 +255,7 @@ struct eap_peer_config {
 	 * wpa_supplicant is run in the background.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *private_key2;
 
@@ -276,7 +276,7 @@ struct eap_peer_config {
 	 * wpa_supplicant is run in the background.
 	 *
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	u8 *dh_file2;
 
@@ -344,7 +344,7 @@ struct eap_peer_config {
 	 * 2 = allow authenticated provisioning,
 	 * 3 = allow both unauthenticated and authenticated provisioning
 	 *
-	 * fast_max_pac_list_len=<num> option can be used to set the maximum
+	 * fast_max_pac_list_len=num option can be used to set the maximum
 	 * number of PAC entries to store in a PAC list (default: 10).
 	 *
 	 * fast_pac_format=binary option can be used to select binary format
@@ -357,8 +357,8 @@ struct eap_peer_config {
 	 * 1 = use cryptobinding if server supports it
 	 * 2 = require cryptobinding
 	 *
-	 * EAP-WSC (WPS) uses following options: pin=<Device Password> and
-	 * uuid=<Device UUID>
+	 * EAP-WSC (WPS) uses following options: pin=Device_Password and
+	 * uuid=Device_UUID
 	 */
 	char *phase1;
 
@@ -578,7 +578,7 @@ struct eap_peer_config {
 	 * to the file should be used since working directory may change when
 	 * wpa_supplicant is run in the background.
 	 * Alternatively, a named configuration blob can be used by setting
-	 * this to blob://<blob name>.
+	 * this to blob://blob_name.
 	 */
 	char *pac_file;
 

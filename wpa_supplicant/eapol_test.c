@@ -38,6 +38,13 @@ extern int wpa_debug_show_keys;
 struct wpa_driver_ops *wpa_supplicant_drivers[] = { NULL };
 
 
+struct extra_radius_attr {
+	u8 type;
+	char syntax;
+	char *data;
+	struct extra_radius_attr *next;
+};
+
 struct eapol_test_data {
 	struct wpa_supplicant *wpa_s;
 
@@ -66,8 +73,7 @@ struct eapol_test_data {
 
 	char *connect_info;
 	u8 own_addr[ETH_ALEN];
-	int cui_flag;
-	char *cui_str;
+	struct extra_radius_attr *extra_attrs;
 };
 
 static struct eapol_test_data eapol_test;
@@ -84,6 +90,69 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 			   MAC2STR(addr), txt);
 	else
 		wpa_printf(MSG_DEBUG, "%s", txt);
+}
+
+
+static int add_extra_attr(struct radius_msg *msg,
+			  struct extra_radius_attr *attr)
+{
+	size_t len;
+	char *pos;
+	u32 val;
+	char buf[128];
+
+	switch (attr->syntax) {
+	case 's':
+		os_snprintf(buf, sizeof(buf), "%s", attr->data);
+		len = os_strlen(buf);
+		break;
+	case 'n':
+		buf[0] = '\0';
+		len = 1;
+		break;
+	case 'x':
+		pos = attr->data;
+		if (pos[0] == '0' && pos[1] == 'x')
+			pos += 2;
+		len = os_strlen(pos);
+		if ((len & 1) || (len / 2) > sizeof(buf)) {
+			printf("Invalid extra attribute hexstring\n");
+			return -1;
+		}
+		len /= 2;
+		if (hexstr2bin(pos, (u8 *) buf, len) < 0) {
+			printf("Invalid extra attribute hexstring\n");
+			return -1;
+		}
+		break;
+	case 'd':
+		val = htonl(atoi(attr->data));
+		os_memcpy(buf, &val, 4);
+		len = 4;
+		break;
+	default:
+		printf("Incorrect extra attribute syntax specification\n");
+		return -1;
+	}
+
+	if (!radius_msg_add_attr(msg, attr->type, (u8 *) buf, len)) {
+		printf("Could not add attribute %d\n", attr->type);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int add_extra_attrs(struct radius_msg *msg,
+			   struct extra_radius_attr *attrs)
+{
+	struct extra_radius_attr *p;
+	for (p = attrs; p; p = p->next) {
+		if (add_extra_attr(msg, p) < 0)
+			return -1;
+	}
+	return 0;
 }
 
 
@@ -166,22 +235,8 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 		goto fail;
 	}
 
-	if (e->cui_flag) {
-		int l = 0;
-		if (e->cui_flag == 1) {
-			l = 1;
-			buf[0] = '\0';
-		} else if (e->cui_flag == 2) {
-			os_snprintf(buf, sizeof(buf), "%s", e->cui_str);
-			l = os_strlen(buf);
-		}
-		if (!radius_msg_add_attr(msg,
-					 RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
-					 (u8 *) buf, l)) {
-			printf("Could not add Chargeable-User-Identity\n");
-			goto fail;
-		}
-	}
+	if (add_extra_attrs(msg, e->extra_attrs) < 0)
+		goto fail;
 
 	if (eap && !radius_msg_add_eap(msg, eap, len)) {
 		printf("Could not add EAP-Message\n");
@@ -365,6 +420,8 @@ static int test_eapol(struct eapol_test_data *e, struct wpa_supplicant *wpa_s,
 static void test_eapol_clean(struct eapol_test_data *e,
 			     struct wpa_supplicant *wpa_s)
 {
+	struct extra_radius_attr *p, *prev;
+
 	radius_client_deinit(e->radius);
 	os_free(e->last_eap_radius);
 	if (e->last_recv_radius) {
@@ -387,6 +444,13 @@ static void test_eapol_clean(struct eapol_test_data *e,
 		wpa_s->ctrl_iface = NULL;
 	}
 	wpa_config_free(wpa_s->conf);
+
+	p = e->extra_attrs;
+	while (p) {
+		prev = p;
+		p = p->next;
+		os_free(prev);
+	}
 }
 
 
@@ -889,7 +953,8 @@ static void usage(void)
 	       "[-s<AS secret>]\\\n"
 	       "           [-r<count>] [-t<timeout>] [-C<Connect-Info>] \\\n"
 	       "           [-M<client MAC address>] \\\n"
-	       "           [-I<CUI>] [-i] [-A<client IP>]\n"
+	       "           [-N<attr spec>] \\\n"
+	       "           [-A<client IP>]\n"
 	       "eapol_test scard\n"
 	       "eapol_test sim <PIN> <num triplets> [debug]\n"
 	       "\n");
@@ -913,9 +978,18 @@ static void usage(void)
 	       "  -M<client MAC address> = Set own MAC address "
 	       "(Calling-Station-Id,\n"
 	       "                           default: 02:00:00:00:00:01)\n"
-	       "  -I<CUI> = send Chargeable-User-Identity containing the "
-	       "value of CUI\n"
-	       "  -i = send NUL value in Chargeable-User-Identity\n");
+	       "  -N<attr spec> = send arbitrary attribute specified by:\n"
+	       "                  attr_id:syntax:value or attr_id\n"
+	       "                  attr_id - number id of the attribute\n"
+	       "                  syntax - one of: s, d, x\n"
+	       "                     s = string\n"
+	       "                     d = integer\n"
+	       "                     x = octet string\n"
+	       "                  value - attribute value.\n"
+	       "       When only attr_id is specified, NULL will be used as "
+	       "value.\n"
+	       "       Multiple attributes can be specified by using the "
+	       "option several times.\n");
 }
 
 
@@ -929,6 +1003,8 @@ int main(int argc, char *argv[])
 	char *cli_addr = NULL;
 	char *conf = NULL;
 	int timeout = 30;
+	char *pos;
+	struct extra_radius_attr *p = NULL, *p1;
 
 	if (os_program_init())
 		return -1;
@@ -943,7 +1019,7 @@ int main(int argc, char *argv[])
 	wpa_debug_show_keys = 1;
 
 	for (;;) {
-		c = getopt(argc, argv, "a:A:c:C:iI:M:np:r:s:St:W");
+		c = getopt(argc, argv, "a:A:c:C:M:nN:p:r:s:St:W");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -958,13 +1034,6 @@ int main(int argc, char *argv[])
 			break;
 		case 'C':
 			eapol_test.connect_info = optarg;
-			break;
-		case 'i':
-			eapol_test.cui_flag = 1;
-			break;
-		case 'I':
-			eapol_test.cui_flag = 2;
-			eapol_test.cui_str = optarg;
 			break;
 		case 'M':
 			if (hwaddr_aton(optarg, eapol_test.own_addr)) {
@@ -992,6 +1061,34 @@ int main(int argc, char *argv[])
 			break;
 		case 'W':
 			wait_for_monitor++;
+			break;
+		case 'N':
+			p1 = os_zalloc(sizeof(p1));
+			if (p1 == NULL)
+				break;
+			if (!p)
+				eapol_test.extra_attrs = p1;
+			else
+				p->next = p1;
+			p = p1;
+
+			p->type = atoi(optarg);
+			pos = os_strchr(optarg, ':');
+			if (pos == NULL) {
+				p->syntax = 'n';
+				p->data = NULL;
+				break;
+			}
+
+			pos++;
+			if (pos[0] == '\0' || pos[1] != ':') {
+				printf("Incorrect format of attribute "
+				       "specification\n");
+				break;
+			}
+
+			p->syntax = pos[0];
+			p->data = pos + 2;
 			break;
 		default:
 			usage();

@@ -20,7 +20,7 @@
 #
 ##########################################################################
 # Copyright (C) 2003 Jonathan Foster <jon@jon-foster.co.uk>
-# Copyright (C) 2005 Jouni Malinen <j@w1.fi>
+# Copyright (C) 2005-2008 Jouni Malinen <j@w1.fi>
 # (modified for kerneldoc format used in wpa_supplicant)
 #
 # This program is free software; you can redistribute it and/or modify
@@ -69,6 +69,11 @@
 #
 sub fixcomment {
     $t = $_[0];
+
+    # wpa_supplicant -> %wpa_supplicant except for struct wpa_supplicant
+    $t =~ s/struct wpa_supplicant/struct STRUCTwpa_supplicant/sg;
+    $t =~ s/ wpa_supplicant/ \%wpa_supplicant/sg;
+    $t =~ s/struct STRUCTwpa_supplicant/struct wpa_supplicant/sg;
 
     # " * func: foo" --> "\brief foo\n"
     # " * struct bar: foo" --> "\brief foo\n"

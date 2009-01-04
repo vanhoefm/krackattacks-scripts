@@ -970,7 +970,7 @@ static void usage(void)
 	       "automatically\n"
 	       "  -r<count> = number of re-authentications\n"
 	       "  -W = wait for a control interface monitor before starting\n"
-	       "  -S = save configuration after authentiation\n"
+	       "  -S = save configuration after authentication\n"
 	       "  -n = no MPPE keys expected\n"
 	       "  -t<timeout> = sets timeout in seconds (default: 30 s)\n"
 	       "  -C<Connect-Info> = RADIUS Connect-Info (default: "

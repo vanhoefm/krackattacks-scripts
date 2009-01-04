@@ -335,7 +335,7 @@ wps_registrar_init(struct wps_context *wps,
 
 /**
  * wps_registrar_deinit - Deinitialize WPS Registrar data
- * @reg: Registrar data from wps_registrar_deinit()
+ * @reg: Registrar data from wps_registrar_init()
  */
 void wps_registrar_deinit(struct wps_registrar *reg)
 {
@@ -348,6 +348,14 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 }
 
 
+/**
+ * wps_registrar_add_pin - Configure a new PIN for Registrar
+ * @reg: Registrar data from wps_registrar_init()
+ * @uuid: UUID-E or %NULL for wildcard (any UUID)
+ * @pin: PIN (Device Password)
+ * @pin_len: Length of pin in octets
+ * Returns: 0 on success, -1 on failure
+ */
 int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 			  const u8 *pin, size_t pin_len)
 {
@@ -382,6 +390,12 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 }
 
 
+/**
+ * wps_registrar_invalidate_pin - Invalidate a PIN for a specific UUID-E
+ * @reg: Registrar data from wps_registrar_init()
+ * @uuid: UUID-E
+ * Returns: 0 on success, -1 on failure (e.g., PIN not found)
+ */
 int wps_registrar_invalidate_pin(struct wps_registrar *reg, const u8 *uuid)
 {
 	struct wps_uuid_pin *pin, *prev;
@@ -454,6 +468,16 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 }
 
 
+/**
+ * wps_registrar_unlock_pin - Unlock a PIN for a specific UUID-E
+ * @reg: Registrar data from wps_registrar_init()
+ * @uuid: UUID-E
+ * Returns: 0 on success, -1 on failure
+ *
+ * PINs are locked to enforce only one concurrent use. This function unlocks a
+ * PIN to allow it to be used again. If the specified PIN was configured using
+ * a wildcard UUID, it will be removed instead of allowing multiple uses.
+ */
 int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid)
 {
 	struct wps_uuid_pin *pin;
@@ -476,17 +500,32 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid)
 }
 
 
-static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
+static void wps_registrar_stop_pbc(struct wps_registrar *reg)
 {
-	struct wps_registrar *reg = eloop_ctx;
-
-	wpa_printf(MSG_DEBUG, "WPS: PBC timed out - disable PBC mode");
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
 	wps_set_ie(reg);
 }
 
 
+static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wps_registrar *reg = eloop_ctx;
+
+	wpa_printf(MSG_DEBUG, "WPS: PBC timed out - disable PBC mode");
+	wps_registrar_stop_pbc(reg);
+}
+
+
+/**
+ * wps_registrar_button_pushed - Notify Registrar that AP button was pushed
+ * @reg: Registrar data from wps_registrar_init()
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function is called on an AP when a push button is pushed to activate
+ * PBC mode. The PBC mode will be stopped after walk time (2 minutes) timeout
+ * or when a PBC registration is completed.
+ */
 int wps_registrar_button_pushed(struct wps_registrar *reg)
 {
 	if (wps_registrar_pbc_overlap(reg, NULL, NULL)) {
@@ -510,12 +549,20 @@ static void wps_registrar_pbc_completed(struct wps_registrar *reg)
 {
 	wpa_printf(MSG_DEBUG, "WPS: PBC completed - stopping PBC mode");
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
-	reg->selected_registrar = 0;
-	reg->pbc = 0;
-	wps_set_ie(reg);
+	wps_registrar_stop_pbc(reg);
 }
 
 
+/**
+ * wps_registrar_probe_req_rx - Notify Registrar of Probe Request
+ * @reg: Registrar data from wps_registrar_init()
+ * @addr: MAC address of the Probe Request sender
+ * @wps_data: WPS IE contents
+ *
+ * This function is called on an AP when a Probe Request with WPS IE is
+ * received. This is used to track PBC mode use and to detect possible overlap
+ * situation with other WPS APs.
+ */
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data)
 {

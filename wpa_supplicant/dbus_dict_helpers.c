@@ -21,7 +21,7 @@
 
 /**
  * Start a dict in a dbus message.  Should be paired with a call to
- * {@link wpa_dbus_dict_close_write}.
+ * wpa_dbus_dict_close_write().
  *
  * @param iter A valid dbus message iterator
  * @param iter_dict (out) A dict iterator to pass to further dict functions
@@ -50,12 +50,12 @@ dbus_bool_t wpa_dbus_dict_open_write(DBusMessageIter *iter,
 
 /**
  * End a dict element in a dbus message.  Should be paired with
- * a call to {@link wpa_dbus_dict_open_write}.
+ * a call to wpa_dbus_dict_open_write().
  *
  * @param iter valid dbus message iterator, same as passed to
  *    wpa_dbus_dict_open_write()
  * @param iter_dict a dbus dict iterator returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @return TRUE on success, FALSE on failure
  *
  */
@@ -209,7 +209,7 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_byte_array(
  * Add a string entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The string value
  * @return TRUE on success, FALSE on failure
@@ -229,7 +229,7 @@ dbus_bool_t wpa_dbus_dict_append_string(DBusMessageIter *iter_dict,
  * Add a byte entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The byte value
  * @return TRUE on success, FALSE on failure
@@ -249,7 +249,7 @@ dbus_bool_t wpa_dbus_dict_append_byte(DBusMessageIter *iter_dict,
  * Add a boolean entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The boolean value
  * @return TRUE on success, FALSE on failure
@@ -269,7 +269,7 @@ dbus_bool_t wpa_dbus_dict_append_bool(DBusMessageIter *iter_dict,
  * Add a 16-bit signed integer entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The 16-bit signed integer value
  * @return TRUE on success, FALSE on failure
@@ -290,7 +290,7 @@ dbus_bool_t wpa_dbus_dict_append_int16(DBusMessageIter *iter_dict,
  * Add a 16-bit unsigned integer entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The 16-bit unsigned integer value
  * @return TRUE on success, FALSE on failure
@@ -311,7 +311,7 @@ dbus_bool_t wpa_dbus_dict_append_uint16(DBusMessageIter *iter_dict,
  * Add a 32-bit signed integer to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The 32-bit signed integer value
  * @return TRUE on success, FALSE on failure
@@ -332,7 +332,7 @@ dbus_bool_t wpa_dbus_dict_append_int32(DBusMessageIter *iter_dict,
  * Add a 32-bit unsigned integer entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The 32-bit unsigned integer value
  * @return TRUE on success, FALSE on failure
@@ -353,7 +353,7 @@ dbus_bool_t wpa_dbus_dict_append_uint32(DBusMessageIter *iter_dict,
  * Add a 64-bit integer entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The 64-bit integer value
  * @return TRUE on success, FALSE on failure
@@ -374,7 +374,7 @@ dbus_bool_t wpa_dbus_dict_append_int64(DBusMessageIter *iter_dict,
  * Add a 64-bit unsigned integer entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The 64-bit unsigned integer value
  * @return TRUE on success, FALSE on failure
@@ -395,7 +395,7 @@ dbus_bool_t wpa_dbus_dict_append_uint64(DBusMessageIter *iter_dict,
  * Add a double-precision floating point entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The double-precision floating point value
  * @return TRUE on success, FALSE on failure
@@ -416,7 +416,7 @@ dbus_bool_t wpa_dbus_dict_append_double(DBusMessageIter *iter_dict,
  * Add a DBus object path entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The DBus object path value
  * @return TRUE on success, FALSE on failure
@@ -437,7 +437,7 @@ dbus_bool_t wpa_dbus_dict_append_object_path(DBusMessageIter *iter_dict,
  * Add a byte array entry to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_write}
+ *    wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param value The byte array
  * @param value_len The length of the byte array, in bytes
@@ -462,14 +462,14 @@ dbus_bool_t wpa_dbus_dict_append_byte_array(DBusMessageIter *iter_dict,
  * Begin a string array entry in the dict
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *                  {@link nmu_dbus_dict_open_write}
+ *                  wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param iter_dict_entry A private DBusMessageIter provided by the caller to
- *                        be passed to {@link wpa_dbus_dict_end_string_array}
+ *                        be passed to wpa_dbus_dict_end_string_array()
  * @param iter_dict_val A private DBusMessageIter provided by the caller to
- *                      be passed to {@link wpa_dbus_dict_end_string_array}
+ *                      be passed to wpa_dbus_dict_end_string_array()
  * @param iter_array On return, the DBusMessageIter to be passed to
- *                   {@link wpa_dbus_dict_string_array_add_element}
+ *                   wpa_dbus_dict_string_array_add_element()
  * @return TRUE on success, FALSE on failure
  *
  */
@@ -506,7 +506,7 @@ dbus_bool_t wpa_dbus_dict_begin_string_array(DBusMessageIter *iter_dict,
  * Add a single string element to a string array dict entry
  *
  * @param iter_array A valid DBusMessageIter returned from
- *                   {@link wpa_dbus_dict_begin_string_array}'s
+ *                   wpa_dbus_dict_begin_string_array()'s
  *                   iter_array parameter
  * @param elem The string element to be added to the dict entry's string array
  * @return TRUE on success, FALSE on failure
@@ -527,13 +527,13 @@ dbus_bool_t wpa_dbus_dict_string_array_add_element(DBusMessageIter *iter_array,
  * End a string array dict entry
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *                  {@link nmu_dbus_dict_open_write}
+ *                  wpa_dbus_dict_open_write()
  * @param iter_dict_entry A private DBusMessageIter returned from
- *                        {@link wpa_dbus_dict_end_string_array}
+ *                        wpa_dbus_dict_end_string_array()
  * @param iter_dict_val A private DBusMessageIter returned from
- *                      {@link wpa_dbus_dict_end_string_array}
+ *                      wpa_dbus_dict_end_string_array()
  * @param iter_array A DBusMessageIter returned from
- *                   {@link wpa_dbus_dict_end_string_array}
+ *                   wpa_dbus_dict_end_string_array()
  * @return TRUE on success, FALSE on failure
  *
  */
@@ -560,7 +560,7 @@ dbus_bool_t wpa_dbus_dict_end_string_array(DBusMessageIter *iter_dict,
  * Convenience function to add an entire string array to the dict.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *                  {@link nmu_dbus_dict_open_write}
+ *                  wpa_dbus_dict_open_write()
  * @param key The key of the dict item
  * @param items The array of strings
  * @param num_items The number of strings in the array
@@ -608,7 +608,7 @@ dbus_bool_t wpa_dbus_dict_append_string_array(DBusMessageIter *iter_dict,
  *
  * @param iter A valid DBusMessageIter pointing to the start of the dict
  * @param iter_dict (out) A DBusMessageIter to be passed to
- *    {@link wpa_dbus_dict_read_next_entry}
+ *    wpa_dbus_dict_read_next_entry()
  * @return TRUE on success, FALSE on failure
  *
  */
@@ -868,14 +868,14 @@ static dbus_bool_t _wpa_dbus_dict_fill_value_from_variant(
 /**
  * Read the current key/value entry from the dict.  Entries are dynamically
  * allocated when needed and must be freed after use with the
- * {@link wpa_dbus_dict_entry_clear} function.
+ * wpa_dbus_dict_entry_clear() function.
  *
  * The returned entry object will be filled with the type and value of the next
  * entry in the dict, or the type will be DBUS_TYPE_INVALID if an error
  * occurred.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_read}
+ *    wpa_dbus_dict_open_read()
  * @param entry A valid dict entry object into which the dict key and value
  *    will be placed
  * @return TRUE on success, FALSE on failure
@@ -927,7 +927,7 @@ error:
  * Return whether or not there are additional dictionary entries.
  *
  * @param iter_dict A valid DBusMessageIter returned from
- *    {@link wpa_dbus_dict_open_read}
+ *    wpa_dbus_dict_open_read()
  * @return TRUE if more dict entries exists, FALSE if no more dict entries
  * exist
  */

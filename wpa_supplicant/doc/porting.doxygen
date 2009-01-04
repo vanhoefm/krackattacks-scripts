@@ -19,9 +19,9 @@ supported.
 %wpa_supplicant is mostly using ANSI C functions that are available on
 most targets. However, couple of additional functions that are common
 on modern UNIX systems are used. Number of these are listed with
-prototypes in common.h (the #ifdef CONFIG_ANSI_C_EXTRA block). These
-functions may need to be implemented or at least defined as macros to
-native functions in the target OS or C library.
+prototypes in common.h (the \verbatim #ifdef CONFIG_ANSI_C_EXTRA \endverbatim
+block). These functions may need to be implemented or at least defined
+as macros to native functions in the target OS or C library.
 
 Many of the common ANSI C functions are used through a wrapper
 definitions in os.h to allow these to be replaced easily with a

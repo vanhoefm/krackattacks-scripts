@@ -94,7 +94,7 @@ INPUT                  = wpa_supplicant \
 	src/wps
 FILE_PATTERNS          = *.c *.h *.cpp *.m *.doxygen
 RECURSIVE              = YES
-EXCLUDE                = 
+EXCLUDE                = wpa_supplicant/wpa_gui
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */.moc/* */.ui/*
 EXAMPLE_PATH           = 

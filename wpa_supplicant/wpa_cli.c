@@ -1519,24 +1519,22 @@ static void wpa_cli_interactive(void)
 		 * passwords. */
 		HIST_ENTRY *h;
 		history_set_pos(0);
-		h = next_history();
-		while (h) {
+		while ((h = current_history())) {
 			char *p = h->line;
 			while (*p == ' ' || *p == '\t')
 				p++;
 			if (os_strncasecmp(p, "pa", 2) == 0 ||
 			    os_strncasecmp(p, "o", 1) == 0 ||
-			    os_strncasecmp(p, "n", 1)) {
+			    os_strncasecmp(p, "n", 1) == 0) {
 				h = remove_history(where_history());
 				if (h) {
 					os_free(h->line);
 					os_free(h->data);
 					os_free(h);
-				}
-				h = current_history();
-			} else {
-				h = next_history();
-			}
+				} else
+					next_history();
+			} else
+				next_history();
 		}
 		write_history(hfile);
 		os_free(hfile);

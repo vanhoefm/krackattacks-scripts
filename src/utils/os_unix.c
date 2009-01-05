@@ -78,9 +78,9 @@ int os_mktime(int year, int month, int day, int hour, int min, int sec,
 
 int os_daemonize(const char *pid_file)
 {
-#ifdef __unclinux
+#ifdef __uClinux__
 	return -1;
-#else /* __uclinux */
+#else /* __uClinux__ */
 	if (daemon(0, 0)) {
 		perror("daemon");
 		return -1;
@@ -95,7 +95,7 @@ int os_daemonize(const char *pid_file)
 	}
 
 	return -0;
-#endif /* __uclinux */
+#endif /* __uClinux__ */
 }
 
 

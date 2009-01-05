@@ -1127,61 +1127,137 @@ static int wpa_cli_cmd_interface_list(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+enum wpa_cli_cmd_flags {
+	cli_cmd_flag_none		= 0x00,
+	cli_cmd_flag_sensitive		= 0x01
+};
+
 struct wpa_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
+	enum wpa_cli_cmd_flags flags;
 };
 
 static struct wpa_cli_cmd wpa_cli_commands[] = {
-	{ "status", wpa_cli_cmd_status },
-	{ "ping", wpa_cli_cmd_ping },
-	{ "mib", wpa_cli_cmd_mib },
-	{ "help", wpa_cli_cmd_help },
-	{ "interface", wpa_cli_cmd_interface },
-	{ "level", wpa_cli_cmd_level },
-	{ "license", wpa_cli_cmd_license },
-	{ "quit", wpa_cli_cmd_quit },
-	{ "set", wpa_cli_cmd_set },
-	{ "logon", wpa_cli_cmd_logon },
-	{ "logoff", wpa_cli_cmd_logoff },
-	{ "pmksa", wpa_cli_cmd_pmksa },
-	{ "reassociate", wpa_cli_cmd_reassociate },
-	{ "preauthenticate", wpa_cli_cmd_preauthenticate },
-	{ "identity", wpa_cli_cmd_identity },
-	{ "password", wpa_cli_cmd_password },
-	{ "new_password", wpa_cli_cmd_new_password },
-	{ "pin", wpa_cli_cmd_pin },
-	{ "otp", wpa_cli_cmd_otp },
-	{ "passphrase", wpa_cli_cmd_passphrase },
-	{ "bssid", wpa_cli_cmd_bssid },
-	{ "list_networks", wpa_cli_cmd_list_networks },
-	{ "select_network", wpa_cli_cmd_select_network },
-	{ "enable_network", wpa_cli_cmd_enable_network },
-	{ "disable_network", wpa_cli_cmd_disable_network },
-	{ "add_network", wpa_cli_cmd_add_network },
-	{ "remove_network", wpa_cli_cmd_remove_network },
-	{ "set_network", wpa_cli_cmd_set_network },
-	{ "get_network", wpa_cli_cmd_get_network },
-	{ "save_config", wpa_cli_cmd_save_config },
-	{ "disconnect", wpa_cli_cmd_disconnect },
-	{ "reconnect", wpa_cli_cmd_reconnect },
-	{ "scan", wpa_cli_cmd_scan },
-	{ "scan_results", wpa_cli_cmd_scan_results },
-	{ "bss", wpa_cli_cmd_bss },
-	{ "get_capability", wpa_cli_cmd_get_capability },
-	{ "reconfigure", wpa_cli_cmd_reconfigure },
-	{ "terminate", wpa_cli_cmd_terminate },
-	{ "interface_add", wpa_cli_cmd_interface_add },
-	{ "interface_remove", wpa_cli_cmd_interface_remove },
-	{ "interface_list", wpa_cli_cmd_interface_list },
-	{ "ap_scan", wpa_cli_cmd_ap_scan },
-	{ "stkstart", wpa_cli_cmd_stkstart },
-	{ "ft_ds", wpa_cli_cmd_ft_ds },
-	{ "wps_pbc", wpa_cli_cmd_wps_pbc },
-	{ "wps_pin", wpa_cli_cmd_wps_pin },
-	{ "wps_reg", wpa_cli_cmd_wps_reg },
-	{ NULL, NULL }
+	{ "status", wpa_cli_cmd_status,
+	  cli_cmd_flag_none },
+	{ "ping", wpa_cli_cmd_ping,
+	  cli_cmd_flag_none },
+	{ "mib", wpa_cli_cmd_mib,
+	  cli_cmd_flag_none },
+	{ "help", wpa_cli_cmd_help,
+	  cli_cmd_flag_none },
+	{ "interface", wpa_cli_cmd_interface,
+	  cli_cmd_flag_none },
+	{ "level", wpa_cli_cmd_level,
+	  cli_cmd_flag_none },
+	{ "license", wpa_cli_cmd_license,
+	  cli_cmd_flag_none },
+	{ "quit", wpa_cli_cmd_quit,
+	  cli_cmd_flag_none },
+	{ "set", wpa_cli_cmd_set,
+	  cli_cmd_flag_none },
+	{ "logon", wpa_cli_cmd_logon,
+	  cli_cmd_flag_none },
+	{ "logoff", wpa_cli_cmd_logoff,
+	  cli_cmd_flag_none },
+	{ "pmksa", wpa_cli_cmd_pmksa,
+	  cli_cmd_flag_none },
+	{ "reassociate", wpa_cli_cmd_reassociate,
+	  cli_cmd_flag_none },
+	{ "preauthenticate", wpa_cli_cmd_preauthenticate,
+	  cli_cmd_flag_none },
+	{ "identity", wpa_cli_cmd_identity,
+	  cli_cmd_flag_none },
+	{ "password", wpa_cli_cmd_password,
+	  cli_cmd_flag_sensitive },
+	{ "new_password", wpa_cli_cmd_new_password,
+	  cli_cmd_flag_sensitive },
+	{ "pin", wpa_cli_cmd_pin,
+	  cli_cmd_flag_sensitive },
+	{ "otp", wpa_cli_cmd_otp,
+	  cli_cmd_flag_sensitive },
+	{ "passphrase", wpa_cli_cmd_passphrase,
+	  cli_cmd_flag_sensitive },
+	{ "bssid", wpa_cli_cmd_bssid,
+	  cli_cmd_flag_none },
+	{ "list_networks", wpa_cli_cmd_list_networks,
+	  cli_cmd_flag_none },
+	{ "select_network", wpa_cli_cmd_select_network,
+	  cli_cmd_flag_none },
+	{ "enable_network", wpa_cli_cmd_enable_network,
+	  cli_cmd_flag_none },
+	{ "disable_network", wpa_cli_cmd_disable_network,
+	  cli_cmd_flag_none },
+	{ "add_network", wpa_cli_cmd_add_network,
+	  cli_cmd_flag_none },
+	{ "remove_network", wpa_cli_cmd_remove_network,
+	  cli_cmd_flag_none },
+	{ "set_network", wpa_cli_cmd_set_network,
+	  cli_cmd_flag_sensitive },
+	{ "get_network", wpa_cli_cmd_get_network,
+	  cli_cmd_flag_none },
+	{ "save_config", wpa_cli_cmd_save_config,
+	  cli_cmd_flag_none },
+	{ "disconnect", wpa_cli_cmd_disconnect,
+	  cli_cmd_flag_none },
+	{ "reconnect", wpa_cli_cmd_reconnect,
+	  cli_cmd_flag_none },
+	{ "scan", wpa_cli_cmd_scan,
+	  cli_cmd_flag_none },
+	{ "scan_results", wpa_cli_cmd_scan_results,
+	  cli_cmd_flag_none },
+	{ "bss", wpa_cli_cmd_bss,
+	  cli_cmd_flag_none },
+	{ "get_capability", wpa_cli_cmd_get_capability,
+	  cli_cmd_flag_none },
+	{ "reconfigure", wpa_cli_cmd_reconfigure,
+	  cli_cmd_flag_none },
+	{ "terminate", wpa_cli_cmd_terminate,
+	  cli_cmd_flag_none },
+	{ "interface_add", wpa_cli_cmd_interface_add,
+	  cli_cmd_flag_none },
+	{ "interface_remove", wpa_cli_cmd_interface_remove,
+	  cli_cmd_flag_none },
+	{ "interface_list", wpa_cli_cmd_interface_list,
+	  cli_cmd_flag_none },
+	{ "ap_scan", wpa_cli_cmd_ap_scan,
+	  cli_cmd_flag_none },
+	{ "stkstart", wpa_cli_cmd_stkstart,
+	  cli_cmd_flag_none },
+	{ "ft_ds", wpa_cli_cmd_ft_ds,
+	  cli_cmd_flag_none },
+	{ "wps_pbc", wpa_cli_cmd_wps_pbc,
+	  cli_cmd_flag_none },
+	{ "wps_pin", wpa_cli_cmd_wps_pin,
+	  cli_cmd_flag_sensitive },
+	{ "wps_reg", wpa_cli_cmd_wps_reg,
+	  cli_cmd_flag_sensitive },
+	{ NULL, NULL, cli_cmd_flag_none }
 };
+
+
+#ifdef CONFIG_READLINE
+static int cmd_has_sensitive_data(const char *cmd)
+{
+	const char *c, *delim;
+	int n;
+	size_t len;
+
+	delim = os_strchr(cmd, ' ');
+	if (delim)
+		len = delim - cmd;
+	else
+		len = os_strlen(cmd);
+
+	for (n = 0; (c = wpa_cli_commands[n].cmd); n++) {
+		if (os_strncasecmp(cmd, c, len) == 0 && len == os_strlen(c))
+			return (wpa_cli_commands[n].flags &
+				cli_cmd_flag_sensitive);
+	}
+	return 0;
+}
+#endif /* CONFIG_READLINE */
 
 
 static int wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -1523,9 +1599,7 @@ static void wpa_cli_interactive(void)
 			char *p = h->line;
 			while (*p == ' ' || *p == '\t')
 				p++;
-			if (os_strncasecmp(p, "pa", 2) == 0 ||
-			    os_strncasecmp(p, "o", 1) == 0 ||
-			    os_strncasecmp(p, "n", 1) == 0) {
+			if (cmd_has_sensitive_data(p)) {
 				h = remove_history(where_history());
 				if (h) {
 					os_free(h->line);

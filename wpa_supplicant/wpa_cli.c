@@ -86,59 +86,6 @@ static const char *wpa_cli_full_license =
 "OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n"
 "\n";
 
-static const char *commands_help =
-"commands:\n"
-"  status [verbose] = get current WPA/EAPOL/EAP status\n"
-"  mib = get MIB variables (dot1x, dot11)\n"
-"  help = show this usage help\n"
-"  interface [ifname] = show interfaces/select interface\n"
-"  level <debug level> = change debug level\n"
-"  license = show full wpa_cli license\n"
-"  logoff = IEEE 802.1X EAPOL state machine logoff\n"
-"  logon = IEEE 802.1X EAPOL state machine logon\n"
-"  set = set variables (shows list of variables when run without arguments)\n"
-"  pmksa = show PMKSA cache\n"
-"  reassociate = force reassociation\n"
-"  reconfigure = force wpa_supplicant to re-read its configuration file\n"
-"  preauthenticate <BSSID> = force preauthentication\n"
-"  identity <network id> <identity> = configure identity for an SSID\n"
-"  password <network id> <password> = configure password for an SSID\n"
-"  new_password <network id> <password> = change password for an SSID\n"
-"  pin <network id> <pin> = configure pin for an SSID\n"
-"  otp <network id> <password> = configure one-time-password for an SSID\n"
-"  passphrase <network id> <passphrase> = configure private key passphrase\n"
-"    for an SSID\n"
-"  bssid <network id> <BSSID> = set preferred BSSID for an SSID\n"
-"  list_networks = list configured networks\n"
-"  select_network <network id> = select a network (disable others)\n"
-"  enable_network <network id> = enable a network\n"
-"  disable_network <network id> = disable a network\n"
-"  add_network = add a network\n"
-"  remove_network <network id> = remove a network\n"
-"  set_network <network id> <variable> <value> = set network variables "
-"(shows\n"
-"    list of variables when run without arguments)\n"
-"  get_network <network id> <variable> = get network variables\n"
-"  save_config = save the current configuration\n"
-"  disconnect = disconnect and wait for reassociate/reconnect command before\n "
-"    connecting\n"
-"  reconnect = like reassociate, but only takes effect if already "
-"disconnected\n"
-"  scan = request new BSS scan\n"
-"  scan_results = get latest scan results\n"
-"  bss <<idx> | <bssid>> = get detailed scan result info\n"
-"  get_capability <eap/pairwise/group/key_mgmt/proto/auth_alg> = "
-"get capabilies\n"
-"  ap_scan <value> = set ap_scan parameter\n"
-"  stkstart <addr> = request STK negotiation with <addr>\n"
-"  ft_ds <addr> = request over-the-DS FT with <addr>\n"
-"  wps_pbc [BSSID] = start Wi-Fi Protected Setup: Push Button Configuration\n"
-"  wps_pin <BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
-"hardcoded)\n"
-"  wps_reg <BSSID> <AP PIN> = start WPS Registrar to configure an AP\n"
-"  terminate = terminate wpa_supplicant\n"
-"  quit = exit wpa_cli\n";
-
 static struct wpa_ctrl *ctrl_conn;
 static int wpa_cli_quit = 0;
 static int wpa_cli_attached = 0;
@@ -148,6 +95,9 @@ static const char *ctrl_iface_dir = "/var/run/wpa_supplicant";
 static char *ctrl_ifname = NULL;
 static const char *pid_file = NULL;
 static const char *action_file = NULL;
+
+
+static void print_help();
 
 
 static void usage(void)
@@ -162,9 +112,8 @@ static void usage(void)
 	       "       wpa_supplicant\n"
 	       "  -B = run a daemon in the background\n"
 	       "  default path: /var/run/wpa_supplicant\n"
-	       "  default interface: first interface found in socket path\n"
-	       "%s",
-	       commands_help);
+	       "  default interface: first interface found in socket path\n");
+	print_help();
 }
 
 
@@ -278,7 +227,7 @@ static int wpa_cli_cmd_pmksa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 static int wpa_cli_cmd_help(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	printf("%s", commands_help);
+	print_help();
 	return 0;
 }
 
@@ -1136,105 +1085,189 @@ struct wpa_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
 	enum wpa_cli_cmd_flags flags;
+	const char *usage;
 };
 
 static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "status", wpa_cli_cmd_status,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "[verbose] = get current WPA/EAPOL/EAP status" },
 	{ "ping", wpa_cli_cmd_ping,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= pings wpa_supplicant" },
 	{ "mib", wpa_cli_cmd_mib,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= get MIB variables (dot1x, dot11)" },
 	{ "help", wpa_cli_cmd_help,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= show this usage help" },
 	{ "interface", wpa_cli_cmd_interface,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "[ifname] = show interfaces/select interface" },
 	{ "level", wpa_cli_cmd_level,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<debug level> = change debug level" },
 	{ "license", wpa_cli_cmd_license,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= show full wpa_cli license" },
 	{ "quit", wpa_cli_cmd_quit,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= exit wpa_cli" },
 	{ "set", wpa_cli_cmd_set,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= set variables (shows list of variables when run without "
+	  "arguments)" },
 	{ "logon", wpa_cli_cmd_logon,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= IEEE 802.1X EAPOL state machine logon" },
 	{ "logoff", wpa_cli_cmd_logoff,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= IEEE 802.1X EAPOL state machine logoff" },
 	{ "pmksa", wpa_cli_cmd_pmksa,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= show PMKSA cache" },
 	{ "reassociate", wpa_cli_cmd_reassociate,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= force reassociation" },
 	{ "preauthenticate", wpa_cli_cmd_preauthenticate,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<BSSID> = force preauthentication" },
 	{ "identity", wpa_cli_cmd_identity,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> <identity> = configure identity for an SSID" },
 	{ "password", wpa_cli_cmd_password,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<network id> <password> = configure password for an SSID" },
 	{ "new_password", wpa_cli_cmd_new_password,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<network id> <password> = change password for an SSID" },
 	{ "pin", wpa_cli_cmd_pin,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<network id> <pin> = configure pin for an SSID" },
 	{ "otp", wpa_cli_cmd_otp,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<network id> <password> = configure one-time-password for an SSID"
+	},
 	{ "passphrase", wpa_cli_cmd_passphrase,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<network id> <passphrase> = configure private key passphrase\n"
+	  "  for an SSID" },
 	{ "bssid", wpa_cli_cmd_bssid,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> <BSSID> = set preferred BSSID for an SSID" },
 	{ "list_networks", wpa_cli_cmd_list_networks,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= list configured networks" },
 	{ "select_network", wpa_cli_cmd_select_network,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> = select a network (disable others)" },
 	{ "enable_network", wpa_cli_cmd_enable_network,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> = enable a network" },
 	{ "disable_network", wpa_cli_cmd_disable_network,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> = disable a network" },
 	{ "add_network", wpa_cli_cmd_add_network,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= add a network" },
 	{ "remove_network", wpa_cli_cmd_remove_network,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> = remove a network" },
 	{ "set_network", wpa_cli_cmd_set_network,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<network id> <variable> <value> = set network variables (shows\n"
+	  "  list of variables when run without arguments)" },
 	{ "get_network", wpa_cli_cmd_get_network,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<network id> <variable> = get network variables" },
 	{ "save_config", wpa_cli_cmd_save_config,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= save the current configuration" },
 	{ "disconnect", wpa_cli_cmd_disconnect,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= disconnect and wait for reassociate/reconnect command before\n"
+	  "  connecting" },
 	{ "reconnect", wpa_cli_cmd_reconnect,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= like reassociate, but only takes effect if already disconnected"
+	},
 	{ "scan", wpa_cli_cmd_scan,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= request new BSS scan" },
 	{ "scan_results", wpa_cli_cmd_scan_results,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= get latest scan results" },
 	{ "bss", wpa_cli_cmd_bss,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<<idx> | <bssid>> = get detailed scan result info" },
 	{ "get_capability", wpa_cli_cmd_get_capability,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<eap/pairwise/group/key_mgmt/proto/auth_alg> = get capabilies" },
 	{ "reconfigure", wpa_cli_cmd_reconfigure,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= force wpa_supplicant to re-read its configuration file" },
 	{ "terminate", wpa_cli_cmd_terminate,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= terminate wpa_supplicant" },
 	{ "interface_add", wpa_cli_cmd_interface_add,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<ifname> <confname> <driver> <ctrl_interface> <driver_param>\n"
+	  "  <bridge_name> = adds new interface, all parameters but <ifname>\n"
+	  "  are optional" },
 	{ "interface_remove", wpa_cli_cmd_interface_remove,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<ifname> = removes the interface" },
 	{ "interface_list", wpa_cli_cmd_interface_list,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "= list available interfaces" },
 	{ "ap_scan", wpa_cli_cmd_ap_scan,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<value> = set ap_scan parameter" },
 	{ "stkstart", wpa_cli_cmd_stkstart,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<addr> = request STK negotiation with <addr>" },
 	{ "ft_ds", wpa_cli_cmd_ft_ds,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "<addr> = request over-the-DS FT with <addr>" },
 	{ "wps_pbc", wpa_cli_cmd_wps_pbc,
-	  cli_cmd_flag_none },
+	  cli_cmd_flag_none,
+	  "[BSSID] = start Wi-Fi Protected Setup: Push Button Configuration" },
 	{ "wps_pin", wpa_cli_cmd_wps_pin,
-	  cli_cmd_flag_sensitive },
+	  cli_cmd_flag_sensitive,
+	  "<BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
+	  "hardcoded)" },
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
-	  cli_cmd_flag_sensitive },
-	{ NULL, NULL, cli_cmd_flag_none }
+	  cli_cmd_flag_sensitive,
+	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },
+	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
+
+
+/*
+ * Prints command usage, lines are padded with the specified string.
+ */
+static void print_cmd_help(struct wpa_cli_cmd *cmd, const char *pad)
+{
+	char c;
+	size_t n;
+
+	printf("%s%s ", pad, cmd->cmd);
+	for (n = 0; (c = cmd->usage[n]); n++) {
+		printf("%c", c);
+		if (c == '\n')
+			printf("%s", pad);
+	}
+	printf("\n");
+}
+
+
+static void print_help(void)
+{
+	int n;
+	printf("commands:\n");
+	for (n = 0; wpa_cli_commands[n].cmd; n++)
+		print_cmd_help(&wpa_cli_commands[n], "  ");
+}
 
 
 #ifdef CONFIG_READLINE

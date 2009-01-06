@@ -126,8 +126,8 @@ EOF
     cp win_example.reg ../../"$WDIR"
 
     cd wpa_gui-qt4
-    qmake -spec win32-x-g++
     make -C icons
+    qmake -spec win32-x-g++
     make -j2
     cp release/wpa_gui.exe ../../../"$WDIR"
     cd ../../..

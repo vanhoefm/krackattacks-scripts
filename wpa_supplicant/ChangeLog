@@ -1,6 +1,6 @@
 ChangeLog for wpa_supplicant
 
-????-??-?? - v0.6.7
+2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)
 	  (wpa_supplicant can now be configured to act as a WPS Enrollee to
 	  enroll credentials for a network using PIN and PBC methods; in

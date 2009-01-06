@@ -1,10 +1,11 @@
 ChangeLog for hostapd
 
-????-??-?? - v0.6.7
+2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)
 	  (hostapd can now be configured to act as an integrated WPS Registrar
 	  and provision credentials for WPS Enrollees using PIN and PBC
-	  methods; external WPS Registrars are not supported); WPS support can
+	  methods; external wireless Registrar can configure the AP, but
+	  external WLAN Manager Registrars are not supported); WPS support can
 	  be enabled by adding CONFIG_WPS=y into .config and setting the
 	  runtime configuration variables in hostapd.conf (see WPS section in
 	  the example configuration file); new hostapd_cli commands wps_pin and

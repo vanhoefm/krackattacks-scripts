@@ -1,8 +1,7 @@
 wpa_supplicant for Windows
 ==========================
 
-Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi> and
-contributors
+Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi> and contributors
 All Rights Reserved.
 
 This program is dual-licensed under both the GPL version 2 and BSD

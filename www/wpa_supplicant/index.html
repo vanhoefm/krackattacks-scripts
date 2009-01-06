@@ -3,7 +3,7 @@
   <head>
     <title>Linux WPA Supplicant (IEEE 802.1X, WPA, WPA2, RSN, IEEE 802.11i)</title>
     <meta name="description" content="WPA Supplicant for Linux, BSD, and Windows (IEEE 802.1X, WPA, WPA2, RSN, IEEE 802.11i)">
-    <meta name="keywords" content="WPA, WPA2, IEEE 802.11i, IEEE 802.1X, WPA Supplicant, wpa_supplicant, TKIP, CCMP, EAP-PEAP, EAP-TLS, EAP-TTLS, EAP-SIM, EAP-AKA, EAP-PSK, EAP-GTC, EAP-MSCHAPv2, EAP-MD5, EAP-FAST, EAP-PAX, EAP-IKEv2IEEE 802.1X Supplicant, IEEE 802.1aa, EAPOL, RSN, pre-authentication, PMKSA caching, BSD WPA Supplicant, FreeBSD WPA Supplicant, wireless, WinXP WPA Supplicant, EAP-TNC, TNCC, IF-IMC, IF-TNCCS">
+    <meta name="keywords" content="WPA, WPA2, IEEE 802.11i, IEEE 802.1X, WPA Supplicant, wpa_supplicant, TKIP, CCMP, EAP-PEAP, EAP-TLS, EAP-TTLS, EAP-SIM, EAP-AKA, EAP-PSK, EAP-GTC, EAP-MSCHAPv2, EAP-MD5, EAP-FAST, EAP-PAX, EAP-IKEv2IEEE 802.1X Supplicant, IEEE 802.1aa, EAPOL, RSN, pre-authentication, PMKSA caching, BSD WPA Supplicant, FreeBSD WPA Supplicant, wireless, WinXP WPA Supplicant, EAP-TNC, TNCC, IF-IMC, IF-TNCCS, WPS">
     <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
   </head>
 
@@ -41,6 +41,7 @@ build for x86 target).</p>
 <li>key management for CCMP, TKIP, WEP104, WEP40</li>
 <li>WPA and full IEEE 802.11i/RSN/WPA2</li>
 <li>RSN: PMKSA caching, pre-authentication</li>
+<li>Wi-Fi Protected Setup (WPS)</li>
 </ul>
 
 <h4>Supported EAP methods (IEEE 802.1X Supplicant)</h4>
@@ -69,7 +70,7 @@ build for x86 target).</p>
 <li>EAP-PAX</li>
 <li>EAP-SAKE</li>
 <li>EAP-IKEv2</li>
-<li>EAP-GPSK (experimental)</li>
+<li>EAP-GPSK</li>
 <li>LEAP (note: requires special support from the driver)</li>
 </ul>
 
@@ -138,7 +139,7 @@ other drivers.</p>
 
 <p>
 <b>wpa_supplicant</b><br>
-Copyright (c) 2003-2008, Jouni Malinen &lt;j@w1.fi&gt;
+Copyright (c) 2003-2009, Jouni Malinen &lt;j@w1.fi&gt;
 and contributors.
 </p>
 
@@ -186,8 +187,9 @@ has some more information about the Windows port of wpa_supplicant.</p>
 </ul>
 <li>Latest development release:
 <ul>
-<li><a href="../releases/wpa_supplicant-0.6.6.tar.gz">wpa_supplicant-0.6.6.tar.gz</a> (source code for all versions)</li>
-<li><a href="../releases/wpa_supplicant-windows-bin-0.6.6.zip">wpa_supplicant-windows-bin-0.6.6.zip</a> (binaries for Windows)</li>
+<li><a href="../releases/wpa_supplicant-0.6.7.tar.gz">wpa_supplicant-0.6.7.tar.gz</a> (source code for all versions)</li>
+<li><a href="../releases/wpa_supplicant-0.6.7.exe">wpa_supplicant-0.6.7.exe</a> (binary installer for Windows)</li>
+<li><a href="../releases/wpa_supplicant-windows-bin-0.6.7.zip">wpa_supplicant-windows-bin-0.6.7.zip</a> (binaries for Windows)</li>
 <li><a href="qt4/wpa_gui-qt433-windows-dll.zip">wpa_gui-qt433-windows-dll.zip</a> (Qt4 libraries from wpa_gui/Windows)</li>
 </ul>
 <li>ChangeLog:
@@ -351,7 +353,7 @@ bug/feature request</a>.
     <address><a href="mailto:j@w1.fi">Jouni Malinen</a></address>
 <!-- Created: Sat May 22 21:41:58 PDT 2004 -->
 <!-- hhmts start -->
-Last modified: Fri Dec 26 15:37:46 EET 2008
+Last modified: Tue Jan  6 20:06:04 EET 2009
 <!-- hhmts end -->
     </div>
   </body>

@@ -135,3 +135,8 @@ CONFIG_IPV6=y
 
 # IEEE 802.11n (High Throughput) support
 #CONFIG_IEEE80211N=y
+
+# Remove debugging code that is printing out debug messages to stdout.
+# This can be used to reduce the size of the hostapd considerably if debugging
+# code is not needed.
+#CONFIG_NO_STDOUT_DEBUG=y

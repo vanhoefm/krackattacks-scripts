@@ -502,6 +502,10 @@ ifdef NEED_BASE64
 OBJS += ../src/utils/base64.o
 endif
 
+ifdef CONFIG_NO_STDOUT_DEBUG
+CFLAGS += -DCONFIG_NO_STDOUT_DEBUG
+endif
+
 ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)

@@ -383,7 +383,7 @@ static void hostapd_acl_expire(void *eloop_ctx, void *timeout_ctx)
  */
 static RadiusRxResult
 hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
-			u8 *shared_secret, size_t shared_secret_len,
+			const u8 *shared_secret, size_t shared_secret_len,
 			void *data)
 {
 	struct hostapd_data *hapd = data;

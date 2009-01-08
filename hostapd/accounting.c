@@ -422,7 +422,8 @@ static void accounting_sta_get_id(struct hostapd_data *hapd,
  */
 static RadiusRxResult
 accounting_receive(struct radius_msg *msg, struct radius_msg *req,
-		   u8 *shared_secret, size_t shared_secret_len, void *data)
+		   const u8 *shared_secret, size_t shared_secret_len,
+		   void *data)
 {
 	if (msg->hdr->code != RADIUS_CODE_ACCOUNTING_RESPONSE) {
 		printf("Unknown RADIUS message code\n");

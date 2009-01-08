@@ -293,7 +293,8 @@ void radius_msg_dump(struct radius_msg *msg)
 }
 
 
-int radius_msg_finish(struct radius_msg *msg, u8 *secret, size_t secret_len)
+int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
+		      size_t secret_len)
 {
 	if (secret) {
 		u8 auth[MD5_MAC_LEN];
@@ -364,7 +365,7 @@ int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 }
 
 
-void radius_msg_finish_acct(struct radius_msg *msg, u8 *secret,
+void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 			    size_t secret_len)
 {
 	const u8 *addr[2];
@@ -899,7 +900,7 @@ static void encrypt_ms_key(const u8 *key, size_t key_len, u16 salt,
 
 struct radius_ms_mppe_keys *
 radius_msg_get_ms_keys(struct radius_msg *msg, struct radius_msg *sent_msg,
-		       u8 *secret, size_t secret_len)
+		       const u8 *secret, size_t secret_len)
 {
 	u8 *key;
 	size_t keylen;
@@ -940,7 +941,7 @@ radius_msg_get_ms_keys(struct radius_msg *msg, struct radius_msg *sent_msg,
 
 struct radius_ms_mppe_keys *
 radius_msg_get_cisco_keys(struct radius_msg *msg, struct radius_msg *sent_msg,
-			  u8 *secret, size_t secret_len)
+			  const u8 *secret, size_t secret_len)
 {
 	u8 *key;
 	size_t keylen;
@@ -1043,8 +1044,8 @@ int radius_msg_add_mppe_keys(struct radius_msg *msg,
  * in RFC 2865, Chap. 5.2 */
 struct radius_attr_hdr *
 radius_msg_add_attr_user_password(struct radius_msg *msg,
-				  u8 *data, size_t data_len,
-				  u8 *secret, size_t secret_len)
+				  const u8 *data, size_t data_len,
+				  const u8 *secret, size_t secret_len)
 {
 	u8 buf[128];
 	int padlen, i;

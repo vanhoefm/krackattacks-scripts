@@ -207,10 +207,11 @@ int radius_msg_initialize(struct radius_msg *msg, size_t init_len);
 void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier);
 void radius_msg_free(struct radius_msg *msg);
 void radius_msg_dump(struct radius_msg *msg);
-int radius_msg_finish(struct radius_msg *msg, u8 *secret, size_t secret_len);
+int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
+		      size_t secret_len);
 int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 			  size_t secret_len, const u8 *req_authenticator);
-void radius_msg_finish_acct(struct radius_msg *msg, u8 *secret,
+void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 			    size_t secret_len);
 struct radius_attr_hdr *radius_msg_add_attr(struct radius_msg *msg, u8 type,
 					    const u8 *data, size_t data_len);
@@ -229,10 +230,10 @@ void radius_msg_make_authenticator(struct radius_msg *msg,
 				   const u8 *data, size_t len);
 struct radius_ms_mppe_keys *
 radius_msg_get_ms_keys(struct radius_msg *msg, struct radius_msg *sent_msg,
-		       u8 *secret, size_t secret_len);
+		       const u8 *secret, size_t secret_len);
 struct radius_ms_mppe_keys *
 radius_msg_get_cisco_keys(struct radius_msg *msg, struct radius_msg *sent_msg,
-			  u8 *secret, size_t secret_len);
+			  const u8 *secret, size_t secret_len);
 int radius_msg_add_mppe_keys(struct radius_msg *msg,
 			     const u8 *req_authenticator,
 			     const u8 *secret, size_t secret_len,
@@ -240,8 +241,8 @@ int radius_msg_add_mppe_keys(struct radius_msg *msg,
 			     const u8 *recv_key, size_t recv_key_len);
 struct radius_attr_hdr *
 radius_msg_add_attr_user_password(struct radius_msg *msg,
-				  u8 *data, size_t data_len,
-				  u8 *secret, size_t secret_len);
+				  const u8 *data, size_t data_len,
+				  const u8 *secret, size_t secret_len);
 int radius_msg_get_attr(struct radius_msg *msg, u8 type, u8 *buf, size_t len);
 int radius_msg_get_vlanid(struct radius_msg *msg);
 

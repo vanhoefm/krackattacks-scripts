@@ -1042,7 +1042,8 @@ static void ieee802_1x_decapsulate_radius(struct hostapd_data *hapd,
 static void ieee802_1x_get_keys(struct hostapd_data *hapd,
 				struct sta_info *sta, struct radius_msg *msg,
 				struct radius_msg *req,
-				u8 *shared_secret, size_t shared_secret_len)
+				const u8 *shared_secret,
+				size_t shared_secret_len)
 {
 	struct radius_ms_mppe_keys *keys;
 	struct eapol_state_machine *sm = sta->eapol_sm;
@@ -1213,7 +1214,7 @@ ieee802_1x_search_radius_identifier(struct hostapd_data *hapd, u8 identifier)
  */
 static RadiusRxResult
 ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
-			u8 *shared_secret, size_t shared_secret_len,
+			const u8 *shared_secret, size_t shared_secret_len,
 			void *data)
 {
 	struct hostapd_data *hapd = data;

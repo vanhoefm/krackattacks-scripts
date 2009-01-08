@@ -35,7 +35,8 @@
 struct radius_rx_handler {
 	RadiusRxResult (*handler)(struct radius_msg *msg,
 				  struct radius_msg *req,
-				  u8 *shared_secret, size_t shared_secret_len,
+				  const u8 *shared_secret,
+				  size_t shared_secret_len,
 				  void *data);
 	void *data;
 };
@@ -106,7 +107,7 @@ int radius_client_register(struct radius_client_data *radius,
 			   RadiusType msg_type,
 			   RadiusRxResult (*handler)(struct radius_msg *msg,
 						     struct radius_msg *req,
-						     u8 *shared_secret,
+						     const u8 *shared_secret,
 						     size_t shared_secret_len,
 						     void *data),
 			   void *data)

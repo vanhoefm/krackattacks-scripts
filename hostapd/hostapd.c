@@ -286,7 +286,7 @@ static void hostapd_sim_db_cb(void *ctx, void *session_ctx)
  */
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx)
 {
-	printf("Signal %d received - terminating\n", sig);
+	wpa_printf(MSG_DEBUG, "Signal %d received - terminating", sig);
 	eloop_terminate();
 }
 
@@ -395,12 +395,14 @@ static void handle_reload(int sig, void *eloop_ctx, void *signal_ctx)
 	struct hapd_interfaces *hapds = (struct hapd_interfaces *) eloop_ctx;
 	size_t i;
 
-	printf("Signal %d received - reloading configuration\n", sig);
+	wpa_printf(MSG_DEBUG, "Signal %d received - reloading configuration",
+		   sig);
 
 	for (i = 0; i < hapds->count; i++) {
 		if (hostapd_reload_config(hapds->iface[i]) < 0) {
-			printf("Failed to read new configuration file - "
-			       "continuing with old.\n");
+			wpa_printf(MSG_WARNING, "Failed to read new "
+				   "configuration file - continuing with "
+				   "old.");
 			continue;
 		}
 	}
@@ -420,15 +422,17 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 	char *buf;
 
 	if (!hapd->conf->dump_log_name) {
-		printf("Dump file not defined - ignoring dump request\n");
+		wpa_printf(MSG_DEBUG, "Dump file not defined - ignoring dump "
+			   "request");
 		return;
 	}
 
-	printf("Dumping hostapd state to '%s'\n", hapd->conf->dump_log_name);
+	wpa_printf(MSG_DEBUG, "Dumping hostapd state to '%s'",
+		   hapd->conf->dump_log_name);
 	f = fopen(hapd->conf->dump_log_name, "w");
 	if (f == NULL) {
-		printf("Could not open dump file '%s' for writing.\n",
-		       hapd->conf->dump_log_name);
+		wpa_printf(MSG_WARNING, "Could not open dump file '%s' for "
+			   "writing.", hapd->conf->dump_log_name);
 		return;
 	}
 
@@ -530,8 +534,9 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
 		if (hostapd_set_encryption(ifname, hapd, "none", NULL, i, NULL,
 					   0, i == 0 ? 1 : 0)) {
-			printf("Failed to clear default encryption keys "
-			       "(ifname=%s keyidx=%d)\n", ifname, i);
+			wpa_printf(MSG_DEBUG, "Failed to clear default "
+				   "encryption keys (ifname=%s keyidx=%d)",
+				   ifname, i);
 		}
 	}
 #ifdef CONFIG_IEEE80211W
@@ -540,9 +545,9 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 			if (hostapd_set_encryption(ifname, hapd, "none", NULL,
 						   i, NULL, 0,
 						   i == 0 ? 1 : 0)) {
-				printf("Failed to clear default mgmt "
-				       "encryption keys (ifname=%s keyidx=%d)"
-				       "\n", ifname, i);
+				wpa_printf(MSG_DEBUG, "Failed to clear "
+					   "default mgmt encryption keys "
+					   "(ifname=%s keyidx=%d)", ifname, i);
 			}
 		}
 	}
@@ -569,7 +574,7 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 			 	   ssid->wep.key[idx],
 			 	   ssid->wep.len[idx],
 				   idx == ssid->wep.idx)) {
-		printf("Could not set WEP encryption.\n");
+		wpa_printf(MSG_WARNING, "Could not set WEP encryption.");
 		errors++;
 	}
 
@@ -590,8 +595,8 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 						   idx, key->key[idx],
 						   key->len[idx],
 						   idx == key->idx)) {
-				printf("Could not set dynamic VLAN WEP "
-				       "encryption.\n");
+				wpa_printf(MSG_WARNING, "Could not set "
+					   "dynamic VLAN WEP encryption.");
 				errors++;
 			}
 		}
@@ -668,8 +673,8 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 
 	if (hapd->interface_added &&
 	    hostapd_bss_remove(hapd, hapd->conf->iface)) {
-		printf("Failed to remove BSS interface %s\n",
-		       hapd->conf->iface);
+		wpa_printf(MSG_WARNING, "Failed to remove BSS interface %s",
+			   hapd->conf->iface);
 	}
 }
 
@@ -724,7 +729,8 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 					   i, hapd->conf->ssid.wep.key[i],
 					   hapd->conf->ssid.wep.len[i],
 					   i == hapd->conf->ssid.wep.idx)) {
-			printf("Could not set WEP encryption.\n");
+			wpa_printf(MSG_WARNING, "Could not set WEP "
+				   "encryption.");
 			return -1;
 		}
 		if (hapd->conf->ssid.wep.key[i] &&
@@ -745,7 +751,7 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 
 	wpa_printf(MSG_DEBUG, "Flushing old station entries");
 	if (hostapd_flush(hapd)) {
-		printf("Could not connect to kernel driver.\n");
+		wpa_printf(MSG_WARNING, "Could not connect to kernel driver.");
 		ret = -1;
 	}
 	wpa_printf(MSG_DEBUG, "Deauthenticate all stations");
@@ -1128,19 +1134,20 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 		return 0;
 
 	if (res < 0) {
-		printf("Driver did not accept BSSID mask " MACSTR " for start "
-		       "address " MACSTR ".\n",
-		       MAC2STR(mask), MAC2STR(hapd->own_addr));
+		wpa_printf(MSG_ERROR, "Driver did not accept BSSID mask "
+			   MACSTR " for start address " MACSTR ".",
+			   MAC2STR(mask), MAC2STR(hapd->own_addr));
 		return -1;
 	}
 
 	for (i = 0; i < ETH_ALEN; i++) {
 		if ((hapd->own_addr[i] & mask[i]) != hapd->own_addr[i]) {
-			printf("Invalid BSSID mask " MACSTR " for start "
-			       "address " MACSTR ".\n"
-			       "Start address must be the first address in the"
-			       " block (i.e., addr AND mask == addr).\n",
-			       MAC2STR(mask), MAC2STR(hapd->own_addr));
+			wpa_printf(MSG_ERROR, "Invalid BSSID mask " MACSTR
+				   " for start address " MACSTR ".",
+				   MAC2STR(mask), MAC2STR(hapd->own_addr));
+			wpa_printf(MSG_ERROR, "Start address must be the "
+				   "first address in the block (i.e., addr "
+				   "AND mask == addr).");
 			return -1;
 		}
 	}
@@ -1193,7 +1200,7 @@ static int hostapd_setup_wpa(struct hostapd_data *hapd)
 #endif /* CONFIG_IEEE80211R */
 	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb);
 	if (hapd->wpa_auth == NULL) {
-		printf("WPA initialization failed.\n");
+		wpa_printf(MSG_ERROR, "WPA initialization failed.");
 		return -1;
 	}
 
@@ -1211,8 +1218,8 @@ static int hostapd_setup_wpa(struct hostapd_data *hapd)
 	}
 
 	if (rsn_preauth_iface_init(hapd)) {
-		printf("Initialization of RSN pre-authentication "
-		       "failed.\n");
+		wpa_printf(MSG_ERROR, "Initialization of RSN "
+			   "pre-authentication failed.");
 		return -1;
 	}
 
@@ -1248,7 +1255,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd,
 
 	hapd->radius_srv = radius_server_init(&srv);
 	if (hapd->radius_srv == NULL) {
-		printf("RADIUS server initialization failed.\n");
+		wpa_printf(MSG_ERROR, "RADIUS server initialization failed.");
 		return -1;
 	}
 
@@ -1285,9 +1292,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 			if (hostapd_mac_comp(hapd->own_addr,
 					     hapd->iface->bss[0]->own_addr) ==
 			    0) {
-				printf("BSS '%s' may not have BSSID "
-				       "set to the MAC address of the radio\n",
-				       hapd->conf->iface);
+				wpa_printf(MSG_ERROR, "BSS '%s' may not have "
+					   "BSSID set to the MAC address of "
+					   "the radio", hapd->conf->iface);
 				return -1;
 			}
 		}
@@ -1295,8 +1302,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		hapd->interface_added = 1;
 		if (hostapd_bss_add(hapd->iface->bss[0], hapd->conf->iface,
 				    hapd->own_addr)) {
-			printf("Failed to add BSS (BSSID=" MACSTR ")\n",
-			       MAC2STR(hapd->own_addr));
+			wpa_printf(MSG_ERROR, "Failed to add BSS (BSSID="
+				   MACSTR ")", MAC2STR(hapd->own_addr));
 			return -1;
 		}
 	}
@@ -1308,7 +1315,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	 */
 	ssid_len = hostapd_get_ssid(hapd, ssid, sizeof(ssid));
 	if (ssid_len < 0) {
-		printf("Could not read SSID from system\n");
+		wpa_printf(MSG_ERROR, "Could not read SSID from system");
 		return -1;
 	}
 	if (conf->ssid.ssid_set) {
@@ -1331,27 +1338,28 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	}
 
 	if (!hostapd_drv_none(hapd)) {
-		printf("Using interface %s with hwaddr " MACSTR
-		       " and ssid '%s'\n",
-		       hapd->conf->iface, MAC2STR(hapd->own_addr),
-		       hapd->conf->ssid.ssid);
+		wpa_printf(MSG_ERROR, "Using interface %s with hwaddr " MACSTR
+			   " and ssid '%s'",
+			   hapd->conf->iface, MAC2STR(hapd->own_addr),
+			   hapd->conf->ssid.ssid);
 	}
 
 	if (hostapd_setup_wpa_psk(conf)) {
-		printf("WPA-PSK setup failed.\n");
+		wpa_printf(MSG_ERROR, "WPA-PSK setup failed.");
 		return -1;
 	}
 
 	/* Set flag for whether SSID is broadcast in beacons */
 	if (hostapd_set_broadcast_ssid(hapd,
 				       !!hapd->conf->ignore_broadcast_ssid)) {
-		printf("Could not set broadcast SSID flag for kernel "
-		       "driver\n");
+		wpa_printf(MSG_ERROR, "Could not set broadcast SSID flag for "
+			   "kernel driver");
 		return -1;
 	}
 
 	if (hostapd_set_dtim_period(hapd, hapd->conf->dtim_period)) {
-		printf("Could not set DTIM period for kernel driver\n");
+		wpa_printf(MSG_ERROR, "Could not set DTIM period for kernel "
+			   "driver");
 		return -1;
 	}
 
@@ -1359,7 +1367,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	 * response frames) */
 	if (set_ssid && hostapd_set_ssid(hapd, (u8 *) conf->ssid.ssid,
 					 conf->ssid.ssid_len)) {
-		printf("Could not set SSID for kernel driver\n");
+		wpa_printf(MSG_ERROR, "Could not set SSID for kernel driver");
 		return -1;
 	}
 
@@ -1367,19 +1375,19 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		conf->radius->msg_dumps = 1;
 	hapd->radius = radius_client_init(hapd, conf->radius);
 	if (hapd->radius == NULL) {
-		printf("RADIUS client initialization failed.\n");
+		wpa_printf(MSG_ERROR, "RADIUS client initialization failed.");
 		return -1;
 	}
 
 	if (hostapd_acl_init(hapd)) {
-		printf("ACL initialization failed.\n");
+		wpa_printf(MSG_ERROR, "ACL initialization failed.");
 		return -1;
 	}
 	if (hostapd_init_wps(hapd, conf))
 		return -1;
 
 	if (ieee802_1x_init(hapd)) {
-		printf("IEEE 802.1X initialization failed.\n");
+		wpa_printf(MSG_ERROR, "IEEE 802.1X initialization failed.");
 		return -1;
 	}
 
@@ -1387,23 +1395,24 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 
 	if (accounting_init(hapd)) {
-		printf("Accounting initialization failed.\n");
+		wpa_printf(MSG_ERROR, "Accounting initialization failed.");
 		return -1;
 	}
 
 	if (hapd->conf->ieee802_11f &&
 	    (hapd->iapp = iapp_init(hapd, hapd->conf->iapp_iface)) == NULL) {
-		printf("IEEE 802.11F (IAPP) initialization failed.\n");
+		wpa_printf(MSG_ERROR, "IEEE 802.11F (IAPP) initialization "
+			   "failed.");
 		return -1;
 	}
 
 	if (hostapd_ctrl_iface_init(hapd)) {
-		printf("Failed to setup control interface\n");
+		wpa_printf(MSG_ERROR, "Failed to setup control interface");
 		return -1;
 	}
 
 	if (!hostapd_drv_none(hapd) && vlan_init(hapd)) {
-		printf("VLAN initialization failed.\n");
+		wpa_printf(MSG_ERROR, "VLAN initialization failed.");
 		return -1;
 	}
 
@@ -1414,7 +1423,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		if (hapd->l2 == NULL &&
 		    (hapd->driver == NULL ||
 		     hapd->driver->send_ether == NULL)) {
-			printf("Failed to open l2_packet interface\n");
+			wpa_printf(MSG_ERROR, "Failed to open l2_packet "
+				   "interface");
 			return -1;
 		}
 	}
@@ -1444,8 +1454,8 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 
 		if (hostapd_set_tx_queue_params(hapd, i, p->aifs, p->cwmin,
 						p->cwmax, p->burst)) {
-			printf("Failed to set TX queue parameters for queue %d"
-			       ".\n", i);
+			wpa_printf(MSG_DEBUG, "Failed to set TX queue "
+				   "parameters for queue %d.", i);
 			/* Continue anyway */
 		}
 	}
@@ -1514,8 +1524,8 @@ static int setup_interface(struct hostapd_iface *iface)
 	}
 
 	if (hapd->drv_priv == NULL) {
-		printf("%s driver initialization failed.\n",
-			hapd->driver ? hapd->driver->name : "Unknown");
+		wpa_printf(MSG_ERROR, "%s driver initialization failed.",
+			   hapd->driver ? hapd->driver->name : "Unknown");
 		hapd->driver = NULL;
 		return -1;
 	}
@@ -1536,20 +1546,21 @@ static int setup_interface(struct hostapd_iface *iface)
 	os_memcpy(country, hapd->iconf->country, 3);
 	country[3] = '\0';
 	if (hostapd_set_country(hapd, country) < 0) {
-		printf("Failed to set country code\n");
+		wpa_printf(MSG_ERROR, "Failed to set country code");
 		return -1;
 	}
 
 	if (hapd->iconf->ieee80211d &&
 	    hostapd_set_ieee80211d(hapd, 1) < 0) {
-		printf("Failed to set ieee80211d (%d)\n",
-		       hapd->iconf->ieee80211d);
+		wpa_printf(MSG_ERROR, "Failed to set ieee80211d (%d)",
+			   hapd->iconf->ieee80211d);
 		return -1;
 	}
 
 	if (hapd->iconf->bridge_packets != INTERNAL_BRIDGE_DO_NOT_CONTROL &&
 	    hostapd_set_internal_bridge(hapd, hapd->iconf->bridge_packets)) {
-		printf("Failed to set bridge_packets for kernel driver\n");
+		wpa_printf(MSG_ERROR, "Failed to set bridge_packets for "
+			   "kernel driver");
 		return -1;
 	}
 
@@ -1563,8 +1574,8 @@ static int setup_interface(struct hostapd_iface *iface)
 	} else {
 		int ret = hostapd_select_hw_mode(iface);
 		if (ret < 0) {
-			printf("Could not select hw_mode and channel. (%d)\n",
-			       ret);
+			wpa_printf(MSG_ERROR, "Could not select hw_mode and "
+				   "channel. (%d)", ret);
 			return -1;
 		}
 	}
@@ -1574,14 +1585,16 @@ static int setup_interface(struct hostapd_iface *iface)
 
 	if (hapd->iconf->channel) {
 		freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
-		printf("Mode: %s  Channel: %d  Frequency: %d MHz\n",
-		       hostapd_hw_mode_txt(hapd->iconf->hw_mode),
-		       hapd->iconf->channel, freq);
+		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
+			   "Frequency: %d MHz",
+			   hostapd_hw_mode_txt(hapd->iconf->hw_mode),
+			   hapd->iconf->channel, freq);
 
 		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, freq,
 				     hapd->iconf->ieee80211n,
 				     hapd->iconf->secondary_channel)) {
-			printf("Could not set channel for kernel driver\n");
+			wpa_printf(MSG_ERROR, "Could not set channel for "
+				   "kernel driver");
 			return -1;
 		}
 	}
@@ -1595,14 +1608,15 @@ static int setup_interface(struct hostapd_iface *iface)
 
 	if (hapd->iconf->rts_threshold > -1 &&
 	    hostapd_set_rts(hapd, hapd->iconf->rts_threshold)) {
-		printf("Could not set RTS threshold for kernel driver\n");
+		wpa_printf(MSG_ERROR, "Could not set RTS threshold for "
+			   "kernel driver");
 		return -1;
 	}
 
 	if (hapd->iconf->fragm_threshold > -1 &&
 	    hostapd_set_frag(hapd, hapd->iconf->fragm_threshold)) {
-		printf("Could not set fragmentation threshold for kernel "
-		       "driver\n");
+		wpa_printf(MSG_ERROR, "Could not set fragmentation threshold "
+			   "for kernel driver");
 		return -1;
 	}
 
@@ -1732,7 +1746,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 
 		hapd->ssl_ctx = tls_init(NULL);
 		if (hapd->ssl_ctx == NULL) {
-			printf("Failed to initialize TLS\n");
+			wpa_printf(MSG_ERROR, "Failed to initialize TLS");
 			goto fail;
 		}
 
@@ -1744,13 +1758,13 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 		params.dh_file = hapd->conf->dh_file;
 
 		if (tls_global_set_params(hapd->ssl_ctx, &params)) {
-			printf("Failed to set TLS parameters\n");
+			wpa_printf(MSG_ERROR, "Failed to set TLS parameters");
 			goto fail;
 		}
 
 		if (tls_global_set_verify(hapd->ssl_ctx,
 					  hapd->conf->check_crl)) {
-			printf("Failed to enable check_crl\n");
+			wpa_printf(MSG_ERROR, "Failed to enable check_crl");
 			goto fail;
 		}
 	}
@@ -1762,8 +1776,8 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 			eap_sim_db_init(hapd->conf->eap_sim_db,
 					hostapd_sim_db_cb, hapd);
 		if (hapd->eap_sim_db_priv == NULL) {
-			printf("Failed to initialize EAP-SIM database "
-			       "interface\n");
+			wpa_printf(MSG_ERROR, "Failed to initialize EAP-SIM "
+				   "database interface");
 			goto fail;
 		}
 	}
@@ -1921,7 +1935,8 @@ int main(int argc, char *argv[])
 
 	/* Initialize interfaces */
 	for (i = 0; i < interfaces.count; i++) {
-		printf("Configuration file: %s\n", argv[optind + i]);
+		wpa_printf(MSG_ERROR, "Configuration file: %s",
+			   argv[optind + i]);
 		interfaces.iface[i] = hostapd_init(argv[optind + i]);
 		if (!interfaces.iface[i])
 			goto out;

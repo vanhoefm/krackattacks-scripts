@@ -140,9 +140,14 @@ static void eapol_auth_tx_req(struct eapol_state_machine *sm)
 }
 
 
-/* Port Timers state machine - implemented as a function that will be called
- * once a second as a registered event loop timeout */
-
+/**
+ * eapol_port_timers_tick - Port Timers state machine
+ * @eloop_ctx: struct eapol_state_machine *
+ * @timeout_ctx: Not used
+ *
+ * This statemachine is implemented as a function that will be called
+ * once a second as a registered event loop timeout.
+ */
 static void eapol_port_timers_tick(void *eloop_ctx, void *timeout_ctx)
 {
 	struct eapol_state_machine *state = timeout_ctx;
@@ -941,6 +946,13 @@ static void eapol_sm_step_cb(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+/**
+ * eapol_auth_step - Advance EAPOL state machines
+ * @sm: EAPOL state machine
+ *
+ * This function is called to advance EAPOL state machines after any change
+ * that could affect their state.
+ */
 void eapol_auth_step(struct eapol_state_machine *sm)
 {
 	/*

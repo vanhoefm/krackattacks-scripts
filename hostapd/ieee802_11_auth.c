@@ -10,6 +10,11 @@
  * license.
  *
  * See README and COPYING for more details.
+ *
+ * Access control list for IEEE 802.11 authentication can uses statically
+ * configured ACL from configuration files or an external RADIUS server.
+ * Results from external RADIUS queries are cached to allow faster
+ * authentication frame processing.
  */
 
 #include "includes.h"
@@ -193,6 +198,17 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
+/**
+ * hostapd_allowed_address - Check whether a specified STA can be authenticated
+ * @hapd: hostapd BSS data
+ * @addr: MAC address of the STA
+ * @msg: Authentication message
+ * @len: Length of msg in octets
+ * @session_timeout: Buffer for returning session timeout (from RADIUS)
+ * @acct_interim_interval: Buffer for returning account interval (from RADIUS)
+ * @vlan_id: Buffer for returning VLAN ID
+ * Returns: HOSTAPD_ACL_ACCEPT, HOSTAPD_ACL_REJECT, or HOSTAPD_ACL_PENDING
+ */
 int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    const u8 *msg, size_t len, u32 *session_timeout,
 			    u32 *acct_interim_interval, int *vlan_id)
@@ -337,6 +353,11 @@ static void hostapd_acl_expire_queries(struct hostapd_data *hapd, time_t now)
 }
 
 
+/**
+ * hostapd_acl_expire - ACL cache expiration callback
+ * @eloop_ctx: struct hostapd_data *
+ * @timeout_ctx: Not used
+ */
 static void hostapd_acl_expire(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
@@ -350,8 +371,16 @@ static void hostapd_acl_expire(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-/* Return 0 if RADIUS message was a reply to ACL query (and was processed here)
- * or -1 if not. */
+/**
+ * hostapd_acl_recv_radius - Process incoming RADIUS Authentication messages
+ * @msg: RADIUS response message
+ * @req: RADIUS request message
+ * @shared_secret: RADIUS shared secret
+ * @shared_secret_len: Length of shared_secret in octets
+ * @data: Context data (struct hostapd_data *)
+ * Returns: RADIUS_RX_PROCESSED if RADIUS message was a reply to ACL query (and
+ * was processed here) or RADIUS_RX_UNKNOWN if not.
+ */
 static RadiusRxResult
 hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 			u8 *shared_secret, size_t shared_secret_len,
@@ -443,6 +472,11 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 }
 
 
+/**
+ * hostapd_acl_init: Initialize IEEE 802.11 ACL
+ * @hapd: hostapd BSS data
+ * Returns: 0 on success, -1 on failure
+ */
 int hostapd_acl_init(struct hostapd_data *hapd)
 {
 	if (radius_client_register(hapd->radius, RADIUS_AUTH,
@@ -455,6 +489,10 @@ int hostapd_acl_init(struct hostapd_data *hapd)
 }
 
 
+/**
+ * hostapd_acl_deinit - Deinitialize IEEE 802.11 ACL
+ * @hapd: hostapd BSS data
+ */
 void hostapd_acl_deinit(struct hostapd_data *hapd)
 {
 	struct hostapd_acl_query_data *query, *prev;

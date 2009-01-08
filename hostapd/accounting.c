@@ -225,6 +225,11 @@ static void accounting_interim_update(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+/**
+ * accounting_sta_start - Start STA accounting
+ * @hapd: hostapd BSS data
+ * @sta: The station
+ */
 void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	struct radius_msg *msg;
@@ -363,6 +368,11 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 }
 
 
+/**
+ * accounting_sta_interim - Send a interim STA accounting report
+ * @hapd: hostapd BSS data
+ * @sta: The station
+ */
 void accounting_sta_interim(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	if (sta->acct_session_started)
@@ -370,6 +380,11 @@ void accounting_sta_interim(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
+/**
+ * accounting_sta_stop - Stop STA accounting
+ * @hapd: hostapd BSS data
+ * @sta: The station
+ */
 void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	if (sta->acct_session_started) {
@@ -396,7 +411,15 @@ static void accounting_sta_get_id(struct hostapd_data *hapd,
 }
 
 
-/* Process the RADIUS frames from Accounting Server */
+/**
+ * accounting_receive - Process the RADIUS frames from Accounting Server
+ * @msg: RADIUS response message
+ * @req: RADIUS request message
+ * @shared_secret: RADIUS shared secret
+ * @shared_secret_len: Length of shared_secret in octets
+ * @data: Context data (struct hostapd_data *)
+ * Returns: Processing status
+ */
 static RadiusRxResult
 accounting_receive(struct radius_msg *msg, struct radius_msg *req,
 		   u8 *shared_secret, size_t shared_secret_len, void *data)
@@ -444,6 +467,11 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
 }
 
 
+/**
+ * accounting_init: Initialize accounting
+ * @hapd: hostapd BSS data
+ * Returns: 0 on success, -1 on failure
+ */
 int accounting_init(struct hostapd_data *hapd)
 {
 	/* Acct-Session-Id should be unique over reboots. If reliable clock is
@@ -460,6 +488,10 @@ int accounting_init(struct hostapd_data *hapd)
 }
 
 
+/**
+ * accounting_deinit: Deinitilize accounting
+ * @hapd: hostapd BSS data
+ */
 void accounting_deinit(struct hostapd_data *hapd)
 {
 	accounting_report_state(hapd, 0);

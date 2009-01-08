@@ -1377,6 +1377,11 @@ static int hostapd_config_ht_capab(struct hostapd_config *conf,
 #endif /* CONFIG_IEEE80211N */
 
 
+/**
+ * hostapd_config_read - Read and parse a configuration file
+ * @fname: Configuration file name (including path, if needed)
+ * Returns: Allocated configuration data structure
+ */
 struct hostapd_config * hostapd_config_read(const char *fname)
 {
 	struct hostapd_config *conf;
@@ -2366,6 +2371,10 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 }
 
 
+/**
+ * hostapd_config_free - Free hostapd configuration
+ * @conf: Configuration data from hostapd_config_read().
+ */
 void hostapd_config_free(struct hostapd_config *conf)
 {
 	size_t i;
@@ -2381,8 +2390,16 @@ void hostapd_config_free(struct hostapd_config *conf)
 }
 
 
-/* Perform a binary search for given MAC address from a pre-sorted list.
- * Returns 1 if address is in the list or 0 if not. */
+/**
+ * hostapd_maclist_found - Find a MAC address from a list
+ * @list: MAC address list
+ * @num_entries: Number of addresses in the list
+ * @addr: Address to search for
+ * @vlan_id: Buffer for returning VLAN ID or %NULL if not needed
+ * Returns: 1 if address is in the list or 0 if not.
+ *
+ * Perform a binary search for given MAC address from a pre-sorted list.
+ */
 int hostapd_maclist_found(struct mac_acl_entry *list, int num_entries,
 			  const u8 *addr, int *vlan_id)
 {

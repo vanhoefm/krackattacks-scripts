@@ -116,6 +116,14 @@ static int ieee802_11_parse_vendor_specific(u8 *pos, size_t elen,
 }
 
 
+/**
+ * ieee802_11_parse_elems - Parse information elements in management frames
+ * @start: Pointer to the start of IEs
+ * @len: Length of IE buffer in octets
+ * @elems: Data structure for parsed elements
+ * @show_errors: Whether to show parsing errors in debug log
+ * Returns: Parsing result
+ */
 ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 				struct ieee802_11_elems *elems,
 				int show_errors)

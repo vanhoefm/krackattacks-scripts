@@ -335,6 +335,12 @@ void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len)
 }
 
 
+/**
+ * ieee802_11_send_deauth - Send Deauthentication frame
+ * @hapd: hostapd BSS data
+ * @addr: Address of the destination STA
+ * @reason: Reason code for Deauthentication
+ */
 void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason)
 {
 	struct ieee80211_mgmt mgmt;
@@ -1631,6 +1637,15 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 }
 
 
+/**
+ * ieee802_11_mgmt_cb - Process management frame TX status callback
+ * @hapd: hostapd BSS data structure (the BSS from which the management frame
+ * was sent from)
+ * @buf: management frame data (starting from IEEE 802.11 header)
+ * @len: length of frame data in octets
+ * @stype: management frame subtype from frame control field
+ * @ok: Whether the frame was ACK'ed
+ */
 void ieee802_11_mgmt_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok)
 {

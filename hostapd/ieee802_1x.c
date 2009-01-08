@@ -647,7 +647,15 @@ static void handle_eap(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
-/* Process the EAPOL frames from the Supplicant */
+/**
+ * ieee802_1x_receive - Process the EAPOL frames from the Supplicant
+ * @hapd: hostapd BSS data
+ * @sa: Source address (sender of the EAPOL frame)
+ * @buf: EAPOL frame
+ * @len: Length of buf in octets
+ *
+ * This function is called for each incoming EAPOL frame from the interface
+ */
 void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 			size_t len)
 {
@@ -796,6 +804,14 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 }
 
 
+/**
+ * ieee802_1x_new_station - Start IEEE 802.1X authentication
+ * @hapd: hostapd BSS data
+ * @sta: The station
+ *
+ * This function is called to start IEEE 802.1X authentication when a new
+ * station completes IEEE 802.11 association.
+ */
 void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	struct rsn_pmksa_cache_entry *pmksa;
@@ -1186,7 +1202,15 @@ ieee802_1x_search_radius_identifier(struct hostapd_data *hapd, u8 identifier)
 }
 
 
-/* Process the RADIUS frames from Authentication Server */
+/**
+ * ieee802_1x_receive_auth - Process RADIUS frames from Authentication Server
+ * @msg: RADIUS response message
+ * @req: RADIUS request message
+ * @shared_secret: RADIUS shared secret
+ * @shared_secret_len: Length of shared_secret in octets
+ * @data: Context data (struct hostapd_data *)
+ * Returns: Processing status
+ */
 static RadiusRxResult
 ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 			u8 *shared_secret, size_t shared_secret_len,

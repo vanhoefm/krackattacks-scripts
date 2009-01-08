@@ -281,6 +281,9 @@ static void hostapd_sim_db_cb(void *ctx, void *session_ctx)
 #endif /* EAP_SERVER */
 
 
+/**
+ * handle_term - SIGINT and SIGTERM handler to terminate hostapd process
+ */
 static void handle_term(int sig, void *eloop_ctx, void *signal_ctx)
 {
 	printf("Signal %d received - terminating\n", sig);
@@ -384,6 +387,9 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 
 
 #ifndef CONFIG_NATIVE_WINDOWS
+/**
+ * handle_reload - SIGHUP handler to reload configuration
+ */
 static void handle_reload(int sig, void *eloop_ctx, void *signal_ctx)
 {
 	struct hapd_interfaces *hapds = (struct hapd_interfaces *) eloop_ctx;
@@ -402,6 +408,9 @@ static void handle_reload(int sig, void *eloop_ctx, void *signal_ctx)
 
 
 #ifdef HOSTAPD_DUMP_STATE
+/**
+ * hostapd_dump_state - SIGUSR1 handler to dump hostapd state to a text file
+ */
 static void hostapd_dump_state(struct hostapd_data *hapd)
 {
 	FILE *f;

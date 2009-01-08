@@ -13,7 +13,7 @@
  *
  * Note: IEEE 802.11F-2003 was a experimental use specification. It has expired
  * and IEEE has withdrawn it. In other words, it is likely better to look at
- * using some other mechanism for AP-to-AP communication than extenting the
+ * using some other mechanism for AP-to-AP communication than extending the
  * implementation here.
  */
 
@@ -238,6 +238,11 @@ static void iapp_send_layer2_update(struct iapp_data *iapp, u8 *addr)
 }
 
 
+/**
+ * iapp_new_station - IAPP processing for a new STA
+ * @iapp: IAPP data
+ * @sta: The associated station
+ */
 void iapp_new_station(struct iapp_data *iapp, struct sta_info *sta)
 {
 	struct ieee80211_mgmt *assoc;
@@ -306,6 +311,12 @@ static void iapp_process_add_notify(struct iapp_data *iapp,
 }
 
 
+/**
+ * iapp_receive_udp - Process IAPP UDP frames
+ * @sock: File descriptor for the socket
+ * @eloop_ctx: IAPP data (struct iapp_data *)
+ * @sock_ctx: Not used
+ */
 static void iapp_receive_udp(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct iapp_data *iapp = eloop_ctx;

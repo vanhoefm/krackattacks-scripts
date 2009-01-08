@@ -219,6 +219,14 @@ void hostapd_free_stas(struct hostapd_data *hapd)
 }
 
 
+/**
+ * ap_handle_timer - Per STA timer handler
+ * @eloop_ctx: struct hostapd_data *
+ * @timeout_ctx: struct sta_info *
+ *
+ * This function is called to check station activity and to remove inactive
+ * stations.
+ */
 void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;

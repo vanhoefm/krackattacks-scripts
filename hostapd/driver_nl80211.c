@@ -81,6 +81,10 @@ struct i802_driver_data {
 };
 
 
+static int i802_sta_deauth(void *priv, const u8 *addr, int reason);
+static int i802_sta_disassoc(void *priv, const u8 *addr, int reason);
+
+
 static void add_ifidx(struct i802_driver_data *drv, int ifidx)
 {
 	int i;
@@ -1631,21 +1635,21 @@ static int i802_set_country(void *priv, const char *country)
 }
 
 
-static void handle_unknown_sta(struct hostapd_data *hapd, u8 *ta)
+static void handle_unknown_sta(struct i802_driver_data *drv, u8 *ta)
 {
 	struct sta_info *sta;
 
-	sta = ap_get_sta(hapd, ta);
+	sta = ap_get_sta(drv->hapd, ta);
 	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
 		printf("Data/PS-poll frame from not associated STA "
 		       MACSTR "\n", MAC2STR(ta));
 		if (sta && (sta->flags & WLAN_STA_AUTH))
-			hostapd_sta_disassoc(
-				hapd, ta,
+			i802_sta_disassoc(
+				drv, ta,
 				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
 		else
-			hostapd_sta_deauth(
-				hapd, ta,
+			i802_sta_deauth(
+				drv, ta,
 				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
 	}
 }
@@ -1695,7 +1699,8 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 }
 
 
-static void handle_frame(struct hostapd_iface *iface, u8 *buf, size_t len,
+static void handle_frame(struct i802_driver_data *drv,
+			 struct hostapd_iface *iface, u8 *buf, size_t len,
 			 struct hostapd_frame_info *hfi,
 			 enum ieee80211_msg_type msg_type)
 {
@@ -1801,10 +1806,10 @@ static void handle_frame(struct hostapd_iface *iface, u8 *buf, size_t len,
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
 		wpa_printf(MSG_DEBUG, "CTRL");
-		handle_unknown_sta(hapd, hdr->addr2);
+		handle_unknown_sta(drv, hdr->addr2);
 		break;
 	case WLAN_FC_TYPE_DATA:
-		handle_unknown_sta(hapd, hdr->addr2);
+		handle_unknown_sta(drv, hdr->addr2);
 		break;
 	}
 }
@@ -1903,7 +1908,7 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 	else
 		msg_type = ieee80211_msg_tx_callback_ack;
 
-	handle_frame(hapd->iface, buf + iter.max_length,
+	handle_frame(drv, hapd->iface, buf + iter.max_length,
 		     len - iter.max_length, &hfi, msg_type);
 }
 

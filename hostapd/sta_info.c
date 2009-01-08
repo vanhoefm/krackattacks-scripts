@@ -25,7 +25,7 @@
 #include "wpa.h"
 #include "preauth.h"
 #include "radius/radius_client.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "beacon.h"
 #include "hw_features.h"
 #include "mlme.h"

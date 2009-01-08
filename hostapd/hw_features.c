@@ -18,7 +18,7 @@
 
 #include "hostapd.h"
 #include "hw_features.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "config.h"
 
 

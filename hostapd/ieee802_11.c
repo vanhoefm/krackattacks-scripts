@@ -34,7 +34,7 @@
 #include "wme.h"
 #include "ap_list.h"
 #include "accounting.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "mlme.h"
 
 

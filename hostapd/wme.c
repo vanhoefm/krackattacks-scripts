@@ -19,7 +19,7 @@
 #include "ieee802_11.h"
 #include "wme.h"
 #include "sta_info.h"
-#include "driver.h"
+#include "driver_i.h"
 
 
 /* TODO: maintain separate sequence and fragment numbers for each AC

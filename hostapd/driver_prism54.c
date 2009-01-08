@@ -1052,7 +1052,7 @@ static void * prism54_driver_init(struct hostapd_data *hapd)
 	}
 	prism54_init_1x(drv);
 	/* must clean previous elems */
-	hostapd_set_generic_elem(hapd, NULL, 0);
+	prism54_set_generic_elem(drv->iface, drv, NULL, 0);
 
 	return drv;
 }

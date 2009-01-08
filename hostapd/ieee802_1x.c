@@ -27,7 +27,7 @@
 #include "wpa.h"
 #include "preauth.h"
 #include "pmksa_cache.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "hw_features.h"
 #include "eap_server/eap.h"
 #include "ieee802_11_defs.h"

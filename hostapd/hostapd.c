@@ -30,7 +30,7 @@
 #include "ieee802_11_auth.h"
 #include "ap_list.h"
 #include "sta_info.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
 #include "wpa.h"

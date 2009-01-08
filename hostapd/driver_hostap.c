@@ -1,6 +1,6 @@
 /*
  * hostapd / Kernel driver communication with Linux Host AP driver
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -63,8 +63,10 @@ struct hostap_driver_data {
 static int hostapd_ioctl(void *priv, struct prism2_hostapd_param *param,
 			 int len);
 static int hostap_set_iface_flags(void *priv, int dev_up);
+static int hostap_sta_disassoc(void *priv, const u8 *addr, int reason);
+static int hostap_sta_deauth(void *priv, const u8 *addr, int reason);
 
-static void handle_data(struct hostapd_data *hapd, u8 *buf, size_t len,
+static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 			u16 stype)
 {
 	struct ieee80211_hdr *hdr;
@@ -85,17 +87,17 @@ static void handle_data(struct hostapd_data *hapd, u8 *buf, size_t len,
 	}
 
 	sa = hdr->addr2;
-	sta = ap_get_sta(hapd, sa);
+	sta = ap_get_sta(drv->hapd, sa);
 	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
 		printf("Data frame from not associated STA " MACSTR "\n",
 		       MAC2STR(sa));
 		if (sta && (sta->flags & WLAN_STA_AUTH))
-			hostapd_sta_disassoc(
-				hapd, sa,
+			hostap_sta_disassoc(
+				drv, sa,
 				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
 		else
-			hostapd_sta_deauth(
-				hapd, sa,
+			hostap_sta_deauth(
+				drv, sa,
 				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
 		return;
 	}
@@ -125,7 +127,7 @@ static void handle_data(struct hostapd_data *hapd, u8 *buf, size_t len,
 	left -= 2;
 	switch (ethertype) {
 	case ETH_P_PAE:
-		ieee802_1x_receive(hapd, sa, pos, left);
+		ieee802_1x_receive(drv->hapd, sa, pos, left);
 		break;
 
 	default:
@@ -135,8 +137,8 @@ static void handle_data(struct hostapd_data *hapd, u8 *buf, size_t len,
 }
 
 
-static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
-			       int ok)
+static void handle_tx_callback(struct hostap_driver_data *drv, u8 *buf,
+			       size_t len, int ok)
 {
 	struct ieee80211_hdr *hdr;
 	u16 fc, type, stype;
@@ -152,7 +154,7 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 	case WLAN_FC_TYPE_MGMT:
 		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
 			   ok ? "ACK" : "fail");
-		ieee802_11_mgmt_cb(hapd, buf, len, stype, ok);
+		ieee802_11_mgmt_cb(drv->hapd, buf, len, stype, ok);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
@@ -161,7 +163,7 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 	case WLAN_FC_TYPE_DATA:
 		wpa_printf(MSG_DEBUG, "DATA (TX callback) %s",
 			   ok ? "ACK" : "fail");
-		sta = ap_get_sta(hapd, hdr->addr1);
+		sta = ap_get_sta(drv->hapd, hdr->addr1);
 		if (sta && sta->flags & WLAN_STA_PENDING_POLL) {
 			wpa_printf(MSG_DEBUG, "STA " MACSTR
 				   " %s pending activity poll",
@@ -171,7 +173,7 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 				sta->flags &= ~WLAN_STA_PENDING_POLL;
 		}
 		if (sta)
-			ieee802_1x_tx_status(hapd, sta, buf, len, ok);
+			ieee802_1x_tx_status(drv->hapd, sta, buf, len, ok);
 		break;
 	default:
 		printf("unknown TX callback frame type %d\n", type);
@@ -180,7 +182,7 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 }
 
 
-static void handle_frame(struct hostapd_data *hapd, u8 *buf, size_t len)
+static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 {
 	struct ieee80211_hdr *hdr;
 	u16 fc, extra_len, type, stype;
@@ -222,7 +224,7 @@ static void handle_frame(struct hostapd_data *hapd, u8 *buf, size_t len)
 		len -= extra_len + 2;
 		extra = buf + len;
 	} else if (ver == 1 || ver == 2) {
-		handle_tx_callback(hapd, buf, data_len, ver == 2 ? 1 : 0);
+		handle_tx_callback(drv, buf, data_len, ver == 2 ? 1 : 0);
 		return;
 	} else if (ver != 0) {
 		printf("unknown protocol version %d\n", ver);
@@ -233,14 +235,14 @@ static void handle_frame(struct hostapd_data *hapd, u8 *buf, size_t len)
 	case WLAN_FC_TYPE_MGMT:
 		if (stype != WLAN_FC_STYPE_BEACON)
 			wpa_printf(MSG_MSGDUMP, "MGMT");
-		ieee802_11_mgmt(hapd, buf, data_len, stype, NULL);
+		ieee802_11_mgmt(drv->hapd, buf, data_len, stype, NULL);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		wpa_printf(MSG_DEBUG, "CTRL");
 		break;
 	case WLAN_FC_TYPE_DATA:
 		wpa_printf(MSG_DEBUG, "DATA");
-		handle_data(hapd, buf, data_len, stype);
+		handle_data(drv, buf, data_len, stype);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "unknown frame type %d", type);
@@ -251,7 +253,7 @@ static void handle_frame(struct hostapd_data *hapd, u8 *buf, size_t len)
 
 static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
-	struct hostapd_data *hapd = (struct hostapd_data *) eloop_ctx;
+	struct hostap_driver_data *drv = eloop_ctx;
 	int len;
 	unsigned char buf[3000];
 
@@ -261,7 +263,7 @@ static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	handle_frame(hapd, buf, len);
+	handle_frame(drv, buf, len);
 }
 
 
@@ -276,8 +278,7 @@ static int hostap_init_sockets(struct hostap_driver_data *drv)
 		return -1;
 	}
 
-	if (eloop_register_read_sock(drv->sock, handle_read, drv->hapd, NULL))
-	{
+	if (eloop_register_read_sock(drv->sock, handle_read, drv, NULL)) {
 		printf("Could not register read socket\n");
 		return -1;
 	}

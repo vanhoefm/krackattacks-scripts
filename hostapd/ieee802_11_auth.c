@@ -27,7 +27,6 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eloop.h"
-#include "driver.h"
 
 #define RADIUS_ACL_TIMEOUT 30
 

@@ -25,7 +25,7 @@
 #include "wme.h"
 #include "beacon.h"
 #include "hw_features.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "sta_info.h"
 #include "wps_hostapd.h"
 

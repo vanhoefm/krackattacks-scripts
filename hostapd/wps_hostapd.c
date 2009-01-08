@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "hostapd.h"
-#include "driver.h"
+#include "driver_i.h"
 #include "eloop.h"
 #include "uuid.h"
 #include "wpa_ctrl.h"

@@ -39,10 +39,10 @@ LIBS += -lws2_32
 endif
 
 OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
-	ieee802_11.o config.o ieee802_11_auth.o accounting.o \
+	config.o ieee802_11_auth.o accounting.o \
 	sta_info.o wpa.o ctrl_iface.o \
-	drivers.o preauth.o pmksa_cache.o beacon.o \
-	hw_features.o wme.o ap_list.o \
+	drivers.o preauth.o pmksa_cache.o \
+	hw_features.o \
 	mlme.o vlan_init.o wpa_auth_ie.o
 
 OBJS += ../src/utils/eloop.o
@@ -101,6 +101,7 @@ CFLAGS += -DCONFIG_IEEE80211N
 endif
 
 ifdef CONFIG_DRIVER_HOSTAP
+NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_HOSTAP
 OBJS += driver_hostap.o
 endif
@@ -122,6 +123,7 @@ OBJS += driver_prism54.o
 endif
 
 ifdef CONFIG_DRIVER_NL80211
+NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_NL80211
 OBJS += driver_nl80211.o radiotap.o
 LIBS += -lnl
@@ -140,6 +142,7 @@ CONFIG_L2_FREEBSD=y
 endif
 
 ifdef CONFIG_DRIVER_TEST
+NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_TEST
 OBJS += driver_test.o
 endif
@@ -500,6 +503,11 @@ endif
 
 ifdef NEED_BASE64
 OBJS += ../src/utils/base64.o
+endif
+
+ifdef NEED_MLME
+OBJS += beacon.o wme.o ap_list.o ieee802_11.o
+CFLAGS += -DNEED_MLME
 endif
 
 ifdef CONFIG_NO_STDOUT_DEBUG

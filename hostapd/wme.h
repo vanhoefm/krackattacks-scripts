@@ -122,7 +122,15 @@ struct ieee80211_mgmt;
 
 u8 * hostapd_eid_wme(struct hostapd_data *hapd, u8 *eid);
 int hostapd_eid_wme_valid(struct hostapd_data *hapd, u8 *eid, size_t len);
+#ifdef NEED_MLME
 int hostapd_wme_sta_config(struct hostapd_data *hapd, struct sta_info *sta);
+#else /* NEED_MLME */
+static inline int hostapd_wme_sta_config(struct hostapd_data *hapd,
+					 struct sta_info *sta)
+{
+	return 0;
+}
+#endif /* NEED_MLME */
 void hostapd_wme_action(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 			size_t len);
 

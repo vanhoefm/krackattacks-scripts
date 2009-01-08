@@ -30,6 +30,7 @@
 #include "sta_info.h"
 #include "accounting.h"
 #include "wps_hostapd.h"
+#include "driver.h"
 
 
 struct wpa_ctrl_dst {

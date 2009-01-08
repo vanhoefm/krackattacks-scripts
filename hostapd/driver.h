@@ -16,6 +16,20 @@
 #ifndef DRIVER_H
 #define DRIVER_H
 
+struct hostapd_data;
+
+struct hostap_sta_driver_data {
+	unsigned long rx_packets, tx_packets, rx_bytes, tx_bytes;
+	unsigned long current_tx_rate;
+	unsigned long inactive_msec;
+	unsigned long flags;
+	unsigned long num_ps_buf_frames;
+	unsigned long tx_retry_failed;
+	unsigned long tx_retry_count;
+	int last_rssi;
+	int last_ack_rssi;
+};
+
 struct hostapd_sta_add_params {
 	const u8 *addr;
 	u16 aid;
@@ -196,5 +210,8 @@ struct wpa_driver_ops {
 	int (*set_wps_probe_resp_ie)(const char *ifname, void *priv,
 				     const u8 *ie, size_t len);
 };
+
+void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
+			   int reassoc);
 
 #endif /* DRIVER_H */

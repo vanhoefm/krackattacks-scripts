@@ -529,7 +529,7 @@ static int i802_set_rts(void *priv, int rts)
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 	iwr.u.rts.value = rts;
 	iwr.u.rts.fixed = 1;
 
@@ -548,7 +548,7 @@ static int i802_get_rts(void *priv, int *rts)
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWRTS, &iwr) < 0) {
 		perror("ioctl[SIOCGIWRTS]");
@@ -567,7 +567,7 @@ static int i802_set_frag(void *priv, int frag)
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 	iwr.u.frag.value = frag;
 	iwr.u.frag.fixed = 1;
 
@@ -586,7 +586,7 @@ static int i802_get_frag(void *priv, int *frag)
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWFRAG, &iwr) < 0) {
 		perror("ioctl[SIOCGIWFRAG]");
@@ -605,7 +605,7 @@ static int i802_set_retry(void *priv, int short_retry, int long_retry)
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 
 	iwr.u.retry.value = short_retry;
 	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MIN;
@@ -631,7 +631,7 @@ static int i802_get_retry(void *priv, int *short_retry, int *long_retry)
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 
 	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MIN;
 	if (ioctl(drv->ioctl_sock, SIOCGIWRETRY, &iwr) < 0) {
@@ -1009,8 +1009,7 @@ static int nl80211_create_iface(struct i802_driver_data *drv,
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_NEW_INTERFACE, 0);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
-		    if_nametoindex(drv->hapd->conf->iface));
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
 	NLA_PUT_STRING(msg, NL80211_ATTR_IFNAME, ifname);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, iftype);
 

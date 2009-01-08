@@ -19,83 +19,10 @@
 
 #include "common.h"
 #include "ap.h"
-
-#ifndef ETH_ALEN
-#define ETH_ALEN 6
-#endif
-#ifndef IFNAMSIZ
-#define IFNAMSIZ 16
-#endif
-#ifndef ETH_P_ALL
-#define ETH_P_ALL 0x0003
-#endif
-#ifndef ETH_P_PAE
-#define ETH_P_PAE 0x888E /* Port Access Entity (IEEE 802.1X) */
-#endif /* ETH_P_PAE */
-#ifndef ETH_P_EAPOL
-#define ETH_P_EAPOL ETH_P_PAE
-#endif /* ETH_P_EAPOL */
-
-#ifndef ETH_P_RRB
-#define ETH_P_RRB 0x890D
-#endif /* ETH_P_RRB */
-
+#include "hostapd_defs.h"
 #include "config.h"
 
-#ifdef _MSC_VER
-#pragma pack(push, 1)
-#endif /* _MSC_VER */
-
-#define MAX_VLAN_ID 4094
-
-struct ieee8023_hdr {
-	u8 dest[6];
-	u8 src[6];
-	u16 ethertype;
-} STRUCT_PACKED;
-
-
-struct ieee80211_hdr {
-	le16 frame_control;
-	le16 duration_id;
-	u8 addr1[6];
-	u8 addr2[6];
-	u8 addr3[6];
-	le16 seq_ctrl;
-	/* followed by 'u8 addr4[6];' if ToDS and FromDS is set in data frame
-	 */
-} STRUCT_PACKED;
-
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif /* _MSC_VER */
-
-#define IEEE80211_DA_FROMDS addr1
-#define IEEE80211_BSSID_FROMDS addr2
-#define IEEE80211_SA_FROMDS addr3
-
-#define IEEE80211_HDRLEN (sizeof(struct ieee80211_hdr))
-
-#define IEEE80211_FC(type, stype) host_to_le16((type << 2) | (stype << 4))
-
-/* MTU to be set for the wlan#ap device; this is mainly needed for IEEE 802.1X
- * frames that might be longer than normal default MTU and they are not
- * fragmented */
-#define HOSTAPD_MTU 2290
-
 extern unsigned char rfc1042_header[6];
-
-struct hostap_sta_driver_data {
-	unsigned long rx_packets, tx_packets, rx_bytes, tx_bytes;
-	unsigned long current_tx_rate;
-	unsigned long inactive_msec;
-	unsigned long flags;
-	unsigned long num_ps_buf_frames;
-	unsigned long tx_retry_failed;
-	unsigned long tx_retry_count;
-	int last_rssi;
-	int last_ack_rssi;
-};
 
 struct wpa_driver_ops;
 struct wpa_ctrl_dst;
@@ -228,8 +155,6 @@ struct hostapd_iface {
 #endif /* CONFIG_IEEE80211N */
 };
 
-void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
-			   int reassoc);
 int hostapd_reload_config(struct hostapd_iface *iface);
 
 #endif /* HOSTAPD_H */

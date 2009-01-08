@@ -38,6 +38,7 @@
 
 struct wired_driver_data {
 	struct hostapd_data *hapd;
+	char iface[IFNAMSIZ + 1];
 
 	int sock; /* raw packet socket for driver access */
 	int dhcp_sock; /* socket for dhcp packets */
@@ -197,7 +198,7 @@ static int wired_init_sockets(struct wired_driver_data *drv)
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, hapd->conf->iface, sizeof(ifr.ifr_name));
+	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
 	if (ioctl(drv->sock, SIOCGIFINDEX, &ifr) != 0) {
 		perror("ioctl(SIOCGIFINDEX)");
 		return -1;
@@ -229,7 +230,7 @@ static int wired_init_sockets(struct wired_driver_data *drv)
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, hapd->conf->iface, sizeof(ifr.ifr_name));
+	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
 	if (ioctl(drv->sock, SIOCGIFHWADDR, &ifr) != 0) {
 		perror("ioctl(SIOCGIFHWADDR)");
 		return -1;
@@ -271,7 +272,7 @@ static int wired_init_sockets(struct wired_driver_data *drv)
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_ifrn.ifrn_name, hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(ifr.ifr_ifrn.ifrn_name, drv->iface, IFNAMSIZ);
 	if (setsockopt(drv->dhcp_sock, SOL_SOCKET, SO_BINDTODEVICE,
 		       (char *) &ifr, sizeof(ifr)) < 0) {
 		perror("setsockopt[SOL_SOCKET,SO_BINDTODEVICE]");
@@ -339,6 +340,7 @@ static void * wired_driver_init(struct hostapd_data *hapd)
 	}
 
 	drv->hapd = hapd;
+	os_strlcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
 	drv->use_pae_group_addr = hapd->conf->use_pae_group_addr;
 
 	if (wired_init_sockets(drv)) {

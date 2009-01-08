@@ -53,6 +53,7 @@ struct hostapd_acl_query_data {
 };
 
 
+#ifndef CONFIG_NO_RADIUS
 static void hostapd_acl_cache_free(struct hostapd_cached_radius_acl *acl_cache)
 {
 	struct hostapd_cached_radius_acl *prev;
@@ -96,6 +97,7 @@ static int hostapd_acl_cache_get(struct hostapd_data *hapd, const u8 *addr,
 
 	return -1;
 }
+#endif /* CONFIG_NO_RADIUS */
 
 
 static void hostapd_acl_query_free(struct hostapd_acl_query_data *query)
@@ -107,6 +109,7 @@ static void hostapd_acl_query_free(struct hostapd_acl_query_data *query)
 }
 
 
+#ifndef CONFIG_NO_RADIUS
 static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 				    struct hostapd_acl_query_data *query)
 {
@@ -196,6 +199,7 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 	os_free(msg);
 	return -1;
 }
+#endif /* CONFIG_NO_RADIUS */
 
 
 /**
@@ -234,6 +238,9 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 		return HOSTAPD_ACL_REJECT;
 
 	if (hapd->conf->macaddr_acl == USE_EXTERNAL_RADIUS_AUTH) {
+#ifdef CONFIG_NO_RADIUS
+		return HOSTAPD_ACL_REJECT;
+#else /* CONFIG_NO_RADIUS */
 		struct hostapd_acl_query_data *query;
 
 		/* Check whether ACL cache has an entry for this station */
@@ -289,12 +296,14 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 		/* Queued data will be processed in hostapd_acl_recv_radius()
 		 * when RADIUS server replies to the sent Access-Request. */
 		return HOSTAPD_ACL_PENDING;
+#endif /* CONFIG_NO_RADIUS */
 	}
 
 	return HOSTAPD_ACL_REJECT;
 }
 
 
+#ifndef CONFIG_NO_RADIUS
 static void hostapd_acl_expire_cache(struct hostapd_data *hapd, time_t now)
 {
 	struct hostapd_cached_radius_acl *prev, *entry, *tmp;
@@ -472,6 +481,7 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 
 	return RADIUS_RX_PROCESSED;
 }
+#endif /* CONFIG_NO_RADIUS */
 
 
 /**
@@ -481,11 +491,13 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
  */
 int hostapd_acl_init(struct hostapd_data *hapd)
 {
+#ifndef CONFIG_NO_RADIUS
 	if (radius_client_register(hapd->radius, RADIUS_AUTH,
 				   hostapd_acl_recv_radius, hapd))
 		return -1;
 
 	eloop_register_timeout(10, 0, hostapd_acl_expire, hapd, NULL);
+#endif /* CONFIG_NO_RADIUS */
 
 	return 0;
 }
@@ -499,9 +511,11 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 {
 	struct hostapd_acl_query_data *query, *prev;
 
+#ifndef CONFIG_NO_RADIUS
 	eloop_cancel_timeout(hostapd_acl_expire, hapd, NULL);
 
 	hostapd_acl_cache_free(hapd->acl_cache);
+#endif /* CONFIG_NO_RADIUS */
 
 	query = hapd->acl_queries;
 	while (query) {

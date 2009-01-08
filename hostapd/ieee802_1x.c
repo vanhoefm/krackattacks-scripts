@@ -371,6 +371,7 @@ int radius_sta_rate(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
+#ifndef CONFIG_NO_RADIUS
 static void ieee802_1x_learn_identity(struct hostapd_data *hapd,
 				      struct eapol_state_machine *sm,
 				      const u8 *eap, size_t len)
@@ -541,6 +542,7 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 	radius_msg_free(msg);
 	os_free(msg);
 }
+#endif /* CONFIG_NO_RADIUS */
 
 
 char *eap_type_text(u8 type)
@@ -948,10 +950,12 @@ void ieee802_1x_free_station(struct sta_info *sta)
 
 	sta->eapol_sm = NULL;
 
+#ifndef CONFIG_NO_RADIUS
 	if (sm->last_recv_radius) {
 		radius_msg_free(sm->last_recv_radius);
 		os_free(sm->last_recv_radius);
 	}
+#endif /* CONFIG_NO_RADIUS */
 
 	os_free(sm->identity);
 	ieee802_1x_free_radius_class(&sm->radius_class);
@@ -959,6 +963,7 @@ void ieee802_1x_free_station(struct sta_info *sta)
 }
 
 
+#ifndef CONFIG_NO_RADIUS
 static void ieee802_1x_decapsulate_radius(struct hostapd_data *hapd,
 					  struct sta_info *sta)
 {
@@ -1371,6 +1376,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 
 	return RADIUS_RX_QUEUED;
 }
+#endif /* CONFIG_NO_RADIUS */
 
 
 void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
@@ -1382,11 +1388,13 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 		       HOSTAPD_LEVEL_DEBUG, "aborting authentication");
 
+#ifndef CONFIG_NO_RADIUS
 	if (sm->last_recv_radius) {
 		radius_msg_free(sm->last_recv_radius);
 		os_free(sm->last_recv_radius);
 		sm->last_recv_radius = NULL;
 	}
+#endif /* CONFIG_NO_RADIUS */
 
 	if (sm->eap_if->eapTimeout) {
 		/*
@@ -1535,10 +1543,12 @@ static void ieee802_1x_eapol_send(void *ctx, void *sta_ctx, u8 type,
 static void ieee802_1x_aaa_send(void *ctx, void *sta_ctx,
 				const u8 *data, size_t datalen)
 {
+#ifndef CONFIG_NO_RADIUS
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta = sta_ctx;
 
 	ieee802_1x_encapsulate_radius(hapd, sta, data, datalen);
+#endif /* CONFIG_NO_RADIUS */
 }
 
 
@@ -1698,9 +1708,11 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	    hostapd_set_ieee8021x(hapd->conf->iface, hapd, 1))
 		return -1;
 
+#ifndef CONFIG_NO_RADIUS
 	if (radius_client_register(hapd->radius, RADIUS_AUTH,
 				   ieee802_1x_receive_auth, hapd))
 		return -1;
+#endif /* CONFIG_NO_RADIUS */
 
 	if (hapd->conf->default_wep_key_len) {
 		hostapd_set_privacy(hapd, 1);

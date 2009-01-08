@@ -140,3 +140,9 @@ CONFIG_IPV6=y
 # This can be used to reduce the size of the hostapd considerably if debugging
 # code is not needed.
 #CONFIG_NO_STDOUT_DEBUG=y
+
+# Remove support for RADIUS accounting
+#CONFIG_NO_ACCOUNTING=y
+
+# Remove support for RADIUS
+#CONFIG_NO_RADIUS=y

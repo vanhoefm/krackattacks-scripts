@@ -39,7 +39,7 @@ LIBS += -lws2_32
 endif
 
 OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
-	config.o ieee802_11_auth.o accounting.o \
+	config.o ieee802_11_auth.o \
 	sta_info.o wpa.o ctrl_iface.o \
 	drivers.o preauth.o pmksa_cache.o \
 	hw_features.o \
@@ -55,8 +55,19 @@ OBJS += ../src/utils/ip_addr.o
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
 
+ifdef CONFIG_NO_RADIUS
+CFLAGS += -DCONFIG_NO_RADIUS
+CONFIG_NO_ACCOUNTING=y
+else
 OBJS += ../src/radius/radius.o
 OBJS += ../src/radius/radius_client.o
+endif
+
+ifdef CONFIG_NO_ACCOUNTING
+CFLAGS += -DCONFIG_NO_ACCOUNTING
+else
+OBJS += accounting.o
+endif
 
 OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o

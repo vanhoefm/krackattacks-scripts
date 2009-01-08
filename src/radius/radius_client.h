@@ -93,6 +93,33 @@ int radius_client_send(struct radius_client_data *radius,
 		       RadiusType msg_type, const u8 *addr);
 u8 radius_client_get_id(struct radius_client_data *radius);
 
+#ifdef CONFIG_NO_RADIUS
+static inline void radius_client_flush(struct radius_client_data *radius,
+				       int only_auth)
+{
+}
+
+static inline struct radius_client_data *
+radius_client_init(void *ctx, struct hostapd_radius_servers *conf)
+{
+	return (void *) -1;
+}
+
+static inline void radius_client_deinit(struct radius_client_data *radius)
+{
+}
+
+static inline void radius_client_flush_auth(struct radius_client_data *radius,
+					    u8 *addr)
+{
+}
+
+static inline int radius_client_get_mib(struct radius_client_data *radius,
+					char *buf, size_t buflen)
+{
+	return 0;
+}
+#else /* CONFIG_NO_RADIUS */
 void radius_client_flush(struct radius_client_data *radius, int only_auth);
 struct radius_client_data *
 radius_client_init(void *ctx, struct hostapd_radius_servers *conf);
@@ -100,6 +127,7 @@ void radius_client_deinit(struct radius_client_data *radius);
 void radius_client_flush_auth(struct radius_client_data *radius, u8 *addr);
 int radius_client_get_mib(struct radius_client_data *radius, char *buf,
 			  size_t buflen);
+#endif /* CONFIG_NO_RADIUS */
 struct radius_client_data *
 radius_client_reconfig(struct radius_client_data *old, void *ctx,
 		       struct hostapd_radius_servers *oldconf,

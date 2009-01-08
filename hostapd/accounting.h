@@ -15,11 +15,32 @@
 #ifndef ACCOUNTING_H
 #define ACCOUNTING_H
 
-void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta);
 void accounting_sta_interim(struct hostapd_data *hapd, struct sta_info *sta);
+#ifdef CONFIG_NO_ACCOUNTING
+static inline void accounting_sta_start(struct hostapd_data *hapd,
+					struct sta_info *sta)
+{
+}
+
+static inline void accounting_sta_stop(struct hostapd_data *hapd,
+				       struct sta_info *sta)
+{
+}
+
+static inline int accounting_init(struct hostapd_data *hapd)
+{
+	return 0;
+}
+
+static inline void accounting_deinit(struct hostapd_data *hapd)
+{
+}
+#else /* CONFIG_NO_ACCOUNTING */
+void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta);
 void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta);
 int accounting_init(struct hostapd_data *hapd);
 void accounting_deinit(struct hostapd_data *hapd);
+#endif /* CONFIG_NO_ACCOUNTING */
 int accounting_reconfig(struct hostapd_data *hapd,
 			struct hostapd_config *oldconf);
 

@@ -22,8 +22,6 @@
 #include "hostapd_defs.h"
 #include "config.h"
 
-extern unsigned char rfc1042_header[6];
-
 struct wpa_driver_ops;
 struct wpa_ctrl_dst;
 struct radius_server_data;

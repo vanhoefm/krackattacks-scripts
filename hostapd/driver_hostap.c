@@ -42,6 +42,7 @@
 #include "hostap_common.h"
 #include "hw_features.h"
 
+static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
 struct hostap_driver_data {
 	struct hostapd_data *hapd;

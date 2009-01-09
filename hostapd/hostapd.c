@@ -59,8 +59,6 @@ struct hapd_interfaces {
 	struct hostapd_iface **iface;
 };
 
-unsigned char rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
-
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;

@@ -46,6 +46,8 @@
 #define nl_handle_destroy nl_socket_free
 #endif /* CONFIG_LIBNL20 */
 
+static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
+
 enum ieee80211_msg_type {
 	ieee80211_msg_normal = 0,
 	ieee80211_msg_tx_callback_ack = 1,

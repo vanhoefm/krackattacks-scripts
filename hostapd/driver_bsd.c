@@ -34,12 +34,9 @@
 #include "driver.h"
 #include "ieee802_1x.h"
 #include "eloop.h"
-#include "sta_info.h"
 #include "l2_packet/l2_packet.h"
 
 #include "eapol_sm.h"
-#include "wpa.h"
-#include "radius/radius.h"
 #include "ieee802_11.h"
 #include "common.h"
 
@@ -505,28 +502,6 @@ bsd_sta_disassoc(void *priv, const u8 *addr, int reason_code)
 }
 
 static int
-bsd_del_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
-{
-	struct hostapd_data *hapd = drv->hapd;
-	struct hostapd_bss_config *conf = hapd->conf;
-	struct sta_info *sta;
-
-	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
-		HOSTAPD_LEVEL_INFO, "deassociated");
-
-	sta = ap_get_sta(hapd, addr);
-	if (sta != NULL) {
-		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
-		if (conf->wpa)
-			wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
-		sta->acct_terminate_cause = RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
-		ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
-		ap_free_sta(hapd, sta);
-	}
-	return 0;
-}
-
-static int
 bsd_new_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
 	struct hostapd_data *hapd = drv->hapd;
@@ -593,7 +568,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 			break;
 		case RTM_IEEE80211_LEAVE:
 			leave = (struct ieee80211_leave_event *) &ifan[1];
-			bsd_del_sta(drv, leave->iev_addr);
+			hostapd_notif_disassoc(drv, leave->iev_addr);
 			break;
 		case RTM_IEEE80211_JOIN:
 #ifdef RTM_IEEE80211_REJOIN

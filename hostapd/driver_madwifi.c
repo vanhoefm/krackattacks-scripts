@@ -60,13 +60,9 @@
 #include "ieee802_1x.h"
 #include "eloop.h"
 #include "priv_netlink.h"
-#include "sta_info.h"
 #include "l2_packet/l2_packet.h"
 
-#include "wpa.h"
-#include "radius/radius.h"
 #include "ieee802_11.h"
-#include "accounting.h"
 #include "common.h"
 #include "wps_hostapd.h"
 
@@ -795,26 +791,6 @@ static int madwifi_receive_probe_req(struct madwifi_driver_data *drv)
 	return ret;
 }
 
-static int
-madwifi_del_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
-{
-	struct hostapd_data *hapd = drv->hapd;
-	struct sta_info *sta;
-
-	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
-		HOSTAPD_LEVEL_INFO, "disassociated");
-
-	sta = ap_get_sta(hapd, addr);
-	if (sta != NULL) {
-		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
-		wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
-		sta->acct_terminate_cause = RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
-		ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
-		ap_free_sta(hapd, sta);
-	}
-	return 0;
-}
-
 #ifdef CONFIG_WPS
 static int
 madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
@@ -994,7 +970,8 @@ madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
 
 		switch (iwe->cmd) {
 		case IWEVEXPIRED:
-			madwifi_del_sta(drv, (u8 *) iwe->u.addr.sa_data);
+			hostapd_notif_disassoc(drv->hapd,
+					       (u8 *) iwe->u.addr.sa_data);
 			break;
 		case IWEVREGISTERED:
 			madwifi_new_sta(drv, (u8 *) iwe->u.addr.sa_data);

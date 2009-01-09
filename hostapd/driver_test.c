@@ -21,10 +21,7 @@
 #include "sha1.h"
 #include "eloop.h"
 #include "ieee802_1x.h"
-#include "sta_info.h"
 #include "wpa.h"
-#include "accounting.h"
-#include "radius/radius.h"
 #include "l2_packet/l2_packet.h"
 #include "ieee802_11.h"
 #include "hw_features.h"
@@ -522,24 +519,12 @@ static void test_driver_disassoc(struct test_driver_data *drv,
 				 struct sockaddr_un *from, socklen_t fromlen)
 {
 	struct test_client_socket *cli;
-	struct sta_info *sta;
 
 	cli = test_driver_get_cli(drv, from, fromlen);
 	if (!cli)
 		return;
 
-	hostapd_logger(drv->hapd, cli->addr, HOSTAPD_MODULE_IEEE80211,
-		       HOSTAPD_LEVEL_INFO, "disassociated");
-
-	sta = ap_get_sta(drv->hapd, cli->addr);
-	if (sta != NULL) {
-		sta->flags &= ~WLAN_STA_ASSOC;
-		wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
-		sta->acct_terminate_cause =
-			RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
-		ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
-		ap_free_sta(drv->hapd, sta);
-	}
+	hostapd_notif_disassoc(drv->hapd, cli->addr);
 }
 
 

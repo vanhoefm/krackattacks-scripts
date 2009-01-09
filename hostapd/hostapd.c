@@ -33,6 +33,7 @@
 #include "driver_i.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
+#include "radius/radius.h"
 #include "wpa.h"
 #include "preauth.h"
 #include "wme.h"
@@ -364,6 +365,28 @@ skip_wpa_check:
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
 
 	return 0;
+}
+
+
+void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta;
+
+	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
+		       HOSTAPD_LEVEL_INFO, "disassociated");
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL) {
+		wpa_printf(MSG_DEBUG, "Disassociation notification for "
+			   "unknown STA " MACSTR, MAC2STR(addr));
+		return;
+	}
+
+	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
+	wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
+	sta->acct_terminate_cause = RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
+	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
+	ap_free_sta(hapd, sta);
 }
 
 

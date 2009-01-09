@@ -34,7 +34,6 @@
 #include "ieee802_1x.h"
 #include "eloop.h"
 #include "ieee802_11.h"
-#include "sta_info.h"
 #include "hw_features.h"
 #include "mlme.h"
 #include "radiotap.h"
@@ -1636,26 +1635,6 @@ static int i802_set_country(void *priv, const char *country)
 }
 
 
-static void handle_unknown_sta(struct i802_driver_data *drv, u8 *ta)
-{
-	struct sta_info *sta;
-
-	sta = ap_get_sta(drv->hapd, ta);
-	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
-		printf("Data/PS-poll frame from not associated STA "
-		       MACSTR "\n", MAC2STR(ta));
-		if (sta && (sta->flags & WLAN_STA_AUTH))
-			i802_sta_disassoc(
-				drv, ta,
-				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
-		else
-			i802_sta_deauth(
-				drv, ta,
-				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
-	}
-}
-
-
 static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 			       int ok)
 {
@@ -1797,10 +1776,10 @@ static void handle_frame(struct i802_driver_data *drv,
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
 		wpa_printf(MSG_DEBUG, "CTRL");
-		handle_unknown_sta(drv, hdr->addr2);
+		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
 		break;
 	case WLAN_FC_TYPE_DATA:
-		handle_unknown_sta(drv, hdr->addr2);
+		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
 		break;
 	}
 }

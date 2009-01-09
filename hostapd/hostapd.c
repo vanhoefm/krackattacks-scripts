@@ -278,6 +278,26 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
+void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta;
+
+	sta = ap_get_sta(hapd, addr);
+	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
+		wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated "
+			   "STA " MACSTR, MAC2STR(addr));
+		if (sta && (sta->flags & WLAN_STA_AUTH))
+			hostapd_sta_disassoc(
+				hapd, addr,
+				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
+		else
+			hostapd_sta_deauth(
+				hapd, addr,
+				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
+	}
+}
+
+
 #ifdef EAP_SERVER
 static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 				 struct sta_info *sta, void *ctx)

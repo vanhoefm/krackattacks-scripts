@@ -38,7 +38,6 @@
 #include "eloop.h"
 #include "priv_netlink.h"
 #include "ieee802_11.h"
-#include "sta_info.h"
 #include "hostap_common.h"
 #include "hw_features.h"
 
@@ -74,7 +73,6 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	u16 fc, ethertype;
 	u8 *pos, *sa;
 	size_t left;
-	struct sta_info *sta;
 
 	if (len < sizeof(struct ieee80211_hdr))
 		return;
@@ -88,20 +86,7 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	}
 
 	sa = hdr->addr2;
-	sta = ap_get_sta(drv->hapd, sa);
-	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
-		printf("Data frame from not associated STA " MACSTR "\n",
-		       MAC2STR(sa));
-		if (sta && (sta->flags & WLAN_STA_AUTH))
-			hostap_sta_disassoc(
-				drv, sa,
-				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
-		else
-			hostap_sta_deauth(
-				drv, sa,
-				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
-		return;
-	}
+	hostapd_rx_from_unknown_sta(drv->hapd, sa);
 
 	pos = (u8 *) (hdr + 1);
 	left = len - sizeof(*hdr);

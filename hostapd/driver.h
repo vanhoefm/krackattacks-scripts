@@ -215,5 +215,6 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);
+void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd, const u8 *addr);
 
 #endif /* DRIVER_H */

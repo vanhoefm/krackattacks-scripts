@@ -136,7 +136,8 @@ endif
 ifdef CONFIG_DRIVER_NL80211
 NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_NL80211
-OBJS += driver_nl80211.o radiotap.o
+OBJS += driver_nl80211.o
+OBJS += ../src/utils/radiotap.o
 LIBS += -lnl
 ifdef CONFIG_LIBNL20
 LIBS += -lnl-genl

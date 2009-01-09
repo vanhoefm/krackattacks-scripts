@@ -31,17 +31,10 @@ void ieee802_11_mgmt_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok);
 void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len);
 #ifdef NEED_MLME
-void ieee80211_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr,
-				   int local);
 int ieee802_11_get_mib(struct hostapd_data *hapd, char *buf, size_t buflen);
 int ieee802_11_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   char *buf, size_t buflen);
 #else /* NEED_MLME */
-static inline void ieee80211_michael_mic_failure(struct hostapd_data *hapd,
-						 const u8 *addr, int local)
-{
-}
-
 static inline int ieee802_11_get_mib(struct hostapd_data *hapd, char *buf,
 				     size_t buflen)
 {

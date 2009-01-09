@@ -674,8 +674,9 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	wpa_printf(MSG_DEBUG, "IEEE 802.1X: %lu bytes from " MACSTR,
 		   (unsigned long) len, MAC2STR(sa));
 	sta = ap_get_sta(hapd, sa);
-	if (!sta) {
-		printf("   no station information available\n");
+	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
+		wpa_printf(MSG_DEBUG, "IEEE 802.1X data frame from not "
+			   "associated STA");
 		return;
 	}
 

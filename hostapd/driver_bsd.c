@@ -697,15 +697,7 @@ handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 {
 	struct bsd_driver_data *drv = ctx;
 	struct hostapd_data *hapd = drv->hapd;
-	struct sta_info *sta;
 
-	sta = ap_get_sta(hapd, src_addr);
-	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
-		printf("Data frame from not associated STA %s\n",
-		       ether_sprintf(src_addr));
-		/* XXX cannot happen */
-		return;
-	}
 	ieee802_1x_receive(hapd, src_addr, buf + sizeof(struct l2_ethhdr),
 			   len - sizeof(struct l2_ethhdr));
 }

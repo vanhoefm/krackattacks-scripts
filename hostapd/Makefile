@@ -43,6 +43,7 @@ OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
 	sta_info.o wpa.o ctrl_iface.o \
 	drivers.o preauth.o pmksa_cache.o \
 	hw_features.o \
+	tkip_countermeasures.o \
 	mlme.o vlan_init.o wpa_auth_ie.o
 
 OBJS += ../src/utils/eloop.o

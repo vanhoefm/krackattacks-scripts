@@ -298,6 +298,75 @@ void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
+			const u8 *ie, size_t ielen)
+{
+	struct sta_info *sta;
+	int new_assoc, res;
+
+	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
+		       HOSTAPD_LEVEL_INFO, "associated");
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta) {
+		accounting_sta_stop(hapd, sta);
+	} else {
+		sta = ap_sta_add(hapd, addr);
+		if (sta == NULL)
+			return -1;
+	}
+	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS);
+
+	if (hapd->conf->wpa) {
+		if (ie == NULL || ielen == 0) {
+			if (hapd->conf->wps_state) {
+				wpa_printf(MSG_DEBUG, "STA did not include "
+					   "WPA/RSN IE in (Re)Association "
+					   "Request - possible WPS use");
+				sta->flags |= WLAN_STA_MAYBE_WPS;
+				goto skip_wpa_check;
+			}
+
+			wpa_printf(MSG_DEBUG, "No WPA/RSN IE from STA");
+			return -1;
+		}
+		if (hapd->conf->wps_state && ie[0] == 0xdd && ie[1] >= 4 &&
+		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
+			sta->flags |= WLAN_STA_WPS;
+			goto skip_wpa_check;
+		}
+
+		if (sta->wpa_sm == NULL)
+			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
+							sta->addr);
+		if (sta->wpa_sm == NULL) {
+			wpa_printf(MSG_ERROR, "Failed to initialize WPA state "
+				   "machine");
+			return -1;
+		}
+		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
+					  ie, ielen, NULL, 0);
+		if (res != WPA_IE_OK) {
+			wpa_printf(MSG_DEBUG, "WPA/RSN information element "
+				   "rejected? (res %u)", res);
+			wpa_hexdump(MSG_DEBUG, "IE", ie, ielen);
+			return -1;
+		}
+	}
+skip_wpa_check:
+
+	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
+	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;
+	wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
+
+	hostapd_new_assoc_sta(hapd, sta, !new_assoc);
+
+	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
+
+	return 0;
+}
+
+
 #ifdef EAP_SERVER
 static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 				 struct sta_info *sta, void *ctx)

@@ -530,59 +530,27 @@ static int
 bsd_new_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
 	struct hostapd_data *hapd = drv->hapd;
-	struct hostapd_bss_config *conf = hapd->conf;
-	struct sta_info *sta;
 	struct ieee80211req_wpaie ie;
-	int new_assoc, ielen, res;
+	int new_assoc, ielen = 0, res;
+	u8 *iebuf = NULL;
 
-	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
-		HOSTAPD_LEVEL_INFO, "associated");
-
-	sta = ap_sta_add(hapd, addr);
-	if (sta == NULL)
-		return -1;
 	/*
 	 * Fetch and validate any negotiated WPA/RSN parameters.
 	 */
-	if (conf->wpa) {
-		memset(&ie, 0, sizeof(ie));
-		memcpy(ie.wpa_macaddr, addr, IEEE80211_ADDR_LEN);
-		if (get80211var(drv, IEEE80211_IOC_WPAIE, &ie, sizeof(ie)) < 0) {
-			printf("Failed to get WPA/RSN information element.\n");
-			return -1;		/* XXX not right */
-		}
-		ielen = ie.wpa_ie[1];
-		if (ielen == 0) {
-			printf("No WPA/RSN information element for station!\n");
-			return -1;		/* XXX not right */
-		}
-		ielen += 2;
-		if (sta->wpa_sm == NULL)
-			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
-							sta->addr);
-		if (sta->wpa_sm == NULL) {
-			printf("Failed to initialize WPA state machine\n");
-			return -1;
-		}
-		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
-					  ie.wpa_ie, ielen, NULL, 0);
-		if (res != WPA_IE_OK) {
-			printf("WPA/RSN information element rejected? "
-				"(res %u)\n", res);
-			return -1;
-		}
+	memset(&ie, 0, sizeof(ie));
+	memcpy(ie.wpa_macaddr, addr, IEEE80211_ADDR_LEN);
+	if (get80211var(drv, IEEE80211_IOC_WPAIE, &ie, sizeof(ie)) < 0) {
+		printf("Failed to get WPA/RSN information element.\n");
+		goto no_ie;
 	}
+	iebuf = ie.wpa_ie;
+	ielen = ie.wpa_ie[1];
+	if (ielen == 0)
+		iebuf = NULL;
+	else
+		ielen += 2;
 
-	/*
-	 * Now that the internal station state is setup
-	 * kick the authenticator into action.
-	 */
-	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
-	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;
-	wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
-	hostapd_new_assoc_sta(hapd, sta, !new_assoc);
-	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
-	return 0;
+	return hostapd_notif_assoc(hapd, addr, iebuf, ielen);
 }
 
 #include <net/route.h>

@@ -855,23 +855,22 @@ madwifi_set_wps_probe_resp_ie(const char *ifname, void *priv, const u8 *ie,
 #endif /* CONFIG_WPS */
 
 static int
-madwifi_process_wpa_ie(struct madwifi_driver_data *drv, struct sta_info *sta)
+madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
 	struct hostapd_data *hapd = drv->hapd;
 	struct ieee80211req_wpaie ie;
-	int ielen, res;
-	u8 *iebuf;
+	int ielen = 0, res;
+	u8 *iebuf = NULL;
 
 	/*
 	 * Fetch negotiated WPA/RSN parameters from the system.
 	 */
 	memset(&ie, 0, sizeof(ie));
-	memcpy(ie.wpa_macaddr, sta->addr, IEEE80211_ADDR_LEN);
+	memcpy(ie.wpa_macaddr, addr, IEEE80211_ADDR_LEN);
 	if (set80211priv(drv, IEEE80211_IOCTL_GETWPAIE, &ie, sizeof(ie))) {
-		wpa_printf(MSG_ERROR, "%s: Failed to get WPA/RSN IE",
+		wpa_printf(MSG_DEBUG, "%s: Failed to get WPA/RSN IE",
 			   __func__);
-		printf("Failed to get WPA/RSN information element.\n");
-		return -1;		/* XXX not right */
+		goto no_ie;
 	}
 	wpa_hexdump(MSG_MSGDUMP, "madwifi req WPA IE",
 		    ie.wpa_ie, IEEE80211_MAX_OPT_IE);
@@ -891,54 +890,15 @@ madwifi_process_wpa_ie(struct madwifi_driver_data *drv, struct sta_info *sta)
 			iebuf[1] = 0;
 	}
 #endif /* MADWIFI_NG */
+
 	ielen = iebuf[1];
-	if (ielen == 0) {
-#ifdef CONFIG_WPS
-		if (hapd->conf->wps_state) {
-			wpa_printf(MSG_DEBUG, "STA did not include WPA/RSN IE "
-				   "in (Re)Association Request - possible WPS "
-				   "use");
-			sta->flags |= WLAN_STA_MAYBE_WPS;
-			return 0;
-		}
-#endif /* CONFIG_WPS */
-		printf("No WPA/RSN information element for station!?\n");
-		return -1;		/* XXX not right */
-	}
-	ielen += 2;
-	if (sta->wpa_sm == NULL)
-		sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth, sta->addr);
-	if (sta->wpa_sm == NULL) {
-		printf("Failed to initialize WPA state machine\n");
-		return -1;
-	}
-	res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
-				  iebuf, ielen, NULL, 0);
-	if (res != WPA_IE_OK) {
-		printf("WPA/RSN information element rejected? (res %u)\n", res);
-		return -1;
-	}
-	return 0;
-}
+	if (ielen == 0)
+		iebuf = NULL;
+	else
+		ielen += 2;
 
-static int
-madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
-{
-	struct hostapd_data *hapd = drv->hapd;
-	struct sta_info *sta;
-	int new_assoc;
-
-	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
-		HOSTAPD_LEVEL_INFO, "associated");
-
-	sta = ap_get_sta(hapd, addr);
-	if (sta) {
-		accounting_sta_stop(hapd, sta);
-	} else {
-		sta = ap_sta_add(hapd, addr);
-		if (sta == NULL)
-			return -1;
-	}
+no_ie:
+	res = hostapd_notif_assoc(hapd, addr, iebuf, ielen);
 
 	if (memcmp(addr, drv->acct_mac, ETH_ALEN) == 0) {
 		/* Cached accounting data is not valid anymore. */
@@ -946,21 +906,7 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 		memset(&drv->acct_data, 0, sizeof(drv->acct_data));
 	}
 
-	if (hapd->conf->wpa) {
-		if (madwifi_process_wpa_ie(drv, sta))
-			return -1;
-	}
-
-	/*
-	 * Now that the internal station state is setup
-	 * kick the authenticator into action.
-	 */
-	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
-	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;
-	wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
-	hostapd_new_assoc_sta(hapd, sta, !new_assoc);
-	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
-	return 0;
+	return res;
 }
 
 static void

@@ -168,55 +168,6 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 }
 
 
-static void hostapd_deauth_all_stas(struct hostapd_data *hapd)
-{
-	u8 addr[ETH_ALEN];
-
-	/* New Prism2.5/3 STA firmware versions seem to have issues with this
-	 * broadcast deauth frame. This gets the firmware in odd state where
-	 * nothing works correctly, so let's skip sending this for the hostap
-	 * driver. */
-
-	if (hapd->driver && os_strcmp(hapd->driver->name, "hostap") != 0) {
-		os_memset(addr, 0xff, ETH_ALEN);
-		hostapd_sta_deauth(hapd, addr,
-				   WLAN_REASON_PREV_AUTH_NOT_VALID);
-	}
-}
-
-
-/**
- * hostapd_prune_associations - Remove extraneous associations
- * @hapd: Pointer to BSS data for the most recent association
- * @sta: Pointer to the associated STA data
- *
- * This function looks through all radios and BSS's for previous
- * (stale) associations of STA. If any are found they are removed.
- */
-static void hostapd_prune_associations(struct hostapd_data *hapd,
-				       struct sta_info *sta)
-{
-	struct sta_info *osta;
-	struct hostapd_data *ohapd;
-	size_t i, j;
-	struct hapd_interfaces *interfaces = eloop_get_user_data();
-
-	for (i = 0; i < interfaces->count; i++) {
-		for (j = 0; j < interfaces->iface[i]->num_bss; j++) {
-			ohapd = interfaces->iface[i]->bss[j];
-			if (ohapd == hapd)
-				continue;
-			osta = ap_get_sta(ohapd, sta->addr);
-			if (!osta)
-				continue;
-
-			ap_sta_disassociate(ohapd, osta,
-					    WLAN_REASON_UNSPECIFIED);
-		}
-	}
-}
-
-
 static void ieee80211_tkip_countermeasures_stop(void *eloop_ctx,
 						void *timeout_ctx)
 {
@@ -284,6 +235,38 @@ static void ieee80211_michael_mic_failure(struct hostapd_data *hapd,
 			ieee80211_tkip_countermeasures_start(hapd);
 	}
 	hapd->michael_mic_failure = now;
+}
+
+
+/**
+ * hostapd_prune_associations - Remove extraneous associations
+ * @hapd: Pointer to BSS data for the most recent association
+ * @sta: Pointer to the associated STA data
+ *
+ * This function looks through all radios and BSS's for previous
+ * (stale) associations of STA. If any are found they are removed.
+ */
+static void hostapd_prune_associations(struct hostapd_data *hapd,
+				       struct sta_info *sta)
+{
+	struct sta_info *osta;
+	struct hostapd_data *ohapd;
+	size_t i, j;
+	struct hapd_interfaces *interfaces = eloop_get_user_data();
+
+	for (i = 0; i < interfaces->count; i++) {
+		for (j = 0; j < interfaces->iface[i]->num_bss; j++) {
+			ohapd = interfaces->iface[i]->bss[j];
+			if (ohapd == hapd)
+				continue;
+			osta = ap_get_sta(ohapd, sta->addr);
+			if (!osta)
+				continue;
+
+			ap_sta_disassociate(ohapd, osta,
+					    WLAN_REASON_UNSPECIFIED);
+		}
+	}
 }
 
 
@@ -981,7 +964,17 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 		ret = -1;
 	}
 	wpa_printf(MSG_DEBUG, "Deauthenticate all stations");
-	hostapd_deauth_all_stas(hapd);
+
+	/* New Prism2.5/3 STA firmware versions seem to have issues with this
+	 * broadcast deauth frame. This gets the firmware in odd state where
+	 * nothing works correctly, so let's skip sending this for the hostap
+	 * driver. */
+	if (hapd->driver && os_strcmp(hapd->driver->name, "hostap") != 0) {
+		u8 addr[ETH_ALEN];
+		os_memset(addr, 0xff, ETH_ALEN);
+		hostapd_sta_deauth(hapd, addr,
+				   WLAN_REASON_PREV_AUTH_NOT_VALID);
+	}
 
 	return ret;
 }

@@ -31,7 +31,6 @@
 
 #include "hostapd.h"
 #include "driver.h"
-#include "ieee802_1x.h"
 #include "eloop.h"
 #include "ieee802_11.h"
 #include "hw_features.h"
@@ -1802,7 +1801,7 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 
 	if (have_ifidx(drv, lladdr.sll_ifindex))
-		ieee802_1x_receive(hapd, lladdr.sll_addr, buf, len);
+		hostapd_eapol_receive(hapd, lladdr.sll_addr, buf, len);
 }
 
 

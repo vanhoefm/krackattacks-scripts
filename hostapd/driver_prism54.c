@@ -933,8 +933,8 @@ static void handle_802_3(int sock, void *eloop_ctx, void *sock_ctx)
                 return;
         }
         if (hdr->type == htons(ETH_P_PAE)) {
-                ieee802_1x_receive(hapd, (u8 *) &hdr->sa[0], (u8 *) &hdr[1],
-				   len - sizeof(*hdr));
+                hostapd_eapol_receive(hapd, (u8 *) &hdr->sa[0], (u8 *) &hdr[1],
+				      len - sizeof(*hdr));
         }
 	free(hdr);
 }

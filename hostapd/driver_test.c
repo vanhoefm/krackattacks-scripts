@@ -20,7 +20,6 @@
 #include "driver.h"
 #include "sha1.h"
 #include "eloop.h"
-#include "ieee802_1x.h"
 #include "wpa.h"
 #include "l2_packet/l2_packet.h"
 #include "ieee802_11.h"
@@ -549,7 +548,7 @@ static void test_driver_eapol(struct test_driver_data *drv,
 		hapd = test_driver_get_hapd(drv, cli->bss);
 		if (hapd == NULL)
 			return;
-		ieee802_1x_receive(hapd, cli->addr, data, datalen);
+		hostapd_eapol_receive(hapd, cli->addr, data, datalen);
 	} else {
 		wpa_printf(MSG_DEBUG, "test_socket: EAPOL from unknown "
 			   "client");

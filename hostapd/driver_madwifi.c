@@ -57,7 +57,6 @@
 
 #include "hostapd.h"
 #include "driver.h"
-#include "ieee802_1x.h"
 #include "eloop.h"
 #include "priv_netlink.h"
 #include "l2_packet/l2_packet.h"
@@ -1217,10 +1216,9 @@ static void
 handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 {
 	struct madwifi_driver_data *drv = ctx;
-	struct hostapd_data *hapd = drv->hapd;
-
-	ieee802_1x_receive(hapd, src_addr, buf + sizeof(struct l2_ethhdr),
-			   len - sizeof(struct l2_ethhdr));
+	hostapd_eapol_receive(drv->hapd, src_addr,
+			      buf + sizeof(struct l2_ethhdr),
+			      len - sizeof(struct l2_ethhdr));
 }
 
 static void *

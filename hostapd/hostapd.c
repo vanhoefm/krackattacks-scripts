@@ -390,6 +390,13 @@ void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
+			   const u8 *buf, size_t len)
+{
+	ieee802_1x_receive(hapd, sa, buf, len);
+}
+
+
 #ifdef EAP_SERVER
 static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 				 struct sta_info *sta, void *ctx)

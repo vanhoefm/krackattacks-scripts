@@ -34,7 +34,6 @@
 
 #include "hostapd.h"
 #include "driver.h"
-#include "ieee802_1x.h"
 #include "eloop.h"
 #include "priv_netlink.h"
 #include "ieee802_11.h"
@@ -113,7 +112,7 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	left -= 2;
 	switch (ethertype) {
 	case ETH_P_PAE:
-		ieee802_1x_receive(drv->hapd, sa, pos, left);
+		hostapd_eapol_receive(drv->hapd, sa, pos, left);
 		break;
 
 	default:

@@ -29,7 +29,6 @@
 #endif /* USE_KERNEL_HEADERS */
 
 #include "hostapd.h"
-#include "ieee802_1x.h"
 #include "eloop.h"
 #include "sta_info.h"
 #include "driver.h"
@@ -119,7 +118,7 @@ static void handle_data(struct hostapd_data *hapd, unsigned char *buf,
 			pos = (u8 *) (hdr + 1);
 			left = len - sizeof(*hdr);
 
-			ieee802_1x_receive(hapd, sa, pos, left);
+			hostapd_eapol_receive(hapd, sa, pos, left);
 		break;
 
 	default:

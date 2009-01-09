@@ -219,5 +219,7 @@ void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd, const u8 *addr);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
+void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
+			   const u8 *buf, size_t len);
 
 #endif /* DRIVER_H */

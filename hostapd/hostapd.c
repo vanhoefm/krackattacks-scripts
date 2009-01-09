@@ -260,6 +260,24 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
+		       const u8 *buf, size_t len, int ack)
+{
+	struct sta_info *sta;
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta && sta->flags & WLAN_STA_PENDING_POLL) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " %s pending "
+			   "activity poll", MAC2STR(sta->addr),
+			   ack ? "ACKed" : "did not ACK");
+		if (ack)
+			sta->flags &= ~WLAN_STA_PENDING_POLL;
+	}
+	if (sta)
+		ieee802_1x_tx_status(hapd, sta, buf, len, ack);
+}
+
+
 #ifdef EAP_SERVER
 static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 				 struct sta_info *sta, void *ctx)

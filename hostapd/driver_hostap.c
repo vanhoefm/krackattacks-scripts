@@ -143,7 +143,6 @@ static void handle_tx_callback(struct hostap_driver_data *drv, u8 *buf,
 {
 	struct ieee80211_hdr *hdr;
 	u16 fc, type, stype;
-	struct sta_info *sta;
 
 	hdr = (struct ieee80211_hdr *) buf;
 	fc = le_to_host16(hdr->frame_control);
@@ -164,17 +163,7 @@ static void handle_tx_callback(struct hostap_driver_data *drv, u8 *buf,
 	case WLAN_FC_TYPE_DATA:
 		wpa_printf(MSG_DEBUG, "DATA (TX callback) %s",
 			   ok ? "ACK" : "fail");
-		sta = ap_get_sta(drv->hapd, hdr->addr1);
-		if (sta && sta->flags & WLAN_STA_PENDING_POLL) {
-			wpa_printf(MSG_DEBUG, "STA " MACSTR
-				   " %s pending activity poll",
-				   MAC2STR(sta->addr),
-				   ok ? "ACKed" : "did not ACK");
-			if (ok)
-				sta->flags &= ~WLAN_STA_PENDING_POLL;
-		}
-		if (sta)
-			ieee802_1x_tx_status(drv->hapd, sta, buf, len, ok);
+		hostapd_tx_status(drv->hapd, hdr->addr1, buf, len, ok);
 		break;
 	default:
 		printf("unknown TX callback frame type %d\n", type);

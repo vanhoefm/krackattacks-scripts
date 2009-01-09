@@ -213,5 +213,7 @@ struct wpa_driver_ops {
 
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
+void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
+		       const u8 *buf, size_t len, int ack);
 
 #endif /* DRIVER_H */

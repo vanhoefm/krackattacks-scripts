@@ -62,7 +62,7 @@ int ieee802_1x_reconfig(struct hostapd_data *hapd,
 			struct hostapd_config *oldconf,
 			struct hostapd_bss_config *oldbss);
 int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
-			 u8 *buf, size_t len, int ack);
+			 const u8 *buf, size_t len, int ack);
 u8 * ieee802_1x_get_identity(struct eapol_state_machine *sm, size_t *len);
 u8 * ieee802_1x_get_radius_class(struct eapol_state_machine *sm, size_t *len,
 				 int idx);

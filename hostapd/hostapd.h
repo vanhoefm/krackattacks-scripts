@@ -154,5 +154,7 @@ struct hostapd_iface {
 };
 
 int hostapd_reload_config(struct hostapd_iface *iface);
+int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
+					 void *ctx), void *ctx);
 
 #endif /* HOSTAPD_H */

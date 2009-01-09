@@ -19,18 +19,10 @@
 #include "ieee802_11_defs.h"
 #include "ieee802_11_common.h"
 
-struct hostapd_frame_info {
-	u32 phytype;
-	u32 channel;
-	u32 datarate;
-	u32 ssi_signal;
-
-	unsigned int passive_scan:1;
-};
-
 struct hostapd_iface;
 struct hostapd_data;
 struct sta_info;
+struct hostapd_frame_info;
 
 void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason);
 void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,

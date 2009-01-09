@@ -32,7 +32,6 @@
 #include "hostapd.h"
 #include "driver.h"
 #include "eloop.h"
-#include "ieee802_11.h"
 #include "hw_features.h"
 #include "mlme.h"
 #include "radiotap.h"
@@ -1650,7 +1649,7 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 	case WLAN_FC_TYPE_MGMT:
 		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
 			   ok ? "ACK" : "fail");
-		ieee802_11_mgmt_cb(hapd, buf, len, stype, ok);
+		hostapd_mgmt_tx_cb(hapd, buf, len, stype, ok);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
@@ -1767,10 +1766,10 @@ static void handle_frame(struct i802_driver_data *drv,
 			wpa_printf(MSG_MSGDUMP, "MGMT");
 		if (broadcast_bssid) {
 			for (i = 0; i < iface->num_bss; i++)
-				ieee802_11_mgmt(iface->bss[i], buf, data_len,
+				hostapd_mgmt_rx(iface->bss[i], buf, data_len,
 						stype, hfi);
 		} else
-			ieee802_11_mgmt(hapd, buf, data_len, stype, hfi);
+			hostapd_mgmt_rx(hapd, buf, data_len, stype, hfi);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
@@ -2122,7 +2121,7 @@ hostapd_wireless_event_wireless_custom(struct i802_driver_data *drv,
 		}
 		pos += 5;
 		if (hwaddr_aton(pos, addr) == 0) {
-			ieee80211_michael_mic_failure(drv->hapd, addr, 1);
+			hostapd_michael_mic_failure(drv->hapd, addr);
 		} else {
 			wpa_printf(MSG_DEBUG,
 				   "MLME-MICHAELMICFAILURE.indication "

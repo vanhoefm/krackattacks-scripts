@@ -61,7 +61,6 @@
 #include "priv_netlink.h"
 #include "l2_packet/l2_packet.h"
 
-#include "ieee802_11.h"
 #include "common.h"
 #include "wps_hostapd.h"
 
@@ -902,7 +901,7 @@ madwifi_wireless_event_wireless_custom(struct madwifi_driver_data *drv,
 		}
 		pos += 5;
 		if (hwaddr_aton(pos, addr) == 0) {
-			ieee80211_michael_mic_failure(drv->hapd, addr, 1);
+			hostapd_michael_mic_failure(drv->hapd, addr);
 		} else {
 			wpa_printf(MSG_DEBUG,
 				   "MLME-MICHAELMICFAILURE.indication "

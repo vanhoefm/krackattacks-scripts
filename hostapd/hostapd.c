@@ -397,6 +397,26 @@ void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
 }
 
 
+void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
+		     u16 stype, struct hostapd_frame_info *fi)
+{
+	ieee802_11_mgmt(hapd, buf, len, stype, fi);
+}
+
+
+void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
+			u16 stype, int ok)
+{
+	ieee802_11_mgmt_cb(hapd, buf, len, stype, ok);
+}
+
+
+void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr)
+{
+	ieee80211_michael_mic_failure(hapd, addr, 1);
+}
+
+
 #ifdef EAP_SERVER
 static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 				 struct sta_info *sta, void *ctx)

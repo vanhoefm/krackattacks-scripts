@@ -222,4 +222,19 @@ void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
 void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
 			   const u8 *buf, size_t len);
 
+struct hostapd_frame_info {
+	u32 phytype;
+	u32 channel;
+	u32 datarate;
+	u32 ssi_signal;
+
+	unsigned int passive_scan:1;
+};
+
+void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
+		     u16 stype, struct hostapd_frame_info *fi);
+void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
+			u16 stype, int ok);
+void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr);
+
 #endif /* DRIVER_H */

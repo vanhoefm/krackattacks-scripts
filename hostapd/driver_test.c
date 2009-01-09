@@ -22,7 +22,6 @@
 #include "eloop.h"
 #include "wpa.h"
 #include "l2_packet/l2_packet.h"
-#include "ieee802_11.h"
 #include "hw_features.h"
 #include "wps_hostapd.h"
 
@@ -317,7 +316,7 @@ static int test_driver_send_mgmt_frame(void *priv, const void *buf,
 
 	hdr = (struct ieee80211_hdr *) buf;
 	fc = le_to_host16(hdr->frame_control);
-	ieee802_11_mgmt_cb(drv->hapd, (u8 *) buf, len, WLAN_FC_GET_STYPE(fc),
+	hostapd_mgmt_tx_cb(drv->hapd, (u8 *) buf, len, WLAN_FC_GET_STYPE(fc),
 			   ret >= 0);
 
 	return ret;
@@ -611,7 +610,7 @@ static void test_driver_mlme(struct test_driver_data *drv,
 			   __func__);
 		return;
 	}
-	ieee802_11_mgmt(drv->hapd, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
+	hostapd_mgmt_rx(drv->hapd, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
 }
 
 

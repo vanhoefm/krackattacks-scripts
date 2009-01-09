@@ -36,7 +36,6 @@
 #include "l2_packet/l2_packet.h"
 
 #include "eapol_sm.h"
-#include "ieee802_11.h"
 #include "common.h"
 
 struct bsd_driver_data {
@@ -585,7 +584,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 				"Michael MIC failure wireless event: "
 				"keyix=%u src_addr=" MACSTR, mic->iev_keyix,
 				MAC2STR(mic->iev_src));
-			ieee80211_michael_mic_failure(hapd, mic->iev_src, 1);
+			hostapd_michael_mic_failure(hapd, mic->iev_src);
 			break;
 		}
 		break;

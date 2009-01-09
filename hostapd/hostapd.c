@@ -1789,15 +1789,139 @@ fail:
 }
 
 
+static int hostapd_global_init(struct hapd_interfaces *interfaces)
+{
+	hostapd_logger_register_cb(hostapd_logger_cb);
+
+	if (eap_server_register_methods()) {
+		wpa_printf(MSG_ERROR, "Failed to register EAP methods");
+		return -1;
+	}
+
+	if (eloop_init(interfaces)) {
+		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
+		return -1;
+	}
+
+#ifndef CONFIG_NATIVE_WINDOWS
+	eloop_register_signal(SIGHUP, handle_reload, NULL);
+	eloop_register_signal(SIGUSR1, handle_dump_state, NULL);
+#endif /* CONFIG_NATIVE_WINDOWS */
+	eloop_register_signal_terminate(handle_term, NULL);
+
+#ifndef CONFIG_NATIVE_WINDOWS
+	openlog("hostapd", 0, LOG_DAEMON);
+#endif /* CONFIG_NATIVE_WINDOWS */
+
+	return 0;
+}
+
+
+static void hostapd_global_deinit(const char *pid_file)
+{
+#ifdef EAP_TNC
+	tncs_global_deinit();
+#endif /* EAP_TNC */
+
+	eloop_destroy();
+
+#ifndef CONFIG_NATIVE_WINDOWS
+	closelog();
+#endif /* CONFIG_NATIVE_WINDOWS */
+
+	eap_server_unregister_methods();
+
+	os_daemonize_terminate(pid_file);
+}
+
+
+static void hostapd_interface_deinit(struct hostapd_iface *iface)
+{
+	size_t j;
+
+	if (iface == NULL)
+		return;
+
+	hostapd_cleanup_iface_pre(iface);
+	for (j = 0; j < iface->num_bss; j++) {
+		struct hostapd_data *hapd = iface->bss[j];
+		hostapd_free_stas(hapd);
+		hostapd_flush_old_stations(hapd);
+		hostapd_cleanup(hapd);
+		if (j == iface->num_bss - 1 && hapd->driver)
+			hostapd_driver_deinit(hapd);
+	}
+	for (j = 0; j < iface->num_bss; j++)
+		os_free(iface->bss[j]);
+	hostapd_cleanup_iface(iface);
+}
+
+
+static struct hostapd_iface * hostapd_interface_init(const char *config_fname,
+						     int debug)
+{
+	struct hostapd_iface *iface;
+	int k;
+
+	wpa_printf(MSG_ERROR, "Configuration file: %s", config_fname);
+	iface = hostapd_init(config_fname);
+	if (!iface)
+		return NULL;
+
+	for (k = 0; k < debug; k++) {
+		if (iface->bss[0]->conf->logger_stdout_level > 0)
+			iface->bss[0]->conf->logger_stdout_level--;
+	}
+
+	if (hostapd_setup_interface(iface)) {
+		hostapd_interface_deinit(iface);
+		return NULL;
+	}
+
+	return iface;
+}
+
+
+static int hostapd_global_run(struct hapd_interfaces *ifaces, int daemonize,
+			      const char *pid_file)
+{
+#ifdef EAP_TNC
+	int tnc = 0;
+	size_t i, k;
+
+	for (i = 0; !tnc && i < ifaces->count; i++) {
+		for (k = 0; k < ifaces->iface[i]->num_bss; k++) {
+			if (ifaces->iface[i]->bss[0]->conf->tnc) {
+				tnc++;
+				break;
+			}
+		}
+	}
+
+	if (tnc && tncs_global_init() < 0) {
+		wpa_printf(MSG_ERROR, "Failed to initialize TNCS");
+		return -1;
+	}
+#endif /* EAP_TNC */
+
+	if (daemonize && os_daemonize(pid_file)) {
+		perror("daemon");
+		return -1;
+	}
+
+	eloop_run();
+
+	return 0;
+}
+
+
 int main(int argc, char *argv[])
 {
 	struct hapd_interfaces interfaces;
-	int ret = 1, k;
-	size_t i, j;
-	int c, debug = 0, daemonize = 0, tnc = 0;
+	int ret = 1;
+	size_t i;
+	int c, debug = 0, daemonize = 0;
 	const char *pid_file = NULL;
-
-	hostapd_logger_register_cb(hostapd_logger_cb);
 
 	for (;;) {
 		c = getopt(argc, argv, "BdhKP:tv");
@@ -1838,13 +1962,7 @@ int main(int argc, char *argv[])
 	if (optind == argc)
 		usage();
 
-	if (eap_server_register_methods()) {
-		wpa_printf(MSG_ERROR, "Failed to register EAP methods");
-		return -1;
-	}
-
 	interfaces.count = argc - optind;
-
 	interfaces.iface = os_malloc(interfaces.count *
 				     sizeof(struct hostapd_iface *));
 	if (interfaces.iface == NULL) {
@@ -1852,104 +1970,29 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (eloop_init(&interfaces)) {
-		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
+	if (hostapd_global_init(&interfaces))
 		return -1;
-	}
-
-#ifndef CONFIG_NATIVE_WINDOWS
-	eloop_register_signal(SIGHUP, handle_reload, NULL);
-	eloop_register_signal(SIGUSR1, handle_dump_state, NULL);
-#endif /* CONFIG_NATIVE_WINDOWS */
-	eloop_register_signal_terminate(handle_term, NULL);
 
 	/* Initialize interfaces */
 	for (i = 0; i < interfaces.count; i++) {
-		wpa_printf(MSG_ERROR, "Configuration file: %s",
-			   argv[optind + i]);
-		interfaces.iface[i] = hostapd_init(argv[optind + i]);
+		interfaces.iface[i] = hostapd_interface_init(argv[optind + i],
+							     debug);
 		if (!interfaces.iface[i])
 			goto out;
-		for (k = 0; k < debug; k++) {
-			if (interfaces.iface[i]->bss[0]->conf->
-			    logger_stdout_level > 0)
-				interfaces.iface[i]->bss[0]->conf->
-					logger_stdout_level--;
-		}
-
-		ret = hostapd_setup_interface(interfaces.iface[i]);
-		if (ret)
-			goto out;
-
-		for (k = 0; k < (int) interfaces.iface[i]->num_bss; k++) {
-			if (interfaces.iface[i]->bss[0]->conf->tnc)
-				tnc++;
-		}
 	}
 
-#ifdef EAP_TNC
-	if (tnc && tncs_global_init() < 0) {
-		wpa_printf(MSG_ERROR, "Failed to initialize TNCS");
+	if (hostapd_global_run(&interfaces, daemonize, pid_file))
 		goto out;
-	}
-#endif /* EAP_TNC */
-
-	if (daemonize && os_daemonize(pid_file)) {
-		perror("daemon");
-		goto out;
-	}
-
-#ifndef CONFIG_NATIVE_WINDOWS
-	openlog("hostapd", 0, LOG_DAEMON);
-#endif /* CONFIG_NATIVE_WINDOWS */
-
-	eloop_run();
-
-	/* Disconnect associated stations from all interfaces and BSSes */
-	for (i = 0; i < interfaces.count; i++) {
-		for (j = 0; j < interfaces.iface[i]->num_bss; j++) {
-			struct hostapd_data *hapd =
-				interfaces.iface[i]->bss[j];
-			hostapd_free_stas(hapd);
-			hostapd_flush_old_stations(hapd);
-		}
-	}
 
 	ret = 0;
 
  out:
 	/* Deinitialize all interfaces */
-	for (i = 0; i < interfaces.count; i++) {
-		if (!interfaces.iface[i])
-			continue;
-		hostapd_cleanup_iface_pre(interfaces.iface[i]);
-		for (j = 0; j < interfaces.iface[i]->num_bss; j++) {
-			struct hostapd_data *hapd =
-				interfaces.iface[i]->bss[j];
-			hostapd_cleanup(hapd);
-			if (j == interfaces.iface[i]->num_bss - 1 &&
-			    hapd->driver)
-				hostapd_driver_deinit(hapd);
-		}
-		for (j = 0; j < interfaces.iface[i]->num_bss; j++)
-			os_free(interfaces.iface[i]->bss[j]);
-		hostapd_cleanup_iface(interfaces.iface[i]);
-	}
+	for (i = 0; i < interfaces.count; i++)
+		hostapd_interface_deinit(interfaces.iface[i]);
 	os_free(interfaces.iface);
 
-#ifdef EAP_TNC
-	tncs_global_deinit();
-#endif /* EAP_TNC */
-
-	eloop_destroy();
-
-#ifndef CONFIG_NATIVE_WINDOWS
-	closelog();
-#endif /* CONFIG_NATIVE_WINDOWS */
-
-	eap_server_unregister_methods();
-
-	os_daemonize_terminate(pid_file);
+	hostapd_global_deinit(pid_file);
 
 	return ret;
 }

@@ -26,6 +26,7 @@
 #include "eapol_sm.h"
 #include "iapp.h"
 #include "ap.h"
+#include "ieee802_11_defs.h"
 #include "ieee802_11_auth.h"
 #include "ap_list.h"
 #include "sta_info.h"

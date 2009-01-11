@@ -375,12 +375,12 @@ static int wpa_driver_broadcom_set_drop_unencrypted(void *priv, int enabled)
 {
 	struct wpa_driver_broadcom_data *drv = priv;
 	/* SET_EAP_RESTRICT, SET_WEP_RESTRICT */
-	int restrict = (enabled ? 1 : 0);
+	int _restrict = (enabled ? 1 : 0);
 	
 	if (broadcom_ioctl(drv, WLC_SET_WEP_RESTRICT, 
-			   &restrict, sizeof(restrict)) < 0 ||
+			   &_restrict, sizeof(_restrict)) < 0 ||
 	    broadcom_ioctl(drv, WLC_SET_EAP_RESTRICT,
-			   &restrict, sizeof(restrict)) < 0)
+			   &_restrict, sizeof(_restrict)) < 0)
 		return -1;
 
 	return 0;
@@ -512,7 +512,7 @@ static int wpa_driver_broadcom_disassociate(void *priv, const u8 *addr,
 					    int reason_code)
 {
 	struct wpa_driver_broadcom_data *drv = priv;
-	return broadcom_ioctl(drv, WLC_DISASSOC, 0, 0);
+	return broadcom_ioctl(drv, WLC_DISASSOC, NULL, 0);
 }
 
 static int

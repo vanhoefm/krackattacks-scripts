@@ -255,7 +255,7 @@ void rsn_preauth_send(struct hostapd_data *hapd, struct sta_info *sta,
 
 	os_memcpy(ethhdr->h_dest, sta->addr, ETH_ALEN);
 	os_memcpy(ethhdr->h_source, hapd->own_addr, ETH_ALEN);
-	ethhdr->h_proto = htons(ETH_P_PREAUTH);
+	ethhdr->h_proto = host_to_be16(ETH_P_PREAUTH);
 	os_memcpy(ethhdr + 1, buf, len);
 
 	if (l2_packet_send(piface->l2, sta->addr, ETH_P_PREAUTH, (u8 *) ethhdr,

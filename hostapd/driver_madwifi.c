@@ -1199,7 +1199,7 @@ madwifi_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
 	eth = (struct l2_ethhdr *) bp;
 	memcpy(eth->h_dest, addr, ETH_ALEN);
 	memcpy(eth->h_source, own_addr, ETH_ALEN);
-	eth->h_proto = htons(ETH_P_EAPOL);
+	eth->h_proto = host_to_be16(ETH_P_EAPOL);
 	memcpy(eth+1, data, data_len);
 
 	wpa_hexdump(MSG_MSGDUMP, "TX EAPOL", bp, len);

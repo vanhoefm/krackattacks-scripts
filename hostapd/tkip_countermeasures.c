@@ -20,6 +20,7 @@
 #include "sta_info.h"
 #include "mlme.h"
 #include "wpa.h"
+#include "tkip_countermeasures.h"
 
 
 static void ieee80211_tkip_countermeasures_stop(void *eloop_ctx,

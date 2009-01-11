@@ -407,6 +407,7 @@ int WpaGui::openCtrlConnection(const char *ifname)
 		QString res(buf);
 		QStringList types = res.split(QChar(' '));
 		actionWPS->setEnabled(types.contains("WSC"));
+		wpsTab->setEnabled(types.contains("WSC"));
 	}
 
 	return 0;

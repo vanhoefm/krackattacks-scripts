@@ -1520,8 +1520,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "deny_mac_file") == 0) {
 			if (hostapd_config_read_maclist(pos, &bss->deny_mac,
 							&bss->num_deny_mac)) {
-				wpa_printf(MSG_ERROR "Line %d: Failed to read "
-					   "deny_mac_file '%s'", line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: Failed to "
+					   "read deny_mac_file '%s'",
+					   line, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "ap_max_inactivity") == 0) {

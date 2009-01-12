@@ -38,6 +38,7 @@
 #include "priv_netlink.h"
 #include "hostap_common.h"
 #include "hw_features.h"
+#include "ieee802_11_defs.h"
 
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 

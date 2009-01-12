@@ -24,6 +24,7 @@
 #include "l2_packet/l2_packet.h"
 #include "hw_features.h"
 #include "wps_hostapd.h"
+#include "ieee802_11_defs.h"
 
 
 struct test_client_socket {

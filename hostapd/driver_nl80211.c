@@ -36,6 +36,7 @@
 #include "mlme.h"
 #include "radiotap.h"
 #include "radiotap_iter.h"
+#include "ieee802_11_defs.h"
 
 #ifdef CONFIG_LIBNL20
 /* libnl 2.0 compatibility code */

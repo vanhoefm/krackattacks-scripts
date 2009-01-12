@@ -63,6 +63,7 @@
 
 #include "common.h"
 #include "wps_hostapd.h"
+#include "ieee802_11_defs.h"
 
 
 struct madwifi_driver_data {
@@ -202,6 +203,7 @@ set80211param(struct madwifi_driver_data *drv, int op, int arg)
 	return 0;
 }
 
+#ifndef CONFIG_NO_STDOUT_DEBUG
 static const char *
 ether_sprintf(const u8 *addr)
 {
@@ -213,6 +215,7 @@ ether_sprintf(const u8 *addr)
 		snprintf(buf, sizeof(buf), MACSTR, 0,0,0,0,0,0);
 	return buf;
 }
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 
 /*
  * Configure WPA parameters.

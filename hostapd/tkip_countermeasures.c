@@ -20,6 +20,7 @@
 #include "sta_info.h"
 #include "mlme.h"
 #include "wpa.h"
+#include "ieee802_11_defs.h"
 #include "tkip_countermeasures.h"
 
 

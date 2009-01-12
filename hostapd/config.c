@@ -1902,6 +1902,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "pmk_r1_push") == 0) {
 			bss->pmk_r1_push = atoi(pos);
 #endif /* CONFIG_IEEE80211R */
+#ifndef CONFIG_NO_CTRL_IFACE
 		} else if (os_strcmp(buf, "ctrl_interface") == 0) {
 			os_free(bss->ctrl_interface);
 			bss->ctrl_interface = os_strdup(pos);
@@ -1933,6 +1934,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d",
 				   bss->ctrl_interface_gid);
 #endif /* CONFIG_NATIVE_WINDOWS */
+#endif /* CONFIG_NO_CTRL_IFACE */
 #ifdef RADIUS_SERVER
 		} else if (os_strcmp(buf, "radius_server_clients") == 0) {
 			os_free(bss->radius_server_clients);

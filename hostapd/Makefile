@@ -40,7 +40,7 @@ endif
 
 OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
 	config.o ieee802_11_auth.o \
-	sta_info.o wpa.o ctrl_iface.o \
+	sta_info.o wpa.o \
 	drivers.o preauth.o pmksa_cache.o \
 	hw_features.o \
 	drv_callbacks.o \
@@ -75,6 +75,12 @@ ifdef CONFIG_NO_VLAN
 CFLAGS += -DCONFIG_NO_VLAN
 else
 OBJS += vlan_init.o
+endif
+
+ifdef CONFIG_NO_CTRL_IFACE
+CFLAGS += -DCONFIG_NO_CTRL_IFACE
+else
+OBJS += ctrl_iface.o
 endif
 
 OBJS += ../src/crypto/md5.o

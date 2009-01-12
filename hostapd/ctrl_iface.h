@@ -15,9 +15,25 @@
 #ifndef CTRL_IFACE_H
 #define CTRL_IFACE_H
 
+#ifndef CONFIG_NO_CTRL_IFACE
 int hostapd_ctrl_iface_init(struct hostapd_data *hapd);
 void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd);
 void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 			     char *buf, size_t len);
+#else /* CONFIG_NO_CTRL_IFACE */
+static inline int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
+{
+	return 0;
+}
+
+static inline void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
+{
+}
+
+static inline void hostapd_ctrl_iface_send(struct hostapd_data *hapd,
+					   int level, char *buf, size_t len)
+{
+}
+#endif /* CONFIG_NO_CTRL_IFACE */
 
 #endif /* CTRL_IFACE_H */

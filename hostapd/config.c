@@ -768,6 +768,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 #endif /* EAP_SERVER */
 
 
+#ifndef CONFIG_NO_RADIUS
 static int
 hostapd_config_read_radius_addr(struct hostapd_radius_server **server,
 				int *num_server, const char *val, int def_port,
@@ -793,6 +794,7 @@ hostapd_config_read_radius_addr(struct hostapd_radius_server **server,
 
 	return ret;
 }
+#endif /* CONFIG_NO_RADIUS */
 
 
 static int hostapd_config_parse_key_mgmt(int line, const char *value)
@@ -1697,6 +1699,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			}
 		} else if (os_strcmp(buf, "nas_identifier") == 0) {
 			bss->nas_identifier = os_strdup(pos);
+#ifndef CONFIG_NO_RADIUS
 		} else if (os_strcmp(buf, "auth_server_addr") == 0) {
 			if (hostapd_config_read_radius_addr(
 				    &bss->radius->auth_servers,
@@ -1751,6 +1754,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "radius_acct_interim_interval") == 0)
 		{
 			bss->radius->acct_interim_interval = atoi(pos);
+#endif /* CONFIG_NO_RADIUS */
 		} else if (os_strcmp(buf, "auth_algs") == 0) {
 			bss->auth_algs = atoi(pos);
 			if (bss->auth_algs == 0) {

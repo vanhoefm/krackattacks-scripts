@@ -44,7 +44,7 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 
 	f = fopen(fname, "r");
 	if (!f) {
-		printf("VLAN file '%s' not readable.\n", fname);
+		wpa_printf(MSG_ERROR, "VLAN file '%s' not readable.", fname);
 		return -1;
 	}
 
@@ -71,8 +71,8 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 			vlan_id = strtol(buf, &pos, 10);
 			if (buf == pos || vlan_id < 1 ||
 			    vlan_id > MAX_VLAN_ID) {
-				printf("Invalid VLAN ID at line %d in '%s'\n",
-				       line, fname);
+				wpa_printf(MSG_ERROR, "Invalid VLAN ID at "
+					   "line %d in '%s'", line, fname);
 				fclose(f);
 				return -1;
 			}
@@ -85,16 +85,16 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 			pos2++;
 		*pos2 = '\0';
 		if (*pos == '\0' || os_strlen(pos) > IFNAMSIZ) {
-			printf("Invalid VLAN ifname at line %d in '%s'\n",
-			       line, fname);
+			wpa_printf(MSG_ERROR, "Invalid VLAN ifname at line %d "
+				   "in '%s'", line, fname);
 			fclose(f);
 			return -1;
 		}
 
 		vlan = os_malloc(sizeof(*vlan));
 		if (vlan == NULL) {
-			printf("Out of memory while reading VLAN interfaces "
-			       "from '%s'\n", fname);
+			wpa_printf(MSG_ERROR, "Out of memory while reading "
+				   "VLAN interfaces from '%s'", fname);
 			fclose(f);
 			return -1;
 		}
@@ -214,7 +214,8 @@ static struct hostapd_config * hostapd_config_defaults(void)
 	conf = os_zalloc(sizeof(*conf));
 	bss = os_zalloc(sizeof(*bss));
 	if (conf == NULL || bss == NULL) {
-		printf("Failed to allocate memory for configuration data.\n");
+		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
+			   "configuration data.");
 		os_free(conf);
 		os_free(bss);
 		return NULL;
@@ -223,7 +224,7 @@ static struct hostapd_config * hostapd_config_defaults(void)
 	/* set default driver based on configuration */
 	conf->driver = hostapd_drivers[0];
 	if (conf->driver == NULL) {
-		printf("No driver wrappers registered!\n");
+		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
 		os_free(conf);
 		os_free(bss);
 		return NULL;
@@ -301,7 +302,7 @@ static int hostapd_config_read_maclist(const char *fname,
 
 	f = fopen(fname, "r");
 	if (!f) {
-		printf("MAC list file '%s' not found.\n", fname);
+		wpa_printf(MSG_ERROR, "MAC list file '%s' not found.", fname);
 		return -1;
 	}
 
@@ -322,8 +323,8 @@ static int hostapd_config_read_maclist(const char *fname,
 			continue;
 
 		if (hwaddr_aton(buf, addr)) {
-			printf("Invalid MAC address '%s' at line %d in '%s'\n",
-			       buf, line, fname);
+			wpa_printf(MSG_ERROR, "Invalid MAC address '%s' at "
+				   "line %d in '%s'", buf, line, fname);
 			fclose(f);
 			return -1;
 		}
@@ -339,7 +340,7 @@ static int hostapd_config_read_maclist(const char *fname,
 
 		newacl = os_realloc(*acl, (*num + 1) * sizeof(**acl));
 		if (newacl == NULL) {
-			printf("MAC list reallocation failed\n");
+			wpa_printf(MSG_ERROR, "MAC list reallocation failed");
 			fclose(f);
 			return -1;
 		}
@@ -372,7 +373,7 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 
 	f = fopen(fname, "r");
 	if (!f) {
-		printf("WPA PSK file '%s' not found.\n", fname);
+		wpa_printf(MSG_ERROR, "WPA PSK file '%s' not found.", fname);
 		return -1;
 	}
 
@@ -393,15 +394,15 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 			continue;
 
 		if (hwaddr_aton(buf, addr)) {
-			printf("Invalid MAC address '%s' on line %d in '%s'\n",
-			       buf, line, fname);
+			wpa_printf(MSG_ERROR, "Invalid MAC address '%s' on "
+				   "line %d in '%s'", buf, line, fname);
 			ret = -1;
 			break;
 		}
 
 		psk = os_zalloc(sizeof(*psk));
 		if (psk == NULL) {
-			printf("WPA PSK allocation failed\n");
+			wpa_printf(MSG_ERROR, "WPA PSK allocation failed");
 			ret = -1;
 			break;
 		}
@@ -412,7 +413,8 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 
 		pos = buf + 17;
 		if (*pos == '\0') {
-			printf("No PSK on line %d in '%s'\n", line, fname);
+			wpa_printf(MSG_ERROR, "No PSK on line %d in '%s'",
+				   line, fname);
 			os_free(psk);
 			ret = -1;
 			break;
@@ -429,8 +431,8 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 			ok = 1;
 		}
 		if (!ok) {
-			printf("Invalid PSK '%s' on line %d in '%s'\n",
-			       pos, line, fname);
+			wpa_printf(MSG_ERROR, "Invalid PSK '%s' on line %d in "
+				   "'%s'", pos, line, fname);
 			os_free(psk);
 			ret = -1;
 			break;
@@ -452,13 +454,13 @@ int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf)
 
 	if (ssid->wpa_passphrase != NULL) {
 		if (ssid->wpa_psk != NULL) {
-			printf("Warning: both WPA PSK and passphrase set. "
-			       "Using passphrase.\n");
+			wpa_printf(MSG_ERROR, "Warning: both WPA PSK and "
+				   "passphrase set. Using passphrase.");
 			os_free(ssid->wpa_psk);
 		}
 		ssid->wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
 		if (ssid->wpa_psk == NULL) {
-			printf("Unable to alloc space for PSK\n");
+			wpa_printf(MSG_ERROR, "Unable to alloc space for PSK");
 			return -1;
 		}
 		wpa_hexdump_ascii(MSG_DEBUG, "SSID",
@@ -503,7 +505,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 
 	f = fopen(fname, "r");
 	if (!f) {
-		printf("EAP user file '%s' not found.\n", fname);
+		wpa_printf(MSG_ERROR, "EAP user file '%s' not found.", fname);
 		return -1;
 	}
 
@@ -527,14 +529,14 @@ static int hostapd_config_read_eap_user(const char *fname,
 		user = NULL;
 
 		if (buf[0] != '"' && buf[0] != '*') {
-			printf("Invalid EAP identity (no \" in start) on "
-			       "line %d in '%s'\n", line, fname);
+			wpa_printf(MSG_ERROR, "Invalid EAP identity (no \" in "
+				   "start) on line %d in '%s'", line, fname);
 			goto failed;
 		}
 
 		user = os_zalloc(sizeof(*user));
 		if (user == NULL) {
-			printf("EAP user allocation failed\n");
+			wpa_printf(MSG_ERROR, "EAP user allocation failed");
 			goto failed;
 		}
 		user->force_version = -1;
@@ -547,15 +549,16 @@ static int hostapd_config_read_eap_user(const char *fname,
 			while (*pos != '"' && *pos != '\0')
 				pos++;
 			if (*pos == '\0') {
-				printf("Invalid EAP identity (no \" in end) on"
-				       " line %d in '%s'\n", line, fname);
+				wpa_printf(MSG_ERROR, "Invalid EAP identity "
+					   "(no \" in end) on line %d in '%s'",
+					   line, fname);
 				goto failed;
 			}
 
 			user->identity = os_malloc(pos - start);
 			if (user->identity == NULL) {
-				printf("Failed to allocate memory for EAP "
-				       "identity\n");
+				wpa_printf(MSG_ERROR, "Failed to allocate "
+					   "memory for EAP identity");
 				goto failed;
 			}
 			os_memcpy(user->identity, start, pos - start);
@@ -571,8 +574,8 @@ static int hostapd_config_read_eap_user(const char *fname,
 			pos++;
 
 		if (*pos == '\0') {
-			printf("No EAP method on line %d in '%s'\n",
-			       line, fname);
+			wpa_printf(MSG_ERROR, "No EAP method on line %d in "
+				   "'%s'", line, fname);
 			goto failed;
 		}
 
@@ -617,8 +620,9 @@ static int hostapd_config_read_eap_user(const char *fname,
 						EAP_TTLS_AUTH_MSCHAPV2;
 					goto skip_eap;
 				}
-				printf("Unsupported EAP type '%s' on line %d "
-				       "in '%s'\n", start, line, fname);
+				wpa_printf(MSG_ERROR, "Unsupported EAP type "
+					   "'%s' on line %d in '%s'",
+					   start, line, fname);
 				goto failed;
 			}
 
@@ -631,8 +635,8 @@ static int hostapd_config_read_eap_user(const char *fname,
 			start = pos3;
 		}
 		if (num_methods == 0 && user->ttls_auth == 0) {
-			printf("No EAP types configured on line %d in '%s'\n",
-			       line, fname);
+			wpa_printf(MSG_ERROR, "No EAP types configured on "
+				   "line %d in '%s'", line, fname);
 			goto failed;
 		}
 
@@ -665,15 +669,16 @@ static int hostapd_config_read_eap_user(const char *fname,
 			while (*pos != '"' && *pos != '\0')
 				pos++;
 			if (*pos == '\0') {
-				printf("Invalid EAP password (no \" in end) "
-				       "on line %d in '%s'\n", line, fname);
+				wpa_printf(MSG_ERROR, "Invalid EAP password "
+					   "(no \" in end) on line %d in '%s'",
+					   line, fname);
 				goto failed;
 			}
 
 			user->password = os_malloc(pos - start);
 			if (user->password == NULL) {
-				printf("Failed to allocate memory for EAP "
-				       "password\n");
+				wpa_printf(MSG_ERROR, "Failed to allocate "
+					   "memory for EAP password");
 				goto failed;
 			}
 			os_memcpy(user->password, start, pos - start);
@@ -687,19 +692,19 @@ static int hostapd_config_read_eap_user(const char *fname,
 			       *pos2 != '\t' && *pos2 != '#')
 				pos2++;
 			if (pos2 - pos != 32) {
-				printf("Invalid password hash on line %d in "
-				       "'%s'\n", line, fname);
+				wpa_printf(MSG_ERROR, "Invalid password hash "
+					   "on line %d in '%s'", line, fname);
 				goto failed;
 			}
 			user->password = os_malloc(16);
 			if (user->password == NULL) {
-				printf("Failed to allocate memory for EAP "
-				       "password hash\n");
+				wpa_printf(MSG_ERROR, "Failed to allocate "
+					   "memory for EAP password hash");
 				goto failed;
 			}
 			if (hexstr2bin(pos, user->password, 16) < 0) {
-				printf("Invalid hash password on line %d in "
-				       "'%s'\n", line, fname);
+				wpa_printf(MSG_ERROR, "Invalid hash password "
+					   "on line %d in '%s'", line, fname);
 				goto failed;
 			}
 			user->password_len = 16;
@@ -711,20 +716,20 @@ static int hostapd_config_read_eap_user(const char *fname,
 			       *pos2 != '\t' && *pos2 != '#')
 				pos2++;
 			if ((pos2 - pos) & 1) {
-				printf("Invalid hex password on line %d in "
-				       "'%s'\n", line, fname);
+				wpa_printf(MSG_ERROR, "Invalid hex password "
+					   "on line %d in '%s'", line, fname);
 				goto failed;
 			}
 			user->password = os_malloc((pos2 - pos) / 2);
 			if (user->password == NULL) {
-				printf("Failed to allocate memory for EAP "
-				       "password\n");
+				wpa_printf(MSG_ERROR, "Failed to allocate "
+					   "memory for EAP password");
 				goto failed;
 			}
 			if (hexstr2bin(pos, user->password,
 				       (pos2 - pos) / 2) < 0) {
-				printf("Invalid hex password on line %d in "
-				       "'%s'\n", line, fname);
+				wpa_printf(MSG_ERROR, "Invalid hex password "
+					   "on line %d in '%s'", line, fname);
 				goto failed;
 			}
 			user->password_len = (pos2 - pos) / 2;
@@ -827,8 +832,8 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 			val |= WPA_KEY_MGMT_IEEE8021X_SHA256;
 #endif /* CONFIG_IEEE80211W */
 		else {
-			printf("Line %d: invalid key_mgmt '%s'\n",
-			       line, start);
+			wpa_printf(MSG_ERROR, "Line %d: invalid key_mgmt '%s'",
+				   line, start);
 			os_free(buf);
 			return -1;
 		}
@@ -840,7 +845,8 @@ static int hostapd_config_parse_key_mgmt(int line, const char *value)
 
 	os_free(buf);
 	if (val == 0) {
-		printf("Line %d: no key_mgmt values configured.\n", line);
+		wpa_printf(MSG_ERROR, "Line %d: no key_mgmt values "
+			   "configured.", line);
 		return -1;
 	}
 
@@ -879,7 +885,8 @@ static int hostapd_config_parse_cipher(int line, const char *value)
 		else if (os_strcmp(start, "NONE") == 0)
 			val |= WPA_CIPHER_NONE;
 		else {
-			printf("Line %d: invalid cipher '%s'.", line, start);
+			wpa_printf(MSG_ERROR, "Line %d: invalid cipher '%s'.",
+				   line, start);
 			os_free(buf);
 			return -1;
 		}
@@ -891,7 +898,8 @@ static int hostapd_config_parse_cipher(int line, const char *value)
 	os_free(buf);
 
 	if (val == 0) {
-		printf("Line %d: no cipher values configured.", line);
+		wpa_printf(MSG_ERROR, "Line %d: no cipher values configured.",
+			   line);
 		return -1;
 	}
 	return val;
@@ -903,16 +911,16 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 {
 	if (bss->ieee802_1x && !bss->eap_server &&
 	    !bss->radius->auth_servers) {
-		printf("Invalid IEEE 802.1X configuration (no EAP "
-		       "authenticator configured).\n");
+		wpa_printf(MSG_ERROR, "Invalid IEEE 802.1X configuration (no "
+			   "EAP authenticator configured).");
 		return -1;
 	}
 
 	if (bss->wpa && (bss->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
 	    bss->ssid.wpa_psk == NULL && bss->ssid.wpa_passphrase == NULL &&
 	    bss->ssid.wpa_psk_file == NULL) {
-		printf("WPA-PSK enabled, but PSK or passphrase is not "
-		       "configured.\n");
+		wpa_printf(MSG_ERROR, "WPA-PSK enabled, but PSK or passphrase "
+			   "is not configured.");
 		return -1;
 	}
 
@@ -923,10 +931,10 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 			if ((&conf->bss[i] != bss) &&
 			    (hostapd_mac_comp(conf->bss[i].bssid,
 					      bss->bssid) == 0)) {
-				printf("Duplicate BSSID " MACSTR
-				       " on interface '%s' and '%s'.\n",
-				       MAC2STR(bss->bssid),
-				       conf->bss[i].iface, bss->iface);
+				wpa_printf(MSG_ERROR, "Duplicate BSSID " MACSTR
+					   " on interface '%s' and '%s'.",
+					   MAC2STR(bss->bssid),
+					   conf->bss[i].iface, bss->iface);
 				return -1;
 			}
 		}
@@ -938,8 +946,9 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	    (bss->nas_identifier == NULL ||
 	     os_strlen(bss->nas_identifier) < 1 ||
 	     os_strlen(bss->nas_identifier) > FT_R0KH_ID_MAX_LEN)) {
-		printf("FT (IEEE 802.11r) requires nas_identifier to be "
-		       "configured as a 1..48 octet string\n");
+		wpa_printf(MSG_ERROR, "FT (IEEE 802.11r) requires "
+			   "nas_identifier to be configured as a 1..48 octet "
+			   "string");
 		return -1;
 	}
 #endif /* CONFIG_IEEE80211R */
@@ -948,8 +957,8 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	if (conf->ieee80211n && bss->wpa &&
 	    !(bss->wpa_pairwise & WPA_CIPHER_CCMP) &&
 	    !(bss->rsn_pairwise & WPA_CIPHER_CCMP)) {
-		printf("HT (IEEE 802.11n) with WPA/WPA2 requires CCMP to be "
-		       "enabled\n");
+		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) with WPA/WPA2 "
+			   "requires CCMP to be enabled");
 		return -1;
 	}
 #endif /* CONFIG_IEEE80211N */
@@ -1055,7 +1064,8 @@ static int hostapd_config_bss(struct hostapd_config *conf, const char *ifname)
 	bss = os_realloc(conf->bss, (conf->num_bss + 1) *
 			 sizeof(struct hostapd_bss_config));
 	if (bss == NULL) {
-		printf("Failed to allocate memory for multi-BSS entry\n");
+		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
+			   "multi-BSS entry");
 		return -1;
 	}
 	conf->bss = bss;
@@ -1064,8 +1074,8 @@ static int hostapd_config_bss(struct hostapd_config *conf, const char *ifname)
 	os_memset(bss, 0, sizeof(*bss));
 	bss->radius = os_zalloc(sizeof(*bss->radius));
 	if (bss->radius == NULL) {
-		printf("Failed to allocate memory for multi-BSS RADIUS "
-		       "data\n");
+		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
+			   "multi-BSS RADIUS data");
 		return -1;
 	}
 
@@ -1117,7 +1127,7 @@ static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
 		num = IEEE80211_TX_QUEUE_BEACON;
 		pos += 7;
 	} else {
-		printf("Unknown tx_queue name '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Unknown tx_queue name '%s'", pos);
 		return -1;
 	}
 
@@ -1126,25 +1136,28 @@ static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
 	if (os_strcmp(pos, "aifs") == 0) {
 		queue->aifs = atoi(val);
 		if (queue->aifs < 0 || queue->aifs > 255) {
-			printf("Invalid AIFS value %d\n", queue->aifs);
+			wpa_printf(MSG_ERROR, "Invalid AIFS value %d",
+				   queue->aifs);
 			return -1;
 		}
 	} else if (os_strcmp(pos, "cwmin") == 0) {
 		queue->cwmin = atoi(val);
 		if (!valid_cw(queue->cwmin)) {
-			printf("Invalid cwMin value %d\n", queue->cwmin);
+			wpa_printf(MSG_ERROR, "Invalid cwMin value %d",
+				   queue->cwmin);
 			return -1;
 		}
 	} else if (os_strcmp(pos, "cwmax") == 0) {
 		queue->cwmax = atoi(val);
 		if (!valid_cw(queue->cwmax)) {
-			printf("Invalid cwMax value %d\n", queue->cwmax);
+			wpa_printf(MSG_ERROR, "Invalid cwMax value %d",
+				   queue->cwmax);
 			return -1;
 		}
 	} else if (os_strcmp(pos, "burst") == 0) {
 		queue->burst = hostapd_config_read_int10(val);
 	} else {
-		printf("Unknown tx_queue field '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Unknown tx_queue field '%s'", pos);
 		return -1;
 	}
 
@@ -1176,7 +1189,7 @@ static int hostapd_config_wme_ac(struct hostapd_config *conf, char *name,
 		num = 3;
 		pos += 3;
 	} else {
-		printf("Unknown wme name '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Unknown wme name '%s'", pos);
 		return -1;
 	}
 
@@ -1185,40 +1198,40 @@ static int hostapd_config_wme_ac(struct hostapd_config *conf, char *name,
 	if (os_strcmp(pos, "aifs") == 0) {
 		v = atoi(val);
 		if (v < 1 || v > 255) {
-			printf("Invalid AIFS value %d\n", v);
+			wpa_printf(MSG_ERROR, "Invalid AIFS value %d", v);
 			return -1;
 		}
 		ac->aifs = v;
 	} else if (os_strcmp(pos, "cwmin") == 0) {
 		v = atoi(val);
 		if (v < 0 || v > 12) {
-			printf("Invalid cwMin value %d\n", v);
+			wpa_printf(MSG_ERROR, "Invalid cwMin value %d", v);
 			return -1;
 		}
 		ac->cwmin = v;
 	} else if (os_strcmp(pos, "cwmax") == 0) {
 		v = atoi(val);
 		if (v < 0 || v > 12) {
-			printf("Invalid cwMax value %d\n", v);
+			wpa_printf(MSG_ERROR, "Invalid cwMax value %d", v);
 			return -1;
 		}
 		ac->cwmax = v;
 	} else if (os_strcmp(pos, "txop_limit") == 0) {
 		v = atoi(val);
 		if (v < 0 || v > 0xffff) {
-			printf("Invalid txop value %d\n", v);
+			wpa_printf(MSG_ERROR, "Invalid txop value %d", v);
 			return -1;
 		}
 		ac->txopLimit = v;
 	} else if (os_strcmp(pos, "acm") == 0) {
 		v = atoi(val);
 		if (v < 0 || v > 1) {
-			printf("Invalid acm value %d\n", v);
+			wpa_printf(MSG_ERROR, "Invalid acm value %d", v);
 			return -1;
 		}
 		ac->admission_control_mandatory = v;
 	} else {
-		printf("Unknown wme_ac_ field '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Unknown wme_ac_ field '%s'", pos);
 		return -1;
 	}
 
@@ -1242,7 +1255,7 @@ static int add_r0kh(struct hostapd_bss_config *bss, char *value)
 	if (next)
 		*next++ = '\0';
 	if (next == NULL || hwaddr_aton(pos, r0kh->addr)) {
-		printf("Invalid R0KH MAC address: '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Invalid R0KH MAC address: '%s'", pos);
 		os_free(r0kh);
 		return -1;
 	}
@@ -1252,7 +1265,7 @@ static int add_r0kh(struct hostapd_bss_config *bss, char *value)
 	if (next)
 		*next++ = '\0';
 	if (next == NULL || next - pos > FT_R0KH_ID_MAX_LEN) {
-		printf("Invalid R0KH-ID: '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Invalid R0KH-ID: '%s'", pos);
 		os_free(r0kh);
 		return -1;
 	}
@@ -1261,7 +1274,7 @@ static int add_r0kh(struct hostapd_bss_config *bss, char *value)
 
 	pos = next;
 	if (hexstr2bin(pos, r0kh->key, sizeof(r0kh->key))) {
-		printf("Invalid R0KH key: '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Invalid R0KH key: '%s'", pos);
 		os_free(r0kh);
 		return -1;
 	}
@@ -1289,7 +1302,7 @@ static int add_r1kh(struct hostapd_bss_config *bss, char *value)
 	if (next)
 		*next++ = '\0';
 	if (next == NULL || hwaddr_aton(pos, r1kh->addr)) {
-		printf("Invalid R1KH MAC address: '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Invalid R1KH MAC address: '%s'", pos);
 		os_free(r1kh);
 		return -1;
 	}
@@ -1299,14 +1312,14 @@ static int add_r1kh(struct hostapd_bss_config *bss, char *value)
 	if (next)
 		*next++ = '\0';
 	if (next == NULL || hwaddr_aton(pos, r1kh->id)) {
-		printf("Invalid R1KH-ID: '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Invalid R1KH-ID: '%s'", pos);
 		os_free(r1kh);
 		return -1;
 	}
 
 	pos = next;
 	if (hexstr2bin(pos, r1kh->key, sizeof(r1kh->key))) {
-		printf("Invalid R1KH key: '%s'\n", pos);
+		wpa_printf(MSG_ERROR, "Invalid R1KH key: '%s'", pos);
 		os_free(r1kh);
 		return -1;
 	}
@@ -1395,8 +1408,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 
 	f = fopen(fname, "r");
 	if (f == NULL) {
-		printf("Could not open configuration file '%s' for reading.\n",
-		       fname);
+		wpa_printf(MSG_ERROR, "Could not open configuration file '%s' "
+			   "for reading.", fname);
 		return NULL;
 	}
 
@@ -1426,7 +1439,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 
 		pos = os_strchr(buf, '=');
 		if (pos == NULL) {
-			printf("Line %d: invalid line '%s'\n", line, buf);
+			wpa_printf(MSG_ERROR, "Line %d: invalid line '%s'",
+				   line, buf);
 			errors++;
 			continue;
 		}
@@ -1450,8 +1464,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				}
 			}
 			if (conf->driver == NULL) {
-				printf("Line %d: invalid/unknown driver "
-				       "'%s'\n", line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: invalid/"
+					   "unknown driver '%s'", line, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "debug") == 0) {
@@ -1472,8 +1486,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->ssid.ssid_len = os_strlen(pos);
 			if (bss->ssid.ssid_len > HOSTAPD_MAX_SSID_LEN ||
 			    bss->ssid.ssid_len < 1) {
-				printf("Line %d: invalid SSID '%s'\n", line,
-				       pos);
+				wpa_printf(MSG_ERROR, "Line %d: invalid SSID "
+					   "'%s'", line, pos);
 				errors++;
 			} else {
 				os_memcpy(bss->ssid.ssid, pos,
@@ -1486,25 +1500,24 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			if (bss->macaddr_acl != ACCEPT_UNLESS_DENIED &&
 			    bss->macaddr_acl != DENY_UNLESS_ACCEPTED &&
 			    bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH) {
-				printf("Line %d: unknown macaddr_acl %d\n",
-				       line, bss->macaddr_acl);
+				wpa_printf(MSG_ERROR, "Line %d: unknown "
+					   "macaddr_acl %d",
+					   line, bss->macaddr_acl);
 			}
 		} else if (os_strcmp(buf, "accept_mac_file") == 0) {
 			if (hostapd_config_read_maclist(pos, &bss->accept_mac,
 							&bss->num_accept_mac))
 			{
-				printf("Line %d: Failed to read "
-				       "accept_mac_file '%s'\n",
-				       line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: Failed to "
+					   "read accept_mac_file '%s'",
+					   line, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "deny_mac_file") == 0) {
 			if (hostapd_config_read_maclist(pos, &bss->deny_mac,
-							&bss->num_deny_mac))
-			{
-				printf("Line %d: Failed to read "
-				       "deny_mac_file '%s'\n",
-				       line, pos);
+							&bss->num_deny_mac)) {
+				wpa_printf(MSG_ERROR "Line %d: Failed to read "
+					   "deny_mac_file '%s'", line, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "ap_max_inactivity") == 0) {
@@ -1521,9 +1534,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->eapol_version = atoi(pos);
 			if (bss->eapol_version < 1 ||
 			    bss->eapol_version > 2) {
-				printf("Line %d: invalid EAPOL "
-				       "version (%d): '%s'.\n",
-				       line, bss->eapol_version, pos);
+				wpa_printf(MSG_ERROR, "Line %d: invalid EAPOL "
+					   "version (%d): '%s'.",
+					   line, bss->eapol_version, pos);
 				errors++;
 			} else
 				wpa_printf(MSG_DEBUG, "eapol_version=%d",
@@ -1531,8 +1544,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #ifdef EAP_SERVER
 		} else if (os_strcmp(buf, "eap_authenticator") == 0) {
 			bss->eap_server = atoi(pos);
-			printf("Line %d: obsolete eap_authenticator used; "
-			       "this has been renamed to eap_server\n", line);
+			wpa_printf(MSG_ERROR, "Line %d: obsolete "
+				   "eap_authenticator used; this has been "
+				   "renamed to eap_server", line);
 		} else if (os_strcmp(buf, "eap_server") == 0) {
 			bss->eap_server = atoi(pos);
 		} else if (os_strcmp(buf, "eap_user_file") == 0) {
@@ -1560,20 +1574,20 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			os_free(bss->pac_opaque_encr_key);
 			bss->pac_opaque_encr_key = os_malloc(16);
 			if (bss->pac_opaque_encr_key == NULL) {
-				printf("Line %d: No memory for "
-				       "pac_opque_encr_key\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: No memory for "
+					   "pac_opaque_encr_key", line);
 				errors++;
 			} else if (hexstr2bin(pos, bss->pac_opaque_encr_key,
 					      16)) {
-				printf("Line %d: Invalid pac_opque_encr_key\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "pac_opaque_encr_key", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "eap_fast_a_id") == 0) {
 			size_t idlen = os_strlen(pos);
 			if (idlen & 1) {
-				printf("Line %d: Invalid eap_fast_a_id\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "eap_fast_a_id", line);
 				errors++;
 			} else {
 				os_free(bss->eap_fast_a_id);
@@ -1581,8 +1595,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				if (bss->eap_fast_a_id == NULL ||
 				    hexstr2bin(pos, bss->eap_fast_a_id,
 					       idlen / 2)) {
-					printf("Line %d: Failed to parse "
-					       "eap_fast_a_id\n", line);
+					wpa_printf(MSG_ERROR, "Line %d: "
+						   "Failed to parse "
+						   "eap_fast_a_id", line);
 					errors++;
 				} else
 					bss->eap_fast_a_id_len = idlen / 2;
@@ -1613,8 +1628,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			char *term;
 			bss->eap_req_id_text = os_strdup(pos);
 			if (bss->eap_req_id_text == NULL) {
-				printf("Line %d: Failed to allocate memory "
-				       "for eap_req_id_text\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: Failed to "
+					   "allocate memory for "
+					   "eap_req_id_text", line);
 				errors++;
 				continue;
 			}
@@ -1631,36 +1647,38 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "wep_key_len_broadcast") == 0) {
 			bss->default_wep_key_len = atoi(pos);
 			if (bss->default_wep_key_len > 13) {
-				printf("Line %d: invalid WEP key len %lu "
-				       "(= %lu bits)\n", line,
-				       (unsigned long)
-				       bss->default_wep_key_len,
-				       (unsigned long)
-				       bss->default_wep_key_len * 8);
+				wpa_printf(MSG_ERROR, "Line %d: invalid WEP "
+					   "key len %lu (= %lu bits)", line,
+					   (unsigned long)
+					   bss->default_wep_key_len,
+					   (unsigned long)
+					   bss->default_wep_key_len * 8);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wep_key_len_unicast") == 0) {
 			bss->individual_wep_key_len = atoi(pos);
 			if (bss->individual_wep_key_len < 0 ||
 			    bss->individual_wep_key_len > 13) {
-				printf("Line %d: invalid WEP key len %d "
-				       "(= %d bits)\n", line,
-				       bss->individual_wep_key_len,
-				       bss->individual_wep_key_len * 8);
+				wpa_printf(MSG_ERROR, "Line %d: invalid WEP "
+					   "key len %d (= %d bits)", line,
+					   bss->individual_wep_key_len,
+					   bss->individual_wep_key_len * 8);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wep_rekey_period") == 0) {
 			bss->wep_rekeying_period = atoi(pos);
 			if (bss->wep_rekeying_period < 0) {
-				printf("Line %d: invalid period %d\n",
-				       line, bss->wep_rekeying_period);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "period %d",
+					   line, bss->wep_rekeying_period);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "eap_reauth_period") == 0) {
 			bss->eap_reauth_period = atoi(pos);
 			if (bss->eap_reauth_period < 0) {
-				printf("Line %d: invalid period %d\n",
-				       line, bss->eap_reauth_period);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "period %d",
+					   line, bss->eap_reauth_period);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "eapol_key_index_workaround") == 0) {
@@ -1673,8 +1691,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #endif /* CONFIG_IAPP */
 		} else if (os_strcmp(buf, "own_ip_addr") == 0) {
 			if (hostapd_parse_ip_addr(pos, &bss->own_ip_addr)) {
-				printf("Line %d: invalid IP address '%s'\n",
-				       line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: invalid IP "
+					   "address '%s'", line, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "nas_identifier") == 0) {
@@ -1684,8 +1702,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				    &bss->radius->auth_servers,
 				    &bss->radius->num_auth_servers, pos, 1812,
 				    &bss->radius->auth_server)) {
-				printf("Line %d: invalid IP address '%s'\n",
-				       line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: invalid IP "
+					   "address '%s'", line, pos);
 				errors++;
 			}
 		} else if (bss->radius->auth_server &&
@@ -1696,8 +1714,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			int len = os_strlen(pos);
 			if (len == 0) {
 				/* RFC 2865, Ch. 3 */
-				printf("Line %d: empty shared secret is not "
-				       "allowed.\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: empty shared "
+					   "secret is not allowed.", line);
 				errors++;
 			}
 			bss->radius->auth_server->shared_secret =
@@ -1708,8 +1726,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				    &bss->radius->acct_servers,
 				    &bss->radius->num_acct_servers, pos, 1813,
 				    &bss->radius->acct_server)) {
-				printf("Line %d: invalid IP address '%s'\n",
-				       line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: invalid IP "
+					   "address '%s'", line, pos);
 				errors++;
 			}
 		} else if (bss->radius->acct_server &&
@@ -1720,8 +1738,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			int len = os_strlen(pos);
 			if (len == 0) {
 				/* RFC 2865, Ch. 3 */
-				printf("Line %d: empty shared secret is not "
-				       "allowed.\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: empty shared "
+					   "secret is not allowed.", line);
 				errors++;
 			}
 			bss->radius->acct_server->shared_secret =
@@ -1736,18 +1754,19 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "auth_algs") == 0) {
 			bss->auth_algs = atoi(pos);
 			if (bss->auth_algs == 0) {
-				printf("Line %d: no authentication algorithms "
-				       "allowed\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: no "
+					   "authentication algorithms allowed",
+					   line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "max_num_sta") == 0) {
 			bss->max_num_sta = atoi(pos);
 			if (bss->max_num_sta < 0 ||
 			    bss->max_num_sta > MAX_STA_COUNT) {
-				printf("Line %d: Invalid max_num_sta=%d; "
-				       "allowed range 0..%d\n", line,
-				       bss->max_num_sta, MAX_STA_COUNT);
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "max_num_sta=%d; allowed range "
+					   "0..%d", line, bss->max_num_sta,
+					   MAX_STA_COUNT);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wpa") == 0) {
@@ -1763,8 +1782,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "wpa_passphrase") == 0) {
 			int len = os_strlen(pos);
 			if (len < 8 || len > 63) {
-				printf("Line %d: invalid WPA passphrase length"
-				       " %d (expected 8..63)\n", line, len);
+				wpa_printf(MSG_ERROR, "Line %d: invalid WPA "
+					   "passphrase length %d (expected "
+					   "8..63)", line, len);
 				errors++;
 			} else {
 				os_free(bss->ssid.wpa_passphrase);
@@ -1779,8 +1799,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			else if (hexstr2bin(pos, bss->ssid.wpa_psk->psk,
 					    PMK_LEN) ||
 				 pos[PMK_LEN * 2] != '\0') {
-				printf("Line %d: Invalid PSK '%s'.\n", line,
-				       pos);
+				wpa_printf(MSG_ERROR, "Line %d: Invalid PSK "
+					   "'%s'.", line, pos);
 				errors++;
 			} else {
 				bss->ssid.wpa_psk->group = 1;
@@ -1789,7 +1809,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			os_free(bss->ssid.wpa_psk_file);
 			bss->ssid.wpa_psk_file = os_strdup(pos);
 			if (!bss->ssid.wpa_psk_file) {
-				printf("Line %d: allocation failed\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: allocation "
+					   "failed", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wpa_key_mgmt") == 0) {
@@ -1806,9 +1827,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			else if (bss->wpa_pairwise &
 				 (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 |
 				  WPA_CIPHER_WEP104)) {
-				printf("Line %d: unsupported pairwise "
-				       "cipher suite '%s'\n",
-				       bss->wpa_pairwise, pos);
+				wpa_printf(MSG_ERROR, "Line %d: unsupported "
+					   "pairwise cipher suite '%s'",
+					   bss->wpa_pairwise, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "rsn_pairwise") == 0) {
@@ -1820,9 +1841,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			else if (bss->rsn_pairwise &
 				 (WPA_CIPHER_NONE | WPA_CIPHER_WEP40 |
 				  WPA_CIPHER_WEP104)) {
-				printf("Line %d: unsupported pairwise "
-				       "cipher suite '%s'\n",
-				       bss->rsn_pairwise, pos);
+				wpa_printf(MSG_ERROR, "Line %d: unsupported "
+					   "pairwise cipher suite '%s'",
+					   bss->rsn_pairwise, pos);
 				errors++;
 			}
 #ifdef CONFIG_RSN_PREAUTH
@@ -1928,8 +1949,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			else if (os_strcmp(pos, "g") == 0)
 				conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
 			else {
-				printf("Line %d: unknown hw_mode '%s'\n",
-				       line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: unknown "
+					   "hw_mode '%s'", line, pos);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "channel") == 0) {
@@ -1942,50 +1963,56 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			 * useful in real life scenarios, do not allow beacon
 			 * period to be set below 15 TU. */
 			if (val < 15 || val > 65535) {
-				printf("Line %d: invalid beacon_int %d "
-				       "(expected 15..65535)\n",
-				       line, val);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "beacon_int %d (expected "
+					   "15..65535)", line, val);
 				errors++;
 			} else
 				conf->beacon_int = val;
 		} else if (os_strcmp(buf, "dtim_period") == 0) {
 			bss->dtim_period = atoi(pos);
 			if (bss->dtim_period < 1 || bss->dtim_period > 255) {
-				printf("Line %d: invalid dtim_period %d\n",
-				       line, bss->dtim_period);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "dtim_period %d",
+					   line, bss->dtim_period);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "rts_threshold") == 0) {
 			conf->rts_threshold = atoi(pos);
 			if (conf->rts_threshold < 0 ||
 			    conf->rts_threshold > 2347) {
-				printf("Line %d: invalid rts_threshold %d\n",
-				       line, conf->rts_threshold);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "rts_threshold %d",
+					   line, conf->rts_threshold);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "fragm_threshold") == 0) {
 			conf->fragm_threshold = atoi(pos);
 			if (conf->fragm_threshold < 256 ||
 			    conf->fragm_threshold > 2346) {
-				printf("Line %d: invalid fragm_threshold %d\n",
-				       line, conf->fragm_threshold);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "fragm_threshold %d",
+					   line, conf->fragm_threshold);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "send_probe_response") == 0) {
 			int val = atoi(pos);
 			if (val != 0 && val != 1) {
-				printf("Line %d: invalid send_probe_response "
-				       "%d (expected 0 or 1)\n", line, val);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "send_probe_response %d (expected "
+					   "0 or 1)", line, val);
 			} else
 				conf->send_probe_response = val;
 		} else if (os_strcmp(buf, "supported_rates") == 0) {
 			if (hostapd_parse_rates(&conf->supported_rates, pos)) {
-				printf("Line %d: invalid rate list\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid rate "
+					   "list", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "basic_rates") == 0) {
 			if (hostapd_parse_rates(&conf->basic_rates, pos)) {
-				printf("Line %d: invalid rate list\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid rate "
+					   "list", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "preamble") == 0) {
@@ -2000,8 +2027,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "wep_default_key") == 0) {
 			bss->ssid.wep.idx = atoi(pos);
 			if (bss->ssid.wep.idx > 3) {
-				printf("Invalid wep_default_key index %d\n",
-				       bss->ssid.wep.idx);
+				wpa_printf(MSG_ERROR, "Invalid "
+					   "wep_default_key index %d",
+					   bss->ssid.wep.idx);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wep_key0") == 0 ||
@@ -2010,16 +2038,16 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			   os_strcmp(buf, "wep_key3") == 0) {
 			if (hostapd_config_read_wep(&bss->ssid.wep,
 						    buf[7] - '0', pos)) {
-				printf("Line %d: invalid WEP key '%s'\n",
-				       line, buf);
+				wpa_printf(MSG_ERROR, "Line %d: invalid WEP "
+					   "key '%s'", line, buf);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "dynamic_vlan") == 0) {
 			bss->ssid.dynamic_vlan = atoi(pos);
 		} else if (os_strcmp(buf, "vlan_file") == 0) {
 			if (hostapd_config_read_vlan_file(bss, pos)) {
-				printf("Line %d: failed to read VLAN file "
-				       "'%s'\n", line, pos);
+				wpa_printf(MSG_ERROR, "Line %d: failed to "
+					   "read VLAN file '%s'", line, pos);
 				errors++;
 			}
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
@@ -2038,32 +2066,34 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			conf->ap_table_expiration_time = atoi(pos);
 		} else if (os_strncmp(buf, "tx_queue_", 9) == 0) {
 			if (hostapd_config_tx_queue(conf, buf, pos)) {
-				printf("Line %d: invalid TX queue item\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid TX "
+					   "queue item", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wme_enabled") == 0) {
 			bss->wme_enabled = atoi(pos);
 		} else if (os_strncmp(buf, "wme_ac_", 7) == 0) {
 			if (hostapd_config_wme_ac(conf, buf, pos)) {
-				printf("Line %d: invalid wme ac item\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid wme "
+					   "ac item", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "bss") == 0) {
 			if (hostapd_config_bss(conf, pos)) {
-				printf("Line %d: invalid bss item\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid bss "
+					   "item", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "bssid") == 0) {
 			if (bss == conf->bss &&
 			    (!conf->driver || !conf->driver->init_bssid)) {
-				printf("Line %d: bssid item not allowed "
-				       "for the default interface and this "
-				       "driver\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: bssid item "
+					   "not allowed for the default "
+					   "interface and this driver", line);
 				errors++;
 			} else if (hwaddr_aton(pos, bss->bssid)) {
-				printf("Line %d: invalid bssid item\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid bssid "
+					   "item", line);
 				errors++;
 			}
 #ifdef CONFIG_IEEE80211W
@@ -2072,18 +2102,17 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "assoc_sa_query_max_timeout") == 0) {
 			bss->assoc_sa_query_max_timeout = atoi(pos);
 			if (bss->assoc_sa_query_max_timeout == 0) {
-				printf("Line %d: invalid "
-				       "assoc_sa_query_max_timeout\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "assoc_sa_query_max_timeout", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "assoc_sa_query_retry_timeout") == 0)
 		{
 			bss->assoc_sa_query_retry_timeout = atoi(pos);
 			if (bss->assoc_sa_query_retry_timeout == 0) {
-				printf("Line %d: invalid "
-				       "assoc_sa_query_retry_timeout\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "assoc_sa_query_retry_timeout",
+					   line);
 				errors++;
 			}
 #endif /* CONFIG_IEEE80211W */
@@ -2092,7 +2121,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			conf->ieee80211n = atoi(pos);
 		} else if (os_strcmp(buf, "ht_capab") == 0) {
 			if (hostapd_config_ht_capab(conf, pos) < 0) {
-				printf("Line %d: invalid ht_capab\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "ht_capab", line);
 				errors++;
 			}
 #endif /* CONFIG_IEEE80211N */
@@ -2104,50 +2134,52 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "wps_state") == 0) {
 			bss->wps_state = atoi(pos);
 			if (bss->wps_state < 0 || bss->wps_state > 2) {
-				printf("Line %d: invalid wps_state\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "wps_state", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "ap_setup_locked") == 0) {
 			bss->ap_setup_locked = atoi(pos);
 		} else if (os_strcmp(buf, "uuid") == 0) {
 			if (uuid_str2bin(pos, bss->uuid)) {
-				printf("Line %d: invalid UUID\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid UUID",
+					   line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "wps_pin_requests") == 0) {
 			bss->wps_pin_requests = os_strdup(pos);
 		} else if (os_strcmp(buf, "device_name") == 0) {
 			if (os_strlen(pos) > 32) {
-				printf("Line %d: Too long device_name\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Too long "
+					   "device_name", line);
 				errors++;
 			}
 			bss->device_name = os_strdup(pos);
 		} else if (os_strcmp(buf, "manufacturer") == 0) {
 			if (os_strlen(pos) > 64) {
-				printf("Line %d: Too long manufacturer\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Too long "
+					   "manufacturer", line);
 				errors++;
 			}
 			bss->manufacturer = os_strdup(pos);
 		} else if (os_strcmp(buf, "model_name") == 0) {
 			if (os_strlen(pos) > 32) {
-				printf("Line %d: Too long model_name\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Too long "
+					   "model_name", line);
 				errors++;
 			}
 			bss->model_name = os_strdup(pos);
 		} else if (os_strcmp(buf, "model_number") == 0) {
 			if (os_strlen(pos) > 32) {
-				printf("Line %d: Too long model_number\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Too long "
+					   "model_number", line);
 				errors++;
 			}
 			bss->model_number = os_strdup(pos);
 		} else if (os_strcmp(buf, "serial_number") == 0) {
 			if (os_strlen(pos) > 32) {
-				printf("Line %d: Too long serial_number\n",
-				       line);
+				wpa_printf(MSG_ERROR, "Line %d: Too long "
+					   "serial_number", line);
 				errors++;
 			}
 			bss->serial_number = os_strdup(pos);
@@ -2157,15 +2189,16 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->config_methods = os_strdup(pos);
 		} else if (os_strcmp(buf, "os_version") == 0) {
 			if (hexstr2bin(pos, bss->os_version, 4)) {
-				printf("Line %d: invalid os_version\n", line);
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "os_version", line);
 				errors++;
 			}
 		} else if (os_strcmp(buf, "ap_pin") == 0) {
 			bss->ap_pin = os_strdup(pos);
 #endif /* CONFIG_WPS */
 		} else {
-			printf("Line %d: unknown configuration item '%s'\n",
-			       line, buf);
+			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
+				   "item '%s'", line, buf);
 			errors++;
 		}
 	}
@@ -2215,8 +2248,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		errors++;
 
 	if (errors) {
-		printf("%d errors found in configuration file '%s'\n",
-		       errors, fname);
+		wpa_printf(MSG_ERROR, "%d errors found in configuration file "
+			   "'%s'", errors, fname);
 		hostapd_config_free(conf);
 		conf = NULL;
 	}

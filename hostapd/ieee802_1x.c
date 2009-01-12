@@ -185,6 +185,7 @@ static void ieee802_1x_tx_key_one(struct hostapd_data *hapd,
 }
 
 
+#ifndef CONFIG_NO_VLAN
 static struct hostapd_wep_keys *
 ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 {
@@ -279,13 +280,16 @@ ieee802_1x_get_group(struct hostapd_data *hapd, struct hostapd_ssid *ssid,
 
 	return ssid->dyn_vlan_keys[vlan_id];
 }
+#endif /* CONFIG_NO_VLAN */
 
 
 void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 {
-	struct hostapd_wep_keys *key = NULL;
 	struct eapol_state_machine *sm = sta->eapol_sm;
+#ifndef CONFIG_NO_VLAN
+	struct hostapd_wep_keys *key = NULL;
 	int vlan_id;
+#endif /* CONFIG_NO_VLAN */
 
 	if (sm == NULL || !sm->eap_if->eapKeyData)
 		return;
@@ -293,6 +297,7 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 	wpa_printf(MSG_DEBUG, "IEEE 802.1X: Sending EAPOL-Key(s) to " MACSTR,
 		   MAC2STR(sta->addr));
 
+#ifndef CONFIG_NO_VLAN
 	vlan_id = sta->vlan_id;
 	if (vlan_id < 0 || vlan_id > MAX_VLAN_ID)
 		vlan_id = 0;
@@ -303,7 +308,9 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 			ieee802_1x_tx_key_one(hapd, sta, key->idx, 1,
 					      key->key[key->idx],
 					      key->len[key->idx]);
-	} else if (hapd->default_wep_key) {
+	} else
+#endif /* CONFIG_NO_VLAN */
+	if (hapd->default_wep_key) {
 		ieee802_1x_tx_key_one(hapd, sta, hapd->default_wep_key_idx, 1,
 				      hapd->default_wep_key,
 				      hapd->conf->default_wep_key_len);
@@ -1299,6 +1306,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	case RADIUS_CODE_ACCESS_ACCEPT:
 		if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_DISABLED)
 			sta->vlan_id = 0;
+#ifndef CONFIG_NO_VLAN
 		else {
 			old_vlanid = sta->vlan_id;
 			sta->vlan_id = radius_msg_get_vlanid(msg);
@@ -1319,6 +1327,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 				       "ID in Access-Accept");
 			break;
 		}
+#endif /* CONFIG_NO_VLAN */
 
 		ap_sta_bind_vlan(hapd, sta, old_vlanid);
 

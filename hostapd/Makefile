@@ -45,7 +45,7 @@ OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
 	hw_features.o \
 	drv_callbacks.o \
 	tkip_countermeasures.o \
-	mlme.o vlan_init.o wpa_auth_ie.o
+	mlme.o wpa_auth_ie.o
 
 OBJS += ../src/utils/eloop.o
 OBJS += ../src/utils/common.o
@@ -69,6 +69,12 @@ ifdef CONFIG_NO_ACCOUNTING
 CFLAGS += -DCONFIG_NO_ACCOUNTING
 else
 OBJS += accounting.o
+endif
+
+ifdef CONFIG_NO_VLAN
+CFLAGS += -DCONFIG_NO_VLAN
+else
+OBJS += vlan_init.o
 endif
 
 OBJS += ../src/crypto/md5.o

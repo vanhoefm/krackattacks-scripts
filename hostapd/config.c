@@ -34,6 +34,7 @@
 extern struct wpa_driver_ops *hostapd_drivers[];
 
 
+#ifndef CONFIG_NO_VLAN
 static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 					 const char *fname)
 {
@@ -113,6 +114,7 @@ static int hostapd_config_read_vlan_file(struct hostapd_bss_config *bss,
 
 	return 0;
 }
+#endif /* CONFIG_NO_VLAN */
 
 
 static void hostapd_config_free_vlan(struct hostapd_bss_config *bss)
@@ -2046,6 +2048,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   "key '%s'", line, buf);
 				errors++;
 			}
+#ifndef CONFIG_NO_VLAN
 		} else if (os_strcmp(buf, "dynamic_vlan") == 0) {
 			bss->ssid.dynamic_vlan = atoi(pos);
 		} else if (os_strcmp(buf, "vlan_file") == 0) {
@@ -2058,6 +2061,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "vlan_tagged_interface") == 0) {
 			bss->ssid.vlan_tagged_interface = os_strdup(pos);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
+#endif /* CONFIG_NO_VLAN */
 		} else if (os_strcmp(buf, "passive_scan_interval") == 0) {
 			conf->passive_scan_interval = atoi(pos);
 		} else if (os_strcmp(buf, "passive_scan_listen") == 0) {

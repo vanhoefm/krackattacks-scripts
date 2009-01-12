@@ -518,6 +518,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		     int old_vlanid)
 {
+#ifndef CONFIG_NO_VLAN
 	const char *iface;
 	struct hostapd_vlan *vlan = NULL;
 
@@ -616,6 +617,9 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		wpa_printf(MSG_INFO, "Failed to update VLAN-ID for WPA");
 
 	return hostapd_set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
+#else /* CONFIG_NO_VLAN */
+	return 0;
+#endif /* CONFIG_NO_VLAN */
 }
 
 

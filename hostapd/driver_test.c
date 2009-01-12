@@ -532,12 +532,11 @@ static void test_driver_eapol(struct test_driver_data *drv,
 {
 	struct test_client_socket *cli;
 	if (datalen > 14) {
-		u8 *proto = data + 2 * ETH_ALEN;
 		/* Skip Ethernet header */
 		wpa_printf(MSG_DEBUG, "test_driver: dst=" MACSTR " src="
 			   MACSTR " proto=%04x",
 			   MAC2STR(data), MAC2STR(data + ETH_ALEN),
-			   WPA_GET_BE16(proto));
+			   WPA_GET_BE16(data + 2 * ETH_ALEN));
 		data += 14;
 		datalen -= 14;
 	}

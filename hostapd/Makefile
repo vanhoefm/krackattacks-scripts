@@ -347,6 +347,7 @@ ifdef TLS_FUNCS
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, and EAP_TTLS)
 CFLAGS += -DEAP_TLS_FUNCS
 OBJS += ../src/eap_server/eap_tls_common.o
+NEED_TLS_PRF=y
 ifeq ($(CONFIG_TLS), openssl)
 OBJS += ../src/crypto/tls_openssl.o
 LIBS += -lssl -lcrypto
@@ -494,6 +495,10 @@ endif
 
 ifndef NEED_T_PRF
 CFLAGS += -DCONFIG_NO_T_PRF
+endif
+
+ifndef NEED_TLS_PRF
+CFLAGS += -DCONFIG_NO_TLS_PRF
 endif
 
 ifdef CONFIG_RADIUS_SERVER

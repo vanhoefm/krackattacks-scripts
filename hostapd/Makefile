@@ -42,7 +42,6 @@ OBJS =	hostapd.o ieee802_1x.o eapol_sm.o \
 	config.o ieee802_11_auth.o \
 	sta_info.o wpa.o \
 	drivers.o preauth.o pmksa_cache.o \
-	hw_features.o \
 	drv_callbacks.o \
 	tkip_countermeasures.o \
 	mlme.o wpa_auth_ie.o
@@ -538,6 +537,7 @@ endif
 
 ifdef NEED_MLME
 OBJS += beacon.o wme.o ap_list.o ieee802_11.o
+OBJS += hw_features.o
 CFLAGS += -DNEED_MLME
 endif
 

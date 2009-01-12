@@ -50,6 +50,7 @@ struct hostapd_hw_modes {
 };
 
 
+#ifdef NEED_MLME
 void hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,
 			      size_t num_hw_features);
 int hostapd_get_hw_features(struct hostapd_iface *iface);
@@ -57,5 +58,27 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface);
 const char * hostapd_hw_mode_txt(int mode);
 int hostapd_hw_get_freq(struct hostapd_data *hapd, int chan);
 int hostapd_hw_get_channel(struct hostapd_data *hapd, int freq);
+#else /* NEED_MLME */
+static inline void
+hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,
+			 size_t num_hw_features)
+{
+}
+
+static inline int hostapd_get_hw_features(struct hostapd_iface *iface)
+{
+	return -1;
+}
+
+static inline int hostapd_select_hw_mode(struct hostapd_iface *iface)
+{
+	return -1;
+}
+
+static inline int hostapd_hw_get_freq(struct hostapd_data *hapd, int chan)
+{
+	return -1;
+}
+#endif /* NEED_MLME */
 
 #endif /* HW_FEATURES_H */

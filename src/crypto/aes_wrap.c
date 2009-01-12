@@ -86,6 +86,8 @@ int aes_wrap(const u8 *kek, int n, const u8 *plain, u8 *cipher)
 #endif /* CONFIG_NO_AES_WRAP */
 
 
+#ifndef CONFIG_NO_AES_UNWRAP
+
 /**
  * aes_unwrap - Unwrap key with AES Key Wrap Algorithm (128-bit KEK) (RFC3394)
  * @kek: Key encryption key (KEK)
@@ -144,6 +146,8 @@ int aes_unwrap(const u8 *kek, int n, const u8 *cipher, u8 *plain)
 
 	return 0;
 }
+
+#endif /* CONFIG_NO_AES_UNWRAP */
 
 
 #define BLOCK_SIZE 16

@@ -22,6 +22,7 @@
 #include "mlme.h"
 
 
+#ifndef CONFIG_NO_HOSTAPD_LOGGER
 static const char * mlme_auth_alg_str(int alg)
 {
 	switch (alg) {
@@ -35,6 +36,7 @@ static const char * mlme_auth_alg_str(int alg)
 
 	return "unknown";
 }
+#endif /* CONFIG_NO_HOSTAPD_LOGGER */
 
 
 /**

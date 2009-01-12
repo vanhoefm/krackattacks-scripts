@@ -1617,6 +1617,7 @@ static int ieee802_1x_sta_entry_alive(void *ctx, const u8 *addr)
 static void ieee802_1x_logger(void *ctx, const u8 *addr,
 			      eapol_logger_level level, const char *txt)
 {
+#ifndef CONFIG_NO_HOSTAPD_LOGGER
 	struct hostapd_data *hapd = ctx;
 	int hlevel;
 
@@ -1635,6 +1636,7 @@ static void ieee802_1x_logger(void *ctx, const u8 *addr,
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE8021X, hlevel, "%s",
 		       txt);
+#endif /* CONFIG_NO_HOSTAPD_LOGGER */
 }
 
 

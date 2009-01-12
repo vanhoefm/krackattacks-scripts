@@ -82,6 +82,7 @@ int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
 }
 
 
+#ifndef CONFIG_NO_HOSTAPD_LOGGER
 static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 			      int level, const char *txt, size_t len)
 {
@@ -181,6 +182,7 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 
 	os_free(format);
 }
+#endif /* CONFIG_NO_HOSTAPD_LOGGER */
 
 
 #ifdef EAP_SERVER
@@ -695,6 +697,7 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 static void hostapd_wpa_auth_logger(void *ctx, const u8 *addr,
 				    logger_level level, const char *txt)
 {
+#ifndef CONFIG_NO_HOSTAPD_LOGGER
 	struct hostapd_data *hapd = ctx;
 	int hlevel;
 
@@ -712,6 +715,7 @@ static void hostapd_wpa_auth_logger(void *ctx, const u8 *addr,
 	}
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_WPA, hlevel, "%s", txt);
+#endif /* CONFIG_NO_HOSTAPD_LOGGER */
 }
 
 

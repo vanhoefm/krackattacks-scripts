@@ -1690,6 +1690,7 @@ static int wpa_driver_wext_set_key_ext(void *priv, wpa_alg alg,
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 	iwr.u.encoding.flags = key_idx + 1;
+	iwr.u.encoding.flags |= IW_ENCODE_TEMP;
 	if (alg == WPA_ALG_NONE)
 		iwr.u.encoding.flags |= IW_ENCODE_DISABLED;
 	iwr.u.encoding.pointer = (caddr_t) ext;
@@ -1819,6 +1820,7 @@ int wpa_driver_wext_set_key(void *priv, wpa_alg alg,
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 	iwr.u.encoding.flags = key_idx + 1;
+	iwr.u.encoding.flags |= IW_ENCODE_TEMP;
 	if (alg == WPA_ALG_NONE)
 		iwr.u.encoding.flags |= IW_ENCODE_DISABLED;
 	iwr.u.encoding.pointer = (caddr_t) key;
@@ -1833,6 +1835,7 @@ int wpa_driver_wext_set_key(void *priv, wpa_alg alg,
 		os_memset(&iwr, 0, sizeof(iwr));
 		os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 		iwr.u.encoding.flags = key_idx + 1;
+		iwr.u.encoding.flags |= IW_ENCODE_TEMP;
 		iwr.u.encoding.pointer = (caddr_t) NULL;
 		iwr.u.encoding.length = 0;
 		if (ioctl(drv->ioctl_sock, SIOCSIWENCODE, &iwr) < 0) {

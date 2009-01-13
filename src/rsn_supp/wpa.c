@@ -2387,3 +2387,13 @@ int wpa_sm_parse_own_wpa_ie(struct wpa_sm *sm, struct wpa_ie_data *data)
 		return -2;
 	return 0;
 }
+
+
+int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
+{
+#ifndef CONFIG_NO_WPA2
+	return pmksa_cache_list(sm->pmksa, buf, len);
+#else /* CONFIG_NO_WPA2 */
+	return -1;
+#endif /* CONFIG_NO_WPA2 */
+}

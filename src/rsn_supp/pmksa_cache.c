@@ -439,7 +439,7 @@ int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
 
 /**
  * pmksa_cache_list - Dump text list of entries in PMKSA cache
- * @sm: Pointer to WPA state machine data from wpa_sm_init()
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
  * @buf: Buffer for the list
  * @len: Length of the buffer
  * Returns: number of bytes written to buffer
@@ -447,7 +447,7 @@ int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
  * This function is used to generate a text format representation of the
  * current PMKSA cache contents for the ctrl_iface PMKSA command.
  */
-int pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
+int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len)
 {
 	int i, ret;
 	char *pos = buf;
@@ -462,7 +462,7 @@ int pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
 		return pos - buf;
 	pos += ret;
 	i = 0;
-	entry = sm->pmksa->pmksa;
+	entry = pmksa->pmksa;
 	while (entry) {
 		i++;
 		ret = os_snprintf(pos, buf + len - pos, "%d " MACSTR " ",

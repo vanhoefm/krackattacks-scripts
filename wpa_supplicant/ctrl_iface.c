@@ -1517,7 +1517,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_status(
 			wpa_s, buf + 6, reply, reply_size);
 	} else if (os_strcmp(buf, "PMKSA") == 0) {
-		reply_len = pmksa_cache_list(wpa_s->wpa, reply, reply_size);
+		reply_len = wpa_sm_pmksa_cache_list(wpa_s->wpa, reply,
+						    reply_size);
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpa_supplicant_ctrl_iface_set(wpa_s, buf + 4))
 			reply_len = -1;

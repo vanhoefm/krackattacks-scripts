@@ -908,47 +908,6 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
-void ieee802_1x_free_radius_class(struct radius_class_data *class)
-{
-	size_t i;
-	if (class == NULL)
-		return;
-	for (i = 0; i < class->count; i++)
-		os_free(class->attr[i].data);
-	os_free(class->attr);
-	class->attr = NULL;
-	class->count = 0;
-}
-
-
-int ieee802_1x_copy_radius_class(struct radius_class_data *dst,
-				 const struct radius_class_data *src)
-{
-	size_t i;
-
-	if (src->attr == NULL)
-		return 0;
-
-	dst->attr = os_zalloc(src->count * sizeof(struct radius_attr_data));
-	if (dst->attr == NULL)
-		return -1;
-
-	dst->count = 0;
-
-	for (i = 0; i < src->count; i++) {
-		dst->attr[i].data = os_malloc(src->attr[i].len);
-		if (dst->attr[i].data == NULL)
-			break;
-		dst->count++;
-		os_memcpy(dst->attr[i].data, src->attr[i].data,
-			  src->attr[i].len);
-		dst->attr[i].len = src->attr[i].len;
-	}
-
-	return 0;
-}
-
-
 void ieee802_1x_free_station(struct sta_info *sta)
 {
 	struct eapol_state_machine *sm = sta->eapol_sm;
@@ -963,10 +922,10 @@ void ieee802_1x_free_station(struct sta_info *sta)
 		radius_msg_free(sm->last_recv_radius);
 		os_free(sm->last_recv_radius);
 	}
+	radius_free_class(&sm->radius_class);
 #endif /* CONFIG_NO_RADIUS */
 
 	os_free(sm->identity);
-	ieee802_1x_free_radius_class(&sm->radius_class);
 	eapol_auth_free(sm);
 }
 
@@ -1108,7 +1067,7 @@ static void ieee802_1x_store_radius_class(struct hostapd_data *hapd,
 	    sm == NULL)
 		return;
 
-	ieee802_1x_free_radius_class(&sm->radius_class);
+	radius_free_class(&sm->radius_class);
 	count = radius_msg_count_attr(msg, RADIUS_ATTR_CLASS, 1);
 	if (count <= 0)
 		return;

@@ -21,7 +21,6 @@
 #include "eloop.h"
 #include "sha1.h"
 #include "sha256.h"
-#include "ieee802_1x.h"
 #include "eapol_sm.h"
 #include "pmksa_cache.h"
 
@@ -83,7 +82,7 @@ static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 	if (entry == NULL)
 		return;
 	os_free(entry->identity);
-	ieee802_1x_free_radius_class(&entry->radius_class);
+	radius_free_class(&entry->radius_class);
 	os_free(entry);
 }
 
@@ -177,8 +176,7 @@ static void pmksa_cache_from_eapol_data(struct rsn_pmksa_cache_entry *entry,
 		}
 	}
 
-	ieee802_1x_copy_radius_class(&entry->radius_class,
-				     &eapol->radius_class);
+	radius_copy_class(&entry->radius_class, &eapol->radius_class);
 
 	entry->eap_type_authsrv = eapol->eap_type_authsrv;
 	entry->vlan_id = eapol->sta->vlan_id;
@@ -203,9 +201,8 @@ void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 				  eapol->identity, eapol->identity_len);
 	}
 
-	ieee802_1x_free_radius_class(&eapol->radius_class);
-	ieee802_1x_copy_radius_class(&eapol->radius_class,
-				     &entry->radius_class);
+	radius_free_class(&eapol->radius_class);
+	radius_copy_class(&eapol->radius_class, &entry->radius_class);
 	if (eapol->radius_class.attr) {
 		wpa_printf(MSG_DEBUG, "Copied %lu Class attribute(s) from "
 			   "PMKSA", (unsigned long) eapol->radius_class.count);
@@ -337,8 +334,7 @@ pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 				  old_entry->identity_len);
 		}
 	}
-	ieee802_1x_copy_radius_class(&entry->radius_class,
-				     &old_entry->radius_class);
+	radius_copy_class(&entry->radius_class, &old_entry->radius_class);
 	entry->eap_type_authsrv = old_entry->eap_type_authsrv;
 	entry->vlan_id = old_entry->vlan_id;
 	entry->opportunistic = 1;

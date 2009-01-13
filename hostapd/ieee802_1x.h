@@ -78,12 +78,6 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 void hostapd_get_ntp_timestamp(u8 *buf);
 char *eap_type_text(u8 type);
 
-struct radius_class_data;
-
-void ieee802_1x_free_radius_class(struct radius_class_data *class);
-int ieee802_1x_copy_radius_class(struct radius_class_data *dst,
-				 const struct radius_class_data *src);
-
 const char *radius_mode_txt(struct hostapd_data *hapd);
 int radius_sta_rate(struct hostapd_data *hapd, struct sta_info *sta);
 

@@ -269,4 +269,19 @@ int radius_msg_get_attr_ptr(struct radius_msg *msg, u8 type, u8 **buf,
 			    size_t *len, const u8 *start);
 int radius_msg_count_attr(struct radius_msg *msg, u8 type, int min_len);
 
+
+struct radius_attr_data {
+	u8 *data;
+	size_t len;
+};
+
+struct radius_class_data {
+	struct radius_attr_data *attr;
+	size_t count;
+};
+
+void radius_free_class(struct radius_class_data *c);
+int radius_copy_class(struct radius_class_data *dst,
+		      const struct radius_class_data *src);
+
 #endif /* RADIUS_H */

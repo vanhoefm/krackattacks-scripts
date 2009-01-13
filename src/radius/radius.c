@@ -1232,3 +1232,44 @@ int radius_msg_get_vlanid(struct radius_msg *msg)
 
 	return -1;
 }
+
+
+void radius_free_class(struct radius_class_data *c)
+{
+	size_t i;
+	if (c == NULL)
+		return;
+	for (i = 0; i < c->count; i++)
+		os_free(c->attr[i].data);
+	os_free(c->attr);
+	c->attr = NULL;
+	c->count = 0;
+}
+
+
+int radius_copy_class(struct radius_class_data *dst,
+		      const struct radius_class_data *src)
+{
+	size_t i;
+
+	if (src->attr == NULL)
+		return 0;
+
+	dst->attr = os_zalloc(src->count * sizeof(struct radius_attr_data));
+	if (dst->attr == NULL)
+		return -1;
+
+	dst->count = 0;
+
+	for (i = 0; i < src->count; i++) {
+		dst->attr[i].data = os_malloc(src->attr[i].len);
+		if (dst->attr[i].data == NULL)
+			break;
+		dst->count++;
+		os_memcpy(dst->attr[i].data, src->attr[i].data,
+			  src->attr[i].len);
+		dst->attr[i].len = src->attr[i].len;
+	}
+
+	return 0;
+}

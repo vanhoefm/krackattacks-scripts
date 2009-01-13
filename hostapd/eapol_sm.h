@@ -16,6 +16,7 @@
 #define EAPOL_SM_H
 
 #include "defs.h"
+#include "radius/radius.h"
 
 /* IEEE Std 802.1X-2004, Ch. 8.2 */
 
@@ -26,16 +27,6 @@ typedef enum { Both = 0, In = 1 } ControlledDirection;
 typedef unsigned int Counter;
 
 struct eap_sm;
-
-struct radius_attr_data {
-	u8 *data;
-	size_t len;
-};
-
-struct radius_class_data {
-	struct radius_attr_data *attr;
-	size_t count;
-};
 
 
 struct eapol_auth_config {

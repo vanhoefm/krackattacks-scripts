@@ -370,17 +370,17 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 						 u8 id)
 {
 	struct wpabuf *buf, *encr_req;
-	size_t len;
+	size_t mlen;
 
-	len = 6; /* Result TLV */
+	mlen = 6; /* Result TLV */
 	if (data->crypto_binding != NO_BINDING)
-		len += 60; /* Cryptobinding TLV */
+		mlen += 60; /* Cryptobinding TLV */
 #ifdef EAP_TNC
 	if (data->soh_response)
-		len += wpabuf_len(data->soh_response);
+		mlen += wpabuf_len(data->soh_response);
 #endif /* EAP_TNC */
 
-	buf = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TLV, len,
+	buf = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TLV, mlen,
 			    EAP_CODE_REQUEST, id);
 	if (buf == NULL)
 		return NULL;

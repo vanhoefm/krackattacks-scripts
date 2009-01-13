@@ -246,9 +246,11 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 			wpa_hexdump_key(MSG_DEBUG, "WPA: PMK from EAPOL state "
 					"machines", sm->pmk, pmk_len);
 			sm->pmk_len = pmk_len;
-			pmksa_cache_add(sm->pmksa, sm->pmk, pmk_len, src_addr,
-					sm->own_addr, sm->network_ctx,
-					sm->key_mgmt);
+			if (sm->proto == WPA_PROTO_RSN) {
+				pmksa_cache_add(sm->pmksa, sm->pmk, pmk_len,
+						src_addr, sm->own_addr,
+						sm->network_ctx, sm->key_mgmt);
+			}
 			if (!sm->cur_pmksa && pmkid &&
 			    pmksa_cache_get(sm->pmksa, src_addr, pmkid)) {
 				wpa_printf(MSG_DEBUG, "RSN: the new PMK "

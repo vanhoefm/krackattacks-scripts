@@ -167,7 +167,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	struct rsn_pmksa_cache_entry *entry, *pos, *prev;
 	struct os_time now;
 
-	if (pmksa->sm->proto != WPA_PROTO_RSN || pmk_len > PMK_LEN)
+	if (pmk_len > PMK_LEN)
 		return NULL;
 
 	entry = os_zalloc(sizeof(*entry));

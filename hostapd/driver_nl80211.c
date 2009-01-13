@@ -1962,8 +1962,6 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
 
-	drv->ioctl_sock = -1;
-
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
 		perror("socket[PF_INET,SOCK_DGRAM]");

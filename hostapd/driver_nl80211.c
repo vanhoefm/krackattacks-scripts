@@ -609,14 +609,14 @@ static int i802_set_retry(void *priv, int short_retry, int long_retry)
 
 	iwr.u.retry.value = short_retry;
 	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MIN;
-	if (ioctl(drv->ioctl_sock, SIOCSIWFRAG, &iwr) < 0) {
+	if (ioctl(drv->ioctl_sock, SIOCSIWRETRY, &iwr) < 0) {
 		perror("ioctl[SIOCSIWRETRY(short)]");
 		return -1;
 	}
 
 	iwr.u.retry.value = long_retry;
 	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MAX;
-	if (ioctl(drv->ioctl_sock, SIOCSIWFRAG, &iwr) < 0) {
+	if (ioctl(drv->ioctl_sock, SIOCSIWRETRY, &iwr) < 0) {
 		perror("ioctl[SIOCSIWRETRY(long)]");
 		return -1;
 	}

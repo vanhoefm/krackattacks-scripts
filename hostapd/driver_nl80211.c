@@ -920,12 +920,6 @@ static int i802_sta_set_flags(void *priv, const u8 *addr,
 }
 
 
-static int i802_set_regulatory_domain(void *priv, unsigned int rd)
-{
-	return -1;
-}
-
-
 static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 				    int cw_min, int cw_max, int burst_time)
 {
@@ -2495,7 +2489,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_retry = i802_set_retry,
 	.get_retry = i802_get_retry,
 	.set_rate_sets = i802_set_rate_sets,
-	.set_regulatory_domain = i802_set_regulatory_domain,
 	.set_beacon = i802_set_beacon,
 	.set_internal_bridge = i802_set_internal_bridge,
 	.set_beacon_int = i802_set_beacon_int,

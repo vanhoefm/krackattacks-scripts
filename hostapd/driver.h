@@ -136,7 +136,6 @@ struct wpa_driver_ops {
 			     int total_flags, int flags_or, int flags_and);
 	int (*set_rate_sets)(void *priv, int *supp_rates, int *basic_rates,
 			     int mode);
-	int (*set_regulatory_domain)(void *priv, unsigned int rd);
 	int (*set_country)(void *priv, const char *country);
 	int (*set_ieee80211d)(void *priv, int enabled);
 	int (*set_beacon)(const char *ifname, void *priv,

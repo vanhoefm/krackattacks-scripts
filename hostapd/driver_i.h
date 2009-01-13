@@ -344,15 +344,6 @@ hostapd_set_rate_sets(struct hostapd_data *hapd, int *supp_rates,
 }
 
 static inline int
-hostapd_set_regulatory_domain(struct hostapd_data *hapd, unsigned int rd)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->set_regulatory_domain == NULL)
-		return 0;
-	return hapd->driver->set_regulatory_domain(hapd->drv_priv, rd);
-}
-
-static inline int
 hostapd_set_country(struct hostapd_data *hapd, const char *country)
 {
 	if (hapd->driver == NULL ||

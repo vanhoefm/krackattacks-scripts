@@ -156,6 +156,18 @@ static int add_extra_attrs(struct radius_msg *msg,
 }
 
 
+static struct extra_radius_attr *
+find_extra_attr(struct extra_radius_attr *attrs, u8 type)
+{
+	struct extra_radius_attr *p;
+	for (p = attrs; p; p = p->next) {
+		if (p->type == type)
+			return p;
+	}
+	return NULL;
+}
+
+
 static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 					  const u8 *eap, size_t len)
 {
@@ -200,7 +212,8 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 		goto fail;
 	}
 
-	if (!radius_msg_add_attr(msg, RADIUS_ATTR_NAS_IP_ADDRESS,
+	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_NAS_IP_ADDRESS) &&
+	    !radius_msg_add_attr(msg, RADIUS_ATTR_NAS_IP_ADDRESS,
 				 (u8 *) &e->own_ip_addr, 4)) {
 		printf("Could not add NAS-IP-Address\n");
 		goto fail;
@@ -208,7 +221,9 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 
 	os_snprintf(buf, sizeof(buf), RADIUS_802_1X_ADDR_FORMAT,
 		    MAC2STR(e->wpa_s->own_addr));
-	if (!radius_msg_add_attr(msg, RADIUS_ATTR_CALLING_STATION_ID,
+	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_CALLING_STATION_ID)
+	    &&
+	    !radius_msg_add_attr(msg, RADIUS_ATTR_CALLING_STATION_ID,
 				 (u8 *) buf, os_strlen(buf))) {
 		printf("Could not add Calling-Station-Id\n");
 		goto fail;
@@ -217,19 +232,22 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 	/* TODO: should probably check MTU from driver config; 2304 is max for
 	 * IEEE 802.11, but use 1400 to avoid problems with too large packets
 	 */
-	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_FRAMED_MTU, 1400)) {
+	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_FRAMED_MTU) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_FRAMED_MTU, 1400)) {
 		printf("Could not add Framed-MTU\n");
 		goto fail;
 	}
 
-	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_NAS_PORT_TYPE,
+	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_NAS_PORT_TYPE) &&
+	    !radius_msg_add_attr_int32(msg, RADIUS_ATTR_NAS_PORT_TYPE,
 				       RADIUS_NAS_PORT_TYPE_IEEE_802_11)) {
 		printf("Could not add NAS-Port-Type\n");
 		goto fail;
 	}
 
 	os_snprintf(buf, sizeof(buf), "%s", e->connect_info);
-	if (!radius_msg_add_attr(msg, RADIUS_ATTR_CONNECT_INFO,
+	if (!find_extra_attr(e->extra_attrs, RADIUS_ATTR_CONNECT_INFO) &&
+	    !radius_msg_add_attr(msg, RADIUS_ATTR_CONNECT_INFO,
 				 (u8 *) buf, os_strlen(buf))) {
 		printf("Could not add Connect-Info\n");
 		goto fail;

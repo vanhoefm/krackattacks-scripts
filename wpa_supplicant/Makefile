@@ -563,6 +563,8 @@ ifdef CONFIG_EAP_TNC
 CFLAGS += -DEAP_TNC
 OBJS += ../src/eap_peer/eap_tnc.o
 OBJS += ../src/eap_peer/tncc.o
+OBJS_h += ../src/eap_server/eap_tnc.o
+OBJS_h += ../src/eap_server/tncs.o
 NEED_BASE64=y
 endif
 

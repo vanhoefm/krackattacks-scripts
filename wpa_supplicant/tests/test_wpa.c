@@ -17,7 +17,7 @@
 #include "common.h"
 #include "eloop.h"
 #include "ieee802_11_defs.h"
-#include "config.h"
+#include "../config.h"
 #include "wpa.h"
 #include "wpa_ie.h"
 #include "../hostapd/wpa.h"
@@ -49,14 +49,6 @@ struct wpa {
 	u8 supp_ie[80];
 	size_t supp_ie_len;
 };
-
-
-static struct wpa_ssid * supp_get_ssid(void *ctx)
-{
-	struct wpa *wpa = ctx;
-	wpa_printf(MSG_DEBUG, "SUPP: %s", __func__);
-	return &wpa->ssid;
-}
 
 
 static int supp_get_bssid(void *ctx, u8 *bssid)
@@ -175,12 +167,6 @@ static int supp_mlme_setprotection(void *ctx, const u8 *addr,
 }
 
 
-static void supp_cancel_scan(void *ctx)
-{
-	wpa_printf(MSG_DEBUG, "SUPP: %s", __func__);
-}
-
-
 static void supp_cancel_auth_timeout(void *ctx)
 {
 	wpa_printf(MSG_DEBUG, "SUPP: %s", __func__);
@@ -195,14 +181,12 @@ static int supp_init(struct wpa *wpa)
 
 	ctx->ctx = wpa;
 	ctx->set_state = supp_set_state;
-	ctx->get_ssid = supp_get_ssid;
 	ctx->get_bssid = supp_get_bssid;
 	ctx->ether_send = supp_ether_send;
 	ctx->get_beacon_ie = supp_get_beacon_ie;
 	ctx->alloc_eapol = supp_alloc_eapol;
 	ctx->set_key = supp_set_key;
 	ctx->mlme_setprotection = supp_mlme_setprotection;
-	ctx->cancel_scan = supp_cancel_scan;
 	ctx->cancel_auth_timeout = supp_cancel_auth_timeout;
 	wpa->supp = wpa_sm_init(ctx);
 	if (wpa->supp == NULL) {

@@ -568,3 +568,37 @@ void wpa_pmk_r1_to_ptk(const u8 *pmk_r1, const u8 *snonce, const u8 *anonce,
 }
 
 #endif /* CONFIG_IEEE80211R */
+
+
+/**
+ * rsn_pmkid - Calculate PMK identifier
+ * @pmk: Pairwise master key
+ * @pmk_len: Length of pmk in bytes
+ * @aa: Authenticator address
+ * @spa: Supplicant address
+ * @pmkid: Buffer for PMKID
+ * @use_sha256: Whether to use SHA256-based KDF
+ *
+ * IEEE Std 802.11i-2004 - 8.5.1.2 Pairwise key hierarchy
+ * PMKID = HMAC-SHA1-128(PMK, "PMK Name" || AA || SPA)
+ */
+void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
+	       u8 *pmkid, int use_sha256)
+{
+	char *title = "PMK Name";
+	const u8 *addr[3];
+	const size_t len[3] = { 8, ETH_ALEN, ETH_ALEN };
+	unsigned char hash[SHA256_MAC_LEN];
+
+	addr[0] = (u8 *) title;
+	addr[1] = aa;
+	addr[2] = spa;
+
+#ifdef CONFIG_IEEE80211W
+	if (use_sha256)
+		hmac_sha256_vector(pmk, pmk_len, 3, addr, len, hash);
+	else
+#endif /* CONFIG_IEEE80211W */
+		hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
+	os_memcpy(pmkid, hash, PMKID_LEN);
+}

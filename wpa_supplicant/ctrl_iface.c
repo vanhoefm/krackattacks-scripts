@@ -29,6 +29,7 @@
 #include "ieee802_11_defs.h"
 #include "wps_supplicant.h"
 #include "wps/wps.h"
+#include "ibss_rsn.h"
 
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);
@@ -225,6 +226,26 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 	return wpas_wps_start_reg(wpa_s, _bssid, pin);
 }
 #endif /* CONFIG_WPS */
+
+
+#ifdef CONFIG_IBSS_RSN
+static int wpa_supplicant_ctrl_iface_ibss_rsn(
+	struct wpa_supplicant *wpa_s, char *addr)
+{
+	u8 peer[ETH_ALEN];
+
+	if (hwaddr_aton(addr, peer)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE IBSS_RSN: invalid "
+			   "address '%s'", peer);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE IBSS_RSN " MACSTR,
+		   MAC2STR(peer));
+
+	return ibss_rsn_start(wpa_s->ibss_rsn, peer);
+}
+#endif /* CONFIG_IBSS_RSN */
 
 
 static int wpa_supplicant_ctrl_iface_ctrl_rsp(struct wpa_supplicant *wpa_s,
@@ -1566,6 +1587,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_wps_reg(wpa_s, buf + 8))
 			reply_len = -1;
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_IBSS_RSN
+	} else if (os_strncmp(buf, "IBSS_RSN ", 9) == 0) {
+		if (wpa_supplicant_ctrl_iface_ibss_rsn(wpa_s, buf + 9))
+			reply_len = -1;
+#endif /* CONFIG_IBSS_RSN */
 	} else if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0)
 	{
 		if (wpa_supplicant_ctrl_iface_ctrl_rsp(

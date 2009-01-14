@@ -39,6 +39,7 @@
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
+#include "ibss_rsn.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -385,6 +386,11 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	ieee80211_sta_deinit(wpa_s);
 
 	wpas_wps_deinit(wpa_s);
+
+#ifdef CONFIG_IBSS_RSN
+	ibss_rsn_deinit(wpa_s->ibss_rsn);
+	wpa_s->ibss_rsn = NULL;
+#endif /* CONFIG_IBSS_RSN */
 }
 
 
@@ -1858,6 +1864,14 @@ static int wpa_supplicant_init_iface2(struct wpa_supplicant *wpa_s)
 		if (capa.flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE)
 			wpa_s->driver_4way_handshake = 1;
 	}
+
+#ifdef CONFIG_IBSS_RSN
+	wpa_s->ibss_rsn = ibss_rsn_init(wpa_s);
+	if (!wpa_s->ibss_rsn) {
+		wpa_printf(MSG_DEBUG, "Failed to init IBSS RSN");
+		return -1;
+	}
+#endif /* CONFIG_IBSS_RSN */
 
 	return 0;
 }

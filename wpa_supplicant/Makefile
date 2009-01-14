@@ -941,6 +941,21 @@ else
 CFLAGS += -DCONFIG_NO_WPA -DCONFIG_NO_WPA2
 endif
 
+ifdef CONFIG_IBSS_RSN
+CFLAGS += -DCONFIG_IBSS_RSN
+OBJS += ibss_rsn.o
+OBJS += ../hostapd/wpa.o
+OBJS += ../hostapd/wpa_auth_ie.o
+OBJS += ../hostapd/pmksa_cache.o
+OBJS += ../src/radius/radius.o
+ifdef CONFIG_IEEE80211R
+OBJS += ../hostapd/wpa_ft.o
+endif
+ifdef CONFIG_PEERKEY
+OBJS += ../hostapd/peerkey.o
+endif
+endif
+
 ifdef CONFIG_NO_WPA2
 CFLAGS += -DCONFIG_NO_WPA2
 endif

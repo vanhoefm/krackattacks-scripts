@@ -33,6 +33,7 @@ extern struct wpa_driver_ops *wpa_supplicant_drivers[];
 struct wpa_scan_result;
 struct wpa_sm;
 struct wpa_supplicant;
+struct ibss_rsn;
 
 /*
  * Forward declarations of private structures used within the ctrl_iface
@@ -355,6 +356,8 @@ struct wpa_supplicant {
 	int mic_errors_seen; /* Michael MIC errors with the current PTK */
 
 	struct wps_context *wps;
+
+	struct ibss_rsn *ibss_rsn;
 };
 
 

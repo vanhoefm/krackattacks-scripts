@@ -1147,7 +1147,17 @@ typedef enum wpa_event_type {
 	 * FT authentication sequence from the AP. The FT IEs are included in
 	 * the extra information in union wpa_event_data::ft_ies.
 	 */
-	EVENT_FT_RESPONSE
+	EVENT_FT_RESPONSE,
+
+	/**
+	 * EVENT_IBSS_RSN_START - Request RSN authentication in IBSS
+	 *
+	 * The driver can use this event to inform wpa_supplicant about a STA
+	 * in an IBSS with which protected frames could be exchanged. This
+	 * event starts RSN authentication with the other STA to authenticate
+	 * the STA and set up encryption keys with it.
+	 */
+	EVENT_IBSS_RSN_START
 } wpa_event_type;
 
 
@@ -1274,6 +1284,13 @@ union wpa_event_data {
 		int ft_action;
 		u8 target_ap[ETH_ALEN];
 	} ft_ies;
+
+	/**
+	 * struct ibss_rsn_start - Data for EVENT_IBSS_RSN_START
+	 */
+	struct ibss_rsn_start {
+		u8 peer[ETH_ALEN];
+	} ibss_rsn_start;
 };
 
 /**

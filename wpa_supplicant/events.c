@@ -32,6 +32,7 @@
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
+#include "ibss_rsn.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -1067,6 +1068,17 @@ wpa_supplicant_event_ft_response(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211R */
 
 
+#ifdef CONFIG_IBSS_RSN
+static void wpa_supplicant_event_ibss_rsn_start(struct wpa_supplicant *wpa_s,
+						union wpa_event_data *data)
+{
+	if (data == NULL)
+		return;
+	ibss_rsn_start(wpa_s->ibss_rsn, data->ibss_rsn_start.peer);
+}
+#endif /* CONFIG_IBSS_RSN */
+
+
 void wpa_supplicant_event(void *ctx, wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -1106,6 +1118,11 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 		wpa_supplicant_event_ft_response(wpa_s, data);
 		break;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IBSS_RSN
+	case EVENT_IBSS_RSN_START:
+		wpa_supplicant_event_ibss_rsn_start(wpa_s, data);
+		break;
+#endif /* CONFIG_IBSS_RSN */
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

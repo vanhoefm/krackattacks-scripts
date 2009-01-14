@@ -374,7 +374,8 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 		return NULL;
 	}
 
-	wpa_auth->pmksa = pmksa_cache_init(wpa_auth_pmksa_free_cb, wpa_auth);
+	wpa_auth->pmksa = pmksa_cache_auth_init(wpa_auth_pmksa_free_cb,
+						wpa_auth);
 	if (wpa_auth->pmksa == NULL) {
 		wpa_printf(MSG_ERROR, "PMKSA cache initialization failed.");
 		os_free(wpa_auth->wpa_ie);
@@ -387,7 +388,7 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 	if (wpa_auth->ft_pmk_cache == NULL) {
 		wpa_printf(MSG_ERROR, "FT PMK cache initialization failed.");
 		os_free(wpa_auth->wpa_ie);
-		pmksa_cache_deinit(wpa_auth->pmksa);
+		pmksa_cache_auth_deinit(wpa_auth->pmksa);
 		os_free(wpa_auth);
 		return NULL;
 	}
@@ -423,7 +424,7 @@ void wpa_deinit(struct wpa_authenticator *wpa_auth)
 		wpa_stsl_remove(wpa_auth, wpa_auth->stsl_negotiations);
 #endif /* CONFIG_PEERKEY */
 
-	pmksa_cache_deinit(wpa_auth->pmksa);
+	pmksa_cache_auth_deinit(wpa_auth->pmksa);
 
 #ifdef CONFIG_IEEE80211R
 	wpa_ft_pmk_cache_deinit(wpa_auth->ft_pmk_cache);
@@ -2367,9 +2368,9 @@ int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
 	if (sm == NULL || sm->wpa != WPA_VERSION_WPA2)
 		return -1;
 
-	if (pmksa_cache_add(sm->wpa_auth->pmksa, pmk, PMK_LEN,
-			    sm->wpa_auth->addr, sm->addr, session_timeout,
-			    eapol, sm->wpa_key_mgmt))
+	if (pmksa_cache_auth_add(sm->wpa_auth->pmksa, pmk, PMK_LEN,
+				 sm->wpa_auth->addr, sm->addr, session_timeout,
+				 eapol, sm->wpa_key_mgmt))
 		return 0;
 
 	return -1;
@@ -2384,9 +2385,9 @@ int wpa_auth_pmksa_add_preauth(struct wpa_authenticator *wpa_auth,
 	if (wpa_auth == NULL)
 		return -1;
 
-	if (pmksa_cache_add(wpa_auth->pmksa, pmk, len, wpa_auth->addr,
-			    sta_addr, session_timeout, eapol,
-			    WPA_KEY_MGMT_IEEE8021X))
+	if (pmksa_cache_auth_add(wpa_auth->pmksa, pmk, len, wpa_auth->addr,
+				 sta_addr, session_timeout, eapol,
+				 WPA_KEY_MGMT_IEEE8021X))
 		return 0;
 
 	return -1;

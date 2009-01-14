@@ -211,8 +211,8 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
 
 
 /**
- * pmksa_cache_add - Add a PMKSA cache entry
- * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * pmksa_cache_auth_add - Add a PMKSA cache entry
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
  * @pmk: The new pairwise master key
  * @pmk_len: PMK length in bytes, usually PMK_LEN (32)
  * @aa: Authenticator address
@@ -228,7 +228,8 @@ static void pmksa_cache_link_entry(struct rsn_pmksa_cache *pmksa,
  * based on the PMK.
  */
 struct rsn_pmksa_cache_entry *
-pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
+pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
+		     const u8 *pmk, size_t pmk_len,
 		const u8 *aa, const u8 *spa, int session_timeout,
 		struct eapol_state_machine *eapol, int akmp)
 {
@@ -257,7 +258,7 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 
 	/* Replace an old entry for the same STA (if found) with the new entry
 	 */
-	pos = pmksa_cache_get(pmksa, spa, NULL);
+	pos = pmksa_cache_auth_get(pmksa, spa, NULL);
 	if (pos)
 		pmksa_cache_free_entry(pmksa, pos);
 
@@ -312,10 +313,10 @@ pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 
 
 /**
- * pmksa_cache_deinit - Free all entries in PMKSA cache
- * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * pmksa_cache_auth_deinit - Free all entries in PMKSA cache
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
  */
-void pmksa_cache_deinit(struct rsn_pmksa_cache *pmksa)
+void pmksa_cache_auth_deinit(struct rsn_pmksa_cache *pmksa)
 {
 	struct rsn_pmksa_cache_entry *entry, *prev;
 	int i;
@@ -337,14 +338,15 @@ void pmksa_cache_deinit(struct rsn_pmksa_cache *pmksa)
 
 
 /**
- * pmksa_cache_get - Fetch a PMKSA cache entry
- * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * pmksa_cache_auth_get - Fetch a PMKSA cache entry
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
  * @spa: Supplicant address or %NULL to match any
  * @pmkid: PMKID or %NULL to match any
  * Returns: Pointer to PMKSA cache entry or %NULL if no match was found
  */
-struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
-					       const u8 *spa, const u8 *pmkid)
+struct rsn_pmksa_cache_entry *
+pmksa_cache_auth_get(struct rsn_pmksa_cache *pmksa,
+		     const u8 *spa, const u8 *pmkid)
 {
 	struct rsn_pmksa_cache_entry *entry;
 
@@ -366,7 +368,7 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
 
 /**
  * pmksa_cache_get_okc - Fetch a PMKSA cache entry using OKC
- * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_auth_init()
  * @aa: Authenticator address
  * @spa: Supplicant address
  * @pmkid: PMKID
@@ -396,14 +398,14 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
 
 
 /**
- * pmksa_cache_init - Initialize PMKSA cache
+ * pmksa_cache_auth_init - Initialize PMKSA cache
  * @free_cb: Callback function to be called when a PMKSA cache entry is freed
  * @ctx: Context pointer for free_cb function
  * Returns: Pointer to PMKSA cache data or %NULL on failure
  */
 struct rsn_pmksa_cache *
-pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx), void *ctx)
+pmksa_cache_auth_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
+				      void *ctx), void *ctx)
 {
 	struct rsn_pmksa_cache *pmksa;
 

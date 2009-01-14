@@ -38,18 +38,20 @@ struct rsn_pmksa_cache_entry {
 struct rsn_pmksa_cache;
 
 struct rsn_pmksa_cache *
-pmksa_cache_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
-				 void *ctx), void *ctx);
-void pmksa_cache_deinit(struct rsn_pmksa_cache *pmksa);
-struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
-					       const u8 *spa, const u8 *pmkid);
+pmksa_cache_auth_init(void (*free_cb)(struct rsn_pmksa_cache_entry *entry,
+				      void *ctx), void *ctx);
+void pmksa_cache_auth_deinit(struct rsn_pmksa_cache *pmksa);
+struct rsn_pmksa_cache_entry *
+pmksa_cache_auth_get(struct rsn_pmksa_cache *pmksa,
+		     const u8 *spa, const u8 *pmkid);
 struct rsn_pmksa_cache_entry * pmksa_cache_get_okc(
 	struct rsn_pmksa_cache *pmksa, const u8 *spa, const u8 *aa,
 	const u8 *pmkid);
 struct rsn_pmksa_cache_entry *
-pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
-		const u8 *aa, const u8 *spa, int session_timeout,
-		struct eapol_state_machine *eapol, int akmp);
+pmksa_cache_auth_add(struct rsn_pmksa_cache *pmksa,
+		     const u8 *pmk, size_t pmk_len,
+		     const u8 *aa, const u8 *spa, int session_timeout,
+		     struct eapol_state_machine *eapol, int akmp);
 struct rsn_pmksa_cache_entry *
 pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 		    const struct rsn_pmksa_cache_entry *old_entry,

@@ -670,8 +670,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	for (i = 0; i < data.num_pmkid; i++) {
 		wpa_hexdump(MSG_DEBUG, "RSN IE: STA PMKID",
 			    &data.pmkid[i * PMKID_LEN], PMKID_LEN);
-		sm->pmksa = pmksa_cache_get(wpa_auth->pmksa, sm->addr,
-					    &data.pmkid[i * PMKID_LEN]);
+		sm->pmksa = pmksa_cache_auth_get(wpa_auth->pmksa, sm->addr,
+						 &data.pmkid[i * PMKID_LEN]);
 		if (sm->pmksa) {
 			pmkid = sm->pmksa->pmkid;
 			break;

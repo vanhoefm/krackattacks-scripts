@@ -15,8 +15,11 @@
 #ifndef IBSS_RSN_H
 #define IBSS_RSN_H
 
+struct ibss_rsn;
+
 struct ibss_rsn_peer {
 	struct ibss_rsn_peer *next;
+	struct ibss_rsn *ibss_rsn;
 
 	u8 addr[ETH_ALEN];
 

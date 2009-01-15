@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "l2_packet/l2_packet.h"
 #include "wpa_supplicant_i.h"
 #include "wpa.h"
 #include "wpa_ie.h"
@@ -33,15 +34,17 @@ static void ibss_rsn_free(struct ibss_rsn_peer *peer)
 static int supp_ether_send(void *ctx, const u8 *dest, u16 proto, const u8 *buf,
 			   size_t len)
 {
-	/* struct ibss_rsn_peer *peer = ctx; */
+	struct ibss_rsn_peer *peer = ctx;
+	struct wpa_supplicant *wpa_s = peer->ibss_rsn->wpa_s;
 
 	wpa_printf(MSG_DEBUG, "SUPP: %s(dest=" MACSTR " proto=0x%04x "
 		   "len=%lu)",
 		   __func__, MAC2STR(dest), proto, (unsigned long) len);
 
-	/* TODO: send EAPOL frame */
+	if (wpa_s->l2)
+		return l2_packet_send(wpa_s->l2, dest, proto, buf, len);
 
-	return 0;
+	return wpa_drv_send_eapol(wpa_s, dest, proto, buf, len);
 }
 
 
@@ -181,15 +184,18 @@ static const u8 * auth_get_psk(void *ctx, const u8 *addr, const u8 *prev_psk)
 static int auth_send_eapol(void *ctx, const u8 *addr, const u8 *data,
 			   size_t data_len, int encrypt)
 {
-	/* struct ibss_rsn *ibss_rsn = ctx; */
+	struct ibss_rsn_peer *peer = ctx;
+	struct wpa_supplicant *wpa_s = peer->ibss_rsn->wpa_s;
 
 	wpa_printf(MSG_DEBUG, "AUTH: %s(addr=" MACSTR " data_len=%lu "
 		   "encrypt=%d)",
 		   __func__, MAC2STR(addr), (unsigned long) data_len, encrypt);
 
-	/* TODO: send EAPOL frame */
+	if (wpa_s->l2)
+		return l2_packet_send(wpa_s->l2, addr, ETH_P_EAPOL, data,
+				      data_len);
 
-	return 0;
+	return wpa_drv_send_eapol(wpa_s, addr, ETH_P_EAPOL, data, data_len);
 }
 
 
@@ -261,6 +267,7 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 	if (peer == NULL)
 		return -1;
 
+	peer->ibss_rsn = ibss_rsn;
 	os_memcpy(peer->addr, addr, ETH_ALEN);
 
 	if (ibss_rsn_supp_init(peer, ibss_rsn->wpa_s->own_addr, ibss_rsn->psk)

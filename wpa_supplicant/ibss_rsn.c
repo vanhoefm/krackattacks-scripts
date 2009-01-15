@@ -240,13 +240,16 @@ static int ibss_rsn_auth_init(struct ibss_rsn *ibss_rsn,
 		return -1;
 	}
 
-#if 0 /* TODO: get peer RSN IE with Probe Request */
-	if (wpa_validate_wpa_ie(ibss_rsn->auth_group, peer->auth, PEER_IE,
-				PEER_IE_LEN, NULL, 0) != WPA_IE_OK) {
+	/* TODO: get peer RSN IE with Probe Request */
+	if (wpa_validate_wpa_ie(ibss_rsn->auth_group, peer->auth,
+				(u8 *) "\x30\x12\x01\x00"
+				"\x00\x0f\xac\x04"
+				"\x01\x00\x00\x0f\xac\x04"
+				"\x01\x00\x00\x0f\xac\x02", 20, NULL, 0) !=
+	    WPA_IE_OK) {
 		wpa_printf(MSG_DEBUG, "AUTH: wpa_validate_wpa_ie() failed");
 		return -1;
 	}
-#endif
 
 	wpa_auth_sm_event(peer->auth, WPA_ASSOC);
 

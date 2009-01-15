@@ -184,8 +184,8 @@ static const u8 * auth_get_psk(void *ctx, const u8 *addr, const u8 *prev_psk)
 static int auth_send_eapol(void *ctx, const u8 *addr, const u8 *data,
 			   size_t data_len, int encrypt)
 {
-	struct ibss_rsn_peer *peer = ctx;
-	struct wpa_supplicant *wpa_s = peer->ibss_rsn->wpa_s;
+	struct ibss_rsn *ibss_rsn = ctx;
+	struct wpa_supplicant *wpa_s = ibss_rsn->wpa_s;
 
 	wpa_printf(MSG_DEBUG, "AUTH: %s(addr=" MACSTR " data_len=%lu "
 		   "encrypt=%d)",

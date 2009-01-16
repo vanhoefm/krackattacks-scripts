@@ -300,6 +300,9 @@ struct hostapd_bss_config {
 	char *config_methods;
 	u8 os_version[4];
 	char *ap_pin;
+	int skip_cred_build;
+	u8 *extra_cred;
+	size_t extra_cred_len;
 #endif /* CONFIG_WPS */
 };
 

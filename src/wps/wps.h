@@ -204,6 +204,31 @@ struct wps_registrar_config {
 	 * cb_ctx: Higher layer context data for Registrar callbacks
 	 */
 	void *cb_ctx;
+
+	/**
+	 * skip_cred_build: Do not build credential
+	 *
+	 * This option can be used to disable internal code that builds
+	 * Credential attribute into M8 based on the current network
+	 * configuration and Enrollee capabilities. The extra_cred data will
+	 * then be used as the Credential(s).
+	 */
+	int skip_cred_build;
+
+	/**
+	 * extra_cred: Additional Credential attribute(s)
+	 *
+	 * This optional data (set to %NULL to disable) can be used to add
+	 * Credential attribute(s) for other networks into M8. If
+	 * skip_cred_build is set, this will also override the automatically
+	 * generated Credential attribute.
+	 */
+	const u8 *extra_cred;
+
+	/**
+	 * extra_cred_len: Length of extra_cred in octets
+	 */
+	size_t extra_cred_len;
 };
 
 

@@ -516,6 +516,9 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	cfg.set_ie_cb = hostapd_wps_set_ie_cb;
 	cfg.pin_needed_cb = hostapd_wps_pin_needed_cb;
 	cfg.cb_ctx = hapd;
+	cfg.skip_cred_build = conf->skip_cred_build;
+	cfg.extra_cred = conf->extra_cred;
+	cfg.extra_cred_len = conf->extra_cred_len;
 
 	wps->registrar = wps_registrar_init(wps, &cfg);
 	if (wps->registrar == NULL) {

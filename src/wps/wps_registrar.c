@@ -89,6 +89,9 @@ struct wps_registrar {
 
 	struct wps_uuid_pin *pins;
 	struct wps_pbc_session *pbc_sessions;
+
+	int skip_cred_build;
+	struct wpabuf *extra_cred;
 };
 
 
@@ -323,6 +326,15 @@ wps_registrar_init(struct wps_context *wps,
 	reg->set_ie_cb = cfg->set_ie_cb;
 	reg->pin_needed_cb = cfg->pin_needed_cb;
 	reg->cb_ctx = cfg->cb_ctx;
+	reg->skip_cred_build = cfg->skip_cred_build;
+	if (cfg->extra_cred) {
+		reg->extra_cred = wpabuf_alloc_copy(cfg->extra_cred,
+						    cfg->extra_cred_len);
+		if (reg->extra_cred == NULL) {
+			os_free(reg);
+			return NULL;
+		}
+	}
 
 	if (wps_set_ie(reg)) {
 		wps_registrar_deinit(reg);
@@ -344,6 +356,7 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	wps_free_pins(reg->pins);
 	wps_free_pbc_sessions(reg->pbc_sessions);
+	wpabuf_free(reg->extra_cred);
 	os_free(reg);
 }
 
@@ -918,6 +931,9 @@ static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 {
 	struct wpabuf *cred;
 
+	if (wps->wps->registrar->skip_cred_build)
+		goto skip_cred_build;
+
 	wpa_printf(MSG_DEBUG, "WPS:  * Credential");
 	os_memset(&wps->cred, 0, sizeof(wps->cred));
 
@@ -1020,6 +1036,12 @@ static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	wpabuf_put_be16(msg, wpabuf_len(cred));
 	wpabuf_put_buf(msg, cred);
 	wpabuf_free(cred);
+
+skip_cred_build:
+	if (wps->wps->registrar->extra_cred) {
+		wpa_printf(MSG_DEBUG, "WPS:  * Credential (pre-configured)");
+		wpabuf_put_buf(msg, wps->wps->registrar->extra_cred);
+	}
 
 	return 0;
 }

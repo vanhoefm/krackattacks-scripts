@@ -1552,6 +1552,14 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 		return;
 	}
 
+#ifdef CONFIG_IBSS_RSN
+	if (wpa_s->current_ssid &&
+	    wpa_s->current_ssid->mode == IEEE80211_MODE_IBSS) {
+		ibss_rsn_rx_eapol(wpa_s->ibss_rsn, src_addr, buf, len);
+		return;
+	}
+#endif /* CONFIG_IBSS_RSN */
+
 	/* Source address of the incoming EAPOL frame could be compared to the
 	 * current BSSID. However, it is possible that a centralized
 	 * Authenticator could be using another MAC address than the BSSID of

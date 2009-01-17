@@ -327,3 +327,100 @@ void ibss_rsn_deinit(struct ibss_rsn *ibss_rsn)
 	os_free(ibss_rsn);
 
 }
+
+
+static int ibss_rsn_eapol_dst_supp(const u8 *buf, size_t len)
+{
+	const struct ieee802_1x_hdr *hdr;
+	const struct wpa_eapol_key *key;
+	u16 key_info;
+	size_t plen;
+
+	/* TODO: Support other EAPOL packets than just EAPOL-Key */
+
+	if (len < sizeof(*hdr) + sizeof(*key))
+		return -1;
+
+	hdr = (const struct ieee802_1x_hdr *) buf;
+	key = (const struct wpa_eapol_key *) (hdr + 1);
+	plen = be_to_host16(hdr->length);
+
+	if (hdr->version < EAPOL_VERSION) {
+		/* TODO: backwards compatibility */
+	}
+	if (hdr->type != IEEE802_1X_TYPE_EAPOL_KEY) {
+		wpa_printf(MSG_DEBUG, "RSN: EAPOL frame (type %u) discarded, "
+			"not a Key frame", hdr->type);
+		return -1;
+	}
+	if (plen > len - sizeof(*hdr) || plen < sizeof(*key)) {
+		wpa_printf(MSG_DEBUG, "RSN: EAPOL frame payload size %lu "
+			   "invalid (frame size %lu)",
+			   (unsigned long) plen, (unsigned long) len);
+		return -1;
+	}
+
+	if (key->type != EAPOL_KEY_TYPE_RSN) {
+		wpa_printf(MSG_DEBUG, "RSN: EAPOL-Key type (%d) unknown, "
+			   "discarded", key->type);
+		return -1;
+	}
+
+	key_info = WPA_GET_BE16(key->key_info);
+
+	return !!(key_info & WPA_KEY_INFO_ACK);
+}
+
+
+static int ibss_rsn_process_rx_eapol(struct ibss_rsn *ibss_rsn,
+				     struct ibss_rsn_peer *peer,
+				     const u8 *buf, size_t len)
+{
+	int supp;
+	u8 *tmp;
+
+	supp = ibss_rsn_eapol_dst_supp(buf, len);
+	if (supp < 0)
+		return -1;
+
+	tmp = os_malloc(len);
+	if (tmp == NULL)
+		return -1;
+	os_memcpy(tmp, buf, len);
+	if (supp) {
+		wpa_printf(MSG_DEBUG, "RSN: IBSS RX EAPOL for Supplicant");
+		wpa_sm_rx_eapol(peer->supp, peer->addr, tmp, len);
+	} else {
+		wpa_printf(MSG_DEBUG, "RSN: IBSS RX EAPOL for Authenticator");
+		wpa_receive(ibss_rsn->auth_group, peer->auth, tmp, len);
+	}
+	os_free(tmp);
+
+	return 1;
+}
+
+
+int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
+		      const u8 *buf, size_t len)
+{
+	struct ibss_rsn_peer *peer;
+
+	for (peer = ibss_rsn->peers; peer; peer = peer->next) {
+		if (os_memcmp(src_addr, peer->addr, ETH_ALEN) == 0)
+			return ibss_rsn_process_rx_eapol(ibss_rsn, peer,
+							 buf, len);
+	}
+
+	if (ibss_rsn_eapol_dst_supp(buf, len) > 0) {
+		/*
+		 * Create new IBSS peer based on an EAPOL message from the peer
+		 * Authenticator.
+		 */
+		if (ibss_rsn_start(ibss_rsn, src_addr) < 0)
+			return -1;
+		return ibss_rsn_process_rx_eapol(ibss_rsn, ibss_rsn->peers,
+						 buf, len);
+	}
+
+	return 0;
+}

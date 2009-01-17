@@ -39,5 +39,7 @@ struct ibss_rsn {
 struct ibss_rsn * ibss_rsn_init(struct wpa_supplicant *wpa_s);
 void ibss_rsn_deinit(struct ibss_rsn *ibss_rsn);
 int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr);
+int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
+		      const u8 *buf, size_t len);
 
 #endif /* IBSS_RSN_H */

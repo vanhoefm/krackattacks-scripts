@@ -239,6 +239,7 @@ static void wpa_init_conf(struct wpa_supplicant *wpa_s, const char *ifname)
 	assert(ctx != NULL);
 
 	ctx->ctx = wpa_s;
+	ctx->msg_ctx = wpa_s;
 	ctx->set_state = _wpa_supplicant_set_state;
 	ctx->get_state = _wpa_supplicant_get_state;
 	ctx->deauthenticate = _wpa_supplicant_deauthenticate;

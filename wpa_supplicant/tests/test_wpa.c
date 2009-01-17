@@ -180,6 +180,7 @@ static int supp_init(struct wpa *wpa)
 		return -1;
 
 	ctx->ctx = wpa;
+	ctx->msg_ctx = wpa;
 	ctx->set_state = supp_set_state;
 	ctx->get_bssid = supp_get_bssid;
 	ctx->ether_send = supp_ether_send;

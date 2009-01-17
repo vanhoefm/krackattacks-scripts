@@ -144,6 +144,7 @@ int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 		return -1;
 
 	ctx->ctx = peer;
+	ctx->msg_ctx = peer->ibss_rsn->wpa_s;
 	ctx->set_state = supp_set_state;
 	ctx->ether_send = supp_ether_send;
 	ctx->get_beacon_ie = supp_get_beacon_ie;

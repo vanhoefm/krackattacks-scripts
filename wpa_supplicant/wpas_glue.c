@@ -586,6 +586,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	}
 
 	ctx->ctx = wpa_s;
+	ctx->msg_ctx = wpa_s;
 	ctx->set_state = _wpa_supplicant_set_state;
 	ctx->get_state = _wpa_supplicant_get_state;
 	ctx->deauthenticate = _wpa_supplicant_deauthenticate;

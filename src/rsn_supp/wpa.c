@@ -258,10 +258,10 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 				abort_cached = 0;
 			}
 		} else {
-			wpa_msg(sm->ctx->ctx, MSG_WARNING,
+			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to get master session key from "
 				"EAPOL state machines");
-			wpa_msg(sm->ctx->ctx, MSG_WARNING,
+			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Key handshake aborted");
 			if (sm->cur_pmksa) {
 				wpa_printf(MSG_DEBUG, "RSN: Cancelled PMKSA "
@@ -413,7 +413,7 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 
 	if (sm->renew_snonce) {
 		if (os_get_random(sm->snonce, WPA_NONCE_LEN)) {
-			wpa_msg(sm->ctx->ctx, MSG_WARNING,
+			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to get random data for SNonce");
 			return;
 		}
@@ -451,7 +451,8 @@ static void wpa_sm_start_preauth(void *eloop_ctx, void *timeout_ctx)
 static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 					    const u8 *addr, int secure)
 {
-	wpa_msg(sm->ctx->ctx, MSG_INFO, "WPA: Key negotiation completed with "
+	wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+		"WPA: Key negotiation completed with "
 		MACSTR " [PTK=%s GTK=%s]", MAC2STR(addr),
 		wpa_cipher_txt(sm->pairwise_cipher),
 		wpa_cipher_txt(sm->group_cipher));
@@ -769,7 +770,7 @@ static void wpa_report_ie_mismatch(struct wpa_sm *sm,
 				   const u8 *wpa_ie, size_t wpa_ie_len,
 				   const u8 *rsn_ie, size_t rsn_ie_len)
 {
-	wpa_msg(sm->ctx->ctx, MSG_WARNING, "WPA: %s (src=" MACSTR ")",
+	wpa_msg(sm->ctx->msg_ctx, MSG_WARNING, "WPA: %s (src=" MACSTR ")",
 		reason, MAC2STR(src_addr));
 
 	if (sm->ap_wpa_ie) {
@@ -1218,7 +1219,7 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 		return;
 
 	if (rekey) {
-		wpa_msg(sm->ctx->ctx, MSG_INFO, "WPA: Group rekeying "
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Group rekeying "
 			"completed with " MACSTR " [GTK=%s]",
 			MAC2STR(sm->bssid), wpa_cipher_txt(sm->group_cipher));
 		wpa_sm_cancel_auth_timeout(sm);
@@ -1586,7 +1587,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 	extra_len = data_len - sizeof(*hdr) - sizeof(*key);
 
 	if (WPA_GET_BE16(key->key_data_length) > extra_len) {
-		wpa_msg(sm->ctx->ctx, MSG_INFO, "WPA: Invalid EAPOL-Key "
+		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Invalid EAPOL-Key "
 			"frame - key_data overflow (%d > %lu)",
 			WPA_GET_BE16(key->key_data_length),
 			(unsigned long) extra_len);

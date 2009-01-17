@@ -107,15 +107,15 @@ static void rsn_preauth_eapol_cb(struct eapol_sm *eapol, int success,
 					sm->network_ctx,
 					WPA_KEY_MGMT_IEEE8021X);
 		} else {
-			wpa_msg(sm->ctx->ctx, MSG_INFO, "RSN: failed to get "
-				"master session key from pre-auth EAPOL state "
-				"machines");
+			wpa_msg(sm->ctx->msg_ctx, MSG_INFO,
+				"RSN: failed to get master session key from "
+				"pre-auth EAPOL state machines");
 			success = 0;
 		}
 	}
 
-	wpa_msg(sm->ctx->ctx, MSG_INFO, "RSN: pre-authentication with " MACSTR
-		" %s", MAC2STR(sm->preauth_bssid),
+	wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "RSN: pre-authentication with "
+		MACSTR " %s", MAC2STR(sm->preauth_bssid),
 		success ? "completed successfully" : "failed");
 
 	rsn_preauth_deinit(sm);
@@ -127,8 +127,8 @@ static void rsn_preauth_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_sm *sm = eloop_ctx;
 
-	wpa_msg(sm->ctx->ctx, MSG_INFO, "RSN: pre-authentication with " MACSTR
-		" timed out", MAC2STR(sm->preauth_bssid));
+	wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "RSN: pre-authentication with "
+		MACSTR " timed out", MAC2STR(sm->preauth_bssid));
 	rsn_preauth_deinit(sm);
 	rsn_preauth_candidate_process(sm);
 }
@@ -183,8 +183,8 @@ int rsn_preauth_init(struct wpa_sm *sm, const u8 *dst,
 	if (sm->preauth_eapol)
 		return -1;
 
-	wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: starting pre-authentication "
-		"with " MACSTR, MAC2STR(dst));
+	wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG,
+		"RSN: starting pre-authentication with " MACSTR, MAC2STR(dst));
 
 	sm->l2_preauth = l2_packet_init(sm->ifname, sm->own_addr,
 					ETH_P_RSN_PREAUTH,
@@ -300,15 +300,15 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 
 	/* TODO: drop priority for old candidate entries */
 
-	wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: processing PMKSA candidate "
+	wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: processing PMKSA candidate "
 		"list");
 	if (sm->preauth_eapol ||
 	    sm->proto != WPA_PROTO_RSN ||
 	    wpa_sm_get_state(sm) != WPA_COMPLETED ||
 	    (sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X &&
 	     sm->key_mgmt != WPA_KEY_MGMT_IEEE8021X_SHA256)) {
-		wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: not in suitable state "
-			"for new pre-authentication");
+		wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: not in suitable "
+			"state for new pre-authentication");
 		return; /* invalid state for new pre-auth */
 	}
 
@@ -318,7 +318,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 		p = pmksa_cache_get(sm->pmksa, candidate->bssid, NULL);
 		if (os_memcmp(sm->bssid, candidate->bssid, ETH_ALEN) != 0 &&
 		    (p == NULL || p->opportunistic)) {
-			wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: PMKSA "
+			wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: PMKSA "
 				"candidate " MACSTR
 				" selected for pre-authentication",
 				MAC2STR(candidate->bssid));
@@ -328,7 +328,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 			os_free(candidate);
 			return;
 		}
-		wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: PMKSA candidate "
+		wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: PMKSA candidate "
 			MACSTR " does not need pre-authentication anymore",
 			MAC2STR(candidate->bssid));
 		/* Some drivers (e.g., NDIS) expect to get notified about the
@@ -340,7 +340,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 		sm->pmksa_candidates = candidate->next;
 		os_free(candidate);
 	}
-	wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: no more pending PMKSA "
+	wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: no more pending PMKSA "
 		"candidates");
 }
 
@@ -414,7 +414,7 @@ void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 	else
 		sm->pmksa_candidates = cand;
 
-	wpa_msg(sm->ctx->ctx, MSG_DEBUG, "RSN: added PMKSA cache "
+	wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: added PMKSA cache "
 		"candidate " MACSTR " prio %d", MAC2STR(bssid), prio);
 	rsn_preauth_candidate_process(sm);
 }

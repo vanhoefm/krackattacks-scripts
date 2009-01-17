@@ -33,6 +33,7 @@ struct wpa_config_blob;
 
 struct wpa_sm_ctx {
 	void *ctx; /* pointer to arbitrary upper level context */
+	void *msg_ctx; /* upper level context for wpa_msg() calls */
 
 	void (*set_state)(void *ctx, wpa_states state);
 	wpa_states (*get_state)(void *ctx);

@@ -1179,6 +1179,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	} else if (ssid->mode == IEEE80211_MODE_IBSS &&
 		   wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
 		   wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE) {
+		ibss_rsn_set_psk(wpa_s->ibss_rsn, ssid->psk);
 		/*
 		 * RSN IBSS authentication is per-STA and we can disable the
 		 * per-BSSID authentication.

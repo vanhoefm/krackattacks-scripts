@@ -446,3 +446,9 @@ int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
 
 	return 0;
 }
+
+
+void ibss_rsn_set_psk(struct ibss_rsn *ibss_rsn, const u8 *psk)
+{
+	os_memcpy(ibss_rsn->psk, psk, PMK_LEN);
+}

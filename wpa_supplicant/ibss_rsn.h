@@ -44,5 +44,6 @@ void ibss_rsn_deinit(struct ibss_rsn *ibss_rsn);
 int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr);
 int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
 		      const u8 *buf, size_t len);
+void ibss_rsn_set_psk(struct ibss_rsn *ibss_rsn, const u8 *psk);
 
 #endif /* IBSS_RSN_H */

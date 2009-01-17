@@ -251,6 +251,21 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	struct eapol_config eapol_conf;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
+#ifdef CONFIG_IBSS_RSN
+	if (ssid->mode == IEEE80211_MODE_IBSS &&
+	    wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
+	    wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE) {
+		/*
+		 * RSN IBSS authentication is per-STA and we can disable the
+		 * per-BSSID EAPOL authentication.
+		 */
+		eapol_sm_notify_portControl(wpa_s->eapol, ForceAuthorized);
+		eapol_sm_notify_eap_success(wpa_s->eapol, TRUE);
+		eapol_sm_notify_eap_fail(wpa_s->eapol, FALSE);
+		return;
+	}
+#endif /* CONFIG_IBSS_RSN */
+
 	eapol_sm_notify_eap_success(wpa_s->eapol, FALSE);
 	eapol_sm_notify_eap_fail(wpa_s->eapol, FALSE);
 
@@ -1160,6 +1175,17 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		 * management. */
 		wpa_supplicant_cancel_auth_timeout(wpa_s);
 		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
+#ifdef CONFIG_IBSS_RSN
+	} else if (ssid->mode == IEEE80211_MODE_IBSS &&
+		   wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
+		   wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE) {
+		/*
+		 * RSN IBSS authentication is per-STA and we can disable the
+		 * per-BSSID authentication.
+		 */
+		wpa_supplicant_cancel_auth_timeout(wpa_s);
+		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
+#endif /* CONFIG_IBSS_RSN */
 	} else {
 		/* Timeout for IEEE 802.11 authentication and association */
 		int timeout = 60;

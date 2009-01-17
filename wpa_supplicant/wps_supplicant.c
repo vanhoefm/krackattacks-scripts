@@ -58,6 +58,16 @@ static int wpa_supplicant_wps_cred(void *ctx,
 
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_CRED_RECEIVED);
 
+	if (cred->auth_type != WPS_AUTH_OPEN &&
+	    cred->auth_type != WPS_AUTH_SHARED &&
+	    cred->auth_type != WPS_AUTH_WPAPSK &&
+	    cred->auth_type != WPS_AUTH_WPA2PSK) {
+		wpa_printf(MSG_DEBUG, "WPS: Ignored credentials for "
+			   "unsupported authentication type %d",
+			   cred->auth_type);
+		return 0;
+	}
+
 	if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS: Replace WPS network block based "
 			   "on the received credential");

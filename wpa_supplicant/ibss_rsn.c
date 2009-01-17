@@ -86,9 +86,16 @@ static u8 * supp_alloc_eapol(void *ctx, u8 type, const void *data,
 
 static int supp_get_beacon_ie(void *ctx)
 {
+	struct ibss_rsn_peer *peer = ctx;
+
 	wpa_printf(MSG_DEBUG, "SUPP: %s", __func__);
-	/* TODO */
-	return -1;
+	/* TODO: get correct RSN IE */
+	return wpa_sm_set_ap_rsn_ie(peer->supp,
+				    (u8 *) "\x30\x14\x01\x00"
+				    "\x00\x0f\xac\x04"
+				    "\x01\x00\x00\x0f\xac\x04"
+				    "\x01\x00\x00\x0f\xac\x02"
+				    "\x00\x00", 22);
 }
 
 
@@ -159,7 +166,6 @@ int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 	wpa_sm_set_param(peer->supp, WPA_PARAM_KEY_MGMT, WPA_KEY_MGMT_PSK);
 	wpa_sm_set_pmk(peer->supp, psk, PMK_LEN);
 
-#if 0 /* TODO? */
 	peer->supp_ie_len = sizeof(peer->supp_ie);
 	if (wpa_sm_set_assoc_wpa_ie_default(peer->supp, peer->supp_ie,
 					    &peer->supp_ie_len) < 0) {
@@ -167,7 +173,6 @@ int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 			   " failed");
 		return -1;
 	}
-#endif
 
 	wpa_sm_notify_assoc(peer->supp, peer->addr);
 
@@ -258,10 +263,11 @@ static int ibss_rsn_auth_init(struct ibss_rsn *ibss_rsn,
 
 	/* TODO: get peer RSN IE with Probe Request */
 	if (wpa_validate_wpa_ie(ibss_rsn->auth_group, peer->auth,
-				(u8 *) "\x30\x12\x01\x00"
+				(u8 *) "\x30\x14\x01\x00"
 				"\x00\x0f\xac\x04"
 				"\x01\x00\x00\x0f\xac\x04"
-				"\x01\x00\x00\x0f\xac\x02", 20, NULL, 0) !=
+				"\x01\x00\x00\x0f\xac\x02"
+				"\x00\x00", 22, NULL, 0) !=
 	    WPA_IE_OK) {
 		wpa_printf(MSG_DEBUG, "AUTH: wpa_validate_wpa_ie() failed");
 		return -1;

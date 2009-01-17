@@ -65,6 +65,8 @@ struct wpa_driver_test_data {
 	int associated;
 	u8 *probe_req_ie;
 	size_t probe_req_ie_len;
+	int ibss;
+	int privacy;
 };
 
 
@@ -132,8 +134,18 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 	end[-1] = '\0';
 
 	while ((dent = readdir(dir))) {
-		if (os_strncmp(dent->d_name, "AP-", 3) != 0)
+		if (os_strncmp(dent->d_name, "AP-", 3) != 0 &&
+		    os_strncmp(dent->d_name, "STA-", 4) != 0)
 			continue;
+		if (drv->own_socket_path) {
+			size_t olen, dlen;
+			olen = os_strlen(drv->own_socket_path);
+			dlen = os_strlen(dent->d_name);
+			if (olen >= dlen &&
+			    os_strcmp(dent->d_name,
+				      drv->own_socket_path + olen - dlen) == 0)
+				continue;
+		}
 		wpa_printf(MSG_DEBUG, "%s: SCAN %s", __func__, dent->d_name);
 
 		os_memset(&addr, 0, sizeof(addr));
@@ -264,8 +276,21 @@ static int wpa_driver_test_associate(
 	} else
 		drv->assoc_wpa_ie_len = 0;
 
+	drv->ibss = params->mode == IEEE80211_MODE_IBSS;
+	drv->privacy = params->key_mgmt_suite &
+		(WPA_KEY_MGMT_IEEE8021X |
+		 WPA_KEY_MGMT_PSK |
+		 WPA_KEY_MGMT_WPA_NONE |
+		 WPA_KEY_MGMT_FT_IEEE8021X |
+		 WPA_KEY_MGMT_FT_PSK |
+		 WPA_KEY_MGMT_IEEE8021X_SHA256 |
+		 WPA_KEY_MGMT_PSK_SHA256);
+	if (params->wep_key_len[params->wep_tx_keyidx])
+		drv->privacy = 1;
+
 #ifdef DRIVER_TEST_UNIX
-	if (drv->test_dir && params->bssid) {
+	if (drv->test_dir && params->bssid &&
+	    params->mode != IEEE80211_MODE_IBSS) {
 		os_memset(&drv->hostapd_addr, 0, sizeof(drv->hostapd_addr));
 		drv->hostapd_addr.sun_family = AF_UNIX;
 		os_snprintf(drv->hostapd_addr.sun_path,
@@ -315,6 +340,17 @@ static int wpa_driver_test_associate(
 		drv->ssid_len = params->ssid_len;
 	} else {
 		drv->associated = 1;
+		if (params->mode == IEEE80211_MODE_IBSS) {
+			os_memcpy(drv->ssid, params->ssid, params->ssid_len);
+			drv->ssid_len = params->ssid_len;
+			if (params->bssid)
+				os_memcpy(drv->bssid, params->bssid, ETH_ALEN);
+			else {
+				os_get_random(drv->bssid, ETH_ALEN);
+				drv->bssid[0] &= ~0x01;
+				drv->bssid[0] |= 0x02;
+			}
+		}
 		wpa_supplicant_event(drv->ctx, EVENT_ASSOC, NULL);
 	}
 
@@ -464,8 +500,10 @@ static void wpa_driver_test_scanresp(struct wpa_driver_test_data *drv,
 		pos = pos2 + 1;
 		while (*pos == ' ')
 			pos++;
-		if (os_strncmp(pos, "PRIVACY", 7) == 0)
+		if (os_strstr(pos, "PRIVACY"))
 			res->caps |= IEEE80211_CAP_PRIVACY;
+		if (os_strstr(pos, "IBSS"))
+			res->caps |= IEEE80211_CAP_IBSS;
 	}
 
 	os_free(drv->scanres[drv->num_scanres]);
@@ -534,6 +572,54 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 }
 
 
+static void wpa_driver_test_scan_cmd(struct wpa_driver_test_data *drv,
+				     struct sockaddr *from,
+				     socklen_t fromlen,
+				     const u8 *data, size_t data_len)
+{
+	char buf[512], *pos, *end;
+	int ret;
+
+	/* data: optional [ STA-addr | ' ' | IEs(hex) ] */
+
+	if (!drv->ibss)
+		return;
+
+	pos = buf;
+	end = buf + sizeof(buf);
+
+	/* reply: SCANRESP BSSID SSID IEs */
+	ret = snprintf(pos, end - pos, "SCANRESP " MACSTR " ",
+		       MAC2STR(drv->bssid));
+	if (ret < 0 || ret >= end - pos)
+		return;
+	pos += ret;
+	pos += wpa_snprintf_hex(pos, end - pos,
+				drv->ssid, drv->ssid_len);
+	ret = snprintf(pos, end - pos, " ");
+	if (ret < 0 || ret >= end - pos)
+		return;
+	pos += ret;
+	pos += wpa_snprintf_hex(pos, end - pos, drv->assoc_wpa_ie,
+				drv->assoc_wpa_ie_len);
+
+	if (drv->privacy) {
+		ret = snprintf(pos, end - pos, " PRIVACY");
+		if (ret < 0 || ret >= end - pos)
+			return;
+		pos += ret;
+	}
+
+	ret = snprintf(pos, end - pos, " IBSS");
+	if (ret < 0 || ret >= end - pos)
+		return;
+	pos += ret;
+
+	sendto(drv->test_socket, buf, pos - buf, 0,
+	       (struct sockaddr *) from, fromlen);
+}
+
+
 static void wpa_driver_test_receive_unix(int sock, void *eloop_ctx,
 					 void *sock_ctx)
 {
@@ -576,6 +662,10 @@ static void wpa_driver_test_receive_unix(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "MLME ", 5) == 0) {
 		wpa_driver_test_mlme(drv, (struct sockaddr *) &from, fromlen,
 				     (const u8 *) buf + 5, res - 5);
+	} else if (os_strncmp(buf, "SCAN ", 5) == 0) {
+		wpa_driver_test_scan_cmd(drv, (struct sockaddr *) &from,
+					 fromlen,
+					 (const u8 *) buf + 5, res - 5);
 	} else {
 		wpa_hexdump_ascii(MSG_DEBUG, "Unknown test_socket command",
 				  (u8 *) buf, res);

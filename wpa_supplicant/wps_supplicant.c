@@ -87,11 +87,8 @@ static int wpa_supplicant_wps_cred(void *ctx,
 
 	switch (cred->encr_type) {
 	case WPS_ENCR_NONE:
-		ssid->pairwise_cipher = ssid->group_cipher = WPA_CIPHER_NONE;
 		break;
 	case WPS_ENCR_WEP:
-		ssid->pairwise_cipher = ssid->group_cipher =
-			WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104;
 		if (cred->key_len > 0 && cred->key_len <= MAX_WEP_KEY_LEN &&
 		    cred->key_idx < NUM_WEP_KEYS) {
 			os_memcpy(ssid->wep_key[cred->key_idx], cred->key,
@@ -102,11 +99,9 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		break;
 	case WPS_ENCR_TKIP:
 		ssid->pairwise_cipher = WPA_CIPHER_TKIP;
-		ssid->group_cipher = WPA_CIPHER_TKIP;
 		break;
 	case WPS_ENCR_AES:
 		ssid->pairwise_cipher = WPA_CIPHER_CCMP;
-		ssid->group_cipher = WPA_CIPHER_CCMP | WPA_CIPHER_TKIP;
 		break;
 	}
 

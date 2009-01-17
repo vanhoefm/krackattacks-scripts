@@ -25,6 +25,7 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QImageReader>
+#include <QSettings>
 
 #include "wpagui.h"
 #include "dirent.h"
@@ -41,8 +42,8 @@ static int wpagui_printf(const char *, ...)
 }
 #endif
 
-WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
-	: QMainWindow(parent)
+WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
+	: QMainWindow(parent), app(_app)
 {
 	setupUi(this);
 
@@ -136,6 +137,15 @@ WpaGui::WpaGui(QWidget *parent, const char *, Qt::WFlags)
 	ctrl_iface_dir = strdup("/var/run/wpa_supplicant");
 
 	parse_argv();
+
+	if (app->isSessionRestored()) {
+		QSettings settings("wpa_supplicant", "wpa_gui");
+		settings.beginGroup("state");
+		if (app->sessionId().compare(settings.value("session_id").
+					     toString()) == 0)
+			startInTray = settings.value("in_tray").toBool();
+		settings.endGroup();
+	}
 
 	if (QSystemTrayIcon::isSystemTrayAvailable())
 		createTrayIcon(startInTray);
@@ -1294,6 +1304,7 @@ void WpaGui::createTrayIcon(bool trayOnly)
 
 	if (!trayOnly)
 		show();
+	inTray = trayOnly;
 }
 
 
@@ -1317,10 +1328,13 @@ void WpaGui::trayActivated(QSystemTrayIcon::ActivationReason how)
 	 * custom closeEvent handler take care of children */
 	case QSystemTrayIcon::Trigger:
 		ackTrayIcon = true;
-		if (isVisible())
+		if (isVisible()) {
 			close();
-		else
+			inTray = true;
+		} else {
 			show();
+			inTray = false;
+		}
 		break;
 	case QSystemTrayIcon::MiddleClick:
 		showTrayStatus();
@@ -1663,4 +1677,14 @@ void WpaGui::addInterface()
 	add_iface = new AddInterface(this, this);
 	add_iface->show();
 	add_iface->exec();
+}
+
+
+void WpaGui::saveState()
+{
+	QSettings settings("wpa_supplicant", "wpa_gui");
+	settings.beginGroup("state");
+	settings.setValue("session_id", app->sessionId());
+	settings.setValue("in_tray", inTray);
+	settings.endGroup();
 }

@@ -28,7 +28,7 @@ class WpaGui : public QMainWindow, public Ui::WpaGui
 	Q_OBJECT
 
 public:
-	WpaGui(QWidget *parent = 0, const char *name = 0,
+	WpaGui(QApplication *app, QWidget *parent = 0, const char *name = 0,
 	       Qt::WFlags fl = 0);
 	~WpaGui();
 
@@ -40,6 +40,7 @@ public:
 	virtual void disableNetwork(const QString &sel);
 	virtual int getNetworkDisabled(const QString &sel);
 	void setBssFromScan(const QString &bssid);
+	void saveState();
 
 public slots:
 	virtual void parse_argv();
@@ -136,6 +137,9 @@ private:
 	AddInterface *add_iface;
 
 	bool connectedToService;
+
+	QApplication *app;
+	bool inTray;
 };
 
 #endif /* WPAGUI_H */

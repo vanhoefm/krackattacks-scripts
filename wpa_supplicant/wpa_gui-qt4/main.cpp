@@ -18,10 +18,32 @@
 #include <QApplication>
 #include "wpagui.h"
 
+
+class WpaGuiApp : public QApplication
+{
+public:
+	WpaGuiApp(int &argc, char **argv);
+
+	virtual void saveState(QSessionManager &manager);
+
+	WpaGui *w;
+};
+
+WpaGuiApp::WpaGuiApp(int &argc, char **argv) : QApplication(argc, argv)
+{
+}
+
+void WpaGuiApp::saveState(QSessionManager &manager)
+{
+	QApplication::saveState(manager);
+	w->saveState();
+}
+
+
 int main(int argc, char *argv[])
 {
-	QApplication app(argc, argv);
-	WpaGui w;
+	WpaGuiApp app(argc, argv);
+	WpaGui w(&app);
 	int ret;
 
 #ifdef CONFIG_NATIVE_WINDOWS
@@ -31,6 +53,8 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 #endif /* CONFIG_NATIVE_WINDOWS */
+
+	app.w = &w;
 
 	ret = app.exec();
 

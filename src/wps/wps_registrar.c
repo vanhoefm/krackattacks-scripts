@@ -851,7 +851,7 @@ static int wps_build_cred_network_idx(struct wpabuf *msg,
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Index");
 	wpabuf_put_be16(msg, ATTR_NETWORK_INDEX);
 	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, 0);
+	wpabuf_put_u8(msg, 1);
 	return 0;
 }
 

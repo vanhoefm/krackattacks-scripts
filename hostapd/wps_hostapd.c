@@ -181,6 +181,9 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	int multi_bss;
 	int wpa;
 
+	wpa_hexdump_key(MSG_DEBUG, "WPS: Received Credential attribute",
+			cred->cred_attr, cred->cred_attr_len);
+
 	wpa_printf(MSG_DEBUG, "WPS: Received new AP Settings");
 	wpa_hexdump_ascii(MSG_DEBUG, "WPS: SSID", cred->ssid, cred->ssid_len);
 	wpa_printf(MSG_DEBUG, "WPS: Authentication Type 0x%x",

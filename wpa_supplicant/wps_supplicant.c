@@ -58,6 +58,9 @@ static int wpa_supplicant_wps_cred(void *ctx,
 
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_CRED_RECEIVED);
 
+	wpa_hexdump_key(MSG_DEBUG, "WPS: Received Credential attribute",
+			cred->cred_attr, cred->cred_attr_len);
+
 	if (cred->auth_type != WPS_AUTH_OPEN &&
 	    cred->auth_type != WPS_AUTH_SHARED &&
 	    cred->auth_type != WPS_AUTH_WPAPSK &&

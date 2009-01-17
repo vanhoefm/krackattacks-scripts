@@ -41,6 +41,9 @@ struct wps_registrar;
  * @key: Key
  * @key_len: Key length in octets
  * @mac_addr: MAC address of the peer
+ * @cred_attr: Unparsed Credential attribute data (used only in cred_cb());
+ *	this may be %NULL, if not used
+ * @cred_attr_len: Length of cred_attr in octets
  */
 struct wps_credential {
 	u8 ssid[32];
@@ -51,6 +54,8 @@ struct wps_credential {
 	u8 key[64];
 	size_t key_len;
 	u8 mac_addr[ETH_ALEN];
+	const u8 *cred_attr;
+	size_t cred_attr_len;
 };
 
 /**

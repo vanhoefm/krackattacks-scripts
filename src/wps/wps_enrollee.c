@@ -630,8 +630,13 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 	    wps_process_cred(&attr, &wps->cred))
 		return -1;
 
-	if (wps->wps->cred_cb)
+	if (wps->wps->cred_cb) {
+		wps->cred.cred_attr = cred - 4;
+		wps->cred.cred_attr_len = cred_len + 4;
 		wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
+		wps->cred.cred_attr = NULL;
+		wps->cred.cred_attr_len = 0;
+	}
 
 	return 0;
 }
@@ -661,7 +666,8 @@ static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
 
 
 static int wps_process_ap_settings_e(struct wps_data *wps,
-				     struct wps_parse_attr *attr)
+				     struct wps_parse_attr *attr,
+				     struct wpabuf *attrs)
 {
 	struct wps_credential cred;
 
@@ -674,8 +680,11 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 	wpa_printf(MSG_INFO, "WPS: Received new AP configuration from "
 		   "Registrar");
 
-	if (wps->wps->cred_cb)
+	if (wps->wps->cred_cb) {
+		cred.cred_attr = wpabuf_head(attrs);
+		cred.cred_attr_len = wpabuf_len(attrs);
 		wps->wps->cred_cb(wps->wps->cb_ctx, &cred);
+	}
 
 	return 0;
 }
@@ -904,7 +913,7 @@ static enum wps_process_res wps_process_m8(struct wps_data *wps,
 	    wps_process_key_wrap_auth(wps, decrypted, eattr.key_wrap_auth) ||
 	    wps_process_creds(wps, eattr.cred, eattr.cred_len,
 			      eattr.num_cred) ||
-	    wps_process_ap_settings_e(wps, &eattr)) {
+	    wps_process_ap_settings_e(wps, &eattr, decrypted)) {
 		wpabuf_free(decrypted);
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;

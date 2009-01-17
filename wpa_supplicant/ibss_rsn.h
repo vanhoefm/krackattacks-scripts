@@ -24,6 +24,7 @@ struct ibss_rsn_peer {
 	u8 addr[ETH_ALEN];
 
 	struct wpa_sm *supp;
+	wpa_states supp_state;
 
 	struct wpa_state_machine *auth;
 };

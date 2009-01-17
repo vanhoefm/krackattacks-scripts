@@ -104,12 +104,26 @@ static int supp_set_key(void *ctx, wpa_alg alg,
 			const u8 *seq, size_t seq_len,
 			const u8 *key, size_t key_len)
 {
+	struct ibss_rsn_peer *peer = ctx;
+
+	if (key_idx == 0) {
+		/*
+		 * In IBSS RSN, the pairwise key from the 4-way handshake
+		 * initiated by the peer with highest MAC address is used.
+		 */
+		if (os_memcmp(peer->ibss_rsn->wpa_s->own_addr, peer->addr,
+			      ETH_ALEN) > 0)
+			return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "SUPP: %s(alg=%d addr=" MACSTR " key_idx=%d "
 		   "set_tx=%d)",
 		   __func__, alg, MAC2STR(addr), key_idx, set_tx);
 	wpa_hexdump(MSG_DEBUG, "SUPP: set_key - seq", seq, seq_len);
-	wpa_hexdump(MSG_DEBUG, "SUPP: set_key - key", key, key_len);
-	return 0;
+	wpa_hexdump_key(MSG_DEBUG, "SUPP: set_key - key", key, key_len);
+
+	return wpa_drv_set_key(peer->ibss_rsn->wpa_s, alg, addr, key_idx,
+			       set_tx, seq, seq_len, key, key_len);
 }
 
 
@@ -221,6 +235,42 @@ static int auth_send_eapol(void *ctx, const u8 *addr, const u8 *data,
 }
 
 
+static int auth_set_key(void *ctx, int vlan_id, const char *_alg,
+			const u8 *addr, int idx, u8 *key,
+			size_t key_len)
+{
+	struct ibss_rsn *ibss_rsn = ctx;
+	u8 seq[6];
+	wpa_alg alg;
+
+	os_memset(seq, 0, sizeof(seq));
+	if (os_strcmp(_alg, "none") == 0)
+		alg = WPA_ALG_NONE;
+	else if (os_strcmp(_alg, "WEP") == 0)
+		alg = WPA_ALG_WEP;
+	else if (os_strcmp(_alg, "TKIP") == 0)
+		alg = WPA_ALG_TKIP;
+	else if (os_strcmp(_alg, "CCMP") == 0)
+		alg = WPA_ALG_CCMP;
+	else if (os_strcmp(_alg, "IGTK") == 0)
+		alg = WPA_ALG_IGTK;
+	else
+		return -1;
+
+	if (idx == 0) {
+		/*
+		 * In IBSS RSN, the pairwise key from the 4-way handshake
+		 * initiated by the peer with highest MAC address is used.
+		 */
+		if (os_memcmp(ibss_rsn->wpa_s->own_addr, addr, ETH_ALEN) < 0)
+			return 0;
+	}
+
+	return wpa_drv_set_key(ibss_rsn->wpa_s, alg, addr, idx,
+			       1, seq, 6, key, key_len);
+}
+
+
 static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 				    const u8 *own_addr)
 {
@@ -242,6 +292,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	cb.logger = auth_logger;
 	cb.send_eapol = auth_send_eapol;
 	cb.get_psk = auth_get_psk;
+	cb.set_key = auth_set_key;
 
 	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb);
 	if (ibss_rsn->auth_group == NULL) {

@@ -312,6 +312,17 @@ struct wpa_config {
 	 * in
 	 */
 	char country[2];
+
+	/**
+	 * wps_cred_processing - Credential processing
+	 *
+	 *   0 = process received credentials internally
+	 *   1 = do not process received credentials; just pass them over
+	 *	ctrl_iface to external program(s)
+	 *   2 = process received credentials internally and pass them over
+	 *	ctrl_iface to external program(s)
+	 */
+	int wps_cred_processing;
 };
 
 

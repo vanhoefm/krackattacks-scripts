@@ -15,6 +15,8 @@
 #ifndef CTRL_IFACE_DBUS_H
 #define CTRL_IFACE_DBUS_H
 
+struct wps_credential;
+
 #ifdef CONFIG_CTRL_IFACE_DBUS
 
 #ifndef SIGPOLL
@@ -84,6 +86,8 @@ void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 					     wpa_states new_state,
 					     wpa_states old_state);
+void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
+					 const struct wps_credential *cred);
 
 char * wpas_dbus_decompose_object_path(const char *path, char **network,
                                        char **bssid);
@@ -126,6 +130,12 @@ static inline void
 wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 					wpa_states new_state,
 					wpa_states old_state)
+{
+}
+
+static inline void
+wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
+				    const struct wps_credential *cred)
 {
 }
 

@@ -18,6 +18,7 @@
 #include "eloop.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
+#include "wps/wps.h"
 #include "ctrl_iface_dbus.h"
 #include "ctrl_iface_dbus_handlers.h"
 
@@ -736,6 +737,63 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 out:
 	dbus_message_unref(_signal);
 }
+
+
+#ifdef CONFIG_WPS
+void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
+					 const struct wps_credential *cred)
+{
+	struct ctrl_iface_dbus_priv *iface;
+	DBusMessage *_signal = NULL;
+	const char *path;
+
+	/* Do nothing if the control interface is not turned on */
+	if (wpa_s->global == NULL)
+		return;
+	iface = wpa_s->global->dbus_ctrl_iface;
+	if (iface == NULL)
+		return;
+
+	path = wpa_supplicant_get_dbus_path(wpa_s);
+	if (path == NULL) {
+		perror("wpa_supplicant_dbus_notify_wps_cred[dbus]: "
+		       "interface didn't have a dbus path");
+		wpa_printf(MSG_ERROR,
+		           "wpa_supplicant_dbus_notify_wps_cred[dbus]: "
+		           "interface didn't have a dbus path; can't send "
+		           "signal.");
+		return;
+	}
+	_signal = dbus_message_new_signal(path, WPAS_DBUS_IFACE_INTERFACE,
+					  "WpsCred");
+	if (_signal == NULL) {
+		perror("wpa_supplicant_dbus_notify_wps_cred[dbus]: "
+		       "couldn't create dbus signal; likely out of memory");
+		wpa_printf(MSG_ERROR,
+		           "wpa_supplicant_dbus_notify_wps_cred[dbus]: "
+		           "couldn't create dbus signal; likely out of "
+		           "memory.");
+		return;
+	}
+
+	if (!dbus_message_append_args(_signal,
+	                              DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+				      &cred->cred_attr, cred->cred_attr_len,
+	                              DBUS_TYPE_INVALID)) {
+		perror("wpa_supplicant_dbus_notify_wps_cred[dbus]: "
+		       "not enough memory to construct signal.");
+		wpa_printf(MSG_ERROR,
+		           "wpa_supplicant_dbus_notify_wps_cred[dbus]: "
+		           "not enough memory to construct signal.");
+		goto out;
+	}
+
+	dbus_connection_send(iface->con, _signal, NULL);
+
+out:
+	dbus_message_unref(_signal);
+}
+#endif /* CONFIG_WPS */
 
 
 /**

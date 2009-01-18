@@ -251,6 +251,8 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 		hk, TEXT("device_type"));
 	if (wpa_config_read_global_os_version(config, hk))
 		errors++;
+	wpa_config_read_reg_dword(hk, TEXT("wps_cred_processing"),
+				  &config->wps_cred_processing);
 #endif /* CONFIG_WPS */
 
 	return errors ? -1 : 0;
@@ -573,6 +575,8 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 			    WPA_GET_BE32(config->os_version));
 		wpa_config_write_reg_string(hk, "os_version", vbuf);
 	}
+	wpa_config_write_reg_dword(hk, TEXT("wps_cred_processing"),
+				   config->wps_cred_processing, 0);
 #endif /* CONFIG_WPS */
 
 	return 0;

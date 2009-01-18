@@ -23,6 +23,7 @@
 #include "eloop.h"
 #include "uuid.h"
 #include "wpa_ctrl.h"
+#include "ctrl_iface_dbus.h"
 #include "eap_common/eap_wsc_common.h"
 #include "wps_supplicant.h"
 
@@ -46,6 +47,15 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 		return 1;
 	}
 
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && wpa_s->current_ssid) {
+		wpa_printf(MSG_DEBUG, "WPS: Registration completed - waiting "
+			   "for external credential processing");
+		wpas_clear_wps(wpa_s);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+		return 1;
+	}
+
 	return 0;
 }
 
@@ -56,10 +66,26 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_CRED_RECEIVED);
+	if ((wpa_s->conf->wps_cred_processing == 1 ||
+	     wpa_s->conf->wps_cred_processing == 2) && cred->cred_attr) {
+		size_t blen = cred->cred_attr_len * 2 + 1;
+		char *buf = os_malloc(blen);
+		if (buf) {
+			wpa_snprintf_hex(buf, blen,
+					 cred->cred_attr, cred->cred_attr_len);
+			wpa_msg(wpa_s, MSG_INFO, "%s%s",
+				WPS_EVENT_CRED_RECEIVED, buf);
+			os_free(buf);
+		}
+		wpa_supplicant_dbus_notify_wps_cred(wpa_s, cred);
+	} else
+		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_CRED_RECEIVED);
 
 	wpa_hexdump_key(MSG_DEBUG, "WPS: Received Credential attribute",
 			cred->cred_attr, cred->cred_attr_len);
+
+	if (wpa_s->conf->wps_cred_processing == 1)
+		return 0;
 
 	if (cred->auth_type != WPS_AUTH_OPEN &&
 	    cred->auth_type != WPS_AUTH_SHARED &&

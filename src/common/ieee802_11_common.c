@@ -219,6 +219,10 @@ ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 			elems->ftie = pos;
 			elems->ftie_len = elen;
 			break;
+		case WLAN_EID_TIMEOUT_INTERVAL:
+			elems->timeout_int = pos;
+			elems->timeout_int_len = elen;
+			break;
 		case WLAN_EID_HT_CAP:
 			elems->ht_capabilities = pos;
 			elems->ht_capabilities_len = elen;
@@ -226,10 +230,6 @@ ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 		case WLAN_EID_HT_OPERATION:
 			elems->ht_operation = pos;
 			elems->ht_operation_len = elen;
-			break;
-		case WLAN_EID_ASSOC_COMEBACK_TIME:
-			elems->assoc_comeback = pos;
-			elems->assoc_comeback_len = elen;
 			break;
 		default:
 			unknown++;

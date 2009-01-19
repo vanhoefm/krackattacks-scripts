@@ -1087,9 +1087,10 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 			   status_code);
 #ifdef CONFIG_IEEE80211W
 		if (status_code == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY &&
-		    elems.assoc_comeback && elems.assoc_comeback_len == 4) {
+		    elems.timeout_int && elems.timeout_int_len == 5 &&
+		    elems.timeout_int[0] == WLAN_TIMEOUT_ASSOC_COMEBACK) {
 			u32 tu, ms;
-			tu = WPA_GET_LE32(elems.assoc_comeback);
+			tu = WPA_GET_LE32(elems.timeout_int + 1);
 			ms = tu * 1024 / 1000;
 			wpa_printf(MSG_DEBUG, "MLME: AP rejected association "
 				   "temporarily; comeback duration %u TU "

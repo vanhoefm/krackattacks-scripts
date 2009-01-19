@@ -301,8 +301,9 @@ static u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 	u32 timeout, tu;
 	struct os_time now, passed;
 
-	*pos++ = WLAN_EID_ASSOC_COMEBACK_TIME;
-	*pos++ = 4;
+	*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
+	*pos++ = 5;
+	*pos++ = WLAN_TIMEOUT_ASSOC_COMEBACK;
 	os_get_time(&now);
 	os_time_sub(&now, &sta->sa_query_start, &passed);
 	tu = (passed.sec * 1000000 + passed.usec) / 1024;

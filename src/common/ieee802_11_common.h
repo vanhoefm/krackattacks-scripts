@@ -55,12 +55,12 @@ struct ieee802_11_elems {
 	u8 mdie_len;
 	u8 *ftie;
 	u8 ftie_len;
+	u8 *timeout_int;
+	u8 timeout_int_len;
 	u8 *ht_capabilities;
 	u8 ht_capabilities_len;
 	u8 *ht_operation;
 	u8 ht_operation_len;
-	u8 *assoc_comeback;
-	u8 assoc_comeback_len;
 	u8 *vendor_ht_cap;
 	u8 vendor_ht_cap_len;
 };

@@ -101,6 +101,7 @@ static int hostapd_cli_quit = 0;
 static int hostapd_cli_attached = 0;
 static const char *ctrl_iface_dir = "/var/run/hostapd";
 static char *ctrl_ifname = NULL;
+static int ping_interval = 5;
 
 
 static void usage(void)
@@ -109,7 +110,8 @@ static void usage(void)
 	fprintf(stderr, 
 		"\n"	
 		"usage: hostapd_cli [-p<path>] [-i<ifname>] [-hv] "
-		"[command..]\n"
+		"[-G<ping interval>] \\\n"
+		"        [command..]\n"
 		"\n"
 		"Options:\n"
 		"   -h           help (show this usage text)\n"
@@ -507,7 +509,7 @@ static void hostapd_cli_interactive(void)
 	do {
 		hostapd_cli_recv_pending(ctrl_conn, 0);
 		printf("> ");
-		alarm(1);
+		alarm(ping_interval);
 		res = fgets(cmd, sizeof(cmd), stdin);
 		alarm(0);
 		if (res == NULL)
@@ -569,7 +571,7 @@ static void hostapd_cli_alarm(int sig)
 	}
 	if (ctrl_conn)
 		hostapd_cli_recv_pending(ctrl_conn, 1);
-	alarm(1);
+	alarm(ping_interval);
 }
 
 
@@ -580,10 +582,13 @@ int main(int argc, char *argv[])
 	int c;
 
 	for (;;) {
-		c = getopt(argc, argv, "hi:p:v");
+		c = getopt(argc, argv, "hG:i:p:v");
 		if (c < 0)
 			break;
 		switch (c) {
+		case 'G':
+			ping_interval = atoi(optarg);
+			break;
 		case 'h':
 			usage();
 			return 0;

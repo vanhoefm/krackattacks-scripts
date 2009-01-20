@@ -1,5 +1,9 @@
 ChangeLog for wpa_supplicant
 
+????-??-?? - v0.7.0
+	* increased wpa_cli ping interval to 5 seconds and made this
+	  configurable with a new command line options (-G<seconds>)
+
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)
 	  (wpa_supplicant can now be configured to act as a WPS Enrollee to

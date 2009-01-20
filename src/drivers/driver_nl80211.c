@@ -993,6 +993,36 @@ nla_put_failure:
 }
 
 
+static int wpa_driver_nl80211_set_probe_req_ie(void *priv, const u8 *ies,
+					       size_t ies_len)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_MGMT_EXTRA_IE, 0);
+
+	NLA_PUT_U8(msg, NL80211_ATTR_MGMT_SUBTYPE, 4 /* ProbeReq */);
+	if (ies)
+		NLA_PUT(msg, NL80211_ATTR_IE, ies_len, ies);
+
+	ret = 0;
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	return ret;
+
+nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 #ifdef CONFIG_CLIENT_MLME
 
 static int nl80211_set_vif(struct wpa_driver_nl80211_data *drv,
@@ -2895,6 +2925,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_country = wpa_driver_nl80211_set_country,
+	.set_probe_req_ie = wpa_driver_nl80211_set_probe_req_ie,
 #ifdef CONFIG_CLIENT_MLME
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 	.set_channel = wpa_driver_nl80211_set_channel,

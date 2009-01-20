@@ -905,7 +905,8 @@ static int wps_build_cred_network_key(struct wpabuf *msg,
 static int wps_build_cred_mac_addr(struct wpabuf *msg,
 				   struct wps_credential *cred)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address");
+	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address (" MACSTR ")",
+		   MAC2STR(cred->mac_addr));
 	wpabuf_put_be16(msg, ATTR_MAC_ADDR);
 	wpabuf_put_be16(msg, ETH_ALEN);
 	wpabuf_put_data(msg, cred->mac_addr, ETH_ALEN);
@@ -979,7 +980,8 @@ static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		}
 	}
 	wps->cred.encr_type = wps->encr_type;
-	os_memcpy(wps->cred.mac_addr, wps->mac_addr_e, ETH_ALEN);
+	/* Set MAC address in the Credential to be the AP's address (BSSID) */
+	os_memcpy(wps->cred.mac_addr, wps->wps->dev.mac_addr, ETH_ALEN);
 
 	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->wps->ap) {
 		u8 r[16];

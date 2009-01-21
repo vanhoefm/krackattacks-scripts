@@ -152,6 +152,18 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 }
 
 
+static void hostapd_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
+				       const u8 *uuid_e)
+{
+	struct hostapd_data *hapd = ctx;
+	char uuid[40];
+	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
+		return;
+	wpa_msg(hapd, MSG_INFO, WPS_EVENT_REG_SUCCESS MACSTR " %s",
+		MAC2STR(mac_addr), uuid);
+}
+
+
 static int str_starts(const char *str, const char *start)
 {
 	return os_strncmp(str, start, os_strlen(start)) == 0;
@@ -531,10 +543,13 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	cfg.new_psk_cb = hostapd_wps_new_psk_cb;
 	cfg.set_ie_cb = hostapd_wps_set_ie_cb;
 	cfg.pin_needed_cb = hostapd_wps_pin_needed_cb;
+	cfg.reg_success_cb = hostapd_wps_reg_success_cb;
 	cfg.cb_ctx = hapd;
 	cfg.skip_cred_build = conf->skip_cred_build;
 	cfg.extra_cred = conf->extra_cred;
 	cfg.extra_cred_len = conf->extra_cred_len;
+	cfg.disable_auto_conf = (hapd->conf->wps_cred_processing == 1) &&
+		conf->skip_cred_build;
 
 	wps->registrar = wps_registrar_init(wps, &cfg);
 	if (wps->registrar == NULL) {

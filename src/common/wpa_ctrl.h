@@ -70,6 +70,7 @@ extern "C" {
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "
 #define WPS_EVENT_NEW_AP_SETTINGS "WPS-NEW-AP-SETTINGS "
+#define WPS_EVENT_REG_SUCCESS "WPS-REG-SUCCESS "
 
 
 /* wpa_supplicant/hostapd control interface access */

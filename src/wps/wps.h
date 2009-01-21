@@ -206,6 +206,18 @@ struct wps_registrar_config {
 			      const struct wps_device_data *dev);
 
 	/**
+	 * reg_success_cb - Callback for reporting successful registration
+	 * @ctx: Higher layer context data (cb_ctx)
+	 * @mac_addr: MAC address of the Enrollee
+	 * @uuid_e: UUID-E of the Enrollee
+	 *
+	 * This callback is called whenever an Enrollee completes registration
+	 * successfully.
+	 */
+	void (*reg_success_cb)(void *ctx, const u8 *mac_addr,
+			       const u8 *uuid_e);
+
+	/**
 	 * cb_ctx: Higher layer context data for Registrar callbacks
 	 */
 	void *cb_ctx;
@@ -234,6 +246,18 @@ struct wps_registrar_config {
 	 * extra_cred_len: Length of extra_cred in octets
 	 */
 	size_t extra_cred_len;
+
+	/**
+	 * disable_auto_conf - Disable auto-configuration on first registration
+	 *
+	 * By default, the AP that is started in not configured state will
+	 * generate a random PSK and move to configured state when the first
+	 * registration protocol run is completed successfully. This option can
+	 * be used to disable this functionality and leave it up to an external
+	 * program to take care of configuration. This requires the extra_cred
+	 * to be set with a suitable Credential and skip_cred_build being used.
+	 */
+	int disable_auto_conf;
 };
 
 

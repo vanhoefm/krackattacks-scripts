@@ -85,6 +85,8 @@ struct wps_registrar {
 			 const u8 *probe_resp_ie, size_t probe_resp_ie_len);
 	void (*pin_needed_cb)(void *ctx, const u8 *uuid_e,
 			      const struct wps_device_data *dev);
+	void (*reg_success_cb)(void *ctx, const u8 *mac_addr,
+			       const u8 *uuid_e);
 	void *cb_ctx;
 
 	struct wps_uuid_pin *pins;
@@ -92,6 +94,7 @@ struct wps_registrar {
 
 	int skip_cred_build;
 	struct wpabuf *extra_cred;
+	int disable_auto_conf;
 };
 
 
@@ -325,6 +328,7 @@ wps_registrar_init(struct wps_context *wps,
 	reg->new_psk_cb = cfg->new_psk_cb;
 	reg->set_ie_cb = cfg->set_ie_cb;
 	reg->pin_needed_cb = cfg->pin_needed_cb;
+	reg->reg_success_cb = cfg->reg_success_cb;
 	reg->cb_ctx = cfg->cb_ctx;
 	reg->skip_cred_build = cfg->skip_cred_build;
 	if (cfg->extra_cred) {
@@ -335,6 +339,7 @@ wps_registrar_init(struct wps_context *wps,
 			return NULL;
 		}
 	}
+	reg->disable_auto_conf = cfg->disable_auto_conf;
 
 	if (wps_set_ie(reg)) {
 		wps_registrar_deinit(reg);
@@ -627,6 +632,16 @@ static void wps_cb_pin_needed(struct wps_registrar *reg, const u8 *uuid_e,
 		return;
 
 	reg->pin_needed_cb(reg->cb_ctx, uuid_e, dev);
+}
+
+
+static void wps_cb_reg_success(struct wps_registrar *reg, const u8 *mac_addr,
+			       const u8 *uuid_e)
+{
+	if (reg->reg_success_cb == NULL)
+		return;
+
+	reg->reg_success_cb(reg->cb_ctx, mac_addr, uuid_e);
 }
 
 
@@ -983,7 +998,8 @@ static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	/* Set MAC address in the Credential to be the AP's address (BSSID) */
 	os_memcpy(wps->cred.mac_addr, wps->wps->dev.mac_addr, ETH_ALEN);
 
-	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->wps->ap) {
+	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->wps->ap &&
+	    !wps->wps->registrar->disable_auto_conf) {
 		u8 r[16];
 		/* Generate a random passphrase */
 		if (os_get_random(r, sizeof(r)) < 0)
@@ -2118,7 +2134,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	wpa_printf(MSG_DEBUG, "WPS: Negotiation completed successfully");
 
 	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->new_psk &&
-	    wps->wps->ap) {
+	    wps->wps->ap && !wps->wps->registrar->disable_auto_conf) {
 		struct wps_credential cred;
 
 		wpa_printf(MSG_DEBUG, "WPS: Moving to Configured state based "
@@ -2159,6 +2175,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		os_free(wps->new_psk);
 		wps->new_psk = NULL;
 	}
+
+	wps_cb_reg_success(wps->wps->registrar, wps->mac_addr_e, wps->uuid_e);
 
 	if (wps->pbc) {
 		wps_registrar_remove_pbc_session(wps->wps->registrar,

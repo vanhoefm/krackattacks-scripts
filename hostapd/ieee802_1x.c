@@ -747,6 +747,8 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 			sta->eapol_sm->flags |= EAPOL_SM_WAIT_START;
 		}
 #endif /* CONFIG_WPS */
+
+		sta->eapol_sm->eap_if->portEnabled = TRUE;
 	}
 
 	/* since we support version 1, we can ignore version field and proceed
@@ -829,7 +831,7 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 	int force_1x = 0;
 
 #ifdef CONFIG_WPS
-	if (hapd->conf->wps_state &&
+	if (hapd->conf->wps_state && hapd->conf->wpa &&
 	    (sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS))) {
 		/*
 		 * Need to enable IEEE 802.1X/EAPOL state machines for possible

@@ -303,6 +303,7 @@ struct hostapd_bss_config {
 	int skip_cred_build;
 	u8 *extra_cred;
 	size_t extra_cred_len;
+	int wps_cred_processing;
 #endif /* CONFIG_WPS */
 };
 

@@ -2227,6 +2227,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   line, pos);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "wps_cred_processing") == 0) {
+			bss->wps_cred_processing = atoi(pos);
 #endif /* CONFIG_WPS */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "

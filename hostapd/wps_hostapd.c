@@ -194,7 +194,22 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	wpa_printf(MSG_DEBUG, "WPS: MAC Address " MACSTR,
 		   MAC2STR(cred->mac_addr));
 
-	wpa_msg(hapd, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);
+	if ((hapd->conf->wps_cred_processing == 1 ||
+	     hapd->conf->wps_cred_processing == 2) && cred->cred_attr) {
+		size_t blen = cred->cred_attr_len * 2 + 1;
+		char *buf = os_malloc(blen);
+		if (buf) {
+			wpa_snprintf_hex(buf, blen,
+					 cred->cred_attr, cred->cred_attr_len);
+			wpa_msg(hapd, MSG_INFO, "%s%s",
+				WPS_EVENT_NEW_AP_SETTINGS, buf);
+			os_free(buf);
+		}
+	} else
+		wpa_msg(hapd, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);
+
+	if (hapd->conf->wps_cred_processing == 1)
+		return 0;
 
 	len = os_strlen(hapd->iface->config_fname) + 5;
 	tmp_fname = os_malloc(len);

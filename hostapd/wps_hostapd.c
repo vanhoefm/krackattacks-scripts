@@ -19,7 +19,6 @@
 #include "eloop.h"
 #include "uuid.h"
 #include "wpa_ctrl.h"
-#include "ctrl_iface.h"
 #include "ieee802_11_defs.h"
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
@@ -133,7 +132,7 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 			  dev->model_number, dev->serial_number,
 			  dev->categ, dev->oui, dev->sub_categ);
 	if (len > 0 && len < (int) sizeof(txt))
-		hostapd_ctrl_iface_send(hapd, MSG_INFO, txt, len);
+		wpa_msg(hapd, MSG_INFO, "%s", txt);
 
 	if (hapd->conf->wps_pin_requests) {
 		FILE *f;
@@ -195,8 +194,7 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	wpa_printf(MSG_DEBUG, "WPS: MAC Address " MACSTR,
 		   MAC2STR(cred->mac_addr));
 
-	hostapd_ctrl_iface_send(hapd, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS,
-				os_strlen(WPS_EVENT_NEW_AP_SETTINGS));
+	wpa_msg(hapd, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);
 
 	len = os_strlen(hapd->iface->config_fname) + 5;
 	tmp_fname = os_malloc(len);

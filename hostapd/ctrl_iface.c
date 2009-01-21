@@ -42,6 +42,10 @@ struct wpa_ctrl_dst {
 };
 
 
+static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
+				    const char *buf, size_t len);
+
+
 static int hostapd_ctrl_iface_attach(struct hostapd_data *hapd,
 				     struct sockaddr_un *from,
 				     socklen_t fromlen)
@@ -382,6 +386,16 @@ static char * hostapd_ctrl_iface_path(struct hostapd_data *hapd)
 }
 
 
+static void hostapd_ctrl_iface_msg_cb(void *ctx, int level,
+				      const char *txt, size_t len)
+{
+	struct hostapd_data *hapd = ctx;
+	if (hapd == NULL)
+		return;
+	hostapd_ctrl_iface_send(hapd, level, txt, len);
+}
+
+
 int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 {
 	struct sockaddr_un addr;
@@ -446,6 +460,7 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	hapd->ctrl_sock = s;
 	eloop_register_read_sock(s, hostapd_ctrl_iface_receive, hapd,
 				 NULL);
+	wpa_msg_register_cb(hostapd_ctrl_iface_msg_cb);
 
 	return 0;
 
@@ -495,8 +510,8 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 }
 
 
-void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
-			     char *buf, size_t len)
+static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
+				    const char *buf, size_t len)
 {
 	struct wpa_ctrl_dst *dst, *next;
 	struct msghdr msg;
@@ -511,7 +526,7 @@ void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 	os_snprintf(levelstr, sizeof(levelstr), "<%d>", level);
 	io[0].iov_base = levelstr;
 	io[0].iov_len = os_strlen(levelstr);
-	io[1].iov_base = buf;
+	io[1].iov_base = (char *) buf;
 	io[1].iov_len = len;
 	os_memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = io;

@@ -144,6 +144,10 @@ provided for each Enrollee (separated with tabulators):
 Example line in the /var/run/hostapd.pin-req file:
 1200188391	53b63a98-d29e-4457-a2ed-094d7e6a669c	Intel(R) Centrino(R)	Intel Corporation	Intel(R) Centrino(R)	-	-	1-0050F204-1
 
+Control interface data:
+WPS-PIN-NEEDED [UUID-E|MAC Address|Device Name|Manufacturer|Model Name|Model Number|Serial Number|Device Category]
+For example:
+<2>WPS-PIN-NEEDED [53b63a98-d29e-4457-a2ed-094d7e6a669c|02:12:34:56:78:9a|Device|Manuf|Model|Model Number|Serial Number|1-0050F204-1]
 
 When the user enters a PIN for a pending Enrollee, e.g., on the web
 UI), hostapd needs to be notified of the new PIN over the control
@@ -178,3 +182,46 @@ hostapd_cli wps_pbc
 At this point, the client has two minutes to complete WPS negotiation
 which will generate a new WPA PSK in the same way as the PIN method
 described above.
+
+
+Credential generation and configuration changes
+-----------------------------------------------
+
+By default, hostapd generates credentials for Enrollees and processing
+AP configuration updates internally. However, it is possible to
+control these operations from external programs, if desired.
+
+The internal credential generation can be disabled with
+skip_cred_build=1 option in the configuration. extra_cred option will
+then need to be used to provide pre-configured Credential attribute(s)
+for hostapd to use. The exact data from this binary file will be sent,
+i.e., it will have to include valid WPS attributes. extra_cred can
+also be used to add additional networks if the Registrar is used to
+configure credentials for multiple networks.
+
+Processing of received configuration updates can be disabled with
+wps_cred_processing=1 option. When this is used, an external program
+is responsible for creating hostapd configuration files and processing
+configuration updates based on messages received from hostapd over
+control interface. This will also include the initial configuration on
+first successful registration if the AP is initially set in
+unconfigured state.
+
+Following control interface messages are sent out for external programs:
+
+WPS-REG-SUCCESS <Enrollee MAC address <UUID-E>
+For example:
+<2>WPS-REG-SUCCESS 02:66:a0:ee:17:27 2b7093f1-d6fb-5108-adbb-bea66bb87333
+
+This can be used to tricker change from unconfigured to configured
+state (random configuration based on the first successful WPS
+registration). In addition, this can be used to update AP UI about the
+status of WPS registration progress.
+
+
+WPS-NEW-AP-SETTINGS <hexdump of AP Setup attributes>
+For example:
+<2>WPS-NEW-AP-SETTINGS 10260001011045000c6a6b6d2d7770732d74657374100300020020100f00020008102700403065346230343536633236366665306433396164313535346131663462663731323433376163666462376633393965353466316631623032306164343438623510200006024231cede15101e000844
+
+This can be used to update the externally stored AP configuration and
+then update hostapd configuration (followed by restarting of hostapd).

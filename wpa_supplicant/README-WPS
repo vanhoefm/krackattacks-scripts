@@ -163,3 +163,22 @@ how WPS support can be integrated into the GUI. Its main window has a
 WPS tab that guides user through WPS registration with automatic AP
 selection. In addition, it shows how WPS can be started manually by
 selecting an AP from scan results.
+
+
+Credential processing
+---------------------
+
+By default, wpa_supplicant processes received credentials and updates
+its configuration internally. However, it is possible to
+control these operations from external programs, if desired.
+
+This internal processing can be disabled with wps_cred_processing=1
+option. When this is used, an external program is responsible for
+processing the credential attributes and updating wpa_supplicant
+configuration based on them.
+
+Following control interface messages are sent out for external programs:
+
+WPS-CRED-RECEIVED  <hexdump of Credential attribute(s)>
+For example:
+<2>WPS-CRED-RECEIVED 100e006f10260001011045000c6a6b6d2d7770732d74657374100300020020100f000200081027004030653462303435366332363666653064333961643135353461316634626637313234333761636664623766333939653534663166316230323061643434386235102000060266a0ee1727

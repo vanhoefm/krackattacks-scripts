@@ -421,11 +421,16 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	os_memcpy(wps->ssid, hapd->conf->ssid.ssid, wps->ssid_len);
 	wps->ap = 1;
 	os_memcpy(wps->dev.mac_addr, hapd->own_addr, ETH_ALEN);
-	wps->dev.device_name = os_strdup(hapd->conf->device_name);
-	wps->dev.manufacturer = os_strdup(hapd->conf->manufacturer);
-	wps->dev.model_name = os_strdup(hapd->conf->model_name);
-	wps->dev.model_number = os_strdup(hapd->conf->model_number);
-	wps->dev.serial_number = os_strdup(hapd->conf->serial_number);
+	wps->dev.device_name = hapd->conf->device_name ?
+		os_strdup(hapd->conf->device_name) : NULL;
+	wps->dev.manufacturer = hapd->conf->manufacturer ?
+		os_strdup(hapd->conf->manufacturer) : NULL;
+	wps->dev.model_name = hapd->conf->model_name ?
+		os_strdup(hapd->conf->model_name) : NULL;
+	wps->dev.model_number = hapd->conf->model_number ?
+		os_strdup(hapd->conf->model_number) : NULL;
+	wps->dev.serial_number = hapd->conf->serial_number ?
+		os_strdup(hapd->conf->serial_number) : NULL;
 	if (hapd->conf->config_methods) {
 		char *m = hapd->conf->config_methods;
 		if (os_strstr(m, "label"))

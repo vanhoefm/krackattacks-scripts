@@ -186,7 +186,7 @@ int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 
 
 /**
- * wps_is_selected_pbc_registrar - Check whether WPS IE indicates active PIN
+ * wps_is_selected_pin_registrar - Check whether WPS IE indicates active PIN
  * @msg: WPS IE contents from Beacon or Probe Response frame
  * Returns: 1 if PIN Registrar is active, 0 if not
  */
@@ -202,9 +202,13 @@ int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 	 * Device Password ID here.
 	 */
 
-	if (wps_parse_msg(msg, &attr) < 0 ||
-	    !attr.selected_registrar || *attr.selected_registrar == 0 ||
-	    !attr.dev_password_id ||
+	if (wps_parse_msg(msg, &attr) < 0)
+		return 0;
+
+	if (!attr.selected_registrar || *attr.selected_registrar == 0)
+		return 0;
+
+	if (attr.dev_password_id != NULL &&
 	    WPA_GET_BE16(attr.dev_password_id) == DEV_PW_PUSHBUTTON)
 		return 0;
 

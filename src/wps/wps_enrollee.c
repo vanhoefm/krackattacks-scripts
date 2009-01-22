@@ -35,7 +35,7 @@ static int wps_build_wps_state(struct wps_data *wps, struct wpabuf *msg)
 	wpa_printf(MSG_DEBUG, "WPS:  * Wi-Fi Protected Setup State");
 	wpabuf_put_be16(msg, ATTR_WPS_STATE);
 	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, WPS_STATE_CONFIGURED);
+	wpabuf_put_u8(msg, WPS_STATE_NOT_CONFIGURED);
 	return 0;
 }
 

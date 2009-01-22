@@ -27,6 +27,7 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 
 	wpa_printf(MSG_DEBUG, "WPS:  * Public Key");
 	pubkey = dh_init(dh_groups_get(WPS_DH_GROUP), &wps->dh_privkey);
+	pubkey = wpabuf_zeropad(pubkey, 192);
 	if (pubkey == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to initialize "
 			   "Diffie-Hellman handshake");

@@ -82,6 +82,7 @@ int wps_derive_keys(struct wps_data *wps)
 
 	dh_shared = dh_derive_shared(pubkey, wps->dh_privkey,
 				     dh_groups_get(WPS_DH_GROUP));
+	dh_shared = wpabuf_zeropad(dh_shared, 192);
 	if (dh_shared == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to derive DH shared key");
 		return -1;

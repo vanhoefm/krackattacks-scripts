@@ -37,6 +37,7 @@ struct wpabuf * wpabuf_dup(const struct wpabuf *src);
 void wpabuf_free(struct wpabuf *buf);
 void * wpabuf_put(struct wpabuf *buf, size_t len);
 struct wpabuf * wpabuf_concat(struct wpabuf *a, struct wpabuf *b);
+struct wpabuf * wpabuf_zeropad(struct wpabuf *buf, size_t len);
 
 
 /**

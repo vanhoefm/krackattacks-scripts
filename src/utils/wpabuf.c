@@ -160,3 +160,38 @@ struct wpabuf * wpabuf_concat(struct wpabuf *a, struct wpabuf *b)
 
 	return n;
 }
+
+
+/**
+ * wpabuf_zeropad - Pad buffer with 0x00 octets (prefix) to specified length
+ * @buf: Buffer to be padded
+ * @len: Length for the padded buffer
+ * Returns: wpabuf padded to len octets or %NULL on failure
+ *
+ * If buf is longer than len octets or of same size, it will be returned as-is.
+ * Otherwise a new buffer is allocated and prefixed with 0x00 octets followed
+ * by the source data. The source buffer will be freed on error, i.e., caller
+ * will only be responsible on freeing the returned buffer. If buf is %NULL,
+ * %NULL will be returned.
+ */
+struct wpabuf * wpabuf_zeropad(struct wpabuf *buf, size_t len)
+{
+	struct wpabuf *ret;
+	size_t blen;
+
+	if (buf == NULL)
+		return NULL;
+
+	blen = wpabuf_len(buf);
+	if (blen >= len)
+		return buf;
+
+	ret = wpabuf_alloc(len);
+	if (ret) {
+		os_memset(wpabuf_put(ret, len - blen), 0, len - blen);
+		wpabuf_put_buf(ret, buf);
+	}
+	wpabuf_free(buf);
+
+	return ret;
+}

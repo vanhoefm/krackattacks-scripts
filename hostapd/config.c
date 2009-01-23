@@ -2434,6 +2434,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->device_type);
 	os_free(conf->config_methods);
 	os_free(conf->ap_pin);
+	os_free(conf->extra_cred);
 #endif /* CONFIG_WPS */
 }
 

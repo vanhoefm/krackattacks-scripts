@@ -1477,6 +1477,7 @@ static int wps_process_e_snonce1(struct wps_data *wps, const u8 *e_snonce1)
 		wpa_printf(MSG_DEBUG, "WPS: E-Hash1 derived from E-S1 does "
 			   "not match with the pre-committed value");
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
+		wps_pwd_auth_fail_event(wps->wps, 0, 1);
 		return -1;
 	}
 
@@ -1517,6 +1518,7 @@ static int wps_process_e_snonce2(struct wps_data *wps, const u8 *e_snonce2)
 			   "not match with the pre-committed value");
 		wps_registrar_invalidate_pin(wps->wps->registrar, wps->uuid_e);
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
+		wps_pwd_auth_fail_event(wps->wps, 0, 2);
 		return -1;
 	}
 
@@ -2218,4 +2220,10 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported op_code %d", op_code);
 		return WPS_FAILURE;
 	}
+}
+
+
+int wps_registrar_update_ie(struct wps_registrar *reg)
+{
+	return wps_set_ie(reg);
 }

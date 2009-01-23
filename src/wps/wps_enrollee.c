@@ -580,6 +580,7 @@ static int wps_process_r_snonce1(struct wps_data *wps, const u8 *r_snonce1)
 		wpa_printf(MSG_DEBUG, "WPS: R-Hash1 derived from R-S1 does "
 			   "not match with the pre-committed value");
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
+		wps_pwd_auth_fail_event(wps->wps, 1, 1);
 		return -1;
 	}
 
@@ -619,6 +620,7 @@ static int wps_process_r_snonce2(struct wps_data *wps, const u8 *r_snonce2)
 		wpa_printf(MSG_DEBUG, "WPS: R-Hash2 derived from R-S2 does "
 			   "not match with the pre-committed value");
 		wps->config_error = WPS_CFG_DEV_PASSWORD_AUTH_FAILURE;
+		wps_pwd_auth_fail_event(wps->wps, 1, 2);
 		return -1;
 	}
 

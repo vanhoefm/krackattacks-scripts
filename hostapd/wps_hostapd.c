@@ -376,6 +376,57 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 }
 
 
+static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
+				  struct wps_event_pwd_auth_fail *data)
+{
+	FILE *f;
+
+	if (!data->enrollee)
+		return;
+
+	/*
+	 * Registrar failed to prove its knowledge of the AP PIN. Lock AP setup
+	 * if this happens multiple times.
+	 */
+	hapd->ap_pin_failures++;
+	if (hapd->ap_pin_failures < 4)
+		return;
+
+	wpa_msg(hapd, MSG_INFO, WPS_EVENT_AP_SETUP_LOCKED);
+	hapd->wps->ap_setup_locked = 1;
+
+	wps_registrar_update_ie(hapd->wps->registrar);
+
+	if (hapd->conf->wps_cred_processing == 1)
+		return;
+
+	f = fopen(hapd->iface->config_fname, "a");
+	if (f == NULL) {
+		wpa_printf(MSG_WARNING, "WPS: Could not append to the current "
+			   "configuration file");
+		return;
+	}
+
+	fprintf(f, "# WPS AP Setup Locked based on possible attack\n");
+	fprintf(f, "ap_setup_locked=1\n");
+	fclose(f);
+
+	/* TODO: dualband AP may need to update multiple configuration files */
+
+	wpa_printf(MSG_DEBUG, "WPS: AP configuration updated");
+}
+
+
+static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
+				 union wps_event_data *data)
+{
+	struct hostapd_data *hapd = ctx;
+
+	if (event == WPS_EV_PWD_AUTH_FAIL)
+		hostapd_pwd_auth_fail(hapd, &data->pwd_auth_fail);
+}
+
+
 static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 {
 	os_free(hapd->wps_beacon_ie);
@@ -406,6 +457,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		return -1;
 
 	wps->cred_cb = hostapd_wps_cred_cb;
+	wps->event_cb = hostapd_wps_event_cb;
 	wps->cb_ctx = hapd;
 
 	os_memset(&cfg, 0, sizeof(cfg));

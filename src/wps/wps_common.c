@@ -321,3 +321,17 @@ void wps_success_event(struct wps_context *wps)
 
 	wps->event_cb(wps->cb_ctx, WPS_EV_SUCCESS, NULL);
 }
+
+
+void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part)
+{
+	union wps_event_data data;
+
+	if (wps->event_cb == NULL)
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	data.pwd_auth_fail.enrollee = enrollee;
+	data.pwd_auth_fail.part = part;
+	wps->event_cb(wps->cb_ctx, WPS_EV_PWD_AUTH_FAIL, &data);
+}

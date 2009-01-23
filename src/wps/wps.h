@@ -278,7 +278,12 @@ enum wps_event {
 	/**
 	 * WPS_EV_SUCCESS - Registration succeeded
 	 */
-	WPS_EV_SUCCESS
+	WPS_EV_SUCCESS,
+
+	/**
+	 * WPS_EV_PWD_AUTH_FAIL - Password authentication failed
+	 */
+	WPS_EV_PWD_AUTH_FAIL
 };
 
 /**
@@ -312,6 +317,11 @@ union wps_event_data {
 	struct wps_event_fail {
 		int msg;
 	} fail;
+
+	struct wps_event_pwd_auth_fail {
+		int enrollee;
+		int part;
+	} pwd_auth_fail;
 };
 
 /**
@@ -444,6 +454,7 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid);
 int wps_registrar_button_pushed(struct wps_registrar *reg);
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data);
+int wps_registrar_update_ie(struct wps_registrar *reg);
 
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);

@@ -275,6 +275,8 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 	case WPS_EV_SUCCESS:
 		wpa_supplicant_wps_event_success(wpa_s);
 		break;
+	case WPS_EV_PWD_AUTH_FAIL:
+		break;
 	}
 }
 

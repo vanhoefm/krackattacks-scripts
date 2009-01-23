@@ -187,6 +187,7 @@ struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 					  size_t encr_len);
 void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg);
 void wps_success_event(struct wps_context *wps);
+void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part);
 
 /* wps_attr_parse.c */
 int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);

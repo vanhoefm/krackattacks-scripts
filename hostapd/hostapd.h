@@ -95,6 +95,7 @@ struct hostapd_data {
 	size_t wps_beacon_ie_len;
 	u8 *wps_probe_resp_ie;
 	size_t wps_probe_resp_ie_len;
+	unsigned int ap_pin_failures;
 #endif /* CONFIG_WPS */
 };
 

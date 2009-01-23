@@ -268,17 +268,34 @@ static int wps_build_cred_mac_addr(struct wps_data *wps, struct wpabuf *msg)
 }
 
 
+static int wps_build_ap_settings(struct wps_data *wps, struct wpabuf *plain)
+{
+	if (wps->wps->ap_settings) {
+		wpa_printf(MSG_DEBUG, "WPS:  * AP Settings (pre-configured)");
+		wpabuf_put_data(plain, wps->wps->ap_settings,
+				wps->wps->ap_settings_len);
+		return 0;
+	}
+
+	return wps_build_cred_ssid(wps, plain) ||
+		wps_build_cred_mac_addr(wps, plain) ||
+		wps_build_cred_auth_type(wps, plain) ||
+		wps_build_cred_encr_type(wps, plain) ||
+		wps_build_cred_network_key(wps, plain);
+}
+
+
 static struct wpabuf * wps_build_m7(struct wps_data *wps)
 {
 	struct wpabuf *msg, *plain;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building Message M7");
 
-	plain = wpabuf_alloc(500);
+	plain = wpabuf_alloc(500 + wps->wps->ap_settings_len);
 	if (plain == NULL)
 		return NULL;
 
-	msg = wpabuf_alloc(1000);
+	msg = wpabuf_alloc(1000 + wps->wps->ap_settings_len);
 	if (msg == NULL) {
 		wpabuf_free(plain);
 		return NULL;
@@ -288,12 +305,7 @@ static struct wpabuf * wps_build_m7(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_M7) ||
 	    wps_build_registrar_nonce(wps, msg) ||
 	    wps_build_e_snonce2(wps, plain) ||
-	    (wps->wps->ap &&
-	     (wps_build_cred_ssid(wps, plain) ||
-	      wps_build_cred_mac_addr(wps, plain) ||
-	      wps_build_cred_auth_type(wps, plain) ||
-	      wps_build_cred_encr_type(wps, plain) ||
-	      wps_build_cred_network_key(wps, plain))) ||
+	    (wps->wps->ap && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
 	    wps_build_authenticator(wps, msg)) {

@@ -397,6 +397,19 @@ struct wps_context {
 	size_t network_key_len;
 
 	/**
+	 * ap_settings - AP Settings override for M7 (only used at AP)
+	 *
+	 * If %NULL, AP Settings attributes will be generated based on the
+	 * current network configuration.
+	 */
+	u8 *ap_settings;
+
+	/**
+	 * ap_settings_len - Length of ap_settings in octets
+	 */
+	size_t ap_settings_len;
+
+	/**
 	 * cred_cb - Callback to notify that new Credentials were received
 	 * @ctx: Higher layer context data (cb_ctx)
 	 * @cred: The received Credential

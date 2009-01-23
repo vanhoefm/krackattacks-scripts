@@ -545,6 +545,9 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;
 	}
 
+	wps->ap_settings = conf->ap_settings;
+	wps->ap_settings_len = conf->ap_settings_len;
+
 	cfg.new_psk_cb = hostapd_wps_new_psk_cb;
 	cfg.set_ie_cb = hostapd_wps_set_ie_cb;
 	cfg.pin_needed_cb = hostapd_wps_pin_needed_cb;

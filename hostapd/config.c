@@ -2229,6 +2229,16 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			}
 		} else if (os_strcmp(buf, "wps_cred_processing") == 0) {
 			bss->wps_cred_processing = atoi(pos);
+		} else if (os_strcmp(buf, "ap_settings") == 0) {
+			os_free(bss->ap_settings);
+			bss->ap_settings =
+				(u8 *) os_readfile(pos, &bss->ap_settings_len);
+			if (bss->ap_settings == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: could not "
+					   "read AP Settings from '%s'",
+					   line, pos);
+				errors++;
+			}
 #endif /* CONFIG_WPS */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
@@ -2435,6 +2445,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->config_methods);
 	os_free(conf->ap_pin);
 	os_free(conf->extra_cred);
+	os_free(conf->ap_settings);
 #endif /* CONFIG_WPS */
 }
 

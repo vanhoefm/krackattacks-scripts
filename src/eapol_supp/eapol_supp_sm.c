@@ -1165,6 +1165,31 @@ int eapol_sm_rx_eapol(struct eapol_sm *sm, const u8 *src, const u8 *buf,
 		sm->dot1xSuppEapLengthErrorFramesRx++;
 		return 0;
 	}
+#ifdef CONFIG_WPS
+	if (sm->conf.workaround &&
+	    plen < len - sizeof(*hdr) &&
+	    hdr->type == IEEE802_1X_TYPE_EAP_PACKET &&
+	    len - sizeof(*hdr) > sizeof(struct eap_hdr)) {
+		const struct eap_hdr *ehdr =
+			(const struct eap_hdr *) (hdr + 1);
+		u16 elen;
+
+		elen = be_to_host16(ehdr->length);
+		if (elen > plen && elen <= len - sizeof(*hdr)) {
+			/*
+			 * Buffalo WHR-G125 Ver.1.47 seems to send EAP-WPS
+			 * packets with too short EAPOL header length field
+			 * (14 octets). This is fixed in firmware Ver.1.49.
+			 * As a workaround, fix the EAPOL header based on the
+			 * correct length in the EAP packet.
+			 */
+			wpa_printf(MSG_DEBUG, "EAPOL: Workaround - fix EAPOL "
+				   "payload length based on EAP header: "
+				   "%d -> %d", (int) plen, elen);
+			plen = elen;
+		}
+	}
+#endif /* CONFIG_WPS */
 	data_len = plen + sizeof(*hdr);
 
 	switch (hdr->type) {
@@ -1349,6 +1374,7 @@ void eapol_sm_notify_config(struct eapol_sm *sm,
 	sm->conf.accept_802_1x_keys = conf->accept_802_1x_keys;
 	sm->conf.required_keys = conf->required_keys;
 	sm->conf.fast_reauth = conf->fast_reauth;
+	sm->conf.workaround = conf->workaround;
 	if (sm->eap) {
 		eap_set_fast_reauth(sm->eap, conf->fast_reauth);
 		eap_set_workaround(sm->eap, conf->workaround);

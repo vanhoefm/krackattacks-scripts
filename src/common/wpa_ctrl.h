@@ -66,6 +66,8 @@ extern "C" {
 #define WPS_EVENT_FAIL "WPS-FAIL "
 /** WPS registration completed successfully */
 #define WPS_EVENT_SUCCESS "WPS-SUCCESS "
+/** WPS enrollment attempt timed out and was terminated */
+#define WPS_EVENT_TIMEOUT "WPS-TIMEOUT "
 
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "

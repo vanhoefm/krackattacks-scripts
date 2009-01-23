@@ -25,8 +25,10 @@
 #include "wpa_ctrl.h"
 #include "ctrl_iface_dbus.h"
 #include "eap_common/eap_wsc_common.h"
+#include "blacklist.h"
 #include "wps_supplicant.h"
 
+#define WPS_PIN_SCAN_IGNORE_SEL_REG 3
 
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpas_clear_wps(struct wpa_supplicant *wpa_s);
@@ -34,6 +36,27 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s);
 
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 {
+	if (!wpa_s->wps_success &&
+	    wpa_s->current_ssid &&
+	    eap_is_wps_pin_enrollee(&wpa_s->current_ssid->eap)) {
+		const u8 *bssid = wpa_s->bssid;
+		if (is_zero_ether_addr(bssid))
+			bssid = wpa_s->pending_bssid;
+
+		wpa_printf(MSG_DEBUG, "WPS: PIN registration with " MACSTR
+			   " did not succeed - continue trying to find "
+			   "suitable AP", MAC2STR(bssid));
+		wpa_blacklist_add(wpa_s, bssid);
+
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+		wpa_s->reassociate = 1;
+		wpa_supplicant_req_scan(wpa_s,
+					wpa_s->blacklist_cleared ? 5 : 0, 0);
+		wpa_s->blacklist_cleared = 0;
+		return 1;
+	}
+
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
 
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && wpa_s->current_ssid &&
@@ -234,6 +257,7 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);
+	wpa_s->wps_success = 1;
 }
 
 
@@ -291,7 +315,8 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
-	wpa_printf(MSG_DEBUG, "WPS: Requested operation timed out");
+	wpa_printf(MSG_INFO, WPS_EVENT_TIMEOUT "Requested operation timed "
+		   "out");
 	wpas_clear_wps(wpa_s);
 }
 
@@ -363,6 +388,9 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	}
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
+	wpa_s->scan_runs = 0;
+	wpa_s->wps_success = 0;
+	wpa_s->blacklist_cleared = 0;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 }
 
@@ -550,7 +578,8 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 }
 
 
-int wpas_wps_ssid_bss_match(struct wpa_ssid *ssid, struct wpa_scan_res *bss)
+int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
+			    struct wpa_ssid *ssid, struct wpa_scan_res *bss)
 {
 	struct wpabuf *wps_ie;
 
@@ -584,14 +613,24 @@ int wpas_wps_ssid_bss_match(struct wpa_ssid *ssid, struct wpa_scan_res *bss)
 			return 0;
 		}
 
+		/*
+		 * Start with WPS APs that advertise active PIN Registrar and
+		 * allow any WPS AP after third scan since some APs do not set
+		 * Selected Registrar attribute properly when using external
+		 * Registrar.
+		 */
 		if (!wps_is_selected_pin_registrar(wps_ie)) {
-			wpa_printf(MSG_DEBUG, "   skip - WPS AP "
-				   "without active PIN Registrar");
-			wpabuf_free(wps_ie);
-			return 0;
+			if (wpa_s->scan_runs < WPS_PIN_SCAN_IGNORE_SEL_REG) {
+				wpa_printf(MSG_DEBUG, "   skip - WPS AP "
+					   "without active PIN Registrar");
+				wpabuf_free(wps_ie);
+				return 0;
+			}
+			wpa_printf(MSG_DEBUG, "   selected based on WPS IE");
+		} else {
+			wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
+				   "(Active PIN)");
 		}
-		wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
-			   "(Active PIN)");
 		wpabuf_free(wps_ie);
 		return 1;
 	}
@@ -606,7 +645,8 @@ int wpas_wps_ssid_bss_match(struct wpa_ssid *ssid, struct wpa_scan_res *bss)
 }
 
 
-int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid,
+int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid,
 			      struct wpa_scan_res *bss)
 {
 	struct wpabuf *wps_ie = NULL;
@@ -620,7 +660,9 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_ssid *ssid,
 		}
 	} else if (eap_is_wps_pin_enrollee(&ssid->eap)) {
 		wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
-		if (wps_ie && wps_is_selected_pin_registrar(wps_ie)) {
+		if (wps_ie &&
+		    (wps_is_selected_pin_registrar(wps_ie) ||
+		     wpa_s->scan_runs >= WPS_PIN_SCAN_IGNORE_SEL_REG)) {
 			/* allow wildcard SSID for WPS PIN */
 			ret = 1;
 		}

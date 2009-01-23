@@ -346,6 +346,7 @@ struct wpa_supplicant {
 			     * results without a new scan request; this is used
 			     * to speed up the first association if the driver
 			     * has already available scan results. */
+	int scan_runs; /* number of scan runs since WPS was started */
 
 	struct wpa_client_mlme mlme;
 	int use_client_mlme;
@@ -356,6 +357,8 @@ struct wpa_supplicant {
 	int mic_errors_seen; /* Michael MIC errors with the current PTK */
 
 	struct wps_context *wps;
+	int wps_success; /* WPS success event received */
+	int blacklist_cleared;
 
 	struct ibss_rsn *ibss_rsn;
 };

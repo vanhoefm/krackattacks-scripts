@@ -271,7 +271,8 @@ static int wpa_supplicant_match_privacy(struct wpa_scan_res *bss,
 }
 
 
-static int wpa_supplicant_ssid_bss_match(struct wpa_ssid *ssid,
+static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
+					 struct wpa_ssid *ssid,
 					 struct wpa_scan_res *bss)
 {
 	struct wpa_ie_data ie;
@@ -279,7 +280,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_ssid *ssid,
 	const u8 *rsn_ie, *wpa_ie;
 	int ret;
 
-	ret = wpas_wps_ssid_bss_match(ssid, bss);
+	ret = wpas_wps_ssid_bss_match(wpa_s, ssid, bss);
 	if (ret >= 0)
 		return ret;
 
@@ -425,7 +426,7 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_WPS
 			if (ssid->ssid_len == 0 &&
-			    wpas_wps_ssid_wildcard_ok(ssid, bss))
+			    wpas_wps_ssid_wildcard_ok(wpa_s, ssid, bss))
 				check_ssid = 0;
 #endif /* CONFIG_WPS */
 
@@ -445,7 +446,7 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 				continue;
 			}
 
-			if (!wpa_supplicant_ssid_bss_match(ssid, bss))
+			if (!wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
 				continue;
 
 			wpa_printf(MSG_DEBUG, "   selected WPA AP "
@@ -515,7 +516,8 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 				 * with our mode. */
 				check_ssid = 1;
 				if (ssid->ssid_len == 0 &&
-				    wpas_wps_ssid_wildcard_ok(ssid, bss))
+				    wpas_wps_ssid_wildcard_ok(wpa_s, ssid,
+							      bss))
 					check_ssid = 0;
 			}
 #endif /* CONFIG_WPS */
@@ -646,6 +648,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 			wpa_printf(MSG_DEBUG, "No APs found - clear blacklist "
 				   "and try again");
 			wpa_blacklist_clear(wpa_s);
+			wpa_s->blacklist_cleared++;
 		} else if (selected == NULL) {
 			break;
 		}

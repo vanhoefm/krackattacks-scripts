@@ -476,11 +476,6 @@ int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf)
 		wpa_hexdump(MSG_DEBUG, "PSK (from passphrase)",
 			    ssid->wpa_psk->psk, PMK_LEN);
 		ssid->wpa_psk->group = 1;
-
-		os_memset(ssid->wpa_passphrase, 0,
-			  os_strlen(ssid->wpa_passphrase));
-		os_free(ssid->wpa_passphrase);
-		ssid->wpa_passphrase = NULL;
 	}
 
 	if (ssid->wpa_psk_file) {

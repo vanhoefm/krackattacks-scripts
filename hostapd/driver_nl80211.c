@@ -1652,8 +1652,6 @@ static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 			   ok ? "ACK" : "fail");
 		break;
 	case WLAN_FC_TYPE_DATA:
-		wpa_printf(MSG_DEBUG, "DATA (TX callback) %s",
-			   ok ? "ACK" : "fail");
 		hostapd_tx_status(hapd, hdr->addr1, buf, len, ok);
 		break;
 	default:
@@ -1696,6 +1694,9 @@ static void handle_frame(struct i802_driver_data *drv,
 		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
 		case WLAN_FC_TODS:
 			bssid = hdr->addr1;
+			break;
+		case WLAN_FC_FROMDS:
+			bssid = hdr->addr2;
 			break;
 		default:
 			/* discard */

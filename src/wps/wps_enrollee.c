@@ -995,7 +995,14 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		return WPS_FAILURE;
 	}
 
-	if (ret == WPS_CONTINUE) {
+	/*
+	 * Save a copy of the last message for Authenticator derivation if we
+	 * are continuing. However, skip M2D since it is not authenticated and
+	 * neither is the ACK/NACK response frame. This allows the possibly
+	 * following M2 to be processed correctly by using the previously sent
+	 * M1 in Authenticator derivation.
+	 */
+	if (ret == WPS_CONTINUE && *attr.msg_type != WPS_M2D) {
 		/* Save a copy of the last message for Authenticator derivation
 		 */
 		wpabuf_free(wps->last_msg);

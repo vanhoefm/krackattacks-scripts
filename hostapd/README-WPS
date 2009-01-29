@@ -48,9 +48,9 @@ hostapd includes an optional WPS component that can be used as an
 internal WPS Registrar to manage addition of new WPS enabled clients
 to the network. In addition, WPS Enrollee functionality in hostapd can
 be used to allow external WPS Registrars to configure the access
-point, e.g., for initial network setup. The current version of hostapd
-does not support use of external WPS Registrars for adding new client
-devices.
+point, e.g., for initial network setup. In addition, hostapd can proxy a
+WPS registration between a wireless Enrollee and an external Registrar
+(e.g., Microsoft Vista or Atheros JumpStart) with UPnP.
 
 
 hostapd configuration
@@ -64,6 +64,7 @@ CONFIG_DRIVER_MADWIFI=y
 CFLAGS += -I/usr/src/madwifi-0.9.3
 CONFIG_EAP=y
 CONFIG_WPS=y
+CONFIG_WPS_UPNP=y
 
 
 Following section shows an example runtime configuration
@@ -105,6 +106,10 @@ serial_number=12345
 device_type=6-0050F204-1
 os_version=01020300
 config_methods=label display push_button keypad
+
+# if external Registrars are allowed, UPnP support could be added:
+#upnp_iface=br0
+#friendly_name=WPS Access Point
 
 
 External operations

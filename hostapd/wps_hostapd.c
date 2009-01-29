@@ -20,10 +20,20 @@
 #include "uuid.h"
 #include "wpa_ctrl.h"
 #include "ieee802_11_defs.h"
+#include "sta_info.h"
+#include "eapol_sm.h"
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
 #include "wps_hostapd.h"
+
+
+#ifdef CONFIG_WPS_UPNP
+#include "wps/wps_upnp.h"
+static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
+				 struct wps_context *wps);
+static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd);
+#endif /* CONFIG_WPS_UPNP */
 
 
 static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
@@ -619,6 +629,22 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		return -1;
 	}
 
+#ifdef CONFIG_WPS_UPNP
+	wps->friendly_name = hapd->conf->friendly_name;
+	wps->manufacturer_url = hapd->conf->manufacturer_url;
+	wps->model_description = hapd->conf->model_description;
+	wps->model_url = hapd->conf->model_url;
+	wps->upc = hapd->conf->upc;
+
+	if (hostapd_wps_upnp_init(hapd, wps) < 0) {
+		wpa_printf(MSG_ERROR, "Failed to initialize WPS UPnP");
+		wps_registrar_deinit(wps->registrar);
+		os_free(wps->network_key);
+		os_free(wps);
+		return -1;
+	}
+#endif /* CONFIG_WPS_UPNP */
+
 	hapd->wps = wps;
 
 	return 0;
@@ -629,9 +655,13 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
 	if (hapd->wps == NULL)
 		return;
+#ifdef CONFIG_WPS_UPNP
+	hostapd_wps_upnp_deinit(hapd);
+#endif /* CONFIG_WPS_UPNP */
 	wps_registrar_deinit(hapd->wps->registrar);
 	os_free(hapd->wps->network_key);
 	wps_device_data_free(&hapd->wps->dev);
+	wpabuf_free(hapd->wps->upnp_msg);
 	os_free(hapd->wps);
 	hapd->wps = NULL;
 	hostapd_wps_clear_ies(hapd);
@@ -705,8 +735,244 @@ void hostapd_wps_probe_req_rx(struct hostapd_data *hapd, const u8 *addr,
 		pos += 2 + pos[1];
 	}
 
-	if (wpabuf_len(wps_ie) > 0)
+	if (wpabuf_len(wps_ie) > 0) {
 		wps_registrar_probe_req_rx(hapd->wps->registrar, addr, wps_ie);
+#ifdef CONFIG_WPS_UPNP
+		/* FIX: what exactly should be included in the WLANEvent?
+		 * WPS attributes? Full ProbeReq frame? */
+		upnp_wps_device_send_wlan_event(hapd->wps_upnp, addr,
+						UPNP_WPS_WLANEVENT_TYPE_PROBE,
+						wps_ie);
+#endif /* CONFIG_WPS_UPNP */
+	}
 
 	wpabuf_free(wps_ie);
 }
+
+
+#ifdef CONFIG_WPS_UPNP
+
+static struct wpabuf *
+hostapd_rx_req_get_device_info(void *priv, struct upnp_wps_peer *peer)
+{
+	struct hostapd_data *hapd = priv;
+	struct wps_config cfg;
+	struct wps_data *wps;
+	enum wsc_op_code op_code;
+	struct wpabuf *m1;
+
+	/*
+	 * Request for DeviceInfo, i.e., M1 TLVs. This is a start of WPS
+	 * registration over UPnP with the AP acting as an Enrollee. It should
+	 * be noted that this is frequently used just to get the device data,
+	 * i.e., there may not be any intent to actually complete the
+	 * registration.
+	 */
+
+	if (peer->wps)
+		wps_deinit(peer->wps);
+
+	os_memset(&cfg, 0, sizeof(cfg));
+	cfg.wps = hapd->wps;
+	cfg.pin = (u8 *) hapd->conf->ap_pin;
+	cfg.pin_len = os_strlen(hapd->conf->ap_pin);
+	wps = wps_init(&cfg);
+	if (wps == NULL)
+		return NULL;
+
+	m1 = wps_get_msg(wps, &op_code);
+	if (m1 == NULL) {
+		wps_deinit(wps);
+		return NULL;
+	}
+
+	peer->wps = wps;
+
+	return m1;
+}
+
+
+static struct wpabuf *
+hostapd_rx_req_put_message(void *priv, struct upnp_wps_peer *peer,
+			   const struct wpabuf *msg)
+{
+	enum wps_process_res res;
+	enum wsc_op_code op_code;
+
+	/* PutMessage: msg = InMessage, return OutMessage */
+	res = wps_process_msg(peer->wps, WSC_UPnP, msg);
+	if (res == WPS_FAILURE)
+		return NULL;
+	return wps_get_msg(peer->wps, &op_code);
+}
+
+
+static struct wpabuf *
+hostapd_rx_req_get_ap_settings(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return NULL;
+}
+
+
+static int hostapd_rx_req_set_ap_settings(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_rx_req_del_ap_settings(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static struct wpabuf *
+hostapd_rx_req_get_sta_settings(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return NULL;
+}
+
+
+static int hostapd_rx_req_set_sta_settings(void *priv,
+					   const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_rx_req_del_sta_settings(void *priv,
+					   const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_rx_req_put_wlan_event_response(
+	void *priv, enum upnp_wps_wlanevent_type ev_type,
+	const u8 *mac_addr, const struct wpabuf *msg)
+{
+	struct hostapd_data *hapd = priv;
+	struct sta_info *sta;
+
+	wpa_printf(MSG_DEBUG, "WPS UPnP: PutWLANResponse ev_type=%d mac_addr="
+		   MACSTR, ev_type, MAC2STR(mac_addr));
+	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS UPnP: PutWLANResponse NewMessage",
+			  wpabuf_head(msg), wpabuf_len(msg));
+	if (ev_type != UPNP_WPS_WLANEVENT_TYPE_EAP) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Ignored unexpected "
+			   "PutWLANResponse WLANEventType %d", ev_type);
+		return -1;
+	}
+
+	/*
+	 * EAP response to ongoing to WPS Registration. Send it to EAP-WSC
+	 * server implementation for delivery to the peer.
+	 */
+
+	/* TODO: support multiple pending UPnP messages */
+	os_memcpy(hapd->wps->upnp_msg_addr, mac_addr, ETH_ALEN);
+	wpabuf_free(hapd->wps->upnp_msg);
+	hapd->wps->upnp_msg = wpabuf_dup(msg);
+
+	sta = ap_get_sta(hapd, mac_addr);
+	if (sta)
+		return eapol_auth_eap_pending_cb(sta->eapol_sm,
+						 hapd->wps->pending_session);
+
+	return 0;
+}
+
+
+static int hostapd_rx_req_set_selected_registrar(void *priv,
+						 const struct wpabuf *msg)
+{
+	struct hostapd_data *hapd = priv;
+	return wps_registrar_set_selected_registrar(hapd->wps->registrar, msg);
+}
+
+
+static int hostapd_rx_req_reboot_ap(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_rx_req_reset_ap(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_rx_req_reboot_sta(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_rx_req_reset_sta(void *priv, const struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
+	return -1;
+}
+
+
+static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
+				 struct wps_context *wps)
+{
+	struct upnp_wps_device_ctx *ctx;
+
+	if (!hapd->conf->upnp_iface)
+		return 0;
+	ctx = os_zalloc(sizeof(*ctx));
+	if (ctx == NULL)
+		return -1;
+
+	ctx->rx_req_get_device_info = hostapd_rx_req_get_device_info;
+	ctx->rx_req_put_message = hostapd_rx_req_put_message;
+	ctx->rx_req_get_ap_settings = hostapd_rx_req_get_ap_settings;
+	ctx->rx_req_set_ap_settings = hostapd_rx_req_set_ap_settings;
+	ctx->rx_req_del_ap_settings = hostapd_rx_req_del_ap_settings;
+	ctx->rx_req_get_sta_settings = hostapd_rx_req_get_sta_settings;
+	ctx->rx_req_set_sta_settings = hostapd_rx_req_set_sta_settings;
+	ctx->rx_req_del_sta_settings = hostapd_rx_req_del_sta_settings;
+	ctx->rx_req_put_wlan_event_response =
+		hostapd_rx_req_put_wlan_event_response;
+	ctx->rx_req_set_selected_registrar =
+		hostapd_rx_req_set_selected_registrar;
+	ctx->rx_req_reboot_ap = hostapd_rx_req_reboot_ap;
+	ctx->rx_req_reset_ap = hostapd_rx_req_reset_ap;
+	ctx->rx_req_reboot_sta = hostapd_rx_req_reboot_sta;
+	ctx->rx_req_reset_sta = hostapd_rx_req_reset_sta;
+
+	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd);
+	if (hapd->wps_upnp == NULL) {
+		os_free(ctx);
+		return -1;
+	}
+	wps->wps_upnp = hapd->wps_upnp;
+
+	if (upnp_wps_device_start(hapd->wps_upnp, hapd->conf->upnp_iface)) {
+		upnp_wps_device_deinit(hapd->wps_upnp);
+		hapd->wps_upnp = NULL;
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd)
+{
+	upnp_wps_device_deinit(hapd->wps_upnp);
+}
+
+#endif /* CONFIG_WPS_UPNP */

@@ -1,6 +1,6 @@
 /*
  * Dynamic data buffer
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -38,6 +38,7 @@ void wpabuf_free(struct wpabuf *buf);
 void * wpabuf_put(struct wpabuf *buf, size_t len);
 struct wpabuf * wpabuf_concat(struct wpabuf *a, struct wpabuf *b);
 struct wpabuf * wpabuf_zeropad(struct wpabuf *buf, size_t len);
+void wpabuf_printf(struct wpabuf *buf, char *fmt, ...) PRINTF_FORMAT(2, 3);
 
 
 /**
@@ -145,6 +146,11 @@ static inline void wpabuf_set(struct wpabuf *buf, const void *data, size_t len)
 {
 	buf->ext_data = (u8 *) data;
 	buf->size = buf->used = len;
+}
+
+static inline void wpabuf_put_str(struct wpabuf *dst, const char *str)
+{
+	wpabuf_put_data(dst, str, os_strlen(str));
 }
 
 #endif /* WPABUF_H */

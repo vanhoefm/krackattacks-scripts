@@ -21,6 +21,7 @@
 #include "eloop.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
+#include "wps_upnp.h"
 
 
 struct wps_uuid_pin {
@@ -95,11 +96,15 @@ struct wps_registrar {
 	int skip_cred_build;
 	struct wpabuf *extra_cred;
 	int disable_auto_conf;
+	int sel_reg_dev_password_id_override;
+	int sel_reg_config_methods_override;
 };
 
 
 static int wps_set_ie(struct wps_registrar *reg);
 static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx);
+static void wps_registrar_set_selected_timeout(void *eloop_ctx,
+					       void *timeout_ctx);
 
 
 static void wps_registrar_add_pbc_session(struct wps_registrar *reg,
@@ -243,6 +248,8 @@ static int wps_build_sel_reg_dev_password_id(struct wps_registrar *reg,
 	u16 id = reg->pbc ? DEV_PW_PUSHBUTTON : DEV_PW_DEFAULT;
 	if (!reg->selected_registrar)
 		return 0;
+	if (reg->sel_reg_dev_password_id_override >= 0)
+		id = reg->sel_reg_dev_password_id_override;
 	wpa_printf(MSG_DEBUG, "WPS:  * Device Password ID (%d)", id);
 	wpabuf_put_be16(msg, ATTR_DEV_PASSWORD_ID);
 	wpabuf_put_be16(msg, 2);
@@ -260,6 +267,8 @@ static int wps_build_sel_reg_config_methods(struct wps_registrar *reg,
 	methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
 	if (reg->pbc)
 		methods |= WPS_CONFIG_PUSHBUTTON;
+	if (reg->sel_reg_config_methods_override >= 0)
+		methods = reg->sel_reg_config_methods_override;
 	wpa_printf(MSG_DEBUG, "WPS:  * Selected Registrar Config Methods (%x)",
 		   methods);
 	wpabuf_put_be16(msg, ATTR_SELECTED_REGISTRAR_CONFIG_METHODS);
@@ -340,6 +349,7 @@ wps_registrar_init(struct wps_context *wps,
 		}
 	}
 	reg->disable_auto_conf = cfg->disable_auto_conf;
+	reg->sel_reg_dev_password_id_override = -1;
 
 	if (wps_set_ie(reg)) {
 		wps_registrar_deinit(reg);
@@ -359,6 +369,7 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 	if (reg == NULL)
 		return;
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
+	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	wps_free_pins(reg->pins);
 	wps_free_pbc_sessions(reg->pbc_sessions);
 	wpabuf_free(reg->extra_cred);
@@ -1311,6 +1322,22 @@ struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
 {
 	struct wpabuf *msg;
 
+#ifdef CONFIG_WPS_UPNP
+	if (wps->wps->wps_upnp && wps->wps->upnp_msg) {
+		wpa_printf(MSG_DEBUG, "WPS: Use pending message from UPnP");
+		msg = wps->wps->upnp_msg;
+		wps->wps->upnp_msg = NULL;
+		*op_code = WSC_MSG; /* FIX: ack/nack */
+		wps->ext_reg = 1;
+		return msg;
+	}
+	if (wps->ext_reg) {
+		wpa_printf(MSG_DEBUG, "WPS: Using external Registrar, but no "
+			   "pending message available");
+		return NULL;
+	}
+#endif /* CONFIG_WPS_UPNP */
+
 	switch (wps->state) {
 	case SEND_M2:
 		if (wps_get_dev_password(wps) < 0)
@@ -1927,6 +1954,17 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 
 	switch (*attr.msg_type) {
 	case WPS_M1:
+#ifdef CONFIG_WPS_UPNP
+		if (wps->wps->wps_upnp && attr.mac_addr) {
+			/* Remove old pending messages when starting new run */
+			wpabuf_free(wps->wps->upnp_msg);
+			wps->wps->upnp_msg = NULL;
+
+			upnp_wps_device_send_wlan_event(
+				wps->wps->wps_upnp, attr.mac_addr,
+				UPNP_WPS_WLANEVENT_TYPE_EAP, msg);
+		}
+#endif /* CONFIG_WPS_UPNP */
 		ret = wps_process_m1(wps, &attr);
 		break;
 	case WPS_M3:
@@ -1988,6 +2026,17 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 		return WPS_FAILURE;
 	}
 
+#ifdef CONFIG_WPS_UPNP
+	if (wps->wps->wps_upnp && wps->ext_reg && wps->state == RECV_M2D_ACK &&
+	    upnp_wps_subscribers(wps->wps->wps_upnp)) {
+		if (wps->wps->upnp_msg)
+			return WPS_CONTINUE;
+		wpa_printf(MSG_DEBUG, "WPS: Wait for response from an "
+			   "external Registrar");
+		return WPS_PENDING;
+	}
+#endif /* CONFIG_WPS_UPNP */
+
 	if (attr.registrar_nonce == NULL ||
 	    os_memcmp(wps->nonce_r, attr.registrar_nonce, WPS_NONCE_LEN != 0))
 	{
@@ -2002,8 +2051,16 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 	}
 
 	if (wps->state == RECV_M2D_ACK) {
-		/* TODO: support for multiple registrars and sending of
-		 * multiple M2/M2D messages */
+#ifdef CONFIG_WPS_UPNP
+		if (wps->wps->wps_upnp &&
+		    upnp_wps_subscribers(wps->wps->wps_upnp)) {
+			if (wps->wps->upnp_msg)
+				return WPS_CONTINUE;
+			wpa_printf(MSG_DEBUG, "WPS: Wait for response from an "
+				   "external Registrar");
+			return WPS_PENDING;
+		}
+#endif /* CONFIG_WPS_UPNP */
 
 		wpa_printf(MSG_DEBUG, "WPS: No more registrars available - "
 			   "terminate negotiation");
@@ -2043,6 +2100,14 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 			   *attr.msg_type);
 		return WPS_FAILURE;
 	}
+
+#ifdef CONFIG_WPS_UPNP
+	if (wps->wps->wps_upnp && wps->ext_reg) {
+		wpa_printf(MSG_DEBUG, "WPS: Negotiation using external "
+			   "Registrar terminated by the Enrollee");
+		return WPS_FAILURE;
+	}
+#endif /* CONFIG_WPS_UPNP */
 
 	if (attr.registrar_nonce == NULL ||
 	    os_memcmp(wps->nonce_r, attr.registrar_nonce, WPS_NONCE_LEN != 0))
@@ -2094,7 +2159,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 
 	wpa_printf(MSG_DEBUG, "WPS: Received WSC_Done");
 
-	if (wps->state != RECV_DONE) {
+	if (wps->state != RECV_DONE &&
+	    (!wps->wps->wps_upnp || !wps->ext_reg)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving WSC_Done", wps->state);
 		return WPS_FAILURE;
@@ -2119,6 +2185,14 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 			   *attr.msg_type);
 		return WPS_FAILURE;
 	}
+
+#ifdef CONFIG_WPS_UPNP
+	if (wps->wps->wps_upnp && wps->ext_reg) {
+		wpa_printf(MSG_DEBUG, "WPS: Negotiation using external "
+			   "Registrar completed successfully");
+		return WPS_DONE;
+	}
+#endif /* CONFIG_WPS_UPNP */
 
 	if (attr.registrar_nonce == NULL ||
 	    os_memcmp(wps->nonce_r, attr.registrar_nonce, WPS_NONCE_LEN != 0))
@@ -2202,6 +2276,30 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 		   "op_code=%d)",
 		   (unsigned long) wpabuf_len(msg), op_code);
 
+#ifdef CONFIG_WPS_UPNP
+	if (wps->wps->wps_upnp && wps->ext_reg && wps->wps->upnp_msg == NULL &&
+	    (op_code == WSC_MSG || op_code == WSC_Done)) {
+		struct wps_parse_attr attr;
+		int type;
+		if (wps_parse_msg(msg, &attr) < 0 || attr.msg_type == NULL)
+			type = -1;
+		else
+			type = *attr.msg_type;
+		wpa_printf(MSG_DEBUG, "WPS: Sending received message (type %d)"
+			   " to external Registrar for processing", type);
+		upnp_wps_device_send_wlan_event(wps->wps->wps_upnp,
+						wps->mac_addr_e,
+						UPNP_WPS_WLANEVENT_TYPE_EAP,
+						msg);
+		if (op_code == WSC_MSG)
+			return WPS_PENDING;
+	} else if (wps->wps->wps_upnp && wps->ext_reg && op_code == WSC_MSG) {
+		wpa_printf(MSG_DEBUG, "WPS: Skip internal processing - using "
+			   "external Registrar");
+		return WPS_CONTINUE;
+	}
+#endif /* CONFIG_WPS_UPNP */
+
 	switch (op_code) {
 	case WSC_MSG:
 		return wps_process_wsc_msg(wps, msg);
@@ -2226,4 +2324,69 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 int wps_registrar_update_ie(struct wps_registrar *reg)
 {
 	return wps_set_ie(reg);
+}
+
+
+static void wps_registrar_set_selected_timeout(void *eloop_ctx,
+					       void *timeout_ctx)
+{
+	struct wps_registrar *reg = eloop_ctx;
+
+	wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar timed out - "
+		   "unselect Registrar");
+	reg->selected_registrar = 0;
+	reg->pbc = 0;
+	reg->sel_reg_dev_password_id_override = -1;
+	reg->sel_reg_config_methods_override = -1;
+	wps_set_ie(reg);
+}
+
+
+/**
+ * wps_registrar_set_selected_registrar - Notification of SetSelectedRegistrar
+ * @reg: Registrar data from wps_registrar_init()
+ * @msg: Received message from SetSelectedRegistrar
+ * @msg_len: Length of msg in octets
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function is called when an AP receives a SetSelectedRegistrar UPnP
+ * message.
+ */
+int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
+					 const struct wpabuf *msg)
+{
+	struct wps_parse_attr attr;
+
+	wpa_hexdump_buf(MSG_MSGDUMP, "WPS: SetSelectedRegistrar attributes",
+			msg);
+
+	if (wps_parse_msg(msg, &attr) < 0 ||
+	    attr.version == NULL || *attr.version != WPS_VERSION) {
+		wpa_printf(MSG_DEBUG, "WPS: Unsupported SetSelectedRegistrar "
+			   "version 0x%x", attr.version ? *attr.version : 0);
+		return -1;
+	}
+
+	if (attr.selected_registrar == NULL ||
+	    *attr.selected_registrar == 0) {
+		wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar: Disable "
+			   "Selected Registrar");
+		eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg,
+				     NULL);
+		wps_registrar_set_selected_timeout(reg, NULL);
+		return 0;
+	}
+
+	reg->selected_registrar = 1;
+	reg->sel_reg_dev_password_id_override = attr.dev_password_id ?
+		WPA_GET_BE16(attr.dev_password_id) : DEV_PW_DEFAULT;
+	reg->sel_reg_config_methods_override = attr.sel_reg_config_methods ?
+		WPA_GET_BE16(attr.sel_reg_config_methods) : -1;
+	wps_set_ie(reg);
+
+	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
+	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
+			       wps_registrar_set_selected_timeout,
+			       reg, NULL);
+	return 0;
 }

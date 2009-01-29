@@ -21,6 +21,7 @@
  * enum wsc_op_code - EAP-WSC OP-Code values
  */
 enum wsc_op_code {
+	WSC_UPnP = 0 /* No OP Code in UPnP transport */,
 	WSC_Start = 0x01,
 	WSC_ACK = 0x02,
 	WSC_NACK = 0x03,
@@ -30,6 +31,7 @@ enum wsc_op_code {
 };
 
 struct wps_registrar;
+struct upnp_wps_device_sm;
 
 /**
  * struct wps_credential - WPS Credential
@@ -142,7 +144,13 @@ enum wps_process_res {
 	/**
 	 * WPS_FAILURE - Processing failed
 	 */
-	WPS_FAILURE
+	WPS_FAILURE,
+
+	/**
+	 * WPS_PENDING - Processing continues, but waiting for an external
+	 *	event (e.g., UPnP message from an external Registrar)
+	 */
+	WPS_PENDING
 };
 enum wps_process_res wps_process_msg(struct wps_data *wps,
 				     enum wsc_op_code op_code,
@@ -420,6 +428,31 @@ struct wps_context {
 	size_t ap_settings_len;
 
 	/**
+	 * friendly_name - Friendly Name (required for UPnP)
+	 */
+	char *friendly_name;
+
+	/**
+	 * manufacturer_url - Manufacturer URL (optional for UPnP)
+	 */
+	char *manufacturer_url;
+
+	/**
+	 * model_description - Model Description (recommended for UPnP)
+	 */
+	char *model_description;
+
+	/**
+	 * model_url - Model URL (optional for UPnP)
+	 */
+	char *model_url;
+
+	/**
+	 * upc - Universal Product Code (optional for UPnP)
+	 */
+	char *upc;
+
+	/**
 	 * cred_cb - Callback to notify that new Credentials were received
 	 * @ctx: Higher layer context data (cb_ctx)
 	 * @cred: The received Credential
@@ -440,6 +473,13 @@ struct wps_context {
 	 * cb_ctx: Higher layer context data for callbacks
 	 */
 	void *cb_ctx;
+
+	struct upnp_wps_device_sm *wps_upnp;
+
+	/* TODO: support multiple pending messages from UPnP PutWLANResponse */
+	u8 upnp_msg_addr[ETH_ALEN];
+	struct wpabuf *upnp_msg;
+	void *pending_session;
 };
 
 
@@ -455,6 +495,8 @@ int wps_registrar_button_pushed(struct wps_registrar *reg);
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data);
 int wps_registrar_update_ie(struct wps_registrar *reg);
+int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
+					 const struct wpabuf *msg);
 
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);

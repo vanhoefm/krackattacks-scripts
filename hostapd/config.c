@@ -2234,6 +2234,23 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   line, pos);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "upnp_iface") == 0) {
+			bss->upnp_iface = os_strdup(pos);
+		} else if (os_strcmp(buf, "friendly_name") == 0) {
+			os_free(bss->friendly_name);
+			bss->friendly_name = os_strdup(pos);
+		} else if (os_strcmp(buf, "manufacturer_url") == 0) {
+			os_free(bss->manufacturer_url);
+			bss->manufacturer_url = os_strdup(pos);
+		} else if (os_strcmp(buf, "model_description") == 0) {
+			os_free(bss->model_description);
+			bss->model_description = os_strdup(pos);
+		} else if (os_strcmp(buf, "model_url") == 0) {
+			os_free(bss->model_url);
+			bss->model_url = os_strdup(pos);
+		} else if (os_strcmp(buf, "upc") == 0) {
+			os_free(bss->upc);
+			bss->upc = os_strdup(pos);
 #endif /* CONFIG_WPS */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
@@ -2441,6 +2458,12 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->ap_pin);
 	os_free(conf->extra_cred);
 	os_free(conf->ap_settings);
+	os_free(conf->upnp_iface);
+	os_free(conf->friendly_name);
+	os_free(conf->manufacturer_url);
+	os_free(conf->model_description);
+	os_free(conf->model_url);
+	os_free(conf->upc);
 #endif /* CONFIG_WPS */
 }
 

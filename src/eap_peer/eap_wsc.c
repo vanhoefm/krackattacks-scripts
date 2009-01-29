@@ -405,6 +405,7 @@ static struct wpabuf * eap_wsc_process(struct eap_sm *sm, void *priv,
 		eap_wsc_state(data, MESG);
 		break;
 	case WPS_FAILURE:
+	case WPS_PENDING:
 		wpa_printf(MSG_DEBUG, "EAP-WSC: WPS processing failed");
 		eap_wsc_state(data, FAIL);
 		break;

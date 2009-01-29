@@ -1,6 +1,6 @@
 /*
  * Dynamic data buffer
- * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -194,4 +194,19 @@ struct wpabuf * wpabuf_zeropad(struct wpabuf *buf, size_t len)
 	wpabuf_free(buf);
 
 	return ret;
+}
+
+
+void wpabuf_printf(struct wpabuf *buf, char *fmt, ...)
+{
+	va_list ap;
+	void *tmp = wpabuf_mhead_u8(buf) + wpabuf_len(buf);
+	int res;
+
+	va_start(ap, fmt);
+	res = vsnprintf(tmp, buf->size - buf->used, fmt, ap);
+	va_end(ap);
+	if (res < 0 || (size_t) res >= buf->size - buf->used)
+		wpabuf_overflow(buf, res);
+	buf->used += res;
 }

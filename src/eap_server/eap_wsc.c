@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "eloop.h"
 #include "eap_i.h"
 #include "eap_common/eap_wsc_common.h"
 #include "wps/wps.h"
@@ -29,6 +30,7 @@ struct eap_wsc_data {
 	size_t out_used;
 	size_t fragment_size;
 	struct wps_data *wps;
+	int ext_reg_timeout;
 };
 
 
@@ -59,6 +61,21 @@ static void eap_wsc_state(struct eap_wsc_data *data, int state)
 		   eap_wsc_state_txt(data->state),
 		   eap_wsc_state_txt(state));
 	data->state = state;
+}
+
+
+static void eap_wsc_ext_reg_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct eap_sm *sm = eloop_ctx;
+	struct eap_wsc_data *data = timeout_ctx;
+
+	if (sm->method_pending != METHOD_PENDING_WAIT)
+		return;
+
+	wpa_printf(MSG_DEBUG, "EAP-WSC: Timeout while waiting for an External "
+		   "Registrar");
+	data->ext_reg_timeout = 1;
+	eap_sm_pending_cb(sm);
 }
 
 
@@ -123,6 +140,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 static void eap_wsc_reset(struct eap_sm *sm, void *priv)
 {
 	struct eap_wsc_data *data = priv;
+	eloop_cancel_timeout(eap_wsc_ext_reg_timeout, sm, data);
 	wpabuf_free(data->in_buf);
 	wpabuf_free(data->out_buf);
 	wps_deinit(data->wps);
@@ -324,6 +342,12 @@ static void eap_wsc_process(struct eap_sm *sm, void *priv,
 	enum wps_process_res res;
 	struct wpabuf tmpbuf;
 
+	eloop_cancel_timeout(eap_wsc_ext_reg_timeout, sm, data);
+	if (data->ext_reg_timeout) {
+		eap_wsc_state(data, FAIL);
+		return;
+	}
+
 	pos = eap_hdr_validate(EAP_VENDOR_WFA, EAP_VENDOR_TYPE_WSC,
 			       respData, &len);
 	if (pos == NULL || len < 2)
@@ -408,6 +432,14 @@ static void eap_wsc_process(struct eap_sm *sm, void *priv,
 	case WPS_FAILURE:
 		wpa_printf(MSG_DEBUG, "EAP-WSC: WPS processing failed");
 		eap_wsc_state(data, FAIL);
+		break;
+	case WPS_PENDING:
+		eap_wsc_state(data, MSG);
+		sm->method_pending = METHOD_PENDING_WAIT;
+		sm->wps->pending_session = sm;
+		eloop_cancel_timeout(eap_wsc_ext_reg_timeout, sm, data);
+		eloop_register_timeout(5, 0, eap_wsc_ext_reg_timeout,
+				       sm, data);
 		break;
 	}
 

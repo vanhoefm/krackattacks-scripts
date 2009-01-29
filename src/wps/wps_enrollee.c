@@ -32,7 +32,13 @@ static int wps_build_mac_addr(struct wps_data *wps, struct wpabuf *msg)
 
 static int wps_build_wps_state(struct wps_data *wps, struct wpabuf *msg)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * Wi-Fi Protected Setup State");
+	u8 state;
+	if (wps->wps->ap)
+		state = wps->wps->wps_state;
+	else
+		state = WPS_STATE_NOT_CONFIGURED;
+	wpa_printf(MSG_DEBUG, "WPS:  * Wi-Fi Protected Setup State (%d)",
+		   state);
 	wpabuf_put_be16(msg, ATTR_WPS_STATE);
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, WPS_STATE_NOT_CONFIGURED);
@@ -1155,6 +1161,7 @@ enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps,
 
 	switch (op_code) {
 	case WSC_MSG:
+	case WSC_UPnP:
 		return wps_process_wsc_msg(wps, msg);
 	case WSC_ACK:
 		return wps_process_wsc_ack(wps, msg);

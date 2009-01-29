@@ -306,6 +306,12 @@ struct hostapd_bss_config {
 	int wps_cred_processing;
 	u8 *ap_settings;
 	size_t ap_settings_len;
+	char *upnp_iface;
+	char *friendly_name;
+	char *manufacturer_url;
+	char *model_description;
+	char *model_url;
+	char *upc;
 #endif /* CONFIG_WPS */
 };
 

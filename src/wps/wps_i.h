@@ -101,6 +101,8 @@ struct wps_data {
 	 * config_error - Configuration Error value to be used in NACK
 	 */
 	u16 config_error;
+
+	int ext_reg;
 };
 
 

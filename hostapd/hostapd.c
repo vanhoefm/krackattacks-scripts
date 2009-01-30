@@ -1478,11 +1478,13 @@ static int setup_interface(struct hostapd_iface *iface)
 		      OP_MODE_PURE);
 #endif /* CONFIG_IEEE80211N */
 
-	os_memcpy(country, hapd->iconf->country, 3);
-	country[3] = '\0';
-	if (hostapd_set_country(hapd, country) < 0) {
-		wpa_printf(MSG_ERROR, "Failed to set country code");
-		return -1;
+	if (hapd->iconf->country[0] && hapd->iconf->country[1]) {
+		os_memcpy(country, hapd->iconf->country, 3);
+		country[3] = '\0';
+		if (hostapd_set_country(hapd, country) < 0) {
+			wpa_printf(MSG_ERROR, "Failed to set country code");
+			return -1;
+		}
 	}
 
 	if (hapd->iconf->ieee80211d &&

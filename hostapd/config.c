@@ -250,8 +250,6 @@ static struct hostapd_config * hostapd_config_defaults(void)
 	conf->send_probe_response = 1;
 	conf->bridge_packets = INTERNAL_BRIDGE_DO_NOT_CONTROL;
 
-	os_memcpy(conf->country, "US ", 3);
-
 	for (i = 0; i < NUM_TX_QUEUES; i++)
 		conf->tx_queue[i].aifs = -1; /* use hw default */
 
@@ -969,6 +967,12 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 static int hostapd_config_check(struct hostapd_config *conf)
 {
 	size_t i;
+
+	if (conf->ieee80211d && (!conf->country[0] || !conf->country[1])) {
+		wpa_printf(MSG_ERROR, "Cannot enable IEEE 802.11d without "
+			   "setting the country_code");
+		return -1;
+	}
 
 	for (i = 0; i < conf->num_bss; i++) {
 		if (hostapd_config_check_bss(&conf->bss[i], conf))

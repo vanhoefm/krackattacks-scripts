@@ -329,7 +329,6 @@ typedef enum {
  */
 struct hostapd_config {
 	struct hostapd_bss_config *bss, *last_bss;
-	struct hostapd_radius_servers *radius;
 	size_t num_bss;
 
 	u16 beacon_int;

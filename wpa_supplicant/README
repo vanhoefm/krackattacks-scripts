@@ -166,7 +166,7 @@ Current hardware/software requirements:
 	Linux ndiswrapper (http://ndiswrapper.sourceforge.net/) with
 	Windows NDIS driver.
 
-	Broadcom wl.o driver
+	Broadcom wl.o driver (old version only)
 	This is a generic Linux driver for Broadcom IEEE 802.11a/g cards.
 	However, it is proprietary driver that is not publicly available
 	except for couple of exceptions, mainly Broadcom-based APs/wireless
@@ -176,7 +176,10 @@ Current hardware/software requirements:
 	the needed header file, wlioctl.h, for compiling wpa_supplicant.
 	This driver support in wpa_supplicant is expected to work also with
 	other devices based on Broadcom driver (assuming the driver includes
-	client mode support).
+	client mode support). Please note that the newer Broadcom driver
+	("hybrid Linux driver") supports Linux wireless extensions and does
+	not need (or even work) with the specific driver wrapper. Use -Dwext
+	with that driver.
 
 	Intel ipw2100 driver
 	(http://sourceforge.net/projects/ipw2100/)

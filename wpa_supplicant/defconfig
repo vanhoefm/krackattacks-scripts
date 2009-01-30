@@ -65,7 +65,10 @@ CONFIG_DRIVER_HOSTAP=y
 # Driver interface for Atmel driver
 CONFIG_DRIVER_ATMEL=y
 
-# Driver interface for Broadcom driver
+# Driver interface for old Broadcom driver
+# Please note that the newer Broadcom driver ("hybrid Linux driver") supports
+# Linux wireless extensions and does not need (or even work) with the old
+# driver wrapper. Use CONFIG_DRIVER_WEXT=y with that driver.
 #CONFIG_DRIVER_BROADCOM=y
 # Example path for wlioctl.h; change to match your configuration
 #CFLAGS += -I/opt/WRT54GS/release/src/include

@@ -64,6 +64,7 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	static int counter = 0;
 	int ret;
 	size_t res;
+	int tries = 0;
 
 	ctrl = os_malloc(sizeof(*ctrl));
 	if (ctrl == NULL)
@@ -77,15 +78,28 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	}
 
 	ctrl->local.sun_family = AF_UNIX;
+	counter++;
+try_again:
 	ret = os_snprintf(ctrl->local.sun_path, sizeof(ctrl->local.sun_path),
-			  "/tmp/wpa_ctrl_%d-%d", getpid(), counter++);
+			  "/tmp/wpa_ctrl_%d-%d", getpid(), counter);
 	if (ret < 0 || (size_t) ret >= sizeof(ctrl->local.sun_path)) {
 		close(ctrl->s);
 		os_free(ctrl);
 		return NULL;
 	}
+	tries++;
 	if (bind(ctrl->s, (struct sockaddr *) &ctrl->local,
 		    sizeof(ctrl->local)) < 0) {
+		if (errno == EADDRINUSE && tries < 2) {
+			/*
+			 * getpid() returns unique identifier for this instance
+			 * of wpa_ctrl, so the existing socket file must have
+			 * been left by unclean termination of an earlier run.
+			 * Remove the file and try again.
+			 */
+			unlink(ctrl->local.sun_path);
+			goto try_again;
+		}
 		close(ctrl->s);
 		os_free(ctrl);
 		return NULL;

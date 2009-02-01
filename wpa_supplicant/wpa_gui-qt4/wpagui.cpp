@@ -73,6 +73,13 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 
 	(void) statusBar();
 
+	/*
+	 * Disable WPS tab by default; it will be enabled if wpa_supplicant is
+	 * built with WPS support.
+	 */
+	wpsTab->setEnabled(false);
+	wpaguiTab->setTabEnabled(wpaguiTab->indexOf(wpsTab), false);
+
 	connect(fileEventHistoryAction, SIGNAL(triggered()), this,
 		SLOT(eventHistory()));
 	connect(fileSaveConfigAction, SIGNAL(triggered()), this,
@@ -416,8 +423,10 @@ int WpaGui::openCtrlConnection(const char *ifname)
 
 		QString res(buf);
 		QStringList types = res.split(QChar(' '));
-		actionWPS->setEnabled(types.contains("WSC"));
-		wpsTab->setEnabled(types.contains("WSC"));
+		bool wps = types.contains("WSC");
+		actionWPS->setEnabled(wps);
+		wpsTab->setEnabled(wps);
+		wpaguiTab->setTabEnabled(wpaguiTab->indexOf(wpsTab), wps);
 	}
 
 	return 0;

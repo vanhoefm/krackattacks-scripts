@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - roboswitch driver interface
- * Copyright (c) 2008 Jouke Witteveen
+ * Copyright (c) 2008-2009 Jouke Witteveen
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -47,6 +47,7 @@
 
 /* VLAN page registers */
 #define ROBO_VLAN_ACCESS	0x06	/* VLAN table Access register */
+#define ROBO_VLAN_ACCESS_5365	0x08	/* VLAN table Access register (5365) */
 #define ROBO_VLAN_READ		0x0C	/* VLAN read register */
 
 
@@ -240,32 +241,44 @@ static int wpa_driver_roboswitch_leave(struct wpa_driver_roboswitch_data *drv,
 				       const u8 *addr)
 {
 	int i;
-	u8 mport[4] = { ROBO_ARLCTRL_VEC_1, ROBO_ARLCTRL_ADDR_1,
-			ROBO_ARLCTRL_VEC_2, ROBO_ARLCTRL_ADDR_2 };
 	u16 _read[3], zero = 0;
-	/* same as at join */
-	u16 addr_word[ETH_ALEN / 2];
+	u16 addr_word[ETH_ALEN / 2]; /* same as at join */
 
 	for (i = 0; i < ETH_ALEN; i += 2)
 		addr_word[(ETH_ALEN - i) / 2 - 1] = WPA_GET_BE16(addr + i);
 
-	/* find our address/vector pair */
-	for (i = 0; i < 4; i += 2) {
-		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE, mport[i],
-					   _read, 1);
-		if (_read[0] == drv->ports) {
-			wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
-						   mport[i + 1], _read, 3);
-			if (os_memcmp(_read, addr_word, 6) == 0)
-				break;
+	/* check if multiport address 1 was used */
+	wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE, ROBO_ARLCTRL_VEC_1,
+				   _read, 1);
+	if (_read[0] == drv->ports) {
+		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
+					   ROBO_ARLCTRL_ADDR_1, _read, 3);
+		if (os_memcmp(_read, addr_word, 6) == 0) {
+			wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
+						    ROBO_ARLCTRL_VEC_1, &zero,
+						    1);
+			goto clean_up;
 		}
 	}
-	/* check if we found our address/vector pair and deactivate it */
-	if (i == 4)
-		return -1;
-	wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE, mport[i], &zero,
-				    1);
 
+	/* check if multiport address 2 was used */
+	wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE, ROBO_ARLCTRL_VEC_2,
+				   _read, 1);
+	if (_read[0] == drv->ports) {
+		wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE,
+					   ROBO_ARLCTRL_ADDR_2, _read, 3);
+		if (os_memcmp(_read, addr_word, 6) == 0) {
+			wpa_driver_roboswitch_write(drv, ROBO_ARLCTRL_PAGE,
+						    ROBO_ARLCTRL_VEC_2, &zero,
+						    1);
+			goto clean_up;
+		}
+	}
+
+	/* used multiport address not found */
+	return -1;
+
+clean_up:
 	/* leave the multiport registers in a sane state */
 	wpa_driver_roboswitch_read(drv, ROBO_ARLCTRL_PAGE, ROBO_ARLCTRL_VEC_1,
 				   _read, 1);
@@ -306,7 +319,7 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_roboswitch_data *drv;
 	int len = -1, sep = -1;
-	u16 vlan = 0, vlan_read[2];
+	u16 _read, vlan = 0, vlan_read[2];
 
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL) return NULL;
@@ -369,9 +382,14 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 	}
 
 	vlan |= 1 << 13;
-	/* The BCM5365 uses a different register and is not accounted for. */
 	wpa_driver_roboswitch_write(drv, ROBO_VLAN_PAGE, ROBO_VLAN_ACCESS,
 				    &vlan, 1);
+	/* Read back: The BCM5365 uses a different register */
+	wpa_driver_roboswitch_read(drv, ROBO_VLAN_PAGE, ROBO_VLAN_ACCESS,
+				   &_read, 1);
+	if (_read != vlan)
+		wpa_driver_roboswitch_write(drv, ROBO_VLAN_PAGE,
+					    ROBO_VLAN_ACCESS_5365, &vlan, 1);
 	wpa_driver_roboswitch_read(drv, ROBO_VLAN_PAGE, ROBO_VLAN_READ,
 				   vlan_read, 2);
 	if (!(vlan_read[1] & (1 << 4))) {

@@ -400,8 +400,7 @@ static int event_send_start(struct subscription *s)
 	 */
 	if (connect(e->sd, (struct sockaddr *) &e->addr->saddr,
 		    sizeof(e->addr->saddr))) {
-		if (errno == EINPROGRESS) {
-		} else {
+		if (errno != EINPROGRESS) {
 			event_retry(e, 1);
 			return -1;
 		}
@@ -432,7 +431,8 @@ void event_send_all_later_handler(void *eloop_data, void *user_ctx)
 	int nerrors = 0;
 
 	sm->event_send_all_queued = 0;
-	if ((s = sm->subscriptions) == NULL)
+	s = sm->subscriptions;
+	if (s == NULL)
 		return;
 	do {
 		if (s->addr_list == NULL) {

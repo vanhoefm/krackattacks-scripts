@@ -51,7 +51,7 @@ static int token_eq(const char *s1, const char *s2)
 		if (end1 || end2 || c1 != c2)
 			break;
 	}
-	return (end1 && end2);  /* reached end of both words? */
+	return end1 && end2; /* reached end of both words? */
 }
 
 
@@ -359,10 +359,9 @@ void msearchreply_state_machine_stop(struct advertisement_state_machine *a)
 	wpa_printf(MSG_DEBUG, "WPS UPnP: M-SEARCH stop");
 	if (a->next == a) {
 		sm->msearch_replies = NULL;
-	} else  {
-		if (sm->msearch_replies == a) {
+	} else {
+		if (sm->msearch_replies == a)
 			sm->msearch_replies = a->next;
-		}
 		a->next->prev = a->prev;
 		a->prev->next = a->next;
 	}

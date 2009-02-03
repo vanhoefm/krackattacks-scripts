@@ -567,9 +567,8 @@ void subscription_unlink(struct subscription *s)
 		/* only one? */
 		sm->subscriptions = NULL;
 	} else  {
-		if (sm->subscriptions == s) {
+		if (sm->subscriptions == s)
 			sm->subscriptions = s->next;
-		}
 		s->next->prev = s->prev;
 		s->prev->next = s->next;
 	}
@@ -856,7 +855,8 @@ static int get_netif_info(const char *net_if, unsigned *ip_addr,
 	if (*ip_addr_text == NULL || *mac_addr_text == NULL)
 		goto fail;
 
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0)
 		goto fail;
 
 	os_strncpy(req.ifr_name, net_if, sizeof(req.ifr_name));

@@ -253,7 +253,7 @@ upnp_get_first_document_item(char *doc, const char *item, char **value)
 		if (!os_strncasecmp(tagname, match, match_len) &&
 		    *tag != '/' &&
 		    (tagname[match_len] == '>' ||
-		     !isgraph(tagname[match_len]) )) {
+		     !isgraph(tagname[match_len]))) {
 			break;
 		}
 	}

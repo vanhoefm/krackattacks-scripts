@@ -607,4 +607,12 @@ hostapd_set_wps_probe_resp_ie(struct hostapd_data *hapd, const u8 *ie,
 						   hapd->drv_priv, ie, len);
 }
 
+static inline const struct hostapd_neighbor_bss *
+hostapd_driver_get_neighbor_bss(struct hostapd_data *hapd, size_t *num)
+{
+	if (hapd->driver == NULL || hapd->driver->get_neighbor_bss == NULL)
+		return NULL;
+	return hapd->driver->get_neighbor_bss(hapd->drv_priv, num);
+}
+
 #endif /* DRIVER_I_H */

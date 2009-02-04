@@ -54,6 +54,14 @@ enum hostapd_driver_if_type {
 	HOSTAPD_IF_VLAN, HOSTAPD_IF_WDS
 };
 
+struct hostapd_neighbor_bss {
+	u8 bssid[ETH_ALEN];
+	int freq; /* MHz */
+	unsigned int ht:1;
+	int pri_chan;
+	int sec_chan; /* 0 for 20 MHz channels */
+};
+
 struct wpa_driver_ops {
 	const char *name;		/* as appears in the config file */
 
@@ -208,6 +216,9 @@ struct wpa_driver_ops {
 				 const u8 *ie, size_t len);
 	int (*set_wps_probe_resp_ie)(const char *ifname, void *priv,
 				     const u8 *ie, size_t len);
+
+	const struct hostapd_neighbor_bss *
+	(*get_neighbor_bss)(void *priv, size_t *num);
 };
 
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,

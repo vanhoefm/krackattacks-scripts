@@ -236,6 +236,162 @@ static int ieee80211n_allowed_ht40_channel_pair(struct hostapd_iface *iface)
 }
 
 
+static void ieee80211n_switch_pri_sec(struct hostapd_iface *iface)
+{
+	if (iface->conf->secondary_channel > 0) {
+		iface->conf->channel += 4;
+		iface->conf->secondary_channel = -1;
+	} else {
+		iface->conf->channel -= 4;
+		iface->conf->secondary_channel = 1;
+	}
+}
+
+
+static int ieee80211n_check_40mhz_5g(struct hostapd_iface *iface)
+{
+	int pri_chan, sec_chan, pri_freq, sec_freq, pri_bss, sec_bss;
+	const struct hostapd_neighbor_bss *n;
+	size_t i, num;
+	int match;
+
+	pri_chan = iface->conf->channel;
+	sec_chan = iface->conf->secondary_channel * 4;
+	pri_freq = hostapd_hw_get_freq(iface->bss[0], pri_chan);
+	if (iface->conf->secondary_channel > 0)
+		sec_freq = pri_freq + 20;
+	else
+		sec_freq = pri_freq - 20;
+
+	n = hostapd_driver_get_neighbor_bss(iface->bss[0], &num);
+
+	/*
+	 * Switch PRI/SEC channels if Beacons were detected on selected SEC
+	 * channel, but not on selected PRI channel.
+	 */
+	pri_bss = sec_bss = 0;
+	for (i = 0; n && i < num; i++) {
+		if (n[i].freq == pri_freq)
+			pri_bss++;
+		else if (n[i].freq == sec_freq)
+			sec_bss++;
+	}
+	if (sec_bss && !pri_bss) {
+		wpa_printf(MSG_INFO, "Switch own primary and secondary "
+			   "channel to get secondary channel with no Beacons "
+			   "from other BSSes");
+		ieee80211n_switch_pri_sec(iface);
+	}
+
+	/*
+	 * Match PRI/SEC channel with any existing HT40 BSS on the same
+	 * channels that we are about to use (if already mixed order in
+	 * existing BSSes, use own preference).
+	 */
+	match = 0;
+	for (i = 0; n && i < num; i++) {
+		if (pri_chan == n[i].pri_chan &&
+		    sec_chan == n[i].sec_chan) {
+			match = 1;
+			break;
+		}
+	}
+	if (!match) {
+		for (i = 0; n && i < num; i++) {
+			if (pri_chan == n[i].sec_chan &&
+			    sec_chan == n[i].pri_chan) {
+				wpa_printf(MSG_INFO, "Switch own primary and "
+					   "secondary channel due to BSS "
+					   "overlap with " MACSTR,
+					   MAC2STR(n[i].bssid));
+				ieee80211n_switch_pri_sec(iface);
+				break;
+			}
+		}
+	}
+
+	return 1;
+}
+
+
+static int ieee80211n_check_40mhz_2g4(struct hostapd_iface *iface)
+{
+	int pri_freq, sec_freq;
+	int affected_start, affected_end;
+	const struct hostapd_neighbor_bss *n;
+	size_t i, num;
+
+	pri_freq = hostapd_hw_get_freq(iface->bss[0], iface->conf->channel);
+	if (iface->conf->secondary_channel > 0)
+		sec_freq = pri_freq + 20;
+	else
+		sec_freq = pri_freq - 20;
+	affected_start = (pri_freq + sec_freq) / 2 - 25;
+	affected_end = (pri_freq + sec_freq) / 2 + 25;
+	wpa_printf(MSG_DEBUG, "40 MHz affected channel range: [%d,%d] MHz",
+		   affected_start, affected_end);
+	n = hostapd_driver_get_neighbor_bss(iface->bss[0], &num);
+	for (i = 0; n && i < num; i++) {
+		int pri = n[i].freq;
+		int sec = pri;
+		if (n[i].sec_chan) {
+			if (n[i].sec_chan < n[i].pri_chan)
+				sec = pri - 20;
+			else
+				sec = pri + 20;
+		}
+
+		if ((pri < affected_start || pri > affected_end) &&
+		    (sec < affected_start || sec > affected_end))
+			continue; /* not within affected channel range */
+
+		if (n[i].sec_chan) {
+			if (pri_freq != pri || sec_freq != sec) {
+				wpa_printf(MSG_DEBUG, "40 MHz pri/sec "
+					   "mismatch with BSS " MACSTR
+					   " <%d,%d> (chan=%d%c) vs. <%d,%d>",
+					   MAC2STR(n[i].bssid),
+					   pri, sec, n[i].pri_chan,
+					   sec > pri ? '+' : '-',
+					   pri_freq, sec_freq);
+				return 0;
+			}
+		}
+
+		/* TODO: 40 MHz intolerant */
+	}
+
+	return 1;
+}
+
+
+static void ieee80211n_check_40mhz(struct hostapd_iface *iface)
+{
+	int oper40;
+
+	if (!iface->conf->secondary_channel)
+		return; /* HT40 not used */
+
+	/* Check list of neighboring BSSes (from scan) to see whether 40 MHz is
+	 * allowed per IEEE 802.11n/D7.0, 11.14.3.2 */
+
+	if (iface->current_mode->mode == HOSTAPD_MODE_IEEE80211A)
+		oper40 = ieee80211n_check_40mhz_5g(iface);
+	else
+		oper40 = ieee80211n_check_40mhz_2g4(iface);
+
+	if (!oper40) {
+		wpa_printf(MSG_INFO, "20/40 MHz operation not permitted on "
+			   "channel pri=%d sec=%d based on overlapping BSSes",
+			   iface->conf->channel,
+			   iface->conf->channel +
+			   iface->conf->secondary_channel * 4);
+		iface->conf->secondary_channel = 0;
+		iface->conf->ht_capab &= ~HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
+	}
+}
+
+
 static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 {
 	u16 hw = iface->current_mode->ht_capab;
@@ -402,6 +558,7 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 	}
 
 #ifdef CONFIG_IEEE80211N
+	ieee80211n_check_40mhz(iface);
 	if (!ieee80211n_allowed_ht40_channel_pair(iface))
 		return -1;
 	if (!ieee80211n_supported_ht_capab(iface))

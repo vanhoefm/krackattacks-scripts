@@ -5,6 +5,7 @@ ChangeLog for hostapd
 	  configurable with a new command line options (-G<seconds>)
 	* driver_nl80211: use Linux socket filter to improve performance
 	* added support for external Registrars with WPS (UPnP transport)
+	* 802.11n: scan for overlapping BSSes before starting 20/40 MHz channel
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

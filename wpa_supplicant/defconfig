@@ -82,6 +82,9 @@ CONFIG_DRIVER_ATMEL=y
 # Driver interface for generic Linux wireless extensions
 CONFIG_DRIVER_WEXT=y
 
+# Driver interface for Linux drivers using the nl80211 kernel interface
+#CONFIG_DRIVER_NL80211=y
+
 # Driver interface for FreeBSD net80211 layer (e.g., Atheros driver)
 #CONFIG_DRIVER_BSD=y
 #CFLAGS += -I/usr/local/include
@@ -360,15 +363,10 @@ CONFIG_PEERKEY=y
 
 # Include client MLME (management frame processing).
 # This can be used to move MLME processing of Linux mac80211 stack into user
-# space.
+# space. Please note that this is currently only available with
+# driver_nl80211.c and only with a modified version of Linux kernel and
+# wpa_supplicant.
 #CONFIG_CLIENT_MLME=y
-# Currently, driver_nl80211.c build requires some additional parameters to be
-# able to include some of the kernel header files. Following lines can be used
-# to set these (WIRELESS_DEV must point to the root directory of the
-# wireless-testing.git tree). In addition, mac80211 may need external patches
-# to enable userspace MLME support.
-#WIRELESS_DEV=/usr/src/wireless-testing
-#CFLAGS += -I$(WIRELESS_DEV)/net/mac80211
 
 # IEEE Std 802.11r-2008 (Fast BSS Transition)
 #CONFIG_IEEE80211R=y

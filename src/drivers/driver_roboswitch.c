@@ -49,6 +49,7 @@
 #define ROBO_VLAN_ACCESS	0x06	/* VLAN table Access register */
 #define ROBO_VLAN_ACCESS_5365	0x08	/* VLAN table Access register (5365) */
 #define ROBO_VLAN_READ		0x0C	/* VLAN read register */
+#define ROBO_VLAN_MAX		0xFF	/* Maximum number of VLANs */
 
 
 static const u8 pae_group_addr[ETH_ALEN] =
@@ -319,7 +320,7 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_roboswitch_data *drv;
 	int len = -1, sep = -1;
-	u16 _read, vlan = 0, vlan_read[2];
+	u16 vlan_max = ROBO_VLAN_MAX, vlan = 0, vlan_read[2];
 
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL) return NULL;
@@ -352,7 +353,7 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 		}
 		vlan *= 10;
 		vlan += ifname[sep] - '0';
-		if (vlan > 255) {
+		if (vlan > ROBO_VLAN_MAX) {
 			wpa_printf(MSG_INFO, "%s: VLAN out of range in "
 				   "interface name %s", __func__, ifname);
 			os_free(drv);
@@ -381,13 +382,17 @@ static void * wpa_driver_roboswitch_init(void *ctx, const char *ifname)
 		return NULL;
 	}
 
+	/* set the read bit */
 	vlan |= 1 << 13;
+	/* set and read back to see if the register can be used */
 	wpa_driver_roboswitch_write(drv, ROBO_VLAN_PAGE, ROBO_VLAN_ACCESS,
-				    &vlan, 1);
-	/* Read back: The BCM5365 uses a different register */
+				    &vlan_max, 1);
 	wpa_driver_roboswitch_read(drv, ROBO_VLAN_PAGE, ROBO_VLAN_ACCESS,
-				   &_read, 1);
-	if (_read != vlan)
+				   &vlan_max, 1);
+	if (vlan_max == ROBO_VLAN_MAX) /* pre-5365 */
+		wpa_driver_roboswitch_write(drv, ROBO_VLAN_PAGE,
+					    ROBO_VLAN_ACCESS, &vlan, 1);
+	else /* 5365 uses a different register */
 		wpa_driver_roboswitch_write(drv, ROBO_VLAN_PAGE,
 					    ROBO_VLAN_ACCESS_5365, &vlan, 1);
 	wpa_driver_roboswitch_read(drv, ROBO_VLAN_PAGE, ROBO_VLAN_READ,

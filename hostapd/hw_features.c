@@ -234,6 +234,107 @@ static int ieee80211n_allowed_ht40_channel_pair(struct hostapd_iface *iface)
 
 	return 1;
 }
+
+
+static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
+{
+	u16 hw = iface->current_mode->ht_capab;
+	u16 conf = iface->conf->ht_capab;
+
+	if (!iface->conf->ieee80211n)
+		return 1;
+
+	if ((conf & HT_CAP_INFO_LDPC_CODING_CAP) &&
+	    !(hw & HT_CAP_INFO_LDPC_CODING_CAP)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [LDPC]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET) &&
+	    !(hw & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [HT40*]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_SMPS_MASK) != (hw & HT_CAP_INFO_SMPS_MASK) &&
+	    (conf & HT_CAP_INFO_SMPS_MASK) != HT_CAP_INFO_SMPS_DISABLED) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [SMPS-*]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_GREEN_FIELD) &&
+	    !(hw & HT_CAP_INFO_GREEN_FIELD)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [GF]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_SHORT_GI20MHZ) &&
+	    !(hw & HT_CAP_INFO_SHORT_GI20MHZ)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [SHORT-GI-20]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_SHORT_GI40MHZ) &&
+	    !(hw & HT_CAP_INFO_SHORT_GI40MHZ)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [SHORT-GI-40]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_TX_STBC) && !(hw & HT_CAP_INFO_TX_STBC)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [TX-STBC]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_RX_STBC_MASK) >
+	    (hw & HT_CAP_INFO_RX_STBC_MASK)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [RX-STBC*]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_DELAYED_BA) &&
+	    !(hw & HT_CAP_INFO_DELAYED_BA)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [DELAYED-BA]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_MAX_AMSDU_SIZE) &&
+	    !(hw & HT_CAP_INFO_MAX_AMSDU_SIZE)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [MAX-AMSDU-7935]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_DSSS_CCK40MHZ) &&
+	    !(hw & HT_CAP_INFO_DSSS_CCK40MHZ)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [DSSS_CCK-40]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_PSMP_SUPP) && !(hw & HT_CAP_INFO_PSMP_SUPP)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [PSMP]");
+		return 0;
+	}
+
+	if ((conf & HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT) &&
+	    !(hw & HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT)) {
+		wpa_printf(MSG_ERROR, "Driver does not support configured "
+			   "HT capability [LSIG-TXOP-PROT]");
+		return 0;
+	}
+
+	return 1;
+}
 #endif /* CONFIG_IEEE80211N */
 
 
@@ -302,6 +403,8 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 
 #ifdef CONFIG_IEEE80211N
 	if (!ieee80211n_allowed_ht40_channel_pair(iface))
+		return -1;
+	if (!ieee80211n_supported_ht_capab(iface))
 		return -1;
 #endif /* CONFIG_IEEE80211N */
 

@@ -1378,6 +1378,11 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),
 			  nla_len(nl_band), NULL);
 
+		if (tb_band[NL80211_BAND_ATTR_HT_CAPA]) {
+			mode->ht_capab = nla_get_u16(
+				tb_band[NL80211_BAND_ATTR_HT_CAPA]);
+		}
+
 		nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
 			nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX, nla_data(nl_freq),
 				  nla_len(nl_freq), freq_policy);

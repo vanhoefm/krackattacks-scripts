@@ -47,6 +47,7 @@ struct hostapd_hw_modes {
 	struct hostapd_channel_data *channels;
 	int num_rates;
 	struct hostapd_rate_data *rates;
+	u16 ht_capab;
 };
 
 

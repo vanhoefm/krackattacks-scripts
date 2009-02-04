@@ -2199,7 +2199,7 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 
 	eap_peer_unregister_methods();
 
-	for (i = 0; wpa_supplicant_drivers[i]; i++) {
+	for (i = 0; wpa_supplicant_drivers[i] && global->drv_priv; i++) {
 		if (!global->drv_priv[i])
 			continue;
 		wpa_supplicant_drivers[i]->global_deinit(global->drv_priv[i]);

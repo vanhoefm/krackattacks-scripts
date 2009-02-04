@@ -17,7 +17,7 @@ CONFIG_DRIVER_HOSTAP=y
 
 # Driver interface for madwifi driver
 #CONFIG_DRIVER_MADWIFI=y
-#CFLAGS += -I../head # change to reflect local setup; directory for madwifi src
+#CFLAGS += -I../../madwifi # change to the madwifi source directory
 
 # Driver interface for Prism54 driver
 #CONFIG_DRIVER_PRISM54=y

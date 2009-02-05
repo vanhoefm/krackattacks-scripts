@@ -59,7 +59,8 @@ set80211priv(struct wpa_driver_madwifi_data *drv, int op, void *data, int len,
 
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	if (len < IFNAMSIZ) {
+	if (len < IFNAMSIZ &&
+	    op != IEEE80211_IOCTL_SET_APPIEBUF) {
 		/*
 		 * Argument data fits inline; put it there.
 		 */
@@ -90,7 +91,7 @@ set80211priv(struct wpa_driver_madwifi_data *drv, int op, void *data, int len,
 				"ioctl[IEEE80211_IOCTL_GETCHANLIST]",
 				"ioctl[IEEE80211_IOCTL_CHANSWITCH]",
 				NULL,
-				NULL,
+				"ioctl[IEEE80211_IOCTL_SET_APPIEBUF]",
 				"ioctl[IEEE80211_IOCTL_GETSCANRESULTS]",
 				NULL,
 				"ioctl[IEEE80211_IOCTL_GETCHANINFO]",
@@ -482,6 +483,30 @@ static int wpa_driver_madwifi_set_operstate(void *priv, int state)
 }
 
 
+static int wpa_driver_madwifi_set_probe_req_ie(void *priv, const u8 *ies,
+					       size_t ies_len)
+{
+	struct ieee80211req_getset_appiebuf *probe_req_ie;
+	int ret;
+
+	probe_req_ie = os_malloc(sizeof(*probe_req_ie) + ies_len);
+	if (probe_req_ie == NULL)
+		return -1;
+
+	probe_req_ie->app_frmtype = IEEE80211_APPIE_FRAME_PROBE_REQ;
+	probe_req_ie->app_buflen = ies_len;
+	os_memcpy(probe_req_ie->app_buf, ies, ies_len);
+
+	ret = set80211priv(priv, IEEE80211_IOCTL_SET_APPIEBUF, probe_req_ie,
+			   sizeof(struct ieee80211req_getset_appiebuf) +
+			   ies_len, 1);
+
+	os_free(probe_req_ie);
+
+	return ret;
+}
+
+
 static void * wpa_driver_madwifi_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_madwifi_data *drv;
@@ -568,4 +593,5 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.associate		= wpa_driver_madwifi_associate,
 	.set_auth_alg		= wpa_driver_madwifi_set_auth_alg,
 	.set_operstate		= wpa_driver_madwifi_set_operstate,
+	.set_probe_req_ie	= wpa_driver_madwifi_set_probe_req_ie,
 };

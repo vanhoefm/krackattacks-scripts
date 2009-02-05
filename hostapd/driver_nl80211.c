@@ -2291,10 +2291,12 @@ static int i802_get_ht_scan_res(struct i802_driver_data *drv)
 		if (ioctl(drv->ioctl_sock, SIOCGIWSCAN, &iwr) == 0)
 			break;
 
-		if (errno == E2BIG && res_buf_len < 100000) {
+		if (errno == E2BIG && res_buf_len < 65535) {
 			os_free(res_buf);
 			res_buf = NULL;
 			res_buf_len *= 2;
+			if (res_buf_len > 65535)
+				res_buf_len = 65535; /* 16-bit length field */
 			wpa_printf(MSG_DEBUG, "Scan results did not fit - "
 				   "trying larger buffer (%lu bytes)",
 				   (unsigned long) res_buf_len);

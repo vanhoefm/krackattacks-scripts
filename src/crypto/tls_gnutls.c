@@ -254,8 +254,9 @@ static ssize_t tls_pull_func(gnutls_transport_ptr ptr, void *buf,
 		conn->pull_buf = conn->pull_buf_offset = NULL;
 		conn->pull_buf_len = 0;
 	} else {
-		wpa_printf(MSG_DEBUG, "%s - %d bytes remaining in pull_buf",
-			   __func__, end - conn->pull_buf_offset);
+		wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in pull_buf",
+			   __func__,
+			   (unsigned long) (end - conn->pull_buf_offset));
 	}
 	return len;
 }
@@ -943,8 +944,9 @@ u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
 
 	if (in_data && in_len) {
 		if (conn->pull_buf) {
-			wpa_printf(MSG_DEBUG, "%s - %d bytes remaining in "
-				   "pull_buf", __func__, conn->pull_buf_len);
+			wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in "
+				   "pull_buf", __func__,
+				   (unsigned long) conn->pull_buf_len);
 			os_free(conn->pull_buf);
 		}
 		conn->pull_buf = os_malloc(in_len);
@@ -1073,8 +1075,9 @@ int tls_connection_decrypt(void *ssl_ctx, struct tls_connection *conn,
 	ssize_t res;
 
 	if (conn->pull_buf) {
-		wpa_printf(MSG_DEBUG, "%s - %d bytes remaining in "
-			   "pull_buf", __func__, conn->pull_buf_len);
+		wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in "
+			   "pull_buf", __func__,
+			   (unsigned long) conn->pull_buf_len);
 		os_free(conn->pull_buf);
 	}
 	conn->pull_buf = os_malloc(in_len);
@@ -1132,7 +1135,7 @@ int tls_connection_decrypt(void *ssl_ctx, struct tls_connection *conn,
 
 		if (res < 0) {
 			wpa_printf(MSG_DEBUG, "%s - gnutls_ia_recv failed: %d "
-				   "(%s)", __func__, res,
+				   "(%s)", __func__, (int) res,
 				   gnutls_strerror(res));
 		}
 		return res;
@@ -1142,7 +1145,7 @@ int tls_connection_decrypt(void *ssl_ctx, struct tls_connection *conn,
 	res = gnutls_record_recv(conn->session, out_data, out_len);
 	if (res < 0) {
 		wpa_printf(MSG_DEBUG, "%s - gnutls_record_recv failed: %d "
-			   "(%s)", __func__, res, gnutls_strerror(res));
+			   "(%s)", __func__, (int) res, gnutls_strerror(res));
 	}
 
 	return res;

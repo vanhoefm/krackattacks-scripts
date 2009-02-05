@@ -566,6 +566,7 @@ OBJS += ../src/eap_peer/tncc.o
 OBJS_h += ../src/eap_server/eap_tnc.o
 OBJS_h += ../src/eap_server/tncs.o
 NEED_BASE64=y
+LIBS += -ldl
 endif
 
 ifdef CONFIG_IEEE8021X_EAPOL

@@ -216,6 +216,31 @@ static int wps_build_wps_state(struct wps_context *wps, struct wpabuf *msg)
 }
 
 
+#ifdef CONFIG_WPS_UPNP
+static void wps_registrar_free_pending_m2(struct wps_context *wps)
+{
+	struct upnp_pending_message *p, *p2, *prev = NULL;
+	p = wps->upnp_msgs;
+	while (p) {
+		if (p->type == WPS_M2 || p->type == WPS_M2D) {
+			if (prev == NULL)
+				wps->upnp_msgs = p->next;
+			else
+				prev->next = p->next;
+			wpa_printf(MSG_DEBUG, "WPS UPnP: Drop pending M2/M2D");
+			p2 = p;
+			p = p->next;
+			wpabuf_free(p2->msg);
+			os_free(p2);
+			continue;
+		}
+		prev = p;
+		p = p->next;
+	}
+}
+#endif /* CONFIG_WPS_UPNP */
+
+
 static int wps_build_ap_setup_locked(struct wps_context *wps,
 				     struct wpabuf *msg)
 {
@@ -1324,13 +1349,30 @@ struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
 	struct wpabuf *msg;
 
 #ifdef CONFIG_WPS_UPNP
-	if (wps->wps->wps_upnp && wps->wps->upnp_msg) {
-		wpa_printf(MSG_DEBUG, "WPS: Use pending message from UPnP");
-		msg = wps->wps->upnp_msg;
-		wps->wps->upnp_msg = NULL;
-		*op_code = WSC_MSG; /* FIX: ack/nack */
-		wps->ext_reg = 1;
-		return msg;
+	if (wps->wps->wps_upnp) {
+		struct upnp_pending_message *p, *prev = NULL;
+		if (wps->ext_reg > 1)
+			wps_registrar_free_pending_m2(wps->wps);
+		p = wps->wps->upnp_msgs;
+		/* TODO: check pending message MAC address */
+		while (p && p->next) {
+			prev = p;
+			p = p->next;
+		}
+		if (p) {
+			wpa_printf(MSG_DEBUG, "WPS: Use pending message from "
+				   "UPnP");
+			if (prev)
+				prev->next = NULL;
+			else
+				wps->wps->upnp_msgs = NULL;
+			msg = p->msg;
+			os_free(p);
+			*op_code = WSC_MSG;
+			if (wps->ext_reg == 0)
+				wps->ext_reg = 1;
+			return msg;
+		}
 	}
 	if (wps->ext_reg) {
 		wpa_printf(MSG_DEBUG, "WPS: Using external Registrar, but no "
@@ -1958,8 +2000,8 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 #ifdef CONFIG_WPS_UPNP
 		if (wps->wps->wps_upnp && attr.mac_addr) {
 			/* Remove old pending messages when starting new run */
-			wpabuf_free(wps->wps->upnp_msg);
-			wps->wps->upnp_msg = NULL;
+			wps_free_pending_msgs(wps->wps->upnp_msgs);
+			wps->wps->upnp_msgs = NULL;
 
 			upnp_wps_device_send_wlan_event(
 				wps->wps->wps_upnp, attr.mac_addr,
@@ -2030,7 +2072,7 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 #ifdef CONFIG_WPS_UPNP
 	if (wps->wps->wps_upnp && wps->ext_reg && wps->state == RECV_M2D_ACK &&
 	    upnp_wps_subscribers(wps->wps->wps_upnp)) {
-		if (wps->wps->upnp_msg)
+		if (wps->wps->upnp_msgs)
 			return WPS_CONTINUE;
 		wpa_printf(MSG_DEBUG, "WPS: Wait for response from an "
 			   "external Registrar");
@@ -2055,8 +2097,10 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 #ifdef CONFIG_WPS_UPNP
 		if (wps->wps->wps_upnp &&
 		    upnp_wps_subscribers(wps->wps->wps_upnp)) {
-			if (wps->wps->upnp_msg)
+			if (wps->wps->upnp_msgs)
 				return WPS_CONTINUE;
+			if (wps->ext_reg == 0)
+				wps->ext_reg = 1;
 			wpa_printf(MSG_DEBUG, "WPS: Wait for response from an "
 				   "external Registrar");
 			return WPS_PENDING;
@@ -2278,7 +2322,16 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 		   (unsigned long) wpabuf_len(msg), op_code);
 
 #ifdef CONFIG_WPS_UPNP
-	if (wps->wps->wps_upnp && wps->ext_reg && wps->wps->upnp_msg == NULL &&
+	if (wps->wps->wps_upnp && op_code == WSC_MSG && wps->ext_reg == 1) {
+		struct wps_parse_attr attr;
+		if (wps_parse_msg(msg, &attr) == 0 && attr.msg_type &&
+		    *attr.msg_type == WPS_M3)
+			wps->ext_reg = 2; /* past M2/M2D phase */
+	}
+	if (wps->ext_reg > 1)
+		wps_registrar_free_pending_m2(wps->wps);
+	if (wps->wps->wps_upnp && wps->ext_reg &&
+	    wps->wps->upnp_msgs == NULL &&
 	    (op_code == WSC_MSG || op_code == WSC_Done)) {
 		struct wps_parse_attr attr;
 		int type;

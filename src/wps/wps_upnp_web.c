@@ -993,6 +993,7 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 	u8 macaddr[ETH_ALEN];
 	int ev_type;
+	int type;
 	char *val;
 
 	/*
@@ -1020,17 +1021,17 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 	os_free(val);
 	if (ev_type == UPNP_WPS_WLANEVENT_TYPE_EAP) {
 		struct wps_parse_attr attr;
-		int type;
 		if (wps_parse_msg(msg, &attr) < 0 ||
 		    attr.msg_type == NULL)
 			type = -1;
 		else
 			type = *attr.msg_type;
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Message Type %d", type);
-	}
+	} else
+		type = -1;
 	if (!sm->ctx->rx_req_put_wlan_event_response ||
 	    sm->ctx->rx_req_put_wlan_event_response(sm->priv, ev_type,
-						    macaddr, msg)) {
+						    macaddr, msg, type)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Fail: sm->ctx->"
 			   "rx_req_put_wlan_event_response");
 		wpabuf_free(msg);

@@ -16,6 +16,7 @@
 #include "eloop.h"
 #include "uuid.h"
 #include "httpread.h"
+#include "wps_defs.h"
 #include "wps_upnp.h"
 #include "wps_upnp_i.h"
 

@@ -333,6 +333,20 @@ union wps_event_data {
 };
 
 /**
+ * struct upnp_pending_message - Pending PutWLANResponse messages
+ * @next: Pointer to next pending message or %NULL
+ * @addr: NewWLANEventMAC
+ * @msg: NewMessage
+ * @type: Message Type
+ */
+struct upnp_pending_message {
+	struct upnp_pending_message *next;
+	u8 addr[ETH_ALEN];
+	struct wpabuf *msg;
+	enum wps_msg_type type;
+};
+
+/**
  * struct wps_context - Long term WPS context data
  *
  * This data is stored at the higher layer Authenticator or Supplicant data
@@ -476,10 +490,8 @@ struct wps_context {
 
 	struct upnp_wps_device_sm *wps_upnp;
 
-	/* TODO: support multiple pending messages from UPnP PutWLANResponse */
-	u8 upnp_msg_addr[ETH_ALEN];
-	struct wpabuf *upnp_msg;
-	void *pending_session;
+	/* Pending messages from UPnP PutWLANResponse */
+	struct upnp_pending_message *upnp_msgs;
 };
 
 
@@ -501,5 +513,6 @@ int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);
 unsigned int wps_generate_pin(void);
+void wps_free_pending_msgs(struct upnp_pending_message *msgs);
 
 #endif /* WPS_H */

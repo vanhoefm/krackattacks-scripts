@@ -661,7 +661,7 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 	wps_registrar_deinit(hapd->wps->registrar);
 	os_free(hapd->wps->network_key);
 	wps_device_data_free(&hapd->wps->dev);
-	wpabuf_free(hapd->wps->upnp_msg);
+	wps_free_pending_msgs(hapd->wps->upnp_msgs);
 	os_free(hapd->wps);
 	hapd->wps = NULL;
 	hostapd_wps_clear_ies(hapd);
@@ -855,10 +855,12 @@ static int hostapd_rx_req_del_sta_settings(void *priv,
 
 static int hostapd_rx_req_put_wlan_event_response(
 	void *priv, enum upnp_wps_wlanevent_type ev_type,
-	const u8 *mac_addr, const struct wpabuf *msg)
+	const u8 *mac_addr, const struct wpabuf *msg,
+	enum wps_msg_type msg_type)
 {
 	struct hostapd_data *hapd = priv;
 	struct sta_info *sta;
+	struct upnp_pending_message *p;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: PutWLANResponse ev_type=%d mac_addr="
 		   MACSTR, ev_type, MAC2STR(mac_addr));
@@ -875,11 +877,6 @@ static int hostapd_rx_req_put_wlan_event_response(
 	 * server implementation for delivery to the peer.
 	 */
 
-	/* TODO: support multiple pending UPnP messages */
-	os_memcpy(hapd->wps->upnp_msg_addr, mac_addr, ETH_ALEN);
-	wpabuf_free(hapd->wps->upnp_msg);
-	hapd->wps->upnp_msg = wpabuf_dup(msg);
-
 	sta = ap_get_sta(hapd, mac_addr);
 	if (!sta) {
 		/*
@@ -890,18 +887,26 @@ static int hostapd_rx_req_put_wlan_event_response(
 		wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found based "
 			   "on NewWLANEventMAC; try wildcard match");
 		for (sta = hapd->sta_list; sta; sta = sta->next) {
-			if (sta->eapol_sm &&
-			    sta->eapol_sm->eap == hapd->wps->pending_session)
+			if (sta->eapol_sm && (sta->flags & WLAN_STA_WPS))
 				break;
 		}
 	}
-	if (sta)
-		return eapol_auth_eap_pending_cb(sta->eapol_sm,
-						 hapd->wps->pending_session);
 
-	wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found");
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found");
+		return 0;
+	}
 
-	return 0;
+	p = os_zalloc(sizeof(*p));
+	if (p == NULL)
+		return -1;
+	os_memcpy(p->addr, sta->addr, ETH_ALEN);
+	p->msg = wpabuf_dup(msg);
+	p->type = msg_type;
+	p->next = hapd->wps->upnp_msgs;
+	hapd->wps->upnp_msgs = p;
+
+	return eapol_auth_eap_pending_cb(sta->eapol_sm, sta->eapol_sm->eap);
 }
 
 

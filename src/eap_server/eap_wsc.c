@@ -436,7 +436,6 @@ static void eap_wsc_process(struct eap_sm *sm, void *priv,
 	case WPS_PENDING:
 		eap_wsc_state(data, MSG);
 		sm->method_pending = METHOD_PENDING_WAIT;
-		sm->wps->pending_session = sm;
 		eloop_cancel_timeout(eap_wsc_ext_reg_timeout, sm, data);
 		eloop_register_timeout(5, 0, eap_wsc_ext_reg_timeout,
 				       sm, data);

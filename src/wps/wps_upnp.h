@@ -40,7 +40,8 @@ struct upnp_wps_device_ctx {
 	int (*rx_req_del_sta_settings)(void *priv, const struct wpabuf *msg);
 	int (*rx_req_put_wlan_event_response)(
 		void *priv, enum upnp_wps_wlanevent_type ev_type,
-		const u8 *mac_addr, const struct wpabuf *msg);
+		const u8 *mac_addr, const struct wpabuf *msg,
+		enum wps_msg_type msg_type);
 	int (*rx_req_set_selected_registrar)(void *priv,
 					     const struct wpabuf *msg);
 	int (*rx_req_reboot_ap)(void *priv, const struct wpabuf *msg);

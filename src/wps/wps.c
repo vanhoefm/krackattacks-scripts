@@ -320,3 +320,16 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 
 	return ie;
 }
+
+
+void wps_free_pending_msgs(struct upnp_pending_message *msgs)
+{
+	struct upnp_pending_message *p, *prev;
+	p = msgs;
+	while (p) {
+		prev = p;
+		p = p->next;
+		wpabuf_free(prev->msg);
+		os_free(prev);
+	}
+}

@@ -602,8 +602,9 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 			"WPS: Probe Request with WPS data received",
 			wps_data);
 
-	if (wps_parse_msg(wps_data, &attr) < 0 ||
-	    attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (wps_parse_msg(wps_data, &attr) < 0)
+		return;
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported ProbeReq WPS IE "
 			   "version 0x%x", attr.version ? *attr.version : 0);
 		return;
@@ -1933,7 +1934,7 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;
@@ -2009,7 +2010,7 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;
@@ -2084,7 +2085,7 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;
@@ -2169,7 +2170,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;
@@ -2360,8 +2361,9 @@ int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
 	wpa_hexdump_buf(MSG_MSGDUMP, "WPS: SetSelectedRegistrar attributes",
 			msg);
 
-	if (wps_parse_msg(msg, &attr) < 0 ||
-	    attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (wps_parse_msg(msg, &attr) < 0)
+		return -1;
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported SetSelectedRegistrar "
 			   "version 0x%x", attr.version ? *attr.version : 0);
 		return -1;

@@ -956,7 +956,7 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;
@@ -1029,7 +1029,7 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;
@@ -1081,7 +1081,7 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (attr.version == NULL || *attr.version != WPS_VERSION) {
+	if (!wps_version_supported(attr.version)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
 			   attr.version ? *attr.version : 0);
 		return WPS_FAILURE;

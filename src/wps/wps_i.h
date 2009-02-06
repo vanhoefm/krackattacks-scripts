@@ -238,4 +238,10 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 					       enum wsc_op_code op_code,
 					       const struct wpabuf *msg);
 
+
+static inline int wps_version_supported(const u8 *version)
+{
+	return version && *version == WPS_VERSION;
+}
+
 #endif /* WPS_I_H */

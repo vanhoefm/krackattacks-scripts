@@ -881,9 +881,25 @@ static int hostapd_rx_req_put_wlan_event_response(
 	hapd->wps->upnp_msg = wpabuf_dup(msg);
 
 	sta = ap_get_sta(hapd, mac_addr);
+	if (!sta) {
+		/*
+		 * Workaround - Intel wsccmd uses bogus NewWLANEventMAC:
+		 * Pick STA that is in an ongoing WPS registration without
+		 * checking the MAC address.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found based "
+			   "on NewWLANEventMAC; try wildcard match");
+		for (sta = hapd->sta_list; sta; sta = sta->next) {
+			if (sta->eapol_sm &&
+			    sta->eapol_sm->eap == hapd->wps->pending_session)
+				break;
+		}
+	}
 	if (sta)
 		return eapol_auth_eap_pending_cb(sta->eapol_sm,
 						 hapd->wps->pending_session);
+
+	wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found");
 
 	return 0;
 }

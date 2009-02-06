@@ -241,7 +241,8 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 
 static inline int wps_version_supported(const u8 *version)
 {
-	return version && *version == WPS_VERSION;
+	/* Require major version match, but allow minor version differences */
+	return version && (*version & 0xf0) == (WPS_VERSION & 0xf0);
 }
 
 #endif /* WPS_I_H */

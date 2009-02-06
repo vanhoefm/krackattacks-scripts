@@ -527,6 +527,16 @@ CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y
 NEED_BASE64=y
+
+ifdef CONFIG_WPS_UPNP
+CFLAGS += -DCONFIG_WPS_UPNP
+OBJS += ../src/wps/wps_upnp.o
+OBJS += ../src/wps/wps_upnp_ssdp.o
+OBJS += ../src/wps/wps_upnp_web.o
+OBJS += ../src/wps/wps_upnp_event.o
+OBJS += ../src/wps/httpread.o
+endif
+
 endif
 
 ifdef CONFIG_EAP_IKEV2

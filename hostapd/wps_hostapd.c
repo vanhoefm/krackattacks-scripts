@@ -853,7 +853,7 @@ static int hostapd_rx_req_del_sta_settings(void *priv,
 }
 
 
-static int hostapd_rx_req_put_wlan_event_response(
+static int hostapd_rx_req_put_wlan_response(
 	void *priv, enum upnp_wps_wlanevent_type ev_type,
 	const u8 *mac_addr, const struct wpabuf *msg,
 	enum wps_msg_type msg_type)
@@ -965,8 +965,7 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 	ctx->rx_req_get_sta_settings = hostapd_rx_req_get_sta_settings;
 	ctx->rx_req_set_sta_settings = hostapd_rx_req_set_sta_settings;
 	ctx->rx_req_del_sta_settings = hostapd_rx_req_del_sta_settings;
-	ctx->rx_req_put_wlan_event_response =
-		hostapd_rx_req_put_wlan_event_response;
+	ctx->rx_req_put_wlan_response = hostapd_rx_req_put_wlan_response;
 	ctx->rx_req_set_selected_registrar =
 		hostapd_rx_req_set_selected_registrar;
 	ctx->rx_req_reboot_ap = hostapd_rx_req_reboot_ap;

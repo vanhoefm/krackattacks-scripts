@@ -1029,11 +1029,11 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Message Type %d", type);
 	} else
 		type = -1;
-	if (!sm->ctx->rx_req_put_wlan_event_response ||
-	    sm->ctx->rx_req_put_wlan_event_response(sm->priv, ev_type,
-						    macaddr, msg, type)) {
+	if (!sm->ctx->rx_req_put_wlan_response ||
+	    sm->ctx->rx_req_put_wlan_response(sm->priv, ev_type, macaddr, msg,
+					      type)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Fail: sm->ctx->"
-			   "rx_req_put_wlan_event_response");
+			   "rx_req_put_wlan_response");
 		wpabuf_free(msg);
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}

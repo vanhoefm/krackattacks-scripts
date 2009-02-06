@@ -187,7 +187,8 @@ static void event_retry(struct wps_event_ *e, int do_next_address)
 	if (do_next_address)
 		e->retry++;
 	if (e->retry >= s->n_addr) {
-		wpa_printf(MSG_DEBUG, "WPS UPnP: Giving up on sending event");
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Giving up on sending event "
+			   "for %s", e->addr->domain_and_port);
 		return;
 	}
 	event_enqueue_at_begin(s, e);
@@ -226,20 +227,25 @@ static void event_got_response_handler(struct httpread *handle, void *cookie,
 			reply_code = httpread_reply_code_get(hread);
 			if (reply_code == HTTP_OK) {
 				wpa_printf(MSG_DEBUG,
-					   "WPS UPnP: Got event reply OK");
+					   "WPS UPnP: Got event reply OK from "
+					   "%s", e->addr->domain_and_port);
 				event_delete(e);
 				goto send_more;
 			} else {
 				wpa_printf(MSG_DEBUG, "WPS UPnP: Got event "
-					   "error reply code %d", reply_code);
+					   "error reply code %d from %s",
+					   reply_code,
+					   e->addr->domain_and_port);
 				goto bad;
 			}
 		} else {
 			wpa_printf(MSG_DEBUG, "WPS UPnP: Got bogus event "
-				   "response %d", en);
+				   "response %d from %s", en,
+				   e->addr->domain_and_port);
 		}
 	} else {
-		wpa_printf(MSG_DEBUG, "WPS UPnP: Event response timeout/fail");
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Event response timeout/fail "
+			   "for %s", e->addr->domain_and_port);
 		goto bad;
 	}
 	event_retry(e, 1);
@@ -313,6 +319,8 @@ static void event_send_tx_ready(int sock, void *eloop_ctx, void *sock_ctx)
 	/* we could: Turn blocking back on? */
 	fcntl(e->sd, F_SETFL, 0);
 #endif
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Sending event to %s",
+		   e->addr->domain_and_port);
 	if (send_wpabuf(e->sd, buf) < 0) {
 		event_retry(e, 1);
 		goto bad;

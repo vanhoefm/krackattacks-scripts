@@ -465,7 +465,7 @@ static void subscr_addr_list_create(struct subscription *s,
 
 int send_wpabuf(int fd, struct wpabuf *buf)
 {
-	wpa_printf(MSG_DEBUG, "WPS UPnP: %lu byte response",
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Send %lu byte message",
 		   (unsigned long) wpabuf_len(buf));
 	errno = 0;
 	if (write(fd, wpabuf_head(buf), wpabuf_len(buf)) !=

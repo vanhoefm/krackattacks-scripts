@@ -51,6 +51,7 @@ struct web_connection {
 	struct web_connection *prev;
 	struct upnp_wps_device_sm *sm; /* parent */
 	int sd; /* socket to read from */
+	struct sockaddr_in cli_addr;
 	int sd_registered; /* nonzero if we must cancel registration */
 	struct httpread *hread; /* state machine for reading socket */
 	int n_rcvd_data; /* how much data read so far */
@@ -689,6 +690,7 @@ static void web_connection_parse_get(struct web_connection *c, char *filename)
 	if (filename == NULL)
 		filename = "(null)"; /* just in case */
 	if (os_strcasecmp(filename, UPNP_WPS_DEVICE_XML_FILE) == 0) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET for device XML");
 		req = GET_DEVICE_XML_FILE;
 		extra_len = 3000;
 		if (sm->wps->friendly_name)
@@ -702,11 +704,12 @@ static void web_connection_parse_get(struct web_connection *c, char *filename)
 		if (sm->wps->upc)
 			extra_len += os_strlen(sm->wps->upc);
 	} else if (!os_strcasecmp(filename, UPNP_WPS_SCPD_XML_FILE)) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET for SCPD XML");
 		req = GET_SCPD_XML_FILE;
 		extra_len = os_strlen(wps_scpd_xml);
 	} else {
 		/* File not found */
-		wpa_printf(MSG_DEBUG, "WPS UPnP: File not found: %s",
+		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET file not found: %s",
 			   filename);
 		buf = wpabuf_alloc(200);
 		if (buf == NULL)
@@ -1465,6 +1468,7 @@ static void web_connection_parse_subscribe(struct web_connection *c,
 		ret = HTTP_PRECONDITION_FAILED;
 		goto error;
 	}
+	wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP SUBSCRIBE for event");
 	end = os_strchr(h, '\n');
 
 	for (; end != NULL; h = end + 1) {
@@ -1595,8 +1599,6 @@ static void web_connection_parse_subscribe(struct web_connection *c,
 	/* And empty line to terminate header: */
 	wpabuf_put_str(buf, "\r\n");
 
-	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS UPnP SUBSCRIBE response",
-			  wpabuf_head(buf), wpabuf_len(buf));
 	send_wpabuf(c->sd, buf);
 	wpabuf_free(buf);
 	os_free(callback_urls);
@@ -1669,6 +1671,7 @@ static void web_connection_parse_unsubscribe(struct web_connection *c,
 		ret = HTTP_PRECONDITION_FAILED;
 		goto send_msg;
 	}
+	wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP UNSUBSCRIBE for event");
 	end = os_strchr(h, '\n');
 
 	for (; end != NULL; h = end + 1) {
@@ -1776,7 +1779,9 @@ static void web_connection_check_data(struct web_connection *c)
 	while (*filename == '/')
 		filename++;
 
-	wpa_printf(MSG_DEBUG, "WPS UPnP: Got HTTP request type %d", htype);
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Got HTTP request type %d from %s:%d",
+		   htype, inet_ntoa(c->cli_addr.sin_addr),
+		   htons(c->cli_addr.sin_port));
 
 	switch (htype) {
 	case HTTPREAD_HDR_TYPE_GET:
@@ -1821,14 +1826,13 @@ static void web_connection_got_file_handler(struct httpread *handle,
 /* web_connection_start - Start web connection
  * @sm: WPS UPnP state machine from upnp_wps_device_init()
  * @sd: Socket descriptor
- * @ip_addr: of client, in host byte order
- * @ip_port: of client, in native byte order
+ * @addr: Client address
  *
- * The socket descriptor sd is handed over for ownership by the WPs UPnP
+ * The socket descriptor sd is handed over for ownership by the WPS UPnP
  * state machine.
  */
 static void web_connection_start(struct upnp_wps_device_sm *sm,
-				 int sd, unsigned ip_addr, unsigned ip_port)
+				 int sd, struct sockaddr_in *addr)
 {
 	struct web_connection *c = NULL;
 
@@ -1841,6 +1845,7 @@ static void web_connection_start(struct upnp_wps_device_sm *sm,
 	c = os_zalloc(sizeof(*c));
 	if (c == NULL)
 		return;
+	os_memcpy(&c->cli_addr, addr, sizeof(c->cli_addr));
 	c->sm = sm;
 	c->sd = sd;
 #if 0
@@ -1908,8 +1913,7 @@ static void web_listener_handler(int sd, void *eloop_ctx, void *sock_ctx)
 			   errno, strerror(errno), sm->web_sd);
 		return;
 	}
-	web_connection_start(sm, new_sd, addr.sin_addr.s_addr,
-			     htons(addr.sin_port));
+	web_connection_start(sm, new_sd, &addr);
 }
 
 

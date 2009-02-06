@@ -702,7 +702,7 @@ static int subscription_first_event(struct subscription *s)
 struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 					 char *callback_urls)
 {
-	struct subscription *s = NULL;
+	struct subscription *s;
 	time_t now = time(NULL);
 	time_t expire = now + UPNP_SUBSCRIBE_SEC;
 
@@ -711,7 +711,7 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 
 	/* If too many subscriptions, remove oldest */
 	if (sm->n_subscriptions >= MAX_SUBSCRIPTIONS) {
-		struct subscription *s = sm->subscriptions;
+		s = sm->subscriptions;
 		wpa_printf(MSG_INFO, "WPS UPnP: Too many subscriptions, "
 			   "trashing oldest");
 		subscription_unlink(s);

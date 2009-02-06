@@ -1117,7 +1117,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_rf_bands(&wps->wps->dev, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
-	    wps_build_dev_password_id(msg, DEV_PW_DEFAULT) ||
+	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);

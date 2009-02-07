@@ -1043,6 +1043,7 @@ OBJS_priv += ../src/utils/os_$(CONFIG_OS).o
 OBJS_priv += ../src/utils/$(CONFIG_ELOOP).o
 OBJS_priv += ../src/utils/common.o
 OBJS_priv += ../src/utils/wpa_debug.o
+OBJS_priv += ../src/utils/wpabuf.o
 OBJS_priv += wpa_priv.o
 ifdef CONFIG_DRIVER_TEST
 OBJS_priv += ../src/crypto/sha1.o

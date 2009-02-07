@@ -283,6 +283,7 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 			cipher = EVP_aes_256_cbc();
 			break;
 		default:
+			os_free(ctx);
 			return NULL;
 		}
 		break;
@@ -301,6 +302,7 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 		break;
 #endif /* OPENSSL_NO_RC2 */
 	default:
+		os_free(ctx);
 		return NULL;
 	}
 

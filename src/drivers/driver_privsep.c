@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - privilege separated driver interface
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -443,6 +443,22 @@ static void wpa_driver_privsep_event_rx_eapol(void *ctx, u8 *buf, size_t len)
 }
 
 
+static void wpa_driver_privsep_event_sta_rx(void *ctx, u8 *buf, size_t len)
+{
+#ifdef CONFIG_CLIENT_MLME
+	struct ieee80211_rx_status *rx_status;
+
+	if (len < sizeof(*rx_status))
+		return;
+	rx_status = (struct ieee80211_rx_status *) buf;
+	buf += sizeof(*rx_status);
+	len -= sizeof(*rx_status);
+
+	wpa_supplicant_sta_rx(ctx, buf, len, rx_status);
+#endif /* CONFIG_CLIENT_MLME */
+}
+
+
 static void wpa_driver_privsep_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -518,6 +534,11 @@ static void wpa_driver_privsep_receive(int sock, void *eloop_ctx,
 	case PRIVSEP_EVENT_RX_EAPOL:
 		wpa_driver_privsep_event_rx_eapol(drv->ctx, event_buf,
 						  event_len);
+		break;
+	case PRIVSEP_EVENT_STA_RX:
+		wpa_driver_privsep_event_sta_rx(drv->ctx, event_buf,
+						event_len);
+		break;
 	}
 
 	os_free(buf);

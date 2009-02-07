@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - privilege separation commands
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -71,6 +71,7 @@ enum privsep_event {
 	PRIVSEP_EVENT_STKSTART,
 	PRIVSEP_EVENT_FT_RESPONSE,
 	PRIVSEP_EVENT_RX_EAPOL,
+	PRIVSEP_EVENT_STA_RX,
 };
 
 #endif /* PRIVSEP_COMMANDS_H */

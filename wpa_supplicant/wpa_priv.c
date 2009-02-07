@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / privileged helper program
- * Copyright (c) 2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1030,6 +1030,53 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 		perror("sendmsg(wpas_socket)");
 }
 
+
+#ifdef CONFIG_CLIENT_MLME
+void wpa_supplicant_sta_free_hw_features(struct wpa_hw_modes *hw_features,
+					 size_t num_hw_features)
+{
+	size_t i;
+
+	if (hw_features == NULL)
+		return;
+
+	for (i = 0; i < num_hw_features; i++) {
+		os_free(hw_features[i].channels);
+		os_free(hw_features[i].rates);
+	}
+
+	os_free(hw_features);
+}
+
+
+void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
+			   struct ieee80211_rx_status *rx_status)
+{
+	struct wpa_priv_interface *iface = ctx;
+	struct msghdr msg;
+	struct iovec io[3];
+	int event = PRIVSEP_EVENT_STA_RX;
+
+	wpa_printf(MSG_DEBUG, "STA RX from driver");
+	io[0].iov_base = &event;
+	io[0].iov_len = sizeof(event);
+	io[1].iov_base = (u8 *) rx_status;
+	io[1].iov_len = sizeof(*rx_status);
+	io[2].iov_base = (u8 *) buf;
+	io[2].iov_len = len;
+
+	os_memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = io;
+	msg.msg_iovlen = 3;
+	msg.msg_name = &iface->drv_addr;
+	msg.msg_namelen = sizeof(iface->drv_addr);
+
+	if (sendmsg(iface->fd, &msg, 0) < 0)
+		perror("sendmsg(wpas_socket)");
+}
+#endif /* CONFIG_CLIENT_MLME */
+
+
 static void wpa_priv_terminate(int sig, void *eloop_ctx, void *signal_ctx)
 {
 	wpa_printf(MSG_DEBUG, "wpa_priv termination requested");
@@ -1060,7 +1107,8 @@ static void wpa_priv_fd_workaround(void)
 static void usage(void)
 {
 	printf("wpa_priv v" VERSION_STR "\n"
-	       "Copyright (c) 2007, Jouni Malinen <j@w1.fi> and contributors\n"
+	       "Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi> and "
+	       "contributors\n"
 	       "\n"
 	       "usage:\n"
 	       "  wpa_priv [-Bdd] [-P<pid file>] <driver:ifname> "

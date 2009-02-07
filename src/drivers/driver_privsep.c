@@ -476,8 +476,8 @@ static void wpa_driver_privsep_receive(int sock, void *eloop_ctx,
 	os_memcpy(&event, buf, sizeof(int));
 	event_buf = &buf[sizeof(int)];
 	event_len = res - sizeof(int);
-	wpa_printf(MSG_DEBUG, "privsep: Event %d received (len=%d)",
-		   event, event_len);
+	wpa_printf(MSG_DEBUG, "privsep: Event %d received (len=%lu)",
+		   event, (unsigned long) event_len);
 
 	e = event;
 	switch (e) {

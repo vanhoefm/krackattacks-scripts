@@ -1157,7 +1157,7 @@ eap_ikev2.so: ../src/eap_peer/eap_ikev2.c ../src/eap_peer/ikev2.c ../src/eap_com
 
 %.so: %.c
 	$(CC) -o $@ $(CFLAGS) -shared -rdynamic -fPIC $< \
-		-D$(*:eap_%=eap_peer_%)_register=eap_peer_method_dynamic_init
+		-D$(*F:eap_%=eap_peer_%)_register=eap_peer_method_dynamic_init
 
 
 wpa_supplicant.exe: wpa_supplicant

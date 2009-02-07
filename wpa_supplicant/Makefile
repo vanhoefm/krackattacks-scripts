@@ -505,10 +505,6 @@ endif
 
 ifdef CONFIG_WPS
 # EAP-WSC
-ifeq ($(CONFIG_EAP_WSC), dyn)
-CFLAGS += -DCONFIG_WPS -DEAP_WSC_DYNAMIC
-EAPDYN += ../src/eap_peer/eap_wsc.so
-else
 CFLAGS += -DCONFIG_WPS -DEAP_WSC
 OBJS += wps_supplicant.o
 OBJS += ../src/utils/uuid.o
@@ -522,7 +518,6 @@ OBJS += ../src/wps/wps_dev_attr.o
 OBJS += ../src/wps/wps_enrollee.o
 OBJS += ../src/wps/wps_registrar.o
 OBJS_h += ../src/eap_server/eap_wsc.o
-endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y

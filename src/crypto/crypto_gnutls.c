@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / wrapper functions for libgcrypt
- * Copyright (c) 2004-2005, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -197,4 +197,117 @@ error:
 	gcry_mpi_release(bn_modulus);
 	gcry_mpi_release(bn_result);
 	return ret;
+}
+
+
+struct crypto_cipher {
+	gcry_cipher_hd_t enc;
+	gcry_cipher_hd_t dec;
+};
+
+
+struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
+					  const u8 *iv, const u8 *key,
+					  size_t key_len)
+{
+	struct crypto_cipher *ctx;
+	gcry_error_t res;
+	enum gcry_cipher_algos a;
+	int ivlen;
+
+	ctx = os_zalloc(sizeof(*ctx));
+	if (ctx == NULL)
+		return NULL;
+
+	switch (alg) {
+	case CRYPTO_CIPHER_ALG_RC4:
+		a = GCRY_CIPHER_ARCFOUR;
+		res = gcry_cipher_open(&ctx->enc, a, GCRY_CIPHER_MODE_STREAM,
+				       0);
+		gcry_cipher_open(&ctx->dec, a, GCRY_CIPHER_MODE_STREAM, 0);
+		break;
+	case CRYPTO_CIPHER_ALG_AES:
+		if (key_len == 24)
+			a = GCRY_CIPHER_AES192;
+		else if (key_len == 32)
+			a = GCRY_CIPHER_AES256;
+		else
+			a = GCRY_CIPHER_AES;
+		res = gcry_cipher_open(&ctx->enc, a, GCRY_CIPHER_MODE_CBC, 0);
+		gcry_cipher_open(&ctx->dec, a, GCRY_CIPHER_MODE_CBC, 0);
+		break;
+	case CRYPTO_CIPHER_ALG_3DES:
+		a = GCRY_CIPHER_3DES;
+		res = gcry_cipher_open(&ctx->enc, a, GCRY_CIPHER_MODE_CBC, 0);
+		gcry_cipher_open(&ctx->dec, a, GCRY_CIPHER_MODE_CBC, 0);
+		break;
+	case CRYPTO_CIPHER_ALG_DES:
+		a = GCRY_CIPHER_DES;
+		res = gcry_cipher_open(&ctx->enc, a, GCRY_CIPHER_MODE_CBC, 0);
+		gcry_cipher_open(&ctx->dec, a, GCRY_CIPHER_MODE_CBC, 0);
+		break;
+	case CRYPTO_CIPHER_ALG_RC2:
+		if (key_len == 5)
+			a = GCRY_CIPHER_RFC2268_40;
+		else
+			a = GCRY_CIPHER_RFC2268_128;
+		res = gcry_cipher_open(&ctx->enc, a, GCRY_CIPHER_MODE_CBC, 0);
+		gcry_cipher_open(&ctx->dec, a, GCRY_CIPHER_MODE_CBC, 0);
+		break;
+	default:
+		os_free(ctx);
+		return NULL;
+	}
+
+	if (res != GPG_ERR_NO_ERROR) {
+		os_free(ctx);
+		return NULL;
+	}
+
+	if (gcry_cipher_setkey(ctx->enc, key, key_len) != GPG_ERR_NO_ERROR ||
+	    gcry_cipher_setkey(ctx->dec, key, key_len) != GPG_ERR_NO_ERROR) {
+		gcry_cipher_close(ctx->enc);
+		gcry_cipher_close(ctx->dec);
+		os_free(ctx);
+		return NULL;
+	}
+
+	ivlen = gcry_cipher_get_algo_blklen(a);
+	if (gcry_cipher_setiv(ctx->enc, iv, ivlen) != GPG_ERR_NO_ERROR ||
+	    gcry_cipher_setiv(ctx->dec, iv, ivlen) != GPG_ERR_NO_ERROR) {
+		gcry_cipher_close(ctx->enc);
+		gcry_cipher_close(ctx->dec);
+		os_free(ctx);
+		return NULL;
+	}
+
+	return ctx;
+}
+
+
+int crypto_cipher_encrypt(struct crypto_cipher *ctx, const u8 *plain,
+			  u8 *crypt, size_t len)
+{
+	if (gcry_cipher_encrypt(ctx->enc, crypt, len, plain, len) !=
+	    GPG_ERR_NO_ERROR)
+		return -1;
+	return 0;
+}
+
+
+int crypto_cipher_decrypt(struct crypto_cipher *ctx, const u8 *crypt,
+			  u8 *plain, size_t len)
+{
+	if (gcry_cipher_decrypt(ctx->dec, plain, len, crypt, len) !=
+	    GPG_ERR_NO_ERROR)
+		return -1;
+	return 0;
+}
+
+
+void crypto_cipher_deinit(struct crypto_cipher *ctx)
+{
+	gcry_cipher_close(ctx->enc);
+	gcry_cipher_close(ctx->dec);
+	os_free(ctx);
 }

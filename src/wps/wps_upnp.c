@@ -859,7 +859,7 @@ static int get_netif_info(const char *net_if, unsigned *ip_addr,
 	if (sock < 0)
 		goto fail;
 
-	os_strncpy(req.ifr_name, net_if, sizeof(req.ifr_name));
+	os_strlcpy(req.ifr_name, net_if, sizeof(req.ifr_name));
 	if (ioctl(sock, SIOCGIFADDR, &req) < 0) {
 		wpa_printf(MSG_ERROR, "WPS UPnP: SIOCGIFADDR failed: %d (%s)",
 			   errno, strerror(errno));
@@ -870,7 +870,7 @@ static int get_netif_info(const char *net_if, unsigned *ip_addr,
 	in_addr.s_addr = *ip_addr;
 	os_snprintf(*ip_addr_text, 16, "%s", inet_ntoa(in_addr));
 
-	os_strncpy(req.ifr_name, net_if, sizeof(req.ifr_name));
+	os_strlcpy(req.ifr_name, net_if, sizeof(req.ifr_name));
 	if (ioctl(sock, SIOCGIFHWADDR, &req) < 0) {
 		wpa_printf(MSG_ERROR, "WPS UPnP: SIOCGIFHWADDR failed: "
 			   "%d (%s)", errno, strerror(errno));

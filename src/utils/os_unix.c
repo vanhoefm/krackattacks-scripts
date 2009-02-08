@@ -76,12 +76,47 @@ int os_mktime(int year, int month, int day, int hour, int min, int sec,
 }
 
 
+#ifdef __APPLE__
+#include <fcntl.h>
+static int os_daemon(int nochdir, int noclose)
+{
+	int devnull;
+
+	if (chdir("/") < 0)
+		return -1;
+
+	devnull = open("/dev/null", O_RDWR);
+	if (devnull < 0)
+		return -1;
+
+	if (dup2(devnull, STDIN_FILENO) < 0) {
+		close(devnull);
+		return -1;
+	}
+
+	if (dup2(devnull, STDOUT_FILENO) < 0) {
+		close(devnull);
+		return -1;
+	}
+
+	if (dup2(devnull, STDERR_FILENO) < 0) {
+		close(devnull);
+		return -1;
+	}
+
+	return 0;
+}
+#else /* __APPLE__ */
+#define os_daemon daemon
+#endif /* __APPLE__ */
+
+
 int os_daemonize(const char *pid_file)
 {
 #ifdef __uClinux__
 	return -1;
 #else /* __uClinux__ */
-	if (daemon(0, 0)) {
+	if (os_daemon(0, 0)) {
 		perror("daemon");
 		return -1;
 	}

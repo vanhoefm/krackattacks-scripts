@@ -21,7 +21,13 @@
 #include "ieee802_11_defs.h"
 
 #include <net/if.h>
+
+#ifdef __NetBSD__
+#include <net/if_ether.h>
+#define COMPAT_FREEBSD_NET80211
+#else
 #include <net/ethernet.h>
+#endif
 
 #include <net80211/ieee80211.h>
 #include <net80211/ieee80211_crypto.h>
@@ -449,7 +455,12 @@ wpa_driver_bsd_scan(void *priv, const u8 *ssid, size_t ssid_len)
 }
 
 #include <net/route.h>
+#if __FreeBSD__
 #include <net80211/ieee80211_freebsd.h>
+#endif
+#if __NetBSD__
+#include <net80211/ieee80211_netbsd.h>
+#endif
 
 static void
 wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)

@@ -1060,6 +1060,14 @@ int tls_connection_encrypt(void *ssl_ctx, struct tls_connection *conn,
 		return -1;
 	if (conn->push_buf_len < out_len)
 		out_len = conn->push_buf_len;
+	else if (conn->push_buf_len > out_len) {
+		wpa_printf(MSG_INFO, "GnuTLS: Not enough buffer space for "
+			   "encrypted message (in_len=%lu push_buf_len=%lu "
+			   "out_len=%lu",
+			   (unsigned long) in_len,
+			   (unsigned long) conn->push_buf_len,
+			   (unsigned long) out_len);
+	}
 	os_memcpy(out_data, conn->push_buf, out_len);
 	os_free(conn->push_buf);
 	conn->push_buf = NULL;

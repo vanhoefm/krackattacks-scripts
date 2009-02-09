@@ -904,7 +904,7 @@ int eap_peer_tls_encrypt(struct eap_sm *sm, struct eap_ssl_data *data,
 
 	if (in_data) {
 		eap_peer_tls_reset_output(data);
-		len = wpabuf_len(in_data) + 100;
+		len = wpabuf_len(in_data) + 300;
 		data->tls_out = os_malloc(len);
 		if (data->tls_out == NULL)
 			return -1;

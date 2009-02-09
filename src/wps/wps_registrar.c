@@ -375,6 +375,7 @@ wps_registrar_init(struct wps_context *wps,
 	}
 	reg->disable_auto_conf = cfg->disable_auto_conf;
 	reg->sel_reg_dev_password_id_override = -1;
+	reg->sel_reg_config_methods_override = -1;
 
 	if (wps_set_ie(reg)) {
 		wps_registrar_deinit(reg);

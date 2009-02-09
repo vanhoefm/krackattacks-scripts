@@ -548,7 +548,8 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 
 	/* If the message was handled, send back the reply */
 	if (reply) {
-		dbus_connection_send(connection, reply, NULL);
+		if (!dbus_message_get_no_reply(message))
+			dbus_connection_send(connection, reply, NULL);
 		dbus_message_unref(reply);
 	}
 
@@ -607,7 +608,8 @@ static DBusHandlerResult wpas_message_handler(DBusConnection *connection,
 
 	/* If the message was handled, send back the reply */
 	if (reply) {
-		dbus_connection_send(connection, reply, NULL);
+		if (!dbus_message_get_no_reply(message))
+			dbus_connection_send(connection, reply, NULL);
 		dbus_message_unref(reply);
 	}
 

@@ -1252,7 +1252,7 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
  * @wpa_s: Pointer to wpa_supplicant data
  * @reason_code: IEEE 802.11 reason code for the deauthenticate frame
  *
- * This function is used to request %wpa_supplicant to disassociate with the
+ * This function is used to request %wpa_supplicant to deauthenticate from the
  * current AP.
  */
 void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,

@@ -97,6 +97,8 @@ set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
 	if (op == IEEE80211_IOCTL_FILTERFRAME)
 		do_inline = 0;
 #endif /* IEEE80211_IOCTL_FILTERFRAME */
+	if (op == IEEE80211_IOCTL_SET_APPIEBUF)
+		do_inline = 0;
 	if (do_inline) {
 		/*
 		 * Argument data fits inline; put it there.

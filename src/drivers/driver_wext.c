@@ -1911,9 +1911,21 @@ static int wpa_driver_wext_disassociate(void *priv, const u8 *addr,
 					int reason_code)
 {
 	struct wpa_driver_wext_data *drv = priv;
+	const u8 null_bssid[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
+	u8 ssid[32];
+	int ret, i;
+
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-	return wpa_driver_wext_mlme(drv, addr, IW_MLME_DISASSOC,
-				    reason_code);
+
+	ret = wpa_driver_wext_mlme(drv, addr, IW_MLME_DISASSOC, reason_code);
+
+	wpa_driver_wext_set_bssid(drv, null_bssid);
+
+	for (i = 0; i < 32; i++)
+		ssid[i] = rand() & 0xFF;
+	wpa_driver_wext_set_ssid(drv, ssid, 32);
+
+	return ret;
 }
 
 

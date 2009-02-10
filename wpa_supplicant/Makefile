@@ -1199,7 +1199,7 @@ test-sha1: $(TEST_SHA1_OBJS)
 	./test-sha1
 	rm test-sha1
 
-TEST_SHA256_OBJS = ../src/crypto/sha256.o ../src/crypto/md5.o tests/test_sha256.o ../src/crypto/crypto_openssl.o
+TEST_SHA256_OBJS = ../src/crypto/sha256.o ../src/crypto/md5.o tests/test_sha256.o ../src/utils/os_unix.o ../src/crypto/crypto_openssl.o
 test-sha256: $(TEST_SHA256_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_SHA256_OBJS) $(LIBS)
 	./test-sha256

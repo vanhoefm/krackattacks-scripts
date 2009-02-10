@@ -323,7 +323,8 @@ int main(int argc, char *argv[])
 	}
 
 	printf("Test IEEE 802.11r KDF\n");
-	sha256_prf("abc", 3, "KDF test", "data", 4, hash, sizeof(hash));
+	sha256_prf((u8 *) "abc", 3, "KDF test", (u8 *) "data", 4,
+		   hash, sizeof(hash));
 	/* TODO: add proper test case for this */
 
 	return errors;

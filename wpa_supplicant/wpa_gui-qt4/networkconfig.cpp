@@ -19,12 +19,14 @@
 #include "wpagui.h"
 
 enum {
-    AUTH_NONE = 0,
-    AUTH_IEEE8021X = 1,
-    AUTH_WPA_PSK = 2,
-    AUTH_WPA_EAP = 3,
-    AUTH_WPA2_PSK = 4,
-    AUTH_WPA2_EAP = 5
+	AUTH_NONE_OPEN,
+	AUTH_NONE_WEP,
+	AUTH_NONE_WEP_SHARED,
+	AUTH_IEEE8021X,
+	AUTH_WPA_PSK,
+	AUTH_WPA_EAP,
+	AUTH_WPA2_PSK,
+	AUTH_WPA2_EAP
 };
 
 #define WPA_GUI_KEY_DATA "[key is configured]"
@@ -35,6 +37,7 @@ NetworkConfig::NetworkConfig(QWidget *parent, const char *, bool, Qt::WFlags)
 {
 	setupUi(this);
 
+	encrSelect->setEnabled(false);
 	connect(authSelect, SIGNAL(activated(int)), this,
 		SLOT(authChanged(int)));
 	connect(cancelButton, SIGNAL(clicked()), this, SLOT(close()));
@@ -81,22 +84,24 @@ void NetworkConfig::paramsFromScanResults(QTreeWidgetItem *sel)
 	else if (flags.indexOf("[WPA-PSK") >= 0)
 		auth = AUTH_WPA_PSK;
 	else
-		auth = AUTH_NONE;
+		auth = AUTH_NONE_OPEN;
 
 	if (flags.indexOf("-CCMP") >= 0)
 		encr = 1;
 	else if (flags.indexOf("-TKIP") >= 0)
 		encr = 0;
-	else if (flags.indexOf("WEP") >= 0)
+	else if (flags.indexOf("WEP") >= 0) {
 		encr = 1;
-	else
+		if (auth == AUTH_NONE_OPEN)
+			auth = AUTH_NONE_WEP;
+	} else
 		encr = 0;
 
 	authSelect->setCurrentIndex(auth);
 	authChanged(auth);
 	encrSelect->setCurrentIndex(encr);
 
-	wepEnabled(auth == AUTH_NONE && encr == 1);
+	wepEnabled(auth == AUTH_NONE_WEP);
 
 	getEapCapa();
 
@@ -108,6 +113,8 @@ void NetworkConfig::paramsFromScanResults(QTreeWidgetItem *sel)
 
 void NetworkConfig::authChanged(int sel)
 {
+	encrSelect->setEnabled(sel != AUTH_NONE_OPEN && sel != AUTH_NONE_WEP &&
+			       sel != AUTH_NONE_WEP_SHARED);
 	pskEdit->setEnabled(sel == AUTH_WPA_PSK || sel == AUTH_WPA2_PSK);
 	bool eap = sel == AUTH_IEEE8021X || sel == AUTH_WPA_EAP ||
 		sel == AUTH_WPA2_EAP;
@@ -122,10 +129,11 @@ void NetworkConfig::authChanged(int sel)
 	while (encrSelect->count())
 		encrSelect->removeItem(0);
 
-	if (sel == AUTH_NONE || sel == AUTH_IEEE8021X) {
+	if (sel == AUTH_NONE_OPEN || sel == AUTH_NONE_WEP ||
+	    sel == AUTH_NONE_WEP_SHARED || sel == AUTH_IEEE8021X) {
 		encrSelect->addItem("None");
 		encrSelect->addItem("WEP");
-		encrSelect->setCurrentIndex(sel == AUTH_NONE ? 0 : 1);
+		encrSelect->setCurrentIndex(sel == AUTH_NONE_OPEN ? 0 : 1);
 	} else {
 		encrSelect->addItem("TKIP");
 		encrSelect->addItem("CCMP");
@@ -133,7 +141,7 @@ void NetworkConfig::authChanged(int sel)
 					     sel == AUTH_WPA2_EAP) ? 1 : 0);
 	}
 
-	wepEnabled(sel == AUTH_IEEE8021X);
+	wepEnabled(sel == AUTH_NONE_WEP || sel == AUTH_NONE_WEP_SHARED);
 }
 
 
@@ -236,7 +244,9 @@ void NetworkConfig::addNetwork()
 
 	const char *key_mgmt = NULL, *proto = NULL, *pairwise = NULL;
 	switch (auth) {
-	case AUTH_NONE:
+	case AUTH_NONE_OPEN:
+	case AUTH_NONE_WEP:
+	case AUTH_NONE_WEP_SHARED:
 		key_mgmt = "NONE";
 		break;
 	case AUTH_IEEE8021X:
@@ -259,6 +269,11 @@ void NetworkConfig::addNetwork()
 		proto = "WPA2";
 		break;
 	}
+
+	if (auth == AUTH_NONE_WEP_SHARED)
+		setNetworkParam(id, "auth_alg", "SHARED", false);
+	else
+		setNetworkParam(id, "auth_alg", "OPEN", false);
 
 	if (auth == AUTH_WPA_PSK || auth == AUTH_WPA_EAP ||
 	    auth == AUTH_WPA2_PSK || auth == AUTH_WPA2_EAP) {
@@ -422,9 +437,8 @@ int NetworkConfig::setNetworkParam(int id, const char *field,
 }
 
 
-void NetworkConfig::encrChanged(const QString &sel)
+void NetworkConfig::encrChanged(const QString &)
 {
-	wepEnabled(sel.indexOf("WEP") == 0);
 }
 
 
@@ -517,7 +531,7 @@ void NetworkConfig::paramsFromConfig(int network_id)
 			wpa = 1;
 	}
 
-	int auth = AUTH_NONE, encr = 0;
+	int auth = AUTH_NONE_OPEN, encr = 0;
 	snprintf(cmd, sizeof(cmd), "GET_NETWORK %d key_mgmt", network_id);
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) >= 0) {
@@ -536,7 +550,8 @@ void NetworkConfig::paramsFromConfig(int network_id)
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) >= 0) {
 		reply[reply_len] = '\0';
-		if (strstr(reply, "CCMP") && auth != AUTH_NONE)
+		if (strstr(reply, "CCMP") && auth != AUTH_NONE_OPEN &&
+		    auth != AUTH_NONE_WEP && auth != AUTH_NONE_WEP_SHARED)
 			encr = 1;
 		else if (strstr(reply, "TKIP"))
 			encr = 0;
@@ -694,14 +709,31 @@ void NetworkConfig::paramsFromConfig(int network_id)
 			pos = strchr(reply + 1, '"');
 			if (pos)
 				*pos = '\0';
-			if (auth == AUTH_NONE || auth == AUTH_IEEE8021X)
+			if (auth == AUTH_NONE_OPEN || auth == AUTH_IEEE8021X) {
+				if (auth == AUTH_NONE_OPEN)
+					auth = AUTH_NONE_WEP;
 				encr = 1;
+			}
 
 			wepEdit->setText(reply + 1);
 		} else if (res >= 0 && key_value_isset(reply, reply_len)) {
-			if (auth == AUTH_NONE || auth == AUTH_IEEE8021X)
+			if (auth == AUTH_NONE_OPEN || auth == AUTH_IEEE8021X) {
+				if (auth == AUTH_NONE_OPEN)
+					auth = AUTH_NONE_WEP;
 				encr = 1;
+			}
 			wepEdit->setText(WPA_GUI_KEY_DATA);
+		}
+	}
+
+	if (auth == AUTH_NONE_WEP) {
+		snprintf(cmd, sizeof(cmd), "GET_NETWORK %d auth_alg",
+			 network_id);
+		reply_len = sizeof(reply) - 1;
+		if (wpagui->ctrlRequest(cmd, reply, &reply_len) >= 0) {
+			reply[reply_len] = '\0';
+			if (strcmp(reply, "SHARED") == 0)
+				auth = AUTH_NONE_WEP_SHARED;
 		}
 	}
 
@@ -748,8 +780,7 @@ void NetworkConfig::paramsFromConfig(int network_id)
 	authSelect->setCurrentIndex(auth);
 	authChanged(auth);
 	encrSelect->setCurrentIndex(encr);
-	if (auth == AUTH_NONE || auth == AUTH_IEEE8021X)
-		wepEnabled(encr == 1);
+	wepEnabled(auth == AUTH_NONE_WEP || auth == AUTH_NONE_WEP_SHARED);
 
 	removeButton->setEnabled(true);
 	addButton->setText("Save");

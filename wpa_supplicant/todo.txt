@@ -74,15 +74,14 @@ To do:
   configured ca_cert store (e.g., ROOT) (they could be, e.g., in CA store)
 
 
-0.6.x branch:
+0.7.x branch:
 - clean up common.[ch]
 - change TLS/crypto library interface to use a structure of function
   pointers and helper inline functions (like driver_ops) instead of
   requiring every TLS wrapper to implement all functions
 - add support for encrypted configuration fields (e.g., password, psk,
   passphrase, pin)
-- wpa_gui: add support for setting and showing priority, auth_alg
-  (open/shared for static WEP)
+- wpa_gui: add support for setting and showing priority
 
 - cleanup TLS/PEAP/TTLS/FAST fragmentation: both the handshake and Appl. Data
   phases should be able to use the same functions for this;

@@ -1898,12 +1898,35 @@ static int wpa_driver_wext_mlme(struct wpa_driver_wext_data *drv,
 }
 
 
+static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
+{
+	const u8 null_bssid[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
+	u8 ssid[32];
+	int i;
+
+	/*
+	 * Clear the BSSID selection and set a random SSID to make sure the
+	 * driver will not be trying to associate with something even if it
+	 * does not understand SIOCSIWMLME commands (or tries to associate
+	 * automatically after deauth/disassoc).
+	 */
+	wpa_driver_wext_set_bssid(drv, null_bssid);
+
+	for (i = 0; i < 32; i++)
+		ssid[i] = rand() & 0xFF;
+	wpa_driver_wext_set_ssid(drv, ssid, 32);
+}
+
+
 static int wpa_driver_wext_deauthenticate(void *priv, const u8 *addr,
 					  int reason_code)
 {
 	struct wpa_driver_wext_data *drv = priv;
+	int ret;
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-	return wpa_driver_wext_mlme(drv, addr, IW_MLME_DEAUTH, reason_code);
+	wpa_driver_wext_disconnect(drv);
+	ret = wpa_driver_wext_mlme(drv, addr, IW_MLME_DEAUTH, reason_code);
+	return ret;
 }
 
 
@@ -1911,20 +1934,10 @@ static int wpa_driver_wext_disassociate(void *priv, const u8 *addr,
 					int reason_code)
 {
 	struct wpa_driver_wext_data *drv = priv;
-	const u8 null_bssid[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
-	u8 ssid[32];
-	int ret, i;
-
+	int ret;
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-
 	ret = wpa_driver_wext_mlme(drv, addr, IW_MLME_DISASSOC, reason_code);
-
-	wpa_driver_wext_set_bssid(drv, null_bssid);
-
-	for (i = 0; i < 32; i++)
-		ssid[i] = rand() & 0xFF;
-	wpa_driver_wext_set_ssid(drv, ssid, 32);
-
+	wpa_driver_wext_disconnect(drv);
 	return ret;
 }
 

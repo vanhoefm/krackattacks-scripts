@@ -156,10 +156,13 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 		return -1;
 
 	/* best/max rate preferred if signal level close enough XXX */
-	maxrate_a = wpa_scan_get_max_rate(wa);
-	maxrate_b = wpa_scan_get_max_rate(wb);
-	if (maxrate_a != maxrate_b && abs(wb->level - wa->level) < 5)
-		return maxrate_b - maxrate_a;
+	if ((wa->level && wb->level && abs(wb->level - wa->level) < 5) ||
+	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
+		maxrate_a = wpa_scan_get_max_rate(wa);
+		maxrate_b = wpa_scan_get_max_rate(wb);
+		if (maxrate_a != maxrate_b)
+			return maxrate_b - maxrate_a;
+	}
 
 	/* use freq for channel preference */
 

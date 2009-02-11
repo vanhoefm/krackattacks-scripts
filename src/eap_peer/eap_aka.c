@@ -840,7 +840,13 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 #ifdef EAP_AKA_PRIME
 	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
 		/* Note: AUTN = (SQN ^ AK) || AMF || MAC which gives us the
-		 * needed 6-octet SQN ^AK for CK',IK' derivation */
+		 * needed 6-octet SQN ^ AK for CK',IK' derivation */
+		u16 amf = WPA_GET_BE16(data->autn + 6);
+		if (!(amf & 0x8000)) {
+			wpa_printf(MSG_WARNING, "EAP-AKA': AMF separation bit "
+				   "not set (AMF=0x%4x)", amf);
+			return eap_aka_authentication_reject(data, id);
+		}
 		eap_aka_prime_derive_ck_ik_prime(data->ck, data->ik,
 						 data->autn,
 						 data->network_name,

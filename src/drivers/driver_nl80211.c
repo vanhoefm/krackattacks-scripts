@@ -1552,336 +1552,76 @@ nla_put_failure:
 }
 
 
-static u8 * wpa_driver_nl80211_giwscan(struct wpa_driver_nl80211_data *drv,
-				    size_t *len)
+static int bss_info_handler(struct nl_msg *msg, void *arg)
 {
-	struct iwreq iwr;
-	u8 *res_buf;
-	size_t res_buf_len;
-
-	res_buf_len = IW_SCAN_MAX_DATA;
-	for (;;) {
-		res_buf = os_malloc(res_buf_len);
-		if (res_buf == NULL)
-			return NULL;
-		os_memset(&iwr, 0, sizeof(iwr));
-		os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-		iwr.u.data.pointer = res_buf;
-		iwr.u.data.length = res_buf_len;
-
-		if (ioctl(drv->ioctl_sock, SIOCGIWSCAN, &iwr) == 0)
-			break;
-
-		if (errno == E2BIG && res_buf_len < 65535) {
-			os_free(res_buf);
-			res_buf = NULL;
-			res_buf_len *= 2;
-			if (res_buf_len > 65535)
-				res_buf_len = 65535; /* 16-bit length field */
-			wpa_printf(MSG_DEBUG, "Scan results did not fit - "
-				   "trying larger buffer (%lu bytes)",
-				   (unsigned long) res_buf_len);
-		} else {
-			perror("ioctl[SIOCGIWSCAN]");
-			os_free(res_buf);
-			return NULL;
-		}
-	}
-
-	if (iwr.u.data.length > res_buf_len) {
-		os_free(res_buf);
-		return NULL;
-	}
-	*len = iwr.u.data.length;
-
-	return res_buf;
-}
-
-
-/*
- * Data structure for collecting WEXT scan results. This is needed to allow
- * the various methods of reporting IEs to be combined into a single IE buffer.
- */
-struct wext_scan_data {
-	struct wpa_scan_res res;
-	u8 *ie;
-	size_t ie_len;
-	u8 ssid[32];
-	size_t ssid_len;
-	int maxrate;
-};
-
-
-static void wext_get_scan_mode(struct iw_event *iwe,
-			       struct wext_scan_data *res)
-{
-	if (iwe->u.mode == IW_MODE_ADHOC)
-		res->res.caps |= IEEE80211_CAP_IBSS;
-	else if (iwe->u.mode == IW_MODE_MASTER || iwe->u.mode == IW_MODE_INFRA)
-		res->res.caps |= IEEE80211_CAP_ESS;
-}
-
-
-static void wext_get_scan_ssid(struct iw_event *iwe,
-			       struct wext_scan_data *res, char *custom,
-			       char *end)
-{
-	int ssid_len = iwe->u.essid.length;
-	if (custom + ssid_len > end)
-		return;
-	if (iwe->u.essid.flags &&
-	    ssid_len > 0 &&
-	    ssid_len <= IW_ESSID_MAX_SIZE) {
-		os_memcpy(res->ssid, custom, ssid_len);
-		res->ssid_len = ssid_len;
-	}
-}
-
-
-static void wext_get_scan_freq(struct iw_event *iwe,
-			       struct wext_scan_data *res)
-{
-	int divi = 1000000, i;
-
-	if (iwe->u.freq.e == 0) {
-		/*
-		 * Some drivers do not report frequency, but a channel.
-		 * Try to map this to frequency by assuming they are using
-		 * IEEE 802.11b/g.  But don't overwrite a previously parsed
-		 * frequency if the driver sends both frequency and channel,
-		 * since the driver may be sending an A-band channel that we
-		 * don't handle here.
-		 */
-
-		if (res->res.freq)
-			return;
-
-		if (iwe->u.freq.m >= 1 && iwe->u.freq.m <= 13) {
-			res->res.freq = 2407 + 5 * iwe->u.freq.m;
-			return;
-		} else if (iwe->u.freq.m == 14) {
-			res->res.freq = 2484;
-			return;
-		}
-	}
-
-	if (iwe->u.freq.e > 6) {
-		wpa_printf(MSG_DEBUG, "Invalid freq in scan results (BSSID="
-			   MACSTR " m=%d e=%d)",
-			   MAC2STR(res->res.bssid), iwe->u.freq.m,
-			   iwe->u.freq.e);
-		return;
-	}
-
-	for (i = 0; i < iwe->u.freq.e; i++)
-		divi /= 10;
-	res->res.freq = iwe->u.freq.m / divi;
-}
-
-
-static void wext_get_scan_qual(struct iw_event *iwe,
-			       struct wext_scan_data *res)
-{
-	res->res.qual = iwe->u.qual.qual;
-	res->res.noise = iwe->u.qual.noise;
-	res->res.level = iwe->u.qual.level;
-}
-
-
-static void wext_get_scan_encode(struct iw_event *iwe,
-				 struct wext_scan_data *res)
-{
-	if (!(iwe->u.data.flags & IW_ENCODE_DISABLED))
-		res->res.caps |= IEEE80211_CAP_PRIVACY;
-}
-
-
-static void wext_get_scan_rate(struct iw_event *iwe,
-			       struct wext_scan_data *res, char *pos,
-			       char *end)
-{
-	int maxrate;
-	char *custom = pos + IW_EV_LCP_LEN;
-	struct iw_param p;
-	size_t clen;
-
-	clen = iwe->len;
-	if (custom + clen > end)
-		return;
-	maxrate = 0;
-	while (((ssize_t) clen) >= (ssize_t) sizeof(struct iw_param)) {
-		/* Note: may be misaligned, make a local, aligned copy */
-		os_memcpy(&p, custom, sizeof(struct iw_param));
-		if (p.value > maxrate)
-			maxrate = p.value;
-		clen -= sizeof(struct iw_param);
-		custom += sizeof(struct iw_param);
-	}
-
-	/* Convert the maxrate from WE-style (b/s units) to
-	 * 802.11 rates (500000 b/s units).
-	 */
-	res->maxrate = maxrate / 500000;
-}
-
-
-static void wext_get_scan_iwevgenie(struct iw_event *iwe,
-				    struct wext_scan_data *res, char *custom,
-				    char *end)
-{
-	char *genie, *gpos, *gend;
-	u8 *tmp;
-
-	if (iwe->u.data.length == 0)
-		return;
-
-	gpos = genie = custom;
-	gend = genie + iwe->u.data.length;
-	if (gend > end) {
-		wpa_printf(MSG_INFO, "IWEVGENIE overflow");
-		return;
-	}
-
-	tmp = os_realloc(res->ie, res->ie_len + gend - gpos);
-	if (tmp == NULL)
-		return;
-	os_memcpy(tmp + res->ie_len, gpos, gend - gpos);
-	res->ie = tmp;
-	res->ie_len += gend - gpos;
-}
-
-
-static void wext_get_scan_custom(struct iw_event *iwe,
-				 struct wext_scan_data *res, char *custom,
-				 char *end)
-{
-	size_t clen;
-	u8 *tmp;
-
-	clen = iwe->u.data.length;
-	if (custom + clen > end)
-		return;
-
-	if (clen > 7 && os_strncmp(custom, "wpa_ie=", 7) == 0) {
-		char *spos;
-		int bytes;
-		spos = custom + 7;
-		bytes = custom + clen - spos;
-		if (bytes & 1 || bytes == 0)
-			return;
-		bytes /= 2;
-		tmp = os_realloc(res->ie, res->ie_len + bytes);
-		if (tmp == NULL)
-			return;
-		hexstr2bin(spos, tmp + res->ie_len, bytes);
-		res->ie = tmp;
-		res->ie_len += bytes;
-	} else if (clen > 7 && os_strncmp(custom, "rsn_ie=", 7) == 0) {
-		char *spos;
-		int bytes;
-		spos = custom + 7;
-		bytes = custom + clen - spos;
-		if (bytes & 1 || bytes == 0)
-			return;
-		bytes /= 2;
-		tmp = os_realloc(res->ie, res->ie_len + bytes);
-		if (tmp == NULL)
-			return;
-		hexstr2bin(spos, tmp + res->ie_len, bytes);
-		res->ie = tmp;
-		res->ie_len += bytes;
-	} else if (clen > 4 && os_strncmp(custom, "tsf=", 4) == 0) {
-		char *spos;
-		int bytes;
-		u8 bin[8];
-		spos = custom + 4;
-		bytes = custom + clen - spos;
-		if (bytes != 16) {
-			wpa_printf(MSG_INFO, "Invalid TSF length (%d)", bytes);
-			return;
-		}
-		bytes /= 2;
-		hexstr2bin(spos, bin, bytes);
-		res->res.tsf += WPA_GET_BE64(bin);
-	}
-}
-
-
-static int wext_19_iw_point(struct wpa_driver_nl80211_data *drv, u16 cmd)
-{
-	return drv->we_version_compiled > 18 &&
-		(cmd == SIOCGIWESSID || cmd == SIOCGIWENCODE ||
-		 cmd == IWEVGENIE || cmd == IWEVCUSTOM);
-}
-
-
-static void wpa_driver_nl80211_add_scan_entry(struct wpa_scan_results *res,
-					   struct wext_scan_data *data)
-{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *bss[NL80211_BSS_MAX + 1];
+	static struct nla_policy bss_policy[NL80211_BSS_MAX + 1] = {
+		[NL80211_BSS_BSSID] = { .type = NLA_UNSPEC },
+		[NL80211_BSS_FREQUENCY] = { .type = NLA_U32 },
+		[NL80211_BSS_TSF] = { .type = NLA_U64 },
+		[NL80211_BSS_BEACON_INTERVAL] = { .type = NLA_U16 },
+		[NL80211_BSS_CAPABILITY] = { .type = NLA_U16 },
+		[NL80211_BSS_INFORMATION_ELEMENTS] = { .type = NLA_UNSPEC },
+		[NL80211_BSS_SIGNAL_MBM] = { .type = NLA_U32 },
+		[NL80211_BSS_SIGNAL_UNSPEC] = { .type = NLA_U8 },
+	};
+	struct wpa_scan_results *res = arg;
 	struct wpa_scan_res **tmp;
 	struct wpa_scan_res *r;
-	size_t extra_len;
-	u8 *pos, *end, *ssid_ie = NULL, *rate_ie = NULL;
+	const u8 *ie;
+	size_t ie_len;
 
-	/* Figure out whether we need to fake any IEs */
-	pos = data->ie;
-	end = pos + data->ie_len;
-	while (pos && pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
-			break;
-		if (pos[0] == WLAN_EID_SSID)
-			ssid_ie = pos;
-		else if (pos[0] == WLAN_EID_SUPP_RATES)
-			rate_ie = pos;
-		else if (pos[0] == WLAN_EID_EXT_SUPP_RATES)
-			rate_ie = pos;
-		pos += 2 + pos[1];
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb[NL80211_ATTR_BSS])
+		return NL_SKIP;
+	if (nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS],
+			     bss_policy))
+		return NL_SKIP;
+	if (bss[NL80211_BSS_INFORMATION_ELEMENTS]) {
+		ie = nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
+		ie_len = nla_len(bss[NL80211_BSS_INFORMATION_ELEMENTS]);
+	} else {
+		ie = NULL;
+		ie_len = 0;
 	}
 
-	extra_len = 0;
-	if (ssid_ie == NULL)
-		extra_len += 2 + data->ssid_len;
-	if (rate_ie == NULL && data->maxrate)
-		extra_len += 3;
-
-	r = os_zalloc(sizeof(*r) + extra_len + data->ie_len);
+	r = os_zalloc(sizeof(*r) + ie_len);
 	if (r == NULL)
-		return;
-	os_memcpy(r, &data->res, sizeof(*r));
-	r->ie_len = extra_len + data->ie_len;
-	pos = (u8 *) (r + 1);
-	if (ssid_ie == NULL) {
-		/*
-		 * Generate a fake SSID IE since the driver did not report
-		 * a full IE list.
-		 */
-		*pos++ = WLAN_EID_SSID;
-		*pos++ = data->ssid_len;
-		os_memcpy(pos, data->ssid, data->ssid_len);
-		pos += data->ssid_len;
-	}
-	if (rate_ie == NULL && data->maxrate) {
-		/*
-		 * Generate a fake Supported Rates IE since the driver did not
-		 * report a full IE list.
-		 */
-		*pos++ = WLAN_EID_SUPP_RATES;
-		*pos++ = 1;
-		*pos++ = data->maxrate;
-	}
-	if (data->ie)
-		os_memcpy(pos, data->ie, data->ie_len);
+		return NL_SKIP;
+	if (bss[NL80211_BSS_BSSID])
+		os_memcpy(r->bssid, nla_data(bss[NL80211_BSS_BSSID]),
+			  ETH_ALEN);
+	if (bss[NL80211_BSS_FREQUENCY])
+		r->freq = nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
+	if (bss[NL80211_BSS_BEACON_INTERVAL])
+		r->beacon_int = nla_get_u16(bss[NL80211_BSS_BEACON_INTERVAL]);
+	if (bss[NL80211_BSS_CAPABILITY])
+		r->caps = nla_get_u16(bss[NL80211_BSS_CAPABILITY]);
+	if (bss[NL80211_BSS_SIGNAL_UNSPEC])
+		r->qual = nla_get_u8(bss[NL80211_BSS_SIGNAL_UNSPEC]);
+	if (bss[NL80211_BSS_SIGNAL_MBM])
+		r->level = nla_get_u32(bss[NL80211_BSS_SIGNAL_MBM]);
+	if (bss[NL80211_BSS_TSF])
+		r->tsf = nla_get_u64(bss[NL80211_BSS_TSF]);
+	r->ie_len = ie_len;
+	if (ie)
+		os_memcpy(r + 1, ie, ie_len);
 
 	tmp = os_realloc(res->res,
 			 (res->num + 1) * sizeof(struct wpa_scan_res *));
 	if (tmp == NULL) {
 		os_free(r);
-		return;
+		return NL_SKIP;
 	}
 	tmp[res->num++] = r;
 	res->res = tmp;
+
+	return NL_SKIP;
 }
-				      
+
 
 /**
  * wpa_driver_nl80211_get_scan_results - Fetch the latest scan results
@@ -1892,98 +1632,34 @@ static struct wpa_scan_results *
 wpa_driver_nl80211_get_scan_results(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	size_t ap_num = 0, len;
-	int first;
-	u8 *res_buf;
-	struct iw_event iwe_buf, *iwe = &iwe_buf;
-	char *pos, *end, *custom;
+	struct nl_msg *msg;
 	struct wpa_scan_results *res;
-	struct wext_scan_data data;
-
-	res_buf = wpa_driver_nl80211_giwscan(drv, &len);
-	if (res_buf == NULL)
-		return NULL;
-
-	ap_num = 0;
-	first = 1;
+	int ret;
 
 	res = os_zalloc(sizeof(*res));
-	if (res == NULL) {
-		os_free(res_buf);
-		return NULL;
+	if (res == NULL)
+		return 0;
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto nla_put_failure;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, NLM_F_DUMP,
+		    NL80211_CMD_GET_SCAN, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	ret = send_and_recv_msgs(drv, msg, bss_info_handler, res);
+	msg = NULL;
+	if (ret == 0) {
+		wpa_printf(MSG_DEBUG, "Received scan results (%lu BSSes)",
+			   (unsigned long) res->num);
+		return res;
 	}
-
-	pos = (char *) res_buf;
-	end = (char *) res_buf + len;
-	os_memset(&data, 0, sizeof(data));
-
-	while (pos + IW_EV_LCP_LEN <= end) {
-		/* Event data may be unaligned, so make a local, aligned copy
-		 * before processing. */
-		os_memcpy(&iwe_buf, pos, IW_EV_LCP_LEN);
-		if (iwe->len <= IW_EV_LCP_LEN)
-			break;
-
-		custom = pos + IW_EV_POINT_LEN;
-		if (wext_19_iw_point(drv, iwe->cmd)) {
-			/* WE-19 removed the pointer from struct iw_point */
-			char *dpos = (char *) &iwe_buf.u.data.length;
-			int dlen = dpos - (char *) &iwe_buf;
-			os_memcpy(dpos, pos + IW_EV_LCP_LEN,
-				  sizeof(struct iw_event) - dlen);
-		} else {
-			os_memcpy(&iwe_buf, pos, sizeof(struct iw_event));
-			custom += IW_EV_POINT_OFF;
-		}
-
-		switch (iwe->cmd) {
-		case SIOCGIWAP:
-			if (!first)
-				wpa_driver_nl80211_add_scan_entry(res, &data);
-			first = 0;
-			os_free(data.ie);
-			os_memset(&data, 0, sizeof(data));
-			os_memcpy(data.res.bssid,
-				  iwe->u.ap_addr.sa_data, ETH_ALEN);
-			break;
-		case SIOCGIWMODE:
-			wext_get_scan_mode(iwe, &data);
-			break;
-		case SIOCGIWESSID:
-			wext_get_scan_ssid(iwe, &data, custom, end);
-			break;
-		case SIOCGIWFREQ:
-			wext_get_scan_freq(iwe, &data);
-			break;
-		case IWEVQUAL:
-			wext_get_scan_qual(iwe, &data);
-			break;
-		case SIOCGIWENCODE:
-			wext_get_scan_encode(iwe, &data);
-			break;
-		case SIOCGIWRATE:
-			wext_get_scan_rate(iwe, &data, pos, end);
-			break;
-		case IWEVGENIE:
-			wext_get_scan_iwevgenie(iwe, &data, custom, end);
-			break;
-		case IWEVCUSTOM:
-			wext_get_scan_custom(iwe, &data, custom, end);
-			break;
-		}
-
-		pos += iwe->len;
-	}
-	os_free(res_buf);
-	res_buf = NULL;
-	if (!first)
-		wpa_driver_nl80211_add_scan_entry(res, &data);
-	os_free(data.ie);
-
-	wpa_printf(MSG_DEBUG, "Received %lu bytes of scan results (%lu BSSes)",
-		   (unsigned long) len, (unsigned long) res->num);
-
-	return res;
+	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
+		   "(%s)", ret, strerror(-ret));
+nla_put_failure:
+	nlmsg_free(msg);
+	wpa_scan_results_free(res);
+	return NULL;
 }
 
 

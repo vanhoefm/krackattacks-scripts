@@ -1898,6 +1898,7 @@ static int wpa_supplicant_init_iface2(struct wpa_supplicant *wpa_s)
 		}
 		if (capa.flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE)
 			wpa_s->driver_4way_handshake = 1;
+		wpa_s->max_scan_ssids = capa.max_scan_ssids;
 	}
 
 #ifdef CONFIG_IBSS_RSN

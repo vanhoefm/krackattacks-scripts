@@ -1402,6 +1402,62 @@ static int wpa_driver_nl80211_create_monitor_interface(
 #endif /* CONFIG_CLIENT_MLME */
 
 
+struct wiphy_info_data {
+	int max_scan_ssids;
+};
+
+
+static int wiphy_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct wiphy_info_data *info = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS])
+		info->max_scan_ssids =
+			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS]);
+
+	return NL_SKIP;
+}
+
+
+static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
+				       struct wiphy_info_data *info)
+{
+	struct nl_msg *msg;
+
+	os_memset(info, 0, sizeof(*info));
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_GET_WIPHY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	if (send_and_recv_msgs(drv, msg, wiphy_info_handler, info) == 0)
+		return 0;
+	msg = NULL;
+nla_put_failure:
+	nlmsg_free(msg);
+	return -1;
+}
+
+
+static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
+{
+	struct wiphy_info_data info;
+	if (wpa_driver_nl80211_get_info(drv, &info))
+		return;
+	drv->has_capability = 1;
+	drv->capa.max_scan_ssids = info.max_scan_ssids;
+}
+
+
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -1549,6 +1605,8 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	wpa_driver_nl80211_get_range(drv);
 
 	drv->ifindex = if_nametoindex(drv->ifname);
+
+	wpa_driver_nl80211_capa(drv);
 
 	wpa_driver_nl80211_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
 }

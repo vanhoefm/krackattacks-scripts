@@ -322,6 +322,8 @@ struct wpa_driver_capa {
  * struct wpa_driver_ops::set_key using alg = WPA_ALG_PMK */
 #define WPA_DRIVER_FLAGS_4WAY_HANDSHAKE 0x00000008
 	unsigned int flags;
+
+	int max_scan_ssids;
 };
 
 

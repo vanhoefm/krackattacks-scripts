@@ -351,6 +351,7 @@ struct wpa_supplicant {
 	struct wpa_client_mlme mlme;
 	int use_client_mlme;
 	int driver_4way_handshake;
+	int max_scan_ssids;
 
 	int pending_mic_error_report;
 	int pending_mic_error_pairwise;

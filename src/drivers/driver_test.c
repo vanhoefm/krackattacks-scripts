@@ -1016,6 +1016,7 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 		WPA_DRIVER_AUTH_LEAP;
 	if (drv->use_mlme)
 		capa->flags |= WPA_DRIVER_FLAGS_USER_SPACE_MLME;
+	capa->max_scan_ssids = 10;
 
 	return 0;
 }

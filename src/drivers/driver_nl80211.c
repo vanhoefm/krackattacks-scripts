@@ -1495,38 +1495,42 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 static int wpa_driver_nl80211_scan(void *priv, const u8 *ssid, size_t ssid_len)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
 	int ret = 0, timeout;
-	struct iw_scan_req req;
+	struct nl_msg *msg, *ssids;
 
-	if (ssid_len > IW_ESSID_MAX_SIZE) {
-		wpa_printf(MSG_DEBUG, "%s: too long SSID (%lu)",
-			   __FUNCTION__, (unsigned long) ssid_len);
+	msg = nlmsg_alloc();
+	ssids = nlmsg_alloc();
+	if (!msg || !ssids) {
+		nlmsg_free(msg);
+		nlmsg_free(ssids);
 		return -1;
 	}
 
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_TRIGGER_SCAN, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
 	if (ssid && ssid_len) {
-		os_memset(&req, 0, sizeof(req));
-		req.essid_len = ssid_len;
-		req.bssid.sa_family = ARPHRD_ETHER;
-		os_memset(req.bssid.sa_data, 0xff, ETH_ALEN);
-		os_memcpy(req.essid, ssid, ssid_len);
-		iwr.u.data.pointer = (caddr_t) &req;
-		iwr.u.data.length = sizeof(req);
-		iwr.u.data.flags = IW_SCAN_THIS_ESSID;
+		/* Request an active scan for a specific SSID */
+		NLA_PUT(ssids, 1, ssid_len, ssid);
+	} else {
+		/* Request an active scan for wildcard SSID */
+		NLA_PUT(ssids, 1, 0, "");
 	}
+	nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
 
-	if (ioctl(drv->ioctl_sock, SIOCSIWSCAN, &iwr) < 0) {
-		perror("ioctl[SIOCSIWSCAN]");
-		ret = -1;
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger failed: ret=%d "
+			   "(%s)", ret, strerror(-ret));
+		goto nla_put_failure;
 	}
 
 	/* Not all drivers generate "scan completed" wireless event, so try to
 	 * read results after a timeout. */
-	timeout = 5;
+	timeout = 10;
 	if (drv->scan_complete_events) {
 		/*
 		 * The driver seems to deliver SIOCGIWSCAN events to notify
@@ -1538,9 +1542,12 @@ static int wpa_driver_nl80211_scan(void *priv, const u8 *ssid, size_t ssid_len)
 	wpa_printf(MSG_DEBUG, "Scan requested (ret=%d) - scan timeout %d "
 		   "seconds", ret, timeout);
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
-	eloop_register_timeout(timeout, 0, wpa_driver_nl80211_scan_timeout, drv,
-			       drv->ctx);
+	eloop_register_timeout(timeout, 0, wpa_driver_nl80211_scan_timeout,
+			       drv, drv->ctx);
 
+nla_put_failure:
+	nlmsg_free(ssids);
+	nlmsg_free(msg);
 	return ret;
 }
 

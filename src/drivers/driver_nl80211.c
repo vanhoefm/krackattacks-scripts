@@ -49,7 +49,7 @@
 
 struct wpa_driver_nl80211_data {
 	void *ctx;
-	int event_sock;
+	int wext_event_sock;
 	int ioctl_sock;
 	char ifname[IFNAMSIZ + 1];
 	int ifindex;
@@ -151,6 +151,68 @@ static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 }
 
 
+struct family_data {
+	const char *group;
+	int id;
+};
+
+
+static int family_handler(struct nl_msg *msg, void *arg)
+{
+	struct family_data *res = arg;
+	struct nlattr *tb[CTRL_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *mcgrp;
+	int i;
+
+	nla_parse(tb, CTRL_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb[CTRL_ATTR_MCAST_GROUPS])
+		return NL_SKIP;
+
+	nla_for_each_nested(mcgrp, tb[CTRL_ATTR_MCAST_GROUPS], i) {
+		struct nlattr *tb2[CTRL_ATTR_MCAST_GRP_MAX + 1];
+		nla_parse(tb2, CTRL_ATTR_MCAST_GRP_MAX, nla_data(mcgrp),
+			  nla_len(mcgrp), NULL);
+		if (!tb2[CTRL_ATTR_MCAST_GRP_NAME] ||
+		    !tb2[CTRL_ATTR_MCAST_GRP_ID] ||
+		    os_strncmp(nla_data(tb2[CTRL_ATTR_MCAST_GRP_NAME]),
+			       res->group,
+			       nla_len(tb2[CTRL_ATTR_MCAST_GRP_NAME])) != 0)
+			continue;
+		res->id = nla_get_u32(tb2[CTRL_ATTR_MCAST_GRP_ID]);
+		break;
+	};
+
+	return NL_SKIP;
+}
+
+
+static int nl_get_multicast_id(struct wpa_driver_nl80211_data *drv,
+			       const char *family, const char *group)
+{
+	struct nl_msg *msg;
+	int ret = -1;
+	struct family_data res = { group, -ENOENT };
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+	genlmsg_put(msg, 0, 0, genl_ctrl_resolve(drv->nl_handle, "nlctrl"),
+		    0, 0, CTRL_CMD_GETFAMILY, 0);
+	NLA_PUT_STRING(msg, CTRL_ATTR_FAMILY_NAME, family);
+
+	ret = send_and_recv_msgs(drv, msg, family_handler, &res);
+	msg = NULL;
+	if (ret == 0)
+		ret = res.id;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 static int wpa_driver_nl80211_send_oper_ifla(
 	struct wpa_driver_nl80211_data *drv,
 	int linkmode, int operstate)
@@ -200,7 +262,7 @@ static int wpa_driver_nl80211_send_oper_ifla(
 	wpa_printf(MSG_DEBUG, "WEXT: Operstate: linkmode=%d, operstate=%d",
 		   linkmode, operstate);
 
-	ret = send(drv->event_sock, &req, req.hdr.nlmsg_len, 0);
+	ret = send(drv->wext_event_sock, &req, req.hdr.nlmsg_len, 0);
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "WEXT: Sending operstate IFLA failed: "
 			   "%s (assume operstate is not supported)",
@@ -631,12 +693,6 @@ static void wpa_driver_nl80211_event_wireless(struct wpa_driver_nl80211_data *dr
 			wpa_driver_nl80211_event_wireless_custom(ctx, buf);
 			os_free(buf);
 			break;
-		case SIOCGIWSCAN:
-			drv->scan_complete_events = 1;
-			eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout,
-					     drv, ctx);
-			wpa_supplicant_event(ctx, EVENT_SCAN_RESULTS, NULL);
-			break;
 		case IWEVASSOCREQIE:
 			wpa_driver_nl80211_event_wireless_assocreqie(
 				drv, custom, iwe->u.data.length);
@@ -832,8 +888,8 @@ static void wpa_driver_nl80211_event_rtm_dellink(struct wpa_driver_nl80211_data 
 }
 
 
-static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
-					  void *sock_ctx)
+static void wpa_driver_nl80211_event_receive_wext(int sock, void *eloop_ctx,
+						  void *sock_ctx)
 {
 	char buf[8192];
 	int left;
@@ -896,6 +952,77 @@ try_again:
 		 */
 		goto try_again;
 	}
+}
+
+
+static int no_seq_check(struct nl_msg *msg, void *arg)
+{
+	return NL_OK;
+}
+
+
+static int process_event(struct nl_msg *msg, void *arg)
+{
+	struct wpa_driver_nl80211_data *drv = arg;
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_IFINDEX]) {
+		int ifindex = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+		if (ifindex != drv->ifindex) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignored event (cmd=%d)"
+				   " for foreign interface (ifindex %d)",
+				   gnlh->cmd, ifindex);
+			return NL_SKIP;
+		}
+	}
+
+	switch (gnlh->cmd) {
+	case NL80211_CMD_NEW_SCAN_RESULTS:
+		wpa_printf(MSG_DEBUG, "nl80211: New scan results available");
+		drv->scan_complete_events = 1;
+		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
+				     drv->ctx);
+		wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, NULL);
+		break;
+	case NL80211_CMD_SCAN_ABORTED:
+		wpa_printf(MSG_DEBUG, "nl80211: Scan aborted");
+		/*
+		 * Need to indicate that scan results are available in order
+		 * not to make wpa_supplicant stop its scanning.
+		 */
+		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
+				     drv->ctx);
+		wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, NULL);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "nl0211: Ignored unknown event (cmd=%d)",
+			   gnlh->cmd);
+		break;
+	}
+
+	return NL_SKIP;
+}
+
+
+static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
+					     void *sock_ctx)
+{
+	struct nl_cb *cb;
+	struct wpa_driver_nl80211_data *drv = eloop_ctx;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Event message available");
+
+	cb = nl_cb_clone(drv->nl_cb);
+	if (!cb)
+		return;
+	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
+	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, process_event, drv);
+	nl_recvmsgs(drv->nl_handle, cb);
+	nl_cb_put(cb);
 }
 
 
@@ -1284,7 +1411,7 @@ static int wpa_driver_nl80211_create_monitor_interface(
  */
 static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 {
-	int s;
+	int s, ret;
 	struct sockaddr_nl local;
 	struct wpa_driver_nl80211_data *drv;
 
@@ -1328,6 +1455,18 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		goto err4;
 	}
 
+	ret = nl_get_multicast_id(drv, "nl80211", "scan");
+	if (ret >= 0)
+		ret = nl_socket_add_membership(drv->nl_handle, ret);
+	if (ret < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Could not add multicast "
+			   "membership for scan events: %d (%s)",
+			   ret, strerror(-ret));
+		goto err4;
+	}
+	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle),
+				 wpa_driver_nl80211_event_receive, drv, ctx);
+
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
 		perror("socket(PF_INET,SOCK_DGRAM)");
@@ -1349,9 +1488,9 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		goto err6;
 	}
 
-	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive, drv,
+	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_wext, drv,
 				 ctx);
-	drv->event_sock = s;
+	drv->wext_event_sock = s;
 
 	wpa_driver_nl80211_finish_drv_init(drv);
 
@@ -1449,16 +1588,17 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
-	eloop_unregister_read_sock(drv->event_sock);
+	eloop_unregister_read_sock(drv->wext_event_sock);
 
 	if (wpa_driver_nl80211_get_ifflags(drv, &flags) == 0)
 		(void) wpa_driver_nl80211_set_ifflags(drv, flags & ~IFF_UP);
 
-	close(drv->event_sock);
+	close(drv->wext_event_sock);
 	close(drv->ioctl_sock);
 	os_free(drv->assoc_req_ies);
 	os_free(drv->assoc_resp_ies);
 
+	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle));
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
 	nl_handle_destroy(drv->nl_handle);

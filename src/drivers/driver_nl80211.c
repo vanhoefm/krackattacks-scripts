@@ -1579,17 +1579,6 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		if (wpa_driver_nl80211_set_ifflags(drv, flags | IFF_UP) != 0) {
 			printf("Could not set interface '%s' UP\n",
 			       drv->ifname);
-		} else {
-			/*
-			 * Wait some time to allow driver to initialize before
-			 * starting configuring the driver. This seems to be
-			 * needed at least some drivers that load firmware etc.
-			 * when the interface is set up.
-			 */
-			wpa_printf(MSG_DEBUG, "Interface %s set UP - waiting "
-				   "a second for the driver to complete "
-				   "initialization", drv->ifname);
-			sleep(1);
 		}
 	}
 

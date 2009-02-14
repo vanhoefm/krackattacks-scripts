@@ -309,11 +309,11 @@ struct wpa_supplicant {
 
 	struct wpa_ssid *prev_scan_ssid; /* previously scanned SSID;
 					  * NULL = not yet initialized (start
-					  * with broadcast SSID)
-					  * BROADCAST_SSID_SCAN = broadcast
+					  * with wildcard SSID)
+					  * WILDCARD_SSID_SCAN = wildcard
 					  * SSID was used in the previous scan
 					  */
-#define BROADCAST_SSID_SCAN ((struct wpa_ssid *) 1)
+#define WILDCARD_SSID_SCAN ((struct wpa_ssid *) 1)
 
 	struct wpa_scan_results *scan_res;
 

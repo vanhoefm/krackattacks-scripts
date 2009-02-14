@@ -91,7 +91,7 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 	if (ssid == NULL) {
 		wpa_printf(MSG_DEBUG, "wpa_supplicant_scan: Reached "
 			   "end of scan list - go back to beginning");
-		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
+		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 		return;
 	}
@@ -100,7 +100,7 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 		wpa_s->prev_scan_ssid = ssid;
 	} else {
 		/* Start from the beginning of the SSID list. */
-		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
+		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 	}
 	wpa_supplicant_associate(wpa_s, NULL, ssid);
 }
@@ -174,7 +174,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;
-	if (wpa_s->prev_scan_ssid != BROADCAST_SSID_SCAN) {
+	if (wpa_s->prev_scan_ssid != WILDCARD_SSID_SCAN) {
 		while (ssid) {
 			if (ssid == wpa_s->prev_scan_ssid) {
 				ssid = ssid->next;
@@ -189,8 +189,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	} else if (wpa_s->conf->ap_scan == 2) {
 		/*
-		 * User-initiated scan request in ap_scan == 2; use broadcast
-		 * scan.
+		 * User-initiated scan request in ap_scan == 2; scan with
+		 * wildcard SSID.
 		 */
 		ssid = NULL;
 	} else {
@@ -221,15 +221,15 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	if (ssid) {
 		wpa_s->prev_scan_ssid = ssid;
 		if (max_ssids > 1) {
-			wpa_printf(MSG_DEBUG, "Include broadcast SSID in the "
+			wpa_printf(MSG_DEBUG, "Include wildcard SSID in the "
 				   "scan request");
-			params.num_ssids++; /* Broadcast scan */
+			params.num_ssids++;
 		}
 		wpa_printf(MSG_DEBUG, "Starting AP scan for specific SSID(s)");
 	} else {
-		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
+		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 		params.num_ssids++;
-		wpa_printf(MSG_DEBUG, "Starting AP scan for broadcast SSID");
+		wpa_printf(MSG_DEBUG, "Starting AP scan for wildcard SSID");
 	}
 
 #ifdef CONFIG_WPS

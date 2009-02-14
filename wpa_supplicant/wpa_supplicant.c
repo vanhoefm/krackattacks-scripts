@@ -1688,7 +1688,7 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	wpa_printf(MSG_DEBUG, "RSN: flushing PMKID list in the driver");
 	wpa_drv_flush_pmkid(wpa_s);
 
-	wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
+	wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 	wpa_supplicant_req_scan(wpa_s, interface_count, 100000);
 	interface_count++;
 

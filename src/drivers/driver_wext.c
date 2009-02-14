@@ -1076,8 +1076,8 @@ void wpa_driver_wext_scan_timeout(void *eloop_ctx, void *timeout_ctx)
  * wpa_driver_wext_scan - Request the driver to initiate scan
  * @priv: Pointer to private wext data from wpa_driver_wext_init()
  * @ssid: Specific SSID to scan for (ProbeReq) or %NULL to scan for
- *	all SSIDs (either active scan with broadcast SSID or passive
- *	scan
+ *	all SSIDs (either active scan with wildcard SSID or passive
+ *	scan)
  * @ssid_len: Length of the SSID
  * Returns: 0 on success, -1 on failure
  */

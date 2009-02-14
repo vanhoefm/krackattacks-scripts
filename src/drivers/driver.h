@@ -156,7 +156,7 @@ struct wpa_driver_scan_params {
 		/**
 		 * ssid - specific SSID to scan for (ProbeReq)
 		 * %NULL or zero-length SSID is used to indicate active scan
-		 * with broadcast SSID.
+		 * with wildcard SSID.
 		 */
 		const u8 *ssid;
 		/**
@@ -601,8 +601,8 @@ struct wpa_driver_ops {
 	 * scan - Request the driver to initiate scan (old version)
 	 * @priv: private driver interface data
 	 * @ssid: specific SSID to scan for (ProbeReq) or %NULL to scan for
-	 *	all SSIDs (either active scan with broadcast SSID or passive
-	 *	scan
+	 *	all SSIDs (either active scan with wildcard SSID or passive
+	 *	scan)
 	 * @ssid_len: length of the SSID
 	 *
 	 * Returns: 0 on success, -1 on failure

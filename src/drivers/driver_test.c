@@ -163,10 +163,18 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 #endif /* DRIVER_TEST_UNIX */
 
 
-static int wpa_driver_test_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_test_scan(void *priv,
+				struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_test_data *drv = priv;
+	size_t i;
+
 	wpa_printf(MSG_DEBUG, "%s: priv=%p", __func__, priv);
+	for (i = 0; i < params->num_ssids; i++)
+		wpa_hexdump(MSG_DEBUG, "Scan SSID",
+			    params->ssids[i].ssid, params->ssids[i].ssid_len);
+	wpa_hexdump(MSG_DEBUG, "Scan extra IE(s)",
+		    params->extra_ies, params->extra_ies_len);
 
 	drv->num_scanres = 0;
 
@@ -1016,7 +1024,7 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 		WPA_DRIVER_AUTH_LEAP;
 	if (drv->use_mlme)
 		capa->flags |= WPA_DRIVER_FLAGS_USER_SPACE_MLME;
-	capa->max_scan_ssids = 10;
+	capa->max_scan_ssids = 2;
 
 	return 0;
 }
@@ -1275,7 +1283,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	wpa_driver_test_set_param,
 	NULL /* set_countermeasures */,
 	NULL /* set_drop_unencrypted */,
-	wpa_driver_test_scan,
+	NULL /* scan */,
 	NULL /* get_scan_results */,
 	wpa_driver_test_deauthenticate,
 	wpa_driver_test_disassociate,
@@ -1318,5 +1326,5 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	wpa_driver_test_global_deinit,
 	wpa_driver_test_init2,
 	wpa_driver_test_get_interfaces,
-	NULL /* scan2 */
+	wpa_driver_test_scan
 };

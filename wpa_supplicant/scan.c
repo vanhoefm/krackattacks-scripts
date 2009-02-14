@@ -65,38 +65,69 @@ static int wpas_wps_in_use(struct wpa_config *conf,
 }
 #endif /* CONFIG_WPS */
 
+
+static int wpa_supplicant_enabled_networks(struct wpa_config *conf)
+{
+	struct wpa_ssid *ssid = conf->ssid;
+	while (ssid) {
+		if (!ssid->disabled)
+			return 1;
+		ssid = ssid->next;
+	}
+	return 0;
+}
+
+
+static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
+				     struct wpa_ssid *ssid)
+{
+	while (ssid) {
+		if (!ssid->disabled)
+			break;
+		ssid = ssid->next;
+	}
+
+	/* ap_scan=2 mode - try to associate with each SSID. */
+	if (ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "wpa_supplicant_scan: Reached "
+			   "end of scan list - go back to beginning");
+		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		return;
+	}
+	if (ssid->next) {
+		/* Continue from the next SSID on the next attempt. */
+		wpa_s->prev_scan_ssid = ssid;
+	} else {
+		/* Start from the beginning of the SSID list. */
+		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
+	}
+	wpa_supplicant_associate(wpa_s, NULL, ssid);
+}
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
-	int enabled, scan_req = 0, ret;
+	int scan_req = 0, ret;
 	struct wpabuf *wps_ie = NULL;
-	const u8 *extra_ie = NULL;
-	size_t extra_ie_len = 0;
 	int wps = 0;
 #ifdef CONFIG_WPS
 	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
 #endif /* CONFIG_WPS */
+	struct wpa_driver_scan_params params;
+	size_t max_ssids;
 
 	if (wpa_s->disconnected && !wpa_s->scan_req)
 		return;
 
-	enabled = 0;
-	ssid = wpa_s->conf->ssid;
-	while (ssid) {
-		if (!ssid->disabled) {
-			enabled++;
-			break;
-		}
-		ssid = ssid->next;
-	}
-	if (!enabled && !wpa_s->scan_req) {
+	if (!wpa_supplicant_enabled_networks(wpa_s->conf) &&
+	    !wpa_s->scan_req) {
 		wpa_printf(MSG_DEBUG, "No enabled networks - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
 		return;
 	}
-	scan_req = wpa_s->scan_req;
-	wpa_s->scan_req = 0;
 
 	if (wpa_s->conf->ap_scan != 0 &&
 	    wpa_s->driver && IS_WIRED(wpa_s->driver)) {
@@ -110,10 +141,38 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
+	if (wpa_s->use_client_mlme || wpa_s->conf->ap_scan == 2)
+		max_ssids = 1;
+	else {
+		max_ssids = wpa_s->max_scan_ssids;
+		if (max_ssids > WPAS_MAX_SCAN_SSIDS)
+			max_ssids = WPAS_MAX_SCAN_SSIDS;
+	}
+
+#ifdef CONFIG_WPS
+	wps = wpas_wps_in_use(wpa_s->conf, &req_type);
+#endif /* CONFIG_WPS */
+
+	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
+	    !wpa_s->use_client_mlme && wps != 2) {
+		wpa_s->scan_res_tried++;
+		wpa_printf(MSG_DEBUG, "Trying to get current scan results "
+			   "first without requesting a new scan to speed up "
+			   "initial association");
+		wpa_supplicant_event(wpa_s, EVENT_SCAN_RESULTS, NULL);
+		return;
+	}
+
+	scan_req = wpa_s->scan_req;
+	wpa_s->scan_req = 0;
+
+	os_memset(&params, 0, sizeof(params));
+
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
 
+	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;
 	if (wpa_s->prev_scan_ssid != BROADCAST_SSID_SCAN) {
 		while (ssid) {
@@ -124,58 +183,53 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 			ssid = ssid->next;
 		}
 	}
-	while (ssid) {
-		if (!ssid->disabled &&
-		    (ssid->scan_ssid || wpa_s->conf->ap_scan == 2))
-			break;
-		ssid = ssid->next;
-	}
 
 	if (scan_req != 2 && wpa_s->conf->ap_scan == 2) {
-		/*
-		 * ap_scan=2 mode - try to associate with each SSID instead of
-		 * scanning for each scan_ssid=1 network.
-		 */
-		if (ssid == NULL) {
-			wpa_printf(MSG_DEBUG, "wpa_supplicant_scan: Reached "
-				   "end of scan list - go back to beginning");
-			wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
-			wpa_supplicant_req_scan(wpa_s, 0, 0);
-			return;
-		}
-		if (ssid->next) {
-			/* Continue from the next SSID on the next attempt. */
-			wpa_s->prev_scan_ssid = ssid;
-		} else {
-			/* Start from the beginning of the SSID list. */
-			wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
-		}
-		wpa_supplicant_associate(wpa_s, NULL, ssid);
+		wpa_supplicant_assoc_try(wpa_s, ssid);
 		return;
+	} else if (wpa_s->conf->ap_scan == 2) {
+		/*
+		 * User-initiated scan request in ap_scan == 2; use broadcast
+		 * scan.
+		 */
+		ssid = NULL;
+	} else {
+		struct wpa_ssid *start = ssid;
+		if (ssid == NULL && max_ssids > 1)
+			ssid = wpa_s->conf->ssid;
+		while (ssid) {
+			if (!ssid->disabled && ssid->scan_ssid) {
+				wpa_hexdump_ascii(MSG_DEBUG, "Scan SSID",
+						  ssid->ssid, ssid->ssid_len);
+				params.ssids[params.num_ssids].ssid =
+					ssid->ssid;
+				params.ssids[params.num_ssids].ssid_len =
+					ssid->ssid_len;
+				params.num_ssids++;
+				if (params.num_ssids + 1 >= max_ssids)
+					break;
+			}
+			ssid = ssid->next;
+			if (ssid == start)
+				break;
+			if (ssid == NULL && max_ssids > 1 &&
+			    start != wpa_s->conf->ssid)
+				ssid = wpa_s->conf->ssid;
+		}
 	}
 
-	wpa_printf(MSG_DEBUG, "Starting AP scan (%s SSID)",
-		   ssid ? "specific": "broadcast");
 	if (ssid) {
-		wpa_hexdump_ascii(MSG_DEBUG, "Scan SSID",
-				  ssid->ssid, ssid->ssid_len);
 		wpa_s->prev_scan_ssid = ssid;
-	} else
+		if (max_ssids > 1) {
+			wpa_printf(MSG_DEBUG, "Include broadcast SSID in the "
+				   "scan request");
+			params.num_ssids++; /* Broadcast scan */
+		}
+		wpa_printf(MSG_DEBUG, "Starting AP scan for specific SSID(s)");
+	} else {
 		wpa_s->prev_scan_ssid = BROADCAST_SSID_SCAN;
-
-#ifdef CONFIG_WPS
-	wps = wpas_wps_in_use(wpa_s->conf, &req_type);
-#endif /* CONFIG_WPS */
-
-	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
-	    !wpa_s->use_client_mlme && wps != 2) {
-		wpa_s->scan_res_tried++;
-		wpa_s->scan_req = scan_req;
-		wpa_printf(MSG_DEBUG, "Trying to get current scan results "
-			   "first without requesting a new scan to speed up "
-			   "initial association");
-		wpa_supplicant_event(wpa_s, EVENT_SCAN_RESULTS, NULL);
-		return;
+		params.num_ssids++;
+		wpa_printf(MSG_DEBUG, "Starting AP scan for broadcast SSID");
 	}
 
 #ifdef CONFIG_WPS
@@ -183,27 +237,20 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
 						wpa_s->wps->uuid, req_type);
 		if (wps_ie) {
-			extra_ie = wpabuf_head(wps_ie);
-			extra_ie_len = wpabuf_len(wps_ie);
+			params.extra_ies = wpabuf_head(wps_ie);
+			params.extra_ies_len = wpabuf_len(wps_ie);
 		}
 	}
 #endif /* CONFIG_WPS */
 
 	if (wpa_s->use_client_mlme) {
-		ieee80211_sta_set_probe_req_ie(wpa_s, extra_ie, extra_ie_len);
-		ret = ieee80211_sta_req_scan(wpa_s, ssid ? ssid->ssid : NULL,
-					     ssid ? ssid->ssid_len : 0);
+		ieee80211_sta_set_probe_req_ie(wpa_s, params.extra_ies,
+					       params.extra_ies_len);
+		ret = ieee80211_sta_req_scan(wpa_s, params.ssids[0].ssid,
+					     params.ssids[0].ssid_len);
 	} else {
-		struct wpa_driver_scan_params params;
-		os_memset(&params, 0, sizeof(params));
-		wpa_drv_set_probe_req_ie(wpa_s, extra_ie, extra_ie_len);
-		if (ssid) {
-			params.ssids[0].ssid = ssid->ssid;
-			params.ssids[0].ssid_len = ssid->ssid_len;
-		}
-		params.num_ssids = 1;
-		params.extra_ies = extra_ie;
-		params.extra_ies_len = extra_ie_len;
+		wpa_drv_set_probe_req_ie(wpa_s, params.extra_ies,
+					 params.extra_ies_len);
 		ret = wpa_drv_scan(wpa_s, &params);
 	}
 

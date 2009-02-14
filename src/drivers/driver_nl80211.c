@@ -1683,17 +1683,16 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 /**
  * wpa_driver_nl80211_scan - Request the driver to initiate scan
  * @priv: Pointer to private wext data from wpa_driver_nl80211_init()
- * @ssid: Specific SSID to scan for (ProbeReq) or %NULL to scan for
- *	all SSIDs (either active scan with broadcast SSID or passive
- *	scan
- * @ssid_len: Length of the SSID
+ * @params: Scan parameters
  * Returns: 0 on success, -1 on failure
  */
-static int wpa_driver_nl80211_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_nl80211_scan(void *priv,
+				   struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	int ret = 0, timeout;
 	struct nl_msg *msg, *ssids;
+	size_t i;
 
 	msg = nlmsg_alloc();
 	ssids = nlmsg_alloc();
@@ -1708,14 +1707,12 @@ static int wpa_driver_nl80211_scan(void *priv, const u8 *ssid, size_t ssid_len)
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	if (ssid && ssid_len) {
-		/* Request an active scan for a specific SSID */
-		NLA_PUT(ssids, 1, ssid_len, ssid);
-	} else {
-		/* Request an active scan for wildcard SSID */
-		NLA_PUT(ssids, 1, 0, "");
+	for (i = 0; i < params->num_ssids; i++) {
+		NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
+			params->ssids[i].ssid);
 	}
-	nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
+	if (params->num_ssids)
+		nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
@@ -2791,7 +2788,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_key = wpa_driver_nl80211_set_key,
 	.set_countermeasures = wpa_driver_nl80211_set_countermeasures,
 	.set_drop_unencrypted = wpa_driver_nl80211_set_drop_unencrypted,
-	.scan = wpa_driver_nl80211_scan,
+	.scan2 = wpa_driver_nl80211_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
 	.disassociate = wpa_driver_nl80211_disassociate,

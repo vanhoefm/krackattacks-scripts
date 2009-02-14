@@ -8,6 +8,10 @@ ChangeLog for wpa_supplicant
 	* allow multiple driver wrappers to be specified on command line
 	  (e.g., -Dnl80211,wext); the first one that is able to initialize the
 	  interface will be used
+	* added support for multiple SSIDs per scan request to optimize
+	  scan_ssid=1 operations in ap_scan=1 mode (i.e., search for hidden
+	  SSIDs); this requires driver support and can currently be used only
+	  with nl80211
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

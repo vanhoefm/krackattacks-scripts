@@ -495,12 +495,15 @@ static inline int wpa_drv_associate(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
-static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s, const u8 *ssid,
-			       size_t ssid_len)
+static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s,
+			       struct wpa_driver_scan_params *params)
 {
-	if (wpa_s->driver->scan) {
-		return wpa_s->driver->scan(wpa_s->drv_priv, ssid, ssid_len);
-	}
+	if (wpa_s->driver->scan2)
+		return wpa_s->driver->scan2(wpa_s->drv_priv, params);
+	if (wpa_s->driver->scan)
+		return wpa_s->driver->scan(wpa_s->drv_priv,
+					   params->ssids[0].ssid,
+					   params->ssids[0].ssid_len);
 	return -1;
 }
 

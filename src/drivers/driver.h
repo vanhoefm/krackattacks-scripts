@@ -142,6 +142,46 @@ struct wpa_interface_info {
 	const char *drv_name;
 };
 
+#define WPAS_MAX_SCAN_SSIDS 4
+
+/**
+ * struct wpa_driver_scan_params - Scan parameters
+ * Data for struct wpa_driver_ops::scan2().
+ */
+struct wpa_driver_scan_params {
+	/**
+	 * ssids - SSIDs to scan for
+	 */
+	struct wpa_driver_scan_ssid {
+		/**
+		 * ssid - specific SSID to scan for (ProbeReq)
+		 * %NULL or zero-length SSID is used to indicate active scan
+		 * with broadcast SSID.
+		 */
+		const u8 *ssid;
+		/**
+		 * ssid_len: Length of the SSID in octets
+		 */
+		size_t ssid_len;
+	} ssids[WPAS_MAX_SCAN_SSIDS];
+
+	/**
+	 * num_ssids - Number of entries in ssids array
+	 * Zero indicates a request for a passive scan.
+	 */
+	size_t num_ssids;
+
+	/**
+	 * extra_ies - Extra IE(s) to add into Probe Request or %NULL
+	 */
+	const u8 *extra_ies;
+
+	/**
+	 * extra_ies_len - Length of extra_ies in octets
+	 */
+	size_t extra_ies_len;
+};
+
 /**
  * struct wpa_driver_associate_params - Association parameters
  * Data for struct wpa_driver_ops::associate().
@@ -558,7 +598,7 @@ struct wpa_driver_ops {
 	int (*set_drop_unencrypted)(void *priv, int enabled);
 
 	/**
-	 * scan - Request the driver to initiate scan
+	 * scan - Request the driver to initiate scan (old version)
 	 * @priv: private driver interface data
 	 * @ssid: specific SSID to scan for (ProbeReq) or %NULL to scan for
 	 *	all SSIDs (either active scan with broadcast SSID or passive
@@ -570,6 +610,9 @@ struct wpa_driver_ops {
 	 * Once the scan results are ready, the driver should report scan
 	 * results event for wpa_supplicant which will eventually request the
 	 * results with wpa_driver_get_scan_results().
+	 *
+	 * This function is depracated. New driver wrapper implementations
+	 * should implement support for scan2().
 	 */
 	int (*scan)(void *priv, const u8 *ssid, size_t ssid_len);
 
@@ -1019,6 +1062,19 @@ struct wpa_driver_ops {
 	 * failure
 	 */
 	struct wpa_interface_info * (*get_interfaces)(void *global_priv);
+
+	/**
+	 * scan2 - Request the driver to initiate scan
+	 * @priv: private driver interface data
+	 * @params: Scan parameters
+	 *
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * Once the scan results are ready, the driver should report scan
+	 * results event for wpa_supplicant which will eventually request the
+	 * results with wpa_driver_get_scan_results2().
+	 */
+	int (*scan2)(void *priv, struct wpa_driver_scan_params *params);
 };
 
 /* Function to check whether a driver is for wired connections */

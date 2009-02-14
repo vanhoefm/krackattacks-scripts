@@ -3122,5 +3122,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* global_init */,
 	NULL /* global_deinit */,
 	NULL /* init2 */,
-	wpa_driver_ndis_get_interfaces
+	wpa_driver_ndis_get_interfaces,
+	NULL /* scan2 */
 };

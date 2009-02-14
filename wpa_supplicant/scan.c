@@ -194,9 +194,17 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		ret = ieee80211_sta_req_scan(wpa_s, ssid ? ssid->ssid : NULL,
 					     ssid ? ssid->ssid_len : 0);
 	} else {
+		struct wpa_driver_scan_params params;
+		os_memset(&params, 0, sizeof(params));
 		wpa_drv_set_probe_req_ie(wpa_s, extra_ie, extra_ie_len);
-		ret = wpa_drv_scan(wpa_s, ssid ? ssid->ssid : NULL,
-				   ssid ? ssid->ssid_len : 0);
+		if (ssid) {
+			params.ssids[0].ssid = ssid->ssid;
+			params.ssids[0].ssid_len = ssid->ssid_len;
+		}
+		params.num_ssids = 1;
+		params.extra_ies = extra_ie;
+		params.extra_ies_len = extra_ie_len;
+		ret = wpa_drv_scan(wpa_s, &params);
 	}
 
 	wpabuf_free(wps_ie);

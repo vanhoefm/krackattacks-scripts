@@ -52,7 +52,7 @@ static void usage(void)
 	       "  -C = ctrl_interface parameter (only used if -c is not)\n"
 	       "  -i = interface name\n"
 	       "  -d = increase debugging verbosity (-dd even more)\n"
-	       "  -D = driver name\n"
+	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n"
 #ifdef CONFIG_DEBUG_FILE
 	       "  -f = log output to debug file instead of stdout\n"
 #endif /* CONFIG_DEBUG_FILE */

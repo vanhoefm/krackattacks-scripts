@@ -34,7 +34,7 @@
 
 static int wpa_driver_wext_flush_pmkid(void *priv);
 static int wpa_driver_wext_get_range(void *priv);
-static void wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv);
+static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv);
 
 
 static int wpa_driver_wext_send_oper_ifla(struct wpa_driver_wext_data *drv,
@@ -913,50 +913,60 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
 		perror("socket(PF_INET,SOCK_DGRAM)");
-		os_free(drv);
-		return NULL;
+		goto err1;
 	}
 
 	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (s < 0) {
 		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
-		close(drv->ioctl_sock);
-		os_free(drv);
-		return NULL;
+		goto err2;
 	}
+	drv->event_sock = s;
 
 	os_memset(&local, 0, sizeof(local));
 	local.nl_family = AF_NETLINK;
 	local.nl_groups = RTMGRP_LINK;
 	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
 		perror("bind(netlink)");
-		close(s);
-		close(drv->ioctl_sock);
-		os_free(drv);
-		return NULL;
+		goto err3;
 	}
 
 	eloop_register_read_sock(s, wpa_driver_wext_event_receive, drv, ctx);
-	drv->event_sock = s;
 
 	drv->mlme_sock = -1;
 
-	wpa_driver_wext_finish_drv_init(drv);
+	if (wpa_driver_wext_finish_drv_init(drv) < 0)
+		goto err4;
 
 	return drv;
+
+err4:
+	eloop_unregister_read_sock(drv->event_sock);
+err3:
+	close(drv->event_sock);
+err2:
+	close(drv->ioctl_sock);
+err1:
+	os_free(drv);
+	return NULL;
 }
 
 
-static void wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
+static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 {
 	int flags;
 
-	if (wpa_driver_wext_get_ifflags(drv, &flags) != 0)
-		printf("Could not get interface '%s' flags\n", drv->ifname);
-	else if (!(flags & IFF_UP)) {
+	if (wpa_driver_wext_get_ifflags(drv, &flags) != 0) {
+		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
+			   drv->ifname);
+		return -1;
+	}
+
+	if (!(flags & IFF_UP)) {
 		if (wpa_driver_wext_set_ifflags(drv, flags | IFF_UP) != 0) {
-			printf("Could not set interface '%s' UP\n",
-			       drv->ifname);
+			wpa_printf(MSG_ERROR, "Could not set interface '%s' "
+				   "UP", drv->ifname);
+			return -1;
 		} else {
 			/*
 			 * Wait some time to allow driver to initialize before
@@ -977,7 +987,9 @@ static void wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 	wpa_driver_wext_flush_pmkid(drv);
 
 	if (wpa_driver_wext_set_mode(drv, 0) < 0) {
-		printf("Could not configure driver to use managed mode\n");
+		wpa_printf(MSG_DEBUG, "Could not configure driver to use "
+			   "managed mode");
+		/* Try to use it anyway */
 	}
 
 	wpa_driver_wext_get_range(drv);
@@ -1000,6 +1012,8 @@ static void wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 	}
 
 	wpa_driver_wext_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
+
+	return 0;
 }
 
 

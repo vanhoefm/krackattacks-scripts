@@ -1491,6 +1491,8 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 				     const char *name)
 {
 	int i;
+	size_t len;
+	const char *pos;
 
 	if (wpa_s == NULL)
 		return -1;
@@ -1507,14 +1509,21 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
+	pos = os_strchr(name, ',');
+	if (pos)
+		len = pos - name;
+	else
+		len = os_strlen(name);
 	for (i = 0; wpa_supplicant_drivers[i]; i++) {
-		if (os_strcmp(name, wpa_supplicant_drivers[i]->name) == 0) {
+		if (os_strlen(wpa_supplicant_drivers[i]->name) == len &&
+		    os_strncmp(name, wpa_supplicant_drivers[i]->name, len) ==
+		    0) {
 			wpa_s->driver = wpa_supplicant_drivers[i];
 			return 0;
 		}
 	}
 
-	wpa_printf(MSG_ERROR, "Unsupported driver '%s'.\n", name);
+	wpa_printf(MSG_ERROR, "Unsupported driver '%s'.", name);
 	return -1;
 }
 
@@ -1710,16 +1719,15 @@ static struct wpa_supplicant * wpa_supplicant_alloc(void)
 static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 				     struct wpa_interface *iface)
 {
+	const char *ifname, *driver;
+	struct wpa_driver_capa capa;
+
 	wpa_printf(MSG_DEBUG, "Initializing interface '%s' conf '%s' driver "
 		   "'%s' ctrl_interface '%s' bridge '%s'", iface->ifname,
 		   iface->confname ? iface->confname : "N/A",
 		   iface->driver ? iface->driver : "default",
 		   iface->ctrl_interface ? iface->ctrl_interface : "N/A",
 		   iface->bridge_ifname ? iface->bridge_ifname : "N/A");
-
-	if (wpa_supplicant_set_driver(wpa_s, iface->driver) < 0) {
-		return -1;
-	}
 
 	if (iface->confname) {
 #ifdef CONFIG_BACKEND_FILE
@@ -1788,18 +1796,6 @@ static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 			   sizeof(wpa_s->bridge_ifname));
 	}
 
-	return 0;
-}
-
-
-static int wpa_supplicant_init_iface2(struct wpa_supplicant *wpa_s)
-{
-	const char *ifname;
-	struct wpa_driver_capa capa;
-
-	wpa_printf(MSG_DEBUG, "Initializing interface (2) '%s'",
-		   wpa_s->ifname);
-
 	/* RSNA Supplicant Key Management - INITIALIZE */
 	eapol_sm_notify_portEnabled(wpa_s->eapol, FALSE);
 	eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
@@ -1808,8 +1804,21 @@ static int wpa_supplicant_init_iface2(struct wpa_supplicant *wpa_s)
 	 * L2 receive handler so that association events are processed before
 	 * EAPOL-Key packets if both become available for the same select()
 	 * call. */
+	driver = iface->driver;
+next_driver:
+	if (wpa_supplicant_set_driver(wpa_s, driver) < 0)
+		return -1;
+
 	wpa_s->drv_priv = wpa_drv_init(wpa_s, wpa_s->ifname);
 	if (wpa_s->drv_priv == NULL) {
+		const char *pos;
+		pos = os_strchr(driver, ',');
+		if (pos) {
+			wpa_printf(MSG_DEBUG, "Failed to initialize driver "
+				   "interface - try next driver wrapper");
+			driver = pos + 1;
+			goto next_driver;
+		}
 		wpa_printf(MSG_ERROR, "Failed to initialize driver interface");
 		return -1;
 	}
@@ -1965,8 +1974,7 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (wpa_s == NULL)
 		return NULL;
 
-	if (wpa_supplicant_init_iface(wpa_s, iface) ||
-	    wpa_supplicant_init_iface2(wpa_s)) {
+	if (wpa_supplicant_init_iface(wpa_s, iface)) {
 		wpa_printf(MSG_DEBUG, "Failed to add interface %s",
 			   iface->ifname);
 		wpa_supplicant_deinit_iface(wpa_s);

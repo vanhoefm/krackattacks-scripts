@@ -500,7 +500,7 @@ options:
   -C = ctrl_interface parameter (only used if -c is not)
   -i = interface name
   -d = increase debugging verbosity (-dd even more)
-  -D = driver name
+  -D = driver name (can be multiple drivers: nl80211,wext)
   -f = Log output to default log location (normally /tmp)
   -g = global ctrl_interface
   -K = include keys (passwords, etc.) in debug output
@@ -543,6 +543,13 @@ reports, is to start wpa_supplicant on foreground with debugging
 enabled:
 
 wpa_supplicant -c/etc/wpa_supplicant.conf -iwlan0 -d
+
+If the specific driver wrapper is not known beforehand, it is possible
+to specify multiple comma separated driver wrappers on the command
+line. wpa_supplicant will use the first driver wrapper that is able to
+initialize the interface.
+
+wpa_supplicant -Dnl80211,wext -c/etc/wpa_supplicant.conf -iwlan0
 
 
 wpa_supplicant can control multiple interfaces (radios) either by

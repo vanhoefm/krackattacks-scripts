@@ -89,7 +89,7 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 static int wpa_driver_nl80211_set_mode(void *priv, int mode);
 static int wpa_driver_nl80211_flush_pmkid(void *priv);
 static int wpa_driver_nl80211_get_range(void *priv);
-static void
+static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 
 
@@ -1548,10 +1548,14 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 				 ctx);
 	drv->wext_event_sock = s;
 
-	wpa_driver_nl80211_finish_drv_init(drv);
+	if (wpa_driver_nl80211_finish_drv_init(drv))
+		goto err7;
 
 	return drv;
 
+err7:
+	eloop_unregister_read_sock(drv->wext_event_sock);
+	close(drv->wext_event_sock);
 err6:
 	close(drv->ioctl_sock);
 err5:
@@ -1568,17 +1572,21 @@ err1:
 }
 
 
-static void
+static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
 	int flags;
 
-	if (wpa_driver_nl80211_get_ifflags(drv, &flags) != 0)
-		printf("Could not get interface '%s' flags\n", drv->ifname);
-	else if (!(flags & IFF_UP)) {
+	if (wpa_driver_nl80211_get_ifflags(drv, &flags) != 0) {
+		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
+			   drv->ifname);
+		return -1;
+	}
+	if (!(flags & IFF_UP)) {
 		if (wpa_driver_nl80211_set_ifflags(drv, flags | IFF_UP) != 0) {
-			printf("Could not set interface '%s' UP\n",
-			       drv->ifname);
+			wpa_printf(MSG_ERROR, "Could not set interface '%s' "
+				   "UP", drv->ifname);
+			return -1;
 		}
 	}
 
@@ -1598,6 +1606,8 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	wpa_driver_nl80211_capa(drv);
 
 	wpa_driver_nl80211_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
+
+	return 0;
 }
 
 

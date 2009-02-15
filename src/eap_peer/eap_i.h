@@ -333,6 +333,8 @@ struct eap_sm {
 	int force_disabled;
 
 	struct wps_context *wps;
+
+	int prev_failure;
 };
 
 const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len);

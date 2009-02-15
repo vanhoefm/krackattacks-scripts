@@ -134,7 +134,8 @@ SM_STATE(EAP, INITIALIZE)
 {
 	SM_ENTRY(EAP, INITIALIZE);
 	if (sm->fast_reauth && sm->m && sm->m->has_reauth_data &&
-	    sm->m->has_reauth_data(sm, sm->eap_method_priv)) {
+	    sm->m->has_reauth_data(sm, sm->eap_method_priv) &&
+	    !sm->prev_failure) {
 		wpa_printf(MSG_DEBUG, "EAP: maintaining EAP method data for "
 			   "fast reauthentication");
 		sm->m->deinit_for_reauth(sm, sm->eap_method_priv);
@@ -165,6 +166,7 @@ SM_STATE(EAP, INITIALIZE)
 	eapol_set_bool(sm, EAPOL_eapResp, FALSE);
 	eapol_set_bool(sm, EAPOL_eapNoResp, FALSE);
 	sm->num_rounds = 0;
+	sm->prev_failure = 0;
 }
 
 
@@ -505,6 +507,8 @@ SM_STATE(EAP, FAILURE)
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_FAILURE
 		"EAP authentication failed");
+
+	sm->prev_failure = 1;
 }
 
 

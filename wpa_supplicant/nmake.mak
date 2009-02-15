@@ -81,12 +81,13 @@ OBJS = \
 	$(OBJDIR)\eap_common.obj \
 	$(OBJDIR)\chap.obj \
 	$(OBJDIR)\eap_methods.obj \
-	$(OBJDIR)\eap_tlv.obj \
 	$(OBJDIR)\eap_md5.obj \
 	$(OBJDIR)\eap_tls.obj \
 	$(OBJDIR)\eap_tls_common.obj \
 	$(OBJDIR)\eap_mschapv2.obj \
+	$(OBJDIR)\mschapv2.obj \
 	$(OBJDIR)\eap_peap.obj \
+	$(OBJDIR)\eap_peap_common.obj \
 	$(OBJDIR)\eap_ttls.obj \
 	$(OBJDIR)\eap_gtc.obj \
 	$(OBJDIR)\eap_otp.obj \

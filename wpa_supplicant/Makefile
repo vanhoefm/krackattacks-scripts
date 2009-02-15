@@ -6,6 +6,9 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
+export LIBDIR ?= /usr/local/lib/
+export BINDIR ?= /usr/local/sbin/
+
 CFLAGS += -I../src
 CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
@@ -35,8 +38,9 @@ mkconfig:
 	echo CONFIG_WIRELESS_EXTENSION=y >> .config
 
 install: all
-	mkdir -p $(DESTDIR)/usr/local/sbin/
-	for i in $(ALL); do cp $$i $(DESTDIR)/usr/local/sbin/$$i; done
+	mkdir -p $(DESTDIR)$(BINDIR)
+	for i in $(ALL); do cp $$i $(DESTDIR)$(BINDIR)/$$i; done
+	$(MAKE) -C ../src install
 
 OBJS = config.o
 OBJS += ../src/utils/common.o

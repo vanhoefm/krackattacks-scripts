@@ -68,6 +68,7 @@ digraph versions {
 	v059 [label="0.5.9  hw\n2007-12-02"]
 	v0510 [label="0.5.10  hw\n2008-02-19"]
 	v0511 [label="0.5.11  hw\n2008-11-28"]
+	v068 [label="0.6.8  hw\n2009-02-15"]
 
 # development releases
 
@@ -76,13 +77,13 @@ digraph versions {
 	v024 -> v030 -> v031 -> v032 -> v033 -> v034 -> v035 -> v036 -> v037
 	v037 -> v040 -> v041 -> v042 -> v043 -> v044 -> v045 -> v046 -> v047
 	v047 -> v050 -> v051 -> v052 -> v053 -> v054 -> v055 -> v056 -> v057
-	v057 -> v060 -> v061 -> v062 -> v063 -> v064 -> v065 -> v066 -> v067
+	v057 -> v060 -> v061 -> v062 -> v063 -> v064 -> v065 -> v066 -> v067 -> v068
 
 	{rank=same; v001 v024}
 	{rank=same; v030 v037}
 	{rank=same; v040 v047}
 	{rank=same; v050 v057}
-#	{rank=same; v060 v066}
+	{rank=same; v060 v068}
 
 # stable releases
 

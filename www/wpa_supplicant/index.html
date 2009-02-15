@@ -41,6 +41,8 @@ build for x86 target).</p>
 <li>key management for CCMP, TKIP, WEP104, WEP40</li>
 <li>WPA and full IEEE 802.11i/RSN/WPA2</li>
 <li>RSN: PMKSA caching, pre-authentication</li>
+<li>IEEE 802.11r</li>
+<li>IEEE 802.11w</li>
 <li>Wi-Fi Protected Setup (WPS)</li>
 </ul>
 
@@ -167,35 +169,28 @@ has some more information about the Windows port of wpa_supplicant.</p>
 <li><a href="../releases.html">Release graph</a></li>
 <li>Latest stable release:
 <ul>
+<li><a href="../releases/wpa_supplicant-0.6.8.tar.gz">wpa_supplicant-0.6.8.tar.gz</a> (source code for all versions)</li>
+<li><a href="../releases/wpa_supplicant-0.6.8.exe">wpa_supplicant-0.6.8.exe</a> (binary installer for Windows)</li>
+<li><a href="../releases/wpa_supplicant-windows-bin-0.6.8.zip">wpa_supplicant-windows-bin-0.6.8.zip</a> (binaries for Windows)</li>
+<li><a href="qt4/wpa_gui-qt433-windows-dll.zip">wpa_gui-qt433-windows-dll.zip</a> (Qt4 libraries from wpa_gui/Windows)</li>
+</ul>
+<li>Older stable release:
+<ul>
 <li><a href="../releases/wpa_supplicant-0.5.11.tar.gz">wpa_supplicant-0.5.11.tar.gz</a></li>
 <li><a href="../releases/wpa_supplicant-windows-bin-0.5.11.zip">wpa_supplicant-windows-bin-0.5.11.zip</a> (binaries for Windows)</li>
 </ul>
-<li>Older stable release:
-<ul>
-<li><a href="../releases/wpa_supplicant-0.4.11.tar.gz">wpa_supplicant-0.4.11.tar.gz</a> (source code for all versions)</li>
-<li><a href="../releases/wpa_supplicant-windows-bin-0.4.11.zip">wpa_supplicant-windows-bin-0.4.11.zip</a> (binaries for Windows)</li>
-</ul>
-<li>Older stable release:
-<ul>
-<li><a href="../releases/wpa_supplicant-0.3.11.tar.gz">wpa_supplicant-0.3.11.tar.gz</a> (source code for all versions)</li>
-<li><a href="../releases/wpa_supplicant-windows-bin-0.3.11.zip">wpa_supplicant-windows-bin-0.3.11.zip</a> (binaries for Windows)</li>
-</ul>
-<li>Obsolete stable release<BR>
-(note: 0.2.x branch is not supported anymore - please upgrade to 0.4.x or 0.5.x):
-<ul>
-<li><a href="../releases/wpa_supplicant-0.2.8.tar.gz">wpa_supplicant-0.2.8.tar.gz</a></li>
-</ul>
+<!--
 <li>Latest development release:
 <ul>
-<li><a href="../releases/wpa_supplicant-0.6.7.tar.gz">wpa_supplicant-0.6.7.tar.gz</a> (source code for all versions)</li>
-<li><a href="../releases/wpa_supplicant-0.6.7.exe">wpa_supplicant-0.6.7.exe</a> (binary installer for Windows)</li>
-<li><a href="../releases/wpa_supplicant-windows-bin-0.6.7.zip">wpa_supplicant-windows-bin-0.6.7.zip</a> (binaries for Windows)</li>
-<li><a href="qt4/wpa_gui-qt433-windows-dll.zip">wpa_gui-qt433-windows-dll.zip</a> (Qt4 libraries from wpa_gui/Windows)</li>
+<li><a href="../releases/wpa_supplicant-0.7.0.tar.gz">wpa_supplicant-0.7.0.tar.gz</a> (source code for all versions)</li>
+<li><a href="../releases/wpa_supplicant-0.7.0.exe">wpa_supplicant-0.7.0.exe</a> (binary installer for Windows)</li>
+<li><a href="../releases/wpa_supplicant-windows-bin-0.7.0.zip">wpa_supplicant-windows-bin-0.7.0.zip</a> (binaries for Windows)</li>
 </ul>
+-->
 <li>ChangeLog:
 <ul>
 <li><a href="/gitweb/gitweb.cgi?p=hostap.git;a=blob_plain;f=wpa_supplicant/ChangeLog">development branch</a></li>
-<li><a href="/cgi-bin/viewcvs.cgi/*checkout*/hostap/wpa_supplicant/ChangeLog?rev=stable&amp;content-type=text/plain">stable branch</a>
+<li><a href="/gitweb/gitweb.cgi?p=hostap-06.git;a=blob_plain;f=wpa_supplicant/ChangeLog">stable branch</a></li>
 </ul>
 <li><a href="../releases/">Old releases</a></li>
 <li><a href="http://lists.shmoo.com/mailman/listinfo/hostap">Mailing list</a></li>
@@ -205,8 +200,7 @@ has some more information about the Windows port of wpa_supplicant.</p>
 <li><a href="../releases/snapshots/">Snapshot releases from all active branches</a>
 <li><a href="../cvs.html">GIT and read-only anonymous CVS access (pserver)</a></li>
 <li><a href="../bugz/">Bug and feature request tracking</a></li>
-<li><a href="devel/">Developers' documentation for wpa_supplicant 0.5.x</a></li>
-<li><a href="devel-0.4/">Developers' documentation for wpa_supplicant 0.4.x</a></li>
+<li><a href="devel/">Developers' documentation for wpa_supplicant 0.6.x</a></li>
 <li><a href="wpa_gui.html">wpa_gui screenshots</a></li>
 </ul>
 
@@ -353,7 +347,7 @@ bug/feature request</a>.
     <address><a href="mailto:j@w1.fi">Jouni Malinen</a></address>
 <!-- Created: Sat May 22 21:41:58 PDT 2004 -->
 <!-- hhmts start -->
-Last modified: Tue Jan  6 20:06:04 EET 2009
+Last modified: Sun Feb 15 20:12:44 EET 2009
 <!-- hhmts end -->
     </div>
   </body>

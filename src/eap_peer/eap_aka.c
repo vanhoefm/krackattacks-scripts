@@ -60,6 +60,7 @@ struct eap_aka_data {
 	u8 *network_name;
 	size_t network_name_len;
 	u16 kdf;
+	int kdf_negotiation;
 };
 
 
@@ -665,6 +666,7 @@ static struct wpabuf * eap_aka_prime_kdf_select(struct eap_aka_data *data,
 {
 	struct eap_sim_msg *msg;
 
+	data->kdf_negotiation = 1;
 	data->kdf = kdf;
 	wpa_printf(MSG_DEBUG, "Generating EAP-AKA Challenge (id=%d) (KDF "
 		   "select)", id);
@@ -704,7 +706,7 @@ static int eap_aka_prime_kdf_valid(struct eap_aka_data *data,
 	/* The only allowed (and required) duplication of a KDF is the addition
 	 * of the selected KDF into the beginning of the list. */
 
-	if (data->kdf) {
+	if (data->kdf_negotiation) {
 		if (attr->kdf[0] != data->kdf) {
 			wpa_printf(MSG_WARNING, "EAP-AKA': The server did not "
 				   "accept the selected KDF");
@@ -1251,6 +1253,7 @@ static void eap_aka_deinit_for_reauth(struct eap_sm *sm, void *priv)
 	wpabuf_free(data->id_msgs);
 	data->id_msgs = NULL;
 	data->use_result_ind = 0;
+	data->kdf_negotiation = 0;
 }
 
 

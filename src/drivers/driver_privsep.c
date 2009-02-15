@@ -756,6 +756,15 @@ static int wpa_driver_privsep_set_mode(void *priv, int mode)
 }
 
 
+static int wpa_driver_privsep_set_country(void *priv, const char *alpha2)
+{
+	struct wpa_driver_privsep_data *drv = priv;
+	wpa_printf(MSG_DEBUG, "%s country='%s'", __func__, alpha2);
+	return wpa_priv_cmd(drv, PRIVSEP_CMD_SET_COUNTRY, alpha2,
+			    os_strlen(alpha2), NULL, NULL);
+}
+
+
 struct wpa_driver_ops wpa_driver_privsep_ops = {
 	"privsep",
 	"wpa_supplicant privilege separated driver",
@@ -796,7 +805,7 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	wpa_driver_privsep_get_scan_results2,
 	NULL /* set_probe_req_ie */,
 	wpa_driver_privsep_set_mode,
-	NULL /* set_country */,
+	wpa_driver_privsep_set_country,
 	NULL /* global_init */,
 	NULL /* global_deinit */,
 	NULL /* init2 */,

@@ -575,10 +575,21 @@ static void wpa_priv_cmd_set_mode(struct wpa_priv_interface *iface,
 }
 
 
+static void wpa_priv_cmd_set_country(struct wpa_priv_interface *iface,
+				     char *buf)
+{
+	if (iface->drv_priv == NULL || iface->driver->set_country == NULL ||
+	    *buf == '\0')
+		return;
+
+	iface->driver->set_country(iface->drv_priv, buf);
+}
+
+
 static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wpa_priv_interface *iface = eloop_ctx;
-	char buf[2000];
+	char buf[2000], *pos;
 	void *cmd_buf;
 	size_t cmd_len;
 	int res, cmd;
@@ -648,6 +659,13 @@ static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case PRIVSEP_CMD_SET_MODE:
 		wpa_priv_cmd_set_mode(iface, cmd_buf, cmd_len);
+		break;
+	case PRIVSEP_CMD_SET_COUNTRY:
+		pos = cmd_buf;
+		if (pos + cmd_len >= buf + sizeof(buf))
+			break;
+		pos[cmd_len] = '\0';
+		wpa_priv_cmd_set_country(iface, pos);
 		break;
 	}
 }

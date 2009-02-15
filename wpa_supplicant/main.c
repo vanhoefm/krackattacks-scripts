@@ -52,22 +52,22 @@ static void usage(void)
 	       "  -C = ctrl_interface parameter (only used if -c is not)\n"
 	       "  -i = interface name\n"
 	       "  -d = increase debugging verbosity (-dd even more)\n"
-	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n"
+	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n");
 #ifdef CONFIG_DEBUG_FILE
-	       "  -f = log output to debug file instead of stdout\n"
+	printf("  -f = log output to debug file instead of stdout\n");
 #endif /* CONFIG_DEBUG_FILE */
-	       "  -g = global ctrl_interface\n"
+	printf("  -g = global ctrl_interface\n"
 	       "  -K = include keys (passwords, etc.) in debug output\n"
 	       "  -t = include timestamp in debug messages\n"
 	       "  -h = show this help text\n"
-	       "  -L = show license (GPL and BSD)\n");
-	printf("  -p = driver parameters\n"
+	       "  -L = show license (GPL and BSD)\n"
+	       "  -p = driver parameters\n"
 	       "  -P = PID file\n"
-	       "  -q = decrease debugging verbosity (-qq even less)\n"
+	       "  -q = decrease debugging verbosity (-qq even less)\n");
 #ifdef CONFIG_CTRL_IFACE_DBUS
-	       "  -u = enable DBus control interface\n"
+	printf("  -u = enable DBus control interface\n");
 #endif /* CONFIG_CTRL_IFACE_DBUS */
-	       "  -v = show version\n"
+	printf("  -v = show version\n"
 	       "  -W = wait for a control interface monitor before starting\n"
 	       "  -N = start describing new interface\n");
 

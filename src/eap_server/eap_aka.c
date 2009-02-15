@@ -369,15 +369,19 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 			       EAP_AKA_SUBTYPE_CHALLENGE);
 	wpa_printf(MSG_DEBUG, "   AT_RAND");
 	eap_sim_msg_add(msg, EAP_SIM_AT_RAND, 0, data->rand, EAP_AKA_RAND_LEN);
+	wpa_printf(MSG_DEBUG, "   AT_AUTN");
 	eap_sim_msg_add(msg, EAP_SIM_AT_AUTN, 0, data->autn, EAP_AKA_AUTN_LEN);
 	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
 		if (data->kdf) {
 			/* Add the selected KDF into the beginning */
+			wpa_printf(MSG_DEBUG, "   AT_KDF");
 			eap_sim_msg_add(msg, EAP_SIM_AT_KDF, data->kdf,
 					NULL, 0);
 		}
+		wpa_printf(MSG_DEBUG, "   AT_KDF");
 		eap_sim_msg_add(msg, EAP_SIM_AT_KDF, EAP_AKA_PRIME_KDF,
 				NULL, 0);
+		wpa_printf(MSG_DEBUG, "   AT_KDF_INPUT");
 		eap_sim_msg_add(msg, EAP_SIM_AT_KDF_INPUT,
 				data->network_name_len,
 				data->network_name, data->network_name_len);

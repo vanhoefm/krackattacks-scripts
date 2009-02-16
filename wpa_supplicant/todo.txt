@@ -1,7 +1,4 @@
 To do:
-- hostap: try other roaming modes
-  NOTE: current mode (manual roaming) does not really roam at all..
-  Firmware did not notice the current AP disappearing..
 - add support for WPA with ap_scan=0 (update selected cipher etc. based on
   AssocInfo; make sure these match with configuration)
 - consider closing smart card / PCSC connection when EAP-SIM/EAP-AKA
@@ -59,6 +56,9 @@ To do:
   could very well be done before EAP has been started
 - try to work around race in receiving association event and first EAPOL
   message
+- try to work around race in configuring PTK and sending msg 4/4 (some NDIS
+  drivers with ndiswrapper end up not being able to complete 4-way handshake
+  in some cases; extra delay before setting the key seems to help)
 - add wpa_secure_memzero() macro and secure implementation (volatile u8*) to
   clear memory; this would be used to clear temporary buffers containing
   private data (e.g., keys); the macro can be defined to NOP in order to save
@@ -72,9 +72,6 @@ To do:
 - add support for fetching full user cert chain from Windows certificate
   stores even when there are intermediate CA certs that are not in the
   configured ca_cert store (e.g., ROOT) (they could be, e.g., in CA store)
-
-
-0.7.x branch:
 - clean up common.[ch]
 - change TLS/crypto library interface to use a structure of function
   pointers and helper inline functions (like driver_ops) instead of
@@ -82,7 +79,6 @@ To do:
 - add support for encrypted configuration fields (e.g., password, psk,
   passphrase, pin)
 - wpa_gui: add support for setting and showing priority
-
 - cleanup TLS/PEAP/TTLS/FAST fragmentation: both the handshake and Appl. Data
   phases should be able to use the same functions for this;
   the last step in processing sent should be this code and rest of the code

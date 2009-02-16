@@ -718,7 +718,7 @@ static int get_sta_handler(struct nl_msg *msg, void *arg)
 	if (stats[NL80211_STA_INFO_RX_BYTES])
 		data->rx_bytes = nla_get_u32(stats[NL80211_STA_INFO_RX_BYTES]);
 	if (stats[NL80211_STA_INFO_TX_BYTES])
-		data->rx_bytes = nla_get_u32(stats[NL80211_STA_INFO_TX_BYTES]);
+		data->tx_bytes = nla_get_u32(stats[NL80211_STA_INFO_TX_BYTES]);
 
 	return NL_SKIP;
 }
@@ -729,6 +729,7 @@ static int i802_read_sta_data(void *priv, struct hostap_sta_driver_data *data,
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
 
+	os_memset(data, 0, sizeof(*data));
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;

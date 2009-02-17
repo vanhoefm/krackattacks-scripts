@@ -88,6 +88,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	u8 key_idx;
 
 	if ((wpa_s->conf->wps_cred_processing == 1 ||
 	     wpa_s->conf->wps_cred_processing == 2) && cred->cred_attr) {
@@ -151,13 +152,35 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	case WPS_ENCR_NONE:
 		break;
 	case WPS_ENCR_WEP:
-		if (cred->key_len > 0 && cred->key_len <= MAX_WEP_KEY_LEN &&
-		    cred->key_idx < NUM_WEP_KEYS) {
-			os_memcpy(ssid->wep_key[cred->key_idx], cred->key,
-				  cred->key_len);
-			ssid->wep_key_len[cred->key_idx] = cred->key_len;
-			ssid->wep_tx_keyidx = cred->key_idx;
+		if (cred->key_len <= 0)
+			break;
+		if (cred->key_len != 5 && cred->key_len != 13 &&
+		    cred->key_len != 10 && cred->key_len != 26) {
+			wpa_printf(MSG_ERROR, "WPS: Invalid WEP Key length "
+				   "%lu", (unsigned long) cred->key_len);
+			return -1;
 		}
+		if (cred->key_idx >= NUM_WEP_KEYS) {
+			wpa_printf(MSG_ERROR, "WPS: Invalid WEP Key index %d",
+				   cred->key_idx);
+			return -1;
+		}
+		key_idx = cred->key_idx;
+		if (cred->key_len == 10 || cred->key_len == 26) {
+			if (hexstr2bin((char *) cred->key,
+				       ssid->wep_key[key_idx],
+				       cred->key_len / 2) < 0) {
+				wpa_printf(MSG_ERROR, "WPS: Invalid WEP Key "
+					   "%d", key_idx);
+				return -1;
+			}
+			ssid->wep_key_len[key_idx] = cred->key_len / 2;
+		} else {
+			os_memcpy(ssid->wep_key[key_idx], cred->key,
+				  cred->key_len);
+			ssid->wep_key_len[key_idx] = cred->key_len;
+		}
+		ssid->wep_tx_keyidx = key_idx;
 		break;
 	case WPS_ENCR_TKIP:
 		ssid->pairwise_cipher = WPA_CIPHER_TKIP;

@@ -252,6 +252,11 @@ static int wpa_supplicant_match_privacy(struct wpa_scan_res *bss,
 	if (ssid->mixed_cell)
 		return 1;
 
+#ifdef CONFIG_WPS
+	if (ssid->key_mgmt & WPA_KEY_MGMT_WPS)
+		return 1;
+#endif /* CONFIG_WPS */
+
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
 		if (ssid->wep_key_len[i]) {
 			privacy = 1;

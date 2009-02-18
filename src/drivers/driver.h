@@ -81,8 +81,14 @@ struct wpa_scan_result {
 };
 
 
+#define WPA_SCAN_QUAL_INVALID		BIT(0)
+#define WPA_SCAN_NOISE_INVALID		BIT(1)
+#define WPA_SCAN_LEVEL_INVALID		BIT(2)
+#define WPA_SCAN_LEVEL_DBM		BIT(3)
+
 /**
  * struct wpa_scan_res - Scan result for an BSS/IBSS
+ * @flags: information flags about the BSS/IBSS (WPA_SCAN_*)
  * @bssid: BSSID
  * @freq: frequency of the channel in MHz (e.g., 2412 = channel 1)
  * @beacon_int: beacon interval in TUs (host byte order)
@@ -103,6 +109,7 @@ struct wpa_scan_result {
  * report all IEs to make it easier to support future additions.
  */
 struct wpa_scan_res {
+	unsigned int flags;
 	u8 bssid[ETH_ALEN];
 	int freq;
 	u16 beacon_int;

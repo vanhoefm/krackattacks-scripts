@@ -436,11 +436,14 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 	if (!wpa_dbus_dict_append_uint16(&iter_dict, "capabilities",
 					 res->caps))
 		goto error;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "quality", res->qual))
+	if (!(res->flags & WPA_SCAN_QUAL_INVALID) &&
+	    !wpa_dbus_dict_append_int32(&iter_dict, "quality", res->qual))
 		goto error;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "noise", res->noise))
+	if (!(res->flags & WPA_SCAN_NOISE_INVALID) &&
+	    !wpa_dbus_dict_append_int32(&iter_dict, "noise", res->noise))
 		goto error;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "level", res->level))
+	if (!(res->flags & WPA_SCAN_LEVEL_INVALID) &&
+	    !wpa_dbus_dict_append_int32(&iter_dict, "level", res->level))
 		goto error;
 	if (!wpa_dbus_dict_append_int32(&iter_dict, "maxrate",
 					wpa_scan_get_max_rate(res) * 500000))

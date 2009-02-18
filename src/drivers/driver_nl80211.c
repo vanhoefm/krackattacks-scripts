@@ -1769,10 +1769,16 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		r->beacon_int = nla_get_u16(bss[NL80211_BSS_BEACON_INTERVAL]);
 	if (bss[NL80211_BSS_CAPABILITY])
 		r->caps = nla_get_u16(bss[NL80211_BSS_CAPABILITY]);
-	if (bss[NL80211_BSS_SIGNAL_UNSPEC])
-		r->qual = nla_get_u8(bss[NL80211_BSS_SIGNAL_UNSPEC]);
-	if (bss[NL80211_BSS_SIGNAL_MBM])
+	r->flags |= WPA_SCAN_NOISE_INVALID;
+	if (bss[NL80211_BSS_SIGNAL_MBM]) {
 		r->level = nla_get_u32(bss[NL80211_BSS_SIGNAL_MBM]);
+		r->level /= 100; /* mBm to dBm */
+		r->flags |= WPA_SCAN_LEVEL_DBM | WPA_SCAN_QUAL_INVALID;
+	} else if (bss[NL80211_BSS_SIGNAL_UNSPEC]) {
+		r->level = nla_get_u8(bss[NL80211_BSS_SIGNAL_UNSPEC]);
+		r->flags |= WPA_SCAN_LEVEL_INVALID;
+	} else
+		r->flags |= WPA_SCAN_LEVEL_INVALID | WPA_SCAN_QUAL_INVALID;
 	if (bss[NL80211_BSS_TSF])
 		r->tsf = nla_get_u64(bss[NL80211_BSS_TSF]);
 	r->ie_len = ie_len;

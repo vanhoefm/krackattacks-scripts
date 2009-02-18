@@ -1267,6 +1267,14 @@ static void wext_get_scan_qual(struct iw_event *iwe,
 	res->res.qual = iwe->u.qual.qual;
 	res->res.noise = iwe->u.qual.noise;
 	res->res.level = iwe->u.qual.level;
+	if (iwe->u.qual.updated & IW_QUAL_QUAL_INVALID)
+		res->res.flags |= WPA_SCAN_QUAL_INVALID;
+	if (iwe->u.qual.updated & IW_QUAL_LEVEL_INVALID)
+		res->res.flags |= WPA_SCAN_LEVEL_INVALID;
+	if (iwe->u.qual.updated & IW_QUAL_NOISE_INVALID)
+		res->res.flags |= WPA_SCAN_NOISE_INVALID;
+	if (iwe->u.qual.updated & IW_QUAL_DBM)
+		res->res.flags |= WPA_SCAN_LEVEL_DBM;
 }
 
 

@@ -76,6 +76,11 @@ static inline int hostapd_select_hw_mode(struct hostapd_iface *iface)
 	return -1;
 }
 
+static inline const char * hostapd_hw_mode_txt(int mode)
+{
+	return NULL;
+}
+
 static inline int hostapd_hw_get_freq(struct hostapd_data *hapd, int chan)
 {
 	return -1;

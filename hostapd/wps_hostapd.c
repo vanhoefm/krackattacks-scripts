@@ -326,9 +326,12 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 		else
 			fprintf(nconf, "auth_algs=1\n");
 
-		if (cred->encr_type & WPS_ENCR_WEP && cred->key_idx < 4) {
-			fprintf(nconf, "wep_default_key=%d\n", cred->key_idx);
-			fprintf(nconf, "wep_key%d=", cred->key_idx);
+		if (cred->encr_type & WPS_ENCR_WEP && cred->key_idx <= 4) {
+			int key_idx = cred->key_idx;
+			if (key_idx)
+				key_idx--;
+			fprintf(nconf, "wep_default_key=%d\n", key_idx);
+			fprintf(nconf, "wep_key%d=", key_idx);
 			if (cred->key_len != 10 && cred->key_len != 26)
 				fputc('"', nconf);
 			for (i = 0; i < cred->key_len; i++)

@@ -141,6 +141,12 @@ OBJS += driver_madwifi.o
 CONFIG_L2_PACKET=y
 endif
 
+ifdef CONFIG_DRIVER_ATHEROS
+CFLAGS += -DCONFIG_DRIVER_ATHEROS
+OBJS += driver_atheros.o
+CONFIG_L2_PACKET=y
+endif
+
 ifdef CONFIG_DRIVER_PRISM54
 CFLAGS += -DCONFIG_DRIVER_PRISM54
 OBJS += driver_prism54.o

@@ -282,7 +282,12 @@ SM_STATE(SUPP_PAE, CONNECTING)
 		 * delay authentication. Use a short timeout to send the first
 		 * EAPOL-Start if Authenticator does not start authentication.
 		 */
+#ifdef CONFIG_WPS
+		/* Reduce latency on starting WPS negotiation. */
+		sm->startWhen = 1;
+#else /* CONFIG_WPS */
 		sm->startWhen = 3;
+#endif /* CONFIG_WPS */
 	}
 	eapol_enable_timer_tick(sm);
 	sm->eapolEap = FALSE;

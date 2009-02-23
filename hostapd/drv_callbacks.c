@@ -208,6 +208,12 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			wpa_hexdump(MSG_DEBUG, "IE", ie, ielen);
 			return -1;
 		}
+	} else if (hapd->conf->wps_state) {
+		if (ie && ielen > 4 && ie[0] == 0xdd && ie[1] >= 4 &&
+		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
+			sta->flags |= WLAN_STA_WPS;
+		} else
+			sta->flags |= WLAN_STA_MAYBE_WPS;
 	}
 skip_wpa_check:
 

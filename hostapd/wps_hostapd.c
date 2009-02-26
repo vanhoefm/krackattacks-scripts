@@ -667,6 +667,8 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 	wps_device_data_free(&hapd->wps->dev);
 	wpabuf_free(hapd->wps->dh_pubkey);
 	wpabuf_free(hapd->wps->dh_privkey);
+	wpabuf_free(hapd->wps->oob_conf.pubkey_hash);
+	wpabuf_free(hapd->wps->oob_conf.dev_password);
 	wps_free_pending_msgs(hapd->wps->upnp_msgs);
 	os_free(hapd->wps);
 	hapd->wps = NULL;
@@ -699,6 +701,7 @@ int hostapd_wps_button_pushed(struct hostapd_data *hapd)
 }
 
 
+#ifdef CONFIG_WPS_OOB
 int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 			  char *path, char *method)
 {
@@ -747,6 +750,7 @@ error:
 	wps->dh_privkey = NULL;
 	return -1;
 }
+#endif /* CONFIG_WPS_OOB */
 
 
 void hostapd_wps_probe_req_rx(struct hostapd_data *hapd, const u8 *addr,

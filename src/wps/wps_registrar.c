@@ -1627,6 +1627,7 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 		return -1;
 	}
 
+#ifdef CONFIG_WPS_OOB
 	if (wps->wps->oob_conf.pubkey_hash != NULL) {
 		const u8 *addr[1];
 		u8 hash[WPS_HASH_LEN];
@@ -1640,6 +1641,7 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 			return -1;
 		}
 	}
+#endif /* CONFIG_WPS_OOB */
 
 	wpabuf_free(wps->dh_pubkey_e);
 	wps->dh_pubkey_e = wpabuf_alloc_copy(pk, pk_len);
@@ -1821,6 +1823,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
+#ifdef CONFIG_WPS_OOB
 	if (wps->dev_pw_id >= 0x10 &&
 	    wps->dev_pw_id != wps->wps->oob_dev_pw_id) {
 		wpa_printf(MSG_DEBUG, "WPS: OOB Device Password ID "
@@ -1828,6 +1831,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 		wps->state = SEND_M2D;
 		return WPS_CONTINUE;
 	}
+#endif /* CONFIG_WPS_OOB */
 
 	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON) {
 		if (wps_registrar_pbc_overlap(wps->wps->registrar,

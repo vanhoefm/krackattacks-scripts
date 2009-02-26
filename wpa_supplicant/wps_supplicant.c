@@ -462,6 +462,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
+#ifdef CONFIG_WPS_OOB
 int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 		       char *path, char *method)
 {
@@ -506,6 +507,7 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 
 	return 0;
 }
+#endif /* CONFIG_WPS_OOB */
 
 
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,

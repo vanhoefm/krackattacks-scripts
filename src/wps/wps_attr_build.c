@@ -266,6 +266,7 @@ int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 }
 
 
+#ifdef CONFIG_WPS_OOB
 int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 {
 	size_t hash_len;
@@ -306,3 +307,4 @@ int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 
 	return 0;
 }
+#endif /* CONFIG_WPS_OOB */

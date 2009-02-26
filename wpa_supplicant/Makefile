@@ -530,6 +530,11 @@ NEED_BASE64=y
 ifdef CONFIG_WPS_UFD
 CFLAGS += -DCONFIG_WPS_UFD
 OBJS += ../src/wps/wps_ufd.o
+NEED_WPS_OOB=y
+endif
+
+ifdef NEED_WPS_OOB
+CFLAGS += -DCONFIG_WPS_OOB
 endif
 
 ifdef CONFIG_WPS_UPNP

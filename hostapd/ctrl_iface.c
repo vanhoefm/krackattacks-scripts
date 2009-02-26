@@ -254,6 +254,7 @@ static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
 }
 
 
+#ifdef CONFIG_WPS_OOB
 static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
 {
 	char *path, *method;
@@ -270,6 +271,7 @@ static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
 
 	return hostapd_wps_start_oob(hapd, txt, path, method);
 }
+#endif /* CONFIG_WPS_OOB */
 #endif /* CONFIG_WPS */
 
 
@@ -368,9 +370,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strcmp(buf, "WPS_PBC") == 0) {
 		if (hostapd_wps_button_pushed(hapd))
 			reply_len = -1;
+#ifdef CONFIG_WPS_OOB
 	} else if (os_strncmp(buf, "WPS_OOB ", 8) == 0) {
 		if (hostapd_ctrl_iface_wps_oob(hapd, buf + 8))
 			reply_len = -1;
+#endif /* CONFIG_WPS_OOB */
 #endif /* CONFIG_WPS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

@@ -446,6 +446,7 @@ static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef CONFIG_WPS_OOB
 static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -468,6 +469,7 @@ static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
+#endif /* CONFIG_WPS_OOB */
 
 
 static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -1282,9 +1284,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
 	  "hardcoded)" },
+#ifdef CONFIG_WPS_OOB
 	{ "wps_oob", wpa_cli_cmd_wps_oob,
 	  cli_cmd_flag_sensitive,
 	  "<OOB_DEV_TYPE> <OOB_PATH> <OOB_METHOD> = start WPS OOB" },
+#endif /* CONFIG_WPS_OOB */
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },

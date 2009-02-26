@@ -337,6 +337,8 @@ void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part)
 }
 
 
+#ifdef CONFIG_WPS_OOB
+
 static struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 {
 	struct wps_data data;
@@ -538,3 +540,5 @@ int wps_get_oob_method(char *method)
 		return OOB_METHOD_CRED;
 	return OOB_METHOD_UNKNOWN;
 }
+
+#endif /* CONFIG_WPS_OOB */

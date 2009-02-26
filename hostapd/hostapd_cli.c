@@ -89,7 +89,9 @@ static const char *commands_help =
 #ifdef CONFIG_WPS
 "   wps_pin <uuid> <pin> add WPS Enrollee PIN (Device Password)\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
+#ifdef CONFIG_WPS_OOB
 "   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
+#endif /* CONFIG_WPS_OOB */
 #endif /* CONFIG_WPS */
 "   help                 show this usage help\n"
 "   interface [ifname]   show interfaces/select interface\n"
@@ -278,6 +280,7 @@ static int hostapd_cli_cmd_wps_pbc(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+#ifdef CONFIG_WPS_OOB
 static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -301,6 +304,7 @@ static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
 	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
+#endif /* CONFIG_WPS_OOB */
 #endif /* CONFIG_WPS */
 
 
@@ -458,7 +462,9 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #ifdef CONFIG_WPS
 	{ "wps_pin", hostapd_cli_cmd_wps_pin },
 	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },
+#ifdef CONFIG_WPS_OOB
 	{ "wps_oob", hostapd_cli_cmd_wps_oob },
+#endif /* CONFIG_WPS_OOB */
 #endif /* CONFIG_WPS */
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },

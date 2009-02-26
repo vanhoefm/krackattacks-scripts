@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "dh_groups.h"
+#include "crypto.h"
 #include "sha256.h"
 #include "aes_wrap.h"
 #include "wps_i.h"
@@ -26,11 +26,13 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 	struct wpabuf *pubkey;
 
 	wpa_printf(MSG_DEBUG, "WPS:  * Public Key");
-	pubkey = dh_init(dh_groups_get(WPS_DH_GROUP), &wps->dh_privkey);
-	pubkey = wpabuf_zeropad(pubkey, 192);
-	if (pubkey == NULL) {
+	wpabuf_free(wps->dh_privkey);
+	wps->dh_privkey = wpabuf_dup(wps->wps->dh_privkey);
+	pubkey = wpabuf_dup(wps->wps->dh_pubkey);
+	if (wps->dh_privkey == NULL || pubkey == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to initialize "
 			   "Diffie-Hellman handshake");
+		wpabuf_free(pubkey);
 		return -1;
 	}
 
@@ -249,6 +251,48 @@ int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 	wpabuf_put_buf(msg, plain);
 	if (aes_128_cbc_encrypt(wps->keywrapkey, iv, data, wpabuf_len(plain)))
 		return -1;
+
+	return 0;
+}
+
+
+int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
+{
+	size_t hash_len;
+	const u8 *addr[1];
+	u8 pubkey_hash[WPS_HASH_LEN];
+	u8 dev_password_bin[WPS_OOB_DEVICE_PASSWORD_LEN];
+
+	wpa_printf(MSG_DEBUG, "WPS:  * OOB Device Password");
+
+	addr[0] = wpabuf_head(wps->dh_pubkey);
+	hash_len = wpabuf_len(wps->dh_pubkey);
+	sha256_vector(1, addr, &hash_len, pubkey_hash);
+
+	if (os_get_random((u8 *) &wps->oob_dev_pw_id, sizeof(u16)) < 0) {
+		wpa_printf(MSG_ERROR, "WPS: device password id "
+			   "generation error");
+		return -1;
+	}
+	wps->oob_dev_pw_id |= 0x0010;
+
+	if (os_get_random(dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN) < 0) {
+		wpa_printf(MSG_ERROR, "WPS: OOB device password "
+			   "generation error");
+		return -1;
+	}
+
+	wpabuf_put_be16(msg, ATTR_OOB_DEVICE_PASSWORD);
+	wpabuf_put_be16(msg, WPS_OOB_DEVICE_PASSWORD_ATTR_LEN);
+	wpabuf_put_data(msg, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
+	wpabuf_put_be16(msg, wps->oob_dev_pw_id);
+	wpabuf_put_data(msg, dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN);
+
+	wpa_snprintf_hex_uppercase(
+		wpabuf_put(wps->oob_conf.dev_password,
+			   wpabuf_size(wps->oob_conf.dev_password)),
+		wpabuf_size(wps->oob_conf.dev_password),
+		dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN);
 
 	return 0;
 }

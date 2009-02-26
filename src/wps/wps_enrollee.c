@@ -18,6 +18,7 @@
 #include "sha256.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
+#include "crypto.h"
 
 
 static int wps_build_mac_addr(struct wps_data *wps, struct wpabuf *msg)
@@ -130,7 +131,8 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	if (msg == NULL)
 		return NULL;
 
-	methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
+	methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD |
+		  WPS_CONFIG_USBA;
 	if (wps->pbc)
 		methods |= WPS_CONFIG_PUSHBUTTON;
 
@@ -511,6 +513,20 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 	if (pk == NULL || pk_len == 0) {
 		wpa_printf(MSG_DEBUG, "WPS: No Public Key received");
 		return -1;
+	}
+
+	if (wps->wps->oob_conf.pubkey_hash != NULL) {
+		const u8 *addr[1];
+		u8 hash[WPS_HASH_LEN];
+
+		addr[0] = pk;
+		sha256_vector(1, addr, &pk_len, hash);
+		if (os_memcmp(hash,
+			      wpabuf_head(wps->wps->oob_conf.pubkey_hash),
+			      WPS_OOB_PUBKEY_HASH_LEN) != 0) {
+			wpa_printf(MSG_ERROR, "WPS: Public Key hash error");
+			return -1;
+		}
 	}
 
 	wpabuf_free(wps->dh_pubkey_r);

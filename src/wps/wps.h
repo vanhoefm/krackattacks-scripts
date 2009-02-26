@@ -88,6 +88,17 @@ struct wps_device_data {
 	u8 rf_bands;
 };
 
+struct oob_conf_data {
+	enum {
+		OOB_METHOD_UNKNOWN = 0,
+		OOB_METHOD_DEV_PWD_E,
+		OOB_METHOD_DEV_PWD_R,
+		OOB_METHOD_CRED,
+	} oob_method;
+	struct wpabuf *dev_password;
+	struct wpabuf *pubkey_hash;
+};
+
 /**
  * struct wps_config - WPS configuration for a single registration protocol run
  */
@@ -398,6 +409,31 @@ struct wps_context {
 	struct wps_device_data dev;
 
 	/**
+	 * oob_dev - OOB Device data
+	 */
+	struct oob_device_data *oob_dev;
+
+	/**
+	 * oob_conf - OOB Config data
+	 */
+	struct oob_conf_data oob_conf;
+
+	/**
+	 * oob_dev_pw_id - OOB Device password id
+	 */
+	u16 oob_dev_pw_id;
+
+	/**
+	 * dh_privkey - Diffie-Hellman private key
+	 */
+	struct wpabuf *dh_privkey;
+
+	/**
+	 * dh_pubkey_oob - Diffie-Hellman public key
+	 */
+	struct wpabuf *dh_pubkey;
+
+	/**
 	 * config_methods - Enabled configuration methods
 	 *
 	 * Bit field of WPS_CONFIG_*
@@ -494,6 +530,13 @@ struct wps_context {
 	struct upnp_pending_message *upnp_msgs;
 };
 
+struct oob_device_data {
+	char *device_path;
+	int (*init_func)(struct wps_context *, int);
+	struct wpabuf * (*read_func)(void);
+	int (*write_func)(struct wpabuf *);
+	int (*deinit_func)(void);
+};
 
 struct wps_registrar *
 wps_registrar_init(struct wps_context *wps,
@@ -514,5 +557,9 @@ unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);
 unsigned int wps_generate_pin(void);
 void wps_free_pending_msgs(struct upnp_pending_message *msgs);
+
+struct oob_device_data * wps_get_oob_device(char *device_type);
+int wps_get_oob_method(char *method);
+int wps_process_oob(struct wps_context *wps, int registrar);
 
 #endif /* WPS_H */

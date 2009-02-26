@@ -89,6 +89,7 @@ static const char *commands_help =
 #ifdef CONFIG_WPS
 "   wps_pin <uuid> <pin> add WPS Enrollee PIN (Device Password)\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
+"   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
 #endif /* CONFIG_WPS */
 "   help                 show this usage help\n"
 "   interface [ifname]   show interfaces/select interface\n"
@@ -275,6 +276,31 @@ static int hostapd_cli_cmd_wps_pbc(struct wpa_ctrl *ctrl, int argc,
 {
 	return wpa_ctrl_command(ctrl, "WPS_PBC");
 }
+
+
+static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 3) {
+		printf("Invalid WPS_OOB command: need three arguments:\n"
+		       "- OOB_DEV_TYPE: use 'ufd'\n"
+		       "- OOB_PATH: path of OOB device like '/mnt'\n"
+		       "- OOB_METHOD: OOB method 'pin-e' or 'pin-r', "
+		       "'cred'\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s",
+			  argv[0], argv[1], argv[2]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_OOB command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
 #endif /* CONFIG_WPS */
 
 
@@ -432,6 +458,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #ifdef CONFIG_WPS
 	{ "wps_pin", hostapd_cli_cmd_wps_pin },
 	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },
+	{ "wps_oob", hostapd_cli_cmd_wps_oob },
 #endif /* CONFIG_WPS */
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },

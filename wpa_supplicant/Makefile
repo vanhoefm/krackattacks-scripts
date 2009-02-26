@@ -521,6 +521,7 @@ OBJS += ../src/wps/wps_attr_process.o
 OBJS += ../src/wps/wps_dev_attr.o
 OBJS += ../src/wps/wps_enrollee.o
 OBJS += ../src/wps/wps_registrar.o
+OBJS += ../src/wps/wps_ufd.o
 OBJS_h += ../src/eap_server/eap_wsc.o
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y

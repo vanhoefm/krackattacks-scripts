@@ -204,6 +204,25 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpa_supplicant_ctrl_iface_wps_oob(struct wpa_supplicant *wpa_s,
+					     char *cmd)
+{
+	char *path, *method;
+
+	path = os_strchr(cmd, ' ');
+	if (path == NULL)
+		return -1;
+	*path++ = '\0';
+
+	method = os_strchr(path, ' ');
+	if (method == NULL)
+		return -1;
+	*method++ = '\0';
+
+	return wpas_wps_start_oob(wpa_s, cmd, path, method);
+}
+
+
 static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 					     char *cmd)
 {
@@ -1583,6 +1602,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_wps_pin(wpa_s, buf + 8,
 							      reply,
 							      reply_size);
+	} else if (os_strncmp(buf, "WPS_OOB ", 8) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_oob(wpa_s, buf + 8))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_REG ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_reg(wpa_s, buf + 8))
 			reply_len = -1;

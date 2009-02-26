@@ -252,6 +252,24 @@ static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
 	*pin++ = '\0';
 	return hostapd_wps_add_pin(hapd, txt, pin);
 }
+
+
+static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
+{
+	char *path, *method;
+
+	path = os_strchr(txt, ' ');
+	if (path == NULL)
+		return -1;
+	*path++ = '\0';
+
+	method = os_strchr(path, ' ');
+	if (method == NULL)
+		return -1;
+	*method++ = '\0';
+
+	return hostapd_wps_start_oob(hapd, txt, path, method);
+}
 #endif /* CONFIG_WPS */
 
 
@@ -349,6 +367,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "WPS_PBC") == 0) {
 		if (hostapd_wps_button_pushed(hapd))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_OOB ", 8) == 0) {
+		if (hostapd_ctrl_iface_wps_oob(hapd, buf + 8))
 			reply_len = -1;
 #endif /* CONFIG_WPS */
 	} else {

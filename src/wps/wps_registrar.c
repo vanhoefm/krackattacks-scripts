@@ -22,6 +22,7 @@
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 #include "wps_upnp.h"
+#include "crypto.h"
 
 
 struct wps_uuid_pin {
@@ -981,7 +982,7 @@ static int wps_build_credential(struct wpabuf *msg,
 }
 
 
-static int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
+int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 {
 	struct wpabuf *cred;
 
@@ -1626,6 +1627,20 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 		return -1;
 	}
 
+	if (wps->wps->oob_conf.pubkey_hash != NULL) {
+		const u8 *addr[1];
+		u8 hash[WPS_HASH_LEN];
+
+		addr[0] = pk;
+		sha256_vector(1, addr, &pk_len, hash);
+		if (os_memcmp(hash,
+			      wpabuf_head(wps->wps->oob_conf.pubkey_hash),
+			      WPS_OOB_PUBKEY_HASH_LEN) != 0) {
+			wpa_printf(MSG_ERROR, "WPS: Public Key hash error");
+			return -1;
+		}
+	}
+
 	wpabuf_free(wps->dh_pubkey_e);
 	wps->dh_pubkey_e = wpabuf_alloc_copy(pk, pk_len);
 	if (wps->dh_pubkey_e == NULL)
@@ -1793,7 +1808,8 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	    wps_process_os_version(&wps->peer_dev, attr->os_version))
 		return WPS_FAILURE;
 
-	if (wps->dev_pw_id != DEV_PW_DEFAULT &&
+	if (wps->dev_pw_id < 0x10 &&
+	    wps->dev_pw_id != DEV_PW_DEFAULT &&
 	    wps->dev_pw_id != DEV_PW_USER_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_MACHINE_SPECIFIED &&
 	    wps->dev_pw_id != DEV_PW_REGISTRAR_SPECIFIED &&
@@ -1801,6 +1817,14 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	     !wps->wps->registrar->pbc)) {
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Device Password ID %d",
 			   wps->dev_pw_id);
+		wps->state = SEND_M2D;
+		return WPS_CONTINUE;
+	}
+
+	if (wps->dev_pw_id >= 0x10 &&
+	    wps->dev_pw_id != wps->wps->oob_dev_pw_id) {
+		wpa_printf(MSG_DEBUG, "WPS: OOB Device Password ID "
+			   "%d mismatch", wps->dev_pw_id);
 		wps->state = SEND_M2D;
 		return WPS_CONTINUE;
 	}

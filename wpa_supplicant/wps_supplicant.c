@@ -27,6 +27,7 @@
 #include "eap_common/eap_wsc_common.h"
 #include "blacklist.h"
 #include "wps_supplicant.h"
+#include "dh_groups.h"
 
 #define WPS_PIN_SCAN_IGNORE_SEL_REG 3
 
@@ -440,7 +441,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin)
 {
 	struct wpa_ssid *ssid;
-	char val[30];
+	char val[128];
 	unsigned int rpin = 0;
 
 	wpas_clear_wps(wpa_s);
@@ -458,6 +459,33 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			       wpa_s, NULL);
 	wpas_wps_reassoc(wpa_s, ssid);
 	return rpin;
+}
+
+
+int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
+		       char *path, char *method)
+{
+	struct wps_context *wps = wpa_s->wps;
+
+	wps->oob_dev = wps_get_oob_device(device_type);
+	if (wps->oob_dev == NULL)
+		return -1;
+	wps->oob_dev->device_path = path;
+	wps->oob_conf.oob_method = wps_get_oob_method(method);
+
+	if (wps->oob_conf.oob_method == OOB_METHOD_CRED)
+		wpas_clear_wps(wpa_s);
+
+	if (wps_process_oob(wps, 0) < 0)
+		return -1;
+
+	if ((wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ||
+	     wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_R) &&
+	    wpas_wps_start_pin(wpa_s, NULL,
+			       wpabuf_head(wps->oob_conf.dev_password)) < 0)
+			return -1;
+
+	return 0;
 }
 
 
@@ -584,6 +612,16 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 
+	wps->dh_pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
+				 &wps->dh_privkey);
+	wps->dh_pubkey = wpabuf_zeropad(wps->dh_pubkey, 192);
+	if (wps->dh_pubkey == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to initialize "
+			   "Diffie-Hellman handshake");
+		os_free(wps);
+		return -1;
+	}
+
 	wpa_s->wps = wps;
 
 	return 0;
@@ -598,6 +636,10 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 		return;
 
 	wps_registrar_deinit(wpa_s->wps->registrar);
+	wpabuf_free(wpa_s->wps->dh_pubkey);
+	wpabuf_free(wpa_s->wps->dh_privkey);
+	wpabuf_free(wpa_s->wps->oob_conf.pubkey_hash);
+	wpabuf_free(wpa_s->wps->oob_conf.dev_password);
 	os_free(wpa_s->wps->network_key);
 	os_free(wpa_s->wps);
 	wpa_s->wps = NULL;

@@ -44,7 +44,8 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		os_memcpy(data->uuid_e, cfg->wps->uuid, WPS_UUID_LEN);
 	}
 	if (cfg->pin) {
-		data->dev_pw_id = DEV_PW_DEFAULT;
+		data->dev_pw_id = data->wps->oob_dev_pw_id == 0 ?
+			DEV_PW_DEFAULT : data->wps->oob_dev_pw_id;
 		data->dev_password = os_malloc(cfg->pin_len);
 		if (data->dev_password == NULL) {
 			os_free(data);
@@ -300,7 +301,7 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 		methods = WPS_CONFIG_PUSHBUTTON;
 	else
 		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
-			WPS_CONFIG_KEYPAD;
+			WPS_CONFIG_KEYPAD | WPS_CONFIG_USBA;
 
 	if (wps_build_version(ie) ||
 	    wps_build_req_type(ie, req_type) ||

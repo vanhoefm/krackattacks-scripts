@@ -124,6 +124,8 @@ struct wps_parse_attr {
 	const u8 *assoc_state; /* 2 octets */
 	const u8 *config_error; /* 2 octets */
 	const u8 *dev_password_id; /* 2 octets */
+	const u8 *oob_dev_password; /* WPS_OOB_DEVICE_PASSWORD_ATTR_LEN (54)
+				     * octets */
 	const u8 *os_version; /* 4 octets */
 	const u8 *wps_state; /* 1 octet */
 	const u8 *authenticator; /* WPS_AUTHENTICATOR_LEN (8) octets */
@@ -191,6 +193,8 @@ void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg);
 void wps_success_event(struct wps_context *wps);
 void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part);
 
+extern struct oob_device_data oob_ufd_device_data;
+
 /* wps_attr_parse.c */
 int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
 
@@ -213,6 +217,7 @@ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_conn_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_assoc_state(struct wps_data *wps, struct wpabuf *msg);
+int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps);
 
 /* wps_attr_process.c */
 int wps_process_authenticator(struct wps_data *wps, const u8 *authenticator,
@@ -237,6 +242,7 @@ struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
 enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 					       enum wsc_op_code op_code,
 					       const struct wpabuf *msg);
+int wps_build_cred(struct wps_data *wps, struct wpabuf *msg);
 
 
 static inline int wps_version_supported(const u8 *version)

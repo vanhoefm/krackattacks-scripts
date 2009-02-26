@@ -335,3 +335,203 @@ void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part)
 	data.pwd_auth_fail.part = part;
 	wps->event_cb(wps->cb_ctx, WPS_EV_PWD_AUTH_FAIL, &data);
 }
+
+
+static struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
+{
+	struct wps_data data;
+	struct wpabuf *plain;
+
+	plain = wpabuf_alloc(500);
+	if (plain == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
+			   "credential");
+		return NULL;
+	}
+
+	os_memset(&data, 0, sizeof(data));
+	data.wps = wps;
+	data.auth_type = wps->auth_types;
+	data.encr_type = wps->encr_types;
+	if (wps_build_version(plain) || wps_build_cred(&data, plain)) {
+		wpabuf_free(plain);
+		return NULL;
+	}
+
+	return plain;
+}
+
+
+static struct wpabuf * wps_get_oob_dev_pwd(struct wps_context *wps)
+{
+	struct wpabuf *data;
+
+	data = wpabuf_alloc(9 + WPS_OOB_DEVICE_PASSWORD_ATTR_LEN);
+	if (data == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
+			   "device password attribute");
+		return NULL;
+	}
+
+	wpabuf_free(wps->oob_conf.dev_password);
+	wps->oob_conf.dev_password =
+		wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN * 2 + 1);
+	if (wps->oob_conf.dev_password == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
+			   "device password");
+		wpabuf_free(data);
+		return NULL;
+	}
+
+	if (wps_build_version(data) ||
+	    wps_build_oob_dev_password(data, wps)) {
+		wpa_printf(MSG_ERROR, "WPS: Build OOB device password "
+			   "attribute error");
+		wpabuf_free(data);
+		return NULL;
+	}
+
+	return data;
+}
+
+
+static int wps_parse_oob_dev_pwd(struct wps_context *wps,
+				 struct wpabuf *data)
+{
+	struct oob_conf_data *oob_conf = &wps->oob_conf;
+	struct wps_parse_attr attr;
+	const u8 *pos;
+
+	if (wps_parse_msg(data, &attr) < 0 ||
+	    attr.oob_dev_password == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: OOB device password not found");
+		return -1;
+	}
+
+	pos = attr.oob_dev_password;
+
+	oob_conf->pubkey_hash =
+		wpabuf_alloc_copy(pos, WPS_OOB_PUBKEY_HASH_LEN);
+	if (oob_conf->pubkey_hash == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
+			   "public key hash");
+		return -1;
+	}
+	pos += WPS_OOB_PUBKEY_HASH_LEN;
+
+	wps->oob_dev_pw_id = WPA_GET_BE16(pos);
+	pos += sizeof(wps->oob_dev_pw_id);
+
+	oob_conf->dev_password =
+		wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN * 2 + 1);
+	if (oob_conf->dev_password == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
+			   "device password");
+		return -1;
+	}
+	wpa_snprintf_hex_uppercase(wpabuf_put(oob_conf->dev_password,
+				   wpabuf_size(oob_conf->dev_password)),
+				   wpabuf_size(oob_conf->dev_password), pos,
+				   WPS_OOB_DEVICE_PASSWORD_LEN);
+
+	return 0;
+}
+
+
+static int wps_parse_oob_cred(struct wps_context *wps, struct wpabuf *data)
+{
+	struct wpabuf msg;
+	struct wps_parse_attr attr;
+	size_t i;
+
+	if (wps_parse_msg(data, &attr) < 0 || attr.num_cred <= 0) {
+		wpa_printf(MSG_ERROR, "WPS: OOB credential not found");
+		return -1;
+	}
+
+	for (i = 0; i < attr.num_cred; i++) {
+		struct wps_credential local_cred;
+		struct wps_parse_attr cattr;
+
+		os_memset(&local_cred, 0, sizeof(local_cred));
+		wpabuf_set(&msg, attr.cred[i], attr.cred_len[i]);
+		if (wps_parse_msg(&msg, &cattr) < 0 ||
+		    wps_process_cred(&cattr, &local_cred)) {
+			wpa_printf(MSG_ERROR, "WPS: Failed to parse OOB "
+				   "credential");
+			return -1;
+		}
+		wps->cred_cb(wps->cb_ctx, &local_cred);
+	}
+
+	return 0;
+}
+
+
+int wps_process_oob(struct wps_context *wps, int registrar)
+{
+	struct oob_device_data *oob_dev = wps->oob_dev;
+	struct wpabuf *data;
+	int ret, write_f, oob_method = wps->oob_conf.oob_method;
+
+	write_f = oob_method == OOB_METHOD_DEV_PWD_E ? !registrar : registrar;
+
+	if (oob_dev->init_func(wps, registrar) < 0) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to initialize OOB device");
+		return -1;
+	}
+
+	if (write_f) {
+		if (oob_method == OOB_METHOD_CRED)
+			data = wps_get_oob_cred(wps);
+		else
+			data = wps_get_oob_dev_pwd(wps);
+
+		ret = 0;
+		if (data == NULL || wps->oob_dev->write_func(data) < 0)
+			ret = -1;
+	} else {
+		data = oob_dev->read_func();
+		if (data == NULL)
+			return -1;
+
+		if (oob_method == OOB_METHOD_CRED)
+			ret = wps_parse_oob_cred(wps, data);
+		else
+			ret = wps_parse_oob_dev_pwd(wps, data);
+	}
+	wpabuf_free(data);
+	if (ret < 0) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to process OOB data");
+		return -1;
+	}
+
+	if (oob_dev->deinit_func() < 0) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to deinitialize OOB "
+			   "device");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+struct oob_device_data * wps_get_oob_device(char *device_type)
+{
+	if (os_strstr(device_type, "ufd") != NULL)
+		return &oob_ufd_device_data;
+
+	return NULL;
+}
+
+
+int wps_get_oob_method(char *method)
+{
+	if (os_strstr(method, "pin-e") != NULL)
+		return OOB_METHOD_DEV_PWD_E;
+	if (os_strstr(method, "pin-r") != NULL)
+		return OOB_METHOD_DEV_PWD_R;
+	if (os_strstr(method, "cred") != NULL)
+		return OOB_METHOD_CRED;
+	return OOB_METHOD_UNKNOWN;
+}

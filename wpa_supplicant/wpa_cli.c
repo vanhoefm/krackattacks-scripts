@@ -446,6 +446,30 @@ static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 3) {
+		printf("Invalid WPS_OOB command: need three arguments:\n"
+		       "- OOB_DEV_TYPE: use 'ufd'\n"
+		       "- OOB_PATH: path of OOB device like '/mnt'\n"
+		       "- OOB_METHOD: OOB method 'pin-e' or 'pin-r', "
+		       "'cred'\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s",
+			  argv[0], argv[1], argv[2]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_OOB command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -1258,6 +1282,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
 	  "hardcoded)" },
+	{ "wps_oob", wpa_cli_cmd_wps_oob,
+	  cli_cmd_flag_sensitive,
+	  "<OOB_DEV_TYPE> <OOB_PATH> <OOB_METHOD> = start WPS OOB" },
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },

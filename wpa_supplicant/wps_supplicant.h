@@ -27,6 +27,8 @@ enum wps_request_type wpas_wps_get_req_type(struct wpa_ssid *ssid);
 int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin);
+int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
+		       char *path, char *method);
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		       const char *pin);
 int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,

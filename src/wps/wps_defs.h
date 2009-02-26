@@ -33,6 +33,9 @@
 #define WPS_MGMTAUTHKEY_LEN 32
 #define WPS_MGMTENCKEY_LEN 16
 #define WPS_MGMT_KEY_ID_LEN 16
+#define WPS_OOB_DEVICE_PASSWORD_ATTR_LEN 54
+#define WPS_OOB_DEVICE_PASSWORD_LEN 32
+#define WPS_OOB_PUBKEY_HASH_LEN 20
 
 /* Attribute Types */
 enum wps_attribute {

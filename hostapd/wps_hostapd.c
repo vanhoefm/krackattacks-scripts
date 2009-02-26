@@ -26,6 +26,7 @@
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
 #include "wps_hostapd.h"
+#include "dh_groups.h"
 
 
 #ifdef CONFIG_WPS_UPNP
@@ -648,6 +649,16 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_WPS_UPNP */
 
+	wps->dh_pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
+				 &wps->dh_privkey);
+	wps->dh_pubkey = wpabuf_zeropad(wps->dh_pubkey, 192);
+	if (wps->dh_pubkey == NULL) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to initialize "
+			   "Diffie-Hellman handshake");
+		os_free(wps);
+		return -1;
+	}
+
 	hapd->wps = wps;
 
 	return 0;
@@ -664,6 +675,8 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 	wps_registrar_deinit(hapd->wps->registrar);
 	os_free(hapd->wps->network_key);
 	wps_device_data_free(&hapd->wps->dev);
+	wpabuf_free(hapd->wps->dh_pubkey);
+	wpabuf_free(hapd->wps->dh_privkey);
 	wps_free_pending_msgs(hapd->wps->upnp_msgs);
 	os_free(hapd->wps);
 	hapd->wps = NULL;
@@ -693,6 +706,30 @@ int hostapd_wps_button_pushed(struct hostapd_data *hapd)
 	if (hapd->wps == NULL)
 		return -1;
 	return wps_registrar_button_pushed(hapd->wps->registrar);
+}
+
+
+int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
+			  char *path, char *method)
+{
+	struct wps_context *wps = hapd->wps;
+
+	wps->oob_dev = wps_get_oob_device(device_type);
+	if (wps->oob_dev == NULL)
+		return -1;
+	wps->oob_dev->device_path = path;
+	wps->oob_conf.oob_method = wps_get_oob_method(method);
+
+	if (wps_process_oob(wps, 1) < 0)
+		return -1;
+
+	if ((wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ||
+	     wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_R) &&
+	    hostapd_wps_add_pin(hapd, "any",
+				wpabuf_head(wps->oob_conf.dev_password)) < 0)
+			return -1;
+
+	return 0;
 }
 
 

@@ -22,6 +22,17 @@
 
 #include "wps/wps.h"
 
+#ifdef CONFIG_NATIVE_WINDOWS
+#define UFD_DIR1 "%s\\SMRTNTKY"
+#define UFD_DIR2 UFD_DIR1 "\\WFAWSC"
+#define UFD_FILE UFD_DIR2 "\\%s"
+#else /* CONFIG_NATIVE_WINDOWS */
+#define UFD_DIR1 "%s/SMRTNTKY"
+#define UFD_DIR2 UFD_DIR1 "/WFAWSC"
+#define UFD_FILE UFD_DIR2 "/%s"
+#endif /* CONFIG_NATIVE_WINDOWS */
+
+
 struct wps_ufd_data {
 	int ufd_fd;
 };
@@ -72,8 +83,7 @@ static int get_file_name(struct wps_context *wps, int registrar,
 	case OOB_METHOD_DEV_PWD_E:
 		if (registrar) {
 			char temp[128];
-
-			os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC",
+			os_snprintf(temp, sizeof(temp), UFD_DIR2,
 				wps->oob_dev->device_path);
 			if (wps_get_dev_pwd_e_file_name(temp, file_name) < 0)
 				return -1;
@@ -128,16 +138,15 @@ static void * init_ufd(struct wps_context *wps, int registrar)
 	}
 
 	if (write_f) {
-		os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY", path);
+		os_snprintf(temp, sizeof(temp), UFD_DIR1, path);
 		if (ufd_mkdir(temp))
 			return NULL;
-		os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC", path);
+		os_snprintf(temp, sizeof(temp), UFD_DIR2, path);
 		if (ufd_mkdir(temp))
 			return NULL;
 	}
 
-	os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC/%s", path,
-		    filename);
+	os_snprintf(temp, sizeof(temp), UFD_FILE, path, filename);
 	if (write_f)
 		ufd_fd = open(temp, O_WRONLY | O_CREAT | O_TRUNC,
 			      S_IRUSR | S_IWUSR);

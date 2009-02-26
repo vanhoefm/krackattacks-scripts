@@ -94,6 +94,17 @@ static int get_file_name(struct wps_context *wps, int registrar,
 }
 
 
+static int ufd_mkdir(const char *path)
+{
+	if (mkdir(path, S_IRWXU) < 0 && errno != EEXIST) {
+		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to create directory "
+			   "'%s': %d (%s)", path, errno, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+
 static int init_ufd(struct wps_context *wps, int registrar)
 {
 	int write_f;
@@ -110,13 +121,12 @@ static int init_ufd(struct wps_context *wps, int registrar)
 	}
 
 	if (write_f) {
-		os_snprintf(temp, sizeof(temp),
-			    "mkdir -p %s/SMRTNTKY/WFAWSC", path);
-		if (system(temp) != 0) {
-			wpa_printf(MSG_ERROR, "WPS (UFD): Failed "
-				   "to mkdir");
+		os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY", path);
+		if (ufd_mkdir(temp))
 			return -1;
-		}
+		os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC", path);
+		if (ufd_mkdir(temp))
+			return -1;
 	}
 
 	os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC/%s", path,

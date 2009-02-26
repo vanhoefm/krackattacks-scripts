@@ -468,16 +468,16 @@ static int wps_parse_oob_cred(struct wps_context *wps, struct wpabuf *data)
 }
 
 
-int wps_process_oob(struct wps_context *wps, int registrar)
+int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
+		    int registrar)
 {
-	struct oob_device_data *oob_dev = wps->oob_dev;
 	struct wpabuf *data;
 	int ret, write_f, oob_method = wps->oob_conf.oob_method;
 	void *oob_priv;
 
 	write_f = oob_method == OOB_METHOD_DEV_PWD_E ? !registrar : registrar;
 
-	oob_priv = oob_dev->init_func(wps, registrar);
+	oob_priv = oob_dev->init_func(wps, oob_dev, registrar);
 	if (oob_priv == NULL) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to initialize OOB device");
 		return -1;
@@ -490,8 +490,7 @@ int wps_process_oob(struct wps_context *wps, int registrar)
 			data = wps_get_oob_dev_pwd(wps);
 
 		ret = 0;
-		if (data == NULL ||
-		    wps->oob_dev->write_func(oob_priv, data) < 0)
+		if (data == NULL || oob_dev->write_func(oob_priv, data) < 0)
 			ret = -1;
 	} else {
 		data = oob_dev->read_func(oob_priv);

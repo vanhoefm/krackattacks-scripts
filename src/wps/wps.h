@@ -409,11 +409,6 @@ struct wps_context {
 	struct wps_device_data dev;
 
 	/**
-	 * oob_dev - OOB Device data
-	 */
-	struct oob_device_data *oob_dev;
-
-	/**
 	 * oob_conf - OOB Config data
 	 */
 	struct oob_conf_data oob_conf;
@@ -532,7 +527,8 @@ struct wps_context {
 
 struct oob_device_data {
 	char *device_path;
-	void * (*init_func)(struct wps_context *, int);
+	void * (*init_func)(struct wps_context *, struct oob_device_data *,
+			    int);
 	struct wpabuf * (*read_func)(void *);
 	int (*write_func)(void *, struct wpabuf *);
 	void (*deinit_func)(void *);
@@ -560,6 +556,7 @@ void wps_free_pending_msgs(struct upnp_pending_message *msgs);
 
 struct oob_device_data * wps_get_oob_device(char *device_type);
 int wps_get_oob_method(char *method);
-int wps_process_oob(struct wps_context *wps, int registrar);
+int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
+		    int registrar);
 
 #endif /* WPS_H */

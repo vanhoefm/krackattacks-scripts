@@ -80,7 +80,7 @@ static int wps_get_dev_pwd_e_file_name(char *path, char *file_name)
 
 
 static int get_file_name(struct wps_context *wps, int registrar,
-			 char *file_name)
+			 const char *path, char *file_name)
 {
 	switch (wps->oob_conf.oob_method) {
 	case OOB_METHOD_CRED:
@@ -89,8 +89,7 @@ static int get_file_name(struct wps_context *wps, int registrar,
 	case OOB_METHOD_DEV_PWD_E:
 		if (registrar) {
 			char temp[128];
-			os_snprintf(temp, sizeof(temp), UFD_DIR2,
-				wps->oob_dev->device_path);
+			os_snprintf(temp, sizeof(temp), UFD_DIR2, path);
 			if (wps_get_dev_pwd_e_file_name(temp, file_name) < 0)
 				return -1;
 		} else {
@@ -123,11 +122,12 @@ static int ufd_mkdir(const char *path)
 }
 
 
-static void * init_ufd(struct wps_context *wps, int registrar)
+static void * init_ufd(struct wps_context *wps,
+		       struct oob_device_data *oob_dev, int registrar)
 {
 	int write_f;
 	char temp[128];
-	char *path = wps->oob_dev->device_path;
+	char *path = oob_dev->device_path;
 	char filename[13];
 	struct wps_ufd_data *data;
 	int ufd_fd;
@@ -138,7 +138,7 @@ static void * init_ufd(struct wps_context *wps, int registrar)
 	write_f = wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ?
 		!registrar : registrar;
 
-	if (get_file_name(wps, registrar, filename) < 0) {
+	if (get_file_name(wps, registrar, path, filename) < 0) {
 		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to get file name");
 		return NULL;
 	}

@@ -61,8 +61,14 @@ static int wps_get_dev_pwd_e_file_name(char *path, char *file_name)
 
 	file_num = scandir(path, &namelist, &dev_pwd_e_file_filter,
 			   alphasort);
-	if (file_num <= 0) {
+	if (file_num < 0) {
+		wpa_printf(MSG_ERROR, "WPS: OOB file not found: %d (%s)",
+			   errno, strerror(errno));
+		return -1;
+	}
+	if (file_num == 0) {
 		wpa_printf(MSG_ERROR, "WPS: OOB file not found");
+		os_free(namelist);
 		return -1;
 	}
 	os_strlcpy(file_name, namelist[0]->d_name, 13);

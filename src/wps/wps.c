@@ -299,9 +299,13 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 
 	if (pbc)
 		methods = WPS_CONFIG_PUSHBUTTON;
-	else
+	else {
 		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
-			WPS_CONFIG_KEYPAD | WPS_CONFIG_USBA;
+			WPS_CONFIG_KEYPAD;
+#ifdef CONFIG_WPS_UFD
+		methods |= WPS_CONFIG_USBA;
+#endif /* CONFIG_WPS_UFD */
+	}
 
 	if (wps_build_version(ie) ||
 	    wps_build_req_type(ie, req_type) ||

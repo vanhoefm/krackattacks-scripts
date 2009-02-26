@@ -518,8 +518,10 @@ int wps_process_oob(struct wps_context *wps, int registrar)
 
 struct oob_device_data * wps_get_oob_device(char *device_type)
 {
+#ifdef CONFIG_WPS_UFD
 	if (os_strstr(device_type, "ufd") != NULL)
 		return &oob_ufd_device_data;
+#endif /* CONFIG_WPS_UFD */
 
 	return NULL;
 }

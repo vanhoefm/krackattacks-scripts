@@ -521,12 +521,16 @@ OBJS += ../src/wps/wps_attr_process.o
 OBJS += ../src/wps/wps_dev_attr.o
 OBJS += ../src/wps/wps_enrollee.o
 OBJS += ../src/wps/wps_registrar.o
-OBJS += ../src/wps/wps_ufd.o
 OBJS_h += ../src/eap_server/eap_wsc.o
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y
 NEED_BASE64=y
+
+ifdef CONFIG_WPS_UFD
+CFLAGS += -DCONFIG_WPS_UFD
+OBJS += ../src/wps/wps_ufd.o
+endif
 
 ifdef CONFIG_WPS_UPNP
 CFLAGS += -DCONFIG_WPS_UPNP

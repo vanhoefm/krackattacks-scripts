@@ -131,8 +131,10 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	if (msg == NULL)
 		return NULL;
 
-	methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD |
-		  WPS_CONFIG_USBA;
+	methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
+#ifdef CONFIG_WPS_UFD
+	methods |= WPS_CONFIG_USBA;
+#endif /* CONFIG_WPS_UFD */
 	if (wps->pbc)
 		methods |= WPS_CONFIG_PUSHBUTTON;
 

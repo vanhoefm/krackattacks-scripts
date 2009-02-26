@@ -12,6 +12,8 @@ ChangeLog for wpa_supplicant
 	  scan_ssid=1 operations in ap_scan=1 mode (i.e., search for hidden
 	  SSIDs); this requires driver support and can currently be used only
 	  with nl80211
+	* added support for WPS USBA out-of-band mechanism with USB Flash
+	  Drives (UFD) (CONFIG_WPS_UFD=y)
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

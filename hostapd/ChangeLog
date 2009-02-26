@@ -8,6 +8,8 @@ ChangeLog for hostapd
 	* 802.11n: scan for overlapping BSSes before starting 20/40 MHz channel
 	* driver_nl80211: fixed STA accounting data collection (TX/RX bytes
 	  reported correctly; TX/RX packets not yet available from kernel)
+	* added support for WPS USBA out-of-band mechanism with USB Flash
+	  Drives (UFD) (CONFIG_WPS_UFD=y)
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

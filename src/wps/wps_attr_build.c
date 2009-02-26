@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "dh_groups.h"
 #include "crypto.h"
 #include "sha256.h"
 #include "aes_wrap.h"
@@ -27,8 +28,17 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 
 	wpa_printf(MSG_DEBUG, "WPS:  * Public Key");
 	wpabuf_free(wps->dh_privkey);
-	wps->dh_privkey = wpabuf_dup(wps->wps->dh_privkey);
-	pubkey = wpabuf_dup(wps->wps->dh_pubkey);
+	if (wps->dev_pw_id != DEV_PW_DEFAULT && wps->wps->dh_privkey) {
+		wpa_printf(MSG_DEBUG, "WPS: Using pre-configured DH keys");
+		wps->dh_privkey = wpabuf_dup(wps->wps->dh_privkey);
+		pubkey = wpabuf_dup(wps->wps->dh_pubkey);
+	} else {
+		wpa_printf(MSG_DEBUG, "WPS: Generate new DH keys");
+		wps->dh_privkey = NULL;
+		pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
+				 &wps->dh_privkey);
+		pubkey = wpabuf_zeropad(pubkey, 192);
+	}
 	if (wps->dh_privkey == NULL || pubkey == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to initialize "
 			   "Diffie-Hellman handshake");

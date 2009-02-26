@@ -474,6 +474,24 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 	oob_dev->device_path = path;
 	wps->oob_conf.oob_method = wps_get_oob_method(method);
 
+	if (wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E) {
+		/*
+		 * Use pre-configured DH keys in order to be able to write the
+		 * key hash into the OOB file.
+		 */
+		wpabuf_free(wps->dh_pubkey);
+		wpabuf_free(wps->dh_privkey);
+		wps->dh_privkey = NULL;
+		wps->dh_pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
+					 &wps->dh_privkey);
+		wps->dh_pubkey = wpabuf_zeropad(wps->dh_pubkey, 192);
+		if (wps->dh_pubkey == NULL) {
+			wpa_printf(MSG_ERROR, "WPS: Failed to initialize "
+				   "Diffie-Hellman handshake");
+			return -1;
+		}
+	}
+
 	if (wps->oob_conf.oob_method == OOB_METHOD_CRED)
 		wpas_clear_wps(wpa_s);
 
@@ -609,16 +627,6 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->registrar = wps_registrar_init(wps, &rcfg);
 	if (wps->registrar == NULL) {
 		wpa_printf(MSG_DEBUG, "Failed to initialize WPS Registrar");
-		os_free(wps);
-		return -1;
-	}
-
-	wps->dh_pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
-				 &wps->dh_privkey);
-	wps->dh_pubkey = wpabuf_zeropad(wps->dh_pubkey, 192);
-	if (wps->dh_pubkey == NULL) {
-		wpa_printf(MSG_ERROR, "WPS: Failed to initialize "
-			   "Diffie-Hellman handshake");
 		os_free(wps);
 		return -1;
 	}

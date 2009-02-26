@@ -517,7 +517,8 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 		return -1;
 	}
 
-	if (wps->wps->oob_conf.pubkey_hash != NULL) {
+	if (wps->dev_pw_id != DEV_PW_DEFAULT &&
+	    wps->wps->oob_conf.pubkey_hash) {
 		const u8 *addr[1];
 		u8 hash[WPS_HASH_LEN];
 

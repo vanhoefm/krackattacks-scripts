@@ -473,10 +473,12 @@ int wps_process_oob(struct wps_context *wps, int registrar)
 	struct oob_device_data *oob_dev = wps->oob_dev;
 	struct wpabuf *data;
 	int ret, write_f, oob_method = wps->oob_conf.oob_method;
+	void *oob_priv;
 
 	write_f = oob_method == OOB_METHOD_DEV_PWD_E ? !registrar : registrar;
 
-	if (oob_dev->init_func(wps, registrar) < 0) {
+	oob_priv = oob_dev->init_func(wps, registrar);
+	if (oob_priv == NULL) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to initialize OOB device");
 		return -1;
 	}
@@ -488,12 +490,15 @@ int wps_process_oob(struct wps_context *wps, int registrar)
 			data = wps_get_oob_dev_pwd(wps);
 
 		ret = 0;
-		if (data == NULL || wps->oob_dev->write_func(data) < 0)
+		if (data == NULL ||
+		    wps->oob_dev->write_func(oob_priv, data) < 0)
 			ret = -1;
 	} else {
-		data = oob_dev->read_func();
-		if (data == NULL)
+		data = oob_dev->read_func(oob_priv);
+		if (data == NULL) {
+			oob_dev->deinit_func(oob_priv);
 			return -1;
+		}
 
 		if (oob_method == OOB_METHOD_CRED)
 			ret = wps_parse_oob_cred(wps, data);
@@ -503,14 +508,11 @@ int wps_process_oob(struct wps_context *wps, int registrar)
 	wpabuf_free(data);
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to process OOB data");
+		oob_dev->deinit_func(oob_priv);
 		return -1;
 	}
 
-	if (oob_dev->deinit_func() < 0) {
-		wpa_printf(MSG_ERROR, "WPS: Failed to deinitialize OOB "
-			   "device");
-		return -1;
-	}
+	oob_dev->deinit_func(oob_priv);
 
 	return 0;
 }

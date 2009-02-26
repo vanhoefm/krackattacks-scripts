@@ -532,10 +532,10 @@ struct wps_context {
 
 struct oob_device_data {
 	char *device_path;
-	int (*init_func)(struct wps_context *, int);
-	struct wpabuf * (*read_func)(void);
-	int (*write_func)(struct wpabuf *);
-	int (*deinit_func)(void);
+	void * (*init_func)(struct wps_context *, int);
+	struct wpabuf * (*read_func)(void *);
+	int (*write_func)(void *, struct wpabuf *);
+	void (*deinit_func)(void *);
 };
 
 struct wps_registrar *

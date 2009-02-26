@@ -22,7 +22,9 @@
 
 #include "wps/wps.h"
 
-static int ufd_fd = -1;
+struct wps_ufd_data {
+	int ufd_fd;
+};
 
 
 static int dev_pwd_e_file_filter(const struct dirent *entry)
@@ -105,28 +107,33 @@ static int ufd_mkdir(const char *path)
 }
 
 
-static int init_ufd(struct wps_context *wps, int registrar)
+static void * init_ufd(struct wps_context *wps, int registrar)
 {
 	int write_f;
 	char temp[128];
 	char *path = wps->oob_dev->device_path;
 	char filename[13];
+	struct wps_ufd_data *data;
+	int ufd_fd;
+
+	if (path == NULL)
+		return NULL;
 
 	write_f = wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ?
 		!registrar : registrar;
 
 	if (get_file_name(wps, registrar, filename) < 0) {
 		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to get file name");
-		return -1;
+		return NULL;
 	}
 
 	if (write_f) {
 		os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY", path);
 		if (ufd_mkdir(temp))
-			return -1;
+			return NULL;
 		os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC", path);
 		if (ufd_mkdir(temp))
-			return -1;
+			return NULL;
 	}
 
 	os_snprintf(temp, sizeof(temp), "%s/SMRTNTKY/WFAWSC/%s", path,
@@ -139,20 +146,25 @@ static int init_ufd(struct wps_context *wps, int registrar)
 	if (ufd_fd < 0) {
 		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to open %s: %s",
 			   temp, strerror(errno));
-		return -1;
+		return NULL;
 	}
 
-	return 0;
+	data = os_zalloc(sizeof(*data));
+	if (data == NULL)
+		return NULL;
+	data->ufd_fd = ufd_fd;
+	return data;
 }
 
 
-static struct wpabuf * read_ufd(void)
+static struct wpabuf * read_ufd(void *priv)
 {
+	struct wps_ufd_data *data = priv;
 	struct wpabuf *buf;
 	struct stat s;
 	size_t file_size;
 
-	if (fstat(ufd_fd, &s) < 0) {
+	if (fstat(data->ufd_fd, &s) < 0) {
 		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to get file size");
 		return NULL;
 	}
@@ -165,7 +177,8 @@ static struct wpabuf * read_ufd(void)
 		return NULL;
 	}
 
-	if (read(ufd_fd, wpabuf_mhead(buf), file_size) != (int) file_size) {
+	if (read(data->ufd_fd, wpabuf_mhead(buf), file_size) !=
+	    (int) file_size) {
 		wpabuf_free(buf);
 		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to read");
 		return NULL;
@@ -175,9 +188,11 @@ static struct wpabuf * read_ufd(void)
 }
 
 
-static int write_ufd(struct wpabuf *buf)
+static int write_ufd(void *priv, struct wpabuf *buf)
 {
-	if (write(ufd_fd, wpabuf_mhead(buf), wpabuf_len(buf)) !=
+	struct wps_ufd_data *data = priv;
+
+	if (write(data->ufd_fd, wpabuf_mhead(buf), wpabuf_len(buf)) !=
 	    (int) wpabuf_len(buf)) {
 		wpa_printf(MSG_ERROR, "WPS (UFD): Failed to write");
 		return -1;
@@ -186,11 +201,11 @@ static int write_ufd(struct wpabuf *buf)
 }
 
 
-static int deinit_ufd(void)
+static void deinit_ufd(void *priv)
 {
-	close(ufd_fd);
-	ufd_fd = -1;
-	return 0;
+	struct wps_ufd_data *data = priv;
+	close(data->ufd_fd);
+	os_free(data);
 }
 
 

@@ -333,12 +333,15 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 				key_idx--;
 			fprintf(nconf, "wep_default_key=%d\n", key_idx);
 			fprintf(nconf, "wep_key%d=", key_idx);
-			if (cred->key_len != 10 && cred->key_len != 26)
-				fputc('"', nconf);
-			for (i = 0; i < cred->key_len; i++)
-				fputc(cred->key[i], nconf);
-			if (cred->key_len != 10 && cred->key_len != 26)
-				fputc('"', nconf);
+			if (cred->key_len == 10 || cred->key_len == 26) {
+				/* WEP key as a hex string */
+				for (i = 0; i < cred->key_len; i++)
+					fputc(cred->key[i], nconf);
+			} else {
+				/* Raw WEP key; convert to hex */
+				for (i = 0; i < cred->key_len; i++)
+					fprintf(nconf, "%02x", cred->key[i]);
+			}
 			fprintf(nconf, "\n");
 		}
 	}

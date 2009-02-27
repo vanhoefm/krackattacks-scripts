@@ -25,7 +25,7 @@
 #include "tls/asn1.h"
 
 
-#ifdef EAP_TLS_FUNCS
+#ifdef CONFIG_CRYPTO_INTERNAL
 
 #ifdef CONFIG_TLS_INTERNAL
 
@@ -788,6 +788,7 @@ int crypto_global_init(void)
 void crypto_global_deinit(void)
 {
 }
+#endif /* CONFIG_TLS_INTERNAL */
 
 
 #if defined(EAP_FAST) || defined(CONFIG_WPS)
@@ -830,6 +831,4 @@ error:
 #endif /* EAP_FAST || CONFIG_WPS */
 
 
-#endif /* CONFIG_TLS_INTERNAL */
-
-#endif /* EAP_TLS_FUNCS */
+#endif /* CONFIG_CRYPTO_INTERNAL */

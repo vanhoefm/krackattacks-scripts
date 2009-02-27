@@ -989,11 +989,13 @@ u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
 			return NULL;
 		}
 
+#ifdef CONFIG_GNUTLS_EXTRA
 		if (conn->tls_ia && !gnutls_ia_handshake_p(conn->session)) {
 			wpa_printf(MSG_INFO, "TLS: No TLS/IA negotiation");
 			conn->failed++;
 			return NULL;
 		}
+#endif /* CONFIG_GNUTLS_EXTRA */
 
 		if (conn->tls_ia)
 			wpa_printf(MSG_DEBUG, "TLS: Start TLS/IA handshake");

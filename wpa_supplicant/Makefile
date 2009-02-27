@@ -526,6 +526,7 @@ CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y
 NEED_BASE64=y
+NEED_CRYPTO=y
 
 ifdef CONFIG_WPS_UFD
 CFLAGS += -DCONFIG_WPS_UFD
@@ -703,23 +704,14 @@ OBJS += ../src/crypto/tls_internal.o
 OBJS += ../src/tls/tlsv1_common.o ../src/tls/tlsv1_record.o
 OBJS += ../src/tls/tlsv1_cred.o ../src/tls/tlsv1_client.o
 OBJS += ../src/tls/tlsv1_client_write.o ../src/tls/tlsv1_client_read.o
-OBJS += ../src/tls/asn1.o ../src/tls/x509v3.o
-OBJS_p += ../src/tls/asn1.o
+OBJS += ../src/tls/asn1.o ../src/tls/rsa.o ../src/tls/x509v3.o
+OBJS_p += ../src/tls/asn1.o ../src/tls/rsa.o
 OBJS_p += ../src/crypto/rc4.o ../src/crypto/aes_wrap.o ../src/crypto/aes.o
 NEED_BASE64=y
 NEED_TLS_PRF=y
 CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_TLS_INTERNAL_CLIENT
 ifeq ($(CONFIG_CRYPTO), internal)
-ifdef CONFIG_INTERNAL_LIBTOMMATH
-CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
-ifdef CONFIG_INTERNAL_LIBTOMMATH_FAST
-CFLAGS += -DLTM_FAST
-endif
-else
-LIBS += -ltommath
-LIBS_p += -ltommath
-endif
 endif
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 LIBS += -ltomcrypt -ltfm
@@ -804,9 +796,18 @@ OBJS_p += ../src/crypto/crypto_libtomcrypt.o
 CONFIG_INTERNAL_SHA256=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
-OBJS += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
-OBJS_p += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
+OBJS += ../src/crypto/crypto_internal.o ../src/tls/bignum.o
+OBJS_p += ../src/crypto/crypto_internal.o ../src/tls/bignum.o
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
+ifdef CONFIG_INTERNAL_LIBTOMMATH
+CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
+ifdef CONFIG_INTERNAL_LIBTOMMATH_FAST
+CFLAGS += -DLTM_FAST
+endif
+else
+LIBS += -ltommath
+LIBS_p += -ltommath
+endif
 CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_DES=y
 CONFIG_INTERNAL_SHA1=y

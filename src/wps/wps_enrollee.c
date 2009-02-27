@@ -42,7 +42,7 @@ static int wps_build_wps_state(struct wps_data *wps, struct wpabuf *msg)
 		   state);
 	wpabuf_put_be16(msg, ATTR_WPS_STATE);
 	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, WPS_STATE_NOT_CONFIGURED);
+	wpabuf_put_u8(msg, state);
 	return 0;
 }
 

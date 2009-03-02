@@ -1527,6 +1527,34 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 }
 
 
+#ifdef CONFIG_IEEE80211N
+static void
+hostapd_get_ht_capab(struct hostapd_data *hapd,
+		     struct ht_cap_ie *ht_cap_ie,
+		     struct ht_cap_ie *neg_ht_cap_ie)
+{
+
+	os_memcpy(neg_ht_cap_ie, ht_cap_ie, sizeof(struct ht_cap_ie));
+	neg_ht_cap_ie->data.capabilities_info =
+		ht_cap_ie->data.capabilities_info & hapd->iconf->ht_capab;
+
+	neg_ht_cap_ie->data.capabilities_info &= ~HT_CAP_INFO_SMPS_DISABLED;
+	if ((ht_cap_ie->data.capabilities_info & HT_CAP_INFO_SMPS_DISABLED) ==
+	    (hapd->iconf->ht_capab & HT_CAP_INFO_SMPS_DISABLED))
+		neg_ht_cap_ie->data.capabilities_info |=
+			hapd->iconf->ht_capab & HT_CAP_INFO_SMPS_DISABLED;
+	else
+		neg_ht_cap_ie->data.capabilities_info |=
+			HT_CAP_INFO_SMPS_DISABLED;
+
+	/* FIXME: Rx STBC needs to be handled specially */
+	neg_ht_cap_ie->data.capabilities_info &= ~HT_CAP_INFO_RX_STBC_MASK;
+	neg_ht_cap_ie->data.capabilities_info |=
+		hapd->iconf->ht_capab & HT_CAP_INFO_RX_STBC_MASK;
+}
+#endif /* CONFIG_IEEE80211N */
+
+
 static void handle_assoc_cb(struct hostapd_data *hapd,
 			    struct ieee80211_mgmt *mgmt,
 			    size_t len, int reassoc, int ok)
@@ -1534,7 +1562,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	u16 status;
 	struct sta_info *sta;
 	int new_assoc = 1;
-	struct ht_cap_ie *ht_cap = NULL;
+	struct ht_cap_ie ht_cap;
 
 	if (!ok) {
 		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
@@ -1585,7 +1613,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT)
-		ht_cap = &sta->ht_capabilities;
+		hostapd_get_ht_capab(hapd, &sta->ht_capabilities, &ht_cap);
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211W
@@ -1595,7 +1623,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (hostapd_sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,
 			    sta->capability, sta->supported_rates,
 			    sta->supported_rates_len, 0, sta->listen_interval,
-			    ht_cap))
+			    &ht_cap))
 	{
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,

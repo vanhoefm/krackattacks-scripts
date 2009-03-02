@@ -280,8 +280,20 @@ struct radius_class_data {
 	size_t count;
 };
 
+#ifndef CONFIG_NO_RADIUS
 void radius_free_class(struct radius_class_data *c);
 int radius_copy_class(struct radius_class_data *dst,
 		      const struct radius_class_data *src);
+#else /* CONFIG_NO_RADIUS */
+static inline void radius_free_class(struct radius_class_data *c)
+{
+}
+
+static inline int radius_copy_class(struct radius_class_data *dst,
+				    const struct radius_class_data *src)
+{
+	return -1;
+}
+#endif /* CONFIG_NO_RADIUS */
 
 #endif /* RADIUS_H */

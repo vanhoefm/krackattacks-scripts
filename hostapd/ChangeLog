@@ -10,6 +10,8 @@ ChangeLog for hostapd
 	  reported correctly; TX/RX packets not yet available from kernel)
 	* added support for WPS USBA out-of-band mechanism with USB Flash
 	  Drives (UFD) (CONFIG_WPS_UFD=y)
+	* fixed EAPOL/EAP reauthentication when using an external RADIUS
+	  authentication server
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

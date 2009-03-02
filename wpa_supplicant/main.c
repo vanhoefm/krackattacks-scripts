@@ -26,7 +26,7 @@ static void usage(void)
 	int i;
 	printf("%s\n\n%s\n"
 	       "usage:\n"
-	       "  wpa_supplicant [-BddhKLqqtuvW] [-P<pid file>] "
+	       "  wpa_supplicant [-BddhKLqqstuvW] [-P<pid file>] "
 	       "[-g<global ctrl>] \\\n"
 	       "        -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] "
 	       "[-p<driver_param>] \\\n"
@@ -57,8 +57,11 @@ static void usage(void)
 	printf("  -f = log output to debug file instead of stdout\n");
 #endif /* CONFIG_DEBUG_FILE */
 	printf("  -g = global ctrl_interface\n"
-	       "  -K = include keys (passwords, etc.) in debug output\n"
-	       "  -t = include timestamp in debug messages\n"
+	       "  -K = include keys (passwords, etc.) in debug output\n");
+#ifdef CONFIG_DEBUG_SYSLOG
+	printf("  -s = log output to syslog instead of stdout\n");
+#endif /* CONFIG_DEBUG_SYSLOG */
+	printf("  -t = include timestamp in debug messages\n"
 	       "  -h = show this help text\n"
 	       "  -L = show license (GPL and BSD)\n"
 	       "  -p = driver parameters\n"
@@ -72,7 +75,9 @@ static void usage(void)
 	       "  -N = start describing new interface\n");
 
 	printf("example:\n"
-	       "  wpa_supplicant -Dwext -iwlan0 -c/etc/wpa_supplicant.conf\n");
+	       "  wpa_supplicant -D%s -iwlan0 -c/etc/wpa_supplicant.conf\n",
+	       wpa_supplicant_drivers[i] ?
+		   wpa_supplicant_drivers[i]->name : "wext");
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 }
 
@@ -133,7 +138,7 @@ int main(int argc, char *argv[])
 	wpa_supplicant_fd_workaround();
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bc:C:D:df:g:hi:KLNp:P:qtuvW");
+		c = getopt(argc, argv, "b:Bc:C:D:df:g:hi:KLNp:P:qstuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -194,6 +199,11 @@ int main(int argc, char *argv[])
 		case 'q':
 			params.wpa_debug_level++;
 			break;
+#ifdef CONFIG_DEBUG_SYSLOG
+		case 's':
+			params.wpa_debug_syslog++;
+			break;
+#endif /* CONFIG_DEBUG_SYSLOG */
 		case 't':
 			params.wpa_debug_timestamp++;
 			break;

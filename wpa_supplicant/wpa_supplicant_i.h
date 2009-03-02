@@ -157,6 +157,11 @@ struct wpa_params {
 	 * wpa_debug_file_path - Path of debug file or %NULL to use stdout
 	 */
 	const char *wpa_debug_file_path;
+
+	/**
+	 * wpa_debug_syslog - Enable log output through syslog
+	 */
+	int wpa_debug_syslog;
 };
 
 /**

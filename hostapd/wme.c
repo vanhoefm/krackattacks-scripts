@@ -27,9 +27,6 @@
  * if only WMM stations are receiving a certain group */
 
 
-static u8 wmm_oui[3] = { 0x00, 0x50, 0xf2 };
-
-
 static inline u8 wmm_aci_aifsn(int aifsn, int acm, int aci)
 {
 	u8 ret;
@@ -107,15 +104,12 @@ int hostapd_eid_wmm_valid(struct hostapd_data *hapd, u8 *eid, size_t len)
 
 	wmm = (struct wmm_information_element *) eid;
 	wpa_printf(MSG_DEBUG, "Validating WMM IE: OUI %02x:%02x:%02x  "
-		   "OUI type %d  OUI sub-type %d  version %d",
+		   "OUI type %d  OUI sub-type %d  version %d  QoS info 0x%x",
 		   wmm->oui[0], wmm->oui[1], wmm->oui[2], wmm->oui_type,
-		   wmm->oui_subtype, wmm->version);
-	if (os_memcmp(wmm->oui, wmm_oui, sizeof(wmm_oui)) != 0 ||
-	    wmm->oui_type != WMM_OUI_TYPE ||
-	    wmm->oui_subtype != WMM_OUI_SUBTYPE_INFORMATION_ELEMENT ||
+		   wmm->oui_subtype, wmm->version, wmm->qos_info);
+	if (wmm->oui_subtype != WMM_OUI_SUBTYPE_INFORMATION_ELEMENT ||
 	    wmm->version != WMM_VERSION) {
-		wpa_printf(MSG_DEBUG, "Unsupported WMM IE OUI/Type/Subtype/"
-			   "Version");
+		wpa_printf(MSG_DEBUG, "Unsupported WMM IE Subtype/Version");
 		return -1;
 	}
 

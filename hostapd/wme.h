@@ -42,32 +42,20 @@ struct wmm_information_element {
 
 } __attribute__ ((packed));
 
+#define WMM_AC_AIFSN_MASK 0x0f
+#define WMM_AC_AIFNS_SHIFT 0
+#define WMM_AC_ACM 0x10
+#define WMM_AC_ACI_MASK 0x60
+#define WMM_AC_ACI_SHIFT 5
+
+#define WMM_AC_ECWMIN_MASK 0x0f
+#define WMM_AC_ECWMIN_SHIFT 0
+#define WMM_AC_ECWMAX_MASK 0xf0
+#define WMM_AC_ECWMAX_SHIFT 4
+
 struct wmm_ac_parameter {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-	/* byte 1: ACI/AIFSN */
-	u8 	aifsn:4,
-		acm:1,
-		aci:2,
-		reserved:1;
-
-	/* byte 2: ECWmin/ECWmax (CW = 2^ECW - 1) */
-	u8 	e_cw_min:4,
-		e_cw_max:4;
-#elif __BYTE_ORDER == __BIG_ENDIAN
-	/* byte 1: ACI/AIFSN */
-	u8 	reserved:1,
-		aci:2,
-		acm:1,
-		aifsn:4;
-
-	/* byte 2: ECWmin/ECWmax */
-	u8 	e_cw_max:4,
-		e_cw_min:4;
-#else
-#error	"Please fix <endian.h>"
-#endif
-
-	/* bytes 3 & 4 */
+	u8 aci_aifsn; /* AIFSN, ACM, ACI */
+	u8 cw; /* ECWmin, ECWmax (CW = 2^ECW - 1) */
 	le16 txop_limit;
 } __attribute__ ((packed));
 

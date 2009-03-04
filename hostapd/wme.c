@@ -30,6 +30,24 @@
 static u8 wmm_oui[3] = { 0x00, 0x50, 0xf2 };
 
 
+static inline u8 wmm_aci_aifsn(int aifsn, int acm, int aci)
+{
+	u8 ret;
+	ret = (aifsn << WMM_AC_AIFNS_SHIFT) & WMM_AC_AIFSN_MASK;
+	if (acm)
+		ret |= WMM_AC_ACM;
+	ret |= (aci << WMM_AC_ACI_SHIFT) & WMM_AC_ACI_MASK;
+	return ret;
+}
+
+
+static inline u8 wmm_ecw(int ecwmin, int ecwmax)
+{
+	return ((ecwmin << WMM_AC_ECWMIN_SHIFT) & WMM_AC_ECWMIN_MASK) |
+		((ecwmax << WMM_AC_ECWMAX_SHIFT) & WMM_AC_ECWMAX_MASK);
+}
+
+
 /*
  * Add WMM Parameter Element to Beacon, Probe Response, and (Re)Association
  * Response frames.
@@ -58,12 +76,10 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 		struct hostapd_wmm_ac_params *acp =
 			&hapd->iconf->wmm_ac_params[e];
 
-		ac->aifsn = acp->aifs;
-		ac->acm = acp->admission_control_mandatory;
-		ac->aci = e;
-		ac->reserved = 0;
-		ac->e_cw_min = acp->cwmin;
-		ac->e_cw_max = acp->cwmax;
+		ac->aci_aifsn = wmm_aci_aifsn(acp->aifs,
+					      acp->admission_control_mandatory,
+					      e);
+		ac->cw = wmm_ecw(acp->cwmin, acp->cwmax);
 		ac->txop_limit = host_to_le16(acp->txop_limit);
 	}
 

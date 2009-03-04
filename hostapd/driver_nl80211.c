@@ -913,7 +913,7 @@ static int i802_sta_set_flags(void *priv, const u8 *addr,
 	if (total_flags & WLAN_STA_AUTHORIZED || !drv->ieee802_1x_active)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_AUTHORIZED);
 
-	if (total_flags & WLAN_STA_WME)
+	if (total_flags & WLAN_STA_WMM)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_WME);
 
 	if (total_flags & WLAN_STA_SHORT_PREAMBLE)

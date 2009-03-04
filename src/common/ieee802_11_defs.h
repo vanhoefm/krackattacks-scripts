@@ -214,7 +214,7 @@
 #define WLAN_ACTION_RADIO_MEASUREMENT 5
 #define WLAN_ACTION_FT 6
 #define WLAN_ACTION_SA_QUERY 8
-#define WLAN_ACTION_WMM 17
+#define WLAN_ACTION_WMM 17 /* WMM Specification 1.1 */
 
 /* SA Query Action frame (IEEE 802.11w/D7.0, 7.4.9) */
 #define WLAN_SA_QUERY_REQUEST 0
@@ -301,7 +301,7 @@ struct ieee80211_mgmt {
 					u8 dialog_token;
 					u8 status_code;
 					u8 variable[0];
-				} STRUCT_PACKED wme_action;
+				} STRUCT_PACKED wmm_action;
 				struct{
 					u8 action_code;
 					u8 element_id;
@@ -562,23 +562,27 @@ struct mimo_pwr_save_action {
 #define OUI_MICROSOFT 0x0050f2 /* Microsoft (also used in Wi-Fi specs)
 				* 00:50:F2 */
 
-#define WME_OUI_TYPE 2
-#define WME_OUI_SUBTYPE_INFORMATION_ELEMENT 0
-#define WME_OUI_SUBTYPE_PARAMETER_ELEMENT 1
-#define WME_OUI_SUBTYPE_TSPEC_ELEMENT 2
-#define WME_VERSION 1
+#define WMM_OUI_TYPE 2
+#define WMM_OUI_SUBTYPE_INFORMATION_ELEMENT 0
+#define WMM_OUI_SUBTYPE_PARAMETER_ELEMENT 1
+#define WMM_OUI_SUBTYPE_TSPEC_ELEMENT 2
+#define WMM_VERSION 1
 
-#define WME_ACTION_CODE_SETUP_REQUEST 0
-#define WME_ACTION_CODE_SETUP_RESPONSE 1
-#define WME_ACTION_CODE_TEARDOWN 2
+#define WMM_ACTION_CODE_ADDTS_REQ 0
+#define WMM_ACTION_CODE_ADDTS_RESP 1
+#define WMM_ACTION_CODE_DELTS 2
 
-#define WME_SETUP_RESPONSE_STATUS_ADMISSION_ACCEPTED 0
-#define WME_SETUP_RESPONSE_STATUS_INVALID_PARAMETERS 1
-#define WME_SETUP_RESPONSE_STATUS_REFUSED 3
+#define WMM_ADDTS_STATUS_ADMISSION_ACCEPTED 0
+#define WMM_ADDTS_STATUS_INVALID_PARAMETERS 1
+/* 2 - Reserved */
+#define WMM_ADDTS_STATUS_REFUSED 3
+/* 4-255 - Reserved */
 
-#define WME_TSPEC_DIRECTION_UPLINK 0
-#define WME_TSPEC_DIRECTION_DOWNLINK 1
-#define WME_TSPEC_DIRECTION_BI_DIRECTIONAL 3
+/* WMM TSPEC Direction Field Values */
+#define WMM_TSPEC_DIRECTION_UPLINK 0
+#define WMM_TSPEC_DIRECTION_DOWNLINK 1
+/* 2 - Reserved */
+#define WMM_TSPEC_DIRECTION_BI_DIRECTIONAL 3
 
 
 #define OUI_BROADCOM 0x00904c /* Broadcom (Epigram) */

@@ -766,16 +766,16 @@ static void handle_assoc(struct hostapd_data *hapd,
 		goto fail;
 	}
 
-	sta->flags &= ~WLAN_STA_WME;
-	if (elems.wme && hapd->conf->wme_enabled) {
-		if (hostapd_eid_wme_valid(hapd, elems.wme, elems.wme_len))
+	sta->flags &= ~WLAN_STA_WMM;
+	if (elems.wmm && hapd->conf->wmm_enabled) {
+		if (hostapd_eid_wmm_valid(hapd, elems.wmm, elems.wmm_len))
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_WPA,
 				       HOSTAPD_LEVEL_DEBUG,
-				       "invalid WME element in association "
+				       "invalid WMM element in association "
 				       "request");
 		else
-			sta->flags |= WLAN_STA_WME;
+			sta->flags |= WLAN_STA_WMM;
 	}
 
 	if (!elems.supp_rates) {
@@ -1124,8 +1124,8 @@ static void handle_assoc(struct hostapd_data *hapd,
 		p = hostapd_eid_supp_rates(hapd, reply->u.assoc_resp.variable);
 		/* Extended supported rates */
 		p = hostapd_eid_ext_supp_rates(hapd, p);
-		if (sta->flags & WLAN_STA_WME)
-			p = hostapd_eid_wme(hapd, p);
+		if (sta->flags & WLAN_STA_WMM)
+			p = hostapd_eid_wmm(hapd, p);
 
 		p = hostapd_eid_ht_capabilities_info(hapd, p);
 		p = hostapd_eid_ht_operation(hapd, p);
@@ -1366,7 +1366,7 @@ static void handle_action(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_IEEE80211R */
 	case WLAN_ACTION_WMM:
-		hostapd_wme_action(hapd, mgmt, len);
+		hostapd_wmm_action(hapd, mgmt, len);
 		return;
 #ifdef CONFIG_IEEE80211W
 	case WLAN_ACTION_SA_QUERY:

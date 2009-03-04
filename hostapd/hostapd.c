@@ -229,7 +229,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->rsn_preauth = conf->rsn_preauth;
 	wconf->eapol_version = conf->eapol_version;
 	wconf->peerkey = conf->peerkey;
-	wconf->wme_enabled = conf->wme_enabled;
+	wconf->wmm_enabled = conf->wmm_enabled;
 	wconf->okc = conf->okc;
 #ifdef CONFIG_IEEE80211W
 	wconf->ieee80211w = conf->ieee80211w;
@@ -388,7 +388,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 			(sta->flags & WLAN_STA_SHORT_PREAMBLE ?
 			 "[SHORT_PREAMBLE]" : ""),
 			(sta->flags & WLAN_STA_PREAUTH ? "[PREAUTH]" : ""),
-			(sta->flags & WLAN_STA_WME ? "[WME]" : ""),
+			(sta->flags & WLAN_STA_WMM ? "[WMM]" : ""),
 			(sta->flags & WLAN_STA_MFP ? "[MFP]" : ""),
 			(sta->flags & WLAN_STA_WPS ? "[WPS]" : ""),
 			(sta->flags & WLAN_STA_MAYBE_WPS ? "[MAYBE_WPS]" : ""),

@@ -854,6 +854,9 @@ static int i802_sta_add2(const char *ifname, void *priv,
 #endif /* CONFIG_IEEE80211N */
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_NEW_STATION "
+			   "result: %d (%s)", ret, strerror(-ret));
 	if (ret == -EEXIST)
 		ret = 0;
  nla_put_failure:

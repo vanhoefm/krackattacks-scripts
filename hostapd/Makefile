@@ -330,7 +330,7 @@ OBJS += ../src/wps/ndef.o
 OBJS += ../src/wps/wps_nfc.o
 NEED_WPS_OOB=y
 ifdef CONFIG_WPS_NFC_PN531
-PN531_PATH = /usr/local/src/nfc
+PN531_PATH ?= /usr/local/src/nfc
 CFLAGS += -DCONFIG_WPS_NFC_PN531
 CFLAGS += -I${PN531_PATH}/inc
 OBJS += ../src/wps/wps_nfc_pn531.o

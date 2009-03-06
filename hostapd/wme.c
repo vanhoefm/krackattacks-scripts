@@ -165,43 +165,102 @@ static void wmm_send_action(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
-/* given frame data payload size in bytes, and data_rate in bits per second
- * returns time to complete frame exchange */
-/* FIX: should not use floating point types */
-static double wmm_frame_exchange_time(int bytes, int data_rate, int encryption,
-				      int cts_protection)
-{
-	/* TODO: account for MAC/PHY headers correctly */
-	/* TODO: account for encryption headers */
-	/* TODO: account for WDS headers */
-	/* TODO: account for CTS protection */
-	/* TODO: account for SIFS + ACK at minimum PHY rate */
-	return (bytes + 400) * 8.0 / data_rate;
-}
-
-
 static void wmm_addts_req(struct hostapd_data *hapd,
 			  struct ieee80211_mgmt *mgmt,
 			  struct wmm_tspec_element *tspec, size_t len)
 {
-	/* FIX: should not use floating point types */
-	double medium_time, pps;
+	u8 *end = ((u8 *) mgmt) + len;
+	int medium_time, pps, duration;
+	int up, psb, dir, tid;
+	u16 val, surplus;
 
-	/* TODO: account for airtime and answer no to tspec setup requests
-	 * when none left!! */
+	if ((u8 *) (tspec + 1) > end) {
+		wpa_printf(MSG_DEBUG, "WMM: TSPEC overflow in ADDTS Request");
+		return;
+	}
 
-	pps = (le_to_host32(tspec->mean_data_rate) / 8.0) /
-		le_to_host16(tspec->nominal_msdu_size);
-	medium_time = (le_to_host16(tspec->surplus_bandwidth_allowance) / 8) *
-		pps *
-		wmm_frame_exchange_time(le_to_host16(tspec->nominal_msdu_size),
-					le_to_host32(tspec->minimum_phy_rate),
-					0, 0);
-	tspec->medium_time = host_to_le16(medium_time * 1000000.0 / 32.0);
+	wpa_printf(MSG_DEBUG, "WMM: ADDTS Request (Dialog Token %d) for TSPEC "
+		   "from " MACSTR,
+		   mgmt->u.action.u.wmm_action.dialog_token,
+		   MAC2STR(mgmt->sa));
+
+	up = (tspec->ts_info[1] >> 3) & 0x07;
+	psb = (tspec->ts_info[1] >> 2) & 0x01;
+	dir = (tspec->ts_info[0] >> 5) & 0x03;
+	tid = (tspec->ts_info[0] >> 1) & 0x0f;
+	wpa_printf(MSG_DEBUG, "WMM: TS Info: UP=%d PSB=%d Direction=%d TID=%d",
+		   up, psb, dir, tid);
+	val = le_to_host16(tspec->nominal_msdu_size);
+	wpa_printf(MSG_DEBUG, "WMM: Nominal MSDU Size: %d%s",
+		   val & 0x7fff, val & 0x8000 ? " (fixed)" : "");
+	wpa_printf(MSG_DEBUG, "WMM: Mean Data Rate: %u bps",
+		   le_to_host32(tspec->mean_data_rate));
+	wpa_printf(MSG_DEBUG, "WMM: Minimum PHY Rate: %u bps",
+		   le_to_host32(tspec->minimum_phy_rate));
+	val = le_to_host16(tspec->surplus_bandwidth_allowance);
+	wpa_printf(MSG_DEBUG, "WMM: Surplus Bandwidth Allowance: %u.%04u",
+		   val >> 13, 10000 * (val & 0x1fff) / 0x2000);
+
+	val = le_to_host16(tspec->nominal_msdu_size);
+	if (val == 0) {
+		wpa_printf(MSG_DEBUG, "WMM: Invalid Nominal MSDU Size (0)");
+		goto invalid;
+	}
+	/* pps = Ceiling((Mean Data Rate / 8) / Nominal MSDU Size) */
+	pps = ((le_to_host32(tspec->mean_data_rate) / 8) + val - 1) / val;
+	wpa_printf(MSG_DEBUG, "WMM: Packets-per-second estimate for TSPEC: %d",
+		   pps);
+
+	if (le_to_host32(tspec->minimum_phy_rate) < 1000000) {
+		wpa_printf(MSG_DEBUG, "WMM: Too small Minimum PHY Rate");
+		goto invalid;
+	}
+
+	duration = (le_to_host16(tspec->nominal_msdu_size) & 0x7fff) * 8 /
+		(le_to_host32(tspec->minimum_phy_rate) / 1000000) +
+		50 /* FIX: proper SIFS + ACK duration */;
+
+	/* unsigned binary number with an implicit binary point after the
+	 * leftmost 3 bits, i.e., 0x2000 = 1.0 */
+	surplus = le_to_host16(tspec->surplus_bandwidth_allowance);
+	if (surplus <= 0x2000) {
+		wpa_printf(MSG_DEBUG, "WMM: Surplus Bandwidth Allowance not "
+			   "greater than unity");
+		goto invalid;
+	}
+
+	medium_time = surplus * pps * duration / 0x2000;
+	wpa_printf(MSG_DEBUG, "WMM: Estimated medium time: %u", medium_time);
+
+	/*
+	 * TODO: store list of granted (and still active) TSPECs and check
+	 * whether there is available medium time for this request. For now,
+	 * just refuse requests that would by themselves take very large
+	 * portion of the available bandwidth.
+	 */
+	if (medium_time > 750000) {
+		wpa_printf(MSG_DEBUG, "WMM: Refuse TSPEC request for over "
+			   "75%% of available bandwidth");
+		wmm_send_action(hapd, mgmt->sa, tspec,
+				WMM_ACTION_CODE_ADDTS_RESP,
+				mgmt->u.action.u.wmm_action.dialog_token,
+				WMM_ADDTS_STATUS_REFUSED);
+		return;
+	}
+
+	/* Convert to 32 microseconds per second unit */
+	tspec->medium_time = host_to_le16(medium_time / 32);
 
 	wmm_send_action(hapd, mgmt->sa, tspec, WMM_ACTION_CODE_ADDTS_RESP,
 			mgmt->u.action.u.wmm_action.dialog_token,
 			WMM_ADDTS_STATUS_ADMISSION_ACCEPTED);
+	return;
+
+invalid:
+	wmm_send_action(hapd, mgmt->sa, tspec,
+			WMM_ACTION_CODE_ADDTS_RESP,
+			mgmt->u.action.u.wmm_action.dialog_token,
+			WMM_ADDTS_STATUS_INVALID_PARAMETERS);
 }
 
 

@@ -1012,6 +1012,59 @@ static int ieee80211_ft_assoc_resp(struct wpa_supplicant *wpa_s,
 }
 
 
+static void ieee80211_tx_addts(struct wpa_supplicant *wpa_s)
+{
+	struct wpabuf *buf;
+	struct ieee80211_mgmt *mgmt;
+	struct wmm_tspec_element *tspec;
+	size_t alen;
+	int tid, up;
+
+	wpa_printf(MSG_DEBUG, "MLME: Send ADDTS Request for Voice TSPEC");
+	mgmt = NULL;
+	alen = mgmt->u.action.u.wmm_action.variable - (u8 *) mgmt;
+
+	buf = wpabuf_alloc(alen + sizeof(*tspec));
+	if (buf == NULL)
+		return;
+
+	mgmt = wpabuf_put(buf, alen);
+	os_memcpy(mgmt->da, wpa_s->bssid, ETH_ALEN);
+	os_memcpy(mgmt->sa, wpa_s->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, wpa_s->bssid, ETH_ALEN);
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	mgmt->u.action.category = WLAN_ACTION_WMM;
+	mgmt->u.action.u.wmm_action.action_code = WMM_ACTION_CODE_ADDTS_REQ;
+	mgmt->u.action.u.wmm_action.dialog_token = 1;
+	mgmt->u.action.u.wmm_action.status_code = 0;
+
+	tspec = wpabuf_put(buf, sizeof(*tspec));
+	tspec->eid = WLAN_EID_VENDOR_SPECIFIC;
+	tspec->length = sizeof(*tspec) - 2;
+	tspec->oui[0] = 0x00;
+	tspec->oui[1] = 0x50;
+	tspec->oui[2] = 0xf2;
+	tspec->oui_type = 2;
+	tspec->oui_subtype = 2;
+	tspec->version = 1;
+
+	tid = 1;
+	up = 6; /* Voice */
+	tspec->ts_info[0] = (tid << 1) |
+		(WMM_TSPEC_DIRECTION_BI_DIRECTIONAL << 5) |
+		BIT(7);
+	tspec->ts_info[1] = up << 3;
+	tspec->nominal_msdu_size = host_to_le16(1530);
+	tspec->mean_data_rate = host_to_le32(128000); /* bits per second */
+	tspec->minimum_phy_rate = host_to_le32(6000000);
+	tspec->surplus_bandwidth_allowance = host_to_le16(0x3000); /* 150% */
+
+	ieee80211_sta_tx(wpa_s, wpabuf_head(buf), wpabuf_len(buf));
+	wpabuf_free(buf);
+}
+
+
 static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 					 struct ieee80211_mgmt *mgmt,
 					 size_t len,
@@ -1162,6 +1215,12 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 		ieee80211_sta_wmm_params(wpa_s, elems.wmm, elems.wmm_len);
 
 	ieee80211_associated(wpa_s);
+
+	if (os_strcmp(wpa_s->driver->name, "test") == 0 &&
+	    elems.wmm && wpa_s->mlme.wmm_enabled) {
+		/* Test WMM-AC - send ADDTS for WMM TSPEC */
+		ieee80211_tx_addts(wpa_s);
+	}
 }
 
 
@@ -1788,6 +1847,119 @@ static void ieee80211_rx_mgmt_sa_query_action(
 #endif /* CONFIG_IEEE80211W */
 
 
+static void dump_tspec(struct wmm_tspec_element *tspec)
+{
+	int up, psb, dir, tid;
+	u16 val;
+
+	up = (tspec->ts_info[1] >> 3) & 0x07;
+	psb = (tspec->ts_info[1] >> 2) & 0x01;
+	dir = (tspec->ts_info[0] >> 5) & 0x03;
+	tid = (tspec->ts_info[0] >> 1) & 0x0f;
+	wpa_printf(MSG_DEBUG, "WMM: TS Info: UP=%d PSB=%d Direction=%d TID=%d",
+		   up, psb, dir, tid);
+	val = le_to_host16(tspec->nominal_msdu_size);
+	wpa_printf(MSG_DEBUG, "WMM: Nominal MSDU Size: %d%s",
+		   val & 0x7fff, val & 0x8000 ? " (fixed)" : "");
+	wpa_printf(MSG_DEBUG, "WMM: Mean Data Rate: %u bps",
+		   le_to_host32(tspec->mean_data_rate));
+	wpa_printf(MSG_DEBUG, "WMM: Minimum PHY Rate: %u bps",
+		   le_to_host32(tspec->minimum_phy_rate));
+	val = le_to_host16(tspec->surplus_bandwidth_allowance);
+	wpa_printf(MSG_DEBUG, "WMM: Surplus Bandwidth Allowance: %u.%04u",
+		   val >> 13, 10000 * (val & 0x1fff) / 0x2000);
+	val = le_to_host16(tspec->medium_time);
+	wpa_printf(MSG_DEBUG, "WMM: Medium Time: %u (= %u usec/sec)",
+		   val, 32 * val);
+}
+
+
+static int is_wmm_tspec(const u8 *ie, size_t len)
+{
+	const struct wmm_tspec_element *tspec;
+
+	if (len < sizeof(*tspec))
+		return 0;
+
+	tspec = (const struct wmm_tspec_element *) ie;
+	if (tspec->eid != WLAN_EID_VENDOR_SPECIFIC ||
+	    tspec->length < sizeof(*tspec) - 2 ||
+	    tspec->oui[0] != 0x00 || tspec->oui[1] != 0x50 ||
+	    tspec->oui[2] != 0xf2 || tspec->oui_type != 2 ||
+	    tspec->oui_subtype != 2 || tspec->version != 1)
+		return 0;
+
+	return 1;
+}
+
+
+static void ieee80211_rx_addts_resp(
+	struct wpa_supplicant *wpa_s, struct ieee80211_mgmt *mgmt, size_t len,
+	size_t var_len)
+{
+	struct wmm_tspec_element *tspec;
+
+	wpa_printf(MSG_DEBUG, "WMM: Received ADDTS Response");
+	wpa_hexdump(MSG_MSGDUMP, "WMM: ADDTS Response IE(s)",
+		    mgmt->u.action.u.wmm_action.variable, var_len);
+	if (!is_wmm_tspec(mgmt->u.action.u.wmm_action.variable, var_len))
+		return;
+	tspec = (struct wmm_tspec_element *)
+		mgmt->u.action.u.wmm_action.variable;
+	dump_tspec(tspec);
+}
+
+
+static void ieee80211_rx_delts(
+	struct wpa_supplicant *wpa_s, struct ieee80211_mgmt *mgmt, size_t len,
+	size_t var_len)
+{
+	struct wmm_tspec_element *tspec;
+
+	wpa_printf(MSG_DEBUG, "WMM: Received DELTS");
+	wpa_hexdump(MSG_MSGDUMP, "WMM: DELTS IE(s)",
+		    mgmt->u.action.u.wmm_action.variable, var_len);
+	if (!is_wmm_tspec(mgmt->u.action.u.wmm_action.variable, var_len))
+		return;
+	tspec = (struct wmm_tspec_element *)
+		mgmt->u.action.u.wmm_action.variable;
+	dump_tspec(tspec);
+}
+
+
+static void ieee80211_rx_mgmt_wmm_action(
+	struct wpa_supplicant *wpa_s, struct ieee80211_mgmt *mgmt, size_t len,
+	struct ieee80211_rx_status *rx_status)
+{
+	size_t alen;
+
+	alen = mgmt->u.action.u.wmm_action.variable - (u8 *) mgmt;
+	if (len < alen) {
+		wpa_printf(MSG_DEBUG, "WMM: Received Action frame too short");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "WMM: Received Action frame: Action Code %d, "
+		   "Dialog Token %d, Status Code %d",
+		   mgmt->u.action.u.wmm_action.action_code,
+		   mgmt->u.action.u.wmm_action.dialog_token,
+		   mgmt->u.action.u.wmm_action.status_code);
+
+	switch (mgmt->u.action.u.wmm_action.action_code) {
+	case WMM_ACTION_CODE_ADDTS_RESP:
+		ieee80211_rx_addts_resp(wpa_s, mgmt, len, len - alen);
+		break;
+	case WMM_ACTION_CODE_DELTS:
+		ieee80211_rx_delts(wpa_s, mgmt, len, len - alen);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "WMM: Unsupported Action Code %d",
+			   mgmt->u.action.u.wmm_action.action_code);
+		break;
+	}
+}
+
+
 static void ieee80211_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 				     struct ieee80211_mgmt *mgmt,
 				     size_t len,
@@ -1809,6 +1981,9 @@ static void ieee80211_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 		ieee80211_rx_mgmt_sa_query_action(wpa_s, mgmt, len, rx_status);
 		break;
 #endif /* CONFIG_IEEE80211W */
+	case WLAN_ACTION_WMM:
+		ieee80211_rx_mgmt_wmm_action(wpa_s, mgmt, len, rx_status);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "MLME: unknown Action Category %d",
 			   mgmt->u.action.category);

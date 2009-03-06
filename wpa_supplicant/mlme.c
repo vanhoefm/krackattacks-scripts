@@ -116,8 +116,6 @@ static int ieee80211_sta_set_channel(struct wpa_supplicant *wpa_s,
 }
 
 
-
-#if 0 /* FIX */
 static int ecw2cw(int ecw)
 {
 	int cw = 1;
@@ -127,7 +125,6 @@ static int ecw2cw(int ecw)
 	}
 	return cw - 1;
 }
-#endif
 
 
 static void ieee80211_sta_wmm_params(struct wpa_supplicant *wpa_s,
@@ -136,6 +133,7 @@ static void ieee80211_sta_wmm_params(struct wpa_supplicant *wpa_s,
 	size_t left;
 	int count;
 	u8 *pos;
+	u8 wmm_acm;
 
 	if (wmm_param_len < 8 || wmm_param[5] /* version */ != 1)
 		return;
@@ -147,54 +145,42 @@ static void ieee80211_sta_wmm_params(struct wpa_supplicant *wpa_s,
 	pos = wmm_param + 8;
 	left = wmm_param_len - 8;
 
-#if 0 /* FIX */
 	wmm_acm = 0;
 	for (; left >= 4; left -= 4, pos += 4) {
 		int aci = (pos[0] >> 5) & 0x03;
 		int acm = (pos[0] >> 4) & 0x01;
-		int queue;
+		int aifs, cw_max, cw_min, burst_time;
 
 		switch (aci) {
-		case 1:
-			queue = IEEE80211_TX_QUEUE_DATA3;
+		case 1: /* AC_BK */
 			if (acm)
-				wmm_acm |= BIT(1) | BIT(2);
+				wmm_acm |= BIT(1) | BIT(2); /* BK/- */
 			break;
-		case 2:
-			queue = IEEE80211_TX_QUEUE_DATA1;
+		case 2: /* AC_VI */
 			if (acm)
-				wmm_acm |= BIT(4) | BIT(5);
+				wmm_acm |= BIT(4) | BIT(5); /* CL/VI */
 			break;
-		case 3:
-			queue = IEEE80211_TX_QUEUE_DATA0;
+		case 3: /* AC_VO */
 			if (acm)
-				wmm_acm |= BIT(6) | BIT(7);
+				wmm_acm |= BIT(6) | BIT(7); /* VO/NC */
 			break;
-		case 0:
+		case 0: /* AC_BE */
 		default:
-			queue = IEEE80211_TX_QUEUE_DATA2;
 			if (acm)
-				wpa_s->mlme.wmm_acm |= BIT(0) | BIT(3);
+				wmm_acm |= BIT(0) | BIT(3); /* BE/EE */
 			break;
 		}
 
-		params.aifs = pos[0] & 0x0f;
-		params.cw_max = ecw2cw((pos[1] & 0xf0) >> 4);
-		params.cw_min = ecw2cw(pos[1] & 0x0f);
+		aifs = pos[0] & 0x0f;
+		cw_max = ecw2cw((pos[1] & 0xf0) >> 4);
+		cw_min = ecw2cw(pos[1] & 0x0f);
 		/* TXOP is in units of 32 usec; burst_time in 0.1 ms */
-		params.burst_time = (pos[2] | (pos[3] << 8)) * 32 / 100;
-		wpa_printf(MSG_DEBUG, "MLME: WMM queue=%d aci=%d acm=%d "
-			   "aifs=%d cWmin=%d cWmax=%d burst=%d",
-			   queue, aci, acm, params.aifs, params.cw_min,
-			   params.cw_max, params.burst_time);
-		/* TODO: handle ACM (block TX, fallback to next lowest allowed
-		 * AC for now) */
-		if (local->hw->conf_tx(local->mdev, queue, &params)) {
-			wpa_printf(MSG_DEBUG, "MLME: failed to set TX queue "
-				   "parameters for queue %d", queue);
-		}
+		burst_time = (pos[2] | (pos[3] << 8)) * 32 / 100;
+		wpa_printf(MSG_DEBUG, "MLME: WMM aci=%d acm=%d aifs=%d "
+			   "cWmin=%d cWmax=%d burst=%d",
+			   aci, acm, aifs, cw_min, cw_max, burst_time);
+		/* TODO: driver configuration */
 	}
-#endif
 }
 
 
@@ -1172,14 +1158,8 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 			   "netstack");
 	}
 
-#if 0 /* FIX? */
-	sta->assoc_ap = 1;
-
-	if (elems.wmm && wpa_s->mlme.wmm_enabled) {
-		sta->flags |= WLAN_STA_WMM;
+	if (elems.wmm && wpa_s->mlme.wmm_enabled)
 		ieee80211_sta_wmm_params(wpa_s, elems.wmm, elems.wmm_len);
-	}
-#endif
 
 	ieee80211_associated(wpa_s);
 }
@@ -2865,6 +2845,8 @@ int ieee80211_sta_init(struct wpa_supplicant *wpa_s)
 	wpa_s->mlme.hw_modes = 1 << WPA_MODE_IEEE80211A;
 	wpa_s->mlme.hw_modes |= 1 << WPA_MODE_IEEE80211B;
 	wpa_s->mlme.hw_modes |= 1 << WPA_MODE_IEEE80211G;
+
+	wpa_s->mlme.wmm_enabled = 1;
 
 	return 0;
 }

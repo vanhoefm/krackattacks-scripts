@@ -526,12 +526,20 @@ struct wps_context {
 };
 
 struct oob_device_data {
+	char *device_name;
 	char *device_path;
 	void * (*init_func)(struct wps_context *, struct oob_device_data *,
 			    int);
 	struct wpabuf * (*read_func)(void *);
 	int (*write_func)(void *, struct wpabuf *);
 	void (*deinit_func)(void *);
+};
+
+struct oob_nfc_device_data {
+	int (*init_func)(char *);
+	void * (*read_func)(size_t *);
+	int (*write_func)(void *, size_t);
+	void (*deinit_func)(void);
 };
 
 struct wps_registrar *
@@ -555,6 +563,7 @@ unsigned int wps_generate_pin(void);
 void wps_free_pending_msgs(struct upnp_pending_message *msgs);
 
 struct oob_device_data * wps_get_oob_device(char *device_type);
+struct oob_nfc_device_data * wps_get_oob_nfc_device(char *device_name);
 int wps_get_oob_method(char *method);
 int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
 		    int registrar);

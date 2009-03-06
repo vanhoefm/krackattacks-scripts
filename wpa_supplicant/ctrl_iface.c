@@ -208,7 +208,7 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 static int wpa_supplicant_ctrl_iface_wps_oob(struct wpa_supplicant *wpa_s,
 					     char *cmd)
 {
-	char *path, *method;
+	char *path, *method, *name;
 
 	path = os_strchr(cmd, ' ');
 	if (path == NULL)
@@ -220,7 +220,11 @@ static int wpa_supplicant_ctrl_iface_wps_oob(struct wpa_supplicant *wpa_s,
 		return -1;
 	*method++ = '\0';
 
-	return wpas_wps_start_oob(wpa_s, cmd, path, method);
+	name = os_strchr(method, ' ');
+	if (name != NULL)
+		*name++ = '\0';
+
+	return wpas_wps_start_oob(wpa_s, cmd, path, method, name);
 }
 #endif /* CONFIG_WPS_OOB */
 

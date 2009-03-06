@@ -225,6 +225,7 @@ static void deinit_ufd(void *priv)
 
 
 struct oob_device_data oob_ufd_device_data = {
+	.device_name	= NULL,
 	.device_path	= NULL,
 	.init_func	= init_ufd,
 	.read_func	= read_ufd,

@@ -525,9 +525,28 @@ struct oob_device_data * wps_get_oob_device(char *device_type)
 	if (os_strstr(device_type, "ufd") != NULL)
 		return &oob_ufd_device_data;
 #endif /* CONFIG_WPS_UFD */
+#ifdef CONFIG_WPS_NFC
+	if (os_strstr(device_type, "nfc") != NULL)
+		return &oob_nfc_device_data;
+#endif /* CONFIG_WPS_NFC */
 
 	return NULL;
 }
+
+
+#ifdef CONFIG_WPS_NFC
+struct oob_nfc_device_data * wps_get_oob_nfc_device(char *device_name)
+{
+	if (device_name == NULL)
+		return NULL;
+#ifdef CONFIG_WPS_NFC_PN531
+	if (os_strstr(device_name, "pn531") != NULL)
+		return &oob_nfc_pn531_device_data;
+#endif /* CONFIG_WPS_NFC_PN531 */
+
+	return NULL;
+}
+#endif /* CONFIG_WPS_NFC */
 
 
 int wps_get_oob_method(char *method)

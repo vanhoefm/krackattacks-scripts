@@ -287,17 +287,24 @@ static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
 	char cmd[256];
 	int res;
 
-	if (argc != 3) {
-		printf("Invalid WPS_OOB command: need three arguments:\n"
-		       "- OOB_DEV_TYPE: use 'ufd'\n"
-		       "- OOB_PATH: path of OOB device like '/mnt'\n"
-		       "- OOB_METHOD: OOB method 'pin-e' or 'pin-r', "
-		       "'cred'\n");
+	if (argc != 3 && argc != 4) {
+		printf("Invalid WPS_OOB command: need three or four "
+		       "arguments:\n"
+		       "- DEV_TYPE: use 'ufd' or 'nfc'\n"
+		       "- PATH: path of OOB device like '/mnt'\n"
+		       "- METHOD: OOB method 'pin-e' or 'pin-r', "
+		       "'cred'\n"
+		       "- DEV_NAME: (only for NFC) device name like "
+		       "'pn531'\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s",
-			  argv[0], argv[1], argv[2]);
+	if (argc == 3)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_OOB %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3]);
 	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
 		printf("Too long WPS_OOB command.\n");
 		return -1;

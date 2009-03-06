@@ -194,6 +194,8 @@ void wps_success_event(struct wps_context *wps);
 void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part);
 
 extern struct oob_device_data oob_ufd_device_data;
+extern struct oob_device_data oob_nfc_device_data;
+extern struct oob_nfc_device_data oob_nfc_pn531_device_data;
 
 /* wps_attr_parse.c */
 int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
@@ -244,6 +246,9 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 					       const struct wpabuf *msg);
 int wps_build_cred(struct wps_data *wps, struct wpabuf *msg);
 
+/* ndef.c */
+struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);
+struct wpabuf * ndef_build_wifi(struct wpabuf *buf);
 
 static inline int wps_version_supported(const u8 *version)
 {

@@ -305,6 +305,9 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 #ifdef CONFIG_WPS_UFD
 		methods |= WPS_CONFIG_USBA;
 #endif /* CONFIG_WPS_UFD */
+#ifdef CONFIG_WPS_NFC
+		methods |= WPS_CONFIG_NFC_INTERFACE;
+#endif /* CONFIG_WPS_NFC */
 	}
 
 	if (wps_build_version(ie) ||

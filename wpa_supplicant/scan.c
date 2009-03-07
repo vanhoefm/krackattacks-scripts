@@ -129,8 +129,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	if (wpa_s->conf->ap_scan != 0 &&
-	    wpa_s->driver && IS_WIRED(wpa_s->driver)) {
+	if (wpa_s->conf->ap_scan != 0 && wpa_s->drv_wired) {
 		wpa_printf(MSG_DEBUG, "Using wired authentication - "
 			   "overriding ap_scan configuration");
 		wpa_s->conf->ap_scan = 0;

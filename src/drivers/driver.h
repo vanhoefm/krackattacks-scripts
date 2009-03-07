@@ -368,6 +368,7 @@ struct wpa_driver_capa {
 /* Driver takes care of RSN 4-way handshake internally; PMK is configured with
  * struct wpa_driver_ops::set_key using alg = WPA_ALG_PMK */
 #define WPA_DRIVER_FLAGS_4WAY_HANDSHAKE 0x00000008
+#define WPA_DRIVER_FLAGS_WIRED		0x00000010
 	unsigned int flags;
 
 	int max_scan_ssids;
@@ -1083,13 +1084,6 @@ struct wpa_driver_ops {
 	 */
 	int (*scan2)(void *priv, struct wpa_driver_scan_params *params);
 };
-
-/* Function to check whether a driver is for wired connections */
-static inline int IS_WIRED(const struct wpa_driver_ops *drv)
-{
-	return os_strcmp(drv->name, "wired") == 0 ||
-		os_strcmp(drv->name, "roboswitch") == 0;
-}
 
 /**
  * enum wpa_event_type - Event type for wpa_supplicant_event() calls

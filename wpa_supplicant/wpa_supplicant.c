@@ -211,8 +211,7 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec)
 {
-	if (wpa_s->conf && wpa_s->conf->ap_scan == 0 &&
-	    wpa_s->driver && IS_WIRED(wpa_s->driver))
+	if (wpa_s->conf && wpa_s->conf->ap_scan == 0 && wpa_s->drv_wired)
 		return;
 
 	wpa_msg(wpa_s, MSG_DEBUG, "Setting authentication timeout: %d sec "
@@ -287,9 +286,8 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 				EAPOL_REQUIRE_KEY_BROADCAST;
 		}
 
-		if (wpa_s->conf && wpa_s->driver && IS_WIRED(wpa_s->driver)) {
+		if (wpa_s->conf && wpa_s->drv_wired)
 			eapol_conf.required_keys = 0;
-		}
 	}
 	if (wpa_s->conf)
 		eapol_conf.fast_reauth = wpa_s->conf->fast_reauth;
@@ -1461,8 +1459,7 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 		return NULL;
 	}
 
-	wired = wpa_s->conf->ap_scan == 0 && wpa_s->driver &&
-		IS_WIRED(wpa_s->driver);
+	wired = wpa_s->conf->ap_scan == 0 && wpa_s->drv_wired;
 
 	entry = wpa_s->conf->ssid;
 	while (entry) {
@@ -1908,6 +1905,8 @@ next_driver:
 		if (capa.flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE)
 			wpa_s->driver_4way_handshake = 1;
 		wpa_s->max_scan_ssids = capa.max_scan_ssids;
+		if (capa.flags & WPA_DRIVER_FLAGS_WIRED)
+			wpa_s->drv_wired = 1;
 	}
 
 #ifdef CONFIG_IBSS_RSN

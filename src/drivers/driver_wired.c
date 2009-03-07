@@ -53,6 +53,14 @@ static int wpa_driver_wired_get_bssid(void *priv, u8 *bssid)
 }
 
 
+static int wpa_driver_wired_get_capa(void *priv, struct wpa_driver_capa *capa)
+{
+	os_memset(capa, 0, sizeof(*capa));
+	capa->flags = WPA_DRIVER_FLAGS_WIRED;
+	return 0;
+}
+
+
 static int wpa_driver_wired_get_ifflags(const char *ifname, int *flags)
 {
 	struct ifreq ifr;
@@ -272,6 +280,7 @@ const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.desc = "wpa_supplicant wired Ethernet driver",
 	.get_ssid = wpa_driver_wired_get_ssid,
 	.get_bssid = wpa_driver_wired_get_bssid,
+	.get_capa = wpa_driver_wired_get_capa,
 	.init = wpa_driver_wired_init,
 	.deinit = wpa_driver_wired_deinit,
 };

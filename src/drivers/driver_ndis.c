@@ -2794,11 +2794,17 @@ static void * wpa_driver_ndis_init(void *ctx, const char *ifname)
 			   (int) mode);
 		/* Try to continue anyway */
 
-		if (!drv->has_capability && drv->capa.enc == 0) {
+		if (!drv->has_capability || drv->capa.enc == 0) {
+			/*
+			 * Note: This will also happen with NDIS 6 drivers with
+			 * Vista.
+			 */
 			wpa_printf(MSG_DEBUG, "NDIS: Driver did not provide "
 				   "any wireless capabilities - assume it is "
 				   "a wired interface");
 			drv->wired = 1;
+			drv->capa.flags |= WPA_DRIVER_FLAGS_WIRED;
+			drv->has_capability = 1;
 		}
 	}
 

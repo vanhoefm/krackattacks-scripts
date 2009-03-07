@@ -172,6 +172,15 @@ static int wpa_driver_roboswitch_get_bssid(void *priv, u8 *bssid)
 }
 
 
+static int wpa_driver_roboswitch_get_capa(void *priv,
+					  struct wpa_driver_capa *capa)
+{
+	os_memset(capa, 0, sizeof(*capa));
+	capa->flags = WPA_DRIVER_FLAGS_WIRED;
+	return 0;
+}
+
+
 static const char * wpa_driver_roboswitch_get_ifname(void *priv)
 {
 	struct wpa_driver_roboswitch_data *drv = priv;
@@ -438,6 +447,7 @@ const struct wpa_driver_ops wpa_driver_roboswitch_ops = {
 	.desc = "wpa_supplicant roboswitch driver",
 	.get_ssid = wpa_driver_roboswitch_get_ssid,
 	.get_bssid = wpa_driver_roboswitch_get_bssid,
+	.get_capa = wpa_driver_roboswitch_get_capa,
 	.init = wpa_driver_roboswitch_init,
 	.deinit = wpa_driver_roboswitch_deinit,
 	.get_ifname = wpa_driver_roboswitch_get_ifname,

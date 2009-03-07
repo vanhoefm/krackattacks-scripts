@@ -311,6 +311,7 @@ struct wpa_supplicant {
 	int mgmt_group_cipher;
 
 	void *drv_priv; /* private data used by driver_ops */
+	int drv_wired;
 
 	struct wpa_ssid *prev_scan_ssid; /* previously scanned SSID;
 					  * NULL = not yet initialized (start

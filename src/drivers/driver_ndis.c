@@ -353,6 +353,47 @@ typedef struct NDIS_802_11_PMKID_CANDIDATE_LIST {
 #endif /* OID_802_11_CAPABILITY */
 
 
+#ifndef OID_DOT11_CURRENT_OPERATION_MODE
+/* Native 802.11 OIDs */
+#define OID_DOT11_NDIS_START 0x0D010300
+#define OID_DOT11_CURRENT_OPERATION_MODE (OID_DOT11_NDIS_START + 8)
+#define OID_DOT11_SCAN_REQUEST (OID_DOT11_NDIS_START + 11)
+
+typedef enum _DOT11_BSS_TYPE {
+	dot11_BSS_type_infrastructure = 1,
+	dot11_BSS_type_independent = 2,
+	dot11_BSS_type_any = 3
+} DOT11_BSS_TYPE, * PDOT11_BSS_TYPE;
+
+typedef UCHAR DOT11_MAC_ADDRESS[6];
+typedef DOT11_MAC_ADDRESS * PDOT11_MAC_ADDRESS;
+
+typedef enum _DOT11_SCAN_TYPE {
+	dot11_scan_type_active = 1,
+	dot11_scan_type_passive = 2,
+	dot11_scan_type_auto = 3,
+	dot11_scan_type_forced = 0x80000000
+} DOT11_SCAN_TYPE, * PDOT11_SCAN_TYPE;
+
+typedef struct _DOT11_SCAN_REQUEST_V2 {
+	DOT11_BSS_TYPE dot11BSSType;
+	DOT11_MAC_ADDRESS dot11BSSID;
+	DOT11_SCAN_TYPE dot11ScanType;
+	BOOLEAN bRestrictedScan;
+	ULONG udot11SSIDsOffset;
+	ULONG uNumOfdot11SSIDs;
+	BOOLEAN bUseRequestIE;
+	ULONG uRequestIDsOffset;
+	ULONG uNumOfRequestIDs;
+	ULONG uPhyTypeInfosOffset;
+	ULONG uNumOfPhyTypeInfos;
+	ULONG uIEsOffset;
+	ULONG uIEsLength;
+	UCHAR ucBuffer[1];
+} DOT11_SCAN_REQUEST_V2, * PDOT11_SCAN_REQUEST_V2;
+
+#endif /* OID_DOT11_CURRENT_OPERATION_MODE */
+
 #ifdef CONFIG_USE_NDISUIO
 #ifndef _WIN32_WCE
 #ifdef __MINGW32_VERSION
@@ -712,10 +753,32 @@ static void wpa_driver_ndis_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+static int wpa_driver_ndis_scan_native80211(struct wpa_driver_ndis_data *drv,
+					    const u8 *ssid, size_t ssid_len)
+{
+	DOT11_SCAN_REQUEST_V2 req;
+	int res;
+
+	os_memset(&req, 0, sizeof(req));
+	req.dot11BSSType = dot11_BSS_type_any;
+	os_memset(req.dot11BSSID, 0xff, ETH_ALEN);
+	req.dot11ScanType = dot11_scan_type_auto;
+	res = ndis_set_oid(drv, OID_DOT11_SCAN_REQUEST, (char *) &req,
+			   sizeof(req));
+	eloop_cancel_timeout(wpa_driver_ndis_scan_timeout, drv, drv->ctx);
+	eloop_register_timeout(7, 0, wpa_driver_ndis_scan_timeout, drv,
+			       drv->ctx);
+	return res;
+}
+
+
 static int wpa_driver_ndis_scan(void *priv, const u8 *ssid, size_t ssid_len)
 {
 	struct wpa_driver_ndis_data *drv = priv;
 	int res;
+
+	if (drv->native80211)
+		return wpa_driver_ndis_scan_native80211(drv, ssid, ssid_len);
 
 	if (!drv->radio_enabled) {
 		wpa_printf(MSG_DEBUG, "NDIS: turning radio on before the first"
@@ -2801,12 +2864,21 @@ static void * wpa_driver_ndis_init(void *ctx, const char *ifname)
 	mode = Ndis802_11Infrastructure;
 	if (ndis_set_oid(drv, OID_802_11_INFRASTRUCTURE_MODE,
 			 (char *) &mode, sizeof(mode)) < 0) {
+		char buf[8];
+		int res;
 		wpa_printf(MSG_DEBUG, "NDIS: Failed to set "
 			   "OID_802_11_INFRASTRUCTURE_MODE (%d)",
 			   (int) mode);
 		/* Try to continue anyway */
 
-		if (!drv->has_capability || drv->capa.enc == 0) {
+		res = ndis_get_oid(drv, OID_DOT11_CURRENT_OPERATION_MODE, buf,
+				   sizeof(buf));
+		if (res > 0) {
+			wpa_printf(MSG_INFO, "NDIS: The driver seems to use "
+				   "Native 802.11 OIDs. These are not yet "
+				   "fully supported.");
+			drv->native80211 = 1;
+		} else if (!drv->has_capability || drv->capa.enc == 0) {
 			/*
 			 * Note: This will also happen with NDIS 6 drivers with
 			 * Vista.

@@ -627,6 +627,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	cfg.extra_cred_len = conf->extra_cred_len;
 	cfg.disable_auto_conf = (hapd->conf->wps_cred_processing == 1) &&
 		conf->skip_cred_build;
+	if (conf->ssid.security_policy == SECURITY_STATIC_WEP)
+		cfg.static_wep_only = 1;
 
 	wps->registrar = wps_registrar_init(wps, &cfg);
 	if (wps->registrar == NULL) {

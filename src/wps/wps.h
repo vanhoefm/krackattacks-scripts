@@ -277,6 +277,11 @@ struct wps_registrar_config {
 	 * to be set with a suitable Credential and skip_cred_build being used.
 	 */
 	int disable_auto_conf;
+
+	/**
+	 * static_wep_only - Whether the BSS supports only static WEP
+	 */
+	int static_wep_only;
 };
 
 

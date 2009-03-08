@@ -99,6 +99,7 @@ struct wps_registrar {
 	int disable_auto_conf;
 	int sel_reg_dev_password_id_override;
 	int sel_reg_config_methods_override;
+	int static_wep_only;
 };
 
 
@@ -377,6 +378,7 @@ wps_registrar_init(struct wps_context *wps,
 	reg->disable_auto_conf = cfg->disable_auto_conf;
 	reg->sel_reg_dev_password_id_override = -1;
 	reg->sel_reg_config_methods_override = -1;
+	reg->static_wep_only = cfg->static_wep_only;
 
 	if (wps_set_ie(reg)) {
 		wps_registrar_deinit(reg);
@@ -776,6 +778,28 @@ static int wps_set_ie(struct wps_registrar *reg)
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
+	}
+
+	if (reg->static_wep_only) {
+		/*
+		 * Windows XP and Vista clients can get confused about
+		 * EAP-Identity/Request when they probe the network with
+		 * EAPOL-Start. In such a case, they may assume the network is
+		 * using IEEE 802.1X and prompt user for a certificate while
+		 * the correct (non-WPS) behavior would be to ask for the
+		 * static WEP key. As a workaround, use Microsoft Provisioning
+		 * IE to advertise that legacy 802.1X is not supported.
+		 */
+		const u8 ms_wps[7] = {
+			WLAN_EID_VENDOR_SPECIFIC, 5,
+			/* Microsoft Provisioning IE (00:50:f2:5) */
+			0x00, 0x50, 0xf2, 5,
+			0x00 /* no legacy 802.1X or MS WPS */
+		};
+		wpa_printf(MSG_DEBUG, "WPS: Add Microsoft Provisioning IE "
+			   "into Beacon/Probe Response frames");
+		wpabuf_put_data(beacon, ms_wps, sizeof(ms_wps));
+		wpabuf_put_data(probe, ms_wps, sizeof(ms_wps));
 	}
 
 	ret = wps_cb_set_ie(reg, beacon, probe);

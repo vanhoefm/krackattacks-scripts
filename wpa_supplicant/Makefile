@@ -461,6 +461,7 @@ OBJS += ../src/eap_common/eap_fast_common.o
 OBJS_h += ../src/eap_server/eap_fast.o
 endif
 TLS_FUNCS=y
+CONFIG_IEEE8021X_EAPOL=y
 NEED_T_PRF=y
 endif
 

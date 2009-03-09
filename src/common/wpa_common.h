@@ -282,6 +282,12 @@ struct rsn_ftie {
 #define FTIE_SUBELEM_R0KH_ID 3
 #define FTIE_SUBELEM_IGTK 4
 
+struct rsn_rdie {
+	u8 id;
+	u8 descr_count;
+	le16 status_code;
+} STRUCT_PACKED;
+
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef _MSC_VER

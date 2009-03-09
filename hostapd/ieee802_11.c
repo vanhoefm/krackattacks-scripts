@@ -675,7 +675,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 	int send_deauth = 0, send_len, left, i;
 	struct sta_info *sta;
 	struct ieee802_11_elems elems;
-	u8 buf[sizeof(struct ieee80211_mgmt) + 512];
+	u8 buf[sizeof(struct ieee80211_mgmt) + 1024];
 	struct ieee80211_mgmt *reply;
 
 	if (len < IEEE80211_HDRLEN + (reassoc ? sizeof(mgmt->u.reassoc_req) :
@@ -1133,10 +1133,11 @@ static void handle_assoc(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211R
 		if (resp == WLAN_STATUS_SUCCESS) {
 			/* IEEE 802.11r: Mobility Domain Information, Fast BSS
-			 * Transition Information, RSN */
+			 * Transition Information, RSN, [RIC Response] */
 			p = wpa_sm_write_assoc_resp_ies(sta->wpa_sm, p,
 							buf + sizeof(buf) - p,
-							sta->auth_alg);
+							sta->auth_alg,
+							pos, left);
 		}
 #endif /* CONFIG_IEEE80211R */
 

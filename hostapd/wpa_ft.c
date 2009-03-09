@@ -19,12 +19,35 @@
 #include "wpa.h"
 #include "aes_wrap.h"
 #include "ieee802_11.h"
+#include "wme.h"
 #include "defs.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
 
 
 #ifdef CONFIG_IEEE80211R
+
+struct wpa_ft_ies {
+	const u8 *mdie;
+	size_t mdie_len;
+	const u8 *ftie;
+	size_t ftie_len;
+	const u8 *r1kh_id;
+	const u8 *gtk;
+	size_t gtk_len;
+	const u8 *r0kh_id;
+	size_t r0kh_id_len;
+	const u8 *rsn;
+	size_t rsn_len;
+	const u8 *rsn_pmkid;
+	const u8 *ric;
+	size_t ric_len;
+};
+
+
+static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
+			    struct wpa_ft_ies *parse);
+
 
 static int wpa_ft_rrb_send(struct wpa_authenticator *wpa_auth, const u8 *dst,
 			   const u8 *data, size_t data_len)
@@ -471,14 +494,122 @@ static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
 #endif /* CONFIG_IEEE80211W */
 
 
+static u8 * wpa_ft_process_rdie(u8 *pos, u8 *end, u8 id, u8 descr_count,
+				const u8 *ies, size_t ies_len)
+{
+	struct ieee802_11_elems parse;
+	struct rsn_rdie *rdie;
+
+	wpa_printf(MSG_DEBUG, "FT: Resource Request: id=%d descr_count=%d",
+		   id, descr_count);
+	wpa_hexdump(MSG_MSGDUMP, "FT: Resource descriptor IE(s)",
+		    ies, ies_len);
+
+	if (end - pos < (int) sizeof(*rdie)) {
+		wpa_printf(MSG_ERROR, "FT: Not enough room for response RDIE");
+		return pos;
+	}
+
+	*pos++ = WLAN_EID_RIC_DATA;
+	*pos++ = sizeof(*rdie);
+	rdie = (struct rsn_rdie *) pos;
+	rdie->id = id;
+	rdie->descr_count = 0;
+	rdie->status_code = host_to_le16(WLAN_STATUS_SUCCESS);
+	pos += sizeof(*rdie);
+
+	if (ieee802_11_parse_elems((u8 *) ies, ies_len, &parse, 1) ==
+	    ParseFailed) {
+		wpa_printf(MSG_DEBUG, "FT: Failed to parse request IEs");
+		rdie->status_code =
+			host_to_le16(WLAN_STATUS_UNSPECIFIED_FAILURE);
+		return pos;
+	}
+
+	if (parse.wmm_tspec) {
+		struct wmm_tspec_element *tspec;
+		int res;
+
+		if (parse.wmm_tspec_len + 2 < (int) sizeof(*tspec)) {
+			wpa_printf(MSG_DEBUG, "FT: Too short WMM TSPEC IE "
+				   "(%d)", (int) parse.wmm_tspec_len);
+			rdie->status_code =
+				host_to_le16(WLAN_STATUS_UNSPECIFIED_FAILURE);
+			return pos;
+		}
+		if (end - pos < (int) sizeof(*tspec)) {
+			wpa_printf(MSG_ERROR, "FT: Not enough room for "
+				   "response TSPEC");
+			rdie->status_code =
+				host_to_le16(WLAN_STATUS_UNSPECIFIED_FAILURE);
+			return pos;
+		}
+		tspec = (struct wmm_tspec_element *) pos;
+		os_memcpy(tspec, parse.wmm_tspec - 2, sizeof(*tspec));
+		res = wmm_process_tspec(tspec);
+		wpa_printf(MSG_DEBUG, "FT: ADDTS processing result: %d", res);
+		if (res == WMM_ADDTS_STATUS_INVALID_PARAMETERS)
+			rdie->status_code =
+				host_to_le16(WLAN_STATUS_INVALID_PARAMETERS);
+		else if (res == WMM_ADDTS_STATUS_REFUSED)
+			rdie->status_code =
+				host_to_le16(WLAN_STATUS_REQUEST_DECLINED);
+		else {
+			/* TSPEC accepted; include updated TSPEC in response */
+			rdie->descr_count = 1;
+			pos += sizeof(*tspec);
+		}
+		return pos;
+	}
+
+	wpa_printf(MSG_DEBUG, "FT: No supported resource requested");
+	rdie->status_code = host_to_le16(WLAN_STATUS_UNSPECIFIED_FAILURE);
+	return pos;
+}
+
+
+static u8 * wpa_ft_process_ric(u8 *pos, u8 *end, const u8 *ric, size_t ric_len)
+{
+	const u8 *rpos, *start;
+	const struct rsn_rdie *rdie;
+
+	wpa_hexdump(MSG_MSGDUMP, "FT: RIC Request", ric, ric_len);
+
+	rpos = ric;
+	while (rpos + sizeof(*rdie) < ric + ric_len) {
+		if (rpos[0] != WLAN_EID_RIC_DATA || rpos[1] < sizeof(*rdie) ||
+		    rpos + 2 + rpos[1] > ric + ric_len)
+			break;
+		rdie = (const struct rsn_rdie *) (rpos + 2);
+		rpos += 2 + rpos[1];
+		start = rpos;
+
+		while (rpos + 2 <= ric + ric_len &&
+		       rpos + 2 + rpos[1] <= ric + ric_len) {
+			if (rpos[0] == WLAN_EID_RIC_DATA)
+				break;
+			rpos += 2 + rpos[1];
+		}
+		pos = wpa_ft_process_rdie(pos, end, rdie->id,
+					  rdie->descr_count,
+					  start, rpos - start);
+	}
+
+	return pos;
+}
+
+
 u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
-				 size_t max_len, int auth_alg)
+				 size_t max_len, int auth_alg,
+				 const u8 *req_ies, size_t req_ies_len)
 {
 	u8 *end, *mdie, *ftie, *rsnie, *r0kh_id, *subelem = NULL;
 	size_t mdie_len, ftie_len, rsnie_len, r0kh_id_len, subelem_len = 0;
 	int res;
 	struct wpa_auth_config *conf;
 	struct rsn_ftie *_ftie;
+	struct wpa_ft_ies parse;
+	u8 *ric_start;
 
 	if (sm == NULL)
 		return pos;
@@ -549,31 +680,25 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 
 	_ftie = (struct rsn_ftie *) (ftie + 2);
 	_ftie->mic_control[1] = 3; /* Information element count */
+
+	ric_start = pos;
+	if (wpa_ft_parse_ies(req_ies, req_ies_len, &parse) == 0 && parse.ric) {
+		pos = wpa_ft_process_ric(pos, end, parse.ric, parse.ric_len);
+		_ftie->mic_control[1] += ieee802_11_ie_count(ric_start,
+							     pos - ric_start);
+	}
+	if (ric_start == pos)
+		ric_start = NULL;
+
 	if (wpa_ft_mic(sm->PTK.kck, sm->addr, sm->wpa_auth->addr, 6,
 		       mdie, mdie_len, ftie, ftie_len,
-		       rsnie, rsnie_len, NULL, 0, _ftie->mic) < 0)
+		       rsnie, rsnie_len,
+		       ric_start, ric_start ? pos - ric_start : 0,
+		       _ftie->mic) < 0)
 		wpa_printf(MSG_DEBUG, "FT: Failed to calculate MIC");
 
 	return pos;
 }
-
-
-struct wpa_ft_ies {
-	const u8 *mdie;
-	size_t mdie_len;
-	const u8 *ftie;
-	size_t ftie_len;
-	const u8 *r1kh_id;
-	const u8 *gtk;
-	size_t gtk_len;
-	const u8 *r0kh_id;
-	size_t r0kh_id_len;
-	const u8 *rsn;
-	size_t rsn_len;
-	const u8 *rsn_pmkid;
-	const u8 *ric;
-	size_t ric_len;
-};
 
 
 static int wpa_ft_parse_ftie(const u8 *ie, size_t ie_len,

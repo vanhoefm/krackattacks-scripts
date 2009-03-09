@@ -165,24 +165,11 @@ static void wmm_send_action(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
-static void wmm_addts_req(struct hostapd_data *hapd,
-			  struct ieee80211_mgmt *mgmt,
-			  struct wmm_tspec_element *tspec, size_t len)
+int wmm_process_tspec(struct wmm_tspec_element *tspec)
 {
-	u8 *end = ((u8 *) mgmt) + len;
 	int medium_time, pps, duration;
 	int up, psb, dir, tid;
 	u16 val, surplus;
-
-	if ((u8 *) (tspec + 1) > end) {
-		wpa_printf(MSG_DEBUG, "WMM: TSPEC overflow in ADDTS Request");
-		return;
-	}
-
-	wpa_printf(MSG_DEBUG, "WMM: ADDTS Request (Dialog Token %d) for TSPEC "
-		   "from " MACSTR,
-		   mgmt->u.action.u.wmm_action.dialog_token,
-		   MAC2STR(mgmt->sa));
 
 	up = (tspec->ts_info[1] >> 3) & 0x07;
 	psb = (tspec->ts_info[1] >> 2) & 0x01;
@@ -204,7 +191,7 @@ static void wmm_addts_req(struct hostapd_data *hapd,
 	val = le_to_host16(tspec->nominal_msdu_size);
 	if (val == 0) {
 		wpa_printf(MSG_DEBUG, "WMM: Invalid Nominal MSDU Size (0)");
-		goto invalid;
+		return WMM_ADDTS_STATUS_INVALID_PARAMETERS;
 	}
 	/* pps = Ceiling((Mean Data Rate / 8) / Nominal MSDU Size) */
 	pps = ((le_to_host32(tspec->mean_data_rate) / 8) + val - 1) / val;
@@ -213,7 +200,7 @@ static void wmm_addts_req(struct hostapd_data *hapd,
 
 	if (le_to_host32(tspec->minimum_phy_rate) < 1000000) {
 		wpa_printf(MSG_DEBUG, "WMM: Too small Minimum PHY Rate");
-		goto invalid;
+		return WMM_ADDTS_STATUS_INVALID_PARAMETERS;
 	}
 
 	duration = (le_to_host16(tspec->nominal_msdu_size) & 0x7fff) * 8 /
@@ -226,7 +213,7 @@ static void wmm_addts_req(struct hostapd_data *hapd,
 	if (surplus <= 0x2000) {
 		wpa_printf(MSG_DEBUG, "WMM: Surplus Bandwidth Allowance not "
 			   "greater than unity");
-		goto invalid;
+		return WMM_ADDTS_STATUS_INVALID_PARAMETERS;
 	}
 
 	medium_time = surplus * pps * duration / 0x2000;
@@ -241,26 +228,38 @@ static void wmm_addts_req(struct hostapd_data *hapd,
 	if (medium_time > 750000) {
 		wpa_printf(MSG_DEBUG, "WMM: Refuse TSPEC request for over "
 			   "75%% of available bandwidth");
-		wmm_send_action(hapd, mgmt->sa, tspec,
-				WMM_ACTION_CODE_ADDTS_RESP,
-				mgmt->u.action.u.wmm_action.dialog_token,
-				WMM_ADDTS_STATUS_REFUSED);
-		return;
+		return WMM_ADDTS_STATUS_REFUSED;
 	}
 
 	/* Convert to 32 microseconds per second unit */
 	tspec->medium_time = host_to_le16(medium_time / 32);
 
-	wmm_send_action(hapd, mgmt->sa, tspec, WMM_ACTION_CODE_ADDTS_RESP,
-			mgmt->u.action.u.wmm_action.dialog_token,
-			WMM_ADDTS_STATUS_ADMISSION_ACCEPTED);
-	return;
+	return WMM_ADDTS_STATUS_ADMISSION_ACCEPTED;
+}
 
-invalid:
-	wmm_send_action(hapd, mgmt->sa, tspec,
-			WMM_ACTION_CODE_ADDTS_RESP,
-			mgmt->u.action.u.wmm_action.dialog_token,
-			WMM_ADDTS_STATUS_INVALID_PARAMETERS);
+
+static void wmm_addts_req(struct hostapd_data *hapd,
+			  struct ieee80211_mgmt *mgmt,
+			  struct wmm_tspec_element *tspec, size_t len)
+{
+	u8 *end = ((u8 *) mgmt) + len;
+	int res;
+
+	if ((u8 *) (tspec + 1) > end) {
+		wpa_printf(MSG_DEBUG, "WMM: TSPEC overflow in ADDTS Request");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "WMM: ADDTS Request (Dialog Token %d) for TSPEC "
+		   "from " MACSTR,
+		   mgmt->u.action.u.wmm_action.dialog_token,
+		   MAC2STR(mgmt->sa));
+
+	res = wmm_process_tspec(tspec);
+	wpa_printf(MSG_DEBUG, "WMM: ADDTS processing result: %d", res);
+
+	wmm_send_action(hapd, mgmt->sa, tspec, WMM_ACTION_CODE_ADDTS_RESP,
+			mgmt->u.action.u.wmm_action.dialog_token, res);
 }
 
 

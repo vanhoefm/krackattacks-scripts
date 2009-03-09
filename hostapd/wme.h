@@ -31,5 +31,6 @@ static inline int hostapd_wmm_sta_config(struct hostapd_data *hapd,
 #endif /* NEED_MLME */
 void hostapd_wmm_action(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 			size_t len);
+int wmm_process_tspec(struct wmm_tspec_element *tspec);
 
 #endif /* WME_H */

@@ -284,7 +284,8 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
 			 const u8 *r1kh_id);
 int wpa_ft_prepare_auth_request(struct wpa_sm *sm);
 int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
-			    int ft_action, const u8 *target_ap);
+			    int ft_action, const u8 *target_ap,
+			    const u8 *ric_ies, size_t ric_ies_len);
 int wpa_ft_is_completed(struct wpa_sm *sm);
 int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 				 size_t ies_len, const u8 *src_addr);

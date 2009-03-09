@@ -20,6 +20,7 @@
 #include "wpa_ie.h"
 #include "aes_wrap.h"
 #include "ieee802_11_defs.h"
+#include "ieee802_11_common.h"
 
 #ifdef CONFIG_IEEE80211R
 
@@ -105,20 +106,23 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
 
 
 /**
- * wpa_ft_gen_req_ies - Generate FT (IEEE 802.11r) IEs for Auth Request
+ * wpa_ft_gen_req_ies - Generate FT (IEEE 802.11r) IEs for Auth/ReAssoc Request
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
  * @len: Buffer for returning the length of the IEs
  * @anonce: ANonce or %NULL if not yet available
  * @pmk_name: PMKR0Name or PMKR1Name to be added into the RSN IE PMKID List
  * @kck: 128-bit KCK for MIC or %NULL if no MIC is used
  * @target_ap: Target AP address
+ * @ric_ies: Optional IE(s), e.g., WMM TSPEC(s), for RIC-Request or %NULL
+ * @ric_ies_len: Length of ric_ies buffer in octets
  * Returns: Pointer to buffer with IEs or %NULL on failure
  *
  * Caller is responsible for freeing the returned buffer with os_free();
  */
 static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 			       const u8 *anonce, const u8 *pmk_name,
-			       const u8 *kck, const u8 *target_ap)
+			       const u8 *kck, const u8 *target_ap,
+			       const u8 *ric_ies, size_t ric_ies_len)
 {
 	size_t buf_len;
 	u8 *buf, *pos, *ftie_len, *ftie_pos;
@@ -130,13 +134,13 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	sm->ft_completed = 0;
 
 	buf_len = 2 + sizeof(struct rsn_mdie) + 2 + sizeof(struct rsn_ftie) +
-		2 + sm->r0kh_id_len + 100;
+		2 + sm->r0kh_id_len + ric_ies_len + 100;
 	buf = os_zalloc(buf_len);
 	if (buf == NULL)
 		return NULL;
 	pos = buf;
 
-	/* RSNIE[PMKR0Name] */
+	/* RSNIE[PMKR0Name/PMKR1Name] */
 	rsnie = (struct rsn_ie_hdr *) pos;
 	rsnie->elem_id = WLAN_EID_RSN;
 	WPA_PUT_LE16(rsnie->version, RSN_VERSION);
@@ -241,6 +245,12 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	pos += sm->r0kh_id_len;
 	*ftie_len = pos - ftie_len - 1;
 
+	if (ric_ies) {
+		/* RIC Request */
+		os_memcpy(pos, ric_ies, ric_ies_len);
+		pos += ric_ies_len;
+	}
+
 	if (kck) {
 		/*
 		 * IEEE Std 802.11r-2008, 11A.8.4
@@ -253,12 +263,14 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		 * FTIE (with MIC field set to 0)
 		 * RIC-Request (if present)
 		 */
-		ftie->mic_control[1] = 3; /* Information element count */
+		/* Information element count */
+		ftie->mic_control[1] = 3 + ieee802_11_ie_count(ric_ies,
+							       ric_ies_len);
 		if (wpa_ft_mic(kck, sm->own_addr, target_ap, 5,
 			       ((u8 *) mdie) - 2, 2 + sizeof(*mdie),
 			       ftie_pos, 2 + *ftie_len,
-			       (u8 *) rsnie, 2 + rsnie->len, NULL, 0,
-			       ftie->mic) < 0) {
+			       (u8 *) rsnie, 2 + rsnie->len, ric_ies,
+			       ric_ies_len, ftie->mic) < 0) {
 			wpa_printf(MSG_INFO, "FT: Failed to calculate MIC");
 			os_free(buf);
 			return NULL;
@@ -440,7 +452,7 @@ int wpa_ft_prepare_auth_request(struct wpa_sm *sm)
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, sm->bssid);
+				    NULL, sm->bssid, NULL, 0);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -452,7 +464,8 @@ int wpa_ft_prepare_auth_request(struct wpa_sm *sm)
 
 
 int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
-			    int ft_action, const u8 *target_ap)
+			    int ft_action, const u8 *target_ap,
+			    const u8 *ric_ies, size_t ric_ies_len)
 {
 	u8 *ft_ies;
 	size_t ft_ies_len;
@@ -464,6 +477,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	const u8 *bssid;
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
+	wpa_hexdump(MSG_DEBUG, "FT: RIC IEs", ric_ies, ric_ies_len);
 
 	if (ft_action) {
 		if (!sm->over_the_ds_in_progress) {
@@ -553,7 +567,8 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, ftie->anonce,
-				    sm->pmk_r1_name, sm->ptk.kck, bssid);
+				    sm->pmk_r1_name, sm->ptk.kck, bssid,
+				    ric_ies, ric_ies_len);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -857,7 +872,7 @@ int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap)
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, target_ap);
+				    NULL, target_ap, NULL, 0);
 	if (ft_ies) {
 		sm->over_the_ds_in_progress = 1;
 		os_memcpy(sm->target_ap, target_ap, ETH_ALEN);

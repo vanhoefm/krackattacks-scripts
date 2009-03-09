@@ -94,6 +94,7 @@ static int ieee80211_sta_find_ibss(struct wpa_supplicant *wpa_s);
 static int ieee80211_sta_wep_configured(struct wpa_supplicant *wpa_s);
 static void ieee80211_sta_timer(void *eloop_ctx, void *timeout_ctx);
 static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx);
+static void ieee80211_build_tspec(struct wpabuf *buf);
 
 
 static int ieee80211_sta_set_channel(struct wpa_supplicant *wpa_s,
@@ -876,12 +877,36 @@ static void ieee80211_rx_mgmt_auth(struct wpa_supplicant *wpa_s,
 	case WLAN_AUTH_FT:
 	{
 		union wpa_event_data data;
+		struct wpabuf *ric = NULL;
 		os_memset(&data, 0, sizeof(data));
 		data.ft_ies.ies = mgmt->u.auth.variable;
 		data.ft_ies.ies_len = len -
 			(mgmt->u.auth.variable - (u8 *) mgmt);
 		os_memcpy(data.ft_ies.target_ap, wpa_s->bssid, ETH_ALEN);
+		if (os_strcmp(wpa_s->driver->name, "test") == 0 &&
+		    wpa_s->mlme.wmm_enabled) {
+			ric = wpabuf_alloc(200);
+			if (ric) {
+				/* Build simple RIC-Request: RDIE | TSPEC */
+
+				/* RIC Data (RDIE) */
+				wpabuf_put_u8(ric, WLAN_EID_RIC_DATA);
+				wpabuf_put_u8(ric, 4);
+				wpabuf_put_u8(ric, 0); /* RDIE Identifier */
+				wpabuf_put_u8(ric, 1); /* Resource Descriptor
+							* Count */
+				wpabuf_put_le16(ric, 0); /* Status Code */
+
+				/* WMM TSPEC */
+				ieee80211_build_tspec(ric);
+
+				data.ft_ies.ric_ies = wpabuf_head(ric);
+				data.ft_ies.ric_ies_len = wpabuf_len(ric);
+			}
+		}
+
 		wpa_supplicant_event(wpa_s, EVENT_FT_RESPONSE, &data);
+		wpabuf_free(ric);
 		ieee80211_auth_completed(wpa_s);
 		break;
 	}
@@ -1012,32 +1037,10 @@ static int ieee80211_ft_assoc_resp(struct wpa_supplicant *wpa_s,
 }
 
 
-static void ieee80211_tx_addts(struct wpa_supplicant *wpa_s)
+static void ieee80211_build_tspec(struct wpabuf *buf)
 {
-	struct wpabuf *buf;
-	struct ieee80211_mgmt *mgmt;
 	struct wmm_tspec_element *tspec;
-	size_t alen;
 	int tid, up;
-
-	wpa_printf(MSG_DEBUG, "MLME: Send ADDTS Request for Voice TSPEC");
-	mgmt = NULL;
-	alen = mgmt->u.action.u.wmm_action.variable - (u8 *) mgmt;
-
-	buf = wpabuf_alloc(alen + sizeof(*tspec));
-	if (buf == NULL)
-		return;
-
-	mgmt = wpabuf_put(buf, alen);
-	os_memcpy(mgmt->da, wpa_s->bssid, ETH_ALEN);
-	os_memcpy(mgmt->sa, wpa_s->own_addr, ETH_ALEN);
-	os_memcpy(mgmt->bssid, wpa_s->bssid, ETH_ALEN);
-	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					   WLAN_FC_STYPE_ACTION);
-	mgmt->u.action.category = WLAN_ACTION_WMM;
-	mgmt->u.action.u.wmm_action.action_code = WMM_ACTION_CODE_ADDTS_REQ;
-	mgmt->u.action.u.wmm_action.dialog_token = 1;
-	mgmt->u.action.u.wmm_action.status_code = 0;
 
 	tspec = wpabuf_put(buf, sizeof(*tspec));
 	tspec->eid = WLAN_EID_VENDOR_SPECIFIC;
@@ -1059,6 +1062,35 @@ static void ieee80211_tx_addts(struct wpa_supplicant *wpa_s)
 	tspec->mean_data_rate = host_to_le32(128000); /* bits per second */
 	tspec->minimum_phy_rate = host_to_le32(6000000);
 	tspec->surplus_bandwidth_allowance = host_to_le16(0x3000); /* 150% */
+}
+
+
+static void ieee80211_tx_addts(struct wpa_supplicant *wpa_s)
+{
+	struct wpabuf *buf;
+	struct ieee80211_mgmt *mgmt;
+	size_t alen;
+
+	wpa_printf(MSG_DEBUG, "MLME: Send ADDTS Request for Voice TSPEC");
+	mgmt = NULL;
+	alen = mgmt->u.action.u.wmm_action.variable - (u8 *) mgmt;
+
+	buf = wpabuf_alloc(alen + sizeof(struct wmm_tspec_element));
+	if (buf == NULL)
+		return;
+
+	mgmt = wpabuf_put(buf, alen);
+	os_memcpy(mgmt->da, wpa_s->bssid, ETH_ALEN);
+	os_memcpy(mgmt->sa, wpa_s->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, wpa_s->bssid, ETH_ALEN);
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	mgmt->u.action.category = WLAN_ACTION_WMM;
+	mgmt->u.action.u.wmm_action.action_code = WMM_ACTION_CODE_ADDTS_REQ;
+	mgmt->u.action.u.wmm_action.dialog_token = 1;
+	mgmt->u.action.u.wmm_action.status_code = 0;
+
+	ieee80211_build_tspec(buf);
 
 	ieee80211_sta_tx(wpa_s, wpabuf_head(buf), wpabuf_len(buf));
 	wpabuf_free(buf);
@@ -1216,7 +1248,8 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 
 	ieee80211_associated(wpa_s);
 
-	if (os_strcmp(wpa_s->driver->name, "test") == 0 &&
+	if (wpa_s->mlme.auth_alg != WLAN_AUTH_FT &&
+	    os_strcmp(wpa_s->driver->name, "test") == 0 &&
 	    elems.wmm && wpa_s->mlme.wmm_enabled) {
 		/* Test WMM-AC - send ADDTS for WMM TSPEC */
 		ieee80211_tx_addts(wpa_s);

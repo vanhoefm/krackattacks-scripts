@@ -1087,7 +1087,9 @@ wpa_supplicant_event_ft_response(struct wpa_supplicant *wpa_s,
 	if (wpa_ft_process_response(wpa_s->wpa, data->ft_ies.ies,
 				    data->ft_ies.ies_len,
 				    data->ft_ies.ft_action,
-				    data->ft_ies.target_ap) < 0) {
+				    data->ft_ies.target_ap,
+				    data->ft_ies.ric_ies,
+				    data->ft_ies.ric_ies_len) < 0) {
 		/* TODO: prevent MLME/driver from trying to associate? */
 	}
 }

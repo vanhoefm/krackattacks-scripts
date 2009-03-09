@@ -1342,6 +1342,10 @@ union wpa_event_data {
 		size_t ies_len;
 		int ft_action;
 		u8 target_ap[ETH_ALEN];
+		/** Optional IE(s), e.g., WMM TSPEC(s), for RIC-Request */
+		const u8 *ric_ies;
+		/** Length of ric_ies buffer in octets */
+		size_t ric_ies_len;
 	} ft_ies;
 
 	/**

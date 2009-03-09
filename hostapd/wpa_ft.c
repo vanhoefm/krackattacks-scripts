@@ -571,6 +571,8 @@ struct wpa_ft_ies {
 	const u8 *rsn;
 	size_t rsn_len;
 	const u8 *rsn_pmkid;
+	const u8 *ric;
+	size_t ric_len;
 };
 
 
@@ -623,6 +625,8 @@ static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 	const u8 *end, *pos;
 	struct wpa_ie_data data;
 	int ret;
+	const struct rsn_ftie *ftie;
+	int prot_ie_count = 0;
 
 	os_memset(parse, 0, sizeof(*parse));
 	if (ies == NULL)
@@ -651,12 +655,58 @@ static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 			parse->mdie_len = pos[1];
 			break;
 		case WLAN_EID_FAST_BSS_TRANSITION:
+			if (pos[1] < sizeof(*ftie))
+				return -1;
+			ftie = (const struct rsn_ftie *) (pos + 2);
+			prot_ie_count = ftie->mic_control[1];
 			if (wpa_ft_parse_ftie(pos + 2, pos[1], parse) < 0)
 				return -1;
 			break;
+		case WLAN_EID_RIC_DATA:
+			if (parse->ric == NULL)
+				parse->ric = pos;
 		}
 
 		pos += 2 + pos[1];
+	}
+
+	if (prot_ie_count == 0)
+		return 0; /* no MIC */
+
+	/*
+	 * Check that the protected IE count matches with IEs included in the
+	 * frame.
+	 */
+	if (parse->rsn)
+		prot_ie_count--;
+	if (parse->mdie)
+		prot_ie_count--;
+	if (parse->ftie)
+		prot_ie_count--;
+	if (prot_ie_count < 0) {
+		wpa_printf(MSG_DEBUG, "FT: Some required IEs not included in "
+			   "the protected IE count");
+		return -1;
+	}
+
+	if (prot_ie_count == 0 && parse->ric) {
+		wpa_printf(MSG_DEBUG, "FT: RIC IE(s) in the frame, but not "
+			   "included in protected IE count");
+		return -1;
+	}
+
+	/* Determine the end of the RIC IE(s) */
+	pos = parse->ric;
+	while (pos && pos + 2 <= end && pos + 2 + pos[1] <= end &&
+	       prot_ie_count) {
+		prot_ie_count--;
+		pos += 2 + pos[1];
+	}
+	parse->ric_len = pos - parse->ric;
+	if (prot_ie_count) {
+		wpa_printf(MSG_DEBUG, "FT: %d protected IEs missing from "
+			   "frame", (int) prot_ie_count);
+		return -1;
 	}
 
 	return 0;
@@ -937,20 +987,11 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 		return WLAN_STATUS_INVALID_FTIE;
 	}
 
-	/*
-	 * Assume that MDIE, FTIE, and RSN IE are protected and that there is
-	 * no RIC, so total of 3 protected IEs.
-	 */
-	if (ftie->mic_control[1] != 3) {
-		wpa_printf(MSG_DEBUG, "FT: Unexpected IE count in FTIE (%d)",
-			   ftie->mic_control[1]);
-		return WLAN_STATUS_INVALID_FTIE;
-	}
-
 	if (wpa_ft_mic(sm->PTK.kck, sm->addr, sm->wpa_auth->addr, 5,
 		       parse.mdie - 2, parse.mdie_len + 2,
 		       parse.ftie - 2, parse.ftie_len + 2,
-		       parse.rsn - 2, parse.rsn_len + 2, NULL, 0,
+		       parse.rsn - 2, parse.rsn_len + 2,
+		       parse.ric, parse.ric_len,
 		       mic) < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to calculate MIC");
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;

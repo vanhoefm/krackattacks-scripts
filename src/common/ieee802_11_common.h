@@ -70,5 +70,6 @@ typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
 ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 				struct ieee802_11_elems *elems,
 				int show_errors);
+int ieee802_11_ie_count(const u8 *ies, size_t ies_len);
 
 #endif /* IEEE802_11_COMMON_H */

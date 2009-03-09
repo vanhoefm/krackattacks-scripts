@@ -257,3 +257,25 @@ ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
 
 	return unknown ? ParseUnknown : ParseOK;
 }
+
+
+int ieee802_11_ie_count(const u8 *ies, size_t ies_len)
+{
+	int count = 0;
+	const u8 *pos, *end;
+
+	if (ies == NULL)
+		return 0;
+
+	pos = ies;
+	end = ies + ies_len;
+
+	while (pos + 2 <= end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		count++;
+		pos += 2 + pos[1];
+	}
+
+	return count;
+}

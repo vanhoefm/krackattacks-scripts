@@ -54,6 +54,13 @@ enum ieee80211_msg_type {
 	ieee80211_msg_tx_callback_fail = 2,
 };
 
+struct i802_bss {
+	struct i802_bss *next;
+	char iface[IFNAMSIZ + 1];
+	int dtim_period;
+	unsigned int beacon_set:1;
+};
+
 struct i802_driver_data {
 	struct hostapd_data *hapd;
 
@@ -74,8 +81,8 @@ struct i802_driver_data {
 	struct nl_cache *nl_cache;
 	struct nl_cb *nl_cb;
 	struct genl_family *nl80211;
-	int dtim_period, beacon_int;
-	unsigned int beacon_set:1;
+	int beacon_int;
+	struct i802_bss bss;
 	unsigned int ieee802_1x_active:1;
 	unsigned int ht_40mhz_scan:1;
 
@@ -88,6 +95,20 @@ struct i802_driver_data {
 
 static int i802_sta_deauth(void *priv, const u8 *addr, int reason);
 static int i802_sta_disassoc(void *priv, const u8 *addr, int reason);
+
+
+static struct i802_bss * get_bss(struct i802_driver_data *drv,
+				 const char *iface)
+{
+	struct i802_bss *bss = &drv->bss;
+	while (bss) {
+		if (os_strncmp(iface, bss->iface, IFNAMSIZ) == 0)
+			return bss;
+		bss = bss->next;
+	}
+	wpa_printf(MSG_DEBUG, "nl80211: get_bss(%s) failed", iface);
+	return NULL;
+}
 
 
 static void add_ifidx(struct i802_driver_data *drv, int ifidx)
@@ -1088,29 +1109,47 @@ static int nl80211_create_iface(struct i802_driver_data *drv,
 
 static int i802_bss_add(void *priv, const char *ifname, const u8 *bssid)
 {
+	struct i802_driver_data *drv = priv;
 	int ifidx;
+	struct i802_bss *bss;
 
-	/*
-	 * The kernel supports that when the low-level driver does,
-	 * but we currently don't because we need per-BSS data that
-	 * currently we can't handle easily.
-	 */
-	return -1;
+	bss = os_zalloc(sizeof(*bss));
+	if (bss == NULL)
+		return -1;
+	os_strlcpy(bss->iface, ifname, IFNAMSIZ);
 
 	ifidx = nl80211_create_iface(priv, ifname, NL80211_IFTYPE_AP, bssid);
-	if (ifidx < 0)
-		return -1;
-	if (hostapd_set_iface_flags(priv, ifname, 1)) {
-		nl80211_remove_iface(priv, ifidx);
+	if (ifidx < 0) {
+		os_free(bss);
 		return -1;
 	}
+	if (hostapd_set_iface_flags(priv, ifname, 1)) {
+		nl80211_remove_iface(priv, ifidx);
+		os_free(bss);
+		return -1;
+	}
+	bss->next = drv->bss.next;
+	drv->bss.next = bss;
 	return 0;
 }
 
 
 static int i802_bss_remove(void *priv, const char *ifname)
 {
+	struct i802_driver_data *drv = priv;
+	struct i802_bss *bss, *prev;
 	nl80211_remove_iface(priv, if_nametoindex(ifname));
+	prev = &drv->bss;
+	bss = drv->bss.next;
+	while (bss) {
+		if (os_strncmp(ifname, bss->iface, IFNAMSIZ) == 0) {
+			prev->next = bss->next;
+			os_free(bss);
+			break;
+		}
+		prev = bss;
+		bss = bss->next;
+	}
 	return 0;
 }
 
@@ -1123,12 +1162,19 @@ static int i802_set_beacon(const char *iface, void *priv,
 	struct nl_msg *msg;
 	u8 cmd = NL80211_CMD_NEW_BEACON;
 	int ret;
+	struct i802_bss *bss;
+
+	bss = get_bss(drv, iface);
+	if (bss == NULL)
+		return -ENOENT;
 
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
 
-	if (drv->beacon_set)
+	wpa_printf(MSG_DEBUG, "nl80211: Set beacon (iface=%s beacon_set=%d)",
+		   iface, bss->beacon_set);
+	if (bss->beacon_set)
 		cmd = NL80211_CMD_SET_BEACON;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
@@ -1138,13 +1184,13 @@ static int i802_set_beacon(const char *iface, void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
 	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, drv->beacon_int);
 
-	if (!drv->dtim_period)
-		drv->dtim_period = 2;
-	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, drv->dtim_period);
+	if (!bss->dtim_period)
+		bss->dtim_period = 2;
+	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, bss->dtim_period);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (!ret)
-		drv->beacon_set = 1;
+		bss->beacon_set = 1;
 	return ret;
  nla_put_failure:
 	return -ENOBUFS;
@@ -1212,13 +1258,15 @@ static int i802_set_beacon_int(void *priv, int value)
 
 	drv->beacon_int = value;
 
-	if (!drv->beacon_set)
+	if (!drv->bss.beacon_set)
 		return 0;
 
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Set beacon interval %d "
+		   "(beacon_set=%d)", value, drv->bss.beacon_set);
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_SET_BEACON, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->iface));
@@ -1235,21 +1283,33 @@ static int i802_set_dtim_period(const char *iface, void *priv, int value)
 {
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
+	int ret = -ENOBUFS;
+	struct i802_bss *bss;
+
+	bss = get_bss(drv, iface);
+	if (bss == NULL)
+		return -ENOENT;
 
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Set beacon DTIM period %d (iface=%s "
+		   "beacon_set=%d)", value, iface, bss->beacon_set);
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_SET_BEACON, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
 
-	drv->dtim_period = value;
-	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, drv->dtim_period);
+	bss->dtim_period = value;
+	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, bss->dtim_period);
 
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_SET_BEACON(%s) "
+			   "result: %d (%s)", iface, ret, strerror(-ret));
+
  nla_put_failure:
-	return -ENOBUFS;
+	return ret;
 }
 
 
@@ -2961,6 +3021,7 @@ static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 
 	drv->hapd = hapd;
 	memcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
+	memcpy(drv->bss.iface, hapd->conf->iface, sizeof(drv->iface));
 
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
 	drv->if_indices = drv->default_if_indices;
@@ -2987,6 +3048,7 @@ static void *i802_init(struct hostapd_data *hapd)
 static void i802_deinit(void *priv)
 {
 	struct i802_driver_data *drv = priv;
+	struct i802_bss *bss, *prev;
 
 	if (drv->last_freq_ht) {
 		/* Clear HT flags from the driver */
@@ -3023,6 +3085,14 @@ static void i802_deinit(void *priv)
 		free(drv->if_indices);
 
 	os_free(drv->neighbors);
+
+	bss = drv->bss.next;
+	while (bss) {
+		prev = bss;
+		bss = bss->next;
+		os_free(bss);
+	}
+
 	free(drv);
 }
 

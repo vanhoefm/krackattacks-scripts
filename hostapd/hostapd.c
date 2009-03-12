@@ -1012,6 +1012,7 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	struct hostapd_data *hapd = iface->bss[0];
 	unsigned int i = iface->conf->num_bss, bits = 0, j;
 	int res;
+	int auto_addr = 0;
 
 	if (hostapd_drv_none(hapd))
 		return 0;
@@ -1025,8 +1026,11 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	/* Determine the bits necessary to any configured BSSIDs,
 	   if they are higher than the number of BSSIDs. */
 	for (j = 0; j < iface->conf->num_bss; j++) {
-		if (hostapd_mac_comp_empty(iface->conf->bss[j].bssid) == 0)
+		if (hostapd_mac_comp_empty(iface->conf->bss[j].bssid) == 0) {
+			if (j)
+				auto_addr++;
 			continue;
+		}
 
 		for (i = 0; i < ETH_ALEN; i++) {
 			mask[i] |=
@@ -1034,6 +1038,9 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 				hapd->own_addr[i];
 		}
 	}
+
+	if (!auto_addr)
+		goto skip_mask_ext;
 
 	for (i = 0; i < ETH_ALEN && mask[i] == 0; i++)
 		;
@@ -1050,8 +1057,11 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	if (bits < j)
 		bits = j;
 
-	if (bits > 40)
+	if (bits > 40) {
+		wpa_printf(MSG_ERROR, "Too many bits in the BSSID mask (%u)",
+			   bits);
 		return -1;
+	}
 
 	os_memset(mask, 0xff, ETH_ALEN);
 	j = bits / 8;
@@ -1061,6 +1071,7 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	while (j--)
 		mask[i] <<= 1;
 
+skip_mask_ext:
 	wpa_printf(MSG_DEBUG, "BSS count %lu, BSSID mask " MACSTR " (%d bits)",
 		   (unsigned long) iface->conf->num_bss, MAC2STR(mask), bits);
 
@@ -1074,6 +1085,9 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 			   MAC2STR(mask), MAC2STR(hapd->own_addr));
 		return -1;
 	}
+
+	if (!auto_addr)
+		return 0;
 
 	for (i = 0; i < ETH_ALEN; i++) {
 		if ((hapd->own_addr[i] & mask[i]) != hapd->own_addr[i]) {

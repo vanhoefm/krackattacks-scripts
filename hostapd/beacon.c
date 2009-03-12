@@ -434,6 +434,10 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	os_free(tail);
 	os_free(head);
 
+	if (hostapd_set_dtim_period(hapd, hapd->conf->dtim_period))
+		wpa_printf(MSG_ERROR, "Could not set DTIM period for kernel "
+			   "driver");
+
 	if (hostapd_set_cts_protect(hapd, cts_protection))
 		wpa_printf(MSG_ERROR, "Failed to set CTS protect in kernel "
 			   "driver");

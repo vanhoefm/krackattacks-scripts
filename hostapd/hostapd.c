@@ -1292,12 +1292,6 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (hostapd_set_dtim_period(hapd, hapd->conf->dtim_period)) {
-		wpa_printf(MSG_ERROR, "Could not set DTIM period for kernel "
-			   "driver");
-		return -1;
-	}
-
 	/* Set SSID for the kernel driver (to be used in beacon and probe
 	 * response frames) */
 	if (set_ssid && hostapd_set_ssid(hapd, (u8 *) conf->ssid.ssid,

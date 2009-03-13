@@ -115,6 +115,7 @@ struct l2_packet_data * l2_packet_init(
 		os_free(l2);
 		return NULL;
 	}
+	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, l2->ifname, sizeof(ifr.ifr_name));
 	if (ioctl(l2->fd, SIOCGIFINDEX, &ifr) < 0) {
 		perror("ioctl[SIOCGIFINDEX]");

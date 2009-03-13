@@ -12,6 +12,7 @@ ChangeLog for hostapd
 	  Drives (UFD) (CONFIG_WPS_UFD=y)
 	* fixed EAPOL/EAP reauthentication when using an external RADIUS
 	  authentication server
+	* fixed TNC with EAP-TTLS
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

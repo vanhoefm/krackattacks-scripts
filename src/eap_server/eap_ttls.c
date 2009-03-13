@@ -954,7 +954,7 @@ static int eap_ttls_phase2_eap_init(struct eap_sm *sm,
 	sm->init_phase2 = 1;
 	data->phase2_priv = data->phase2_method->init(sm);
 	sm->init_phase2 = 0;
-	return 0;
+	return data->phase2_priv == NULL ? -1 : 0;
 }
 
 

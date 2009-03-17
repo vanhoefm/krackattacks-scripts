@@ -570,11 +570,12 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 			msg.msg_name = &dst->addr;
 			msg.msg_namelen = dst->addrlen;
 			if (sendmsg(hapd->ctrl_sock, &msg, 0) < 0) {
-				fprintf(stderr, "CTRL_IFACE monitor[%d]: ",
-					idx);
-				perror("sendmsg");
+				int _errno = errno;
+				wpa_printf(MSG_INFO, "CTRL_IFACE monitor[%d]: "
+					   "%d - %s",
+					   idx, errno, strerror(errno));
 				dst->errors++;
-				if (dst->errors > 10) {
+				if (dst->errors > 10 || _errno == ENOENT) {
 					hostapd_ctrl_iface_detach(
 						hapd, &dst->addr,
 						dst->addrlen);

@@ -514,9 +514,12 @@ static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
 			msg.msg_name = (void *) &dst->addr;
 			msg.msg_namelen = dst->addrlen;
 			if (sendmsg(priv->sock, &msg, 0) < 0) {
-				perror("sendmsg(CTRL_IFACE monitor)");
+				int _errno = errno;
+				wpa_printf(MSG_INFO, "CTRL_IFACE monitor[%d]: "
+					   "%d - %s",
+					   idx, errno, strerror(errno));
 				dst->errors++;
-				if (dst->errors > 10) {
+				if (dst->errors > 10 || _errno == ENOENT) {
 					wpa_supplicant_ctrl_iface_detach(
 						priv, &dst->addr,
 						dst->addrlen);

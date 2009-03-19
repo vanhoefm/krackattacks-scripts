@@ -2453,7 +2453,6 @@ static void wps_registrar_set_selected_timeout(void *eloop_ctx,
  * wps_registrar_set_selected_registrar - Notification of SetSelectedRegistrar
  * @reg: Registrar data from wps_registrar_init()
  * @msg: Received message from SetSelectedRegistrar
- * @msg_len: Length of msg in octets
  * Returns: 0 on success, -1 on failure
  *
  * This function is called when an AP receives a SetSelectedRegistrar UPnP

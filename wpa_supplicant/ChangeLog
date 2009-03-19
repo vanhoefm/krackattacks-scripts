@@ -16,6 +16,8 @@ ChangeLog for wpa_supplicant
 	  Drives (UFD) (CONFIG_WPS_UFD=y)
 	* driver_ndis: add PAE group address to the multicast address list to
 	  fix wired IEEE 802.1X authentication
+	* fixed IEEE 802.11r key derivation function to match with the standard
+	  (note: this breaks interoperability with previous version) [Bug 303]
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

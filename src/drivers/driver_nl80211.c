@@ -383,6 +383,7 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 }
 
 
+#ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_set_ssid(void *priv, const u8 *ssid,
 				       size_t ssid_len)
 {
@@ -444,7 +445,6 @@ static int wpa_driver_nl80211_set_freq(void *priv, int freq)
 }
 
 
-#ifdef WEXT_COMPAT
 static void
 wpa_driver_nl80211_event_wireless_custom(void *ctx, char *custom)
 {

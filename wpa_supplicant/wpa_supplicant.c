@@ -40,6 +40,7 @@
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
+#include "sme.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -211,7 +212,8 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec)
 {
-	if (wpa_s->conf && wpa_s->conf->ap_scan == 0 && wpa_s->drv_wired)
+	if (wpa_s->conf && wpa_s->conf->ap_scan == 0 &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_WIRED))
 		return;
 
 	wpa_msg(wpa_s, MSG_DEBUG, "Setting authentication timeout: %d sec "
@@ -286,7 +288,7 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 				EAPOL_REQUIRE_KEY_BROADCAST;
 		}
 
-		if (wpa_s->conf && wpa_s->drv_wired)
+		if (wpa_s->conf && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_WIRED))
 			eapol_conf.required_keys = 0;
 	}
 	if (wpa_s->conf)
@@ -404,6 +406,12 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	ibss_rsn_deinit(wpa_s->ibss_rsn);
 	wpa_s->ibss_rsn = NULL;
 #endif /* CONFIG_IBSS_RSN */
+
+#ifdef CONFIG_SME
+	os_free(wpa_s->sme.ft_ies);
+	wpa_s->sme.ft_ies = NULL;
+	wpa_s->sme.ft_ies_len = 0;
+#endif /* CONFIG_SME */
 }
 
 
@@ -464,6 +472,8 @@ const char * wpa_supplicant_state_txt(int state)
 		return "INACTIVE";
 	case WPA_SCANNING:
 		return "SCANNING";
+	case WPA_AUTHENTICATING:
+		return "AUTHENTICATING";
 	case WPA_ASSOCIATING:
 		return "ASSOCIATING";
 	case WPA_ASSOCIATED:
@@ -930,6 +940,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	struct wpa_driver_capa capa;
 	int assoc_failed = 0;
 
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) {
+		sme_authenticate(wpa_s, bss, ssid);
+		return;
+	}
+
 	wpa_s->reassociate = 0;
 	if (bss) {
 #ifdef CONFIG_IEEE80211R
@@ -1119,7 +1134,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 	params.wep_tx_keyidx = ssid->wep_tx_keyidx;
 
-	if (wpa_s->driver_4way_handshake &&
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) &&
 	    (params.key_mgmt_suite == KEY_MGMT_PSK ||
 	     params.key_mgmt_suite == KEY_MGMT_FT_PSK)) {
 		params.passphrase = ssid->passphrase;
@@ -1153,7 +1168,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_IEEE80211W */
 
-	if (wpa_s->use_client_mlme)
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		ret = ieee80211_sta_associate(wpa_s, &params);
 	else
 		ret = wpa_drv_associate(wpa_s, &params);
@@ -1231,7 +1246,7 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 {
 	u8 *addr = NULL;
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
-		if (wpa_s->use_client_mlme)
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 			ieee80211_sta_disassociate(wpa_s, reason_code);
 		else
 			wpa_drv_disassociate(wpa_s, wpa_s->bssid, reason_code);
@@ -1259,7 +1274,7 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 	u8 *addr = NULL;
 	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
-		if (wpa_s->use_client_mlme)
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 			ieee80211_sta_deauthenticate(wpa_s, reason_code);
 		else
 			wpa_drv_deauthenticate(wpa_s, wpa_s->bssid,
@@ -1395,7 +1410,7 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 {
 	int ret;
 
-	if (wpa_s->use_client_mlme) {
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
 		wpa_scan_results_free(wpa_s->scan_res);
 		wpa_s->scan_res = ieee80211_sta_get_scan_results(wpa_s);
 		if (wpa_s->scan_res == NULL) {
@@ -1436,7 +1451,7 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 	u8 bssid[ETH_ALEN];
 	int wired;
 
-	if (wpa_s->use_client_mlme) {
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
 		if (ieee80211_sta_get_ssid(wpa_s, ssid, &ssid_len)) {
 			wpa_printf(MSG_WARNING, "Could not read SSID from "
 				   "MLME.");
@@ -1452,14 +1467,15 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 		ssid_len = res;
 	}
 
-	if (wpa_s->use_client_mlme)
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		os_memcpy(bssid, wpa_s->bssid, ETH_ALEN);
 	else if (wpa_drv_get_bssid(wpa_s, bssid) < 0) {
 		wpa_printf(MSG_WARNING, "Could not read BSSID from driver.");
 		return NULL;
 	}
 
-	wired = wpa_s->conf->ap_scan == 0 && wpa_s->drv_wired;
+	wired = wpa_s->conf->ap_scan == 0 &&
+		(wpa_s->drv_flags & WPA_DRIVER_FLAGS_WIRED);
 
 	entry = wpa_s->conf->ssid;
 	while (entry) {
@@ -1540,7 +1556,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	}
 
 	if (wpa_s->eapol_received == 0 &&
-	    (!wpa_s->driver_4way_handshake ||
+	    (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) ||
 	     !wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
 	     wpa_s->wpa_state != WPA_COMPLETED)) {
 		/* Timeout for completing IEEE 802.1X and WPA authentication */
@@ -1578,7 +1594,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	    eapol_sm_rx_eapol(wpa_s->eapol, src_addr, buf, len) > 0)
 		return;
 	wpa_drv_poll(wpa_s);
-	if (!wpa_s->driver_4way_handshake)
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE))
 		wpa_sm_rx_eapol(wpa_s->wpa, src_addr, buf, len);
 	else if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt)) {
 		/*
@@ -1897,16 +1913,12 @@ next_driver:
 	}
 
 	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
+		wpa_s->drv_flags = capa.flags;
 		if (capa.flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-			wpa_s->use_client_mlme = 1;
 			if (ieee80211_sta_init(wpa_s))
 				return -1;
 		}
-		if (capa.flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE)
-			wpa_s->driver_4way_handshake = 1;
 		wpa_s->max_scan_ssids = capa.max_scan_ssids;
-		if (capa.flags & WPA_DRIVER_FLAGS_WIRED)
-			wpa_s->drv_wired = 1;
 	}
 
 #ifdef CONFIG_IBSS_RSN

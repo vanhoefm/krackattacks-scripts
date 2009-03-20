@@ -129,6 +129,16 @@ typedef enum {
 	WPA_SCANNING,
 
 	/**
+	 * WPA_AUTHENTICATING - Trying to authenticate with a BSS/SSID
+	 *
+	 * This state is entered when wpa_supplicant has found a suitable BSS
+	 * to authenticate with and the driver is configured to try to
+	 * authenticate with this BSS. This state is used only with drivers
+	 * that use wpa_supplicant as the SME.
+	 */
+	WPA_AUTHENTICATING,
+
+	/**
 	 * WPA_ASSOCIATING - Trying to associate with a BSS/SSID
 	 *
 	 * This state is entered when wpa_supplicant has found a suitable BSS

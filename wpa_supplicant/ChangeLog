@@ -18,6 +18,10 @@ ChangeLog for wpa_supplicant
 	  fix wired IEEE 802.1X authentication
 	* fixed IEEE 802.11r key derivation function to match with the standard
 	  (note: this breaks interoperability with previous version) [Bug 303]
+	* added better support for drivers that allow separate authentication
+	  and association commands (e.g., mac80211-based Linux drivers with
+	  nl80211; SME in wpa_supplicant); this allows over-the-air FT protocol
+	  to be used (IEEE 802.11r)
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

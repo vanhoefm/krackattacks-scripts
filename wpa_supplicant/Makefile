@@ -138,6 +138,7 @@ LIBS += -lnl
 ifdef CONFIG_CLIENT_MLME
 OBJS_d += ../src/utils/radiotap.o
 endif
+NEED_SME=y
 endif
 
 ifdef CONFIG_DRIVER_PRISM54
@@ -1033,6 +1034,11 @@ endif
 
 ifdef NEED_BASE64
 OBJS += ../src/utils/base64.o
+endif
+
+ifdef NEED_SME
+OBJS += sme.o
+CFLAGS += -DCONFIG_SME
 endif
 
 ifdef CONFIG_CLIENT_MLME

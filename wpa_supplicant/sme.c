@@ -1,0 +1,337 @@
+/*
+ * wpa_supplicant - SME
+ * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * Alternatively, this software may be distributed under the terms of BSD
+ * license.
+ *
+ * See README and COPYING for more details.
+ */
+
+#include "includes.h"
+
+#include "common.h"
+#include "drivers/driver.h"
+#include "ieee802_11_defs.h"
+#include "eapol_supp/eapol_supp_sm.h"
+#include "wpa_common.h"
+#include "wpa.h"
+#include "pmksa_cache.h"
+#include "config.h"
+#include "wpa_supplicant_i.h"
+#include "wpas_glue.h"
+#include "wps_supplicant.h"
+#include "sme.h"
+
+void sme_authenticate(struct wpa_supplicant *wpa_s,
+		      struct wpa_scan_res *bss, struct wpa_ssid *ssid)
+{
+	struct wpa_driver_auth_params params;
+	const u8 *ie;
+#ifdef CONFIG_IEEE80211R
+	const u8 *md = NULL;
+#endif /* CONFIG_IEEE80211R */
+
+	if (bss == NULL) {
+		wpa_printf(MSG_ERROR, "SME: No scan result available for the "
+			   "network");
+		return;
+	}
+
+	os_memset(&params, 0, sizeof(params));
+	wpa_s->reassociate = 0;
+
+	params.freq = bss->freq;
+	params.bssid = bss->bssid;
+	ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
+	if (ie == NULL) {
+		wpa_printf(MSG_ERROR, "SME: SSID not available for the BSS");
+		return;
+	}
+	params.ssid = ie + 2;
+	params.ssid_len = ie[1];
+
+	wpa_s->sme.freq = params.freq;
+	os_memcpy(wpa_s->sme.ssid, params.ssid, params.ssid_len);
+	wpa_s->sme.ssid_len = params.ssid_len;
+
+	params.auth_alg = AUTH_ALG_OPEN_SYSTEM;
+#ifdef IEEE8021X_EAPOL
+	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
+		if (ssid->leap) {
+			if (ssid->non_leap == 0)
+				params.auth_alg = AUTH_ALG_LEAP;
+			else
+				params.auth_alg |= AUTH_ALG_LEAP;
+		}
+	}
+#endif /* IEEE8021X_EAPOL */
+	wpa_printf(MSG_DEBUG, "Automatic auth_alg selection: 0x%x",
+		   params.auth_alg);
+	if (ssid->auth_alg) {
+		params.auth_alg = 0;
+		if (ssid->auth_alg & WPA_AUTH_ALG_OPEN)
+			params.auth_alg |= AUTH_ALG_OPEN_SYSTEM;
+		if (ssid->auth_alg & WPA_AUTH_ALG_SHARED)
+			params.auth_alg |= AUTH_ALG_SHARED_KEY;
+		if (ssid->auth_alg & WPA_AUTH_ALG_LEAP)
+			params.auth_alg |= AUTH_ALG_LEAP;
+		wpa_printf(MSG_DEBUG, "Overriding auth_alg selection: 0x%x",
+			   params.auth_alg);
+	}
+
+	os_memset(wpa_s->bssid, 0, ETH_ALEN);
+	os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
+
+	if (bss && (wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
+		    wpa_scan_get_ie(bss, WLAN_EID_RSN)) &&
+	    (ssid->key_mgmt & (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
+			       WPA_KEY_MGMT_FT_IEEE8021X |
+			       WPA_KEY_MGMT_FT_PSK |
+			       WPA_KEY_MGMT_IEEE8021X_SHA256 |
+			       WPA_KEY_MGMT_PSK_SHA256))) {
+		int try_opportunistic;
+		try_opportunistic = ssid->proactive_key_caching &&
+			(ssid->proto & WPA_PROTO_RSN);
+		if (pmksa_cache_set_current(wpa_s->wpa, NULL, bss->bssid,
+					    wpa_s->current_ssid,
+					    try_opportunistic) == 0)
+			eapol_sm_notify_pmkid_attempt(wpa_s->eapol, 1);
+		wpa_s->sme.assoc_req_ie_len = sizeof(wpa_s->sme.assoc_req_ie);
+		if (wpa_supplicant_set_suites(wpa_s, bss, ssid,
+					      wpa_s->sme.assoc_req_ie,
+					      &wpa_s->sme.assoc_req_ie_len)) {
+			wpa_printf(MSG_WARNING, "SME: Failed to set WPA key "
+				   "management and encryption suites");
+			return;
+		}
+	} else if (ssid->key_mgmt &
+		   (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_IEEE8021X |
+		    WPA_KEY_MGMT_WPA_NONE | WPA_KEY_MGMT_FT_PSK |
+		    WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_PSK_SHA256 |
+		    WPA_KEY_MGMT_IEEE8021X_SHA256)) {
+		wpa_s->sme.assoc_req_ie_len = sizeof(wpa_s->sme.assoc_req_ie);
+		if (wpa_supplicant_set_suites(wpa_s, NULL, ssid,
+					      wpa_s->sme.assoc_req_ie,
+					      &wpa_s->sme.assoc_req_ie_len)) {
+			wpa_printf(MSG_WARNING, "SME: Failed to set WPA key "
+				   "management and encryption suites (no scan "
+				   "results)");
+			return;
+		}
+#ifdef CONFIG_WPS
+	} else if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
+		struct wpabuf *wps_ie;
+		wps_ie = wps_build_assoc_req_ie(wpas_wps_get_req_type(ssid));
+		if (wps_ie && wpabuf_len(wps_ie) <=
+		    sizeof(wpa_s->sme.assoc_req_ie)) {
+			wpa_s->sme.assoc_req_ie_len = wpabuf_len(wps_ie);
+			os_memcpy(wpa_s->sme.assoc_req_ie, wpabuf_head(wps_ie),
+				  wpa_s->sme.assoc_req_ie_len);
+		} else
+			wpa_s->sme.assoc_req_ie_len = 0;
+		wpabuf_free(wps_ie);
+		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
+#endif /* CONFIG_WPS */
+	} else {
+		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
+		wpa_s->sme.assoc_req_ie_len = 0;
+	}
+
+#ifdef CONFIG_IEEE80211R
+	ie = wpa_scan_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
+	if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
+		md = ie + 2;
+	wpa_sm_set_ft_params(wpa_s->wpa, md, NULL, 0, NULL);
+	if (md) {
+		/* Prepare for the next transition */
+		wpa_ft_prepare_auth_request(wpa_s->wpa);
+	}
+
+	if (md && ssid->key_mgmt & (WPA_KEY_MGMT_FT_PSK |
+				    WPA_KEY_MGMT_FT_IEEE8021X)) {
+		if (wpa_s->sme.assoc_req_ie_len + 5 <
+		    sizeof(wpa_s->sme.assoc_req_ie)) {
+			struct rsn_mdie *mdie;
+			u8 *pos = wpa_s->sme.assoc_req_ie +
+				wpa_s->sme.assoc_req_ie_len;
+			*pos++ = WLAN_EID_MOBILITY_DOMAIN;
+			*pos++ = sizeof(*mdie);
+			mdie = (struct rsn_mdie *) pos;
+			os_memcpy(mdie->mobility_domain, md,
+				  MOBILITY_DOMAIN_ID_LEN);
+			mdie->ft_capab = 0;
+			wpa_s->sme.assoc_req_ie_len += 5;
+		}
+
+		if (wpa_s->sme.ft_used &&
+		    os_memcmp(md, wpa_s->sme.mobility_domain, 2) == 0) {
+			wpa_printf(MSG_DEBUG, "SME: Trying to use FT "
+				   "over-the-air");
+			params.auth_alg = AUTH_ALG_FT;
+			params.ie = wpa_s->sme.ft_ies;
+			params.ie_len = wpa_s->sme.ft_ies_len;
+		}
+	}
+#endif /* CONFIG_IEEE80211R */
+
+#ifdef CONFIG_IEEE80211W
+	switch (ssid->ieee80211w) {
+	case NO_IEEE80211W:
+		wpa_s->sme.mfp = NO_MGMT_FRAME_PROTECTION;
+		break;
+	case IEEE80211W_OPTIONAL:
+		wpa_s->sme.mfp = MGMT_FRAME_PROTECTION_OPTIONAL;
+		break;
+	case IEEE80211W_REQUIRED:
+		wpa_s->sme.mfp = MGMT_FRAME_PROTECTION_REQUIRED;
+		break;
+	}
+	if (ssid->ieee80211w != NO_IEEE80211W && bss) {
+		const u8 *rsn = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+		struct wpa_ie_data _ie;
+		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &_ie) == 0 &&
+		    _ie.capabilities &
+		    (WPA_CAPABILITY_MFPC | WPA_CAPABILITY_MFPR)) {
+			wpa_printf(MSG_DEBUG, "WPA: Selected AP supports MFP: "
+				   "require MFP");
+			wpa_s->sme.mfp = MGMT_FRAME_PROTECTION_REQUIRED;
+		}
+	}
+#endif /* CONFIG_IEEE80211W */
+
+	wpa_supplicant_cancel_scan(wpa_s);
+
+	wpa_msg(wpa_s, MSG_INFO, "Trying to authenticate with " MACSTR
+		" (SSID='%s' freq=%d MHz)", MAC2STR(params.bssid),
+		wpa_ssid_txt(params.ssid, params.ssid_len), params.freq);
+
+	wpa_clear_keys(wpa_s, bss->bssid);
+	wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
+	wpa_s->current_ssid = ssid;
+	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
+	wpa_supplicant_initiate_eapol(wpa_s);
+
+	if (wpa_drv_authenticate(wpa_s, &params) < 0) {
+		wpa_msg(wpa_s, MSG_INFO, "Authentication request to the "
+			"driver failed");
+		return;
+	}
+
+	/* TODO: add timeout on authentication */
+
+	/*
+	 * Association will be started based on the authentication event from
+	 * the driver.
+	 */
+}
+
+
+void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
+{
+	struct wpa_driver_associate_params params;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	if (ssid == NULL) {
+		wpa_printf(MSG_DEBUG, "SME: Ignore authentication event when "
+			   "network is not selected");
+		return;
+	}
+
+	if (wpa_s->wpa_state != WPA_AUTHENTICATING) {
+		wpa_printf(MSG_DEBUG, "SME: Ignore authentication event when "
+			   "not in authenticating state");
+		return;
+	}
+
+	if (os_memcmp(wpa_s->pending_bssid, data->auth.peer, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "SME: Ignore authentication with "
+			   "unexpected peer " MACSTR,
+			   MAC2STR(data->auth.peer));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "SME: Authentication response: peer=" MACSTR
+		   " auth_type=%d status_code=%d",
+		   MAC2STR(data->auth.peer), data->auth.auth_type,
+		   data->auth.status_code);
+	wpa_hexdump(MSG_MSGDUMP, "SME: Authentication response IEs",
+		    data->auth.ies, data->auth.ies_len);
+
+	if (data->auth.status_code != WLAN_STATUS_SUCCESS) {
+		wpa_printf(MSG_DEBUG, "SME: Authentication failed (status "
+			   "code %d)", data->auth.status_code);
+		return;
+	}
+
+#ifdef CONFIG_IEEE80211R
+	if (data->auth.auth_type == WLAN_AUTH_FT) {
+		union wpa_event_data edata;
+		os_memset(&edata, 0, sizeof(edata));
+		edata.ft_ies.ies = data->auth.ies;
+		edata.ft_ies.ies_len = data->auth.ies_len;
+		os_memcpy(edata.ft_ies.target_ap, data->auth.peer, ETH_ALEN);
+		wpa_supplicant_event(wpa_s, EVENT_FT_RESPONSE, &edata);
+	}
+#endif /* CONFIG_IEEE80211R */
+
+	os_memset(&params, 0, sizeof(params));
+	params.bssid = data->auth.peer;
+	params.ssid = wpa_s->sme.ssid;
+	params.ssid_len = wpa_s->sme.ssid_len;
+	params.freq = wpa_s->sme.freq;
+	params.wpa_ie = wpa_s->sme.assoc_req_ie_len ?
+		wpa_s->sme.assoc_req_ie : NULL;
+	params.wpa_ie_len = wpa_s->sme.assoc_req_ie_len;
+#ifdef CONFIG_IEEE80211R
+	if (data->auth.auth_type == WLAN_AUTH_FT && wpa_s->sme.ft_ies) {
+		params.wpa_ie = wpa_s->sme.ft_ies;
+		params.wpa_ie_len = wpa_s->sme.ft_ies_len;
+	}
+#endif /* CONFIG_IEEE80211R */
+	params.mode = ssid->mode;
+	params.mgmt_frame_protection = wpa_s->sme.mfp;
+
+	wpa_msg(wpa_s, MSG_INFO, "Trying to associate with " MACSTR
+		" (SSID='%s' freq=%d MHz)", MAC2STR(params.bssid),
+		params.ssid ? wpa_ssid_txt(params.ssid, params.ssid_len) : "",
+		params.freq);
+
+	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
+
+	if (wpa_drv_associate(wpa_s, &params) < 0) {
+		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
+			"failed");
+		return;
+	}
+
+	/* TODO: add timeout on association */
+}
+
+
+int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
+		      const u8 *ies, size_t ies_len)
+{
+	if (md == NULL || ies == NULL) {
+		wpa_printf(MSG_DEBUG, "SME: Remove mobility domain");
+		os_free(wpa_s->sme.ft_ies);
+		wpa_s->sme.ft_ies = NULL;
+		wpa_s->sme.ft_ies_len = 0;
+		wpa_s->sme.ft_used = 0;
+		return 0;
+	}
+
+	os_memcpy(wpa_s->sme.mobility_domain, md, MOBILITY_DOMAIN_ID_LEN);
+	wpa_hexdump(MSG_DEBUG, "SME: FT IEs", ies, ies_len);
+	os_free(wpa_s->sme.ft_ies);
+	wpa_s->sme.ft_ies = os_malloc(ies_len);
+	if (wpa_s->sme.ft_ies == NULL)
+		return -1;
+	os_memcpy(wpa_s->sme.ft_ies, ies, ies_len);
+	wpa_s->sme.ft_ies_len = ies_len;
+	return 0;
+}

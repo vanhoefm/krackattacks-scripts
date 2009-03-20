@@ -129,7 +129,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	if (wpa_s->conf->ap_scan != 0 && wpa_s->drv_wired) {
+	if (wpa_s->conf->ap_scan != 0 &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_WIRED)) {
 		wpa_printf(MSG_DEBUG, "Using wired authentication - "
 			   "overriding ap_scan configuration");
 		wpa_s->conf->ap_scan = 0;
@@ -140,7 +141,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	if (wpa_s->use_client_mlme || wpa_s->conf->ap_scan == 2)
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) ||
+	    wpa_s->conf->ap_scan == 2)
 		max_ssids = 1;
 	else {
 		max_ssids = wpa_s->max_scan_ssids;
@@ -153,7 +155,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 #endif /* CONFIG_WPS */
 
 	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
-	    !wpa_s->use_client_mlme && wps != 2) {
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) &&
+	    wps != 2) {
 		wpa_s->scan_res_tried++;
 		wpa_printf(MSG_DEBUG, "Trying to get current scan results "
 			   "first without requesting a new scan to speed up "
@@ -242,7 +245,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 #endif /* CONFIG_WPS */
 
-	if (wpa_s->use_client_mlme) {
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
 		ieee80211_sta_set_probe_req_ie(wpa_s, params.extra_ies,
 					       params.extra_ies_len);
 		ret = ieee80211_sta_req_scan(wpa_s, params.ssids[0].ssid,

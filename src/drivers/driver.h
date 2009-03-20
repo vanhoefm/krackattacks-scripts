@@ -22,6 +22,7 @@
 #define AUTH_ALG_OPEN_SYSTEM	0x01
 #define AUTH_ALG_SHARED_KEY	0x02
 #define AUTH_ALG_LEAP		0x04
+#define AUTH_ALG_FT		0x08
 
 #define IEEE80211_MODE_INFRA	0
 #define IEEE80211_MODE_IBSS	1
@@ -187,6 +188,20 @@ struct wpa_driver_scan_params {
 	 * extra_ies_len - Length of extra_ies in octets
 	 */
 	size_t extra_ies_len;
+};
+
+/**
+ * struct wpa_driver_auth_params - Authentication parameters
+ * Data for struct wpa_driver_ops::authenticate().
+ */
+struct wpa_driver_auth_params {
+	int freq;
+	const u8 *bssid;
+	const u8 *ssid;
+	size_t ssid_len;
+	int auth_alg;
+	const u8 *ie;
+	size_t ie_len;
 };
 
 /**
@@ -369,6 +384,9 @@ struct wpa_driver_capa {
  * struct wpa_driver_ops::set_key using alg = WPA_ALG_PMK */
 #define WPA_DRIVER_FLAGS_4WAY_HANDSHAKE 0x00000008
 #define WPA_DRIVER_FLAGS_WIRED		0x00000010
+/* Driver provides separate commands for authentication and association (SME in
+ * wpa_supplicant). */
+#define WPA_DRIVER_FLAGS_SME		0x00000020
 	unsigned int flags;
 
 	int max_scan_ssids;
@@ -1083,6 +1101,21 @@ struct wpa_driver_ops {
 	 * results with wpa_driver_get_scan_results2().
 	 */
 	int (*scan2)(void *priv, struct wpa_driver_scan_params *params);
+
+	/**
+	 * authenticate - Request driver to authenticate
+	 * @priv: private driver interface data
+	 * @params: authentication parameters
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This is an optional function that can be used with drivers that
+	 * support separate authentication and association steps, i.e., when
+	 * wpa_supplicant can act as the SME. If not implemented, associate()
+	 * function is expected to take care of IEEE 802.11 authentication,
+	 * too.
+	 */
+	 int (*authenticate)(void *priv,
+			     struct wpa_driver_auth_params *params);
 };
 
 /**
@@ -1108,7 +1141,9 @@ typedef enum wpa_event_type {
 	 *
 	 * This event should be called when association is lost either due to
 	 * receiving deauthenticate or disassociate frame from the AP or when
-	 * sending either of these frames to the current AP.
+	 * sending either of these frames to the current AP. If the driver
+	 * supports separate deauthentication event, EVENT_DISASSOC should only
+	 * be used for disassociation and EVENT_DEAUTH for deauthentication.
 	 */
 	EVENT_DISASSOC,
 
@@ -1216,7 +1251,27 @@ typedef enum wpa_event_type {
 	 * event starts RSN authentication with the other STA to authenticate
 	 * the STA and set up encryption keys with it.
 	 */
-	EVENT_IBSS_RSN_START
+	EVENT_IBSS_RSN_START,
+
+	/**
+	 * EVENT_AUTH - Authentication result
+	 *
+	 * This event should be called when authentication attempt has been
+	 * completed. This is only used if the driver supports separate
+	 * authentication step (struct wpa_driver_ops::authenticate).
+	 * Information about authentication result is included in
+	 * union wpa_event_data::auth.
+	 */
+	EVENT_AUTH,
+
+	/**
+	 * EVENT_DEAUTH - Authentication lost
+	 *
+	 * This event should be called when authentication is lost either due
+	 * to receiving deauthenticate frame from the AP or when sending that
+	 * frame to the current AP.
+	 */
+	EVENT_DEAUTH
 } wpa_event_type;
 
 
@@ -1354,6 +1409,17 @@ union wpa_event_data {
 	struct ibss_rsn_start {
 		u8 peer[ETH_ALEN];
 	} ibss_rsn_start;
+
+	/**
+	 * struct auth_info - Data for EVENT_AUTH events
+	 */
+	struct auth_info {
+		u8 peer[ETH_ALEN];
+		u16 auth_type;
+		u16 status_code;
+		const u8 *ies;
+		size_t ies_len;
+	} auth;
 };
 
 /**

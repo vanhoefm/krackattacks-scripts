@@ -1326,5 +1326,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	wpa_driver_test_global_deinit,
 	wpa_driver_test_init2,
 	wpa_driver_test_get_interfaces,
-	wpa_driver_test_scan
+	wpa_driver_test_scan,
+	NULL /* authenticate */
 };

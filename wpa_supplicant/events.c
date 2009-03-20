@@ -33,6 +33,7 @@
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
+#include "sme.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -708,11 +709,58 @@ req_scan:
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 
 
+#ifdef CONFIG_IEEE80211R
+static void wpa_assoc_set_ft_params(struct wpa_supplicant *wpa_s,
+				    const u8 *ftie, const u8 *mdie)
+{
+	const u8 *mobility_domain = NULL;
+	const u8 *r0kh_id = NULL;
+	size_t r0kh_id_len = 0;
+	const u8 *r1kh_id = NULL;
+	struct rsn_ftie *hdr;
+	const u8 *pos, *end;
+
+	if (mdie == NULL || ftie == NULL)
+		return;
+
+	if (mdie[1] >= MOBILITY_DOMAIN_ID_LEN) {
+		mobility_domain = mdie + 2;
+#ifdef CONFIG_SME
+		wpa_s->sme.ft_used = 1;
+		os_memcpy(wpa_s->sme.mobility_domain, mobility_domain, 2);
+#endif /* CONFIG_SME */
+	}
+	if (ftie[1] >= sizeof(struct rsn_ftie)) {
+		end = ftie + 2 + ftie[1];
+		hdr = (struct rsn_ftie *) (ftie + 2);
+		pos = (const u8 *) (hdr + 1);
+		while (pos + 1 < end) {
+			if (pos + 2 + pos[1] > end)
+				break;
+			if (pos[0] == FTIE_SUBELEM_R1KH_ID &&
+			    pos[1] == FT_R1KH_ID_LEN)
+				r1kh_id = pos + 2;
+			else if (pos[0] == FTIE_SUBELEM_R0KH_ID &&
+				 pos[1] >= 1 && pos[1] <= FT_R0KH_ID_MAX_LEN) {
+				r0kh_id = pos + 2;
+				r0kh_id_len = pos[1];
+			}
+			pos += 2 + pos[1];
+		}
+	}
+	wpa_sm_set_ft_params(wpa_s->wpa, mobility_domain, r0kh_id,
+			     r0kh_id_len, r1kh_id);
+}
+#endif /* CONFIG_IEEE80211R */
+
 static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 					   union wpa_event_data *data)
 {
 	int l, len, found = 0, wpa_found, rsn_found;
-	u8 *p;
+	const u8 *p;
+#ifdef CONFIG_IEEE80211R
+	const u8 *mdie = NULL, *ftie = NULL;
+#endif /* CONFIG_IEEE80211R */
 
 	wpa_printf(MSG_DEBUG, "Association info event");
 	if (data->assoc_info.req_ies)
@@ -751,6 +799,29 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	}
 	if (!found && data->assoc_info.req_ies)
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
+
+#ifdef CONFIG_IEEE80211R
+	p = data->assoc_info.resp_ies;
+	l = data->assoc_info.resp_ies_len;
+
+	/* Go through the IEs and make a copy of the WPA/RSN IE, if present. */
+	while (p && l >= 2) {
+		len = p[1] + 2;
+		if (len > l) {
+			wpa_hexdump(MSG_DEBUG, "Truncated IE in assoc_info",
+				    p, l);
+			break;
+		}
+		if (p[0] == WLAN_EID_FAST_BSS_TRANSITION)
+			ftie = p;
+		else if (p[0] == WLAN_EID_MOBILITY_DOMAIN)
+			mdie = p;
+		l -= len;
+		p += len;
+	}
+
+	wpa_assoc_set_ft_params(wpa_s, ftie, mdie);
+#endif /* CONFIG_IEEE80211R */
 
 	/* WPA/RSN IE from Beacon/ProbeResp */
 	p = data->assoc_info.beacon_ies;
@@ -802,9 +873,9 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_event_associnfo(wpa_s, data);
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATED);
-	if (wpa_s->use_client_mlme)
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		os_memcpy(bssid, wpa_s->bssid, ETH_ALEN);
-	if (wpa_s->use_client_mlme ||
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) ||
 	    (wpa_drv_get_bssid(wpa_s, bssid) >= 0 &&
 	     os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0)) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Associated to a new BSS: BSSID="
@@ -859,7 +930,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	}
 	wpa_supplicant_cancel_scan(wpa_s);
 
-	if (wpa_s->driver_4way_handshake &&
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) &&
 	    wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt)) {
 		/*
 		 * We are done; the driver will take care of RSN 4-way
@@ -1113,9 +1184,13 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	struct wpa_supplicant *wpa_s = ctx;
 
 	switch (event) {
+	case EVENT_AUTH:
+		sme_event_auth(wpa_s, data);
+		break;
 	case EVENT_ASSOC:
 		wpa_supplicant_event_assoc(wpa_s, data);
 		break;
+	case EVENT_DEAUTH:
 	case EVENT_DISASSOC:
 		wpa_supplicant_event_disassoc(wpa_s);
 		break;

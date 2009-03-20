@@ -311,7 +311,6 @@ struct wpa_supplicant {
 	int mgmt_group_cipher;
 
 	void *drv_priv; /* private data used by driver_ops */
-	int drv_wired;
 
 	struct wpa_ssid *prev_scan_ssid; /* previously scanned SSID;
 					  * NULL = not yet initialized (start
@@ -355,8 +354,7 @@ struct wpa_supplicant {
 	int scan_runs; /* number of scan runs since WPS was started */
 
 	struct wpa_client_mlme mlme;
-	int use_client_mlme;
-	int driver_4way_handshake;
+	unsigned int drv_flags;
 	int max_scan_ssids;
 
 	int pending_mic_error_report;
@@ -368,6 +366,21 @@ struct wpa_supplicant {
 	int blacklist_cleared;
 
 	struct ibss_rsn *ibss_rsn;
+
+#ifdef CONFIG_SME
+	struct {
+		u8 ssid[32];
+		size_t ssid_len;
+		int freq;
+		u8 assoc_req_ie[80];
+		size_t assoc_req_ie_len;
+		int mfp;
+		int ft_used;
+		u8 mobility_domain[2];
+		u8 *ft_ies;
+		size_t ft_ies_len;
+	} sme;
+#endif /* CONFIG_SME */
 };
 
 
@@ -490,6 +503,14 @@ static inline int wpa_drv_set_mode(struct wpa_supplicant *wpa_s, int mode)
 		return wpa_s->driver->set_mode(wpa_s->drv_priv, mode);
 	}
 	return 0;
+}
+
+static inline int wpa_drv_authenticate(struct wpa_supplicant *wpa_s,
+				       struct wpa_driver_auth_params *params)
+{
+	if (wpa_s->driver->authenticate)
+		return wpa_s->driver->authenticate(wpa_s->drv_priv, params);
+	return -1;
 }
 
 static inline int wpa_drv_associate(struct wpa_supplicant *wpa_s,

@@ -810,7 +810,8 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	NULL /* global_deinit */,
 	NULL /* init2 */,
 	NULL /* get_interfaces */,
-	NULL /* scan2 */
+	NULL /* scan2 */,
+	NULL /* authenticate */
 };
 
 

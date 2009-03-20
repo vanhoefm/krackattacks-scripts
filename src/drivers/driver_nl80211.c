@@ -92,7 +92,9 @@ struct wpa_driver_nl80211_data {
 static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 					    void *timeout_ctx);
 static int wpa_driver_nl80211_set_mode(void *priv, int mode);
+#ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_flush_pmkid(void *priv);
+#endif /* WEXT_COMPAT */
 static int wpa_driver_nl80211_get_range(void *priv);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
@@ -1465,13 +1467,16 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		}
 	}
 
+#ifdef WEXT_COMPAT
 	/*
 	 * Make sure that the driver does not have any obsolete PMKID entries.
 	 */
 	wpa_driver_nl80211_flush_pmkid(drv);
+#endif /* WEXT_COMPAT */
 
 	if (wpa_driver_nl80211_set_mode(drv, 0) < 0) {
-		printf("Could not configure driver to use managed mode\n");
+		wpa_printf(MSG_DEBUG, "nl80211: Could not configure driver to "
+			   "use managed mode");
 	}
 
 	wpa_driver_nl80211_get_range(drv);
@@ -2430,6 +2435,8 @@ try_again:
 }
 
 
+#ifdef WEXT_COMPAT
+
 static int wpa_driver_nl80211_pmksa(struct wpa_driver_nl80211_data *drv,
 				 u32 cmd, const u8 *bssid, const u8 *pmkid)
 {
@@ -2481,6 +2488,8 @@ static int wpa_driver_nl80211_flush_pmkid(void *priv)
 	return wpa_driver_nl80211_pmksa(drv, IW_PMKSA_FLUSH, NULL, NULL);
 }
 
+#endif /* WEXT_COMPAT */
+
 
 static int wpa_driver_nl80211_get_capa(void *priv,
 				       struct wpa_driver_capa *capa)
@@ -2521,9 +2530,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.associate = wpa_driver_nl80211_associate,
 	.init = wpa_driver_nl80211_init,
 	.deinit = wpa_driver_nl80211_deinit,
-	.add_pmkid = wpa_driver_nl80211_add_pmkid,
-	.remove_pmkid = wpa_driver_nl80211_remove_pmkid,
-	.flush_pmkid = wpa_driver_nl80211_flush_pmkid,
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_country = wpa_driver_nl80211_set_country,
@@ -2531,5 +2537,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_wpa = wpa_driver_nl80211_set_wpa,
 	.set_countermeasures = wpa_driver_nl80211_set_countermeasures,
 	.set_auth_alg = wpa_driver_nl80211_set_auth_alg,
+	.add_pmkid = wpa_driver_nl80211_add_pmkid,
+	.remove_pmkid = wpa_driver_nl80211_remove_pmkid,
+	.flush_pmkid = wpa_driver_nl80211_flush_pmkid,
 #endif /* WEXT_COMPAT */
 };

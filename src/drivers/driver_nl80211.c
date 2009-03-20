@@ -543,6 +543,7 @@ static int wpa_driver_nl80211_event_wireless_michaelmicfailure(
 }
 
 
+#ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_event_wireless_pmkidcand(
 	struct wpa_driver_nl80211_data *drv, const char *ev, size_t len)
 {
@@ -570,7 +571,6 @@ static int wpa_driver_nl80211_event_wireless_pmkidcand(
 }
 
 
-#ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_event_wireless_assocreqie(
 	struct wpa_driver_nl80211_data *drv, const char *ev, int len)
 {
@@ -734,11 +734,11 @@ static void wpa_driver_nl80211_event_wireless(struct wpa_driver_nl80211_data *dr
 			wpa_driver_nl80211_event_wireless_assocrespie(
 				drv, custom, iwe->u.data.length);
 			break;
-#endif /* WEXT_COMPAT */
 		case IWEVPMKIDCAND:
 			wpa_driver_nl80211_event_wireless_pmkidcand(
 				drv, custom, iwe->u.data.length);
 			break;
+#endif /* WEXT_COMPAT */
 		}
 
 		pos += iwe->len;

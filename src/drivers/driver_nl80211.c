@@ -86,6 +86,8 @@ struct wpa_driver_nl80211_data {
 
 	u8 bssid[ETH_ALEN];
 	int associated;
+	u8 ssid[32];
+	size_t ssid_len;
 };
 
 
@@ -359,31 +361,41 @@ static int wpa_driver_nl80211_set_bssid(void *priv, const u8 *bssid)
 static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
-	int ret = 0;
+#ifdef WEXT_COMPAT
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME)) {
+		struct iwreq iwr;
+		int ret = 0;
 
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.essid.pointer = (caddr_t) ssid;
-	iwr.u.essid.length = 32;
+		os_memset(&iwr, 0, sizeof(iwr));
+		os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+		iwr.u.essid.pointer = (caddr_t) ssid;
+		iwr.u.essid.length = 32;
 
-	if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCGIWESSID]");
-		ret = -1;
-	} else {
-		ret = iwr.u.essid.length;
-		if (ret > 32)
-			ret = 32;
-		/* Some drivers include nul termination in the SSID, so let's
-		 * remove it here before further processing. WE-21 changes this
-		 * to explicitly require the length _not_ to include nul
-		 * termination. */
-		if (ret > 0 && ssid[ret - 1] == '\0' &&
-		    drv->we_version_compiled < 21)
-			ret--;
+		if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
+			perror("ioctl[SIOCGIWESSID]");
+			ret = -1;
+		} else {
+			ret = iwr.u.essid.length;
+			if (ret > 32)
+				ret = 32;
+			/*
+			 * Some drivers include nul termination in the SSID, so
+			 * let's remove it here before further processing.
+			 * WE-21 changes this to explicitly require the length
+			 * _not_ to include nul termination.
+			 */
+			if (ret > 0 && ssid[ret - 1] == '\0' &&
+			    drv->we_version_compiled < 21)
+				ret--;
+		}
+
+		return ret;
 	}
-
-	return ret;
+#endif /* WEXT_COMPAT */
+	if (!drv->associated)
+		return -1;
+	os_memcpy(ssid, drv->ssid, drv->ssid_len);
+	return drv->ssid_len;
 }
 
 
@@ -2348,6 +2360,10 @@ static int wpa_driver_nl80211_associate(
 				  params->ssid, params->ssid_len);
 		NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
 			params->ssid);
+		if (params->ssid_len > sizeof(drv->ssid))
+			goto nla_put_failure;
+		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
+		drv->ssid_len = params->ssid_len;
 	}
 	wpa_hexdump(MSG_DEBUG, "  * IEs", params->wpa_ie, params->wpa_ie_len);
 	if (params->wpa_ie)

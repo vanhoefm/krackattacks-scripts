@@ -109,6 +109,11 @@ CONFIG_DRIVER_WEXT=y
 # Driver interface for development testing
 #CONFIG_DRIVER_TEST=y
 
+# Include client MLME (management frame processing) for test driver
+# This can be used to test MLME operations in hostapd with the test interface.
+# space.
+#CONFIG_CLIENT_MLME=y
+
 # Driver interface for wired Ethernet drivers
 CONFIG_DRIVER_WIRED=y
 
@@ -360,13 +365,6 @@ CONFIG_PEERKEY=y
 # size. Thus, it may not be the best option for targets that have limited
 # amount of memory/flash.
 #CONFIG_DYNAMIC_EAP_METHODS=y
-
-# Include client MLME (management frame processing).
-# This can be used to move MLME processing of Linux mac80211 stack into user
-# space. Please note that this is currently only available with
-# driver_nl80211.c and only with a modified version of Linux kernel and
-# wpa_supplicant.
-#CONFIG_CLIENT_MLME=y
 
 # IEEE Std 802.11r-2008 (Fast BSS Transition)
 #CONFIG_IEEE80211R=y

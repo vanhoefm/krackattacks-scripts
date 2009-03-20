@@ -331,6 +331,7 @@ static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
 }
 
 
+#ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_set_bssid(void *priv, const u8 *bssid)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
@@ -352,6 +353,7 @@ static int wpa_driver_nl80211_set_bssid(void *priv, const u8 *bssid)
 
 	return ret;
 }
+#endif /* WEXT_COMPAT */
 
 
 static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
@@ -1505,12 +1507,14 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
+#ifdef WEXT_COMPAT
 	/*
 	 * Clear possibly configured driver parameters in order to make it
 	 * easier to use the driver after wpa_supplicant has been terminated.
 	 */
 	(void) wpa_driver_nl80211_set_bssid(drv,
 					 (u8 *) "\x00\x00\x00\x00\x00\x00");
+#endif /* WEXT_COMPAT */
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 

@@ -967,6 +967,7 @@ endif
 ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R
 OBJS += ../src/rsn_supp/wpa_ft.o
+NEED_80211_COMMON=y
 endif
 
 ifndef CONFIG_NO_WPA
@@ -1042,8 +1043,13 @@ CFLAGS += -DCONFIG_SME
 endif
 
 ifdef CONFIG_CLIENT_MLME
-OBJS += mlme.o ../src/common/ieee802_11_common.o
+OBJS += mlme.o
 CFLAGS += -DCONFIG_CLIENT_MLME
+NEED_80211_COMMON=y
+endif
+
+ifdef NEED_80211_COMMON
+OBJS += ../src/common/ieee802_11_common.o
 endif
 
 ifndef CONFIG_MAIN

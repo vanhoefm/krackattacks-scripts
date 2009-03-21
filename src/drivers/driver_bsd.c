@@ -177,7 +177,7 @@ wpa_driver_bsd_get_ssid(void *priv, u8 *ssid)
 }
 
 static int
-wpa_driver_bsd_set_ssid(void *priv, const char *ssid,
+wpa_driver_bsd_set_ssid(void *priv, const u8 *ssid,
 			     size_t ssid_len)
 {
 	struct wpa_driver_bsd_data *drv = priv;
@@ -187,7 +187,7 @@ wpa_driver_bsd_set_ssid(void *priv, const char *ssid,
 
 static int
 wpa_driver_bsd_set_wpa_ie(struct wpa_driver_bsd_data *drv,
-	const char *wpa_ie, size_t wpa_ie_len)
+	const u8 *wpa_ie, size_t wpa_ie_len)
 {
 	return set80211var(drv, IEEE80211_IOC_OPTIE, wpa_ie, wpa_ie_len);
 }

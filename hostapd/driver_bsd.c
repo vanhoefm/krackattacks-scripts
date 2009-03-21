@@ -504,7 +504,7 @@ bsd_new_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
 	struct hostapd_data *hapd = drv->hapd;
 	struct ieee80211req_wpaie ie;
-	int new_assoc, ielen = 0, res;
+	int ielen = 0;
 	u8 *iebuf = NULL;
 
 	/*
@@ -523,6 +523,7 @@ bsd_new_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 	else
 		ielen += 2;
 
+no_ie:
 	return hostapd_notif_assoc(hapd, addr, iebuf, ielen);
 }
 
@@ -566,7 +567,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 			break;
 		case RTM_IEEE80211_LEAVE:
 			leave = (struct ieee80211_leave_event *) &ifan[1];
-			hostapd_notif_disassoc(drv, leave->iev_addr);
+			hostapd_notif_disassoc(drv->hapd, leave->iev_addr);
 			break;
 		case RTM_IEEE80211_JOIN:
 #ifdef RTM_IEEE80211_REJOIN

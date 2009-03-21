@@ -832,6 +832,50 @@ fail:
 }
 
 
+#ifdef __FreeBSD__
+#include <sys/sysctl.h>
+#include <net/route.h>
+#include <net/if_dl.h>
+
+static int eth_get(const char *device, u8 ea[ETH_ALEN])
+{
+	struct if_msghdr *ifm;
+	struct sockaddr_dl *sdl;
+	u_char *p, *buf;
+	size_t len;
+	int mib[] = { CTL_NET, AF_ROUTE, 0, AF_LINK, NET_RT_IFLIST, 0 };
+
+	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0)
+		return -1;
+	if ((buf = os_malloc(len)) == NULL)
+		return -1;
+	if (sysctl(mib, 6, buf, &len, NULL, 0) < 0) {
+		os_free(buf);
+		return -1;
+	}
+	for (p = buf; p < buf + len; p += ifm->ifm_msglen) {
+		ifm = (struct if_msghdr *)p;
+		sdl = (struct sockaddr_dl *)(ifm + 1);
+		if (ifm->ifm_type != RTM_IFINFO ||
+		    (ifm->ifm_addrs & RTA_IFP) == 0)
+			continue;
+		if (sdl->sdl_family != AF_LINK || sdl->sdl_nlen == 0 ||
+		    os_memcmp(sdl->sdl_data, device, sdl->sdl_nlen) != 0)
+			continue;
+		os_memcpy(ea, LLADDR(sdl), sdl->sdl_alen);
+		break;
+	}
+	os_free(buf);
+
+	if (p >= buf + len) {
+		errno = ESRCH;
+		return -1;
+	}
+	return 0;
+}
+#endif /* __FreeBSD__ */
+
+
 /**
  * get_netif_info - Get hw and IP addresses for network device
  * @net_if: Selected network interface name
@@ -870,6 +914,7 @@ static int get_netif_info(const char *net_if, unsigned *ip_addr,
 	in_addr.s_addr = *ip_addr;
 	os_snprintf(*ip_addr_text, 16, "%s", inet_ntoa(in_addr));
 
+#ifdef __linux__
 	os_strlcpy(req.ifr_name, net_if, sizeof(req.ifr_name));
 	if (ioctl(sock, SIOCGIFHWADDR, &req) < 0) {
 		wpa_printf(MSG_ERROR, "WPS UPnP: SIOCGIFHWADDR failed: "
@@ -877,6 +922,14 @@ static int get_netif_info(const char *net_if, unsigned *ip_addr,
 		goto fail;
 	}
 	os_memcpy(mac, req.ifr_addr.sa_data, 6);
+#elif defined(__FreeBSD__)
+	if (eth_get(net_if, mac) < 0) {
+		wpa_printf(MSG_ERROR, "WPS UPnP: Failed to get MAC address");
+		goto fail;
+	}
+#else
+#error MAC address fetch not implemented
+#endif
 	os_snprintf(*mac_addr_text, 18, MACSTR, MAC2STR(req.ifr_addr.sa_data));
 
 	close(sock);

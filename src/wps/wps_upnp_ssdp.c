@@ -784,6 +784,7 @@ fail:
  */
 int add_ssdp_network(char *net_if)
 {
+#ifdef __linux__
 	int ret = -1;
 	int sock = -1;
 	struct rtentry rt;
@@ -826,6 +827,9 @@ fail:
 		close(sock);
 
 	return ret;
+#else /* __linux__ */
+	return 0;
+#endif /* __linux__ */
 }
 
 

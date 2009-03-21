@@ -18,6 +18,7 @@
 
 #include <sys/un.h>
 #include <sys/stat.h>
+#include <stddef.h>
 
 #include "hostapd.h"
 #include "eloop.h"
@@ -61,7 +62,8 @@ static int hostapd_ctrl_iface_attach(struct hostapd_data *hapd,
 	dst->next = hapd->ctrl_dst;
 	hapd->ctrl_dst = dst;
 	wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor attached",
-		    (u8 *) from->sun_path, fromlen);
+		    (u8 *) from->sun_path,
+		    fromlen - offsetof(struct sockaddr_un, sun_path));
 	return 0;
 }
 
@@ -75,15 +77,18 @@ static int hostapd_ctrl_iface_detach(struct hostapd_data *hapd,
 	dst = hapd->ctrl_dst;
 	while (dst) {
 		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path, fromlen) ==
-		    0) {
+		    os_memcmp(from->sun_path, dst->addr.sun_path,
+			      fromlen - offsetof(struct sockaddr_un, sun_path))
+		    == 0) {
 			if (prev == NULL)
 				hapd->ctrl_dst = dst->next;
 			else
 				prev->next = dst->next;
 			os_free(dst);
 			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor detached",
-				    (u8 *) from->sun_path, fromlen);
+				    (u8 *) from->sun_path,
+				    fromlen -
+				    offsetof(struct sockaddr_un, sun_path));
 			return 0;
 		}
 		prev = dst;
@@ -105,10 +110,12 @@ static int hostapd_ctrl_iface_level(struct hostapd_data *hapd,
 	dst = hapd->ctrl_dst;
 	while (dst) {
 		if (fromlen == dst->addrlen &&
-		    os_memcmp(from->sun_path, dst->addr.sun_path, fromlen) ==
-		    0) {
+		    os_memcmp(from->sun_path, dst->addr.sun_path,
+			      fromlen - offsetof(struct sockaddr_un, sun_path))
+		    == 0) {
 			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE changed monitor "
-				    "level", (u8 *) from->sun_path, fromlen);
+				    "level", (u8 *) from->sun_path, fromlen -
+				    offsetof(struct sockaddr_un, sun_path));
 			dst->debug_level = atoi(level);
 			return 0;
 		}
@@ -464,6 +471,9 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	}
 
 	os_memset(&addr, 0, sizeof(addr));
+#ifdef __FreeBSD__
+	addr.sun_len = sizeof(addr);
+#endif /* __FreeBSD__ */
 	addr.sun_family = AF_UNIX;
 	fname = hostapd_ctrl_iface_path(hapd);
 	if (fname == NULL)
@@ -566,7 +576,8 @@ static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 		next = dst->next;
 		if (level >= dst->debug_level) {
 			wpa_hexdump(MSG_DEBUG, "CTRL_IFACE monitor send",
-				    (u8 *) dst->addr.sun_path, dst->addrlen);
+				    (u8 *) dst->addr.sun_path, dst->addrlen -
+				    offsetof(struct sockaddr_un, sun_path));
 			msg.msg_name = &dst->addr;
 			msg.msg_namelen = dst->addrlen;
 			if (sendmsg(hapd->ctrl_sock, &msg, 0) < 0) {

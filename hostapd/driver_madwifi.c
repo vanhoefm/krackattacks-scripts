@@ -853,14 +853,14 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 	}
 	wpa_hexdump(MSG_MSGDUMP, "madwifi req WPA IE",
 		    ie.wpa_ie, IEEE80211_MAX_OPT_IE);
-	wpa_hexdump(MSG_MSGDUMP, "madwifi req RSN IE",
-		    ie.rsn_ie, IEEE80211_MAX_OPT_IE);
 	iebuf = ie.wpa_ie;
 	/* madwifi seems to return some random data if WPA/RSN IE is not set.
 	 * Assume the IE was not included if the IE type is unknown. */
 	if (iebuf[0] != WLAN_EID_VENDOR_SPECIFIC)
 		iebuf[1] = 0;
 #ifdef MADWIFI_NG
+	wpa_hexdump(MSG_MSGDUMP, "madwifi req RSN IE",
+		    ie.rsn_ie, IEEE80211_MAX_OPT_IE);
 	if (iebuf[1] == 0 && ie.rsn_ie[1] > 0) {
 		/* madwifi-ng svn #1453 added rsn_ie. Use it, if wpa_ie was not
 		 * set. This is needed for WPA2. */

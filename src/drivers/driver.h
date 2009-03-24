@@ -350,6 +350,15 @@ struct wpa_driver_associate_params {
 	 * be prepared to handle %NULL value as an error.
 	 */
 	const u8 *psk;
+
+	/**
+	 * drop_unencrypted - Enable/disable unencrypted frame filtering
+	 *
+	 * Configure the driver to drop all non-EAPOL frames (both receive and
+	 * transmit paths). Unencrypted EAPOL frames (ethertype 0x888e) must
+	 * still be allowed for key negotiation.
+	 */
+	int drop_unencrypted;
 };
 
 /**
@@ -620,6 +629,9 @@ struct wpa_driver_ops {
 	 * Configure the driver to drop all non-EAPOL frames (both receive and
 	 * transmit paths). Unencrypted EAPOL frames (ethertype 0x888e) must
 	 * still be allowed for key negotiation.
+	 *
+	 * This function is deprecated. New driver wrapper implementations
+	 * should use associate() parameter drop_unencrypted instead.
 	 */
 	int (*set_drop_unencrypted)(void *priv, int enabled);
 
@@ -637,7 +649,7 @@ struct wpa_driver_ops {
 	 * results event for wpa_supplicant which will eventually request the
 	 * results with wpa_driver_get_scan_results().
 	 *
-	 * This function is depracated. New driver wrapper implementations
+	 * This function is deprecated. New driver wrapper implementations
 	 * should implement support for scan2().
 	 */
 	int (*scan)(void *priv, const u8 *ssid, size_t ssid_len);
@@ -655,7 +667,7 @@ struct wpa_driver_ops {
 	 * returned and the remaining entries will not be included in the
 	 * buffer.
 	 *
-	 * This function is depracated. New driver wrapper implementations
+	 * This function is deprecated. New driver wrapper implementations
 	 * should implement support for get_scan_results2().
 	 */
 	int (*get_scan_results)(void *priv,
@@ -710,6 +722,9 @@ struct wpa_driver_ops {
 	 * supported EAP method. This information is also available in
 	 * associate() params, so set_auth_alg may not be needed in case of
 	 * most drivers.
+	 *
+	 * This function is deprecated. New driver wrapper implementations
+	 * should use associate() parameter auth_alg instead.
 	 *
 	 * Returns: 0 on success, -1 on failure
 	 */
@@ -1028,8 +1043,12 @@ struct wpa_driver_ops {
 	 * This handler will be called before any key configuration and call to
 	 * associate() handler in order to allow the operation mode to be
 	 * configured as early as possible. This information is also available
-	 * in associate() params and as such, some driver wrappers may not need
+	 * in associate() params and as such, driver wrappers may not need
 	 * to implement set_mode() handler.
+	 *
+	 * This function is deprecated. New driver wrapper implementations
+	 * should use associate() parameter mode instead.
+	 *
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_mode)(void *priv, int mode);

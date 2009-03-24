@@ -1142,6 +1142,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			params.psk = ssid->psk;
 	}
 
+	params.drop_unencrypted = use_crypt;
+
 #ifdef CONFIG_IEEE80211W
 	switch (ssid->ieee80211w) {
 	case NO_IEEE80211W:

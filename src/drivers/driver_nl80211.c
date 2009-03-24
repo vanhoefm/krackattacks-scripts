@@ -93,7 +93,8 @@ struct wpa_driver_nl80211_data {
 
 static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 					    void *timeout_ctx);
-static int wpa_driver_nl80211_set_mode(void *priv, int mode);
+static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
+				       int mode);
 #ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_flush_pmkid(void *priv);
 #endif /* WEXT_COMPAT */
@@ -1527,6 +1528,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	(void) wpa_driver_nl80211_set_bssid(drv,
 					 (u8 *) "\x00\x00\x00\x00\x00\x00");
 #endif /* WEXT_COMPAT */
+	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED, 0);
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
@@ -1935,19 +1937,6 @@ static int wpa_driver_nl80211_set_countermeasures(void *priv,
 #endif /* WEXT_COMPAT */
 
 
-static int wpa_driver_nl80211_set_drop_unencrypted(void *priv,
-						int enabled)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-#ifdef WEXT_COMPAT
-	drv->use_crypt = enabled;
-#endif /* WEXT_COMPAT */
-	return wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,
-					      enabled);
-}
-
-
 #ifdef WEXT_COMPAT
 static int wpa_driver_nl80211_mlme_wext(struct wpa_driver_nl80211_data *drv,
 					const u8 *addr, int cmd,
@@ -2141,6 +2130,29 @@ wpa_driver_nl80211_auth_alg_fallback(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int wpa_driver_nl80211_set_auth_alg(struct wpa_driver_nl80211_data *drv,
+					   int auth_alg)
+{
+	int algs = 0, res;
+
+	if (auth_alg & AUTH_ALG_OPEN_SYSTEM)
+		algs |= IW_AUTH_ALG_OPEN_SYSTEM;
+	if (auth_alg & AUTH_ALG_SHARED_KEY)
+		algs |= IW_AUTH_ALG_SHARED_KEY;
+	if (auth_alg & AUTH_ALG_LEAP)
+		algs |= IW_AUTH_ALG_LEAP;
+	if (algs == 0) {
+		/* at least one algorithm should be set */
+		algs = IW_AUTH_ALG_OPEN_SYSTEM;
+	}
+
+	res = wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_80211_AUTH_ALG,
+					     algs);
+	drv->auth_alg_fallback = res == -2;
+	return res;
+}
+
+
 static int wpa_driver_nl80211_associate_wext(
 	void *priv, struct wpa_driver_associate_params *params)
 {
@@ -2150,6 +2162,9 @@ static int wpa_driver_nl80211_associate_wext(
 	int value;
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
+
+	wpa_driver_nl80211_set_mode(drv, params->mode);
+	wpa_driver_nl80211_set_auth_alg(drv, params->auth_alg);
 
 	/*
 	 * If the driver did not support SIOCSIWAUTH, fallback to
@@ -2220,32 +2235,6 @@ static int wpa_driver_nl80211_associate_wext(
 		ret = -1;
 
 	return ret;
-}
-
-
-static int wpa_driver_nl80211_set_auth_alg(void *priv, int auth_alg)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	int algs = 0, res;
-
-	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-		return 0;
-
-	if (auth_alg & AUTH_ALG_OPEN_SYSTEM)
-		algs |= IW_AUTH_ALG_OPEN_SYSTEM;
-	if (auth_alg & AUTH_ALG_SHARED_KEY)
-		algs |= IW_AUTH_ALG_SHARED_KEY;
-	if (auth_alg & AUTH_ALG_LEAP)
-		algs |= IW_AUTH_ALG_LEAP;
-	if (algs == 0) {
-		/* at least one algorithm should be set */
-		algs = IW_AUTH_ALG_OPEN_SYSTEM;
-	}
-
-	res = wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_80211_AUTH_ALG,
-					     algs);
-	drv->auth_alg_fallback = res == -2;
-	return res;
 }
 #endif /* WEXT_COMPAT */
 
@@ -2329,6 +2318,9 @@ static int wpa_driver_nl80211_associate(
 	int ret = -1;
 	struct nl_msg *msg;
 
+	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,
+					  params->drop_unencrypted);
+
 #ifdef WEXT_COMPAT
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
 		return wpa_driver_nl80211_associate_wext(drv, params);
@@ -2389,13 +2381,13 @@ nla_put_failure:
 
 /**
  * wpa_driver_nl80211_set_mode - Set wireless mode (infra/adhoc), SIOCSIWMODE
- * @priv: Pointer to private wext data from wpa_driver_nl80211_init()
+ * @drv: Pointer to private driver data from wpa_driver_nl80211_init()
  * @mode: 0 = infra/BSS (associate with an AP), 1 = adhoc/IBSS
  * Returns: 0 on success, -1 on failure
  */
-static int wpa_driver_nl80211_set_mode(void *priv, int mode)
+static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
+				       int mode)
 {
-	struct wpa_driver_nl80211_data *drv = priv;
 	int ret = -1, flags;
 	struct nl_msg *msg;
 
@@ -2540,12 +2532,10 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_bssid = wpa_driver_nl80211_get_bssid,
 	.get_ssid = wpa_driver_nl80211_get_ssid,
 	.set_key = wpa_driver_nl80211_set_key,
-	.set_drop_unencrypted = wpa_driver_nl80211_set_drop_unencrypted,
 	.scan2 = wpa_driver_nl80211_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
 	.disassociate = wpa_driver_nl80211_disassociate,
-	.set_mode = wpa_driver_nl80211_set_mode,
 	.authenticate = wpa_driver_nl80211_authenticate,
 	.associate = wpa_driver_nl80211_associate,
 	.init = wpa_driver_nl80211_init,
@@ -2556,7 +2546,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #ifdef WEXT_COMPAT
 	.set_wpa = wpa_driver_nl80211_set_wpa,
 	.set_countermeasures = wpa_driver_nl80211_set_countermeasures,
-	.set_auth_alg = wpa_driver_nl80211_set_auth_alg,
 	.add_pmkid = wpa_driver_nl80211_add_pmkid,
 	.remove_pmkid = wpa_driver_nl80211_remove_pmkid,
 	.flush_pmkid = wpa_driver_nl80211_flush_pmkid,

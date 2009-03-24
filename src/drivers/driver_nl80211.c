@@ -1469,6 +1469,13 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
 	int flags;
 
+	drv->ifindex = if_nametoindex(drv->ifname);
+
+	if (wpa_driver_nl80211_set_mode(drv, 0) < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Could not configure driver to "
+			   "use managed mode");
+	}
+
 	if (wpa_driver_nl80211_get_ifflags(drv, &flags) != 0) {
 		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
 			   drv->ifname);
@@ -1489,14 +1496,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	wpa_driver_nl80211_flush_pmkid(drv);
 #endif /* WEXT_COMPAT */
 
-	if (wpa_driver_nl80211_set_mode(drv, 0) < 0) {
-		wpa_printf(MSG_DEBUG, "nl80211: Could not configure driver to "
-			   "use managed mode");
-	}
-
 	wpa_driver_nl80211_get_range(drv);
-
-	drv->ifindex = if_nametoindex(drv->ifname);
 
 	wpa_driver_nl80211_capa(drv);
 
@@ -2408,7 +2408,8 @@ static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 		goto try_again;
 
 nla_put_failure:
-	wpa_printf(MSG_ERROR, "nl80211: Failed to set interface mode");
+	wpa_printf(MSG_ERROR, "nl80211: Failed to set interface mode: %d (%s)",
+		   ret, strerror(-ret));
 	return -1;
 
 try_again:
@@ -2433,7 +2434,8 @@ try_again:
 		ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 		if (ret) {
 			wpa_printf(MSG_ERROR, "Failed to set interface %s "
-				   "mode", drv->ifname);
+				   "mode(try_again): %d (%s)",
+				   drv->ifname, ret, strerror(-ret));
 		}
 
 		/* Ignore return value of get_ifflags to ensure that the device

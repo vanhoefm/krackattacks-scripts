@@ -16,6 +16,8 @@
 #ifndef DRIVER_H
 #define DRIVER_H
 
+#include "sta_flags.h"
+
 struct hostapd_data;
 
 struct hostap_sta_driver_data {

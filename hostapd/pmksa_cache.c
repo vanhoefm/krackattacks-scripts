@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "ap.h"
+#include "sta_info.h"
 #include "config.h"
 #include "common.h"
 #include "eloop.h"

@@ -20,6 +20,7 @@
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "eloop.h"
+#include "sta_info.h"
 #include "ap_list.h"
 #include "hw_features.h"
 #include "beacon.h"

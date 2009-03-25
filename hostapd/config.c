@@ -27,6 +27,7 @@
 #include "wpa.h"
 #include "uuid.h"
 #include "eap_common/eap_wsc_common.h"
+#include "sta_info.h"
 
 
 #define MAX_STA_COUNT 2007

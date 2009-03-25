@@ -18,7 +18,6 @@
 #define HOSTAPD_H
 
 #include "common.h"
-#include "ap.h"
 #include "hostapd_defs.h"
 #include "config.h"
 

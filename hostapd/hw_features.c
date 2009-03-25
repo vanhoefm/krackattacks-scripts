@@ -17,6 +17,7 @@
 #include "includes.h"
 
 #include "hostapd.h"
+#include "ieee802_11_defs.h"
 #include "hw_features.h"
 #include "driver_i.h"
 #include "config.h"

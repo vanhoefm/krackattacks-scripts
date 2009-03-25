@@ -21,6 +21,7 @@
 #include "accounting.h"
 #include "ieee802_1x.h"
 #include "driver_i.h"
+#include "sta_info.h"
 
 
 /* Default interval in seconds for polling TX/RX octets from the driver if

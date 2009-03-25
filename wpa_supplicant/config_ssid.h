@@ -271,6 +271,8 @@ struct wpa_ssid {
 	 *
 	 * 1 = IBSS (ad-hoc, peer-to-peer)
 	 *
+	 * 2 = AP (access point)
+	 *
 	 * Note: IBSS can only be used with key_mgmt NONE (plaintext and
 	 * static WEP) and key_mgmt=WPA-NONE (fixed group key TKIP/CCMP). In
 	 * addition, ap_scan has to be set to 2 for IBSS. WPA-None requires

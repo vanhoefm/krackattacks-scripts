@@ -396,6 +396,8 @@ struct wpa_driver_capa {
 /* Driver provides separate commands for authentication and association (SME in
  * wpa_supplicant). */
 #define WPA_DRIVER_FLAGS_SME		0x00000020
+/* Driver supports AP mode */
+#define WPA_DRIVER_FLAGS_AP		0x00000040
 	unsigned int flags;
 
 	int max_scan_ssids;

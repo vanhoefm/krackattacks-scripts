@@ -1274,6 +1274,7 @@ nla_put_failure:
 
 struct wiphy_info_data {
 	int max_scan_ssids;
+	int ap_supported;
 };
 
 
@@ -1289,6 +1290,18 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	if (tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS])
 		info->max_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS]);
+
+	if (tb[NL80211_ATTR_SUPPORTED_IFTYPES]) {
+		struct nlattr *nl_mode;
+		int i;
+		nla_for_each_nested(nl_mode,
+				    tb[NL80211_ATTR_SUPPORTED_IFTYPES], i) {
+			if (nl_mode->nla_type == NL80211_IFTYPE_AP) {
+				info->ap_supported = 1;
+				break;
+			}
+		}
+	}
 
 	return NL_SKIP;
 }
@@ -1325,6 +1338,8 @@ static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		return;
 	drv->has_capability = 1;
 	drv->capa.max_scan_ssids = info.max_scan_ssids;
+	if (info.ap_supported)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
 }
 
 
@@ -1536,6 +1551,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	if (wpa_driver_nl80211_get_ifflags(drv, &flags) == 0)
 		(void) wpa_driver_nl80211_set_ifflags(drv, flags & ~IFF_UP);
+	wpa_driver_nl80211_set_mode(drv, 0);
 
 	close(drv->wext_event_sock);
 	close(drv->ioctl_sock);
@@ -2311,12 +2327,59 @@ nla_put_failure:
 }
 
 
+#ifdef CONFIG_AP
+static int wpa_driver_nl80211_set_freq2(
+	struct wpa_driver_nl80211_data *drv,
+	struct wpa_driver_associate_params *params)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_WIPHY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	/* TODO: proper channel configuration */
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, 2437);
+
+	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+		return 0;
+nla_put_failure:
+	return -1;
+}
+
+
+static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
+				 struct wpa_driver_associate_params *params)
+{
+	if (wpa_driver_nl80211_set_mode(drv, params->mode) ||
+	    wpa_driver_nl80211_set_freq2(drv, params))
+		return -1;
+
+	/* TODO: setup monitor interface (and add code somewhere to remove this
+	 * when AP mode is stopped; associate with mode != 2 or drv_deinit) */
+	/* TODO: setup beacon */
+
+	return 0;
+}
+#endif /* CONFIG_AP */
+
+
 static int wpa_driver_nl80211_associate(
 	void *priv, struct wpa_driver_associate_params *params)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	int ret = -1;
 	struct nl_msg *msg;
+
+#ifdef CONFIG_AP
+	if (params->mode == 2)
+		return wpa_driver_nl80211_ap(drv, params);
+#endif /* CONFIG_AP */
 
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,
 					  params->drop_unencrypted);
@@ -2390,6 +2453,21 @@ static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 {
 	int ret = -1, flags;
 	struct nl_msg *msg;
+	int nlmode;
+
+	switch (mode) {
+	case 0:
+		nlmode = NL80211_IFTYPE_STATION;
+		break;
+	case 1:
+		nlmode = NL80211_IFTYPE_ADHOC;
+		break;
+	case 2:
+		nlmode = NL80211_IFTYPE_AP;
+		break;
+	default:
+		return -1;
+	}
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -2398,8 +2476,7 @@ static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_SET_INTERFACE, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE,
-		    mode ? NL80211_IFTYPE_ADHOC : NL80211_IFTYPE_STATION);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, nlmode);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (!ret)
@@ -2428,9 +2505,7 @@ try_again:
 		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 			    0, NL80211_CMD_SET_INTERFACE, 0);
 		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-		NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE,
-			    mode ? NL80211_IFTYPE_ADHOC :
-			    NL80211_IFTYPE_STATION);
+		NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, nlmode);
 		ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 		if (ret) {
 			wpa_printf(MSG_ERROR, "Failed to set interface %s "

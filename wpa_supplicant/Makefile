@@ -620,6 +620,10 @@ LIBS += -ldl -rdynamic
 endif
 endif
 
+ifdef CONFIG_AP
+CFLAGS += -DCONFIG_AP
+endif
+
 ifdef CONFIG_EAP_SERVER
 CFLAGS += -DEAP_SERVER
 OBJS_h += ../src/eap_server/eap.o

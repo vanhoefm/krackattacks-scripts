@@ -919,6 +919,31 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_AP
+static void wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
+				     struct wpa_ssid *ssid)
+{
+	struct wpa_driver_associate_params params;
+
+	if (ssid->ssid == NULL || ssid->ssid_len == 0) {
+		wpa_printf(MSG_ERROR, "No SSID configured for AP mode");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "Setting up AP (SSID='%s')",
+		   wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
+
+	os_memset(&params, 0, sizeof(params));
+	params.ssid = ssid->ssid;
+	params.ssid_len = ssid->ssid_len;
+	params.mode = ssid->mode;
+
+	if (wpa_drv_associate(wpa_s, &params) < 0)
+		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
+}
+#endif /* CONFIG_AP */
+
+
 /**
  * wpa_supplicant_associate - Request association
  * @wpa_s: Pointer to wpa_supplicant data
@@ -939,6 +964,21 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int wep_keys_set = 0;
 	struct wpa_driver_capa capa;
 	int assoc_failed = 0;
+
+	if (ssid->mode == 2) {
+#ifdef CONFIG_AP
+		if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP)) {
+			wpa_printf(MSG_INFO, "Driver does not support AP "
+				   "mode");
+			return;
+		}
+		wpa_supplicant_create_ap(wpa_s, ssid);
+#else /* CONFIG_AP */
+		wpa_printf(MSG_ERROR, "AP mode support not included in the "
+			   "build");
+#endif /* CONFIG_AP */
+		return;
+	}
 
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) {
 		sme_authenticate(wpa_s, bss, ssid);

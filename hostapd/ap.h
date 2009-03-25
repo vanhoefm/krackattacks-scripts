@@ -113,14 +113,6 @@ struct sta_info {
 };
 
 
-/* Maximum number of AIDs to use for STAs; must be 2007 or lower
- * (8802.11 limitation) */
-#define MAX_AID_TABLE_SIZE 128
-
-#define STA_HASH_SIZE 256
-#define STA_HASH(sta) (sta[5])
-
-
 /* Default value for maximum station inactivity. After AP_MAX_INACTIVITY has
  * passed since last received frame from the station, a nullfunc data frame is
  * sent to the station. If this frame is not acknowledged and no other frames

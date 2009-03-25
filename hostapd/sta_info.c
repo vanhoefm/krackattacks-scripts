@@ -128,7 +128,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	ap_sta_list_del(hapd, sta);
 
 	if (sta->aid > 0)
-		hapd->sta_aid[sta->aid - 1] = NULL;
+		hapd->sta_aid[(sta->aid - 1) / 32] &=
+			~BIT((sta->aid - 1) % 32);
 
 	hapd->num_sta--;
 	if (sta->nonerp_set) {

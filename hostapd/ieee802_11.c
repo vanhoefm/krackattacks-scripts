@@ -667,21 +667,32 @@ static void handle_auth(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 
 static int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
 {
+	int i, j = 32, aid;
+
 	/* get a unique AID */
 	if (sta->aid > 0) {
 		wpa_printf(MSG_DEBUG, "  old AID %d", sta->aid);
 		return 0;
 	}
 
-	for (sta->aid = 1; sta->aid <= MAX_AID_TABLE_SIZE; sta->aid++)
-		if (hapd->sta_aid[sta->aid - 1] == NULL)
+	for (i = 0; i < AID_WORDS; i++) {
+		if (hapd->sta_aid[i] == (u32) -1)
+			continue;
+		for (j = 0; j < 32; j++) {
+			if (!(hapd->sta_aid[i] & BIT(j)))
+				break;
+		}
+		if (j < 32)
 			break;
-	if (sta->aid > MAX_AID_TABLE_SIZE) {
-		sta->aid = 0;
-		return -1;
 	}
+	if (j == 32)
+		return -1;
+	aid = i * 32 + j + 1;
+	if (aid > 2007)
+		return -1;
 
-	hapd->sta_aid[sta->aid - 1] = sta;
+	sta->aid = aid;
+	hapd->sta_aid[i] |= BIT(j);
 	wpa_printf(MSG_DEBUG, "  new AID %d", sta->aid);
 	return 0;
 }

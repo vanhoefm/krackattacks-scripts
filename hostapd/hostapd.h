@@ -44,13 +44,17 @@ struct hostapd_data {
 
 	int num_sta; /* number of entries in sta_list */
 	struct sta_info *sta_list; /* STA info list head */
+#define STA_HASH_SIZE 256
+#define STA_HASH(sta) (sta[5])
 	struct sta_info *sta_hash[STA_HASH_SIZE];
 
-	/* pointers to STA info; based on allocated AID or NULL if AID free
-	 * AID is in the range 1-2007, so sta_aid[0] corresponders to AID 1
-	 * and so on
+	/*
+	 * Bitfield for indicating which AIDs are allocated. Only AID values
+	 * 1-2007 are used and as such, the bit at index 0 corresponds to AID
+	 * 1.
 	 */
-	struct sta_info *sta_aid[MAX_AID_TABLE_SIZE];
+#define AID_WORDS ((2008 + 31) / 32)
+	u32 sta_aid[AID_WORDS];
 
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;

@@ -31,6 +31,7 @@
 #undef WPA_OUI_TYPE
 
 #include "hostapd.h"
+#include "config.h"
 #include "driver.h"
 #include "eloop.h"
 #include "l2_packet/l2_packet.h"

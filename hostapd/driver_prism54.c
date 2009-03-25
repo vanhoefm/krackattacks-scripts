@@ -36,6 +36,7 @@
 #endif /* USE_KERNEL_HEADERS */
 
 #include "hostapd.h"
+#include "config.h"
 #include "driver.h"
 #include "ieee802_1x.h"
 #include "eloop.h"

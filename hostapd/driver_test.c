@@ -17,6 +17,7 @@
 #include <dirent.h>
 
 #include "hostapd.h"
+#include "config.h"
 #include "driver.h"
 #include "sha1.h"
 #include "eloop.h"

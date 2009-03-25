@@ -33,6 +33,7 @@
 #endif /* USE_KERNEL_HEADERS */
 
 #include "hostapd.h"
+#include "config.h"
 #include "driver.h"
 #include "eloop.h"
 #include "priv_netlink.h"

@@ -29,6 +29,7 @@
 #endif /* USE_KERNEL_HEADERS */
 
 #include "hostapd.h"
+#include "config.h"
 #include "eloop.h"
 #include "sta_info.h"
 #include "driver.h"

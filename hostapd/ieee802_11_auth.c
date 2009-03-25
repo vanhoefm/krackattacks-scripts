@@ -22,6 +22,7 @@
 #ifndef CONFIG_NATIVE_WINDOWS
 
 #include "hostapd.h"
+#include "config.h"
 #include "ieee802_11.h"
 #include "ieee802_11_auth.h"
 #include "radius/radius.h"

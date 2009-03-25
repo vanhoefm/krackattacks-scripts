@@ -17,6 +17,7 @@
 #ifdef CONFIG_RSN_PREAUTH
 
 #include "hostapd.h"
+#include "config.h"
 #include "l2_packet/l2_packet.h"
 #include "ieee802_1x.h"
 #include "eloop.h"

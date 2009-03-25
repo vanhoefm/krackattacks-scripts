@@ -31,6 +31,7 @@
 #include <net/if_arp.h>
 
 #include "hostapd.h"
+#include "config.h"
 #include "driver.h"
 #include "eloop.h"
 #include "hw_features.h"

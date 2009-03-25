@@ -19,7 +19,6 @@
 
 #include "common.h"
 #include "hostapd_defs.h"
-#include "config.h"
 
 struct wpa_driver_ops;
 struct wpa_ctrl_dst;

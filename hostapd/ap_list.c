@@ -18,6 +18,7 @@
 #include "includes.h"
 
 #include "hostapd.h"
+#include "config.h"
 #include "ieee802_11.h"
 #include "eloop.h"
 #include "sta_info.h"

@@ -56,6 +56,7 @@
 #include "wireless_copy.h"
 
 #include "hostapd.h"
+#include "config.h"
 #include "driver.h"
 #include "eloop.h"
 #include "priv_netlink.h"

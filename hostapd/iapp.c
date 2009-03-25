@@ -47,6 +47,7 @@
 #endif /* USE_KERNEL_HEADERS */
 
 #include "hostapd.h"
+#include "config.h"
 #include "ieee802_11.h"
 #include "iapp.h"
 #include "eloop.h"

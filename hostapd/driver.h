@@ -131,9 +131,7 @@ struct wpa_driver_ops {
 	int (*get_inact_sec)(void *priv, const u8 *addr);
 	int (*sta_clear_stats)(void *priv, const u8 *addr);
 
-	/* note: set_freq() is deprecated; use set_freq2() instead */
-	int (*set_freq)(void *priv, int mode, int freq);
-	int (*set_freq2)(void *priv, struct hostapd_freq_params *freq);
+	int (*set_freq)(void *priv, struct hostapd_freq_params *freq);
 	int (*set_rts)(void *priv, int rts);
 	int (*get_rts)(void *priv, int *rts);
 	int (*set_frag)(void *priv, int frag);

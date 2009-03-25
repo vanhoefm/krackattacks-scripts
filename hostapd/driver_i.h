@@ -249,21 +249,17 @@ static inline int
 hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq, int ht_enabled,
 		 int sec_channel_offset)
 {
+	struct hostapd_freq_params data;
 	if (hapd->driver == NULL)
 		return 0;
-	if (hapd->driver->set_freq2) {
-		struct hostapd_freq_params data;
-		os_memset(&data, 0, sizeof(data));
-		data.mode = mode;
-		data.freq = freq;
-		data.ht_enabled = ht_enabled;
-		data.sec_channel_offset = sec_channel_offset;
-		return hapd->driver->set_freq2(hapd->drv_priv, &data);
-	}
-
 	if (hapd->driver->set_freq == NULL)
 		return 0;
-	return hapd->driver->set_freq(hapd->drv_priv, mode, freq);
+	os_memset(&data, 0, sizeof(data));
+	data.mode = mode;
+	data.freq = freq;
+	data.ht_enabled = ht_enabled;
+	data.sec_channel_offset = sec_channel_offset;
+	return hapd->driver->set_freq(hapd->drv_priv, &data);
 }
 
 static inline int

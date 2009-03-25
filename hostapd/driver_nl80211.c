@@ -509,7 +509,7 @@ static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 }
 
 /* Set kernel driver on given frequency (MHz) */
-static int i802_set_freq2(void *priv, struct hostapd_freq_params *freq)
+static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
@@ -3056,7 +3056,7 @@ static void i802_deinit(void *priv)
 		struct hostapd_freq_params freq;
 		os_memset(&freq, 0, sizeof(freq));
 		freq.freq = drv->last_freq;
-		i802_set_freq2(priv, &freq);
+		i802_set_freq(priv, &freq);
 	}
 
 	i802_del_beacon(drv);
@@ -3120,7 +3120,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_add2 = i802_sta_add2,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
-	.set_freq2 = i802_set_freq2,
+	.set_freq = i802_set_freq,
 	.set_rts = i802_set_rts,
 	.get_rts = i802_get_rts,
 	.set_frag = i802_set_frag,

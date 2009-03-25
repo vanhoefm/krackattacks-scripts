@@ -139,6 +139,7 @@ ifdef CONFIG_CLIENT_MLME
 OBJS_d += ../src/utils/radiotap.o
 endif
 NEED_SME=y
+NEED_AP_MLME=y
 endif
 
 ifdef CONFIG_DRIVER_PRISM54
@@ -622,6 +623,45 @@ endif
 
 ifdef CONFIG_AP
 CFLAGS += -DCONFIG_AP
+OBJS += ap.o
+CFLAGS += -DCONFIG_NO_RADIUS
+CFLAGS += -DCONFIG_NO_ACCOUNTING
+CFLAGS += -DCONFIG_NO_VLAN
+OBJS += ../hostapd/sta_info.o
+OBJS += ../hostapd/wpa.o
+OBJS += ../hostapd/pmksa_cache.o
+OBJS += ../hostapd/wpa_auth_ie.o
+OBJS += ../hostapd/tkip_countermeasures.o
+OBJS += ../hostapd/mlme.o
+OBJS += ../hostapd/ieee802_1x.o
+OBJS += ../hostapd/eapol_sm.o
+OBJS += ../hostapd/ieee802_11_auth.o
+OBJS += ../hostapd/drv_callbacks.o
+ifdef CONFIG_IEEE80211R
+OBJS += ../hostapd/wpa_ft.o
+endif
+ifdef CONFIG_PEERKEY
+OBJS += ../hostapd/peerkey.o
+endif
+
+CFLAGS += -DEAP_SERVER
+OBJS += ../src/eap_server/eap.o
+OBJS += ../src/eap_server/eap_identity.o
+OBJS += ../src/eap_server/eap_methods.o
+
+ifdef NEED_AP_MLME
+OBJS += ../hostapd/beacon.o
+OBJS += ../hostapd/wme.o
+OBJS += ../hostapd/ap_list.o
+OBJS += ../hostapd/ieee802_11.o
+OBJS += ../hostapd/hw_features.o
+CFLAGS += -DNEED_MLME
+endif
+ifdef CONFIG_WPS
+CFLAGS += -DEAP_SERVER_WSC
+OBJS += ../hostapd/wps_hostapd.o
+OBJS += ../src/eap_server/eap_wsc.o
+endif
 endif
 
 ifdef CONFIG_EAP_SERVER

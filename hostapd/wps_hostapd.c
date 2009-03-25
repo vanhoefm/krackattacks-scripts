@@ -220,13 +220,13 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	if ((hapd->conf->wps_cred_processing == 1 ||
 	     hapd->conf->wps_cred_processing == 2) && cred->cred_attr) {
 		size_t blen = cred->cred_attr_len * 2 + 1;
-		char *buf = os_malloc(blen);
-		if (buf) {
-			wpa_snprintf_hex(buf, blen,
+		char *_buf = os_malloc(blen);
+		if (_buf) {
+			wpa_snprintf_hex(_buf, blen,
 					 cred->cred_attr, cred->cred_attr_len);
 			wpa_msg(hapd, MSG_INFO, "%s%s",
-				WPS_EVENT_NEW_AP_SETTINGS, buf);
-			os_free(buf);
+				WPS_EVENT_NEW_AP_SETTINGS, _buf);
+			os_free(_buf);
 		}
 	} else
 		wpa_msg(hapd, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);

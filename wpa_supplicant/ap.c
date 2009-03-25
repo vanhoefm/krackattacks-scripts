@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "../hostapd/hostapd.h"
+#include "../hostapd/config.h"
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"

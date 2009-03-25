@@ -844,8 +844,8 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 }
 
 
-static int i802_sta_add2(const char *ifname, void *priv,
-			 struct hostapd_sta_add_params *params)
+static int i802_sta_add(const char *ifname, void *priv,
+			struct hostapd_sta_add_params *params)
 {
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
@@ -3117,7 +3117,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_disassoc = i802_sta_disassoc,
 	.sta_remove = i802_sta_remove,
 	.send_mgmt_frame = i802_send_mgmt_frame,
-	.sta_add2 = i802_sta_add2,
+	.sta_add = i802_sta_add,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_freq = i802_set_freq,

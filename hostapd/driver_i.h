@@ -212,29 +212,23 @@ hostapd_sta_add(const char *ifname, struct hostapd_data *hapd, const u8 *addr,
 		size_t supp_rates_len, int flags, u16 listen_interval,
 		const struct ht_cap_ie *ht_capabilities)
 {
+	struct hostapd_sta_add_params params;
+
 	if (hapd->driver == NULL)
 		return 0;
-
-	if (hapd->driver->sta_add2) {
-		struct hostapd_sta_add_params params;
-		os_memset(&params, 0, sizeof(params));
-		params.addr = addr;
-		params.aid = aid;
-		params.capability = capability;
-		params.supp_rates = supp_rates;
-		params.supp_rates_len = supp_rates_len;
-		params.flags = flags;
-		params.listen_interval = listen_interval;
-		params.ht_capabilities = ht_capabilities;
-		return hapd->driver->sta_add2(ifname, hapd->drv_priv, &params);
-	}
-
 	if (hapd->driver->sta_add == NULL)
 		return 0;
-	return hapd->driver->sta_add(ifname, hapd->drv_priv, addr, aid,
-				     capability, (u8 *) supp_rates,
-				     supp_rates_len,
-				     flags, listen_interval);
+
+	os_memset(&params, 0, sizeof(params));
+	params.addr = addr;
+	params.aid = aid;
+	params.capability = capability;
+	params.supp_rates = supp_rates;
+	params.supp_rates_len = supp_rates_len;
+	params.flags = flags;
+	params.listen_interval = listen_interval;
+	params.ht_capabilities = ht_capabilities;
+	return hapd->driver->sta_add(ifname, hapd->drv_priv, &params);
 }
 
 static inline int

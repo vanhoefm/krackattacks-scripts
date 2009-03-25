@@ -641,10 +641,8 @@ static int hostap_read_sta_data(void *priv,
 }
 
 
-static int hostap_sta_add(const char *ifname, void *priv, const u8 *addr,
-			  u16 aid, u16 capability, u8 *supp_rates,
-			  size_t supp_rates_len, int flags,
-			  u16 listen_interval)
+static int hostap_sta_add(const char *ifname, void *priv,
+			  struct hostapd_sta_add_params *params)
 {
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param param;
@@ -656,22 +654,22 @@ static int hostap_sta_add(const char *ifname, void *priv, const u8 *addr,
 #define WLAN_RATE_5M5 BIT(2)
 #define WLAN_RATE_11M BIT(3)
 
-	for (i = 0; i < supp_rates_len; i++) {
-		if ((supp_rates[i] & 0x7f) == 2)
+	for (i = 0; i < params->supp_rates_len; i++) {
+		if ((params->supp_rates[i] & 0x7f) == 2)
 			tx_supp_rates |= WLAN_RATE_1M;
-		if ((supp_rates[i] & 0x7f) == 4)
+		if ((params->supp_rates[i] & 0x7f) == 4)
 			tx_supp_rates |= WLAN_RATE_2M;
-		if ((supp_rates[i] & 0x7f) == 11)
+		if ((params->supp_rates[i] & 0x7f) == 11)
 			tx_supp_rates |= WLAN_RATE_5M5;
-		if ((supp_rates[i] & 0x7f) == 22)
+		if ((params->supp_rates[i] & 0x7f) == 22)
 			tx_supp_rates |= WLAN_RATE_11M;
 	}
 
 	memset(&param, 0, sizeof(param));
 	param.cmd = PRISM2_HOSTAPD_ADD_STA;
-	memcpy(param.sta_addr, addr, ETH_ALEN);
-	param.u.add_sta.aid = aid;
-	param.u.add_sta.capability = capability;
+	memcpy(param.sta_addr, params->addr, ETH_ALEN);
+	param.u.add_sta.aid = params->aid;
+	param.u.add_sta.capability = params->capability;
 	param.u.add_sta.tx_supp_rates = tx_supp_rates;
 	return hostapd_ioctl(drv, &param, sizeof(param));
 }

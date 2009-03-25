@@ -1029,10 +1029,8 @@ static int test_driver_set_sta_vlan(void *priv, const u8 *addr,
 }
 
 
-static int test_driver_sta_add(const char *ifname, void *priv, const u8 *addr,
-			       u16 aid, u16 capability, u8 *supp_rates,
-			       size_t supp_rates_len, int flags,
-			       u16 listen_interval)
+static int test_driver_sta_add(const char *ifname, void *priv,
+			       struct hostapd_sta_add_params *params)
 {
 	struct test_driver_data *drv = priv;
 	struct test_client_socket *cli;
@@ -1040,14 +1038,15 @@ static int test_driver_sta_add(const char *ifname, void *priv, const u8 *addr,
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s addr=" MACSTR " aid=%d "
 		   "capability=0x%x flags=0x%x listen_interval=%d)",
-		   __func__, ifname, MAC2STR(addr), aid, capability, flags,
-		   listen_interval);
+		   __func__, ifname, MAC2STR(params->addr), params->aid,
+		   params->capability, params->flags,
+		   params->listen_interval);
 	wpa_hexdump(MSG_DEBUG, "test_driver_sta_add - supp_rates",
-		    supp_rates, supp_rates_len);
+		    params->supp_rates, params->supp_rates_len);
 
 	cli = drv->cli;
 	while (cli) {
-		if (memcmp(cli->addr, addr, ETH_ALEN) == 0)
+		if (os_memcmp(cli->addr, params->addr, ETH_ALEN) == 0)
 			break;
 		cli = cli->next;
 	}

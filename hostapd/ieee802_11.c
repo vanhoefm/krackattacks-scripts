@@ -665,6 +665,28 @@ static void handle_auth(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 }
 
 
+static int hostapd_get_aid(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	/* get a unique AID */
+	if (sta->aid > 0) {
+		wpa_printf(MSG_DEBUG, "  old AID %d", sta->aid);
+		return 0;
+	}
+
+	for (sta->aid = 1; sta->aid <= MAX_AID_TABLE_SIZE; sta->aid++)
+		if (hapd->sta_aid[sta->aid - 1] == NULL)
+			break;
+	if (sta->aid > MAX_AID_TABLE_SIZE) {
+		sta->aid = 0;
+		return -1;
+	}
+
+	hapd->sta_aid[sta->aid - 1] = sta;
+	wpa_printf(MSG_DEBUG, "  new AID %d", sta->aid);
+	return 0;
+}
+
+
 static void handle_assoc(struct hostapd_data *hapd,
 			 struct ieee80211_mgmt *mgmt, size_t len, int reassoc)
 {
@@ -1044,22 +1066,10 @@ static void handle_assoc(struct hostapd_data *hapd,
 		ieee802_11_set_beacons(hapd->iface);
 #endif /* CONFIG_IEEE80211N */
 
-	/* get a unique AID */
-	if (sta->aid > 0) {
-		wpa_printf(MSG_DEBUG, "  old AID %d", sta->aid);
-	} else {
-		for (sta->aid = 1; sta->aid <= MAX_AID_TABLE_SIZE; sta->aid++)
-			if (hapd->sta_aid[sta->aid - 1] == NULL)
-				break;
-		if (sta->aid > MAX_AID_TABLE_SIZE) {
-			sta->aid = 0;
-			resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
-			wpa_printf(MSG_ERROR, "  no room for more AIDs");
-			goto fail;
-		} else {
-			hapd->sta_aid[sta->aid - 1] = sta;
-			wpa_printf(MSG_DEBUG, "  new AID %d", sta->aid);
-		}
+	if (hostapd_get_aid(hapd, sta) < 0) {
+		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+		wpa_printf(MSG_ERROR, "  no room for more AIDs");
+		goto fail;
 	}
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,

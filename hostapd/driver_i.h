@@ -199,14 +199,6 @@ hostapd_send_mgmt_frame(struct hostapd_data *hapd, const void *msg, size_t len,
 }
 
 static inline int
-hostapd_set_assoc_ap(struct hostapd_data *hapd, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->set_assoc_ap == NULL)
-		return 0;
-	return hapd->driver->set_assoc_ap(hapd->drv_priv, addr);
-}
-
-static inline int
 hostapd_set_countermeasures(struct hostapd_data *hapd, int enabled)
 {
 	if (hapd->driver == NULL || hapd->driver->set_countermeasures == NULL)

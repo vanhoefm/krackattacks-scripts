@@ -122,7 +122,6 @@ struct wpa_driver_ops {
 	int (*set_countermeasures)(void *priv, int enabled);
 	int (*send_mgmt_frame)(void *priv, const void *msg, size_t len,
 			       int flags);
-	int (*set_assoc_ap)(void *priv, const u8 *addr);
 	/* note: sta_add() is deprecated; use sta_add2() instead */
 	int (*sta_add)(const char *ifname, void *priv, const u8 *addr, u16 aid,
 		       u16 capability, u8 *supp_rates, size_t supp_rates_len,

@@ -727,21 +727,6 @@ static int hostap_sta_clear_stats(void *priv, const u8 *addr)
 }
 
 
-static int hostap_set_assoc_ap(void *priv, const u8 *addr)
-{
-	struct hostap_driver_data *drv = priv;
-	struct prism2_hostapd_param param;
-
-	memset(&param, 0, sizeof(param));
-	param.cmd = PRISM2_HOSTAPD_SET_ASSOC_AP_ADDR;
-	memcpy(param.sta_addr, addr, ETH_ALEN);
-	if (hostapd_ioctl(drv, &param, sizeof(param)))
-		return -1;
-
-	return 0;
-}
-
-
 static int hostapd_ioctl_set_generic_elem(struct hostap_driver_data *drv)
 {
 	struct prism2_hostapd_param *param;
@@ -1245,7 +1230,6 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.sta_remove = hostap_sta_remove,
 	.set_ssid = hostap_set_ssid,
 	.send_mgmt_frame = hostap_send_mgmt_frame,
-	.set_assoc_ap = hostap_set_assoc_ap,
 	.sta_add = hostap_sta_add,
 	.get_inact_sec = hostap_get_inact_sec,
 	.sta_clear_stats = hostap_sta_clear_stats,

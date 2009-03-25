@@ -267,7 +267,7 @@ static struct wpabuf * eap_peap_build_phase2_req(struct eap_sm *sm,
 }
 
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 static struct wpabuf * eap_peap_build_phase2_soh(struct eap_sm *sm,
 						 struct eap_peap_data *data,
 						 u8 id)
@@ -303,7 +303,7 @@ static struct wpabuf * eap_peap_build_phase2_soh(struct eap_sm *sm,
 
 	return encr_req;
 }
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 
 static void eap_peap_get_isk(struct eap_peap_data *data,
@@ -375,10 +375,10 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 	mlen = 6; /* Result TLV */
 	if (data->crypto_binding != NO_BINDING)
 		mlen += 60; /* Cryptobinding TLV */
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	if (data->soh_response)
 		mlen += wpabuf_len(data->soh_response);
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 	buf = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TLV, mlen,
 			    EAP_CODE_REQUEST, id);
@@ -401,7 +401,7 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 		size_t len[2];
 		u16 tlv_type;
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 		if (data->soh_response) {
 			wpa_printf(MSG_DEBUG, "EAP-PEAP: Adding MS-SOH "
 				   "Response TLV");
@@ -409,7 +409,7 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 			wpabuf_free(data->soh_response);
 			data->soh_response = NULL;
 		}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 		if (eap_peap_derive_cmk(sm, data) < 0 ||
 		    os_get_random(data->binding_nonce, 32)) {
@@ -517,13 +517,13 @@ static struct wpabuf * eap_peap_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		data->ssl.out_used = 0;
 		data->ssl.out_buf = eap_peap_build_phase2_req(sm, data, id);
 		break;
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	case PHASE2_SOH:
 		wpabuf_free(data->ssl.out_buf);
 		data->ssl.out_used = 0;
 		data->ssl.out_buf = eap_peap_build_phase2_soh(sm, data, id);
 		break;
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 	case PHASE2_TLV:
 		wpabuf_free(data->ssl.out_buf);
 		data->ssl.out_used = 0;
@@ -757,7 +757,7 @@ static void eap_peap_process_phase2_tlv(struct eap_sm *sm,
 }
 
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 static void eap_peap_process_phase2_soh(struct eap_sm *sm,
 					struct eap_peap_data *data,
 					struct wpabuf *in_data)
@@ -885,7 +885,7 @@ auth_method:
 	wpa_printf(MSG_DEBUG, "EAP-PEAP: try EAP type %d", next_type);
 	eap_peap_phase2_init(sm, data, next_type);
 }
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 
 static void eap_peap_process_phase2_response(struct eap_sm *sm,
@@ -902,12 +902,12 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 		return;
 	}
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	if (data->state == PHASE2_SOH) {
 		eap_peap_process_phase2_soh(sm, data, in_data);
 		return;
 	}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 	if (data->phase2_priv == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: %s - Phase2 not "
@@ -991,7 +991,7 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			break;
 		}
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 		if (data->state != PHASE2_SOH && sm->tnc &&
 		    data->peap_version == 0) {
 			eap_peap_state(data, PHASE2_SOH);
@@ -1000,7 +1000,7 @@ static void eap_peap_process_phase2_response(struct eap_sm *sm,
 			next_type = EAP_TYPE_NONE;
 			break;
 		}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 		eap_peap_state(data, PHASE2_METHOD);
 		next_type = sm->user->methods[0].method;

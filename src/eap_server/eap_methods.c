@@ -149,138 +149,138 @@ int eap_server_register_methods(void)
 		ret = eap_server_identity_register();
 	}
 
-#ifdef EAP_MD5
+#ifdef EAP_SERVER_MD5
 	if (ret == 0) {
 		int eap_server_md5_register(void);
 		ret = eap_server_md5_register();
 	}
-#endif /* EAP_MD5 */
+#endif /* EAP_SERVER_MD5 */
 
-#ifdef EAP_TLS
+#ifdef EAP_SERVER_TLS
 	if (ret == 0) {
 		int eap_server_tls_register(void);
 		ret = eap_server_tls_register();
 	}
-#endif /* EAP_TLS */
+#endif /* EAP_SERVER_TLS */
 
-#ifdef EAP_MSCHAPv2
+#ifdef EAP_SERVER_MSCHAPV2
 	if (ret == 0) {
 		int eap_server_mschapv2_register(void);
 		ret = eap_server_mschapv2_register();
 	}
-#endif /* EAP_MSCHAPv2 */
+#endif /* EAP_SERVER_MSCHAPV2 */
 
-#ifdef EAP_PEAP
+#ifdef EAP_SERVER_PEAP
 	if (ret == 0) {
 		int eap_server_peap_register(void);
 		ret = eap_server_peap_register();
 	}
-#endif /* EAP_PEAP */
+#endif /* EAP_SERVER_PEAP */
 
-#ifdef EAP_TLV
+#ifdef EAP_SERVER_TLV
 	if (ret == 0) {
 		int eap_server_tlv_register(void);
 		ret = eap_server_tlv_register();
 	}
-#endif /* EAP_TLV */
+#endif /* EAP_SERVER_TLV */
 
-#ifdef EAP_GTC
+#ifdef EAP_SERVER_GTC
 	if (ret == 0) {
 		int eap_server_gtc_register(void);
 		ret = eap_server_gtc_register();
 	}
-#endif /* EAP_GTC */
+#endif /* EAP_SERVER_GTC */
 
-#ifdef EAP_TTLS
+#ifdef EAP_SERVER_TTLS
 	if (ret == 0) {
 		int eap_server_ttls_register(void);
 		ret = eap_server_ttls_register();
 	}
-#endif /* EAP_TTLS */
+#endif /* EAP_SERVER_TTLS */
 
-#ifdef EAP_SIM
+#ifdef EAP_SERVER_SIM
 	if (ret == 0) {
 		int eap_server_sim_register(void);
 		ret = eap_server_sim_register();
 	}
-#endif /* EAP_SIM */
+#endif /* EAP_SERVER_SIM */
 
-#ifdef EAP_AKA
+#ifdef EAP_SERVER_AKA
 	if (ret == 0) {
 		int eap_server_aka_register(void);
 		ret = eap_server_aka_register();
 	}
-#endif /* EAP_AKA */
+#endif /* EAP_SERVER_AKA */
 
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 	if (ret == 0) {
 		int eap_server_aka_prime_register(void);
 		ret = eap_server_aka_prime_register();
 	}
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 
-#ifdef EAP_PAX
+#ifdef EAP_SERVER_PAX
 	if (ret == 0) {
 		int eap_server_pax_register(void);
 		ret = eap_server_pax_register();
 	}
-#endif /* EAP_PAX */
+#endif /* EAP_SERVER_PAX */
 
-#ifdef EAP_PSK
+#ifdef EAP_SERVER_PSK
 	if (ret == 0) {
 		int eap_server_psk_register(void);
 		ret = eap_server_psk_register();
 	}
-#endif /* EAP_PSK */
+#endif /* EAP_SERVER_PSK */
 
-#ifdef EAP_SAKE
+#ifdef EAP_SERVER_SAKE
 	if (ret == 0) {
 		int eap_server_sake_register(void);
 		ret = eap_server_sake_register();
 	}
-#endif /* EAP_SAKE */
+#endif /* EAP_SERVER_SAKE */
 
-#ifdef EAP_GPSK
+#ifdef EAP_SERVER_GPSK
 	if (ret == 0) {
 		int eap_server_gpsk_register(void);
 		ret = eap_server_gpsk_register();
 	}
-#endif /* EAP_GPSK */
+#endif /* EAP_SERVER_GPSK */
 
-#ifdef EAP_VENDOR_TEST
+#ifdef EAP_SERVER_VENDOR_TEST
 	if (ret == 0) {
 		int eap_server_vendor_test_register(void);
 		ret = eap_server_vendor_test_register();
 	}
-#endif /* EAP_VENDOR_TEST */
+#endif /* EAP_SERVER_VENDOR_TEST */
 
-#ifdef EAP_FAST
+#ifdef EAP_SERVER_FAST
 	if (ret == 0) {
 		int eap_server_fast_register(void);
 		ret = eap_server_fast_register();
 	}
-#endif /* EAP_FAST */
+#endif /* EAP_SERVER_FAST */
 
-#ifdef EAP_WSC
+#ifdef EAP_SERVER_WSC
 	if (ret == 0) {
 		int eap_server_wsc_register(void);
 		ret = eap_server_wsc_register();
 	}
-#endif /* EAP_WSC */
+#endif /* EAP_SERVER_WSC */
 
-#ifdef EAP_IKEV2
+#ifdef EAP_SERVER_IKEV2
 	if (ret == 0) {
 		int eap_server_ikev2_register(void);
 		ret = eap_server_ikev2_register();
 	}
-#endif /* EAP_IKEV2 */
+#endif /* EAP_SERVER_IKEV2 */
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	if (ret == 0) {
 		int eap_server_tnc_register(void);
 		ret = eap_server_tnc_register();
 	}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 	return ret;
 }

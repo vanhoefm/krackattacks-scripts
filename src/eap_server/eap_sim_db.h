@@ -15,7 +15,7 @@
 #ifndef EAP_SIM_DB_H
 #define EAP_SIM_DB_H
 
-#ifdef EAP_SIM
+#ifdef EAP_SERVER_SIM
 
 #include "eap_common/eap_sim_common.h"
 
@@ -90,7 +90,7 @@ int eap_sim_db_resynchronize(void *priv, const u8 *identity,
 			     size_t identity_len, const u8 *auts,
 			     const u8 *_rand);
 
-#else /* EAP_SIM */
+#else /* EAP_SERVER_SIM */
 static inline void *
 eap_sim_db_init(const char *config,
 		void (*get_complete_cb)(void *ctx, void *session_ctx),
@@ -102,6 +102,6 @@ eap_sim_db_init(const char *config,
 static inline void eap_sim_db_deinit(void *priv)
 {
 }
-#endif /* EAP_SIM */
+#endif /* EAP_SERVER_SIM */
 
 #endif /* EAP_SIM_DB_H */

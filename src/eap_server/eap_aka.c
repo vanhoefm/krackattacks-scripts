@@ -116,7 +116,7 @@ static void * eap_aka_init(struct eap_sm *sm)
 }
 
 
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 static void * eap_aka_prime_init(struct eap_sm *sm)
 {
 	struct eap_aka_data *data;
@@ -148,7 +148,7 @@ static void * eap_aka_prime_init(struct eap_sm *sm)
 
 	return data;
 }
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 
 
 static void eap_aka_reset(struct eap_sm *sm, void *priv)
@@ -399,7 +399,7 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 		eap_sim_msg_add(msg, EAP_SIM_AT_RESULT_IND, 0, NULL, 0);
 	}
 
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 	if (data->eap_method == EAP_TYPE_AKA) {
 		u16 flags = 0;
 		int i;
@@ -426,7 +426,7 @@ static struct wpabuf * eap_aka_build_challenge(struct eap_sm *sm,
 			flags |= EAP_AKA_BIDDING_FLAG_D;
 		eap_sim_msg_add(msg, EAP_SIM_AT_BIDDING, flags, NULL, 0);
 	}
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 
 	wpa_printf(MSG_DEBUG, "   AT_MAC");
 	eap_sim_msg_add_mac(msg, EAP_SIM_AT_MAC);
@@ -701,7 +701,7 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 		return;
 	}
 
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
 		/* Note: AUTN = (SQN ^ AK) || AMF || MAC which gives us the
 		 * needed 6-octet SQN ^AK for CK',IK' derivation */
@@ -710,7 +710,7 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 						 data->network_name,
 						 data->network_name_len);
 	}
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 
 	data->reauth = NULL;
 	data->counter = 0; /* reset re-auth counter since this is full auth */
@@ -807,7 +807,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Processing Challenge");
 
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 #if 0
 	/* KDF negotiation; to be enabled only after more than one KDF is
 	 * supported */
@@ -830,7 +830,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 		return;
 	}
 #endif
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 
 	if (attr->checkcode &&
 	    eap_aka_verify_checkcode(data, attr->checkcode,
@@ -892,7 +892,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 	}
 	if (data->next_reauth_id) {
 		if (data->eap_method == EAP_TYPE_AKA_PRIME) {
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 			eap_sim_db_add_reauth_prime(sm->eap_sim_db_priv,
 						    identity,
 						    identity_len,
@@ -900,7 +900,7 @@ static void eap_aka_process_challenge(struct eap_sm *sm,
 						    data->counter + 1,
 						    data->k_encr, data->k_aut,
 						    data->k_re);
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 		} else {
 			eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
 					      identity_len,
@@ -1031,7 +1031,7 @@ static void eap_aka_process_reauth(struct eap_sm *sm,
 	}
 	if (data->next_reauth_id) {
 		if (data->eap_method == EAP_TYPE_AKA_PRIME) {
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 			eap_sim_db_add_reauth_prime(sm->eap_sim_db_priv,
 						    identity,
 						    identity_len,
@@ -1039,7 +1039,7 @@ static void eap_aka_process_reauth(struct eap_sm *sm,
 						    data->counter + 1,
 						    data->k_encr, data->k_aut,
 						    data->k_re);
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */
 		} else {
 			eap_sim_db_add_reauth(sm->eap_sim_db_priv, identity,
 					      identity_len,
@@ -1247,7 +1247,7 @@ int eap_server_aka_register(void)
 }
 
 
-#ifdef EAP_AKA_PRIME
+#ifdef EAP_SERVER_AKA_PRIME
 int eap_server_aka_prime_register(void)
 {
 	struct eap_method *eap;
@@ -1275,4 +1275,4 @@ int eap_server_aka_prime_register(void)
 
 	return ret;
 }
-#endif /* EAP_AKA_PRIME */
+#endif /* EAP_SERVER_AKA_PRIME */

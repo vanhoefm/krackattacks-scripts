@@ -697,7 +697,7 @@ void crypto_global_deinit(void)
 }
 
 
-#ifdef EAP_FAST
+#if defined(EAP_FAST) || defined(EAP_SERVER_FAST)
 
 int crypto_mod_exp(const u8 *base, size_t base_len,
 		   const u8 *power, size_t power_len,
@@ -729,7 +729,7 @@ fail:
 	return -1;
 }
 
-#endif /* EAP_FAST */
+#endif /* EAP_FAST || EAP_SERVER_FAST */
 
 #endif /* CONFIG_TLS_INTERNAL */
 

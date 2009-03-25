@@ -33,14 +33,14 @@ static void * eap_gtc_init(struct eap_sm *sm)
 		return NULL;
 	data->state = CONTINUE;
 
-#ifdef EAP_FAST
+#ifdef EAP_SERVER_FAST
 	if (sm->m && sm->m->vendor == EAP_VENDOR_IETF &&
 	    sm->m->method == EAP_TYPE_FAST) {
 		wpa_printf(MSG_DEBUG, "EAP-GTC: EAP-FAST tunnel - use prefix "
 			   "with challenge/response");
 		data->prefix = 1;
 	}
-#endif /* EAP_FAST */
+#endif /* EAP_SERVER_FAST */
 
 	return data;
 }
@@ -109,7 +109,7 @@ static void eap_gtc_process(struct eap_sm *sm, void *priv,
 
 	wpa_hexdump_ascii_key(MSG_MSGDUMP, "EAP-GTC: Response", pos, rlen);
 
-#ifdef EAP_FAST
+#ifdef EAP_SERVER_FAST
 	if (data->prefix) {
 		const u8 *pos2, *end;
 		/* "RESPONSE=<user>\0<password>" */
@@ -170,7 +170,7 @@ static void eap_gtc_process(struct eap_sm *sm, void *priv,
 				      "EAP-GTC: Response password",
 				      pos, rlen);
 	}
-#endif /* EAP_FAST */
+#endif /* EAP_SERVER_FAST */
 
 	if (sm->user == NULL || sm->user->password == NULL ||
 	    sm->user->password_hash) {

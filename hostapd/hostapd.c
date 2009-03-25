@@ -1834,9 +1834,9 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces)
 
 static void hostapd_global_deinit(const char *pid_file)
 {
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	tncs_global_deinit();
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 	eloop_destroy();
 
@@ -1900,7 +1900,7 @@ static struct hostapd_iface * hostapd_interface_init(const char *config_fname,
 static int hostapd_global_run(struct hapd_interfaces *ifaces, int daemonize,
 			      const char *pid_file)
 {
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	int tnc = 0;
 	size_t i, k;
 
@@ -1917,7 +1917,7 @@ static int hostapd_global_run(struct hapd_interfaces *ifaces, int daemonize,
 		wpa_printf(MSG_ERROR, "Failed to initialize TNCS");
 		return -1;
 	}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 	if (daemonize && os_daemonize(pid_file)) {
 		perror("daemon");

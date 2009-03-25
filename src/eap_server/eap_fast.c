@@ -942,7 +942,7 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 		left = in_len - sizeof(*hdr);
 		wpa_hexdump(MSG_DEBUG, "EAP-FAST: Phase2 type Nak'ed; "
 			    "allowed types", pos + 1, left - 1);
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 		if (m && m->vendor == EAP_VENDOR_IETF &&
 		    m->method == EAP_TYPE_TNC) {
 			wpa_printf(MSG_DEBUG, "EAP-FAST: Peer Nak'ed required "
@@ -951,7 +951,7 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 			eap_fast_phase2_init(sm, data, next_type);
 			return;
 		}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 		eap_sm_process_nak(sm, pos + 1, left - 1);
 		if (sm->user && sm->user_eap_method_index < EAP_MAX_METHODS &&
 		    sm->user->methods[sm->user_eap_method_index].method !=
@@ -1019,13 +1019,13 @@ static void eap_fast_process_phase2_response(struct eap_sm *sm,
 		eap_fast_state(data, CRYPTO_BINDING);
 		data->eap_seq++;
 		next_type = EAP_TYPE_NONE;
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 		if (sm->tnc && !data->tnc_started) {
 			wpa_printf(MSG_DEBUG, "EAP-FAST: Initialize TNC");
 			next_type = EAP_TYPE_TNC;
 			data->tnc_started = 1;
 		}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 		break;
 	case FAILURE:
 		break;

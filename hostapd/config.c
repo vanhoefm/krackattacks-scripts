@@ -189,12 +189,12 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->assoc_sa_query_max_timeout = 1000;
 	bss->assoc_sa_query_retry_timeout = 201;
 #endif /* CONFIG_IEEE80211W */
-#ifdef EAP_FAST
+#ifdef EAP_SERVER_FAST
 	 /* both anonymous and authenticated provisioning */
 	bss->eap_fast_prov = 3;
 	bss->pac_key_lifetime = 7 * 24 * 60 * 60;
 	bss->pac_key_refresh_time = 1 * 24 * 60 * 60;
-#endif /* EAP_FAST */
+#endif /* EAP_SERVER_FAST */
 }
 
 
@@ -1573,7 +1573,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "dh_file") == 0) {
 			os_free(bss->dh_file);
 			bss->dh_file = os_strdup(pos);
-#ifdef EAP_FAST
+#ifdef EAP_SERVER_FAST
 		} else if (os_strcmp(buf, "pac_opaque_encr_key") == 0) {
 			os_free(bss->pac_opaque_encr_key);
 			bss->pac_opaque_encr_key = os_malloc(16);
@@ -1615,18 +1615,18 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->pac_key_lifetime = atoi(pos);
 		} else if (os_strcmp(buf, "pac_key_refresh_time") == 0) {
 			bss->pac_key_refresh_time = atoi(pos);
-#endif /* EAP_FAST */
-#ifdef EAP_SIM
+#endif /* EAP_SERVER_FAST */
+#ifdef EAP_SERVER_SIM
 		} else if (os_strcmp(buf, "eap_sim_db") == 0) {
 			os_free(bss->eap_sim_db);
 			bss->eap_sim_db = os_strdup(pos);
 		} else if (os_strcmp(buf, "eap_sim_aka_result_ind") == 0) {
 			bss->eap_sim_aka_result_ind = atoi(pos);
-#endif /* EAP_SIM */
-#ifdef EAP_TNC
+#endif /* EAP_SERVER_SIM */
+#ifdef EAP_SERVER_TNC
 		} else if (os_strcmp(buf, "tnc") == 0) {
 			bss->tnc = atoi(pos);
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 #endif /* EAP_SERVER */
 		} else if (os_strcmp(buf, "eap_message") == 0) {
 			char *term;

@@ -1221,14 +1221,14 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 		}
 	}
 
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	if (data->tnc_started && parse.eap == NULL) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: TNC started but no EAP "
 			   "response from peer");
 		eap_ttls_state(data, FAILURE);
 		goto done;
 	}
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 
 	if (parse.eap) {
 		eap_ttls_process_phase2_eap(sm, data, parse.eap,
@@ -1264,7 +1264,7 @@ done:
 
 static void eap_ttls_start_tnc(struct eap_sm *sm, struct eap_ttls_data *data)
 {
-#ifdef EAP_TNC
+#ifdef EAP_SERVER_TNC
 	if (!sm->tnc || data->state != SUCCESS || data->tnc_started)
 		return;
 
@@ -1277,7 +1277,7 @@ static void eap_ttls_start_tnc(struct eap_sm *sm, struct eap_ttls_data *data)
 
 	data->tnc_started = 1;
 	eap_ttls_state(data, PHASE2_METHOD);
-#endif /* EAP_TNC */
+#endif /* EAP_SERVER_TNC */
 }
 
 

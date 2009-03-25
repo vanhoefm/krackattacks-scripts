@@ -341,28 +341,28 @@ bsd_del_key(void *priv, const u8 *addr, int key_idx)
 }
 
 static int
-bsd_set_key(const char *ifname, void *priv, const char *alg,
-	    const u8 *addr, int key_idx,
-	    const u8 *key, size_t key_len, int txkey)
+bsd_set_key(const char *ifname, void *priv, wpa_alg alg,
+	    const u8 *addr, int key_idx, int set_tx, const u8 *seq,
+	    size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct bsd_driver_data *drv = priv;
 	struct ieee80211req_key wk;
 	u_int8_t cipher;
 
-	if (strcmp(alg, "none") == 0)
+	if (alg == WPA_ALG_NONE)
 		return bsd_del_key(drv, addr, key_idx);
 
-	wpa_printf(MSG_DEBUG, "%s: alg=%s addr=%s key_idx=%d",
+	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%s key_idx=%d",
 		   __func__, alg, ether_sprintf(addr), key_idx);
 
-	if (strcmp(alg, "WEP") == 0)
+	if (alg == WPA_ALG_WEP)
 		cipher = IEEE80211_CIPHER_WEP;
-	else if (strcmp(alg, "TKIP") == 0)
+	else if (alg == WPA_ALG_TKIP)
 		cipher = IEEE80211_CIPHER_TKIP;
-	else if (strcmp(alg, "CCMP") == 0)
+	else if (alg == WPA_ALG_CCMP)
 		cipher = IEEE80211_CIPHER_AES_CCM;
 	else {
-		printf("%s: unknown/unsupported algorithm %s\n",
+		printf("%s: unknown/unsupported algorithm %d\n",
 			__func__, alg);
 		return -1;
 	}
@@ -756,7 +756,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.deinit			= bsd_deinit,
 	.set_ieee8021x		= bsd_set_ieee8021x,
 	.set_privacy		= bsd_set_privacy,
-	.set_encryption		= bsd_set_key,
+	.set_key		= bsd_set_key,
 	.get_seqnum		= bsd_get_seqnum,
 	.flush			= bsd_flush,
 	.set_generic_elem	= bsd_set_opt_ie,

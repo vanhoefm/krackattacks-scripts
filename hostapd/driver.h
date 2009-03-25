@@ -16,6 +16,7 @@
 #ifndef DRIVER_H
 #define DRIVER_H
 
+#include "defs.h"
 #include "sta_flags.h"
 
 struct hostapd_data;
@@ -98,9 +99,9 @@ struct wpa_driver_ops {
 	 */
 	int (*set_privacy)(const char *ifname, void *priv, int enabled);
 
-	int (*set_encryption)(const char *ifname, void *priv, const char *alg,
-			      const u8 *addr, int idx,
-			      const u8 *key, size_t key_len, int txkey);
+	int (*set_key)(const char *ifname, void *priv, wpa_alg alg,
+		       const u8 *addr, int key_idx, int set_tx, const u8 *seq,
+		       size_t seq_len, const u8 *key, size_t key_len);
 	int (*get_seqnum)(const char *ifname, void *priv, const u8 *addr,
 			  int idx, u8 *seq);
 	int (*get_seqnum_igtk)(const char *ifname, void *priv, const u8 *addr,

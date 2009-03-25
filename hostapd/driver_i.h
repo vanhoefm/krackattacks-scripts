@@ -80,14 +80,16 @@ hostapd_set_privacy(struct hostapd_data *hapd, int enabled)
 }
 
 static inline int
-hostapd_set_encryption(const char *ifname, struct hostapd_data *hapd,
-		       const char *alg, const u8 *addr, int idx,
-		       u8 *key, size_t key_len, int txkey)
+hostapd_set_key(const char *ifname, struct hostapd_data *hapd,
+		wpa_alg alg, const u8 *addr, int key_idx,
+		int set_tx, const u8 *seq, size_t seq_len,
+		const u8 *key, size_t key_len)
 {
-	if (hapd->driver == NULL || hapd->driver->set_encryption == NULL)
+	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
 		return 0;
-	return hapd->driver->set_encryption(ifname, hapd->drv_priv, alg, addr,
-					    idx, key, key_len, txkey);
+	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
+				     key_idx, set_tx, seq, seq_len, key,
+				     key_len);
 }
 
 static inline int

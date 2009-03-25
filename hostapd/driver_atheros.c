@@ -426,29 +426,33 @@ madwifi_del_key(void *priv, const u8 *addr, int key_idx)
 }
 
 static int
-madwifi_set_key(const char *ifname, void *priv, const char *alg,
-		const u8 *addr, int key_idx,
-		const u8 *key, size_t key_len, int txkey)
+madwifi_set_key(const char *ifname, void *priv, wpa_alg alg, const u8 *addr,
+		int key_idx, int set_tx, const u8 *seq, size_t seq_len,
+		const u8 *key, size_t key_len)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct ieee80211req_key wk;
 	u_int8_t cipher;
 	int ret;
 
-	if (strcmp(alg, "none") == 0)
+	if (alg == WPA_ALG_NONE)
 		return madwifi_del_key(drv, addr, key_idx);
 
-	wpa_printf(MSG_DEBUG, "%s: alg=%s addr=%s key_idx=%d",
+	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%s key_idx=%d",
 		   __func__, alg, ether_sprintf(addr), key_idx);
 
-	if (strcmp(alg, "WEP") == 0)
+	switch (alg) {
+	case WPA_ALG_WEP:
 		cipher = IEEE80211_CIPHER_WEP;
-	else if (strcmp(alg, "TKIP") == 0)
+		break;
+	case WPA_ALG_TKIP:
 		cipher = IEEE80211_CIPHER_TKIP;
-	else if (strcmp(alg, "CCMP") == 0)
+		break;
+	case WPA_ALG_CCMP:
 		cipher = IEEE80211_CIPHER_AES_CCM;
-	else {
-		printf("%s: unknown/unsupported algorithm %s\n",
+		break;
+	default:
+		printf("%s: unknown/unsupported algorithm %d\n",
 			__func__, alg);
 		return -1;
 	}
@@ -476,9 +480,9 @@ madwifi_set_key(const char *ifname, void *priv, const char *alg,
 	ret = set80211priv(drv, IEEE80211_IOCTL_SETKEY, &wk, sizeof(wk));
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to set key (addr %s"
-			   " key_idx %d alg '%s' key_len %lu txkey %d)",
+			   " key_idx %d alg %d key_len %lu set_tx %d)",
 			   __func__, ether_sprintf(wk.ik_macaddr), key_idx,
-			   alg, (unsigned long) key_len, txkey);
+			   alg, (unsigned long) key_len, set_tx);
 	}
 
 	return ret;
@@ -1318,7 +1322,7 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.deinit			= madwifi_deinit,
 	.set_ieee8021x		= madwifi_set_ieee8021x,
 	.set_privacy		= madwifi_set_privacy,
-	.set_encryption		= madwifi_set_key,
+	.set_key		= madwifi_set_key,
 	.get_seqnum		= madwifi_get_seqnum,
 	.flush			= madwifi_flush,
 	.set_generic_elem	= madwifi_set_opt_ie,

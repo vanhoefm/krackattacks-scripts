@@ -102,7 +102,7 @@ static inline int wpa_auth_get_msk(struct wpa_authenticator *wpa_auth,
 
 static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 				   int vlan_id,
-				   const char *alg, const u8 *addr, int idx,
+				   wpa_alg alg, const u8 *addr, int idx,
 				   u8 *key, size_t key_len)
 {
 	if (wpa_auth->cb.set_key == NULL)
@@ -1143,7 +1143,8 @@ void wpa_remove_ptk(struct wpa_state_machine *sm)
 {
 	sm->PTK_valid = FALSE;
 	os_memset(&sm->PTK, 0, sizeof(sm->PTK));
-	wpa_auth_set_key(sm->wpa_auth, 0, "none", sm->addr, 0, (u8 *) "", 0);
+	wpa_auth_set_key(sm->wpa_auth, 0, WPA_ALG_NONE, sm->addr, 0, (u8 *) "",
+			 0);
 	sm->pairwise_set = FALSE;
 	eloop_cancel_timeout(wpa_rekey_ptk, sm->wpa_auth, sm);
 }
@@ -1211,18 +1212,18 @@ void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 }
 
 
-static const char * wpa_alg_txt(int alg)
+static wpa_alg wpa_alg_enum(int alg)
 {
 	switch (alg) {
 	case WPA_CIPHER_CCMP:
-		return "CCMP";
+		return WPA_ALG_CCMP;
 	case WPA_CIPHER_TKIP:
-		return "TKIP";
+		return WPA_ALG_TKIP;
 	case WPA_CIPHER_WEP104:
 	case WPA_CIPHER_WEP40:
-		return "WEP";
+		return WPA_ALG_WEP;
 	default:
-		return "";
+		return WPA_ALG_NONE;
 	}
 }
 
@@ -1610,13 +1611,13 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 	SM_ENTRY_MA(WPA_PTK, PTKINITDONE, wpa_ptk);
 	sm->EAPOLKeyReceived = FALSE;
 	if (sm->Pair) {
-		char *alg;
+		wpa_alg alg;
 		int klen;
 		if (sm->pairwise == WPA_CIPHER_TKIP) {
-			alg = "TKIP";
+			alg = WPA_ALG_TKIP;
 			klen = 32;
 		} else {
-			alg = "CCMP";
+			alg = WPA_ALG_CCMP;
 			klen = 16;
 		}
 		if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
@@ -1996,13 +1997,13 @@ static void wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
 	group->changed = TRUE;
 	group->wpa_group_state = WPA_GROUP_SETKEYSDONE;
 	wpa_auth_set_key(wpa_auth, group->vlan_id,
-			 wpa_alg_txt(wpa_auth->conf.wpa_group),
+			 wpa_alg_enum(wpa_auth->conf.wpa_group),
 			 NULL, group->GN, group->GTK[group->GN - 1],
 			 group->GTK_len);
 
 #ifdef CONFIG_IEEE80211W
 	if (wpa_auth->conf.ieee80211w != WPA_NO_IEEE80211W) {
-		wpa_auth_set_key(wpa_auth, group->vlan_id, "IGTK",
+		wpa_auth_set_key(wpa_auth, group->vlan_id, WPA_ALG_IGTK,
 				 NULL, group->GN_igtk,
 				 group->IGTK[group->GN_igtk - 4],
 				 WPA_IGTK_LEN);

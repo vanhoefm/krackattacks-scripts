@@ -205,11 +205,10 @@ prism54_sta_set_flags(void *priv, const u8 *addr, int total_flags,
 }
 
 
-/* set per station key */
-static int prism54_set_encryption(const char *ifname, void *priv,
-				  const char *alg, const u8 *addr,
-				  int idx, const u8 *key, size_t key_len,
-				  int txkey)
+static int prism54_set_key(const char *ifname, void *priv, wpa_alg alg,
+			   const u8 *addr, int key_idx, int set_tx,
+			   const u8 *seq, size_t seq_len,
+			   const u8 *key, size_t key_len)
 {
 	struct prism54_driver_data *drv = priv;
 	pimdev_hdr *hdr;
@@ -230,22 +229,27 @@ static int prism54_set_encryption(const char *ifname, void *priv,
 	} else {
 		memcpy(&keys->address[0], addr, ETH_ALEN);
 	}
-	if (!strcmp(alg, "WEP")) {
+	switch (alg) {
+	case WPA_ALG_WEP:
 		keys->type = DOT11_PRIV_WEP;
-	} else if (!strcmp(alg, "TKIP")) {
+		break;
+	case WPA_ALG_TKIP:
 		keys->type = DOT11_PRIV_TKIP;
-	} else if (!strcmp(alg, "none")) {
+		break;
+	case WPA_ALG_NONE:
 		/* the only way to clear the key is to deauth it */
 		/* and prism54 is capable to receive unencrypted packet */
 		/* so we do nothing here */
 		free(hdr);
 		return 0;
-	} else {
-		printf("bad auth type: %s\n", alg);
+	default:
+		printf("bad auth type: %d\n", alg);
+		free(hdr);
+		return -1;
 	}
 	buf = (u8 *) &keys->key[0];
 	keys->length = key_len;
-	keys->keyid = idx;
+	keys->keyid = key_idx;
 	keys->options = htons(DOT11_STAKEY_OPTION_DEFAULTKEY);
 	keys->reserved = 0;
 
@@ -1079,7 +1083,7 @@ const struct wpa_driver_ops wpa_driver_prism54_ops = {
 	.deinit = prism54_driver_deinit,
 	/* .set_ieee8021x = prism54_init_1x, */
 	.set_privacy = prism54_set_privacy_invoked,
-	.set_encryption = prism54_set_encryption,
+	.set_key = prism54_set_key,
 	.get_seqnum = prism54_get_seqnum,
 	.flush = prism54_flush,
 	.set_generic_elem = prism54_set_generic_elem,

@@ -436,10 +436,10 @@ static int hostapd_ioctl(void *priv, struct prism2_hostapd_param *param,
 }
 
 
-static int hostap_set_encryption(const char *ifname, void *priv,
-				 const char *alg, const u8 *addr,
-				 int idx, const u8 *key, size_t key_len,
-				 int txkey)
+static int hostap_set_key(const char *ifname, void *priv, wpa_alg alg,
+			  const u8 *addr, int key_idx, int set_tx,
+			  const u8 *seq, size_t seq_len, const u8 *key,
+			  size_t key_len)
 {
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param *param;
@@ -458,10 +458,29 @@ static int hostap_set_encryption(const char *ifname, void *priv,
 		memset(param->sta_addr, 0xff, ETH_ALEN);
 	else
 		memcpy(param->sta_addr, addr, ETH_ALEN);
-	os_strlcpy((char *) param->u.crypt.alg, alg,
-		   HOSTAP_CRYPT_ALG_NAME_LEN);
-	param->u.crypt.flags = txkey ? HOSTAP_CRYPT_FLAG_SET_TX_KEY : 0;
-	param->u.crypt.idx = idx;
+	switch (alg) {
+	case WPA_ALG_NONE:
+		os_strlcpy((char *) param->u.crypt.alg, "NONE",
+			   HOSTAP_CRYPT_ALG_NAME_LEN);
+		break;
+	case WPA_ALG_WEP:
+		os_strlcpy((char *) param->u.crypt.alg, "WEP",
+			   HOSTAP_CRYPT_ALG_NAME_LEN);
+		break;
+	case WPA_ALG_TKIP:
+		os_strlcpy((char *) param->u.crypt.alg, "TKIP",
+			   HOSTAP_CRYPT_ALG_NAME_LEN);
+		break;
+	case WPA_ALG_CCMP:
+		os_strlcpy((char *) param->u.crypt.alg, "CCMP",
+			   HOSTAP_CRYPT_ALG_NAME_LEN);
+		break;
+	default:
+		os_free(buf);
+		return -1;
+	}
+	param->u.crypt.flags = set_tx ? HOSTAP_CRYPT_FLAG_SET_TX_KEY : 0;
+	param->u.crypt.idx = key_idx;
 	param->u.crypt.key_len = key_len;
 	memcpy((u8 *) (param + 1), key, key_len);
 
@@ -1216,7 +1235,7 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.wireless_event_deinit = hostap_wireless_event_deinit,
 	.set_ieee8021x = hostap_set_ieee8021x,
 	.set_privacy = hostap_set_privacy,
-	.set_encryption = hostap_set_encryption,
+	.set_key = hostap_set_key,
 	.get_seqnum = hostap_get_seqnum,
 	.flush = hostap_flush,
 	.set_generic_elem = hostap_set_generic_elem,

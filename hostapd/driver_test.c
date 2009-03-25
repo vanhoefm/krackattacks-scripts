@@ -1006,12 +1006,13 @@ static int test_driver_set_privacy(const char *ifname, void *priv, int enabled)
 }
 
 
-static int test_driver_set_encryption(const char *iface, void *priv,
-				      const char *alg, const u8 *addr, int idx,
-				      const u8 *key, size_t key_len, int txkey)
+static int test_driver_set_key(const char *iface, void *priv, wpa_alg alg,
+			       const u8 *addr, int key_idx, int set_tx,
+			       const u8 *seq, size_t seq_len,
+			       const u8 *key, size_t key_len)
 {
-	wpa_printf(MSG_DEBUG, "%s(iface=%s alg=%s idx=%d txkey=%d)",
-		   __func__, iface, alg, idx, txkey);
+	wpa_printf(MSG_DEBUG, "%s(iface=%s alg=%d idx=%d set_tx=%d)",
+		   __func__, iface, alg, key_idx, set_tx);
 	if (addr)
 		wpa_printf(MSG_DEBUG, "   addr=" MACSTR, MAC2STR(addr));
 	if (key)
@@ -1217,7 +1218,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.valid_bss_mask = test_driver_valid_bss_mask,
 	.set_ssid = test_driver_set_ssid,
 	.set_privacy = test_driver_set_privacy,
-	.set_encryption = test_driver_set_encryption,
+	.set_key = test_driver_set_key,
 	.set_sta_vlan = test_driver_set_sta_vlan,
 	.sta_add = test_driver_sta_add,
 	.send_ether = test_driver_send_ether,

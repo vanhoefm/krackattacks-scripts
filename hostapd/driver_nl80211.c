@@ -264,7 +264,7 @@ static int hostapd_set_iface_flags(struct i802_driver_data *drv,
 
 
 static int nl_set_encr(int ifindex, struct i802_driver_data *drv,
-		       const char *alg, const u8 *addr, int idx, const u8 *key,
+		       wpa_alg alg, const u8 *addr, int idx, const u8 *key,
 		       size_t key_len, int txkey)
 {
 	struct nl_msg *msg;
@@ -274,29 +274,34 @@ static int nl_set_encr(int ifindex, struct i802_driver_data *drv,
 	if (!msg)
 		return -ENOMEM;
 
-	if (strcmp(alg, "none") == 0) {
+	if (alg == WPA_ALG_NONE) {
 		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 			    0, NL80211_CMD_DEL_KEY, 0);
 	} else {
 		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 			    0, NL80211_CMD_NEW_KEY, 0);
 		NLA_PUT(msg, NL80211_ATTR_KEY_DATA, key_len, key);
-		if (strcmp(alg, "WEP") == 0) {
+		switch (alg) {
+		case WPA_ALG_WEP:
 			if (key_len == 5)
 				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 					    0x000FAC01);
 			else
 				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
 					    0x000FAC05);
-		} else if (strcmp(alg, "TKIP") == 0)
+			break;
+		case WPA_ALG_TKIP:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC02);
-		else if (strcmp(alg, "CCMP") == 0)
+			break;
+		case WPA_ALG_CCMP:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC04);
-		else if (strcmp(alg, "IGTK") == 0)
+			break;
+		case WPA_ALG_IGTK:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC06);
-		else {
+			break;
+		default:
 			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
-				   "algorithm '%s'", __func__, alg);
+				   "algorithm %d", __func__, alg);
 			nlmsg_free(msg);
 			return -1;
 		}
@@ -326,7 +331,7 @@ static int nl_set_encr(int ifindex, struct i802_driver_data *drv,
 		    0, NL80211_CMD_SET_KEY, 0);
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
-	if (strcmp(alg, "IGTK") == 0)
+	if (alg == WPA_ALG_IGTK)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT_MGMT);
 	else
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
@@ -340,15 +345,15 @@ static int nl_set_encr(int ifindex, struct i802_driver_data *drv,
 }
 
 
-static int i802_set_encryption(const char *iface, void *priv, const char *alg,
-			       const u8 *addr, int idx, const u8 *key,
-			       size_t key_len, int txkey)
+static int i802_set_key(const char *iface, void *priv, wpa_alg alg,
+			const u8 *addr, int key_idx, int set_tx, const u8 *seq,
+			size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct i802_driver_data *drv = priv;
 	int ret;
 
-	ret = nl_set_encr(if_nametoindex(iface), drv, alg, addr, idx, key,
-			  key_len, txkey);
+	ret = nl_set_encr(if_nametoindex(iface), drv, alg, addr, key_idx, key,
+			  key_len, set_tx);
 	if (ret < 0)
 		return ret;
 
@@ -3107,7 +3112,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.wireless_event_deinit = i802_wireless_event_deinit,
 	.set_ieee8021x = i802_set_ieee8021x,
 	.set_privacy = i802_set_privacy,
-	.set_encryption = i802_set_encryption,
+	.set_key = i802_set_key,
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.read_sta_data = i802_read_sta_data,

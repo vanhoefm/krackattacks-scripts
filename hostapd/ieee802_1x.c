@@ -220,8 +220,8 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 	wpa_hexdump_key(MSG_DEBUG, "Default WEP key (dynamic VLAN)",
 			key->key[key->idx], key->len[key->idx]);
 
-	if (hostapd_set_encryption(ifname, hapd, "WEP", NULL, key->idx,
-				   key->key[key->idx], key->len[key->idx], 1))
+	if (hostapd_set_key(ifname, hapd, WPA_ALG_WEP, NULL, key->idx, 1,
+			    NULL, 0, key->key[key->idx], key->len[key->idx]))
 		printf("Could not set dynamic VLAN WEP encryption key.\n");
 
 	hostapd_set_ieee8021x(ifname, hapd, 1);
@@ -335,10 +335,9 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 
 		/* TODO: set encryption in TX callback, i.e., only after STA
 		 * has ACKed EAPOL-Key frame */
-		if (hostapd_set_encryption(hapd->conf->iface, hapd, "WEP",
-					   sta->addr, 0, ikey,
-					   hapd->conf->individual_wep_key_len,
-					   1)) {
+		if (hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP,
+				    sta->addr, 0, 1, NULL, 0, ikey,
+				    hapd->conf->individual_wep_key_len)) {
 			wpa_printf(MSG_ERROR, "Could not set individual WEP "
 				   "encryption.");
 		}
@@ -1483,10 +1482,10 @@ static void ieee802_1x_rekey(void *eloop_ctx, void *timeout_ctx)
 
 	/* TODO: Could setup key for RX here, but change default TX keyid only
 	 * after new broadcast key has been sent to all stations. */
-	if (hostapd_set_encryption(hapd->conf->iface, hapd, "WEP", NULL,
-				   hapd->default_wep_key_idx,
-				   hapd->default_wep_key,
-				   hapd->conf->default_wep_key_len, 1)) {
+	if (hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
+			    hapd->default_wep_key_idx, 1, NULL, 0,
+			    hapd->default_wep_key,
+			    hapd->conf->default_wep_key_len)) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_WARNING, "failed to configure a "
 			       "new broadcast key");
@@ -1691,8 +1690,8 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 		hostapd_set_privacy(hapd, 1);
 
 		for (i = 0; i < 4; i++)
-			hostapd_set_encryption(hapd->conf->iface, hapd,
-					       "none", NULL, i, NULL, 0, 0);
+			hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
+					NULL, i, 0, NULL, 0, NULL, 0);
 
 		ieee802_1x_rekey(hapd, NULL);
 

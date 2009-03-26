@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - driver interface definition
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -188,6 +188,13 @@ struct wpa_driver_scan_params {
 	 * extra_ies_len - Length of extra_ies in octets
 	 */
 	size_t extra_ies_len;
+
+	/**
+	 * freqs - Array of frequencies to scan or %NULL for all frequencies
+	 *
+	 * The frequency is set in MHz. The array is zero-terminated.
+	 */
+	int *freqs;
 };
 
 /**

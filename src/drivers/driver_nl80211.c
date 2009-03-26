@@ -1596,14 +1596,16 @@ static int wpa_driver_nl80211_scan(void *priv,
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	int ret = 0, timeout;
-	struct nl_msg *msg, *ssids;
+	struct nl_msg *msg, *ssids, *freqs;
 	size_t i;
 
 	msg = nlmsg_alloc();
 	ssids = nlmsg_alloc();
-	if (!msg || !ssids) {
+	freqs = nlmsg_alloc();
+	if (!msg || !ssids || !freqs) {
 		nlmsg_free(msg);
 		nlmsg_free(ssids);
+		nlmsg_free(freqs);
 		return -1;
 	}
 
@@ -1622,6 +1624,12 @@ static int wpa_driver_nl80211_scan(void *priv,
 	if (params->extra_ies) {
 		NLA_PUT(msg, NL80211_ATTR_IE, params->extra_ies_len,
 			params->extra_ies);
+	}
+
+	if (params->freqs) {
+		for (i = 0; params->freqs[i]; i++)
+			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
+		nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -1652,6 +1660,7 @@ static int wpa_driver_nl80211_scan(void *priv,
 nla_put_failure:
 	nlmsg_free(ssids);
 	nlmsg_free(msg);
+	nlmsg_free(freqs);
 	return ret;
 }
 

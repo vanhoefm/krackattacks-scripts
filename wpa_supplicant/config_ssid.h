@@ -340,6 +340,16 @@ struct wpa_ssid {
 	 * attacks against TKIP deficiencies.
 	 */
 	int wpa_ptk_rekey;
+
+	/**
+	 * scan_freq - Array of frequencies to scan or %NULL for all
+	 *
+	 * This is an optional zero-terminated array of frequencies in
+	 * megahertz (MHz) to include in scan requests when searching for this
+	 * network. This can be used to speed up scanning when the network is
+	 * known to not use all possible channels.
+	 */
+	int *scan_freq;
 };
 
 #endif /* CONFIG_SSID_H */

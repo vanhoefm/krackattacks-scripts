@@ -107,6 +107,73 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 }
 
 
+static int int_array_len(const int *a)
+{
+	int i;
+	for (i = 0; a && a[i]; i++)
+		;
+	return i;
+}
+
+
+static void int_array_concat(int **res, const int *a)
+{
+	int reslen, alen, i;
+	int *n;
+
+	reslen = int_array_len(*res);
+	alen = int_array_len(a);
+
+	n = os_realloc(*res, (reslen + alen + 1) * sizeof(int));
+	if (n == NULL) {
+		os_free(*res);
+		*res = NULL;
+	}
+	for (i = 0; i <= alen; i++)
+		n[reslen + i] = a[i];
+	*res = n;
+}
+
+
+static int freq_cmp(const void *a, const void *b)
+{
+	int _a = *(int *) a;
+	int _b = *(int *) b;
+
+	if (_a == 0)
+		return 1;
+	if (_b == 0)
+		return -1;
+	return _a - _b;
+}
+
+
+static void int_array_sort_unique(int *a)
+{
+	int alen;
+	int i, j;
+
+	if (a == NULL)
+		return;
+
+	alen = int_array_len(a);
+	qsort(a, alen, sizeof(int), freq_cmp);
+
+	i = 0;
+	j = 1;
+	while (a[i] && a[j]) {
+		if (a[i] == a[j]) {
+			j++;
+			continue;
+		}
+		a[++i] = a[j++];
+	}
+	if (a[i])
+		i++;
+	a[i] = 0;
+}
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -198,6 +265,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		ssid = NULL;
 	} else {
 		struct wpa_ssid *start = ssid;
+		int freqs_set = 0;
 		if (ssid == NULL && max_ssids > 1)
 			ssid = wpa_s->conf->ssid;
 		while (ssid) {
@@ -219,6 +287,20 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 			    start != wpa_s->conf->ssid)
 				ssid = wpa_s->conf->ssid;
 		}
+
+		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+			if (ssid->disabled)
+				continue;
+			if ((params.freqs || !freqs_set) && ssid->scan_freq) {
+				int_array_concat(&params.freqs,
+						 ssid->scan_freq);
+			} else {
+				os_free(params.freqs);
+				params.freqs = NULL;
+			}
+			freqs_set = 1;
+		}
+		int_array_sort_unique(params.freqs);
 	}
 
 	if (ssid) {
@@ -258,6 +340,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	wpabuf_free(wps_ie);
+	os_free(params.freqs);
 
 	if (ret) {
 		wpa_printf(MSG_WARNING, "Failed to initiate AP scan.");

@@ -461,7 +461,7 @@ static void msearchreply_state_machine_start(struct upnp_wps_device_sm *sm,
 	a->type = MSEARCH_REPLY;
 	a->state = 0;
 	a->sm = sm;
-	os_memcpy(&a->client, client, sizeof(client));
+	os_memcpy(&a->client, client, sizeof(*client));
 	/* Wait time depending on MX value */
 	next_timeout_msec = (1000 * mx * (os_random() & 0xFF)) >> 8;
 	next_timeout_sec = next_timeout_msec / 1000;

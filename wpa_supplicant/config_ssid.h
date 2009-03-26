@@ -318,11 +318,7 @@ struct wpa_ssid {
 	 * This value is used to configure policy for management frame
 	 * protection (IEEE 802.11w). 0 = disabled, 1 = optional, 2 = required.
 	 */
-	enum {
-		NO_IEEE80211W = 0,
-		IEEE80211W_OPTIONAL = 1,
-		IEEE80211W_REQUIRED = 2
-	} ieee80211w;
+	enum mfp_options ieee80211w;
 #endif /* CONFIG_IEEE80211W */
 
 	/**

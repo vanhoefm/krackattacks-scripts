@@ -1476,7 +1476,7 @@ int hostapd_setup_interface(struct hostapd_iface *iface)
  * freed after hostapd_cleanup() is called for it during interface
  * deinitialization.
  */
-static struct hostapd_data *
+struct hostapd_data *
 hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 		       struct hostapd_config *conf,
 		       struct hostapd_bss_config *bss)
@@ -1550,69 +1550,6 @@ fail:
 #endif
 	/* TODO: cleanup allocated resources(?) */
 	os_free(hapd);
-	return NULL;
-}
-
-
-/**
- * hostapd_init - Allocate and initialize per-interface data
- * @config_file: Path to the configuration file
- * Returns: Pointer to the allocated interface data or %NULL on failure
- *
- * This function is used to allocate main data structures for per-interface
- * data. The allocated data buffer will be freed by calling
- * hostapd_cleanup_iface().
- */
-struct hostapd_iface * hostapd_init(const char *config_file)
-{
-	struct hostapd_iface *hapd_iface = NULL;
-	struct hostapd_config *conf = NULL;
-	struct hostapd_data *hapd;
-	size_t i;
-
-	hapd_iface = os_zalloc(sizeof(*hapd_iface));
-	if (hapd_iface == NULL)
-		goto fail;
-
-	hapd_iface->config_fname = os_strdup(config_file);
-	if (hapd_iface->config_fname == NULL)
-		goto fail;
-
-	conf = hostapd_config_read(hapd_iface->config_fname);
-	if (conf == NULL)
-		goto fail;
-	hapd_iface->conf = conf;
-
-	hapd_iface->num_bss = conf->num_bss;
-	hapd_iface->bss = os_zalloc(conf->num_bss *
-				    sizeof(struct hostapd_data *));
-	if (hapd_iface->bss == NULL)
-		goto fail;
-
-	for (i = 0; i < conf->num_bss; i++) {
-		hapd = hapd_iface->bss[i] =
-			hostapd_alloc_bss_data(hapd_iface, conf,
-					       &conf->bss[i]);
-		if (hapd == NULL)
-			goto fail;
-	}
-
-	return hapd_iface;
-
-fail:
-	if (conf)
-		hostapd_config_free(conf);
-	if (hapd_iface) {
-		for (i = 0; hapd_iface->bss && i < hapd_iface->num_bss; i++) {
-			hapd = hapd_iface->bss[i];
-			if (hapd && hapd->ssl_ctx)
-				tls_deinit(hapd->ssl_ctx);
-		}
-
-		os_free(hapd_iface->config_fname);
-		os_free(hapd_iface->bss);
-		os_free(hapd_iface);
-	}
 	return NULL;
 }
 

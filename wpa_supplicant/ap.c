@@ -21,6 +21,8 @@
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"
+#include "config_ssid.h"
+#include "wpa_supplicant_i.h"
 
 
 int hostapd_reload_config(struct hostapd_iface *iface)
@@ -136,4 +138,27 @@ hostapd_get_eap_user(const struct hostapd_bss_config *conf, const u8 *identity,
 	}
 
 	return user;
+}
+
+
+void wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid)
+{
+	struct wpa_driver_associate_params params;
+
+	if (ssid->ssid == NULL || ssid->ssid_len == 0) {
+		wpa_printf(MSG_ERROR, "No SSID configured for AP mode");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "Setting up AP (SSID='%s')",
+		   wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
+
+	os_memset(&params, 0, sizeof(params));
+	params.ssid = ssid->ssid;
+	params.ssid_len = ssid->ssid_len;
+	params.mode = ssid->mode;
+
+	if (wpa_drv_associate(wpa_s, &params) < 0)
+		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
 }

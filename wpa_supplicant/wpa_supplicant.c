@@ -41,6 +41,7 @@
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "sme.h"
+#include "ap.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -917,31 +918,6 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 
 	return 0;
 }
-
-
-#ifdef CONFIG_AP
-static void wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
-				     struct wpa_ssid *ssid)
-{
-	struct wpa_driver_associate_params params;
-
-	if (ssid->ssid == NULL || ssid->ssid_len == 0) {
-		wpa_printf(MSG_ERROR, "No SSID configured for AP mode");
-		return;
-	}
-
-	wpa_printf(MSG_DEBUG, "Setting up AP (SSID='%s')",
-		   wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
-
-	os_memset(&params, 0, sizeof(params));
-	params.ssid = ssid->ssid;
-	params.ssid_len = ssid->ssid_len;
-	params.mode = ssid->mode;
-
-	if (wpa_drv_associate(wpa_s, &params) < 0)
-		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
-}
-#endif /* CONFIG_AP */
 
 
 /**

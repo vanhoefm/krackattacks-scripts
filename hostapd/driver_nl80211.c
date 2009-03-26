@@ -2804,7 +2804,7 @@ static void hostapd_wireless_event_rtm_newlink(struct i802_driver_data *drv,
 					       struct nlmsghdr *h, int len)
 {
 	struct ifinfomsg *ifi;
-	int attrlen, nlmsg_len, rta_len;
+	int attrlen, _nlmsg_len, rta_len;
 	struct rtattr *attr;
 
 	if (len < (int) sizeof(*ifi))
@@ -2815,13 +2815,13 @@ static void hostapd_wireless_event_rtm_newlink(struct i802_driver_data *drv,
 	/* TODO: use ifi->ifi_index to filter out wireless events from other
 	 * interfaces */
 
-	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
+	_nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = h->nlmsg_len - _nlmsg_len;
 	if (attrlen < 0)
 		return;
 
-	attr = (struct rtattr *) (((char *) ifi) + nlmsg_len);
+	attr = (struct rtattr *) (((char *) ifi) + _nlmsg_len);
 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {

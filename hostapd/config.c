@@ -1458,13 +1458,13 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "bridge") == 0) {
 			os_strlcpy(bss->bridge, pos, sizeof(bss->bridge));
 		} else if (os_strcmp(buf, "driver") == 0) {
-			int i;
+			int j;
 			/* clear to get error below if setting is invalid */
 			conf->driver = NULL;
-			for (i = 0; hostapd_drivers[i]; i++) {
-				if (os_strcmp(pos, hostapd_drivers[i]->name) ==
+			for (j = 0; hostapd_drivers[j]; i++) {
+				if (os_strcmp(pos, hostapd_drivers[j]->name) ==
 				    0) {
-					conf->driver = hostapd_drivers[i];
+					conf->driver = hostapd_drivers[j];
 					break;
 				}
 			}

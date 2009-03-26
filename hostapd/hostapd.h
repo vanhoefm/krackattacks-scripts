@@ -159,6 +159,12 @@ struct hostapd_iface {
 };
 
 int hostapd_reload_config(struct hostapd_iface *iface);
+struct hostapd_iface * hostapd_init(const char *config_file);
+int hostapd_setup_interface(struct hostapd_iface *iface);
+void hostapd_interface_deinit(struct hostapd_iface *iface);
+int handle_reload_iface(struct hostapd_iface *iface, void *ctx);
+int handle_dump_state_iface(struct hostapd_iface *iface, void *ctx);
+
 int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
 					 void *ctx), void *ctx);
 

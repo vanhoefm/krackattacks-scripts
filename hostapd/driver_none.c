@@ -54,7 +54,7 @@ static int none_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 }
 
 
-const struct wpa_driver_ops wpa_driver_none_ops = {
+const struct hapd_driver_ops wpa_driver_none_ops = {
 	.name = "none",
 	.init = none_driver_init,
 	.deinit = none_driver_deinit,

@@ -13,8 +13,8 @@
  * See README and COPYING for more details.
  */
 
-#ifndef DRIVER_H
-#define DRIVER_H
+#ifndef HOSTAPD_DRIVER_H
+#define HOSTAPD_DRIVER_H
 
 #include "defs.h"
 #include "sta_flags.h"
@@ -65,7 +65,7 @@ struct hostapd_neighbor_bss {
 	int sec_chan; /* 0 for 20 MHz channels */
 };
 
-struct wpa_driver_ops {
+struct hapd_driver_ops {
 	const char *name;		/* as appears in the config file */
 
 	void * (*init)(struct hostapd_data *hapd);
@@ -243,4 +243,4 @@ void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok);
 void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr);
 
-#endif /* DRIVER_H */
+#endif /* HOSTAPD_DRIVER_H */

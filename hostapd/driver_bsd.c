@@ -750,7 +750,7 @@ bsd_deinit(void *priv)
 	free(drv);
 }
 
-const struct wpa_driver_ops wpa_driver_bsd_ops = {
+const struct hapd_driver_ops wpa_driver_bsd_ops = {
 	.name			= "bsd",
 	.init			= bsd_init,
 	.deinit			= bsd_deinit,

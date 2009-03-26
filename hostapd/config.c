@@ -33,7 +33,7 @@
 
 #define MAX_STA_COUNT 2007
 
-extern struct wpa_driver_ops *hostapd_drivers[];
+extern struct hapd_driver_ops *hostapd_drivers[];
 
 
 #ifndef CONFIG_NO_VLAN
@@ -200,7 +200,7 @@ static void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 }
 
 
-static struct hostapd_config * hostapd_config_defaults(void)
+struct hostapd_config * hostapd_config_defaults(void)
 {
 	struct hostapd_config *conf;
 	struct hostapd_bss_config *bss;

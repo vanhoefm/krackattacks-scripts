@@ -1077,7 +1077,7 @@ static void prism54_driver_deinit(void *priv)
 }
 
 
-const struct wpa_driver_ops wpa_driver_prism54_ops = {
+const struct hapd_driver_ops wpa_driver_prism54_ops = {
 	.name = "prism54",
 	.init = prism54_driver_init,
 	.deinit = prism54_driver_deinit,

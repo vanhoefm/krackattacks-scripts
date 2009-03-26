@@ -1200,7 +1200,7 @@ static void test_driver_deinit(void *priv)
 }
 
 
-const struct wpa_driver_ops wpa_driver_test_ops = {
+const struct hapd_driver_ops wpa_driver_test_ops = {
 	.name = "test",
 	.init = test_driver_init,
 	.deinit = test_driver_deinit,

@@ -1316,7 +1316,7 @@ madwifi_commit(void *priv)
 	return madwifi_set_iface_flags(priv, 1);
 }
 
-const struct wpa_driver_ops wpa_driver_atheros_ops = {
+const struct hapd_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
 	.init			= madwifi_init,
 	.deinit			= madwifi_deinit,

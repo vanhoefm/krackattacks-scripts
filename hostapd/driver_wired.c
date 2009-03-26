@@ -366,7 +366,7 @@ static void wired_driver_deinit(void *priv)
 }
 
 
-const struct wpa_driver_ops wpa_driver_wired_ops = {
+const struct hapd_driver_ops wpa_driver_wired_ops = {
 	.name = "wired",
 	.init = wired_driver_init,
 	.deinit = wired_driver_deinit,

@@ -1227,7 +1227,7 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 }
 
 
-const struct wpa_driver_ops wpa_driver_hostap_ops = {
+const struct hapd_driver_ops wpa_driver_hostap_ops = {
 	.name = "hostap",
 	.init = hostap_init,
 	.deinit = hostap_driver_deinit,

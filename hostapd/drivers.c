@@ -16,35 +16,35 @@
 
 
 #ifdef CONFIG_DRIVER_HOSTAP
-extern struct wpa_driver_ops wpa_driver_hostap_ops; /* driver_hostap.c */
+extern struct hapd_driver_ops wpa_driver_hostap_ops; /* driver_hostap.c */
 #endif /* CONFIG_DRIVER_HOSTAP */
 #ifdef CONFIG_DRIVER_NL80211
-extern struct wpa_driver_ops wpa_driver_nl80211_ops; /* driver_nl80211.c */
+extern struct hapd_driver_ops wpa_driver_nl80211_ops; /* driver_nl80211.c */
 #endif /* CONFIG_DRIVER_NL80211 */
 #ifdef CONFIG_DRIVER_PRISM54
-extern struct wpa_driver_ops wpa_driver_prism54_ops; /* driver_prism54.c */
+extern struct hapd_driver_ops wpa_driver_prism54_ops; /* driver_prism54.c */
 #endif /* CONFIG_DRIVER_PRISM54 */
 #ifdef CONFIG_DRIVER_MADWIFI
-extern struct wpa_driver_ops wpa_driver_madwifi_ops; /* driver_madwifi.c */
+extern struct hapd_driver_ops wpa_driver_madwifi_ops; /* driver_madwifi.c */
 #endif /* CONFIG_DRIVER_MADWIFI */
 #ifdef CONFIG_DRIVER_ATHEROS
-extern struct wpa_driver_ops wpa_driver_atheros_ops; /* driver_atheros.c */
+extern struct hapd_driver_ops wpa_driver_atheros_ops; /* driver_atheros.c */
 #endif /* CONFIG_DRIVER_ATHEROS */
 #ifdef CONFIG_DRIVER_BSD
-extern struct wpa_driver_ops wpa_driver_bsd_ops; /* driver_bsd.c */
+extern struct hapd_driver_ops wpa_driver_bsd_ops; /* driver_bsd.c */
 #endif /* CONFIG_DRIVER_BSD */
 #ifdef CONFIG_DRIVER_WIRED
-extern struct wpa_driver_ops wpa_driver_wired_ops; /* driver_wired.c */
+extern struct hapd_driver_ops wpa_driver_wired_ops; /* driver_wired.c */
 #endif /* CONFIG_DRIVER_WIRED */
 #ifdef CONFIG_DRIVER_TEST
-extern struct wpa_driver_ops wpa_driver_test_ops; /* driver_test.c */
+extern struct hapd_driver_ops wpa_driver_test_ops; /* driver_test.c */
 #endif /* CONFIG_DRIVER_TEST */
 #ifdef CONFIG_DRIVER_NONE
-extern struct wpa_driver_ops wpa_driver_none_ops; /* driver_none.c */
+extern struct hapd_driver_ops wpa_driver_none_ops; /* driver_none.c */
 #endif /* CONFIG_DRIVER_NONE */
 
 
-struct wpa_driver_ops *hostapd_drivers[] =
+struct hapd_driver_ops *hostapd_drivers[] =
 {
 #ifdef CONFIG_DRIVER_HOSTAP
 	&wpa_driver_hostap_ops,

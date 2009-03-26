@@ -347,7 +347,7 @@ struct hostapd_config {
 	int *supported_rates;
 	int *basic_rates;
 
-	const struct wpa_driver_ops *driver;
+	const struct hapd_driver_ops *driver;
 
 	int passive_scan_interval; /* seconds, 0 = disabled */
 	int passive_scan_listen; /* usec */
@@ -392,6 +392,7 @@ struct hostapd_config {
 
 int hostapd_mac_comp(const void *a, const void *b);
 int hostapd_mac_comp_empty(const void *a);
+struct hostapd_config * hostapd_config_defaults(void);
 struct hostapd_config * hostapd_config_read(const char *fname);
 void hostapd_config_free(struct hostapd_config *conf);
 int hostapd_maclist_found(struct mac_acl_entry *list, int num_entries,

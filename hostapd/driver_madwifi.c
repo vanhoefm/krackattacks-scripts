@@ -1372,7 +1372,7 @@ madwifi_commit(void *priv)
 	return madwifi_set_iface_flags(priv, 1);
 }
 
-const struct wpa_driver_ops wpa_driver_madwifi_ops = {
+const struct hapd_driver_ops wpa_driver_madwifi_ops = {
 	.name			= "madwifi",
 	.init			= madwifi_init,
 	.deinit			= madwifi_deinit,

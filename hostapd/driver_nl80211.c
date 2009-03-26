@@ -3103,7 +3103,7 @@ static void i802_deinit(void *priv)
 }
 
 
-const struct wpa_driver_ops wpa_driver_nl80211_ops = {
+const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.init = i802_init,
 	.init_bssid = i802_init_bssid,

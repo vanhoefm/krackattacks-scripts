@@ -1299,7 +1299,6 @@ static int setup_interface(struct hostapd_iface *iface)
 	u8 *b = conf->bssid;
 	int freq;
 	size_t j;
-	int ret = 0;
 	u8 *prev_addr;
 
 	/*
@@ -1433,7 +1432,7 @@ static int setup_interface(struct hostapd_iface *iface)
 		return -1;
 	}
 
-	return ret;
+	return 0;
 }
 
 

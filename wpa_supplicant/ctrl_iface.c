@@ -20,6 +20,7 @@
 #include "config.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "ctrl_iface.h"
 #include "l2_packet/l2_packet.h"
 #include "preauth.h"
@@ -30,6 +31,8 @@
 #include "wps_supplicant.h"
 #include "wps/wps.h"
 #include "ibss_rsn.h"
+
+extern struct wpa_driver_ops *wpa_supplicant_drivers[];
 
 static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 					    char *buf, int len);

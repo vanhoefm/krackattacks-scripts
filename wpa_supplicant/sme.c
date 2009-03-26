@@ -15,7 +15,6 @@
 #include "includes.h"
 
 #include "common.h"
-#include "drivers/driver.h"
 #include "ieee802_11_defs.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wpa_common.h"
@@ -23,6 +22,7 @@
 #include "pmksa_cache.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
 #include "sme.h"

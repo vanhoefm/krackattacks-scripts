@@ -23,10 +23,10 @@
 #include "eap_peer/eap.h"
 #include "wpa.h"
 #include "eloop.h"
-#include "drivers/driver.h"
 #include "config.h"
 #include "l2_packet/l2_packet.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "ctrl_iface.h"
 #include "ctrl_iface_dbus.h"
 #include "pcsc_funcs.h"
@@ -114,6 +114,7 @@ const char *wpa_supplicant_full_license5 =
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
+extern struct wpa_driver_ops *wpa_supplicant_drivers[];
 
 /* Configure default/group WEP keys for static WEP */
 static int wpa_set_wep_keys(struct wpa_supplicant *wpa_s,
@@ -413,6 +414,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->sme.ft_ies = NULL;
 	wpa_s->sme.ft_ies_len = 0;
 #endif /* CONFIG_SME */
+
+#ifdef CONFIG_AP
+	wpa_supplicant_ap_deinit(wpa_s);
+#endif /* CONFIG_AP */
 }
 
 

@@ -20,6 +20,7 @@
 #include "config.h"
 #include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "eloop.h"
 #include "uuid.h"
 #include "wpa_ctrl.h"

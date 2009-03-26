@@ -19,6 +19,9 @@
 
 #include "common.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
+
+extern struct wpa_driver_ops *wpa_supplicant_drivers[];
 
 
 static void usage(void)

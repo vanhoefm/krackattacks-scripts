@@ -22,6 +22,7 @@
 #include "l2_packet/l2_packet.h"
 #include "wpa_common.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "pmksa_cache.h"
 #include "mlme.h"
 #include "sme.h"

@@ -17,6 +17,7 @@
 #include "common.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "ctrl_iface_dbus.h"
 #include "ctrl_iface_dbus_handlers.h"
 #include "eap_peer/eap_methods.h"

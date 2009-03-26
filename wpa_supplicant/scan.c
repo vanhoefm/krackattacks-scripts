@@ -18,6 +18,7 @@
 #include "eloop.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "mlme.h"
 #include "wps_supplicant.h"
 

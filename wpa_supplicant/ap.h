@@ -16,7 +16,8 @@
 #ifndef AP_H
 #define AP_H
 
-void wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
-			      struct wpa_ssid *ssid);
+int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
+			     struct wpa_ssid *ssid);
+void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s);
 
 #endif /* AP_H */

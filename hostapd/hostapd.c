@@ -159,6 +159,16 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 
 	ieee802_11_set_beacon(hapd);
 
+	if (hapd->conf->ssid.ssid_set &&
+	    hostapd_set_ssid(hapd, (u8 *) hapd->conf->ssid.ssid,
+			     hapd->conf->ssid.ssid_len)) {
+		wpa_printf(MSG_ERROR, "Could not set SSID for kernel driver");
+		/* try to continue */
+	}
+
+	if (hapd->conf->ieee802_1x || hapd->conf->wpa)
+		hostapd_set_ieee8021x(hapd->conf->iface, hapd, 1);
+
 	hostapd_config_free(oldconf);
 
 	wpa_printf(MSG_DEBUG, "Reconfigured interface %s", hapd->conf->iface);

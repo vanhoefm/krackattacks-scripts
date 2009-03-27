@@ -1461,7 +1461,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			int j;
 			/* clear to get error below if setting is invalid */
 			conf->driver = NULL;
-			for (j = 0; hostapd_drivers[j]; i++) {
+			for (j = 0; hostapd_drivers[j]; j++) {
 				if (os_strcmp(pos, hostapd_drivers[j]->name) ==
 				    0) {
 					conf->driver = hostapd_drivers[j];

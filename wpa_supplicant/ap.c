@@ -97,6 +97,65 @@ struct hapd_driver_ops *hostapd_drivers[] =
 	NULL
 };
 
+
+static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
+				  struct wpa_ssid *ssid,
+				  struct hostapd_config *conf)
+{
+	struct hostapd_bss_config *bss = &conf->bss[0];
+
+	os_strlcpy(bss->iface, wpa_s->ifname, sizeof(bss->iface));
+
+	if (ssid->frequency == 0) {
+		/* default channel 11 */
+		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
+		conf->channel = 11;
+	} else if (ssid->frequency >= 2412 && ssid->frequency <= 2472) {
+		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
+		conf->channel = (ssid->frequency - 2407) / 5;
+	} else if ((ssid->frequency >= 5180 && ssid->frequency <= 5240) ||
+		   (ssid->frequency >= 5745 && ssid->frequency <= 5825)) {
+		conf->hw_mode = HOSTAPD_MODE_IEEE80211G;
+		conf->channel = (ssid->frequency - 5000) / 5;
+	} else {
+		wpa_printf(MSG_ERROR, "Unsupported AP mode frequency: %d MHz",
+			   ssid->frequency);
+		return -1;
+	}
+
+	/* TODO: enable HT if driver supports it;
+	 * drop to 11b if driver does not support 11g */
+
+	if (ssid->ssid_len == 0) {
+		wpa_printf(MSG_ERROR, "No SSID configured for AP mode");
+		return -1;
+	}
+	os_memcpy(bss->ssid.ssid, ssid->ssid, ssid->ssid_len);
+	bss->ssid.ssid[ssid->ssid_len] = '\0';
+	bss->ssid.ssid_len = ssid->ssid_len;
+	bss->ssid.ssid_set = 1;
+
+	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt))
+		bss->wpa = ssid->proto;
+	bss->wpa_key_mgmt = ssid->key_mgmt;
+	bss->wpa_pairwise = ssid->pairwise_cipher;
+	if (ssid->passphrase) {
+		bss->ssid.wpa_passphrase = os_strdup(ssid->passphrase);
+		if (hostapd_setup_wpa_psk(bss))
+			return -1;
+	} else if (ssid->psk_set) {
+		os_free(bss->ssid.wpa_psk);
+		bss->ssid.wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
+		if (bss->ssid.wpa_psk == NULL)
+			return -1;
+		os_memcpy(bss->ssid.wpa_psk->psk, ssid->psk, PMK_LEN);
+		bss->ssid.wpa_psk->group = 1;
+	}
+
+	return 0;
+}
+
+
 int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {
@@ -117,6 +176,12 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 	wpa_s->ap_iface->conf = conf = hostapd_config_defaults();
 	if (conf == NULL) {
+		wpa_supplicant_ap_deinit(wpa_s);
+		return -1;
+	}
+
+	if (wpa_supplicant_conf_ap(wpa_s, ssid, conf)) {
+		wpa_printf(MSG_ERROR, "Failed to create AP configuration");
 		wpa_supplicant_ap_deinit(wpa_s);
 		return -1;
 	}

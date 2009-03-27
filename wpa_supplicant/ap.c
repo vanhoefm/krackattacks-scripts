@@ -79,7 +79,165 @@ static void ap_driver_deinit(void *priv)
 static int ap_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 				u16 proto, const u8 *data, size_t data_len)
 {
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_key(const char *iface, void *priv, wpa_alg alg,
+			     const u8 *addr, int key_idx, int set_tx,
+			     const u8 *seq, size_t seq_len, const u8 *key,
+			     size_t key_len)
+{
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_set_key(wpa_s, alg, addr, key_idx, set_tx, seq, seq_len,
+			       key, key_len);
+}
+
+
+static int ap_driver_get_seqnum(const char *iface, void *priv, const u8 *addr,
+				int idx, u8 *seq)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_flush(void *priv)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_read_sta_data(void *priv,
+				   struct hostap_sta_driver_data *data,
+				   const u8 *addr)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_sta_set_flags(void *priv, const u8 *addr, int total_flags,
+				   int flags_or, int flags_and)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_sta_deauth(void *priv, const u8 *addr, int reason)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_sta_disassoc(void *priv, const u8 *addr, int reason)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_sta_remove(void *priv, const u8 *addr)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_send_mgmt_frame(void *priv, const void *data, size_t len,
+				     int flags)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_sta_add(const char *ifname, void *priv,
+			     struct hostapd_sta_add_params *params)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_get_inact_sec(void *priv, const u8 *addr)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_freq(void *priv, struct hostapd_freq_params *freq)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
 	return 0;
+}
+
+
+static int ap_driver_set_beacon(const char *iface, void *priv,
+				u8 *head, size_t head_len,
+				u8 *tail, size_t tail_len)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_beacon_int(void *priv, int value)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_dtim_period(const char *iface, void *priv, int value)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_cts_protect(void *priv, int value)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_preamble(void *priv, int value)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_short_slot_time(void *priv, int value)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static int ap_driver_set_tx_queue_params(void *priv, int queue, int aifs,
+					 int cw_min, int cw_max,
+					 int burst_time)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return -1;
+}
+
+
+static struct hostapd_hw_modes *ap_driver_get_hw_feature_data(void *priv,
+							      u16 *num_modes,
+							      u16 *flags)
+{
+	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
+	return NULL;
 }
 
 
@@ -89,6 +247,26 @@ static struct hapd_driver_ops ap_driver_ops =
 	.init = ap_driver_init,
 	.deinit = ap_driver_deinit,
 	.send_ether = ap_driver_send_ether,
+	.set_key = ap_driver_set_key,
+	.get_seqnum = ap_driver_get_seqnum,
+	.flush = ap_driver_flush,
+	.read_sta_data = ap_driver_read_sta_data,
+	.sta_set_flags = ap_driver_sta_set_flags,
+	.sta_deauth = ap_driver_sta_deauth,
+	.sta_disassoc = ap_driver_sta_disassoc,
+	.sta_remove = ap_driver_sta_remove,
+	.send_mgmt_frame = ap_driver_send_mgmt_frame,
+	.sta_add = ap_driver_sta_add,
+	.get_inact_sec = ap_driver_get_inact_sec,
+	.set_freq = ap_driver_set_freq,
+	.set_beacon = ap_driver_set_beacon,
+	.set_beacon_int = ap_driver_set_beacon_int,
+	.set_dtim_period = ap_driver_set_dtim_period,
+	.set_cts_protect = ap_driver_set_cts_protect,
+	.set_preamble = ap_driver_set_preamble,
+	.set_short_slot_time = ap_driver_set_short_slot_time,
+	.set_tx_queue_params = ap_driver_set_tx_queue_params,
+	.get_hw_feature_data = ap_driver_get_hw_feature_data,
 };
 
 struct hapd_driver_ops *hostapd_drivers[] =
@@ -173,6 +351,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	wpa_s->ap_iface = hapd_iface = os_zalloc(sizeof(*wpa_s->ap_iface));
 	if (hapd_iface == NULL)
 		return -1;
+	hapd_iface->owner = wpa_s;
 
 	wpa_s->ap_iface->conf = conf = hostapd_config_defaults();
 	if (conf == NULL) {

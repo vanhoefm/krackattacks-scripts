@@ -108,6 +108,7 @@ struct hostapd_data {
  * struct hostapd_iface - hostapd per-interface data structure
  */
 struct hostapd_iface {
+	void *owner;
 	char *config_fname;
 	struct hostapd_config *conf;
 

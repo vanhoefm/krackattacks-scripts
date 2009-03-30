@@ -210,6 +210,16 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	if (wpa_s->conf->wps_cred_processing == 1)
 		return 0;
 
+	wpa_hexdump_ascii(MSG_DEBUG, "WPS: SSID", cred->ssid, cred->ssid_len);
+	wpa_printf(MSG_DEBUG, "WPS: Authentication Type 0x%x",
+		   cred->auth_type);
+	wpa_printf(MSG_DEBUG, "WPS: Encryption Type 0x%x", cred->encr_type);
+	wpa_printf(MSG_DEBUG, "WPS: Network Key Index %d", cred->key_idx);
+	wpa_hexdump_key(MSG_DEBUG, "WPS: Network Key",
+			cred->key, cred->key_len);
+	wpa_printf(MSG_DEBUG, "WPS: MAC Address " MACSTR,
+		   MAC2STR(cred->mac_addr));
+
 	if (cred->auth_type != WPS_AUTH_OPEN &&
 	    cred->auth_type != WPS_AUTH_SHARED &&
 	    cred->auth_type != WPS_AUTH_WPAPSK &&

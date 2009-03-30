@@ -2334,6 +2334,19 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	}
 
 	if (!wps->wps->ap) {
+		/*
+		 * Update credential to only include a single authentication
+		 * and encryption type in case the AP configuration includes
+		 * more than one option.
+		 */
+		if (wps->cred.auth_type & WPS_AUTH_WPA2PSK)
+			wps->cred.auth_type = WPS_AUTH_WPA2PSK;
+		else if (wps->cred.auth_type & WPS_AUTH_WPAPSK)
+			wps->cred.auth_type = WPS_AUTH_WPAPSK;
+		if (wps->cred.encr_type & WPS_ENCR_AES)
+			wps->cred.encr_type = WPS_ENCR_AES;
+		else if (wps->cred.encr_type & WPS_ENCR_TKIP)
+			wps->cred.encr_type = WPS_ENCR_TKIP;
 		wpa_printf(MSG_DEBUG, "WPS: Update local configuration based "
 			   "on the modified AP configuration");
 		if (wps->wps->cred_cb)

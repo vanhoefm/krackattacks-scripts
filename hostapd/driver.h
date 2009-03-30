@@ -47,6 +47,7 @@ struct hostapd_sta_add_params {
 struct hostapd_freq_params {
 	int mode;
 	int freq;
+	int channel;
 	int ht_enabled;
 	int sec_channel_offset; /* 0 = HT40 disabled, -1 = HT40 enabled,
 				 * secondary channel below primary, 1 = HT40

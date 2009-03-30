@@ -234,6 +234,28 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	if (hapd->conf->wps_cred_processing == 1)
 		return 0;
 
+	os_memcpy(hapd->wps->ssid, cred->ssid, cred->ssid_len);
+	hapd->wps->ssid_len = cred->ssid_len;
+	hapd->wps->encr_types = cred->encr_type;
+	hapd->wps->auth_types = cred->auth_type;
+	if (cred->key == NULL) {
+		os_free(hapd->wps->network_key);
+		hapd->wps->network_key = NULL;
+		hapd->wps->network_key_len = 0;
+	} else {
+		if (hapd->wps->network_key == NULL ||
+		    hapd->wps->network_key_len < cred->key_len) {
+			hapd->wps->network_key_len = 0;
+			os_free(hapd->wps->network_key);
+			hapd->wps->network_key = os_malloc(cred->key_len);
+			if (hapd->wps->network_key == NULL)
+				return -1;
+		}
+		hapd->wps->network_key_len = cred->key_len;
+		os_memcpy(hapd->wps->network_key, cred->key, cred->key_len);
+	}
+	hapd->wps->wps_state = WPS_STATE_CONFIGURED;
+
 	len = os_strlen(hapd->iface->config_fname) + 5;
 	tmp_fname = os_malloc(len);
 	if (tmp_fname == NULL)

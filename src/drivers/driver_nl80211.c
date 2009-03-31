@@ -43,18 +43,15 @@
 
 struct wpa_driver_nl80211_data {
 	void *ctx;
-	int wext_event_sock;
+	int link_event_sock;
 	int ioctl_sock;
 	char ifname[IFNAMSIZ + 1];
 	int ifindex;
 	int if_removed;
 	struct wpa_driver_capa capa;
 	int has_capability;
-	int we_version_compiled;
 
 	int operstate;
-
-	char mlmedev[IFNAMSIZ + 1];
 
 	int scan_complete_events;
 
@@ -248,7 +245,7 @@ static int wpa_driver_nl80211_send_oper_ifla(
 	wpa_printf(MSG_DEBUG, "WEXT: Operstate: linkmode=%d, operstate=%d",
 		   linkmode, operstate);
 
-	ret = send(drv->wext_event_sock, &req, req.hdr.nlmsg_len, 0);
+	ret = send(drv->link_event_sock, &req, req.hdr.nlmsg_len, 0);
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "WEXT: Sending operstate IFLA failed: "
 			   "%s (assume operstate is not supported)",
@@ -300,76 +297,6 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 		return -1;
 	os_memcpy(ssid, drv->ssid, drv->ssid_len);
 	return drv->ssid_len;
-}
-
-
-static int wpa_driver_nl80211_event_wireless_michaelmicfailure(
-	void *ctx, const char *ev, size_t len)
-{
-	const struct iw_michaelmicfailure *mic;
-	union wpa_event_data data;
-
-	if (len < sizeof(*mic))
-		return -1;
-
-	mic = (const struct iw_michaelmicfailure *) ev;
-
-	wpa_printf(MSG_DEBUG, "Michael MIC failure wireless event: "
-		   "flags=0x%x src_addr=" MACSTR, mic->flags,
-		   MAC2STR(mic->src_addr.sa_data));
-
-	os_memset(&data, 0, sizeof(data));
-	data.michael_mic_failure.unicast = !(mic->flags & IW_MICFAILURE_GROUP);
-	wpa_supplicant_event(ctx, EVENT_MICHAEL_MIC_FAILURE, &data);
-
-	return 0;
-}
-
-
-static void wpa_driver_nl80211_event_wireless(struct wpa_driver_nl80211_data *drv,
-					   void *ctx, char *data, int len)
-{
-	struct iw_event iwe_buf, *iwe = &iwe_buf;
-	char *pos, *end, *custom;
-
-	pos = data;
-	end = data + len;
-
-	while (pos + IW_EV_LCP_LEN <= end) {
-		/* Event data may be unaligned, so make a local, aligned copy
-		 * before processing. */
-		os_memcpy(&iwe_buf, pos, IW_EV_LCP_LEN);
-		wpa_printf(MSG_DEBUG, "Wireless event: cmd=0x%x len=%d",
-			   iwe->cmd, iwe->len);
-		if (iwe->len <= IW_EV_LCP_LEN)
-			return;
-
-		custom = pos + IW_EV_POINT_LEN;
-		if (drv->we_version_compiled > 18 &&
-		    (iwe->cmd == IWEVMICHAELMICFAILURE ||
-		     iwe->cmd == IWEVCUSTOM ||
-		     iwe->cmd == IWEVASSOCREQIE ||
-		     iwe->cmd == IWEVASSOCRESPIE ||
-		     iwe->cmd == IWEVPMKIDCAND)) {
-			/* WE-19 removed the pointer from struct iw_point */
-			char *dpos = (char *) &iwe_buf.u.data.length;
-			int dlen = dpos - (char *) &iwe_buf;
-			os_memcpy(dpos, pos + IW_EV_LCP_LEN,
-				  sizeof(struct iw_event) - dlen);
-		} else {
-			os_memcpy(&iwe_buf, pos, sizeof(struct iw_event));
-			custom += IW_EV_POINT_OFF;
-		}
-
-		switch (iwe->cmd) {
-		case IWEVMICHAELMICFAILURE:
-			wpa_driver_nl80211_event_wireless_michaelmicfailure(
-				ctx, custom, iwe->u.data.length);
-			break;
-		}
-
-		pos += iwe->len;
-	}
 }
 
 
@@ -500,11 +427,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(struct wpa_driver_nl80211_data 
 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
-		if (attr->rta_type == IFLA_WIRELESS) {
-			wpa_driver_nl80211_event_wireless(
-				drv, ctx, ((char *) attr) + rta_len,
-				attr->rta_len - rta_len);
-		} else if (attr->rta_type == IFLA_IFNAME) {
+		if (attr->rta_type == IFLA_IFNAME) {
 			wpa_driver_nl80211_event_link(
 				drv, ctx,
 				((char *) attr) + rta_len,
@@ -549,7 +472,7 @@ static void wpa_driver_nl80211_event_rtm_dellink(struct wpa_driver_nl80211_data 
 }
 
 
-static void wpa_driver_nl80211_event_receive_wext(int sock, void *eloop_ctx,
+static void wpa_driver_nl80211_event_receive_link(int sock, void *eloop_ctx,
 						  void *sock_ctx)
 {
 	char buf[8192];
@@ -1053,9 +976,9 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		goto err6;
 	}
 
-	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_wext, drv,
+	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_link, drv,
 				 ctx);
-	drv->wext_event_sock = s;
+	drv->link_event_sock = s;
 
 	if (wpa_driver_nl80211_finish_drv_init(drv))
 		goto err7;
@@ -1063,8 +986,8 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 	return drv;
 
 err7:
-	eloop_unregister_read_sock(drv->wext_event_sock);
-	close(drv->wext_event_sock);
+	eloop_unregister_read_sock(drv->link_event_sock);
+	close(drv->link_event_sock);
 err6:
 	close(drv->ioctl_sock);
 err5:
@@ -1134,13 +1057,13 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
-	eloop_unregister_read_sock(drv->wext_event_sock);
+	eloop_unregister_read_sock(drv->link_event_sock);
 
 	if (wpa_driver_nl80211_get_ifflags(drv, &flags) == 0)
 		(void) wpa_driver_nl80211_set_ifflags(drv, flags & ~IFF_UP);
 	wpa_driver_nl80211_set_mode(drv, 0);
 
-	close(drv->wext_event_sock);
+	close(drv->link_event_sock);
 	close(drv->ioctl_sock);
 
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle));
@@ -1402,7 +1325,6 @@ static int wpa_driver_nl80211_get_range(void *priv)
 			   range->we_version_source,
 			   range->enc_capa);
 		drv->has_capability = 1;
-		drv->we_version_compiled = range->we_version_compiled;
 		if (range->enc_capa & IW_ENC_CAPA_WPA) {
 			drv->capa.key_mgmt |= WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 				WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK;

@@ -41,16 +41,6 @@
 #endif
 
 
-#ifndef NO_WEXT_COMPAT
-/*
- * Fall back to WEXT association, if the kernel does not support nl80211 MLME
- * commands. This is temporary backwards compatibility version that will be
- * removed at some point.
- */
-#define WEXT_COMPAT
-#endif /* NO_WEXT_COMPAT */
-
-
 struct wpa_driver_nl80211_data {
 	void *ctx;
 	int wext_event_sock;
@@ -61,17 +51,6 @@ struct wpa_driver_nl80211_data {
 	struct wpa_driver_capa capa;
 	int has_capability;
 	int we_version_compiled;
-
-#ifdef WEXT_COMPAT
-	u8 *assoc_req_ies;
-	size_t assoc_req_ies_len;
-	u8 *assoc_resp_ies;
-	size_t assoc_resp_ies_len;
-
-	/* for set_auth_alg fallback */
-	int use_crypt;
-	int auth_alg_fallback;
-#endif /* WEXT_COMPAT */
 
 	int operstate;
 
@@ -95,9 +74,6 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 					    void *timeout_ctx);
 static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 				       int mode);
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_flush_pmkid(void *priv);
-#endif /* WEXT_COMPAT */
 static int wpa_driver_nl80211_get_range(void *priv);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
@@ -310,23 +286,6 @@ static int wpa_driver_nl80211_set_auth_param(
 static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-#ifdef WEXT_COMPAT
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME)) {
-		struct iwreq iwr;
-		int ret = 0;
-
-		os_memset(&iwr, 0, sizeof(iwr));
-		os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-
-		if (ioctl(drv->ioctl_sock, SIOCGIWAP, &iwr) < 0) {
-			perror("ioctl[SIOCGIWAP]");
-			ret = -1;
-		}
-		os_memcpy(bssid, iwr.u.ap_addr.sa_data, ETH_ALEN);
-
-		return ret;
-	}
-#endif /* WEXT_COMPAT */
 	if (!drv->associated)
 		return -1;
 	os_memcpy(bssid, drv->bssid, ETH_ALEN);
@@ -334,205 +293,14 @@ static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
 }
 
 
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_set_bssid(void *priv, const u8 *bssid)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
-	int ret = 0;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.ap_addr.sa_family = ARPHRD_ETHER;
-	if (bssid)
-		os_memcpy(iwr.u.ap_addr.sa_data, bssid, ETH_ALEN);
-	else
-		os_memset(iwr.u.ap_addr.sa_data, 0, ETH_ALEN);
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWAP, &iwr) < 0) {
-		perror("ioctl[SIOCSIWAP]");
-		ret = -1;
-	}
-
-	return ret;
-}
-#endif /* WEXT_COMPAT */
-
-
 static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-#ifdef WEXT_COMPAT
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME)) {
-		struct iwreq iwr;
-		int ret = 0;
-
-		os_memset(&iwr, 0, sizeof(iwr));
-		os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-		iwr.u.essid.pointer = (caddr_t) ssid;
-		iwr.u.essid.length = 32;
-
-		if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
-			perror("ioctl[SIOCGIWESSID]");
-			ret = -1;
-		} else {
-			ret = iwr.u.essid.length;
-			if (ret > 32)
-				ret = 32;
-			/*
-			 * Some drivers include nul termination in the SSID, so
-			 * let's remove it here before further processing.
-			 * WE-21 changes this to explicitly require the length
-			 * _not_ to include nul termination.
-			 */
-			if (ret > 0 && ssid[ret - 1] == '\0' &&
-			    drv->we_version_compiled < 21)
-				ret--;
-		}
-
-		return ret;
-	}
-#endif /* WEXT_COMPAT */
 	if (!drv->associated)
 		return -1;
 	os_memcpy(ssid, drv->ssid, drv->ssid_len);
 	return drv->ssid_len;
 }
-
-
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_set_ssid(void *priv, const u8 *ssid,
-				       size_t ssid_len)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
-	int ret = 0;
-	char buf[33];
-
-	if (ssid_len > 32)
-		return -1;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	/* flags: 1 = ESSID is active, 0 = not (promiscuous) */
-	iwr.u.essid.flags = (ssid_len != 0);
-	os_memset(buf, 0, sizeof(buf));
-	os_memcpy(buf, ssid, ssid_len);
-	iwr.u.essid.pointer = (caddr_t) buf;
-	if (drv->we_version_compiled < 21) {
-		/* For historic reasons, set SSID length to include one extra
-		 * character, C string nul termination, even though SSID is
-		 * really an octet string that should not be presented as a C
-		 * string. Some Linux drivers decrement the length by one and
-		 * can thus end up missing the last octet of the SSID if the
-		 * length is not incremented here. WE-21 changes this to
-		 * explicitly require the length _not_ to include nul
-		 * termination. */
-		if (ssid_len)
-			ssid_len++;
-	}
-	iwr.u.essid.length = ssid_len;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWESSID, &iwr) < 0) {
-		perror("ioctl[SIOCSIWESSID]");
-		ret = -1;
-	}
-
-	return ret;
-}
-
-
-static int wpa_driver_nl80211_set_freq(void *priv, int freq)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
-	int ret = 0;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.freq.m = freq * 100000;
-	iwr.u.freq.e = 1;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWFREQ, &iwr) < 0) {
-		perror("ioctl[SIOCSIWFREQ]");
-		ret = -1;
-	}
-
-	return ret;
-}
-
-
-static void
-wpa_driver_nl80211_event_wireless_custom(void *ctx, char *custom)
-{
-	union wpa_event_data data;
-
-	wpa_printf(MSG_MSGDUMP, "WEXT: Custom wireless event: '%s'",
-		   custom);
-
-	os_memset(&data, 0, sizeof(data));
-	/* Host AP driver */
-	if (os_strncmp(custom, "MLME-MICHAELMICFAILURE.indication", 33) == 0) {
-		data.michael_mic_failure.unicast =
-			os_strstr(custom, " unicast ") != NULL;
-		/* TODO: parse parameters(?) */
-		wpa_supplicant_event(ctx, EVENT_MICHAEL_MIC_FAILURE, &data);
-	} else if (os_strncmp(custom, "ASSOCINFO(ReqIEs=", 17) == 0) {
-		char *spos;
-		int bytes;
-
-		spos = custom + 17;
-
-		bytes = strspn(spos, "0123456789abcdefABCDEF");
-		if (!bytes || (bytes & 1))
-			return;
-		bytes /= 2;
-
-		data.assoc_info.req_ies = os_malloc(bytes);
-		if (data.assoc_info.req_ies == NULL)
-			return;
-
-		data.assoc_info.req_ies_len = bytes;
-		hexstr2bin(spos, data.assoc_info.req_ies, bytes);
-
-		spos += bytes * 2;
-
-		data.assoc_info.resp_ies = NULL;
-		data.assoc_info.resp_ies_len = 0;
-
-		if (os_strncmp(spos, " RespIEs=", 9) == 0) {
-			spos += 9;
-
-			bytes = strspn(spos, "0123456789abcdefABCDEF");
-			if (!bytes || (bytes & 1))
-				goto done;
-			bytes /= 2;
-
-			data.assoc_info.resp_ies = os_malloc(bytes);
-			if (data.assoc_info.resp_ies == NULL)
-				goto done;
-
-			data.assoc_info.resp_ies_len = bytes;
-			hexstr2bin(spos, data.assoc_info.resp_ies, bytes);
-		}
-
-		wpa_supplicant_event(ctx, EVENT_ASSOCINFO, &data);
-
-	done:
-		os_free(data.assoc_info.resp_ies);
-		os_free(data.assoc_info.req_ies);
-#ifdef CONFIG_PEERKEY
-	} else if (os_strncmp(custom, "STKSTART.request=", 17) == 0) {
-		if (hwaddr_aton(custom + 17, data.stkstart.peer)) {
-			wpa_printf(MSG_DEBUG, "WEXT: unrecognized "
-				   "STKSTART.request '%s'", custom + 17);
-			return;
-		}
-		wpa_supplicant_event(ctx, EVENT_STKSTART, &data);
-#endif /* CONFIG_PEERKEY */
-	}
-}
-#endif /* WEXT_COMPAT */
 
 
 static int wpa_driver_nl80211_event_wireless_michaelmicfailure(
@@ -558,111 +326,11 @@ static int wpa_driver_nl80211_event_wireless_michaelmicfailure(
 }
 
 
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_event_wireless_pmkidcand(
-	struct wpa_driver_nl80211_data *drv, const char *ev, size_t len)
-{
-	const struct iw_pmkid_cand *cand;
-	union wpa_event_data data;
-	const u8 *addr;
-
-	if (len < sizeof(*cand))
-		return -1;
-
-	cand = (const struct iw_pmkid_cand *) ev;
-	addr = (const u8 *) cand->bssid.sa_data;
-
-	wpa_printf(MSG_DEBUG, "PMKID candidate wireless event: "
-		   "flags=0x%x index=%d bssid=" MACSTR, cand->flags,
-		   cand->index, MAC2STR(addr));
-
-	os_memset(&data, 0, sizeof(data));
-	os_memcpy(data.pmkid_candidate.bssid, addr, ETH_ALEN);
-	data.pmkid_candidate.index = cand->index;
-	data.pmkid_candidate.preauth = cand->flags & IW_PMKID_CAND_PREAUTH;
-	wpa_supplicant_event(drv->ctx, EVENT_PMKID_CANDIDATE, &data);
-
-	return 0;
-}
-
-
-static int wpa_driver_nl80211_event_wireless_assocreqie(
-	struct wpa_driver_nl80211_data *drv, const char *ev, int len)
-{
-	if (len < 0)
-		return -1;
-
-	wpa_hexdump(MSG_DEBUG, "AssocReq IE wireless event", (const u8 *) ev,
-		    len);
-	os_free(drv->assoc_req_ies);
-	drv->assoc_req_ies = os_malloc(len);
-	if (drv->assoc_req_ies == NULL) {
-		drv->assoc_req_ies_len = 0;
-		return -1;
-	}
-	os_memcpy(drv->assoc_req_ies, ev, len);
-	drv->assoc_req_ies_len = len;
-
-	return 0;
-}
-
-
-static int wpa_driver_nl80211_event_wireless_assocrespie(
-	struct wpa_driver_nl80211_data *drv, const char *ev, int len)
-{
-	if (len < 0)
-		return -1;
-
-	wpa_hexdump(MSG_DEBUG, "AssocResp IE wireless event", (const u8 *) ev,
-		    len);
-	os_free(drv->assoc_resp_ies);
-	drv->assoc_resp_ies = os_malloc(len);
-	if (drv->assoc_resp_ies == NULL) {
-		drv->assoc_resp_ies_len = 0;
-		return -1;
-	}
-	os_memcpy(drv->assoc_resp_ies, ev, len);
-	drv->assoc_resp_ies_len = len;
-
-	return 0;
-}
-
-
-static void wpa_driver_nl80211_event_assoc_ies(struct wpa_driver_nl80211_data *drv)
-{
-	union wpa_event_data data;
-
-	if (drv->assoc_req_ies == NULL && drv->assoc_resp_ies == NULL)
-		return;
-
-	os_memset(&data, 0, sizeof(data));
-	if (drv->assoc_req_ies) {
-		data.assoc_info.req_ies = drv->assoc_req_ies;
-		drv->assoc_req_ies = NULL;
-		data.assoc_info.req_ies_len = drv->assoc_req_ies_len;
-	}
-	if (drv->assoc_resp_ies) {
-		data.assoc_info.resp_ies = drv->assoc_resp_ies;
-		drv->assoc_resp_ies = NULL;
-		data.assoc_info.resp_ies_len = drv->assoc_resp_ies_len;
-	}
-
-	wpa_supplicant_event(drv->ctx, EVENT_ASSOCINFO, &data);
-
-	os_free(data.assoc_info.req_ies);
-	os_free(data.assoc_info.resp_ies);
-}
-#endif /* WEXT_COMPAT */
-
-
 static void wpa_driver_nl80211_event_wireless(struct wpa_driver_nl80211_data *drv,
 					   void *ctx, char *data, int len)
 {
 	struct iw_event iwe_buf, *iwe = &iwe_buf;
 	char *pos, *end, *custom;
-#ifdef WEXT_COMPAT
-	char *buf;
-#endif /* WEXT_COMPAT */
 
 	pos = data;
 	end = data + len;
@@ -694,66 +362,10 @@ static void wpa_driver_nl80211_event_wireless(struct wpa_driver_nl80211_data *dr
 		}
 
 		switch (iwe->cmd) {
-#ifdef WEXT_COMPAT
-		case SIOCGIWAP:
-			if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-				break;
-			wpa_printf(MSG_DEBUG, "Wireless event: new AP: "
-				   MACSTR,
-				   MAC2STR((u8 *) iwe->u.ap_addr.sa_data));
-			if (is_zero_ether_addr(
-				    (const u8 *) iwe->u.ap_addr.sa_data) ||
-			    os_memcmp(iwe->u.ap_addr.sa_data,
-				      "\x44\x44\x44\x44\x44\x44", ETH_ALEN) ==
-			    0) {
-				os_free(drv->assoc_req_ies);
-				drv->assoc_req_ies = NULL;
-				os_free(drv->assoc_resp_ies);
-				drv->assoc_resp_ies = NULL;
-				wpa_supplicant_event(ctx, EVENT_DISASSOC,
-						     NULL);
-			
-			} else {
-				wpa_driver_nl80211_event_assoc_ies(drv);
-				wpa_supplicant_event(ctx, EVENT_ASSOC, NULL);
-			}
-			break;
-#endif /* WEXT_COMPAT */
 		case IWEVMICHAELMICFAILURE:
 			wpa_driver_nl80211_event_wireless_michaelmicfailure(
 				ctx, custom, iwe->u.data.length);
 			break;
-#ifdef WEXT_COMPAT
-		case IWEVCUSTOM:
-			if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-				break;
-			if (custom + iwe->u.data.length > end)
-				return;
-			buf = os_malloc(iwe->u.data.length + 1);
-			if (buf == NULL)
-				return;
-			os_memcpy(buf, custom, iwe->u.data.length);
-			buf[iwe->u.data.length] = '\0';
-			wpa_driver_nl80211_event_wireless_custom(ctx, buf);
-			os_free(buf);
-			break;
-		case IWEVASSOCREQIE:
-			if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-				break;
-			wpa_driver_nl80211_event_wireless_assocreqie(
-				drv, custom, iwe->u.data.length);
-			break;
-		case IWEVASSOCRESPIE:
-			if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-				break;
-			wpa_driver_nl80211_event_wireless_assocrespie(
-				drv, custom, iwe->u.data.length);
-			break;
-		case IWEVPMKIDCAND:
-			wpa_driver_nl80211_event_wireless_pmkidcand(
-				drv, custom, iwe->u.data.length);
-			break;
-#endif /* WEXT_COMPAT */
 		}
 
 		pos += iwe->len;
@@ -1409,15 +1021,6 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 	ret = nl_get_multicast_id(drv, "nl80211", "mlme");
 	if (ret >= 0)
 		ret = nl_socket_add_membership(drv->nl_handle, ret);
-#ifdef WEXT_COMPAT
-	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
-			   "membership for mlme events: %d (%s)",
-			   ret, strerror(-ret));
-		/* Use WEXT for association request */
-	} else
-		drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
-#else /* WEXT_COMPAT */
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Could not add multicast "
 			   "membership for mlme events: %d (%s)",
@@ -1425,7 +1028,6 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		goto err4;
 	}
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
-#endif /* WEXT_COMPAT */
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle),
 				 wpa_driver_nl80211_event_receive, drv, ctx);
@@ -1504,13 +1106,6 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		}
 	}
 
-#ifdef WEXT_COMPAT
-	/*
-	 * Make sure that the driver does not have any obsolete PMKID entries.
-	 */
-	wpa_driver_nl80211_flush_pmkid(drv);
-#endif /* WEXT_COMPAT */
-
 	wpa_driver_nl80211_get_range(drv);
 
 	wpa_driver_nl80211_capa(drv);
@@ -1535,14 +1130,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
-#ifdef WEXT_COMPAT
-	/*
-	 * Clear possibly configured driver parameters in order to make it
-	 * easier to use the driver after wpa_supplicant has been terminated.
-	 */
-	(void) wpa_driver_nl80211_set_bssid(drv,
-					 (u8 *) "\x00\x00\x00\x00\x00\x00");
-#endif /* WEXT_COMPAT */
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED, 0);
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
@@ -1555,10 +1142,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	close(drv->wext_event_sock);
 	close(drv->ioctl_sock);
-#ifdef WEXT_COMPAT
-	os_free(drv->assoc_req_ies);
-	os_free(drv->assoc_resp_ies);
-#endif /* WEXT_COMPAT */
 
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle));
 	genl_family_put(drv->nl80211);
@@ -1846,20 +1429,6 @@ static int wpa_driver_nl80211_get_range(void *priv)
 }
 
 
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_set_wpa(void *priv, int enabled)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-		return 0;
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-
-	return wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_WPA_ENABLED,
-					      enabled);
-}
-#endif /* WEXT_COMPAT */
-
-
 static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 				      const u8 *addr, int key_idx,
 				      int set_tx, const u8 *seq,
@@ -1947,50 +1516,6 @@ nla_put_failure:
 }
 
 
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_set_countermeasures(void *priv,
-					       int enabled)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-		return 0;
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-	return wpa_driver_nl80211_set_auth_param(drv,
-					      IW_AUTH_TKIP_COUNTERMEASURES,
-					      enabled);
-}
-#endif /* WEXT_COMPAT */
-
-
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_mlme_wext(struct wpa_driver_nl80211_data *drv,
-					const u8 *addr, int cmd,
-					int reason_code)
-{
-	struct iwreq iwr;
-	struct iw_mlme mlme;
-	int ret = 0;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	os_memset(&mlme, 0, sizeof(mlme));
-	mlme.cmd = cmd;
-	mlme.reason_code = reason_code;
-	mlme.addr.sa_family = ARPHRD_ETHER;
-	os_memcpy(mlme.addr.sa_data, addr, ETH_ALEN);
-	iwr.u.data.pointer = (caddr_t) &mlme;
-	iwr.u.data.length = sizeof(mlme);
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWMLME, &iwr) < 0) {
-		perror("ioctl[SIOCSIWMLME]");
-		ret = -1;
-	}
-
-	return ret;
-}
-#endif /* WEXT_COMPAT */
-
-
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   const u8 *addr, int cmd, u16 reason_code)
 {
@@ -2027,12 +1552,6 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
-#ifdef WEXT_COMPAT
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
-		return wpa_driver_nl80211_mlme_wext(drv, addr, IW_MLME_DEAUTH,
-						    reason_code);
-#endif /* WEXT_COMPAT */
-
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
 				       reason_code);
 }
@@ -2043,225 +1562,9 @@ static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
-#ifdef WEXT_COMPAT
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
-		return wpa_driver_nl80211_mlme_wext(drv, addr,
-						    IW_MLME_DISASSOC,
-						    reason_code);
-#endif /* WEXT_COMPAT */
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISASSOCIATE,
 				       reason_code);
 }
-
-
-#ifdef WEXT_COMPAT
-static int wpa_driver_nl80211_set_gen_ie(void *priv, const u8 *ie,
-				      size_t ie_len)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
-	int ret = 0;
-
-	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME)
-		return 0;
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.data.pointer = (caddr_t) ie;
-	iwr.u.data.length = ie_len;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWGENIE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWGENIE]");
-		ret = -1;
-	}
-
-	return ret;
-}
-
-
-static int wpa_driver_nl80211_cipher2wext(int cipher)
-{
-	switch (cipher) {
-	case CIPHER_NONE:
-		return IW_AUTH_CIPHER_NONE;
-	case CIPHER_WEP40:
-		return IW_AUTH_CIPHER_WEP40;
-	case CIPHER_TKIP:
-		return IW_AUTH_CIPHER_TKIP;
-	case CIPHER_CCMP:
-		return IW_AUTH_CIPHER_CCMP;
-	case CIPHER_WEP104:
-		return IW_AUTH_CIPHER_WEP104;
-	default:
-		return 0;
-	}
-}
-
-
-static int wpa_driver_nl80211_keymgmt2wext(int keymgmt)
-{
-	switch (keymgmt) {
-	case KEY_MGMT_802_1X:
-	case KEY_MGMT_802_1X_NO_WPA:
-		return IW_AUTH_KEY_MGMT_802_1X;
-	case KEY_MGMT_PSK:
-		return IW_AUTH_KEY_MGMT_PSK;
-	default:
-		return 0;
-	}
-}
-
-
-static int
-wpa_driver_nl80211_auth_alg_fallback(struct wpa_driver_nl80211_data *drv,
-				  struct wpa_driver_associate_params *params)
-{
-	struct iwreq iwr;
-	int ret = 0;
-
-	wpa_printf(MSG_DEBUG, "WEXT: Driver did not support "
-		   "SIOCSIWAUTH for AUTH_ALG, trying SIOCSIWENCODE");
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	/* Just changing mode, not actual keys */
-	iwr.u.encoding.flags = 0;
-	iwr.u.encoding.pointer = (caddr_t) NULL;
-	iwr.u.encoding.length = 0;
-
-	/*
-	 * Note: IW_ENCODE_{OPEN,RESTRICTED} can be interpreted to mean two
-	 * different things. Here they are used to indicate Open System vs.
-	 * Shared Key authentication algorithm. However, some drivers may use
-	 * them to select between open/restricted WEP encrypted (open = allow
-	 * both unencrypted and encrypted frames; restricted = only allow
-	 * encrypted frames).
-	 */
-
-	if (!drv->use_crypt) {
-		iwr.u.encoding.flags |= IW_ENCODE_DISABLED;
-	} else {
-		if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
-			iwr.u.encoding.flags |= IW_ENCODE_OPEN;
-		if (params->auth_alg & AUTH_ALG_SHARED_KEY)
-			iwr.u.encoding.flags |= IW_ENCODE_RESTRICTED;
-	}
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWENCODE, &iwr) < 0) {
-		perror("ioctl[SIOCSIWENCODE]");
-		ret = -1;
-	}
-
-	return ret;
-}
-
-
-static int wpa_driver_nl80211_set_auth_alg(struct wpa_driver_nl80211_data *drv,
-					   int auth_alg)
-{
-	int algs = 0, res;
-
-	if (auth_alg & AUTH_ALG_OPEN_SYSTEM)
-		algs |= IW_AUTH_ALG_OPEN_SYSTEM;
-	if (auth_alg & AUTH_ALG_SHARED_KEY)
-		algs |= IW_AUTH_ALG_SHARED_KEY;
-	if (auth_alg & AUTH_ALG_LEAP)
-		algs |= IW_AUTH_ALG_LEAP;
-	if (algs == 0) {
-		/* at least one algorithm should be set */
-		algs = IW_AUTH_ALG_OPEN_SYSTEM;
-	}
-
-	res = wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_80211_AUTH_ALG,
-					     algs);
-	drv->auth_alg_fallback = res == -2;
-	return res;
-}
-
-
-static int wpa_driver_nl80211_associate_wext(
-	void *priv, struct wpa_driver_associate_params *params)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	int ret = 0;
-	int allow_unencrypted_eapol;
-	int value;
-
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-
-	wpa_driver_nl80211_set_mode(drv, params->mode);
-	wpa_driver_nl80211_set_auth_alg(drv, params->auth_alg);
-
-	/*
-	 * If the driver did not support SIOCSIWAUTH, fallback to
-	 * SIOCSIWENCODE here.
-	 */
-	if (drv->auth_alg_fallback &&
-	    wpa_driver_nl80211_auth_alg_fallback(drv, params) < 0)
-		ret = -1;
-
-	if (!params->bssid &&
-	    wpa_driver_nl80211_set_bssid(drv, NULL) < 0)
-		ret = -1;
-
-	/* TODO: should consider getting wpa version and cipher/key_mgmt suites
-	 * from configuration, not from here, where only the selected suite is
-	 * available */
-	if (wpa_driver_nl80211_set_gen_ie(drv, params->wpa_ie, params->wpa_ie_len)
-	    < 0)
-		ret = -1;
-	if (params->wpa_ie == NULL || params->wpa_ie_len == 0)
-		value = IW_AUTH_WPA_VERSION_DISABLED;
-	else if (params->wpa_ie[0] == WLAN_EID_RSN)
-		value = IW_AUTH_WPA_VERSION_WPA2;
-	else
-		value = IW_AUTH_WPA_VERSION_WPA;
-	if (wpa_driver_nl80211_set_auth_param(drv,
-					   IW_AUTH_WPA_VERSION, value) < 0)
-		ret = -1;
-	value = wpa_driver_nl80211_cipher2wext(params->pairwise_suite);
-	if (wpa_driver_nl80211_set_auth_param(drv,
-					   IW_AUTH_CIPHER_PAIRWISE, value) < 0)
-		ret = -1;
-	value = wpa_driver_nl80211_cipher2wext(params->group_suite);
-	if (wpa_driver_nl80211_set_auth_param(drv,
-					   IW_AUTH_CIPHER_GROUP, value) < 0)
-		ret = -1;
-	value = wpa_driver_nl80211_keymgmt2wext(params->key_mgmt_suite);
-	if (wpa_driver_nl80211_set_auth_param(drv,
-					   IW_AUTH_KEY_MGMT, value) < 0)
-		ret = -1;
-	value = params->key_mgmt_suite != KEY_MGMT_NONE ||
-		params->pairwise_suite != CIPHER_NONE ||
-		params->group_suite != CIPHER_NONE ||
-		params->wpa_ie_len;
-	if (wpa_driver_nl80211_set_auth_param(drv,
-					   IW_AUTH_PRIVACY_INVOKED, value) < 0)
-		ret = -1;
-
-	/* Allow unencrypted EAPOL messages even if pairwise keys are set when
-	 * not using WPA. IEEE 802.1X specifies that these frames are not
-	 * encrypted, but WPA encrypts them when pairwise keys are in use. */
-	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
-	    params->key_mgmt_suite == KEY_MGMT_PSK)
-		allow_unencrypted_eapol = 0;
-	else
-		allow_unencrypted_eapol = 1;
-	
-	if (wpa_driver_nl80211_set_auth_param(drv,
-					   IW_AUTH_RX_UNENCRYPTED_EAPOL,
-					   allow_unencrypted_eapol) < 0)
-		ret = -1;
-	if (params->freq && wpa_driver_nl80211_set_freq(drv, params->freq) < 0)
-		ret = -1;
-	if (wpa_driver_nl80211_set_ssid(drv, params->ssid, params->ssid_len) < 0)
-		ret = -1;
-	if (params->bssid &&
-	    wpa_driver_nl80211_set_bssid(drv, params->bssid) < 0)
-		ret = -1;
-
-	return ret;
-}
-#endif /* WEXT_COMPAT */
 
 
 static int wpa_driver_nl80211_authenticate(
@@ -2392,11 +1695,6 @@ static int wpa_driver_nl80211_associate(
 
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,
 					  params->drop_unencrypted);
-
-#ifdef WEXT_COMPAT
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
-		return wpa_driver_nl80211_associate_wext(drv, params);
-#endif /* WEXT_COMPAT */
 
 	drv->associated = 0;
 
@@ -2533,62 +1831,6 @@ try_again:
 }
 
 
-#ifdef WEXT_COMPAT
-
-static int wpa_driver_nl80211_pmksa(struct wpa_driver_nl80211_data *drv,
-				 u32 cmd, const u8 *bssid, const u8 *pmkid)
-{
-	struct iwreq iwr;
-	struct iw_pmksa pmksa;
-	int ret = 0;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	os_memset(&pmksa, 0, sizeof(pmksa));
-	pmksa.cmd = cmd;
-	pmksa.bssid.sa_family = ARPHRD_ETHER;
-	if (bssid)
-		os_memcpy(pmksa.bssid.sa_data, bssid, ETH_ALEN);
-	if (pmkid)
-		os_memcpy(pmksa.pmkid, pmkid, IW_PMKID_LEN);
-	iwr.u.data.pointer = (caddr_t) &pmksa;
-	iwr.u.data.length = sizeof(pmksa);
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWPMKSA, &iwr) < 0) {
-		if (errno != EOPNOTSUPP)
-			perror("ioctl[SIOCSIWPMKSA]");
-		ret = -1;
-	}
-
-	return ret;
-}
-
-
-static int wpa_driver_nl80211_add_pmkid(void *priv, const u8 *bssid,
-				     const u8 *pmkid)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	return wpa_driver_nl80211_pmksa(drv, IW_PMKSA_ADD, bssid, pmkid);
-}
-
-
-static int wpa_driver_nl80211_remove_pmkid(void *priv, const u8 *bssid,
-		 			const u8 *pmkid)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	return wpa_driver_nl80211_pmksa(drv, IW_PMKSA_REMOVE, bssid, pmkid);
-}
-
-
-static int wpa_driver_nl80211_flush_pmkid(void *priv)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	return wpa_driver_nl80211_pmksa(drv, IW_PMKSA_FLUSH, NULL, NULL);
-}
-
-#endif /* WEXT_COMPAT */
-
-
 static int wpa_driver_nl80211_get_capa(void *priv,
 				       struct wpa_driver_capa *capa)
 {
@@ -2629,11 +1871,4 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_country = wpa_driver_nl80211_set_country,
-#ifdef WEXT_COMPAT
-	.set_wpa = wpa_driver_nl80211_set_wpa,
-	.set_countermeasures = wpa_driver_nl80211_set_countermeasures,
-	.add_pmkid = wpa_driver_nl80211_add_pmkid,
-	.remove_pmkid = wpa_driver_nl80211_remove_pmkid,
-	.flush_pmkid = wpa_driver_nl80211_flush_pmkid,
-#endif /* WEXT_COMPAT */
 };

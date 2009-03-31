@@ -71,7 +71,6 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 					    void *timeout_ctx);
 static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 				       int mode);
-static int wpa_driver_nl80211_get_range(void *priv);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 
@@ -872,6 +871,16 @@ static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	if (wpa_driver_nl80211_get_info(drv, &info))
 		return;
 	drv->has_capability = 1;
+	/* For now, assume TKIP, CCMP, WPA, WPA2 are supported */
+	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
+	drv->capa.enc = WPA_DRIVER_CAPA_ENC_WEP40 |
+		WPA_DRIVER_CAPA_ENC_WEP104 |
+		WPA_DRIVER_CAPA_ENC_TKIP |
+		WPA_DRIVER_CAPA_ENC_CCMP;
+
 	drv->capa.max_scan_ssids = info.max_scan_ssids;
 	if (info.ap_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
@@ -1028,8 +1037,6 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			return -1;
 		}
 	}
-
-	wpa_driver_nl80211_get_range(drv);
 
 	wpa_driver_nl80211_capa(drv);
 
@@ -1285,69 +1292,6 @@ nla_put_failure:
 	nlmsg_free(msg);
 	wpa_scan_results_free(res);
 	return NULL;
-}
-
-
-static int wpa_driver_nl80211_get_range(void *priv)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iw_range *range;
-	struct iwreq iwr;
-	int minlen;
-	size_t buflen;
-
-	/*
-	 * Use larger buffer than struct iw_range in order to allow the
-	 * structure to grow in the future.
-	 */
-	buflen = sizeof(struct iw_range) + 500;
-	range = os_zalloc(buflen);
-	if (range == NULL)
-		return -1;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.data.pointer = (caddr_t) range;
-	iwr.u.data.length = buflen;
-
-	minlen = ((char *) &range->enc_capa) - (char *) range +
-		sizeof(range->enc_capa);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIWRANGE, &iwr) < 0) {
-		perror("ioctl[SIOCGIWRANGE]");
-		os_free(range);
-		return -1;
-	} else if (iwr.u.data.length >= minlen &&
-		   range->we_version_compiled >= 18) {
-		wpa_printf(MSG_DEBUG, "SIOCGIWRANGE: WE(compiled)=%d "
-			   "WE(source)=%d enc_capa=0x%x",
-			   range->we_version_compiled,
-			   range->we_version_source,
-			   range->enc_capa);
-		drv->has_capability = 1;
-		if (range->enc_capa & IW_ENC_CAPA_WPA) {
-			drv->capa.key_mgmt |= WPA_DRIVER_CAPA_KEY_MGMT_WPA |
-				WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK;
-		}
-		if (range->enc_capa & IW_ENC_CAPA_WPA2) {
-			drv->capa.key_mgmt |= WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
-				WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
-		}
-		drv->capa.enc |= WPA_DRIVER_CAPA_ENC_WEP40 |
-			WPA_DRIVER_CAPA_ENC_WEP104;
-		if (range->enc_capa & IW_ENC_CAPA_CIPHER_TKIP)
-			drv->capa.enc |= WPA_DRIVER_CAPA_ENC_TKIP;
-		if (range->enc_capa & IW_ENC_CAPA_CIPHER_CCMP)
-			drv->capa.enc |= WPA_DRIVER_CAPA_ENC_CCMP;
-		wpa_printf(MSG_DEBUG, "  capabilities: key_mgmt 0x%x enc 0x%x",
-			   drv->capa.key_mgmt, drv->capa.enc);
-	} else {
-		wpa_printf(MSG_DEBUG, "SIOCGIWRANGE: too old (short) data - "
-			   "assuming WPA is not supported");
-	}
-
-	os_free(range);
-	return 0;
 }
 
 

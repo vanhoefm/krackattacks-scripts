@@ -1616,7 +1616,7 @@ nla_put_failure:
 
 
 /**
- * wpa_driver_nl80211_set_mode - Set wireless mode (infra/adhoc), SIOCSIWMODE
+ * wpa_driver_nl80211_set_mode - Set wireless mode (infra/adhoc)
  * @drv: Pointer to private driver data from wpa_driver_nl80211_init()
  * @mode: 0 = infra/BSS (associate with an AP), 1 = adhoc/IBSS
  * Returns: 0 on success, -1 on failure

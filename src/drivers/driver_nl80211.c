@@ -1342,6 +1342,11 @@ static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 		case WPA_ALG_CCMP:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC04);
 			break;
+#ifdef CONFIG_IEEE80211W
+		case WPA_ALG_IGTK:
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC06);
+			break;
+#endif /* CONFIG_IEEE80211W */
 		default:
 			nlmsg_free(msg);
 			return -1;

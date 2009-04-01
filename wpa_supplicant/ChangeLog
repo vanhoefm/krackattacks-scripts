@@ -22,6 +22,9 @@ ChangeLog for wpa_supplicant
 	  and association commands (e.g., mac80211-based Linux drivers with
 	  nl80211; SME in wpa_supplicant); this allows over-the-air FT protocol
 	  to be used (IEEE 802.11r)
+	* fixed SHA-256 based key derivation function to match with the
+	  standard when using CCMP (for IEEE 802.11r and IEEE 802.11w)
+	  (note: this breaks interoperability with previous version) [Bug 307]
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

@@ -1405,14 +1405,15 @@ SM_STATE(WPA_PTK, PTKSTART)
 static int wpa_derive_ptk(struct wpa_state_machine *sm, const u8 *pmk,
 			  struct wpa_ptk *ptk)
 {
+	size_t ptk_len = sm->pairwise == WPA_CIPHER_CCMP ? 48 : 64;
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
-		return wpa_auth_derive_ptk_ft(sm, pmk, ptk);
+		return wpa_auth_derive_ptk_ft(sm, pmk, ptk, ptk_len);
 #endif /* CONFIG_IEEE80211R */
 
 	wpa_pmk_to_ptk(pmk, PMK_LEN, "Pairwise key expansion",
 		       sm->wpa_auth->addr, sm->addr, sm->ANonce, sm->SNonce,
-		       (u8 *) ptk, sizeof(*ptk),
+		       (u8 *) ptk, ptk_len,
 		       wpa_key_mgmt_sha256(sm->wpa_key_mgmt));
 
 	return 0;

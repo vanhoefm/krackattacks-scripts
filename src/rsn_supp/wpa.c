@@ -360,14 +360,15 @@ static int wpa_derive_ptk(struct wpa_sm *sm, const unsigned char *src_addr,
 			  const struct wpa_eapol_key *key,
 			  struct wpa_ptk *ptk)
 {
+	size_t ptk_len = sm->pairwise_cipher == WPA_CIPHER_CCMP ? 48 : 64;
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt))
-		return wpa_derive_ptk_ft(sm, src_addr, key, ptk);
+		return wpa_derive_ptk_ft(sm, src_addr, key, ptk, ptk_len);
 #endif /* CONFIG_IEEE80211R */
 
 	wpa_pmk_to_ptk(sm->pmk, sm->pmk_len, "Pairwise key expansion",
 		       sm->own_addr, sm->bssid, sm->snonce, key->key_nonce,
-		       (u8 *) ptk, sizeof(*ptk),
+		       (u8 *) ptk, ptk_len,
 		       wpa_key_mgmt_sha256(sm->key_mgmt));
 	return 0;
 }

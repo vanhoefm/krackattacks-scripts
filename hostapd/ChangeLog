@@ -15,6 +15,9 @@ ChangeLog for hostapd
 	* fixed TNC with EAP-TTLS
 	* fixed IEEE 802.11r key derivation function to match with the standard
 	  (note: this breaks interoperability with previous version) [Bug 303]
+	* fixed SHA-256 based key derivation function to match with the
+	  standard when using CCMP (for IEEE 802.11r and IEEE 802.11w)
+	  (note: this breaks interoperability with previous version) [Bug 307]
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

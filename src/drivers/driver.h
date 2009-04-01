@@ -1299,7 +1299,16 @@ typedef enum wpa_event_type {
 	 * to receiving deauthenticate frame from the AP or when sending that
 	 * frame to the current AP.
 	 */
-	EVENT_DEAUTH
+	EVENT_DEAUTH,
+
+	/**
+	 * EVENT_ASSOC_REJECT - Association rejected
+	 *
+	 * This event should be called when (re)association attempt has been
+	 * rejected by the AP. Information about authentication result is
+	 * included in union wpa_event_data::assoc_reject.
+	 */
+	EVENT_ASSOC_REJECT
 } wpa_event_type;
 
 
@@ -1448,6 +1457,34 @@ union wpa_event_data {
 		const u8 *ies;
 		size_t ies_len;
 	} auth;
+
+	/**
+	 * struct assoc_reject - Data for EVENT_ASSOC_REJECT events
+	 */
+	struct assoc_reject {
+		/**
+		 * resp_ies - (Re)Association Response IEs
+		 *
+		 * Optional association data from the driver. This data is not
+		 * required WPA, but may be useful for some protocols and as
+		 * such, should be reported if this is available to the driver
+		 * interface.
+		 *
+		 * This should start with the first IE (fixed fields before IEs
+		 * are not included).
+		 */
+		u8 *resp_ies;
+
+		/**
+		 * resp_ies_len - Length of resp_ies in bytes
+		 */
+		size_t resp_ies_len;
+
+		/**
+		 * status_code - Status Code from (Re)association Response
+		 */
+		u16 status_code;
+	} assoc_reject;
 };
 
 /**

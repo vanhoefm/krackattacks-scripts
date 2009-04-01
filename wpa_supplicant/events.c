@@ -1226,6 +1226,9 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 		wpa_supplicant_event_ibss_rsn_start(wpa_s, data);
 		break;
 #endif /* CONFIG_IBSS_RSN */
+	case EVENT_ASSOC_REJECT:
+		sme_event_assoc_reject(wpa_s, data);
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

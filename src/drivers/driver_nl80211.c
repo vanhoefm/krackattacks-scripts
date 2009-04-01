@@ -586,10 +586,16 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 
 	status = le_to_host16(mgmt->u.assoc_resp.status_code);
 	if (status != WLAN_STATUS_SUCCESS) {
-		wpa_printf(MSG_DEBUG, "nl80211: Association failed: status "
-			   "code %d", status);
-		/* TODO: notify SME so that things like SA Query and comeback
-		 * time can be implemented */
+		os_memset(&event, 0, sizeof(event));
+		if (len > 24 + sizeof(mgmt->u.assoc_resp)) {
+			event.assoc_reject.resp_ies =
+				(u8 *) mgmt->u.assoc_resp.variable;
+			event.assoc_reject.resp_ies_len =
+				len - 24 - sizeof(mgmt->u.assoc_resp);
+		}
+		event.assoc_reject.status_code = status;
+
+		wpa_supplicant_event(drv->ctx, EVENT_ASSOC_REJECT, &event);
 		return;
 	}
 
@@ -600,7 +606,7 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	if (len > 24 + sizeof(mgmt->u.assoc_resp)) {
 		event.assoc_info.resp_ies = (u8 *) mgmt->u.assoc_resp.variable;
 		event.assoc_info.resp_ies_len =
-			len - 24 - sizeof(mgmt->u.assoc_req);
+			len - 24 - sizeof(mgmt->u.assoc_resp);
 	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);

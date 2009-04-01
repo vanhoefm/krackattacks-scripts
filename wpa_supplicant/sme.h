@@ -22,6 +22,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data);
 int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 		      const u8 *ies, size_t ies_len);
+void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
+			    union wpa_event_data *data);
 
 #else /* CONFIG_SME */
 
@@ -41,6 +43,13 @@ static inline int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 {
 	return -1;
 }
+
+
+static inline void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
+					  union wpa_event_data *data)
+{
+}
+
 #endif /* CONFIG_SME */
 
 #endif /* SME_H */

@@ -335,3 +335,21 @@ int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 	wpa_s->sme.ft_ies_len = ies_len;
 	return 0;
 }
+
+
+void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
+			    union wpa_event_data *data)
+{
+	wpa_printf(MSG_DEBUG, "SME: Association failed: status code %d",
+		   data->assoc_reject.status_code);
+
+	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+	os_memset(wpa_s->bssid, 0, ETH_ALEN);
+	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+
+	/*
+	 * TODO: if more than one possible AP is available in scan results,
+	 * could try the other ones before requesting a new scan.
+	 */
+	wpa_supplicant_req_scan(wpa_s, 5, 0);
+}

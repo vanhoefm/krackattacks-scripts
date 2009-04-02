@@ -2269,28 +2269,29 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 
 	fclose(f);
 
-	if (bss->individual_wep_key_len == 0) {
-		/* individual keys are not use; can use key idx0 for broadcast
-		 * keys */
-		bss->broadcast_key_idx_min = 0;
-	}
-
-	/* Select group cipher based on the enabled pairwise cipher suites */
-	pairwise = 0;
-	if (bss->wpa & 1)
-		pairwise |= bss->wpa_pairwise;
-	if (bss->wpa & 2) {
-		if (bss->rsn_pairwise == 0)
-			bss->rsn_pairwise = bss->wpa_pairwise;
-		pairwise |= bss->rsn_pairwise;
-	}
-	if (pairwise & WPA_CIPHER_TKIP)
-		bss->wpa_group = WPA_CIPHER_TKIP;
-	else
-		bss->wpa_group = WPA_CIPHER_CCMP;
-
 	for (i = 0; i < conf->num_bss; i++) {
 		bss = &conf->bss[i];
+
+		if (bss->individual_wep_key_len == 0) {
+			/* individual keys are not use; can use key idx0 for
+			 * broadcast keys */
+			bss->broadcast_key_idx_min = 0;
+		}
+
+		/* Select group cipher based on the enabled pairwise cipher
+		 * suites */
+		pairwise = 0;
+		if (bss->wpa & 1)
+			pairwise |= bss->wpa_pairwise;
+		if (bss->wpa & 2) {
+			if (bss->rsn_pairwise == 0)
+				bss->rsn_pairwise = bss->wpa_pairwise;
+			pairwise |= bss->rsn_pairwise;
+		}
+		if (pairwise & WPA_CIPHER_TKIP)
+			bss->wpa_group = WPA_CIPHER_TKIP;
+		else
+			bss->wpa_group = WPA_CIPHER_CCMP;
 
 		bss->radius->auth_server = bss->radius->auth_servers;
 		bss->radius->acct_server = bss->radius->acct_servers;

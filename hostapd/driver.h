@@ -217,6 +217,8 @@ struct hapd_driver_ops {
 	(*get_neighbor_bss)(void *priv, size_t *num);
 };
 
+struct sta_info;
+
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,

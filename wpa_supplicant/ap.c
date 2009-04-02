@@ -19,6 +19,9 @@
 #include "../hostapd/hostapd.h"
 #include "../hostapd/config.h"
 #include "../hostapd/driver.h"
+#ifdef NEED_MLME
+#include "../hostapd/ieee802_11.h"
+#endif /* NEED_MLME */
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"
@@ -412,3 +415,35 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 	hostapd_interface_deinit(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
 }
+
+
+void ap_tx_status(void *ctx, const u8 *addr,
+		  const u8 *buf, size_t len, int ack)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	hostapd_tx_status(wpa_s->ap_iface->bss[0], addr, buf, len, ack);
+}
+
+
+void ap_rx_from_unknown_sta(void *ctx, const u8 *addr)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	ap_rx_from_unknown_sta(wpa_s->ap_iface->bss[0], addr);
+}
+
+
+#ifdef NEED_MLME
+void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
+		struct hostapd_frame_info *fi)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	ieee802_11_mgmt(wpa_s->ap_iface->bss[0], buf, len, stype, fi);
+}
+
+
+void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	ieee802_11_mgmt_cb(wpa_s->ap_iface->bss[0], buf, len, stype, ok);
+}
+#endif /* NEED_MLME */

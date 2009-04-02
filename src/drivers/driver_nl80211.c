@@ -26,6 +26,21 @@
 #include "eloop.h"
 #include "ieee802_11_defs.h"
 
+#ifdef CONFIG_AP
+
+#include <netpacket/packet.h>
+#include <linux/filter.h>
+#include "radiotap.h"
+#include "radiotap_iter.h"
+#include "../hostapd/driver.h"
+#include "../hostapd/hostapd_defs.h"
+
+#ifndef ETH_P_ALL
+#define ETH_P_ALL 0x0003
+#endif
+
+#endif /* CONFIG_AP */
+
 #ifndef IFF_LOWER_UP
 #define IFF_LOWER_UP   0x10000         /* driver signals L1 up         */
 #endif
@@ -68,6 +83,8 @@ struct wpa_driver_nl80211_data {
 #ifdef CONFIG_AP
 	int beacon_int;
 	unsigned int beacon_set:1;
+	int monitor_sock;
+	int monitor_ifidx;
 #endif /* CONFIG_AP */
 };
 
@@ -78,6 +95,11 @@ static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 				       int mode);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
+
+#ifdef CONFIG_AP
+static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
+				 int ifidx);
+#endif /* CONFIG_AP */
 
 
 /* nl80211 code */
@@ -916,6 +938,10 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		return NULL;
 	drv->ctx = ctx;
 	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
+#ifdef CONFIG_AP
+	drv->monitor_ifidx = -1;
+	drv->monitor_sock = -1;
+#endif /* CONFIG_AP */
 
 	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
 	if (drv->nl_cb == NULL) {
@@ -1068,6 +1094,15 @@ static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	int flags;
+
+#ifdef CONFIG_AP
+	if (drv->monitor_ifidx >= 0)
+		nl80211_remove_iface(drv, drv->monitor_ifidx);
+	if (drv->monitor_sock >= 0) {
+		eloop_unregister_read_sock(drv->monitor_sock);
+		close(drv->monitor_sock);
+	}
+#endif /* CONFIG_AP */
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
@@ -1619,12 +1654,512 @@ nla_put_failure:
 }
 
 
+static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
+				 int ifidx)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto nla_put_failure;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_DEL_INTERFACE, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifidx);
+
+	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+		return;
+ nla_put_failure:
+	wpa_printf(MSG_ERROR, "Failed to remove interface (ifidx=%d).\n",
+		   ifidx);
+}
+
+
+static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
+				const char *ifname, enum nl80211_iftype iftype)
+{
+	struct nl_msg *msg, *flags = NULL;
+	int ifidx;
+	int ret = -ENOBUFS;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_NEW_INTERFACE, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_STRING(msg, NL80211_ATTR_IFNAME, ifname);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, iftype);
+
+	if (iftype == NL80211_IFTYPE_MONITOR) {
+		int err;
+
+		flags = nlmsg_alloc();
+		if (!flags)
+			goto nla_put_failure;
+
+		NLA_PUT_FLAG(flags, NL80211_MNTR_FLAG_COOK_FRAMES);
+
+		err = nla_put_nested(msg, NL80211_ATTR_MNTR_FLAGS, flags);
+
+		nlmsg_free(flags);
+
+		if (err)
+			goto nla_put_failure;
+	}
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+ nla_put_failure:
+		wpa_printf(MSG_ERROR, "Failed to create interface %s.",
+			   ifname);
+		return ret;
+	}
+
+	ifidx = if_nametoindex(ifname);
+
+	if (ifidx <= 0)
+		return -1;
+
+	return ifidx;
+}
+
+
+enum ieee80211_msg_type {
+	ieee80211_msg_normal = 0,
+	ieee80211_msg_tx_callback_ack = 1,
+	ieee80211_msg_tx_callback_fail = 2,
+};
+
+
+void ap_tx_status(void *ctx, const u8 *addr,
+		  const u8 *buf, size_t len, int ack);
+void ap_rx_from_unknown_sta(void *ctx, const u8 *addr);
+void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
+		struct hostapd_frame_info *fi);
+void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok);
+
+
+static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
+{
+	struct ieee80211_hdr *hdr;
+	u16 fc, type, stype;
+
+	hdr = (struct ieee80211_hdr *) buf;
+	fc = le_to_host16(hdr->frame_control);
+
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	switch (type) {
+	case WLAN_FC_TYPE_MGMT:
+		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
+			   ok ? "ACK" : "fail");
+		ap_mgmt_tx_cb(ctx, buf, len, stype, ok);
+		break;
+	case WLAN_FC_TYPE_CTRL:
+		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
+			   ok ? "ACK" : "fail");
+		break;
+	case WLAN_FC_TYPE_DATA:
+		ap_tx_status(ctx, hdr->addr1, buf, len, ok);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "unknown TX callback frame type %d",
+			   type);
+		break;
+	}
+}
+
+
+static void handle_frame(struct wpa_driver_nl80211_data *drv,
+			 u8 *buf, size_t len,
+			 struct hostapd_frame_info *hfi,
+			 enum ieee80211_msg_type msg_type)
+{
+	struct ieee80211_hdr *hdr;
+	u16 fc, type, stype;
+	size_t data_len = len;
+
+	/*
+	 * PS-Poll frames are 16 bytes. All other frames are
+	 * 24 bytes or longer.
+	 */
+	if (len < 16)
+		return;
+
+	hdr = (struct ieee80211_hdr *) buf;
+	fc = le_to_host16(hdr->frame_control);
+
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	switch (type) {
+	case WLAN_FC_TYPE_DATA:
+		if (len < 24)
+			return;
+		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
+		case WLAN_FC_TODS:
+			break;
+		case WLAN_FC_FROMDS:
+			break;
+		default:
+			/* discard */
+			return;
+		}
+		break;
+	case WLAN_FC_TYPE_CTRL:
+		/* discard non-ps-poll frames */
+		if (stype != WLAN_FC_STYPE_PSPOLL)
+			return;
+		break;
+	case WLAN_FC_TYPE_MGMT:
+		break;
+	default:
+		/* discard */
+		return;
+	}
+
+	switch (msg_type) {
+	case ieee80211_msg_normal:
+		/* continue processing */
+		break;
+	case ieee80211_msg_tx_callback_ack:
+		handle_tx_callback(drv->ctx, buf, data_len, 1);
+		return;
+	case ieee80211_msg_tx_callback_fail:
+		handle_tx_callback(drv->ctx, buf, data_len, 0);
+		return;
+	}
+
+	switch (type) {
+	case WLAN_FC_TYPE_MGMT:
+		if (stype != WLAN_FC_STYPE_BEACON &&
+		    stype != WLAN_FC_STYPE_PROBE_REQ)
+			wpa_printf(MSG_MSGDUMP, "MGMT");
+		ap_mgmt_rx(drv->ctx, buf, data_len, stype, hfi);
+		break;
+	case WLAN_FC_TYPE_CTRL:
+		/* can only get here with PS-Poll frames */
+		wpa_printf(MSG_DEBUG, "CTRL");
+		ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
+		break;
+	case WLAN_FC_TYPE_DATA:
+		ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
+		break;
+	}
+}
+
+
+static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	struct wpa_driver_nl80211_data *drv = eloop_ctx;
+	int len;
+	unsigned char buf[3000];
+	struct ieee80211_radiotap_iterator iter;
+	int ret;
+	struct hostapd_frame_info hfi;
+	int injected = 0, failed = 0, msg_type, rxflags = 0;
+
+	len = recv(sock, buf, sizeof(buf), 0);
+	if (len < 0) {
+		perror("recv");
+		return;
+	}
+
+	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len)) {
+		printf("received invalid radiotap frame\n");
+		return;
+	}
+
+	memset(&hfi, 0, sizeof(hfi));
+
+	while (1) {
+		ret = ieee80211_radiotap_iterator_next(&iter);
+		if (ret == -ENOENT)
+			break;
+		if (ret) {
+			printf("received invalid radiotap frame (%d)\n", ret);
+			return;
+		}
+		switch (iter.this_arg_index) {
+		case IEEE80211_RADIOTAP_FLAGS:
+			if (*iter.this_arg & IEEE80211_RADIOTAP_F_FCS)
+				len -= 4;
+			break;
+		case IEEE80211_RADIOTAP_RX_FLAGS:
+			rxflags = 1;
+			break;
+		case IEEE80211_RADIOTAP_TX_FLAGS:
+			injected = 1;
+			failed = le_to_host16((*(uint16_t *) iter.this_arg)) &
+					IEEE80211_RADIOTAP_F_TX_FAIL;
+			break;
+		case IEEE80211_RADIOTAP_DATA_RETRIES:
+			break;
+		case IEEE80211_RADIOTAP_CHANNEL:
+			/* TODO convert from freq/flags to channel number
+			hfi.channel = XXX;
+			hfi.phytype = XXX;
+			 */
+			break;
+		case IEEE80211_RADIOTAP_RATE:
+			hfi.datarate = *iter.this_arg * 5;
+			break;
+		case IEEE80211_RADIOTAP_DB_ANTSIGNAL:
+			hfi.ssi_signal = *iter.this_arg;
+			break;
+		}
+	}
+
+	if (rxflags && injected)
+		return;
+
+	if (!injected)
+		msg_type = ieee80211_msg_normal;
+	else if (failed)
+		msg_type = ieee80211_msg_tx_callback_fail;
+	else
+		msg_type = ieee80211_msg_tx_callback_ack;
+
+	handle_frame(drv, buf + iter.max_length,
+		     len - iter.max_length, &hfi, msg_type);
+}
+
+
+/*
+ * we post-process the filter code later and rewrite
+ * this to the offset to the last instruction
+ */
+#define PASS	0xFF
+#define FAIL	0xFE
+
+static struct sock_filter msock_filter_insns[] = {
+	/*
+	 * do a little-endian load of the radiotap length field
+	 */
+	/* load lower byte into A */
+	BPF_STMT(BPF_LD  | BPF_B | BPF_ABS, 2),
+	/* put it into X (== index register) */
+	BPF_STMT(BPF_MISC| BPF_TAX, 0),
+	/* load upper byte into A */
+	BPF_STMT(BPF_LD  | BPF_B | BPF_ABS, 3),
+	/* left-shift it by 8 */
+	BPF_STMT(BPF_ALU | BPF_LSH | BPF_K, 8),
+	/* or with X */
+	BPF_STMT(BPF_ALU | BPF_OR | BPF_X, 0),
+	/* put result into X */
+	BPF_STMT(BPF_MISC| BPF_TAX, 0),
+
+	/*
+	 * Allow management frames through, this also gives us those
+	 * management frames that we sent ourselves with status
+	 */
+	/* load the lower byte of the IEEE 802.11 frame control field */
+	BPF_STMT(BPF_LD  | BPF_B | BPF_IND, 0),
+	/* mask off frame type and version */
+	BPF_STMT(BPF_ALU | BPF_AND | BPF_K, 0xF),
+	/* accept frame if it's both 0, fall through otherwise */
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0, PASS, 0),
+
+	/*
+	 * TODO: add a bit to radiotap RX flags that indicates
+	 * that the sending station is not associated, then
+	 * add a filter here that filters on our DA and that flag
+	 * to allow us to deauth frames to that bad station.
+	 *
+	 * Not a regression -- we didn't do it before either.
+	 */
+
+#if 0
+	/*
+	 * drop non-data frames, WDS frames
+	 */
+	/* load the lower byte of the frame control field */
+	BPF_STMT(BPF_LD   | BPF_B | BPF_IND, 0),
+	/* mask off QoS bit */
+	BPF_STMT(BPF_ALU  | BPF_AND | BPF_K, 0x0c),
+	/* drop non-data frames */
+	BPF_JUMP(BPF_JMP  | BPF_JEQ | BPF_K, 8, 0, FAIL),
+	/* load the upper byte of the frame control field */
+	BPF_STMT(BPF_LD   | BPF_B | BPF_IND, 0),
+	/* mask off toDS/fromDS */
+	BPF_STMT(BPF_ALU  | BPF_AND | BPF_K, 0x03),
+	/* drop WDS frames */
+	BPF_JUMP(BPF_JMP  | BPF_JEQ | BPF_K, 3, FAIL, 0),
+#endif
+
+	/*
+	 * add header length to index
+	 */
+	/* load the lower byte of the frame control field */
+	BPF_STMT(BPF_LD   | BPF_B | BPF_IND, 0),
+	/* mask off QoS bit */
+	BPF_STMT(BPF_ALU  | BPF_AND | BPF_K, 0x80),
+	/* right shift it by 6 to give 0 or 2 */
+	BPF_STMT(BPF_ALU  | BPF_RSH | BPF_K, 6),
+	/* add data frame header length */
+	BPF_STMT(BPF_ALU  | BPF_ADD | BPF_K, 24),
+	/* add index, was start of 802.11 header */
+	BPF_STMT(BPF_ALU  | BPF_ADD | BPF_X, 0),
+	/* move to index, now start of LL header */
+	BPF_STMT(BPF_MISC | BPF_TAX, 0),
+
+	/*
+	 * Accept empty data frames, we use those for
+	 * polling activity.
+	 */
+	BPF_STMT(BPF_LD  | BPF_W | BPF_LEN, 0),
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_X, 0, PASS, 0),
+
+	/*
+	 * Accept EAPOL frames
+	 */
+	BPF_STMT(BPF_LD  | BPF_W | BPF_IND, 0),
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0xAAAA0300, 0, FAIL),
+	BPF_STMT(BPF_LD  | BPF_W | BPF_IND, 4),
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0x0000888E, PASS, FAIL),
+
+	/* keep these last two statements or change the code below */
+	/* return 0 == "DROP" */
+	BPF_STMT(BPF_RET | BPF_K, 0),
+	/* return ~0 == "keep all" */
+	BPF_STMT(BPF_RET | BPF_K, ~0),
+};
+
+static struct sock_fprog msock_filter = {
+	.len = sizeof(msock_filter_insns)/sizeof(msock_filter_insns[0]),
+	.filter = msock_filter_insns,
+};
+
+
+static int add_monitor_filter(int s)
+{
+	int idx;
+
+	/* rewrite all PASS/FAIL jump offsets */
+	for (idx = 0; idx < msock_filter.len; idx++) {
+		struct sock_filter *insn = &msock_filter_insns[idx];
+
+		if (BPF_CLASS(insn->code) == BPF_JMP) {
+			if (insn->code == (BPF_JMP|BPF_JA)) {
+				if (insn->k == PASS)
+					insn->k = msock_filter.len - idx - 2;
+				else if (insn->k == FAIL)
+					insn->k = msock_filter.len - idx - 3;
+			}
+
+			if (insn->jt == PASS)
+				insn->jt = msock_filter.len - idx - 2;
+			else if (insn->jt == FAIL)
+				insn->jt = msock_filter.len - idx - 3;
+
+			if (insn->jf == PASS)
+				insn->jf = msock_filter.len - idx - 2;
+			else if (insn->jf == FAIL)
+				insn->jf = msock_filter.len - idx - 3;
+		}
+	}
+
+	if (setsockopt(s, SOL_SOCKET, SO_ATTACH_FILTER,
+		       &msock_filter, sizeof(msock_filter))) {
+		perror("SO_ATTACH_FILTER");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int
+nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
+{
+	char buf[IFNAMSIZ];
+	struct sockaddr_ll ll;
+	int optval;
+	socklen_t optlen;
+	int flags;
+
+	snprintf(buf, IFNAMSIZ, "mon.%s", drv->ifname);
+	buf[IFNAMSIZ - 1] = '\0';
+
+	drv->monitor_ifidx =
+		nl80211_create_iface(drv, buf, NL80211_IFTYPE_MONITOR);
+
+	if (drv->monitor_ifidx < 0)
+		return -1;
+
+	if (wpa_driver_nl80211_get_ifflags_ifname(drv, buf, &flags) != 0) {
+		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
+			   buf);
+		goto error;
+	}
+	if (!(flags & IFF_UP)) {
+		if (wpa_driver_nl80211_set_ifflags_ifname(drv, buf,
+							  flags | IFF_UP) != 0)
+		{
+			wpa_printf(MSG_ERROR, "Could not set interface '%s' "
+				   "UP", buf);
+			goto error;
+		}
+	}
+
+	memset(&ll, 0, sizeof(ll));
+	ll.sll_family = AF_PACKET;
+	ll.sll_ifindex = drv->monitor_ifidx;
+	drv->monitor_sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	if (drv->monitor_sock < 0) {
+		perror("socket[PF_PACKET,SOCK_RAW]");
+		goto error;
+	}
+
+	if (add_monitor_filter(drv->monitor_sock)) {
+		wpa_printf(MSG_INFO, "Failed to set socket filter for monitor "
+			   "interface; do filtering in user space");
+		/* This works, but will cost in performance. */
+	}
+
+	if (bind(drv->monitor_sock, (struct sockaddr *) &ll,
+		 sizeof(ll)) < 0) {
+		perror("monitor socket bind");
+		goto error;
+	}
+
+	optlen = sizeof(optval);
+	optval = 20;
+	if (setsockopt
+	    (drv->monitor_sock, SOL_SOCKET, SO_PRIORITY, &optval, optlen)) {
+		perror("Failed to set socket priority");
+		goto error;
+	}
+
+	if (eloop_register_read_sock(drv->monitor_sock, handle_monitor_read,
+				     drv, NULL)) {
+		printf("Could not register monitor read socket\n");
+		goto error;
+	}
+
+	return 0;
+ error:
+	nl80211_remove_iface(drv, drv->monitor_ifidx);
+	return -1;
+}
+
+
 static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
 {
-	if (wpa_driver_nl80211_set_mode(drv, params->mode) ||
-	    wpa_driver_nl80211_set_freq2(drv, params))
+	if (drv->monitor_ifidx < 0 &&
+	    nl80211_create_monitor_interface(drv))
 		return -1;
+
+	if (wpa_driver_nl80211_set_mode(drv, params->mode) ||
+	    wpa_driver_nl80211_set_freq2(drv, params)) {
+		nl80211_remove_iface(drv, drv->monitor_ifidx);
+		drv->monitor_ifidx = -1;
+		return -1;
+	}
 
 	/* TODO: setup monitor interface (and add code somewhere to remove this
 	 * when AP mode is stopped; associate with mode != 2 or drv_deinit) */

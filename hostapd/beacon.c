@@ -428,15 +428,12 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
 	if (hostapd_set_beacon(hapd->conf->iface, hapd, (u8 *) head, head_len,
-			       tail, tail_len))
-		wpa_printf(MSG_ERROR, "Failed to set beacon head/tail");
+			       tail, tail_len, hapd->conf->dtim_period))
+		wpa_printf(MSG_ERROR, "Failed to set beacon head/tail or DTIM "
+			   "period");
 
 	os_free(tail);
 	os_free(head);
-
-	if (hostapd_set_dtim_period(hapd, hapd->conf->dtim_period))
-		wpa_printf(MSG_ERROR, "Could not set DTIM period for kernel "
-			   "driver");
 
 	if (hostapd_set_cts_protect(hapd, cts_protection))
 		wpa_printf(MSG_ERROR, "Failed to set CTS protect in kernel "

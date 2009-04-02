@@ -58,7 +58,6 @@ enum ieee80211_msg_type {
 struct i802_bss {
 	struct i802_bss *next;
 	char iface[IFNAMSIZ + 1];
-	int dtim_period;
 	unsigned int beacon_set:1;
 };
 
@@ -1161,8 +1160,8 @@ static int i802_bss_remove(void *priv, const char *ifname)
 
 
 static int i802_set_beacon(const char *iface, void *priv,
-			   u8 *head, size_t head_len,
-			   u8 *tail, size_t tail_len)
+			   const u8 *head, size_t head_len,
+			   const u8 *tail, size_t tail_len, int dtim_period)
 {
 	struct i802_driver_data *drv = priv;
 	struct nl_msg *msg;
@@ -1189,10 +1188,7 @@ static int i802_set_beacon(const char *iface, void *priv,
 	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, tail_len, tail);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
 	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, drv->beacon_int);
-
-	if (!bss->dtim_period)
-		bss->dtim_period = 2;
-	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, bss->dtim_period);
+	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, dtim_period);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (!ret)
@@ -1282,40 +1278,6 @@ static int i802_set_beacon_int(void *priv, int value)
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
-}
-
-
-static int i802_set_dtim_period(const char *iface, void *priv, int value)
-{
-	struct i802_driver_data *drv = priv;
-	struct nl_msg *msg;
-	int ret = -ENOBUFS;
-	struct i802_bss *bss;
-
-	bss = get_bss(drv, iface);
-	if (bss == NULL)
-		return -ENOENT;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	wpa_printf(MSG_DEBUG, "nl80211: Set beacon DTIM period %d (iface=%s "
-		   "beacon_set=%d)", value, iface, bss->beacon_set);
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_SET_BEACON, 0);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
-
-	bss->dtim_period = value;
-	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, bss->dtim_period);
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret)
-		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_SET_BEACON(%s) "
-			   "result: %d (%s)", iface, ret, strerror(-ret));
-
- nla_put_failure:
-	return ret;
 }
 
 
@@ -3136,7 +3098,6 @@ const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.set_beacon = i802_set_beacon,
 	.set_internal_bridge = i802_set_internal_bridge,
 	.set_beacon_int = i802_set_beacon_int,
-	.set_dtim_period = i802_set_dtim_period,
 	.set_cts_protect = i802_set_cts_protect,
 	.set_preamble = i802_set_preamble,
 	.set_short_slot_time = i802_set_short_slot_time,

@@ -144,8 +144,8 @@ struct hapd_driver_ops {
 	int (*set_country)(void *priv, const char *country);
 	int (*set_ieee80211d)(void *priv, int enabled);
 	int (*set_beacon)(const char *ifname, void *priv,
-			  u8 *head, size_t head_len,
-			  u8 *tail, size_t tail_len);
+			  const u8 *head, size_t head_len,
+			  const u8 *tail, size_t tail_len, int dtim_period);
 
 	/* Configure internal bridge:
 	 * 0 = disabled, i.e., client separation is enabled (no bridging of
@@ -154,7 +154,6 @@ struct hapd_driver_ops {
 	 */
 	int (*set_internal_bridge)(void *priv, int value);
 	int (*set_beacon_int)(void *priv, int value);
-	int (*set_dtim_period)(const char *ifname, void *priv, int value);
 	/* Configure broadcast SSID mode:
 	 * 0 = include SSID in Beacon frames and reply to Probe Request frames
 	 *     that use broadcast SSID

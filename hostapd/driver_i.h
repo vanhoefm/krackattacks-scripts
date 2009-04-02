@@ -357,13 +357,13 @@ hostapd_sta_clear_stats(struct hostapd_data *hapd, const u8 *addr)
 
 static inline int
 hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
-		   u8 *head, size_t head_len,
-		   u8 *tail, size_t tail_len)
+		   const u8 *head, size_t head_len,
+		   const u8 *tail, size_t tail_len, int dtim_period)
 {
 	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
 		return 0;
 	return hapd->driver->set_beacon(ifname, hapd->drv_priv, head, head_len,
-					tail, tail_len);
+					tail, tail_len, dtim_period);
 }
 
 static inline int
@@ -380,15 +380,6 @@ hostapd_set_beacon_int(struct hostapd_data *hapd, int value)
 	if (hapd->driver == NULL || hapd->driver->set_beacon_int == NULL)
 		return 0;
 	return hapd->driver->set_beacon_int(hapd->drv_priv, value);
-}
-
-static inline int
-hostapd_set_dtim_period(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_dtim_period == NULL)
-		return 0;
-	return hapd->driver->set_dtim_period(hapd->conf->iface, hapd->drv_priv,
-					     value);
 }
 
 static inline int

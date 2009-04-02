@@ -378,4 +378,24 @@ static inline int wpa_drv_set_probe_req_ie(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_set_beacon(struct wpa_supplicant *wpa_s,
+				     const u8 *head, size_t head_len,
+				     const u8 *tail, size_t tail_len,
+				     int dtim_period)
+{
+	if (wpa_s->driver->set_beacon)
+		return wpa_s->driver->set_beacon(wpa_s->drv_priv, head,
+						 head_len, tail, tail_len,
+						 dtim_period);
+	return -1;
+}
+
+static inline int wpa_drv_set_beacon_int(struct wpa_supplicant *wpa_s,
+					 int value)
+{
+	if (wpa_s->driver->set_beacon_int)
+		return wpa_s->driver->set_beacon_int(wpa_s->drv_priv, value);
+	return -1;
+}
+
 #endif /* DRIVER_I_H */

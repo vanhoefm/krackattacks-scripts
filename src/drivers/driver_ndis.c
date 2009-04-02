@@ -3215,5 +3215,7 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* init2 */,
 	wpa_driver_ndis_get_interfaces,
 	NULL /* scan2 */,
-	NULL /* authenticate */
+	NULL /* authenticate */,
+	NULL /* set_beacon */,
+	NULL /* set_beacon_int */
 };

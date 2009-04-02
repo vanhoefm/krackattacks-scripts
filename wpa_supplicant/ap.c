@@ -180,25 +180,22 @@ static int ap_driver_set_freq(void *priv, struct hostapd_freq_params *freq)
 
 
 static int ap_driver_set_beacon(const char *iface, void *priv,
-				u8 *head, size_t head_len,
-				u8 *tail, size_t tail_len)
+				const u8 *head, size_t head_len,
+				const u8 *tail, size_t tail_len,
+				int dtim_period)
 {
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_set_beacon(wpa_s, head, head_len, tail, tail_len,
+				  dtim_period);
 }
 
 
 static int ap_driver_set_beacon_int(void *priv, int value)
 {
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_set_dtim_period(const char *iface, void *priv, int value)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_set_beacon_int(wpa_s, value);
 }
 
 
@@ -261,7 +258,6 @@ static struct hapd_driver_ops ap_driver_ops =
 	.set_freq = ap_driver_set_freq,
 	.set_beacon = ap_driver_set_beacon,
 	.set_beacon_int = ap_driver_set_beacon_int,
-	.set_dtim_period = ap_driver_set_dtim_period,
 	.set_cts_protect = ap_driver_set_cts_protect,
 	.set_preamble = ap_driver_set_preamble,
 	.set_short_slot_time = ap_driver_set_short_slot_time,
@@ -348,6 +344,21 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_supplicant_ap_deinit(wpa_s);
+
+	wpa_printf(MSG_DEBUG, "Setting up AP (SSID='%s')",
+		   wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
+
+	os_memset(&params, 0, sizeof(params));
+	params.ssid = ssid->ssid;
+	params.ssid_len = ssid->ssid_len;
+	params.mode = ssid->mode;
+	params.freq = ssid->frequency;
+
+	if (wpa_drv_associate(wpa_s, &params) < 0) {
+		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
+		return -1;
+	}
+
 	wpa_s->ap_iface = hapd_iface = os_zalloc(sizeof(*wpa_s->ap_iface));
 	if (hapd_iface == NULL)
 		return -1;
@@ -386,19 +397,6 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	if (hostapd_setup_interface(wpa_s->ap_iface)) {
 		wpa_printf(MSG_ERROR, "Failed to initialize AP interface");
 		wpa_supplicant_ap_deinit(wpa_s);
-		return -1;
-	}
-
-	wpa_printf(MSG_DEBUG, "Setting up AP (SSID='%s')",
-		   wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
-
-	os_memset(&params, 0, sizeof(params));
-	params.ssid = ssid->ssid;
-	params.ssid_len = ssid->ssid_len;
-	params.mode = ssid->mode;
-
-	if (wpa_drv_associate(wpa_s, &params) < 0) {
-		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
 		return -1;
 	}
 

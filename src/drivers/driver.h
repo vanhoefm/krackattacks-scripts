@@ -1142,8 +1142,13 @@ struct wpa_driver_ops {
 	 * function is expected to take care of IEEE 802.11 authentication,
 	 * too.
 	 */
-	 int (*authenticate)(void *priv,
-			     struct wpa_driver_auth_params *params);
+	int (*authenticate)(void *priv,
+			    struct wpa_driver_auth_params *params);
+
+	int (*set_beacon)(void *priv, const u8 *head, size_t head_len,
+			  const u8 *tail, size_t tail_len, int dtim_period);
+
+	int (*set_beacon_int)(void *priv, int value);
 };
 
 /**

@@ -64,6 +64,11 @@ struct wpa_driver_nl80211_data {
 	int associated;
 	u8 ssid[32];
 	size_t ssid_len;
+
+#ifdef CONFIG_AP
+	int beacon_int;
+	unsigned int beacon_set:1;
+#endif /* CONFIG_AP */
 };
 
 
@@ -1517,11 +1522,81 @@ nla_put_failure:
 
 
 #ifdef CONFIG_AP
+static int wpa_driver_nl80211_set_beacon(void *priv,
+					 const u8 *head, size_t head_len,
+					 const u8 *tail, size_t tail_len,
+					 int dtim_period)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	u8 cmd = NL80211_CMD_NEW_BEACON;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Set beacon (beacon_set=%d)",
+		   drv->beacon_set);
+	if (drv->beacon_set)
+		cmd = NL80211_CMD_SET_BEACON;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, cmd, 0);
+	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, head_len, head);
+	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, tail_len, tail);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	if (!drv->beacon_int)
+		drv->beacon_int = 100;
+	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, drv->beacon_int);
+	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, dtim_period);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Beacon set failed: %d (%s)",
+			   ret, strerror(-ret));
+	} else
+		drv->beacon_set = 1;
+	return ret;
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
+static int wpa_driver_nl80211_set_beacon_int(void *priv, int value)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+
+	drv->beacon_int = value;
+
+	if (!drv->beacon_set)
+		return 0;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Set beacon interval %d "
+		   "(beacon_set=%d)", value, drv->beacon_set);
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_BEACON, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, value);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static int wpa_driver_nl80211_set_freq2(
 	struct wpa_driver_nl80211_data *drv,
 	struct wpa_driver_associate_params *params)
 {
 	struct nl_msg *msg;
+	int ret;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -1532,11 +1607,13 @@ static int wpa_driver_nl80211_set_freq2(
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	/* TODO: proper channel configuration */
-	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, 2437);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
 
-	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret == 0)
 		return 0;
+	wpa_printf(MSG_DEBUG, "nl80211: MLME Failed to set channel (freq=%d): "
+		   "%d (%s)", params->freq, ret, strerror(-ret));
 nla_put_failure:
 	return -1;
 }
@@ -1551,7 +1628,6 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 
 	/* TODO: setup monitor interface (and add code somewhere to remove this
 	 * when AP mode is stopped; associate with mode != 2 or drv_deinit) */
-	/* TODO: setup beacon */
 
 	return 0;
 }
@@ -1748,4 +1824,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_country = wpa_driver_nl80211_set_country,
+#ifdef CONFIG_AP
+	.set_beacon = wpa_driver_nl80211_set_beacon,
+	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
+#endif /* CONFIG_AP */
 };

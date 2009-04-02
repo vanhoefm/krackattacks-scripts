@@ -1327,5 +1327,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	wpa_driver_test_init2,
 	wpa_driver_test_get_interfaces,
 	wpa_driver_test_scan,
-	NULL /* authenticate */
+	NULL /* authenticate */,
+	NULL /* set_beacon */,
+	NULL /* set_beacon_int */
 };

@@ -58,6 +58,7 @@ struct ap_driver_data {
 static void * ap_driver_init(struct hostapd_data *hapd)
 {
 	struct ap_driver_data *drv;
+	struct wpa_supplicant *wpa_s = hapd->iface->owner;
 
 	drv = os_zalloc(sizeof(struct ap_driver_data));
 	if (drv == NULL) {
@@ -66,6 +67,7 @@ static void * ap_driver_init(struct hostapd_data *hapd)
 		return NULL;
 	}
 	drv->hapd = hapd;
+	os_memcpy(hapd->own_addr, wpa_s->own_addr, ETH_ALEN);
 
 	return drv;
 }

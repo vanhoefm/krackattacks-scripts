@@ -278,3 +278,19 @@ void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr)
 {
 	michael_mic_failure(hapd, addr, 1);
 }
+
+
+struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
+					  const u8 *addr)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		hapd = iface->bss[j];
+		if (ap_get_sta(hapd, addr))
+			return hapd;
+	}
+
+	return NULL;
+}

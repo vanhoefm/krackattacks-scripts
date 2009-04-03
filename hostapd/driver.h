@@ -237,5 +237,7 @@ void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
 void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok);
 void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr);
+struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
+					  const u8 *addr);
 
 #endif /* HOSTAPD_DRIVER_H */

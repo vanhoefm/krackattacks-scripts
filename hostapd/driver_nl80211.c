@@ -1731,7 +1731,6 @@ static void handle_frame(struct i802_driver_data *drv,
 static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct i802_driver_data *drv = eloop_ctx;
-	struct hostapd_data *hapd = drv->hapd;
 	struct sockaddr_ll lladdr;
 	unsigned char buf[3000];
 	int len;
@@ -1744,8 +1743,13 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	if (have_ifidx(drv, lladdr.sll_ifindex))
+	if (have_ifidx(drv, lladdr.sll_ifindex)) {
+		struct hostapd_data *hapd;
+		hapd = hostapd_sta_get_bss(drv->hapd, lladdr.sll_addr);
+		if (!hapd)
+			return;
 		hostapd_eapol_receive(hapd, lladdr.sll_addr, buf, len);
+	}
 }
 
 

@@ -65,7 +65,6 @@ struct i802_driver_data {
 	struct hostapd_data *hapd;
 
 	char iface[IFNAMSIZ + 1];
-	int bridge;
 	int ioctl_sock; /* socket for ioctl() use */
 	int wext_sock; /* socket for wireless events */
 	int eapol_sock; /* socket for EAPOL frames */
@@ -115,6 +114,8 @@ static void add_ifidx(struct i802_driver_data *drv, int ifidx)
 	int i;
 	int *old;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Add own interface ifindex %d",
+		   ifidx);
 	for (i = 0; i < drv->num_if_indices; i++) {
 		if (drv->if_indices[i] == 0) {
 			drv->if_indices[i] = ifidx;
@@ -160,9 +161,6 @@ static void del_ifidx(struct i802_driver_data *drv, int ifidx)
 static int have_ifidx(struct i802_driver_data *drv, int ifidx)
 {
 	int i;
-
-	if (ifidx == drv->bridge)
-		return 1;
 
 	for (i = 0; i < drv->num_if_indices; i++)
 		if (drv->if_indices[i] == ifidx)
@@ -2874,6 +2872,7 @@ i802_get_neighbor_bss(void *priv, size_t *num)
 static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 {
 	struct i802_driver_data *drv;
+	size_t i;
 
 	drv = os_zalloc(sizeof(struct i802_driver_data));
 	if (drv == NULL) {
@@ -2887,7 +2886,11 @@ static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
 	drv->if_indices = drv->default_if_indices;
-	drv->bridge = if_nametoindex(hapd->conf->bridge);
+	for (i = 0; i < hapd->iface->num_bss; i++) {
+		struct hostapd_data *bss = hapd->iface->bss[i];
+		if (bss->conf->bridge)
+			add_ifidx(drv, if_nametoindex(bss->conf->bridge));
+	}
 	drv->ht_40mhz_scan = hapd->iconf->secondary_channel != 0;
 
 	if (i802_init_sockets(drv, bssid))

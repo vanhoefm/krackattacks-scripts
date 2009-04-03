@@ -1152,30 +1152,6 @@ static int i802_del_beacon(struct i802_driver_data *drv)
 }
 
 
-static int i802_set_privacy(const char *ifname, void *priv, int enabled)
-{
-	struct i802_driver_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-
-	os_strlcpy(iwr.ifr_name, ifname, IFNAMSIZ);
-	iwr.u.param.flags = IW_AUTH_PRIVACY_INVOKED;
-	iwr.u.param.value = enabled;
-
-	ioctl(drv->ioctl_sock, SIOCSIWAUTH, &iwr);
-
-	/* ignore errors, the kernel/driver might not care */
-	return 0;
-}
-
-
-static int i802_set_internal_bridge(void *priv, int value)
-{
-	return -1;
-}
-
-
 static int i802_set_beacon_int(void *priv, int value)
 {
 	struct i802_driver_data *drv = priv;
@@ -2996,7 +2972,6 @@ const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.init = i802_init,
 	.init_bssid = i802_init_bssid,
 	.deinit = i802_deinit,
-	.set_privacy = i802_set_privacy,
 	.set_key = i802_set_key,
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
@@ -3016,7 +2991,6 @@ const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.set_retry = i802_set_retry,
 	.set_rate_sets = i802_set_rate_sets,
 	.set_beacon = i802_set_beacon,
-	.set_internal_bridge = i802_set_internal_bridge,
 	.set_beacon_int = i802_set_beacon_int,
 	.set_cts_protect = i802_set_cts_protect,
 	.set_preamble = i802_set_preamble,

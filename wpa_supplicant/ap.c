@@ -239,8 +239,9 @@ static struct hostapd_hw_modes *ap_driver_get_hw_feature_data(void *priv,
 							      u16 *num_modes,
 							      u16 *flags)
 {
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return NULL;
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_get_hw_feature_data(wpa_s, num_modes, flags);
 }
 
 

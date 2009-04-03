@@ -1557,6 +1557,271 @@ nla_put_failure:
 
 
 #ifdef CONFIG_AP
+
+struct phy_info_arg {
+	u16 *num_modes;
+	struct hostapd_hw_modes *modes;
+};
+
+static int phy_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct phy_info_arg *phy_info = arg;
+
+	struct nlattr *tb_band[NL80211_BAND_ATTR_MAX + 1];
+
+	struct nlattr *tb_freq[NL80211_FREQUENCY_ATTR_MAX + 1];
+	static struct nla_policy freq_policy[NL80211_FREQUENCY_ATTR_MAX + 1] = {
+		[NL80211_FREQUENCY_ATTR_FREQ] = { .type = NLA_U32 },
+		[NL80211_FREQUENCY_ATTR_DISABLED] = { .type = NLA_FLAG },
+		[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN] = { .type = NLA_FLAG },
+		[NL80211_FREQUENCY_ATTR_NO_IBSS] = { .type = NLA_FLAG },
+		[NL80211_FREQUENCY_ATTR_RADAR] = { .type = NLA_FLAG },
+		[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] = { .type = NLA_U32 },
+	};
+
+	struct nlattr *tb_rate[NL80211_BITRATE_ATTR_MAX + 1];
+	static struct nla_policy rate_policy[NL80211_BITRATE_ATTR_MAX + 1] = {
+		[NL80211_BITRATE_ATTR_RATE] = { .type = NLA_U32 },
+		[NL80211_BITRATE_ATTR_2GHZ_SHORTPREAMBLE] = { .type = NLA_FLAG },
+	};
+
+	struct nlattr *nl_band;
+	struct nlattr *nl_freq;
+	struct nlattr *nl_rate;
+	int rem_band, rem_freq, rem_rate;
+	struct hostapd_hw_modes *mode;
+	int idx, mode_is_set;
+
+	nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (!tb_msg[NL80211_ATTR_WIPHY_BANDS])
+		return NL_SKIP;
+
+	nla_for_each_nested(nl_band, tb_msg[NL80211_ATTR_WIPHY_BANDS], rem_band) {
+		mode = realloc(phy_info->modes, (*phy_info->num_modes + 1) * sizeof(*mode));
+		if (!mode)
+			return NL_SKIP;
+		phy_info->modes = mode;
+
+		mode_is_set = 0;
+
+		mode = &phy_info->modes[*(phy_info->num_modes)];
+		memset(mode, 0, sizeof(*mode));
+		*(phy_info->num_modes) += 1;
+
+		nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),
+			  nla_len(nl_band), NULL);
+
+		if (tb_band[NL80211_BAND_ATTR_HT_CAPA]) {
+			mode->ht_capab = nla_get_u16(
+				tb_band[NL80211_BAND_ATTR_HT_CAPA]);
+		}
+
+		nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
+			nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX, nla_data(nl_freq),
+				  nla_len(nl_freq), freq_policy);
+			if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
+				continue;
+			mode->num_channels++;
+		}
+
+		mode->channels = calloc(mode->num_channels, sizeof(struct hostapd_channel_data));
+		if (!mode->channels)
+			return NL_SKIP;
+
+		idx = 0;
+
+		nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
+			nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX, nla_data(nl_freq),
+				  nla_len(nl_freq), freq_policy);
+			if (!tb_freq[NL80211_FREQUENCY_ATTR_FREQ])
+				continue;
+
+			mode->channels[idx].freq = nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_FREQ]);
+			mode->channels[idx].flag = 0;
+
+			if (!mode_is_set) {
+				/* crude heuristic */
+				if (mode->channels[idx].freq < 4000)
+					mode->mode = HOSTAPD_MODE_IEEE80211B;
+				else
+					mode->mode = HOSTAPD_MODE_IEEE80211A;
+				mode_is_set = 1;
+			}
+
+			/* crude heuristic */
+			if (mode->channels[idx].freq < 4000)
+				if (mode->channels[idx].freq == 2848)
+					mode->channels[idx].chan = 14;
+				else
+					mode->channels[idx].chan = (mode->channels[idx].freq - 2407) / 5;
+			else
+				mode->channels[idx].chan = mode->channels[idx].freq/5 - 1000;
+
+			if (tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_DISABLED;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_PASSIVE_SCAN])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_PASSIVE_SCAN;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_NO_IBSS])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_NO_IBSS;
+			if (tb_freq[NL80211_FREQUENCY_ATTR_RADAR])
+				mode->channels[idx].flag |=
+					HOSTAPD_CHAN_RADAR;
+
+			if (tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER] &&
+			    !tb_freq[NL80211_FREQUENCY_ATTR_DISABLED])
+				mode->channels[idx].max_tx_power =
+					nla_get_u32(tb_freq[NL80211_FREQUENCY_ATTR_MAX_TX_POWER]) / 100;
+
+			idx++;
+		}
+
+		nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES], rem_rate) {
+			nla_parse(tb_rate, NL80211_BITRATE_ATTR_MAX, nla_data(nl_rate),
+				  nla_len(nl_rate), rate_policy);
+			if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
+				continue;
+			mode->num_rates++;
+		}
+
+		mode->rates = calloc(mode->num_rates, sizeof(struct hostapd_rate_data));
+		if (!mode->rates)
+			return NL_SKIP;
+
+		idx = 0;
+
+		nla_for_each_nested(nl_rate, tb_band[NL80211_BAND_ATTR_RATES], rem_rate) {
+			nla_parse(tb_rate, NL80211_BITRATE_ATTR_MAX, nla_data(nl_rate),
+				  nla_len(nl_rate), rate_policy);
+			if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
+				continue;
+			mode->rates[idx].rate = nla_get_u32(tb_rate[NL80211_BITRATE_ATTR_RATE]);
+
+			/* crude heuristic */
+			if (mode->mode == HOSTAPD_MODE_IEEE80211B &&
+			    mode->rates[idx].rate > 200)
+				mode->mode = HOSTAPD_MODE_IEEE80211G;
+
+			if (tb_rate[NL80211_BITRATE_ATTR_2GHZ_SHORTPREAMBLE])
+				mode->rates[idx].flags |= HOSTAPD_RATE_PREAMBLE2;
+
+			idx++;
+		}
+	}
+
+	return NL_SKIP;
+}
+
+static struct hostapd_hw_modes *
+wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
+{
+	u16 m;
+	struct hostapd_hw_modes *mode11g = NULL, *nmodes, *mode;
+	int i, mode11g_idx = -1;
+
+	/* If only 802.11g mode is included, use it to construct matching
+	 * 802.11b mode data. */
+
+	for (m = 0; m < *num_modes; m++) {
+		if (modes[m].mode == HOSTAPD_MODE_IEEE80211B)
+			return modes; /* 802.11b already included */
+		if (modes[m].mode == HOSTAPD_MODE_IEEE80211G)
+			mode11g_idx = m;
+	}
+
+	if (mode11g_idx < 0)
+		return modes; /* 2.4 GHz band not supported at all */
+
+	nmodes = os_realloc(modes, (*num_modes + 1) * sizeof(*nmodes));
+	if (nmodes == NULL)
+		return modes; /* Could not add 802.11b mode */
+
+	mode = &nmodes[*num_modes];
+	os_memset(mode, 0, sizeof(*mode));
+	(*num_modes)++;
+	modes = nmodes;
+
+	mode->mode = HOSTAPD_MODE_IEEE80211B;
+
+	mode11g = &modes[mode11g_idx];
+	mode->num_channels = mode11g->num_channels;
+	mode->channels = os_malloc(mode11g->num_channels *
+				   sizeof(struct hostapd_channel_data));
+	if (mode->channels == NULL) {
+		(*num_modes)--;
+		return modes; /* Could not add 802.11b mode */
+	}
+	os_memcpy(mode->channels, mode11g->channels,
+		  mode11g->num_channels * sizeof(struct hostapd_channel_data));
+
+	mode->num_rates = 0;
+	mode->rates = os_malloc(4 * sizeof(struct hostapd_rate_data));
+	if (mode->rates == NULL) {
+		os_free(mode->channels);
+		(*num_modes)--;
+		return modes; /* Could not add 802.11b mode */
+	}
+
+	for (i = 0; i < mode11g->num_rates; i++) {
+		if (mode11g->rates[i].rate > 110 ||
+		    mode11g->rates[i].flags &
+		    (HOSTAPD_RATE_ERP | HOSTAPD_RATE_OFDM))
+			continue;
+		mode->rates[mode->num_rates] = mode11g->rates[i];
+		mode->num_rates++;
+		if (mode->num_rates == 4)
+			break;
+	}
+
+	if (mode->num_rates == 0) {
+		os_free(mode->channels);
+		os_free(mode->rates);
+		(*num_modes)--;
+		return modes; /* No 802.11b rates */
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Added 802.11b mode based on 802.11g "
+		   "information");
+
+	return modes;
+}
+
+
+static struct hostapd_hw_modes *
+wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	struct phy_info_arg result = {
+		.num_modes = num_modes,
+		.modes = NULL,
+	};
+
+	*num_modes = 0;
+	*flags = 0;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return NULL;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_GET_WIPHY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0)
+		return wpa_driver_nl80211_add_11b(result.modes, num_modes);
+ nla_put_failure:
+	return NULL;
+}
+
+
 static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 					 const void *data, size_t len,
 					 int encrypt)
@@ -2434,5 +2699,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_beacon = wpa_driver_nl80211_set_beacon,
 	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
 	.send_mlme = wpa_driver_nl80211_send_mlme,
+	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 #endif /* CONFIG_AP */
 };

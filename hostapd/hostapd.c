@@ -120,6 +120,7 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	struct hostapd_data *hapd = iface->bss[0];
 	struct hostapd_config *newconf, *oldconf;
 	struct wpa_auth_config wpa_auth_conf;
+	size_t j;
 
 	newconf = hostapd_config_read(iface->config_fname);
 	if (newconf == NULL)
@@ -129,7 +130,8 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	 * Deauthenticate all stations since the new configuration may not
 	 * allow them to use the BSS anymore.
 	 */
-	hostapd_flush_old_stations(hapd);
+	for (j = 0; j < iface->num_bss; j++)
+		hostapd_flush_old_stations(iface->bss[j]);
 
 	/* TODO: update dynamic data based on changed configuration
 	 * items (e.g., open/close sockets, etc.) */
@@ -1111,6 +1113,13 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		}
 	}
 
+	hostapd_flush_old_stations(hapd);
+	hostapd_set_privacy(hapd, 0);
+
+	hostapd_broadcast_wep_clear(hapd);
+	if (hostapd_setup_encryption(hapd->conf->iface, hapd))
+		return -1;
+
 	/*
 	 * Fetch the SSID from the system and use it or,
 	 * if one was specified in the config file, verify they
@@ -1374,9 +1383,6 @@ static int setup_interface(struct hostapd_iface *iface)
 		}
 	}
 
-	hostapd_flush_old_stations(hapd);
-	hostapd_set_privacy(hapd, 0);
-
 	if (hapd->iconf->channel) {
 		freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
 		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
@@ -1394,12 +1400,7 @@ static int setup_interface(struct hostapd_iface *iface)
 		}
 	}
 
-	hostapd_broadcast_wep_clear(hapd);
-	if (hostapd_setup_encryption(hapd->conf->iface, hapd))
-		return -1;
-
 	hostapd_set_beacon_int(hapd, hapd->iconf->beacon_int);
-	ieee802_11_set_beacon(hapd);
 
 	if (hapd->iconf->rts_threshold > -1 &&
 	    hostapd_set_rts(hapd, hapd->iconf->rts_threshold)) {

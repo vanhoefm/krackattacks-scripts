@@ -797,7 +797,7 @@ struct wpa_driver_ops {
 	int (*flush_pmkid)(void *priv);
 
 	/**
-	 * flush_pmkid - Flush PMKSA cache
+	 * get_capa - Get driver capabilities
 	 * @priv: private driver interface data
 	 *
 	 * Returns: 0 on success, -1 on failure

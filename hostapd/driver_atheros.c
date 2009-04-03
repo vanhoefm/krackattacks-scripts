@@ -1074,9 +1074,8 @@ madwifi_get_we_version(struct madwifi_driver_data *drv)
 
 
 static int
-madwifi_wireless_event_init(void *priv)
+madwifi_wireless_event_init(struct madwifi_driver_data *drv)
 {
-	struct madwifi_driver_data *drv = priv;
 	int s;
 	struct sockaddr_nl local;
 
@@ -1107,16 +1106,12 @@ madwifi_wireless_event_init(void *priv)
 
 
 static void
-madwifi_wireless_event_deinit(void *priv)
+madwifi_wireless_event_deinit(struct madwifi_driver_data *drv)
 {
-	struct madwifi_driver_data *drv = priv;
-
-	if (drv != NULL) {
-		if (drv->wext_sock < 0)
-			return;
-		eloop_unregister_read_sock(drv->wext_sock);
-		close(drv->wext_sock);
-	}
+	if (drv->wext_sock < 0)
+		return;
+	eloop_unregister_read_sock(drv->wext_sock);
+	close(drv->wext_sock);
 }
 
 
@@ -1232,6 +1227,9 @@ madwifi_init(struct hostapd_data *hapd)
 
 	madwifi_receive_probe_req(drv);
 
+	if (madwifi_wireless_event_init(drv))
+		goto bad;
+
 	return drv;
 bad:
 	if (drv->sock_xmit != NULL)
@@ -1249,6 +1247,7 @@ madwifi_deinit(void *priv)
 {
 	struct madwifi_driver_data *drv = priv;
 
+	madwifi_wireless_event_deinit(drv);
 	(void) madwifi_set_iface_flags(drv, 0);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
@@ -1326,8 +1325,6 @@ const struct hapd_driver_ops wpa_driver_atheros_ops = {
 	.get_seqnum		= madwifi_get_seqnum,
 	.flush			= madwifi_flush,
 	.set_generic_elem	= madwifi_set_opt_ie,
-	.wireless_event_init	= madwifi_wireless_event_init,
-	.wireless_event_deinit	= madwifi_wireless_event_deinit,
 	.sta_set_flags		= madwifi_sta_set_flags,
 	.read_sta_data		= madwifi_read_sta_driver_data,
 	.send_eapol		= madwifi_send_eapol,

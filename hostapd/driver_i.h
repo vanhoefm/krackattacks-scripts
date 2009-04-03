@@ -44,24 +44,6 @@ hostapd_driver_deinit(struct hostapd_data *hapd)
 }
 
 static inline int
-hostapd_wireless_event_init(struct hostapd_data *hapd)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->wireless_event_init == NULL)
-		return 0;
-	return hapd->driver->wireless_event_init(hapd->drv_priv);
-}
-
-static inline void
-hostapd_wireless_event_deinit(struct hostapd_data *hapd)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->wireless_event_deinit == NULL)
-		return;
-	hapd->driver->wireless_event_deinit(hapd->drv_priv);
-}
-
-static inline int
 hostapd_set_ieee8021x(const char *ifname, struct hostapd_data *hapd,
 		      int enabled)
 {

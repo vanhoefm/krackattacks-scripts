@@ -1037,9 +1037,8 @@ static int hostap_get_we_version(struct hostap_driver_data *drv)
 }
 
 
-static int hostap_wireless_event_init(void *priv)
+static int hostap_wireless_event_init(struct hostap_driver_data *drv)
 {
-	struct hostap_driver_data *drv = priv;
 	int s;
 	struct sockaddr_nl local;
 
@@ -1070,9 +1069,8 @@ static int hostap_wireless_event_init(void *priv)
 }
 
 
-static void hostap_wireless_event_deinit(void *priv)
+static void hostap_wireless_event_deinit(struct hostap_driver_data *drv)
 {
-	struct hostap_driver_data *drv = priv;
 	if (drv->wext_sock < 0)
 		return;
 	eloop_unregister_read_sock(drv->wext_sock);
@@ -1109,7 +1107,7 @@ static void * hostap_init(struct hostapd_data *hapd)
 		return NULL;
 	}
 
-	if (hostap_init_sockets(drv)) {
+	if (hostap_init_sockets(drv) || hostap_wireless_event_init(drv)) {
 		close(drv->ioctl_sock);
 		free(drv);
 		return NULL;
@@ -1123,6 +1121,7 @@ static void hostap_driver_deinit(void *priv)
 {
 	struct hostap_driver_data *drv = priv;
 
+	hostap_wireless_event_deinit(drv);
 	(void) hostap_set_iface_flags(drv, 0);
 	(void) hostap_ioctl_prism2param(drv, PRISM2_PARAM_HOSTAPD, 0);
 	(void) hostap_ioctl_prism2param(drv, PRISM2_PARAM_HOSTAPD_STA, 0);
@@ -1231,8 +1230,6 @@ const struct hapd_driver_ops wpa_driver_hostap_ops = {
 	.name = "hostap",
 	.init = hostap_init,
 	.deinit = hostap_driver_deinit,
-	.wireless_event_init = hostap_wireless_event_init,
-	.wireless_event_deinit = hostap_wireless_event_deinit,
 	.set_ieee8021x = hostap_set_ieee8021x,
 	.set_privacy = hostap_set_privacy,
 	.set_key = hostap_set_key,

@@ -594,9 +594,8 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 }
 
 static int
-bsd_wireless_event_init(void *priv)
+bsd_wireless_event_init(struct bsd_driver_data *drv)
 {
-	struct bsd_driver_data *drv = priv;
 	int s;
 
 	drv->wext_sock = -1;
@@ -613,16 +612,12 @@ bsd_wireless_event_init(void *priv)
 }
 
 static void
-bsd_wireless_event_deinit(void *priv)
+bsd_wireless_event_deinit(struct bsd_driver_data *drv)
 {
-	struct bsd_driver_data *drv = priv;
-
-	if (drv != NULL) {
-		if (drv->wext_sock < 0)
-			return;
-		eloop_unregister_read_sock(drv->wext_sock);
-		close(drv->wext_sock);
-	}
+	if (drv->wext_sock < 0)
+		return;
+	eloop_unregister_read_sock(drv->wext_sock);
+	close(drv->wext_sock);
 }
 
 
@@ -724,6 +719,8 @@ bsd_init(struct hostapd_data *hapd)
 		goto bad;
 
 	bsd_set_iface_flags(drv, 0);	/* mark down during setup */
+	if (bsd_wireless_event_init(drv))
+		goto bad;
 
 	return drv;
 bad:
@@ -742,6 +739,7 @@ bsd_deinit(void *priv)
 {
 	struct bsd_driver_data *drv = priv;
 
+	bsd_wireless_event_deinit(drv);
 	(void) bsd_set_iface_flags(drv, 0);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
@@ -760,8 +758,6 @@ const struct hapd_driver_ops wpa_driver_bsd_ops = {
 	.get_seqnum		= bsd_get_seqnum,
 	.flush			= bsd_flush,
 	.set_generic_elem	= bsd_set_opt_ie,
-	.wireless_event_init	= bsd_wireless_event_init,
-	.wireless_event_deinit	= bsd_wireless_event_deinit,
 	.sta_set_flags		= bsd_sta_set_flags,
 	.read_sta_data		= bsd_read_sta_driver_data,
 	.send_eapol		= bsd_send_eapol,

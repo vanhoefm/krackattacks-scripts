@@ -2891,9 +2891,8 @@ static int hostap_get_we_version(struct i802_driver_data *drv)
 }
 
 
-static int i802_wireless_event_init(void *priv)
+static int i802_wireless_event_init(struct i802_driver_data *drv)
 {
-	struct i802_driver_data *drv = priv;
 	int s;
 	struct sockaddr_nl local;
 
@@ -2924,9 +2923,8 @@ static int i802_wireless_event_init(void *priv)
 }
 
 
-static void i802_wireless_event_deinit(void *priv)
+static void i802_wireless_event_deinit(struct i802_driver_data *drv)
 {
-	struct i802_driver_data *drv = priv;
 	if (drv->wext_sock < 0)
 		return;
 	eloop_unregister_read_sock(drv->wext_sock);
@@ -2999,6 +2997,9 @@ static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 	if (i802_init_sockets(drv, bssid))
 		goto failed;
 
+	if (i802_wireless_event_init(drv))
+		goto failed;
+
 	return drv;
 
 failed:
@@ -3017,6 +3018,8 @@ static void i802_deinit(void *priv)
 {
 	struct i802_driver_data *drv = priv;
 	struct i802_bss *bss, *prev;
+
+	i802_wireless_event_deinit(drv);
 
 	if (drv->last_freq_ht) {
 		/* Clear HT flags from the driver */
@@ -3070,8 +3073,6 @@ const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.init = i802_init,
 	.init_bssid = i802_init_bssid,
 	.deinit = i802_deinit,
-	.wireless_event_init = i802_wireless_event_init,
-	.wireless_event_deinit = i802_wireless_event_deinit,
 	.set_ieee8021x = i802_set_ieee8021x,
 	.set_privacy = i802_set_privacy,
 	.set_key = i802_set_key,

@@ -426,8 +426,6 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 
 	hostapd_deinit_wps(hapd);
 
-	hostapd_wireless_event_deinit(hapd);
-
 #ifdef EAP_TLS_FUNCS
 	if (hapd->ssl_ctx) {
 		tls_deinit(hapd->ssl_ctx);
@@ -1363,10 +1361,6 @@ static int setup_interface(struct hostapd_iface *iface)
 			   "kernel driver");
 		return -1;
 	}
-
-	/* TODO: merge with hostapd_driver_init() ? */
-	if (hostapd_wireless_event_init(hapd) < 0)
-		return -1;
 
 	if (hostapd_get_hw_features(iface)) {
 		/* Not all drivers support this yet, so continue without hw

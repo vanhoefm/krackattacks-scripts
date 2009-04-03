@@ -73,9 +73,6 @@ struct hapd_driver_ops {
 	void * (*init_bssid)(struct hostapd_data *hapd, const u8 *bssid);
 	void (*deinit)(void *priv);
 
-	int (*wireless_event_init)(void *priv);
-	void (*wireless_event_deinit)(void *priv);
-
 	/**
 	 * set_8021x - enable/disable IEEE 802.1X support
 	 * @ifname: Interface name (for multi-SSID/VLAN support)

@@ -155,8 +155,9 @@ static int ap_driver_sta_remove(void *priv, const u8 *addr)
 static int ap_driver_send_mgmt_frame(void *priv, const void *data, size_t len,
 				     int flags)
 {
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_send_mlme(wpa_s, data, len);
 }
 
 

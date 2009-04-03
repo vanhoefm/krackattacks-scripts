@@ -1557,6 +1557,77 @@ nla_put_failure:
 
 
 #ifdef CONFIG_AP
+static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
+					 const void *data, size_t len,
+					 int encrypt)
+{
+	__u8 rtap_hdr[] = {
+		0x00, 0x00, /* radiotap version */
+		0x0e, 0x00, /* radiotap length */
+		0x02, 0xc0, 0x00, 0x00, /* bmap: flags, tx and rx flags */
+		IEEE80211_RADIOTAP_F_FRAG, /* F_FRAG (fragment if required) */
+		0x00,       /* padding */
+		0x00, 0x00, /* RX and TX flags to indicate that */
+		0x00, 0x00, /* this is the injected frame directly */
+	};
+	struct iovec iov[2] = {
+		{
+			.iov_base = &rtap_hdr,
+			.iov_len = sizeof(rtap_hdr),
+		},
+		{
+			.iov_base = (void *) data,
+			.iov_len = len,
+		}
+	};
+	struct msghdr msg = {
+		.msg_name = NULL,
+		.msg_namelen = 0,
+		.msg_iov = iov,
+		.msg_iovlen = 2,
+		.msg_control = NULL,
+		.msg_controllen = 0,
+		.msg_flags = 0,
+	};
+
+	if (encrypt)
+		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
+
+	return sendmsg(drv->monitor_sock, &msg, 0);
+}
+
+
+static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
+					size_t data_len)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct ieee80211_mgmt *mgmt;
+	int do_not_encrypt = 0;
+	u16 fc;
+
+	mgmt = (struct ieee80211_mgmt *) data;
+	fc = le_to_host16(mgmt->frame_control);
+
+	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_AUTH) {
+		/*
+		 * Only one of the authentication frame types is encrypted.
+		 * In order for static WEP encryption to work properly (i.e.,
+		 * to not encrypt the frame), we need to tell mac80211 about
+		 * the frames that must not be encrypted.
+		 */
+		u16 auth_alg = le_to_host16(mgmt->u.auth.auth_alg);
+		u16 auth_trans = le_to_host16(mgmt->u.auth.auth_transaction);
+		if (auth_alg == WLAN_AUTH_OPEN ||
+		    (auth_alg == WLAN_AUTH_SHARED_KEY && auth_trans != 3))
+			do_not_encrypt = 1;
+	}
+
+	return wpa_driver_nl80211_send_frame(drv, data, data_len,
+					     !do_not_encrypt);
+}
+
+
 static int wpa_driver_nl80211_set_beacon(void *priv,
 					 const u8 *head, size_t head_len,
 					 const u8 *tail, size_t tail_len,
@@ -2362,5 +2433,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #ifdef CONFIG_AP
 	.set_beacon = wpa_driver_nl80211_set_beacon,
 	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
+	.send_mlme = wpa_driver_nl80211_send_mlme,
 #endif /* CONFIG_AP */
 };

@@ -248,13 +248,13 @@ struct wpa_client_mlme {
 
 	int cts_protect_erp_frames;
 
-	int phymode; /* current mode; WPA_MODE_IEEE80211A, .. */
-	struct wpa_hw_modes *modes;
+	hostapd_hw_mode phymode; /* current mode */
+	struct hostapd_hw_modes *modes;
 	size_t num_modes;
 	unsigned int hw_modes; /* bitfield of allowed hardware modes;
-				* (1 << MODE_*) */
+				* (1 << HOSTAPD_MODE_*) */
 	int num_curr_rates;
-	struct wpa_rate_data *curr_rates;
+	struct hostapd_rate_data *curr_rates;
 	int freq; /* The current frequency in MHz */
 	int channel; /* The current IEEE 802.11 channel number */
 

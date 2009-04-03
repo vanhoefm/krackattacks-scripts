@@ -312,14 +312,6 @@ struct hostapd_bss_config {
 };
 
 
-typedef enum {
-	HOSTAPD_MODE_IEEE80211B,
-	HOSTAPD_MODE_IEEE80211G,
-	HOSTAPD_MODE_IEEE80211A,
-	NUM_HOSTAPD_MODES
-} hostapd_hw_mode;
-
-
 /**
  * struct hostapd_config - Per-radio interface configuration
  */

@@ -275,7 +275,7 @@ static inline int wpa_drv_mlme_setprotection(struct wpa_supplicant *wpa_s,
 	return 0;
 }
 
-static inline struct wpa_hw_modes *
+static inline struct hostapd_hw_modes *
 wpa_drv_get_hw_feature_data(struct wpa_supplicant *wpa_s, u16 *num_modes,
 			    u16 *flags)
 {
@@ -286,7 +286,7 @@ wpa_drv_get_hw_feature_data(struct wpa_supplicant *wpa_s, u16 *num_modes,
 }
 
 static inline int wpa_drv_set_channel(struct wpa_supplicant *wpa_s,
-				      wpa_hw_mode phymode, int chan,
+				      hostapd_hw_mode phymode, int chan,
 				      int freq)
 {
 	if (wpa_s->driver->set_channel)

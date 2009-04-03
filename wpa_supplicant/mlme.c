@@ -98,11 +98,11 @@ static void ieee80211_build_tspec(struct wpabuf *buf);
 
 
 static int ieee80211_sta_set_channel(struct wpa_supplicant *wpa_s,
-				     wpa_hw_mode phymode, int chan,
+				     hostapd_hw_mode phymode, int chan,
 				     int freq)
 {
 	size_t i;
-	struct wpa_hw_modes *mode;
+	struct hostapd_hw_modes *mode;
 
 	for (i = 0; i < wpa_s->mlme.num_modes; i++) {
 		mode = &wpa_s->mlme.modes[i];
@@ -339,7 +339,7 @@ static void ieee80211_send_assoc(struct wpa_supplicant *wpa_s)
 	blen = 0;
 
 	capab = wpa_s->mlme.capab;
-	if (wpa_s->mlme.phymode == WPA_MODE_IEEE80211G) {
+	if (wpa_s->mlme.phymode == HOSTAPD_MODE_IEEE80211G) {
 		capab |= WLAN_CAPABILITY_SHORT_SLOT_TIME |
 			WLAN_CAPABILITY_SHORT_PREAMBLE;
 	}
@@ -670,7 +670,7 @@ static void ieee80211_send_probe_req(struct wpa_supplicant *wpa_s,
 	supp_rates[0] = WLAN_EID_SUPP_RATES;
 	supp_rates[1] = 0;
 	for (i = 0; i < wpa_s->mlme.num_curr_rates; i++) {
-		struct wpa_rate_data *rate = &wpa_s->mlme.curr_rates[i];
+		struct hostapd_rate_data *rate = &wpa_s->mlme.curr_rates[i];
 		if (esupp_rates) {
 			pos = buf + len;
 			len++;
@@ -1600,8 +1600,8 @@ static void ieee80211_bss_info(struct wpa_supplicant *wpa_s,
 	bss->channel = channel;
 	bss->freq = wpa_s->mlme.freq;
 	if (channel != wpa_s->mlme.channel &&
-	    (wpa_s->mlme.phymode == WPA_MODE_IEEE80211G ||
-	     wpa_s->mlme.phymode == WPA_MODE_IEEE80211B) &&
+	    (wpa_s->mlme.phymode == HOSTAPD_MODE_IEEE80211G ||
+	     wpa_s->mlme.phymode == HOSTAPD_MODE_IEEE80211B) &&
 	    channel >= 1 && channel <= 14) {
 		static const int freq_list[] = {
 			2412, 2417, 2422, 2427, 2432, 2437, 2442,
@@ -2692,14 +2692,14 @@ static int ieee80211_active_scan(struct wpa_supplicant *wpa_s)
 	int c;
 
 	for (m = 0; m < wpa_s->mlme.num_modes; m++) {
-		struct wpa_hw_modes *mode = &wpa_s->mlme.modes[m];
+		struct hostapd_hw_modes *mode = &wpa_s->mlme.modes[m];
 		if ((int) mode->mode != (int) wpa_s->mlme.phymode)
 			continue;
 		for (c = 0; c < mode->num_channels; c++) {
-			struct wpa_channel_data *chan = &mode->channels[c];
-			if (chan->flag & WPA_CHAN_W_SCAN &&
+			struct hostapd_channel_data *chan = &mode->channels[c];
+			if (!(chan->flag & HOSTAPD_CHAN_DISABLED) &&
 			    chan->chan == wpa_s->mlme.channel) {
-				if (chan->flag & WPA_CHAN_W_ACTIVE_SCAN)
+				if (!(chan->flag & HOSTAPD_CHAN_PASSIVE_SCAN))
 					return 1;
 				break;
 			}
@@ -2713,8 +2713,8 @@ static int ieee80211_active_scan(struct wpa_supplicant *wpa_s)
 static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
-	struct wpa_hw_modes *mode;
-	struct wpa_channel_data *chan;
+	struct hostapd_hw_modes *mode;
+	struct hostapd_channel_data *chan;
 	int skip = 0;
 	int timeout = 0;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
@@ -2753,10 +2753,10 @@ static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx)
 		}
 		skip = !(wpa_s->mlme.hw_modes & (1 << mode->mode));
 		chan = &mode->channels[wpa_s->mlme.scan_channel_idx];
-		if (!(chan->flag & WPA_CHAN_W_SCAN) ||
-		    (adhoc && !(chan->flag & WPA_CHAN_W_IBSS)) ||
-		    (wpa_s->mlme.hw_modes & (1 << WPA_MODE_IEEE80211G) &&
-		     mode->mode == WPA_MODE_IEEE80211B &&
+		if ((chan->flag & HOSTAPD_CHAN_DISABLED) ||
+		    (adhoc && (chan->flag & HOSTAPD_CHAN_NO_IBSS)) ||
+		    (wpa_s->mlme.hw_modes & (1 << HOSTAPD_MODE_IEEE80211G) &&
+		     mode->mode == HOSTAPD_MODE_IEEE80211B &&
 		     wpa_s->mlme.scan_skip_11b))
 			skip = 1;
 
@@ -3019,7 +3019,7 @@ void ieee80211_sta_rx(struct wpa_supplicant *wpa_s, const u8 *buf, size_t len,
 }
 
 
-void ieee80211_sta_free_hw_features(struct wpa_hw_modes *hw_features,
+void ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
 				    size_t num_hw_features)
 {
 	size_t i;
@@ -3050,9 +3050,9 @@ int ieee80211_sta_init(struct wpa_supplicant *wpa_s)
 
 	wpa_s->mlme.num_modes = num_modes;
 
-	wpa_s->mlme.hw_modes = 1 << WPA_MODE_IEEE80211A;
-	wpa_s->mlme.hw_modes |= 1 << WPA_MODE_IEEE80211B;
-	wpa_s->mlme.hw_modes |= 1 << WPA_MODE_IEEE80211G;
+	wpa_s->mlme.hw_modes = 1 << HOSTAPD_MODE_IEEE80211A;
+	wpa_s->mlme.hw_modes |= 1 << HOSTAPD_MODE_IEEE80211B;
+	wpa_s->mlme.hw_modes |= 1 << HOSTAPD_MODE_IEEE80211G;
 
 	wpa_s->mlme.wmm_enabled = 1;
 

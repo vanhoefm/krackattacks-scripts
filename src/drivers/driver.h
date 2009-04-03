@@ -411,45 +411,6 @@ struct wpa_driver_capa {
 };
 
 
-#define WPA_CHAN_W_SCAN 0x00000001
-#define WPA_CHAN_W_ACTIVE_SCAN 0x00000002
-#define WPA_CHAN_W_IBSS 0x00000004
-
-struct wpa_channel_data {
-	short chan; /* channel number (IEEE 802.11) */
-	short freq; /* frequency in MHz */
-	int flag; /* flag for user space use (WPA_CHAN_*) */
-};
-
-#define WPA_RATE_ERP 0x00000001
-#define WPA_RATE_BASIC 0x00000002
-#define WPA_RATE_PREAMBLE2 0x00000004
-#define WPA_RATE_SUPPORTED 0x00000010
-#define WPA_RATE_OFDM 0x00000020
-#define WPA_RATE_CCK 0x00000040
-#define WPA_RATE_MANDATORY 0x00000100
-
-struct wpa_rate_data {
-	int rate; /* rate in 100 kbps */
-	int flags; /* WPA_RATE_ flags */
-};
-
-typedef enum {
-	WPA_MODE_IEEE80211B,
-	WPA_MODE_IEEE80211G,
-	WPA_MODE_IEEE80211A,
-	NUM_WPA_MODES
-} wpa_hw_mode;
-
-struct wpa_hw_modes {
-	wpa_hw_mode mode;
-	int num_channels;
-	struct wpa_channel_data *channels;
-	int num_rates;
-	struct wpa_rate_data *rates;
-};
-
-
 struct ieee80211_rx_status {
         int channel;
         int ssi;
@@ -910,14 +871,14 @@ struct wpa_driver_ops {
 	 * This function is only needed for drivers that export MLME
 	 * (management frame processing) to wpa_supplicant.
 	 */
-	struct wpa_hw_modes * (*get_hw_feature_data)(void *priv,
-						     u16 *num_modes,
-						     u16 *flags);
+	struct hostapd_hw_modes * (*get_hw_feature_data)(void *priv,
+							 u16 *num_modes,
+							 u16 *flags);
 
 	/**
 	 * set_channel - Set channel
 	 * @priv: Private driver interface data
-	 * @phymode: WPA_MODE_IEEE80211B, ..
+	 * @phymode: HOSTAPD_MODE_IEEE80211B, ..
 	 * @chan: IEEE 802.11 channel number
 	 * @freq: Frequency of the channel in MHz
 	 * Returns: 0 on success, -1 on failure
@@ -925,7 +886,7 @@ struct wpa_driver_ops {
 	 * This function is only needed for drivers that export MLME
 	 * (management frame processing) to wpa_supplicant.
 	 */
-	int (*set_channel)(void *priv, wpa_hw_mode phymode, int chan,
+	int (*set_channel)(void *priv, hostapd_hw_mode phymode, int chan,
 			   int freq);
 
 	/**
@@ -1524,7 +1485,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
 			   struct ieee80211_rx_status *rx_status);
-void wpa_supplicant_sta_free_hw_features(struct wpa_hw_modes *hw_features,
+void wpa_supplicant_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
 					 size_t num_hw_features);
 
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie);

@@ -513,7 +513,7 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 	iface->current_mode = NULL;
 	for (i = 0; i < iface->num_hw_features; i++) {
 		struct hostapd_hw_modes *mode = &iface->hw_features[i];
-		if (mode->mode == (int) iface->conf->hw_mode) {
+		if (mode->mode == iface->conf->hw_mode) {
 			iface->current_mode = mode;
 			break;
 		}

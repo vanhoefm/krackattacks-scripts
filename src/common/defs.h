@@ -213,4 +213,48 @@ enum mfp_options {
 	IEEE80211W_REQUIRED = 2
 };
 
+
+/* Hardware features */
+
+#define HOSTAPD_CHAN_DISABLED 0x00000001
+#define HOSTAPD_CHAN_PASSIVE_SCAN 0x00000002
+#define HOSTAPD_CHAN_NO_IBSS 0x00000004
+#define HOSTAPD_CHAN_RADAR 0x00000008
+
+struct hostapd_channel_data {
+	short chan; /* channel number (IEEE 802.11) */
+	short freq; /* frequency in MHz */
+	int flag; /* flag for hostapd use (HOSTAPD_CHAN_*) */
+	u8 max_tx_power; /* maximum transmit power in dBm */
+};
+
+#define HOSTAPD_RATE_ERP 0x00000001
+#define HOSTAPD_RATE_BASIC 0x00000002
+#define HOSTAPD_RATE_PREAMBLE2 0x00000004
+#define HOSTAPD_RATE_SUPPORTED 0x00000010
+#define HOSTAPD_RATE_OFDM 0x00000020
+#define HOSTAPD_RATE_CCK 0x00000040
+#define HOSTAPD_RATE_MANDATORY 0x00000100
+
+struct hostapd_rate_data {
+	int rate; /* rate in 100 kbps */
+	int flags; /* HOSTAPD_RATE_ flags */
+};
+
+typedef enum {
+	HOSTAPD_MODE_IEEE80211B,
+	HOSTAPD_MODE_IEEE80211G,
+	HOSTAPD_MODE_IEEE80211A,
+	NUM_HOSTAPD_MODES
+} hostapd_hw_mode;
+
+struct hostapd_hw_modes {
+	hostapd_hw_mode mode;
+	int num_channels;
+	struct hostapd_channel_data *channels;
+	int num_rates;
+	struct hostapd_rate_data *rates;
+	u16 ht_capab;
+};
+
 #endif /* DEFS_H */

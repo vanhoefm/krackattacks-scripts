@@ -1047,37 +1047,37 @@ static int wpa_driver_test_mlme_setprotection(void *priv, const u8 *addr,
 
 
 #ifdef CONFIG_CLIENT_MLME
-static struct wpa_hw_modes *
+static struct hostapd_hw_modes *
 wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 {
-	struct wpa_hw_modes *modes;
+	struct hostapd_hw_modes *modes;
 
 	*num_modes = 1;
 	*flags = 0;
-	modes = os_zalloc(*num_modes * sizeof(struct wpa_hw_modes));
+	modes = os_zalloc(*num_modes * sizeof(struct hostapd_hw_modes));
 	if (modes == NULL)
 		return NULL;
-	modes[0].mode = WPA_MODE_IEEE80211G;
+	modes[0].mode = HOSTAPD_MODE_IEEE80211G;
 	modes[0].num_channels = 1;
 	modes[0].num_rates = 1;
-	modes[0].channels = os_zalloc(sizeof(struct wpa_channel_data));
-	modes[0].rates = os_zalloc(sizeof(struct wpa_rate_data));
+	modes[0].channels = os_zalloc(sizeof(struct hostapd_channel_data));
+	modes[0].rates = os_zalloc(sizeof(struct hostapd_rate_data));
 	if (modes[0].channels == NULL || modes[0].rates == NULL) {
 		wpa_supplicant_sta_free_hw_features(modes, *num_modes);
 		return NULL;
 	}
 	modes[0].channels[0].chan = 1;
 	modes[0].channels[0].freq = 2412;
-	modes[0].channels[0].flag = WPA_CHAN_W_SCAN | WPA_CHAN_W_ACTIVE_SCAN;
+	modes[0].channels[0].flag = 0;
 	modes[0].rates[0].rate = 10;
-	modes[0].rates[0].flags = WPA_RATE_BASIC | WPA_RATE_SUPPORTED |
-		WPA_RATE_CCK | WPA_RATE_MANDATORY;
+	modes[0].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
+		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
 
 	return modes;
 }
 
 
-static int wpa_driver_test_set_channel(void *priv, wpa_hw_mode phymode,
+static int wpa_driver_test_set_channel(void *priv, hostapd_hw_mode phymode,
 				       int chan, int freq)
 {
 	wpa_printf(MSG_DEBUG, "%s: phymode=%d chan=%d freq=%d",

@@ -31,7 +31,7 @@ int ieee80211_sta_associate(struct wpa_supplicant *wpa_s,
 			    struct wpa_driver_associate_params *params);
 int ieee80211_sta_get_ssid(struct wpa_supplicant *wpa_s, u8 *ssid,
 			   size_t *len);
-void ieee80211_sta_free_hw_features(struct wpa_hw_modes *hw_features,
+void ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
 				    size_t num_hw_features);
 void ieee80211_sta_rx(struct wpa_supplicant *wpa_s, const u8 *buf, size_t len,
 		      struct ieee80211_rx_status *rx_status);

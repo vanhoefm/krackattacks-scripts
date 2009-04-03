@@ -128,11 +128,8 @@ struct hapd_driver_ops {
 
 	int (*set_freq)(void *priv, struct hostapd_freq_params *freq);
 	int (*set_rts)(void *priv, int rts);
-	int (*get_rts)(void *priv, int *rts);
 	int (*set_frag)(void *priv, int frag);
-	int (*get_frag)(void *priv, int *frag);
 	int (*set_retry)(void *priv, int short_retry, int long_retry);
-	int (*get_retry)(void *priv, int *short_retry, int *long_retry);
 
 	int (*sta_set_flags)(void *priv, const u8 *addr,
 			     int total_flags, int flags_or, int flags_and);
@@ -159,7 +156,6 @@ struct hapd_driver_ops {
 	 */
 	int (*set_broadcast_ssid)(void *priv, int value);
 	int (*set_cts_protect)(void *priv, int value);
-	int (*set_key_tx_rx_threshold)(void *priv, int value);
 	int (*set_preamble)(void *priv, int value);
 	int (*set_short_slot_time)(void *priv, int value);
 	int (*set_tx_queue_params)(void *priv, int queue, int aifs, int cw_min,

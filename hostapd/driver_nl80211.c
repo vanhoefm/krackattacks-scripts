@@ -573,25 +573,6 @@ static int i802_set_rts(void *priv, int rts)
 }
 
 
-static int i802_get_rts(void *priv, int *rts)
-{
-	struct i802_driver_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIWRTS, &iwr) < 0) {
-		perror("ioctl[SIOCGIWRTS]");
-		return -1;
-	}
-
-	*rts = iwr.u.rts.value;
-
-	return 0;
-}
-
-
 static int i802_set_frag(void *priv, int frag)
 {
 	struct i802_driver_data *drv = priv;
@@ -606,25 +587,6 @@ static int i802_set_frag(void *priv, int frag)
 		perror("ioctl[SIOCSIWFRAG]");
 		return -1;
 	}
-
-	return 0;
-}
-
-
-static int i802_get_frag(void *priv, int *frag)
-{
-	struct i802_driver_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIWFRAG, &iwr) < 0) {
-		perror("ioctl[SIOCGIWFRAG]");
-		return -1;
-	}
-
-	*frag = iwr.u.frag.value;
 
 	return 0;
 }
@@ -651,32 +613,6 @@ static int i802_set_retry(void *priv, int short_retry, int long_retry)
 		perror("ioctl[SIOCSIWRETRY(long)]");
 		return -1;
 	}
-
-	return 0;
-}
-
-
-static int i802_get_retry(void *priv, int *short_retry, int *long_retry)
-{
-	struct i802_driver_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
-
-	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MIN;
-	if (ioctl(drv->ioctl_sock, SIOCGIWRETRY, &iwr) < 0) {
-		perror("ioctl[SIOCGIWFRAG(short)]");
-		return -1;
-	}
-	*short_retry = iwr.u.retry.value;
-
-	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MAX;
-	if (ioctl(drv->ioctl_sock, SIOCGIWRETRY, &iwr) < 0) {
-		perror("ioctl[SIOCGIWFRAG(long)]");
-		return -1;
-	}
-	*long_retry = iwr.u.retry.value;
 
 	return 0;
 }
@@ -3090,11 +3026,8 @@ const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_freq = i802_set_freq,
 	.set_rts = i802_set_rts,
-	.get_rts = i802_get_rts,
 	.set_frag = i802_set_frag,
-	.get_frag = i802_get_frag,
 	.set_retry = i802_set_retry,
-	.get_retry = i802_get_retry,
 	.set_rate_sets = i802_set_rate_sets,
 	.set_beacon = i802_set_beacon,
 	.set_internal_bridge = i802_set_internal_bridge,

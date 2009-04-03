@@ -250,14 +250,6 @@ hostapd_set_rts(struct hostapd_data *hapd, int rts)
 }
 
 static inline int
-hostapd_get_rts(struct hostapd_data *hapd, int *rts)
-{
-	if (hapd->driver == NULL || hapd->driver->get_rts == NULL)
-		return 0;
-	return hapd->driver->get_rts(hapd->drv_priv, rts);
-}
-
-static inline int
 hostapd_set_frag(struct hostapd_data *hapd, int frag)
 {
 	if (hapd->driver == NULL || hapd->driver->set_frag == NULL)
@@ -266,28 +258,11 @@ hostapd_set_frag(struct hostapd_data *hapd, int frag)
 }
 
 static inline int
-hostapd_get_frag(struct hostapd_data *hapd, int *frag)
-{
-	if (hapd->driver == NULL || hapd->driver->get_frag == NULL)
-		return 0;
-	return hapd->driver->get_frag(hapd->drv_priv, frag);
-}
-
-static inline int
 hostapd_set_retry(struct hostapd_data *hapd, int short_retry, int long_retry)
 {
 	if (hapd->driver == NULL || hapd->driver->set_retry == NULL)
 		return 0;
 	return hapd->driver->set_retry(hapd->drv_priv, short_retry,
-				       long_retry);
-}
-
-static inline int
-hostapd_get_retry(struct hostapd_data *hapd, int *short_retry, int *long_retry)
-{
-	if (hapd->driver == NULL || hapd->driver->get_retry == NULL)
-		return 0;
-	return hapd->driver->get_retry(hapd->drv_priv, short_retry,
 				       long_retry);
 }
 
@@ -378,15 +353,6 @@ hostapd_set_cts_protect(struct hostapd_data *hapd, int value)
 	if (hapd->driver == NULL || hapd->driver->set_cts_protect == NULL)
 		return 0;
 	return hapd->driver->set_cts_protect(hapd->drv_priv, value);
-}
-
-static inline int
-hostapd_set_key_tx_rx_threshold(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->set_key_tx_rx_threshold == NULL)
-		return 0;
-	return hapd->driver->set_key_tx_rx_threshold(hapd->drv_priv, value);
 }
 
 static inline int

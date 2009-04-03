@@ -2433,7 +2433,6 @@ static int i802_ht_scan(struct i802_driver_data *drv)
 static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 {
 	struct ifreq ifr;
-	struct sockaddr_ll addr;
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
@@ -2519,12 +2518,6 @@ static int i802_init_sockets(struct i802_driver_data *drv, const u8 *bssid)
 
 	if (hostapd_set_iface_flags(drv, drv->iface, 1))
 		goto fail1;
-
-	memset(&addr, 0, sizeof(addr));
-	addr.sll_family = AF_PACKET;
-	addr.sll_ifindex = ifr.ifr_ifindex;
-	wpa_printf(MSG_DEBUG, "Opening raw packet socket for ifindex %d",
-		   addr.sll_ifindex);
 
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));
 	if (drv->eapol_sock < 0) {

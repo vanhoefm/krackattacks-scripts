@@ -83,7 +83,6 @@ struct i802_driver_data {
 	struct genl_family *nl80211;
 	int beacon_int;
 	struct i802_bss bss;
-	unsigned int ieee802_1x_active:1;
 	unsigned int ht_40mhz_scan:1;
 
 	int last_freq;
@@ -875,7 +874,7 @@ static int i802_sta_set_flags(void *priv, const u8 *addr,
 		    if_nametoindex(drv->iface));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 
-	if (total_flags & WLAN_STA_AUTHORIZED || !drv->ieee802_1x_active)
+	if (total_flags & WLAN_STA_AUTHORIZED)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_AUTHORIZED);
 
 	if (total_flags & WLAN_STA_WMM)
@@ -1150,18 +1149,6 @@ static int i802_del_beacon(struct i802_driver_data *drv)
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
-}
-
-
-static int i802_set_ieee8021x(const char *ifname, void *priv, int enabled)
-{
-	struct i802_driver_data *drv = priv;
-
-	/*
-	 * FIXME: This needs to be per interface (BSS)
-	 */
-	drv->ieee802_1x_active = enabled;
-	return 0;
 }
 
 
@@ -3009,7 +2996,6 @@ const struct hapd_driver_ops wpa_driver_nl80211_ops = {
 	.init = i802_init,
 	.init_bssid = i802_init_bssid,
 	.deinit = i802_deinit,
-	.set_ieee8021x = i802_set_ieee8021x,
 	.set_privacy = i802_set_privacy,
 	.set_key = i802_set_key,
 	.get_seqnum = i802_get_seqnum,

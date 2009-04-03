@@ -1630,6 +1630,10 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (sta->flags & WLAN_STA_ASSOC)
 		new_assoc = 0;
 	sta->flags |= WLAN_STA_ASSOC;
+	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa) {
+		/* Open or static WEP; no separate authorization */
+		sta->flags |= WLAN_STA_AUTHORIZED;
+	}
 
 	if (reassoc)
 		mlme_reassociate_indication(hapd, sta);

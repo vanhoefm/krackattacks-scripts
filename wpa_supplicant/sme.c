@@ -35,6 +35,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_IEEE80211R
 	const u8 *md = NULL;
 #endif /* CONFIG_IEEE80211R */
+	int i;
 
 	if (bss == NULL) {
 		wpa_printf(MSG_ERROR, "SME: No scan result available for the "
@@ -83,6 +84,13 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "Overriding auth_alg selection: 0x%x",
 			   params.auth_alg);
 	}
+
+	for (i = 0; i < NUM_WEP_KEYS; i++) {
+		if (ssid->wep_key_len[i])
+			params.wep_key[i] = ssid->wep_key[i];
+		params.wep_key_len[i] = ssid->wep_key_len[i];
+	}
+	params.wep_tx_keyidx = ssid->wep_tx_keyidx;
 
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);

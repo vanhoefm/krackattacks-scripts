@@ -1488,7 +1488,7 @@ static int wpa_driver_nl80211_authenticate(
 	void *priv, struct wpa_driver_auth_params *params)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	int ret = -1;
+	int ret = -1, i;
 	struct nl_msg *msg;
 	enum nl80211_auth_type type;
 
@@ -1500,6 +1500,16 @@ static int wpa_driver_nl80211_authenticate(
 
 	wpa_printf(MSG_DEBUG, "nl80211: Authenticate (ifindex=%d)",
 		   drv->ifindex);
+
+	for (i = 0; i < 4; i++) {
+		if (!params->wep_key[i])
+			continue;
+		wpa_driver_nl80211_set_key(drv, WPA_ALG_WEP, NULL, i,
+					   i == params->wep_tx_keyidx, NULL, 0,
+					   params->wep_key[i],
+					   params->wep_key_len[i]);
+	}
+
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
 		    NL80211_CMD_AUTHENTICATE, 0);
 

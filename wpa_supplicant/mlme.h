@@ -88,7 +88,7 @@ static inline int ieee80211_sta_get_ssid(struct wpa_supplicant *wpa_s,
 }
 
 static inline void
-ieee80211_sta_free_hw_features(struct wpa_hw_modes *hw_features,
+ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
 			       size_t num_hw_features)
 {
 }

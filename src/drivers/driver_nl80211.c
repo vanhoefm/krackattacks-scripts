@@ -166,6 +166,8 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			 u8 *buf, size_t len,
 			 struct hostapd_frame_info *hfi,
 			 enum ieee80211_msg_type msg_type);
+static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
+static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 #endif /* HOSTAPD */
 
 
@@ -862,62 +864,40 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 }
 
 
-static int wpa_driver_nl80211_get_ifflags_ifname(struct wpa_driver_nl80211_data *drv,
-					      const char *ifname, int *flags)
+static int hostapd_set_iface_flags(struct wpa_driver_nl80211_data *drv,
+				   const char *ifname, int dev_up)
 {
 	struct ifreq ifr;
 
+	if (drv->ioctl_sock < 0)
+		return -1;
+
 	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, (caddr_t) &ifr) < 0) {
+
+	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
 		perror("ioctl[SIOCGIFFLAGS]");
+		wpa_printf(MSG_DEBUG, "Could not read interface flags (%s)",
+			   ifname);
 		return -1;
 	}
-	*flags = ifr.ifr_flags & 0xffff;
-	return 0;
-}
 
+	if (dev_up) {
+		if (ifr.ifr_flags & IFF_UP)
+			return 0;
+		ifr.ifr_flags |= IFF_UP;
+	} else {
+		if (!(ifr.ifr_flags & IFF_UP))
+			return 0;
+		ifr.ifr_flags &= ~IFF_UP;
+	}
 
-/**
- * wpa_driver_nl80211_get_ifflags - Get interface flags (SIOCGIFFLAGS)
- * @drv: driver_nl80211 private data
- * @flags: Pointer to returned flags value
- * Returns: 0 on success, -1 on failure
- */
-static int wpa_driver_nl80211_get_ifflags(struct wpa_driver_nl80211_data *drv,
-					  int *flags)
-{
-	return wpa_driver_nl80211_get_ifflags_ifname(drv, drv->ifname, flags);
-}
-
-
-static int wpa_driver_nl80211_set_ifflags_ifname(
-	struct wpa_driver_nl80211_data *drv,
-	const char *ifname, int flags)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	ifr.ifr_flags = flags & 0xffff;
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, (caddr_t) &ifr) < 0) {
-		perror("SIOCSIFFLAGS");
+	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
+		perror("ioctl[SIOCSIFFLAGS]");
 		return -1;
 	}
+
 	return 0;
-}
-
-
-/**
- * wpa_driver_nl80211_set_ifflags - Set interface flags (SIOCSIFFLAGS)
- * @drv: driver_nl80211 private data
- * @flags: New value for flags
- * Returns: 0 on success, -1 on failure
- */
-static int wpa_driver_nl80211_set_ifflags(struct wpa_driver_nl80211_data *drv,
-					  int flags)
-{
-	return wpa_driver_nl80211_set_ifflags_ifname(drv, drv->ifname, flags);
 }
 
 
@@ -1172,8 +1152,6 @@ err1:
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
-	int flags;
-
 	drv->ifindex = if_nametoindex(drv->ifname);
 
 	if (wpa_driver_nl80211_set_mode(drv, 0) < 0) {
@@ -1181,17 +1159,10 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			   "use managed mode");
 	}
 
-	if (wpa_driver_nl80211_get_ifflags(drv, &flags) != 0) {
-		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
-			   drv->ifname);
+	if (hostapd_set_iface_flags(drv, drv->ifname, 1)) {
+		wpa_printf(MSG_ERROR, "Could not set interface '%s' "
+			   "UP", drv->ifname);
 		return -1;
-	}
-	if (!(flags & IFF_UP)) {
-		if (wpa_driver_nl80211_set_ifflags(drv, flags | IFF_UP) != 0) {
-			wpa_printf(MSG_ERROR, "Could not set interface '%s' "
-				   "UP", drv->ifname);
-			return -1;
-		}
 	}
 
 	wpa_driver_nl80211_capa(drv);
@@ -1212,7 +1183,6 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	int flags;
 
 #ifdef CONFIG_AP
 	if (drv->monitor_ifidx >= 0)
@@ -1231,8 +1201,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	eloop_unregister_read_sock(drv->link_event_sock);
 
-	if (wpa_driver_nl80211_get_ifflags(drv, &flags) == 0)
-		(void) wpa_driver_nl80211_set_ifflags(drv, flags & ~IFF_UP);
+	hostapd_set_iface_flags(drv, drv->ifname, 0);
 	wpa_driver_nl80211_set_mode(drv, 0);
 
 	close(drv->link_event_sock);
@@ -2149,11 +2118,19 @@ nla_put_failure:
 	return -1;
 }
 
+#endif /* CONFIG_AP */
+
+#if defined(CONFIG_AP) || defined(HOSTAPD)
 
 static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 				 int ifidx)
 {
 	struct nl_msg *msg;
+
+#ifdef HOSTAPD
+	/* stop listening for EAPOL on this interface */
+	del_ifidx(drv, ifidx);
+#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -2172,11 +2149,16 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 
 
 static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
-				const char *ifname, enum nl80211_iftype iftype)
+				const char *ifname, enum nl80211_iftype iftype,
+				const u8 *addr)
 {
 	struct nl_msg *msg, *flags = NULL;
 	int ifidx;
 	int ret = -ENOBUFS;
+#ifdef HOSTAPD
+	struct ifreq ifreq;
+	struct iwreq iwr;
+#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -2218,9 +2200,43 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	if (ifidx <= 0)
 		return -1;
 
+#ifdef HOSTAPD
+	/* start listening for EAPOL on this interface */
+	add_ifidx(drv, ifidx);
+
+	if (addr) {
+		switch (iftype) {
+		case NL80211_IFTYPE_AP:
+			os_strlcpy(ifreq.ifr_name, ifname, IFNAMSIZ);
+			memcpy(ifreq.ifr_hwaddr.sa_data, addr, ETH_ALEN);
+			ifreq.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+
+			if (ioctl(drv->ioctl_sock, SIOCSIFHWADDR, &ifreq)) {
+				nl80211_remove_iface(drv, ifidx);
+				return -1;
+			}
+			break;
+		case NL80211_IFTYPE_WDS:
+			memset(&iwr, 0, sizeof(iwr));
+			os_strlcpy(iwr.ifr_name, ifname, IFNAMSIZ);
+			iwr.u.addr.sa_family = ARPHRD_ETHER;
+			memcpy(iwr.u.addr.sa_data, addr, ETH_ALEN);
+			if (ioctl(drv->ioctl_sock, SIOCSIWAP, &iwr))
+				return -1;
+			break;
+		default:
+			/* nothing */
+			break;
+		}
+	}
+#endif /* HOSTAPD */
+
 	return ifidx;
 }
 
+#endif /* CONFIG_AP || HOSTAPD */
+
+#ifdef CONFIG_AP
 
 void ap_tx_status(void *ctx, const u8 *addr,
 		  const u8 *buf, size_t len, int ack);
@@ -2577,9 +2593,6 @@ static int add_monitor_filter(int s)
 	return 0;
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
-
-#ifdef CONFIG_AP
 
 static int
 nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
@@ -2588,31 +2601,18 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	struct sockaddr_ll ll;
 	int optval;
 	socklen_t optlen;
-	int flags;
 
 	snprintf(buf, IFNAMSIZ, "mon.%s", drv->ifname);
 	buf[IFNAMSIZ - 1] = '\0';
 
 	drv->monitor_ifidx =
-		nl80211_create_iface(drv, buf, NL80211_IFTYPE_MONITOR);
+		nl80211_create_iface(drv, buf, NL80211_IFTYPE_MONITOR, NULL);
 
 	if (drv->monitor_ifidx < 0)
 		return -1;
 
-	if (wpa_driver_nl80211_get_ifflags_ifname(drv, buf, &flags) != 0) {
-		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
-			   buf);
+	if (hostapd_set_iface_flags(drv, buf, 1))
 		goto error;
-	}
-	if (!(flags & IFF_UP)) {
-		if (wpa_driver_nl80211_set_ifflags_ifname(drv, buf,
-							  flags | IFF_UP) != 0)
-		{
-			wpa_printf(MSG_ERROR, "Could not set interface '%s' "
-				   "UP", buf);
-			goto error;
-		}
-	}
 
 	memset(&ll, 0, sizeof(ll));
 	ll.sll_family = AF_PACKET;
@@ -2629,8 +2629,7 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 		/* This works, but will cost in performance. */
 	}
 
-	if (bind(drv->monitor_sock, (struct sockaddr *) &ll,
-		 sizeof(ll)) < 0) {
+	if (bind(drv->monitor_sock, (struct sockaddr *) &ll, sizeof(ll)) < 0) {
 		perror("monitor socket bind");
 		goto error;
 	}
@@ -2655,6 +2654,9 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	return -1;
 }
 
+#endif /* CONFIG_AP || HOSTAPD */
+
+#ifdef CONFIG_AP
 
 static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
@@ -2755,7 +2757,7 @@ nla_put_failure:
 static int wpa_driver_nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
 				       int mode)
 {
-	int ret = -1, flags;
+	int ret = -1;
 	struct nl_msg *msg;
 	int nlmode;
 
@@ -2798,9 +2800,7 @@ try_again:
 	 * take the device down, try to set the mode again, and bring the
 	 * device back up.
 	 */
-	if (wpa_driver_nl80211_get_ifflags(drv, &flags) == 0) {
-		(void) wpa_driver_nl80211_set_ifflags(drv, flags & ~IFF_UP);
-
+	if (hostapd_set_iface_flags(drv, drv->ifname, 0) == 0) {
 		/* Try to set the mode again while the interface is down */
 		msg = nlmsg_alloc();
 		if (!msg)
@@ -2817,11 +2817,8 @@ try_again:
 				   drv->ifname, ret, strerror(-ret));
 		}
 
-		/* Ignore return value of get_ifflags to ensure that the device
-		 * is always up like it was before this function was called.
-		 */
-		(void) wpa_driver_nl80211_get_ifflags(drv, &flags);
-		(void) wpa_driver_nl80211_set_ifflags(drv, flags | IFF_UP);
+		if (hostapd_set_iface_flags(drv, drv->ifname, 1))
+			ret = -1;
 	}
 
 	return ret;
@@ -2929,38 +2926,6 @@ static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 	for (i = 0; i < drv->num_if_indices; i++)
 		if (drv->if_indices[i] == ifidx)
 			return 1;
-
-	return 0;
-}
-
-
-static int hostapd_set_iface_flags(struct wpa_driver_nl80211_data *drv,
-				   const char *ifname, int dev_up)
-{
-	struct ifreq ifr;
-
-	if (drv->ioctl_sock < 0)
-		return -1;
-
-	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		wpa_printf(MSG_DEBUG, "Could not read interface flags (%s)",
-			   drv->ifname);
-		return -1;
-	}
-
-	if (dev_up)
-		ifr.ifr_flags |= IFF_UP;
-	else
-		ifr.ifr_flags &= ~IFF_UP;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
-		return -1;
-	}
 
 	return 0;
 }
@@ -3491,111 +3456,6 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 }
 
 
-static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv, int ifidx)
-{
-	struct nl_msg *msg;
-
-	/* stop listening for EAPOL on this interface */
-	del_ifidx(drv, ifidx);
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		goto nla_put_failure;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_DEL_INTERFACE, 0);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifidx);
-
-	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
-		return;
- nla_put_failure:
-	printf("Failed to remove interface.\n");
-}
-
-
-static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
-				const char *ifname,
-				enum nl80211_iftype iftype,
-				const u8 *addr)
-{
-	struct nl_msg *msg, *flags = NULL;
-	int ifidx;
-	struct ifreq ifreq;
-	struct iwreq iwr;
-	int ret = -ENOBUFS;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_NEW_INTERFACE, 0);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->ifname));
-	NLA_PUT_STRING(msg, NL80211_ATTR_IFNAME, ifname);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFTYPE, iftype);
-
-	if (iftype == NL80211_IFTYPE_MONITOR) {
-		int err;
-
-		flags = nlmsg_alloc();
-		if (!flags)
-			goto nla_put_failure;
-
-		NLA_PUT_FLAG(flags, NL80211_MNTR_FLAG_COOK_FRAMES);
-
-		err = nla_put_nested(msg, NL80211_ATTR_MNTR_FLAGS, flags);
-
-		nlmsg_free(flags);
-
-		if (err)
-			goto nla_put_failure;
-	}
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret) {
- nla_put_failure:
-		printf("Failed to create interface %s.\n", ifname);
-		return ret;
-	}
-
-	ifidx = if_nametoindex(ifname);
-
-	if (ifidx <= 0)
-		return -1;
-
-	/* start listening for EAPOL on this interface */
-	add_ifidx(drv, ifidx);
-
-	if (addr) {
-		switch (iftype) {
-		case NL80211_IFTYPE_AP:
-			os_strlcpy(ifreq.ifr_name, ifname, IFNAMSIZ);
-			memcpy(ifreq.ifr_hwaddr.sa_data, addr, ETH_ALEN);
-			ifreq.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-
-			if (ioctl(drv->ioctl_sock, SIOCSIFHWADDR, &ifreq)) {
-				nl80211_remove_iface(drv, ifidx);
-				return -1;
-			}
-			break;
-		case NL80211_IFTYPE_WDS:
-			memset(&iwr, 0, sizeof(iwr));
-			os_strlcpy(iwr.ifr_name, ifname, IFNAMSIZ);
-			iwr.u.addr.sa_family = ARPHRD_ETHER;
-			memcpy(iwr.u.addr.sa_data, addr, ETH_ALEN);
-			if (ioctl(drv->ioctl_sock, SIOCSIWAP, &iwr))
-				return -1;
-			break;
-		default:
-			/* nothing */
-			break;
-		}
-	}
-
-	return ifidx;
-}
-
-
 static int i802_bss_add(void *priv, const char *ifname, const u8 *bssid)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
@@ -3980,67 +3840,6 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 			return;
 		hostapd_eapol_receive(hapd, lladdr.sll_addr, buf, len);
 	}
-}
-
-
-static int nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
-{
-	char buf[IFNAMSIZ];
-	struct sockaddr_ll ll;
-	int optval;
-	socklen_t optlen;
-
-	snprintf(buf, IFNAMSIZ, "mon.%s", drv->ifname);
-	buf[IFNAMSIZ - 1] = '\0';
-
-	drv->monitor_ifidx =
-		nl80211_create_iface(drv, buf, NL80211_IFTYPE_MONITOR, NULL);
-
-	if (drv->monitor_ifidx < 0)
-		return -1;
-
-	if (hostapd_set_iface_flags(drv, buf, 1))
-		goto error;
-
-	memset(&ll, 0, sizeof(ll));
-	ll.sll_family = AF_PACKET;
-	ll.sll_ifindex = drv->monitor_ifidx;
-	drv->monitor_sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	if (drv->monitor_sock < 0) {
-		perror("socket[PF_PACKET,SOCK_RAW]");
-		goto error;
-	}
-
-	if (add_monitor_filter(drv->monitor_sock)) {
-		wpa_printf(MSG_INFO, "Failed to set socket filter for monitor "
-			   "interface; do filtering in user space");
-		/* This works, but will cost in performance. */
-	}
-
-	if (bind(drv->monitor_sock, (struct sockaddr *) &ll,
-		 sizeof(ll)) < 0) {
-		perror("monitor socket bind");
-		goto error;
-	}
-
-	optlen = sizeof(optval);
-	optval = 20;
-	if (setsockopt
-	    (drv->monitor_sock, SOL_SOCKET, SO_PRIORITY, &optval, optlen)) {
-		perror("Failed to set socket priority");
-		goto error;
-	}
-
-	if (eloop_register_read_sock(drv->monitor_sock, handle_monitor_read,
-				     drv, NULL)) {
-		printf("Could not register monitor read socket\n");
-		goto error;
-	}
-
-	return 0;
- error:
-	nl80211_remove_iface(drv, drv->monitor_ifidx);
-	return -1;
 }
 
 

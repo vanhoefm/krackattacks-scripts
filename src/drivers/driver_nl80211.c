@@ -1,6 +1,10 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2004, Instant802 Networks, Inc.
+ * Copyright (c) 2005-2006, Devicescape Software, Inc.
+ * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
+ * Copyright (c) 2009, Atheros Communications
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -79,6 +83,12 @@
 #define IF_OPER_UP 6
 #endif
 
+enum ieee80211_msg_type {
+	ieee80211_msg_normal = 0,
+	ieee80211_msg_tx_callback_ack = 1,
+	ieee80211_msg_tx_callback_fail = 2,
+};
+
 struct i802_bss {
 	struct i802_bss *next;
 	char ifname[IFNAMSIZ + 1];
@@ -150,6 +160,13 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 				 int ifidx);
 #endif /* CONFIG_AP */
+
+#ifdef HOSTAPD
+static void handle_frame(struct wpa_driver_nl80211_data *drv,
+			 u8 *buf, size_t len,
+			 struct hostapd_frame_info *hfi,
+			 enum ieee80211_msg_type msg_type);
+#endif /* HOSTAPD */
 
 
 /* nl80211 code */
@@ -2205,13 +2222,6 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 }
 
 
-enum ieee80211_msg_type {
-	ieee80211_msg_normal = 0,
-	ieee80211_msg_tx_callback_ack = 1,
-	ieee80211_msg_tx_callback_fail = 2,
-};
-
-
 void ap_tx_status(void *ctx, const u8 *addr,
 		  const u8 *buf, size_t len, int ack);
 void ap_rx_from_unknown_sta(void *ctx, const u8 *addr);
@@ -2219,6 +2229,9 @@ void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
 		struct hostapd_frame_info *fi);
 void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok);
 
+#endif /* CONFIG_AP */
+
+#if defined(CONFIG_AP) || defined(HOSTAPD)
 
 static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 {
@@ -2235,14 +2248,22 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 	case WLAN_FC_TYPE_MGMT:
 		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
 			   ok ? "ACK" : "fail");
+#ifdef HOSTAPD
+		hostapd_mgmt_tx_cb(ctx, buf, len, stype, ok);
+#else /* HOSTAPD */
 		ap_mgmt_tx_cb(ctx, buf, len, stype, ok);
+#endif /* HOSTAPD */
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
 			   ok ? "ACK" : "fail");
 		break;
 	case WLAN_FC_TYPE_DATA:
+#ifdef HOSTAPD
+		hostapd_tx_status(ctx, hdr->addr1, buf, len, ok);
+#else /* HOSTAPD */
 		ap_tx_status(ctx, hdr->addr1, buf, len, ok);
+#endif /* HOSTAPD */
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "unknown TX callback frame type %d",
@@ -2251,6 +2272,9 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 	}
 }
 
+#endif /* CONFIG_AP || HOSTAPD */
+
+#ifdef CONFIG_AP
 
 static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			 u8 *buf, size_t len,
@@ -2330,6 +2354,9 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 	}
 }
 
+#endif /* CONFIG_AP */
+
+#if defined(CONFIG_AP) || defined(HOSTAPD)
 
 static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
@@ -2550,6 +2577,9 @@ static int add_monitor_filter(int s)
 	return 0;
 }
 
+#endif /* CONFIG_AP || HOSTAPD */
+
+#ifdef CONFIG_AP
 
 static int
 nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
@@ -2824,13 +2854,6 @@ static int wpa_driver_nl80211_set_operstate(void *priv, int state)
 #ifdef HOSTAPD
 
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
-
-enum ieee80211_msg_type {
-	ieee80211_msg_normal = 0,
-	ieee80211_msg_tx_callback_ack = 1,
-	ieee80211_msg_tx_callback_fail = 2,
-};
-
 
 static int i802_sta_deauth(void *priv, const u8 *addr, int reason);
 static int i802_sta_disassoc(void *priv, const u8 *addr, int reason);
@@ -3815,43 +3838,12 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 }
 
 
-static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
-			       int ok)
-{
-	struct ieee80211_hdr *hdr;
-	u16 fc, type, stype;
-
-	hdr = (struct ieee80211_hdr *) buf;
-	fc = le_to_host16(hdr->frame_control);
-
-	type = WLAN_FC_GET_TYPE(fc);
-	stype = WLAN_FC_GET_STYPE(fc);
-
-	switch (type) {
-	case WLAN_FC_TYPE_MGMT:
-		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
-			   ok ? "ACK" : "fail");
-		hostapd_mgmt_tx_cb(hapd, buf, len, stype, ok);
-		break;
-	case WLAN_FC_TYPE_CTRL:
-		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
-			   ok ? "ACK" : "fail");
-		break;
-	case WLAN_FC_TYPE_DATA:
-		hostapd_tx_status(hapd, hdr->addr1, buf, len, ok);
-		break;
-	default:
-		printf("unknown TX callback frame type %d\n", type);
-		break;
-	}
-}
-
-
 static void handle_frame(struct wpa_driver_nl80211_data *drv,
-			 struct hostapd_iface *iface, u8 *buf, size_t len,
+			 u8 *buf, size_t len,
 			 struct hostapd_frame_info *hfi,
 			 enum ieee80211_msg_type msg_type)
 {
+	struct hostapd_iface *iface = drv->hapd->iface;
 	struct ieee80211_hdr *hdr;
 	u16 fc, type, stype;
 	size_t data_len = len;
@@ -3988,227 +3980,6 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 			return;
 		hostapd_eapol_receive(hapd, lladdr.sll_addr, buf, len);
 	}
-}
-
-
-static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
-{
-	struct wpa_driver_nl80211_data *drv = eloop_ctx;
-	int len;
-	unsigned char buf[3000];
-	struct hostapd_data *hapd = drv->hapd;
-	struct ieee80211_radiotap_iterator iter;
-	int ret;
-	struct hostapd_frame_info hfi;
-	int injected = 0, failed = 0, msg_type, rxflags = 0;
-
-	len = recv(sock, buf, sizeof(buf), 0);
-	if (len < 0) {
-		perror("recv");
-		return;
-	}
-
-	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len)) {
-		printf("received invalid radiotap frame\n");
-		return;
-	}
-
-	memset(&hfi, 0, sizeof(hfi));
-
-	while (1) {
-		ret = ieee80211_radiotap_iterator_next(&iter);
-		if (ret == -ENOENT)
-			break;
-		if (ret) {
-			printf("received invalid radiotap frame (%d)\n", ret);
-			return;
-		}
-		switch (iter.this_arg_index) {
-		case IEEE80211_RADIOTAP_FLAGS:
-			if (*iter.this_arg & IEEE80211_RADIOTAP_F_FCS)
-				len -= 4;
-			break;
-		case IEEE80211_RADIOTAP_RX_FLAGS:
-			rxflags = 1;
-			break;
-		case IEEE80211_RADIOTAP_TX_FLAGS:
-			injected = 1;
-			failed = le_to_host16((*(uint16_t *) iter.this_arg)) &
-					IEEE80211_RADIOTAP_F_TX_FAIL;
-			break;
-		case IEEE80211_RADIOTAP_DATA_RETRIES:
-			break;
-		case IEEE80211_RADIOTAP_CHANNEL:
-			/* TODO convert from freq/flags to channel number
-			hfi.channel = XXX;
-			hfi.phytype = XXX;
-			 */
-			break;
-		case IEEE80211_RADIOTAP_RATE:
-			hfi.datarate = *iter.this_arg * 5;
-			break;
-		case IEEE80211_RADIOTAP_DB_ANTSIGNAL:
-			hfi.ssi_signal = *iter.this_arg;
-			break;
-		}
-	}
-
-	if (rxflags && injected)
-		return;
-
-	if (!injected)
-		msg_type = ieee80211_msg_normal;
-	else if (failed)
-		msg_type = ieee80211_msg_tx_callback_fail;
-	else
-		msg_type = ieee80211_msg_tx_callback_ack;
-
-	handle_frame(drv, hapd->iface, buf + iter.max_length,
-		     len - iter.max_length, &hfi, msg_type);
-}
-
-
-/*
- * we post-process the filter code later and rewrite
- * this to the offset to the last instruction
- */
-#define PASS	0xFF
-#define FAIL	0xFE
-
-static struct sock_filter msock_filter_insns[] = {
-	/*
-	 * do a little-endian load of the radiotap length field
-	 */
-	/* load lower byte into A */
-	BPF_STMT(BPF_LD  | BPF_B | BPF_ABS, 2),
-	/* put it into X (== index register) */
-	BPF_STMT(BPF_MISC| BPF_TAX, 0),
-	/* load upper byte into A */
-	BPF_STMT(BPF_LD  | BPF_B | BPF_ABS, 3),
-	/* left-shift it by 8 */
-	BPF_STMT(BPF_ALU | BPF_LSH | BPF_K, 8),
-	/* or with X */
-	BPF_STMT(BPF_ALU | BPF_OR | BPF_X, 0),
-	/* put result into X */
-	BPF_STMT(BPF_MISC| BPF_TAX, 0),
-
-	/*
-	 * Allow management frames through, this also gives us those
-	 * management frames that we sent ourselves with status
-	 */
-	/* load the lower byte of the IEEE 802.11 frame control field */
-	BPF_STMT(BPF_LD  | BPF_B | BPF_IND, 0),
-	/* mask off frame type and version */
-	BPF_STMT(BPF_ALU | BPF_AND | BPF_K, 0xF),
-	/* accept frame if it's both 0, fall through otherwise */
-	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0, PASS, 0),
-
-	/*
-	 * TODO: add a bit to radiotap RX flags that indicates
-	 * that the sending station is not associated, then
-	 * add a filter here that filters on our DA and that flag
-	 * to allow us to deauth frames to that bad station.
-	 *
-	 * Not a regression -- we didn't do it before either.
-	 */
-
-#if 0
-	/*
-	 * drop non-data frames, WDS frames
-	 */
-	/* load the lower byte of the frame control field */
-	BPF_STMT(BPF_LD   | BPF_B | BPF_IND, 0),
-	/* mask off QoS bit */
-	BPF_STMT(BPF_ALU  | BPF_AND | BPF_K, 0x0c),
-	/* drop non-data frames */
-	BPF_JUMP(BPF_JMP  | BPF_JEQ | BPF_K, 8, 0, FAIL),
-	/* load the upper byte of the frame control field */
-	BPF_STMT(BPF_LD   | BPF_B | BPF_IND, 0),
-	/* mask off toDS/fromDS */
-	BPF_STMT(BPF_ALU  | BPF_AND | BPF_K, 0x03),
-	/* drop WDS frames */
-	BPF_JUMP(BPF_JMP  | BPF_JEQ | BPF_K, 3, FAIL, 0),
-#endif
-
-	/*
-	 * add header length to index
-	 */
-	/* load the lower byte of the frame control field */
-	BPF_STMT(BPF_LD   | BPF_B | BPF_IND, 0),
-	/* mask off QoS bit */
-	BPF_STMT(BPF_ALU  | BPF_AND | BPF_K, 0x80),
-	/* right shift it by 6 to give 0 or 2 */
-	BPF_STMT(BPF_ALU  | BPF_RSH | BPF_K, 6),
-	/* add data frame header length */
-	BPF_STMT(BPF_ALU  | BPF_ADD | BPF_K, 24),
-	/* add index, was start of 802.11 header */
-	BPF_STMT(BPF_ALU  | BPF_ADD | BPF_X, 0),
-	/* move to index, now start of LL header */
-	BPF_STMT(BPF_MISC | BPF_TAX, 0),
-
-	/*
-	 * Accept empty data frames, we use those for
-	 * polling activity.
-	 */
-	BPF_STMT(BPF_LD  | BPF_W | BPF_LEN, 0),
-	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_X, 0, PASS, 0),
-
-	/*
-	 * Accept EAPOL frames
-	 */
-	BPF_STMT(BPF_LD  | BPF_W | BPF_IND, 0),
-	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0xAAAA0300, 0, FAIL),
-	BPF_STMT(BPF_LD  | BPF_W | BPF_IND, 4),
-	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0x0000888E, PASS, FAIL),
-
-	/* keep these last two statements or change the code below */
-	/* return 0 == "DROP" */
-	BPF_STMT(BPF_RET | BPF_K, 0),
-	/* return ~0 == "keep all" */
-	BPF_STMT(BPF_RET | BPF_K, ~0),
-};
-
-static struct sock_fprog msock_filter = {
-	.len = sizeof(msock_filter_insns)/sizeof(msock_filter_insns[0]),
-	.filter = msock_filter_insns,
-};
-
-
-static int add_monitor_filter(int s)
-{
-	int idx;
-
-	/* rewrite all PASS/FAIL jump offsets */
-	for (idx = 0; idx < msock_filter.len; idx++) {
-		struct sock_filter *insn = &msock_filter_insns[idx];
-
-		if (BPF_CLASS(insn->code) == BPF_JMP) {
-			if (insn->code == (BPF_JMP|BPF_JA)) {
-				if (insn->k == PASS)
-					insn->k = msock_filter.len - idx - 2;
-				else if (insn->k == FAIL)
-					insn->k = msock_filter.len - idx - 3;
-			}
-
-			if (insn->jt == PASS)
-				insn->jt = msock_filter.len - idx - 2;
-			else if (insn->jt == FAIL)
-				insn->jt = msock_filter.len - idx - 3;
-
-			if (insn->jf == PASS)
-				insn->jf = msock_filter.len - idx - 2;
-			else if (insn->jf == FAIL)
-				insn->jf = msock_filter.len - idx - 3;
-		}
-	}
-
-	if (setsockopt(s, SOL_SOCKET, SO_ATTACH_FILTER,
-		       &msock_filter, sizeof(msock_filter))) {
-		perror("SO_ATTACH_FILTER");
-		return -1;
-	}
-
-	return 0;
 }
 
 

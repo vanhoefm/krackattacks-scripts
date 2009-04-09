@@ -55,8 +55,6 @@
 
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/config.h"
-#include "../../hostapd/hw_features.h"
-#include "../../hostapd/mlme.h"
 #include "../../hostapd/sta_flags.h"
 #include "ieee802_11_common.h"
 

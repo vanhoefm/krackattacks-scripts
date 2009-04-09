@@ -119,7 +119,6 @@ struct wpa_driver_nl80211_data {
 #ifdef HOSTAPD
 	struct hostapd_data *hapd;
 
-	int wext_sock; /* socket for wireless events */
 	int eapol_sock; /* socket for EAPOL frames */
 	int monitor_sock; /* socket for monitor */
 	int monitor_ifidx;
@@ -128,7 +127,6 @@ struct wpa_driver_nl80211_data {
 	int *if_indices;
 	int num_if_indices;
 
-	int we_version;
 	int beacon_int;
 	struct i802_bss bss;
 	unsigned int ht_40mhz_scan:1;
@@ -154,10 +152,6 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_AP */
 
 
-#ifdef HOSTAPD
-#define wpa_supplicant_event(c, e, d) do { } while (0)
-#endif /* HOSTAPD */
-
 /* nl80211 code */
 static int ack_handler(struct nl_msg *msg, void *arg)
 {
@@ -180,6 +174,13 @@ static int error_handler(struct sockaddr_nl *nla, struct nlmsgerr *err,
 	*ret = err->error;
 	return NL_SKIP;
 }
+
+
+static int no_seq_check(struct nl_msg *msg, void *arg)
+{
+	return NL_OK;
+}
+
 
 static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 			      struct nl_msg *msg,
@@ -382,6 +383,7 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 }
 
 
+#ifndef HOSTAPD
 static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
 					  void *ctx, char *buf, size_t len,
 					  int del)
@@ -621,12 +623,6 @@ try_again:
 }
 
 
-static int no_seq_check(struct nl_msg *msg, void *arg)
-{
-	return NL_OK;
-}
-
-
 static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 			    const u8 *frame, size_t len)
 {
@@ -729,10 +725,17 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 	}
 }
 
+#endif /* HOSTAPD */
+
 
 static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
 					   struct nlattr *tb[])
 {
+#ifdef HOSTAPD
+	if (tb[NL80211_ATTR_MAC])
+		hostapd_michael_mic_failure(drv->hapd,
+					    nla_data(tb[NL80211_ATTR_MAC]));
+#else /* HOSTAPD */
 	union wpa_event_data data;
 
 	wpa_printf(MSG_DEBUG, "nl80211: MLME event Michael MIC failure");
@@ -762,6 +765,7 @@ static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
 	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_MICHAEL_MIC_FAILURE, &data);
+#endif /* HOSTAPD */
 }
 
 
@@ -785,6 +789,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 	}
 
 	switch (gnlh->cmd) {
+#ifndef HOSTAPD
 	case NL80211_CMD_NEW_SCAN_RESULTS:
 		wpa_printf(MSG_DEBUG, "nl80211: New scan results available");
 		drv->scan_complete_events = 1;
@@ -808,6 +813,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_DISASSOCIATE:
 		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME]);
 		break;
+#endif /* HOSTAPD */
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:
 		mlme_event_michael_mic_failure(drv, tb);
 		break;
@@ -1116,8 +1122,10 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		goto err6;
 	}
 
+#ifndef HOSTAPD
 	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_link, drv,
 				 ctx);
+#endif /* HOSTAPD */
 	drv->link_event_sock = s;
 
 	if (wpa_driver_nl80211_finish_drv_init(drv))
@@ -1234,7 +1242,9 @@ static void wpa_driver_nl80211_deinit(void *priv)
 static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	wpa_printf(MSG_DEBUG, "Scan timeout - try to get results");
+#ifndef HOSTAPD
 	wpa_supplicant_event(timeout_ctx, EVENT_SCAN_RESULTS, NULL);
+#endif /* HOSTAPD */
 }
 
 
@@ -4757,6 +4767,7 @@ static int i802_ht_scan(struct wpa_driver_nl80211_data *drv)
 static int i802_init_sockets(struct wpa_driver_nl80211_data *drv, const u8 *bssid)
 {
 	struct ifreq ifr;
+	int ret;
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
@@ -4819,6 +4830,28 @@ static int i802_init_sockets(struct wpa_driver_nl80211_data *drv, const u8 *bssi
 		printf("nl80211 not found.\n");
 		return -1;
 	}
+
+	ret = nl_get_multicast_id(drv, "nl80211", "scan");
+	if (ret >= 0)
+		ret = nl_socket_add_membership(drv->nl_handle, ret);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
+			   "membership for scan events: %d (%s)",
+			   ret, strerror(-ret));
+	}
+
+	ret = nl_get_multicast_id(drv, "nl80211", "mlme");
+	if (ret >= 0)
+		ret = nl_socket_add_membership(drv->nl_handle, ret);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
+			   "membership for mlme events: %d (%s)",
+			   ret, strerror(-ret));
+	}
+
+	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle),
+				 wpa_driver_nl80211_event_receive, drv,
+				 drv->hapd);
 
 #ifdef CONFIG_IEEE80211N
 	if (drv->ht_40mhz_scan) {
@@ -4899,255 +4932,6 @@ static int i802_sta_clear_stats(void *priv, const u8 *addr)
 }
 
 
-static void
-hostapd_wireless_event_wireless_custom(struct wpa_driver_nl80211_data *drv,
-				       char *custom)
-{
-	wpa_printf(MSG_DEBUG, "Custom wireless event: '%s'", custom);
-
-	if (strncmp(custom, "MLME-MICHAELMICFAILURE.indication", 33) == 0) {
-		char *pos;
-		u8 addr[ETH_ALEN];
-		pos = strstr(custom, "addr=");
-		if (pos == NULL) {
-			wpa_printf(MSG_DEBUG,
-				   "MLME-MICHAELMICFAILURE.indication "
-				   "without sender address ignored");
-			return;
-		}
-		pos += 5;
-		if (hwaddr_aton(pos, addr) == 0) {
-			hostapd_michael_mic_failure(drv->hapd, addr);
-		} else {
-			wpa_printf(MSG_DEBUG,
-				   "MLME-MICHAELMICFAILURE.indication "
-				   "with invalid MAC address");
-		}
-	}
-}
-
-
-static void hostapd_wireless_event_wireless(struct wpa_driver_nl80211_data *drv,
-					    char *data, int len)
-{
-	struct iw_event iwe_buf, *iwe = &iwe_buf;
-	char *pos, *end, *custom, *buf;
-
-	pos = data;
-	end = data + len;
-
-	while (pos + IW_EV_LCP_LEN <= end) {
-		/* Event data may be unaligned, so make a local, aligned copy
-		 * before processing. */
-		memcpy(&iwe_buf, pos, IW_EV_LCP_LEN);
-		wpa_printf(MSG_DEBUG, "Wireless event: cmd=0x%x len=%d",
-			   iwe->cmd, iwe->len);
-		if (iwe->len <= IW_EV_LCP_LEN)
-			return;
-
-		custom = pos + IW_EV_POINT_LEN;
-		if (drv->we_version > 18 &&
-		    (iwe->cmd == IWEVMICHAELMICFAILURE ||
-		     iwe->cmd == IWEVCUSTOM)) {
-			/* WE-19 removed the pointer from struct iw_point */
-			char *dpos = (char *) &iwe_buf.u.data.length;
-			int dlen = dpos - (char *) &iwe_buf;
-			memcpy(dpos, pos + IW_EV_LCP_LEN,
-			       sizeof(struct iw_event) - dlen);
-		} else {
-			memcpy(&iwe_buf, pos, sizeof(struct iw_event));
-			custom += IW_EV_POINT_OFF;
-		}
-
-		switch (iwe->cmd) {
-		case IWEVCUSTOM:
-			if (custom + iwe->u.data.length > end)
-				return;
-			buf = malloc(iwe->u.data.length + 1);
-			if (buf == NULL)
-				return;
-			memcpy(buf, custom, iwe->u.data.length);
-			buf[iwe->u.data.length] = '\0';
-			hostapd_wireless_event_wireless_custom(drv, buf);
-			free(buf);
-			break;
-		}
-
-		pos += iwe->len;
-	}
-}
-
-
-static void hostapd_wireless_event_rtm_newlink(struct wpa_driver_nl80211_data *drv,
-					       struct nlmsghdr *h, int len)
-{
-	struct ifinfomsg *ifi;
-	int attrlen, _nlmsg_len, rta_len;
-	struct rtattr *attr;
-
-	if (len < (int) sizeof(*ifi))
-		return;
-
-	ifi = NLMSG_DATA(h);
-
-	/* TODO: use ifi->ifi_index to filter out wireless events from other
-	 * interfaces */
-
-	_nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
-
-	attrlen = h->nlmsg_len - _nlmsg_len;
-	if (attrlen < 0)
-		return;
-
-	attr = (struct rtattr *) (((char *) ifi) + _nlmsg_len);
-
-	rta_len = RTA_ALIGN(sizeof(struct rtattr));
-	while (RTA_OK(attr, attrlen)) {
-		if (attr->rta_type == IFLA_WIRELESS) {
-			hostapd_wireless_event_wireless(
-				drv, ((char *) attr) + rta_len,
-				attr->rta_len - rta_len);
-		}
-		attr = RTA_NEXT(attr, attrlen);
-	}
-}
-
-
-static void hostapd_wireless_event_receive(int sock, void *eloop_ctx,
-					   void *sock_ctx)
-{
-	char buf[256];
-	int left;
-	struct sockaddr_nl from;
-	socklen_t fromlen;
-	struct nlmsghdr *h;
-	struct wpa_driver_nl80211_data *drv = eloop_ctx;
-
-	fromlen = sizeof(from);
-	left = recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT,
-			(struct sockaddr *) &from, &fromlen);
-	if (left < 0) {
-		if (errno != EINTR && errno != EAGAIN)
-			perror("recvfrom(netlink)");
-		return;
-	}
-
-	h = (struct nlmsghdr *) buf;
-	while (left >= (int) sizeof(*h)) {
-		int len, plen;
-
-		len = h->nlmsg_len;
-		plen = len - sizeof(*h);
-		if (len > left || plen < 0) {
-			printf("Malformed netlink message: "
-			       "len=%d left=%d plen=%d\n",
-			       len, left, plen);
-			break;
-		}
-
-		switch (h->nlmsg_type) {
-		case RTM_NEWLINK:
-			hostapd_wireless_event_rtm_newlink(drv, h, plen);
-			break;
-		}
-
-		len = NLMSG_ALIGN(len);
-		left -= len;
-		h = (struct nlmsghdr *) ((char *) h + len);
-	}
-
-	if (left > 0) {
-		printf("%d extra bytes in the end of netlink message\n", left);
-	}
-}
-
-
-static int hostap_get_we_version(struct wpa_driver_nl80211_data *drv)
-{
-	struct iw_range *range;
-	struct iwreq iwr;
-	int minlen;
-	size_t buflen;
-
-	drv->we_version = 0;
-
-	/*
-	 * Use larger buffer than struct iw_range in order to allow the
-	 * structure to grow in the future.
-	 */
-	buflen = sizeof(struct iw_range) + 500;
-	range = os_zalloc(buflen);
-	if (range == NULL)
-		return -1;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.data.pointer = (caddr_t) range;
-	iwr.u.data.length = buflen;
-
-	minlen = ((char *) &range->enc_capa) - (char *) range +
-		sizeof(range->enc_capa);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIWRANGE, &iwr) < 0) {
-		perror("ioctl[SIOCGIWRANGE]");
-		free(range);
-		return -1;
-	} else if (iwr.u.data.length >= minlen &&
-		   range->we_version_compiled >= 18) {
-		wpa_printf(MSG_DEBUG, "SIOCGIWRANGE: WE(compiled)=%d "
-			   "WE(source)=%d enc_capa=0x%x",
-			   range->we_version_compiled,
-			   range->we_version_source,
-			   range->enc_capa);
-		drv->we_version = range->we_version_compiled;
-	}
-
-	free(range);
-	return 0;
-}
-
-
-static int i802_wireless_event_init(struct wpa_driver_nl80211_data *drv)
-{
-	int s;
-	struct sockaddr_nl local;
-
-	hostap_get_we_version(drv);
-
-	drv->wext_sock = -1;
-
-	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (s < 0) {
-		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
-		return -1;
-	}
-
-	memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	local.nl_groups = RTMGRP_LINK;
-	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
-		perror("bind(netlink)");
-		close(s);
-		return -1;
-	}
-
-	eloop_register_read_sock(s, hostapd_wireless_event_receive, drv,
-				 NULL);
-	drv->wext_sock = s;
-
-	return 0;
-}
-
-
-static void i802_wireless_event_deinit(struct wpa_driver_nl80211_data *drv)
-{
-	if (drv->wext_sock < 0)
-		return;
-	eloop_unregister_read_sock(drv->wext_sock);
-	close(drv->wext_sock);
-}
-
-
 static int i802_sta_deauth(void *priv, const u8 *addr, int reason)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
@@ -5219,9 +5003,6 @@ static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 	if (i802_init_sockets(drv, bssid))
 		goto failed;
 
-	if (i802_wireless_event_init(drv))
-		goto failed;
-
 	return drv;
 
 failed:
@@ -5240,8 +5021,6 @@ static void i802_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct i802_bss *bss, *prev;
-
-	i802_wireless_event_deinit(drv);
 
 	if (drv->last_freq_ht) {
 		/* Clear HT flags from the driver */
@@ -5269,6 +5048,7 @@ static void i802_deinit(void *priv)
 		close(drv->eapol_sock);
 	}
 
+	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle));
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
 	nl_handle_destroy(drv->nl_handle);

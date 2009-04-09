@@ -291,9 +291,9 @@ static inline int
 hostapd_set_country(struct hostapd_data *hapd, const char *country)
 {
 	if (hapd->driver == NULL ||
-	    hapd->driver->hapd_set_country == NULL)
+	    hapd->driver->set_country == NULL)
 		return 0;
-	return hapd->driver->hapd_set_country(hapd->drv_priv, country);
+	return hapd->driver->set_country(hapd->drv_priv, country);
 }
 
 static inline int

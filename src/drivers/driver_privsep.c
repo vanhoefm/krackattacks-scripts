@@ -838,7 +838,6 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	NULL /* set_retry */,
 	NULL /* sta_set_flags */,
 	NULL /* set_rate_sets */,
-	NULL /* hapd_set_country */,
 	NULL /* set_ieee80211d */,
 	NULL /* hapd_set_beacon */,
 	NULL /* set_internal_bridge */,

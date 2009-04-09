@@ -921,7 +921,7 @@ static int wpa_driver_nl80211_set_country(void *priv, const char *alpha2_arg)
 
 	msg = nlmsg_alloc();
 	if (!msg)
-		goto nla_put_failure;
+		return -ENOMEM;
 
 	alpha2[0] = alpha2_arg[0];
 	alpha2[1] = alpha2_arg[1];
@@ -3815,30 +3815,6 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 }
 
 
-static int i802_set_country(void *priv, const char *country)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg;
-	char alpha2[3];
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_REQ_SET_REG, 0);
-
-	alpha2[0] = country[0];
-	alpha2[1] = country[1];
-	alpha2[2] = '\0';
-	NLA_PUT_STRING(msg, NL80211_ATTR_REG_ALPHA2, alpha2);
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
 static void handle_tx_callback(struct hostapd_data *hapd, u8 *buf, size_t len,
 			       int ok)
 {
@@ -5064,7 +5040,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.if_update = i802_if_update,
 	.if_remove = i802_if_remove,
 	.set_sta_vlan = i802_set_sta_vlan,
-	.hapd_set_country = i802_set_country,
 	.get_neighbor_bss = i802_get_neighbor_bss,
 #endif /* HOSTAPD */
 };

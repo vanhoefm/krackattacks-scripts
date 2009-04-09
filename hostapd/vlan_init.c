@@ -28,7 +28,7 @@
 #include <linux/if_vlan.h>
 #include <linux/if_bridge.h>
 
-#include "priv_netlink.h"
+#include "drivers/priv_netlink.h"
 #include "eloop.h"
 
 

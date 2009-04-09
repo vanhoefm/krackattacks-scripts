@@ -171,8 +171,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		hapd->iface->num_sta_ht_20mhz--;
 	}
 
+#ifdef NEED_MLME
 	if (hostapd_ht_operation_update(hapd->iface) > 0)
 		set_beacon++;
+#endif /* NEED_MLME */
 #endif /* CONFIG_IEEE80211N */
 
 	if (set_beacon)
@@ -695,7 +697,9 @@ static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 		       HOSTAPD_LEVEL_DEBUG,
 		       "association SA Query attempt %d", sta->sa_query_count);
 
+#ifdef NEED_MLME
 	ieee802_11_send_sa_query_req(hapd, sta->addr, trans_id);
+#endif /* NEED_MLME */
 }
 
 

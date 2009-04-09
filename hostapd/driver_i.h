@@ -16,15 +16,15 @@
 #ifndef DRIVER_I_H
 #define DRIVER_I_H
 
-#include "driver.h"
+#include "drivers/driver.h"
 #include "config.h"
 
 static inline void *
 hostapd_driver_init(struct hostapd_data *hapd)
 {
-	if (hapd->driver == NULL || hapd->driver->init == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_init == NULL)
 		return NULL;
-	return hapd->driver->init(hapd);
+	return hapd->driver->hapd_init(hapd);
 }
 
 static inline void *
@@ -38,9 +38,9 @@ hostapd_driver_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 static inline void
 hostapd_driver_deinit(struct hostapd_data *hapd)
 {
-	if (hapd->driver == NULL || hapd->driver->deinit == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_deinit == NULL)
 		return;
-	hapd->driver->deinit(hapd->drv_priv);
+	hapd->driver->hapd_deinit(hapd->drv_priv);
 }
 
 static inline int
@@ -67,11 +67,11 @@ hostapd_set_key(const char *ifname, struct hostapd_data *hapd,
 		int set_tx, const u8 *seq, size_t seq_len,
 		const u8 *key, size_t key_len)
 {
-	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_set_key == NULL)
 		return 0;
-	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
-				     key_idx, set_tx, seq, seq_len, key,
-				     key_len);
+	return hapd->driver->hapd_set_key(ifname, hapd->drv_priv, alg, addr,
+					  key_idx, set_tx, seq, seq_len, key,
+					  key_len);
 }
 
 static inline int
@@ -125,10 +125,11 @@ static inline int
 hostapd_send_eapol(struct hostapd_data *hapd, const u8 *addr, const u8 *data,
 		   size_t data_len, int encrypt)
 {
-	if (hapd->driver == NULL || hapd->driver->send_eapol == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_send_eapol == NULL)
 		return 0;
-	return hapd->driver->send_eapol(hapd->drv_priv, addr, data, data_len,
-					encrypt, hapd->own_addr);
+	return hapd->driver->hapd_send_eapol(hapd->drv_priv, addr, data,
+					     data_len, encrypt,
+					     hapd->own_addr);
 }
 
 static inline int
@@ -158,19 +159,19 @@ hostapd_sta_remove(struct hostapd_data *hapd, const u8 *addr)
 static inline int
 hostapd_get_ssid(struct hostapd_data *hapd, u8 *buf, size_t len)
 {
-	if (hapd->driver == NULL || hapd->driver->get_ssid == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_get_ssid == NULL)
 		return 0;
-	return hapd->driver->get_ssid(hapd->conf->iface, hapd->drv_priv, buf,
-				      len);
+	return hapd->driver->hapd_get_ssid(hapd->conf->iface, hapd->drv_priv,
+					   buf, len);
 }
 
 static inline int
 hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
 {
-	if (hapd->driver == NULL || hapd->driver->set_ssid == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_set_ssid == NULL)
 		return 0;
-	return hapd->driver->set_ssid(hapd->conf->iface, hapd->drv_priv, buf,
-				      len);
+	return hapd->driver->hapd_set_ssid(hapd->conf->iface, hapd->drv_priv,
+					   buf, len);
 }
 
 static inline int
@@ -185,9 +186,10 @@ hostapd_send_mgmt_frame(struct hostapd_data *hapd, const void *msg, size_t len,
 static inline int
 hostapd_set_countermeasures(struct hostapd_data *hapd, int enabled)
 {
-	if (hapd->driver == NULL || hapd->driver->set_countermeasures == NULL)
+	if (hapd->driver == NULL ||
+	    hapd->driver->hapd_set_countermeasures == NULL)
 		return 0;
-	return hapd->driver->set_countermeasures(hapd->drv_priv, enabled);
+	return hapd->driver->hapd_set_countermeasures(hapd->drv_priv, enabled);
 }
 
 static inline int
@@ -290,9 +292,9 @@ static inline int
 hostapd_set_country(struct hostapd_data *hapd, const char *country)
 {
 	if (hapd->driver == NULL ||
-	    hapd->driver->set_country == NULL)
+	    hapd->driver->hapd_set_country == NULL)
 		return 0;
-	return hapd->driver->set_country(hapd->drv_priv, country);
+	return hapd->driver->hapd_set_country(hapd->drv_priv, country);
 }
 
 static inline int
@@ -317,10 +319,11 @@ hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
 		   const u8 *head, size_t head_len,
 		   const u8 *tail, size_t tail_len, int dtim_period)
 {
-	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_set_beacon == NULL)
 		return 0;
-	return hapd->driver->set_beacon(ifname, hapd->drv_priv, head, head_len,
-					tail, tail_len, dtim_period);
+	return hapd->driver->hapd_set_beacon(ifname, hapd->drv_priv,
+					     head, head_len,
+					     tail, tail_len, dtim_period);
 }
 
 static inline int
@@ -334,9 +337,9 @@ hostapd_set_internal_bridge(struct hostapd_data *hapd, int value)
 static inline int
 hostapd_set_beacon_int(struct hostapd_data *hapd, int value)
 {
-	if (hapd->driver == NULL || hapd->driver->set_beacon_int == NULL)
+	if (hapd->driver == NULL || hapd->driver->hapd_set_beacon_int == NULL)
 		return 0;
-	return hapd->driver->set_beacon_int(hapd->drv_priv, value);
+	return hapd->driver->hapd_set_beacon_int(hapd->drv_priv, value);
 }
 
 static inline int
@@ -449,10 +452,12 @@ static inline struct hostapd_hw_modes *
 hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 			    u16 *flags)
 {
-	if (hapd->driver == NULL || hapd->driver->get_hw_feature_data == NULL)
+	if (hapd->driver == NULL ||
+	    hapd->driver->hapd_get_hw_feature_data == NULL)
 		return NULL;
-	return hapd->driver->get_hw_feature_data(hapd->drv_priv, num_modes,
-						 flags);
+	return hapd->driver->hapd_get_hw_feature_data(hapd->drv_priv,
+						      num_modes,
+						      flags);
 }
 
 static inline int

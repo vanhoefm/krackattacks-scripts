@@ -114,7 +114,7 @@ const char *wpa_supplicant_full_license5 =
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
-extern struct wpa_driver_ops *wpa_supplicant_drivers[];
+extern struct wpa_driver_ops *wpa_drivers[];
 
 /* Configure default/group WEP keys for static WEP */
 static int wpa_set_wep_keys(struct wpa_supplicant *wpa_s,
@@ -1533,7 +1533,7 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 	if (wpa_s == NULL)
 		return -1;
 
-	if (wpa_supplicant_drivers[0] == NULL) {
+	if (wpa_drivers[0] == NULL) {
 		wpa_printf(MSG_ERROR, "No driver interfaces build into "
 			   "wpa_supplicant.");
 		return -1;
@@ -1541,7 +1541,7 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 
 	if (name == NULL) {
 		/* default to first driver in the list */
-		wpa_s->driver = wpa_supplicant_drivers[0];
+		wpa_s->driver = wpa_drivers[0];
 		return 0;
 	}
 
@@ -1550,11 +1550,11 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 		len = pos - name;
 	else
 		len = os_strlen(name);
-	for (i = 0; wpa_supplicant_drivers[i]; i++) {
-		if (os_strlen(wpa_supplicant_drivers[i]->name) == len &&
-		    os_strncmp(name, wpa_supplicant_drivers[i]->name, len) ==
+	for (i = 0; wpa_drivers[i]; i++) {
+		if (os_strlen(wpa_drivers[i]->name) == len &&
+		    os_strncmp(name, wpa_drivers[i]->name, len) ==
 		    0) {
-			wpa_s->driver = wpa_supplicant_drivers[i];
+			wpa_s->driver = wpa_drivers[i];
 			return 0;
 		}
 	}
@@ -2159,7 +2159,7 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		}
 	}
 
-	for (i = 0; wpa_supplicant_drivers[i]; i++)
+	for (i = 0; wpa_drivers[i]; i++)
 		global->drv_count++;
 	if (global->drv_count == 0) {
 		wpa_printf(MSG_ERROR, "No drivers enabled");
@@ -2171,13 +2171,13 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		wpa_supplicant_deinit(global);
 		return NULL;
 	}
-	for (i = 0; wpa_supplicant_drivers[i]; i++) {
-		if (!wpa_supplicant_drivers[i]->global_init)
+	for (i = 0; wpa_drivers[i]; i++) {
+		if (!wpa_drivers[i]->global_init)
 			continue;
-		global->drv_priv[i] = wpa_supplicant_drivers[i]->global_init();
+		global->drv_priv[i] = wpa_drivers[i]->global_init();
 		if (global->drv_priv[i] == NULL) {
 			wpa_printf(MSG_ERROR, "Failed to initialize driver "
-				   "'%s'", wpa_supplicant_drivers[i]->name);
+				   "'%s'", wpa_drivers[i]->name);
 			wpa_supplicant_deinit(global);
 			return NULL;
 		}
@@ -2244,10 +2244,10 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 
 	eap_peer_unregister_methods();
 
-	for (i = 0; wpa_supplicant_drivers[i] && global->drv_priv; i++) {
+	for (i = 0; wpa_drivers[i] && global->drv_priv; i++) {
 		if (!global->drv_priv[i])
 			continue;
-		wpa_supplicant_drivers[i]->global_deinit(global->drv_priv[i]);
+		wpa_drivers[i]->global_deinit(global->drv_priv[i]);
 	}
 	os_free(global->drv_priv);
 

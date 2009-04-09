@@ -339,7 +339,7 @@ struct hostapd_config {
 	int *supported_rates;
 	int *basic_rates;
 
-	const struct hapd_driver_ops *driver;
+	const struct wpa_driver_ops *driver;
 
 	int passive_scan_interval; /* seconds, 0 = disabled */
 	int passive_scan_listen; /* usec */

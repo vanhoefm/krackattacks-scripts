@@ -20,7 +20,7 @@
 #include "common.h"
 #include "hostapd_defs.h"
 
-struct hapd_driver_ops;
+struct wpa_driver_ops;
 struct wpa_ctrl_dst;
 struct radius_server_data;
 struct upnp_wps_device_sm;
@@ -54,7 +54,7 @@ struct hostapd_data {
 #define AID_WORDS ((2008 + 31) / 32)
 	u32 sta_aid[AID_WORDS];
 
-	const struct hapd_driver_ops *driver;
+	const struct wpa_driver_ops *driver;
 	void *drv_priv;
 
 	u8 *default_wep_key;

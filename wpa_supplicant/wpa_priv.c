@@ -692,7 +692,7 @@ static void wpa_priv_interface_deinit(struct wpa_priv_interface *iface)
 }
 
 
-extern struct wpa_driver_ops *wpa_supplicant_drivers[];
+extern struct wpa_driver_ops *wpa_drivers[];
 
 static struct wpa_priv_interface *
 wpa_priv_interface_init(const char *dir, const char *params)
@@ -721,10 +721,10 @@ wpa_priv_interface_init(const char *dir, const char *params)
 	os_memcpy(iface->driver_name, params, len);
 	iface->driver_name[len] = '\0';
 
-	for (i = 0; wpa_supplicant_drivers[i]; i++) {
+	for (i = 0; wpa_drivers[i]; i++) {
 		if (os_strcmp(iface->driver_name,
-			      wpa_supplicant_drivers[i]->name) == 0) {
-			iface->driver = wpa_supplicant_drivers[i];
+			      wpa_drivers[i]->name) == 0) {
+			iface->driver = wpa_drivers[i];
 			break;
 		}
 	}

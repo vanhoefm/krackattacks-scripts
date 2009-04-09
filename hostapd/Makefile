@@ -41,10 +41,14 @@ endif
 OBJS =	hostapd.o main.o ieee802_1x.o eapol_sm.o \
 	config.o ieee802_11_auth.o \
 	sta_info.o wpa.o \
-	drivers.o preauth.o pmksa_cache.o \
+	preauth.o pmksa_cache.o \
 	drv_callbacks.o \
 	tkip_countermeasures.o \
 	mlme.o wpa_auth_ie.o
+
+OBJS += ../src/drivers/drivers.o
+OBJS += ../src/drivers/scan_helpers.o
+CFLAGS += -DHOSTAPD
 
 OBJS += ../src/utils/eloop.o
 OBJS += ../src/utils/common.o
@@ -127,35 +131,35 @@ endif
 ifdef CONFIG_DRIVER_HOSTAP
 NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_HOSTAP
-OBJS += driver_hostap.o
+OBJS += ../src/drivers/driver_hostap.o
 endif
 
 ifdef CONFIG_DRIVER_WIRED
 CFLAGS += -DCONFIG_DRIVER_WIRED
-OBJS += driver_wired.o
+OBJS += ../src/drivers/driver_wired.o
 endif
 
 ifdef CONFIG_DRIVER_MADWIFI
 CFLAGS += -DCONFIG_DRIVER_MADWIFI
-OBJS += driver_madwifi.o
+OBJS += ../src/drivers/driver_madwifi.o
 CONFIG_L2_PACKET=y
 endif
 
 ifdef CONFIG_DRIVER_ATHEROS
 CFLAGS += -DCONFIG_DRIVER_ATHEROS
-OBJS += driver_atheros.o
+OBJS += ../src/drivers/driver_atheros.o
 CONFIG_L2_PACKET=y
 endif
 
 ifdef CONFIG_DRIVER_PRISM54
 CFLAGS += -DCONFIG_DRIVER_PRISM54
-OBJS += driver_prism54.o
+OBJS += ../src/drivers/driver_prism54.o
 endif
 
 ifdef CONFIG_DRIVER_NL80211
 NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_NL80211
-OBJS += driver_nl80211.o
+OBJS += ../src/drivers/driver_nl80211.o
 OBJS += ../src/utils/radiotap.o
 LIBS += -lnl
 ifdef CONFIG_LIBNL20
@@ -166,7 +170,7 @@ endif
 
 ifdef CONFIG_DRIVER_BSD
 CFLAGS += -DCONFIG_DRIVER_BSD
-OBJS += driver_bsd.o
+OBJS += ../src/drivers/driver_bsd.o
 CONFIG_L2_PACKET=y
 CONFIG_DNET_PCAP=y
 CONFIG_L2_FREEBSD=y
@@ -175,12 +179,12 @@ endif
 ifdef CONFIG_DRIVER_TEST
 NEED_MLME=y
 CFLAGS += -DCONFIG_DRIVER_TEST
-OBJS += driver_test.o
+OBJS += ../src/drivers/driver_test.o
 endif
 
 ifdef CONFIG_DRIVER_NONE
 CFLAGS += -DCONFIG_DRIVER_NONE
-OBJS += driver_none.o
+OBJS += ../src/drivers/driver_none.o
 endif
 
 ifdef CONFIG_L2_PACKET

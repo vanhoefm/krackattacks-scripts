@@ -14,7 +14,7 @@
 
 #include "includes.h"
 
-#include "hostapd.h"
+#include "../hostapd/hostapd.h"
 #include "driver.h"
 
 
@@ -54,9 +54,9 @@ static int none_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 }
 
 
-const struct hapd_driver_ops wpa_driver_none_ops = {
+const struct wpa_driver_ops wpa_driver_none_ops = {
 	.name = "none",
-	.init = none_driver_init,
-	.deinit = none_driver_deinit,
+	.hapd_init = none_driver_init,
+	.hapd_deinit = none_driver_deinit,
 	.send_ether = none_driver_send_ether,
 };

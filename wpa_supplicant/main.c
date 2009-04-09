@@ -21,7 +21,7 @@
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 
-extern struct wpa_driver_ops *wpa_supplicant_drivers[];
+extern struct wpa_driver_ops *wpa_drivers[];
 
 
 static void usage(void)
@@ -41,10 +41,10 @@ static void usage(void)
 	       "drivers:\n",
 	       wpa_supplicant_version, wpa_supplicant_license);
 
-	for (i = 0; wpa_supplicant_drivers[i]; i++) {
+	for (i = 0; wpa_drivers[i]; i++) {
 		printf("  %s = %s\n",
-		       wpa_supplicant_drivers[i]->name,
-		       wpa_supplicant_drivers[i]->desc);
+		       wpa_drivers[i]->name,
+		       wpa_drivers[i]->desc);
 	}
 
 #ifndef CONFIG_NO_STDOUT_DEBUG
@@ -79,8 +79,7 @@ static void usage(void)
 
 	printf("example:\n"
 	       "  wpa_supplicant -D%s -iwlan0 -c/etc/wpa_supplicant.conf\n",
-	       wpa_supplicant_drivers[i] ?
-		   wpa_supplicant_drivers[i]->name : "wext");
+	       wpa_drivers[i] ? wpa_drivers[i]->name : "wext");
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 }
 

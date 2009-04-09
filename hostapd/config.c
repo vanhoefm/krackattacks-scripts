@@ -19,7 +19,7 @@
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 #include "hostapd.h"
-#include "driver.h"
+#include "drivers/driver.h"
 #include "sha1.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
@@ -33,7 +33,7 @@
 
 #define MAX_STA_COUNT 2007
 
-extern struct hapd_driver_ops *hostapd_drivers[];
+extern struct wpa_driver_ops *wpa_drivers[];
 
 
 #ifndef CONFIG_NO_VLAN
@@ -226,7 +226,7 @@ struct hostapd_config * hostapd_config_defaults(void)
 	}
 
 	/* set default driver based on configuration */
-	conf->driver = hostapd_drivers[0];
+	conf->driver = wpa_drivers[0];
 	if (conf->driver == NULL) {
 		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
 		os_free(conf);
@@ -1461,10 +1461,10 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			int j;
 			/* clear to get error below if setting is invalid */
 			conf->driver = NULL;
-			for (j = 0; hostapd_drivers[j]; j++) {
-				if (os_strcmp(pos, hostapd_drivers[j]->name) ==
-				    0) {
-					conf->driver = hostapd_drivers[j];
+			for (j = 0; wpa_drivers[j]; j++) {
+				if (os_strcmp(pos, wpa_drivers[j]->name) == 0)
+				{
+					conf->driver = wpa_drivers[j];
 					break;
 				}
 			}

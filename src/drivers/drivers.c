@@ -1,5 +1,5 @@
 /*
- * WPA Supplicant / driver interface list
+ * Driver interface list
  * Copyright (c) 2004-2005, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -74,9 +74,18 @@ extern struct wpa_driver_ops wpa_driver_iphone_ops; /* driver_iphone.m */
 /* driver_roboswitch.c */
 extern struct wpa_driver_ops wpa_driver_roboswitch_ops;
 #endif /* CONFIG_DRIVER_ROBOSWITCH */
+#ifdef CONFIG_DRIVER_ATHEROS
+extern struct wpa_driver_ops wpa_driver_atheros_ops; /* driver_atheros.c */
+#endif /* CONFIG_DRIVER_ATHEROS */
+#ifdef CONFIG_DRIVER_NONE
+extern struct wpa_driver_ops wpa_driver_none_ops; /* driver_none.c */
+#endif /* CONFIG_DRIVER_NONE */
+#ifdef CONFIG_AP
+extern struct wpa_driver_ops ap_driver_ops; /* wpa_supplicant/ap.c */
+#endif /* CONFIG_AP */
 
 
-struct wpa_driver_ops *wpa_supplicant_drivers[] =
+struct wpa_driver_ops *wpa_drivers[] =
 {
 #ifdef CONFIG_DRIVER_WEXT
 	&wpa_driver_wext_ops,
@@ -135,5 +144,14 @@ struct wpa_driver_ops *wpa_supplicant_drivers[] =
 #ifdef CONFIG_DRIVER_ROBOSWITCH
 	&wpa_driver_roboswitch_ops,
 #endif /* CONFIG_DRIVER_ROBOSWITCH */
+#ifdef CONFIG_DRIVER_ATHEROS
+	&wpa_driver_atheros_ops,
+#endif /* CONFIG_DRIVER_ATHEROS */
+#ifdef CONFIG_DRIVER_NONE
+	&wpa_driver_none_ops,
+#endif /* CONFIG_DRIVER_NONE */
+#ifdef CONFIG_AP
+	&ap_driver_ops,
+#endif /* CONFIG_AP */
 	NULL
 };

@@ -18,7 +18,6 @@
 #include "common.h"
 #include "../hostapd/hostapd.h"
 #include "../hostapd/config.h"
-#include "../hostapd/driver.h"
 #ifdef NEED_MLME
 #include "../hostapd/ieee802_11.h"
 #endif /* NEED_MLME */
@@ -245,13 +244,13 @@ static struct hostapd_hw_modes *ap_driver_get_hw_feature_data(void *priv,
 }
 
 
-static struct hapd_driver_ops ap_driver_ops =
+struct wpa_driver_ops ap_driver_ops =
 {
 	.name = "wpa_supplicant",
-	.init = ap_driver_init,
-	.deinit = ap_driver_deinit,
+	.hapd_init = ap_driver_init,
+	.hapd_deinit = ap_driver_deinit,
 	.send_ether = ap_driver_send_ether,
-	.set_key = ap_driver_set_key,
+	.hapd_set_key = ap_driver_set_key,
 	.get_seqnum = ap_driver_get_seqnum,
 	.flush = ap_driver_flush,
 	.read_sta_data = ap_driver_read_sta_data,
@@ -263,27 +262,35 @@ static struct hapd_driver_ops ap_driver_ops =
 	.sta_add = ap_driver_sta_add,
 	.get_inact_sec = ap_driver_get_inact_sec,
 	.set_freq = ap_driver_set_freq,
-	.set_beacon = ap_driver_set_beacon,
-	.set_beacon_int = ap_driver_set_beacon_int,
+	.hapd_set_beacon = ap_driver_set_beacon,
+	.hapd_set_beacon_int = ap_driver_set_beacon_int,
 	.set_cts_protect = ap_driver_set_cts_protect,
 	.set_preamble = ap_driver_set_preamble,
 	.set_short_slot_time = ap_driver_set_short_slot_time,
 	.set_tx_queue_params = ap_driver_set_tx_queue_params,
-	.get_hw_feature_data = ap_driver_get_hw_feature_data,
+	.hapd_get_hw_feature_data = ap_driver_get_hw_feature_data,
 };
 
-struct hapd_driver_ops *hostapd_drivers[] =
-{
-	&ap_driver_ops,
-	NULL
-};
 
+extern struct wpa_driver_ops *wpa_drivers[];
 
 static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid,
 				  struct hostapd_config *conf)
 {
 	struct hostapd_bss_config *bss = &conf->bss[0];
+	int j;
+
+	for (j = 0; wpa_drivers[j]; j++) {
+		if (os_strcmp("wpa_supplicant", wpa_drivers[j]->name) == 0) {
+			conf->driver = wpa_drivers[j];
+			break;
+		}
+	}
+	if (conf->driver == NULL) {
+		wpa_printf(MSG_ERROR, "No AP driver ops found");
+		return -1;
+	}
 
 	os_strlcpy(bss->iface, wpa_s->ifname, sizeof(bss->iface));
 

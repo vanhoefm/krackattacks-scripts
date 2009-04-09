@@ -58,14 +58,15 @@
 
 #include "wireless_copy.h"
 
-#include "hostapd.h"
-#include "config.h"
+#include "../hostapd/hostapd.h"
+#include "../hostapd/config.h"
+#include "../hostapd/sta_flags.h"
 #include "driver.h"
 #include "eloop.h"
 #include "priv_netlink.h"
 #include "l2_packet/l2_packet.h"
 
-#include "wps_hostapd.h"
+#include "../hostapd/wps_hostapd.h"
 #include "ieee802_11_defs.h"
 
 
@@ -1315,23 +1316,23 @@ madwifi_commit(void *priv)
 	return madwifi_set_iface_flags(priv, 1);
 }
 
-const struct hapd_driver_ops wpa_driver_atheros_ops = {
+const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
-	.init			= madwifi_init,
+	.hapd_init		= madwifi_init,
 	.deinit			= madwifi_deinit,
 	.set_ieee8021x		= madwifi_set_ieee8021x,
 	.set_privacy		= madwifi_set_privacy,
-	.set_key		= madwifi_set_key,
+	.hapd_set_key		= madwifi_set_key,
 	.get_seqnum		= madwifi_get_seqnum,
 	.flush			= madwifi_flush,
 	.set_generic_elem	= madwifi_set_opt_ie,
 	.sta_set_flags		= madwifi_sta_set_flags,
 	.read_sta_data		= madwifi_read_sta_driver_data,
-	.send_eapol		= madwifi_send_eapol,
+	.hapd_send_eapol	= madwifi_send_eapol,
 	.sta_disassoc		= madwifi_sta_disassoc,
 	.sta_deauth		= madwifi_sta_deauth,
-	.set_ssid		= madwifi_set_ssid,
-	.get_ssid		= madwifi_get_ssid,
+	.hapd_set_ssid		= madwifi_set_ssid,
+	.hapd_get_ssid		= madwifi_get_ssid,
 	.set_countermeasures	= madwifi_set_countermeasures,
 	.sta_clear_stats	= madwifi_sta_clear_stats,
 	.commit			= madwifi_commit,

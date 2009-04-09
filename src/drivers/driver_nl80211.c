@@ -88,7 +88,7 @@ enum ieee80211_msg_type {
 
 struct i802_bss {
 	struct i802_bss *next;
-	char ifname[IFNAMSIZ + 1];
+	int ifindex;
 	unsigned int beacon_set:1;
 };
 
@@ -165,6 +165,8 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			 enum ieee80211_msg_type msg_type);
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
+static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
+				 int ifindex);
 #endif /* HOSTAPD */
 
 
@@ -2014,35 +2016,42 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 					     !do_not_encrypt);
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
 
-
-#ifdef CONFIG_AP
-
-static int wpa_driver_nl80211_set_beacon(void *priv,
-					 const u8 *head, size_t head_len,
-					 const u8 *tail, size_t tail_len,
-					 int dtim_period)
+static int wpa_driver_nl80211_set_beacon_iface(int ifindex, void *priv,
+					       const u8 *head, size_t head_len,
+					       const u8 *tail, size_t tail_len,
+					       int dtim_period)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct nl_msg *msg;
 	u8 cmd = NL80211_CMD_NEW_BEACON;
 	int ret;
+	int beacon_set;
+#ifdef HOSTAPD
+	struct i802_bss *bss;
+
+	bss = get_bss(drv, ifindex);
+	if (bss == NULL)
+		return -ENOENT;
+	beacon_set = bss->beacon_set;
+#else /* HOSTAPD */
+	beacon_set = drv->beacon_set;
+#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Set beacon (beacon_set=%d)",
-		   drv->beacon_set);
-	if (drv->beacon_set)
+		   beacon_set);
+	if (beacon_set)
 		cmd = NL80211_CMD_SET_BEACON;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, cmd, 0);
 	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, head_len, head);
 	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, tail_len, tail);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
 	if (!drv->beacon_int)
 		drv->beacon_int = 100;
 	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, drv->beacon_int);
@@ -2052,8 +2061,13 @@ static int wpa_driver_nl80211_set_beacon(void *priv,
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Beacon set failed: %d (%s)",
 			   ret, strerror(-ret));
-	} else
+	} else {
+#ifdef HOSTAPD
+		bss->beacon_set = 1;
+#else /* HOSTAPD */
 		drv->beacon_set = 1;
+#endif /* HOSTAPD */
+	}
 	return ret;
  nla_put_failure:
 	return -ENOBUFS;
@@ -2067,15 +2081,19 @@ static int wpa_driver_nl80211_set_beacon_int(void *priv, int value)
 
 	drv->beacon_int = value;
 
+#ifdef HOSTAPD
+	if (!drv->bss.beacon_set)
+		return 0;
+#else /* HOSTAPD */
 	if (!drv->beacon_set)
 		return 0;
+#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Set beacon interval %d "
-		   "(beacon_set=%d)", value, drv->beacon_set);
+	wpa_printf(MSG_DEBUG, "nl80211: Set beacon interval %d", value);
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_SET_BEACON, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
@@ -2085,6 +2103,23 @@ static int wpa_driver_nl80211_set_beacon_int(void *priv, int value)
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
+}
+
+#endif /* CONFIG_AP || HOSTAPD */
+
+
+#ifdef CONFIG_AP
+
+static int wpa_driver_nl80211_set_beacon(void *priv,
+					 const u8 *head, size_t head_len,
+					 const u8 *tail, size_t tail_len,
+					 int dtim_period)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	return wpa_driver_nl80211_set_beacon_iface(drv->ifindex, priv,
+						   head, head_len,
+						   tail, tail_len,
+						   dtim_period);
 }
 
 
@@ -2854,15 +2889,15 @@ static int i802_sta_disassoc(void *priv, const u8 *addr, int reason);
 
 
 static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
-				 const char *iface)
+				 int ifindex)
 {
 	struct i802_bss *bss = &drv->bss;
 	while (bss) {
-		if (os_strncmp(iface, bss->ifname, IFNAMSIZ) == 0)
+		if (ifindex == bss->ifindex)
 			return bss;
 		bss = bss->next;
 	}
-	wpa_printf(MSG_DEBUG, "nl80211: get_bss(%s) failed", iface);
+	wpa_printf(MSG_DEBUG, "nl80211: get_bss(%d) failed", ifindex);
 	return NULL;
 }
 
@@ -3462,7 +3497,7 @@ static int i802_bss_add(void *priv, const char *ifname, const u8 *bssid)
 	bss = os_zalloc(sizeof(*bss));
 	if (bss == NULL)
 		return -1;
-	os_strlcpy(bss->ifname, ifname, IFNAMSIZ);
+	bss->ifindex = if_nametoindex(ifname);
 
 	ifidx = nl80211_create_iface(priv, ifname, NL80211_IFTYPE_AP, bssid);
 	if (ifidx < 0) {
@@ -3484,11 +3519,12 @@ static int i802_bss_remove(void *priv, const char *ifname)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct i802_bss *bss, *prev;
-	nl80211_remove_iface(priv, if_nametoindex(ifname));
+	int ifindex = if_nametoindex(ifname);
+	nl80211_remove_iface(priv, ifindex);
 	prev = &drv->bss;
 	bss = drv->bss.next;
 	while (bss) {
-		if (os_strncmp(ifname, bss->ifname, IFNAMSIZ) == 0) {
+		if (ifindex == bss->ifindex) {
 			prev->next = bss->next;
 			os_free(bss);
 			break;
@@ -3504,39 +3540,10 @@ static int i802_set_beacon(const char *iface, void *priv,
 			   const u8 *head, size_t head_len,
 			   const u8 *tail, size_t tail_len, int dtim_period)
 {
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg;
-	u8 cmd = NL80211_CMD_NEW_BEACON;
-	int ret;
-	struct i802_bss *bss;
-
-	bss = get_bss(drv, iface);
-	if (bss == NULL)
-		return -ENOENT;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	wpa_printf(MSG_DEBUG, "nl80211: Set beacon (iface=%s beacon_set=%d)",
-		   iface, bss->beacon_set);
-	if (bss->beacon_set)
-		cmd = NL80211_CMD_SET_BEACON;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, cmd, 0);
-	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, head_len, head);
-	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, tail_len, tail);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(iface));
-	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, drv->beacon_int);
-	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, dtim_period);
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (!ret)
-		bss->beacon_set = 1;
-	return ret;
- nla_put_failure:
-	return -ENOBUFS;
+	return wpa_driver_nl80211_set_beacon_iface(if_nametoindex(iface), priv,
+						   head, head_len,
+						   tail, tail_len,
+						   dtim_period);
 }
 
 
@@ -3551,34 +3558,6 @@ static int i802_del_beacon(struct wpa_driver_nl80211_data *drv)
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_DEL_BEACON, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->ifname));
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
-static int i802_set_beacon_int(void *priv, int value)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg;
-
-	drv->beacon_int = value;
-
-	if (!drv->bss.beacon_set)
-		return 0;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	wpa_printf(MSG_DEBUG, "nl80211: Set beacon interval %d "
-		   "(beacon_set=%d)", value, drv->bss.beacon_set);
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_SET_BEACON, 0);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->ifname));
-
-	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, value);
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
@@ -4466,8 +4445,8 @@ static void *i802_init(struct hostapd_data *hapd,
 
 	drv->hapd = hapd;
 	memcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
-	memcpy(drv->bss.ifname, params->ifname, sizeof(drv->bss.ifname));
 	drv->ifindex = if_nametoindex(drv->ifname);
+	drv->bss.ifindex = drv->ifindex;
 
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
 	drv->if_indices = drv->default_if_indices;
@@ -4562,10 +4541,10 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_country = wpa_driver_nl80211_set_country,
 #ifdef CONFIG_AP
 	.set_beacon = wpa_driver_nl80211_set_beacon,
-	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
 	.send_mlme = wpa_driver_nl80211_send_mlme,
 #endif /* CONFIG_AP */
 #if defined(CONFIG_AP) || defined(HOSTAPD)
+	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 #endif /* CONFIG_AP || HOSTAPD */
 #ifdef HOSTAPD
@@ -4589,7 +4568,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_retry = i802_set_retry,
 	.set_rate_sets = i802_set_rate_sets,
 	.hapd_set_beacon = i802_set_beacon,
-	.hapd_set_beacon_int = i802_set_beacon_int,
 	.set_cts_protect = i802_set_cts_protect,
 	.set_preamble = i802_set_preamble,
 	.set_short_slot_time = i802_set_short_slot_time,

@@ -1287,7 +1287,6 @@ struct wpa_driver_ops {
 	 * 1 = enabled, i.e., bridge packets between associated STAs (default)
 	 */
 	int (*set_internal_bridge)(void *priv, int value);
-	int (*hapd_set_beacon_int)(void *priv, int value);
 	/* Configure broadcast SSID mode:
 	 * 0 = include SSID in Beacon frames and reply to Probe Request frames
 	 *     that use broadcast SSID

@@ -268,7 +268,7 @@ struct wpa_driver_ops ap_driver_ops =
 	.set_preamble = ap_driver_set_preamble,
 	.set_short_slot_time = ap_driver_set_short_slot_time,
 	.set_tx_queue_params = ap_driver_set_tx_queue_params,
-	.hapd_get_hw_feature_data = ap_driver_get_hw_feature_data,
+	.get_hw_feature_data = ap_driver_get_hw_feature_data,
 };
 
 

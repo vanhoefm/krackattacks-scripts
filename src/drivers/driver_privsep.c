@@ -853,7 +853,6 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	NULL /* bss_remove */,
 	NULL /* valid_bss_mask */,
 	NULL /* passive_scan */,
-	NULL /* hapd_get_hw_feature_data */,
 	NULL /* if_add */,
 	NULL /* if_update */,
 	NULL /* if_remove */,

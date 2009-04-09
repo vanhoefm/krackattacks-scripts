@@ -77,6 +77,46 @@ struct test_driver_data {
 	int udp_port;
 };
 
+#else /* HOSTAPD */
+
+struct wpa_driver_test_global {
+	int dummy;
+};
+
+struct wpa_driver_test_data {
+	struct wpa_driver_test_global *global;
+	void *ctx;
+	u8 own_addr[ETH_ALEN];
+	int test_socket;
+#ifdef DRIVER_TEST_UNIX
+	struct sockaddr_un hostapd_addr;
+#endif /* DRIVER_TEST_UNIX */
+	int hostapd_addr_set;
+	struct sockaddr_in hostapd_addr_udp;
+	int hostapd_addr_udp_set;
+	char *own_socket_path;
+	char *test_dir;
+	u8 bssid[ETH_ALEN];
+	u8 ssid[32];
+	size_t ssid_len;
+#define MAX_SCAN_RESULTS 30
+	struct wpa_scan_res *scanres[MAX_SCAN_RESULTS];
+	size_t num_scanres;
+	int use_associnfo;
+	u8 assoc_wpa_ie[80];
+	size_t assoc_wpa_ie_len;
+	int use_mlme;
+	int associated;
+	u8 *probe_req_ie;
+	size_t probe_req_ie_len;
+	int ibss;
+	int privacy;
+};
+
+#endif /* HOSTAPD */
+
+
+#ifdef HOSTAPD
 
 static void test_driver_free_bss(struct test_driver_bss *bss)
 {
@@ -821,68 +861,6 @@ static int test_driver_sta_disassoc(void *priv, const u8 *addr, int reason)
 }
 
 
-static struct hostapd_hw_modes *
-test_driver_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
-{
-	struct hostapd_hw_modes *modes;
-
-	*num_modes = 3;
-	*flags = 0;
-	modes = os_zalloc(*num_modes * sizeof(struct hostapd_hw_modes));
-	if (modes == NULL)
-		return NULL;
-	modes[0].mode = HOSTAPD_MODE_IEEE80211G;
-	modes[0].num_channels = 1;
-	modes[0].num_rates = 1;
-	modes[0].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[0].rates = os_zalloc(sizeof(struct hostapd_rate_data));
-	if (modes[0].channels == NULL || modes[0].rates == NULL) {
-		hostapd_free_hw_features(modes, *num_modes);
-		return NULL;
-	}
-	modes[0].channels[0].chan = 1;
-	modes[0].channels[0].freq = 2412;
-	modes[0].channels[0].flag = 0;
-	modes[0].rates[0].rate = 10;
-	modes[0].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
-
-	modes[1].mode = HOSTAPD_MODE_IEEE80211B;
-	modes[1].num_channels = 1;
-	modes[1].num_rates = 1;
-	modes[1].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[1].rates = os_zalloc(sizeof(struct hostapd_rate_data));
-	if (modes[1].channels == NULL || modes[1].rates == NULL) {
-		hostapd_free_hw_features(modes, *num_modes);
-		return NULL;
-	}
-	modes[1].channels[0].chan = 1;
-	modes[1].channels[0].freq = 2412;
-	modes[1].channels[0].flag = 0;
-	modes[1].rates[0].rate = 10;
-	modes[1].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
-
-	modes[2].mode = HOSTAPD_MODE_IEEE80211A;
-	modes[2].num_channels = 1;
-	modes[2].num_rates = 1;
-	modes[2].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[2].rates = os_zalloc(sizeof(struct hostapd_rate_data));
-	if (modes[2].channels == NULL || modes[2].rates == NULL) {
-		hostapd_free_hw_features(modes, *num_modes);
-		return NULL;
-	}
-	modes[2].channels[0].chan = 60;
-	modes[2].channels[0].freq = 5300;
-	modes[2].channels[0].flag = 0;
-	modes[2].rates[0].rate = 60;
-	modes[2].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_MANDATORY;
-
-	return modes;
-}
-
-
 static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid)
 {
 	struct test_driver_data *drv = priv;
@@ -1215,69 +1193,7 @@ static void test_driver_deinit(void *priv)
 	test_driver_free_priv(drv);
 }
 
-
-const struct wpa_driver_ops wpa_driver_test_ops = {
-	.name = "test",
-	.hapd_init = test_driver_init,
-	.hapd_deinit = test_driver_deinit,
-	.hapd_send_eapol = test_driver_send_eapol,
-	.send_mgmt_frame = test_driver_send_mgmt_frame,
-	.set_generic_elem = test_driver_set_generic_elem,
-	.sta_deauth = test_driver_sta_deauth,
-	.sta_disassoc = test_driver_sta_disassoc,
-	.get_hw_feature_data = test_driver_get_hw_feature_data,
-	.bss_add = test_driver_bss_add,
-	.bss_remove = test_driver_bss_remove,
-	.if_add = test_driver_if_add,
-	.if_update = test_driver_if_update,
-	.if_remove = test_driver_if_remove,
-	.valid_bss_mask = test_driver_valid_bss_mask,
-	.hapd_set_ssid = test_driver_set_ssid,
-	.set_privacy = test_driver_set_privacy,
-	.hapd_set_key = test_driver_set_key,
-	.set_sta_vlan = test_driver_set_sta_vlan,
-	.sta_add = test_driver_sta_add,
-	.send_ether = test_driver_send_ether,
-	.set_wps_beacon_ie = test_driver_set_wps_beacon_ie,
-	.set_wps_probe_resp_ie = test_driver_set_wps_probe_resp_ie,
-};
-
 #else /* HOSTAPD */
-
-struct wpa_driver_test_global {
-	int dummy;
-};
-
-struct wpa_driver_test_data {
-	struct wpa_driver_test_global *global;
-	void *ctx;
-	u8 own_addr[ETH_ALEN];
-	int test_socket;
-#ifdef DRIVER_TEST_UNIX
-	struct sockaddr_un hostapd_addr;
-#endif /* DRIVER_TEST_UNIX */
-	int hostapd_addr_set;
-	struct sockaddr_in hostapd_addr_udp;
-	int hostapd_addr_udp_set;
-	char *own_socket_path;
-	char *test_dir;
-	u8 bssid[ETH_ALEN];
-	u8 ssid[32];
-	size_t ssid_len;
-#define MAX_SCAN_RESULTS 30
-	struct wpa_scan_res *scanres[MAX_SCAN_RESULTS];
-	size_t num_scanres;
-	int use_associnfo;
-	u8 assoc_wpa_ie[80];
-	size_t assoc_wpa_ie_len;
-	int use_mlme;
-	int associated;
-	u8 *probe_req_ie;
-	size_t probe_req_ie_len;
-	int ibss;
-	int privacy;
-};
-
 
 static void wpa_driver_test_poll(void *eloop_ctx, void *timeout_ctx)
 {
@@ -2256,36 +2172,6 @@ static int wpa_driver_test_mlme_setprotection(void *priv, const u8 *addr,
 
 
 #ifdef CONFIG_CLIENT_MLME
-static struct hostapd_hw_modes *
-wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
-{
-	struct hostapd_hw_modes *modes;
-
-	*num_modes = 1;
-	*flags = 0;
-	modes = os_zalloc(*num_modes * sizeof(struct hostapd_hw_modes));
-	if (modes == NULL)
-		return NULL;
-	modes[0].mode = HOSTAPD_MODE_IEEE80211G;
-	modes[0].num_channels = 1;
-	modes[0].num_rates = 1;
-	modes[0].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[0].rates = os_zalloc(sizeof(struct hostapd_rate_data));
-	if (modes[0].channels == NULL || modes[0].rates == NULL) {
-		wpa_supplicant_sta_free_hw_features(modes, *num_modes);
-		return NULL;
-	}
-	modes[0].channels[0].chan = 1;
-	modes[0].channels[0].freq = 2412;
-	modes[0].channels[0].flag = 0;
-	modes[0].rates[0].rate = 10;
-	modes[0].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
-
-	return modes;
-}
-
-
 static int wpa_driver_test_set_channel(void *priv, hostapd_hw_mode phymode,
 				       int chan, int freq)
 {
@@ -2479,10 +2365,105 @@ wpa_driver_test_get_interfaces(void *global_priv)
 	return iface;
 }
 
+#endif /* HOSTAPD */
+
+
+#if defined(HOSTAPD) || defined(CONFIG_CLIENT_MLME)
+static struct hostapd_hw_modes *
+wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
+{
+	struct hostapd_hw_modes *modes;
+
+	*num_modes = 3;
+	*flags = 0;
+	modes = os_zalloc(*num_modes * sizeof(struct hostapd_hw_modes));
+	if (modes == NULL)
+		return NULL;
+	modes[0].mode = HOSTAPD_MODE_IEEE80211G;
+	modes[0].num_channels = 1;
+	modes[0].num_rates = 1;
+	modes[0].channels = os_zalloc(sizeof(struct hostapd_channel_data));
+	modes[0].rates = os_zalloc(sizeof(struct hostapd_rate_data));
+	if (modes[0].channels == NULL || modes[0].rates == NULL)
+		goto fail;
+	modes[0].channels[0].chan = 1;
+	modes[0].channels[0].freq = 2412;
+	modes[0].channels[0].flag = 0;
+	modes[0].rates[0].rate = 10;
+	modes[0].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
+		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
+
+	modes[1].mode = HOSTAPD_MODE_IEEE80211B;
+	modes[1].num_channels = 1;
+	modes[1].num_rates = 1;
+	modes[1].channels = os_zalloc(sizeof(struct hostapd_channel_data));
+	modes[1].rates = os_zalloc(sizeof(struct hostapd_rate_data));
+	if (modes[1].channels == NULL || modes[1].rates == NULL)
+		goto fail;
+	modes[1].channels[0].chan = 1;
+	modes[1].channels[0].freq = 2412;
+	modes[1].channels[0].flag = 0;
+	modes[1].rates[0].rate = 10;
+	modes[1].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
+		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
+
+	modes[2].mode = HOSTAPD_MODE_IEEE80211A;
+	modes[2].num_channels = 1;
+	modes[2].num_rates = 1;
+	modes[2].channels = os_zalloc(sizeof(struct hostapd_channel_data));
+	modes[2].rates = os_zalloc(sizeof(struct hostapd_rate_data));
+	if (modes[2].channels == NULL || modes[2].rates == NULL)
+		goto fail;
+	modes[2].channels[0].chan = 60;
+	modes[2].channels[0].freq = 5300;
+	modes[2].channels[0].flag = 0;
+	modes[2].rates[0].rate = 60;
+	modes[2].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
+		HOSTAPD_RATE_MANDATORY;
+
+	return modes;
+
+fail:
+	if (modes) {
+		size_t i;
+		for (i = 0; i < *num_modes; i++) {
+			os_free(modes[i].channels);
+			os_free(modes[i].rates);
+		}
+		os_free(modes);
+	}
+	return NULL;
+}
+#endif /* HOSTAPD || CONFIG_CLIENT_MLME */
+
 
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
+#ifdef HOSTAPD
+	.hapd_init = test_driver_init,
+	.hapd_deinit = test_driver_deinit,
+	.hapd_send_eapol = test_driver_send_eapol,
+	.send_mgmt_frame = test_driver_send_mgmt_frame,
+	.set_generic_elem = test_driver_set_generic_elem,
+	.sta_deauth = test_driver_sta_deauth,
+	.sta_disassoc = test_driver_sta_disassoc,
+	.get_hw_feature_data = wpa_driver_test_get_hw_feature_data,
+	.bss_add = test_driver_bss_add,
+	.bss_remove = test_driver_bss_remove,
+	.if_add = test_driver_if_add,
+	.if_update = test_driver_if_update,
+	.if_remove = test_driver_if_remove,
+	.valid_bss_mask = test_driver_valid_bss_mask,
+	.hapd_set_ssid = test_driver_set_ssid,
+	.set_privacy = test_driver_set_privacy,
+	.hapd_set_key = test_driver_set_key,
+	.set_sta_vlan = test_driver_set_sta_vlan,
+	.sta_add = test_driver_sta_add,
+	.send_ether = test_driver_send_ether,
+	.set_wps_beacon_ie = test_driver_set_wps_beacon_ie,
+	.set_wps_probe_resp_ie = test_driver_set_wps_probe_resp_ie,
+#else /* HOSTAPD */
 	wpa_driver_test_get_bssid,
 	wpa_driver_test_get_ssid,
 	wpa_driver_test_set_wpa,
@@ -2581,7 +2562,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* bss_remove */,
 	NULL /* valid_bss_mask */,
 	NULL /* passive_scan */,
-	NULL /* hapd_get_hw_feature_data */,
 	NULL /* if_add */,
 	NULL /* if_update */,
 	NULL /* if_remove */,
@@ -2594,6 +2574,5 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* set_wps_beacon_ie */,
 	NULL /* set_wps_probe_resp_ie */,
 	NULL /* get_neighbor_bss */
-};
-
 #endif /* HOSTAPD */
+};

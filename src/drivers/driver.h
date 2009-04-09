@@ -1297,9 +1297,6 @@ struct wpa_driver_ops {
 	int (*passive_scan)(void *priv, int now, int our_mode_only,
 			    int interval, int _listen, int *channel,
 			    int *last_rx);
-	struct hostapd_hw_modes * (*hapd_get_hw_feature_data)(void *priv,
-							      u16 *num_modes,
-							      u16 *flags);
 	int (*if_add)(const char *iface, void *priv,
 		      enum hostapd_driver_if_type type, char *ifname,
 		      const u8 *addr);
@@ -1714,8 +1711,6 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
 			   struct ieee80211_rx_status *rx_status);
-void wpa_supplicant_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
-					 size_t num_hw_features);
 
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie);
 #define WPA_IE_VENDOR_TYPE 0x0050f201

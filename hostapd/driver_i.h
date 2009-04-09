@@ -453,11 +453,10 @@ hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 			    u16 *flags)
 {
 	if (hapd->driver == NULL ||
-	    hapd->driver->hapd_get_hw_feature_data == NULL)
+	    hapd->driver->get_hw_feature_data == NULL)
 		return NULL;
-	return hapd->driver->hapd_get_hw_feature_data(hapd->drv_priv,
-						      num_modes,
-						      flags);
+	return hapd->driver->get_hw_feature_data(hapd->drv_priv, num_modes,
+						 flags);
 }
 
 static inline int

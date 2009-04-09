@@ -1050,23 +1050,6 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 
 #ifdef CONFIG_CLIENT_MLME
-void wpa_supplicant_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
-					 size_t num_hw_features)
-{
-	size_t i;
-
-	if (hw_features == NULL)
-		return;
-
-	for (i = 0; i < num_hw_features; i++) {
-		os_free(hw_features[i].channels);
-		os_free(hw_features[i].rates);
-	}
-
-	os_free(hw_features);
-}
-
-
 void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
 			   struct ieee80211_rx_status *rx_status)
 {

@@ -1631,13 +1631,6 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 }
 
 
-void wpa_supplicant_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
-					 size_t num_hw_features)
-{
-	ieee80211_sta_free_hw_features(hw_features, num_hw_features);
-}
-
-
 void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
 			   struct ieee80211_rx_status *rx_status)
 {

@@ -1960,10 +1960,6 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	return NULL;
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
-
-
-#ifdef CONFIG_AP
 
 static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 					 const void *data, size_t len,
@@ -2035,6 +2031,10 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 					     !do_not_encrypt);
 }
 
+#endif /* CONFIG_AP || HOSTAPD */
+
+
+#ifdef CONFIG_AP
 
 static int wpa_driver_nl80211_set_beacon(void *priv,
 					 const u8 *head, size_t head_len,
@@ -3038,72 +3038,6 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 }
 
 
-static int i802_send_frame(void *priv, const void *data, size_t len,
-			   int encrypt)
-{
-	__u8 rtap_hdr[] = {
-		0x00, 0x00, /* radiotap version */
-		0x0e, 0x00, /* radiotap length */
-		0x02, 0xc0, 0x00, 0x00, /* bmap: flags, tx and rx flags */
-		IEEE80211_RADIOTAP_F_FRAG, /* F_FRAG (fragment if required) */
-		0x00,       /* padding */
-		0x00, 0x00, /* RX and TX flags to indicate that */
-		0x00, 0x00, /* this is the injected frame directly */
-	};
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iovec iov[2] = {
-		{
-			.iov_base = &rtap_hdr,
-			.iov_len = sizeof(rtap_hdr),
-		},
-		{
-			.iov_base = (void*)data,
-			.iov_len = len,
-		}
-	};
-	struct msghdr msg = {
-		.msg_name = NULL,
-		.msg_namelen = 0,
-		.msg_iov = iov,
-		.msg_iovlen = 2,
-		.msg_control = NULL,
-		.msg_controllen = 0,
-		.msg_flags = 0,
-	};
-
-	if (encrypt)
-		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
-
-	return sendmsg(drv->monitor_sock, &msg, 0);
-}
-
-static int i802_send_mgmt_frame(void *priv, const void *data, size_t len)
-{
-	struct ieee80211_mgmt *mgmt;
-	int do_not_encrypt = 0;
-	u16 fc;
-
-	mgmt = (struct ieee80211_mgmt *) data;
-	fc = le_to_host16(mgmt->frame_control);
-
-	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
-	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_AUTH) {
-		/*
-		 * Only one of the authentication frame types is encrypted.
-		 * In order for static WEP encryption to work properly (i.e.,
-		 * to not encrypt the frame), we need to tell mac80211 about
-		 * the frames that must not be encrypted.
-		 */
-		u16 auth_alg = le_to_host16(mgmt->u.auth.auth_alg);
-		u16 auth_trans = le_to_host16(mgmt->u.auth.auth_transaction);
-		if (auth_alg == WLAN_AUTH_OPEN ||
-		    (auth_alg == WLAN_AUTH_SHARED_KEY && auth_trans != 3))
-			do_not_encrypt = 1;
-	}
-
-	return i802_send_frame(priv, data, len, !do_not_encrypt);
-}
-
 /* Set kernel driver on given frequency (MHz) */
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
@@ -3363,14 +3297,13 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = i802_send_frame(drv, (u8 *) hdr, len, encrypt);
-	free(hdr);
-
+	res = wpa_driver_nl80211_send_frame(drv, (u8 *) hdr, len, encrypt);
 	if (res < 0) {
-		perror("i802_send_eapol: send");
-		printf("i802_send_eapol - packet len: %lu - failed\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_ERROR, "i802_send_eapol - packet len: %lu - "
+			   "failed: %d (%s)",
+			   (unsigned long) len, errno, strerror(errno));
 	}
+	free(hdr);
 
 	return res;
 }
@@ -4943,8 +4876,9 @@ static int i802_sta_deauth(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
-	return i802_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				    sizeof(mgmt.u.deauth));
+	return wpa_driver_nl80211_send_mlme(drv, (u8 *) &mgmt,
+					    IEEE80211_HDRLEN +
+					    sizeof(mgmt.u.deauth));
 }
 
 
@@ -4960,8 +4894,9 @@ static int i802_sta_disassoc(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
-	return i802_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				    sizeof(mgmt.u.disassoc));
+	return wpa_driver_nl80211_send_mlme(drv, (u8 *) &mgmt,
+					    IEEE80211_HDRLEN +
+					    sizeof(mgmt.u.disassoc));
 }
 
 
@@ -5109,7 +5044,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
 	.sta_remove = i802_sta_remove,
-	.send_mgmt_frame = i802_send_mgmt_frame,
 	.sta_add = i802_sta_add,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,

@@ -293,7 +293,7 @@ static int hostap_init_sockets(struct hostap_driver_data *drv)
 }
 
 
-static int hostap_send_mgmt_frame(void *priv, const void *msg, size_t len)
+static int hostap_send_mlme(void *priv, const u8 *msg, size_t len)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *) msg;
@@ -341,14 +341,13 @@ static int hostap_send_eapol(void *priv, const u8 *addr, const u8 *data,
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = hostap_send_mgmt_frame(drv, (u8 *) hdr, len);
-	free(hdr);
-
+	res = hostap_send_mlme(drv, (u8 *) hdr, len);
 	if (res < 0) {
-		perror("hostapd_send_eapol: send");
-		printf("hostapd_send_eapol - packet len: %lu - failed\n",
-		       (unsigned long) len);
+		wpa_printf(MSG_ERROR, "hostap_send_eapol - packet len: %lu - "
+			   "failed: %d (%s)",
+			   (unsigned long) len, errno, strerror(errno));
 	}
+	free(hdr);
 
 	return res;
 }
@@ -1145,8 +1144,8 @@ static int hostap_sta_deauth(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
-	return hostap_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				      sizeof(mgmt.u.deauth));
+	return hostap_send_mlme(drv, (u8 *) &mgmt, IEEE80211_HDRLEN +
+				sizeof(mgmt.u.deauth));
 }
 
 
@@ -1162,8 +1161,8 @@ static int hostap_sta_disassoc(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
-	return  hostap_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				       sizeof(mgmt.u.disassoc));
+	return  hostap_send_mlme(drv, (u8 *) &mgmt, IEEE80211_HDRLEN +
+				 sizeof(mgmt.u.disassoc));
 }
 
 
@@ -1711,7 +1710,7 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.sta_disassoc = hostap_sta_disassoc,
 	.sta_remove = hostap_sta_remove,
 	.hapd_set_ssid = hostap_set_ssid,
-	.send_mgmt_frame = hostap_send_mgmt_frame,
+	.send_mlme = hostap_send_mlme,
 	.sta_add = hostap_sta_add,
 	.get_inact_sec = hostap_get_inact_sec,
 	.sta_clear_stats = hostap_sta_clear_stats,

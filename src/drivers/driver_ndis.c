@@ -3233,7 +3233,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* hapd_get_ssid */,
 	NULL /* hapd_set_ssid */,
 	NULL /* hapd_set_countermeasures */,
-	NULL /* send_mgmt_frame */,
 	NULL /* sta_add */,
 	NULL /* get_inact_sec */,
 	NULL /* sta_clear_stats */,

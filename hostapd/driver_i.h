@@ -177,9 +177,9 @@ hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
 static inline int
 hostapd_send_mgmt_frame(struct hostapd_data *hapd, const void *msg, size_t len)
 {
-	if (hapd->driver == NULL || hapd->driver->send_mgmt_frame == NULL)
+	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
 		return 0;
-	return hapd->driver->send_mgmt_frame(hapd->drv_priv, msg, len);
+	return hapd->driver->send_mlme(hapd->drv_priv, msg, len);
 }
 
 static inline int

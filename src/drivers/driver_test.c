@@ -297,7 +297,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 }
 
 
-static int test_driver_send_mgmt_frame(void *priv, const void *buf, size_t len)
+static int wpa_driver_test_send_mlme(void *priv, const u8 *buf, size_t len)
 {
 	struct test_driver_data *drv = priv;
 	struct msghdr msg;
@@ -2443,7 +2443,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.hapd_init = test_driver_init,
 	.hapd_deinit = test_driver_deinit,
 	.hapd_send_eapol = test_driver_send_eapol,
-	.send_mgmt_frame = test_driver_send_mgmt_frame,
+	.send_mlme = wpa_driver_test_send_mlme,
 	.set_generic_elem = test_driver_set_generic_elem,
 	.sta_deauth = test_driver_sta_deauth,
 	.sta_disassoc = test_driver_sta_disassoc,
@@ -2537,7 +2537,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* hapd_get_ssid */,
 	NULL /* hapd_set_ssid */,
 	NULL /* hapd_set_countermeasures */,
-	NULL /* send_mgmt_frame */,
 	NULL /* sta_add */,
 	NULL /* get_inact_sec */,
 	NULL /* sta_clear_stats */,

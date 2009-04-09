@@ -1249,7 +1249,6 @@ struct wpa_driver_ops {
 	int (*hapd_set_ssid)(const char *ifname, void *priv, const u8 *buf,
 			     int len);
 	int (*hapd_set_countermeasures)(void *priv, int enabled);
-	int (*send_mgmt_frame)(void *priv, const void *msg, size_t len);
 	int (*sta_add)(const char *ifname, void *priv,
 		       struct hostapd_sta_add_params *params);
 	int (*get_inact_sec)(void *priv, const u8 *addr);

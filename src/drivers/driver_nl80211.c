@@ -1397,31 +1397,29 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
-				      const u8 *addr, int key_idx,
-				      int set_tx, const u8 *seq,
-				      size_t seq_len,
-				      const u8 *key, size_t key_len)
+static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
+		       wpa_alg alg, const u8 *addr, int key_idx, int set_tx,
+		       const u8 *seq, size_t seq_len,
+		       const u8 *key, size_t key_len)
 {
-	struct wpa_driver_nl80211_data *drv = priv;
-	int err;
 	struct nl_msg *msg;
+	int ret;
 
-	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%p key_idx=%d set_tx=%d "
-		   "seq_len=%lu key_len=%lu",
-		   __func__, alg, addr, key_idx, set_tx,
+	wpa_printf(MSG_DEBUG, "%s: ifindex=%d alg=%d addr=%p key_idx=%d "
+		   "set_tx=%d seq_len=%lu key_len=%lu",
+		   __func__, ifindex, alg, addr, key_idx, set_tx,
 		   (unsigned long) seq_len, (unsigned long) key_len);
 
 	msg = nlmsg_alloc();
-	if (msg == NULL)
-		return -1;
+	if (!msg)
+		return -ENOMEM;
 
 	if (alg == WPA_ALG_NONE) {
-		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-			    NL80211_CMD_DEL_KEY, 0);
+		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+			    0, NL80211_CMD_DEL_KEY, 0);
 	} else {
-		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-			    NL80211_CMD_NEW_KEY, 0);
+		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+			    0, NL80211_CMD_NEW_KEY, 0);
 		NLA_PUT(msg, NL80211_ATTR_KEY_DATA, key_len, key);
 		switch (alg) {
 		case WPA_ALG_WEP:
@@ -1438,16 +1436,19 @@ static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 		case WPA_ALG_CCMP:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC04);
 			break;
-#ifdef CONFIG_IEEE80211W
 		case WPA_ALG_IGTK:
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC06);
 			break;
-#endif /* CONFIG_IEEE80211W */
 		default:
+			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
+				   "algorithm %d", __func__, alg);
 			nlmsg_free(msg);
 			return -1;
 		}
 	}
+
+	if (seq)
+		NLA_PUT(msg, NL80211_ATTR_KEY_SEQ, seq_len, seq);
 
 	if (addr && os_memcmp(addr, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) != 0)
 	{
@@ -1455,37 +1456,61 @@ static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 	}
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_idx);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
 
-	err = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (err) {
-		wpa_printf(MSG_DEBUG, "nl80211: set_key failed; err=%d", err);
-		return -1;
-	}
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret == -ENOENT && alg == WPA_ALG_NONE)
+		ret = 0;
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: set_key failed; err=%d %s)",
+			   ret, strerror(-ret));
 
-	if (set_tx && alg != WPA_ALG_NONE) {
-		msg = nlmsg_alloc();
-		if (msg == NULL)
-			return -1;
+	/*
+	 * If we failed or don't need to set the default TX key (below),
+	 * we're done here.
+	 */
+	if (ret || !set_tx || alg == WPA_ALG_NONE)
+		return ret;
+#ifdef HOSTAPD /* FIX: is this needed? */
+	if (addr)
+		return ret;
+#endif /* HOSTAPD */
 
-		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-			    0, NL80211_CMD_SET_KEY, 0);
-		NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_idx);
-		NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_KEY, 0);
+	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_idx);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
+	if (alg == WPA_ALG_IGTK)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT_MGMT);
+	else
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
 
-		err = send_and_recv_msgs(drv, msg, NULL, NULL);
-		if (err) {
-			wpa_printf(MSG_DEBUG, "nl80211: set default key "
-				   "failed; err=%d", err);
-			return -1;
-		}
-	}
-
-	return 0;
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret == -ENOENT)
+		ret = 0;
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: set_key default failed; "
+			   "err=%d %s)", ret, strerror(-ret));
+	return ret;
 
 nla_put_failure:
 	return -ENOBUFS;
+}
+
+
+static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
+				      const u8 *addr, int key_idx,
+				      int set_tx, const u8 *seq,
+				      size_t seq_len,
+				      const u8 *key, size_t key_len)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	return nl_set_encr(drv->ifindex, drv, alg, addr, key_idx, set_tx, seq,
+			   seq_len, key, key_len);
 }
 
 
@@ -2870,101 +2895,13 @@ static int hostapd_set_iface_flags(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
-		       wpa_alg alg, const u8 *addr, int idx, const u8 *key,
-		       size_t key_len, int txkey)
-{
-	struct nl_msg *msg;
-	int ret;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	if (alg == WPA_ALG_NONE) {
-		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-			    0, NL80211_CMD_DEL_KEY, 0);
-	} else {
-		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-			    0, NL80211_CMD_NEW_KEY, 0);
-		NLA_PUT(msg, NL80211_ATTR_KEY_DATA, key_len, key);
-		switch (alg) {
-		case WPA_ALG_WEP:
-			if (key_len == 5)
-				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    0x000FAC01);
-			else
-				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    0x000FAC05);
-			break;
-		case WPA_ALG_TKIP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC02);
-			break;
-		case WPA_ALG_CCMP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC04);
-			break;
-		case WPA_ALG_IGTK:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC06);
-			break;
-		default:
-			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
-				   "algorithm %d", __func__, alg);
-			nlmsg_free(msg);
-			return -1;
-		}
-	}
-
-	if (addr)
-		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
-	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret == -ENOENT)
-		ret = 0;
-
-	/*
-	 * If we failed or don't need to set the default TX key (below),
-	 * we're done here.
-	 */
-	if (ret || !txkey || addr)
-		return ret;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_SET_KEY, 0);
-	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, idx);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
-	if (alg == WPA_ALG_IGTK)
-		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT_MGMT);
-	else
-		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret == -ENOENT)
-		ret = 0;
-	return ret;
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
 static int i802_set_key(const char *iface, void *priv, wpa_alg alg,
 			const u8 *addr, int key_idx, int set_tx, const u8 *seq,
 			size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	int ret;
-
-	ret = nl_set_encr(if_nametoindex(iface), drv, alg, addr, key_idx, key,
-			  key_len, set_tx);
-	if (ret < 0)
-		return ret;
-
-	return ret;
+	return nl_set_encr(if_nametoindex(iface), drv, alg, addr, key_idx,
+			   set_tx, seq, seq_len, key, key_len);
 }
 
 

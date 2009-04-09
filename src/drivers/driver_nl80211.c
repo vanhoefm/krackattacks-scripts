@@ -730,6 +730,41 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
+					   struct nlattr *tb[])
+{
+	union wpa_event_data data;
+
+	wpa_printf(MSG_DEBUG, "nl80211: MLME event Michael MIC failure");
+	os_memset(&data, 0, sizeof(data));
+	if (tb[NL80211_ATTR_MAC]) {
+		wpa_hexdump(MSG_DEBUG, "nl80211: Source MAC address",
+			    nla_data(tb[NL80211_ATTR_MAC]),
+			    nla_len(tb[NL80211_ATTR_MAC]));
+	}
+	if (tb[NL80211_ATTR_KEY_SEQ]) {
+		wpa_hexdump(MSG_DEBUG, "nl80211: TSC",
+			    nla_data(tb[NL80211_ATTR_KEY_SEQ]),
+			    nla_len(tb[NL80211_ATTR_KEY_SEQ]));
+	}
+	if (tb[NL80211_ATTR_KEY_TYPE]) {
+		enum nl80211_key_type key_type =
+			nla_get_u32(tb[NL80211_ATTR_KEY_TYPE]);
+		wpa_printf(MSG_DEBUG, "nl80211: Key Type %d", key_type);
+		if (key_type == NL80211_KEYTYPE_PAIRWISE)
+			data.michael_mic_failure.unicast = 1;
+	} else
+		data.michael_mic_failure.unicast = 1;
+
+	if (tb[NL80211_ATTR_KEY_IDX]) {
+		u8 key_id = nla_get_u8(tb[NL80211_ATTR_KEY_IDX]);
+		wpa_printf(MSG_DEBUG, "nl80211: Key Id %d", key_id);
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_MICHAEL_MIC_FAILURE, &data);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -772,6 +807,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_DEAUTHENTICATE:
 	case NL80211_CMD_DISASSOCIATE:
 		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME]);
+		break;
+	case NL80211_CMD_MICHAEL_MIC_FAILURE:
+		mlme_event_michael_mic_failure(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

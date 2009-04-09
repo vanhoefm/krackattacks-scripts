@@ -1030,7 +1030,8 @@ static int prism54_init_sockets(struct prism54_driver_data *drv)
 }
 
 
-static void * prism54_driver_init(struct hostapd_data *hapd)
+static void * prism54_driver_init(struct hostapd_data *hapd,
+				  struct wpa_init_params *params)
 {
 	struct prism54_driver_data *drv;
 
@@ -1043,7 +1044,7 @@ static void * prism54_driver_init(struct hostapd_data *hapd)
 
 	drv->hapd = hapd;
 	drv->pim_sock = drv->sock = -1;
-	memcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
+	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
 
 	if (prism54_init_sockets(drv)) {
 		free(drv);

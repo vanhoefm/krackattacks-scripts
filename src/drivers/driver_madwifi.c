@@ -1230,7 +1230,7 @@ handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 }
 
 static void *
-madwifi_init(struct hostapd_data *hapd)
+madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 {
 	struct madwifi_driver_data *drv;
 	struct ifreq ifr;
@@ -1248,7 +1248,7 @@ madwifi_init(struct hostapd_data *hapd)
 		perror("socket[PF_INET,SOCK_DGRAM]");
 		goto bad;
 	}
-	memcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
+	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
 
 	memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
@@ -1264,10 +1264,10 @@ madwifi_init(struct hostapd_data *hapd)
 		goto bad;
 	if (l2_packet_get_own_addr(drv->sock_xmit, hapd->own_addr))
 		goto bad;
-	if (hapd->conf->bridge[0] != '\0') {
+	if (params->bridge[0]) {
 		wpa_printf(MSG_DEBUG, "Configure bridge %s for EAPOL traffic.",
-			   hapd->conf->bridge);
-		drv->sock_recv = l2_packet_init(hapd->conf->bridge, NULL,
+			   params->bridge[0]);
+		drv->sock_recv = l2_packet_init(params->bridge[0], NULL,
 						ETH_P_EAPOL, handle_read, drv,
 						1);
 		if (drv->sock_recv == NULL)

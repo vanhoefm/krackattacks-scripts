@@ -54,7 +54,6 @@
 #include <net/if_arp.h>
 
 #include "../../hostapd/hostapd.h"
-#include "../../hostapd/config.h"
 #include "../../hostapd/sta_flags.h"
 #include "ieee802_11_common.h"
 
@@ -4453,7 +4452,8 @@ i802_get_neighbor_bss(void *priv, size_t *num)
 }
 
 
-static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
+static void *i802_init(struct hostapd_data *hapd,
+		       struct wpa_init_params *params)
 {
 	struct wpa_driver_nl80211_data *drv;
 	size_t i;
@@ -4465,20 +4465,19 @@ static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 	}
 
 	drv->hapd = hapd;
-	memcpy(drv->ifname, hapd->conf->iface, sizeof(drv->ifname));
-	memcpy(drv->bss.ifname, hapd->conf->iface, sizeof(drv->bss.ifname));
+	memcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
+	memcpy(drv->bss.ifname, params->ifname, sizeof(drv->bss.ifname));
 	drv->ifindex = if_nametoindex(drv->ifname);
 
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
 	drv->if_indices = drv->default_if_indices;
-	for (i = 0; i < hapd->iface->num_bss; i++) {
-		struct hostapd_data *bss = hapd->iface->bss[i];
-		if (bss->conf->bridge)
-			add_ifidx(drv, if_nametoindex(bss->conf->bridge));
+	for (i = 0; i < params->num_bridge; i++) {
+		if (params->bridge[i])
+			add_ifidx(drv, if_nametoindex(params->bridge[i]));
 	}
-	drv->ht_40mhz_scan = hapd->iconf->secondary_channel != 0;
+	drv->ht_40mhz_scan = params->ht_40mhz_scan;
 
-	if (i802_init_sockets(drv, bssid))
+	if (i802_init_sockets(drv, params->bssid))
 		goto failed;
 
 	return drv;
@@ -4486,12 +4485,6 @@ static void *i802_init_bssid(struct hostapd_data *hapd, const u8 *bssid)
 failed:
 	free(drv);
 	return NULL;
-}
-
-
-static void *i802_init(struct hostapd_data *hapd)
-{
-	return i802_init_bssid(hapd, NULL);
 }
 
 
@@ -4577,7 +4570,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #endif /* CONFIG_AP || HOSTAPD */
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
-	.init_bssid = i802_init_bssid,
 	.hapd_deinit = i802_deinit,
 	.hapd_set_key = i802_set_key,
 	.get_seqnum = i802_get_seqnum,

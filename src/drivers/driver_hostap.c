@@ -31,7 +31,6 @@
 #include "priv_netlink.h"
 #include "ieee802_11_defs.h"
 #include "../../hostapd/hostapd.h"
-#include "../../hostapd/config.h"
 #include "../../hostapd/hw_features.h"
 #include "../../hostapd/sta_flags.h"
 
@@ -1071,7 +1070,8 @@ static void hostap_wireless_event_deinit(struct hostap_driver_data *drv)
 }
 
 
-static void * hostap_init(struct hostapd_data *hapd)
+static void * hostap_init(struct hostapd_data *hapd,
+			  struct wpa_init_params *params)
 {
 	struct hostap_driver_data *drv;
 
@@ -1083,7 +1083,7 @@ static void * hostap_init(struct hostapd_data *hapd)
 
 	drv->hapd = hapd;
 	drv->ioctl_sock = drv->sock = -1;
-	memcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
+	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {

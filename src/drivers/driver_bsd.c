@@ -704,7 +704,7 @@ bsd_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
 }
 
 static void *
-bsd_init(struct hostapd_data *hapd)
+bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 {
 	struct bsd_driver_data *drv;
 

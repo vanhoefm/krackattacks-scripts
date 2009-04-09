@@ -2099,13 +2099,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				errors++;
 			}
 		} else if (os_strcmp(buf, "bssid") == 0) {
-			if (bss == conf->bss &&
-			    (!conf->driver || !conf->driver->init_bssid)) {
-				wpa_printf(MSG_ERROR, "Line %d: bssid item "
-					   "not allowed for the default "
-					   "interface and this driver", line);
-				errors++;
-			} else if (hwaddr_aton(pos, bss->bssid)) {
+			if (hwaddr_aton(pos, bss->bssid)) {
 				wpa_printf(MSG_ERROR, "Line %d: invalid bssid "
 					   "item", line);
 				errors++;

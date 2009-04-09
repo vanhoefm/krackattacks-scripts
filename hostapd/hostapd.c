@@ -1322,11 +1322,9 @@ static int setup_interface(struct hostapd_iface *iface)
 	 * Initialize the driver interface and make sure that all BSSes get
 	 * configured with a pointer to this driver interface.
 	 */
-	if (b[0] | b[1] | b[2] | b[3] | b[4] | b[5]) {
-		hapd->drv_priv = hostapd_driver_init_bssid(hapd, b);
-	} else {
-		hapd->drv_priv = hostapd_driver_init(hapd);
-	}
+	if (!(b[0] | b[1] | b[2] | b[3] | b[4] | b[5]))
+		b = NULL;
+	hapd->drv_priv = hostapd_driver_init(hapd, b);
 
 	if (hapd->drv_priv == NULL) {
 		wpa_printf(MSG_ERROR, "%s driver initialization failed.",

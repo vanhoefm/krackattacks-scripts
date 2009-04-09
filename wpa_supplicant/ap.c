@@ -54,7 +54,8 @@ struct ap_driver_data {
 };
 
 
-static void * ap_driver_init(struct hostapd_data *hapd)
+static void * ap_driver_init(struct hostapd_data *hapd,
+			     struct wpa_init_params *params)
 {
 	struct ap_driver_data *drv;
 	struct wpa_supplicant *wpa_s = hapd->iface->owner;

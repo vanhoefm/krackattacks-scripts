@@ -502,6 +502,18 @@ struct hostapd_neighbor_bss {
 	int sec_chan; /* 0 for 20 MHz channels */
 };
 
+struct wpa_init_params {
+	const u8 *bssid;
+	const char *ifname;
+	const u8 *ssid;
+	size_t ssid_len;
+	const char *test_socket;
+	int use_pae_group_addr;
+	int ht_40mhz_scan;
+	char **bridge;
+	size_t num_bridge;
+};
+
 
 /**
  * struct wpa_driver_ops - Driver interface API definition
@@ -1197,8 +1209,8 @@ struct wpa_driver_ops {
 
 	int (*set_beacon_int)(void *priv, int value);
 
-	void * (*hapd_init)(struct hostapd_data *hapd);
-	void * (*init_bssid)(struct hostapd_data *hapd, const u8 *bssid);
+	void * (*hapd_init)(struct hostapd_data *hapd,
+			    struct wpa_init_params *params);
 	void (*hapd_deinit)(void *priv);
 
 	/**

@@ -38,7 +38,6 @@
 #ifdef HOSTAPD
 
 #include "../../hostapd/hostapd.h"
-#include "../../hostapd/config.h"
 #include "../../hostapd/wpa.h"
 #include "../../hostapd/hw_features.h"
 #include "../../hostapd/wps_hostapd.h"
@@ -1066,7 +1065,8 @@ static int test_driver_sta_add(const char *ifname, void *priv,
 }
 
 
-static void * test_driver_init(struct hostapd_data *hapd)
+static void * test_driver_init(struct hostapd_data *hapd,
+			       struct wpa_init_params *params)
 {
 	struct test_driver_data *drv;
 	struct sockaddr_un addr_un;
@@ -1090,35 +1090,35 @@ static void * test_driver_init(struct hostapd_data *hapd)
 
 	/* Generate a MAC address to help testing with multiple APs */
 	hapd->own_addr[0] = 0x02; /* locally administered */
-	sha1_prf((const u8 *) hapd->conf->iface, strlen(hapd->conf->iface),
+	sha1_prf((const u8 *) params->ifname, strlen(params->ifname),
 		 "hostapd test bssid generation",
-		 (const u8 *) hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len,
+		 params->ssid, params->ssid_len,
 		 hapd->own_addr + 1, ETH_ALEN - 1);
 
-	os_strlcpy(drv->bss->ifname, hapd->conf->iface, IFNAMSIZ);
+	os_strlcpy(drv->bss->ifname, params->ifname, IFNAMSIZ);
 	memcpy(drv->bss->bssid, hapd->own_addr, ETH_ALEN);
 
-	if (hapd->conf->test_socket) {
-		if (strlen(hapd->conf->test_socket) >=
+	if (params->test_socket) {
+		if (os_strlen(params->test_socket) >=
 		    sizeof(addr_un.sun_path)) {
 			printf("Too long test_socket path\n");
 			test_driver_free_priv(drv);
 			return NULL;
 		}
-		if (strncmp(hapd->conf->test_socket, "DIR:", 4) == 0) {
-			size_t len = strlen(hapd->conf->test_socket) + 30;
-			drv->socket_dir = strdup(hapd->conf->test_socket + 4);
+		if (strncmp(params->test_socket, "DIR:", 4) == 0) {
+			size_t len = strlen(params->test_socket) + 30;
+			drv->socket_dir = strdup(params->test_socket + 4);
 			drv->own_socket_path = malloc(len);
 			if (drv->own_socket_path) {
 				snprintf(drv->own_socket_path, len,
 					 "%s/AP-" MACSTR,
-					 hapd->conf->test_socket + 4,
+					 params->test_socket + 4,
 					 MAC2STR(hapd->own_addr));
 			}
-		} else if (strncmp(hapd->conf->test_socket, "UDP:", 4) == 0) {
-			drv->udp_port = atoi(hapd->conf->test_socket + 4);
+		} else if (strncmp(params->test_socket, "UDP:", 4) == 0) {
+			drv->udp_port = atoi(params->test_socket + 4);
 		} else {
-			drv->own_socket_path = strdup(hapd->conf->test_socket);
+			drv->own_socket_path = strdup(params->test_socket);
 		}
 		if (drv->own_socket_path == NULL && drv->udp_port == 0) {
 			test_driver_free_priv(drv);
@@ -2520,7 +2520,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* set_beacon */,
 	NULL /* set_beacon_int */,
 	NULL /* hapd_init */,
-	NULL /* init_bssid */,
 	NULL /* hapd_deinit */,
 	NULL /* set_ieee8021x */,
 	NULL /* set_privacy */,

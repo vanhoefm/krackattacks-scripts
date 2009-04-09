@@ -23,7 +23,8 @@ struct none_driver_data {
 };
 
 
-static void * none_driver_init(struct hostapd_data *hapd)
+static void * none_driver_init(struct hostapd_data *hapd,
+			       struct wpa_init_params *params)
 {
 	struct none_driver_data *drv;
 

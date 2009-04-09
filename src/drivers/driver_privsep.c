@@ -814,6 +814,8 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	NULL /* authenticate */,
 	NULL /* set_beacon */,
 	NULL /* set_beacon_int */,
+	NULL /* hapd_init */,
+	NULL /* hapd_deinit */,
 	NULL /* set_ieee8021x */,
 	NULL /* set_privacy */,
 	NULL /* hapd_set_key */,

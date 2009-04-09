@@ -31,7 +31,6 @@
 #ifdef HOSTAPD
 #include "eloop.h"
 #include "../../hostapd/hostapd.h"
-#include "../../hostapd/config.h"
 #include "../../hostapd/sta_info.h"
 #include "../../hostapd/accounting.h"
 #endif /* HOSTAPD */
@@ -336,7 +335,8 @@ static int wired_send_eapol(void *priv, const u8 *addr,
 }
 
 
-static void * wired_driver_hapd_init(struct hostapd_data *hapd)
+static void * wired_driver_hapd_init(struct hostapd_data *hapd,
+				     struct wpa_init_params *params)
 {
 	struct wpa_driver_wired_data *drv;
 
@@ -347,8 +347,8 @@ static void * wired_driver_hapd_init(struct hostapd_data *hapd)
 	}
 
 	drv->hapd = hapd;
-	os_strlcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
-	drv->use_pae_group_addr = hapd->conf->use_pae_group_addr;
+	os_strlcpy(drv->iface, params->ifname, sizeof(drv->iface));
+	drv->use_pae_group_addr = params->use_pae_group_addr;
 
 	if (wired_init_sockets(drv)) {
 		free(drv);

@@ -293,8 +293,7 @@ static int hostap_init_sockets(struct hostap_driver_data *drv)
 }
 
 
-static int hostap_send_mgmt_frame(void *priv, const void *msg, size_t len,
-				  int flags)
+static int hostap_send_mgmt_frame(void *priv, const void *msg, size_t len)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_hdr *hdr = (struct ieee80211_hdr *) msg;
@@ -302,7 +301,7 @@ static int hostap_send_mgmt_frame(void *priv, const void *msg, size_t len,
 
 	/* Request TX callback */
 	hdr->frame_control |= host_to_le16(BIT(1));
-	res = send(drv->sock, msg, len, flags);
+	res = send(drv->sock, msg, len, 0);
 	hdr->frame_control &= ~host_to_le16(BIT(1));
 
 	return res;
@@ -342,7 +341,7 @@ static int hostap_send_eapol(void *priv, const u8 *addr, const u8 *data,
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = hostap_send_mgmt_frame(drv, (u8 *) hdr, len, 0);
+	res = hostap_send_mgmt_frame(drv, (u8 *) hdr, len);
 	free(hdr);
 
 	if (res < 0) {
@@ -1147,7 +1146,7 @@ static int hostap_sta_deauth(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	return hostap_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				      sizeof(mgmt.u.deauth), 0);
+				      sizeof(mgmt.u.deauth));
 }
 
 
@@ -1164,7 +1163,7 @@ static int hostap_sta_disassoc(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
 	return  hostap_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				       sizeof(mgmt.u.disassoc), 0);
+				       sizeof(mgmt.u.disassoc));
 }
 
 

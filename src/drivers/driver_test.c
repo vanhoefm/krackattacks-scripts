@@ -297,8 +297,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 }
 
 
-static int test_driver_send_mgmt_frame(void *priv, const void *buf,
-				       size_t len, int flags)
+static int test_driver_send_mgmt_frame(void *priv, const void *buf, size_t len)
 {
 	struct test_driver_data *drv = priv;
 	struct msghdr msg;

@@ -3039,7 +3039,7 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 
 
 static int i802_send_frame(void *priv, const void *data, size_t len,
-			   int encrypt, int flags)
+			   int encrypt)
 {
 	__u8 rtap_hdr[] = {
 		0x00, 0x00, /* radiotap version */
@@ -3074,11 +3074,10 @@ static int i802_send_frame(void *priv, const void *data, size_t len,
 	if (encrypt)
 		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
 
-	return sendmsg(drv->monitor_sock, &msg, flags);
+	return sendmsg(drv->monitor_sock, &msg, 0);
 }
 
-static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
-				int flags)
+static int i802_send_mgmt_frame(void *priv, const void *data, size_t len)
 {
 	struct ieee80211_mgmt *mgmt;
 	int do_not_encrypt = 0;
@@ -3102,7 +3101,7 @@ static int i802_send_mgmt_frame(void *priv, const void *data, size_t len,
 			do_not_encrypt = 1;
 	}
 
-	return i802_send_frame(priv, data, len, !do_not_encrypt, flags);
+	return i802_send_frame(priv, data, len, !do_not_encrypt);
 }
 
 /* Set kernel driver on given frequency (MHz) */
@@ -3364,7 +3363,7 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = i802_send_frame(drv, (u8 *) hdr, len, encrypt, 0);
+	res = i802_send_frame(drv, (u8 *) hdr, len, encrypt);
 	free(hdr);
 
 	if (res < 0) {
@@ -4945,7 +4944,7 @@ static int i802_sta_deauth(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	return i802_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				      sizeof(mgmt.u.deauth), 0);
+				    sizeof(mgmt.u.deauth));
 }
 
 
@@ -4961,8 +4960,8 @@ static int i802_sta_disassoc(void *priv, const u8 *addr, int reason)
 	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
 	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
-	return  i802_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
-				       sizeof(mgmt.u.disassoc), 0);
+	return i802_send_mgmt_frame(drv, &mgmt, IEEE80211_HDRLEN +
+				    sizeof(mgmt.u.disassoc));
 }
 
 

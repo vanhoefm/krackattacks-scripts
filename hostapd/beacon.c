@@ -312,7 +312,7 @@ void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	}
 #endif /* CONFIG_WPS */
 
-	if (hostapd_send_mgmt_frame(hapd, resp, pos - (u8 *) resp, 0) < 0)
+	if (hostapd_send_mgmt_frame(hapd, resp, pos - (u8 *) resp) < 0)
 		perror("handle_probe_req: send");
 
 	os_free(resp);

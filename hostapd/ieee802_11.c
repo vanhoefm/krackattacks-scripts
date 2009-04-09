@@ -357,7 +357,7 @@ void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason)
 	os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	if (hostapd_send_mgmt_frame(hapd, &mgmt, IEEE80211_HDRLEN +
-				    sizeof(mgmt.u.deauth), 0) < 0)
+				    sizeof(mgmt.u.deauth)) < 0)
 		perror("ieee802_11_send_deauth: send");
 }
 
@@ -452,7 +452,7 @@ static void send_auth_reply(struct hostapd_data *hapd,
 		   " auth_alg=%d auth_transaction=%d resp=%d (IE len=%lu)",
 		   MAC2STR(dst), auth_alg, auth_transaction,
 		   resp, (unsigned long) ies_len);
-	if (hostapd_send_mgmt_frame(hapd, reply, rlen, 0) < 0)
+	if (hostapd_send_mgmt_frame(hapd, reply, rlen) < 0)
 		perror("send_auth_reply: send");
 
 	os_free(buf);
@@ -1170,7 +1170,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		send_len += p - reply->u.assoc_resp.variable;
 	}
 
-	if (hostapd_send_mgmt_frame(hapd, reply, send_len, 0) < 0)
+	if (hostapd_send_mgmt_frame(hapd, reply, send_len) < 0)
 		perror("handle_assoc: send");
 }
 
@@ -1298,7 +1298,7 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 	os_memcpy(mgmt.u.action.u.sa_query_req.trans_id, trans_id,
 		  WLAN_SA_QUERY_TR_ID_LEN);
 	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hostapd_send_mgmt_frame(hapd, &mgmt, end - (u8 *) &mgmt, 0) < 0)
+	if (hostapd_send_mgmt_frame(hapd, &mgmt, end - (u8 *) &mgmt) < 0)
 		perror("ieee802_11_send_sa_query_req: send");
 }
 
@@ -1416,7 +1416,7 @@ static void handle_action(struct hostapd_data *hapd,
 		os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
 		mgmt->u.action.category |= 0x80;
 
-		hostapd_send_mgmt_frame(hapd, mgmt, len, 0);
+		hostapd_send_mgmt_frame(hapd, mgmt, len);
 	}
 }
 

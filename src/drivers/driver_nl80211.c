@@ -2100,6 +2100,49 @@ static int wpa_driver_nl80211_set_beacon_int(void *priv, int value)
 	return -ENOBUFS;
 }
 
+
+static int wpa_driver_nl80211_set_freq(struct wpa_driver_nl80211_data *drv,
+				       int freq, int ht_enabled,
+				       int sec_channel_offset)
+{
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_WIPHY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
+	if (ht_enabled) {
+		switch (sec_channel_offset) {
+		case -1:
+			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
+				    NL80211_CHAN_HT40MINUS);
+			break;
+		case 1:
+			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
+				    NL80211_CHAN_HT40PLUS);
+			break;
+		default:
+			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
+				    NL80211_CHAN_HT20);
+			break;
+		}
+	}
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret == 0)
+		return 0;
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to set channel (freq=%d): "
+		   "%d (%s)", freq, ret, strerror(-ret));
+nla_put_failure:
+	return -1;
+}
+
 #endif /* CONFIG_AP || HOSTAPD */
 
 
@@ -2115,34 +2158,6 @@ static int wpa_driver_nl80211_set_beacon(void *priv,
 						   head, head_len,
 						   tail, tail_len,
 						   dtim_period);
-}
-
-
-static int wpa_driver_nl80211_set_freq2(
-	struct wpa_driver_nl80211_data *drv,
-	struct wpa_driver_associate_params *params)
-{
-	struct nl_msg *msg;
-	int ret;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_SET_WIPHY, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret == 0)
-		return 0;
-	wpa_printf(MSG_DEBUG, "nl80211: MLME Failed to set channel (freq=%d): "
-		   "%d (%s)", params->freq, ret, strerror(-ret));
-nla_put_failure:
-	return -1;
 }
 
 #endif /* CONFIG_AP */
@@ -2693,7 +2708,7 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		return -1;
 
 	if (wpa_driver_nl80211_set_mode(drv, params->mode) ||
-	    wpa_driver_nl80211_set_freq2(drv, params)) {
+	    wpa_driver_nl80211_set_freq(drv, params->freq, 0, 0)) {
 		nl80211_remove_iface(drv, drv->monitor_ifidx);
 		drv->monitor_ifidx = -1;
 		return -1;
@@ -3057,41 +3072,8 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -1;
-
-	drv->last_freq = freq->freq;
-	drv->last_freq_ht = freq->ht_enabled;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_SET_WIPHY, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->ifname));
-	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq->freq);
-	if (freq->ht_enabled) {
-		switch (freq->sec_channel_offset) {
-		case -1:
-			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
-				    NL80211_CHAN_HT40MINUS);
-			break;
-		case 1:
-			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
-				    NL80211_CHAN_HT40PLUS);
-			break;
-		default:
-			NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_CHANNEL_TYPE,
-				    NL80211_CHAN_HT20);
-			break;
-		}
-	}
-
-	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
-		return 0;
- nla_put_failure:
-	return -1;
+	return wpa_driver_nl80211_set_freq(drv, freq->freq, freq->ht_enabled,
+					   freq->sec_channel_offset);
 }
 
 

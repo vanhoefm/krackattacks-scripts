@@ -48,11 +48,6 @@
 #endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
-#include <netlink/msg.h>
-#include <netlink/attr.h>
-#include <net/if.h>
-#include <net/if_arp.h>
-
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/sta_flags.h"
 #include "ieee802_11_common.h"

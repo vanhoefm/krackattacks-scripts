@@ -1007,28 +1007,12 @@ static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 }
 
 
-/**
- * wpa_driver_nl80211_init - Initialize nl80211 driver interface
- * @ctx: context to be used when calling wpa_supplicant functions,
- * e.g., wpa_supplicant_event()
- * @ifname: interface name, e.g., wlan0
- * Returns: Pointer to private data, %NULL on failure
- */
-static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
+static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv,
+				      void *ctx)
 {
-	int s, ret;
-	struct sockaddr_nl local;
-	struct wpa_driver_nl80211_data *drv;
+	int ret;
 
-	drv = os_zalloc(sizeof(*drv));
-	if (drv == NULL)
-		return NULL;
-	drv->ctx = ctx;
-	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
-#ifdef CONFIG_AP
-	drv->monitor_ifidx = -1;
-	drv->monitor_sock = -1;
-#endif /* CONFIG_AP */
+	/* Initialize generic netlink and nl80211 */
 
 	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
 	if (drv->nl_cb == NULL) {
@@ -1050,12 +1034,21 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		goto err3;
 	}
 
+#ifdef CONFIG_LIBNL20
+	if (genl_ctrl_alloc_cache(drv->nl_handle, &drv->nl_cache) < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
+			   "netlink cache");
+		goto err3;
+	}
+#else /* CONFIG_LIBNL20 */
 	drv->nl_cache = genl_ctrl_alloc_cache(drv->nl_handle);
 	if (drv->nl_cache == NULL) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
 			   "netlink cache");
 		goto err3;
 	}
+#endif /* CONFIG_LIBNL20 */
+
 
 	drv->nl80211 = genl_ctrl_search_by_name(drv->nl_cache, "nl80211");
 	if (drv->nl80211 == NULL) {
@@ -1083,10 +1076,50 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 			   ret, strerror(-ret));
 		goto err4;
 	}
-	drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle),
 				 wpa_driver_nl80211_event_receive, drv, ctx);
+
+	return 0;
+
+err4:
+	nl_cache_free(drv->nl_cache);
+err3:
+	nl_handle_destroy(drv->nl_handle);
+err2:
+	nl_cb_put(drv->nl_cb);
+err1:
+	return -1;
+}
+
+
+/**
+ * wpa_driver_nl80211_init - Initialize nl80211 driver interface
+ * @ctx: context to be used when calling wpa_supplicant functions,
+ * e.g., wpa_supplicant_event()
+ * @ifname: interface name, e.g., wlan0
+ * Returns: Pointer to private data, %NULL on failure
+ */
+static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
+{
+	int s;
+	struct sockaddr_nl local;
+	struct wpa_driver_nl80211_data *drv;
+
+	drv = os_zalloc(sizeof(*drv));
+	if (drv == NULL)
+		return NULL;
+	drv->ctx = ctx;
+	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
+#ifdef CONFIG_AP
+	drv->monitor_ifidx = -1;
+	drv->monitor_sock = -1;
+#endif /* CONFIG_AP */
+
+	if (wpa_driver_nl80211_init_nl(drv, ctx))
+		goto err1;
+
+	drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
@@ -1127,11 +1160,8 @@ err6:
 	close(drv->ioctl_sock);
 err5:
 	genl_family_put(drv->nl80211);
-err4:
 	nl_cache_free(drv->nl_cache);
-err3:
 	nl_handle_destroy(drv->nl_handle);
-err2:
 	nl_cb_put(drv->nl_cb);
 err1:
 	os_free(drv);
@@ -4127,7 +4157,6 @@ static int i802_ht_scan(struct wpa_driver_nl80211_data *drv)
 static int i802_init_sockets(struct wpa_driver_nl80211_data *drv, const u8 *bssid)
 {
 	struct ifreq ifr;
-	int ret;
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
@@ -4152,66 +4181,8 @@ static int i802_init_sockets(struct wpa_driver_nl80211_data *drv, const u8 *bssi
 		}
 	}
 
-	/*
-	 * initialise generic netlink and nl80211
-	 */
-	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
-	if (!drv->nl_cb) {
-		printf("Failed to allocate netlink callbacks.\n");
+	if (wpa_driver_nl80211_init_nl(drv, drv->hapd))
 		return -1;
-	}
-
-	drv->nl_handle = nl_handle_alloc_cb(drv->nl_cb);
-	if (!drv->nl_handle) {
-		printf("Failed to allocate netlink handle.\n");
-		return -1;
-	}
-
-	if (genl_connect(drv->nl_handle)) {
-		printf("Failed to connect to generic netlink.\n");
-		return -1;
-	}
-
-#ifdef CONFIG_LIBNL20
-	if (genl_ctrl_alloc_cache(drv->nl_handle, &drv->nl_cache) < 0) {
-		printf("Failed to allocate generic netlink cache.\n");
-		return -1;
-	}
-#else /* CONFIG_LIBNL20 */
-	drv->nl_cache = genl_ctrl_alloc_cache(drv->nl_handle);
-	if (!drv->nl_cache) {
-		printf("Failed to allocate generic netlink cache.\n");
-		return -1;
-	}
-#endif /* CONFIG_LIBNL20 */
-
-	drv->nl80211 = genl_ctrl_search_by_name(drv->nl_cache, "nl80211");
-	if (!drv->nl80211) {
-		printf("nl80211 not found.\n");
-		return -1;
-	}
-
-	ret = nl_get_multicast_id(drv, "nl80211", "scan");
-	if (ret >= 0)
-		ret = nl_socket_add_membership(drv->nl_handle, ret);
-	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
-			   "membership for scan events: %d (%s)",
-			   ret, strerror(-ret));
-	}
-
-	ret = nl_get_multicast_id(drv, "nl80211", "mlme");
-	if (ret >= 0)
-		ret = nl_socket_add_membership(drv->nl_handle, ret);
-	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
-			   "membership for mlme events: %d (%s)",
-			   ret, strerror(-ret));
-	}
-
-	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle),
-				 wpa_driver_nl80211_event_receive, drv,
-				 drv->hapd);
 
 #ifdef CONFIG_IEEE80211N
 	if (drv->ht_40mhz_scan) {

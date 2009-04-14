@@ -4541,9 +4541,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_country = wpa_driver_nl80211_set_country,
 #ifdef CONFIG_AP
 	.set_beacon = wpa_driver_nl80211_set_beacon,
-	.send_mlme = wpa_driver_nl80211_send_mlme,
 #endif /* CONFIG_AP */
 #if defined(CONFIG_AP) || defined(HOSTAPD)
+	.send_mlme = wpa_driver_nl80211_send_mlme,
 	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 #endif /* CONFIG_AP || HOSTAPD */

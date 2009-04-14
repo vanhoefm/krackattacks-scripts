@@ -111,25 +111,25 @@ struct wpa_driver_nl80211_data {
 	u8 ssid[32];
 	size_t ssid_len;
 
-#ifdef CONFIG_AP
+#if defined(CONFIG_AP) || defined(HOSTAPD)
 	int beacon_int;
-	unsigned int beacon_set:1;
 	int monitor_sock;
 	int monitor_ifidx;
+#endif /* CONFIG_AP || HOSTAPD */
+
+#ifdef CONFIG_AP
+	unsigned int beacon_set:1;
 #endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
 	struct hostapd_data *hapd;
 
 	int eapol_sock; /* socket for EAPOL frames */
-	int monitor_sock; /* socket for monitor */
-	int monitor_ifidx;
 
 	int default_if_indices[16];
 	int *if_indices;
 	int num_if_indices;
 
-	int beacon_int;
 	struct i802_bss bss;
 	unsigned int ht_40mhz_scan:1;
 
@@ -154,10 +154,6 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
-static void handle_frame(struct wpa_driver_nl80211_data *drv,
-			 u8 *buf, size_t len,
-			 struct hostapd_frame_info *hfi,
-			 enum ieee80211_msg_type msg_type);
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
@@ -338,13 +334,13 @@ static int wpa_driver_nl80211_send_oper_ifla(
 			RTA_LENGTH(sizeof(char));
 	}
 
-	wpa_printf(MSG_DEBUG, "WEXT: Operstate: linkmode=%d, operstate=%d",
+	wpa_printf(MSG_DEBUG, "nl80211: Operstate: linkmode=%d, operstate=%d",
 		   linkmode, operstate);
 
 	ret = send(drv->link_event_sock, &req, req.hdr.nlmsg_len, 0);
 	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "WEXT: Sending operstate IFLA failed: "
-			   "%s (assume operstate is not supported)",
+		wpa_printf(MSG_DEBUG, "nl80211: Sending operstate IFLA failed:"
+			   " %s (assume operstate is not supported)",
 			   strerror(errno));
 	}
 
@@ -2330,9 +2326,6 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 	}
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
-
-#ifdef CONFIG_AP
 
 static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			 u8 *buf, size_t len,
@@ -2342,6 +2335,14 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 	struct ieee80211_hdr *hdr;
 	u16 fc, type, stype;
 	size_t data_len = len;
+	u8 *bssid;
+	void *ctx = drv->ctx;
+#ifdef HOSTAPD
+	struct hostapd_iface *iface = drv->hapd->iface;
+	struct hostapd_data *hapd = NULL;
+	int broadcast_bssid = 0;
+	size_t i;
+#endif /* HOSTAPD */
 
 	/*
 	 * PS-Poll frames are 16 bytes. All other frames are
@@ -2362,8 +2363,10 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			return;
 		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
 		case WLAN_FC_TODS:
+			bssid = hdr->addr1;
 			break;
 		case WLAN_FC_FROMDS:
+			bssid = hdr->addr2;
 			break;
 		default:
 			/* discard */
@@ -2374,23 +2377,55 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 		/* discard non-ps-poll frames */
 		if (stype != WLAN_FC_STYPE_PSPOLL)
 			return;
+		bssid = hdr->addr1;
 		break;
 	case WLAN_FC_TYPE_MGMT:
+		bssid = hdr->addr3;
 		break;
 	default:
 		/* discard */
 		return;
 	}
 
+#ifdef HOSTAPD
+	/* find interface frame belongs to */
+	for (i = 0; i < iface->num_bss; i++) {
+		if (memcmp(bssid, iface->bss[i]->own_addr, ETH_ALEN) == 0) {
+			hapd = iface->bss[i];
+			break;
+		}
+	}
+
+	if (hapd == NULL) {
+		hapd = iface->bss[0];
+
+		if (bssid[0] != 0xff || bssid[1] != 0xff ||
+		    bssid[2] != 0xff || bssid[3] != 0xff ||
+		    bssid[4] != 0xff || bssid[5] != 0xff) {
+			/*
+			 * Unknown BSSID - drop frame if this is not from
+			 * passive scanning or a beacon (at least ProbeReq
+			 * frames to other APs may be allowed through RX
+			 * filtering in the wlan hw/driver)
+			 */
+			if ((type != WLAN_FC_TYPE_MGMT ||
+			     stype != WLAN_FC_STYPE_BEACON))
+				return;
+		} else
+			broadcast_bssid = 1;
+	}
+	ctx = hapd;
+#endif /* HOSTAPD */
+
 	switch (msg_type) {
 	case ieee80211_msg_normal:
 		/* continue processing */
 		break;
 	case ieee80211_msg_tx_callback_ack:
-		handle_tx_callback(drv->ctx, buf, data_len, 1);
+		handle_tx_callback(ctx, buf, data_len, 1);
 		return;
 	case ieee80211_msg_tx_callback_fail:
-		handle_tx_callback(drv->ctx, buf, data_len, 0);
+		handle_tx_callback(ctx, buf, data_len, 0);
 		return;
 	}
 
@@ -2399,22 +2434,36 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 		if (stype != WLAN_FC_STYPE_BEACON &&
 		    stype != WLAN_FC_STYPE_PROBE_REQ)
 			wpa_printf(MSG_MSGDUMP, "MGMT");
+#ifdef HOSTAPD
+		if (broadcast_bssid) {
+			for (i = 0; i < iface->num_bss; i++)
+				hostapd_mgmt_rx(iface->bss[i], buf, data_len,
+						stype, hfi);
+		} else
+			hostapd_mgmt_rx(hapd, buf, data_len, stype, hfi);
+#else /* HOSTAPD */
 		ap_mgmt_rx(drv->ctx, buf, data_len, stype, hfi);
+#endif /* HOSTAPD */
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
 		wpa_printf(MSG_DEBUG, "CTRL");
+#ifdef HOSTAPD
+		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
+#else /* HOSTAPD */
 		ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
+#endif /* HOSTAPD */
 		break;
 	case WLAN_FC_TYPE_DATA:
+#ifdef HOSTAPD
+		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
+#else /* HOSTAPD */
 		ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
+#endif /* HOSTAPD */
 		break;
 	}
 }
 
-#endif /* CONFIG_AP */
-
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 
 static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
@@ -3648,126 +3697,6 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
-}
-
-
-static void handle_frame(struct wpa_driver_nl80211_data *drv,
-			 u8 *buf, size_t len,
-			 struct hostapd_frame_info *hfi,
-			 enum ieee80211_msg_type msg_type)
-{
-	struct hostapd_iface *iface = drv->hapd->iface;
-	struct ieee80211_hdr *hdr;
-	u16 fc, type, stype;
-	size_t data_len = len;
-	struct hostapd_data *hapd = NULL;
-	int broadcast_bssid = 0;
-	size_t i;
-	u8 *bssid;
-
-	/*
-	 * PS-Poll frames are 16 bytes. All other frames are
-	 * 24 bytes or longer.
-	 */
-	if (len < 16)
-		return;
-
-	hdr = (struct ieee80211_hdr *) buf;
-	fc = le_to_host16(hdr->frame_control);
-
-	type = WLAN_FC_GET_TYPE(fc);
-	stype = WLAN_FC_GET_STYPE(fc);
-
-	switch (type) {
-	case WLAN_FC_TYPE_DATA:
-		if (len < 24)
-			return;
-		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
-		case WLAN_FC_TODS:
-			bssid = hdr->addr1;
-			break;
-		case WLAN_FC_FROMDS:
-			bssid = hdr->addr2;
-			break;
-		default:
-			/* discard */
-			return;
-		}
-		break;
-	case WLAN_FC_TYPE_CTRL:
-		/* discard non-ps-poll frames */
-		if (stype != WLAN_FC_STYPE_PSPOLL)
-			return;
-		bssid = hdr->addr1;
-		break;
-	case WLAN_FC_TYPE_MGMT:
-		bssid = hdr->addr3;
-		break;
-	default:
-		/* discard */
-		return;
-	}
-
-	/* find interface frame belongs to */
-	for (i = 0; i < iface->num_bss; i++) {
-		if (memcmp(bssid, iface->bss[i]->own_addr, ETH_ALEN) == 0) {
-			hapd = iface->bss[i];
-			break;
-		}
-	}
-
-	if (hapd == NULL) {
-		hapd = iface->bss[0];
-
-		if (bssid[0] != 0xff || bssid[1] != 0xff ||
-		    bssid[2] != 0xff || bssid[3] != 0xff ||
-		    bssid[4] != 0xff || bssid[5] != 0xff) {
-			/*
-			 * Unknown BSSID - drop frame if this is not from
-			 * passive scanning or a beacon (at least ProbeReq
-			 * frames to other APs may be allowed through RX
-			 * filtering in the wlan hw/driver)
-			 */
-			if ((type != WLAN_FC_TYPE_MGMT ||
-			     stype != WLAN_FC_STYPE_BEACON))
-				return;
-		} else
-			broadcast_bssid = 1;
-	}
-
-	switch (msg_type) {
-	case ieee80211_msg_normal:
-		/* continue processing */
-		break;
-	case ieee80211_msg_tx_callback_ack:
-		handle_tx_callback(hapd, buf, data_len, 1);
-		return;
-	case ieee80211_msg_tx_callback_fail:
-		handle_tx_callback(hapd, buf, data_len, 0);
-		return;
-	}
-
-	switch (type) {
-	case WLAN_FC_TYPE_MGMT:
-		if (stype != WLAN_FC_STYPE_BEACON &&
-		    stype != WLAN_FC_STYPE_PROBE_REQ)
-			wpa_printf(MSG_MSGDUMP, "MGMT");
-		if (broadcast_bssid) {
-			for (i = 0; i < iface->num_bss; i++)
-				hostapd_mgmt_rx(iface->bss[i], buf, data_len,
-						stype, hfi);
-		} else
-			hostapd_mgmt_rx(hapd, buf, data_len, stype, hfi);
-		break;
-	case WLAN_FC_TYPE_CTRL:
-		/* can only get here with PS-Poll frames */
-		wpa_printf(MSG_DEBUG, "CTRL");
-		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
-		break;
-	case WLAN_FC_TYPE_DATA:
-		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
-		break;
-	}
 }
 
 

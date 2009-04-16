@@ -116,11 +116,9 @@ struct wpa_driver_nl80211_data {
 	int nlmode;
 	int ap_scan_as_station;
 
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 	int beacon_int;
 	int monitor_sock;
 	int monitor_ifidx;
-#endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef CONFIG_AP
 	unsigned int beacon_set:1;
@@ -159,6 +157,10 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
 				 int ifindex);
+static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
+				 int ifidx);
+static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
+static int i802_del_beacon(struct wpa_driver_nl80211_data *drv);
 #endif /* HOSTAPD */
 
 
@@ -931,6 +933,7 @@ nla_put_failure:
 }
 
 
+#ifndef HOSTAPD
 struct wiphy_info_data {
 	int max_scan_ssids;
 	int ap_supported;
@@ -1010,6 +1013,7 @@ static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	if (info.ap_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
 }
+#endif /* HOSTAPD */
 
 
 static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv,
@@ -1098,6 +1102,39 @@ err1:
 }
 
 
+static int wpa_driver_nl80211_init_link_events(
+	struct wpa_driver_nl80211_data *drv)
+{
+#ifdef HOSTAPD
+	return 0;
+#else /* HOSTAPD */
+	int s;
+	struct sockaddr_nl local;
+
+	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (s < 0) {
+		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
+		goto failed;
+	}
+
+	os_memset(&local, 0, sizeof(local));
+	local.nl_family = AF_NETLINK;
+	local.nl_groups = RTMGRP_LINK;
+	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
+		perror("bind(netlink)");
+		close(s);
+		return -1;
+	}
+
+	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_link, drv,
+				 ctx);
+	drv->link_event_sock = s;
+
+	return 0;
+#endif /* HOSTAPD */
+}
+
+
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -1107,8 +1144,6 @@ err1:
  */
 static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 {
-	int s;
-	struct sockaddr_nl local;
 	struct wpa_driver_nl80211_data *drv;
 
 	drv = os_zalloc(sizeof(*drv));
@@ -1116,59 +1151,43 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		return NULL;
 	drv->ctx = ctx;
 	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
-#ifdef CONFIG_AP
 	drv->monitor_ifidx = -1;
 	drv->monitor_sock = -1;
-#endif /* CONFIG_AP */
+	drv->link_event_sock = -1;
+	drv->ioctl_sock = -1;
 
-	if (wpa_driver_nl80211_init_nl(drv, ctx))
-		goto err1;
+	if (wpa_driver_nl80211_init_nl(drv, ctx)) {
+		os_free(drv);
+		return NULL;
+	}
 
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
 		perror("socket(PF_INET,SOCK_DGRAM)");
-		goto err5;
+		goto failed;
 	}
 
-	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (s < 0) {
-		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
-		goto err6;
-	}
-
-	os_memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	local.nl_groups = RTMGRP_LINK;
-	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
-		perror("bind(netlink)");
-		close(s);
-		goto err6;
-	}
-
-#ifndef HOSTAPD
-	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_link, drv,
-				 ctx);
-#endif /* HOSTAPD */
-	drv->link_event_sock = s;
-
-	if (wpa_driver_nl80211_finish_drv_init(drv))
-		goto err7;
+	if (wpa_driver_nl80211_init_link_events(drv) ||
+	    wpa_driver_nl80211_finish_drv_init(drv))
+		goto failed;
 
 	return drv;
 
-err7:
-	eloop_unregister_read_sock(drv->link_event_sock);
-	close(drv->link_event_sock);
-err6:
-	close(drv->ioctl_sock);
-err5:
+failed:
+	if (drv->link_event_sock >= 0) {
+		eloop_unregister_read_sock(drv->link_event_sock);
+		close(drv->link_event_sock);
+	}
+	if (drv->ioctl_sock >= 0)
+		close(drv->ioctl_sock);
+
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
 	nl_handle_destroy(drv->nl_handle);
 	nl_cb_put(drv->nl_cb);
-err1:
+
 	os_free(drv);
 	return NULL;
 }
@@ -1179,6 +1198,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 {
 	drv->ifindex = if_nametoindex(drv->ifname);
 
+#ifndef HOSTAPD
 	if (wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA) < 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Could not configure driver to "
 			   "use managed mode");
@@ -1193,9 +1213,24 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	wpa_driver_nl80211_capa(drv);
 
 	wpa_driver_nl80211_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
+#endif /* HOSTAPD */
 
 	return 0;
 }
+
+
+#ifdef HOSTAPD
+static void wpa_driver_nl80211_free_bss(struct wpa_driver_nl80211_data *drv)
+{
+	struct i802_bss *bss, *prev;
+	bss = drv->bss.next;
+	while (bss) {
+		prev = bss;
+		bss = bss->next;
+		os_free(bss);
+	}
+}
+#endif /* HOSTAPD */
 
 
 /**
@@ -1209,30 +1244,55 @@ static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 
-#ifdef CONFIG_AP
+#if defined(CONFIG_AP) || defined(HOSTAPD)
 	if (drv->monitor_ifidx >= 0)
 		nl80211_remove_iface(drv, drv->monitor_ifidx);
 	if (drv->monitor_sock >= 0) {
 		eloop_unregister_read_sock(drv->monitor_sock);
 		close(drv->monitor_sock);
 	}
-#endif /* CONFIG_AP */
+#endif /* CONFIG_AP || HOSTAPD */
 
-	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
+#ifdef HOSTAPD
+	if (drv->last_freq_ht) {
+		/* Clear HT flags from the driver */
+		struct hostapd_freq_params freq;
+		os_memset(&freq, 0, sizeof(freq));
+		freq.freq = drv->last_freq;
+		i802_set_freq(priv, &freq);
+	}
 
+	i802_del_beacon(drv);
+
+	if (drv->eapol_sock >= 0) {
+		eloop_unregister_read_sock(drv->eapol_sock);
+		close(drv->eapol_sock);
+	}
+
+	if (drv->if_indices != drv->default_if_indices)
+		os_free(drv->if_indices);
+
+	wpa_driver_nl80211_free_bss(drv);
+#else /* HOSTAPD */
 #ifndef NO_WEXT
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED, 0);
 #endif /* NO_WEXT */
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
-	eloop_unregister_read_sock(drv->link_event_sock);
+	if (drv->link_event_sock >= 0) {
+		eloop_unregister_read_sock(drv->link_event_sock);
+		close(drv->link_event_sock);
+	}
+#endif /* HOSTAPD */
 
-	hostapd_set_iface_flags(drv, drv->ifname, 0);
+	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
+
+	(void) hostapd_set_iface_flags(drv, drv->ifname, 0);
 	wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA);
 
-	close(drv->link_event_sock);
-	close(drv->ioctl_sock);
+	if (drv->ioctl_sock >= 0)
+		close(drv->ioctl_sock);
 
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle));
 	genl_family_put(drv->nl80211);
@@ -3867,16 +3927,11 @@ static void *i802_init(struct hostapd_data *hapd,
 	size_t i;
 	struct ifreq ifr;
 
-	drv = os_zalloc(sizeof(struct wpa_driver_nl80211_data));
-	if (drv == NULL) {
-		printf("Could not allocate memory for i802 driver data\n");
+	drv = wpa_driver_nl80211_init(hapd, params->ifname);
+	if (drv == NULL)
 		return NULL;
-	}
 
 	drv->hapd = hapd;
-	drv->ctx = hapd;
-	memcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
-	drv->ifindex = if_nametoindex(drv->ifname);
 	drv->bss.ifindex = drv->ifindex;
 
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
@@ -3884,12 +3939,6 @@ static void *i802_init(struct hostapd_data *hapd,
 	for (i = 0; i < params->num_bridge; i++) {
 		if (params->bridge[i])
 			add_ifidx(drv, if_nametoindex(params->bridge[i]));
-	}
-
-	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
-	if (drv->ioctl_sock < 0) {
-		perror("socket[PF_INET,SOCK_DGRAM]");
-		goto failed;
 	}
 
 	/* start listening for EAPOL on the default AP interface */
@@ -3909,9 +3958,6 @@ static void *i802_init(struct hostapd_data *hapd,
 		}
 	}
 
-	if (wpa_driver_nl80211_init_nl(drv, drv->hapd))
-		goto failed;
-
 	/* Initialise a monitor interface */
 	if (nl80211_create_monitor_interface(drv))
 		goto failed;
@@ -3919,16 +3965,16 @@ static void *i802_init(struct hostapd_data *hapd,
 	if (nl80211_set_mode(drv, drv->ifindex, NL80211_IFTYPE_AP)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to set interface %s "
 			   "into AP mode", drv->ifname);
-		goto fail1;
+		goto failed;
 	}
 
 	if (hostapd_set_iface_flags(drv, drv->ifname, 1))
-		goto fail1;
+		goto failed;
 
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));
 	if (drv->eapol_sock < 0) {
 		perror("socket(PF_PACKET, SOCK_DGRAM, ETH_P_PAE)");
-		goto fail1;
+		goto failed;
 	}
 
 	if (eloop_register_read_sock(drv->eapol_sock, handle_eapol, drv, NULL))
@@ -3941,74 +3987,37 @@ static void *i802_init(struct hostapd_data *hapd,
 	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
 	if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr) != 0) {
 		perror("ioctl(SIOCGIFHWADDR)");
-		goto fail1;
+		goto failed;
 	}
 
 	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
 		printf("Invalid HW-addr family 0x%04x\n",
 		       ifr.ifr_hwaddr.sa_family);
-		goto fail1;
+		goto failed;
 	}
 	os_memcpy(drv->hapd->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	return drv;
 
-fail1:
-	nl80211_remove_iface(drv, drv->monitor_ifidx);
 failed:
-	free(drv);
+	if (drv->monitor_ifidx >= 0)
+		nl80211_remove_iface(drv, drv->monitor_ifidx);
+	if (drv->ioctl_sock >= 0)
+		close(drv->ioctl_sock);
+
+	genl_family_put(drv->nl80211);
+	nl_cache_free(drv->nl_cache);
+	nl_handle_destroy(drv->nl_handle);
+	nl_cb_put(drv->nl_cb);
+
+	os_free(drv);
 	return NULL;
 }
 
 
 static void i802_deinit(void *priv)
 {
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct i802_bss *bss, *prev;
-
-	if (drv->last_freq_ht) {
-		/* Clear HT flags from the driver */
-		struct hostapd_freq_params freq;
-		os_memset(&freq, 0, sizeof(freq));
-		freq.freq = drv->last_freq;
-		i802_set_freq(priv, &freq);
-	}
-
-	i802_del_beacon(drv);
-
-	/* remove monitor interface */
-	nl80211_remove_iface(drv, drv->monitor_ifidx);
-
-	(void) hostapd_set_iface_flags(drv, drv->ifname, 0);
-
-	if (drv->monitor_sock >= 0) {
-		eloop_unregister_read_sock(drv->monitor_sock);
-		close(drv->monitor_sock);
-	}
-	if (drv->ioctl_sock >= 0)
-		close(drv->ioctl_sock);
-	if (drv->eapol_sock >= 0) {
-		eloop_unregister_read_sock(drv->eapol_sock);
-		close(drv->eapol_sock);
-	}
-
-	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle));
-	genl_family_put(drv->nl80211);
-	nl_cache_free(drv->nl_cache);
-	nl_handle_destroy(drv->nl_handle);
-	nl_cb_put(drv->nl_cb);
-
-	if (drv->if_indices != drv->default_if_indices)
-		free(drv->if_indices);
-
-	bss = drv->bss.next;
-	while (bss) {
-		prev = bss;
-		bss = bss->next;
-		os_free(bss);
-	}
-
-	free(drv);
+	wpa_driver_nl80211_deinit(priv);
 }
 
 #endif /* HOSTAPD */

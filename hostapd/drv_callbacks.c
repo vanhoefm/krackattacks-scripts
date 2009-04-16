@@ -294,3 +294,25 @@ struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 
 	return NULL;
 }
+
+
+#ifndef CONFIG_AP
+void wpa_supplicant_event(void *ctx, wpa_event_type event,
+			  union wpa_event_data *data)
+{
+	struct hostapd_data *hapd = ctx;
+
+	switch (event) {
+	case EVENT_MICHAEL_MIC_FAILURE:
+		michael_mic_failure(hapd, data->michael_mic_failure.src, 1);
+		break;
+	case EVENT_SCAN_RESULTS:
+		if (hapd->iface->scan_cb)
+			hapd->iface->scan_cb(hapd->iface);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
+		break;
+	}
+}
+#endif /* CONFIG_AP */

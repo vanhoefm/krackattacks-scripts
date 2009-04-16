@@ -1314,9 +1314,6 @@ static int setup_interface(struct hostapd_iface *iface)
 	size_t i;
 	char country[4];
 	u8 *b = conf->bssid;
-	int freq;
-	size_t j;
-	u8 *prev_addr;
 
 	/*
 	 * Initialize the driver interface and make sure that all BSSes get
@@ -1335,6 +1332,11 @@ static int setup_interface(struct hostapd_iface *iface)
 	for (i = 0; i < iface->num_bss; i++) {
 		iface->bss[i]->driver = hapd->driver;
 		iface->bss[i]->drv_priv = hapd->drv_priv;
+	}
+
+	if (hostapd_driver_set_mode(hapd, IEEE80211_MODE_AP)) {
+		wpa_printf(MSG_ERROR, "Failed to set driver in AP mode");
+		return -1;
 	}
 
 	if (hostapd_validate_bssid_configuration(iface))
@@ -1379,8 +1381,33 @@ static int setup_interface(struct hostapd_iface *iface)
 				   "channel. (%d)", ret);
 			return -1;
 		}
+		ret = hostapd_check_ht_capab(iface);
+		if (ret < 0)
+			return -1;
+		if (ret == 1) {
+			wpa_printf(MSG_DEBUG, "Interface initialization will "
+				   "be completed in a callback");
+			return 0;
+		}
+	}
+	return hostapd_setup_interface_complete(iface, 0);
+}
+
+
+int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
+{
+	struct hostapd_data *hapd = iface->bss[0];
+	int freq;
+	size_t j;
+	u8 *prev_addr;
+
+	if (err) {
+		wpa_printf(MSG_ERROR, "Interface initialization failed");
+		eloop_terminate();
+		return -1;
 	}
 
+	wpa_printf(MSG_DEBUG, "Completing interface initialization");
 	if (hapd->iconf->channel) {
 		freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
 		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
@@ -1436,6 +1463,9 @@ static int setup_interface(struct hostapd_iface *iface)
 		return -1;
 	}
 
+	wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
+		   iface->bss[0]->conf->iface);
+
 	return 0;
 }
 
@@ -1460,9 +1490,6 @@ int hostapd_setup_interface(struct hostapd_iface *iface)
 			   iface->bss[0]->conf->iface);
 		eloop_terminate();
 		return -1;
-	} else if (!hostapd_drv_none(iface->bss[0])) {
-		wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
-			   iface->bss[0]->conf->iface);
 	}
 
 	return 0;

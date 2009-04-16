@@ -36,7 +36,6 @@ hostapd_driver_init(struct hostapd_data *hapd, const u8 *bssid)
 	params.ssid_len = hapd->conf->ssid.ssid_len;
 	params.test_socket = hapd->conf->test_socket;
 	params.use_pae_group_addr = hapd->conf->use_pae_group_addr;
-	params.ht_40mhz_scan = hapd->iconf->secondary_channel != 0;
 
 	params.num_bridge = hapd->iface->num_bss;
 	params.bridge = os_zalloc(hapd->iface->num_bss * sizeof(char *));
@@ -553,12 +552,27 @@ hostapd_set_wps_probe_resp_ie(struct hostapd_data *hapd, const u8 *ie,
 						   hapd->drv_priv, ie, len);
 }
 
-static inline const struct hostapd_neighbor_bss *
-hostapd_driver_get_neighbor_bss(struct hostapd_data *hapd, size_t *num)
+static inline int hostapd_driver_set_mode(struct hostapd_data *hapd, int mode)
 {
-	if (hapd->driver == NULL || hapd->driver->get_neighbor_bss == NULL)
-		return NULL;
-	return hapd->driver->get_neighbor_bss(hapd->drv_priv, num);
+	if (hapd->driver == NULL || hapd->driver->set_mode == NULL)
+		return 0;
+	return hapd->driver->set_mode(hapd->drv_priv, mode);
+}
+
+static inline int hostapd_driver_scan(struct hostapd_data *hapd,
+				      struct wpa_driver_scan_params *params)
+{
+	if (hapd->driver && hapd->driver->scan2)
+		return hapd->driver->scan2(hapd->drv_priv, params);
+	return -1;
+}
+
+static inline struct wpa_scan_results * hostapd_driver_get_scan_results(
+	struct hostapd_data *hapd)
+{
+	if (hapd->driver && hapd->driver->get_scan_results2)
+		return hapd->driver->get_scan_results2(hapd->drv_priv);
+	return NULL;
 }
 
 #endif /* DRIVER_I_H */

@@ -61,6 +61,7 @@ struct hostapd_hw_modes {
 
 #define IEEE80211_MODE_INFRA	0
 #define IEEE80211_MODE_IBSS	1
+#define IEEE80211_MODE_AP	2
 
 #define IEEE80211_CAP_ESS	0x0001
 #define IEEE80211_CAP_IBSS	0x0002
@@ -494,14 +495,6 @@ enum hostapd_driver_if_type {
 	HOSTAPD_IF_VLAN, HOSTAPD_IF_WDS
 };
 
-struct hostapd_neighbor_bss {
-	u8 bssid[ETH_ALEN];
-	int freq; /* MHz */
-	unsigned int ht:1;
-	int pri_chan;
-	int sec_chan; /* 0 for 20 MHz channels */
-};
-
 struct wpa_init_params {
 	const u8 *bssid;
 	const char *ifname;
@@ -509,7 +502,6 @@ struct wpa_init_params {
 	size_t ssid_len;
 	const char *test_socket;
 	int use_pae_group_addr;
-	int ht_40mhz_scan;
 	char **bridge;
 	size_t num_bridge;
 };
@@ -1341,9 +1333,6 @@ struct wpa_driver_ops {
 				 const u8 *ie, size_t len);
 	int (*set_wps_probe_resp_ie)(const char *ifname, void *priv,
 				     const u8 *ie, size_t len);
-
-	const struct hostapd_neighbor_bss *
-	(*get_neighbor_bss)(void *priv, size_t *num);
 };
 
 /**
@@ -1589,6 +1578,7 @@ union wpa_event_data {
 	 */
 	struct michael_mic_failure {
 		int unicast;
+		const u8 *src;
 	} michael_mic_failure;
 
 	/**

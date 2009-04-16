@@ -154,9 +154,8 @@ struct hostapd_iface {
 	/* Overlapping BSS information */
 	int olbc_ht;
 
-#ifdef CONFIG_IEEE80211N
 	u16 ht_op_mode;
-#endif /* CONFIG_IEEE80211N */
+	void (*scan_cb)(struct hostapd_iface *iface);
 };
 
 int hostapd_reload_config(struct hostapd_iface *iface);
@@ -165,6 +164,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 		       struct hostapd_config *conf,
 		       struct hostapd_bss_config *bss);
 int hostapd_setup_interface(struct hostapd_iface *iface);
+int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err);
 void hostapd_interface_deinit(struct hostapd_iface *iface);
 int handle_reload_iface(struct hostapd_iface *iface, void *ctx);
 int handle_dump_state_iface(struct hostapd_iface *iface, void *ctx);

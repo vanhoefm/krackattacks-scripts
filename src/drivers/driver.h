@@ -492,7 +492,7 @@ struct hostapd_freq_params {
 };
 
 enum hostapd_driver_if_type {
-	HOSTAPD_IF_VLAN, HOSTAPD_IF_WDS
+	HOSTAPD_IF_VLAN
 };
 
 struct wpa_init_params {

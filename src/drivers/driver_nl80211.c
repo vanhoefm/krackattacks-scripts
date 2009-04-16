@@ -2318,9 +2318,6 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	int ret = -ENOBUFS;
 #ifdef HOSTAPD
 	struct ifreq ifreq;
-#ifndef NO_WEXT
-	struct iwreq iwr;
-#endif /* NO_WEXT */
 #endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
@@ -2379,18 +2376,6 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 				return -1;
 			}
 			break;
-		case NL80211_IFTYPE_WDS:
-#ifdef NO_WEXT
-			return -1;
-#else /* NO_WEXT */
-			memset(&iwr, 0, sizeof(iwr));
-			os_strlcpy(iwr.ifr_name, ifname, IFNAMSIZ);
-			iwr.u.addr.sa_family = ARPHRD_ETHER;
-			memcpy(iwr.u.addr.sa_data, addr, ETH_ALEN);
-			if (ioctl(drv->ioctl_sock, SIOCSIWAP, &iwr))
-				return -1;
-			break;
-#endif /* NO_WEXT */
 		default:
 			/* nothing */
 			break;
@@ -3779,8 +3764,6 @@ static enum nl80211_iftype i802_if_type(enum hostapd_driver_if_type type)
 	switch (type) {
 	case HOSTAPD_IF_VLAN:
 		return NL80211_IFTYPE_AP_VLAN;
-	case HOSTAPD_IF_WDS:
-		return NL80211_IFTYPE_WDS;
 	}
 	return -1;
 }

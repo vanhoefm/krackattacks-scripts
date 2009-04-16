@@ -19,11 +19,14 @@
 #include "includes.h"
 #include <sys/ioctl.h>
 #include <net/if_arp.h>
+#include <net/if.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
 #include "nl80211_copy.h"
+#ifndef NO_WEXT
 #include "wireless_copy.h"
+#endif /* NO_WEXT */
 
 #include "common.h"
 #include "driver.h"
@@ -346,6 +349,7 @@ static int wpa_driver_nl80211_send_oper_ifla(
 }
 
 
+#ifndef NO_WEXT
 static int wpa_driver_nl80211_set_auth_param(
 	struct wpa_driver_nl80211_data *drv, int idx, u32 value)
 {
@@ -368,6 +372,7 @@ static int wpa_driver_nl80211_set_auth_param(
 
 	return ret;
 }
+#endif /* NO_WEXT */
 
 
 static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
@@ -1215,7 +1220,9 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
+#ifndef NO_WEXT
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED, 0);
+#endif /* NO_WEXT */
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
@@ -2251,7 +2258,9 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	int ret = -ENOBUFS;
 #ifdef HOSTAPD
 	struct ifreq ifreq;
+#ifndef NO_WEXT
 	struct iwreq iwr;
+#endif /* NO_WEXT */
 #endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
@@ -2311,6 +2320,9 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 			}
 			break;
 		case NL80211_IFTYPE_WDS:
+#ifdef NO_WEXT
+			return -1;
+#else /* NO_WEXT */
 			memset(&iwr, 0, sizeof(iwr));
 			os_strlcpy(iwr.ifr_name, ifname, IFNAMSIZ);
 			iwr.u.addr.sa_family = ARPHRD_ETHER;
@@ -2318,6 +2330,7 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 			if (ioctl(drv->ioctl_sock, SIOCSIWAP, &iwr))
 				return -1;
 			break;
+#endif /* NO_WEXT */
 		default:
 			/* nothing */
 			break;
@@ -2839,8 +2852,10 @@ static int wpa_driver_nl80211_associate(
 		return wpa_driver_nl80211_ap(drv, params);
 #endif /* CONFIG_AP */
 
+#ifndef NO_WEXT
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,
 					  params->drop_unencrypted);
+#endif /* NO_WEXT */
 
 	drv->associated = 0;
 
@@ -3178,6 +3193,9 @@ static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 
 static int i802_set_rts(void *priv, int rts)
 {
+#ifdef NO_WEXT
+	return -1;
+#else /* NO_WEXT */
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct iwreq iwr;
 
@@ -3192,11 +3210,15 @@ static int i802_set_rts(void *priv, int rts)
 	}
 
 	return 0;
+#endif /* NO_WEXT */
 }
 
 
 static int i802_set_frag(void *priv, int frag)
 {
+#ifdef NO_WEXT
+	return -1;
+#else /* NO_WEXT */
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct iwreq iwr;
 
@@ -3211,11 +3233,15 @@ static int i802_set_frag(void *priv, int frag)
 	}
 
 	return 0;
+#endif /* NO_WEXT */
 }
 
 
 static int i802_set_retry(void *priv, int short_retry, int long_retry)
 {
+#ifdef NO_WEXT
+	return -1;
+#else /* NO_WEXT */
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct iwreq iwr;
 
@@ -3237,6 +3263,7 @@ static int i802_set_retry(void *priv, int short_retry, int long_retry)
 	}
 
 	return 0;
+#endif /* NO_WEXT */
 }
 
 

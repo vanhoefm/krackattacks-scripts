@@ -1160,7 +1160,7 @@ static int wpa_driver_nl80211_init_link_events(
 	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (s < 0) {
 		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
-		goto failed;
+		return -1;
 	}
 
 	os_memset(&local, 0, sizeof(local));
@@ -1173,7 +1173,7 @@ static int wpa_driver_nl80211_init_link_events(
 	}
 
 	eloop_register_read_sock(s, wpa_driver_nl80211_event_receive_link, drv,
-				 ctx);
+				 drv->ctx);
 	drv->link_event_sock = s;
 
 	return 0;

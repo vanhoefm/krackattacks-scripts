@@ -291,6 +291,52 @@ nla_put_failure:
 }
 
 
+#ifdef HOSTAPD
+static int get_ifhwaddr(struct wpa_driver_nl80211_data *drv,
+			const char *ifname, u8 *addr)
+{
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr)) {
+		wpa_printf(MSG_ERROR, "%s: ioctl(SIOCGIFHWADDR): %d (%s)",
+			   ifname, errno, strerror(errno));
+		return -1;
+	}
+
+	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
+		wpa_printf(MSG_ERROR, "%s: Invalid HW-addr family 0x%04x",
+			   ifname, ifr.ifr_hwaddr.sa_family);
+		return -1;
+	}
+	os_memcpy(addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+
+	return 0;
+}
+
+
+static int set_ifhwaddr(struct wpa_driver_nl80211_data *drv,
+			const char *ifname, const u8 *addr)
+{
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	os_memcpy(ifr.ifr_hwaddr.sa_data, addr, ETH_ALEN);
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+
+	if (ioctl(drv->ioctl_sock, SIOCSIFHWADDR, &ifr)) {
+		wpa_printf(MSG_DEBUG, "%s: ioctl(SIOCSIFHWADDR): %d (%s)",
+			   ifname, errno, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* HOSTAPD */
+
+
 static int wpa_driver_nl80211_send_oper_ifla(
 	struct wpa_driver_nl80211_data *drv,
 	int linkmode, int operstate)
@@ -2316,9 +2362,6 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg, *flags = NULL;
 	int ifidx;
 	int ret = -ENOBUFS;
-#ifdef HOSTAPD
-	struct ifreq ifreq;
-#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -2364,22 +2407,10 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	/* start listening for EAPOL on this interface */
 	add_ifidx(drv, ifidx);
 
-	if (addr) {
-		switch (iftype) {
-		case NL80211_IFTYPE_AP:
-			os_strlcpy(ifreq.ifr_name, ifname, IFNAMSIZ);
-			memcpy(ifreq.ifr_hwaddr.sa_data, addr, ETH_ALEN);
-			ifreq.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-
-			if (ioctl(drv->ioctl_sock, SIOCSIFHWADDR, &ifreq)) {
-				nl80211_remove_iface(drv, ifidx);
-				return -1;
-			}
-			break;
-		default:
-			/* nothing */
-			break;
-		}
+	if (addr && iftype == NL80211_IFTYPE_AP &&
+	    set_ifhwaddr(drv, ifname, addr)) {
+		nl80211_remove_iface(drv, ifidx);
+		return -1;
 	}
 #endif /* HOSTAPD */
 
@@ -3908,7 +3939,6 @@ static void *i802_init(struct hostapd_data *hapd,
 {
 	struct wpa_driver_nl80211_data *drv;
 	size_t i;
-	struct ifreq ifr;
 
 	drv = wpa_driver_nl80211_init(hapd, params->ifname);
 	if (drv == NULL)
@@ -3930,16 +3960,8 @@ static void *i802_init(struct hostapd_data *hapd,
 	if (hostapd_set_iface_flags(drv, drv->ifname, 0))
 		goto failed;
 
-	if (params->bssid) {
-		os_strlcpy(ifr.ifr_name, drv->ifname, IFNAMSIZ);
-		os_memcpy(ifr.ifr_hwaddr.sa_data, params->bssid, ETH_ALEN);
-		ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-
-		if (ioctl(drv->ioctl_sock, SIOCSIFHWADDR, &ifr)) {
-			perror("ioctl(SIOCSIFHWADDR)");
-			goto failed;
-		}
-	}
+	if (params->bssid && set_ifhwaddr(drv, drv->ifname, params->bssid))
+		goto failed;
 
 	/* Initialise a monitor interface */
 	if (nl80211_create_monitor_interface(drv))
@@ -3966,19 +3988,8 @@ static void *i802_init(struct hostapd_data *hapd,
 		goto failed;
 	}
 
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr) != 0) {
-		perror("ioctl(SIOCGIFHWADDR)");
+	if (get_ifhwaddr(drv, drv->ifname, drv->hapd->own_addr))
 		goto failed;
-	}
-
-	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-		printf("Invalid HW-addr family 0x%04x\n",
-		       ifr.ifr_hwaddr.sa_family);
-		goto failed;
-	}
-	os_memcpy(drv->hapd->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	return drv;
 

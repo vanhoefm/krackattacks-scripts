@@ -941,9 +941,9 @@ static void handle_802_3(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-static int prism54_init_sockets(struct prism54_driver_data *drv)
+static int prism54_init_sockets(struct prism54_driver_data *drv,
+				struct wpa_init_params *params)
 {
-	struct hostapd_data *hapd = drv->hapd;
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
 
@@ -960,9 +960,9 @@ static int prism54_init_sockets(struct prism54_driver_data *drv)
 	}
 
         memset(&ifr, 0, sizeof(ifr));
-	if (hapd->conf->bridge[0] != '\0') {
-		printf("opening bridge: %s\n", hapd->conf->bridge);
-		os_strlcpy(ifr.ifr_name, hapd->conf->bridge,
+	if (params->num_bridge && params->bridge[0]) {
+		printf("opening bridge: %s\n", params->bridge[0]);
+		os_strlcpy(ifr.ifr_name, params->bridge[0],
 			   sizeof(ifr.ifr_name));
 	} else {
 		os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
@@ -996,7 +996,7 @@ static int prism54_init_sockets(struct prism54_driver_data *drv)
 		       ifr.ifr_hwaddr.sa_family);
 		return -1;
 	}
-	memcpy(drv->hapd->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	memcpy(params->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	drv->pim_sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	if (drv->pim_sock < 0) {
@@ -1048,7 +1048,7 @@ static void * prism54_driver_init(struct hostapd_data *hapd,
 	drv->pim_sock = drv->sock = -1;
 	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
 
-	if (prism54_init_sockets(drv)) {
+	if (prism54_init_sockets(drv, params)) {
 		free(drv);
 		return NULL;
 	}

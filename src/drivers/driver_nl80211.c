@@ -3987,7 +3987,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		goto failed;
 	}
 
-	if (get_ifhwaddr(drv, drv->ifname, drv->hapd->own_addr))
+	if (get_ifhwaddr(drv, drv->ifname, params->own_addr))
 		goto failed;
 
 	return drv;

@@ -46,6 +46,9 @@ hostapd_driver_init(struct hostapd_data *hapd, const u8 *bssid)
 		if (bss->conf->bridge[0])
 			params.bridge[i] = bss->conf->bridge;
 	}
+
+	params.own_addr = hapd->own_addr;
+
 	ret = hapd->driver->hapd_init(hapd, &params);
 	os_free(params.bridge);
 

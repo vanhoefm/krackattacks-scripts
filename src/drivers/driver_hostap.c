@@ -234,7 +234,7 @@ static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-static int hostap_init_sockets(struct hostap_driver_data *drv)
+static int hostap_init_sockets(struct hostap_driver_data *drv, u8 *own_addr)
 {
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
@@ -284,7 +284,7 @@ static int hostap_init_sockets(struct hostap_driver_data *drv)
 		       ifr.ifr_hwaddr.sa_family);
 		return -1;
 	}
-	memcpy(drv->hapd->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	os_memcpy(own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	return 0;
 }
@@ -1098,7 +1098,8 @@ static void * hostap_init(struct hostapd_data *hapd,
 		return NULL;
 	}
 
-	if (hostap_init_sockets(drv) || hostap_wireless_event_init(drv)) {
+	if (hostap_init_sockets(drv, params->own_addr) ||
+	    hostap_wireless_event_init(drv)) {
 		close(drv->ioctl_sock);
 		free(drv);
 		return NULL;

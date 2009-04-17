@@ -1203,7 +1203,7 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 					handle_read, drv, 1);
 	if (drv->sock_xmit == NULL)
 		goto bad;
-	if (l2_packet_get_own_addr(drv->sock_xmit, hapd->own_addr))
+	if (l2_packet_get_own_addr(drv->sock_xmit, params->own_addr))
 		goto bad;
 	if (params->bridge[0]) {
 		wpa_printf(MSG_DEBUG, "Configure bridge %s for EAPOL traffic.",

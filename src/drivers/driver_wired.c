@@ -30,9 +30,8 @@
 
 #ifdef HOSTAPD
 #include "eloop.h"
-#include "../../hostapd/hostapd.h"
+#include "../../hostapd/hostapd_defs.h"
 #include "../../hostapd/sta_info.h"
-#include "../../hostapd/accounting.h"
 #endif /* HOSTAPD */
 
 static const u8 pae_group_addr[ETH_ALEN] =
@@ -185,7 +184,7 @@ static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-static int wired_init_sockets(struct wpa_driver_wired_data *drv)
+static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 {
 	struct hostapd_data *hapd = drv->hapd;
 	struct ifreq ifr;
@@ -248,7 +247,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv)
 		       ifr.ifr_hwaddr.sa_family);
 		return -1;
 	}
-	memcpy(hapd->own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	memcpy(own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	/* setup dhcp listen socket for sta detection */
 	if ((drv->dhcp_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
@@ -350,7 +349,7 @@ static void * wired_driver_hapd_init(struct hostapd_data *hapd,
 	os_strlcpy(drv->iface, params->ifname, sizeof(drv->iface));
 	drv->use_pae_group_addr = params->use_pae_group_addr;
 
-	if (wired_init_sockets(drv)) {
+	if (wired_init_sockets(drv, params->own_addr)) {
 		free(drv);
 		return NULL;
 	}

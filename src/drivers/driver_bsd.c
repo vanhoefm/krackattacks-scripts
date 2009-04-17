@@ -722,13 +722,13 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 		perror("socket[PF_INET,SOCK_DGRAM]");
 		goto bad;
 	}
-	memcpy(drv->iface, hapd->conf->iface, sizeof(drv->iface));
+	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
 
 	drv->sock_xmit = l2_packet_init(drv->iface, NULL, ETH_P_EAPOL,
 					handle_read, drv, 1);
 	if (drv->sock_xmit == NULL)
 		goto bad;
-	if (l2_packet_get_own_addr(drv->sock_xmit, hapd->own_addr))
+	if (l2_packet_get_own_addr(drv->sock_xmit, params->own_addr))
 		goto bad;
 
 	bsd_set_iface_flags(drv, 0);	/* mark down during setup */

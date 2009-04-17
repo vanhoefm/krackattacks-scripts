@@ -504,6 +504,8 @@ struct wpa_init_params {
 	int use_pae_group_addr;
 	char **bridge;
 	size_t num_bridge;
+
+	u8 *own_addr; /* buffer for writing own MAC address */
 };
 
 

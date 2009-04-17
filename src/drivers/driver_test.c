@@ -1091,14 +1091,14 @@ static void * test_driver_init(struct hostapd_data *hapd,
 	drv->hapd = hapd;
 
 	/* Generate a MAC address to help testing with multiple APs */
-	hapd->own_addr[0] = 0x02; /* locally administered */
+	params->own_addr[0] = 0x02; /* locally administered */
 	sha1_prf((const u8 *) params->ifname, strlen(params->ifname),
 		 "hostapd test bssid generation",
 		 params->ssid, params->ssid_len,
-		 hapd->own_addr + 1, ETH_ALEN - 1);
+		 params->own_addr + 1, ETH_ALEN - 1);
 
 	os_strlcpy(drv->bss->ifname, params->ifname, IFNAMSIZ);
-	memcpy(drv->bss->bssid, hapd->own_addr, ETH_ALEN);
+	memcpy(drv->bss->bssid, params->own_addr, ETH_ALEN);
 
 	if (params->test_socket) {
 		if (os_strlen(params->test_socket) >=
@@ -1115,7 +1115,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 				snprintf(drv->own_socket_path, len,
 					 "%s/AP-" MACSTR,
 					 params->test_socket + 4,
-					 MAC2STR(hapd->own_addr));
+					 MAC2STR(params->own_addr));
 			}
 		} else if (strncmp(params->test_socket, "UDP:", 4) == 0) {
 			drv->udp_port = atoi(params->test_socket + 4);

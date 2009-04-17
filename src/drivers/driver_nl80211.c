@@ -143,7 +143,6 @@ static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
 static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 				 int ifidx);
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
-static int i802_del_beacon(struct wpa_driver_nl80211_data *drv);
 #endif /* HOSTAPD */
 
 
@@ -1263,6 +1262,26 @@ static void wpa_driver_nl80211_free_bss(struct wpa_driver_nl80211_data *drv)
 #endif /* HOSTAPD */
 
 
+#if defined(CONFIG_AP) || defined(HOSTAPD)
+static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_DEL_BEACON, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+#endif /* CONFIG_AP || HOSTAPD */
+
+
 /**
  * wpa_driver_nl80211_deinit - Deinitialize nl80211 driver interface
  * @priv: Pointer to private nl80211 data from wpa_driver_nl80211_init()
@@ -1281,6 +1300,9 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		eloop_unregister_read_sock(drv->monitor_sock);
 		close(drv->monitor_sock);
 	}
+
+	if (drv->nlmode == NL80211_IFTYPE_AP)
+		wpa_driver_nl80211_del_beacon(drv);
 #endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef HOSTAPD
@@ -1291,8 +1313,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		freq.freq = drv->last_freq;
 		i802_set_freq(priv, &freq);
 	}
-
-	i802_del_beacon(drv);
 
 	if (drv->eapol_sock >= 0) {
 		eloop_unregister_read_sock(drv->eapol_sock);
@@ -3618,24 +3638,6 @@ static int i802_set_beacon(const char *iface, void *priv,
 						   head, head_len,
 						   tail, tail_len,
 						   dtim_period);
-}
-
-
-static int i802_del_beacon(struct wpa_driver_nl80211_data *drv)
-{
-	struct nl_msg *msg;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_DEL_BEACON, 0);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(drv->ifname));
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
-	return -ENOBUFS;
 }
 
 

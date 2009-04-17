@@ -2320,6 +2320,73 @@ nla_put_failure:
 	return -1;
 }
 
+
+static int wpa_driver_nl80211_sta_add(const char *ifname, void *priv,
+				      struct hostapd_sta_add_params *params)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret = -ENOBUFS;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_NEW_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(ifname));
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
+	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, params->supp_rates_len,
+		params->supp_rates);
+	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
+		    params->listen_interval);
+
+#ifdef CONFIG_IEEE80211N
+	if (params->ht_capabilities) {
+		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
+			params->ht_capabilities->length,
+			&params->ht_capabilities->data);
+	}
+#endif /* CONFIG_IEEE80211N */
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_NEW_STATION "
+			   "result: %d (%s)", ret, strerror(-ret));
+	if (ret == -EEXIST)
+		ret = 0;
+ nla_put_failure:
+	return ret;
+}
+
+
+static int wpa_driver_nl80211_sta_remove(void *priv, const u8 *addr)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_DEL_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
+		    if_nametoindex(drv->ifname));
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret == -ENOENT)
+		return 0;
+	return ret;
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
 #endif /* CONFIG_AP || HOSTAPD */
 
 
@@ -3448,74 +3515,6 @@ static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
 }
 
 
-static int i802_sta_add(const char *ifname, void *priv,
-			struct hostapd_sta_add_params *params)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg;
-	int ret = -ENOBUFS;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_NEW_STATION, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
-		    if_nametoindex(drv->ifname));
-	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
-	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, params->supp_rates_len,
-		params->supp_rates);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
-		    params->listen_interval);
-
-#ifdef CONFIG_IEEE80211N
-	if (params->ht_capabilities) {
-		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
-			params->ht_capabilities->length,
-			&params->ht_capabilities->data);
-	}
-#endif /* CONFIG_IEEE80211N */
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret)
-		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_NEW_STATION "
-			   "result: %d (%s)", ret, strerror(-ret));
-	if (ret == -EEXIST)
-		ret = 0;
- nla_put_failure:
-	return ret;
-}
-
-
-static int i802_sta_remove(void *priv, const u8 *addr)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg;
-	int ret;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_DEL_STATION, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
-		    if_nametoindex(drv->ifname));
-	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
-
-	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret == -ENOENT)
-		return 0;
-	return ret;
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
 static int i802_sta_set_flags(void *priv, const u8 *addr,
 			      int total_flags, int flags_or, int flags_and)
 {
@@ -3966,6 +3965,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.send_mlme = wpa_driver_nl80211_send_mlme,
 	.set_beacon_int = wpa_driver_nl80211_set_beacon_int,
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
+	.sta_add = wpa_driver_nl80211_sta_add,
+	.sta_remove = wpa_driver_nl80211_sta_remove,
 #endif /* CONFIG_AP || HOSTAPD */
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
@@ -3978,8 +3979,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_set_flags = i802_sta_set_flags,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
-	.sta_remove = i802_sta_remove,
-	.sta_add = i802_sta_add,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_freq = i802_set_freq,

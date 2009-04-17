@@ -398,4 +398,21 @@ static inline int wpa_drv_set_beacon_int(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_sta_add(struct wpa_supplicant *wpa_s,
+				  struct hostapd_sta_add_params *params)
+{
+	if (wpa_s->driver->sta_add)
+		return wpa_s->driver->sta_add(wpa_s->ifname, wpa_s->drv_priv,
+					      params);
+	return -1;
+}
+
+static inline int wpa_drv_sta_remove(struct wpa_supplicant *wpa_s,
+				     const u8 *addr)
+{
+	if (wpa_s->driver->sta_remove)
+		return wpa_s->driver->sta_remove(wpa_s->drv_priv, addr);
+	return -1;
+}
+
 #endif /* DRIVER_I_H */

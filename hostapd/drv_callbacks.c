@@ -120,24 +120,104 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack)
 {
 	struct sta_info *sta;
+	struct hostapd_iface *iface = hapd->iface;
 
 	sta = ap_get_sta(hapd, addr);
-	if (sta && sta->flags & WLAN_STA_PENDING_POLL) {
+	if (sta == NULL && iface->num_bss > 1) {
+		size_t j;
+		for (j = 0; j < iface->num_bss; j++) {
+			hapd = iface->bss[j];
+			sta = ap_get_sta(hapd, addr);
+			if (sta)
+				break;
+		}
+	}
+	if (sta == NULL)
+		return;
+	if (sta->flags & WLAN_STA_PENDING_POLL) {
 		wpa_printf(MSG_DEBUG, "STA " MACSTR " %s pending "
 			   "activity poll", MAC2STR(sta->addr),
 			   ack ? "ACKed" : "did not ACK");
 		if (ack)
 			sta->flags &= ~WLAN_STA_PENDING_POLL;
 	}
-	if (sta)
-		ieee802_1x_tx_status(hapd, sta, buf, len, ack);
+
+	ieee802_1x_tx_status(hapd, sta, buf, len, ack);
 }
 
 
-void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd, const u8 *addr)
+static const u8 * get_hdr_bssid(const struct ieee80211_hdr *hdr, size_t len)
+{
+	u16 fc, type, stype;
+
+	/*
+	 * PS-Poll frames are 16 bytes. All other frames are
+	 * 24 bytes or longer.
+	 */
+	if (len < 16)
+		return NULL;
+
+	fc = le_to_host16(hdr->frame_control);
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	switch (type) {
+	case WLAN_FC_TYPE_DATA:
+		if (len < 24)
+			return NULL;
+		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
+		case WLAN_FC_TODS:
+			return hdr->addr1;
+		case WLAN_FC_FROMDS:
+			return hdr->addr2;
+		default:
+			return NULL;
+		}
+	case WLAN_FC_TYPE_CTRL:
+		if (stype != WLAN_FC_STYPE_PSPOLL)
+			return NULL;
+		return hdr->addr1;
+	case WLAN_FC_TYPE_MGMT:
+		return hdr->addr3;
+	default:
+		return NULL;
+	}
+}
+
+
+#define HAPD_BROADCAST ((struct hostapd_data *) -1)
+
+static struct hostapd_data * get_hapd_bssid(struct hostapd_iface *iface,
+					    const u8 *bssid)
+{
+	size_t i;
+
+	if (bssid == NULL)
+		return NULL;
+	if (bssid[0] == 0xff && bssid[1] == 0xff && bssid[2] == 0xff &&
+	    bssid[3] == 0xff && bssid[4] == 0xff && bssid[5] == 0xff)
+		return HAPD_BROADCAST;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		if (os_memcmp(bssid, iface->bss[i]->own_addr, ETH_ALEN) == 0)
+			return iface->bss[i];
+	}
+
+	return NULL;
+}
+
+
+void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
+				 const struct ieee80211_hdr *hdr, size_t len)
 {
 	struct sta_info *sta;
+	const u8 *addr;
 
+	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
+	if (hapd == NULL || hapd == HAPD_BROADCAST)
+		return;
+
+	addr = hdr->addr2;
 	sta = ap_get_sta(hapd, addr);
 	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
 		wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated "
@@ -262,13 +342,48 @@ void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
 void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
 		     u16 stype, struct hostapd_frame_info *fi)
 {
-	ieee802_11_mgmt(hapd, buf, len, stype, fi);
+	struct hostapd_iface *iface = hapd->iface;
+	struct ieee80211_hdr *hdr;
+	const u8 *bssid;
+
+	hdr = (struct ieee80211_hdr *) buf;
+	bssid = get_hdr_bssid(hdr, len);
+	if (bssid == NULL)
+		return;
+
+	hapd = get_hapd_bssid(iface, bssid);
+	if (hapd == NULL) {
+		u16 fc;
+		fc = le_to_host16(hdr->frame_control);
+
+		/*
+		 * Drop frames to unknown BSSIDs except for Beacon frames which
+		 * could be used to update neighbor information.
+		 */
+		if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_BEACON)
+			hapd = iface->bss[0];
+		else
+			return;
+	}
+
+	if (hapd == HAPD_BROADCAST) {
+		size_t i;
+		for (i = 0; i < iface->num_bss; i++)
+			ieee802_11_mgmt(iface->bss[i], buf, len, stype, fi);
+	} else
+		ieee802_11_mgmt(hapd, buf, len, stype, fi);
 }
 
 
 void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok)
 {
+	struct ieee80211_hdr *hdr;
+	hdr = (struct ieee80211_hdr *) buf;
+	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
+	if (hapd == NULL || hapd == HAPD_BROADCAST)
+		return;
 	ieee802_11_mgmt_cb(hapd, buf, len, stype, ok);
 }
 #endif /* NEED_MLME */

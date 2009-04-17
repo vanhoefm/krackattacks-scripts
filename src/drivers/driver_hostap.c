@@ -78,7 +78,7 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	}
 
 	sa = hdr->addr2;
-	hostapd_rx_from_unknown_sta(drv->hapd, sa);
+	hostapd_rx_from_unknown_sta(drv->hapd, hdr, len);
 
 	pos = (u8 *) (hdr + 1);
 	left = len - sizeof(*hdr);

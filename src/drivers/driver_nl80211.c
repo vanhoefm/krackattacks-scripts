@@ -38,20 +38,11 @@
 #include <linux/filter.h>
 #include "radiotap.h"
 #include "radiotap_iter.h"
+
+#include "../../hostapd/hostapd_defs.h"
 #endif /* CONFIG_AP || HOSTAPD */
 
-#ifdef CONFIG_AP
-
-#include "../hostapd/hostapd_defs.h"
-
-#ifndef ETH_P_ALL
-#define ETH_P_ALL 0x0003
-#endif
-
-#endif /* CONFIG_AP */
-
 #ifdef HOSTAPD
-#include "../../hostapd/hostapd.h"
 #include "../../hostapd/sta_flags.h"
 #include "ieee802_11_common.h"
 
@@ -77,12 +68,6 @@
 #ifndef IF_OPER_UP
 #define IF_OPER_UP 6
 #endif
-
-enum ieee80211_msg_type {
-	ieee80211_msg_normal = 0,
-	ieee80211_msg_tx_callback_ack = 1,
-	ieee80211_msg_tx_callback_fail = 2,
-};
 
 struct i802_bss {
 	struct i802_bss *next;
@@ -125,8 +110,6 @@ struct wpa_driver_nl80211_data {
 #endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
-	struct hostapd_data *hapd;
-
 	int eapol_sock; /* socket for EAPOL frames */
 
 	int default_if_indices[16];
@@ -2472,139 +2455,46 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 }
 
 
+static void from_unknown_sta(struct wpa_driver_nl80211_data *drv,
+			     struct ieee80211_hdr *hdr, size_t len)
+{
+#ifdef HOSTAPD
+	hostapd_rx_from_unknown_sta(drv->ctx, hdr, len);
+#else /* HOSTAPD */
+	ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
+#endif /* HOSTAPD */
+}
+
+
 static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			 u8 *buf, size_t len,
-			 struct hostapd_frame_info *hfi,
-			 enum ieee80211_msg_type msg_type)
+			 struct hostapd_frame_info *hfi)
 {
 	struct ieee80211_hdr *hdr;
-	u16 fc, type, stype;
-	size_t data_len = len;
-	u8 *bssid;
-	void *ctx = drv->ctx;
-#ifdef HOSTAPD
-	struct hostapd_iface *iface = drv->hapd->iface;
-	struct hostapd_data *hapd = NULL;
-	int broadcast_bssid = 0;
-	size_t i;
-#endif /* HOSTAPD */
-
-	/*
-	 * PS-Poll frames are 16 bytes. All other frames are
-	 * 24 bytes or longer.
-	 */
-	if (len < 16)
-		return;
+	u16 fc, stype;
 
 	hdr = (struct ieee80211_hdr *) buf;
 	fc = le_to_host16(hdr->frame_control);
-
-	type = WLAN_FC_GET_TYPE(fc);
 	stype = WLAN_FC_GET_STYPE(fc);
 
-	switch (type) {
-	case WLAN_FC_TYPE_DATA:
-		if (len < 24)
-			return;
-		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
-		case WLAN_FC_TODS:
-			bssid = hdr->addr1;
-			break;
-		case WLAN_FC_FROMDS:
-			bssid = hdr->addr2;
-			break;
-		default:
-			/* discard */
-			return;
-		}
-		break;
-	case WLAN_FC_TYPE_CTRL:
-		/* discard non-ps-poll frames */
-		if (stype != WLAN_FC_STYPE_PSPOLL)
-			return;
-		bssid = hdr->addr1;
-		break;
-	case WLAN_FC_TYPE_MGMT:
-		bssid = hdr->addr3;
-		break;
-	default:
-		/* discard */
-		return;
-	}
-
-#ifdef HOSTAPD
-	/* find interface frame belongs to */
-	for (i = 0; i < iface->num_bss; i++) {
-		if (memcmp(bssid, iface->bss[i]->own_addr, ETH_ALEN) == 0) {
-			hapd = iface->bss[i];
-			break;
-		}
-	}
-
-	if (hapd == NULL) {
-		hapd = iface->bss[0];
-
-		if (bssid[0] != 0xff || bssid[1] != 0xff ||
-		    bssid[2] != 0xff || bssid[3] != 0xff ||
-		    bssid[4] != 0xff || bssid[5] != 0xff) {
-			/*
-			 * Unknown BSSID - drop frame if this is not from
-			 * passive scanning or a beacon (at least ProbeReq
-			 * frames to other APs may be allowed through RX
-			 * filtering in the wlan hw/driver)
-			 */
-			if ((type != WLAN_FC_TYPE_MGMT ||
-			     stype != WLAN_FC_STYPE_BEACON))
-				return;
-		} else
-			broadcast_bssid = 1;
-	}
-	ctx = hapd;
-#endif /* HOSTAPD */
-
-	switch (msg_type) {
-	case ieee80211_msg_normal:
-		/* continue processing */
-		break;
-	case ieee80211_msg_tx_callback_ack:
-		handle_tx_callback(ctx, buf, data_len, 1);
-		return;
-	case ieee80211_msg_tx_callback_fail:
-		handle_tx_callback(ctx, buf, data_len, 0);
-		return;
-	}
-
-	switch (type) {
+	switch (WLAN_FC_GET_TYPE(fc)) {
 	case WLAN_FC_TYPE_MGMT:
 		if (stype != WLAN_FC_STYPE_BEACON &&
 		    stype != WLAN_FC_STYPE_PROBE_REQ)
 			wpa_printf(MSG_MSGDUMP, "MGMT");
 #ifdef HOSTAPD
-		if (broadcast_bssid) {
-			for (i = 0; i < iface->num_bss; i++)
-				hostapd_mgmt_rx(iface->bss[i], buf, data_len,
-						stype, hfi);
-		} else
-			hostapd_mgmt_rx(hapd, buf, data_len, stype, hfi);
+		hostapd_mgmt_rx(drv->ctx, buf, len, stype, hfi);
 #else /* HOSTAPD */
-		ap_mgmt_rx(drv->ctx, buf, data_len, stype, hfi);
+		ap_mgmt_rx(drv->ctx, buf, len, stype, hfi);
 #endif /* HOSTAPD */
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
 		wpa_printf(MSG_DEBUG, "CTRL");
-#ifdef HOSTAPD
-		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
-#else /* HOSTAPD */
-		ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
-#endif /* HOSTAPD */
+		from_unknown_sta(drv, hdr, len);
 		break;
 	case WLAN_FC_TYPE_DATA:
-#ifdef HOSTAPD
-		hostapd_rx_from_unknown_sta(drv->hapd, hdr->addr2);
-#else /* HOSTAPD */
-		ap_rx_from_unknown_sta(drv->ctx, hdr->addr2);
-#endif /* HOSTAPD */
+		from_unknown_sta(drv, hdr, len);
 		break;
 	}
 }
@@ -2618,7 +2508,7 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 	struct ieee80211_radiotap_iterator iter;
 	int ret;
 	struct hostapd_frame_info hfi;
-	int injected = 0, failed = 0, msg_type, rxflags = 0;
+	int injected = 0, failed = 0, rxflags = 0;
 
 	len = recv(sock, buf, sizeof(buf), 0);
 	if (len < 0) {
@@ -2675,14 +2565,11 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 
 	if (!injected)
-		msg_type = ieee80211_msg_normal;
-	else if (failed)
-		msg_type = ieee80211_msg_tx_callback_fail;
+		handle_frame(drv, buf + iter.max_length,
+			     len - iter.max_length, &hfi);
 	else
-		msg_type = ieee80211_msg_tx_callback_ack;
-
-	handle_frame(drv, buf + iter.max_length,
-		     len - iter.max_length, &hfi, msg_type);
+		handle_tx_callback(drv->ctx, buf + iter.max_length,
+				   len - iter.max_length, !failed);
 }
 
 
@@ -3864,11 +3751,11 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 
 	if (have_ifidx(drv, lladdr.sll_ifindex)) {
-		struct hostapd_data *hapd;
-		hapd = hostapd_sta_get_bss(drv->hapd, lladdr.sll_addr);
-		if (!hapd)
+		void *ctx;
+		ctx = hostapd_sta_get_bss(drv->ctx, lladdr.sll_addr);
+		if (!ctx)
 			return;
-		hostapd_eapol_receive(hapd, lladdr.sll_addr, buf, len);
+		hostapd_eapol_receive(ctx, lladdr.sll_addr, buf, len);
 	}
 }
 
@@ -3943,7 +3830,6 @@ static void *i802_init(struct hostapd_data *hapd,
 	if (drv == NULL)
 		return NULL;
 
-	drv->hapd = hapd;
 	drv->bss.ifindex = drv->ifindex;
 
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);

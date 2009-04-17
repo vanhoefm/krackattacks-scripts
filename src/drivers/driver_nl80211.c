@@ -3560,13 +3560,13 @@ static int i802_bss_add(void *priv, const char *ifname, const u8 *bssid)
 	bss = os_zalloc(sizeof(*bss));
 	if (bss == NULL)
 		return -1;
-	bss->ifindex = if_nametoindex(ifname);
 
 	ifidx = nl80211_create_iface(priv, ifname, NL80211_IFTYPE_AP, bssid);
 	if (ifidx < 0) {
 		os_free(bss);
 		return -1;
 	}
+	bss->ifindex = ifidx;
 	if (hostapd_set_iface_flags(priv, ifname, 1)) {
 		nl80211_remove_iface(priv, ifidx);
 		os_free(bss);

@@ -130,6 +130,11 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 
+#if defined(CONFIG_AP) || defined(HOSTAPD)
+static void nl80211_remove_monitor_interface(
+	struct wpa_driver_nl80211_data *drv);
+#endif /* CONFIG_AP || HOSTAPD */
+
 #ifdef CONFIG_AP
 static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 				 int ifidx);
@@ -1294,8 +1299,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	struct wpa_driver_nl80211_data *drv = priv;
 
 #if defined(CONFIG_AP) || defined(HOSTAPD)
-	if (drv->monitor_ifidx >= 0)
-		nl80211_remove_iface(drv, drv->monitor_ifidx);
+	nl80211_remove_monitor_interface(drv);
 	if (drv->monitor_sock >= 0) {
 		eloop_unregister_read_sock(drv->monitor_sock);
 		close(drv->monitor_sock);
@@ -2742,6 +2746,16 @@ static int add_monitor_filter(int s)
 }
 
 
+static void nl80211_remove_monitor_interface(
+	struct wpa_driver_nl80211_data *drv)
+{
+	if (drv->monitor_ifidx >= 0) {
+		nl80211_remove_iface(drv, drv->monitor_ifidx);
+		drv->monitor_ifidx = -1;
+	}
+}
+
+
 static int
 nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 {
@@ -2798,7 +2812,7 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 
 	return 0;
  error:
-	nl80211_remove_iface(drv, drv->monitor_ifidx);
+	nl80211_remove_monitor_interface(drv);
 	return -1;
 }
 
@@ -2809,14 +2823,9 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
 {
-	if (drv->monitor_ifidx < 0 &&
-	    nl80211_create_monitor_interface(drv))
-		return -1;
-
 	if (wpa_driver_nl80211_set_mode(drv, params->mode) ||
 	    wpa_driver_nl80211_set_freq(drv, params->freq, 0, 0)) {
-		nl80211_remove_iface(drv, drv->monitor_ifidx);
-		drv->monitor_ifidx = -1;
+		nl80211_remove_monitor_interface(drv);
 		return -1;
 	}
 
@@ -2947,11 +2956,14 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 
 	if (nl80211_set_mode(drv, drv->ifindex, nlmode) == 0) {
 		drv->nlmode = nlmode;
-		return 0;
+		ret = 0;
+		goto done;
 	}
 
-	if (nlmode == drv->nlmode)
-		return 0; /* Already in the requested mode */
+	if (nlmode == drv->nlmode) {
+		ret = 0;
+		goto done; /* Already in the requested mode */
+	}
 
 	/* mac80211 doesn't allow mode changes while the device is up, so
 	 * take the device down, try to set the mode again, and bring the
@@ -2966,6 +2978,19 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 
 	if (!ret)
 		drv->nlmode = nlmode;
+
+done:
+#if defined(CONFIG_AP) || defined(HOSTAPD)
+	if (!ret && nlmode == NL80211_IFTYPE_AP) {
+		/* Setup additional AP mode functionality if needed */
+		if (drv->monitor_ifidx < 0 &&
+		    nl80211_create_monitor_interface(drv))
+			return -1;
+	} else if (!ret && nlmode != NL80211_IFTYPE_AP) {
+		/* Remove additional AP mode functionality */
+		nl80211_remove_monitor_interface(drv);
+	}
+#endif /* CONFIG_AP || HOSTAPD */
 
 	return ret;
 }
@@ -3855,15 +3880,13 @@ static void *i802_init(struct hostapd_data *hapd,
 	/* start listening for EAPOL on the default AP interface */
 	add_ifidx(drv, drv->ifindex);
 
-	if (hostapd_set_iface_flags(drv, drv->ifname, 0))
-		goto failed;
+	if (params->bssid) {
+		if (hostapd_set_iface_flags(drv, drv->ifname, 0))
+			goto failed;
 
-	if (params->bssid && set_ifhwaddr(drv, drv->ifname, params->bssid))
-		goto failed;
-
-	/* Initialise a monitor interface */
-	if (nl80211_create_monitor_interface(drv))
-		goto failed;
+		if (set_ifhwaddr(drv, drv->ifname, params->bssid))
+			goto failed;
+	}
 
 	if (nl80211_set_mode(drv, drv->ifindex, NL80211_IFTYPE_AP)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to set interface %s "
@@ -3892,8 +3915,7 @@ static void *i802_init(struct hostapd_data *hapd,
 	return drv;
 
 failed:
-	if (drv->monitor_ifidx >= 0)
-		nl80211_remove_iface(drv, drv->monitor_ifidx);
+	nl80211_remove_monitor_interface(drv);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
 

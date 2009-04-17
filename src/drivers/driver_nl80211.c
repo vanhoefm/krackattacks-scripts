@@ -320,6 +320,8 @@ static int set_ifhwaddr(struct wpa_driver_nl80211_data *drv,
 #endif /* HOSTAPD */
 
 
+#ifndef HOSTAPD
+
 static int wpa_driver_nl80211_send_oper_ifla(
 	struct wpa_driver_nl80211_data *drv,
 	int linkmode, int operstate)
@@ -426,7 +428,6 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 }
 
 
-#ifndef HOSTAPD
 static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
 					  void *ctx, char *buf, size_t len,
 					  int del)
@@ -1678,6 +1679,8 @@ nla_put_failure:
 }
 
 
+#ifndef HOSTAPD
+
 static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 				      const u8 *addr, int key_idx,
 				      int set_tx, const u8 *seq,
@@ -1821,6 +1824,8 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
 }
+
+#endif /* HOSTAPD */
 
 
 #if defined(CONFIG_AP) || defined(HOSTAPD)
@@ -2803,6 +2808,7 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_AP */
 
 
+#ifndef HOSTAPD
 static int wpa_driver_nl80211_associate(
 	void *priv, struct wpa_driver_associate_params *params)
 {
@@ -2871,6 +2877,7 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
 }
+#endif /* HOSTAPD */
 
 
 static int nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
@@ -2944,6 +2951,8 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 }
 
 
+#ifndef HOSTAPD
+
 static int wpa_driver_nl80211_get_capa(void *priv,
 				       struct wpa_driver_capa *capa)
 {
@@ -2965,6 +2974,8 @@ static int wpa_driver_nl80211_set_operstate(void *priv, int state)
 	return wpa_driver_nl80211_send_oper_ifla(
 		drv, -1, state ? IF_OPER_UP : IF_OPER_DORMANT);
 }
+
+#endif /* HOSTAPD */
 
 
 #ifdef HOSTAPD
@@ -3905,11 +3916,14 @@ static void i802_deinit(void *priv)
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
+#ifndef HOSTAPD
 	.get_bssid = wpa_driver_nl80211_get_bssid,
 	.get_ssid = wpa_driver_nl80211_get_ssid,
 	.set_key = wpa_driver_nl80211_set_key,
+#endif /* HOSTAPD */
 	.scan2 = wpa_driver_nl80211_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
+#ifndef HOSTAPD
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
 	.disassociate = wpa_driver_nl80211_disassociate,
 	.authenticate = wpa_driver_nl80211_authenticate,
@@ -3918,6 +3932,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.deinit = wpa_driver_nl80211_deinit,
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
+#endif /* HOSTAPD */
 	.set_country = wpa_driver_nl80211_set_country,
 	.set_mode = wpa_driver_nl80211_set_mode,
 #ifdef CONFIG_AP

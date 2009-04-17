@@ -461,7 +461,8 @@ static int prism54_flush(void *priv)
 }
 
 
-static int prism54_sta_deauth(void *priv, const u8 *addr, int reason)
+static int prism54_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+			      int reason)
 {
 	struct prism54_driver_data *drv = priv;
 	pimdev_hdr *hdr;
@@ -486,7 +487,8 @@ static int prism54_sta_deauth(void *priv, const u8 *addr, int reason)
 }
 
 
-static int prism54_sta_disassoc(void *priv, const u8 *addr, int reason)
+static int prism54_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
+				int reason)
 {
 	struct prism54_driver_data *drv = priv;
         pimdev_hdr *hdr;

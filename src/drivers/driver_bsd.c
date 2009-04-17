@@ -59,7 +59,8 @@ struct bsd_driver_data {
 	int	wext_sock;			/* socket for wireless events */
 };
 
-static int bsd_sta_deauth(void *priv, const u8 *addr, int reason_code);
+static int bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+			  int reason_code);
 
 static int
 set80211var(struct bsd_driver_data *drv, int op, const void *arg, int arg_len)
@@ -449,7 +450,7 @@ bsd_flush(void *priv)
 	u8 allsta[IEEE80211_ADDR_LEN];
 
 	memset(allsta, 0xff, IEEE80211_ADDR_LEN);
-	return bsd_sta_deauth(priv, allsta, IEEE80211_REASON_AUTH_LEAVE);
+	return bsd_sta_deauth(priv, NULL, allsta, IEEE80211_REASON_AUTH_LEAVE);
 }
 
 
@@ -482,7 +483,7 @@ bsd_set_opt_ie(const char *ifname, void *priv, const u8 *ie, size_t ie_len)
 }
 
 static int
-bsd_sta_deauth(void *priv, const u8 *addr, int reason_code)
+bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr, int reason_code)
 {
 	struct bsd_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
@@ -497,7 +498,8 @@ bsd_sta_deauth(void *priv, const u8 *addr, int reason_code)
 }
 
 static int
-bsd_sta_disassoc(void *priv, const u8 *addr, int reason_code)
+bsd_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
+		 int reason_code)
 {
 	struct bsd_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;

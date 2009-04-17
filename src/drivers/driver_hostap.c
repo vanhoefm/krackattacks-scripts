@@ -57,8 +57,6 @@ struct hostap_driver_data {
 static int hostapd_ioctl(void *priv, struct prism2_hostapd_param *param,
 			 int len);
 static int hostap_set_iface_flags(void *priv, int dev_up);
-static int hostap_sta_disassoc(void *priv, const u8 *addr, int reason);
-static int hostap_sta_deauth(void *priv, const u8 *addr, int reason);
 
 static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 			u16 stype)
@@ -1132,7 +1130,8 @@ static void hostap_driver_deinit(void *priv)
 }
 
 
-static int hostap_sta_deauth(void *priv, const u8 *addr, int reason)
+static int hostap_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+			     int reason)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
@@ -1141,15 +1140,16 @@ static int hostap_sta_deauth(void *priv, const u8 *addr, int reason)
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_DEAUTH);
 	memcpy(mgmt.da, addr, ETH_ALEN);
-	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
-	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
+	memcpy(mgmt.sa, own_addr, ETH_ALEN);
+	memcpy(mgmt.bssid, own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	return hostap_send_mlme(drv, (u8 *) &mgmt, IEEE80211_HDRLEN +
 				sizeof(mgmt.u.deauth));
 }
 
 
-static int hostap_sta_disassoc(void *priv, const u8 *addr, int reason)
+static int hostap_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
+			       int reason)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
@@ -1158,8 +1158,8 @@ static int hostap_sta_disassoc(void *priv, const u8 *addr, int reason)
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_DISASSOC);
 	memcpy(mgmt.da, addr, ETH_ALEN);
-	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
-	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
+	memcpy(mgmt.sa, own_addr, ETH_ALEN);
+	memcpy(mgmt.bssid, own_addr, ETH_ALEN);
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
 	return  hostap_send_mlme(drv, (u8 *) &mgmt, IEEE80211_HDRLEN +
 				 sizeof(mgmt.u.disassoc));

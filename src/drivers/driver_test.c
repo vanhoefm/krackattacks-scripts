@@ -813,7 +813,8 @@ static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
 }
 
 
-static int test_driver_sta_deauth(void *priv, const u8 *addr, int reason)
+static int test_driver_sta_deauth(void *priv, const u8 *own_addr,
+				  const u8 *addr, int reason)
 {
 	struct test_driver_data *drv = priv;
 	struct test_client_socket *cli;
@@ -836,7 +837,8 @@ static int test_driver_sta_deauth(void *priv, const u8 *addr, int reason)
 }
 
 
-static int test_driver_sta_disassoc(void *priv, const u8 *addr, int reason)
+static int test_driver_sta_disassoc(void *priv, const u8 *own_addr,
+				    const u8 *addr, int reason)
 {
 	struct test_driver_data *drv = priv;
 	struct test_client_socket *cli;

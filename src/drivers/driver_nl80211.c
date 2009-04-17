@@ -3084,9 +3084,6 @@ static int wpa_driver_nl80211_set_operstate(void *priv, int state)
 
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
-static int i802_sta_deauth(void *priv, const u8 *addr, int reason);
-static int i802_sta_disassoc(void *priv, const u8 *addr, int reason);
-
 
 static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
 				 int ifindex)
@@ -3898,7 +3895,8 @@ static int i802_sta_clear_stats(void *priv, const u8 *addr)
 }
 
 
-static int i802_sta_deauth(void *priv, const u8 *addr, int reason)
+static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+			   int reason)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
@@ -3907,8 +3905,8 @@ static int i802_sta_deauth(void *priv, const u8 *addr, int reason)
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_DEAUTH);
 	memcpy(mgmt.da, addr, ETH_ALEN);
-	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
-	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
+	memcpy(mgmt.sa, own_addr, ETH_ALEN);
+	memcpy(mgmt.bssid, own_addr, ETH_ALEN);
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	return wpa_driver_nl80211_send_mlme(drv, (u8 *) &mgmt,
 					    IEEE80211_HDRLEN +
@@ -3916,7 +3914,8 @@ static int i802_sta_deauth(void *priv, const u8 *addr, int reason)
 }
 
 
-static int i802_sta_disassoc(void *priv, const u8 *addr, int reason)
+static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
+			     int reason)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
@@ -3925,8 +3924,8 @@ static int i802_sta_disassoc(void *priv, const u8 *addr, int reason)
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_DISASSOC);
 	memcpy(mgmt.da, addr, ETH_ALEN);
-	memcpy(mgmt.sa, drv->hapd->own_addr, ETH_ALEN);
-	memcpy(mgmt.bssid, drv->hapd->own_addr, ETH_ALEN);
+	memcpy(mgmt.sa, own_addr, ETH_ALEN);
+	memcpy(mgmt.bssid, own_addr, ETH_ALEN);
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
 	return wpa_driver_nl80211_send_mlme(drv, (u8 *) &mgmt,
 					    IEEE80211_HDRLEN +

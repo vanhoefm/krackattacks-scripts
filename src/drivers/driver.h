@@ -1246,8 +1246,10 @@ struct wpa_driver_ops {
 	int (*hapd_send_eapol)(void *priv, const u8 *addr, const u8 *data,
 			       size_t data_len, int encrypt,
 			       const u8 *own_addr);
-	int (*sta_deauth)(void *priv, const u8 *addr, int reason);
-	int (*sta_disassoc)(void *priv, const u8 *addr, int reason);
+	int (*sta_deauth)(void *priv, const u8 *own_addr, const u8 *addr,
+			  int reason);
+	int (*sta_disassoc)(void *priv, const u8 *own_addr, const u8 *addr,
+			    int reason);
 	int (*sta_remove)(void *priv, const u8 *addr);
 	int (*hapd_get_ssid)(const char *ifname, void *priv, u8 *buf, int len);
 	int (*hapd_set_ssid)(const char *ifname, void *priv, const u8 *buf,

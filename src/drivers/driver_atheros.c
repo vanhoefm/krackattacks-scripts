@@ -86,7 +86,8 @@ struct madwifi_driver_data {
 	struct l2_packet_data *sock_raw; /* raw 802.11 management frames */
 };
 
-static int madwifi_sta_deauth(void *priv, const u8 *addr, int reason_code);
+static int madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+			      int reason_code);
 
 static int
 set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
@@ -539,7 +540,8 @@ madwifi_flush(void *priv)
 {
 	u8 allsta[IEEE80211_ADDR_LEN];
 	memset(allsta, 0xff, IEEE80211_ADDR_LEN);
-	return madwifi_sta_deauth(priv, allsta, IEEE80211_REASON_AUTH_LEAVE);
+	return madwifi_sta_deauth(priv, NULL, allsta,
+				  IEEE80211_REASON_AUTH_LEAVE);
 }
 
 
@@ -611,7 +613,8 @@ madwifi_set_opt_ie(const char *ifname, void *priv, const u8 *ie, size_t ie_len)
 }
 
 static int
-madwifi_sta_deauth(void *priv, const u8 *addr, int reason_code)
+madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+		   int reason_code)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
@@ -634,7 +637,8 @@ madwifi_sta_deauth(void *priv, const u8 *addr, int reason_code)
 }
 
 static int
-madwifi_sta_disassoc(void *priv, const u8 *addr, int reason_code)
+madwifi_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
+		     int reason_code)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;

@@ -154,7 +154,8 @@ hostapd_sta_deauth(struct hostapd_data *hapd, const u8 *addr, int reason)
 {
 	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
 		return 0;
-	return hapd->driver->sta_deauth(hapd->drv_priv, addr, reason);
+	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
+					reason);
 }
 
 static inline int
@@ -162,7 +163,8 @@ hostapd_sta_disassoc(struct hostapd_data *hapd, const u8 *addr, int reason)
 {
 	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
 		return 0;
-	return hapd->driver->sta_disassoc(hapd->drv_priv, addr, reason);
+	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
+					  reason);
 }
 
 static inline int

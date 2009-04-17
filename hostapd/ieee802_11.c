@@ -1446,9 +1446,6 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len, u16 stype,
 		return;
 	}
 
-	if (fi && fi->passive_scan)
-		return;
-
 	broadcast = mgmt->bssid[0] == 0xff && mgmt->bssid[1] == 0xff &&
 		mgmt->bssid[2] == 0xff && mgmt->bssid[3] == 0xff &&
 		mgmt->bssid[4] == 0xff && mgmt->bssid[5] == 0xff;

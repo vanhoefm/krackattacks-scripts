@@ -458,17 +458,6 @@ hostapd_if_remove(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
 	return hapd->driver->if_remove(hapd->drv_priv, type, ifname, addr);
 }
 
-static inline int
-hostapd_passive_scan(struct hostapd_data *hapd, int now, int our_mode_only,
-		     int interval, int _listen, int *channel,
-		     int *last_rx)
-{
-	if (hapd->driver == NULL || hapd->driver->passive_scan == NULL)
-		return -1;
-	return hapd->driver->passive_scan(hapd->drv_priv, now, our_mode_only,
-					  interval, _listen, channel, last_rx);
-}
-
 static inline struct hostapd_hw_modes *
 hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 			    u16 *flags)

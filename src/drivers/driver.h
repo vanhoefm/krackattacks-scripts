@@ -1298,9 +1298,6 @@ struct wpa_driver_ops {
 	int (*bss_add)(void *priv, const char *ifname, const u8 *bssid);
 	int (*bss_remove)(void *priv, const char *ifname);
 	int (*valid_bss_mask)(void *priv, const u8 *addr, const u8 *mask);
-	int (*passive_scan)(void *priv, int now, int our_mode_only,
-			    int interval, int _listen, int *channel,
-			    int *last_rx);
 	int (*if_add)(const char *iface, void *priv,
 		      enum hostapd_driver_if_type type, char *ifname,
 		      const u8 *addr);
@@ -1747,8 +1744,6 @@ struct hostapd_frame_info {
 	u32 channel;
 	u32 datarate;
 	u32 ssi_signal;
-
-	unsigned int passive_scan:1;
 };
 
 void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,

@@ -593,7 +593,7 @@ int hostapd_check_ht_capab(struct hostapd_iface *iface)
  */
 int hostapd_select_hw_mode(struct hostapd_iface *iface)
 {
-	int i, j, ok, ret;
+	int i, j, ok;
 
 	if (iface->num_hw_features < 1)
 		return -1;
@@ -654,23 +654,7 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 		return -1;
 	}
 
-	ret = hostapd_passive_scan(iface->bss[0], 0,
-				   iface->conf->passive_scan_mode,
-				   iface->conf->passive_scan_interval,
-				   iface->conf->passive_scan_listen,
-				   NULL, NULL);
-	if (ret) {
-		if (ret == -1) {
-			wpa_printf(MSG_DEBUG, "Passive scanning not "
-				   "supported");
-		} else {
-			wpa_printf(MSG_ERROR, "Could not set passive "
-				   "scanning: %s", strerror(ret));
-		}
-		ret = 0;
-	}
-
-	return ret;
+	return 0;
 }
 
 

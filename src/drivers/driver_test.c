@@ -2558,7 +2558,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	NULL /* bss_add */,
 	NULL /* bss_remove */,
 	NULL /* valid_bss_mask */,
-	NULL /* passive_scan */,
 	NULL /* if_add */,
 	NULL /* if_update */,
 	NULL /* if_remove */,

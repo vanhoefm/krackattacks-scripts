@@ -72,23 +72,6 @@ enum ieee80211_phytype {
  * in this link will thus be the least recently used entry. */
 
 
-static void ap_list_new_ap(struct hostapd_iface *iface, struct ap_info *ap)
-{
-	wpa_printf(MSG_DEBUG, "New AP detected: " MACSTR, MAC2STR(ap->addr));
-
-	/* TODO: could send a notification message to an external program that
-	 * would then determine whether a rogue AP has been detected */
-}
-
-
-static void ap_list_expired_ap(struct hostapd_iface *iface, struct ap_info *ap)
-{
-	wpa_printf(MSG_DEBUG, "AP info expired: " MACSTR, MAC2STR(ap->addr));
-
-	/* TODO: could send a notification message to an external program */
-}
-
-
 static int ap_list_beacon_olbc(struct hostapd_iface *iface, struct ap_info *ap)
 {
 	int i;
@@ -278,8 +261,6 @@ static struct ap_info * ap_ap_add(struct hostapd_iface *iface, u8 *addr)
 	if (iface->num_ap > iface->conf->ap_table_max_size && ap != ap->prev) {
 		wpa_printf(MSG_DEBUG, "Removing the least recently used AP "
 			   MACSTR " from AP table", MAC2STR(ap->prev->addr));
-		if (iface->conf->passive_scan_interval > 0)
-			ap_list_expired_ap(iface, ap->prev);
 		ap_free_ap(iface, ap->prev);
 	}
 
@@ -365,10 +346,7 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 		ap->datarate = fi->datarate;
 	}
 
-	if (new_ap) {
-		if (iface->conf->passive_scan_interval > 0)
-			ap_list_new_ap(iface, ap);
-	} else if (ap != iface->ap_list) {
+	if (!new_ap && ap != iface->ap_list) {
 		/* move AP entry into the beginning of the list so that the
 		 * oldest entry is always in the end of the list */
 		ap_ap_list_del(iface, ap);
@@ -412,18 +390,12 @@ static void ap_list_timer(void *eloop_ctx, void *timeout_ctx)
 
 	time(&now);
 
-	/* FIX: it looks like jkm-Purina ended up in busy loop in this
-	 * function. Apparently, something can still cause a loop in the AP
-	 * list.. */
-
 	while (iface->ap_list) {
 		ap = iface->ap_list->prev;
 		if (ap->last_beacon + iface->conf->ap_table_expiration_time >=
 		    now)
 			break;
 
-		if (iface->conf->passive_scan_interval > 0)
-			ap_list_expired_ap(iface, ap);
 		ap_free_ap(iface, ap);
 	}
 
@@ -495,8 +467,6 @@ int ap_list_reconfig(struct hostapd_iface *iface,
 		    now)
 			break;
 
-		if (iface->conf->passive_scan_interval > 0)
-			ap_list_expired_ap(iface, iface->ap_list->prev);
 		ap_free_ap(iface, iface->ap_list->prev);
 	}
 

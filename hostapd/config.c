@@ -2066,12 +2066,6 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->ssid.vlan_tagged_interface = os_strdup(pos);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 #endif /* CONFIG_NO_VLAN */
-		} else if (os_strcmp(buf, "passive_scan_interval") == 0) {
-			conf->passive_scan_interval = atoi(pos);
-		} else if (os_strcmp(buf, "passive_scan_listen") == 0) {
-			conf->passive_scan_listen = atoi(pos);
-		} else if (os_strcmp(buf, "passive_scan_mode") == 0) {
-			conf->passive_scan_mode = atoi(pos);
 		} else if (os_strcmp(buf, "ap_table_max_size") == 0) {
 			conf->ap_table_max_size = atoi(pos);
 		} else if (os_strcmp(buf, "ap_table_expiration_time") == 0) {

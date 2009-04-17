@@ -341,9 +341,6 @@ struct hostapd_config {
 
 	const struct wpa_driver_ops *driver;
 
-	int passive_scan_interval; /* seconds, 0 = disabled */
-	int passive_scan_listen; /* usec */
-	int passive_scan_mode;
 	int ap_table_max_size;
 	int ap_table_expiration_time;
 

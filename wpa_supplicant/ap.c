@@ -133,14 +133,16 @@ static int ap_driver_sta_set_flags(void *priv, const u8 *addr, int total_flags,
 }
 
 
-static int ap_driver_sta_deauth(void *priv, const u8 *addr, int reason)
+static int ap_driver_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+				int reason)
 {
 	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
 	return -1;
 }
 
 
-static int ap_driver_sta_disassoc(void *priv, const u8 *addr, int reason)
+static int ap_driver_sta_disassoc(void *priv, const u8 *own_addr,
+				  const u8 *addr, int reason)
 {
 	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
 	return -1;
@@ -154,8 +156,7 @@ static int ap_driver_sta_remove(void *priv, const u8 *addr)
 }
 
 
-static int ap_driver_send_mgmt_frame(void *priv, const void *data, size_t len,
-				     int flags)
+static int ap_driver_send_mlme(void *priv, const u8 *data, size_t len)
 {
 	struct ap_driver_data *drv = priv;
 	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
@@ -259,12 +260,12 @@ struct wpa_driver_ops ap_driver_ops =
 	.sta_deauth = ap_driver_sta_deauth,
 	.sta_disassoc = ap_driver_sta_disassoc,
 	.sta_remove = ap_driver_sta_remove,
-	.send_mgmt_frame = ap_driver_send_mgmt_frame,
+	.send_mlme = ap_driver_send_mlme,
 	.sta_add = ap_driver_sta_add,
 	.get_inact_sec = ap_driver_get_inact_sec,
 	.set_freq = ap_driver_set_freq,
 	.hapd_set_beacon = ap_driver_set_beacon,
-	.hapd_set_beacon_int = ap_driver_set_beacon_int,
+	.set_beacon_int = ap_driver_set_beacon_int,
 	.set_cts_protect = ap_driver_set_cts_protect,
 	.set_preamble = ap_driver_set_preamble,
 	.set_short_slot_time = ap_driver_set_short_slot_time,

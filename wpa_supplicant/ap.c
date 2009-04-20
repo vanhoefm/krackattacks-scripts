@@ -248,6 +248,17 @@ static struct hostapd_hw_modes *ap_driver_get_hw_feature_data(void *priv,
 }
 
 
+static int ap_driver_hapd_send_eapol(void *priv, const u8 *addr,
+				     const u8 *data, size_t data_len,
+				     int encrypt, const u8 *own_addr)
+{
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_hapd_send_eapol(wpa_s, addr, data, data_len, encrypt,
+				       own_addr);
+}
+
+
 struct wpa_driver_ops ap_driver_ops =
 {
 	.name = "wpa_supplicant",
@@ -273,6 +284,7 @@ struct wpa_driver_ops ap_driver_ops =
 	.set_short_slot_time = ap_driver_set_short_slot_time,
 	.set_tx_queue_params = ap_driver_set_tx_queue_params,
 	.get_hw_feature_data = ap_driver_get_hw_feature_data,
+	.hapd_send_eapol = ap_driver_hapd_send_eapol,
 };
 
 
@@ -486,3 +498,10 @@ void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok)
 	ieee802_11_mgmt_cb(wpa_s->ap_iface->bss[0], buf, len, stype, ok);
 }
 #endif /* NEED_MLME */
+
+
+void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,
+				const u8 *src_addr, const u8 *buf, size_t len)
+{
+	hostapd_eapol_receive(wpa_s->ap_iface->bss[0], src_addr, buf, len);
+}

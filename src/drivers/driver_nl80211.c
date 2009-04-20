@@ -2885,6 +2885,76 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	return -1;
 }
 
+
+static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
+
+static int wpa_driver_nl80211_hapd_send_eapol(
+	void *priv, const u8 *addr, const u8 *data,
+	size_t data_len, int encrypt, const u8 *own_addr)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct ieee80211_hdr *hdr;
+	size_t len;
+	u8 *pos;
+	int res;
+#if 0 /* FIX */
+	int qos = sta->flags & WLAN_STA_WME;
+#else
+	int qos = 0;
+#endif
+
+	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +
+		data_len;
+	hdr = os_zalloc(len);
+	if (hdr == NULL) {
+		printf("malloc() failed for i802_send_data(len=%lu)\n",
+		       (unsigned long) len);
+		return -1;
+	}
+
+	hdr->frame_control =
+		IEEE80211_FC(WLAN_FC_TYPE_DATA, WLAN_FC_STYPE_DATA);
+	hdr->frame_control |= host_to_le16(WLAN_FC_FROMDS);
+	if (encrypt)
+		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
+#if 0 /* To be enabled if qos determination is added above */
+	if (qos) {
+		hdr->frame_control |=
+			host_to_le16(WLAN_FC_STYPE_QOS_DATA << 4);
+	}
+#endif
+
+	memcpy(hdr->IEEE80211_DA_FROMDS, addr, ETH_ALEN);
+	memcpy(hdr->IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
+	memcpy(hdr->IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
+	pos = (u8 *) (hdr + 1);
+
+#if 0 /* To be enabled if qos determination is added above */
+	if (qos) {
+		/* add an empty QoS header if needed */
+		pos[0] = 0;
+		pos[1] = 0;
+		pos += 2;
+	}
+#endif
+
+	memcpy(pos, rfc1042_header, sizeof(rfc1042_header));
+	pos += sizeof(rfc1042_header);
+	WPA_PUT_BE16(pos, ETH_P_PAE);
+	pos += 2;
+	memcpy(pos, data, data_len);
+
+	res = wpa_driver_nl80211_send_frame(drv, (u8 *) hdr, len, encrypt);
+	if (res < 0) {
+		wpa_printf(MSG_ERROR, "i802_send_eapol - packet len: %lu - "
+			   "failed: %d (%s)",
+			   (unsigned long) len, errno, strerror(errno));
+	}
+	free(hdr);
+
+	return res;
+}
+
 #endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef CONFIG_AP
@@ -3093,9 +3163,6 @@ static int wpa_driver_nl80211_set_operstate(void *priv, int state)
 
 
 #ifdef HOSTAPD
-
-static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
-
 
 static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
 				 int ifindex)
@@ -3447,73 +3514,6 @@ static int i802_read_sta_data(void *priv, struct hostap_sta_driver_data *data,
 	return send_and_recv_msgs(drv, msg, get_sta_handler, data);
  nla_put_failure:
 	return -ENOBUFS;
-}
-
-
-static int i802_send_eapol(void *priv, const u8 *addr, const u8 *data,
-			   size_t data_len, int encrypt, const u8 *own_addr)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct ieee80211_hdr *hdr;
-	size_t len;
-	u8 *pos;
-	int res;
-#if 0 /* FIX */
-	int qos = sta->flags & WLAN_STA_WME;
-#else
-	int qos = 0;
-#endif
-
-	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +
-		data_len;
-	hdr = os_zalloc(len);
-	if (hdr == NULL) {
-		printf("malloc() failed for i802_send_data(len=%lu)\n",
-		       (unsigned long) len);
-		return -1;
-	}
-
-	hdr->frame_control =
-		IEEE80211_FC(WLAN_FC_TYPE_DATA, WLAN_FC_STYPE_DATA);
-	hdr->frame_control |= host_to_le16(WLAN_FC_FROMDS);
-	if (encrypt)
-		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
-#if 0 /* To be enabled if qos determination is added above */
-	if (qos) {
-		hdr->frame_control |=
-			host_to_le16(WLAN_FC_STYPE_QOS_DATA << 4);
-	}
-#endif
-
-	memcpy(hdr->IEEE80211_DA_FROMDS, addr, ETH_ALEN);
-	memcpy(hdr->IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
-	memcpy(hdr->IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
-	pos = (u8 *) (hdr + 1);
-
-#if 0 /* To be enabled if qos determination is added above */
-	if (qos) {
-		/* add an empty QoS header if needed */
-		pos[0] = 0;
-		pos[1] = 0;
-		pos += 2;
-	}
-#endif
-
-	memcpy(pos, rfc1042_header, sizeof(rfc1042_header));
-	pos += sizeof(rfc1042_header);
-	WPA_PUT_BE16(pos, ETH_P_PAE);
-	pos += 2;
-	memcpy(pos, data, data_len);
-
-	res = wpa_driver_nl80211_send_frame(drv, (u8 *) hdr, len, encrypt);
-	if (res < 0) {
-		wpa_printf(MSG_ERROR, "i802_send_eapol - packet len: %lu - "
-			   "failed: %d (%s)",
-			   (unsigned long) len, errno, strerror(errno));
-	}
-	free(hdr);
-
-	return res;
 }
 
 
@@ -3969,6 +3969,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 	.sta_add = wpa_driver_nl80211_sta_add,
 	.sta_remove = wpa_driver_nl80211_sta_remove,
+	.hapd_send_eapol = wpa_driver_nl80211_hapd_send_eapol,
 #endif /* CONFIG_AP || HOSTAPD */
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
@@ -3977,7 +3978,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.read_sta_data = i802_read_sta_data,
-	.hapd_send_eapol = i802_send_eapol,
 	.sta_set_flags = i802_sta_set_flags,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,

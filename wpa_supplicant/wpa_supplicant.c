@@ -1570,6 +1570,13 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	wpa_printf(MSG_DEBUG, "RX EAPOL from " MACSTR, MAC2STR(src_addr));
 	wpa_hexdump(MSG_MSGDUMP, "RX EAPOL", buf, len);
 
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		wpa_supplicant_ap_rx_eapol(wpa_s, src_addr, buf, len);
+		return;
+	}
+#endif /* CONFIG_AP */
+
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_NONE) {
 		wpa_printf(MSG_DEBUG, "Ignored received EAPOL frame since "
 			   "no key management is configured");

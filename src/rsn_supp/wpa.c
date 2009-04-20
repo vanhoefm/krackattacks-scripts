@@ -410,13 +410,13 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 #endif /* CONFIG_NO_WPA2 */
 
 	if (wpa_supplicant_get_pmk(sm, src_addr, ie.pmkid))
-		return;
+		goto failed;
 
 	if (sm->renew_snonce) {
 		if (os_get_random(sm->snonce, WPA_NONCE_LEN)) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to get random data for SNonce");
-			return;
+			goto failed;
 		}
 		sm->renew_snonce = 0;
 		wpa_hexdump(MSG_DEBUG, "WPA: Renewed SNonce",
@@ -436,9 +436,13 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 	if (wpa_supplicant_send_2_of_4(sm, sm->bssid, key, ver, sm->snonce,
 				       sm->assoc_wpa_ie, sm->assoc_wpa_ie_len,
 				       ptk))
-		return;
+		goto failed;
 
 	os_memcpy(sm->anonce, key->key_nonce, WPA_NONCE_LEN);
+	return;
+
+failed:
+	wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
 }
 
 
@@ -541,7 +545,8 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 	if (wpa_sm_set_key(sm, alg, sm->bssid, 0, 1, key_rsc, rsclen,
 			   (u8 *) sm->ptk.tk1, keylen) < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set PTK to the "
-			   "driver.");
+			   "driver (alg=%d keylen=%d bssid=" MACSTR ")",
+			   alg, keylen, MAC2STR(sm->bssid));
 		return -1;
 	}
 
@@ -651,7 +656,8 @@ static int wpa_supplicant_install_gtk(struct wpa_sm *sm,
 				  gd->keyidx, gd->tx, key_rsc, gd->key_rsc_len,
 				  _gtk, gd->gtk_len) < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to "
-			   "the driver.");
+			   "the driver (alg=%d keylen=%d keyidx=%d)",
+			   gd->alg, gd->gtk_len, gd->keyidx);
 		return -1;
 	}
 
@@ -948,30 +954,30 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	wpa_supplicant_parse_ies(pos, len, &ie);
 	if (ie.gtk && !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		wpa_printf(MSG_WARNING, "WPA: GTK IE in unencrypted key data");
-		return;
+		goto failed;
 	}
 #ifdef CONFIG_IEEE80211W
 	if (ie.igtk && !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		wpa_printf(MSG_WARNING, "WPA: IGTK KDE in unencrypted key "
 			   "data");
-		return;
+		goto failed;
 	}
 
 	if (ie.igtk && ie.igtk_len != sizeof(struct wpa_igtk_kde)) {
 		wpa_printf(MSG_WARNING, "WPA: Invalid IGTK KDE length %lu",
 			   (unsigned long) ie.igtk_len);
-		return;
+		goto failed;
 	}
 #endif /* CONFIG_IEEE80211W */
 
 	if (wpa_supplicant_validate_ie(sm, sm->bssid, &ie) < 0)
-		return;
+		goto failed;
 
 	if (os_memcmp(sm->anonce, key->key_nonce, WPA_NONCE_LEN) != 0) {
 		wpa_printf(MSG_WARNING, "WPA: ANonce from message 1 of 4-Way "
 			   "Handshake differs from 3 of 4-Way Handshake - drop"
 			   " packet (src=" MACSTR ")", MAC2STR(sm->bssid));
-		return;
+		goto failed;
 	}
 
 	keylen = WPA_GET_BE16(key->key_length);
@@ -981,7 +987,7 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 			wpa_printf(MSG_WARNING, "WPA: Invalid CCMP key length "
 				   "%d (src=" MACSTR ")",
 				   keylen, MAC2STR(sm->bssid));
-			return;
+			goto failed;
 		}
 		break;
 	case WPA_CIPHER_TKIP:
@@ -989,14 +995,15 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 			wpa_printf(MSG_WARNING, "WPA: Invalid TKIP key length "
 				   "%d (src=" MACSTR ")",
 				   keylen, MAC2STR(sm->bssid));
-			return;
+			goto failed;
 		}
 		break;
 	}
 
 	if (wpa_supplicant_send_4_of_4(sm, sm->bssid, key, ver, key_info,
-				       NULL, 0, &sm->ptk))
-		return;
+				       NULL, 0, &sm->ptk)) {
+		goto failed;
+	}
 
 	/* SNonce was successfully used in msg 3/4, so mark it to be renewed
 	 * for the next 4-Way Handshake. If msg 3 is received again, the old
@@ -1004,7 +1011,8 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	sm->renew_snonce = 1;
 
 	if (key_info & WPA_KEY_INFO_INSTALL) {
-		wpa_supplicant_install_ptk(sm, key);
+		if (wpa_supplicant_install_ptk(sm, key))
+			goto failed;
 	}
 
 	if (key_info & WPA_KEY_INFO_SECURE) {
@@ -1019,10 +1027,18 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	    wpa_supplicant_pairwise_gtk(sm, key,
 					ie.gtk, ie.gtk_len, key_info) < 0) {
 		wpa_printf(MSG_INFO, "RSN: Failed to configure GTK");
+		goto failed;
 	}
 
-	if (ieee80211w_set_keys(sm, &ie) < 0)
+	if (ieee80211w_set_keys(sm, &ie) < 0) {
 		wpa_printf(MSG_INFO, "RSN: Failed to configure IGTK");
+		goto failed;
+	}
+
+	return;
+
+failed:
+	wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
 }
 
 
@@ -1213,11 +1229,11 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 	wpa_sm_set_state(sm, WPA_GROUP_HANDSHAKE);
 
 	if (ret)
-		return;
+		goto failed;
 
 	if (wpa_supplicant_install_gtk(sm, &gd, key->key_rsc) ||
 	    wpa_supplicant_send_2_of_2(sm, key, ver, key_info))
-		return;
+		goto failed;
 
 	if (rekey) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_INFO, "WPA: Group rekeying "
@@ -1230,6 +1246,10 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 						key_info &
 						WPA_KEY_INFO_SECURE);
 	}
+	return;
+
+failed:
+	wpa_sm_deauthenticate(sm, WLAN_REASON_UNSPECIFIED);
 }
 
 

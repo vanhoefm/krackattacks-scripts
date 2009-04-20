@@ -404,7 +404,7 @@ static void _wpa_supplicant_disassociate(void *wpa_s, int reason_code)
 {
 	wpa_supplicant_disassociate(wpa_s, reason_code);
 	/* Schedule a scan to make sure we continue looking for networks */
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	wpa_supplicant_req_scan(wpa_s, 5, 0);
 }
 
 
@@ -412,7 +412,7 @@ static void _wpa_supplicant_deauthenticate(void *wpa_s, int reason_code)
 {
 	wpa_supplicant_deauthenticate(wpa_s, reason_code);
 	/* Schedule a scan to make sure we continue looking for networks */
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	wpa_supplicant_req_scan(wpa_s, 5, 0);
 }
 
 

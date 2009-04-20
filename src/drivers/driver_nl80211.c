@@ -1753,6 +1753,7 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
+	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
 				       reason_code);
 }
@@ -1763,6 +1764,7 @@ static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
+	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISASSOCIATE,
 				       reason_code);
 }

@@ -1295,7 +1295,6 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 				   int reason_code)
 {
 	u8 *addr = NULL;
-	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 			ieee80211_sta_deauthenticate(wpa_s, reason_code);
@@ -1305,11 +1304,10 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 		addr = wpa_s->bssid;
 	}
 	wpa_clear_keys(wpa_s, addr);
+	wpa_supplicant_mark_disassoc(wpa_s);
 	wpa_s->current_ssid = NULL;
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
-	eapol_sm_notify_portEnabled(wpa_s->eapol, FALSE);
-	eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
 }
 
 

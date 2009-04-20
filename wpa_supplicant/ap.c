@@ -283,7 +283,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 				  struct hostapd_config *conf)
 {
 	struct hostapd_bss_config *bss = &conf->bss[0];
-	int j;
+	int j, pairwise;
 
 	for (j = 0; wpa_drivers[j]; j++) {
 		if (os_strcmp("wpa_supplicant", wpa_drivers[j]->name) == 0) {
@@ -333,8 +333,6 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->wpa_pairwise = ssid->pairwise_cipher;
 	if (ssid->passphrase) {
 		bss->ssid.wpa_passphrase = os_strdup(ssid->passphrase);
-		if (hostapd_setup_wpa_psk(bss))
-			return -1;
 	} else if (ssid->psk_set) {
 		os_free(bss->ssid.wpa_psk);
 		bss->ssid.wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
@@ -343,6 +341,32 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		os_memcpy(bss->ssid.wpa_psk->psk, ssid->psk, PMK_LEN);
 		bss->ssid.wpa_psk->group = 1;
 	}
+
+	/* Select group cipher based on the enabled pairwise cipher suites */
+	pairwise = 0;
+	if (bss->wpa & 1)
+		pairwise |= bss->wpa_pairwise;
+	if (bss->wpa & 2) {
+		if (bss->rsn_pairwise == 0)
+			bss->rsn_pairwise = bss->wpa_pairwise;
+		pairwise |= bss->rsn_pairwise;
+	}
+	if (pairwise & WPA_CIPHER_TKIP)
+		bss->wpa_group = WPA_CIPHER_TKIP;
+	else
+		bss->wpa_group = WPA_CIPHER_CCMP;
+
+	if (bss->wpa && bss->ieee802_1x)
+		bss->ssid.security_policy = SECURITY_WPA;
+	else if (bss->wpa)
+		bss->ssid.security_policy = SECURITY_WPA_PSK;
+	else if (bss->ieee802_1x) {
+		bss->ssid.security_policy = SECURITY_IEEE_802_1X;
+		bss->ssid.wep.default_len = bss->default_wep_key_len;
+	} else if (bss->ssid.wep.keys_set)
+		bss->ssid.security_policy = SECURITY_STATIC_WEP;
+	else
+		bss->ssid.security_policy = SECURITY_PLAINTEXT;
 
 	return 0;
 }

@@ -128,8 +128,10 @@ static int ap_driver_read_sta_data(void *priv,
 static int ap_driver_sta_set_flags(void *priv, const u8 *addr, int total_flags,
 				   int flags_or, int flags_and)
 {
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
+	struct ap_driver_data *drv = priv;
+	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
+	return wpa_drv_sta_set_flags(wpa_s, addr, total_flags, flags_or,
+				     flags_and);
 }
 
 

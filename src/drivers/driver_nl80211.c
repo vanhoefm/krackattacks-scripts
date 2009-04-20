@@ -40,10 +40,10 @@
 #include "radiotap_iter.h"
 
 #include "../../hostapd/hostapd_defs.h"
+#include "../../hostapd/sta_flags.h"
 #endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef HOSTAPD
-#include "../../hostapd/sta_flags.h"
 #include "ieee802_11_common.h"
 
 #ifdef CONFIG_LIBNL20
@@ -2955,6 +2955,54 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	return res;
 }
 
+
+static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
+					    int total_flags, int flags_or,
+					    int flags_and)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg, *flags = NULL;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	flags = nlmsg_alloc();
+	if (!flags) {
+		nlmsg_free(msg);
+		return -ENOMEM;
+	}
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
+		    if_nametoindex(drv->ifname));
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+
+	if (total_flags & WLAN_STA_AUTHORIZED)
+		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_AUTHORIZED);
+
+	if (total_flags & WLAN_STA_WMM)
+		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_WME);
+
+	if (total_flags & WLAN_STA_SHORT_PREAMBLE)
+		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_SHORT_PREAMBLE);
+
+	if (total_flags & WLAN_STA_MFP)
+		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_MFP);
+
+	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))
+		goto nla_put_failure;
+
+	nlmsg_free(flags);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	nlmsg_free(flags);
+	return -ENOBUFS;
+}
+
 #endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef CONFIG_AP
@@ -3517,53 +3565,6 @@ static int i802_read_sta_data(void *priv, struct hostap_sta_driver_data *data,
 }
 
 
-static int i802_sta_set_flags(void *priv, const u8 *addr,
-			      int total_flags, int flags_or, int flags_and)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct nl_msg *msg, *flags = NULL;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	flags = nlmsg_alloc();
-	if (!flags) {
-		nlmsg_free(msg);
-		return -ENOMEM;
-	}
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-		    0, NL80211_CMD_SET_STATION, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
-		    if_nametoindex(drv->ifname));
-	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
-
-	if (total_flags & WLAN_STA_AUTHORIZED)
-		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_AUTHORIZED);
-
-	if (total_flags & WLAN_STA_WMM)
-		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_WME);
-
-	if (total_flags & WLAN_STA_SHORT_PREAMBLE)
-		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_SHORT_PREAMBLE);
-
-	if (total_flags & WLAN_STA_MFP)
-		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_MFP);
-
-	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))
-		goto nla_put_failure;
-
-	nlmsg_free(flags);
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
- 	nlmsg_free(flags);
-	return -ENOBUFS;
-}
-
-
 static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 				    int cw_min, int cw_max, int burst_time)
 {
@@ -3970,6 +3971,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_add = wpa_driver_nl80211_sta_add,
 	.sta_remove = wpa_driver_nl80211_sta_remove,
 	.hapd_send_eapol = wpa_driver_nl80211_hapd_send_eapol,
+	.sta_set_flags = wpa_driver_nl80211_sta_set_flags,
 #endif /* CONFIG_AP || HOSTAPD */
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
@@ -3978,7 +3980,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.read_sta_data = i802_read_sta_data,
-	.sta_set_flags = i802_sta_set_flags,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
 	.get_inact_sec = i802_get_inact_sec,

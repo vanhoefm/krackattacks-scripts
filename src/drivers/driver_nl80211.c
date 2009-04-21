@@ -3393,47 +3393,63 @@ static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 
 static int i802_set_rts(void *priv, int rts)
 {
-#ifdef NO_WEXT
-	return -1;
-#else /* NO_WEXT */
 	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
+	struct nl_msg *msg;
+	int ret = -ENOBUFS;
+	u32 val;
 
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.rts.value = rts;
-	iwr.u.rts.fixed = 1;
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
 
-	if (ioctl(drv->ioctl_sock, SIOCSIWRTS, &iwr) < 0) {
-		perror("ioctl[SIOCSIWRTS]");
-		return -1;
-	}
+	if (rts >= 2347)
+		val = (u32) -1;
+	else
+		val = rts;
 
-	return 0;
-#endif /* NO_WEXT */
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_WIPHY, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_RTS_THRESHOLD, val);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (!ret)
+		return 0;
+nla_put_failure:
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to set RTS threshold %d: "
+		   "%d (%s)", rts, ret, strerror(-ret));
+	return ret;
 }
 
 
 static int i802_set_frag(void *priv, int frag)
 {
-#ifdef NO_WEXT
-	return -1;
-#else /* NO_WEXT */
 	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
+	struct nl_msg *msg;
+	int ret = -ENOBUFS;
+	u32 val;
 
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.frag.value = frag;
-	iwr.u.frag.fixed = 1;
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
 
-	if (ioctl(drv->ioctl_sock, SIOCSIWFRAG, &iwr) < 0) {
-		perror("ioctl[SIOCSIWFRAG]");
-		return -1;
-	}
+	if (frag >= 2346)
+		val = (u32) -1;
+	else
+		val = frag;
 
-	return 0;
-#endif /* NO_WEXT */
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_WIPHY, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FRAG_THRESHOLD, val);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (!ret)
+		return 0;
+nla_put_failure:
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to set fragmentation threshold "
+		   "%d: %d (%s)", frag, ret, strerror(-ret));
+	return ret;
 }
 
 

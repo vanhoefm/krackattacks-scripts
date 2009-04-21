@@ -31,6 +31,7 @@
 #include "wps_supplicant.h"
 #include "wps/wps.h"
 #include "ibss_rsn.h"
+#include "ap.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -150,18 +151,22 @@ static int wpa_supplicant_ctrl_iface_ft_ds(
 static int wpa_supplicant_ctrl_iface_wps_pbc(struct wpa_supplicant *wpa_s,
 					     char *cmd)
 {
-	u8 bssid[ETH_ALEN];
+	u8 bssid[ETH_ALEN], *_bssid = bssid;
 
 	if (cmd == NULL || os_strcmp(cmd, "any") == 0)
-		return wpas_wps_start_pbc(wpa_s, NULL);
-
-	if (hwaddr_aton(cmd, bssid)) {
+		_bssid = NULL;
+	else if (hwaddr_aton(cmd, bssid)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_PBC: invalid BSSID '%s'",
 			   cmd);
 		return -1;
 	}
 
-	return wpas_wps_start_pbc(wpa_s, bssid);
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface)
+		return wpa_supplicant_ap_wps_pbc(wpa_s, _bssid);
+#endif /* CONFIG_AP */
+
+	return wpas_wps_start_pbc(wpa_s, _bssid);
 }
 
 
@@ -184,6 +189,12 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 			   cmd);
 		return -1;
 	}
+
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface)
+		return wpa_supplicant_ap_wps_pin(wpa_s, _bssid, pin,
+						 buf, buflen);
+#endif /* CONFIG_AP */
 
 	if (pin) {
 		ret = wpas_wps_start_pin(wpa_s, _bssid, pin);

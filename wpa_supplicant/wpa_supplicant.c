@@ -21,6 +21,7 @@
 #include "common.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
+#include "eap_server/eap_methods.h"
 #include "wpa.h"
 #include "eloop.h"
 #include "config.h"
@@ -2118,6 +2119,17 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		return NULL;
 	}
 
+#ifdef CONFIG_AP
+	ret = eap_server_register_methods();
+	if (ret) {
+		wpa_printf(MSG_ERROR, "Failed to register EAP server methods");
+		if (ret == -2)
+			wpa_printf(MSG_ERROR, "Two or more EAP methods used "
+				   "the same EAP type.");
+		return NULL;
+	}
+#endif /* CONFIG_AP */
+
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)
 		return NULL;
@@ -2241,6 +2253,9 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 		wpa_supplicant_dbus_ctrl_iface_deinit(global->dbus_ctrl_iface);
 
 	eap_peer_unregister_methods();
+#ifdef CONFIG_AP
+	eap_server_unregister_methods();
+#endif /* CONFIG_AP */
 
 	for (i = 0; wpa_drivers[i] && global->drv_priv; i++) {
 		if (!global->drv_priv[i])

@@ -12,8 +12,8 @@
  * See README and COPYING for more details.
  */
 
-#ifndef EAP_METHODS_H
-#define EAP_METHODS_H
+#ifndef EAP_SERVER_METHODS_H
+#define EAP_SERVER_METHODS_H
 
 const struct eap_method * eap_server_get_eap_method(int vendor,
 						    EapType method);
@@ -26,4 +26,4 @@ EapType eap_server_get_type(const char *name, int *vendor);
 int eap_server_register_methods(void);
 void eap_server_unregister_methods(void);
 
-#endif /* EAP_METHODS_H */
+#endif /* EAP_SERVER_METHODS_H */

@@ -21,9 +21,11 @@
 #ifdef NEED_MLME
 #include "../hostapd/ieee802_11.h"
 #endif /* NEED_MLME */
+#include "../hostapd/wps_hostapd.h"
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"
+#include "wps/wps.h"
 #include "config_ssid.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -382,6 +384,17 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	else
 		bss->ssid.security_policy = SECURITY_PLAINTEXT;
 
+#ifdef CONFIG_WPS
+	/*
+	 * Enable WPS by default, but require user interaction to actually use
+	 * it. Only the internal Registrar is supported.
+	 */
+	bss->eap_server = 1;
+	bss->wps_state = 2;
+	bss->ap_setup_locked = 1;
+	bss->config_methods = os_strdup("display push_button");
+#endif /* CONFIG_WPS */
+
 	return 0;
 }
 
@@ -507,3 +520,31 @@ void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,
 {
 	hostapd_eapol_receive(wpa_s->ap_iface->bss[0], src_addr, buf, len);
 }
+
+
+#ifdef CONFIG_WPS
+
+int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
+{
+	return hostapd_wps_button_pushed(wpa_s->ap_iface->bss[0]);
+}
+
+
+int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
+			      const char *pin, char *buf, size_t buflen)
+{
+	int ret, ret_len = 0;
+
+	if (pin == NULL) {
+		unsigned int rpin = wps_generate_pin();
+		ret_len = os_snprintf(buf, buflen, "%d", rpin);
+		pin = buf;
+	}
+
+	ret = hostapd_wps_add_pin(wpa_s->ap_iface->bss[0], "any", pin);
+	if (ret)
+		return -1;
+	return ret_len;
+}
+
+#endif /* CONFIG_WPS */

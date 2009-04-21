@@ -281,15 +281,6 @@ hostapd_set_frag(struct hostapd_data *hapd, int frag)
 }
 
 static inline int
-hostapd_set_retry(struct hostapd_data *hapd, int short_retry, int long_retry)
-{
-	if (hapd->driver == NULL || hapd->driver->set_retry == NULL)
-		return 0;
-	return hapd->driver->set_retry(hapd->drv_priv, short_retry,
-				       long_retry);
-}
-
-static inline int
 hostapd_sta_set_flags(struct hostapd_data *hapd, u8 *addr,
 		      int total_flags, int flags_or, int flags_and)
 {

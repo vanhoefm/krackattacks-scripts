@@ -3437,36 +3437,6 @@ static int i802_set_frag(void *priv, int frag)
 }
 
 
-static int i802_set_retry(void *priv, int short_retry, int long_retry)
-{
-#ifdef NO_WEXT
-	return -1;
-#else /* NO_WEXT */
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct iwreq iwr;
-
-	memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-
-	iwr.u.retry.value = short_retry;
-	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MIN;
-	if (ioctl(drv->ioctl_sock, SIOCSIWRETRY, &iwr) < 0) {
-		perror("ioctl[SIOCSIWRETRY(short)]");
-		return -1;
-	}
-
-	iwr.u.retry.value = long_retry;
-	iwr.u.retry.flags = IW_RETRY_LIMIT | IW_RETRY_MAX;
-	if (ioctl(drv->ioctl_sock, SIOCSIWRETRY, &iwr) < 0) {
-		perror("ioctl[SIOCSIWRETRY(long)]");
-		return -1;
-	}
-
-	return 0;
-#endif /* NO_WEXT */
-}
-
-
 static int i802_flush(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
@@ -3987,7 +3957,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_freq = i802_set_freq,
 	.set_rts = i802_set_rts,
 	.set_frag = i802_set_frag,
-	.set_retry = i802_set_retry,
 	.set_rate_sets = i802_set_rate_sets,
 	.hapd_set_beacon = i802_set_beacon,
 	.set_cts_protect = i802_set_cts_protect,

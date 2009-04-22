@@ -1355,13 +1355,6 @@ static int setup_interface(struct hostapd_iface *iface)
 		}
 	}
 
-	if (hapd->iconf->ieee80211d &&
-	    hostapd_set_ieee80211d(hapd, 1) < 0) {
-		wpa_printf(MSG_ERROR, "Failed to set ieee80211d (%d)",
-			   hapd->iconf->ieee80211d);
-		return -1;
-	}
-
 	if (hapd->iconf->bridge_packets != INTERNAL_BRIDGE_DO_NOT_CONTROL &&
 	    hostapd_set_internal_bridge(hapd, hapd->iconf->bridge_packets)) {
 		wpa_printf(MSG_ERROR, "Failed to set bridge_packets for "

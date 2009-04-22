@@ -310,15 +310,6 @@ hostapd_set_country(struct hostapd_data *hapd, const char *country)
 }
 
 static inline int
-hostapd_set_ieee80211d(struct hostapd_data *hapd, int enabled)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->set_ieee80211d == NULL)
-		return 0;
-	return hapd->driver->set_ieee80211d(hapd->drv_priv, enabled);
-}
-
-static inline int
 hostapd_sta_clear_stats(struct hostapd_data *hapd, const u8 *addr)
 {
 	if (hapd->driver == NULL || hapd->driver->sta_clear_stats == NULL)

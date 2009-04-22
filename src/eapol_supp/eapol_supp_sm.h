@@ -215,6 +215,13 @@ struct eapol_ctx {
 	 */
 	void (*eap_param_needed)(void *ctx, const char *field,
 				 const char *txt);
+
+	/**
+	 * port_cb - Set port authorized/unauthorized callback (optional)
+	 * @ctx: Callback context (ctx)
+	 * @authorized: Whether the supplicant port is now in authorized state
+	 */
+	void (*port_cb)(void *ctx, int authorized);
 };
 
 

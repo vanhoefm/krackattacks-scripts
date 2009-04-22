@@ -438,4 +438,14 @@ static inline int wpa_drv_sta_set_flags(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_set_supp_port(struct wpa_supplicant *wpa_s,
+					int authorized)
+{
+	if (wpa_s->driver->set_supp_port) {
+		return wpa_s->driver->set_supp_port(wpa_s->drv_priv,
+						    authorized);
+	}
+	return 0;
+}
+
 #endif /* DRIVER_I_H */

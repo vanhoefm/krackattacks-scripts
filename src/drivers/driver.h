@@ -1333,6 +1333,14 @@ struct wpa_driver_ops {
 				 const u8 *ie, size_t len);
 	int (*set_wps_probe_resp_ie)(const char *ifname, void *priv,
 				     const u8 *ie, size_t len);
+
+	/**
+	 * set_supp_port - Set IEEE 802.1X Supplicant Port status
+	 * @priv: Private driver interface data
+	 * @authorized: Whether the port is authorized
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*set_supp_port)(void *priv, int authorized);
 };
 
 /**

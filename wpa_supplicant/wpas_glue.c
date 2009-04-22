@@ -537,6 +537,15 @@ static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 
 
+static void wpa_supplicant_port_cb(void *ctx, int authorized)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	wpa_printf(MSG_DEBUG, "EAPOL: Supplicant port status: %s",
+		   authorized ? "Authorized" : "Unauthorized");
+	wpa_drv_set_supp_port(wpa_s, authorized);
+}
+
+
 int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 {
 #ifdef IEEE8021X_EAPOL
@@ -564,6 +573,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 #endif /* EAP_TLS_OPENSSL */
 	ctx->wps = wpa_s->wps;
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
+	ctx->port_cb = wpa_supplicant_port_cb;
 	ctx->cb = wpa_supplicant_eapol_cb;
 	ctx->cb_ctx = wpa_s;
 	wpa_s->eapol = eapol_sm_init(ctx);

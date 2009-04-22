@@ -57,9 +57,6 @@ struct hostapd_data {
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;
 
-	u8 *default_wep_key;
-	u8 default_wep_key_idx;
-
 	struct radius_client_data *radius;
 	int radius_client_reconfigured;
 	u32 acct_session_id_hi, acct_session_id_lo;

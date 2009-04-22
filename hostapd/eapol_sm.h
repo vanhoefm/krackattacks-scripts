@@ -85,6 +85,9 @@ struct eapol_auth_cb {
 struct eapol_authenticator {
 	struct eapol_auth_config conf;
 	struct eapol_auth_cb cb;
+
+	u8 *default_wep_key;
+	u8 default_wep_key_idx;
 };
 
 

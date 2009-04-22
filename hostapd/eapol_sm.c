@@ -14,7 +14,7 @@
 
 #include "includes.h"
 
-#include "hostapd.h"
+#include "common.h"
 #include "ieee802_1x.h"
 #include "eapol_sm.h"
 #include "eloop.h"
@@ -804,7 +804,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	sm->portControl = Auto;
 
 	if (!eapol->conf.wpa &&
-	    (hapd->default_wep_key || eapol->conf.individual_wep_key_len > 0))
+	    (eapol->default_wep_key || eapol->conf.individual_wep_key_len > 0))
 		sm->keyTxEnabled = TRUE;
 	else
 		sm->keyTxEnabled = FALSE;
@@ -1318,6 +1318,11 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 		return NULL;
 	}
 
+	if (conf->individual_wep_key_len > 0) {
+		/* use key0 in individual key and key1 in broadcast key */
+		eapol->default_wep_key_idx = 1;
+	}
+
 	eapol->cb.eapol_send = cb->eapol_send;
 	eapol->cb.aaa_send = cb->aaa_send;
 	eapol->cb.finished = cb->finished;
@@ -1338,5 +1343,6 @@ void eapol_auth_deinit(struct eapol_authenticator *eapol)
 		return;
 
 	eapol_auth_conf_free(&eapol->conf);
+	os_free(eapol->default_wep_key);
 	os_free(eapol);
 }

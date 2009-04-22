@@ -392,8 +392,6 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 {
 	hostapd_ctrl_iface_deinit(hapd);
 
-	os_free(hapd->default_wep_key);
-	hapd->default_wep_key = NULL;
 	iapp_deinit(hapd->iapp);
 	hapd->iapp = NULL;
 	accounting_deinit(hapd);
@@ -1521,11 +1519,6 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	hapd->iconf = conf;
 	hapd->conf = bss;
 	hapd->iface = hapd_iface;
-
-	if (hapd->conf->individual_wep_key_len > 0) {
-		/* use key0 in individual key and key1 in broadcast key */
-		hapd->default_wep_key_idx = 1;
-	}
 
 #ifdef EAP_TLS_FUNCS
 	if (hapd->conf->eap_server &&

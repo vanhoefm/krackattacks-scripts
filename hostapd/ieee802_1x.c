@@ -285,6 +285,7 @@ ieee802_1x_get_group(struct hostapd_data *hapd, struct hostapd_ssid *ssid,
 
 void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 {
+	struct eapol_authenticator *eapol = hapd->eapol_auth;
 	struct eapol_state_machine *sm = sta->eapol_sm;
 #ifndef CONFIG_NO_VLAN
 	struct hostapd_wep_keys *key = NULL;
@@ -310,9 +311,9 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 					      key->len[key->idx]);
 	} else
 #endif /* CONFIG_NO_VLAN */
-	if (hapd->default_wep_key) {
-		ieee802_1x_tx_key_one(hapd, sta, hapd->default_wep_key_idx, 1,
-				      hapd->default_wep_key,
+	if (eapol->default_wep_key) {
+		ieee802_1x_tx_key_one(hapd, sta, eapol->default_wep_key_idx, 1,
+				      eapol->default_wep_key,
 				      hapd->conf->default_wep_key_len);
 	}
 
@@ -1425,22 +1426,24 @@ void ieee802_1x_dump_state(FILE *f, const char *prefix, struct sta_info *sta)
 
 static int ieee802_1x_rekey_broadcast(struct hostapd_data *hapd)
 {
+	struct eapol_authenticator *eapol = hapd->eapol_auth;
+
 	if (hapd->conf->default_wep_key_len < 1)
 		return 0;
 
-	os_free(hapd->default_wep_key);
-	hapd->default_wep_key = os_malloc(hapd->conf->default_wep_key_len);
-	if (hapd->default_wep_key == NULL ||
-	    os_get_random(hapd->default_wep_key,
+	os_free(eapol->default_wep_key);
+	eapol->default_wep_key = os_malloc(hapd->conf->default_wep_key_len);
+	if (eapol->default_wep_key == NULL ||
+	    os_get_random(eapol->default_wep_key,
 			  hapd->conf->default_wep_key_len)) {
 		printf("Could not generate random WEP key.\n");
-		os_free(hapd->default_wep_key);
-		hapd->default_wep_key = NULL;
+		os_free(eapol->default_wep_key);
+		eapol->default_wep_key = NULL;
 		return -1;
 	}
 
 	wpa_hexdump_key(MSG_DEBUG, "IEEE 802.1X: New default WEP key",
-			hapd->default_wep_key,
+			eapol->default_wep_key,
 			hapd->conf->default_wep_key_len);
 
 	return 0;
@@ -1461,36 +1464,37 @@ static int ieee802_1x_sta_key_available(struct hostapd_data *hapd,
 static void ieee802_1x_rekey(void *eloop_ctx, void *timeout_ctx)
 {
 	struct hostapd_data *hapd = eloop_ctx;
+	struct eapol_authenticator *eapol = hapd->eapol_auth;
 
-	if (hapd->default_wep_key_idx >= 3)
-		hapd->default_wep_key_idx =
+	if (eapol->default_wep_key_idx >= 3)
+		eapol->default_wep_key_idx =
 			hapd->conf->individual_wep_key_len > 0 ? 1 : 0;
 	else
-		hapd->default_wep_key_idx++;
+		eapol->default_wep_key_idx++;
 
 	wpa_printf(MSG_DEBUG, "IEEE 802.1X: New default WEP key index %d",
-		   hapd->default_wep_key_idx);
+		   eapol->default_wep_key_idx);
 		      
 	if (ieee802_1x_rekey_broadcast(hapd)) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_WARNING, "failed to generate a "
 			       "new broadcast key");
-		os_free(hapd->default_wep_key);
-		hapd->default_wep_key = NULL;
+		os_free(eapol->default_wep_key);
+		eapol->default_wep_key = NULL;
 		return;
 	}
 
 	/* TODO: Could setup key for RX here, but change default TX keyid only
 	 * after new broadcast key has been sent to all stations. */
 	if (hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
-			    hapd->default_wep_key_idx, 1, NULL, 0,
-			    hapd->default_wep_key,
+			    eapol->default_wep_key_idx, 1, NULL, 0,
+			    eapol->default_wep_key,
 			    hapd->conf->default_wep_key_len)) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_WARNING, "failed to configure a "
 			       "new broadcast key");
-		os_free(hapd->default_wep_key);
-		hapd->default_wep_key = NULL;
+		os_free(eapol->default_wep_key);
+		eapol->default_wep_key = NULL;
 		return;
 	}
 
@@ -1695,7 +1699,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 
 		ieee802_1x_rekey(hapd, NULL);
 
-		if (hapd->default_wep_key == NULL)
+		if (hapd->eapol_auth->default_wep_key == NULL)
 			return -1;
 	}
 

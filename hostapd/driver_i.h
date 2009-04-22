@@ -346,14 +346,6 @@ hostapd_set_beacon_int(struct hostapd_data *hapd, int value)
 }
 
 static inline int
-hostapd_set_broadcast_ssid(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_broadcast_ssid == NULL)
-		return 0;
-	return hapd->driver->set_broadcast_ssid(hapd->drv_priv, value);
-}
-
-static inline int
 hostapd_set_cts_protect(struct hostapd_data *hapd, int value)
 {
 	if (hapd->driver == NULL || hapd->driver->set_cts_protect == NULL)

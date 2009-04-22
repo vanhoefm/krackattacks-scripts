@@ -1281,13 +1281,6 @@ struct wpa_driver_ops {
 	 * 1 = enabled, i.e., bridge packets between associated STAs (default)
 	 */
 	int (*set_internal_bridge)(void *priv, int value);
-	/* Configure broadcast SSID mode:
-	 * 0 = include SSID in Beacon frames and reply to Probe Request frames
-	 *     that use broadcast SSID
-	 * 1 = hide SSID from Beacon frames and ignore Probe Request frames for
-	 *     broadcast SSID
-	 */
-	int (*set_broadcast_ssid)(void *priv, int value);
 	int (*set_cts_protect)(void *priv, int value);
 	int (*set_preamble)(void *priv, int value);
 	int (*set_short_slot_time)(void *priv, int value);

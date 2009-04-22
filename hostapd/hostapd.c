@@ -1159,14 +1159,6 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	/* Set flag for whether SSID is broadcast in beacons */
-	if (hostapd_set_broadcast_ssid(hapd,
-				       !!hapd->conf->ignore_broadcast_ssid)) {
-		wpa_printf(MSG_ERROR, "Could not set broadcast SSID flag for "
-			   "kernel driver");
-		return -1;
-	}
-
 	/* Set SSID for the kernel driver (to be used in beacon and probe
 	 * response frames) */
 	if (set_ssid && hostapd_set_ssid(hapd, (u8 *) conf->ssid.ssid,

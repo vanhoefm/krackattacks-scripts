@@ -1497,7 +1497,17 @@ typedef enum wpa_event_type {
 	 * rejected by the AP. Information about authentication result is
 	 * included in union wpa_event_data::assoc_reject.
 	 */
-	EVENT_ASSOC_REJECT
+	EVENT_ASSOC_REJECT,
+
+	/**
+	 * EVENT_AUTH_TIMED_OUT - Authentication timed out
+	 */
+	EVENT_AUTH_TIMED_OUT,
+
+	/**
+	 * EVENT_ASSOC_TIMED_OUT - Association timed out
+	 */
+	EVENT_ASSOC_TIMED_OUT
 } wpa_event_type;
 
 
@@ -1675,6 +1685,10 @@ union wpa_event_data {
 		 */
 		u16 status_code;
 	} assoc_reject;
+
+	struct timeout_event {
+		u8 addr[ETH_ALEN];
+	} timeout_event;
 };
 
 /**

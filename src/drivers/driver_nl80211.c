@@ -740,9 +740,40 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static void mlme_event(struct wpa_driver_nl80211_data *drv,
-		       enum nl80211_commands cmd, struct nlattr *frame)
+static void mlme_timeout_event(struct wpa_driver_nl80211_data *drv,
+			       enum nl80211_commands cmd, struct nlattr *addr)
 {
+	union wpa_event_data event;
+	enum wpa_event_type ev;
+
+	if (nla_len(addr) != ETH_ALEN)
+		return;
+
+	wpa_printf(MSG_DEBUG, "nl80211: MLME event %d; timeout with " MACSTR,
+		   cmd, MAC2STR((u8 *) nla_data(addr)));
+
+	if (cmd == NL80211_CMD_AUTHENTICATE)
+		ev = EVENT_AUTH_TIMED_OUT;
+	else if (cmd == NL80211_CMD_ASSOCIATE)
+		ev = EVENT_ASSOC_TIMED_OUT;
+	else
+		return;
+
+	os_memset(&event, 0, sizeof(event));
+	os_memcpy(event.timeout_event.addr, nla_data(addr), ETH_ALEN);
+	wpa_supplicant_event(drv->ctx, ev, &event);
+}
+
+
+static void mlme_event(struct wpa_driver_nl80211_data *drv,
+		       enum nl80211_commands cmd, struct nlattr *frame,
+		       struct nlattr *addr, struct nlattr *timed_out)
+{
+	if (timed_out && addr) {
+		mlme_timeout_event(drv, cmd, addr);
+		return;
+	}
+
 	if (frame == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: MLME event %d without frame "
 			   "data", cmd);
@@ -861,7 +892,8 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_ASSOCIATE:
 	case NL80211_CMD_DEAUTHENTICATE:
 	case NL80211_CMD_DISASSOCIATE:
-		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME]);
+		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME],
+			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT]);
 		break;
 #endif /* HOSTAPD */
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:

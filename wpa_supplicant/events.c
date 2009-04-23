@@ -1229,6 +1229,12 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	case EVENT_ASSOC_REJECT:
 		sme_event_assoc_reject(wpa_s, data);
 		break;
+	case EVENT_AUTH_TIMED_OUT:
+		sme_event_auth_timed_out(wpa_s, data);
+		break;
+	case EVENT_ASSOC_TIMED_OUT:
+		sme_event_assoc_timed_out(wpa_s, data);
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

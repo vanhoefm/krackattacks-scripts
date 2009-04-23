@@ -361,3 +361,20 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 	 */
 	wpa_supplicant_req_scan(wpa_s, 5, 0);
 }
+
+
+void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
+			      union wpa_event_data *data)
+{
+	wpa_printf(MSG_DEBUG, "SME: Authentication timed out");
+	wpa_supplicant_req_scan(wpa_s, 5, 0);
+}
+
+
+void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
+			       union wpa_event_data *data)
+{
+	wpa_printf(MSG_DEBUG, "SME: Association timed out");
+	wpa_supplicant_mark_disassoc(wpa_s);
+	wpa_supplicant_req_scan(wpa_s, 5, 0);
+}

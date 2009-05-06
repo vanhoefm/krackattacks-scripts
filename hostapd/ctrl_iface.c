@@ -484,8 +484,35 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 		goto fail;
 	os_strlcpy(addr.sun_path, fname, sizeof(addr.sun_path));
 	if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("bind(PF_UNIX)");
-		goto fail;
+		wpa_printf(MSG_DEBUG, "ctrl_iface bind(PF_UNIX) failed: %s",
+			   strerror(errno));
+		if (connect(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+			wpa_printf(MSG_DEBUG, "ctrl_iface exists, but does not"
+				   " allow connections - assuming it was left"
+				   "over from forced program termination");
+			if (unlink(fname) < 0) {
+				perror("unlink[ctrl_iface]");
+				wpa_printf(MSG_ERROR, "Could not unlink "
+					   "existing ctrl_iface socket '%s'",
+					   fname);
+				goto fail;
+			}
+			if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) <
+			    0) {
+				perror("bind(PF_UNIX)");
+				goto fail;
+			}
+			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "
+				   "ctrl_iface socket '%s'", fname);
+		} else {
+			wpa_printf(MSG_INFO, "ctrl_iface exists and seems to "
+				   "be in use - cannot override it");
+			wpa_printf(MSG_INFO, "Delete '%s' manually if it is "
+				   "not used anymore", fname);
+			os_free(fname);
+			fname = NULL;
+			goto fail;
+		}
 	}
 
 	if (hapd->conf->ctrl_interface_gid_set &&

@@ -24,6 +24,7 @@
 #include "wps_upnp.h"
 #include "crypto.h"
 
+#define WPS_WORKAROUNDS
 
 struct wps_uuid_pin {
 	struct wps_uuid_pin *next;
@@ -1695,7 +1696,21 @@ static int wps_process_auth_type_flags(struct wps_data *wps, const u8 *auth)
 		wpa_printf(MSG_DEBUG, "WPS: No match in supported "
 			   "authentication types (own 0x%x Enrollee 0x%x)",
 			   wps->wps->auth_types, auth_types);
+#ifdef WPS_WORKAROUNDS
+		/*
+		 * Some deployed implementations seem to advertise incorrect
+		 * information in this attribute. For example, Linksys WRT350N
+		 * seems to have a byteorder bug that breaks this negotiation.
+		 * In order to interoperate with existing implementations,
+		 * assume that the Enrollee supports everything we do.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS: Workaround - assume Enrollee "
+			   "does not advertise supported authentication types "
+			   "correctly");
+		wps->auth_type = wps->wps->auth_types;
+#else /* WPS_WORKAROUNDS */
 		return -1;
+#endif /* WPS_WORKAROUNDS */
 	}
 
 	return 0;
@@ -1719,8 +1734,23 @@ static int wps_process_encr_type_flags(struct wps_data *wps, const u8 *encr)
 	wps->encr_type = wps->wps->encr_types & encr_types;
 	if (wps->encr_type == 0) {
 		wpa_printf(MSG_DEBUG, "WPS: No match in supported "
-			   "encryption types");
+			   "encryption types (own 0x%x Enrollee 0x%x)",
+			   wps->wps->encr_types, encr_types);
+#ifdef WPS_WORKAROUNDS
+		/*
+		 * Some deployed implementations seem to advertise incorrect
+		 * information in this attribute. For example, Linksys WRT350N
+		 * seems to have a byteorder bug that breaks this negotiation.
+		 * In order to interoperate with existing implementations,
+		 * assume that the Enrollee supports everything we do.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS: Workaround - assume Enrollee "
+			   "does not advertise supported encryption types "
+			   "correctly");
+		wps->encr_type = wps->wps->encr_types;
+#else /* WPS_WORKAROUNDS */
 		return -1;
+#endif /* WPS_WORKAROUNDS */
 	}
 
 	return 0;

@@ -25,6 +25,7 @@
 #include "ieee802_11_defs.h"
 #include "wpas_glue.h"
 #include "eapol_supp/eapol_supp_sm.h"
+#include "wps_supplicant.h"
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
@@ -1460,3 +1461,146 @@ DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 
 	return wpas_dbus_new_success_reply(message);
 }
+
+
+#ifdef CONFIG_WPS
+
+/**
+ * wpas_dbus_iface_wps_pbc - Request credentials using WPS PBC method
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: A dbus message containing a UINT32 indicating success (1) or
+ *          failure (0)
+ *
+ * Handler function for "wpsPbc" method call
+ */
+DBusMessage * wpas_dbus_iface_wps_pbc(DBusMessage *message,
+				      struct wpa_supplicant *wpa_s)
+{
+	char *arg_bssid = NULL;
+	u8 bssid[ETH_ALEN];
+	int ret = 0;
+
+	if (!dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &arg_bssid,
+				   DBUS_TYPE_INVALID))
+		return wpas_dbus_new_invalid_opts_error(message, NULL);
+
+	if (!os_strcmp(arg_bssid, "any"))
+		ret = wpas_wps_start_pbc(wpa_s, NULL);
+	else if (!hwaddr_aton(arg_bssid, bssid))
+		ret = wpas_wps_start_pbc(wpa_s, bssid);
+	else {
+		return wpas_dbus_new_invalid_opts_error(message,
+							"Invalid BSSID");
+	}
+
+	if (ret < 0) {
+		return dbus_message_new_error(message,
+					      WPAS_ERROR_WPS_PBC_ERROR,
+					      "Could not start PBC "
+					      "negotiation");
+	}
+
+	return wpas_dbus_new_success_reply(message);
+}
+
+
+/**
+ * wpas_dbus_iface_wps_pin - Establish the PIN number of the enrollee
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: A dbus message containing a UINT32 indicating success (1) or
+ *          failure (0)
+ *
+ * Handler function for "wpsPin" method call
+ */
+DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
+				      struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	char *arg_bssid;
+	char *pin = NULL;
+	u8 bssid[ETH_ALEN], *_bssid = NULL;
+	int ret = 0;
+
+	if (!dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &arg_bssid,
+				   DBUS_TYPE_STRING, &pin, DBUS_TYPE_INVALID))
+		return wpas_dbus_new_invalid_opts_error(message, NULL);
+
+	if (!os_strcmp(arg_bssid, "any"))
+		_bssid = NULL;
+	else if (!hwaddr_aton(arg_bssid, bssid))
+		_bssid = bssid;
+	else {
+		return wpas_dbus_new_invalid_opts_error(message,
+							"Invalid BSSID");
+	}
+
+	if (os_strlen(pin) > 0)
+		ret = wpas_wps_start_pin(wpa_s, _bssid, pin);
+	else
+		ret = wpas_wps_start_pin(wpa_s, _bssid, NULL);
+
+	if (ret < 0) {
+		return dbus_message_new_error(message,
+					      WPAS_ERROR_WPS_PIN_ERROR,
+					      "Could not init PIN");
+	}
+
+	reply = dbus_message_new_method_return(message);
+	if (reply == NULL)
+		return NULL;
+
+	if (ret == 0) {
+		dbus_message_append_args(reply, DBUS_TYPE_STRING, &pin,
+					 DBUS_TYPE_INVALID);
+	} else {
+		char npin[9];
+		sprintf(npin, "%08d", ret);
+		dbus_message_append_args(reply, DBUS_TYPE_STRING, &npin,
+					 DBUS_TYPE_INVALID);
+	}
+	return reply;
+}
+
+
+/**
+ * wpas_dbus_iface_wps_reg - Request credentials using the PIN of the AP
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: A dbus message containing a UINT32 indicating success (1) or
+ *          failure (0)
+ *
+ * Handler function for "wpsReg" method call
+ */
+DBusMessage * wpas_dbus_iface_wps_reg(DBusMessage *message,
+				      struct wpa_supplicant *wpa_s)
+{
+	char *arg_bssid;
+	char *pin = NULL;
+	u8 bssid[ETH_ALEN];
+	int ret = 0;
+
+	if (!dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &arg_bssid,
+				   DBUS_TYPE_STRING, &pin, DBUS_TYPE_INVALID))
+		return wpas_dbus_new_invalid_opts_error(message, NULL);
+
+	if (!os_strcmp(arg_bssid, "any"))
+		ret = wpas_wps_start_reg(wpa_s, NULL, pin);
+	else if (!hwaddr_aton(arg_bssid, bssid))
+		ret = wpas_wps_start_reg(wpa_s, bssid, pin);
+	else {
+		return wpas_dbus_new_invalid_opts_error(message,
+							"Invalid BSSID");
+	}
+
+	if (ret < 0) {
+		return dbus_message_new_error(message,
+					      WPAS_ERROR_WPS_PBC_ERROR,
+					      "Could not request credentials");
+	}
+
+	return wpas_dbus_new_success_reply(message);
+}
+
+#endif /* CONFIG_WPS */

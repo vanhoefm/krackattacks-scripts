@@ -545,6 +545,14 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 			reply = wpas_dbus_iface_set_blobs(message, wpa_s);
 		else if (!strcmp(method, "removeBlobs"))
 			reply = wpas_dbus_iface_remove_blobs(message, wpa_s);
+#ifdef CONFIG_WPS
+		else if (!os_strcmp(method, "wpsPbc"))
+			reply = wpas_dbus_iface_wps_pbc(message, wpa_s);
+		else if (!os_strcmp(method, "wpsPin"))
+			reply = wpas_dbus_iface_wps_pin(message, wpa_s);
+		else if (!os_strcmp(method, "wpsReg"))
+			reply = wpas_dbus_iface_wps_reg(message, wpa_s);
+#endif /* CONFIG_WPS */
 	}
 
 	/* If the message was handled, send back the reply */

@@ -74,6 +74,15 @@ struct wps_credential;
 #define WPAS_ERROR_REMOVE_NETWORK_ERROR \
 	WPAS_DBUS_IFACE_INTERFACE ".RemoveNetworkError"
 
+#ifdef CONFIG_WPS
+#define WPAS_ERROR_WPS_PBC_ERROR \
+	WPAS_DBUS_IFACE_INTERFACE ".WpsPbcError"
+#define WPAS_ERROR_WPS_PIN_ERROR \
+	WPAS_DBUS_IFACE_INTERFACE ".WpsPinError"
+#define WPAS_ERROR_WPS_REG_ERROR \
+	WPAS_DBUS_IFACE_INTERFACE ".WpsRegError"
+#endif /* CONFIG_WPS */
+
 #define WPAS_DBUS_BSSID_FORMAT "%02x%02x%02x%02x%02x%02x"
 
 struct wpa_global;

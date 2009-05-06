@@ -219,11 +219,11 @@
 #define WLAN_ACTION_SA_QUERY 8
 #define WLAN_ACTION_WMM 17 /* WMM Specification 1.1 */
 
-/* SA Query Action frame (IEEE 802.11w/D7.0, 7.4.9) */
+/* SA Query Action frame (IEEE 802.11w/D8.0, 7.4.9) */
 #define WLAN_SA_QUERY_REQUEST 0
 #define WLAN_SA_QUERY_RESPONSE 1
 
-#define WLAN_SA_QUERY_TR_ID_LEN 16
+#define WLAN_SA_QUERY_TR_ID_LEN 2
 
 /* Timeout Interval Type */
 #define WLAN_TIMEOUT_REASSOC_DEADLINE 1

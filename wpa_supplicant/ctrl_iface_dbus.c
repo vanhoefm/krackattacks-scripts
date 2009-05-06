@@ -604,6 +604,9 @@ static DBusHandlerResult wpas_message_handler(DBusConnection *connection,
 		} else if (!strcmp(method, "getInterface")) {
 			reply = wpas_dbus_global_get_interface(
 				message, ctrl_iface->global);
+		} else if (!strcmp(method, "setDebugParams")) {
+			reply = wpas_dbus_global_set_debugparams(
+				message, ctrl_iface->global);
 		}
 	}
 

@@ -1287,6 +1287,11 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 	struct ieee80211_mgmt mgmt;
 	u8 *end;
 
+	wpa_printf(MSG_DEBUG, "IEEE 802.11: Sending SA Query Request to "
+		   MACSTR, MAC2STR(addr));
+	wpa_hexdump(MSG_DEBUG, "IEEE 802.11: SA Query Transaction ID",
+		    trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+
 	os_memset(&mgmt, 0, sizeof(mgmt));
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_ACTION);
@@ -1323,6 +1328,12 @@ static void hostapd_sa_query_action(struct hostapd_data *hapd,
 			   "Action %d", mgmt->u.action.u.sa_query_resp.action);
 		return;
 	}
+
+	wpa_printf(MSG_DEBUG, "IEEE 802.11: Received SA Query Response from "
+		   MACSTR, MAC2STR(mgmt->sa));
+	wpa_hexdump(MSG_DEBUG, "IEEE 802.11: SA Query Transaction ID",
+		    mgmt->u.action.u.sa_query_resp.trans_id,
+		    WLAN_SA_QUERY_TR_ID_LEN);
 
 	/* MLME-SAQuery.confirm */
 

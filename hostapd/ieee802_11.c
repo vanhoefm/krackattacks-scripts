@@ -1366,9 +1366,18 @@ static void hostapd_sa_query_action(struct hostapd_data *hapd,
 #endif /* CONFIG_IEEE80211W */
 
 
+static int robust_action_frame(u8 category)
+{
+	return category != WLAN_ACTION_PUBLIC &&
+		category != WLAN_ACTION_HT;
+}
+
+
 static void handle_action(struct hostapd_data *hapd,
 			  struct ieee80211_mgmt *mgmt, size_t len)
 {
+	struct sta_info *sta;
+
 	if (len < IEEE80211_HDRLEN + 1) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG,
@@ -1377,13 +1386,23 @@ static void handle_action(struct hostapd_data *hapd,
 		return;
 	}
 
+	sta = ap_get_sta(hapd, mgmt->sa);
+#ifdef CONFIG_IEEE80211W
+	if (sta && (sta->flags & WLAN_STA_MFP) &&
+	    !(mgmt->frame_control & host_to_le16(WLAN_FC_ISWEP) &&
+	      robust_action_frame(mgmt->u.action.category))) {
+		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "Dropped unprotected Robust Action frame from "
+			       "an MFP STA");
+		return;
+	}
+#endif /* CONFIG_IEEE80211W */
+
 	switch (mgmt->u.action.category) {
 #ifdef CONFIG_IEEE80211R
 	case WLAN_ACTION_FT:
 	{
-		struct sta_info *sta;
-
-		sta = ap_get_sta(hapd, mgmt->sa);
 		if (sta == NULL || !(sta->flags & WLAN_STA_ASSOC)) {
 			wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignored FT Action "
 				   "frame from unassociated STA " MACSTR,

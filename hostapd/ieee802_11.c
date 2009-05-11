@@ -1615,6 +1615,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	struct ht_cap_ie ht_cap;
 #endif /* CONFIG_IEEE80211N */
 	struct ht_cap_ie *ht_cap_ptr = NULL;
+	int set_flags, flags_and, flags_or;
 
 	if (!ok) {
 		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
@@ -1699,13 +1700,12 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		/* VLAN ID already set (e.g., by PMKSA caching), so bind STA */
 		ap_sta_bind_vlan(hapd, sta, 0);
 	}
-	if (sta->flags & WLAN_STA_SHORT_PREAMBLE) {
-		hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
-				      WLAN_STA_SHORT_PREAMBLE, ~0);
-	} else {
-		hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
-				      0, ~WLAN_STA_SHORT_PREAMBLE);
-	}
+
+	set_flags = WLAN_STA_SHORT_PREAMBLE | WLAN_STA_WMM | WLAN_STA_MFP;
+	flags_or = sta->flags & set_flags;
+	flags_and = sta->flags | ~set_flags;
+	hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
+			      flags_or, flags_and);
 
 	if (sta->auth_alg == WLAN_AUTH_FT)
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FT);

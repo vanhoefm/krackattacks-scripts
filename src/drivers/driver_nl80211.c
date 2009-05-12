@@ -3110,6 +3110,11 @@ static int wpa_driver_nl80211_associate(
 		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
 			params->wpa_ie);
 
+#ifdef CONFIG_IEEE80211W
+	if (params->mgmt_frame_protection == MGMT_FRAME_PROTECTION_REQUIRED)
+		NLA_PUT_U32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED);
+#endif /* CONFIG_IEEE80211W */
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {

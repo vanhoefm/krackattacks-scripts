@@ -2988,12 +2988,30 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 }
 
 
+static u32 sta_flags_nl80211(int flags)
+{
+	u32 f = 0;
+
+	if (flags & WLAN_STA_AUTHORIZED)
+		f |= BIT(NL80211_STA_FLAG_AUTHORIZED);
+	if (flags & WLAN_STA_WMM)
+		f |= BIT(NL80211_STA_FLAG_WME);
+	if (flags & WLAN_STA_SHORT_PREAMBLE)
+		f |= BIT(NL80211_STA_FLAG_SHORT_PREAMBLE);
+	if (flags & WLAN_STA_MFP)
+		f |= BIT(NL80211_STA_FLAG_MFP);
+
+	return f;
+}
+
+
 static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 					    int total_flags, int flags_or,
 					    int flags_and)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct nl_msg *msg, *flags = NULL;
+	struct nl80211_sta_flag_update upd;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -3012,6 +3030,10 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 		    if_nametoindex(drv->ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 
+	/*
+	 * Backwards compatibility version using NL80211_ATTR_STA_FLAGS. This
+	 * can be removed eventually.
+	 */
 	if (total_flags & WLAN_STA_AUTHORIZED)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_AUTHORIZED);
 
@@ -3026,6 +3048,11 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 
 	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))
 		goto nla_put_failure;
+
+	os_memset(&upd, 0, sizeof(upd));
+	upd.mask = sta_flags_nl80211(flags_or | ~flags_and);
+	upd.set = sta_flags_nl80211(flags_or);
+	NLA_PUT(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd);
 
 	nlmsg_free(flags);
 

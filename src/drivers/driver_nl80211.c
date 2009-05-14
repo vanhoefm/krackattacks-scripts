@@ -3142,6 +3142,8 @@ static int wpa_driver_nl80211_associate(
 		NLA_PUT_U32(msg, NL80211_ATTR_USE_MFP, NL80211_MFP_REQUIRED);
 #endif /* CONFIG_IEEE80211W */
 
+	NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
@@ -3269,6 +3271,35 @@ static int wpa_driver_nl80211_set_operstate(void *priv, int state)
 	drv->operstate = state;
 	return wpa_driver_nl80211_send_oper_ifla(
 		drv, -1, state ? IF_OPER_UP : IF_OPER_DORMANT);
+}
+
+
+static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	struct nl80211_sta_flag_update upd;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
+		    if_nametoindex(drv->ifname));
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, drv->bssid);
+
+	os_memset(&upd, 0, sizeof(upd));
+	upd.mask = BIT(NL80211_STA_FLAG_AUTHORIZED);
+	if (authorized)
+		upd.set = BIT(NL80211_STA_FLAG_AUTHORIZED);
+	NLA_PUT(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
 }
 
 #endif /* HOSTAPD */
@@ -4008,6 +4039,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.deinit = wpa_driver_nl80211_deinit,
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
+	.set_supp_port = wpa_driver_nl80211_set_supp_port,
 #endif /* HOSTAPD */
 	.set_country = wpa_driver_nl80211_set_country,
 	.set_mode = wpa_driver_nl80211_set_mode,

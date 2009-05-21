@@ -29,10 +29,19 @@
 #else
 #include <net/ethernet.h>
 #endif
+#include <net/route.h>
 
 #include <net80211/ieee80211.h>
 #include <net80211/ieee80211_crypto.h>
 #include <net80211/ieee80211_ioctl.h>
+#if __FreeBSD__
+#include <net80211/ieee80211_freebsd.h>
+#endif
+#if __NetBSD__
+#include <net80211/ieee80211_netbsd.h>
+#endif
+
+#ifdef HOSTAPD
 
 /*
  * Avoid conflicts with hostapd definitions by undefining couple of defines
@@ -42,13 +51,11 @@
 #undef WPA_VERSION
 #undef WPA_OUI_TYPE
 
-
-#ifdef HOSTAPD
-
 #include "l2_packet/l2_packet.h"
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/config.h"
 #include "../../hostapd/eapol_sm.h"
+#include "../../hostapd/sta_flags.h"
 
 struct bsd_driver_data {
 	struct hostapd_data *hapd;		/* back pointer */
@@ -540,9 +547,6 @@ bsd_new_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 no_ie:
 	return hostapd_notif_assoc(hapd, addr, iebuf, ielen);
 }
-
-#include <net/route.h>
-#include <net80211/ieee80211_freebsd.h>
 
 static void
 bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
@@ -1202,14 +1206,6 @@ wpa_driver_bsd_scan(void *priv, const u8 *ssid, size_t ssid_len)
 	/* NB: net80211 delivers a scan complete event so no need to poll */
 	return set80211param(drv, IEEE80211_IOC_SCAN_REQ, 0);
 }
-
-#include <net/route.h>
-#if __FreeBSD__
-#include <net80211/ieee80211_freebsd.h>
-#endif
-#if __NetBSD__
-#include <net80211/ieee80211_netbsd.h>
-#endif
 
 static void
 wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)

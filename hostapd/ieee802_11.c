@@ -1363,7 +1363,6 @@ static void hostapd_sa_query_action(struct hostapd_data *hapd,
 		       "Reply to pending SA Query received");
 	ap_sta_stop_sa_query(hapd, sta);
 }
-#endif /* CONFIG_IEEE80211W */
 
 
 static int robust_action_frame(u8 category)
@@ -1371,6 +1370,7 @@ static int robust_action_frame(u8 category)
 	return category != WLAN_ACTION_PUBLIC &&
 		category != WLAN_ACTION_HT;
 }
+#endif /* CONFIG_IEEE80211W */
 
 
 static void handle_action(struct hostapd_data *hapd,

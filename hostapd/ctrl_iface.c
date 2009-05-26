@@ -256,10 +256,21 @@ static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
 static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
 {
 	char *pin = os_strchr(txt, ' ');
+	char *timeout_txt;
+	int timeout;
+
 	if (pin == NULL)
 		return -1;
 	*pin++ = '\0';
-	return hostapd_wps_add_pin(hapd, txt, pin);
+
+	timeout_txt = os_strchr(pin, ' ');
+	if (timeout_txt) {
+		*timeout_txt++ = '\0';
+		timeout = atoi(timeout_txt);
+	} else
+		timeout = 0;
+
+	return hostapd_wps_add_pin(hapd, txt, pin, timeout);
 }
 
 

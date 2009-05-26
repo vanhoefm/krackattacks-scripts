@@ -552,7 +552,7 @@ wps_registrar_init(struct wps_context *wps,
 		   const struct wps_registrar_config *cfg);
 void wps_registrar_deinit(struct wps_registrar *reg);
 int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
-			  const u8 *pin, size_t pin_len);
+			  const u8 *pin, size_t pin_len, int timeout);
 int wps_registrar_invalidate_pin(struct wps_registrar *reg, const u8 *uuid);
 int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid);
 int wps_registrar_button_pushed(struct wps_registrar *reg);

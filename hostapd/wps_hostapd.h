@@ -21,7 +21,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		     struct hostapd_bss_config *conf);
 void hostapd_deinit_wps(struct hostapd_data *hapd);
 int hostapd_wps_add_pin(struct hostapd_data *hapd, const char *uuid,
-			const char *pin);
+			const char *pin, int timeout);
 int hostapd_wps_button_pushed(struct hostapd_data *hapd);
 int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 			  char *path, char *method, char *name);

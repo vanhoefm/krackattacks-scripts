@@ -32,7 +32,10 @@ struct wps_uuid_pin {
 	int wildcard_uuid;
 	u8 *pin;
 	size_t pin_len;
-	int locked;
+#define PIN_LOCKED BIT(0)
+#define PIN_EXPIRES BIT(1)
+	int flags;
+	struct os_time expiration;
 };
 
 
@@ -413,10 +416,11 @@ void wps_registrar_deinit(struct wps_registrar *reg)
  * @uuid: UUID-E or %NULL for wildcard (any UUID)
  * @pin: PIN (Device Password)
  * @pin_len: Length of pin in octets
+ * @timeout: Time (in seconds) when the PIN will be invalidated; 0 = no timeout
  * Returns: 0 on success, -1 on failure
  */
 int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
-			  const u8 *pin, size_t pin_len)
+			  const u8 *pin, size_t pin_len, int timeout)
 {
 	struct wps_uuid_pin *p;
 
@@ -435,10 +439,17 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 	os_memcpy(p->pin, pin, pin_len);
 	p->pin_len = pin_len;
 
+	if (timeout) {
+		p->flags |= PIN_EXPIRES;
+		os_get_time(&p->expiration);
+		p->expiration.sec += timeout;
+	}
+
 	p->next = reg->pins;
 	reg->pins = p;
 
-	wpa_printf(MSG_DEBUG, "WPS: A new PIN configured");
+	wpa_printf(MSG_DEBUG, "WPS: A new PIN configured (timeout=%d)",
+		   timeout);
 	wpa_hexdump(MSG_DEBUG, "WPS: UUID", uuid, WPS_UUID_LEN);
 	wpa_hexdump_ascii_key(MSG_DEBUG, "WPS: PIN", pin, pin_len);
 	reg->selected_registrar = 1;
@@ -446,6 +457,34 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 	wps_set_ie(reg);
 
 	return 0;
+}
+
+
+static void wps_registrar_expire_pins(struct wps_registrar *reg)
+{
+	struct wps_uuid_pin *pin, *prev, *del;
+	struct os_time now;
+
+	os_get_time(&now);
+	prev = NULL;
+	pin = reg->pins;
+	while (pin) {
+		if ((pin->flags & PIN_EXPIRES) &&
+		    os_time_before(&pin->expiration, &now)) {
+			if (prev == NULL)
+				reg->pins = pin->next;
+			else
+				prev->next = pin->next;
+			del = pin;
+			pin = pin->next;
+			wpa_hexdump(MSG_DEBUG, "WPS: Expired PIN for UUID",
+				    del->uuid, WPS_UUID_LEN);
+			wps_free_pin(del);
+			continue;
+		}
+		prev = pin;
+		pin = pin->next;
+	}
 }
 
 
@@ -485,6 +524,8 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 {
 	struct wps_uuid_pin *pin;
 
+	wps_registrar_expire_pins(reg);
+
 	pin = reg->pins;
 	while (pin) {
 		if (!pin->wildcard_uuid &&
@@ -516,13 +557,13 @@ static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 	 * Lock the PIN to avoid attacks based on concurrent re-use of the PIN
 	 * that could otherwise avoid PIN invalidations.
 	 */
-	if (pin->locked) {
+	if (pin->flags & PIN_LOCKED) {
 		wpa_printf(MSG_DEBUG, "WPS: Selected PIN locked - do not "
 			   "allow concurrent re-use");
 		return NULL;
 	}
 	*pin_len = pin->pin_len;
-	pin->locked = 1;
+	pin->flags |= PIN_LOCKED;
 	return pin->pin;
 }
 
@@ -549,7 +590,7 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid)
 					   "wildcard PIN");
 				return wps_registrar_invalidate_pin(reg, uuid);
 			}
-			pin->locked = 0;
+			pin->flags &= ~PIN_LOCKED;
 			return 0;
 		}
 		pin = pin->next;

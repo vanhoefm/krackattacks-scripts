@@ -541,7 +541,7 @@ int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		pin = buf;
 	}
 
-	ret = hostapd_wps_add_pin(wpa_s->ap_iface->bss[0], "any", pin);
+	ret = hostapd_wps_add_pin(wpa_s->ap_iface->bss[0], "any", pin, 0);
 	if (ret)
 		return -1;
 	return ret_len;

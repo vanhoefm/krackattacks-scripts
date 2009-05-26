@@ -435,6 +435,7 @@ struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len)
 }
 
 
+#ifdef EAP_TLS_FUNCS
 static struct crypto_private_key *
 crypto_pkcs8_key_import(const u8 *buf, size_t len)
 {
@@ -536,6 +537,7 @@ crypto_pkcs8_key_import(const u8 *buf, size_t len)
 	return (struct crypto_private_key *)
 		crypto_rsa_import_private_key(hdr.payload, hdr.length);
 }
+#endif /* EAP_TLS_FUNCS */
 
 
 struct crypto_private_key * crypto_private_key_import(const u8 *key,

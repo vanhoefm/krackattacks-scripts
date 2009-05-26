@@ -506,6 +506,15 @@ ifeq ($(CONFIG_CRYPTO), internal)
 OBJS += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
 OBJS_p += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
+ifdef CONFIG_INTERNAL_LIBTOMMATH
+CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
+ifdef CONFIG_INTERNAL_LIBTOMMATH_FAST
+CFLAGS += -DLTM_FAST
+endif
+else
+LIBS += -ltommath
+LIBS_p += -ltommath
+endif
 CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_DES=y
 CONFIG_INTERNAL_SHA1=y

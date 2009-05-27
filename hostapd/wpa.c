@@ -620,6 +620,22 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		return;
 	}
 
+	if (sm->wpa == WPA_VERSION_WPA2) {
+		if (key->type != EAPOL_KEY_TYPE_RSN) {
+			wpa_printf(MSG_DEBUG, "Ignore EAPOL-Key with "
+				   "unexpected type %d in RSN mode",
+				   key->type);
+			return;
+		}
+	} else {
+		if (key->type != EAPOL_KEY_TYPE_WPA) {
+			wpa_printf(MSG_DEBUG, "Ignore EAPOL-Key with "
+				   "unexpected type %d in WPA mode",
+				   key->type);
+			return;
+		}
+	}
+
 	/* FIX: verify that the EAPOL-Key frame was encrypted if pairwise keys
 	 * are set */
 

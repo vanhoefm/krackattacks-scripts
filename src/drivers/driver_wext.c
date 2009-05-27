@@ -1923,21 +1923,36 @@ static int wpa_driver_wext_mlme(struct wpa_driver_wext_data *drv,
 
 static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 {
+	struct iwreq iwr;
 	const u8 null_bssid[ETH_ALEN] = { 0, 0, 0, 0, 0, 0 };
 	u8 ssid[32];
 	int i;
 
 	/*
-	 * Clear the BSSID selection and set a random SSID to make sure the
-	 * driver will not be trying to associate with something even if it
-	 * does not understand SIOCSIWMLME commands (or tries to associate
-	 * automatically after deauth/disassoc).
+	 * Only force-disconnect when the card is in infrastructure mode,
+	 * otherwise the driver might interpret the cleared BSSID and random
+	 * SSID as an attempt to create a new ad-hoc network.
 	 */
-	wpa_driver_wext_set_bssid(drv, null_bssid);
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+	if (ioctl(drv->ioctl_sock, SIOCGIWMODE, &iwr) < 0) {
+		perror("ioctl[SIOCGIWMODE]");
+		iwr.u.mode = IW_MODE_INFRA;
+	}
 
-	for (i = 0; i < 32; i++)
-		ssid[i] = rand() & 0xFF;
-	wpa_driver_wext_set_ssid(drv, ssid, 32);
+	if (iwr.u.mode == IW_MODE_INFRA) {
+		/*
+		 * Clear the BSSID selection and set a random SSID to make sure
+		 * the driver will not be trying to associate with something
+		 * even if it does not understand SIOCSIWMLME commands (or
+		 * tries to associate automatically after deauth/disassoc).
+		 */
+		wpa_driver_wext_set_bssid(drv, null_bssid);
+
+		for (i = 0; i < 32; i++)
+			ssid[i] = rand() & 0xFF;
+		wpa_driver_wext_set_ssid(drv, ssid, 32);
+	}
 }
 
 

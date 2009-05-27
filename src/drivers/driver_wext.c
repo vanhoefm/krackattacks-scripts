@@ -1962,8 +1962,8 @@ static int wpa_driver_wext_deauthenticate(void *priv, const u8 *addr,
 	struct wpa_driver_wext_data *drv = priv;
 	int ret;
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-	wpa_driver_wext_disconnect(drv);
 	ret = wpa_driver_wext_mlme(drv, addr, IW_MLME_DEAUTH, reason_code);
+	wpa_driver_wext_disconnect(drv);
 	return ret;
 }
 

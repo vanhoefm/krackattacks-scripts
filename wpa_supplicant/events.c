@@ -615,6 +615,8 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 	struct wpa_scan_res *selected = NULL;
 	struct wpa_ssid *ssid = NULL;
 
+	wpa_supplicant_notify_scanning(wpa_s, 0);
+
 	if (wpa_supplicant_get_scan_results(wpa_s) < 0) {
 		if (wpa_s->conf->ap_scan == 2)
 			return;

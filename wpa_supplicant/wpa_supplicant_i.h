@@ -329,6 +329,7 @@ struct wpa_supplicant {
 	struct ctrl_iface_priv *ctrl_iface;
 
 	wpa_states wpa_state;
+	int scanning;
 	int new_connection;
 	int reassociated_connection;
 
@@ -431,6 +432,8 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 /* scan.c */
 void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec);
 void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s);
+void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,
+				    int scanning);
 
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);

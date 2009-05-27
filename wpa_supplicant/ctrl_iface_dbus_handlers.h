@@ -77,6 +77,9 @@ DBusMessage * wpas_dbus_iface_set_smartcard_modules(
 DBusMessage * wpas_dbus_iface_get_state(DBusMessage *message,
 					struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_iface_get_scanning(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_iface_set_blobs(DBusMessage *message,
 				        struct wpa_supplicant *wpa_s);
 

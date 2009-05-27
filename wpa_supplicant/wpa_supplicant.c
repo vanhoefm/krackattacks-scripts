@@ -511,6 +511,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s, wpa_states state)
 		   wpa_supplicant_state_txt(wpa_s->wpa_state),
 		   wpa_supplicant_state_txt(state));
 
+	if (state != WPA_SCANNING)
+		wpa_supplicant_notify_scanning(wpa_s, 0);
+
 	wpa_supplicant_dbus_notify_state_change(wpa_s, state,
 						wpa_s->wpa_state);
 

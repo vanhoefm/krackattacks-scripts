@@ -1338,6 +1338,35 @@ DBusMessage * wpas_dbus_iface_get_state(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_iface_get_scanning - Get interface scanning state
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A dbus message containing whether the interface is scanning
+ *
+ * Handler function for "scanning" method call.
+ */
+DBusMessage * wpas_dbus_iface_get_scanning(DBusMessage *message,
+					   struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	dbus_bool_t scanning = wpa_s->scanning ? TRUE : FALSE;
+
+	reply = dbus_message_new_method_return(message);
+	if (reply != NULL) {
+		dbus_message_append_args(reply, DBUS_TYPE_BOOLEAN, &scanning,
+					 DBUS_TYPE_INVALID);
+	} else {
+		perror("wpas_dbus_iface_get_scanning[dbus]: out of "
+		       "memory.");
+		wpa_printf(MSG_ERROR, "dbus control interface: not enough "
+			   "memory to return scanning state.");
+	}
+
+	return reply;
+}
+
+
+/**
  * wpas_dbus_iface_set_blobs - Store named binary blobs (ie, for certificates)
  * @message: Pointer to incoming dbus message
  * @wpa_s: %wpa_supplicant data structure

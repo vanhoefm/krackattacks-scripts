@@ -35,6 +35,7 @@
 static int wpa_driver_wext_flush_pmkid(void *priv);
 static int wpa_driver_wext_get_range(void *priv);
 static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv);
+static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv);
 
 
 static int wpa_driver_wext_send_oper_ifla(struct wpa_driver_wext_data *drv,
@@ -994,6 +995,13 @@ static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 
 	wpa_driver_wext_get_range(drv);
 
+	/*
+	 * Unlock the driver's BSSID and force to a random SSID to clear any
+	 * previous association the driver might have when the supplicant
+	 * starts up.
+	 */
+	wpa_driver_wext_disconnect(drv);
+
 	drv->ifindex = if_nametoindex(drv->ifname);
 
 	if (os_strncmp(drv->ifname, "wlan", 4) == 0) {
@@ -1035,8 +1043,7 @@ void wpa_driver_wext_deinit(void *priv)
 	 * Clear possibly configured driver parameters in order to make it
 	 * easier to use the driver after wpa_supplicant has been terminated.
 	 */
-	(void) wpa_driver_wext_set_bssid(drv,
-					 (u8 *) "\x00\x00\x00\x00\x00\x00");
+	wpa_driver_wext_disconnect(drv);
 
 	wpa_driver_wext_send_oper_ifla(priv, 0, IF_OPER_UP);
 

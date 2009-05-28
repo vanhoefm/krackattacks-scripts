@@ -1702,6 +1702,9 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	}
 
 	set_flags = WLAN_STA_SHORT_PREAMBLE | WLAN_STA_WMM | WLAN_STA_MFP;
+	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa &&
+	    sta->flags & WLAN_STA_AUTHORIZED)
+		set_flags |= WLAN_STA_AUTHORIZED;
 	flags_or = sta->flags & set_flags;
 	flags_and = sta->flags | ~set_flags;
 	hostapd_sta_set_flags(hapd, sta->addr, sta->flags,

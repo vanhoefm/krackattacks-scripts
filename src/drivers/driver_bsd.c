@@ -1172,10 +1172,6 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	/* XXX error handling is wrong but unclear what to do... */
 	if (wpa_driver_bsd_set_wpa_ie(drv, params->wpa_ie, params->wpa_ie_len) < 0)
 		return -1;
-#ifndef NEW_FREEBSD_MLME_ASSOC
-	if (wpa_driver_bsd_set_ssid(drv, params->ssid, params->ssid_len) < 0)
-		return -1;
-#endif
 
 	privacy = !(params->pairwise_suite == CIPHER_NONE &&
 	    params->group_suite == CIPHER_NONE &&
@@ -1193,11 +1189,9 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 
 	os_memset(&mlme, 0, sizeof(mlme));
 	mlme.im_op = IEEE80211_MLME_ASSOC;
-#ifdef NEW_FREEBSD_MLME_ASSOC
 	if (params->ssid != NULL)
 		os_memcpy(mlme.im_ssid, params->ssid, params->ssid_len);
 	mlme.im_ssid_len = params->ssid_len;
-#endif
 	if (params->bssid != NULL)
 		os_memcpy(mlme.im_macaddr, params->bssid, IEEE80211_ADDR_LEN);
 	if (set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme)) < 0)

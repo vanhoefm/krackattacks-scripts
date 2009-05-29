@@ -25,7 +25,6 @@
 
 #ifdef __NetBSD__
 #include <net/if_ether.h>
-#define COMPAT_FREEBSD_NET80211
 #else
 #include <net/ethernet.h>
 #endif
@@ -40,6 +39,104 @@
 #if __NetBSD__
 #include <net80211/ieee80211_netbsd.h>
 #endif
+
+/* Generic functions for hostapd and wpa_supplicant */
+
+static int
+bsd_set80211var(int s, const char *ifname, int op, const void *arg, int arg_len)
+{
+	struct ieee80211req ireq;
+
+	os_memset(&ireq, 0, sizeof(ireq));
+	os_strlcpy(ireq.i_name, ifname, sizeof(ireq.i_name));
+	ireq.i_type = op;
+	ireq.i_len = arg_len;
+	ireq.i_data = (void *) arg;
+
+	if (ioctl(s, SIOCS80211, &ireq) < 0) {
+		fprintf(stderr, "ioctl[SIOCS80211, op %u, len %u]: %s\n",
+			op, arg_len, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int
+bsd_get80211var(int s, const char *ifname, int op, void *arg, int arg_len)
+{
+	struct ieee80211req ireq;
+
+	os_memset(&ireq, 0, sizeof(ireq));
+	os_strlcpy(ireq.i_name, ifname, sizeof(ireq.i_name));
+	ireq.i_type = op;
+	ireq.i_len = arg_len;
+	ireq.i_data = arg;
+
+	if (ioctl(s, SIOCG80211, &ireq) < 0) {
+		fprintf(stderr, "ioctl[SIOCG80211, op %u, len %u]: %s\n",
+			op, arg_len, strerror(errno));
+		return -1;
+	}
+	return ireq.i_len;
+}
+
+static int
+bsd_set80211param(int s, const char *ifname, int op, int arg)
+{
+	struct ieee80211req ireq;
+
+	os_memset(&ireq, 0, sizeof(ireq));
+	os_strlcpy(ireq.i_name, ifname, sizeof(ireq.i_name));
+	ireq.i_type = op;
+	ireq.i_val = arg;
+
+	if (ioctl(s, SIOCS80211, &ireq) < 0) {
+		fprintf(stderr, "ioctl[SIOCS80211, op %u, arg 0x%x]: %s\n",
+			op, arg, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+static int
+bsd_get_ssid(int s, const char *ifname, u8 *ssid)
+{
+#ifdef SIOCG80211NWID
+	struct ieee80211_nwid nwid;
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	ifr.ifr_data = (void *)&nwid;
+	if (ioctl(s, SIOCG80211NWID, &ifr) < 0 ||
+	    nwid.i_len > IEEE80211_NWID_LEN)
+		return -1;
+	os_memcpy(ssid, nwid.i_nwid, nwid.i_len);
+	return nwid.i_len;
+#else
+	return bsd_get80211var(s, ifname, IEEE80211_IOC_SSID,
+		ssid, IEEE80211_NWID_LEN);
+#endif
+}
+
+static int
+bsd_set_ssid(int s, const char *ifname, const u8 *ssid, size_t ssid_len)
+{
+#ifdef SIOCS80211NWID
+	struct ieee80211_nwid nwid;
+	struct ifreq ifr;
+
+	os_memcpy(nwid.i_nwid, ssid, ssid_len);
+	nwid.i_len = ssid_len;
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	ifr.ifr_data = (void *)&nwid;
+	return ioctl(s, SIOCS80211NWID, &ifr);
+#else
+	return bsd_set80211var(s, ifname, IEEE80211_IOC_SSID, ssid, ssid_len);
+#endif
+}
+
 
 #ifdef HOSTAPD
 
@@ -72,54 +169,19 @@ static int bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 static int
 set80211var(struct bsd_driver_data *drv, int op, const void *arg, int arg_len)
 {
-	struct ieee80211req ireq;
-
-	memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->iface, IFNAMSIZ);
-	ireq.i_type = op;
-	ireq.i_len = arg_len;
-	ireq.i_data = (void *) arg;
-
-	if (ioctl(drv->ioctl_sock, SIOCS80211, &ireq) < 0) {
-		perror("ioctl[SIOCS80211]");
-		return -1;
-	}
-	return 0;
+	return bsd_set80211var(drv->ioctl_sock, drv->iface, op, arg, arg_len);
 }
 
 static int
 get80211var(struct bsd_driver_data *drv, int op, void *arg, int arg_len)
 {
-	struct ieee80211req ireq;
-
-	memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->iface, IFNAMSIZ);
-	ireq.i_type = op;
-	ireq.i_len = arg_len;
-	ireq.i_data = arg;
-
-	if (ioctl(drv->ioctl_sock, SIOCG80211, &ireq) < 0) {
-		perror("ioctl[SIOCG80211]");
-		return -1;
-	}
-	return ireq.i_len;
+	return bsd_get80211var(drv->ioctl_sock, drv->iface, op, arg, arg_len);
 }
 
 static int
 set80211param(struct bsd_driver_data *drv, int op, int arg)
 {
-	struct ieee80211req ireq;
-
-	memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->iface, IFNAMSIZ);
-	ireq.i_type = op;
-	ireq.i_val = arg;
-
-	if (ioctl(drv->ioctl_sock, SIOCS80211, &ireq) < 0) {
-		perror("ioctl[SIOCS80211]");
-		return -1;
-	}
-	return 0;
+	return bsd_set80211param(drv->ioctl_sock, drv->iface, op, arg);
 }
 
 static const char *
@@ -235,7 +297,7 @@ bsd_set_iface_flags(void *priv, int dev_up)
 		return -1;
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->iface, IFNAMSIZ);
+	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
 
 	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
 		perror("ioctl[SIOCGIFFLAGS]");
@@ -254,7 +316,7 @@ bsd_set_iface_flags(void *priv, int dev_up)
 
 	if (dev_up) {
 		memset(&ifr, 0, sizeof(ifr));
-		os_strlcpy(ifr.ifr_name, drv->iface, IFNAMSIZ);
+		os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
 		ifr.ifr_mtu = HOSTAPD_MTU;
 		if (ioctl(drv->ioctl_sock, SIOCSIFMTU, &ifr) != 0) {
 			perror("ioctl[SIOCSIFMTU]");
@@ -689,24 +751,25 @@ handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 }
 
 static int
-bsd_get_ssid(const char *ifname, void *priv, u8 *buf, int len)
+hostapd_bsd_get_ssid(const char *ifname, void *priv, u8 *buf, int len)
 {
 	struct bsd_driver_data *drv = priv;
-	int ssid_len = get80211var(drv, IEEE80211_IOC_SSID, buf, len);
+	int ssid_len;
 
+	ssid_len = bsd_get_ssid(drv->ioctl_sock, drv->iface, buf);
 	wpa_printf(MSG_DEBUG, "%s: ssid=\"%.*s\"", __func__, ssid_len, buf);
 
 	return ssid_len;
 }
 
 static int
-bsd_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
+hostapd_bsd_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
 {
 	struct bsd_driver_data *drv = priv;
 
 	wpa_printf(MSG_DEBUG, "%s: ssid=\"%.*s\"", __func__, len, buf);
 
-	return set80211var(drv, IEEE80211_IOC_SSID, buf, len);
+	return bsd_set_ssid(drv->ioctl_sock, drv->iface, buf, len);
 }
 
 static void *
@@ -780,8 +843,8 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.hapd_send_eapol	= bsd_send_eapol,
 	.sta_disassoc		= bsd_sta_disassoc,
 	.sta_deauth		= bsd_sta_deauth,
-	.hapd_set_ssid		= bsd_set_ssid,
-	.hapd_get_ssid		= bsd_get_ssid,
+	.hapd_set_ssid		= hostapd_bsd_set_ssid,
+	.hapd_get_ssid		= hostapd_bsd_get_ssid,
 };
 
 #else /* HOSTAPD */
@@ -800,57 +863,19 @@ struct wpa_driver_bsd_data {
 static int
 set80211var(struct wpa_driver_bsd_data *drv, int op, const void *arg, int arg_len)
 {
-	struct ieee80211req ireq;
-
-	os_memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->ifname, IFNAMSIZ);
-	ireq.i_type = op;
-	ireq.i_len = arg_len;
-	ireq.i_data = (void *) arg;
-
-	if (ioctl(drv->sock, SIOCS80211, &ireq) < 0) {
-		fprintf(stderr, "ioctl[SIOCS80211, op %u, len %u]: %s\n",
-			op, arg_len, strerror(errno));
-		return -1;
-	}
-	return 0;
+	return bsd_set80211var(drv->sock, drv->ifname, op, arg, arg_len);
 }
 
 static int
 get80211var(struct wpa_driver_bsd_data *drv, int op, void *arg, int arg_len)
 {
-	struct ieee80211req ireq;
-
-	os_memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->ifname, IFNAMSIZ);
-	ireq.i_type = op;
-	ireq.i_len = arg_len;
-	ireq.i_data = arg;
-
-	if (ioctl(drv->sock, SIOCG80211, &ireq) < 0) {
-		fprintf(stderr, "ioctl[SIOCG80211, op %u, len %u]: %s\n",
-			op, arg_len, strerror(errno));
-		return -1;
-	}
-	return ireq.i_len;
+	return bsd_get80211var(drv->sock, drv->ifname, op, arg, arg_len);
 }
 
 static int
 set80211param(struct wpa_driver_bsd_data *drv, int op, int arg)
 {
-	struct ieee80211req ireq;
-
-	os_memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->ifname, IFNAMSIZ);
-	ireq.i_type = op;
-	ireq.i_val = arg;
-
-	if (ioctl(drv->sock, SIOCS80211, &ireq) < 0) {
-		fprintf(stderr, "ioctl[SIOCS80211, op %u, arg 0x%x]: %s\n",
-			op, arg, strerror(errno));
-		return -1;
-	}
-	return 0;
+	return bsd_set80211param(drv->sock, drv->ifname, op, arg);
 }
 
 static int
@@ -859,7 +884,7 @@ get80211param(struct wpa_driver_bsd_data *drv, int op)
 	struct ieee80211req ireq;
 
 	os_memset(&ireq, 0, sizeof(ireq));
-	os_strlcpy(ireq.i_name, drv->ifname, IFNAMSIZ);
+	os_strlcpy(ireq.i_name, drv->ifname, sizeof(ireq.i_name));
 	ireq.i_type = op;
 
 	if (ioctl(drv->sock, SIOCG80211, &ireq) < 0) {
@@ -904,7 +929,7 @@ static int
 wpa_driver_bsd_get_bssid(void *priv, u8 *bssid)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-#ifdef __NetBSD__
+#ifdef SIOCG80211BSSID
 	struct ieee80211_bssid bs;
 
 	os_strncpy(bs.i_name, drv->ifname, sizeof(bs.i_name));
@@ -933,22 +958,8 @@ static int
 wpa_driver_bsd_get_ssid(void *priv, u8 *ssid)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-#ifdef __NetBSD__
-	struct ieee80211_nwid nwid;
-	struct ifreq ifr;
 
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strncpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (void *)&nwid;
-	if (ioctl(drv->sock, SIOCG80211NWID, &ifr) < 0 ||
-	    nwid.i_len > IEEE80211_NWID_LEN)
-		return -1;
-	os_memcpy(ssid, nwid.i_nwid, nwid.i_len);
-	return nwid.i_len;
-#else
-	return get80211var(drv, IEEE80211_IOC_SSID,
-		ssid, IEEE80211_NWID_LEN);
-#endif
+	return bsd_get_ssid(drv->sock, drv->ifname, ssid);
 }
 
 static int
@@ -956,19 +967,8 @@ wpa_driver_bsd_set_ssid(void *priv, const u8 *ssid,
 			     size_t ssid_len)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-#ifdef __NetBSD__
-	struct ieee80211_nwid nwid;
-	struct ifreq ifr;
 
-	os_memcpy(nwid.i_nwid, ssid, ssid_len);
-	nwid.i_len = ssid_len;
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strncpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (void *)&nwid;
-	return ioctl(drv->sock, SIOCS80211NWID, &ifr);
-#else
-	return set80211var(drv, IEEE80211_IOC_SSID, ssid, ssid_len);
-#endif
+	return bsd_set_ssid(drv->sock, drv->ifname, ssid, ssid_len);
 }
 
 static int
@@ -1519,7 +1519,7 @@ wpa_driver_bsd_deinit(void *priv)
 
 const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.name			= "bsd",
-	.desc			= "BSD 802.11 support (Atheros, etc.)",
+	.desc			= "BSD 802.11 support",
 	.init			= wpa_driver_bsd_init,
 	.deinit			= wpa_driver_bsd_deinit,
 	.get_bssid		= wpa_driver_bsd_get_bssid,

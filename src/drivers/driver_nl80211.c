@@ -2468,9 +2468,10 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
-				const char *ifname, enum nl80211_iftype iftype,
-				const u8 *addr)
+static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
+				     const char *ifname,
+				     enum nl80211_iftype iftype,
+				     const u8 *addr)
 {
 	struct nl_msg *msg, *flags = NULL;
 	int ifidx;
@@ -2506,8 +2507,8 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {
  nla_put_failure:
-		wpa_printf(MSG_ERROR, "Failed to create interface %s.",
-			   ifname);
+		wpa_printf(MSG_ERROR, "Failed to create interface %s: %d (%s)",
+			   ifname, ret, strerror(-ret));
 		return ret;
 	}
 
@@ -2528,6 +2529,27 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 #endif /* HOSTAPD */
 
 	return ifidx;
+}
+static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
+				const char *ifname, enum nl80211_iftype iftype,
+				const u8 *addr)
+{
+	int ret;
+
+	ret = nl80211_create_iface_once(drv, ifname, iftype, addr);
+
+	/* if error occured and interface exists already */
+	if (ret == -ENFILE && if_nametoindex(ifname)) {
+		wpa_printf(MSG_INFO, "Try to remove and re-create %s", ifname);
+
+		/* Try to remove the interface that was already there. */
+		nl80211_remove_iface(drv, if_nametoindex(ifname));
+
+		/* Try to create the interface again */
+		ret = nl80211_create_iface_once(drv, ifname, iftype, addr);
+	}
+
+	return ret;
 }
 
 #endif /* CONFIG_AP || HOSTAPD */

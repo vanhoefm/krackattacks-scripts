@@ -387,7 +387,7 @@ bsd_set_key(const char *ifname, void *priv, wpa_alg alg,
 	}
 
 	if (key_len > sizeof(wk.ik_keydata)) {
-		printf("%s: key length %d too big\n", __func__, key_len);
+		printf("%s: key length %d too big\n", __func__, (int) key_len);
 		return -3;
 	}
 
@@ -660,7 +660,7 @@ bsd_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
 		bp = malloc(len);
 		if (bp == NULL) {
 			printf("EAPOL frame discarded, cannot malloc temp "
-				"buffer of size %u!\n", len);
+			       "buffer of size %u!\n", (unsigned int) len);
 			return -1;
 		}
 	}
@@ -1162,8 +1162,8 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	wpa_printf(MSG_DEBUG,
 		"%s: ssid '%.*s' wpa ie len %u pairwise %u group %u key mgmt %u"
 		, __func__
-		, params->ssid_len, params->ssid
-		, params->wpa_ie_len
+		   , (unsigned int) params->ssid_len, params->ssid
+		, (unsigned int) params->wpa_ie_len
 		, params->pairwise_suite
 		, params->group_suite
 		, params->key_mgmt_suite

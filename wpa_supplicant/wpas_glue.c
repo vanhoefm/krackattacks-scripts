@@ -499,6 +499,7 @@ static int wpa_supplicant_send_ft_action(void *ctx, u8 action,
 #endif /* CONFIG_NO_WPA */
 
 
+#ifdef IEEE8021X_EAPOL
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
 					    const char *txt)
@@ -544,6 +545,7 @@ static void wpa_supplicant_port_cb(void *ctx, int authorized)
 		   authorized ? "Authorized" : "Unauthorized");
 	wpa_drv_set_supp_port(wpa_s, authorized);
 }
+#endif /* IEEE8021X_EAPOL */
 
 
 int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)

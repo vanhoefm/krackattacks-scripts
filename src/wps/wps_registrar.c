@@ -2019,6 +2019,28 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 }
 
 
+static void wps_sta_cred_cb(struct wps_data *wps)
+{
+	/*
+	 * Update credential to only include a single authentication and
+	 * encryption type in case the AP configuration includes more than one
+	 * option.
+	 */
+	if (wps->cred.auth_type & WPS_AUTH_WPA2PSK)
+		wps->cred.auth_type = WPS_AUTH_WPA2PSK;
+	else if (wps->cred.auth_type & WPS_AUTH_WPAPSK)
+		wps->cred.auth_type = WPS_AUTH_WPAPSK;
+	if (wps->cred.encr_type & WPS_ENCR_AES)
+		wps->cred.encr_type = WPS_ENCR_AES;
+	else if (wps->cred.encr_type & WPS_ENCR_TKIP)
+		wps->cred.encr_type = WPS_ENCR_TKIP;
+	wpa_printf(MSG_DEBUG, "WPS: Update local configuration based on the "
+		   "AP configuration");
+	if (wps->wps->cred_cb)
+		wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
+}
+
+
 static int wps_process_ap_settings_r(struct wps_data *wps,
 				     struct wps_parse_attr *attr)
 {
@@ -2031,12 +2053,21 @@ static int wps_process_ap_settings_r(struct wps_data *wps,
 
 	wpa_printf(MSG_INFO, "WPS: Received old AP configuration from AP");
 
+#if 0
 	/*
 	 * TODO: Provide access to AP settings and allow changes before sending
 	 * out M8. For now, just copy the settings unchanged into M8.
 	 */
 
 	return 0;
+#else
+	/*
+	 * For now, use the AP PIN only to receive the current AP settings,
+	 * not to reconfigure the AP.
+	 */
+	wps_sta_cred_cb(wps);
+	return 1;
+#endif
 }
 
 
@@ -2404,25 +2435,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		wps->new_psk = NULL;
 	}
 
-	if (!wps->wps->ap) {
-		/*
-		 * Update credential to only include a single authentication
-		 * and encryption type in case the AP configuration includes
-		 * more than one option.
-		 */
-		if (wps->cred.auth_type & WPS_AUTH_WPA2PSK)
-			wps->cred.auth_type = WPS_AUTH_WPA2PSK;
-		else if (wps->cred.auth_type & WPS_AUTH_WPAPSK)
-			wps->cred.auth_type = WPS_AUTH_WPAPSK;
-		if (wps->cred.encr_type & WPS_ENCR_AES)
-			wps->cred.encr_type = WPS_ENCR_AES;
-		else if (wps->cred.encr_type & WPS_ENCR_TKIP)
-			wps->cred.encr_type = WPS_ENCR_TKIP;
-		wpa_printf(MSG_DEBUG, "WPS: Update local configuration based "
-			   "on the modified AP configuration");
-		if (wps->wps->cred_cb)
-			wps->wps->cred_cb(wps->wps->cb_ctx, &wps->cred);
-	}
+	if (!wps->wps->ap)
+		wps_sta_cred_cb(wps);
 
 	if (wps->new_psk) {
 		if (wps_cb_new_psk(wps->wps->registrar, wps->mac_addr_e,

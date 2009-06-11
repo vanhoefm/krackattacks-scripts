@@ -29,6 +29,14 @@ struct x509_name {
 	char *o; /* organizationName */
 	char *ou; /* organizationalUnitName */
 	char *email; /* emailAddress */
+
+	/* from alternative name extension */
+	char *alt_email; /* rfc822Name */
+	char *dns; /* dNSName */
+	char *uri; /* uniformResourceIdentifier */
+	u8 *ip; /* iPAddress */
+	size_t ip_len; /* IPv4: 4, IPv6: 16 */
+	struct asn1_oid rid; /* registeredID */
 };
 
 struct x509_certificate {
@@ -52,6 +60,8 @@ struct x509_certificate {
 #define X509_EXT_BASIC_CONSTRAINTS		(1 << 0)
 #define X509_EXT_PATH_LEN_CONSTRAINT		(1 << 1)
 #define X509_EXT_KEY_USAGE			(1 << 2)
+#define X509_EXT_SUBJECT_ALT_NAME		(1 << 3)
+#define X509_EXT_ISSUER_ALT_NAME		(1 << 4)
 
 	/* BasicConstraints */
 	int ca; /* cA */

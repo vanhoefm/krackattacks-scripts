@@ -34,6 +34,15 @@ static void x509_free_name(struct x509_name *name)
 	os_free(name->email);
 	name->cn = name->c = name->l = name->st = name->o = name->ou = NULL;
 	name->email = NULL;
+
+	os_free(name->alt_email);
+	os_free(name->dns);
+	os_free(name->uri);
+	os_free(name->ip);
+	name->alt_email = name->dns = name->uri = NULL;
+	name->ip = NULL;
+	name->ip_len = 0;
+	os_memset(&name->rid, 0, sizeof(name->rid));
 }
 
 
@@ -815,6 +824,213 @@ static int x509_parse_ext_basic_constraints(struct x509_certificate *cert,
 }
 
 
+static int x509_parse_alt_name_rfc8222(struct x509_name *name,
+				       const u8 *pos, size_t len)
+{
+	/* rfc822Name IA5String */
+	wpa_hexdump_ascii(MSG_MSGDUMP, "X509: altName - rfc822Name", pos, len);
+	os_free(name->alt_email);
+	name->alt_email = os_zalloc(len + 1);
+	if (name->alt_email == NULL)
+		return -1;
+	os_memcpy(name->alt_email, pos, len);
+	return 0;
+}
+
+
+static int x509_parse_alt_name_dns(struct x509_name *name,
+				   const u8 *pos, size_t len)
+{
+	/* dNSName IA5String */
+	wpa_hexdump_ascii(MSG_MSGDUMP, "X509: altName - dNSName", pos, len);
+	os_free(name->dns);
+	name->dns = os_zalloc(len + 1);
+	if (name->dns == NULL)
+		return -1;
+	os_memcpy(name->dns, pos, len);
+	return 0;
+}
+
+
+static int x509_parse_alt_name_uri(struct x509_name *name,
+				   const u8 *pos, size_t len)
+{
+	/* uniformResourceIdentifier IA5String */
+	wpa_hexdump_ascii(MSG_MSGDUMP,
+			  "X509: altName - uniformResourceIdentifier",
+			  pos, len);
+	os_free(name->uri);
+	name->uri = os_zalloc(len + 1);
+	if (name->uri == NULL)
+		return -1;
+	os_memcpy(name->uri, pos, len);
+	return 0;
+}
+
+
+static int x509_parse_alt_name_ip(struct x509_name *name,
+				       const u8 *pos, size_t len)
+{
+	/* iPAddress OCTET STRING */
+	wpa_hexdump(MSG_MSGDUMP, "X509: altName - iPAddress", pos, len);
+	os_free(name->ip);
+	name->ip = os_malloc(len);
+	if (name->ip == NULL)
+		return -1;
+	os_memcpy(name->ip, pos, len);
+	name->ip_len = len;
+	return 0;
+}
+
+
+static int x509_parse_alt_name_rid(struct x509_name *name,
+				   const u8 *pos, size_t len)
+{
+	char buf[80];
+
+	/* registeredID OBJECT IDENTIFIER */
+	if (asn1_parse_oid(pos, len, &name->rid) < 0)
+		return -1;
+
+	asn1_oid_to_str(&name->rid, buf, sizeof(buf));
+	wpa_printf(MSG_MSGDUMP, "X509: altName - registeredID: %s", buf);
+
+	return 0;
+}
+
+
+static int x509_parse_ext_alt_name(struct x509_name *name,
+				   const u8 *pos, size_t len)
+{
+	struct asn1_hdr hdr;
+	const u8 *p, *end;
+
+	/*
+	 * GeneralNames ::= SEQUENCE SIZE (1..MAX) OF GeneralName
+	 *
+	 * GeneralName ::= CHOICE {
+	 *     otherName                       [0]     OtherName,
+	 *     rfc822Name                      [1]     IA5String,
+	 *     dNSName                         [2]     IA5String,
+	 *     x400Address                     [3]     ORAddress,
+	 *     directoryName                   [4]     Name,
+	 *     ediPartyName                    [5]     EDIPartyName,
+	 *     uniformResourceIdentifier       [6]     IA5String,
+	 *     iPAddress                       [7]     OCTET STRING,
+	 *     registeredID                    [8]     OBJECT IDENTIFIER }
+	 *
+	 * OtherName ::= SEQUENCE {
+	 *     type-id    OBJECT IDENTIFIER,
+	 *     value      [0] EXPLICIT ANY DEFINED BY type-id }
+	 *
+	 * EDIPartyName ::= SEQUENCE {
+	 *     nameAssigner            [0]     DirectoryString OPTIONAL,
+	 *     partyName               [1]     DirectoryString }
+	 */
+
+	for (p = pos, end = pos + len; p < end; p = hdr.payload + hdr.length) {
+		int res;
+
+		if (asn1_get_next(p, end - p, &hdr) < 0) {
+			wpa_printf(MSG_DEBUG, "X509: Failed to parse "
+				   "SubjectAltName item");
+			return -1;
+		}
+
+		if (hdr.class != ASN1_CLASS_CONTEXT_SPECIFIC)
+			continue;
+
+		switch (hdr.tag) {
+		case 1:
+			res = x509_parse_alt_name_rfc8222(name, hdr.payload,
+							  hdr.length);
+			break;
+		case 2:
+			res = x509_parse_alt_name_dns(name, hdr.payload,
+						      hdr.length);
+			break;
+		case 6:
+			res = x509_parse_alt_name_uri(name, hdr.payload,
+						      hdr.length);
+			break;
+		case 7:
+			res = x509_parse_alt_name_ip(name, hdr.payload,
+						     hdr.length);
+			break;
+		case 8:
+			res = x509_parse_alt_name_rid(name, hdr.payload,
+						      hdr.length);
+			break;
+		case 0: /* TODO: otherName */
+		case 3: /* TODO: x500Address */
+		case 4: /* TODO: directoryName */
+		case 5: /* TODO: ediPartyName */
+		default:
+			res = 0;
+			break;
+		}
+		if (res < 0)
+			return res;
+	}
+
+	return 0;
+}
+
+
+static int x509_parse_ext_subject_alt_name(struct x509_certificate *cert,
+					   const u8 *pos, size_t len)
+{
+	struct asn1_hdr hdr;
+
+	/* SubjectAltName ::= GeneralNames */
+
+	if (asn1_get_next(pos, len, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG, "X509: Expected SEQUENCE in "
+			   "SubjectAltName; found %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "X509: SubjectAltName");
+	cert->extensions_present |= X509_EXT_SUBJECT_ALT_NAME;
+
+	if (hdr.length == 0)
+		return 0;
+
+	return x509_parse_ext_alt_name(&cert->subject, hdr.payload,
+				       hdr.length);
+}
+
+
+static int x509_parse_ext_issuer_alt_name(struct x509_certificate *cert,
+					  const u8 *pos, size_t len)
+{
+	struct asn1_hdr hdr;
+
+	/* IssuerAltName ::= GeneralNames */
+
+	if (asn1_get_next(pos, len, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG, "X509: Expected SEQUENCE in "
+			   "IssuerAltName; found %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "X509: IssuerAltName");
+	cert->extensions_present |= X509_EXT_ISSUER_ALT_NAME;
+
+	if (hdr.length == 0)
+		return 0;
+
+	return x509_parse_ext_alt_name(&cert->issuer, hdr.payload,
+				       hdr.length);
+}
+
+
 static int x509_parse_extension_data(struct x509_certificate *cert,
 				     struct asn1_oid *oid,
 				     const u8 *pos, size_t len)
@@ -824,7 +1040,6 @@ static int x509_parse_extension_data(struct x509_certificate *cert,
 
 	/* TODO: add other extensions required by RFC 3280, Ch 4.2:
 	 * certificate policies (section 4.2.1.5)
-	 * the subject alternative name (section 4.2.1.7)
 	 * name constraints (section 4.2.1.11)
 	 * policy constraints (section 4.2.1.12)
 	 * extended key usage (section 4.2.1.13)
@@ -833,6 +1048,10 @@ static int x509_parse_extension_data(struct x509_certificate *cert,
 	switch (oid->oid[3]) {
 	case 15: /* id-ce-keyUsage */
 		return x509_parse_ext_key_usage(cert, pos, len);
+	case 17: /* id-ce-subjectAltName */
+		return x509_parse_ext_subject_alt_name(cert, pos, len);
+	case 18: /* id-ce-issuerAltName */
+		return x509_parse_ext_issuer_alt_name(cert, pos, len);
 	case 19: /* id-ce-basicConstraints */
 		return x509_parse_ext_basic_constraints(cert, pos, len);
 	default:

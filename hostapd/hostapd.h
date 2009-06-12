@@ -29,6 +29,11 @@ struct upnp_wps_device_sm;
 struct full_dynamic_vlan;
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
+struct hostapd_probereq_cb {
+	void (*cb)(void *ctx, const u8 *sa, const u8 *ie, size_t ie_len);
+	void *ctx;
+};
+
 /**
  * struct hostapd_data - hostapd per-BSS data structure
  */
@@ -98,6 +103,9 @@ struct hostapd_data {
 	unsigned int ap_pin_failures;
 	struct upnp_wps_device_sm *wps_upnp;
 #endif /* CONFIG_WPS */
+
+	struct hostapd_probereq_cb *probereq_cb;
+	size_t num_probereq_cb;
 };
 
 
@@ -168,5 +176,10 @@ int handle_dump_state_iface(struct hostapd_iface *iface, void *ctx);
 
 int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
 					 void *ctx), void *ctx);
+
+int hostapd_register_probereq_cb(struct hostapd_data *hapd,
+				 void (*cb)(void *ctx, const u8 *sa,
+					    const u8 *ie, size_t ie_len),
+				 void *ctx);
 
 #endif /* HOSTAPD_H */

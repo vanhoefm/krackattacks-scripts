@@ -36,6 +36,9 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd);
 #endif /* CONFIG_WPS_UPNP */
 
+static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
+				     const u8 *ie, size_t ie_len);
+
 
 static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
 				  size_t psk_len)
@@ -676,6 +679,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_WPS_UPNP */
 
+	hostapd_register_probereq_cb(hapd, hostapd_wps_probe_req_rx, hapd);
+
 	hapd->wps = wps;
 
 	return 0;
@@ -783,9 +788,10 @@ error:
 #endif /* CONFIG_WPS_OOB */
 
 
-void hostapd_wps_probe_req_rx(struct hostapd_data *hapd, const u8 *addr,
-			      const u8 *ie, size_t ie_len)
+static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
+				     const u8 *ie, size_t ie_len)
 {
+	struct hostapd_data *hapd = ctx;
 	struct wpabuf *wps_ie;
 	const u8 *end, *pos, *wps;
 

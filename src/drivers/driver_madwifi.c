@@ -71,7 +71,6 @@
 #include "l2_packet/l2_packet.h"
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/config.h"
-#include "../../hostapd/wps_hostapd.h"
 #include "../../hostapd/sta_flags.h"
 
 
@@ -778,7 +777,7 @@ static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 	ie = mgmt->u.probe_req.variable;
 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
 
-	hostapd_wps_probe_req_rx(drv->hapd, mgmt->sa, ie, ie_len);
+	hostapd_probe_req_rx(drv->hapd, mgmt->sa, ie, ie_len);
 }
 #endif /* IEEE80211_IOCTL_FILTERFRAME */
 #endif /* CONFIG_WPS */

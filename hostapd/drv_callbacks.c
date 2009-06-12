@@ -25,6 +25,7 @@
 #include "wpa.h"
 #include "iapp.h"
 #include "wme.h"
+#include "wps_hostapd.h"
 
 
 struct prune_data {
@@ -431,3 +432,10 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	}
 }
 #endif /* CONFIG_AP */
+
+
+void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
+			 const u8 *ie, size_t ie_len)
+{
+	hostapd_wps_probe_req_rx(hapd, sa, ie, ie_len);
+}

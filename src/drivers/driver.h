@@ -1766,5 +1766,7 @@ void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr);
 struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 					  const u8 *addr);
+void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
+			  const u8 *ie, size_t ie_len);
 
 #endif /* DRIVER_H */

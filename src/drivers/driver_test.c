@@ -40,7 +40,6 @@
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/wpa.h"
 #include "../../hostapd/hw_features.h"
-#include "../../hostapd/wps_hostapd.h"
 
 
 struct test_client_socket {
@@ -415,7 +414,7 @@ static void test_driver_scan(struct test_driver_data *drv,
 			   MAC2STR(sa));
 		wpa_hexdump(MSG_MSGDUMP, "test_driver: scan IEs", ie, ielen);
 
-		hostapd_wps_probe_req_rx(drv->hapd, sa, ie, ielen);
+		hostapd_probe_req_rx(drv->hapd, sa, ie, ielen);
 	}
 
 	for (bss = drv->bss; bss; bss = bss->next) {

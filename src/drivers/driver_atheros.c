@@ -685,7 +685,7 @@ static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 	ie = mgmt->u.probe_req.variable;
 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
 
-	hostapd_wps_probe_req_rx(drv->hapd, mgmt->sa, ie, ie_len);
+	hostapd_probe_req_rx(drv->hapd, mgmt->sa, ie, ie_len);
 }
 #endif /* CONFIG_WPS */
 

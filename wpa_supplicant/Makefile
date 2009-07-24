@@ -35,7 +35,6 @@ mkconfig:
 	fi
 	echo CONFIG_DRIVER_HOSTAP=y >> .config
 	echo CONFIG_DRIVER_WEXT=y >> .config
-	echo CONFIG_WIRELESS_EXTENSION=y >> .config
 
 install: all
 	mkdir -p $(DESTDIR)$(BINDIR)

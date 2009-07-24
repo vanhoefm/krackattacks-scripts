@@ -397,10 +397,8 @@ CONFIG_PCSC=y
 
 Following options can be added to .config to select which driver
 interfaces are included. Hermes driver interface needs to be downloaded
-from Agere (see above). CONFIG_WIRELESS_EXTENSION will be used
-automatically if any of the selected drivers need it.
+from Agere (see above).
 
-CONFIG_WIRELESS_EXTENSION=y
 CONFIG_DRIVER_HOSTAP=y
 CONFIG_DRIVER_HERMES=y
 CONFIG_DRIVER_MADWIFI=y
@@ -426,7 +424,6 @@ CONFIG_DRIVER_BROADCOM=y
 CONFIG_DRIVER_IPW=y
 CONFIG_DRIVER_BSD=y
 CONFIG_DRIVER_NDIS=y
-CONFIG_WIRELESS_EXTENSION=y
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_MD5=y
 CONFIG_EAP_MSCHAPV2=y

@@ -1253,6 +1253,16 @@ eap_ikev2.so: ../src/eap_peer/eap_ikev2.c ../src/eap_peer/ikev2.c ../src/eap_com
 	$(CC) -o $@ $(CFLAGS) -shared -rdynamic -fPIC $< \
 		-D$(*F:eap_%=eap_peer_%)_register=eap_peer_method_dynamic_init
 
+Q=@
+E=echo
+ifeq ($(V), 1)
+Q=
+E=true
+endif
+
+%.o: %.c
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
+	@$(E) "  CC " $<
 
 wpa_supplicant.exe: wpa_supplicant
 	mv -f $< $@

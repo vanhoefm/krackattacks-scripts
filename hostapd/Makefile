@@ -615,6 +615,17 @@ ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)
 
+Q=@
+E=echo
+ifeq ($(V), 1)
+Q=
+E=true
+endif
+
+%.o: %.c
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
+	@$(E) "  CC " $<
+
 verify_config:
 	@if [ ! -r .config ]; then \
 		echo 'Building hostapd requires a configuration file'; \

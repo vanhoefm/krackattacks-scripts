@@ -469,6 +469,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
+	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
+
 	return 0;
 }
 

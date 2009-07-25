@@ -45,14 +45,14 @@
 
 #ifdef HOSTAPD
 #include "ieee802_11_common.h"
+#endif /* HOSTAPD */
 
 #ifdef CONFIG_LIBNL20
 /* libnl 2.0 compatibility code */
+#define nl_handle nl_sock
 #define nl_handle_alloc_cb nl_socket_alloc_cb
 #define nl_handle_destroy nl_socket_free
 #endif /* CONFIG_LIBNL20 */
-
-#endif /* HOSTAPD */
 
 
 #ifndef IFF_LOWER_UP

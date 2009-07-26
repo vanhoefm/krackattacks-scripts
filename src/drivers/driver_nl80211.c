@@ -1680,7 +1680,7 @@ static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
 		}
 	}
 
-	if (seq)
+	if (seq && seq_len)
 		NLA_PUT(msg, NL80211_ATTR_KEY_SEQ, seq_len, seq);
 
 	if (addr && os_memcmp(addr, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) != 0)

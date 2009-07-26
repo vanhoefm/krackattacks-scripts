@@ -2197,7 +2197,7 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct ieee80211_mgmt *mgmt;
-	int do_not_encrypt = 0;
+	int encrypt = 1;
 	u16 fc;
 
 	mgmt = (struct ieee80211_mgmt *) data;
@@ -2213,13 +2213,11 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 		 */
 		u16 auth_alg = le_to_host16(mgmt->u.auth.auth_alg);
 		u16 auth_trans = le_to_host16(mgmt->u.auth.auth_transaction);
-		if (auth_alg == WLAN_AUTH_OPEN ||
-		    (auth_alg == WLAN_AUTH_SHARED_KEY && auth_trans != 3))
-			do_not_encrypt = 1;
+		if (auth_alg != WLAN_AUTH_SHARED_KEY || auth_trans != 3)
+			encrypt = 0;
 	}
 
-	return wpa_driver_nl80211_send_frame(drv, data, data_len,
-					     !do_not_encrypt);
+	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt);
 }
 
 

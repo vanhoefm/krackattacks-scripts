@@ -42,6 +42,7 @@ install: all
 	$(MAKE) -C ../src install
 
 SHA1OBJS = ../src/crypto/sha1.o
+DESOBJS = # none needed when not internal
 
 
 OBJS = config.o
@@ -51,13 +52,11 @@ OBJS += ../src/utils/wpabuf.o
 OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
 OBJS += ../src/crypto/md4.o
-OBJS += ../src/crypto/des.o
 OBJS_p = wpa_passphrase.o
 OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o
 OBJS_p += ../src/crypto/md5.o
 OBJS_p += ../src/crypto/md4.o
-OBJS_p += ../src/crypto/des.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 
 -include .config
@@ -919,7 +918,7 @@ ifdef CONFIG_INTERNAL_MD4
 CFLAGS += -DINTERNAL_MD4
 endif
 ifdef CONFIG_INTERNAL_DES
-CFLAGS += -DINTERNAL_DES
+DESOBJS += ../src/crypto/des-internal.o
 endif
 
 ifdef CONFIG_IEEE80211R
@@ -1117,9 +1116,9 @@ CFLAGS += -DCONFIG_DELAYED_MIC_ERROR_REPORT
 endif
 
 OBJS += ../src/drivers/scan_helpers.o
-OBJS += $(SHA1OBJS)
+OBJS += $(SHA1OBJS) $(DESOBJS)
 
-OBJS_p += $(SHA1OBJS)
+OBJS_p += $(SHA1OBJS) $(DESOBJS)
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o
 OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.o
@@ -1213,7 +1212,7 @@ test_wpa: $(OBJS_wpa) $(OBJS_h)
 
 OBJSa=../src/tls/asn1_test.o ../src/tls/asn1.o ../src/tls/x509v3.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o ../src/crypto/md5.o $(SHA1OBSJ) \
-	../src/crypto/rc4.o ../src/crypto/des.o ../src/crypto/aes_wrap.o \
+	../src/crypto/rc4.o $(DESOBJS) ../src/crypto/aes_wrap.o \
 	../src/crypto/aes.o ../src/tls/bignum.o ../src/tls/rsa.o
 asn1_test: $(OBJSa)
 	$(LDO) $(LDFLAGS) -o asn1_test $(OBJSa)
@@ -1222,7 +1221,7 @@ OBJSx=tests/test_x509v3.o ../src/tls/asn1.o ../src/tls/x509v3.o \
 	../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o \
 	../src/crypto/md5.o $(SHA1OBJS) ../src/crypto/aes.o \
-	../src/crypto/rc4.o ../src/crypto/des.o ../src/crypto/aes_wrap.o \
+	../src/crypto/rc4.o $(DESOBJS) ../src/crypto/aes_wrap.o \
 	../src/crypto/sha256.o \
 	../src/tls/bignum.o ../src/tls/rsa.o
 test_x509v3: $(OBJSx)

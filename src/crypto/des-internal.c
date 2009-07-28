@@ -19,9 +19,6 @@
 #include "common.h"
 #include "crypto.h"
 
-
-#ifdef INTERNAL_DES
-
 /*
  * This implementation is based on a DES implementation included in
  * LibTomCrypt. The version here is modified to fit in wpa_supplicant/hostapd
@@ -475,5 +472,3 @@ void des3_decrypt(const u8 *crypt, const struct des3_key_s *key, u8 *plain)
 	WPA_PUT_BE32(plain, work[0]);
 	WPA_PUT_BE32(plain + 4, work[1]);
 }
-
-#endif /* INTERNAL_DES */

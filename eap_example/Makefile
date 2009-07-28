@@ -34,12 +34,16 @@ OBJS_both += ../src/utils/wpabuf.o
 OBJS_both += ../src/crypto/md5.o
 OBJS_both += ../src/crypto/rc4.o
 OBJS_both += ../src/crypto/md4.o
-OBJS_both += ../src/crypto/sha1.o ../src/crypto/sha1-internal.o
-OBJS_both += ../src/crypto/des.o
+OBJS_both += ../src/crypto/sha1.o
 OBJS_both += ../src/crypto/aes_wrap.o
 OBJS_both += ../src/crypto/aes.o
 OBJS_both += ../src/crypto/ms_funcs.o
 OBJS_both += ../src/crypto/sha256.o
+
+ifeq ($(CONFIG_TLS), internal)
+OBJS_both += ../src/crypto/sha1-internal.o
+OBJS_both += ../src/crypto/des-internal.o
+endif
 
 
 OBJS_both += ../src/eap_common/eap_peap_common.o
@@ -124,7 +128,6 @@ CFLAGS += -DINTERNAL_AES
 CFLAGS += -DINTERNAL_SHA256
 CFLAGS += -DINTERNAL_MD5
 CFLAGS += -DINTERNAL_MD4
-CFLAGS += -DINTERNAL_DES
 ifdef CONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
 else

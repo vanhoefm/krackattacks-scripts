@@ -90,7 +90,6 @@ OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
 OBJS += ../src/crypto/md4.o
 OBJS += ../src/crypto/sha1.o
-OBJS += ../src/crypto/des.o
 OBJS += ../src/crypto/aes_wrap.o
 OBJS += ../src/crypto/aes.o
 
@@ -547,7 +546,7 @@ ifdef CONFIG_INTERNAL_MD4
 CFLAGS += -DINTERNAL_MD4
 endif
 ifdef CONFIG_INTERNAL_DES
-CFLAGS += -DINTERNAL_DES
+OBJS += ../src/crypto/des-internal.o
 endif
 
 ifdef NEED_SHA256

@@ -43,6 +43,7 @@ install: all
 
 SHA1OBJS = ../src/crypto/sha1.o
 DESOBJS = # none needed when not internal
+AESOBJS = ../src/crypto/aes_wrap.o
 
 
 OBJS = config.o
@@ -775,7 +776,7 @@ OBJS += ../src/tls/tlsv1_cred.o ../src/tls/tlsv1_client.o
 OBJS += ../src/tls/tlsv1_client_write.o ../src/tls/tlsv1_client_read.o
 OBJS += ../src/tls/asn1.o ../src/tls/rsa.o ../src/tls/x509v3.o
 OBJS_p += ../src/tls/asn1.o ../src/tls/rsa.o
-OBJS_p += ../src/crypto/rc4.o ../src/crypto/aes_wrap.o ../src/crypto/aes.o
+OBJS_p += ../src/crypto/rc4.o
 NEED_BASE64=y
 NEED_TLS_PRF=y
 CFLAGS += -DCONFIG_TLS_INTERNAL
@@ -903,7 +904,7 @@ CONFIG_INTERNAL_MD5=y
 endif
 
 ifdef CONFIG_INTERNAL_AES
-CFLAGS += -DINTERNAL_AES
+AESOBJS += ../src/crypto/aes-internal.o
 endif
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o
@@ -1065,7 +1066,7 @@ CFLAGS += -DCONFIG_NO_AES_ENCRYPT_BLOCK
 endif
 
 ifdef NEED_AES
-OBJS += ../src/crypto/aes_wrap.o ../src/crypto/aes.o
+OBJS += $(AESOBJS)
 endif
 
 ifdef NEED_DH_GROUPS
@@ -1118,7 +1119,7 @@ endif
 OBJS += ../src/drivers/scan_helpers.o
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
-OBJS_p += $(SHA1OBJS) $(DESOBJS)
+OBJS_p += $(SHA1OBJS) $(DESOBJS) $(AESOBJS)
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o
 OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.o
@@ -1212,16 +1213,15 @@ test_wpa: $(OBJS_wpa) $(OBJS_h)
 
 OBJSa=../src/tls/asn1_test.o ../src/tls/asn1.o ../src/tls/x509v3.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o ../src/crypto/md5.o $(SHA1OBSJ) \
-	../src/crypto/rc4.o $(DESOBJS) ../src/crypto/aes_wrap.o \
-	../src/crypto/aes.o ../src/tls/bignum.o ../src/tls/rsa.o
+	../src/crypto/rc4.o $(DESOBJS) $(AESOBJS) ../src/tls/bignum.o ../src/tls/rsa.o
 asn1_test: $(OBJSa)
 	$(LDO) $(LDFLAGS) -o asn1_test $(OBJSa)
 
 OBJSx=tests/test_x509v3.o ../src/tls/asn1.o ../src/tls/x509v3.o \
 	../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o \
-	../src/crypto/md5.o $(SHA1OBJS) ../src/crypto/aes.o \
-	../src/crypto/rc4.o $(DESOBJS) ../src/crypto/aes_wrap.o \
+	../src/crypto/md5.o $(SHA1OBJS) $(AESOBJS) \
+	../src/crypto/rc4.o $(DESOBJS) \
 	../src/crypto/sha256.o \
 	../src/tls/bignum.o ../src/tls/rsa.o
 test_x509v3: $(OBJSx)
@@ -1312,15 +1312,15 @@ test-sha256: $(TEST_SHA256_OBJS)
 	./test-sha256
 	rm test-sha256
 
-TEST_AES_OBJS = ../src/crypto/aes_wrap.o ../src/crypto/aes.o tests/test_aes.o
+TEST_AES_OBJS = tests/test_aes.o $(AESOBJS)
 test-aes: $(TEST_AES_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_AES_OBJS) $(LIBS)
 	./test-aes
 	rm test-aes
 
 TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) ../src/crypto/md5.o \
-	../src/crypto/aes_wrap.o ../src/utils/common.o ../src/utils/os_unix.o \
-	../src/utils/wpa_debug.o ../src/crypto/aes.o \
+	../src/utils/common.o ../src/utils/os_unix.o \
+	../src/utils/wpa_debug.o $(AESOBJS) \
 	tests/test_eap_sim_common.o
 test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_AES_OBJS) $(LIBS)

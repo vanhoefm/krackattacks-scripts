@@ -24,9 +24,6 @@
 #include "includes.h"
 
 #include "common.h"
-
-#ifdef INTERNAL_AES
-
 #include "crypto.h"
 
 /*
@@ -1123,5 +1120,3 @@ void aes_decrypt_deinit(void *ctx)
 	os_free(ctx);
 }
 #endif /* CONFIG_NO_AES_DECRYPT */
-
-#endif /* INTERNAL_AES */

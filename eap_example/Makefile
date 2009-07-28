@@ -36,13 +36,13 @@ OBJS_both += ../src/crypto/rc4.o
 OBJS_both += ../src/crypto/md4.o
 OBJS_both += ../src/crypto/sha1.o
 OBJS_both += ../src/crypto/aes_wrap.o
-OBJS_both += ../src/crypto/aes.o
 OBJS_both += ../src/crypto/ms_funcs.o
 OBJS_both += ../src/crypto/sha256.o
 
 ifeq ($(CONFIG_TLS), internal)
 OBJS_both += ../src/crypto/sha1-internal.o
 OBJS_both += ../src/crypto/des-internal.o
+OBJS_both += ../src/crypto/aes-internal.o
 endif
 
 
@@ -124,7 +124,6 @@ CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
 CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 CFLAGS += -DCONFIG_INTERNAL_X509
-CFLAGS += -DINTERNAL_AES
 CFLAGS += -DINTERNAL_SHA256
 CFLAGS += -DINTERNAL_MD5
 CFLAGS += -DINTERNAL_MD4

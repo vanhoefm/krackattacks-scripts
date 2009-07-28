@@ -44,7 +44,7 @@ OBJS =	hostapd.o main.o ieee802_1x.o eapol_sm.o \
 	preauth.o pmksa_cache.o \
 	drv_callbacks.o \
 	tkip_countermeasures.o \
-	mlme.o wpa_auth_ie.o
+	mlme.o wpa_auth_ie.o $(AESOBJS)
 
 OBJS += ../src/drivers/drivers.o
 OBJS += ../src/drivers/scan_helpers.o
@@ -90,10 +90,8 @@ OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
 OBJS += ../src/crypto/md4.o
 OBJS += ../src/crypto/sha1.o
-OBJS += ../src/crypto/aes_wrap.o
-OBJS += ../src/crypto/aes.o
 
-HOBJS=../src/hlr_auc_gw/hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/hlr_auc_gw/milenage.o ../src/crypto/aes_wrap.o ../src/crypto/aes.o
+AESOBJS = ../src/crypto/aes_wrap.o
 
 CFLAGS += -DCONFIG_CTRL_IFACE -DCONFIG_CTRL_IFACE_UNIX
 
@@ -430,7 +428,7 @@ OBJS += ../src/tls/tlsv1_cred.o ../src/tls/tlsv1_server.o
 OBJS += ../src/tls/tlsv1_server_write.o ../src/tls/tlsv1_server_read.o
 OBJS += ../src/tls/asn1.o ../src/tls/x509v3.o
 OBJS_p += ../src/tls/asn1.o
-OBJS_p += ../src/crypto/rc4.o ../src/crypto/aes_wrap.o ../src/crypto/aes.o
+OBJS_p += ../src/crypto/rc4.o $(AESOBJS)
 NEED_BASE64=y
 CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
@@ -531,7 +529,7 @@ CONFIG_INTERNAL_SHA256=y
 endif
 
 ifdef CONFIG_INTERNAL_AES
-CFLAGS += -DINTERNAL_AES
+AESOBJS += ../src/crypto/aes-internal.o
 endif
 ifdef CONFIG_INTERNAL_SHA1
 OBJS += ../src/crypto/sha1-internal.o
@@ -653,6 +651,8 @@ ifdef TLS_FUNCS
 LIBS_n += -lcrypto
 endif
 
+HOBJS=../src/hlr_auc_gw/hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/hlr_auc_gw/milenage.o $(AESOBJS)
+
 nt_password_hash: $(NOBJS)
 	$(CC) -o nt_password_hash $(NOBJS) $(LIBS_n)
 
@@ -685,10 +685,10 @@ clean-docs:
 	rm -rf doc/latex doc/html
 	rm -f doc/hostapd.{eps,png} hostapd-devel.pdf
 
-TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes_wrap.c ../src/crypto/aes.c ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
+TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes_wrap.c ../src/crypto/aes-internal.c ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
 test-milenage: $(TEST_SRC_MILENAGE)
 	$(CC) -o test-milenage -Wall -Werror $(TEST_SRC_MILENAGE) \
-		-DTEST_MAIN_MILENAGE -I. -DINTERNAL_AES \
+		-DTEST_MAIN_MILENAGE -I. \
 		-I../src/crypto -I../src/utils
 	./test-milenage
 	rm test-milenage

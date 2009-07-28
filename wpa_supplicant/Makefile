@@ -44,6 +44,7 @@ install: all
 SHA1OBJS = ../src/crypto/sha1.o
 DESOBJS = # none needed when not internal
 AESOBJS = ../src/crypto/aes_wrap.o
+SHA256OBJS = # none by default
 
 
 OBJS = config.o
@@ -909,9 +910,6 @@ endif
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o
 endif
-ifdef CONFIG_INTERNAL_SHA256
-CFLAGS += -DINTERNAL_SHA256
-endif
 ifdef CONFIG_INTERNAL_MD5
 CFLAGS += -DINTERNAL_MD5
 endif
@@ -932,9 +930,13 @@ NEED_SHA256=y
 endif
 
 ifdef NEED_SHA256
-OBJS += ../src/crypto/sha256.o
+SHA256OBJS += ../src/crypto/sha256.o
 CFLAGS += -DNEED_SHA256
+ifdef CONFIG_INTERNAL_SHA256
+SHA256OBJS += ../src/crypto/sha256-internal.o
 endif
+endif
+OBJS += $(SHA256OBJS)
 
 ifdef CONFIG_WIRELESS_EXTENSION
 OBJS_d += ../src/drivers/driver_wext.o
@@ -1221,8 +1223,7 @@ OBJSx=tests/test_x509v3.o ../src/tls/asn1.o ../src/tls/x509v3.o \
 	../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o \
 	../src/crypto/md5.o $(SHA1OBJS) $(AESOBJS) \
-	../src/crypto/rc4.o $(DESOBJS) \
-	../src/crypto/sha256.o \
+	../src/crypto/rc4.o $(DESOBJS) $(SHA256OBJS) \
 	../src/tls/bignum.o ../src/tls/rsa.o
 test_x509v3: $(OBJSx)
 	$(LDO) $(LDFLAGS) -o test_x509v3 $(OBJSx)
@@ -1306,7 +1307,7 @@ test-sha1: $(TEST_SHA1_OBJS)
 	./test-sha1
 	rm test-sha1
 
-TEST_SHA256_OBJS = ../src/crypto/sha256.o ../src/crypto/md5.o tests/test_sha256.o ../src/utils/os_unix.o ../src/crypto/crypto_openssl.o
+TEST_SHA256_OBJS = $(SHA256OBJS) ../src/crypto/md5.o tests/test_sha256.o ../src/utils/os_unix.o ../src/crypto/crypto_openssl.o
 test-sha256: $(TEST_SHA256_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_SHA256_OBJS) $(LIBS)
 	./test-sha256

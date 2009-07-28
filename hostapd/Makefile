@@ -534,9 +534,6 @@ endif
 ifdef CONFIG_INTERNAL_SHA1
 OBJS += ../src/crypto/sha1-internal.o
 endif
-ifdef CONFIG_INTERNAL_SHA256
-CFLAGS += -DINTERNAL_SHA256
-endif
 ifdef CONFIG_INTERNAL_MD5
 CFLAGS += -DINTERNAL_MD5
 endif
@@ -549,6 +546,9 @@ endif
 
 ifdef NEED_SHA256
 OBJS += ../src/crypto/sha256.o
+ifdef CONFIG_INTERNAL_SHA256
+OBJS += ../src/crypto/sha256-internal.o
+endif
 endif
 
 ifdef NEED_DH_GROUPS

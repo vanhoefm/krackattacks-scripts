@@ -37,13 +37,13 @@ OBJS_both += ../src/crypto/md4.o
 OBJS_both += ../src/crypto/sha1.o
 OBJS_both += ../src/crypto/aes_wrap.o
 OBJS_both += ../src/crypto/ms_funcs.o
-OBJS_both += ../src/crypto/sha256.o
 
 ifeq ($(CONFIG_TLS), internal)
 OBJS_both += ../src/crypto/sha1-internal.o
 OBJS_both += ../src/crypto/des-internal.o
 OBJS_both += ../src/crypto/aes-internal.o
 endif
+SHA256OBJS = ../src/crypto/sha256.o
 
 
 OBJS_both += ../src/eap_common/eap_peap_common.o
@@ -103,7 +103,7 @@ CFLAGS += -DEAP_TLS_OPENSSL
 OBJS_both += ../src/crypto/tls_openssl.o
 OBJS_both += ../src/crypto/crypto_openssl.o
 LIBS += -lssl -lcrypto
-CFLAGS += -DINTERNAL_SHA256
+CONFIG_INTERNAL_SHA256=y
 endif
 
 ifeq ($(CONFIG_TLS), internal)
@@ -124,7 +124,7 @@ CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
 CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 CFLAGS += -DCONFIG_INTERNAL_X509
-CFLAGS += -DINTERNAL_SHA256
+CONFIG_INTERNAL_SHA256=y
 CFLAGS += -DINTERNAL_MD5
 CFLAGS += -DINTERNAL_MD4
 ifdef CONFIG_INTERNAL_LIBTOMMATH
@@ -134,6 +134,12 @@ LIBS += -ltommath
 endif
 endif
 
+
+ifdef CONFIG_INTERNAL_SHA256
+SHA256OBJS += ../src/crypto/sha256-internal.o
+endif
+
+OBJS_both += $(SHA256OBJS)
 
 
 # Optional components to add EAP server support

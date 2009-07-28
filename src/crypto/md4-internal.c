@@ -17,9 +17,6 @@
 #include "common.h"
 #include "crypto.h"
 
-
-#ifdef INTERNAL_MD4
-
 #define	MD4_BLOCK_LENGTH		64
 #define	MD4_DIGEST_LENGTH		16
 
@@ -278,5 +275,3 @@ MD4Transform(u32 state[4], const u8 block[MD4_BLOCK_LENGTH])
 	state[3] += d;
 }
 /* ===== end - public domain MD4 implementation ===== */
-
-#endif /* INTERNAL_MD4 */

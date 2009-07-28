@@ -88,7 +88,6 @@ endif
 
 OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
-OBJS += ../src/crypto/md4.o
 OBJS += ../src/crypto/sha1.o
 
 AESOBJS = ../src/crypto/aes_wrap.o
@@ -538,7 +537,7 @@ ifdef CONFIG_INTERNAL_MD5
 CFLAGS += -DINTERNAL_MD5
 endif
 ifdef CONFIG_INTERNAL_MD4
-CFLAGS += -DINTERNAL_MD4
+OBJS += ../src/crypto/md4-internal.o
 endif
 ifdef CONFIG_INTERNAL_DES
 OBJS += ../src/crypto/des-internal.o

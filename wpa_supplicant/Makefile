@@ -45,6 +45,7 @@ SHA1OBJS = ../src/crypto/sha1.o
 DESOBJS = # none needed when not internal
 AESOBJS = ../src/crypto/aes_wrap.o
 SHA256OBJS = # none by default
+MD4OBJS = # none by default
 
 
 OBJS = config.o
@@ -53,12 +54,10 @@ OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o
 OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
-OBJS += ../src/crypto/md4.o
 OBJS_p = wpa_passphrase.o
 OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o
 OBJS_p += ../src/crypto/md5.o
-OBJS_p += ../src/crypto/md4.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 
 -include .config
@@ -914,8 +913,11 @@ ifdef CONFIG_INTERNAL_MD5
 CFLAGS += -DINTERNAL_MD5
 endif
 ifdef CONFIG_INTERNAL_MD4
-CFLAGS += -DINTERNAL_MD4
+MD4OBJS += ../src/crypto/md4-internal.o
 endif
+OBJS += $(MD4OBJS)
+OBJS_p += $(MD4OBJS)
+
 ifdef CONFIG_INTERNAL_DES
 DESOBJS += ../src/crypto/des-internal.o
 endif
@@ -1328,7 +1330,7 @@ test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
 	./test-eap_sim_common
 	rm test-eap_sim_common
 
-TEST_MD4_OBJS = ../src/crypto/md4.o tests/test_md4.o #../src/crypto/crypto_openssl.o
+TEST_MD4_OBJS = ../src/crypto/md4-internal.o tests/test_md4.o #../src/crypto/crypto_openssl.o
 test-md4: $(TEST_MD4_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_MD4_OBJS) $(LIBS)
 	./test-md4

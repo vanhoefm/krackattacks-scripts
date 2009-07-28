@@ -33,7 +33,7 @@ OBJS_both += ../src/utils/base64.o
 OBJS_both += ../src/utils/wpabuf.o
 OBJS_both += ../src/crypto/md5.o
 OBJS_both += ../src/crypto/rc4.o
-OBJS_both += ../src/crypto/md4.o
+OBJS_both += ../src/crypto/md4-internal.o
 OBJS_both += ../src/crypto/sha1.o
 OBJS_both += ../src/crypto/aes_wrap.o
 OBJS_both += ../src/crypto/ms_funcs.o
@@ -126,7 +126,6 @@ CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 CFLAGS += -DCONFIG_INTERNAL_X509
 CONFIG_INTERNAL_SHA256=y
 CFLAGS += -DINTERNAL_MD5
-CFLAGS += -DINTERNAL_MD4
 ifdef CONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
 else

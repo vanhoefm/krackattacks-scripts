@@ -311,10 +311,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\crypto\md4.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\crypto\md5.c"
 				>
 			</File>

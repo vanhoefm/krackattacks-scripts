@@ -46,18 +46,16 @@ DESOBJS = # none needed when not internal
 AESOBJS = ../src/crypto/aes_wrap.o
 SHA256OBJS = # none by default
 MD4OBJS = # none by default
-
+MD5OBJS = ../src/crypto/md5.o
 
 OBJS = config.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o
-OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
 OBJS_p = wpa_passphrase.o
 OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o
-OBJS_p += ../src/crypto/md5.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 
 -include .config
@@ -910,13 +908,13 @@ ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o
 endif
 ifdef CONFIG_INTERNAL_MD5
-CFLAGS += -DINTERNAL_MD5
+MD5OBJS += ../src/crypto/md5-internal.o
 endif
 ifdef CONFIG_INTERNAL_MD4
 MD4OBJS += ../src/crypto/md4-internal.o
 endif
-OBJS += $(MD4OBJS)
-OBJS_p += $(MD4OBJS)
+OBJS += $(MD4OBJS) $(MD5OBJS)
+OBJS_p += $(MD4OBJS) $(MD5OBJS)
 
 ifdef CONFIG_INTERNAL_DES
 DESOBJS += ../src/crypto/des-internal.o
@@ -1151,7 +1149,7 @@ OBJS_priv += ../src/utils/wpabuf.o
 OBJS_priv += wpa_priv.o
 ifdef CONFIG_DRIVER_TEST
 OBJS_priv += $(SHA1OBJS)
-OBJS_priv += ../src/crypto/md5.o
+OBJS_priv += $(MD5OBJS)
 ifeq ($(CONFIG_TLS), openssl)
 OBJS_priv += ../src/crypto/crypto_openssl.o
 endif
@@ -1216,7 +1214,7 @@ test_wpa: $(OBJS_wpa) $(OBJS_h)
 	$(LDO) $(LDFLAGS) -o test_wpa $(OBJS_wpa) $(LIBS)
 
 OBJSa=../src/tls/asn1_test.o ../src/tls/asn1.o ../src/tls/x509v3.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
-	../src/crypto/crypto_$(CONFIG_CRYPTO).o ../src/crypto/md5.o $(SHA1OBSJ) \
+	../src/crypto/crypto_$(CONFIG_CRYPTO).o $(MD5OBJS) $(SHA1OBSJ) \
 	../src/crypto/rc4.o $(DESOBJS) $(AESOBJS) ../src/tls/bignum.o ../src/tls/rsa.o
 asn1_test: $(OBJSa)
 	$(LDO) $(LDFLAGS) -o asn1_test $(OBJSa)
@@ -1224,7 +1222,7 @@ asn1_test: $(OBJSa)
 OBJSx=tests/test_x509v3.o ../src/tls/asn1.o ../src/tls/x509v3.o \
 	../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
 	../src/crypto/crypto_$(CONFIG_CRYPTO).o \
-	../src/crypto/md5.o $(SHA1OBJS) $(AESOBJS) \
+	$(MD5OBJS) $(SHA1OBJS) $(AESOBJS) \
 	../src/crypto/rc4.o $(DESOBJS) $(SHA256OBJS) \
 	../src/tls/bignum.o ../src/tls/rsa.o
 test_x509v3: $(OBJSx)
@@ -1296,20 +1294,20 @@ wpa_gui-qt4/Makefile:
 wpa_gui-qt4: wpa_gui-qt4/Makefile
 	$(MAKE) -C wpa_gui-qt4
 
-TEST_MS_FUNCS_OBJS = ../src/crypto/crypto_openssl.o $(SHA1OBJS) ../src/crypto/md5.o \
+TEST_MS_FUNCS_OBJS = ../src/crypto/crypto_openssl.o $(SHA1OBJS) $(MD5OBJS) \
 	../src/utils/os_unix.o ../src/crypto/rc4.o tests/test_ms_funcs.o
 test-ms_funcs: $(TEST_MS_FUNCS_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_MS_FUNCS_OBJS) $(LIBS) -lcrypto
 	./test-ms_funcs
 	rm test-ms_funcs
 
-TEST_SHA1_OBJS = $(SHA1OBJS) ../src/crypto/md5.o tests/test_sha1.o #../src/crypto/crypto_openssl.o
+TEST_SHA1_OBJS = $(SHA1OBJS) $(MD5OBJS) tests/test_sha1.o #../src/crypto/crypto_openssl.o
 test-sha1: $(TEST_SHA1_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_SHA1_OBJS) $(LIBS)
 	./test-sha1
 	rm test-sha1
 
-TEST_SHA256_OBJS = $(SHA256OBJS) ../src/crypto/md5.o tests/test_sha256.o ../src/utils/os_unix.o ../src/crypto/crypto_openssl.o
+TEST_SHA256_OBJS = $(SHA256OBJS) $(MD5OBJS) tests/test_sha256.o ../src/utils/os_unix.o ../src/crypto/crypto_openssl.o
 test-sha256: $(TEST_SHA256_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_SHA256_OBJS) $(LIBS)
 	./test-sha256
@@ -1321,7 +1319,7 @@ test-aes: $(TEST_AES_OBJS)
 	./test-aes
 	rm test-aes
 
-TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) ../src/crypto/md5.o \
+TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) $(MD5OBJS) \
 	../src/utils/common.o ../src/utils/os_unix.o \
 	../src/utils/wpa_debug.o $(AESOBJS) \
 	tests/test_eap_sim_common.o
@@ -1336,7 +1334,7 @@ test-md4: $(TEST_MD4_OBJS)
 	./test-md4
 	rm test-md4
 
-TEST_MD5_OBJS = ../src/crypto/md5.o tests/test_md5.o #../src/crypto/crypto_openssl.o
+TEST_MD5_OBJS = $(MD5OBJS) tests/test_md5.o #../src/crypto/crypto_openssl.o
 test-md5: $(TEST_MD5_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_MD5_OBJS) $(LIBS)
 	./test-md5

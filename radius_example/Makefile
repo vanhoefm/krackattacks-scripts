@@ -20,8 +20,7 @@ OBJS += ../src/utils/os_unix.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/eloop.o
 OBJS += ../src/utils/ip_addr.o
-OBJS += ../src/crypto/md5.o
-CFLAGS += -DINTERNAL_MD5
+OBJS += ../src/crypto/md5.o ../src/crypto/md5-internal.o
 
 OBJS += ../src/radius/radius.o
 OBJS += ../src/radius/radius_client.o

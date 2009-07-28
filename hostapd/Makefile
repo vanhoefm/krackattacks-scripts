@@ -534,7 +534,7 @@ ifdef CONFIG_INTERNAL_SHA1
 OBJS += ../src/crypto/sha1-internal.o
 endif
 ifdef CONFIG_INTERNAL_MD5
-CFLAGS += -DINTERNAL_MD5
+OBJS += ../src/crypto/md5-internal.o
 endif
 ifdef CONFIG_INTERNAL_MD4
 OBJS += ../src/crypto/md4-internal.o
@@ -644,6 +644,9 @@ hostapd_cli: $(OBJS_c)
 NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o ../src/crypto/sha1.o ../src/crypto/rc4.o ../src/crypto/md5.o
 ifdef CONFIG_INTERNAL_SHA1
 NOBJS += ../src/crypto/sha1-internal.o
+endif
+ifdef CONFIG_INTERNAL_MD5
+NOBJS += ../src/crypto/md5-internal.o
 endif
 NOBJS += ../src/crypto/crypto_openssl.o ../src/utils/os_$(CONFIG_OS).o
 ifdef TLS_FUNCS

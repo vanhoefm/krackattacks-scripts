@@ -31,7 +31,6 @@ OBJS_both += ../src/utils/os_unix.o
 OBJS_both += ../src/utils/wpa_debug.o
 OBJS_both += ../src/utils/base64.o
 OBJS_both += ../src/utils/wpabuf.o
-OBJS_both += ../src/crypto/md5.o
 OBJS_both += ../src/crypto/rc4.o
 OBJS_both += ../src/crypto/md4-internal.o
 OBJS_both += ../src/crypto/sha1.o
@@ -45,6 +44,7 @@ OBJS_both += ../src/crypto/aes-internal.o
 endif
 SHA256OBJS = ../src/crypto/sha256.o
 
+MD5OBJS = ../src/crypto/md5.o
 
 OBJS_both += ../src/eap_common/eap_peap_common.o
 OBJS_both += ../src/eap_common/eap_psk_common.o
@@ -125,7 +125,7 @@ CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 CFLAGS += -DCONFIG_INTERNAL_X509
 CONFIG_INTERNAL_SHA256=y
-CFLAGS += -DINTERNAL_MD5
+MD5OBJS += ../src/crypto/md5-internal.o
 ifdef CONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
 else
@@ -138,7 +138,7 @@ ifdef CONFIG_INTERNAL_SHA256
 SHA256OBJS += ../src/crypto/sha256-internal.o
 endif
 
-OBJS_both += $(SHA256OBJS)
+OBJS_both += $(SHA256OBJS) $(MD5OBJS)
 
 
 # Optional components to add EAP server support

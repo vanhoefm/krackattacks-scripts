@@ -41,7 +41,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\..\src\utils;..\..\..\src\crypto;C:\dev\openssl\include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;CONFIG_WIN32_DEFAULTS;INTERNAL_MD5"
+				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;CONFIG_WIN32_DEFAULTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
@@ -120,7 +120,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalIncludeDirectories="..\..\..\src\utils;..\..\..\src\crypto;C:\dev\openssl\include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;CONFIG_WIN32_DEFAULTS;INTERNAL_MD5"
+				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;CONFIG_WIN32_DEFAULTS"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
@@ -187,6 +187,10 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\crypto\md5.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\md5-internal.c"
 				>
 			</File>
 			<File

@@ -38,7 +38,7 @@ CFLAGS += -DCONFIG_NATIVE_WINDOWS
 LIBS += -lws2_32
 endif
 
-SHA1OBJS = ../src/crypto/sha1.o
+SHA1OBJS = ../src/crypto/sha1.o ../src/crypto/sha1-pbkdf2.o
 
 OBJS =	hostapd.o main.o ieee802_1x.o eapol_sm.o \
 	config.o ieee802_11_auth.o \

@@ -845,11 +845,19 @@ endif
 ifeq ($(CONFIG_TLS), openssl)
 OBJS += ../src/crypto/crypto_openssl.o
 OBJS_p += ../src/crypto/crypto_openssl.o
+ifdef NEED_FIPS186_2_PRF
+OBJS += ../src/crypto/fips_prf_openssl.o
+OBJS_p += ../src/crypto/fips_prf_openssl.o
+endif
 CONFIG_INTERNAL_SHA256=y
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/crypto_gnutls.o
 OBJS_p += ../src/crypto/crypto_gnutls.o
+ifdef NEED_FIPS186_2_PRF
+OBJS += ../src/crypto/fips_prf_gnutls.o
+OBJS_p += ../src/crypto/fips_prf_gnutls.o
+endif
 CONFIG_INTERNAL_SHA256=y
 endif
 ifeq ($(CONFIG_TLS), schannel)
@@ -906,6 +914,9 @@ AESOBJS += ../src/crypto/aes-internal.o
 endif
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o
+ifdef NEED_FIPS186_2_PRF
+SHA1OBJS += ../src/crypto/fips_prf_internal.o
+endif
 endif
 ifdef CONFIG_INTERNAL_MD5
 MD5OBJS += ../src/crypto/md5-internal.o
@@ -1073,10 +1084,6 @@ endif
 
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o
-endif
-
-ifndef NEED_FIPS186_2_PRF
-CFLAGS += -DCONFIG_NO_FIPS186_2_PRF
 endif
 
 ifndef NEED_T_PRF

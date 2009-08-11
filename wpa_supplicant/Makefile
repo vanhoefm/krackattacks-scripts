@@ -1090,8 +1090,8 @@ ifdef NEED_T_PRF
 SHA1OBJS += ../src/crypto/sha1-tprf.o
 endif
 
-ifndef NEED_TLS_PRF
-CFLAGS += -DCONFIG_NO_TLS_PRF
+ifdef NEED_TLS_PRF
+SHA1OBJS += ../src/crypto/sha1-tlsprf.o
 endif
 
 ifdef NEED_BASE64

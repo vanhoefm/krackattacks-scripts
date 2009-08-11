@@ -1086,8 +1086,8 @@ ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o
 endif
 
-ifndef NEED_T_PRF
-CFLAGS += -DCONFIG_NO_T_PRF
+ifdef NEED_T_PRF
+SHA1OBJS += ../src/crypto/sha1-tprf.o
 endif
 
 ifndef NEED_TLS_PRF

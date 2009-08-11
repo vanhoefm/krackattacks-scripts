@@ -38,6 +38,8 @@ CFLAGS += -DCONFIG_NATIVE_WINDOWS
 LIBS += -lws2_32
 endif
 
+SHA1OBJS = ../src/crypto/sha1.o
+
 OBJS =	hostapd.o main.o ieee802_1x.o eapol_sm.o \
 	config.o ieee802_11_auth.o \
 	sta_info.o wpa.o \
@@ -88,7 +90,6 @@ endif
 
 OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
-OBJS += ../src/crypto/sha1.o
 
 AESOBJS = ../src/crypto/aes_wrap.o
 
@@ -541,9 +542,9 @@ ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal.o
 endif
 ifdef CONFIG_INTERNAL_SHA1
-OBJS += ../src/crypto/sha1-internal.o
+SHA1OBJS += ../src/crypto/sha1-internal.o
 ifdef NEED_FIPS186_2_PRF
-OBJS += ../src/crypto/fips_prf_internal.o
+SHA1OBJS += ../src/crypto/fips_prf_internal.o
 endif
 endif
 ifdef CONFIG_INTERNAL_MD5
@@ -567,8 +568,8 @@ ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o
 endif
 
-ifndef NEED_T_PRF
-CFLAGS += -DCONFIG_NO_T_PRF
+ifdef NEED_T_PRF
+SHA1OBJS += ../src/crypto/sha1-tprf.o
 endif
 
 ifndef NEED_TLS_PRF
@@ -616,6 +617,8 @@ CFLAGS += -DCONFIG_NO_AES_DECRYPT
 CFLAGS += -DCONFIG_NO_AES_ENCRYPT_BLOCK
 endif
 
+OBJS += $(SHA1OBJS)
+
 ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)
@@ -650,10 +653,7 @@ OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
 hostapd_cli: $(OBJS_c)
 	$(CC) -o hostapd_cli $(OBJS_c)
 
-NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o ../src/crypto/sha1.o ../src/crypto/rc4.o ../src/crypto/md5.o
-ifdef CONFIG_INTERNAL_SHA1
-NOBJS += ../src/crypto/sha1-internal.o
-endif
+NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS) ../src/crypto/rc4.o ../src/crypto/md5.o
 ifdef CONFIG_INTERNAL_MD5
 NOBJS += ../src/crypto/md5-internal.o
 endif

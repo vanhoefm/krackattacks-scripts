@@ -539,7 +539,7 @@ CONFIG_INTERNAL_SHA256=y
 endif
 
 ifdef CONFIG_INTERNAL_AES
-AESOBJS += ../src/crypto/aes-internal.o
+AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-enc.o
 endif
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o

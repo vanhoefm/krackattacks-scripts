@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "md5.h"
+#include "md5_i.h"
 #include "crypto.h"
 
 struct MD5Context {
@@ -24,12 +25,6 @@ struct MD5Context {
 	u8 in[64];
 };
 
-#ifndef CONFIG_CRYPTO_INTERNAL
-static void MD5Init(struct MD5Context *context);
-static void MD5Update(struct MD5Context *context, unsigned char const *buf,
-			  unsigned len);
-static void MD5Final(unsigned char digest[16], struct MD5Context *context);
-#endif /* CONFIG_CRYPTO_INTERNAL */
 static void MD5Transform(u32 buf[4], u32 const in[16]);
 
 

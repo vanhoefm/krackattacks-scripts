@@ -24,8 +24,8 @@
 #include "tls/bignum.h"
 #include "tls/asn1.h"
 
-
-#ifdef CONFIG_CRYPTO_INTERNAL
+#include "sha1_i.h"
+#include "md5_i.h"
 
 #ifdef CONFIG_TLS_INTERNAL
 
@@ -831,6 +831,3 @@ error:
 }
 
 #endif /* EAP_FAST || EAP_SERVER_FAST || CONFIG_WPS */
-
-
-#endif /* CONFIG_CRYPTO_INTERNAL */

@@ -16,9 +16,8 @@
 
 #include "common.h"
 #include "sha1.h"
+#include "sha1_i.h"
 #include "crypto.h"
-
-void SHA1Transform(u32 state[5], const unsigned char buffer[64]);
 
 
 int fips186_2_prf(const u8 *seed, size_t seed_len, u8 *x, size_t xlen)

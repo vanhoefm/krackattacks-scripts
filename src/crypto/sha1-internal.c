@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "sha1.h"
+#include "sha1_i.h"
 #include "md5.h"
 #include "crypto.h"
 
@@ -27,11 +28,6 @@ struct SHA1Context {
 
 typedef struct SHA1Context SHA1_CTX;
 
-#ifndef CONFIG_CRYPTO_INTERNAL
-static void SHA1Init(struct SHA1Context *context);
-static void SHA1Update(struct SHA1Context *context, const void *data, u32 len);
-static void SHA1Final(unsigned char digest[20], struct SHA1Context *context);
-#endif /* CONFIG_CRYPTO_INTERNAL */
 void SHA1Transform(u32 state[5], const unsigned char buffer[64]);
 
 

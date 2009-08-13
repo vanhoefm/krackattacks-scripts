@@ -30,13 +30,4 @@ int __must_check tls_prf(const u8 *secret, size_t secret_len,
 			 u8 *out, size_t outlen);
 void pbkdf2_sha1(const char *passphrase, const char *ssid, size_t ssid_len,
 		 int iterations, u8 *buf, size_t buflen);
-
-#ifdef CONFIG_CRYPTO_INTERNAL
-struct SHA1Context;
-
-void SHA1Init(struct SHA1Context *context);
-void SHA1Update(struct SHA1Context *context, const void *data, u32 len);
-void SHA1Final(unsigned char digest[20], struct SHA1Context *context);
-#endif /* CONFIG_CRYPTO_INTERNAL */
-
 #endif /* SHA1_H */

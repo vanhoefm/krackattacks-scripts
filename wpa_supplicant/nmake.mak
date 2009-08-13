@@ -66,7 +66,13 @@ OBJS = \
 	$(OBJDIR)\sha1.obj \
 	$(OBJDIR)\md5.obj \
 	$(OBJDIR)\rc4.obj \
-	$(OBJDIR)\aes_wrap.obj \
+	$(OBJDIR)\aes-cbc.obj \
+	$(OBJDIR)\aes-ctr.obj \
+	$(OBJDIR)\aes-eax.obj \
+	$(OBJDIR)\aes-encblock.obj \
+	$(OBJDIR)\aes-omac1.obj \
+	$(OBJDIR)\aes-unwrap.obj \
+	$(OBJDIR)\aes-wrap.obj \
 	$(OBJDIR)\common.obj \
 	$(OBJDIR)\wpa_debug.obj \
 	$(OBJDIR)\wpabuf.obj \

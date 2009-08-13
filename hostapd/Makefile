@@ -91,7 +91,7 @@ endif
 OBJS += ../src/crypto/md5.o
 OBJS += ../src/crypto/rc4.o
 
-AESOBJS = ../src/crypto/aes_wrap.o
+AESOBJS = # none so far
 
 CFLAGS += -DCONFIG_CTRL_IFACE -DCONFIG_CTRL_IFACE_UNIX
 
@@ -609,15 +609,17 @@ ifdef CONFIG_NO_STDOUT_DEBUG
 CFLAGS += -DCONFIG_NO_STDOUT_DEBUG
 endif
 
-ifdef CONFIG_NO_AES_EXTRAS
-CFLAGS += -DCONFIG_NO_AES_UNWRAP
-CFLAGS += -DCONFIG_NO_AES_CTR -DCONFIG_NO_AES_OMAC1
-CFLAGS += -DCONFIG_NO_AES_EAX -DCONFIG_NO_AES_CBC
-CFLAGS += -DCONFIG_NO_AES_ENCRYPT_BLOCK
-else
+AESOBJS += ../src/crypto/aes-wrap.o
+ifndef CONFIG_NO_AES_EXTRAS
 ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal-dec.o
 endif
+AESOBJS += ../src/crypto/aes-cbc.o
+AESOBJS += ../src/crypto/aes-ctr.o
+AESOBJS += ../src/crypto/aes-eax.o
+AESOBJS += ../src/crypto/aes-encblock.o
+AESOBJS += ../src/crypto/aes-omac1.o
+AESOBJS += ../src/crypto/aes-unwrap.o
 endif
 
 OBJS += $(SHA1OBJS)
@@ -699,7 +701,15 @@ clean-docs:
 	rm -rf doc/latex doc/html
 	rm -f doc/hostapd.{eps,png} hostapd-devel.pdf
 
-TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes_wrap.c ../src/crypto/aes-internal.c ../src/crypto/aes-internal-dec.c \
+TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes-internal.c ../src/crypto/aes-internal-dec.c \
+		../src/crypto/aes-cbc.c \
+		../src/crypto/aes-ctr.c \
+		../src/crypto/aes-eax.c \
+		../src/crypto/aes-encblock.c \
+		../src/crypto/aes-internal-enc.c \
+		../src/crypto/aes-omac1.c \
+		../src/crypto/aes-unwrap.c \
+		../src/crypto/aes-wrap.c \
 		 ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
 test-milenage: $(TEST_SRC_MILENAGE)
 	$(CC) -o test-milenage -Wall -Werror $(TEST_SRC_MILENAGE) \

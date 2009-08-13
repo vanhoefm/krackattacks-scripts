@@ -183,7 +183,31 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\..\src\crypto\aes_wrap.c"
+				RelativePath="..\..\..\src\crypto\aes-cbc.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\aes-ctr.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\aes-eax.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\aes-encblock.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\aes-omac1.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\aes-unwrap.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\aes-wrap.c"
 				>
 			</File>
 			<File

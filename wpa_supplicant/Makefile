@@ -43,7 +43,7 @@ install: all
 
 SHA1OBJS = ../src/crypto/sha1.o
 DESOBJS = # none needed when not internal
-AESOBJS = ../src/crypto/aes_wrap.o
+AESOBJS = # none so far (see below)
 SHA256OBJS = # none by default
 MD4OBJS = # none by default
 MD5OBJS = ../src/crypto/md5.o
@@ -1070,15 +1070,17 @@ ifndef CONFIG_NO_WPA_PASSPHRASE
 SHA1OBJS += ../src/crypto/sha1-pbkdf2.o
 endif
 
-ifdef CONFIG_NO_AES_EXTRAS
-CFLAGS += -DCONFIG_NO_AES_WRAP
-CFLAGS += -DCONFIG_NO_AES_CTR -DCONFIG_NO_AES_OMAC1
-CFLAGS += -DCONFIG_NO_AES_EAX -DCONFIG_NO_AES_CBC
-CFLAGS += -DCONFIG_NO_AES_ENCRYPT_BLOCK
-else
+AESOBJS += ../src/crypto/aes-unwrap.o
+ifndef CONFIG_NO_AES_EXTRAS
 ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal-enc.o
 endif
+AESOBJS += ../src/crypto/aes-cbc.o
+AESOBJS += ../src/crypto/aes-ctr.o
+AESOBJS += ../src/crypto/aes-eax.o
+AESOBJS += ../src/crypto/aes-encblock.o
+AESOBJS += ../src/crypto/aes-omac1.o
+AESOBJS += ../src/crypto/aes-wrap.o
 endif
 
 ifdef NEED_AES

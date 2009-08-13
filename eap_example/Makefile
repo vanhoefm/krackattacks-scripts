@@ -34,7 +34,13 @@ OBJS_both += ../src/utils/wpabuf.o
 OBJS_both += ../src/crypto/rc4.o
 OBJS_both += ../src/crypto/md4-internal.o
 OBJS_both += ../src/crypto/sha1.o
-OBJS_both += ../src/crypto/aes_wrap.o
+OBJS_both += ../src/crypto/aes-cbc.o
+OBJS_both += ../src/crypto/aes-ctr.o
+OBJS_both += ../src/crypto/aes-eax.o
+OBJS_both += ../src/crypto/aes-encblock.o
+OBJS_both += ../src/crypto/aes-omac1.o
+OBJS_both += ../src/crypto/aes-unwrap.o
+OBJS_both += ../src/crypto/aes-wrap.o
 OBJS_both += ../src/crypto/ms_funcs.o
 
 ifeq ($(CONFIG_TLS), internal)

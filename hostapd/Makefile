@@ -613,8 +613,11 @@ ifdef CONFIG_NO_AES_EXTRAS
 CFLAGS += -DCONFIG_NO_AES_UNWRAP
 CFLAGS += -DCONFIG_NO_AES_CTR -DCONFIG_NO_AES_OMAC1
 CFLAGS += -DCONFIG_NO_AES_EAX -DCONFIG_NO_AES_CBC
-CFLAGS += -DCONFIG_NO_AES_DECRYPT
 CFLAGS += -DCONFIG_NO_AES_ENCRYPT_BLOCK
+else
+ifdef CONFIG_INTERNAL_AES
+AESOBJS += ../src/crypto/aes-internal-dec.o
+endif
 endif
 
 OBJS += $(SHA1OBJS)
@@ -696,7 +699,8 @@ clean-docs:
 	rm -rf doc/latex doc/html
 	rm -f doc/hostapd.{eps,png} hostapd-devel.pdf
 
-TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes_wrap.c ../src/crypto/aes-internal.c ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
+TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes_wrap.c ../src/crypto/aes-internal.c ../src/crypto/aes-internal-dec.c \
+		 ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
 test-milenage: $(TEST_SRC_MILENAGE)
 	$(CC) -o test-milenage -Wall -Werror $(TEST_SRC_MILENAGE) \
 		-DTEST_MAIN_MILENAGE -I. \

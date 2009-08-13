@@ -25,6 +25,7 @@
 
 #include "common.h"
 #include "crypto.h"
+#include "aes_i.h"
 
 /*
  * rijndael-alg-fst.c
@@ -52,9 +53,6 @@
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* #define FULL_UNROLL */
-#define AES_SMALL_TABLES
-
 
 /*
 Te0[x] = S [x].[02, 01, 01, 03];
@@ -70,7 +68,7 @@ Td3[x] = Si[x].[09, 0d, 0b, 0e];
 Td4[x] = Si[x].[01, 01, 01, 01];
 */
 
-static const u32 Te0[256] = {
+const u32 Te0[256] = {
     0xc66363a5U, 0xf87c7c84U, 0xee777799U, 0xf67b7b8dU,
     0xfff2f20dU, 0xd66b6bbdU, 0xde6f6fb1U, 0x91c5c554U,
     0x60303050U, 0x02010103U, 0xce6767a9U, 0x562b2b7dU,
@@ -137,7 +135,7 @@ static const u32 Te0[256] = {
     0x7bb0b0cbU, 0xa85454fcU, 0x6dbbbbd6U, 0x2c16163aU,
 };
 #ifndef AES_SMALL_TABLES
-static const u32 Te1[256] = {
+const u32 Te1[256] = {
     0xa5c66363U, 0x84f87c7cU, 0x99ee7777U, 0x8df67b7bU,
     0x0dfff2f2U, 0xbdd66b6bU, 0xb1de6f6fU, 0x5491c5c5U,
     0x50603030U, 0x03020101U, 0xa9ce6767U, 0x7d562b2bU,
@@ -203,7 +201,7 @@ static const u32 Te1[256] = {
     0xc3824141U, 0xb0299999U, 0x775a2d2dU, 0x111e0f0fU,
     0xcb7bb0b0U, 0xfca85454U, 0xd66dbbbbU, 0x3a2c1616U,
 };
-static const u32 Te2[256] = {
+const u32 Te2[256] = {
     0x63a5c663U, 0x7c84f87cU, 0x7799ee77U, 0x7b8df67bU,
     0xf20dfff2U, 0x6bbdd66bU, 0x6fb1de6fU, 0xc55491c5U,
     0x30506030U, 0x01030201U, 0x67a9ce67U, 0x2b7d562bU,
@@ -269,7 +267,7 @@ static const u32 Te2[256] = {
     0x41c38241U, 0x99b02999U, 0x2d775a2dU, 0x0f111e0fU,
     0xb0cb7bb0U, 0x54fca854U, 0xbbd66dbbU, 0x163a2c16U,
 };
-static const u32 Te3[256] = {
+const u32 Te3[256] = {
 
     0x6363a5c6U, 0x7c7c84f8U, 0x777799eeU, 0x7b7b8df6U,
     0xf2f20dffU, 0x6b6bbdd6U, 0x6f6fb1deU, 0xc5c55491U,
@@ -336,7 +334,7 @@ static const u32 Te3[256] = {
     0x4141c382U, 0x9999b029U, 0x2d2d775aU, 0x0f0f111eU,
     0xb0b0cb7bU, 0x5454fca8U, 0xbbbbd66dU, 0x16163a2cU,
 };
-static const u32 Te4[256] = {
+const u32 Te4[256] = {
     0x63636363U, 0x7c7c7c7cU, 0x77777777U, 0x7b7b7b7bU,
     0xf2f2f2f2U, 0x6b6b6b6bU, 0x6f6f6f6fU, 0xc5c5c5c5U,
     0x30303030U, 0x01010101U, 0x67676767U, 0x2b2b2b2bU,
@@ -403,7 +401,7 @@ static const u32 Te4[256] = {
     0xb0b0b0b0U, 0x54545454U, 0xbbbbbbbbU, 0x16161616U,
 };
 #endif /* AES_SMALL_TABLES */
-static const u32 Td0[256] = {
+const u32 Td0[256] = {
     0x51f4a750U, 0x7e416553U, 0x1a17a4c3U, 0x3a275e96U,
     0x3bab6bcbU, 0x1f9d45f1U, 0xacfa58abU, 0x4be30393U,
     0x2030fa55U, 0xad766df6U, 0x88cc7691U, 0xf5024c25U,
@@ -470,7 +468,7 @@ static const u32 Td0[256] = {
     0x7bcb8461U, 0xd532b670U, 0x486c5c74U, 0xd0b85742U,
 };
 #ifndef AES_SMALL_TABLES
-static const u32 Td1[256] = {
+const u32 Td1[256] = {
     0x5051f4a7U, 0x537e4165U, 0xc31a17a4U, 0x963a275eU,
     0xcb3bab6bU, 0xf11f9d45U, 0xabacfa58U, 0x934be303U,
     0x552030faU, 0xf6ad766dU, 0x9188cc76U, 0x25f5024cU,
@@ -536,7 +534,7 @@ static const u32 Td1[256] = {
     0x7139a801U, 0xde080cb3U, 0x9cd8b4e4U, 0x906456c1U,
     0x617bcb84U, 0x70d532b6U, 0x74486c5cU, 0x42d0b857U,
 };
-static const u32 Td2[256] = {
+const u32 Td2[256] = {
     0xa75051f4U, 0x65537e41U, 0xa4c31a17U, 0x5e963a27U,
     0x6bcb3babU, 0x45f11f9dU, 0x58abacfaU, 0x03934be3U,
     0xfa552030U, 0x6df6ad76U, 0x769188ccU, 0x4c25f502U,
@@ -603,7 +601,7 @@ static const u32 Td2[256] = {
     0x017139a8U, 0xb3de080cU, 0xe49cd8b4U, 0xc1906456U,
     0x84617bcbU, 0xb670d532U, 0x5c74486cU, 0x5742d0b8U,
 };
-static const u32 Td3[256] = {
+const u32 Td3[256] = {
     0xf4a75051U, 0x4165537eU, 0x17a4c31aU, 0x275e963aU,
     0xab6bcb3bU, 0x9d45f11fU, 0xfa58abacU, 0xe303934bU,
     0x30fa5520U, 0x766df6adU, 0xcc769188U, 0x024c25f5U,
@@ -669,7 +667,7 @@ static const u32 Td3[256] = {
     0xa8017139U, 0x0cb3de08U, 0xb4e49cd8U, 0x56c19064U,
     0xcb84617bU, 0x32b670d5U, 0x6c5c7448U, 0xb85742d0U,
 };
-static const u32 Td4[256] = {
+const u32 Td4[256] = {
     0x52525252U, 0x09090909U, 0x6a6a6a6aU, 0xd5d5d5d5U,
     0x30303030U, 0x36363636U, 0xa5a5a5a5U, 0x38383838U,
     0xbfbfbfbfU, 0x40404040U, 0xa3a3a3a3U, 0x9e9e9e9eU,
@@ -735,13 +733,13 @@ static const u32 Td4[256] = {
     0xe1e1e1e1U, 0x69696969U, 0x14141414U, 0x63636363U,
     0x55555555U, 0x21212121U, 0x0c0c0c0cU, 0x7d7d7d7dU,
 };
-static const u32 rcon[] = {
+const u32 rcon[] = {
 	0x01000000, 0x02000000, 0x04000000, 0x08000000,
 	0x10000000, 0x20000000, 0x40000000, 0x80000000,
 	0x1B000000, 0x36000000, /* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
 };
 #else /* AES_SMALL_TABLES */
-static const u8 Td4s[256] = {
+const u8 Td4s[256] = {
     0x52U, 0x09U, 0x6aU, 0xd5U, 0x30U, 0x36U, 0xa5U, 0x38U,
     0xbfU, 0x40U, 0xa3U, 0x9eU, 0x81U, 0xf3U, 0xd7U, 0xfbU,
     0x7cU, 0xe3U, 0x39U, 0x82U, 0x9bU, 0x2fU, 0xffU, 0x87U,
@@ -775,95 +773,11 @@ static const u8 Td4s[256] = {
     0x17U, 0x2bU, 0x04U, 0x7eU, 0xbaU, 0x77U, 0xd6U, 0x26U,
     0xe1U, 0x69U, 0x14U, 0x63U, 0x55U, 0x21U, 0x0cU, 0x7dU,
 };
-static const u8 rcons[] = {
+const u8 rcons[] = {
 	0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36
 	/* for 128-bit blocks, Rijndael never uses more than 10 rcon values */
 };
 #endif /* AES_SMALL_TABLES */
-
-
-#ifndef AES_SMALL_TABLES
-
-#define RCON(i) rcon[(i)]
-
-#define TE0(i) Te0[((i) >> 24) & 0xff]
-#define TE1(i) Te1[((i) >> 16) & 0xff]
-#define TE2(i) Te2[((i) >> 8) & 0xff]
-#define TE3(i) Te3[(i) & 0xff]
-#define TE41(i) (Te4[((i) >> 24) & 0xff] & 0xff000000)
-#define TE42(i) (Te4[((i) >> 16) & 0xff] & 0x00ff0000)
-#define TE43(i) (Te4[((i) >> 8) & 0xff] & 0x0000ff00)
-#define TE44(i) (Te4[(i) & 0xff] & 0x000000ff)
-#define TE421(i) (Te4[((i) >> 16) & 0xff] & 0xff000000)
-#define TE432(i) (Te4[((i) >> 8) & 0xff] & 0x00ff0000)
-#define TE443(i) (Te4[(i) & 0xff] & 0x0000ff00)
-#define TE414(i) (Te4[((i) >> 24) & 0xff] & 0x000000ff)
-#define TE4(i) (Te4[(i)] & 0x000000ff)
-
-#define TD0(i) Td0[((i) >> 24) & 0xff]
-#define TD1(i) Td1[((i) >> 16) & 0xff]
-#define TD2(i) Td2[((i) >> 8) & 0xff]
-#define TD3(i) Td3[(i) & 0xff]
-#define TD41(i) (Td4[((i) >> 24) & 0xff] & 0xff000000)
-#define TD42(i) (Td4[((i) >> 16) & 0xff] & 0x00ff0000)
-#define TD43(i) (Td4[((i) >> 8) & 0xff] & 0x0000ff00)
-#define TD44(i) (Td4[(i) & 0xff] & 0x000000ff)
-#define TD0_(i) Td0[(i) & 0xff]
-#define TD1_(i) Td1[(i) & 0xff]
-#define TD2_(i) Td2[(i) & 0xff]
-#define TD3_(i) Td3[(i) & 0xff]
-
-#else /* AES_SMALL_TABLES */
-
-#define RCON(i) (rcons[(i)] << 24)
-
-static inline u32 rotr(u32 val, int bits)
-{
-	return (val >> bits) | (val << (32 - bits));
-}
-
-#define TE0(i) Te0[((i) >> 24) & 0xff]
-#define TE1(i) rotr(Te0[((i) >> 16) & 0xff], 8)
-#define TE2(i) rotr(Te0[((i) >> 8) & 0xff], 16)
-#define TE3(i) rotr(Te0[(i) & 0xff], 24)
-#define TE41(i) ((Te0[((i) >> 24) & 0xff] << 8) & 0xff000000)
-#define TE42(i) (Te0[((i) >> 16) & 0xff] & 0x00ff0000)
-#define TE43(i) (Te0[((i) >> 8) & 0xff] & 0x0000ff00)
-#define TE44(i) ((Te0[(i) & 0xff] >> 8) & 0x000000ff)
-#define TE421(i) ((Te0[((i) >> 16) & 0xff] << 8) & 0xff000000)
-#define TE432(i) (Te0[((i) >> 8) & 0xff] & 0x00ff0000)
-#define TE443(i) (Te0[(i) & 0xff] & 0x0000ff00)
-#define TE414(i) ((Te0[((i) >> 24) & 0xff] >> 8) & 0x000000ff)
-#define TE4(i) ((Te0[(i)] >> 8) & 0x000000ff)
-
-#define TD0(i) Td0[((i) >> 24) & 0xff]
-#define TD1(i) rotr(Td0[((i) >> 16) & 0xff], 8)
-#define TD2(i) rotr(Td0[((i) >> 8) & 0xff], 16)
-#define TD3(i) rotr(Td0[(i) & 0xff], 24)
-#define TD41(i) (Td4s[((i) >> 24) & 0xff] << 24)
-#define TD42(i) (Td4s[((i) >> 16) & 0xff] << 16)
-#define TD43(i) (Td4s[((i) >> 8) & 0xff] << 8)
-#define TD44(i) (Td4s[(i) & 0xff])
-#define TD0_(i) Td0[(i) & 0xff]
-#define TD1_(i) rotr(Td0[(i) & 0xff], 8)
-#define TD2_(i) rotr(Td0[(i) & 0xff], 16)
-#define TD3_(i) rotr(Td0[(i) & 0xff], 24)
-
-#endif /* AES_SMALL_TABLES */
-
-#define SWAP(x) (_lrotl(x, 8) & 0x00ff00ff | _lrotr(x, 8) & 0xff00ff00)
-
-#ifdef _MSC_VER
-#define GETU32(p) SWAP(*((u32 *)(p)))
-#define PUTU32(ct, st) { *((u32 *)(ct)) = SWAP((st)); }
-#else
-#define GETU32(pt) (((u32)(pt)[0] << 24) ^ ((u32)(pt)[1] << 16) ^ \
-((u32)(pt)[2] <<  8) ^ ((u32)(pt)[3]))
-#define PUTU32(ct, st) { \
-(ct)[0] = (u8)((st) >> 24); (ct)[1] = (u8)((st) >> 16); \
-(ct)[2] = (u8)((st) >>  8); (ct)[3] = (u8)(st); }
-#endif
-
 /**
  * Expand the cipher key into the encryption key schedule.
  *
@@ -889,40 +803,6 @@ void rijndaelKeySetupEnc(u32 rk[/*44*/], const u8 cipherKey[])
 		rk += 4;
 	}
 }
-
-#ifndef CONFIG_NO_AES_DECRYPT
-/**
- * Expand the cipher key into the decryption key schedule.
- *
- * @return	the number of rounds for the given cipher key size.
- */
-void rijndaelKeySetupDec(u32 rk[/*44*/], const u8 cipherKey[])
-{
-	int Nr = 10, i, j;
-	u32 temp;
-
-	/* expand the cipher key: */
-	rijndaelKeySetupEnc(rk, cipherKey);
-	/* invert the order of the round keys: */
-	for (i = 0, j = 4*Nr; i < j; i += 4, j -= 4) {
-		temp = rk[i    ]; rk[i    ] = rk[j    ]; rk[j    ] = temp;
-		temp = rk[i + 1]; rk[i + 1] = rk[j + 1]; rk[j + 1] = temp;
-		temp = rk[i + 2]; rk[i + 2] = rk[j + 2]; rk[j + 2] = temp;
-		temp = rk[i + 3]; rk[i + 3] = rk[j + 3]; rk[j + 3] = temp;
-	}
-	/* apply the inverse MixColumn transform to all round keys but the
-	 * first and the last: */
-	for (i = 1; i < Nr; i++) {
-		rk += 4;
-		for (j = 0; j < 4; j++) {
-			rk[j] = TD0_(TE4((rk[j] >> 24)       )) ^
-				TD1_(TE4((rk[j] >> 16) & 0xff)) ^
-				TD2_(TE4((rk[j] >>  8) & 0xff)) ^
-				TD3_(TE4((rk[j]      ) & 0xff));
-		}
-	}
-}
-#endif /* CONFIG_NO_AES_DECRYPT */
 
 #ifndef CONFIG_NO_AES_ENCRYPT
 void rijndaelEncrypt(const u32 rk[/*44*/], const u8 pt[16], u8 ct[16])
@@ -991,82 +871,7 @@ d##3 = TE0(s##3) ^ TE1(s##0) ^ TE2(s##1) ^ TE3(s##2) ^ rk[4 * i + 3]
 	s3 = TE41(t3) ^ TE42(t0) ^ TE43(t1) ^ TE44(t2) ^ rk[3];
 	PUTU32(ct + 12, s3);
 }
-#endif /* CONFIG_NO_AES_ENCRYPT */
 
-void rijndaelDecrypt(const u32 rk[/*44*/], const u8 ct[16], u8 pt[16])
-{
-	u32 s0, s1, s2, s3, t0, t1, t2, t3;
-	const int Nr = 10;
-#ifndef FULL_UNROLL
-	int r;
-#endif /* ?FULL_UNROLL */
-
-	/*
-	 * map byte array block to cipher state
-	 * and add initial round key:
-	 */
-	s0 = GETU32(ct     ) ^ rk[0];
-	s1 = GETU32(ct +  4) ^ rk[1];
-	s2 = GETU32(ct +  8) ^ rk[2];
-	s3 = GETU32(ct + 12) ^ rk[3];
-
-#define ROUND(i,d,s) \
-d##0 = TD0(s##0) ^ TD1(s##3) ^ TD2(s##2) ^ TD3(s##1) ^ rk[4 * i]; \
-d##1 = TD0(s##1) ^ TD1(s##0) ^ TD2(s##3) ^ TD3(s##2) ^ rk[4 * i + 1]; \
-d##2 = TD0(s##2) ^ TD1(s##1) ^ TD2(s##0) ^ TD3(s##3) ^ rk[4 * i + 2]; \
-d##3 = TD0(s##3) ^ TD1(s##2) ^ TD2(s##1) ^ TD3(s##0) ^ rk[4 * i + 3]
-
-#ifdef FULL_UNROLL
-
-	ROUND(1,t,s);
-	ROUND(2,s,t);
-	ROUND(3,t,s);
-	ROUND(4,s,t);
-	ROUND(5,t,s);
-	ROUND(6,s,t);
-	ROUND(7,t,s);
-	ROUND(8,s,t);
-	ROUND(9,t,s);
-
-	rk += Nr << 2;
-
-#else  /* !FULL_UNROLL */
-
-	/* Nr - 1 full rounds: */
-	r = Nr >> 1;
-	for (;;) {
-		ROUND(1,t,s);
-		rk += 8;
-		if (--r == 0)
-			break;
-		ROUND(0,s,t);
-	}
-
-#endif /* ?FULL_UNROLL */
-
-#undef ROUND
-
-	/*
-	 * apply last round and
-	 * map cipher state to byte array block:
-	 */
-	s0 = TD41(t0) ^ TD42(t3) ^ TD43(t2) ^ TD44(t1) ^ rk[0];
-	PUTU32(pt     , s0);
-	s1 = TD41(t1) ^ TD42(t0) ^ TD43(t3) ^ TD44(t2) ^ rk[1];
-	PUTU32(pt +  4, s1);
-	s2 = TD41(t2) ^ TD42(t1) ^ TD43(t0) ^ TD44(t3) ^ rk[2];
-	PUTU32(pt +  8, s2);
-	s3 = TD41(t3) ^ TD42(t2) ^ TD43(t1) ^ TD44(t0) ^ rk[3];
-	PUTU32(pt + 12, s3);
-}
-
-
-
-/* Generic wrapper functions for AES functions */
-
-#define AES_PRIV_SIZE (4 * 44)
-
-#ifndef CONFIG_NO_AES_ENCRYPT
 void * aes_encrypt_init(const u8 *key, size_t len)
 {
 	u32 *rk;
@@ -1092,31 +897,3 @@ void aes_encrypt_deinit(void *ctx)
 	os_free(ctx);
 }
 #endif /* CONFIG_NO_AES_ENCRYPT */
-
-
-#ifndef CONFIG_NO_AES_DECRYPT
-void * aes_decrypt_init(const u8 *key, size_t len)
-{
-	u32 *rk;
-	if (len != 16)
-		return NULL;
-	rk = os_malloc(AES_PRIV_SIZE);
-	if (rk == NULL)
-		return NULL;
-	rijndaelKeySetupDec(rk, key);
-	return rk;
-}
-
-
-void aes_decrypt(void *ctx, const u8 *crypt, u8 *plain)
-{
-	rijndaelDecrypt(ctx, crypt, plain);
-}
-
-
-void aes_decrypt_deinit(void *ctx)
-{
-	os_memset(ctx, 0, AES_PRIV_SIZE);
-	os_free(ctx);
-}
-#endif /* CONFIG_NO_AES_DECRYPT */

@@ -40,7 +40,7 @@ OBJS_both += ../src/crypto/ms_funcs.o
 ifeq ($(CONFIG_TLS), internal)
 OBJS_both += ../src/crypto/sha1-internal.o
 OBJS_both += ../src/crypto/des-internal.o
-OBJS_both += ../src/crypto/aes-internal.o
+OBJS_both += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o
 endif
 SHA256OBJS = ../src/crypto/sha256.o
 

@@ -34,6 +34,7 @@ OBJS_both += ../src/utils/wpabuf.o
 OBJS_both += ../src/crypto/rc4.o
 OBJS_both += ../src/crypto/md4-internal.o
 OBJS_both += ../src/crypto/sha1.o
+OBJS_both += ../src/crypto/sha1-tlsprf.o
 OBJS_both += ../src/crypto/aes-cbc.o
 OBJS_both += ../src/crypto/aes-ctr.o
 OBJS_both += ../src/crypto/aes-eax.o

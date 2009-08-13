@@ -489,7 +489,6 @@ HOBJS += ../src/crypto/crypto_openssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
 OBJS_p += ../src/crypto/fips_prf_openssl.o
-HOBJS += ../src/crypto/fips_prf_openssl.o
 endif
 CONFIG_INTERNAL_SHA256=y
 endif
@@ -500,7 +499,6 @@ HOBJS += ../src/crypto/crypto_gnutls.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_gnutls.o
 OBJS_p += ../src/crypto/fips_prf_gnutls.o
-HOBJS += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
 endif
@@ -667,7 +665,12 @@ ifdef TLS_FUNCS
 LIBS_n += -lcrypto
 endif
 
-HOBJS=../src/hlr_auc_gw/hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/hlr_auc_gw/milenage.o $(AESOBJS)
+HOBJS += ../src/hlr_auc_gw/hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/hlr_auc_gw/milenage.o
+HOBJS += ../src/crypto/aes-encblock.o
+ifdef CONFIG_INTERNAL_AES
+HOBJS += ../src/crypto/aes-internal.o
+HOBJS += ../src/crypto/aes-internal-enc.o
+endif
 
 nt_password_hash: $(NOBJS)
 	$(CC) -o nt_password_hash $(NOBJS) $(LIBS_n)

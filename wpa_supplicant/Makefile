@@ -847,7 +847,6 @@ OBJS += ../src/crypto/crypto_openssl.o
 OBJS_p += ../src/crypto/crypto_openssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
-OBJS_p += ../src/crypto/fips_prf_openssl.o
 endif
 CONFIG_INTERNAL_SHA256=y
 endif
@@ -856,7 +855,6 @@ OBJS += ../src/crypto/crypto_gnutls.o
 OBJS_p += ../src/crypto/crypto_gnutls.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_gnutls.o
-OBJS_p += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
 endif
@@ -925,7 +923,7 @@ ifdef CONFIG_INTERNAL_MD4
 MD4OBJS += ../src/crypto/md4-internal.o
 endif
 OBJS += $(MD4OBJS) $(MD5OBJS)
-OBJS_p += $(MD4OBJS) $(MD5OBJS)
+OBJS_p += $(MD5OBJS)
 
 ifdef CONFIG_INTERNAL_DES
 DESOBJS += ../src/crypto/des-internal.o
@@ -1133,7 +1131,12 @@ endif
 OBJS += ../src/drivers/scan_helpers.o
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
-OBJS_p += $(SHA1OBJS) $(DESOBJS) $(AESOBJS)
+OBJS_p += $(SHA1OBJS) $(DESOBJS)
+ifdef CONFIG_INTERNAL_AES
+OBJS_p += ../src/crypto/aes-internal.o
+OBJS_p += ../src/crypto/aes-internal-dec.o
+OBJS_p += ../src/crypto/aes-internal-enc.o
+endif
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o
 OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.o

@@ -30,11 +30,11 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,
 void ieee802_11_mgmt_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 			u16 stype, int ok);
 void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len);
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 int ieee802_11_get_mib(struct hostapd_data *hapd, char *buf, size_t buflen);
 int ieee802_11_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   char *buf, size_t buflen);
-#else /* NEED_MLME */
+#else /* NEED_AP_MLME */
 static inline int ieee802_11_get_mib(struct hostapd_data *hapd, char *buf,
 				     size_t buflen)
 {
@@ -47,7 +47,7 @@ static inline int ieee802_11_get_mib_sta(struct hostapd_data *hapd,
 {
 	return 0;
 }
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 			   int probe);
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid);

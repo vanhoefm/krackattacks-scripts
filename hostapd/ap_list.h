@@ -63,10 +63,10 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 			    struct ieee80211_mgmt *mgmt,
 			    struct ieee802_11_elems *elems,
 			    struct hostapd_frame_info *fi);
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 int ap_list_init(struct hostapd_iface *iface);
 void ap_list_deinit(struct hostapd_iface *iface);
-#else /* NEED_MLME */
+#else /* NEED_AP_MLME */
 static inline int ap_list_init(struct hostapd_iface *iface)
 {
 	return 0;
@@ -75,7 +75,7 @@ static inline int ap_list_init(struct hostapd_iface *iface)
 static inline void ap_list_deinit(struct hostapd_iface *iface)
 {
 }
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 int ap_list_reconfig(struct hostapd_iface *iface,
 		     struct hostapd_config *oldconf);
 

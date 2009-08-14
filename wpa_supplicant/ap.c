@@ -18,9 +18,9 @@
 #include "common.h"
 #include "../hostapd/hostapd.h"
 #include "../hostapd/config.h"
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 #include "../hostapd/ieee802_11.h"
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 #include "../hostapd/wps_hostapd.h"
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
@@ -500,7 +500,7 @@ void ap_rx_from_unknown_sta(void *ctx, const u8 *addr)
 }
 
 
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
 		struct hostapd_frame_info *fi)
 {
@@ -514,7 +514,7 @@ void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok)
 	struct wpa_supplicant *wpa_s = ctx;
 	ieee802_11_mgmt_cb(wpa_s->ap_iface->bss[0], buf, len, stype, ok);
 }
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 
 
 void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,

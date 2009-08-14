@@ -526,7 +526,7 @@ static u8 * wpa_ft_process_rdie(u8 *pos, u8 *end, u8 id, u8 descr_count,
 		return pos;
 	}
 
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 	if (parse.wmm_tspec) {
 		struct wmm_tspec_element *tspec;
 		int res;
@@ -562,7 +562,7 @@ static u8 * wpa_ft_process_rdie(u8 *pos, u8 *end, u8 id, u8 descr_count,
 		}
 		return pos;
 	}
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 
 	wpa_printf(MSG_DEBUG, "FT: No supported resource requested");
 	rdie->status_code = host_to_le16(WLAN_STATUS_UNSPECIFIED_FAILURE);

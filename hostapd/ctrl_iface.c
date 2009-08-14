@@ -231,7 +231,7 @@ static int hostapd_ctrl_iface_new_sta(struct hostapd_data *hapd,
 
 
 #ifdef CONFIG_IEEE80211W
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
 				       const char *txtaddr)
 {
@@ -248,7 +248,7 @@ static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
 
 	return 0;
 }
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 #endif /* CONFIG_IEEE80211W */
 
 
@@ -383,11 +383,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		if (hostapd_ctrl_iface_new_sta(hapd, buf + 8))
 			reply_len = -1;
 #ifdef CONFIG_IEEE80211W
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 	} else if (os_strncmp(buf, "SA_QUERY ", 9) == 0) {
 		if (hostapd_ctrl_iface_sa_query(hapd, buf + 9))
 			reply_len = -1;
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 	} else if (os_strncmp(buf, "WPS_PIN ", 8) == 0) {

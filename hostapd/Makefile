@@ -547,7 +547,7 @@ endif
 ifdef NEED_AP_MLME
 OBJS += beacon.o wme.o ap_list.o ieee802_11.o
 OBJS += hw_features.o
-CFLAGS += -DNEED_MLME
+CFLAGS += -DNEED_AP_MLME
 endif
 
 ifdef CONFIG_NO_STDOUT_DEBUG

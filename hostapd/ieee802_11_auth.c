@@ -465,13 +465,13 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	hostapd_set_radius_acl_auth(hapd, query->addr, cache->accepted,
 				    cache->session_timeout);
 #else /* CONFIG_DRIVER_RADIUS_ACL */
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 	/* Re-send original authentication frame for 802.11 processing */
 	wpa_printf(MSG_DEBUG, "Re-sending authentication frame after "
 		   "successful RADIUS ACL query");
 	ieee802_11_mgmt(hapd, query->auth_msg, query->auth_msg_len,
 			WLAN_FC_STYPE_AUTH, NULL);
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 #endif /* CONFIG_DRIVER_RADIUS_ACL */
 
  done:

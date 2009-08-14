@@ -339,7 +339,7 @@ void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
 }
 
 
-#ifdef NEED_MLME
+#ifdef NEED_AP_MLME
 void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
 		     u16 stype, struct hostapd_frame_info *fi)
 {
@@ -387,7 +387,7 @@ void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 		return;
 	ieee802_11_mgmt_cb(hapd, buf, len, stype, ok);
 }
-#endif /* NEED_MLME */
+#endif /* NEED_AP_MLME */
 
 
 void hostapd_michael_mic_failure(struct hostapd_data *hapd, const u8 *addr)

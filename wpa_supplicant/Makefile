@@ -544,7 +544,7 @@ OBJS += ../hostapd/wme.o
 OBJS += ../hostapd/ap_list.o
 OBJS += ../hostapd/ieee802_11.o
 OBJS += ../hostapd/hw_features.o
-CFLAGS += -DNEED_MLME
+CFLAGS += -DNEED_AP_MLME
 endif
 ifdef CONFIG_WPS
 CFLAGS += -DEAP_SERVER_WSC

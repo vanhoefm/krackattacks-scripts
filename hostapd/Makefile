@@ -125,64 +125,11 @@ ifdef CONFIG_IEEE80211N
 CFLAGS += -DCONFIG_IEEE80211N
 endif
 
-ifdef CONFIG_DRIVER_HOSTAP
-NEED_MLME=y
-CFLAGS += -DCONFIG_DRIVER_HOSTAP
-OBJS += ../src/drivers/driver_hostap.o
-endif
-
-ifdef CONFIG_DRIVER_WIRED
-CFLAGS += -DCONFIG_DRIVER_WIRED
-OBJS += ../src/drivers/driver_wired.o
-endif
-
-ifdef CONFIG_DRIVER_MADWIFI
-CFLAGS += -DCONFIG_DRIVER_MADWIFI
-OBJS += ../src/drivers/driver_madwifi.o
-CONFIG_L2_PACKET=y
-endif
-
-ifdef CONFIG_DRIVER_ATHEROS
-CFLAGS += -DCONFIG_DRIVER_ATHEROS
-OBJS += ../src/drivers/driver_atheros.o
-CONFIG_L2_PACKET=y
-endif
-
-ifdef CONFIG_DRIVER_PRISM54
-CFLAGS += -DCONFIG_DRIVER_PRISM54
-OBJS += ../src/drivers/driver_prism54.o
-endif
-
-ifdef CONFIG_DRIVER_NL80211
-NEED_MLME=y
-CFLAGS += -DCONFIG_DRIVER_NL80211
-OBJS += ../src/drivers/driver_nl80211.o
-OBJS += ../src/utils/radiotap.o
-LIBS += -lnl
-ifdef CONFIG_LIBNL20
-LIBS += -lnl-genl
-CFLAGS += -DCONFIG_LIBNL20
-endif
-endif
-
-ifdef CONFIG_DRIVER_BSD
-CFLAGS += -DCONFIG_DRIVER_BSD
-OBJS += ../src/drivers/driver_bsd.o
-CONFIG_L2_PACKET=y
-CONFIG_DNET_PCAP=y
-CONFIG_L2_FREEBSD=y
-endif
-
-ifdef CONFIG_DRIVER_TEST
-NEED_MLME=y
-CFLAGS += -DCONFIG_DRIVER_TEST
-OBJS += ../src/drivers/driver_test.o
-endif
-
-ifdef CONFIG_DRIVER_NONE
-CFLAGS += -DCONFIG_DRIVER_NONE
-OBJS += ../src/drivers/driver_none.o
-endif
+include ../src/drivers/drivers.mak
+OBJS += $(DRV_AP_OBJS)
+CFLAGS += $(DRV_AP_CFLAGS)
+LDFLAGS += $(DRV_AP_LDFLAGS)
+LIBS += $(DRV_AP_LIBS)
 
 ifdef CONFIG_L2_PACKET
 ifdef CONFIG_DNET_PCAP
@@ -597,7 +544,7 @@ ifdef NEED_BASE64
 OBJS += ../src/utils/base64.o
 endif
 
-ifdef NEED_MLME
+ifdef NEED_AP_MLME
 OBJS += beacon.o wme.o ap_list.o ieee802_11.o
 OBJS += hw_features.o
 CFLAGS += -DNEED_MLME

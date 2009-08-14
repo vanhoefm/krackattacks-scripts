@@ -118,134 +118,18 @@ ifdef CONFIG_NO_SCAN_PROCESSING
 CFLAGS += -DCONFIG_NO_SCAN_PROCESSING
 endif
 
-ifdef CONFIG_DRIVER_HOSTAP
-CFLAGS += -DCONFIG_DRIVER_HOSTAP
-OBJS_d += ../src/drivers/driver_hostap.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_WEXT
-CFLAGS += -DCONFIG_DRIVER_WEXT
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_NL80211
-CFLAGS += -DCONFIG_DRIVER_NL80211
-OBJS_d += ../src/drivers/driver_nl80211.o
-LIBS += -lnl
-ifdef CONFIG_LIBNL20
-LIBS += -lnl-genl
-CFLAGS += -DCONFIG_LIBNL20
-endif
-ifdef CONFIG_CLIENT_MLME
-OBJS_d += ../src/utils/radiotap.o
-endif
-NEED_SME=y
-NEED_AP_MLME=y
-endif
-
-ifdef CONFIG_DRIVER_PRISM54
-CFLAGS += -DCONFIG_DRIVER_PRISM54
-OBJS_d += ../src/drivers/driver_prism54.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_HERMES
-CFLAGS += -DCONFIG_DRIVER_HERMES
-OBJS_d += ../src/drivers/driver_hermes.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_MADWIFI
-CFLAGS += -DCONFIG_DRIVER_MADWIFI
-OBJS_d += ../src/drivers/driver_madwifi.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_ATMEL
-CFLAGS += -DCONFIG_DRIVER_ATMEL
-OBJS_d += ../src/drivers/driver_atmel.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_NDISWRAPPER
-CFLAGS += -DCONFIG_DRIVER_NDISWRAPPER
-OBJS_d += ../src/drivers/driver_ndiswrapper.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_RALINK
-CFLAGS += -DCONFIG_DRIVER_RALINK
-OBJS_d += ../src/drivers/driver_ralink.o
-endif
-
-ifdef CONFIG_DRIVER_BROADCOM
-CFLAGS += -DCONFIG_DRIVER_BROADCOM
-OBJS_d += ../src/drivers/driver_broadcom.o
-endif
-
-ifdef CONFIG_DRIVER_IPW
-CFLAGS += -DCONFIG_DRIVER_IPW
-OBJS_d += ../src/drivers/driver_ipw.o
-CONFIG_WIRELESS_EXTENSION=y
-endif
-
-ifdef CONFIG_DRIVER_BSD
-CFLAGS += -DCONFIG_DRIVER_BSD
-OBJS_d += ../src/drivers/driver_bsd.o
-ifndef CONFIG_L2_PACKET
-CONFIG_L2_PACKET=freebsd
-endif
-endif
-
-ifdef CONFIG_DRIVER_NDIS
-CFLAGS += -DCONFIG_DRIVER_NDIS
-OBJS_d += ../src/drivers/driver_ndis.o
-ifdef CONFIG_NDIS_EVENTS_INTEGRATED
-OBJS_d += ../src/drivers/driver_ndis_.o
-endif
-ifndef CONFIG_L2_PACKET
-CONFIG_L2_PACKET=pcap
-endif
-CONFIG_WINPCAP=y
-ifdef CONFIG_USE_NDISUIO
-CFLAGS += -DCONFIG_USE_NDISUIO
-endif
-endif
-
-ifdef CONFIG_DRIVER_WIRED
-CFLAGS += -DCONFIG_DRIVER_WIRED
-OBJS_d += ../src/drivers/driver_wired.o
-endif
-
-ifdef CONFIG_DRIVER_TEST
-CFLAGS += -DCONFIG_DRIVER_TEST
-OBJS_d += ../src/drivers/driver_test.o
-endif
-
-ifdef CONFIG_DRIVER_OSX
-CFLAGS += -DCONFIG_DRIVER_OSX
-OBJS_d += ../src/drivers/driver_osx.o
-LDFLAGS += -framework CoreFoundation
-LDFLAGS += -F/System/Library/PrivateFrameworks -framework Apple80211
-endif
-
-ifdef CONFIG_DRIVER_PS3
-CFLAGS += -DCONFIG_DRIVER_PS3 -m64
-OBJS_d += ../src/drivers/driver_ps3.o
-LDFLAGS += -m64
-endif
-
-ifdef CONFIG_DRIVER_IPHONE
-CFLAGS += -DCONFIG_DRIVER_IPHONE
-OBJS_d += ../src/drivers/driver_iphone.o
-OBJS_d += ../src/drivers/MobileApple80211.o
-LIBS += -framework CoreFoundation
-endif
-
-ifdef CONFIG_DRIVER_ROBOSWITCH
-CFLAGS += -DCONFIG_DRIVER_ROBOSWITCH
-OBJS_d += ../src/drivers/driver_roboswitch.o
+include ../src/drivers/drivers.mak
+ifdef CONFIG_AP
+OBJS_d += $(DRV_BOTH_OBJS)
+CFLAGS += $(DRV_BOTH_CFLAGS)
+LDFLAGS += $(DRV_BOTH_LDFLAGS)
+LIBS += $(DRV_BOTH_LIBS)
+else
+NEED_AP_MLME=
+OBJS_d += $(DRV_WPA_OBJS)
+CFLAGS += $(DRV_WPA_CFLAGS)
+LDFLAGS += $(DRV_WPA_LDFLAGS)
+LIBS += $(DRV_WPA_LIBS)
 endif
 
 ifndef CONFIG_L2_PACKET
@@ -946,10 +830,6 @@ SHA256OBJS += ../src/crypto/sha256-internal.o
 endif
 endif
 OBJS += $(SHA256OBJS)
-
-ifdef CONFIG_WIRELESS_EXTENSION
-OBJS_d += ../src/drivers/driver_wext.o
-endif
 
 ifdef CONFIG_CTRL_IFACE
 ifeq ($(CONFIG_CTRL_IFACE), y)

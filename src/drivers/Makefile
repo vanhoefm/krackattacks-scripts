@@ -4,6 +4,7 @@ all:
 clean:
 	for d in $(SUBDIRS); do make -C $$d clean; done
 	rm -f *~ *.o *.d
+	rm -f build.wpa_supplicant build.hostapd
 
 install:
 	@echo Nothing to be made.

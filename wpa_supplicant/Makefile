@@ -1084,10 +1084,18 @@ endif
 
 dynamic_eap_methods: $(EAPDYN)
 
-wpa_priv: $(OBJS_priv)
+../src/drivers/build.wpa_supplicant:
+	@if [ -e ../src/drivers/build.hostapd ]; then \
+		$(MAKE) -C ../src/drivers clean; \
+	fi
+	@touch ../src/drivers/build.wpa_supplicant
+
+BCHECK=../src/drivers/build.wpa_supplicant
+
+wpa_priv: $(BCHECK) $(OBJS_priv)
 	$(LDO) $(LDFLAGS) -o wpa_priv $(OBJS_priv) $(LIBS)
 
-wpa_supplicant: .config $(OBJS) $(EXTRA_progs)
+wpa_supplicant: .config $(BCHECK) $(OBJS) $(EXTRA_progs)
 	$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS)
 
 eapol_test: .config $(OBJS_t)

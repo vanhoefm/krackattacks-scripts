@@ -596,7 +596,15 @@ verify_config:
 install: all
 	for i in $(ALL); do cp $$i /usr/local/bin/$$i; done
 
-hostapd: $(OBJS)
+../src/drivers/build.hostapd:
+	@if [ -e ../src/drivers/build.wpa_supplicant ]; then \
+		$(MAKE) -C ../src/drivers clean; \
+	fi
+	@touch ../src/drivers/build.hostapd
+
+BCHECK=../src/drivers/build.hostapd
+
+hostapd: $(BCHECK) $(OBJS)
 	$(CC) -o hostapd $(OBJS) $(LIBS)
 
 OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o

@@ -188,6 +188,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	u8 key_idx = 0;
+	u16 auth_type;
 
 	if ((wpa_s->conf->wps_cred_processing == 1 ||
 	     wpa_s->conf->wps_cred_processing == 2) && cred->cred_attr) {
@@ -220,13 +221,20 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	wpa_printf(MSG_DEBUG, "WPS: MAC Address " MACSTR,
 		   MAC2STR(cred->mac_addr));
 
-	if (cred->auth_type != WPS_AUTH_OPEN &&
-	    cred->auth_type != WPS_AUTH_SHARED &&
-	    cred->auth_type != WPS_AUTH_WPAPSK &&
-	    cred->auth_type != WPS_AUTH_WPA2PSK) {
+	auth_type = cred->auth_type;
+	if (auth_type == (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) {
+		wpa_printf(MSG_DEBUG, "WPS: Workaround - convert mixed-mode "
+			   "auth_type into WPA2PSK");
+		auth_type = WPS_AUTH_WPA2PSK;
+	}
+
+	if (auth_type != WPS_AUTH_OPEN &&
+	    auth_type != WPS_AUTH_SHARED &&
+	    auth_type != WPS_AUTH_WPAPSK &&
+	    auth_type != WPS_AUTH_WPA2PSK) {
 		wpa_printf(MSG_DEBUG, "WPS: Ignored credentials for "
-			   "unsupported authentication type %d",
-			   cred->auth_type);
+			   "unsupported authentication type 0x%x",
+			   auth_type);
 		return 0;
 	}
 
@@ -300,7 +308,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		break;
 	}
 
-	switch (cred->auth_type) {
+	switch (auth_type) {
 	case WPS_AUTH_OPEN:
 		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
 		ssid->key_mgmt = WPA_KEY_MGMT_NONE;

@@ -331,6 +331,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\crypto\fips_prf_openssl.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\utils\ip_addr.c"
 				>
 			</File>
@@ -392,6 +396,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\crypto\sha1.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\sha1-pbkdf2.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\sha1-tlsprf.c"
 				>
 			</File>
 			<File

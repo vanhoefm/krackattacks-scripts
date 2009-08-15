@@ -387,6 +387,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\crypto\sha1-pbkdf2.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\src\crypto\sha1-tlsprf.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\crypto\tls_openssl.c"
 				>
 			</File>

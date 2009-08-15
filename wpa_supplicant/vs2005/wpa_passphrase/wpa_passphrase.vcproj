@@ -206,6 +206,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\crypto\sha1-pbkdf2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\wpa_passphrase.c"
 				>
 			</File>

@@ -393,7 +393,7 @@ int main(int argc, char *argv[])
 	int ret = 1;
 	size_t i;
 	int c, debug = 0, daemonize = 0;
-	const char *pid_file = NULL;
+	char *pid_file = NULL;
 
 	for (;;) {
 		c = getopt(argc, argv, "BdhKP:tv");
@@ -415,7 +415,8 @@ int main(int argc, char *argv[])
 			wpa_debug_show_keys++;
 			break;
 		case 'P':
-			pid_file = optarg;
+			os_free(pid_file);
+			pid_file = os_rel2abs_path(optarg);
 			break;
 		case 't':
 			wpa_debug_timestamp++;
@@ -459,6 +460,7 @@ int main(int argc, char *argv[])
 	ret = 0;
 
  out:
+	os_free(pid_file);
 	/* Deinitialize all interfaces */
 	for (i = 0; i < interfaces.count; i++)
 		hostapd_interface_deinit(interfaces.iface[i]);

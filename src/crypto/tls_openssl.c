@@ -735,6 +735,9 @@ void * tls_init(const struct tls_config *conf)
 	if (tls_openssl_ref_count == 0) {
 		SSL_load_error_strings();
 		SSL_library_init();
+#ifndef OPENSSL_NO_SHA256
+		EVP_add_digest(EVP_sha256());
+#endif /* OPENSSL_NO_SHA256 */
 		/* TODO: if /dev/urandom is available, PRNG is seeded
 		 * automatically. If this is not the case, random data should
 		 * be added here. */

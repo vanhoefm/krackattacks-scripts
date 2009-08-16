@@ -605,11 +605,11 @@ install: all
 BCHECK=../src/drivers/build.hostapd
 
 hostapd: $(BCHECK) $(OBJS)
-	$(CC) -o hostapd $(OBJS) $(LIBS)
+	$(CC) $(LDFLAGS) -o hostapd $(OBJS) $(LIBS)
 
 OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
 hostapd_cli: $(OBJS_c)
-	$(CC) -o hostapd_cli $(OBJS_c)
+	$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c)
 
 NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS) ../src/crypto/rc4.o ../src/crypto/md5.o
 ifdef CONFIG_INTERNAL_MD5
@@ -628,10 +628,10 @@ HOBJS += ../src/crypto/aes-internal-enc.o
 endif
 
 nt_password_hash: $(NOBJS)
-	$(CC) -o nt_password_hash $(NOBJS) $(LIBS_n)
+	$(CC) $(LDFLAGS) -o nt_password_hash $(NOBJS) $(LIBS_n)
 
 hlr_auc_gw: $(HOBJS)
-	$(CC) -o hlr_auc_gw $(HOBJS) $(LIBS_h)
+	$(CC) $(LDFLAGS) -o hlr_auc_gw $(HOBJS) $(LIBS_h)
 
 clean:
 	$(MAKE) -C ../src clean
@@ -670,7 +670,7 @@ TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes-internal.c ..
 		../src/crypto/aes-wrap.c \
 		 ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
 test-milenage: $(TEST_SRC_MILENAGE)
-	$(CC) -o test-milenage -Wall -Werror $(TEST_SRC_MILENAGE) \
+	$(CC) $(LDFLAGS) -o test-milenage -Wall -Werror $(TEST_SRC_MILENAGE) \
 		-DTEST_MAIN_MILENAGE -I. \
 		-I../src/crypto -I../src/utils
 	./test-milenage

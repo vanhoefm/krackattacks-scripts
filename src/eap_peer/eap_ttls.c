@@ -691,10 +691,15 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 	pos += EAP_TTLS_MSCHAPV2_CHALLENGE_LEN;
 	os_memset(pos, 0, 8); /* Reserved, must be zero */
 	pos += 8;
-	mschapv2_derive_response(identity, identity_len, password,
-				 password_len, pwhash, challenge,
-				 peer_challenge, pos, data->auth_response,
-				 data->master_key);
+	if (mschapv2_derive_response(identity, identity_len, password,
+				     password_len, pwhash, challenge,
+				     peer_challenge, pos, data->auth_response,
+				     data->master_key)) {
+		wpabuf_free(msg);
+		wpa_printf(MSG_ERROR, "EAP-TTLS/MSCHAPV2: Failed to derive "
+			   "response");
+		return -1;
+	}
 	data->auth_response_valid = 1;
 
 	eap_ttlsv1_permute_inner(sm, data);

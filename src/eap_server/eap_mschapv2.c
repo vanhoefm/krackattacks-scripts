@@ -295,6 +295,7 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 	u8 expected[24];
 	const u8 *username, *user;
 	size_t username_len, user_len;
+	int res;
 
 	pos = eap_hdr_validate(EAP_VENDOR_IETF, EAP_TYPE_MSCHAPV2, respData,
 			       &len);
@@ -372,17 +373,22 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 			  username, username_len);
 
 	if (sm->user->password_hash) {
-		generate_nt_response_pwhash(data->auth_challenge,
-					    peer_challenge,
-					    username, username_len,
-					    sm->user->password,
-					    expected);
+		res = generate_nt_response_pwhash(data->auth_challenge,
+						  peer_challenge,
+						  username, username_len,
+						  sm->user->password,
+						  expected);
 	} else {
-		generate_nt_response(data->auth_challenge, peer_challenge,
-				     username, username_len,
-				     sm->user->password,
-				     sm->user->password_len,
-				     expected);
+		res = generate_nt_response(data->auth_challenge,
+					   peer_challenge,
+					   username, username_len,
+					   sm->user->password,
+					   sm->user->password_len,
+					   expected);
+	}
+	if (res) {
+		data->state = FAILURE;
+		return;
 	}
 
 	if (os_memcmp(nt_response, expected, 24) == 0) {

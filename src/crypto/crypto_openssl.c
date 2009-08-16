@@ -315,7 +315,7 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 	EVP_CIPHER_CTX_set_padding(&ctx->enc, 0);
 	if (!EVP_EncryptInit_ex(&ctx->enc, cipher, NULL, NULL, NULL) ||
 	    !EVP_CIPHER_CTX_set_key_length(&ctx->enc, key_len) ||
-	    !EVP_EncryptInit_ex(&ctx->enc, cipher, NULL, key, iv)) {
+	    !EVP_EncryptInit_ex(&ctx->enc, NULL, NULL, key, iv)) {
 		EVP_CIPHER_CTX_cleanup(&ctx->enc);
 		os_free(ctx);
 		return NULL;
@@ -325,7 +325,7 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 	EVP_CIPHER_CTX_set_padding(&ctx->dec, 0);
 	if (!EVP_DecryptInit_ex(&ctx->dec, cipher, NULL, NULL, NULL) ||
 	    !EVP_CIPHER_CTX_set_key_length(&ctx->dec, key_len) ||
-	    !EVP_DecryptInit_ex(&ctx->dec, cipher, NULL, key, iv)) {
+	    !EVP_DecryptInit_ex(&ctx->dec, NULL, NULL, key, iv)) {
 		EVP_CIPHER_CTX_cleanup(&ctx->enc);
 		EVP_CIPHER_CTX_cleanup(&ctx->dec);
 		os_free(ctx);

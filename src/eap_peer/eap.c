@@ -1188,6 +1188,9 @@ struct eap_sm * eap_peer_sm_init(void *eapol_ctx,
 	tlsconf.opensc_engine_path = conf->opensc_engine_path;
 	tlsconf.pkcs11_engine_path = conf->pkcs11_engine_path;
 	tlsconf.pkcs11_module_path = conf->pkcs11_module_path;
+#ifdef CONFIG_FIPS
+	tlsconf.fips_mode = 1;
+#endif /* CONFIG_FIPS */
 	sm->ssl_ctx = tls_init(&tlsconf);
 	if (sm->ssl_ctx == NULL) {
 		wpa_printf(MSG_WARNING, "SSL: Failed to initialize TLS "

@@ -1066,6 +1066,10 @@ OBJS += $(OBJS_d) ../src/drivers/drivers.o
 OBJS += $(OBJS_l2)
 endif
 
+ifdef CONFIG_FIPS
+CFLAGS += -DCONFIG_FIPS
+endif
+
 ifdef CONFIG_NDIS_EVENTS_INTEGRATED
 CFLAGS += -DCONFIG_NDIS_EVENTS_INTEGRATED
 OBJS += ../src/drivers/ndis_events.o

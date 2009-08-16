@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / SSL/TLS interface functions for openssl
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -733,6 +733,26 @@ void * tls_init(const struct tls_config *conf)
 	SSL_CTX *ssl;
 
 	if (tls_openssl_ref_count == 0) {
+#ifdef CONFIG_FIPS
+#ifdef OPENSSL_FIPS
+		if (conf->fips_mode) {
+			if (!FIPS_mode_set(1)) {
+				wpa_printf(MSG_ERROR, "Failed to enable FIPS "
+					   "mode");
+				ERR_load_crypto_strings();
+				ERR_print_errors_fp(stderr);
+				return NULL;
+			} else
+				wpa_printf(MSG_INFO, "Running in FIPS mode");
+		}
+#else /* OPENSSL_FIPS */
+		if (conf->fips_mode) {
+			wpa_printf(MSG_ERROR, "FIPS mode requested, but not "
+				   "supported");
+			return NULL;
+		}
+#endif /* OPENSSL_FIPS */
+#endif /* CONFIG_FIPS */
 		SSL_load_error_strings();
 		SSL_library_init();
 #ifndef OPENSSL_NO_SHA256

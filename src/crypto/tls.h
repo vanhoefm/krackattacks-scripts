@@ -32,6 +32,7 @@ struct tls_config {
 	const char *opensc_engine_path;
 	const char *pkcs11_engine_path;
 	const char *pkcs11_module_path;
+	int fips_mode;
 };
 
 /**

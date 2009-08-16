@@ -1131,7 +1131,10 @@ static int wpa_supplicant_process_1_of_2_wpa(struct wpa_sm *sm,
 			return -1;
 		}
 		os_memcpy(gd->gtk, key + 1, keydatalen);
-		rc4_skip(ek, 32, 256, gd->gtk, keydatalen);
+		if (rc4_skip(ek, 32, 256, gd->gtk, keydatalen)) {
+			wpa_printf(MSG_ERROR, "WPA: RC4 failed");
+			return -1;
+		}
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES) {
 		if (keydatalen % 8) {
 			wpa_printf(MSG_WARNING, "WPA: Unsupported AES-WRAP "
@@ -1322,7 +1325,10 @@ static int wpa_supplicant_decrypt_key_data(struct wpa_sm *sm,
 		u8 ek[32];
 		os_memcpy(ek, key->key_iv, 16);
 		os_memcpy(ek + 16, sm->ptk.kek, 16);
-		rc4_skip(ek, 32, 256, (u8 *) (key + 1), keydatalen);
+		if (rc4_skip(ek, 32, 256, (u8 *) (key + 1), keydatalen)) {
+			wpa_printf(MSG_ERROR, "WPA: RC4 failed");
+			return -1;
+		}
 	} else if (ver == WPA_KEY_INFO_TYPE_HMAC_SHA1_AES ||
 		   ver == WPA_KEY_INFO_TYPE_AES_128_CMAC) {
 		u8 *buf;

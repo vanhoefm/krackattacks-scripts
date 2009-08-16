@@ -13,6 +13,7 @@ endif
 CONFIG_TLS=openssl
 #CONFIG_TLS=internal
 #CONFIG_INTERNAL_LIBTOMMATH=y
+#CONFIG_TLS=gnutls
 
 
 CFLAGS += -I.
@@ -110,6 +111,14 @@ CFLAGS += -DEAP_TLS_OPENSSL
 OBJS_both += ../src/crypto/tls_openssl.o
 OBJS_both += ../src/crypto/crypto_openssl.o
 LIBS += -lssl -lcrypto
+CONFIG_INTERNAL_SHA256=y
+endif
+
+ifeq ($(CONFIG_TLS), gnutls)
+CFLAGS += -DEAP_TLS_GNUTLS
+OBJS_both += ../src/crypto/tls_gnutls.o
+OBJS_both += ../src/crypto/crypto_gnutls.o
+LIBS += -lgnutls -lgcrypt
 CONFIG_INTERNAL_SHA256=y
 endif
 

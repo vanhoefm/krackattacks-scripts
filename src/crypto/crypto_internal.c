@@ -18,7 +18,6 @@
 #include "crypto.h"
 #include "md5.h"
 #include "sha1.h"
-#include "rc4.h"
 #include "aes.h"
 #include "tls/rsa.h"
 #include "tls/bignum.h"

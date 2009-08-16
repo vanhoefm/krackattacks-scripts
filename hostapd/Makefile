@@ -89,7 +89,6 @@ OBJS += ctrl_iface.o
 endif
 
 OBJS += ../src/crypto/md5.o
-OBJS += ../src/crypto/rc4.o
 
 AESOBJS = # none so far
 
@@ -437,6 +436,7 @@ ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
 OBJS_p += ../src/crypto/fips_prf_openssl.o
 endif
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/crypto_gnutls.o
@@ -447,12 +447,14 @@ OBJS += ../src/crypto/fips_prf_gnutls.o
 OBJS_p += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 OBJS += ../src/crypto/crypto_libtomcrypt.o
 OBJS_p += ../src/crypto/crypto_libtomcrypt.o
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
 OBJS += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
@@ -473,6 +475,7 @@ CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD4=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 endif
 else
@@ -480,6 +483,7 @@ CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 
 ifdef CONFIG_INTERNAL_AES
@@ -499,6 +503,9 @@ OBJS += ../src/crypto/md4-internal.o
 endif
 ifdef CONFIG_INTERNAL_DES
 OBJS += ../src/crypto/des-internal.o
+endif
+ifdef CONFIG_INTERNAL_RC4
+OBJS += ../src/crypto/rc4.o
 endif
 
 ifdef NEED_SHA256

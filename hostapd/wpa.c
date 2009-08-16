@@ -22,7 +22,6 @@
 #include "wpa.h"
 #include "sha1.h"
 #include "sha256.h"
-#include "rc4.h"
 #include "aes_wrap.h"
 #include "crypto.h"
 #include "eloop.h"

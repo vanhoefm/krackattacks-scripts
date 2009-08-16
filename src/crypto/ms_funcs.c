@@ -18,7 +18,6 @@
 #include "sha1.h"
 #include "ms_funcs.h"
 #include "crypto.h"
-#include "rc4.h"
 
 
 /**

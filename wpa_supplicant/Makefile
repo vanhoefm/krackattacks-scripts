@@ -52,7 +52,6 @@ OBJS = config.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o
-OBJS += ../src/crypto/rc4.o
 OBJS_p = wpa_passphrase.o
 OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o
@@ -677,6 +676,7 @@ CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifdef CONFIG_SMARTCARD
 ifndef CONFIG_NATIVE_WINDOWS
@@ -732,6 +732,7 @@ OBJS_p += ../src/crypto/crypto_openssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
 endif
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/crypto_gnutls.o
@@ -740,17 +741,20 @@ ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_TLS), schannel)
 OBJS += ../src/crypto/crypto_cryptoapi.o
 OBJS_p += ../src/crypto/crypto_cryptoapi.o
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 OBJS += ../src/crypto/crypto_libtomcrypt.o
 OBJS_p += ../src/crypto/crypto_libtomcrypt.o
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
 OBJS += ../src/crypto/crypto_internal.o ../src/tls/bignum.o
@@ -771,18 +775,21 @@ CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD4=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 ifeq ($(CONFIG_CRYPTO), cryptoapi)
 OBJS += ../src/crypto/crypto_cryptoapi.o
 OBJS_p += ../src/crypto/crypto_cryptoapi.o
 CFLAGS += -DCONFIG_CRYPTO_CRYPTOAPI
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 endif
 ifeq ($(CONFIG_TLS), none)
 OBJS += ../src/crypto/crypto_none.o
 OBJS_p += ../src/crypto/crypto_none.o
 CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
 else
 CONFIG_INTERNAL_AES=y
@@ -810,6 +817,10 @@ OBJS_p += $(MD5OBJS)
 
 ifdef CONFIG_INTERNAL_DES
 DESOBJS += ../src/crypto/des-internal.o
+endif
+
+ifdef CONFIG_INTERNAL_RC4
+OBJS += ../src/crypto/rc4.o
 endif
 
 ifdef CONFIG_IEEE80211R

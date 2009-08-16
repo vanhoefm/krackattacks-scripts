@@ -28,7 +28,7 @@
 #include "radius/radius_client.h"
 #include "ieee802_11_auth.h"
 #include "sta_info.h"
-#include "rc4.h"
+#include "crypto.h"
 #include "ieee802_1x.h"
 #include "wpa.h"
 #include "wme.h"

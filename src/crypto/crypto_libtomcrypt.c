@@ -16,7 +16,6 @@
 #include <tomcrypt.h>
 
 #include "common.h"
-#include "rc4.h"
 #include "crypto.h"
 
 #ifndef mp_init_multi

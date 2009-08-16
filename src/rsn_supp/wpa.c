@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "rc4.h"
+#include "crypto.h"
 #include "aes_wrap.h"
 #include "wpa.h"
 #include "eloop.h"

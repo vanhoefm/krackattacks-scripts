@@ -50,10 +50,10 @@ int wpa_eapol_key_mic(const u8 *key, int ver, const u8 *buf, size_t len,
 
 	switch (ver) {
 	case WPA_KEY_INFO_TYPE_HMAC_MD5_RC4:
-		hmac_md5(key, 16, buf, len, mic);
-		break;
+		return hmac_md5(key, 16, buf, len, mic);
 	case WPA_KEY_INFO_TYPE_HMAC_SHA1_AES:
-		hmac_sha1(key, 16, buf, len, hash);
+		if (hmac_sha1(key, 16, buf, len, hash))
+			return -1;
 		os_memcpy(mic, hash, MD5_MAC_LEN);
 		break;
 #if defined(CONFIG_IEEE80211R) || defined(CONFIG_IEEE80211W)

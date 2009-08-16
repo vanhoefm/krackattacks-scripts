@@ -32,7 +32,7 @@
 #endif /* openssl < 0.9.7 */
 
 
-int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
+int openssl_digest_vector(const EVP_MD *type, int non_fips, size_t num_elem,
 			  const u8 *addr[], const size_t *len, u8 *mac)
 {
 	EVP_MD_CTX ctx;
@@ -40,6 +40,8 @@ int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 	unsigned int mac_len;
 
 	EVP_MD_CTX_init(&ctx);
+	if (non_fips)
+		EVP_MD_CTX_set_flags(&ctx, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
 	if (!EVP_DigestInit_ex(&ctx, type, NULL)) {
 		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestInit_ex failed: %s",
 			   ERR_error_string(ERR_get_error(), NULL));
@@ -65,7 +67,7 @@ int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
 
 int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	return openssl_digest_vector(EVP_md4(), num_elem, addr, len, mac);
+	return openssl_digest_vector(EVP_md4(), 0, num_elem, addr, len, mac);
 }
 
 
@@ -92,20 +94,30 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	return openssl_digest_vector(EVP_md5(), num_elem, addr, len, mac);
+	return openssl_digest_vector(EVP_md5(), 0, num_elem, addr, len, mac);
 }
+
+
+#ifdef CONFIG_FIPS
+int md5_vector_non_fips_allow(size_t num_elem, const u8 *addr[],
+			      const size_t *len, u8 *mac)
+{
+	return openssl_digest_vector(EVP_md5(), 1, num_elem, addr, len, mac);
+}
+#endif /* CONFIG_FIPS */
 
 
 int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	return openssl_digest_vector(EVP_sha1(), num_elem, addr, len, mac);
+	return openssl_digest_vector(EVP_sha1(), 0, num_elem, addr, len, mac);
 }
 
 
 int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 		  u8 *mac)
 {
-	return openssl_digest_vector(EVP_sha256(), num_elem, addr, len, mac);
+	return openssl_digest_vector(EVP_sha256(), 0, num_elem, addr, len,
+				     mac);
 }
 
 

@@ -47,6 +47,22 @@ int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
  */
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
 
+#ifdef CONFIG_FIPS
+/**
+ * md5_vector_non_fips_allow - MD5 hash for data vector (non-FIPS use allowed)
+ * @num_elem: Number of elements in the data vector
+ * @addr: Pointers to the data areas
+ * @len: Lengths of the data blocks
+ * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 on failure
+ */
+int md5_vector_non_fips_allow(size_t num_elem, const u8 *addr[],
+			      const size_t *len, u8 *mac);
+#else /* CONFIG_FIPS */
+#define md5_vector_non_fips_allow md5_vector
+#endif /* CONFIG_FIPS */
+
+
 /**
  * sha1_vector - SHA-1 hash for data vector
  * @num_elem: Number of elements in the data vector

@@ -1068,6 +1068,7 @@ endif
 
 ifdef CONFIG_FIPS
 CFLAGS += -DCONFIG_FIPS
+MD5OBJS += ../src/crypto/md5-non-fips.o
 endif
 
 ifdef CONFIG_NDIS_EVENTS_INTEGRATED

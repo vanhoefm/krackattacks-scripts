@@ -102,6 +102,13 @@ int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 }
 
 
+int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
+		  u8 *mac)
+{
+	return openssl_digest_vector(EVP_sha256(), num_elem, addr, len, mac);
+}
+
+
 void * aes_encrypt_init(const u8 *key, size_t len)
 {
 	AES_KEY *ak;

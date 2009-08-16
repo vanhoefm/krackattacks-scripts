@@ -96,6 +96,43 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
+int rc4_skip(const u8 *key, size_t keylen, size_t skip,
+	     u8 *data, size_t data_len)
+{
+#ifdef OPENSSL_NO_RC4
+	return -1;
+#else /* OPENSSL_NO_RC4 */
+	EVP_CIPHER_CTX ctx;
+	int outl;
+	int res = -1;
+	unsigned char skip_buf[16];
+
+	EVP_CIPHER_CTX_init(&ctx);
+	if (!EVP_CIPHER_CTX_set_padding(&ctx, 0) ||
+	    !EVP_CipherInit_ex(&ctx, EVP_rc4(), NULL, NULL, NULL, 1) ||
+	    !EVP_CIPHER_CTX_set_key_length(&ctx, keylen) ||
+	    !EVP_CipherInit_ex(&ctx, NULL, NULL, key, NULL, 1))
+		goto out;
+
+	while (skip >= sizeof(skip_buf)) {
+		size_t len = skip;
+		if (len > sizeof(skip_buf))
+			len = sizeof(skip_buf);
+		if (!EVP_CipherUpdate(&ctx, skip_buf, &outl, skip_buf, len))
+			goto out;
+		skip -= len;
+	}
+
+	if (EVP_CipherUpdate(&ctx, data, &outl, data, data_len))
+		res = 0;
+
+out:
+	EVP_CIPHER_CTX_cleanup(&ctx);
+	return res;
+#endif /* OPENSSL_NO_RC4 */
+}
+
+
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	return openssl_digest_vector(EVP_md5(), 0, num_elem, addr, len, mac);

@@ -40,8 +40,12 @@ int openssl_digest_vector(const EVP_MD *type, int non_fips, size_t num_elem,
 	unsigned int mac_len;
 
 	EVP_MD_CTX_init(&ctx);
+#ifdef CONFIG_FIPS
+#ifdef OPENSSL_FIPS
 	if (non_fips)
 		EVP_MD_CTX_set_flags(&ctx, EVP_MD_CTX_FLAG_NON_FIPS_ALLOW);
+#endif /* OPENSSL_FIPS */
+#endif /* CONFIG_FIPS */
 	if (!EVP_DigestInit_ex(&ctx, type, NULL)) {
 		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestInit_ex failed: %s",
 			   ERR_error_string(ERR_get_error(), NULL));

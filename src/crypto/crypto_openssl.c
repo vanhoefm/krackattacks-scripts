@@ -14,9 +14,7 @@
 
 #include "includes.h"
 #include <openssl/opensslv.h>
-#include <openssl/md4.h>
-#include <openssl/md5.h>
-#include <openssl/sha.h>
+#include <openssl/err.h>
 #include <openssl/des.h>
 #include <openssl/aes.h>
 #include <openssl/bn.h>
@@ -34,19 +32,40 @@
 #endif /* openssl < 0.9.7 */
 
 
+int openssl_digest_vector(const EVP_MD *type, size_t num_elem,
+			  const u8 *addr[], const size_t *len, u8 *mac)
+{
+	EVP_MD_CTX ctx;
+	size_t i;
+	unsigned int mac_len;
+
+	EVP_MD_CTX_init(&ctx);
+	if (!EVP_DigestInit_ex(&ctx, type, NULL)) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestInit_ex failed: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+	for (i = 0; i < num_elem; i++) {
+		if (!EVP_DigestUpdate(&ctx, addr[i], len[i])) {
+			wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestUpdate "
+				   "failed: %s",
+				   ERR_error_string(ERR_get_error(), NULL));
+			return -1;
+		}
+	}
+	if (!EVP_DigestFinal(&ctx, mac, &mac_len)) {
+		wpa_printf(MSG_ERROR, "OpenSSL: EVP_DigestFinal failed: %s",
+			   ERR_error_string(ERR_get_error(), NULL));
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	MD4_CTX ctx;
-	size_t i;
-
-	if (!MD4_Init(&ctx))
-		return -1;
-	for (i = 0; i < num_elem; i++)
-		if (!MD4_Update(&ctx, addr[i], len[i]))
-			return -1;
-	if (!MD4_Final(mac, &ctx))
-		return -1;
-	return 0;
+	return openssl_digest_vector(EVP_md4(), num_elem, addr, len, mac);
 }
 
 
@@ -73,33 +92,13 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	MD5_CTX ctx;
-	size_t i;
-
-	if (!MD5_Init(&ctx))
-		return -1;
-	for (i = 0; i < num_elem; i++)
-		if (!MD5_Update(&ctx, addr[i], len[i]))
-			return -1;
-	if (!MD5_Final(mac, &ctx))
-		return -1;
-	return 0;
+	return openssl_digest_vector(EVP_md5(), num_elem, addr, len, mac);
 }
 
 
 int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	SHA_CTX ctx;
-	size_t i;
-
-	if (!SHA1_Init(&ctx))
-		return -1;
-	for (i = 0; i < num_elem; i++)
-		if (!SHA1_Update(&ctx, addr[i], len[i]))
-			return -1;
-	if (!SHA1_Final(mac, &ctx))
-		return -1;
-	return 0;
+	return openssl_digest_vector(EVP_sha1(), num_elem, addr, len, mac);
 }
 
 

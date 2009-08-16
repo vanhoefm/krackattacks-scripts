@@ -437,7 +437,6 @@ ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
 OBJS_p += ../src/crypto/fips_prf_openssl.o
 endif
-CONFIG_INTERNAL_SHA256=y
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/crypto_gnutls.o

@@ -68,6 +68,8 @@ static int tlsv1_add_cert_der(struct x509_certificate **chain,
 
 static const char *pem_cert_begin = "-----BEGIN CERTIFICATE-----";
 static const char *pem_cert_end = "-----END CERTIFICATE-----";
+static const char *pem_key_begin = "-----BEGIN RSA PRIVATE KEY-----";
+static const char *pem_key_end = "-----END RSA PRIVATE KEY-----";
 
 
 static const u8 * search_tag(const char *tag, const u8 *buf, size_t len)
@@ -209,10 +211,37 @@ int tlsv1_set_cert(struct tlsv1_credentials *cred, const char *cert,
 }
 
 
+static int tlsv1_set_key_pem(struct tlsv1_credentials *cred,
+			     const u8 *key, size_t len)
+{
+	const u8 *pos, *end;
+	unsigned char *der;
+	size_t der_len;
+
+	pos = search_tag(pem_key_begin, key, len);
+	if (!pos)
+		return -1;
+
+	pos += os_strlen(pem_key_begin);
+	end = search_tag(pem_key_end, pos, key + len - pos);
+	if (!end)
+		return -1;
+
+	der = base64_decode(pos, end - pos, &der_len);
+	if (!der)
+		return -1;
+	cred->key = crypto_private_key_import(der, der_len);
+	os_free(der);
+	return cred->key ? 0 : -1;
+}
+
+
 static int tlsv1_set_key(struct tlsv1_credentials *cred,
 			 const u8 *key, size_t len)
 {
 	cred->key = crypto_private_key_import(key, len);
+	if (cred->key == NULL)
+		tlsv1_set_key_pem(cred, key, len);
 	if (cred->key == NULL) {
 		wpa_printf(MSG_INFO, "TLSv1: Failed to parse private key");
 		return -1;

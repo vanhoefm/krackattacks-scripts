@@ -37,9 +37,9 @@ void SHA1Transform(u32 state[5], const unsigned char buffer[64]);
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 of failure
  */
-void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len,
-		 u8 *mac)
+int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	SHA1_CTX ctx;
 	size_t i;
@@ -48,6 +48,7 @@ void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len,
 	for (i = 0; i < num_elem; i++)
 		SHA1Update(&ctx, addr[i], len[i]);
 	SHA1Final(mac, &ctx);
+	return 0;
 }
 
 

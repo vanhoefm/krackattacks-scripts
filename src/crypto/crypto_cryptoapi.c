@@ -167,9 +167,9 @@ int cryptoapi_hash_vector(ALG_ID alg, size_t hash_len, size_t num_elem,
 }
 
 
-void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	cryptoapi_hash_vector(CALG_MD4, 16, num_elem, addr, len, mac);
+	return cryptoapi_hash_vector(CALG_MD4, 16, num_elem, addr, len, mac);
 }
 
 
@@ -239,15 +239,15 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 
 
 #ifdef EAP_TLS_FUNCS
-void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	cryptoapi_hash_vector(CALG_MD5, 16, num_elem, addr, len, mac);
+	return cryptoapi_hash_vector(CALG_MD5, 16, num_elem, addr, len, mac);
 }
 
 
-void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
-	cryptoapi_hash_vector(CALG_SHA, 20, num_elem, addr, len, mac);
+	return cryptoapi_hash_vector(CALG_SHA, 20, num_elem, addr, len, mac);
 }
 
 

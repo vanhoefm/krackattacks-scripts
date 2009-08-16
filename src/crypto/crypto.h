@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / wrapper functions for crypto libraries
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -33,8 +33,9 @@
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 on failure
  */
-void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
+int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
 
 /**
  * md5_vector - MD5 hash for data vector
@@ -42,8 +43,9 @@ void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 on failure
  */
-void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
+int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
 
 /**
  * sha1_vector - SHA-1 hash for data vector
@@ -51,9 +53,10 @@ void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac);
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 on failure
  */
-void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len,
-		 u8 *mac);
+int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len,
+		u8 *mac);
 
 /**
  * fips186_2-prf - NIST FIPS Publication 186-2 change notice 1 PRF
@@ -76,9 +79,10 @@ int __must_check fips186_2_prf(const u8 *seed, size_t seed_len, u8 *x,
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 on failure
  */
-void sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
-		   u8 *mac);
+int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
+		  u8 *mac);
 
 /**
  * des_encrypt - Encrypt one block with DES

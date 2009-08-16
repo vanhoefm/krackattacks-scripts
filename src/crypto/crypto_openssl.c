@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / wrapper functions for libcrypto
- * Copyright (c) 2004-2005, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -34,15 +34,19 @@
 #endif /* openssl < 0.9.7 */
 
 
-void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	MD4_CTX ctx;
 	size_t i;
 
-	MD4_Init(&ctx);
+	if (!MD4_Init(&ctx))
+		return -1;
 	for (i = 0; i < num_elem; i++)
-		MD4_Update(&ctx, addr[i], len[i]);
-	MD4_Final(mac, &ctx);
+		if (!MD4_Update(&ctx, addr[i], len[i]))
+			return -1;
+	if (!MD4_Final(mac, &ctx))
+		return -1;
+	return 0;
 }
 
 
@@ -67,28 +71,37 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
-void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	MD5_CTX ctx;
 	size_t i;
 
-	MD5_Init(&ctx);
+	if (!MD5_Init(&ctx))
+		return -1;
 	for (i = 0; i < num_elem; i++)
-		MD5_Update(&ctx, addr[i], len[i]);
-	MD5_Final(mac, &ctx);
+		if (!MD5_Update(&ctx, addr[i], len[i]))
+			return -1;
+	if (!MD5_Final(mac, &ctx))
+		return -1;
+	return 0;
 }
 
 
-void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	SHA_CTX ctx;
 	size_t i;
 
-	SHA1_Init(&ctx);
+	if (!SHA1_Init(&ctx))
+		return -1;
 	for (i = 0; i < num_elem; i++)
-		SHA1_Update(&ctx, addr[i], len[i]);
-	SHA1_Final(mac, &ctx);
+		if (!SHA1_Update(&ctx, addr[i], len[i]))
+			return -1;
+	if (!SHA1_Final(mac, &ctx))
+		return -1;
+	return 0;
 }
+
 
 void * aes_encrypt_init(const u8 *key, size_t len)
 {

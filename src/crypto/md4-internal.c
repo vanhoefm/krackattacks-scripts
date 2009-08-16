@@ -32,7 +32,7 @@ static void MD4Update(MD4_CTX *ctx, const unsigned char *input, size_t len);
 static void MD4Final(unsigned char digest[MD4_DIGEST_LENGTH], MD4_CTX *ctx);
 
 
-void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	MD4_CTX ctx;
 	size_t i;
@@ -41,6 +41,7 @@ void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 	for (i = 0; i < num_elem; i++)
 		MD4Update(&ctx, addr[i], len[i]);
 	MD4Final(mac, &ctx);
+	return 0;
 }
 
 

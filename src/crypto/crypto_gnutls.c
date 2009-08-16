@@ -18,20 +18,21 @@
 #include "common.h"
 #include "crypto.h"
 
-void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	gcry_md_hd_t hd;
 	unsigned char *p;
 	size_t i;
 
 	if (gcry_md_open(&hd, GCRY_MD_MD4, 0) != GPG_ERR_NO_ERROR)
-		return;
+		return -1;
 	for (i = 0; i < num_elem; i++)
 		gcry_md_write(hd, addr[i], len[i]);
 	p = gcry_md_read(hd, GCRY_MD_MD4);
 	if (p)
 		memcpy(mac, p, gcry_md_get_algo_dlen(GCRY_MD_MD4));
 	gcry_md_close(hd);
+	return 0;
 }
 
 
@@ -57,37 +58,39 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
-void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	gcry_md_hd_t hd;
 	unsigned char *p;
 	size_t i;
 
 	if (gcry_md_open(&hd, GCRY_MD_MD5, 0) != GPG_ERR_NO_ERROR)
-		return;
+		return -1;
 	for (i = 0; i < num_elem; i++)
 		gcry_md_write(hd, addr[i], len[i]);
 	p = gcry_md_read(hd, GCRY_MD_MD5);
 	if (p)
 		memcpy(mac, p, gcry_md_get_algo_dlen(GCRY_MD_MD5));
 	gcry_md_close(hd);
+	return 0;
 }
 
 
-void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	gcry_md_hd_t hd;
 	unsigned char *p;
 	size_t i;
 
 	if (gcry_md_open(&hd, GCRY_MD_SHA1, 0) != GPG_ERR_NO_ERROR)
-		return;
+		return -1;
 	for (i = 0; i < num_elem; i++)
 		gcry_md_write(hd, addr[i], len[i]);
 	p = gcry_md_read(hd, GCRY_MD_SHA1);
 	if (p)
 		memcpy(mac, p, gcry_md_get_algo_dlen(GCRY_MD_SHA1));
 	gcry_md_close(hd);
+	return 0;
 }
 
 

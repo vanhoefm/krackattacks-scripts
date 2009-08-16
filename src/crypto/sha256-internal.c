@@ -36,17 +36,21 @@ static int sha256_done(struct sha256_state *md, unsigned char *out);
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 of failure
  */
-void sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
-		 u8 *mac)
+int sha256_vector(size_t num_elem, const u8 *addr[], const size_t *len,
+		  u8 *mac)
 {
 	struct sha256_state ctx;
 	size_t i;
 
 	sha256_init(&ctx);
 	for (i = 0; i < num_elem; i++)
-		sha256_process(&ctx, addr[i], len[i]);
-	sha256_done(&ctx, mac);
+		if (sha256_process(&ctx, addr[i], len[i]))
+			return -1;
+	if (sha256_done(&ctx, mac))
+		return -1;
+	return 0;
 }
 
 

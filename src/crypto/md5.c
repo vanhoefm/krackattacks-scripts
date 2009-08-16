@@ -27,9 +27,10 @@
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash (16 bytes)
+ * Returns: 0 on success, -1 on failure
  */
-void hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
-		     const u8 *addr[], const size_t *len, u8 *mac)
+int hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
+		    const u8 *addr[], const size_t *len, u8 *mac)
 {
 	u8 k_pad[64]; /* padding - key XORd with ipad/opad */
 	u8 tk[16];
@@ -41,12 +42,13 @@ void hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
 		 * Fixed limit on the number of fragments to avoid having to
 		 * allocate memory (which could fail).
 		 */
-		return;
+		return -1;
 	}
 
         /* if key is longer than 64 bytes reset it to key = MD5(key) */
         if (key_len > 64) {
-		md5_vector(1, &key, &key_len, tk);
+		if (md5_vector(1, &key, &key_len, tk))
+			return -1;
 		key = tk;
 		key_len = 16;
         }
@@ -75,7 +77,8 @@ void hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
 		_addr[i + 1] = addr[i];
 		_len[i + 1] = len[i];
 	}
-	md5_vector(1 + num_elem, _addr, _len, mac);
+	if (md5_vector(1 + num_elem, _addr, _len, mac))
+		return -1;
 
 	os_memset(k_pad, 0, sizeof(k_pad));
 	os_memcpy(k_pad, key, key_len);
@@ -88,7 +91,7 @@ void hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
 	_len[0] = 64;
 	_addr[1] = mac;
 	_len[1] = MD5_MAC_LEN;
-	md5_vector(2, _addr, _len, mac);
+	return md5_vector(2, _addr, _len, mac);
 }
 
 
@@ -99,9 +102,10 @@ void hmac_md5_vector(const u8 *key, size_t key_len, size_t num_elem,
  * @data: Pointers to the data area
  * @data_len: Length of the data area
  * @mac: Buffer for the hash (16 bytes)
+ * Returns: 0 on success, -1 on failure
  */
-void hmac_md5(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
+int hmac_md5(const u8 *key, size_t key_len, const u8 *data, size_t data_len,
 	      u8 *mac)
 {
-	hmac_md5_vector(key, key_len, 1, &data, &data_len, mac);
+	return hmac_md5_vector(key, key_len, 1, &data, &data_len, mac);
 }

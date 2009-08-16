@@ -37,8 +37,9 @@ typedef struct MD5Context MD5_CTX;
  * @addr: Pointers to the data areas
  * @len: Lengths of the data blocks
  * @mac: Buffer for the hash
+ * Returns: 0 on success, -1 of failure
  */
-void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	MD5_CTX ctx;
 	size_t i;
@@ -47,6 +48,7 @@ void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 	for (i = 0; i < num_elem; i++)
 		MD5Update(&ctx, addr[i], len[i]);
 	MD5Final(mac, &ctx);
+	return 0;
 }
 
 

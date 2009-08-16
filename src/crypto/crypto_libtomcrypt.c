@@ -29,7 +29,7 @@
 #endif
 
 
-void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	hash_state md;
 	size_t i;
@@ -38,6 +38,7 @@ void md4_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 	for (i = 0; i < num_elem; i++)
 		md4_process(&md, addr[i], len[i]);
 	md4_done(&md, mac);
+	return 0;
 }
 
 
@@ -63,7 +64,7 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 
 
 #ifdef EAP_TLS_FUNCS
-void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	hash_state md;
 	size_t i;
@@ -72,10 +73,11 @@ void md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 	for (i = 0; i < num_elem; i++)
 		md5_process(&md, addr[i], len[i]);
 	md5_done(&md, mac);
+	return 0;
 }
 
 
-void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
+int sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	hash_state md;
 	size_t i;
@@ -84,6 +86,7 @@ void sha1_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 	for (i = 0; i < num_elem; i++)
 		sha1_process(&md, addr[i], len[i]);
 	sha1_done(&md, mac);
+	return 0;
 }
 
 

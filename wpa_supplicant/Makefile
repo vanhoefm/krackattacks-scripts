@@ -1007,6 +1007,11 @@ ifdef CONFIG_DELAYED_MIC_ERROR_REPORT
 CFLAGS += -DCONFIG_DELAYED_MIC_ERROR_REPORT
 endif
 
+ifdef CONFIG_FIPS
+CFLAGS += -DCONFIG_FIPS
+MD5OBJS += ../src/crypto/md5-non-fips.o
+endif
+
 OBJS += ../src/drivers/scan_helpers.o
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
@@ -1064,11 +1069,6 @@ EXTRA_progs += wpa_priv
 else
 OBJS += $(OBJS_d) ../src/drivers/drivers.o
 OBJS += $(OBJS_l2)
-endif
-
-ifdef CONFIG_FIPS
-CFLAGS += -DCONFIG_FIPS
-MD5OBJS += ../src/crypto/md5-non-fips.o
 endif
 
 ifdef CONFIG_NDIS_EVENTS_INTEGRATED

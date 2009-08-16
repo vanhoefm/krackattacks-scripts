@@ -384,8 +384,8 @@ static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 			r = random();
 			os_memcpy(key, &now, 4);
 			os_memcpy(key + 4, &r, 4);
-			rc4(sta->challenge, WLAN_AUTH_CHALLENGE_LEN,
-			    key, sizeof(key));
+			rc4_skip(key, sizeof(key), 0,
+				 sta->challenge, WLAN_AUTH_CHALLENGE_LEN);
 		}
 		return 0;
 	}

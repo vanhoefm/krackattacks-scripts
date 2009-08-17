@@ -16,7 +16,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "aes_i.h"
+#include "aes.h"
 
 /**
  * aes_unwrap - Unwrap key with AES Key Wrap Algorithm (128-bit KEK) (RFC3394)

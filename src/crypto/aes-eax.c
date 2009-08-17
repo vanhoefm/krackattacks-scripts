@@ -16,7 +16,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "aes_i.h"
+#include "aes.h"
 #include "aes_wrap.h"
 
 /**
@@ -37,7 +37,8 @@ int aes_128_eax_encrypt(const u8 *key, const u8 *nonce, size_t nonce_len,
 {
 	u8 *buf;
 	size_t buf_len;
-	u8 nonce_mac[BLOCK_SIZE], hdr_mac[BLOCK_SIZE], data_mac[BLOCK_SIZE];
+	u8 nonce_mac[AES_BLOCK_SIZE], hdr_mac[AES_BLOCK_SIZE],
+		data_mac[AES_BLOCK_SIZE];
 	int i, ret = -1;
 
 	if (nonce_len > data_len)
@@ -71,7 +72,7 @@ int aes_128_eax_encrypt(const u8 *key, const u8 *nonce, size_t nonce_len,
 	if (omac1_aes_128(key, buf, 16 + data_len, data_mac))
 		goto fail;
 
-	for (i = 0; i < BLOCK_SIZE; i++)
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		tag[i] = nonce_mac[i] ^ data_mac[i] ^ hdr_mac[i];
 
 	ret = 0;
@@ -100,7 +101,8 @@ int aes_128_eax_decrypt(const u8 *key, const u8 *nonce, size_t nonce_len,
 {
 	u8 *buf;
 	size_t buf_len;
-	u8 nonce_mac[BLOCK_SIZE], hdr_mac[BLOCK_SIZE], data_mac[BLOCK_SIZE];
+	u8 nonce_mac[AES_BLOCK_SIZE], hdr_mac[AES_BLOCK_SIZE],
+		data_mac[AES_BLOCK_SIZE];
 	int i;
 
 	if (nonce_len > data_len)
@@ -140,7 +142,7 @@ int aes_128_eax_decrypt(const u8 *key, const u8 *nonce, size_t nonce_len,
 
 	os_free(buf);
 
-	for (i = 0; i < BLOCK_SIZE; i++) {
+	for (i = 0; i < AES_BLOCK_SIZE; i++) {
 		if (tag[i] != (nonce_mac[i] ^ data_mac[i] ^ hdr_mac[i]))
 			return -2;
 	}

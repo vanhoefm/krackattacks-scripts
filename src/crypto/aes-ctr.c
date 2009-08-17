@@ -16,7 +16,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "aes_i.h"
+#include "aes.h"
 
 /**
  * aes_128_ctr_encrypt - AES-128 CTR mode encryption
@@ -33,23 +33,23 @@ int aes_128_ctr_encrypt(const u8 *key, const u8 *nonce,
 	size_t j, len, left = data_len;
 	int i;
 	u8 *pos = data;
-	u8 counter[BLOCK_SIZE], buf[BLOCK_SIZE];
+	u8 counter[AES_BLOCK_SIZE], buf[AES_BLOCK_SIZE];
 
 	ctx = aes_encrypt_init(key, 16);
 	if (ctx == NULL)
 		return -1;
-	os_memcpy(counter, nonce, BLOCK_SIZE);
+	os_memcpy(counter, nonce, AES_BLOCK_SIZE);
 
 	while (left > 0) {
 		aes_encrypt(ctx, counter, buf);
 
-		len = (left < BLOCK_SIZE) ? left : BLOCK_SIZE;
+		len = (left < AES_BLOCK_SIZE) ? left : AES_BLOCK_SIZE;
 		for (j = 0; j < len; j++)
 			pos[j] ^= buf[j];
 		pos += len;
 		left -= len;
 
-		for (i = BLOCK_SIZE - 1; i >= 0; i--) {
+		for (i = AES_BLOCK_SIZE - 1; i >= 0; i--) {
 			counter[i]++;
 			if (counter[i])
 				break;

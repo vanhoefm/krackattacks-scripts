@@ -16,18 +16,18 @@
 #include "includes.h"
 
 #include "common.h"
-#include "aes_i.h"
+#include "aes.h"
 
 static void gf_mulx(u8 *pad)
 {
 	int i, carry;
 
 	carry = pad[0] & 0x80;
-	for (i = 0; i < BLOCK_SIZE - 1; i++)
+	for (i = 0; i < AES_BLOCK_SIZE - 1; i++)
 		pad[i] = (pad[i] << 1) | (pad[i + 1] >> 7);
-	pad[BLOCK_SIZE - 1] <<= 1;
+	pad[AES_BLOCK_SIZE - 1] <<= 1;
 	if (carry)
-		pad[BLOCK_SIZE - 1] ^= 0x87;
+		pad[AES_BLOCK_SIZE - 1] ^= 0x87;
 }
 
 
@@ -48,14 +48,14 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 			 const u8 *addr[], const size_t *len, u8 *mac)
 {
 	void *ctx;
-	u8 cbc[BLOCK_SIZE], pad[BLOCK_SIZE];
+	u8 cbc[AES_BLOCK_SIZE], pad[AES_BLOCK_SIZE];
 	const u8 *pos, *end;
 	size_t i, e, left, total_len;
 
 	ctx = aes_encrypt_init(key, 16);
 	if (ctx == NULL)
 		return -1;
-	os_memset(cbc, 0, BLOCK_SIZE);
+	os_memset(cbc, 0, AES_BLOCK_SIZE);
 
 	total_len = 0;
 	for (e = 0; e < num_elem; e++)
@@ -66,8 +66,8 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 	pos = addr[0];
 	end = pos + len[0];
 
-	while (left >= BLOCK_SIZE) {
-		for (i = 0; i < BLOCK_SIZE; i++) {
+	while (left >= AES_BLOCK_SIZE) {
+		for (i = 0; i < AES_BLOCK_SIZE; i++) {
 			cbc[i] ^= *pos++;
 			if (pos >= end) {
 				e++;
@@ -75,12 +75,12 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 				end = pos + len[e];
 			}
 		}
-		if (left > BLOCK_SIZE)
+		if (left > AES_BLOCK_SIZE)
 			aes_encrypt(ctx, cbc, cbc);
-		left -= BLOCK_SIZE;
+		left -= AES_BLOCK_SIZE;
 	}
 
-	os_memset(pad, 0, BLOCK_SIZE);
+	os_memset(pad, 0, AES_BLOCK_SIZE);
 	aes_encrypt(ctx, pad, pad);
 	gf_mulx(pad);
 
@@ -97,7 +97,7 @@ int omac1_aes_128_vector(const u8 *key, size_t num_elem,
 		gf_mulx(pad);
 	}
 
-	for (i = 0; i < BLOCK_SIZE; i++)
+	for (i = 0; i < AES_BLOCK_SIZE; i++)
 		pad[i] ^= cbc[i];
 	aes_encrypt(ctx, pad, mac);
 	aes_encrypt_deinit(ctx);

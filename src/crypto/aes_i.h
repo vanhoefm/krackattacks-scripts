@@ -17,8 +17,6 @@
 
 #include "aes.h"
 
-#define BLOCK_SIZE 16
-
 /* #define FULL_UNROLL */
 #define AES_SMALL_TABLES
 

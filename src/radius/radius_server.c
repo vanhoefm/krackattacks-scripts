@@ -765,6 +765,22 @@ fail:
 }
 
 
+static int radius_server_disable_pmtu_discovery(int s)
+{
+	int r = -1;
+#if defined(IP_MTU_DISCOVER) && defined(IP_PMTUDISC_DONT)
+	/* Turn off Path MTU discovery on IPv4/UDP sockets. */
+	int action = IP_PMTUDISC_DONT;
+	r = setsockopt(s, IPPROTO_IP, IP_MTU_DISCOVER, &action,
+		       sizeof(action));
+	if (r == -1)
+		wpa_printf(MSG_ERROR, "Failed to set IP_MTU_DISCOVER: "
+			   "%s", strerror(errno));
+#endif
+	return r;
+}
+
+
 static int radius_server_open_socket(int port)
 {
 	int s;
@@ -775,6 +791,8 @@ static int radius_server_open_socket(int port)
 		perror("socket");
 		return -1;
 	}
+
+	radius_server_disable_pmtu_discovery(s);
 
 	os_memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;

@@ -440,6 +440,13 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 		}
 		os_memcpy(*fieldp, hdr.payload, hdr.length);
 		(*fieldp)[hdr.length] = '\0';
+		if (os_strlen(*fieldp) != hdr.length) {
+			wpa_printf(MSG_INFO, "X509: Reject certificate with "
+				   "embedded NUL byte in a string (%s[NUL])",
+				   *fieldp);
+			x509_free_name(name);
+			return -1;
+		}
 	}
 
 	return 0;
@@ -834,6 +841,14 @@ static int x509_parse_alt_name_rfc8222(struct x509_name *name,
 	if (name->alt_email == NULL)
 		return -1;
 	os_memcpy(name->alt_email, pos, len);
+	if (os_strlen(name->alt_email) != len) {
+		wpa_printf(MSG_INFO, "X509: Reject certificate with "
+			   "embedded NUL byte in rfc822Name (%s[NUL])",
+			   name->alt_email);
+		os_free(name->alt_email);
+		name->alt_email = NULL;
+		return -1;
+	}
 	return 0;
 }
 
@@ -848,6 +863,14 @@ static int x509_parse_alt_name_dns(struct x509_name *name,
 	if (name->dns == NULL)
 		return -1;
 	os_memcpy(name->dns, pos, len);
+	if (os_strlen(name->dns) != len) {
+		wpa_printf(MSG_INFO, "X509: Reject certificate with "
+			   "embedded NUL byte in dNSName (%s[NUL])",
+			   name->dns);
+		os_free(name->dns);
+		name->dns = NULL;
+		return -1;
+	}
 	return 0;
 }
 
@@ -864,6 +887,14 @@ static int x509_parse_alt_name_uri(struct x509_name *name,
 	if (name->uri == NULL)
 		return -1;
 	os_memcpy(name->uri, pos, len);
+	if (os_strlen(name->uri) != len) {
+		wpa_printf(MSG_INFO, "X509: Reject certificate with "
+			   "embedded NUL byte in uniformResourceIdentifier "
+			   "(%s[NUL])", name->uri);
+		os_free(name->uri);
+		name->uri = NULL;
+		return -1;
+	}
 	return 0;
 }
 

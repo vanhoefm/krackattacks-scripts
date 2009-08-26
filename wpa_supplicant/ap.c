@@ -494,10 +494,10 @@ void ap_tx_status(void *ctx, const u8 *addr,
 }
 
 
-void ap_rx_from_unknown_sta(void *ctx, const u8 *addr)
+void ap_rx_from_unknown_sta(void *ctx, struct ieee80211_hdr *hdr, size_t len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	ap_rx_from_unknown_sta(wpa_s->ap_iface->bss[0], addr);
+	hostapd_rx_from_unknown_sta(wpa_s->ap_iface->bss[0], hdr, len);
 }
 
 

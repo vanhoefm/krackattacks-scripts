@@ -22,17 +22,24 @@
 #include <byteswap.h>
 #endif /* __linux__ */
 
-#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+#if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__DragonFly__) || \
+    defined(__OpenBSD__)
 #include <sys/types.h>
 #include <sys/endian.h>
 #define __BYTE_ORDER	_BYTE_ORDER
 #define	__LITTLE_ENDIAN	_LITTLE_ENDIAN
 #define	__BIG_ENDIAN	_BIG_ENDIAN
+#ifdef __OpenBSD__
+#define bswap_16 swap16
+#define bswap_32 swap32
+#define bswap_64 swap64
+#else /* __OpenBSD__ */
 #define bswap_16 bswap16
 #define bswap_32 bswap32
 #define bswap_64 bswap64
+#endif /* __OpenBSD__ */
 #endif /* defined(__FreeBSD__) || defined(__NetBSD__) ||
-	* defined(__DragonFly__) */
+	* defined(__DragonFly__) || defined(__OpenBSD__) */
 
 #ifdef __APPLE__
 #include <sys/types.h>

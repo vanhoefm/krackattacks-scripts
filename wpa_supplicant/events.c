@@ -806,7 +806,7 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	p = data->assoc_info.resp_ies;
 	l = data->assoc_info.resp_ies_len;
 
-	/* Go through the IEs and make a copy of the WPA/RSN IE, if present. */
+	/* Go through the IEs and make a copy of the FT/MD IE, if present. */
 	while (p && l >= 2) {
 		len = p[1] + 2;
 		if (len > l) {

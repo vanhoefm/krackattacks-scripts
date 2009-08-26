@@ -496,24 +496,22 @@ int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
 			ret = -1;
 	} else {
 		data = oob_dev->read_func(oob_priv);
-		if (data == NULL) {
-			oob_dev->deinit_func(oob_priv);
-			return -1;
+		if (data == NULL)
+			ret = -1;
+		else {
+			if (oob_method == OOB_METHOD_CRED)
+				ret = wps_parse_oob_cred(wps, data);
+			else
+				ret = wps_parse_oob_dev_pwd(wps, data);
 		}
-
-		if (oob_method == OOB_METHOD_CRED)
-			ret = wps_parse_oob_cred(wps, data);
-		else
-			ret = wps_parse_oob_dev_pwd(wps, data);
 	}
 	wpabuf_free(data);
+	oob_dev->deinit_func(oob_priv);
+
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to process OOB data");
-		oob_dev->deinit_func(oob_priv);
 		return -1;
 	}
-
-	oob_dev->deinit_func(oob_priv);
 
 	return 0;
 }

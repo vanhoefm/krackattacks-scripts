@@ -1843,6 +1843,60 @@ nla_put_failure:
 
 #ifndef HOSTAPD
 
+static int nl80211_set_conn_keys(struct wpa_driver_associate_params *params,
+				 struct nl_msg *msg)
+{
+	int i, privacy = 0;
+	struct nlattr *nl_keys, *nl_key;
+
+	for (i = 0; i < 4; i++) {
+		if (!params->wep_key[i])
+			continue;
+		privacy = 1;
+		break;
+	}
+	if (!privacy)
+		return 0;
+
+	NLA_PUT_FLAG(msg, NL80211_ATTR_PRIVACY);
+
+	nl_keys = nla_nest_start(msg, NL80211_ATTR_KEYS);
+	if (!nl_keys)
+		goto nla_put_failure;
+
+	for (i = 0; i < 4; i++) {
+		if (!params->wep_key[i])
+			continue;
+
+		nl_key = nla_nest_start(msg, i);
+		if (!nl_key)
+			goto nla_put_failure;
+
+		NLA_PUT(msg, NL80211_KEY_DATA, params->wep_key_len[i],
+			params->wep_key[i]);
+		if (params->wep_key_len[i] == 5)
+			NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_WEP40);
+		else
+			NLA_PUT_U32(msg, NL80211_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_WEP104);
+
+		NLA_PUT_U8(msg, NL80211_KEY_IDX, i);
+
+		if (i == params->wep_tx_keyidx)
+			NLA_PUT_FLAG(msg, NL80211_KEY_DEFAULT);
+
+		nla_nest_end(msg, nl_key);
+	}
+	nla_nest_end(msg, nl_keys);
+
+	return 0;
+
+nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
 				      const u8 *addr, int key_idx,
 				      int set_tx, const u8 *seq,
@@ -1886,10 +1940,22 @@ nla_put_failure:
 }
 
 
+static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
+					 const u8 *addr, int reason_code)
+{
+	wpa_printf(MSG_DEBUG, "%s", __func__);
+	drv->associated = 0;
+	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISCONNECT,
+				       reason_code);
+}
+
+
 static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 					     int reason_code)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
+		return wpa_driver_nl80211_disconnect(drv, addr, reason_code);
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
@@ -1901,6 +1967,8 @@ static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
 					   int reason_code)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
+		return wpa_driver_nl80211_disconnect(drv, addr, reason_code);
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISASSOCIATE,
@@ -3210,6 +3278,152 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 
 
 #ifndef HOSTAPD
+static int wpa_driver_nl80211_connect(
+	struct wpa_driver_nl80211_data *drv,
+	struct wpa_driver_associate_params *params)
+{
+	struct nl_msg *msg;
+	enum nl80211_auth_type type;
+	int ret = 0;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Connect (ifindex=%d)", drv->ifindex);
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_CONNECT, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	if (params->bssid) {
+		wpa_printf(MSG_DEBUG, "  * bssid=" MACSTR,
+			   MAC2STR(params->bssid));
+		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
+	}
+	if (params->freq) {
+		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
+		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
+	}
+	if (params->ssid) {
+		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
+				  params->ssid, params->ssid_len);
+		NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
+			params->ssid);
+		if (params->ssid_len > sizeof(drv->ssid))
+			goto nla_put_failure;
+		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
+		drv->ssid_len = params->ssid_len;
+	}
+	wpa_hexdump(MSG_DEBUG, "  * IEs", params->wpa_ie, params->wpa_ie_len);
+	if (params->wpa_ie)
+		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
+			params->wpa_ie);
+
+	if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
+		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
+	else if (params->auth_alg & AUTH_ALG_SHARED_KEY)
+		type = NL80211_AUTHTYPE_SHARED_KEY;
+	else if (params->auth_alg & AUTH_ALG_LEAP)
+		type = NL80211_AUTHTYPE_NETWORK_EAP;
+	else if (params->auth_alg & AUTH_ALG_FT)
+		type = NL80211_AUTHTYPE_FT;
+	else
+		goto nla_put_failure;
+
+	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
+	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
+
+	if (params->wpa_ie && params->wpa_ie_len) {
+		enum nl80211_wpa_versions ver;
+
+		if (params->wpa_ie[0] == WLAN_EID_RSN)
+			ver = NL80211_WPA_VERSION_2;
+		else
+			ver = NL80211_WPA_VERSION_1;
+
+		wpa_printf(MSG_DEBUG, "  * WPA Version %d", ver);
+		NLA_PUT_U32(msg, NL80211_ATTR_WPA_VERSIONS, ver);
+	}
+
+	if (params->pairwise_suite != CIPHER_NONE) {
+		int cipher = IW_AUTH_CIPHER_NONE;
+
+		switch (params->pairwise_suite) {
+		case CIPHER_WEP40:
+			cipher = WLAN_CIPHER_SUITE_WEP40;
+			break;
+		case CIPHER_WEP104:
+			cipher = WLAN_CIPHER_SUITE_WEP104;
+			break;
+		case CIPHER_CCMP:
+			cipher = WLAN_CIPHER_SUITE_CCMP;
+			break;
+		case CIPHER_TKIP:
+		default:
+			cipher = WLAN_CIPHER_SUITE_TKIP;
+			break;
+		}
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
+	}
+
+	if (params->group_suite != CIPHER_NONE) {
+		int cipher = IW_AUTH_CIPHER_NONE;
+
+		switch (params->group_suite) {
+		case CIPHER_WEP40:
+			cipher = WLAN_CIPHER_SUITE_WEP40;
+			break;
+		case CIPHER_WEP104:
+			cipher = WLAN_CIPHER_SUITE_WEP104;
+			break;
+		case CIPHER_CCMP:
+			cipher = WLAN_CIPHER_SUITE_CCMP;
+			break;
+		case CIPHER_TKIP:
+		default:
+			cipher = WLAN_CIPHER_SUITE_TKIP;
+			break;
+		}
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
+	}
+
+	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
+	    params->key_mgmt_suite == KEY_MGMT_PSK) {
+		int mgmt = WLAN_AKM_SUITE_PSK;
+
+		switch (params->key_mgmt_suite) {
+		case KEY_MGMT_802_1X:
+			mgmt = WLAN_AKM_SUITE_8021X;
+			break;
+		case KEY_MGMT_PSK:
+		default:
+			mgmt = WLAN_AKM_SUITE_PSK;
+			break;
+		}
+		NLA_PUT_U32(msg, NL80211_ATTR_AKM_SUITES, mgmt);
+	}
+
+	ret = nl80211_set_conn_keys(params, msg);
+	if (ret)
+		goto nla_put_failure;
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: MLME connect failed: ret=%d "
+			   "(%s)", ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+	ret = 0;
+	wpa_printf(MSG_DEBUG, "nl80211: Connect request send successfully");
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+
+}
+
+
 static int wpa_driver_nl80211_associate(
 	void *priv, struct wpa_driver_associate_params *params)
 {
@@ -3221,6 +3435,9 @@ static int wpa_driver_nl80211_associate(
 	if (params->mode == 2)
 		return wpa_driver_nl80211_ap(drv, params);
 #endif /* CONFIG_AP */
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
+		return wpa_driver_nl80211_connect(drv, params);
 
 #ifndef NO_WEXT
 	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,

@@ -1005,6 +1005,8 @@ nla_put_failure:
 struct wiphy_info_data {
 	int max_scan_ssids;
 	int ap_supported;
+	int auth_supported;
+	int connect_supported;
 };
 
 
@@ -1030,6 +1032,20 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				info->ap_supported = 1;
 				break;
 			}
+		}
+	}
+
+	if (tb[NL80211_ATTR_SUPPORTED_COMMANDS]) {
+		struct nlattr *nl_cmd;
+		int i;
+
+		nla_for_each_nested(nl_cmd,
+				    tb[NL80211_ATTR_SUPPORTED_COMMANDS], i) {
+			u32 cmd = nla_get_u32(nl_cmd);
+			if (cmd == NL80211_CMD_AUTHENTICATE)
+				info->auth_supported = 1;
+			else if (cmd == NL80211_CMD_CONNECT)
+				info->connect_supported = 1;
 		}
 	}
 
@@ -1061,11 +1077,11 @@ nla_put_failure:
 }
 
 
-static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
+static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 {
 	struct wiphy_info_data info;
 	if (wpa_driver_nl80211_get_info(drv, &info))
-		return;
+		return -1;
 	drv->has_capability = 1;
 	/* For now, assume TKIP, CCMP, WPA, WPA2 are supported */
 	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
@@ -1080,6 +1096,16 @@ static void wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.max_scan_ssids = info.max_scan_ssids;
 	if (info.ap_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
+
+	if (info.auth_supported)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
+	else if (!info.connect_supported) {
+		wpa_printf(MSG_INFO, "nl80211: Driver does not support "
+			   "authentication/association or connect commands");
+		return -1;
+	}
+
+	return 0;
 }
 #endif /* HOSTAPD */
 
@@ -1257,8 +1283,6 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 		return NULL;
 	}
 
-	drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
-
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
 		perror("socket(PF_INET,SOCK_DGRAM)");
@@ -1306,7 +1330,8 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		return -1;
 	}
 
-	wpa_driver_nl80211_capa(drv);
+	if (wpa_driver_nl80211_capa(drv))
+		return -1;
 
 	wpa_driver_nl80211_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
 #endif /* HOSTAPD */

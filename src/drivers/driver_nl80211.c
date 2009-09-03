@@ -741,6 +741,40 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
 
+static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
+			       enum nl80211_commands cmd, struct nlattr *status,
+			       struct nlattr *addr, struct nlattr *req_ie,
+			       struct nlattr *resp_ie)
+{
+	union wpa_event_data event;
+
+	os_memset(&event, 0, sizeof(event));
+	if (cmd == NL80211_CMD_CONNECT &&
+	    nla_get_u16(status) != WLAN_STATUS_SUCCESS) {
+		if (resp_ie) {
+			event.assoc_reject.resp_ies = nla_data(resp_ie);
+			event.assoc_reject.resp_ies_len = nla_len(resp_ie);
+		}
+		event.assoc_reject.status_code = nla_get_u16(status);
+		wpa_supplicant_event(drv->ctx, EVENT_ASSOC_REJECT, &event);
+		return;
+	}
+
+	drv->associated = 1;
+	if (addr)
+		os_memcpy(drv->bssid, nla_data(addr), ETH_ALEN);
+
+	if (req_ie) {
+		event.assoc_info.req_ies = nla_data(req_ie);
+		event.assoc_info.req_ies_len = nla_len(req_ie);
+	}
+	if (resp_ie) {
+		event.assoc_info.resp_ies = nla_data(resp_ie);
+		event.assoc_info.resp_ies_len = nla_len(resp_ie);
+	}
+
+	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
+}
 
 static void mlme_timeout_event(struct wpa_driver_nl80211_data *drv,
 			       enum nl80211_commands cmd, struct nlattr *addr)
@@ -896,6 +930,18 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_DISASSOCIATE:
 		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME],
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT]);
+		break;
+	case NL80211_CMD_CONNECT:
+	case NL80211_CMD_ROAM:
+		mlme_event_connect(drv, gnlh->cmd,
+				   tb[NL80211_ATTR_STATUS_CODE],
+				   tb[NL80211_ATTR_MAC],
+				   tb[NL80211_ATTR_REQ_IE],
+				   tb[NL80211_ATTR_RESP_IE]);
+		break;
+	case NL80211_CMD_DISCONNECT:
+		drv->associated = 0;
+		wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 		break;
 #endif /* HOSTAPD */
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:

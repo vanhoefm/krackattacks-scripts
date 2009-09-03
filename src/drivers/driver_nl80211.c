@@ -1690,19 +1690,22 @@ static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
 		case WPA_ALG_WEP:
 			if (key_len == 5)
 				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    0x000FAC01);
+					    WLAN_CIPHER_SUITE_WEP40);
 			else
 				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    0x000FAC05);
+					    WLAN_CIPHER_SUITE_WEP104);
 			break;
 		case WPA_ALG_TKIP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC02);
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_TKIP);
 			break;
 		case WPA_ALG_CCMP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC04);
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_CCMP);
 			break;
 		case WPA_ALG_IGTK:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER, 0x000FAC06);
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_AES_CMAC);
 			break;
 		default:
 			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "

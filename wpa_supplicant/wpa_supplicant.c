@@ -405,6 +405,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpas_wps_deinit(wpa_s);
 
+	wpabuf_free(wpa_s->pending_eapol_rx);
+	wpa_s->pending_eapol_rx = NULL;
+
 #ifdef CONFIG_IBSS_RSN
 	ibss_rsn_deinit(wpa_s->ibss_rsn);
 	wpa_s->ibss_rsn = NULL;
@@ -1573,6 +1576,27 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 	wpa_printf(MSG_DEBUG, "RX EAPOL from " MACSTR, MAC2STR(src_addr));
 	wpa_hexdump(MSG_MSGDUMP, "RX EAPOL", buf, len);
+
+	if (wpa_s->wpa_state < WPA_ASSOCIATED) {
+		/*
+		 * There is possible race condition between receiving the
+		 * association event and the EAPOL frame since they are coming
+		 * through different paths from the driver. In order to avoid
+		 * issues in trying to process the EAPOL frame before receiving
+		 * association information, lets queue it for processing until
+		 * the association event is received.
+		 */
+		wpa_printf(MSG_DEBUG, "Not associated - Delay processing of "
+			   "received EAPOL frame");
+		wpabuf_free(wpa_s->pending_eapol_rx);
+		wpa_s->pending_eapol_rx = wpabuf_alloc_copy(buf, len);
+		if (wpa_s->pending_eapol_rx) {
+			os_get_time(&wpa_s->pending_eapol_rx_time);
+			os_memcpy(wpa_s->pending_eapol_rx_src, src_addr,
+				  ETH_ALEN);
+		}
+		return;
+	}
 
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface) {

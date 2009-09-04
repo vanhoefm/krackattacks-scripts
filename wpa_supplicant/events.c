@@ -943,6 +943,25 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_portValid(wpa_s->eapol, TRUE);
 		eapol_sm_notify_eap_success(wpa_s->eapol, TRUE);
 	}
+
+	if (wpa_s->pending_eapol_rx) {
+		struct os_time now, age;
+		os_get_time(&now);
+		os_time_sub(&now, &wpa_s->pending_eapol_rx_time, &age);
+		if (age.sec == 0 && age.usec < 100000 &&
+		    os_memcmp(wpa_s->pending_eapol_rx_src, bssid, ETH_ALEN) ==
+		    0) {
+			wpa_printf(MSG_DEBUG, "Process pending EAPOL frame "
+				   "that was received just before association "
+				   "notification");
+			wpa_supplicant_rx_eapol(
+				wpa_s, wpa_s->pending_eapol_rx_src,
+				wpabuf_head(wpa_s->pending_eapol_rx),
+				wpabuf_len(wpa_s->pending_eapol_rx));
+		}
+		wpabuf_free(wpa_s->pending_eapol_rx);
+		wpa_s->pending_eapol_rx = NULL;
+	}
 }
 
 

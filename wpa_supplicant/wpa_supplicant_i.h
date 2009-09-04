@@ -364,6 +364,10 @@ struct wpa_supplicant {
 	int wps_success; /* WPS success event received */
 	int blacklist_cleared;
 
+	struct wpabuf *pending_eapol_rx;
+	struct os_time pending_eapol_rx_time;
+	u8 pending_eapol_rx_src[ETH_ALEN];
+
 	struct ibss_rsn *ibss_rsn;
 
 #ifdef CONFIG_SME

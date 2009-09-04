@@ -748,6 +748,16 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 {
 	union wpa_event_data event;
 
+	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME) {
+		/*
+		 * Avoid reporting two association events that would confuse
+		 * the core code.
+		 */
+		wpa_printf(MSG_DEBUG, "nl80211: Ignore connect event (cmd=%d) "
+			   "when using userspace SME", cmd);
+		return;
+	}
+
 	os_memset(&event, 0, sizeof(event));
 	if (cmd == NL80211_CMD_CONNECT &&
 	    nla_get_u16(status) != WLAN_STATUS_SUCCESS) {
@@ -940,6 +950,15 @@ static int process_event(struct nl_msg *msg, void *arg)
 				   tb[NL80211_ATTR_RESP_IE]);
 		break;
 	case NL80211_CMD_DISCONNECT:
+		if (drv->capa.flags & WPA_DRIVER_FLAGS_SME) {
+			/*
+			 * Avoid reporting two disassociation events that could
+			 * confuse the core code.
+			 */
+			wpa_printf(MSG_DEBUG, "nl80211: Ignore disconnect "
+				   "event when using userspace SME");
+			break;
+		}
 		drv->associated = 0;
 		wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 		break;

@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - internal definitions
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -103,6 +103,8 @@ struct wps_data {
 	u16 config_error;
 
 	int ext_reg;
+
+	struct wps_credential *new_ap_settings;
 };
 
 

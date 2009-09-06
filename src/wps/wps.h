@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup
- * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -132,6 +132,16 @@ struct wps_config {
 	 * assoc_wps_ie: (Re)AssocReq WPS IE (in AP; %NULL if not AP)
 	 */
 	const struct wpabuf *assoc_wps_ie;
+
+	/**
+	 * new_ap_settings - New AP settings (%NULL if not used)
+	 *
+	 * This parameter provides new AP settings when using a wireless
+	 * stations as a Registrar to configure the AP. %NULL means that AP
+	 * will not be reconfigured, i.e., the station will only learn the
+	 * current AP settings by using AP PIN.
+	 */
+	const struct wps_credential *new_ap_settings;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);

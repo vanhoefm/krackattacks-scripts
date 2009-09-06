@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -248,6 +248,11 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 {
 	u8 bssid[ETH_ALEN], *_bssid = bssid;
 	char *pin;
+	char *new_ssid;
+	char *new_auth;
+	char *new_encr;
+	char *new_key;
+	struct wps_new_ap_settings ap;
 
 	pin = os_strchr(cmd, ' ');
 	if (pin == NULL)
@@ -262,7 +267,32 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	return wpas_wps_start_reg(wpa_s, _bssid, pin);
+	new_ssid = os_strchr(pin, ' ');
+	if (new_ssid == NULL)
+		return wpas_wps_start_reg(wpa_s, _bssid, pin, NULL);
+	*new_ssid++ = '\0';
+
+	new_auth = os_strchr(new_ssid, ' ');
+	if (new_auth == NULL)
+		return -1;
+	*new_auth++ = '\0';
+
+	new_encr = os_strchr(new_auth, ' ');
+	if (new_encr == NULL)
+		return -1;
+	*new_encr++ = '\0';
+
+	new_key = os_strchr(new_encr, ' ');
+	if (new_key == NULL)
+		return -1;
+	*new_key++ = '\0';
+
+	os_memset(&ap, 0, sizeof(ap));
+	ap.ssid_hex = new_ssid;
+	ap.auth = new_auth;
+	ap.encr = new_encr;
+	ap.key_hex = new_key;
+	return wpas_wps_start_reg(wpa_s, _bssid, pin, &ap);
 }
 #endif /* CONFIG_WPS */
 

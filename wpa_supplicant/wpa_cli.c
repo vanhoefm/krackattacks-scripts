@@ -484,14 +484,47 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	char cmd[256];
 	int res;
 
-	if (argc != 2) {
+	if (argc == 2)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_REG %s %s",
+				  argv[0], argv[1]);
+	else if (argc == 6) {
+		char ssid_hex[2 * 32 + 1];
+		char key_hex[2 * 64 + 1];
+		int i;
+
+		ssid_hex[0] = '\0';
+		for (i = 0; i < 32; i++) {
+			if (argv[2][i] == '\0')
+				break;
+			os_snprintf(&ssid_hex[i * 2], 3, "%02x", argv[2][i]);
+		}
+
+		key_hex[0] = '\0';
+		for (i = 0; i < 64; i++) {
+			if (argv[5][i] == '\0')
+				break;
+			os_snprintf(&key_hex[i * 2], 3, "%02x", argv[5][i]);
+		}
+
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "WPS_REG %s %s %s %s %s %s",
+				  argv[0], argv[1], ssid_hex, argv[3], argv[4],
+				  key_hex);
+	} else {
 		printf("Invalid WPS_REG command: need two arguments:\n"
 		       "- BSSID: use 'any' to select any\n"
 		       "- AP PIN\n");
+		printf("Alternatively, six arguments can be used to "
+		       "reconfigure the AP:\n"
+		       "- BSSID: use 'any' to select any\n"
+		       "- AP PIN\n"
+		       "- new SSID\n"
+		       "- new auth (OPEN, WPAPSK, WPA2PSK)\n"
+		       "- new encr (NONE, WEP, TKIP, CCMP)\n"
+		       "- new key\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_REG %s %s", argv[0], argv[1]);
 	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
 		printf("Too long WPS_REG command.\n");
 		return -1;

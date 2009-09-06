@@ -630,10 +630,12 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 
 
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
-		       const char *pin)
+		       const char *pin, struct wps_new_ap_settings *settings)
 {
 	struct wpa_ssid *ssid;
-	char val[30];
+	char val[200];
+	char *pos, *end;
+	int res;
 
 	if (!pin)
 		return -1;
@@ -641,7 +643,24 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	ssid = wpas_wps_add_network(wpa_s, 1, bssid);
 	if (ssid == NULL)
 		return -1;
-	os_snprintf(val, sizeof(val), "\"pin=%s\"", pin);
+	pos = val;
+	end = pos + sizeof(val);
+	res = os_snprintf(pos, end - pos, "\"pin=%s", pin);
+	if (res < 0 || res >= end - pos)
+		return -1;
+	pos += res;
+	if (settings) {
+		res = os_snprintf(pos, end - pos, " new_ssid=%s new_auth=%s "
+				  "new_encr=%s new_key=%s",
+				  settings->ssid_hex, settings->auth,
+				  settings->encr, settings->key_hex);
+		if (res < 0 || res >= end - pos)
+			return -1;
+		pos += res;
+	}
+	res = os_snprintf(pos, end - pos, "\"");
+	if (res < 0 || res >= end - pos)
+		return -1;
 	wpa_config_set(ssid, "phase1", val, 0);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);

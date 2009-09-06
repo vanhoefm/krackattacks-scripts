@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant / WPS integration
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +20,13 @@
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 
+struct wps_new_ap_settings {
+	const char *ssid_hex;
+	const char *auth;
+	const char *encr;
+	const char *key_hex;
+};
+
 int wpas_wps_init(struct wpa_supplicant *wpa_s);
 void wpas_wps_deinit(struct wpa_supplicant *wpa_s);
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s);
@@ -30,7 +37,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 		       char *path, char *method, char *name);
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
-		       const char *pin);
+		       const char *pin, struct wps_new_ap_settings *settings);
 int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 			    struct wpa_ssid *ssid, struct wpa_scan_res *bss);
 int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,

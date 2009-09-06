@@ -1,6 +1,6 @@
 /*
  * EAP-WSC peer for Wi-Fi Protected Setup
- * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -65,6 +65,72 @@ static void eap_wsc_state(struct eap_wsc_data *data, int state)
 }
 
 
+static int eap_wsc_new_ap_settings(struct wps_credential *cred,
+				   const char *params)
+{
+	const char *pos, *end;
+	size_t len;
+
+	os_memset(cred, 0, sizeof(*cred));
+
+	pos = os_strstr(params, "new_ssid=");
+	if (pos == NULL)
+		return 0;
+	pos += 9;
+	end = os_strchr(pos, ' ');
+	if (end == NULL)
+		len = os_strlen(pos);
+	else
+		len = end - pos;
+	if ((len & 1) || len > 2 * sizeof(cred->ssid) ||
+	    hexstr2bin(pos, cred->ssid, len / 2))
+		return -1;
+	cred->ssid_len = len / 2;
+
+	pos = os_strstr(params, "new_auth=");
+	if (pos == NULL)
+		return -1;
+	if (os_strncmp(pos + 9, "OPEN", 4) == 0)
+		cred->auth_type = WPS_AUTH_OPEN;
+	else if (os_strncmp(pos + 9, "WPAPSK", 6) == 0)
+		cred->auth_type = WPS_AUTH_WPAPSK;
+	else if (os_strncmp(pos + 9, "WPA2PSK", 7) == 0)
+		cred->auth_type = WPS_AUTH_WPA2PSK;
+	else
+		return -1;
+
+	pos = os_strstr(params, "new_encr=");
+	if (pos == NULL)
+		return -1;
+	if (os_strncmp(pos + 9, "NONE", 4) == 0)
+		cred->encr_type = WPS_ENCR_NONE;
+	else if (os_strncmp(pos + 9, "WEP", 3) == 0)
+		cred->encr_type = WPS_ENCR_WEP;
+	else if (os_strncmp(pos + 9, "TKIP", 4) == 0)
+		cred->encr_type = WPS_ENCR_TKIP;
+	else if (os_strncmp(pos + 9, "CCMP", 4) == 0)
+		cred->encr_type = WPS_ENCR_AES;
+	else
+		return -1;
+
+	pos = os_strstr(params, "new_key=");
+	if (pos == NULL)
+		return 0;
+	pos += 8;
+	end = os_strchr(pos, ' ');
+	if (end == NULL)
+		len = os_strlen(pos);
+	else
+		len = end - pos;
+	if ((len & 1) || len > 2 * sizeof(cred->key) ||
+	    hexstr2bin(pos, cred->key, len / 2))
+		return -1;
+	cred->key_len = len / 2;
+
+	return 1;
+}
+
+
 static void * eap_wsc_init(struct eap_sm *sm)
 {
 	struct eap_wsc_data *data;
@@ -75,6 +141,8 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	const char *pos;
 	const char *phase1;
 	struct wps_context *wps;
+	struct wps_credential new_ap_settings;
+	int res;
 
 	wps = sm->wps;
 	if (wps == NULL) {
@@ -133,6 +201,17 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			   "configuration data");
 		os_free(data);
 		return NULL;
+	}
+
+	res = eap_wsc_new_ap_settings(&new_ap_settings, phase1);
+	if (res < 0) {
+		os_free(data);
+		return NULL;
+	}
+	if (res == 1) {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Provide new AP settings for "
+			   "WPS");
+		cfg.new_ap_settings = &new_ap_settings;
 	}
 
 	data->wps = wps_init(&cfg);

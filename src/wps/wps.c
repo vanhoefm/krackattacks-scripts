@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup
- * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -89,6 +89,17 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		}
 	}
 
+	if (cfg->new_ap_settings) {
+		data->new_ap_settings =
+			os_malloc(sizeof(*data->new_ap_settings));
+		if (data->new_ap_settings == NULL) {
+			os_free(data);
+			return NULL;
+		}
+		os_memcpy(data->new_ap_settings, cfg->new_ap_settings,
+			  sizeof(*data->new_ap_settings));
+	}
+
 	return data;
 }
 
@@ -115,6 +126,7 @@ void wps_deinit(struct wps_data *data)
 	os_free(data->dev_password);
 	os_free(data->new_psk);
 	wps_device_data_free(&data->peer_dev);
+	os_free(data->new_ap_settings);
 	os_free(data);
 }
 

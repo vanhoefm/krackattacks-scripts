@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - Registrar
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -2041,6 +2041,19 @@ static void wps_sta_cred_cb(struct wps_data *wps)
 }
 
 
+static void wps_cred_update(struct wps_credential *dst,
+			    struct wps_credential *src)
+{
+	os_memcpy(dst->ssid, src->ssid, sizeof(dst->ssid));
+	dst->ssid_len = src->ssid_len;
+	dst->auth_type = src->auth_type;
+	dst->encr_type = src->encr_type;
+	dst->key_idx = src->key_idx;
+	os_memcpy(dst->key, src->key, sizeof(dst->key));
+	dst->key_len = src->key_len;
+}
+
+
 static int wps_process_ap_settings_r(struct wps_data *wps,
 				     struct wps_parse_attr *attr)
 {
@@ -2053,21 +2066,19 @@ static int wps_process_ap_settings_r(struct wps_data *wps,
 
 	wpa_printf(MSG_INFO, "WPS: Received old AP configuration from AP");
 
-#if 0
-	/*
-	 * TODO: Provide access to AP settings and allow changes before sending
-	 * out M8. For now, just copy the settings unchanged into M8.
-	 */
-
-	return 0;
-#else
-	/*
-	 * For now, use the AP PIN only to receive the current AP settings,
-	 * not to reconfigure the AP.
-	 */
-	wps_sta_cred_cb(wps);
-	return 1;
-#endif
+	if (wps->new_ap_settings) {
+		wpa_printf(MSG_INFO, "WPS: Update AP configuration based on "
+			   "new settings");
+		wps_cred_update(&wps->cred, wps->new_ap_settings);
+		return 0;
+	} else {
+		/*
+		 * Use the AP PIN only to receive the current AP settings, not
+		 * to reconfigure the AP.
+		 */
+		wps_sta_cred_cb(wps);
+		return 1;
+	}
 }
 
 

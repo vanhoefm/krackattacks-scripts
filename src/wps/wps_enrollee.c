@@ -328,6 +328,16 @@ static struct wpabuf * wps_build_m7(struct wps_data *wps)
 	}
 	wpabuf_free(plain);
 
+	if (wps->wps->ap && wps->wps->registrar) {
+		/*
+		 * If the Registrar is only learning our current configuration,
+		 * it may not continue protocol run to successful completion.
+		 * Store information here to make sure it remains available.
+		 */
+		wps_device_store(wps->wps->registrar, &wps->peer_dev,
+				 wps->uuid_r);
+	}
+
 	wps->state = RECV_M8;
 	return msg;
 }
@@ -751,7 +761,8 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 	    wps_process_enrollee_nonce(wps, attr->enrollee_nonce) ||
 	    wps_process_uuid_r(wps, attr->uuid_r) ||
 	    wps_process_pubkey(wps, attr->public_key, attr->public_key_len) ||
-	    wps_process_authenticator(wps, attr->authenticator, msg)) {
+	    wps_process_authenticator(wps, attr->authenticator, msg) ||
+	    wps_process_device_attrs(&wps->peer_dev, attr)) {
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
 	}

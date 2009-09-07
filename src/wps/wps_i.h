@@ -247,6 +247,8 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 					       enum wsc_op_code op_code,
 					       const struct wpabuf *msg);
 int wps_build_cred(struct wps_data *wps, struct wpabuf *msg);
+int wps_device_store(struct wps_registrar *reg,
+		     struct wps_device_data *dev, const u8 *uuid);
 
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);

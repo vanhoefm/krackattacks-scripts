@@ -1092,3 +1092,10 @@ static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd)
 }
 
 #endif /* CONFIG_WPS_UPNP */
+
+
+int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
+			    char *buf, size_t buflen)
+{
+	return wps_registrar_get_info(hapd->wps->registrar, addr, buf, buflen);
+}

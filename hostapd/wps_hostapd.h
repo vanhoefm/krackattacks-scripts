@@ -25,6 +25,8 @@ int hostapd_wps_add_pin(struct hostapd_data *hapd, const char *uuid,
 int hostapd_wps_button_pushed(struct hostapd_data *hapd);
 int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 			  char *path, char *method, char *name);
+int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
+			    char *buf, size_t buflen);
 
 #else /* CONFIG_WPS */
 
@@ -36,6 +38,13 @@ static inline int hostapd_init_wps(struct hostapd_data *hapd,
 
 static inline void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
+}
+
+static inline int hostapd_wps_get_mib_sta(struct hostapd_data *hapd,
+					  const u8 *addr,
+					  char *buf, size_t buflen)
+{
+	return 0;
 }
 
 #endif /* CONFIG_WPS */

@@ -23,6 +23,7 @@
 #include "wps_dev_attr.h"
 #include "wps_upnp.h"
 #include "crypto.h"
+#include "uuid.h"
 
 #define WPS_WORKAROUNDS
 
@@ -79,6 +80,13 @@ static void wps_free_pbc_sessions(struct wps_pbc_session *pbc)
 }
 
 
+struct wps_registrar_device {
+	struct wps_registrar_device *next;
+	struct wps_device_data dev;
+	u8 uuid[WPS_UUID_LEN];
+};
+
+
 struct wps_registrar {
 	struct wps_context *wps;
 
@@ -104,6 +112,8 @@ struct wps_registrar {
 	int sel_reg_dev_password_id_override;
 	int sel_reg_config_methods_override;
 	int static_wep_only;
+
+	struct wps_registrar_device *devices;
 };
 
 
@@ -111,6 +121,74 @@ static int wps_set_ie(struct wps_registrar *reg);
 static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 					       void *timeout_ctx);
+
+
+static void wps_free_devices(struct wps_registrar_device *dev)
+{
+	struct wps_registrar_device *prev;
+
+	while (dev) {
+		prev = dev;
+		dev = dev->next;
+		wps_device_data_free(&prev->dev);
+		os_free(prev);
+	}
+}
+
+
+static struct wps_registrar_device * wps_device_get(struct wps_registrar *reg,
+						    const u8 *addr)
+{
+	struct wps_registrar_device *dev;
+
+	for (dev = reg->devices; dev; dev = dev->next) {
+		if (os_memcmp(dev->dev.mac_addr, addr, ETH_ALEN) == 0)
+			return dev;
+	}
+	return NULL;
+}
+
+
+static void wps_device_clone_data(struct wps_device_data *dst,
+				  struct wps_device_data *src)
+{
+	os_memcpy(dst->mac_addr, src->mac_addr, ETH_ALEN);
+	dst->categ = src->categ;
+	dst->oui = src->oui;
+	dst->sub_categ = src->sub_categ;
+
+#define WPS_STRDUP(n) \
+	os_free(dst->n); \
+	dst->n = src->n ? os_strdup(src->n) : NULL
+
+	WPS_STRDUP(device_name);
+	WPS_STRDUP(manufacturer);
+	WPS_STRDUP(model_name);
+	WPS_STRDUP(model_number);
+	WPS_STRDUP(serial_number);
+#undef WPS_STRDUP
+}
+
+
+int wps_device_store(struct wps_registrar *reg,
+		     struct wps_device_data *dev, const u8 *uuid)
+{
+	struct wps_registrar_device *d;
+
+	d = wps_device_get(reg, dev->mac_addr);
+	if (d == NULL) {
+		d = os_zalloc(sizeof(*d));
+		if (d == NULL)
+			return -1;
+		d->next = reg->devices;
+		reg->devices = d;
+	}
+
+	wps_device_clone_data(&d->dev, dev);
+	os_memcpy(d->uuid, uuid, WPS_UUID_LEN);
+
+	return 0;
+}
 
 
 static void wps_registrar_add_pbc_session(struct wps_registrar *reg,
@@ -406,6 +484,7 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 	wps_free_pins(reg->pins);
 	wps_free_pbc_sessions(reg->pbc_sessions);
 	wpabuf_free(reg->extra_cred);
+	wps_free_devices(reg->devices);
 	os_free(reg);
 }
 
@@ -2401,6 +2480,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	if (wps->wps->wps_upnp && wps->ext_reg) {
 		wpa_printf(MSG_DEBUG, "WPS: Negotiation using external "
 			   "Registrar completed successfully");
+		wps_device_store(wps->wps->registrar, &wps->peer_dev,
+				 wps->uuid_e);
 		return WPS_DONE;
 	}
 #endif /* CONFIG_WPS_UPNP */
@@ -2419,6 +2500,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 	}
 
 	wpa_printf(MSG_DEBUG, "WPS: Negotiation completed successfully");
+	wps_device_store(wps->wps->registrar, &wps->peer_dev,
+			 wps->uuid_e);
 
 	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->new_psk &&
 	    wps->wps->ap && !wps->wps->registrar->disable_auto_conf) {
@@ -2605,4 +2688,40 @@ int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
 			       wps_registrar_set_selected_timeout,
 			       reg, NULL);
 	return 0;
+}
+
+
+int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
+			   char *buf, size_t buflen)
+{
+	struct wps_registrar_device *d;
+	int len = 0, ret;
+	char uuid[40];
+
+	d = wps_device_get(reg, addr);
+	if (d == NULL)
+		return 0;
+	if (uuid_bin2str(d->uuid, uuid, sizeof(uuid)))
+		return 0;
+
+	ret = os_snprintf(buf + len, buflen - len,
+			  "wpsUuid=%s\n"
+			  "wpsPrimaryDeviceType=%u-%08X-%u\n"
+			  "wpsDeviceName=%s\n"
+			  "wpsManufacturer=%s\n"
+			  "wpsModelName=%s\n"
+			  "wpsModelNumber=%s\n"
+			  "wpsSerialNumber=%s\n",
+			  uuid,
+			  d->dev.categ, d->dev.oui, d->dev.sub_categ,
+			  d->dev.device_name ? d->dev.device_name : "",
+			  d->dev.manufacturer ? d->dev.manufacturer : "",
+			  d->dev.model_name ? d->dev.model_name : "",
+			  d->dev.model_number ? d->dev.model_number : "",
+			  d->dev.serial_number ? d->dev.serial_number : "");
+	if (ret < 0 || (size_t) ret >= buflen - len)
+		return len;
+	len += ret;
+
+	return len;
 }

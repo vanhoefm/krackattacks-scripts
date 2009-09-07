@@ -100,6 +100,9 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 			  sizeof(*data->new_ap_settings));
 	}
 
+	if (cfg->peer_addr)
+		os_memcpy(data->peer_dev.mac_addr, cfg->peer_addr, ETH_ALEN);
+
 	return data;
 }
 

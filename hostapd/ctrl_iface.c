@@ -155,6 +155,10 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 	res = ieee802_1x_get_mib_sta(hapd, sta, buf + len, buflen - len);
 	if (res >= 0)
 		len += res;
+	res = hostapd_wps_get_mib_sta(hapd, sta->addr, buf + len,
+				      buflen - len);
+	if (res >= 0)
+		len += res;
 
 	return len;
 }

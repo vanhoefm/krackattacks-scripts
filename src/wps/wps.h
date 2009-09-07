@@ -142,6 +142,11 @@ struct wps_config {
 	 * current AP settings by using AP PIN.
 	 */
 	const struct wps_credential *new_ap_settings;
+
+	/**
+	 * peer_addr: MAC address of the peer in AP; %NULL if not AP
+	 */
+	const u8 *peer_addr;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);
@@ -571,6 +576,8 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 int wps_registrar_update_ie(struct wps_registrar *reg);
 int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
 					 const struct wpabuf *msg);
+int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
+			   char *buf, size_t buflen);
 
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);

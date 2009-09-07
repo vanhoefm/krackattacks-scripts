@@ -126,6 +126,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		cfg.pin_len = sm->user->password_len;
 	}
 	cfg.assoc_wps_ie = sm->assoc_wps_ie;
+	cfg.peer_addr = sm->peer_addr;
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);

@@ -35,7 +35,8 @@ HEADERS	+= wpamsg.h \
 	scanresults.h \
 	userdatarequest.h \
 	networkconfig.h \
-	addinterface.h
+	addinterface.h \
+	peers.h
 
 SOURCES	+= main.cpp \
 	wpagui.cpp \
@@ -44,6 +45,7 @@ SOURCES	+= main.cpp \
 	userdatarequest.cpp \
 	networkconfig.cpp \
 	addinterface.cpp \
+	peers.cpp \
 	../../src/common/wpa_ctrl.c
 
 RESOURCES += icons.qrc
@@ -52,7 +54,8 @@ FORMS	= wpagui.ui \
 	eventhistory.ui \
 	scanresults.ui \
 	userdatarequest.ui \
-	networkconfig.ui
+	networkconfig.ui \
+	peers.ui
 
 
 unix {

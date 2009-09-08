@@ -85,6 +85,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 	connect(fileSaveConfigAction, SIGNAL(triggered()), this,
 		SLOT(saveConfig()));
 	connect(actionWPS, SIGNAL(triggered()), this, SLOT(wpsDialog()));
+	connect(actionPeers, SIGNAL(triggered()), this, SLOT(peersDialog()));
 	connect(fileExitAction, SIGNAL(triggered()), qApp, SLOT(quit()));
 	connect(networkAddAction, SIGNAL(triggered()), this,
 		SLOT(addNetwork()));
@@ -133,6 +134,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 
 	eh = NULL;
 	scanres = NULL;
+	peers = NULL;
 	add_iface = NULL;
 	udr = NULL;
 	tray_icon = NULL;
@@ -201,6 +203,12 @@ WpaGui::~WpaGui()
 		scanres->close();
 		delete scanres;
 		scanres = NULL;
+	}
+
+	if (peers) {
+		peers->close();
+		delete peers;
+		peers = NULL;
 	}
 
 	if (add_iface) {
@@ -1412,6 +1420,12 @@ void WpaGui::closeEvent(QCloseEvent *event)
 		scanres = NULL;
 	}
 
+	if (peers) {
+		peers->close();
+		delete peers;
+		peers = NULL;
+	}
+
 	if (udr) {
 		udr->close();
 		delete udr;
@@ -1441,6 +1455,22 @@ void WpaGui::closeEvent(QCloseEvent *event)
 void WpaGui::wpsDialog()
 {
 	wpaguiTab->setCurrentWidget(wpsTab);
+}
+
+
+void WpaGui::peersDialog()
+{
+	if (peers) {
+		peers->close();
+		delete peers;
+	}
+
+	peers = new Peers();
+	if (peers == NULL)
+		return;
+	peers->setWpaGui(this);
+	peers->show();
+	peers->exec();
 }
 
 

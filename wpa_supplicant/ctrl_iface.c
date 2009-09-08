@@ -1735,6 +1735,16 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "BSS ", 4) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_bss(
 			wpa_s, buf + 4, reply, reply_size);
+#ifdef CONFIG_AP
+	} else if (os_strcmp(buf, "STA-FIRST") == 0) {
+		reply_len = ap_ctrl_iface_sta_first(wpa_s, reply, reply_size);
+	} else if (os_strncmp(buf, "STA ", 4) == 0) {
+		reply_len = ap_ctrl_iface_sta(wpa_s, buf + 4, reply,
+					      reply_size);
+	} else if (os_strncmp(buf, "STA-NEXT ", 9) == 0) {
+		reply_len = ap_ctrl_iface_sta_next(wpa_s, buf + 9, reply,
+						   reply_size);
+#endif /* CONFIG_AP */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

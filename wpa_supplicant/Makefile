@@ -525,6 +525,9 @@ OBJS += ../hostapd/ieee802_1x.o
 OBJS += ../hostapd/eapol_sm.o
 OBJS += ../hostapd/ieee802_11_auth.o
 OBJS += ../hostapd/drv_callbacks.o
+ifdef CONFIG_CTRL_IFACE
+OBJS += ../hostapd/ctrl_iface_ap.o
+endif
 ifdef CONFIG_IEEE80211R
 OBJS += ../hostapd/wpa_ft.o
 endif

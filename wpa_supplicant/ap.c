@@ -22,6 +22,7 @@
 #include "../hostapd/ieee802_11.h"
 #endif /* NEED_AP_MLME */
 #include "../hostapd/wps_hostapd.h"
+#include "../hostapd/ctrl_iface_ap.h"
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"
@@ -551,3 +552,33 @@ int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 #endif /* CONFIG_WPS */
+
+
+int ap_ctrl_iface_sta_first(struct wpa_supplicant *wpa_s,
+			    char *buf, size_t buflen)
+{
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	return hostapd_ctrl_iface_sta_first(wpa_s->ap_iface->bss[0],
+					    buf, buflen);
+}
+
+
+int ap_ctrl_iface_sta(struct wpa_supplicant *wpa_s, const char *txtaddr,
+		      char *buf, size_t buflen)
+{
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	return hostapd_ctrl_iface_sta(wpa_s->ap_iface->bss[0], txtaddr,
+				      buf, buflen);
+}
+
+
+int ap_ctrl_iface_sta_next(struct wpa_supplicant *wpa_s, const char *txtaddr,
+			   char *buf, size_t buflen)
+{
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	return hostapd_ctrl_iface_sta_next(wpa_s->ap_iface->bss[0], txtaddr,
+					   buf, buflen);
+}

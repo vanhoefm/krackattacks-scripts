@@ -1164,6 +1164,71 @@ static int wpa_cli_cmd_interface_list(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+#ifdef CONFIG_AP
+static int wpa_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char buf[64];
+	if (argc != 1) {
+		printf("Invalid 'sta' command - exactly one argument, STA "
+		       "address, is required.\n");
+		return -1;
+	}
+	snprintf(buf, sizeof(buf), "STA %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
+				char *addr, size_t addr_len)
+{
+	char buf[4096], *pos;
+	size_t len;
+	int ret;
+
+	if (ctrl_conn == NULL) {
+		printf("Not connected to hostapd - command dropped.\n");
+		return -1;
+	}
+	len = sizeof(buf) - 1;
+	ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
+			       wpa_cli_msg_cb);
+	if (ret == -2) {
+		printf("'%s' command timed out.\n", cmd);
+		return -2;
+	} else if (ret < 0) {
+		printf("'%s' command failed.\n", cmd);
+		return -1;
+	}
+
+	buf[len] = '\0';
+	if (memcmp(buf, "FAIL", 4) == 0)
+		return -1;
+	printf("%s", buf);
+
+	pos = buf;
+	while (*pos != '\0' && *pos != '\n')
+		pos++;
+	*pos = '\0';
+	os_strlcpy(addr, buf, addr_len);
+	return 0;
+}
+
+
+static int wpa_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char addr[32], cmd[64];
+
+	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr)))
+		return 0;
+	do {
+		snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
+	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr)) == 0);
+
+	return -1;
+}
+#endif /* CONFIG_AP */
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -1335,6 +1400,14 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "ibss_rsn", wpa_cli_cmd_ibss_rsn,
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },
+#ifdef CONFIG_AP
+	{ "sta", wpa_cli_cmd_sta,
+	  cli_cmd_flag_none,
+	  "<addr> = get information about an associated station (AP)" },
+	{ "all_sta", wpa_cli_cmd_all_sta,
+	  cli_cmd_flag_none,
+	  "= get information about all associated stations (AP)" },
+#endif /* CONFIG_AP */
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

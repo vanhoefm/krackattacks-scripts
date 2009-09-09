@@ -493,6 +493,7 @@ static int radius_server_request(struct radius_server_data *data,
 	unsigned int state;
 	struct radius_session *sess;
 	struct radius_msg *reply;
+	int is_complete = 0;
 
 	if (force_sess)
 		sess = force_sess;
@@ -603,6 +604,9 @@ static int radius_server_request(struct radius_server_data *data,
 		return -1;
 	}
 
+	if (sess->eap_if->eapSuccess || sess->eap_if->eapFail)
+		is_complete = 1;
+
 	reply = radius_server_encapsulate_eap(data, client, sess, msg);
 
 	if (reply) {
@@ -644,7 +648,7 @@ static int radius_server_request(struct radius_server_data *data,
 		client->counters.packets_dropped++;
 	}
 
-	if (sess->eap_if->eapSuccess || sess->eap_if->eapFail) {
+	if (is_complete) {
 		RADIUS_DEBUG("Removing completed session 0x%x after timeout",
 			     sess->sess_id);
 		eloop_cancel_timeout(radius_server_session_remove_timeout,

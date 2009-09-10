@@ -285,20 +285,23 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 				     size_t data_len)
 {
-#ifdef HOSTAPD
 	struct wpa_driver_test_data *drv = priv;
 	struct msghdr msg;
 	struct iovec io[2];
 	const u8 *dest;
-	int ret = 0, broadcast = 0;
-	char desttxt[30];
 	struct sockaddr_un addr;
 	struct dirent *dent;
 	DIR *dir;
+	int broadcast;
+	int ret = 0;
+#ifdef HOSTAPD
+	char desttxt[30];
 	struct ieee80211_hdr *hdr;
 	u16 fc;
+#endif /* HOSTAPD */
 
-	if (drv->test_socket < 0 || data_len < 10 || drv->socket_dir == NULL) {
+	wpa_hexdump(MSG_MSGDUMP, "test_send_mlme", data, data_len);
+	if (drv->test_socket < 0 || data_len < 10) {
 		wpa_printf(MSG_DEBUG, "%s: invalid parameters (sock=%d len=%lu"
 			   " socket_dir=%p)",
 			   __func__, drv->test_socket,
@@ -307,19 +310,27 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 		return -1;
 	}
 
-	dest = data;
-	dest += 4;
-	broadcast = memcmp(dest, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) == 0;
+	dest = data + 4;
+	broadcast = os_memcmp(dest, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) == 0;
+
+#ifdef HOSTAPD
 	snprintf(desttxt, sizeof(desttxt), MACSTR, MAC2STR(dest));
+#endif /* HOSTAPD */
 
 	io[0].iov_base = "MLME ";
 	io[0].iov_len = 5;
 	io[1].iov_base = (void *) data;
 	io[1].iov_len = data_len;
 
-	memset(&msg, 0, sizeof(msg));
+	os_memset(&msg, 0, sizeof(msg));
 	msg.msg_iov = io;
 	msg.msg_iovlen = 2;
+
+#ifdef HOSTAPD
+	if (drv->socket_dir == NULL) {
+		wpa_printf(MSG_DEBUG, "%s: socket_dir == NULL", __func__);
+		return -1;
+	}
 
 	dir = opendir(drv->socket_dir);
 	if (dir == NULL) {
@@ -334,18 +345,18 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 		if (dent->d_type != DT_SOCK && dent->d_type != DT_UNKNOWN)
 			continue;
 #endif /* _DIRENT_HAVE_D_TYPE */
-		if (strcmp(dent->d_name, ".") == 0 ||
-		    strcmp(dent->d_name, "..") == 0)
+		if (os_strcmp(dent->d_name, ".") == 0 ||
+		    os_strcmp(dent->d_name, "..") == 0)
 			continue;
 
-		memset(&addr, 0, sizeof(addr));
+		os_memset(&addr, 0, sizeof(addr));
 		addr.sun_family = AF_UNIX;
-		snprintf(addr.sun_path, sizeof(addr.sun_path), "%s/%s",
-			 drv->socket_dir, dent->d_name);
+		os_snprintf(addr.sun_path, sizeof(addr.sun_path), "%s/%s",
+			    drv->socket_dir, dent->d_name);
 
-		if (strcmp(addr.sun_path, drv->own_socket_path) == 0)
+		if (os_strcmp(addr.sun_path, drv->own_socket_path) == 0)
 			continue;
-		if (!broadcast && strstr(dent->d_name, desttxt) == NULL)
+		if (!broadcast && os_strstr(dent->d_name, desttxt) == NULL)
 			continue;
 
 		wpa_printf(MSG_DEBUG, "%s: Send management frame to %s",
@@ -355,38 +366,11 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 		msg.msg_namelen = sizeof(addr);
 		ret = sendmsg(drv->test_socket, &msg, 0);
 		if (ret < 0)
-			perror("driver_test: sendmsg");
+			perror("driver_test: sendmsg(test_socket)");
 	}
 	closedir(dir);
-
-	hdr = (struct ieee80211_hdr *) data;
-	fc = le_to_host16(hdr->frame_control);
-	hostapd_mgmt_tx_cb(drv->hapd, (u8 *) data, data_len,
-			   WLAN_FC_GET_STYPE(fc), ret >= 0);
-
-	return ret;
 #else /* HOSTAPD */
-	struct wpa_driver_test_data *drv = priv;
-	struct msghdr msg;
-	struct iovec io[2];
-	struct sockaddr_un addr;
-	const u8 *dest;
-	struct dirent *dent;
-	DIR *dir;
 
-	wpa_hexdump(MSG_MSGDUMP, "test_send_mlme", data, data_len);
-	if (data_len < 10)
-		return -1;
-	dest = data + 4;
-
-	io[0].iov_base = "MLME ";
-	io[0].iov_len = 5;
-	io[1].iov_base = (u8 *) data;
-	io[1].iov_len = data_len;
-
-	os_memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = io;
-	msg.msg_iovlen = 2;
 	if (os_memcmp(dest, drv->bssid, ETH_ALEN) == 0 ||
 	    drv->test_dir == NULL) {
 		if (drv->hostapd_addr_udp_set) {
@@ -398,8 +382,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 			msg.msg_namelen = sizeof(drv->hostapd_addr);
 #endif /* DRIVER_TEST_UNIX */
 		}
-	} else if (os_memcmp(dest, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) == 0)
-	{
+	} else if (broadcast) {
 		dir = opendir(drv->test_dir);
 		if (dir == NULL)
 			return -1;
@@ -426,11 +409,12 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 			msg.msg_name = &addr;
 			msg.msg_namelen = sizeof(addr);
 
-			if (sendmsg(drv->test_socket, &msg, 0) < 0)
-				perror("sendmsg(test_socket)");
+			ret = sendmsg(drv->test_socket, &msg, 0);
+			if (ret < 0)
+				perror("driver_test: sendmsg(test_socket)");
 		}
 		closedir(dir);
-		return 0;
+		return ret;
 	} else {
 		struct stat st;
 		os_memset(&addr, 0, sizeof(addr));
@@ -450,9 +434,16 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 		perror("sendmsg(test_socket)");
 		return -1;
 	}
-
-	return 0;
 #endif /* HOSTAPD */
+
+#ifdef HOSTAPD
+	hdr = (struct ieee80211_hdr *) data;
+	fc = le_to_host16(hdr->frame_control);
+	hostapd_mgmt_tx_cb(drv->hapd, (u8 *) data, data_len,
+			   WLAN_FC_GET_STYPE(fc), ret >= 0);
+#endif /* HOSTAPD */
+
+	return ret;
 }
 
 

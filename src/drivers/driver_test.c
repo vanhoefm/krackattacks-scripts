@@ -34,9 +34,6 @@
 #include "sha1.h"
 #include "ieee802_11_defs.h"
 
-
-#ifdef HOSTAPD
-
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/wpa.h"
 #include "../../hostapd/hw_features.h"
@@ -64,18 +61,6 @@ struct test_driver_bss {
 	size_t ssid_len;
 	int privacy;
 };
-
-struct test_driver_data {
-	struct hostapd_data *hapd;
-	struct test_client_socket *cli;
-	int test_socket;
-	struct test_driver_bss *bss;
-	char *socket_dir;
-	char *own_socket_path;
-	int udp_port;
-};
-
-#else /* HOSTAPD */
 
 struct wpa_driver_test_global {
 	int dummy;
@@ -109,9 +94,13 @@ struct wpa_driver_test_data {
 	size_t probe_req_ie_len;
 	int ibss;
 	int privacy;
-};
 
-#endif /* HOSTAPD */
+	struct hostapd_data *hapd;
+	struct test_client_socket *cli;
+	struct test_driver_bss *bss;
+	char *socket_dir;
+	int udp_port;
+};
 
 
 #ifdef HOSTAPD
@@ -125,7 +114,7 @@ static void test_driver_free_bss(struct test_driver_bss *bss)
 }
 
 
-static void test_driver_free_priv(struct test_driver_data *drv)
+static void test_driver_free_priv(struct wpa_driver_test_data *drv)
 {
 	struct test_driver_bss *bss, *prev;
 
@@ -145,7 +134,7 @@ static void test_driver_free_priv(struct test_driver_data *drv)
 
 
 static struct test_client_socket *
-test_driver_get_cli(struct test_driver_data *drv, struct sockaddr_un *from,
+test_driver_get_cli(struct wpa_driver_test_data *drv, struct sockaddr_un *from,
 		    socklen_t fromlen)
 {
 	struct test_client_socket *cli = drv->cli;
@@ -166,7 +155,7 @@ static int test_driver_send_eapol(void *priv, const u8 *addr, const u8 *data,
 				  size_t data_len, int encrypt,
 				  const u8 *own_addr)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_client_socket *cli;
 	struct msghdr msg;
 	struct iovec io[3];
@@ -211,7 +200,7 @@ static int test_driver_send_eapol(void *priv, const u8 *addr, const u8 *data,
 static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 				  u16 proto, const u8 *data, size_t data_len)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct msghdr msg;
 	struct iovec io[3];
 	struct l2_ethhdr eth;
@@ -297,7 +286,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 
 static int wpa_driver_test_send_mlme(void *priv, const u8 *buf, size_t len)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct msghdr msg;
 	struct iovec io[2];
 	const u8 *dest;
@@ -378,7 +367,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *buf, size_t len)
 }
 
 
-static void test_driver_scan(struct test_driver_data *drv,
+static void test_driver_scan(struct wpa_driver_test_data *drv,
 			     struct sockaddr_un *from, socklen_t fromlen,
 			     char *data)
 {
@@ -450,8 +439,9 @@ static void test_driver_scan(struct test_driver_data *drv,
 }
 
 
-static struct hostapd_data * test_driver_get_hapd(struct test_driver_data *drv,
-						  struct test_driver_bss *bss)
+static struct hostapd_data *
+test_driver_get_hapd(struct wpa_driver_test_data *drv,
+		     struct test_driver_bss *bss)
 {
 	struct hostapd_iface *iface = drv->hapd->iface;
 	struct hostapd_data *hapd = NULL;
@@ -477,7 +467,7 @@ static struct hostapd_data * test_driver_get_hapd(struct test_driver_data *drv,
 }
 
 
-static int test_driver_new_sta(struct test_driver_data *drv,
+static int test_driver_new_sta(struct wpa_driver_test_data *drv,
 			       struct test_driver_bss *bss, const u8 *addr,
 			       const u8 *ie, size_t ielen)
 {
@@ -491,7 +481,7 @@ static int test_driver_new_sta(struct test_driver_data *drv,
 }
 
 
-static void test_driver_assoc(struct test_driver_data *drv,
+static void test_driver_assoc(struct wpa_driver_test_data *drv,
 			      struct sockaddr_un *from, socklen_t fromlen,
 			      char *data)
 {
@@ -568,7 +558,7 @@ static void test_driver_assoc(struct test_driver_data *drv,
 }
 
 
-static void test_driver_disassoc(struct test_driver_data *drv,
+static void test_driver_disassoc(struct wpa_driver_test_data *drv,
 				 struct sockaddr_un *from, socklen_t fromlen)
 {
 	struct test_client_socket *cli;
@@ -581,7 +571,7 @@ static void test_driver_disassoc(struct test_driver_data *drv,
 }
 
 
-static void test_driver_eapol(struct test_driver_data *drv,
+static void test_driver_eapol(struct wpa_driver_test_data *drv,
 			      struct sockaddr_un *from, socklen_t fromlen,
 			      u8 *data, size_t datalen)
 {
@@ -609,7 +599,7 @@ static void test_driver_eapol(struct test_driver_data *drv,
 }
 
 
-static void test_driver_ether(struct test_driver_data *drv,
+static void test_driver_ether(struct wpa_driver_test_data *drv,
 			      struct sockaddr_un *from, socklen_t fromlen,
 			      u8 *data, size_t datalen)
 {
@@ -633,7 +623,7 @@ static void test_driver_ether(struct test_driver_data *drv,
 }
 
 
-static void test_driver_mlme(struct test_driver_data *drv,
+static void test_driver_mlme(struct wpa_driver_test_data *drv,
 			     struct sockaddr_un *from, socklen_t fromlen,
 			     u8 *data, size_t datalen)
 {
@@ -670,7 +660,7 @@ static void test_driver_mlme(struct test_driver_data *drv,
 
 static void test_driver_receive_unix(int sock, void *eloop_ctx, void *sock_ctx)
 {
-	struct test_driver_data *drv = eloop_ctx;
+	struct wpa_driver_test_data *drv = eloop_ctx;
 	char buf[2000];
 	int res;
 	struct sockaddr_un from;
@@ -708,7 +698,7 @@ static void test_driver_receive_unix(int sock, void *eloop_ctx, void *sock_ctx)
 
 
 static struct test_driver_bss *
-test_driver_get_bss(struct test_driver_data *drv, const char *ifname)
+test_driver_get_bss(struct wpa_driver_test_data *drv, const char *ifname)
 {
 	struct test_driver_bss *bss;
 
@@ -723,7 +713,7 @@ test_driver_get_bss(struct test_driver_data *drv, const char *ifname)
 static int test_driver_set_generic_elem(const char *ifname, void *priv,
 					const u8 *elem, size_t elem_len)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
 	bss = test_driver_get_bss(drv, ifname);
@@ -753,7 +743,7 @@ static int test_driver_set_generic_elem(const char *ifname, void *priv,
 static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
 					 const u8 *ie, size_t len)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
 	wpa_hexdump(MSG_DEBUG, "test_driver: Beacon WPS IE", ie, len);
@@ -784,7 +774,7 @@ static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
 static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
 					     const u8 *ie, size_t len)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
 	wpa_hexdump(MSG_DEBUG, "test_driver: ProbeResp WPS IE", ie, len);
@@ -815,7 +805,7 @@ static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
 static int test_driver_sta_deauth(void *priv, const u8 *own_addr,
 				  const u8 *addr, int reason)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_client_socket *cli;
 
 	if (drv->test_socket < 0)
@@ -839,7 +829,7 @@ static int test_driver_sta_deauth(void *priv, const u8 *own_addr,
 static int test_driver_sta_disassoc(void *priv, const u8 *own_addr,
 				    const u8 *addr, int reason)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_client_socket *cli;
 
 	if (drv->test_socket < 0)
@@ -862,7 +852,7 @@ static int test_driver_sta_disassoc(void *priv, const u8 *own_addr,
 
 static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s bssid=" MACSTR ")",
@@ -884,7 +874,7 @@ static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid)
 
 static int test_driver_bss_remove(void *priv, const char *ifname)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss, *prev;
 	struct test_client_socket *cli, *prev_c;
 
@@ -955,7 +945,7 @@ static int test_driver_valid_bss_mask(void *priv, const u8 *addr,
 static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
 				int len)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, ifname);
@@ -980,7 +970,7 @@ static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
 
 static int test_driver_set_privacy(const char *ifname, void *priv, int enabled)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s enabled=%d)",
@@ -1026,7 +1016,7 @@ static int test_driver_set_sta_vlan(void *priv, const u8 *addr,
 static int test_driver_sta_add(const char *ifname, void *priv,
 			       struct hostapd_sta_add_params *params)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_client_socket *cli;
 	struct test_driver_bss *bss;
 
@@ -1069,13 +1059,13 @@ static int test_driver_sta_add(const char *ifname, void *priv,
 static void * test_driver_init(struct hostapd_data *hapd,
 			       struct wpa_init_params *params)
 {
-	struct test_driver_data *drv;
+	struct wpa_driver_test_data *drv;
 	struct sockaddr_un addr_un;
 	struct sockaddr_in addr_in;
 	struct sockaddr *addr;
 	socklen_t alen;
 
-	drv = os_zalloc(sizeof(struct test_driver_data));
+	drv = os_zalloc(sizeof(struct wpa_driver_test_data));
 	if (drv == NULL) {
 		printf("Could not allocate memory for test driver data\n");
 		return NULL;
@@ -1167,7 +1157,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 
 static void test_driver_deinit(void *priv)
 {
-	struct test_driver_data *drv = priv;
+	struct wpa_driver_test_data *drv = priv;
 	struct test_client_socket *cli, *prev;
 
 	cli = drv->cli;

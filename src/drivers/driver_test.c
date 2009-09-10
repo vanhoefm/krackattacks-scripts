@@ -102,31 +102,15 @@ struct wpa_driver_test_data {
 };
 
 
+static void wpa_driver_test_deinit(void *priv);
+
+
 static void test_driver_free_bss(struct test_driver_bss *bss)
 {
 	free(bss->ie);
 	free(bss->wps_beacon_ie);
 	free(bss->wps_probe_resp_ie);
 	free(bss);
-}
-
-
-static void test_driver_free_priv(struct wpa_driver_test_data *drv)
-{
-	struct test_driver_bss *bss, *prev;
-
-	if (drv == NULL)
-		return;
-
-	bss = drv->bss;
-	while (bss) {
-		prev = bss;
-		bss = bss->next;
-		test_driver_free_bss(prev);
-	}
-	free(drv->own_socket_path);
-	free(drv->test_dir);
-	free(drv);
 }
 
 
@@ -1186,7 +1170,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		if (os_strlen(params->test_socket) >=
 		    sizeof(addr_un.sun_path)) {
 			printf("Too long test_socket path\n");
-			test_driver_free_priv(drv);
+			wpa_driver_test_deinit(drv);
 			return NULL;
 		}
 		if (strncmp(params->test_socket, "DIR:", 4) == 0) {
@@ -1205,7 +1189,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 			drv->own_socket_path = strdup(params->test_socket);
 		}
 		if (drv->own_socket_path == NULL && drv->udp_port == 0) {
-			test_driver_free_priv(drv);
+			wpa_driver_test_deinit(drv);
 			return NULL;
 		}
 
@@ -1213,7 +1197,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 					  SOCK_DGRAM, 0);
 		if (drv->test_socket < 0) {
 			perror("socket");
-			test_driver_free_priv(drv);
+			wpa_driver_test_deinit(drv);
 			return NULL;
 		}
 
@@ -1236,7 +1220,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 			close(drv->test_socket);
 			if (drv->own_socket_path)
 				unlink(drv->own_socket_path);
-			test_driver_free_priv(drv);
+			wpa_driver_test_deinit(drv);
 			return NULL;
 		}
 		eloop_register_read_sock(drv->test_socket,
@@ -1245,35 +1229,6 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		drv->test_socket = -1;
 
 	return drv;
-}
-
-
-static void test_driver_deinit(void *priv)
-{
-	struct wpa_driver_test_data *drv = priv;
-	struct test_client_socket *cli, *prev;
-
-	cli = drv->cli;
-	while (cli) {
-		prev = cli;
-		cli = cli->next;
-		free(prev);
-	}
-
-	if (drv->test_socket >= 0) {
-		eloop_unregister_read_sock(drv->test_socket);
-		close(drv->test_socket);
-		if (drv->own_socket_path)
-			unlink(drv->own_socket_path);
-	}
-
-	/* There should be only one BSS remaining at this point. */
-	if (drv->bss == NULL)
-		wpa_printf(MSG_ERROR, "%s: drv->bss == NULL", __func__);
-	else if (drv->bss->next)
-		wpa_printf(MSG_ERROR, "%s: drv->bss->next != NULL", __func__);
-
-	test_driver_free_priv(drv);
 }
 
 
@@ -1943,7 +1898,32 @@ static void wpa_driver_test_close_test_socket(struct wpa_driver_test_data *drv)
 static void wpa_driver_test_deinit(void *priv)
 {
 	struct wpa_driver_test_data *drv = priv;
+	struct test_client_socket *cli, *prev;
+	struct test_driver_bss *bss, *prev_bss;
 	int i;
+
+	cli = drv->cli;
+	while (cli) {
+		prev = cli;
+		cli = cli->next;
+		os_free(prev);
+	}
+
+#ifdef HOSTAPD
+	/* There should be only one BSS remaining at this point. */
+	if (drv->bss == NULL)
+		wpa_printf(MSG_ERROR, "%s: drv->bss == NULL", __func__);
+	else if (drv->bss->next)
+		wpa_printf(MSG_ERROR, "%s: drv->bss->next != NULL", __func__);
+#endif /* HOSTAPD */
+
+	bss = drv->bss;
+	while (bss) {
+		prev_bss = bss;
+		bss = bss->next;
+		test_driver_free_bss(prev_bss);
+	}
+
 	wpa_driver_test_close_test_socket(drv);
 	eloop_cancel_timeout(wpa_driver_test_scan_timeout, drv, drv->ctx);
 	eloop_cancel_timeout(wpa_driver_test_poll, drv, NULL);
@@ -2428,7 +2408,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
 	.hapd_init = test_driver_init,
-	.hapd_deinit = test_driver_deinit,
+	.hapd_deinit = wpa_driver_test_deinit,
 	.hapd_send_eapol = test_driver_send_eapol,
 	.send_mlme = wpa_driver_test_send_mlme,
 	.set_generic_elem = test_driver_set_generic_elem,

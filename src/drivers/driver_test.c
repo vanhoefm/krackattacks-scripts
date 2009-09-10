@@ -138,6 +138,21 @@ static void test_driver_free_bss(struct test_driver_bss *bss)
 }
 
 
+static void test_driver_free_bsses(struct wpa_driver_test_data *drv)
+{
+	struct test_driver_bss *bss, *prev_bss;
+
+	bss = drv->bss;
+	while (bss) {
+		prev_bss = bss;
+		bss = bss->next;
+		test_driver_free_bss(prev_bss);
+	}
+
+	drv->bss = NULL;
+}
+
+
 static struct test_client_socket *
 test_driver_get_cli(struct wpa_driver_test_data *drv, struct sockaddr_un *from,
 		    socklen_t fromlen)
@@ -1532,8 +1547,29 @@ static int wpa_driver_test_associate(
 	}
 #endif /* DRIVER_TEST_UNIX */
 
-	if (drv->test_socket >= 0 &&
-	    (drv->hostapd_addr_set || drv->hostapd_addr_udp_set)) {
+	if (params->mode == IEEE80211_MODE_AP) {
+		struct test_driver_bss *bss;
+		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
+		drv->ssid_len = params->ssid_len;
+
+		test_driver_free_bsses(drv);
+		bss = drv->bss = os_zalloc(sizeof(*drv->bss));
+		if (bss == NULL)
+			return -1;
+		os_memcpy(bss->bssid, drv->own_addr, ETH_ALEN);
+		os_memcpy(bss->ssid, params->ssid, params->ssid_len);
+		bss->ssid_len = params->ssid_len;
+		bss->privacy = drv->privacy;
+		if (params->wpa_ie && params->wpa_ie_len) {
+			bss->ie = os_malloc(params->wpa_ie_len);
+			if (bss->ie) {
+				os_memcpy(bss->ie, params->wpa_ie,
+					  params->wpa_ie_len);
+				bss->ielen = params->wpa_ie_len;
+			}
+		}
+	} else if (drv->test_socket >= 0 &&
+		   (drv->hostapd_addr_set || drv->hostapd_addr_udp_set)) {
 		char cmd[200], *pos, *end;
 		int ret;
 		end = cmd + sizeof(cmd);
@@ -1965,7 +2001,6 @@ static void wpa_driver_test_deinit(void *priv)
 {
 	struct wpa_driver_test_data *drv = priv;
 	struct test_client_socket *cli, *prev;
-	struct test_driver_bss *bss, *prev_bss;
 	int i;
 
 	cli = drv->cli;
@@ -1983,12 +2018,7 @@ static void wpa_driver_test_deinit(void *priv)
 		wpa_printf(MSG_ERROR, "%s: drv->bss->next != NULL", __func__);
 #endif /* HOSTAPD */
 
-	bss = drv->bss;
-	while (bss) {
-		prev_bss = bss;
-		bss = bss->next;
-		test_driver_free_bss(prev_bss);
-	}
+	test_driver_free_bsses(drv);
 
 	wpa_driver_test_close_test_socket(drv);
 	eloop_cancel_timeout(wpa_driver_test_scan_timeout, drv, drv->ctx);

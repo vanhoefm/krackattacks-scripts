@@ -1461,6 +1461,22 @@ static int wpa_driver_test_set_key(void *priv, wpa_alg alg, const u8 *addr,
 }
 
 
+static int wpa_driver_update_mode(struct wpa_driver_test_data *drv, int ap)
+{
+	if (ap && !drv->ap) {
+		wpa_driver_test_close_test_socket(drv);
+		wpa_driver_test_attach(drv, drv->test_dir, 1);
+		drv->ap = 1;
+	} else if (!ap && drv->ap) {
+		wpa_driver_test_close_test_socket(drv);
+		wpa_driver_test_attach(drv, drv->test_dir, 0);
+		drv->ap = 0;
+	}
+
+	return 0;
+}
+
+
 static int wpa_driver_test_associate(
 	void *priv, struct wpa_driver_associate_params *params)
 {
@@ -1489,15 +1505,7 @@ static int wpa_driver_test_associate(
 	} else
 		drv->assoc_wpa_ie_len = 0;
 
-	if (params->mode == IEEE80211_MODE_AP && !drv->ap) {
-		wpa_driver_test_close_test_socket(drv);
-		wpa_driver_test_attach(drv, drv->test_dir, 1);
-		drv->ap = 1;
-	} else if (params->mode != IEEE80211_MODE_AP && drv->ap) {
-		wpa_driver_test_close_test_socket(drv);
-		wpa_driver_test_attach(drv, drv->test_dir, 0);
-		drv->ap = 0;
-	}
+	wpa_driver_update_mode(drv, params->mode == IEEE80211_MODE_AP);
 
 	drv->ibss = params->mode == IEEE80211_MODE_IBSS;
 	drv->privacy = params->key_mgmt_suite &
@@ -2462,6 +2470,13 @@ fail:
 }
 
 
+static int wpa_driver_test_set_mode(void *priv, int mode)
+{
+	struct wpa_driver_test_data *drv = priv;
+	return wpa_driver_update_mode(drv, mode == IEEE80211_MODE_AP);
+}
+
+
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
@@ -2512,4 +2527,5 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.init2 = wpa_driver_test_init2,
 	.get_interfaces = wpa_driver_test_get_interfaces,
 	.scan2 = wpa_driver_test_scan,
+	.set_mode = wpa_driver_test_set_mode,
 };

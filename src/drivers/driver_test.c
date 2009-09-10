@@ -94,6 +94,7 @@ struct wpa_driver_test_data {
 	size_t probe_req_ie_len;
 	int ibss;
 	int privacy;
+	int ap;
 
 	struct hostapd_data *hapd;
 	struct test_client_socket *cli;
@@ -103,6 +104,29 @@ struct wpa_driver_test_data {
 
 
 static void wpa_driver_test_deinit(void *priv);
+static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
+				  const char *dir, int ap);
+static void wpa_driver_test_close_test_socket(
+	struct wpa_driver_test_data *drv);
+
+#ifdef CONFIG_AP
+void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
+		struct hostapd_frame_info *fi);
+void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok);
+
+#else /* CONFIG_AP */
+#ifndef HOSTAPD
+static inline void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
+			      struct hostapd_frame_info *fi)
+{
+}
+
+static inline void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype,
+				 int ok)
+{
+}
+#endif /* HOSTAPD */
+#endif /* CONFIG_AP */
 
 
 static void test_driver_free_bss(struct test_driver_bss *bss)
@@ -277,10 +301,10 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	DIR *dir;
 	int broadcast;
 	int ret = 0;
-#ifdef HOSTAPD
-	char desttxt[30];
 	struct ieee80211_hdr *hdr;
 	u16 fc;
+#ifdef HOSTAPD
+	char desttxt[30];
 #endif /* HOSTAPD */
 
 	wpa_hexdump(MSG_MSGDUMP, "test_send_mlme", data, data_len);
@@ -419,11 +443,16 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	}
 #endif /* HOSTAPD */
 
-#ifdef HOSTAPD
 	hdr = (struct ieee80211_hdr *) data;
 	fc = le_to_host16(hdr->frame_control);
+#ifdef HOSTAPD
 	hostapd_mgmt_tx_cb(drv->hapd, (u8 *) data, data_len,
 			   WLAN_FC_GET_STYPE(fc), ret >= 0);
+#else /* HOSTAPD */
+	if (drv->ap) {
+		ap_mgmt_tx_cb(drv->ctx, (u8 *) data, data_len,
+			      WLAN_FC_GET_STYPE(fc), ret >= 0);
+	}
 #endif /* HOSTAPD */
 
 	return ret;
@@ -508,6 +537,7 @@ static struct hostapd_data *
 test_driver_get_hapd(struct wpa_driver_test_data *drv,
 		     struct test_driver_bss *bss)
 {
+#ifdef HOSTAPD
 	struct hostapd_iface *iface = drv->hapd->iface;
 	struct hostapd_data *hapd = NULL;
 	size_t i;
@@ -529,6 +559,9 @@ test_driver_get_hapd(struct wpa_driver_test_data *drv,
 	}
 
 	return hapd;
+#else /* HOSTAPD */
+	return NULL;
+#endif /* HOSTAPD */
 }
 
 
@@ -646,29 +679,37 @@ static void test_driver_eapol(struct wpa_driver_test_data *drv,
 			      struct sockaddr_un *from, socklen_t fromlen,
 			      u8 *data, size_t datalen)
 {
+#ifdef HOSTAPD
 	struct test_client_socket *cli;
+#endif /* HOSTAPD */
+	const u8 *src = NULL;
+
 	if (datalen > 14) {
 		/* Skip Ethernet header */
+		src = data + ETH_ALEN;
 		wpa_printf(MSG_DEBUG, "test_driver: dst=" MACSTR " src="
 			   MACSTR " proto=%04x",
-			   MAC2STR(data), MAC2STR(data + ETH_ALEN),
+			   MAC2STR(data), MAC2STR(src),
 			   WPA_GET_BE16(data + 2 * ETH_ALEN));
 		data += 14;
 		datalen -= 14;
 	}
+#ifdef HOSTAPD
 	cli = test_driver_get_cli(drv, from, fromlen);
 	if (cli) {
 		struct hostapd_data *hapd;
 		hapd = test_driver_get_hapd(drv, cli->bss);
 		if (hapd == NULL)
 			return;
-#ifdef HOSTAPD
 		hostapd_eapol_receive(hapd, cli->addr, data, datalen);
-#endif /* HOSTAPD */
 	} else {
 		wpa_printf(MSG_DEBUG, "test_socket: EAPOL from unknown "
 			   "client");
 	}
+#else /* HOSTAPD */
+	if (src)
+		wpa_supplicant_rx_eapol(drv->ctx, src, data, datalen);
+#endif /* HOSTAPD */
 }
 
 
@@ -731,6 +772,8 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 	}
 #ifdef HOSTAPD
 	hostapd_mgmt_rx(drv->hapd, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
+#else /* HOSTAPD */
+	ap_mgmt_rx(drv->ctx, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
 #endif /* HOSTAPD */
 }
 
@@ -1446,6 +1489,16 @@ static int wpa_driver_test_associate(
 	} else
 		drv->assoc_wpa_ie_len = 0;
 
+	if (params->mode == IEEE80211_MODE_AP && !drv->ap) {
+		wpa_driver_test_close_test_socket(drv);
+		wpa_driver_test_attach(drv, drv->test_dir, 1);
+		drv->ap = 1;
+	} else if (params->mode != IEEE80211_MODE_AP && drv->ap) {
+		wpa_driver_test_close_test_socket(drv);
+		wpa_driver_test_attach(drv, drv->test_dir, 0);
+		drv->ap = 0;
+	}
+
 	drv->ibss = params->mode == IEEE80211_MODE_IBSS;
 	drv->privacy = params->key_mgmt_suite &
 		(WPA_KEY_MGMT_IEEE8021X |
@@ -1802,6 +1855,11 @@ static void wpa_driver_test_receive_unix(int sock, void *eloop_ctx,
 	socklen_t fromlen = sizeof(from);
 	const size_t buflen = 2000;
 
+	if (drv->ap) {
+		test_driver_receive_unix(sock, eloop_ctx, sock_ctx);
+		return;
+	}
+
 	buf = os_malloc(buflen);
 	if (buf == NULL)
 		return;
@@ -1936,7 +1994,7 @@ static void wpa_driver_test_deinit(void *priv)
 
 
 static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
-				  const char *dir)
+				  const char *dir, int ap)
 {
 #ifdef DRIVER_TEST_UNIX
 	static unsigned int counter = 0;
@@ -1949,8 +2007,8 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 		drv->own_socket_path = os_malloc(len);
 		if (drv->own_socket_path == NULL)
 			return -1;
-		os_snprintf(drv->own_socket_path, len, "%s/STA-" MACSTR,
-			    dir, MAC2STR(drv->own_addr));
+		os_snprintf(drv->own_socket_path, len, "%s/%s-" MACSTR,
+			    dir, ap ? "AP" : "STA", MAC2STR(drv->own_addr));
 	} else {
 		drv->own_socket_path = os_malloc(100);
 		if (drv->own_socket_path == NULL)
@@ -2077,7 +2135,7 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 		end = os_strchr(drv->test_dir, ' ');
 		if (end)
 			*end = '\0';
-		if (wpa_driver_test_attach(drv, drv->test_dir))
+		if (wpa_driver_test_attach(drv, drv->test_dir, 0))
 			return -1;
 	} else {
 		pos = os_strstr(param, "test_udp=");
@@ -2092,7 +2150,7 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 			if (wpa_driver_test_attach_udp(drv, dst))
 				return -1;
 			os_free(dst);
-		} else if (wpa_driver_test_attach(drv, NULL))
+		} else if (wpa_driver_test_attach(drv, NULL, 0))
 			return -1;
 	}
 

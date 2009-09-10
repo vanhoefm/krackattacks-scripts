@@ -98,7 +98,6 @@ struct wpa_driver_test_data {
 	struct hostapd_data *hapd;
 	struct test_client_socket *cli;
 	struct test_driver_bss *bss;
-	char *socket_dir;
 	int udp_port;
 };
 
@@ -126,7 +125,7 @@ static void test_driver_free_priv(struct wpa_driver_test_data *drv)
 		test_driver_free_bss(prev);
 	}
 	free(drv->own_socket_path);
-	free(drv->socket_dir);
+	free(drv->test_dir);
 	free(drv);
 }
 
@@ -208,10 +207,10 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 	DIR *dir;
 	int ret = 0, broadcast = 0, count = 0;
 
-	if (drv->test_socket < 0 || drv->socket_dir == NULL) {
+	if (drv->test_socket < 0 || drv->test_dir == NULL) {
 		wpa_printf(MSG_DEBUG, "%s: invalid parameters (sock=%d "
-			   "socket_dir=%p)",
-			   __func__, drv->test_socket, drv->socket_dir);
+			   "test_dir=%p)",
+			   __func__, drv->test_socket, drv->test_dir);
 		return -1;
 	}
 
@@ -233,7 +232,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 	msg.msg_iov = io;
 	msg.msg_iovlen = 3;
 
-	dir = opendir(drv->socket_dir);
+	dir = opendir(drv->test_dir);
 	if (dir == NULL) {
 		perror("test_driver: opendir");
 		return -1;
@@ -253,7 +252,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 		memset(&addr, 0, sizeof(addr));
 		addr.sun_family = AF_UNIX;
 		snprintf(addr.sun_path, sizeof(addr.sun_path), "%s/%s",
-			 drv->socket_dir, dent->d_name);
+			 drv->test_dir, dent->d_name);
 
 		if (strcmp(addr.sun_path, drv->own_socket_path) == 0)
 			continue;
@@ -303,10 +302,10 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	wpa_hexdump(MSG_MSGDUMP, "test_send_mlme", data, data_len);
 	if (drv->test_socket < 0 || data_len < 10) {
 		wpa_printf(MSG_DEBUG, "%s: invalid parameters (sock=%d len=%lu"
-			   " socket_dir=%p)",
+			   " test_dir=%p)",
 			   __func__, drv->test_socket,
 			   (unsigned long) data_len,
-			   drv->socket_dir);
+			   drv->test_dir);
 		return -1;
 	}
 
@@ -327,12 +326,12 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	msg.msg_iovlen = 2;
 
 #ifdef HOSTAPD
-	if (drv->socket_dir == NULL) {
-		wpa_printf(MSG_DEBUG, "%s: socket_dir == NULL", __func__);
+	if (drv->test_dir == NULL) {
+		wpa_printf(MSG_DEBUG, "%s: test_dir == NULL", __func__);
 		return -1;
 	}
 
-	dir = opendir(drv->socket_dir);
+	dir = opendir(drv->test_dir);
 	if (dir == NULL) {
 		perror("test_driver: opendir");
 		return -1;
@@ -352,7 +351,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 		os_memset(&addr, 0, sizeof(addr));
 		addr.sun_family = AF_UNIX;
 		os_snprintf(addr.sun_path, sizeof(addr.sun_path), "%s/%s",
-			    drv->socket_dir, dent->d_name);
+			    drv->test_dir, dent->d_name);
 
 		if (os_strcmp(addr.sun_path, drv->own_socket_path) == 0)
 			continue;
@@ -1192,7 +1191,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		}
 		if (strncmp(params->test_socket, "DIR:", 4) == 0) {
 			size_t len = strlen(params->test_socket) + 30;
-			drv->socket_dir = strdup(params->test_socket + 4);
+			drv->test_dir = strdup(params->test_socket + 4);
 			drv->own_socket_path = malloc(len);
 			if (drv->own_socket_path) {
 				snprintf(drv->own_socket_path, len,

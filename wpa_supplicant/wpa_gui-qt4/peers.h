@@ -32,7 +32,9 @@ public:
 	void setWpaGui(WpaGui *_wpagui);
 
 public slots:
-	virtual void clicked(const QModelIndex &index);
+	virtual void context_menu(const QPoint &pos);
+	virtual void enter_pin();
+	virtual void ctx_refresh();
 
 protected slots:
 	virtual void languageChange();
@@ -43,6 +45,7 @@ private:
 	WpaGui *wpagui;
 	QStandardItemModel model;
 	QIcon *default_icon;
+	QStandardItem *ctx_item;
 };
 
 #endif /* PEERS_H */

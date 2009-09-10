@@ -36,7 +36,8 @@ HEADERS	+= wpamsg.h \
 	userdatarequest.h \
 	networkconfig.h \
 	addinterface.h \
-	peers.h
+	peers.h \
+	stringquery.h
 
 SOURCES	+= main.cpp \
 	wpagui.cpp \
@@ -46,6 +47,7 @@ SOURCES	+= main.cpp \
 	networkconfig.cpp \
 	addinterface.cpp \
 	peers.cpp \
+	stringquery.cpp \
 	../../src/common/wpa_ctrl.c
 
 RESOURCES += icons.qrc

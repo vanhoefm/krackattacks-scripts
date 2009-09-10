@@ -2243,6 +2243,7 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 		WPA_DRIVER_AUTH_LEAP;
 	if (drv->use_mlme)
 		capa->flags |= WPA_DRIVER_FLAGS_USER_SPACE_MLME;
+	capa->flags |= WPA_DRIVER_FLAGS_AP;
 	capa->max_scan_ssids = 2;
 
 	return 0;

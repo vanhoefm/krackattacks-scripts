@@ -145,7 +145,8 @@ void Peers::update_peers()
 		while (*txt != '\0' && *txt != '\n')
 			txt++;
 		*txt++ = '\0';
-		if (strncmp(reply, "FAIL", 4) == 0)
+		if (strncmp(reply, "FAIL", 4) == 0 ||
+		    strncmp(reply, "UNKNOWN", 7) == 0)
 			break;
 
 		QStringList lines = info.split(QRegExp("\\n"));

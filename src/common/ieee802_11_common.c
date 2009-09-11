@@ -279,3 +279,48 @@ int ieee802_11_ie_count(const u8 *ies, size_t ies_len)
 
 	return count;
 }
+
+
+struct wpabuf * ieee802_11_vendor_ie_concat(const u8 *ies, size_t ies_len,
+					    u32 oui_type)
+{
+	struct wpabuf *buf;
+	const u8 *end, *pos, *ie;
+
+	pos = ies;
+	end = ies + ies_len;
+	ie = NULL;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			return NULL;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    WPA_GET_BE32(&pos[2]) == oui_type) {
+			ie = pos;
+			break;
+		}
+		pos += 2 + pos[1];
+	}
+
+	if (ie == NULL)
+		return NULL; /* No specified vendor IE found */
+
+	buf = wpabuf_alloc(ies_len);
+	if (buf == NULL)
+		return NULL;
+
+	/*
+	 * There may be multiple vendor IEs in the message, so need to
+	 * concatenate their data fields.
+	 */
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    WPA_GET_BE32(&pos[2]) == oui_type)
+			wpabuf_put_data(buf, pos + 6, pos[1] - 4);
+		pos += 2 + pos[1];
+	}
+
+	return buf;
+}

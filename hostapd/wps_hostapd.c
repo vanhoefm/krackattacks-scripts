@@ -20,6 +20,7 @@
 #include "uuid.h"
 #include "wpa_ctrl.h"
 #include "ieee802_11_defs.h"
+#include "ieee802_11_common.h"
 #include "sta_info.h"
 #include "eapol_sm.h"
 #include "wps/wps.h"
@@ -793,43 +794,13 @@ static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 {
 	struct hostapd_data *hapd = ctx;
 	struct wpabuf *wps_ie;
-	const u8 *end, *pos, *wps;
 
 	if (hapd->wps == NULL)
 		return;
 
-	pos = ie;
-	end = ie + ie_len;
-	wps = NULL;
-
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
-			return;
-		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
-		    WPA_GET_BE32(&pos[2]) == WPS_DEV_OUI_WFA) {
-			wps = pos;
-			break;
-		}
-		pos += 2 + pos[1];
-	}
-
-	if (wps == NULL)
-		return; /* No WPS IE in Probe Request */
-
-	wps_ie = wpabuf_alloc(ie_len);
+	wps_ie = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
 	if (wps_ie == NULL)
 		return;
-
-	/* There may be multiple WPS IEs in the message, so need to concatenate
-	 * their WPS Data fields */
-	while (pos + 1 < end) {
-		if (pos + 2 + pos[1] > end)
-			break;
-		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
-		    WPA_GET_BE32(&pos[2]) == WPS_DEV_OUI_WFA)
-			wpabuf_put_data(wps_ie, pos + 6, pos[1] - 4);
-		pos += 2 + pos[1];
-	}
 
 	if (wpabuf_len(wps_ie) > 0) {
 		wps_registrar_probe_req_rx(hapd->wps->registrar, addr, wps_ie);

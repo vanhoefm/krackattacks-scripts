@@ -1205,6 +1205,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		printf("Could not allocate memory for test driver data\n");
 		return NULL;
 	}
+	drv->ap = 1;
 	drv->bss = os_zalloc(sizeof(*drv->bss));
 	if (drv->bss == NULL) {
 		printf("Could not allocate memory for test driver BSS data\n");

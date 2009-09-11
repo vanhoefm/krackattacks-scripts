@@ -150,6 +150,7 @@ struct wps_parse_attr {
 	const u8 *selected_registrar; /* 1 octet (Bool) */
 	const u8 *request_type; /* 1 octet */
 	const u8 *response_type; /* 1 octet */
+	const u8 *ap_setup_locked; /* 1 octet */
 
 	/* variable length fields */
 	const u8 *manufacturer;

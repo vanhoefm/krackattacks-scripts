@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "ieee802_11_defs.h"
+#include "ieee802_11_common.h"
 #include "wpa_common.h"
 #include "config.h"
 #include "eap_peer/eap.h"
@@ -982,4 +983,20 @@ int wpas_wps_searching(struct wpa_supplicant *wpa_s)
 	}
 
 	return 0;
+}
+
+
+int wpas_wps_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
+			      char *end)
+{
+	struct wpabuf *wps_ie;
+	int ret;
+
+	wps_ie = ieee802_11_vendor_ie_concat(ies, ies_len, WPS_DEV_OUI_WFA);
+	if (wps_ie == NULL)
+		return 0;
+
+	ret = wps_attr_text(wps_ie, buf, end);
+	wpabuf_free(wps_ie);
+	return ret;
 }

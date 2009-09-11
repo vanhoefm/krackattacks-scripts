@@ -1547,6 +1547,14 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		return pos - buf;
 	pos += ret;
 
+#ifdef CONFIG_WPS
+	ie = (const u8 *) (bss + 1);
+	ret = wpas_wps_scan_result_text(ie, bss->ie_len, pos, end);
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+#endif /* CONFIG_WPS */
+
 	return pos - buf;
 }
 

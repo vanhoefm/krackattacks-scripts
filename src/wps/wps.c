@@ -356,3 +356,104 @@ void wps_free_pending_msgs(struct upnp_pending_message *msgs)
 		os_free(prev);
 	}
 }
+
+
+int wps_attr_text(struct wpabuf *data, char *buf, char *end)
+{
+	struct wps_parse_attr attr;
+	char *pos = buf;
+	int ret;
+
+	if (wps_parse_msg(data, &attr) < 0)
+		return -1;
+
+	if (attr.wps_state) {
+		if (*attr.wps_state == WPS_STATE_NOT_CONFIGURED)
+			ret = os_snprintf(pos, end - pos,
+					  "wps_state=unconfigured\n");
+		else if (*attr.wps_state == WPS_STATE_CONFIGURED)
+			ret = os_snprintf(pos, end - pos,
+					  "wps_state=configured\n");
+		else
+			ret = 0;
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.ap_setup_locked && *attr.ap_setup_locked) {
+		ret = os_snprintf(pos, end - pos,
+				  "wps_ap_setup_locked=1\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.selected_registrar && *attr.selected_registrar) {
+		ret = os_snprintf(pos, end - pos,
+				  "wps_selected_registrar=1\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.dev_password_id) {
+		ret = os_snprintf(pos, end - pos,
+				  "wps_device_password_id=%u\n",
+				  WPA_GET_BE16(attr.dev_password_id));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.sel_reg_config_methods) {
+		ret = os_snprintf(pos, end - pos,
+				  "wps_selected_registrar_config_methods="
+				  "0x%04x\n",
+				  WPA_GET_BE16(attr.sel_reg_config_methods));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.primary_dev_type) {
+		ret = os_snprintf(pos, end - pos,
+				  "wps_primary_device_type=%u-%08x-%u\n",
+				  WPA_GET_BE16(attr.primary_dev_type),
+				  WPA_GET_BE32(&attr.primary_dev_type[2]),
+				  WPA_GET_BE16(&attr.primary_dev_type[6]));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.dev_name) {
+		char *str = os_malloc(attr.dev_name_len + 1);
+		size_t i;
+		if (str == NULL)
+			return pos - buf;
+		for (i = 0; i < attr.dev_name_len; i++) {
+			if (attr.dev_name[i] < 32)
+				str[i] = '_';
+			else
+				str[i] = attr.dev_name[i];
+		}
+		str[i] = '\0';
+		ret = os_snprintf(pos, end - pos, "wps_device_name=%s\n", str);
+		os_free(str);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (attr.config_methods) {
+		ret = os_snprintf(pos, end - pos,
+				  "wps_config_methods=0x%04x\n",
+				  WPA_GET_BE16(attr.config_methods));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	return pos - buf;
+}

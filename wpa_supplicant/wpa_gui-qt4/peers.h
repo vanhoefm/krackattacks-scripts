@@ -40,6 +40,8 @@ protected slots:
 	virtual void languageChange();
 
 private:
+	void add_stations();
+	void add_scan_results();
 	void update_peers();
 
 	WpaGui *wpagui;

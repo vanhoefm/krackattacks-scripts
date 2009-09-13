@@ -1545,7 +1545,8 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 }
 
 
-static int wpa_supplicant_get_scan_results_old(struct wpa_supplicant *wpa_s)
+static struct wpa_scan_results * wpa_supplicant_get_scan_results_old(
+	struct wpa_supplicant *wpa_s)
 {
 #define SCAN_AP_LIMIT 128
 	struct wpa_scan_result *results;
@@ -1556,7 +1557,7 @@ static int wpa_supplicant_get_scan_results_old(struct wpa_supplicant *wpa_s)
 	if (results == NULL) {
 		wpa_printf(MSG_WARNING, "Failed to allocate memory for scan "
 			   "results");
-		return -1;
+		return NULL;
 	}
 
 	num = wpa_drv_get_scan_results(wpa_s, results, SCAN_AP_LIMIT);
@@ -1564,7 +1565,7 @@ static int wpa_supplicant_get_scan_results_old(struct wpa_supplicant *wpa_s)
 	if (num < 0) {
 		wpa_printf(MSG_DEBUG, "Failed to get scan results");
 		os_free(results);
-		return -1;
+		return NULL;
 	}
 	if (num > SCAN_AP_LIMIT) {
 		wpa_printf(MSG_INFO, "Not enough room for all APs (%d < %d)",
@@ -1572,20 +1573,17 @@ static int wpa_supplicant_get_scan_results_old(struct wpa_supplicant *wpa_s)
 		num = SCAN_AP_LIMIT;
 	}
 
-	wpa_scan_results_free(wpa_s->scan_res);
-	wpa_s->scan_res = NULL;
-
 	/* Convert old scan result data structure to the new one */
 	res = os_zalloc(sizeof(*res));
 	if (res == NULL) {
 		os_free(results);
-		return -1;
+		return NULL;
 	}
 	res->res = os_zalloc(num * sizeof(struct wpa_scan_res *));
 	if (res->res == NULL) {
 		os_free(results);
 		os_free(res);
-		return -1;
+		return NULL;
 	}
 
 	for (i = 0; i < num; i++) {
@@ -1647,9 +1645,8 @@ static int wpa_supplicant_get_scan_results_old(struct wpa_supplicant *wpa_s)
 	}
 
 	os_free(results);
-	wpa_s->scan_res = res;
 
-	return 0;
+	return res;
 }
 
 
@@ -1665,28 +1662,20 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 {
 	int ret;
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-		wpa_scan_results_free(wpa_s->scan_res);
+	wpa_scan_results_free(wpa_s->scan_res);
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		wpa_s->scan_res = ieee80211_sta_get_scan_results(wpa_s);
-		if (wpa_s->scan_res == NULL) {
-			wpa_printf(MSG_DEBUG, "Failed to get scan results");
-			ret = -1;
-		} else
-			ret = 0;
-	} else if (wpa_s->driver->get_scan_results2 == NULL)
-		ret = wpa_supplicant_get_scan_results_old(wpa_s);
-	else {
-		wpa_scan_results_free(wpa_s->scan_res);
+	else if (wpa_s->driver->get_scan_results2 == NULL)
+		wpa_s->scan_res = wpa_supplicant_get_scan_results_old(wpa_s);
+	else
 		wpa_s->scan_res = wpa_drv_get_scan_results2(wpa_s);
-		if (wpa_s->scan_res == NULL) {
-			wpa_printf(MSG_DEBUG, "Failed to get scan results");
-			ret = -1;
-		} else
-			ret = 0;
-	}
-
-	if (wpa_s->scan_res)
+	if (wpa_s->scan_res == NULL) {
+		wpa_printf(MSG_DEBUG, "Failed to get scan results");
+		ret = -1;
+	} else {
+		ret = 0;
 		wpa_scan_sort_results(wpa_s->scan_res);
+	}
 
 	return ret;
 }

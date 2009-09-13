@@ -310,19 +310,13 @@ DBusMessage * wpas_dbus_global_set_debugparams(DBusMessage *message,
 		goto out;
 	}
 
-	/* check for allowed debuglevels */
-	if (debug_level != MSG_MSGDUMP &&
-	    debug_level != MSG_DEBUG &&
-	    debug_level != MSG_INFO &&
-	    debug_level != MSG_WARNING &&
-	    debug_level != MSG_ERROR) {
+	if (wpa_supplicant_set_debug_params(global, debug_level,
+					    debug_timestamp ? 1 : 0,
+					    debug_show_keys ? 1 : 0)) {
 		reply = wpas_dbus_new_invalid_opts_error(message, NULL);
 		goto out;
 	}
 
-	wpa_debug_level = debug_level;
-	wpa_debug_timestamp = debug_timestamp ? 1 : 0;
-	wpa_debug_show_keys = debug_show_keys ? 1 : 0;
 	reply = wpas_dbus_new_success_reply(message);
 
 out:
@@ -1065,16 +1059,7 @@ DBusMessage * wpas_dbus_iface_enable_network(DBusMessage *message,
 					     struct wpa_supplicant *wpa_s,
 					     struct wpa_ssid *ssid)
 {
-	if (wpa_s->current_ssid == NULL && ssid->disabled) {
-		/*
-		 * Try to reassociate since there is no current configuration
-		 * and a new network was made available.
-		 */
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
-	}
-	ssid->disabled = 0;
-
+	wpa_supplicant_enable_network(wpa_s, ssid);
 	return wpas_dbus_new_success_reply(message);
 }
 
@@ -1093,10 +1078,7 @@ DBusMessage * wpas_dbus_iface_disable_network(DBusMessage *message,
 					      struct wpa_supplicant *wpa_s,
 					      struct wpa_ssid *ssid)
 {
-	if (ssid == wpa_s->current_ssid)
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
-	ssid->disabled = 1;
-
+	wpa_supplicant_disable_network(wpa_s, ssid);
 	return wpas_dbus_new_success_reply(message);
 }
 
@@ -1121,13 +1103,7 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 
 	if (strlen(dbus_message_get_signature(message)) == 0) {
 		/* Any network */
-		ssid = wpa_s->conf->ssid;
-		while (ssid) {
-			ssid->disabled = 0;
-			ssid = ssid->next;
-		}
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+		ssid = NULL;
 	} else {
 		const char *obj_path;
 		int nid;
@@ -1166,23 +1142,10 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 			reply = wpas_dbus_new_invalid_network_error(message);
 			goto out;
 		}
-
-		/* Finally, associate with the network */
-		if (ssid != wpa_s->current_ssid && wpa_s->current_ssid)
-			wpa_supplicant_disassociate(
-				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
-
-		/* Mark all other networks disabled and trigger reassociation
-		 */
-		ssid = wpa_s->conf->ssid;
-		while (ssid) {
-			ssid->disabled = (nid != ssid->id);
-			ssid = ssid->next;
-		}
-		wpa_s->disconnected = 0;
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
+
+	/* Finally, associate with the network */
+	wpa_supplicant_select_network(wpa_s, ssid);
 
 	reply = wpas_dbus_new_success_reply(message);
 
@@ -1233,11 +1196,11 @@ DBusMessage * wpas_dbus_iface_set_ap_scan(DBusMessage *message,
 		goto out;
 	}
 
-	if (ap_scan > 2) {
+	if (wpa_supplicant_set_ap_scan(wpa_s, ap_scan)) {
 		reply = wpas_dbus_new_invalid_opts_error(message, NULL);
 		goto out;
 	}
-	wpa_s->conf->ap_scan = ap_scan;
+
 	reply = wpas_dbus_new_success_reply(message);
 
 out:

@@ -418,6 +418,18 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 				 int reason_code);
 
+void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
+				   struct wpa_ssid *ssid);
+void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
+				    struct wpa_ssid *ssid);
+void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
+				   struct wpa_ssid *ssid);
+int wpa_supplicant_set_ap_scan(struct wpa_supplicant *wpa_s,
+			       int ap_scan);
+int wpa_supplicant_set_debug_params(struct wpa_global *global,
+				    int debug_level, int debug_timestamp,
+				    int debug_show_keys);
+
 void wpa_show_license(void);
 
 struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,

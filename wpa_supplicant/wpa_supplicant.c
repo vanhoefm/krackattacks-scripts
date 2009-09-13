@@ -1349,6 +1349,202 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * wpa_supplicant_enable_network - Mark a configured network as enabled
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @ssid: wpa_ssid structure for a configured network or %NULL
+ *
+ * Enables the specified network or all networks if no network specified.
+ */
+void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
+				   struct wpa_ssid *ssid)
+{
+	struct wpa_ssid *other_ssid;
+	int was_disabled;
+
+	if (ssid == NULL) {
+		other_ssid = wpa_s->conf->ssid;
+		while (other_ssid) {
+			if (other_ssid == wpa_s->current_ssid &&
+			    other_ssid->disabled)
+				wpa_s->reassociate = 1;
+
+			was_disabled = other_ssid->disabled;
+
+			other_ssid->disabled = 0;
+
+			if (was_disabled != other_ssid->disabled)
+				wpas_notify_network_enabled_changed(
+					wpa_s, other_ssid);
+
+			other_ssid = other_ssid->next;
+		}
+		if (wpa_s->reassociate)
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
+	} else if (wpa_s->current_ssid == NULL && ssid->disabled) {
+		/*
+		 * Try to reassociate since there is no current configuration
+		 * and a new network was made available.
+		 */
+		wpa_s->reassociate = 1;
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+		was_disabled = ssid->disabled;
+
+		ssid->disabled = 0;
+
+		if (was_disabled != ssid->disabled)
+			wpas_notify_network_enabled_changed(wpa_s, ssid);
+	}
+}
+
+
+/**
+ * wpa_supplicant_disable_network - Mark a configured network as disabled
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @ssid: wpa_ssid structure for a configured network or %NULL
+ *
+ * Disables the specified network or all networks if no network specified.
+ */
+void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
+				    struct wpa_ssid *ssid)
+{
+	struct wpa_ssid *other_ssid;
+	int was_disabled;
+
+	if (ssid == NULL) {
+		other_ssid = wpa_s->conf->ssid;
+		while (other_ssid) {
+			was_disabled = other_ssid->disabled;
+
+			other_ssid->disabled = 1;
+
+			if (was_disabled != other_ssid->disabled)
+				wpas_notify_network_enabled_changed(
+					wpa_s, other_ssid);
+
+			other_ssid = other_ssid->next;
+		}
+		if (wpa_s->current_ssid)
+			wpa_supplicant_disassociate(
+				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	} else {
+		if (ssid == wpa_s->current_ssid)
+			wpa_supplicant_disassociate(
+				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+
+		was_disabled = ssid->disabled;
+
+		ssid->disabled = 1;
+
+		if (was_disabled != ssid->disabled)
+			wpas_notify_network_enabled_changed(wpa_s, ssid);
+	}
+}
+
+
+/**
+ * wpa_supplicant_select_network - Attempt association with a network
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @ssid: wpa_ssid structure for a configured network or %NULL for any network
+ */
+void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
+				   struct wpa_ssid *ssid)
+{
+
+	struct wpa_ssid *other_ssid;
+
+	if (ssid && ssid != wpa_s->current_ssid && wpa_s->current_ssid)
+		wpa_supplicant_disassociate(
+			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+
+	/*
+	 * Mark all other networks disabled or mark all networks enabled if no
+	 * network specified.
+	 */
+	other_ssid = wpa_s->conf->ssid;
+	while (other_ssid) {
+		int was_disabled = other_ssid->disabled;
+
+		other_ssid->disabled = ssid ? (ssid->id != other_ssid->id) : 0;
+
+		if (was_disabled != other_ssid->disabled)
+			wpas_notify_network_enabled_changed(wpa_s, other_ssid);
+
+		other_ssid = other_ssid->next;
+	}
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	wpas_notify_network_selected(wpa_s, ssid);
+}
+
+
+/**
+ * wpa_supplicant_set_ap_scan - Set AP scan mode for interface
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @ap_scan: AP scan mode
+ * Returns: 0 if succeed or -1 if ap_scan has an invalid value
+ *
+ */
+int wpa_supplicant_set_ap_scan(struct wpa_supplicant *wpa_s, int ap_scan)
+{
+
+	int old_ap_scan;
+
+	if (ap_scan < 0 || ap_scan > 2)
+		return -1;
+
+	old_ap_scan = wpa_s->conf->ap_scan;
+	wpa_s->conf->ap_scan = ap_scan;
+
+	if (old_ap_scan != wpa_s->conf->ap_scan)
+		wpas_notify_ap_scan_changed(wpa_s);
+
+	return 0;
+}
+
+
+/**
+ * wpa_supplicant_set_debug_params - Set global debug params
+ * @global: wpa_global structure
+ * @debug_level: debug level
+ * @debug_timestamp: determines if show timestamp in debug data
+ * @debug_show_keys: determines if show keys in debug data
+ * Returns: 0 if succeed or -1 if debug_level has wrong value
+ */
+int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
+				    int debug_timestamp, int debug_show_keys)
+{
+
+	int old_level, old_timestamp, old_show_keys;
+
+	/* check for allowed debuglevels */
+	if (debug_level != MSG_MSGDUMP &&
+	    debug_level != MSG_DEBUG &&
+	    debug_level != MSG_INFO &&
+	    debug_level != MSG_WARNING &&
+	    debug_level != MSG_ERROR)
+		return -1;
+
+	old_level = wpa_debug_level;
+	old_timestamp = wpa_debug_timestamp;
+	old_show_keys = wpa_debug_show_keys;
+
+	wpa_debug_level = debug_level;
+	wpa_debug_timestamp = debug_timestamp ? 1 : 0;
+	wpa_debug_show_keys = debug_show_keys ? 1 : 0;
+
+	if (wpa_debug_level != old_level ||
+	    wpa_debug_timestamp != old_timestamp ||
+	    wpa_debug_show_keys != old_show_keys)
+		wpas_notify_debug_params_changed(global);
+
+	return 0;
+}
+
+
 static int wpa_supplicant_get_scan_results_old(struct wpa_supplicant *wpa_s)
 {
 #define SCAN_AP_LIMIT 128

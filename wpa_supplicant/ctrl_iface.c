@@ -830,37 +830,20 @@ static int wpa_supplicant_ctrl_iface_select_network(
 	/* cmd: "<network id>" or "any" */
 	if (os_strcmp(cmd, "any") == 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: SELECT_NETWORK any");
-		ssid = wpa_s->conf->ssid;
-		while (ssid) {
-			ssid->disabled = 0;
-			ssid = ssid->next;
+		ssid = NULL;
+	} else {
+		id = atoi(cmd);
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: SELECT_NETWORK id=%d", id);
+
+		ssid = wpa_config_get_network(wpa_s->conf, id);
+		if (ssid == NULL) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
+				   "network id=%d", id);
+			return -1;
 		}
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
-		return 0;
 	}
 
-	id = atoi(cmd);
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: SELECT_NETWORK id=%d", id);
-
-	ssid = wpa_config_get_network(wpa_s->conf, id);
-	if (ssid == NULL) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
-			   "id=%d", id);
-		return -1;
-	}
-
-	if (ssid != wpa_s->current_ssid && wpa_s->current_ssid)
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
-
-	/* Mark all other networks disabled and trigger reassociation */
-	ssid = wpa_s->conf->ssid;
-	while (ssid) {
-		ssid->disabled = id != ssid->id;
-		ssid = ssid->next;
-	}
-	wpa_s->reassociate = 1;
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	wpa_supplicant_select_network(wpa_s, ssid);
 
 	return 0;
 }
@@ -875,36 +858,19 @@ static int wpa_supplicant_ctrl_iface_enable_network(
 	/* cmd: "<network id>" or "all" */
 	if (os_strcmp(cmd, "all") == 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: ENABLE_NETWORK all");
-		ssid = wpa_s->conf->ssid;
-		while (ssid) {
-			if (ssid == wpa_s->current_ssid && ssid->disabled)
-				wpa_s->reassociate = 1;
-			ssid->disabled = 0;
-			ssid = ssid->next;
+		ssid = NULL;
+	} else {
+		id = atoi(cmd);
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: ENABLE_NETWORK id=%d", id);
+
+		ssid = wpa_config_get_network(wpa_s->conf, id);
+		if (ssid == NULL) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
+				   "network id=%d", id);
+			return -1;
 		}
-		if (wpa_s->reassociate)
-			wpa_supplicant_req_scan(wpa_s, 0, 0);
-		return 0;
 	}
-
-	id = atoi(cmd);
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: ENABLE_NETWORK id=%d", id);
-
-	ssid = wpa_config_get_network(wpa_s->conf, id);
-	if (ssid == NULL) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
-			   "id=%d", id);
-		return -1;
-	}
-
-	if (wpa_s->current_ssid == NULL && ssid->disabled) {
-		/*
-		 * Try to reassociate since there is no current configuration
-		 * and a new network was made available. */
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
-	}
-	ssid->disabled = 0;
+	wpa_supplicant_enable_network(wpa_s, ssid);
 
 	return 0;
 }
@@ -919,30 +885,19 @@ static int wpa_supplicant_ctrl_iface_disable_network(
 	/* cmd: "<network id>" or "all" */
 	if (os_strcmp(cmd, "all") == 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: DISABLE_NETWORK all");
-		ssid = wpa_s->conf->ssid;
-		while (ssid) {
-			ssid->disabled = 1;
-			ssid = ssid->next;
+		ssid = NULL;
+	} else {
+		id = atoi(cmd);
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: DISABLE_NETWORK id=%d", id);
+
+		ssid = wpa_config_get_network(wpa_s->conf, id);
+		if (ssid == NULL) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
+				   "network id=%d", id);
+			return -1;
 		}
-		if (wpa_s->current_ssid)
-			wpa_supplicant_disassociate(wpa_s,
-				                    WLAN_REASON_DEAUTH_LEAVING);
-		return 0;
 	}
-
-	id = atoi(cmd);
-	wpa_printf(MSG_DEBUG, "CTRL_IFACE: DISABLE_NETWORK id=%d", id);
-
-	ssid = wpa_config_get_network(wpa_s->conf, id);
-	if (ssid == NULL) {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "
-			   "id=%d", id);
-		return -1;
-	}
-
-	if (ssid == wpa_s->current_ssid)
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
-	ssid->disabled = 1;
+	wpa_supplicant_disable_network(wpa_s, ssid);
 
 	return 0;
 }
@@ -1569,11 +1524,7 @@ static int wpa_supplicant_ctrl_iface_ap_scan(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
 	int ap_scan = atoi(cmd);
-
-	if (ap_scan < 0 || ap_scan > 2)
-		return -1;
-	wpa_s->conf->ap_scan = ap_scan;
-	return 0;
+	return wpa_supplicant_set_ap_scan(wpa_s, ap_scan);
 }
 
 

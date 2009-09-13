@@ -25,17 +25,19 @@
 #include "driver_i.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
+#include "notify.h"
 #include "sme.h"
 
 void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_scan_res *bss, struct wpa_ssid *ssid)
 {
 	struct wpa_driver_auth_params params;
+	struct wpa_ssid *old_ssid;
 	const u8 *ie;
 #ifdef CONFIG_IEEE80211R
 	const u8 *md = NULL;
 #endif /* CONFIG_IEEE80211R */
-	int i;
+	int i, bssid_changed;
 
 	if (bss == NULL) {
 		wpa_printf(MSG_ERROR, "SME: No scan result available for the "
@@ -92,8 +94,11 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	}
 	params.wep_tx_keyidx = ssid->wep_tx_keyidx;
 
+	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
+	if (bssid_changed)
+		wpas_notify_bssid_changed(wpa_s);
 
 	if (bss && (wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
 		    wpa_scan_get_ie(bss, WLAN_EID_RSN)) &&
@@ -220,9 +225,12 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 	wpa_clear_keys(wpa_s, bss->bssid);
 	wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
+	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
+	if (old_ssid != wpa_s->current_ssid)
+		wpas_notify_network_changed(wpa_s);
 
 	if (wpa_drv_authenticate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Authentication request to the "
@@ -348,12 +356,17 @@ int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 			    union wpa_event_data *data)
 {
+	int bssid_changed;
+
 	wpa_printf(MSG_DEBUG, "SME: Association failed: status code %d",
 		   data->assoc_reject.status_code);
 
 	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+	if (bssid_changed)
+		wpas_notify_bssid_changed(wpa_s);
 
 	/*
 	 * TODO: if more than one possible AP is available in scan results,

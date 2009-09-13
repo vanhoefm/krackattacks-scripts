@@ -20,6 +20,7 @@
 #include "eloop.h"
 #include "config_ssid.h"
 #include "wpa_supplicant_i.h"
+#include "notify.h"
 #include "driver_i.h"
 #include "wpa.h"
 #include "ieee802_11_defs.h"
@@ -2245,7 +2246,7 @@ static int ieee80211_ibss_allowed(struct wpa_supplicant *wpa_s)
 static int ieee80211_sta_join_ibss(struct wpa_supplicant *wpa_s,
 				   struct ieee80211_sta_bss *bss)
 {
-	int res = 0, rates, done = 0;
+	int res = 0, rates, done = 0, bssid_changed;
 	struct ieee80211_mgmt *mgmt;
 #if 0 /* FIX */
 	struct ieee80211_tx_control control;
@@ -2264,7 +2265,10 @@ static int ieee80211_sta_join_ibss(struct wpa_supplicant *wpa_s,
 		local->hw->reset_tsf(local->mdev);
 	}
 #endif
+	bssid_changed = os_memcmp(wpa_s->bssid, bss->bssid, ETH_ALEN);
 	os_memcpy(wpa_s->bssid, bss->bssid, ETH_ALEN);
+	if (bssid_changed)
+		wpas_notify_bssid_changed(wpa_s);
 
 #if 0 /* FIX */
 	local->conf.beacon_int = bss->beacon_int >= 10 ? bss->beacon_int : 10;
@@ -2580,11 +2584,17 @@ int ieee80211_sta_associate(struct wpa_supplicant *wpa_s,
 			    struct wpa_driver_associate_params *params)
 {
 	struct ieee80211_sta_bss *bss;
+	int bssid_changed;
 
 	wpa_s->mlme.bssid_set = 0;
 	wpa_s->mlme.freq = params->freq;
 	if (params->bssid) {
+		bssid_changed = os_memcmp(wpa_s->bssid, params->bssid,
+					  ETH_ALEN);
 		os_memcpy(wpa_s->bssid, params->bssid, ETH_ALEN);
+		if (bssid_changed)
+			wpas_notify_bssid_changed(wpa_s);
+
 		if (!is_zero_ether_addr(params->bssid))
 			wpa_s->mlme.bssid_set = 1;
 		bss = ieee80211_bss_get(wpa_s, wpa_s->bssid);

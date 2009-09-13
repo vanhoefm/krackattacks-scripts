@@ -20,6 +20,7 @@
 #include "driver_i.h"
 #include "ctrl_iface_dbus.h"
 #include "ctrl_iface_dbus_handlers.h"
+#include "notify.h"
 #include "eap_peer/eap_methods.h"
 #include "dbus_dict_helpers.h"
 #include "ieee802_11_defs.h"
@@ -834,6 +835,7 @@ DBusMessage * wpas_dbus_iface_add_network(DBusMessage *message,
 					       "a network on this interface.");
 		goto out;
 	}
+	wpas_notify_network_added(wpa_s, ssid);
 	ssid->disabled = 1;
 	wpa_config_set_network_defaults(ssid);
 
@@ -896,6 +898,8 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 		reply = wpas_dbus_new_invalid_network_error(message);
 		goto out;
 	}
+
+	wpas_notify_network_removed(wpa_s, ssid);
 
 	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
 		reply = dbus_message_new_error(message,
@@ -1439,8 +1443,11 @@ DBusMessage * wpas_dbus_iface_set_blobs(DBusMessage *message,
 		}
 
 		/* Success */
-		wpa_config_remove_blob(wpa_s->conf, blob->name);
+		if (!wpa_config_remove_blob(wpa_s->conf, blob->name))
+			wpas_notify_blob_removed(wpa_s, blob->name);
 		wpa_config_set_blob(wpa_s->conf, blob);
+		wpas_notify_blob_added(wpa_s, blob->name);
+
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 	wpa_dbus_dict_entry_clear(&entry);
@@ -1480,6 +1487,8 @@ DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 
 		if (wpa_config_remove_blob(wpa_s->conf, name) != 0)
 			err_msg = "Error removing blob.";
+		else
+			wpas_notify_blob_removed(wpa_s, name);
 		dbus_message_iter_next(&array);
 	}
 

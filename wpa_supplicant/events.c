@@ -27,7 +27,7 @@
 #include "pmksa_cache.h"
 #include "wpa_ctrl.h"
 #include "eap_peer/eap.h"
-#include "ctrl_iface_dbus.h"
+#include "notify.h"
 #include "ieee802_11_defs.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
@@ -38,7 +38,7 @@
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 {
-	struct wpa_ssid *ssid;
+	struct wpa_ssid *ssid, *old_ssid;
 
 	if (wpa_s->conf->ap_scan == 1 && wpa_s->current_ssid)
 		return 0;
@@ -74,9 +74,12 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->current_ssid && wpa_s->current_ssid != ssid)
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
+	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
+	if (old_ssid != wpa_s->current_ssid)
+		wpas_notify_network_changed(wpa_s);
 
 	return 0;
 }
@@ -98,9 +101,15 @@ static void wpa_supplicant_stop_countermeasures(void *eloop_ctx,
 
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 {
+	int bssid_changed;
+
 	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+	if (bssid_changed)
+		wpas_notify_bssid_changed(wpa_s);
+
 	eapol_sm_notify_portEnabled(wpa_s->eapol, FALSE);
 	eapol_sm_notify_portValid(wpa_s->eapol, FALSE);
 	if (wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt))
@@ -636,9 +645,10 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 			"empty - not posting");
 	} else {
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
-		wpa_supplicant_dbus_notify_scan_results(wpa_s);
-		wpas_wps_notify_scan_results(wpa_s);
+		wpas_notify_scan_results(wpa_s);
 	}
+
+	wpas_notify_scan_done(wpa_s, 1);
 
 	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s)) ||
 	    wpa_s->disconnected)
@@ -870,6 +880,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 {
 	u8 bssid[ETH_ALEN];
 	int ft_completed = wpa_ft_is_completed(wpa_s->wpa);
+	int bssid_changed;
 
 	if (data)
 		wpa_supplicant_event_associnfo(wpa_s, data);
@@ -882,8 +893,12 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	     os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0)) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Associated to a new BSS: BSSID="
 			MACSTR, MAC2STR(bssid));
+		bssid_changed = os_memcmp(wpa_s->bssid, bssid, ETH_ALEN);
 		os_memcpy(wpa_s->bssid, bssid, ETH_ALEN);
 		os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+		if (bssid_changed)
+			wpas_notify_bssid_changed(wpa_s);
+
 		if (wpa_supplicant_dynamic_keys(wpa_s) && !ft_completed) {
 			wpa_clear_keys(wpa_s, bssid);
 		}

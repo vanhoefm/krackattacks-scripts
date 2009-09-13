@@ -32,6 +32,7 @@
 #include "wps/wps.h"
 #include "ibss_rsn.h"
 #include "ap.h"
+#include "notify.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -958,6 +959,9 @@ static int wpa_supplicant_ctrl_iface_add_network(
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
 		return -1;
+
+	wpas_notify_network_added(wpa_s, ssid);
+
 	ssid->disabled = 1;
 	wpa_config_set_network_defaults(ssid);
 
@@ -979,8 +983,10 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: REMOVE_NETWORK all");
 		ssid = wpa_s->conf->ssid;
 		while (ssid) {
+			struct wpa_ssid *remove_ssid = ssid;
 			id = ssid->id;
 			ssid = ssid->next;
+			wpas_notify_network_removed(wpa_s, remove_ssid);
 			wpa_config_remove_network(wpa_s->conf, id);
 		}
 		if (wpa_s->current_ssid) {

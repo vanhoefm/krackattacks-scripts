@@ -43,6 +43,7 @@
 #include "ibss_rsn.h"
 #include "sme.h"
 #include "ap.h"
+#include "notify.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -517,8 +518,7 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s, wpa_states state)
 	if (state != WPA_SCANNING)
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 
-	wpa_supplicant_dbus_notify_state_change(wpa_s, state,
-						wpa_s->wpa_state);
+	wpas_notify_state_changed(wpa_s, state, wpa_s->wpa_state);
 
 	if (state == WPA_COMPLETED && wpa_s->new_connection) {
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
@@ -557,11 +557,13 @@ static void wpa_supplicant_terminate(int sig, void *eloop_ctx,
 
 static void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 {
+	wpa_states old_state = wpa_s->wpa_state;
 	wpa_s->pairwise_cipher = 0;
 	wpa_s->group_cipher = 0;
 	wpa_s->mgmt_group_cipher = 0;
 	wpa_s->key_mgmt = 0;
 	wpa_s->wpa_state = WPA_DISCONNECTED;
+	wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
 }
 
 
@@ -579,7 +581,10 @@ static void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_config *conf;
+	struct wpa_ssid *old_ssid;
 	int reconf_ctrl;
+	int old_ap_scan;
+
 	if (wpa_s->confname == NULL)
 		return -1;
 	conf = wpa_config_read(wpa_s->confname);
@@ -600,7 +605,11 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	}
 
 	eapol_sm_invalidate_cached_session(wpa_s->eapol);
+	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = NULL;
+	if (old_ssid != wpa_s->current_ssid)
+		wpas_notify_network_changed(wpa_s);
+
 	/*
 	 * TODO: should notify EAPOL SM about changes in opensc_engine_path,
 	 * pkcs11_engine_path, pkcs11_module_path.
@@ -616,8 +625,13 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	wpa_sm_set_fast_reauth(wpa_s->wpa, wpa_s->conf->fast_reauth);
 	rsn_preauth_deinit(wpa_s->wpa);
+
+	old_ap_scan = wpa_s->conf->ap_scan;
 	wpa_config_free(wpa_s->conf);
 	wpa_s->conf = conf;
+	if (old_ap_scan != wpa_s->conf->ap_scan)
+		wpas_notify_ap_scan_changed(wpa_s);
+
 	if (reconf_ctrl)
 		wpa_s->ctrl_iface = wpa_supplicant_ctrl_iface_init(wpa_s);
 
@@ -945,13 +959,14 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 {
 	u8 wpa_ie[80];
 	size_t wpa_ie_len;
-	int use_crypt, ret, i;
+	int use_crypt, ret, i, bssid_changed;
 	int algs = AUTH_ALG_OPEN_SYSTEM;
 	wpa_cipher cipher_pairwise, cipher_group;
 	struct wpa_driver_associate_params params;
 	int wep_keys_set = 0;
 	struct wpa_driver_capa capa;
 	int assoc_failed = 0;
+	struct wpa_ssid *old_ssid;
 
 	if (ssid->mode == 2) {
 #ifdef CONFIG_AP
@@ -982,8 +997,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with " MACSTR
 			" (SSID='%s' freq=%d MHz)", MAC2STR(bss->bssid),
 			ie ? wpa_ssid_txt(ie + 2, ie[1]) : "", bss->freq);
+		bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 		os_memset(wpa_s->bssid, 0, ETH_ALEN);
 		os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
+		if (bssid_changed)
+			wpas_notify_bssid_changed(wpa_s);
 #ifdef CONFIG_IEEE80211R
 		ie = wpa_scan_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
 		if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
@@ -1257,9 +1275,12 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		 */
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
 	}
+	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
+	if (old_ssid != wpa_s->current_ssid)
+		wpas_notify_network_changed(wpa_s);
 }
 
 
@@ -1274,7 +1295,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 				 int reason_code)
 {
+	struct wpa_ssid *old_ssid;
 	u8 *addr = NULL;
+
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 			ieee80211_sta_disassociate(wpa_s, reason_code);
@@ -1284,9 +1307,12 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 	}
 	wpa_clear_keys(wpa_s, addr);
 	wpa_supplicant_mark_disassoc(wpa_s);
+	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = NULL;
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+	if (old_ssid != wpa_s->current_ssid)
+		wpas_notify_network_changed(wpa_s);
 }
 
 
@@ -1301,7 +1327,9 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 				   int reason_code)
 {
+	struct wpa_ssid *old_ssid;
 	u8 *addr = NULL;
+
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 			ieee80211_sta_deauthenticate(wpa_s, reason_code);
@@ -1312,9 +1340,12 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 	}
 	wpa_clear_keys(wpa_s, addr);
 	wpa_supplicant_mark_disassoc(wpa_s);
+	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = NULL;
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
+	if (old_ssid != wpa_s->current_ssid)
+		wpas_notify_network_changed(wpa_s);
 }
 
 
@@ -2001,7 +2032,7 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s)
 		wpa_clear_keys(wpa_s, NULL);
 	}
 
-	wpas_dbus_unregister_iface(wpa_s);
+	wpas_notify_unregister_interface(wpa_s);
 
 	wpa_supplicant_cleanup(wpa_s);
 

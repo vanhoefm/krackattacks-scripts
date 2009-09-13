@@ -49,6 +49,7 @@ MD4OBJS = # none by default
 MD5OBJS = ../src/crypto/md5.o
 
 OBJS = config.o
+OBJS += notify.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o

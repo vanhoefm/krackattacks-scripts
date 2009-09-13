@@ -25,7 +25,7 @@
 #include "eloop.h"
 #include "uuid.h"
 #include "wpa_ctrl.h"
-#include "ctrl_iface_dbus.h"
+#include "notify.h"
 #include "eap_common/eap_wsc_common.h"
 #include "blacklist.h"
 #include "wpa.h"
@@ -202,7 +202,8 @@ static int wpa_supplicant_wps_cred(void *ctx,
 				WPS_EVENT_CRED_RECEIVED, buf);
 			os_free(buf);
 		}
-		wpa_supplicant_dbus_notify_wps_cred(wpa_s, cred);
+
+		wpas_notify_wps_credential(wpa_s, cred);
 	} else
 		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_CRED_RECEIVED);
 
@@ -255,6 +256,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		ssid = wpa_config_add_network(wpa_s->conf);
 		if (ssid == NULL)
 			return -1;
+		wpas_notify_network_added(wpa_s, ssid);
 	}
 
 	wpa_config_set_network_defaults(ssid);
@@ -387,6 +389,7 @@ static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_M2D
 		"dev_password_id=%d config_error=%d",
 		m2d->dev_password_id, m2d->config_error);
+	wpas_notify_wps_event_m2d(wpa_s, m2d);
 }
 
 
@@ -395,6 +398,7 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 {
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_FAIL "msg=%d", fail->msg);
 	wpas_clear_wps(wpa_s);
+	wpas_notify_wps_event_fail(wpa_s, fail);
 }
 
 
@@ -402,6 +406,7 @@ static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);
 	wpa_s->wps_success = 1;
+	wpas_notify_wps_event_success(wpa_s);
 }
 
 
@@ -438,7 +443,7 @@ enum wps_request_type wpas_wps_get_req_type(struct wpa_ssid *ssid)
 static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 {
 	int id;
-	struct wpa_ssid *ssid;
+	struct wpa_ssid *ssid, *remove_ssid = NULL;
 
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
 
@@ -446,14 +451,20 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
-			if (ssid == wpa_s->current_ssid)
+			if (ssid == wpa_s->current_ssid) {
 				wpa_s->current_ssid = NULL;
+				if (ssid != NULL)
+					wpas_notify_network_changed(wpa_s);
+			}
 			id = ssid->id;
+			remove_ssid = ssid;
 		} else
 			id = -1;
 		ssid = ssid->next;
-		if (id >= 0)
+		if (id >= 0) {
+			wpas_notify_network_removed(wpa_s, remove_ssid);
 			wpa_config_remove_network(wpa_s->conf, id);
+		}
 	}
 }
 
@@ -475,12 +486,14 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
 		return NULL;
+	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
 	if (wpa_config_set(ssid, "key_mgmt", "WPS", 0) < 0 ||
 	    wpa_config_set(ssid, "eap", "WSC", 0) < 0 ||
 	    wpa_config_set(ssid, "identity", registrar ?
 			   "\"" WSC_ID_REGISTRAR "\"" :
 			   "\"" WSC_ID_ENROLLEE "\"", 0) < 0) {
+		wpas_notify_network_removed(wpa_s, ssid);
 		wpa_config_remove_network(wpa_s->conf, ssid->id);
 		return NULL;
 	}
@@ -529,7 +542,10 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	/* Mark all other networks disabled and trigger reassociation */
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
+		int was_disabled = ssid->disabled;
 		ssid->disabled = ssid != selected;
+		if (was_disabled != ssid->disabled)
+			wpas_notify_network_enabled_changed(wpa_s, ssid);
 		ssid = ssid->next;
 	}
 	wpa_s->disconnected = 0;

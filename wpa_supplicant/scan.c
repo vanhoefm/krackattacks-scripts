@@ -21,7 +21,7 @@
 #include "driver_i.h"
 #include "mlme.h"
 #include "wps_supplicant.h"
-#include "ctrl_iface_dbus.h"
+#include "notify.h"
 
 
 static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
@@ -33,8 +33,11 @@ static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 	if (ssid == NULL)
 		return;
 
-	if (wpa_s->current_ssid == NULL)
+	if (wpa_s->current_ssid == NULL) {
 		wpa_s->current_ssid = ssid;
+		if (wpa_s->current_ssid != NULL)
+			wpas_notify_network_changed(wpa_s);
+	}
 	wpa_supplicant_initiate_eapol(wpa_s);
 	wpa_printf(MSG_DEBUG, "Already associated with a configured network - "
 		   "generating associated event");
@@ -203,6 +206,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_printf(MSG_DEBUG, "Using wired authentication - "
 			   "overriding ap_scan configuration");
 		wpa_s->conf->ap_scan = 0;
+		wpas_notify_ap_scan_changed(wpa_s);
 	}
 
 	if (wpa_s->conf->ap_scan == 0) {
@@ -348,6 +352,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	if (ret) {
 		wpa_printf(MSG_WARNING, "Failed to initiate AP scan.");
 		wpa_supplicant_notify_scanning(wpa_s, 0);
+		wpas_notify_scan_done(wpa_s, 0);
 		wpa_supplicant_req_scan(wpa_s, 10, 0);
 	} else
 		wpa_s->scan_runs++;
@@ -413,7 +418,7 @@ void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,
 {
 	if (wpa_s->scanning != scanning) {
 		wpa_s->scanning = scanning;
-		wpa_supplicant_dbus_notify_scanning(wpa_s);
+		wpas_notify_scanning(wpa_s);
 	}
 }
 

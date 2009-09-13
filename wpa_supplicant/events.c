@@ -543,7 +543,7 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 					   "BSSID mismatch");
 				continue;
 			}
-			
+
 			if (!(ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
 			    !(ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
 			    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA))
@@ -553,7 +553,7 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 				continue;
 			}
 
-			if ((ssid->key_mgmt & 
+			if ((ssid->key_mgmt &
 			     (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
 			      WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_FT_PSK |
 			      WPA_KEY_MGMT_IEEE8021X_SHA256 |

@@ -2050,7 +2050,7 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 		os_free(wpa_s);
 		return NULL;
 	}
-		
+
 	wpa_s->next = global->ifaces;
 	global->ifaces = wpa_s;
 

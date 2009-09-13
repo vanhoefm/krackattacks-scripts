@@ -1781,7 +1781,6 @@ static void ieee80211_rx_mgmt_ft_action(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "MLME: Foreign STA Address " MACSTR
 			   " in FT Action Response", MAC2STR(sta_addr));
 		return;
-			   
 	}
 
 	if (status) {

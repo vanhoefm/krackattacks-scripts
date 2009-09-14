@@ -191,8 +191,10 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_driver_scan_params params;
 	size_t max_ssids;
 
-	if (wpa_s->disconnected && !wpa_s->scan_req)
+	if (wpa_s->disconnected && !wpa_s->scan_req) {
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		return;
+	}
 
 	if (!wpa_supplicant_enabled_networks(wpa_s->conf) &&
 	    !wpa_s->scan_req) {

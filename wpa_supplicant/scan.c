@@ -178,6 +178,34 @@ static void int_array_sort_unique(int *a)
 }
 
 
+int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
+				struct wpa_driver_scan_params *params)
+{
+	int ret;
+
+	wpa_supplicant_notify_scanning(wpa_s, 1);
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
+		ieee80211_sta_set_probe_req_ie(wpa_s, params->extra_ies,
+					       params->extra_ies_len);
+		ret = ieee80211_sta_req_scan(wpa_s, params->ssids[0].ssid,
+					     params->ssids[0].ssid_len);
+	} else {
+		wpa_drv_set_probe_req_ie(wpa_s, params->extra_ies,
+					 params->extra_ies_len);
+		ret = wpa_drv_scan(wpa_s, params);
+	}
+
+	if (ret) {
+		wpa_supplicant_notify_scanning(wpa_s, 0);
+		wpas_notify_scan_done(wpa_s, 0);
+	} else
+		wpa_s->scan_runs++;
+
+	return ret;
+}
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -335,26 +363,13 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 #endif /* CONFIG_WPS */
 
-	wpa_supplicant_notify_scanning(wpa_s, 1);
-
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-		ieee80211_sta_set_probe_req_ie(wpa_s, params.extra_ies,
-					       params.extra_ies_len);
-		ret = ieee80211_sta_req_scan(wpa_s, params.ssids[0].ssid,
-					     params.ssids[0].ssid_len);
-	} else {
-		wpa_drv_set_probe_req_ie(wpa_s, params.extra_ies,
-					 params.extra_ies_len);
-		ret = wpa_drv_scan(wpa_s, &params);
-	}
+	ret = wpa_supplicant_trigger_scan(wpa_s, &params);
 
 	wpabuf_free(wps_ie);
 	os_free(params.freqs);
 
 	if (ret) {
 		wpa_printf(MSG_WARNING, "Failed to initiate AP scan.");
-		wpa_supplicant_notify_scanning(wpa_s, 0);
-		wpas_notify_scan_done(wpa_s, 0);
 		wpa_supplicant_req_scan(wpa_s, 10, 0);
 	} else
 		wpa_s->scan_runs++;

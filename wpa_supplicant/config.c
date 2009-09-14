@@ -1458,7 +1458,8 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(peerkey, 0, 1) },
 	{ INT_RANGE(mixed_cell, 0, 1) },
 	{ INT_RANGE(frequency, 0, 10000) },
-	{ INT(wpa_ptk_rekey) }
+	{ INT(wpa_ptk_rekey) },
+	{ STR(bgscan) },
 };
 
 #undef OFFSET
@@ -1623,6 +1624,7 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 #endif /* IEEE8021X_EAPOL */
 	os_free(ssid->id_str);
 	os_free(ssid->scan_freq);
+	os_free(ssid->bgscan);
 	os_free(ssid);
 }
 

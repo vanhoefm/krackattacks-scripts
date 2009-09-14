@@ -350,6 +350,15 @@ struct wpa_ssid {
 	 * known to not use all possible channels.
 	 */
 	int *scan_freq;
+
+	/**
+	 * bgscan - Background scan and roaming parameters or %NULL if none
+	 *
+	 * This is an optional set of parameters for background scanning and
+	 * roaming within a network (ESS) in following format:
+	 * <bgscan module name>:<module parameters>
+	 */
+	char *bgscan;
 };
 
 #endif /* CONFIG_SSID_H */

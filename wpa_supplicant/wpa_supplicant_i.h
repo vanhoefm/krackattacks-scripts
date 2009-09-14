@@ -388,6 +388,10 @@ struct wpa_supplicant {
 #ifdef CONFIG_AP
 	struct hostapd_iface *ap_iface;
 #endif /* CONFIG_AP */
+
+	struct wpa_ssid *bgscan_ssid;
+	const struct bgscan_ops *bgscan;
+	void *bgscan_priv;
 };
 
 
@@ -450,6 +454,9 @@ void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec);
 void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,
 				    int scanning);
+struct wpa_driver_scan_params;
+int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
+				struct wpa_driver_scan_params *params);
 
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);

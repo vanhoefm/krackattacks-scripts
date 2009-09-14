@@ -34,6 +34,7 @@
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "sme.h"
+#include "bgscan.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -658,6 +659,9 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 		return;
 	}
 
+	if (bgscan_notify_scan(wpa_s) == 1)
+		return;
+
 	while (selected == NULL) {
 		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
 			selected = wpa_supplicant_select_bss(
@@ -981,6 +985,25 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		wpabuf_free(wpa_s->pending_eapol_rx);
 		wpa_s->pending_eapol_rx = NULL;
 	}
+
+#ifdef CONFIG_BGSCAN
+	if (wpa_s->current_ssid != wpa_s->bgscan_ssid) {
+		bgscan_deinit(wpa_s);
+		if (wpa_s->current_ssid && wpa_s->current_ssid->bgscan) {
+			if (bgscan_init(wpa_s, wpa_s->current_ssid)) {
+				wpa_printf(MSG_DEBUG, "Failed to initialize "
+					   "bgscan");
+				/*
+				 * Live without bgscan; it is only used as a
+				 * roaming optimization, so the initial
+				 * connection is not affected.
+				 */
+			} else
+				wpa_s->bgscan_ssid = wpa_s->current_ssid;
+		} else
+			wpa_s->bgscan_ssid = NULL;
+	}
+#endif /* CONFIG_BGSCAN */
 }
 
 
@@ -1018,6 +1041,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s)
 		wpa_clear_keys(wpa_s, wpa_s->bssid);
 	}
 	wpa_supplicant_mark_disassoc(wpa_s);
+	bgscan_deinit(wpa_s);
 }
 
 

@@ -44,6 +44,7 @@
 #include "sme.h"
 #include "ap.h"
 #include "notify.h"
+#include "bgscan.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -362,6 +363,7 @@ void wpa_supplicant_set_non_wpa_policy(struct wpa_supplicant *wpa_s,
 
 static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 {
+	bgscan_deinit(wpa_s);
 	scard_deinit(wpa_s->scard);
 	wpa_s->scard = NULL;
 	wpa_sm_set_scard_ctx(wpa_s->wpa, NULL);

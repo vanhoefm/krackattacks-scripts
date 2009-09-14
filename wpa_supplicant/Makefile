@@ -1037,6 +1037,17 @@ OBJS_p += ../src/crypto/aes-internal-dec.o
 OBJS_p += ../src/crypto/aes-internal-enc.o
 endif
 
+ifdef CONFIG_BGSCAN_SIMPLE
+CFLAGS += -DCONFIG_BGSCAN_SIMPLE
+OBJS += bgscan_simple.o
+NEED_BGSCAN=y
+endif
+
+ifdef NEED_BGSCAN
+CFLAGS += -DCONFIG_BGSCAN
+OBJS += bgscan.o
+endif
+
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o
 OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.o
 ifdef CONFIG_AUTHENTICATOR

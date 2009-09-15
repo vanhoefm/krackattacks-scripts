@@ -120,8 +120,7 @@ extern int wpa_debug_timestamp;
 extern struct wpa_driver_ops *wpa_drivers[];
 
 /* Configure default/group WEP keys for static WEP */
-static int wpa_set_wep_keys(struct wpa_supplicant *wpa_s,
-			    struct wpa_ssid *ssid)
+int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 {
 	int i, set = 0;
 

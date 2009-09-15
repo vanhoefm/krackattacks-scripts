@@ -1170,6 +1170,8 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		return -1;
 	}
 
+	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
+
 	return 0;
 }
 #endif /* HOSTAPD */
@@ -1861,6 +1863,56 @@ nla_put_failure:
 
 
 #ifndef HOSTAPD
+static int nl_add_key(struct nl_msg *msg, wpa_alg alg,
+		      int key_idx, int defkey,
+		      const u8 *seq, size_t seq_len,
+		      const u8 *key, size_t key_len)
+{
+	struct nlattr *key_attr = nla_nest_start(msg, NL80211_ATTR_KEY);
+	if (!key_attr)
+		return -1;
+
+	if (defkey && alg == WPA_ALG_IGTK)
+		NLA_PUT_FLAG(msg, NL80211_KEY_DEFAULT_MGMT);
+	else if (defkey)
+		NLA_PUT_FLAG(msg, NL80211_KEY_DEFAULT);
+
+	NLA_PUT_U8(msg, NL80211_KEY_IDX, key_idx);
+
+	switch (alg) {
+	case WPA_ALG_WEP:
+		if (key_len == 5)
+			NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC01);
+		else
+			NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC05);
+		break;
+	case WPA_ALG_TKIP:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC02);
+		break;
+	case WPA_ALG_CCMP:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC04);
+		break;
+	case WPA_ALG_IGTK:
+		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC06);
+		break;
+	default:
+		wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
+			   "algorithm %d", __func__, alg);
+		return -1;
+	}
+
+	if (seq && seq_len)
+		NLA_PUT(msg, NL80211_KEY_SEQ, seq_len, seq);
+
+	NLA_PUT(msg, NL80211_KEY_DATA, key_len, key);
+
+	nla_nest_end(msg, key_attr);
+
+	return 0;
+ nla_put_failure:
+	return -1;
+}
+
 
 static int nl80211_set_conn_keys(struct wpa_driver_associate_params *params,
 				 struct nl_msg *msg)
@@ -2012,6 +2064,9 @@ static int wpa_driver_nl80211_authenticate(
 	wpa_printf(MSG_DEBUG, "nl80211: Authenticate (ifindex=%d)",
 		   drv->ifindex);
 
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_AUTHENTICATE, 0);
+
 	for (i = 0; i < 4; i++) {
 		if (!params->wep_key[i])
 			continue;
@@ -2019,10 +2074,14 @@ static int wpa_driver_nl80211_authenticate(
 					   i == params->wep_tx_keyidx, NULL, 0,
 					   params->wep_key[i],
 					   params->wep_key_len[i]);
+		if (params->wep_tx_keyidx != i)
+			continue;
+		if (nl_add_key(msg, WPA_ALG_WEP, i, 1, NULL, 0,
+			       params->wep_key[i], params->wep_key_len[i])) {
+			nlmsg_free(msg);
+			return -1;
+		}
 	}
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_AUTHENTICATE, 0);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	if (params->bssid) {

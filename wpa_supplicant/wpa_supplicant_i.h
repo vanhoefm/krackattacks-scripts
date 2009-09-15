@@ -396,6 +396,8 @@ struct wpa_supplicant {
 
 
 /* wpa_supplicant.c */
+int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
+
 int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s);
 
 const char * wpa_supplicant_state_txt(int state);

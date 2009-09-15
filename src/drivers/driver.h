@@ -433,6 +433,7 @@ struct wpa_driver_capa {
 
 /* Driver generated WPA/RSN IE */
 #define WPA_DRIVER_FLAGS_DRIVER_IE	0x00000001
+/* Driver needs static WEP key setup after association command */
 #define WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC 0x00000002
 #define WPA_DRIVER_FLAGS_USER_SPACE_MLME 0x00000004
 /* Driver takes care of RSN 4-way handshake internally; PMK is configured with
@@ -444,6 +445,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_SME		0x00000020
 /* Driver supports AP mode */
 #define WPA_DRIVER_FLAGS_AP		0x00000040
+/* Driver needs static WEP key setup after association has been completed */
+#define WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE	0x00000080
 	unsigned int flags;
 
 	int max_scan_ssids;

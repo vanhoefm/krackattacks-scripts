@@ -889,6 +889,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	u8 bssid[ETH_ALEN];
 	int ft_completed = wpa_ft_is_completed(wpa_s->wpa);
 	int bssid_changed;
+	struct wpa_driver_capa capa;
 
 	if (data)
 		wpa_supplicant_event_associnfo(wpa_s, data);
@@ -1004,6 +1005,14 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 			wpa_s->bgscan_ssid = NULL;
 	}
 #endif /* CONFIG_BGSCAN */
+
+	if ((wpa_s->key_mgmt == WPA_KEY_MGMT_NONE ||
+	     wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) &&
+	    wpa_s->current_ssid && wpa_drv_get_capa(wpa_s, &capa) == 0 &&
+	    capa.flags & WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE) {
+		/* Set static WEP keys again */
+		wpa_set_wep_keys(wpa_s, wpa_s->current_ssid);
+	}
 }
 
 

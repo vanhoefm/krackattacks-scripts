@@ -1754,6 +1754,41 @@ nla_put_failure:
 }
 
 
+static int nl_put_key_cipher(struct nl_msg *msg, wpa_alg alg, size_t key_len)
+{
+	switch (alg) {
+	case WPA_ALG_WEP:
+		if (key_len == 5)
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_WEP40);
+		else
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+				    WLAN_CIPHER_SUITE_WEP104);
+		break;
+	case WPA_ALG_TKIP:
+		NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_TKIP);
+		break;
+	case WPA_ALG_CCMP:
+		NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_CCMP);
+		break;
+	case WPA_ALG_IGTK:
+		NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
+			    WLAN_CIPHER_SUITE_AES_CMAC);
+		break;
+	default:
+		wpa_printf(MSG_ERROR, "%s: Unsupported encryption algorithm "
+			   "%d", __func__, alg);
+		return -1;
+	}
+	return 0;
+
+nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
 		       wpa_alg alg, const u8 *addr, int key_idx, int set_tx,
 		       const u8 *seq, size_t seq_len,
@@ -1778,30 +1813,7 @@ static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
 		genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 			    0, NL80211_CMD_NEW_KEY, 0);
 		NLA_PUT(msg, NL80211_ATTR_KEY_DATA, key_len, key);
-		switch (alg) {
-		case WPA_ALG_WEP:
-			if (key_len == 5)
-				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    WLAN_CIPHER_SUITE_WEP40);
-			else
-				NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-					    WLAN_CIPHER_SUITE_WEP104);
-			break;
-		case WPA_ALG_TKIP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_TKIP);
-			break;
-		case WPA_ALG_CCMP:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_CCMP);
-			break;
-		case WPA_ALG_IGTK:
-			NLA_PUT_U32(msg, NL80211_ATTR_KEY_CIPHER,
-				    WLAN_CIPHER_SUITE_AES_CMAC);
-			break;
-		default:
-			wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
-				   "algorithm %d", __func__, alg);
+		if (nl_put_key_cipher(msg, alg, key_len)) {
 			nlmsg_free(msg);
 			return -1;
 		}
@@ -1879,27 +1891,8 @@ static int nl_add_key(struct nl_msg *msg, wpa_alg alg,
 
 	NLA_PUT_U8(msg, NL80211_KEY_IDX, key_idx);
 
-	switch (alg) {
-	case WPA_ALG_WEP:
-		if (key_len == 5)
-			NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC01);
-		else
-			NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC05);
-		break;
-	case WPA_ALG_TKIP:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC02);
-		break;
-	case WPA_ALG_CCMP:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC04);
-		break;
-	case WPA_ALG_IGTK:
-		NLA_PUT_U32(msg, NL80211_KEY_CIPHER, 0x000FAC06);
-		break;
-	default:
-		wpa_printf(MSG_ERROR, "%s: Unsupported encryption "
-			   "algorithm %d", __func__, alg);
+	if (nl_put_key_cipher(msg, alg, key_len))
 		return -1;
-	}
 
 	if (seq && seq_len)
 		NLA_PUT(msg, NL80211_KEY_SEQ, seq_len, seq);

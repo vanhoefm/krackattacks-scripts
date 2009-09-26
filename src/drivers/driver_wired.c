@@ -474,7 +474,7 @@ static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
 		os_memcpy(LLADDR(dlp), addr, ETH_ALEN);
 	}
 #endif /* __FreeBSD__ */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 	{
 		struct sockaddr *sap;
 		sap = (struct sockaddr *) &ifr.ifr_addr;
@@ -482,7 +482,7 @@ static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
 		sap->sa_family = AF_UNSPEC;
 		os_memcpy(sap->sa_data, addr, ETH_ALEN);
 	}
-#endif /* defined(__NetBSD__) || defined(__OpenBSD__) */
+#endif /* defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__) */
 
 	if (ioctl(s, add ? SIOCADDMULTI : SIOCDELMULTI, (caddr_t) &ifr) < 0) {
 		perror("ioctl[SIOC{ADD/DEL}MULTI]");

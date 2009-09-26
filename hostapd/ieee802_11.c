@@ -1679,6 +1679,13 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	sta->sa_query_timed_out = 0;
 #endif /* CONFIG_IEEE80211W */
 
+	/*
+	 * Remove the STA entry in order to make sure the STA PS state gets
+	 * cleared and configuration gets updated in case of reassociation back
+	 * to the same AP.
+	 */
+	hostapd_sta_remove(hapd, sta->addr);
+
 	if (hostapd_sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,
 			    sta->capability, sta->supported_rates,
 			    sta->supported_rates_len, 0, sta->listen_interval,

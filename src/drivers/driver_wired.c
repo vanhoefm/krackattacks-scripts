@@ -21,9 +21,9 @@
 #include <net/if_arp.h>
 #include <net/if.h>
 #endif /* __linux__ */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__DragonFly__)
 #include <net/if_dl.h>
-#endif /* __FreeBSD__ */
+#endif /* defined(__FreeBSD__) || defined(__DragonFly__) */
 
 #include "common.h"
 #include "driver.h"
@@ -461,7 +461,7 @@ static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
 	ifr.ifr_hwaddr.sa_family = AF_UNSPEC;
 	os_memcpy(ifr.ifr_hwaddr.sa_data, addr, ETH_ALEN);
 #endif /* __linux__ */
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__DragonFly__)
 	{
 		struct sockaddr_dl *dlp;
 		dlp = (struct sockaddr_dl *) &ifr.ifr_addr;
@@ -473,7 +473,7 @@ static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
 		dlp->sdl_slen = 0;
 		os_memcpy(LLADDR(dlp), addr, ETH_ALEN);
 	}
-#endif /* __FreeBSD__ */
+#endif /* defined(__FreeBSD__) || defined(__DragonFly__) */
 #if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 	{
 		struct sockaddr *sap;

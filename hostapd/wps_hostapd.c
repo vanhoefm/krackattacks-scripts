@@ -147,7 +147,7 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 			  dev->model_number, dev->serial_number,
 			  dev->categ, dev->oui, dev->sub_categ);
 	if (len > 0 && len < (int) sizeof(txt))
-		wpa_msg(hapd, MSG_INFO, "%s", txt);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, "%s", txt);
 
 	if (hapd->conf->wps_pin_requests) {
 		FILE *f;
@@ -174,7 +174,7 @@ static void hostapd_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 	char uuid[40];
 	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
 		return;
-	wpa_msg(hapd, MSG_INFO, WPS_EVENT_REG_SUCCESS MACSTR " %s",
+	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_REG_SUCCESS MACSTR " %s",
 		MAC2STR(mac_addr), uuid);
 }
 
@@ -228,12 +228,12 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 		if (_buf) {
 			wpa_snprintf_hex(_buf, blen,
 					 cred->cred_attr, cred->cred_attr_len);
-			wpa_msg(hapd, MSG_INFO, "%s%s",
+			wpa_msg(hapd->msg_ctx, MSG_INFO, "%s%s",
 				WPS_EVENT_NEW_AP_SETTINGS, _buf);
 			os_free(_buf);
 		}
 	} else
-		wpa_msg(hapd, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);
 
 	if (hapd->conf->wps_cred_processing == 1)
 		return 0;
@@ -435,7 +435,7 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 	if (hapd->ap_pin_failures < 4)
 		return;
 
-	wpa_msg(hapd, MSG_INFO, WPS_EVENT_AP_SETUP_LOCKED);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_LOCKED);
 	hapd->wps->ap_setup_locked = 1;
 
 	wps_registrar_update_ie(hapd->wps->registrar);

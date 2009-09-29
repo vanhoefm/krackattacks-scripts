@@ -462,6 +462,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			wpa_supplicant_ap_deinit(wpa_s);
 			return -1;
 		}
+
+		hapd_iface->bss[i]->msg_ctx = wpa_s;
 	}
 
 	if (hostapd_setup_interface(wpa_s->ap_iface)) {

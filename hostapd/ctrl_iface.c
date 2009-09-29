@@ -464,6 +464,7 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	hapd->ctrl_sock = s;
 	eloop_register_read_sock(s, hostapd_ctrl_iface_receive, hapd,
 				 NULL);
+	hapd->msg_ctx = hapd;
 	wpa_msg_register_cb(hostapd_ctrl_iface_msg_cb);
 
 	return 0;

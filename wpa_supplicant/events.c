@@ -619,10 +619,87 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 }
 
 
+static struct wpa_scan_res *
+wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
+			    struct wpa_ssid **selected_ssid)
+{
+	struct wpa_scan_res *selected = NULL;
+	int prio;
+
+	while (selected == NULL) {
+		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
+			selected = wpa_supplicant_select_bss(
+				wpa_s, wpa_s->conf->pssid[prio],
+				selected_ssid);
+			if (selected)
+				break;
+		}
+
+		if (selected == NULL && wpa_s->blacklist) {
+			wpa_printf(MSG_DEBUG, "No APs found - clear blacklist "
+				   "and try again");
+			wpa_blacklist_clear(wpa_s);
+			wpa_s->blacklist_cleared++;
+		} else if (selected == NULL)
+			break;
+	}
+
+	return selected;
+}
+
+
+static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
+					int timeout)
+{
+	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1) {
+		/*
+		 * Quick recovery if the initial scan results were not
+		 * complete when fetched before the first scan request.
+		 */
+		wpa_s->scan_res_tried++;
+		timeout = 0;
+	}
+	wpa_supplicant_req_scan(wpa_s, timeout, 0);
+}
+
+
+static void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
+				   struct wpa_scan_res *selected,
+				   struct wpa_ssid *ssid)
+{
+	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
+		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
+			"PBC session overlap");
+		wpa_supplicant_req_new_scan(wpa_s, 10);
+		return;
+	}
+
+	/*
+	 * Do not trigger new association unless the BSSID has changed or if
+	 * reassociation is requested. If we are in process of associating with
+	 * the selected BSSID, do not trigger new attempt.
+	 */
+	if (wpa_s->reassociate ||
+	    (os_memcmp(selected->bssid, wpa_s->bssid, ETH_ALEN) != 0 &&
+	     (wpa_s->wpa_state != WPA_ASSOCIATING ||
+	      os_memcmp(selected->bssid, wpa_s->pending_bssid, ETH_ALEN) !=
+	      0))) {
+		if (wpa_supplicant_scard_init(wpa_s, ssid)) {
+			wpa_supplicant_req_new_scan(wpa_s, 10);
+			return;
+		}
+		wpa_supplicant_associate(wpa_s, selected, ssid);
+	} else {
+		wpa_printf(MSG_DEBUG, "Already associated with the selected "
+			   "AP");
+	}
+	rsn_preauth_scan_results(wpa_s->wpa, wpa_s->scan_res);
+}
+
+
 static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 {
-	int prio, timeout;
-	struct wpa_scan_res *selected = NULL;
+	struct wpa_scan_res *selected;
 	struct wpa_ssid *ssid = NULL;
 
 	wpa_supplicant_notify_scanning(wpa_s, 0);
@@ -632,8 +709,8 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 			return;
 		wpa_printf(MSG_DEBUG, "Failed to get scan results - try "
 			   "scanning again");
-		timeout = 1;
-		goto req_scan;
+		wpa_supplicant_req_new_scan(wpa_s, 1);
+		return;
 	}
 
 	/*
@@ -662,69 +739,13 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 	if (bgscan_notify_scan(wpa_s) == 1)
 		return;
 
-	while (selected == NULL) {
-		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
-			selected = wpa_supplicant_select_bss(
-				wpa_s, wpa_s->conf->pssid[prio], &ssid);
-			if (selected)
-				break;
-		}
-
-		if (selected == NULL && wpa_s->blacklist) {
-			wpa_printf(MSG_DEBUG, "No APs found - clear blacklist "
-				   "and try again");
-			wpa_blacklist_clear(wpa_s);
-			wpa_s->blacklist_cleared++;
-		} else if (selected == NULL) {
-			break;
-		}
-	}
-
+	selected = wpa_supplicant_pick_network(wpa_s, &ssid);
 	if (selected) {
-		if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
-			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
-				"PBC session overlap");
-			timeout = 10;
-			goto req_scan;
-		}
-
-		/* Do not trigger new association unless the BSSID has changed
-		 * or if reassociation is requested. If we are in process of
-		 * associating with the selected BSSID, do not trigger new
-		 * attempt. */
-		if (wpa_s->reassociate ||
-		    (os_memcmp(selected->bssid, wpa_s->bssid, ETH_ALEN) != 0 &&
-		     (wpa_s->wpa_state != WPA_ASSOCIATING ||
-		      os_memcmp(selected->bssid, wpa_s->pending_bssid,
-				ETH_ALEN) != 0))) {
-			if (wpa_supplicant_scard_init(wpa_s, ssid)) {
-				wpa_supplicant_req_scan(wpa_s, 10, 0);
-				return;
-			}
-			wpa_supplicant_associate(wpa_s, selected, ssid);
-		} else {
-			wpa_printf(MSG_DEBUG, "Already associated with the "
-				   "selected AP.");
-		}
-		rsn_preauth_scan_results(wpa_s->wpa, wpa_s->scan_res);
+		wpa_supplicant_connect(wpa_s, selected, ssid);
 	} else {
-		wpa_printf(MSG_DEBUG, "No suitable AP found.");
-		timeout = 5;
-		goto req_scan;
+		wpa_printf(MSG_DEBUG, "No suitable network found");
+		wpa_supplicant_req_new_scan(wpa_s, 5);
 	}
-
-	return;
-
-req_scan:
-	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1) {
-		/*
-		 * Quick recovery if the initial scan results were not
-		 * complete when fetched before the first scan request.
-		 */
-		wpa_s->scan_res_tried++;
-		timeout = 0;
-	}
-	wpa_supplicant_req_scan(wpa_s, timeout, 0);
 }
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 

@@ -252,7 +252,7 @@ void Peers::add_scan_results()
 
 		QStandardItem *item = new QStandardItem(*default_icon, name);
 		if (item) {
-			item->setData(QString(reply), peer_role_address);
+			item->setData(bssid, peer_role_address);
 			if (flags.contains("[WPS"))
 				item->setData(PEER_TYPE_AP_WPS,
 					      peer_role_type);

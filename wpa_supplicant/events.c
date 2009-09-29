@@ -697,6 +697,26 @@ static void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 }
 
 
+static struct wpa_ssid *
+wpa_supplicant_pick_new_network(struct wpa_supplicant *wpa_s)
+{
+	int prio;
+	struct wpa_ssid *ssid;
+
+	for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
+		for (ssid = wpa_s->conf->pssid[prio]; ssid; ssid = ssid->pnext)
+		{
+			if (ssid->disabled)
+				continue;
+			if (ssid->mode == IEEE80211_MODE_IBSS ||
+			    ssid->mode == IEEE80211_MODE_AP)
+				return ssid;
+		}
+	}
+	return NULL;
+}
+
+
 static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_scan_res *selected;
@@ -744,7 +764,12 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 		wpa_supplicant_connect(wpa_s, selected, ssid);
 	} else {
 		wpa_printf(MSG_DEBUG, "No suitable network found");
-		wpa_supplicant_req_new_scan(wpa_s, 5);
+		ssid = wpa_supplicant_pick_new_network(wpa_s);
+		if (ssid) {
+			wpa_printf(MSG_DEBUG, "Setup a new network");
+			wpa_supplicant_associate(wpa_s, NULL, ssid);
+		} else
+			wpa_supplicant_req_new_scan(wpa_s, 5);
 	}
 }
 #endif /* CONFIG_NO_SCAN_PROCESSING */

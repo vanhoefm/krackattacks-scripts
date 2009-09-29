@@ -828,6 +828,8 @@ void WpaGui::processMsg(char *msg)
 	WpaMsg wm(pos, priority);
 	if (eh)
 		eh->addEvent(wm);
+	if (peers)
+		peers->event_notify(wm);
 	msgs.append(wm);
 	while (msgs.count() > 100)
 		msgs.pop_front();

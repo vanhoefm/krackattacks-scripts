@@ -16,6 +16,7 @@
 #include <QImageReader>
 #include <QMessageBox>
 
+#include "wpa_ctrl.h"
 #include "wpagui.h"
 #include "stringquery.h"
 #include "peers.h"
@@ -26,7 +27,6 @@ static const int peer_role_type = Qt::UserRole + 2;
 
 /*
  * TODO:
- * - add pending WPS queries (from M1/PIN, PBC?)
  * - add current AP info (e.g., from WPS) in station mode
  * - different icons to indicate peer type
  */
@@ -35,6 +35,7 @@ enum peer_type {
 	PEER_TYPE_ASSOCIATED_STATION,
 	PEER_TYPE_AP,
 	PEER_TYPE_AP_WPS,
+	PEER_TYPE_WPS_PIN_NEEDED,
 };
 
 
@@ -99,12 +100,16 @@ void Peers::context_menu(const QPoint &pos)
 		case PEER_TYPE_AP_WPS:
 			title = tr("WPS AP");
 			break;
+		case PEER_TYPE_WPS_PIN_NEEDED:
+			title = tr("WPS PIN needed");
+			break;
 		}
 		menu->addAction(title)->setEnabled(false);
 		menu->addSeparator();
 
 		if (type == PEER_TYPE_ASSOCIATED_STATION ||
-		    type == PEER_TYPE_AP_WPS) {
+		    type == PEER_TYPE_AP_WPS ||
+		    type == PEER_TYPE_WPS_PIN_NEEDED) {
 			/* TODO: only for peers that are requesting WPS PIN
 			 * method */
 			menu->addAction(QString("Enter WPS PIN"), this,
@@ -281,4 +286,58 @@ void Peers::update_peers()
 
 	add_stations();
 	add_scan_results();
+}
+
+
+QStandardItem * Peers::find_addr(QString addr)
+{
+	if (model.rowCount() == 0)
+		return NULL;
+
+	QModelIndexList lst = model.match(model.index(0, 0), peer_role_address,
+					  addr);
+	if (lst.size() == 0)
+		return NULL;
+	return model.itemFromIndex(lst[0]);
+}
+
+
+void Peers::event_notify(WpaMsg msg)
+{
+	QString text = msg.getMsg();
+	if (text.startsWith(WPS_EVENT_PIN_NEEDED)) {
+		/*
+		 * WPS-PIN-NEEDED 5a02a5fa-9199-5e7c-bc46-e183d3cb32f7
+		 * 02:2a:c4:18:5b:f3
+		 * [Wireless Client|Company|cmodel|123|12345|1-0050F204-1]
+		 */
+		QStringList items = text.split(' ');
+		QString uuid = items[1];
+		QString addr = items[2];
+		QString name = "";
+
+		QStandardItem *item = find_addr(addr);
+		if (item)
+			return;
+
+		int pos = text.indexOf('[');
+		if (pos >= 0) {
+			int pos2 = text.lastIndexOf(']');
+			if (pos2 >= pos) {
+				items = text.mid(pos + 1, pos2 - pos - 1).
+					split('|');
+				name = items[0];
+				items.append(addr);
+			}
+		}
+
+		item = new QStandardItem(*default_icon, name);
+		if (item) {
+			item->setData(addr, peer_role_address);
+			item->setData(PEER_TYPE_WPS_PIN_NEEDED,
+				      peer_role_type);
+			item->setToolTip(items.join(QString("\n")));
+			model.appendRow(item);
+		}
+	}
 }

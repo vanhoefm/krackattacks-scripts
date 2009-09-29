@@ -17,6 +17,7 @@
 
 #include <QObject>
 #include <QStandardItemModel>
+#include "wpamsg.h"
 #include "ui_peers.h"
 
 class WpaGui;
@@ -30,6 +31,7 @@ public:
 		    bool modal = false, Qt::WFlags fl = 0);
 	~Peers();
 	void setWpaGui(WpaGui *_wpagui);
+	void event_notify(WpaMsg msg);
 
 public slots:
 	virtual void context_menu(const QPoint &pos);
@@ -43,6 +45,7 @@ private:
 	void add_stations();
 	void add_scan_results();
 	void update_peers();
+	QStandardItem * find_addr(QString addr);
 
 	WpaGui *wpagui;
 	QStandardItemModel model;

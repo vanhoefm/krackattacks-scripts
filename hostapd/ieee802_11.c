@@ -585,7 +585,7 @@ static void handle_auth(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 
 	if (vlan_id > 0) {
 		if (hostapd_get_vlan_id_ifname(hapd->conf->vlan,
-					       sta->vlan_id) == NULL) {
+					       vlan_id) == NULL) {
 			hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_INFO, "Invalid VLAN ID "
 				       "%d received from RADIUS server",

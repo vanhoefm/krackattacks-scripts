@@ -658,6 +658,7 @@ endif
 ifeq ($(CONFIG_TLS), nss)
 OBJS += ../src/crypto/tls_nss.o
 LIBS += -lnss3 -lssl3
+LIBS_p += -lnss3
 endif
 ifeq ($(CONFIG_TLS), internal)
 OBJS += ../src/crypto/tls_internal.o
@@ -730,6 +731,7 @@ ifeq ($(CONFIG_TLS), schannel)
 endif
 ifeq ($(CONFIG_TLS), nss)
 LIBS += -lnss3
+LIBS_p += -lnss3
 endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)

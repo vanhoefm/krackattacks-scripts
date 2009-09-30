@@ -429,17 +429,8 @@ int tls_connection_set_ia(void *tls_ctx, struct tls_connection *conn,
 int tls_connection_get_keys(void *tls_ctx, struct tls_connection *conn,
 			    struct tls_keys *keys)
 {
-	static u8 hack[48]; /* FIX */
-	wpa_printf(MSG_DEBUG, "NSS: TODO - %s", __func__);
-	os_memset(keys, 0, sizeof(*keys));
-	keys->master_key = hack;
-	keys->master_key_len = 48;
-	keys->client_random = hack;
-	keys->server_random = hack;
-	keys->client_random_len = 32;
-	keys->server_random_len = 32;
-
-	return 0;
+	/* NSS does not export master secret or client/server random. */
+	return -1;
 }
 
 
@@ -447,7 +438,21 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 		       const char *label, int server_random_first,
 		       u8 *out, size_t out_len)
 {
-	return -1;
+	if (conn == NULL || server_random_first) {
+		wpa_printf(MSG_INFO, "NSS: Unsupported PRF request "
+			   "(server_random_first=%d)",
+			   server_random_first);
+		return -1;
+	}
+
+	if (SSL_ExportKeyingMaterial(conn->fd, label, NULL, 0, out, out_len) !=
+	    SECSuccess) {
+		wpa_printf(MSG_INFO, "NSS: Failed to use TLS extractor "
+			   "(label='%s' out_len=%d", label, (int) out_len);
+		return -1;
+	}
+
+	return 0;
 }
 
 

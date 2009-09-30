@@ -4271,7 +4271,7 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
 		    if_nametoindex(drv->ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
+	NLA_PUT_U32(msg, NL80211_ATTR_STA_VLAN,
 		    if_nametoindex(ifname));
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);

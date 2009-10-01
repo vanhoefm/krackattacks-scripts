@@ -134,6 +134,8 @@ struct wpa_scan_result {
  * @noise: noise level
  * @level: signal level
  * @tsf: Timestamp
+ * @age: Age of the information in milliseconds (i.e., how many milliseconds
+ * ago the last Beacon or Probe Response frame was received)
  * @ie_len: length of the following IE field in octets
  *
  * This structure is used as a generic format for scan results from the
@@ -155,6 +157,7 @@ struct wpa_scan_res {
 	int noise;
 	int level;
 	u64 tsf;
+	unsigned int age;
 	size_t ie_len;
 	/* followed by ie_len octets of IEs */
 };

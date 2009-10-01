@@ -1654,6 +1654,7 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_BSS_INFORMATION_ELEMENTS] = { .type = NLA_UNSPEC },
 		[NL80211_BSS_SIGNAL_MBM] = { .type = NLA_U32 },
 		[NL80211_BSS_SIGNAL_UNSPEC] = { .type = NLA_U8 },
+		[NL80211_BSS_SEEN_MS_AGO] = { .type = NLA_U32 },
 	};
 	struct wpa_scan_results *res = arg;
 	struct wpa_scan_res **tmp;
@@ -1700,6 +1701,8 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		r->flags |= WPA_SCAN_LEVEL_INVALID | WPA_SCAN_QUAL_INVALID;
 	if (bss[NL80211_BSS_TSF])
 		r->tsf = nla_get_u64(bss[NL80211_BSS_TSF]);
+	if (bss[NL80211_BSS_SEEN_MS_AGO])
+		r->age = nla_get_u32(bss[NL80211_BSS_SEEN_MS_AGO]);
 	r->ie_len = ie_len;
 	if (ie)
 		os_memcpy(r + 1, ie, ie_len);

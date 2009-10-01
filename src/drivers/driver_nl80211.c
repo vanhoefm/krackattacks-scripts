@@ -916,6 +916,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 	}
 
 	switch (gnlh->cmd) {
+	case NL80211_CMD_TRIGGER_SCAN:
+		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger");
+		break;
 	case NL80211_CMD_NEW_SCAN_RESULTS:
 		wpa_printf(MSG_DEBUG, "nl80211: New scan results available");
 		drv->scan_complete_events = 1;

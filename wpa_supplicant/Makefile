@@ -723,10 +723,6 @@ ifdef CHAP
 OBJS += ../src/eap_common/chap.o
 endif
 
-ifndef CONFIG_NO_WPA
-NEED_CRYPTO=y
-endif
-
 ifdef NEED_CRYPTO
 ifndef TLS_FUNCS
 ifeq ($(CONFIG_TLS), openssl)
@@ -831,6 +827,7 @@ else
 CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD5=y
+CONFIG_INTERNAL_RC4=y
 endif
 
 ifdef CONFIG_INTERNAL_AES

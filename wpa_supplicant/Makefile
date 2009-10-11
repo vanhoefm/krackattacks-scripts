@@ -617,6 +617,23 @@ ifdef NEED_MILENAGE
 OBJS += ../src/hlr_auc_gw/milenage.o
 endif
 
+ifdef CONFIG_PKCS12
+CFLAGS += -DPKCS12_FUNCS
+endif
+
+ifdef CONFIG_SMARTCARD
+CFLAGS += -DCONFIG_SMARTCARD
+endif
+
+ifdef MS_FUNCS
+OBJS += ../src/crypto/ms_funcs.o
+NEED_CRYPTO=y
+endif
+
+ifdef CHAP
+OBJS += ../src/eap_common/chap.o
+endif
+
 ifndef CONFIG_TLS
 CONFIG_TLS=openssl
 endif
@@ -704,23 +721,6 @@ endif
 NEED_CRYPTO=y
 else
 OBJS += ../src/crypto/tls_none.o
-endif
-
-ifdef CONFIG_PKCS12
-CFLAGS += -DPKCS12_FUNCS
-endif
-
-ifdef CONFIG_SMARTCARD
-CFLAGS += -DCONFIG_SMARTCARD
-endif
-
-ifdef MS_FUNCS
-OBJS += ../src/crypto/ms_funcs.o
-NEED_CRYPTO=y
-endif
-
-ifdef CHAP
-OBJS += ../src/eap_common/chap.o
 endif
 
 ifdef NEED_CRYPTO

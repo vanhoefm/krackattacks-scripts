@@ -320,6 +320,7 @@ OBJS_h += ../src/eap_server/eap_sim.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
+NEED_AES_CBC=y
 endif
 
 ifdef CONFIG_EAP_LEAP
@@ -347,6 +348,9 @@ OBJS_h += ../src/eap_server/eap_psk.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_AES=y
+NEED_AES_OMAC1=y
+NEED_AES_ENCBLOCK=y
+NEED_AES_EAX=y
 endif
 
 ifdef CONFIG_EAP_AKA
@@ -361,6 +365,7 @@ OBJS_h += ../src/eap_server/eap_aka.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
+NEED_AES_CBC=y
 endif
 
 ifdef CONFIG_EAP_AKA_PRIME
@@ -438,6 +443,7 @@ ifdef CONFIG_EAP_GPSK_SHA256
 CFLAGS += -DEAP_GPSK_SHA256
 endif
 NEED_SHA256=y
+NEED_AES_OMAC1=y
 endif
 
 ifdef CONFIG_WPS
@@ -869,12 +875,20 @@ AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o
 endif
 
 AESOBJS += ../src/crypto/aes-unwrap.o
-ifndef CONFIG_NO_AES_EXTRAS
-NEED_AES_CBC=y
-AESOBJS += ../src/crypto/aes-ctr.o
+ifdef NEED_AES_EAX
 AESOBJS += ../src/crypto/aes-eax.o
+NEED_AES_CTR=y
+endif
+ifdef NEED_AES_CTR
+AESOBJS += ../src/crypto/aes-ctr.o
+endif
+ifdef NEED_AES_ENCBLOCK
 AESOBJS += ../src/crypto/aes-encblock.o
+endif
+ifdef NEED_AES_OMAC1
 AESOBJS += ../src/crypto/aes-omac1.o
+endif
+ifdef NEED_AES_WRAP
 AESOBJS += ../src/crypto/aes-wrap.o
 endif
 ifdef NEED_AES_CBC

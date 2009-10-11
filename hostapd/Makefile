@@ -190,6 +190,7 @@ ifdef CONFIG_EAP_SIM
 CFLAGS += -DEAP_SERVER_SIM
 OBJS += ../src/eap_server/eap_sim.o
 CONFIG_EAP_SIM_COMMON=y
+NEED_AES_CBC=y
 endif
 
 ifdef CONFIG_EAP_AKA
@@ -197,6 +198,7 @@ CFLAGS += -DEAP_SERVER_AKA
 OBJS += ../src/eap_server/eap_aka.o
 CONFIG_EAP_SIM_COMMON=y
 NEED_SHA256=y
+NEED_AES_CBC=y
 endif
 
 ifdef CONFIG_EAP_AKA_PRIME
@@ -220,6 +222,9 @@ endif
 ifdef CONFIG_EAP_PSK
 CFLAGS += -DEAP_SERVER_PSK
 OBJS += ../src/eap_server/eap_psk.o ../src/eap_common/eap_psk_common.o
+NEED_AES_OMAC1=y
+NEED_AES_ENCBLOCK=y
+NEED_AES_EAX=y
 endif
 
 ifdef CONFIG_EAP_SAKE
@@ -234,6 +239,7 @@ ifdef CONFIG_EAP_GPSK_SHA256
 CFLAGS += -DEAP_SERVER_GPSK_SHA256
 endif
 NEED_SHA256=y
+NEED_AES_OMAC1=y
 endif
 
 ifdef CONFIG_EAP_VENDOR_TEST
@@ -518,13 +524,20 @@ AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-enc.o
 endif
 
 AESOBJS += ../src/crypto/aes-wrap.o
-ifndef CONFIG_NO_AES_EXTRAS
-NEED_AES_CBC=y
-AESOBJS += ../src/crypto/aes-cbc.o
-AESOBJS += ../src/crypto/aes-ctr.o
+ifdef NEED_AES_EAX
 AESOBJS += ../src/crypto/aes-eax.o
+NEED_AES_CTR=y
+endif
+ifdef NEED_AES_CTR
+AESOBJS += ../src/crypto/aes-ctr.o
+endif
+ifdef NEED_AES_ENCBLOCK
 AESOBJS += ../src/crypto/aes-encblock.o
+endif
+ifdef NEED_AES_OMAC1
 AESOBJS += ../src/crypto/aes-omac1.o
+endif
+ifdef NEED_AES_UNWRAP
 AESOBJS += ../src/crypto/aes-unwrap.o
 endif
 ifdef NEED_AES_CBC

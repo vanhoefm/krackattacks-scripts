@@ -243,11 +243,6 @@ CONFIG_CTRL_IFACE=y
 # wpa_passphrase). This saves about 0.5 kB in code size.
 #CONFIG_NO_WPA_PASSPHRASE=y
 
-# Remove AES extra functions. This can be used to reduce code size by about
-# 1.5 kB by removing extra AES modes that are not needed for commonly used
-# client configurations (they are needed for some EAP types).
-#CONFIG_NO_AES_EXTRAS=y
-
 # Disable scan result processing (ap_mode=1) to save code size by about 1 kB.
 # This can be used if ap_scan=1 mode is never enabled.
 #CONFIG_NO_SCAN_PROCESSING=y

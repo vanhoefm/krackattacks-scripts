@@ -353,21 +353,30 @@ ifdef TLS_FUNCS
 CFLAGS += -DEAP_TLS_FUNCS
 OBJS += ../src/eap_server/eap_tls_common.o
 NEED_TLS_PRF=y
+endif
+
+ifdef TLS_FUNCS
 ifeq ($(CONFIG_TLS), openssl)
 OBJS += ../src/crypto/tls_openssl.o
 LIBS += -lssl -lcrypto
-LIBS_p += -lcrypto
 LIBS_h += -lcrypto
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/tls_gnutls.o
 LIBS += -lgnutls -lgcrypt -lgpg-error
-LIBS_p += -lgcrypt
 LIBS_h += -lgcrypt
-endif
 ifdef CONFIG_GNUTLS_EXTRA
 CFLAGS += -DCONFIG_GNUTLS_EXTRA
 LIBS += -lgnutls-extra
+endif
+endif
+ifeq ($(CONFIG_TLS), schannel)
+OBJS += ../src/crypto/tls_schannel.o
+endif
+ifeq ($(CONFIG_TLS), nss)
+OBJS += ../src/crypto/tls_nss.o
+LIBS += -lnss3 -lssl3
+LIBS_h += -lnss3
 endif
 ifeq ($(CONFIG_TLS), internal)
 OBJS += ../src/crypto/tls_internal.o
@@ -375,22 +384,14 @@ OBJS += ../src/tls/tlsv1_common.o ../src/tls/tlsv1_record.o
 OBJS += ../src/tls/tlsv1_cred.o ../src/tls/tlsv1_server.o
 OBJS += ../src/tls/tlsv1_server_write.o ../src/tls/tlsv1_server_read.o
 OBJS += ../src/tls/asn1.o ../src/tls/x509v3.o
-OBJS_p += ../src/tls/asn1.o
-OBJS_p += ../src/crypto/rc4.o $(AESOBJS)
 NEED_BASE64=y
 CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
 ifeq ($(CONFIG_CRYPTO), internal)
-ifdef CONFIG_INTERNAL_LIBTOMMATH
-CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
-else
-LIBS += -ltommath
-LIBS_p += -ltommath
-endif
 endif
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 LIBS += -ltomcrypt -ltfm
-LIBS_p += -ltomcrypt -ltfm
+LIBS_h += -ltomcrypt -ltfm
 endif
 endif
 NEED_CRYPTO=y
@@ -415,37 +416,37 @@ ifdef NEED_CRYPTO
 ifndef TLS_FUNCS
 ifeq ($(CONFIG_TLS), openssl)
 LIBS += -lcrypto
-LIBS_p += -lcrypto
 LIBS_h += -lcrypto
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 LIBS += -lgcrypt
-LIBS_p += -lgcrypt
 LIBS_h += -lgcrypt
+endif
+ifeq ($(CONFIG_TLS), schannel)
+endif
+ifeq ($(CONFIG_TLS), nss)
+LIBS += -lnss3
+LIBS_h += -lnss3
 endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 LIBS += -ltomcrypt -ltfm
-LIBS_p += -ltomcrypt -ltfm
+LIBS_h += -ltomcrypt -ltfm
 endif
 endif
 endif
 ifeq ($(CONFIG_TLS), openssl)
 OBJS += ../src/crypto/crypto_openssl.o
-OBJS_p += ../src/crypto/crypto_openssl.o
 HOBJS += ../src/crypto/crypto_openssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
-OBJS_p += ../src/crypto/fips_prf_openssl.o
 endif
 endif
 ifeq ($(CONFIG_TLS), gnutls)
 OBJS += ../src/crypto/crypto_gnutls.o
-OBJS_p += ../src/crypto/crypto_gnutls.o
 HOBJS += ../src/crypto/crypto_gnutls.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_gnutls.o
-OBJS_p += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
@@ -454,14 +455,12 @@ endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 OBJS += ../src/crypto/crypto_libtomcrypt.o
-OBJS_p += ../src/crypto/crypto_libtomcrypt.o
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
 OBJS += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
-OBJS_p += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 ifdef CONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
@@ -470,7 +469,7 @@ CFLAGS += -DLTM_FAST
 endif
 else
 LIBS += -ltommath
-LIBS_p += -ltommath
+LIBS_h += -ltommath
 endif
 CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_DES=y

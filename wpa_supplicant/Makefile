@@ -639,6 +639,9 @@ CFLAGS += -DEAP_TLS_FUNCS
 OBJS += ../src/eap_peer/eap_tls_common.o
 OBJS_h += ../src/eap_server/eap_tls_common.o
 NEED_TLS_PRF=y
+endif
+
+ifdef TLS_FUNCS
 ifeq ($(CONFIG_TLS), openssl)
 CFLAGS += -DEAP_TLS_OPENSSL
 OBJS += ../src/crypto/tls_openssl.o

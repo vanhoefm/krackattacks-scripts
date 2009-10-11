@@ -418,6 +418,7 @@ NEED_SHA256=y
 NEED_BASE64=y
 NEED_CRYPTO=y
 NEED_80211_COMMON=y
+NEED_AES_CBC=y
 
 ifdef CONFIG_WPS_UFD
 CFLAGS += -DCONFIG_WPS_UFD
@@ -722,6 +723,10 @@ ifdef CHAP
 OBJS += ../src/eap_common/chap.o
 endif
 
+ifndef CONFIG_NO_WPA
+NEED_CRYPTO=y
+endif
+
 ifdef NEED_CRYPTO
 ifndef TLS_FUNCS
 ifeq ($(CONFIG_TLS), openssl)
@@ -991,15 +996,19 @@ endif
 
 AESOBJS += ../src/crypto/aes-unwrap.o
 ifndef CONFIG_NO_AES_EXTRAS
-ifdef CONFIG_INTERNAL_AES
-AESOBJS += ../src/crypto/aes-internal-enc.o
-endif
-AESOBJS += ../src/crypto/aes-cbc.o
+NEED_AES_CBC=y
 AESOBJS += ../src/crypto/aes-ctr.o
 AESOBJS += ../src/crypto/aes-eax.o
 AESOBJS += ../src/crypto/aes-encblock.o
 AESOBJS += ../src/crypto/aes-omac1.o
 AESOBJS += ../src/crypto/aes-wrap.o
+else
+endif
+ifdef NEED_AES_CBC
+ifdef CONFIG_INTERNAL_AES
+AESOBJS += ../src/crypto/aes-internal-enc.o
+endif
+AESOBJS += ../src/crypto/aes-cbc.o
 endif
 
 ifdef NEED_AES

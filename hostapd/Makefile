@@ -266,6 +266,7 @@ NEED_DH_GROUPS=y
 NEED_SHA256=y
 NEED_CRYPTO=y
 NEED_BASE64=y
+NEED_AES_CBC=y
 
 ifdef CONFIG_WPS_UFD
 CFLAGS += -DCONFIG_WPS_UFD
@@ -576,15 +577,20 @@ endif
 
 AESOBJS += ../src/crypto/aes-wrap.o
 ifndef CONFIG_NO_AES_EXTRAS
-ifdef CONFIG_INTERNAL_AES
-AESOBJS += ../src/crypto/aes-internal-dec.o
-endif
+NEED_AES_CBC=y
 AESOBJS += ../src/crypto/aes-cbc.o
 AESOBJS += ../src/crypto/aes-ctr.o
 AESOBJS += ../src/crypto/aes-eax.o
 AESOBJS += ../src/crypto/aes-encblock.o
 AESOBJS += ../src/crypto/aes-omac1.o
 AESOBJS += ../src/crypto/aes-unwrap.o
+endif
+
+ifdef NEED_AES_CBC
+ifdef CONFIG_INTERNAL_AES
+AESOBJS += ../src/crypto/aes-internal-dec.o
+endif
+AESOBJS += ../src/crypto/aes-cbc.o
 endif
 
 OBJS += $(SHA1OBJS)

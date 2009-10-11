@@ -30,7 +30,7 @@
 #include "blacklist.h"
 #include "wpa.h"
 #include "wps_supplicant.h"
-#include "dh_groups.h"
+#include "dh_group5.h"
 
 #define WPS_PIN_SCAN_IGNORE_SEL_REG 3
 
@@ -619,10 +619,11 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 		wpabuf_free(wps->dh_pubkey);
 		wpabuf_free(wps->dh_privkey);
 		wps->dh_privkey = NULL;
-		wps->dh_pubkey = dh_init(dh_groups_get(WPS_DH_GROUP),
-					 &wps->dh_privkey);
+		wps->dh_pubkey = NULL;
+		dh5_free(wps->dh_ctx);
+		wps->dh_ctx = dh5_init(&wps->dh_privkey, &wps->dh_pubkey);
 		wps->dh_pubkey = wpabuf_zeropad(wps->dh_pubkey, 192);
-		if (wps->dh_pubkey == NULL) {
+		if (wps->dh_ctx == NULL || wps->dh_pubkey == NULL) {
 			wpa_printf(MSG_ERROR, "WPS: Failed to initialize "
 				   "Diffie-Hellman handshake");
 			return -1;

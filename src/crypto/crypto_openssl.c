@@ -19,8 +19,10 @@
 #include <openssl/aes.h>
 #include <openssl/bn.h>
 #include <openssl/evp.h>
+#include <openssl/dh.h>
 
 #include "common.h"
+#include "wpabuf.h"
 #include "crypto.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x00907000
@@ -362,4 +364,99 @@ void crypto_cipher_deinit(struct crypto_cipher *ctx)
 	EVP_CIPHER_CTX_cleanup(&ctx->enc);
 	EVP_CIPHER_CTX_cleanup(&ctx->dec);
 	os_free(ctx);
+}
+
+
+void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
+{
+	DH *dh;
+	struct wpabuf *pubkey = NULL, *privkey = NULL;
+	size_t publen, privlen;
+
+	*priv = NULL;
+	*publ = NULL;
+
+	dh = DH_new();
+	if (dh == NULL)
+		return NULL;
+
+	dh->g = BN_new();
+	if (dh->g == NULL || BN_set_word(dh->g, 2) != 1)
+		goto err;
+
+	dh->p = get_rfc3526_prime_1536(NULL);
+	if (dh->p == NULL)
+		goto err;
+
+	if (DH_generate_key(dh) != 1)
+		goto err;
+
+	publen = BN_num_bytes(dh->p);
+	pubkey = wpabuf_alloc(publen);
+	if (pubkey == NULL)
+		goto err;
+	privlen = BN_num_bytes(dh->priv_key);
+	privkey = wpabuf_alloc(privlen);
+	if (privkey == NULL)
+		goto err;
+
+	BN_bn2bin(dh->pub_key, wpabuf_put(pubkey, publen));
+	BN_bn2bin(dh->priv_key, wpabuf_put(privkey, privlen));
+
+	*priv = privkey;
+	*publ = pubkey;
+	return dh;
+
+err:
+	wpabuf_free(pubkey);
+	wpabuf_free(privkey);
+	DH_free(dh);
+	return NULL;
+}
+
+
+struct wpabuf * dh5_derive_shared(void *ctx, const struct wpabuf *peer_public,
+				  const struct wpabuf *own_private)
+{
+	BIGNUM *pub_key;
+	struct wpabuf *res = NULL;
+	size_t rlen;
+	DH *dh = ctx;
+	int keylen;
+
+	if (ctx == NULL)
+		return NULL;
+
+	pub_key = BN_bin2bn(wpabuf_head(peer_public), wpabuf_len(peer_public),
+			    NULL);
+	if (pub_key == NULL)
+		return NULL;
+
+	rlen = DH_size(dh);
+	res = wpabuf_alloc(rlen);
+	if (res == NULL)
+		goto err;
+
+	keylen = DH_compute_key(wpabuf_mhead(res), pub_key, dh);
+	if (keylen < 0)
+		goto err;
+	wpabuf_put(res, keylen);
+	BN_free(pub_key);
+
+	return res;
+
+err:
+	BN_free(pub_key);
+	wpabuf_free(res);
+	return NULL;
+}
+
+
+void dh5_free(void *ctx)
+{
+	DH *dh;
+	if (ctx == NULL)
+		return;
+	dh = ctx;
+	DH_free(dh);
 }

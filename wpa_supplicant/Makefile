@@ -56,6 +56,7 @@ OBJS += ../src/utils/wpabuf.o
 OBJS_p = wpa_passphrase.o
 OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o
+OBJS_p += ../src/utils/wpabuf.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 
 -include .config
@@ -756,12 +757,14 @@ OBJS += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_TLS), schannel)
 OBJS += ../src/crypto/crypto_cryptoapi.o
 OBJS_p += ../src/crypto/crypto_cryptoapi.o
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_TLS), nss)
 OBJS += ../src/crypto/crypto_nss.o
@@ -770,6 +773,7 @@ CONFIG_INTERNAL_MD4=y
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_nss.o
 endif
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
@@ -777,6 +781,7 @@ OBJS += ../src/crypto/crypto_libtomcrypt.o
 OBJS_p += ../src/crypto/crypto_libtomcrypt.o
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
 OBJS += ../src/crypto/crypto_internal.o ../src/tls/bignum.o
@@ -798,6 +803,7 @@ CONFIG_INTERNAL_MD4=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_CRYPTO), cryptoapi)
 OBJS += ../src/crypto/crypto_cryptoapi.o
@@ -997,9 +1003,17 @@ ifdef NEED_AES
 OBJS += $(AESOBJS)
 endif
 
+ifdef CONFIG_INTERNAL_DH_GROUP5
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o
+OBJS += ../src/crypto/dh_group5.o
 ifdef NEED_DH_GROUPS_ALL
+CFLAGS += -DALL_DH_GROUPS
+endif
+endif
+else
+ifdef NEED_DH_GROUPS_ALL
+OBJS += ../src/crypto/dh_groups.o
 CFLAGS += -DALL_DH_GROUPS
 endif
 endif

@@ -449,6 +449,7 @@ OBJS_p += ../src/crypto/fips_prf_gnutls.o
 endif
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_TLS), internal)
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
@@ -456,6 +457,7 @@ OBJS += ../src/crypto/crypto_libtomcrypt.o
 OBJS_p += ../src/crypto/crypto_libtomcrypt.o
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
 OBJS += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
@@ -477,6 +479,7 @@ CONFIG_INTERNAL_MD4=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
 endif
 endif
 else
@@ -516,9 +519,17 @@ OBJS += ../src/crypto/sha256-internal.o
 endif
 endif
 
+ifdef CONFIG_INTERNAL_DH_GROUP5
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o
+OBJS += ../src/crypto/dh_group5.o
 ifdef NEED_DH_GROUPS_ALL
+CFLAGS += -DALL_DH_GROUPS
+endif
+endif
+else
+ifdef NEED_DH_GROUPS_ALL
+OBJS += ../src/crypto/dh_groups.o
 CFLAGS += -DALL_DH_GROUPS
 endif
 endif

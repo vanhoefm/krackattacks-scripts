@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "dh_groups.h"
+#include "dh_group5.h"
 #include "sha256.h"
 #include "aes_wrap.h"
 #include "crypto.h"
@@ -80,8 +80,9 @@ int wps_derive_keys(struct wps_data *wps)
 		return -1;
 	}
 
-	dh_shared = dh_derive_shared(pubkey, wps->dh_privkey,
-				     dh_groups_get(WPS_DH_GROUP));
+	dh_shared = dh5_derive_shared(wps->dh_ctx, pubkey, wps->dh_privkey);
+	dh5_free(wps->dh_ctx);
+	wps->dh_ctx = NULL;
 	dh_shared = wpabuf_zeropad(dh_shared, 192);
 	if (dh_shared == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to derive DH shared key");

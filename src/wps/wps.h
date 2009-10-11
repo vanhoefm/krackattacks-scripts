@@ -439,6 +439,11 @@ struct wps_context {
 	u16 oob_dev_pw_id;
 
 	/**
+	 * dh_ctx - Context data for Diffie-Hellman operation
+	 */
+	void *dh_ctx;
+
+	/**
 	 * dh_privkey - Diffie-Hellman private key
 	 */
 	struct wpabuf *dh_privkey;

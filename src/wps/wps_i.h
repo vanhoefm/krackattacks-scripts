@@ -105,6 +105,8 @@ struct wps_data {
 	int ext_reg;
 
 	struct wps_credential *new_ap_settings;
+
+	void *dh_ctx;
 };
 
 

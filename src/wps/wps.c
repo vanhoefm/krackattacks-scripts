@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "dh_group5.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 #include "ieee802_11_defs.h"
@@ -130,6 +131,7 @@ void wps_deinit(struct wps_data *data)
 	os_free(data->new_psk);
 	wps_device_data_free(&data->peer_dev);
 	os_free(data->new_ap_settings);
+	dh5_free(data->dh_ctx);
 	os_free(data);
 }
 

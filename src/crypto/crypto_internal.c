@@ -792,7 +792,7 @@ void crypto_global_deinit(void)
 #endif /* CONFIG_TLS_INTERNAL */
 
 
-#if defined(EAP_FAST) || defined(EAP_SERVER_FAST) || defined(CONFIG_WPS)
+#ifdef CONFIG_MODEXP
 
 int crypto_mod_exp(const u8 *base, size_t base_len,
 		   const u8 *power, size_t power_len,
@@ -829,4 +829,4 @@ error:
 	return ret;
 }
 
-#endif /* EAP_FAST || EAP_SERVER_FAST || CONFIG_WPS */
+#endif /* CONFIG_MODEXP */

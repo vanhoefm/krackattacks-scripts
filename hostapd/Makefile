@@ -38,15 +38,17 @@ CFLAGS += -DCONFIG_NATIVE_WINDOWS
 LIBS += -lws2_32
 endif
 
-SHA1OBJS = ../src/crypto/sha1.o ../src/crypto/sha1-pbkdf2.o
-
 OBJS =	hostapd.o main.o ieee802_1x.o eapol_sm.o \
 	config.o ieee802_11_auth.o \
 	sta_info.o wpa.o \
 	preauth.o pmksa_cache.o \
 	drv_callbacks.o \
 	tkip_countermeasures.o \
-	mlme.o wpa_auth_ie.o $(AESOBJS)
+	mlme.o wpa_auth_ie.o
+NEED_RC4=y
+NEED_AES=y
+NEED_MD5=y
+NEED_SHA1=y
 
 OBJS += ../src/drivers/drivers.o
 OBJS += ../src/drivers/scan_helpers.o
@@ -90,8 +92,6 @@ OBJS += ctrl_iface_ap.o
 endif
 
 OBJS += ../src/crypto/md5.o
-
-AESOBJS = # none so far
 
 CFLAGS += -DCONFIG_CTRL_IFACE -DCONFIG_CTRL_IFACE_UNIX
 
@@ -264,9 +264,9 @@ OBJS += ../src/wps/wps_enrollee.o
 OBJS += ../src/wps/wps_registrar.o
 NEED_DH_GROUPS=y
 NEED_SHA256=y
-NEED_CRYPTO=y
 NEED_BASE64=y
 NEED_AES_CBC=y
+NEED_MODEXP=y
 
 ifdef CONFIG_WPS_UFD
 CFLAGS += -DCONFIG_WPS_UFD
@@ -310,6 +310,7 @@ OBJS += ../src/eap_server/eap_ikev2.o ../src/eap_server/ikev2.o
 OBJS += ../src/eap_common/eap_ikev2_common.o ../src/eap_common/ikev2_common.o
 NEED_DH_GROUPS=y
 NEED_DH_GROUPS_ALL=y
+NEED_MODEXP=y
 endif
 
 ifdef CONFIG_EAP_TNC
@@ -338,130 +339,123 @@ endif
 
 ifdef MS_FUNCS
 OBJS += ../src/crypto/ms_funcs.o
-NEED_CRYPTO=y
+NEED_DES=y
+NEED_MD4=y
 endif
 
 ifdef CHAP
 OBJS += ../src/eap_common/chap.o
 endif
 
-ifndef CONFIG_TLS
-CONFIG_TLS=openssl
-endif
-
-ifeq ($(CONFIG_TLS), internal)
-ifndef CONFIG_CRYPTO
-CONFIG_CRYPTO=internal
-endif
-endif
-ifeq ($(CONFIG_CRYPTO), libtomcrypt)
-CFLAGS += -DCONFIG_INTERNAL_X509
-endif
-ifeq ($(CONFIG_CRYPTO), internal)
-CFLAGS += -DCONFIG_INTERNAL_X509
-endif
-
-
 ifdef TLS_FUNCS
+NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, and EAP_TTLS)
 CFLAGS += -DEAP_TLS_FUNCS
 OBJS += ../src/eap_server/eap_tls_common.o
 NEED_TLS_PRF=y
 endif
 
-ifdef TLS_FUNCS
-ifeq ($(CONFIG_TLS), openssl)
-OBJS += ../src/crypto/tls_openssl.o
-LIBS += -lssl -lcrypto
-LIBS_h += -lcrypto
-endif
-ifeq ($(CONFIG_TLS), gnutls)
-OBJS += ../src/crypto/tls_gnutls.o
-LIBS += -lgnutls -lgcrypt -lgpg-error
-LIBS_h += -lgcrypt
-ifdef CONFIG_GNUTLS_EXTRA
-CFLAGS += -DCONFIG_GNUTLS_EXTRA
-LIBS += -lgnutls-extra
-endif
-endif
-ifeq ($(CONFIG_TLS), schannel)
-OBJS += ../src/crypto/tls_schannel.o
-endif
-ifeq ($(CONFIG_TLS), nss)
-OBJS += ../src/crypto/tls_nss.o
-LIBS += -lnss3 -lssl3
-LIBS_h += -lnss3
-endif
-ifeq ($(CONFIG_TLS), internal)
-OBJS += ../src/crypto/tls_internal.o
-OBJS += ../src/tls/tlsv1_common.o ../src/tls/tlsv1_record.o
-OBJS += ../src/tls/tlsv1_cred.o ../src/tls/tlsv1_server.o
-OBJS += ../src/tls/tlsv1_server_write.o ../src/tls/tlsv1_server_read.o
-OBJS += ../src/tls/asn1.o ../src/tls/x509v3.o
-NEED_BASE64=y
-CFLAGS += -DCONFIG_TLS_INTERNAL
-CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
-ifeq ($(CONFIG_CRYPTO), internal)
-endif
-ifeq ($(CONFIG_CRYPTO), libtomcrypt)
-LIBS += -ltomcrypt -ltfm
-LIBS_h += -ltomcrypt -ltfm
-endif
-endif
-NEED_CRYPTO=y
-else
-OBJS += ../src/crypto/tls_none.o
+ifndef CONFIG_TLS
+CONFIG_TLS=openssl
 endif
 
-ifdef NEED_CRYPTO
-ifndef TLS_FUNCS
 ifeq ($(CONFIG_TLS), openssl)
-LIBS += -lcrypto
-LIBS_h += -lcrypto
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/tls_openssl.o
+LIBS += -lssl
 endif
-ifeq ($(CONFIG_TLS), gnutls)
-LIBS += -lgcrypt
-LIBS_h += -lgcrypt
-endif
-ifeq ($(CONFIG_TLS), schannel)
-endif
-ifeq ($(CONFIG_TLS), nss)
-LIBS += -lnss3
-LIBS_h += -lnss3
-endif
-ifeq ($(CONFIG_TLS), internal)
-ifeq ($(CONFIG_CRYPTO), libtomcrypt)
-LIBS += -ltomcrypt -ltfm
-LIBS_h += -ltomcrypt -ltfm
-endif
-endif
-endif
-ifeq ($(CONFIG_TLS), openssl)
 OBJS += ../src/crypto/crypto_openssl.o
 HOBJS += ../src/crypto/crypto_openssl.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_openssl.o
 endif
+LIBS += -lcrypto
+LIBS_h += -lcrypto
 endif
+
 ifeq ($(CONFIG_TLS), gnutls)
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/tls_gnutls.o
+LIBS += -lgnutls -lgpg-error
+ifdef CONFIG_GNUTLS_EXTRA
+CFLAGS += -DCONFIG_GNUTLS_EXTRA
+LIBS += -lgnutls-extra
+endif
+endif
 OBJS += ../src/crypto/crypto_gnutls.o
 HOBJS += ../src/crypto/crypto_gnutls.o
 ifdef NEED_FIPS186_2_PRF
 OBJS += ../src/crypto/fips_prf_gnutls.o
 endif
+LIBS += -lgcrypt
+LIBS_h += -lgcrypt
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y
 endif
+
+ifeq ($(CONFIG_TLS), schannel)
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/tls_schannel.o
+endif
+OBJS += ../src/crypto/crypto_cryptoapi.o
+OBJS_p += ../src/crypto/crypto_cryptoapi.o
+CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
+CONFIG_INTERNAL_DH_GROUP5=y
+endif
+
+ifeq ($(CONFIG_TLS), nss)
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/tls_nss.o
+LIBS += -lssl3
+endif
+OBJS += ../src/crypto/crypto_nss.o
+ifdef NEED_FIPS186_2_PRF
+OBJS += ../src/crypto/fips_prf_nss.o
+endif
+LIBS += -lnss3
+LIBS_h += -lnss3
+CONFIG_INTERNAL_MD4=y
+CONFIG_INTERNAL_DH_GROUP5=y
+endif
+
 ifeq ($(CONFIG_TLS), internal)
+ifndef CONFIG_CRYPTO
+CONFIG_CRYPTO=internal
+endif
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/tls_internal.o
+OBJS += ../src/tls/tlsv1_common.o
+OBJS += ../src/tls/tlsv1_record.o
+OBJS += ../src/tls/tlsv1_cred.o
+OBJS += ../src/tls/tlsv1_server.o
+OBJS += ../src/tls/tlsv1_server_write.o
+OBJS += ../src/tls/tlsv1_server_read.o
+OBJS += ../src/tls/asn1.o
+OBJS += ../src/tls/rsa.o
+OBJS += ../src/tls/x509v3.o
+NEED_BASE64=y
+NEED_TLS_PRF=y
+NEED_MODEXP=y
+CFLAGS += -DCONFIG_TLS_INTERNAL
+CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
+endif
+ifdef NEED_MODEXP
+OBJS += ../src/tls/bignum.o
+endif
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
+CFLAGS += -DCONFIG_INTERNAL_X509
 OBJS += ../src/crypto/crypto_libtomcrypt.o
+LIBS += -ltomcrypt -ltfm
+LIBS_h += -ltomcrypt -ltfm
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
-OBJS += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
+CFLAGS += -DCONFIG_INTERNAL_X509
+OBJS += ../src/crypto/crypto_internal.o
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 ifdef CONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
@@ -481,34 +475,111 @@ CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y
 endif
+ifeq ($(CONFIG_CRYPTO), cryptoapi)
+OBJS += ../src/crypto/crypto_cryptoapi.o
+OBJS_p += ../src/crypto/crypto_cryptoapi.o
+CFLAGS += -DCONFIG_CRYPTO_CRYPTOAPI
+CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
 endif
-else
+endif
+
+ifeq ($(CONFIG_TLS), none)
+ifdef TLS_FUNCS
+OBJS += ../src/crypto/tls_none.o
+CFLAGS += -DEAP_TLS_NONE
+CONFIG_INTERNAL_AES=y
+CONFIG_INTERNAL_SHA1=y
+CONFIG_INTERNAL_MD5=y
+endif
+OBJS += ../src/crypto/crypto_none.o
+OBJS_p += ../src/crypto/crypto_none.o
+CONFIG_INTERNAL_SHA256=y
+CONFIG_INTERNAL_RC4=y
+endif
+
+ifndef TLS_FUNCS
+OBJS += ../src/crypto/tls_none.o
+ifeq ($(CONFIG_TLS), internal)
 CONFIG_INTERNAL_AES=y
 CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_RC4=y
 endif
+endif
 
+ifdef NEED_MODEXP
+CFLAGS += -DCONFIG_MODEXP
+endif
+
+AESOBJS = # none so far
 ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-enc.o
 endif
+
+AESOBJS += ../src/crypto/aes-wrap.o
+ifndef CONFIG_NO_AES_EXTRAS
+NEED_AES_CBC=y
+AESOBJS += ../src/crypto/aes-cbc.o
+AESOBJS += ../src/crypto/aes-ctr.o
+AESOBJS += ../src/crypto/aes-eax.o
+AESOBJS += ../src/crypto/aes-encblock.o
+AESOBJS += ../src/crypto/aes-omac1.o
+AESOBJS += ../src/crypto/aes-unwrap.o
+endif
+ifdef NEED_AES_CBC
+ifdef CONFIG_INTERNAL_AES
+AESOBJS += ../src/crypto/aes-internal-dec.o
+endif
+AESOBJS += ../src/crypto/aes-cbc.o
+endif
+ifdef NEED_AES
+OBJS += $(AESOBJS)
+endif
+
+ifdef NEED_SHA1
+SHA1OBJS += ../src/crypto/sha1.o
 ifdef CONFIG_INTERNAL_SHA1
 SHA1OBJS += ../src/crypto/sha1-internal.o
 ifdef NEED_FIPS186_2_PRF
 SHA1OBJS += ../src/crypto/fips_prf_internal.o
 endif
 endif
+SHA1OBJS += ../src/crypto/sha1-pbkdf2.o
+ifdef NEED_T_PRF
+SHA1OBJS += ../src/crypto/sha1-tprf.o
+endif
+ifdef NEED_TLS_PRF
+SHA1OBJS += ../src/crypto/sha1-tlsprf.o
+endif
+endif
+
+ifdef NEED_SHA1
+OBJS += $(SHA1OBJS)
+endif
+
+ifdef NEED_MD5
 ifdef CONFIG_INTERNAL_MD5
 OBJS += ../src/crypto/md5-internal.o
 endif
+endif
+
+ifdef NEED_MD4
 ifdef CONFIG_INTERNAL_MD4
 OBJS += ../src/crypto/md4-internal.o
 endif
+endif
+
+ifdef NEED_DES
 ifdef CONFIG_INTERNAL_DES
 OBJS += ../src/crypto/des-internal.o
 endif
+endif
+
+ifdef NEED_RC4
 ifdef CONFIG_INTERNAL_RC4
 OBJS += ../src/crypto/rc4.o
+endif
 endif
 
 ifdef NEED_SHA256
@@ -531,14 +602,6 @@ ifdef NEED_DH_GROUPS_ALL
 OBJS += ../src/crypto/dh_groups.o
 CFLAGS += -DALL_DH_GROUPS
 endif
-endif
-
-ifdef NEED_T_PRF
-SHA1OBJS += ../src/crypto/sha1-tprf.o
-endif
-
-ifdef NEED_TLS_PRF
-SHA1OBJS += ../src/crypto/sha1-tlsprf.o
 endif
 
 ifdef CONFIG_RADIUS_SERVER
@@ -573,26 +636,6 @@ endif
 ifdef CONFIG_NO_STDOUT_DEBUG
 CFLAGS += -DCONFIG_NO_STDOUT_DEBUG
 endif
-
-AESOBJS += ../src/crypto/aes-wrap.o
-ifndef CONFIG_NO_AES_EXTRAS
-NEED_AES_CBC=y
-AESOBJS += ../src/crypto/aes-cbc.o
-AESOBJS += ../src/crypto/aes-ctr.o
-AESOBJS += ../src/crypto/aes-eax.o
-AESOBJS += ../src/crypto/aes-encblock.o
-AESOBJS += ../src/crypto/aes-omac1.o
-AESOBJS += ../src/crypto/aes-unwrap.o
-endif
-
-ifdef NEED_AES_CBC
-ifdef CONFIG_INTERNAL_AES
-AESOBJS += ../src/crypto/aes-internal-dec.o
-endif
-AESOBJS += ../src/crypto/aes-cbc.o
-endif
-
-OBJS += $(SHA1OBJS)
 
 ALL=hostapd hostapd_cli
 

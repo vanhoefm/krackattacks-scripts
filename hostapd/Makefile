@@ -119,6 +119,7 @@ ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R
 OBJS += wpa_ft.o
 NEED_SHA256=y
+NEED_AES_UNWRAP=y
 endif
 
 ifdef CONFIG_IEEE80211N
@@ -253,6 +254,7 @@ OBJS += ../src/eap_server/eap_fast.o
 OBJS += ../src/eap_common/eap_fast_common.o
 TLS_FUNCS=y
 NEED_T_PRF=y
+NEED_AES_UNWRAP=y
 endif
 
 ifdef CONFIG_WPS

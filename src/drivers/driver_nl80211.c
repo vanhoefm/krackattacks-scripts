@@ -2063,9 +2063,11 @@ static int wpa_driver_nl80211_authenticate(
 	int ret = -1, i;
 	struct nl_msg *msg;
 	enum nl80211_auth_type type;
+	int count = 0;
 
 	drv->associated = 0;
 
+retry:
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -1;
@@ -2133,6 +2135,21 @@ static int wpa_driver_nl80211_authenticate(
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: MLME command failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
+		count++;
+		if (ret == -EALREADY && count == 1 && params->bssid) {
+			/*
+			 * mac80211 does not currently accept new
+			 * authentication if we are already authenticated. As a
+			 * workaround, force deauthentication and try again.
+			 */
+			wpa_printf(MSG_DEBUG, "nl80211: Retry authentication "
+				   "after forced deauthentication");
+			wpa_driver_nl80211_deauthenticate(
+				drv, params->bssid,
+				WLAN_REASON_PREV_AUTH_NOT_VALID);
+			nlmsg_free(msg);
+			goto retry;
+		}
 		goto nla_put_failure;
 	}
 	ret = 0;

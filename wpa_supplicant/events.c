@@ -1065,6 +1065,13 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s)
 {
 	const u8 *bssid;
+#ifdef CONFIG_SME
+	int authenticating;
+	u8 prev_pending_bssid[ETH_ALEN];
+
+	authenticating = wpa_s->wpa_state == WPA_AUTHENTICATING;
+	os_memcpy(prev_pending_bssid, wpa_s->pending_bssid, ETH_ALEN);
+#endif /* CONFIG_SME */
 
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPA_NONE) {
 		/*
@@ -1097,6 +1104,20 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s)
 	}
 	wpa_supplicant_mark_disassoc(wpa_s);
 	bgscan_deinit(wpa_s);
+#ifdef CONFIG_SME
+	if (authenticating &&
+	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)) {
+		/*
+		 * mac80211-workaround to force deauth on failed auth cmd,
+		 * requires us to remain in authenticating state to allow the
+		 * second authentication attempt to be continued properly.
+		 */
+		wpa_printf(MSG_DEBUG, "SME: Allow pending authentication to "
+			   "proceed after disconnection event");
+		wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
+		os_memcpy(wpa_s->pending_bssid, prev_pending_bssid, ETH_ALEN);
+	}
+#endif /* CONFIG_SME */
 }
 
 

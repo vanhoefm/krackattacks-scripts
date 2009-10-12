@@ -30,9 +30,14 @@
 #endif
 #include <net/route.h>
 
+#ifdef __DragonFly__
+#include <netproto/802_11/ieee80211_ioctl.h>
+#include <netproto/802_11/ieee80211_dragonfly.h>
+#else /* __DragonFly__ */
 #include <net80211/ieee80211.h>
 #include <net80211/ieee80211_crypto.h>
 #include <net80211/ieee80211_ioctl.h>
+#endif /* __DragonFly__ */
 #if __FreeBSD__
 #include <net80211/ieee80211_freebsd.h>
 #endif

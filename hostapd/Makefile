@@ -113,12 +113,14 @@ endif
 ifdef CONFIG_IEEE80211W
 CFLAGS += -DCONFIG_IEEE80211W
 NEED_SHA256=y
+NEED_AES_OMAC1=y
 endif
 
 ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R
 OBJS += wpa_ft.o
 NEED_SHA256=y
+NEED_AES_OMAC1=y
 NEED_AES_UNWRAP=y
 endif
 
@@ -540,13 +542,17 @@ ifdef NEED_AES_OMAC1
 AESOBJS += ../src/crypto/aes-omac1.o
 endif
 ifdef NEED_AES_UNWRAP
+NEED_AES_DEC=y
 AESOBJS += ../src/crypto/aes-unwrap.o
 endif
 ifdef NEED_AES_CBC
+NEED_AES_DEC=y
+AESOBJS += ../src/crypto/aes-cbc.o
+endif
+ifdef NEED_AES_DEC
 ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal-dec.o
 endif
-AESOBJS += ../src/crypto/aes-cbc.o
 endif
 ifdef NEED_AES
 OBJS += $(AESOBJS)

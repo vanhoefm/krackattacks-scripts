@@ -556,6 +556,8 @@ int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 #endif /* CONFIG_WPS */
 
 
+#ifdef CONFIG_CTRL_IFACE
+
 int ap_ctrl_iface_sta_first(struct wpa_supplicant *wpa_s,
 			    char *buf, size_t buflen)
 {
@@ -584,3 +586,5 @@ int ap_ctrl_iface_sta_next(struct wpa_supplicant *wpa_s, const char *txtaddr,
 	return hostapd_ctrl_iface_sta_next(wpa_s->ap_iface->bss[0], txtaddr,
 					   buf, buflen);
 }
+
+#endif /* CONFIG_CTRL_IFACE */

@@ -149,6 +149,7 @@ ifdef CONFIG_IBSS_RSN
 CFLAGS += -DCONFIG_IBSS_RSN
 OBJS += ibss_rsn.o
 OBJS += ../hostapd/wpa.o
+NEED_AES_WRAP=y
 OBJS += ../hostapd/wpa_auth_ie.o
 OBJS += ../hostapd/pmksa_cache.o
 OBJS += ../src/radius/radius.o
@@ -574,6 +575,7 @@ OBJS += ../hostapd/config.o
 OBJS += ../src/utils/ip_addr.o
 OBJS += ../hostapd/sta_info.o
 OBJS += ../hostapd/wpa.o
+NEED_AES_WRAP=y
 OBJS += ../hostapd/pmksa_cache.o
 OBJS += ../hostapd/wpa_auth_ie.o
 OBJS += ../hostapd/tkip_countermeasures.o
@@ -892,6 +894,7 @@ NEED_AES_ENC=y
 AESOBJS += ../src/crypto/aes-omac1.o
 endif
 ifdef NEED_AES_WRAP
+NEED_AES_ENC=y
 AESOBJS += ../src/crypto/aes-wrap.o
 endif
 ifdef NEED_AES_CBC

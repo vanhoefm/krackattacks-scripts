@@ -658,6 +658,14 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 		 */
 		wpa_s->scan_res_tried++;
 		timeout = 0;
+	} else if (!wpa_supplicant_enabled_networks(wpa_s->conf)) {
+		/*
+		 * No networks are enabled; short-circuit request so
+		 * we don't wait timeout seconds before transitioning
+		 * to INACTIVE state.
+		 */
+		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
+		return;
 	}
 	wpa_supplicant_req_scan(wpa_s, timeout, 0);
 }

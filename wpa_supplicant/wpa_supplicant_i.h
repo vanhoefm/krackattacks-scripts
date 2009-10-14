@@ -452,6 +452,7 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid);
 
 /* scan.c */
+int wpa_supplicant_enabled_networks(struct wpa_config *conf);
 void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec);
 void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,

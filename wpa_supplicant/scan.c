@@ -71,7 +71,7 @@ static int wpas_wps_in_use(struct wpa_config *conf,
 #endif /* CONFIG_WPS */
 
 
-static int wpa_supplicant_enabled_networks(struct wpa_config *conf)
+int wpa_supplicant_enabled_networks(struct wpa_config *conf)
 {
 	struct wpa_ssid *ssid = conf->ssid;
 	while (ssid) {

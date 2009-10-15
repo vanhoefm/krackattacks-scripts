@@ -21,6 +21,42 @@
 #include "ctrl_iface_dbus.h"
 #include "notify.h"
 
+int wpas_notify_supplicant_initialized(struct wpa_global *global)
+{
+	if (global->params.dbus_ctrl_interface) {
+		global->dbus_ctrl_iface =
+			wpa_supplicant_dbus_ctrl_iface_init(global);
+		if (global->dbus_ctrl_iface == NULL)
+			return -1;
+	}
+
+	return 0;
+}
+
+
+void wpas_notify_supplicant_deinitialized(struct wpa_global *global)
+{
+	if (global->dbus_ctrl_iface)
+		wpa_supplicant_dbus_ctrl_iface_deinit(global->dbus_ctrl_iface);
+}
+
+
+int wpas_notify_iface_added(struct wpa_supplicant *wpa_s)
+{
+	if (wpas_dbus_register_iface(wpa_s))
+		return -1;
+
+	return 0;
+}
+
+
+
+void wpas_notify_iface_removed(struct wpa_supplicant *wpa_s)
+{
+	/* unregister interface in old DBus ctrl iface */
+	wpas_dbus_unregister_iface(wpa_s);
+}
+
 
 void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 			       wpa_states new_state, wpa_states old_state)
@@ -55,13 +91,6 @@ void wpas_notify_network_enabled_changed(struct wpa_supplicant *wpa_s,
 void wpas_notify_network_selected(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid)
 {
-}
-
-
-void wpas_notify_unregister_interface(struct wpa_supplicant *wpa_s)
-{
-	/* unregister interface in old DBus ctrl iface */
-	wpas_dbus_unregister_iface(wpa_s);
 }
 
 

@@ -29,7 +29,6 @@
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "ctrl_iface.h"
-#include "ctrl_iface_dbus.h"
 #include "pcsc_funcs.h"
 #include "version.h"
 #include "preauth.h"
@@ -2222,7 +2221,7 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s)
 		wpa_clear_keys(wpa_s, NULL);
 	}
 
-	wpas_notify_unregister_interface(wpa_s);
+	wpas_notify_iface_removed(wpa_s);
 
 	wpa_supplicant_cleanup(wpa_s);
 
@@ -2265,8 +2264,8 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 
 	wpa_s->global = global;
 
-	/* Register the interface with the dbus control interface */
-	if (wpas_dbus_register_iface(wpa_s)) {
+	/* Notify the control interfaces about new iface */
+	if (wpas_notify_iface_added(wpa_s)) {
 		wpa_supplicant_deinit_iface(wpa_s);
 		os_free(wpa_s);
 		return NULL;
@@ -2408,13 +2407,9 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		return NULL;
 	}
 
-	if (global->params.dbus_ctrl_interface) {
-		global->dbus_ctrl_iface =
-			wpa_supplicant_dbus_ctrl_iface_init(global);
-		if (global->dbus_ctrl_iface == NULL) {
-			wpa_supplicant_deinit(global);
-			return NULL;
-		}
+	if (wpas_notify_supplicant_initialized(global)) {
+		wpa_supplicant_deinit(global);
+		return NULL;
 	}
 
 	for (i = 0; wpa_drivers[i]; i++)
@@ -2497,8 +2492,8 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 
 	if (global->ctrl_iface)
 		wpa_supplicant_global_ctrl_iface_deinit(global->ctrl_iface);
-	if (global->dbus_ctrl_iface)
-		wpa_supplicant_dbus_ctrl_iface_deinit(global->dbus_ctrl_iface);
+
+	wpas_notify_supplicant_deinitialized(global);
 
 	eap_peer_unregister_methods();
 #ifdef CONFIG_AP

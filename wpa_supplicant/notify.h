@@ -19,6 +19,10 @@ struct wps_credential;
 struct wps_event_m2d;
 struct wps_event_fail;
 
+int wpas_notify_supplicant_initialized(struct wpa_global *global);
+void wpas_notify_supplicant_deinitialized(struct wpa_global *global);
+int wpas_notify_iface_added(struct wpa_supplicant *wpa_s);
+void wpas_notify_iface_removed(struct wpa_supplicant *wpa_s);
 void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 			       wpa_states new_state, wpa_states old_state);
 void wpas_notify_network_changed(struct wpa_supplicant *wpa_s);
@@ -28,7 +32,6 @@ void wpas_notify_network_enabled_changed(struct wpa_supplicant *wpa_s,
 					 struct wpa_ssid *ssid);
 void wpas_notify_network_selected(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid);
-void wpas_notify_unregister_interface(struct wpa_supplicant *wpa_s);
 void wpas_notify_scanning(struct wpa_supplicant *wpa_s);
 void wpas_notify_scan_done(struct wpa_supplicant *wpa_s, int success);
 void wpas_notify_scan_results(struct wpa_supplicant *wpa_s);

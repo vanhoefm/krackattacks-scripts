@@ -42,7 +42,9 @@ protected slots:
 	virtual void languageChange();
 
 private:
+	void add_station(QString info);
 	void add_stations();
+	void add_single_station(const char *addr);
 	void add_scan_results();
 	void update_peers();
 	QStandardItem * find_addr(QString addr);

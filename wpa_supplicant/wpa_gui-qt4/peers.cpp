@@ -156,11 +156,40 @@ void Peers::ctx_refresh()
 }
 
 
+void Peers::add_station(QString info)
+{
+	QStringList lines = info.split(QRegExp("\\n"));
+	QString name;
+
+	for (QStringList::Iterator it = lines.begin();
+	     it != lines.end(); it++) {
+		int pos = (*it).indexOf('=') + 1;
+		if (pos < 1)
+			continue;
+
+		if ((*it).startsWith("wpsDeviceName="))
+			name = (*it).mid(pos);
+	}
+
+	if (name.isEmpty())
+		name = lines[0];
+
+	QStandardItem *item = new QStandardItem(*default_icon, name);
+	if (item) {
+		item->setData(lines[0], peer_role_address);
+		item->setData(PEER_TYPE_ASSOCIATED_STATION,
+			      peer_role_type);
+		item->setToolTip(info);
+		model.appendRow(item);
+	}
+}
+
+
 void Peers::add_stations()
 {
 	char reply[2048];
 	size_t reply_len;
-	char cmd[20];
+	char cmd[30];
 	int res;
 
 	reply_len = sizeof(reply) - 1;
@@ -178,35 +207,37 @@ void Peers::add_stations()
 		    strncmp(reply, "UNKNOWN", 7) == 0)
 			break;
 
-		QStringList lines = info.split(QRegExp("\\n"));
-		QString name;
-
-		for (QStringList::Iterator it = lines.begin();
-		     it != lines.end(); it++) {
-			int pos = (*it).indexOf('=') + 1;
-			if (pos < 1)
-				continue;
-
-			if ((*it).startsWith("wpsDeviceName="))
-				name = (*it).mid(pos);
-		}
-
-		if (name.isEmpty())
-			name = reply;
-
-		QStandardItem *item = new QStandardItem(*default_icon, name);
-		if (item) {
-			item->setData(QString(reply), peer_role_address);
-			item->setData(PEER_TYPE_ASSOCIATED_STATION,
-				      peer_role_type);
-			item->setToolTip(info);
-			model.appendRow(item);
-		}
+		add_station(info);
 
 		reply_len = sizeof(reply) - 1;
 		snprintf(cmd, sizeof(cmd), "STA-NEXT %s", reply);
 		res = wpagui->ctrlRequest(cmd, reply, &reply_len);
 	} while (res >= 0);
+}
+
+
+void Peers::add_single_station(const char *addr)
+{
+	char reply[2048];
+	size_t reply_len;
+	char cmd[30];
+
+	reply_len = sizeof(reply) - 1;
+	snprintf(cmd, sizeof(cmd), "STA %s", addr);
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
+		return;
+
+	reply[reply_len] = '\0';
+	QString info(reply);
+	char *txt = reply;
+	while (*txt != '\0' && *txt != '\n')
+		txt++;
+	*txt++ = '\0';
+	if (strncmp(reply, "FAIL", 4) == 0 ||
+	    strncmp(reply, "UNKNOWN", 7) == 0)
+		return;
+
+	add_station(info);
 }
 
 
@@ -305,6 +336,7 @@ QStandardItem * Peers::find_addr(QString addr)
 void Peers::event_notify(WpaMsg msg)
 {
 	QString text = msg.getMsg();
+
 	if (text.startsWith(WPS_EVENT_PIN_NEEDED)) {
 		/*
 		 * WPS-PIN-NEEDED 5a02a5fa-9199-5e7c-bc46-e183d3cb32f7
@@ -339,5 +371,36 @@ void Peers::event_notify(WpaMsg msg)
 			item->setToolTip(items.join(QString("\n")));
 			model.appendRow(item);
 		}
+		return;
+	}
+
+	if (text.startsWith(AP_STA_CONNECTED)) {
+		/* AP-STA-CONNECTED 02:2a:c4:18:5b:f3 */
+		QStringList items = text.split(' ');
+		QString addr = items[1];
+		QStandardItem *item = find_addr(addr);
+		if (item == NULL || item->data(peer_role_type).toInt() !=
+		    PEER_TYPE_ASSOCIATED_STATION)
+			add_single_station(addr.toAscii().constData());
+		return;
+	}
+
+	if (text.startsWith(AP_STA_DISCONNECTED)) {
+		/* AP-STA-DISCONNECTED 02:2a:c4:18:5b:f3 */
+		QStringList items = text.split(' ');
+		QString addr = items[1];
+
+		if (model.rowCount() == 0)
+			return;
+
+		QModelIndexList lst = model.match(model.index(0, 0),
+						  peer_role_address, addr);
+		for (int i = 0; i < lst.size(); i++) {
+			QStandardItem *item = model.itemFromIndex(lst[i]);
+			if (item && item->data(peer_role_type).toInt() ==
+			    PEER_TYPE_ASSOCIATED_STATION)
+				model.removeRow(lst[i].row());
+		}
+		return;
 	}
 }

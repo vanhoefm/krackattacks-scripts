@@ -36,6 +36,7 @@
 #include "accounting.h"
 #include "driver_i.h"
 #include "mlme.h"
+#include "wpa_ctrl.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
@@ -1198,6 +1199,8 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	}
 
 	sta->flags &= ~WLAN_STA_ASSOC;
+	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
+		MAC2STR(sta->addr));
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "disassociated");
@@ -1246,6 +1249,8 @@ static void handle_deauth(struct hostapd_data *hapd,
 	}
 
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
+		MAC2STR(sta->addr));
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG, "deauthenticated");
@@ -1661,6 +1666,8 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa) {
 		/* Open or static WEP; no separate authorization */
 		sta->flags |= WLAN_STA_AUTHORIZED;
+		wpa_msg(hapd->msg_ctx, MSG_INFO,
+			AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 	}
 
 	if (reassoc)

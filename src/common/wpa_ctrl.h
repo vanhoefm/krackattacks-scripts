@@ -74,6 +74,8 @@ extern "C" {
 #define WPS_EVENT_NEW_AP_SETTINGS "WPS-NEW-AP-SETTINGS "
 #define WPS_EVENT_REG_SUCCESS "WPS-REG-SUCCESS "
 #define WPS_EVENT_AP_SETUP_LOCKED "WPS-AP-SETUP-LOCKED "
+#define AP_STA_CONNECTED "AP-STA-CONNECTED "
+#define AP_STA_DISCONNECTED "AP-STA-DISCONNECTED "
 
 
 /* wpa_supplicant/hostapd control interface access */

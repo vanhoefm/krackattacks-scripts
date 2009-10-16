@@ -31,6 +31,7 @@
 #include "hw_features.h"
 #include "eap_server/eap.h"
 #include "ieee802_11_defs.h"
+#include "wpa_ctrl.h"
 
 
 static void ieee802_1x_finished(struct hostapd_data *hapd,
@@ -83,12 +84,20 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 		return;
 
 	if (authorized) {
+		if (!(sta->flags & WLAN_STA_AUTHORIZED))
+			wpa_msg(hapd->msg_ctx, MSG_INFO,
+				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 		sta->flags |= WLAN_STA_AUTHORIZED;
 		res = hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
 					    WLAN_STA_AUTHORIZED, ~0);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "authorizing port");
 	} else {
+		if ((sta->flags & (WLAN_STA_AUTHORIZED | WLAN_STA_ASSOC)) ==
+		    (WLAN_STA_AUTHORIZED | WLAN_STA_ASSOC))
+			wpa_msg(hapd->msg_ctx, MSG_INFO,
+				AP_STA_DISCONNECTED MACSTR,
+				MAC2STR(sta->addr));
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
 		res = hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
 					    0, ~WLAN_STA_AUTHORIZED);

@@ -70,6 +70,8 @@ static const char *pem_cert_begin = "-----BEGIN CERTIFICATE-----";
 static const char *pem_cert_end = "-----END CERTIFICATE-----";
 static const char *pem_key_begin = "-----BEGIN RSA PRIVATE KEY-----";
 static const char *pem_key_end = "-----END RSA PRIVATE KEY-----";
+static const char *pem_key2_begin = "-----BEGIN PRIVATE KEY-----";
+static const char *pem_key2_end = "-----END PRIVATE KEY-----";
 
 
 static const u8 * search_tag(const char *tag, const u8 *buf, size_t len)
@@ -219,13 +221,20 @@ static int tlsv1_set_key_pem(struct tlsv1_credentials *cred,
 	size_t der_len;
 
 	pos = search_tag(pem_key_begin, key, len);
-	if (!pos)
-		return -1;
-
-	pos += os_strlen(pem_key_begin);
-	end = search_tag(pem_key_end, pos, key + len - pos);
-	if (!end)
-		return -1;
+	if (!pos) {
+		pos = search_tag(pem_key2_begin, key, len);
+		if (!pos)
+			return -1;
+		pos += os_strlen(pem_key2_begin);
+		end = search_tag(pem_key2_end, pos, key + len - pos);
+		if (!end)
+			return -1;
+	} else {
+		pos += os_strlen(pem_key_begin);
+		end = search_tag(pem_key_end, pos, key + len - pos);
+		if (!end)
+			return -1;
+	}
 
 	der = base64_decode(pos, end - pos, &der_len);
 	if (!der)

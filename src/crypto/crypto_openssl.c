@@ -34,8 +34,9 @@
 #endif /* openssl < 0.9.7 */
 
 
-int openssl_digest_vector(const EVP_MD *type, int non_fips, size_t num_elem,
-			  const u8 *addr[], const size_t *len, u8 *mac)
+static int openssl_digest_vector(const EVP_MD *type, int non_fips,
+				 size_t num_elem, const u8 *addr[],
+				 const size_t *len, u8 *mac)
 {
 	EVP_MD_CTX ctx;
 	size_t i;

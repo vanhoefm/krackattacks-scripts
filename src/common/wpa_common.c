@@ -602,3 +602,70 @@ void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
 		hmac_sha1_vector(pmk, pmk_len, 3, addr, len, hash);
 	os_memcpy(pmkid, hash, PMKID_LEN);
 }
+
+
+/**
+ * wpa_cipher_txt - Convert cipher suite to a text string
+ * @cipher: Cipher suite (WPA_CIPHER_* enum)
+ * Returns: Pointer to a text string of the cipher suite name
+ */
+const char * wpa_cipher_txt(int cipher)
+{
+	switch (cipher) {
+	case WPA_CIPHER_NONE:
+		return "NONE";
+	case WPA_CIPHER_WEP40:
+		return "WEP-40";
+	case WPA_CIPHER_WEP104:
+		return "WEP-104";
+	case WPA_CIPHER_TKIP:
+		return "TKIP";
+	case WPA_CIPHER_CCMP:
+		return "CCMP";
+	case WPA_CIPHER_CCMP | WPA_CIPHER_TKIP:
+		return "CCMP+TKIP";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+
+/**
+ * wpa_key_mgmt_txt - Convert key management suite to a text string
+ * @key_mgmt: Key management suite (WPA_KEY_MGMT_* enum)
+ * @proto: WPA/WPA2 version (WPA_PROTO_*)
+ * Returns: Pointer to a text string of the key management suite name
+ */
+const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
+{
+	switch (key_mgmt) {
+	case WPA_KEY_MGMT_IEEE8021X:
+		if (proto == (WPA_PROTO_RSN | WPA_PROTO_WPA))
+			return "WPA2+WPA/IEEE 802.1X/EAP";
+		return proto == WPA_PROTO_RSN ?
+			"WPA2/IEEE 802.1X/EAP" : "WPA/IEEE 802.1X/EAP";
+	case WPA_KEY_MGMT_PSK:
+		if (proto == (WPA_PROTO_RSN | WPA_PROTO_WPA))
+			return "WPA2-PSK+WPA-PSK";
+		return proto == WPA_PROTO_RSN ?
+			"WPA2-PSK" : "WPA-PSK";
+	case WPA_KEY_MGMT_NONE:
+		return "NONE";
+	case WPA_KEY_MGMT_IEEE8021X_NO_WPA:
+		return "IEEE 802.1X (no WPA)";
+#ifdef CONFIG_IEEE80211R
+	case WPA_KEY_MGMT_FT_IEEE8021X:
+		return "FT-EAP";
+	case WPA_KEY_MGMT_FT_PSK:
+		return "FT-PSK";
+#endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	case WPA_KEY_MGMT_IEEE8021X_SHA256:
+		return "WPA2-EAP-SHA256";
+	case WPA_KEY_MGMT_PSK_SHA256:
+		return "WPA2-PSK-SHA256";
+#endif /* CONFIG_IEEE80211W */
+	default:
+		return "UNKNOWN";
+	}
+}

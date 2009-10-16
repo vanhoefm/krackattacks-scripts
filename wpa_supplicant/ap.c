@@ -473,6 +473,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_s->current_ssid = ssid;
+	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
 	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 
 	return 0;
@@ -585,6 +586,35 @@ int ap_ctrl_iface_sta_next(struct wpa_supplicant *wpa_s, const char *txtaddr,
 		return -1;
 	return hostapd_ctrl_iface_sta_next(wpa_s->ap_iface->bss[0], txtaddr,
 					   buf, buflen);
+}
+
+
+int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
+				 size_t buflen, int verbose)
+{
+	char *pos = buf, *end = buf + buflen;
+	int ret;
+	struct hostapd_bss_config *conf;
+
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+
+	conf = wpa_s->ap_iface->bss[0]->conf;
+	if (conf->wpa == 0)
+		return 0;
+
+	ret = os_snprintf(pos, end - pos,
+			  "pairwise_cipher=%s\n"
+			  "group_cipher=%s\n"
+			  "key_mgmt=%s\n",
+			  wpa_cipher_txt(conf->rsn_pairwise),
+			  wpa_cipher_txt(conf->wpa_group),
+			  wpa_key_mgmt_txt(conf->wpa_key_mgmt,
+					   conf->wpa));
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+	return pos - buf;
 }
 
 #endif /* CONFIG_CTRL_IFACE */

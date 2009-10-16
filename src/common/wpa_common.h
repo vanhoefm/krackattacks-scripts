@@ -341,4 +341,7 @@ int wpa_parse_wpa_ie_rsn(const u8 *rsn_ie, size_t rsn_ie_len,
 void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
 	       u8 *pmkid, int use_sha256);
 
+const char * wpa_cipher_txt(int cipher);
+const char * wpa_key_mgmt_txt(int key_mgmt, int proto);
+
 #endif /* WPA_COMMON_H */

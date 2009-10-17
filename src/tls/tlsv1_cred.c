@@ -72,6 +72,8 @@ static const char *pem_key_begin = "-----BEGIN RSA PRIVATE KEY-----";
 static const char *pem_key_end = "-----END RSA PRIVATE KEY-----";
 static const char *pem_key2_begin = "-----BEGIN PRIVATE KEY-----";
 static const char *pem_key2_end = "-----END PRIVATE KEY-----";
+static const char *pem_key_enc_begin = "-----BEGIN ENCRYPTED PRIVATE KEY-----";
+static const char *pem_key_enc_end = "-----END ENCRYPTED PRIVATE KEY-----";
 
 
 static const u8 * search_tag(const char *tag, const u8 *buf, size_t len)
@@ -239,18 +241,46 @@ static int tlsv1_set_key_pem(struct tlsv1_credentials *cred,
 	der = base64_decode(pos, end - pos, &der_len);
 	if (!der)
 		return -1;
-	cred->key = crypto_private_key_import(der, der_len);
+	cred->key = crypto_private_key_import(der, der_len, NULL);
+	os_free(der);
+	return cred->key ? 0 : -1;
+}
+
+
+static int tlsv1_set_key_enc_pem(struct tlsv1_credentials *cred,
+				 const u8 *key, size_t len, const char *passwd)
+{
+	const u8 *pos, *end;
+	unsigned char *der;
+	size_t der_len;
+
+	if (passwd == NULL)
+		return -1;
+	pos = search_tag(pem_key_enc_begin, key, len);
+	if (!pos)
+		return -1;
+	pos += os_strlen(pem_key_enc_begin);
+	end = search_tag(pem_key_enc_end, pos, key + len - pos);
+	if (!end)
+		return -1;
+
+	der = base64_decode(pos, end - pos, &der_len);
+	if (!der)
+		return -1;
+	cred->key = crypto_private_key_import(der, der_len, passwd);
 	os_free(der);
 	return cred->key ? 0 : -1;
 }
 
 
 static int tlsv1_set_key(struct tlsv1_credentials *cred,
-			 const u8 *key, size_t len)
+			 const u8 *key, size_t len, const char *passwd)
 {
-	cred->key = crypto_private_key_import(key, len);
+	cred->key = crypto_private_key_import(key, len, passwd);
 	if (cred->key == NULL)
 		tlsv1_set_key_pem(cred, key, len);
+	if (cred->key == NULL)
+		tlsv1_set_key_enc_pem(cred, key, len, passwd);
 	if (cred->key == NULL) {
 		wpa_printf(MSG_INFO, "TLSv1: Failed to parse private key");
 		return -1;
@@ -280,7 +310,8 @@ int tlsv1_set_private_key(struct tlsv1_credentials *cred,
 
 	if (private_key_blob)
 		return tlsv1_set_key(cred, private_key_blob,
-				     private_key_blob_len);
+				     private_key_blob_len,
+				     private_key_passwd);
 
 	if (private_key) {
 		u8 *buf;
@@ -294,7 +325,7 @@ int tlsv1_set_private_key(struct tlsv1_credentials *cred,
 			return -1;
 		}
 
-		ret = tlsv1_set_key(cred, buf, len);
+		ret = tlsv1_set_key(cred, buf, len, private_key_passwd);
 		os_free(buf);
 		return ret;
 	}

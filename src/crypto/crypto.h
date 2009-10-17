@@ -295,6 +295,7 @@ struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len);
  * crypto_private_key_import - Import an RSA private key
  * @key: Key buffer (DER encoded RSA private key)
  * @len: Key buffer length in bytes
+ * @passwd: Key encryption password or %NULL if key is not encrypted
  * Returns: Pointer to the private key or %NULL on failure
  *
  * This function is only used with internal TLSv1 implementation
@@ -302,7 +303,8 @@ struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len);
  * to implement this.
  */
 struct crypto_private_key * crypto_private_key_import(const u8 *key,
-						      size_t len);
+						      size_t len,
+						      const char *passwd);
 
 /**
  * crypto_public_key_from_cert - Import an RSA public key from a certificate

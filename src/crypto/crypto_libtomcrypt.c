@@ -453,7 +453,8 @@ struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len)
 
 
 struct crypto_private_key * crypto_private_key_import(const u8 *key,
-						      size_t len)
+						      size_t len,
+						      const char *passwd)
 {
 	int res;
 	struct crypto_private_key *pk;

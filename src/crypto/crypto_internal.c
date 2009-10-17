@@ -481,7 +481,7 @@ struct crypto_public_key * crypto_public_key_import(const u8 *key, size_t len)
 
 #ifdef EAP_TLS_FUNCS
 static struct crypto_private_key *
-crypto_pkcs8_key_import(const u8 *buf, size_t len)
+pkcs8_key_import(const u8 *buf, size_t len)
 {
 	struct asn1_hdr hdr;
 	const u8 *pos, *end;
@@ -581,18 +581,308 @@ crypto_pkcs8_key_import(const u8 *buf, size_t len)
 	return (struct crypto_private_key *)
 		crypto_rsa_import_private_key(hdr.payload, hdr.length);
 }
+
+
+struct pkcs5_params {
+	enum pkcs5_alg {
+		PKCS5_ALG_UNKNOWN,
+		PKCS5_ALG_MD5_DES_CBC
+	} alg;
+	u8 salt[8];
+	size_t salt_len;
+	unsigned int iter_count;
+};
+
+
+enum pkcs5_alg pkcs5_get_alg(struct asn1_oid *oid)
+{
+	if (oid->len == 7 &&
+	    oid->oid[0] == 1 /* iso */ &&
+	    oid->oid[1] == 2 /* member-body */ &&
+	    oid->oid[2] == 840 /* us */ &&
+	    oid->oid[3] == 113549 /* rsadsi */ &&
+	    oid->oid[4] == 1 /* pkcs */ &&
+	    oid->oid[5] == 5 /* pkcs-5 */ &&
+	    oid->oid[6] == 3 /* pbeWithMD5AndDES-CBC */)
+		return PKCS5_ALG_MD5_DES_CBC;
+
+	return PKCS5_ALG_UNKNOWN;
+}
+
+
+static int pkcs5_get_params(const u8 *enc_alg, size_t enc_alg_len,
+			    struct pkcs5_params *params)
+{
+	struct asn1_hdr hdr;
+	const u8 *enc_alg_end, *pos, *end;
+	struct asn1_oid oid;
+	char obuf[80];
+
+	/* AlgorithmIdentifier */
+
+	enc_alg_end = enc_alg + enc_alg_len;
+
+	os_memset(params, 0, sizeof(*params));
+
+	if (asn1_get_oid(enc_alg, enc_alg_end - enc_alg, &oid, &pos)) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Failed to parse OID "
+			   "(algorithm)");
+		return -1;
+	}
+
+	asn1_oid_to_str(&oid, obuf, sizeof(obuf));
+	wpa_printf(MSG_DEBUG, "PKCS #5: encryption algorithm %s", obuf);
+	params->alg = pkcs5_get_alg(&oid);
+	if (params->alg == PKCS5_ALG_UNKNOWN) {
+		wpa_printf(MSG_INFO, "PKCS #5: unsupported encryption "
+			   "algorithm %s", obuf);
+		return -1;
+	}
+
+	/*
+	 * PKCS#5, Section 8
+	 * PBEParameter ::= SEQUENCE {
+	 *   salt OCTET STRING SIZE(8),
+	 *   iterationCount INTEGER }
+	 */
+
+	if (asn1_get_next(pos, enc_alg_end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Expected SEQUENCE "
+			   "(PBEParameter) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return -1;
+	}
+	pos = hdr.payload;
+	end = hdr.payload + hdr.length;
+
+	/* salt OCTET STRING SIZE(8) */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_OCTETSTRING ||
+	    hdr.length != 8) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Expected OCTETSTRING SIZE(8) "
+			   "(salt) - found class %d tag 0x%x size %d",
+			   hdr.class, hdr.tag, hdr.length);
+		return -1;
+	}
+	pos = hdr.payload + hdr.length;
+	os_memcpy(params->salt, hdr.payload, hdr.length);
+	params->salt_len = hdr.length;
+	wpa_hexdump(MSG_DEBUG, "PKCS #5: salt",
+		    params->salt, params->salt_len);
+
+	/* iterationCount INTEGER */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL || hdr.tag != ASN1_TAG_INTEGER) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Expected INTEGER - found "
+			   "class %d tag 0x%x", hdr.class, hdr.tag);
+		return -1;
+	}
+	if (hdr.length == 1)
+		params->iter_count = *hdr.payload;
+	else if (hdr.length == 2)
+		params->iter_count = WPA_GET_BE16(hdr.payload);
+	else if (hdr.length == 4)
+		params->iter_count = WPA_GET_BE32(hdr.payload);
+	else {
+		wpa_hexdump(MSG_DEBUG, "PKCS #5: Unsupported INTEGER value "
+			    " (iterationCount)",
+			    hdr.payload, hdr.length);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "PKCS #5: iterationCount=0x%x",
+		   params->iter_count);
+	if (params->iter_count == 0 || params->iter_count > 0xffff) {
+		wpa_printf(MSG_INFO, "PKCS #5: Unsupported "
+			   "iterationCount=0x%x", params->iter_count);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static struct crypto_cipher * pkcs5_crypto_init(struct pkcs5_params *params,
+						const char *passwd)
+{
+	unsigned int i;
+	u8 hash[MD5_MAC_LEN];
+	struct MD5Context md5;
+
+	if (params->alg != PKCS5_ALG_MD5_DES_CBC)
+		return NULL;
+
+	MD5Init(&md5);
+	MD5Update(&md5, (const u8 *) passwd, os_strlen(passwd));
+	MD5Update(&md5, params->salt, params->salt_len);
+	MD5Final(hash, &md5);
+	for (i = 1; i < params->iter_count; i++) {
+		MD5Init(&md5);
+		MD5Update(&md5, hash, MD5_MAC_LEN);
+		MD5Final(hash, &md5);
+	}
+	/* TODO: DES key parity bits(?) */
+	wpa_hexdump_key(MSG_DEBUG, "PKCS #5: DES key", hash, 8);
+	wpa_hexdump_key(MSG_DEBUG, "PKCS #5: DES IV", hash + 8, 8);
+
+	return crypto_cipher_init(CRYPTO_CIPHER_ALG_DES, hash + 8, hash, 8);
+}
+
+
+static u8 * pkcs5_decrypt(const u8 *enc_alg, size_t enc_alg_len,
+			  const u8 *enc_data, size_t enc_data_len,
+			  const char *passwd, size_t *data_len)
+{
+	struct crypto_cipher *ctx;
+	u8 *eb, pad;
+	struct pkcs5_params params;
+	unsigned int i;
+
+	if (pkcs5_get_params(enc_alg, enc_alg_len, &params) < 0) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Unsupported parameters");
+		return NULL;
+	}
+
+	ctx = pkcs5_crypto_init(&params, passwd);
+	if (ctx == NULL) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Failed to initialize crypto");
+		return NULL;
+	}
+
+	/* PKCS #5, Section 7 - Decryption process */
+	if (enc_data_len < 16 || enc_data_len % 8) {
+		wpa_printf(MSG_INFO, "PKCS #5: invalid length of ciphertext "
+			   "%d", (int) enc_data_len);
+		crypto_cipher_deinit(ctx);
+		return NULL;
+	}
+
+	eb = os_malloc(enc_data_len);
+	if (eb == NULL) {
+		crypto_cipher_deinit(ctx);
+		return NULL;
+	}
+
+	if (crypto_cipher_decrypt(ctx, enc_data, eb, enc_data_len) < 0) {
+		wpa_printf(MSG_DEBUG, "PKCS #5: Failed to decrypt EB");
+		crypto_cipher_deinit(ctx);
+		os_free(eb);
+		return NULL;
+	}
+	crypto_cipher_deinit(ctx);
+
+	pad = eb[enc_data_len - 1];
+	if (pad > 8) {
+		wpa_printf(MSG_INFO, "PKCS #5: Invalid PS octet 0x%x", pad);
+		os_free(eb);
+		return NULL;
+	}
+	for (i = enc_data_len - pad; i < enc_data_len; i++) {
+		if (eb[i] != pad) {
+			wpa_hexdump(MSG_INFO, "PKCS #5: Invalid PS",
+				    eb + enc_data_len - pad, pad);
+			os_free(eb);
+			return NULL;
+		}
+	}
+
+	wpa_hexdump_key(MSG_MSGDUMP, "PKCS #5: message M (encrypted key)",
+			eb, enc_data_len - pad);
+
+	*data_len = enc_data_len - pad;
+	return eb;
+}
+
+
+static struct crypto_private_key *
+pkcs8_enc_key_import(const u8 *buf, size_t len, const char *passwd)
+{
+	struct asn1_hdr hdr;
+	const u8 *pos, *end, *enc_alg;
+	size_t enc_alg_len;
+	u8 *data;
+	size_t data_len;
+
+	if (passwd == NULL)
+		return NULL;
+
+	/*
+	 * PKCS #8, Chapter 7
+	 * EncryptedPrivateKeyInfo ::= SEQUENCE {
+	 *   encryptionAlgorithm EncryptionAlgorithmIdentifier,
+	 *   encryptedData EncryptedData }
+	 * EncryptionAlgorithmIdentifier ::= AlgorithmIdentifier
+	 * EncryptedData ::= OCTET STRING
+	 */
+
+	if (asn1_get_next(buf, len, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG, "PKCS #8: Does not start with PKCS #8 "
+			   "header (SEQUENCE); assume encrypted PKCS #8 not "
+			   "used");
+		return NULL;
+	}
+	pos = hdr.payload;
+	end = pos + hdr.length;
+
+	/* encryptionAlgorithm EncryptionAlgorithmIdentifier */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_SEQUENCE) {
+		wpa_printf(MSG_DEBUG, "PKCS #8: Expected SEQUENCE "
+			   "(AlgorithmIdentifier) - found class %d tag 0x%x; "
+			   "assume encrypted PKCS #8 not used",
+			   hdr.class, hdr.tag);
+		return NULL;
+	}
+	enc_alg = hdr.payload;
+	enc_alg_len = hdr.length;
+	pos = hdr.payload + hdr.length;
+
+	/* encryptedData EncryptedData */
+	if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
+	    hdr.class != ASN1_CLASS_UNIVERSAL ||
+	    hdr.tag != ASN1_TAG_OCTETSTRING) {
+		wpa_printf(MSG_DEBUG, "PKCS #8: Expected OCTETSTRING "
+			   "(encryptedData) - found class %d tag 0x%x",
+			   hdr.class, hdr.tag);
+		return NULL;
+	}
+
+	data = pkcs5_decrypt(enc_alg, enc_alg_len, hdr.payload, hdr.length,
+			     passwd, &data_len);
+	if (data) {
+		struct crypto_private_key *key;
+		key = pkcs8_key_import(data, data_len);
+		os_free(data);
+		return key;
+	}
+
+	return NULL;
+}
 #endif /* EAP_TLS_FUNCS */
 
 
 struct crypto_private_key * crypto_private_key_import(const u8 *key,
-						      size_t len)
+						      size_t len,
+						      const char *passwd)
 {
 	struct crypto_private_key *res;
 
 	/* First, check for possible PKCS #8 encoding */
-	res = crypto_pkcs8_key_import(key, len);
+	res = pkcs8_key_import(key, len);
 	if (res)
 		return res;
+
+	if (passwd) {
+		/* Try to parse as encrypted PKCS #8 */
+		res = pkcs8_enc_key_import(key, len, passwd);
+		if (res)
+			return res;
+	}
 
 	/* Not PKCS#8, so try to import PKCS #1 encoded RSA private key */
 	wpa_printf(MSG_DEBUG, "Trying to parse PKCS #1 encoded RSA private "

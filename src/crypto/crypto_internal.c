@@ -29,19 +29,6 @@
 
 #ifdef CONFIG_TLS_INTERNAL
 
-struct MD5Context {
-	u32 buf[4];
-	u32 bits[2];
-	u8 in[64];
-};
-
-struct SHA1Context {
-	u32 state[5];
-	u32 count[2];
-	unsigned char buffer[64];
-};
-
-
 struct crypto_hash {
 	enum crypto_hash_alg alg;
 	union {

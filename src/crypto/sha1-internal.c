@@ -20,12 +20,6 @@
 #include "md5.h"
 #include "crypto.h"
 
-struct SHA1Context {
-	u32 state[5];
-	u32 count[2];
-	unsigned char buffer[64];
-};
-
 typedef struct SHA1Context SHA1_CTX;
 
 void SHA1Transform(u32 state[5], const unsigned char buffer[64]);

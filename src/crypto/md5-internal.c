@@ -19,11 +19,6 @@
 #include "md5_i.h"
 #include "crypto.h"
 
-struct MD5Context {
-	u32 buf[4];
-	u32 bits[2];
-	u8 in[64];
-};
 
 static void MD5Transform(u32 buf[4], u32 const in[16]);
 

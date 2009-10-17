@@ -38,6 +38,10 @@ void des3_key_setup(const u8 *key, struct des3_key_s *dkey);
 void des3_encrypt(const u8 *plain, const struct des3_key_s *key, u8 *crypt);
 void des3_decrypt(const u8 *crypt, const struct des3_key_s *key, u8 *plain);
 
+void des_key_setup(const u8 *key, u32 *ek, u32 *dk);
+void des_block_encrypt(const u8 *plain, const u32 *ek, u8 *crypt);
+void des_block_decrypt(const u8 *crypt, const u32 *dk, u8 *plain);
+
 
 struct MD5Context {
 	u32 buf[4];
@@ -245,6 +249,11 @@ struct crypto_cipher {
 			struct des3_key_s key;
 			u8 cbc[8];
 		} des3;
+		struct {
+			u32 ek[32];
+			u32 dk[32];
+			u8 cbc[8];
+		} des;
 	} u;
 };
 
@@ -297,6 +306,14 @@ struct crypto_cipher * crypto_cipher_init(enum crypto_cipher_alg alg,
 		des3_key_setup(key, &ctx->u.des3.key);
 		os_memcpy(ctx->u.des3.cbc, iv, 8);
 		break;
+	case CRYPTO_CIPHER_ALG_DES:
+		if (key_len != 8) {
+			os_free(ctx);
+			return NULL;
+		}
+		des_key_setup(key, ctx->u.des.ek, ctx->u.des.dk);
+		os_memcpy(ctx->u.des.cbc, iv, 8);
+		break;
 	default:
 		os_free(ctx);
 		return NULL;
@@ -348,6 +365,20 @@ int crypto_cipher_encrypt(struct crypto_cipher *ctx, const u8 *plain,
 			crypt += 8;
 		}
 		break;
+	case CRYPTO_CIPHER_ALG_DES:
+		if (len % 8)
+			return -1;
+		blocks = len / 8;
+		for (i = 0; i < blocks; i++) {
+			for (j = 0; j < 8; j++)
+				ctx->u.des3.cbc[j] ^= plain[j];
+			des_block_encrypt(ctx->u.des.cbc, ctx->u.des.ek,
+					  ctx->u.des.cbc);
+			os_memcpy(crypt, ctx->u.des.cbc, 8);
+			plain += 8;
+			crypt += 8;
+		}
+		break;
 	default:
 		return -1;
 	}
@@ -394,6 +425,20 @@ int crypto_cipher_decrypt(struct crypto_cipher *ctx, const u8 *crypt,
 			for (j = 0; j < 8; j++)
 				plain[j] ^= ctx->u.des3.cbc[j];
 			os_memcpy(ctx->u.des3.cbc, tmp, 8);
+			plain += 8;
+			crypt += 8;
+		}
+		break;
+	case CRYPTO_CIPHER_ALG_DES:
+		if (len % 8)
+			return -1;
+		blocks = len / 8;
+		for (i = 0; i < blocks; i++) {
+			os_memcpy(tmp, crypt, 8);
+			des_block_decrypt(crypt, ctx->u.des.dk, plain);
+			for (j = 0; j < 8; j++)
+				plain[j] ^= ctx->u.des.cbc[j];
+			os_memcpy(ctx->u.des.cbc, tmp, 8);
 			plain += 8;
 			crypt += 8;
 		}

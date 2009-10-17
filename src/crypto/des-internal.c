@@ -429,6 +429,35 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
+void des_key_setup(const u8 *key, u32 *ek, u32 *dk)
+{
+	deskey(key, 0, ek);
+	deskey(key, 1, dk);
+}
+
+
+void des_block_encrypt(const u8 *plain, const u32 *ek, u8 *crypt)
+{
+	u32 work[2];
+	work[0] = WPA_GET_BE32(plain);
+	work[1] = WPA_GET_BE32(plain + 4);
+	desfunc(work, ek);
+	WPA_PUT_BE32(crypt, work[0]);
+	WPA_PUT_BE32(crypt + 4, work[1]);
+}
+
+
+void des_block_decrypt(const u8 *crypt, const u32 *dk, u8 *plain)
+{
+	u32 work[2];
+	work[0] = WPA_GET_BE32(crypt);
+	work[1] = WPA_GET_BE32(crypt + 4);
+	desfunc(work, dk);
+	WPA_PUT_BE32(plain, work[0]);
+	WPA_PUT_BE32(plain + 4, work[1]);
+}
+
+
 struct des3_key_s {
 	u32 ek[3][32];
 	u32 dk[3][32];

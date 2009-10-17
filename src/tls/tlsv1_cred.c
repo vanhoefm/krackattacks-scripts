@@ -1,6 +1,6 @@
 /*
  * TLSv1 credentials
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -215,61 +215,63 @@ int tlsv1_set_cert(struct tlsv1_credentials *cred, const char *cert,
 }
 
 
-static int tlsv1_set_key_pem(struct tlsv1_credentials *cred,
-			     const u8 *key, size_t len)
+static struct crypto_private_key * tlsv1_set_key_pem(const u8 *key, size_t len)
 {
 	const u8 *pos, *end;
 	unsigned char *der;
 	size_t der_len;
+	struct crypto_private_key *pkey;
 
 	pos = search_tag(pem_key_begin, key, len);
 	if (!pos) {
 		pos = search_tag(pem_key2_begin, key, len);
 		if (!pos)
-			return -1;
+			return NULL;
 		pos += os_strlen(pem_key2_begin);
 		end = search_tag(pem_key2_end, pos, key + len - pos);
 		if (!end)
-			return -1;
+			return NULL;
 	} else {
 		pos += os_strlen(pem_key_begin);
 		end = search_tag(pem_key_end, pos, key + len - pos);
 		if (!end)
-			return -1;
+			return NULL;
 	}
 
 	der = base64_decode(pos, end - pos, &der_len);
 	if (!der)
-		return -1;
-	cred->key = crypto_private_key_import(der, der_len, NULL);
+		return NULL;
+	pkey = crypto_private_key_import(der, der_len, NULL);
 	os_free(der);
-	return cred->key ? 0 : -1;
+	return pkey;
 }
 
 
-static int tlsv1_set_key_enc_pem(struct tlsv1_credentials *cred,
-				 const u8 *key, size_t len, const char *passwd)
+static struct crypto_private_key * tlsv1_set_key_enc_pem(const u8 *key,
+							 size_t len,
+							 const char *passwd)
 {
 	const u8 *pos, *end;
 	unsigned char *der;
 	size_t der_len;
+	struct crypto_private_key *pkey;
 
 	if (passwd == NULL)
-		return -1;
+		return NULL;
 	pos = search_tag(pem_key_enc_begin, key, len);
 	if (!pos)
-		return -1;
+		return NULL;
 	pos += os_strlen(pem_key_enc_begin);
 	end = search_tag(pem_key_enc_end, pos, key + len - pos);
 	if (!end)
-		return -1;
+		return NULL;
 
 	der = base64_decode(pos, end - pos, &der_len);
 	if (!der)
-		return -1;
-	cred->key = crypto_private_key_import(der, der_len, passwd);
+		return NULL;
+	pkey = crypto_private_key_import(der, der_len, passwd);
 	os_free(der);
-	return cred->key ? 0 : -1;
+	return pkey;
 }
 
 
@@ -278,9 +280,9 @@ static int tlsv1_set_key(struct tlsv1_credentials *cred,
 {
 	cred->key = crypto_private_key_import(key, len, passwd);
 	if (cred->key == NULL)
-		tlsv1_set_key_pem(cred, key, len);
+		cred->key = tlsv1_set_key_pem(key, len);
 	if (cred->key == NULL)
-		tlsv1_set_key_enc_pem(cred, key, len, passwd);
+		cred->key = tlsv1_set_key_enc_pem(key, len, passwd);
 	if (cred->key == NULL) {
 		wpa_printf(MSG_INFO, "TLSv1: Failed to parse private key");
 		return -1;

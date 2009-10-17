@@ -2,7 +2,7 @@
  * DES and 3DES-EDE ciphers
  *
  * Modifications to LibTomCrypt implementation:
- * Copyright (c) 2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,6 +18,7 @@
 
 #include "common.h"
 #include "crypto.h"
+#include "des_i.h"
 
 /*
  * This implementation is based on a DES implementation included in
@@ -457,11 +458,6 @@ void des_block_decrypt(const u8 *crypt, const u32 *dk, u8 *plain)
 	WPA_PUT_BE32(plain + 4, work[1]);
 }
 
-
-struct des3_key_s {
-	u32 ek[3][32];
-	u32 dk[3][32];
-};
 
 void des3_key_setup(const u8 *key, struct des3_key_s *dkey)
 {

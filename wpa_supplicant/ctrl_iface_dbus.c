@@ -861,6 +861,11 @@ void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 out:
 	dbus_message_unref(_signal);
 }
+#else /* CONFIG_WPS */
+void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
+					 const struct wps_credential *cred)
+{
+}
 #endif /* CONFIG_WPS */
 
 

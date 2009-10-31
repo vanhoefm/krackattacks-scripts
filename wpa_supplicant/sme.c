@@ -26,6 +26,7 @@
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
 #include "notify.h"
+#include "blacklist.h"
 #include "sme.h"
 
 void sme_authenticate(struct wpa_supplicant *wpa_s,
@@ -357,12 +358,39 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 			    union wpa_event_data *data)
 {
 	int bssid_changed;
+	int timeout = 5000;
 
-	wpa_printf(MSG_DEBUG, "SME: Association failed: status code %d",
+	wpa_printf(MSG_DEBUG, "SME: Association with " MACSTR " failed: "
+		   "status code %d", MAC2STR(wpa_s->pending_bssid),
 		   data->assoc_reject.status_code);
 
-	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
+
+	/*
+	 * For now, unconditionally terminate the previous authentication. In
+	 * theory, this should not be needed, but mac80211 gets quite confused
+	 * if the authentication is left pending.. Some roaming cases might
+	 * benefit from using the previous authentication, so this could be
+	 * optimized in the future.
+	 */
+	if (wpa_drv_deauthenticate(wpa_s, wpa_s->pending_bssid,
+				   WLAN_REASON_DEAUTH_LEAVING) < 0) {
+		wpa_msg(wpa_s, MSG_INFO,
+			"Deauth request to the driver failed");
+	}
+
+	if (wpa_blacklist_add(wpa_s, wpa_s->pending_bssid) == 0) {
+		struct wpa_blacklist *b;
+		b = wpa_blacklist_get(wpa_s, wpa_s->pending_bssid);
+		if (b && b->count < 3) {
+			/*
+			 * Speed up next attempt if there could be other APs
+			 * that could accept association.
+			 */
+			timeout = 100;
+		}
+	}
+	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 	if (bssid_changed)
@@ -372,7 +400,8 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 	 * TODO: if more than one possible AP is available in scan results,
 	 * could try the other ones before requesting a new scan.
 	 */
-	wpa_supplicant_req_scan(wpa_s, 5, 0);
+	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
+				1000 * (timeout % 1000));
 }
 
 

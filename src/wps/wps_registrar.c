@@ -114,6 +114,8 @@ struct wps_registrar {
 	int static_wep_only;
 
 	struct wps_registrar_device *devices;
+
+	int force_pbc_overlap;
 };
 
 
@@ -715,6 +717,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 		return -1;
 	}
 	wpa_printf(MSG_DEBUG, "WPS: Button pushed - PBC mode started");
+	reg->force_pbc_overlap = 0;
 	reg->selected_registrar = 1;
 	reg->pbc = 1;
 	wps_set_ie(reg);
@@ -776,6 +779,11 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 		   MACSTR, MAC2STR(addr));
 
 	wps_registrar_add_pbc_session(reg, addr, attr.uuid_e);
+	if (wps_registrar_pbc_overlap(reg, addr, attr.uuid_e)) {
+		wpa_printf(MSG_DEBUG, "WPS: PBC session overlap detected");
+		reg->force_pbc_overlap = 1;
+		wps_pbc_overlap_event(reg->wps);
+	}
 }
 
 
@@ -2011,13 +2019,15 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 #endif /* CONFIG_WPS_OOB */
 
 	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON) {
-		if (wps_registrar_pbc_overlap(wps->wps->registrar,
+		if (wps->wps->registrar->force_pbc_overlap ||
+		    wps_registrar_pbc_overlap(wps->wps->registrar,
 					      wps->mac_addr_e, wps->uuid_e)) {
 			wpa_printf(MSG_DEBUG, "WPS: PBC overlap - deny PBC "
 				   "negotiation");
 			wps->state = SEND_M2D;
 			wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
 			wps_pbc_overlap_event(wps->wps);
+			wps->wps->registrar->force_pbc_overlap = 1;
 			return WPS_CONTINUE;
 		}
 		wps_registrar_add_pbc_session(wps->wps->registrar,
@@ -2040,6 +2050,14 @@ static enum wps_process_res wps_process_m3(struct wps_data *wps,
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving M3", wps->state);
 		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
+	if (wps->pbc && wps->wps->registrar->force_pbc_overlap) {
+		wpa_printf(MSG_DEBUG, "WPS: Reject negotiation due to PBC "
+			   "session overlap");
+		wps->state = SEND_WSC_NACK;
+		wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
 		return WPS_CONTINUE;
 	}
 
@@ -2069,6 +2087,14 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving M5", wps->state);
 		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
+	if (wps->pbc && wps->wps->registrar->force_pbc_overlap) {
+		wpa_printf(MSG_DEBUG, "WPS: Reject negotiation due to PBC "
+			   "session overlap");
+		wps->state = SEND_WSC_NACK;
+		wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
 		return WPS_CONTINUE;
 	}
 
@@ -2179,6 +2205,14 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 		wpa_printf(MSG_DEBUG, "WPS: Unexpected state (%d) for "
 			   "receiving M7", wps->state);
 		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
+	if (wps->pbc && wps->wps->registrar->force_pbc_overlap) {
+		wpa_printf(MSG_DEBUG, "WPS: Reject negotiation due to PBC "
+			   "session overlap");
+		wps->state = SEND_WSC_NACK;
+		wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
 		return WPS_CONTINUE;
 	}
 

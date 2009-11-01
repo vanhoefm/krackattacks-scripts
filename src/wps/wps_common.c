@@ -338,6 +338,24 @@ void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part)
 }
 
 
+void wps_pbc_overlap_event(struct wps_context *wps)
+{
+	if (wps->event_cb == NULL)
+		return;
+
+	wps->event_cb(wps->cb_ctx, WPS_EV_PBC_OVERLAP, NULL);
+}
+
+
+void wps_pbc_timeout_event(struct wps_context *wps)
+{
+	if (wps->event_cb == NULL)
+		return;
+
+	wps->event_cb(wps->cb_ctx, WPS_EV_PBC_TIMEOUT, NULL);
+}
+
+
 #ifdef CONFIG_WPS_OOB
 
 static struct wpabuf * wps_get_oob_cred(struct wps_context *wps)

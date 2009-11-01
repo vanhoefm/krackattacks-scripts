@@ -426,6 +426,10 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 		break;
 	case WPS_EV_PWD_AUTH_FAIL:
 		break;
+	case WPS_EV_PBC_OVERLAP:
+		break;
+	case WPS_EV_PBC_TIMEOUT:
+		break;
 	}
 }
 

@@ -322,7 +322,17 @@ enum wps_event {
 	/**
 	 * WPS_EV_PWD_AUTH_FAIL - Password authentication failed
 	 */
-	WPS_EV_PWD_AUTH_FAIL
+	WPS_EV_PWD_AUTH_FAIL,
+
+	/**
+	 * WPS_EV_PBC_OVERLAP - PBC session overlap detected
+	 */
+	WPS_EV_PBC_OVERLAP,
+
+	/**
+	 * WPS_EV_PBC_TIMEOUT - PBC walktime expired before protocol run start
+	 */
+	WPS_EV_PBC_TIMEOUT
 };
 
 /**

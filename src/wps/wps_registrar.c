@@ -692,6 +692,7 @@ static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct wps_registrar *reg = eloop_ctx;
 
 	wpa_printf(MSG_DEBUG, "WPS: PBC timed out - disable PBC mode");
+	wps_pbc_timeout_event(reg->wps);
 	wps_registrar_stop_pbc(reg);
 }
 
@@ -710,6 +711,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 	if (wps_registrar_pbc_overlap(reg, NULL, NULL)) {
 		wpa_printf(MSG_DEBUG, "WPS: PBC overlap - do not start PBC "
 			   "mode");
+		wps_pbc_overlap_event(reg->wps);
 		return -1;
 	}
 	wpa_printf(MSG_DEBUG, "WPS: Button pushed - PBC mode started");
@@ -2015,6 +2017,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 				   "negotiation");
 			wps->state = SEND_M2D;
 			wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
+			wps_pbc_overlap_event(wps->wps);
 			return WPS_CONTINUE;
 		}
 		wps_registrar_add_pbc_session(wps->wps->registrar,

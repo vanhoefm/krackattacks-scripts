@@ -1305,14 +1305,15 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 {
 	struct wpabuf *msg;
-	u16 err = WPS_CFG_NO_ERROR;
+	u16 err = wps->config_error;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building Message M2D");
 	msg = wpabuf_alloc(1000);
 	if (msg == NULL)
 		return NULL;
 
-	if (wps->wps->ap && wps->wps->ap_setup_locked)
+	if (wps->wps->ap && wps->wps->ap_setup_locked &&
+	    err == WPS_CFG_NO_ERROR)
 		err = WPS_CFG_SETUP_LOCKED;
 
 	if (wps_build_version(msg) ||
@@ -2013,6 +2014,7 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 			wpa_printf(MSG_DEBUG, "WPS: PBC overlap - deny PBC "
 				   "negotiation");
 			wps->state = SEND_M2D;
+			wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
 			return WPS_CONTINUE;
 		}
 		wps_registrar_add_pbc_session(wps->wps->registrar,

@@ -536,6 +536,10 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 	reg->selected_registrar = 1;
 	reg->pbc = 0;
 	wps_set_ie(reg);
+	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
+	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
+			       wps_registrar_set_selected_timeout,
+			       reg, NULL);
 
 	return 0;
 }
@@ -734,6 +738,14 @@ static void wps_registrar_pbc_completed(struct wps_registrar *reg)
 	wpa_printf(MSG_DEBUG, "WPS: PBC completed - stopping PBC mode");
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	wps_registrar_stop_pbc(reg);
+}
+
+static void wps_registrar_pin_completed(struct wps_registrar *reg)
+{
+	wpa_printf(MSG_DEBUG, "WPS: PIN completed using internal Registrar");
+	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
+	reg->selected_registrar = 0;
+	wps_set_ie(reg);
 }
 
 
@@ -2587,6 +2599,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		wps_registrar_remove_pbc_session(wps->wps->registrar,
 						 wps->mac_addr_e, wps->uuid_e);
 		wps_registrar_pbc_completed(wps->wps->registrar);
+	} else {
+		wps_registrar_pin_completed(wps->wps->registrar);
 	}
 
 	wps_success_event(wps->wps);

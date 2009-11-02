@@ -132,6 +132,7 @@ static void int_array_concat(int **res, const int *a)
 	if (n == NULL) {
 		os_free(*res);
 		*res = NULL;
+		return;
 	}
 	for (i = 0; i <= alen; i++)
 		n[reslen + i] = a[i];

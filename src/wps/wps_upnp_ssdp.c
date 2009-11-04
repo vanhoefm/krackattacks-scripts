@@ -799,11 +799,11 @@ int add_ssdp_network(char *net_if)
 		goto fail;
 
 	rt.rt_dev = net_if;
-	sin = (struct sockaddr_in *) &rt.rt_dst;
+	sin = aliasing_hide_typecast(&rt.rt_dst, struct sockaddr_in);
 	sin->sin_family = AF_INET;
 	sin->sin_port = 0;
 	sin->sin_addr.s_addr = inet_addr(SSDP_TARGET);
-	sin = (struct sockaddr_in *) &rt.rt_genmask;
+	sin = aliasing_hide_typecast(&rt.rt_genmask, struct sockaddr_in);
 	sin->sin_family = AF_INET;
 	sin->sin_port = 0;
 	sin->sin_addr.s_addr = inet_addr(SSDP_NETMASK);

@@ -442,4 +442,17 @@ static inline int is_zero_ether_addr(const u8 *a)
 
 #include "wpa_debug.h"
 
+
+/*
+ * gcc 4.4 ends up generating strict-aliasing warnings about some very common
+ * networking socket uses that do not really result in a real problem and
+ * cannot be easily avoided with union-based type-punning due to struct
+ * definitions including another struct in system header files. To avoid having
+ * to fully disable strict-aliasing warnings, provide a mechanism to hide the
+ * typecast from aliasing for now. A cleaner solution will hopefully be found
+ * in the future to handle these cases.
+ */
+void * __hide_aliasing_typecast(void *foo);
+#define aliasing_hide_typecast(a,t) (t *) __hide_aliasing_typecast((a))
+
 #endif /* COMMON_H */

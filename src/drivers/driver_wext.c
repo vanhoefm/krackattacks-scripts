@@ -65,8 +65,9 @@ static int wpa_driver_wext_send_oper_ifla(struct wpa_driver_wext_data *drv,
 	req.ifinfo.ifi_change = 0;
 
 	if (linkmode != -1) {
-		rta = (struct rtattr *)
-			((char *) &req + NLMSG_ALIGN(req.hdr.nlmsg_len));
+		rta = aliasing_hide_typecast(
+			((char *) &req + NLMSG_ALIGN(req.hdr.nlmsg_len)),
+			struct rtattr);
 		rta->rta_type = IFLA_LINKMODE;
 		rta->rta_len = RTA_LENGTH(sizeof(char));
 		*((char *) RTA_DATA(rta)) = linkmode;

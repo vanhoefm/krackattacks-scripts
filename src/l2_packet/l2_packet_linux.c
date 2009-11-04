@@ -185,7 +185,7 @@ int l2_packet_get_ip_addr(struct l2_packet_data *l2, char *buf, size_t len)
 		return -1;
 	}
 	close(s);
-	saddr = (struct sockaddr_in *) &ifr.ifr_addr;
+	saddr = aliasing_hide_typecast(&ifr.ifr_addr, struct sockaddr_in);
 	if (saddr->sin_family != AF_INET)
 		return -1;
 	res = os_strlcpy(buf, inet_ntoa(saddr->sin_addr), len);

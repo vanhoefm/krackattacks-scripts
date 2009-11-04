@@ -160,6 +160,24 @@ struct wpa_params {
 	 * wpa_debug_syslog - Enable log output through syslog
 	 */
 	int wpa_debug_syslog;
+
+	/**
+	 * override_driver - Optional driver parameter override
+	 *
+	 * This parameter can be used to override the driver parameter in
+	 * dynamic interface addition to force a specific driver wrapper to be
+	 * used instead.
+	 */
+	char *override_driver;
+
+	/**
+	 * override_ctrl_interface - Optional ctrl_interface override
+	 *
+	 * This parameter can be used to override the ctrl_interface parameter
+	 * in dynamic interface addition to force a control interface to be
+	 * created.
+	 */
+	char *override_ctrl_interface;
 };
 
 /**

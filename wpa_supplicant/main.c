@@ -34,6 +34,7 @@ static void usage(void)
 	       "        -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] "
 	       "[-p<driver_param>] \\\n"
 	       "        [-b<br_ifname>] [-f<debug file>] \\\n"
+	       "        [-o<override driver>] [-O<override ctrl>] \\\n"
 	       "        [-N -i<ifname> -c<conf> [-C<ctrl>] "
 	       "[-D<driver>] \\\n"
 	       "        [-p<driver_param>] [-b<br_ifname>] ...]\n"
@@ -67,6 +68,8 @@ static void usage(void)
 	printf("  -t = include timestamp in debug messages\n"
 	       "  -h = show this help text\n"
 	       "  -L = show license (GPL and BSD)\n"
+	       "  -o = override driver parameter for new interfaces\n"
+	       "  -O = override ctrl_interface parameter for new interfaces\n"
 	       "  -p = driver parameters\n"
 	       "  -P = PID file\n"
 	       "  -q = decrease debugging verbosity (-qq even less)\n");
@@ -140,7 +143,7 @@ int main(int argc, char *argv[])
 	wpa_supplicant_fd_workaround();
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bc:C:D:df:g:hi:KLNp:P:qstuvW");
+		c = getopt(argc, argv, "b:Bc:C:D:df:g:hi:KLNo:O:p:P:qstuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -191,6 +194,12 @@ int main(int argc, char *argv[])
 			license();
 			exitcode = 0;
 			goto out;
+		case 'o':
+			params.override_driver = optarg;
+			break;
+		case 'O':
+			params.override_ctrl_interface = optarg;
+			break;
 		case 'p':
 			iface->driver_param = optarg;
 			break;

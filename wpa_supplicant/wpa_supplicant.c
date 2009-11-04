@@ -2246,6 +2246,7 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 						 struct wpa_interface *iface)
 {
 	struct wpa_supplicant *wpa_s;
+	struct wpa_interface t_iface;
 
 	if (global == NULL || iface == NULL)
 		return NULL;
@@ -2254,7 +2255,22 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (wpa_s == NULL)
 		return NULL;
 
-	if (wpa_supplicant_init_iface(wpa_s, iface)) {
+	t_iface = *iface;
+	if (global->params.override_driver) {
+		wpa_printf(MSG_DEBUG, "Override interface parameter: driver "
+			   "('%s' -> '%s')",
+			   iface->driver, global->params.override_driver);
+		t_iface.driver = global->params.override_driver;
+	}
+	if (global->params.override_ctrl_interface) {
+		wpa_printf(MSG_DEBUG, "Override interface parameter: "
+			   "ctrl_interface ('%s' -> '%s')",
+			   iface->ctrl_interface,
+			   global->params.override_ctrl_interface);
+		t_iface.ctrl_interface =
+			global->params.override_ctrl_interface;
+	}
+	if (wpa_supplicant_init_iface(wpa_s, &t_iface)) {
 		wpa_printf(MSG_DEBUG, "Failed to add interface %s",
 			   iface->ifname);
 		wpa_supplicant_deinit_iface(wpa_s);
@@ -2388,6 +2404,12 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	if (params->ctrl_interface)
 		global->params.ctrl_interface =
 			os_strdup(params->ctrl_interface);
+	if (params->override_driver)
+		global->params.override_driver =
+			os_strdup(params->override_driver);
+	if (params->override_ctrl_interface)
+		global->params.override_ctrl_interface =
+			os_strdup(params->override_ctrl_interface);
 	wpa_debug_level = global->params.wpa_debug_level =
 		params->wpa_debug_level;
 	wpa_debug_show_keys = global->params.wpa_debug_show_keys =
@@ -2514,6 +2536,8 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 		os_free(global->params.pid_file);
 	}
 	os_free(global->params.ctrl_interface);
+	os_free(global->params.override_driver);
+	os_free(global->params.override_ctrl_interface);
 
 	os_free(global);
 	wpa_debug_close_syslog();

@@ -667,7 +667,13 @@ static void radius_server_receive_auth(int sock, void *eloop_ctx,
 {
 	struct radius_server_data *data = eloop_ctx;
 	u8 *buf = NULL;
-	struct sockaddr_storage from;
+	union {
+		struct sockaddr_storage ss;
+		struct sockaddr_in sin;
+#ifdef CONFIG_IPV6
+		struct sockaddr_in6 sin6;
+#endif /* CONFIG_IPV6 */
+	} from;
 	socklen_t fromlen;
 	int len;
 	struct radius_client *client = NULL;
@@ -682,7 +688,7 @@ static void radius_server_receive_auth(int sock, void *eloop_ctx,
 
 	fromlen = sizeof(from);
 	len = recvfrom(sock, buf, RADIUS_MAX_MSG_LEN, 0,
-		       (struct sockaddr *) &from, &fromlen);
+		       (struct sockaddr *) &from.ss, &fromlen);
 	if (len < 0) {
 		perror("recvfrom[radius_server]");
 		goto fail;
@@ -690,28 +696,26 @@ static void radius_server_receive_auth(int sock, void *eloop_ctx,
 
 #ifdef CONFIG_IPV6
 	if (data->ipv6) {
-		struct sockaddr_in6 *from6 = (struct sockaddr_in6 *) &from;
-		if (inet_ntop(AF_INET6, &from6->sin6_addr, abuf, sizeof(abuf))
-		    == NULL)
+		if (inet_ntop(AF_INET6, &from.sin6.sin6_addr, abuf,
+			      sizeof(abuf)) == NULL)
 			abuf[0] = '\0';
-		from_port = ntohs(from6->sin6_port);
+		from_port = ntohs(from.sin6.sin6_port);
 		RADIUS_DEBUG("Received %d bytes from %s:%d",
 			     len, abuf, from_port);
 
 		client = radius_server_get_client(data,
 						  (struct in_addr *)
-						  &from6->sin6_addr, 1);
+						  &from.sin6.sin6_addr, 1);
 	}
 #endif /* CONFIG_IPV6 */
 
 	if (!data->ipv6) {
-		struct sockaddr_in *from4 = (struct sockaddr_in *) &from;
-		os_strlcpy(abuf, inet_ntoa(from4->sin_addr), sizeof(abuf));
-		from_port = ntohs(from4->sin_port);
+		os_strlcpy(abuf, inet_ntoa(from.sin.sin_addr), sizeof(abuf));
+		from_port = ntohs(from.sin.sin_port);
 		RADIUS_DEBUG("Received %d bytes from %s:%d",
 			     len, abuf, from_port);
 
-		client = radius_server_get_client(data, &from4->sin_addr, 0);
+		client = radius_server_get_client(data, &from.sin.sin_addr, 0);
 	}
 
 	RADIUS_DUMP("Received data", buf, len);

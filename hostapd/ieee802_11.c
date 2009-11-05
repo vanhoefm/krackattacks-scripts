@@ -120,9 +120,8 @@ u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
 		    MAX_RX_AMPDU_FACTOR_64KB);
 
 	cap->capabilities_info = host_to_le16(hapd->iconf->ht_capab);
-
-	cap->supported_mcs_set[0] = 0xff;
-	cap->supported_mcs_set[1] = 0xff;
+	os_memcpy(cap->supported_mcs_set, hapd->iface->current_mode->mcs_set,
+		  16);
 
  	pos += sizeof(*cap);
 

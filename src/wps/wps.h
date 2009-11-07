@@ -32,6 +32,7 @@ enum wsc_op_code {
 
 struct wps_registrar;
 struct upnp_wps_device_sm;
+struct wps_er;
 
 /**
  * struct wps_credential - WPS Credential
@@ -605,5 +606,8 @@ int wps_get_oob_method(char *method);
 int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
 		    int registrar);
 int wps_attr_text(struct wpabuf *data, char *buf, char *end);
+
+struct wps_er * wps_er_init(struct wps_context *wps, const char *ifname);
+void wps_er_deinit(struct wps_er *er);
 
 #endif /* WPS_H */

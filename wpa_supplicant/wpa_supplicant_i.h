@@ -380,6 +380,7 @@ struct wpa_supplicant {
 
 	struct wps_context *wps;
 	int wps_success; /* WPS success event received */
+	struct wps_er *wps_er;
 	int blacklist_cleared;
 
 	struct wpabuf *pending_eapol_rx;

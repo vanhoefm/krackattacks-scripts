@@ -885,9 +885,8 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
  * @mac_addr_text: Buffer for returning allocated MAC address text
  * Returns: 0 on success, -1 on failure
  */
-static int get_netif_info(const char *net_if, unsigned *ip_addr,
-			  char **ip_addr_text, u8 mac[ETH_ALEN],
-			  char **mac_addr_text)
+int get_netif_info(const char *net_if, unsigned *ip_addr, char **ip_addr_text,
+		   u8 mac[ETH_ALEN], char **mac_addr_text)
 {
 	struct ifreq req;
 	int sock = -1;
@@ -930,7 +929,7 @@ static int get_netif_info(const char *net_if, unsigned *ip_addr,
 #else
 #error MAC address fetch not implemented
 #endif
-	os_snprintf(*mac_addr_text, 18, MACSTR, MAC2STR(req.ifr_addr.sa_data));
+	os_snprintf(*mac_addr_text, 18, MACSTR, MAC2STR(mac));
 
 	close(sock);
 	return 0;

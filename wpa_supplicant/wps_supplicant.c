@@ -814,6 +814,9 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->wps->network_key);
 	os_free(wpa_s->wps);
 	wpa_s->wps = NULL;
+
+	wps_er_deinit(wpa_s->wps_er);
+	wpa_s->wps_er = NULL;
 }
 
 
@@ -1020,4 +1023,31 @@ int wpas_wps_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 	ret = wps_attr_text(wps_ie, buf, end);
 	wpabuf_free(wps_ie);
 	return ret;
+}
+
+
+int wpas_wps_er_start(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_WPS_ER
+	if (wpa_s->wps_er) {
+		/* TODO: re-send ctrl_iface events for current data? */
+		return 0;
+	}
+	wpa_s->wps_er = wps_er_init(wpa_s->wps, wpa_s->ifname);
+	if (wpa_s->wps_er == NULL)
+		return -1;
+	return 0;
+#else /* CONFIG_WPS_ER */
+	return 0;
+#endif /* CONFIG_WPS_ER */
+}
+
+
+int wpas_wps_er_stop(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_WPS_ER
+	wps_er_deinit(wpa_s->wps_er);
+	wpa_s->wps_er = NULL;
+#endif /* CONFIG_WPS_ER */
+	return 0;
 }

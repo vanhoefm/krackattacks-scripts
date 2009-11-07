@@ -533,6 +533,22 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_wps_er_start(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "WPS_ER_START");
+
+}
+
+
+static int wpa_cli_cmd_wps_er_stop(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "WPS_ER_STOP");
+
+}
+
+
 static int wpa_cli_cmd_ibss_rsn(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -1397,6 +1413,12 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },
+	{ "wps_er_start", wpa_cli_cmd_wps_er_start,
+	  cli_cmd_flag_none,
+	  "= start Wi-Fi Protected Setup External Registrar" },
+	{ "wps_er_stop", wpa_cli_cmd_wps_er_stop,
+	  cli_cmd_flag_none,
+	  "= stop Wi-Fi Protected Setup External Registrar" },
 	{ "ibss_rsn", wpa_cli_cmd_ibss_rsn,
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },

@@ -497,6 +497,12 @@ ifdef NEED_WPS_OOB
 CFLAGS += -DCONFIG_WPS_OOB
 endif
 
+ifdef CONFIG_WPS_ER
+CONFIG_WPS_UPNP=y
+CFLAGS += -DCONFIG_WPS_ER
+OBJS += ../src/wps/wps_er.o
+endif
+
 ifdef CONFIG_WPS_UPNP
 CFLAGS += -DCONFIG_WPS_UPNP
 OBJS += ../src/wps/wps_upnp.o

@@ -191,7 +191,6 @@ void web_listener_stop(struct upnp_wps_device_sm *sm);
 
 /* wps_upnp_event.c */
 int event_add(struct subscription *s, const struct wpabuf *data);
-void event_delete(struct wps_event_ *e);
 void event_delete_all(struct subscription *s);
 void event_send_all_later(struct upnp_wps_device_sm *sm);
 void event_send_stop_all(struct upnp_wps_device_sm *sm);

@@ -297,3 +297,50 @@ struct wpabuf * http_client_get_body(struct http_client *c)
 		   httpread_length_get(c->hread));
 	return &c->body;
 }
+
+
+char * http_link_update(char *url, const char *base)
+{
+	char *n;
+	size_t len;
+	const char *pos;
+
+	/* RFC 2396, Chapter 5.2 */
+	/* TODO: consider adding all cases described in RFC 2396 */
+
+	if (url == NULL)
+		return NULL;
+
+	if (os_strncmp(url, "http://", 7) == 0)
+		return url; /* absolute link */
+
+	if (os_strncmp(base, "http://", 7) != 0)
+		return url; /* unable to handle base URL */
+
+	len = os_strlen(url) + 1 + os_strlen(base) + 1;
+	n = os_malloc(len);
+	if (n == NULL)
+		return url; /* failed */
+
+	if (url[0] == '/') {
+		pos = os_strchr(base + 7, '/');
+		if (pos == NULL) {
+			os_snprintf(n, len, "%s%s", base, url);
+		} else {
+			os_memcpy(n, base, pos - base);
+			os_memcpy(n + (pos - base), url, os_strlen(url));
+		}
+	} else {
+		pos = os_strrchr(base + 7, '/');
+		if (pos == NULL) {
+			os_snprintf(n, len, "%s/%s", base, url);
+		} else {
+			os_memcpy(n, base, pos - base + 1);
+			os_memcpy(n + (pos - base) + 1, url, os_strlen(url));
+		}
+	}
+
+	os_free(url);
+
+	return n;
+}

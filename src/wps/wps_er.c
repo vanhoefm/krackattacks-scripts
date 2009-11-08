@@ -17,17 +17,15 @@
 #include "common.h"
 #include "uuid.h"
 #include "eloop.h"
+#include "http_client.h"
+#include "upnp_xml.h"
 #include "wps_i.h"
 #include "wps_upnp.h"
 #include "wps_upnp_i.h"
 
 
 /* TODO:
- * SSDP M-SEARCH multicast TX for WFA
- * create AP entry
- * fetch wps_device info based on LOCATION: from SSDP NOTIFY
- * parse wps_device info into AP entry (name, SCPD/control/eventSub URLs, etc.
- * subscribe to events
+ * start own HTTP server for receiving events
  * send notification of new AP device with wpa_msg
  * re-send notifications with wpa_msg if ER re-started (to update wpa_gui-qt4)
  * (also re-send SSDP M-SEARCH in this case to find new APs)
@@ -41,7 +39,22 @@ struct wps_er_ap {
 	struct wps_er_ap *next;
 	struct in_addr addr;
 	char *location;
+	struct http_client *http;
 
+	char *friendly_name;
+	char *manufacturer;
+	char *manufacturer_url;
+	char *model_description;
+	char *model_name;
+	char *model_number;
+	char *model_url;
+	char *serial_number;
+	char *udn;
+	char *upc;
+
+	char *scpd_url;
+	char *control_url;
+	char *event_sub_url;
 };
 
 struct wps_er {
@@ -82,6 +95,23 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 		   inet_ntoa(ap->addr), ap->location);
 	eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
 	os_free(ap->location);
+	http_client_free(ap->http);
+
+	os_free(ap->friendly_name);
+	os_free(ap->manufacturer);
+	os_free(ap->manufacturer_url);
+	os_free(ap->model_description);
+	os_free(ap->model_name);
+	os_free(ap->model_number);
+	os_free(ap->model_url);
+	os_free(ap->serial_number);
+	os_free(ap->udn);
+	os_free(ap->upc);
+
+	os_free(ap->scpd_url);
+	os_free(ap->control_url);
+	os_free(ap->event_sub_url);
+
 	os_free(ap);
 }
 
@@ -92,6 +122,87 @@ static void wps_er_ap_timeout(void *eloop_data, void *user_ctx)
 	struct wps_er_ap *ap = user_ctx;
 	wpa_printf(MSG_DEBUG, "WPS ER: AP advertisement timed out");
 	wps_er_ap_free(er, ap);
+}
+
+
+static void wps_er_parse_device_description(struct wps_er_ap *ap,
+					    struct wpabuf *reply)
+{
+	/* Note: reply includes null termination after the buffer data */
+	const char *data = wpabuf_head(reply);
+
+	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Device info",
+			  wpabuf_head(reply), wpabuf_len(reply));
+
+	ap->friendly_name = xml_get_first_item(data, "friendlyName");
+	wpa_printf(MSG_DEBUG, "WPS ER: friendlyName='%s'", ap->friendly_name);
+
+	ap->manufacturer = xml_get_first_item(data, "manufacturer");
+	wpa_printf(MSG_DEBUG, "WPS ER: manufacturer='%s'", ap->manufacturer);
+
+	ap->manufacturer_url = xml_get_first_item(data, "manufacturerURL");
+	wpa_printf(MSG_DEBUG, "WPS ER: manufacturerURL='%s'",
+		   ap->manufacturer_url);
+
+	ap->model_description = xml_get_first_item(data, "modelDescription");
+	wpa_printf(MSG_DEBUG, "WPS ER: modelDescription='%s'",
+		   ap->model_description);
+
+	ap->model_name = xml_get_first_item(data, "modelName");
+	wpa_printf(MSG_DEBUG, "WPS ER: modelName='%s'", ap->model_name);
+
+	ap->model_number = xml_get_first_item(data, "modelNumber");
+	wpa_printf(MSG_DEBUG, "WPS ER: modelNumber='%s'", ap->model_number);
+
+	ap->model_url = xml_get_first_item(data, "modelURL");
+	wpa_printf(MSG_DEBUG, "WPS ER: modelURL='%s'", ap->model_url);
+
+	ap->serial_number = xml_get_first_item(data, "serialNumber");
+	wpa_printf(MSG_DEBUG, "WPS ER: serialNumber='%s'", ap->serial_number);
+
+	ap->udn = xml_get_first_item(data, "UDN");
+	wpa_printf(MSG_DEBUG, "WPS ER: UDN='%s'", ap->udn);
+
+	ap->upc = xml_get_first_item(data, "UPC");
+	wpa_printf(MSG_DEBUG, "WPS ER: UPC='%s'", ap->upc);
+
+	ap->scpd_url = http_link_update(
+		xml_get_first_item(data, "SCPDURL"), ap->location);
+	wpa_printf(MSG_DEBUG, "WPS ER: SCPDURL='%s'", ap->scpd_url);
+
+	ap->control_url = http_link_update(
+		xml_get_first_item(data, "controlURL"), ap->location);
+	wpa_printf(MSG_DEBUG, "WPS ER: controlURL='%s'", ap->control_url);
+
+	ap->event_sub_url = http_link_update(
+		xml_get_first_item(data, "eventSubURL"), ap->location);
+	wpa_printf(MSG_DEBUG, "WPS ER: eventSubURL='%s'", ap->event_sub_url);
+
+	/* TODO: subscribe for events */
+}
+
+
+static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
+				    enum http_client_event event)
+{
+	struct wps_er_ap *ap = ctx;
+	struct wpabuf *reply;
+
+	switch (event) {
+	case HTTP_CLIENT_OK:
+		reply = http_client_get_body(c);
+		if (reply == NULL)
+			break;
+		wps_er_parse_device_description(ap, reply);
+		break;
+	case HTTP_CLIENT_FAILED:
+	case HTTP_CLIENT_INVALID_REPLY:
+	case HTTP_CLIENT_TIMEOUT:
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to fetch device info");
+		break;
+	}
+	http_client_free(ap->http);
+	ap->http = NULL;
 }
 
 
@@ -125,7 +236,9 @@ static void wps_er_ap_add(struct wps_er *er, struct in_addr *addr,
 	wpa_printf(MSG_DEBUG, "WPS ER: Added AP entry for %s (%s)",
 		   inet_ntoa(ap->addr), ap->location);
 
-	/* TODO: get device data and subscribe for events */
+	/* Fetch device description */
+	ap->http = http_client_url(ap->location, NULL, 10000,
+				   wps_er_http_dev_desc_cb, ap);
 }
 
 

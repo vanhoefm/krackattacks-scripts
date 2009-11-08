@@ -11,6 +11,8 @@
 #ifndef UPNP_XML_H
 #define UPNP_XML_H
 
+#include "http.h"
+
 void xml_data_encode(struct wpabuf *buf, const char *data, int len);
 void xml_add_tagged_data(struct wpabuf *buf, const char *tag,
 			 const char *data);

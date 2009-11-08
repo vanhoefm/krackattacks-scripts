@@ -38,5 +38,6 @@ struct http_client * http_client_url(const char *url,
 				     void *cb_ctx);
 void http_client_free(struct http_client *c);
 struct wpabuf * http_client_get_body(struct http_client *c);
+char * http_link_update(char *url, const char *base);
 
 #endif /* HTTP_CLIENT_H */

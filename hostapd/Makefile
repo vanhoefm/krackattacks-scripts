@@ -310,6 +310,7 @@ OBJS += ../src/wps/wps_upnp_ssdp.o
 OBJS += ../src/wps/wps_upnp_web.o
 OBJS += ../src/wps/wps_upnp_event.o
 OBJS += ../src/wps/httpread.o
+OBJS += ../src/wps/http_client.o
 endif
 
 endif

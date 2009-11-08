@@ -130,8 +130,7 @@ struct upnp_wps_device_sm {
 	struct advertisement_state_machine *msearch_replies;
 	int n_msearch_replies; /* no. of pending M-SEARCH replies */
 	int web_port; /* our port that others get xml files from */
-	int web_sd; /* socket to listen for web requests */
-	int web_sd_registered; /* nonzero if we must cancel registration */
+	struct http_server *web_srv;
 	struct web_connection *web_connections; /* linked list */
 	int n_web_connections; /* no. of pending web connections */
 	/* Note: subscriptions are kept in expiry order */

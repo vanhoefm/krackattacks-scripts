@@ -512,6 +512,7 @@ OBJS += ../src/wps/wps_upnp_event.o
 OBJS += ../src/wps/upnp_xml.o
 OBJS += ../src/wps/httpread.o
 OBJS += ../src/wps/http_client.o
+OBJS += ../src/wps/http_server.o
 endif
 
 endif

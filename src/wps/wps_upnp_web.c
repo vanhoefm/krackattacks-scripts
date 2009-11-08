@@ -9,13 +9,12 @@
  */
 
 #include "includes.h"
-#include <fcntl.h>
 
 #include "common.h"
 #include "base64.h"
-#include "eloop.h"
 #include "uuid.h"
 #include "httpread.h"
+#include "http_server.h"
 #include "wps_i.h"
 #include "wps_upnp.h"
 #include "wps_upnp_i.h"
@@ -1593,9 +1592,9 @@ static void web_connection_got_file_handler(struct httpread *handle,
  * The socket descriptor sd is handed over for ownership by the WPS UPnP
  * state machine.
  */
-static void web_connection_start(struct upnp_wps_device_sm *sm,
-				 int sd, struct sockaddr_in *addr)
+static void web_connection_start(void *ctx, int sd, struct sockaddr_in *addr)
 {
+	struct upnp_wps_device_sm *sm = ctx;
 	struct web_connection *c = NULL;
 
 	/* if too many connections, bail */
@@ -1649,77 +1648,21 @@ fail:
 
 void web_listener_stop(struct upnp_wps_device_sm *sm)
 {
-	if (sm->web_sd_registered) {
-		sm->web_sd_registered = 0;
-		eloop_unregister_sock(sm->web_sd, EVENT_TYPE_READ);
-	}
-	if (sm->web_sd >= 0)
-		close(sm->web_sd);
-	sm->web_sd = -1;
-}
-
-
-static void web_listener_handler(int sd, void *eloop_ctx, void *sock_ctx)
-{
-	struct sockaddr_in addr;
-	socklen_t addr_len = sizeof(addr);
-	struct upnp_wps_device_sm *sm = sock_ctx;
-	int new_sd;
-
-	/* Create state for new connection */
-	/* Remember so we can cancel if need be */
-	new_sd = accept(sm->web_sd, (struct sockaddr *) &addr, &addr_len);
-	if (new_sd < 0) {
-		wpa_printf(MSG_ERROR, "WPS UPnP: web listener accept "
-			   "errno=%d (%s) web_sd=%d",
-			   errno, strerror(errno), sm->web_sd);
-		return;
-	}
-	web_connection_start(sm, new_sd, &addr);
+	http_server_deinit(sm->web_srv);
+	sm->web_srv = NULL;
 }
 
 
 int web_listener_start(struct upnp_wps_device_sm *sm)
 {
-	struct sockaddr_in addr;
-	int port;
-
-	sm->web_sd = socket(AF_INET, SOCK_STREAM, 0);
-	if (sm->web_sd < 0)
-		goto fail;
-	if (fcntl(sm->web_sd, F_SETFL, O_NONBLOCK) != 0)
-		goto fail;
-	port = 49152;  /* first non-reserved port */
-	for (;;) {
-		os_memset(&addr, 0, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_addr.s_addr = sm->ip_addr;
-		addr.sin_port = htons(port);
-		if (bind(sm->web_sd, (struct sockaddr *) &addr,
-			 sizeof(addr)) == 0)
-			break;
-		if (errno == EADDRINUSE) {
-			/* search for unused port */
-			if (++port == 65535)
-				goto fail;
-			continue;
-		}
-		goto fail;
+	struct in_addr addr;
+	addr.s_addr = sm->ip_addr;
+	sm->web_srv = http_server_init(&addr, -1, web_connection_start, sm);
+	if (sm->web_srv == NULL) {
+		web_listener_stop(sm);
+		return -1;
 	}
-	if (listen(sm->web_sd, 10 /* max backlog */) != 0)
-		goto fail;
-	if (fcntl(sm->web_sd, F_SETFL, O_NONBLOCK) != 0)
-		goto fail;
-	if (eloop_register_sock(sm->web_sd, EVENT_TYPE_READ,
-				web_listener_handler, NULL, sm))
-		goto fail;
-	sm->web_sd_registered = 1;
-	sm->web_port = port;
+	sm->web_port = http_server_get_port(sm->web_srv);
 
 	return 0;
-
-fail:
-	/* Error */
-	web_listener_stop(sm);
-	return -1;
 }

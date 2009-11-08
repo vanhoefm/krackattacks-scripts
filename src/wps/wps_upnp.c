@@ -956,8 +956,6 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Stop device");
 	web_listener_stop(sm);
-	while (sm->web_connections)
-		web_connection_stop(sm->web_connections);
 	while (sm->msearch_replies)
 		msearchreply_state_machine_stop(sm->msearch_replies);
 	while (sm->subscriptions)  {

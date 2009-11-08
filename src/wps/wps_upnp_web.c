@@ -38,28 +38,6 @@ static const char *http_connection_close =
 	"Connection: close\r\n";
 
 /*
- * Incoming web connections are recorded in this struct.
- * A web connection is a TCP connection to us, the server;
- * it is called a "web connection" because we use http and serve
- * data that looks like web pages.
- * State information is need to track the connection until we figure
- * out what they want and what we want to do about it.
- */
-struct web_connection {
-	/* double linked list */
-	struct web_connection *next;
-	struct web_connection *prev;
-	struct upnp_wps_device_sm *sm; /* parent */
-	int sd; /* socket to read from */
-	struct sockaddr_in cli_addr;
-	int sd_registered; /* nonzero if we must cancel registration */
-	struct httpread *hread; /* state machine for reading socket */
-	int n_rcvd_data; /* how much data read so far */
-	int done; /* internal flag, set when we've finished */
-};
-
-
-/*
  * "Files" that we serve via HTTP. The format of these files is given by
  * WFA WPS specifications. Extra white space has been removed to save space.
  */
@@ -378,27 +356,6 @@ static void format_wps_device_xml(struct upnp_wps_device_sm *sm,
 }
 
 
-void web_connection_stop(struct web_connection *c)
-{
-	struct upnp_wps_device_sm *sm = c->sm;
-
-	httpread_destroy(c->hread);
-	c->hread = NULL;
-	close(c->sd);
-	c->sd = -1;
-	if (c->next == c) {
-		sm->web_connections = NULL;
-	} else {
-		if (sm->web_connections == c)
-			sm->web_connections = c->next;
-		c->next->prev = c->prev;
-		c->prev->next = c->next;
-	}
-	os_free(c);
-	sm->n_web_connections--;
-}
-
-
 static void http_put_reply_code(struct wpabuf *buf, enum http_reply_code code)
 {
 	wpabuf_put_str(buf, "HTTP/1.1 ");
@@ -459,9 +416,9 @@ static void http_put_empty(struct wpabuf *buf, enum http_reply_code code)
  * Per RFC 2616, content-length: is not required but connection:close
  * would appear to be required (given that we will be closing it!).
  */
-static void web_connection_parse_get(struct web_connection *c, char *filename)
+static void web_connection_parse_get(struct upnp_wps_device_sm *sm,
+				     struct http_request *hreq, char *filename)
 {
-	struct upnp_wps_device_sm *sm = c->sm;
 	struct wpabuf *buf; /* output buffer, allocated */
 	char *put_length_here;
 	char *body_start;
@@ -502,8 +459,10 @@ static void web_connection_parse_get(struct web_connection *c, char *filename)
 		wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP GET file not found: %s",
 			   filename);
 		buf = wpabuf_alloc(200);
-		if (buf == NULL)
+		if (buf == NULL) {
+			http_request_deinit(hreq);
 			return;
+		}
 		wpabuf_put_str(buf,
 			       "HTTP/1.1 404 Not Found\r\n"
 			       "Connection: close\r\n");
@@ -517,8 +476,10 @@ static void web_connection_parse_get(struct web_connection *c, char *filename)
 	}
 
 	buf = wpabuf_alloc(1000 + extra_len);
-	if (buf == NULL)
+	if (buf == NULL) {
+		http_request_deinit(hreq);
 		return;
+	}
 
 	wpabuf_put_str(buf,
 		       "HTTP/1.1 200 OK\r\n"
@@ -555,8 +516,7 @@ static void web_connection_parse_get(struct web_connection *c, char *filename)
 	os_memcpy(put_length_here, len_buf, os_strlen(len_buf));
 
 send_buf:
-	send_wpabuf(c->sd, buf);
-	wpabuf_free(buf);
+	http_request_send_and_deinit(hreq, buf);
 }
 
 
@@ -940,7 +900,7 @@ static const char *soap_error_postfix =
 	"</detail>\n"
 	"</s:Fault>\n";
 
-static void web_connection_send_reply(struct web_connection *c,
+static void web_connection_send_reply(struct http_request *req,
 				      enum http_reply_code ret,
 				      const char *action, int action_len,
 				      const struct wpabuf *reply,
@@ -968,8 +928,8 @@ static void web_connection_send_reply(struct web_connection *c,
 	if (buf == NULL) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Cannot allocate reply to "
 			   "POST");
-		wpabuf_free(buf);
 		os_free(replydata);
+		http_request_deinit(req);
 		return;
 	}
 
@@ -1042,12 +1002,11 @@ static void web_connection_send_reply(struct web_connection *c,
 		os_memcpy(put_length_here, len_buf, os_strlen(len_buf));
 	}
 
-	send_wpabuf(c->sd, buf);
-	wpabuf_free(buf);
+	http_request_send_and_deinit(req, buf);
 }
 
 
-static const char * web_get_action(struct web_connection *c,
+static const char * web_get_action(struct http_request *req,
 				   const char *filename, size_t *action_len)
 {
 	const char *match;
@@ -1062,7 +1021,7 @@ static const char * web_get_action(struct web_connection *c,
 		return NULL;
 	}
 	/* The SOAPAction line of the header tells us what we want to do */
-	b = httpread_hdr_line_get(c->hread, "SOAPAction:");
+	b = http_request_get_hdr_line(req, "SOAPAction:");
 	if (b == NULL)
 		return NULL;
 	if (*b == '"')
@@ -1109,19 +1068,19 @@ static const char * web_get_action(struct web_connection *c,
  * Per RFC 2616, content-length: is not required but connection:close
  * would appear to be required (given that we will be closing it!).
  */
-static void web_connection_parse_post(struct web_connection *c,
+static void web_connection_parse_post(struct upnp_wps_device_sm *sm,
+				      struct http_request *req,
 				      const char *filename)
 {
 	enum http_reply_code ret;
-	struct upnp_wps_device_sm *sm = c->sm;
-	char *data = httpread_data_get(c->hread); /* body of http msg */
+	char *data = http_request_get_data(req); /* body of http msg */
 	const char *action;
 	size_t action_len;
 	const char *replyname = NULL; /* argument name for the reply */
 	struct wpabuf *reply = NULL; /* data for the reply */
 
 	ret = UPNP_INVALID_ACTION;
-	action = web_get_action(c, filename, &action_len);
+	action = web_get_action(req, filename, &action_len);
 	if (action == NULL)
 		goto bad;
 
@@ -1172,7 +1131,7 @@ static void web_connection_parse_post(struct web_connection *c,
 bad:
 	if (ret != HTTP_OK)
 		wpa_printf(MSG_INFO, "WPS UPnP: POST failure ret=%d", ret);
-	web_connection_send_reply(c, ret, action, action_len, reply,
+	web_connection_send_reply(req, ret, action, action_len, reply,
 				  replyname);
 	wpabuf_free(reply);
 }
@@ -1197,13 +1156,13 @@ bad:
  * Per RFC 2616, content-length: is not required but connection:close
  * would appear to be required (given that we will be closing it!).
  */
-static void web_connection_parse_subscribe(struct web_connection *c,
+static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
+					   struct http_request *req,
 					   const char *filename)
 {
-	struct upnp_wps_device_sm *sm = c->sm;
 	struct wpabuf *buf;
 	char *b;
-	char *hdr = httpread_hdr_get(c->hread);
+	char *hdr = http_request_get_hdr(req);
 	char *h;
 	char *match;
 	int match_len;
@@ -1217,8 +1176,10 @@ static void web_connection_parse_subscribe(struct web_connection *c,
 	enum http_reply_code ret = HTTP_INTERNAL_SERVER_ERROR;
 
 	buf = wpabuf_alloc(1000);
-	if (buf == NULL)
+	if (buf == NULL) {
+		http_request_deinit(req);
 		return;
+	}
 
 	/* Parse/validate headers */
 	h = hdr;
@@ -1360,9 +1321,8 @@ static void web_connection_parse_subscribe(struct web_connection *c,
 	/* And empty line to terminate header: */
 	wpabuf_put_str(buf, "\r\n");
 
-	send_wpabuf(c->sd, buf);
-	wpabuf_free(buf);
 	os_free(callback_urls);
+	http_request_send_and_deinit(req, buf);
 	return;
 
 error:
@@ -1388,8 +1348,7 @@ error:
 	*   599 Too many subscriptions (not a standard HTTP error)
 	*/
 	http_put_empty(buf, ret);
-	send_wpabuf(c->sd, buf);
-	wpabuf_free(buf);
+	http_request_send_and_deinit(req, buf);
 }
 
 
@@ -1408,12 +1367,12 @@ error:
  * Per RFC 2616, content-length: is not required but connection:close
  * would appear to be required (given that we will be closing it!).
  */
-static void web_connection_parse_unsubscribe(struct web_connection *c,
+static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
+					     struct http_request *req,
 					     const char *filename)
 {
-	struct upnp_wps_device_sm *sm = c->sm;
 	struct wpabuf *buf;
-	char *hdr = httpread_hdr_get(c->hread);
+	char *hdr = http_request_get_hdr(req);
 	char *h;
 	char *match;
 	int match_len;
@@ -1500,40 +1459,42 @@ static void web_connection_parse_unsubscribe(struct web_connection *c,
 
 send_msg:
 	buf = wpabuf_alloc(200);
-	if (buf == NULL)
+	if (buf == NULL) {
+		http_request_deinit(req);
 		return;
+	}
 	http_put_empty(buf, ret);
-	send_wpabuf(c->sd, buf);
-	wpabuf_free(buf);
+	http_request_send_and_deinit(req, buf);
 }
 
 
 /* Send error in response to unknown requests */
-static void web_connection_unimplemented(struct web_connection *c)
+static void web_connection_unimplemented(struct http_request *req)
 {
 	struct wpabuf *buf;
 	buf = wpabuf_alloc(200);
-	if (buf == NULL)
+	if (buf == NULL) {
+		http_request_deinit(req);
 		return;
+	}
 	http_put_empty(buf, HTTP_UNIMPLEMENTED);
-	send_wpabuf(c->sd, buf);
-	wpabuf_free(buf);
+	http_request_send_and_deinit(req, buf);
 }
 
 
 
 /* Called when we have gotten an apparently valid http request.
  */
-static void web_connection_check_data(struct web_connection *c)
+static void web_connection_check_data(void *ctx, struct http_request *req)
 {
-	struct httpread *hread = c->hread;
-	enum httpread_hdr_type htype = httpread_hdr_type_get(hread);
-	/* char *data = httpread_data_get(hread); */
-	char *filename = httpread_uri_get(hread);
+	struct upnp_wps_device_sm *sm = ctx;
+	enum httpread_hdr_type htype = http_request_get_type(req);
+	char *filename = http_request_get_uri(req);
+	struct sockaddr_in *cli = http_request_get_cli_addr(req);
 
-	c->done = 1;
 	if (!filename) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get HTTP URI");
+		http_request_deinit(req);
 		return;
 	}
 	/* Trim leading slashes from filename */
@@ -1541,22 +1502,22 @@ static void web_connection_check_data(struct web_connection *c)
 		filename++;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Got HTTP request type %d from %s:%d",
-		   htype, inet_ntoa(c->cli_addr.sin_addr),
-		   htons(c->cli_addr.sin_port));
+		   htype, inet_ntoa(cli->sin_addr), htons(cli->sin_port));
 
 	switch (htype) {
 	case HTTPREAD_HDR_TYPE_GET:
-		web_connection_parse_get(c, filename);
+		web_connection_parse_get(sm, req, filename);
 		break;
 	case HTTPREAD_HDR_TYPE_POST:
-		web_connection_parse_post(c, filename);
+		web_connection_parse_post(sm, req, filename);
 		break;
 	case HTTPREAD_HDR_TYPE_SUBSCRIBE:
-		web_connection_parse_subscribe(c, filename);
+		web_connection_parse_subscribe(sm, req, filename);
 		break;
 	case HTTPREAD_HDR_TYPE_UNSUBSCRIBE:
-		web_connection_parse_unsubscribe(c, filename);
+		web_connection_parse_unsubscribe(sm, req, filename);
 		break;
+
 		/* We are not required to support M-POST; just plain
 		 * POST is supposed to work, so we only support that.
 		 * If for some reason we need to support M-POST, it is
@@ -1564,79 +1525,9 @@ static void web_connection_check_data(struct web_connection *c)
 		 */
 	default:
 		/* Send 501 for anything else */
-		web_connection_unimplemented(c);
+		web_connection_unimplemented(req);
 		break;
 	}
-}
-
-
-
-/* called back when we have gotten request */
-static void web_connection_got_file_handler(struct httpread *handle,
-					    void *cookie,
-					    enum httpread_event en)
-{
-	struct web_connection *c = cookie;
-
-	if (en == HTTPREAD_EVENT_FILE_READY)
-		web_connection_check_data(c);
-	web_connection_stop(c);
-}
-
-
-/* web_connection_start - Start web connection
- * @sm: WPS UPnP state machine from upnp_wps_device_init()
- * @sd: Socket descriptor
- * @addr: Client address
- *
- * The socket descriptor sd is handed over for ownership by the WPS UPnP
- * state machine.
- */
-static void web_connection_start(void *ctx, int sd, struct sockaddr_in *addr)
-{
-	struct upnp_wps_device_sm *sm = ctx;
-	struct web_connection *c = NULL;
-
-	/* if too many connections, bail */
-	if (sm->n_web_connections >= MAX_WEB_CONNECTIONS) {
-		close(sd);
-		return;
-	}
-
-	c = os_zalloc(sizeof(*c));
-	if (c == NULL)
-		return;
-	os_memcpy(&c->cli_addr, addr, sizeof(c->cli_addr));
-	c->sm = sm;
-	c->sd = sd;
-#if 0
-	/*
-	 * Setting non-blocking should not be necessary for read, and can mess
-	 * up sending where blocking might be better.
-	 */
-	if (fcntl(sd, F_SETFL, O_NONBLOCK) != 0)
-		break;
-#endif
-	c->hread = httpread_create(c->sd, web_connection_got_file_handler,
-				   c /* cookie */,
-				   WEB_CONNECTION_MAX_READ,
-				   WEB_CONNECTION_TIMEOUT_SEC);
-	if (c->hread == NULL)
-		goto fail;
-	if (sm->web_connections) {
-		c->next = sm->web_connections;
-		c->prev = c->next->prev;
-		c->prev->next = c;
-		c->next->prev = c;
-	} else {
-		sm->web_connections = c->next = c->prev = c;
-	}
-	sm->n_web_connections++;
-	return;
-
-fail:
-	if (c)
-		web_connection_stop(c);
 }
 
 
@@ -1657,7 +1548,8 @@ int web_listener_start(struct upnp_wps_device_sm *sm)
 {
 	struct in_addr addr;
 	addr.s_addr = sm->ip_addr;
-	sm->web_srv = http_server_init(&addr, -1, web_connection_start, sm);
+	sm->web_srv = http_server_init(&addr, -1, web_connection_check_data,
+				       sm);
 	if (sm->web_srv == NULL) {
 		web_listener_stop(sm);
 		return -1;

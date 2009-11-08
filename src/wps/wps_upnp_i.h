@@ -30,7 +30,6 @@
 #define MULTICAST_MAX_READ 1600 /* max bytes we'll read for UPD request */
 
 
-struct web_connection;
 struct subscription;
 struct upnp_wps_device_sm;
 
@@ -131,8 +130,6 @@ struct upnp_wps_device_sm {
 	int n_msearch_replies; /* no. of pending M-SEARCH replies */
 	int web_port; /* our port that others get xml files from */
 	struct http_server *web_srv;
-	struct web_connection *web_connections; /* linked list */
-	int n_web_connections; /* no. of pending web connections */
 	/* Note: subscriptions are kept in expiry order */
 	struct subscription *subscriptions; /* linked list */
 	int n_subscriptions; /* no of current subscriptions */
@@ -171,7 +168,6 @@ int ssdp_open_multicast_sock(u32 ip_addr);
 int ssdp_open_multicast(struct upnp_wps_device_sm *sm);
 
 /* wps_upnp_web.c */
-void web_connection_stop(struct web_connection *c);
 int web_listener_start(struct upnp_wps_device_sm *sm);
 void web_listener_stop(struct upnp_wps_device_sm *sm);
 

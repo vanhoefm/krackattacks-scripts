@@ -11,6 +11,8 @@
 #ifndef WPS_UPNP_I_H
 #define WPS_UPNP_I_H
 
+#include "http.h"
+
 #define UPNP_MULTICAST_ADDRESS  "239.255.255.250" /* for UPnP multicasting */
 #define UPNP_MULTICAST_PORT 1900 /* UDP port to monitor for UPnP */
 
@@ -31,21 +33,6 @@
 struct web_connection;
 struct subscription;
 struct upnp_wps_device_sm;
-
-
-enum http_reply_code {
-	HTTP_OK = 200,
-	HTTP_BAD_REQUEST = 400,
-	UPNP_INVALID_ACTION = 401,
-	UPNP_INVALID_ARGS = 402,
-	HTTP_PRECONDITION_FAILED = 412,
-	HTTP_INTERNAL_SERVER_ERROR = 500,
-	HTTP_UNIMPLEMENTED = 501,
-	UPNP_ACTION_FAILED = 501,
-	UPNP_ARG_VALUE_INVALID = 600,
-	UPNP_ARG_VALUE_OUT_OF_RANGE = 601,
-	UPNP_OUT_OF_MEMORY = 603
-};
 
 
 enum advertisement_type_enum {

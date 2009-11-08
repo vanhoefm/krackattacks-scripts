@@ -19,6 +19,7 @@
 #include "wps_i.h"
 #include "wps_upnp.h"
 #include "wps_upnp_i.h"
+#include "upnp_xml.h"
 
 /***************************************************************************
  * Web connections (we serve pages of info about ourselves, handle
@@ -57,216 +58,6 @@ struct web_connection {
 	int n_rcvd_data; /* how much data read so far */
 	int done; /* internal flag, set when we've finished */
 };
-
-
-/*
- * XML parsing and formatting
- *
- * XML is a markup language based on unicode; usually (and in our case,
- * always!) based on utf-8. utf-8 uses a variable number of bytes per
- * character. utf-8 has the advantage that all non-ASCII unicode characters are
- * represented by sequences of non-ascii (high bit set) bytes, whereas ASCII
- * characters are single ascii bytes, thus we can use typical text processing.
- *
- * (One other interesting thing about utf-8 is that it is possible to look at
- * any random byte and determine if it is the first byte of a character as
- * versus a continuation byte).
- *
- * The base syntax of XML uses a few ASCII punctionation characters; any
- * characters that would appear in the payload data are rewritten using
- * sequences, e.g., &amp; for ampersand(&) and &lt for left angle bracket (<).
- * Five such escapes total (more can be defined but that does not apply to our
- * case). Thus we can safely parse for angle brackets etc.
- *
- * XML describes tree structures of tagged data, with each element beginning
- * with an opening tag <label> and ending with a closing tag </label> with
- * matching label. (There is also a self-closing tag <label/> which is supposed
- * to be equivalent to <label></label>, i.e., no payload, but we are unlikely
- * to see it for our purpose).
- *
- * Actually the opening tags are a little more complicated because they can
- * contain "attributes" after the label (delimited by ascii space or tab chars)
- * of the form attribute_label="value" or attribute_label='value'; as it turns
- * out we do not have to read any of these attributes, just ignore them.
- *
- * Labels are any sequence of chars other than space, tab, right angle bracket
- * (and ?), but may have an inner structure of <namespace><colon><plain_label>.
- * As it turns out, we can ignore the namespaces, in fact we can ignore the
- * entire tree hierarchy, because the plain labels we are looking for will be
- * unique (not in general, but for this application). We do however have to be
- * careful to skip over the namespaces.
- *
- * In generating XML we have to be more careful, but that is easy because
- * everything we do is pretty canned. The only real care to take is to escape
- * any special chars in our payload.
- */
-
-/**
- * xml_next_tag - Advance to next tag
- * @in: Input
- * @out: OUT: start of tag just after '<'
- * @out_tagname: OUT: start of name of tag, skipping namespace
- * @end: OUT: one after tag
- * Returns: 0 on success, 1 on failure
- *
- * A tag has form:
- *     <left angle bracket><...><right angle bracket>
- * Within the angle brackets, there is an optional leading forward slash (which
- * makes the tag an ending tag), then an optional leading label (followed by
- * colon) and then the tag name itself.
- *
- * Note that angle brackets present in the original data must have been encoded
- * as &lt; and &gt; so they will not trouble us.
- */
-static int xml_next_tag(char *in, char **out, char **out_tagname,
-			char **end)
-{
-	while (*in && *in != '<')
-		in++;
-	if (*in != '<')
-		return 1;
-	*out = ++in;
-	if (*in == '/')
-		in++;
-	*out_tagname = in; /* maybe */
-	while (isalnum(*in) || *in == '-')
-		in++;
-	if (*in == ':')
-		*out_tagname = ++in;
-	while (*in && *in != '>')
-		in++;
-	if (*in != '>')
-		return 1;
-	*end = ++in;
-	return 0;
-}
-
-
-/* xml_data_encode -- format data for xml file, escaping special characters.
- *
- * Note that we assume we are using utf8 both as input and as output!
- * In utf8, characters may be classed as follows:
- *     0xxxxxxx(2) -- 1 byte ascii char
- *     11xxxxxx(2) -- 1st byte of multi-byte char w/ unicode value >= 0x80
- *         110xxxxx(2) -- 1st byte of 2 byte sequence (5 payload bits here)
- *         1110xxxx(2) -- 1st byte of 3 byte sequence (4 payload bits here)
- *         11110xxx(2) -- 1st byte of 4 byte sequence (3 payload bits here)
- *      10xxxxxx(2) -- extension byte (6 payload bits per byte)
- *      Some values implied by the above are however illegal because they
- *      do not represent unicode chars or are not the shortest encoding.
- * Actually, we can almost entirely ignore the above and just do
- * text processing same as for ascii text.
- *
- * XML is written with arbitrary unicode characters, except that five
- * characters have special meaning and so must be escaped where they
- * appear in payload data... which we do here.
- */
-static void xml_data_encode(struct wpabuf *buf, const char *data, int len)
-{
-	int i;
-	for (i = 0; i < len; i++) {
-		u8 c = ((u8 *) data)[i];
-		if (c == '<') {
-			wpabuf_put_str(buf, "&lt;");
-			continue;
-		}
-		if (c == '>') {
-			wpabuf_put_str(buf, "&gt;");
-			continue;
-		}
-		if (c == '&') {
-			wpabuf_put_str(buf, "&amp;");
-			continue;
-		}
-		if (c == '\'') {
-			wpabuf_put_str(buf, "&apos;");
-			continue;
-		}
-		if (c == '"') {
-			wpabuf_put_str(buf, "&quot;");
-			continue;
-		}
-		/*
-		 * We could try to represent control characters using the
-		 * sequence: &#x; where x is replaced by a hex numeral, but not
-		 * clear why we would do this.
-		 */
-		wpabuf_put_u8(buf, c);
-	}
-}
-
-
-/* xml_add_tagged_data -- format tagged data as a new xml line.
- *
- * tag must not have any special chars.
- * data may have special chars, which are escaped.
- */
-static void xml_add_tagged_data(struct wpabuf *buf, const char *tag,
-				const char *data)
-{
-	wpabuf_printf(buf, "<%s>", tag);
-	xml_data_encode(buf, data, os_strlen(data));
-	wpabuf_printf(buf, "</%s>\n", tag);
-}
-
-
-/* A POST body looks something like (per upnp spec):
- * <?xml version="1.0"?>
- * <s:Envelope
- *     xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
- *     s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
- *   <s:Body>
- *     <u:actionName xmlns:u="urn:schemas-upnp-org:service:serviceType:v">
- *       <argumentName>in arg value</argumentName>
- *       other in args and their values go here, if any
- *     </u:actionName>
- *   </s:Body>
- * </s:Envelope>
- *
- * where :
- *      s: might be some other namespace name followed by colon
- *      u: might be some other namespace name followed by colon
- *      actionName will be replaced according to action requested
- *      schema following actionName will be WFA scheme instead
- *      argumentName will be actual argument name
- *      (in arg value) will be actual argument value
- */
-static int
-upnp_get_first_document_item(char *doc, const char *item, char **value)
-{
-	const char *match = item;
-	int match_len = os_strlen(item);
-	char *tag;
-	char *tagname;
-	char *end;
-
-	*value = NULL;          /* default, bad */
-
-	/*
-	 * This is crude: ignore any possible tag name conflicts and go right
-	 * to the first tag of this name. This should be ok for the limited
-	 * domain of UPnP messages.
-	 */
-	for (;;) {
-		if (xml_next_tag(doc, &tag, &tagname, &end))
-			return 1;
-		doc = end;
-		if (!os_strncasecmp(tagname, match, match_len) &&
-		    *tag != '/' &&
-		    (tagname[match_len] == '>' ||
-		     !isgraph(tagname[match_len]))) {
-			break;
-		}
-	}
-	end = doc;
-	while (*end && *end != '<')
-		end++;
-	*value = os_zalloc(1 + (end - doc));
-	if (*value == NULL)
-		return 1;
-	os_memcpy(*value, doc, end - doc);
-	return 0;
-}
 
 
 /*
@@ -770,36 +561,6 @@ send_buf:
 }
 
 
-static struct wpabuf * web_get_item(char *data, const char *name,
-				    enum http_reply_code *ret)
-{
-	char *msg;
-	struct wpabuf *buf;
-	unsigned char *decoded;
-	size_t len;
-
-	if (upnp_get_first_document_item(data, name, &msg)) {
-		*ret = UPNP_ARG_VALUE_INVALID;
-		return NULL;
-	}
-
-	decoded = base64_decode((unsigned char *) msg, os_strlen(msg), &len);
-	os_free(msg);
-	if (decoded == NULL) {
-		*ret = UPNP_OUT_OF_MEMORY;
-		return NULL;
-	}
-
-	buf = wpabuf_alloc_ext_data(decoded, len);
-	if (buf == NULL) {
-		os_free(decoded);
-		*ret = UPNP_OUT_OF_MEMORY;
-		return NULL;
-	}
-	return buf;
-}
-
-
 static enum http_reply_code
 web_process_get_device_info(struct upnp_wps_device_sm *sm,
 			    struct wpabuf **reply, const char **replyname)
@@ -835,7 +596,7 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 	wpa_printf(MSG_DEBUG, "WPS UPnP: PutMessage");
 	if (sm->ctx->rx_req_put_message == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;
-	msg = web_get_item(data, "NewInMessage", &ret);
+	msg = xml_get_base64_item(data, "NewInMessage", &ret);
 	if (msg == NULL)
 		return ret;
 	*reply = sm->ctx->rx_req_put_message(sm->priv, &sm->peer, msg);
@@ -858,7 +619,7 @@ web_process_get_ap_settings(struct upnp_wps_device_sm *sm, char *data,
 	wpa_printf(MSG_DEBUG, "WPS UPnP: GetAPSettings");
 	if (sm->ctx->rx_req_get_ap_settings == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;
-	msg = web_get_item(data, "NewMessage", &ret);
+	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
 	*reply = sm->ctx->rx_req_get_ap_settings(sm->priv, msg);
@@ -878,7 +639,7 @@ web_process_set_ap_settings(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: SetAPSettings");
-	msg = web_get_item(data, "NewAPSettings", &ret);
+	msg = xml_get_base64_item(data, "NewAPSettings", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_set_ap_settings ||
@@ -901,7 +662,7 @@ web_process_del_ap_settings(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: DelAPSettings");
-	msg = web_get_item(data, "NewAPSettings", &ret);
+	msg = xml_get_base64_item(data, "NewAPSettings", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_del_ap_settings ||
@@ -927,7 +688,7 @@ web_process_get_sta_settings(struct upnp_wps_device_sm *sm, char *data,
 	wpa_printf(MSG_DEBUG, "WPS UPnP: GetSTASettings");
 	if (sm->ctx->rx_req_get_sta_settings == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;
-	msg = web_get_item(data, "NewMessage", &ret);
+	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
 	*reply = sm->ctx->rx_req_get_sta_settings(sm->priv, msg);
@@ -947,7 +708,7 @@ web_process_set_sta_settings(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: SetSTASettings");
-	msg = web_get_item(data, "NewSTASettings", &ret);
+	msg = xml_get_base64_item(data, "NewSTASettings", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_set_sta_settings ||
@@ -970,7 +731,7 @@ web_process_del_sta_settings(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: DelSTASettings");
-	msg = web_get_item(data, "NewSTASettings", &ret);
+	msg = xml_get_base64_item(data, "NewSTASettings", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_del_sta_settings ||
@@ -1002,18 +763,18 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 	 */
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: PutWLANResponse");
-	msg = web_get_item(data, "NewMessage", &ret);
+	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
-	if (upnp_get_first_document_item(data, "NewWLANEventType", &val)) {
+	val = xml_get_first_item(data, "NewWLANEventType");
+	if (val == NULL) {
 		wpabuf_free(msg);
 		return UPNP_ARG_VALUE_INVALID;
 	}
 	ev_type = atol(val);
 	os_free(val);
-	val = NULL;
-	if (upnp_get_first_document_item(data, "NewWLANEventMAC", &val) ||
-	    hwaddr_aton(val, macaddr)) {
+	val = xml_get_first_item(data, "NewWLANEventMAC");
+	if (val == NULL || hwaddr_aton(val, macaddr)) {
 		wpabuf_free(msg);
 		os_free(val);
 		return UPNP_ARG_VALUE_INVALID;
@@ -1053,7 +814,7 @@ web_process_set_selected_registrar(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: SetSelectedRegistrar");
-	msg = web_get_item(data, "NewMessage", &ret);
+	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_set_selected_registrar ||
@@ -1076,7 +837,7 @@ web_process_reboot_ap(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: RebootAP");
-	msg = web_get_item(data, "NewAPSettings", &ret);
+	msg = xml_get_base64_item(data, "NewAPSettings", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_reboot_ap ||
@@ -1099,7 +860,7 @@ web_process_reset_ap(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: ResetAP");
-	msg = web_get_item(data, "NewMessage", &ret);
+	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_reset_ap ||
@@ -1122,7 +883,7 @@ web_process_reboot_sta(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: RebootSTA");
-	msg = web_get_item(data, "NewSTASettings", &ret);
+	msg = xml_get_base64_item(data, "NewSTASettings", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_reboot_sta ||
@@ -1145,7 +906,7 @@ web_process_reset_sta(struct upnp_wps_device_sm *sm, char *data,
 	enum http_reply_code ret;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: ResetSTA");
-	msg = web_get_item(data, "NewMessage", &ret);
+	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
 	if (!sm->ctx->rx_req_reset_sta ||

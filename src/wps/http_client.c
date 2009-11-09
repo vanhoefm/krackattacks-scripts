@@ -193,25 +193,17 @@ struct http_client * http_client_addr(struct sockaddr_in *dst,
 }
 
 
-struct http_client * http_client_url(const char *url,
-				     struct wpabuf *req, size_t max_response,
-				     void (*cb)(void *ctx,
-						struct http_client *c,
-						enum http_client_event event),
-				     void *cb_ctx)
+char * http_client_url_parse(const char *url, struct sockaddr_in *dst,
+			     char **ret_path)
 {
-	struct sockaddr_in dst;
-	struct http_client *c;
 	char *u, *addr, *port, *path;
-	struct wpabuf *req_buf = NULL;
 
-	if (os_strncmp(url, "http://", 7) != 0)
-		return NULL;
 	u = os_strdup(url);
 	if (u == NULL)
 		return NULL;
-	os_memset(&dst, 0, sizeof(dst));
-	dst.sin_family = AF_INET;
+
+	os_memset(dst, 0, sizeof(*dst));
+	dst->sin_family = AF_INET;
 	addr = u + 7;
 	path = os_strchr(addr, '/');
 	port = os_strchr(addr, ':');
@@ -225,7 +217,7 @@ struct http_client * http_client_url(const char *url,
 	if (port)
 		*port++ = '\0';
 
-	if (inet_aton(addr, &dst.sin_addr) == 0) {
+	if (inet_aton(addr, &dst->sin_addr) == 0) {
 		/* TODO: name lookup */
 		wpa_printf(MSG_DEBUG, "HTTP: Unsupported address in URL '%s' "
 			   "(addr='%s' port='%s')",
@@ -235,14 +227,38 @@ struct http_client * http_client_url(const char *url,
 	}
 
 	if (port)
-		dst.sin_port = htons(atoi(port));
+		dst->sin_port = htons(atoi(port));
 	else
-		dst.sin_port = htons(80);
+		dst->sin_port = htons(80);
 
 	if (*path == '\0') {
 		/* remove temporary nul termination for address */
 		*path = '/';
 	}
+
+	*ret_path = path;
+
+	return u;
+}
+
+
+struct http_client * http_client_url(const char *url,
+				     struct wpabuf *req, size_t max_response,
+				     void (*cb)(void *ctx,
+						struct http_client *c,
+						enum http_client_event event),
+				     void *cb_ctx)
+{
+	struct sockaddr_in dst;
+	struct http_client *c;
+	char *u, *path;
+	struct wpabuf *req_buf = NULL;
+
+	if (os_strncmp(url, "http://", 7) != 0)
+		return NULL;
+	u = http_client_url_parse(url, &dst, &path);
+	if (u == NULL)
+		return NULL;
 
 	if (req == NULL) {
 		req_buf = wpabuf_alloc(os_strlen(url) + 1000);

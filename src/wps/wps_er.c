@@ -17,7 +17,9 @@
 #include "common.h"
 #include "uuid.h"
 #include "eloop.h"
+#include "httpread.h"
 #include "http_client.h"
+#include "http_server.h"
 #include "upnp_xml.h"
 #include "wps_i.h"
 #include "wps_upnp.h"
@@ -25,7 +27,6 @@
 
 
 /* TODO:
- * start own HTTP server for receiving events
  * send notification of new AP device with wpa_msg
  * re-send notifications with wpa_msg if ER re-started (to update wpa_gui-qt4)
  * (also re-send SSDP M-SEARCH in this case to find new APs)
@@ -37,6 +38,7 @@ static void wps_er_ap_timeout(void *eloop_data, void *user_ctx);
 
 struct wps_er_ap {
 	struct wps_er_ap *next;
+	struct wps_er *er;
 	struct in_addr addr;
 	char *location;
 	struct http_client *http;
@@ -55,6 +57,9 @@ struct wps_er_ap {
 	char *scpd_url;
 	char *control_url;
 	char *event_sub_url;
+
+	int subscribed;
+	unsigned int id;
 };
 
 struct wps_er {
@@ -67,6 +72,9 @@ struct wps_er {
 	int multicast_sd;
 	int ssdp_sd;
 	struct wps_er_ap *ap;
+	struct http_server *http_srv;
+	int http_port;
+	unsigned int next_ap_id;
 };
 
 
@@ -89,8 +97,21 @@ static struct wps_er_ap * wps_er_ap_get(struct wps_er *er,
 }
 
 
+static struct wps_er_ap * wps_er_ap_get_id(struct wps_er *er, unsigned int id)
+{
+	struct wps_er_ap *ap;
+	for (ap = er->ap; ap; ap = ap->next) {
+		if (ap->id == id)
+			break;
+	}
+	return ap;
+}
+
+
 static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 {
+	/* TODO: if ap->subscribed, unsubscribe from events if the AP is still
+	 * alive */
 	wpa_printf(MSG_DEBUG, "WPS ER: Removing AP entry for %s (%s)",
 		   inet_ntoa(ap->addr), ap->location);
 	eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
@@ -122,6 +143,74 @@ static void wps_er_ap_timeout(void *eloop_data, void *user_ctx)
 	struct wps_er_ap *ap = user_ctx;
 	wpa_printf(MSG_DEBUG, "WPS ER: AP advertisement timed out");
 	wps_er_ap_free(er, ap);
+}
+
+
+static void wps_er_http_subscribe_cb(void *ctx, struct http_client *c,
+				     enum http_client_event event)
+{
+	struct wps_er_ap *ap = ctx;
+
+	switch (event) {
+	case HTTP_CLIENT_OK:
+		wpa_printf(MSG_DEBUG, "WPS ER: Subscribed to events");
+		break;
+	case HTTP_CLIENT_FAILED:
+	case HTTP_CLIENT_INVALID_REPLY:
+	case HTTP_CLIENT_TIMEOUT:
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to subscribe to events");
+		break;
+	}
+	http_client_free(ap->http);
+	ap->http = NULL;
+}
+
+
+static void wps_er_subscribe(struct wps_er_ap *ap)
+{
+	struct wpabuf *req;
+	struct sockaddr_in dst;
+	char *url, *path;
+
+	if (ap->event_sub_url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No eventSubURL - cannot "
+			   "subscribe");
+		return;
+	}
+	if (ap->http) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP request - cannot "
+			   "send subscribe request");
+		return;
+	}
+
+	url = http_client_url_parse(ap->event_sub_url, &dst, &path);
+	if (url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse eventSubURL");
+		return;
+	}
+
+	req = wpabuf_alloc(os_strlen(ap->event_sub_url) + 1000);
+	if (req == NULL) {
+		os_free(url);
+		return;
+	}
+	wpabuf_printf(req,
+		      "SUBSCRIBE %s HTTP/1.1\r\n"
+		      "HOST: %s:%d\r\n"
+		      "CALLBACK: <http://%s:%d/event/%d>\r\n"
+		      "NT: upnp:event\r\n"
+		      "TIMEOUT: Second-%d\r\n"
+		      "\r\n",
+		      path, inet_ntoa(dst.sin_addr), ntohs(dst.sin_port),
+		      ap->er->ip_addr_text, ap->er->http_port, ap->id, 1800);
+	os_free(url);
+	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Subscription request",
+			  wpabuf_head(req), wpabuf_len(req));
+
+	ap->http = http_client_addr(&dst, req, 1000, wps_er_http_subscribe_cb,
+				    ap);
+	if (ap->http == NULL)
+		wpabuf_free(req);
 }
 
 
@@ -177,8 +266,6 @@ static void wps_er_parse_device_description(struct wps_er_ap *ap,
 	ap->event_sub_url = http_link_update(
 		xml_get_first_item(data, "eventSubURL"), ap->location);
 	wpa_printf(MSG_DEBUG, "WPS ER: eventSubURL='%s'", ap->event_sub_url);
-
-	/* TODO: subscribe for events */
 }
 
 
@@ -187,6 +274,7 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 {
 	struct wps_er_ap *ap = ctx;
 	struct wpabuf *reply;
+	int subscribe = 0;
 
 	switch (event) {
 	case HTTP_CLIENT_OK:
@@ -194,6 +282,7 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 		if (reply == NULL)
 			break;
 		wps_er_parse_device_description(ap, reply);
+		subscribe = 1;
 		break;
 	case HTTP_CLIENT_FAILED:
 	case HTTP_CLIENT_INVALID_REPLY:
@@ -203,6 +292,8 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 	}
 	http_client_free(ap->http);
 	ap->http = NULL;
+	if (subscribe)
+		wps_er_subscribe(ap);
 }
 
 
@@ -222,6 +313,8 @@ static void wps_er_ap_add(struct wps_er *er, struct in_addr *addr,
 	ap = os_zalloc(sizeof(*ap));
 	if (ap == NULL)
 		return;
+	ap->er = er;
+	ap->id = ++er->next_ap_id;
 	ap->location = os_strdup(location);
 	if (ap->location == NULL) {
 		os_free(ap);
@@ -396,11 +489,65 @@ static void wps_er_send_ssdp_msearch(struct wps_er *er)
 }
 
 
+static void wps_er_http_event(struct wps_er *er, struct http_request *req,
+			      unsigned int ap_id)
+{
+	struct wps_er_ap *ap = wps_er_ap_get_id(er, ap_id);
+	if (ap == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: HTTP event from unknown AP id "
+			   "%u", ap_id);
+		return;
+	}
+	wpa_printf(MSG_MSGDUMP, "WPS ER: HTTP event from AP id %u: %s",
+		   ap_id, http_request_get_data(req));
+	/* TODO */
+	http_request_deinit(req);
+}
+
+
+static void wps_er_http_notify(struct wps_er *er, struct http_request *req)
+{
+	char *uri = http_request_get_uri(req);
+
+	if (os_strncmp(uri, "/event/", 7) == 0) {
+		wps_er_http_event(er, req, atoi(uri + 7));
+	} else {
+		wpa_printf(MSG_DEBUG, "WPS ER: Unknown HTTP NOTIFY for '%s'",
+			   uri);
+		http_request_deinit(req);
+	}
+}
+
+
+static void wps_er_http_req(void *ctx, struct http_request *req)
+{
+	struct wps_er *er = ctx;
+	struct sockaddr_in *cli = http_request_get_cli_addr(req);
+	enum httpread_hdr_type type = http_request_get_type(req);
+	wpa_printf(MSG_DEBUG, "WPS ER: HTTP request: '%s' (type %d) from "
+		   "%s:%d",
+		   http_request_get_uri(req), type,
+		   inet_ntoa(cli->sin_addr), ntohs(cli->sin_port));
+
+	switch (type) {
+	case HTTPREAD_HDR_TYPE_NOTIFY:
+		wps_er_http_notify(er, req);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "WPS ER: Unsupported HTTP request type "
+			   "%d", type);
+		http_request_deinit(req);
+		break;
+	}
+}
+
+
 struct wps_er *
 wps_er_init(struct wps_context *wps, const char *ifname)
 {
 	struct wps_er *er;
 	struct wps_registrar_config rcfg;
+	struct in_addr addr;
 
 	er = os_zalloc(sizeof(*er));
 	if (er == NULL)
@@ -453,6 +600,14 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 		return NULL;
 	}
 
+	addr.s_addr = er->ip_addr;
+	er->http_srv = http_server_init(&addr, -1, wps_er_http_req, er);
+	if (er->http_srv == NULL) {
+		wps_er_deinit(er);
+		return NULL;
+	}
+	er->http_port = http_server_get_port(er->http_srv);
+
 	wpa_printf(MSG_DEBUG, "WPS ER: Start (ifname=%s ip_addr=%s "
 		   "mac_addr=%s)",
 		   er->ifname, er->ip_addr_text, er->mac_addr_text);
@@ -467,6 +622,7 @@ void wps_er_deinit(struct wps_er *er)
 {
 	if (er == NULL)
 		return;
+	http_server_deinit(er->http_srv);
 	wps_er_ap_remove_all(er);
 	if (er->multicast_sd >= 0) {
 		eloop_unregister_sock(er->multicast_sd, EVENT_TYPE_READ);

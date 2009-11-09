@@ -24,6 +24,8 @@ enum http_client_event {
 	HTTP_CLIENT_INVALID_REPLY,
 };
 
+char * http_client_url_parse(const char *url, struct sockaddr_in *dst,
+			     char **path);
 struct http_client * http_client_addr(struct sockaddr_in *dst,
 				      struct wpabuf *req, size_t max_response,
 				      void (*cb)(void *ctx,

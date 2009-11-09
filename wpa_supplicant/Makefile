@@ -1025,12 +1025,12 @@ OBJS += ctrl_iface.o ctrl_iface_$(CONFIG_CTRL_IFACE).o
 endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS
-CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
-OBJS += ctrl_iface_dbus.o ctrl_iface_dbus_handlers.o dbus_dict_helpers.o
+DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
+DBUS_OBJS += ctrl_iface_dbus.o ctrl_iface_dbus_handlers.o
+DBUS_OBJS += dbus_dict_helpers.o
 ifndef DBUS_LIBS
 DBUS_LIBS := $(shell pkg-config --libs dbus-1)
 endif
-LIBS += $(DBUS_LIBS)
 ifndef DBUS_INCLUDE
 DBUS_INCLUDE := $(shell pkg-config --cflags dbus-1)
 endif
@@ -1045,8 +1045,31 @@ DBUS_VERSION_MINOR=0
 endif
 DBUS_INCLUDE += -DDBUS_VERSION_MAJOR=$(DBUS_VERSION_MAJOR)
 DBUS_INCLUDE += -DDBUS_VERSION_MINOR=$(DBUS_VERSION_MINOR)
-CFLAGS += $(DBUS_INCLUDE)
+DBUS_CFLAGS += $(DBUS_INCLUDE)
 endif
+
+ifdef CONFIG_CTRL_IFACE_DBUS_NEW
+DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_NEW
+DBUS_OBJS ?= dbus_dict_helpers.o
+DBUS_OBJS += ctrl_iface_dbus_new_helpers.o
+DBUS_OBJS += ctrl_iface_dbus_new.o ctrl_iface_dbus_new_handlers.o
+ifndef DBUS_LIBS
+DBUS_LIBS := $(shell pkg-config --libs dbus-1)
+endif
+ifndef DBUS_INCLUDE
+DBUS_INCLUDE := $(shell pkg-config --cflags dbus-1)
+endif
+ifdef CONFIG_CTRL_IFACE_DBUS_INTRO
+DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_INTRO
+DBUS_INCLUDE += $(shell xml2-config --cflags)
+DBUS_LIBS += $(shell xml2-config --libs)
+endif
+DBUS_CFLAGS += $(DBUS_INCLUDE)
+endif
+
+OBJS += $(DBUS_OBJS)
+CFLAGS += $(DBUS_CFLAGS)
+LIBS += $(DBUS_LIBS)
 
 ifdef CONFIG_READLINE
 CFLAGS += -DCONFIG_READLINE

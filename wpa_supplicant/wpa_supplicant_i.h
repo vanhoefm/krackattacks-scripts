@@ -190,7 +190,10 @@ struct wpa_global {
 	struct wpa_supplicant *ifaces;
 	struct wpa_params params;
 	struct ctrl_iface_global_priv *ctrl_iface;
+	/* old DBus API data */
 	struct ctrl_iface_dbus_priv *dbus_ctrl_iface;
+	/* new DBus API data */
+	struct ctrl_iface_dbus_new_priv *dbus_new_ctrl_iface;
 	void **drv_priv;
 	size_t drv_count;
 };
@@ -305,6 +308,9 @@ struct wpa_supplicant {
 #ifdef CONFIG_CTRL_IFACE_DBUS
 	char *dbus_path;
 #endif /* CONFIG_CTRL_IFACE_DBUS */
+#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
+	char *dbus_new_path;
+#endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 	char bridge_ifname[16];
 
 	char *confname;

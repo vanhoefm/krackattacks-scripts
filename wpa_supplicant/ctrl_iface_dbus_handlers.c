@@ -45,8 +45,8 @@ static DBusMessage * wpas_dbus_new_invalid_opts_error(DBusMessage *message,
 	DBusMessage *reply;
 
 	reply = dbus_message_new_error(message, WPAS_ERROR_INVALID_OPTS,
-				      "Did not receive correct message "
-				      "arguments.");
+				       "Did not receive correct message "
+				       "arguments.");
 	if (arg != NULL)
 		dbus_message_append_args(reply, DBUS_TYPE_STRING, &arg,
 					 DBUS_TYPE_INVALID);
@@ -77,10 +77,10 @@ static DBusMessage * wpas_dbus_new_success_reply(DBusMessage *message)
 
 static void wpas_dbus_free_wpa_interface(struct wpa_interface *iface)
 {
-	free((char *) iface->driver);
-	free((char *) iface->driver_param);
-	free((char *) iface->confname);
-	free((char *) iface->bridge_ifname);
+	os_free((char *) iface->driver);
+	os_free((char *) iface->driver_param);
+	os_free((char *) iface->confname);
+	os_free((char *) iface->bridge_ifname);
 }
 
 
@@ -103,7 +103,7 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter;
 
-	memset(&iface, 0, sizeof(iface));
+	os_memset(&iface, 0, sizeof(iface));
 
 	dbus_message_iter_init(message, &iter);
 
@@ -113,7 +113,7 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 	if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
 		goto error;
 	dbus_message_iter_get_basic(&iter, &ifname);
-	if (!strlen(ifname))
+	if (!os_strlen(ifname))
 		goto error;
 	iface.ifname = ifname;
 
@@ -283,6 +283,7 @@ out:
 	return reply;
 }
 
+
 /**
  * wpas_dbus_global_set_debugparams- Set the debug params
  * @message: Pointer to incoming dbus message
@@ -306,22 +307,20 @@ DBusMessage * wpas_dbus_global_set_debugparams(DBusMessage *message,
 	                           DBUS_TYPE_BOOLEAN, &debug_timestamp,
 	                           DBUS_TYPE_BOOLEAN, &debug_show_keys,
 	                           DBUS_TYPE_INVALID)) {
-		reply = wpas_dbus_new_invalid_opts_error(message, NULL);
-		goto out;
+		return wpas_dbus_new_invalid_opts_error(message, NULL);
 	}
 
 	if (wpa_supplicant_set_debug_params(global, debug_level,
 					    debug_timestamp ? 1 : 0,
 					    debug_show_keys ? 1 : 0)) {
-		reply = wpas_dbus_new_invalid_opts_error(message, NULL);
-		goto out;
+		return wpas_dbus_new_invalid_opts_error(message, NULL);
 	}
 
 	reply = wpas_dbus_new_success_reply(message);
 
-out:
 	return reply;
 }
+
 
 /**
  * wpas_dbus_iface_scan - Request a wireless scan on an interface
@@ -394,14 +393,14 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 		/* Construct the object path for this network.  Note that ':'
 		 * is not a valid character in dbus object paths.
 		 */
-		snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-			 "%s/" WPAS_DBUS_BSSIDS_PART "/"
-			 WPAS_DBUS_BSSID_FORMAT,
-			 wpa_supplicant_get_dbus_path(wpa_s),
-			 MAC2STR(res->bssid));
+		os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_BSSIDS_PART "/"
+			    WPAS_DBUS_BSSID_FORMAT,
+			    wpa_supplicant_get_dbus_path(wpa_s),
+			    MAC2STR(res->bssid));
 		dbus_message_iter_append_basic(&sub_iter,
 					       DBUS_TYPE_OBJECT_PATH, &path);
-		free(path);
+		os_free(path);
 	}
 
 	dbus_message_iter_close_container(&iter, &sub_iter);
@@ -551,8 +550,8 @@ DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 
 		/* free returned method array */
 		while (eap_methods[i])
-			free(eap_methods[i++]);
-		free(eap_methods);
+			os_free(eap_methods[i++]);
+		os_free(eap_methods);
 
 		if (!success)
 			goto error;
@@ -834,17 +833,17 @@ DBusMessage * wpas_dbus_iface_add_network(DBusMessage *message,
 	wpa_config_set_network_defaults(ssid);
 
 	/* Construct the object path for this network. */
-	snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-		 "%s/" WPAS_DBUS_NETWORKS_PART "/%d",
-		 wpa_supplicant_get_dbus_path(wpa_s),
-		 ssid->id);
+	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NETWORKS_PART "/%d",
+		    wpa_supplicant_get_dbus_path(wpa_s),
+		    ssid->id);
 
 	reply = dbus_message_new_method_return(message);
 	dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH,
 				 &path, DBUS_TYPE_INVALID);
 
 out:
-	free(path);
+	os_free(path);
 	return reply;
 }
 
@@ -880,6 +879,7 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 		reply = wpas_dbus_new_invalid_network_error(message);
 		goto out;
 	}
+
 	/* Ensure the network is actually a child of this interface */
 	if (strcmp(iface, wpa_supplicant_get_dbus_path(wpa_s)) != 0) {
 		reply = wpas_dbus_new_invalid_network_error(message);
@@ -908,8 +908,8 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 	reply = wpas_dbus_new_success_reply(message);
 
 out:
-	free(iface);
-	free(net_id);
+	os_free(iface);
+	os_free(net_id);
 	return reply;
 }
 
@@ -919,6 +919,7 @@ static const char *dont_quote[] = {
 	"opensc_engine_path", "pkcs11_engine_path", "pkcs11_module_path",
 	"bssid", NULL
 };
+
 
 static dbus_bool_t should_quote_opt(const char *key)
 {
@@ -930,6 +931,7 @@ static dbus_bool_t should_quote_opt(const char *key)
 	}
 	return TRUE;
 }
+
 
 /**
  * wpas_dbus_iface_set_network - Set options for a configured network
@@ -978,13 +980,13 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 			if (value == NULL)
 				goto error;
 			ret = wpa_snprintf_hex(value, size,
-					(u8 *) entry.bytearray_value,
-					entry.array_len);
+					       (u8 *) entry.bytearray_value,
+					       entry.array_len);
 			if (ret <= 0)
 				goto error;
 		} else if (entry.type == DBUS_TYPE_STRING) {
 			if (should_quote_opt(entry.key)) {
-				size = strlen(entry.str_value);
+				size = os_strlen(entry.str_value);
 				/* Zero-length option check */
 				if (size <= 0)
 					goto error;
@@ -992,12 +994,12 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 				value = os_zalloc(size);
 				if (value == NULL)
 					goto error;
-				ret = snprintf(value, size, "\"%s\"",
-						entry.str_value);
+				ret = os_snprintf(value, size, "\"%s\"",
+						  entry.str_value);
 				if (ret < 0 || (size_t) ret != (size - 1))
 					goto error;
 			} else {
-				value = strdup(entry.str_value);
+				value = os_strdup(entry.str_value);
 				if (value == NULL)
 					goto error;
 			}
@@ -1005,14 +1007,16 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 			value = os_zalloc(size);
 			if (value == NULL)
 				goto error;
-			ret = snprintf(value, size, "%u", entry.uint32_value);
+			ret = os_snprintf(value, size, "%u",
+					  entry.uint32_value);
 			if (ret <= 0)
 				goto error;
 		} else if (entry.type == DBUS_TYPE_INT32) {
 			value = os_zalloc(size);
 			if (value == NULL)
 				goto error;
-			ret = snprintf(value, size, "%d", entry.int32_value);
+			ret = os_snprintf(value, size, "%d",
+					  entry.int32_value);
 			if (ret <= 0)
 				goto error;
 		} else
@@ -1021,17 +1025,17 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 		if (wpa_config_set(ssid, entry.key, value, 0) < 0)
 			goto error;
 
-		if ((strcmp(entry.key, "psk") == 0 &&
+		if ((os_strcmp(entry.key, "psk") == 0 &&
 		     value[0] == '"' && ssid->ssid_len) ||
-		    (strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
+		    (os_strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
 			wpa_config_update_psk(ssid);
 
-		free(value);
+		os_free(value);
 		wpa_dbus_dict_entry_clear(&entry);
 		continue;
 
 	error:
-		free(value);
+		os_free(value);
 		reply = wpas_dbus_new_invalid_opts_error(message, entry.key);
 		wpa_dbus_dict_entry_clear(&entry);
 		break;
@@ -1101,7 +1105,7 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 	char *iface_obj_path = NULL;
 	char *network = NULL;
 
-	if (strlen(dbus_message_get_signature(message)) == 0) {
+	if (os_strlen(dbus_message_get_signature(message)) == 0) {
 		/* Any network */
 		ssid = NULL;
 	} else {
@@ -1126,7 +1130,7 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 		}
 		/* Ensure the object path really points to this interface */
 		obj_path = wpa_supplicant_get_dbus_path(wpa_s);
-		if (strcmp(iface_obj_path, obj_path) != 0) {
+		if (os_strcmp(iface_obj_path, obj_path) != 0) {
 			reply = wpas_dbus_new_invalid_network_error(message);
 			goto out;
 		}
@@ -1150,8 +1154,8 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 	reply = wpas_dbus_new_success_reply(message);
 
 out:
-	free(iface_obj_path);
-	free(network);
+	os_free(iface_obj_path);
+	os_free(network);
 	return reply;
 }
 
@@ -1277,6 +1281,7 @@ error:
 	os_free(pkcs11_module_path);
 	return wpas_dbus_new_invalid_opts_error(message, NULL);
 }
+
 
 /**
  * wpas_dbus_iface_get_state - Get interface state
@@ -1429,7 +1434,7 @@ DBusMessage * wpas_dbus_iface_set_blobs(DBusMessage *message,
  * Asks wpa_supplicant to remove one or more previously stored binary blobs.
  */
 DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
-					  struct wpa_supplicant *wpa_s)
+					   struct wpa_supplicant *wpa_s)
 {
 	DBusMessageIter iter, array;
 	char *err_msg = NULL;
@@ -1445,7 +1450,7 @@ DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 		const char *name;
 
 		dbus_message_iter_get_basic(&array, &name);
-		if (!strlen(name))
+		if (!os_strlen(name))
 			err_msg = "Invalid blob name.";
 
 		if (wpa_config_remove_blob(wpa_s->conf, name) != 0)
@@ -1455,10 +1460,9 @@ DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 		dbus_message_iter_next(&array);
 	}
 
-	if (err_msg) {
+	if (err_msg)
 		return dbus_message_new_error(message, WPAS_ERROR_REMOVE_ERROR,
 					      err_msg);
-	}
 
 	return wpas_dbus_new_success_reply(message);
 }
@@ -1557,7 +1561,7 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 					 DBUS_TYPE_INVALID);
 	} else {
 		char npin[9];
-		sprintf(npin, "%08d", ret);
+		os_snprintf(npin, sizeof(npin), "%08d", ret);
 		dbus_message_append_args(reply, DBUS_TYPE_STRING, &npin,
 					 DBUS_TYPE_INVALID);
 	}

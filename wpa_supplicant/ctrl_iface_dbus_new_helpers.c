@@ -594,7 +594,7 @@ static DBusMessage * introspect(DBusMessage *message,
 	struct wpa_dbus_signal_desc *signal_dsc;
 	struct wpa_dbus_method_desc *method_dsc;
 	struct wpa_dbus_property_desc *property_dsc;
-	char *intro_str;
+	xmlChar *intro_str;
 	char **children;
 	int i, s;
 
@@ -798,7 +798,7 @@ static DBusMessage * introspect(DBusMessage *message,
 	dbus_free_string_array(children);
 
 
-	xmlDocDumpFormatMemory(doc, (xmlChar **) &intro_str, &s, 1);
+	xmlDocDumpFormatMemory(doc, &intro_str, &s, 1);
 
 	xmlFreeDoc(doc);
 

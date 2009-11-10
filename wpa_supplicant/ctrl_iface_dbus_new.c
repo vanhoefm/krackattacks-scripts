@@ -1104,7 +1104,6 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	struct network_handler_args *arg2 = NULL;
 	struct network_handler_args *arg3 = NULL;
 
-	const char *path = wpas_dbus_get_path(wpa_s);
 	char *net_obj_path;
 
 	struct wpa_dbus_argument sargs[] = {
@@ -1123,7 +1122,8 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	if (net_obj_path == NULL)
 		return -1;
 	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u", path, ssid->id);
+		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
+		    wpas_dbus_get_path(wpa_s), ssid->id);
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
@@ -1219,7 +1219,6 @@ err:
 static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
-	const char *path = wpas_dbus_get_path(wpa_s);
 	char *net_obj_path;
 	int ret;
 
@@ -1234,7 +1233,8 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 	if (net_obj_path == NULL)
 		return -1;
 	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u", path, nid);
+		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
+		    wpas_dbus_get_path(wpa_s), nid);
 
 	ret = wpa_dbus_unregister_object_per_iface(ctrl_iface, net_obj_path);
 
@@ -1258,7 +1258,6 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 				    u8 bssid[ETH_ALEN])
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
-	const char *path = wpas_dbus_get_path(wpa_s);
 	char *bss_obj_path;
 
 	/* Do nothing if the control interface is not turned on */
@@ -1274,7 +1273,7 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 
 	os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/" WPAS_DBUS_BSSID_FORMAT,
-		    path, MAC2STR(bssid));
+		    wpas_dbus_get_path(wpa_s), MAC2STR(bssid));
 
 	if (wpa_dbus_unregister_object_per_iface(ctrl_iface, bss_obj_path)) {
 		wpa_printf(MSG_ERROR,
@@ -1296,7 +1295,6 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
-	const char *path = wpas_dbus_get_path(wpa_s);
 	char *bss_obj_path;
 
 	struct bss_handler_args *arg = NULL;
@@ -1314,7 +1312,7 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 
 	os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/" WPAS_DBUS_BSSID_FORMAT,
-		    path, MAC2STR(bssid));
+		    wpas_dbus_get_path(wpa_s), MAC2STR(bssid));
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
@@ -1907,9 +1905,8 @@ err:
 static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
-	struct wpa_ssid *ssid = wpa_s->conf->ssid;
+	struct wpa_ssid *ssid;
 	size_t i;
-	const char *path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -1918,20 +1915,20 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 	if (ctrl_iface == NULL)
 		return 0;
 
-	path = wpas_dbus_get_path(wpa_s);
-
 	/* unregister all BSSs and networks from dbus */
 	for (i = 0; i < wpa_s->scan_res->num; i++) {
 		wpas_dbus_unregister_bss(wpa_s,
 					 wpa_s->scan_res->res[i]->bssid);
 	}
 
+	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		wpas_dbus_unregister_network(wpa_s, ssid->id);
 		ssid = ssid->next;
 	}
 
-	if (wpa_dbus_unregister_object_per_iface(ctrl_iface, path))
+	if (wpa_dbus_unregister_object_per_iface(ctrl_iface,
+						 wpas_dbus_get_path(wpa_s)))
 		return -1;
 
 	wpas_dbus_signal_interface_removed(wpa_s);

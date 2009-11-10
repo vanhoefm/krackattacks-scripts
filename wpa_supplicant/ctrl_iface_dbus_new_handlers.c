@@ -2281,7 +2281,7 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 					      NULL);
 	}
 
-	if (wpa_s->bssid && !is_zero_ether_addr(wpa_s->bssid)) {
+	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		size_t i;
 		for (i = 0; i < wpa_s->scan_res->num; i++) {
 			struct wpa_scan_res *res = wpa_s->scan_res->res[i];

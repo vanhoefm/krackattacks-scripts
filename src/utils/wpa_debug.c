@@ -335,6 +335,30 @@ void wpa_msg(void *ctx, int level, char *fmt, ...)
 		wpa_msg_cb(ctx, level, buf, len);
 	os_free(buf);
 }
+
+
+void wpa_msg_ctrl(void *ctx, int level, char *fmt, ...)
+{
+	va_list ap;
+	char *buf;
+	const int buflen = 2048;
+	int len;
+
+	if (!wpa_msg_cb)
+		return;
+
+	buf = os_malloc(buflen);
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR, "wpa_msg_ctrl: Failed to allocate "
+			   "message buffer");
+		return;
+	}
+	va_start(ap, fmt);
+	len = vsnprintf(buf, buflen, fmt, ap);
+	va_end(ap);
+	wpa_msg_cb(ctx, level, buf, len);
+	os_free(buf);
+}
 #endif /* CONFIG_NO_WPA_MSG */
 
 

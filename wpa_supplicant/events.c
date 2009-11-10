@@ -760,7 +760,8 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 		wpa_msg(wpa_s, MSG_DEBUG, "Cached scan results are "
 			"empty - not posting");
 	} else {
-		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+		wpa_printf(MSG_DEBUG, "New scan results available");
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
 		wpas_notify_scan_results(wpa_s);
 	}
 

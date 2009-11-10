@@ -300,7 +300,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		 */
 		ssid = NULL;
 	} else {
-		struct wpa_ssid *start = ssid;
+		struct wpa_ssid *start = ssid, *tssid;
 		int freqs_set = 0;
 		if (ssid == NULL && max_ssids > 1)
 			ssid = wpa_s->conf->ssid;
@@ -324,12 +324,12 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 				ssid = wpa_s->conf->ssid;
 		}
 
-		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
-			if (ssid->disabled)
+		for (tssid = wpa_s->conf->ssid; tssid; tssid = tssid->next) {
+			if (tssid->disabled)
 				continue;
-			if ((params.freqs || !freqs_set) && ssid->scan_freq) {
+			if ((params.freqs || !freqs_set) && tssid->scan_freq) {
 				int_array_concat(&params.freqs,
-						 ssid->scan_freq);
+						 tssid->scan_freq);
 			} else {
 				os_free(params.freqs);
 				params.freqs = NULL;

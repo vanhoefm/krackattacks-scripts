@@ -168,7 +168,7 @@ static int prism54_set_sta_authorized(void *priv, const u8 *addr,
 	pimdev_hdr *hdr;
 	char *pos;
 
-	hdr = malloc(sizeof(*hdr) + ETH_ALEN);
+	hdr = os_zalloc(sizeof(*hdr) + ETH_ALEN);
 	if (hdr == NULL)
 		return -1;
 	hdr->op = htonl(PIMOP_SET);
@@ -212,7 +212,7 @@ static int prism54_set_key(const char *ifname, void *priv, wpa_alg alg,
 	int ret = 0;
 
 	blen = sizeof(struct obj_stakey) + sizeof(pimdev_hdr);
-	hdr = malloc(blen);
+	hdr = os_zalloc(blen);
 	if (hdr == NULL) {
 		printf("memory low\n");
 		return -1;
@@ -276,7 +276,7 @@ static int prism54_get_seqnum(const char *ifname, void *priv, const u8 *addr,
 	int ret = 0;
 
 	blen = sizeof(*stasc) + sizeof(*hdr);
-	hdr = malloc(blen);
+	hdr = os_zalloc(blen);
 	if (hdr == NULL)
 		return -1;
 
@@ -318,7 +318,7 @@ static int prism54_init_1x(void *priv)
 	unsigned long *ul;
 	int blen = sizeof(*hdr) + sizeof(*ul);
 
-	hdr = malloc(blen);
+	hdr = os_zalloc(blen);
 	if (hdr == NULL)
 		return -1;
 
@@ -356,7 +356,7 @@ static int prism54_set_privacy_invoked(const char *ifname, void *priv,
 	unsigned long *ul;
 	int ret;
 	int blen = sizeof(*hdr) + sizeof(*ul);
-	hdr = malloc(blen);
+	hdr = os_zalloc(blen);
 	if (hdr == NULL)
 		return -1;
 	ul = (unsigned long *) &hdr[1];
@@ -469,7 +469,7 @@ static int prism54_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 	struct obj_mlmeex *mlme;
 	int ret;
 	int blen = sizeof(*hdr) + sizeof(*mlme);
-	hdr = malloc(blen);
+	hdr = os_zalloc(blen);
 	if (hdr == NULL)
 		return -1;
 	mlme = (struct obj_mlmeex *) &hdr[1];
@@ -495,7 +495,7 @@ static int prism54_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
         struct obj_mlmeex *mlme;
 	int ret;
         int blen = sizeof(*hdr) + sizeof(*mlme);
-        hdr = malloc(blen);
+        hdr = os_zalloc(blen);
 	if (hdr == NULL)
 		return -1;
         mlme = (struct obj_mlmeex *) &hdr[1];
@@ -521,7 +521,7 @@ static int prism54_get_inact_sec(void *priv, const u8 *addr)
 	int blen = sizeof(*hdr) + sizeof(*sta);
 	int ret;
 
-	hdr = malloc(blen);
+	hdr = os_zalloc(blen);
 	if (hdr == NULL)
 		return -1;
 	hdr->op = htonl(PIMOP_GET);

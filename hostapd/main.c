@@ -460,13 +460,13 @@ int main(int argc, char *argv[])
 	ret = 0;
 
  out:
-	os_free(pid_file);
 	/* Deinitialize all interfaces */
 	for (i = 0; i < interfaces.count; i++)
 		hostapd_interface_deinit(interfaces.iface[i]);
 	os_free(interfaces.iface);
 
 	hostapd_global_deinit(pid_file);
+	os_free(pid_file);
 
 	return ret;
 }

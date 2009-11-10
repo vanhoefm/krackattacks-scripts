@@ -173,39 +173,49 @@ void wpas_notify_scan_results(struct wpa_supplicant *wpa_s)
 void wpas_notify_wps_credential(struct wpa_supplicant *wpa_s,
 				const struct wps_credential *cred)
 {
+#ifdef CONFIG_WPS
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
+#endif /* CONFIG_WPS */
 
 	/* notify the old DBus API */
 	wpa_supplicant_dbus_notify_wps_cred(wpa_s, cred);
 	/* notify the new DBus API */
+#ifdef CONFIG_WPS
 	if (cbs)
 		cbs->signal_wps_credentials(wpa_s, cred);
+#endif /* CONFIG_WPS */
 }
 
 
 void wpas_notify_wps_event_m2d(struct wpa_supplicant *wpa_s,
 			       struct wps_event_m2d *m2d)
 {
+#ifdef CONFIG_WPS
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
 		cbs->signal_wps_event_m2d(wpa_s, m2d);
+#endif /* CONFIG_WPS */
 }
 
 
 void wpas_notify_wps_event_fail(struct wpa_supplicant *wpa_s,
 				struct wps_event_fail *fail)
 {
+#ifdef CONFIG_WPS
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
 		cbs->signal_wps_event_fail(wpa_s, fail);
+#endif /* CONFIG_WPS */
 }
 
 
 void wpas_notify_wps_event_success(struct wpa_supplicant *wpa_s)
 {
+#ifdef CONFIG_WPS
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
 		cbs->signal_wps_event_success(wpa_s);
+#endif /* CONFIG_WPS */
 }
 
 

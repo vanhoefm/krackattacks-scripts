@@ -46,8 +46,8 @@ extern int wpa_debug_timestamp;
  * and BSSID parts, if those parts exist.
  */
 static char * wpas_dbus_new_decompose_object_path(const char *path,
-		char **network,
-		char **bssid)
+						  char **network,
+						  char **bssid)
 {
 	const unsigned int dev_path_prefix_len =
 		strlen(WPAS_DBUS_NEW_PATH_INTERFACES "/");
@@ -55,38 +55,38 @@ static char * wpas_dbus_new_decompose_object_path(const char *path,
 	char *next_sep;
 
 	/* Be a bit paranoid about path */
-	if (!path || strncmp(path, WPAS_DBUS_NEW_PATH_INTERFACES "/",
-			     dev_path_prefix_len))
+	if (!path || os_strncmp(path, WPAS_DBUS_NEW_PATH_INTERFACES "/",
+				dev_path_prefix_len))
 		return NULL;
 
 	/* Ensure there's something at the end of the path */
 	if ((path + dev_path_prefix_len)[0] == '\0')
 		return NULL;
 
-	obj_path_only = strdup(path);
+	obj_path_only = os_strdup(path);
 	if (obj_path_only == NULL)
 		return NULL;
 
-	next_sep = strchr(obj_path_only + dev_path_prefix_len, '/');
+	next_sep = os_strchr(obj_path_only + dev_path_prefix_len, '/');
 	if (next_sep != NULL) {
-		const char *net_part = strstr(next_sep,
-					      WPAS_DBUS_NEW_NETWORKS_PART "/");
-		const char *bssid_part = strstr(next_sep,
-						WPAS_DBUS_NEW_BSSIDS_PART "/");
+		const char *net_part = os_strstr(
+			next_sep, WPAS_DBUS_NEW_NETWORKS_PART "/");
+		const char *bssid_part = os_strstr(
+			next_sep, WPAS_DBUS_NEW_BSSIDS_PART "/");
 
 		if (network && net_part) {
 			/* Deal with a request for a configured network */
 			const char *net_name = net_part +
-				strlen(WPAS_DBUS_NEW_NETWORKS_PART "/");
+				os_strlen(WPAS_DBUS_NEW_NETWORKS_PART "/");
 			*network = NULL;
-			if (strlen(net_name))
-				*network = strdup(net_name);
+			if (os_strlen(net_name))
+				*network = os_strdup(net_name);
 		} else if (bssid && bssid_part) {
 			/* Deal with a request for a scanned BSSID */
 			const char *bssid_name = bssid_part +
-				strlen(WPAS_DBUS_NEW_BSSIDS_PART "/");
+				os_strlen(WPAS_DBUS_NEW_BSSIDS_PART "/");
 			if (strlen(bssid_name))
-				*bssid = strdup(bssid_name);
+				*bssid = os_strdup(bssid_name);
 			else
 				*bssid = NULL;
 		}
@@ -108,10 +108,10 @@ static char * wpas_dbus_new_decompose_object_path(const char *path,
  * Convenience function to create and return an UnknownError
  */
 static DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,
-						      const char *arg)
+						   const char *arg)
 {
-	return dbus_message_new_error(message,
-			WPAS_DBUS_ERROR_UNKNOWN_ERROR, arg);
+	return dbus_message_new_error(message, WPAS_DBUS_ERROR_UNKNOWN_ERROR,
+				      arg);
 }
 
 
@@ -125,7 +125,8 @@ static DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,
 static DBusMessage * wpas_dbus_error_iface_unknown(DBusMessage *message)
 {
 	return dbus_message_new_error(message, WPAS_DBUS_ERROR_IFACE_UNKNOWN,
-				      "wpa_supplicant knows nothing about this interface.");
+				      "wpa_supplicant knows nothing about "
+				      "this interface.");
 }
 
 
@@ -139,7 +140,8 @@ static DBusMessage * wpas_dbus_error_iface_unknown(DBusMessage *message)
 static DBusMessage * wpas_dbus_error_network_unknown(DBusMessage *message)
 {
 	return dbus_message_new_error(message, WPAS_DBUS_ERROR_NETWORK_UNKNOWN,
-		       "There is no such a network in this interface.");
+				      "There is no such a network in this "
+				      "interface.");
 }
 
 
@@ -151,13 +153,13 @@ static DBusMessage * wpas_dbus_error_network_unknown(DBusMessage *message)
  * Convenience function to create and return an invalid options error
  */
 static DBusMessage * wpas_dbus_error_invald_args(DBusMessage *message,
-						      const char *arg)
+						 const char *arg)
 {
 	DBusMessage *reply;
 
 	reply = dbus_message_new_error(message, WPAS_DBUS_ERROR_INVALID_ARGS,
-				      "Did not receive correct message "
-				      "arguments.");
+				       "Did not receive correct message "
+				       "arguments.");
 	if (arg != NULL)
 		dbus_message_append_args(reply, DBUS_TYPE_STRING, &arg,
 					 DBUS_TYPE_INVALID);
@@ -185,7 +187,7 @@ static dbus_bool_t should_quote_opt(const char *key)
 {
 	int i = 0;
 	while (dont_quote[i] != NULL) {
-		if (strcmp(key, dont_quote[i]) == 0)
+		if (os_strcmp(key, dont_quote[i]) == 0)
 			return FALSE;
 		i++;
 	}
@@ -197,9 +199,8 @@ static struct wpa_scan_res * find_scan_result(struct bss_handler_args *bss)
 	struct wpa_scan_results *results = bss->wpa_s->scan_res;
 	size_t i;
 	for (i = 0; i < results->num; i++) {
-		if (!os_memcmp(results->res[i]->bssid, bss->bssid, ETH_ALEN)) {
+		if (!os_memcmp(results->res[i]->bssid, bss->bssid, ETH_ALEN))
 			return results->res[i];
-		}
 	}
 	return NULL;
 }
@@ -217,7 +218,7 @@ static struct wpa_supplicant * get_iface_by_dbus_path(
 	struct wpa_supplicant *wpa_s;
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
-		if (strcmp(wpa_s->dbus_new_path, path) == 0)
+		if (os_strcmp(wpa_s->dbus_new_path, path) == 0)
 			return wpa_s;
 	}
 	return NULL;
@@ -235,13 +236,13 @@ static struct wpa_supplicant * get_iface_by_dbus_path(
  * Sets network configuration with parameters given id DBus dictionary
  */
 static DBusMessage * set_network_properties(DBusMessage *message,
-		struct wpa_ssid *ssid, DBusMessageIter *iter)
+					    struct wpa_ssid *ssid,
+					    DBusMessageIter *iter)
 {
 
 	struct wpa_dbus_dict_entry entry = { .type = DBUS_TYPE_STRING };
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter_dict;
-
 
 	if (!wpa_dbus_dict_open_read(iter, &iter_dict)) {
 		reply = wpas_dbus_error_invald_args(message, NULL);
@@ -257,7 +258,7 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 			goto out;
 		}
 		if (entry.type == DBUS_TYPE_ARRAY &&
-				entry.array_type == DBUS_TYPE_BYTE) {
+		    entry.array_type == DBUS_TYPE_BYTE) {
 			if (entry.array_len <= 0)
 				goto error;
 
@@ -266,16 +267,15 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 			if (value == NULL)
 				goto error;
 
-			ret = wpa_snprintf_hex(value, size, (u8*) entry.bytearray_value,
-												entry.array_len);
+			ret = wpa_snprintf_hex(value, size,
+					       (u8 *) entry.bytearray_value,
+					       entry.array_len);
 			if (ret <= 0)
 				goto error;
-
-		}
-		else {
+		} else {
 			if (entry.type == DBUS_TYPE_STRING) {
 				if (should_quote_opt(entry.key)) {
-					size = strlen(entry.str_value);
+					size = os_strlen(entry.str_value);
 					if (size <= 0)
 						goto error;
 
@@ -284,40 +284,39 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 					if (value == NULL)
 						goto error;
 
-					ret = snprintf(value, size, "\"%s\"", entry.str_value);
-					if (ret < 0 || (size_t)ret != (size - 1))
+					ret = os_snprintf(value, size,
+							  "\"%s\"",
+							  entry.str_value);
+					if (ret < 0 ||
+					    (size_t) ret != (size - 1))
 						goto error;
-
-				}
-				else {
-					value = strdup(entry.str_value);
+				} else {
+					value = os_strdup(entry.str_value);
 					if (value == NULL)
 						goto error;
 				}
-			}
-			else {
+			} else {
 				if (entry.type == DBUS_TYPE_UINT32) {
 					value = os_zalloc(size);
 					if (value == NULL)
 						goto error;
 
-					ret = snprintf(value, size, "%u", entry.uint32_value);
+					ret = os_snprintf(value, size, "%u",
+							  entry.uint32_value);
 					if (ret <= 0)
 						goto error;
-
-				}
-				else {
+				} else {
 					if (entry.type == DBUS_TYPE_INT32) {
 						value = os_zalloc(size);
 						if (value == NULL)
 							goto error;
 
-						ret = snprintf(value, size, "%d", entry.int32_value);
+						ret = os_snprintf(
+							value, size, "%d",
+							entry.int32_value);
 						if (ret <= 0)
 							goto error;
-
-					}
-					else
+					} else
 						goto error;
 				}
 			}
@@ -326,9 +325,9 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 		if (wpa_config_set(ssid, entry.key, value, 0) < 0)
 			goto error;
 
-		if ((strcmp(entry.key, "psk") == 0 &&
-				value[0] == '"' && ssid->ssid_len) ||
-				(strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
+		if ((os_strcmp(entry.key, "psk") == 0 &&
+		     value[0] == '"' && ssid->ssid_len) ||
+		    (strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
 			wpa_config_update_psk(ssid);
 
 		os_free(value);
@@ -341,8 +340,8 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 		wpa_dbus_dict_entry_clear(&entry);
 		break;
 	}
-	out:
-		return reply;
+out:
+	return reply;
 }
 
 
@@ -358,7 +357,7 @@ static DBusMessage * set_network_properties(DBusMessage *message,
  * will manage.
  */
 DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
-					     struct wpa_global *global)
+						 struct wpa_global *global)
 {
 	struct wpa_interface iface;
 	DBusMessageIter iter_dict;
@@ -376,24 +375,21 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 		if (!strcmp(entry.key, "Driver") &&
-			(entry.type == DBUS_TYPE_STRING)) {
+		    (entry.type == DBUS_TYPE_STRING)) {
 			iface.driver = strdup(entry.str_value);
 			if (iface.driver == NULL)
 				goto error;
-		}
-		else if (!strcmp(entry.key, "Ifname") &&
+		} else if (!strcmp(entry.key, "Ifname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
 			iface.ifname = strdup(entry.str_value);
 			if (iface.ifname == NULL)
 				goto error;
-		}
-		else if (!strcmp(entry.key, "BridgeIfname") &&
+		} else if (!strcmp(entry.key, "BridgeIfname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
 			iface.bridge_ifname = strdup(entry.str_value);
 			if (iface.bridge_ifname == NULL)
 				goto error;
-		}
-		else {
+		} else {
 			wpa_dbus_dict_entry_clear(&entry);
 			goto error;
 		}
@@ -418,10 +414,9 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 			dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH,
 			                         &path, DBUS_TYPE_INVALID);
 		} else {
-			reply = wpas_dbus_error_unknown_error(message,
-						       "wpa_supplicant "
-						       "couldn't grab this "
-						       "interface.");
+			reply = wpas_dbus_error_unknown_error(
+				message, "wpa_supplicant couldn't grab this "
+				"interface.");
 		}
 	}
 	free_wpa_interface(&iface);
@@ -445,23 +440,22 @@ error:
  * currently manages.
  */
 DBusMessage * wpas_dbus_handler_remove_interface(DBusMessage *message,
-						struct wpa_global *global)
+						 struct wpa_global *global)
 {
 	struct wpa_supplicant *wpa_s;
 	char *path;
 	DBusMessage *reply = NULL;
 
 	dbus_message_get_args(message, NULL, DBUS_TYPE_OBJECT_PATH, &path,
-		   DBUS_TYPE_INVALID);
+			      DBUS_TYPE_INVALID);
 
 	wpa_s = get_iface_by_dbus_path(global, path);
-	if (wpa_s == NULL) {
+	if (wpa_s == NULL)
 		reply = wpas_dbus_error_iface_unknown(message);
-	}
 	else if (wpa_supplicant_remove_iface(global, wpa_s)) {
-		reply = wpas_dbus_error_unknown_error(message,
-					       "wpa_supplicant couldn't "
-					       "remove this interface.");
+		reply = wpas_dbus_error_unknown_error(
+			message, "wpa_supplicant couldn't remove this "
+			"interface.");
 	}
 
 	return reply;
@@ -478,7 +472,7 @@ DBusMessage * wpas_dbus_handler_remove_interface(DBusMessage *message,
  * Handler function for "getInterface" method call.
  */
 DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
-					     struct wpa_global *global)
+					      struct wpa_global *global)
 {
 	DBusMessage *reply = NULL;
 	const char *ifname;
@@ -486,39 +480,35 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 	struct wpa_supplicant *wpa_s;
 
 	dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &ifname,
-		   DBUS_TYPE_INVALID);
+			      DBUS_TYPE_INVALID);
 
 	wpa_s = wpa_supplicant_get_iface(global, ifname);
-	if (wpa_s == NULL) {
-		reply = wpas_dbus_error_iface_unknown(message);
-		goto out;
-	}
+	if (wpa_s == NULL)
+		return wpas_dbus_error_iface_unknown(message);
 
 	path = wpas_dbus_get_path(wpa_s);
 	if (path == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_handler_get_interface[dbus]: "
-				"interface has no dbus object path set");
-		reply = wpas_dbus_error_unknown_error(message, "path not set");
-		goto out;
+			   "interface has no dbus object path set");
+		return wpas_dbus_error_unknown_error(message, "path not set");
 	}
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
 		perror("wpas_dbus_handler_get_interface[dbus]: out of memory "
-				"when creating reply");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
-		goto out;
+		       "when creating reply");
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
-			DBUS_TYPE_INVALID)) {
+				      DBUS_TYPE_INVALID)) {
 		perror("wpas_dbus_handler_get_interface[dbus]: out of memory "
-				"when appending argument to reply");
+		       "when appending argument to reply");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
-out:
 	return reply;
 }
 
@@ -532,7 +522,7 @@ out:
  * Getter for "DebugParams" property.
  */
 DBusMessage * wpas_dbus_getter_debug_params(DBusMessage *message,
-					       struct wpa_global *global)
+					    struct wpa_global *global)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, struct_iter;
@@ -543,71 +533,79 @@ DBusMessage * wpas_dbus_getter_debug_params(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_getter_network_properties[dbus] out of "
-				"memory when trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory when trying to initialize return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"(ibb)", &variant_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to open variant");
+					      "(ibb)", &variant_iter)) {
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to open variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_STRUCT,
-			NULL, &struct_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to open struct");
+					      NULL, &struct_iter)) {
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to open struct");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_append_basic(&struct_iter, DBUS_TYPE_INT32,
-			&wpa_debug_level)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to append value to struct");
+					    &wpa_debug_level)) {
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to append value to struct");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_append_basic(&struct_iter, DBUS_TYPE_BOOLEAN,
-			&wpa_debug_timestamp)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to append value to struct");
+					    &wpa_debug_timestamp)) {
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to append value to struct");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_append_basic(&struct_iter, DBUS_TYPE_BOOLEAN,
-			&wpa_debug_show_keys)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to append value to struct");
+					    &wpa_debug_show_keys)) {
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to append value to struct");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_close_container(&variant_iter, &struct_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to close struct");
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to close struct");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory when "
-				"trying to close variant");
+		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
+		       "when trying to close variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -626,7 +624,7 @@ out:
  * Setter for "DebugParams" property.
  */
 DBusMessage * wpas_dbus_setter_debug_params(DBusMessage *message,
-					       struct wpa_global *global)
+					    struct wpa_global *global)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, struct_iter;
@@ -636,8 +634,9 @@ DBusMessage * wpas_dbus_setter_debug_params(DBusMessage *message,
 
 	if (!dbus_message_iter_init(message, &iter)) {
 		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-				"trying to initialize message iterator");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to initialize message iterator");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 	dbus_message_iter_next(&iter);
@@ -645,9 +644,10 @@ DBusMessage * wpas_dbus_setter_debug_params(DBusMessage *message,
 
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
-	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_STRUCT) {
-		reply = wpas_dbus_error_invald_args(message,
-				"Argument must by a structure");
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_STRUCT)
+	{
+		reply = wpas_dbus_error_invald_args(
+			message, "Argument must by a structure");
 		goto out;
 	}
 
@@ -655,39 +655,44 @@ DBusMessage * wpas_dbus_setter_debug_params(DBusMessage *message,
 
 
 	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_INT32) {
-		reply = wpas_dbus_error_invald_args(message,
-				"First struct argument must by an INT32");
-		goto out;
-	}
-	dbus_message_iter_get_basic(&struct_iter, &debug_level);
-	if (!dbus_message_iter_next(&struct_iter)) {
-		reply = wpas_dbus_error_invald_args(message,
-				"Not enough elements in struct");
+		reply = wpas_dbus_error_invald_args(
+			message, "First struct argument must by an INT32");
 		goto out;
 	}
 
-	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_BOOLEAN) {
-		reply = wpas_dbus_error_invald_args(message,
-				"Second struct argument must by a boolean");
+	dbus_message_iter_get_basic(&struct_iter, &debug_level);
+	if (!dbus_message_iter_next(&struct_iter)) {
+		reply = wpas_dbus_error_invald_args(
+			message, "Not enough elements in struct");
+		goto out;
+	}
+
+	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_BOOLEAN)
+	{
+		reply = wpas_dbus_error_invald_args(
+			message, "Second struct argument must by a boolean");
 		goto out;
 	}
 	dbus_message_iter_get_basic(&struct_iter, &debug_timestamp);
 	if (!dbus_message_iter_next(&struct_iter)) {
-		reply = wpas_dbus_error_invald_args(message,
-				"Not enough elements in struct");
+		reply = wpas_dbus_error_invald_args(
+			message, "Not enough elements in struct");
 		goto out;
 	}
 
-	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_BOOLEAN) {
-		reply = wpas_dbus_error_invald_args(message,
-				"Third struct argument must by an boolean");
+	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_BOOLEAN)
+	{
+		reply = wpas_dbus_error_invald_args(
+			message, "Third struct argument must by an boolean");
 		goto out;
 	}
 	dbus_message_iter_get_basic(&struct_iter, &debug_show_keys);
 
 	if (wpa_supplicant_set_debug_params(global, debug_level,
-			debug_timestamp ? 1 : 0, debug_show_keys ? 1 : 0)) {
-		reply = wpas_dbus_error_invald_args(message, "Wrong debug level value");
+					    debug_timestamp ? 1 : 0,
+					    debug_show_keys ? 1 : 0)) {
+		reply = wpas_dbus_error_invald_args(
+			message, "Wrong debug level value");
 		goto out;
 	}
 
@@ -708,12 +713,11 @@ out:
  * paths
  */
 DBusMessage * wpas_dbus_getter_interfaces(DBusMessage *message,
-					     struct wpa_global *global)
+					  struct wpa_global *global)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, array_iter;
 	const char *path;
-
 	struct wpa_supplicant *wpa_s;
 
 	if (message == NULL)
@@ -722,53 +726,60 @@ DBusMessage * wpas_dbus_getter_interfaces(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_getter_interfaces[dbus] out of memory "
-				"when trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "when trying to initialize return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"ao", &variant_iter)) {
+					      "ao", &variant_iter)) {
 		perror("wpas_dbus_getter_interfaces[dbus] out of memory "
-				"when trying to open variant");
+		       "when trying to open variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
-				"o", &array_iter)) {
+					      "o", &array_iter)) {
 		perror("wpas_dbus_getter_interfaces[dbus] out of memory "
-				"when trying to open array");
+		       "when trying to open array");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		path = wpas_dbus_get_path(wpa_s);
 		if (!dbus_message_iter_append_basic(&array_iter,
-				DBUS_TYPE_OBJECT_PATH, &path)) {
-			perror("wpas_dbus_getter_interfaces[dbus] out of memory "
-					"when trying to append interface path");
+						    DBUS_TYPE_OBJECT_PATH,
+						    &path)) {
+			perror("wpas_dbus_getter_interfaces[dbus] out of "
+			       "memory when trying to append interface path");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-										   NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 	}
 
 	if (!dbus_message_iter_close_container(&variant_iter, &array_iter)) {
 		perror("wpas_dbus_getter_interfaces[dbus] out of memory "
-				"when trying to close array");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "when trying to close array");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
 		perror("wpas_dbus_getter_interfaces[dbus] out of memory "
-				"when trying to close variant");
+		       "when trying to close variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -787,8 +798,7 @@ out:
  * Getter for "EapMethods" property. Handles requests
  * by dbus clients to return list of strings with supported EAP methods
  */
-DBusMessage * wpas_dbus_getter_eap_methods(DBusMessage *message,
-					     void *nothing)
+DBusMessage * wpas_dbus_getter_eap_methods(DBusMessage *message, void *nothing)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, array_iter;
@@ -801,27 +811,30 @@ DBusMessage * wpas_dbus_getter_eap_methods(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_getter_eap_methods[dbus] out of memory "
-				"when trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "when trying to initialize return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"as", &variant_iter)) {
+					      "as", &variant_iter)) {
 		perror("wpas_dbus_getter_eap_methods[dbus] out of memory "
-				"when trying to open variant");
+		       "when trying to open variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
-				"s", &array_iter)) {
+					      "s", &array_iter)) {
 		perror("wpas_dbus_getter_eap_methods[dbus] out of memory "
-				"when trying to open variant");
+		       "when trying to open variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -831,35 +844,39 @@ DBusMessage * wpas_dbus_getter_eap_methods(DBusMessage *message,
 		int err = 0;
 		for (i = 0; i < num_items; i++) {
 			if (!dbus_message_iter_append_basic(&array_iter,
-					DBUS_TYPE_STRING, &(eap_methods[i])))
+							    DBUS_TYPE_STRING,
+							    &(eap_methods[i])))
 				err = 1;
 			os_free(eap_methods[i]);
 		}
 		os_free(eap_methods);
 
 		if (err) {
-			wpa_printf(MSG_ERROR, "wpas_dbus_getter_eap_methods[dbus] "
-					"out of memory when adding to array");
+			wpa_printf(MSG_ERROR, "wpas_dbus_getter_eap_methods"
+				   "[dbus] out of memory when adding to "
+				   "array");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-										   NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 	}
 
 	if (!dbus_message_iter_close_container(&variant_iter, &array_iter)) {
 		perror("wpas_dbus_getter_eap_methods[dbus] "
-					"out of memory when trying to close array");
-			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-										   NULL);
+		       "out of memory when trying to close array");
+		dbus_message_unref(reply);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 			goto out;
 	}
 	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
 		perror("wpas_dbus_getter_eap_methods[dbus] "
-				"out of memory when trying to close variant");
+		       "out of memory when trying to close variant");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -879,11 +896,11 @@ out:
  * on a particular wireless interface.
  */
 DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
-				   struct wpa_supplicant *wpa_s)
+				     struct wpa_supplicant *wpa_s)
 {
 	DBusMessage * reply = NULL;
 	DBusMessageIter iter, dict_iter, entry_iter, variant_iter,
-			array_iter, sub_array_iter;
+		array_iter, sub_array_iter;
 	char *key, *val, *type = NULL;
 	int len;
 	int freqs_num = 0;
@@ -905,84 +922,93 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		dbus_message_iter_next(&entry_iter);
 		dbus_message_iter_recurse(&entry_iter, &variant_iter);
 
-		if (!strcmp(key, "Type")) {
-
+		if (!os_strcmp(key, "Type")) {
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_STRING) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"Type must be a string");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong Type value type. String required");
+			    DBUS_TYPE_STRING) {
+				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
+					   "[dbus]: Type must be a string");
+				reply = wpas_dbus_error_invald_args(
+					message, "Wrong Type value type. "
+					"String required");
 				goto out;
 			}
 
 			dbus_message_iter_get_basic(&variant_iter, &type);
 
-		}
-		else if (!strcmp(key, "SSIDs")) {
-
+		} else if (!strcmp(key, "SSIDs")) {
 			struct wpa_driver_scan_ssid *ssids = params.ssids;
 
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_ARRAY) {
+			    DBUS_TYPE_ARRAY) {
 
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"ssids must be an array of arrays of bytes");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong SSIDs value type. "
-						"Array of arrays of bytes required");
+				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
+					   "[dbus]: ssids must be an array of "
+					   "arrays of bytes");
+				reply = wpas_dbus_error_invald_args(
+					message,
+					"Wrong SSIDs value type. "
+					"Array of arrays of bytes required");
 				goto out;
 			}
 
 			dbus_message_iter_recurse(&variant_iter, &array_iter);
 
 			if (dbus_message_iter_get_arg_type(&array_iter) !=
-					DBUS_TYPE_ARRAY ||
-					dbus_message_iter_get_element_type(&array_iter) !=
-						DBUS_TYPE_BYTE) {
-
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"ssids must be an array of arrays of bytes");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong SSIDs value type. "
-						"Array of arrays of bytes required");
+			    DBUS_TYPE_ARRAY ||
+			    dbus_message_iter_get_element_type(&array_iter) !=
+			    DBUS_TYPE_BYTE) {
+				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
+					   "[dbus]: ssids must be an array of "
+					   "arrays of bytes");
+				reply = wpas_dbus_error_invald_args(
+					message,
+					"Wrong SSIDs value type. "
+					"Array of arrays of bytes required");
 				goto out;
 			}
 
 			while (dbus_message_iter_get_arg_type(&array_iter) ==
-					DBUS_TYPE_ARRAY) {
-
+			       DBUS_TYPE_ARRAY) {
 				if (ssids_num >= WPAS_MAX_SCAN_SSIDS) {
-					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-							"To many ssids specified on scan dbus call");
-					reply = wpas_dbus_error_invald_args(message,
-							"To many ssids specified. "
-							"Specify at most four");
+					wpa_printf(MSG_DEBUG,
+						   "wpas_dbus_handler_scan"
+						   "[dbus]: To many ssids "
+						   "specified on scan dbus "
+						   "call");
+					reply = wpas_dbus_error_invald_args(
+						message,
+						"To many ssids specified. "
+						"Specify at most four");
 					goto out;
 				}
 
-				dbus_message_iter_recurse(&array_iter, &sub_array_iter);
+				dbus_message_iter_recurse(&array_iter,
+							  &sub_array_iter);
 
 
-				dbus_message_iter_get_fixed_array(&sub_array_iter,
-						&val, &len);
+				dbus_message_iter_get_fixed_array(
+					&sub_array_iter, &val, &len);
 
 				if (len == 0) {
 					dbus_message_iter_next(&array_iter);
 					continue;
 				}
 
-				ssids[ssids_num].ssid = os_malloc(sizeof(u8) * len);
-
-				if (! ssids[ssids_num].ssid) {
-					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-							"out of memory. can't allocate memory for SSID");
-					reply = dbus_message_new_error(message,
-							DBUS_ERROR_NO_MEMORY, NULL);
+				ssids[ssids_num].ssid =
+					os_malloc(sizeof(u8) * len);
+				if (!ssids[ssids_num].ssid) {
+					wpa_printf(MSG_DEBUG,
+						   "wpas_dbus_handler_scan"
+						   "[dbus]: out of memory. "
+						   "Cannot allocate memory "
+						   "for SSID");
+					reply = dbus_message_new_error(
+						message,
+						DBUS_ERROR_NO_MEMORY, NULL);
 					goto out;
 				}
 				os_memcpy((void *) ssids[ssids_num].ssid, val,
-						sizeof(u8) * len);
+					  sizeof(u8) * len);
 				ssids[ssids_num].ssid_len = len;
 
 				dbus_message_iter_next(&array_iter);
@@ -990,58 +1016,64 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 			}
 
 			params.num_ssids = ssids_num;
-		}
-		else if (!strcmp(key, "IEs")) {
+		} else if (!strcmp(key, "IEs")) {
 			u8 *ies = NULL;
 
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_ARRAY) {
+			    DBUS_TYPE_ARRAY) {
 
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"ies must be an array of arrays of bytes");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong IEs value type. "
-						"Array of arrays of bytes required");
+				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
+					   "[dbus]: ies must be an array of "
+					   "arrays of bytes");
+				reply = wpas_dbus_error_invald_args(
+					message,
+					"Wrong IEs value type. "
+					"Array of arrays of bytes required");
 				goto out;
 			}
 
 			dbus_message_iter_recurse(&variant_iter, &array_iter);
 
 			if (dbus_message_iter_get_arg_type(&array_iter) !=
-					DBUS_TYPE_ARRAY ||
-					dbus_message_iter_get_element_type(&array_iter) !=
-					DBUS_TYPE_BYTE) {
-
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"ies must be an array of arrays of bytes");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong IEs value type. Array required");
+			    DBUS_TYPE_ARRAY ||
+			    dbus_message_iter_get_element_type(&array_iter) !=
+			    DBUS_TYPE_BYTE) {
+				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
+					   "[dbus]: ies must be an array of "
+					   "arrays of bytes");
+				reply = wpas_dbus_error_invald_args(
+					message, "Wrong IEs value type. Array "
+					"required");
 				goto out;
 			}
 
 			while (dbus_message_iter_get_arg_type(&array_iter) ==
-					DBUS_TYPE_ARRAY) {
+			       DBUS_TYPE_ARRAY) {
+				dbus_message_iter_recurse(&array_iter,
+							  &sub_array_iter);
 
-				dbus_message_iter_recurse(&array_iter, &sub_array_iter);
-
-				dbus_message_iter_get_fixed_array(&sub_array_iter,
-						&val, &len);
+				dbus_message_iter_get_fixed_array(
+					&sub_array_iter, &val, &len);
 
 				if (len == 0) {
 					dbus_message_iter_next(&array_iter);
 					continue;
 				}
 
-				ies = os_realloc(ies, ies_len+len);
-
+				ies = os_realloc(ies, ies_len + len);
 				if (!ies) {
-					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-							"out of memory. can't allocate memory for IE");
-					reply = dbus_message_new_error(message,
-							DBUS_ERROR_NO_MEMORY, NULL);
+					wpa_printf(MSG_DEBUG,
+						   "wpas_dbus_handler_scan"
+						   "[dbus]: out of memory. "
+						   "Cannot allocate memory "
+						   "for IE");
+					reply = dbus_message_new_error(
+						message,
+						DBUS_ERROR_NO_MEMORY, NULL);
 					goto out;
 				}
-				os_memcpy(ies+ies_len, val, sizeof(u8) * len);
+				os_memcpy(ies + ies_len, val,
+					  sizeof(u8) * len);
 				ies_len += len;
 
 				dbus_message_iter_next(&array_iter);
@@ -1049,77 +1081,90 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 
 			params.extra_ies = ies;
 			params.extra_ies_len = ies_len;
-		}
-		else if (!strcmp(key, "Channels")) {
+		} else if (!strcmp(key, "Channels")) {
 			int *freqs = NULL;
 
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-				DBUS_TYPE_ARRAY) {
+			    DBUS_TYPE_ARRAY) {
 
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"Channels must be an array of structs");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong Channels value type. "
-						"Array of structs required");
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_scan[dbus]: "
+					   "Channels must be an array of "
+					   "structs");
+				reply = wpas_dbus_error_invald_args(
+					message,
+					"Wrong Channels value type. "
+					"Array of structs required");
 				goto out;
 			}
 
 			dbus_message_iter_recurse(&variant_iter, &array_iter);
 
 			if (dbus_message_iter_get_arg_type(&array_iter) !=
-				DBUS_TYPE_STRUCT) {
-
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"Channels must be an array of structs");
-				reply = wpas_dbus_error_invald_args(message,
-						"Wrong Channels value type. "
-						"Array of structs required");
+			    DBUS_TYPE_STRUCT) {
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_scan[dbus]: "
+					   "Channels must be an array of "
+					   "structs");
+				reply = wpas_dbus_error_invald_args(
+					message,
+					"Wrong Channels value type. "
+					"Array of structs required");
 				goto out;
 			}
 
 			while (dbus_message_iter_get_arg_type(&array_iter) ==
-					DBUS_TYPE_STRUCT) {
+			       DBUS_TYPE_STRUCT) {
 				int freq, width;
 
-				dbus_message_iter_recurse(&array_iter, &sub_array_iter);
+				dbus_message_iter_recurse(&array_iter,
+							  &sub_array_iter);
 
-				if (dbus_message_iter_get_arg_type(&sub_array_iter) !=
-						DBUS_TYPE_UINT32) {
-					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-							"Channel must by specified by struct of "
-							"two UINT32s %c",
-							dbus_message_iter_get_arg_type(&sub_array_iter));
-					reply = wpas_dbus_error_invald_args(message,
-							"Wrong Channel struct. Two UINT32s required");
+				if (dbus_message_iter_get_arg_type(
+					    &sub_array_iter) !=
+				    DBUS_TYPE_UINT32) {
+					wpa_printf(MSG_DEBUG,
+						   "wpas_dbus_handler_scan"
+						   "[dbus]: Channel must by "
+						   "specified by struct of "
+						   "two UINT32s %c",
+						   dbus_message_iter_get_arg_type(&sub_array_iter));
+					reply = wpas_dbus_error_invald_args(
+						message,
+						"Wrong Channel struct. Two "
+						"UINT32s required");
 					os_free(freqs);
 					goto out;
 				}
-				dbus_message_iter_get_basic(&sub_array_iter, &freq);
+				dbus_message_iter_get_basic(&sub_array_iter,
+							    &freq);
 
 				if (!dbus_message_iter_next(&sub_array_iter) ||
-						dbus_message_iter_get_arg_type(&sub_array_iter) !=
-							DBUS_TYPE_UINT32) {
+				    dbus_message_iter_get_arg_type(
+					    &sub_array_iter) !=
+				    DBUS_TYPE_UINT32) {
 					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-							"Channel must by specified by struct of "
-							"two UINT32s");
+						   "Channel must by specified by struct of "
+						   "two UINT32s");
 					reply = wpas_dbus_error_invald_args(message,
-							"Wrong Channel struct. Two UINT32s required");
+									    "Wrong Channel struct. Two UINT32s required");
 					os_free(freqs);
 					goto out;
 				}
 
 				dbus_message_iter_get_basic(&sub_array_iter, &width);
 
-				#define FREQS_ALLOC_CHUNK 32
+#define FREQS_ALLOC_CHUNK 32
 				if (freqs_num % FREQS_ALLOC_CHUNK == 0) {
 					freqs = os_realloc(freqs,
-							sizeof(int) * (freqs_num + FREQS_ALLOC_CHUNK));
+							   sizeof(int) * (freqs_num + FREQS_ALLOC_CHUNK));
 				}
 				if (!freqs) {
 					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-							"out of memory. can't allocate memory for freqs");
-					reply = dbus_message_new_error(message,
-							DBUS_ERROR_NO_MEMORY, NULL);
+						   "out of memory. can't allocate memory for freqs");
+					reply = dbus_message_new_error(
+						message,
+						DBUS_ERROR_NO_MEMORY, NULL);
 					goto out;
 				}
 
@@ -1129,23 +1174,24 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				dbus_message_iter_next(&array_iter);
 			}
 
-			freqs = os_realloc(freqs, sizeof(int) * (freqs_num + 1));
+			freqs = os_realloc(freqs,
+					   sizeof(int) * (freqs_num + 1));
 			if (!freqs) {
 				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						"out of memory. can't allocate memory for freqs");
-				reply = dbus_message_new_error(message,
-						DBUS_ERROR_NO_MEMORY, NULL);
+					   "out of memory. can't allocate memory for freqs");
+				reply = dbus_message_new_error(
+					message, DBUS_ERROR_NO_MEMORY, NULL);
 				goto out;
 			}
 			freqs[freqs_num] = 0;
 
 			params.freqs = freqs;
-		}
-		else {
+		} else {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-					"Unknown argument %s", key);
-			reply = wpas_dbus_error_invald_args(message,
-					"Wrong Channel struct. Two UINT32s required");
+				   "Unknown argument %s", key);
+			reply = wpas_dbus_error_invald_args(
+				message,
+				"Wrong Channel struct. Two UINT32s required");
 			goto out;
 		}
 
@@ -1154,7 +1200,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 
 	if (!type) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-				"Scan type not specified");
+			   "Scan type not specified");
 		reply = wpas_dbus_error_invald_args(message, key);
 		goto out;
 	}
@@ -1162,34 +1208,31 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 	if (!strcmp(type, "passive")) {
 		if (ssids_num || ies_len) {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-					"SSIDs or IEs specified for passive scan.");
-			reply = wpas_dbus_error_invald_args(message,
-					"You can specify only Channels in passive scan");
+				   "SSIDs or IEs specified for passive scan.");
+			reply = wpas_dbus_error_invald_args(
+				message, "You can specify only Channels in "
+				"passive scan");
 			goto out;
-		}
-		else if (freqs_num > 0) {
+		} else if (freqs_num > 0) {
 			/* wildcard ssid */
 			params.num_ssids++;
 			wpa_supplicant_trigger_scan(wpa_s, &params);
-		}
-		else {
+		} else {
 			wpa_s->scan_req = 2;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
-	}
-	else if (!strcmp(type, "active")) {
+	} else if (!strcmp(type, "active")) {
 		wpa_supplicant_trigger_scan(wpa_s, &params);
-	}
-	else {
+	} else {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-				"Unknown scan type: %s", type);
+			   "Unknown scan type: %s", type);
 		reply = wpas_dbus_error_invald_args(message,
-				"Wrong scan type");
+						    "Wrong scan type");
 		goto out;
 	}
 
 out:
-	os_free((u8*) params.extra_ies);
+	os_free((u8 *) params.extra_ies);
 	os_free(params.freqs);
 	return reply;
 }
@@ -1205,7 +1248,7 @@ out:
  * Handler function for "Disconnect" method call of network interface.
  */
 DBusMessage * wpas_dbus_handler_disconnect(DBusMessage *message,
-					 struct wpa_supplicant *wpa_s)
+					   struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->current_ssid != NULL) {
 		wpa_s->disconnected = 1;
@@ -1213,10 +1256,9 @@ DBusMessage * wpas_dbus_handler_disconnect(DBusMessage *message,
 
 		return NULL;
 	}
-	else {
-		return dbus_message_new_error(message, WPAS_DBUS_ERROR_NOT_CONNECTED,
-						"This interface is not connected");
-	}
+
+	return dbus_message_new_error(message, WPAS_DBUS_ERROR_NOT_CONNECTED,
+				      "This interface is not connected");
 }
 
 
@@ -1229,7 +1271,7 @@ DBusMessage * wpas_dbus_handler_disconnect(DBusMessage *message,
  * Handler function for "AddNetwork" method call of a network interface.
  */
 DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
-					  struct wpa_supplicant *wpa_s)
+					    struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter;
@@ -1240,7 +1282,8 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 	if (path == NULL) {
 		perror("wpas_dbus_handler_add_network[dbus]: out of "
 		       "memory.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto err;
 	}
 
@@ -1249,10 +1292,11 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_handler_add_network[dbus]: "
-			       "can't add new interface.");
-		reply = wpas_dbus_error_unknown_error(message,
-					       "wpa_supplicant could not add "
-					       "a network on this interface.");
+			   "can't add new interface.");
+		reply = wpas_dbus_error_unknown_error(
+			message,
+			"wpa_supplicant could not add "
+			"a network on this interface.");
 		goto err;
 	}
 	wpas_notify_network_added(wpa_s, ssid);
@@ -1262,30 +1306,32 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 	reply = set_network_properties(message, ssid, &iter);
 	if (reply) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_add_network[dbus]:"
-				"control interface couldn't set network properties");
+			   "control interface couldn't set network "
+			   "properties");
 		goto err;
 	}
 
 	/* Construct the object path for this network. */
-	snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-		 "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
-		 wpas_dbus_get_path(wpa_s),
-		 ssid->id);
-
+	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
+		    wpas_dbus_get_path(wpa_s),
+		    ssid->id);
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
 		perror("wpas_dbus_handler_add_network[dbus]: out of memory "
-				"when creating reply");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "when creating reply");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto err;
 	}
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
-			DBUS_TYPE_INVALID)) {
+				      DBUS_TYPE_INVALID)) {
 		perror("wpas_dbus_handler_add_network[dbus]: out of memory "
-				"when appending argument to reply");
+		       "when appending argument to reply");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto err;
 	}
 
@@ -1311,7 +1357,7 @@ err:
  * Handler function for "RemoveNetwork" method call of a network interface.
  */
 DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
-					     struct wpa_supplicant *wpa_s)
+					       struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	const char *op;
@@ -1320,7 +1366,7 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	struct wpa_ssid *ssid;
 
 	dbus_message_get_args(message, NULL, DBUS_TYPE_OBJECT_PATH, &op,
-			DBUS_TYPE_INVALID);
+			      DBUS_TYPE_INVALID);
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
@@ -1345,10 +1391,12 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	wpas_notify_network_removed(wpa_s, ssid);
 
 	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_handler_remove_network[dbus]: "
-				"error occurred when removing network %d", id);
-		reply = wpas_dbus_error_unknown_error(message,
-			   "error removing the specified network on this interface.");
+		wpa_printf(MSG_ERROR,
+			   "wpas_dbus_handler_remove_network[dbus]: "
+			   "error occurred when removing network %d", id);
+		reply = wpas_dbus_error_unknown_error(
+			message, "error removing the specified network on "
+			"this interface.");
 		goto out;
 	}
 
@@ -1371,7 +1419,7 @@ out:
  * Handler function for "SelectNetwork" method call of network interface.
  */
 DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
-					     struct wpa_supplicant *wpa_s)
+					       struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	const char *op;
@@ -1380,7 +1428,7 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 	struct wpa_ssid *ssid;
 
 	dbus_message_get_args(message, NULL, DBUS_TYPE_OBJECT_PATH, &op,
-		   DBUS_TYPE_INVALID);
+			      DBUS_TYPE_INVALID);
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
@@ -1401,6 +1449,7 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 		reply = wpas_dbus_error_network_unknown(message);
 		goto out;
 	}
+
 	/* Finally, associate with the network */
 	wpa_supplicant_select_network(wpa_s, ssid);
 
@@ -1420,7 +1469,7 @@ out:
  * Asks wpa_supplicant to internally store a binary blobs.
  */
 DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+					 struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter, array_iter;
@@ -1434,8 +1483,9 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 	dbus_message_iter_get_basic(&iter, &blob_name);
 
 	if (wpa_config_get_blob(wpa_s->conf, blob_name)) {
-		return dbus_message_new_error(message, WPAS_DBUS_ERROR_BLOB_EXISTS,
-				NULL);
+		return dbus_message_new_error(message,
+					      WPAS_DBUS_ERROR_BLOB_EXISTS,
+					      NULL);
 	}
 
 	dbus_message_iter_next(&iter);
@@ -1446,16 +1496,18 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 	blob = os_zalloc(sizeof(*blob));
 	if (!blob) {
 		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-				"trying to allocate blob struct");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to allocate blob struct");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto err;
 	}
 
 	blob->data = os_malloc(blob_len);
 	if (!blob->data) {
 		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-				"trying to allocate blob data");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to allocate blob data");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto err;
 	}
 	os_memcpy(blob->data, blob_data, blob_len);
@@ -1464,8 +1516,9 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 	blob->name = strdup(blob_name);
 	if (!blob->name) {
 		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-				"trying to copy blob name");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to copy blob name");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto err;
 	}
 
@@ -1493,7 +1546,7 @@ err:
  * Gets one wpa_supplicant's binary blobs.
  */
 DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+					 struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter, array_iter;
@@ -1502,53 +1555,58 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 	const struct wpa_config_blob *blob;
 
 	dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &blob_name,
-			DBUS_TYPE_INVALID);
+			      DBUS_TYPE_INVALID);
 
 	blob = wpa_config_get_blob(wpa_s->conf, blob_name);
 	if (!blob) {
-		return dbus_message_new_error(message, WPAS_DBUS_ERROR_BLOB_UNKNOWN,
-				"Blob id not set");
+		return dbus_message_new_error(message,
+					      WPAS_DBUS_ERROR_BLOB_UNKNOWN,
+					      "Blob id not set");
 	}
 
 	reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-				"trying to allocate return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to allocate return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
-			DBUS_TYPE_BYTE_AS_STRING, &array_iter)) {
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &array_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-				"trying to open array");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to open array");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_append_fixed_array(&array_iter, DBUS_TYPE_BYTE,
-			&(blob->data),	blob->len)) {
+						  &(blob->data), blob->len)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-				"trying to append data to array");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to append data to array");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_close_container(&iter, &array_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-				"trying to close array");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to close array");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 out:
 	return reply;
-
 }
 
 
@@ -1561,26 +1619,24 @@ out:
  * Asks wpa_supplicant to internally remove a binary blobs.
  */
 DBusMessage * wpas_dbus_handler_remove_blob(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+					    struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
-
 	char *blob_name;
 
 	dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &blob_name,
-			DBUS_TYPE_INVALID);
+			      DBUS_TYPE_INVALID);
 
 	if (wpa_config_remove_blob(wpa_s->conf, blob_name)) {
-		return dbus_message_new_error(message, WPAS_DBUS_ERROR_BLOB_UNKNOWN,
-				"Blob id not set");
+		return dbus_message_new_error(message,
+					      WPAS_DBUS_ERROR_BLOB_UNKNOWN,
+					      "Blob id not set");
 	}
 	wpas_notify_blob_removed(wpa_s, blob_name);
 
 	return reply;
 
 }
-
-
 
 
 /**
@@ -1592,13 +1648,17 @@ DBusMessage * wpas_dbus_handler_remove_blob(DBusMessage *message,
  * Getter for "Capabilities" property of an interface.
  */
 DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
-					   struct wpa_supplicant *wpa_s)
+					    struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	struct wpa_driver_capa capa;
 	int res;
 	DBusMessageIter iter, iter_dict;
-	DBusMessageIter iter_dict_entry, iter_dict_val, iter_array, variant_iter;
+	DBusMessageIter iter_dict_entry, iter_dict_val, iter_array,
+		variant_iter;
+	const char *scans[] = { "active", "passive", "ssid" };
+	const char *modes[] = { "infrastructure", "ad-hoc", "ap" };
+	int n = sizeof(modes) / sizeof(char *);
 
 	if (message == NULL)
 		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
@@ -1609,7 +1669,7 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"a{sv}", &variant_iter))
+					      "a{sv}", &variant_iter))
 		goto nomem;
 
 	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
@@ -1621,8 +1681,8 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 	if (res < 0) {
 		const char *args[] = {"ccmp", "tkip", "none"};
 		if (!wpa_dbus_dict_append_string_array(
-				&iter_dict, "Pairwise", args,
-				sizeof(args) / sizeof(char*)))
+			    &iter_dict, "Pairwise", args,
+			    sizeof(args) / sizeof(char*)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Pairwise",
@@ -1662,8 +1722,8 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 			"ccmp", "tkip", "wep104", "wep40"
 		};
 		if (!wpa_dbus_dict_append_string_array(
-				&iter_dict, "Group", args,
-				sizeof(args) / sizeof(char*)))
+			    &iter_dict, "Group", args,
+			    sizeof(args) / sizeof(char*)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Group",
@@ -1713,8 +1773,8 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 			"none"
 		};
 		if (!wpa_dbus_dict_append_string_array(
-				&iter_dict, "KeyMgmt", args,
-				sizeof(args) / sizeof(char*)))
+			    &iter_dict, "KeyMgmt", args,
+			    sizeof(args) / sizeof(char*)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "KeyMgmt",
@@ -1753,7 +1813,8 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 
 
 #ifdef CONFIG_WPS
-		if (!wpa_dbus_dict_string_array_add_element(&iter_array, "wps"))
+		if (!wpa_dbus_dict_string_array_add_element(&iter_array,
+							    "wps"))
 			goto nomem;
 #endif /* CONFIG_WPS */
 
@@ -1762,15 +1823,14 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 						    &iter_dict_val,
 						    &iter_array))
 			goto nomem;
-
 	}
 
 	/***** WPA protocol */
 	if (res < 0) {
 		const char *args[] = { "rsn", "wpa" };
 		if (!wpa_dbus_dict_append_string_array(
-				&iter_dict, "Protocol", args,
-				sizeof(args) / sizeof(char*)))
+			    &iter_dict, "Protocol", args,
+			    sizeof(args) / sizeof(char*)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Protocol",
@@ -1804,8 +1864,8 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 	if (res < 0) {
 		const char *args[] = { "open", "shared", "leap" };
 		if (!wpa_dbus_dict_append_string_array(
-				&iter_dict, "AuthAlg", args,
-				sizeof(args) / sizeof(char*)))
+			    &iter_dict, "AuthAlg", args,
+			    sizeof(args) / sizeof(char*)))
 			goto nomem;
 	} else {
 		if (!wpa_dbus_dict_begin_string_array(&iter_dict, "AuthAlg",
@@ -1840,19 +1900,14 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 	}
 
 	/***** Scan */
-	const char *scans[] = { "active", "passive", "ssid" };
-	if (!wpa_dbus_dict_append_string_array(
-			&iter_dict, "Scan", scans,
-			sizeof(scans) / sizeof(char*)))
+	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Scan", scans,
+					       sizeof(scans) / sizeof(char *)))
 		goto nomem;
 
 	/***** Modes */
-	const char *modes[] = { "infrastructure", "ad-hoc", "ap" };
-	int n = sizeof(modes) / sizeof(char*);
 	if (res < 0 || !(capa.flags & WPA_DRIVER_FLAGS_AP))
 		n--; /* exclude ap mode if it is not supported by the driver */
-	if (!wpa_dbus_dict_append_string_array(
-			&iter_dict, "Modes", modes, n))
+	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Modes", modes, n))
 		goto nomem;
 
 	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
@@ -1863,9 +1918,9 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 	return reply;
 
 nomem:
-	if (reply) {
+	if (reply)
 		dbus_message_unref(reply);
-	}
+
 	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
 }
 
@@ -1880,7 +1935,7 @@ nomem:
  * Getter for "State" property.
  */
 DBusMessage * wpas_dbus_getter_state(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+				     struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -1892,26 +1947,30 @@ DBusMessage * wpas_dbus_getter_state(DBusMessage *message,
 	else
 		reply = dbus_message_new_method_return(message);
 	if (reply != NULL) {
-
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-				"s", &variant_iter)) {
+						      "s", &variant_iter)) {
 			perror("wpas_dbus_getter_state[dbus] out of memory "
-					"when trying to open variant");
+			       "when trying to open variant");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
 		str_state = wpa_supplicant_state_txt(wpa_s->wpa_state);
 
-		/* make state string lowercase to fit new DBus API convention */
-		state_ls = tmp = strdup(str_state);
+		/* make state string lowercase to fit new DBus API convention
+		 */
+		state_ls = tmp = os_strdup(str_state);
 		if (!tmp) {
 			perror("wpas_dbus_getter_state[dbus] out of memory "
 					"when trying read state");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 		while (*tmp) {
@@ -1919,24 +1978,30 @@ DBusMessage * wpas_dbus_getter_state(DBusMessage *message,
 			tmp++;
 		}
 
-		if (!dbus_message_iter_append_basic(&variant_iter, DBUS_TYPE_STRING,
-				&state_ls)) {
+		if (!dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_STRING,
+						    &state_ls)) {
 			perror("wpas_dbus_getter_state[dbus] out of memory "
-					"when trying append state");
+			       "when trying append state");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto err;
 		}
 		if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_state[dbus] out of memory "
-					"when trying close variant");
+			       "when trying close variant");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto err;
 		}
 	err:
 		os_free(state_ls);
 	}
+
 out:
 	return reply;
 }
@@ -1950,7 +2015,7 @@ out:
  * Getter for "scanning" property.
  */
 DBusMessage * wpas_dbus_getter_scanning(DBusMessage *message,
-					   struct wpa_supplicant *wpa_s)
+					struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -1964,20 +2029,23 @@ DBusMessage * wpas_dbus_getter_scanning(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"b", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_BOOLEAN, &scanning) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
+						      "b", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_BOOLEAN,
+						    &scanning) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_scanning[dbus]: out of "
-				   "memory to put scanning state into message.");
+			       "memory to put scanning state into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_scanning[dbus]: out of "
 		       "memory to return scanning state.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	return reply;
@@ -1993,7 +2061,7 @@ DBusMessage * wpas_dbus_getter_scanning(DBusMessage *message,
  * Getter function for "ApScan" property.
  */
 DBusMessage * wpas_dbus_getter_ap_scan(DBusMessage *message,
-					  struct wpa_supplicant *wpa_s)
+				       struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2007,20 +2075,23 @@ DBusMessage * wpas_dbus_getter_ap_scan(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"u", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_UINT32, &ap_scan) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
+						      "u", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_UINT32,
+						    &ap_scan) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_ap_scan[dbus]: out of "
-				   "memory to put scanning state into message.");
+			       "memory to put scanning state into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_ap_scan[dbus]: out of "
 		       "memory to return scanning state.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	return reply;
@@ -2036,7 +2107,7 @@ DBusMessage * wpas_dbus_getter_ap_scan(DBusMessage *message,
  * Setter function for "ApScan" property.
  */
 DBusMessage * wpas_dbus_setter_ap_scan(DBusMessage *message,
-					  struct wpa_supplicant *wpa_s)
+				       struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2044,8 +2115,9 @@ DBusMessage * wpas_dbus_setter_ap_scan(DBusMessage *message,
 
 	if (!dbus_message_iter_init(message, &iter)) {
 		perror("wpas_dbus_getter_ap_scan[dbus]: out of "
-			   "memory to return scanning state.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to return scanning state.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2054,15 +2126,18 @@ DBusMessage * wpas_dbus_setter_ap_scan(DBusMessage *message,
 	dbus_message_iter_next(&iter);
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
-	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_UINT32) {
-		reply = wpas_dbus_error_invald_args(message, "UINT32 required");
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_UINT32)
+	{
+		reply = wpas_dbus_error_invald_args(message,
+						    "UINT32 required");
 		goto out;
 	}
 	dbus_message_iter_get_basic(&variant_iter, &ap_scan);
 
 	if (wpa_supplicant_set_ap_scan(wpa_s, ap_scan)) {
-		reply = wpas_dbus_error_invald_args(message,
-											"ap_scan must equal 0, 1 or 2");
+		reply = wpas_dbus_error_invald_args(
+			message,
+			"ap_scan must equal 0, 1 or 2");
 		goto out;
 	}
 
@@ -2081,7 +2156,7 @@ out:
  * Getter for "Ifname" property.
  */
 DBusMessage * wpas_dbus_getter_ifname(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+				      struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2090,8 +2165,9 @@ DBusMessage * wpas_dbus_getter_ifname(DBusMessage *message,
 	ifname = wpa_s->ifname;
 	if (ifname == NULL) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_getter_ifname[dbus]: "
-				"wpa_s has no interface name set"");");
-		return wpas_dbus_error_unknown_error(message, "ifname not set");
+			   "wpa_s has no interface name set"");");
+		return wpas_dbus_error_unknown_error(message,
+						     "ifname not set");
 	}
 
 	if (message == NULL)
@@ -2102,20 +2178,23 @@ DBusMessage * wpas_dbus_getter_ifname(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"s", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_STRING, &ifname) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
+						      "s", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_STRING,
+						    &ifname) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_ifname[dbus]: out of "
-				   "memory to put ifname into message.");
+			       "memory to put ifname into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_ifname[dbus]: out of "
-			   "memory to return ifname state.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to return ifname state.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	return reply;
@@ -2132,7 +2211,7 @@ DBusMessage * wpas_dbus_getter_ifname(DBusMessage *message,
  * Getter for "Driver" property.
  */
 DBusMessage * wpas_dbus_getter_driver(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+				      struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2140,7 +2219,7 @@ DBusMessage * wpas_dbus_getter_driver(DBusMessage *message,
 
 	if (wpa_s->driver == NULL || wpa_s->driver->name == NULL) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_getter_driver[dbus]: "
-				"wpa_s has no driver set"");");
+			   "wpa_s has no driver set"");");
 		return wpas_dbus_error_unknown_error(message, NULL);
 	}
 
@@ -2154,20 +2233,23 @@ DBusMessage * wpas_dbus_getter_driver(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"s", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_STRING, &driver) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
+						      "s", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_STRING,
+						    &driver) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_driver[dbus]: out of "
-				   "memory to put driver into message.");
+			       "memory to put driver into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_driver[dbus]: out of "
-			   "memory to return driver.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to return driver.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	return reply;
@@ -2184,7 +2266,7 @@ DBusMessage * wpas_dbus_getter_driver(DBusMessage *message,
  * Getter for "CurrentBSS" property.
  */
 DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+					   struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2194,8 +2276,9 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 
 	if (bss_obj_path == NULL) {
 		perror("wpas_dbus_getter_current_bss[dbus]: out of "
-			   "memory to allocate result argument.");
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to allocate result argument.");
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
 	if (wpa_s->bssid && !is_zero_ether_addr(wpa_s->bssid)) {
@@ -2210,11 +2293,12 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 	}
 
 	if (is_bssid_known)
-		snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-				"%s/" WPAS_DBUS_NEW_BSSIDS_PART "/" WPAS_DBUS_BSSID_FORMAT,
-				path, MAC2STR(wpa_s->bssid));
+		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/"
+			    WPAS_DBUS_BSSID_FORMAT,
+			    path, MAC2STR(wpa_s->bssid));
 	else
-		sprintf(bss_obj_path, "/");
+		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 
 	if (message == NULL)
 		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
@@ -2224,20 +2308,23 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"o", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_OBJECT_PATH, &bss_obj_path) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
+						      "o", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_OBJECT_PATH,
+						    &bss_obj_path) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_current_bss[dbus]: out of "
-				   "memory to put path into message.");
+			       "memory to put path into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_current_bss[dbus]: out of "
-			   "memory when creating reply.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory when creating reply.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	os_free(bss_obj_path);
@@ -2255,7 +2342,7 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
  * Getter for "CurrentNetwork" property.
  */
 DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+					       struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2264,16 +2351,17 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 
 	if (net_obj_path == NULL) {
 		perror("wpas_dbus_getter_current_network[dbus]: out of "
-			   "memory to allocate result argument.");
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to allocate result argument.");
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
 	if (wpa_s->current_ssid)
-		snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-			 "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u", path,
-			 wpa_s->current_ssid->id);
+		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u", path,
+			    wpa_s->current_ssid->id);
 	else
-		sprintf(net_obj_path, "/");
+		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 
 	if (message == NULL)
 		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
@@ -2283,20 +2371,23 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"o", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_OBJECT_PATH, &net_obj_path) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
-			perror("wpas_dbus_getter_current_network[dbus]: out of "
-				   "memory to put path into message.");
+						      "o", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_OBJECT_PATH,
+						    &net_obj_path) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
+			perror("wpas_dbus_getter_current_network[dbus]: out "
+			       "of memory to put path into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_current_network[dbus]: out of "
-			   "memory when creating reply.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory when creating reply.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	os_free(net_obj_path);
@@ -2314,7 +2405,7 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
  * Getter for "BridgeIfname" property.
  */
 DBusMessage * wpas_dbus_getter_bridge_ifname(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+					     struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2323,7 +2414,7 @@ DBusMessage * wpas_dbus_getter_bridge_ifname(DBusMessage *message,
 	bridge_ifname = wpa_s->bridge_ifname;
 	if (bridge_ifname == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bridge_ifname[dbus]: "
-				"wpa_s has no bridge interface name set"");");
+			   "wpa_s has no bridge interface name set"");");
 		return wpas_dbus_error_unknown_error(message, NULL);
 	}
 
@@ -2335,20 +2426,23 @@ DBusMessage * wpas_dbus_getter_bridge_ifname(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"s", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_STRING, &bridge_ifname) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
-
+						      "s", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_STRING,
+						    &bridge_ifname) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 			perror("wpas_dbus_getter_bridge_ifname[dbus]: out of "
-				   "memory to put bridge ifname into message.");
+			       "memory to put bridge ifname into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_bridge_ifname[dbus]: out of "
-			   "memory to return bridge ifname.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to return bridge ifname.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	return reply;
@@ -2365,7 +2459,7 @@ DBusMessage * wpas_dbus_getter_bridge_ifname(DBusMessage *message,
  * Getter for "BSSs" property.
  */
 DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
-					   struct wpa_supplicant *wpa_s)
+				    struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, array_iter;
@@ -2373,9 +2467,9 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 
 	/* Ensure we've actually got scan results to return */
 	if (wpa_s->scan_res == NULL &&
-			wpa_supplicant_get_scan_results(wpa_s) < 0) {
+	    wpa_supplicant_get_scan_results(wpa_s) < 0) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bsss[dbus]: "
-				"An error occurred getting scan results.");
+			   "An error occurred getting scan results.");
 		return wpas_dbus_error_unknown_error(message, NULL);
 	}
 
@@ -2386,21 +2480,24 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
 		perror("wpas_dbus_getter_bsss[dbus]: out of "
-			   "memory to create return message.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to create return message.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"ao", &variant_iter) ||
-			!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
-					DBUS_TYPE_OBJECT_PATH_AS_STRING, &array_iter)) {
+					      "ao", &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_OBJECT_PATH_AS_STRING,
+					      &array_iter)) {
 		perror("wpas_dbus_getter_bsss[dbus]: out of "
-			   "memory to open container.");
+		       "memory to open container.");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2414,28 +2511,31 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 			perror("wpas_dbus_getter_bsss[dbus]: out of "
 			       "memory.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 		/* Construct the object path for this BSS. Note that ':'
 		 * is not a valid character in dbus object paths.
 		 */
-		snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-			 "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/"
-			 WPAS_DBUS_BSSID_FORMAT,
-			 wpas_dbus_get_path(wpa_s),
-			 MAC2STR(res->bssid));
+		os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/"
+			    WPAS_DBUS_BSSID_FORMAT,
+			    wpas_dbus_get_path(wpa_s),
+			    MAC2STR(res->bssid));
 		dbus_message_iter_append_basic(&array_iter,
 					       DBUS_TYPE_OBJECT_PATH, &path);
 		os_free(path);
 	}
 
 	if (!dbus_message_iter_close_container(&variant_iter, &array_iter) ||
-			!dbus_message_iter_close_container(&iter, &variant_iter)) {
+	    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 		perror("wpas_dbus_getter_bsss[dbus]: out of "
-			   "memory to close container.");
+		       "memory to close container.");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2454,7 +2554,7 @@ out:
  * Getter for "Networks" property.
  */
 DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
-					   struct wpa_supplicant *wpa_s)
+					struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, array_iter;
@@ -2462,7 +2562,7 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 
 	if (wpa_s->conf == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_getter_networks[dbus]: "
-				"An error occurred getting networks list.");
+			   "An error occurred getting networks list.");
 		return wpas_dbus_error_unknown_error(message, NULL);
 	}
 
@@ -2473,21 +2573,24 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
 		perror("wpas_dbus_getter_networks[dbus]: out of "
-			   "memory to create return message.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to create return message.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"ao", &variant_iter) ||
-			!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
-					DBUS_TYPE_OBJECT_PATH_AS_STRING, &array_iter)) {
+					      "ao", &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_OBJECT_PATH_AS_STRING,
+					      &array_iter)) {
 		perror("wpas_dbus_getter_networks[dbus]: out of "
-			   "memory to open container.");
+		       "memory to open container.");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2498,28 +2601,30 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 		path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 		if (path == NULL) {
 			perror("wpas_dbus_getter_networks[dbus]: out of "
-				   "memory.");
+			       "memory.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
 		/* Construct the object path for this network. */
-		snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-			 "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
-			 wpas_dbus_get_path(wpa_s), ssid->id);
+		os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
+			    wpas_dbus_get_path(wpa_s), ssid->id);
 		dbus_message_iter_append_basic(&array_iter,
 					       DBUS_TYPE_OBJECT_PATH, &path);
 		os_free(path);
 	}
 
-
 	if (!dbus_message_iter_close_container(&variant_iter, &array_iter) ||
-			!dbus_message_iter_close_container(&iter, &variant_iter)) {
+	    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 		perror("wpas_dbus_getter_networks[dbus]: out of "
-			   "memory to close container.");
+		       "memory to close container.");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2537,7 +2642,7 @@ out:
  * Getter for "Blobs" property.
  */
 DBusMessage * wpas_dbus_getter_blobs(DBusMessage *message,
-					   struct wpa_supplicant *wpa_s)
+				     struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, dict_iter, entry_iter, array_iter;
@@ -2549,82 +2654,105 @@ DBusMessage * wpas_dbus_getter_blobs(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-				"trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to initialize return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"a{say}", &variant_iter)) {
+					      "a{say}", &variant_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-				"trying to open variant");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to open variant");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
-			"{say}", &dict_iter)) {
+					      "{say}", &dict_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-				"trying to open dictionary");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to open dictionary");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	blob = wpa_s->conf->blobs;
 	while (blob) {
-		if (!dbus_message_iter_open_container(&dict_iter, DBUS_TYPE_DICT_ENTRY,
-				 NULL, &entry_iter)) {
+		if (!dbus_message_iter_open_container(&dict_iter,
+						      DBUS_TYPE_DICT_ENTRY,
+						      NULL, &entry_iter)) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-					"trying to open entry");
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			perror("wpas_dbus_getter_blobs[dbus] out of memory "
+			       "when trying to open entry");
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
-		if (!dbus_message_iter_append_basic(&entry_iter, DBUS_TYPE_STRING,
-				&(blob->name))) {
+		if (!dbus_message_iter_append_basic(&entry_iter,
+						    DBUS_TYPE_STRING,
+						    &(blob->name))) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-					"trying to append blob name");
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			perror("wpas_dbus_getter_blobs[dbus] out of memory "
+			       "when trying to append blob name");
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
-		if (!dbus_message_iter_open_container(&entry_iter, DBUS_TYPE_ARRAY,
-				 DBUS_TYPE_BYTE_AS_STRING, &array_iter)) {
+		if (!dbus_message_iter_open_container(&entry_iter,
+						      DBUS_TYPE_ARRAY,
+						      DBUS_TYPE_BYTE_AS_STRING,
+						      &array_iter)) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-					"trying to open array");
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			perror("wpas_dbus_getter_blobs[dbus] out of memory "
+			       "when trying to open array");
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
-		if (!dbus_message_iter_append_fixed_array(&array_iter, DBUS_TYPE_BYTE,
-				&(blob->data), blob->len)) {
+		if (!dbus_message_iter_append_fixed_array(&array_iter,
+							  DBUS_TYPE_BYTE,
+							  &(blob->data),
+							  blob->len)) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-					"trying to append blob data");
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			perror("wpas_dbus_getter_blobs[dbus] out of memory "
+			       "when trying to append blob data");
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
-		if (!dbus_message_iter_close_container(&entry_iter, &array_iter)) {
+		if (!dbus_message_iter_close_container(&entry_iter,
+						       &array_iter)) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-					"trying to close array");
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			perror("wpas_dbus_getter_blobs[dbus] out of memory "
+			       "when trying to close array");
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
-		if (!dbus_message_iter_close_container(&dict_iter, &entry_iter)) {
+		if (!dbus_message_iter_close_container(&dict_iter,
+						       &entry_iter)) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-					"trying to close entry");
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			perror("wpas_dbus_getter_blobs[dbus] out of memory "
+			       "when trying to close entry");
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 
@@ -2634,16 +2762,18 @@ DBusMessage * wpas_dbus_getter_blobs(DBusMessage *message,
 	if (!dbus_message_iter_close_container(&variant_iter, &dict_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-				"trying to close dictionary");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to close dictionary");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-				"trying to close variant");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to close variant");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2661,17 +2791,15 @@ out:
  * Getter for "Properties" property.
  */
 DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
-		struct bss_handler_args *bss)
+					      struct bss_handler_args *bss)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, iter_dict, variant_iter;
 	const u8 *ie;
-
 	struct wpa_scan_res *res = find_scan_result(bss);
 
-	if (res == NULL) {
+	if (res == NULL)
 		return NULL;
-	}
 
 	/* Dump the properties into a dbus message */
 	if (message == NULL)
@@ -2685,7 +2813,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-				"a{sv}", &variant_iter))
+					      "a{sv}", &variant_iter))
 		goto error;
 
 	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
@@ -2772,7 +2900,7 @@ error:
  * Getter for "enabled" property of a configured network.
  */
 DBusMessage * wpas_dbus_getter_enabled(DBusMessage *message,
-		  struct network_handler_args *net)
+				       struct network_handler_args *net)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2785,36 +2913,40 @@ DBusMessage * wpas_dbus_getter_enabled(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_getter_enabled[dbus] out of memory when "
-				"trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to initialize return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"b", &variant_iter)) {
+					      "b", &variant_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_enabled[dbus] out of memory when "
-				"trying to open variant");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to open variant");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_append_basic(&variant_iter,
-			DBUS_TYPE_BOOLEAN, &enabled)) {
+					    DBUS_TYPE_BOOLEAN, &enabled)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_enabled[dbus] out of memory when "
-				"trying to append value");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to append value");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
 		dbus_message_unref(reply);
 		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-				"trying to close variant");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to close variant");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2833,7 +2965,7 @@ out:
  * Setter for "Enabled" property of a configured network.
  */
 DBusMessage * wpas_dbus_setter_enabled(DBusMessage *message,
-		  struct network_handler_args *net)
+				       struct network_handler_args *net)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -2845,8 +2977,9 @@ DBusMessage * wpas_dbus_setter_enabled(DBusMessage *message,
 
 	if (!dbus_message_iter_init(message, &iter)) {
 		perror("wpas_dbus_setter_enabled[dbus] out of memory when "
-				"trying to init iterator");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "trying to init iterator");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2854,11 +2987,13 @@ DBusMessage * wpas_dbus_setter_enabled(DBusMessage *message,
 	dbus_message_iter_next(&iter);
 
 	dbus_message_iter_recurse(&iter, &variant_iter);
-	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_BOOLEAN) {
+	if (dbus_message_iter_get_arg_type(&variant_iter) !=
+	    DBUS_TYPE_BOOLEAN) {
 		perror("wpas_dbus_setter_enabled[dbus] "
-				"variant content should be boolean");
-		reply = dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
-				"value should be a boolean");
+		       "variant content should be boolean");
+		reply = dbus_message_new_error(message,
+					       DBUS_ERROR_INVALID_ARGS,
+					       "value should be a boolean");
 		goto out;
 	}
 	dbus_message_iter_get_basic(&variant_iter, &enable);
@@ -2866,12 +3001,10 @@ DBusMessage * wpas_dbus_setter_enabled(DBusMessage *message,
 	wpa_s = net->wpa_s;
 	ssid = net->ssid;
 
-	if (enable) {
+	if (enable)
 		wpa_supplicant_enable_network(wpa_s, ssid);
-	}
-	else {
+	else
 		wpa_supplicant_disable_network(wpa_s, ssid);
-	}
 
 out:
 	return reply;
@@ -2887,12 +3020,11 @@ out:
  *
  * Getter for "Properties" property of a configured network.
  */
-DBusMessage * wpas_dbus_getter_network_properties(DBusMessage *message,
-					  struct network_handler_args *net)
+DBusMessage * wpas_dbus_getter_network_properties(
+	DBusMessage *message, struct network_handler_args *net)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter, variant_iter, dict_iter;
-
 	char **iterator;
 
 #if 0
@@ -2903,8 +3035,9 @@ DBusMessage * wpas_dbus_getter_network_properties(DBusMessage *message,
 #endif
 	if (!props) {
 		perror("wpas_dbus_getter_network_properties[dbus] couldn't "
-				"read network properties. out of memory.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "read network properties. out of memory.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2914,8 +3047,9 @@ DBusMessage * wpas_dbus_getter_network_properties(DBusMessage *message,
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_getter_network_properties[dbus] out of "
-				"memory when trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory when trying to initialize return message");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2924,29 +3058,32 @@ DBusMessage * wpas_dbus_getter_network_properties(DBusMessage *message,
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
 			"a{sv}", &variant_iter)) {
 		perror("wpas_dbus_getter_network_properties[dbus] out of "
-						"memory when trying to open variant container");
+		       "memory when trying to open variant container");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!wpa_dbus_dict_open_write(&variant_iter, &dict_iter)) {
 		perror("wpas_dbus_getter_network_properties[dbus] out of "
-						"memory when trying to open dict");
+		       "memory when trying to open dict");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	iterator = props;
 	while (*iterator) {
 		if (!wpa_dbus_dict_append_string(&dict_iter, *iterator,
-												*(iterator+1))) {
-			perror("wpas_dbus_getter_network_properties[dbus] out of "
-							"memory when trying to add entry");
+						 *(iterator + 1))) {
+			perror("wpas_dbus_getter_network_properties[dbus] out "
+			       "of memory when trying to add entry");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 		iterator += 2;
@@ -2955,17 +3092,19 @@ DBusMessage * wpas_dbus_getter_network_properties(DBusMessage *message,
 
 	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter)) {
 		perror("wpas_dbus_getter_network_properties[dbus] out of "
-						"memory when trying to close dictionary");
+		       "memory when trying to close dictionary");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
 		perror("wpas_dbus_getter_network_properties[dbus] out of "
-						"memory when trying to close variant container");
+		       "memory when trying to close variant container");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -2989,8 +3128,8 @@ out:
  *
  * Setter for "Properties" property of a configured network.
  */
-DBusMessage * wpas_dbus_setter_network_properties(DBusMessage *message,
-					  struct network_handler_args *net)
+DBusMessage * wpas_dbus_setter_network_properties(
+	DBusMessage *message, struct network_handler_args *net)
 {
 	struct wpa_ssid *ssid = net->ssid;
 
@@ -3004,17 +3143,17 @@ DBusMessage * wpas_dbus_setter_network_properties(DBusMessage *message,
 
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
-    reply = set_network_properties(message, ssid, &variant_iter);
-
-    if (reply)
+	reply = set_network_properties(message, ssid, &variant_iter);
+	if (reply)
 		wpa_printf(MSG_DEBUG, "dbus control interface couldn't set "
-				"network properties");
+			   "network properties");
 
-    return reply;
+	return reply;
 }
 
 
 #ifdef CONFIG_WPS
+
 /**
  * wpas_dbus_handler_wps_start - Start WPS configuration
  * @message: Pointer to incoming dbus message
@@ -3027,7 +3166,7 @@ DBusMessage * wpas_dbus_setter_network_properties(DBusMessage *message,
  * has a dictionary argument which may contain newly generated pin (optional).
  */
 DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
-		struct wpa_supplicant *wpa_s)
+					  struct wpa_supplicant *wpa_s)
 {
 	DBusMessage * reply = NULL;
 	DBusMessageIter iter, dict_iter, entry_iter, variant_iter, array_iter;
@@ -3043,93 +3182,102 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	dbus_message_iter_init(message, &iter);
 
 	dbus_message_iter_recurse(&iter, &dict_iter);
-	while (dbus_message_iter_get_arg_type(&dict_iter) == DBUS_TYPE_DICT_ENTRY) {
+	while (dbus_message_iter_get_arg_type(&dict_iter) ==
+	       DBUS_TYPE_DICT_ENTRY) {
 		dbus_message_iter_recurse(&dict_iter, &entry_iter);
 
 		dbus_message_iter_get_basic(&entry_iter, &key);
 		dbus_message_iter_next(&entry_iter);
 
-		if (strcmp(key, "Role") == 0) {
+		if (os_strcmp(key, "Role") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_STRING) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"wrong Role type. string required");
-				reply = wpas_dbus_error_invald_args(message,
-						"Role must be a string");
+			    DBUS_TYPE_STRING) {
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start"
+					   "[dbus]: "
+					   "wrong Role type. string required");
+				reply = wpas_dbus_error_invald_args(
+					message, "Role must be a string");
 				goto out;
 			}
 			dbus_message_iter_get_basic(&variant_iter, &val);
-			if (strcmp(val, "enrollee") == 0)
+			if (os_strcmp(val, "enrollee") == 0)
 				role = 1;
-			else if (strcmp(val, "registrar") == 0)
+			else if (os_strcmp(val, "registrar") == 0)
 				role = 2;
 			else {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"unknown role %s", val);
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start[dbus]: "
+					   "unknown role %s", val);
 				reply = wpas_dbus_error_invald_args(message, val);
 				goto out;
 			}
-		}
-		else if (strcmp(key, "Type") == 0) {
+		} else if (strcmp(key, "Type") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_STRING) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"wrong Type type. string required");
-				reply = wpas_dbus_error_invald_args(message,
-						"Type must be a string");
+			    DBUS_TYPE_STRING) {
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start[dbus]: "
+					   "wrong Type type. string required");
+				reply = wpas_dbus_error_invald_args(
+					message, "Type must be a string");
 				goto out;
 			}
 			dbus_message_iter_get_basic(&variant_iter, &val);
-			if (strcmp(val, "pin") == 0)
+			if (os_strcmp(val, "pin") == 0)
 				type = 1;
-			else if (strcmp(val, "pbc") == 0)
+			else if (os_strcmp(val, "pbc") == 0)
 				type = 2;
 			else {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"unknown type %s", val);
-				reply = wpas_dbus_error_invald_args(message, val);
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start[dbus]: "
+					   "unknown type %s", val);
+				reply = wpas_dbus_error_invald_args(message,
+								    val);
 				goto out;
 			}
-		}
-		else if (strcmp(key, "Bssid") == 0) {
+		} else if (strcmp(key, "Bssid") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_ARRAY ||
-					dbus_message_iter_get_element_type(&variant_iter) !=
-							DBUS_TYPE_ARRAY) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"wrong Bssid type. byte array required");
-				reply = wpas_dbus_error_invald_args(message,
-						"Bssid must be a byte array");
+			    DBUS_TYPE_ARRAY ||
+			    dbus_message_iter_get_element_type(&variant_iter) !=
+			    DBUS_TYPE_ARRAY) {
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start[dbus]: "
+					   "wrong Bssid type. byte array required");
+				reply = wpas_dbus_error_invald_args(
+					message, "Bssid must be a byte array");
 				goto out;
 			}
 			dbus_message_iter_recurse(&variant_iter, &array_iter);
-			dbus_message_iter_get_fixed_array(&array_iter, &bssid, &len);
+			dbus_message_iter_get_fixed_array(&array_iter, &bssid,
+							  &len);
 			if (len != ETH_ALEN) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"wrong Bssid length %d", len);
-				reply = wpas_dbus_error_invald_args(message,
-						"Bssid is wrong length");
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start[dbus]: "
+					   "wrong Bssid length %d", len);
+				reply = wpas_dbus_error_invald_args(
+					message, "Bssid is wrong length");
 				goto out;
 			}
 		}
-		else if (strcmp(key, "Pin") == 0) {
+		else if (os_strcmp(key, "Pin") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
 			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-					DBUS_TYPE_STRING) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-						"wrong Pin type. string required");
-				reply = wpas_dbus_error_invald_args(message,
-						"Pin must be a string");
+			    DBUS_TYPE_STRING) {
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_wps_start[dbus]: "
+					   "wrong Pin type. string required");
+				reply = wpas_dbus_error_invald_args(
+					message, "Pin must be a string");
 				goto out;
 			}
 			dbus_message_iter_get_basic(&variant_iter, &pin);
-		}
-		else {
-			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-					"unknown key %s", key);
+		} else {
+			wpa_printf(MSG_DEBUG,
+				   "wpas_dbus_handler_wps_start[dbus]: "
+				   "unknown key %s", key);
 			reply = wpas_dbus_error_invald_args(message, key);
 			goto out;
 		}
@@ -3139,77 +3287,82 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 
 	if (role == 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-				"Role not specified");
-		reply = wpas_dbus_error_invald_args(message, "Role not specified");
+			   "Role not specified");
+		reply = wpas_dbus_error_invald_args(message,
+						    "Role not specified");
 		goto out;
 	}
 	else if (role == 1 && type == 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-				"Type not specified");
-		reply = wpas_dbus_error_invald_args(message, "Type not specified");
+			   "Type not specified");
+		reply = wpas_dbus_error_invald_args(message,
+						    "Type not specified");
 		goto out;
 	}
 	else if (role == 2 && pin == NULL) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-				"Pin required for registrar role.");
-		reply = wpas_dbus_error_invald_args(message,
-				"Pin required for registrar role.");
+			   "Pin required for registrar role.");
+		reply = wpas_dbus_error_invald_args(
+			message, "Pin required for registrar role.");
 		goto out;
 	}
 
-	if (role == 2) {
+	if (role == 2)
 		ret = wpas_wps_start_reg(wpa_s, bssid, pin, NULL);
-	}
 	else if (type == 1) {
 		ret = wpas_wps_start_pin(wpa_s, bssid, pin);
-		if (ret>0)
-			sprintf(npin, "%08d", ret);
-	}
-	else {
+		if (ret > 0)
+			os_snprintf(npin, sizeof(npin), "%08d", ret);
+	} else
 		ret = wpas_wps_start_pbc(wpa_s, bssid);
-	}
 
-	if (ret<0) {
+	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
-				"wpas_wps_failed in role %s and key %s.",
-				(role == 1 ? "enrollee" : "registrar"),
-				(type == 0 ? "" : (type == 1 ? "pin" : "pbc")));
-		reply = wpas_dbus_error_unknown_error(message, "wps start failed");
+			   "wpas_wps_failed in role %s and key %s.",
+			   (role == 1 ? "enrollee" : "registrar"),
+			   (type == 0 ? "" : (type == 1 ? "pin" : "pbc")));
+		reply = wpas_dbus_error_unknown_error(message,
+						      "wps start failed");
 		goto out;
 	}
 
 	reply = dbus_message_new_method_return(message);
 	if (!reply) {
 		perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-				"when creating reply");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "when creating reply");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!wpa_dbus_dict_open_write(&iter, &dict_iter)) {
 		perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-				"when opening dictionary");
+		       "when opening dictionary");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
-	if (strlen(npin) > 0) {
+	if (os_strlen(npin) > 0) {
 		if (!wpa_dbus_dict_append_string(&dict_iter, "Pin", npin)) {
-			perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-			"when appending pin");
+			perror("wpas_dbus_handler_wps_start[dbus]: "
+			       "out of memory when appending pin");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 			goto out;
 		}
 	}
 
 	if (!wpa_dbus_dict_close_write(&iter, &dict_iter)) {
 		perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-		"when closing dictionary");
+		       "when closing dictionary");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -3228,8 +3381,8 @@ out:
  * true if wps_cred_processing configuration field is not equal to 1 or false
  * if otherwise.
  */
-DBusMessage * wpas_dbus_getter_process_credentials(DBusMessage *message,
-		struct wpa_supplicant *wpa_s)
+DBusMessage * wpas_dbus_getter_process_credentials(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -3243,20 +3396,24 @@ DBusMessage * wpas_dbus_getter_process_credentials(DBusMessage *message,
 	if (reply != NULL) {
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					"b", &variant_iter) ||
-				!dbus_message_iter_append_basic(&variant_iter,
-						DBUS_TYPE_BOOLEAN, &process) ||
-				!dbus_message_iter_close_container(&iter, &variant_iter)) {
+						      "b", &variant_iter) ||
+		    !dbus_message_iter_append_basic(&variant_iter,
+						    DBUS_TYPE_BOOLEAN,
+						    &process) ||
+		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 
-			perror("wpas_dbus_getter_process_credentials[dbus]: out of "
-				   "memory to put value into message.");
+			perror("wpas_dbus_getter_process_credentials[dbus]: "
+			       "out of memory to put value into message.");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
 		}
 	} else {
 		perror("wpas_dbus_getter_process_credentials[dbus]: out of "
-			   "memory to create reply message.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to create reply message.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 	}
 
 	return reply;
@@ -3272,8 +3429,8 @@ DBusMessage * wpas_dbus_getter_process_credentials(DBusMessage *message,
  * Setter for "ProcessCredentials" property. Sets credentials_processed on 2
  * if boolean argument is true or on 1 if otherwise.
  */
-DBusMessage * wpas_dbus_setter_process_credentials(DBusMessage *message,
-		struct wpa_supplicant *wpa_s)
+DBusMessage * wpas_dbus_setter_process_credentials(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter;
@@ -3281,8 +3438,9 @@ DBusMessage * wpas_dbus_setter_process_credentials(DBusMessage *message,
 
 	if (!dbus_message_iter_init(message, &iter)) {
 		perror("wpas_dbus_getter_ap_scan[dbus]: out of "
-			   "memory to return scanning state.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+		       "memory to return scanning state.");
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
 		goto out;
 	}
 
@@ -3291,8 +3449,10 @@ DBusMessage * wpas_dbus_setter_process_credentials(DBusMessage *message,
 	dbus_message_iter_next(&iter);
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
-	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_BOOLEAN) {
-		reply = wpas_dbus_error_invald_args(message, "BOOLEAN required");
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_BOOLEAN)
+	{
+		reply = wpas_dbus_error_invald_args(message,
+						    "BOOLEAN required");
 		goto out;
 	}
 	dbus_message_iter_get_basic(&variant_iter, &process_credentials);
@@ -3301,12 +3461,16 @@ DBusMessage * wpas_dbus_setter_process_credentials(DBusMessage *message,
 	wpa_s->conf->wps_cred_processing = (process_credentials ? 2 : 1);
 
 	if ((wpa_s->conf->wps_cred_processing != 1) != old_pc)
-		wpa_dbus_signal_property_changed(wpa_s->global->dbus_new_ctrl_iface,
-				(WPADBusPropertyAccessor) wpas_dbus_getter_process_credentials,
-				wpa_s, wpas_dbus_get_path(wpa_s), WPAS_DBUS_NEW_IFACE_WPS,
-				"ProcessCredentials");
+		wpa_dbus_signal_property_changed(
+			wpa_s->global->dbus_new_ctrl_iface,
+			(WPADBusPropertyAccessor)
+			wpas_dbus_getter_process_credentials,
+			wpa_s, wpas_dbus_get_path(wpa_s),
+			WPAS_DBUS_NEW_IFACE_WPS,
+			"ProcessCredentials");
 
 out:
 	return reply;
 }
+
 #endif /* CONFIG_WPS */

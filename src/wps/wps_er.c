@@ -489,19 +489,169 @@ static void wps_er_send_ssdp_msearch(struct wps_er *er)
 }
 
 
+static void http_put_date(struct wpabuf *buf)
+{
+	wpabuf_put_str(buf, "Date: ");
+	format_date(buf);
+	wpabuf_put_str(buf, "\r\n");
+}
+
+
+static void wps_er_http_resp_not_found(struct http_request *req)
+{
+	struct wpabuf *buf;
+	buf = wpabuf_alloc(200);
+	if (buf == NULL) {
+		http_request_deinit(req);
+		return;
+	}
+
+	wpabuf_put_str(buf,
+		       "HTTP/1.1 404 Not Found\r\n"
+		       "Server: unspecified, UPnP/1.0, unspecified\r\n"
+		       "Connection: close\r\n");
+	http_put_date(buf);
+	wpabuf_put_str(buf, "\r\n");
+	http_request_send_and_deinit(req, buf);
+}
+
+
+static void wps_er_http_resp_ok(struct http_request *req)
+{
+	struct wpabuf *buf;
+	buf = wpabuf_alloc(200);
+	if (buf == NULL) {
+		http_request_deinit(req);
+		return;
+	}
+
+	wpabuf_put_str(buf,
+		       "HTTP/1.1 200 OK\r\n"
+		       "Server: unspecified, UPnP/1.0, unspecified\r\n"
+		       "Connection: close\r\n"
+		       "Content-Length: 0\r\n");
+	http_put_date(buf);
+	wpabuf_put_str(buf, "\r\n");
+	http_request_send_and_deinit(req, buf);
+}
+
+
+static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
+					       const u8 *addr,
+					       struct wpabuf *msg)
+{
+	struct wps_parse_attr attr;
+
+	wpa_printf(MSG_DEBUG, "WPS ER: WLANEvent - Probe Request - from "
+		   MACSTR, MAC2STR(addr));
+	wpa_hexdump_buf(MSG_MSGDUMP, "WPS ER: WLANEvent - Enrollee's message "
+			"(TLVs from Probe Request)", msg);
+
+	if (wps_parse_msg(msg, &attr) < 0) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse TLVs in "
+			   "WLANEvent message");
+		return;
+	}
+
+	/* TODO: add STA table to the AP entry and wpa_msg indication if new
+	 * STA */
+}
+
+
+static void wps_er_process_wlanevent_eap(struct wps_er_ap *ap, const u8 *addr,
+					 struct wpabuf *msg)
+{
+	struct wps_parse_attr attr;
+
+	wpa_printf(MSG_DEBUG, "WPS ER: WLANEvent - EAP - from " MACSTR,
+		   MAC2STR(addr));
+	wpa_hexdump_buf(MSG_MSGDUMP, "WPS ER: WLANEvent - Enrollee's message "
+			"(TLVs from EAP-WSC)", msg);
+
+	if (wps_parse_msg(msg, &attr) < 0) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse TLVs in "
+			   "WLANEvent message");
+		return;
+	}
+
+	/* TODO: add STA table to the AP entry and wpa_msg indication if new
+	 * STA; process message if it is part of ongoing protocol run */
+}
+
+
+static void wps_er_process_wlanevent(struct wps_er_ap *ap,
+				     struct wpabuf *event)
+{
+	u8 *data;
+	u8 wlan_event_type;
+	u8 wlan_event_mac[ETH_ALEN];
+	struct wpabuf msg;
+
+	wpa_hexdump(MSG_MSGDUMP, "WPS ER: Received WLANEvent",
+		    wpabuf_head(event), wpabuf_len(event));
+	if (wpabuf_len(event) < 1 + 17) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Too short WLANEvent");
+		return;
+	}
+
+	data = wpabuf_mhead(event);
+	wlan_event_type = data[0];
+	if (hwaddr_aton((char *) data + 1, wlan_event_mac) < 0) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Invalid WLANEventMAC in "
+			   "WLANEvent");
+		return;
+	}
+
+	wpabuf_set(&msg, data + 1 + 17, wpabuf_len(event) - (1 + 17));
+
+	switch (wlan_event_type) {
+	case 1:
+		wps_er_process_wlanevent_probe_req(ap, wlan_event_mac, &msg);
+		break;
+	case 2:
+		wps_er_process_wlanevent_eap(ap, wlan_event_mac, &msg);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "WPS ER: Unknown WLANEventType %d",
+			   wlan_event_type);
+		break;
+	}
+}
+
+
 static void wps_er_http_event(struct wps_er *er, struct http_request *req,
 			      unsigned int ap_id)
 {
 	struct wps_er_ap *ap = wps_er_ap_get_id(er, ap_id);
+	struct wpabuf *event;
+	enum http_reply_code ret;
+
 	if (ap == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS ER: HTTP event from unknown AP id "
 			   "%u", ap_id);
+		wps_er_http_resp_not_found(req);
 		return;
 	}
 	wpa_printf(MSG_MSGDUMP, "WPS ER: HTTP event from AP id %u: %s",
 		   ap_id, http_request_get_data(req));
-	/* TODO */
-	http_request_deinit(req);
+
+	event = xml_get_base64_item(http_request_get_data(req), "WLANEvent",
+				    &ret);
+	if (event == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Could not extract WLANEvent "
+			   "from the event notification");
+		/*
+		 * Reply with OK anyway to avoid getting unregistered from
+		 * events.
+		 */
+		wps_er_http_resp_ok(req);
+		return;
+	}
+
+	wps_er_process_wlanevent(ap, event);
+
+	wpabuf_free(event);
+	wps_er_http_resp_ok(req);
 }
 
 
@@ -514,7 +664,7 @@ static void wps_er_http_notify(struct wps_er *er, struct http_request *req)
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS ER: Unknown HTTP NOTIFY for '%s'",
 			   uri);
-		http_request_deinit(req);
+		wps_er_http_resp_not_found(req);
 	}
 }
 
@@ -524,6 +674,8 @@ static void wps_er_http_req(void *ctx, struct http_request *req)
 	struct wps_er *er = ctx;
 	struct sockaddr_in *cli = http_request_get_cli_addr(req);
 	enum httpread_hdr_type type = http_request_get_type(req);
+	struct wpabuf *buf;
+
 	wpa_printf(MSG_DEBUG, "WPS ER: HTTP request: '%s' (type %d) from "
 		   "%s:%d",
 		   http_request_get_uri(req), type,
@@ -536,7 +688,17 @@ static void wps_er_http_req(void *ctx, struct http_request *req)
 	default:
 		wpa_printf(MSG_DEBUG, "WPS ER: Unsupported HTTP request type "
 			   "%d", type);
-		http_request_deinit(req);
+		buf = wpabuf_alloc(200);
+		if (buf == NULL) {
+			http_request_deinit(req);
+			return;
+		}
+		wpabuf_put_str(buf,
+			       "HTTP/1.1 501 Unimplemented\r\n"
+			       "Connection: close\r\n");
+		http_put_date(buf);
+		wpabuf_put_str(buf, "\r\n");
+		http_request_send_and_deinit(req, buf);
 		break;
 	}
 }

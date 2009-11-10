@@ -715,7 +715,7 @@ ifdef TLS_FUNCS
 LIBS_n += -lcrypto
 endif
 
-HOBJS += ../src/hlr_auc_gw/hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/hlr_auc_gw/milenage.o
+HOBJS += ../src/hlr_auc_gw/hlr_auc_gw.o ../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).o ../src/utils/wpabuf.o ../src/hlr_auc_gw/milenage.o
 HOBJS += ../src/crypto/aes-encblock.o
 ifdef CONFIG_INTERNAL_AES
 HOBJS += ../src/crypto/aes-internal.o

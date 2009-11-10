@@ -970,22 +970,27 @@ static DBusMessage * get_all_properties(
 }
 
 
-static int is_signature_correct(DBusMessage * message,
+static int is_signature_correct(DBusMessage *message,
 				struct wpa_dbus_method_desc *method_dsc)
 {
 	/* According to DBus documentation max length of signature is 255 */
-	#define MAX_SIG_LEN 256
-
-	char registered_sig[MAX_SIG_LEN];
+#define MAX_SIG_LEN 256
+	char registered_sig[MAX_SIG_LEN], *pos;
 	const char *sig = dbus_message_get_signature(message);
-	int i;
+	int i, ret;
 
-	registered_sig[0] = 0;
+	pos = registered_sig;
+	*pos = '\0';
 
 	for (i = 0; i < method_dsc->args_num; i++) {
 		struct wpa_dbus_argument arg = method_dsc->args[i];
-		if (arg.dir == ARG_IN)
-			strcat(registered_sig, arg.type);
+		if (arg.dir == ARG_IN) {
+			size_t blen = registered_sig + MAX_SIG_LEN - pos;
+			ret = os_snprintf(pos, blen, "%s", arg.type);
+			if (ret < 0 || (size_t) ret >= blen)
+				return 0;
+			pos += ret;
+		}
 	}
 
 	return !os_strncmp(registered_sig, sig, MAX_SIG_LEN);

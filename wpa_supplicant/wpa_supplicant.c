@@ -1481,7 +1481,8 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	wpa_s->reassociate = 1;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
 
-	wpas_notify_network_selected(wpa_s, ssid);
+	if (ssid)
+		wpas_notify_network_selected(wpa_s, ssid);
 }
 
 

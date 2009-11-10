@@ -242,7 +242,7 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	hapd->wps->ssid_len = cred->ssid_len;
 	hapd->wps->encr_types = cred->encr_type;
 	hapd->wps->auth_types = cred->auth_type;
-	if (cred->key == NULL) {
+	if (cred->key_len == 0) {
 		os_free(hapd->wps->network_key);
 		hapd->wps->network_key = NULL;
 		hapd->wps->network_key_len = 0;

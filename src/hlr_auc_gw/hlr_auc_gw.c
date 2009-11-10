@@ -544,7 +544,7 @@ static void aka_auts(int s, struct sockaddr_un *from, socklen_t fromlen,
 	*auts++ = '\0';
 
 	__rand = strchr(auts, ' ');
-	if (rand == NULL)
+	if (__rand == NULL)
 		return;
 	*__rand++ = '\0';
 

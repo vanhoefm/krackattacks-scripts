@@ -3036,9 +3036,8 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	if (!props) {
 		perror("wpas_dbus_getter_network_properties[dbus] couldn't "
 		       "read network properties. out of memory.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
 	if (message == NULL)

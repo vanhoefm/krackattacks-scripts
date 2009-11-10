@@ -815,8 +815,10 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->wps);
 	wpa_s->wps = NULL;
 
+#ifdef CONFIG_WPS_ER
 	wps_er_deinit(wpa_s->wps_er);
 	wpa_s->wps_er = NULL;
+#endif /* CONFIG_WPS_ER */
 }
 
 

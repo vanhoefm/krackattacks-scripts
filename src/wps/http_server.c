@@ -140,7 +140,8 @@ void http_request_send(struct http_request *req, struct wpabuf *resp)
 	int res;
 
 	wpa_printf(MSG_DEBUG, "HTTP: Send %lu byte response to %s:%d",
-		   wpabuf_len(resp), inet_ntoa(req->cli.sin_addr),
+		   (unsigned long) wpabuf_len(resp),
+		   inet_ntoa(req->cli.sin_addr),
 		   ntohs(req->cli.sin_port));
 
 	res = send(req->fd, wpabuf_head(resp), wpabuf_len(resp), 0);

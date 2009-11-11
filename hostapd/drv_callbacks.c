@@ -284,9 +284,26 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
 					  ie, ielen, NULL, 0);
 		if (res != WPA_IE_OK) {
+			int resp;
 			wpa_printf(MSG_DEBUG, "WPA/RSN information element "
 				   "rejected? (res %u)", res);
 			wpa_hexdump(MSG_DEBUG, "IE", ie, ielen);
+			if (res == WPA_INVALID_GROUP)
+				resp = WLAN_REASON_GROUP_CIPHER_NOT_VALID;
+			else if (res == WPA_INVALID_PAIRWISE)
+				resp = WLAN_REASON_PAIRWISE_CIPHER_NOT_VALID;
+			else if (res == WPA_INVALID_AKMP)
+				resp = WLAN_REASON_AKMP_NOT_VALID;
+#ifdef CONFIG_IEEE80211W
+			else if (res == WPA_MGMT_FRAME_PROTECTION_VIOLATION)
+				resp = WLAN_REASON_INVALID_IE;
+			else if (res == WPA_INVALID_MGMT_GROUP_CIPHER)
+				resp = WLAN_REASON_GROUP_CIPHER_NOT_VALID;
+#endif /* CONFIG_IEEE80211W */
+			else
+				resp = WLAN_REASON_INVALID_IE;
+			hostapd_sta_disassoc(hapd, sta->addr, resp);
+			ap_free_sta(hapd, sta);
 			return -1;
 		}
 	} else if (hapd->conf->wps_state) {

@@ -1550,6 +1550,37 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 }
 
 
+static void notify_bss_changes(struct wpa_supplicant *wpa_s,
+			       u8 (*prev_bssids)[ETH_ALEN], int prev_num,
+			       struct wpa_scan_results *new)
+{
+	int new_num, i, j;
+
+	new_num = new != NULL ? new->num : 0;
+	if (prev_bssids == NULL)
+		prev_num = 0;
+
+	for (i = 0; i < prev_num; i++) {
+		for (j = 0; j < new_num; j++) {
+			if (!os_memcmp(prev_bssids[i], new->res[j]->bssid,
+				       ETH_ALEN))
+				break;
+		}
+		if (j == new_num)
+			wpas_notify_bss_removed(wpa_s, prev_bssids[i]);
+	}
+	for (i = 0; i < new_num; i++) {
+		for (j = 0; j < prev_num; j++) {
+			if (!os_memcmp(new->res[i]->bssid, prev_bssids[j],
+				       ETH_ALEN))
+				break;
+		}
+		if (j == prev_num)
+			wpas_notify_bss_added(wpa_s, new->res[i]->bssid);
+	}
+}
+
+
 static struct wpa_scan_results * wpa_supplicant_get_scan_results_old(
 	struct wpa_supplicant *wpa_s)
 {
@@ -1665,7 +1696,22 @@ static struct wpa_scan_results * wpa_supplicant_get_scan_results_old(
  */
 int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 {
-	int ret;
+	int ret, i, prev_scan_res_num;
+	u8 (*prev_scan_bssids)[ETH_ALEN];
+
+	prev_scan_res_num = wpa_s->scan_res ? wpa_s->scan_res->num : 0;
+	prev_scan_bssids = os_malloc(prev_scan_res_num * ETH_ALEN);
+
+	if (prev_scan_bssids) {
+		for (i = 0; i < prev_scan_res_num; i++) {
+			os_memcpy(prev_scan_bssids[i],
+				  wpa_s->scan_res->res[i]->bssid, ETH_ALEN);
+		}
+	} else {
+		wpa_printf(MSG_WARNING, "Not enough memory for old scan "
+			   "results list");
+		prev_scan_res_num = 0;
+	}
 
 	wpa_scan_results_free(wpa_s->scan_res);
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
@@ -1681,6 +1727,10 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 		ret = 0;
 		wpa_scan_sort_results(wpa_s->scan_res);
 	}
+
+	notify_bss_changes(wpa_s, prev_scan_bssids, prev_scan_res_num,
+			   wpa_s->scan_res);
+	os_free(prev_scan_bssids);
 
 	return ret;
 }

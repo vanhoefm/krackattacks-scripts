@@ -237,6 +237,24 @@ void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_bss_added(struct wpa_supplicant *wpa_s,
+				 u8 bssid[])
+{
+	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
+	if (cbs)
+		cbs->register_bss(wpa_s, bssid);
+}
+
+
+void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s,
+				 u8 bssid[])
+{
+	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
+	if (cbs)
+		cbs->unregister_bss(wpa_s, bssid);
+}
+
+
 void wpas_notify_blob_added(struct wpa_supplicant *wpa_s, const char *name)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();

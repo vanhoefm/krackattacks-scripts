@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "base64.h"
 #include "uuid.h"
 #include "eloop.h"
 #include "httpread.h"
@@ -137,13 +138,6 @@ static void wps_er_sta_remove_all(struct wps_er_ap *ap)
 		sta = sta->next;
 		wps_er_sta_free(prev);
 	}
-}
-
-
-static void wps_er_pin_needed_cb(void *ctx, const u8 *uuid_e,
-				 const struct wps_device_data *dev)
-{
-	wpa_printf(MSG_DEBUG, "WPS ER: PIN needed");
 }
 
 
@@ -717,12 +711,110 @@ static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
 }
 
 
+static void wps_er_http_put_wlan_response_cb(void *ctx, struct http_client *c,
+					     enum http_client_event event)
+{
+	struct wps_er_sta *sta = ctx;
+
+	switch (event) {
+	case HTTP_CLIENT_OK:
+		wpa_printf(MSG_DEBUG, "WPS ER: PutWLANResponse OK");
+		break;
+	case HTTP_CLIENT_FAILED:
+	case HTTP_CLIENT_INVALID_REPLY:
+	case HTTP_CLIENT_TIMEOUT:
+		wpa_printf(MSG_DEBUG, "WPS ER: PutWLANResponse failed");
+		break;
+	}
+	http_client_free(sta->http);
+	sta->http = NULL;
+}
+
+
+static const char *soap_prefix =
+	"<?xml version=\"1.0\"?>\n"
+	"<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
+	"s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\n"
+	"<s:Body>\n";
+static const char *soap_postfix =
+	"</s:Body>\n</s:Envelope>\n";
+static const char *urn_wfawlanconfig =
+	"urn:schemas-wifialliance-org:service:WFAWLANConfig:1";
+
 static void wps_er_sta_send_msg(struct wps_er_sta *sta, struct wpabuf *msg)
 {
-	/* TODO: send msg as UPnP POST: PutWLANResponse(NewMessage,
-	 * NewWLANEventType, NewWLANEventMAC) */
+	unsigned char *encoded;
+	size_t encoded_len;
+	struct wpabuf *buf;
+	char *len_ptr, *body_ptr;
+	char len_buf[10];
+	struct sockaddr_in dst;
+	char *url, *path;
 
+	if (sta->http) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP request for STA - "
+			   "ignore new request");
+		return;
+	}
+
+	url = http_client_url_parse(sta->ap->control_url, &dst, &path);
+	if (url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse eventSubURL");
+		return;
+	}
+
+	encoded = base64_encode(wpabuf_head(msg), wpabuf_len(msg),
+				&encoded_len);
 	wpabuf_free(msg);
+	if (encoded == NULL) {
+		os_free(url);
+		return;
+	}
+
+	buf = wpabuf_alloc(1000 + encoded_len);
+	if (buf == NULL) {
+		os_free(encoded);
+		os_free(url);
+		return;
+	}
+
+	wpabuf_printf(buf,
+		      "POST %s HTTP/1.1\r\n"
+		      "Host: %s:%d\r\n"
+		      "Content-Type: text/xml; charset=\"utf-8\"\r\n"
+		      "Content-Length: ",
+		      path, inet_ntoa(dst.sin_addr), ntohs(dst.sin_port));
+	os_free(url);
+	len_ptr = wpabuf_put(buf, 0);
+	wpabuf_printf(buf,
+		      "        \r\n"
+		      "SOAPACTION: \"%s#PutWLANResponse\"\r\n"
+		      "\r\n",
+		      urn_wfawlanconfig);
+
+	body_ptr = wpabuf_put(buf, 0);
+
+	wpabuf_put_str(buf, soap_prefix);
+	wpabuf_put_str(buf, "<u:PutWLANResponse xmlns:u=\"");
+	wpabuf_put_str(buf, urn_wfawlanconfig);
+	wpabuf_put_str(buf, "\">\n");
+	wpabuf_printf(buf, "<NewMessage>%s</NewMessage>\n", (char *) encoded);
+	os_free(encoded);
+	wpabuf_printf(buf, "<NewWLANEventType>%d</NewWLANEventType>\n",
+		      UPNP_WPS_WLANEVENT_TYPE_EAP);
+	wpabuf_printf(buf, "<NewWLANEventMAC>" MACSTR "</NewWLANEventMAC>\n",
+		      MAC2STR(sta->addr));
+	wpabuf_put_str(buf, "</u:PutWLANResponse>\n");
+	wpabuf_put_str(buf, soap_postfix);
+
+	os_snprintf(len_buf, sizeof(len_buf), "%d",
+		    (int) ((char *) wpabuf_put(buf, 0) - body_ptr));
+	os_memcpy(len_ptr, len_buf, os_strlen(len_buf));
+
+	sta->http = http_client_addr(&dst, buf, 1000,
+				     wps_er_http_put_wlan_response_cb, sta);
+	if (sta->http == NULL)
+		wpabuf_free(buf);
 }
 
 
@@ -915,7 +1007,6 @@ struct wps_er *
 wps_er_init(struct wps_context *wps, const char *ifname)
 {
 	struct wps_er *er;
-	struct wps_registrar_config rcfg;
 	struct in_addr addr;
 
 	er = os_zalloc(sizeof(*er));
@@ -927,9 +1018,6 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 
 	os_strlcpy(er->ifname, ifname, sizeof(er->ifname));
 	er->wps = wps;
-	os_memset(&rcfg, 0, sizeof(rcfg));
-	rcfg.pin_needed_cb = wps_er_pin_needed_cb;
-	rcfg.cb_ctx = er;
 
 	if (get_netif_info(ifname,
 			   &er->ip_addr, &er->ip_addr_text,

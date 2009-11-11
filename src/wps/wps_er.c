@@ -34,11 +34,31 @@
  */
 
 static void wps_er_ap_timeout(void *eloop_data, void *user_ctx);
+static void wps_er_sta_timeout(void *eloop_data, void *user_ctx);
 
+
+struct wps_er_sta {
+	struct wps_er_sta *next;
+	struct wps_er_ap *ap;
+	u8 addr[ETH_ALEN];
+	u16 config_methods;
+	u8 uuid[WPS_UUID_LEN];
+	u8 pri_dev_type[8];
+	u16 dev_passwd_id;
+	int m1_received;
+	char *manufacturer;
+	char *model_name;
+	char *model_number;
+	char *serial_number;
+	char *dev_name;
+	struct wps_data *wps;
+	struct http_client *http;
+};
 
 struct wps_er_ap {
 	struct wps_er_ap *next;
 	struct wps_er *er;
+	struct wps_er_sta *sta; /* list of STAs/Enrollees using this AP */
 	struct in_addr addr;
 	char *location;
 	struct http_client *http;
@@ -63,7 +83,7 @@ struct wps_er_ap {
 };
 
 struct wps_er {
-	struct wps_registrar *reg;
+	struct wps_context *wps;
 	char ifname[17];
 	char *mac_addr_text; /* mac addr of network i.f. we use */
 	u8 mac_addr[ETH_ALEN]; /* mac addr of network i.f. we use */
@@ -76,6 +96,48 @@ struct wps_er {
 	int http_port;
 	unsigned int next_ap_id;
 };
+
+
+static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr)
+{
+	struct wps_er_sta *sta = ap->sta;
+	while (sta) {
+		if (os_memcmp(sta->addr, addr, ETH_ALEN) == 0)
+			return sta;
+		sta = sta->next;
+	}
+	return NULL;
+}
+
+
+static void wps_er_sta_free(struct wps_er_sta *sta)
+{
+	if (sta->wps)
+		wps_deinit(sta->wps);
+	os_free(sta->manufacturer);
+	os_free(sta->model_name);
+	os_free(sta->model_number);
+	os_free(sta->serial_number);
+	os_free(sta->dev_name);
+	http_client_free(sta->http);
+	eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);
+	os_free(sta);
+}
+
+
+static void wps_er_sta_remove_all(struct wps_er_ap *ap)
+{
+	struct wps_er_sta *prev, *sta;
+
+	sta = ap->sta;
+	ap->sta = NULL;
+
+	while (sta) {
+		prev = sta;
+		sta = sta->next;
+		wps_er_sta_free(prev);
+	}
+}
 
 
 static void wps_er_pin_needed_cb(void *ctx, const u8 *uuid_e,
@@ -132,6 +194,8 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 	os_free(ap->scpd_url);
 	os_free(ap->control_url);
 	os_free(ap->event_sub_url);
+
+	wps_er_sta_remove_all(ap);
 
 	os_free(ap);
 }
@@ -536,6 +600,102 @@ static void wps_er_http_resp_ok(struct http_request *req)
 }
 
 
+static void wps_er_sta_timeout(void *eloop_data, void *user_ctx)
+{
+	struct wps_er_sta *sta = eloop_data;
+	wpa_printf(MSG_DEBUG, "WPS ER: STA entry timed out");
+	wps_er_sta_free(sta);
+}
+
+
+static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
+					       const u8 *addr,
+					       struct wps_parse_attr *attr,
+					       int probe_req)
+{
+	struct wps_er_sta *sta = wps_er_sta_get(ap, addr);
+
+	if (sta == NULL) {
+		sta = os_zalloc(sizeof(*sta));
+		if (sta == NULL)
+			return NULL;
+		os_memcpy(sta->addr, addr, ETH_ALEN);
+		sta->ap = ap;
+		sta->next = ap->sta;
+		ap->sta = sta;
+	}
+
+	if (!probe_req)
+		sta->m1_received = 1;
+
+	if (attr->config_methods && (!probe_req || !sta->m1_received))
+		sta->config_methods = WPA_GET_BE16(attr->config_methods);
+	if (attr->uuid_e && (!probe_req || !sta->m1_received))
+		os_memcpy(sta->uuid, attr->uuid_e, WPS_UUID_LEN);
+	if (attr->primary_dev_type && (!probe_req || !sta->m1_received))
+		os_memcpy(sta->pri_dev_type, attr->primary_dev_type, 8);
+	if (attr->dev_password_id && (!probe_req || !sta->m1_received))
+		sta->dev_passwd_id = WPA_GET_BE16(attr->dev_password_id);
+
+	if (attr->manufacturer) {
+		os_free(sta->manufacturer);
+		sta->manufacturer = os_malloc(attr->manufacturer_len + 1);
+		if (sta->manufacturer) {
+			os_memcpy(sta->manufacturer, attr->manufacturer,
+				  attr->manufacturer_len);
+			sta->manufacturer[attr->manufacturer_len] = '\0';
+		}
+	}
+
+	if (attr->model_name) {
+		os_free(sta->model_name);
+		sta->model_name = os_malloc(attr->model_name_len + 1);
+		if (sta->model_name) {
+			os_memcpy(sta->model_name, attr->model_name,
+				  attr->model_name_len);
+			sta->model_name[attr->model_name_len] = '\0';
+		}
+	}
+
+	if (attr->model_number) {
+		os_free(sta->model_number);
+		sta->model_number = os_malloc(attr->model_number_len + 1);
+		if (sta->model_number) {
+			os_memcpy(sta->model_number, attr->model_number,
+				  attr->model_number_len);
+			sta->model_number[attr->model_number_len] = '\0';
+		}
+	}
+
+	if (attr->serial_number) {
+		os_free(sta->serial_number);
+		sta->serial_number = os_malloc(attr->serial_number_len + 1);
+		if (sta->serial_number) {
+			os_memcpy(sta->serial_number, attr->serial_number,
+				  attr->serial_number_len);
+			sta->serial_number[attr->serial_number_len] = '\0';
+		}
+	}
+
+	if (attr->dev_name) {
+		os_free(sta->dev_name);
+		sta->dev_name = os_malloc(attr->dev_name_len + 1);
+		if (sta->dev_name) {
+			os_memcpy(sta->dev_name, attr->dev_name,
+				  attr->dev_name_len);
+			sta->dev_name[attr->dev_name_len] = '\0';
+		}
+	}
+
+	eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);
+	eloop_register_timeout(300, 0, wps_er_sta_timeout, sta, NULL);
+
+	/* TODO: wpa_msg indication if new STA */
+
+	return sta;
+}
+
+
 static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
 					       const u8 *addr,
 					       struct wpabuf *msg)
@@ -553,8 +713,50 @@ static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
 		return;
 	}
 
-	/* TODO: add STA table to the AP entry and wpa_msg indication if new
-	 * STA */
+	wps_er_add_sta_data(ap, addr, &attr, 1);
+}
+
+
+static void wps_er_sta_send_msg(struct wps_er_sta *sta, struct wpabuf *msg)
+{
+	/* TODO: send msg as UPnP POST: PutWLANResponse(NewMessage,
+	 * NewWLANEventType, NewWLANEventMAC) */
+
+	wpabuf_free(msg);
+}
+
+
+static void wps_er_sta_process(struct wps_er_sta *sta, struct wpabuf *msg)
+{
+	enum wps_process_res res;
+
+	res = wps_process_msg(sta->wps, WSC_MSG, msg);
+	if (res == WPS_CONTINUE) {
+		enum wsc_op_code op_code;
+		struct wpabuf *next = wps_get_msg(sta->wps, &op_code);
+		if (next)
+			wps_er_sta_send_msg(sta, next);
+	}
+}
+
+
+static void wps_er_sta_start(struct wps_er_sta *sta, struct wpabuf *msg)
+{
+	struct wps_config cfg;
+
+	if (sta->wps)
+		wps_deinit(sta->wps);
+
+	os_memset(&cfg, 0, sizeof(cfg));
+	cfg.wps = sta->ap->er->wps;
+	cfg.registrar = 1;
+	cfg.peer_addr = sta->addr;
+
+	sta->wps = wps_init(&cfg);
+	if (sta->wps == NULL)
+		return;
+
+	wps_er_sta_process(sta, msg);
 }
 
 
@@ -562,6 +764,7 @@ static void wps_er_process_wlanevent_eap(struct wps_er_ap *ap, const u8 *addr,
 					 struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
+	struct wps_er_sta *sta;
 
 	wpa_printf(MSG_DEBUG, "WPS ER: WLANEvent - EAP - from " MACSTR,
 		   MAC2STR(addr));
@@ -574,8 +777,12 @@ static void wps_er_process_wlanevent_eap(struct wps_er_ap *ap, const u8 *addr,
 		return;
 	}
 
-	/* TODO: add STA table to the AP entry and wpa_msg indication if new
-	 * STA; process message if it is part of ongoing protocol run */
+	sta = wps_er_add_sta_data(ap, addr, &attr, 0);
+
+	if (attr.msg_type && *attr.msg_type == WPS_M1)
+		wps_er_sta_start(sta, msg);
+	else if (sta->wps)
+		wps_er_sta_process(sta, msg);
 }
 
 
@@ -719,15 +926,10 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 	er->ssdp_sd = -1;
 
 	os_strlcpy(er->ifname, ifname, sizeof(er->ifname));
+	er->wps = wps;
 	os_memset(&rcfg, 0, sizeof(rcfg));
 	rcfg.pin_needed_cb = wps_er_pin_needed_cb;
 	rcfg.cb_ctx = er;
-
-	er->reg = wps_registrar_init(wps, &rcfg);
-	if (er->reg == NULL) {
-		wps_er_deinit(er);
-		return NULL;
-	}
 
 	if (get_netif_info(ifname,
 			   &er->ip_addr, &er->ip_addr_text,
@@ -794,7 +996,6 @@ void wps_er_deinit(struct wps_er *er)
 		eloop_unregister_sock(er->ssdp_sd, EVENT_TYPE_READ);
 		close(er->ssdp_sd);
 	}
-	wps_registrar_deinit(er->reg);
 	os_free(er->ip_addr_text);
 	os_free(er->mac_addr_text);
 	os_free(er);

@@ -336,6 +336,7 @@ int wpa_config_remove_network(struct wpa_config *config, int id);
 void wpa_config_set_network_defaults(struct wpa_ssid *ssid);
 int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
 		   int line);
+char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys);
 char * wpa_config_get(struct wpa_ssid *ssid, const char *var);
 char * wpa_config_get_no_key(struct wpa_ssid *ssid, const char *var);
 void wpa_config_update_psk(struct wpa_ssid *ssid);

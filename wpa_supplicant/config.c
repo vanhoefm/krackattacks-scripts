@@ -1832,6 +1832,59 @@ int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
 }
 
 
+/**
+ * wpa_config_get_all - Get all options from network configuration
+ * @ssid: Pointer to network configuration data
+ * @get_keys: Determines if keys/passwords will be included in returned list
+ * Returns: %NULL terminated list of all set keys and their values in the form
+ * of [key1, val1, key2, val2, ... , NULL]
+ *
+ * This function can be used to get list of all configured network properties.
+ * The caller is responsible for freeing the returned list and all its
+ * elements.
+ */
+char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys)
+{
+	const struct parse_data *field;
+	char *key, *value;
+	size_t i;
+	char **props;
+	int fields_num;
+
+	props = os_zalloc(sizeof(char *) * ((2 * NUM_SSID_FIELDS) + 1));
+	if (!props)
+		return NULL;
+
+	fields_num = 0;
+	for (i = 0; i < NUM_SSID_FIELDS; i++) {
+		field = &ssid_fields[i];
+		if (field->key_data && !get_keys)
+			continue;
+		value = field->writer(field, ssid);
+		if (value == NULL || os_strlen(value) == 0)
+			continue;
+
+		key = os_strdup(field->name);
+		if (key == NULL)
+			goto err;
+
+		props[fields_num * 2] = key;
+		props[fields_num * 2 + 1] = value;
+
+		fields_num++;
+	}
+
+	return props;
+
+err:
+	value = *props;
+	while (value)
+		os_free(value++);
+	os_free(props);
+	return NULL;
+}
+
+
 #ifndef NO_CONFIG_WRITE
 /**
  * wpa_config_get - Get a variable in network configuration

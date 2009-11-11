@@ -3026,13 +3026,7 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter, variant_iter, dict_iter;
 	char **iterator;
-
-#if 0
-	/* FIX: decide what to do with wpa_config_get_all */
-	char** props = wpa_config_get_all(net->ssid, 0);
-#else
-	char **props = NULL;
-#endif
+	char **props = wpa_config_get_all(net->ssid, 0);
 	if (!props) {
 		perror("wpas_dbus_getter_network_properties[dbus] couldn't "
 		       "read network properties. out of memory.");

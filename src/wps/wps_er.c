@@ -847,13 +847,13 @@ static void wps_er_sta_send_msg(struct wps_er_sta *sta, struct wpabuf *msg)
 }
 
 
-static void wps_er_sta_process(struct wps_er_sta *sta, struct wpabuf *msg)
+static void wps_er_sta_process(struct wps_er_sta *sta, struct wpabuf *msg,
+			       enum wsc_op_code op_code)
 {
 	enum wps_process_res res;
 
-	res = wps_process_msg(sta->wps, WSC_MSG, msg);
+	res = wps_process_msg(sta->wps, op_code, msg);
 	if (res == WPS_CONTINUE) {
-		enum wsc_op_code op_code;
 		struct wpabuf *next = wps_get_msg(sta->wps, &op_code);
 		if (next)
 			wps_er_sta_send_msg(sta, next);
@@ -877,7 +877,7 @@ static void wps_er_sta_start(struct wps_er_sta *sta, struct wpabuf *msg)
 	if (sta->wps == NULL)
 		return;
 
-	wps_er_sta_process(sta, msg);
+	wps_er_sta_process(sta, msg, WSC_MSG);
 }
 
 
@@ -902,8 +902,23 @@ static void wps_er_process_wlanevent_eap(struct wps_er_ap *ap, const u8 *addr,
 
 	if (attr.msg_type && *attr.msg_type == WPS_M1)
 		wps_er_sta_start(sta, msg);
-	else if (sta->wps)
-		wps_er_sta_process(sta, msg);
+	else if (sta->wps) {
+		enum wsc_op_code op_code = WSC_MSG;
+		if (attr.msg_type) {
+			switch (*attr.msg_type) {
+			case WPS_WSC_ACK:
+				op_code = WSC_ACK;
+				break;
+			case WPS_WSC_NACK:
+				op_code = WSC_NACK;
+				break;
+			case WPS_WSC_DONE:
+				op_code = WSC_Done;
+				break;
+			}
+		}
+		wps_er_sta_process(sta, msg, op_code);
+	}
 }
 
 

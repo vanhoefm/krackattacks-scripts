@@ -344,7 +344,7 @@ char * http_link_update(char *url, const char *base)
 			os_snprintf(n, len, "%s%s", base, url);
 		} else {
 			os_memcpy(n, base, pos - base);
-			os_memcpy(n + (pos - base), url, os_strlen(url));
+			os_memcpy(n + (pos - base), url, os_strlen(url) + 1);
 		}
 	} else {
 		pos = os_strrchr(base + 7, '/');
@@ -352,7 +352,8 @@ char * http_link_update(char *url, const char *base)
 			os_snprintf(n, len, "%s/%s", base, url);
 		} else {
 			os_memcpy(n, base, pos - base + 1);
-			os_memcpy(n + (pos - base) + 1, url, os_strlen(url));
+			os_memcpy(n + (pos - base) + 1, url, os_strlen(url) +
+				  1);
 		}
 	}
 

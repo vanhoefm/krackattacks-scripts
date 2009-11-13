@@ -1563,8 +1563,18 @@ struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
 			else
 				wps->wps->upnp_msgs = NULL;
 			msg = p->msg;
+			switch (p->type) {
+			case WPS_WSC_ACK:
+				*op_code = WSC_ACK;
+				break;
+			case WPS_WSC_NACK:
+				*op_code = WSC_NACK;
+				break;
+			default:
+				*op_code = WSC_MSG;
+				break;
+			}
 			os_free(p);
-			*op_code = WSC_MSG;
 			if (wps->ext_reg == 0)
 				wps->ext_reg = 1;
 			return msg;

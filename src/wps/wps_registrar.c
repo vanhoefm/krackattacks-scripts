@@ -2666,7 +2666,8 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 		wps_registrar_free_pending_m2(wps->wps);
 	if (wps->wps->wps_upnp && wps->ext_reg &&
 	    wps->wps->upnp_msgs == NULL &&
-	    (op_code == WSC_MSG || op_code == WSC_Done)) {
+	    (op_code == WSC_MSG || op_code == WSC_Done || op_code == WSC_NACK))
+	{
 		struct wps_parse_attr attr;
 		int type;
 		if (wps_parse_msg(msg, &attr) < 0 || attr.msg_type == NULL)

@@ -741,41 +741,24 @@ static const char *soap_postfix =
 static const char *urn_wfawlanconfig =
 	"urn:schemas-wifialliance-org:service:WFAWLANConfig:1";
 
-static void wps_er_sta_send_msg(struct wps_er_sta *sta, struct wpabuf *msg)
+static struct wpabuf * wps_er_soap_hdr(const struct wpabuf *msg,
+				       const char *name, const char *path,
+				       const struct sockaddr_in *dst,
+				       char **len_ptr, char **body_ptr)
 {
 	unsigned char *encoded;
 	size_t encoded_len;
 	struct wpabuf *buf;
-	char *len_ptr, *body_ptr;
-	char len_buf[10];
-	struct sockaddr_in dst;
-	char *url, *path;
-
-	if (sta->http) {
-		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP request for STA - "
-			   "ignore new request");
-		return;
-	}
-
-	url = http_client_url_parse(sta->ap->control_url, &dst, &path);
-	if (url == NULL) {
-		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse eventSubURL");
-		return;
-	}
 
 	encoded = base64_encode(wpabuf_head(msg), wpabuf_len(msg),
 				&encoded_len);
-	wpabuf_free(msg);
-	if (encoded == NULL) {
-		os_free(url);
-		return;
-	}
+	if (encoded == NULL)
+		return NULL;
 
 	buf = wpabuf_alloc(1000 + encoded_len);
 	if (buf == NULL) {
 		os_free(encoded);
-		os_free(url);
-		return;
+		return NULL;
 	}
 
 	wpabuf_printf(buf,
@@ -783,33 +766,79 @@ static void wps_er_sta_send_msg(struct wps_er_sta *sta, struct wpabuf *msg)
 		      "Host: %s:%d\r\n"
 		      "Content-Type: text/xml; charset=\"utf-8\"\r\n"
 		      "Content-Length: ",
-		      path, inet_ntoa(dst.sin_addr), ntohs(dst.sin_port));
-	os_free(url);
-	len_ptr = wpabuf_put(buf, 0);
+		      path, inet_ntoa(dst->sin_addr), ntohs(dst->sin_port));
+
+	*len_ptr = wpabuf_put(buf, 0);
 	wpabuf_printf(buf,
 		      "        \r\n"
-		      "SOAPACTION: \"%s#PutWLANResponse\"\r\n"
+		      "SOAPACTION: \"%s#%s\"\r\n"
 		      "\r\n",
-		      urn_wfawlanconfig);
+		      urn_wfawlanconfig, name);
 
-	body_ptr = wpabuf_put(buf, 0);
+	*body_ptr = wpabuf_put(buf, 0);
 
 	wpabuf_put_str(buf, soap_prefix);
-	wpabuf_put_str(buf, "<u:PutWLANResponse xmlns:u=\"");
+	wpabuf_printf(buf, "<u:%s xmlns:u=\"", name);
 	wpabuf_put_str(buf, urn_wfawlanconfig);
 	wpabuf_put_str(buf, "\">\n");
 	wpabuf_printf(buf, "<NewMessage>%s</NewMessage>\n", (char *) encoded);
 	os_free(encoded);
+
+	return buf;
+}
+
+
+static void wps_er_soap_end(struct wpabuf *buf, const char *name,
+			    char *len_ptr, char *body_ptr)
+{
+	char len_buf[10];
+	wpabuf_printf(buf, "</u:%s>\n", name);
+	wpabuf_put_str(buf, soap_postfix);
+	os_snprintf(len_buf, sizeof(len_buf), "%d",
+		    (int) ((char *) wpabuf_put(buf, 0) - body_ptr));
+	os_memcpy(len_ptr, len_buf, os_strlen(len_buf));
+}
+
+
+static void wps_er_sta_send_msg(struct wps_er_sta *sta, struct wpabuf *msg)
+{
+	struct wpabuf *buf;
+	char *len_ptr, *body_ptr;
+	struct sockaddr_in dst;
+	char *url, *path;
+
+	if (sta->http) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP request for STA - "
+			   "ignore new request");
+		wpabuf_free(msg);
+		return;
+	}
+
+	if (sta->ap->control_url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No controlURL for AP");
+		wpabuf_free(msg);
+		return;
+	}
+
+	url = http_client_url_parse(sta->ap->control_url, &dst, &path);
+	if (url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse controlURL");
+		wpabuf_free(msg);
+		return;
+	}
+
+	buf = wps_er_soap_hdr(msg, "PutWLANResponse", path, &dst, &len_ptr,
+			      &body_ptr);
+	wpabuf_free(msg);
+	os_free(url);
+	if (buf == NULL)
+		return;
 	wpabuf_printf(buf, "<NewWLANEventType>%d</NewWLANEventType>\n",
 		      UPNP_WPS_WLANEVENT_TYPE_EAP);
 	wpabuf_printf(buf, "<NewWLANEventMAC>" MACSTR "</NewWLANEventMAC>\n",
 		      MAC2STR(sta->addr));
-	wpabuf_put_str(buf, "</u:PutWLANResponse>\n");
-	wpabuf_put_str(buf, soap_postfix);
 
-	os_snprintf(len_buf, sizeof(len_buf), "%d",
-		    (int) ((char *) wpabuf_put(buf, 0) - body_ptr));
-	os_memcpy(len_ptr, len_buf, os_strlen(len_buf));
+	wps_er_soap_end(buf, "PutWLANResponse", len_ptr, body_ptr);
 
 	sta->http = http_client_addr(&dst, buf, 1000,
 				     wps_er_http_put_wlan_response_cb, sta);
@@ -1087,4 +1116,116 @@ void wps_er_deinit(struct wps_er *er)
 	os_free(er->ip_addr_text);
 	os_free(er->mac_addr_text);
 	os_free(er);
+}
+
+
+static void wps_er_http_set_sel_reg_cb(void *ctx, struct http_client *c,
+				       enum http_client_event event)
+{
+	struct wps_er_ap *ap = ctx;
+
+	switch (event) {
+	case HTTP_CLIENT_OK:
+		wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar OK");
+		break;
+	case HTTP_CLIENT_FAILED:
+	case HTTP_CLIENT_INVALID_REPLY:
+	case HTTP_CLIENT_TIMEOUT:
+		wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar failed");
+		break;
+	}
+	http_client_free(ap->http);
+	ap->http = NULL;
+}
+
+
+static void wps_er_send_set_sel_reg(struct wps_er_ap *ap, struct wpabuf *msg)
+{
+	struct wpabuf *buf;
+	char *len_ptr, *body_ptr;
+	struct sockaddr_in dst;
+	char *url, *path;
+
+	if (ap->control_url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No controlURL for AP");
+		return;
+	}
+
+	if (ap->http) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP request for AP - "
+			   "ignore new request");
+		return;
+	}
+
+	url = http_client_url_parse(ap->control_url, &dst, &path);
+	if (url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse controlURL");
+		return;
+	}
+
+	buf = wps_er_soap_hdr(msg, "SetSelectedRegistrar", path, &dst,
+			      &len_ptr, &body_ptr);
+	os_free(url);
+	if (buf == NULL)
+		return;
+
+	wps_er_soap_end(buf, "SetSelectedRegistrar", len_ptr, body_ptr);
+
+	ap->http = http_client_addr(&dst, buf, 1000,
+				    wps_er_http_set_sel_reg_cb, ap);
+	if (ap->http == NULL)
+		wpabuf_free(buf);
+}
+
+
+static int wps_er_build_selected_registrar(struct wpabuf *msg, int sel_reg)
+{
+	wpabuf_put_be16(msg, ATTR_SELECTED_REGISTRAR);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, !!sel_reg);
+	return 0;
+}
+
+
+static int wps_er_build_dev_password_id(struct wpabuf *msg, u16 dev_passwd_id)
+{
+	wpabuf_put_be16(msg, ATTR_DEV_PASSWORD_ID);
+	wpabuf_put_be16(msg, 2);
+	wpabuf_put_be16(msg, dev_passwd_id);
+	return 0;
+}
+
+
+static int wps_er_build_sel_reg_config_methods(struct wpabuf *msg,
+					       u16 sel_reg_config_methods)
+{
+	wpabuf_put_be16(msg, ATTR_SELECTED_REGISTRAR_CONFIG_METHODS);
+	wpabuf_put_be16(msg, 2);
+	wpabuf_put_be16(msg, sel_reg_config_methods);
+	return 0;
+}
+
+
+void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
+			u16 sel_reg_config_methods)
+{
+	struct wpabuf *msg;
+	struct wps_er_ap *ap;
+
+	msg = wpabuf_alloc(500);
+	if (msg == NULL)
+		return;
+
+	if (wps_build_version(msg) ||
+	    wps_er_build_selected_registrar(msg, sel_reg) ||
+	    wps_er_build_dev_password_id(msg, dev_passwd_id) ||
+	    wps_er_build_sel_reg_config_methods(msg, sel_reg_config_methods)) {
+		wpabuf_free(msg);
+		return;
+	}
+
+	for (ap = er->ap; ap; ap = ap->next)
+		wps_er_send_set_sel_reg(ap, msg);
+
+	wpabuf_free(msg);
 }

@@ -295,6 +295,21 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 	ap.key_hex = new_key;
 	return wpas_wps_start_reg(wpa_s, _bssid, pin, &ap);
 }
+
+
+#ifdef CONFIG_WPS_ER
+static int wpa_supplicant_ctrl_iface_wps_er_pin(struct wpa_supplicant *wpa_s,
+						char *cmd)
+{
+	char *uuid = cmd, *pin;
+	pin = os_strchr(uuid, ' ');
+	if (pin == NULL)
+		return -1;
+	*pin++ = '\0';
+	return wpas_wps_er_add_pin(wpa_s, uuid, pin);
+}
+#endif /* CONFIG_WPS_ER */
+
 #endif /* CONFIG_WPS */
 
 
@@ -1632,12 +1647,17 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_REG ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_reg(wpa_s, buf + 8))
 			reply_len = -1;
+#ifdef CONFIG_WPS_ER
 	} else if (os_strcmp(buf, "WPS_ER_START") == 0) {
 		if (wpas_wps_er_start(wpa_s))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "WPS_ER_STOP") == 0) {
 		if (wpas_wps_er_stop(wpa_s))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_ER_PIN ", 11) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_er_pin(wpa_s, buf + 11))
+			reply_len = -1;
+#endif /* CONFIG_WPS_ER */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_IBSS_RSN
 	} else if (os_strncmp(buf, "IBSS_RSN ", 9) == 0) {

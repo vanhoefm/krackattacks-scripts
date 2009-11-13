@@ -101,6 +101,8 @@ struct wps_registrar {
 			      const struct wps_device_data *dev);
 	void (*reg_success_cb)(void *ctx, const u8 *mac_addr,
 			       const u8 *uuid_e);
+	void (*set_sel_reg_cb)(void *ctx, int sel_reg, u16 dev_passwd_id,
+			       u16 sel_reg_config_methods);
 	void *cb_ctx;
 
 	struct wps_uuid_pin *pins;
@@ -120,6 +122,7 @@ struct wps_registrar {
 
 
 static int wps_set_ie(struct wps_registrar *reg);
+static void wps_cb_set_sel_reg(struct wps_registrar *reg);
 static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 					       void *timeout_ctx);
@@ -449,6 +452,7 @@ wps_registrar_init(struct wps_context *wps,
 	reg->set_ie_cb = cfg->set_ie_cb;
 	reg->pin_needed_cb = cfg->pin_needed_cb;
 	reg->reg_success_cb = cfg->reg_success_cb;
+	reg->set_sel_reg_cb = cfg->set_sel_reg_cb;
 	reg->cb_ctx = cfg->cb_ctx;
 	reg->skip_cred_build = cfg->skip_cred_build;
 	if (cfg->extra_cred) {
@@ -536,6 +540,7 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 	reg->selected_registrar = 1;
 	reg->pbc = 0;
 	wps_set_ie(reg);
+	wps_cb_set_sel_reg(reg);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
 			       wps_registrar_set_selected_timeout,
@@ -690,6 +695,7 @@ static void wps_registrar_stop_pbc(struct wps_registrar *reg)
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
 	wps_set_ie(reg);
+	wps_cb_set_sel_reg(reg);
 }
 
 
@@ -725,6 +731,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 	reg->selected_registrar = 1;
 	reg->pbc = 1;
 	wps_set_ie(reg);
+	wps_cb_set_sel_reg(reg);
 
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wps_registrar_pbc_timeout,
@@ -746,6 +753,7 @@ static void wps_registrar_pin_completed(struct wps_registrar *reg)
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	reg->selected_registrar = 0;
 	wps_set_ie(reg);
+	wps_cb_set_sel_reg(reg);
 }
 
 
@@ -840,6 +848,24 @@ static int wps_cb_set_ie(struct wps_registrar *reg,
 			      wpabuf_len(beacon_ie),
 			      wpabuf_head(probe_resp_ie),
 			      wpabuf_len(probe_resp_ie));
+}
+
+
+static void wps_cb_set_sel_reg(struct wps_registrar *reg)
+{
+	u16 methods = 0;
+	if (reg->set_sel_reg_cb == NULL)
+		return;
+
+	if (reg->selected_registrar) {
+		methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
+		if (reg->pbc)
+			methods |= WPS_CONFIG_PUSHBUTTON;
+	}
+
+	reg->set_sel_reg_cb(reg->cb_ctx, reg->selected_registrar,
+			    reg->pbc ? DEV_PW_PUSHBUTTON : DEV_PW_DEFAULT,
+			    methods);
 }
 
 
@@ -2691,6 +2717,7 @@ static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 	reg->sel_reg_dev_password_id_override = -1;
 	reg->sel_reg_config_methods_override = -1;
 	wps_set_ie(reg);
+	wps_cb_set_sel_reg(reg);
 }
 
 

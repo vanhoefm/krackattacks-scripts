@@ -253,6 +253,24 @@ struct wps_registrar_config {
 			       const u8 *uuid_e);
 
 	/**
+	 * set_sel_reg_cb - Callback for reporting selected registrar changes
+	 * @ctx: Higher layer context data (cb_ctx)
+	 * @sel_reg: Whether the Registrar is selected
+	 * @dev_passwd_id: Device Password ID to indicate with method or
+	 *	specific password the Registrar intends to use
+	 * @sel_reg_config_methods: Bit field of active config methods
+	 *
+	 * This callback is called whenever the Selected Registrar state
+	 * changes (e.g., a new PIN becomes available or PBC is invoked). This
+	 * callback is only used by External Registrar implementation;
+	 * set_ie_cb() is used by AP implementation in similar caes, but it
+	 * provides the full WPS IE data instead of just the minimal Registrar
+	 * state information.
+	 */
+	void (*set_sel_reg_cb)(void *ctx, int sel_reg, u16 dev_passwd_id,
+			       u16 sel_reg_config_methods);
+
+	/**
 	 * cb_ctx: Higher layer context data for Registrar callbacks
 	 */
 	void *cb_ctx;
@@ -609,5 +627,7 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end);
 
 struct wps_er * wps_er_init(struct wps_context *wps, const char *ifname);
 void wps_er_deinit(struct wps_er *er);
+void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
+			u16 sel_reg_config_methods);
 
 #endif /* WPS_H */

@@ -723,6 +723,20 @@ static void wpas_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 }
 
 
+static void wpas_wps_set_sel_reg_cb(void *ctx, int sel_reg, u16 dev_passwd_id,
+				    u16 sel_reg_config_methods)
+{
+#ifdef CONFIG_WPS_ER
+	struct wpa_supplicant *wpa_s = ctx;
+
+	if (wpa_s->wps_er == NULL)
+		return;
+	wps_er_set_sel_reg(wpa_s->wps_er, sel_reg, dev_passwd_id,
+			   sel_reg_config_methods);
+#endif /* CONFIG_WPS_ER */
+}
+
+
 int wpas_wps_init(struct wpa_supplicant *wpa_s)
 {
 	struct wps_context *wps;
@@ -784,6 +798,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	os_memset(&rcfg, 0, sizeof(rcfg));
 	rcfg.new_psk_cb = wpas_wps_new_psk_cb;
 	rcfg.pin_needed_cb = wpas_wps_pin_needed_cb;
+	rcfg.set_sel_reg_cb = wpas_wps_set_sel_reg_cb;
 	rcfg.cb_ctx = wpa_s;
 
 	wps->registrar = wps_registrar_init(wps, &rcfg);
@@ -1053,3 +1068,20 @@ int wpas_wps_er_stop(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_WPS_ER */
 	return 0;
 }
+
+
+#ifdef CONFIG_WPS_ER
+int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const char *uuid,
+			const char *pin)
+{
+	u8 u[UUID_LEN];
+	int any = 0;
+
+	if (os_strcmp(uuid, "any") == 0)
+		any = 1;
+	else if (uuid_str2bin(uuid, u))
+		return -1;
+	return wps_registrar_add_pin(wpa_s->wps->registrar, any ? NULL : u,
+				     (const u8 *) pin, os_strlen(pin), 300);
+}
+#endif /* CONFIG_WPS_ER */

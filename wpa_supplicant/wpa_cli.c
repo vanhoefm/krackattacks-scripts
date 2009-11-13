@@ -549,6 +549,29 @@ static int wpa_cli_cmd_wps_er_stop(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_wps_er_pin(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid WPS_ER_PIN command: need two arguments:\n"
+		       "- UUID: use 'any' to select any\n"
+		       "- PIN: Enrollee PIN\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_ER_PIN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_ibss_rsn(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -1419,6 +1442,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_er_stop", wpa_cli_cmd_wps_er_stop,
 	  cli_cmd_flag_none,
 	  "= stop Wi-Fi Protected Setup External Registrar" },
+	{ "wps_er_pin", wpa_cli_cmd_wps_er_pin,
+	  cli_cmd_flag_sensitive,
+	  "<UUID> <PIN> = add an Enrollee PIN to External Registrar" },
 	{ "ibss_rsn", wpa_cli_cmd_ibss_rsn,
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },

@@ -874,52 +874,6 @@ hostapd_rx_req_put_message(void *priv, struct upnp_wps_peer *peer,
 }
 
 
-static struct wpabuf *
-hostapd_rx_req_get_ap_settings(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return NULL;
-}
-
-
-static int hostapd_rx_req_set_ap_settings(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
-static int hostapd_rx_req_del_ap_settings(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
-static struct wpabuf *
-hostapd_rx_req_get_sta_settings(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return NULL;
-}
-
-
-static int hostapd_rx_req_set_sta_settings(void *priv,
-					   const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
-static int hostapd_rx_req_del_sta_settings(void *priv,
-					   const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
 static int hostapd_rx_req_put_wlan_response(
 	void *priv, enum upnp_wps_wlanevent_type ev_type,
 	const u8 *mac_addr, const struct wpabuf *msg,
@@ -985,34 +939,6 @@ static int hostapd_rx_req_set_selected_registrar(void *priv,
 }
 
 
-static int hostapd_rx_req_reboot_ap(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
-static int hostapd_rx_req_reset_ap(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
-static int hostapd_rx_req_reboot_sta(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
-static int hostapd_rx_req_reset_sta(void *priv, const struct wpabuf *msg)
-{
-	wpa_printf(MSG_DEBUG, "WPS UPnP: TODO %s", __func__);
-	return -1;
-}
-
-
 static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 				 struct wps_context *wps)
 {
@@ -1026,19 +952,9 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 
 	ctx->rx_req_get_device_info = hostapd_rx_req_get_device_info;
 	ctx->rx_req_put_message = hostapd_rx_req_put_message;
-	ctx->rx_req_get_ap_settings = hostapd_rx_req_get_ap_settings;
-	ctx->rx_req_set_ap_settings = hostapd_rx_req_set_ap_settings;
-	ctx->rx_req_del_ap_settings = hostapd_rx_req_del_ap_settings;
-	ctx->rx_req_get_sta_settings = hostapd_rx_req_get_sta_settings;
-	ctx->rx_req_set_sta_settings = hostapd_rx_req_set_sta_settings;
-	ctx->rx_req_del_sta_settings = hostapd_rx_req_del_sta_settings;
 	ctx->rx_req_put_wlan_response = hostapd_rx_req_put_wlan_response;
 	ctx->rx_req_set_selected_registrar =
 		hostapd_rx_req_set_selected_registrar;
-	ctx->rx_req_reboot_ap = hostapd_rx_req_reboot_ap;
-	ctx->rx_req_reset_ap = hostapd_rx_req_reset_ap;
-	ctx->rx_req_reboot_sta = hostapd_rx_req_reboot_sta;
-	ctx->rx_req_reset_sta = hostapd_rx_req_reset_sta;
 
 	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd);
 	if (hapd->wps_upnp == NULL) {

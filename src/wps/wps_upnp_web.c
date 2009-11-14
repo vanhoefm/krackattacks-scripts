@@ -73,76 +73,6 @@ static const char wps_scpd_xml[] =
 "</argumentList>\n"
 "</action>\n"
 "<action>\n"
-"<name>GetAPSettings</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewMessage</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>Message</relatedStateVariable>\n"
-"</argument>\n"
-"<argument>\n"
-"<name>NewAPSettings</name>\n"
-"<direction>out</direction>\n"
-"<relatedStateVariable>APSettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>SetAPSettings</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>APSettings</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>APSettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>DelAPSettings</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewAPSettings</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>APSettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>GetSTASettings</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewMessage</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>Message</relatedStateVariable>\n"
-"</argument>\n"
-"<argument>\n"
-"<name>NewSTASettings</name>\n"
-"<direction>out</direction>\n"
-"<relatedStateVariable>STASettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>SetSTASettings</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewSTASettings</name>\n"
-"<direction>out</direction>\n"
-"<relatedStateVariable>STASettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>DelSTASettings</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewSTASettings</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>STASettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
 "<name>PutWLANResponse</name>\n"
 "<argumentList>\n"
 "<argument>\n"
@@ -172,46 +102,6 @@ static const char wps_scpd_xml[] =
 "</argument>\n"
 "</argumentList>\n"
 "</action>\n"
-"<action>\n"
-"<name>RebootAP</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewAPSettings</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>APSettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>ResetAP</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewMessage</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>Message</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>RebootSTA</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewSTASettings</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>APSettings</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
-"<action>\n"
-"<name>ResetSTA</name>\n"
-"<argumentList>\n"
-"<argument>\n"
-"<name>NewMessage</name>\n"
-"<direction>in</direction>\n"
-"<relatedStateVariable>Message</relatedStateVariable>\n"
-"</argument>\n"
-"</argumentList>\n"
-"</action>\n"
 "</actionList>\n"
 "<serviceStateTable>\n"
 "<stateVariable sendEvents=\"no\">\n"
@@ -230,17 +120,9 @@ static const char wps_scpd_xml[] =
 "<name>DeviceInfo</name>\n"
 "<dataType>bin.base64</dataType>\n"
 "</stateVariable>\n"
-"<stateVariable sendEvents=\"no\">\n"
-"<name>APSettings</name>\n"
-"<dataType>bin.base64</dataType>\n"
-"</stateVariable>\n"
 "<stateVariable sendEvents=\"yes\">\n"
 "<name>APStatus</name>\n"
 "<dataType>ui1</dataType>\n"
-"</stateVariable>\n"
-"<stateVariable sendEvents=\"no\">\n"
-"<name>STASettings</name>\n"
-"<dataType>bin.base64</dataType>\n"
 "</stateVariable>\n"
 "<stateVariable sendEvents=\"yes\">\n"
 "<name>STAStatus</name>\n"
@@ -568,144 +450,6 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 
 
 static enum http_reply_code
-web_process_get_ap_settings(struct upnp_wps_device_sm *sm, char *data,
-			    struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	static const char *name = "NewAPSettings";
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: GetAPSettings");
-	if (sm->ctx->rx_req_get_ap_settings == NULL)
-		return HTTP_INTERNAL_SERVER_ERROR;
-	msg = xml_get_base64_item(data, "NewMessage", &ret);
-	if (msg == NULL)
-		return ret;
-	*reply = sm->ctx->rx_req_get_ap_settings(sm->priv, msg);
-	wpabuf_free(msg);
-	if (*reply == NULL)
-		return HTTP_INTERNAL_SERVER_ERROR;
-	*replyname = name;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_set_ap_settings(struct upnp_wps_device_sm *sm, char *data,
-			    struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: SetAPSettings");
-	msg = xml_get_base64_item(data, "NewAPSettings", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_set_ap_settings ||
-	    sm->ctx->rx_req_set_ap_settings(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_del_ap_settings(struct upnp_wps_device_sm *sm, char *data,
-			    struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: DelAPSettings");
-	msg = xml_get_base64_item(data, "NewAPSettings", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_del_ap_settings ||
-	    sm->ctx->rx_req_del_ap_settings(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_get_sta_settings(struct upnp_wps_device_sm *sm, char *data,
-			     struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	static const char *name = "NewSTASettings";
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: GetSTASettings");
-	if (sm->ctx->rx_req_get_sta_settings == NULL)
-		return HTTP_INTERNAL_SERVER_ERROR;
-	msg = xml_get_base64_item(data, "NewMessage", &ret);
-	if (msg == NULL)
-		return ret;
-	*reply = sm->ctx->rx_req_get_sta_settings(sm->priv, msg);
-	wpabuf_free(msg);
-	if (*reply == NULL)
-		return HTTP_INTERNAL_SERVER_ERROR;
-	*replyname = name;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_set_sta_settings(struct upnp_wps_device_sm *sm, char *data,
-			     struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: SetSTASettings");
-	msg = xml_get_base64_item(data, "NewSTASettings", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_set_sta_settings ||
-	    sm->ctx->rx_req_set_sta_settings(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_del_sta_settings(struct upnp_wps_device_sm *sm, char *data,
-			     struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: DelSTASettings");
-	msg = xml_get_base64_item(data, "NewSTASettings", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_del_sta_settings ||
-	    sm->ctx->rx_req_del_sta_settings(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
 web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 			      struct wpabuf **reply, const char **replyname)
 {
@@ -778,98 +522,6 @@ web_process_set_selected_registrar(struct upnp_wps_device_sm *sm, char *data,
 		return ret;
 	if (!sm->ctx->rx_req_set_selected_registrar ||
 	    sm->ctx->rx_req_set_selected_registrar(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_reboot_ap(struct upnp_wps_device_sm *sm, char *data,
-		      struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: RebootAP");
-	msg = xml_get_base64_item(data, "NewAPSettings", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_reboot_ap ||
-	    sm->ctx->rx_req_reboot_ap(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_reset_ap(struct upnp_wps_device_sm *sm, char *data,
-		     struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: ResetAP");
-	msg = xml_get_base64_item(data, "NewMessage", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_reset_ap ||
-	    sm->ctx->rx_req_reset_ap(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_reboot_sta(struct upnp_wps_device_sm *sm, char *data,
-		       struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: RebootSTA");
-	msg = xml_get_base64_item(data, "NewSTASettings", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_reboot_sta ||
-	    sm->ctx->rx_req_reboot_sta(sm->priv, msg)) {
-		wpabuf_free(msg);
-		return HTTP_INTERNAL_SERVER_ERROR;
-	}
-	wpabuf_free(msg);
-	*replyname = NULL;
-	*reply = NULL;
-	return HTTP_OK;
-}
-
-
-static enum http_reply_code
-web_process_reset_sta(struct upnp_wps_device_sm *sm, char *data,
-		      struct wpabuf **reply, const char **replyname)
-{
-	struct wpabuf *msg;
-	enum http_reply_code ret;
-
-	wpa_printf(MSG_DEBUG, "WPS UPnP: ResetSTA");
-	msg = xml_get_base64_item(data, "NewMessage", &ret);
-	if (msg == NULL)
-		return ret;
-	if (!sm->ctx->rx_req_reset_sta ||
-	    sm->ctx->rx_req_reset_sta(sm->priv, msg)) {
 		wpabuf_free(msg);
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
@@ -1093,38 +745,12 @@ static void web_connection_parse_post(struct upnp_wps_device_sm *sm,
 		ret = web_process_get_device_info(sm, &reply, &replyname);
 	else if (!os_strncasecmp("PutMessage", action, action_len))
 		ret = web_process_put_message(sm, data, &reply, &replyname);
-	else if (!os_strncasecmp("GetAPSettings", action, action_len))
-		ret = web_process_get_ap_settings(sm, data, &reply,
-						  &replyname);
-	else if (!os_strncasecmp("SetAPSettings", action, action_len))
-		ret = web_process_set_ap_settings(sm, data, &reply,
-						  &replyname);
-	else if (!os_strncasecmp("DelAPSettings", action, action_len))
-		ret = web_process_del_ap_settings(sm, data, &reply,
-						  &replyname);
-	else if (!os_strncasecmp("GetSTASettings", action, action_len))
-		ret = web_process_get_sta_settings(sm, data, &reply,
-						   &replyname);
-	else if (!os_strncasecmp("SetSTASettings", action, action_len))
-		ret = web_process_set_sta_settings(sm, data, &reply,
-						   &replyname);
-	else if (!os_strncasecmp("DelSTASettings", action, action_len))
-		ret = web_process_del_sta_settings(sm, data, &reply,
-						  &replyname);
 	else if (!os_strncasecmp("PutWLANResponse", action, action_len))
 		ret = web_process_put_wlan_response(sm, data, &reply,
 						    &replyname);
 	else if (!os_strncasecmp("SetSelectedRegistrar", action, action_len))
 		ret = web_process_set_selected_registrar(sm, data, &reply,
 							 &replyname);
-	else if (!os_strncasecmp("RebootAP", action, action_len))
-		ret = web_process_reboot_ap(sm, data, &reply, &replyname);
-	else if (!os_strncasecmp("ResetAP", action, action_len))
-		ret = web_process_reset_ap(sm, data, &reply, &replyname);
-	else if (!os_strncasecmp("RebootSTA", action, action_len))
-		ret = web_process_reboot_sta(sm, data, &reply, &replyname);
-	else if (!os_strncasecmp("ResetSTA", action, action_len))
-		ret = web_process_reset_sta(sm, data, &reply, &replyname);
 	else
 		wpa_printf(MSG_INFO, "WPS UPnP: Unknown POST type");
 

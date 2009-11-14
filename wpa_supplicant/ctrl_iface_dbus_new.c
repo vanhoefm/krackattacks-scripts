@@ -914,6 +914,123 @@ static void wpas_dbus_signal_debug_params_changed(struct wpa_global *global)
 }
 
 
+static void wpas_dbus_meth_reg_create_interface(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	struct wpa_dbus_argument margs[] = {
+		{ "args", "a{sv}", ARG_IN },
+		{ "path", "o", ARG_OUT },
+		END_ARGS
+	};
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				 "CreateInterface",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_create_interface,
+				 global, NULL, margs);
+}
+
+
+static void wpas_dbus_meth_reg_remove_interface(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	struct wpa_dbus_argument margs[] = {
+		{ "path", "o", ARG_IN },
+		END_ARGS
+	};
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				 "RemoveInterface",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_remove_interface,
+				 global, NULL, margs);
+}
+
+
+static void wpas_dbus_meth_reg_get_interface(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	struct wpa_dbus_argument margs[] = {
+		{ "ifname", "s", ARG_IN },
+		{ "path", "o", ARG_OUT },
+		END_ARGS
+	};
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				 "GetInterface",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_get_interface,
+				 global, NULL, margs);
+}
+
+
+static void wpas_dbus_prop_reg_debug_params(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				   "DebugParams", "(ibb)",
+				   (WPADBusPropertyAccessor)
+				   &wpas_dbus_getter_debug_params,
+				   (WPADBusPropertyAccessor)
+				   &wpas_dbus_setter_debug_params,
+				   global, NULL, RW);
+}
+
+
+static void wpas_dbus_prop_reg_interfaces(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				   "Interfaces", "ao",
+				   (WPADBusPropertyAccessor)
+				   &wpas_dbus_getter_interfaces,
+				   NULL, global, NULL, R);
+}
+
+
+static void wpas_dbus_prop_reg_eap_methods(
+	struct wpa_dbus_object_desc *obj_desc)
+{
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				   "EapMethods", "as",
+				   wpas_dbus_getter_eap_methods,
+				   NULL, NULL, NULL, R);
+}
+
+
+static void wpas_dbus_sign_reg_interface_added(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	struct wpa_dbus_argument sargs[] = {
+		{ "path", "o", ARG_OUT },
+		END_ARGS
+	};
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				 "InterfaceAdded", sargs);
+}
+
+
+static void wpas_dbus_sign_reg_interface_removed(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	struct wpa_dbus_argument sargs[] = {
+		{ "path", "o", ARG_OUT },
+		END_ARGS
+	};
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				 "InterfaceRemoved", sargs);
+}
+
+
+static void wpas_dbus_sign_reg_properties_changed(
+	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+{
+	struct wpa_dbus_argument sargs[] = {
+		{ "properties", "a{sv}", ARG_OUT },
+		END_ARGS
+	};
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
+				 "PropertiesChanged", sargs);
+}
+
+
 /**
  * wpas_dbus_ctrl_iface_init - Initialize dbus control interface
  * @global: Pointer to global data from wpa_supplicant_init()
@@ -927,33 +1044,6 @@ static struct ctrl_iface_dbus_new_priv * wpas_dbus_ctrl_iface_init(
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
-	/* register methods */
-	struct wpa_dbus_argument margs1[] = {
-		{ "args", "a{sv}", ARG_IN },
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument margs2[] = {
-		{ "path", "o", ARG_IN },
-		END_ARGS
-	};
-	struct wpa_dbus_argument margs3[] = {
-		{ "ifname", "s", ARG_IN },
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs1[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs2[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs3[] = {
-		{ "properties", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
@@ -962,104 +1052,21 @@ static struct ctrl_iface_dbus_new_priv * wpas_dbus_ctrl_iface_init(
 		return NULL;
 	}
 
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				     "CreateInterface",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_create_interface,
-				     global, NULL, margs1)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "CreateInterface",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
+	wpas_dbus_meth_reg_create_interface(global, obj_desc);
+	wpas_dbus_meth_reg_remove_interface(global, obj_desc);
+	wpas_dbus_meth_reg_get_interface(global, obj_desc);
 
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-			"RemoveInterface",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_remove_interface,
-				     global, NULL, margs2)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "RemoveInterface",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
+	wpas_dbus_prop_reg_debug_params(global, obj_desc);
+	wpas_dbus_prop_reg_interfaces(global, obj_desc);
+	wpas_dbus_prop_reg_eap_methods(obj_desc);
 
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				     "GetInterface",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_get_interface,
-				     global, NULL, margs3)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "global",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
-
-	/* register properties */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				       "DebugParams", "(ibb)",
-				       (WPADBusPropertyAccessor)
-				       &wpas_dbus_getter_debug_params,
-				       (WPADBusPropertyAccessor)
-				       &wpas_dbus_setter_debug_params,
-				       global, NULL, RW)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "DebugParams",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
-
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				       "Interfaces", "ao",
-				       (WPADBusPropertyAccessor)
-				       &wpas_dbus_getter_interfaces, NULL,
-				       global, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Interfaces",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
-
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				       "EapMethods", "as",
-				       wpas_dbus_getter_eap_methods, NULL,
-				       NULL, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "EapMethods",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
-
-
-	/* register signals */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				     "InterfaceAdded", sargs1)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "InterfaceAdded",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
-
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				     "InterfaceRemoved", sargs2)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "InterfaceRemoved",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
-
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				     "PropertiesChanged", sargs3)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "PropertiesChanged",
-			   WPAS_DBUS_NEW_INTERFACE);
-	}
+	wpas_dbus_sign_reg_interface_added(global, obj_desc);
+	wpas_dbus_sign_reg_interface_removed(global, obj_desc);
+	wpas_dbus_sign_reg_properties_changed(global, obj_desc);
 
 	ctrl_iface = wpa_dbus_ctrl_iface_init(global, WPAS_DBUS_NEW_PATH,
 					      WPAS_DBUS_NEW_SERVICE,
 					      obj_desc);
-
 	if (!ctrl_iface)
 		free_dbus_object_desc(obj_desc);
 

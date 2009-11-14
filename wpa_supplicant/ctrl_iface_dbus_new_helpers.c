@@ -1491,7 +1491,8 @@ int wpa_dbus_unregister_object_per_iface(
  * using this function.
  */
 int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
-			     char *dbus_interface, char *dbus_method,
+			     const char *dbus_interface,
+			     const char *dbus_method,
 			     WPADBusMethodHandler method_handler,
 			     void *handler_argument,
 			     WPADBusArgumentFreeFunction argument_free_func,
@@ -1509,7 +1510,6 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 	}
 
 	/* count args */
-
 	if (args) {
 		while (args[args_num].name && args[args_num].type)
 			args_num++;
@@ -1518,7 +1518,7 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 	method_dsc = os_zalloc(sizeof(struct wpa_dbus_method_desc) +
 			       args_num * sizeof(struct wpa_dbus_argument));
 	if (!method_dsc)
-		return -1;
+		goto err;
 
 	if (prev_desc == NULL)
 		obj_dsc->methods = method_dsc;
@@ -1572,6 +1572,8 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 	return 0;
 
 err:
+	wpa_printf(MSG_WARNING, "Failed to register dbus method %s in "
+		   "interface %s", dbus_method, dbus_interface);
 	if (method_dsc) {
 		os_free(method_dsc->dbus_interface);
 		os_free(method_dsc->dbus_method);
@@ -1607,7 +1609,8 @@ err:
  * using it.
  */
 int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
-			     char *dbus_interface, char *dbus_signal,
+			     const char *dbus_interface,
+			     const char *dbus_signal,
 			     struct wpa_dbus_argument args[])
 {
 
@@ -1629,9 +1632,9 @@ int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
 	}
 
 	signal_dsc = os_zalloc(sizeof(struct wpa_dbus_signal_desc) +
-			       args_num*sizeof(struct wpa_dbus_argument));
+			       args_num * sizeof(struct wpa_dbus_argument));
 	if (!signal_dsc)
-		return -1;
+		goto err;
 
 	if (prev_desc == NULL)
 		obj_dsc->signals = signal_dsc;
@@ -1679,6 +1682,8 @@ int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
 	return 0;
 
 err:
+	wpa_printf(MSG_WARNING, "Failed to register dbus signal %s in "
+		   "interface %s", dbus_signal, dbus_interface);
 	if (signal_dsc) {
 		os_free(signal_dsc->dbus_interface);
 		os_free(signal_dsc->dbus_signal);
@@ -1720,8 +1725,9 @@ err:
  * used.
  */
 int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
-			       char *dbus_interface, char *dbus_property,
-			       char *type,
+			       const char *dbus_interface,
+			       const char *dbus_property,
+			       const char *type,
 			       WPADBusPropertyAccessor getter,
 			       WPADBusPropertyAccessor setter,
 			       void *user_data,
@@ -1740,7 +1746,7 @@ int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 
 	property_dsc = os_zalloc(sizeof(struct wpa_dbus_property_desc));
 	if (!property_dsc)
-		return -1;
+		goto err;
 
 	if (prev_desc == NULL)
 		obj_dsc->properties = property_dsc;
@@ -1779,6 +1785,8 @@ int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 	return 0;
 
 err:
+	wpa_printf(MSG_WARNING, "Failed to register dbus property %s in "
+		   "interface %s", dbus_property, dbus_interface);
 	if (property_dsc) {
 		os_free(property_dsc->dbus_interface);
 		os_free(property_dsc->dbus_property);

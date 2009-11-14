@@ -94,25 +94,27 @@ int wpa_dbus_unregister_object_per_iface(
 	const char *path);
 
 int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
-			     char *dbus_interface, char *dbus_method,
+			     const char *dbus_interface,
+			     const char *dbus_method,
 			     WPADBusMethodHandler method_handler,
 			     void *handler_argument,
 			     WPADBusArgumentFreeFunction argument_free_func,
 			     struct wpa_dbus_argument args[]);
 
 int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
-			     char *dbus_interface, char *dbus_signal,
+			     const char *dbus_interface,
+			     const char *dbus_signal,
 			     struct wpa_dbus_argument args[]);
 
 int wpa_dbus_property_register(
 	struct wpa_dbus_object_desc *obj_dsc,
-	char *dbus_interface, char *dbus_property,
-	char *type,
+	const char *dbus_interface, const char *dbus_property,
+	const char *type,
 	WPADBusPropertyAccessor getter,
 	WPADBusPropertyAccessor setter,
 	void *user_data,
-	WPADBusArgumentFreeFunction user_datat_free_func,
-	enum dbus_prop_access access);
+	WPADBusArgumentFreeFunction user_data_free_func,
+	enum dbus_prop_access _access);
 
 void wpa_dbus_signal_property_changed(struct ctrl_iface_dbus_new_priv *iface,
 				      WPADBusPropertyAccessor property_getter,

@@ -159,7 +159,8 @@ int get_netif_info(const char *net_if, unsigned *ip_addr, char **ip_addr_text,
 /* wps_upnp_ssdp.c */
 void msearchreply_state_machine_stop(struct advertisement_state_machine *a);
 int advertisement_state_machine_start(struct upnp_wps_device_sm *sm);
-void advertisement_state_machine_stop(struct upnp_wps_device_sm *sm);
+void advertisement_state_machine_stop(struct upnp_wps_device_sm *sm,
+				      int send_byebye);
 void ssdp_listener_stop(struct upnp_wps_device_sm *sm);
 int ssdp_listener_start(struct upnp_wps_device_sm *sm);
 int ssdp_listener_open(void);

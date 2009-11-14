@@ -964,8 +964,7 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 		subscription_destroy(s);
 	}
 
-	advertisement_state_machine_stop(sm);
-	/* TODO: send byebye notifications */
+	advertisement_state_machine_stop(sm, 1);
 
 	event_send_stop_all(sm);
 	os_free(sm->wlanevent);

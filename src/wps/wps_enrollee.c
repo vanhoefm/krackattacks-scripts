@@ -555,10 +555,6 @@ static int wps_process_pubkey(struct wps_data *wps, const u8 *pk,
 	if (wps_derive_keys(wps) < 0)
 		return -1;
 
-	if (wps->request_type == WPS_REQ_WLAN_MANAGER_REGISTRAR &&
-	    wps_derive_mgmt_keys(wps) < 0)
-		return -1;
-
 	return 0;
 }
 

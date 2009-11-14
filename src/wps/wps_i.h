@@ -62,10 +62,6 @@ struct wps_data {
 	u8 authkey[WPS_AUTHKEY_LEN];
 	u8 keywrapkey[WPS_KEYWRAPKEY_LEN];
 	u8 emsk[WPS_EMSK_LEN];
-	u8 mgmt_auth_key[WPS_MGMTAUTHKEY_LEN];
-	u8 mgmt_auth_key_id[WPS_MGMT_KEY_ID_LEN];
-	u8 mgmt_enc_key[WPS_MGMTENCKEY_LEN];
-	u8 mgmt_enc_key_id[WPS_MGMT_KEY_ID_LEN];
 
 	struct wpabuf *last_msg;
 
@@ -189,7 +185,6 @@ struct wps_parse_attr {
 void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,
 	     const char *label, u8 *res, size_t res_len);
 int wps_derive_keys(struct wps_data *wps);
-int wps_derive_mgmt_keys(struct wps_data *wps);
 void wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
 		    size_t dev_passwd_len);
 struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,

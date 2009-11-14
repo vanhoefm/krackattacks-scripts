@@ -47,9 +47,6 @@
  * -- Needs renaming with module prefix to avoid polluting the debugger
  * namespace and causing possible collisions with other static fncs
  * and structure declarations when using the debugger.
- * -- Just what should be in the first event message sent after subscription
- * for the WLANEvent field? If i pass it empty, Vista replies with OK
- * but apparently barfs on the message.
  * -- The http error code generation is pretty bogus, hopefully noone cares.
  *
  * Author: Ted Merrill, Atheros Communications, based upon earlier work
@@ -641,6 +638,27 @@ struct subscription * subscription_find(struct upnp_wps_device_sm *sm,
 }
 
 
+static struct wpabuf * build_fake_wsc_ack(void)
+{
+	struct wpabuf *msg = wpabuf_alloc(100);
+	if (msg == NULL)
+		return NULL;
+	wpabuf_put_u8(msg, UPNP_WPS_WLANEVENT_TYPE_EAP);
+	wpabuf_put_str(msg, "00:00:00:00:00:00");
+	wps_build_version(msg);
+	wps_build_msg_type(msg, WPS_WSC_ACK);
+	/* Enrollee Nonce */
+	wpabuf_put_be16(msg, ATTR_ENROLLEE_NONCE);
+	wpabuf_put_be16(msg, WPS_NONCE_LEN);
+	wpabuf_put(msg, WPS_NONCE_LEN);
+	/* Registrar Nonce */
+	wpabuf_put_be16(msg, ATTR_REGISTRAR_NONCE);
+	wpabuf_put_be16(msg, WPS_NONCE_LEN);
+	wpabuf_put(msg, WPS_NONCE_LEN);
+	return msg;
+}
+
+
 /* subscription_first_event -- send format/queue event that is automatically
  * sent on a new subscription.
  */
@@ -664,6 +682,28 @@ static int subscription_first_event(struct subscription *s)
 		"<e:propertyset xmlns:e=\"urn:schemas-upnp-org:event-1-0\">\n";
 	const char *tail = "</e:propertyset>\n";
 	char txt[10];
+
+	if (s->sm->wlanevent == NULL) {
+		/*
+		 * There has been no events before the subscription. However,
+		 * UPnP device architecture specification requires all the
+		 * evented variables to be included, so generate a dummy event
+		 * for this particular case using a WSC_ACK and all-zeros
+		 * nonces. The ER (UPnP control point) will ignore this, but at
+		 * least it will learn that WLANEvent variable will be used in
+		 * event notifications in the future.
+		 */
+		struct wpabuf *msg;
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Use a fake WSC_ACK as the "
+			   "initial WLANEvent");
+		msg = build_fake_wsc_ack();
+		if (msg) {
+			s->sm->wlanevent = (char *)
+				base64_encode(wpabuf_head(msg),
+					      wpabuf_len(msg), NULL);
+			wpabuf_free(msg);
+		}
+	}
 
 	wlan_event = s->sm->wlanevent;
 	if (wlan_event == NULL || *wlan_event == '\0') {

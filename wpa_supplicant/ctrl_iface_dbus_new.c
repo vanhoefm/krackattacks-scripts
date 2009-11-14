@@ -1159,42 +1159,26 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	arg2->ssid = ssid;
 
 	/* Enabled property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
-				       "Enabled", "b",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_enabled,
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_setter_enabled,
-				       arg1, free, RW)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Enabled",
-			   WPAS_DBUS_NEW_IFACE_NETWORK);
-	}
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
+				   "Enabled", "b",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_enabled,
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_setter_enabled,
+				   arg1, free, RW);
 
 	/* Properties property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
-				       "Properties", "a{sv}",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_network_properties,
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_setter_network_properties,
-				       arg2, free, RW)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Properties",
-			   WPAS_DBUS_NEW_IFACE_NETWORK);
-	}
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
+				   "Properties", "a{sv}",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_network_properties,
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_setter_network_properties,
+				   arg2, free, RW);
 
 	/* PropertiesChanged signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
-				     "PropertiesChanged", sargs)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "PropertiesChanged",
-			   WPAS_DBUS_NEW_IFACE_NETWORK);
-	}
-
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
+				 "PropertiesChanged", sargs);
 
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, net_obj_path,
 					       wpa_s->ifname, obj_desc))
@@ -1346,16 +1330,11 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 	os_memcpy(arg->bssid, bssid, ETH_ALEN);
 
 	/* Properties property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_BSSID,
-				       "Properties", "a{sv}",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_bss_properties, NULL,
-				       arg, free, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Properties",
-			   WPAS_DBUS_NEW_IFACE_BSSID);
-	}
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_BSSID,
+				   "Properties", "a{sv}",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_bss_properties, NULL,
+				   arg, free, R);
 
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, bss_obj_path,
 					       wpa_s->ifname, obj_desc)) {
@@ -1506,391 +1485,151 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 		goto err;
 	}
 
-	/* Scan method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "Scan",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_scan,
-				     wpa_s, NULL, args1)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "Scan",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "Scan",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_scan,
+				 wpa_s, NULL, args1);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "Disconnect",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_disconnect,
+				 wpa_s, NULL, NULL);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "AddNetwork",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_add_network,
+				 wpa_s, NULL, args3);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "RemoveNetwork",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_remove_network,
+				 wpa_s, NULL, args4);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "SelectNetwork",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_select_network,
+				 wpa_s, NULL, args5);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "AddBlob",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_add_blob,
+				 wpa_s, NULL, args6);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "GetBlob",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_get_blob,
+				 wpa_s, NULL, args7);
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "RemoveBlob",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_remove_blob,
+				 wpa_s, NULL, args8);
 
-	/* Disconnect method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "Disconnect",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_disconnect,
-				     wpa_s, NULL, NULL)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "Disconnect",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "Capabilities", "a{sv}",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_capabilities, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "State", "s",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_state, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "Scanning", "b",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_scanning, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "ApScan", "u",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_ap_scan,
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_setter_ap_scan,
+				   wpa_s, NULL, RW);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "Ifname", "s",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_ifname, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "Driver", "s",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_driver, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "BridgeIfname", "s",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_bridge_ifname, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "CurrentBSS", "o",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_current_bss, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "CurrentNetwork", "o",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_current_network, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "Blobs", "a{say}",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_blobs, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "BSSs", "ao",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_bsss, NULL,
+				   wpa_s, NULL, R);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				   "Networks", "ao",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_networks, NULL,
+				   wpa_s, NULL, R);
 
-	/* AddNetwork method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "AddNetwork",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_add_network,
-				     wpa_s, NULL, args3)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "AddNetwork",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* RemoveNetwork method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "RemoveNetwork",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_remove_network,
-				     wpa_s, NULL, args4)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "RemoveNetwork",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* SelectNetwork method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "SelectNetwork",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_select_network,
-				     wpa_s, NULL, args5)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "SelectNetwork",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* AddBlob method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "AddBlob",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_add_blob,
-				     wpa_s, NULL, args6)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "AddBlob",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* GetBlob method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "GetBlob",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_get_blob,
-				     wpa_s, NULL, args7)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "GetBlob",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* RemoveBlob method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "RemoveBlob",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_remove_blob,
-				     wpa_s, NULL, args8)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "RemoveBlob",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* Capabilities property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "Capabilities", "a{sv}",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_capabilities, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Capabilities",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* State property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "State", "s",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_state, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "State",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* Scanning property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "Scanning", "b",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_scanning, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Scanning",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* ApScan property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "ApScan", "u",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_ap_scan,
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_setter_ap_scan,
-				       wpa_s, NULL, RW)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "ApScan",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* Ifname property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "Ifname", "s",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_ifname, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Ifname",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* Driver property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "Driver", "s",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_driver, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Driver",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* BridgeIfname property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "BridgeIfname", "s",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_bridge_ifname, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "BridgeIfname",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* CurrentBSS property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "CurrentBSS", "o",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_current_bss, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "CurrentBSS",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* CurrentNetwork property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "CurrentNetwork", "o",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_current_network, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "CurrentNetwork",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* Blobs property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "Blobs", "a{say}",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_blobs, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Blobs",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* BSSs property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "BSSs", "ao",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_bsss, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "BSSs",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* Networks property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				       "Networks", "ao",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_networks, NULL,
-				       wpa_s, NULL, R)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "Networks",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* ScanDone signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "ScanDone", sargs1)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "ScanDone",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* StateChanged signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "StateChanged", sargs2)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "StateChanged",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* BSSAdded signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "BSSAdded", sargs3)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "BSSAdded",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* BSSRemoved signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "BSSRemoved", sargs4)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "BSSRemoved",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* BlobAdded signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "BlobAdded", sargs5)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "BlobAdded",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* BlobRemoved signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "BlobRemoved", sargs6)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "BlobRemoved",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* NetworkAdded signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "NetworkAdded", sargs7)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "NetworkAdded",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* NetworkRemoved signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "NetworkRemoved", sargs8)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "NetworkRemoved",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* NetworkSelected signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "NetworkSelected", sargs9)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "NetworkSelected",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
-
-	/* PropertiesChanged signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				     "PropertiesChanged", sargs10)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "PropertiesChanged",
-			   WPAS_DBUS_NEW_IFACE_INTERFACE);
-	}
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "ScanDone", sargs1);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "StateChanged", sargs2);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "BSSAdded", sargs3);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "BSSRemoved", sargs4);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "BlobAdded", sargs5);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "BlobRemoved", sargs6);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "NetworkAdded", sargs7);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "NetworkRemoved", sargs8);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "NetworkSelected", sargs9);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
+				 "PropertiesChanged", sargs10);
 
 #ifdef CONFIG_WPS
-	/* Start method */
-	if (wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				     "Start",
-				     (WPADBusMethodHandler)
-				     &wpas_dbus_handler_wps_start,
-				     wpa_s, NULL, args9)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to register dbus method %s"
-			   "in interface %s", "Start",
-			   WPAS_DBUS_NEW_IFACE_WPS);
-	}
+	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
+				 "Start",
+				 (WPADBusMethodHandler)
+				 &wpas_dbus_handler_wps_start,
+				 wpa_s, NULL, args9);
+	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
+				   "ProcessCredentials", "b",
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_getter_process_credentials,
+				   (WPADBusPropertyAccessor)
+				   wpas_dbus_setter_process_credentials,
+				   wpa_s, NULL, RW);
 
-	/* ProcessCredentials property */
-	if (wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				       "ProcessCredentials", "b",
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_getter_process_credentials,
-				       (WPADBusPropertyAccessor)
-				       wpas_dbus_setter_process_credentials,
-				       wpa_s, NULL, RW)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus property %s"
-			   "in interface %s", "ProcessCredentials",
-			   WPAS_DBUS_NEW_IFACE_WPS);
-	}
-
-	/* Event signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				     "Event", sargs11)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "Event",
-			   WPAS_DBUS_NEW_IFACE_WPS);
-	}
-
-	/* Credentials signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				     "Credentials", sargs12)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "Credentials",
-			   WPAS_DBUS_NEW_IFACE_WPS);
-	}
-
-	/* PropertiesChanged signal */
-	if (wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				     "PropertiesChanged", sargs13)) {
-		wpa_printf(MSG_ERROR,
-			   "Failed to register dbus signal %s"
-			   "in interface %s", "PropertiesChanged",
-			   WPAS_DBUS_NEW_IFACE_WPS);
-	}
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
+				 "Event", sargs11);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
+				 "Credentials", sargs12);
+	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
+				 "PropertiesChanged", sargs13);
 #endif /* CONFIG_WPS */
 
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, path, wpa_s->ifname,

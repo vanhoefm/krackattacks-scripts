@@ -1496,7 +1496,7 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 			     WPADBusMethodHandler method_handler,
 			     void *handler_argument,
 			     WPADBusArgumentFreeFunction argument_free_func,
-			     struct wpa_dbus_argument args[])
+			     const struct wpa_dbus_argument args[])
 {
 	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
 	struct wpa_dbus_method_desc *prev_desc;
@@ -1611,7 +1611,7 @@ err:
 int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
 			     const char *dbus_interface,
 			     const char *dbus_signal,
-			     struct wpa_dbus_argument args[])
+			     const struct wpa_dbus_argument args[])
 {
 
 	struct wpa_dbus_signal_desc *signal_dsc = obj_dsc->signals;

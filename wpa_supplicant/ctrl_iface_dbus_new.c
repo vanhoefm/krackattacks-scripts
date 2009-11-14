@@ -914,121 +914,126 @@ static void wpas_dbus_signal_debug_params_changed(struct wpa_global *global)
 }
 
 
-static void wpas_dbus_meth_reg_create_interface(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
+struct wpas_dbus_method {
+	const char *name;
+	const char *iface;
+	WPADBusMethodHandler handler;
+	struct wpa_dbus_argument args[3];
+};
+
+struct wpas_dbus_property {
+	const char *name;
+	const char *iface;
+	const char *type;
+	WPADBusPropertyAccessor getter;
+	WPADBusPropertyAccessor setter;
+	enum dbus_prop_access _access;
+};
+
+struct wpas_dbus_signal {
+	const char *name;
+	const char *iface;
+	struct wpa_dbus_argument args[3];
+};
+
+
+static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
+			       void *priv,
+			       const struct wpas_dbus_method *methods,
+			       const struct wpas_dbus_property *properties,
+			       const struct wpas_dbus_signal *signals)
 {
-	struct wpa_dbus_argument margs[] = {
-		{ "args", "a{sv}", ARG_IN },
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				 "CreateInterface",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_create_interface,
-				 global, NULL, margs);
+	int i;
+
+	for (i = 0; methods && methods[i].name; i++) {
+		wpa_dbus_method_register(obj_desc, methods[i].iface,
+					 methods[i].name, methods[i].handler,
+					 priv, NULL, methods[i].args);
+	}
+
+	for (i = 0; properties && properties[i].name; i++) {
+		wpa_dbus_property_register(obj_desc, properties[i].iface,
+					   properties[i].name,
+					   properties[i].type,
+					   properties[i].getter,
+					   properties[i].setter,
+					   priv, NULL, properties[i]._access);
+	}
+
+	for (i = 0; signals && signals[i].name; i++) {
+		wpa_dbus_signal_register(obj_desc, signals[i].iface,
+					 signals[i].name, signals[i].args);
+	}
 }
 
 
-static void wpas_dbus_meth_reg_remove_interface(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	struct wpa_dbus_argument margs[] = {
-		{ "path", "o", ARG_IN },
-		END_ARGS
-	};
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				 "RemoveInterface",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_remove_interface,
-				 global, NULL, margs);
-}
+static const struct wpas_dbus_method wpas_dbus_global_methods[] = {
+	{ "CreateInterface", WPAS_DBUS_NEW_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_create_interface,
+	  {
+		  { "args", "a{sv}", ARG_IN },
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "RemoveInterface", WPAS_DBUS_NEW_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_interface,
+	  {
+		  { "path", "o", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "GetInterface", WPAS_DBUS_NEW_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_get_interface,
+	  {
+		  { "ifname", "s", ARG_IN },
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ NULL, NULL, NULL, { END_ARGS } }
+};
 
+static const struct wpas_dbus_property wpas_dbus_global_properties[] = {
+	{ "DebugParams", WPAS_DBUS_NEW_INTERFACE, "(ibb)",
+	  (WPADBusPropertyAccessor) &wpas_dbus_getter_debug_params,
+	  (WPADBusPropertyAccessor) &wpas_dbus_setter_debug_params,
+	  RW
+	},
+	{ "Interfaces", WPAS_DBUS_NEW_INTERFACE, "ao",
+	  (WPADBusPropertyAccessor) &wpas_dbus_getter_interfaces,
+	  NULL,
+	  R
+	},
+	{ "EapMethods", WPAS_DBUS_NEW_INTERFACE, "as",
+	  wpas_dbus_getter_eap_methods,
+	  NULL,
+	  R
+	},
+	{ NULL, NULL, NULL, NULL, NULL, 0 }
+};
 
-static void wpas_dbus_meth_reg_get_interface(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	struct wpa_dbus_argument margs[] = {
-		{ "ifname", "s", ARG_IN },
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				 "GetInterface",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_get_interface,
-				 global, NULL, margs);
-}
-
-
-static void wpas_dbus_prop_reg_debug_params(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				   "DebugParams", "(ibb)",
-				   (WPADBusPropertyAccessor)
-				   &wpas_dbus_getter_debug_params,
-				   (WPADBusPropertyAccessor)
-				   &wpas_dbus_setter_debug_params,
-				   global, NULL, RW);
-}
-
-
-static void wpas_dbus_prop_reg_interfaces(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				   "Interfaces", "ao",
-				   (WPADBusPropertyAccessor)
-				   &wpas_dbus_getter_interfaces,
-				   NULL, global, NULL, R);
-}
-
-
-static void wpas_dbus_prop_reg_eap_methods(
-	struct wpa_dbus_object_desc *obj_desc)
-{
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				   "EapMethods", "as",
-				   wpas_dbus_getter_eap_methods,
-				   NULL, NULL, NULL, R);
-}
-
-
-static void wpas_dbus_sign_reg_interface_added(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	struct wpa_dbus_argument sargs[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				 "InterfaceAdded", sargs);
-}
-
-
-static void wpas_dbus_sign_reg_interface_removed(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	struct wpa_dbus_argument sargs[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				 "InterfaceRemoved", sargs);
-}
-
-
-static void wpas_dbus_sign_reg_properties_changed(
-	struct wpa_global *global, struct wpa_dbus_object_desc *obj_desc)
-{
-	struct wpa_dbus_argument sargs[] = {
-		{ "properties", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_INTERFACE,
-				 "PropertiesChanged", sargs);
-}
+static const struct wpas_dbus_signal wpas_dbus_global_signals[] = {
+	{ "InterfaceAdded", WPAS_DBUS_NEW_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "InterfaceRemoved", WPAS_DBUS_NEW_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "PropertiesChanged", WPAS_DBUS_NEW_INTERFACE,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ NULL, NULL, { END_ARGS } }
+};
 
 
 /**
@@ -1052,17 +1057,9 @@ static struct ctrl_iface_dbus_new_priv * wpas_dbus_ctrl_iface_init(
 		return NULL;
 	}
 
-	wpas_dbus_meth_reg_create_interface(global, obj_desc);
-	wpas_dbus_meth_reg_remove_interface(global, obj_desc);
-	wpas_dbus_meth_reg_get_interface(global, obj_desc);
-
-	wpas_dbus_prop_reg_debug_params(global, obj_desc);
-	wpas_dbus_prop_reg_interfaces(global, obj_desc);
-	wpas_dbus_prop_reg_eap_methods(obj_desc);
-
-	wpas_dbus_sign_reg_interface_added(global, obj_desc);
-	wpas_dbus_sign_reg_interface_removed(global, obj_desc);
-	wpas_dbus_sign_reg_properties_changed(global, obj_desc);
+	wpas_dbus_register(obj_desc, global, wpas_dbus_global_methods,
+			   wpas_dbus_global_properties,
+			   wpas_dbus_global_signals);
 
 	ctrl_iface = wpa_dbus_ctrl_iface_init(global, WPAS_DBUS_NEW_PATH,
 					      WPAS_DBUS_NEW_SERVICE,
@@ -1109,7 +1106,6 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 
 	struct network_handler_args *arg1 = NULL;
 	struct network_handler_args *arg2 = NULL;
-	struct network_handler_args *arg3 = NULL;
 
 	char *net_obj_path;
 
@@ -1194,7 +1190,6 @@ err:
 	os_free(obj_desc);
 	os_free(arg1);
 	os_free(arg2);
-	os_free(arg3);
 	return -1;
 }
 
@@ -1357,6 +1352,225 @@ err:
 }
 
 
+static const struct wpas_dbus_method wpas_dbus_interface_methods[] = {
+	{ "Scan", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_scan,
+	  {
+		  { "args", "a{sv}", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "Disconnect", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_disconnect,
+	  {
+		  END_ARGS
+	  }
+	},
+	{ "AddNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_add_network,
+	  {
+		  { "args", "a{sv}", ARG_IN },
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "RemoveNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_network,
+	  {
+		  { "path", "o", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "SelectNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_select_network,
+	  {
+		  { "path", "o", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "AddBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_add_blob,
+	  {
+		  { "name", "s", ARG_IN },
+		  { "data", "ay", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "GetBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_get_blob,
+	  {
+		  { "name", "s", ARG_IN },
+		  { "data", "ay", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "RemoveBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_blob,
+	  {
+		  { "name", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
+#ifdef CONFIG_WPS
+	{ "Start", WPAS_DBUS_NEW_IFACE_WPS,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_wps_start,
+	  {
+		  { "args", "a{sv}", ARG_IN },
+		  { "output", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_WPS */
+	{ NULL, NULL, NULL, { END_ARGS } }
+};
+
+static const struct wpas_dbus_property wpas_dbus_interface_properties[] = {
+	{ "Capabilities", WPAS_DBUS_NEW_IFACE_INTERFACE, "a{sv}",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_capabilities,
+	  NULL, R
+	},
+	{ "State", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_state,
+	  NULL, R
+	},
+	{ "Scanning", WPAS_DBUS_NEW_IFACE_INTERFACE, "b",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_scanning,
+	  NULL, R
+	},
+	{ "ApScan", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_ap_scan,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_ap_scan,
+	  RW
+	},
+	{ "Ifname", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_ifname,
+	  NULL, R
+	},
+	{ "Driver", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_driver,
+	  NULL, R
+	},
+	{ "BridgeIfname", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bridge_ifname,
+	  NULL, R
+	},
+	{ "CurrentBSS", WPAS_DBUS_NEW_IFACE_INTERFACE, "o",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_current_bss,
+	  NULL, R
+	},
+	{ "CurrentNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE, "o",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_current_network,
+	  NULL, R
+	},
+	{ "Blobs", WPAS_DBUS_NEW_IFACE_INTERFACE, "a{say}",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_blobs,
+	  NULL, R
+	},
+	{ "BSSs", WPAS_DBUS_NEW_IFACE_INTERFACE, "ao",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bsss,
+	  NULL, R
+	},
+	{ "Networks", WPAS_DBUS_NEW_IFACE_INTERFACE, "ao",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_networks,
+	  NULL, R
+	},
+#ifdef CONFIG_WPS
+	{ "ProcessCredentials", WPAS_DBUS_NEW_IFACE_WPS, "b",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_process_credentials,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_process_credentials,
+	  RW
+	},
+#endif /* CONFIG_WPS */
+	{ NULL, NULL, NULL, NULL, NULL, 0 }
+};
+
+static const struct wpas_dbus_signal wpas_dbus_interface_signals[] = {
+	{ "ScanDone", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "success", "b", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "StateChanged", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "newState", "s", ARG_OUT },
+		  { "oldState", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "BSSAdded", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "BSSRemoved", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "BlobAdded", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "name", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "BlobRemoved", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "name", "s", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "NetworkAdded", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "NetworkRemoved", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "NetworkSelected", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+#ifdef CONFIG_WPS
+	{ "Event", WPAS_DBUS_NEW_IFACE_WPS,
+	  {
+		  { "name", "s", ARG_OUT },
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "Credentials", WPAS_DBUS_NEW_IFACE_WPS,
+	  {
+		  { "credentials", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_WPS,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_WPS */
+	{ NULL, NULL, { END_ARGS } }
+};
+
+
 static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 {
 
@@ -1366,99 +1580,6 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 		wpa_s->global->dbus_new_ctrl_iface;
 	int next;
 
-	struct wpa_dbus_argument args1[] = {
-		{ "args", "a{sv}", ARG_IN },
-		END_ARGS
-	};
-	struct wpa_dbus_argument args3[] = {
-		{ "args", "a{sv}", ARG_IN },
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument args4[] = {
-		{ "path", "o", ARG_IN },
-		END_ARGS
-	};
-	struct wpa_dbus_argument args5[] = {
-		{ "path", "o", ARG_IN },
-		END_ARGS
-	};
-	struct wpa_dbus_argument args6[] = {
-		{ "name", "s", ARG_IN },
-		{ "data", "ay", ARG_IN },
-		END_ARGS
-	};
-	struct wpa_dbus_argument args7[] = {
-		{ "name", "s", ARG_IN },
-		{ "data", "ay", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument args8[] = {
-		{ "name", "s", ARG_IN },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs1[] = {
-		{ "success", "b", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs2[] = {
-		{ "newState", "s", ARG_OUT },
-		{ "oldState", "s", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs3[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs4[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs5[] = {
-		{ "name", "s", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs6[] = {
-		{ "name", "s", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs7[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs8[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs9[] = {
-		{ "path", "o", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs10[] = {
-		{ "properties", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
-
-#ifdef CONFIG_WPS
-	struct wpa_dbus_argument args9[] = {
-		{ "args", "a{sv}", ARG_IN },
-		{ "output", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs11[] = {
-		{ "name", "s", ARG_OUT },
-		{ "args", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs12[] = {
-		{ "credentials", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
-	struct wpa_dbus_argument sargs13[] = {
-		{ "properties", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
-#endif /* CONFIG_WPS */
 	/* Do nothing if the control interface is not turned on */
 	if (ctrl_iface == NULL)
 		return 0;
@@ -1485,152 +1606,9 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 		goto err;
 	}
 
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "Scan",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_scan,
-				 wpa_s, NULL, args1);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "Disconnect",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_disconnect,
-				 wpa_s, NULL, NULL);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "AddNetwork",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_add_network,
-				 wpa_s, NULL, args3);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "RemoveNetwork",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_remove_network,
-				 wpa_s, NULL, args4);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "SelectNetwork",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_select_network,
-				 wpa_s, NULL, args5);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "AddBlob",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_add_blob,
-				 wpa_s, NULL, args6);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "GetBlob",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_get_blob,
-				 wpa_s, NULL, args7);
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "RemoveBlob",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_remove_blob,
-				 wpa_s, NULL, args8);
-
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "Capabilities", "a{sv}",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_capabilities, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "State", "s",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_state, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "Scanning", "b",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_scanning, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "ApScan", "u",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_ap_scan,
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_setter_ap_scan,
-				   wpa_s, NULL, RW);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "Ifname", "s",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_ifname, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "Driver", "s",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_driver, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "BridgeIfname", "s",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_bridge_ifname, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "CurrentBSS", "o",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_current_bss, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "CurrentNetwork", "o",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_current_network, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "Blobs", "a{say}",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_blobs, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "BSSs", "ao",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_bsss, NULL,
-				   wpa_s, NULL, R);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				   "Networks", "ao",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_networks, NULL,
-				   wpa_s, NULL, R);
-
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "ScanDone", sargs1);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "StateChanged", sargs2);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "BSSAdded", sargs3);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "BSSRemoved", sargs4);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "BlobAdded", sargs5);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "BlobRemoved", sargs6);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "NetworkAdded", sargs7);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "NetworkRemoved", sargs8);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "NetworkSelected", sargs9);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_INTERFACE,
-				 "PropertiesChanged", sargs10);
-
-#ifdef CONFIG_WPS
-	wpa_dbus_method_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				 "Start",
-				 (WPADBusMethodHandler)
-				 &wpas_dbus_handler_wps_start,
-				 wpa_s, NULL, args9);
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				   "ProcessCredentials", "b",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_process_credentials,
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_setter_process_credentials,
-				   wpa_s, NULL, RW);
-
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				 "Event", sargs11);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				 "Credentials", sargs12);
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_WPS,
-				 "PropertiesChanged", sargs13);
-#endif /* CONFIG_WPS */
+	wpas_dbus_register(obj_desc, wpa_s, wpas_dbus_interface_methods,
+			   wpas_dbus_interface_properties,
+			   wpas_dbus_interface_signals);
 
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, path, wpa_s->ifname,
 					       obj_desc))

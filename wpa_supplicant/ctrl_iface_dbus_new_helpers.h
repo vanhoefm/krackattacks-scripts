@@ -99,12 +99,12 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 			     WPADBusMethodHandler method_handler,
 			     void *handler_argument,
 			     WPADBusArgumentFreeFunction argument_free_func,
-			     struct wpa_dbus_argument args[]);
+			     const struct wpa_dbus_argument args[]);
 
 int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
 			     const char *dbus_interface,
 			     const char *dbus_signal,
-			     struct wpa_dbus_argument args[]);
+			     const struct wpa_dbus_argument args[]);
 
 int wpa_dbus_property_register(
 	struct wpa_dbus_object_desc *obj_dsc,

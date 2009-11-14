@@ -548,11 +548,11 @@ static void wpas_dbus_signal_network_enabled_changed(
 static void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 
-	DBusMessage * _signal = NULL;
+	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
 	struct ctrl_iface_dbus_new_priv *iface;
 	char *key = "success";
-	const char * path;
+	const char *path;
 
 	iface = wpa_s->global->dbus_new_ctrl_iface;
 
@@ -602,11 +602,11 @@ static void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 					    struct wps_event_fail *fail)
 {
 
-	DBusMessage * _signal = NULL;
+	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
 	struct ctrl_iface_dbus_new_priv *iface;
-	char* key = "fail";
-	const char * path;
+	char *key = "fail";
+	const char *path;
 
 	iface = wpa_s->global->dbus_new_ctrl_iface;
 
@@ -657,11 +657,11 @@ static void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 					   struct wps_event_m2d *m2d)
 {
 
-	DBusMessage * _signal = NULL;
+	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
 	struct ctrl_iface_dbus_new_priv *iface;
-	char* key = "m2d";
-	const char * path;
+	char *key = "m2d";
+	const char *path;
 
 	iface = wpa_s->global->dbus_new_ctrl_iface;
 

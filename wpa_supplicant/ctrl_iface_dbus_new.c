@@ -29,7 +29,7 @@
  * wpas_dbus_set_path - Assign a dbus path to an interface
  * @wpa_s: wpa_supplicant interface structure
  * @path: dbus path to set on the interface
- * Returns: 0 on succes, -1 on error
+ * Returns: 0 on success, -1 on error
  */
 static int wpas_dbus_set_path(struct wpa_supplicant *wpa_s,
 			      const char *path)
@@ -387,7 +387,7 @@ static void wpas_dbus_signal_network_added(struct wpa_supplicant *wpa_s,
 
 
 /**
- * wpas_dbus_signal_network_added - Send a network removed signal
+ * wpas_dbus_signal_network_removed - Send a network removed signal
  * @wpa_s: %wpa_supplicant network interface data
  * @id: network id
  *
@@ -511,7 +511,7 @@ out:
 
 
 /**
- * wpas_dbus_signal_state_changed - Signals that Enabled property changed
+ * wpas_dbus_signal_network_enabled_changed - Signals Enabled property changes
  * @wpa_s: %wpa_supplicant network interface data
  * @ssid: configured network which Enabled property has changed
  *
@@ -1247,12 +1247,12 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 
 
 /**
- * wpas_dbus_register_bss - Register a scanned BSS with dbus
+ * wpas_dbus_unregister_bss - Unregister a scanned BSS from dbus
  * @wpa_s: wpa_supplicant interface structure
  * @bssid: scanned network bssid
  * Returns: 0 on success, -1 on failure
  *
- * Registers BSS representing object with dbus
+ * Unregisters BSS representing object from dbus
  */
 static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 				    u8 bssid[ETH_ALEN])
@@ -1290,6 +1290,14 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * wpas_dbus_register_bss - Register a scanned BSS with dbus
+ * @wpa_s: wpa_supplicant interface structure
+ * @bssid: scanned network bssid
+ * Returns: 0 on success, -1 on failure
+ *
+ * Registers BSS representing object with dbus
+ */
 static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 				  u8 bssid[ETH_ALEN])
 {
@@ -1363,14 +1371,6 @@ err:
 }
 
 
-/**
- * wpas_dbus_unregister_bss - Unregister a scanned BSS from dbus
- * @wpa_s: wpa_supplicant interface structure
- * @bssid: scanned network bssid
- * Returns: 0 on success, -1 on failure
- *
- * Unregisters BSS representing object from dbus
- */
 static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 {
 

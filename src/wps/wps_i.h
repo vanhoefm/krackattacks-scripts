@@ -34,6 +34,11 @@ struct wps_data {
 	 */
 	int registrar;
 
+	/**
+	 * er - Whether the local end is an external registrar
+	 */
+	int er;
+
 	enum {
 		/* Enrollee states */
 		SEND_M1, RECV_M2, SEND_M3, RECV_M4, SEND_M5, RECV_M6, SEND_M7,

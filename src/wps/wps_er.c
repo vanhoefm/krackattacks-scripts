@@ -949,6 +949,7 @@ static void wps_er_sta_start(struct wps_er_sta *sta, struct wpabuf *msg)
 	sta->wps = wps_init(&cfg);
 	if (sta->wps == NULL)
 		return;
+	sta->wps->er = 1;
 
 	wps_er_sta_process(sta, msg, WSC_MSG);
 }

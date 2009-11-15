@@ -2215,7 +2215,7 @@ static void wps_cred_update(struct wps_credential *dst,
 static int wps_process_ap_settings_r(struct wps_data *wps,
 				     struct wps_parse_attr *attr)
 {
-	if (wps->wps->ap)
+	if (wps->wps->ap || wps->er)
 		return 0;
 
 	/* AP Settings Attributes in M7 when Enrollee is an AP */
@@ -2273,7 +2273,7 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 	decrypted = wps_decrypt_encr_settings(wps, attr->encr_settings,
 					      attr->encr_settings_len);
 	if (decrypted == NULL) {
-		wpa_printf(MSG_DEBUG, "WPS: Failed to decrypted Encrypted "
+		wpa_printf(MSG_DEBUG, "WPS: Failed to decrypt Encrypted "
 			   "Settings attribute");
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;

@@ -54,6 +54,8 @@ int wpas_wps_er_stop(struct wpa_supplicant *wpa_s);
 int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const char *uuid,
 			const char *pin);
 int wpas_wps_er_pbc(struct wpa_supplicant *wpa_s, const char *uuid);
+int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
+		      const char *pin);
 
 #else /* CONFIG_WPS */
 

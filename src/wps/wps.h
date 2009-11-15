@@ -677,5 +677,7 @@ void wps_er_deinit(struct wps_er *er);
 void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 			u16 sel_reg_config_methods);
 int wps_er_pbc(struct wps_er *er, const u8 *uuid);
+int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
+		 size_t pin_len);
 
 #endif /* WPS_H */

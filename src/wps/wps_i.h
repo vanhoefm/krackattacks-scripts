@@ -108,6 +108,9 @@ struct wps_data {
 	struct wps_credential *new_ap_settings;
 
 	void *dh_ctx;
+
+	void (*ap_settings_cb)(void *ctx, const struct wps_credential *cred);
+	void *ap_settings_cb_ctx;
 };
 
 

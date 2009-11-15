@@ -594,6 +594,29 @@ static int wpa_cli_cmd_wps_er_pbc(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_wps_er_learn(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid WPS_ER_LEARN command: need two arguments:\n"
+		       "- UUID: specify which AP to use\n"
+		       "- PIN: AP PIN\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_LEARN %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_ER_LEARN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_ibss_rsn(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[256];
@@ -1470,6 +1493,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_er_pbc", wpa_cli_cmd_wps_er_pbc,
 	  cli_cmd_flag_none,
 	  "<UUID> = accept an Enrollee PBC using External Registrar" },
+	{ "wps_er_learn", wpa_cli_cmd_wps_er_learn,
+	  cli_cmd_flag_sensitive,
+	  "<UUID> <PIN> = learn AP configuration" },
 	{ "ibss_rsn", wpa_cli_cmd_ibss_rsn,
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },

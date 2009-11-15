@@ -1171,4 +1171,16 @@ int wpas_wps_er_pbc(struct wpa_supplicant *wpa_s, const char *uuid)
 		return -1;
 	return wps_er_pbc(wpa_s->wps_er, u);
 }
+
+
+int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
+		      const char *pin)
+{
+	u8 u[UUID_LEN];
+
+	if (uuid_str2bin(uuid, u))
+		return -1;
+	return wps_er_learn(wpa_s->wps_er, u, (const u8 *) pin,
+			    os_strlen(pin));
+}
 #endif /* CONFIG_WPS_ER */

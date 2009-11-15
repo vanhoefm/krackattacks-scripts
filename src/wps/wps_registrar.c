@@ -2234,6 +2234,11 @@ static int wps_process_ap_settings_r(struct wps_data *wps,
 		 * Use the AP PIN only to receive the current AP settings, not
 		 * to reconfigure the AP.
 		 */
+		if (wps->ap_settings_cb) {
+			wps->ap_settings_cb(wps->ap_settings_cb_ctx,
+					    &wps->cred);
+			return 1;
+		}
 		wps_sta_cred_cb(wps);
 		return 1;
 	}

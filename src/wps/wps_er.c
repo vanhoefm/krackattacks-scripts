@@ -668,8 +668,19 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 {
 	struct wps_er_sta *sta = wps_er_sta_get(ap, addr);
 	int new_sta = 0;
+	int m1;
+
+	m1 = !probe_req && attr->msg_type && *attr->msg_type == WPS_M1;
 
 	if (sta == NULL) {
+		/*
+		 * Only allow new STA entry to be added based on Probe Request
+		 * or M1. This will filter out bogus events and anything that
+		 * may have been ongoing at the time ER subscribed for events.
+		 */
+		if (!probe_req && !m1)
+			return NULL;
+
 		sta = os_zalloc(sizeof(*sta));
 		if (sta == NULL)
 			return NULL;
@@ -680,7 +691,7 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 		new_sta = 1;
 	}
 
-	if (!probe_req)
+	if (m1)
 		sta->m1_received = 1;
 
 	if (attr->config_methods && (!probe_req || !sta->m1_received))
@@ -745,9 +756,8 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 	eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);
 	eloop_register_timeout(300, 0, wps_er_sta_timeout, sta, NULL);
 
-	if (!probe_req || new_sta)
-		wps_er_sta_event(ap->er->wps, sta,
-				 WPS_EV_ER_ENROLLEE_ADD);
+	if (m1 || new_sta)
+		wps_er_sta_event(ap->er->wps, sta, WPS_EV_ER_ENROLLEE_ADD);
 
 	return sta;
 }
@@ -962,6 +972,8 @@ static void wps_er_process_wlanevent_eap(struct wps_er_ap *ap, const u8 *addr,
 	}
 
 	sta = wps_er_add_sta_data(ap, addr, &attr, 0);
+	if (sta == NULL)
+		return;
 
 	if (attr.msg_type && *attr.msg_type == WPS_M1)
 		wps_er_sta_start(sta, msg);

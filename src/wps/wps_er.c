@@ -1408,6 +1408,10 @@ static void wps_er_http_put_message_cb(void *ctx, struct http_client *c,
 	case HTTP_CLIENT_INVALID_REPLY:
 	case HTTP_CLIENT_TIMEOUT:
 		wpa_printf(MSG_DEBUG, "WPS ER: PutMessage failed");
+		if (ap->wps) {
+			wps_deinit(ap->wps);
+			ap->wps = NULL;
+		}
 		break;
 	}
 	http_client_free(ap->http);

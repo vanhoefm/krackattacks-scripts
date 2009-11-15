@@ -100,6 +100,31 @@ struct wps_er {
 };
 
 
+static void wps_er_sta_event(struct wps_context *wps, struct wps_er_sta *sta,
+			     enum wps_event event)
+{
+	union wps_event_data data;
+	struct wps_event_er_enrollee *ev = &data.enrollee;
+
+	if (wps->event_cb == NULL)
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	ev->uuid = sta->uuid;
+	ev->mac_addr = sta->addr;
+	ev->m1_received = sta->m1_received;
+	ev->config_methods = sta->config_methods;
+	ev->dev_passwd_id = sta->dev_passwd_id;
+	ev->pri_dev_type = sta->pri_dev_type;
+	ev->dev_name = sta->dev_name;
+	ev->manufacturer = sta->manufacturer;
+	ev->model_name = sta->model_name;
+	ev->model_number = sta->model_number;
+	ev->serial_number = sta->serial_number;
+	wps->event_cb(wps->cb_ctx, event, &data);
+}
+
+
 static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr)
 {
 	struct wps_er_sta *sta = ap->sta;
@@ -114,6 +139,7 @@ static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr)
 
 static void wps_er_sta_free(struct wps_er_sta *sta)
 {
+	wps_er_sta_event(sta->ap->er->wps, sta, WPS_EV_ER_ENROLLEE_REMOVE);
 	if (sta->wps)
 		wps_deinit(sta->wps);
 	os_free(sta->manufacturer);
@@ -165,6 +191,30 @@ static struct wps_er_ap * wps_er_ap_get_id(struct wps_er *er, unsigned int id)
 }
 
 
+static void wps_er_ap_event(struct wps_context *wps, struct wps_er_ap *ap,
+			    enum wps_event event)
+{
+	union wps_event_data data;
+	struct wps_event_er_ap *evap = &data.ap;
+
+	if (wps->event_cb == NULL)
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	evap->uuid = ap->uuid;
+	evap->friendly_name = ap->friendly_name;
+	evap->manufacturer = ap->manufacturer;
+	evap->manufacturer_url = ap->manufacturer_url;
+	evap->model_description = ap->model_description;
+	evap->model_name = ap->model_name;
+	evap->model_number = ap->model_number;
+	evap->model_url = ap->model_url;
+	evap->serial_number = ap->serial_number;
+	evap->upc = ap->upc;
+	wps->event_cb(wps->cb_ctx, event, &data);
+}
+
+
 static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 {
 	/* TODO: if ap->subscribed, unsubscribe from events if the AP is still
@@ -172,6 +222,7 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 	wpa_printf(MSG_DEBUG, "WPS ER: Removing AP entry for %s (%s)",
 		   inet_ntoa(ap->addr), ap->location);
 	eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
+	wps_er_ap_event(er->wps, ap, WPS_EV_ER_AP_REMOVE);
 	os_free(ap->location);
 	http_client_free(ap->http);
 
@@ -213,6 +264,7 @@ static void wps_er_http_subscribe_cb(void *ctx, struct http_client *c,
 	switch (event) {
 	case HTTP_CLIENT_OK:
 		wpa_printf(MSG_DEBUG, "WPS ER: Subscribed to events");
+		wps_er_ap_event(ap->er->wps, ap, WPS_EV_ER_AP_ADD);
 		break;
 	case HTTP_CLIENT_FAILED:
 	case HTTP_CLIENT_INVALID_REPLY:
@@ -615,6 +667,7 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 					       int probe_req)
 {
 	struct wps_er_sta *sta = wps_er_sta_get(ap, addr);
+	int new_sta = 0;
 
 	if (sta == NULL) {
 		sta = os_zalloc(sizeof(*sta));
@@ -624,6 +677,7 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 		sta->ap = ap;
 		sta->next = ap->sta;
 		ap->sta = sta;
+		new_sta = 1;
 	}
 
 	if (!probe_req)
@@ -691,7 +745,9 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 	eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);
 	eloop_register_timeout(300, 0, wps_er_sta_timeout, sta, NULL);
 
-	/* TODO: wpa_msg indication if new STA */
+	if (!probe_req || new_sta)
+		wps_er_sta_event(ap->er->wps, sta,
+				 WPS_EV_ER_ENROLLEE_ADD);
 
 	return sta;
 }

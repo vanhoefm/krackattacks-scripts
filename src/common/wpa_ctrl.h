@@ -69,6 +69,12 @@ extern "C" {
 /** WPS enrollment attempt timed out and was terminated */
 #define WPS_EVENT_TIMEOUT "WPS-TIMEOUT "
 
+/* WPS ER events */
+#define WPS_EVENT_ER_AP_ADD "WPS-ER-AP-ADD "
+#define WPS_EVENT_ER_AP_REMOVE "WPS-ER-AP-REMOVE "
+#define WPS_EVENT_ER_ENROLLEE_ADD "WPS-ER-ENROLLEE-ADD "
+#define WPS_EVENT_ER_ENROLLEE_REMOVE "WPS-ER-ENROLLEE-REMOVE "
+
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "
 #define WPS_EVENT_NEW_AP_SETTINGS "WPS-NEW-AP-SETTINGS "

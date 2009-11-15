@@ -410,6 +410,69 @@ static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpa_supplicant_wps_event_er_ap_add(struct wpa_supplicant *wpa_s,
+					       struct wps_event_er_ap *ap)
+{
+	char uuid_str[100];
+	uuid_bin2str(ap->uuid, uuid_str, sizeof(uuid_str));
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_AP_ADD "%s|%s|%s|%s|%s|%s|%s",
+		uuid_str,
+		ap->friendly_name ? ap->friendly_name : "",
+		ap->manufacturer ? ap->manufacturer : "",
+		ap->model_description ? ap->model_description : "",
+		ap->model_name ? ap->model_name : "",
+		ap->manufacturer_url ? ap->manufacturer_url : "",
+		ap->model_url ? ap->model_url : "");
+}
+
+
+static void wpa_supplicant_wps_event_er_ap_remove(struct wpa_supplicant *wpa_s,
+						  struct wps_event_er_ap *ap)
+{
+	char uuid_str[100];
+	uuid_bin2str(ap->uuid, uuid_str, sizeof(uuid_str));
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_AP_REMOVE "%s", uuid_str);
+}
+
+
+static void wpa_supplicant_wps_event_er_enrollee_add(
+	struct wpa_supplicant *wpa_s, struct wps_event_er_enrollee *enrollee)
+{
+	char uuid_str[100];
+	char dev_type[20];
+
+	uuid_bin2str(enrollee->uuid, uuid_str, sizeof(uuid_str));
+	if (enrollee->pri_dev_type)
+		os_snprintf(dev_type, sizeof(dev_type), "%u-%08X-%u",
+			    WPA_GET_BE16(enrollee->pri_dev_type),
+			    WPA_GET_BE32(enrollee->pri_dev_type + 2),
+			    WPA_GET_BE16(enrollee->pri_dev_type + 6));
+	else
+		dev_type[0] = '\0';
+
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_ENROLLEE_ADD "%s " MACSTR
+		" M1=%d config_methods=0x%x dev_passwd_id=%d pri_dev_type=%s "
+		"|%s|%s|%s|%s|%s|",
+		uuid_str, MAC2STR(enrollee->mac_addr), enrollee->m1_received,
+		enrollee->config_methods, enrollee->dev_passwd_id, dev_type,
+		enrollee->dev_name ? enrollee->dev_name : "",
+		enrollee->manufacturer ? enrollee->manufacturer : "",
+		enrollee->model_name ? enrollee->model_name : "",
+		enrollee->model_number ? enrollee->model_number : "",
+		enrollee->serial_number ? enrollee->serial_number : "");
+}
+
+
+static void wpa_supplicant_wps_event_er_enrollee_remove(
+	struct wpa_supplicant *wpa_s, struct wps_event_er_enrollee *enrollee)
+{
+	char uuid_str[100];
+	uuid_bin2str(enrollee->uuid, uuid_str, sizeof(uuid_str));
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_ENROLLEE_REMOVE "%s " MACSTR,
+		uuid_str, MAC2STR(enrollee->mac_addr));
+}
+
+
 static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 				     union wps_event_data *data)
 {
@@ -429,6 +492,20 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 	case WPS_EV_PBC_OVERLAP:
 		break;
 	case WPS_EV_PBC_TIMEOUT:
+		break;
+	case WPS_EV_ER_AP_ADD:
+		wpa_supplicant_wps_event_er_ap_add(wpa_s, &data->ap);
+		break;
+	case WPS_EV_ER_AP_REMOVE:
+		wpa_supplicant_wps_event_er_ap_remove(wpa_s, &data->ap);
+		break;
+	case WPS_EV_ER_ENROLLEE_ADD:
+		wpa_supplicant_wps_event_er_enrollee_add(wpa_s,
+							 &data->enrollee);
+		break;
+	case WPS_EV_ER_ENROLLEE_REMOVE:
+		wpa_supplicant_wps_event_er_enrollee_remove(wpa_s,
+							    &data->enrollee);
 		break;
 	}
 }

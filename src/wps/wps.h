@@ -351,7 +351,27 @@ enum wps_event {
 	/**
 	 * WPS_EV_PBC_TIMEOUT - PBC walktime expired before protocol run start
 	 */
-	WPS_EV_PBC_TIMEOUT
+	WPS_EV_PBC_TIMEOUT,
+
+	/**
+	 * WPS_EV_ER_AP_ADD - ER: AP added
+	 */
+	WPS_EV_ER_AP_ADD,
+
+	/**
+	 * WPS_EV_ER_AP_REMOVE - ER: AP removed
+	 */
+	WPS_EV_ER_AP_REMOVE,
+
+	/**
+	 * WPS_EV_ER_ENROLLEE_ADD - ER: Enrollee added
+	 */
+	WPS_EV_ER_ENROLLEE_ADD,
+
+	/**
+	 * WPS_EV_ER_ENROLLEE_REMOVE - ER: Enrollee removed
+	 */
+	WPS_EV_ER_ENROLLEE_REMOVE
 };
 
 /**
@@ -390,6 +410,33 @@ union wps_event_data {
 		int enrollee;
 		int part;
 	} pwd_auth_fail;
+
+	struct wps_event_er_ap {
+		const u8 *uuid;
+		const char *friendly_name;
+		const char *manufacturer;
+		const char *manufacturer_url;
+		const char *model_description;
+		const char *model_name;
+		const char *model_number;
+		const char *model_url;
+		const char *serial_number;
+		const char *upc;
+	} ap;
+
+	struct wps_event_er_enrollee {
+		const u8 *uuid;
+		const u8 *mac_addr;
+		int m1_received;
+		u16 config_methods;
+		u16 dev_passwd_id;
+		const u8 *pri_dev_type;
+		const char *dev_name;
+		const char *manufacturer;
+		const char *model_name;
+		const char *model_number;
+		const char *serial_number;
+	} enrollee;
 };
 
 /**

@@ -258,6 +258,8 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 	os_free(ap->control_url);
 	os_free(ap->event_sub_url);
 
+	os_free(ap->ap_settings);
+
 	wps_er_sta_remove_all(ap);
 
 	os_free(ap);
@@ -976,6 +978,7 @@ static void wps_er_sta_start(struct wps_er_sta *sta, struct wpabuf *msg)
 	if (sta->wps == NULL)
 		return;
 	sta->wps->er = 1;
+	sta->wps->use_cred = sta->ap->ap_settings;
 
 	wps_er_sta_process(sta, msg, WSC_MSG);
 }

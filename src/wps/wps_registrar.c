@@ -1093,7 +1093,7 @@ static int wps_build_r_snonce2(struct wps_data *wps, struct wpabuf *msg)
 
 
 static int wps_build_cred_network_idx(struct wpabuf *msg,
-				      struct wps_credential *cred)
+				      const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Index");
 	wpabuf_put_be16(msg, ATTR_NETWORK_INDEX);
@@ -1104,7 +1104,7 @@ static int wps_build_cred_network_idx(struct wpabuf *msg,
 
 
 static int wps_build_cred_ssid(struct wpabuf *msg,
-			       struct wps_credential *cred)
+			       const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * SSID");
 	wpabuf_put_be16(msg, ATTR_SSID);
@@ -1115,7 +1115,7 @@ static int wps_build_cred_ssid(struct wpabuf *msg,
 
 
 static int wps_build_cred_auth_type(struct wpabuf *msg,
-				    struct wps_credential *cred)
+				    const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type (0x%x)",
 		   cred->auth_type);
@@ -1127,7 +1127,7 @@ static int wps_build_cred_auth_type(struct wpabuf *msg,
 
 
 static int wps_build_cred_encr_type(struct wpabuf *msg,
-				    struct wps_credential *cred)
+				    const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type (0x%x)",
 		   cred->encr_type);
@@ -1139,7 +1139,7 @@ static int wps_build_cred_encr_type(struct wpabuf *msg,
 
 
 static int wps_build_cred_network_key(struct wpabuf *msg,
-				      struct wps_credential *cred)
+				      const const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Key");
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);
@@ -1150,7 +1150,7 @@ static int wps_build_cred_network_key(struct wpabuf *msg,
 
 
 static int wps_build_cred_mac_addr(struct wpabuf *msg,
-				   struct wps_credential *cred)
+				   const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * MAC Address (" MACSTR ")",
 		   MAC2STR(cred->mac_addr));
@@ -1162,7 +1162,7 @@ static int wps_build_cred_mac_addr(struct wpabuf *msg,
 
 
 static int wps_build_credential(struct wpabuf *msg,
-				struct wps_credential *cred)
+				const struct wps_credential *cred)
 {
 	if (wps_build_cred_network_idx(msg, cred) ||
 	    wps_build_cred_ssid(msg, cred) ||
@@ -1183,6 +1183,10 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		goto skip_cred_build;
 
 	wpa_printf(MSG_DEBUG, "WPS:  * Credential");
+	if (wps->use_cred) {
+		os_memcpy(&wps->cred, wps->use_cred, sizeof(wps->cred));
+		goto use_provided;
+	}
 	os_memset(&wps->cred, 0, sizeof(wps->cred));
 
 	os_memcpy(wps->cred.ssid, wps->wps->ssid, wps->wps->ssid_len);
@@ -1273,6 +1277,7 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		wps->cred.key_len = wps->new_psk_len * 2;
 	}
 
+use_provided:
 	cred = wpabuf_alloc(200);
 	if (cred == NULL)
 		return -1;
@@ -1478,8 +1483,8 @@ static struct wpabuf * wps_build_m8(struct wps_data *wps)
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_M8) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
-	    (wps->wps->ap && wps_build_cred(wps, plain)) ||
-	    (!wps->wps->ap && wps_build_ap_settings(wps, plain)) ||
+	    ((wps->wps->ap || wps->er) && wps_build_cred(wps, plain)) ||
+	    (!wps->wps->ap && !wps->er && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
 	    wps_build_authenticator(wps, msg)) {
@@ -2621,7 +2626,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 		wps->new_psk = NULL;
 	}
 
-	if (!wps->wps->ap)
+	if (!wps->wps->ap && !wps->er)
 		wps_sta_cred_cb(wps);
 
 	if (wps->new_psk) {

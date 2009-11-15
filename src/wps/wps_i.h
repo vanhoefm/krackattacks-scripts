@@ -111,6 +111,8 @@ struct wps_data {
 
 	void (*ap_settings_cb)(void *ctx, const struct wps_credential *cred);
 	void *ap_settings_cb_ctx;
+
+	struct wps_credential *use_cred;
 };
 
 

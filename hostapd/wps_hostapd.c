@@ -885,8 +885,8 @@ static int hostapd_rx_req_put_wlan_response(
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: PutWLANResponse ev_type=%d mac_addr="
 		   MACSTR, ev_type, MAC2STR(mac_addr));
-	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS UPnP: PutWLANResponse NewMessage",
-			  wpabuf_head(msg), wpabuf_len(msg));
+	wpa_hexdump(MSG_MSGDUMP, "WPS UPnP: PutWLANResponse NewMessage",
+		    wpabuf_head(msg), wpabuf_len(msg));
 	if (ev_type != UPNP_WPS_WLANEVENT_TYPE_EAP) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Ignored unexpected "
 			   "PutWLANResponse WLANEventType %d", ev_type);

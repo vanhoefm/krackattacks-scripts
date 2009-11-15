@@ -1190,6 +1190,17 @@ enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps,
 		   "op_code=%d)",
 		   (unsigned long) wpabuf_len(msg), op_code);
 
+	if (op_code == WSC_UPnP) {
+		/* Determine the OpCode based on message type attribute */
+		struct wps_parse_attr attr;
+		if (wps_parse_msg(msg, &attr) == 0 && attr.msg_type) {
+			if (*attr.msg_type == WPS_WSC_ACK)
+				op_code = WSC_ACK;
+			else if (*attr.msg_type == WPS_WSC_NACK)
+				op_code = WSC_NACK;
+		}
+	}
+
 	switch (op_code) {
 	case WSC_MSG:
 	case WSC_UPnP:

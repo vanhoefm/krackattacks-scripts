@@ -242,6 +242,8 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 	wps_er_ap_event(er->wps, ap, WPS_EV_ER_AP_REMOVE);
 	os_free(ap->location);
 	http_client_free(ap->http);
+	if (ap->wps)
+		wps_deinit(ap->wps);
 
 	os_free(ap->friendly_name);
 	os_free(ap->manufacturer);

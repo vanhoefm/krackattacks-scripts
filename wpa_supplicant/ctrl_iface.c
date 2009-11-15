@@ -1657,6 +1657,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_ER_PIN ", 11) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_pin(wpa_s, buf + 11))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_ER_PBC ", 11) == 0) {
+		if (wpas_wps_er_pbc(wpa_s, buf + 11))
+			reply_len = -1;
 #endif /* CONFIG_WPS_ER */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_IBSS_RSN

@@ -1319,3 +1319,21 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 
 	wpabuf_free(msg);
 }
+
+
+int wps_er_pbc(struct wps_er *er, const u8 *uuid)
+{
+	if (er == NULL || er->wps == NULL)
+		return -1;
+
+	/*
+	 * TODO: Should enable PBC mode only in a single AP based on which AP
+	 * the Enrollee (uuid) is using. Now, we may end up enabling multiple
+	 * APs in PBC mode which could result in session overlap at the
+	 * Enrollee.
+	 */
+	if (wps_registrar_button_pushed(er->wps->registrar))
+		return -1;
+
+	return 0;
+}

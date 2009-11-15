@@ -1161,4 +1161,14 @@ int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const char *uuid,
 	return wps_registrar_add_pin(wpa_s->wps->registrar, any ? NULL : u,
 				     (const u8 *) pin, os_strlen(pin), 300);
 }
+
+
+int wpas_wps_er_pbc(struct wpa_supplicant *wpa_s, const char *uuid)
+{
+	u8 u[UUID_LEN];
+
+	if (uuid_str2bin(uuid, u))
+		return -1;
+	return wps_er_pbc(wpa_s->wps_er, u);
+}
 #endif /* CONFIG_WPS_ER */

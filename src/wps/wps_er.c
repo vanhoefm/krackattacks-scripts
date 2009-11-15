@@ -64,6 +64,7 @@ struct wps_er_ap {
 	char *location;
 	struct http_client *http;
 
+	u8 uuid[WPS_UUID_LEN];
 	char *friendly_name;
 	char *manufacturer;
 	char *manufacturer_url;
@@ -277,6 +278,7 @@ static void wps_er_parse_device_description(struct wps_er_ap *ap,
 {
 	/* Note: reply includes null termination after the buffer data */
 	const char *data = wpabuf_head(reply);
+	char *pos;
 
 	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Device info",
 			  wpabuf_head(reply), wpabuf_len(reply));
@@ -309,6 +311,11 @@ static void wps_er_parse_device_description(struct wps_er_ap *ap,
 
 	ap->udn = xml_get_first_item(data, "UDN");
 	wpa_printf(MSG_DEBUG, "WPS ER: UDN='%s'", ap->udn);
+	pos = os_strstr(ap->udn, "uuid:");
+	if (pos) {
+		pos += 5;
+		uuid_str2bin(pos, ap->uuid);
+	}
 
 	ap->upc = xml_get_first_item(data, "UPC");
 	wpa_printf(MSG_DEBUG, "WPS ER: UPC='%s'", ap->upc);

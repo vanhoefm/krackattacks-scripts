@@ -332,6 +332,14 @@ wpa_supplicant_ctrl_iface_init(struct wpa_supplicant *wpa_s)
 		goto fail;
 	}
 
+	/* Make sure the group can enter and read the directory */
+	if (gid_set &&
+	    chmod(dir, S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP) < 0) {
+		wpa_printf(MSG_ERROR, "CTRL: chmod[ctrl_interface]: %s",
+			   strerror(errno));
+		goto fail;
+	}
+
 	if (os_strlen(dir) + 1 + os_strlen(wpa_s->ifname) >=
 	    sizeof(addr.sun_path)) {
 		wpa_printf(MSG_ERROR, "ctrl_iface path limit exceeded");

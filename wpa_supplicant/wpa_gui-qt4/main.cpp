@@ -24,7 +24,9 @@ class WpaGuiApp : public QApplication
 public:
 	WpaGuiApp(int &argc, char **argv);
 
+#ifndef QT_NO_SESSIONMANAGER
 	virtual void saveState(QSessionManager &manager);
+#endif
 
 	WpaGui *w;
 };
@@ -33,11 +35,13 @@ WpaGuiApp::WpaGuiApp(int &argc, char **argv) : QApplication(argc, argv)
 {
 }
 
+#ifndef QT_NO_SESSIONMANAGER
 void WpaGuiApp::saveState(QSessionManager &manager)
 {
 	QApplication::saveState(manager);
 	w->saveState();
 }
+#endif
 
 
 int main(int argc, char *argv[])

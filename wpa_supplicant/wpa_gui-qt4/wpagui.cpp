@@ -147,6 +147,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 
 	parse_argv();
 
+#ifndef QT_NO_SESSIONMANAGER
 	if (app->isSessionRestored()) {
 		QSettings settings("wpa_supplicant", "wpa_gui");
 		settings.beginGroup("state");
@@ -155,6 +156,7 @@ WpaGui::WpaGui(QApplication *_app, QWidget *parent, const char *, Qt::WFlags)
 			startInTray = settings.value("in_tray").toBool();
 		settings.endGroup();
 	}
+#endif
 
 	if (QSystemTrayIcon::isSystemTrayAvailable())
 		createTrayIcon(startInTray);
@@ -1721,6 +1723,7 @@ void WpaGui::addInterface()
 }
 
 
+#ifndef QT_NO_SESSIONMANAGER
 void WpaGui::saveState()
 {
 	QSettings settings("wpa_supplicant", "wpa_gui");
@@ -1729,3 +1732,4 @@ void WpaGui::saveState()
 	settings.setValue("in_tray", inTray);
 	settings.endGroup();
 }
+#endif

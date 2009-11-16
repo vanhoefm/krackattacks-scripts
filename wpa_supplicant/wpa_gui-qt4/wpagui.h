@@ -40,7 +40,9 @@ public:
 	virtual void disableNetwork(const QString &sel);
 	virtual int getNetworkDisabled(const QString &sel);
 	void setBssFromScan(const QString &bssid);
+#ifndef QT_NO_SESSIONMANAGER
 	void saveState();
+#endif
 
 public slots:
 	virtual void parse_argv();

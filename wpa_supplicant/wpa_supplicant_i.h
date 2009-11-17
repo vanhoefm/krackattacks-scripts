@@ -407,6 +407,8 @@ struct wpa_supplicant {
 		u8 mobility_domain[2];
 		u8 *ft_ies;
 		size_t ft_ies_len;
+		u8 prev_bssid[ETH_ALEN];
+		int prev_bssid_set;
 	} sme;
 #endif /* CONFIG_SME */
 

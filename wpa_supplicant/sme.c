@@ -59,6 +59,10 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	params.ssid = ie + 2;
 	params.ssid_len = ie[1];
 
+	if (wpa_s->sme.ssid_len != params.ssid_len ||
+	    os_memcmp(wpa_s->sme.ssid, params.ssid, params.ssid_len) != 0)
+		wpa_s->sme.prev_bssid_set = 0;
+
 	wpa_s->sme.freq = params.freq;
 	os_memcpy(wpa_s->sme.ssid, params.ssid, params.ssid_len);
 	wpa_s->sme.ssid_len = params.ssid_len;
@@ -312,6 +316,8 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 #endif /* CONFIG_IEEE80211R */
 	params.mode = ssid->mode;
 	params.mgmt_frame_protection = wpa_s->sme.mfp;
+	if (wpa_s->sme.prev_bssid_set)
+		params.prev_bssid = wpa_s->sme.prev_bssid;
 
 	wpa_msg(wpa_s, MSG_INFO, "Trying to associate with " MACSTR
 		" (SSID='%s' freq=%d MHz)", MAC2STR(params.bssid),
@@ -378,6 +384,7 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO,
 			"Deauth request to the driver failed");
 	}
+	wpa_s->sme.prev_bssid_set = 0;
 
 	if (wpa_blacklist_add(wpa_s, wpa_s->pending_bssid) == 0) {
 		struct wpa_blacklist *b;

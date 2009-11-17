@@ -409,6 +409,14 @@ struct wpa_driver_associate_params {
 	 * still be allowed for key negotiation.
 	 */
 	int drop_unencrypted;
+
+	/**
+	 * prev_bssid - Previously used BSSID in this ESS
+	 *
+	 * When not %NULL, this is a request to use reassociation instead of
+	 * association.
+	 */
+	const u8 *prev_bssid;
 };
 
 /**

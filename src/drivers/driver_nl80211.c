@@ -3599,6 +3599,13 @@ static int wpa_driver_nl80211_associate(
 
 	NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
 
+	if (params->prev_bssid) {
+		wpa_printf(MSG_DEBUG, "  * prev_bssid=" MACSTR,
+			   MAC2STR(params->prev_bssid));
+		NLA_PUT(msg, NL80211_ATTR_PREV_BSSID, ETH_ALEN,
+			params->prev_bssid);
+	}
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {

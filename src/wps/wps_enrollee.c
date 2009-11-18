@@ -680,6 +680,21 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 	    wps_process_cred(&attr, &wps->cred))
 		return -1;
 
+	if (os_memcmp(wps->cred.mac_addr, wps->wps->dev.mac_addr, ETH_ALEN) !=
+	    0) {
+		wpa_printf(MSG_DEBUG, "WPS: MAC Address in the Credential ("
+			   MACSTR ") does not match with own address (" MACSTR
+			   ")", MAC2STR(wps->cred.mac_addr),
+			   MAC2STR(wps->wps->dev.mac_addr));
+		/*
+		 * In theory, this could be consider fatal error, but there are
+		 * number of deployed implementations using other address here
+		 * due to unclarity in the specification. For interoperability
+		 * reasons, allow this to be processed since we do not really
+		 * use the MAC Address information for anything.
+		 */
+	}
+
 	if (wps->wps->cred_cb) {
 		wps->cred.cred_attr = cred - 4;
 		wps->cred.cred_attr_len = cred_len + 4;
@@ -729,6 +744,21 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 
 	wpa_printf(MSG_INFO, "WPS: Received new AP configuration from "
 		   "Registrar");
+
+	if (os_memcmp(cred.mac_addr, wps->wps->dev.mac_addr, ETH_ALEN) !=
+	    0) {
+		wpa_printf(MSG_DEBUG, "WPS: MAC Address in the AP Settings ("
+			   MACSTR ") does not match with own address (" MACSTR
+			   ")", MAC2STR(cred.mac_addr),
+			   MAC2STR(wps->wps->dev.mac_addr));
+		/*
+		 * In theory, this could be consider fatal error, but there are
+		 * number of deployed implementations using other address here
+		 * due to unclarity in the specification. For interoperability
+		 * reasons, allow this to be processed since we do not really
+		 * use the MAC Address information for anything.
+		 */
+	}
 
 	if (wps->wps->cred_cb) {
 		cred.cred_attr = wpabuf_head(attrs);

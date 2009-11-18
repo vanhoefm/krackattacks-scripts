@@ -1231,8 +1231,10 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		}
 	}
 	wps->cred.encr_type = wps->encr_type;
-	/* Set MAC address in the Credential to be the AP's address (BSSID) */
-	os_memcpy(wps->cred.mac_addr, wps->wps->dev.mac_addr, ETH_ALEN);
+	/*
+	 * Set MAC address in the Credential to be the Enrollee's MAC address
+	 */
+	os_memcpy(wps->cred.mac_addr, wps->mac_addr_e, ETH_ALEN);
 
 	if (wps->wps->wps_state == WPS_STATE_NOT_CONFIGURED && wps->wps->ap &&
 	    !wps->wps->registrar->disable_auto_conf) {

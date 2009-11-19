@@ -40,6 +40,7 @@ public slots:
 
 protected slots:
 	virtual void languageChange();
+	virtual void closeEvent(QCloseEvent *event);
 
 private:
 	void add_station(QString info);
@@ -48,6 +49,9 @@ private:
 	void add_scan_results();
 	void update_peers();
 	QStandardItem * find_addr(QString addr);
+	QStandardItem * find_uuid(QString uuid);
+	void done(int r);
+	void remove_enrollee_uuid(QString uuid);
 
 	WpaGui *wpagui;
 	QStandardItemModel model;

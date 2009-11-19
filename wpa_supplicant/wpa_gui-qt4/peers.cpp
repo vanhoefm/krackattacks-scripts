@@ -24,6 +24,7 @@
 
 static const int peer_role_address = Qt::UserRole + 1;
 static const int peer_role_type = Qt::UserRole + 2;
+static const int peer_role_uuid = Qt::UserRole + 3;
 
 /*
  * TODO:
@@ -36,6 +37,8 @@ enum peer_type {
 	PEER_TYPE_AP,
 	PEER_TYPE_AP_WPS,
 	PEER_TYPE_WPS_PIN_NEEDED,
+	PEER_TYPE_WPS_ER_AP,
+	PEER_TYPE_WPS_ER_ENROLLEE
 };
 
 
@@ -103,13 +106,20 @@ void Peers::context_menu(const QPoint &pos)
 		case PEER_TYPE_WPS_PIN_NEEDED:
 			title = tr("WPS PIN needed");
 			break;
+		case PEER_TYPE_WPS_ER_AP:
+			title = tr("ER: WPS AP");
+			break;
+		case PEER_TYPE_WPS_ER_ENROLLEE:
+			title = tr("ER: WPS Enrollee");
+			break;
 		}
 		menu->addAction(title)->setEnabled(false);
 		menu->addSeparator();
 
 		if (type == PEER_TYPE_ASSOCIATED_STATION ||
 		    type == PEER_TYPE_AP_WPS ||
-		    type == PEER_TYPE_WPS_PIN_NEEDED) {
+		    type == PEER_TYPE_WPS_PIN_NEEDED ||
+		    type == PEER_TYPE_WPS_ER_ENROLLEE) {
 			/* TODO: only for peers that are requesting WPS PIN
 			 * method */
 			menu->addAction(QString("Enter WPS PIN"), this,
@@ -128,7 +138,7 @@ void Peers::enter_pin()
 {
 	if (ctx_item == NULL)
 		return;
-	QString addr = ctx_item->data(peer_role_address).toString();
+
 	StringQuery input(tr("PIN:"));
 	input.setWindowTitle(tr("PIN for ") + ctx_item->text());
 	if (input.exec() != QDialog::Accepted)
@@ -137,9 +147,19 @@ void Peers::enter_pin()
 	char cmd[100];
 	char reply[100];
 	size_t reply_len;
-	snprintf(cmd, sizeof(cmd), "WPS_PIN %s %s",
-		 addr.toAscii().constData(),
-		 input.get_string().toAscii().constData());
+
+	if (ctx_item->data(peer_role_type).toInt() ==
+	    PEER_TYPE_WPS_ER_ENROLLEE) {
+		QString uuid = ctx_item->data(peer_role_uuid).toString();
+		snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s",
+			 uuid.toAscii().constData(),
+			 input.get_string().toAscii().constData());
+	} else {
+		QString addr = ctx_item->data(peer_role_address).toString();
+		snprintf(cmd, sizeof(cmd), "WPS_PIN %s %s",
+			 addr.toAscii().constData(),
+			 input.get_string().toAscii().constData());
+	}
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
@@ -315,6 +335,10 @@ void Peers::update_peers()
 	if (wpagui == NULL)
 		return;
 
+	char reply[20];
+	size_t replylen = sizeof(reply) - 1;
+	wpagui->ctrlRequest("WPS_ER_START", reply, &replylen);
+
 	add_stations();
 	add_scan_results();
 }
@@ -327,6 +351,19 @@ QStandardItem * Peers::find_addr(QString addr)
 
 	QModelIndexList lst = model.match(model.index(0, 0), peer_role_address,
 					  addr);
+	if (lst.size() == 0)
+		return NULL;
+	return model.itemFromIndex(lst[0]);
+}
+
+
+QStandardItem * Peers::find_uuid(QString uuid)
+{
+	if (model.rowCount() == 0)
+		return NULL;
+
+	QModelIndexList lst = model.match(model.index(0, 0), peer_role_uuid,
+					  uuid);
 	if (lst.size() == 0)
 		return NULL;
 	return model.itemFromIndex(lst[0]);
@@ -402,5 +439,136 @@ void Peers::event_notify(WpaMsg msg)
 				model.removeRow(lst[i].row());
 		}
 		return;
+	}
+
+	if (text.startsWith(WPS_EVENT_ER_AP_ADD)) {
+		/*
+		 * WPS-ER-AP-ADD 87654321-9abc-def0-1234-56789abc0002|
+		 * Very friendly name|Company|Long description of the model|
+		 * WAP|http://w1.fi/|http://w1.fi/hostapd/
+		 */
+		int pos = text.indexOf(' ');
+		if (pos < 0)
+			return;
+		QStringList items = text.mid(pos + 1).split('|');
+		if (items.size() < 2)
+			return;
+
+		QStandardItem *item = find_uuid(items[0]);
+		if (item)
+			return;
+
+		item = new QStandardItem(*default_icon, items[1]);
+		if (item) {
+			item->setData(items[0], peer_role_uuid);
+			item->setData(PEER_TYPE_WPS_ER_AP, peer_role_type);
+			item->setToolTip(items.join(QString("\n")));
+			model.appendRow(item);
+		}
+
+		return;
+	}
+
+	if (text.startsWith(WPS_EVENT_ER_AP_REMOVE)) {
+		/* WPS-ER-AP-REMOVE 87654321-9abc-def0-1234-56789abc0002 */
+		QStringList items = text.split(' ');
+		if (items.size() < 2)
+			return;
+		if (model.rowCount() == 0)
+			return;
+
+		QModelIndexList lst = model.match(model.index(0, 0),
+						  peer_role_uuid, items[1]);
+		for (int i = 0; i < lst.size(); i++) {
+			QStandardItem *item = model.itemFromIndex(lst[i]);
+			if (item && item->data(peer_role_type).toInt() ==
+			    PEER_TYPE_WPS_ER_AP)
+				model.removeRow(lst[i].row());
+		}
+		return;
+	}
+
+	if (text.startsWith(WPS_EVENT_ER_ENROLLEE_ADD)) {
+		/*
+		 * WPS-ER-ENROLLEE-ADD 2b7093f1-d6fb-5108-adbb-bea66bb87333
+		 * 02:66:a0:ee:17:27 M1=1 config_methods=0x14d dev_passwd_id=0
+		 * pri_dev_type=1-0050F204-1
+		 * |Wireless Client|Company|cmodel|123|12345|
+		 */
+		QStringList items = text.split(' ');
+		if (items.size() < 3)
+			return;
+		QString uuid = items[1];
+		QString addr = items[2];
+
+		int pos = text.indexOf('|');
+		if (pos < 0)
+			return;
+		items = text.mid(pos + 1).split('|');
+		if (items.size() < 1)
+			return;
+		QString name = items[0];
+		if (name.length() == 0)
+			name = addr;
+
+		remove_enrollee_uuid(uuid);
+
+		QStandardItem *item;
+		item = new QStandardItem(*default_icon, name);
+		if (item) {
+			item->setData(uuid, peer_role_uuid);
+			item->setData(addr, peer_role_address);
+			item->setData(PEER_TYPE_WPS_ER_ENROLLEE,
+				      peer_role_type);
+			item->setToolTip(items.join(QString("\n")));
+			model.appendRow(item);
+		}
+
+		return;
+	}
+
+	if (text.startsWith(WPS_EVENT_ER_ENROLLEE_REMOVE)) {
+		/*
+		 * WPS-ER-ENROLLEE-REMOVE 2b7093f1-d6fb-5108-adbb-bea66bb87333
+		 * 02:66:a0:ee:17:27
+		 */
+		QStringList items = text.split(' ');
+		if (items.size() < 2)
+			return;
+		remove_enrollee_uuid(items[1]);
+		return;
+	}
+}
+
+
+void Peers::closeEvent(QCloseEvent *)
+{
+	if (wpagui) {
+		char reply[20];
+		size_t replylen = sizeof(reply) - 1;
+		wpagui->ctrlRequest("WPS_ER_STOP", reply, &replylen);
+	}
+}
+
+
+void Peers::done(int r)
+{
+	QDialog::done(r);
+	close();
+}
+
+
+void Peers::remove_enrollee_uuid(QString uuid)
+{
+	if (model.rowCount() == 0)
+		return;
+
+	QModelIndexList lst = model.match(model.index(0, 0),
+					  peer_role_uuid, uuid);
+	for (int i = 0; i < lst.size(); i++) {
+		QStandardItem *item = model.itemFromIndex(lst[i]);
+		if (item && item->data(peer_role_type).toInt() ==
+		    PEER_TYPE_WPS_ER_ENROLLEE)
+			model.removeRow(lst[i].row());
 	}
 }

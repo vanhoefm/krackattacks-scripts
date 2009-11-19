@@ -147,6 +147,14 @@ void Peers::enter_pin()
 	if (ctx_item == NULL)
 		return;
 
+	int peer_type = ctx_item->data(peer_role_type).toInt();
+	QString uuid;
+	QString addr;
+	if (peer_type == PEER_TYPE_WPS_ER_ENROLLEE)
+		uuid = ctx_item->data(peer_role_uuid).toString();
+	else
+		addr = ctx_item->data(peer_role_address).toString();
+
 	StringQuery input(tr("PIN:"));
 	input.setWindowTitle(tr("PIN for ") + ctx_item->text());
 	if (input.exec() != QDialog::Accepted)
@@ -156,14 +164,11 @@ void Peers::enter_pin()
 	char reply[100];
 	size_t reply_len;
 
-	if (ctx_item->data(peer_role_type).toInt() ==
-	    PEER_TYPE_WPS_ER_ENROLLEE) {
-		QString uuid = ctx_item->data(peer_role_uuid).toString();
+	if (peer_type == PEER_TYPE_WPS_ER_ENROLLEE) {
 		snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s",
 			 uuid.toAscii().constData(),
 			 input.get_string().toAscii().constData());
 	} else {
-		QString addr = ctx_item->data(peer_role_address).toString();
 		snprintf(cmd, sizeof(cmd), "WPS_PIN %s %s",
 			 addr.toAscii().constData(),
 			 input.get_string().toAscii().constData());

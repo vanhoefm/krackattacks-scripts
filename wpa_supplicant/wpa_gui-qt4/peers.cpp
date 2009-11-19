@@ -48,9 +48,15 @@ Peers::Peers(QWidget *parent, const char *, bool, Qt::WFlags)
 	setupUi(this);
 
 	if (QImageReader::supportedImageFormats().contains(QByteArray("svg")))
+	{
 		default_icon = new QIcon(":/icons/wpa_gui.svg");
-	else
+		ap_icon = new QIcon(":/icons/ap.svg");
+		laptop_icon = new QIcon(":/icons/laptop.svg");
+	} else {
 		default_icon = new QIcon(":/icons/wpa_gui.png");
+		ap_icon = new QIcon(":/icons/ap.png");
+		laptop_icon = new QIcon(":/icons/laptop.png");
+	}
 
 	peers->setModel(&model);
 	peers->setResizeMode(QListView::Adjust);
@@ -73,6 +79,8 @@ void Peers::setWpaGui(WpaGui *_wpagui)
 Peers::~Peers()
 {
 	delete default_icon;
+	delete ap_icon;
+	delete laptop_icon;
 }
 
 
@@ -194,7 +202,7 @@ void Peers::add_station(QString info)
 	if (name.isEmpty())
 		name = lines[0];
 
-	QStandardItem *item = new QStandardItem(*default_icon, name);
+	QStandardItem *item = new QStandardItem(*laptop_icon, name);
 	if (item) {
 		item->setData(lines[0], peer_role_address);
 		item->setData(PEER_TYPE_ASSOCIATED_STATION,
@@ -306,7 +314,7 @@ void Peers::add_scan_results()
 		if (name.isEmpty())
 			name = ssid + "\n" + bssid;
 
-		QStandardItem *item = new QStandardItem(*default_icon, name);
+		QStandardItem *item = new QStandardItem(*ap_icon, name);
 		if (item) {
 			item->setData(bssid, peer_role_address);
 			if (flags.contains("[WPS"))
@@ -400,7 +408,7 @@ void Peers::event_notify(WpaMsg msg)
 			}
 		}
 
-		item = new QStandardItem(*default_icon, name);
+		item = new QStandardItem(*laptop_icon, name);
 		if (item) {
 			item->setData(addr, peer_role_address);
 			item->setData(PEER_TYPE_WPS_PIN_NEEDED,
@@ -458,7 +466,7 @@ void Peers::event_notify(WpaMsg msg)
 		if (item)
 			return;
 
-		item = new QStandardItem(*default_icon, items[1]);
+		item = new QStandardItem(*ap_icon, items[1]);
 		if (item) {
 			item->setData(items[0], peer_role_uuid);
 			item->setData(PEER_TYPE_WPS_ER_AP, peer_role_type);
@@ -514,7 +522,7 @@ void Peers::event_notify(WpaMsg msg)
 		remove_enrollee_uuid(uuid);
 
 		QStandardItem *item;
-		item = new QStandardItem(*default_icon, name);
+		item = new QStandardItem(*laptop_icon, name);
 		if (item) {
 			item->setData(uuid, peer_role_uuid);
 			item->setData(addr, peer_role_address);

@@ -56,6 +56,8 @@ private:
 	WpaGui *wpagui;
 	QStandardItemModel model;
 	QIcon *default_icon;
+	QIcon *ap_icon;
+	QIcon *laptop_icon;
 	QStandardItem *ctx_item;
 };
 

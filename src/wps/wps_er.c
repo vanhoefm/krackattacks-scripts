@@ -1235,6 +1235,21 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 }
 
 
+void wps_er_refresh(struct wps_er *er)
+{
+	struct wps_er_ap *ap;
+	struct wps_er_sta *sta;
+
+	for (ap = er->ap; ap; ap = ap->next) {
+		wps_er_ap_event(er->wps, ap, WPS_EV_ER_AP_ADD);
+		for (sta = ap->sta; sta; sta = sta->next)
+			wps_er_sta_event(er->wps, sta, WPS_EV_ER_ENROLLEE_ADD);
+	}
+
+	wps_er_send_ssdp_msearch(er);
+}
+
+
 void wps_er_deinit(struct wps_er *er)
 {
 	if (er == NULL)

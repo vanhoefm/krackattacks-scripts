@@ -1124,7 +1124,7 @@ int wpas_wps_er_start(struct wpa_supplicant *wpa_s)
 {
 #ifdef CONFIG_WPS_ER
 	if (wpa_s->wps_er) {
-		/* TODO: re-send ctrl_iface events for current data? */
+		wps_er_refresh(wpa_s->wps_er);
 		return 0;
 	}
 	wpa_s->wps_er = wps_er_init(wpa_s->wps, wpa_s->ifname);

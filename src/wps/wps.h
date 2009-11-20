@@ -673,6 +673,7 @@ int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
 int wps_attr_text(struct wpabuf *data, char *buf, char *end);
 
 struct wps_er * wps_er_init(struct wps_context *wps, const char *ifname);
+void wps_er_refresh(struct wps_er *er);
 void wps_er_deinit(struct wps_er *er);
 void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 			u16 sel_reg_config_methods);

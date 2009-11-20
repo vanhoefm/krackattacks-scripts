@@ -60,17 +60,17 @@ DRV_OBJS += ../src/drivers/driver_test.o
 NEED_AP_MLME=y
 endif
 
+ifdef CONFIG_DRIVER_NONE
+DRV_CFLAGS += -DCONFIG_DRIVER_NONE
+DRV_OBJS += ../src/drivers/driver_none.o
+endif
+
 ##### PURE AP DRIVERS
 
 ifdef CONFIG_DRIVER_ATHEROS
 DRV_AP_CFLAGS += -DCONFIG_DRIVER_ATHEROS
 DRV_AP_OBJS += ../src/drivers/driver_atheros.o
 CONFIG_L2_PACKET=linux
-endif
-
-ifdef CONFIG_DRIVER_NONE
-DRV_AP_CFLAGS += -DCONFIG_DRIVER_NONE
-DRV_AP_OBJS += ../src/drivers/driver_none.o
 endif
 
 ##### PURE CLIENT DRIVERS

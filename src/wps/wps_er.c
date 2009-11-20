@@ -676,8 +676,22 @@ static void wps_er_http_resp_ok(struct http_request *req)
 
 static void wps_er_sta_timeout(void *eloop_data, void *user_ctx)
 {
-	struct wps_er_sta *sta = eloop_data;
+	struct wps_er_sta *prev, *tmp, *sta = eloop_data;
 	wpa_printf(MSG_DEBUG, "WPS ER: STA entry timed out");
+	tmp = sta->ap->sta;
+	prev = NULL;
+	while (tmp) {
+		if (tmp == sta)
+			break;
+		prev = tmp;
+		tmp = tmp->next;
+	}
+	if (tmp) {
+		if (prev)
+			prev->next = sta->next;
+		else
+			sta->ap->sta = sta->next;
+	}
 	wps_er_sta_free(sta);
 }
 

@@ -66,6 +66,8 @@ struct wps_er_ap {
 	struct wps_data *wps;
 
 	u8 uuid[WPS_UUID_LEN];
+	u8 pri_dev_type[8];
+	u8 wps_state;
 	char *friendly_name;
 	char *manufacturer;
 	char *manufacturer_url;
@@ -85,6 +87,8 @@ struct wps_er_ap {
 	unsigned int id;
 
 	struct wps_credential *ap_settings;
+
+	void (*m1_handler)(struct wps_er_ap *ap, struct wpabuf *m1);
 };
 
 struct wps_er {
@@ -104,6 +108,9 @@ struct wps_er {
 
 
 static void wps_er_ap_process(struct wps_er_ap *ap, struct wpabuf *msg);
+static int wps_er_send_get_device_info(struct wps_er_ap *ap,
+				       void (*m1_handler)(struct wps_er_ap *ap,
+							  struct wpabuf *m1));
 
 
 static void wps_er_sta_event(struct wps_context *wps, struct wps_er_sta *sta,
@@ -377,6 +384,29 @@ static void wps_er_subscribe(struct wps_er_ap *ap)
 }
 
 
+static void wps_er_ap_get_m1(struct wps_er_ap *ap, struct wpabuf *m1)
+{
+	struct wps_parse_attr attr;
+
+	if (wps_parse_msg(m1, &attr) < 0) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse M1");
+		return;
+	}
+	if (attr.primary_dev_type)
+		os_memcpy(ap->pri_dev_type, attr.primary_dev_type, 8);
+	if (attr.wps_state)
+		ap->wps_state = *attr.wps_state;
+
+	wps_er_subscribe(ap);
+}
+
+
+static void wps_er_get_device_info(struct wps_er_ap *ap)
+{
+	wps_er_send_get_device_info(ap, wps_er_ap_get_m1);
+}
+
+
 static void wps_er_parse_device_description(struct wps_er_ap *ap,
 					    struct wpabuf *reply)
 {
@@ -443,7 +473,7 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 {
 	struct wps_er_ap *ap = ctx;
 	struct wpabuf *reply;
-	int subscribe = 0;
+	int ok = 0;
 
 	switch (event) {
 	case HTTP_CLIENT_OK:
@@ -451,7 +481,7 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 		if (reply == NULL)
 			break;
 		wps_er_parse_device_description(ap, reply);
-		subscribe = 1;
+		ok = 1;
 		break;
 	case HTTP_CLIENT_FAILED:
 	case HTTP_CLIENT_INVALID_REPLY:
@@ -461,8 +491,8 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 	}
 	http_client_free(ap->http);
 	ap->http = NULL;
-	if (subscribe)
-		wps_er_subscribe(ap);
+	if (ok)
+		wps_er_get_device_info(ap);
 }
 
 
@@ -1560,11 +1590,33 @@ static void wps_er_ap_process(struct wps_er_ap *ap, struct wpabuf *msg)
 }
 
 
+static void wps_er_ap_learn_m1(struct wps_er_ap *ap, struct wpabuf *m1)
+{
+	struct wps_config cfg;
+
+	if (ap->wps) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Protocol run already in "
+			   "progress with this AP");
+		return;
+	}
+
+	os_memset(&cfg, 0, sizeof(cfg));
+	cfg.wps = ap->er->wps;
+	cfg.registrar = 1;
+	ap->wps = wps_init(&cfg);
+	if (ap->wps == NULL)
+		return;
+	ap->wps->ap_settings_cb = wps_er_ap_settings_cb;
+	ap->wps->ap_settings_cb_ctx = ap;
+
+	wps_er_ap_process(ap, m1);
+}
+
+
 static void wps_er_ap_learn(struct wps_er_ap *ap, const char *dev_info)
 {
 	struct wpabuf *info;
 	enum http_reply_code ret;
-	struct wps_config cfg;
 
 	wpa_printf(MSG_DEBUG, "WPS ER: Received GetDeviceInfo response (M1) "
 		   "from the AP");
@@ -1575,25 +1627,7 @@ static void wps_er_ap_learn(struct wps_er_ap *ap, const char *dev_info)
 		return;
 	}
 
-	if (ap->wps) {
-		wpa_printf(MSG_DEBUG, "WPS ER: Protocol run already in "
-			   "progress with this AP");
-		wpabuf_free(info);
-		return;
-	}
-
-	os_memset(&cfg, 0, sizeof(cfg));
-	cfg.wps = ap->er->wps;
-	cfg.registrar = 1;
-	ap->wps = wps_init(&cfg);
-	if (ap->wps == NULL) {
-		wpabuf_free(info);
-		return;
-	}
-	ap->wps->ap_settings_cb = wps_er_ap_settings_cb;
-	ap->wps->ap_settings_cb_ctx = ap;
-
-	wps_er_ap_process(ap, info);
+	ap->m1_handler(ap, info);
 	wpabuf_free(info);
 }
 
@@ -1632,27 +1666,18 @@ static void wps_er_http_get_dev_info_cb(void *ctx, struct http_client *c,
 }
 
 
-int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
-		 size_t pin_len)
+static int wps_er_send_get_device_info(struct wps_er_ap *ap,
+				       void (*m1_handler)(struct wps_er_ap *ap,
+							  struct wpabuf *m1))
 {
-	struct wps_er_ap *ap;
 	struct wpabuf *buf;
 	char *len_ptr, *body_ptr;
 	struct sockaddr_in dst;
 	char *url, *path;
 
-	if (er == NULL)
-		return -1;
-
-	ap = wps_er_ap_get(er, NULL, uuid);
-	if (ap == NULL) {
-		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for learn "
-			   "request");
-		return -1;
-	}
-	if (ap->wps || ap->http) {
-		wpa_printf(MSG_DEBUG, "WPS ER: Pending operation ongoing "
-			   "with the AP - cannot start learn");
+	if (ap->http) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP operation ongoing "
+			   "with the AP - cannot get device info");
 		return -1;
 	}
 
@@ -1681,6 +1706,35 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 		wpabuf_free(buf);
 		return -1;
 	}
+
+	ap->m1_handler = m1_handler;
+
+	return 0;
+}
+
+
+int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
+		 size_t pin_len)
+{
+	struct wps_er_ap *ap;
+
+	if (er == NULL)
+		return -1;
+
+	ap = wps_er_ap_get(er, NULL, uuid);
+	if (ap == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for learn "
+			   "request");
+		return -1;
+	}
+	if (ap->wps) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending operation ongoing "
+			   "with the AP - cannot start learn");
+		return -1;
+	}
+
+	if (wps_er_send_get_device_info(ap, wps_er_ap_learn_m1) < 0)
+		return -1;
 
 	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */
 	wps_registrar_add_pin(er->wps->registrar, uuid, pin, pin_len, 0);

@@ -140,14 +140,30 @@ void Peers::context_menu(const QPoint &pos)
 		menu->addAction(Peers::ItemType(type))->setEnabled(false);
 		menu->addSeparator();
 
-		if (type == PEER_TYPE_ASSOCIATED_STATION ||
-		    type == PEER_TYPE_AP_WPS ||
-		    type == PEER_TYPE_WPS_PIN_NEEDED ||
-		    type == PEER_TYPE_WPS_ER_ENROLLEE) {
-			/* TODO: only for peers that are requesting WPS PIN
-			 * method */
+		int config_methods = -1;
+		QVariant var = ctx_item->data(peer_role_config_methods);
+		if (var.isValid())
+			config_methods = var.toInt();
+
+		if ((type == PEER_TYPE_ASSOCIATED_STATION ||
+		     type == PEER_TYPE_AP_WPS ||
+		     type == PEER_TYPE_WPS_PIN_NEEDED ||
+		     type == PEER_TYPE_WPS_ER_ENROLLEE) &&
+		    (config_methods == -1 || (config_methods & 0x010c))) {
 			menu->addAction(tr("Enter WPS PIN"), this,
 					SLOT(enter_pin()));
+		}
+
+		if (type == PEER_TYPE_AP_WPS) {
+			menu->addAction(tr("Connect (PBC)"), this,
+					SLOT(connect_pbc()));
+		}
+
+		if ((type == PEER_TYPE_ASSOCIATED_STATION ||
+		     type == PEER_TYPE_WPS_ER_ENROLLEE) &&
+		    config_methods >= 0 && (config_methods & 0x0080)) {
+			menu->addAction(tr("Enroll (PBC)"), this,
+					SLOT(connect_pbc()));
 		}
 
 		menu->addAction(tr("Properties"), this, SLOT(properties()));
@@ -753,4 +769,31 @@ void Peers::properties()
 		msg.setDetailedText(var.toString());
 
 	msg.exec();
+}
+
+
+void Peers::connect_pbc()
+{
+	if (ctx_item == NULL)
+		return;
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+
+	int peer_type = ctx_item->data(peer_role_type).toInt();
+	if (peer_type == PEER_TYPE_WPS_ER_ENROLLEE) {
+		snprintf(cmd, sizeof(cmd), "WPS_ER_PBC %s",
+			 ctx_item->data(peer_role_uuid).toString().toAscii().
+			 constData());
+	} else {
+		snprintf(cmd, sizeof(cmd), "WPS_PBC");
+	}
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to start WPS PBC.");
+		msg.exec();
+	}
 }

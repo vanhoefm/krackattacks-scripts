@@ -1,6 +1,6 @@
 ChangeLog for wpa_supplicant
 
-????-??-?? - v0.7.0
+2009-11-21 - v0.7.0
 	* increased wpa_cli ping interval to 5 seconds and made this
 	  configurable with a new command line options (-G<seconds>)
 	* fixed scan buffer processing with WEXT to handle up to 65535

@@ -28,7 +28,9 @@ enum {
 	peer_role_uuid,
 	peer_role_details,
 	peer_role_pri_dev_type,
-	peer_role_ssid
+	peer_role_ssid,
+	peer_role_config_methods,
+	peer_role_dev_passwd_id
 };
 
 /*
@@ -560,6 +562,20 @@ void Peers::event_notify(WpaMsg msg)
 		QString uuid = items[1];
 		QString addr = items[2];
 		QString pri_dev_type = items[6].mid(13);
+		int config_methods = -1;
+		int dev_passwd_id = -1;
+
+		for (int i = 3; i < items.size(); i++) {
+			int pos = items[i].indexOf('=') + 1;
+			if (pos < 1)
+				continue;
+			QString val = items[i].mid(pos);
+			if (items[i].startsWith("config_methods=")) {
+				config_methods = val.toInt(0, 0);
+			} else if (items[i].startsWith("dev_passwd_id=")) {
+				dev_passwd_id = val.toInt();
+			}
+		}
 
 		int pos = text.indexOf('|');
 		if (pos < 0)
@@ -584,6 +600,12 @@ void Peers::event_notify(WpaMsg msg)
 			item->setData(items.join(QString("\n")),
 				      peer_role_details);
 			item->setData(pri_dev_type, peer_role_pri_dev_type);
+			if (config_methods >= 0)
+				item->setData(config_methods,
+					      peer_role_config_methods);
+			if (dev_passwd_id >= 0)
+				item->setData(dev_passwd_id,
+					      peer_role_dev_passwd_id);
 			model.appendRow(item);
 		}
 
@@ -672,6 +694,57 @@ void Peers::properties()
 	var = ctx_item->data(peer_role_ssid);
 	if (var.isValid())
 		info += tr("SSID: ") + var.toString() + QString("\n");
+
+	var = ctx_item->data(peer_role_config_methods);
+	if (var.isValid()) {
+		int methods = var.toInt();
+		info += tr("Configuration Methods: ");
+		if (methods & 0x0001)
+			info += tr("[USBA]");
+		if (methods & 0x0002)
+			info += tr("[Ethernet]");
+		if (methods & 0x0004)
+			info += tr("[Label]");
+		if (methods & 0x0008)
+			info += tr("[Display]");
+		if (methods & 0x0010)
+			info += tr("[Ext. NFC Token]");
+		if (methods & 0x0020)
+			info += tr("[Int. NFC Token]");
+		if (methods & 0x0040)
+			info += tr("[NFC Interface]");
+		if (methods & 0x0080)
+			info += tr("[Push Button]");
+		if (methods & 0x0100)
+			info += tr("[Keypad]");
+		info += "\n";
+	}
+
+	var = ctx_item->data(peer_role_dev_passwd_id);
+	if (var.isValid()) {
+		info += tr("Device Password ID: ") + var.toString();
+		switch (var.toInt()) {
+		case 0:
+			info += tr(" (Default PIN)");
+			break;
+		case 1:
+			info += tr(" (User-specified PIN)");
+			break;
+		case 2:
+			info += tr(" (Machine-specified PIN)");
+			break;
+		case 3:
+			info += tr(" (Rekey)");
+			break;
+		case 4:
+			info += tr(" (Push Button)");
+			break;
+		case 5:
+			info += tr(" (Registrar-specified)");
+			break;
+		}
+		info += "\n";
+	}
 
 	msg.setInformativeText(info);
 

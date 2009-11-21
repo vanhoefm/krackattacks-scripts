@@ -25,6 +25,39 @@ ChangeLog for wpa_supplicant
 	* fixed SHA-256 based key derivation function to match with the
 	  standard when using CCMP (for IEEE 802.11r and IEEE 802.11w)
 	  (note: this breaks interoperability with previous version) [Bug 307]
+	* use shared driver wrapper files with hostapd
+	* added AP mode functionality (CONFIG_AP=y) with mode=2 in the network
+	  block; this can be used for open and WPA2-Personal networks
+	  (optionally, with WPS); this links in parts of hostapd functionality
+	  into wpa_supplicant
+	* wpa_gui-qt4: added new Peers dialog to show information about peers
+	  (other devices, including APs and stations, etc. in the neighborhood)
+	* added support for WPS External Registrar functionality (configure APs
+	  and enroll new devices); can be used with wpa_gui-qt4 Peers dialog
+	  and wpa_cli commands wps_er_start, wps_er_stop, wps_er_pin,
+	  wps_er_pbc, wps_er_learn
+	  (this can also be used with a new 'none' driver wrapper if no
+	  wireless device or IEEE 802.1X on wired is needed)
+	* driver_nl80211: multiple updates to provide support for new Linux
+	  nl80211/mac80211 functionality
+	* updated management frame protection to use IEEE Std 802.11w-2009
+	* fixed number of small WPS issues and added workarounds to
+	  interoperate with common deployed broken implementations
+	* added support for NFC out-of-band mechanism with WPS
+	* driver_ndis: fixed wired IEEE 802.1X authentication with PAE group
+	  address frames
+	* added preliminary support for IEEE 802.11r RIC processing
+	* added support for specifying subset of enabled frequencies to scan
+	  (scan_freq option in the network configuration block); this can speed
+	  up scanning process considerably if it is known that only a small
+	  subset of channels is actually used in the network (this is currently
+	  supported only with -Dnl80211)
+	* added a workaround for race condition between receiving the
+	  association event and the following EAPOL-Key
+	* added background scan and roaming infrastructure to allow
+	  network-specific optimizations to be used to improve roaming within
+	  an ESS (same SSID)
+	* added new DBus interface (fi.w1.wpa_supplicant1)
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

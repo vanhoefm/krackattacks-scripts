@@ -18,6 +18,21 @@ ChangeLog for hostapd
 	* fixed SHA-256 based key derivation function to match with the
 	  standard when using CCMP (for IEEE 802.11r and IEEE 802.11w)
 	  (note: this breaks interoperability with previous version) [Bug 307]
+	* added number of code size optimizations to remove unnecessary
+	  functionality from the program binary based on build configuration
+	  (part of this automatic; part configurable with CONFIG_NO_* build
+	  options)
+	* use shared driver wrapper files with wpa_supplicant
+	* driver_nl80211: multiple updates to provide support for new Linux
+	  nl80211/mac80211 functionality
+	* updated management frame protection to use IEEE Std 802.11w-2009
+	* fixed number of small WPS issues and added workarounds to
+	  interoperate with common deployed broken implementations
+	* added some IEEE 802.11n co-existance rules to disable 40 MHz channels
+	  or modify primary/secondary channels if needed based on neighboring
+	  networks
+	* added support for NFC out-of-band mechanism with WPS
+	* added preliminary support for IEEE 802.11r RIC processing
 
 2009-01-06 - v0.6.7
 	* added support for Wi-Fi Protected Setup (WPS)

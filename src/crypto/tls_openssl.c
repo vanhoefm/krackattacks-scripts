@@ -108,71 +108,9 @@ static void tls_show_errors(int level, const char *func, const char *txt)
  * MinGW does not yet include all the needed definitions for CryptoAPI, so
  * define here whatever extra is needed.
  */
-#define CALG_SSL3_SHAMD5 (ALG_CLASS_HASH | ALG_TYPE_ANY | ALG_SID_SSL3SHAMD5)
 #define CERT_SYSTEM_STORE_CURRENT_USER (1 << 16)
 #define CERT_STORE_READONLY_FLAG 0x00008000
 #define CERT_STORE_OPEN_EXISTING_FLAG 0x00004000
-#define CRYPT_ACQUIRE_COMPARE_KEY_FLAG 0x00000004
-
-static BOOL WINAPI
-(*CryptAcquireCertificatePrivateKey)(PCCERT_CONTEXT pCert, DWORD dwFlags,
-				     void *pvReserved, HCRYPTPROV *phCryptProv,
-				     DWORD *pdwKeySpec, BOOL *pfCallerFreeProv)
-= NULL; /* to be loaded from crypt32.dll */
-
-#ifdef CONFIG_MINGW32_LOAD_CERTENUM
-static PCCERT_CONTEXT WINAPI
-(*CertEnumCertificatesInStore)(HCERTSTORE hCertStore,
-			       PCCERT_CONTEXT pPrevCertContext)
-= NULL; /* to be loaded from crypt32.dll */
-#endif /* CONFIG_MINGW32_LOAD_CERTENUM */
-
-static int mingw_load_crypto_func(void)
-{
-	HINSTANCE dll;
-
-	/* MinGW does not yet have full CryptoAPI support, so load the needed
-	 * function here. */
-
-	if (CryptAcquireCertificatePrivateKey)
-		return 0;
-
-	dll = LoadLibrary("crypt32");
-	if (dll == NULL) {
-		wpa_printf(MSG_DEBUG, "CryptoAPI: Could not load crypt32 "
-			   "library");
-		return -1;
-	}
-
-	CryptAcquireCertificatePrivateKey = GetProcAddress(
-		dll, "CryptAcquireCertificatePrivateKey");
-	if (CryptAcquireCertificatePrivateKey == NULL) {
-		wpa_printf(MSG_DEBUG, "CryptoAPI: Could not get "
-			   "CryptAcquireCertificatePrivateKey() address from "
-			   "crypt32 library");
-		return -1;
-	}
-
-#ifdef CONFIG_MINGW32_LOAD_CERTENUM
-	CertEnumCertificatesInStore = (void *) GetProcAddress(
-		dll, "CertEnumCertificatesInStore");
-	if (CertEnumCertificatesInStore == NULL) {
-		wpa_printf(MSG_DEBUG, "CryptoAPI: Could not get "
-			   "CertEnumCertificatesInStore() address from "
-			   "crypt32 library");
-		return -1;
-	}
-#endif /* CONFIG_MINGW32_LOAD_CERTENUM */
-
-	return 0;
-}
-
-#else /* __MINGW32_VERSION */
-
-static int mingw_load_crypto_func(void)
-{
-	return 0;
-}
 
 #endif /* __MINGW32_VERSION */
 
@@ -403,9 +341,6 @@ static int tls_cryptoapi_cert(SSL *ssl, const char *name)
 		goto err;
 	}
 
-	if (mingw_load_crypto_func())
-		goto err;
-
 	if (!CryptAcquireCertificatePrivateKey(priv->cert,
 					       CRYPT_ACQUIRE_COMPARE_KEY_FLAG,
 					       NULL, &priv->crypt_prov,
@@ -475,9 +410,6 @@ static int tls_cryptoapi_ca_cert(SSL_CTX *ssl_ctx, SSL *ssl, const char *name)
 #ifdef UNICODE
 	WCHAR *wstore;
 #endif /* UNICODE */
-
-	if (mingw_load_crypto_func())
-		return -1;
 
 	if (name == NULL || strncmp(name, "cert_store://", 13) != 0)
 		return -1;

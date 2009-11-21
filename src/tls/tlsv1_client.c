@@ -627,7 +627,7 @@ int tlsv1_client_set_cipher_list(struct tlsv1_client *conn, u8 *ciphers)
 		 * list and seem to require that the last entry in the list is
 		 * the one that it wants to use. However, TLS specification
 		 * requires the list to be in the client preference order. As a
-		 * workaround, ass anon-DH AES-128-SHA1 again at the end of the
+		 * workaround, add anon-DH AES-128-SHA1 again at the end of the
 		 * list to allow the Cisco code to find it.
 		 */
 		suites[count++] = TLS_DH_anon_WITH_AES_128_CBC_SHA;

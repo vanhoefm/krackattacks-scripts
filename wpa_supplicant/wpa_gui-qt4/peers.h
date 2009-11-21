@@ -37,6 +37,7 @@ public slots:
 	virtual void context_menu(const QPoint &pos);
 	virtual void enter_pin();
 	virtual void ctx_refresh();
+	virtual void properties();
 
 protected slots:
 	virtual void languageChange();
@@ -52,6 +53,7 @@ private:
 	QStandardItem * find_uuid(QString uuid);
 	void done(int r);
 	void remove_enrollee_uuid(QString uuid);
+	QString ItemType(int type);
 
 	WpaGui *wpagui;
 	QStandardItemModel model;

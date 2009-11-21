@@ -22,14 +22,18 @@
 #include "peers.h"
 
 
-static const int peer_role_address = Qt::UserRole + 1;
-static const int peer_role_type = Qt::UserRole + 2;
-static const int peer_role_uuid = Qt::UserRole + 3;
+enum {
+	peer_role_address = Qt::UserRole + 1,
+	peer_role_type,
+	peer_role_uuid,
+	peer_role_details,
+	peer_role_pri_dev_type,
+	peer_role_ssid
+};
 
 /*
  * TODO:
  * - add current AP info (e.g., from WPS) in station mode
- * - different icons to indicate peer type
  */
 
 enum peer_type {
@@ -91,6 +95,36 @@ void Peers::languageChange()
 }
 
 
+QString Peers::ItemType(int type)
+{
+	QString title;
+	switch (type) {
+	case PEER_TYPE_ASSOCIATED_STATION:
+		title = tr("Associated station");
+		break;
+	case PEER_TYPE_AP:
+		title = tr("AP");
+		break;
+	case PEER_TYPE_AP_WPS:
+		title = tr("WPS AP");
+		break;
+	case PEER_TYPE_WPS_PIN_NEEDED:
+		title = tr("WPS PIN needed");
+		break;
+	case PEER_TYPE_WPS_ER_AP:
+		title = tr("ER: WPS AP");
+		break;
+	case PEER_TYPE_WPS_ER_AP_UNCONFIGURED:
+		title = tr("ER: WPS AP (Unconfigured)");
+		break;
+	case PEER_TYPE_WPS_ER_ENROLLEE:
+		title = tr("ER: WPS Enrollee");
+		break;
+	}
+	return title;
+}
+
+
 void Peers::context_menu(const QPoint &pos)
 {
 	QMenu *menu = new QMenu;
@@ -101,31 +135,7 @@ void Peers::context_menu(const QPoint &pos)
 	if (idx.isValid()) {
 		ctx_item = model.itemFromIndex(idx);
 		int type = ctx_item->data(peer_role_type).toInt();
-		QString title;
-		switch (type) {
-		case PEER_TYPE_ASSOCIATED_STATION:
-			title = tr("Associated station");
-			break;
-		case PEER_TYPE_AP:
-			title = tr("AP");
-			break;
-		case PEER_TYPE_AP_WPS:
-			title = tr("WPS AP");
-			break;
-		case PEER_TYPE_WPS_PIN_NEEDED:
-			title = tr("WPS PIN needed");
-			break;
-		case PEER_TYPE_WPS_ER_AP:
-			title = tr("ER: WPS AP");
-			break;
-		case PEER_TYPE_WPS_ER_AP_UNCONFIGURED:
-			title = tr("ER: WPS AP (Unconfigured)");
-			break;
-		case PEER_TYPE_WPS_ER_ENROLLEE:
-			title = tr("ER: WPS Enrollee");
-			break;
-		}
-		menu->addAction(title)->setEnabled(false);
+		menu->addAction(Peers::ItemType(type))->setEnabled(false);
 		menu->addSeparator();
 
 		if (type == PEER_TYPE_ASSOCIATED_STATION ||
@@ -134,9 +144,11 @@ void Peers::context_menu(const QPoint &pos)
 		    type == PEER_TYPE_WPS_ER_ENROLLEE) {
 			/* TODO: only for peers that are requesting WPS PIN
 			 * method */
-			menu->addAction(QString("Enter WPS PIN"), this,
+			menu->addAction(tr("Enter WPS PIN"), this,
 					SLOT(enter_pin()));
 		}
+
+		menu->addAction(tr("Properties"), this, SLOT(properties()));
 	} else {
 		ctx_item = NULL;
 		menu->addAction(QString("Refresh"), this, SLOT(ctx_refresh()));
@@ -216,7 +228,8 @@ void Peers::add_station(QString info)
 		item->setData(lines[0], peer_role_address);
 		item->setData(PEER_TYPE_ASSOCIATED_STATION,
 			      peer_role_type);
-		item->setToolTip(info);
+		item->setData(info, peer_role_details);
+		item->setToolTip(ItemType(PEER_TYPE_ASSOCIATED_STATION));
 		model.appendRow(item);
 	}
 }
@@ -300,7 +313,7 @@ void Peers::add_scan_results()
 		if (bss.isEmpty() || bss.startsWith("FAIL"))
 			break;
 
-		QString ssid, bssid, flags, wps_name;
+		QString ssid, bssid, flags, wps_name, pri_dev_type;
 
 		QStringList lines = bss.split(QRegExp("\\n"));
 		for (QStringList::Iterator it = lines.begin();
@@ -317,6 +330,8 @@ void Peers::add_scan_results()
 				ssid = (*it).mid(pos);
 			else if ((*it).startsWith("wps_device_name="))
 				wps_name = (*it).mid(pos);
+			else if ((*it).startsWith("wps_primary_device_type="))
+				pri_dev_type = (*it).mid(pos);
 		}
 
 		QString name = wps_name;
@@ -326,11 +341,12 @@ void Peers::add_scan_results()
 		QStandardItem *item = new QStandardItem(*ap_icon, name);
 		if (item) {
 			item->setData(bssid, peer_role_address);
+			int type;
 			if (flags.contains("[WPS"))
-				item->setData(PEER_TYPE_AP_WPS,
-					      peer_role_type);
+				type = PEER_TYPE_AP_WPS;
 			else
-				item->setData(PEER_TYPE_AP, peer_role_type);
+				type = PEER_TYPE_AP;
+			item->setData(type, peer_role_type);
 
 			for (int i = 0; i < lines.size(); i++) {
 				if (lines[i].length() > 60) {
@@ -339,7 +355,13 @@ void Peers::add_scan_results()
 					lines[i] += "..";
 				}
 			}
-			item->setToolTip(lines.join("\n"));
+			item->setToolTip(ItemType(type));
+			item->setData(lines.join("\n"), peer_role_details);
+			if (!pri_dev_type.isEmpty())
+				item->setData(pri_dev_type,
+					      peer_role_pri_dev_type);
+			if (!ssid.isEmpty())
+				item->setData(ssid, peer_role_ssid);
 			model.appendRow(item);
 		}
 	}
@@ -422,7 +444,9 @@ void Peers::event_notify(WpaMsg msg)
 			item->setData(addr, peer_role_address);
 			item->setData(PEER_TYPE_WPS_PIN_NEEDED,
 				      peer_role_type);
-			item->setToolTip(items.join(QString("\n")));
+			item->setToolTip(ItemType(PEER_TYPE_WPS_PIN_NEEDED));
+			item->setData(items.join("\n"), peer_role_details);
+			item->setData(items[5], peer_role_pri_dev_type);
 			model.appendRow(item);
 		}
 		return;
@@ -470,7 +494,7 @@ void Peers::event_notify(WpaMsg msg)
 			return;
 		QString uuid = items[1];
 		QString addr = items[2];
-		QString pri_dev_type = items[3];
+		QString pri_dev_type = items[3].mid(13);
 		int wps_state = items[4].mid(10).toInt();
 
 		int pos = text.indexOf('|');
@@ -488,12 +512,13 @@ void Peers::event_notify(WpaMsg msg)
 		if (item) {
 			item->setData(uuid, peer_role_uuid);
 			item->setData(addr, peer_role_address);
-			item->setData(wps_state == 2 ? PEER_TYPE_WPS_ER_AP:
-				      PEER_TYPE_WPS_ER_AP_UNCONFIGURED,
-				      peer_role_type);
-			item->setToolTip(addr + QString("\n") +
-					 pri_dev_type + QString("\n") +
-					 items.join(QString("\n")));
+			int type = wps_state == 2 ? PEER_TYPE_WPS_ER_AP:
+				PEER_TYPE_WPS_ER_AP_UNCONFIGURED;
+			item->setData(type, peer_role_type);
+			item->setToolTip(ItemType(type));
+			item->setData(pri_dev_type, peer_role_pri_dev_type);
+			item->setData(items.join(QString("\n")),
+				      peer_role_details);
 			model.appendRow(item);
 		}
 
@@ -534,6 +559,7 @@ void Peers::event_notify(WpaMsg msg)
 			return;
 		QString uuid = items[1];
 		QString addr = items[2];
+		QString pri_dev_type = items[6].mid(13);
 
 		int pos = text.indexOf('|');
 		if (pos < 0)
@@ -554,7 +580,10 @@ void Peers::event_notify(WpaMsg msg)
 			item->setData(addr, peer_role_address);
 			item->setData(PEER_TYPE_WPS_ER_ENROLLEE,
 				      peer_role_type);
-			item->setToolTip(items.join(QString("\n")));
+			item->setToolTip(ItemType(PEER_TYPE_WPS_ER_ENROLLEE));
+			item->setData(items.join(QString("\n")),
+				      peer_role_details);
+			item->setData(pri_dev_type, peer_role_pri_dev_type);
 			model.appendRow(item);
 		}
 
@@ -605,4 +634,50 @@ void Peers::remove_enrollee_uuid(QString uuid)
 		    PEER_TYPE_WPS_ER_ENROLLEE)
 			model.removeRow(lst[i].row());
 	}
+}
+
+
+void Peers::properties()
+{
+	if (ctx_item == NULL)
+		return;
+
+	QMessageBox msg(this);
+	msg.setStandardButtons(QMessageBox::Ok);
+	msg.setDefaultButton(QMessageBox::Ok);
+	msg.setEscapeButton(QMessageBox::Ok);
+	msg.setWindowTitle(tr("Peer Properties"));
+
+	int type = ctx_item->data(peer_role_type).toInt();
+	QString title = Peers::ItemType(type);
+
+	msg.setText(title + QString("\n") + tr("Name: ") + ctx_item->text());
+
+	QVariant var;
+	QString info;
+
+	var = ctx_item->data(peer_role_address);
+	if (var.isValid())
+		info += tr("Address: ") + var.toString() + QString("\n");
+
+	var = ctx_item->data(peer_role_uuid);
+	if (var.isValid())
+		info += tr("UUID: ") + var.toString() + QString("\n");
+
+	var = ctx_item->data(peer_role_pri_dev_type);
+	if (var.isValid())
+		info += tr("Primary Device Type: ") + var.toString() +
+			QString("\n");
+
+	var = ctx_item->data(peer_role_ssid);
+	if (var.isValid())
+		info += tr("SSID: ") + var.toString() + QString("\n");
+
+	msg.setInformativeText(info);
+
+	var = ctx_item->data(peer_role_details);
+	if (var.isValid())
+		msg.setDetailedText(var.toString());
+
+	msg.exec();
 }

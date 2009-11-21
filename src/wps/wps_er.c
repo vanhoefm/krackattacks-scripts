@@ -293,12 +293,13 @@ static void wps_er_subscribe(struct wps_er_ap *ap)
 	wpabuf_printf(req,
 		      "SUBSCRIBE %s HTTP/1.1\r\n"
 		      "HOST: %s:%d\r\n"
-		      "CALLBACK: <http://%s:%d/event/%d>\r\n"
+		      "CALLBACK: <http://%s:%d/event/%u/%u>\r\n"
 		      "NT: upnp:event\r\n"
 		      "TIMEOUT: Second-%d\r\n"
 		      "\r\n",
 		      path, inet_ntoa(dst.sin_addr), ntohs(dst.sin_port),
-		      ap->er->ip_addr_text, ap->er->http_port, ap->id, 1800);
+		      ap->er->ip_addr_text, ap->er->http_port,
+		      ap->er->event_id, ap->id, 1800);
 	os_free(url);
 	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Subscription request",
 			  wpabuf_head(req), wpabuf_len(req));
@@ -981,7 +982,19 @@ static void wps_er_http_notify(struct wps_er *er, struct http_request *req)
 	char *uri = http_request_get_uri(req);
 
 	if (os_strncmp(uri, "/event/", 7) == 0) {
-		wps_er_http_event(er, req, atoi(uri + 7));
+		unsigned int event_id;
+		char *pos;
+		event_id = atoi(uri + 7);
+		if (event_id != er->event_id) {
+			wpa_printf(MSG_DEBUG, "WPS ER: HTTP event for an "
+				   "unknown event id %u", event_id);
+			return;
+		}
+		pos = os_strchr(uri + 7, '/');
+		if (pos == NULL)
+			return;
+		pos++;
+		wps_er_http_event(er, req, atoi(pos));
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS ER: Unknown HTTP NOTIFY for '%s'",
 			   uri);
@@ -1040,6 +1053,7 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 
 	os_strlcpy(er->ifname, ifname, sizeof(er->ifname));
 	er->wps = wps;
+	os_get_random((unsigned char *) &er->event_id, sizeof(er->event_id));
 
 	if (get_netif_info(ifname,
 			   &er->ip_addr, &er->ip_addr_text,

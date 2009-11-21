@@ -68,6 +68,7 @@ struct wps_er {
 	struct http_server *http_srv;
 	int http_port;
 	unsigned int next_ap_id;
+	unsigned int event_id;
 };
 
 

@@ -268,11 +268,30 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 }
 
 
+static void wps_er_ap_unlink(struct wps_er *er, struct wps_er_ap *ap)
+{
+	struct wps_er_ap *prev, *tmp;
+	tmp = er->ap;
+	prev = NULL;
+	while (tmp) {
+		if (tmp == ap) {
+			if (prev)
+				prev->next = ap->next;
+			else
+				er->ap = ap->next;
+		}
+		prev = tmp;
+		tmp = tmp->next;
+	}
+}
+
+
 static void wps_er_ap_timeout(void *eloop_data, void *user_ctx)
 {
 	struct wps_er *er = eloop_data;
 	struct wps_er_ap *ap = user_ctx;
 	wpa_printf(MSG_DEBUG, "WPS ER: AP advertisement timed out");
+	wps_er_ap_unlink(er, ap);
 	wps_er_ap_free(er, ap);
 }
 

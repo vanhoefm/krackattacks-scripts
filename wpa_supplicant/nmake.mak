@@ -65,7 +65,6 @@ OBJS = \
 	$(OBJDIR)\eloop_win.obj \
 	$(OBJDIR)\sha1.obj \
 	$(OBJDIR)\md5.obj \
-	$(OBJDIR)\rc4.obj \
 	$(OBJDIR)\aes-cbc.obj \
 	$(OBJDIR)\aes-ctr.obj \
 	$(OBJDIR)\aes-eax.obj \
@@ -123,6 +122,7 @@ OBJS = \
 	$(OBJDIR)\ms_funcs.obj \
 	$(OBJDIR)\crypto_openssl.obj \
 	$(OBJDIR)\pcsc_funcs.obj \
+	$(OBJDIR)\notify.obj \
 	$(OBJDIR)\ndis_events.obj
 
 # OBJS = $(OBJS) $(OBJDIR)\eap_fast.obj

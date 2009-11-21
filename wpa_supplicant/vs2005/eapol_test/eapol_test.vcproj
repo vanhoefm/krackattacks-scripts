@@ -355,6 +355,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\notify.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\utils\os_win32.c"
 				>
 			</File>
@@ -380,10 +384,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\radius\radius_client.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\crypto\rc4.c"
 				>
 			</File>
 			<File

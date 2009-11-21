@@ -145,7 +145,7 @@ struct upnp_wps_device_sm {
 /* wps_upnp.c */
 void format_date(struct wpabuf *buf);
 struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
-					 char *callback_urls);
+					 const char *callback_urls);
 struct subscription * subscription_renew(struct upnp_wps_device_sm *sm,
 					 const u8 uuid[UUID_LEN]);
 void subscription_unlink(struct subscription *s);

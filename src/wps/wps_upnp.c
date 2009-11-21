@@ -734,13 +734,13 @@ static int subscription_first_event(struct subscription *s)
 
 
 /**
- * subscription_start - Rremember a UPnP control point to send events to.
+ * subscription_start - Remember a UPnP control point to send events to.
  * @sm: WPS UPnP state machine from upnp_wps_device_init()
- * @callback_urls: malloc' mem given to the subscription
+ * @callback_urls: Callback URLs
  * Returns: %NULL on error, or pointer to new subscription structure.
  */
 struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
-					 char *callback_urls)
+					 const char *callback_urls)
 {
 	struct subscription *s;
 	time_t now = time(NULL);
@@ -780,7 +780,6 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	}
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Subscription %p started with %s",
 		   s, callback_urls);
-	os_free(callback_urls);
 	/* Schedule sending this */
 	event_send_all_later(sm);
 	return s;

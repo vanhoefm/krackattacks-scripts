@@ -239,7 +239,7 @@ void advertisement_state_machine_stop(struct upnp_wps_device_sm *sm,
 	struct sockaddr_in dest;
 
 	eloop_cancel_timeout(advertisement_state_machine_handler, NULL, sm);
-	if (!send_byebye)
+	if (!send_byebye || sm->multicast_sd < 0)
 		return;
 
 	a->type = ADVERTISE_DOWN;

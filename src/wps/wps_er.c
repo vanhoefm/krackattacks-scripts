@@ -195,22 +195,13 @@ static void wps_er_sta_remove_all(struct wps_er_ap *ap)
 
 
 static struct wps_er_ap * wps_er_ap_get(struct wps_er *er,
-					struct in_addr *addr)
+					struct in_addr *addr, const u8 *uuid)
 {
 	struct wps_er_ap *ap;
 	for (ap = er->ap; ap; ap = ap->next) {
-		if (ap->addr.s_addr == addr->s_addr)
-			break;
-	}
-	return ap;
-}
-
-
-static struct wps_er_ap * wps_er_ap_get_uuid(struct wps_er *er, const u8 *uuid)
-{
-	struct wps_er_ap *ap;
-	for (ap = er->ap; ap; ap = ap->next) {
-		if (os_memcmp(uuid, ap->uuid, WPS_UUID_LEN) == 0)
+		if ((addr == NULL || ap->addr.s_addr == addr->s_addr) &&
+		    (uuid == NULL ||
+		     os_memcmp(uuid, ap->uuid, WPS_UUID_LEN) == 0))
 			break;
 	}
 	return ap;
@@ -475,12 +466,13 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 }
 
 
-static void wps_er_ap_add(struct wps_er *er, struct in_addr *addr,
+static void wps_er_ap_add(struct wps_er *er, const u8 *uuid,
+			  struct in_addr *addr,
 			  const char *location, int max_age)
 {
 	struct wps_er_ap *ap;
 
-	ap = wps_er_ap_get(er, addr);
+	ap = wps_er_ap_get(er, addr, uuid);
 	if (ap) {
 		/* Update advertisement timeout */
 		eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
@@ -502,6 +494,7 @@ static void wps_er_ap_add(struct wps_er *er, struct in_addr *addr,
 	er->ap = ap;
 
 	ap->addr.s_addr = addr->s_addr;
+	os_memcpy(ap->uuid, uuid, WPS_UUID_LEN);
 	eloop_register_timeout(max_age, 0, wps_er_ap_timeout, er, ap);
 
 	wpa_printf(MSG_DEBUG, "WPS ER: Added AP entry for %s (%s)",
@@ -557,6 +550,7 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 	int wfa = 0, byebye = 0;
 	int max_age = -1;
 	char *location = NULL;
+	u8 uuid[WPS_UUID_LEN];
 
 	addr_len = sizeof(addr);
 	nread = recvfrom(sd, buf, sizeof(buf) - 1, 0,
@@ -579,6 +573,8 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 		if (os_strncmp(buf, "NOTIFY ", 7) != 0)
 			return; /* only process notifications */
 	}
+
+	os_memset(uuid, 0, sizeof(uuid));
 
 	for (start = buf; start && *start; start = pos) {
 		pos = os_strchr(start, '\n');
@@ -610,6 +606,15 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 				continue;
 			pos2 += 8;
 			max_age = atoi(pos2);
+		} else if (os_strncasecmp(start, "USN:", 4) == 0) {
+			start += 4;
+			pos2 = os_strstr(start, "uuid:");
+			if (pos2) {
+				pos2 += 5;
+				while (*pos2 == ' ')
+					pos2++;
+				uuid_str2bin(pos2, uuid);
+			}
 		}
 	}
 
@@ -631,7 +636,7 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 		   "(packet source: %s  max-age: %d)",
 		   location, inet_ntoa(addr.sin_addr), max_age);
 
-	wps_er_ap_add(er, &addr.sin_addr, location, max_age);
+	wps_er_ap_add(er, uuid, &addr.sin_addr, location, max_age);
 }
 
 
@@ -1639,7 +1644,7 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 	if (er == NULL)
 		return -1;
 
-	ap = wps_er_ap_get_uuid(er, uuid);
+	ap = wps_er_ap_get(er, NULL, uuid);
 	if (ap == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for learn "
 			   "request");

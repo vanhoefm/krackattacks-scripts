@@ -35,8 +35,12 @@ int gnutls_ia_verify_endphase(gnutls_session_t session, char *checksum);
 #include "tls.h"
 
 
+#ifndef TLS_RANDOM_SIZE
 #define TLS_RANDOM_SIZE 32
+#endif
+#ifndef TLS_MASTER_SIZE
 #define TLS_MASTER_SIZE 48
+#endif
 
 
 #if LIBGNUTLS_VERSION_NUMBER < 0x010302

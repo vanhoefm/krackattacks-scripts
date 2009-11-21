@@ -299,6 +299,7 @@ static void wps_er_ap_unlink(struct wps_er *er, struct wps_er_ap *ap)
 				prev->next = ap->next;
 			else
 				er->ap = ap->next;
+			return;
 		}
 		prev = tmp;
 		tmp = tmp->next;

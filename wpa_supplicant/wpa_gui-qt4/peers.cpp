@@ -38,6 +38,7 @@ enum peer_type {
 	PEER_TYPE_AP_WPS,
 	PEER_TYPE_WPS_PIN_NEEDED,
 	PEER_TYPE_WPS_ER_AP,
+	PEER_TYPE_WPS_ER_AP_UNCONFIGURED,
 	PEER_TYPE_WPS_ER_ENROLLEE
 };
 
@@ -116,6 +117,9 @@ void Peers::context_menu(const QPoint &pos)
 			break;
 		case PEER_TYPE_WPS_ER_AP:
 			title = tr("ER: WPS AP");
+			break;
+		case PEER_TYPE_WPS_ER_AP_UNCONFIGURED:
+			title = tr("ER: WPS AP (Unconfigured)");
 			break;
 		case PEER_TYPE_WPS_ER_ENROLLEE:
 			title = tr("ER: WPS Enrollee");
@@ -456,26 +460,40 @@ void Peers::event_notify(WpaMsg msg)
 
 	if (text.startsWith(WPS_EVENT_ER_AP_ADD)) {
 		/*
-		 * WPS-ER-AP-ADD 87654321-9abc-def0-1234-56789abc0002|
-		 * Very friendly name|Company|Long description of the model|
+		 * WPS-ER-AP-ADD 87654321-9abc-def0-1234-56789abc0002
+		 * 02:11:22:33:44:55 pri_dev_type=6-0050F204-1 wps_state=1
+		 * |Very friendly name|Company|Long description of the model|
 		 * WAP|http://w1.fi/|http://w1.fi/hostapd/
 		 */
-		int pos = text.indexOf(' ');
+		QStringList items = text.split(' ');
+		if (items.size() < 5)
+			return;
+		QString uuid = items[1];
+		QString addr = items[2];
+		QString pri_dev_type = items[3];
+		int wps_state = items[4].mid(10).toInt();
+
+		int pos = text.indexOf('|');
 		if (pos < 0)
 			return;
-		QStringList items = text.mid(pos + 1).split('|');
-		if (items.size() < 2)
+		items = text.mid(pos + 1).split('|');
+		if (items.size() < 1)
 			return;
 
-		QStandardItem *item = find_uuid(items[0]);
+		QStandardItem *item = find_uuid(uuid);
 		if (item)
 			return;
 
-		item = new QStandardItem(*ap_icon, items[1]);
+		item = new QStandardItem(*ap_icon, items[0]);
 		if (item) {
-			item->setData(items[0], peer_role_uuid);
-			item->setData(PEER_TYPE_WPS_ER_AP, peer_role_type);
-			item->setToolTip(items.join(QString("\n")));
+			item->setData(uuid, peer_role_uuid);
+			item->setData(addr, peer_role_address);
+			item->setData(wps_state == 2 ? PEER_TYPE_WPS_ER_AP:
+				      PEER_TYPE_WPS_ER_AP_UNCONFIGURED,
+				      peer_role_type);
+			item->setToolTip(addr + QString("\n") +
+					 pri_dev_type + QString("\n") +
+					 items.join(QString("\n")));
 			model.appendRow(item);
 		}
 
@@ -494,8 +512,11 @@ void Peers::event_notify(WpaMsg msg)
 						  peer_role_uuid, items[1]);
 		for (int i = 0; i < lst.size(); i++) {
 			QStandardItem *item = model.itemFromIndex(lst[i]);
-			if (item && item->data(peer_role_type).toInt() ==
-			    PEER_TYPE_WPS_ER_AP)
+			if (item &&
+			    (item->data(peer_role_type).toInt() ==
+			     PEER_TYPE_WPS_ER_AP ||
+			     item->data(peer_role_type).toInt() ==
+			     PEER_TYPE_WPS_ER_AP_UNCONFIGURED))
 				model.removeRow(lst[i].row());
 		}
 		return;

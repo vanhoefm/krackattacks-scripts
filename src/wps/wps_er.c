@@ -68,6 +68,7 @@ struct wps_er_ap {
 	u8 uuid[WPS_UUID_LEN];
 	u8 pri_dev_type[8];
 	u8 wps_state;
+	u8 mac_addr[ETH_ALEN];
 	char *friendly_name;
 	char *manufacturer;
 	char *manufacturer_url;
@@ -246,6 +247,9 @@ static void wps_er_ap_event(struct wps_context *wps, struct wps_er_ap *ap,
 	evap->model_url = ap->model_url;
 	evap->serial_number = ap->serial_number;
 	evap->upc = ap->upc;
+	evap->pri_dev_type = ap->pri_dev_type;
+	evap->wps_state = ap->wps_state;
+	evap->mac_addr = ap->mac_addr;
 	wps->event_cb(wps->cb_ctx, event, &data);
 }
 
@@ -396,6 +400,8 @@ static void wps_er_ap_get_m1(struct wps_er_ap *ap, struct wpabuf *m1)
 		os_memcpy(ap->pri_dev_type, attr.primary_dev_type, 8);
 	if (attr.wps_state)
 		ap->wps_state = *attr.wps_state;
+	if (attr.mac_addr)
+		os_memcpy(ap->mac_addr, attr.mac_addr, ETH_ALEN);
 
 	wps_er_subscribe(ap);
 }

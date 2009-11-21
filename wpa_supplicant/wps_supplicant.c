@@ -414,9 +414,20 @@ static void wpa_supplicant_wps_event_er_ap_add(struct wpa_supplicant *wpa_s,
 					       struct wps_event_er_ap *ap)
 {
 	char uuid_str[100];
+	char dev_type[20];
+
 	uuid_bin2str(ap->uuid, uuid_str, sizeof(uuid_str));
-	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_AP_ADD "%s|%s|%s|%s|%s|%s|%s",
-		uuid_str,
+	if (ap->pri_dev_type)
+		os_snprintf(dev_type, sizeof(dev_type), "%u-%08X-%u",
+			    WPA_GET_BE16(ap->pri_dev_type),
+			    WPA_GET_BE32(ap->pri_dev_type + 2),
+			    WPA_GET_BE16(ap->pri_dev_type + 6));
+	else
+		dev_type[0] = '\0';
+
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_AP_ADD "%s " MACSTR
+		" pri_dev_type=%s wps_state=%d |%s|%s|%s|%s|%s|%s|",
+		uuid_str, MAC2STR(ap->mac_addr), dev_type, ap->wps_state,
 		ap->friendly_name ? ap->friendly_name : "",
 		ap->manufacturer ? ap->manufacturer : "",
 		ap->model_description ? ap->model_description : "",

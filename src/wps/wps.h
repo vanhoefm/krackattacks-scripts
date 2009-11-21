@@ -413,6 +413,7 @@ union wps_event_data {
 
 	struct wps_event_er_ap {
 		const u8 *uuid;
+		const u8 *mac_addr;
 		const char *friendly_name;
 		const char *manufacturer;
 		const char *manufacturer_url;
@@ -422,6 +423,8 @@ union wps_event_data {
 		const char *model_url;
 		const char *serial_number;
 		const char *upc;
+		const u8 *pri_dev_type;
+		u8 wps_state;
 	} ap;
 
 	struct wps_event_er_enrollee {

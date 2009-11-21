@@ -25,89 +25,11 @@
 #include "wps_i.h"
 #include "wps_upnp.h"
 #include "wps_upnp_i.h"
+#include "wps_er.h"
 
-
-/* TODO:
- * send notification of new AP device with wpa_msg
- * re-send notifications with wpa_msg if ER re-started (to update wpa_gui-qt4)
- * (also re-send SSDP M-SEARCH in this case to find new APs)
- * parse UPnP event messages
- */
 
 static void wps_er_ap_timeout(void *eloop_data, void *user_ctx);
 static void wps_er_sta_timeout(void *eloop_data, void *user_ctx);
-
-
-struct wps_er_sta {
-	struct wps_er_sta *next;
-	struct wps_er_ap *ap;
-	u8 addr[ETH_ALEN];
-	u16 config_methods;
-	u8 uuid[WPS_UUID_LEN];
-	u8 pri_dev_type[8];
-	u16 dev_passwd_id;
-	int m1_received;
-	char *manufacturer;
-	char *model_name;
-	char *model_number;
-	char *serial_number;
-	char *dev_name;
-	struct wps_data *wps;
-	struct http_client *http;
-};
-
-struct wps_er_ap {
-	struct wps_er_ap *next;
-	struct wps_er *er;
-	struct wps_er_sta *sta; /* list of STAs/Enrollees using this AP */
-	struct in_addr addr;
-	char *location;
-	struct http_client *http;
-	struct wps_data *wps;
-
-	u8 uuid[WPS_UUID_LEN];
-	u8 pri_dev_type[8];
-	u8 wps_state;
-	u8 mac_addr[ETH_ALEN];
-	char *friendly_name;
-	char *manufacturer;
-	char *manufacturer_url;
-	char *model_description;
-	char *model_name;
-	char *model_number;
-	char *model_url;
-	char *serial_number;
-	char *udn;
-	char *upc;
-
-	char *scpd_url;
-	char *control_url;
-	char *event_sub_url;
-
-	int subscribed;
-	unsigned int id;
-
-	struct wps_credential *ap_settings;
-
-	void (*m1_handler)(struct wps_er_ap *ap, struct wpabuf *m1);
-};
-
-struct wps_er {
-	struct wps_context *wps;
-	char ifname[17];
-	char *mac_addr_text; /* mac addr of network i.f. we use */
-	u8 mac_addr[ETH_ALEN]; /* mac addr of network i.f. we use */
-	char *ip_addr_text; /* IP address of network i.f. we use */
-	unsigned ip_addr; /* IP address of network i.f. we use (host order) */
-	int multicast_sd;
-	int ssdp_sd;
-	struct wps_er_ap *ap;
-	struct http_server *http_srv;
-	int http_port;
-	unsigned int next_ap_id;
-};
-
-
 static void wps_er_ap_process(struct wps_er_ap *ap, struct wpabuf *msg);
 static int wps_er_send_get_device_info(struct wps_er_ap *ap,
 				       void (*m1_handler)(struct wps_er_ap *ap,
@@ -502,9 +424,8 @@ static void wps_er_http_dev_desc_cb(void *ctx, struct http_client *c,
 }
 
 
-static void wps_er_ap_add(struct wps_er *er, const u8 *uuid,
-			  struct in_addr *addr,
-			  const char *location, int max_age)
+void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
+		   const char *location, int max_age)
 {
 	struct wps_er_ap *ap;
 
@@ -542,7 +463,7 @@ static void wps_er_ap_add(struct wps_er *er, const u8 *uuid,
 }
 
 
-static void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr)
+void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr)
 {
 	struct wps_er_ap *prev = NULL, *ap = er->ap;
 
@@ -573,138 +494,6 @@ static void wps_er_ap_remove_all(struct wps_er *er)
 		ap = ap->next;
 		wps_er_ap_free(er, prev);
 	}
-}
-
-
-static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
-{
-	struct wps_er *er = eloop_ctx;
-	struct sockaddr_in addr; /* client address */
-	socklen_t addr_len;
-	int nread;
-	char buf[MULTICAST_MAX_READ], *pos, *pos2, *start;
-	int wfa = 0, byebye = 0;
-	int max_age = -1;
-	char *location = NULL;
-	u8 uuid[WPS_UUID_LEN];
-
-	addr_len = sizeof(addr);
-	nread = recvfrom(sd, buf, sizeof(buf) - 1, 0,
-			 (struct sockaddr *) &addr, &addr_len);
-	if (nread <= 0)
-		return;
-	buf[nread] = '\0';
-
-	wpa_printf(MSG_DEBUG, "WPS ER: Received SSDP from %s",
-		   inet_ntoa(addr.sin_addr));
-	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Received SSDP contents",
-			  (u8 *) buf, nread);
-
-	if (sd == er->multicast_sd) {
-		/* Reply to M-SEARCH */
-		if (os_strncmp(buf, "HTTP/1.1 200 OK", 15) != 0)
-			return; /* unexpected response header */
-	} else {
-		/* Unsolicited message (likely NOTIFY or M-SEARCH) */
-		if (os_strncmp(buf, "NOTIFY ", 7) != 0)
-			return; /* only process notifications */
-	}
-
-	os_memset(uuid, 0, sizeof(uuid));
-
-	for (start = buf; start && *start; start = pos) {
-		pos = os_strchr(start, '\n');
-		if (pos) {
-			if (pos[-1] == '\r')
-				pos[-1] = '\0';
-			*pos++ = '\0';
-		}
-		if (os_strstr(start, "schemas-wifialliance-org:device:"
-			      "WFADevice:1"))
-			wfa = 1;
-		if (os_strstr(start, "schemas-wifialliance-org:service:"
-			      "WFAWLANConfig:1"))
-			wfa = 1;
-		if (os_strncasecmp(start, "LOCATION:", 9) == 0) {
-			start += 9;
-			while (*start == ' ')
-				start++;
-			location = start;
-		} else if (os_strncasecmp(start, "NTS:", 4) == 0) {
-			if (os_strstr(start, "ssdp:byebye"))
-				byebye = 1;
-		} else if (os_strncasecmp(start, "CACHE-CONTROL:", 14) == 0) {
-			start += 9;
-			while (*start == ' ')
-				start++;
-			pos2 = os_strstr(start, "max-age=");
-			if (pos2 == NULL)
-				continue;
-			pos2 += 8;
-			max_age = atoi(pos2);
-		} else if (os_strncasecmp(start, "USN:", 4) == 0) {
-			start += 4;
-			pos2 = os_strstr(start, "uuid:");
-			if (pos2) {
-				pos2 += 5;
-				while (*pos2 == ' ')
-					pos2++;
-				uuid_str2bin(pos2, uuid);
-			}
-		}
-	}
-
-	if (!wfa)
-		return; /* Not WPS advertisement/reply */
-
-	if (byebye) {
-		wps_er_ap_remove(er, &addr.sin_addr);
-		return;
-	}
-
-	if (!location)
-		return; /* Unknown location */
-
-	if (max_age < 1)
-		return; /* No max-age reported */
-
-	wpa_printf(MSG_DEBUG, "WPS ER: AP discovered: %s "
-		   "(packet source: %s  max-age: %d)",
-		   location, inet_ntoa(addr.sin_addr), max_age);
-
-	wps_er_ap_add(er, uuid, &addr.sin_addr, location, max_age);
-}
-
-
-static void wps_er_send_ssdp_msearch(struct wps_er *er)
-{
-	struct wpabuf *msg;
-	struct sockaddr_in dest;
-
-	msg = wpabuf_alloc(500);
-	if (msg == NULL)
-		return;
-
-	wpabuf_put_str(msg,
-		       "M-SEARCH * HTTP/1.1\r\n"
-		       "HOST: 239.255.255.250:1900\r\n"
-		       "MAN: \"ssdp:discover\"\r\n"
-		       "MX: 3\r\n"
-		       "ST: urn:schemas-wifialliance-org:device:WFADevice:1"
-		       "\r\n"
-		       "\r\n");
-
-	os_memset(&dest, 0, sizeof(dest));
-	dest.sin_family = AF_INET;
-	dest.sin_addr.s_addr = inet_addr(UPNP_MULTICAST_ADDRESS);
-	dest.sin_port = htons(UPNP_MULTICAST_PORT);
-
-	if (sendto(er->multicast_sd, wpabuf_head(msg), wpabuf_len(msg), 0,
-		   (struct sockaddr *) &dest, sizeof(dest)) < 0)
-		wpa_printf(MSG_DEBUG, "WPS ER: M-SEARCH sendto failed: "
-			   "%d (%s)", errno, strerror(errno));
-
-	wpabuf_free(msg);
 }
 
 
@@ -1261,26 +1050,7 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 		return NULL;
 	}
 
-	if (add_ssdp_network(ifname)) {
-		wps_er_deinit(er);
-		return NULL;
-	}
-
-	er->multicast_sd = ssdp_open_multicast_sock(er->ip_addr);
-	if (er->multicast_sd < 0) {
-		wps_er_deinit(er);
-		return NULL;
-	}
-
-	er->ssdp_sd = ssdp_listener_open();
-	if (er->ssdp_sd < 0) {
-		wps_er_deinit(er);
-		return NULL;
-	}
-	if (eloop_register_sock(er->multicast_sd, EVENT_TYPE_READ,
-				wps_er_ssdp_rx, er, NULL) ||
-	    eloop_register_sock(er->ssdp_sd, EVENT_TYPE_READ,
-				wps_er_ssdp_rx, er, NULL)) {
+	if (wps_er_ssdp_init(er) < 0) {
 		wps_er_deinit(er);
 		return NULL;
 	}
@@ -1296,8 +1066,6 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 	wpa_printf(MSG_DEBUG, "WPS ER: Start (ifname=%s ip_addr=%s "
 		   "mac_addr=%s)",
 		   er->ifname, er->ip_addr_text, er->mac_addr_text);
-
-	wps_er_send_ssdp_msearch(er);
 
 	return er;
 }
@@ -1324,14 +1092,7 @@ void wps_er_deinit(struct wps_er *er)
 		return;
 	http_server_deinit(er->http_srv);
 	wps_er_ap_remove_all(er);
-	if (er->multicast_sd >= 0) {
-		eloop_unregister_sock(er->multicast_sd, EVENT_TYPE_READ);
-		close(er->multicast_sd);
-	}
-	if (er->ssdp_sd >= 0) {
-		eloop_unregister_sock(er->ssdp_sd, EVENT_TYPE_READ);
-		close(er->ssdp_sd);
-	}
+	wps_er_ssdp_deinit(er);
 	os_free(er->ip_addr_text);
 	os_free(er->mac_addr_text);
 	os_free(er);

@@ -501,6 +501,7 @@ ifdef CONFIG_WPS_ER
 CONFIG_WPS_UPNP=y
 CFLAGS += -DCONFIG_WPS_ER
 OBJS += ../src/wps/wps_er.o
+OBJS += ../src/wps/wps_er_ssdp.o
 endif
 
 ifdef CONFIG_WPS_UPNP

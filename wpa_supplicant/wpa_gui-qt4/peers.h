@@ -37,6 +37,7 @@ public slots:
 	virtual void context_menu(const QPoint &pos);
 	virtual void enter_pin();
 	virtual void connect_pbc();
+	virtual void learn_ap_config();
 	virtual void ctx_refresh();
 	virtual void properties();
 

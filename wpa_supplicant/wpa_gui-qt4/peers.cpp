@@ -166,6 +166,11 @@ void Peers::context_menu(const QPoint &pos)
 					SLOT(connect_pbc()));
 		}
 
+		if (type == PEER_TYPE_WPS_ER_AP) {
+			menu->addAction(tr("Learn Configuration"), this,
+					SLOT(learn_ap_config()));
+		}
+
 		menu->addAction(tr("Properties"), this, SLOT(properties()));
 	} else {
 		ctx_item = NULL;
@@ -794,6 +799,35 @@ void Peers::connect_pbc()
 		QMessageBox msg;
 		msg.setIcon(QMessageBox::Warning);
 		msg.setText("Failed to start WPS PBC.");
+		msg.exec();
+	}
+}
+
+
+void Peers::learn_ap_config()
+{
+	if (ctx_item == NULL)
+		return;
+
+	QString uuid = ctx_item->data(peer_role_uuid).toString();
+
+	StringQuery input(tr("AP PIN:"));
+	input.setWindowTitle(tr("AP PIN for ") + ctx_item->text());
+	if (input.exec() != QDialog::Accepted)
+		return;
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+
+	snprintf(cmd, sizeof(cmd), "WPS_ER_LEARN %s %s",
+		 uuid.toAscii().constData(),
+		 input.get_string().toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText(tr("Failed to start learning AP configuration."));
 		msg.exec();
 	}
 }

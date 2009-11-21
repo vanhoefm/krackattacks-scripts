@@ -832,6 +832,18 @@ static void wps_er_sta_process(struct wps_er_sta *sta, struct wpabuf *msg,
 		struct wpabuf *next = wps_get_msg(sta->wps, &op_code);
 		if (next)
 			wps_er_sta_send_msg(sta, next);
+	} else {
+		wpa_printf(MSG_DEBUG, "WPS ER: Protocol run %s with the "
+			   "enrollee (res=%d)",
+			   res == WPS_DONE ? "succeeded" : "failed", res);
+		wps_deinit(sta->wps);
+		sta->wps = NULL;
+		if (res == WPS_DONE) {
+			/* Remove the STA entry after short timeout */
+			eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);
+			eloop_register_timeout(10, 0, wps_er_sta_timeout, sta,
+					       NULL);
+		}
 	}
 }
 

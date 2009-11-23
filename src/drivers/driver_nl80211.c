@@ -320,8 +320,6 @@ static int set_ifhwaddr(struct wpa_driver_nl80211_data *drv,
 #endif /* HOSTAPD */
 
 
-#ifndef HOSTAPD
-
 static int wpa_driver_nl80211_send_oper_ifla(
 	struct wpa_driver_nl80211_data *drv,
 	int linkmode, int operstate)
@@ -360,8 +358,9 @@ static int wpa_driver_nl80211_send_oper_ifla(
 			RTA_LENGTH(sizeof(char));
 	}
 	if (operstate != -1) {
-		rta = (struct rtattr *)
-			((char *) &req + NLMSG_ALIGN(req.hdr.nlmsg_len));
+		rta = aliasing_hide_typecast(
+			((char *) &req + NLMSG_ALIGN(req.hdr.nlmsg_len)),
+			struct rtattr);
 		rta->rta_type = IFLA_OPERSTATE;
 		rta->rta_len = RTA_LENGTH(sizeof(char));
 		*((char *) RTA_DATA(rta)) = operstate;
@@ -402,6 +401,8 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 	return drv->ssid_len;
 }
 
+
+#ifndef HOSTAPD
 
 static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
 					  void *ctx, char *buf, size_t len,
@@ -641,6 +642,8 @@ try_again:
 	}
 }
 
+#endif /* HOSTAPD */
+
 
 static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 			    const u8 *frame, size_t len)
@@ -710,6 +713,7 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
 
+
 static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 			       enum nl80211_commands cmd, struct nlattr *status,
 			       struct nlattr *addr, struct nlattr *req_ie,
@@ -754,6 +758,7 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
+
 
 static void mlme_timeout_event(struct wpa_driver_nl80211_data *drv,
 			       enum nl80211_commands cmd, struct nlattr *addr)
@@ -818,8 +823,6 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		break;
 	}
 }
-
-#endif /* HOSTAPD */
 
 
 static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
@@ -905,7 +908,6 @@ static int process_event(struct nl_msg *msg, void *arg)
 				     drv->ctx);
 		wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, NULL);
 		break;
-#ifndef HOSTAPD
 	case NL80211_CMD_AUTHENTICATE:
 	case NL80211_CMD_ASSOCIATE:
 	case NL80211_CMD_DEAUTHENTICATE:
@@ -934,7 +936,6 @@ static int process_event(struct nl_msg *msg, void *arg)
 		drv->associated = 0;
 		wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 		break;
-#endif /* HOSTAPD */
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:
 		mlme_event_michael_mic_failure(drv, tb);
 		break;
@@ -1834,7 +1835,6 @@ nla_put_failure:
 }
 
 
-#ifndef HOSTAPD
 static int nl_add_key(struct nl_msg *msg, wpa_alg alg,
 		      int key_idx, int defkey,
 		      const u8 *seq, size_t seq_len,
@@ -2126,8 +2126,6 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
 }
-
-#endif /* HOSTAPD */
 
 
 #if defined(CONFIG_AP) || defined(HOSTAPD)
@@ -3305,7 +3303,6 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_AP */
 
 
-#ifndef HOSTAPD
 static int wpa_driver_nl80211_connect(
 	struct wpa_driver_nl80211_data *drv,
 	struct wpa_driver_associate_params *params)
@@ -3374,7 +3371,7 @@ static int wpa_driver_nl80211_connect(
 	}
 
 	if (params->pairwise_suite != CIPHER_NONE) {
-		int cipher = IW_AUTH_CIPHER_NONE;
+		int cipher;
 
 		switch (params->pairwise_suite) {
 		case CIPHER_WEP40:
@@ -3395,7 +3392,7 @@ static int wpa_driver_nl80211_connect(
 	}
 
 	if (params->group_suite != CIPHER_NONE) {
-		int cipher = IW_AUTH_CIPHER_NONE;
+		int cipher;
 
 		switch (params->group_suite) {
 		case CIPHER_WEP40:
@@ -3532,7 +3529,6 @@ nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
 }
-#endif /* HOSTAPD */
 
 
 static int nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
@@ -3622,8 +3618,6 @@ done:
 }
 
 
-#ifndef HOSTAPD
-
 static int wpa_driver_nl80211_get_capa(void *priv,
 				       struct wpa_driver_capa *capa)
 {
@@ -3674,8 +3668,6 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
  nla_put_failure:
 	return -ENOBUFS;
 }
-
-#endif /* HOSTAPD */
 
 
 #ifdef HOSTAPD
@@ -4385,14 +4377,11 @@ static void i802_deinit(void *priv)
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
-#ifndef HOSTAPD
 	.get_bssid = wpa_driver_nl80211_get_bssid,
 	.get_ssid = wpa_driver_nl80211_get_ssid,
 	.set_key = wpa_driver_nl80211_set_key,
-#endif /* HOSTAPD */
 	.scan2 = wpa_driver_nl80211_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
-#ifndef HOSTAPD
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
 	.disassociate = wpa_driver_nl80211_disassociate,
 	.authenticate = wpa_driver_nl80211_authenticate,
@@ -4402,7 +4391,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_supp_port = wpa_driver_nl80211_set_supp_port,
-#endif /* HOSTAPD */
 	.set_country = wpa_driver_nl80211_set_country,
 	.set_mode = wpa_driver_nl80211_set_mode,
 	.set_beacon = wpa_driver_nl80211_set_beacon,

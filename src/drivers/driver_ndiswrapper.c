@@ -11,6 +11,10 @@
  * license.
  *
  * See README and COPYING for more details.
+ *
+ * Please note that ndiswrapper supports WPA configuration via Linux wireless
+ * extensions and if the kernel includes support for this, driver_wext.c should
+ * be used instead of this driver wrapper.
  */
 
 #include "includes.h"
@@ -345,7 +349,7 @@ static void wpa_ndiswrapper_deinit(void *priv)
 
 const struct wpa_driver_ops wpa_driver_ndiswrapper_ops = {
 	.name = "ndiswrapper",
-	.desc = "Linux ndiswrapper",
+	.desc = "Linux ndiswrapper (deprecated; use wext)",
 	.set_wpa = wpa_ndiswrapper_set_wpa,
 	.set_key = wpa_ndiswrapper_set_key,
 	.set_countermeasures = wpa_ndiswrapper_set_countermeasures,

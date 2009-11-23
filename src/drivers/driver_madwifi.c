@@ -12,6 +12,11 @@
  * license.
  *
  * See README and COPYING for more details.
+ *
+ * While this driver wrapper supports both AP (hostapd) and station
+ * (wpa_supplicant) operations, the station side is deprecated and
+ * driver_wext.c should be used instead. This driver wrapper should only be
+ * used with hostapd for AP mode functionality.
  */
 
 #include "includes.h"

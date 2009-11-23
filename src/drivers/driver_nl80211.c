@@ -24,9 +24,6 @@
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
 #include "nl80211_copy.h"
-#ifndef NO_WEXT
-#include "wireless_copy.h"
-#endif /* NO_WEXT */
 
 #include "common.h"
 #include "driver.h"
@@ -384,32 +381,6 @@ static int wpa_driver_nl80211_send_oper_ifla(
 
 	return ret < 0 ? -1 : 0;
 }
-
-
-#ifndef NO_WEXT
-static int wpa_driver_nl80211_set_auth_param(
-	struct wpa_driver_nl80211_data *drv, int idx, u32 value)
-{
-	struct iwreq iwr;
-	int ret = 0;
-
-	os_memset(&iwr, 0, sizeof(iwr));
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.param.flags = idx & IW_AUTH_INDEX;
-	iwr.u.param.value = value;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIWAUTH, &iwr) < 0) {
-		if (errno != EOPNOTSUPP) {
-			wpa_printf(MSG_DEBUG, "WEXT: SIOCSIWAUTH(param %d "
-				   "value 0x%x) failed: %s)",
-				   idx, value, strerror(errno));
-		}
-		ret = errno == EOPNOTSUPP ? -2 : -1;
-	}
-
-	return ret;
-}
-#endif /* NO_WEXT */
 
 
 static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
@@ -1483,9 +1454,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	wpa_driver_nl80211_free_bss(drv);
 #else /* HOSTAPD */
-#ifndef NO_WEXT
-	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED, 0);
-#endif /* NO_WEXT */
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
@@ -3498,11 +3466,6 @@ static int wpa_driver_nl80211_associate(
 
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
 		return wpa_driver_nl80211_connect(drv, params);
-
-#ifndef NO_WEXT
-	wpa_driver_nl80211_set_auth_param(drv, IW_AUTH_DROP_UNENCRYPTED,
-					  params->drop_unencrypted);
-#endif /* NO_WEXT */
 
 	drv->associated = 0;
 

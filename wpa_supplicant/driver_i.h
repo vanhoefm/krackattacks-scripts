@@ -43,16 +43,6 @@ static inline int wpa_drv_set_param(struct wpa_supplicant *wpa_s,
 	return 0;
 }
 
-static inline int wpa_drv_set_drop_unencrypted(struct wpa_supplicant *wpa_s,
-					       int enabled)
-{
-	if (wpa_s->driver->set_drop_unencrypted) {
-		return wpa_s->driver->set_drop_unencrypted(wpa_s->drv_priv,
-							   enabled);
-	}
-	return -1;
-}
-
 static inline int wpa_drv_set_countermeasures(struct wpa_supplicant *wpa_s,
 					      int enabled)
 {
@@ -61,32 +51,6 @@ static inline int wpa_drv_set_countermeasures(struct wpa_supplicant *wpa_s,
 							  enabled);
 	}
 	return -1;
-}
-
-static inline int wpa_drv_set_auth_alg(struct wpa_supplicant *wpa_s,
-				       int auth_alg)
-{
-	if (wpa_s->driver->set_auth_alg) {
-		return wpa_s->driver->set_auth_alg(wpa_s->drv_priv,
-						   auth_alg);
-	}
-	return -1;
-}
-
-static inline int wpa_drv_set_wpa(struct wpa_supplicant *wpa_s, int enabled)
-{
-	if (wpa_s->driver->set_wpa) {
-		return wpa_s->driver->set_wpa(wpa_s->drv_priv, enabled);
-	}
-	return 0;
-}
-
-static inline int wpa_drv_set_mode(struct wpa_supplicant *wpa_s, int mode)
-{
-	if (wpa_s->driver->set_mode) {
-		return wpa_s->driver->set_mode(wpa_s->drv_priv, mode);
-	}
-	return 0;
 }
 
 static inline int wpa_drv_authenticate(struct wpa_supplicant *wpa_s,

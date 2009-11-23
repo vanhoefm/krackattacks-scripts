@@ -273,16 +273,6 @@ static int wpa_driver_atmel_set_countermeasures(void *priv,
 }
 
 
-static int wpa_driver_atmel_set_drop_unencrypted(void *priv,
-						  int enabled)
-{
-	/* FIX */
-	printf("wpa_driver_atmel_set_drop_unencrypted - not yet "
-	       "implemented\n");
-	return 0;
-}
-
-
 static int wpa_driver_atmel_mlme(void *priv, const u8 *addr, int cmd,
 				 int reason_code)
 {
@@ -473,6 +463,8 @@ static void * wpa_driver_atmel_init(void *ctx, const char *ifname)
 		return NULL;
 	}
 
+	wpa_driver_atmel_set_wpa(drv, 1);
+
 	return drv;
 }
 
@@ -480,6 +472,7 @@ static void * wpa_driver_atmel_init(void *ctx, const char *ifname)
 static void wpa_driver_atmel_deinit(void *priv)
 {
 	struct wpa_driver_atmel_data *drv = priv;
+	wpa_driver_atmel_set_wpa(drv, 0);
 	wpa_driver_wext_deinit(drv->wext);
 	close(drv->sock);
 	os_free(drv);
@@ -491,12 +484,10 @@ const struct wpa_driver_ops wpa_driver_atmel_ops = {
 	.desc = "ATMEL AT76C5XXx (USB, PCMCIA)",
 	.get_bssid = wpa_driver_atmel_get_bssid,
 	.get_ssid = wpa_driver_atmel_get_ssid,
-	.set_wpa = wpa_driver_atmel_set_wpa,
 	.set_key = wpa_driver_atmel_set_key,
 	.init = wpa_driver_atmel_init,
 	.deinit = wpa_driver_atmel_deinit,
 	.set_countermeasures = wpa_driver_atmel_set_countermeasures,
-	.set_drop_unencrypted = wpa_driver_atmel_set_drop_unencrypted,
 	.scan = wpa_driver_atmel_scan,
 	.get_scan_results2 = wpa_driver_atmel_get_scan_results,
 	.deauthenticate = wpa_driver_atmel_deauthenticate,

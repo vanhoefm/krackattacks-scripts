@@ -1152,6 +1152,7 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	struct wpa_driver_bsd_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	int privacy;
+	int ret = 0;
 
 	wpa_printf(MSG_DEBUG,
 		"%s: ssid '%.*s' wpa ie len %u pairwise %u group %u key mgmt %u"
@@ -1163,6 +1164,11 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 		, params->key_mgmt_suite
 	);
 
+	if (wpa_driver_bsd_set_drop_unencrypted(drv, params->drop_unencrypted)
+	    < 0)
+		ret = -1;
+	if (wpa_driver_bsd_set_auth_alg(drv, params->auth_alg) < 0)
+		ret = -1;
 	/* XXX error handling is wrong but unclear what to do... */
 	if (wpa_driver_bsd_set_wpa_ie(drv, params->wpa_ie, params->wpa_ie_len) < 0)
 		return -1;
@@ -1190,7 +1196,7 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 		os_memcpy(mlme.im_macaddr, params->bssid, IEEE80211_ADDR_LEN);
 	if (set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme)) < 0)
 		return -1;
-	return 0;
+	return ret;
 }
 
 static int
@@ -1473,6 +1479,8 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 		goto fail;
 	}
 
+	wpa_driver_bsd_set_wpa(drv, 1);
+
 	return drv;
 fail:
 	close(drv->sock);
@@ -1488,6 +1496,7 @@ wpa_driver_bsd_deinit(void *priv)
 	struct wpa_driver_bsd_data *drv = priv;
 	int flags;
 
+	wpa_driver_bsd_set_wpa(drv, 0);
 	eloop_unregister_read_sock(drv->route);
 
 	/* NB: mark interface down */
@@ -1512,16 +1521,13 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.deinit			= wpa_driver_bsd_deinit,
 	.get_bssid		= wpa_driver_bsd_get_bssid,
 	.get_ssid		= wpa_driver_bsd_get_ssid,
-	.set_wpa		= wpa_driver_bsd_set_wpa,
 	.set_key		= wpa_driver_bsd_set_key,
 	.set_countermeasures	= wpa_driver_bsd_set_countermeasures,
-	.set_drop_unencrypted	= wpa_driver_bsd_set_drop_unencrypted,
 	.scan			= wpa_driver_bsd_scan,
 	.get_scan_results2	= wpa_driver_bsd_get_scan_results2,
 	.deauthenticate		= wpa_driver_bsd_deauthenticate,
 	.disassociate		= wpa_driver_bsd_disassociate,
 	.associate		= wpa_driver_bsd_associate,
-	.set_auth_alg		= wpa_driver_bsd_set_auth_alg,
 };
 
 #endif /* HOSTAPD */

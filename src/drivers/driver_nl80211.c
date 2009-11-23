@@ -2023,6 +2023,9 @@ static int wpa_driver_nl80211_authenticate(
 
 	drv->associated = 0;
 
+	if (wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA) < 0)
+		return -1;
+
 retry:
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -3452,8 +3455,11 @@ static int wpa_driver_nl80211_associate(
 		return wpa_driver_nl80211_ap(drv, params);
 #endif /* CONFIG_AP */
 
-	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME)) {
+		if (wpa_driver_nl80211_set_mode(drv, params->mode) < 0)
+			return -1;
 		return wpa_driver_nl80211_connect(drv, params);
+	}
 
 	drv->associated = 0;
 
@@ -4306,7 +4312,7 @@ static void *i802_init(struct hostapd_data *hapd,
 			goto failed;
 	}
 
-	if (nl80211_set_mode(drv, drv->ifindex, NL80211_IFTYPE_AP)) {
+	if (wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_AP)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to set interface %s "
 			   "into AP mode", drv->ifname);
 		goto failed;
@@ -4373,7 +4379,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_supp_port = wpa_driver_nl80211_set_supp_port,
 	.set_country = wpa_driver_nl80211_set_country,
-	.set_mode = wpa_driver_nl80211_set_mode,
 	.set_beacon = wpa_driver_nl80211_set_beacon,
 #if defined(CONFIG_AP) || defined(HOSTAPD)
 	.send_mlme = wpa_driver_nl80211_send_mlme,

@@ -1327,11 +1327,6 @@ static int setup_interface(struct hostapd_iface *iface)
 		iface->bss[i]->drv_priv = hapd->drv_priv;
 	}
 
-	if (hostapd_driver_set_mode(hapd, IEEE80211_MODE_AP)) {
-		wpa_printf(MSG_ERROR, "Failed to set driver in AP mode");
-		return -1;
-	}
-
 	if (hostapd_validate_bssid_configuration(iface))
 		return -1;
 

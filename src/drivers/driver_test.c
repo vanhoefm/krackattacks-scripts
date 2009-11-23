@@ -1296,13 +1296,6 @@ static void wpa_driver_test_poll(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-static int wpa_driver_test_set_wpa(void *priv, int enabled)
-{
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
-	return 0;
-}
-
-
 static void wpa_driver_test_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	wpa_printf(MSG_DEBUG, "Scan timeout - try to get results");
@@ -2484,13 +2477,6 @@ fail:
 }
 
 
-static int wpa_driver_test_set_mode(void *priv, int mode)
-{
-	struct wpa_driver_test_data *drv = priv;
-	return wpa_driver_update_mode(drv, mode == IEEE80211_MODE_AP);
-}
-
-
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
@@ -2517,7 +2503,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.set_wps_probe_resp_ie = test_driver_set_wps_probe_resp_ie,
 	.get_bssid = wpa_driver_test_get_bssid,
 	.get_ssid = wpa_driver_test_get_ssid,
-	.set_wpa = wpa_driver_test_set_wpa,
 	.set_key = wpa_driver_test_set_key,
 	.deinit = wpa_driver_test_deinit,
 	.set_param = wpa_driver_test_set_param,
@@ -2540,5 +2525,4 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.init2 = wpa_driver_test_init2,
 	.get_interfaces = wpa_driver_test_get_interfaces,
 	.scan2 = wpa_driver_test_scan,
-	.set_mode = wpa_driver_test_set_mode,
 };

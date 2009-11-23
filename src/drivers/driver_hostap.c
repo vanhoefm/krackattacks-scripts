@@ -1235,6 +1235,9 @@ struct wpa_driver_hostap_data {
 };
 
 
+static int wpa_driver_hostap_set_auth_alg(void *priv, int auth_alg);
+
+
 static int hostapd_ioctl(struct wpa_driver_hostap_data *drv,
 			 struct prism2_hostapd_param *param,
 			 int len, int show_err)
@@ -1435,14 +1438,6 @@ static int wpa_driver_hostap_set_countermeasures(void *priv, int enabled)
 }
 
 
-static int wpa_driver_hostap_set_drop_unencrypted(void *priv, int enabled)
-{
-	struct wpa_driver_hostap_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __FUNCTION__, enabled);
-	return prism2param(drv, PRISM2_PARAM_DROP_UNENCRYPTED, enabled);
-}
-
-
 static int wpa_driver_hostap_reset(struct wpa_driver_hostap_data *drv,
 				   int type)
 {
@@ -1518,6 +1513,11 @@ wpa_driver_hostap_associate(void *priv,
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
+	if (prism2param(drv, PRISM2_PARAM_DROP_UNENCRYPTED,
+			params->drop_unencrypted) < 0)
+		ret = -1;
+	if (wpa_driver_hostap_set_auth_alg(drv, params->auth_alg) < 0)
+		ret = -1;
 	if (params->mode != drv->current_mode) {
 		/* At the moment, Host AP driver requires host_roaming=2 for
 		 * infrastructure mode and host_roaming=0 for adhoc. */
@@ -1682,6 +1682,8 @@ static void * wpa_driver_hostap_init(void *ctx, const char *ifname)
 		wpa_driver_wext_alternative_ifindex(drv->wext, ifname2);
 	}
 
+	wpa_driver_hostap_set_wpa(drv, 1);
+
 	return drv;
 }
 
@@ -1689,6 +1691,7 @@ static void * wpa_driver_hostap_init(void *ctx, const char *ifname)
 static void wpa_driver_hostap_deinit(void *priv)
 {
 	struct wpa_driver_hostap_data *drv = priv;
+	wpa_driver_hostap_set_wpa(drv, 0);
 	wpa_driver_wext_deinit(drv->wext);
 	close(drv->sock);
 	os_free(drv);
@@ -1726,15 +1729,12 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 #else /* HOSTAPD */
 	.get_bssid = wpa_driver_hostap_get_bssid,
 	.get_ssid = wpa_driver_hostap_get_ssid,
-	.set_wpa = wpa_driver_hostap_set_wpa,
 	.set_countermeasures = wpa_driver_hostap_set_countermeasures,
-	.set_drop_unencrypted = wpa_driver_hostap_set_drop_unencrypted,
 	.scan = wpa_driver_hostap_scan,
 	.get_scan_results2 = wpa_driver_hostap_get_scan_results,
 	.deauthenticate = wpa_driver_hostap_deauthenticate,
 	.disassociate = wpa_driver_hostap_disassociate,
 	.associate = wpa_driver_hostap_associate,
-	.set_auth_alg = wpa_driver_hostap_set_auth_alg,
 	.init = wpa_driver_hostap_init,
 	.deinit = wpa_driver_hostap_deinit,
 	.set_operstate = wpa_driver_hostap_set_operstate,

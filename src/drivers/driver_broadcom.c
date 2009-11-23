@@ -349,6 +349,7 @@ static void * wpa_driver_broadcom_init(void *ctx, const char *ifname)
 	eloop_register_read_sock(s, wpa_driver_broadcom_event_receive, ctx,
 				 NULL);
 	drv->event_sock = s;
+	wpa_driver_broadcom_set_wpa(drv, 1);
 
 	return drv;
 }
@@ -356,6 +357,7 @@ static void * wpa_driver_broadcom_init(void *ctx, const char *ifname)
 static void wpa_driver_broadcom_deinit(void *priv)
 {
 	struct wpa_driver_broadcom_data *drv = priv;
+	wpa_driver_broadcom_set_wpa(drv, 0);
 	eloop_cancel_timeout(wpa_driver_broadcom_scan_timeout, drv, drv->ctx);
 	eloop_unregister_read_sock(drv->event_sock);
 	close(drv->event_sock);
@@ -531,7 +533,11 @@ wpa_driver_broadcom_associate(void *priv,
 	int wsec = 4;
 	int dummy;
 	int wpa_auth;
-	
+	int ret;
+
+	ret = wpa_driver_broadcom_set_drop_unencrypted(
+		drv, params->drop_unencrypted);
+
 	s.SSID_len = params->ssid_len;
 	os_memcpy(s.SSID, params->ssid, params->ssid_len);
 
@@ -583,7 +589,7 @@ wpa_driver_broadcom_associate(void *priv,
 	    broadcom_ioctl(drv, WLC_SET_SSID, &s, sizeof(s)) < 0)
 		return -1;
 
-	return 0;
+	return ret;
 }
 
 const struct wpa_driver_ops wpa_driver_broadcom_ops = {
@@ -591,12 +597,10 @@ const struct wpa_driver_ops wpa_driver_broadcom_ops = {
 	.desc = "Broadcom wl.o driver",
 	.get_bssid = wpa_driver_broadcom_get_bssid,
 	.get_ssid = wpa_driver_broadcom_get_ssid,
-	.set_wpa = wpa_driver_broadcom_set_wpa,
 	.set_key = wpa_driver_broadcom_set_key,
 	.init = wpa_driver_broadcom_init,
 	.deinit = wpa_driver_broadcom_deinit,
 	.set_countermeasures = wpa_driver_broadcom_set_countermeasures,
-	.set_drop_unencrypted = wpa_driver_broadcom_set_drop_unencrypted,
 	.scan = wpa_driver_broadcom_scan,
 	.get_scan_results = wpa_driver_broadcom_get_scan_results,
 	.deauthenticate = wpa_driver_broadcom_deauthenticate,

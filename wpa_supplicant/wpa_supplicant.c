@@ -1038,11 +1038,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	 * previous association. */
 	wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
-	if (wpa_drv_set_mode(wpa_s, ssid->mode)) {
-		wpa_printf(MSG_WARNING, "Failed to set operating mode");
-		assoc_failed = 1;
-	}
-
 #ifdef IEEE8021X_EAPOL
 	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (ssid->leap) {
@@ -1065,7 +1060,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "Overriding auth_alg selection: 0x%x",
 			   algs);
 	}
-	wpa_drv_set_auth_alg(wpa_s, algs);
 
 	if (bss && (wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
 		    wpa_scan_get_ie(bss, WLAN_EID_RSN)) &&
@@ -1155,7 +1149,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_set_wpa_none_key(wpa_s, ssid);
 	}
 
-	wpa_drv_set_drop_unencrypted(wpa_s, use_crypt);
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
 	os_memset(&params, 0, sizeof(params));
 	if (bss) {
@@ -1993,30 +1986,11 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 		}
 	}
 
-	/* Backwards compatibility call to set_wpa() handler. This is called
-	 * only just after init and just before deinit, so these handler can be
-	 * used to implement same functionality. */
-	if (wpa_drv_set_wpa(wpa_s, 1) < 0) {
-		struct wpa_driver_capa capa;
-		if (wpa_drv_get_capa(wpa_s, &capa) < 0 ||
-		    !(capa.flags & (WPA_DRIVER_CAPA_KEY_MGMT_WPA |
-				    WPA_DRIVER_CAPA_KEY_MGMT_WPA2))) {
-			wpa_printf(MSG_DEBUG, "Driver does not support WPA.");
-			/* Continue to allow non-WPA modes to be used. */
-		} else {
-			wpa_printf(MSG_ERROR, "Failed to enable WPA in the "
-				"driver.");
-			return -1;
-		}
-	}
-
 	wpa_clear_keys(wpa_s, NULL);
 
 	/* Make sure that TKIP countermeasures are not left enabled (could
 	 * happen if wpa_supplicant is killed during countermeasures. */
 	wpa_drv_set_countermeasures(wpa_s, 0);
-
-	wpa_drv_set_drop_unencrypted(wpa_s, 1);
 
 	wpa_printf(MSG_DEBUG, "RSN: flushing PMKID list in the driver");
 	wpa_drv_flush_pmkid(wpa_s);
@@ -2259,15 +2233,6 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s)
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 
-		/* Backwards compatibility call to set_wpa() handler. This is
-		 * called only just after init and just before deinit, so these
-		 * handler can be used to implement same functionality. */
-		if (wpa_drv_set_wpa(wpa_s, 0) < 0) {
-			wpa_printf(MSG_ERROR, "Failed to disable WPA in the "
-				   "driver.");
-		}
-
-		wpa_drv_set_drop_unencrypted(wpa_s, 0);
 		wpa_drv_set_countermeasures(wpa_s, 0);
 		wpa_clear_keys(wpa_s, NULL);
 	}

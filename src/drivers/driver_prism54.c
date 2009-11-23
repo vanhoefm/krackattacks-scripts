@@ -1300,6 +1300,10 @@ wpa_driver_prism54_associate(void *priv,
 	struct wpa_driver_prism54_data *drv = priv;
 	int ret = 0;
 
+	if (wpa_driver_prism54_set_drop_unencrypted(drv,
+						    params->drop_unencrypted)
+	    < 0)
+		ret = -1;
 	if (wpa_driver_prism54_set_wpa_ie(drv, params->wpa_ie,
 					  params->wpa_ie_len) < 0)
 		ret = -1;
@@ -1403,6 +1407,8 @@ static void * wpa_driver_prism54_init(void *ctx, const char *ifname)
 		return NULL;
 	}
 
+	wpa_driver_prism54_set_wpa(drv, 1);
+
 	return drv;
 }
 
@@ -1410,6 +1416,7 @@ static void * wpa_driver_prism54_init(void *ctx, const char *ifname)
 static void wpa_driver_prism54_deinit(void *priv)
 {
 	struct wpa_driver_prism54_data *drv = priv;
+	wpa_driver_prism54_set_wpa(drv, 0);
 	wpa_driver_wext_deinit(drv->wext);
 	close(drv->sock);
 	os_free(drv);
@@ -1439,9 +1446,7 @@ const struct wpa_driver_ops wpa_driver_prism54_ops = {
 #else /* HOSTAPD */
 	.get_bssid = wpa_driver_prism54_get_bssid,
 	.get_ssid = wpa_driver_prism54_get_ssid,
-	.set_wpa = wpa_driver_prism54_set_wpa,
 	.set_countermeasures = wpa_driver_prism54_set_countermeasures,
-	.set_drop_unencrypted = wpa_driver_prism54_set_drop_unencrypted,
 	.scan = wpa_driver_prism54_scan,
 	.get_scan_results2 = wpa_driver_prism54_get_scan_results,
 	.deauthenticate = wpa_driver_prism54_deauthenticate,

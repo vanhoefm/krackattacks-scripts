@@ -51,8 +51,6 @@ static void wpa_priv_cmd_register(struct wpa_priv_interface *iface,
 {
 	if (iface->drv_priv) {
 		wpa_printf(MSG_DEBUG, "Cleaning up forgotten driver instance");
-		if (iface->driver->set_wpa)
-			iface->driver->set_wpa(iface->drv_priv, 0);
 		if (iface->driver->deinit)
 			iface->driver->deinit(iface->drv_priv);
 		iface->drv_priv = NULL;
@@ -85,9 +83,6 @@ static void wpa_priv_cmd_register(struct wpa_priv_interface *iface,
 	    iface->driver->set_param(iface->drv_priv, NULL) < 0) {
 		wpa_printf(MSG_ERROR, "Driver interface rejected param");
 	}
-
-	if (iface->driver->set_wpa)
-		iface->driver->set_wpa(iface->drv_priv, 1);
 }
 
 
@@ -95,24 +90,11 @@ static void wpa_priv_cmd_unregister(struct wpa_priv_interface *iface,
 				    struct sockaddr_un *from)
 {
 	if (iface->drv_priv) {
-		if (iface->driver->set_wpa)
-			iface->driver->set_wpa(iface->drv_priv, 0);
 		if (iface->driver->deinit)
 			iface->driver->deinit(iface->drv_priv);
 		iface->drv_priv = NULL;
 		iface->wpas_registered = 0;
 	}
-}
-
-
-static void wpa_priv_cmd_set_wpa(struct wpa_priv_interface *iface,
-				 char *buf, size_t len)
-{
-	if (iface->drv_priv == NULL || len != sizeof(int))
-		return;
-
-	if (iface->driver->set_wpa)
-		iface->driver->set_wpa(iface->drv_priv, *((int *) buf));
 }
 
 
@@ -612,9 +594,6 @@ static void wpa_priv_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case PRIVSEP_CMD_UNREGISTER:
 		wpa_priv_cmd_unregister(iface, &from);
-		break;
-	case PRIVSEP_CMD_SET_WPA:
-		wpa_priv_cmd_set_wpa(iface, cmd_buf, cmd_len);
 		break;
 	case PRIVSEP_CMD_SCAN:
 		wpa_priv_cmd_scan(iface, cmd_buf, cmd_len);

@@ -513,13 +513,6 @@ hostapd_set_wps_probe_resp_ie(struct hostapd_data *hapd, const u8 *ie,
 						   hapd->drv_priv, ie, len);
 }
 
-static inline int hostapd_driver_set_mode(struct hostapd_data *hapd, int mode)
-{
-	if (hapd->driver == NULL || hapd->driver->set_mode == NULL)
-		return 0;
-	return hapd->driver->set_mode(hapd->drv_priv, mode);
-}
-
 static inline int hostapd_driver_scan(struct hostapd_data *hapd,
 				      struct wpa_driver_scan_params *params)
 {

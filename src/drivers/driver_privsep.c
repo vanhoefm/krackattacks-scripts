@@ -102,15 +102,6 @@ static int wpa_priv_cmd(struct wpa_driver_privsep_data *drv, int cmd,
 }
 
 			     
-static int wpa_driver_privsep_set_wpa(void *priv, int enabled)
-{
-	struct wpa_driver_privsep_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
-	return wpa_priv_cmd(drv, PRIVSEP_CMD_SET_WPA, &enabled,
-			    sizeof(enabled), NULL, NULL);
-}
-
-
 static int wpa_driver_privsep_scan(void *priv, const u8 *ssid, size_t ssid_len)
 {
 	struct wpa_driver_privsep_data *drv = priv;
@@ -748,15 +739,6 @@ static const u8 * wpa_driver_privsep_get_mac_addr(void *priv)
 }
 
 
-static int wpa_driver_privsep_set_mode(void *priv, int mode)
-{
-	struct wpa_driver_privsep_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s mode=%d", __func__, mode);
-	return wpa_priv_cmd(drv, PRIVSEP_CMD_SET_MODE, &mode, sizeof(mode),
-			    NULL, NULL);
-}
-
-
 static int wpa_driver_privsep_set_country(void *priv, const char *alpha2)
 {
 	struct wpa_driver_privsep_data *drv = priv;
@@ -771,7 +753,6 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	"wpa_supplicant privilege separated driver",
 	.get_bssid = wpa_driver_privsep_get_bssid,
 	.get_ssid = wpa_driver_privsep_get_ssid,
-	.set_wpa = wpa_driver_privsep_set_wpa,
 	.set_key = wpa_driver_privsep_set_key,
 	.init = wpa_driver_privsep_init,
 	.deinit = wpa_driver_privsep_deinit,
@@ -783,7 +764,6 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	.get_capa = wpa_driver_privsep_get_capa,
 	.get_mac_addr = wpa_driver_privsep_get_mac_addr,
 	.get_scan_results2 = wpa_driver_privsep_get_scan_results2,
-	.set_mode = wpa_driver_privsep_set_mode,
 	.set_country = wpa_driver_privsep_set_country,
 };
 

@@ -36,6 +36,7 @@ static int wpa_driver_wext_flush_pmkid(void *priv);
 static int wpa_driver_wext_get_range(void *priv);
 static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv);
 static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv);
+static int wpa_driver_wext_set_auth_alg(void *priv, int auth_alg);
 
 
 static int wpa_driver_wext_send_oper_ifla(struct wpa_driver_wext_data *drv,
@@ -940,6 +941,8 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 	if (wpa_driver_wext_finish_drv_init(drv) < 0)
 		goto err4;
 
+	wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED, 1);
+
 	return drv;
 
 err4:
@@ -1037,6 +1040,8 @@ void wpa_driver_wext_deinit(void *priv)
 {
 	struct wpa_driver_wext_data *drv = priv;
 	int flags;
+
+	wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED, 0);
 
 	eloop_cancel_timeout(wpa_driver_wext_scan_timeout, drv, drv->ctx);
 
@@ -1653,16 +1658,6 @@ static int wpa_driver_wext_get_range(void *priv)
 }
 
 
-static int wpa_driver_wext_set_wpa(void *priv, int enabled)
-{
-	struct wpa_driver_wext_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-
-	return wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED,
-					      enabled);
-}
-
-
 static int wpa_driver_wext_set_psk(struct wpa_driver_wext_data *drv,
 				   const u8 *psk)
 {
@@ -2096,6 +2091,14 @@ int wpa_driver_wext_associate(void *priv,
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
+	if (wpa_driver_wext_set_drop_unencrypted(drv, params->drop_unencrypted)
+	    < 0)
+		ret = -1;
+	if (wpa_driver_wext_set_auth_alg(drv, params->auth_alg) < 0)
+		ret = -1;
+	if (wpa_driver_wext_set_mode(drv, params->mode) < 0)
+		ret = -1;
+
 	/*
 	 * If the driver did not support SIOCSIWAUTH, fallback to
 	 * SIOCSIWENCODE here.
@@ -2374,17 +2377,13 @@ const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.desc = "Linux wireless extensions (generic)",
 	.get_bssid = wpa_driver_wext_get_bssid,
 	.get_ssid = wpa_driver_wext_get_ssid,
-	.set_wpa = wpa_driver_wext_set_wpa,
 	.set_key = wpa_driver_wext_set_key,
 	.set_countermeasures = wpa_driver_wext_set_countermeasures,
-	.set_drop_unencrypted = wpa_driver_wext_set_drop_unencrypted,
 	.scan = wpa_driver_wext_scan,
 	.get_scan_results2 = wpa_driver_wext_get_scan_results,
 	.deauthenticate = wpa_driver_wext_deauthenticate,
 	.disassociate = wpa_driver_wext_disassociate,
-	.set_mode = wpa_driver_wext_set_mode,
 	.associate = wpa_driver_wext_associate,
-	.set_auth_alg = wpa_driver_wext_set_auth_alg,
 	.init = wpa_driver_wext_init,
 	.deinit = wpa_driver_wext_deinit,
 	.add_pmkid = wpa_driver_wext_add_pmkid,

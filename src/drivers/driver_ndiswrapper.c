@@ -73,6 +73,8 @@ struct wpa_assoc_info
 #define WPA_DEINIT			SIOCIWFIRSTPRIV+10
 #define WPA_GET_CAPA		 	SIOCIWFIRSTPRIV+11
 
+static int wpa_ndiswrapper_set_auth_alg(void *priv, int auth_alg);
+
 static int get_socket(void)
 {
 	static const int families[] = {
@@ -223,6 +225,12 @@ wpa_ndiswrapper_associate(void *priv,
 	struct wpa_assoc_info wpa_assoc_info;
 	struct iwreq priv_req;
 
+	if (wpa_ndiswrapper_set_drop_unencrypted(drv,
+						 params->drop_unencrypted) < 0)
+		ret = -1;
+	if (wpa_ndiswrapper_set_auth_alg(drv, params->auth_alg) < 0)
+		ret = -1;
+
 	os_memset(&priv_req, 0, sizeof(priv_req));
 	os_memset(&wpa_assoc_info, 0, sizeof(wpa_assoc_info));
 
@@ -334,6 +342,8 @@ static void * wpa_ndiswrapper_init(void *ctx, const char *ifname)
 		return NULL;
 	}
 
+	wpa_ndiswrapper_set_wpa(drv, 1);
+
 	return drv;
 }
 
@@ -341,6 +351,7 @@ static void * wpa_ndiswrapper_init(void *ctx, const char *ifname)
 static void wpa_ndiswrapper_deinit(void *priv)
 {
 	struct wpa_driver_ndiswrapper_data *drv = priv;
+	wpa_ndiswrapper_set_wpa(drv, 0);
 	wpa_driver_wext_deinit(drv->wext);
 	close(drv->sock);
 	os_free(drv);
@@ -350,14 +361,11 @@ static void wpa_ndiswrapper_deinit(void *priv)
 const struct wpa_driver_ops wpa_driver_ndiswrapper_ops = {
 	.name = "ndiswrapper",
 	.desc = "Linux ndiswrapper (deprecated; use wext)",
-	.set_wpa = wpa_ndiswrapper_set_wpa,
 	.set_key = wpa_ndiswrapper_set_key,
 	.set_countermeasures = wpa_ndiswrapper_set_countermeasures,
-	.set_drop_unencrypted = wpa_ndiswrapper_set_drop_unencrypted,
 	.deauthenticate = wpa_ndiswrapper_deauthenticate,
 	.disassociate = wpa_ndiswrapper_disassociate,
 	.associate = wpa_ndiswrapper_associate,
-	.set_auth_alg = wpa_ndiswrapper_set_auth_alg,
 
 	.get_bssid = wpa_ndiswrapper_get_bssid,
 	.get_ssid = wpa_ndiswrapper_get_ssid,

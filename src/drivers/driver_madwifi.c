@@ -1386,6 +1386,9 @@ struct wpa_driver_madwifi_data {
 	int sock;
 };
 
+static int wpa_driver_madwifi_set_auth_alg(void *priv, int auth_alg);
+
+
 static int
 set80211priv(struct wpa_driver_madwifi_data *drv, int op, void *data, int len,
 	     int show_err)
@@ -1634,15 +1637,6 @@ wpa_driver_madwifi_set_countermeasures(void *priv, int enabled)
 	return set80211param(drv, IEEE80211_PARAM_COUNTERMEASURES, enabled, 1);
 }
 
-
-static int
-wpa_driver_madwifi_set_drop_unencrypted(void *priv, int enabled)
-{
-	struct wpa_driver_madwifi_data *drv = priv;
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __FUNCTION__, enabled);
-	return set80211param(drv, IEEE80211_PARAM_DROPUNENCRYPTED, enabled, 1);
-}
-
 static int
 wpa_driver_madwifi_deauthenticate(void *priv, const u8 *addr, int reason_code)
 {
@@ -1678,6 +1672,12 @@ wpa_driver_madwifi_associate(void *priv,
 	int ret = 0, privacy = 1;
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
+
+	if (set80211param(drv, IEEE80211_PARAM_DROPUNENCRYPTED,
+			  params->drop_unencrypted, 1) < 0)
+		ret = -1;
+	if (wpa_driver_madwifi_set_auth_alg(drv, params->auth_alg) < 0)
+		ret = -1;
 
 	/*
 	 * NB: Don't need to set the freq or cipher-related state as
@@ -1943,13 +1943,11 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.init			= wpa_driver_madwifi_init,
 	.deinit			= wpa_driver_madwifi_deinit,
 	.set_countermeasures	= wpa_driver_madwifi_set_countermeasures,
-	.set_drop_unencrypted	= wpa_driver_madwifi_set_drop_unencrypted,
 	.scan			= wpa_driver_madwifi_scan,
 	.get_scan_results2	= wpa_driver_madwifi_get_scan_results,
 	.deauthenticate		= wpa_driver_madwifi_deauthenticate,
 	.disassociate		= wpa_driver_madwifi_disassociate,
 	.associate		= wpa_driver_madwifi_associate,
-	.set_auth_alg		= wpa_driver_madwifi_set_auth_alg,
 	.set_operstate		= wpa_driver_madwifi_set_operstate,
 	.set_probe_req_ie	= wpa_driver_madwifi_set_probe_req_ie,
 #endif /* HOSTAPD */

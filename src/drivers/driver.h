@@ -568,30 +568,6 @@ struct wpa_driver_ops {
 	int (*get_ssid)(void *priv, u8 *ssid);
 
 	/**
-	 * set_wpa - Enable/disable WPA support (OBSOLETE)
-	 * @priv: private driver interface data
-	 * @enabled: 1 = enable, 0 = disable
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * Note: This function is included for backwards compatibility. This is
-	 * called only just after init and just before deinit, so these
-	 * functions can be used to implement same functionality and the driver
-	 * interface need not define this function.
-	 *
-	 * Configure the kernel driver to enable/disable WPA support. This may
-	 * be empty function, if WPA support is always enabled. Common
-	 * configuration items are WPA IE (clearing it when WPA support is
-	 * disabled), Privacy flag configuration for capability field (note:
-	 * this the value need to set in associate handler to allow plaintext
-	 * mode to be used) when trying to associate with, roaming mode (can
-	 * allow wpa_supplicant to control roaming if ap_scan=1 is used;
-	 * however, drivers can also implement roaming if desired, especially
-	 * ap_scan=2 mode is used for this).
-	 */
-	int (*set_wpa)(void *priv, int enabled);
-
-	/**
 	 * set_key - Configure encryption key
 	 * @ifname: Interface name (for multi-SSID/VLAN support)
 	 * @priv: private driver interface data
@@ -699,22 +675,6 @@ struct wpa_driver_ops {
 	int (*set_countermeasures)(void *priv, int enabled);
 
 	/**
-	 * set_drop_unencrypted - Enable/disable unencrypted frame filtering
-	 * @priv: private driver interface data
-	 * @enabled: 1 = unencrypted Tx/Rx frames will be dropped, 0 = disabled
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * Configure the driver to drop all non-EAPOL frames (both receive and
-	 * transmit paths). Unencrypted EAPOL frames (ethertype 0x888e) must
-	 * still be allowed for key negotiation.
-	 *
-	 * This function is deprecated. New driver wrapper implementations
-	 * should use associate() parameter drop_unencrypted instead.
-	 */
-	int (*set_drop_unencrypted)(void *priv, int enabled);
-
-	/**
 	 * scan - Request the driver to initiate scan (old version)
 	 * @priv: private driver interface data
 	 * @ssid: specific SSID to scan for (ProbeReq) or %NULL to scan for
@@ -784,30 +744,6 @@ struct wpa_driver_ops {
 	 */
 	int (*associate)(void *priv,
 			 struct wpa_driver_associate_params *params);
-
-	/**
-	 * set_auth_alg - Set IEEE 802.11 authentication algorithm
-	 * @priv: private driver interface data
-	 * @auth_alg: bit field of AUTH_ALG_*
-	 *
-	 * If the driver supports more than one authentication algorithm at the
-	 * same time, it should configure all supported algorithms. If not, one
-	 * algorithm needs to be selected arbitrarily. Open System
-	 * authentication should be ok for most cases and it is recommended to
-	 * be used if other options are not supported. Static WEP configuration
-	 * may also use Shared Key authentication and LEAP requires its own
-	 * algorithm number. For LEAP, user can make sure that only one
-	 * algorithm is used at a time by configuring LEAP as the only
-	 * supported EAP method. This information is also available in
-	 * associate() params, so set_auth_alg may not be needed in case of
-	 * most drivers.
-	 *
-	 * This function is deprecated. New driver wrapper implementations
-	 * should use associate() parameter auth_alg instead.
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_auth_alg)(void *priv, int auth_alg);
 
 	/**
 	 * add_pmkid - Add PMKSA cache entry to the driver
@@ -1113,24 +1049,6 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_probe_req_ie)(void *priv, const u8 *ies, size_t ies_len);
-
- 	/**
-	 * set_mode - Request driver to set the operating mode
-	 * @priv: private driver interface data
-	 * @mode: Operation mode (infra/ibss) IEEE80211_MODE_*
-	 *
-	 * This handler will be called before any key configuration and call to
-	 * associate() handler in order to allow the operation mode to be
-	 * configured as early as possible. This information is also available
-	 * in associate() params and as such, driver wrappers may not need
-	 * to implement set_mode() handler.
-	 *
-	 * This function is deprecated. New driver wrapper implementations
-	 * should use associate() parameter mode instead.
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_mode)(void *priv, int mode);
 
 	/**
 	 * set_country - Set country

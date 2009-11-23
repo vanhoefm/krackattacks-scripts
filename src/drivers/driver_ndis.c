@@ -739,13 +739,6 @@ static int wpa_driver_ndis_disassociate(void *priv, const u8 *addr,
 }
 
 
-static int wpa_driver_ndis_set_wpa(void *priv, int enabled)
-{
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
-	return 0;
-}
-
-
 static void wpa_driver_ndis_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	wpa_printf(MSG_DEBUG, "Scan timeout - try to get results");
@@ -3175,19 +3168,16 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	"Windows NDIS driver",
 	wpa_driver_ndis_get_bssid,
 	wpa_driver_ndis_get_ssid,
-	wpa_driver_ndis_set_wpa,
 	wpa_driver_ndis_set_key,
 	wpa_driver_ndis_init,
 	wpa_driver_ndis_deinit,
 	NULL /* set_param */,
 	NULL /* set_countermeasures */,
-	NULL /* set_drop_unencrypted */,
 	wpa_driver_ndis_scan,
 	NULL /* get_scan_results */,
 	wpa_driver_ndis_deauthenticate,
 	wpa_driver_ndis_disassociate,
 	wpa_driver_ndis_associate,
-	NULL /* set_auth_alg */,
 	wpa_driver_ndis_add_pmkid,
 	wpa_driver_ndis_remove_pmkid,
 	wpa_driver_ndis_flush_pmkid,
@@ -3209,7 +3199,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* send_ft_action */,
 	wpa_driver_ndis_get_scan_results,
 	NULL /* set_probe_req_ie */,
-	NULL /* set_mode */,
 	NULL /* set_country */,
 	NULL /* global_init */,
 	NULL /* global_deinit */,

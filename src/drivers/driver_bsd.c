@@ -319,17 +319,6 @@ bsd_set_iface_flags(void *priv, int dev_up)
 		return -1;
 	}
 
-	if (dev_up) {
-		memset(&ifr, 0, sizeof(ifr));
-		os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
-		ifr.ifr_mtu = HOSTAPD_MTU;
-		if (ioctl(drv->ioctl_sock, SIOCSIFMTU, &ifr) != 0) {
-			perror("ioctl[SIOCSIFMTU]");
-			printf("Setting MTU failed - trying to survive with "
-			       "current value\n");
-		}
-	}
-
 	return 0;
 }
 

@@ -746,8 +746,9 @@ static void wpa_driver_ndis_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-static int wpa_driver_ndis_scan_native80211(struct wpa_driver_ndis_data *drv,
-					    const u8 *ssid, size_t ssid_len)
+static int wpa_driver_ndis_scan_native80211(
+	struct wpa_driver_ndis_data *drv,
+	struct wpa_driver_scan_params *params)
 {
 	DOT11_SCAN_REQUEST_V2 req;
 	int res;
@@ -765,13 +766,14 @@ static int wpa_driver_ndis_scan_native80211(struct wpa_driver_ndis_data *drv,
 }
 
 
-static int wpa_driver_ndis_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_ndis_scan(void *priv,
+				struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_ndis_data *drv = priv;
 	int res;
 
 	if (drv->native80211)
-		return wpa_driver_ndis_scan_native80211(drv, ssid, ssid_len);
+		return wpa_driver_ndis_scan_native80211(drv, params);
 
 	if (!drv->radio_enabled) {
 		wpa_printf(MSG_DEBUG, "NDIS: turning radio on before the first"
@@ -3173,7 +3175,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	wpa_driver_ndis_deinit,
 	NULL /* set_param */,
 	NULL /* set_countermeasures */,
-	wpa_driver_ndis_scan,
 	NULL /* get_scan_results */,
 	wpa_driver_ndis_deauthenticate,
 	wpa_driver_ndis_disassociate,
@@ -3198,13 +3199,12 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* update_ft_ies */,
 	NULL /* send_ft_action */,
 	wpa_driver_ndis_get_scan_results,
-	NULL /* set_probe_req_ie */,
 	NULL /* set_country */,
 	NULL /* global_init */,
 	NULL /* global_deinit */,
 	NULL /* init2 */,
 	wpa_driver_ndis_get_interfaces,
-	NULL /* scan2 */,
+	wpa_driver_ndis_scan,
 	NULL /* authenticate */,
 	NULL /* set_beacon */,
 	NULL /* hapd_init */,

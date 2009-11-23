@@ -1369,6 +1369,22 @@ static int wpa_driver_test_scan(void *priv,
 	size_t i;
 
 	wpa_printf(MSG_DEBUG, "%s: priv=%p", __func__, priv);
+
+	os_free(drv->probe_req_ie);
+	if (params->extra_ies) {
+		drv->probe_req_ie = os_malloc(params->extra_ies_len);
+		if (drv->probe_req_ie == NULL) {
+			drv->probe_req_ie_len = 0;
+			return -1;
+		}
+		os_memcpy(drv->probe_req_ie, params->extra_ies,
+			  params->extra_ies_len);
+		drv->probe_req_ie_len = params->extra_ies_len;
+	} else {
+		drv->probe_req_ie = NULL;
+		drv->probe_req_ie_len = 0;
+	}
+
 	for (i = 0; i < params->num_ssids; i++)
 		wpa_hexdump(MSG_DEBUG, "Scan SSID",
 			    params->ssids[i].ssid, params->ssids[i].ssid_len);
@@ -2349,28 +2365,6 @@ static int wpa_driver_test_set_bssid(void *priv, const u8 *bssid)
 }
 
 
-static int wpa_driver_test_set_probe_req_ie(void *priv, const u8 *ies,
-					    size_t ies_len)
-{
-	struct wpa_driver_test_data *drv = priv;
-
-	os_free(drv->probe_req_ie);
-	if (ies) {
-		drv->probe_req_ie = os_malloc(ies_len);
-		if (drv->probe_req_ie == NULL) {
-			drv->probe_req_ie_len = 0;
-			return -1;
-		}
-		os_memcpy(drv->probe_req_ie, ies, ies_len);
-		drv->probe_req_ie_len = ies_len;
-	} else {
-		drv->probe_req_ie = NULL;
-		drv->probe_req_ie_len = 0;
-	}
-	return 0;
-}
-
-
 static void * wpa_driver_test_global_init(void)
 {
 	struct wpa_driver_test_global *global;
@@ -2519,7 +2513,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.mlme_add_sta = wpa_driver_test_mlme_add_sta,
 	.mlme_remove_sta = wpa_driver_test_mlme_remove_sta,
 	.get_scan_results2 = wpa_driver_test_get_scan_results2,
-	.set_probe_req_ie = wpa_driver_test_set_probe_req_ie,
 	.global_init = wpa_driver_test_global_init,
 	.global_deinit = wpa_driver_test_global_deinit,
 	.init2 = wpa_driver_test_init2,

@@ -1217,10 +1217,12 @@ wpa_driver_bsd_set_auth_alg(void *priv, int auth_alg)
 }
 
 static int
-wpa_driver_bsd_scan(void *priv, const u8 *ssid, size_t ssid_len)
+wpa_driver_bsd_scan(void *priv, struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_bsd_data *drv = priv;
 	int flags;
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
 
 	/* NB: interface must be marked UP to do a scan */
 	if (getifflags(drv, &flags) != 0 || setifflags(drv, flags | IFF_UP) != 0)
@@ -1523,7 +1525,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.get_ssid		= wpa_driver_bsd_get_ssid,
 	.set_key		= wpa_driver_bsd_set_key,
 	.set_countermeasures	= wpa_driver_bsd_set_countermeasures,
-	.scan			= wpa_driver_bsd_scan,
+	.scan2			= wpa_driver_bsd_scan,
 	.get_scan_results2	= wpa_driver_bsd_get_scan_results2,
 	.deauthenticate		= wpa_driver_bsd_deauthenticate,
 	.disassociate		= wpa_driver_bsd_disassociate,

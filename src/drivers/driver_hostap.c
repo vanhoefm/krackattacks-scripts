@@ -1568,18 +1568,21 @@ wpa_driver_hostap_associate(void *priv,
 }
 
 
-static int wpa_driver_hostap_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_hostap_scan(void *priv,
+				  struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_hostap_data *drv = priv;
 	struct prism2_hostapd_param param;
 	int ret;
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
 
 	if (ssid == NULL) {
 		/* Use standard Linux Wireless Extensions ioctl if possible
 		 * because some drivers using hostap code in wpa_supplicant
 		 * might not support Host AP specific scan request (with SSID
 		 * info). */
-		return wpa_driver_wext_scan(drv->wext, ssid, ssid_len);
+		return wpa_driver_wext_scan(drv->wext, params);
 	}
 
 	if (ssid_len > 32)
@@ -1730,7 +1733,7 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.get_bssid = wpa_driver_hostap_get_bssid,
 	.get_ssid = wpa_driver_hostap_get_ssid,
 	.set_countermeasures = wpa_driver_hostap_set_countermeasures,
-	.scan = wpa_driver_hostap_scan,
+	.scan2 = wpa_driver_hostap_scan,
 	.get_scan_results2 = wpa_driver_hostap_get_scan_results,
 	.deauthenticate = wpa_driver_hostap_deauthenticate,
 	.disassociate = wpa_driver_hostap_disassociate,

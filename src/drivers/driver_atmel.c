@@ -420,10 +420,11 @@ static int wpa_driver_atmel_get_ssid(void *priv, u8 *ssid)
 }
 
 
-static int wpa_driver_atmel_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_atmel_scan(void *priv,
+				 struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_atmel_data *drv = priv;
-	return wpa_driver_wext_scan(drv->wext, ssid, ssid_len);
+	return wpa_driver_wext_scan(drv->wext, params);
 }
 
 
@@ -488,7 +489,7 @@ const struct wpa_driver_ops wpa_driver_atmel_ops = {
 	.init = wpa_driver_atmel_init,
 	.deinit = wpa_driver_atmel_deinit,
 	.set_countermeasures = wpa_driver_atmel_set_countermeasures,
-	.scan = wpa_driver_atmel_scan,
+	.scan2 = wpa_driver_atmel_scan,
 	.get_scan_results2 = wpa_driver_atmel_get_scan_results,
 	.deauthenticate = wpa_driver_atmel_deauthenticate,
 	.disassociate = wpa_driver_atmel_disassociate,

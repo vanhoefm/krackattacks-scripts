@@ -675,25 +675,6 @@ struct wpa_driver_ops {
 	int (*set_countermeasures)(void *priv, int enabled);
 
 	/**
-	 * scan - Request the driver to initiate scan (old version)
-	 * @priv: private driver interface data
-	 * @ssid: specific SSID to scan for (ProbeReq) or %NULL to scan for
-	 *	all SSIDs (either active scan with wildcard SSID or passive
-	 *	scan)
-	 * @ssid_len: length of the SSID
-	 *
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * Once the scan results are ready, the driver should report scan
-	 * results event for wpa_supplicant which will eventually request the
-	 * results with wpa_driver_get_scan_results().
-	 *
-	 * This function is deprecated. New driver wrapper implementations
-	 * should implement support for scan2().
-	 */
-	int (*scan)(void *priv, const u8 *ssid, size_t ssid_len);
-
-	/**
 	 * get_scan_results - Fetch the latest scan results (old version)
 	 * @priv: private driver interface data
 	 * @results: pointer to buffer for scan results
@@ -1040,15 +1021,6 @@ struct wpa_driver_ops {
 	 * freeing the data structure) on success, NULL on failure
 	 */
 	 struct wpa_scan_results * (*get_scan_results2)(void *priv);
-
-	/**
-	 * set_probe_req_ie - Set information element(s) for Probe Request
-	 * @priv: private driver interface data
-	 * @ies: Information elements to append or %NULL to remove extra IEs
-	 * @ies_len: Length of the IE buffer in octets
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_probe_req_ie)(void *priv, const u8 *ies, size_t ies_len);
 
 	/**
 	 * set_country - Set country

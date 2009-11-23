@@ -1026,7 +1026,8 @@ static void wpa_driver_ralink_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 
 }
 
-static int wpa_driver_ralink_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_ralink_scan(void *priv,
+				  struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_ralink_data *drv = priv;
 	struct iwreq iwr;
@@ -1037,6 +1038,7 @@ static int wpa_driver_ralink_scan(void *priv, const u8 *ssid, size_t ssid_len)
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
+#if 0
 	if (ssid_len > IW_ESSID_MAX_SIZE) {
 		wpa_printf(MSG_DEBUG, "%s: too long SSID (%lu)",
 			   __FUNCTION__, (unsigned long) ssid_len);
@@ -1044,6 +1046,7 @@ static int wpa_driver_ralink_scan(void *priv, const u8 *ssid, size_t ssid_len)
 	}
 
 	/* wpa_driver_ralink_set_ssid(drv, ssid, ssid_len); */
+#endif
 
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
@@ -1495,7 +1498,7 @@ const struct wpa_driver_ops wpa_driver_ralink_ops = {
 	.init = wpa_driver_ralink_init,
 	.deinit = wpa_driver_ralink_deinit,
 	.set_countermeasures	= wpa_driver_ralink_set_countermeasures,
-	.scan = wpa_driver_ralink_scan,
+	.scan2 = wpa_driver_ralink_scan,
 	.get_scan_results = wpa_driver_ralink_get_scan_results,
 	.deauthenticate = wpa_driver_ralink_deauthenticate,
 	.disassociate = wpa_driver_ralink_disassociate,

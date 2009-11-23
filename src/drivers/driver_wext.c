@@ -1088,18 +1088,17 @@ void wpa_driver_wext_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 /**
  * wpa_driver_wext_scan - Request the driver to initiate scan
  * @priv: Pointer to private wext data from wpa_driver_wext_init()
- * @ssid: Specific SSID to scan for (ProbeReq) or %NULL to scan for
- *	all SSIDs (either active scan with wildcard SSID or passive
- *	scan)
- * @ssid_len: Length of the SSID
+ * @param: Scan parameters (specific SSID to scan for (ProbeReq), etc.)
  * Returns: 0 on success, -1 on failure
  */
-int wpa_driver_wext_scan(void *priv, const u8 *ssid, size_t ssid_len)
+int wpa_driver_wext_scan(void *priv, struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_wext_data *drv = priv;
 	struct iwreq iwr;
 	int ret = 0, timeout;
 	struct iw_scan_req req;
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
 
 	if (ssid_len > IW_ESSID_MAX_SIZE) {
 		wpa_printf(MSG_DEBUG, "%s: too long SSID (%lu)",
@@ -2379,7 +2378,7 @@ const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.get_ssid = wpa_driver_wext_get_ssid,
 	.set_key = wpa_driver_wext_set_key,
 	.set_countermeasures = wpa_driver_wext_set_countermeasures,
-	.scan = wpa_driver_wext_scan,
+	.scan2 = wpa_driver_wext_scan,
 	.get_scan_results2 = wpa_driver_wext_get_scan_results,
 	.deauthenticate = wpa_driver_wext_deauthenticate,
 	.disassociate = wpa_driver_wext_disassociate,

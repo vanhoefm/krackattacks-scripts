@@ -400,11 +400,13 @@ static void wpa_driver_broadcom_scan_timeout(void *eloop_ctx,
 	wpa_supplicant_event(timeout_ctx, EVENT_SCAN_RESULTS, NULL);
 }
 
-static int wpa_driver_broadcom_scan(void *priv, const u8 *ssid,
-				    size_t ssid_len)
+static int wpa_driver_broadcom_scan(void *priv,
+				    struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_broadcom_data *drv = priv;
 	wlc_ssid_t wst = { 0, "" };
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
 
 	if (ssid && ssid_len > 0 && ssid_len <= sizeof(wst.SSID)) {
 		wst.SSID_len = ssid_len;
@@ -601,7 +603,7 @@ const struct wpa_driver_ops wpa_driver_broadcom_ops = {
 	.init = wpa_driver_broadcom_init,
 	.deinit = wpa_driver_broadcom_deinit,
 	.set_countermeasures = wpa_driver_broadcom_set_countermeasures,
-	.scan = wpa_driver_broadcom_scan,
+	.scan2 = wpa_driver_broadcom_scan,
 	.get_scan_results = wpa_driver_broadcom_get_scan_results,
 	.deauthenticate = wpa_driver_broadcom_deauthenticate,
 	.disassociate = wpa_driver_broadcom_disassociate,

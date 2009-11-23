@@ -1387,6 +1387,8 @@ struct wpa_driver_madwifi_data {
 };
 
 static int wpa_driver_madwifi_set_auth_alg(void *priv, int auth_alg);
+static int wpa_driver_madwifi_set_probe_req_ie(void *priv, const u8 *ies,
+					       size_t ies_len);
 
 
 static int
@@ -1754,11 +1756,16 @@ wpa_driver_madwifi_set_auth_alg(void *priv, int auth_alg)
 }
 
 static int
-wpa_driver_madwifi_scan(void *priv, const u8 *ssid, size_t ssid_len)
+wpa_driver_madwifi_scan(void *priv, struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_madwifi_data *drv = priv;
 	struct iwreq iwr;
 	int ret = 0;
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
+
+	wpa_driver_madwifi_set_probe_req_ie(drv, params->extra_ies,
+					    params->extra_ies_len);
 
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
@@ -1943,12 +1950,11 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.init			= wpa_driver_madwifi_init,
 	.deinit			= wpa_driver_madwifi_deinit,
 	.set_countermeasures	= wpa_driver_madwifi_set_countermeasures,
-	.scan			= wpa_driver_madwifi_scan,
+	.scan2			= wpa_driver_madwifi_scan,
 	.get_scan_results2	= wpa_driver_madwifi_get_scan_results,
 	.deauthenticate		= wpa_driver_madwifi_deauthenticate,
 	.disassociate		= wpa_driver_madwifi_disassociate,
 	.associate		= wpa_driver_madwifi_associate,
 	.set_operstate		= wpa_driver_madwifi_set_operstate,
-	.set_probe_req_ie	= wpa_driver_madwifi_set_probe_req_ie,
 #endif /* HOSTAPD */
 };

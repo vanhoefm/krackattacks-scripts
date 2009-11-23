@@ -75,10 +75,6 @@ static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s,
 {
 	if (wpa_s->driver->scan2)
 		return wpa_s->driver->scan2(wpa_s->drv_priv, params);
-	if (wpa_s->driver->scan)
-		return wpa_s->driver->scan(wpa_s->drv_priv,
-					   params->ssids[0].ssid,
-					   params->ssids[0].ssid_len);
 	return -1;
 }
 
@@ -330,15 +326,6 @@ static inline int wpa_drv_send_ft_action(struct wpa_supplicant *wpa_s,
 	if (wpa_s->driver->send_ft_action)
 		return wpa_s->driver->send_ft_action(wpa_s->drv_priv, action,
 						     target_ap, ies, ies_len);
-	return -1;
-}
-
-static inline int wpa_drv_set_probe_req_ie(struct wpa_supplicant *wpa_s,
-					   const u8 *ies, size_t ies_len)
-{
-	if (wpa_s->driver->set_probe_req_ie)
-		return wpa_s->driver->set_probe_req_ie(wpa_s->drv_priv, ies,
-						       ies_len);
 	return -1;
 }
 

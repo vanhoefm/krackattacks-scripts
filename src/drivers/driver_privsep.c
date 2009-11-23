@@ -102,9 +102,12 @@ static int wpa_priv_cmd(struct wpa_driver_privsep_data *drv, int cmd,
 }
 
 			     
-static int wpa_driver_privsep_scan(void *priv, const u8 *ssid, size_t ssid_len)
+static int wpa_driver_privsep_scan(void *priv,
+				   struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_privsep_data *drv = priv;
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
 	wpa_printf(MSG_DEBUG, "%s: priv=%p", __func__, priv);
 	return wpa_priv_cmd(drv, PRIVSEP_CMD_SCAN, ssid, ssid_len,
 			    NULL, NULL);
@@ -757,7 +760,7 @@ struct wpa_driver_ops wpa_driver_privsep_ops = {
 	.init = wpa_driver_privsep_init,
 	.deinit = wpa_driver_privsep_deinit,
 	.set_param = wpa_driver_privsep_set_param,
-	.scan = wpa_driver_privsep_scan,
+	.scan2 = wpa_driver_privsep_scan,
 	.deauthenticate = wpa_driver_privsep_deauthenticate,
 	.disassociate = wpa_driver_privsep_disassociate,
 	.associate = wpa_driver_privsep_associate,

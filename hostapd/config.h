@@ -20,10 +20,6 @@
 #include "ip_addr.h"
 #include "wpa_common.h"
 
-#ifndef IFNAMSIZ
-#define IFNAMSIZ 16
-#endif
-
 typedef u8 macaddr[ETH_ALEN];
 
 struct mac_acl_entry {

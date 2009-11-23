@@ -30,9 +30,22 @@
 
 #ifdef HOSTAPD
 #include "eloop.h"
-#include "../../hostapd/hostapd_defs.h"
 #include "../../hostapd/sta_info.h"
 #endif /* HOSTAPD */
+
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif /* _MSC_VER */
+
+struct ieee8023_hdr {
+	u8 dest[6];
+	u8 src[6];
+	u16 ethertype;
+} STRUCT_PACKED;
+
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif /* _MSC_VER */
 
 static const u8 pae_group_addr[ETH_ALEN] =
 { 0x01, 0x80, 0xc2, 0x00, 0x00, 0x03 };

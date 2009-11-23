@@ -23,10 +23,6 @@
 #include "driver.h"
 #include "l2_packet/l2_packet.h"
 
-#ifndef ETH_P_EAPOL
-#define ETH_P_EAPOL		0x888e
-#endif
-
 #define ROBO_PHY_ADDR		0x1e	/* RoboSwitch PHY address */
 
 /* MII access registers */

@@ -27,14 +27,6 @@
 #include "privsep_commands.h"
 #include "ieee802_11_defs.h"
 
-#ifndef ETH_P_EAPOL
-#define ETH_P_EAPOL 0x888e
-#endif
-
-#ifndef ETH_P_RSN_PREAUTH
-#define ETH_P_RSN_PREAUTH 0x88c7
-#endif
-
 
 struct wpa_priv_interface {
 	struct wpa_priv_interface *next;

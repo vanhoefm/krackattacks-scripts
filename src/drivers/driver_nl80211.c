@@ -36,7 +36,6 @@
 #include "radiotap.h"
 #include "radiotap_iter.h"
 
-#include "../../hostapd/hostapd_defs.h"
 #include "../../hostapd/sta_flags.h"
 #endif /* CONFIG_AP || HOSTAPD */
 

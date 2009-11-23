@@ -20,6 +20,8 @@
 #include "common.h"
 #include "hostapd_defs.h"
 
+#define MAX_VLAN_ID 4094
+
 struct wpa_driver_ops;
 struct wpa_ctrl_dst;
 struct radius_server_data;

@@ -45,10 +45,6 @@ struct ft_rrb_frame {
 #define FT_PACKET_R0KH_R1KH_RESP 201
 #define FT_PACKET_R0KH_R1KH_PUSH 202
 
-#ifndef ETH_P_RRB
-#define ETH_P_RRB 0x890D
-#endif /* ETH_P_RRB */
-
 #define FT_R0KH_R1KH_PULL_DATA_LEN 44
 #define FT_R0KH_R1KH_RESP_DATA_LEN 76
 #define FT_R0KH_R1KH_PUSH_DATA_LEN 80

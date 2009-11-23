@@ -19,14 +19,6 @@
 #include "eapol_common.h"
 #include "wpa_common.h"
 
-#ifndef ETH_P_EAPOL
-#define ETH_P_EAPOL 0x888e
-#endif
-
-#ifndef ETH_P_RSN_PREAUTH
-#define ETH_P_RSN_PREAUTH 0x88c7
-#endif
-
 struct wpa_sm;
 struct eapol_sm;
 struct wpa_config_blob;

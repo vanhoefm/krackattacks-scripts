@@ -18,7 +18,6 @@
 #define HOSTAPD_H
 
 #include "common.h"
-#include "hostapd_defs.h"
 
 #define MAX_VLAN_ID 4094
 

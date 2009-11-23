@@ -35,6 +35,11 @@
 #include "../../hostapd/sta_flags.h"
 
 
+/* MTU to be set for the wlan#ap device; this is mainly needed for IEEE 802.1X
+ * frames that might be longer than normal default MTU and they are not
+ * fragmented */
+#define HOSTAPD_MTU 2290
+
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
 struct hostap_driver_data {

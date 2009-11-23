@@ -1411,8 +1411,6 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		}
 	}
 
-	hostapd_set_beacon_int(hapd, hapd->iconf->beacon_int);
-
 	if (hapd->iconf->rts_threshold > -1 &&
 	    hostapd_set_rts(hapd, hapd->iconf->rts_threshold)) {
 		wpa_printf(MSG_ERROR, "Could not set RTS threshold for "

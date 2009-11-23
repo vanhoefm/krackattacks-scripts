@@ -1213,10 +1213,10 @@ struct wpa_driver_ops {
 	int (*authenticate)(void *priv,
 			    struct wpa_driver_auth_params *params);
 
-	int (*set_beacon)(void *priv, const u8 *head, size_t head_len,
-			  const u8 *tail, size_t tail_len, int dtim_period);
-
-	int (*set_beacon_int)(void *priv, int value);
+	int (*set_beacon)(const char *ifname, void *priv,
+			  const u8 *head, size_t head_len,
+			  const u8 *tail, size_t tail_len, int dtim_period,
+			  int beacon_int);
 
 	void * (*hapd_init)(struct hostapd_data *hapd,
 			    struct wpa_init_params *params);
@@ -1285,10 +1285,6 @@ struct wpa_driver_ops {
 			     int total_flags, int flags_or, int flags_and);
 	int (*set_rate_sets)(void *priv, int *supp_rates, int *basic_rates,
 			     int mode);
-	int (*hapd_set_beacon)(const char *ifname, void *priv,
-			       const u8 *head, size_t head_len,
-			       const u8 *tail, size_t tail_len,
-			       int dtim_period);
 
 	/* Configure internal bridge:
 	 * 0 = disabled, i.e., client separation is enabled (no bridging of

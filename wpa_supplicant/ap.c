@@ -196,20 +196,12 @@ static int ap_driver_set_freq(void *priv, struct hostapd_freq_params *freq)
 static int ap_driver_set_beacon(const char *iface, void *priv,
 				const u8 *head, size_t head_len,
 				const u8 *tail, size_t tail_len,
-				int dtim_period)
+				int dtim_period, int beacon_int)
 {
 	struct ap_driver_data *drv = priv;
 	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
 	return wpa_drv_set_beacon(wpa_s, head, head_len, tail, tail_len,
-				  dtim_period);
-}
-
-
-static int ap_driver_set_beacon_int(void *priv, int value)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_set_beacon_int(wpa_s, value);
+				  dtim_period, beacon_int);
 }
 
 
@@ -282,8 +274,7 @@ struct wpa_driver_ops ap_driver_ops =
 	.sta_add = ap_driver_sta_add,
 	.get_inact_sec = ap_driver_get_inact_sec,
 	.set_freq = ap_driver_set_freq,
-	.hapd_set_beacon = ap_driver_set_beacon,
-	.set_beacon_int = ap_driver_set_beacon_int,
+	.set_beacon = ap_driver_set_beacon,
 	.set_cts_protect = ap_driver_set_cts_protect,
 	.set_preamble = ap_driver_set_preamble,
 	.set_short_slot_time = ap_driver_set_short_slot_time,

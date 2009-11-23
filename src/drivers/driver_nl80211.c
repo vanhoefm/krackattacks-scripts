@@ -1726,11 +1726,14 @@ nla_put_failure:
 }
 
 
-static int nl_set_encr(int ifindex, struct wpa_driver_nl80211_data *drv,
-		       wpa_alg alg, const u8 *addr, int key_idx, int set_tx,
-		       const u8 *seq, size_t seq_len,
-		       const u8 *key, size_t key_len)
+static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
+				      wpa_alg alg, const u8 *addr, int key_idx,
+				      int set_tx,
+				      const u8 *seq, size_t seq_len,
+				      const u8 *key, size_t key_len)
 {
+	struct wpa_driver_nl80211_data *drv = priv;
+	int ifindex = if_nametoindex(ifname);
 	struct nl_msg *msg;
 	int ret;
 
@@ -1942,18 +1945,6 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_set_key(void *priv, wpa_alg alg,
-				      const u8 *addr, int key_idx,
-				      int set_tx, const u8 *seq,
-				      size_t seq_len,
-				      const u8 *key, size_t key_len)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	return nl_set_encr(drv->ifindex, drv, alg, addr, key_idx, set_tx, seq,
-			   seq_len, key, key_len);
-}
-
-
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   const u8 *addr, int cmd, u16 reason_code)
 {
@@ -2046,7 +2037,8 @@ retry:
 	for (i = 0; i < 4; i++) {
 		if (!params->wep_key[i])
 			continue;
-		wpa_driver_nl80211_set_key(drv, WPA_ALG_WEP, NULL, i,
+		wpa_driver_nl80211_set_key(drv->ifname, drv, WPA_ALG_WEP, NULL,
+					   i,
 					   i == params->wep_tx_keyidx, NULL, 0,
 					   params->wep_key[i],
 					   params->wep_key_len[i]);
@@ -3746,16 +3738,6 @@ static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 }
 
 
-static int i802_set_key(const char *iface, void *priv, wpa_alg alg,
-			const u8 *addr, int key_idx, int set_tx, const u8 *seq,
-			size_t seq_len, const u8 *key, size_t key_len)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	return nl_set_encr(if_nametoindex(iface), drv, alg, addr, key_idx,
-			   set_tx, seq, seq_len, key, key_len);
-}
-
-
 static inline int min_int(int a, int b)
 {
 	if (a < b)
@@ -4404,7 +4386,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
 	.hapd_deinit = i802_deinit,
-	.hapd_set_key = i802_set_key,
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.read_sta_data = i802_read_sta_data,

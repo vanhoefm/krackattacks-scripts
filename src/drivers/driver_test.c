@@ -1124,21 +1124,6 @@ static int test_driver_set_privacy(const char *ifname, void *priv, int enabled)
 }
 
 
-static int test_driver_set_key(const char *iface, void *priv, wpa_alg alg,
-			       const u8 *addr, int key_idx, int set_tx,
-			       const u8 *seq, size_t seq_len,
-			       const u8 *key, size_t key_len)
-{
-	wpa_printf(MSG_DEBUG, "%s(iface=%s alg=%d idx=%d set_tx=%d)",
-		   __func__, iface, alg, key_idx, set_tx);
-	if (addr)
-		wpa_printf(MSG_DEBUG, "   addr=" MACSTR, MAC2STR(addr));
-	if (key)
-		wpa_hexdump_key(MSG_DEBUG, "   key", key, key_len);
-	return 0;
-}
-
-
 static int test_driver_set_sta_vlan(void *priv, const u8 *addr,
 				    const char *ifname, int vlan_id)
 {
@@ -1457,22 +1442,20 @@ static struct wpa_scan_results * wpa_driver_test_get_scan_results2(void *priv)
 }
 
 
-static int wpa_driver_test_set_key(void *priv, wpa_alg alg, const u8 *addr,
-				   int key_idx, int set_tx,
+static int wpa_driver_test_set_key(const char *ifname, void *priv, wpa_alg alg,
+				   const u8 *addr, int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {
-	wpa_printf(MSG_DEBUG, "%s: priv=%p alg=%d key_idx=%d set_tx=%d",
-		   __func__, priv, alg, key_idx, set_tx);
-	if (addr) {
+	wpa_printf(MSG_DEBUG, "%s: ifname=%s priv=%p alg=%d key_idx=%d "
+		   "set_tx=%d",
+		   __func__, ifname, priv, alg, key_idx, set_tx);
+	if (addr)
 		wpa_printf(MSG_DEBUG, "   addr=" MACSTR, MAC2STR(addr));
-	}
-	if (seq) {
+	if (seq)
 		wpa_hexdump(MSG_DEBUG, "   seq", seq, seq_len);
-	}
-	if (key) {
-		wpa_hexdump(MSG_DEBUG, "   key", key, key_len);
-	}
+	if (key)
+		wpa_hexdump_key(MSG_DEBUG, "   key", key, key_len);
 	return 0;
 }
 
@@ -2527,7 +2510,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.valid_bss_mask = test_driver_valid_bss_mask,
 	.hapd_set_ssid = test_driver_set_ssid,
 	.set_privacy = test_driver_set_privacy,
-	.hapd_set_key = test_driver_set_key,
 	.set_sta_vlan = test_driver_set_sta_vlan,
 	.sta_add = test_driver_sta_add,
 	.send_ether = test_driver_send_ether,

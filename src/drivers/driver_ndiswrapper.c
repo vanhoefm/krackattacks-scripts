@@ -107,8 +107,8 @@ static int wpa_ndiswrapper_set_wpa(void *priv, int enabled)
 	return ret;
 }
 
-static int wpa_ndiswrapper_set_key(void *priv, wpa_alg alg, const u8 *addr,
-				   int key_idx, int set_tx,
+static int wpa_ndiswrapper_set_key(const char *ifname, void *priv, wpa_alg alg,
+				   const u8 *addr, int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {
@@ -142,8 +142,8 @@ static int wpa_ndiswrapper_set_key(void *priv, wpa_alg alg, const u8 *addr,
 		 * did not associate. Try to make sure the keys are cleared so
 		 * that plaintext APs can be used in all cases.
 		 */
-		wpa_driver_wext_set_key(drv->wext, alg, addr, key_idx, set_tx,
-					seq, seq_len, key, key_len);
+		wpa_driver_wext_set_key(ifname, drv->wext, alg, addr, key_idx,
+					set_tx, seq, seq_len, key, key_len);
 	}
 
 	return ret;

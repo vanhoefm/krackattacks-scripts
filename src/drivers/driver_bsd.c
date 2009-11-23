@@ -828,7 +828,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.hapd_deinit		= bsd_deinit,
 	.set_ieee8021x		= bsd_set_ieee8021x,
 	.set_privacy		= bsd_set_privacy,
-	.hapd_set_key		= bsd_set_key,
+	.set_key		= bsd_set_key,
 	.get_seqnum		= bsd_get_seqnum,
 	.flush			= bsd_flush,
 	.set_generic_elem	= bsd_set_opt_ie,
@@ -1023,7 +1023,7 @@ wpa_driver_bsd_del_key(struct wpa_driver_bsd_data *drv, int key_idx,
 }
 
 static int
-wpa_driver_bsd_set_key(void *priv, wpa_alg alg,
+wpa_driver_bsd_set_key(const char *ifname, void *priv, wpa_alg alg,
 		       const unsigned char *addr, int key_idx, int set_tx,
 		       const u8 *seq, size_t seq_len,
 		       const u8 *key, size_t key_len)

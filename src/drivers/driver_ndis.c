@@ -975,8 +975,8 @@ static int wpa_driver_ndis_add_wep(struct wpa_driver_ndis_data *drv,
 }
 
 
-static int wpa_driver_ndis_set_key(void *priv, wpa_alg alg, const u8 *addr,
-				   int key_idx, int set_tx,
+static int wpa_driver_ndis_set_key(const char *ifname, void *priv, wpa_alg alg,
+				   const u8 *addr, int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {
@@ -1083,7 +1083,8 @@ wpa_driver_ndis_associate(void *priv,
 				continue;
 			wpa_printf(MSG_DEBUG, "NDIS: Re-setting static WEP "
 				   "key %d", i);
-			wpa_driver_ndis_set_key(drv, WPA_ALG_WEP, bcast, i,
+			wpa_driver_ndis_set_key(drv->ifname, drv, WPA_ALG_WEP,
+						bcast, i,
 						i == params->wep_tx_keyidx,
 						NULL, 0, params->wep_key[i],
 						params->wep_key_len[i]);
@@ -3221,7 +3222,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* hapd_deinit */,
 	NULL /* set_ieee8021x */,
 	NULL /* set_privacy */,
-	NULL /* hapd_set_key */,
 	NULL /* get_seqnum */,
 	NULL /* get_seqnum_igtk */,
 	NULL /* flush */,

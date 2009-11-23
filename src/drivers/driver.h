@@ -15,7 +15,7 @@
 #ifndef DRIVER_H
 #define DRIVER_H
 
-#define WPA_SUPPLICANT_DRIVER_VERSION 3
+#define WPA_SUPPLICANT_DRIVER_VERSION 4
 
 #include "defs.h"
 
@@ -593,6 +593,7 @@ struct wpa_driver_ops {
 
 	/**
 	 * set_key - Configure encryption key
+	 * @ifname: Interface name (for multi-SSID/VLAN support)
 	 * @priv: private driver interface data
 	 * @alg: encryption algorithm (%WPA_ALG_NONE, %WPA_ALG_WEP,
 	 *	%WPA_ALG_TKIP, %WPA_ALG_CCMP, %WPA_ALG_IGTK, %WPA_ALG_PMK);
@@ -634,8 +635,9 @@ struct wpa_driver_ops {
 	 * in driver_*.c set_key() implementation, see driver_ndis.c for an
 	 * example on how this can be done.
 	 */
-	int (*set_key)(void *priv, wpa_alg alg, const u8 *addr,
-		       int key_idx, int set_tx, const u8 *seq, size_t seq_len,
+	int (*set_key)(const char *ifname, void *priv, wpa_alg alg,
+		       const u8 *addr, int key_idx, int set_tx,
+		       const u8 *seq, size_t seq_len,
 		       const u8 *key, size_t key_len);
 
 	/**
@@ -1246,10 +1248,6 @@ struct wpa_driver_ops {
 	 */
 	int (*set_privacy)(const char *ifname, void *priv, int enabled);
 
-	int (*hapd_set_key)(const char *ifname, void *priv, wpa_alg alg,
-			    const u8 *addr, int key_idx, int set_tx,
-			    const u8 *seq, size_t seq_len,
-			    const u8 *key, size_t key_len);
 	int (*get_seqnum)(const char *ifname, void *priv, const u8 *addr,
 			  int idx, u8 *seq);
 	int (*get_seqnum_igtk)(const char *ifname, void *priv, const u8 *addr,

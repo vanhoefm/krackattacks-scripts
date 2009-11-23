@@ -431,10 +431,10 @@ static int hostapd_ioctl(void *priv, struct prism2_hostapd_param *param,
 }
 
 
-static int hostap_set_key(const char *ifname, void *priv, wpa_alg alg,
-			  const u8 *addr, int key_idx, int set_tx,
-			  const u8 *seq, size_t seq_len, const u8 *key,
-			  size_t key_len)
+static int wpa_driver_hostap_set_key(const char *ifname, void *priv,
+				     wpa_alg alg, const u8 *addr, int key_idx,
+				     int set_tx, const u8 *seq, size_t seq_len,
+				     const u8 *key, size_t key_len)
 {
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param *param;
@@ -1350,8 +1350,8 @@ static void show_set_key_error(struct prism2_hostapd_param *param)
 }
 
 
-static int wpa_driver_hostap_set_key(void *priv, wpa_alg alg,
-				     const u8 *addr, int key_idx,
+static int wpa_driver_hostap_set_key(const char *ifname, void *priv,
+				     wpa_alg alg, const u8 *addr, int key_idx,
 				     int set_tx, const u8 *seq, size_t seq_len,
 				     const u8 *key, size_t key_len)
 {
@@ -1700,12 +1700,12 @@ static void wpa_driver_hostap_deinit(void *priv)
 const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.name = "hostap",
 	.desc = "Host AP driver (Intersil Prism2/2.5/3)",
+	.set_key = wpa_driver_hostap_set_key,
 #ifdef HOSTAPD
 	.hapd_init = hostap_init,
 	.hapd_deinit = hostap_driver_deinit,
 	.set_ieee8021x = hostap_set_ieee8021x,
 	.set_privacy = hostap_set_privacy,
-	.hapd_set_key = hostap_set_key,
 	.get_seqnum = hostap_get_seqnum,
 	.flush = hostap_flush,
 	.set_generic_elem = hostap_set_generic_elem,
@@ -1727,7 +1727,6 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.get_bssid = wpa_driver_hostap_get_bssid,
 	.get_ssid = wpa_driver_hostap_get_ssid,
 	.set_wpa = wpa_driver_hostap_set_wpa,
-	.set_key = wpa_driver_hostap_set_key,
 	.set_countermeasures = wpa_driver_hostap_set_countermeasures,
 	.set_drop_unencrypted = wpa_driver_hostap_set_drop_unencrypted,
 	.scan = wpa_driver_hostap_scan,

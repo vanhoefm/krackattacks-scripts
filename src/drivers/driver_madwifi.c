@@ -455,9 +455,10 @@ madwifi_del_key(void *priv, const u8 *addr, int key_idx)
 }
 
 static int
-madwifi_set_key(const char *ifname, void *priv, wpa_alg alg,
-		const u8 *addr, int key_idx, int set_tx, const u8 *seq,
-		size_t seq_len, const u8 *key, size_t key_len)
+wpa_driver_madwifi_set_key(const char *ifname, void *priv, wpa_alg alg,
+			   const u8 *addr, int key_idx, int set_tx,
+			   const u8 *seq, size_t seq_len,
+			   const u8 *key, size_t key_len)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct ieee80211req_key wk;
@@ -1530,7 +1531,7 @@ wpa_driver_madwifi_del_key(struct wpa_driver_madwifi_data *drv, int key_idx,
 }
 
 static int
-wpa_driver_madwifi_set_key(void *priv, wpa_alg alg,
+wpa_driver_madwifi_set_key(const char *ifname, void *priv, wpa_alg alg,
 			   const u8 *addr, int key_idx, int set_tx,
 			   const u8 *seq, size_t seq_len,
 			   const u8 *key, size_t key_len)
@@ -1552,8 +1553,8 @@ wpa_driver_madwifi_set_key(void *priv, wpa_alg alg,
 			 * configuration with IEEE80211_IOCTL_SETKEY, so use
 			 * Linux wireless extensions ioctl for this.
 			 */
-			return wpa_driver_wext_set_key(drv->wext, alg, addr,
-						       key_idx, set_tx,
+			return wpa_driver_wext_set_key(ifname, drv->wext, alg,
+						       addr, key_idx, set_tx,
 						       seq, seq_len,
 						       key, key_len);
 		}
@@ -1910,12 +1911,12 @@ static void wpa_driver_madwifi_deinit(void *priv)
 const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.name			= "madwifi",
 	.desc			= "MADWIFI 802.11 support (Atheros, etc.)",
+	.set_key		= wpa_driver_madwifi_set_key,
 #ifdef HOSTAPD
 	.hapd_init		= madwifi_init,
 	.hapd_deinit		= madwifi_deinit,
 	.set_ieee8021x		= madwifi_set_ieee8021x,
 	.set_privacy		= madwifi_set_privacy,
-	.hapd_set_key		= madwifi_set_key,
 	.get_seqnum		= madwifi_get_seqnum,
 	.flush			= madwifi_flush,
 	.set_generic_elem	= madwifi_set_opt_ie,
@@ -1934,7 +1935,6 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 #else /* HOSTAPD */
 	.get_bssid		= wpa_driver_madwifi_get_bssid,
 	.get_ssid		= wpa_driver_madwifi_get_ssid,
-	.set_key		= wpa_driver_madwifi_set_key,
 	.init			= wpa_driver_madwifi_init,
 	.deinit			= wpa_driver_madwifi_deinit,
 	.set_countermeasures	= wpa_driver_madwifi_set_countermeasures,

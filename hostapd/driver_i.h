@@ -87,11 +87,11 @@ hostapd_set_key(const char *ifname, struct hostapd_data *hapd,
 		int set_tx, const u8 *seq, size_t seq_len,
 		const u8 *key, size_t key_len)
 {
-	if (hapd->driver == NULL || hapd->driver->hapd_set_key == NULL)
+	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
 		return 0;
-	return hapd->driver->hapd_set_key(ifname, hapd->drv_priv, alg, addr,
-					  key_idx, set_tx, seq, seq_len, key,
-					  key_len);
+	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
+				     key_idx, set_tx, seq, seq_len, key,
+				     key_len);
 }
 
 static inline int

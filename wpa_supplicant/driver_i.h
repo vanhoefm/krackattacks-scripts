@@ -160,9 +160,9 @@ static inline int wpa_drv_set_key(struct wpa_supplicant *wpa_s, wpa_alg alg,
 {
 	if (wpa_s->driver->set_key) {
 		wpa_s->keys_cleared = 0;
-		return wpa_s->driver->set_key(wpa_s->drv_priv, alg, addr,
-					      key_idx, set_tx, seq, seq_len,
-					      key, key_len);
+		return wpa_s->driver->set_key(wpa_s->ifname, wpa_s->drv_priv,
+					      alg, addr, key_idx, set_tx,
+					      seq, seq_len, key, key_len);
 	}
 	return -1;
 }

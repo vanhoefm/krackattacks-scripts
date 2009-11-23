@@ -196,10 +196,11 @@ wpa_driver_privsep_get_scan_results2(void *priv)
 }
 
 
-static int wpa_driver_privsep_set_key(void *priv, wpa_alg alg, const u8 *addr,
-				   int key_idx, int set_tx,
-				   const u8 *seq, size_t seq_len,
-				   const u8 *key, size_t key_len)
+static int wpa_driver_privsep_set_key(const char *ifname, void *priv,
+				      wpa_alg alg, const u8 *addr,
+				      int key_idx, int set_tx,
+				      const u8 *seq, size_t seq_len,
+				      const u8 *key, size_t key_len)
 {
 	struct wpa_driver_privsep_data *drv = priv;
 	struct privsep_cmd_set_key cmd;

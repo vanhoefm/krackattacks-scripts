@@ -199,10 +199,11 @@ prism54_sta_set_flags(void *priv, const u8 *addr, int total_flags,
 }
 
 
-static int prism54_set_key(const char *ifname, void *priv, wpa_alg alg,
-			   const u8 *addr, int key_idx, int set_tx,
-			   const u8 *seq, size_t seq_len,
-			   const u8 *key, size_t key_len)
+static int wpa_driver_prism54_set_key(const char *ifname, void *priv,
+				      wpa_alg alg, const u8 *addr, int key_idx,
+				      int set_tx,
+				      const u8 *seq, size_t seq_len,
+				      const u8 *key, size_t key_len)
 {
 	struct prism54_driver_data *drv = priv;
 	pimdev_hdr *hdr;
@@ -1159,7 +1160,8 @@ static int wpa_driver_prism54_set_wpa(void *priv, int enabled)
 }
 
 
-static int wpa_driver_prism54_set_key(void *priv, wpa_alg alg,
+static int wpa_driver_prism54_set_key(const char *ifname, void *priv,
+				      wpa_alg alg,
 				      const u8 *addr, int key_idx, int set_tx,
 				      const u8 *seq, size_t seq_len,
 				      const u8 *key, size_t key_len)
@@ -1419,12 +1421,12 @@ static void wpa_driver_prism54_deinit(void *priv)
 const struct wpa_driver_ops wpa_driver_prism54_ops = {
 	.name = "prism54",
 	.desc = "Prism54.org driver (Intersil Prism GT/Duette/Indigo)",
+	.set_key = wpa_driver_prism54_set_key,
 #ifdef HOSTAPD
 	.hapd_init = prism54_driver_init,
 	.hapd_deinit = prism54_driver_deinit,
 	/* .set_ieee8021x = prism54_init_1x, */
 	.set_privacy = prism54_set_privacy_invoked,
-	.hapd_set_key = prism54_set_key,
 	.get_seqnum = prism54_get_seqnum,
 	.flush = prism54_flush,
 	.set_generic_elem = prism54_set_generic_elem,
@@ -1438,7 +1440,6 @@ const struct wpa_driver_ops wpa_driver_prism54_ops = {
 	.get_bssid = wpa_driver_prism54_get_bssid,
 	.get_ssid = wpa_driver_prism54_get_ssid,
 	.set_wpa = wpa_driver_prism54_set_wpa,
-	.set_key = wpa_driver_prism54_set_key,
 	.set_countermeasures = wpa_driver_prism54_set_countermeasures,
 	.set_drop_unencrypted = wpa_driver_prism54_set_drop_unencrypted,
 	.scan = wpa_driver_prism54_scan,

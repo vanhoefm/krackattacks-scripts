@@ -3175,7 +3175,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	wpa_driver_ndis_deinit,
 	NULL /* set_param */,
 	NULL /* set_countermeasures */,
-	NULL /* get_scan_results */,
 	wpa_driver_ndis_deauthenticate,
 	wpa_driver_ndis_disassociate,
 	wpa_driver_ndis_associate,

@@ -1067,10 +1067,8 @@ static int wpa_driver_ralink_scan(void *priv,
 	return ret;
 }
 
-static int
-wpa_driver_ralink_get_scan_results(void *priv,
-				   struct wpa_scan_result *results,
-				   size_t max_size)
+static struct wpa_scan_results *
+wpa_driver_ralink_get_scan_results(void *priv)
 {
 	struct wpa_driver_ralink_data *drv = priv;
 	UCHAR *buf = NULL;
@@ -1080,9 +1078,10 @@ wpa_driver_ralink_get_scan_results(void *priv,
 	int rv = 0;
 	size_t ap_num;
 	u8 *pos, *end;
+	struct wpa_scan_results *res;
 
 	if (drv->g_driver_down == 1)
-		return -1;
+		return NULL;
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
 	if (drv->we_version_compiled >= 17) {
@@ -1093,7 +1092,7 @@ wpa_driver_ralink_get_scan_results(void *priv,
 		iwr.u.data.length = 4096;
 	}
 	if (buf == NULL)
-		return -1;
+		return NULL;
 
 	wsr = (NDIS_802_11_BSSID_LIST_EX *) buf;
 
@@ -1105,22 +1104,33 @@ wpa_driver_ralink_get_scan_results(void *priv,
 	if ((rv = ioctl(drv->ioctl_sock, RT_PRIV_IOCTL, &iwr)) < 0) {
 		wpa_printf(MSG_DEBUG, "ioctl fail: rv = %d", rv);
 		os_free(buf);
-		return -1;
+		return NULL;
 	}
 
-	os_memset(results, 0, max_size * sizeof(struct wpa_scan_result));
+	res = os_zalloc(sizeof(*res));
+	if (res == NULL) {
+		os_free(buf);
+		return NULL;
+	}
+
+	res->res = os_zalloc(wsr->NumberOfItems *
+			     sizeof(struct wpa_scan_res *));
+	if (res->res == NULL) {
+		os_free(res);
+		os_free(buf);
+		return NULL;
+	}
 
 	for (ap_num = 0, wbi = wsr->Bssid; ap_num < wsr->NumberOfItems;
 	     ++ap_num) {
-		os_memcpy(results[ap_num].bssid, &wbi->MacAddress, ETH_ALEN);
-		os_memcpy(results[ap_num].ssid, wbi->Ssid.Ssid,
-			  wbi->Ssid.SsidLength);
-		results[ap_num].ssid_len = wbi->Ssid.SsidLength;
-		results[ap_num].freq = (wbi->Configuration.DSConfig / 1000);
+		struct wpa_scan_res *r;
+		r = os_malloc(sizeof(*r) + wbi->IELength);
+		if (r == NULL)
+			break;
+		res->res[res->num++] = r;
 
-		/* get ie's */
-		wpa_hexdump(MSG_DEBUG, "RALINK: AP IEs",
-			    (u8 *) wbi + sizeof(*wbi) - 1, wbi->IELength);
+		os_memcpy(r->bssid, &wbi->MacAddress, ETH_ALEN);
+		r->freq = (wbi->Configuration.DSConfig / 1000);
 
 		pos = (u8 *) wbi + sizeof(*wbi) - 1;
 		end = (u8 *) wbi + sizeof(*wbi) + wbi->IELength;
@@ -1129,34 +1139,17 @@ wpa_driver_ralink_get_scan_results(void *priv,
 			break;
 
 		pos += sizeof(NDIS_802_11_FIXED_IEs) - 2;
-		os_memcpy(&results[ap_num].caps, pos, 2);
+		r->caps = WPA_GET_LE16(pos);
 		pos += 2;
 
-		while (pos + 1 < end && pos + 2 + pos[1] <= end) {
-			u8 ielen = 2 + pos[1];
-
-			if (ielen > SSID_MAX_WPA_IE_LEN) {
-				pos += ielen;
-				continue;
-			}
-
-			if (pos[0] == WLAN_EID_VENDOR_SPECIFIC &&
-			    pos[1] >= 4 &&
-			    os_memcmp(pos + 2, "\x00\x50\xf2\x01", 4) == 0) {
-				os_memcpy(results[ap_num].wpa_ie, pos, ielen);
-				results[ap_num].wpa_ie_len = ielen;
-			} else if (pos[0] == WLAN_EID_RSN) {
-				os_memcpy(results[ap_num].rsn_ie, pos, ielen);
-				results[ap_num].rsn_ie_len = ielen;
-			}
-			pos += ielen;
-		}
+		os_memcpy(r + 1, pos, end - pos);
+		r->ie_len = end - pos;
 
 		wbi = (NDIS_WLAN_BSSID_EX *) ((u8 *) wbi + wbi->Length);
 	}
 
 	os_free(buf);
-	return ap_num;
+	return res;
 }
 
 static int ralink_set_auth_mode(struct wpa_driver_ralink_data *drv,
@@ -1499,7 +1492,7 @@ const struct wpa_driver_ops wpa_driver_ralink_ops = {
 	.deinit = wpa_driver_ralink_deinit,
 	.set_countermeasures	= wpa_driver_ralink_set_countermeasures,
 	.scan2 = wpa_driver_ralink_scan,
-	.get_scan_results = wpa_driver_ralink_get_scan_results,
+	.get_scan_results2 = wpa_driver_ralink_get_scan_results,
 	.deauthenticate = wpa_driver_ralink_deauthenticate,
 	.disassociate = wpa_driver_ralink_disassociate,
 	.associate = wpa_driver_ralink_associate,

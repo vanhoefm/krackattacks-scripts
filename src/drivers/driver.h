@@ -68,57 +68,6 @@ struct hostapd_hw_modes {
 #define IEEE80211_CAP_IBSS	0x0002
 #define IEEE80211_CAP_PRIVACY	0x0010
 
-#define SSID_MAX_WPA_IE_LEN 40
-/**
- * struct wpa_scan_result - Scan results (old structure)
- * @bssid: BSSID
- * @ssid: SSID
- * @ssid_len: length of the ssid
- * @wpa_ie: WPA IE
- * @wpa_ie_len: length of the wpa_ie
- * @rsn_ie: RSN IE
- * @rsn_ie_len: length of the RSN IE
- * @freq: frequency of the channel in MHz (e.g., 2412 = channel 1)
- * @caps: capability information field in host byte order
- * @qual: signal quality
- * @noise: noise level
- * @level: signal level
- * @maxrate: maximum supported rate
- * @mdie_present: Whether MDIE was included in Beacon/ProbeRsp frame
- * @mdie: Mobility domain identifier IE (IEEE 802.11r MDIE) (starting from
- * IE type field)
- * @tsf: Timestamp
- *
- * This structure is used as a generic format for scan results from the
- * driver. Each driver interface implementation is responsible for converting
- * the driver or OS specific scan results into this format.
- *
- * This structure is the old data structure used for scan results. It is
- * obsoleted by the new struct wpa_scan_res structure and the old version is
- * only included for backwards compatibility with existing driver wrapper
- * implementations. New implementations are encouraged to implement for struct
- * wpa_scan_res. The old structure will be removed at some point.
- */
-struct wpa_scan_result {
-	u8 bssid[ETH_ALEN];
-	u8 ssid[32];
-	size_t ssid_len;
-	u8 wpa_ie[SSID_MAX_WPA_IE_LEN];
-	size_t wpa_ie_len;
-	u8 rsn_ie[SSID_MAX_WPA_IE_LEN];
-	size_t rsn_ie_len;
-	int freq;
-	u16 caps;
-	int qual;
-	int noise;
-	int level;
-	int maxrate;
-	int mdie_present;
-	u8 mdie[5];
-	u64 tsf;
-};
-
-
 #define WPA_SCAN_QUAL_INVALID		BIT(0)
 #define WPA_SCAN_NOISE_INVALID		BIT(1)
 #define WPA_SCAN_LEVEL_INVALID		BIT(2)
@@ -673,26 +622,6 @@ struct wpa_driver_ops {
 	 * should drop all received and queued frames that are using TKIP.
 	 */
 	int (*set_countermeasures)(void *priv, int enabled);
-
-	/**
-	 * get_scan_results - Fetch the latest scan results (old version)
-	 * @priv: private driver interface data
-	 * @results: pointer to buffer for scan results
-	 * @max_size: maximum number of entries (buffer size)
-	 *
-	 * Returns: Number of scan result entries used on success, -1 on
-	 * failure
-	 *
-	 * If scan results include more than max_size BSSes, max_size will be
-	 * returned and the remaining entries will not be included in the
-	 * buffer.
-	 *
-	 * This function is deprecated. New driver wrapper implementations
-	 * should implement support for get_scan_results2().
-	 */
-	int (*get_scan_results)(void *priv,
-				struct wpa_scan_result *results,
-				size_t max_size);
 
 	/**
 	 * deauthenticate - Request driver to deauthenticate

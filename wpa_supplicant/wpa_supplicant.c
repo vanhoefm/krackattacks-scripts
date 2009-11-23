@@ -1574,111 +1574,6 @@ static void notify_bss_changes(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_scan_results * wpa_supplicant_get_scan_results_old(
-	struct wpa_supplicant *wpa_s)
-{
-#define SCAN_AP_LIMIT 128
-	struct wpa_scan_result *results;
-	int num, i;
-	struct wpa_scan_results *res;
-
-	results = os_malloc(SCAN_AP_LIMIT * sizeof(struct wpa_scan_result));
-	if (results == NULL) {
-		wpa_printf(MSG_WARNING, "Failed to allocate memory for scan "
-			   "results");
-		return NULL;
-	}
-
-	num = wpa_drv_get_scan_results(wpa_s, results, SCAN_AP_LIMIT);
-	wpa_printf(MSG_DEBUG, "Scan results: %d", num);
-	if (num < 0) {
-		wpa_printf(MSG_DEBUG, "Failed to get scan results");
-		os_free(results);
-		return NULL;
-	}
-	if (num > SCAN_AP_LIMIT) {
-		wpa_printf(MSG_INFO, "Not enough room for all APs (%d < %d)",
-			   num, SCAN_AP_LIMIT);
-		num = SCAN_AP_LIMIT;
-	}
-
-	/* Convert old scan result data structure to the new one */
-	res = os_zalloc(sizeof(*res));
-	if (res == NULL) {
-		os_free(results);
-		return NULL;
-	}
-	res->res = os_zalloc(num * sizeof(struct wpa_scan_res *));
-	if (res->res == NULL) {
-		os_free(results);
-		os_free(res);
-		return NULL;
-	}
-
-	for (i = 0; i < num; i++) {
-		struct wpa_scan_result *bss = &results[i];
-		struct wpa_scan_res *r;
-		size_t ie_len;
-		u8 *pos;
-
-		ie_len = 2 + bss->ssid_len + bss->rsn_ie_len + bss->wpa_ie_len;
-		if (bss->maxrate)
-			ie_len += 3;
-		if (bss->mdie_present)
-			ie_len += 5;
-
-		r = os_zalloc(sizeof(*r) + ie_len);
-		if (r == NULL)
-			break;
-
-		os_memcpy(r->bssid, bss->bssid, ETH_ALEN);
-		r->freq = bss->freq;
-		r->caps = bss->caps;
-		r->qual = bss->qual;
-		r->noise = bss->noise;
-		r->level = bss->level;
-		r->tsf = bss->tsf;
-		r->ie_len = ie_len;
-
-		pos = (u8 *) (r + 1);
-
-		/* SSID IE */
-		*pos++ = WLAN_EID_SSID;
-		*pos++ = bss->ssid_len;
-		os_memcpy(pos, bss->ssid, bss->ssid_len);
-		pos += bss->ssid_len;
-
-		if (bss->maxrate) {
-			/* Fake Supported Rate IE to include max rate */
-			*pos++ = WLAN_EID_SUPP_RATES;
-			*pos++ = 1;
-			*pos++ = bss->maxrate;
-		}
-
-		if (bss->rsn_ie_len) {
-			os_memcpy(pos, bss->rsn_ie, bss->rsn_ie_len);
-			pos += bss->rsn_ie_len;
-		}
-
-		if (bss->mdie_present) {
-			os_memcpy(pos, bss->mdie, 5);
-			pos += 5;
-		}
-
-		if (bss->wpa_ie_len) {
-			os_memcpy(pos, bss->wpa_ie, bss->wpa_ie_len);
-			pos += bss->wpa_ie_len;
-		}
-
-		res->res[res->num++] = r;
-	}
-
-	os_free(results);
-
-	return res;
-}
-
-
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1709,8 +1604,6 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 	wpa_scan_results_free(wpa_s->scan_res);
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		wpa_s->scan_res = ieee80211_sta_get_scan_results(wpa_s);
-	else if (wpa_s->driver->get_scan_results2 == NULL)
-		wpa_s->scan_res = wpa_supplicant_get_scan_results_old(wpa_s);
 	else
 		wpa_s->scan_res = wpa_drv_get_scan_results2(wpa_s);
 	if (wpa_s->scan_res == NULL) {

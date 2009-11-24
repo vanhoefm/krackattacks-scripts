@@ -823,6 +823,7 @@ ifeq ($(CONFIG_CRYPTO), internal)
 CFLAGS += -DCONFIG_INTERNAL_X509
 OBJS += ../src/crypto/crypto_internal.o
 OBJS_p += ../src/crypto/crypto_internal.o
+NEED_AES_ENC=y
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL
 ifdef CONFIG_INTERNAL_LIBTOMMATH
 CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH

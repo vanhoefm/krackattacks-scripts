@@ -21,6 +21,7 @@
 #include <dirent.h>
 
 #include "wps/wps.h"
+#include "wps/wps_i.h"
 
 #ifdef CONFIG_NATIVE_WINDOWS
 #define UFD_DIR1 "%s\\SMRTNTKY"

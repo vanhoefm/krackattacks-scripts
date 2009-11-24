@@ -16,6 +16,7 @@
 #include "includes.h"
 #include "common.h"
 #include "wps/wps.h"
+#include "wps/wps_i.h"
 
 #define FLAG_MESSAGE_BEGIN (1 << 7)
 #define FLAG_MESSAGE_END (1 << 6)

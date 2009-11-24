@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "aes.h"
+#include "aes_wrap.h"
 
 /**
  * aes_128_cbc_encrypt - AES-128 CBC encryption

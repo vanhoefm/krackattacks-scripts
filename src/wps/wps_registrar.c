@@ -1139,7 +1139,7 @@ static int wps_build_cred_encr_type(struct wpabuf *msg,
 
 
 static int wps_build_cred_network_key(struct wpabuf *msg,
-				      const const struct wps_credential *cred)
+				      const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Key");
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);

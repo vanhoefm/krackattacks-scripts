@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "aes.h"
+#include "aes_wrap.h"
 
 /**
  * aes_128_encrypt_block - Perform one AES 128-bit block operation

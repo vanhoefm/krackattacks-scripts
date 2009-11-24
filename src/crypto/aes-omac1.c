@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "aes.h"
+#include "aes_wrap.h"
 
 static void gf_mulx(u8 *pad)
 {

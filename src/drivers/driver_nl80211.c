@@ -1701,7 +1701,7 @@ wpa_driver_nl80211_get_scan_results(void *priv)
 
 	res = os_zalloc(sizeof(*res));
 	if (res == NULL)
-		return 0;
+		return NULL;
 	msg = nlmsg_alloc();
 	if (!msg)
 		goto nla_put_failure;

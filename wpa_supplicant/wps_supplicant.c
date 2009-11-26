@@ -414,14 +414,12 @@ static void wpa_supplicant_wps_event_er_ap_add(struct wpa_supplicant *wpa_s,
 					       struct wps_event_er_ap *ap)
 {
 	char uuid_str[100];
-	char dev_type[20];
+	char dev_type[WPS_DEV_TYPE_BUFSIZE];
 
 	uuid_bin2str(ap->uuid, uuid_str, sizeof(uuid_str));
 	if (ap->pri_dev_type)
-		os_snprintf(dev_type, sizeof(dev_type), "%u-%08X-%u",
-			    WPA_GET_BE16(ap->pri_dev_type),
-			    WPA_GET_BE32(ap->pri_dev_type + 2),
-			    WPA_GET_BE16(ap->pri_dev_type + 6));
+		wps_dev_type_bin2str(ap->pri_dev_type, dev_type,
+				     sizeof(dev_type));
 	else
 		dev_type[0] = '\0';
 
@@ -450,14 +448,12 @@ static void wpa_supplicant_wps_event_er_enrollee_add(
 	struct wpa_supplicant *wpa_s, struct wps_event_er_enrollee *enrollee)
 {
 	char uuid_str[100];
-	char dev_type[20];
+	char dev_type[WPS_DEV_TYPE_BUFSIZE];
 
 	uuid_bin2str(enrollee->uuid, uuid_str, sizeof(uuid_str));
 	if (enrollee->pri_dev_type)
-		os_snprintf(dev_type, sizeof(dev_type), "%u-%08X-%u",
-			    WPA_GET_BE16(enrollee->pri_dev_type),
-			    WPA_GET_BE32(enrollee->pri_dev_type + 2),
-			    WPA_GET_BE16(enrollee->pri_dev_type + 6));
+		wps_dev_type_bin2str(enrollee->pri_dev_type, dev_type,
+				     sizeof(dev_type));
 	else
 		dev_type[0] = '\0';
 

@@ -419,11 +419,12 @@ int wps_attr_text(struct wpabuf *data, char *buf, char *end)
 	}
 
 	if (attr.primary_dev_type) {
+		char devtype[WPS_DEV_TYPE_BUFSIZE];
 		ret = os_snprintf(pos, end - pos,
-				  "wps_primary_device_type=%u-%08x-%u\n",
-				  WPA_GET_BE16(attr.primary_dev_type),
-				  WPA_GET_BE32(&attr.primary_dev_type[2]),
-				  WPA_GET_BE16(&attr.primary_dev_type[6]));
+				  "wps_primary_device_type=%s\n",
+				  wps_dev_type_bin2str(attr.primary_dev_type,
+						       devtype,
+						       sizeof(devtype)));
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;

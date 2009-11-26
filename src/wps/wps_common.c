@@ -528,3 +528,41 @@ int wps_get_oob_method(char *method)
 }
 
 #endif /* CONFIG_WPS_OOB */
+
+
+int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN])
+{
+	const char *pos;
+
+	/* <categ>-<OUI>-<subcateg> */
+	WPA_PUT_BE16(dev_type, atoi(str));
+	pos = os_strchr(str, '-');
+	if (pos == NULL)
+		return -1;
+	pos++;
+	if (hexstr2bin(pos, &dev_type[2], 4))
+		return -1;
+	pos = os_strchr(pos, '-');
+	if (pos == NULL)
+		return -1;
+	pos++;
+	WPA_PUT_BE16(&dev_type[6], atoi(pos));
+
+
+	return 0;
+}
+
+
+char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
+			    size_t buf_len)
+{
+	int ret;
+
+	ret = os_snprintf(buf, buf_len, "%u-%08X-%u",
+			  WPA_GET_BE16(dev_type), WPA_GET_BE32(&dev_type[2]),
+			  WPA_GET_BE16(&dev_type[6]));
+	if (ret < 0 || (unsigned int) ret >= buf_len)
+		return NULL;
+
+	return buf;
+}

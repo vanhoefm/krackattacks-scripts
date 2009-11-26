@@ -232,13 +232,6 @@ enum wps_assoc_state {
 };
 
 
-/* Primary Device Type */
-struct wps_dev_type {
-	u8 categ_id[2];
-	u8 oui[4];
-	u8 sub_categ_id[2];
-};
-
 #define WPS_DEV_OUI_WFA 0x0050f204
 
 enum wps_dev_categ {

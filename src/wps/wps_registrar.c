@@ -158,9 +158,7 @@ static void wps_device_clone_data(struct wps_device_data *dst,
 				  struct wps_device_data *src)
 {
 	os_memcpy(dst->mac_addr, src->mac_addr, ETH_ALEN);
-	dst->categ = src->categ;
-	dst->oui = src->oui;
-	dst->sub_categ = src->sub_categ;
+	os_memcpy(dst->pri_dev_type, src->pri_dev_type, WPS_DEV_TYPE_LEN);
 
 #define WPS_STRDUP(n) \
 	os_free(dst->n); \
@@ -2800,6 +2798,7 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 	struct wps_registrar_device *d;
 	int len = 0, ret;
 	char uuid[40];
+	char devtype[WPS_DEV_TYPE_BUFSIZE];
 
 	d = wps_device_get(reg, addr);
 	if (d == NULL)
@@ -2809,14 +2808,15 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 
 	ret = os_snprintf(buf + len, buflen - len,
 			  "wpsUuid=%s\n"
-			  "wpsPrimaryDeviceType=%u-%08X-%u\n"
+			  "wpsPrimaryDeviceType=%s\n"
 			  "wpsDeviceName=%s\n"
 			  "wpsManufacturer=%s\n"
 			  "wpsModelName=%s\n"
 			  "wpsModelNumber=%s\n"
 			  "wpsSerialNumber=%s\n",
 			  uuid,
-			  d->dev.categ, d->dev.oui, d->dev.sub_categ,
+			  wps_dev_type_bin2str(d->dev.pri_dev_type, devtype,
+					       sizeof(devtype)),
 			  d->dev.device_name ? d->dev.device_name : "",
 			  d->dev.manufacturer ? d->dev.manufacturer : "",
 			  d->dev.model_name ? d->dev.model_name : "",

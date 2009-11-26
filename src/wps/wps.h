@@ -61,6 +61,9 @@ struct wps_credential {
 	size_t cred_attr_len;
 };
 
+#define WPS_DEV_TYPE_LEN 8
+#define WPS_DEV_TYPE_BUFSIZE 21
+
 /**
  * struct wps_device_data - WPS Device Data
  * @mac_addr: Device MAC address
@@ -69,9 +72,7 @@ struct wps_credential {
  * @model_name: Model Name (0..32 octets encoded in UTF-8)
  * @model_number: Model Number (0..32 octets encoded in UTF-8)
  * @serial_number: Serial Number (0..32 octets encoded in UTF-8)
- * @categ: Primary Device Category
- * @oui: Primary Device OUI
- * @sub_categ: Primary Device Sub-Category
+ * @pri_dev_type: Primary Device Type
  * @os_version: OS Version
  * @rf_bands: RF bands (WPS_RF_24GHZ, WPS_RF_50GHZ flags)
  */
@@ -82,9 +83,7 @@ struct wps_device_data {
 	char *model_name;
 	char *model_number;
 	char *serial_number;
-	u16 categ;
-	u32 oui;
-	u16 sub_categ;
+	u8 pri_dev_type[WPS_DEV_TYPE_LEN];
 	u32 os_version;
 	u8 rf_bands;
 };
@@ -683,5 +682,9 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 int wps_er_pbc(struct wps_er *er, const u8 *uuid);
 int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 		 size_t pin_len);
+
+int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN]);
+char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
+			    size_t buf_len);
 
 #endif /* WPS_H */

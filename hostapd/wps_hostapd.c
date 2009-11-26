@@ -137,15 +137,17 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 	struct hostapd_data *hapd = ctx;
 	char uuid[40], txt[400];
 	int len;
+	char devtype[WPS_DEV_TYPE_BUFSIZE];
 	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
 		return;
 	wpa_printf(MSG_DEBUG, "WPS: PIN needed for E-UUID %s", uuid);
 	len = os_snprintf(txt, sizeof(txt), WPS_EVENT_PIN_NEEDED
-			  "%s " MACSTR " [%s|%s|%s|%s|%s|%d-%08X-%d]",
+			  "%s " MACSTR " [%s|%s|%s|%s|%s|%s]",
 			  uuid, MAC2STR(dev->mac_addr), dev->device_name,
 			  dev->manufacturer, dev->model_name,
 			  dev->model_number, dev->serial_number,
-			  dev->categ, dev->oui, dev->sub_categ);
+			  wps_dev_type_bin2str(dev->pri_dev_type, devtype,
+					       sizeof(devtype)));
 	if (len > 0 && len < (int) sizeof(txt))
 		wpa_msg(hapd->msg_ctx, MSG_INFO, "%s", txt);
 
@@ -157,11 +159,12 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 			return;
 		os_get_time(&t);
 		fprintf(f, "%ld\t%s\t" MACSTR "\t%s\t%s\t%s\t%s\t%s"
-			"\t%d-%08X-%d\n",
+			"\t%s\n",
 			t.sec, uuid, MAC2STR(dev->mac_addr), dev->device_name,
 			dev->manufacturer, dev->model_name, dev->model_number,
 			dev->serial_number,
-			dev->categ, dev->oui, dev->sub_categ);
+			wps_dev_type_bin2str(dev->pri_dev_type, devtype,
+					     sizeof(devtype)));
 		fclose(f);
 	}
 }
@@ -537,32 +540,12 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		if (os_strstr(m, "keypad"))
 			wps->config_methods |= WPS_CONFIG_KEYPAD;
 	}
-	if (hapd->conf->device_type) {
-		char *pos;
-		u8 oui[4];
-		/* <categ>-<OUI>-<subcateg> */
-		wps->dev.categ = atoi(hapd->conf->device_type);
-		pos = os_strchr(hapd->conf->device_type, '-');
-		if (pos == NULL) {
-			wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
-			os_free(wps);
-			return -1;
-		}
-		pos++;
-		if (hexstr2bin(pos, oui, 4)) {
-			wpa_printf(MSG_ERROR, "WPS: Invalid device_type OUI");
-			os_free(wps);
-			return -1;
-		}
-		wps->dev.oui = WPA_GET_BE32(oui);
-		pos = os_strchr(pos, '-');
-		if (pos == NULL) {
-			wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
-			os_free(wps);
-			return -1;
-		}
-		pos++;
-		wps->dev.sub_categ = atoi(pos);
+	if (hapd->conf->device_type &&
+	    wps_dev_type_str2bin(hapd->conf->device_type,
+				 wps->dev.pri_dev_type) < 0) {
+		wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
+		os_free(wps);
+		return -1;
 	}
 	wps->dev.os_version = WPA_GET_BE32(hapd->conf->os_version);
 	wps->dev.rf_bands = hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?

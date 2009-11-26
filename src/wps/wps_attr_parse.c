@@ -111,7 +111,7 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->sel_reg_config_methods = pos;
 		break;
 	case ATTR_PRIMARY_DEV_TYPE:
-		if (len != sizeof(struct wps_dev_type)) {
+		if (len != WPS_DEV_TYPE_LEN) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Primary Device "
 				   "Type length %u", len);
 			return -1;

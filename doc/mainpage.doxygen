@@ -39,7 +39,7 @@ to different target boards and operating systems is available on
 the \ref porting "porting page".
 
 EAPOL (IEEE 802.1X) state machines are implemented as a separate
-module that interacts with \ref eap_module "EAP peer implementation".
+module that interacts with \ref eap_peer_module "EAP peer implementation".
 In addition to programs aimed at normal production use,
 %wpa_supplicant source tree includes number of \ref testing_tools
 "testing and development tools" that make it easier to test the
@@ -77,7 +77,7 @@ to different target boards and operating systems is available on
 the \ref porting "porting page".
 
 EAPOL (IEEE 802.1X) state machines are implemented as a separate
-module that interacts with \ref eap_module "EAP server implementation".
+module that interacts with \ref eap_server_module "EAP server implementation".
 Similarly, RADIUS authentication server is in its own separate module.
 Both IEEE 802.1X and RADIUS authentication server can use EAP server
 functionality.

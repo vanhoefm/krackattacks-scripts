@@ -1757,7 +1757,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->radius->retry_primary_interval = atoi(pos);
 		} else if (os_strcmp(buf, "radius_acct_interim_interval") == 0)
 		{
-			bss->radius->acct_interim_interval = atoi(pos);
+			bss->acct_interim_interval = atoi(pos);
 #endif /* CONFIG_NO_RADIUS */
 		} else if (os_strcmp(buf, "auth_algs") == 0) {
 			bss->auth_algs = atoi(pos);

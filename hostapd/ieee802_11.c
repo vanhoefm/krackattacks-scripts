@@ -601,8 +601,7 @@ static void handle_auth(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	sta->flags &= ~WLAN_STA_PREAUTH;
 	ieee802_1x_notify_pre_auth(sta->eapol_sm, 0);
 
-	if (hapd->conf->radius->acct_interim_interval == 0 &&
-	    acct_interim_interval)
+	if (hapd->conf->acct_interim_interval == 0 && acct_interim_interval)
 		sta->acct_interim_interval = acct_interim_interval;
 	if (res == HOSTAPD_ACL_ACCEPT_TIMEOUT)
 		ap_sta_session_timeout(hapd, sta, session_timeout);

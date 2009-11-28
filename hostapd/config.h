@@ -167,6 +167,7 @@ struct hostapd_bss_config {
 	struct hostapd_ip_addr own_ip_addr;
 	char *nas_identifier;
 	struct hostapd_radius_servers *radius;
+	int acct_interim_interval;
 
 	struct hostapd_ssid ssid;
 

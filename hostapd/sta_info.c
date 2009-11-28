@@ -435,7 +435,7 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 		wpa_printf(MSG_ERROR, "malloc failed");
 		return NULL;
 	}
-	sta->acct_interim_interval = hapd->conf->radius->acct_interim_interval;
+	sta->acct_interim_interval = hapd->conf->acct_interim_interval;
 
 	/* initialize STA info data */
 	eloop_register_timeout(hapd->conf->ap_max_inactivity, 0,

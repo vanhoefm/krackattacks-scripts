@@ -167,13 +167,6 @@ struct hostapd_radius_servers {
 	int retry_primary_interval;
 
 	/**
-	 * acct_interim_interval - Interim accounting update interval
-	 *
-	 * This parameter is not used inside RADIUS client code.
-	 */
-	int acct_interim_interval;
-
-	/**
 	 * msg_dumps - Whether RADIUS message details are shown in stdout
 	 */
 	int msg_dumps;

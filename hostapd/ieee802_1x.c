@@ -1256,7 +1256,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 				      &termination_action))
 		termination_action = RADIUS_TERMINATION_ACTION_DEFAULT;
 
-	if (hapd->conf->radius->acct_interim_interval == 0 &&
+	if (hapd->conf->acct_interim_interval == 0 &&
 	    msg->hdr->code == RADIUS_CODE_ACCESS_ACCEPT &&
 	    radius_msg_get_attr_int32(msg, RADIUS_ATTR_ACCT_INTERIM_INTERVAL,
 				      &acct_interim_interval) == 0) {

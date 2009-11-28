@@ -1704,6 +1704,7 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 	if (name == NULL) {
 		/* default to first driver in the list */
 		wpa_s->driver = wpa_drivers[0];
+		wpa_s->global_drv_priv = wpa_s->global->drv_priv[0];
 		return 0;
 	}
 
@@ -1717,6 +1718,7 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 		    os_strncmp(name, wpa_drivers[i]->name, len) ==
 		    0) {
 			wpa_s->driver = wpa_drivers[i];
+			wpa_s->global_drv_priv = wpa_s->global->drv_priv[i];
 			return 0;
 		}
 	}

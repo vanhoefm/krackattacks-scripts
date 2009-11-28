@@ -1390,25 +1390,4 @@ clean:
 	rm -f core *~ *.o *.d eap_*.so $(ALL) $(WINALL) eapol_test preauth_test
 	rm -f wpa_priv
 
-%.eps: %.fig
-	fig2dev -L eps $*.fig $*.eps
-
-%.png: %.fig
-	fig2dev -L png -m 3 $*.fig | pngtopnm | pnmscale 0.4 | pnmtopng \
-		> $*.png
-
-docs-pics: doc/wpa_supplicant.png doc/wpa_supplicant.eps
-
-docs: docs-pics
-	(cd ..; doxygen wpa_supplicant/doc/doxygen.full; cd wpa_supplicant)
-	$(MAKE) -C doc/latex
-	cp doc/latex/refman.pdf wpa_supplicant-devel.pdf
-
-docs-fast: docs-pics
-	(cd ..; doxygen wpa_supplicant/doc/doxygen.fast; cd wpa_supplicant)
-
-clean-docs:
-	rm -rf doc/latex doc/html
-	rm -f doc/wpa_supplicant.{eps,png} wpa_supplicant-devel.pdf
-
 -include $(OBJS:%.o=%.d)

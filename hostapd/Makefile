@@ -734,27 +734,6 @@ clean:
 	rm -f core *~ *.o hostapd hostapd_cli nt_password_hash hlr_auc_gw
 	rm -f *.d
 
-%.eps: %.fig
-	fig2dev -L eps $*.fig $*.eps
-
-%.png: %.fig
-	fig2dev -L png -m 3 $*.fig | pngtopnm | pnmscale 0.4 | pnmtopng \
-		> $*.png
-
-docs-pics: doc/hostapd.png doc/hostapd.eps
-
-docs: docs-pics
-	(cd ..; doxygen hostapd/doc/doxygen.full; cd hostapd)
-	$(MAKE) -C doc/latex
-	cp doc/latex/refman.pdf hostapd-devel.pdf
-
-docs-fast: docs-pics
-	(cd ..; doxygen hostapd/doc/doxygen.fast; cd hostapd)
-
-clean-docs:
-	rm -rf doc/latex doc/html
-	rm -f doc/hostapd.{eps,png} hostapd-devel.pdf
-
 TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes-internal.c ../src/crypto/aes-internal-dec.c \
 		../src/crypto/aes-cbc.c \
 		../src/crypto/aes-ctr.c \

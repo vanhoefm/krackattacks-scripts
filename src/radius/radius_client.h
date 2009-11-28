@@ -267,9 +267,5 @@ void radius_client_flush_auth(struct radius_client_data *radius,
 int radius_client_get_mib(struct radius_client_data *radius, char *buf,
 			  size_t buflen);
 #endif /* CONFIG_NO_RADIUS */
-struct radius_client_data *
-radius_client_reconfig(struct radius_client_data *old, void *ctx,
-		       struct hostapd_radius_servers *oldconf,
-		       struct hostapd_radius_servers *newconf);
 
 #endif /* RADIUS_CLIENT_H */

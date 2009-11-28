@@ -1,4 +1,4 @@
-/**
+/*
  * http_client - HTTP client
  * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *

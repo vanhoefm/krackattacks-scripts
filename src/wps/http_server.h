@@ -1,4 +1,4 @@
-/**
+/*
  * http_server - HTTP server
  * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *

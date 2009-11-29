@@ -16,6 +16,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"

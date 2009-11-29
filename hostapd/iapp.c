@@ -46,6 +46,7 @@
 #include <netpacket/packet.h>
 #endif /* USE_KERNEL_HEADERS */
 
+#include "common.h"
 #include "hostapd.h"
 #include "config.h"
 #include "ieee802_11.h"

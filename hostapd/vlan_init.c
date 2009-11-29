@@ -15,6 +15,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "driver_i.h"
 #include "vlan_init.h"

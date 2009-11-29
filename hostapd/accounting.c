@@ -14,6 +14,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"

@@ -17,8 +17,6 @@
 #ifndef HOSTAPD_H
 #define HOSTAPD_H
 
-#include "common.h"
-
 #define MAX_VLAN_ID 4094
 
 struct wpa_driver_ops;

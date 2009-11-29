@@ -20,6 +20,7 @@
 #include <sys/stat.h>
 #include <stddef.h>
 
+#include "common.h"
 #include "hostapd.h"
 #include "eloop.h"
 #include "config.h"

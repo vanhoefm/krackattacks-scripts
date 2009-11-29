@@ -14,6 +14,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "ieee802_1x.h"
 #include "wpa.h"

@@ -17,6 +17,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "config.h"
 #include "ieee802_11.h"

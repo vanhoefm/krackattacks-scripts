@@ -14,6 +14,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "eloop.h"
 #include "driver_i.h"

@@ -19,6 +19,7 @@
 
 #include <net/if.h>
 
+#include "common.h"
 #include "eloop.h"
 #include "hostapd.h"
 #include "ieee802_11.h"

@@ -17,8 +17,9 @@
 #include <syslog.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-#include "eloop.h"
+#include "common.h"
 #include "hostapd.h"
+#include "eloop.h"
 #include "common/version.h"
 #include "config.h"
 #include "tls.h"

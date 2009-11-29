@@ -19,6 +19,7 @@
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
+#include "common.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "wpa.h"

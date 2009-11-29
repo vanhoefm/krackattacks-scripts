@@ -16,6 +16,7 @@
 
 #ifdef CONFIG_RSN_PREAUTH
 
+#include "common.h"
 #include "hostapd.h"
 #include "config.h"
 #include "l2_packet/l2_packet.h"

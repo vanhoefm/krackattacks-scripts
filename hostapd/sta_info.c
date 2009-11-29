@@ -15,6 +15,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "sta_flags.h"
 #include "sta_info.h"

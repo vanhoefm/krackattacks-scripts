@@ -18,6 +18,7 @@
 #include <grp.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
+#include "common.h"
 #include "hostapd.h"
 #include "drivers/driver.h"
 #include "sha1.h"

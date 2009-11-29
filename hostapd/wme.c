@@ -15,6 +15,7 @@
 
 #include "includes.h"
 
+#include "common.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "wme.h"

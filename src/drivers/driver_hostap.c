@@ -30,8 +30,6 @@
 
 #include "priv_netlink.h"
 #include "common/ieee802_11_defs.h"
-#include "../../hostapd/hostapd.h"
-#include "../../hostapd/hw_features.h"
 #include "../../hostapd/sta_flags.h"
 
 
@@ -1200,7 +1198,9 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 	mode->channels = os_zalloc(clen);
 	mode->rates = os_zalloc(rlen);
 	if (mode->channels == NULL || mode->rates == NULL) {
-		hostapd_free_hw_features(mode, *num_modes);
+		os_free(mode->channels);
+		os_free(mode->rates);
+		os_free(mode);
 		return NULL;
 	}
 

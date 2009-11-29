@@ -36,7 +36,6 @@
 
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/wpa.h"
-#include "../../hostapd/hw_features.h"
 
 
 struct test_client_socket {

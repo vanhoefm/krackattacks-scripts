@@ -1666,7 +1666,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	struct eapol_auth_cb cb;
 
 	os_memset(&conf, 0, sizeof(conf));
-	conf.hapd = hapd;
+	conf.ctx = hapd;
 	conf.eap_reauth_period = hapd->conf->eap_reauth_period;
 	conf.wpa = hapd->conf->wpa;
 	conf.individual_wep_key_len = hapd->conf->individual_wep_key_len;

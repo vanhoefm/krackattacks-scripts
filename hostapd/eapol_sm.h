@@ -49,12 +49,8 @@ struct eapol_auth_config {
 	int tnc;
 	struct wps_context *wps;
 
-	/*
-	 * Pointer to hostapd data. This is a temporary workaround for
-	 * transition phase and will be removed once IEEE 802.1X/EAPOL code is
-	 * separated more cleanly from rest of hostapd.
-	 */
-	struct hostapd_data *hapd;
+	/* Opaque context pointer to owner data for callback functions */
+	void *ctx;
 };
 
 struct eap_user;
@@ -240,10 +236,6 @@ struct eapol_state_machine {
 	struct eapol_authenticator *eapol;
 
 	void *sta; /* station context pointer to use in callbacks */
-
-	/* Somewhat nasty pointer to global hostapd data to avoid
-	 * passing this to every function */
-	struct hostapd_data *hapd;
 };
 
 

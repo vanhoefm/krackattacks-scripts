@@ -31,16 +31,16 @@ static struct eapol_callbacks eapol_cb;
 /* EAPOL state machines are described in IEEE Std 802.1X-2004, Chap. 8.2 */
 
 #define setPortAuthorized() \
-sm->eapol->cb.set_port_authorized(sm->hapd, sm->sta, 1)
+sm->eapol->cb.set_port_authorized(sm->eapol->conf.ctx, sm->sta, 1)
 #define setPortUnauthorized() \
-sm->eapol->cb.set_port_authorized(sm->hapd, sm->sta, 0)
+sm->eapol->cb.set_port_authorized(sm->eapol->conf.ctx, sm->sta, 0)
 
 /* procedures */
 #define txCannedFail() eapol_auth_tx_canned_eap(sm, 0)
 #define txCannedSuccess() eapol_auth_tx_canned_eap(sm, 1)
 #define txReq() eapol_auth_tx_req(sm)
-#define abortAuth() sm->eapol->cb.abort_auth(sm->hapd, sm->sta)
-#define txKey() sm->eapol->cb.tx_key(sm->hapd, sm->sta)
+#define abortAuth() sm->eapol->cb.abort_auth(sm->eapol->conf.ctx, sm->sta)
+#define txKey() sm->eapol->cb.tx_key(sm->eapol->conf.ctx, sm->sta)
 #define processKey() do { } while (0)
 
 
@@ -55,7 +55,7 @@ static void eapol_auth_logger(struct eapol_authenticator *eapol,
 {
 	if (eapol->cb.logger == NULL)
 		return;
-	eapol->cb.logger(eapol->conf.hapd, addr, level, txt);
+	eapol->cb.logger(eapol->conf.ctx, addr, level, txt);
 }
 
 
@@ -99,7 +99,8 @@ static void eapol_auth_tx_canned_eap(struct eapol_state_machine *sm,
 	eapol_auth_vlogger(sm->eapol, sm->addr, EAPOL_LOGGER_DEBUG,
 			   "Sending canned EAP packet %s (identifier %d)",
 			   success ? "SUCCESS" : "FAILURE", eap.identifier);
-	sm->eapol->cb.eapol_send(sm->hapd, sm->sta, IEEE802_1X_TYPE_EAP_PACKET,
+	sm->eapol->cb.eapol_send(sm->eapol->conf.ctx, sm->sta,
+				 IEEE802_1X_TYPE_EAP_PACKET,
 				 (u8 *) &eap, sizeof(eap));
 	sm->dot1xAuthEapolFramesTx++;
 }
@@ -127,7 +128,8 @@ static void eapol_auth_tx_req(struct eapol_state_machine *sm)
 	eapol_auth_vlogger(sm->eapol, sm->addr, EAPOL_LOGGER_DEBUG,
 			   "Sending EAP Packet (identifier %d)",
 			   sm->last_eap_id);
-	sm->eapol->cb.eapol_send(sm->hapd, sm->sta, IEEE802_1X_TYPE_EAP_PACKET,
+	sm->eapol->cb.eapol_send(sm->eapol->conf.ctx, sm->sta,
+				 IEEE802_1X_TYPE_EAP_PACKET,
 				 wpabuf_head(sm->eap_if->eapReqData),
 				 wpabuf_len(sm->eap_if->eapReqData));
 	sm->dot1xAuthEapolFramesTx++;
@@ -220,7 +222,7 @@ SM_STATE(AUTH_PAE, DISCONNECTED)
 	sm->reAuthCount = 0;
 	sm->eapolLogoff = FALSE;
 	if (!from_initialize) {
-		sm->eapol->cb.finished(sm->hapd, sm->sta, 0,
+		sm->eapol->cb.finished(sm->eapol->conf.ctx, sm->sta, 0,
 				       sm->flags & EAPOL_SM_PREAUTH);
 	}
 }
@@ -277,7 +279,7 @@ SM_STATE(AUTH_PAE, HELD)
 				   "%d (%s)", sm->eap_type_supp,
 				   eap_server_get_name(0, sm->eap_type_supp));
 	}
-	sm->eapol->cb.finished(sm->hapd, sm->sta, 0,
+	sm->eapol->cb.finished(sm->eapol->conf.ctx, sm->sta, 0,
 			       sm->flags & EAPOL_SM_PREAUTH);
 }
 
@@ -303,7 +305,7 @@ SM_STATE(AUTH_PAE, AUTHENTICATED)
 			   sm->eap_type_authsrv,
 			   eap_server_get_name(0, sm->eap_type_authsrv),
 			   extra);
-	sm->eapol->cb.finished(sm->hapd, sm->sta, 1,
+	sm->eapol->cb.finished(sm->eapol->conf.ctx, sm->sta, 1,
 			       sm->flags & EAPOL_SM_PREAUTH);
 }
 
@@ -610,7 +612,7 @@ SM_STATE(REAUTH_TIMER, REAUTHENTICATE)
 	SM_ENTRY_MA(REAUTH_TIMER, REAUTHENTICATE, reauth_timer);
 
 	sm->reAuthenticate = TRUE;
-	sm->eapol->cb.eapol_event(sm->hapd, sm->sta,
+	sm->eapol->cb.eapol_event(sm->eapol->conf.ctx, sm->sta,
 				  EAPOL_AUTH_REAUTHENTICATE);
 }
 
@@ -761,12 +763,10 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 		 int flags, const struct wpabuf *assoc_wps_ie, void *sta_ctx)
 {
 	struct eapol_state_machine *sm;
-	struct hostapd_data *hapd; /* TODO: to be removed */
 	struct eap_config eap_conf;
 
 	if (eapol == NULL)
 		return NULL;
-	hapd = eapol->conf.hapd;
 
 	sm = os_zalloc(sizeof(*sm));
 	if (sm == NULL) {
@@ -778,7 +778,6 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	os_memcpy(sm->addr, addr, ETH_ALEN);
 	sm->flags = flags;
 
-	sm->hapd = hapd;
 	sm->eapol = eapol;
 	sm->sta = sta_ctx;
 
@@ -857,7 +856,7 @@ void eapol_auth_free(struct eapol_state_machine *sm)
 static int eapol_sm_sta_entry_alive(struct eapol_authenticator *eapol,
 				    const u8 *addr)
 {
-	return eapol->cb.sta_entry_alive(eapol->conf.hapd, addr);
+	return eapol->cb.sta_entry_alive(eapol->conf.ctx, addr);
 }
 
 
@@ -928,14 +927,14 @@ restart:
 				return;
 			}
 			sm->eapol->cb.aaa_send(
-				sm->hapd, sm->sta,
+				sm->eapol->conf.ctx, sm->sta,
 				wpabuf_head(sm->eap_if->aaaEapRespData),
 				wpabuf_len(sm->eap_if->aaaEapRespData));
 		}
 	}
 
 	if (eapol_sm_sta_entry_alive(eapol, addr))
-		sm->eapol->cb.eapol_event(sm->hapd, sm->sta,
+		sm->eapol->cb.eapol_event(sm->eapol->conf.ctx, sm->sta,
 					  EAPOL_AUTH_SM_CHANGE);
 }
 
@@ -1202,8 +1201,8 @@ static int eapol_sm_get_eap_user(void *ctx, const u8 *identity,
 				 struct eap_user *user)
 {
 	struct eapol_state_machine *sm = ctx;
-	return sm->eapol->cb.get_eap_user(sm->hapd, identity, identity_len,
-					  phase2, user);
+	return sm->eapol->cb.get_eap_user(sm->eapol->conf.ctx, identity,
+					  identity_len, phase2, user);
 }
 
 
@@ -1237,7 +1236,7 @@ int eapol_auth_eap_pending_cb(struct eapol_state_machine *sm, void *ctx)
 static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 				 struct eapol_auth_config *src)
 {
-	dst->hapd = src->hapd;
+	dst->ctx = src->ctx;
 	dst->eap_reauth_period = src->eap_reauth_period;
 	dst->wpa = src->wpa;
 	dst->individual_wep_key_len = src->individual_wep_key_len;
@@ -1333,6 +1332,7 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 	eapol->cb.set_port_authorized = cb->set_port_authorized;
 	eapol->cb.abort_auth = cb->abort_auth;
 	eapol->cb.tx_key = cb->tx_key;
+	eapol->cb.eapol_event = cb->eapol_event;
 
 	return eapol;
 }

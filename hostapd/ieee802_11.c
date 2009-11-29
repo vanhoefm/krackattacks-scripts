@@ -858,11 +858,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 	    elems.ht_capabilities_len >=
 	    sizeof(struct ieee80211_ht_capabilities)) {
 		sta->flags |= WLAN_STA_HT;
-		sta->ht_capabilities.id = WLAN_EID_HT_CAP;
-		sta->ht_capabilities.length =
-			sizeof(struct ieee80211_ht_capabilities);
-		os_memcpy(&sta->ht_capabilities.data,
-			  elems.ht_capabilities,
+		os_memcpy(&sta->ht_capabilities, elems.ht_capabilities,
 			  sizeof(struct ieee80211_ht_capabilities));
 	} else
 		sta->flags &= ~WLAN_STA_HT;
@@ -1037,7 +1033,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT) {
 		u16 ht_capab = le_to_host16(
-			sta->ht_capabilities.data.ht_capabilities_info);
+			sta->ht_capabilities.ht_capabilities_info);
 		wpa_printf(MSG_DEBUG, "HT: STA " MACSTR " HT Capabilities "
 			   "Info: 0x%04x", MAC2STR(sta->addr), ht_capab);
 		if ((ht_capab & HT_CAP_INFO_GREEN_FIELD) == 0) {
@@ -1583,19 +1579,19 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211N
 static void
 hostapd_get_ht_capab(struct hostapd_data *hapd,
-		     struct ht_cap_ie *ht_cap_ie,
-		     struct ht_cap_ie *neg_ht_cap_ie)
+		     struct ieee80211_ht_capabilities *ht_cap,
+		     struct ieee80211_ht_capabilities *neg_ht_cap)
 {
 	u16 cap;
 
-	os_memcpy(neg_ht_cap_ie, ht_cap_ie, sizeof(struct ht_cap_ie));
-	cap = le_to_host16(neg_ht_cap_ie->data.ht_capabilities_info);
+	os_memcpy(neg_ht_cap, ht_cap, sizeof(*neg_ht_cap));
+	cap = le_to_host16(neg_ht_cap->ht_capabilities_info);
 	cap &= hapd->iconf->ht_capab;
 	cap |= (hapd->iconf->ht_capab & HT_CAP_INFO_SMPS_DISABLED);
 
 	/* FIXME: Rx STBC needs to be handled specially */
 	cap |= (hapd->iconf->ht_capab & HT_CAP_INFO_RX_STBC_MASK);
-	neg_ht_cap_ie->data.ht_capabilities_info = host_to_le16(cap);
+	neg_ht_cap->ht_capabilities_info = host_to_le16(cap);
 }
 #endif /* CONFIG_IEEE80211N */
 
@@ -1608,9 +1604,9 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	struct sta_info *sta;
 	int new_assoc = 1;
 #ifdef CONFIG_IEEE80211N
-	struct ht_cap_ie ht_cap;
+	struct ieee80211_ht_capabilities ht_cap;
 #endif /* CONFIG_IEEE80211N */
-	struct ht_cap_ie *ht_cap_ptr = NULL;
+	struct ieee80211_ht_capabilities *ht_cap_ptr = NULL;
 	int set_flags, flags_and, flags_or;
 
 	if (!ok) {

@@ -379,12 +379,6 @@ struct ieee80211_ht_operation {
 	u8 basic_set[16];
 } STRUCT_PACKED;
 
-struct ht_cap_ie {
-	u8 id;
-	u8 length;
-	struct ieee80211_ht_capabilities data;
-} STRUCT_PACKED;
-
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif /* _MSC_VER */

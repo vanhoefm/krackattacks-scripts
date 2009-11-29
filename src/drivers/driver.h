@@ -443,7 +443,7 @@ struct hostapd_sta_add_params {
 	size_t supp_rates_len;
 	int flags;
 	u16 listen_interval;
-	const struct ht_cap_ie *ht_capabilities;
+	const struct ieee80211_ht_capabilities *ht_capabilities;
 };
 
 struct hostapd_freq_params {

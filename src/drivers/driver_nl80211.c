@@ -2600,14 +2600,11 @@ static int wpa_driver_nl80211_sta_add(const char *ifname, void *priv,
 		params->supp_rates);
 	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
 		    params->listen_interval);
-
-#ifdef CONFIG_IEEE80211N
 	if (params->ht_capabilities) {
 		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
-			params->ht_capabilities->length,
-			&params->ht_capabilities->data);
+			sizeof(*params->ht_capabilities),
+			params->ht_capabilities);
 	}
-#endif /* CONFIG_IEEE80211N */
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret)

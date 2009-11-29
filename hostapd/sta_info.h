@@ -80,7 +80,7 @@ struct sta_info {
 	int vlan_id;
 
 #ifdef CONFIG_IEEE80211N
-	struct ht_cap_ie ht_capabilities; /* IEEE 802.11n capabilities */
+	struct ieee80211_ht_capabilities ht_capabilities;
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211W

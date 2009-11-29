@@ -217,7 +217,7 @@ static inline int
 hostapd_sta_add(const char *ifname, struct hostapd_data *hapd, const u8 *addr,
 		u16 aid, u16 capability, const u8 *supp_rates,
 		size_t supp_rates_len, int flags, u16 listen_interval,
-		const struct ht_cap_ie *ht_capabilities)
+		const struct ieee80211_ht_capabilities *ht_capabilities)
 {
 	struct hostapd_sta_add_params params;
 

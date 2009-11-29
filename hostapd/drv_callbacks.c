@@ -461,3 +461,9 @@ void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 		hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
 					sa, ie, ie_len);
 }
+
+
+void hostapd_button_pushed(struct hostapd_data *hapd)
+{
+	hostapd_wps_button_pushed(hapd);
+}

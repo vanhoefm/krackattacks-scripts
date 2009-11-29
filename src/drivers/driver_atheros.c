@@ -65,8 +65,6 @@
 #include "eloop.h"
 #include "priv_netlink.h"
 #include "l2_packet/l2_packet.h"
-
-#include "../hostapd/wps_hostapd.h"
 #include "common/ieee802_11_defs.h"
 
 
@@ -849,7 +847,7 @@ madwifi_wireless_event_wireless_custom(struct madwifi_driver_data *drv,
 		/* PROBLEM! this event is received for ALL BSSs ...
 		 * so all are enabled for WPS... ugh.
 		 */
-		hostapd_wps_button_pushed(drv->hapd);
+		hostapd_button_pushed(drv->hapd);
 	} else if (strncmp(custom, "Manage.prob_req ", 16) == 0) {
 		/*
 		 * Atheros driver uses a hack to pass Probe Request frames as a

@@ -1597,5 +1597,6 @@ struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 					  const u8 *addr);
 void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 			  const u8 *ie, size_t ie_len);
+void hostapd_button_pushed(struct hostapd_data *hapd);
 
 #endif /* DRIVER_H */

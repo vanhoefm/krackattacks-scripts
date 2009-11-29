@@ -92,7 +92,7 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 /* This function is called when a station sends an association request with
  * WMM info element. The function returns zero on success or non-zero on any
  * error in WMM element. eid does not include Element ID and Length octets. */
-int hostapd_eid_wmm_valid(struct hostapd_data *hapd, u8 *eid, size_t len)
+int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid, size_t len)
 {
 	struct wmm_information_element *wmm;
 

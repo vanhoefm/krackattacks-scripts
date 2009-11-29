@@ -23,6 +23,7 @@
 #include "md5.h"
 #include "crypto.h"
 #include "eloop.h"
+#include "sta_flags.h"
 #include "sta_info.h"
 #include "wpa.h"
 #include "preauth.h"

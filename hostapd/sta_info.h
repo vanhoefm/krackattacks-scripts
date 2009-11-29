@@ -15,8 +15,6 @@
 #ifndef STA_INFO_H
 #define STA_INFO_H
 
-#include "sta_flags.h"
-
 #ifdef CONFIG_IEEE80211N
 #include "common/ieee802_11_defs.h"
 #endif /* CONFIG_IEEE80211N */

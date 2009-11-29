@@ -16,6 +16,7 @@
 #include "includes.h"
 
 #include "hostapd.h"
+#include "sta_flags.h"
 #include "sta_info.h"
 #include "eloop.h"
 #include "accounting.h"

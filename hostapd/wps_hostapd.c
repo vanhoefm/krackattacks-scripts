@@ -21,6 +21,7 @@
 #include "common/wpa_ctrl.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "sta_flags.h"
 #include "sta_info.h"
 #include "eapol_sm.h"
 #include "wps/wps.h"

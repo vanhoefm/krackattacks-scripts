@@ -37,6 +37,7 @@
 #include "../../hostapd/ieee802_1x.h"
 #include "../../hostapd/ieee802_11.h"
 #include "../../hostapd/wpa.h"
+#include "../../hostapd/sta_flags.h"
 #include "../../hostapd/sta_info.h"
 #include "../../hostapd/accounting.h"
 

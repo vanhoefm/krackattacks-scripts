@@ -21,6 +21,7 @@
 #include "l2_packet/l2_packet.h"
 #include "ieee802_1x.h"
 #include "eloop.h"
+#include "sta_flags.h"
 #include "sta_info.h"
 #include "common/wpa_common.h"
 #include "eapol_sm.h"

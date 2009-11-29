@@ -664,7 +664,7 @@ SM_STEP(AUTH_KEY_TX)
 	switch (sm->auth_key_tx_state) {
 	case AUTH_KEY_TX_NO_KEY_TRANSMIT:
 		if (sm->keyTxEnabled && sm->eap_if->eapKeyAvailable &&
-		    sm->keyRun && !wpa_auth_sta_wpa_version(sm->sta->wpa_sm))
+		    sm->keyRun && !(sm->flags & EAPOL_SM_USES_WPA))
 			SM_ENTER(AUTH_KEY_TX, KEY_TRANSMIT);
 		break;
 	case AUTH_KEY_TX_KEY_TRANSMIT:
@@ -758,7 +758,7 @@ SM_STEP(CTRL_DIR)
 
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
-		 int preauth, struct sta_info *sta)
+		 int flags, struct sta_info *sta)
 {
 	struct eapol_state_machine *sm;
 	struct hostapd_data *hapd; /* TODO: to be removed */
@@ -776,8 +776,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	}
 	sm->radius_identifier = -1;
 	os_memcpy(sm->addr, addr, ETH_ALEN);
-	if (preauth)
-		sm->flags |= EAPOL_SM_PREAUTH;
+	sm->flags = flags;
 
 	sm->hapd = hapd;
 	sm->eapol = eapol;

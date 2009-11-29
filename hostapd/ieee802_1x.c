@@ -719,9 +719,13 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		return;
 
 	if (!sta->eapol_sm) {
+		int flags = 0;
+		if (sta->flags & WLAN_STA_PREAUTH)
+			flags |= EAPOL_SM_PREAUTH;
+		if (sta->wpa_sm)
+			flags |= EAPOL_SM_USES_WPA;
 		sta->eapol_sm = eapol_auth_alloc(hapd->eapol_auth, sta->addr,
-						 sta->flags & WLAN_STA_PREAUTH,
-						 sta);
+						 flags, sta);
 		if (!sta->eapol_sm)
 			return;
 
@@ -836,11 +840,15 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 		return;
 
 	if (sta->eapol_sm == NULL) {
+		int flags = 0;
+		if (sta->flags & WLAN_STA_PREAUTH)
+			flags |= EAPOL_SM_PREAUTH;
+		if (sta->wpa_sm)
+			flags |= EAPOL_SM_USES_WPA;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "start authentication");
 		sta->eapol_sm = eapol_auth_alloc(hapd->eapol_auth, sta->addr,
-						 sta->flags & WLAN_STA_PREAUTH,
-						 sta);
+						 flags, sta);
 		if (sta->eapol_sm == NULL) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE8021X,

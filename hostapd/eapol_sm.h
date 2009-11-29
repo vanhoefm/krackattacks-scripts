@@ -1,6 +1,6 @@
 /*
- * hostapd / IEEE 802.1X-2004 Authenticator - EAPOL state machine
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * IEEE 802.1X-2004 Authenticator - EAPOL state machine
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -202,6 +202,7 @@ struct eapol_state_machine {
 	u8 addr[ETH_ALEN]; /* Supplicant address */
 #define EAPOL_SM_PREAUTH BIT(0)
 #define EAPOL_SM_WAIT_START BIT(1)
+#define EAPOL_SM_USES_WPA BIT(2)
 	int flags; /* EAPOL_SM_* */
 
 	/* EAPOL/AAA <-> EAP full authenticator interface */
@@ -243,7 +244,7 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 void eapol_auth_deinit(struct eapol_authenticator *eapol);
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
-		 int preauth, struct sta_info *sta);
+		 int flags, struct sta_info *sta);
 void eapol_auth_free(struct eapol_state_machine *sm);
 void eapol_auth_step(struct eapol_state_machine *sm);
 void eapol_auth_initialize(struct eapol_state_machine *sm);

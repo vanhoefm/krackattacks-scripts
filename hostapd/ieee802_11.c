@@ -1045,6 +1045,12 @@ static void handle_assoc(struct hostapd_data *hapd,
 			ieee802_11_set_beacons(hapd->iface);
 	}
 
+	if (hostapd_get_aid(hapd, sta) < 0) {
+		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
+		wpa_printf(MSG_ERROR, "  no room for more AIDs");
+		goto fail;
+	}
+
 #ifdef CONFIG_IEEE80211N
 	if ((sta->flags & WLAN_STA_HT) && sta->ht_capabilities) {
 		u16 ht_capab = le_to_host16(
@@ -1087,12 +1093,6 @@ static void handle_assoc(struct hostapd_data *hapd,
 	if (hostapd_ht_operation_update(hapd->iface) > 0)
 		ieee802_11_set_beacons(hapd->iface);
 #endif /* CONFIG_IEEE80211N */
-
-	if (hostapd_get_aid(hapd, sta) < 0) {
-		resp = WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA;
-		wpa_printf(MSG_ERROR, "  no room for more AIDs");
-		goto fail;
-	}
 
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG,

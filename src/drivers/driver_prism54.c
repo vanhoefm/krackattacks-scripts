@@ -39,7 +39,6 @@
 #include "../../hostapd/wpa.h"
 #include "../../hostapd/sta_flags.h"
 #include "../../hostapd/sta_info.h"
-#include "../../hostapd/accounting.h"
 
 
 const int PIM_BUF_SIZE = 4096;
@@ -633,7 +632,6 @@ static void prism54_handle_disassoc(struct prism54_driver_data *drv,
 {
 	struct obj_mlme *mlme;
 	pimdev_hdr *hdr;
-	struct sta_info *sta;
 	char *mac_id;
 
 	hdr = (pimdev_hdr *) buf;
@@ -641,17 +639,7 @@ static void prism54_handle_disassoc(struct prism54_driver_data *drv,
 	mac_id = mac_id_get(drv, mlme->id);
 	if (mac_id == NULL)
 		return;
-	memcpy(&mlme->address[0], mac_id, ETH_ALEN);
-	sta = ap_get_sta(drv->hapd, (u8 *) &mlme->address[0]);
-	if (sta == NULL) {
-		return;
-	}
-	sta->flags &= ~WLAN_STA_ASSOC;
-	wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
-	sta->acct_terminate_cause = RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
-	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
-	accounting_sta_stop(drv->hapd, sta);
-	ieee802_1x_free_station(sta);
+	hostapd_notif_disassoc(drv->hapd, (u8 *) mac_id);
 }
 
 

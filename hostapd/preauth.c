@@ -25,7 +25,7 @@
 #include "sta_flags.h"
 #include "sta_info.h"
 #include "common/wpa_common.h"
-#include "eapol_sm.h"
+#include "eapol_auth/eapol_auth_sm.h"
 #include "wpa.h"
 #include "preauth.h"
 

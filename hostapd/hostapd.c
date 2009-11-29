@@ -21,7 +21,7 @@
 #include "beacon.h"
 #include "hw_features.h"
 #include "accounting.h"
-#include "eapol_sm.h"
+#include "eapol_auth/eapol_auth_sm.h"
 #include "iapp.h"
 #include "common/ieee802_11_defs.h"
 #include "ieee802_11_auth.h"

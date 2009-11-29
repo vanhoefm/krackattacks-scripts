@@ -18,7 +18,7 @@
 
 #include "common.h"
 #include "config.h"
-#include "eapol_sm.h"
+#include "eapol_auth/eapol_auth_sm.h"
 #include "wpa.h"
 #include "sha1.h"
 #include "sha256.h"

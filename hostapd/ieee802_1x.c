@@ -20,7 +20,7 @@
 #include "accounting.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
-#include "eapol_sm.h"
+#include "eapol_auth/eapol_auth_sm.h"
 #include "md5.h"
 #include "crypto.h"
 #include "eloop.h"

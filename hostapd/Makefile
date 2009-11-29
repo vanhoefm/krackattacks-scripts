@@ -37,7 +37,7 @@ CFLAGS += -DCONFIG_NATIVE_WINDOWS
 LIBS += -lws2_32
 endif
 
-OBJS =	hostapd.o main.o ieee802_1x.o eapol_sm.o \
+OBJS =	hostapd.o main.o ieee802_1x.o \
 	config.o ieee802_11_auth.o \
 	sta_info.o wpa.o \
 	preauth.o pmksa_cache.o \
@@ -62,6 +62,8 @@ OBJS += ../src/utils/ip_addr.o
 
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
+
+OBJS += ../src/eapol_auth/eapol_auth_sm.o
 
 ifdef CONFIG_NO_RADIUS
 CFLAGS += -DCONFIG_NO_RADIUS

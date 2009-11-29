@@ -589,7 +589,7 @@ OBJS += ../hostapd/wpa_auth_ie.o
 OBJS += ../hostapd/tkip_countermeasures.o
 OBJS += ../hostapd/mlme.o
 OBJS += ../hostapd/ieee802_1x.o
-OBJS += ../hostapd/eapol_sm.o
+OBJS += ../src/eapol_auth/eapol_auth_sm.o
 OBJS += ../hostapd/ieee802_11_auth.o
 OBJS += ../hostapd/drv_callbacks.o
 ifdef CONFIG_CTRL_IFACE
@@ -636,7 +636,7 @@ OBJS_h += ../src/radius/radius_client.o
 endif
 
 ifdef CONFIG_AUTHENTICATOR
-OBJS_h += ../hostapd/eapol_sm.o
+OBJS_h += ../eapol_auth/eapol_auth_sm.o
 OBJS_h += ../hostapd/ieee802_1x.o
 endif
 

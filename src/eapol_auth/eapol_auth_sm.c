@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "eapol_sm.h"
+#include "eapol_auth_sm.h"
 #include "eloop.h"
 #include "common/eapol_common.h"
 #include "eap_server/eap.h"

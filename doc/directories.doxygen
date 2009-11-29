@@ -38,6 +38,9 @@ driver is used.
 \dir src/eap_server EAP server
 
 
+\dir src/eapol_auth EAPOL authenticator
+
+
 \dir src/eapol_supp EAPOL supplicant
 
 

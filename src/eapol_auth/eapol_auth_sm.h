@@ -12,8 +12,8 @@
  * See README and COPYING for more details.
  */
 
-#ifndef EAPOL_SM_H
-#define EAPOL_SM_H
+#ifndef EAPOL_AUTH_SM_H
+#define EAPOL_AUTH_SM_H
 
 #include "common/defs.h"
 #include "radius/radius.h"
@@ -251,4 +251,4 @@ void eapol_auth_dump_state(FILE *f, const char *prefix,
 			   struct eapol_state_machine *sm);
 int eapol_auth_eap_pending_cb(struct eapol_state_machine *sm, void *ctx);
 
-#endif /* EAPOL_SM_H */
+#endif /* EAPOL_AUTH_SM_H */

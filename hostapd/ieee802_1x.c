@@ -563,28 +563,6 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 #endif /* CONFIG_NO_RADIUS */
 
 
-char *eap_type_text(u8 type)
-{
-	switch (type) {
-	case EAP_TYPE_IDENTITY: return "Identity";
-	case EAP_TYPE_NOTIFICATION: return "Notification";
-	case EAP_TYPE_NAK: return "Nak";
-	case EAP_TYPE_MD5: return "MD5-Challenge";
-	case EAP_TYPE_OTP: return "One-Time Password";
-	case EAP_TYPE_GTC: return "Generic Token Card";
-	case EAP_TYPE_TLS: return "TLS";
-	case EAP_TYPE_TTLS: return "TTLS";
-	case EAP_TYPE_PEAP: return "PEAP";
-	case EAP_TYPE_SIM: return "SIM";
-	case EAP_TYPE_FAST: return "FAST";
-	case EAP_TYPE_SAKE: return "SAKE";
-	case EAP_TYPE_PSK: return "PSK";
-	case EAP_TYPE_PAX: return "PAX";
-	default: return "Unknown";
-	}
-}
-
-
 static void handle_eap_response(struct hostapd_data *hapd,
 				struct sta_info *sta, struct eap_hdr *eap,
 				size_t len)
@@ -607,7 +585,7 @@ static void handle_eap_response(struct hostapd_data *hapd,
 		       HOSTAPD_LEVEL_DEBUG, "received EAP packet (code=%d "
 		       "id=%d len=%d) from STA: EAP Response-%s (%d)",
 		       eap->code, eap->identifier, be_to_host16(eap->length),
-		       eap_type_text(type), type);
+		       eap_server_get_name(0, type), type);
 
 	sm->dot1xAuthEapolRespFramesRx++;
 
@@ -993,12 +971,14 @@ static void ieee802_1x_decapsulate_radius(struct hostapd_data *hapd,
 		if (eap_type >= 0)
 			sm->eap_type_authsrv = eap_type;
 		os_snprintf(buf, sizeof(buf), "EAP-Request-%s (%d)",
-			    eap_type >= 0 ? eap_type_text(eap_type) : "??",
+			    eap_type >= 0 ? eap_server_get_name(0, eap_type) :
+			    "??",
 			    eap_type);
 		break;
 	case EAP_CODE_RESPONSE:
 		os_snprintf(buf, sizeof(buf), "EAP Response-%s (%d)",
-			    eap_type >= 0 ? eap_type_text(eap_type) : "??",
+			    eap_type >= 0 ? eap_server_get_name(0, eap_type) :
+			    "??",
 			    eap_type);
 		break;
 	case EAP_CODE_SUCCESS:
@@ -1424,8 +1404,9 @@ void ieee802_1x_dump_state(FILE *f, const char *prefix, struct sta_info *sta)
 
 	fprintf(f, "%slast EAP type: Authentication Server: %d (%s) "
 		"Supplicant: %d (%s)\n", prefix,
-		sm->eap_type_authsrv, eap_type_text(sm->eap_type_authsrv),
-		sm->eap_type_supp, eap_type_text(sm->eap_type_supp));
+		sm->eap_type_authsrv,
+		eap_server_get_name(0, sm->eap_type_authsrv),
+		sm->eap_type_supp, eap_server_get_name(0, sm->eap_type_supp));
 
 	fprintf(f, "%scached_packets=%s\n", prefix,
 		sm->last_recv_radius ? "[RX RADIUS]" : "");

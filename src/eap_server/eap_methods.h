@@ -1,6 +1,6 @@
 /*
- * hostapd / EAP method registration
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * EAP server method registration
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -25,5 +25,6 @@ int eap_server_method_register(struct eap_method *method);
 EapType eap_server_get_type(const char *name, int *vendor);
 int eap_server_register_methods(void);
 void eap_server_unregister_methods(void);
+const char * eap_server_get_name(int vendor, EapType type);
 
 #endif /* EAP_SERVER_METHODS_H */

@@ -1,6 +1,6 @@
 /*
- * hostapd / IEEE 802.1X-2004 Authenticator - EAPOL state machine
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * IEEE 802.1X-2004 Authenticator - EAPOL state machine
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,7 +15,6 @@
 #include "includes.h"
 
 #include "common.h"
-#include "ieee802_1x.h"
 #include "eapol_sm.h"
 #include "eloop.h"
 #include "wpa.h"
@@ -272,12 +271,12 @@ SM_STATE(AUTH_PAE, HELD)
 	eapol_auth_vlogger(sm->eapol, sm->addr, EAPOL_LOGGER_WARNING,
 			   "authentication failed - EAP type: %d (%s)",
 			   sm->eap_type_authsrv,
-			   eap_type_text(sm->eap_type_authsrv));
+			   eap_server_get_name(0, sm->eap_type_authsrv));
 	if (sm->eap_type_authsrv != sm->eap_type_supp) {
 		eapol_auth_vlogger(sm->eapol, sm->addr, EAPOL_LOGGER_INFO,
 				   "Supplicant used different EAP type: "
 				   "%d (%s)", sm->eap_type_supp,
-				   eap_type_text(sm->eap_type_supp));
+				   eap_server_get_name(0, sm->eap_type_supp));
 	}
 	sm->eapol->cb.finished(sm->hapd, sm->sta, 0,
 			       sm->flags & EAPOL_SM_PREAUTH);
@@ -303,7 +302,8 @@ SM_STATE(AUTH_PAE, AUTHENTICATED)
 	eapol_auth_vlogger(sm->eapol, sm->addr, EAPOL_LOGGER_INFO,
 			   "authenticated - EAP type: %d (%s)%s",
 			   sm->eap_type_authsrv,
-			   eap_type_text(sm->eap_type_authsrv), extra);
+			   eap_server_get_name(0, sm->eap_type_authsrv),
+			   extra);
 	sm->eapol->cb.finished(sm->hapd, sm->sta, 1,
 			       sm->flags & EAPOL_SM_PREAUTH);
 }

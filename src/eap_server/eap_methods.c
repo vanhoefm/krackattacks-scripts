@@ -1,6 +1,6 @@
 /*
- * hostapd / EAP method registration
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * EAP server method registration
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -305,4 +305,24 @@ void eap_server_unregister_methods(void)
 		else
 			eap_server_method_free(m);
 	}
+}
+
+
+/**
+ * eap_server_get_name - Get EAP method name for the given EAP type
+ * @vendor: EAP Vendor-Id (0 = IETF)
+ * @type: EAP method type
+ * Returns: EAP method name, e.g., TLS, or %NULL if not found
+ *
+ * This function maps EAP type numbers into EAP type names based on the list of
+ * EAP methods included in the build.
+ */
+const char * eap_server_get_name(int vendor, EapType type)
+{
+	struct eap_method *m;
+	for (m = eap_methods; m; m = m->next) {
+		if (m->vendor == vendor && m->method == type)
+			return m->name;
+	}
+	return NULL;
 }

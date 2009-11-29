@@ -28,8 +28,8 @@
 #include "eloop.h"
 #include "priv_netlink.h"
 #include "driver_wext.h"
-#include "ieee802_11_defs.h"
-#include "wpa_common.h"
+#include "common/ieee802_11_defs.h"
+#include "common/wpa_common.h"
 
 
 static int wpa_driver_wext_flush_pmkid(void *priv);

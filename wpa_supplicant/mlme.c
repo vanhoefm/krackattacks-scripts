@@ -23,8 +23,8 @@
 #include "notify.h"
 #include "driver_i.h"
 #include "wpa.h"
-#include "ieee802_11_defs.h"
-#include "ieee802_11_common.h"
+#include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "mlme.h"
 
 

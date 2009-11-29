@@ -29,7 +29,7 @@
 
 #include "wpagui.h"
 #include "dirent.h"
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 #include "userdatarequest.h"
 #include "networkconfig.h"
 

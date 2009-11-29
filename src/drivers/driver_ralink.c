@@ -22,7 +22,7 @@
 #include "driver.h"
 #include "l2_packet/l2_packet.h"
 #include "eloop.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "priv_netlink.h"
 #include "driver_ralink.h"
 

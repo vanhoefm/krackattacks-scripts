@@ -23,7 +23,7 @@
 #include "wpa.h"
 #include "wpa_i.h"
 #include "wpa_ie.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "peerkey.h"
 
 

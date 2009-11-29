@@ -18,7 +18,6 @@
 #include "common.h"
 #include "radius.h"
 #include "eloop.h"
-#include "defs.h"
 #include "eap_server/eap.h"
 #include "radius_server.h"
 

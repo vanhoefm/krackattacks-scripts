@@ -14,7 +14,7 @@
 
 #include "userdatarequest.h"
 #include "wpagui.h"
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 
 
 UserDataRequest::UserDataRequest(QWidget *parent, const char *, bool,

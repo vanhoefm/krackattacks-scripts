@@ -25,7 +25,7 @@
 #include "notify.h"
 #include "eap_peer/eap_methods.h"
 #include "dbus_dict_helpers.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "wpas_glue.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wps_supplicant.h"

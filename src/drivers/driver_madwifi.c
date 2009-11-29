@@ -26,7 +26,7 @@
 #include "driver.h"
 #include "driver_wext.h"
 #include "eloop.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "wireless_copy.h"
 
 /*

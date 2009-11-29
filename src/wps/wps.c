@@ -18,7 +18,7 @@
 #include "dh_group5.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 
 
 /**

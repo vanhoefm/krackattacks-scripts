@@ -13,7 +13,7 @@
  */
 
 #include <cstdio>
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 
 #include <QMessageBox>
 

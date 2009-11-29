@@ -29,7 +29,7 @@
 #include "tls.h"
 #include "crypto.h"
 #include "pcsc_funcs.h"
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 #include "state_machine.h"
 #include "eap_common/eap_wsc_common.h"
 

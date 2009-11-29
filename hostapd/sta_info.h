@@ -18,7 +18,7 @@
 #include "sta_flags.h"
 
 #ifdef CONFIG_IEEE80211N
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #endif /* CONFIG_IEEE80211N */
 
 /* Maximum number of supported rates (from both Supported Rates and Extended

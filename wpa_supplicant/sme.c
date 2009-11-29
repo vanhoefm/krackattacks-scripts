@@ -15,9 +15,9 @@
 #include "includes.h"
 
 #include "common.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "eapol_supp/eapol_supp_sm.h"
-#include "wpa_common.h"
+#include "common/wpa_common.h"
 #include "wpa.h"
 #include "pmksa_cache.h"
 #include "config.h"

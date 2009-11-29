@@ -17,7 +17,7 @@
 #include "common.h"
 #include "sha256.h"
 #include "base64.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "eloop.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"

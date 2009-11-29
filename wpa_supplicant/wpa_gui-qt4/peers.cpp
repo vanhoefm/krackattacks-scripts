@@ -16,7 +16,7 @@
 #include <QImageReader>
 #include <QMessageBox>
 
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 #include "wpagui.h"
 #include "stringquery.h"
 #include "peers.h"

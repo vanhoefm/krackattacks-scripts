@@ -15,9 +15,9 @@
 #include "includes.h"
 #include <dirent.h>
 
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 #include "common.h"
-#include "version.h"
+#include "common/version.h"
 
 
 static const char *hostapd_cli_version =

@@ -16,8 +16,8 @@
 #ifndef IEEE802_11_H
 #define IEEE802_11_H
 
-#include "ieee802_11_defs.h"
-#include "ieee802_11_common.h"
+#include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 
 struct hostapd_iface;
 struct hostapd_data;

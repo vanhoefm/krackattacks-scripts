@@ -23,7 +23,7 @@
 #include "sha1.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
-#include "wpa_common.h"
+#include "common/wpa_common.h"
 #include "wpa.h"
 #include "uuid.h"
 #include "eap_common/eap_wsc_common.h"

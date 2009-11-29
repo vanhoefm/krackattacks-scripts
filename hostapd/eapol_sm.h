@@ -15,7 +15,7 @@
 #ifndef EAPOL_SM_H
 #define EAPOL_SM_H
 
-#include "defs.h"
+#include "common/defs.h"
 #include "radius/radius.h"
 
 /* IEEE Std 802.1X-2004, Ch. 8.2 */

@@ -14,7 +14,7 @@
 
 #include "includes.h"
 
-#include "../hostapd/hostapd.h"
+#include "common.h"
 #include "driver.h"
 
 

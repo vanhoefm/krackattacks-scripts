@@ -18,7 +18,7 @@
 #include "common.h"
 #include "driver.h"
 #include "eloop.h"
-#include "privsep_commands.h"
+#include "common/privsep_commands.h"
 
 
 struct wpa_driver_privsep_data {

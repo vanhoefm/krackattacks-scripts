@@ -22,7 +22,7 @@
 #include "ieee802_1x.h"
 #include "eloop.h"
 #include "sta_info.h"
-#include "wpa_common.h"
+#include "common/wpa_common.h"
 #include "eapol_sm.h"
 #include "wpa.h"
 #include "preauth.h"

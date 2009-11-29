@@ -17,7 +17,7 @@
 #include "common.h"
 #include "wpa.h"
 #include "pmksa_cache.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "wpa_i.h"
 #include "wpa_ie.h"
 

@@ -22,7 +22,7 @@
 #include "preauth.h"
 #include "pmksa_cache.h"
 #include "wpa_i.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 
 
 #if defined(IEEE8021X_EAPOL) && !defined(CONFIG_NO_WPA2)

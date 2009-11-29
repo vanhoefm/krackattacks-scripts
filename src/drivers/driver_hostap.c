@@ -29,7 +29,7 @@
 #include <netpacket/packet.h>
 
 #include "priv_netlink.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/hw_features.h"
 #include "../../hostapd/sta_flags.h"

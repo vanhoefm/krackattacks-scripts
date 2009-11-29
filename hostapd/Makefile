@@ -13,7 +13,6 @@ CFLAGS += -DHOSTAPD_DUMP_STATE
 CFLAGS += -I../src
 CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
-CFLAGS += -I../src/common
 
 # Uncomment following line and set the path to your kernel tree include
 # directory if your C library does not include all header files.

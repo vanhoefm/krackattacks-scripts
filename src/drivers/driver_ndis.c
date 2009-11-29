@@ -40,7 +40,7 @@ int close(int fd);
 #include "common.h"
 #include "driver.h"
 #include "eloop.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "driver_ndis.h"
 
 int wpa_driver_register_event_cb(struct wpa_driver_ndis_data *drv);

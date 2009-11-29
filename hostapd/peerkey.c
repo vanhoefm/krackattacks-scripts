@@ -19,7 +19,6 @@
 #include "sha1.h"
 #include "sha256.h"
 #include "wpa.h"
-#include "defs.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
 

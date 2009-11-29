@@ -16,7 +16,7 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 #include "../config.h"
 #include "wpa.h"
 #include "wpa_ie.h"

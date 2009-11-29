@@ -20,7 +20,6 @@
 #include "aes_wrap.h"
 #include "ieee802_11.h"
 #include "wme.h"
-#include "defs.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
 

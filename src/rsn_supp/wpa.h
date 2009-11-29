@@ -15,9 +15,9 @@
 #ifndef WPA_H
 #define WPA_H
 
-#include "defs.h"
-#include "eapol_common.h"
-#include "wpa_common.h"
+#include "common/defs.h"
+#include "common/eapol_common.h"
+#include "common/wpa_common.h"
 
 struct wpa_sm;
 struct eapol_sm;

@@ -21,11 +21,11 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "version.h"
+#include "common/version.h"
 #include "drivers/driver.h"
 #include "l2_packet/l2_packet.h"
-#include "privsep_commands.h"
-#include "ieee802_11_defs.h"
+#include "common/privsep_commands.h"
+#include "common/ieee802_11_defs.h"
 
 
 struct wpa_priv_interface {

@@ -16,11 +16,11 @@
 #include <sys/ioctl.h>
 #include "wireless_copy.h"
 #include "common.h"
-#include "wpa_common.h"
+#include "common/wpa_common.h"
 #include "driver.h"
 #include "eloop.h"
 #include "driver_wext.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 
 static int wpa_driver_ps3_set_wpa_key(struct wpa_driver_wext_data *drv,
 				struct wpa_driver_associate_params *params)

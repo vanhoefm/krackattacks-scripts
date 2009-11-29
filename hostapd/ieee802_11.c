@@ -36,7 +36,7 @@
 #include "accounting.h"
 #include "driver_i.h"
 #include "mlme.h"
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)

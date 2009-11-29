@@ -32,7 +32,7 @@
 #include "l2_packet/l2_packet.h"
 #include "eloop.h"
 #include "sha1.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/wpa.h"

@@ -24,9 +24,9 @@
 #include <readline/history.h>
 #endif /* CONFIG_READLINE */
 
-#include "wpa_ctrl.h"
+#include "common/wpa_ctrl.h"
 #include "common.h"
-#include "version.h"
+#include "common/version.h"
 
 
 static const char *wpa_cli_version =

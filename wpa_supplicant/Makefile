@@ -12,7 +12,6 @@ export BINDIR ?= /usr/local/sbin/
 CFLAGS += -I../src
 CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
-CFLAGS += -I../src/common
 CFLAGS += -I../src/rsn_supp
 
 ALL=wpa_supplicant wpa_passphrase wpa_cli

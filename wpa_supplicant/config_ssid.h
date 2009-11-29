@@ -15,7 +15,7 @@
 #ifndef CONFIG_SSID_H
 #define CONFIG_SSID_H
 
-#include "defs.h"
+#include "common/defs.h"
 #include "eap_peer/eap_config.h"
 
 #define MAX_SSID_LEN 32

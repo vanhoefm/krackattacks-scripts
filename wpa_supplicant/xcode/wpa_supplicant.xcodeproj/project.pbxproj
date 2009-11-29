@@ -455,7 +455,6 @@
 					../../src,
 					../../src/crypto,
 					../../src/utils,
-					../../src/common,
 					../../src/rsn_supp,
 				);
 				ONLY_ACTIVE_ARCH = YES;
@@ -479,7 +478,6 @@
 					../../src,
 					../../src/crypto,
 					../../src/utils,
-					../../src/common,
 					../../src/rsn_supp,
 				);
 				OTHER_CFLAGS = "-DCONFIG_XCODE_DEFAULTS";

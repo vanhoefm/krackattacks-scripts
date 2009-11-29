@@ -19,7 +19,7 @@
 
 #include "eloop.h"
 #include "hostapd.h"
-#include "version.h"
+#include "common/version.h"
 #include "config.h"
 #include "tls.h"
 #include "eap_server/eap.h"

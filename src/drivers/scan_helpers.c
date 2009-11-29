@@ -16,7 +16,7 @@
 
 #include "common.h"
 #include "drivers/driver.h"
-#include "ieee802_11_defs.h"
+#include "common/ieee802_11_defs.h"
 
 
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)

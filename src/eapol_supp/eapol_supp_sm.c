@@ -18,7 +18,7 @@
 #include "eapol_supp_sm.h"
 #include "eap_peer/eap.h"
 #include "eloop.h"
-#include "eapol_common.h"
+#include "common/eapol_common.h"
 #include "md5.h"
 #include "crypto.h"
 #include "state_machine.h"

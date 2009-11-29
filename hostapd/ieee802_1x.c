@@ -30,8 +30,8 @@
 #include "driver_i.h"
 #include "hw_features.h"
 #include "eap_server/eap.h"
-#include "ieee802_11_defs.h"
-#include "wpa_ctrl.h"
+#include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 
 
 static void ieee802_1x_finished(struct hostapd_data *hapd,

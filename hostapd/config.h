@@ -16,9 +16,9 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include "defs.h"
+#include "common/defs.h"
 #include "ip_addr.h"
-#include "wpa_common.h"
+#include "common/wpa_common.h"
 
 typedef u8 macaddr[ETH_ALEN];
 

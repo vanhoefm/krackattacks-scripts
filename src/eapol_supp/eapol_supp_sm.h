@@ -15,7 +15,7 @@
 #ifndef EAPOL_SUPP_SM_H
 #define EAPOL_SUPP_SM_H
 
-#include "defs.h"
+#include "common/defs.h"
 
 typedef enum { Unauthorized, Authorized } PortStatus;
 typedef enum { Auto, ForceUnauthorized, ForceAuthorized } PortControl;

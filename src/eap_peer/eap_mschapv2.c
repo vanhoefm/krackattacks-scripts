@@ -22,11 +22,11 @@
 #include "includes.h"
 
 #include "common.h"
-#include "eap_i.h"
-#include "eap_config.h"
-#include "ms_funcs.h"
+#include "crypto/ms_funcs.h"
 #include "common/wpa_ctrl.h"
 #include "mschapv2.h"
+#include "eap_i.h"
+#include "eap_config.h"
 
 
 #ifdef _MSC_VER

@@ -15,10 +15,10 @@
 #include "includes.h"
 
 #include "common.h"
-#include "sha256.h"
+#include "crypto/crypto.h"
+#include "crypto/sha256.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
-#include "crypto.h"
 
 
 static int wps_build_mac_addr(struct wps_data *wps, struct wpabuf *msg)

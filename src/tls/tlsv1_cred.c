@@ -16,7 +16,7 @@
 
 #include "common.h"
 #include "base64.h"
-#include "crypto.h"
+#include "crypto/crypto.h"
 #include "x509v3.h"
 #include "tlsv1_cred.h"
 

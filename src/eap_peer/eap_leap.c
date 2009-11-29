@@ -15,9 +15,9 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/ms_funcs.h"
+#include "crypto/crypto.h"
 #include "eap_i.h"
-#include "ms_funcs.h"
-#include "crypto.h"
 
 #define LEAP_VERSION 1
 #define LEAP_CHALLENGE_LEN 8

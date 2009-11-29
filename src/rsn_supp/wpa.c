@@ -15,17 +15,17 @@
 #include "includes.h"
 
 #include "common.h"
-#include "crypto.h"
-#include "aes_wrap.h"
+#include "crypto/aes_wrap.h"
+#include "crypto/crypto.h"
+#include "common/ieee802_11_defs.h"
+#include "eapol_supp/eapol_supp_sm.h"
 #include "wpa.h"
 #include "eloop.h"
-#include "eapol_supp/eapol_supp_sm.h"
 #include "preauth.h"
 #include "pmksa_cache.h"
 #include "wpa_i.h"
 #include "wpa_ie.h"
 #include "peerkey.h"
-#include "common/ieee802_11_defs.h"
 
 
 /**

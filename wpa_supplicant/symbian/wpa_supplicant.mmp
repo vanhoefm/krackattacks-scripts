@@ -5,7 +5,7 @@ TARGETTYPE	exe
 
 SYSTEMINCLUDE \epoc32\include \epoc32\include\variant \epoc32\include\ecom \epoc32\include\libc
 
-USERINCLUDE	.. ..\..\src ..\..\src\utils ..\..\src\crypto
+USERINCLUDE	.. ..\..\src ..\..\src\utils
 
 SOURCEPATH	..
 SOURCE		main_symbian.cpp

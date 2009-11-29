@@ -12,7 +12,7 @@
  * See README and COPYING for more details.
  */
 
-#include "ms_funcs.c"
+#include "crypto/ms_funcs.c"
 
 
 int main(int argc, char *argv[])

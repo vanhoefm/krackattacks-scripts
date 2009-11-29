@@ -453,7 +453,6 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
 					../../src,
-					../../src/crypto,
 					../../src/utils,
 				);
 				ONLY_ACTIVE_ARCH = YES;
@@ -475,7 +474,6 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = (
 					../../src,
-					../../src/crypto,
 					../../src/utils,
 				);
 				OTHER_CFLAGS = "-DCONFIG_XCODE_DEFAULTS";

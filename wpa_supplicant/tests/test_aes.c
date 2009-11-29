@@ -15,8 +15,8 @@
 #include "includes.h"
 
 #include "common.h"
-#include "crypto.h"
-#include "aes_wrap.h"
+#include "crypto/crypto.h"
+#include "crypto/aes_wrap.h"
 
 #define BLOCK_SIZE 16
 

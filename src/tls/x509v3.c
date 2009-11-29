@@ -18,8 +18,8 @@
 
 #ifdef CONFIG_INTERNAL_X509
 
+#include "crypto/crypto.h"
 #include "asn1.h"
-#include "crypto.h"
 #include "x509v3.h"
 
 

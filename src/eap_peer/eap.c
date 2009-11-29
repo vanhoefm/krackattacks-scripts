@@ -24,14 +24,14 @@
 #include "includes.h"
 
 #include "common.h"
+#include "pcsc_funcs.h"
+#include "state_machine.h"
+#include "crypto/crypto.h"
+#include "crypto/tls.h"
+#include "common/wpa_ctrl.h"
+#include "eap_common/eap_wsc_common.h"
 #include "eap_i.h"
 #include "eap_config.h"
-#include "tls.h"
-#include "crypto.h"
-#include "pcsc_funcs.h"
-#include "common/wpa_ctrl.h"
-#include "state_machine.h"
-#include "eap_common/eap_wsc_common.h"
 
 #define STATE_MACHINE_DATA struct eap_sm
 #define STATE_MACHINE_DEBUG_PREFIX "EAP"

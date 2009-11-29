@@ -16,8 +16,8 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/tls.h"
 #include "eap_server/eap.h"
-#include "tls.h"
 #include "wpabuf.h"
 
 void eap_example_peer_rx(const u8 *data, size_t data_len);

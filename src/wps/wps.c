@@ -15,10 +15,10 @@
 #include "includes.h"
 
 #include "common.h"
-#include "dh_group5.h"
+#include "crypto/dh_group5.h"
+#include "common/ieee802_11_defs.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
-#include "common/ieee802_11_defs.h"
 
 
 /**

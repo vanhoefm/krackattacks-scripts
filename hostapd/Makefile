@@ -7,7 +7,6 @@ CFLAGS = -MMD -O2 -Wall -g
 endif
 
 CFLAGS += -I../src
-CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
 
 # Uncomment following line and set the path to your kernel tree include

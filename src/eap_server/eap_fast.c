@@ -15,13 +15,13 @@
 #include "includes.h"
 
 #include "common.h"
-#include "aes_wrap.h"
-#include "sha1.h"
-#include "eap_i.h"
-#include "eap_tls_common.h"
-#include "tls.h"
+#include "crypto/aes_wrap.h"
+#include "crypto/sha1.h"
+#include "crypto/tls.h"
 #include "eap_common/eap_tlv_common.h"
 #include "eap_common/eap_fast_common.h"
+#include "eap_i.h"
+#include "eap_tls_common.h"
 
 
 static void eap_fast_reset(struct eap_sm *sm, void *priv);

@@ -15,8 +15,8 @@
 #include "includes.h"
 
 #include "common.h"
-#include "crypto.h"
-#include "md5.h"
+#include "crypto/crypto.h"
+#include "crypto/md5.h"
 #include "asn1.h"
 #include "pkcs5.h"
 

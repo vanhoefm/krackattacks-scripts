@@ -40,7 +40,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\..\src\utils;..\..\..\src\crypto;C:\dev\openssl\include"
+				AdditionalIncludeDirectories="..\..\..\src\utils;C:\dev\openssl\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;CONFIG_WIN32_DEFAULTS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -119,7 +119,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="..\..\..\src\utils;..\..\..\src\crypto;C:\dev\openssl\include"
+				AdditionalIncludeDirectories="..\..\..\src\utils;C:\dev\openssl\include"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE;CONFIG_WIN32_DEFAULTS"
 				RuntimeLibrary="2"
 				UsePrecompiledHeader="0"

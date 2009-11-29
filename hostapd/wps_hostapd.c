@@ -15,21 +15,21 @@
 #include "includes.h"
 
 #include "common.h"
-#include "hostapd.h"
-#include "driver_i.h"
 #include "eloop.h"
 #include "uuid.h"
+#include "crypto/dh_groups.h"
 #include "common/wpa_ctrl.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
-#include "sta_flags.h"
-#include "sta_info.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
+#include "hostapd.h"
+#include "driver_i.h"
+#include "sta_flags.h"
+#include "sta_info.h"
 #include "wps_hostapd.h"
-#include "dh_groups.h"
 
 
 #ifdef CONFIG_WPS_UPNP

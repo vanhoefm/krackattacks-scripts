@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "ms_funcs.h"
+#include "crypto/ms_funcs.h"
 #include "mschapv2.h"
 
 const u8 * mschapv2_remove_domain(const u8 *username, size_t *len)

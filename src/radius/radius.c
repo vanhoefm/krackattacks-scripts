@@ -16,8 +16,8 @@
 
 #include "common.h"
 #include "radius.h"
-#include "md5.h"
-#include "crypto.h"
+#include "crypto/md5.h"
+#include "crypto/crypto.h"
 
 
 static struct radius_attr_hdr *

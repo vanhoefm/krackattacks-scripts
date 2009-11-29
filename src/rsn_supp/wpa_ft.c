@@ -15,12 +15,12 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/aes_wrap.h"
+#include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "wpa.h"
 #include "wpa_i.h"
 #include "wpa_ie.h"
-#include "aes_wrap.h"
-#include "common/ieee802_11_defs.h"
-#include "common/ieee802_11_common.h"
 
 #ifdef CONFIG_IEEE80211R
 

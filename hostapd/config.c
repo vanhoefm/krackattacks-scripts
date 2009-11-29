@@ -19,16 +19,16 @@
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 #include "common.h"
-#include "hostapd.h"
+#include "crypto/sha1.h"
 #include "drivers/driver.h"
-#include "sha1.h"
-#include "eap_server/eap.h"
 #include "radius/radius_client.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_common.h"
+#include "eap_common/eap_wsc_common.h"
+#include "eap_server/eap.h"
+#include "hostapd.h"
 #include "wpa.h"
 #include "uuid.h"
-#include "eap_common/eap_wsc_common.h"
 #include "sta_info.h"
 #include "config.h"
 

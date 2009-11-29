@@ -15,12 +15,11 @@
 #include "includes.h"
 
 #include "common.h"
-#include "eap_server/eap_i.h"
+#include "crypto/sha256.h"
+#include "crypto/crypto.h"
 #include "eap_common/eap_sim_common.h"
+#include "eap_server/eap_i.h"
 #include "eap_server/eap_sim_db.h"
-#include "sha1.h"
-#include "sha256.h"
-#include "crypto.h"
 
 
 struct eap_aka_data {

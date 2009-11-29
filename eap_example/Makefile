@@ -18,9 +18,7 @@ CONFIG_TLS=openssl
 
 CFLAGS += -I.
 CFLAGS += -I../src
-CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
-CFLAGS += -I../src/common
 
 # at least for now, need to include config_ssid.h and config_blob.h from
 # wpa_supplicant directory

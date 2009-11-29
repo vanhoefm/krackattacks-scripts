@@ -15,12 +15,12 @@
 #include "includes.h"
 
 #include "common.h"
-#include "eap_common/eap_defs.h"
-#include "sha1.h"
-#include "sha256.h"
-#include "crypto.h"
-#include "aes_wrap.h"
 #include "wpabuf.h"
+#include "crypto/aes_wrap.h"
+#include "crypto/crypto.h"
+#include "crypto/sha1.h"
+#include "crypto/sha256.h"
+#include "eap_common/eap_defs.h"
 #include "eap_common/eap_sim_common.h"
 
 

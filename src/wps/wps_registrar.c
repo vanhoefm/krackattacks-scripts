@@ -15,14 +15,14 @@
 #include "includes.h"
 
 #include "common.h"
-#include "sha256.h"
 #include "base64.h"
-#include "common/ieee802_11_defs.h"
 #include "eloop.h"
+#include "crypto/crypto.h"
+#include "crypto/sha256.h"
+#include "common/ieee802_11_defs.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 #include "wps_upnp.h"
-#include "crypto.h"
 #include "uuid.h"
 
 #define WPS_WORKAROUNDS

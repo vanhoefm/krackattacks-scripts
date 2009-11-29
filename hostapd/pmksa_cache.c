@@ -19,8 +19,6 @@
 #include "config.h"
 #include "common.h"
 #include "eloop.h"
-#include "sha1.h"
-#include "sha256.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "pmksa_cache.h"
 

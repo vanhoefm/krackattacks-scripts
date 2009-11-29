@@ -17,13 +17,13 @@
 #ifdef CONFIG_PEERKEY
 
 #include "common.h"
-#include "sha1.h"
-#include "sha256.h"
 #include "eloop.h"
+#include "crypto/sha1.h"
+#include "crypto/sha256.h"
+#include "common/ieee802_11_defs.h"
 #include "wpa.h"
 #include "wpa_i.h"
 #include "wpa_ie.h"
-#include "common/ieee802_11_defs.h"
 #include "peerkey.h"
 
 

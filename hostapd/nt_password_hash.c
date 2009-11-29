@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "ms_funcs.h"
+#include "crypto/ms_funcs.h"
 
 
 int main(int argc, char *argv[])

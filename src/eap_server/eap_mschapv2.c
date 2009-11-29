@@ -15,8 +15,8 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/ms_funcs.h"
 #include "eap_i.h"
-#include "ms_funcs.h"
 
 
 struct eap_mschapv2_hdr {

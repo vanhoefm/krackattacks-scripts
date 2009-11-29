@@ -21,16 +21,17 @@
 
 #include "common.h"
 #include "eloop.h"
+#include "crypto/crypto.h"
+#include "common/wpa_ctrl.h"
+#include "radius/radius.h"
+#include "radius/radius_client.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "beacon.h"
 #include "hw_features.h"
-#include "radius/radius.h"
-#include "radius/radius_client.h"
 #include "ieee802_11_auth.h"
 #include "sta_flags.h"
 #include "sta_info.h"
-#include "crypto.h"
 #include "ieee802_1x.h"
 #include "wpa.h"
 #include "wme.h"
@@ -38,7 +39,6 @@
 #include "accounting.h"
 #include "driver_i.h"
 #include "mlme.h"
-#include "common/wpa_ctrl.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)

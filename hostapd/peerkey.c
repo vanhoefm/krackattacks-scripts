@@ -16,8 +16,8 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "sha1.h"
-#include "sha256.h"
+#include "crypto/sha1.h"
+#include "crypto/sha256.h"
 #include "wpa.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"

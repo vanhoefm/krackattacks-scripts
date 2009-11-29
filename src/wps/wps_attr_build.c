@@ -15,10 +15,10 @@
 #include "includes.h"
 
 #include "common.h"
-#include "dh_group5.h"
-#include "crypto.h"
-#include "sha256.h"
-#include "aes_wrap.h"
+#include "crypto/aes_wrap.h"
+#include "crypto/crypto.h"
+#include "crypto/dh_group5.h"
+#include "crypto/sha256.h"
 #include "wps_i.h"
 
 

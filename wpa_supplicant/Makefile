@@ -10,7 +10,6 @@ export LIBDIR ?= /usr/local/lib/
 export BINDIR ?= /usr/local/sbin/
 
 CFLAGS += -I../src
-CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
 
 ALL=wpa_supplicant wpa_passphrase wpa_cli
@@ -1365,7 +1364,7 @@ TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) $(MD5OBJS) \
 	../src/utils/wpa_debug.o $(AESOBJS) \
 	tests/test_eap_sim_common.o
 test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_AES_OBJS) $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $(TEST_EAP_SIM_COMMON_OBJS) $(LIBS)
 	./test-eap_sim_common
 	rm test-eap_sim_common
 

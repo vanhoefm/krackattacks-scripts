@@ -18,13 +18,13 @@
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 #include "common.h"
-#include "hostapd.h"
 #include "eloop.h"
+#include "crypto/tls.h"
 #include "common/version.h"
-#include "config.h"
-#include "tls.h"
 #include "eap_server/eap.h"
 #include "eap_server/tncs.h"
+#include "hostapd.h"
+#include "config.h"
 
 
 extern int wpa_debug_level;

@@ -15,12 +15,10 @@
 #include "includes.h"
 
 #include "common.h"
-#include "wpa.h"
 #include "eloop.h"
-#include "sha1.h"
-#include "sha256.h"
-#include "wpa_i.h"
 #include "eapol_supp/eapol_supp_sm.h"
+#include "wpa.h"
+#include "wpa_i.h"
 #include "pmksa_cache.h"
 
 #if defined(IEEE8021X_EAPOL) && !defined(CONFIG_NO_WPA2)

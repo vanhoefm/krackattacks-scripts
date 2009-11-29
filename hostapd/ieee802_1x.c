@@ -15,15 +15,17 @@
 #include "includes.h"
 
 #include "common.h"
-#include "hostapd.h"
-#include "ieee802_1x.h"
-#include "accounting.h"
+#include "eloop.h"
+#include "crypto/md5.h"
+#include "crypto/crypto.h"
+#include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eapol_auth/eapol_auth_sm.h"
-#include "md5.h"
-#include "crypto.h"
-#include "eloop.h"
+#include "hostapd.h"
+#include "ieee802_1x.h"
+#include "accounting.h"
 #include "sta_flags.h"
 #include "sta_info.h"
 #include "wpa.h"
@@ -32,8 +34,6 @@
 #include "driver_i.h"
 #include "hw_features.h"
 #include "eap_server/eap.h"
-#include "common/ieee802_11_defs.h"
-#include "common/wpa_ctrl.h"
 
 
 static void ieee802_1x_finished(struct hostapd_data *hapd,

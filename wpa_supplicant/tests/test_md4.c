@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "crypto.h"
+#include "crypto/crypto.h"
 
 int main(int argc, char *argv[])
 {

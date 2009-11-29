@@ -15,8 +15,8 @@
 #include "includes.h"
 
 #include "common.h"
-#include "sha1.h"
-#include "tls.h"
+#include "crypto/sha1.h"
+#include "crypto/tls.h"
 #include "tlsv1_common.h"
 #include "tlsv1_record.h"
 #include "tlsv1_client.h"

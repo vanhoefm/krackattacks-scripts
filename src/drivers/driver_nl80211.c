@@ -39,10 +39,6 @@
 #include "../../hostapd/sta_flags.h"
 #endif /* CONFIG_AP || HOSTAPD */
 
-#ifdef HOSTAPD
-#include "ieee802_11_common.h"
-#endif /* HOSTAPD */
-
 #ifdef CONFIG_LIBNL20
 /* libnl 2.0 compatibility code */
 #define nl_handle nl_sock

@@ -52,6 +52,7 @@ struct hostapd_hw_modes {
 	struct hostapd_rate_data *rates;
 	u16 ht_capab;
 	u8 mcs_set[16];
+	u8 a_mpdu_params;
 };
 
 

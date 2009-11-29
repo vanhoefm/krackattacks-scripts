@@ -116,12 +116,7 @@ u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid)
 	cap = (struct ieee80211_ht_capabilities *) pos;
 	os_memset(cap, 0, sizeof(*cap));
 	cap->ht_capabilities_info = host_to_le16(hapd->iconf->ht_capab);
-
-	/* FIX: from driver */
-	SET_2BIT_U8(&cap->a_mpdu_params,
-		    MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET,
-		    MAX_RX_AMPDU_FACTOR_64KB);
-
+	cap->a_mpdu_params = hapd->iface->current_mode->a_mpdu_params;
 	os_memcpy(cap->supported_mcs_set, hapd->iface->current_mode->mcs_set,
 		  16);
 

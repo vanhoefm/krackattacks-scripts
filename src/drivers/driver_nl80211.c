@@ -2186,6 +2186,18 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 				tb_band[NL80211_BAND_ATTR_HT_CAPA]);
 		}
 
+		if (tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR]) {
+			mode->a_mpdu_params |= nla_get_u8(
+				tb_band[NL80211_BAND_ATTR_HT_AMPDU_FACTOR]) &
+				0x03;
+		}
+
+		if (tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY]) {
+			mode->a_mpdu_params |= nla_get_u8(
+				tb_band[NL80211_BAND_ATTR_HT_AMPDU_DENSITY]) <<
+				2;
+		}
+
 		if (tb_band[NL80211_BAND_ATTR_HT_MCS_SET] &&
 		    nla_len(tb_band[NL80211_BAND_ATTR_HT_MCS_SET])) {
 			u8 *mcs;

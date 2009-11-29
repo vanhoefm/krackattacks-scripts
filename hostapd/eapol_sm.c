@@ -18,7 +18,6 @@
 #include "eapol_sm.h"
 #include "eloop.h"
 #include "common/eapol_common.h"
-#include "sta_info.h"
 #include "eap_server/eap.h"
 #include "state_machine.h"
 #include "eap_common/eap_common.h"
@@ -759,7 +758,7 @@ SM_STEP(CTRL_DIR)
 
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
-		 int flags, struct sta_info *sta)
+		 int flags, const struct wpabuf *assoc_wps_ie, void *sta_ctx)
 {
 	struct eapol_state_machine *sm;
 	struct hostapd_data *hapd; /* TODO: to be removed */
@@ -781,7 +780,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 
 	sm->hapd = hapd;
 	sm->eapol = eapol;
-	sm->sta = sta;
+	sm->sta = sta_ctx;
 
 	/* Set default values for state machine constants */
 	sm->auth_pae_state = AUTH_PAE_INITIALIZE;
@@ -827,7 +826,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.eap_sim_aka_result_ind = eapol->conf.eap_sim_aka_result_ind;
 	eap_conf.tnc = eapol->conf.tnc;
 	eap_conf.wps = eapol->conf.wps;
-	eap_conf.assoc_wps_ie = sta->wps_ie;
+	eap_conf.assoc_wps_ie = assoc_wps_ie;
 	eap_conf.peer_addr = addr;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
 	if (sm->eap == NULL) {

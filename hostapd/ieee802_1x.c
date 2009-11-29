@@ -657,7 +657,8 @@ ieee802_1x_alloc_eapol_sm(struct hostapd_data *hapd, struct sta_info *sta)
 		if (wpa_auth_sta_get_pmksa(sta->wpa_sm))
 			flags |= EAPOL_SM_FROM_PMKSA_CACHE;
 	}
-	return eapol_auth_alloc(hapd->eapol_auth, sta->addr, flags, sta);
+	return eapol_auth_alloc(hapd->eapol_auth, sta->addr, flags,
+				sta->wps_ie, sta);
 }
 
 

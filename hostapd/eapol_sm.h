@@ -239,10 +239,11 @@ struct eapol_state_machine {
 
 	struct eapol_authenticator *eapol;
 
-	/* Somewhat nasty pointers to global hostapd and STA data to avoid
-	 * passing these to every function */
+	void *sta; /* station context pointer to use in callbacks */
+
+	/* Somewhat nasty pointer to global hostapd data to avoid
+	 * passing this to every function */
 	struct hostapd_data *hapd;
-	struct sta_info *sta;
 };
 
 
@@ -251,7 +252,7 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 void eapol_auth_deinit(struct eapol_authenticator *eapol);
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
-		 int flags, struct sta_info *sta);
+		 int flags, const struct wpabuf *assoc_wps_ie, void *sta_ctx);
 void eapol_auth_free(struct eapol_state_machine *sm);
 void eapol_auth_step(struct eapol_state_machine *sm);
 void eapol_auth_dump_state(FILE *f, const char *prefix,

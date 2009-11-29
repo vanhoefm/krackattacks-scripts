@@ -1389,46 +1389,6 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
-#ifdef HOSTAPD_DUMP_STATE
-static void fprint_char(FILE *f, char c)
-{
-	if (c >= 32 && c < 127)
-		fprintf(f, "%c", c);
-	else
-		fprintf(f, "<%02x>", c);
-}
-
-
-void ieee802_1x_dump_state(FILE *f, const char *prefix, struct sta_info *sta)
-{
-	struct eapol_state_machine *sm = sta->eapol_sm;
-	if (sm == NULL)
-		return;
-
-	fprintf(f, "%sIEEE 802.1X:\n", prefix);
-
-	if (sm->identity) {
-		size_t i;
-		fprintf(f, "%sidentity=", prefix);
-		for (i = 0; i < sm->identity_len; i++)
-			fprint_char(f, sm->identity[i]);
-		fprintf(f, "\n");
-	}
-
-	fprintf(f, "%slast EAP type: Authentication Server: %d (%s) "
-		"Supplicant: %d (%s)\n", prefix,
-		sm->eap_type_authsrv,
-		eap_server_get_name(0, sm->eap_type_authsrv),
-		sm->eap_type_supp, eap_server_get_name(0, sm->eap_type_supp));
-
-	fprintf(f, "%scached_packets=%s\n", prefix,
-		sm->last_recv_radius ? "[RX RADIUS]" : "");
-
-	eapol_auth_dump_state(f, prefix, sm);
-}
-#endif /* HOSTAPD_DUMP_STATE */
-
-
 static int ieee802_1x_rekey_broadcast(struct hostapd_data *hapd)
 {
 	struct eapol_authenticator *eapol = hapd->eapol_auth;

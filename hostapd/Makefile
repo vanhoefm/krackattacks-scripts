@@ -6,10 +6,6 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
-# define HOSTAPD_DUMP_STATE to include SIGUSR1 handler for dumping state to
-# a file (undefine it, if you want to save in binary size)
-CFLAGS += -DHOSTAPD_DUMP_STATE
-
 CFLAGS += -I../src
 CFLAGS += -I../src/crypto
 CFLAGS += -I../src/utils
@@ -64,6 +60,15 @@ OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
 
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
+
+
+ifndef CONFIG_NO_DUMP_STATE
+# define HOSTAPD_DUMP_STATE to include SIGUSR1 handler for dumping state to
+# a file (undefine it, if you want to save in binary size)
+CFLAGS += -DHOSTAPD_DUMP_STATE
+OBJS += dump_state.o
+OBJS += ../src/eapol_auth/eapol_auth_dump.o
+endif
 
 ifdef CONFIG_NO_RADIUS
 CFLAGS += -DCONFIG_NO_RADIUS

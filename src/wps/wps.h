@@ -686,5 +686,6 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN]);
 char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
 			    size_t buf_len);
+void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid);
 
 #endif /* WPS_H */

@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - common functionality
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "dh_group5.h"
+#include "sha1.h"
 #include "sha256.h"
 #include "aes_wrap.h"
 #include "crypto.h"
@@ -565,4 +566,32 @@ char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
 		return NULL;
 
 	return buf;
+}
+
+
+void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid)
+{
+	const u8 *addr[2];
+	size_t len[2];
+	u8 hash[SHA1_MAC_LEN];
+	u8 nsid[16] = {
+		0x52, 0x64, 0x80, 0xf8,
+		0xc9, 0x9b,
+		0x4b, 0xe5,
+		0xa6, 0x55,
+		0x58, 0xed, 0x5f, 0x5d, 0x60, 0x84
+	};
+
+	addr[0] = nsid;
+	len[0] = sizeof(nsid);
+	addr[1] = mac_addr;
+	len[1] = 6;
+	sha1_vector(2, addr, len, hash);
+	os_memcpy(uuid, hash, 16);
+
+	/* Version: 5 = named-based version using SHA-1 */
+	uuid[6] = (5 << 4) | (uuid[6] & 0x0f);
+
+	/* Variant specified in RFC 4122 */
+	uuid[8] = 0x80 | (uuid[8] & 0x3f);
 }

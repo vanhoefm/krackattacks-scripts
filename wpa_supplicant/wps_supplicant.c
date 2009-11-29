@@ -28,7 +28,7 @@
 #include "notify.h"
 #include "eap_common/eap_wsc_common.h"
 #include "blacklist.h"
-#include "wpa.h"
+#include "rsn_supp/wpa.h"
 #include "wps_supplicant.h"
 #include "dh_group5.h"
 

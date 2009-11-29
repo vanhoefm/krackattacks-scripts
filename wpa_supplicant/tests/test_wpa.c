@@ -18,8 +18,8 @@
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "../config.h"
-#include "wpa.h"
-#include "wpa_ie.h"
+#include "rsn_supp/wpa.h"
+#include "rsn_supp/wpa_ie.h"
 #include "../hostapd/wpa.h"
 
 

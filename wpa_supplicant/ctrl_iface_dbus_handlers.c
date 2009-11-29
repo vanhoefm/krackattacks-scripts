@@ -27,7 +27,7 @@
 #include "wpas_glue.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wps_supplicant.h"
-#include "wpa.h"
+#include "rsn_supp/wpa.h"
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;

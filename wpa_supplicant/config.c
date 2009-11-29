@@ -15,7 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
-#include "wpa.h"
+#include "rsn_supp/wpa.h"
 #include "sha1.h"
 #include "eap_peer/eap.h"
 #include "config.h"

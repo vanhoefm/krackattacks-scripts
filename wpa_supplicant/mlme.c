@@ -22,7 +22,7 @@
 #include "wpa_supplicant_i.h"
 #include "notify.h"
 #include "driver_i.h"
-#include "wpa.h"
+#include "rsn_supp/wpa.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "mlme.h"

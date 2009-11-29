@@ -455,7 +455,6 @@
 					../../src,
 					../../src/crypto,
 					../../src/utils,
-					../../src/rsn_supp,
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "-DCONFIG_XCODE_DEFAULTS";
@@ -478,7 +477,6 @@
 					../../src,
 					../../src/crypto,
 					../../src/utils,
-					../../src/rsn_supp,
 				);
 				OTHER_CFLAGS = "-DCONFIG_XCODE_DEFAULTS";
 				PREBINDING = NO;

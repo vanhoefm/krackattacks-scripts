@@ -23,7 +23,7 @@
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
 #include "eloop.h"
-#include "wpa.h"
+#include "rsn_supp/wpa.h"
 #include "eap_peer/eap_i.h"
 #include "wpa_supplicant_i.h"
 #include "radius/radius.h"

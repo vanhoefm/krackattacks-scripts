@@ -22,14 +22,14 @@
 #include "config.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eloop.h"
-#include "wpa.h"
+#include "rsn_supp/wpa.h"
 #include "eap_peer/eap.h"
 #include "wpa_supplicant_i.h"
 #include "l2_packet/l2_packet.h"
 #include "ctrl_iface.h"
 #include "pcsc_funcs.h"
-#include "preauth.h"
-#include "pmksa_cache.h"
+#include "rsn_supp/preauth.h"
+#include "rsn_supp/pmksa_cache.h"
 #include "drivers/driver.h"
 
 

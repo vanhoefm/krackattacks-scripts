@@ -23,6 +23,7 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eapol_auth/eapol_auth_sm.h"
+#include "eapol_auth/eapol_auth_sm_i.h"
 #include "hostapd.h"
 #include "ieee802_1x.h"
 #include "accounting.h"

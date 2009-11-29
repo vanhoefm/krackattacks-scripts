@@ -15,12 +15,14 @@
 #include "includes.h"
 
 #include "common.h"
-#include "eapol_auth_sm.h"
 #include "eloop.h"
-#include "common/eapol_common.h"
-#include "eap_server/eap.h"
 #include "state_machine.h"
+#include "common/eapol_common.h"
+#include "eap_common/eap_defs.h"
 #include "eap_common/eap_common.h"
+#include "eap_server/eap.h"
+#include "eapol_auth_sm.h"
+#include "eapol_auth_sm_i.h"
 
 #define STATE_MACHINE_DATA struct eapol_state_machine
 #define STATE_MACHINE_DEBUG_PREFIX "IEEE 802.1X"

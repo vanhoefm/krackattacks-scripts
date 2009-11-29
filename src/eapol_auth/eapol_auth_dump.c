@@ -17,6 +17,7 @@
 #include "common.h"
 #include "eap_server/eap.h"
 #include "eapol_auth_sm.h"
+#include "eapol_auth_sm_i.h"
 
 static inline const char * port_type_txt(PortTypes pt)
 {

@@ -19,6 +19,7 @@
 #include "crypto/tls.h"
 #include "common/ieee802_11_defs.h"
 #include "eapol_auth/eapol_auth_sm.h"
+#include "eapol_auth/eapol_auth_sm_i.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
 #include "eap_server/eap_sim_db.h"

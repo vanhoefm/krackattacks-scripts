@@ -1642,6 +1642,22 @@ static void _ieee802_1x_tx_key(void *ctx, void *sta_ctx)
 }
 
 
+static void ieee802_1x_eapol_event(void *ctx, void *sta_ctx,
+				   enum eapol_event type)
+{
+	/* struct hostapd_data *hapd = ctx; */
+	struct sta_info *sta = sta_ctx;
+	switch (type) {
+	case EAPOL_AUTH_SM_CHANGE:
+		wpa_auth_sm_notify(sta->wpa_sm);
+		break;
+	case EAPOL_AUTH_REAUTHENTICATE:
+		wpa_auth_sm_event(sta->wpa_sm, WPA_REAUTH_EAPOL);
+		break;
+	}
+}
+
+
 int ieee802_1x_init(struct hostapd_data *hapd)
 {
 	int i;
@@ -1679,6 +1695,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	cb.set_port_authorized = ieee802_1x_set_port_authorized;
 	cb.abort_auth = _ieee802_1x_abort_auth;
 	cb.tx_key = _ieee802_1x_tx_key;
+	cb.eapol_event = ieee802_1x_eapol_event;
 
 	hapd->eapol_auth = eapol_auth_init(&conf, &cb);
 	if (hapd->eapol_auth == NULL)

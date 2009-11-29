@@ -63,6 +63,11 @@ typedef enum {
 	EAPOL_LOGGER_DEBUG, EAPOL_LOGGER_INFO, EAPOL_LOGGER_WARNING
 } eapol_logger_level;
 
+enum eapol_event {
+	EAPOL_AUTH_SM_CHANGE,
+	EAPOL_AUTH_REAUTHENTICATE
+};
+
 struct eapol_auth_cb {
 	void (*eapol_send)(void *ctx, void *sta_ctx, u8 type, const u8 *data,
 			   size_t datalen);
@@ -77,6 +82,7 @@ struct eapol_auth_cb {
 	void (*set_port_authorized)(void *ctx, void *sta_ctx, int authorized);
 	void (*abort_auth)(void *ctx, void *sta_ctx);
 	void (*tx_key)(void *ctx, void *sta_ctx);
+	void (*eapol_event)(void *ctx, void *sta_ctx, enum eapol_event type);
 };
 
 /**

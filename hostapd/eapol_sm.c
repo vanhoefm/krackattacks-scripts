@@ -18,7 +18,6 @@
 #include "eapol_sm.h"
 #include "eloop.h"
 #include "common/eapol_common.h"
-#include "wpa.h"
 #include "sta_info.h"
 #include "eap_server/eap.h"
 #include "state_machine.h"
@@ -611,7 +610,8 @@ SM_STATE(REAUTH_TIMER, REAUTHENTICATE)
 	SM_ENTRY_MA(REAUTH_TIMER, REAUTHENTICATE, reauth_timer);
 
 	sm->reAuthenticate = TRUE;
-	wpa_auth_sm_event(sm->sta->wpa_sm, WPA_REAUTH_EAPOL);
+	sm->eapol->cb.eapol_event(sm->hapd, sm->sta,
+				  EAPOL_AUTH_REAUTHENTICATE);
 }
 
 
@@ -935,7 +935,8 @@ restart:
 	}
 
 	if (eapol_sm_sta_entry_alive(eapol, addr))
-		wpa_auth_sm_notify(sm->sta->wpa_sm);
+		sm->eapol->cb.eapol_event(sm->hapd, sm->sta,
+					  EAPOL_AUTH_SM_CHANGE);
 }
 
 

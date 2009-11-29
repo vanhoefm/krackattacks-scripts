@@ -17,8 +17,8 @@
 #include "common.h"
 #include "eapol_sm.h"
 #include "eloop.h"
+#include "common/eapol_common.h"
 #include "wpa.h"
-#include "preauth.h"
 #include "sta_info.h"
 #include "eap_server/eap.h"
 #include "state_machine.h"
@@ -51,7 +51,7 @@ static void eapol_sm_step_cb(void *eloop_ctx, void *timeout_ctx);
 
 
 static void eapol_auth_logger(struct eapol_authenticator *eapol,
-			      const u8 *addr, logger_level level,
+			      const u8 *addr, eapol_logger_level level,
 			      const char *txt)
 {
 	if (eapol->cb.logger == NULL)
@@ -61,7 +61,7 @@ static void eapol_auth_logger(struct eapol_authenticator *eapol,
 
 
 static void eapol_auth_vlogger(struct eapol_authenticator *eapol,
-			       const u8 *addr, logger_level level,
+			       const u8 *addr, eapol_logger_level level,
 			       const char *fmt, ...)
 {
 	char *format;

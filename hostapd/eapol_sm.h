@@ -203,6 +203,7 @@ struct eapol_state_machine {
 #define EAPOL_SM_PREAUTH BIT(0)
 #define EAPOL_SM_WAIT_START BIT(1)
 #define EAPOL_SM_USES_WPA BIT(2)
+#define EAPOL_SM_FROM_PMKSA_CACHE BIT(3)
 	int flags; /* EAPOL_SM_* */
 
 	/* EAPOL/AAA <-> EAP full authenticator interface */

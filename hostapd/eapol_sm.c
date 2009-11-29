@@ -297,7 +297,7 @@ SM_STATE(AUTH_PAE, AUTHENTICATED)
 	sm->reAuthCount = 0;
 	if (sm->flags & EAPOL_SM_PREAUTH)
 		extra = " (pre-authentication)";
-	else if (wpa_auth_sta_get_pmksa(sm->sta->wpa_sm))
+	else if (sm->flags & EAPOL_SM_FROM_PMKSA_CACHE)
 		extra = " (PMKSA cache)";
 	eapol_auth_vlogger(sm->eapol, sm->addr, EAPOL_LOGGER_INFO,
 			   "authenticated - EAP type: %d (%s)%s",

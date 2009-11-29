@@ -645,6 +645,22 @@ static void handle_eap(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+static struct eapol_state_machine *
+ieee802_1x_alloc_eapol_sm(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	int flags = 0;
+	if (sta->flags & WLAN_STA_PREAUTH)
+		flags |= EAPOL_SM_PREAUTH;
+	if (sta->wpa_sm) {
+		if (wpa_auth_sta_get_pmksa(sta->wpa_sm))
+			flags |= EAPOL_SM_USES_WPA;
+		if (wpa_auth_sta_get_pmksa(sta->wpa_sm))
+			flags |= EAPOL_SM_FROM_PMKSA_CACHE;
+	}
+	return eapol_auth_alloc(hapd->eapol_auth, sta->addr, flags, sta);
+}
+
+
 /**
  * ieee802_1x_receive - Process the EAPOL frames from the Supplicant
  * @hapd: hostapd BSS data
@@ -719,13 +735,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		return;
 
 	if (!sta->eapol_sm) {
-		int flags = 0;
-		if (sta->flags & WLAN_STA_PREAUTH)
-			flags |= EAPOL_SM_PREAUTH;
-		if (sta->wpa_sm)
-			flags |= EAPOL_SM_USES_WPA;
-		sta->eapol_sm = eapol_auth_alloc(hapd->eapol_auth, sta->addr,
-						 flags, sta);
+		sta->eapol_sm = ieee802_1x_alloc_eapol_sm(hapd, sta);
 		if (!sta->eapol_sm)
 			return;
 
@@ -840,15 +850,9 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 		return;
 
 	if (sta->eapol_sm == NULL) {
-		int flags = 0;
-		if (sta->flags & WLAN_STA_PREAUTH)
-			flags |= EAPOL_SM_PREAUTH;
-		if (sta->wpa_sm)
-			flags |= EAPOL_SM_USES_WPA;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "start authentication");
-		sta->eapol_sm = eapol_auth_alloc(hapd->eapol_auth, sta->addr,
-						 flags, sta);
+		sta->eapol_sm = ieee802_1x_alloc_eapol_sm(hapd, sta);
 		if (sta->eapol_sm == NULL) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_IEEE8021X,

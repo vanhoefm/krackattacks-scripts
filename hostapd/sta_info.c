@@ -200,6 +200,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	wpabuf_free(sta->wps_ie);
 
+	os_free(sta->ht_capabilities);
+
 	os_free(sta);
 }
 

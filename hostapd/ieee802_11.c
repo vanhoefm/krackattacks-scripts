@@ -855,15 +855,28 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211N
 	/* save HT capabilities in the sta object */
-	os_memset(&sta->ht_capabilities, 0, sizeof(sta->ht_capabilities));
 	if (elems.ht_capabilities &&
 	    elems.ht_capabilities_len >=
 	    sizeof(struct ieee80211_ht_capabilities)) {
+		if (sta->ht_capabilities) {
+			os_memset(sta->ht_capabilities, 0,
+				  sizeof(*sta->ht_capabilities));
+		} else {
+			sta->ht_capabilities =
+				os_zalloc(sizeof(*sta->ht_capabilities));
+			if (sta->ht_capabilities == NULL) {
+				resp = WLAN_STATUS_UNSPECIFIED_FAILURE;
+				goto fail;
+			}
+		}
 		sta->flags |= WLAN_STA_HT;
-		os_memcpy(&sta->ht_capabilities, elems.ht_capabilities,
+		os_memcpy(sta->ht_capabilities, elems.ht_capabilities,
 			  sizeof(struct ieee80211_ht_capabilities));
-	} else
+	} else {
 		sta->flags &= ~WLAN_STA_HT;
+		os_free(sta->ht_capabilities);
+		sta->ht_capabilities = NULL;
+	}
 #endif /* CONFIG_IEEE80211N */
 
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems.rsn_ie) {
@@ -1033,9 +1046,9 @@ static void handle_assoc(struct hostapd_data *hapd,
 	}
 
 #ifdef CONFIG_IEEE80211N
-	if (sta->flags & WLAN_STA_HT) {
+	if ((sta->flags & WLAN_STA_HT) && sta->ht_capabilities) {
 		u16 ht_capab = le_to_host16(
-			sta->ht_capabilities.ht_capabilities_info);
+			sta->ht_capabilities->ht_capabilities_info);
 		wpa_printf(MSG_DEBUG, "HT: STA " MACSTR " HT Capabilities "
 			   "Info: 0x%04x", MAC2STR(sta->addr), ht_capab);
 		if ((ht_capab & HT_CAP_INFO_GREEN_FIELD) == 0) {
@@ -1586,6 +1599,8 @@ hostapd_get_ht_capab(struct hostapd_data *hapd,
 {
 	u16 cap;
 
+	if (ht_cap == NULL)
+		return;
 	os_memcpy(neg_ht_cap, ht_cap, sizeof(*neg_ht_cap));
 	cap = le_to_host16(neg_ht_cap->ht_capabilities_info);
 	cap &= hapd->iconf->ht_capab;
@@ -1667,7 +1682,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT) {
 		ht_cap_ptr = &ht_cap;
-		hostapd_get_ht_capab(hapd, &sta->ht_capabilities, ht_cap_ptr);
+		hostapd_get_ht_capab(hapd, sta->ht_capabilities, ht_cap_ptr);
 	}
 #endif /* CONFIG_IEEE80211N */
 

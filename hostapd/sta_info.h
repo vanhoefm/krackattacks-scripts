@@ -15,10 +15,6 @@
 #ifndef STA_INFO_H
 #define STA_INFO_H
 
-#ifdef CONFIG_IEEE80211N
-#include "common/ieee802_11_defs.h"
-#endif /* CONFIG_IEEE80211N */
-
 /* Maximum number of supported rates (from both Supported Rates and Extended
  * Supported Rates IEs). */
 #define WLAN_SUPP_RATES_MAX 32
@@ -77,9 +73,7 @@ struct sta_info {
 
 	int vlan_id;
 
-#ifdef CONFIG_IEEE80211N
-	struct ieee80211_ht_capabilities ht_capabilities;
-#endif /* CONFIG_IEEE80211N */
+	struct ieee80211_ht_capabilities *ht_capabilities;
 
 #ifdef CONFIG_IEEE80211W
 	int sa_query_count; /* number of pending SA Query requests;

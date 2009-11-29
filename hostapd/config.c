@@ -24,6 +24,7 @@
 #include "sha1.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
+#include "common/ieee802_11_defs.h"
 #include "common/wpa_common.h"
 #include "wpa.h"
 #include "uuid.h"

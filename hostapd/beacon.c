@@ -2,7 +2,7 @@
  * hostapd / IEEE 802.11 Management: Beacon and Probe Request/Response
  * Copyright (c) 2002-2004, Instant802 Networks, Inc.
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
@@ -301,7 +301,7 @@ void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 	/* Wi-Fi Alliance WMM */
 	pos = hostapd_eid_wmm(hapd, pos);
 
-	pos = hostapd_eid_ht_capabilities_info(hapd, pos);
+	pos = hostapd_eid_ht_capabilities(hapd, pos);
 	pos = hostapd_eid_ht_operation(hapd, pos);
 
 #ifdef CONFIG_WPS
@@ -402,7 +402,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	if (hapd->iconf->ieee80211n) {
 		u8 *ht_capab, *ht_oper;
 		ht_capab = tailpos;
-		tailpos = hostapd_eid_ht_capabilities_info(hapd, tailpos);
+		tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);
 
 		ht_oper = tailpos;
 		tailpos = hostapd_eid_ht_operation(hapd, tailpos);

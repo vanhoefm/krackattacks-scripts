@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
@@ -101,10 +101,10 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
+u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid)
 {
 #ifdef CONFIG_IEEE80211N
-	struct ieee80211_ht_capability *cap;
+	struct ieee80211_ht_capabilities *cap;
 	u8 *pos = eid;
 
 	if (!hapd->iconf->ieee80211n)
@@ -113,15 +113,21 @@ u8 * hostapd_eid_ht_capabilities_info(struct hostapd_data *hapd, u8 *eid)
 	*pos++ = WLAN_EID_HT_CAP;
 	*pos++ = sizeof(*cap);
 
-	cap = (struct ieee80211_ht_capability *) pos;
+	cap = (struct ieee80211_ht_capabilities *) pos;
 	os_memset(cap, 0, sizeof(*cap));
-	SET_2BIT_U8(&cap->mac_ht_params_info,
+	cap->ht_capabilities_info = host_to_le16(hapd->iconf->ht_capab);
+
+	/* FIX: from driver */
+	SET_2BIT_U8(&cap->a_mpdu_params,
 		    MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET,
 		    MAX_RX_AMPDU_FACTOR_64KB);
 
-	cap->capabilities_info = host_to_le16(hapd->iconf->ht_capab);
 	os_memcpy(cap->supported_mcs_set, hapd->iface->current_mode->mcs_set,
 		  16);
+
+	/* TODO: ht_extended_capabilities (now fully disabled) */
+	/* TODO: tx_bf_capability_info (now fully disabled) */
+	/* TODO: asel_capabilities (now fully disabled) */
 
  	pos += sizeof(*cap);
 
@@ -855,14 +861,14 @@ static void handle_assoc(struct hostapd_data *hapd,
 	os_memset(&sta->ht_capabilities, 0, sizeof(sta->ht_capabilities));
 	if (elems.ht_capabilities &&
 	    elems.ht_capabilities_len >=
-	    sizeof(struct ieee80211_ht_capability)) {
+	    sizeof(struct ieee80211_ht_capabilities)) {
 		sta->flags |= WLAN_STA_HT;
 		sta->ht_capabilities.id = WLAN_EID_HT_CAP;
 		sta->ht_capabilities.length =
-			sizeof(struct ieee80211_ht_capability);
+			sizeof(struct ieee80211_ht_capabilities);
 		os_memcpy(&sta->ht_capabilities.data,
 			  elems.ht_capabilities,
-			  sizeof(struct ieee80211_ht_capability));
+			  sizeof(struct ieee80211_ht_capabilities));
 	} else
 		sta->flags &= ~WLAN_STA_HT;
 #endif /* CONFIG_IEEE80211N */
@@ -1036,7 +1042,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT) {
 		u16 ht_capab = le_to_host16(
-			sta->ht_capabilities.data.capabilities_info);
+			sta->ht_capabilities.data.ht_capabilities_info);
 		wpa_printf(MSG_DEBUG, "HT: STA " MACSTR " HT Capabilities "
 			   "Info: 0x%04x", MAC2STR(sta->addr), ht_capab);
 		if ((ht_capab & HT_CAP_INFO_GREEN_FIELD) == 0) {
@@ -1147,7 +1153,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		if (sta->flags & WLAN_STA_WMM)
 			p = hostapd_eid_wmm(hapd, p);
 
-		p = hostapd_eid_ht_capabilities_info(hapd, p);
+		p = hostapd_eid_ht_capabilities(hapd, p);
 		p = hostapd_eid_ht_operation(hapd, p);
 
 #ifdef CONFIG_IEEE80211R
@@ -1588,13 +1594,13 @@ hostapd_get_ht_capab(struct hostapd_data *hapd,
 	u16 cap;
 
 	os_memcpy(neg_ht_cap_ie, ht_cap_ie, sizeof(struct ht_cap_ie));
-	cap = le_to_host16(neg_ht_cap_ie->data.capabilities_info);
+	cap = le_to_host16(neg_ht_cap_ie->data.ht_capabilities_info);
 	cap &= hapd->iconf->ht_capab;
 	cap |= (hapd->iconf->ht_capab & HT_CAP_INFO_SMPS_DISABLED);
 
 	/* FIXME: Rx STBC needs to be handled specially */
 	cap |= (hapd->iconf->ht_capab & HT_CAP_INFO_RX_STBC_MASK);
-	neg_ht_cap_ie->data.capabilities_info = host_to_le16(cap);
+	neg_ht_cap_ie->data.ht_capabilities_info = host_to_le16(cap);
 }
 #endif /* CONFIG_IEEE80211N */
 

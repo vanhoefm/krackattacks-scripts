@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 Frame type definitions
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2007-2008 Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
@@ -392,13 +392,13 @@ enum {
 };
 
 
-struct ieee80211_ht_capability {
-	le16 capabilities_info;
-	u8 mac_ht_params_info;
+struct ieee80211_ht_capabilities {
+	le16 ht_capabilities_info;
+	u8 a_mpdu_params;
 	u8 supported_mcs_set[16];
-	le16 extended_ht_capability_info;
-	le32 tx_BF_capability_info;
-	u8 antenna_selection_info;
+	le16 ht_extended_capabilities;
+	le32 tx_bf_capability_info;
+	u8 asel_capabilities;
 } STRUCT_PACKED;
 
 
@@ -517,7 +517,7 @@ struct ieee80211_ht_operation {
 struct ht_cap_ie {
 	u8 id;
 	u8 length;
-	struct ieee80211_ht_capability data;
+	struct ieee80211_ht_capabilities data;
 } STRUCT_PACKED;
 
 

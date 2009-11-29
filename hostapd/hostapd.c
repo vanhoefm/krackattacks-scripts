@@ -1330,12 +1330,6 @@ static int setup_interface(struct hostapd_iface *iface)
 	if (hostapd_validate_bssid_configuration(iface))
 		return -1;
 
-#ifdef CONFIG_IEEE80211N
-	SET_2BIT_LE16(&iface->ht_op_mode,
-		      HT_INFO_OPERATION_MODE_OP_MODE_OFFSET,
-		      OP_MODE_PURE);
-#endif /* CONFIG_IEEE80211N */
-
 	if (hapd->iconf->country[0] && hapd->iconf->country[1]) {
 		os_memcpy(country, hapd->iconf->country, 3);
 		country[3] = '\0';

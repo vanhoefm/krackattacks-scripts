@@ -360,37 +360,6 @@ struct ieee80211_mgmt {
 	} u;
 } STRUCT_PACKED;
 
-#ifdef _MSC_VER
-#pragma pack(pop)
-#endif /* _MSC_VER */
-
-#define ERP_INFO_NON_ERP_PRESENT BIT(0)
-#define ERP_INFO_USE_PROTECTION BIT(1)
-#define ERP_INFO_BARKER_PREAMBLE_MODE BIT(2)
-
-
-/* HT Capability element */
-
-enum {
-	MAX_RX_AMPDU_FACTOR_8KB = 0,
-	MAX_RX_AMPDU_FACTOR_16KB,
-	MAX_RX_AMPDU_FACTOR_32KB,
-	MAX_RX_AMPDU_FACTOR_64KB
-};
-
-enum {
-	CALIBRATION_NOT_SUPPORTED = 0,
-	CALIBRATION_CANNOT_INIT,
-	CALIBRATION_CAN_INIT,
-	CALIBRATION_FULL_SUPPORT
-};
-
-enum {
-	MCS_FEEDBACK_NOT_PROVIDED = 0,
-	MCS_FEEDBACK_UNSOLICITED,
-	MCS_FEEDBACK_MRQ_RESPONSE
-};
-
 
 struct ieee80211_ht_capabilities {
 	le16 ht_capabilities_info;
@@ -410,47 +379,19 @@ struct ieee80211_ht_operation {
 	u8 basic_set[16];
 } STRUCT_PACKED;
 
-/* auxiliary bit manipulation macros FIXME: move it to common later... */
-#define SET_2BIT_U8(_ptr_, _shift_, _val_)				\
-	((*(_ptr_) &= ~(3 << (_shift_))),				\
-	 (*(_ptr_) |= (*(_ptr_) & (((u8)3) << (_shift_))) |		\
-		      (((u8)(_val_) & 3) << _shift_)))
+struct ht_cap_ie {
+	u8 id;
+	u8 length;
+	struct ieee80211_ht_capabilities data;
+} STRUCT_PACKED;
 
-#define GET_2BIT_U8(_var_, _shift_)	\
-	(((_var_) & (((u8)3) << (_shift_))) >> (_shift_))
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif /* _MSC_VER */
 
-#define SET_2BIT_LE16(_u16ptr_, _shift_, _val_)				\
-	((*(_u16ptr_) &= ~(3 << (_shift_))),				\
-	 (*(_u16ptr_) |= 						\
-		(((*(_u16ptr_)) & (((u16)3) << ((u16)_shift_))) |	\
-		(((u16)(_val_) & (u16)3) << (u16)(_shift_)))))
-
-#define GET_2BIT_LE16(_var_, _shift_)	\
-	(((_var_) & (((u16)3) << (_shift_))) >> (_shift_))
-
-#define SET_2BIT_LE32(_u32ptr_, _shift_, _val_)				\
-	((*(_u32ptr_) &= ~(3 << (_shift_))),				\
-	 (*(_u32ptr_) |= (((*(_u32ptr_)) & (((u32)3) << (_shift_))) |	\
-			(((u32)(_val_) & 3) << _shift_))))
-
-#define GET_2BIT_LE32(_var_, _shift_)	\
-	(((_var_) & (((u32)3) << (_shift_))) >> (_shift_))
-
-#define SET_3BIT_LE16(_u16ptr_, _shift_, _val_)				\
-	((*(_u16ptr_) &= ~(7 << (_shift_))),				\
-	(*(_u16ptr_) |= (((*(_u16ptr_)) & (((u16)7) << (_shift_))) |	\
-			(((u16)(_val_) & 7) << _shift_))))
-
-#define GET_3BIT_LE16(_var_, _shift_)	\
-	(((_var_) & (((u16)7) << (_shift_))) >> (_shift_))
-
-#define SET_3BIT_LE32(_u32ptr_, _shift_, _val_)				\
-	((*(_u32ptr_) &= ~(7 << (_shift_))),				\
-	 (*(_u32ptr_) |= (((*(_u32ptr_)) & (((u32)7) << (_shift_))) |	\
-			(((u32)(_val_) & 7) << _shift_))))
-
-#define GET_3BIT_LE32(_var_, _shift_)	\
-	(((_var_) & (((u32)7) << (_shift_))) >> (_shift_))
+#define ERP_INFO_NON_ERP_PRESENT BIT(0)
+#define ERP_INFO_USE_PROTECTION BIT(1)
+#define ERP_INFO_BARKER_PREAMBLE_MODE BIT(2)
 
 
 #define HT_CAP_INFO_LDPC_CODING_CAP		((u16) BIT(0))
@@ -474,9 +415,6 @@ struct ieee80211_ht_operation {
 #define HT_CAP_INFO_40MHZ_INTOLERANT		((u16) BIT(14))
 #define HT_CAP_INFO_LSIG_TXOP_PROTECT_SUPPORT	((u16) BIT(15))
 
-
-#define MAC_HT_PARAM_INFO_MAX_RX_AMPDU_FACTOR_OFFSET	0
-#define MAC_HT_PARAM_INFO_MAX_MPDU_DENSITY_OFFSET	2
 
 #define EXT_HT_CAP_INFO_PCO			((u16) BIT(0))
 #define EXT_HT_CAP_INFO_TRANS_TIME_OFFSET	1
@@ -513,22 +451,6 @@ struct ieee80211_ht_operation {
 #define ASEL_CAPABILITY_RX_AS_CAP ((u8) BIT(5))
 #define ASEL_CAPABILITY_TX_SOUND_PPDUS_CAP ((u8) BIT(6))
 
-
-struct ht_cap_ie {
-	u8 id;
-	u8 length;
-	struct ieee80211_ht_capabilities data;
-} STRUCT_PACKED;
-
-
-#define REC_TRANS_CHNL_WIDTH_20     0
-#define REC_TRANS_CHNL_WIDTH_ANY    1
-
-#define OP_MODE_PURE                    0
-#define OP_MODE_MAY_BE_LEGACY_STAS      1
-#define OP_MODE_20MHZ_HT_STA_ASSOCED    2
-#define OP_MODE_MIXED                   3
-
 #define HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK	((u8) BIT(0) | BIT(1))
 #define HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE		((u8) BIT(0))
 #define HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW		((u8) BIT(0) | BIT(1))
@@ -536,6 +458,12 @@ struct ht_cap_ie {
 #define HT_INFO_HT_PARAM_RIFS_MODE			((u8) BIT(3))
 #define HT_INFO_HT_PARAM_CTRL_ACCESS_ONLY		((u8) BIT(4))
 #define HT_INFO_HT_PARAM_SRV_INTERVAL_GRANULARITY	((u8) BIT(5))
+
+
+#define OP_MODE_PURE                    0
+#define OP_MODE_MAY_BE_LEGACY_STAS      1
+#define OP_MODE_20MHZ_HT_STA_ASSOCED    2
+#define OP_MODE_MIXED                   3
 
 #define HT_INFO_OPERATION_MODE_OP_MODE_MASK	\
 		((le16) (0x0001 | 0x0002))
@@ -550,37 +478,6 @@ struct ht_cap_ie {
 #define HT_INFO_STBC_PARAM_LSIG_TXOP_PROTECT_ALLOWED	((u16) BIT(9))
 #define HT_INFO_STBC_PARAM_PCO_ACTIVE			((u16) BIT(10))
 #define HT_INFO_STBC_PARAM_PCO_PHASE			((u16) BIT(11))
-
-
-/* Secondary channel offset element */
-#define SECONDARY_CHANNEL_OFFSET_NONE	0
-#define SECONDARY_CHANNEL_OFFSET_ABOVE	1
-#define SECONDARY_CHANNEL_OFFSET_BELOW	3
-struct secondary_channel_offset_ie {
-	u8 id;
-	u8 length;
-	u8 secondary_offset_offset;
-} STRUCT_PACKED;
-
-
-/* body of Recommended Transmit Channel Width action frame */
-#define CHANNEL_WIDTH_20	0
-#define CHANNEL_WIDTH_ANY	1
-struct recommended_tx_channel_width_action {
-	u8 category;
-	u8 action;
-	u8 channel_width;
-} STRUCT_PACKED;
-
-/* body of MIMO Power Save action frame */
-#define PWR_SAVE_MODE_STATIC	0
-#define PWR_SAVE_MODE_DYNAMIC	1
-struct mimo_pwr_save_action {
-	u8 category;
-	u8 action;
-	u8 enable;
-	u8 mode;
-} STRUCT_PACKED;
 
 
 #define OUI_MICROSOFT 0x0050f2 /* Microsoft (also used in Wi-Fi specs)

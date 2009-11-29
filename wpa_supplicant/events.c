@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Driver event processing
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -711,7 +711,6 @@ static void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "Already associated with the selected "
 			   "AP");
 	}
-	rsn_preauth_scan_results(wpa_s->wpa, wpa_s->scan_res);
 }
 
 
@@ -732,6 +731,34 @@ wpa_supplicant_pick_new_network(struct wpa_supplicant *wpa_s)
 		}
 	}
 	return NULL;
+}
+
+
+static void wpa_supplicant_rsn_preauth_scan_results(
+	struct wpa_supplicant *wpa_s)
+{
+	int i;
+
+	if (rsn_preauth_scan_results(wpa_s->wpa) < 0)
+		return;
+
+	for (i = wpa_s->scan_res->num - 1; i >= 0; i--) {
+		const u8 *ssid, *rsn;
+		struct wpa_scan_res *r;
+
+		r = wpa_s->scan_res->res[i];
+
+		ssid = wpa_scan_get_ie(r, WLAN_EID_SSID);
+		if (ssid == NULL)
+			continue;
+
+		rsn = wpa_scan_get_ie(r, WLAN_EID_RSN);
+		if (rsn == NULL)
+			continue;
+
+		rsn_preauth_scan_result(wpa_s->wpa, r->bssid, ssid, rsn);
+	}
+
 }
 
 
@@ -777,6 +804,8 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
 
 	if (bgscan_notify_scan(wpa_s) == 1)
 		return;
+
+	wpa_supplicant_rsn_preauth_scan_results(wpa_s);
 
 	selected = wpa_supplicant_pick_network(wpa_s, &ssid);
 	if (selected) {

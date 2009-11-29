@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - RSN pre-authentication
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,7 +16,6 @@
 
 #include "common.h"
 #include "wpa.h"
-#include "drivers/driver.h"
 #include "eloop.h"
 #include "l2_packet/l2_packet.h"
 #include "eapol_supp/eapol_supp_sm.h"
@@ -423,23 +422,18 @@ void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 /* TODO: schedule periodic scans if current AP supports preauth */
 
 /**
- * rsn_preauth_scan_results - Process scan results to find PMKSA candidates
+ * rsn_preauth_scan_results - Start processing scan results for canditates
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
- * @results: Scan results
+ * Returns: 0 if ready to process results or -1 to skip processing
  *
- * This functions goes through the scan results and adds all suitable APs
- * (Authenticators) into PMKSA candidate list.
+ * This functions is used to notify RSN code about start of new scan results
+ * processing. The actual scan results will be provided by calling
+ * rsn_preauth_scan_result() for each BSS if this function returned 0.
  */
-void rsn_preauth_scan_results(struct wpa_sm *sm,
-			      struct wpa_scan_results *results)
+int rsn_preauth_scan_results(struct wpa_sm *sm)
 {
-	struct wpa_scan_res *r;
-	struct wpa_ie_data ie;
-	int i;
-	struct rsn_pmksa_cache_entry *pmksa;
-
 	if (sm->ssid_len == 0)
-		return;
+		return -1;
 
 	/*
 	 * TODO: is it ok to free all candidates? What about the entries
@@ -447,37 +441,41 @@ void rsn_preauth_scan_results(struct wpa_sm *sm,
 	 */
 	pmksa_candidate_free(sm);
 
-	for (i = results->num - 1; i >= 0; i--) {
-		const u8 *ssid, *rsn;
+	return 0;
+}
 
-		r = results->res[i];
 
-		ssid = wpa_scan_get_ie(r, WLAN_EID_SSID);
-		if (ssid == NULL || ssid[1] != sm->ssid_len ||
-		    os_memcmp(ssid + 2, sm->ssid, ssid[1]) != 0)
-			continue;
+/**
+ * rsn_preauth_scan_result - Processing scan result for PMKSA canditates
+ * @sm: Pointer to WPA state machine data from wpa_sm_init()
+ *
+ * Add all suitable APs (Authenticators) from scan results into PMKSA
+ * candidate list.
+ */
+void rsn_preauth_scan_result(struct wpa_sm *sm, const u8 *bssid,
+			     const u8 *ssid, const u8 *rsn)
+{
+	struct wpa_ie_data ie;
+	struct rsn_pmksa_cache_entry *pmksa;
 
-		if (os_memcmp(r->bssid, sm->bssid, ETH_ALEN) == 0)
-			continue;
+	if (ssid[1] != sm->ssid_len ||
+	    os_memcmp(ssid + 2, sm->ssid, sm->ssid_len) != 0)
+		return; /* Not for the current SSID */
 
-		rsn = wpa_scan_get_ie(r, WLAN_EID_RSN);
-		if (rsn == NULL || wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ie))
-			continue;
+	if (os_memcmp(bssid, sm->bssid, ETH_ALEN) == 0)
+		return; /* Ignore current AP */
 
-		pmksa = pmksa_cache_get(sm->pmksa, r->bssid, NULL);
-		if (pmksa &&
-		    (!pmksa->opportunistic ||
-		     !(ie.capabilities & WPA_CAPABILITY_PREAUTH)))
-			continue;
+	if (wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ie))
+		return;
 
-		/*
-		 * Give less priority to candidates found from normal
-		 * scan results.
-		 */
-		pmksa_candidate_add(sm, r->bssid,
-				    PMKID_CANDIDATE_PRIO_SCAN,
-				    ie.capabilities & WPA_CAPABILITY_PREAUTH);
-	}
+	pmksa = pmksa_cache_get(sm->pmksa, bssid, NULL);
+	if (pmksa && (!pmksa->opportunistic ||
+		      !(ie.capabilities & WPA_CAPABILITY_PREAUTH)))
+		return;
+
+	/* Give less priority to candidates found from normal scan results. */
+	pmksa_candidate_add(sm, bssid, PMKID_CANDIDATE_PRIO_SCAN,
+			    ie.capabilities & WPA_CAPABILITY_PREAUTH);
 }
 
 

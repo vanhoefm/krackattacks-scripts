@@ -19,6 +19,7 @@
 #include "wpa_supplicant_i.h"
 #include "rsn_supp/wpa.h"
 #include "rsn_supp/wpa_ie.h"
+#include "driver_i.h"
 #include "../hostapd/wpa.h"
 #include "ibss_rsn.h"
 
@@ -235,28 +236,13 @@ static int auth_send_eapol(void *ctx, const u8 *addr, const u8 *data,
 }
 
 
-static int auth_set_key(void *ctx, int vlan_id, const char *_alg,
-			const u8 *addr, int idx, u8 *key,
-			size_t key_len)
+static int auth_set_key(void *ctx, int vlan_id, wpa_alg alg, const u8 *addr,
+			int idx, u8 *key, size_t key_len)
 {
 	struct ibss_rsn *ibss_rsn = ctx;
 	u8 seq[6];
-	wpa_alg alg;
 
 	os_memset(seq, 0, sizeof(seq));
-	if (os_strcmp(_alg, "none") == 0)
-		alg = WPA_ALG_NONE;
-	else if (os_strcmp(_alg, "WEP") == 0)
-		alg = WPA_ALG_WEP;
-	else if (os_strcmp(_alg, "TKIP") == 0)
-		alg = WPA_ALG_TKIP;
-	else if (os_strcmp(_alg, "CCMP") == 0)
-		alg = WPA_ALG_CCMP;
-	else if (os_strcmp(_alg, "IGTK") == 0)
-		alg = WPA_ALG_IGTK;
-	else
-		return -1;
-
 	if (idx == 0) {
 		/*
 		 * In IBSS RSN, the pairwise key from the 4-way handshake

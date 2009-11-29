@@ -28,7 +28,7 @@ struct radius_msg;
  * server.
  *
  * radiusAuthClientPendingRequests (or radiusAccClientPendingRequests) is the
- * length of hapd->radius->msgs for matching msg_type.
+ * number struct radius_client_data::msgs for matching msg_type.
  */
 struct hostapd_radius_server {
 	/**
@@ -211,9 +211,30 @@ typedef enum {
  * RadiusRxResult - RADIUS client RX handler result
  */
 typedef enum {
+	/**
+	 * RADIUS_RX_PROCESSED - Message processed
+	 *
+	 * This stops handler calls and frees the message.
+	 */
 	RADIUS_RX_PROCESSED,
+
+	/**
+	 * RADIUS_RX_QUEUED - Message has been queued
+	 *
+	 * This stops handler calls, but does not free the message; the handler
+	 * that returned this is responsible for eventually freeing the
+	 * message.
+	 */
 	RADIUS_RX_QUEUED,
+
+	/**
+	 * RADIUS_RX_UNKNOWN - Message is not for this handler
+	 */
 	RADIUS_RX_UNKNOWN,
+
+	/**
+	 * RADIUS_RX_INVALID_AUTHENTICATOR - Message has invalid Authenticator
+	 */
 	RADIUS_RX_INVALID_AUTHENTICATOR
 } RadiusRxResult;
 

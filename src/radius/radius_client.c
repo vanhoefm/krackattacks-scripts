@@ -62,14 +62,21 @@
  * This data structure is used internally inside the RADIUS client module to
  * store registered RX handlers. These handlers are registered by calls to
  * radius_client_register() and unregistered when the RADIUS client is
- * deinitizlized with a call to radius_client_deinit().
+ * deinitialized with a call to radius_client_deinit().
  */
 struct radius_rx_handler {
+	/**
+	 * handler - Received RADIUS message handler
+	 */
 	RadiusRxResult (*handler)(struct radius_msg *msg,
 				  struct radius_msg *req,
 				  const u8 *shared_secret,
 				  size_t shared_secret_len,
 				  void *data);
+
+	/**
+	 * data - Context data for the handler
+	 */
 	void *data;
 };
 
@@ -81,21 +88,63 @@ struct radius_rx_handler {
  * store pending RADIUS requests that may still need to be retransmitted.
  */
 struct radius_msg_list {
-	u8 addr[ETH_ALEN]; /* STA/client address; used to find RADIUS messages
-			    * for the same STA. */
+	/**
+	 * addr - STA/client address
+	 *
+	 * This is used to find RADIUS messages for the same STA.
+	 */
+	u8 addr[ETH_ALEN];
+
+	/**
+	 * msg - RADIUS message
+	 */
 	struct radius_msg *msg;
+
+	/**
+	 * msg_type - Message type
+	 */
 	RadiusType msg_type;
+
+	/**
+	 * first_try - Time of the first transmission attempt
+	 */
 	os_time_t first_try;
+
+	/**
+	 * next_try - Time for the next transmission attempt
+	 */
 	os_time_t next_try;
+
+	/**
+	 * attempts - Number of transmission attempts
+	 */
 	int attempts;
+
+	/**
+	 * next_wait - Next retransmission wait time in seconds
+	 */
 	int next_wait;
+
+	/**
+	 * last_attempt - Time of the last transmission attempt
+	 */
 	struct os_time last_attempt;
 
-	u8 *shared_secret;
+	/**
+	 * shared_secret - Shared secret with the target RADIUS server
+	 */
+	const u8 *shared_secret;
+
+	/**
+	 * shared_secret_len - shared_secret length in octets
+	 */
 	size_t shared_secret_len;
 
 	/* TODO: server config with failover to backup server(s) */
 
+	/**
+	 * next - Next message in the list
+	 */
 	struct radius_msg_list *next;
 };
 
@@ -120,36 +169,68 @@ struct radius_client_data {
 	struct hostapd_radius_servers *conf;
 
 	/**
-	 * auth_serv_sock - Socket for authentication RADIUS messages
+	 * auth_serv_sock - IPv4 socket for RADIUS authentication messages
 	 */
 	int auth_serv_sock;
 
 	/**
-	 * acct_serv_sock - Socket for accounting RADIUS messages
+	 * acct_serv_sock - IPv4 socket for RADIUS accounting messages
 	 */
 	int acct_serv_sock;
 
+	/**
+	 * auth_serv_sock6 - IPv6 socket for RADIUS authentication messages
+	 */
 	int auth_serv_sock6;
+
+	/**
+	 * acct_serv_sock6 - IPv6 socket for RADIUS accounting messages
+	 */
 	int acct_serv_sock6;
 
 	/**
-	 * auth_sock - Current used socket for RADIUS authentication server
+	 * auth_sock - Currently used socket for RADIUS authentication server
 	 */
 	int auth_sock;
 
 	/**
-	 * acct_sock - Current used socket for RADIUS accounting server
+	 * acct_sock - Currently used socket for RADIUS accounting server
 	 */
 	int acct_sock;
 
+	/**
+	 * auth_handlers - Authentication message handlers
+	 */
 	struct radius_rx_handler *auth_handlers;
+
+	/**
+	 * num_auth_handlers - Number of handlers in auth_handlers
+	 */
 	size_t num_auth_handlers;
+
+	/**
+	 * acct_handlers - Accounting message handlers
+	 */
 	struct radius_rx_handler *acct_handlers;
+
+	/**
+	 * num_acct_handlers - Number of handlers in acct_handlers
+	 */
 	size_t num_acct_handlers;
 
+	/**
+	 * msgs - Pending outgoing RADIUS messages
+	 */
 	struct radius_msg_list *msgs;
+
+	/**
+	 * num_msgs - Number of pending messages in the msgs list
+	 */
 	size_t num_msgs;
 
+	/**
+	 * next_radius_identifier - Next RADIUS message identifier to use
+	 */
 	u8 next_radius_identifier;
 };
 
@@ -435,7 +516,8 @@ static void radius_client_update_timeout(struct radius_client_data *radius)
 
 static void radius_client_list_add(struct radius_client_data *radius,
 				   struct radius_msg *msg,
-				   RadiusType msg_type, u8 *shared_secret,
+				   RadiusType msg_type,
+				   const u8 *shared_secret,
 				   size_t shared_secret_len, const u8 *addr)
 {
 	struct radius_msg_list *entry, *prev;
@@ -548,7 +630,7 @@ int radius_client_send(struct radius_client_data *radius,
 		       const u8 *addr)
 {
 	struct hostapd_radius_servers *conf = radius->conf;
-	u8 *shared_secret;
+	const u8 *shared_secret;
 	size_t shared_secret_len;
 	char *name;
 	int s, res;
@@ -833,7 +915,7 @@ void radius_client_flush(struct radius_client_data *radius, int only_auth)
 
 
 static void radius_client_update_acct_msgs(struct radius_client_data *radius,
-					   u8 *shared_secret,
+					   const u8 *shared_secret,
 					   size_t shared_secret_len)
 {
 	struct radius_msg_list *entry;

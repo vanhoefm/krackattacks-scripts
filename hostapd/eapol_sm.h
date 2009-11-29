@@ -254,7 +254,6 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 		 int flags, struct sta_info *sta);
 void eapol_auth_free(struct eapol_state_machine *sm);
 void eapol_auth_step(struct eapol_state_machine *sm);
-void eapol_auth_initialize(struct eapol_state_machine *sm);
 void eapol_auth_dump_state(FILE *f, const char *prefix,
 			   struct eapol_state_machine *sm);
 int eapol_auth_eap_pending_cb(struct eapol_state_machine *sm, void *ctx);

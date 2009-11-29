@@ -47,6 +47,7 @@ sm->eapol->cb.set_port_authorized(sm->hapd, sm->sta, 0)
 
 static void eapol_sm_step_run(struct eapol_state_machine *sm);
 static void eapol_sm_step_cb(void *eloop_ctx, void *timeout_ctx);
+static void eapol_auth_initialize(struct eapol_state_machine *sm);
 
 
 static void eapol_auth_logger(struct eapol_authenticator *eapol,
@@ -966,7 +967,7 @@ void eapol_auth_step(struct eapol_state_machine *sm)
 }
 
 
-void eapol_auth_initialize(struct eapol_state_machine *sm)
+static void eapol_auth_initialize(struct eapol_state_machine *sm)
 {
 	sm->initializing = TRUE;
 	/* Initialize the state machines by asserting initialize and then

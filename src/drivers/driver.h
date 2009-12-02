@@ -73,6 +73,8 @@ struct hostapd_hw_modes {
 #define WPA_SCAN_NOISE_INVALID		BIT(1)
 #define WPA_SCAN_LEVEL_INVALID		BIT(2)
 #define WPA_SCAN_LEVEL_DBM		BIT(3)
+#define WPA_SCAN_AUTHENTICATED		BIT(4)
+#define WPA_SCAN_ASSOCIATED		BIT(5)
 
 /**
  * struct wpa_scan_res - Scan result for an BSS/IBSS

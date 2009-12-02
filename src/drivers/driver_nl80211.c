@@ -88,6 +88,7 @@ struct wpa_driver_nl80211_data {
 	struct nl_cb *nl_cb;
 	struct genl_family *nl80211;
 
+	u8 auth_bssid[ETH_ALEN];
 	u8 bssid[ETH_ALEN];
 	int associated;
 	u8 ssid[32];
@@ -653,6 +654,7 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
+	os_memcpy(drv->auth_bssid, mgmt->sa, ETH_ALEN);
 	os_memset(&event, 0, sizeof(event));
 	os_memcpy(event.auth.peer, mgmt->sa, ETH_ALEN);
 	event.auth.auth_type = le_to_host16(mgmt->u.auth.auth_alg);
@@ -1616,6 +1618,7 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_BSS_INFORMATION_ELEMENTS] = { .type = NLA_UNSPEC },
 		[NL80211_BSS_SIGNAL_MBM] = { .type = NLA_U32 },
 		[NL80211_BSS_SIGNAL_UNSPEC] = { .type = NLA_U8 },
+		[NL80211_BSS_STATUS] = { .type = NLA_U32 },
 		[NL80211_BSS_SEEN_MS_AGO] = { .type = NLA_U32 },
 	};
 	struct wpa_scan_results *res = arg;
@@ -1669,6 +1672,21 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 	if (ie)
 		os_memcpy(r + 1, ie, ie_len);
 
+	if (bss[NL80211_BSS_STATUS]) {
+		enum nl80211_bss_status status;
+		status = nla_get_u32(bss[NL80211_BSS_STATUS]);
+		switch (status) {
+		case NL80211_BSS_STATUS_AUTHENTICATED:
+			r->flags |= WPA_SCAN_AUTHENTICATED;
+			break;
+		case NL80211_BSS_STATUS_ASSOCIATED:
+			r->flags |= WPA_SCAN_ASSOCIATED;
+			break;
+		default:
+			break;
+		}
+	}
+
 	tmp = os_realloc(res->res,
 			 (res->num + 1) * sizeof(struct wpa_scan_res *));
 	if (tmp == NULL) {
@@ -1679,6 +1697,53 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 	res->res = tmp;
 
 	return NL_SKIP;
+}
+
+
+static void wpa_driver_nl80211_check_bss_status(
+	struct wpa_driver_nl80211_data *drv, struct wpa_scan_results *res)
+{
+	size_t i;
+
+	for (i = 0; i < res->num; i++) {
+		struct wpa_scan_res *r = res->res[i];
+		if (r->flags & WPA_SCAN_AUTHENTICATED) {
+			wpa_printf(MSG_DEBUG, "nl80211: Scan results "
+				   "indicates BSS status with " MACSTR
+				   " as authenticated",
+				   MAC2STR(r->bssid));
+			if (drv->nlmode == NL80211_IFTYPE_STATION &&
+			    os_memcmp(r->bssid, drv->bssid, ETH_ALEN) != 0 &&
+			    os_memcmp(r->bssid, drv->auth_bssid, ETH_ALEN) !=
+			    0) {
+				wpa_printf(MSG_DEBUG, "nl80211: Unknown BSSID"
+					   " in local state (auth=" MACSTR
+					   " assoc=" MACSTR ")",
+					   MAC2STR(drv->auth_bssid),
+					   MAC2STR(drv->bssid));
+			}
+		}
+
+		if (r->flags & WPA_SCAN_ASSOCIATED) {
+			wpa_printf(MSG_DEBUG, "nl80211: Scan results "
+				   "indicate BSS status with " MACSTR
+				   " as associated",
+				   MAC2STR(r->bssid));
+			if (drv->nlmode == NL80211_IFTYPE_STATION &&
+			    !drv->associated) {
+				wpa_printf(MSG_DEBUG, "nl80211: Local state "
+					   "(not associated) does not match "
+					   "with BSS state");
+			} else if (drv->nlmode == NL80211_IFTYPE_STATION &&
+				   os_memcmp(drv->bssid, r->bssid, ETH_ALEN) !=
+				   0) {
+				wpa_printf(MSG_DEBUG, "nl80211: Local state "
+					   "(associated with " MACSTR ") does "
+					   "not match with BSS state",
+					   MAC2STR(r->bssid));
+			}
+		}
+	}
 }
 
 
@@ -1711,6 +1776,7 @@ wpa_driver_nl80211_get_scan_results(void *priv)
 	if (ret == 0) {
 		wpa_printf(MSG_DEBUG, "Received scan results (%lu BSSes)",
 			   (unsigned long) res->num);
+		wpa_driver_nl80211_check_bss_status(drv, res);
 		return res;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
@@ -2018,6 +2084,7 @@ static int wpa_driver_nl80211_authenticate(
 	int count = 0;
 
 	drv->associated = 0;
+	os_memset(drv->auth_bssid, 0, ETH_ALEN);
 
 	if (wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA) < 0)
 		return -1;

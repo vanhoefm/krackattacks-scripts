@@ -2166,6 +2166,8 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (wpa_s == NULL)
 		return NULL;
 
+	wpa_s->global = global;
+
 	t_iface = *iface;
 	if (global->params.override_driver) {
 		wpa_printf(MSG_DEBUG, "Override interface parameter: driver "
@@ -2188,8 +2190,6 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 		os_free(wpa_s);
 		return NULL;
 	}
-
-	wpa_s->global = global;
 
 	/* Notify the control interfaces about new iface */
 	if (wpas_notify_iface_added(wpa_s)) {

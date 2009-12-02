@@ -121,6 +121,8 @@ static void wpa_driver_nl80211_scan_timeout(void *eloop_ctx,
 static int wpa_driver_nl80211_set_mode(void *priv, int mode);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
+static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
+				   const u8 *addr, int cmd, u16 reason_code);
 
 #if defined(CONFIG_AP) || defined(HOSTAPD)
 static void nl80211_remove_monitor_interface(
@@ -1700,6 +1702,19 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 }
 
 
+static void clear_state_mismatch(struct wpa_driver_nl80211_data *drv,
+				 const u8 *addr)
+{
+	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME) {
+		wpa_printf(MSG_DEBUG, "nl80211: Clear possible state "
+			   "mismatch");
+		wpa_driver_nl80211_mlme(drv, addr,
+					NL80211_CMD_DEAUTHENTICATE,
+					WLAN_REASON_PREV_AUTH_NOT_VALID);
+	}
+}
+
+
 static void wpa_driver_nl80211_check_bss_status(
 	struct wpa_driver_nl80211_data *drv, struct wpa_scan_results *res)
 {
@@ -1734,13 +1749,16 @@ static void wpa_driver_nl80211_check_bss_status(
 				wpa_printf(MSG_DEBUG, "nl80211: Local state "
 					   "(not associated) does not match "
 					   "with BSS state");
+				clear_state_mismatch(drv, r->bssid);
 			} else if (drv->nlmode == NL80211_IFTYPE_STATION &&
 				   os_memcmp(drv->bssid, r->bssid, ETH_ALEN) !=
 				   0) {
 				wpa_printf(MSG_DEBUG, "nl80211: Local state "
 					   "(associated with " MACSTR ") does "
 					   "not match with BSS state",
-					   MAC2STR(r->bssid));
+					   MAC2STR(drv->bssid));
+				clear_state_mismatch(drv, r->bssid);
+				clear_state_mismatch(drv, drv->bssid);
 			}
 		}
 	}

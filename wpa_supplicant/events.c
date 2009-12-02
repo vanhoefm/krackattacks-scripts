@@ -1383,8 +1383,10 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	case EVENT_ASSOC:
 		wpa_supplicant_event_assoc(wpa_s, data);
 		break;
-	case EVENT_DEAUTH:
 	case EVENT_DISASSOC:
+		sme_event_disassoc(wpa_s, data);
+		/* fall through */
+	case EVENT_DEAUTH:
 		wpa_supplicant_event_disassoc(wpa_s);
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:

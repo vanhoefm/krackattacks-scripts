@@ -28,6 +28,8 @@ void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 			      union wpa_event_data *data);
 void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 			       union wpa_event_data *data);
+void sme_event_disassoc(struct wpa_supplicant *wpa_s,
+			union wpa_event_data *data);
 
 #else /* CONFIG_SME */
 
@@ -61,6 +63,11 @@ static inline void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 
 static inline void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 					     union wpa_event_data *data)
+{
+}
+
+static inline void sme_event_disassoc(struct wpa_supplicant *wpa_s,
+				      union wpa_event_data *data)
 {
 }
 

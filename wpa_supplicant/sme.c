@@ -427,3 +427,23 @@ void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_mark_disassoc(wpa_s);
 	wpa_supplicant_req_scan(wpa_s, 5, 0);
 }
+
+
+void sme_event_disassoc(struct wpa_supplicant *wpa_s,
+			union wpa_event_data *data)
+{
+	wpa_printf(MSG_DEBUG, "SME: Disassociation event received");
+	if (!is_zero_ether_addr(wpa_s->bssid) &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)) {
+		/*
+		 * cfg80211/mac80211 can get into somewhat confused state if
+		 * the AP only disassociates us and leaves us in authenticated
+		 * state. For now, force the state to be cleared to avoid
+		 * confusing errors if we try to associate with the AP again.
+		 */
+		wpa_printf(MSG_DEBUG, "SME: Deauthenticate to clear driver "
+			   "state");
+		wpa_drv_deauthenticate(wpa_s, wpa_s->bssid,
+				       WLAN_REASON_DEAUTH_LEAVING);
+	}
+}

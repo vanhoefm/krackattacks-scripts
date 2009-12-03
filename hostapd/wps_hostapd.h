@@ -47,6 +47,11 @@ static inline int hostapd_wps_get_mib_sta(struct hostapd_data *hapd,
 	return 0;
 }
 
+static inline int hostapd_wps_button_pushed(struct hostapd_data *hapd)
+{
+	return 0;
+}
+
 #endif /* CONFIG_WPS */
 
 #endif /* WPS_HOSTAPD_H */

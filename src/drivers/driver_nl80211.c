@@ -860,6 +860,23 @@ static void mlme_event_michael_mic_failure(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
+				 struct nlattr *tb[])
+{
+	if (tb[NL80211_ATTR_MAC] == NULL) {
+		wpa_printf(MSG_DEBUG, "nl80211: No address in IBSS joined "
+			   "event");
+		return;
+	}
+	os_memcpy(drv->bssid, nla_data(tb[NL80211_ATTR_MAC]), ETH_ALEN);
+	drv->associated = 1;
+	wpa_printf(MSG_DEBUG, "nl80211: IBSS " MACSTR " joined",
+		   MAC2STR(drv->bssid));
+
+	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, NULL);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -937,6 +954,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 		break;
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:
 		mlme_event_michael_mic_failure(drv, tb);
+		break;
+	case NL80211_CMD_JOIN_IBSS:
+		mlme_event_join_ibss(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
@@ -3387,6 +3407,101 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 #endif /* CONFIG_AP */
 
 
+static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv)
+{
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_LEAVE_IBSS, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Leave IBSS failed: ret=%d "
+			   "(%s)", ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+
+	ret = 0;
+	wpa_printf(MSG_DEBUG, "nl80211: Leave IBSS request sent successfully");
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
+static int wpa_driver_nl80211_ibss(struct wpa_driver_nl80211_data *drv,
+				   struct wpa_driver_associate_params *params)
+{
+	struct nl_msg *msg;
+	int ret = -1;
+	int count = 0;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Join IBSS (ifindex=%d)", drv->ifindex);
+
+	if (wpa_driver_nl80211_set_mode(drv, params->mode)) {
+		wpa_printf(MSG_INFO, "nl80211: Failed to set interface into "
+			   "IBSS mode");
+		return -1;
+	}
+
+retry:
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_JOIN_IBSS, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	if (params->ssid == NULL || params->ssid_len > sizeof(drv->ssid))
+		goto nla_put_failure;
+
+	wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
+			  params->ssid, params->ssid_len);
+	NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
+		params->ssid);
+	os_memcpy(drv->ssid, params->ssid, params->ssid_len);
+	drv->ssid_len = params->ssid_len;
+
+	wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
+
+	ret = nl80211_set_conn_keys(params, msg);
+	if (ret)
+		goto nla_put_failure;
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Join IBSS failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		count++;
+		if (ret == -EALREADY && count == 1) {
+			wpa_printf(MSG_DEBUG, "nl80211: Retry IBSS join after "
+				   "forced leave");
+			nl80211_leave_ibss(drv);
+			nlmsg_free(msg);
+			goto retry;
+		}
+
+		goto nla_put_failure;
+	}
+	ret = 0;
+	wpa_printf(MSG_DEBUG, "nl80211: Join IBSS request sent successfully");
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 static int wpa_driver_nl80211_connect(
 	struct wpa_driver_nl80211_data *drv,
 	struct wpa_driver_associate_params *params)
@@ -3541,9 +3656,12 @@ static int wpa_driver_nl80211_associate(
 	struct nl_msg *msg;
 
 #ifdef CONFIG_AP
-	if (params->mode == 2)
+	if (params->mode == IEEE80211_MODE_AP)
 		return wpa_driver_nl80211_ap(drv, params);
 #endif /* CONFIG_AP */
+
+	if (params->mode == IEEE80211_MODE_IBSS)
+		return wpa_driver_nl80211_ibss(drv, params);
 
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME)) {
 		if (wpa_driver_nl80211_set_mode(drv, params->mode) < 0)

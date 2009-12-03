@@ -972,7 +972,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
 
-	if (ssid->mode == 2) {
+	if (ssid->mode == IEEE80211_MODE_AP) {
 #ifdef CONFIG_AP
 		if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP)) {
 			wpa_printf(MSG_INFO, "Driver does not support AP "
@@ -987,7 +987,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) {
+	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
+	    ssid->mode == IEEE80211_MODE_INFRA) {
 		sme_authenticate(wpa_s, bss, ssid);
 		return;
 	}

@@ -27,17 +27,17 @@ int wpas_notify_supplicant_initialized(struct wpa_global *global)
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 
 	if (global->params.dbus_ctrl_interface) {
-		global->dbus_ctrl_iface =
-			wpa_supplicant_dbus_ctrl_iface_init(global);
-		if (global->dbus_ctrl_iface == NULL)
-			return -1;
-
 		if (cbs) {
 			global->dbus_new_ctrl_iface =
 				cbs->dbus_ctrl_init(global);
 			if (global->dbus_new_ctrl_iface == NULL)
 				return -1;
 		}
+
+		global->dbus_ctrl_iface =
+			wpa_supplicant_dbus_ctrl_iface_init(global);
+		if (global->dbus_ctrl_iface == NULL)
+			return -1;
 	}
 
 	return 0;
@@ -48,11 +48,11 @@ void wpas_notify_supplicant_deinitialized(struct wpa_global *global)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 
-	if (global->dbus_ctrl_iface)
-		wpa_supplicant_dbus_ctrl_iface_deinit(global->dbus_ctrl_iface);
-
 	if (cbs && global->dbus_new_ctrl_iface)
 		cbs->dbus_ctrl_deinit(global->dbus_new_ctrl_iface);
+
+	if (global->dbus_ctrl_iface)
+		wpa_supplicant_dbus_ctrl_iface_deinit(global->dbus_ctrl_iface);
 }
 
 

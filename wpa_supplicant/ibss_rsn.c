@@ -107,21 +107,23 @@ static int supp_set_key(void *ctx, wpa_alg alg,
 {
 	struct ibss_rsn_peer *peer = ctx;
 
+	wpa_printf(MSG_DEBUG, "SUPP: %s(alg=%d addr=" MACSTR " key_idx=%d "
+		   "set_tx=%d)",
+		   __func__, alg, MAC2STR(addr), key_idx, set_tx);
+	wpa_hexdump(MSG_DEBUG, "SUPP: set_key - seq", seq, seq_len);
+	wpa_hexdump_key(MSG_DEBUG, "SUPP: set_key - key", key, key_len);
+
 	if (key_idx == 0) {
 		/*
 		 * In IBSS RSN, the pairwise key from the 4-way handshake
 		 * initiated by the peer with highest MAC address is used.
 		 */
 		if (os_memcmp(peer->ibss_rsn->wpa_s->own_addr, peer->addr,
-			      ETH_ALEN) > 0)
+			      ETH_ALEN) > 0) {
+			wpa_printf(MSG_DEBUG, "SUPP: Do not use this PTK");
 			return 0;
+		}
 	}
-
-	wpa_printf(MSG_DEBUG, "SUPP: %s(alg=%d addr=" MACSTR " key_idx=%d "
-		   "set_tx=%d)",
-		   __func__, alg, MAC2STR(addr), key_idx, set_tx);
-	wpa_hexdump(MSG_DEBUG, "SUPP: set_key - seq", seq, seq_len);
-	wpa_hexdump_key(MSG_DEBUG, "SUPP: set_key - key", key, key_len);
 
 	return wpa_drv_set_key(peer->ibss_rsn->wpa_s, alg, addr, key_idx,
 			       set_tx, seq, seq_len, key, key_len);
@@ -243,13 +245,26 @@ static int auth_set_key(void *ctx, int vlan_id, wpa_alg alg, const u8 *addr,
 	u8 seq[6];
 
 	os_memset(seq, 0, sizeof(seq));
+
+	if (addr) {
+		wpa_printf(MSG_DEBUG, "AUTH: %s(alg=%d addr=" MACSTR
+			   " key_idx=%d)",
+			   __func__, alg, MAC2STR(addr), idx);
+	} else {
+		wpa_printf(MSG_DEBUG, "AUTH: %s(alg=%d key_idx=%d)",
+			   __func__, alg, idx);
+	}
+	wpa_hexdump_key(MSG_DEBUG, "AUTH: set_key - key", key, key_len);
+
 	if (idx == 0) {
 		/*
 		 * In IBSS RSN, the pairwise key from the 4-way handshake
 		 * initiated by the peer with highest MAC address is used.
 		 */
-		if (os_memcmp(ibss_rsn->wpa_s->own_addr, addr, ETH_ALEN) < 0)
+		if (os_memcmp(ibss_rsn->wpa_s->own_addr, addr, ETH_ALEN) < 0) {
+			wpa_printf(MSG_DEBUG, "AUTH: Do not use this PTK");
 			return 0;
+		}
 	}
 
 	return wpa_drv_set_key(ibss_rsn->wpa_s, alg, addr, idx,

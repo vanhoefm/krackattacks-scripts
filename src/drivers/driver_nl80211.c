@@ -3477,6 +3477,14 @@ retry:
 	if (ret)
 		goto nla_put_failure;
 
+	if (params->wpa_ie) {
+		wpa_hexdump(MSG_DEBUG,
+			    "  * Extra IEs for Beacon/Probe Response frames",
+			    params->wpa_ie, params->wpa_ie_len);
+		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
+			params->wpa_ie);
+	}
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {

@@ -143,19 +143,9 @@ CFLAGS += -DCONFIG_NO_WPA -DCONFIG_NO_WPA2
 endif
 
 ifdef CONFIG_IBSS_RSN
+NEED_RSN_AUTHENTICATOR=y
 CFLAGS += -DCONFIG_IBSS_RSN
 OBJS += ibss_rsn.o
-OBJS += ../hostapd/wpa.o
-NEED_AES_WRAP=y
-OBJS += ../hostapd/wpa_auth_ie.o
-OBJS += ../hostapd/pmksa_cache.o
-OBJS += ../src/radius/radius.o
-ifdef CONFIG_IEEE80211R
-OBJS += ../hostapd/wpa_ft.o
-endif
-ifdef CONFIG_PEERKEY
-OBJS += ../hostapd/peerkey.o
-endif
 endif
 
 ifdef CONFIG_NO_WPA2
@@ -572,6 +562,7 @@ endif
 endif
 
 ifdef CONFIG_AP
+NEED_RSN_AUTHENTICATOR=y
 CFLAGS += -DCONFIG_AP
 OBJS += ap.o
 CFLAGS += -DCONFIG_NO_RADIUS
@@ -581,10 +572,6 @@ OBJS += ../hostapd/hostapd.o
 OBJS += ../hostapd/config.o
 OBJS += ../src/utils/ip_addr.o
 OBJS += ../hostapd/sta_info.o
-OBJS += ../hostapd/wpa.o
-NEED_AES_WRAP=y
-OBJS += ../hostapd/pmksa_cache.o
-OBJS += ../hostapd/wpa_auth_ie.o
 OBJS += ../hostapd/tkip_countermeasures.o
 OBJS += ../hostapd/mlme.o
 OBJS += ../hostapd/ieee802_1x.o
@@ -593,12 +580,6 @@ OBJS += ../hostapd/ieee802_11_auth.o
 OBJS += ../hostapd/drv_callbacks.o
 ifdef CONFIG_CTRL_IFACE
 OBJS += ../hostapd/ctrl_iface_ap.o
-endif
-ifdef CONFIG_IEEE80211R
-OBJS += ../hostapd/wpa_ft.o
-endif
-ifdef CONFIG_PEERKEY
-OBJS += ../hostapd/peerkey.o
 endif
 
 CFLAGS += -DEAP_SERVER
@@ -618,6 +599,20 @@ ifdef CONFIG_WPS
 CFLAGS += -DEAP_SERVER_WSC
 OBJS += ../hostapd/wps_hostapd.o
 OBJS += ../src/eap_server/eap_wsc.o
+endif
+endif
+
+ifdef NEED_RSN_AUTHENTICATOR
+CFLAGS += -DCONFIG_NO_RADIUS
+NEED_AES_WRAP=y
+OBJS += ../hostapd/wpa.o
+OBJS += ../hostapd/wpa_auth_ie.o
+OBJS += ../hostapd/pmksa_cache.o
+ifdef CONFIG_IEEE80211R
+OBJS += ../hostapd/wpa_ft.o
+endif
+ifdef CONFIG_PEERKEY
+OBJS += ../hostapd/peerkey.o
 endif
 endif
 

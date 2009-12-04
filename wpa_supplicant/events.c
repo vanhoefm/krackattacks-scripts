@@ -1384,7 +1384,8 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 		wpa_supplicant_event_assoc(wpa_s, data);
 		break;
 	case EVENT_DISASSOC:
-		sme_event_disassoc(wpa_s, data);
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
+			sme_event_disassoc(wpa_s, data);
 		/* fall through */
 	case EVENT_DEAUTH:
 		wpa_supplicant_event_disassoc(wpa_s);

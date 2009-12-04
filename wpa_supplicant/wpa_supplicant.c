@@ -1244,7 +1244,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		 * per-BSSID authentication.
 		 */
 		wpa_supplicant_cancel_auth_timeout(wpa_s);
-		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 #endif /* CONFIG_IBSS_RSN */
 	} else {
 		/* Timeout for IEEE 802.11 authentication and association */
@@ -1774,7 +1773,9 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 	if (wpa_s->eapol_received == 0 &&
 	    (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) ||
 	     !wpa_key_mgmt_wpa_psk(wpa_s->key_mgmt) ||
-	     wpa_s->wpa_state != WPA_COMPLETED)) {
+	     wpa_s->wpa_state != WPA_COMPLETED) &&
+	    (wpa_s->current_ssid == NULL ||
+	     wpa_s->current_ssid->mode != IEEE80211_MODE_IBSS)) {
 		/* Timeout for completing IEEE 802.1X and WPA authentication */
 		wpa_supplicant_req_auth_timeout(
 			wpa_s,

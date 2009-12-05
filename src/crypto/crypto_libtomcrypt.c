@@ -62,7 +62,6 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
-#ifdef EAP_TLS_FUNCS
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	hash_state md;
@@ -146,8 +145,6 @@ void aes_decrypt_deinit(void *ctx)
 	os_free(skey);
 }
 
-
-#ifdef CONFIG_TLS_INTERNAL
 
 struct crypto_hash {
 	enum crypto_hash_alg alg;
@@ -733,7 +730,3 @@ fail:
 }
 
 #endif /* CONFIG_MODEXP */
-
-#endif /* CONFIG_TLS_INTERNAL */
-
-#endif /* EAP_TLS_FUNCS */

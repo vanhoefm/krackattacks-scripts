@@ -27,8 +27,6 @@
 #include "md5_i.h"
 #include "des_i.h"
 
-#ifdef CONFIG_TLS_INTERNAL
-
 struct crypto_hash {
 	enum crypto_hash_alg alg;
 	union {
@@ -543,7 +541,6 @@ int crypto_global_init(void)
 void crypto_global_deinit(void)
 {
 }
-#endif /* CONFIG_TLS_INTERNAL */
 
 
 #ifdef CONFIG_MODEXP

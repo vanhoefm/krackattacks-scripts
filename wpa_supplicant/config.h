@@ -169,7 +169,6 @@ struct wpa_config {
 	 */
 	int fast_reauth;
 
-#ifdef EAP_TLS_OPENSSL
 	/**
 	 * opensc_engine_path - Path to the OpenSSL engine for opensc
 	 *
@@ -194,7 +193,6 @@ struct wpa_config {
 	 * module is not loaded.
 	 */
 	char *pkcs11_module_path;
-#endif /* EAP_TLS_OPENSSL */
 
 	/**
 	 * driver_param - Driver interface parameters

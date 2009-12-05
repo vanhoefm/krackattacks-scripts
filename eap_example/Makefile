@@ -89,7 +89,6 @@ CFLAGS += -DEAP_PSK
 CFLAGS += -DEAP_PAX
 CFLAGS += -DEAP_SAKE
 CFLAGS += -DEAP_GPSK -DEAP_GPSK_SHA256
-CFLAGS += -DEAP_TLS_FUNCS
 
 CFLAGS += -DEAP_SERVER_TLS
 CFLAGS += -DEAP_SERVER_PEAP
@@ -105,7 +104,6 @@ CFLAGS += -DEAP_SERVER_GPSK -DEAP_SERVER_GPSK_SHA256
 CFLAGS += -DIEEE8021X_EAPOL
 
 ifeq ($(CONFIG_TLS), openssl)
-CFLAGS += -DEAP_TLS_OPENSSL
 OBJS_both += ../src/crypto/tls_openssl.o
 OBJS_both += ../src/crypto/crypto_openssl.o
 LIBS += -lssl -lcrypto
@@ -113,7 +111,6 @@ CONFIG_INTERNAL_SHA256=y
 endif
 
 ifeq ($(CONFIG_TLS), gnutls)
-CFLAGS += -DEAP_TLS_GNUTLS
 OBJS_both += ../src/crypto/tls_gnutls.o
 OBJS_both += ../src/crypto/crypto_gnutls.o
 LIBS += -lgnutls -lgcrypt

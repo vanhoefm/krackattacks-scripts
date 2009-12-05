@@ -33,7 +33,6 @@ L"Microsoft Enhanced RSA and AES Cryptographic Provider (Prototype)"
 #define CALG_HMAC (ALG_CLASS_HASH | ALG_TYPE_ANY | ALG_SID_HMAC)
 #endif
 
-#ifdef CONFIG_TLS_INTERNAL
 #ifdef __MINGW32_VERSION
 /*
  * MinGW does not yet include all the needed definitions for CryptoAPI, so
@@ -98,7 +97,6 @@ static int mingw_load_crypto_func(void)
 }
 
 #endif /* __MINGW32_VERSION */
-#endif /* CONFIG_TLS_INTERNAL */
 
 
 static void cryptoapi_report_error(const char *msg)
@@ -238,7 +236,6 @@ void des_encrypt(const u8 *clear, const u8 *key, u8 *cypher)
 }
 
 
-#ifdef EAP_TLS_FUNCS
 int md5_vector(size_t num_elem, const u8 *addr[], const size_t *len, u8 *mac)
 {
 	return cryptoapi_hash_vector(CALG_MD5, 16, num_elem, addr, len, mac);
@@ -364,7 +361,6 @@ void aes_decrypt_deinit(void *ctx)
 	aes_encrypt_deinit(ctx);
 }
 
-#ifdef CONFIG_TLS_INTERNAL
 
 struct crypto_hash {
 	enum crypto_hash_alg alg;
@@ -796,7 +792,3 @@ int crypto_global_init(void)
 void crypto_global_deinit(void)
 {
 }
-
-#endif /* CONFIG_TLS_INTERNAL */
-
-#endif /* EAP_TLS_FUNCS */

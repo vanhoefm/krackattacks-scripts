@@ -694,7 +694,6 @@ endif
 ifdef TLS_FUNCS
 NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, EAP_TTLS, and EAP_FAST)
-CFLAGS += -DEAP_TLS_FUNCS
 OBJS += ../src/eap_peer/eap_tls_common.o
 OBJS_h += ../src/eap_server/eap_tls_common.o
 NEED_TLS_PRF=y
@@ -794,7 +793,6 @@ OBJS_p += ../src/crypto/rc4.o
 NEED_BASE64=y
 NEED_TLS_PRF=y
 NEED_MODEXP=y
-CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_TLS_INTERNAL_CLIENT
 endif
 ifdef NEED_MODEXP

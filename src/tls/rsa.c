@@ -34,7 +34,6 @@ struct crypto_rsa_key {
 };
 
 
-#ifdef EAP_TLS_FUNCS
 static const u8 * crypto_rsa_parse_integer(const u8 *pos, const u8 *end,
 					   struct bignum *num)
 {
@@ -223,7 +222,6 @@ error:
 	crypto_rsa_free(key);
 	return NULL;
 }
-#endif /* EAP_TLS_FUNCS */
 
 
 /**

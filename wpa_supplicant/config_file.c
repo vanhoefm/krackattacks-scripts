@@ -434,11 +434,9 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(eapol_version, 1, 2) },
 	{ INT(ap_scan) },
 	{ INT(fast_reauth) },
-#ifdef EAP_TLS_OPENSSL
 	{ STR(opensc_engine_path) },
 	{ STR(pkcs11_engine_path) },
 	{ STR(pkcs11_module_path) },
-#endif /* EAP_TLS_OPENSSL */
 	{ STR(driver_param) },
 	{ INT(dot11RSNAConfigPMKLifetime) },
 	{ INT(dot11RSNAConfigPMKReauthThreshold) },
@@ -837,7 +835,6 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "ap_scan=%d\n", config->ap_scan);
 	if (config->fast_reauth != DEFAULT_FAST_REAUTH)
 		fprintf(f, "fast_reauth=%d\n", config->fast_reauth);
-#ifdef EAP_TLS_OPENSSL
 	if (config->opensc_engine_path)
 		fprintf(f, "opensc_engine_path=%s\n",
 			config->opensc_engine_path);
@@ -847,7 +844,6 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->pkcs11_module_path)
 		fprintf(f, "pkcs11_module_path=%s\n",
 			config->pkcs11_module_path);
-#endif /* EAP_TLS_OPENSSL */
 	if (config->driver_param)
 		fprintf(f, "driver_param=%s\n", config->driver_param);
 	if (config->dot11RSNAConfigPMKLifetime)

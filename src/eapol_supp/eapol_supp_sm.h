@@ -173,7 +173,6 @@ struct eapol_ctx {
 	 */
 	void (*aborted_cached)(void *ctx);
 
-#ifdef EAP_TLS_OPENSSL
 	/**
 	 * opensc_engine_path - Path to the OpenSSL engine for opensc
 	 *
@@ -198,7 +197,6 @@ struct eapol_ctx {
 	 * module is not loaded.
 	 */
 	const char *pkcs11_module_path;
-#endif /* EAP_TLS_OPENSSL */
 
 	/**
 	 * wps - WPS context data

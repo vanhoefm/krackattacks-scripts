@@ -1262,14 +1262,12 @@ DBusMessage * wpas_dbus_iface_set_smartcard_modules(
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-#ifdef EAP_TLS_OPENSSL
 	os_free(wpa_s->conf->opensc_engine_path);
 	wpa_s->conf->opensc_engine_path = opensc_engine_path;
 	os_free(wpa_s->conf->pkcs11_engine_path);
 	wpa_s->conf->pkcs11_engine_path = pkcs11_engine_path;
 	os_free(wpa_s->conf->pkcs11_module_path);
 	wpa_s->conf->pkcs11_module_path = pkcs11_module_path;
-#endif /* EAP_TLS_OPENSSL */
 
 	wpa_sm_set_eapol(wpa_s->wpa, NULL);
 	eapol_sm_deinit(wpa_s->eapol);

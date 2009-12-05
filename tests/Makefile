@@ -1,4 +1,4 @@
-TESTS=test-base64 test-milenage
+TESTS=test-base64 test-md4 test-milenage
 
 all: $(TESTS)
 
@@ -32,6 +32,8 @@ BASE64_OBJS=test-base64.o \
 test-base64: $(BASE64_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(BASE64_OBJS)
 
+test-md4: test-md4.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
 
 MILENAGE_OBJS=test-milenage.o \
 	$(LIBS)
@@ -41,6 +43,7 @@ test-milenage: $(MILENAGE_OBJS)
 
 
 run-tests: $(TESTS)
+	./test-md4
 	./test-milenage
 
 clean:

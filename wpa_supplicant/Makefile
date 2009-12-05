@@ -1363,19 +1363,13 @@ test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
 	./test-eap_sim_common
 	rm test-eap_sim_common
 
-TEST_MD4_OBJS = ../src/crypto/md4-internal.o tests/test_md4.o #../src/crypto/crypto_openssl.o
-test-md4: $(TEST_MD4_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_MD4_OBJS) $(LIBS)
-	./test-md4
-	rm test-md4
-
 TEST_MD5_OBJS = $(MD5OBJS) tests/test_md5.o #../src/crypto/crypto_openssl.o
 test-md5: $(TEST_MD5_OBJS)
 	$(LDO) $(LDFLAGS) -o $@ $(TEST_MD5_OBJS) $(LIBS)
 	./test-md5
 	rm test-md5
 
-tests: test-ms_funcs test-sha1 test-aes test-eap_sim_common test-md4 test-md5
+tests: test-ms_funcs test-sha1 test-aes test-eap_sim_common test-md5
 
 clean:
 	$(MAKE) -C ../src clean

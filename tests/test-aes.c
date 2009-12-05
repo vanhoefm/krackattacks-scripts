@@ -148,14 +148,14 @@ static int test_cbc(void)
 			break;
 		}
 		memcpy(buf, tv->plain, tv->len);
-		aes_128_cbc_encrypt(tv->key, tv->iv, buf, tv->len);
-		if (memcmp(buf, tv->cipher, tv->len) != 0) {
+		if (aes_128_cbc_encrypt(tv->key, tv->iv, buf, tv->len) ||
+		    memcmp(buf, tv->cipher, tv->len) != 0) {
 			printf("AES-CBC encrypt %d failed\n", i);
 			ret++;
 		}
 		memcpy(buf, tv->cipher, tv->len);
-		aes_128_cbc_decrypt(tv->key, tv->iv, buf, tv->len);
-		if (memcmp(buf, tv->plain, tv->len) != 0) {
+		if (aes_128_cbc_decrypt(tv->key, tv->iv, buf, tv->len) ||
+		    memcmp(buf, tv->plain, tv->len) != 0) {
 			printf("AES-CBC decrypt %d failed\n", i);
 			ret++;
 		}
@@ -272,8 +272,8 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < sizeof(test_vectors) / sizeof(test_vectors[0]); i++) {
 		tv = &test_vectors[i];
-		omac1_aes_128(tv->k, tv->msg, tv->msg_len, result);
-		if (memcmp(result, tv->tag, 16) != 0) {
+		if (omac1_aes_128(tv->k, tv->msg, tv->msg_len, result) ||
+		    memcmp(result, tv->tag, 16) != 0) {
 			printf("OMAC1-AES-128 test vector %d failed\n", i);
 			ret++;
 		}
@@ -287,8 +287,9 @@ int main(int argc, char *argv[])
 			addr[1] = tv->msg + 1;
 			len[1] = tv->msg_len - 1;
 
-			omac1_aes_128_vector(tv->k, 2, addr, len, result);
-			if (memcmp(result, tv->tag, 16) != 0) {
+			if (omac1_aes_128_vector(tv->k, 2, addr, len,
+						 result) ||
+			    memcmp(result, tv->tag, 16) != 0) {
 				printf("OMAC1-AES-128(vector) test vector %d "
 				       "failed\n", i);
 				ret++;

@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 {
 	struct {
 		char *data;
-		u8 *hash;
+		char *hash;
 	} tests[] = {
 		{
 			"",
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
 		printf("MD5 test case %d:", i);
 
-		addr[0] = tests[i].data;
+		addr[0] = (u8 *) tests[i].data;
 		len[0] = strlen(tests[i].data);
 		md5_vector(1, addr, len, hash);
 		if (memcmp(hash, tests[i].hash, 16) != 0) {
@@ -80,9 +80,9 @@ int main(int argc, char *argv[])
 			printf(" OK");
 
 		if (len[0]) {
-			addr[0] = tests[i].data;
+			addr[0] = (u8 *) tests[i].data;
 			len[0] = strlen(tests[i].data);
-			addr[1] = tests[i].data + 1;
+			addr[1] = (u8 *) tests[i].data + 1;
 			len[1] = strlen(tests[i].data) - 1;
 			md5_vector(1, addr, len, hash);
 			if (memcmp(hash, tests[i].hash, 16) != 0) {

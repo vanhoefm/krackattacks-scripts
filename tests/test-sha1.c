@@ -137,9 +137,9 @@ static int test_eap_fast(void)
 	}
 
 	printf("- PRF (TLS, SHA1/MD5) test case / key_block\n");
-	tls_prf(master_secret, sizeof(master_secret), "key expansion",
-		seed, sizeof(seed), buf, sizeof(key_block));
-	if (memcmp(key_block, buf, sizeof(key_block)) != 0) {
+	if (tls_prf(master_secret, sizeof(master_secret), "key expansion",
+		    seed, sizeof(seed), buf, sizeof(key_block)) ||
+	    memcmp(key_block, buf, sizeof(key_block)) != 0) {
 		printf("PRF test - FAILED!\n");
 		errors++;
 	}

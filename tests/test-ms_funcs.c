@@ -18,8 +18,8 @@
 int main(int argc, char *argv[])
 {
 	/* Test vector from RFC2759 example */
-	u8 *username = "User";
-	u8 *password = "clientPass";
+	char *username = "User";
+	char *password = "clientPass";
 	u8 auth_challenge[] = {
 		0x5B, 0x5D, 0x7C, 0x7D, 0x7B, 0x3F, 0x2F, 0x3E,
 		0x3C, 0x2C, 0x60, 0x21, 0x32, 0x26, 0x26, 0x28
@@ -61,53 +61,54 @@ int main(int argc, char *argv[])
 
 	printf("Testing ms_funcs.c\n");
 
-	challenge_hash(peer_challenge, auth_challenge,
-		       username, strlen(username),
-		       buf);
-	if (memcmp(challenge, buf, sizeof(challenge)) != 0) {
+	if (challenge_hash(peer_challenge, auth_challenge,
+			   (u8 *) username, strlen(username),
+			   buf) ||
+	    memcmp(challenge, buf, sizeof(challenge)) != 0) {
 		printf("challenge_hash failed\n");
 		errors++;
 	}
 
-	nt_password_hash(password, strlen(password), buf);
-	if (memcmp(password_hash, buf, sizeof(password_hash)) != 0) {
+	if (nt_password_hash((u8 *) password, strlen(password), buf) ||
+	    memcmp(password_hash, buf, sizeof(password_hash)) != 0) {
 		printf("nt_password_hash failed\n");
 		errors++;
 	}
 
-	generate_nt_response(auth_challenge, peer_challenge,
-			     username, strlen(username),
-			     password, strlen(password),
-			     buf);
-	if (memcmp(nt_response, buf, sizeof(nt_response)) != 0) {
+	if (generate_nt_response(auth_challenge, peer_challenge,
+				 (u8 *) username, strlen(username),
+				 (u8 *) password, strlen(password),
+				 buf) ||
+	    memcmp(nt_response, buf, sizeof(nt_response)) != 0) {
 		printf("generate_nt_response failed\n");
 		errors++;
 	}
 
-	hash_nt_password_hash(password_hash, buf);
-	if (memcmp(password_hash_hash, buf, sizeof(password_hash_hash)) != 0) {
+	if (hash_nt_password_hash(password_hash, buf) ||
+	    memcmp(password_hash_hash, buf, sizeof(password_hash_hash)) != 0) {
 		printf("hash_nt_password_hash failed\n");
 		errors++;
 	}
 
-	generate_authenticator_response(password, strlen(password),
-					peer_challenge, auth_challenge,
-					username, strlen(username),
-					nt_response, buf);
-	if (memcmp(authenticator_response, buf, sizeof(authenticator_response))
+	if (generate_authenticator_response((u8 *) password, strlen(password),
+					    peer_challenge, auth_challenge,
+					    (u8 *) username, strlen(username),
+					    nt_response, buf) ||
+	    memcmp(authenticator_response, buf, sizeof(authenticator_response))
 	    != 0) {
 		printf("generate_authenticator_response failed\n");
 		errors++;
 	}
 
-	get_master_key(password_hash_hash, nt_response, buf);
-	if (memcmp(master_key, buf, sizeof(master_key)) != 0) {
+	if (get_master_key(password_hash_hash, nt_response, buf) ||
+	    memcmp(master_key, buf, sizeof(master_key)) != 0) {
 		printf("get_master_key failed\n");
 		errors++;
 	}
 
-	get_asymetric_start_key(master_key, buf, sizeof(send_start_key), 1, 1);
-	if (memcmp(send_start_key, buf, sizeof(send_start_key)) != 0) {
+	if (get_asymetric_start_key(master_key, buf, sizeof(send_start_key),
+				    1, 1) ||
+	    memcmp(send_start_key, buf, sizeof(send_start_key)) != 0) {
 		printf("get_asymetric_start_key failed\n");
 		errors++;
 	}

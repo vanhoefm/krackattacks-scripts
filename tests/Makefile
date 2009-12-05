@@ -1,4 +1,5 @@
-TESTS=test-base64 test-md4 test-milenage
+TESTS=test-base64 test-md4 test-md5 test-milenage test-ms_funcs test-sha1 \
+	test-sha256 test-aes
 
 all: $(TESTS)
 
@@ -27,19 +28,40 @@ LIBS = ../src/utils/libutils.a \
 	$(MAKE) -C ../src/crypto
 
 
+test-aes: test-aes.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
 test-base64: test-base64.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-md4: test-md4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
+test-md5: test-md5.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
 test-milenage: test-milenage.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
+test-ms_funcs: test-ms_funcs.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
+test-sha1: test-sha1.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
+test-sha256: test-sha256.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 
 run-tests: $(TESTS)
+	./test-aes
 	./test-md4
+	./test-md5
 	./test-milenage
+	./test-sha1
+	./test-sha256
+	@echo
+	@echo All tests completed successfully.
 
 clean:
 	$(MAKE) -C ../src clean

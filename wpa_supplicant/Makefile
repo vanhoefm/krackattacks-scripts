@@ -1329,31 +1329,6 @@ wpa_gui-qt4/Makefile:
 wpa_gui-qt4: wpa_gui-qt4/Makefile
 	$(MAKE) -C wpa_gui-qt4
 
-TEST_MS_FUNCS_OBJS = ../src/crypto/crypto_openssl.o $(SHA1OBJS) $(MD5OBJS) \
-	../src/utils/os_unix.o ../src/crypto/rc4.o tests/test_ms_funcs.o
-test-ms_funcs: $(TEST_MS_FUNCS_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_MS_FUNCS_OBJS) $(LIBS) -lcrypto
-	./test-ms_funcs
-	rm test-ms_funcs
-
-TEST_SHA1_OBJS = $(SHA1OBJS) $(MD5OBJS) tests/test_sha1.o #../src/crypto/crypto_openssl.o
-test-sha1: $(TEST_SHA1_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_SHA1_OBJS) $(LIBS)
-	./test-sha1
-	rm test-sha1
-
-TEST_SHA256_OBJS = $(SHA256OBJS) $(MD5OBJS) tests/test_sha256.o ../src/utils/os_unix.o ../src/crypto/crypto_openssl.o
-test-sha256: $(TEST_SHA256_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_SHA256_OBJS) $(LIBS)
-	./test-sha256
-	rm test-sha256
-
-TEST_AES_OBJS = tests/test_aes.o $(AESOBJS)
-test-aes: $(TEST_AES_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_AES_OBJS) $(LIBS)
-	./test-aes
-	rm test-aes
-
 TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) $(MD5OBJS) \
 	../src/utils/common.o ../src/utils/os_unix.o \
 	../src/utils/wpa_debug.o $(AESOBJS) \
@@ -1363,13 +1338,7 @@ test-eap_sim_common: $(TEST_EAP_SIM_COMMON_OBJS)
 	./test-eap_sim_common
 	rm test-eap_sim_common
 
-TEST_MD5_OBJS = $(MD5OBJS) tests/test_md5.o #../src/crypto/crypto_openssl.o
-test-md5: $(TEST_MD5_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(TEST_MD5_OBJS) $(LIBS)
-	./test-md5
-	rm test-md5
-
-tests: test-ms_funcs test-sha1 test-aes test-eap_sim_common test-md5
+tests: test-eap_sim_common
 
 clean:
 	$(MAKE) -C ../src clean

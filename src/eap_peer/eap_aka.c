@@ -19,7 +19,7 @@
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
-#include "hlr_auc_gw/milenage.h"
+#include "crypto/milenage.h"
 #include "eap_common/eap_sim_common.h"
 #include "eap_config.h"
 #include "eap_i.h"

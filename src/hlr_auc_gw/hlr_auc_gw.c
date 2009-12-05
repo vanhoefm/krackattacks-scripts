@@ -47,7 +47,7 @@
 #include <sys/un.h>
 
 #include "common.h"
-#include "milenage.h"
+#include "crypto/milenage.h"
 
 static const char *default_socket_path = "/tmp/hlr_auc_gw.sock";
 static const char *socket_path;

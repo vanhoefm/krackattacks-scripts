@@ -670,7 +670,7 @@ NEED_MILENAGE=y
 endif
 
 ifdef NEED_MILENAGE
-OBJS += ../src/hlr_auc_gw/milenage.o
+OBJS += ../src/crypto/milenage.o
 endif
 
 ifdef CONFIG_PKCS12

@@ -24,4 +24,6 @@ test-base64: $(BASE64_OBJS)
 
 clean:
 	$(MAKE) -C ../src clean
-	rm -f $(TESTS) *~ *.o
+	rm -f $(TESTS) *~ *.o *.d
+
+-include $(OBJS:%.o=%.d)

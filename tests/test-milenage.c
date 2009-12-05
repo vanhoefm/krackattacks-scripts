@@ -1,6 +1,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/aes_wrap.h"
 #include "crypto/milenage.h"
 
 
@@ -13,13 +14,15 @@ extern int wpa_debug_level;
  * @k: K = 128-bit subscriber key
  * @opc: Buffer for OPc = 128-bit value derived from OP and K
  */
-static void milenage_opc(const u8 *op, const u8 *k, u8 *opc)
+static int milenage_opc(const u8 *op, const u8 *k, u8 *opc)
 {
 	int i;
 	/* OP_C = OP XOR E_K(OP) */
-	aes_128_encrypt_block(k, op, opc);
+	if (aes_128_encrypt_block(k, op, opc) < 0)
+		return -1;
 	for (i = 0; i < 16; i++)
 		opc[i] ^= op[i];
+	return 0;
 }
 
 

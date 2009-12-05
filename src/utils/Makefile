@@ -8,14 +8,7 @@ install:
 	@echo Nothing to be made.
 
 
-ifndef CC
-CC=gcc
-endif
-
-ifndef CFLAGS
-CFLAGS = -MMD -O2 -Wall -g
-endif
-
+include ../lib.rules
 
 LIB_OBJS= \
 	base64.o \

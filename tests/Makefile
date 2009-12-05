@@ -17,10 +17,14 @@ endif
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
-LIBS = ../src/utils/libutils.a
+LIBS = ../src/utils/libutils.a \
+	../src/crypto/libcrypto.a
 
 ../src/utils/libutils.a:
 	$(MAKE) -C ../src/utils
+
+../src/crypto/libcrypto.a:
+	$(MAKE) -C ../src/crypto
 
 BASE64_OBJS=test-base64.o \
 	$(LIBS)
@@ -30,10 +34,6 @@ test-base64: $(BASE64_OBJS)
 
 
 MILENAGE_OBJS=test-milenage.o \
-	../src/crypto/aes-internal.o \
-	../src/crypto/aes-internal-enc.o \
-	../src/crypto/aes-encblock.o \
-	../src/crypto/milenage.o \
 	$(LIBS)
 
 test-milenage: $(MILENAGE_OBJS)

@@ -26,20 +26,15 @@ LIBS = ../src/utils/libutils.a \
 ../src/crypto/libcrypto.a:
 	$(MAKE) -C ../src/crypto
 
-BASE64_OBJS=test-base64.o \
-	$(LIBS)
 
-test-base64: $(BASE64_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(BASE64_OBJS)
+test-base64: test-base64.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-md4: test-md4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
-MILENAGE_OBJS=test-milenage.o \
-	$(LIBS)
-
-test-milenage: $(MILENAGE_OBJS)
-	$(LDO) $(LDFLAGS) -o $@ $(MILENAGE_OBJS)
+test-milenage: test-milenage.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
 
 
 run-tests: $(TESTS)

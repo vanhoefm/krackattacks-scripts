@@ -23,6 +23,7 @@ LIB_OBJS= \
 	aes-internal-dec.o \
 	aes-internal-enc.o \
 	aes-omac1.o \
+	aes-unwrap.o \
 	aes-wrap.o \
 	des-internal.o \
 	dh_group5.o \
@@ -37,6 +38,7 @@ LIB_OBJS= \
 	sha1.o \
 	sha1-internal.o \
 	sha1-pbkdf2.o \
+	sha1-tlsprf.o \
 	sha1-tprf.o \
 	sha256.o \
 	sha256-internal.o

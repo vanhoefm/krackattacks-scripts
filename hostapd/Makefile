@@ -739,21 +739,4 @@ clean:
 	rm -f core *~ *.o hostapd hostapd_cli nt_password_hash hlr_auc_gw
 	rm -f *.d
 
-TEST_SRC_MILENAGE = ../src/hlr_auc_gw/milenage.c ../src/crypto/aes-internal.c ../src/crypto/aes-internal-dec.c \
-		../src/crypto/aes-cbc.c \
-		../src/crypto/aes-ctr.c \
-		../src/crypto/aes-eax.c \
-		../src/crypto/aes-encblock.c \
-		../src/crypto/aes-internal-enc.c \
-		../src/crypto/aes-omac1.c \
-		../src/crypto/aes-unwrap.c \
-		../src/crypto/aes-wrap.c \
-		 ../src/utils/common.c ../src/utils/wpa_debug.o ../src/utils/os_$(CONFIG_OS).c
-test-milenage: $(TEST_SRC_MILENAGE)
-	$(CC) $(LDFLAGS) -o test-milenage -Wall -Werror $(TEST_SRC_MILENAGE) \
-		-DTEST_MAIN_MILENAGE -I. \
-		-I../src/crypto -I../src/utils
-	./test-milenage
-	rm test-milenage
-
 -include $(OBJS:%.o=%.d)

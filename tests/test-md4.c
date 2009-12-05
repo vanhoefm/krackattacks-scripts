@@ -1,6 +1,6 @@
 /*
  * Test program for MD4 (test vectors from RFC 1320)
- * Copyright (c) 2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 {
 	struct {
 		char *data;
-		u8 *hash;
+		char *hash;
 	} tests[] = {
 		{
 			"",
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++) {
 		printf("MD4 test case %d:", i);
 
-		addr[0] = tests[i].data;
+		addr[0] = (u8 *) tests[i].data;
 		len[0] = strlen(tests[i].data);
 		md4_vector(1, addr, len, hash);
 		if (memcmp(hash, tests[i].hash, 16) != 0) {
@@ -80,9 +80,9 @@ int main(int argc, char *argv[])
 			printf(" OK");
 
 		if (len[0]) {
-			addr[0] = tests[i].data;
+			addr[0] = (u8 *) tests[i].data;
 			len[0] = strlen(tests[i].data);
-			addr[1] = tests[i].data + 1;
+			addr[1] = (u8 *) tests[i].data + 1;
 			len[1] = strlen(tests[i].data) - 1;
 			md4_vector(1, addr, len, hash);
 			if (memcmp(hash, tests[i].hash, 16) != 0) {

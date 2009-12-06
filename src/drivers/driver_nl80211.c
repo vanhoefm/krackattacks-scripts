@@ -3003,7 +3003,6 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		case IEEE80211_RADIOTAP_CHANNEL:
 			/* TODO convert from freq/flags to channel number
 			hfi.channel = XXX;
-			hfi.phytype = XXX;
 			 */
 			break;
 		case IEEE80211_RADIOTAP_RATE:

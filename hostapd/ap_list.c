@@ -29,44 +29,6 @@
 #include "drivers/driver.h"
 
 
-struct ieee80211_frame_info {
-	u32 version;
-	u32 length;
-	u64 mactime;
-	u64 hosttime;
-	u32 phytype;
-	u32 channel;
-	u32 datarate;
-	u32 antenna;
-	u32 priority;
-	u32 ssi_type;
-	u32 ssi_signal;
-	u32 ssi_noise;
-	u32 preamble;
-	u32 encoding;
-
-	/* Note: this structure is otherwise identical to capture format used
-	 * in linux-wlan-ng, but this additional field is used to provide meta
-	 * data about the frame to hostapd. This was the easiest method for
-	 * providing this information, but this might change in the future. */
-	u32 msg_type;
-} __attribute__ ((packed));
-
-
-enum ieee80211_phytype {
-	ieee80211_phytype_fhss_dot11_97  = 1,
-	ieee80211_phytype_dsss_dot11_97  = 2,
-	ieee80211_phytype_irbaseband     = 3,
-	ieee80211_phytype_dsss_dot11_b   = 4,
-	ieee80211_phytype_pbcc_dot11_b   = 5,
-	ieee80211_phytype_ofdm_dot11_g   = 6,
-	ieee80211_phytype_pbcc_dot11_g   = 7,
-	ieee80211_phytype_ofdm_dot11_a   = 8,
-	ieee80211_phytype_dsss_dot11_turbog = 255,
-	ieee80211_phytype_dsss_dot11_turbo = 256,
-};
-
-
 /* AP list is a double linked list with head->prev pointing to the end of the
  * list and tail->next = NULL. Entries are moved to the head of the list
  * whenever a beacon has been received from the AP in question. The tail entry
@@ -78,7 +40,6 @@ static int ap_list_beacon_olbc(struct hostapd_iface *iface, struct ap_info *ap)
 	int i;
 
 	if (iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G ||
-	    ap->phytype != ieee80211_phytype_pbcc_dot11_g ||
 	    iface->conf->channel != ap->channel)
 		return 0;
 
@@ -342,7 +303,6 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	ap->num_beacons++;
 	time(&ap->last_beacon);
 	if (fi) {
-		ap->phytype = fi->phytype;
 		ap->ssi_signal = fi->ssi_signal;
 		ap->datarate = fi->datarate;
 	}

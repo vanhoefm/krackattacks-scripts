@@ -39,7 +39,6 @@ struct ap_info {
 	int wpa;
 	int erp; /* ERP Info or -1 if ERP info element not present */
 
-	int phytype; /* .11a / .11b / .11g / Atheros Turbo */
 	int channel;
 	int datarate; /* in 100 kbps */
 	int ssi_signal;

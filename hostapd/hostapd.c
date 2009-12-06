@@ -51,8 +51,12 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
 
 extern int wpa_debug_level;
 
+#if defined(EAP_SERVER_SIM) || defined(EAP_SERVER_AKA)
+#define EAP_SIM_DB
+#endif /* EAP_SERVER_SIM || EAP_SERVER_AKA */
 
-#ifdef EAP_SERVER
+
+#ifdef EAP_SIM_DB
 static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 				 struct sta_info *sta, void *ctx)
 {
@@ -71,7 +75,7 @@ static void hostapd_sim_db_cb(void *ctx, void *session_ctx)
 #endif /* RADIUS_SERVER */
 	}
 }
-#endif /* EAP_SERVER */
+#endif /* EAP_SIM_DB */
 
 
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
@@ -1430,7 +1434,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	}
 #endif /* EAP_TLS_FUNCS */
 
-#if defined(EAP_SERVER_SIM) || defined(EAP_SERVER_AKA)
+#ifdef EAP_SIM_DB
 	if (hapd->conf->eap_sim_db) {
 		hapd->eap_sim_db_priv =
 			eap_sim_db_init(hapd->conf->eap_sim_db,
@@ -1441,13 +1445,13 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 			goto fail;
 		}
 	}
-#endif /* EAP_SERVER_SIM || EAP_SERVER_AKA */
+#endif /* EAP_SIM_DB */
 
 	hapd->driver = hapd->iconf->driver;
 
 	return hapd;
 
-#if defined(EAP_TLS_FUNCS) || defined(EAP_SERVER)
+#if defined(EAP_TLS_FUNCS) || defined(EAP_SIM_DB)
 fail:
 #endif
 	/* TODO: cleanup allocated resources(?) */

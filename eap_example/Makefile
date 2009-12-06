@@ -26,8 +26,6 @@ OBJS_both += ../src/utils/os_unix.o
 OBJS_both += ../src/utils/wpa_debug.o
 OBJS_both += ../src/utils/base64.o
 OBJS_both += ../src/utils/wpabuf.o
-OBJS_both += ../src/crypto/rc4.o
-OBJS_both += ../src/crypto/md4-internal.o
 OBJS_both += ../src/crypto/sha1.o
 OBJS_both += ../src/crypto/sha1-tlsprf.o
 OBJS_both += ../src/crypto/aes-cbc.o
@@ -40,9 +38,14 @@ OBJS_both += ../src/crypto/aes-wrap.o
 OBJS_both += ../src/crypto/ms_funcs.o
 
 ifeq ($(CONFIG_TLS), internal)
+OBJS_both += ../src/crypto/rc4.o
+OBJS_both += ../src/crypto/md4-internal.o
 OBJS_both += ../src/crypto/sha1-internal.o
 OBJS_both += ../src/crypto/des-internal.o
 OBJS_both += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o ../src/crypto/aes-internal-enc.o
+endif
+ifeq ($(CONFIG_TLS), gnutls)
+OBJS_both += ../src/crypto/rc4.o
 endif
 SHA256OBJS = ../src/crypto/sha256.o
 
@@ -104,7 +107,6 @@ ifeq ($(CONFIG_TLS), openssl)
 OBJS_both += ../src/crypto/tls_openssl.o
 OBJS_both += ../src/crypto/crypto_openssl.o
 LIBS += -lssl -lcrypto
-CONFIG_INTERNAL_SHA256=y
 endif
 
 ifeq ($(CONFIG_TLS), gnutls)
@@ -120,6 +122,9 @@ OBJS_both += ../src/tls/tlsv1_common.o ../src/tls/tlsv1_record.o
 OBJS_both += ../src/tls/tlsv1_cred.o
 OBJS_both += ../src/tls/asn1.o ../src/tls/x509v3.o
 OBJS_both += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
+OBJS_both += ../src/tls/pkcs1.o
+OBJS_both += ../src/tls/pkcs5.o
+OBJS_both += ../src/tls/pkcs8.o
 
 OBJS_peer += ../src/tls/tlsv1_client.o
 OBJS_peer += ../src/tls/tlsv1_client_write.o ../src/tls/tlsv1_client_read.o

@@ -328,12 +328,12 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 	}
 #endif /* EAP_TLS_FUNCS */
 
-#ifdef EAP_SERVER
+#if defined(EAP_SERVER_SIM) || defined(EAP_SERVER_AKA)
 	if (hapd->eap_sim_db_priv) {
 		eap_sim_db_deinit(hapd->eap_sim_db_priv);
 		hapd->eap_sim_db_priv = NULL;
 	}
-#endif /* EAP_SERVER */
+#endif /* EAP_SERVER_SIM || EAP_SERVER_AKA */
 
 	if (hapd->interface_added &&
 	    hostapd_bss_remove(hapd, hapd->conf->iface)) {
@@ -1430,7 +1430,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 	}
 #endif /* EAP_TLS_FUNCS */
 
-#ifdef EAP_SERVER
+#if defined(EAP_SERVER_SIM) || defined(EAP_SERVER_AKA)
 	if (hapd->conf->eap_sim_db) {
 		hapd->eap_sim_db_priv =
 			eap_sim_db_init(hapd->conf->eap_sim_db,
@@ -1441,7 +1441,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 			goto fail;
 		}
 	}
-#endif /* EAP_SERVER */
+#endif /* EAP_SERVER_SIM || EAP_SERVER_AKA */
 
 	hapd->driver = hapd->iconf->driver;
 

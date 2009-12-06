@@ -15,8 +15,6 @@
 #ifndef EAP_SIM_DB_H
 #define EAP_SIM_DB_H
 
-#if defined(EAP_SERVER_SIM) || defined(EAP_SERVER_AKA)
-
 #include "eap_common/eap_sim_common.h"
 
 /* Identity prefixes */
@@ -89,19 +87,5 @@ int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
 int eap_sim_db_resynchronize(void *priv, const u8 *identity,
 			     size_t identity_len, const u8 *auts,
 			     const u8 *_rand);
-
-#else /* EAP_SERVER_SIM || EAP_SERVER_AKA */
-static inline void *
-eap_sim_db_init(const char *config,
-		void (*get_complete_cb)(void *ctx, void *session_ctx),
-		void *ctx)
-{
-	return (void *) 1;
-}
-
-static inline void eap_sim_db_deinit(void *priv)
-{
-}
-#endif /* EAP_SERVER_SIM || EAP_SERVER_AKA */
 
 #endif /* EAP_SIM_DB_H */

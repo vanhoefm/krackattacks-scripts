@@ -58,8 +58,8 @@ static inline int rsn_preauth_scan_results(struct wpa_sm *sm)
 	return -1;
 }
 
-void rsn_preauth_scan_result(struct wpa_sm *sm, const u8 *bssid,
-			     const u8 *ssid, const u8 *rsn)
+static inline void rsn_preauth_scan_result(struct wpa_sm *sm, const u8 *bssid,
+					   const u8 *ssid, const u8 *rsn)
 {
 }
 

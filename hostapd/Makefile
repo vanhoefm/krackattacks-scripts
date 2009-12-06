@@ -668,6 +668,9 @@ endif
 ifdef NEED_AP_MLME
 OBJS += beacon.o wme.o ap_list.o ieee802_11.o
 OBJS += hw_features.o
+ifdef CONFIG_IEEE80211N
+OBJS += ieee802_11_ht.o
+endif
 CFLAGS += -DNEED_AP_MLME
 endif
 

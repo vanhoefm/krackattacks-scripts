@@ -1,7 +1,6 @@
 /*
  * hostapd / Station table
  * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
- * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -157,7 +156,6 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 			set_beacon++;
 	}
 
-#ifdef CONFIG_IEEE80211N
 	if (sta->no_ht_gf_set) {
 		sta->no_ht_gf_set = 0;
 		hapd->iface->num_sta_ht_no_gf--;
@@ -173,11 +171,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		hapd->iface->num_sta_ht_20mhz--;
 	}
 
-#ifdef NEED_AP_MLME
+#if defined(NEED_AP_MLME) && defined(CONFIG_IEEE80211N)
 	if (hostapd_ht_operation_update(hapd->iface) > 0)
 		set_beacon++;
-#endif /* NEED_AP_MLME */
-#endif /* CONFIG_IEEE80211N */
+#endif /* NEED_AP_MLME && CONFIG_IEEE80211N */
 
 	if (set_beacon)
 		ieee802_11_set_beacons(hapd->iface);

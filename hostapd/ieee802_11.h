@@ -1,7 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2006, Jouni Malinen <j@w1.fi>
- * Copyright (c) 2007-2008, Intel Corporation
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -57,5 +56,11 @@ u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid);
 int hostapd_ht_operation_update(struct hostapd_iface *iface);
 void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 				  const u8 *addr, const u8 *trans_id);
+void hostapd_get_ht_capab(struct hostapd_data *hapd,
+			  struct ieee80211_ht_capabilities *ht_cap,
+			  struct ieee80211_ht_capabilities *neg_ht_cap);
+u16 copy_sta_ht_capab(struct sta_info *sta, const u8 *ht_capab,
+		      size_t ht_capab_len);
+void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
 
 #endif /* IEEE802_11_H */

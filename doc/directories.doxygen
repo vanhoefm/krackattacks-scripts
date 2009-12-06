@@ -44,15 +44,6 @@ driver is used.
 \dir src/eapol_supp EAPOL supplicant
 
 
-\dir src/hlr_auc_gw HLR/AuC gateway module for hostapd
-
-This is an example implementation of HLR/AuC gateway that hostapd can
-use for EAP-SIM and EAP-AKA server access. This example implements an
-internal authentication server using Milenage and GSM-Milenage.
-Alternative design could use this component as a gateway between an
-external HLR/AuC and EAP server code in hostapd.
-
-
 \dir src/l2_packet Layer 2 packet interface
 
 This module defines an interface for layer 2 (link layer) packet

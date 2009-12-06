@@ -18,9 +18,13 @@ endif
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
-LIBS = ../src/utils/libutils.a \
-	../src/crypto/libcrypto.a \
+SLIBS = ../src/utils/libutils.a
+
+DLIBS = ../src/crypto/libcrypto.a \
 	../src/tls/libtls.a
+
+LIBS = $(SLIBS) $(DLIBS)
+LLIBS = -Wl,--start-group $(DLIBS) -Wl,--end-group $(SLIBS)
 
 ../src/utils/libutils.a:
 	$(MAKE) -C ../src/utils
@@ -60,7 +64,7 @@ test-sha256: test-sha256.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-x509: test-x509.o $(LIBS)
-	$(LDO) $(LDFLAGS) -o $@ $^
+	$(LDO) $(LDFLAGS) -o $@ $< $(LLIBS)
 
 
 run-tests: $(TESTS)

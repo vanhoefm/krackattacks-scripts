@@ -6,6 +6,10 @@ ifndef CC
 CC=gcc
 endif
 
+ifndef RANLIB
+RANLIB=ranlib
+endif
+
 ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
@@ -21,11 +25,7 @@ CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
 
-OBJS_both += ../src/utils/common.o
-OBJS_both += ../src/utils/os_unix.o
-OBJS_both += ../src/utils/wpa_debug.o
-OBJS_both += ../src/utils/base64.o
-OBJS_both += ../src/utils/wpabuf.o
+OBJS_both += ../src/utils/libutils.a
 OBJS_both += ../src/crypto/sha1.o
 OBJS_both += ../src/crypto/sha1-tlsprf.o
 OBJS_both += ../src/crypto/aes-cbc.o
@@ -192,11 +192,16 @@ OBJS_lib=$(OBJS_both) $(OBJS_peer) $(OBJS_server)
 
 OBJS_ex = eap_example.o eap_example_peer.o eap_example_server.o
 
+
+../src/utils/libutils.a:
+	$(MAKE) -C ../src/utils
+
+
 ifneq ($(CONFIG_SOLIB), yes)
 LIBEAP = libeap.a
 libeap.a: $(OBJS_lib)
-	ar rc libeap.a $(OBJS_lib)
-	ranlib libeap.a
+	$(AR) crT libeap.a $(OBJS_lib)
+	$(RANLIB) libeap.a
 
 else
 CFLAGS  += -fPIC -DPIC

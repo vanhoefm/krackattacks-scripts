@@ -49,6 +49,6 @@ LIB_OBJS += fips_prf_internal.o
 
 
 libcrypto.a: $(LIB_OBJS)
-	$(AR) cr $@ $(LIB_OBJS)
+	$(AR) crT $@ $?
 
 -include $(OBJS:%.o=%.d)

@@ -75,7 +75,9 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 	time_t now;
 	struct sta_info *sta;
 	int i;
+#ifndef CONFIG_NO_RADIUS
 	char *buf;
+#endif /* CONFIG_NO_RADIUS */
 
 	if (!hapd->conf->dump_log_name) {
 		wpa_printf(MSG_DEBUG, "Dump file not defined - ignoring dump "
@@ -143,6 +145,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 		ieee802_1x_dump_state(f, "  ", sta);
 	}
 
+#ifndef CONFIG_NO_RADIUS
 	buf = os_malloc(4096);
 	if (buf) {
 		int count = radius_client_get_mib(hapd->radius, buf, 4096);
@@ -162,6 +165,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 		fprintf(f, "%s", buf);
 		os_free(buf);
 	}
+#endif /* CONFIG_NO_RADIUS */
 	fclose(f);
 }
 

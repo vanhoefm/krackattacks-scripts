@@ -45,9 +45,6 @@
 #include "tkip_countermeasures.h"
 
 
-static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
-				       size_t identity_len, int phase2,
-				       struct eap_user *user);
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);
 static int hostapd_setup_wpa(struct hostapd_data *hapd);
 static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
@@ -68,8 +65,11 @@ static int hostapd_sim_db_cb_sta(struct hostapd_data *hapd,
 static void hostapd_sim_db_cb(void *ctx, void *session_ctx)
 {
 	struct hostapd_data *hapd = ctx;
-	if (ap_for_each_sta(hapd, hostapd_sim_db_cb_sta, session_ctx) == 0)
+	if (ap_for_each_sta(hapd, hostapd_sim_db_cb_sta, session_ctx) == 0) {
+#ifdef RADIUS_SERVER
 		radius_server_eap_pending_cb(hapd->radius_srv, session_ctx);
+#endif /* RADIUS_SERVER */
+	}
 }
 #endif /* EAP_SERVER */
 
@@ -135,9 +135,11 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	for (j = 0; j < iface->num_bss; j++)
 		hostapd_flush_old_stations(iface->bss[j]);
 
+#ifndef CONFIG_NO_RADIUS
 	/* TODO: update dynamic data based on changed configuration
 	 * items (e.g., open/close sockets, etc.) */
 	radius_client_flush(hapd->radius, 0);
+#endif /* CONFIG_NO_RADIUS */
 
 	oldconf = hapd->iconf;
 	hapd->iconf = newconf;
@@ -304,10 +306,14 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 	ieee802_1x_deinit(hapd);
 	vlan_deinit(hapd);
 	hostapd_acl_deinit(hapd);
+#ifndef CONFIG_NO_RADIUS
 	radius_client_deinit(hapd->radius);
 	hapd->radius = NULL;
+#endif /* CONFIG_NO_RADIUS */
+#ifdef RADIUS_SERVER
 	radius_server_deinit(hapd->radius_srv);
 	hapd->radius_srv = NULL;
+#endif /* RADIUS_SERVER */
 
 #ifdef CONFIG_IEEE80211R
 	l2_packet_deinit(hapd->l2);
@@ -923,6 +929,47 @@ static int hostapd_setup_wpa(struct hostapd_data *hapd)
 }
 
 
+#ifdef RADIUS_SERVER
+
+static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
+				       size_t identity_len, int phase2,
+				       struct eap_user *user)
+{
+	const struct hostapd_eap_user *eap_user;
+	int i, count;
+
+	eap_user = hostapd_get_eap_user(ctx, identity, identity_len, phase2);
+	if (eap_user == NULL)
+		return -1;
+
+	if (user == NULL)
+		return 0;
+
+	os_memset(user, 0, sizeof(*user));
+	count = EAP_USER_MAX_METHODS;
+	if (count > EAP_MAX_METHODS)
+		count = EAP_MAX_METHODS;
+	for (i = 0; i < count; i++) {
+		user->methods[i].vendor = eap_user->methods[i].vendor;
+		user->methods[i].method = eap_user->methods[i].method;
+	}
+
+	if (eap_user->password) {
+		user->password = os_malloc(eap_user->password_len);
+		if (user->password == NULL)
+			return -1;
+		os_memcpy(user->password, eap_user->password,
+			  eap_user->password_len);
+		user->password_len = eap_user->password_len;
+		user->password_hash = eap_user->password_hash;
+	}
+	user->force_version = eap_user->force_version;
+	user->ttls_auth = eap_user->ttls_auth;
+
+	return 0;
+}
+
+
 static int hostapd_setup_radius_srv(struct hostapd_data *hapd,
 				    struct hostapd_bss_config *conf)
 {
@@ -956,6 +1003,8 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd,
 
 	return 0;
 }
+
+#endif /* RADIUS_SERVER */
 
 
 /**
@@ -1061,11 +1110,13 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	if (wpa_debug_level == MSG_MSGDUMP)
 		conf->radius->msg_dumps = 1;
+#ifndef CONFIG_NO_RADIUS
 	hapd->radius = radius_client_init(hapd, conf->radius);
 	if (hapd->radius == NULL) {
 		wpa_printf(MSG_ERROR, "RADIUS client initialization failed.");
 		return -1;
 	}
+#endif /* CONFIG_NO_RADIUS */
 
 	if (hostapd_acl_init(hapd)) {
 		wpa_printf(MSG_ERROR, "ACL initialization failed.");
@@ -1120,9 +1171,11 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	ieee802_11_set_beacon(hapd);
 
+#ifdef RADIUS_SERVER
 	if (conf->radius_server_clients &&
 	    hostapd_setup_radius_srv(hapd, conf))
 		return -1;
+#endif /* RADIUS_SERVER */
 
 	return 0;
 }
@@ -1147,45 +1200,6 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 			/* Continue anyway */
 		}
 	}
-}
-
-
-static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
-				       size_t identity_len, int phase2,
-				       struct eap_user *user)
-{
-	const struct hostapd_eap_user *eap_user;
-	int i, count;
-
-	eap_user = hostapd_get_eap_user(ctx, identity, identity_len, phase2);
-	if (eap_user == NULL)
-		return -1;
-
-	if (user == NULL)
-		return 0;
-
-	os_memset(user, 0, sizeof(*user));
-	count = EAP_USER_MAX_METHODS;
-	if (count > EAP_MAX_METHODS)
-		count = EAP_MAX_METHODS;
-	for (i = 0; i < count; i++) {
-		user->methods[i].vendor = eap_user->methods[i].vendor;
-		user->methods[i].method = eap_user->methods[i].method;
-	}
-
-	if (eap_user->password) {
-		user->password = os_malloc(eap_user->password_len);
-		if (user->password == NULL)
-			return -1;
-		os_memcpy(user->password, eap_user->password,
-			  eap_user->password_len);
-		user->password_len = eap_user->password_len;
-		user->password_hash = eap_user->password_hash;
-	}
-	user->force_version = eap_user->force_version;
-	user->ttls_auth = eap_user->ttls_auth;
-
-	return 0;
 }
 
 

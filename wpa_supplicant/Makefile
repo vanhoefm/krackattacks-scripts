@@ -1145,11 +1145,12 @@ OBJS_wpa += tests/link_test.o
 endif
 OBJS_wpa += $(OBJS_l2)
 OBJS += wpa_supplicant.o events.o blacklist.o wpas_glue.o scan.o
-OBJS_t := $(OBJS) $(OBJS_l2) eapol_test.o ../src/radius/radius_client.o
-ifndef CONFIG_IBSS_RSN
+OBJS_t := $(OBJS) $(OBJS_l2) eapol_test.o
+OBJS_t += ../src/radius/radius_client.o
 OBJS_t += ../src/radius/radius.o
-endif
+ifndef CONFIG_AP
 OBJS_t += ../src/utils/ip_addr.o
+endif
 OBJS_t2 := $(OBJS) $(OBJS_l2) preauth_test.o
 OBJS += $(CONFIG_MAIN).o
 

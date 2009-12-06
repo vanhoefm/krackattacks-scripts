@@ -275,6 +275,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			else
 				reply_len += res;
 		}
+#ifndef CONFIG_NO_RADIUS
 		if (reply_len >= 0) {
 			res = radius_client_get_mib(hapd->radius,
 						    reply + reply_len,
@@ -284,6 +285,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			else
 				reply_len += res;
 		}
+#endif /* CONFIG_NO_RADIUS */
 	} else if (os_strcmp(buf, "STA-FIRST") == 0) {
 		reply_len = hostapd_ctrl_iface_sta_first(hapd, reply,
 							 reply_size);

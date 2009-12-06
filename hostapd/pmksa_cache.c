@@ -47,7 +47,9 @@ static void _pmksa_cache_free_entry(struct rsn_pmksa_cache_entry *entry)
 	if (entry == NULL)
 		return;
 	os_free(entry->identity);
+#ifndef CONFIG_NO_RADIUS
 	radius_free_class(&entry->radius_class);
+#endif /* CONFIG_NO_RADIUS */
 	os_free(entry);
 }
 
@@ -141,7 +143,9 @@ static void pmksa_cache_from_eapol_data(struct rsn_pmksa_cache_entry *entry,
 		}
 	}
 
+#ifndef CONFIG_NO_RADIUS
 	radius_copy_class(&entry->radius_class, &eapol->radius_class);
+#endif /* CONFIG_NO_RADIUS */
 
 	entry->eap_type_authsrv = eapol->eap_type_authsrv;
 	entry->vlan_id = ((struct sta_info *) eapol->sta)->vlan_id;
@@ -166,8 +170,10 @@ void pmksa_cache_to_eapol_data(struct rsn_pmksa_cache_entry *entry,
 				  eapol->identity, eapol->identity_len);
 	}
 
+#ifndef CONFIG_NO_RADIUS
 	radius_free_class(&eapol->radius_class);
 	radius_copy_class(&eapol->radius_class, &entry->radius_class);
+#endif /* CONFIG_NO_RADIUS */
 	if (eapol->radius_class.attr) {
 		wpa_printf(MSG_DEBUG, "Copied %lu Class attribute(s) from "
 			   "PMKSA", (unsigned long) eapol->radius_class.count);
@@ -300,7 +306,9 @@ pmksa_cache_add_okc(struct rsn_pmksa_cache *pmksa,
 				  old_entry->identity_len);
 		}
 	}
+#ifndef CONFIG_NO_RADIUS
 	radius_copy_class(&entry->radius_class, &old_entry->radius_class);
+#endif /* CONFIG_NO_RADIUS */
 	entry->eap_type_authsrv = old_entry->eap_type_authsrv;
 	entry->vlan_id = old_entry->vlan_id;
 	entry->opportunistic = 1;

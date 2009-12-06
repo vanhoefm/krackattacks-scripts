@@ -188,7 +188,9 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	ieee802_1x_free_station(sta);
 	wpa_auth_sta_deinit(sta->wpa_sm);
 	rsn_preauth_free_station(hapd, sta);
+#ifndef CONFIG_NO_RADIUS
 	radius_client_flush_auth(hapd->radius, sta->addr);
+#endif /* CONFIG_NO_RADIUS */
 
 	os_free(sta->last_assoc_req);
 	os_free(sta->challenge);

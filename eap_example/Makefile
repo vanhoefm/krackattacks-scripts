@@ -20,10 +20,6 @@ CFLAGS += -I.
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
-# at least for now, need to include config_ssid.h and config_blob.h from
-# wpa_supplicant directory
-CFLAGS += -I../wpa_supplicant
-
 
 OBJS_both += ../src/utils/common.o
 OBJS_both += ../src/utils/os_unix.o

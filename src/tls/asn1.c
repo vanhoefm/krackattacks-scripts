@@ -15,9 +15,6 @@
 #include "includes.h"
 
 #include "common.h"
-
-#ifdef CONFIG_INTERNAL_X509
-
 #include "asn1.h"
 
 int asn1_get_next(const u8 *buf, size_t len, struct asn1_hdr *hdr)
@@ -213,5 +210,3 @@ unsigned long asn1_bit_string_to_long(const u8 *buf, size_t len)
 
 	return val;
 }
-
-#endif /* CONFIG_INTERNAL_X509 */

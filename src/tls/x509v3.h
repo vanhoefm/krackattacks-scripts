@@ -99,8 +99,6 @@ enum {
 	X509_VALIDATE_UNKNOWN_CA
 };
 
-#ifdef CONFIG_INTERNAL_X509
-
 void x509_certificate_free(struct x509_certificate *cert);
 struct x509_certificate * x509_certificate_parse(const u8 *buf, size_t len);
 void x509_name_string(struct x509_name *name, char *buf, size_t len);
@@ -115,50 +113,5 @@ struct x509_certificate *
 x509_certificate_get_subject(struct x509_certificate *chain,
 			     struct x509_name *name);
 int x509_certificate_self_signed(struct x509_certificate *cert);
-
-#else /* CONFIG_INTERNAL_X509 */
-
-static inline void x509_certificate_free(struct x509_certificate *cert)
-{
-}
-
-static inline struct x509_certificate *
-x509_certificate_parse(const u8 *buf, size_t len)
-{
-	return NULL;
-}
-
-static inline void x509_name_string(struct x509_name *name, char *buf,
-				    size_t len)
-{
-	if (len)
-		buf[0] = '\0';
-}
-
-static inline void x509_certificate_chain_free(struct x509_certificate *cert)
-{
-}
-
-static inline int
-x509_certificate_chain_validate(struct x509_certificate *trusted,
-				struct x509_certificate *chain,
-				int *reason)
-{
-	return -1;
-}
-
-static inline struct x509_certificate *
-x509_certificate_get_subject(struct x509_certificate *chain,
-			     struct x509_name *name)
-{
-	return NULL;
-}
-
-static inline int x509_certificate_self_signed(struct x509_certificate *cert)
-{
-	return -1;
-}
-
-#endif /* CONFIG_INTERNAL_X509 */
 
 #endif /* X509V3_H */

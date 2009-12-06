@@ -460,6 +460,7 @@ OBJS += ../src/tls/x509v3.o
 OBJS += ../src/tls/pkcs1.o
 OBJS += ../src/tls/pkcs5.o
 OBJS += ../src/tls/pkcs8.o
+NEED_SHA256=y
 NEED_BASE64=y
 NEED_TLS_PRF=y
 NEED_MODEXP=y
@@ -476,7 +477,6 @@ OBJS += ../src/crypto/crypto_internal-modexp.o
 OBJS += ../src/tls/bignum.o
 endif
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
-CFLAGS += -DCONFIG_INTERNAL_X509
 OBJS += ../src/crypto/crypto_libtomcrypt.o
 LIBS += -ltomcrypt -ltfm
 LIBS_h += -ltomcrypt -ltfm
@@ -485,7 +485,6 @@ CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y
 endif
 ifeq ($(CONFIG_CRYPTO), internal)
-CFLAGS += -DCONFIG_INTERNAL_X509
 OBJS += ../src/crypto/crypto_internal.o
 NEED_AES_DEC=y
 CFLAGS += -DCONFIG_CRYPTO_INTERNAL

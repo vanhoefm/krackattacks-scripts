@@ -15,9 +15,6 @@
 #include "includes.h"
 
 #include "common.h"
-
-#ifdef CONFIG_INTERNAL_X509
-
 #include "crypto/crypto.h"
 #include "asn1.h"
 #include "x509v3.h"
@@ -1745,18 +1742,12 @@ skip_digest_oid:
 			    hash, hash_len);
 		break;
 	case 11: /* sha256WithRSAEncryption */
-#ifdef NEED_SHA256
 		sha256_vector(1, &cert->tbs_cert_start, &cert->tbs_cert_len,
 			      hash);
 		hash_len = 32;
 		wpa_hexdump(MSG_MSGDUMP, "X509: Certificate hash (SHA256)",
 			    hash, hash_len);
 		break;
-#else /* NEED_SHA256 */
-		wpa_printf(MSG_INFO, "X509: SHA256 support disabled");
-		os_free(data);
-		return -1;
-#endif /* NEED_SHA256 */
 	case 2: /* md2WithRSAEncryption */
 	case 12: /* sha384WithRSAEncryption */
 	case 13: /* sha512WithRSAEncryption */
@@ -1970,5 +1961,3 @@ int x509_certificate_self_signed(struct x509_certificate *cert)
 {
 	return x509_name_compare(&cert->issuer, &cert->subject) == 0;
 }
-
-#endif /* CONFIG_INTERNAL_X509 */

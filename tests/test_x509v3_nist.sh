@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # X.509 Path Validation Test Suite, Version 1.07
 # http://csrc.nist.gov/pki/testing/x509paths_old.html
@@ -16,7 +16,7 @@ if [ ! -d $TESTS ]; then
     exit 1
 fi
 
-X509TEST="./test_x509v3 -v"
+X509TEST="./test-x509v3 -v"
 TMPOUT=test_x509v3_nist.out
 
 # TODO: add support for validating CRLs

@@ -1,5 +1,5 @@
 TESTS=test-base64 test-md4 test-md5 test-milenage test-ms_funcs test-sha1 \
-	test-sha256 test-aes test-asn1 test-x509
+	test-sha256 test-aes test-asn1 test-x509 test-x509v3
 
 all: $(TESTS)
 
@@ -66,6 +66,9 @@ test-sha256: test-sha256.o $(LIBS)
 test-x509: test-x509.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $< $(LLIBS)
 
+test-x509v3: test-x509v3.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $< $(LLIBS)
+
 
 run-tests: $(TESTS)
 	./test-aes
@@ -80,5 +83,7 @@ run-tests: $(TESTS)
 clean:
 	$(MAKE) -C ../src clean
 	rm -f $(TESTS) *~ *.o *.d
+	rm -f test_x509v3_nist.out.*
+	rm -f test_x509v3_nist2.out.*
 
 -include $(OBJS:%.o=%.d)

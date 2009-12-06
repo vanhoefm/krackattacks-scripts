@@ -1240,15 +1240,6 @@ link_test: $(OBJS) $(OBJS_h) tests/link_test.o
 test_wpa: $(OBJS_wpa) $(OBJS_h)
 	$(LDO) $(LDFLAGS) -o test_wpa $(OBJS_wpa) $(LIBS)
 
-OBJSx=tests/test_x509v3.o ../src/tls/asn1.o ../src/tls/x509v3.o \
-	../src/utils/common.o ../src/utils/wpa_debug.o ../src/utils/os_unix.o \
-	../src/crypto/crypto_$(CONFIG_CRYPTO).o \
-	$(MD5OBJS) $(SHA1OBJS) $(AESOBJS) \
-	../src/crypto/rc4.o $(DESOBJS) $(SHA256OBJS) \
-	../src/tls/bignum.o ../src/tls/rsa.o
-test_x509v3: $(OBJSx)
-	$(LDO) $(LDFLAGS) -o test_x509v3 $(OBJSx)
-
 win_if_list: win_if_list.c
 	$(LDO) $(LDFLAGS) -o $@ win_if_list.c $(CFLAGS) $(LIBS_w)
 

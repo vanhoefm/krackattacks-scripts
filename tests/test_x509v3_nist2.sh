@@ -1,8 +1,8 @@
-#!/bin/sh
+#!/bin/bash
 
 # Public Key Interoperability Test Suite (PKITS)
 # http://csrc.nist.gov/pki/testing/x509paths.html
-# http://csrc.nist.gov/pki/testing/PKITS_data.zip
+# http://csrc.nist.gov/groups/ST/crypto_apps_infra/documents/PKITS_data.zip
 
 if [ -z "$1" ]; then
     echo "usage: $0 <path to root test directory>"
@@ -16,7 +16,7 @@ if [ ! -d $TESTS ]; then
     exit 1
 fi
 
-X509TEST="$PWD/test_x509v3 -v"
+X509TEST="$PWD/test-x509v3 -v"
 TMPOUT="$PWD/test_x509v3_nist2.out"
 
 # TODO: add support for validating CRLs

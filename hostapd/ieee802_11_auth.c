@@ -529,15 +529,4 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 	}
 }
 
-
-int hostapd_acl_reconfig(struct hostapd_data *hapd,
-			 struct hostapd_config *oldconf)
-{
-	if (!hapd->radius_client_reconfigured)
-		return 0;
-
-	hostapd_acl_deinit(hapd);
-	return hostapd_acl_init(hapd);
-}
-
 #endif /* CONFIG_NATIVE_WINDOWS */

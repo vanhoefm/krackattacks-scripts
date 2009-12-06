@@ -41,7 +41,5 @@ void accounting_sta_stop(struct hostapd_data *hapd, struct sta_info *sta);
 int accounting_init(struct hostapd_data *hapd);
 void accounting_deinit(struct hostapd_data *hapd);
 #endif /* CONFIG_NO_ACCOUNTING */
-int accounting_reconfig(struct hostapd_data *hapd,
-			struct hostapd_config *oldconf);
 
 #endif /* ACCOUNTING_H */

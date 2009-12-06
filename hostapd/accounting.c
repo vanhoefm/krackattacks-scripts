@@ -499,14 +499,3 @@ void accounting_deinit(struct hostapd_data *hapd)
 {
 	accounting_report_state(hapd, 0);
 }
-
-
-int accounting_reconfig(struct hostapd_data *hapd,
-			struct hostapd_config *oldconf)
-{
-	if (!hapd->radius_client_reconfigured)
-		return 0;
-
-	accounting_deinit(hapd);
-	return accounting_init(hapd);
-}

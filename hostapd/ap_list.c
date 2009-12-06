@@ -446,30 +446,3 @@ void ap_list_deinit(struct hostapd_iface *iface)
 	eloop_cancel_timeout(ap_list_timer, iface, NULL);
 	hostapd_free_aps(iface);
 }
-
-
-int ap_list_reconfig(struct hostapd_iface *iface,
-		     struct hostapd_config *oldconf)
-{
-	time_t now;
-	struct ap_info *ap;
-
-	if (iface->conf->ap_table_max_size == oldconf->ap_table_max_size &&
-	    iface->conf->ap_table_expiration_time ==
-	    oldconf->ap_table_expiration_time)
-		return 0;
-
-	time(&now);
-
-	while (iface->ap_list) {
-		ap = iface->ap_list->prev;
-		if (iface->num_ap <= iface->conf->ap_table_max_size &&
-		    ap->last_beacon + iface->conf->ap_table_expiration_time >=
-		    now)
-			break;
-
-		ap_free_ap(iface, iface->ap_list->prev);
-	}
-
-	return 0;
-}

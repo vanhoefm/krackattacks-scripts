@@ -27,7 +27,5 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    u32 *acct_interim_interval, int *vlan_id);
 int hostapd_acl_init(struct hostapd_data *hapd);
 void hostapd_acl_deinit(struct hostapd_data *hapd);
-int hostapd_acl_reconfig(struct hostapd_data *hapd,
-			 struct hostapd_config *oldconf);
 
 #endif /* IEEE802_11_AUTH_H */

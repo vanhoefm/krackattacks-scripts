@@ -76,7 +76,5 @@ static inline void ap_list_deinit(struct hostapd_iface *iface)
 {
 }
 #endif /* NEED_AP_MLME */
-int ap_list_reconfig(struct hostapd_iface *iface,
-		     struct hostapd_config *oldconf);
 
 #endif /* AP_LIST_H */

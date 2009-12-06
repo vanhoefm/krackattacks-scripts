@@ -19,8 +19,6 @@
 #ifndef CONFIG_NO_VLAN
 int vlan_init(struct hostapd_data *hapd);
 void vlan_deinit(struct hostapd_data *hapd);
-int vlan_reconfig(struct hostapd_data *hapd, struct hostapd_config *oldconf,
-		  struct hostapd_bss_config *oldbss);
 struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 				       struct hostapd_vlan *vlan,
 				       int vlan_id);

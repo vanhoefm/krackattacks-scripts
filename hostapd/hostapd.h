@@ -64,7 +64,6 @@ struct hostapd_data {
 	void *msg_ctx; /* ctx for wpa_msg() calls */
 
 	struct radius_client_data *radius;
-	int radius_client_reconfigured;
 	u32 acct_session_id_hi, acct_session_id_lo;
 
 	struct iapp_data *iapp;

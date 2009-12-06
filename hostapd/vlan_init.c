@@ -743,17 +743,6 @@ void vlan_deinit(struct hostapd_data *hapd)
 }
 
 
-int vlan_reconfig(struct hostapd_data *hapd, struct hostapd_config *oldconf,
-		  struct hostapd_bss_config *oldbss)
-{
-	vlan_dynamic_remove(hapd, oldbss->vlan);
-	if (vlan_dynamic_add(hapd, hapd->conf->vlan))
-		return -1;
-
-	return 0;
-}
-
-
 struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 				       struct hostapd_vlan *vlan,
 				       int vlan_id)

@@ -632,13 +632,14 @@ OBJS_h += ../src/radius/radius_client.o
 endif
 
 ifdef CONFIG_AUTHENTICATOR
-OBJS_h += ../eapol_auth/eapol_auth_sm.o
+OBJS_h += ../src/eapol_auth/eapol_auth_sm.o
 OBJS_h += ../hostapd/ieee802_1x.o
 endif
 
 ifdef CONFIG_WPA_AUTHENTICATOR
 OBJS_h += ../hostapd/wpa.o
 OBJS_h += ../hostapd/wpa_auth_ie.o
+OBJS_h += ../hostapd/pmksa_cache.o
 ifdef CONFIG_IEEE80211R
 OBJS_h += ../hostapd/wpa_ft.o
 endif

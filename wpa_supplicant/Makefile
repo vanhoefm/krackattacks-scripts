@@ -40,6 +40,7 @@ install: all
 
 OBJS = config.o
 OBJS += notify.o
+OBJS += eap_register.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
 OBJS += ../src/utils/wpabuf.o
@@ -582,7 +583,7 @@ ifdef CONFIG_CTRL_IFACE
 OBJS += ../hostapd/ctrl_iface_ap.o
 endif
 
-CFLAGS += -DEAP_SERVER
+CFLAGS += -DEAP_SERVER -DEAP_SERVER_IDENTITY
 OBJS += ../src/eap_server/eap.o
 OBJS += ../src/eap_server/eap_identity.o
 OBJS += ../src/eap_server/eap_methods.o

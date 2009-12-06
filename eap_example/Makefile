@@ -90,6 +90,7 @@ CFLAGS += -DEAP_PAX
 CFLAGS += -DEAP_SAKE
 CFLAGS += -DEAP_GPSK -DEAP_GPSK_SHA256
 
+CFLAGS += -DEAP_SERVER_IDENTITY
 CFLAGS += -DEAP_SERVER_TLS
 CFLAGS += -DEAP_SERVER_PEAP
 CFLAGS += -DEAP_SERVER_TTLS
@@ -173,6 +174,17 @@ CFLAGS += -DEAP_SERVER
 ifndef LDO
 LDO=$(CC)
 endif
+
+Q=@
+E=echo
+ifeq ($(V), 1)
+Q=
+E=true
+endif
+
+%.o: %.c
+	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
+	@$(E) "  CC " $<
 
 
 OBJS_lib=$(OBJS_both) $(OBJS_peer) $(OBJS_server)

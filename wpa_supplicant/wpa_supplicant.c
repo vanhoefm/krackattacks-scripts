@@ -2286,7 +2286,7 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	if (params->wpa_debug_syslog)
 		wpa_debug_open_syslog();
 
-	ret = eap_peer_register_methods();
+	ret = eap_register_methods();
 	if (ret) {
 		wpa_printf(MSG_ERROR, "Failed to register EAP methods");
 		if (ret == -2)
@@ -2294,17 +2294,6 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 				   "the same EAP type.");
 		return NULL;
 	}
-
-#ifdef CONFIG_AP
-	ret = eap_server_register_methods();
-	if (ret) {
-		wpa_printf(MSG_ERROR, "Failed to register EAP server methods");
-		if (ret == -2)
-			wpa_printf(MSG_ERROR, "Two or more EAP methods used "
-				   "the same EAP type.");
-		return NULL;
-	}
-#endif /* CONFIG_AP */
 
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)

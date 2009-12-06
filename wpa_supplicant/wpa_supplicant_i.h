@@ -492,4 +492,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);
 
+/* eap_register.c */
+int eap_register_methods(void);
+
 #endif /* WPA_SUPPLICANT_I_H */

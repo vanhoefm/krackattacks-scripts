@@ -1128,7 +1128,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (eap_peer_register_methods()) {
+	if (eap_register_methods()) {
 		wpa_printf(MSG_ERROR, "Failed to register EAP methods");
 		return -1;
 	}

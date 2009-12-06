@@ -342,10 +342,12 @@ endif
 endif
 
 # Basic EAP functionality is needed for EAPOL
+OBJS += eap_register.o
 OBJS += ../src/eap_server/eap.o
 OBJS += ../src/eap_common/eap_common.o
 OBJS += ../src/eap_server/eap_methods.o
 OBJS += ../src/eap_server/eap_identity.o
+CFLAGS += -DEAP_SERVER_IDENTITY
 
 ifdef CONFIG_EAP
 CFLAGS += -DEAP_SERVER

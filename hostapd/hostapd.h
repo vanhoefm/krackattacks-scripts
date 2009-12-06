@@ -183,4 +183,6 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 					    const u8 *ie, size_t ie_len),
 				 void *ctx);
 
+int eap_server_register_methods(void);
+
 #endif /* HOSTAPD_H */

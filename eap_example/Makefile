@@ -14,11 +14,6 @@ ifndef CFLAGS
 CFLAGS = -MMD -O2 -Wall -g
 endif
 
-CONFIG_TLS=openssl
-#CONFIG_TLS=internal
-#CONFIG_INTERNAL_LIBTOMMATH=y
-#CONFIG_TLS=gnutls
-
 
 CFLAGS += -I.
 CFLAGS += -I../src
@@ -26,30 +21,8 @@ CFLAGS += -I../src/utils
 
 
 OBJS_both += ../src/utils/libutils.a
-OBJS_both += ../src/crypto/sha1.o
-OBJS_both += ../src/crypto/sha1-tlsprf.o
-OBJS_both += ../src/crypto/aes-cbc.o
-OBJS_both += ../src/crypto/aes-ctr.o
-OBJS_both += ../src/crypto/aes-eax.o
-OBJS_both += ../src/crypto/aes-encblock.o
-OBJS_both += ../src/crypto/aes-omac1.o
-OBJS_both += ../src/crypto/aes-unwrap.o
-OBJS_both += ../src/crypto/aes-wrap.o
-OBJS_both += ../src/crypto/ms_funcs.o
-
-ifeq ($(CONFIG_TLS), internal)
-OBJS_both += ../src/crypto/rc4.o
-OBJS_both += ../src/crypto/md4-internal.o
-OBJS_both += ../src/crypto/sha1-internal.o
-OBJS_both += ../src/crypto/des-internal.o
-OBJS_both += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o ../src/crypto/aes-internal-enc.o
-endif
-ifeq ($(CONFIG_TLS), gnutls)
-OBJS_both += ../src/crypto/rc4.o
-endif
-SHA256OBJS = ../src/crypto/sha256.o
-
-MD5OBJS = ../src/crypto/md5.o
+OBJS_both += ../src/crypto/libcrypto.a
+OBJS_both += ../src/tls/libtls.a
 
 OBJS_both += ../src/eap_common/eap_peap_common.o
 OBJS_both += ../src/eap_common/eap_psk_common.o
@@ -103,56 +76,6 @@ CFLAGS += -DEAP_SERVER_GPSK -DEAP_SERVER_GPSK_SHA256
 
 CFLAGS += -DIEEE8021X_EAPOL
 
-ifeq ($(CONFIG_TLS), openssl)
-OBJS_both += ../src/crypto/tls_openssl.o
-OBJS_both += ../src/crypto/crypto_openssl.o
-LIBS += -lssl -lcrypto
-endif
-
-ifeq ($(CONFIG_TLS), gnutls)
-OBJS_both += ../src/crypto/tls_gnutls.o
-OBJS_both += ../src/crypto/crypto_gnutls.o
-LIBS += -lgnutls -lgcrypt
-CONFIG_INTERNAL_SHA256=y
-endif
-
-ifeq ($(CONFIG_TLS), internal)
-OBJS_both += ../src/crypto/tls_internal.o
-OBJS_both += ../src/tls/tlsv1_common.o ../src/tls/tlsv1_record.o
-OBJS_both += ../src/tls/tlsv1_cred.o
-OBJS_both += ../src/tls/asn1.o ../src/tls/x509v3.o
-OBJS_both += ../src/crypto/crypto_internal.o ../src/tls/rsa.o ../src/tls/bignum.o
-OBJS_both += ../src/tls/pkcs1.o
-OBJS_both += ../src/tls/pkcs5.o
-OBJS_both += ../src/tls/pkcs8.o
-
-OBJS_peer += ../src/tls/tlsv1_client.o
-OBJS_peer += ../src/tls/tlsv1_client_write.o ../src/tls/tlsv1_client_read.o
-CFLAGS += -DCONFIG_TLS_INTERNAL_CLIENT
-
-OBJS_server += ../src/tls/tlsv1_server.o
-OBJS_server += ../src/tls/tlsv1_server_write.o ../src/tls/tlsv1_server_read.o
-CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
-
-CFLAGS += -DCONFIG_TLS_INTERNAL
-CFLAGS += -DCONFIG_CRYPTO_INTERNAL
-CFLAGS += -DCONFIG_INTERNAL_X509
-CONFIG_INTERNAL_SHA256=y
-MD5OBJS += ../src/crypto/md5-internal.o
-ifdef CONFIG_INTERNAL_LIBTOMMATH
-CFLAGS += -DCONFIG_INTERNAL_LIBTOMMATH
-else
-LIBS += -ltommath
-endif
-endif
-
-
-ifdef CONFIG_INTERNAL_SHA256
-SHA256OBJS += ../src/crypto/sha256-internal.o
-endif
-
-OBJS_both += $(SHA256OBJS) $(MD5OBJS)
-
 
 # Optional components to add EAP server support
 OBJS_server += ../src/eap_server/eap_tls.o
@@ -195,6 +118,12 @@ OBJS_ex = eap_example.o eap_example_peer.o eap_example_server.o
 
 ../src/utils/libutils.a:
 	$(MAKE) -C ../src/utils
+
+../src/crypto/libcrypto.a:
+	$(MAKE) -C ../src/crypto
+
+../src/tls/libtls.a:
+	$(MAKE) -C ../src/tls
 
 
 ifneq ($(CONFIG_SOLIB), yes)

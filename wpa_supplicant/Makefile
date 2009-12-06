@@ -589,12 +589,19 @@ OBJS += ../src/eap_server/eap.o
 OBJS += ../src/eap_server/eap_identity.o
 OBJS += ../src/eap_server/eap_methods.o
 
+ifdef CONFIG_IEEE80211N
+CFLAGS += -DCONFIG_IEEE80211N
+endif
+
 ifdef NEED_AP_MLME
 OBJS += ../hostapd/beacon.o
 OBJS += ../hostapd/wme.o
 OBJS += ../hostapd/ap_list.o
 OBJS += ../hostapd/ieee802_11.o
 OBJS += ../hostapd/hw_features.o
+ifdef CONFIG_IEEE80211N
+OBJS += ../hostapd/ieee802_11_ht.o
+endif
 CFLAGS += -DNEED_AP_MLME
 endif
 ifdef CONFIG_WPS

@@ -44,6 +44,9 @@ LIB_OBJS= \
 	sha256-internal.o
 
 LIB_OBJS += crypto_internal.o
+LIB_OBJS += crypto_internal-cipher.o
+LIB_OBJS += crypto_internal-modexp.o
+LIB_OBJS += crypto_internal-rsa.o
 LIB_OBJS += tls_internal.o
 LIB_OBJS += fips_prf_internal.o
 

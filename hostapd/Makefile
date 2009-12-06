@@ -329,6 +329,7 @@ OBJS += ../src/eap_common/eap_ikev2_common.o ../src/eap_common/ikev2_common.o
 NEED_DH_GROUPS=y
 NEED_DH_GROUPS_ALL=y
 NEED_MODEXP=y
+NEED_CIPHER=y
 endif
 
 ifdef CONFIG_EAP_TNC
@@ -445,6 +446,7 @@ ifndef CONFIG_CRYPTO
 CONFIG_CRYPTO=internal
 endif
 ifdef TLS_FUNCS
+OBJS += ../src/crypto/crypto_internal-rsa.o
 OBJS += ../src/crypto/tls_internal.o
 OBJS += ../src/tls/tlsv1_common.o
 OBJS += ../src/tls/tlsv1_record.o
@@ -461,10 +463,16 @@ OBJS += ../src/tls/pkcs8.o
 NEED_BASE64=y
 NEED_TLS_PRF=y
 NEED_MODEXP=y
+NEED_CIPHER=y
 CFLAGS += -DCONFIG_TLS_INTERNAL
 CFLAGS += -DCONFIG_TLS_INTERNAL_SERVER
 endif
+ifdef NEED_CIPHER
+NEED_DES=y
+OBJS += ../src/crypto/crypto_internal-cipher.o
+endif
 ifdef NEED_MODEXP
+OBJS += ../src/crypto/crypto_internal-modexp.o
 OBJS += ../src/tls/bignum.o
 endif
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
@@ -530,10 +538,6 @@ CONFIG_INTERNAL_SHA1=y
 CONFIG_INTERNAL_MD5=y
 CONFIG_INTERNAL_RC4=y
 endif
-endif
-
-ifdef NEED_MODEXP
-CFLAGS += -DCONFIG_MODEXP
 endif
 
 AESOBJS = # none so far

@@ -523,6 +523,7 @@ CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_DH_GROUPS_ALL=y
 NEED_MODEXP=y
+NEED_CIPHER=y
 endif
 
 ifdef CONFIG_EAP_VENDOR_TEST
@@ -772,6 +773,7 @@ ifndef CONFIG_CRYPTO
 CONFIG_CRYPTO=internal
 endif
 ifdef TLS_FUNCS
+OBJS += ../src/crypto/crypto_internal-rsa.o
 OBJS += ../src/crypto/tls_internal.o
 OBJS += ../src/tls/tlsv1_common.o
 OBJS += ../src/tls/tlsv1_record.o
@@ -785,20 +787,19 @@ OBJS += ../src/tls/x509v3.o
 OBJS += ../src/tls/pkcs1.o
 OBJS += ../src/tls/pkcs5.o
 OBJS += ../src/tls/pkcs8.o
-OBJS_p += ../src/tls/asn1.o
-OBJS_p += ../src/tls/rsa.o
-OBJS_p += ../src/tls/pkcs1.o
-OBJS_p += ../src/tls/pkcs5.o
-OBJS_p += ../src/tls/pkcs8.o
-OBJS_p += ../src/crypto/rc4.o
 NEED_BASE64=y
 NEED_TLS_PRF=y
 NEED_MODEXP=y
+NEED_CIPHER=y
 CFLAGS += -DCONFIG_TLS_INTERNAL_CLIENT
 endif
+ifdef NEED_CIPHER
+NEED_DES=y
+OBJS += ../src/crypto/crypto_internal-cipher.o
+endif
 ifdef NEED_MODEXP
+OBJS += ../src/crypto/crypto_internal-modexp.o
 OBJS += ../src/tls/bignum.o
-OBJS_p += ../src/tls/bignum.o
 endif
 ifeq ($(CONFIG_CRYPTO), libtomcrypt)
 CFLAGS += -DCONFIG_INTERNAL_X509
@@ -877,10 +878,6 @@ CONFIG_INTERNAL_RC4=y
 endif
 endif
 
-ifdef NEED_MODEXP
-CFLAGS += -DCONFIG_MODEXP
-endif
-
 AESOBJS = # none so far (see below)
 ifdef CONFIG_INTERNAL_AES
 AESOBJS += ../src/crypto/aes-internal.o ../src/crypto/aes-internal-dec.o
@@ -916,9 +913,6 @@ endif
 endif
 ifdef NEED_AES
 OBJS += $(AESOBJS)
-ifdef CONFIG_INTERNAL_AES
-OBJS_p += $(AESOBJS)
-endif
 endif
 
 ifdef NEED_SHA1
@@ -1133,7 +1127,7 @@ endif
 OBJS += ../src/drivers/scan_helpers.o
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
-OBJS_p += $(SHA1OBJS) $(DESOBJS)
+OBJS_p += $(SHA1OBJS)
 
 ifdef CONFIG_BGSCAN_SIMPLE
 CFLAGS += -DCONFIG_BGSCAN_SIMPLE

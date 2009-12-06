@@ -1,4 +1,5 @@
 test-aes
+test-asn1
 test-base64
 test-md4
 test-md5
@@ -6,3 +7,4 @@ test-milenage
 test-ms_funcs
 test-sha1
 test-sha256
+test-x509

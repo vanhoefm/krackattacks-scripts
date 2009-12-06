@@ -1,5 +1,5 @@
 TESTS=test-base64 test-md4 test-md5 test-milenage test-ms_funcs test-sha1 \
-	test-sha256 test-aes
+	test-sha256 test-aes test-asn1 test-x509
 
 all: $(TESTS)
 
@@ -19,7 +19,8 @@ CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
 LIBS = ../src/utils/libutils.a \
-	../src/crypto/libcrypto.a
+	../src/crypto/libcrypto.a \
+	../src/tls/libtls.a
 
 ../src/utils/libutils.a:
 	$(MAKE) -C ../src/utils
@@ -27,8 +28,14 @@ LIBS = ../src/utils/libutils.a \
 ../src/crypto/libcrypto.a:
 	$(MAKE) -C ../src/crypto
 
+../src/tls/libtls.a:
+	$(MAKE) -C ../src/tls
+
 
 test-aes: test-aes.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
+test-asn1: test-asn1.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-base64: test-base64.o $(LIBS)
@@ -50,6 +57,9 @@ test-sha1: test-sha1.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 test-sha256: test-sha256.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
+test-x509: test-x509.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
 

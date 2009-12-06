@@ -1,7 +1,6 @@
 /*
  * hostapd / Configuration file
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
- * Copyright (c) 2007-2008, Intel Corporation
+ * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -262,9 +261,7 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->wmm_ac_params[2] = ac_vi;
 	conf->wmm_ac_params[3] = ac_vo;
 
-#ifdef CONFIG_IEEE80211N
 	conf->ht_capab = HT_CAP_INFO_SMPS_DISABLED;
-#endif /* CONFIG_IEEE80211N */
 
 	return conf;
 }

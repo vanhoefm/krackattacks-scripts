@@ -56,15 +56,6 @@ static int ap_list_beacon_olbc(struct hostapd_iface *iface, struct ap_info *ap)
 }
 
 
-#ifdef CONFIG_IEEE80211N
-static int ap_list_beacon_olbc_ht(struct hostapd_iface *iface,
-				  struct ap_info *ap)
-{
-	return !ap->ht_support;
-}
-#endif /* CONFIG_IEEE80211N */
-
-
 struct ap_info * ap_get_ap(struct hostapd_iface *iface, u8 *ap)
 {
 	struct ap_info *s;
@@ -323,7 +314,7 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	}
 
 #ifdef CONFIG_IEEE80211N
-	if (!iface->olbc_ht && ap_list_beacon_olbc_ht(iface, ap)) {
+	if (!iface->olbc_ht && !ap->ht_support) {
 		iface->olbc_ht = 1;
 		hostapd_ht_operation_update(iface);
 		wpa_printf(MSG_DEBUG, "OLBC HT AP detected: " MACSTR
@@ -368,10 +359,8 @@ static void ap_list_timer(void *eloop_ctx, void *timeout_ctx)
 		while (ap && (olbc == 0 || olbc_ht == 0)) {
 			if (ap_list_beacon_olbc(iface, ap))
 				olbc = 1;
-#ifdef CONFIG_IEEE80211N
-			if (ap_list_beacon_olbc_ht(iface, ap))
+			if (!ap->ht_support)
 				olbc_ht = 1;
-#endif /* CONFIG_IEEE80211N */
 			ap = ap->next;
 		}
 		if (!olbc && iface->olbc) {

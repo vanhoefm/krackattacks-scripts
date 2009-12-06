@@ -1,7 +1,6 @@
 /*
  * hostapd - internal driver interface wrappers
  * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
- * Copyright (c) 2007-2008, Intel Corporation
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -472,7 +471,6 @@ hostapd_set_radius_acl_expire(struct hostapd_data *hapd, const u8 *mac)
 	return hapd->driver->set_radius_acl_expire(hapd->drv_priv, mac);
 }
 
-#ifdef CONFIG_IEEE80211N
 static inline int
 hostapd_set_ht_params(const char *ifname, struct hostapd_data *hapd,
 		      const u8 *ht_capab, size_t ht_capab_len,
@@ -485,7 +483,6 @@ hostapd_set_ht_params(const char *ifname, struct hostapd_data *hapd,
 		ifname, hapd->drv_priv, ht_capab, ht_capab_len,
 		ht_oper, ht_oper_len);
 }
-#endif /* CONFIG_IEEE80211N */
 
 static inline int
 hostapd_drv_none(struct hostapd_data *hapd)

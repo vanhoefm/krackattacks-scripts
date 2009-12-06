@@ -1,7 +1,6 @@
 /*
  * hostapd / Configuration file
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
- * Copyright (c) 2007-2008, Intel Corporation
+ * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -367,10 +366,8 @@ struct hostapd_config {
 		INTERNAL_BRIDGE_ENABLED = 1
 	} bridge_packets;
 
-#ifdef CONFIG_IEEE80211N
 	int ht_op_mode_fixed;
 	u16 ht_capab;
-#endif /* CONFIG_IEEE80211N */
 	int ieee80211n;
 	int secondary_channel;
 };

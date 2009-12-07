@@ -1147,6 +1147,23 @@ wpa_driver_bsd_disassociate(void *priv, const u8 *addr, int reason_code)
 }
 
 static int
+wpa_driver_bsd_set_auth_alg(void *priv, int auth_alg)
+{
+	struct wpa_driver_bsd_data *drv = priv;
+	int authmode;
+
+	if ((auth_alg & AUTH_ALG_OPEN_SYSTEM) &&
+	    (auth_alg & AUTH_ALG_SHARED_KEY))
+		authmode = IEEE80211_AUTH_AUTO;
+	else if (auth_alg & AUTH_ALG_SHARED_KEY)
+		authmode = IEEE80211_AUTH_SHARED;
+	else
+		authmode = IEEE80211_AUTH_OPEN;
+
+	return set80211param(drv, IEEE80211_IOC_AUTHMODE, authmode);
+}
+
+static int
 wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 {
 	struct wpa_driver_bsd_data *drv = priv;
@@ -1197,23 +1214,6 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	if (set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme)) < 0)
 		return -1;
 	return ret;
-}
-
-static int
-wpa_driver_bsd_set_auth_alg(void *priv, int auth_alg)
-{
-	struct wpa_driver_bsd_data *drv = priv;
-	int authmode;
-
-	if ((auth_alg & AUTH_ALG_OPEN_SYSTEM) &&
-	    (auth_alg & AUTH_ALG_SHARED_KEY))
-		authmode = IEEE80211_AUTH_AUTO;
-	else if (auth_alg & AUTH_ALG_SHARED_KEY)
-		authmode = IEEE80211_AUTH_SHARED;
-	else
-		authmode = IEEE80211_AUTH_OPEN;
-
-	return set80211param(drv, IEEE80211_IOC_AUTHMODE, authmode);
 }
 
 static int

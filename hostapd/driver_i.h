@@ -330,14 +330,6 @@ hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
 }
 
 static inline int
-hostapd_set_internal_bridge(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_internal_bridge == NULL)
-		return 0;
-	return hapd->driver->set_internal_bridge(hapd->drv_priv, value);
-}
-
-static inline int
 hostapd_set_cts_protect(struct hostapd_data *hapd, int value)
 {
 	if (hapd->driver == NULL || hapd->driver->set_cts_protect == NULL)

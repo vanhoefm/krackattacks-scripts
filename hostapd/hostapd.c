@@ -1246,13 +1246,6 @@ static int setup_interface(struct hostapd_iface *iface)
 		}
 	}
 
-	if (hapd->iconf->bridge_packets != INTERNAL_BRIDGE_DO_NOT_CONTROL &&
-	    hostapd_set_internal_bridge(hapd, hapd->iconf->bridge_packets)) {
-		wpa_printf(MSG_ERROR, "Failed to set bridge_packets for "
-			   "kernel driver");
-		return -1;
-	}
-
 	if (hostapd_get_hw_features(iface)) {
 		/* Not all drivers support this yet, so continue without hw
 		 * feature data. */

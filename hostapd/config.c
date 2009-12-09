@@ -251,7 +251,6 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->rts_threshold = -1; /* use driver default: 2347 */
 	conf->fragm_threshold = -1; /* user driver default: 2346 */
 	conf->send_probe_response = 1;
-	conf->bridge_packets = INTERNAL_BRIDGE_DO_NOT_CONTROL;
 
 	for (i = 0; i < NUM_TX_QUEUES; i++)
 		conf->tx_queue[i].aifs = -1; /* use hw default */
@@ -2031,8 +2030,6 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				conf->preamble = LONG_PREAMBLE;
 		} else if (os_strcmp(buf, "ignore_broadcast_ssid") == 0) {
 			bss->ignore_broadcast_ssid = atoi(pos);
-		} else if (os_strcmp(buf, "bridge_packets") == 0) {
-			conf->bridge_packets = atoi(pos);
 		} else if (os_strcmp(buf, "wep_default_key") == 0) {
 			bss->ssid.wep.idx = atoi(pos);
 			if (bss->ssid.wep.idx > 3) {

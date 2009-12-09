@@ -360,12 +360,6 @@ struct hostapd_config {
 	 */
 	struct hostapd_wmm_ac_params wmm_ac_params[4];
 
-	enum {
-		INTERNAL_BRIDGE_DO_NOT_CONTROL = -1,
-		INTERNAL_BRIDGE_DISABLED = 0,
-		INTERNAL_BRIDGE_ENABLED = 1
-	} bridge_packets;
-
 	int ht_op_mode_fixed;
 	u16 ht_capab;
 	int ieee80211n;

@@ -1111,12 +1111,6 @@ struct wpa_driver_ops {
 	int (*set_rate_sets)(void *priv, int *supp_rates, int *basic_rates,
 			     int mode);
 
-	/* Configure internal bridge:
-	 * 0 = disabled, i.e., client separation is enabled (no bridging of
-	 *     packets between associated STAs
-	 * 1 = enabled, i.e., bridge packets between associated STAs (default)
-	 */
-	int (*set_internal_bridge)(void *priv, int value);
 	int (*set_cts_protect)(void *priv, int value);
 	int (*set_preamble)(void *priv, int value);
 	int (*set_short_slot_time)(void *priv, int value);

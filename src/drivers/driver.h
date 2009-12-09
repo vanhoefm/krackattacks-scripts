@@ -1123,8 +1123,6 @@ struct wpa_driver_ops {
 	int (*if_add)(const char *iface, void *priv,
 		      enum hostapd_driver_if_type type, char *ifname,
 		      const u8 *addr);
-	int (*if_update)(void *priv, enum hostapd_driver_if_type type,
-			 char *ifname, const u8 *addr);
 	int (*if_remove)(void *priv, enum hostapd_driver_if_type type,
 			 const char *ifname, const u8 *addr);
 	int (*set_sta_vlan)(void *priv, const u8 *addr, const char *ifname,

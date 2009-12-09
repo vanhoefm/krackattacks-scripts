@@ -407,15 +407,6 @@ hostapd_if_add(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
 }
 
 static inline int
-hostapd_if_update(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
-		  char *ifname, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->if_update == NULL)
-		return -1;
-	return hapd->driver->if_update(hapd->drv_priv, type, ifname, addr);
-}
-
-static inline int
 hostapd_if_remove(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
 		  char *ifname, const u8 *addr)
 {

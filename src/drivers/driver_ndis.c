@@ -3239,7 +3239,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* bss_remove */,
 	NULL /* valid_bss_mask */,
 	NULL /* if_add */,
-	NULL /* if_update */,
 	NULL /* if_remove */,
 	NULL /* set_sta_vlan */,
 	NULL /* commit */,

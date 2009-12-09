@@ -4371,14 +4371,6 @@ static int i802_if_add(const char *iface, void *priv,
 }
 
 
-static int i802_if_update(void *priv, enum hostapd_driver_if_type type,
-			  char *ifname, const u8 *addr)
-{
-	/* unused at the moment */
-	return -1;
-}
-
-
 static int i802_if_remove(void *priv, enum hostapd_driver_if_type type,
 			  const char *ifname, const u8 *addr)
 {
@@ -4624,7 +4616,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.bss_add = i802_bss_add,
 	.bss_remove = i802_bss_remove,
 	.if_add = i802_if_add,
-	.if_update = i802_if_update,
 	.if_remove = i802_if_remove,
 	.set_sta_vlan = i802_set_sta_vlan,
 #endif /* HOSTAPD */

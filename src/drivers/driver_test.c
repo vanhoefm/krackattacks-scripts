@@ -1053,14 +1053,6 @@ static int test_driver_if_add(const char *iface, void *priv,
 }
 
 
-static int test_driver_if_update(void *priv, enum hostapd_driver_if_type type,
-				 char *ifname, const u8 *addr)
-{
-	wpa_printf(MSG_DEBUG, "%s(type=%d ifname=%s)", __func__, type, ifname);
-	return 0;
-}
-
-
 static int test_driver_if_remove(void *priv, enum hostapd_driver_if_type type,
 				 const char *ifname, const u8 *addr)
 {
@@ -2484,7 +2476,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.bss_add = test_driver_bss_add,
 	.bss_remove = test_driver_bss_remove,
 	.if_add = test_driver_if_add,
-	.if_update = test_driver_if_update,
 	.if_remove = test_driver_if_remove,
 	.valid_bss_mask = test_driver_valid_bss_mask,
 	.hapd_set_ssid = test_driver_set_ssid,

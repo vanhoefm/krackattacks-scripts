@@ -275,7 +275,7 @@ struct wpa_client_mlme {
 	unsigned int hw_modes; /* bitfield of allowed hardware modes;
 				* (1 << HOSTAPD_MODE_*) */
 	int num_curr_rates;
-	struct hostapd_rate_data *curr_rates;
+	int *curr_rates;
 	int freq; /* The current frequency in MHz */
 	int channel; /* The current IEEE 802.11 channel number */
 

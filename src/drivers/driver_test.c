@@ -2413,37 +2413,37 @@ wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	modes[0].num_channels = 1;
 	modes[0].num_rates = 1;
 	modes[0].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[0].rates = os_zalloc(sizeof(struct hostapd_rate_data));
+	modes[0].rates = os_zalloc(sizeof(int));
 	if (modes[0].channels == NULL || modes[0].rates == NULL)
 		goto fail;
 	modes[0].channels[0].chan = 1;
 	modes[0].channels[0].freq = 2412;
 	modes[0].channels[0].flag = 0;
-	modes[0].rates[0].rate = 10;
+	modes[0].rates[0] = 10;
 
 	modes[1].mode = HOSTAPD_MODE_IEEE80211B;
 	modes[1].num_channels = 1;
 	modes[1].num_rates = 1;
 	modes[1].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[1].rates = os_zalloc(sizeof(struct hostapd_rate_data));
+	modes[1].rates = os_zalloc(sizeof(int));
 	if (modes[1].channels == NULL || modes[1].rates == NULL)
 		goto fail;
 	modes[1].channels[0].chan = 1;
 	modes[1].channels[0].freq = 2412;
 	modes[1].channels[0].flag = 0;
-	modes[1].rates[0].rate = 10;
+	modes[1].rates[0] = 10;
 
 	modes[2].mode = HOSTAPD_MODE_IEEE80211A;
 	modes[2].num_channels = 1;
 	modes[2].num_rates = 1;
 	modes[2].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[2].rates = os_zalloc(sizeof(struct hostapd_rate_data));
+	modes[2].rates = os_zalloc(sizeof(int));
 	if (modes[2].channels == NULL || modes[2].rates == NULL)
 		goto fail;
 	modes[2].channels[0].chan = 60;
 	modes[2].channels[0].freq = 5300;
 	modes[2].channels[0].flag = 0;
-	modes[2].rates[0].rate = 60;
+	modes[2].rates[0] = 60;
 
 	return modes;
 

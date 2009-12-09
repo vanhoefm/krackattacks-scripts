@@ -31,6 +31,14 @@ struct hostapd_probereq_cb {
 	void *ctx;
 };
 
+#define HOSTAPD_RATE_BASIC 0x00000001
+
+struct hostapd_rate_data {
+	int rate; /* rate in 100 kbps */
+	int flags; /* HOSTAPD_RATE_ flags */
+};
+
+
 /**
  * struct hostapd_data - hostapd per-BSS data structure
  */

@@ -391,20 +391,16 @@ static void ieee80211_send_assoc(struct wpa_supplicant *wpa_s)
 	blen += len + 2;
 	*pos++ = WLAN_EID_SUPP_RATES;
 	*pos++ = len;
-	for (i = 0; i < len; i++) {
-		int rate = wpa_s->mlme.curr_rates[i].rate;
-		*pos++ = (u8) (rate / 5);
-	}
+	for (i = 0; i < len; i++)
+		*pos++ = (u8) (wpa_s->mlme.curr_rates[i] / 5);
 
 	if (wpa_s->mlme.num_curr_rates > len) {
 		pos = buf + blen;
 		blen += wpa_s->mlme.num_curr_rates - len + 2;
 		*pos++ = WLAN_EID_EXT_SUPP_RATES;
 		*pos++ = wpa_s->mlme.num_curr_rates - len;
-		for (i = len; i < wpa_s->mlme.num_curr_rates; i++) {
-			int rate = wpa_s->mlme.curr_rates[i].rate;
-			*pos++ = (u8) (rate / 5);
-		}
+		for (i = len; i < wpa_s->mlme.num_curr_rates; i++)
+			*pos++ = (u8) (wpa_s->mlme.curr_rates[i] / 5);
 	}
 
 	if (wpa_s->mlme.extra_ie && wpa_s->mlme.auth_alg != WLAN_AUTH_FT) {
@@ -671,7 +667,6 @@ static void ieee80211_send_probe_req(struct wpa_supplicant *wpa_s,
 	supp_rates[0] = WLAN_EID_SUPP_RATES;
 	supp_rates[1] = 0;
 	for (i = 0; i < wpa_s->mlme.num_curr_rates; i++) {
-		struct hostapd_rate_data *rate = &wpa_s->mlme.curr_rates[i];
 		if (esupp_rates) {
 			pos = buf + len;
 			len++;
@@ -687,7 +682,7 @@ static void ieee80211_send_probe_req(struct wpa_supplicant *wpa_s,
 			len++;
 			supp_rates[1]++;
 		}
-		*pos++ = rate->rate / 5;
+		*pos++ = wpa_s->mlme.curr_rates[i] / 5;
 	}
 
 	if (wpa_s->mlme.extra_probe_ie) {
@@ -2399,7 +2394,7 @@ static int ieee80211_sta_join_ibss(struct wpa_supplicant *wpa_s,
 			if (local->conf.phymode == MODE_ATHEROS_TURBO)
 				rate *= 2;
 			for (j = 0; j < local->num_curr_rates; j++)
-				if (local->curr_rates[j].rate == rate)
+				if (local->curr_rates[j] == rate)
 					rates |= BIT(j);
 		}
 		wpa_s->mlme.supp_rates_bits = rates;
@@ -2468,7 +2463,7 @@ static int ieee80211_sta_create_ibss(struct wpa_supplicant *wpa_s)
 	pos = bss->supp_rates;
 #if 0 /* FIX */
 	for (i = 0; i < local->num_curr_rates; i++) {
-		int rate = local->curr_rates[i].rate;
+		int rate = local->curr_rates[i];
 		if (local->conf.phymode == MODE_ATHEROS_TURBO)
 			rate /= 2;
 		*pos++ = (u8) (rate / 5);

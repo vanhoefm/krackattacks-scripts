@@ -1193,7 +1193,7 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 	mode->num_rates = 4;
 
 	clen = mode->num_channels * sizeof(struct hostapd_channel_data);
-	rlen = mode->num_rates * sizeof(struct hostapd_rate_data);
+	rlen = mode->num_rates * sizeof(int);
 
 	mode->channels = os_zalloc(clen);
 	mode->rates = os_zalloc(rlen);
@@ -1212,10 +1212,10 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 			mode->channels[i].flag = HOSTAPD_CHAN_DISABLED;
 	}
 
-	mode->rates[0].rate = 10;
-	mode->rates[1].rate = 20;
-	mode->rates[2].rate = 55;
-	mode->rates[3].rate = 110;
+	mode->rates[0] = 10;
+	mode->rates[1] = 20;
+	mode->rates[2] = 55;
+	mode->rates[3] = 110;
 
 	return mode;
 }

@@ -135,7 +135,7 @@ static int hostapd_prepare_rates(struct hostapd_data *hapd,
 	hapd->iface->num_rates = 0;
 
 	hapd->iface->current_rates =
-		os_malloc(mode->num_rates * sizeof(struct hostapd_rate_data));
+		os_zalloc(mode->num_rates * sizeof(struct hostapd_rate_data));
 	if (!hapd->iface->current_rates) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for rate "
 			   "table.");
@@ -147,17 +147,15 @@ static int hostapd_prepare_rates(struct hostapd_data *hapd,
 
 		if (hapd->iconf->supported_rates &&
 		    !hostapd_rate_found(hapd->iconf->supported_rates,
-					mode->rates[i].rate))
+					mode->rates[i]))
 			continue;
 
 		rate = &hapd->iface->current_rates[hapd->iface->num_rates];
-		os_memcpy(rate, &mode->rates[i],
-			  sizeof(struct hostapd_rate_data));
+		rate->rate = mode->rates[i];
 		if (hostapd_rate_found(basic_rates, rate->rate)) {
 			rate->flags |= HOSTAPD_RATE_BASIC;
 			num_basic_rates++;
-		} else
-			rate->flags &= ~HOSTAPD_RATE_BASIC;
+		}
 		wpa_printf(MSG_DEBUG, "RATE[%d] rate=%d flags=0x%x",
 			   hapd->iface->num_rates, rate->rate, rate->flags);
 		hapd->iface->num_rates++;

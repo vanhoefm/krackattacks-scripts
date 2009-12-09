@@ -2376,7 +2376,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			mode->num_rates++;
 		}
 
-		mode->rates = calloc(mode->num_rates, sizeof(struct hostapd_rate_data));
+		mode->rates = calloc(mode->num_rates, sizeof(int));
 		if (!mode->rates)
 			return NL_SKIP;
 
@@ -2387,11 +2387,11 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 				  nla_len(nl_rate), rate_policy);
 			if (!tb_rate[NL80211_BITRATE_ATTR_RATE])
 				continue;
-			mode->rates[idx].rate = nla_get_u32(tb_rate[NL80211_BITRATE_ATTR_RATE]);
+			mode->rates[idx] = nla_get_u32(tb_rate[NL80211_BITRATE_ATTR_RATE]);
 
 			/* crude heuristic */
 			if (mode->mode == HOSTAPD_MODE_IEEE80211B &&
-			    mode->rates[idx].rate > 200)
+			    mode->rates[idx] > 200)
 				mode->mode = HOSTAPD_MODE_IEEE80211G;
 
 			idx++;
@@ -2444,7 +2444,7 @@ wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
 		  mode11g->num_channels * sizeof(struct hostapd_channel_data));
 
 	mode->num_rates = 0;
-	mode->rates = os_malloc(4 * sizeof(struct hostapd_rate_data));
+	mode->rates = os_malloc(4 * sizeof(int));
 	if (mode->rates == NULL) {
 		os_free(mode->channels);
 		(*num_modes)--;
@@ -2452,10 +2452,8 @@ wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
 	}
 
 	for (i = 0; i < mode11g->num_rates; i++) {
-		if (mode11g->rates[i].rate != 10 &&
-		    mode11g->rates[i].rate != 20 &&
-		    mode11g->rates[i].rate != 55 &&
-		    mode11g->rates[i].rate != 110)
+		if (mode11g->rates[i] != 10 && mode11g->rates[i] != 20 &&
+		    mode11g->rates[i] != 55 && mode11g->rates[i] != 110)
 			continue;
 		mode->rates[mode->num_rates] = mode11g->rates[i];
 		mode->num_rates++;

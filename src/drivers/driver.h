@@ -31,19 +31,12 @@ struct hostapd_channel_data {
 	u8 max_tx_power; /* maximum transmit power in dBm */
 };
 
-#define HOSTAPD_RATE_BASIC 0x00000002
-
-struct hostapd_rate_data {
-	int rate; /* rate in 100 kbps */
-	int flags; /* HOSTAPD_RATE_ flags for internal use */
-};
-
 struct hostapd_hw_modes {
 	hostapd_hw_mode mode;
 	int num_channels;
 	struct hostapd_channel_data *channels;
 	int num_rates;
-	struct hostapd_rate_data *rates;
+	int *rates; /* array of rates in 100 kbps units */
 	u16 ht_capab;
 	u8 mcs_set[16];
 	u8 a_mpdu_params;

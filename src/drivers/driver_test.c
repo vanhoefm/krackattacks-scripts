@@ -1044,19 +1044,23 @@ static int test_driver_bss_remove(void *priv, const char *ifname)
 
 
 static int test_driver_if_add(const char *iface, void *priv,
-			      enum hostapd_driver_if_type type, char *ifname,
+			      enum wpa_driver_if_type type, const char *ifname,
 			      const u8 *addr)
 {
 	wpa_printf(MSG_DEBUG, "%s(iface=%s type=%d ifname=%s)",
 		   __func__, iface, type, ifname);
+	if (type == WPA_IF_AP_BSS)
+		return test_driver_bss_add(priv, ifname, addr);
 	return 0;
 }
 
 
-static int test_driver_if_remove(void *priv, enum hostapd_driver_if_type type,
-				 const char *ifname, const u8 *addr)
+static int test_driver_if_remove(void *priv, enum wpa_driver_if_type type,
+				 const char *ifname)
 {
 	wpa_printf(MSG_DEBUG, "%s(type=%d ifname=%s)", __func__, type, ifname);
+	if (type == WPA_IF_AP_BSS)
+		return test_driver_bss_remove(priv, ifname);
 	return 0;
 }
 
@@ -2473,8 +2477,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.sta_deauth = test_driver_sta_deauth,
 	.sta_disassoc = test_driver_sta_disassoc,
 	.get_hw_feature_data = wpa_driver_test_get_hw_feature_data,
-	.bss_add = test_driver_bss_add,
-	.bss_remove = test_driver_bss_remove,
 	.if_add = test_driver_if_add,
 	.if_remove = test_driver_if_remove,
 	.valid_bss_mask = test_driver_valid_bss_mask,

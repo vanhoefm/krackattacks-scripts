@@ -372,22 +372,6 @@ hostapd_set_tx_queue_params(struct hostapd_data *hapd, int queue, int aifs,
 }
 
 static inline int
-hostapd_bss_add(struct hostapd_data *hapd, const char *ifname, const u8 *bssid)
-{
-	if (hapd->driver == NULL || hapd->driver->bss_add == NULL)
-		return 0;
-	return hapd->driver->bss_add(hapd->drv_priv, ifname, bssid);
-}
-
-static inline int
-hostapd_bss_remove(struct hostapd_data *hapd, const char *ifname)
-{
-	if (hapd->driver == NULL || hapd->driver->bss_remove == NULL)
-		return 0;
-	return hapd->driver->bss_remove(hapd->drv_priv, ifname);
-}
-
-static inline int
 hostapd_valid_bss_mask(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *mask)
 {
@@ -397,8 +381,8 @@ hostapd_valid_bss_mask(struct hostapd_data *hapd, const u8 *addr,
 }
 
 static inline int
-hostapd_if_add(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
-	       char *ifname, const u8 *addr)
+hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
+	       const char *ifname, const u8 *addr)
 {
 	if (hapd->driver == NULL || hapd->driver->if_add == NULL)
 		return -1;
@@ -407,12 +391,12 @@ hostapd_if_add(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
 }
 
 static inline int
-hostapd_if_remove(struct hostapd_data *hapd, enum hostapd_driver_if_type type,
-		  char *ifname, const u8 *addr)
+hostapd_if_remove(struct hostapd_data *hapd, enum wpa_driver_if_type type,
+		  const char *ifname)
 {
 	if (hapd->driver == NULL || hapd->driver->if_remove == NULL)
 		return -1;
-	return hapd->driver->if_remove(hapd->drv_priv, type, ifname, addr);
+	return hapd->driver->if_remove(hapd->drv_priv, type, ifname);
 }
 
 static inline struct hostapd_hw_modes *

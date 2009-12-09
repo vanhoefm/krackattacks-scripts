@@ -340,7 +340,7 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 #endif /* EAP_SERVER_SIM || EAP_SERVER_AKA */
 
 	if (hapd->interface_added &&
-	    hostapd_bss_remove(hapd, hapd->conf->iface)) {
+	    hostapd_if_remove(hapd, WPA_IF_AP_BSS, hapd->conf->iface)) {
 		wpa_printf(MSG_WARNING, "Failed to remove BSS interface %s",
 			   hapd->conf->iface);
 	}
@@ -1048,8 +1048,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		}
 
 		hapd->interface_added = 1;
-		if (hostapd_bss_add(hapd->iface->bss[0], hapd->conf->iface,
-				    hapd->own_addr)) {
+		if (hostapd_if_add(hapd->iface->bss[0], WPA_IF_AP_BSS,
+				   hapd->conf->iface, hapd->own_addr)) {
 			wpa_printf(MSG_ERROR, "Failed to add BSS (BSSID="
 				   MACSTR ")", MAC2STR(hapd->own_addr));
 			return -1;

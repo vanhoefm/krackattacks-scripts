@@ -458,8 +458,26 @@ struct hostapd_freq_params {
 				 * enabled, secondary channel above primary */
 };
 
-enum hostapd_driver_if_type {
-	HOSTAPD_IF_VLAN
+enum wpa_driver_if_type {
+	/**
+	 * WPA_IF_STATION - Station mode interface
+	 */
+	WPA_IF_STATION,
+
+	/**
+	 * WPA_IF_AP_VLAN - AP mode VLAN interface
+	 *
+	 * This interface shares its address and Beacon frame with the main
+	 * BSS.
+	 */
+	WPA_IF_AP_VLAN,
+
+	/**
+	 * WPA_IF_AP_BSS - AP mode BSS interface
+	 *
+	 * This interface has its own address and Beacon frame.
+	 */
+	WPA_IF_AP_BSS,
 };
 
 struct wpa_init_params {
@@ -1117,14 +1135,31 @@ struct wpa_driver_ops {
 	int (*set_short_slot_time)(void *priv, int value);
 	int (*set_tx_queue_params)(void *priv, int queue, int aifs, int cw_min,
 				   int cw_max, int burst_time);
-	int (*bss_add)(void *priv, const char *ifname, const u8 *bssid);
-	int (*bss_remove)(void *priv, const char *ifname);
 	int (*valid_bss_mask)(void *priv, const u8 *addr, const u8 *mask);
+
+	/**
+	 * if_add - Add a virtual interface
+	 * @priv: Private driver interface data
+	 * @iface: Parent interface name
+	 * @type: Interface type
+	 * @ifname: Interface name for the new virtual interface
+	 * @addr: Local address to use for the interface or %NULL to use the
+	 *	parent interface address
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*if_add)(const char *iface, void *priv,
-		      enum hostapd_driver_if_type type, char *ifname,
+		      enum wpa_driver_if_type type, const char *ifname,
 		      const u8 *addr);
-	int (*if_remove)(void *priv, enum hostapd_driver_if_type type,
-			 const char *ifname, const u8 *addr);
+
+	/**
+	 * if_remove - Remove a virtual interface
+	 * @priv: Private driver interface data
+	 * @type: Interface type
+	 * @ifname: Interface name of the virtual interface to be removed
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*if_remove)(void *priv, enum wpa_driver_if_type type,
+			 const char *ifname);
 	int (*set_sta_vlan)(void *priv, const u8 *addr, const char *ifname,
 			    int vlan_id);
 	/**

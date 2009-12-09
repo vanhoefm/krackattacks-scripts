@@ -2743,6 +2743,8 @@ static int wpa_driver_nl80211_sta_remove(void *priv, const u8 *addr)
 	return -ENOBUFS;
 }
 
+#endif /* CONFIG_AP || HOSTAPD */
+
 
 static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 				 int ifidx)
@@ -2832,6 +2834,8 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 
 	return ifidx;
 }
+
+
 static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 				const char *ifname, enum nl80211_iftype iftype,
 				const u8 *addr)
@@ -2854,7 +2858,6 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 	return ret;
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef CONFIG_AP
 
@@ -4257,54 +4260,6 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 }
 
 
-static int i802_bss_add(void *priv, const char *ifname, const u8 *bssid)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	int ifidx;
-	struct i802_bss *bss;
-
-	bss = os_zalloc(sizeof(*bss));
-	if (bss == NULL)
-		return -1;
-
-	ifidx = nl80211_create_iface(priv, ifname, NL80211_IFTYPE_AP, bssid);
-	if (ifidx < 0) {
-		os_free(bss);
-		return -1;
-	}
-	bss->ifindex = ifidx;
-	if (hostapd_set_iface_flags(priv, ifname, 1)) {
-		nl80211_remove_iface(priv, ifidx);
-		os_free(bss);
-		return -1;
-	}
-	bss->next = drv->bss.next;
-	drv->bss.next = bss;
-	return 0;
-}
-
-
-static int i802_bss_remove(void *priv, const char *ifname)
-{
-	struct wpa_driver_nl80211_data *drv = priv;
-	struct i802_bss *bss, *prev;
-	int ifindex = if_nametoindex(ifname);
-	nl80211_remove_iface(priv, ifindex);
-	prev = &drv->bss;
-	bss = drv->bss.next;
-	while (bss) {
-		if (ifindex == bss->ifindex) {
-			prev->next = bss->next;
-			os_free(bss);
-			break;
-		}
-		prev = bss;
-		bss = bss->next;
-	}
-	return 0;
-}
-
-
 static int i802_set_bss(void *priv, int cts, int preamble, int slot)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
@@ -4348,34 +4303,6 @@ static int i802_set_preamble(void *priv, int value)
 static int i802_set_short_slot_time(void *priv, int value)
 {
 	return i802_set_bss(priv, -1, -1, value);
-}
-
-
-static enum nl80211_iftype i802_if_type(enum hostapd_driver_if_type type)
-{
-	switch (type) {
-	case HOSTAPD_IF_VLAN:
-		return NL80211_IFTYPE_AP_VLAN;
-	}
-	return -1;
-}
-
-
-static int i802_if_add(const char *iface, void *priv,
-		       enum hostapd_driver_if_type type, char *ifname,
-		       const u8 *addr)
-{
-	if (nl80211_create_iface(priv, ifname, i802_if_type(type), addr) < 0)
-		return -1;
-	return 0;
-}
-
-
-static int i802_if_remove(void *priv, enum hostapd_driver_if_type type,
-			  const char *ifname, const u8 *addr)
-{
-	nl80211_remove_iface(priv, if_nametoindex(ifname));
-	return 0;
 }
 
 
@@ -4568,6 +4495,93 @@ static void i802_deinit(void *priv)
 #endif /* HOSTAPD */
 
 
+static enum nl80211_iftype wpa_driver_nl80211_if_type(
+	enum wpa_driver_if_type type)
+{
+	switch (type) {
+	case WPA_IF_STATION:
+		return NL80211_IFTYPE_STATION;
+	case WPA_IF_AP_VLAN:
+		return NL80211_IFTYPE_AP_VLAN;
+	case WPA_IF_AP_BSS:
+		return NL80211_IFTYPE_AP;
+	}
+	return -1;
+}
+
+
+static int wpa_driver_nl80211_if_add(const char *iface, void *priv,
+				     enum wpa_driver_if_type type,
+				     const char *ifname, const u8 *addr)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	int ifidx;
+#ifdef HOSTAPD
+	struct i802_bss *bss = NULL;
+
+	if (type == WPA_IF_AP_BSS) {
+		bss = os_zalloc(sizeof(*bss));
+		if (bss == NULL)
+			return -1;
+	}
+#endif /* HOSTAPD */
+
+	ifidx = nl80211_create_iface(drv, ifname,
+				     wpa_driver_nl80211_if_type(type), addr);
+	if (ifidx < 0) {
+#ifdef HOSTAPD
+		os_free(bss);
+#endif /* HOSTAPD */
+		return -1;
+	}
+
+#ifdef HOSTAPD
+	if (type == WPA_IF_AP_BSS) {
+		if (hostapd_set_iface_flags(priv, ifname, 1)) {
+			nl80211_remove_iface(priv, ifidx);
+			os_free(bss);
+			return -1;
+		}
+		bss->ifindex = ifidx;
+		bss->next = drv->bss.next;
+		drv->bss.next = bss;
+	}
+#endif /* HOSTAPD */
+
+	return 0;
+}
+
+
+static int wpa_driver_nl80211_if_remove(void *priv,
+					enum wpa_driver_if_type type,
+					const char *ifname)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	int ifindex = if_nametoindex(ifname);
+
+	nl80211_remove_iface(drv, ifindex);
+
+#ifdef HOSTAPD
+	if (type == WPA_IF_AP_BSS) {
+		struct i802_bss *bss, *prev;
+		prev = &drv->bss;
+		bss = drv->bss.next;
+		while (bss) {
+			if (ifindex == bss->ifindex) {
+				prev->next = bss->next;
+				os_free(bss);
+				break;
+			}
+			prev = bss;
+			bss = bss->next;
+		}
+	}
+#endif /* HOSTAPD */
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -4587,6 +4601,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_supp_port = wpa_driver_nl80211_set_supp_port,
 	.set_country = wpa_driver_nl80211_set_country,
 	.set_beacon = wpa_driver_nl80211_set_beacon,
+	.if_add = wpa_driver_nl80211_if_add,
+	.if_remove = wpa_driver_nl80211_if_remove,
 #if defined(CONFIG_AP) || defined(HOSTAPD)
 	.send_mlme = wpa_driver_nl80211_send_mlme,
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
@@ -4613,10 +4629,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_preamble = i802_set_preamble,
 	.set_short_slot_time = i802_set_short_slot_time,
 	.set_tx_queue_params = i802_set_tx_queue_params,
-	.bss_add = i802_bss_add,
-	.bss_remove = i802_bss_remove,
-	.if_add = i802_if_add,
-	.if_remove = i802_if_remove,
 	.set_sta_vlan = i802_set_sta_vlan,
 #endif /* HOSTAPD */
 };

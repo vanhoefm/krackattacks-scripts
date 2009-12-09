@@ -2420,8 +2420,6 @@ wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	modes[0].channels[0].freq = 2412;
 	modes[0].channels[0].flag = 0;
 	modes[0].rates[0].rate = 10;
-	modes[0].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
 
 	modes[1].mode = HOSTAPD_MODE_IEEE80211B;
 	modes[1].num_channels = 1;
@@ -2434,8 +2432,6 @@ wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	modes[1].channels[0].freq = 2412;
 	modes[1].channels[0].flag = 0;
 	modes[1].rates[0].rate = 10;
-	modes[1].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_CCK | HOSTAPD_RATE_MANDATORY;
 
 	modes[2].mode = HOSTAPD_MODE_IEEE80211A;
 	modes[2].num_channels = 1;
@@ -2448,8 +2444,6 @@ wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	modes[2].channels[0].freq = 5300;
 	modes[2].channels[0].flag = 0;
 	modes[2].rates[0].rate = 60;
-	modes[2].rates[0].flags = HOSTAPD_RATE_BASIC | HOSTAPD_RATE_SUPPORTED |
-		HOSTAPD_RATE_MANDATORY;
 
 	return modes;
 

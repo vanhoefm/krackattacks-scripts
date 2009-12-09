@@ -1213,13 +1213,9 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 	}
 
 	mode->rates[0].rate = 10;
-	mode->rates[0].flags = HOSTAPD_RATE_CCK;
 	mode->rates[1].rate = 20;
-	mode->rates[1].flags = HOSTAPD_RATE_CCK;
 	mode->rates[2].rate = 55;
-	mode->rates[2].flags = HOSTAPD_RATE_CCK;
 	mode->rates[3].rate = 110;
-	mode->rates[3].flags = HOSTAPD_RATE_CCK;
 
 	return mode;
 }

@@ -2394,9 +2394,6 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			    mode->rates[idx].rate > 200)
 				mode->mode = HOSTAPD_MODE_IEEE80211G;
 
-			if (tb_rate[NL80211_BITRATE_ATTR_2GHZ_SHORTPREAMBLE])
-				mode->rates[idx].flags |= HOSTAPD_RATE_PREAMBLE2;
-
 			idx++;
 		}
 	}
@@ -2455,9 +2452,10 @@ wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
 	}
 
 	for (i = 0; i < mode11g->num_rates; i++) {
-		if (mode11g->rates[i].rate > 110 ||
-		    mode11g->rates[i].flags &
-		    (HOSTAPD_RATE_ERP | HOSTAPD_RATE_OFDM))
+		if (mode11g->rates[i].rate != 10 &&
+		    mode11g->rates[i].rate != 20 &&
+		    mode11g->rates[i].rate != 55 &&
+		    mode11g->rates[i].rate != 110)
 			continue;
 		mode->rates[mode->num_rates] = mode11g->rates[i];
 		mode->num_rates++;

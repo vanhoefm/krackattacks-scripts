@@ -31,17 +31,11 @@ struct hostapd_channel_data {
 	u8 max_tx_power; /* maximum transmit power in dBm */
 };
 
-#define HOSTAPD_RATE_ERP 0x00000001
 #define HOSTAPD_RATE_BASIC 0x00000002
-#define HOSTAPD_RATE_PREAMBLE2 0x00000004
-#define HOSTAPD_RATE_SUPPORTED 0x00000010
-#define HOSTAPD_RATE_OFDM 0x00000020
-#define HOSTAPD_RATE_CCK 0x00000040
-#define HOSTAPD_RATE_MANDATORY 0x00000100
 
 struct hostapd_rate_data {
 	int rate; /* rate in 100 kbps */
-	int flags; /* HOSTAPD_RATE_ flags */
+	int flags; /* HOSTAPD_RATE_ flags for internal use */
 };
 
 struct hostapd_hw_modes {

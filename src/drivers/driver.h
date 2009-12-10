@@ -1189,34 +1189,199 @@ struct wpa_driver_ops {
 			       size_t data_len, int encrypt,
 			       const u8 *own_addr);
 
+	/**
+	 * sta_deauth - Deauthenticate a station (AP only)
+	 * @priv: Private driver interface data
+	 * @own_addr: Source address and BSSID for the Deauthentication frame
+	 * @addr: MAC address of the station to deauthenticate
+	 * @reason: Reason code for the Deauthentiation frame
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function requests a specific station to be deauthenticated and
+	 * a Deauthentication frame to be sent to it.
+	 */
 	int (*sta_deauth)(void *priv, const u8 *own_addr, const u8 *addr,
 			  int reason);
+
+	/**
+	 * sta_disassoc - Disassociate a station (AP only)
+	 * @priv: Private driver interface data
+	 * @own_addr: Source address and BSSID for the Disassociation frame
+	 * @addr: MAC address of the station to disassociate
+	 * @reason: Reason code for the Disassociation frame
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function requests a specific station to be disassociated and
+	 * a Disassociation frame to be sent to it.
+	 */
 	int (*sta_disassoc)(void *priv, const u8 *own_addr, const u8 *addr,
 			    int reason);
+
+	/**
+	 * sta_remove - Remove a station entry (AP only)
+	 * @priv: Private driver interface data
+	 * @addr: MAC address of the station to be removed
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*sta_remove)(void *priv, const u8 *addr);
+
+	/**
+	 * hapd_get_ssid - Get the current SSID (AP only)
+	 * @ifname: Interface (master or virtual BSS)
+	 * @priv: Private driver interface data
+	 * @buf: Buffer for returning the SSID
+	 * @len: Maximum length of the buffer
+	 * Returns: Length of the SSID on success, -1 on failure
+	 *
+	 * This function need not be implemented if the driver uses Beacon
+	 * template from set_beacon() and does not reply to Probe Request
+	 * frames.
+	 */
 	int (*hapd_get_ssid)(const char *ifname, void *priv, u8 *buf, int len);
+
+	/**
+	 * hapd_set_ssid - Set SSID (AP only)
+	 * @ifname: Interface (master or virtual BSS)
+	 * @priv: Private driver interface data
+	 * @buf: SSID
+	 * @len: Length of the SSID in octets
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*hapd_set_ssid)(const char *ifname, void *priv, const u8 *buf,
 			     int len);
+	/**
+	 * hapd_set_countermeasures - Enable/disable TKIP countermeasures (AP)
+	 * @priv: Private driver interface data
+	 * @enabled: 1 = countermeasures enabled, 0 = disabled
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This need not be implemented if the driver does not take care of
+	 * association processing.
+	 */
 	int (*hapd_set_countermeasures)(void *priv, int enabled);
+
+	/**
+	 * sta_add - Add a station entry
+	 * @ifname: Interface (master or virtual)
+	 * @priv: Private driver interface data
+	 * @params: Station parameters
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function is used to add a station entry to the driver once the
+	 * station has completed association. This is only used if the driver
+	 * does not take care of association processing.
+	 */
 	int (*sta_add)(const char *ifname, void *priv,
 		       struct hostapd_sta_add_params *params);
+
+	/**
+	 * get_inact_sec - Get station inactivity duration (AP only)
+	 * @priv: Private driver interface data
+	 * @addr: Station address
+	 * Returns: Number of seconds station has been inactive, -1 on failure
+	 */
 	int (*get_inact_sec)(void *priv, const u8 *addr);
+
+	/**
+	 * sta_clear_stats - Clear station statistics (AP only)
+	 * @priv: Private driver interface data
+	 * @addr: Station address
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*sta_clear_stats)(void *priv, const u8 *addr);
 
+	/**
+	 * set_freq - Set channel/frequency (AP only)
+	 * @priv: Private driver interface data
+	 * @freq: Channel parameters
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_freq)(void *priv, struct hostapd_freq_params *freq);
+
+	/**
+	 * set_rts - Set RTS threshold
+	 * @priv: Private driver interface data
+	 * @rts: RTS threshold in octets
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_rts)(void *priv, int rts);
+
+	/**
+	 * set_frag - Set fragmentation threshold
+	 * @priv: Private driver interface data
+	 * @frag: Fragmentation threshold in octets
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_frag)(void *priv, int frag);
 
+	/**
+	 * sta_set_flags - Set station flags (AP only)
+	 * @priv: Private driver interface data
+	 * @addr: Station address
+	 * @total_flags: Bitmap of all WLAN_STA_* flags currently set
+	 * @flags_or: Bitmap of WLAN_STA_* flags to add
+	 * @flags_and: Bitmap of WLAN_STA_* flags to us as a mask
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*sta_set_flags)(void *priv, const u8 *addr,
 			     int total_flags, int flags_or, int flags_and);
+
+	/**
+	 * set_rate_sets - Set supported and basic rate sets (AP only)
+	 * @priv: Private driver interface data
+	 * @supp_rates: -1 terminated array of supported rates in 100 kbps
+	 * @basic_rates: -1 terminated array of basic rates in 100 kbps
+	 * @mode: hardware mode (HOSTAPD_MODE_*)
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_rate_sets)(void *priv, int *supp_rates, int *basic_rates,
 			     int mode);
 
+	/**
+	 * set_cts_protect - Set CTS protection mode (AP only)
+	 * @priv: Private driver interface data
+	 * @value: Whether CTS protection is enabled
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_cts_protect)(void *priv, int value);
+
+	/**
+	 * set_preamble - Set preamble mode (AP only)
+	 * @priv: Private driver interface data
+	 * @value: Whether short preamble is enabled
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_preamble)(void *priv, int value);
+
+	/**
+	 * set_short_slot_time - Set short slot time (AP only)
+	 * @priv: Private driver interface data
+	 * @value: Whether short slot time is enabled
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_short_slot_time)(void *priv, int value);
+
+	/**
+	 * set_tx_queue_params - Set TX queue parameters
+	 * @priv: Private driver interface data
+	 * @queue: Queue number
+	 * @aifs: AIFS
+	 * @cw_min: cwMin
+	 * @cw_max: cwMax
+	 * @burst_time: Maximum length for bursting in 0.1 msec units
+	 */
 	int (*set_tx_queue_params)(void *priv, int queue, int aifs, int cw_min,
 				   int cw_max, int burst_time);
+
+	/**
+	 * valid_bss_mask - Validate BSSID mask
+	 * @priv: Private driver interface data
+	 * @addr: Address
+	 * @mask: Mask
+	 * Returns: 0 if mask is valid, -1 if mask is not valid, 1 if mask can
+	 * be used, but the main interface address must be the first address in
+	 * the block if mask is applied
+	 */
 	int (*valid_bss_mask)(void *priv, const u8 *addr, const u8 *mask);
 
 	/**
@@ -1242,6 +1407,7 @@ struct wpa_driver_ops {
 	 */
 	int (*if_remove)(void *priv, enum wpa_driver_if_type type,
 			 const char *ifname);
+
 	/**
 	 * set_sta_vlan - Bind a station into a specific interface (AP only)
 	 * @priv: Private driver interface data
@@ -1271,13 +1437,48 @@ struct wpa_driver_ops {
 	 */
 	int (*commit)(void *priv);
 
+	/**
+	 * send_ether - Send an ethernet packet (AP only)
+	 * @priv: private driver interface data
+	 * @dst: Destination MAC address
+	 * @src: Source MAC address
+	 * @proto: Ethertype
+	 * @data: EAPOL packet starting with IEEE 802.1X header
+	 * @data_len: Length of the EAPOL packet in octets
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*send_ether)(void *priv, const u8 *dst, const u8 *src, u16 proto,
 			  const u8 *data, size_t data_len);
 
+	/**
+	 * set_radius_acl_auth - Notification of RADIUS ACL change
+	 * @priv: Private driver interface data
+	 * @mac: MAC address of the station
+	 * @accepted: Whether the station was accepted
+	 * @session_timeout: Session timeout for the station
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_radius_acl_auth)(void *priv, const u8 *mac, int accepted, 
 				   u32 session_timeout);
+
+	/**
+	 * set_radius_acl_expire - Notification of RADIUS ACL expiration
+	 * @priv: Private driver interface data
+	 * @mac: MAC address of the station
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_radius_acl_expire)(void *priv, const u8 *mac);
 
+	/**
+	 * set_ht_params - Set HT parameters (AP only)
+	 * @ifname: The interface name (main or virtual BSS)
+	 * @priv: Private driver interface data
+	 * @ht_capab: HT Capabilities IE
+	 * @ht_capab_len: Length of ht_capab in octets
+	 * @ht_oper: HT Operation IE
+	 * @ht_oper_len: Length of ht_oper in octets
+	 * Returns: 0 on success, -1 on failure
+	 */
 	int (*set_ht_params)(const char *ifname, void *priv,
 			     const u8 *ht_capab, size_t ht_capab_len,
 			     const u8 *ht_oper, size_t ht_oper_len);

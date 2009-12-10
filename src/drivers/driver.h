@@ -1711,8 +1711,6 @@ void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
 			   struct ieee80211_rx_status *rx_status);
 
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie);
-#define WPA_IE_VENDOR_TYPE 0x0050f201
-#define WPS_IE_VENDOR_TYPE 0x0050f204
 const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,
 				  u32 vendor_type);
 struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,

@@ -393,17 +393,6 @@ static inline int wpa_auth_get_seqnum(struct wpa_authenticator *wpa_auth,
 }
 
 
-#ifdef CONFIG_IEEE80211W
-static inline int wpa_auth_get_seqnum_igtk(struct wpa_authenticator *wpa_auth,
-					   const u8 *addr, int idx, u8 *seq)
-{
-	if (wpa_auth->cb.get_seqnum_igtk == NULL)
-		return -1;
-	return wpa_auth->cb.get_seqnum_igtk(wpa_auth->cb.ctx, addr, idx, seq);
-}
-#endif /* CONFIG_IEEE80211W */
-
-
 static u8 * wpa_ft_gtk_subelem(struct wpa_state_machine *sm, size_t *len)
 {
 	u8 *subelem;
@@ -478,7 +467,7 @@ static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
 	*pos++ = subelem_len - 2;
 	WPA_PUT_LE16(pos, gsm->GN_igtk);
 	pos += 2;
-	wpa_auth_get_seqnum_igtk(sm->wpa_auth, NULL, gsm->GN_igtk, pos);
+	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, pos);
 	pos += 6;
 	*pos++ = WPA_IGTK_LEN;
 	if (aes_wrap(sm->PTK.kek, WPA_IGTK_LEN / 8,

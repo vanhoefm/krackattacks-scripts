@@ -3211,7 +3211,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* set_ieee8021x */,
 	NULL /* set_privacy */,
 	NULL /* get_seqnum */,
-	NULL /* get_seqnum_igtk */,
 	NULL /* flush */,
 	NULL /* set_generic_elem */,
 	NULL /* read_sta_data */,

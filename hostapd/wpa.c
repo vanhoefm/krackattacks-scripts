@@ -122,15 +122,6 @@ static inline int wpa_auth_get_seqnum(struct wpa_authenticator *wpa_auth,
 }
 
 
-static inline int wpa_auth_get_seqnum_igtk(struct wpa_authenticator *wpa_auth,
-					   const u8 *addr, int idx, u8 *seq)
-{
-	if (wpa_auth->cb.get_seqnum_igtk == NULL)
-		return -1;
-	return wpa_auth->cb.get_seqnum_igtk(wpa_auth->cb.ctx, addr, idx, seq);
-}
-
-
 static inline int
 wpa_auth_send_eapol(struct wpa_authenticator *wpa_auth, const u8 *addr,
 		    const u8 *data, size_t data_len, int encrypt)
@@ -1538,8 +1529,7 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 
 	igtk.keyid[0] = gsm->GN_igtk;
 	igtk.keyid[1] = 0;
-	if (wpa_auth_get_seqnum_igtk(sm->wpa_auth, NULL, gsm->GN_igtk, igtk.pn)
-	    < 0)
+	if (wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, igtk.pn) < 0)
 		os_memset(igtk.pn, 0, sizeof(igtk.pn));
 	os_memcpy(igtk.igtk, gsm->IGTK[gsm->GN_igtk - 4], WPA_IGTK_LEN);
 	pos = wpa_add_kde(pos, RSN_KEY_DATA_IGTK,

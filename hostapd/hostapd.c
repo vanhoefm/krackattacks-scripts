@@ -614,15 +614,6 @@ static int hostapd_wpa_auth_get_seqnum(void *ctx, const u8 *addr, int idx,
 }
 
 
-static int hostapd_wpa_auth_get_seqnum_igtk(void *ctx, const u8 *addr, int idx,
-					    u8 *seq)
-{
-	struct hostapd_data *hapd = ctx;
-	return hostapd_get_seqnum_igtk(hapd->conf->iface, hapd, addr, idx,
-				       seq);
-}
-
-
 static int hostapd_wpa_auth_send_eapol(void *ctx, const u8 *addr,
 				       const u8 *data, size_t data_len,
 				       int encrypt)
@@ -894,7 +885,6 @@ static int hostapd_setup_wpa(struct hostapd_data *hapd)
 	cb.get_msk = hostapd_wpa_auth_get_msk;
 	cb.set_key = hostapd_wpa_auth_set_key;
 	cb.get_seqnum = hostapd_wpa_auth_get_seqnum;
-	cb.get_seqnum_igtk = hostapd_wpa_auth_get_seqnum_igtk;
 	cb.send_eapol = hostapd_wpa_auth_send_eapol;
 	cb.for_each_sta = hostapd_wpa_auth_for_each_sta;
 	cb.for_each_auth = hostapd_wpa_auth_for_each_auth;

@@ -1117,25 +1117,12 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This function is used to fetch the last used TSC/packet number for
-	 * a TKIP or CCMP key.
+	 * a TKIP, CCMP, or BIP/IGTK key. It is mainly used with group keys, so
+	 * there is no strict requirement on implementing support for unicast
+	 * keys (i.e., addr != %NULL).
 	 */
 	int (*get_seqnum)(const char *ifname, void *priv, const u8 *addr,
 			  int idx, u8 *seq);
-
-	/**
-	 * get_seqnum_igtk - Fetch the IGTK packet number (AP only)
-	 * @ifname: The interface name (main or virtual)
-	 * @priv: Private driver interface data
-	 * @addr: %NULL for group keys
-	 * @idx: Key index
-	 * @seq: Buffer for returning the last used packet number
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is used to fetch the last used packet number for an
-	 * IGTK key.
-	 */
-	int (*get_seqnum_igtk)(const char *ifname, void *priv, const u8 *addr,
-			       int idx, u8 *seq);
 
 	/**
 	 * flush - Flush all association stations (AP only)

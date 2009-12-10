@@ -104,16 +104,6 @@ hostapd_get_seqnum(const char *ifname, struct hostapd_data *hapd,
 }
 
 static inline int
-hostapd_get_seqnum_igtk(const char *ifname, struct hostapd_data *hapd,
-			const u8 *addr, int idx, u8 *seq)
-{
-	if (hapd->driver == NULL || hapd->driver->get_seqnum_igtk == NULL)
-		return -1;
-	return hapd->driver->get_seqnum_igtk(ifname, hapd->drv_priv, addr, idx,
-					     seq);
-}
-
-static inline int
 hostapd_flush(struct hostapd_data *hapd)
 {
 	if (hapd->driver == NULL || hapd->driver->flush == NULL)

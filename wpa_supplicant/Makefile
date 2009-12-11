@@ -981,18 +981,15 @@ endif
 OBJS += $(SHA256OBJS)
 endif
 
-ifdef CONFIG_INTERNAL_DH_GROUP5
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_groups.o
+endif
+ifdef NEED_DH_GROUPS_ALL
+CFLAGS += -DALL_DH_GROUPS
+endif
+ifdef CONFIG_INTERNAL_DH_GROUP5
+ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_group5.o
-ifdef NEED_DH_GROUPS_ALL
-CFLAGS += -DALL_DH_GROUPS
-endif
-endif
-else
-ifdef NEED_DH_GROUPS_ALL
-OBJS += ../src/crypto/dh_groups.o
-CFLAGS += -DALL_DH_GROUPS
 endif
 endif
 

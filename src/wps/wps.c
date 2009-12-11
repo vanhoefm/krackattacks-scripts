@@ -307,7 +307,8 @@ struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type)
 	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
 
 	if (wps_build_version(ie) ||
-	    wps_build_req_type(ie, req_type)) {
+	    wps_build_req_type(ie, req_type) ||
+	    wps_build_version2(ie)) {
 		wpabuf_free(ie);
 		return NULL;
 	}
@@ -340,7 +341,8 @@ struct wpabuf * wps_build_assoc_resp_ie(void)
 	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
 
 	if (wps_build_version(ie) ||
-	    wps_build_resp_type(ie, WPS_RESP_AP)) {
+	    wps_build_resp_type(ie, WPS_RESP_AP) ||
+	    wps_build_version2(ie)) {
 		wpabuf_free(ie);
 		return NULL;
 	}
@@ -401,7 +403,8 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_assoc_state(NULL, ie) ||
 	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
-				      DEV_PW_DEFAULT)) {
+				      DEV_PW_DEFAULT) ||
+	    wps_build_version2(ie)) {
 		wpabuf_free(ie);
 		return NULL;
 	}

@@ -755,11 +755,6 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 
 	if (wps_parse_msg(wps_data, &attr) < 0)
 		return;
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported ProbeReq WPS IE "
-			   "version 0x%x", attr.version ? *attr.version : 0);
-		return;
-	}
 
 	if (attr.config_methods == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Config Methods attribute in "
@@ -923,6 +918,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_selected_registrar(reg, beacon) ||
 	    wps_build_sel_reg_dev_password_id(reg, beacon) ||
 	    wps_build_sel_reg_config_methods(reg, beacon) ||
+	    wps_build_version2(beacon) ||
 	    wps_build_version(probe) ||
 	    wps_build_wps_state(reg->wps, probe) ||
 	    wps_build_ap_setup_locked(reg->wps, probe) ||
@@ -934,7 +930,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_uuid_e(probe, reg->wps->uuid) ||
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
-	    wps_build_rf_bands(&reg->wps->dev, probe)) {
+	    wps_build_rf_bands(&reg->wps->dev, probe) ||
+	    wps_build_version2(probe)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
@@ -1350,6 +1347,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);
 		return NULL;
@@ -1388,7 +1386,8 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	    wps_build_rf_bands(&wps->wps->dev, msg) ||
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, err) ||
-	    wps_build_os_version(&wps->wps->dev, msg)) {
+	    wps_build_os_version(&wps->wps->dev, msg) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1423,6 +1422,7 @@ static struct wpabuf * wps_build_m4(struct wps_data *wps)
 	    wps_build_r_snonce1(wps, plain) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -1457,6 +1457,7 @@ static struct wpabuf * wps_build_m6(struct wps_data *wps)
 	    wps_build_r_snonce2(wps, plain) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -1493,6 +1494,7 @@ static struct wpabuf * wps_build_m8(struct wps_data *wps)
 	    (!wps->wps->ap && !wps->er && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -1518,7 +1520,8 @@ static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_WSC_ACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
-	    wps_build_registrar_nonce(wps, msg)) {
+	    wps_build_registrar_nonce(wps, msg) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1541,7 +1544,8 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_WSC_NACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_config_error(msg, wps->config_error)) {
+	    wps_build_config_error(msg, wps->config_error) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -2362,12 +2366,6 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
-
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
 		return WPS_FAILURE;
@@ -2437,12 +2435,6 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
-
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
 
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
@@ -2514,12 +2506,6 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
-
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
 
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
@@ -2599,12 +2585,6 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
-
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
 
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");

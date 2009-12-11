@@ -122,6 +122,7 @@ struct wps_data {
 struct wps_parse_attr {
 	/* fixed length fields */
 	const u8 *version; /* 1 octet */
+	const u8 *version2; /* 1 octet */
 	const u8 *msg_type; /* 1 octet */
 	const u8 *enrollee_nonce; /* WPS_NONCE_LEN (16) octets */
 	const u8 *registrar_nonce; /* WPS_NONCE_LEN (16) octets */
@@ -162,6 +163,9 @@ struct wps_parse_attr {
 	const u8 *request_type; /* 1 octet */
 	const u8 *response_type; /* 1 octet */
 	const u8 *ap_setup_locked; /* 1 octet */
+	const u8 *settings_delay_time; /* 1 octet */
+	const u8 *network_key_shareable; /* 1 octet (Bool) */
+	const u8 *request_to_enroll; /* 1 octet (Bool) */
 
 	/* variable length fields */
 	const u8 *manufacturer;
@@ -186,12 +190,18 @@ struct wps_parse_attr {
 	size_t eap_type_len;
 	const u8 *eap_identity; /* <= 64 octets */
 	size_t eap_identity_len;
+	const u8 *authorized_macs; /* <= 30 octets */
+	size_t authorized_macs_len;
 
 	/* attributes that can occur multiple times */
 #define MAX_CRED_COUNT 10
 	const u8 *cred[MAX_CRED_COUNT];
 	size_t cred_len[MAX_CRED_COUNT];
 	size_t num_cred;
+
+#define MAX_REQ_DEV_TYPE_COUNT 10
+	const u8 *req_dev_type[MAX_REQ_DEV_TYPE_COUNT];
+	size_t num_req_dev_type;
 };
 
 /* wps_common.c */
@@ -228,6 +238,7 @@ int wps_build_key_wrap_auth(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 			    struct wpabuf *plain);
 int wps_build_version(struct wpabuf *msg);
+int wps_build_version2(struct wpabuf *msg);
 int wps_build_msg_type(struct wpabuf *msg, enum wps_msg_type msg_type);
 int wps_build_enrollee_nonce(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_registrar_nonce(struct wps_data *wps, struct wpabuf *msg);
@@ -268,11 +279,5 @@ void wps_registrar_selected_registrar_changed(struct wps_registrar *reg);
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);
 struct wpabuf * ndef_build_wifi(struct wpabuf *buf);
-
-static inline int wps_version_supported(const u8 *version)
-{
-	/* Require major version match, but allow minor version differences */
-	return version && (*version & 0xf0) == (WPS_VERSION & 0xf0);
-}
 
 #endif /* WPS_I_H */

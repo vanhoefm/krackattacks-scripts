@@ -42,11 +42,6 @@ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return -1;
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported SetSelectedRegistrar "
-			   "version 0x%x", attr.version ? *attr.version : 0);
-		return -1;
-	}
 
 	s->reg = reg;
 	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, NULL);

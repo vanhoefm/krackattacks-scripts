@@ -1362,7 +1362,8 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	if (wps_build_version(msg) ||
 	    wps_er_build_selected_registrar(msg, sel_reg) ||
 	    wps_er_build_dev_password_id(msg, dev_passwd_id) ||
-	    wps_er_build_sel_reg_config_methods(msg, sel_reg_config_methods)) {
+	    wps_er_build_sel_reg_config_methods(msg, sel_reg_config_methods) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return;
 	}

@@ -327,7 +327,9 @@ static struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 	data.wps = wps;
 	data.auth_type = wps->auth_types;
 	data.encr_type = wps->encr_types;
-	if (wps_build_version(plain) || wps_build_cred(&data, plain)) {
+	if (wps_build_version(plain) ||
+	    wps_build_cred(&data, plain) ||
+	    wps_build_version2(plain)) {
 		wpabuf_free(plain);
 		return NULL;
 	}
@@ -358,7 +360,8 @@ static struct wpabuf * wps_get_oob_dev_pwd(struct wps_context *wps)
 	}
 
 	if (wps_build_version(data) ||
-	    wps_build_oob_dev_password(data, wps)) {
+	    wps_build_oob_dev_password(data, wps) ||
+	    wps_build_version2(data)) {
 		wpa_printf(MSG_ERROR, "WPS: Build OOB device password "
 			   "attribute error");
 		wpabuf_free(data);

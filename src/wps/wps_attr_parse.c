@@ -32,6 +32,14 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->version = pos;
 		break;
+	case ATTR_VERSION2:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Version2 length "
+				   "%u", len);
+			return -1;
+		}
+		attr->version2 = pos;
+		break;
 	case ATTR_MSG_TYPE:
 		if (len != 1) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Message Type "
@@ -398,6 +406,49 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 			return -1;
 		}
 		attr->ap_setup_locked = pos;
+		break;
+	case ATTR_SETTINGS_DELAY_TIME:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Settings Delay "
+				   "Time length %u", len);
+			return -1;
+		}
+		attr->settings_delay_time = pos;
+		break;
+	case ATTR_NETWORK_KEY_SHAREABLE:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Network Key "
+				   "Shareable length %u", len);
+			return -1;
+		}
+		attr->network_key_shareable = pos;
+		break;
+	case ATTR_REQUEST_TO_ENROLL:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Request to Enroll "
+				   "length %u", len);
+			return -1;
+		}
+		attr->request_to_enroll = pos;
+		break;
+	case ATTR_AUTHORIZED_MACS:
+		attr->authorized_macs = pos;
+		attr->authorized_macs_len = len;
+		break;
+	case ATTR_REQUESTED_DEV_TYPE:
+		if (len != WPS_DEV_TYPE_LEN) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Requested Device "
+				   "Type length %u", len);
+			return -1;
+		}
+		if (attr->num_req_dev_type >= MAX_REQ_DEV_TYPE_COUNT) {
+			wpa_printf(MSG_DEBUG, "WPS: Skipped Requested Device "
+				   "Type attribute (max %u types)",
+				   MAX_REQ_DEV_TYPE_COUNT);
+			break;
+		}
+		attr->req_dev_type[attr->num_req_dev_type] = pos;
+		attr->num_req_dev_type++;
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported attribute type 0x%x "

@@ -158,8 +158,23 @@ int wps_build_authenticator(struct wps_data *wps, struct wpabuf *msg)
 
 int wps_build_version(struct wpabuf *msg)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * Version");
+	/*
+	 * Note: This attribute is deprecated and set to hardcoded 0x10 for
+	 * backwards compatibility reasons. The real version negotiation is
+	 * done with Version2.
+	 */
+	wpa_printf(MSG_DEBUG, "WPS:  * Version (hardcoded 0x10)");
 	wpabuf_put_be16(msg, ATTR_VERSION);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, 0x10);
+	return 0;
+}
+
+
+int wps_build_version2(struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Version2 (0x%x)", WPS_VERSION);
+	wpabuf_put_be16(msg, ATTR_VERSION2);
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, WPS_VERSION);
 	return 0;

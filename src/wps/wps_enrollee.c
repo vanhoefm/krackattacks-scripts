@@ -146,7 +146,8 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
-	    wps_build_os_version(&wps->wps->dev, msg)) {
+	    wps_build_os_version(&wps->wps->dev, msg) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -176,6 +177,7 @@ static struct wpabuf * wps_build_m3(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_M3) ||
 	    wps_build_registrar_nonce(wps, msg) ||
 	    wps_build_e_hash(wps, msg) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);
 		return NULL;
@@ -208,6 +210,7 @@ static struct wpabuf * wps_build_m5(struct wps_data *wps)
 	    wps_build_e_snonce1(wps, plain) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -310,6 +313,7 @@ static struct wpabuf * wps_build_m7(struct wps_data *wps)
 	    (wps->wps->ap && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
+	    wps_build_version2(msg) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -345,7 +349,8 @@ static struct wpabuf * wps_build_wsc_done(struct wps_data *wps)
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_WSC_DONE) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
-	    wps_build_registrar_nonce(wps, msg)) {
+	    wps_build_registrar_nonce(wps, msg) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -373,7 +378,8 @@ static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_WSC_ACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
-	    wps_build_registrar_nonce(wps, msg)) {
+	    wps_build_registrar_nonce(wps, msg) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -396,7 +402,8 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_WSC_NACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_config_error(msg, wps->config_error)) {
+	    wps_build_config_error(msg, wps->config_error) ||
+	    wps_build_version2(msg)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1011,12 +1018,6 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
-
 	if (attr.enrollee_nonce == NULL ||
 	    os_memcmp(wps->nonce_e, attr.enrollee_nonce, WPS_NONCE_LEN != 0)) {
 		wpa_printf(MSG_DEBUG, "WPS: Mismatch in enrollee nonce");
@@ -1084,12 +1085,6 @@ static enum wps_process_res wps_process_wsc_ack(struct wps_data *wps,
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
 
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
-
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
 		return WPS_FAILURE;
@@ -1135,12 +1130,6 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return WPS_FAILURE;
-
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported message version 0x%x",
-			   attr.version ? *attr.version : 0);
-		return WPS_FAILURE;
-	}
 
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");

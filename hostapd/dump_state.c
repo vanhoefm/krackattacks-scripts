@@ -156,6 +156,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 		buf[count] = '\0';
 		fprintf(f, "%s", buf);
 
+#ifdef RADIUS_SERVER
 		count = radius_server_get_mib(hapd->radius_srv, buf, 4096);
 		if (count < 0)
 			count = 0;
@@ -163,6 +164,8 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 			count = 4095;
 		buf[count] = '\0';
 		fprintf(f, "%s", buf);
+#endif /* RADIUS_SERVER */
+
 		os_free(buf);
 	}
 #endif /* CONFIG_NO_RADIUS */

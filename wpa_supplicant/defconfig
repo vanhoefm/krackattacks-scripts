@@ -55,11 +55,6 @@ CONFIG_DRIVER_HOSTAP=y
 # Set include directory to the madwifi source tree
 #CFLAGS += -I../../madwifi
 
-# Driver interface for Prism54 driver
-# (Note: Prism54 is not yet supported, i.e., this will not work as-is and is
-# for developers only)
-#CONFIG_DRIVER_PRISM54=y
-
 # Driver interface for ndiswrapper
 # Deprecated; use CONFIG_DRIVER_WEXT=y instead.
 #CONFIG_DRIVER_NDISWRAPPER=y

@@ -19,9 +19,6 @@ CONFIG_DRIVER_HOSTAP=y
 #CONFIG_DRIVER_MADWIFI=y
 #CFLAGS += -I../../madwifi # change to the madwifi source directory
 
-# Driver interface for Prism54 driver
-#CONFIG_DRIVER_PRISM54=y
-
 # Driver interface for drivers using the nl80211 kernel interface
 #CONFIG_DRIVER_NL80211=y
 # driver_nl80211.c requires a rather new libnl (version 1.1) which may not be

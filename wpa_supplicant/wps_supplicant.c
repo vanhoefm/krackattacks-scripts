@@ -1116,6 +1116,8 @@ int wpas_wps_er_start(struct wpa_supplicant *wpa_s)
 		wps_er_refresh(wpa_s->wps_er);
 		return 0;
 	}
+	wpa_s->wps->config_methods |= WPS_CONFIG_DISPLAY;
+	wpa_s->wps->config_methods |= WPS_CONFIG_KEYPAD;
 	wpa_s->wps_er = wps_er_init(wpa_s->wps, wpa_s->ifname);
 	if (wpa_s->wps_er == NULL)
 		return -1;

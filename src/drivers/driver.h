@@ -481,6 +481,14 @@ struct wpa_init_params {
 };
 
 
+struct wpa_bss_params {
+	/** Interface name (for multi-SSID/VLAN support) */
+	const char *ifname;
+	/** Whether IEEE 802.1X or WPA/WPA2 is enabled */
+	int enabled;
+};
+
+
 /**
  * struct wpa_driver_ops - Driver interface API definition
  *
@@ -1084,16 +1092,17 @@ struct wpa_driver_ops {
 
 	/**
 	 * set_ieee8021x - Enable/disable IEEE 802.1X support (AP only)
-	 * @ifname: Interface name (for multi-SSID/VLAN support)
 	 * @priv: Private driver interface data
-	 * @enabled: 1 = enable, 0 = disable
+	 * @params: BSS parameters
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This is an optional function to configure the kernel driver to
-	 * enable/disable 802.1X support. This can be left undefined (set to
-	 * %NULL) if IEEE 802.1X support is always enabled.
+	 * enable/disable IEEE 802.1X support and set WPA/WPA2 parameters. This
+	 * can be left undefined (set to %NULL) if IEEE 802.1X support is
+	 * always enabled and the driver uses set_beacon() to set WPA/RSN IE
+	 * for Beacon frames.
 	 */
-	int (*set_ieee8021x)(const char *ifname, void *priv, int enabled);
+	int (*set_ieee8021x)(void *priv, struct wpa_bss_params *params);
 
 	/**
 	 * set_privacy - Enable/disable privacy (AP only)

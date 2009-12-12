@@ -306,11 +306,12 @@ madwifi_set_iface_flags(void *priv, int dev_up)
 }
 
 static int
-madwifi_set_ieee8021x(const char *ifname, void *priv, int enabled)
+madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct hostapd_data *hapd = drv->hapd;
 	struct hostapd_bss_config *conf = hapd->conf;
+	int enabled = params->enabled;
 
 	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
 

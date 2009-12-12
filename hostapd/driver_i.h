@@ -63,12 +63,11 @@ hostapd_driver_deinit(struct hostapd_data *hapd)
 }
 
 static inline int
-hostapd_set_ieee8021x(const char *ifname, struct hostapd_data *hapd,
-		      int enabled)
+hostapd_set_ieee8021x(struct hostapd_data *hapd, struct wpa_bss_params *params)
 {
 	if (hapd->driver == NULL || hapd->driver->set_ieee8021x == NULL)
 		return 0;
-	return hapd->driver->set_ieee8021x(ifname, hapd->drv_priv, enabled);
+	return hapd->driver->set_ieee8021x(hapd->drv_priv, params);
 }
 
 static inline int

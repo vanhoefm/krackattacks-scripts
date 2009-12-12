@@ -542,9 +542,10 @@ static int hostap_ioctl_prism2param(void *priv, int param, int value)
 }
 
 
-static int hostap_set_ieee8021x(const char *ifname, void *priv, int enabled)
+static int hostap_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
 	struct hostap_driver_data *drv = priv;
+	int enabled = params->enabled;
 
 	/* enable kernel driver support for IEEE 802.1X */
 	if (hostap_ioctl_prism2param(drv, PRISM2_PARAM_IEEE_802_1X, enabled)) {

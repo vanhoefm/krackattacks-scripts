@@ -177,7 +177,9 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	}
 
 	if (hapd->conf->ieee802_1x || hapd->conf->wpa)
-		hostapd_set_ieee8021x(hapd->conf->iface, hapd, 1);
+		hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 1);
+	else
+		hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 0);
 
 	hostapd_config_free(oldconf);
 
@@ -1485,4 +1487,15 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 	n->ctx = ctx;
 
 	return 0;
+}
+
+
+int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
+			      int enabled)
+{
+	struct wpa_bss_params params;
+	os_memset(&params, 0, sizeof(params));
+	params.ifname = ifname;
+	params.enabled = enabled;
+	return hostapd_set_ieee8021x(hapd, &params);
 }

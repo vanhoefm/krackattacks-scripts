@@ -236,7 +236,7 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 			    NULL, 0, key->key[key->idx], key->len[key->idx]))
 		printf("Could not set dynamic VLAN WEP encryption key.\n");
 
-	hostapd_set_ieee8021x(ifname, hapd, 1);
+	hostapd_set_drv_ieee8021x(hapd, ifname, 1);
 
 	return key;
 }
@@ -1664,7 +1664,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 		return -1;
 
 	if ((hapd->conf->ieee802_1x || hapd->conf->wpa) &&
-	    hostapd_set_ieee8021x(hapd->conf->iface, hapd, 1))
+	    hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 1))
 		return -1;
 
 #ifndef CONFIG_NO_RADIUS
@@ -1696,7 +1696,7 @@ void ieee802_1x_deinit(struct hostapd_data *hapd)
 
 	if (hapd->driver != NULL &&
 	    (hapd->conf->ieee802_1x || hapd->conf->wpa))
-		hostapd_set_ieee8021x(hapd->conf->iface, hapd, 0);
+		hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 0);
 
 	eapol_auth_deinit(hapd->eapol_auth);
 	hapd->eapol_auth = NULL;

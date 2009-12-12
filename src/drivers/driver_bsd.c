@@ -323,11 +323,12 @@ bsd_set_iface_flags(void *priv, int dev_up)
 }
 
 static int
-bsd_set_ieee8021x(const char *ifname, void *priv, int enabled)
+bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
 	struct bsd_driver_data *drv = priv;
 	struct hostapd_data *hapd = drv->hapd;
 	struct hostapd_bss_config *conf = hapd->conf;
+	int enabled = params->enabled;
 
 	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
 

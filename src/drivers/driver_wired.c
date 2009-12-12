@@ -1,5 +1,5 @@
 /*
- * WPA Supplicant - wired Ethernet driver interface
+ * Wired Ethernet driver interface
  * Copyright (c) 2005-2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2004, Gunter Burchardt <tira@isx.de>
  *
@@ -26,11 +26,8 @@
 #endif /* defined(__FreeBSD__) || defined(__DragonFly__) */
 
 #include "common.h"
-#include "driver.h"
-
-#ifdef HOSTAPD
 #include "eloop.h"
-#endif /* HOSTAPD */
+#include "driver.h"
 
 #ifdef _MSC_VER
 #pragma pack(push, 1)
@@ -51,23 +48,17 @@ static const u8 pae_group_addr[ETH_ALEN] =
 
 
 struct wpa_driver_wired_data {
-#ifdef HOSTAPD
-	struct hostapd_data *hapd;
-	char iface[IFNAMSIZ + 1];
+	char ifname[IFNAMSIZ + 1];
+	void *ctx;
 
 	int sock; /* raw packet socket for driver access */
 	int dhcp_sock; /* socket for dhcp packets */
 	int use_pae_group_addr;
-#else /* HOSTAPD */
-	void *ctx;
+
 	int pf_sock;
-	char ifname[IFNAMSIZ + 1];
 	int membership, multi, iff_allmulti, iff_up;
-#endif /* HOSTAPD */
 };
 
-
-#ifdef HOSTAPD
 
 /* TODO: detecting new devices should eventually be changed from using DHCP
  * snooping to trigger on any packet from a new layer 2 MAC address, e.g.,
@@ -93,9 +84,9 @@ struct dhcp_message {
 };
 
 
-static void handle_data(struct hostapd_data *hapd, unsigned char *buf,
-			size_t len)
+static void handle_data(void *ctx, unsigned char *buf, size_t len)
 {
+#ifdef HOSTAPD
 	struct ieee8023_hdr *hdr;
 	u8 *pos, *sa;
 	size_t left;
@@ -114,12 +105,12 @@ static void handle_data(struct hostapd_data *hapd, unsigned char *buf,
 		case ETH_P_PAE:
 			wpa_printf(MSG_MSGDUMP, "Received EAPOL packet");
 			sa = hdr->src;
-			hostapd_notif_new_sta(hapd, sa);
+			hostapd_notif_new_sta(ctx, sa);
 
 			pos = (u8 *) (hdr + 1);
 			left = len - sizeof(*hdr);
 
-			hostapd_eapol_receive(hapd, sa, pos, left);
+			hostapd_eapol_receive(ctx, sa, pos, left);
 		break;
 
 	default:
@@ -127,12 +118,12 @@ static void handle_data(struct hostapd_data *hapd, unsigned char *buf,
 			   ntohs(hdr->ethertype));
 		break;
 	}
+#endif /* HOSTAPD */
 }
 
 
 static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
-	struct hostapd_data *hapd = (struct hostapd_data *) eloop_ctx;
 	int len;
 	unsigned char buf[3000];
 
@@ -142,13 +133,13 @@ static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	handle_data(hapd, buf, len);
+	handle_data(eloop_ctx, buf, len);
 }
 
 
 static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 {
-	struct hostapd_data *hapd = (struct hostapd_data *) eloop_ctx;
+#ifdef HOSTAPD
 	int len;
 	unsigned char buf[3000];
 	struct dhcp_message *msg;
@@ -172,13 +163,13 @@ static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 	wpa_printf(MSG_MSGDUMP, "Got DHCP broadcast packet from " MACSTR,
 		   MAC2STR(mac_address));
 
-	hostapd_notif_new_sta(hapd, mac_address);
+	hostapd_notif_new_sta(eloop_ctx, mac_address);
+#endif /* HOSTAPD */
 }
 
 
 static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 {
-	struct hostapd_data *hapd = drv->hapd;
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
 	struct sockaddr_in addr2;
@@ -191,13 +182,13 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	if (eloop_register_read_sock(drv->sock, handle_read, hapd, NULL)) {
+	if (eloop_register_read_sock(drv->sock, handle_read, drv->ctx, NULL)) {
 		printf("Could not register read socket\n");
 		return -1;
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
+	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
 	if (ioctl(drv->sock, SIOCGIFINDEX, &ifr) != 0) {
 		perror("ioctl(SIOCGIFINDEX)");
 		return -1;
@@ -228,7 +219,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
+	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
 	if (ioctl(drv->sock, SIOCGIFHWADDR, &ifr) != 0) {
 		perror("ioctl(SIOCGIFHWADDR)");
 		return -1;
@@ -247,8 +238,8 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	if (eloop_register_read_sock(drv->dhcp_sock, handle_dhcp, hapd, NULL))
-	{
+	if (eloop_register_read_sock(drv->dhcp_sock, handle_dhcp, drv->ctx,
+				     NULL)) {
 		printf("Could not register read socket\n");
 		return -1;
 	}
@@ -270,7 +261,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 
 	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_ifrn.ifrn_name, drv->iface, IFNAMSIZ);
+	os_strlcpy(ifr.ifr_ifrn.ifrn_name, drv->ifname, IFNAMSIZ);
 	if (setsockopt(drv->dhcp_sock, SOL_SOCKET, SO_BINDTODEVICE,
 		       (char *) &ifr, sizeof(ifr)) < 0) {
 		perror("setsockopt[SOL_SOCKET,SO_BINDTODEVICE]");
@@ -337,8 +328,8 @@ static void * wired_driver_hapd_init(struct hostapd_data *hapd,
 		return NULL;
 	}
 
-	drv->hapd = hapd;
-	os_strlcpy(drv->iface, params->ifname, sizeof(drv->iface));
+	drv->ctx = hapd;
+	os_strlcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
 	drv->use_pae_group_addr = params->use_pae_group_addr;
 
 	if (wired_init_sockets(drv, params->own_addr)) {
@@ -363,7 +354,6 @@ static void wired_driver_hapd_deinit(void *priv)
 	free(drv);
 }
 
-#else /* HOSTAPD */
 
 static int wpa_driver_wired_get_ssid(void *priv, u8 *ssid)
 {
@@ -609,21 +599,17 @@ static void wpa_driver_wired_deinit(void *priv)
 
 	os_free(drv);
 }
-#endif /* HOSTAPD */
 
 
 const struct wpa_driver_ops wpa_driver_wired_ops = {
 	.name = "wired",
 	.desc = "Wired Ethernet driver",
-#ifdef HOSTAPD
 	.hapd_init = wired_driver_hapd_init,
 	.hapd_deinit = wired_driver_hapd_deinit,
 	.hapd_send_eapol = wired_send_eapol,
-#else /* HOSTAPD */
 	.get_ssid = wpa_driver_wired_get_ssid,
 	.get_bssid = wpa_driver_wired_get_bssid,
 	.get_capa = wpa_driver_wired_get_capa,
 	.init = wpa_driver_wired_init,
 	.deinit = wpa_driver_wired_deinit,
-#endif /* HOSTAPD */
 };

@@ -156,7 +156,6 @@ bsd_set_ssid(int s, const char *ifname, const u8 *ssid, size_t ssid_len)
 #include "l2_packet/l2_packet.h"
 #include "../../hostapd/hostapd.h"
 #include "../../hostapd/config.h"
-#include "../../hostapd/eapol_sm.h"
 #include "../../hostapd/sta_flags.h"
 
 struct bsd_driver_data {

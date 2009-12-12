@@ -917,14 +917,6 @@ static int hostapd_rx_req_put_wlan_response(
 }
 
 
-static int hostapd_rx_req_set_selected_registrar(void *priv,
-						 const struct wpabuf *msg)
-{
-	struct hostapd_data *hapd = priv;
-	return wps_registrar_set_selected_registrar(hapd->wps->registrar, msg);
-}
-
-
 static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 				 struct wps_context *wps)
 {
@@ -939,8 +931,6 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 	ctx->rx_req_get_device_info = hostapd_rx_req_get_device_info;
 	ctx->rx_req_put_message = hostapd_rx_req_put_message;
 	ctx->rx_req_put_wlan_response = hostapd_rx_req_put_wlan_response;
-	ctx->rx_req_set_selected_registrar =
-		hostapd_rx_req_set_selected_registrar;
 
 	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd);
 	if (hapd->wps_upnp == NULL) {

@@ -520,8 +520,7 @@ web_process_set_selected_registrar(struct upnp_wps_device_sm *sm, char *data,
 	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
-	if (!sm->ctx->rx_req_set_selected_registrar ||
-	    sm->ctx->rx_req_set_selected_registrar(sm->priv, msg)) {
+	if (wps_registrar_set_selected_registrar(sm->wps->registrar, msg)) {
 		wpabuf_free(msg);
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}

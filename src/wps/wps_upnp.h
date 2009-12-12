@@ -34,8 +34,6 @@ struct upnp_wps_device_ctx {
 		void *priv, enum upnp_wps_wlanevent_type ev_type,
 		const u8 *mac_addr, const struct wpabuf *msg,
 		enum wps_msg_type msg_type);
-	int (*rx_req_set_selected_registrar)(void *priv,
-					     const struct wpabuf *msg);
 };
 
 struct upnp_wps_device_sm *

@@ -687,7 +687,7 @@ static void web_connection_send_reply(struct http_request *req,
 
 
 static const char * web_get_action(struct http_request *req,
-				   const char *filename, size_t *action_len)
+				   size_t *action_len)
 {
 	const char *match;
 	int match_len;
@@ -695,11 +695,6 @@ static const char * web_get_action(struct http_request *req,
 	char *action;
 
 	*action_len = 0;
-	if (os_strcasecmp(filename, UPNP_WPS_DEVICE_CONTROL_FILE)) {
-		wpa_printf(MSG_INFO, "WPS UPnP: Invalid POST filename %s",
-			   filename);
-		return NULL;
-	}
 	/* The SOAPAction line of the header tells us what we want to do */
 	b = http_request_get_hdr_line(req, "SOAPAction:");
 	if (b == NULL)
@@ -754,13 +749,20 @@ static void web_connection_parse_post(struct upnp_wps_device_sm *sm,
 {
 	enum http_reply_code ret;
 	char *data = http_request_get_data(req); /* body of http msg */
-	const char *action;
-	size_t action_len;
+	const char *action = NULL;
+	size_t action_len = 0;
 	const char *replyname = NULL; /* argument name for the reply */
 	struct wpabuf *reply = NULL; /* data for the reply */
 
+	if (os_strcasecmp(filename, UPNP_WPS_DEVICE_CONTROL_FILE)) {
+		wpa_printf(MSG_INFO, "WPS UPnP: Invalid POST filename %s",
+			   filename);
+		ret = HTTP_NOT_FOUND;
+		goto bad;
+	}
+
 	ret = UPNP_INVALID_ACTION;
-	action = web_get_action(req, filename, &action_len);
+	action = web_get_action(req, &action_len);
 	if (action == NULL)
 		goto bad;
 

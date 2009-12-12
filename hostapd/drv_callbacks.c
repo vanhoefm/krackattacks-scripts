@@ -237,6 +237,27 @@ void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
 }
 
 
+int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	if (sta)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "Data frame from unknown STA " MACSTR
+		   " - adding a new STA", MAC2STR(addr));
+	sta = ap_sta_add(hapd, addr);
+	if (sta) {
+		hostapd_new_assoc_sta(hapd, sta, 0);
+	} else {
+		wpa_printf(MSG_DEBUG, "Failed to add STA entry for " MACSTR,
+			   MAC2STR(addr));
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen)
 {

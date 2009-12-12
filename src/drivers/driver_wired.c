@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - wired Ethernet driver interface
- * Copyright (c) 2005-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2004, Gunter Burchardt <tira@isx.de>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -30,7 +30,6 @@
 
 #ifdef HOSTAPD
 #include "eloop.h"
-#include "../../hostapd/sta_info.h"
 #endif /* HOSTAPD */
 
 #ifdef _MSC_VER
@@ -94,26 +93,6 @@ struct dhcp_message {
 };
 
 
-static void wired_possible_new_sta(struct hostapd_data *hapd, u8 *addr)
-{
-	struct sta_info *sta;
-
-	sta = ap_get_sta(hapd, addr);
-	if (sta)
-		return;
-
-	wpa_printf(MSG_DEBUG, "Data frame from unknown STA " MACSTR
-		   " - adding a new STA", MAC2STR(addr));
-	sta = ap_sta_add(hapd, addr);
-	if (sta) {
-		hostapd_new_assoc_sta(hapd, sta, 0);
-	} else {
-		wpa_printf(MSG_DEBUG, "Failed to add STA entry for " MACSTR,
-			   MAC2STR(addr));
-	}
-}
-
-
 static void handle_data(struct hostapd_data *hapd, unsigned char *buf,
 			size_t len)
 {
@@ -135,7 +114,7 @@ static void handle_data(struct hostapd_data *hapd, unsigned char *buf,
 		case ETH_P_PAE:
 			wpa_printf(MSG_MSGDUMP, "Received EAPOL packet");
 			sa = hdr->src;
-			wired_possible_new_sta(hapd, sa);
+			hostapd_notif_new_sta(hapd, sa);
 
 			pos = (u8 *) (hdr + 1);
 			left = len - sizeof(*hdr);
@@ -193,7 +172,7 @@ static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 	wpa_printf(MSG_MSGDUMP, "Got DHCP broadcast packet from " MACSTR,
 		   MAC2STR(mac_address));
 
-	wired_possible_new_sta(hapd, mac_address);
+	hostapd_notif_new_sta(hapd, mac_address);
 }
 
 

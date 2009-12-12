@@ -1918,6 +1918,7 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);
 void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
 				 const struct ieee80211_hdr *hdr, size_t len);
+int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);

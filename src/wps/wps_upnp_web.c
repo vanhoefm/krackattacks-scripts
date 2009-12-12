@@ -764,11 +764,6 @@ static void web_connection_parse_post(struct upnp_wps_device_sm *sm,
 	if (action == NULL)
 		goto bad;
 
-	/*
-	 * There are quite a few possible actions. Although we appear to
-	 * support them all here, not all of them are necessarily supported by
-	 * callbacks at higher levels.
-	 */
 	if (!os_strncasecmp("GetDeviceInfo", action, action_len))
 		ret = web_process_get_device_info(sm, &reply, &replyname);
 	else if (!os_strncasecmp("PutMessage", action, action_len))

@@ -84,6 +84,34 @@ struct dhcp_message {
 };
 
 
+static int wired_multicast_membership(int sock, int ifindex,
+				      const u8 *addr, int add)
+{
+#ifdef __linux__
+	struct packet_mreq mreq;
+
+	if (sock < 0)
+		return -1;
+
+	os_memset(&mreq, 0, sizeof(mreq));
+	mreq.mr_ifindex = ifindex;
+	mreq.mr_type = PACKET_MR_MULTICAST;
+	mreq.mr_alen = ETH_ALEN;
+	os_memcpy(mreq.mr_address, addr, ETH_ALEN);
+
+	if (setsockopt(sock, SOL_PACKET,
+		       add ? PACKET_ADD_MEMBERSHIP : PACKET_DROP_MEMBERSHIP,
+		       &mreq, sizeof(mreq)) < 0) {
+		perror("setsockopt");
+		return -1;
+	}
+	return 0;
+#else /* __linux__ */
+	return -1;
+#endif /* __linux__ */
+}
+
+
 static void handle_data(void *ctx, unsigned char *buf, size_t len)
 {
 #ifdef HOSTAPD
@@ -173,7 +201,6 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
 	struct sockaddr_in addr2;
-	struct packet_mreq mreq;
 	int n = 1;
 
 	drv->sock = socket(PF_PACKET, SOCK_RAW, htons(ETH_P_PAE));
@@ -206,15 +233,10 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 
 	/* filter multicast address */
-	memset(&mreq, 0, sizeof(mreq));
-	mreq.mr_ifindex = ifr.ifr_ifindex;
-	mreq.mr_type = PACKET_MR_MULTICAST;
-	mreq.mr_alen = 6;
-	memcpy(mreq.mr_address, pae_group_addr, mreq.mr_alen);
-
-	if (setsockopt(drv->sock, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mreq,
-		       sizeof(mreq)) < 0) {
-		perror("setsockopt[SOL_SOCKET,PACKET_ADD_MEMBERSHIP]");
+	if (wired_multicast_membership(drv->sock, ifr.ifr_ifindex,
+				       pae_group_addr, 1) < 0) {
+		wpa_printf(MSG_ERROR, "wired: Failed to add multicast group "
+			   "membership");
 		return -1;
 	}
 
@@ -476,34 +498,6 @@ static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
 }
 
 
-static int wpa_driver_wired_membership(struct wpa_driver_wired_data *drv,
-				       const u8 *addr, int add)
-{
-#ifdef __linux__
-	struct packet_mreq mreq;
-
-	if (drv->pf_sock == -1)
-		return -1;
-
-	os_memset(&mreq, 0, sizeof(mreq));
-	mreq.mr_ifindex = if_nametoindex(drv->ifname);
-	mreq.mr_type = PACKET_MR_MULTICAST;
-	mreq.mr_alen = ETH_ALEN;
-	os_memcpy(mreq.mr_address, addr, ETH_ALEN);
-
-	if (setsockopt(drv->pf_sock, SOL_PACKET,
-		       add ? PACKET_ADD_MEMBERSHIP : PACKET_DROP_MEMBERSHIP,
-		       &mreq, sizeof(mreq)) < 0) {
-		perror("setsockopt");
-		return -1;
-	}
-	return 0;
-#else /* __linux__ */
-	return -1;
-#endif /* __linux__ */
-}
-
-
 static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wired_data *drv;
@@ -529,7 +523,9 @@ static void * wpa_driver_wired_init(void *ctx, const char *ifname)
 		drv->iff_up = 1;
 	}
 
-	if (wpa_driver_wired_membership(drv, pae_group_addr, 1) == 0) {
+	if (wired_multicast_membership(drv->pf_sock,
+				       if_nametoindex(drv->ifname),
+				       pae_group_addr, 1) == 0) {
 		wpa_printf(MSG_DEBUG, "%s: Added multicast membership with "
 			   "packet socket", __func__);
 		drv->membership = 1;
@@ -567,7 +563,9 @@ static void wpa_driver_wired_deinit(void *priv)
 	int flags;
 
 	if (drv->membership &&
-	    wpa_driver_wired_membership(drv, pae_group_addr, 0) < 0) {
+	    wired_multicast_membership(drv->pf_sock,
+				       if_nametoindex(drv->ifname),
+				       pae_group_addr, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to remove PAE multicast "
 			   "group (PACKET)", __func__);
 	}

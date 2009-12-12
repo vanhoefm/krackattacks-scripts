@@ -601,6 +601,7 @@ void subscription_destroy(struct subscription *s)
 	if (s->addr_list)
 		subscr_addr_free_all(s);
 	event_delete_all(s);
+	upnp_er_remove_notification(s);
 	os_free(s);
 }
 

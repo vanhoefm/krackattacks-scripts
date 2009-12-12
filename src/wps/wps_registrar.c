@@ -17,13 +17,14 @@
 #include "common.h"
 #include "base64.h"
 #include "eloop.h"
+#include "uuid.h"
 #include "crypto/crypto.h"
 #include "crypto/sha256.h"
 #include "common/ieee802_11_defs.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 #include "wps_upnp.h"
-#include "uuid.h"
+#include "wps_upnp_i.h"
 
 #define WPS_WORKAROUNDS
 
@@ -111,6 +112,7 @@ struct wps_registrar {
 	int skip_cred_build;
 	struct wpabuf *extra_cred;
 	int disable_auto_conf;
+	int sel_reg_union;
 	int sel_reg_dev_password_id_override;
 	int sel_reg_config_methods_override;
 	int static_wep_only;
@@ -122,7 +124,6 @@ struct wps_registrar {
 
 
 static int wps_set_ie(struct wps_registrar *reg);
-static void wps_cb_set_sel_reg(struct wps_registrar *reg);
 static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 					       void *timeout_ctx);
@@ -344,7 +345,7 @@ static int wps_build_ap_setup_locked(struct wps_context *wps,
 static int wps_build_selected_registrar(struct wps_registrar *reg,
 					struct wpabuf *msg)
 {
-	if (!reg->selected_registrar)
+	if (!reg->sel_reg_union)
 		return 0;
 	wpa_printf(MSG_DEBUG, "WPS:  * Selected Registrar");
 	wpabuf_put_be16(msg, ATTR_SELECTED_REGISTRAR);
@@ -358,7 +359,7 @@ static int wps_build_sel_reg_dev_password_id(struct wps_registrar *reg,
 					     struct wpabuf *msg)
 {
 	u16 id = reg->pbc ? DEV_PW_PUSHBUTTON : DEV_PW_DEFAULT;
-	if (!reg->selected_registrar)
+	if (!reg->sel_reg_union)
 		return 0;
 	if (reg->sel_reg_dev_password_id_override >= 0)
 		id = reg->sel_reg_dev_password_id_override;
@@ -374,7 +375,7 @@ static int wps_build_sel_reg_config_methods(struct wps_registrar *reg,
 					    struct wpabuf *msg)
 {
 	u16 methods;
-	if (!reg->selected_registrar)
+	if (!reg->sel_reg_union)
 		return 0;
 	methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
 	if (reg->pbc)
@@ -537,8 +538,7 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 	wpa_hexdump_ascii_key(MSG_DEBUG, "WPS: PIN", pin, pin_len);
 	reg->selected_registrar = 1;
 	reg->pbc = 0;
-	wps_set_ie(reg);
-	wps_cb_set_sel_reg(reg);
+	wps_registrar_selected_registrar_changed(reg);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
 			       wps_registrar_set_selected_timeout,
@@ -692,8 +692,7 @@ static void wps_registrar_stop_pbc(struct wps_registrar *reg)
 {
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
-	wps_set_ie(reg);
-	wps_cb_set_sel_reg(reg);
+	wps_registrar_selected_registrar_changed(reg);
 }
 
 
@@ -728,8 +727,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 	reg->force_pbc_overlap = 0;
 	reg->selected_registrar = 1;
 	reg->pbc = 1;
-	wps_set_ie(reg);
-	wps_cb_set_sel_reg(reg);
+	wps_registrar_selected_registrar_changed(reg);
 
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wps_registrar_pbc_timeout,
@@ -745,13 +743,13 @@ static void wps_registrar_pbc_completed(struct wps_registrar *reg)
 	wps_registrar_stop_pbc(reg);
 }
 
+
 static void wps_registrar_pin_completed(struct wps_registrar *reg)
 {
 	wpa_printf(MSG_DEBUG, "WPS: PIN completed using internal Registrar");
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	reg->selected_registrar = 0;
-	wps_set_ie(reg);
-	wps_cb_set_sel_reg(reg);
+	wps_registrar_selected_registrar_changed(reg);
 }
 
 
@@ -2731,64 +2729,91 @@ static void wps_registrar_set_selected_timeout(void *eloop_ctx,
 {
 	struct wps_registrar *reg = eloop_ctx;
 
-	wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar timed out - "
-		   "unselect Registrar");
+	wpa_printf(MSG_DEBUG, "WPS: Selected Registrar timeout - "
+		   "unselect internal Registrar");
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
-	reg->sel_reg_dev_password_id_override = -1;
-	reg->sel_reg_config_methods_override = -1;
-	wps_set_ie(reg);
-	wps_cb_set_sel_reg(reg);
+	wps_registrar_selected_registrar_changed(reg);
+}
+
+
+#ifdef CONFIG_WPS_UPNP
+static void wps_registrar_sel_reg_add(struct wps_registrar *reg,
+				      struct subscription *s)
+{
+	wpa_printf(MSG_DEBUG, "WPS: External Registrar selected (dev_pw_id=%d "
+		   "config_methods=0x%x)",
+		   s->dev_password_id, s->config_methods);
+	reg->sel_reg_union = 1;
+	if (reg->sel_reg_dev_password_id_override != DEV_PW_PUSHBUTTON)
+		reg->sel_reg_dev_password_id_override = s->dev_password_id;
+	if (reg->sel_reg_config_methods_override == -1)
+		reg->sel_reg_config_methods_override = 0;
+	reg->sel_reg_config_methods_override |= s->config_methods;
+}
+#endif /* CONFIG_WPS_UPNP */
+
+
+static void wps_registrar_sel_reg_union(struct wps_registrar *reg)
+{
+#ifdef CONFIG_WPS_UPNP
+	struct subscription *s;
+
+	if (reg->wps->wps_upnp == NULL)
+		return;
+
+	s = reg->wps->wps_upnp->subscriptions;
+	while (s) {
+		if (s->addr_list)
+			wpa_printf(MSG_DEBUG, "WPS: External Registrar %s:%d",
+				   inet_ntoa(s->addr_list->saddr.sin_addr),
+				   ntohs(s->addr_list->saddr.sin_port));
+		if (s->selected_registrar)
+			wps_registrar_sel_reg_add(reg, s);
+		else
+			wpa_printf(MSG_DEBUG, "WPS: External Registrar not "
+				   "selected");
+
+		s = s->next;
+		if (s == reg->wps->wps_upnp->subscriptions)
+			break;
+	}
+#endif /* CONFIG_WPS_UPNP */
 }
 
 
 /**
- * wps_registrar_set_selected_registrar - Notification of SetSelectedRegistrar
+ * wps_registrar_selected_registrar_changed - SetSelectedRegistrar change
  * @reg: Registrar data from wps_registrar_init()
- * @msg: Received message from SetSelectedRegistrar
- * Returns: 0 on success, -1 on failure
  *
- * This function is called when an AP receives a SetSelectedRegistrar UPnP
- * message.
+ * This function is called when selected registrar state changes, e.g., when an
+ * AP receives a SetSelectedRegistrar UPnP message.
  */
-int wps_registrar_set_selected_registrar(struct wps_registrar *reg,
-					 const struct wpabuf *msg)
+void wps_registrar_selected_registrar_changed(struct wps_registrar *reg)
 {
-	struct wps_parse_attr attr;
+	wpa_printf(MSG_DEBUG, "WPS: Selected registrar information changed");
 
-	wpa_hexdump_buf(MSG_MSGDUMP, "WPS: SetSelectedRegistrar attributes",
-			msg);
+	reg->sel_reg_union = reg->selected_registrar;
+	reg->sel_reg_dev_password_id_override = -1;
+	reg->sel_reg_config_methods_override = -1;
+	if (reg->selected_registrar) {
+		reg->sel_reg_config_methods_override =
+			reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
+		if (reg->pbc) {
+			reg->sel_reg_dev_password_id_override =
+				DEV_PW_PUSHBUTTON;
+			reg->sel_reg_config_methods_override |=
+				WPS_CONFIG_PUSHBUTTON;
+		}
+		wpa_printf(MSG_DEBUG, "WPS: Internal Registrar selected "
+			   "(pbc=%d)", reg->pbc);
+	} else
+		wpa_printf(MSG_DEBUG, "WPS: Internal Registrar not selected");
 
-	if (wps_parse_msg(msg, &attr) < 0)
-		return -1;
-	if (!wps_version_supported(attr.version)) {
-		wpa_printf(MSG_DEBUG, "WPS: Unsupported SetSelectedRegistrar "
-			   "version 0x%x", attr.version ? *attr.version : 0);
-		return -1;
-	}
+	wps_registrar_sel_reg_union(reg);
 
-	if (attr.selected_registrar == NULL ||
-	    *attr.selected_registrar == 0) {
-		wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar: Disable "
-			   "Selected Registrar");
-		eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg,
-				     NULL);
-		wps_registrar_set_selected_timeout(reg, NULL);
-		return 0;
-	}
-
-	reg->selected_registrar = 1;
-	reg->sel_reg_dev_password_id_override = attr.dev_password_id ?
-		WPA_GET_BE16(attr.dev_password_id) : DEV_PW_DEFAULT;
-	reg->sel_reg_config_methods_override = attr.sel_reg_config_methods ?
-		WPA_GET_BE16(attr.sel_reg_config_methods) : -1;
 	wps_set_ie(reg);
-
-	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
-	eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
-			       wps_registrar_set_selected_timeout,
-			       reg, NULL);
-	return 0;
+	wps_cb_set_sel_reg(reg);
 }
 
 

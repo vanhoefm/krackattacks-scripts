@@ -537,19 +537,61 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 }
 
 
+static int find_er_addr(struct subscription *s, struct sockaddr_in *cli)
+{
+	struct subscr_addr *a;
+
+	a = s->addr_list;
+	while (a) {
+		if (cli->sin_addr.s_addr == a->saddr.sin_addr.s_addr)
+			return 1;
+		a = a->next;
+		if (a == s->addr_list)
+			break;
+	}
+	return 0;
+}
+
+
+static struct subscription * find_er(struct upnp_wps_device_sm *sm,
+				     struct sockaddr_in *cli)
+{
+	struct subscription *s;
+
+	s = sm->subscriptions;
+	while (s) {
+		if (find_er_addr(s, cli))
+			return s;
+		s = s->next;
+		if (s == sm->subscriptions)
+			break;
+	}
+
+	return NULL;
+}
+
+
 static enum http_reply_code
-web_process_set_selected_registrar(struct upnp_wps_device_sm *sm, char *data,
+web_process_set_selected_registrar(struct upnp_wps_device_sm *sm,
+				   struct sockaddr_in *cli, char *data,
 				   struct wpabuf **reply,
 				   const char **replyname)
 {
 	struct wpabuf *msg;
 	enum http_reply_code ret;
+	struct subscription *s;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: SetSelectedRegistrar");
+	s = find_er(sm, cli);
+	if (s == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Ignore SetSelectedRegistrar "
+			   "from unknown ER");
+		return UPNP_ACTION_FAILED;
+	}
 	msg = xml_get_base64_item(data, "NewMessage", &ret);
 	if (msg == NULL)
 		return ret;
-	if (wps_registrar_set_selected_registrar(sm->wps->registrar, msg)) {
+	if (upnp_er_set_selected_registrar(sm->wps->registrar, s, msg)) {
 		wpabuf_free(msg);
 		return HTTP_INTERNAL_SERVER_ERROR;
 	}
@@ -744,6 +786,7 @@ static const char * web_get_action(struct http_request *req,
  * would appear to be required (given that we will be closing it!).
  */
 static void web_connection_parse_post(struct upnp_wps_device_sm *sm,
+				      struct sockaddr_in *cli,
 				      struct http_request *req,
 				      const char *filename)
 {
@@ -774,7 +817,7 @@ static void web_connection_parse_post(struct upnp_wps_device_sm *sm,
 		ret = web_process_put_wlan_response(sm, data, &reply,
 						    &replyname);
 	else if (!os_strncasecmp("SetSelectedRegistrar", action, action_len))
-		ret = web_process_set_selected_registrar(sm, data, &reply,
+		ret = web_process_set_selected_registrar(sm, cli, data, &reply,
 							 &replyname);
 	else
 		wpa_printf(MSG_INFO, "WPS UPnP: Unknown POST type");
@@ -1160,7 +1203,7 @@ static void web_connection_check_data(void *ctx, struct http_request *req)
 		web_connection_parse_get(sm, req, filename);
 		break;
 	case HTTPREAD_HDR_TYPE_POST:
-		web_connection_parse_post(sm, req, filename);
+		web_connection_parse_post(sm, cli, req, filename);
 		break;
 	case HTTPREAD_HDR_TYPE_SUBSCRIBE:
 		web_connection_parse_subscribe(sm, req, filename);

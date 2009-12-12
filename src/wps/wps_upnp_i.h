@@ -32,6 +32,7 @@
 
 struct subscription;
 struct upnp_wps_device_sm;
+struct wps_registrar;
 
 
 enum advertisement_type_enum {
@@ -100,6 +101,12 @@ struct subscription {
 	int n_queue; /* How many events are queued */
 	struct wps_event_ *current_event; /* non-NULL if being sent (not in q)
 					   */
+
+	/* Information from SetSelectedRegistrar action */
+	u8 selected_registrar;
+	u16 dev_password_id;
+	u16 config_methods;
+	struct wps_registrar *reg;
 };
 
 
@@ -177,5 +184,11 @@ int event_add(struct subscription *s, const struct wpabuf *data);
 void event_delete_all(struct subscription *s);
 void event_send_all_later(struct upnp_wps_device_sm *sm);
 void event_send_stop_all(struct upnp_wps_device_sm *sm);
+
+/* wps_upnp_ap.c */
+int upnp_er_set_selected_registrar(struct wps_registrar *reg,
+				   struct subscription *s,
+				   const struct wpabuf *msg);
+void upnp_er_remove_notification(struct subscription *s);
 
 #endif /* WPS_UPNP_I_H */

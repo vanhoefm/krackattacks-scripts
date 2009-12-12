@@ -335,7 +335,7 @@ bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 			HOSTAPD_LEVEL_WARNING, "No 802.1X or WPA enabled!");
 		return -1;
 	}
-	if (params->wpa && bsd_configure_wpa(drv) != 0) {
+	if (params->wpa && bsd_configure_wpa(drv, params) != 0) {
 		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
 			HOSTAPD_LEVEL_WARNING, "Error configuring WPA state!");
 		return -1;

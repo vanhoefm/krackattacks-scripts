@@ -35,7 +35,6 @@
 #include "common/ieee802_11_defs.h"
 
 #include "../../hostapd/hostapd.h"
-#include "../../hostapd/wpa.h"
 
 
 struct test_client_socket {
@@ -744,10 +743,11 @@ static void test_driver_ether(struct wpa_driver_test_data *drv,
 
 #ifdef CONFIG_IEEE80211R
 	if (be_to_host16(eth->h_proto) == ETH_P_RRB) {
-#ifdef HOSTAPD
-		wpa_ft_rrb_rx(drv->hapd->wpa_auth, eth->h_source,
-			      data + sizeof(*eth), datalen - sizeof(*eth));
-#endif /* HOSTAPD */
+		union wpa_event_data ev;
+		os_memset(&ev, 0, sizeof(ev));
+		ev.ft_rrb_rx.src = eth->h_source;
+		ev.ft_rrb_rx.data = data + sizeof(*eth);
+		ev.ft_rrb_rx.data_len = datalen - sizeof(*eth);
 	}
 #endif /* CONFIG_IEEE80211R */
 }

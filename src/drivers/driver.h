@@ -1681,7 +1681,12 @@ typedef enum wpa_event_type {
 	/**
 	 * EVENT_ASSOC_TIMED_OUT - Association timed out
 	 */
-	EVENT_ASSOC_TIMED_OUT
+	EVENT_ASSOC_TIMED_OUT,
+
+	/**
+	 * EVENT_FT_RRB_RX - FT (IEEE 802.11r) RRB frame received
+	 */
+	EVENT_FT_RRB_RX
 } wpa_event_type;
 
 
@@ -1863,6 +1868,15 @@ union wpa_event_data {
 	struct timeout_event {
 		u8 addr[ETH_ALEN];
 	} timeout_event;
+
+	/**
+	 * struct ft_rrb_rx - Data for EVENT_FT_RRB_RX events
+	 */
+	struct ft_rrb_rx {
+		const u8 *src;
+		const u8 *data;
+		size_t data_len;
+	} ft_rrb_rx;
 };
 
 /**

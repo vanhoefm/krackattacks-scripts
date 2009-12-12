@@ -25,15 +25,12 @@ enum upnp_wps_wlanevent_type {
 };
 
 struct upnp_wps_device_ctx {
-	struct wpabuf * (*rx_req_get_device_info)(
-		void *priv, struct upnp_wps_peer *peer);
-	struct wpabuf * (*rx_req_put_message)(
-		void *priv, struct upnp_wps_peer *peer,
-		const struct wpabuf *msg);
 	int (*rx_req_put_wlan_response)(
 		void *priv, enum upnp_wps_wlanevent_type ev_type,
 		const u8 *mac_addr, const struct wpabuf *msg,
 		enum wps_msg_type msg_type);
+
+	char *ap_pin;
 };
 
 struct upnp_wps_device_sm *

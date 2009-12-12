@@ -1101,6 +1101,7 @@ void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm)
 		wps_deinit(sm->peer.wps);
 	os_free(sm->root_dir);
 	os_free(sm->desc_url);
+	os_free(sm->ctx->ap_pin);
 	os_free(sm->ctx);
 	os_free(sm);
 }

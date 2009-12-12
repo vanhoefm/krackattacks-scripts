@@ -805,61 +805,6 @@ static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 
 #ifdef CONFIG_WPS_UPNP
 
-static struct wpabuf *
-hostapd_rx_req_get_device_info(void *priv, struct upnp_wps_peer *peer)
-{
-	struct hostapd_data *hapd = priv;
-	struct wps_config cfg;
-	struct wps_data *wps;
-	enum wsc_op_code op_code;
-	struct wpabuf *m1;
-
-	/*
-	 * Request for DeviceInfo, i.e., M1 TLVs. This is a start of WPS
-	 * registration over UPnP with the AP acting as an Enrollee. It should
-	 * be noted that this is frequently used just to get the device data,
-	 * i.e., there may not be any intent to actually complete the
-	 * registration.
-	 */
-
-	if (peer->wps)
-		wps_deinit(peer->wps);
-
-	os_memset(&cfg, 0, sizeof(cfg));
-	cfg.wps = hapd->wps;
-	cfg.pin = (u8 *) hapd->conf->ap_pin;
-	cfg.pin_len = os_strlen(hapd->conf->ap_pin);
-	wps = wps_init(&cfg);
-	if (wps == NULL)
-		return NULL;
-
-	m1 = wps_get_msg(wps, &op_code);
-	if (m1 == NULL) {
-		wps_deinit(wps);
-		return NULL;
-	}
-
-	peer->wps = wps;
-
-	return m1;
-}
-
-
-static struct wpabuf *
-hostapd_rx_req_put_message(void *priv, struct upnp_wps_peer *peer,
-			   const struct wpabuf *msg)
-{
-	enum wps_process_res res;
-	enum wsc_op_code op_code;
-
-	/* PutMessage: msg = InMessage, return OutMessage */
-	res = wps_process_msg(peer->wps, WSC_UPnP, msg);
-	if (res == WPS_FAILURE)
-		return NULL;
-	return wps_get_msg(peer->wps, &op_code);
-}
-
-
 static int hostapd_rx_req_put_wlan_response(
 	void *priv, enum upnp_wps_wlanevent_type ev_type,
 	const u8 *mac_addr, const struct wpabuf *msg,
@@ -928,9 +873,9 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 	if (ctx == NULL)
 		return -1;
 
-	ctx->rx_req_get_device_info = hostapd_rx_req_get_device_info;
-	ctx->rx_req_put_message = hostapd_rx_req_put_message;
 	ctx->rx_req_put_wlan_response = hostapd_rx_req_put_wlan_response;
+	if (hapd->conf->ap_pin)
+		ctx->ap_pin = os_strdup(hapd->conf->ap_pin);
 
 	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd);
 	if (hapd->wps_upnp == NULL) {

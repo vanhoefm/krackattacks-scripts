@@ -407,11 +407,36 @@ web_process_get_device_info(struct upnp_wps_device_sm *sm,
 			    struct wpabuf **reply, const char **replyname)
 {
 	static const char *name = "NewDeviceInfo";
+	struct wps_config cfg;
+	struct upnp_wps_peer *peer = &sm->peer;
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: GetDeviceInfo");
-	if (sm->ctx->rx_req_get_device_info == NULL)
-		return HTTP_INTERNAL_SERVER_ERROR;
-	*reply = sm->ctx->rx_req_get_device_info(sm->priv, &sm->peer);
+
+	/*
+	 * Request for DeviceInfo, i.e., M1 TLVs. This is a start of WPS
+	 * registration over UPnP with the AP acting as an Enrollee. It should
+	 * be noted that this is frequently used just to get the device data,
+	 * i.e., there may not be any intent to actually complete the
+	 * registration.
+	 */
+
+	if (peer->wps)
+		wps_deinit(peer->wps);
+
+	os_memset(&cfg, 0, sizeof(cfg));
+	cfg.wps = sm->wps;
+	cfg.pin = (u8 *) sm->ctx->ap_pin;
+	cfg.pin_len = os_strlen(sm->ctx->ap_pin);
+	peer->wps = wps_init(&cfg);
+	if (peer->wps) {
+		enum wsc_op_code op_code;
+		*reply = wps_get_msg(peer->wps, &op_code);
+		if (*reply == NULL) {
+			wps_deinit(peer->wps);
+			peer->wps = NULL;
+		}
+	} else
+		*reply = NULL;
 	if (*reply == NULL) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Failed to get DeviceInfo");
 		return HTTP_INTERNAL_SERVER_ERROR;
@@ -428,6 +453,8 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 	struct wpabuf *msg;
 	static const char *name = "NewOutMessage";
 	enum http_reply_code ret;
+	enum wps_process_res res;
+	enum wsc_op_code op_code;
 
 	/*
 	 * PutMessage is used by external UPnP-based Registrar to perform WPS
@@ -435,12 +462,14 @@ web_process_put_message(struct upnp_wps_device_sm *sm, char *data,
 	 * PutWLANResponse which is for proxying.
 	 */
 	wpa_printf(MSG_DEBUG, "WPS UPnP: PutMessage");
-	if (sm->ctx->rx_req_put_message == NULL)
-		return HTTP_INTERNAL_SERVER_ERROR;
 	msg = xml_get_base64_item(data, "NewInMessage", &ret);
 	if (msg == NULL)
 		return ret;
-	*reply = sm->ctx->rx_req_put_message(sm->priv, &sm->peer, msg);
+	res = wps_process_msg(sm->peer.wps, WSC_UPnP, msg);
+	if (res == WPS_FAILURE)
+		*reply = NULL;
+	else
+		*reply = wps_get_msg(sm->peer.wps, &op_code);
 	wpabuf_free(msg);
 	if (*reply == NULL)
 		return HTTP_INTERNAL_SERVER_ERROR;

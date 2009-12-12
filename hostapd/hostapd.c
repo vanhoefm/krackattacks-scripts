@@ -1497,5 +1497,13 @@ int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
 	os_memset(&params, 0, sizeof(params));
 	params.ifname = ifname;
 	params.enabled = enabled;
+	if (enabled) {
+		params.wpa = hapd->conf->wpa;
+		params.ieee802_1x = hapd->conf->ieee802_1x;
+		params.wpa_group = hapd->conf->wpa_group;
+		params.wpa_pairwise = hapd->conf->wpa_pairwise;
+		params.wpa_key_mgmt = hapd->conf->wpa_key_mgmt;
+		params.rsn_preauth = hapd->conf->rsn_preauth;
+	}
 	return hostapd_set_ieee8021x(hapd, &params);
 }

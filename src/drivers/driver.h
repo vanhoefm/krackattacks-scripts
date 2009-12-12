@@ -486,6 +486,13 @@ struct wpa_bss_params {
 	const char *ifname;
 	/** Whether IEEE 802.1X or WPA/WPA2 is enabled */
 	int enabled;
+
+	int wpa;
+	int ieee802_1x;
+	int wpa_group;
+	int wpa_pairwise;
+	int wpa_key_mgmt;
+	int rsn_preauth;
 };
 
 

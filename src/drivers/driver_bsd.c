@@ -154,8 +154,6 @@ bsd_set_ssid(int s, const char *ifname, const u8 *ssid, size_t ssid_len)
 #undef WPA_OUI_TYPE
 
 #include "l2_packet/l2_packet.h"
-#include "../../hostapd/hostapd.h"
-#include "../../hostapd/config.h"
 #include "../../hostapd/sta_flags.h"
 
 struct bsd_driver_data {
@@ -204,15 +202,13 @@ ether_sprintf(const u8 *addr)
  * Configure WPA parameters.
  */
 static int
-bsd_configure_wpa(struct bsd_driver_data *drv)
+bsd_configure_wpa(struct bsd_driver_data *drv, struct wpa_bss_params *params)
 {
 	static const char *ciphernames[] =
 		{ "WEP", "TKIP", "AES-OCB", "AES-CCM", "CKIP", "NONE" };
-	struct hostapd_data *hapd = drv->hapd;
-	struct hostapd_bss_config *conf = hapd->conf;
 	int v;
 
-	switch (conf->wpa_group) {
+	switch (params->wpa_group) {
 	case WPA_CIPHER_CCMP:
 		v = IEEE80211_CIPHER_AES_CCM;
 		break;
@@ -230,7 +226,7 @@ bsd_configure_wpa(struct bsd_driver_data *drv)
 		break;
 	default:
 		printf("Unknown group key cipher %u\n",
-			conf->wpa_group);
+			params->wpa_group);
 		return -1;
 	}
 	wpa_printf(MSG_DEBUG, "%s: group key cipher=%s (%u)",
@@ -242,7 +238,7 @@ bsd_configure_wpa(struct bsd_driver_data *drv)
 	}
 	if (v == IEEE80211_CIPHER_WEP) {
 		/* key length is done only for specific ciphers */
-		v = (conf->wpa_group == WPA_CIPHER_WEP104 ? 13 : 5);
+		v = (params->wpa_group == WPA_CIPHER_WEP104 ? 13 : 5);
 		if (set80211param(drv, IEEE80211_IOC_MCASTKEYLEN, v)) {
 			printf("Unable to set group key length to %u\n", v);
 			return -1;
@@ -250,11 +246,11 @@ bsd_configure_wpa(struct bsd_driver_data *drv)
 	}
 
 	v = 0;
-	if (conf->wpa_pairwise & WPA_CIPHER_CCMP)
+	if (params->wpa_pairwise & WPA_CIPHER_CCMP)
 		v |= 1<<IEEE80211_CIPHER_AES_CCM;
-	if (conf->wpa_pairwise & WPA_CIPHER_TKIP)
+	if (params->wpa_pairwise & WPA_CIPHER_TKIP)
 		v |= 1<<IEEE80211_CIPHER_TKIP;
-	if (conf->wpa_pairwise & WPA_CIPHER_NONE)
+	if (params->wpa_pairwise & WPA_CIPHER_NONE)
 		v |= 1<<IEEE80211_CIPHER_NONE;
 	wpa_printf(MSG_DEBUG, "%s: pairwise key ciphers=0x%x", __func__, v);
 	if (set80211param(drv, IEEE80211_IOC_UCASTCIPHERS, v)) {
@@ -263,26 +259,27 @@ bsd_configure_wpa(struct bsd_driver_data *drv)
 	}
 
 	wpa_printf(MSG_DEBUG, "%s: key management algorithms=0x%x",
-		   __func__, conf->wpa_key_mgmt);
-	if (set80211param(drv, IEEE80211_IOC_KEYMGTALGS, conf->wpa_key_mgmt)) {
+		   __func__, params->wpa_key_mgmt);
+	if (set80211param(drv, IEEE80211_IOC_KEYMGTALGS, params->wpa_key_mgmt))
+	{
 		printf("Unable to set key management algorithms to 0x%x\n",
-			conf->wpa_key_mgmt);
+			params->wpa_key_mgmt);
 		return -1;
 	}
 
 	v = 0;
-	if (conf->rsn_preauth)
+	if (params->rsn_preauth)
 		v |= BIT(0);
 	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x",
-		   __func__, conf->rsn_preauth);
+		   __func__, params->rsn_preauth);
 	if (set80211param(drv, IEEE80211_IOC_RSNCAPS, v)) {
 		printf("Unable to set RSN capabilities to 0x%x\n", v);
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "%s: enable WPA= 0x%x", __func__, conf->wpa);
-	if (set80211param(drv, IEEE80211_IOC_WPA, conf->wpa)) {
-		printf("Unable to set WPA to %u\n", conf->wpa);
+	wpa_printf(MSG_DEBUG, "%s: enable WPA= 0x%x", __func__, params->wpa);
+	if (set80211param(drv, IEEE80211_IOC_WPA, params->wpa)) {
+		printf("Unable to set WPA to %u\n", params->wpa);
 		return -1;
 	}
 	return 0;
@@ -325,30 +322,27 @@ static int
 bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
 	struct bsd_driver_data *drv = priv;
-	struct hostapd_data *hapd = drv->hapd;
-	struct hostapd_bss_config *conf = hapd->conf;
-	int enabled = params->enabled;
 
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
+	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, params->enabled);
 
-	if (!enabled) {
+	if (!params->enabled) {
 		/* XXX restore state */
 		return set80211param(priv, IEEE80211_IOC_AUTHMODE,
 			IEEE80211_AUTH_AUTO);
 	}
-	if (!conf->wpa && !conf->ieee802_1x) {
-		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_DRIVER,
+	if (!params->wpa && !params->ieee802_1x) {
+		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
 			HOSTAPD_LEVEL_WARNING, "No 802.1X or WPA enabled!");
 		return -1;
 	}
-	if (conf->wpa && bsd_configure_wpa(drv) != 0) {
-		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_DRIVER,
+	if (params->wpa && bsd_configure_wpa(drv) != 0) {
+		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
 			HOSTAPD_LEVEL_WARNING, "Error configuring WPA state!");
 		return -1;
 	}
 	if (set80211param(priv, IEEE80211_IOC_AUTHMODE,
-		(conf->wpa ?  IEEE80211_AUTH_WPA : IEEE80211_AUTH_8021X))) {
-		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_DRIVER,
+		(params->wpa ? IEEE80211_AUTH_WPA : IEEE80211_AUTH_8021X))) {
+		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
 			HOSTAPD_LEVEL_WARNING, "Error enabling WPA/802.1X!");
 		return -1;
 	}

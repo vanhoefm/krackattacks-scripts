@@ -89,7 +89,7 @@ static const char *commands_help =
 "   sa_query <addr>      send SA Query to a station\n"
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
-"   wps_pin <uuid> <pin> [timeout]  add WPS Enrollee PIN (Device Password)\n"
+"   wps_pin <uuid> <pin> [timeout] [addr]  add WPS Enrollee PIN\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
 #ifdef CONFIG_WPS_OOB
 "   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
@@ -352,13 +352,16 @@ static int hostapd_cli_cmd_sa_query(struct wpa_ctrl *ctrl, int argc,
 static int hostapd_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
-	char buf[64];
+	char buf[256];
 	if (argc < 2) {
 		printf("Invalid 'wps_pin' command - at least two arguments, "
 		       "UUID and PIN, are required.\n");
 		return -1;
 	}
-	if (argc > 2)
+	if (argc > 3)
+		snprintf(buf, sizeof(buf), "WPS_PIN %s %s %s %s",
+			 argv[0], argv[1], argv[2], argv[3]);
+	else if (argc > 2)
 		snprintf(buf, sizeof(buf), "WPS_PIN %s %s %s",
 			 argv[0], argv[1], argv[2]);
 	else

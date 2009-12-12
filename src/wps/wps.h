@@ -197,6 +197,8 @@ int wps_is_selected_pbc_registrar(const struct wpabuf *msg);
 int wps_is_selected_pin_registrar(const struct wpabuf *msg);
 int wps_ap_priority_compar(const struct wpabuf *wps_a,
 			   const struct wpabuf *wps_b);
+int wps_is_addr_authorized(const struct wpabuf *msg, const u8 *addr,
+			   int ver1_compat);
 const u8 * wps_get_uuid_e(const struct wpabuf *msg);
 
 struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type);
@@ -707,8 +709,9 @@ struct wps_registrar *
 wps_registrar_init(struct wps_context *wps,
 		   const struct wps_registrar_config *cfg);
 void wps_registrar_deinit(struct wps_registrar *reg);
-int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
-			  const u8 *pin, size_t pin_len, int timeout);
+int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *addr,
+			  const u8 *uuid, const u8 *pin, size_t pin_len,
+			  int timeout);
 int wps_registrar_invalidate_pin(struct wps_registrar *reg, const u8 *uuid);
 int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid);
 int wps_registrar_button_pushed(struct wps_registrar *reg);

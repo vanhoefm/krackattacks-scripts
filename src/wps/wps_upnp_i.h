@@ -96,6 +96,7 @@ struct subscription {
 	u8 selected_registrar;
 	u16 dev_password_id;
 	u16 config_methods;
+	u8 authorized_macs[WPS_MAX_AUTHORIZED_MACS][ETH_ALEN];
 	struct wps_registrar *reg;
 };
 

@@ -1349,6 +1349,15 @@ static int wps_er_build_sel_reg_config_methods(struct wpabuf *msg,
 }
 
 
+static int wps_er_build_uuid_r(struct wpabuf *msg, const u8 *uuid_r)
+{
+	wpabuf_put_be16(msg, ATTR_UUID_R);
+	wpabuf_put_be16(msg, WPS_UUID_LEN);
+	wpabuf_put_data(msg, uuid_r, WPS_UUID_LEN);
+	return 0;
+}
+
+
 void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 			u16 sel_reg_config_methods)
 {
@@ -1363,7 +1372,9 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	    wps_er_build_selected_registrar(msg, sel_reg) ||
 	    wps_er_build_dev_password_id(msg, dev_passwd_id) ||
 	    wps_er_build_sel_reg_config_methods(msg, sel_reg_config_methods) ||
-	    wps_build_version2(msg)) {
+	    wps_build_version2(msg) ||
+	    wps_build_authorized_macs(er->wps->registrar, msg) ||
+	    wps_er_build_uuid_r(msg, er->wps->uuid)) {
 		wpabuf_free(msg);
 		return;
 	}
@@ -1690,7 +1701,7 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 		return -1;
 
 	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */
-	wps_registrar_add_pin(er->wps->registrar, uuid, pin, pin_len, 0);
+	wps_registrar_add_pin(er->wps->registrar, NULL, uuid, pin, pin_len, 0);
 
 	return 0;
 }
@@ -1751,7 +1762,7 @@ int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
 		return -1;
 
 	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */
-	wps_registrar_add_pin(er->wps->registrar, uuid, pin, pin_len, 0);
+	wps_registrar_add_pin(er->wps->registrar, NULL, uuid, pin, pin_len, 0);
 
 	return 0;
 }

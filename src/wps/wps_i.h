@@ -275,6 +275,7 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg);
 int wps_device_store(struct wps_registrar *reg,
 		     struct wps_device_data *dev, const u8 *uuid);
 void wps_registrar_selected_registrar_changed(struct wps_registrar *reg);
+int wps_build_authorized_macs(struct wps_registrar *reg, struct wpabuf *msg);
 
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);

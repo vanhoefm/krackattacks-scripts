@@ -275,6 +275,8 @@ static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
 	char *pin = os_strchr(txt, ' ');
 	char *timeout_txt;
 	int timeout;
+	u8 addr_buf[ETH_ALEN], *addr = NULL;
+	char *pos;
 
 	if (pin == NULL)
 		return -1;
@@ -284,10 +286,16 @@ static int hostapd_ctrl_iface_wps_pin(struct hostapd_data *hapd, char *txt)
 	if (timeout_txt) {
 		*timeout_txt++ = '\0';
 		timeout = atoi(timeout_txt);
+		pos = os_strchr(timeout_txt, ' ');
+		if (pos) {
+			*pos++ = '\0';
+			if (hwaddr_aton(pos, addr_buf) == 0)
+				addr = addr_buf;
+		}
 	} else
 		timeout = 0;
 
-	return hostapd_wps_add_pin(hapd, txt, pin, timeout);
+	return hostapd_wps_add_pin(hapd, addr, txt, pin, timeout);
 }
 
 

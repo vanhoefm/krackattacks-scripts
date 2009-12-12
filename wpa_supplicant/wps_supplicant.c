@@ -35,7 +35,9 @@
 #include "wps_supplicant.h"
 
 
+#ifndef WPS_PIN_SCAN_IGNORE_SEL_REG
 #define WPS_PIN_SCAN_IGNORE_SEL_REG 3
+#endif /* WPS_PIN_SCAN_IGNORE_SEL_REG */
 
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpas_clear_wps(struct wpa_supplicant *wpa_s);
@@ -966,12 +968,13 @@ int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 		}
 
 		/*
-		 * Start with WPS APs that advertise active PIN Registrar and
-		 * allow any WPS AP after third scan since some APs do not set
-		 * Selected Registrar attribute properly when using external
-		 * Registrar.
+		 * Start with WPS APs that advertise our address as an
+		 * authorized MAC (v2.0) or active PIN Registrar (v1.0) and
+		 * allow any WPS AP after couple of scans since some APs do not
+		 * set Selected Registrar attribute properly when using
+		 * external Registrar.
 		 */
-		if (!wps_is_selected_pin_registrar(wps_ie)) {
+		if (!wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 1)) {
 			if (wpa_s->scan_runs < WPS_PIN_SCAN_IGNORE_SEL_REG) {
 				wpa_printf(MSG_DEBUG, "   skip - WPS AP "
 					   "without active PIN Registrar");
@@ -981,7 +984,7 @@ int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 			wpa_printf(MSG_DEBUG, "   selected based on WPS IE");
 		} else {
 			wpa_printf(MSG_DEBUG, "   selected based on WPS IE "
-				   "(Active PIN)");
+				   "(Authorized MAC or Active PIN)");
 		}
 		wpabuf_free(wps_ie);
 		return 1;
@@ -1013,7 +1016,7 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 	} else if (eap_is_wps_pin_enrollee(&ssid->eap)) {
 		wps_ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
 		if (wps_ie &&
-		    (wps_is_selected_pin_registrar(wps_ie) ||
+		    (wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 1) ||
 		     wpa_s->scan_runs >= WPS_PIN_SCAN_IGNORE_SEL_REG)) {
 			/* allow wildcard SSID for WPS PIN */
 			ret = 1;
@@ -1095,6 +1098,9 @@ void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 		if (wps_is_selected_pbc_registrar(ie))
 			wpa_msg_ctrl(wpa_s, MSG_INFO,
 				     WPS_EVENT_AP_AVAILABLE_PBC);
+		else if (wps_is_addr_authorized(ie, wpa_s->own_addr, 0))
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     WPS_EVENT_AP_AVAILABLE_AUTH);
 		else if (wps_is_selected_pin_registrar(ie))
 			wpa_msg_ctrl(wpa_s, MSG_INFO,
 				     WPS_EVENT_AP_AVAILABLE_PIN);
@@ -1164,8 +1170,8 @@ int wpas_wps_er_stop(struct wpa_supplicant *wpa_s)
 
 
 #ifdef CONFIG_WPS_ER
-int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const char *uuid,
-			const char *pin)
+int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const u8 *addr,
+			const char *uuid, const char *pin)
 {
 	u8 u[UUID_LEN];
 	int any = 0;
@@ -1174,7 +1180,8 @@ int wpas_wps_er_add_pin(struct wpa_supplicant *wpa_s, const char *uuid,
 		any = 1;
 	else if (uuid_str2bin(uuid, u))
 		return -1;
-	return wps_registrar_add_pin(wpa_s->wps->registrar, any ? NULL : u,
+	return wps_registrar_add_pin(wpa_s->wps->registrar, addr,
+				     any ? NULL : u,
 				     (const u8 *) pin, os_strlen(pin), 300);
 }
 

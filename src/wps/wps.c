@@ -205,6 +205,27 @@ int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 }
 
 
+static int is_selected_pin_registrar(struct wps_parse_attr *attr)
+{
+	/*
+	 * In theory, this could also verify that attr.sel_reg_config_methods
+	 * includes WPS_CONFIG_LABEL, WPS_CONFIG_DISPLAY, or WPS_CONFIG_KEYPAD,
+	 * but some deployed AP implementations do not set Selected Registrar
+	 * Config Methods attribute properly, so it is safer to just use
+	 * Device Password ID here.
+	 */
+
+	if (!attr->selected_registrar || *attr->selected_registrar == 0)
+		return 0;
+
+	if (attr->dev_password_id != NULL &&
+	    WPA_GET_BE16(attr->dev_password_id) == DEV_PW_PUSHBUTTON)
+		return 0;
+
+	return 1;
+}
+
+
 /**
  * wps_is_selected_pin_registrar - Check whether WPS IE indicates active PIN
  * @msg: WPS IE contents from Beacon or Probe Response frame
@@ -214,25 +235,49 @@ int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
 
-	/*
-	 * In theory, this could also verify that attr.sel_reg_config_methods
-	 * includes WPS_CONFIG_LABEL, WPS_CONFIG_DISPLAY, or WPS_CONFIG_KEYPAD,
-	 * but some deployed AP implementations do not set Selected Registrar
-	 * Config Methods attribute properly, so it is safer to just use
-	 * Device Password ID here.
-	 */
+	if (wps_parse_msg(msg, &attr) < 0)
+		return 0;
+
+	return is_selected_pin_registrar(&attr);
+}
+
+
+/**
+ * wps_is_addr_authorized - Check whether WPS IE authorizes MAC address
+ * @msg: WPS IE contents from Beacon or Probe Response frame
+ * @addr: MAC address to search for
+ * @ver1_compat: Whether to use version 1 compatibility mode
+ * Returns: 1 if address is authorized, 0 if not
+ */
+int wps_is_addr_authorized(const struct wpabuf *msg, const u8 *addr,
+			   int ver1_compat)
+{
+	struct wps_parse_attr attr;
+	unsigned int i;
+	const u8 *pos;
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return 0;
 
-	if (!attr.selected_registrar || *attr.selected_registrar == 0)
+	if (!attr.version2 && ver1_compat) {
+		/*
+		 * Version 1.0 AP - AuthorizedMACs not used, so revert back to
+		 * old mechanism of using SelectedRegistrar.
+		 */
+		return is_selected_pin_registrar(&attr);
+	}
+
+	if (!attr.authorized_macs)
 		return 0;
 
-	if (attr.dev_password_id != NULL &&
-	    WPA_GET_BE16(attr.dev_password_id) == DEV_PW_PUSHBUTTON)
-		return 0;
+	pos = attr.authorized_macs;
+	for (i = 0; i < attr.authorized_macs_len / ETH_ALEN; i++) {
+		if (os_memcmp(pos, addr, ETH_ALEN) == 0)
+			return 1;
+		pos += ETH_ALEN;
+	}
 
-	return 1;
+	return 0;
 }
 
 

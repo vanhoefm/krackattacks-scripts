@@ -311,12 +311,19 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 static int wpa_supplicant_ctrl_iface_wps_er_pin(struct wpa_supplicant *wpa_s,
 						char *cmd)
 {
-	char *uuid = cmd, *pin;
+	char *uuid = cmd, *pin, *pos;
+	u8 addr_buf[ETH_ALEN], *addr = NULL;
 	pin = os_strchr(uuid, ' ');
 	if (pin == NULL)
 		return -1;
 	*pin++ = '\0';
-	return wpas_wps_er_add_pin(wpa_s, uuid, pin);
+	pos = os_strchr(pin, ' ');
+	if (pos) {
+		*pos++ = '\0';
+		if (hwaddr_aton(pos, addr_buf) == 0)
+			addr = addr_buf;
+	}
+	return wpas_wps_er_add_pin(wpa_s, addr, uuid, pin);
 }
 
 
@@ -818,7 +825,8 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 
 
 #ifdef CONFIG_WPS
-static char * wpa_supplicant_wps_ie_txt_buf(char *pos, char *end,
+static char * wpa_supplicant_wps_ie_txt_buf(struct wpa_supplicant *wpa_s,
+					    char *pos, char *end,
 					    struct wpabuf *wps_ie)
 {
 	int ret;
@@ -828,6 +836,8 @@ static char * wpa_supplicant_wps_ie_txt_buf(char *pos, char *end,
 		return pos;
 	if (wps_is_selected_pbc_registrar(wps_ie))
 		txt = "[WPS-PBC]";
+	else if (wps_is_addr_authorized(wps_ie, wpa_s->own_addr, 0))
+		txt = "[WPS-AUTH]";
 	else if (wps_is_selected_pin_registrar(wps_ie))
 		txt = "[WPS-PIN]";
 	else
@@ -842,13 +852,14 @@ static char * wpa_supplicant_wps_ie_txt_buf(char *pos, char *end,
 #endif /* CONFIG_WPS */
 
 
-static char * wpa_supplicant_wps_ie_txt(char *pos, char *end,
+static char * wpa_supplicant_wps_ie_txt(struct wpa_supplicant *wpa_s,
+					char *pos, char *end,
 					const struct wpa_bss *bss)
 {
 #ifdef CONFIG_WPS
 	struct wpabuf *wps_ie;
 	wps_ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
-	return wpa_supplicant_wps_ie_txt_buf(pos, end, wps_ie);
+	return wpa_supplicant_wps_ie_txt_buf(wpa_s, pos, end, wps_ie);
 #else /* CONFIG_WPS */
 	return pos;
 #endif /* CONFIG_WPS */
@@ -857,6 +868,7 @@ static char * wpa_supplicant_wps_ie_txt(char *pos, char *end,
 
 /* Format one result on one text line into a buffer. */
 static int wpa_supplicant_ctrl_iface_scan_result(
+	struct wpa_supplicant *wpa_s,
 	const struct wpa_bss *bss, char *buf, size_t buflen)
 {
 	char *pos, *end;
@@ -877,7 +889,7 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 	ie2 = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	if (ie2)
 		pos = wpa_supplicant_ie_txt(pos, end, "WPA2", ie2, 2 + ie2[1]);
-	pos = wpa_supplicant_wps_ie_txt(pos, end, bss);
+	pos = wpa_supplicant_wps_ie_txt(wpa_s, pos, end, bss);
 	if (!ie && !ie2 && bss->caps & IEEE80211_CAP_PRIVACY) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
 		if (ret < 0 || ret >= end - pos)
@@ -928,7 +940,7 @@ static int wpa_supplicant_ctrl_iface_scan_results(
 	pos += ret;
 
 	dl_list_for_each(bss, &wpa_s->bss_id, struct wpa_bss, list_id) {
-		ret = wpa_supplicant_ctrl_iface_scan_result(bss, pos,
+		ret = wpa_supplicant_ctrl_iface_scan_result(wpa_s, bss, pos,
 							    end - pos);
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
@@ -1616,7 +1628,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	ie2 = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	if (ie2)
 		pos = wpa_supplicant_ie_txt(pos, end, "WPA2", ie2, 2 + ie2[1]);
-	pos = wpa_supplicant_wps_ie_txt(pos, end, bss);
+	pos = wpa_supplicant_wps_ie_txt(wpa_s, pos, end, bss);
 	if (!ie && !ie2 && bss->caps & IEEE80211_CAP_PRIVACY) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
 		if (ret < 0 || ret >= end - pos)

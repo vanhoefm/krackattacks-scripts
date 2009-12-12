@@ -63,6 +63,8 @@ extern "C" {
 #define WPS_EVENT_OVERLAP "WPS-OVERLAP-DETECTED "
 /** Available WPS AP with active PBC found in scan results */
 #define WPS_EVENT_AP_AVAILABLE_PBC "WPS-AP-AVAILABLE-PBC "
+/** Available WPS AP with our address as authorized in scan results */
+#define WPS_EVENT_AP_AVAILABLE_AUTH "WPS-AP-AVAILABLE-AUTH "
 /** Available WPS AP with recently selected PIN registrar found in scan results
  */
 #define WPS_EVENT_AP_AVAILABLE_PIN "WPS-AP-AVAILABLE-PIN "

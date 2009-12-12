@@ -714,8 +714,8 @@ void hostapd_update_wps(struct hostapd_data *hapd)
 }
 
 
-int hostapd_wps_add_pin(struct hostapd_data *hapd, const char *uuid,
-			const char *pin, int timeout)
+int hostapd_wps_add_pin(struct hostapd_data *hapd, const u8 *addr,
+			const char *uuid, const char *pin, int timeout)
 {
 	u8 u[UUID_LEN];
 	int any = 0;
@@ -726,7 +726,8 @@ int hostapd_wps_add_pin(struct hostapd_data *hapd, const char *uuid,
 		any = 1;
 	else if (uuid_str2bin(uuid, u))
 		return -1;
-	return wps_registrar_add_pin(hapd->wps->registrar, any ? NULL : u,
+	return wps_registrar_add_pin(hapd->wps->registrar, addr,
+				     any ? NULL : u,
 				     (const u8 *) pin, os_strlen(pin),
 				     timeout);
 }
@@ -777,7 +778,7 @@ int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 
 	if ((wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ||
 	     wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_R) &&
-	    hostapd_wps_add_pin(hapd, "any",
+	    hostapd_wps_add_pin(hapd, NULL, "any",
 				wpabuf_head(wps->oob_conf.dev_password), 0) <
 	    0)
 		goto error;

@@ -226,7 +226,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		data->fragment_size = WSC_FRAGMENT_SIZE;
 
 	if (registrar && cfg.pin) {
-		wps_registrar_add_pin(data->wps_ctx->registrar, NULL,
+		wps_registrar_add_pin(data->wps_ctx->registrar, NULL, NULL,
 				      cfg.pin, cfg.pin_len, 0);
 	}
 

@@ -731,15 +731,21 @@ static int wpa_cli_cmd_wps_er_pin(struct wpa_ctrl *ctrl, int argc,
 	char cmd[256];
 	int res;
 
-	if (argc != 2) {
-		printf("Invalid WPS_ER_PIN command: need two arguments:\n"
+	if (argc < 2) {
+		printf("Invalid WPS_ER_PIN command: need at least two "
+		       "arguments:\n"
 		       "- UUID: use 'any' to select any\n"
-		       "- PIN: Enrollee PIN\n");
+		       "- PIN: Enrollee PIN\n"
+		       "optional: - Enrollee MAC address\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s",
-			  argv[0], argv[1]);
+	if (argc > 2)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_PIN %s %s",
+				  argv[0], argv[1]);
 	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
 		printf("Too long WPS_ER_PIN command.\n");
 		return -1;

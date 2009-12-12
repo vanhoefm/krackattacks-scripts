@@ -46,6 +46,7 @@ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
 	s->reg = reg;
 	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, NULL);
 
+	os_memset(s->authorized_macs, 0, sizeof(s->authorized_macs));
 	if (attr.selected_registrar == NULL || *attr.selected_registrar == 0) {
 		wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar: Disable "
 			   "Selected Registrar");
@@ -56,6 +57,13 @@ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
 			WPA_GET_BE16(attr.dev_password_id) : DEV_PW_DEFAULT;
 		s->config_methods = attr.sel_reg_config_methods ?
 			WPA_GET_BE16(attr.sel_reg_config_methods) : -1;
+		if (attr.authorized_macs) {
+			int count = attr.authorized_macs_len / ETH_ALEN;
+			if (count > WPS_MAX_AUTHORIZED_MACS)
+				count = WPS_MAX_AUTHORIZED_MACS;
+			os_memcpy(s->authorized_macs, attr.authorized_macs,
+				  count * ETH_ALEN);
+		}
 		eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
 				       upnp_er_set_selected_timeout, s, NULL);
 	}

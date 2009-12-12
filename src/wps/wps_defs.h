@@ -296,4 +296,6 @@ enum wps_response_type {
 /* Walk Time for push button configuration (in seconds) */
 #define WPS_PBC_WALK_TIME 120
 
+#define WPS_MAX_AUTHORIZED_MACS 5
+
 #endif /* WPS_DEFS_H */

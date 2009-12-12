@@ -899,6 +899,15 @@ void WpaGui::processMsg(char *msg)
 		if (textStatus->text() == "INACTIVE" ||
 		    textStatus->text() == "DISCONNECTED")
 			wpaguiTab->setCurrentWidget(wpsTab);
+	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE_AUTH)) {
+		showTrayMessage(QSystemTrayIcon::Information, 3,
+				"Wi-Fi Protected Setup (WPS) AP\n"
+				"indicating this client is authorized.");
+		wpsStatusText->setText("WPS AP indicating this client is "
+				       "authorized");
+		if (textStatus->text() == "INACTIVE" ||
+		    textStatus->text() == "DISCONNECTED")
+			wpaguiTab->setCurrentWidget(wpsTab);
 	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE)) {
 		wpsStatusText->setText(tr("WPS AP detected"));
 	} else if (str_match(pos, WPS_EVENT_OVERLAP)) {

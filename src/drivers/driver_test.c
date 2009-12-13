@@ -1136,10 +1136,9 @@ static int test_driver_sta_add(const char *ifname, void *priv,
 	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s addr=" MACSTR " aid=%d "
-		   "capability=0x%x flags=0x%x listen_interval=%d)",
+		   "capability=0x%x listen_interval=%d)",
 		   __func__, ifname, MAC2STR(params->addr), params->aid,
-		   params->capability, params->flags,
-		   params->listen_interval);
+		   params->capability, params->listen_interval);
 	wpa_hexdump(MSG_DEBUG, "test_driver_sta_add - supp_rates",
 		    params->supp_rates, params->supp_rates_len);
 

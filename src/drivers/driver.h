@@ -430,7 +430,6 @@ struct hostapd_sta_add_params {
 	u16 capability;
 	const u8 *supp_rates;
 	size_t supp_rates_len;
-	int flags;
 	u16 listen_interval;
 	const struct ieee80211_ht_capabilities *ht_capabilities;
 };

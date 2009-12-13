@@ -204,7 +204,7 @@ hostapd_set_countermeasures(struct hostapd_data *hapd, int enabled)
 static inline int
 hostapd_sta_add(const char *ifname, struct hostapd_data *hapd, const u8 *addr,
 		u16 aid, u16 capability, const u8 *supp_rates,
-		size_t supp_rates_len, int flags, u16 listen_interval,
+		size_t supp_rates_len, u16 listen_interval,
 		const struct ieee80211_ht_capabilities *ht_capabilities)
 {
 	struct hostapd_sta_add_params params;
@@ -220,7 +220,6 @@ hostapd_sta_add(const char *ifname, struct hostapd_data *hapd, const u8 *addr,
 	params.capability = capability;
 	params.supp_rates = supp_rates;
 	params.supp_rates_len = supp_rates_len;
-	params.flags = flags;
 	params.listen_interval = listen_interval;
 	params.ht_capabilities = ht_capabilities;
 	return hapd->driver->sta_add(ifname, hapd->drv_priv, &params);

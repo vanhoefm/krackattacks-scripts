@@ -74,7 +74,6 @@
 
 #include "priv_netlink.h"
 #include "l2_packet/l2_packet.h"
-#include "../../hostapd/sta_flags.h"
 
 
 struct madwifi_driver_data {
@@ -420,9 +419,9 @@ madwifi_sta_set_flags(void *priv, const u8 *addr, int total_flags,
 		      int flags_or, int flags_and)
 {
 	/* For now, only support setting Authorized flag */
-	if (flags_or & WLAN_STA_AUTHORIZED)
+	if (flags_or & WPA_STA_AUTHORIZED)
 		return madwifi_set_sta_authorized(priv, addr, 1);
-	if (!(flags_and & WLAN_STA_AUTHORIZED))
+	if (!(flags_and & WPA_STA_AUTHORIZED))
 		return madwifi_set_sta_authorized(priv, addr, 0);
 	return 0;
 }

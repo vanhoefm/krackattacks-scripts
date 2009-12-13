@@ -154,7 +154,6 @@ bsd_set_ssid(int s, const char *ifname, const u8 *ssid, size_t ssid_len)
 #undef WPA_OUI_TYPE
 
 #include "l2_packet/l2_packet.h"
-#include "../../hostapd/sta_flags.h"
 
 struct bsd_driver_data {
 	struct hostapd_data *hapd;		/* back pointer */
@@ -382,9 +381,9 @@ bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags, int flags_or,
 		  int flags_and)
 {
 	/* For now, only support setting Authorized flag */
-	if (flags_or & WLAN_STA_AUTHORIZED)
+	if (flags_or & WPA_STA_AUTHORIZED)
 		return bsd_set_sta_authorized(priv, addr, 1);
-	if (!(flags_and & WLAN_STA_AUTHORIZED))
+	if (!(flags_and & WPA_STA_AUTHORIZED))
 		return bsd_set_sta_authorized(priv, addr, 0);
 	return 0;
 }

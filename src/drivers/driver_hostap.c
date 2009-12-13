@@ -30,7 +30,6 @@
 
 #include "priv_netlink.h"
 #include "common/ieee802_11_defs.h"
-#include "../../hostapd/sta_flags.h"
 
 
 /* MTU to be set for the wlan#ap device; this is mainly needed for IEEE 802.1X
@@ -359,6 +358,12 @@ static int hostap_sta_set_flags(void *priv, const u8 *addr,
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param param;
 
+	if (flags_or & WPA_STA_AUTHORIZED)
+		flags_or = BIT(5); /* WLAN_STA_AUTHORIZED */
+	if (!(flags_and & WPA_STA_AUTHORIZED))
+		flags_and = ~BIT(5);
+	else
+		flags_and = ~0;
 	memset(&param, 0, sizeof(param));
 	param.cmd = PRISM2_HOSTAPD_SET_FLAGS_STA;
 	memcpy(param.sta_addr, addr, ETH_ALEN);
@@ -693,7 +698,7 @@ static int hostap_sta_remove(void *priv, const u8 *addr)
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param param;
 
-	hostap_sta_set_flags(drv, addr, 0, 0, ~WLAN_STA_AUTHORIZED);
+	hostap_sta_set_flags(drv, addr, 0, 0, ~WPA_STA_AUTHORIZED);
 
 	memset(&param, 0, sizeof(param));
 	param.cmd = PRISM2_HOSTAPD_REMOVE_STA;

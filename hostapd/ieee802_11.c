@@ -1466,7 +1466,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	struct sta_info *sta;
 	int new_assoc = 1;
 	struct ieee80211_ht_capabilities ht_cap;
-	int set_flags, flags_and, flags_or;
+	int set_flags, total_flags, flags_and, flags_or;
 
 	if (!ok) {
 		hostapd_logger(hapd, mgmt->da, HOSTAPD_MODULE_IEEE80211,
@@ -1559,13 +1559,14 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		ap_sta_bind_vlan(hapd, sta, 0);
 	}
 
-	set_flags = WLAN_STA_SHORT_PREAMBLE | WLAN_STA_WMM | WLAN_STA_MFP;
+	total_flags = hostapd_sta_flags_to_drv(sta->flags);
+	set_flags = WPA_STA_SHORT_PREAMBLE | WPA_STA_WMM | WPA_STA_MFP;
 	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa &&
 	    sta->flags & WLAN_STA_AUTHORIZED)
-		set_flags |= WLAN_STA_AUTHORIZED;
-	flags_or = sta->flags & set_flags;
-	flags_and = sta->flags | ~set_flags;
-	hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
+		set_flags |= WPA_STA_AUTHORIZED;
+	flags_or = total_flags & set_flags;
+	flags_and = total_flags | ~set_flags;
+	hostapd_sta_set_flags(hapd, sta->addr, total_flags,
 			      flags_or, flags_and);
 
 	if (sta->auth_alg == WLAN_AUTH_FT)

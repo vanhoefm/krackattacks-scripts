@@ -494,6 +494,10 @@ struct wpa_bss_params {
 	int rsn_preauth;
 };
 
+#define WPA_STA_AUTHORIZED BIT(0)
+#define WPA_STA_WMM BIT(1)
+#define WPA_STA_SHORT_PREAMBLE BIT(2)
+#define WPA_STA_MFP BIT(3)
 
 /**
  * struct wpa_driver_ops - Driver interface API definition
@@ -1320,9 +1324,9 @@ struct wpa_driver_ops {
 	 * sta_set_flags - Set station flags (AP only)
 	 * @priv: Private driver interface data
 	 * @addr: Station address
-	 * @total_flags: Bitmap of all WLAN_STA_* flags currently set
-	 * @flags_or: Bitmap of WLAN_STA_* flags to add
-	 * @flags_and: Bitmap of WLAN_STA_* flags to us as a mask
+	 * @total_flags: Bitmap of all WPA_STA_* flags currently set
+	 * @flags_or: Bitmap of WPA_STA_* flags to add
+	 * @flags_and: Bitmap of WPA_STA_* flags to us as a mask
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*sta_set_flags)(void *priv, const u8 *addr,

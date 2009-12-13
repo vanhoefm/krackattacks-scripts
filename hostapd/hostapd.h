@@ -189,6 +189,7 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 				 void *ctx);
 int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
 			      int enabled);
+int hostapd_sta_flags_to_drv(int flags);
 
 int eap_server_register_methods(void);
 

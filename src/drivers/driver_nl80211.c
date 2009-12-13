@@ -35,8 +35,6 @@
 #include <linux/filter.h>
 #include "radiotap.h"
 #include "radiotap_iter.h"
-
-#include "../../hostapd/sta_flags.h"
 #endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef CONFIG_LIBNL20
@@ -3252,7 +3250,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	u8 *pos;
 	int res;
 #if 0 /* FIX */
-	int qos = sta->flags & WLAN_STA_WME;
+	int qos = sta->flags & WPA_STA_WMM;
 #else
 	int qos = 0;
 #endif
@@ -3314,13 +3312,13 @@ static u32 sta_flags_nl80211(int flags)
 {
 	u32 f = 0;
 
-	if (flags & WLAN_STA_AUTHORIZED)
+	if (flags & WPA_STA_AUTHORIZED)
 		f |= BIT(NL80211_STA_FLAG_AUTHORIZED);
-	if (flags & WLAN_STA_WMM)
+	if (flags & WPA_STA_WMM)
 		f |= BIT(NL80211_STA_FLAG_WME);
-	if (flags & WLAN_STA_SHORT_PREAMBLE)
+	if (flags & WPA_STA_SHORT_PREAMBLE)
 		f |= BIT(NL80211_STA_FLAG_SHORT_PREAMBLE);
-	if (flags & WLAN_STA_MFP)
+	if (flags & WPA_STA_MFP)
 		f |= BIT(NL80211_STA_FLAG_MFP);
 
 	return f;
@@ -3356,16 +3354,16 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 	 * Backwards compatibility version using NL80211_ATTR_STA_FLAGS. This
 	 * can be removed eventually.
 	 */
-	if (total_flags & WLAN_STA_AUTHORIZED)
+	if (total_flags & WPA_STA_AUTHORIZED)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_AUTHORIZED);
 
-	if (total_flags & WLAN_STA_WMM)
+	if (total_flags & WPA_STA_WMM)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_WME);
 
-	if (total_flags & WLAN_STA_SHORT_PREAMBLE)
+	if (total_flags & WPA_STA_SHORT_PREAMBLE)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_SHORT_PREAMBLE);
 
-	if (total_flags & WLAN_STA_MFP)
+	if (total_flags & WPA_STA_MFP)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_MFP);
 
 	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))

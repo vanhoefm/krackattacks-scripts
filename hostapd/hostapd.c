@@ -1507,3 +1507,18 @@ int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
 	}
 	return hostapd_set_ieee8021x(hapd, &params);
 }
+
+
+int hostapd_sta_flags_to_drv(int flags)
+{
+	int res = 0;
+	if (flags & WLAN_STA_AUTHORIZED)
+		res |= WPA_STA_AUTHORIZED;
+	if (flags & WLAN_STA_WMM)
+		res |= WPA_STA_WMM;
+	if (flags & WLAN_STA_SHORT_PREAMBLE)
+		res |= WPA_STA_SHORT_PREAMBLE;
+	if (flags & WLAN_STA_MFP)
+		res |= WPA_STA_MFP;
+	return res;
+}

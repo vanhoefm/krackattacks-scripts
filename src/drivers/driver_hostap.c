@@ -846,7 +846,12 @@ hostapd_wireless_event_wireless_custom(struct hostap_driver_data *drv,
 		}
 		pos += 5;
 		if (hwaddr_aton(pos, addr) == 0) {
-			hostapd_michael_mic_failure(drv->hapd, addr);
+			union wpa_event_data data;
+			os_memset(&data, 0, sizeof(data));
+			data.michael_mic_failure.unicast = 1;
+			data.michael_mic_failure.src = addr;
+			wpa_supplicant_event(drv->hapd,
+					     EVENT_MICHAEL_MIC_FAILURE, &data);
 		} else {
 			wpa_printf(MSG_DEBUG,
 				   "MLME-MICHAELMICFAILURE.indication "

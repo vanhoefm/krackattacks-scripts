@@ -601,7 +601,6 @@ static void
 bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = ctx;
-	struct hostapd_data *hapd = drv->hapd;
 	char buf[2048];
 	struct if_announcemsghdr *ifan;
 	struct rt_msghdr *rtm;
@@ -609,6 +608,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 	struct ieee80211_join_event *join;
 	struct ieee80211_leave_event *leave;
 	int n;
+	union wpa_event_data data;
 
 	n = read(sock, buf, sizeof(buf));
 	if (n < 0) {
@@ -652,7 +652,11 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 				"Michael MIC failure wireless event: "
 				"keyix=%u src_addr=" MACSTR, mic->iev_keyix,
 				MAC2STR(mic->iev_src));
-			hostapd_michael_mic_failure(hapd, mic->iev_src);
+			os_memset(&data, 0, sizeof(data));
+			data.michael_mic_failure.unicast = 1;
+			data.michael_mic_failure.src = mic->iev_src;
+			wpa_supplicant_event(drv->hapd,
+					     EVENT_MICHAEL_MIC_FAILURE, &data);
 			break;
 		}
 		break;

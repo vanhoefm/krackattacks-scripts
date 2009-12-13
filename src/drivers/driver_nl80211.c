@@ -23,19 +23,16 @@
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
+#include <netpacket/packet.h>
+#include <linux/filter.h>
 #include "nl80211_copy.h"
 
 #include "common.h"
-#include "driver.h"
-#include "eloop.h"
-#include "common/ieee802_11_defs.h"
-
-#if defined(CONFIG_AP) || defined(HOSTAPD)
-#include <netpacket/packet.h>
-#include <linux/filter.h>
 #include "radiotap.h"
 #include "radiotap_iter.h"
-#endif /* CONFIG_AP || HOSTAPD */
+#include "eloop.h"
+#include "common/ieee802_11_defs.h"
+#include "driver.h"
 
 #ifdef CONFIG_LIBNL20
 /* libnl 2.0 compatibility code */
@@ -121,24 +118,14 @@ static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   const u8 *addr, int cmd, u16 reason_code);
-
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv);
-#endif /* CONFIG_AP || HOSTAPD */
-
-#ifdef CONFIG_AP
-static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
-				 int ifidx);
-#endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static struct i802_bss * get_bss(struct wpa_driver_nl80211_data *drv,
 				 int ifindex);
-static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
-				 int ifidx);
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 #endif /* HOSTAPD */
 
@@ -398,8 +385,6 @@ static int wpa_driver_nl80211_get_ssid(void *priv, u8 *ssid)
 }
 
 
-#ifndef HOSTAPD
-
 static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
 					  void *ctx, char *buf, size_t len,
 					  int del)
@@ -637,8 +622,6 @@ try_again:
 		goto try_again;
 	}
 }
-
-#endif /* HOSTAPD */
 
 
 static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
@@ -1284,9 +1267,6 @@ err1:
 static int wpa_driver_nl80211_init_link_events(
 	struct wpa_driver_nl80211_data *drv)
 {
-#ifdef HOSTAPD
-	return 0;
-#else /* HOSTAPD */
 	int s;
 	struct sockaddr_nl local;
 
@@ -1310,7 +1290,6 @@ static int wpa_driver_nl80211_init_link_events(
 	drv->link_event_sock = s;
 
 	return 0;
-#endif /* HOSTAPD */
 }
 
 
@@ -1411,7 +1390,6 @@ static void wpa_driver_nl80211_free_bss(struct wpa_driver_nl80211_data *drv)
 #endif /* HOSTAPD */
 
 
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
 {
 	struct nl_msg *msg;
@@ -1428,7 +1406,6 @@ static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
  nla_put_failure:
 	return -ENOBUFS;
 }
-#endif /* CONFIG_AP || HOSTAPD */
 
 
 /**
@@ -1442,7 +1419,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 	nl80211_remove_monitor_interface(drv);
 	if (drv->monitor_sock >= 0) {
 		eloop_unregister_read_sock(drv->monitor_sock);
@@ -1451,7 +1427,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	if (drv->nlmode == NL80211_IFTYPE_AP)
 		wpa_driver_nl80211_del_beacon(drv);
-#endif /* CONFIG_AP || HOSTAPD */
 
 #ifdef HOSTAPD
 	if (drv->last_freq_ht) {
@@ -1471,7 +1446,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		os_free(drv->if_indices);
 
 	wpa_driver_nl80211_free_bss(drv);
-#else /* HOSTAPD */
+#endif /* HOSTAPD */
 
 	wpa_driver_nl80211_send_oper_ifla(priv, 0, IF_OPER_UP);
 
@@ -1479,7 +1454,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		eloop_unregister_read_sock(drv->link_event_sock);
 		close(drv->link_event_sock);
 	}
-#endif /* HOSTAPD */
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
@@ -2221,8 +2195,6 @@ nla_put_failure:
 }
 
 
-#if defined(CONFIG_AP) || defined(HOSTAPD)
-
 struct phy_info_arg {
 	u16 *num_modes;
 	struct hostapd_hw_modes *modes;
@@ -2570,8 +2542,6 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt);
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
-
 
 static int wpa_driver_nl80211_set_beacon(const char *ifname, void *priv,
 					 const u8 *head, size_t head_len,
@@ -2628,8 +2598,6 @@ static int wpa_driver_nl80211_set_beacon(const char *ifname, void *priv,
 	return -ENOBUFS;
 }
 
-
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 
 static int wpa_driver_nl80211_set_freq(struct wpa_driver_nl80211_data *drv,
 				       int freq, int ht_enabled,
@@ -2736,8 +2704,6 @@ static int wpa_driver_nl80211_sta_remove(void *priv, const u8 *addr)
  nla_put_failure:
 	return -ENOBUFS;
 }
-
-#endif /* CONFIG_AP || HOSTAPD */
 
 
 static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
@@ -2864,7 +2830,6 @@ void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok);
 
 #endif /* CONFIG_AP */
 
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 
 static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 {
@@ -2883,9 +2848,9 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 			   ok ? "ACK" : "fail");
 #ifdef HOSTAPD
 		hostapd_mgmt_tx_cb(ctx, buf, len, stype, ok);
-#else /* HOSTAPD */
+#elif CONFIG_AP
 		ap_mgmt_tx_cb(ctx, buf, len, stype, ok);
-#endif /* HOSTAPD */
+#endif
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
@@ -2894,9 +2859,9 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 	case WLAN_FC_TYPE_DATA:
 #ifdef HOSTAPD
 		hostapd_tx_status(ctx, hdr->addr1, buf, len, ok);
-#else /* HOSTAPD */
+#elif CONFIG_AP
 		ap_tx_status(ctx, hdr->addr1, buf, len, ok);
-#endif /* HOSTAPD */
+#endif
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "unknown TX callback frame type %d",
@@ -2911,9 +2876,9 @@ static void from_unknown_sta(struct wpa_driver_nl80211_data *drv,
 {
 #ifdef HOSTAPD
 	hostapd_rx_from_unknown_sta(drv->ctx, hdr, len);
-#else /* HOSTAPD */
+#elif CONFIG_AP
 	ap_rx_from_unknown_sta(drv->ctx, hdr, len);
-#endif /* HOSTAPD */
+#endif
 }
 
 
@@ -2935,9 +2900,9 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			wpa_printf(MSG_MSGDUMP, "MGMT");
 #ifdef HOSTAPD
 		hostapd_mgmt_rx(drv->ctx, buf, len, stype, hfi);
-#else /* HOSTAPD */
+#elif CONFIG_AP
 		ap_mgmt_rx(drv->ctx, buf, len, stype, hfi);
-#endif /* HOSTAPD */
+#endif
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
@@ -3382,9 +3347,6 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 	return -ENOBUFS;
 }
 
-#endif /* CONFIG_AP || HOSTAPD */
-
-#ifdef CONFIG_AP
 
 static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
@@ -3400,7 +3362,6 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 
 	return 0;
 }
-#endif /* CONFIG_AP */
 
 
 static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv)
@@ -3659,10 +3620,8 @@ static int wpa_driver_nl80211_associate(
 	int ret = -1;
 	struct nl_msg *msg;
 
-#ifdef CONFIG_AP
 	if (params->mode == IEEE80211_MODE_AP)
 		return wpa_driver_nl80211_ap(drv, params);
-#endif /* CONFIG_AP */
 
 	if (params->mode == IEEE80211_MODE_IBSS)
 		return wpa_driver_nl80211_ibss(drv, params);
@@ -3811,7 +3770,6 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 		drv->nlmode = nlmode;
 
 done:
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 	if (!ret && nlmode == NL80211_IFTYPE_AP) {
 		/* Setup additional AP mode functionality if needed */
 		if (drv->monitor_ifidx < 0 &&
@@ -3821,7 +3779,6 @@ done:
 		/* Remove additional AP mode functionality */
 		nl80211_remove_monitor_interface(drv);
 	}
-#endif /* CONFIG_AP || HOSTAPD */
 
 	return ret;
 }
@@ -4598,14 +4555,12 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_beacon = wpa_driver_nl80211_set_beacon,
 	.if_add = wpa_driver_nl80211_if_add,
 	.if_remove = wpa_driver_nl80211_if_remove,
-#if defined(CONFIG_AP) || defined(HOSTAPD)
 	.send_mlme = wpa_driver_nl80211_send_mlme,
 	.get_hw_feature_data = wpa_driver_nl80211_get_hw_feature_data,
 	.sta_add = wpa_driver_nl80211_sta_add,
 	.sta_remove = wpa_driver_nl80211_sta_remove,
 	.hapd_send_eapol = wpa_driver_nl80211_hapd_send_eapol,
 	.sta_set_flags = wpa_driver_nl80211_sta_set_flags,
-#endif /* CONFIG_AP || HOSTAPD */
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
 	.hapd_deinit = i802_deinit,

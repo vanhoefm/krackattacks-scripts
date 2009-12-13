@@ -63,6 +63,8 @@ OBJS = \
 	$(OBJDIR)\os_win32.obj \
 	$(OBJDIR)\eloop_win.obj \
 	$(OBJDIR)\sha1.obj \
+	$(OBJDIR)\sha1-tlsprf.obj \
+	$(OBJDIR)\sha1-pbkdf2.obj \
 	$(OBJDIR)\md5.obj \
 	$(OBJDIR)\aes-cbc.obj \
 	$(OBJDIR)\aes-ctr.obj \
@@ -115,11 +117,13 @@ OBJS = \
 	$(OBJDIR)\blacklist.obj \
 	$(OBJDIR)\scan.obj \
 	$(OBJDIR)\wpas_glue.obj \
+	$(OBJDIR)\eap_register.obj \
 	$(OBJDIR)\config.obj \
 	$(OBJDIR)\l2_packet_winpcap.obj \
 	$(OBJDIR)\tls_openssl.obj \
 	$(OBJDIR)\ms_funcs.obj \
 	$(OBJDIR)\crypto_openssl.obj \
+	$(OBJDIR)\fips_prf_openssl.obj \
 	$(OBJDIR)\pcsc_funcs.obj \
 	$(OBJDIR)\notify.obj \
 	$(OBJDIR)\ndis_events.obj
@@ -153,9 +157,12 @@ OBJS_c = \
 OBJS_p = \
 	$(OBJDIR)\os_win32.obj \
 	$(OBJDIR)\common.obj \
+	$(OBJDIR)\wpa_debug.obj \
+	$(OBJDIR)\wpabuf.obj \
 	$(OBJDIR)\sha1.obj \
 	$(OBJDIR)\md5.obj \
 	$(OBJDIR)\crypto_openssl.obj \
+	$(OBJDIR)\sha1-pbkdf2.obj \
 	$(OBJDIR)\wpa_passphrase.obj
 
 LIBS = wbemuuid.lib libcmt.lib kernel32.lib uuid.lib ole32.lib oleaut32.lib \

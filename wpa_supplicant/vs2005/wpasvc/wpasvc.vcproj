@@ -299,6 +299,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\eap_register.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\eap_peer\eap_tls.c"
 				>
 			</File>

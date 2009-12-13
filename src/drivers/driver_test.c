@@ -1,6 +1,6 @@
 /*
- * WPA Supplicant - testing driver interface
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Testing driver interface for a simulated network driver
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -93,7 +93,6 @@ struct wpa_driver_test_data {
 	int privacy;
 	int ap;
 
-	struct hostapd_data *hapd;
 	struct test_client_socket *cli;
 	struct test_driver_bss *bss;
 	int udp_port;
@@ -458,7 +457,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	hdr = (struct ieee80211_hdr *) data;
 	fc = le_to_host16(hdr->frame_control);
 #ifdef HOSTAPD
-	hostapd_mgmt_tx_cb(drv->hapd, (u8 *) data, data_len,
+	hostapd_mgmt_tx_cb(drv->ctx, (u8 *) data, data_len,
 			   WLAN_FC_GET_STYPE(fc), ret >= 0);
 #else /* HOSTAPD */
 	if (drv->ap) {
@@ -508,7 +507,7 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 		wpa_hexdump(MSG_MSGDUMP, "test_driver: scan IEs", ie, ielen);
 
 #ifdef HOSTAPD
-		hostapd_probe_req_rx(drv->hapd, sa, ie, ielen);
+		hostapd_probe_req_rx(drv->ctx, sa, ie, ielen);
 #endif /* HOSTAPD */
 	}
 
@@ -633,7 +632,7 @@ static void test_driver_disassoc(struct wpa_driver_test_data *drv,
 		return;
 
 #ifdef HOSTAPD
-	hostapd_notif_disassoc(drv->hapd, cli->addr);
+	hostapd_notif_disassoc(drv->ctx, cli->addr);
 #endif /* HOSTAPD */
 }
 
@@ -732,7 +731,7 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 		return;
 	}
 #ifdef HOSTAPD
-	hostapd_mgmt_rx(drv->hapd, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
+	hostapd_mgmt_rx(drv->ctx, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
 #else /* HOSTAPD */
 	ap_mgmt_rx(drv->ctx, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
 #endif /* HOSTAPD */
@@ -1141,7 +1140,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		return NULL;
 	}
 
-	drv->hapd = hapd;
+	drv->ctx = hapd;
 
 	/* Generate a MAC address to help testing with multiple APs */
 	params->own_addr[0] = 0x02; /* locally administered */

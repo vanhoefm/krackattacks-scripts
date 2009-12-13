@@ -21,15 +21,6 @@ struct ieee80211_mgmt;
 u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid);
 int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid,
 			  size_t len);
-#ifdef NEED_AP_MLME
-int hostapd_wmm_sta_config(struct hostapd_data *hapd, struct sta_info *sta);
-#else /* NEED_AP_MLME */
-static inline int hostapd_wmm_sta_config(struct hostapd_data *hapd,
-					 struct sta_info *sta)
-{
-	return 0;
-}
-#endif /* NEED_AP_MLME */
 void hostapd_wmm_action(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
 			size_t len);
 int wmm_process_tspec(struct wmm_tspec_element *tspec);

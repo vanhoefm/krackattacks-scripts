@@ -119,23 +119,6 @@ int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid, size_t len)
 }
 
 
-/* This function is called when a station sends an ACK frame for an AssocResp
- * frame (status=success) and the matching AssocReq contained a WMM element.
- */
-int hostapd_wmm_sta_config(struct hostapd_data *hapd, struct sta_info *sta)
-{
-	/* update kernel STA data for WMM related items (WLAN_STA_WPA flag) */
-	if (sta->flags & WLAN_STA_WMM)
-		hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
-				      WLAN_STA_WMM, ~0);
-	else
-		hostapd_sta_set_flags(hapd, sta->addr, sta->flags,
-				      0, ~WLAN_STA_WMM);
-
-	return 0;
-}
-
-
 static void wmm_send_action(struct hostapd_data *hapd, const u8 *addr,
 			    const struct wmm_tspec_element *tspec,
 			    u8 action_code, u8 dialogue_token, u8 status_code)

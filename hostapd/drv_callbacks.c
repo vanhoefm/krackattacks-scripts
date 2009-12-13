@@ -106,8 +106,6 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa)
 		accounting_sta_start(hapd, sta);
 
-	hostapd_wmm_sta_config(hapd, sta);
-
 	/* Start IEEE 802.1X authentication process for new stations */
 	ieee802_1x_new_station(hapd, sta);
 	if (reassoc) {

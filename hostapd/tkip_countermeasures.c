@@ -18,7 +18,6 @@
 #include "hostapd.h"
 #include "eloop.h"
 #include "driver_i.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "mlme.h"
 #include "wpa.h"

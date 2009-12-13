@@ -19,7 +19,6 @@
 #include "drivers/driver.h"
 #include "hostapd.h"
 #include "config.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "beacon.h"
 #include "ieee802_11.h"

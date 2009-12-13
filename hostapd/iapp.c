@@ -52,7 +52,6 @@
 #include "ieee802_11.h"
 #include "iapp.h"
 #include "eloop.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 
 

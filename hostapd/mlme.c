@@ -19,7 +19,6 @@
 #include "common.h"
 #include "ieee802_11.h"
 #include "wpa.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "mlme.h"
 

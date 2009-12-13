@@ -27,7 +27,6 @@
 #include "hostapd.h"
 #include "ieee802_1x.h"
 #include "accounting.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "wpa.h"
 #include "preauth.h"

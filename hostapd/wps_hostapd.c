@@ -28,7 +28,6 @@
 #include "wps/wps_dev_attr.h"
 #include "hostapd.h"
 #include "driver_i.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "wps_hostapd.h"
 

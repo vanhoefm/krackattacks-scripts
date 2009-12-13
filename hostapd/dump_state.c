@@ -23,7 +23,6 @@
 #include "eap_server/eap.h"
 #include "hostapd.h"
 #include "config.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 
 

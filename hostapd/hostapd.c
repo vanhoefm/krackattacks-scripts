@@ -33,7 +33,6 @@
 #include "accounting.h"
 #include "iapp.h"
 #include "ieee802_11_auth.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "ap_list.h"
 #include "driver_i.h"

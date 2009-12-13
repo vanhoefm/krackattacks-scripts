@@ -19,7 +19,6 @@
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "wme.h"
-#include "sta_flags.h"
 #include "sta_info.h"
 #include "driver_i.h"
 

@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +15,23 @@
 #ifndef STA_INFO_H
 #define STA_INFO_H
 
+/* STA flags */
+#define WLAN_STA_AUTH BIT(0)
+#define WLAN_STA_ASSOC BIT(1)
+#define WLAN_STA_PS BIT(2)
+#define WLAN_STA_TIM BIT(3)
+#define WLAN_STA_PERM BIT(4)
+#define WLAN_STA_AUTHORIZED BIT(5)
+#define WLAN_STA_PENDING_POLL BIT(6) /* pending activity poll not ACKed */
+#define WLAN_STA_SHORT_PREAMBLE BIT(7)
+#define WLAN_STA_PREAUTH BIT(8)
+#define WLAN_STA_WMM BIT(9)
+#define WLAN_STA_MFP BIT(10)
+#define WLAN_STA_HT BIT(11)
+#define WLAN_STA_WPS BIT(12)
+#define WLAN_STA_MAYBE_WPS BIT(13)
+#define WLAN_STA_NONERP BIT(31)
+
 /* Maximum number of supported rates (from both Supported Rates and Extended
  * Supported Rates IEs). */
 #define WLAN_SUPP_RATES_MAX 32
@@ -25,7 +42,7 @@ struct sta_info {
 	struct sta_info *hnext; /* next entry in hash table list */
 	u8 addr[6];
 	u16 aid; /* STA's unique AID (1 .. 2007) or 0 if not yet assigned */
-	u32 flags;
+	u32 flags; /* Bitfield of WLAN_STA_* */
 	u16 capability;
 	u16 listen_interval; /* or beacon_int for APs */
 	u8 supported_rates[WLAN_SUPP_RATES_MAX];

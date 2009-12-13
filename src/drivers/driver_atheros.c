@@ -847,7 +847,7 @@ madwifi_wireless_event_wireless_custom(struct madwifi_driver_data *drv,
 		/* PROBLEM! this event is received for ALL BSSs ...
 		 * so all are enabled for WPS... ugh.
 		 */
-		hostapd_button_pushed(drv->hapd);
+		wpa_supplicant_event(drv->hapd, EVENT_WPS_BUTTON_PUSHED, NULL);
 	} else if (strncmp(custom, "Manage.prob_req ", 16) == 0) {
 		/*
 		 * Atheros driver uses a hack to pass Probe Request frames as a

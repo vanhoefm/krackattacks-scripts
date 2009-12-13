@@ -1706,7 +1706,12 @@ typedef enum wpa_event_type {
 	/**
 	 * EVENT_FT_RRB_RX - FT (IEEE 802.11r) RRB frame received
 	 */
-	EVENT_FT_RRB_RX
+	EVENT_FT_RRB_RX,
+
+	/**
+	 * EVENT_WPS_BUTTON_PUSHED - Report hardware push button press for WPS
+	 */
+	EVENT_WPS_BUTTON_PUSHED
 } wpa_event_type;
 
 
@@ -1973,6 +1978,5 @@ struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 					  const u8 *addr);
 void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 			  const u8 *ie, size_t ie_len);
-void hostapd_button_pushed(struct hostapd_data *hapd);
 
 #endif /* DRIVER_H */

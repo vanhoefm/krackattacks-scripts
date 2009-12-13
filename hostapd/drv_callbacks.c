@@ -463,6 +463,9 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 			      data->ft_rrb_rx.data, data->ft_rrb_rx.data_len);
 		break;
 #endif /* CONFIG_IEEE80211R */
+	case EVENT_WPS_BUTTON_PUSHED:
+		hostapd_wps_button_pushed(hapd);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;
@@ -479,10 +482,4 @@ void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
 		hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
 					sa, ie, ie_len);
-}
-
-
-void hostapd_button_pushed(struct hostapd_data *hapd)
-{
-	hostapd_wps_button_pushed(hapd);
 }

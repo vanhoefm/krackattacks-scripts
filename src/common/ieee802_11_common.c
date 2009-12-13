@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 Common routines
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,7 +19,7 @@
 #include "ieee802_11_common.h"
 
 
-static int ieee802_11_parse_vendor_specific(u8 *pos, size_t elen,
+static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 					    struct ieee802_11_elems *elems,
 					    int show_errors)
 {
@@ -131,12 +131,12 @@ static int ieee802_11_parse_vendor_specific(u8 *pos, size_t elen,
  * @show_errors: Whether to show parsing errors in debug log
  * Returns: Parsing result
  */
-ParseRes ieee802_11_parse_elems(u8 *start, size_t len,
+ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 				struct ieee802_11_elems *elems,
 				int show_errors)
 {
 	size_t left = len;
-	u8 *pos = start;
+	const u8 *pos = start;
 	int unknown = 0;
 
 	os_memset(elems, 0, sizeof(*elems));

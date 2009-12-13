@@ -130,11 +130,11 @@ static int ecw2cw(int ecw)
 
 
 static void ieee80211_sta_wmm_params(struct wpa_supplicant *wpa_s,
-				     u8 *wmm_param, size_t wmm_param_len)
+				     const u8 *wmm_param, size_t wmm_param_len)
 {
 	size_t left;
 	int count;
-	u8 *pos;
+	const u8 *pos;
 	u8 wmm_acm;
 
 	if (wmm_param_len < 8 || wmm_param[5] /* version */ != 1)
@@ -218,8 +218,8 @@ static int ieee80211_sta_tx(struct wpa_supplicant *wpa_s, const u8 *buf,
 
 
 static void ieee80211_send_auth(struct wpa_supplicant *wpa_s,
-				int transaction, u8 *extra, size_t extra_len,
-				int encrypt)
+				int transaction, const u8 *extra,
+				size_t extra_len, int encrypt)
 {
 	u8 *buf;
 	size_t len;

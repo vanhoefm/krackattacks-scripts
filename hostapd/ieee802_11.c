@@ -639,7 +639,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	struct ieee802_11_elems elems;
 	u16 resp;
-	u8 *wpa_ie;
+	const u8 *wpa_ie;
 	size_t wpa_ie_len;
 
 	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed) {

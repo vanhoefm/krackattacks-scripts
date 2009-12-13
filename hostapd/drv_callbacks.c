@@ -351,14 +351,14 @@ static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
 }
 
 
-static void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf,
+static void hostapd_mgmt_rx(struct hostapd_data *hapd, const u8 *buf,
 			    size_t len, struct hostapd_frame_info *fi)
 {
 	struct hostapd_iface *iface = hapd->iface;
-	struct ieee80211_hdr *hdr;
+	const struct ieee80211_hdr *hdr;
 	const u8 *bssid;
 
-	hdr = (struct ieee80211_hdr *) buf;
+	hdr = (const struct ieee80211_hdr *) buf;
 	bssid = get_hdr_bssid(hdr, len);
 	if (bssid == NULL)
 		return;

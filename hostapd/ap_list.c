@@ -55,7 +55,7 @@ static int ap_list_beacon_olbc(struct hostapd_iface *iface, struct ap_info *ap)
 }
 
 
-struct ap_info * ap_get_ap(struct hostapd_iface *iface, u8 *ap)
+struct ap_info * ap_get_ap(struct hostapd_iface *iface, const u8 *ap)
 {
 	struct ap_info *s;
 
@@ -195,7 +195,7 @@ int ap_ap_for_each(struct hostapd_iface *iface,
 }
 
 
-static struct ap_info * ap_ap_add(struct hostapd_iface *iface, u8 *addr)
+static struct ap_info * ap_ap_add(struct hostapd_iface *iface, const u8 *addr)
 {
 	struct ap_info *ap;
 
@@ -221,7 +221,7 @@ static struct ap_info * ap_ap_add(struct hostapd_iface *iface, u8 *addr)
 
 
 void ap_list_process_beacon(struct hostapd_iface *iface,
-			    struct ieee80211_mgmt *mgmt,
+			    const struct ieee80211_mgmt *mgmt,
 			    struct ieee802_11_elems *elems,
 			    struct hostapd_frame_info *fi)
 {

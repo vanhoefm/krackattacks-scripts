@@ -1942,7 +1942,7 @@ union wpa_event_data {
 	 * struct rx_mgmt - Data for EVENT_RX_MGMT events
 	 */
 	struct rx_mgmt {
-		u8 *frame;
+		const u8 *frame;
 		size_t frame_len;
 		struct hostapd_frame_info *fi;
 	} rx_mgmt;

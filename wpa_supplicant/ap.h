@@ -36,7 +36,7 @@ void ap_tx_status(void *ctx, const u8 *addr,
 		  const u8 *buf, size_t len, int ack);
 void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
 			    size_t len);
-void ap_mgmt_rx(void *ctx, u8 *buf, size_t len,
+void ap_mgmt_rx(void *ctx, const u8 *buf, size_t len,
 		struct hostapd_frame_info *fi);
 void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok);
 

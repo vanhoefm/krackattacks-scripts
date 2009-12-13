@@ -501,7 +501,7 @@ void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
 }
 
 
-void ap_mgmt_rx(void *ctx, u8 *buf, size_t len,
+void ap_mgmt_rx(void *ctx, const u8 *buf, size_t len,
 		struct hostapd_frame_info *fi)
 {
 #ifdef NEED_AP_MLME

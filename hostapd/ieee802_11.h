@@ -23,8 +23,9 @@ struct hostapd_data;
 struct sta_info;
 struct hostapd_frame_info;
 
-void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason);
-void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,
+void ieee802_11_send_deauth(struct hostapd_data *hapd, const u8 *addr,
+			    u16 reason);
+void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		     struct hostapd_frame_info *fi);
 void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			u16 stype, int ok);

@@ -191,13 +191,14 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len,
 }
 
 
-void handle_probe_req(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
-		      size_t len)
+void handle_probe_req(struct hostapd_data *hapd,
+		      const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct ieee80211_mgmt *resp;
 	struct ieee802_11_elems elems;
 	char *ssid;
-	u8 *pos, *epos, *ie;
+	u8 *pos, *epos;
+	const u8 *ie;
 	size_t ssid_len, ie_len;
 	struct sta_info *sta = NULL;
 

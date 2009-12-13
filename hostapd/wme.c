@@ -223,13 +223,13 @@ int wmm_process_tspec(struct wmm_tspec_element *tspec)
 
 
 static void wmm_addts_req(struct hostapd_data *hapd,
-			  struct ieee80211_mgmt *mgmt,
+			  const struct ieee80211_mgmt *mgmt,
 			  struct wmm_tspec_element *tspec, size_t len)
 {
-	u8 *end = ((u8 *) mgmt) + len;
+	const u8 *end = ((const u8 *) mgmt) + len;
 	int res;
 
-	if ((u8 *) (tspec + 1) > end) {
+	if ((const u8 *) (tspec + 1) > end) {
 		wpa_printf(MSG_DEBUG, "WMM: TSPEC overflow in ADDTS Request");
 		return;
 	}
@@ -247,12 +247,12 @@ static void wmm_addts_req(struct hostapd_data *hapd,
 }
 
 
-void hostapd_wmm_action(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
-			size_t len)
+void hostapd_wmm_action(struct hostapd_data *hapd,
+			const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	int action_code;
 	int left = len - IEEE80211_HDRLEN - 4;
-	u8 *pos = ((u8 *) mgmt) + IEEE80211_HDRLEN + 4;
+	const u8 *pos = ((const u8 *) mgmt) + IEEE80211_HDRLEN + 4;
 	struct ieee802_11_elems elems;
 	struct sta_info *sta = ap_get_sta(hapd, mgmt->sa);
 

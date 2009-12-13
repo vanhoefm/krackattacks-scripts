@@ -196,7 +196,8 @@ void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len)
  * @addr: Address of the destination STA
  * @reason: Reason code for Deauthentication
  */
-void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason)
+void ieee802_11_send_deauth(struct hostapd_data *hapd, const u8 *addr,
+			    u16 reason)
 {
 	struct ieee80211_mgmt mgmt;
 
@@ -217,7 +218,8 @@ void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason)
 
 
 static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
-			   u16 auth_transaction, u8 *challenge, int iswep)
+			   u16 auth_transaction, const u8 *challenge,
+			   int iswep)
 {
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG,
@@ -339,15 +341,15 @@ static void handle_auth_ft_finish(void *ctx, const u8 *dst, const u8 *bssid,
 #endif /* CONFIG_IEEE80211R */
 
 
-static void handle_auth(struct hostapd_data *hapd, struct ieee80211_mgmt *mgmt,
-			size_t len)
+static void handle_auth(struct hostapd_data *hapd,
+			const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	u16 auth_alg, auth_transaction, status_code;
 	u16 resp = WLAN_STATUS_SUCCESS;
 	struct sta_info *sta = NULL;
 	int res;
 	u16 fc;
-	u8 *challenge = NULL;
+	const u8 *challenge = NULL;
 	u32 session_timeout, acct_interim_interval;
 	int vlan_id = 0;
 	u8 resp_ies[2 + WLAN_AUTH_CHALLENGE_LEN];
@@ -635,7 +637,7 @@ static u16 copy_supp_rates(struct hostapd_data *hapd, struct sta_info *sta,
 
 
 static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
-			   u8 *ies, size_t ies_len, int reassoc)
+			   const u8 *ies, size_t ies_len, int reassoc)
 {
 	struct ieee802_11_elems elems;
 	u16 resp;
@@ -821,7 +823,7 @@ static void send_deauth(struct hostapd_data *hapd, const u8 *addr,
 
 
 static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
-			    u16 status_code, int reassoc, u8 *ies,
+			    u16 status_code, int reassoc, const u8 *ies,
 			    size_t ies_len)
 {
 	int send_len;
@@ -882,11 +884,12 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 
 static void handle_assoc(struct hostapd_data *hapd,
-			 struct ieee80211_mgmt *mgmt, size_t len, int reassoc)
+			 const struct ieee80211_mgmt *mgmt, size_t len,
+			 int reassoc)
 {
 	u16 capab_info, listen_interval;
 	u16 resp = WLAN_STATUS_SUCCESS;
-	u8 *pos;
+	const u8 *pos;
 	int left, i;
 	struct sta_info *sta;
 
@@ -1139,7 +1142,7 @@ static void handle_deauth(struct hostapd_data *hapd,
 
 
 static void handle_beacon(struct hostapd_data *hapd,
-			  struct ieee80211_mgmt *mgmt, size_t len,
+			  const struct ieee80211_mgmt *mgmt, size_t len,
 			  struct hostapd_frame_info *fi)
 {
 	struct ieee802_11_elems elems;
@@ -1190,10 +1193,11 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 
 
 static void hostapd_sa_query_action(struct hostapd_data *hapd,
-				    struct ieee80211_mgmt *mgmt, size_t len)
+				    const struct ieee80211_mgmt *mgmt,
+				    size_t len)
 {
 	struct sta_info *sta;
-	u8 *end;
+	const u8 *end;
 	int i;
 
 	end = mgmt->u.action.u.sa_query_resp.trans_id +
@@ -1255,7 +1259,7 @@ static int robust_action_frame(u8 category)
 
 
 static void handle_action(struct hostapd_data *hapd,
-			  struct ieee80211_mgmt *mgmt, size_t len)
+			  const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct sta_info *sta;
 
@@ -1315,6 +1319,8 @@ static void handle_action(struct hostapd_data *hapd,
 		       mgmt->u.action.category);
 	if (!(mgmt->da[0] & 0x01) && !(mgmt->u.action.category & 0x80) &&
 	    !(mgmt->sa[0] & 0x01)) {
+		struct ieee80211_mgmt *resp;
+
 		/*
 		 * IEEE 802.11-REVma/D9.0 - 7.3.1.11
 		 * Return the Action frame to the source without change
@@ -1322,12 +1328,17 @@ static void handle_action(struct hostapd_data *hapd,
 		 */
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: Return unknown Action "
 			   "frame back to sender");
-		os_memcpy(mgmt->da, mgmt->sa, ETH_ALEN);
-		os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
-		os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
-		mgmt->u.action.category |= 0x80;
+		resp = os_malloc(len);
+		if (resp == NULL)
+			return;
+		os_memcpy(resp, mgmt, len);
+		os_memcpy(resp->da, resp->sa, ETH_ALEN);
+		os_memcpy(resp->sa, hapd->own_addr, ETH_ALEN);
+		os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);
+		resp->u.action.category |= 0x80;
 
-		hostapd_send_mgmt_frame(hapd, mgmt, len);
+		hostapd_send_mgmt_frame(hapd, resp, len);
+		os_free(resp);
 	}
 }
 
@@ -1345,7 +1356,7 @@ static void handle_action(struct hostapd_data *hapd,
  * addition, it can be called to re-inserted pending frames (e.g., when using
  * external RADIUS server as an MAC ACL).
  */
-void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,
+void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		     struct hostapd_frame_info *fi)
 {
 	struct ieee80211_mgmt *mgmt;

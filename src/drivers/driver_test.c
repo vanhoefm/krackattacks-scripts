@@ -34,8 +34,6 @@
 #include "crypto/sha1.h"
 #include "common/ieee802_11_defs.h"
 
-#include "../../hostapd/hostapd.h"
-
 
 struct test_client_socket {
 	struct test_client_socket *next;
@@ -47,6 +45,7 @@ struct test_client_socket {
 
 struct test_driver_bss {
 	struct test_driver_bss *next;
+	void *bss_ctx;
 	char ifname[IFNAMSIZ + 1];
 	u8 bssid[ETH_ALEN];
 	u8 *ie;
@@ -546,56 +545,6 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 }
 
 
-static struct hostapd_data *
-test_driver_get_hapd(struct wpa_driver_test_data *drv,
-		     struct test_driver_bss *bss)
-{
-#ifdef HOSTAPD
-	struct hostapd_iface *iface = drv->hapd->iface;
-	struct hostapd_data *hapd = NULL;
-	size_t i;
-
-	if (bss == NULL) {
-		wpa_printf(MSG_DEBUG, "%s: bss == NULL", __func__);
-		return NULL;
-	}
-
-	for (i = 0; i < iface->num_bss; i++) {
-		hapd = iface->bss[i];
-		if (memcmp(hapd->own_addr, bss->bssid, ETH_ALEN) == 0)
-			break;
-	}
-	if (i == iface->num_bss) {
-		wpa_printf(MSG_DEBUG, "%s: no matching interface entry found "
-			   "for BSSID " MACSTR, __func__, MAC2STR(bss->bssid));
-		return NULL;
-	}
-
-	return hapd;
-#else /* HOSTAPD */
-	return NULL;
-#endif /* HOSTAPD */
-}
-
-
-static int test_driver_new_sta(struct wpa_driver_test_data *drv,
-			       struct test_driver_bss *bss, const u8 *addr,
-			       const u8 *ie, size_t ielen)
-{
-	struct hostapd_data *hapd;
-
-	hapd = test_driver_get_hapd(drv, bss);
-	if (hapd == NULL)
-		return -1;
-
-#ifdef HOSTAPD
-	return hostapd_notif_assoc(hapd, addr, ie, ielen);
-#else /* HOSTAPD */
-	return -1;
-#endif /* HOSTAPD */
-}
-
-
 static void test_driver_assoc(struct wpa_driver_test_data *drv,
 			      struct sockaddr_un *from, socklen_t fromlen,
 			      char *data)
@@ -667,9 +616,10 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 	sendto(drv->test_socket, cmd, strlen(cmd), 0,
 	       (struct sockaddr *) from, fromlen);
 
-	if (test_driver_new_sta(drv, bss, cli->addr, ie, ielen) < 0) {
+#ifdef HOSTAPD
+	if (hostapd_notif_assoc(bss->bss_ctx, cli->addr, ie, ielen) < 0)
 		wpa_printf(MSG_DEBUG, "test_driver: failed to add new STA");
-	}
+#endif /* HOSTAPD */
 }
 
 
@@ -710,11 +660,8 @@ static void test_driver_eapol(struct wpa_driver_test_data *drv,
 #ifdef HOSTAPD
 	cli = test_driver_get_cli(drv, from, fromlen);
 	if (cli) {
-		struct hostapd_data *hapd;
-		hapd = test_driver_get_hapd(drv, cli->bss);
-		if (hapd == NULL)
-			return;
-		hostapd_eapol_receive(hapd, cli->addr, data, datalen);
+		hostapd_eapol_receive(cli->bss->bss_ctx, cli->addr, data,
+				      datalen);
 	} else {
 		wpa_printf(MSG_DEBUG, "test_socket: EAPOL from unknown "
 			   "client");
@@ -984,7 +931,8 @@ static int test_driver_sta_disassoc(void *priv, const u8 *own_addr,
 }
 
 
-static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid)
+static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid,
+			       void *bss_ctx)
 {
 	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
@@ -996,6 +944,7 @@ static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid)
 	if (bss == NULL)
 		return -1;
 
+	bss->bss_ctx = bss_ctx;
 	os_strlcpy(bss->ifname, ifname, IFNAMSIZ);
 	memcpy(bss->bssid, bssid, ETH_ALEN);
 
@@ -1045,12 +994,12 @@ static int test_driver_bss_remove(void *priv, const char *ifname)
 
 static int test_driver_if_add(const char *iface, void *priv,
 			      enum wpa_driver_if_type type, const char *ifname,
-			      const u8 *addr)
+			      const u8 *addr, void *bss_ctx)
 {
-	wpa_printf(MSG_DEBUG, "%s(iface=%s type=%d ifname=%s)",
-		   __func__, iface, type, ifname);
+	wpa_printf(MSG_DEBUG, "%s(iface=%s type=%d ifname=%s bss_ctx=%p)",
+		   __func__, iface, type, ifname, bss_ctx);
 	if (type == WPA_IF_AP_BSS)
-		return test_driver_bss_add(priv, ifname, addr);
+		return test_driver_bss_add(priv, ifname, addr, bss_ctx);
 	return 0;
 }
 

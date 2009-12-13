@@ -1398,11 +1398,12 @@ struct wpa_driver_ops {
 	 * @ifname: Interface name for the new virtual interface
 	 * @addr: Local address to use for the interface or %NULL to use the
 	 *	parent interface address
+	 * @bss_ctx: BSS context for %WPA_IF_AP_BSS interfaces
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*if_add)(const char *iface, void *priv,
 		      enum wpa_driver_if_type type, const char *ifname,
-		      const u8 *addr);
+		      const u8 *addr, void *bss_ctx);
 
 	/**
 	 * if_remove - Remove a virtual interface

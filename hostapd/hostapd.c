@@ -1040,7 +1040,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 		hapd->interface_added = 1;
 		if (hostapd_if_add(hapd->iface->bss[0], WPA_IF_AP_BSS,
-				   hapd->conf->iface, hapd->own_addr)) {
+				   hapd->conf->iface, hapd->own_addr, hapd)) {
 			wpa_printf(MSG_ERROR, "Failed to add BSS (BSSID="
 				   MACSTR ")", MAC2STR(hapd->own_addr));
 			return -1;

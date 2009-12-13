@@ -680,7 +680,8 @@ static int vlan_dynamic_add(struct hostapd_data *hapd,
 {
 	while (vlan) {
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
-		    hostapd_if_add(hapd, WPA_IF_AP_VLAN, vlan->ifname, NULL)) {
+		    hostapd_if_add(hapd, WPA_IF_AP_VLAN, vlan->ifname, NULL,
+				   NULL)) {
 			if (errno != EEXIST) {
 				printf("Could not add VLAN iface: %s: %s\n",
 				       vlan->ifname, strerror(errno));
@@ -775,7 +776,7 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 		    pos);
 	os_free(ifname);
 
-	if (hostapd_if_add(hapd, WPA_IF_AP_VLAN, n->ifname, NULL)) {
+	if (hostapd_if_add(hapd, WPA_IF_AP_VLAN, n->ifname, NULL, NULL)) {
 		os_free(n);
 		return NULL;
 	}

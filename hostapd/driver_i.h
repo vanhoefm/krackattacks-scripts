@@ -362,12 +362,12 @@ hostapd_valid_bss_mask(struct hostapd_data *hapd, const u8 *addr,
 
 static inline int
 hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
-	       const char *ifname, const u8 *addr)
+	       const char *ifname, const u8 *addr, void *bss_ctx)
 {
 	if (hapd->driver == NULL || hapd->driver->if_add == NULL)
 		return -1;
 	return hapd->driver->if_add(hapd->conf->iface, hapd->drv_priv, type,
-				    ifname, addr);
+				    ifname, addr, bss_ctx);
 }
 
 static inline int

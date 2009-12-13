@@ -4506,7 +4506,8 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 
 static int wpa_driver_nl80211_if_add(const char *iface, void *priv,
 				     enum wpa_driver_if_type type,
-				     const char *ifname, const u8 *addr)
+				     const char *ifname, const u8 *addr,
+				     void *bss_ctx)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	int ifidx;

@@ -32,5 +32,12 @@ int ap_ctrl_iface_sta_next(struct wpa_supplicant *wpa_s, const char *txtaddr,
 			   char *buf, size_t buflen);
 int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
 				 size_t buflen, int verbose);
+void ap_tx_status(void *ctx, const u8 *addr,
+		  const u8 *buf, size_t len, int ack);
+void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
+			    size_t len);
+void ap_mgmt_rx(void *ctx, u8 *buf, size_t len,
+		struct hostapd_frame_info *fi);
+void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok);
 
 #endif /* AP_H */

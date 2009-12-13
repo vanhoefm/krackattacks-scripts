@@ -2819,66 +2819,34 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 }
 
 
-#ifdef CONFIG_AP
-
-void ap_tx_status(void *ctx, const u8 *addr,
-		  const u8 *buf, size_t len, int ack);
-void ap_rx_from_unknown_sta(void *ctx, struct ieee80211_hdr *hdr, size_t len);
-void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
-		struct hostapd_frame_info *fi);
-void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok);
-
-#endif /* CONFIG_AP */
-
-
 static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 {
 	struct ieee80211_hdr *hdr;
-	u16 fc, type, stype;
+	u16 fc;
+	union wpa_event_data event;
 
 	hdr = (struct ieee80211_hdr *) buf;
 	fc = le_to_host16(hdr->frame_control);
 
-	type = WLAN_FC_GET_TYPE(fc);
-	stype = WLAN_FC_GET_STYPE(fc);
-
-	switch (type) {
-	case WLAN_FC_TYPE_MGMT:
-		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
-			   ok ? "ACK" : "fail");
-#ifdef HOSTAPD
-		hostapd_mgmt_tx_cb(ctx, buf, len, stype, ok);
-#elif CONFIG_AP
-		ap_mgmt_tx_cb(ctx, buf, len, stype, ok);
-#endif
-		break;
-	case WLAN_FC_TYPE_CTRL:
-		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
-			   ok ? "ACK" : "fail");
-		break;
-	case WLAN_FC_TYPE_DATA:
-#ifdef HOSTAPD
-		hostapd_tx_status(ctx, hdr->addr1, buf, len, ok);
-#elif CONFIG_AP
-		ap_tx_status(ctx, hdr->addr1, buf, len, ok);
-#endif
-		break;
-	default:
-		wpa_printf(MSG_DEBUG, "unknown TX callback frame type %d",
-			   type);
-		break;
-	}
+	os_memset(&event, 0, sizeof(event));
+	event.tx_status.type = WLAN_FC_GET_TYPE(fc);
+	event.tx_status.stype = WLAN_FC_GET_STYPE(fc);
+	event.tx_status.dst = hdr->addr1;
+	event.tx_status.data = buf;
+	event.tx_status.data_len = len;
+	event.tx_status.ack = ok;
+	wpa_supplicant_event(ctx, EVENT_TX_STATUS, &event);
 }
 
 
 static void from_unknown_sta(struct wpa_driver_nl80211_data *drv,
 			     struct ieee80211_hdr *hdr, size_t len)
 {
-#ifdef HOSTAPD
-	hostapd_rx_from_unknown_sta(drv->ctx, hdr, len);
-#elif CONFIG_AP
-	ap_rx_from_unknown_sta(drv->ctx, hdr, len);
-#endif
+	union wpa_event_data event;
+	os_memset(&event, 0, sizeof(event));
+	event.rx_from_unknown.hdr = hdr;
+	event.rx_from_unknown.len = len;
+	wpa_supplicant_event(drv->ctx, EVENT_RX_FROM_UNKNOWN, &event);
 }
 
 
@@ -2887,22 +2855,19 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 			 struct hostapd_frame_info *hfi)
 {
 	struct ieee80211_hdr *hdr;
-	u16 fc, stype;
+	u16 fc;
+	union wpa_event_data event;
 
 	hdr = (struct ieee80211_hdr *) buf;
 	fc = le_to_host16(hdr->frame_control);
-	stype = WLAN_FC_GET_STYPE(fc);
 
 	switch (WLAN_FC_GET_TYPE(fc)) {
 	case WLAN_FC_TYPE_MGMT:
-		if (stype != WLAN_FC_STYPE_BEACON &&
-		    stype != WLAN_FC_STYPE_PROBE_REQ)
-			wpa_printf(MSG_MSGDUMP, "MGMT");
-#ifdef HOSTAPD
-		hostapd_mgmt_rx(drv->ctx, buf, len, stype, hfi);
-#elif CONFIG_AP
-		ap_mgmt_rx(drv->ctx, buf, len, stype, hfi);
-#endif
+		os_memset(&event, 0, sizeof(event));
+		event.rx_mgmt.frame = buf;
+		event.rx_mgmt.frame_len = len;
+		event.rx_mgmt.fi = hfi;
+		wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */

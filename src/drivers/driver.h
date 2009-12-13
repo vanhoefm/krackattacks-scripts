@@ -1711,7 +1711,22 @@ typedef enum wpa_event_type {
 	/**
 	 * EVENT_WPS_BUTTON_PUSHED - Report hardware push button press for WPS
 	 */
-	EVENT_WPS_BUTTON_PUSHED
+	EVENT_WPS_BUTTON_PUSHED,
+
+	/**
+	 * EVENT_TX_STATUS - Report TX status
+	 */
+	EVENT_TX_STATUS,
+
+	/**
+	 * EVENT_RX_FROM_UNKNOWN - Report RX from unknown STA
+	 */
+	EVENT_RX_FROM_UNKNOWN,
+
+	/**
+	 * EVENT_RX_MGMT - Report RX of a management frame
+	 */
+	EVENT_RX_MGMT
 } wpa_event_type;
 
 
@@ -1902,6 +1917,35 @@ union wpa_event_data {
 		const u8 *data;
 		size_t data_len;
 	} ft_rrb_rx;
+
+	/**
+	 * struct tx_status - Data for EVENT_TX_STATUS events
+	 */
+	struct tx_status {
+		u16 type;
+		u16 stype;
+		const u8 *dst;
+		const u8 *data;
+		size_t data_len;
+		int ack;
+	} tx_status;
+
+	/**
+	 * struct rx_from_unknown - Data for EVENT_RX_FROM_UNKNOWN events
+	 */
+	struct rx_from_unknown {
+		const struct ieee80211_hdr *hdr;
+		size_t len;
+	} rx_from_unknown;
+
+	/**
+	 * struct rx_mgmt - Data for EVENT_RX_MGMT events
+	 */
+	struct rx_mgmt {
+		u8 *frame;
+		size_t frame_len;
+		struct hostapd_frame_info *fi;
+	} rx_mgmt;
 };
 
 /**
@@ -1953,10 +1997,6 @@ struct ieee80211_hdr;
 
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
-void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
-		       const u8 *buf, size_t len, int ack);
-void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
-				 const struct ieee80211_hdr *hdr, size_t len);
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);
@@ -1970,10 +2010,6 @@ struct hostapd_frame_info {
 	u32 ssi_signal;
 };
 
-void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
-		     u16 stype, struct hostapd_frame_info *fi);
-void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
-			u16 stype, int ok);
 struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 					  const u8 *addr);
 void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,

@@ -1053,7 +1053,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 
 
 static void handle_disassoc(struct hostapd_data *hapd,
-			    struct ieee80211_mgmt *mgmt, size_t len)
+			    const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct sta_info *sta;
 
@@ -1102,7 +1102,7 @@ static void handle_disassoc(struct hostapd_data *hapd,
 
 
 static void handle_deauth(struct hostapd_data *hapd,
-			  struct ieee80211_mgmt *mgmt, size_t len)
+			  const struct ieee80211_mgmt *mgmt, size_t len)
 {
 	struct sta_info *sta;
 
@@ -1338,7 +1338,6 @@ static void handle_action(struct hostapd_data *hapd,
  * sent to)
  * @buf: management frame data (starting from IEEE 802.11 header)
  * @len: length of frame data in octets
- * @stype: management frame subtype from frame control field
  * @fi: meta data about received frame (signal level, etc.)
  *
  * Process all incoming IEEE 802.11 management frames. This will be called for
@@ -1346,11 +1345,16 @@ static void handle_action(struct hostapd_data *hapd,
  * addition, it can be called to re-inserted pending frames (e.g., when using
  * external RADIUS server as an MAC ACL).
  */
-void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len, u16 stype,
+void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,
 		     struct hostapd_frame_info *fi)
 {
-	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *) buf;
+	struct ieee80211_mgmt *mgmt;
 	int broadcast;
+	u16 fc, stype;
+
+	mgmt = (struct ieee80211_mgmt *) buf;
+	fc = le_to_host16(mgmt->frame_control);
+	stype = WLAN_FC_GET_STYPE(fc);
 
 	if (stype == WLAN_FC_STYPE_BEACON) {
 		handle_beacon(hapd, mgmt, len, fi);
@@ -1417,7 +1421,7 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len, u16 stype,
 
 
 static void handle_auth_cb(struct hostapd_data *hapd,
-			   struct ieee80211_mgmt *mgmt,
+			   const struct ieee80211_mgmt *mgmt,
 			   size_t len, int ok)
 {
 	u16 auth_alg, auth_transaction, status_code;
@@ -1458,7 +1462,7 @@ static void handle_auth_cb(struct hostapd_data *hapd,
 
 
 static void handle_assoc_cb(struct hostapd_data *hapd,
-			    struct ieee80211_mgmt *mgmt,
+			    const struct ieee80211_mgmt *mgmt,
 			    size_t len, int reassoc, int ok)
 {
 	u16 status;
@@ -1594,10 +1598,11 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
  * @stype: management frame subtype from frame control field
  * @ok: Whether the frame was ACK'ed
  */
-void ieee802_11_mgmt_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
+void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			u16 stype, int ok)
 {
-	struct ieee80211_mgmt *mgmt = (struct ieee80211_mgmt *) buf;
+	const struct ieee80211_mgmt *mgmt;
+	mgmt = (const struct ieee80211_mgmt *) buf;
 
 	switch (stype) {
 	case WLAN_FC_STYPE_AUTH:
@@ -1641,5 +1646,57 @@ int ieee802_11_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	/* TODO */
 	return 0;
 }
+
+
+void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
+		       const u8 *buf, size_t len, int ack)
+{
+	struct sta_info *sta;
+	struct hostapd_iface *iface = hapd->iface;
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL && iface->num_bss > 1) {
+		size_t j;
+		for (j = 0; j < iface->num_bss; j++) {
+			hapd = iface->bss[j];
+			sta = ap_get_sta(hapd, addr);
+			if (sta)
+				break;
+		}
+	}
+	if (sta == NULL)
+		return;
+	if (sta->flags & WLAN_STA_PENDING_POLL) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " %s pending "
+			   "activity poll", MAC2STR(sta->addr),
+			   ack ? "ACKed" : "did not ACK");
+		if (ack)
+			sta->flags &= ~WLAN_STA_PENDING_POLL;
+	}
+
+	ieee802_1x_tx_status(hapd, sta, buf, len, ack);
+}
+
+
+void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src)
+{
+	struct sta_info *sta;
+
+	sta = ap_get_sta(hapd, src);
+	if (sta && (sta->flags & WLAN_STA_ASSOC))
+		return;
+
+	wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated STA "
+		   MACSTR, MAC2STR(src));
+	if (sta && (sta->flags & WLAN_STA_AUTH))
+		hostapd_sta_disassoc(
+			hapd, src,
+			WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
+	else
+		hostapd_sta_deauth(
+			hapd, src,
+			WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
+}
+
 
 #endif /* CONFIG_NATIVE_WINDOWS */

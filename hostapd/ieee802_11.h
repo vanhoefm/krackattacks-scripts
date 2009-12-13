@@ -25,8 +25,8 @@ struct hostapd_frame_info;
 
 void ieee802_11_send_deauth(struct hostapd_data *hapd, u8 *addr, u16 reason);
 void ieee802_11_mgmt(struct hostapd_data *hapd, u8 *buf, size_t len,
-		     u16 stype, struct hostapd_frame_info *fi);
-void ieee802_11_mgmt_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
+		     struct hostapd_frame_info *fi);
+void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 			u16 stype, int ok);
 void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len);
 #ifdef NEED_AP_MLME
@@ -62,5 +62,8 @@ void hostapd_get_ht_capab(struct hostapd_data *hapd,
 u16 copy_sta_ht_capab(struct sta_info *sta, const u8 *ht_capab,
 		      size_t ht_capab_len);
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
+void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
+		       const u8 *buf, size_t len, int ack);
+void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src);
 
 #endif /* IEEE802_11_H */

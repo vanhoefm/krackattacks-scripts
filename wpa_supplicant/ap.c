@@ -484,33 +484,40 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 void ap_tx_status(void *ctx, const u8 *addr,
 		  const u8 *buf, size_t len, int ack)
 {
+#ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
 	hostapd_tx_status(wpa_s->ap_iface->bss[0], addr, buf, len, ack);
+#endif /* NEED_AP_MLME */
 }
 
 
-void ap_rx_from_unknown_sta(void *ctx, struct ieee80211_hdr *hdr, size_t len)
+void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
+			    size_t len)
 {
+#ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
-	hostapd_rx_from_unknown_sta(wpa_s->ap_iface->bss[0], hdr, len);
+	ieee802_11_rx_from_unknown(wpa_s->ap_iface->bss[0], hdr->addr2);
+#endif /* NEED_AP_MLME */
 }
 
 
-#ifdef NEED_AP_MLME
-void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
+void ap_mgmt_rx(void *ctx, u8 *buf, size_t len,
 		struct hostapd_frame_info *fi)
 {
+#ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
-	ieee802_11_mgmt(wpa_s->ap_iface->bss[0], buf, len, stype, fi);
+	ieee802_11_mgmt(wpa_s->ap_iface->bss[0], buf, len, fi);
+#endif /* NEED_AP_MLME */
 }
 
 
-void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok)
+void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok)
 {
+#ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
 	ieee802_11_mgmt_cb(wpa_s->ap_iface->bss[0], buf, len, stype, ok);
-}
 #endif /* NEED_AP_MLME */
+}
 
 
 void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,

@@ -116,124 +116,6 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
-void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
-		       const u8 *buf, size_t len, int ack)
-{
-	struct sta_info *sta;
-	struct hostapd_iface *iface = hapd->iface;
-
-	sta = ap_get_sta(hapd, addr);
-	if (sta == NULL && iface->num_bss > 1) {
-		size_t j;
-		for (j = 0; j < iface->num_bss; j++) {
-			hapd = iface->bss[j];
-			sta = ap_get_sta(hapd, addr);
-			if (sta)
-				break;
-		}
-	}
-	if (sta == NULL)
-		return;
-	if (sta->flags & WLAN_STA_PENDING_POLL) {
-		wpa_printf(MSG_DEBUG, "STA " MACSTR " %s pending "
-			   "activity poll", MAC2STR(sta->addr),
-			   ack ? "ACKed" : "did not ACK");
-		if (ack)
-			sta->flags &= ~WLAN_STA_PENDING_POLL;
-	}
-
-	ieee802_1x_tx_status(hapd, sta, buf, len, ack);
-}
-
-
-static const u8 * get_hdr_bssid(const struct ieee80211_hdr *hdr, size_t len)
-{
-	u16 fc, type, stype;
-
-	/*
-	 * PS-Poll frames are 16 bytes. All other frames are
-	 * 24 bytes or longer.
-	 */
-	if (len < 16)
-		return NULL;
-
-	fc = le_to_host16(hdr->frame_control);
-	type = WLAN_FC_GET_TYPE(fc);
-	stype = WLAN_FC_GET_STYPE(fc);
-
-	switch (type) {
-	case WLAN_FC_TYPE_DATA:
-		if (len < 24)
-			return NULL;
-		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
-		case WLAN_FC_TODS:
-			return hdr->addr1;
-		case WLAN_FC_FROMDS:
-			return hdr->addr2;
-		default:
-			return NULL;
-		}
-	case WLAN_FC_TYPE_CTRL:
-		if (stype != WLAN_FC_STYPE_PSPOLL)
-			return NULL;
-		return hdr->addr1;
-	case WLAN_FC_TYPE_MGMT:
-		return hdr->addr3;
-	default:
-		return NULL;
-	}
-}
-
-
-#define HAPD_BROADCAST ((struct hostapd_data *) -1)
-
-static struct hostapd_data * get_hapd_bssid(struct hostapd_iface *iface,
-					    const u8 *bssid)
-{
-	size_t i;
-
-	if (bssid == NULL)
-		return NULL;
-	if (bssid[0] == 0xff && bssid[1] == 0xff && bssid[2] == 0xff &&
-	    bssid[3] == 0xff && bssid[4] == 0xff && bssid[5] == 0xff)
-		return HAPD_BROADCAST;
-
-	for (i = 0; i < iface->num_bss; i++) {
-		if (os_memcmp(bssid, iface->bss[i]->own_addr, ETH_ALEN) == 0)
-			return iface->bss[i];
-	}
-
-	return NULL;
-}
-
-
-void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
-				 const struct ieee80211_hdr *hdr, size_t len)
-{
-	struct sta_info *sta;
-	const u8 *addr;
-
-	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
-	if (hapd == NULL || hapd == HAPD_BROADCAST)
-		return;
-
-	addr = hdr->addr2;
-	sta = ap_get_sta(hapd, addr);
-	if (!sta || !(sta->flags & WLAN_STA_ASSOC)) {
-		wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated "
-			   "STA " MACSTR, MAC2STR(addr));
-		if (sta && (sta->flags & WLAN_STA_AUTH))
-			hostapd_sta_disassoc(
-				hapd, addr,
-				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
-		else
-			hostapd_sta_deauth(
-				hapd, addr,
-				WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
-	}
-}
-
-
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)
 {
 	struct sta_info *sta = ap_get_sta(hapd, addr);
@@ -376,9 +258,101 @@ void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
 }
 
 
+struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
+					  const u8 *addr)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		hapd = iface->bss[j];
+		if (ap_get_sta(hapd, addr))
+			return hapd;
+	}
+
+	return NULL;
+}
+
+
+#ifdef HOSTAPD
+
 #ifdef NEED_AP_MLME
-void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
-		     u16 stype, struct hostapd_frame_info *fi)
+
+static const u8 * get_hdr_bssid(const struct ieee80211_hdr *hdr, size_t len)
+{
+	u16 fc, type, stype;
+
+	/*
+	 * PS-Poll frames are 16 bytes. All other frames are
+	 * 24 bytes or longer.
+	 */
+	if (len < 16)
+		return NULL;
+
+	fc = le_to_host16(hdr->frame_control);
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	switch (type) {
+	case WLAN_FC_TYPE_DATA:
+		if (len < 24)
+			return NULL;
+		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
+		case WLAN_FC_TODS:
+			return hdr->addr1;
+		case WLAN_FC_FROMDS:
+			return hdr->addr2;
+		default:
+			return NULL;
+		}
+	case WLAN_FC_TYPE_CTRL:
+		if (stype != WLAN_FC_STYPE_PSPOLL)
+			return NULL;
+		return hdr->addr1;
+	case WLAN_FC_TYPE_MGMT:
+		return hdr->addr3;
+	default:
+		return NULL;
+	}
+}
+
+
+#define HAPD_BROADCAST ((struct hostapd_data *) -1)
+
+static struct hostapd_data * get_hapd_bssid(struct hostapd_iface *iface,
+					    const u8 *bssid)
+{
+	size_t i;
+
+	if (bssid == NULL)
+		return NULL;
+	if (bssid[0] == 0xff && bssid[1] == 0xff && bssid[2] == 0xff &&
+	    bssid[3] == 0xff && bssid[4] == 0xff && bssid[5] == 0xff)
+		return HAPD_BROADCAST;
+
+	for (i = 0; i < iface->num_bss; i++) {
+		if (os_memcmp(bssid, iface->bss[i]->own_addr, ETH_ALEN) == 0)
+			return iface->bss[i];
+	}
+
+	return NULL;
+}
+
+
+static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
+					const struct ieee80211_hdr *hdr,
+					size_t len)
+{
+	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
+	if (hapd == NULL || hapd == HAPD_BROADCAST)
+		return;
+
+	ieee802_11_rx_from_unknown(hapd, hdr->addr2);
+}
+
+
+static void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf,
+			    size_t len, struct hostapd_frame_info *fi)
 {
 	struct hostapd_iface *iface = hapd->iface;
 	struct ieee80211_hdr *hdr;
@@ -408,14 +382,14 @@ void hostapd_mgmt_rx(struct hostapd_data *hapd, u8 *buf, size_t len,
 	if (hapd == HAPD_BROADCAST) {
 		size_t i;
 		for (i = 0; i < iface->num_bss; i++)
-			ieee802_11_mgmt(iface->bss[i], buf, len, stype, fi);
+			ieee802_11_mgmt(iface->bss[i], buf, len, fi);
 	} else
-		ieee802_11_mgmt(hapd, buf, len, stype, fi);
+		ieee802_11_mgmt(hapd, buf, len, fi);
 }
 
 
-void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
-			u16 stype, int ok)
+static void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, const u8 *buf,
+			       size_t len, u16 stype, int ok)
 {
 	struct ieee80211_hdr *hdr;
 	hdr = (struct ieee80211_hdr *) buf;
@@ -424,26 +398,10 @@ void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, u8 *buf, size_t len,
 		return;
 	ieee802_11_mgmt_cb(hapd, buf, len, stype, ok);
 }
+
 #endif /* NEED_AP_MLME */
 
 
-struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
-					  const u8 *addr)
-{
-	struct hostapd_iface *iface = hapd->iface;
-	size_t j;
-
-	for (j = 0; j < iface->num_bss; j++) {
-		hapd = iface->bss[j];
-		if (ap_get_sta(hapd, addr))
-			return hapd;
-	}
-
-	return NULL;
-}
-
-
-#ifndef CONFIG_AP
 void wpa_supplicant_event(void *ctx, wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -466,12 +424,39 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	case EVENT_WPS_BUTTON_PUSHED:
 		hostapd_wps_button_pushed(hapd);
 		break;
+#ifdef NEED_AP_MLME
+	case EVENT_TX_STATUS:
+		switch (data->tx_status.type) {
+		case WLAN_FC_TYPE_MGMT:
+			hostapd_mgmt_tx_cb(hapd, data->tx_status.data,
+					   data->tx_status.data_len,
+					   data->tx_status.stype,
+					   data->tx_status.ack);
+			break;
+		case WLAN_FC_TYPE_DATA:
+			hostapd_tx_status(hapd, data->tx_status.dst,
+					  data->tx_status.data,
+					  data->tx_status.data_len,
+					  data->tx_status.ack);
+			break;
+		}
+		break;
+	case EVENT_RX_FROM_UNKNOWN:
+		hostapd_rx_from_unknown_sta(hapd, data->rx_from_unknown.hdr,
+					    data->rx_from_unknown.len);
+		break;
+	case EVENT_RX_MGMT:
+		hostapd_mgmt_rx(hapd, data->rx_mgmt.frame,
+				data->rx_mgmt.frame_len, data->rx_mgmt.fi);
+		break;
+#endif /* NEED_AP_MLME */
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;
 	}
 }
-#endif /* CONFIG_AP */
+
+#endif /* HOSTAPD */
 
 
 void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,

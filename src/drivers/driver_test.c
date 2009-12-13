@@ -317,6 +317,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 #ifdef HOSTAPD
 	char desttxt[30];
 #endif /* HOSTAPD */
+	union wpa_event_data event;
 
 	wpa_hexdump(MSG_MSGDUMP, "test_send_mlme", data, data_len);
 	if (drv->test_socket < 0 || data_len < 10) {
@@ -456,15 +457,15 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 
 	hdr = (struct ieee80211_hdr *) data;
 	fc = le_to_host16(hdr->frame_control);
-#ifdef HOSTAPD
-	hostapd_mgmt_tx_cb(drv->ctx, (u8 *) data, data_len,
-			   WLAN_FC_GET_STYPE(fc), ret >= 0);
-#else /* HOSTAPD */
-	if (drv->ap) {
-		ap_mgmt_tx_cb(drv->ctx, (u8 *) data, data_len,
-			      WLAN_FC_GET_STYPE(fc), ret >= 0);
-	}
-#endif /* HOSTAPD */
+
+	os_memset(&event, 0, sizeof(event));
+	event.tx_status.type = WLAN_FC_GET_TYPE(fc);
+	event.tx_status.stype = WLAN_FC_GET_STYPE(fc);
+	event.tx_status.dst = hdr->addr1;
+	event.tx_status.data = data;
+	event.tx_status.data_len = data_len;
+	event.tx_status.ack = ret >= 0;
+	wpa_supplicant_event(drv->ctx, EVENT_TX_STATUS, &event);
 
 	return ret;
 }
@@ -705,6 +706,7 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 {
 	struct ieee80211_hdr *hdr;
 	u16 fc;
+	union wpa_event_data event;
 
 	hdr = (struct ieee80211_hdr *) data;
 
@@ -730,11 +732,11 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 			   __func__);
 		return;
 	}
-#ifdef HOSTAPD
-	hostapd_mgmt_rx(drv->ctx, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
-#else /* HOSTAPD */
-	ap_mgmt_rx(drv->ctx, data, datalen, WLAN_FC_GET_STYPE(fc), NULL);
-#endif /* HOSTAPD */
+
+	os_memset(&event, 0, sizeof(event));
+	event.rx_mgmt.frame = data;
+	event.rx_mgmt.frame_len = datalen;
+	wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
 }
 
 

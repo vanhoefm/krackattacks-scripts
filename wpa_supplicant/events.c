@@ -35,6 +35,7 @@
 #include "ibss_rsn.h"
 #include "sme.h"
 #include "bgscan.h"
+#include "ap.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -1433,6 +1434,38 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	case EVENT_ASSOC_TIMED_OUT:
 		sme_event_assoc_timed_out(wpa_s, data);
 		break;
+#ifdef CONFIG_AP
+	case EVENT_TX_STATUS:
+		if (wpa_s->ap_iface == NULL)
+			break;
+		switch (data->tx_status.type) {
+		case WLAN_FC_TYPE_MGMT:
+			ap_mgmt_tx_cb(wpa_s, data->tx_status.data,
+				      data->tx_status.data_len,
+				      data->tx_status.stype,
+				      data->tx_status.ack);
+			break;
+		case WLAN_FC_TYPE_DATA:
+			ap_tx_status(wpa_s, data->tx_status.dst,
+				     data->tx_status.data,
+				     data->tx_status.data_len,
+				     data->tx_status.ack);
+			break;
+		}
+		break;
+	case EVENT_RX_FROM_UNKNOWN:
+		if (wpa_s->ap_iface == NULL)
+			break;
+		ap_rx_from_unknown_sta(wpa_s, data->rx_from_unknown.hdr,
+				       data->rx_from_unknown.len);
+		break;
+	case EVENT_RX_MGMT:
+		if (wpa_s->ap_iface == NULL)
+			break;
+		ap_mgmt_rx(wpa_s, data->rx_mgmt.frame,
+			   data->rx_mgmt.frame_len, data->rx_mgmt.fi);
+		break;
+#endif /* CONFIG_AP */
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

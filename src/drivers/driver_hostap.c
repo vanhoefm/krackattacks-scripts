@@ -67,6 +67,7 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	u16 fc, ethertype;
 	u8 *pos, *sa;
 	size_t left;
+	union wpa_event_data event;
 
 	if (len < sizeof(struct ieee80211_hdr))
 		return;
@@ -80,7 +81,10 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	}
 
 	sa = hdr->addr2;
-	hostapd_rx_from_unknown_sta(drv->hapd, hdr, len);
+	os_memset(&event, 0, sizeof(event));
+	event.rx_from_unknown.hdr = hdr;
+	event.rx_from_unknown.len = len;
+	wpa_supplicant_event(drv->hapd, EVENT_RX_FROM_UNKNOWN, &event);
 
 	pos = (u8 *) (hdr + 1);
 	left = len - sizeof(*hdr);
@@ -121,33 +125,20 @@ static void handle_tx_callback(struct hostap_driver_data *drv, u8 *buf,
 			       size_t len, int ok)
 {
 	struct ieee80211_hdr *hdr;
-	u16 fc, type, stype;
+	u16 fc;
+	union wpa_event_data event;
 
 	hdr = (struct ieee80211_hdr *) buf;
 	fc = le_to_host16(hdr->frame_control);
 
-	type = WLAN_FC_GET_TYPE(fc);
-	stype = WLAN_FC_GET_STYPE(fc);
-
-	switch (type) {
-	case WLAN_FC_TYPE_MGMT:
-		wpa_printf(MSG_DEBUG, "MGMT (TX callback) %s",
-			   ok ? "ACK" : "fail");
-		hostapd_mgmt_tx_cb(drv->hapd, buf, len, stype, ok);
-		break;
-	case WLAN_FC_TYPE_CTRL:
-		wpa_printf(MSG_DEBUG, "CTRL (TX callback) %s",
-			   ok ? "ACK" : "fail");
-		break;
-	case WLAN_FC_TYPE_DATA:
-		wpa_printf(MSG_DEBUG, "DATA (TX callback) %s",
-			   ok ? "ACK" : "fail");
-		hostapd_tx_status(drv->hapd, hdr->addr1, buf, len, ok);
-		break;
-	default:
-		printf("unknown TX callback frame type %d\n", type);
-		break;
-	}
+	os_memset(&event, 0, sizeof(event));
+	event.tx_status.type = WLAN_FC_GET_TYPE(fc);
+	event.tx_status.stype = WLAN_FC_GET_STYPE(fc);
+	event.tx_status.dst = hdr->addr1;
+	event.tx_status.data = buf;
+	event.tx_status.data_len = len;
+	event.tx_status.ack = ok;
+	wpa_supplicant_event(drv->hapd, EVENT_TX_STATUS, &event);
 }
 
 
@@ -158,6 +149,7 @@ static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 	unsigned char *extra = NULL;
 	size_t data_len = len;
 	int ver;
+	union wpa_event_data event;
 
 	/* PSPOLL is only 16 bytes, but driver does not (at least yet) pass
 	 * these to user space */
@@ -202,9 +194,10 @@ static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 
 	switch (type) {
 	case WLAN_FC_TYPE_MGMT:
-		if (stype != WLAN_FC_STYPE_BEACON)
-			wpa_printf(MSG_MSGDUMP, "MGMT");
-		hostapd_mgmt_rx(drv->hapd, buf, data_len, stype, NULL);
+		os_memset(&event, 0, sizeof(event));
+		event.rx_mgmt.frame = buf;
+		event.rx_mgmt.frame_len = data_len;
+		wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		wpa_printf(MSG_DEBUG, "CTRL");

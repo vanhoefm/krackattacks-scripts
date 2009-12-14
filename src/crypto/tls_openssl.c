@@ -2060,9 +2060,18 @@ u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
 		if (*appl_data) {
 			res = SSL_read(conn->ssl, *appl_data, in_len);
 			if (res < 0) {
-				tls_show_errors(MSG_INFO, __func__,
-						"Failed to read possible "
-						"Application Data");
+				int err = SSL_get_error(conn->ssl, res);
+				if (err == SSL_ERROR_WANT_READ ||
+				    err == SSL_ERROR_WANT_WRITE) {
+					wpa_printf(MSG_DEBUG,
+						   "SSL: No Application Data "
+						   "included");
+				} else {
+					tls_show_errors(MSG_INFO, __func__,
+							"Failed to read "
+							"possible "
+							"Application Data");
+				}
 				os_free(*appl_data);
 				*appl_data = NULL;
 			} else {

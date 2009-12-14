@@ -22,12 +22,7 @@ endif
 ifdef CONFIG_DRIVER_NL80211
 DRV_CFLAGS += -DCONFIG_DRIVER_NL80211
 DRV_OBJS += ../src/drivers/driver_nl80211.o
-
-ifdef CONFIG_CLIENT_MLME
 DRV_OBJS += ../src/utils/radiotap.o
-else
-DRV_AP_OBJS += ../src/utils/radiotap.o
-endif
 NEED_SME=y
 NEED_AP_MLME=y
 DRV_LIBS += -lnl

@@ -1143,6 +1143,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 	}
 
 	drv->ctx = hapd;
+	drv->bss->bss_ctx = hapd;
 
 	/* Generate a MAC address to help testing with multiple APs */
 	params->own_addr[0] = 0x02; /* locally administered */

@@ -508,6 +508,7 @@ void WpaGui::updateStatus()
 	bool bssid_updated = false, ipaddr_updated = false;
 	bool status_updated = false;
 	char *pairwise_cipher = NULL, *group_cipher = NULL;
+	char *mode = NULL;
 
 	start = buf;
 	while (*start) {
@@ -544,6 +545,8 @@ void WpaGui::updateStatus()
 				pairwise_cipher = pos;
 			} else if (strcmp(start, "group_cipher") == 0) {
 				group_cipher = pos;
+			} else if (strcmp(start, "mode") == 0) {
+				mode = pos;
 			}
 		}
 
@@ -551,6 +554,8 @@ void WpaGui::updateStatus()
 			break;
 		start = end + 1;
 	}
+	if (status_updated && mode)
+		textStatus->setText(textStatus->text() + " (" + mode + ")");
 
 	if (pairwise_cipher || group_cipher) {
 		QString encr;

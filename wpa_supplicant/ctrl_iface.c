@@ -473,6 +473,27 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 					return pos - buf;
 				pos += ret;
 			}
+
+			switch (ssid->mode) {
+			case 0:
+				ret = os_snprintf(pos, end - pos,
+						  "mode=station\n");
+				break;
+			case 1:
+				ret = os_snprintf(pos, end - pos,
+						  "mode=IBSS\n");
+				break;
+			case 2:
+				ret = os_snprintf(pos, end - pos,
+						  "mode=AP\n");
+				break;
+			default:
+				ret = 0;
+				break;
+			}
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
 		}
 
 #ifdef CONFIG_AP

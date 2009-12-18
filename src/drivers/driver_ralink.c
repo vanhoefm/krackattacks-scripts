@@ -24,6 +24,7 @@
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "priv_netlink.h"
+#include "netlink.h"
 #include "driver_ralink.h"
 
 static void wpa_driver_ralink_scan_timeout(void *eloop_ctx, void *timeout_ctx);
@@ -33,7 +34,7 @@ static void wpa_driver_ralink_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 struct wpa_driver_ralink_data {
 	void *ctx;
 	int ioctl_sock;
-	int event_sock;
+	struct netlink_data *netlink;
 	char ifname[IFNAMSIZ + 1];
 	u8 *assoc_req_ies;
 	size_t assoc_req_ies_len;
@@ -747,29 +748,20 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 }
 
 static void
-wpa_driver_ralink_event_rtm_newlink(struct wpa_driver_ralink_data *drv,
-				    void *ctx, struct nlmsghdr *h, int len)
+wpa_driver_ralink_event_rtm_newlink(void *ctx, struct ifinfomsg *ifi, 
+				    u8 *buf, size_t len)
 {
-	struct ifinfomsg *ifi;
-	int attrlen, nlmsg_len, rta_len;
-	struct rtattr * attr;
+	struct wpa_driver_ralink_data *drv = ctx;
+	int attrlen, rta_len;
+	struct rtattr *attr;
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
-	if (len < (int) sizeof(*ifi))
-		return;
-
-	ifi = NLMSG_DATA(h);
 	wpa_hexdump(MSG_DEBUG, "ifi: ", (u8 *) ifi, sizeof(struct ifinfomsg));
 
-	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
-
-	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
+	attrlen = len;
 	wpa_printf(MSG_DEBUG, "attrlen=%d", attrlen);
-	if (attrlen < 0)
-		return;
-
-	attr = (struct rtattr *) (((char *) ifi) + nlmsg_len);
+	attr = (struct rtattr *) buf;
 	wpa_hexdump(MSG_DEBUG, "attr1: ", (u8 *) attr, sizeof(struct rtattr));
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	wpa_hexdump(MSG_DEBUG, "attr2: ", (u8 *)attr,rta_len);
@@ -785,60 +777,6 @@ wpa_driver_ralink_event_rtm_newlink(struct wpa_driver_ralink_data *drv,
 		wpa_hexdump(MSG_DEBUG, "attr3: ",
 			    (u8 *) attr, sizeof(struct rtattr));
 	}
-}
-
-static void wpa_driver_ralink_event_receive(int sock, void *ctx,
-					    void *sock_ctx)
-{
-	char buf[8192];
-	int left;
-	struct sockaddr_nl from;
-	socklen_t fromlen;
-	struct nlmsghdr *h;
-
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-
-	fromlen = sizeof(from);
-	left = recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT,
-			(struct sockaddr *) &from, &fromlen);
-
-	if (left < 0) {
-		if (errno != EINTR && errno != EAGAIN)
-			perror("recvfrom(netlink)");
-		return;
-	}
-
-	h = (struct nlmsghdr *) buf;
-	wpa_hexdump(MSG_DEBUG, "h: ", (u8 *)h, h->nlmsg_len);
-
-	while (left >= (int) sizeof(*h)) {
-		int len, plen;
-
-		len = h->nlmsg_len;
-		plen = len - sizeof(*h);
-		if (len > left || plen < 0) {
-			wpa_printf(MSG_DEBUG, "Malformed netlink message: "
-				   "len=%d left=%d plen=%d", len, left, plen);
-			break;
-		}
-
-		switch (h->nlmsg_type) {
-		case RTM_NEWLINK:
-			wpa_driver_ralink_event_rtm_newlink(ctx, sock_ctx, h,
-							    plen);
-			break;
-		}
-
-		len = NLMSG_ALIGN(len);
-		left -= len;
-		h = (struct nlmsghdr *) ((char *) h + len);
-	}
-
-	if (left > 0) {
-		wpa_printf(MSG_DEBUG, "%d extra bytes in the end of netlink "
-			   "message", left);
-	}
-
 }
 
 static int
@@ -899,8 +837,8 @@ static void * wpa_driver_ralink_init(void *ctx, const char *ifname)
 	int s;
 	struct wpa_driver_ralink_data *drv;
 	struct ifreq ifr;
-	struct sockaddr_nl local;
 	UCHAR enable_wpa_supplicant = 0;
+	struct netlink_config *cfg;
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
@@ -928,28 +866,22 @@ static void * wpa_driver_ralink_init(void *ctx, const char *ifname)
 	drv->ioctl_sock = s;
 	drv->g_driver_down = 0;
 
-	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (s < 0) {
-		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
+	cfg = os_zalloc(sizeof(*cfg));
+	if (cfg == NULL) {
+		close(drv->ioctl_sock);
+		os_free(drv);
+		return NULL;
+	}
+	cfg->ctx = drv;
+	cfg->newlink_cb = wpa_driver_ralink_event_rtm_newlink;
+	drv->netlink = netlink_init(cfg);
+	if (drv->netlink == NULL) {
+		os_free(cfg);
 		close(drv->ioctl_sock);
 		os_free(drv);
 		return NULL;
 	}
 
-	os_memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	local.nl_groups = RTMGRP_LINK;
-
-	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
-		perror("bind(netlink)");
-		close(s);
-		close(drv->ioctl_sock);
-		os_free(drv);
-		return NULL;
-	}
-
-	eloop_register_read_sock(s, wpa_driver_ralink_event_receive, drv, ctx);
-	drv->event_sock = s;
 	drv->no_of_pmkid = 4; /* Number of PMKID saved supported */
 
 	ralink_set_iface_flags(drv, 1);	/* mark up during setup */
@@ -1007,8 +939,7 @@ static void wpa_driver_ralink_deinit(void *priv)
 	}
 
 	eloop_cancel_timeout(wpa_driver_ralink_scan_timeout, drv, drv->ctx);
-	eloop_unregister_read_sock(drv->event_sock);
-	close(drv->event_sock);
+	netlink_deinit(drv->netlink);
 	close(drv->ioctl_sock);
 	os_free(drv);
 }

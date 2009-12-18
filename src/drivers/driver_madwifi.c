@@ -73,6 +73,7 @@
 #ifdef HOSTAPD
 
 #include "priv_netlink.h"
+#include "netlink.h"
 #include "l2_packet/l2_packet.h"
 
 
@@ -84,7 +85,7 @@ struct madwifi_driver_data {
 	struct l2_packet_data *sock_xmit;	/* raw packet xmit socket */
 	struct l2_packet_data *sock_recv;	/* raw packet recv socket */
 	int	ioctl_sock;			/* socket for ioctl() use */
-	int	wext_sock;			/* socket for wireless events */
+	struct netlink_data *netlink;
 	int	we_version;
 	u8	acct_mac[ETH_ALEN];
 	struct hostap_sta_driver_data acct_data;
@@ -1005,28 +1006,18 @@ madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
 
 
 static void
-madwifi_wireless_event_rtm_newlink(struct madwifi_driver_data *drv,
-					       struct nlmsghdr *h, int len)
+madwifi_wireless_event_rtm_newlink(void *ctx, struct ifinfomsg *ifi,
+				   u8 *buf, size_t len)
 {
-	struct ifinfomsg *ifi;
-	int attrlen, nlmsg_len, rta_len;
-	struct rtattr * attr;
-
-	if (len < (int) sizeof(*ifi))
-		return;
-
-	ifi = NLMSG_DATA(h);
+	struct madwifi_driver_data *drv = ctx;
+	int attrlen, rta_len;
+	struct rtattr *attr;
 
 	if (ifi->ifi_index != drv->ifindex)
 		return;
 
-	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
-
-	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
-	if (attrlen < 0)
-		return;
-
-	attr = (struct rtattr *) (((char *) ifi) + nlmsg_len);
+	attrlen = len;
+	attr = (struct rtattr *) buf;
 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
@@ -1036,55 +1027,6 @@ madwifi_wireless_event_rtm_newlink(struct madwifi_driver_data *drv,
 				attr->rta_len - rta_len);
 		}
 		attr = RTA_NEXT(attr, attrlen);
-	}
-}
-
-
-static void
-madwifi_wireless_event_receive(int sock, void *eloop_ctx, void *sock_ctx)
-{
-	char buf[256];
-	int left;
-	struct sockaddr_nl from;
-	socklen_t fromlen;
-	struct nlmsghdr *h;
-	struct madwifi_driver_data *drv = eloop_ctx;
-
-	fromlen = sizeof(from);
-	left = recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT,
-			(struct sockaddr *) &from, &fromlen);
-	if (left < 0) {
-		if (errno != EINTR && errno != EAGAIN)
-			perror("recvfrom(netlink)");
-		return;
-	}
-
-	h = (struct nlmsghdr *) buf;
-	while (left >= (int) sizeof(*h)) {
-		int len, plen;
-
-		len = h->nlmsg_len;
-		plen = len - sizeof(*h);
-		if (len > left || plen < 0) {
-			printf("Malformed netlink message: "
-			       "len=%d left=%d plen=%d\n",
-			       len, left, plen);
-			break;
-		}
-
-		switch (h->nlmsg_type) {
-		case RTM_NEWLINK:
-			madwifi_wireless_event_rtm_newlink(drv, h, plen);
-			break;
-		}
-
-		len = NLMSG_ALIGN(len);
-		left -= len;
-		h = (struct nlmsghdr *) ((char *) h + len);
-	}
-
-	if (left > 0) {
-		printf("%d extra bytes in the end of netlink message\n", left);
 	}
 }
 
@@ -1138,42 +1080,22 @@ madwifi_get_we_version(struct madwifi_driver_data *drv)
 static int
 madwifi_wireless_event_init(struct madwifi_driver_data *drv)
 {
-	int s;
-	struct sockaddr_nl local;
+	struct netlink_config *cfg;
 
 	madwifi_get_we_version(drv);
 
-	drv->wext_sock = -1;
-
-	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (s < 0) {
-		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
+	cfg = os_zalloc(sizeof(*cfg));
+	if (cfg == NULL)
+		return -1;
+	cfg->ctx = drv;
+	cfg->newlink_cb = madwifi_wireless_event_rtm_newlink;
+	drv->netlink = netlink_init(cfg);
+	if (drv->netlink == NULL) {
+		os_free(cfg);
 		return -1;
 	}
-
-	memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	local.nl_groups = RTMGRP_LINK;
-	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
-		perror("bind(netlink)");
-		close(s);
-		return -1;
-	}
-
-	eloop_register_read_sock(s, madwifi_wireless_event_receive, drv, NULL);
-	drv->wext_sock = s;
 
 	return 0;
-}
-
-
-static void
-madwifi_wireless_event_deinit(struct madwifi_driver_data *drv)
-{
-	if (drv->wext_sock < 0)
-		return;
-	eloop_unregister_read_sock(drv->wext_sock);
-	close(drv->wext_sock);
 }
 
 
@@ -1309,7 +1231,7 @@ madwifi_deinit(void *priv)
 {
 	struct madwifi_driver_data *drv = priv;
 
-	madwifi_wireless_event_deinit(drv);
+	netlink_deinit(drv->netlink);
 	(void) madwifi_set_iface_flags(drv, 0);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);

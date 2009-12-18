@@ -19,8 +19,10 @@ struct netlink_data;
 
 struct netlink_config {
 	void *ctx;
-	void (*newlink_cb)(void *ctx, struct nlmsghdr *buf, size_t len);
-	void (*dellink_cb)(void *ctx, struct nlmsghdr *buf, size_t len);
+	void (*newlink_cb)(void *ctx, struct ifinfomsg *ifi, u8 *buf,
+			   size_t len);
+	void (*dellink_cb)(void *ctx, struct ifinfomsg *ifi, u8 *buf,
+			   size_t len);
 };
 
 struct netlink_data * netlink_init(struct netlink_config *cfg);

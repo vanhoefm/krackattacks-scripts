@@ -26,6 +26,19 @@ struct netlink_data {
 };
 
 
+static void netlink_receive_link(struct netlink_data *netlink,
+				 void (*cb)(void *ctx, struct ifinfomsg *ifi,
+					    u8 *buf, size_t len),
+				 struct nlmsghdr *h)
+{
+	if (cb == NULL || NLMSG_PAYLOAD(h, 0) < sizeof(struct ifinfomsg))
+		return;
+	cb(netlink->cfg->ctx, NLMSG_DATA(h),
+	   NLMSG_DATA(h) + NLMSG_ALIGN(sizeof(struct ifinfomsg)),
+	   NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg)));
+}
+
+
 static void netlink_receive(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct netlink_data *netlink = eloop_ctx;
@@ -49,20 +62,14 @@ try_again:
 
 	h = (struct nlmsghdr *) buf;
 	while (NLMSG_OK(h, left)) {
-		int plen;
-
-		plen = h->nlmsg_len - sizeof(*h);
-
 		switch (h->nlmsg_type) {
 		case RTM_NEWLINK:
-			if (netlink->cfg->newlink_cb)
-				netlink->cfg->newlink_cb(netlink->cfg->ctx,
-							 h, plen);
+			netlink_receive_link(netlink, netlink->cfg->newlink_cb,
+					     h);
 			break;
 		case RTM_DELLINK:
-			if (netlink->cfg->dellink_cb)
-				netlink->cfg->dellink_cb(netlink->cfg->ctx,
-							 h, plen);
+			netlink_receive_link(netlink, netlink->cfg->dellink_cb,
+					     h);
 			break;
 		}
 

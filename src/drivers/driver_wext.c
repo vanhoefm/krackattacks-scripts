@@ -569,21 +569,13 @@ static void wpa_driver_wext_event_link(struct wpa_driver_wext_data *drv,
 
 
 static int wpa_driver_wext_own_ifname(struct wpa_driver_wext_data *drv,
-				      struct nlmsghdr *h)
+				      u8 *buf, size_t len)
 {
-	struct ifinfomsg *ifi;
-	int attrlen, nlmsg_len, rta_len;
+	int attrlen, rta_len;
 	struct rtattr *attr;
 
-	ifi = NLMSG_DATA(h);
-
-	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
-
-	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
-	if (attrlen < 0)
-		return 0;
-
-	attr = (struct rtattr *) (((char *) ifi) + nlmsg_len);
+	attrlen = len;
+	attr = (struct rtattr *) buf;
 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
@@ -602,12 +594,12 @@ static int wpa_driver_wext_own_ifname(struct wpa_driver_wext_data *drv,
 
 
 static int wpa_driver_wext_own_ifindex(struct wpa_driver_wext_data *drv,
-				       int ifindex, struct nlmsghdr *h)
+				       int ifindex, u8 *buf, size_t len)
 {
 	if (drv->ifindex == ifindex || drv->ifindex2 == ifindex)
 		return 1;
 
-	if (drv->if_removed && wpa_driver_wext_own_ifname(drv, h)) {
+	if (drv->if_removed && wpa_driver_wext_own_ifname(drv, buf, len)) {
 		drv->ifindex = if_nametoindex(drv->ifname);
 		wpa_printf(MSG_DEBUG, "WEXT: Update ifindex for a removed "
 			   "interface");
@@ -619,20 +611,14 @@ static int wpa_driver_wext_own_ifindex(struct wpa_driver_wext_data *drv,
 }
 
 
-static void wpa_driver_wext_event_rtm_newlink(void *ctx, struct nlmsghdr *h,
-					      size_t len)
+static void wpa_driver_wext_event_rtm_newlink(void *ctx, struct ifinfomsg *ifi,
+					      u8 *buf, size_t len)
 {
 	struct wpa_driver_wext_data *drv = ctx;
-	struct ifinfomsg *ifi;
-	int attrlen, nlmsg_len, rta_len;
+	int attrlen, rta_len;
 	struct rtattr *attr;
 
-	if (len < sizeof(*ifi))
-		return;
-
-	ifi = NLMSG_DATA(h);
-
-	if (!wpa_driver_wext_own_ifindex(drv, ifi->ifi_index, h)) {
+	if (!wpa_driver_wext_own_ifindex(drv, ifi->ifi_index, buf, len)) {
 		wpa_printf(MSG_DEBUG, "Ignore event for foreign ifindex %d",
 			   ifi->ifi_index);
 		return;
@@ -657,13 +643,8 @@ static void wpa_driver_wext_event_rtm_newlink(void *ctx, struct nlmsghdr *h,
 		netlink_send_oper_ifla(drv->netlink, drv->ifindex,
 				       -1, IF_OPER_UP);
 
-	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
-
-	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
-	if (attrlen < 0)
-		return;
-
-	attr = (struct rtattr *) (((char *) ifi) + nlmsg_len);
+	attrlen = len;
+	attr = (struct rtattr *) buf;
 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
@@ -681,26 +662,15 @@ static void wpa_driver_wext_event_rtm_newlink(void *ctx, struct nlmsghdr *h,
 }
 
 
-static void wpa_driver_wext_event_rtm_dellink(void *ctx, struct nlmsghdr *h,
-					      size_t len)
+static void wpa_driver_wext_event_rtm_dellink(void *ctx, struct ifinfomsg *ifi,
+					      u8 *buf, size_t len)
 {
 	struct wpa_driver_wext_data *drv = ctx;
-	struct ifinfomsg *ifi;
-	int attrlen, nlmsg_len, rta_len;
+	int attrlen, rta_len;
 	struct rtattr *attr;
 
-	if (len < sizeof(*ifi))
-		return;
-
-	ifi = NLMSG_DATA(h);
-
-	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
-
-	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
-	if (attrlen < 0)
-		return;
-
-	attr = (struct rtattr *) (((char *) ifi) + nlmsg_len);
+	attrlen = len;
+	attr = (struct rtattr *) buf;
 
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {

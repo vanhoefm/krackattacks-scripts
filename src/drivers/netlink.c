@@ -48,17 +48,10 @@ try_again:
 	}
 
 	h = (struct nlmsghdr *) buf;
-	while (left >= (int) sizeof(*h)) {
-		int len, plen;
+	while (NLMSG_OK(h, left)) {
+		int plen;
 
-		len = h->nlmsg_len;
-		plen = len - sizeof(*h);
-		if (len > left || plen < 0) {
-			wpa_printf(MSG_DEBUG, "netlnk: Malformed message: "
-				   "len=%d left=%d plen=%d",
-				   len, left, plen);
-			break;
-		}
+		plen = h->nlmsg_len - sizeof(*h);
 
 		switch (h->nlmsg_type) {
 		case RTM_NEWLINK:
@@ -73,9 +66,7 @@ try_again:
 			break;
 		}
 
-		len = NLMSG_ALIGN(len);
-		left -= len;
-		h = (struct nlmsghdr *) ((char *) h + len);
+		h = NLMSG_NEXT(h, left);
 	}
 
 	if (left > 0) {

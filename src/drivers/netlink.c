@@ -15,11 +15,138 @@
 #include "includes.h"
 
 #include "common.h"
+#include "eloop.h"
 #include "priv_netlink.h"
 #include "netlink.h"
 
 
-int netlink_send_oper_ifla(int sock, int ifindex, int linkmode, int operstate)
+struct netlink_data {
+	struct netlink_config *cfg;
+	int sock;
+};
+
+
+static void netlink_receive(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	struct netlink_data *netlink = eloop_ctx;
+	char buf[8192];
+	int left;
+	struct sockaddr_nl from;
+	socklen_t fromlen;
+	struct nlmsghdr *h;
+	int max_events = 10;
+
+try_again:
+	fromlen = sizeof(from);
+	left = recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT,
+			(struct sockaddr *) &from, &fromlen);
+	if (left < 0) {
+		if (errno != EINTR && errno != EAGAIN)
+			wpa_printf(MSG_INFO, "netlink: recvfrom failed: %s",
+				   strerror(errno));
+		return;
+	}
+
+	h = (struct nlmsghdr *) buf;
+	while (left >= (int) sizeof(*h)) {
+		int len, plen;
+
+		len = h->nlmsg_len;
+		plen = len - sizeof(*h);
+		if (len > left || plen < 0) {
+			wpa_printf(MSG_DEBUG, "netlnk: Malformed message: "
+				   "len=%d left=%d plen=%d",
+				   len, left, plen);
+			break;
+		}
+
+		switch (h->nlmsg_type) {
+		case RTM_NEWLINK:
+			if (netlink->cfg->newlink_cb)
+				netlink->cfg->newlink_cb(netlink->cfg->ctx,
+							 h, plen);
+			break;
+		case RTM_DELLINK:
+			if (netlink->cfg->dellink_cb)
+				netlink->cfg->dellink_cb(netlink->cfg->ctx,
+							 h, plen);
+			break;
+		}
+
+		len = NLMSG_ALIGN(len);
+		left -= len;
+		h = (struct nlmsghdr *) ((char *) h + len);
+	}
+
+	if (left > 0) {
+		wpa_printf(MSG_DEBUG, "netlink: %d extra bytes in the end of "
+			   "netlink message", left);
+	}
+
+	if (--max_events > 0) {
+		/*
+		 * Try to receive all events in one eloop call in order to
+		 * limit race condition on cases where AssocInfo event, Assoc
+		 * event, and EAPOL frames are received more or less at the
+		 * same time. We want to process the event messages first
+		 * before starting EAPOL processing.
+		 */
+		goto try_again;
+	}
+}
+
+
+struct netlink_data * netlink_init(struct netlink_config *cfg)
+{
+	struct netlink_data *netlink;
+	struct sockaddr_nl local;
+
+	netlink = os_zalloc(sizeof(*netlink));
+	if (netlink == NULL)
+		return NULL;
+
+	netlink->cfg = cfg;
+
+	netlink->sock = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+	if (netlink->sock < 0) {
+		wpa_printf(MSG_ERROR, "netlink: Failed to open netlink "
+			   "socket: %s", strerror(errno));
+		netlink_deinit(netlink);
+		return NULL;
+	}
+
+	os_memset(&local, 0, sizeof(local));
+	local.nl_family = AF_NETLINK;
+	local.nl_groups = RTMGRP_LINK;
+	if (bind(netlink->sock, (struct sockaddr *) &local, sizeof(local)) < 0)
+	{
+		wpa_printf(MSG_ERROR, "netlink: Failed to bind netlink "
+			   "socket: %s", strerror(errno));
+		netlink_deinit(netlink);
+		return NULL;
+	}
+
+	eloop_register_read_sock(netlink->sock, netlink_receive, netlink,
+				 NULL);
+
+	return netlink;
+}
+
+
+void netlink_deinit(struct netlink_data *netlink)
+{
+	if (netlink == NULL)
+		return;
+	if (netlink->sock >= 0) {
+		eloop_unregister_read_sock(netlink->sock);
+		close(netlink->sock);
+	}
+	os_free(netlink->cfg);
+	os_free(netlink);
+}
+
+int netlink_send_oper_ifla(struct netlink_data *netlink, int ifindex,
+			   int linkmode, int operstate)
 {
 	struct {
 		struct nlmsghdr hdr;
@@ -68,7 +195,7 @@ int netlink_send_oper_ifla(int sock, int ifindex, int linkmode, int operstate)
 	wpa_printf(MSG_DEBUG, "netlink: Operstate: linkmode=%d, operstate=%d",
 		   linkmode, operstate);
 
-	ret = send(sock, &req, req.hdr.nlmsg_len, 0);
+	ret = send(netlink->sock, &req, req.hdr.nlmsg_len, 0);
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "netlink: Sending operstate IFLA "
 			   "failed: %s (assume operstate is not supported)",

@@ -19,7 +19,7 @@
 
 struct wpa_driver_wext_data {
 	void *ctx;
-	int event_sock;
+	struct netlink_data *netlink;
 	int ioctl_sock;
 	int mlme_sock;
 	char ifname[IFNAMSIZ + 1];

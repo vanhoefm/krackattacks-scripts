@@ -15,6 +15,17 @@
 #ifndef NETLINK_H
 #define NETLINK_H
 
-int netlink_send_oper_ifla(int sock, int ifindex, int linkmode, int operstate);
+struct netlink_data;
+
+struct netlink_config {
+	void *ctx;
+	void (*newlink_cb)(void *ctx, struct nlmsghdr *buf, size_t len);
+	void (*dellink_cb)(void *ctx, struct nlmsghdr *buf, size_t len);
+};
+
+struct netlink_data * netlink_init(struct netlink_config *cfg);
+void netlink_deinit(struct netlink_data *netlink);
+int netlink_send_oper_ifla(struct netlink_data *netlink, int ifindex,
+			   int linkmode, int operstate);
 
 #endif /* NETLINK_H */

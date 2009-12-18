@@ -419,7 +419,7 @@ static void wpa_driver_wext_event_assoc_ies(struct wpa_driver_wext_data *drv)
 
 
 static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
-					   void *ctx, char *data, int len)
+					   char *data, int len)
 {
 	struct iw_event iwe_buf, *iwe = &iwe_buf;
 	char *pos, *end, *custom, *buf;
@@ -467,12 +467,13 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 				drv->assoc_req_ies = NULL;
 				os_free(drv->assoc_resp_ies);
 				drv->assoc_resp_ies = NULL;
-				wpa_supplicant_event(ctx, EVENT_DISASSOC,
+				wpa_supplicant_event(drv->ctx, EVENT_DISASSOC,
 						     NULL);
 			
 			} else {
 				wpa_driver_wext_event_assoc_ies(drv);
-				wpa_supplicant_event(ctx, EVENT_ASSOC, NULL);
+				wpa_supplicant_event(drv->ctx, EVENT_ASSOC,
+						     NULL);
 			}
 			break;
 		case IWEVMICHAELMICFAILURE:
@@ -482,7 +483,7 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 				return;
 			}
 			wpa_driver_wext_event_wireless_michaelmicfailure(
-				ctx, custom, iwe->u.data.length);
+				drv->ctx, custom, iwe->u.data.length);
 			break;
 		case IWEVCUSTOM:
 			if (custom + iwe->u.data.length > end) {
@@ -495,14 +496,15 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 				return;
 			os_memcpy(buf, custom, iwe->u.data.length);
 			buf[iwe->u.data.length] = '\0';
-			wpa_driver_wext_event_wireless_custom(ctx, buf);
+			wpa_driver_wext_event_wireless_custom(drv->ctx, buf);
 			os_free(buf);
 			break;
 		case SIOCGIWSCAN:
 			drv->scan_complete_events = 1;
 			eloop_cancel_timeout(wpa_driver_wext_scan_timeout,
-					     drv, ctx);
-			wpa_supplicant_event(ctx, EVENT_SCAN_RESULTS, NULL);
+					     drv, drv->ctx);
+			wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS,
+					     NULL);
 			break;
 		case IWEVASSOCREQIE:
 			if (custom + iwe->u.data.length > end) {
@@ -539,8 +541,7 @@ static void wpa_driver_wext_event_wireless(struct wpa_driver_wext_data *drv,
 
 
 static void wpa_driver_wext_event_link(struct wpa_driver_wext_data *drv,
-				       void *ctx, char *buf, size_t len,
-				       int del)
+				       char *buf, size_t len, int del)
 {
 	union wpa_event_data event;
 
@@ -563,7 +564,7 @@ static void wpa_driver_wext_event_link(struct wpa_driver_wext_data *drv,
 			drv->if_removed = 0;
 	}
 
-	wpa_supplicant_event(ctx, EVENT_INTERFACE_STATUS, &event);
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
 }
 
 
@@ -618,13 +619,13 @@ static int wpa_driver_wext_own_ifindex(struct wpa_driver_wext_data *drv,
 }
 
 
-static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
-					      void *ctx, struct nlmsghdr *h,
+static void wpa_driver_wext_event_rtm_newlink(void *ctx, struct nlmsghdr *h,
 					      size_t len)
 {
+	struct wpa_driver_wext_data *drv = ctx;
 	struct ifinfomsg *ifi;
 	int attrlen, nlmsg_len, rta_len;
-	struct rtattr * attr;
+	struct rtattr *attr;
 
 	if (len < sizeof(*ifi))
 		return;
@@ -653,7 +654,7 @@ static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
 	if (drv->operstate == 1 &&
 	    (ifi->ifi_flags & (IFF_LOWER_UP | IFF_DORMANT)) == IFF_LOWER_UP &&
 	    !(ifi->ifi_flags & IFF_RUNNING))
-		netlink_send_oper_ifla(drv->event_sock, drv->ifindex,
+		netlink_send_oper_ifla(drv->netlink, drv->ifindex,
 				       -1, IF_OPER_UP);
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
@@ -668,10 +669,10 @@ static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
 	while (RTA_OK(attr, attrlen)) {
 		if (attr->rta_type == IFLA_WIRELESS) {
 			wpa_driver_wext_event_wireless(
-				drv, ctx, ((char *) attr) + rta_len,
+				drv, ((char *) attr) + rta_len,
 				attr->rta_len - rta_len);
 		} else if (attr->rta_type == IFLA_IFNAME) {
-			wpa_driver_wext_event_link(drv, ctx,
+			wpa_driver_wext_event_link(drv,
 						   ((char *) attr) + rta_len,
 						   attr->rta_len - rta_len, 0);
 		}
@@ -680,13 +681,13 @@ static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
 }
 
 
-static void wpa_driver_wext_event_rtm_dellink(struct wpa_driver_wext_data *drv,
-					      void *ctx, struct nlmsghdr *h,
+static void wpa_driver_wext_event_rtm_dellink(void *ctx, struct nlmsghdr *h,
 					      size_t len)
 {
+	struct wpa_driver_wext_data *drv = ctx;
 	struct ifinfomsg *ifi;
 	int attrlen, nlmsg_len, rta_len;
-	struct rtattr * attr;
+	struct rtattr *attr;
 
 	if (len < sizeof(*ifi))
 		return;
@@ -704,78 +705,11 @@ static void wpa_driver_wext_event_rtm_dellink(struct wpa_driver_wext_data *drv,
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
 		if (attr->rta_type == IFLA_IFNAME) {
-			wpa_driver_wext_event_link(drv,  ctx,
+			wpa_driver_wext_event_link(drv,
 						   ((char *) attr) + rta_len,
 						   attr->rta_len - rta_len, 1);
 		}
 		attr = RTA_NEXT(attr, attrlen);
-	}
-}
-
-
-static void wpa_driver_wext_event_receive(int sock, void *eloop_ctx,
-					  void *sock_ctx)
-{
-	char buf[8192];
-	int left;
-	struct sockaddr_nl from;
-	socklen_t fromlen;
-	struct nlmsghdr *h;
-	int max_events = 10;
-
-try_again:
-	fromlen = sizeof(from);
-	left = recvfrom(sock, buf, sizeof(buf), MSG_DONTWAIT,
-			(struct sockaddr *) &from, &fromlen);
-	if (left < 0) {
-		if (errno != EINTR && errno != EAGAIN)
-			perror("recvfrom(netlink)");
-		return;
-	}
-
-	h = (struct nlmsghdr *) buf;
-	while (left >= (int) sizeof(*h)) {
-		int len, plen;
-
-		len = h->nlmsg_len;
-		plen = len - sizeof(*h);
-		if (len > left || plen < 0) {
-			wpa_printf(MSG_DEBUG, "Malformed netlink message: "
-				   "len=%d left=%d plen=%d",
-				   len, left, plen);
-			break;
-		}
-
-		switch (h->nlmsg_type) {
-		case RTM_NEWLINK:
-			wpa_driver_wext_event_rtm_newlink(eloop_ctx, sock_ctx,
-							  h, plen);
-			break;
-		case RTM_DELLINK:
-			wpa_driver_wext_event_rtm_dellink(eloop_ctx, sock_ctx,
-							  h, plen);
-			break;
-		}
-
-		len = NLMSG_ALIGN(len);
-		left -= len;
-		h = (struct nlmsghdr *) ((char *) h + len);
-	}
-
-	if (left > 0) {
-		wpa_printf(MSG_DEBUG, "%d extra bytes in the end of netlink "
-			   "message", left);
-	}
-
-	if (--max_events > 0) {
-		/*
-		 * Try to receive all events in one eloop call in order to
-		 * limit race condition on cases where AssocInfo event, Assoc
-		 * event, and EAPOL frames are received more or less at the
-		 * same time. We want to process the event messages first
-		 * before starting EAPOL processing.
-		 */
-		goto try_again;
 	}
 }
 
@@ -845,9 +779,8 @@ int wpa_driver_wext_set_ifflags(struct wpa_driver_wext_data *drv, int flags)
  */
 void * wpa_driver_wext_init(void *ctx, const char *ifname)
 {
-	int s;
-	struct sockaddr_nl local;
 	struct wpa_driver_wext_data *drv;
+	struct netlink_config *cfg;
 
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
@@ -861,36 +794,29 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 		goto err1;
 	}
 
-	s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
-	if (s < 0) {
-		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
+	cfg = os_zalloc(sizeof(*cfg));
+	if (cfg == NULL)
+		goto err1;
+	cfg->ctx = drv;
+	cfg->newlink_cb = wpa_driver_wext_event_rtm_newlink;
+	cfg->dellink_cb = wpa_driver_wext_event_rtm_dellink;
+	drv->netlink = netlink_init(cfg);
+	if (drv->netlink == NULL) {
+		os_free(cfg);
 		goto err2;
 	}
-	drv->event_sock = s;
-
-	os_memset(&local, 0, sizeof(local));
-	local.nl_family = AF_NETLINK;
-	local.nl_groups = RTMGRP_LINK;
-	if (bind(s, (struct sockaddr *) &local, sizeof(local)) < 0) {
-		perror("bind(netlink)");
-		goto err3;
-	}
-
-	eloop_register_read_sock(s, wpa_driver_wext_event_receive, drv, ctx);
 
 	drv->mlme_sock = -1;
 
 	if (wpa_driver_wext_finish_drv_init(drv) < 0)
-		goto err4;
+		goto err3;
 
 	wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED, 1);
 
 	return drv;
 
-err4:
-	eloop_unregister_read_sock(drv->event_sock);
 err3:
-	close(drv->event_sock);
+	netlink_deinit(drv->netlink);
 err2:
 	close(drv->ioctl_sock);
 err1:
@@ -965,7 +891,7 @@ static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 		wpa_driver_wext_alternative_ifindex(drv, ifname2);
 	}
 
-	netlink_send_oper_ifla(drv->event_sock, drv->ifindex,
+	netlink_send_oper_ifla(drv->netlink, drv->ifindex,
 			       1, IF_OPER_DORMANT);
 
 	return 0;
@@ -994,16 +920,15 @@ void wpa_driver_wext_deinit(void *priv)
 	 */
 	wpa_driver_wext_disconnect(drv);
 
-	netlink_send_oper_ifla(drv->event_sock, drv->ifindex, 0, IF_OPER_UP);
+	netlink_send_oper_ifla(drv->netlink, drv->ifindex, 0, IF_OPER_UP);
+	netlink_deinit(drv->netlink);
 
-	eloop_unregister_read_sock(drv->event_sock);
 	if (drv->mlme_sock >= 0)
 		eloop_unregister_read_sock(drv->mlme_sock);
 
 	if (wpa_driver_wext_get_ifflags(drv, &flags) == 0)
 		(void) wpa_driver_wext_set_ifflags(drv, flags & ~IFF_UP);
 
-	close(drv->event_sock);
 	close(drv->ioctl_sock);
 	if (drv->mlme_sock >= 0)
 		close(drv->mlme_sock);
@@ -2303,8 +2228,7 @@ int wpa_driver_wext_set_operstate(void *priv, int state)
 	wpa_printf(MSG_DEBUG, "%s: operstate %d->%d (%s)",
 		   __func__, drv->operstate, state, state ? "UP" : "DORMANT");
 	drv->operstate = state;
-	return netlink_send_oper_ifla(drv->event_sock, drv->ifindex,
-				      -1,
+	return netlink_send_oper_ifla(drv->netlink, drv->ifindex, -1,
 				      state ? IF_OPER_UP : IF_OPER_DORMANT);
 }
 

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		881EED0F10DC14EF009E449F /* eap_register.c in Sources */ = {isa = PBXBuildFile; fileRef = 881EED0E10DC14EF009E449F /* eap_register.c */; };
 		8853CB17109F385C00358CEF /* libpcap.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8853CB16109F385C00358CEF /* libpcap.dylib */; };
 		8853CB1B109F389800358CEF /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8853CB1A109F389800358CEF /* libcrypto.dylib */; };
 		8853CB1F109F38BD00358CEF /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8853CB1E109F38BD00358CEF /* CoreFoundation.framework */; };
@@ -95,6 +96,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		881EED0E10DC14EF009E449F /* eap_register.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = eap_register.c; path = ../eap_register.c; sourceTree = SOURCE_ROOT; };
 		8853CB16109F385C00358CEF /* libpcap.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpcap.dylib; path = usr/lib/libpcap.dylib; sourceTree = SDKROOT; };
 		8853CB1A109F389800358CEF /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = usr/lib/libcrypto.dylib; sourceTree = SDKROOT; };
 		8853CB1E109F38BD00358CEF /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
@@ -205,6 +207,7 @@
 		08FB7795FE84155DC02AAC07 /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				881EED0E10DC14EF009E449F /* eap_register.c */,
 				8853CC51109F4F3500358CEF /* aes-cbc.c */,
 				8853CC52109F4F3500358CEF /* sha1-tlsprf.c */,
 				8853CC4C109F4ED500358CEF /* sha256.c */,
@@ -403,6 +406,7 @@
 				8853CC4E109F4ED500358CEF /* sha256.c in Sources */,
 				8853CC53109F4F3500358CEF /* aes-cbc.c in Sources */,
 				8853CC54109F4F3500358CEF /* sha1-tlsprf.c in Sources */,
+				881EED0F10DC14EF009E449F /* eap_register.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

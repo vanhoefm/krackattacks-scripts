@@ -46,6 +46,7 @@ struct wpa_driver_ralink_data {
 	int ap_scan;
 	int scanning_done;
 	u8 g_driver_down;
+	BOOLEAN	bAddWepKey;
 };
 
 static int ralink_set_oid(struct wpa_driver_ralink_data *drv,
@@ -518,6 +519,34 @@ wpa_driver_ralink_event_wireless_custom(struct wpa_driver_ralink_data *drv,
 	}
 }
 
+static void ralink_interface_up(struct wpa_driver_ralink_data *drv)
+{
+	union wpa_event_data event;
+	int enable_wpa_supplicant = 0;
+	drv->g_driver_down = 0;
+	os_memset(&event, 0, sizeof(event));
+	os_snprintf(event.interface_status.ifname,
+		    sizeof(event.interface_status.ifname), "%s", drv->ifname);
+
+	event.interface_status.ievent = EVENT_INTERFACE_ADDED;
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
+
+	if (drv->ap_scan == 1)
+		enable_wpa_supplicant = 1;
+	else
+		enable_wpa_supplicant = 2;
+	/* trigger driver support wpa_supplicant */
+	if (ralink_set_oid(drv, RT_OID_WPA_SUPPLICANT_SUPPORT,
+			   (PCHAR) &enable_wpa_supplicant, sizeof(UCHAR)) < 0)
+	{
+		wpa_printf(MSG_INFO, "RALINK: Failed to set "
+			   "RT_OID_WPA_SUPPLICANT_SUPPORT(%d)",
+			   (int) enable_wpa_supplicant);
+		wpa_printf(MSG_ERROR, "ralink. Driver does not support "
+			   "wpa_supplicant");
+	}
+}
+
 static void
 wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 				 void *ctx, char *data, int len)
@@ -581,33 +610,9 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 			}
 
 			if (iwe->u.data.flags == RT_ASSOC_EVENT_FLAG) {
+				wpa_supplicant_event(ctx, EVENT_ASSOC, NULL);
 				wpa_printf(MSG_DEBUG, "Custom wireless event: "
 					   "receive ASSOCIATED_EVENT !!!");
-				/* determine whether the dynamic-WEP is used or
-				 * not */
-#if 0
-				if (wpa_s && wpa_s->current_ssid &&
-				    wpa_s->current_ssid->key_mgmt ==
-				    WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
-					if ((wpa_s->current_ssid->eapol_flags &
-					     (EAPOL_FLAG_REQUIRE_KEY_UNICAST | EAPOL_FLAG_REQUIRE_KEY_BROADCAST))) {
-						//wpa_printf(MSG_DEBUG, "The current ssid - (%s), eapol_flag = %d.\n",
-						//	 wpa_ssid_txt(wpa_s->current_ssid->ssid, wpa_s->current_ssid->ssid_len),wpa_s->current_ssid->eapol_flags);
-						ieee8021x_required_key = TRUE;
-					}
-
-					if (ralink_set_oid(drv, OID_802_11_SET_IEEE8021X_REQUIRE_KEY, (char *) &ieee8021x_required_key, sizeof(BOOLEAN)) < 0)
-					{
-						wpa_printf(MSG_DEBUG, "ERROR: Failed to set OID_802_11_SET_IEEE8021X_REQUIRE_KEY(%d)",
-							   (int) ieee8021x_required_key);
-					}
-
-					wpa_printf(MSG_DEBUG, "ieee8021x_required_key is %s and eapol_flag(%d).\n", ieee8021x_required_key ? "TRUE" : "FALSE",
-																								wpa_s->current_ssid->eapol_flags);
-				}
-#endif
-
-				wpa_supplicant_event(ctx, EVENT_ASSOC, NULL);
 			} else if (iwe->u.data.flags == RT_REQIE_EVENT_FLAG) {
 				wpa_printf(MSG_DEBUG, "Custom wireless event: "
 					   "receive ReqIEs !!!");
@@ -690,51 +695,8 @@ wpa_driver_ralink_event_wireless(struct wpa_driver_ralink_data *drv,
 			} else if (iwe->u.data.flags == RT_INTERFACE_DOWN) {
 				drv->g_driver_down = 1;
 				eloop_terminate();
-			} else if (iwe->u.data.flags == RT_REPORT_AP_INFO) {
-				if (drv->ap_scan != 1) {
-					typedef struct PACKED {
-						UCHAR bssid[MAC_ADDR_LEN];
-						UCHAR ssid[MAX_LEN_OF_SSID];
-						INT ssid_len;
-						UCHAR wpa_ie[40];
-						INT wpa_ie_len;
-						UCHAR rsn_ie[40];
-						INT rsn_ie_len;
-						INT freq;
-						USHORT caps;
-					} *PAPINFO;
-
-					wpa_printf(MSG_DEBUG, "Custom wireless"
-						   " event: receive "
-						   "RT_REPORT_AP_INFO !!!");
-					//printf("iwe->u.data.length = %d\n", iwe->u.data.length);
-					//wpa_hexdump(MSG_DEBUG, "AP_Info: ", buf, iwe->u.data.length);
-#if 0
-					wpa_s->num_scan_results = 1;
-					if (wpa_s->scan_results)
-						os_free(wpa_s->scan_results);
-					wpa_s->scan_results = os_malloc(sizeof(struct wpa_scan_result) + 1);
-					if (wpa_s->scan_results) {
-						PAPINFO pApInfo = (PAPINFO)buf;
-						os_memcpy(wpa_s->scan_results[0].bssid, pApInfo->bssid, ETH_ALEN);
-						os_memcpy(wpa_s->scan_results[0].ssid, pApInfo->ssid, pApInfo->ssid_len);
-						wpa_s->scan_results[0].ssid_len = pApInfo->ssid_len;
-						if (pApInfo->wpa_ie_len > 0) {
-							os_memcpy(wpa_s->scan_results[0].wpa_ie, pApInfo->wpa_ie, pApInfo->wpa_ie_len);
-							wpa_s->scan_results[0].wpa_ie_len = pApInfo->wpa_ie_len;
-						} else if (pApInfo->rsn_ie_len > 0) {
-							os_memcpy(wpa_s->scan_results[0].rsn_ie, pApInfo->rsn_ie, pApInfo->rsn_ie_len);
-							wpa_s->scan_results[0].rsn_ie_len = pApInfo->rsn_ie_len;
-						}
-						wpa_s->scan_results[0].caps = pApInfo->caps;
-						wpa_s->scan_results[0].freq = pApInfo->freq;
-					} else {
-						wpa_printf("wpa_s->scan_"
-							   "results fail to "
-							   "os_malloc!!\n");
-					}
-#endif
-				}
+			} else if (iwe->u.data.flags == RT_INTERFACE_UP) {
+				ralink_interface_up(drv);
 			} else {
 				wpa_driver_ralink_event_wireless_custom(
 					drv, ctx, buf);
@@ -935,7 +897,7 @@ static void wpa_driver_ralink_deinit(void *priv)
 		wpa_driver_ralink_flush_pmkid(drv);
 
 		sleep(1);
-		ralink_set_iface_flags(drv, 0);
+		/* ralink_set_iface_flags(drv, 0); */
 	}
 
 	eloop_cancel_timeout(wpa_driver_ralink_scan_timeout, drv, drv->ctx);
@@ -979,6 +941,13 @@ static int wpa_driver_ralink_scan(void *priv,
 	/* wpa_driver_ralink_set_ssid(drv, ssid, ssid_len); */
 #endif
 
+	if (ralink_set_oid(drv, RT_OID_WPS_PROBE_REQ_IE,
+			   (char *) params->extra_ies, params->extra_ies_len) <
+	    0) {
+		wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
+			   "RT_OID_WPS_PROBE_REQ_IE");
+	}
+
 	os_memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
 
@@ -1003,39 +972,53 @@ wpa_driver_ralink_get_scan_results(void *priv)
 {
 	struct wpa_driver_ralink_data *drv = priv;
 	UCHAR *buf = NULL;
+	size_t buf_len;
 	NDIS_802_11_BSSID_LIST_EX *wsr;
 	NDIS_WLAN_BSSID_EX *wbi;
 	struct iwreq iwr;
-	int rv = 0;
 	size_t ap_num;
-	u8 *pos, *end;
+	u8 *pos;
 	struct wpa_scan_results *res;
 
 	if (drv->g_driver_down == 1)
 		return NULL;
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
-	if (drv->we_version_compiled >= 17) {
-		buf = os_zalloc(8192);
-		iwr.u.data.length = 8192;
-	} else {
-		buf = os_zalloc(4096);
-		iwr.u.data.length = 4096;
-	}
-	if (buf == NULL)
-		return NULL;
+	if (drv->we_version_compiled >= 17)
+		buf_len = 8192;
+	else
+		buf_len = 4096;
 
-	wsr = (NDIS_802_11_BSSID_LIST_EX *) buf;
+	for (;;) {
+		buf = os_zalloc(buf_len);
+		iwr.u.data.length = buf_len;
+		if (buf == NULL)
+			return NULL;
 
-	wsr->NumberOfItems = 0;
-	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
-	iwr.u.data.pointer = (void *) buf;
-	iwr.u.data.flags = OID_802_11_BSSID_LIST;
+		wsr = (NDIS_802_11_BSSID_LIST_EX *) buf;
 
-	if ((rv = ioctl(drv->ioctl_sock, RT_PRIV_IOCTL, &iwr)) < 0) {
-		wpa_printf(MSG_DEBUG, "ioctl fail: rv = %d", rv);
-		os_free(buf);
-		return NULL;
+		wsr->NumberOfItems = 0;
+		os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+		iwr.u.data.pointer = (void *) buf;
+		iwr.u.data.flags = OID_802_11_BSSID_LIST;
+
+		if (ioctl(drv->ioctl_sock, RT_PRIV_IOCTL, &iwr) == 0)
+			break;
+
+		if (errno == E2BIG && buf_len < 65535) {
+			os_free(buf);
+			buf = NULL;
+			buf_len *= 2;
+			if (buf_len > 65535)
+				buf_len = 65535; /* 16-bit length field */
+			wpa_printf(MSG_DEBUG, "Scan results did not fit - "
+				   "trying larger buffer (%lu bytes)",
+				   (unsigned long) buf_len);
+		} else {
+			perror("ioctl[RT_PRIV_IOCTL]");
+			os_free(buf);
+			return NULL;
+		}
 	}
 
 	res = os_zalloc(sizeof(*res));
@@ -1054,27 +1037,48 @@ wpa_driver_ralink_get_scan_results(void *priv)
 
 	for (ap_num = 0, wbi = wsr->Bssid; ap_num < wsr->NumberOfItems;
 	     ++ap_num) {
-		struct wpa_scan_res *r;
-		r = os_malloc(sizeof(*r) + wbi->IELength);
+		struct wpa_scan_res *r = NULL;
+		size_t extra_len = 0, var_ie_len = 0;
+		u8 *pos2;
+
+		/* SSID data element */
+		extra_len += 2 + wbi->Ssid.SsidLength;
+		var_ie_len = wbi->IELength - sizeof(NDIS_802_11_FIXED_IEs);
+		r = os_zalloc(sizeof(*r) + extra_len + var_ie_len);
 		if (r == NULL)
 			break;
 		res->res[res->num++] = r;
 
-		os_memcpy(r->bssid, &wbi->MacAddress, ETH_ALEN);
+		wpa_printf(MSG_DEBUG, "SSID - %s", wbi->Ssid.Ssid);
+		/* get ie's */
+		wpa_hexdump(MSG_DEBUG, "RALINK: AP IEs",
+			    (u8 *) &wbi->IEs[0], wbi->IELength);
+
+		os_memcpy(r->bssid, wbi->MacAddress, ETH_ALEN);
+
+		extra_len += (2 + wbi->Ssid.SsidLength);
+		r->ie_len = extra_len + var_ie_len;
+		pos2 = (u8 *) (r + 1);
+
+		/*
+		 * Generate a fake SSID IE since the driver did not report
+		 * a full IE list.
+		 */
+		*pos2++ = WLAN_EID_SSID;
+		*pos2++ = wbi->Ssid.SsidLength;
+		os_memcpy(pos2, wbi->Ssid.Ssid, wbi->Ssid.SsidLength);
+		pos2 += wbi->Ssid.SsidLength;
+
 		r->freq = (wbi->Configuration.DSConfig / 1000);
 
 		pos = (u8 *) wbi + sizeof(*wbi) - 1;
-		end = (u8 *) wbi + sizeof(*wbi) + wbi->IELength;
-
-		if (wbi->IELength < sizeof(NDIS_802_11_FIXED_IEs))
-			break;
 
 		pos += sizeof(NDIS_802_11_FIXED_IEs) - 2;
-		r->caps = WPA_GET_LE16(pos);
+		os_memcpy(&(r->caps), pos, 2);
 		pos += 2;
 
-		os_memcpy(r + 1, pos, end - pos);
-		r->ie_len = end - pos;
+		if (wbi->IELength > sizeof(NDIS_802_11_FIXED_IEs))
+			os_memcpy(pos2, pos, var_ie_len);
 
 		wbi = (NDIS_WLAN_BSSID_EX *) ((u8 *) wbi + wbi->Length);
 	}
@@ -1099,6 +1103,24 @@ static int ralink_set_auth_mode(struct wpa_driver_ralink_data *drv,
 	}
 	return 0;
 }
+
+static int ralink_set_encr_type(struct wpa_driver_ralink_data *drv,
+				NDIS_802_11_WEP_STATUS encr_type)
+{
+	NDIS_802_11_WEP_STATUS wep_status = encr_type;
+
+	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
+
+	if (ralink_set_oid(drv, OID_802_11_WEP_STATUS,
+			   (char *) &wep_status, sizeof(wep_status)) < 0) {
+		wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
+			   "OID_802_11_WEP_STATUS (%d)",
+			   (int) wep_status);
+		return -1;
+	}
+	return 0;
+}
+
 
 static int wpa_driver_ralink_remove_key(struct wpa_driver_ralink_data *drv,
 					int key_idx, const u8 *addr,
@@ -1185,6 +1207,8 @@ static int wpa_driver_ralink_set_key(const char *ifname, void *priv,
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
+	drv->bAddWepKey = FALSE;
+
 	if (addr == NULL || os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
 				      ETH_ALEN) == 0) {
 		/* Group Key */
@@ -1202,6 +1226,7 @@ static int wpa_driver_ralink_set_key(const char *ifname, void *priv,
 	}
 
 	if (alg == WPA_ALG_WEP) {
+		drv->bAddWepKey = TRUE;
 		return wpa_driver_ralink_add_wep(drv, pairwise, key_idx,
 						 set_tx, key, key_len);
 	}
@@ -1291,6 +1316,29 @@ static int wpa_driver_ralink_deauthenticate(void *priv, const u8 *addr,
 	}
 }
 
+static int wpa_driver_ralink_set_gen_ie(void *priv, const u8 *ie,
+					size_t ie_len)
+{
+	struct wpa_driver_ralink_data *drv = priv;
+	struct iwreq iwr;
+	int ret = 0;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+	iwr.u.data.pointer = (caddr_t) ie;
+	iwr.u.data.length = ie_len;
+
+	wpa_hexdump(MSG_DEBUG, "wpa_driver_ralink_set_gen_ie: ",
+		    (u8 *) ie, ie_len);
+
+	if (ioctl(drv->ioctl_sock, SIOCSIWGENIE, &iwr) < 0) {
+		perror("ioctl[SIOCSIWGENIE]");
+		ret = -1;
+	}
+
+	return ret;
+}
+
 static int
 wpa_driver_ralink_associate(void *priv,
 			    struct wpa_driver_associate_params *params)
@@ -1301,6 +1349,7 @@ wpa_driver_ralink_associate(void *priv,
 	NDIS_802_11_AUTHENTICATION_MODE auth_mode;
 	NDIS_802_11_WEP_STATUS encr;
 	BOOLEAN		ieee8021xMode;
+	BOOLEAN 	ieee8021x_required_key = TRUE;
 
 	if (drv->g_driver_down == 1)
 		return -1;
@@ -1319,83 +1368,131 @@ wpa_driver_ralink_associate(void *priv,
 		/* Try to continue anyway */
 	}
 
-	if (params->wpa_ie == NULL || params->wpa_ie_len == 0) {
-		if (params->auth_alg & AUTH_ALG_SHARED_KEY) {
-			if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
-				auth_mode = Ndis802_11AuthModeAutoSwitch;
-			else
-				auth_mode = Ndis802_11AuthModeShared;
-		} else
-			auth_mode = Ndis802_11AuthModeOpen;
-	} else if (params->wpa_ie[0] == WLAN_EID_RSN) {
-		if (params->key_mgmt_suite == KEY_MGMT_PSK)
-			auth_mode = Ndis802_11AuthModeWPA2PSK;
-		else
-			auth_mode = Ndis802_11AuthModeWPA2;
+	if (params->key_mgmt_suite == KEY_MGMT_WPS) {
+		UCHAR enable_wps = 0x80;
+		/* trigger driver support wpa_supplicant */
+		if (ralink_set_oid(drv, RT_OID_WPA_SUPPLICANT_SUPPORT,
+				   (PCHAR) &enable_wps, sizeof(UCHAR)) < 0) {
+			wpa_printf(MSG_INFO, "RALINK: Failed to set "
+				   "RT_OID_WPA_SUPPLICANT_SUPPORT (%d)",
+				   (int) enable_wps);
+		}
+
+		wpa_driver_ralink_set_gen_ie(priv, params->wpa_ie,
+					     params->wpa_ie_len);
+
+		ralink_set_auth_mode(drv, Ndis802_11AuthModeOpen);
+
+		ralink_set_encr_type(drv, Ndis802_11EncryptionDisabled);
 	} else {
-		if (params->key_mgmt_suite == KEY_MGMT_WPA_NONE)
-			auth_mode = Ndis802_11AuthModeWPANone;
-		else if (params->key_mgmt_suite == KEY_MGMT_PSK)
-			auth_mode = Ndis802_11AuthModeWPAPSK;
+#ifdef CONFIG_WPS
+		UCHAR enable_wpa_supplicant;
+
+		if (drv->ap_scan == 1)
+			enable_wpa_supplicant = 0x01;
 		else
-			auth_mode = Ndis802_11AuthModeWPA;
-	}
+			enable_wpa_supplicant = 0x02;
 
-	switch (params->pairwise_suite) {
-	case CIPHER_CCMP:
-		encr = Ndis802_11Encryption3Enabled;
-		break;
-	case CIPHER_TKIP:
-		encr = Ndis802_11Encryption2Enabled;
-		break;
-	case CIPHER_WEP40:
-	case CIPHER_WEP104:
-		encr = Ndis802_11Encryption1Enabled;
-		break;
-	case CIPHER_NONE:
-		if (params->group_suite == CIPHER_CCMP)
-			encr = Ndis802_11Encryption3Enabled;
-		else if (params->group_suite == CIPHER_TKIP)
-			encr = Ndis802_11Encryption2Enabled;
-		else
-			encr = Ndis802_11EncryptionDisabled;
-		break;
-	default:
-		encr = Ndis802_11EncryptionDisabled;
-		break;
-	}
-
-	ralink_set_auth_mode(drv, auth_mode);
-
-	/* notify driver that IEEE8021x mode is enabled */
-	if (params->key_mgmt_suite == KEY_MGMT_802_1X_NO_WPA)
-		ieee8021xMode = TRUE;
-	else
-		ieee8021xMode = FALSE;
-
-	if (ralink_set_oid(drv, OID_802_11_SET_IEEE8021X,
-			   (char *) &ieee8021xMode, sizeof(BOOLEAN)) < 0) {
-		wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
-			   "OID_802_11_SET_IEEE8021X(%d)",
-			   (int) ieee8021xMode);
-	}
-
-	if (ralink_set_oid(drv, OID_802_11_WEP_STATUS,
-			 (char *) &encr, sizeof(encr)) < 0) {
-		wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
-			   "OID_802_11_WEP_STATUS(%d)",
-			   (int) encr);
-	}
-
-	if ((ieee8021xMode == FALSE) &&
-	    (encr == Ndis802_11Encryption1Enabled)) {
-		/* static WEP */
-		int enabled = 0;
-		if (ralink_set_oid(drv, OID_802_11_DROP_UNENCRYPTED,
-				   (char *) &enabled, sizeof(enabled)) < 0) {
+		/* trigger driver support wpa_supplicant */
+		if (ralink_set_oid(drv, RT_OID_WPA_SUPPLICANT_SUPPORT,
+				   (PCHAR) &enable_wpa_supplicant,
+				   sizeof(UCHAR)) < 0) {
 			wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
-				   "OID_802_11_DROP_UNENCRYPTED(%d)",
-				   (int) encr);
+				   "RT_OID_WPA_SUPPLICANT_SUPPORT (%d)",
+				   (int) enable_wpa_supplicant);
+		}
+
+		wpa_driver_ralink_set_gen_ie(priv, (u8 *) "", 0);
+#endif /* CONFIG_WPS */
+
+		if (params->wpa_ie == NULL || params->wpa_ie_len == 0) {
+			if (params->auth_alg & AUTH_ALG_SHARED_KEY) {
+				if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
+					auth_mode = Ndis802_11AuthModeAutoSwitch;
+				else
+					auth_mode = Ndis802_11AuthModeShared;
+			} else
+				auth_mode = Ndis802_11AuthModeOpen;
+		} else if (params->wpa_ie[0] == WLAN_EID_RSN) {
+			if (params->key_mgmt_suite == KEY_MGMT_PSK)
+				auth_mode = Ndis802_11AuthModeWPA2PSK;
+			else
+				auth_mode = Ndis802_11AuthModeWPA2;
+		} else {
+			if (params->key_mgmt_suite == KEY_MGMT_WPA_NONE)
+				auth_mode = Ndis802_11AuthModeWPANone;
+			else if (params->key_mgmt_suite == KEY_MGMT_PSK)
+				auth_mode = Ndis802_11AuthModeWPAPSK;
+			else
+				auth_mode = Ndis802_11AuthModeWPA;
+		}
+
+		switch (params->pairwise_suite) {
+		case CIPHER_CCMP:
+			encr = Ndis802_11Encryption3Enabled;
+			break;
+		case CIPHER_TKIP:
+			encr = Ndis802_11Encryption2Enabled;
+			break;
+		case CIPHER_WEP40:
+		case CIPHER_WEP104:
+			encr = Ndis802_11Encryption1Enabled;
+			break;
+		case CIPHER_NONE:
+			if (params->group_suite == CIPHER_CCMP)
+				encr = Ndis802_11Encryption3Enabled;
+			else if (params->group_suite == CIPHER_TKIP)
+				encr = Ndis802_11Encryption2Enabled;
+			else
+				encr = Ndis802_11EncryptionDisabled;
+			break;
+		default:
+			encr = Ndis802_11EncryptionDisabled;
+			break;
+		}
+
+		ralink_set_auth_mode(drv, auth_mode);
+
+		/* notify driver that IEEE8021x mode is enabled */
+		if (params->key_mgmt_suite == KEY_MGMT_802_1X_NO_WPA) {
+			ieee8021xMode = TRUE;
+			if (drv->bAddWepKey)
+				ieee8021x_required_key = FALSE;
+		} else
+			ieee8021xMode = FALSE;
+
+		if (ralink_set_oid(drv, OID_802_11_SET_IEEE8021X_REQUIRE_KEY,
+				   (char *) &ieee8021x_required_key,
+				   sizeof(BOOLEAN)) < 0) {
+			wpa_printf(MSG_DEBUG, "ERROR: Failed to set "
+				   "OID_802_11_SET_IEEE8021X_REQUIRE_KEY(%d)",
+				   (int) ieee8021x_required_key);
+		} else {
+			wpa_printf(MSG_DEBUG, "ieee8021x_required_key is %s",
+				   ieee8021x_required_key ? "TRUE" : "FALSE");
+		}
+
+		if (ralink_set_oid(drv, OID_802_11_SET_IEEE8021X,
+				   (char *) &ieee8021xMode, sizeof(BOOLEAN)) <
+		    0) {
+			wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
+				   "OID_802_11_SET_IEEE8021X(%d)",
+				   (int) ieee8021xMode);
+		}
+
+		ralink_set_encr_type(drv, encr);
+
+		if ((ieee8021xMode == FALSE) &&
+		    (encr == Ndis802_11Encryption1Enabled)) {
+			/* static WEP */
+			int enabled = 0;
+			if (ralink_set_oid(drv, OID_802_11_DROP_UNENCRYPTED,
+					   (char *) &enabled, sizeof(enabled))
+			    < 0) {
+				wpa_printf(MSG_DEBUG, "RALINK: Failed to set "
+					   "OID_802_11_DROP_UNENCRYPTED(%d)",
+					   (int) encr);
+			}
 		}
 	}
 

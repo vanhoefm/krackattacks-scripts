@@ -637,7 +637,7 @@ static int wpa_driver_wext_own_ifname(struct wpa_driver_wext_data *drv,
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return 0;
 
@@ -716,7 +716,7 @@ static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return;
 
@@ -753,7 +753,7 @@ static void wpa_driver_wext_event_rtm_dellink(struct wpa_driver_wext_data *drv,
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return;
 

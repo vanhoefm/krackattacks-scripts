@@ -922,7 +922,7 @@ static void hostapd_wireless_event_rtm_newlink(struct hostap_driver_data *drv,
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return;
 

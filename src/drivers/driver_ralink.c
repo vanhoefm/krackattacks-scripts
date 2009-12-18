@@ -764,7 +764,7 @@ wpa_driver_ralink_event_rtm_newlink(struct wpa_driver_ralink_data *drv,
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	wpa_printf(MSG_DEBUG, "attrlen=%d", attrlen);
 	if (attrlen < 0)
 		return;

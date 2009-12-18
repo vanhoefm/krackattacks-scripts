@@ -425,7 +425,7 @@ static int wpa_driver_nl80211_own_ifname(struct wpa_driver_nl80211_data *drv,
 
 	_nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - _nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return 0;
 
@@ -504,7 +504,7 @@ static void wpa_driver_nl80211_event_rtm_newlink(struct wpa_driver_nl80211_data 
 
 	_nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - _nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return;
 
@@ -538,7 +538,7 @@ static void wpa_driver_nl80211_event_rtm_dellink(struct wpa_driver_nl80211_data 
 
 	_nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - _nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return;
 

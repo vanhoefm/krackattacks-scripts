@@ -1022,7 +1022,7 @@ madwifi_wireless_event_rtm_newlink(struct madwifi_driver_data *drv,
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
-	attrlen = h->nlmsg_len - nlmsg_len;
+	attrlen = NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg));
 	if (attrlen < 0)
 		return;
 

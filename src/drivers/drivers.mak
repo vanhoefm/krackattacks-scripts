@@ -25,6 +25,7 @@ DRV_OBJS += ../src/drivers/driver_nl80211.o
 DRV_OBJS += ../src/utils/radiotap.o
 NEED_SME=y
 NEED_AP_MLME=y
+NEED_NETLINK=y
 DRV_LIBS += -lnl
 
 ifdef CONFIG_LIBNL20
@@ -67,6 +68,7 @@ endif
 ifdef CONFIG_DRIVER_WEXT
 DRV_WPA_CFLAGS += -DCONFIG_DRIVER_WEXT
 CONFIG_WIRELESS_EXTENSION=y
+NEED_NETLINK=y
 endif
 
 ifdef CONFIG_DRIVER_HERMES
@@ -146,6 +148,10 @@ endif
 ifdef CONFIG_WIRELESS_EXTENSION
 DRV_WPA_CFLAGS += -DCONFIG_WIRELESS_EXTENSION
 DRV_WPA_OBJS += ../src/drivers/driver_wext.o
+endif
+
+ifdef NEED_NETLINK
+DRV_OBJS += ../src/drivers/netlink.o
 endif
 
 ##### COMMON VARS

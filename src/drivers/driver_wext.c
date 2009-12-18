@@ -24,12 +24,13 @@
 
 #include "wireless_copy.h"
 #include "common.h"
-#include "driver.h"
 #include "eloop.h"
-#include "priv_netlink.h"
-#include "driver_wext.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_common.h"
+#include "priv_netlink.h"
+#include "netlink.h"
+#include "driver.h"
+#include "driver_wext.h"
 
 
 static int wpa_driver_wext_flush_pmkid(void *priv);
@@ -37,66 +38,6 @@ static int wpa_driver_wext_get_range(void *priv);
 static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv);
 static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv);
 static int wpa_driver_wext_set_auth_alg(void *priv, int auth_alg);
-
-
-static int wpa_driver_wext_send_oper_ifla(struct wpa_driver_wext_data *drv,
-					  int linkmode, int operstate)
-{
-	struct {
-		struct nlmsghdr hdr;
-		struct ifinfomsg ifinfo;
-		char opts[16];
-	} req;
-	struct rtattr *rta;
-	static int nl_seq;
-	ssize_t ret;
-
-	os_memset(&req, 0, sizeof(req));
-
-	req.hdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
-	req.hdr.nlmsg_type = RTM_SETLINK;
-	req.hdr.nlmsg_flags = NLM_F_REQUEST;
-	req.hdr.nlmsg_seq = ++nl_seq;
-	req.hdr.nlmsg_pid = 0;
-
-	req.ifinfo.ifi_family = AF_UNSPEC;
-	req.ifinfo.ifi_type = 0;
-	req.ifinfo.ifi_index = drv->ifindex;
-	req.ifinfo.ifi_flags = 0;
-	req.ifinfo.ifi_change = 0;
-
-	if (linkmode != -1) {
-		rta = aliasing_hide_typecast(
-			((char *) &req + NLMSG_ALIGN(req.hdr.nlmsg_len)),
-			struct rtattr);
-		rta->rta_type = IFLA_LINKMODE;
-		rta->rta_len = RTA_LENGTH(sizeof(char));
-		*((char *) RTA_DATA(rta)) = linkmode;
-		req.hdr.nlmsg_len = NLMSG_ALIGN(req.hdr.nlmsg_len) +
-			RTA_LENGTH(sizeof(char));
-	}
-	if (operstate != -1) {
-		rta = (struct rtattr *)
-			((char *) &req + NLMSG_ALIGN(req.hdr.nlmsg_len));
-		rta->rta_type = IFLA_OPERSTATE;
-		rta->rta_len = RTA_LENGTH(sizeof(char));
-		*((char *) RTA_DATA(rta)) = operstate;
-		req.hdr.nlmsg_len = NLMSG_ALIGN(req.hdr.nlmsg_len) +
-			RTA_LENGTH(sizeof(char));
-	}
-
-	wpa_printf(MSG_DEBUG, "WEXT: Operstate: linkmode=%d, operstate=%d",
-		   linkmode, operstate);
-
-	ret = send(drv->event_sock, &req, req.hdr.nlmsg_len, 0);
-	if (ret < 0) {
-		wpa_printf(MSG_DEBUG, "WEXT: Sending operstate IFLA failed: "
-			   "%s (assume operstate is not supported)",
-			   strerror(errno));
-	}
-
-	return ret < 0 ? -1 : 0;
-}
 
 
 int wpa_driver_wext_set_auth_param(struct wpa_driver_wext_data *drv,
@@ -712,7 +653,8 @@ static void wpa_driver_wext_event_rtm_newlink(struct wpa_driver_wext_data *drv,
 	if (drv->operstate == 1 &&
 	    (ifi->ifi_flags & (IFF_LOWER_UP | IFF_DORMANT)) == IFF_LOWER_UP &&
 	    !(ifi->ifi_flags & IFF_RUNNING))
-		wpa_driver_wext_send_oper_ifla(drv, -1, IF_OPER_UP);
+		netlink_send_oper_ifla(drv->event_sock, drv->ifindex,
+				       -1, IF_OPER_UP);
 
 	nlmsg_len = NLMSG_ALIGN(sizeof(struct ifinfomsg));
 
@@ -1023,7 +965,8 @@ static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 		wpa_driver_wext_alternative_ifindex(drv, ifname2);
 	}
 
-	wpa_driver_wext_send_oper_ifla(drv, 1, IF_OPER_DORMANT);
+	netlink_send_oper_ifla(drv->event_sock, drv->ifindex,
+			       1, IF_OPER_DORMANT);
 
 	return 0;
 }
@@ -1051,7 +994,7 @@ void wpa_driver_wext_deinit(void *priv)
 	 */
 	wpa_driver_wext_disconnect(drv);
 
-	wpa_driver_wext_send_oper_ifla(priv, 0, IF_OPER_UP);
+	netlink_send_oper_ifla(drv->event_sock, drv->ifindex, 0, IF_OPER_UP);
 
 	eloop_unregister_read_sock(drv->event_sock);
 	if (drv->mlme_sock >= 0)
@@ -2360,8 +2303,9 @@ int wpa_driver_wext_set_operstate(void *priv, int state)
 	wpa_printf(MSG_DEBUG, "%s: operstate %d->%d (%s)",
 		   __func__, drv->operstate, state, state ? "UP" : "DORMANT");
 	drv->operstate = state;
-	return wpa_driver_wext_send_oper_ifla(
-		drv, -1, state ? IF_OPER_UP : IF_OPER_DORMANT);
+	return netlink_send_oper_ifla(drv->event_sock, drv->ifindex,
+				      -1,
+				      state ? IF_OPER_UP : IF_OPER_DORMANT);
 }
 
 

@@ -1,6 +1,6 @@
 /*
  * Event loop based on select() loop
- * Copyright (c) 2002-2005, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -186,12 +186,13 @@ static void eloop_sock_table_destroy(struct eloop_sock_table *table)
 	if (table) {
 		int i;
 		for (i = 0; i < table->count && table->table; i++) {
-			printf("ELOOP: remaining socket: sock=%d "
-			       "eloop_data=%p user_data=%p handler=%p\n",
-			       table->table[i].sock,
-			       table->table[i].eloop_data,
-			       table->table[i].user_data,
-			       table->table[i].handler);
+			wpa_printf(MSG_INFO, "ELOOP: remaining socket: "
+				   "sock=%d eloop_data=%p user_data=%p "
+				   "handler=%p\n",
+				   table->table[i].sock,
+				   table->table[i].eloop_data,
+				   table->table[i].user_data,
+				   table->table[i].handler);
 			wpa_trace_dump("eloop sock", &table->table[i]);
 		}
 		os_free(table->table);
@@ -328,11 +329,11 @@ int eloop_is_timeout_registered(eloop_timeout_handler handler,
 #ifndef CONFIG_NATIVE_WINDOWS
 static void eloop_handle_alarm(int sig)
 {
-	fprintf(stderr, "eloop: could not process SIGINT or SIGTERM in two "
-		"seconds. Looks like there\n"
-		"is a bug that ends up in a busy loop that "
-		"prevents clean shutdown.\n"
-		"Killing program forcefully.\n");
+	wpa_printf(MSG_ERROR, "eloop: could not process SIGINT or SIGTERM in "
+		   "two seconds. Looks like there\n"
+		   "is a bug that ends up in a busy loop that "
+		   "prevents clean shutdown.\n"
+		   "Killing program forcefully.\n");
 	exit(1);
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -442,10 +443,8 @@ void eloop_run(void)
 	rfds = os_malloc(sizeof(*rfds));
 	wfds = os_malloc(sizeof(*wfds));
 	efds = os_malloc(sizeof(*efds));
-	if (rfds == NULL || wfds == NULL || efds == NULL) {
-		printf("eloop_run - malloc failed\n");
+	if (rfds == NULL || wfds == NULL || efds == NULL)
 		goto out;
-	}
 
 	while (!eloop.terminate &&
 	       (!dl_list_empty(&eloop.timeout) || eloop.readers.count > 0 ||
@@ -459,10 +458,6 @@ void eloop_run(void)
 				os_time_sub(&timeout->time, &now, &tv);
 			else
 				tv.sec = tv.usec = 0;
-#if 0
-			printf("next timeout in %lu.%06lu sec\n",
-			       tv.sec, tv.usec);
-#endif
 			_tv.tv_sec = tv.sec;
 			_tv.tv_usec = tv.usec;
 		}

@@ -130,14 +130,15 @@ static int str_starts(const char *str, const char *start)
  * Note: next_advertisement is shared code with msearchreply_* functions
  */
 static struct wpabuf *
-next_advertisement(struct advertisement_state_machine *a, int *islast)
+next_advertisement(struct upnp_wps_device_sm *sm,
+		   struct advertisement_state_machine *a, int *islast)
 {
 	struct wpabuf *msg;
 	char *NTString = "";
 	char uuid_string[80];
 
 	*islast = 0;
-	uuid_bin2str(a->sm->wps->uuid, uuid_string, sizeof(uuid_string));
+	uuid_bin2str(sm->wps->uuid, uuid_string, sizeof(uuid_string));
 	msg = wpabuf_alloc(800); /* more than big enough */
 	if (msg == NULL)
 		goto fail;
@@ -171,7 +172,7 @@ next_advertisement(struct advertisement_state_machine *a, int *islast)
 	if (a->type != ADVERTISE_DOWN) {
 		/* Where others may get our XML files from */
 		wpabuf_printf(msg, "LOCATION: http://%s:%d/%s\r\n",
-			      a->sm->ip_addr_text, a->sm->web_port,
+			      sm->ip_addr_text, sm->web_port,
 			      UPNP_WPS_DEVICE_XML_FILE);
 	}
 
@@ -244,7 +245,6 @@ void advertisement_state_machine_stop(struct upnp_wps_device_sm *sm,
 
 	a->type = ADVERTISE_DOWN;
 	a->state = 0;
-	a->sm = sm;
 
 	os_memset(&dest, 0, sizeof(dest));
 	dest.sin_family = AF_INET;
@@ -252,7 +252,7 @@ void advertisement_state_machine_stop(struct upnp_wps_device_sm *sm,
 	dest.sin_port = htons(UPNP_MULTICAST_PORT);
 
 	while (!islast) {
-		msg = next_advertisement(a, &islast);
+		msg = next_advertisement(sm, a, &islast);
 		if (msg == NULL)
 			break;
 		if (sendto(sm->multicast_sd, wpabuf_head(msg), wpabuf_len(msg),
@@ -291,7 +291,7 @@ static void advertisement_state_machine_handler(void *eloop_data,
 	 */
 
 	wpa_printf(MSG_MSGDUMP, "WPS UPnP: Advertisement state=%d", a->state);
-	msg = next_advertisement(a, &islast);
+	msg = next_advertisement(sm, a, &islast);
 	if (msg == NULL)
 		return;
 
@@ -356,7 +356,6 @@ int advertisement_state_machine_start(struct upnp_wps_device_sm *sm)
 	 */
 	a->type = ADVERTISE_DOWN;
 	a->state = 0;
-	a->sm = sm;
 	/* (other fields not used here) */
 
 	/* First timeout should be random interval < 100 msec */
@@ -375,10 +374,6 @@ int advertisement_state_machine_start(struct upnp_wps_device_sm *sm)
  * They are sent in response to a UDP M-SEARCH packet.
  **************************************************************************/
 
-static void msearchreply_state_machine_handler(void *eloop_data,
-					       void *user_ctx);
-
-
 /**
  * msearchreply_state_machine_stop - Stop M-SEARCH reply state machine
  * @a: Selected advertisement/reply state
@@ -395,7 +390,7 @@ static void msearchreply_state_machine_handler(void *eloop_data,
 					       void *user_ctx)
 {
 	struct advertisement_state_machine *a = user_ctx;
-	struct upnp_wps_device_sm *sm = a->sm;
+	struct upnp_wps_device_sm *sm = eloop_data;
 	struct wpabuf *msg;
 	int next_timeout_msec = 100;
 	int next_timeout_sec = 0;
@@ -413,7 +408,7 @@ static void msearchreply_state_machine_handler(void *eloop_data,
 	wpa_printf(MSG_MSGDUMP, "WPS UPnP: M-SEARCH reply state=%d (%s:%d)",
 		   a->state, inet_ntoa(a->client.sin_addr),
 		   ntohs(a->client.sin_port));
-	msg = next_advertisement(a, &islast);
+	msg = next_advertisement(sm, a, &islast);
 	if (msg == NULL)
 		return;
 
@@ -483,7 +478,6 @@ static void msearchreply_state_machine_start(struct upnp_wps_device_sm *sm,
 		return;
 	a->type = MSEARCH_REPLY;
 	a->state = 0;
-	a->sm = sm;
 	os_memcpy(&a->client, client, sizeof(*client));
 	/* Wait time depending on MX value */
 	next_timeout_msec = (1000 * mx * (os_random() & 0xFF)) >> 8;

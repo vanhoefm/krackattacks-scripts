@@ -50,7 +50,6 @@ enum advertisement_type_enum {
  */
 struct advertisement_state_machine {
 	struct dl_list list;
-	struct upnp_wps_device_sm *sm; /* parent */
 	enum advertisement_type_enum type;
 	int state;
 	int nerrors;

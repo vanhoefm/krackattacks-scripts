@@ -127,10 +127,10 @@ static inline void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype,
 
 static void test_driver_free_bss(struct test_driver_bss *bss)
 {
-	free(bss->ie);
-	free(bss->wps_beacon_ie);
-	free(bss->wps_probe_resp_ie);
-	free(bss);
+	os_free(bss->ie);
+	os_free(bss->wps_beacon_ie);
+	os_free(bss->wps_probe_resp_ie);
+	os_free(bss);
 }
 
 
@@ -564,7 +564,7 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 	if (hwaddr_aton(data, cli->addr)) {
 		printf("test_socket: Invalid MAC address '%s' in ASSOC\n",
 		       data);
-		free(cli);
+		os_free(cli);
 		return;
 	}
 	pos = data + 17;
@@ -576,7 +576,7 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 		ssid_len = (pos2 - pos) / 2;
 		if (hexstr2bin(pos, ssid, ssid_len) < 0) {
 			wpa_printf(MSG_DEBUG, "%s: Invalid SSID", __func__);
-			free(cli);
+			os_free(cli);
 			return;
 		}
 		wpa_hexdump_ascii(MSG_DEBUG, "test_driver_assoc: SSID",
@@ -598,7 +598,7 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 	if (bss == NULL) {
 		wpa_printf(MSG_DEBUG, "%s: No matching SSID found from "
 			   "configured BSSes", __func__);
-		free(cli);
+		os_free(cli);
 		return;
 	}
 
@@ -802,7 +802,7 @@ static int test_driver_set_generic_elem(const char *ifname, void *priv,
 	if (bss == NULL)
 		return -1;
 
-	free(bss->ie);
+	os_free(bss->ie);
 
 	if (elem == NULL) {
 		bss->ie = NULL;
@@ -810,7 +810,7 @@ static int test_driver_set_generic_elem(const char *ifname, void *priv,
 		return 0;
 	}
 
-	bss->ie = malloc(elem_len);
+	bss->ie = os_malloc(elem_len);
 	if (bss->ie == NULL) {
 		bss->ielen = 0;
 		return -1;
@@ -833,7 +833,7 @@ static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
 	if (bss == NULL)
 		return -1;
 
-	free(bss->wps_beacon_ie);
+	os_free(bss->wps_beacon_ie);
 
 	if (ie == NULL) {
 		bss->wps_beacon_ie = NULL;
@@ -841,7 +841,7 @@ static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
 		return 0;
 	}
 
-	bss->wps_beacon_ie = malloc(len);
+	bss->wps_beacon_ie = os_malloc(len);
 	if (bss->wps_beacon_ie == NULL) {
 		bss->wps_beacon_ie_len = 0;
 		return -1;
@@ -864,7 +864,7 @@ static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
 	if (bss == NULL)
 		return -1;
 
-	free(bss->wps_probe_resp_ie);
+	os_free(bss->wps_probe_resp_ie);
 
 	if (ie == NULL) {
 		bss->wps_probe_resp_ie = NULL;
@@ -872,7 +872,7 @@ static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
 		return 0;
 	}
 
-	bss->wps_probe_resp_ie = malloc(len);
+	bss->wps_probe_resp_ie = os_malloc(len);
 	if (bss->wps_probe_resp_ie == NULL) {
 		bss->wps_probe_resp_ie_len = 0;
 		return -1;
@@ -981,7 +981,7 @@ static int test_driver_bss_remove(void *priv, const char *ifname)
 				prev_c->next = cli->next;
 			else
 				drv->cli = cli->next;
-			free(cli);
+			os_free(cli);
 			break;
 		}
 
@@ -1138,7 +1138,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 	drv->bss = os_zalloc(sizeof(*drv->bss));
 	if (drv->bss == NULL) {
 		printf("Could not allocate memory for test driver BSS data\n");
-		free(drv);
+		os_free(drv);
 		return NULL;
 	}
 
@@ -1164,8 +1164,8 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		}
 		if (strncmp(params->test_socket, "DIR:", 4) == 0) {
 			size_t len = strlen(params->test_socket) + 30;
-			drv->test_dir = strdup(params->test_socket + 4);
-			drv->own_socket_path = malloc(len);
+			drv->test_dir = os_strdup(params->test_socket + 4);
+			drv->own_socket_path = os_malloc(len);
 			if (drv->own_socket_path) {
 				snprintf(drv->own_socket_path, len,
 					 "%s/AP-" MACSTR,
@@ -1175,7 +1175,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		} else if (strncmp(params->test_socket, "UDP:", 4) == 0) {
 			drv->udp_port = atoi(params->test_socket + 4);
 		} else {
-			drv->own_socket_path = strdup(params->test_socket);
+			drv->own_socket_path = os_strdup(params->test_socket);
 		}
 		if (drv->own_socket_path == NULL && drv->udp_port == 0) {
 			wpa_driver_test_deinit(drv);

@@ -625,6 +625,9 @@ int main(int argc, char *argv[])
 	int warning_displayed = 0;
 	int c;
 
+	if (os_program_init())
+		return -1;
+
 	for (;;) {
 		c = getopt(argc, argv, "hG:i:p:v");
 		if (c < 0)
@@ -713,5 +716,6 @@ int main(int argc, char *argv[])
 
 	free(ctrl_ifname);
 	hostapd_cli_close_connection();
+	os_program_deinit();
 	return 0;
 }

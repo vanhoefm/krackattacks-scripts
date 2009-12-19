@@ -74,7 +74,6 @@ static void start_example(void *eloop_ctx, void *timeout_ctx)
 				 (u8 *) "user", 4)) {
 		printf("Could not add User-Name\n");
 		radius_msg_free(msg);
-		os_free(msg);
 		return;
 	}
 
@@ -84,7 +83,6 @@ static void start_example(void *eloop_ctx, void *timeout_ctx)
 		    ctx->conf.auth_server->shared_secret_len)) {
 		printf("Could not add User-Password\n");
 		radius_msg_free(msg);
-		os_free(msg);
 		return;
 	}
 
@@ -92,7 +90,6 @@ static void start_example(void *eloop_ctx, void *timeout_ctx)
 				 (u8 *) &ctx->own_ip_addr, 4)) {
 		printf("Could not add NAS-IP-Address\n");
 		radius_msg_free(msg);
-		os_free(msg);
 		return;
 	}
 

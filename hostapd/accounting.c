@@ -177,7 +177,6 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 	return NULL;
 }
 
@@ -366,7 +365,6 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 }
 
 
@@ -462,7 +460,6 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
 	{
 		printf("Could not add Acct-Terminate-Cause\n");
 		radius_msg_free(msg);
-		os_free(msg);
 		return;
 	}
 

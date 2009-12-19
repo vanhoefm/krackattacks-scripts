@@ -230,7 +230,7 @@ struct radius_msg {
 /* MAC address ASCII format for non-802.1X use */
 #define RADIUS_ADDR_FORMAT "%02x%02x%02x%02x%02x%02x"
 
-struct radius_msg *radius_msg_new(u8 code, u8 identifier);
+struct radius_msg * radius_msg_new(u8 code, u8 identifier);
 void radius_msg_free(struct radius_msg *msg);
 void radius_msg_dump(struct radius_msg *msg);
 int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
@@ -239,9 +239,9 @@ int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 			  size_t secret_len, const u8 *req_authenticator);
 void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 			    size_t secret_len);
-struct radius_attr_hdr *radius_msg_add_attr(struct radius_msg *msg, u8 type,
-					    const u8 *data, size_t data_len);
-struct radius_msg *radius_msg_parse(const u8 *data, size_t len);
+struct radius_attr_hdr * radius_msg_add_attr(struct radius_msg *msg, u8 type,
+					     const u8 *data, size_t data_len);
+struct radius_msg * radius_msg_parse(const u8 *data, size_t len);
 int radius_msg_add_eap(struct radius_msg *msg, const u8 *data,
 		       size_t data_len);
 u8 *radius_msg_get_eap(struct radius_msg *msg, size_t *len);

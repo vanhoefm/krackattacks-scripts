@@ -247,7 +247,6 @@ static int radius_client_init_auth(struct radius_client_data *radius);
 static void radius_client_msg_free(struct radius_msg_list *req)
 {
 	radius_msg_free(req->msg);
-	os_free(req->msg);
 	os_free(req);
 }
 
@@ -526,7 +525,6 @@ static void radius_client_list_add(struct radius_client_data *radius,
 		/* No point in adding entries to retransmit queue since event
 		 * loop has already been terminated. */
 		radius_msg_free(msg);
-		os_free(msg);
 		return;
 	}
 
@@ -534,7 +532,6 @@ static void radius_client_list_add(struct radius_client_data *radius,
 	if (entry == NULL) {
 		printf("Failed to add RADIUS packet into retransmit list\n");
 		radius_msg_free(msg);
-		os_free(msg);
 		return;
 	}
 
@@ -802,7 +799,6 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		switch (res) {
 		case RADIUS_RX_PROCESSED:
 			radius_msg_free(msg);
-			os_free(msg);
 			/* continue */
 		case RADIUS_RX_QUEUED:
 			radius_client_msg_free(req);
@@ -830,7 +826,6 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 }
 
 

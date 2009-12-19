@@ -200,7 +200,6 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 	return -1;
 }
 #endif /* CONFIG_NO_RADIUS */

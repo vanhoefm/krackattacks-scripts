@@ -63,6 +63,15 @@ static int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
 }
 
 
+/**
+ * radius_msg_new - Create a new RADIUS message
+ * @code: Code for RADIUS header
+ * @identifier: Identifier for RADIUS header
+ * Returns: Context for RADIUS message or %NULL on failure
+ *
+ * The caller is responsible for freeing the returned data with
+ * radius_msg_free().
+ */
 struct radius_msg * radius_msg_new(u8 code, u8 identifier)
 {
 	struct radius_msg *msg;
@@ -82,16 +91,18 @@ struct radius_msg * radius_msg_new(u8 code, u8 identifier)
 }
 
 
+/**
+ * radius_msg_free - Free a RADIUS message
+ * @msg: RADIUS message from radius_msg_new() or radius_msg_parse()
+ */
 void radius_msg_free(struct radius_msg *msg)
 {
-	os_free(msg->buf);
-	msg->buf = NULL;
-	msg->hdr = NULL;
-	msg->buf_size = msg->buf_used = 0;
+	if (msg == NULL)
+		return;
 
+	os_free(msg->buf);
 	os_free(msg->attr_pos);
-	msg->attr_pos = NULL;
-	msg->attr_size = msg->attr_used = 0;
+	os_free(msg);
 }
 
 
@@ -452,7 +463,16 @@ struct radius_attr_hdr *radius_msg_add_attr(struct radius_msg *msg, u8 type,
 }
 
 
-struct radius_msg *radius_msg_parse(const u8 *data, size_t len)
+/**
+ * radius_msg_parse - Parse a RADIUS message
+ * @data: RADIUS message to be parsed
+ * @len: Length of data buffer in octets
+ * Returns: Parsed RADIUS message or %NULL on failure
+ *
+ * This parses a RADIUS message and makes a copy of its data. The caller is
+ * responsible for freeing the returned data with radius_msg_free().
+ */
+struct radius_msg * radius_msg_parse(const u8 *data, size_t len)
 {
 	struct radius_msg *msg;
 	struct radius_hdr *hdr;
@@ -467,13 +487,13 @@ struct radius_msg *radius_msg_parse(const u8 *data, size_t len)
 
 	msg_len = ntohs(hdr->length);
 	if (msg_len < sizeof(*hdr) || msg_len > len) {
-		printf("Invalid RADIUS message length\n");
+		wpa_printf(MSG_INFO, "RADIUS: Invalid message length");
 		return NULL;
 	}
 
 	if (msg_len < len) {
-		printf("Ignored %lu extra bytes after RADIUS message\n",
-		       (unsigned long) len - msg_len);
+		wpa_printf(MSG_DEBUG, "RADIUS: Ignored %lu extra bytes after "
+			   "RADIUS message", (unsigned long) len - msg_len);
 	}
 
 	msg = os_zalloc(sizeof(*msg));
@@ -512,7 +532,6 @@ struct radius_msg *radius_msg_parse(const u8 *data, size_t len)
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 	return NULL;
 }
 

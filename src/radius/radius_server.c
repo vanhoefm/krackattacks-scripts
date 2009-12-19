@@ -359,15 +359,9 @@ static void radius_server_session_free(struct radius_server_data *data,
 {
 	eloop_cancel_timeout(radius_server_session_timeout, data, sess);
 	eap_server_sm_deinit(sess->eap);
-	if (sess->last_msg) {
-		radius_msg_free(sess->last_msg);
-		os_free(sess->last_msg);
-	}
+	radius_msg_free(sess->last_msg);
 	os_free(sess->last_from_addr);
-	if (sess->last_reply) {
-		radius_msg_free(sess->last_reply);
-		os_free(sess->last_reply);
-	}
+	radius_msg_free(sess->last_reply);
 	os_free(sess);
 	data->num_sess--;
 }
@@ -584,7 +578,6 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 	if (radius_msg_copy_attr(msg, request, RADIUS_ATTR_PROXY_STATE) < 0) {
 		RADIUS_DEBUG("Failed to copy Proxy-State attribute(s)");
 		radius_msg_free(msg);
-		os_free(msg);
 		return NULL;
 	}
 
@@ -629,7 +622,6 @@ static int radius_server_reject(struct radius_server_data *data,
 	if (radius_msg_copy_attr(msg, request, RADIUS_ATTR_PROXY_STATE) < 0) {
 		RADIUS_DEBUG("Failed to copy Proxy-State attribute(s)");
 		radius_msg_free(msg);
-		os_free(msg);
 		return -1;
 	}
 
@@ -652,7 +644,6 @@ static int radius_server_reject(struct radius_server_data *data,
 	}
 
 	radius_msg_free(msg);
-	os_free(msg);
 
 	return ret;
 }
@@ -763,10 +754,7 @@ static int radius_server_request(struct radius_server_data *data,
 		RADIUS_DEBUG("No EAP data from the state machine, but eapFail "
 			     "set");
 	} else if (eap_sm_method_pending(sess->eap)) {
-		if (sess->last_msg) {
-			radius_msg_free(sess->last_msg);
-			os_free(sess->last_msg);
-		}
+		radius_msg_free(sess->last_msg);
 		sess->last_msg = msg;
 		sess->last_from_port = from_port;
 		os_free(sess->last_from_addr);
@@ -813,10 +801,7 @@ static int radius_server_request(struct radius_server_data *data,
 		if (res < 0) {
 			perror("sendto[RADIUS SRV]");
 		}
-		if (sess->last_reply) {
-			radius_msg_free(sess->last_reply);
-			os_free(sess->last_reply);
-		}
+		radius_msg_free(sess->last_reply);
 		sess->last_reply = reply;
 		sess->last_from_port = from_port;
 		sess->last_identifier = msg->hdr->identifier;
@@ -944,10 +929,7 @@ static void radius_server_receive_auth(int sock, void *eloop_ctx,
 		return; /* msg was stored with the session */
 
 fail:
-	if (msg) {
-		radius_msg_free(msg);
-		os_free(msg);
-	}
+	radius_msg_free(msg);
 	os_free(buf);
 }
 
@@ -1515,5 +1497,4 @@ void radius_server_eap_pending_cb(struct radius_server_data *data, void *ctx)
 		return; /* msg was stored with the session */
 
 	radius_msg_free(msg);
-	os_free(msg);
 }

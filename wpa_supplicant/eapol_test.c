@@ -283,7 +283,6 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 }
 
 
@@ -440,10 +439,8 @@ static void test_eapol_clean(struct eapol_test_data *e,
 
 	radius_client_deinit(e->radius);
 	os_free(e->last_eap_radius);
-	if (e->last_recv_radius) {
-		radius_msg_free(e->last_recv_radius);
-		os_free(e->last_recv_radius);
-	}
+	radius_msg_free(e->last_recv_radius);
+	e->last_recv_radius = NULL;
 	os_free(e->eap_identity);
 	e->eap_identity = NULL;
 	eapol_sm_deinit(wpa_s->eapol);
@@ -694,11 +691,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	e->radius_identifier = -1;
 	wpa_printf(MSG_DEBUG, "RADIUS packet matching with station");
 
-	if (e->last_recv_radius) {
-		radius_msg_free(e->last_recv_radius);
-		os_free(e->last_recv_radius);
-	}
-
+	radius_msg_free(e->last_recv_radius);
 	e->last_recv_radius = msg;
 
 	switch (msg->hdr->code) {

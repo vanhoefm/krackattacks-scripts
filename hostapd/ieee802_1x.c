@@ -562,7 +562,6 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 
  fail:
 	radius_msg_free(msg);
-	os_free(msg);
 }
 #endif /* CONFIG_NO_RADIUS */
 
@@ -926,10 +925,7 @@ void ieee802_1x_free_station(struct sta_info *sta)
 	sta->eapol_sm = NULL;
 
 #ifndef CONFIG_NO_RADIUS
-	if (sm->last_recv_radius) {
-		radius_msg_free(sm->last_recv_radius);
-		os_free(sm->last_recv_radius);
-	}
+	radius_msg_free(sm->last_recv_radius);
 	radius_free_class(&sm->radius_class);
 #endif /* CONFIG_NO_RADIUS */
 
@@ -1241,11 +1237,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	wpa_printf(MSG_DEBUG, "RADIUS packet matching with station " MACSTR,
 		   MAC2STR(sta->addr));
 
-	if (sm->last_recv_radius) {
-		radius_msg_free(sm->last_recv_radius);
-		os_free(sm->last_recv_radius);
-	}
-
+	radius_msg_free(sm->last_recv_radius);
 	sm->last_recv_radius = msg;
 
 	session_timeout_set =
@@ -1368,11 +1360,8 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 		       HOSTAPD_LEVEL_DEBUG, "aborting authentication");
 
 #ifndef CONFIG_NO_RADIUS
-	if (sm->last_recv_radius) {
-		radius_msg_free(sm->last_recv_radius);
-		os_free(sm->last_recv_radius);
-		sm->last_recv_radius = NULL;
-	}
+	radius_msg_free(sm->last_recv_radius);
+	sm->last_recv_radius = NULL;
 #endif /* CONFIG_NO_RADIUS */
 
 	if (sm->eap_if->eapTimeout) {

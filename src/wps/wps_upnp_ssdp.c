@@ -385,18 +385,9 @@ static void msearchreply_state_machine_handler(void *eloop_data,
  */
 void msearchreply_state_machine_stop(struct advertisement_state_machine *a)
 {
-	struct upnp_wps_device_sm *sm = a->sm;
 	wpa_printf(MSG_DEBUG, "WPS UPnP: M-SEARCH stop");
-	if (a->next == a) {
-		sm->msearch_replies = NULL;
-	} else {
-		if (sm->msearch_replies == a)
-			sm->msearch_replies = a->next;
-		a->next->prev = a->prev;
-		a->prev->next = a->next;
-	}
+	dl_list_del(&a->list);
 	os_free(a);
-	sm->n_msearch_replies--;
 }
 
 
@@ -476,10 +467,12 @@ static void msearchreply_state_machine_start(struct upnp_wps_device_sm *sm,
 	struct advertisement_state_machine *a;
 	int next_timeout_sec;
 	int next_timeout_msec;
+	int replies;
 
+	replies = dl_list_len(&sm->msearch_replies);
 	wpa_printf(MSG_DEBUG, "WPS UPnP: M-SEARCH reply start (%d "
-		   "outstanding)", sm->n_msearch_replies);
-	if (sm->n_msearch_replies >= MAX_MSEARCH) {
+		   "outstanding)", replies);
+	if (replies >= MAX_MSEARCH) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Too many outstanding "
 			   "M-SEARCH replies");
 		return;
@@ -503,15 +496,7 @@ static void msearchreply_state_machine_start(struct upnp_wps_device_sm *sm,
 		goto fail;
 	}
 	/* Remember for future cleanup */
-	if (sm->msearch_replies) {
-		a->next = sm->msearch_replies;
-		a->prev = a->next->prev;
-		a->prev->next = a;
-		a->next->prev = a;
-	} else {
-		sm->msearch_replies = a->next = a->prev = a;
-	}
-	sm->n_msearch_replies++;
+	dl_list_add(&sm->msearch_replies, &a->list);
 	return;
 
 fail:

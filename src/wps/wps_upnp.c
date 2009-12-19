@@ -907,6 +907,15 @@ fail:
 }
 
 
+static void upnp_wps_free_msearchreply(struct dl_list *head)
+{
+	struct advertisement_state_machine *a, *tmp;
+	dl_list_for_each_safe(a, tmp, head, struct advertisement_state_machine,
+			      list)
+		msearchreply_state_machine_stop(a);
+}
+
+
 static void upnp_wps_free_subscriptions(struct dl_list *head)
 {
 	struct subscription *s, *tmp;
@@ -928,8 +937,7 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Stop device");
 	web_listener_stop(sm);
-	while (sm->msearch_replies)
-		msearchreply_state_machine_stop(sm->msearch_replies);
+	upnp_wps_free_msearchreply(&sm->msearch_replies);
 	upnp_wps_free_subscriptions(&sm->subscriptions);
 
 	advertisement_state_machine_stop(sm, 1);
@@ -1058,6 +1066,7 @@ upnp_wps_device_init(struct upnp_wps_device_ctx *ctx, struct wps_context *wps,
 	sm->ctx = ctx;
 	sm->wps = wps;
 	sm->priv = priv;
+	dl_list_init(&sm->msearch_replies);
 	dl_list_init(&sm->subscriptions);
 
 	return sm;

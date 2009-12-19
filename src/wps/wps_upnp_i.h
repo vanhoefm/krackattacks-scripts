@@ -31,7 +31,6 @@
 #define MULTICAST_MAX_READ 1600 /* max bytes we'll read for UPD request */
 
 
-struct subscription;
 struct upnp_wps_device_sm;
 struct wps_registrar;
 
@@ -50,9 +49,7 @@ enum advertisement_type_enum {
  * separate packets and spread out in time to avoid congestion.
  */
 struct advertisement_state_machine {
-	/* double-linked list */
-	struct advertisement_state_machine *next;
-	struct advertisement_state_machine *prev;
+	struct dl_list list;
 	struct upnp_wps_device_sm *sm; /* parent */
 	enum advertisement_type_enum type;
 	int state;
@@ -127,8 +124,7 @@ struct upnp_wps_device_sm {
 	int ssdp_sd_registered; /* nonzero if we must unregister */
 	unsigned advertise_count; /* how many advertisements done */
 	struct advertisement_state_machine advertisement;
-	struct advertisement_state_machine *msearch_replies;
-	int n_msearch_replies; /* no. of pending M-SEARCH replies */
+	struct dl_list msearch_replies;
 	int web_port; /* our port that others get xml files from */
 	struct http_server *web_srv;
 	/* Note: subscriptions are kept in expiry order */

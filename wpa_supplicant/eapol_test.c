@@ -263,7 +263,8 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 
 	/* State attribute must be copied if and only if this packet is
 	 * Access-Request reply to the previous Access-Challenge */
-	if (e->last_recv_radius && e->last_recv_radius->hdr->code ==
+	if (e->last_recv_radius &&
+	    radius_msg_get_hdr(e->last_recv_radius)->code ==
 	    RADIUS_CODE_ACCESS_CHALLENGE) {
 		int res = radius_msg_copy_attr(msg, e->last_recv_radius,
 					       RADIUS_ATTR_STATE);
@@ -664,10 +665,11 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 			void *data)
 {
 	struct eapol_test_data *e = data;
+	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
 
 	/* RFC 2869, Ch. 5.13: valid Message-Authenticator attribute MUST be
 	 * present when packet contains an EAP-Message attribute */
-	if (msg->hdr->code == RADIUS_CODE_ACCESS_REJECT &&
+	if (hdr->code == RADIUS_CODE_ACCESS_REJECT &&
 	    radius_msg_get_attr(msg, RADIUS_ATTR_MESSAGE_AUTHENTICATOR, NULL,
 				0) < 0 &&
 	    radius_msg_get_attr(msg, RADIUS_ATTR_EAP_MESSAGE, NULL, 0) < 0) {
@@ -681,9 +683,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		return RADIUS_RX_UNKNOWN;
 	}
 
-	if (msg->hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
-	    msg->hdr->code != RADIUS_CODE_ACCESS_REJECT &&
-	    msg->hdr->code != RADIUS_CODE_ACCESS_CHALLENGE) {
+	if (hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
+	    hdr->code != RADIUS_CODE_ACCESS_REJECT &&
+	    hdr->code != RADIUS_CODE_ACCESS_CHALLENGE) {
 		printf("Unknown RADIUS message code\n");
 		return RADIUS_RX_UNKNOWN;
 	}
@@ -694,7 +696,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	radius_msg_free(e->last_recv_radius);
 	e->last_recv_radius = msg;
 
-	switch (msg->hdr->code) {
+	switch (hdr->code) {
 	case RADIUS_CODE_ACCESS_ACCEPT:
 		e->radius_access_accept_received = 1;
 		ieee802_1x_get_keys(e, msg, req, shared_secret,
@@ -707,9 +709,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 
 	ieee802_1x_decapsulate_radius(e);
 
-	if ((msg->hdr->code == RADIUS_CODE_ACCESS_ACCEPT &&
+	if ((hdr->code == RADIUS_CODE_ACCESS_ACCEPT &&
 	     e->eapol_test_num_reauths < 0) ||
-	    msg->hdr->code == RADIUS_CODE_ACCESS_REJECT) {
+	    hdr->code == RADIUS_CODE_ACCESS_REJECT) {
 		eloop_terminate();
 	}
 

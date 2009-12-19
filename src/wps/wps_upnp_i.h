@@ -93,8 +93,7 @@ struct subscription {
 	u8 uuid[UUID_LEN];
 	/* Linked list of address alternatives (rotate through on failure) */
 	struct dl_list addr_list;
-	struct wps_event_ *event_queue; /* Queued event messages. */
-	int n_queue; /* How many events are queued */
+	struct dl_list event_queue; /* Queued event messages. */
 	struct wps_event_ *current_event; /* non-NULL if being sent (not in q)
 					   */
 

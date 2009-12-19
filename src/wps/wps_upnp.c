@@ -684,6 +684,7 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	if (s == NULL)
 		return NULL;
 	dl_list_init(&s->addr_list);
+	dl_list_init(&s->event_queue);
 
 	s->sm = sm;
 	s->timeout_time = expire;

@@ -46,8 +46,7 @@
  * TODO: As an optimization we could share data between subscribers.
  */
 struct wps_event_ {
-	struct wps_event_ *next;
-	struct wps_event_ *prev;        /* double linked list */
+	struct dl_list list;
 	struct subscription *s;         /* parent */
 	unsigned subscriber_sequence;   /* which event for this subscription*/
 	unsigned int retry;             /* which retry */
@@ -85,60 +84,11 @@ static void event_delete(struct wps_event_ *e)
  */
 static struct wps_event_ *event_dequeue(struct subscription *s)
 {
-	struct wps_event_ **event_head = &s->event_queue;
-	struct wps_event_ *e = *event_head;
-	if (e == NULL)
-		return NULL;
-	e->next->prev = e->prev;
-	e->prev->next = e->next;
-	if (*event_head == e) {
-		if (e == e->next) {
-			/* last in queue */
-			*event_head = NULL;
-		} else {
-			*event_head = e->next;
-		}
-	}
-	s->n_queue--;
-	e->next = e->prev = NULL;
-	/* but parent "s" is still valid */
+	struct wps_event_ *e;
+	e = dl_list_first(&s->event_queue, struct wps_event_, list);
+	if (e)
+		dl_list_del(&e->list);
 	return e;
-}
-
-
-/* event_enqueue_at_end -- add event to end of queue */
-static void event_enqueue_at_end(struct subscription *s, struct wps_event_ *e)
-{
-	struct wps_event_ **event_head = &s->event_queue;
-	if (*event_head == NULL) {
-		*event_head = e->next = e->prev = e;
-	} else {
-		e->next = *event_head;
-		e->prev = e->next->prev;
-		e->prev->next = e;
-		e->next->prev = e;
-	}
-	s->n_queue++;
-}
-
-
-/* event_enqueue_at_begin -- add event to begin of queue
- * (appropriate for retrying event only)
- */
-static void event_enqueue_at_begin(struct subscription *s,
-				   struct wps_event_ *e)
-{
-	struct wps_event_ **event_head = &s->event_queue;
-	if (*event_head == NULL) {
-		*event_head = e->next = e->prev = e;
-	} else {
-		e->prev = *event_head;
-		e->next = e->prev->next;
-		e->prev->next = e;
-		e->next->prev = e;
-		*event_head = e;
-	}
-	s->n_queue++;
 }
 
 
@@ -175,7 +125,7 @@ static void event_retry(struct wps_event_ *e, int do_next_address)
 			   "for %s", e->addr->domain_and_port);
 		return;
 	}
-	event_enqueue_at_begin(s, e);
+	dl_list_add(&s->event_queue, &e->list);
 	event_send_all_later(sm);
 }
 
@@ -222,7 +172,7 @@ static void event_http_cb(void *ctx, struct http_client *c,
 		event_delete(e);
 
 		/* Schedule sending more if there is more to send */
-		if (s->event_queue)
+		if (!dl_list_empty(&s->event_queue))
 			event_send_all_later(s->sm);
 		break;
 	case HTTP_CLIENT_FAILED:
@@ -280,7 +230,7 @@ static int event_send_start(struct subscription *s)
 	 */
 	assert(!dl_list_empty(&s->addr_list));
 	assert(s->current_event == NULL);
-	assert(s->event_queue != NULL);
+	assert(!dl_list_empty(&s->event_queue));
 
 	s->current_event = e = event_dequeue(s);
 
@@ -328,7 +278,7 @@ static void event_send_all_later_handler(void *eloop_data, void *user_ctx)
 			subscription_destroy(s);
 		} else {
 			if (s->current_event == NULL /* not busy */ &&
-			    s->event_queue != NULL /* more to do */) {
+			    !dl_list_empty(&s->event_queue) /* more to do */) {
 				if (event_send_start(s))
 					nerrors++;
 			}
@@ -382,7 +332,7 @@ int event_add(struct subscription *s, const struct wpabuf *data)
 {
 	struct wps_event_ *e;
 
-	if (s->n_queue >= MAX_EVENTS_QUEUED) {
+	if (dl_list_len(&s->event_queue) >= MAX_EVENTS_QUEUED) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Too many events queued for "
 			   "subscriber");
 		return 1;
@@ -391,6 +341,7 @@ int event_add(struct subscription *s, const struct wpabuf *data)
 	e = os_zalloc(sizeof(*e));
 	if (e == NULL)
 		return 1;
+	dl_list_init(&e->list);
 	e->s = s;
 	e->data = wpabuf_dup(data);
 	if (e->data == NULL) {
@@ -400,7 +351,7 @@ int event_add(struct subscription *s, const struct wpabuf *data)
 	e->subscriber_sequence = s->next_subscriber_sequence++;
 	if (s->next_subscriber_sequence == 0)
 		s->next_subscriber_sequence++;
-	event_enqueue_at_end(s, e);
+	dl_list_add_tail(&s->event_queue, &e->list);
 	event_send_all_later(s->sm);
 	return 0;
 }

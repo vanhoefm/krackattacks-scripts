@@ -12,12 +12,13 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "base64.h"
-#include "eloop.h"
-#include "uuid.h"
+#include "utils/common.h"
+#include "utils/base64.h"
+#include "utils/eloop.h"
+#include "utils/uuid.h"
+#include "utils/list.h"
 #include "crypto/crypto.h"
 #include "crypto/sha256.h"
 #include "common/ieee802_11_defs.h"
@@ -29,7 +30,7 @@
 #define WPS_WORKAROUNDS
 
 struct wps_uuid_pin {
-	struct wps_uuid_pin *next;
+	struct dl_list list;
 	u8 uuid[WPS_UUID_LEN];
 	int wildcard_uuid;
 	u8 *pin;
@@ -48,16 +49,18 @@ static void wps_free_pin(struct wps_uuid_pin *pin)
 }
 
 
-static void wps_free_pins(struct wps_uuid_pin *pins)
+static void wps_remove_pin(struct wps_uuid_pin *pin)
+{
+	dl_list_del(&pin->list);
+	wps_free_pin(pin);
+}
+
+
+static void wps_free_pins(struct dl_list *pins)
 {
 	struct wps_uuid_pin *pin, *prev;
-
-	pin = pins;
-	while (pin) {
-		prev = pin;
-		pin = pin->next;
-		wps_free_pin(prev);
-	}
+	dl_list_for_each_safe(pin, prev, pins, struct wps_uuid_pin, list)
+		wps_remove_pin(pin);
 }
 
 
@@ -106,7 +109,7 @@ struct wps_registrar {
 			       u16 sel_reg_config_methods);
 	void *cb_ctx;
 
-	struct wps_uuid_pin *pins;
+	struct dl_list pins;
 	struct wps_pbc_session *pbc_sessions;
 
 	int skip_cred_build;
@@ -446,6 +449,7 @@ wps_registrar_init(struct wps_context *wps,
 	if (reg == NULL)
 		return NULL;
 
+	dl_list_init(&reg->pins);
 	reg->wps = wps;
 	reg->new_psk_cb = cfg->new_psk_cb;
 	reg->set_ie_cb = cfg->set_ie_cb;
@@ -486,7 +490,7 @@ void wps_registrar_deinit(struct wps_registrar *reg)
 		return;
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
-	wps_free_pins(reg->pins);
+	wps_free_pins(&reg->pins);
 	wps_free_pbc_sessions(reg->pbc_sessions);
 	wpabuf_free(reg->extra_cred);
 	wps_free_devices(reg->devices);
@@ -529,8 +533,7 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 		p->expiration.sec += timeout;
 	}
 
-	p->next = reg->pins;
-	reg->pins = p;
+	dl_list_add(&reg->pins, &p->list);
 
 	wpa_printf(MSG_DEBUG, "WPS: A new PIN configured (timeout=%d)",
 		   timeout);
@@ -550,28 +553,18 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *uuid,
 
 static void wps_registrar_expire_pins(struct wps_registrar *reg)
 {
-	struct wps_uuid_pin *pin, *prev, *del;
+	struct wps_uuid_pin *pin, *prev;
 	struct os_time now;
 
 	os_get_time(&now);
-	prev = NULL;
-	pin = reg->pins;
-	while (pin) {
+	dl_list_for_each_safe(pin, prev, &reg->pins, struct wps_uuid_pin, list)
+	{
 		if ((pin->flags & PIN_EXPIRES) &&
 		    os_time_before(&pin->expiration, &now)) {
-			if (prev == NULL)
-				reg->pins = pin->next;
-			else
-				prev->next = pin->next;
-			del = pin;
-			pin = pin->next;
 			wpa_hexdump(MSG_DEBUG, "WPS: Expired PIN for UUID",
-				    del->uuid, WPS_UUID_LEN);
-			wps_free_pin(del);
-			continue;
+				    pin->uuid, WPS_UUID_LEN);
+			wps_remove_pin(pin);
 		}
-		prev = pin;
-		pin = pin->next;
 	}
 }
 
@@ -586,21 +579,14 @@ int wps_registrar_invalidate_pin(struct wps_registrar *reg, const u8 *uuid)
 {
 	struct wps_uuid_pin *pin, *prev;
 
-	prev = NULL;
-	pin = reg->pins;
-	while (pin) {
+	dl_list_for_each_safe(pin, prev, &reg->pins, struct wps_uuid_pin, list)
+	{
 		if (os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0) {
-			if (prev == NULL)
-				reg->pins = pin->next;
-			else
-				prev->next = pin->next;
 			wpa_hexdump(MSG_DEBUG, "WPS: Invalidated PIN for UUID",
 				    pin->uuid, WPS_UUID_LEN);
-			wps_free_pin(pin);
+			wps_remove_pin(pin);
 			return 0;
 		}
-		prev = pin;
-		pin = pin->next;
 	}
 
 	return -1;
@@ -610,49 +596,48 @@ int wps_registrar_invalidate_pin(struct wps_registrar *reg, const u8 *uuid)
 static const u8 * wps_registrar_get_pin(struct wps_registrar *reg,
 					const u8 *uuid, size_t *pin_len)
 {
-	struct wps_uuid_pin *pin;
+	struct wps_uuid_pin *pin, *found = NULL;
 
 	wps_registrar_expire_pins(reg);
 
-	pin = reg->pins;
-	while (pin) {
+	dl_list_for_each(pin, &reg->pins, struct wps_uuid_pin, list) {
 		if (!pin->wildcard_uuid &&
-		    os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0)
+		    os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0) {
+			found = pin;
 			break;
-		pin = pin->next;
+		}
 	}
 
-	if (!pin) {
+	if (!found) {
 		/* Check for wildcard UUIDs since none of the UUID-specific
 		 * PINs matched */
-		pin = reg->pins;
-		while (pin) {
+		dl_list_for_each(pin, &reg->pins, struct wps_uuid_pin, list) {
 			if (pin->wildcard_uuid == 1) {
 				wpa_printf(MSG_DEBUG, "WPS: Found a wildcard "
 					   "PIN. Assigned it for this UUID-E");
 				pin->wildcard_uuid = 2;
 				os_memcpy(pin->uuid, uuid, WPS_UUID_LEN);
+				found = pin;
 				break;
 			}
-			pin = pin->next;
 		}
 	}
 
-	if (!pin)
+	if (!found)
 		return NULL;
 
 	/*
 	 * Lock the PIN to avoid attacks based on concurrent re-use of the PIN
 	 * that could otherwise avoid PIN invalidations.
 	 */
-	if (pin->flags & PIN_LOCKED) {
+	if (found->flags & PIN_LOCKED) {
 		wpa_printf(MSG_DEBUG, "WPS: Selected PIN locked - do not "
 			   "allow concurrent re-use");
 		return NULL;
 	}
-	*pin_len = pin->pin_len;
-	pin->flags |= PIN_LOCKED;
-	return pin->pin;
+	*pin_len = found->pin_len;
+	found->flags |= PIN_LOCKED;
+	return found->pin;
 }
 
 
@@ -670,8 +655,7 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid)
 {
 	struct wps_uuid_pin *pin;
 
-	pin = reg->pins;
-	while (pin) {
+	dl_list_for_each(pin, &reg->pins, struct wps_uuid_pin, list) {
 		if (os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0) {
 			if (pin->wildcard_uuid == 2) {
 				wpa_printf(MSG_DEBUG, "WPS: Invalidating used "
@@ -681,7 +665,6 @@ int wps_registrar_unlock_pin(struct wps_registrar *reg, const u8 *uuid)
 			pin->flags &= ~PIN_LOCKED;
 			return 0;
 		}
-		pin = pin->next;
 	}
 
 	return -1;

@@ -1,6 +1,6 @@
 /*
- * hostapd / RADIUS message processing
- * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
+ * RADIUS message processing
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -173,19 +173,47 @@ struct radius_ms_mppe_keys {
 };
 
 
-/* RADIUS message structure for new and parsed messages */
+/**
+ * struct radius_msg - RADIUS message structure for new and parsed messages
+ */
 struct radius_msg {
+	/**
+	 * buf - Allocated buffer for RADIUS message
+	 */
 	unsigned char *buf;
-	size_t buf_size; /* total size allocated for buf */
-	size_t buf_used; /* bytes used in buf */
 
+	/**
+	 * buf_size - Total size of the allocated buf in octets
+	 */
+	size_t buf_size;
+
+	/**
+	 * buf_used - bytes used in buf
+	 */
+	size_t buf_used;
+
+	/**
+	 * hdr - Pointer to the RADIUS header in buf
+	 */
 	struct radius_hdr *hdr;
 
-	size_t *attr_pos; /* array of indexes to attributes (number of bytes
-			   * from buf to the beginning of
-			   * struct radius_attr_hdr). */
-	size_t attr_size; /* total size of the attribute pointer array */
-	size_t attr_used; /* total number of attributes in the array */
+	/**
+	 * attr_pos - Array of indexes to attributes
+	 *
+	 * The values are number of bytes from buf to the beginning of
+	 * struct radius_attr_hdr.
+	 */
+	size_t *attr_pos;
+
+	/**
+	 * attr_size - Total size of the attribute pointer array
+	 */
+	size_t attr_size;
+
+	/**
+	 * attr_used - Total number of attributes in the array
+	 */
+	size_t attr_used;
 };
 
 
@@ -203,8 +231,6 @@ struct radius_msg {
 #define RADIUS_ADDR_FORMAT "%02x%02x%02x%02x%02x%02x"
 
 struct radius_msg *radius_msg_new(u8 code, u8 identifier);
-int radius_msg_initialize(struct radius_msg *msg, size_t init_len);
-void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier);
 void radius_msg_free(struct radius_msg *msg);
 void radius_msg_dump(struct radius_msg *msg);
 int radius_msg_finish(struct radius_msg *msg, const u8 *secret,

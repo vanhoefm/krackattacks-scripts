@@ -1,6 +1,6 @@
 /*
- * hostapd / RADIUS message processing
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * RADIUS message processing
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,18 +12,28 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "radius.h"
+#include "utils/common.h"
 #include "crypto/md5.h"
 #include "crypto/crypto.h"
+#include "radius.h"
+
+
+static int radius_msg_initialize(struct radius_msg *msg, size_t init_len);
 
 
 static struct radius_attr_hdr *
 radius_get_attr_hdr(struct radius_msg *msg, int idx)
 {
 	return (struct radius_attr_hdr *) (msg->buf + msg->attr_pos[idx]);
+}
+
+
+static void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier)
+{
+	msg->hdr->code = code;
+	msg->hdr->identifier = identifier;
 }
 
 
@@ -46,7 +56,7 @@ struct radius_msg *radius_msg_new(u8 code, u8 identifier)
 }
 
 
-int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
+static int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
 {
 	if (msg == NULL || init_len < sizeof(struct radius_hdr))
 		return -1;
@@ -73,13 +83,6 @@ int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
 	msg->attr_used = 0;
 
 	return 0;
-}
-
-
-void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier)
-{
-	msg->hdr->code = code;
-	msg->hdr->identifier = identifier;
 }
 
 

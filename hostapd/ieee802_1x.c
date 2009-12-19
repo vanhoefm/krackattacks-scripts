@@ -543,7 +543,8 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 
 	/* State attribute must be copied if and only if this packet is
 	 * Access-Request reply to the previous Access-Challenge */
-	if (sm->last_recv_radius && sm->last_recv_radius->hdr->code ==
+	if (sm->last_recv_radius &&
+	    radius_msg_get_hdr(sm->last_recv_radius)->code ==
 	    RADIUS_CODE_ACCESS_CHALLENGE) {
 		int res = radius_msg_copy_attr(msg, sm->last_recv_radius,
 					       RADIUS_ATTR_STATE);
@@ -1201,8 +1202,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	int session_timeout_set, old_vlanid = 0;
 	struct eapol_state_machine *sm;
 	int override_eapReq = 0;
+	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
 
-	sm = ieee802_1x_search_radius_identifier(hapd, msg->hdr->identifier);
+	sm = ieee802_1x_search_radius_identifier(hapd, hdr->identifier);
 	if (sm == NULL) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Could not find matching "
 			   "station for this RADIUS message");
@@ -1212,7 +1214,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 
 	/* RFC 2869, Ch. 5.13: valid Message-Authenticator attribute MUST be
 	 * present when packet contains an EAP-Message attribute */
-	if (msg->hdr->code == RADIUS_CODE_ACCESS_REJECT &&
+	if (hdr->code == RADIUS_CODE_ACCESS_REJECT &&
 	    radius_msg_get_attr(msg, RADIUS_ATTR_MESSAGE_AUTHENTICATOR, NULL,
 				0) < 0 &&
 	    radius_msg_get_attr(msg, RADIUS_ATTR_EAP_MESSAGE, NULL, 0) < 0) {
@@ -1226,9 +1228,9 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		return RADIUS_RX_INVALID_AUTHENTICATOR;
 	}
 
-	if (msg->hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
-	    msg->hdr->code != RADIUS_CODE_ACCESS_REJECT &&
-	    msg->hdr->code != RADIUS_CODE_ACCESS_CHALLENGE) {
+	if (hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
+	    hdr->code != RADIUS_CODE_ACCESS_REJECT &&
+	    hdr->code != RADIUS_CODE_ACCESS_CHALLENGE) {
 		printf("Unknown RADIUS message code\n");
 		return RADIUS_RX_UNKNOWN;
 	}
@@ -1248,7 +1250,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		termination_action = RADIUS_TERMINATION_ACTION_DEFAULT;
 
 	if (hapd->conf->acct_interim_interval == 0 &&
-	    msg->hdr->code == RADIUS_CODE_ACCESS_ACCEPT &&
+	    hdr->code == RADIUS_CODE_ACCESS_ACCEPT &&
 	    radius_msg_get_attr_int32(msg, RADIUS_ATTR_ACCT_INTERIM_INTERVAL,
 				      &acct_interim_interval) == 0) {
 		if (acct_interim_interval < 60) {
@@ -1263,7 +1265,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 	}
 
 
-	switch (msg->hdr->code) {
+	switch (hdr->code) {
 	case RADIUS_CODE_ACCESS_ACCEPT:
 		if (sta->ssid->dynamic_vlan == DYNAMIC_VLAN_DISABLED)
 			sta->vlan_id = 0;

@@ -330,6 +330,7 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 {
 	struct hostapd_radius_servers *conf = radius->conf;
 	int s;
+	struct wpabuf *buf;
 
 	if (entry->msg_type == RADIUS_ACCT ||
 	    entry->msg_type == RADIUS_ACCT_INTERIM) {
@@ -354,11 +355,11 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 	entry->attempts++;
 	hostapd_logger(radius->ctx, entry->addr, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_DEBUG, "Resending RADIUS message (id=%d)",
-		       entry->msg->hdr->identifier);
+		       radius_msg_get_hdr(entry->msg)->identifier);
 
 	os_get_time(&entry->last_attempt);
-	if (send(s, wpabuf_head(entry->msg->buf), wpabuf_len(entry->msg->buf),
-		 0) < 0)
+	buf = radius_msg_get_buf(entry->msg);
+	if (send(s, wpabuf_head(buf), wpabuf_len(buf), 0) < 0)
 		radius_client_handle_send_error(radius, s, entry->msg_type);
 
 	entry->next_try = now + entry->next_wait;
@@ -632,6 +633,7 @@ int radius_client_send(struct radius_client_data *radius,
 	size_t shared_secret_len;
 	char *name;
 	int s, res;
+	struct wpabuf *buf;
 
 	if (msg_type == RADIUS_ACCT_INTERIM) {
 		/* Remove any pending interim acct update for the same STA. */
@@ -674,7 +676,8 @@ int radius_client_send(struct radius_client_data *radius,
 	if (conf->msg_dumps)
 		radius_msg_dump(msg);
 
-	res = send(s, wpabuf_head(msg->buf), wpabuf_len(msg->buf), 0);
+	buf = radius_msg_get_buf(msg);
+	res = send(s, wpabuf_head(buf), wpabuf_len(buf), 0);
 	if (res < 0)
 		radius_client_handle_send_error(radius, s, msg_type);
 
@@ -693,6 +696,7 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	int len, roundtrip;
 	unsigned char buf[3000];
 	struct radius_msg *msg;
+	struct radius_hdr *hdr;
 	struct radius_rx_handler *handlers;
 	size_t num_handlers, i;
 	struct radius_msg_list *req, *prev_req;
@@ -730,13 +734,14 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		rconf->malformed_responses++;
 		return;
 	}
+	hdr = radius_msg_get_hdr(msg);
 
 	hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_DEBUG, "Received RADIUS message");
 	if (conf->msg_dumps)
 		radius_msg_dump(msg);
 
-	switch (msg->hdr->code) {
+	switch (hdr->code) {
 	case RADIUS_CODE_ACCESS_ACCEPT:
 		rconf->access_accepts++;
 		break;
@@ -759,7 +764,8 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		if ((req->msg_type == msg_type ||
 		     (req->msg_type == RADIUS_ACCT_INTERIM &&
 		      msg_type == RADIUS_ACCT)) &&
-		    req->msg->hdr->identifier == msg->hdr->identifier)
+		    radius_msg_get_hdr(req->msg)->identifier ==
+		    hdr->identifier)
 			break;
 
 		prev_req = req;
@@ -771,7 +777,7 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 			       HOSTAPD_LEVEL_DEBUG,
 			       "No matching RADIUS request found (type=%d "
 			       "id=%d) - dropping packet",
-			       msg_type, msg->hdr->identifier);
+			       msg_type, hdr->identifier);
 		goto fail;
 	}
 
@@ -820,7 +826,7 @@ static void radius_client_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	hostapd_logger(radius->ctx, req->addr, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_DEBUG, "No RADIUS RX handler found "
 		       "(type=%d code=%d id=%d)%s - dropping packet",
-		       msg_type, msg->hdr->code, msg->hdr->identifier,
+		       msg_type, hdr->code, hdr->identifier,
 		       invalid_authenticator ? " [INVALID AUTHENTICATOR]" :
 		       "");
 	radius_client_msg_free(req);
@@ -848,7 +854,7 @@ u8 radius_client_get_id(struct radius_client_data *radius)
 	entry = radius->msgs;
 	prev = NULL;
 	while (entry) {
-		if (entry->msg->hdr->identifier == id) {
+		if (radius_msg_get_hdr(entry->msg)->identifier == id) {
 			hostapd_logger(radius->ctx, entry->addr,
 				       HOSTAPD_MODULE_RADIUS,
 				       HOSTAPD_LEVEL_DEBUG,

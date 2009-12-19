@@ -173,39 +173,7 @@ struct radius_ms_mppe_keys {
 };
 
 
-/**
- * struct radius_msg - RADIUS message structure for new and parsed messages
- */
-struct radius_msg {
-	/**
-	 * buf - Allocated buffer for RADIUS message
-	 */
-	struct wpabuf *buf;
-
-	/**
-	 * hdr - Pointer to the RADIUS header in buf
-	 */
-	struct radius_hdr *hdr;
-
-	/**
-	 * attr_pos - Array of indexes to attributes
-	 *
-	 * The values are number of bytes from buf to the beginning of
-	 * struct radius_attr_hdr.
-	 */
-	size_t *attr_pos;
-
-	/**
-	 * attr_size - Total size of the attribute pointer array
-	 */
-	size_t attr_size;
-
-	/**
-	 * attr_used - Total number of attributes in the array
-	 */
-	size_t attr_used;
-};
-
+struct radius_msg;
 
 /* Default size to be allocated for new RADIUS messages */
 #define RADIUS_DEFAULT_MSG_SIZE 1024
@@ -220,6 +188,8 @@ struct radius_msg {
 /* MAC address ASCII format for non-802.1X use */
 #define RADIUS_ADDR_FORMAT "%02x%02x%02x%02x%02x%02x"
 
+struct radius_hdr * radius_msg_get_hdr(struct radius_msg *msg);
+struct wpabuf * radius_msg_get_buf(struct radius_msg *msg);
 struct radius_msg * radius_msg_new(u8 code, u8 identifier);
 void radius_msg_free(struct radius_msg *msg);
 void radius_msg_dump(struct radius_msg *msg);

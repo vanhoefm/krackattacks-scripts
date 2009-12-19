@@ -425,7 +425,7 @@ accounting_receive(struct radius_msg *msg, struct radius_msg *req,
 		   const u8 *shared_secret, size_t shared_secret_len,
 		   void *data)
 {
-	if (msg->hdr->code != RADIUS_CODE_ACCOUNTING_RESPONSE) {
+	if (radius_msg_get_hdr(msg)->code != RADIUS_CODE_ACCOUNTING_RESPONSE) {
 		printf("Unknown RADIUS message code\n");
 		return RADIUS_RX_UNKNOWN;
 	}

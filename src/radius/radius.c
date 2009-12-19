@@ -21,6 +21,52 @@
 #include "radius.h"
 
 
+/**
+ * struct radius_msg - RADIUS message structure for new and parsed messages
+ */
+struct radius_msg {
+	/**
+	 * buf - Allocated buffer for RADIUS message
+	 */
+	struct wpabuf *buf;
+
+	/**
+	 * hdr - Pointer to the RADIUS header in buf
+	 */
+	struct radius_hdr *hdr;
+
+	/**
+	 * attr_pos - Array of indexes to attributes
+	 *
+	 * The values are number of bytes from buf to the beginning of
+	 * struct radius_attr_hdr.
+	 */
+	size_t *attr_pos;
+
+	/**
+	 * attr_size - Total size of the attribute pointer array
+	 */
+	size_t attr_size;
+
+	/**
+	 * attr_used - Total number of attributes in the array
+	 */
+	size_t attr_used;
+};
+
+
+struct radius_hdr * radius_msg_get_hdr(struct radius_msg *msg)
+{
+	return msg->hdr;
+}
+
+
+struct wpabuf * radius_msg_get_buf(struct radius_msg *msg)
+{
+	return msg->buf;
+}
+
+
 static struct radius_attr_hdr *
 radius_get_attr_hdr(struct radius_msg *msg, int idx)
 {

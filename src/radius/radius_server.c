@@ -527,6 +527,7 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 	struct radius_msg *msg;
 	int code;
 	unsigned int sess_id;
+	struct radius_hdr *hdr = radius_msg_get_hdr(request);
 
 	if (sess->eap_if->eapFail) {
 		sess->eap_if->eapFail = FALSE;
@@ -539,7 +540,7 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 		code = RADIUS_CODE_ACCESS_CHALLENGE;
 	}
 
-	msg = radius_msg_new(code, request->hdr->identifier);
+	msg = radius_msg_new(code, hdr->identifier);
 	if (msg == NULL) {
 		RADIUS_DEBUG("Failed to allocate reply message");
 		return NULL;
@@ -565,7 +566,7 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 		} else {
 			len = sess->eap_if->eapKeyDataLen / 2;
 		}
-		if (!radius_msg_add_mppe_keys(msg, request->hdr->authenticator,
+		if (!radius_msg_add_mppe_keys(msg, hdr->authenticator,
 					      (u8 *) client->shared_secret,
 					      client->shared_secret_len,
 					      sess->eap_if->eapKeyData + len,
@@ -583,7 +584,7 @@ radius_server_encapsulate_eap(struct radius_server_data *data,
 
 	if (radius_msg_finish_srv(msg, (u8 *) client->shared_secret,
 				  client->shared_secret_len,
-				  request->hdr->authenticator) < 0) {
+				  hdr->authenticator) < 0) {
 		RADIUS_DEBUG("Failed to add Message-Authenticator attribute");
 	}
 
@@ -600,12 +601,13 @@ static int radius_server_reject(struct radius_server_data *data,
 	struct radius_msg *msg;
 	int ret = 0;
 	struct eap_hdr eapfail;
+	struct wpabuf *buf;
+	struct radius_hdr *hdr = radius_msg_get_hdr(request);
 
 	RADIUS_DEBUG("Reject invalid request from %s:%d",
 		     from_addr, from_port);
 
-	msg = radius_msg_new(RADIUS_CODE_ACCESS_REJECT,
-			     request->hdr->identifier);
+	msg = radius_msg_new(RADIUS_CODE_ACCESS_REJECT, hdr->identifier);
 	if (msg == NULL) {
 		return -1;
 	}
@@ -627,7 +629,8 @@ static int radius_server_reject(struct radius_server_data *data,
 
 	if (radius_msg_finish_srv(msg, (u8 *) client->shared_secret,
 				  client->shared_secret_len,
-				  request->hdr->authenticator) < 0) {
+				  hdr->authenticator) <
+	    0) {
 		RADIUS_DEBUG("Failed to add Message-Authenticator attribute");
 	}
 
@@ -637,8 +640,8 @@ static int radius_server_reject(struct radius_server_data *data,
 
 	data->counters.access_rejects++;
 	client->counters.access_rejects++;
-	if (sendto(data->auth_sock, wpabuf_head(msg->buf),
-		   wpabuf_len(msg->buf), 0,
+	buf = radius_msg_get_buf(msg);
+	if (sendto(data->auth_sock, wpabuf_head(buf), wpabuf_len(buf), 0,
 		   (struct sockaddr *) from, sizeof(*from)) < 0) {
 		perror("sendto[RADIUS SRV]");
 		ret = -1;
@@ -698,17 +701,18 @@ static int radius_server_request(struct radius_server_data *data,
 	}
 
 	if (sess->last_from_port == from_port &&
-	    sess->last_identifier == msg->hdr->identifier &&
-	    os_memcmp(sess->last_authenticator, msg->hdr->authenticator, 16) ==
-	    0) {
+	    sess->last_identifier == radius_msg_get_hdr(msg)->identifier &&
+	    os_memcmp(sess->last_authenticator,
+		      radius_msg_get_hdr(msg)->authenticator, 16) == 0) {
 		RADIUS_DEBUG("Duplicate message from %s", from_addr);
 		data->counters.dup_access_requests++;
 		client->counters.dup_access_requests++;
 
 		if (sess->last_reply) {
-			res = sendto(data->auth_sock,
-				     wpabuf_head(sess->last_reply->buf),
-				     wpabuf_len(sess->last_reply->buf), 0,
+			struct wpabuf *buf;
+			buf = radius_msg_get_buf(sess->last_reply);
+			res = sendto(data->auth_sock, wpabuf_head(buf),
+				     wpabuf_len(buf), 0,
 				     (struct sockaddr *) from, fromlen);
 			if (res < 0) {
 				perror("sendto[RADIUS SRV]");
@@ -779,12 +783,15 @@ static int radius_server_request(struct radius_server_data *data,
 	reply = radius_server_encapsulate_eap(data, client, sess, msg);
 
 	if (reply) {
+		struct wpabuf *buf;
+		struct radius_hdr *hdr;
+
 		RADIUS_DEBUG("Reply to %s:%d", from_addr, from_port);
 		if (wpa_debug_level <= MSG_MSGDUMP) {
 			radius_msg_dump(reply);
 		}
 
-		switch (reply->hdr->code) {
+		switch (radius_msg_get_hdr(reply)->code) {
 		case RADIUS_CODE_ACCESS_ACCEPT:
 			data->counters.access_accepts++;
 			client->counters.access_accepts++;
@@ -798,8 +805,9 @@ static int radius_server_request(struct radius_server_data *data,
 			client->counters.access_challenges++;
 			break;
 		}
-		res = sendto(data->auth_sock, wpabuf_head(reply->buf),
-			     wpabuf_len(reply->buf), 0,
+		buf = radius_msg_get_buf(reply);
+		res = sendto(data->auth_sock, wpabuf_head(buf),
+			     wpabuf_len(buf), 0,
 			     (struct sockaddr *) from, fromlen);
 		if (res < 0) {
 			perror("sendto[RADIUS SRV]");
@@ -807,9 +815,9 @@ static int radius_server_request(struct radius_server_data *data,
 		radius_msg_free(sess->last_reply);
 		sess->last_reply = reply;
 		sess->last_from_port = from_port;
-		sess->last_identifier = msg->hdr->identifier;
-		os_memcpy(sess->last_authenticator, msg->hdr->authenticator,
-			  16);
+		hdr = radius_msg_get_hdr(msg);
+		sess->last_identifier = hdr->identifier;
+		os_memcpy(sess->last_authenticator, hdr->authenticator, 16);
 	} else {
 		data->counters.packets_dropped++;
 		client->counters.packets_dropped++;
@@ -908,8 +916,9 @@ static void radius_server_receive_auth(int sock, void *eloop_ctx,
 		radius_msg_dump(msg);
 	}
 
-	if (msg->hdr->code != RADIUS_CODE_ACCESS_REQUEST) {
-		RADIUS_DEBUG("Unexpected RADIUS code %d", msg->hdr->code);
+	if (radius_msg_get_hdr(msg)->code != RADIUS_CODE_ACCESS_REQUEST) {
+		RADIUS_DEBUG("Unexpected RADIUS code %d",
+			     radius_msg_get_hdr(msg)->code);
 		data->counters.unknown_types++;
 		client->counters.unknown_types++;
 		goto fail;

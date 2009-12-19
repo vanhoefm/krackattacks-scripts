@@ -401,11 +401,12 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	struct hostapd_data *hapd = data;
 	struct hostapd_acl_query_data *query, *prev;
 	struct hostapd_cached_radius_acl *cache;
+	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
 
 	query = hapd->acl_queries;
 	prev = NULL;
 	while (query) {
-		if (query->radius_id == msg->hdr->identifier)
+		if (query->radius_id == hdr->identifier)
 			break;
 		prev = query;
 		query = query->next;
@@ -422,10 +423,10 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 		return RADIUS_RX_INVALID_AUTHENTICATOR;
 	}
 
-	if (msg->hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
-	    msg->hdr->code != RADIUS_CODE_ACCESS_REJECT) {
+	if (hdr->code != RADIUS_CODE_ACCESS_ACCEPT &&
+	    hdr->code != RADIUS_CODE_ACCESS_REJECT) {
 		wpa_printf(MSG_DEBUG, "Unknown RADIUS message code %d to ACL "
-			   "query", msg->hdr->code);
+			   "query", hdr->code);
 		return RADIUS_RX_UNKNOWN;
 	}
 
@@ -437,7 +438,7 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	}
 	time(&cache->timestamp);
 	os_memcpy(cache->addr, query->addr, sizeof(cache->addr));
-	if (msg->hdr->code == RADIUS_CODE_ACCESS_ACCEPT) {
+	if (hdr->code == RADIUS_CODE_ACCESS_ACCEPT) {
 		if (radius_msg_get_attr_int32(msg, RADIUS_ATTR_SESSION_TIMEOUT,
 					      &cache->session_timeout) == 0)
 			cache->accepted = HOSTAPD_ACL_ACCEPT_TIMEOUT;

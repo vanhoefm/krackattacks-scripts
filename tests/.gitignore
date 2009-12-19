@@ -1,6 +1,7 @@
 test-aes
 test-asn1
 test-base64
+test-list
 test-md4
 test-md5
 test-milenage

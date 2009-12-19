@@ -1,5 +1,5 @@
 TESTS=test-base64 test-md4 test-md5 test-milenage test-ms_funcs test-sha1 \
-	test-sha256 test-aes test-asn1 test-x509 test-x509v3
+	test-sha256 test-aes test-asn1 test-x509 test-x509v3 test-list
 
 all: $(TESTS)
 
@@ -45,6 +45,9 @@ test-asn1: test-asn1.o $(LIBS)
 test-base64: test-base64.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
+test-list: test-list.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $^
+
 test-md4: test-md4.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
@@ -72,6 +75,7 @@ test-x509v3: test-x509v3.o $(LIBS)
 
 run-tests: $(TESTS)
 	./test-aes
+	./test-list
 	./test-md4
 	./test-md5
 	./test-milenage

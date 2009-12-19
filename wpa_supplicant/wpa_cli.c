@@ -1887,7 +1887,7 @@ static void wpa_cli_interactive(void)
 			wpa_request(ctrl_conn, argc, argv);
 
 		if (cmd != cmdbuf)
-			os_free(cmd);
+			free(cmd);
 	} while (!wpa_cli_quit);
 
 #ifdef CONFIG_READLINE

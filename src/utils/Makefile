@@ -10,11 +10,14 @@ install:
 
 include ../lib.rules
 
+#CFLAGS += -DWPA_TRACE
+
 LIB_OBJS= \
 	base64.o \
 	common.o \
 	ip_addr.o \
 	radiotap.o \
+	trace.o \
 	uuid.o \
 	wpa_debug.o \
 	wpabuf.o

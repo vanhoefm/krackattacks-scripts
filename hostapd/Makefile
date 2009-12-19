@@ -48,6 +48,11 @@ OBJS += ../src/drivers/drivers.o
 OBJS += ../src/drivers/scan_helpers.o
 CFLAGS += -DHOSTAPD
 
+ifdef CONFIG_WPA_TRACE
+CFLAGS += -DWPA_TRACE
+OBJS += ../src/utils/trace.o
+endif
+
 OBJS += ../src/utils/eloop.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o

@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "trace.h"
 #include "eloop.h"
 
 
@@ -23,6 +24,7 @@ struct eloop_sock {
 	void *eloop_data;
 	void *user_data;
 	eloop_sock_handler handler;
+	WPA_TRACE_INFO
 };
 
 struct eloop_timeout {
@@ -31,6 +33,7 @@ struct eloop_timeout {
 	void *user_data;
 	eloop_timeout_handler handler;
 	struct eloop_timeout *next;
+	WPA_TRACE_INFO
 };
 
 struct eloop_signal {
@@ -69,10 +72,22 @@ struct eloop_data {
 static struct eloop_data eloop;
 
 
+#ifdef WPA_TRACE
+static void eloop_sigsegv_handler(int sig)
+{
+	wpa_trace_show("eloop SIGSEGV");
+	abort();
+}
+#endif /* WPA_TRACE */
+
+
 int eloop_init(void *user_data)
 {
 	os_memset(&eloop, 0, sizeof(eloop));
 	eloop.user_data = user_data;
+#ifdef WPA_TRACE
+	signal(SIGSEGV, eloop_sigsegv_handler);
+#endif /* WPA_TRACE */
 	return 0;
 }
 
@@ -96,6 +111,7 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
 	tmp[table->count].eloop_data = eloop_data;
 	tmp[table->count].user_data = user_data;
 	tmp[table->count].handler = handler;
+	wpa_trace_record(&tmp[table->count]);
 	table->count++;
 	table->table = tmp;
 	if (sock > eloop.max_sock)
@@ -177,6 +193,7 @@ static void eloop_sock_table_destroy(struct eloop_sock_table *table)
 			       table->table[i].eloop_data,
 			       table->table[i].user_data,
 			       table->table[i].handler);
+			wpa_trace_dump("eloop sock", &table->table[i]);
 		}
 		os_free(table->table);
 	}
@@ -256,6 +273,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	timeout->user_data = user_data;
 	timeout->handler = handler;
 	timeout->next = NULL;
+	wpa_trace_record(timeout);
 
 	if (eloop.timeout == NULL) {
 		eloop.timeout = timeout;
@@ -543,6 +561,7 @@ void eloop_destroy(void)
 		       "user_data=%p handler=%p\n",
 		       sec, usec, prev->eloop_data, prev->user_data,
 		       prev->handler);
+		wpa_trace_dump("eloop timeout", prev);
 		os_free(prev);
 	}
 	eloop_sock_table_destroy(&eloop.readers);

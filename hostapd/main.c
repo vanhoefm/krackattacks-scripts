@@ -400,6 +400,9 @@ int main(int argc, char *argv[])
 	int c, debug = 0, daemonize = 0;
 	char *pid_file = NULL;
 
+	if (os_program_init())
+		return -1;
+
 	for (;;) {
 		c = getopt(argc, argv, "BdhKP:tv");
 		if (c < 0)
@@ -473,6 +476,8 @@ int main(int argc, char *argv[])
 
 	hostapd_global_deinit(pid_file);
 	os_free(pid_file);
+
+	os_program_deinit();
 
 	return ret;
 }

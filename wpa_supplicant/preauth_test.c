@@ -277,10 +277,9 @@ static void wpa_init_conf(struct wpa_supplicant *wpa_s, const char *ifname)
 }
 
 
-static void eapol_test_terminate(int sig, void *eloop_ctx,
-				 void *signal_ctx)
+static void eapol_test_terminate(int sig, void *signal_ctx)
 {
-	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct wpa_supplicant *wpa_s = signal_ctx;
 	wpa_msg(wpa_s, MSG_INFO, "Signal %d received - terminating", sig);
 	eloop_terminate();
 }
@@ -317,7 +316,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (eloop_init(&wpa_s)) {
+	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		return -1;
 	}
@@ -354,8 +353,8 @@ int main(int argc, char *argv[])
 
 	eloop_register_timeout(30, 0, eapol_test_timeout, &preauth_test, NULL);
 	eloop_register_timeout(0, 100000, eapol_test_poll, &wpa_s, NULL);
-	eloop_register_signal_terminate(eapol_test_terminate, NULL);
-	eloop_register_signal_reconfig(eapol_test_terminate, NULL);
+	eloop_register_signal_terminate(eapol_test_terminate, &wpa_s);
+	eloop_register_signal_reconfig(eapol_test_terminate, &wpa_s);
 	eloop_run();
 
 	if (preauth_test.auth_timed_out)

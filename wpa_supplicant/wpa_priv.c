@@ -1029,7 +1029,7 @@ int main(int argc, char *argv[])
 
 	wpa_printf(MSG_DEBUG, "wpa_priv control directory: '%s'", ctrl_dir);
 
-	if (eloop_init(NULL)) {
+	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		goto out;
 	}

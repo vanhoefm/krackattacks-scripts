@@ -949,10 +949,9 @@ static int scard_get_triplets(int argc, char *argv[])
 }
 
 
-static void eapol_test_terminate(int sig, void *eloop_ctx,
-				 void *signal_ctx)
+static void eapol_test_terminate(int sig, void *signal_ctx)
 {
-	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct wpa_supplicant *wpa_s = signal_ctx;
 	wpa_msg(wpa_s, MSG_INFO, "Signal %d received - terminating", sig);
 	eloop_terminate();
 }
@@ -1128,7 +1127,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (eloop_init(&wpa_s)) {
+	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		return -1;
 	}
@@ -1171,8 +1170,8 @@ int main(int argc, char *argv[])
 	eloop_register_timeout(timeout, 0, eapol_test_timeout, &eapol_test,
 			       NULL);
 	eloop_register_timeout(0, 0, send_eap_request_identity, &wpa_s, NULL);
-	eloop_register_signal_terminate(eapol_test_terminate, NULL);
-	eloop_register_signal_reconfig(eapol_test_terminate, NULL);
+	eloop_register_signal_terminate(eapol_test_terminate, &wpa_s);
+	eloop_register_signal_reconfig(eapol_test_terminate, &wpa_s);
 	eloop_run();
 
 	eloop_cancel_timeout(eapol_test_timeout, &eapol_test, NULL);

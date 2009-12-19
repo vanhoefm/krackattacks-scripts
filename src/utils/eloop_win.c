@@ -50,8 +50,6 @@ struct eloop_signal {
 };
 
 struct eloop_data {
-	void *user_data;
-
 	int max_sock;
 	size_t reader_count;
 	struct eloop_sock *readers;
@@ -79,10 +77,9 @@ struct eloop_data {
 static struct eloop_data eloop;
 
 
-int eloop_init(void *user_data)
+int eloop_init(void)
 {
 	os_memset(&eloop, 0, sizeof(eloop));
-	eloop.user_data = user_data;
 	eloop.num_handles = 1;
 	eloop.handles = os_malloc(eloop.num_handles *
 				  sizeof(eloop.handles[0]));
@@ -613,10 +610,4 @@ void eloop_wait_for_read_sock(int sock)
 	WaitForSingleObject(event, INFINITE);
 	WSAEventSelect(sock, event, 0);
 	WSACloseEvent(event);
-}
-
-
-void * eloop_get_user_data(void)
-{
-	return eloop.user_data;
 }

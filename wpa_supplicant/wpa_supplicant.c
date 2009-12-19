@@ -546,10 +546,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s, wpa_states state)
 }
 
 
-static void wpa_supplicant_terminate(int sig, void *eloop_ctx,
-				     void *signal_ctx)
+static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 {
-	struct wpa_global *global = eloop_ctx;
+	struct wpa_global *global = signal_ctx;
 	struct wpa_supplicant *wpa_s;
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_TERMINATING "- signal %d "
@@ -647,10 +646,9 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 }
 
 
-static void wpa_supplicant_reconfig(int sig, void *eloop_ctx,
-				    void *signal_ctx)
+static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 {
-	struct wpa_global *global = eloop_ctx;
+	struct wpa_global *global = signal_ctx;
 	struct wpa_supplicant *wpa_s;
 	wpa_printf(MSG_DEBUG, "Signal %d received - reconfiguring", sig);
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
@@ -2320,7 +2318,7 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	wpa_debug_timestamp = global->params.wpa_debug_timestamp =
 		params->wpa_debug_timestamp;
 
-	if (eloop_init(global)) {
+	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		wpa_supplicant_deinit(global);
 		return NULL;
@@ -2389,8 +2387,8 @@ int wpa_supplicant_run(struct wpa_global *global)
 					wpa_s->ctrl_iface);
 	}
 
-	eloop_register_signal_terminate(wpa_supplicant_terminate, NULL);
-	eloop_register_signal_reconfig(wpa_supplicant_reconfig, NULL);
+	eloop_register_signal_terminate(wpa_supplicant_terminate, global);
+	eloop_register_signal_reconfig(wpa_supplicant_reconfig, global);
 
 	eloop_run();
 

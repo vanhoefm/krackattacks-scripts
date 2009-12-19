@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
 	os_memset(&ctx, 0, sizeof(ctx));
 	inet_aton("127.0.0.1", &ctx.own_ip_addr);
 
-	if (eloop_init(&ctx)) {
+	if (eloop_init()) {
 		printf("Failed to initialize event loop\n");
 		return -1;
 	}

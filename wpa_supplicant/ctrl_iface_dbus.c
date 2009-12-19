@@ -208,7 +208,7 @@ static void timeout_toggled(DBusTimeout *timeout, void *data)
 }
 
 
-static void process_wakeup_main(int sig, void *eloop_ctx, void *signal_ctx)
+static void process_wakeup_main(int sig, void *signal_ctx)
 {
 	struct ctrl_iface_dbus_priv *iface = signal_ctx;
 

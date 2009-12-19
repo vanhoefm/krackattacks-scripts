@@ -251,7 +251,7 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 /**
  * handle_term - SIGINT and SIGTERM handler to terminate hostapd process
  */
-static void handle_term(int sig, void *eloop_ctx, void *signal_ctx)
+static void handle_term(int sig, void *signal_ctx)
 {
 	wpa_printf(MSG_DEBUG, "Signal %d received - terminating", sig);
 	eloop_terminate();
@@ -262,19 +262,19 @@ static void handle_term(int sig, void *eloop_ctx, void *signal_ctx)
 /**
  * handle_reload - SIGHUP handler to reload configuration
  */
-static void handle_reload(int sig, void *eloop_ctx, void *signal_ctx)
+static void handle_reload(int sig, void *signal_ctx)
 {
-	struct hapd_interfaces *interfaces = eloop_ctx;
+	struct hapd_interfaces *interfaces = signal_ctx;
 	wpa_printf(MSG_DEBUG, "Signal %d received - reloading configuration",
 		   sig);
 	hostapd_for_each_interface(interfaces, handle_reload_iface, NULL);
 }
 
 
-static void handle_dump_state(int sig, void *eloop_ctx, void *signal_ctx)
+static void handle_dump_state(int sig, void *signal_ctx)
 {
 #ifdef HOSTAPD_DUMP_STATE
-	struct hapd_interfaces *interfaces = eloop_ctx;
+	struct hapd_interfaces *interfaces = signal_ctx;
 	hostapd_for_each_interface(interfaces, handle_dump_state_iface, NULL);
 #endif /* HOSTAPD_DUMP_STATE */
 }
@@ -290,16 +290,16 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces)
 		return -1;
 	}
 
-	if (eloop_init(interfaces)) {
+	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		return -1;
 	}
 
 #ifndef CONFIG_NATIVE_WINDOWS
-	eloop_register_signal(SIGHUP, handle_reload, NULL);
-	eloop_register_signal(SIGUSR1, handle_dump_state, NULL);
+	eloop_register_signal(SIGHUP, handle_reload, interfaces);
+	eloop_register_signal(SIGUSR1, handle_dump_state, interfaces);
 #endif /* CONFIG_NATIVE_WINDOWS */
-	eloop_register_signal_terminate(handle_term, NULL);
+	eloop_register_signal_terminate(handle_term, interfaces);
 
 #ifndef CONFIG_NATIVE_WINDOWS
 	openlog("hostapd", 0, LOG_DAEMON);

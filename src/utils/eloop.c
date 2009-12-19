@@ -50,8 +50,6 @@ struct eloop_sock_table {
 };
 
 struct eloop_data {
-	void *user_data;
-
 	int max_sock;
 
 	struct eloop_sock_table readers;
@@ -81,10 +79,9 @@ static void eloop_sigsegv_handler(int sig)
 #endif /* WPA_TRACE */
 
 
-int eloop_init(void *user_data)
+int eloop_init(void)
 {
 	os_memset(&eloop, 0, sizeof(eloop));
-	eloop.user_data = user_data;
 #ifdef WPA_TRACE
 	signal(SIGSEGV, eloop_sigsegv_handler);
 #endif /* WPA_TRACE */
@@ -408,7 +405,6 @@ static void eloop_process_pending_signals(void)
 		if (eloop.signals[i].signaled) {
 			eloop.signals[i].signaled = 0;
 			eloop.signals[i].handler(eloop.signals[i].sig,
-						 eloop.user_data,
 						 eloop.signals[i].user_data);
 		}
 	}
@@ -587,10 +583,4 @@ void eloop_wait_for_read_sock(int sock)
 	FD_ZERO(&rfds);
 	FD_SET(sock, &rfds);
 	select(sock + 1, &rfds, NULL, NULL, NULL);
-}
-
-
-void * eloop_get_user_data(void)
-{
-	return eloop.user_data;
 }

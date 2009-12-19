@@ -351,7 +351,7 @@ int main(int argc, char *argv[])
 	wpa_debug_level = 0;
 	wpa_debug_show_keys = 1;
 
-	if (eloop_init(&wpa)) {
+	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		return -1;
 	}

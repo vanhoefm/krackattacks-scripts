@@ -553,16 +553,9 @@ static struct subscription * find_er(struct upnp_wps_device_sm *sm,
 				     struct sockaddr_in *cli)
 {
 	struct subscription *s;
-
-	s = sm->subscriptions;
-	while (s) {
+	dl_list_for_each(s, &sm->subscriptions, struct subscription, list)
 		if (find_er_addr(s, cli))
 			return s;
-		s = s->next;
-		if (s == sm->subscriptions)
-			break;
-	}
-
 	return NULL;
 }
 
@@ -1136,7 +1129,7 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 			wpa_printf(MSG_DEBUG, "WPS UPnP: Unsubscribing %p %s",
 				   s, (sa && sa->domain_and_port) ?
 				   sa->domain_and_port : "-null-");
-			subscription_unlink(s);
+			dl_list_del(&s->list);
 			subscription_destroy(s);
 		}
 	} else {

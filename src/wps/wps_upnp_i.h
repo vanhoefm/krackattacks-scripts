@@ -81,9 +81,7 @@ struct subscr_addr {
  * also have to age out subscribers unless they renew.
  */
 struct subscription {
-	/* double linked list */
-	struct subscription *next;
-	struct subscription *prev;
+	struct dl_list list;
 	struct upnp_wps_device_sm *sm; /* parent */
 	time_t timeout_time; /* when to age out the subscription */
 	unsigned next_subscriber_sequence; /* number our messages */
@@ -136,8 +134,7 @@ struct upnp_wps_device_sm {
 	int web_port; /* our port that others get xml files from */
 	struct http_server *web_srv;
 	/* Note: subscriptions are kept in expiry order */
-	struct subscription *subscriptions; /* linked list */
-	int n_subscriptions; /* no of current subscriptions */
+	struct dl_list subscriptions;
 	int event_send_all_queued; /* if we are scheduled to send events soon
 				    */
 
@@ -153,7 +150,6 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 					 const char *callback_urls);
 struct subscription * subscription_renew(struct upnp_wps_device_sm *sm,
 					 const u8 uuid[UUID_LEN]);
-void subscription_unlink(struct subscription *s);
 void subscription_destroy(struct subscription *s);
 struct subscription * subscription_find(struct upnp_wps_device_sm *sm,
 					const u8 uuid[UUID_LEN]);

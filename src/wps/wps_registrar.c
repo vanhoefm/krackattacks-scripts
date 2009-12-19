@@ -2762,8 +2762,8 @@ static void wps_registrar_sel_reg_union(struct wps_registrar *reg)
 	if (reg->wps->wps_upnp == NULL)
 		return;
 
-	s = reg->wps->wps_upnp->subscriptions;
-	while (s) {
+	dl_list_for_each(s, &reg->wps->wps_upnp->subscriptions,
+			 struct subscription, list) {
 		struct subscr_addr *sa;
 		sa = dl_list_first(&s->addr_list, struct subscr_addr, list);
 		if (sa) {
@@ -2776,10 +2776,6 @@ static void wps_registrar_sel_reg_union(struct wps_registrar *reg)
 		else
 			wpa_printf(MSG_DEBUG, "WPS: External Registrar not "
 				   "selected");
-
-		s = s->next;
-		if (s == reg->wps->wps_upnp->subscriptions)
-			break;
 	}
 #endif /* CONFIG_WPS_UPNP */
 }

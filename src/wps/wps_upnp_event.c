@@ -238,7 +238,7 @@ static void event_http_cb(void *ctx, struct http_client *c,
 		 */
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Deleting subscription due to "
 			   "errors");
-		subscription_unlink(s);
+		dl_list_del(&s->list);
 		subscription_destroy(s);
 		break;
 	case HTTP_CLIENT_TIMEOUT:
@@ -314,32 +314,26 @@ static int event_send_start(struct subscription *s)
 static void event_send_all_later_handler(void *eloop_data, void *user_ctx)
 {
 	struct upnp_wps_device_sm *sm = user_ctx;
-	struct subscription *s;
-	struct subscription *s_old;
+	struct subscription *s, *tmp;
 	int nerrors = 0;
 
 	sm->event_send_all_queued = 0;
-	s = sm->subscriptions;
-	if (s == NULL)
-		return;
-	do {
+	dl_list_for_each_safe(s, tmp, &sm->subscriptions, struct subscription,
+			      list) {
 		if (dl_list_empty(&s->addr_list)) {
 			/* if we've given up on all addresses */
 			wpa_printf(MSG_DEBUG, "WPS UPnP: Removing "
 				   "subscription with no addresses");
-			s_old = s;
-			s = s_old->next;
-			subscription_unlink(s_old);
-			subscription_destroy(s_old);
+			dl_list_del(&s->list);
+			subscription_destroy(s);
 		} else {
 			if (s->current_event == NULL /* not busy */ &&
 			    s->event_queue != NULL /* more to do */) {
 				if (event_send_start(s))
 					nerrors++;
 			}
-			s = s->next;
 		}
-	} while (sm->subscriptions != NULL && s != sm->subscriptions);
+	}
 
 	if (nerrors) {
 		/* Try again later */

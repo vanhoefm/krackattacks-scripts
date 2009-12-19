@@ -467,14 +467,14 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 	/* Enqueue event message for all subscribers */
 	struct wpabuf *buf; /* holds event message */
 	int buf_size = 0;
-	struct subscription *s;
+	struct subscription *s, *tmp;
 	/* Actually, utf-8 is the default, but it doesn't hurt to specify it */
 	const char *format_head =
 		"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 		"<e:propertyset xmlns:e=\"urn:schemas-upnp-org:event-1-0\">\n";
 	const char *format_tail = "</e:propertyset>\n";
 
-	if (sm->subscriptions == NULL) {
+	if (dl_list_empty(&sm->subscriptions)) {
 		/* optimize */
 		return;
 	}
@@ -496,19 +496,15 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 	wpa_printf(MSG_MSGDUMP, "WPS UPnP: WLANEvent message:\n%s",
 		   (char *) wpabuf_head(buf));
 
-	s = sm->subscriptions;
-	do {
+	dl_list_for_each_safe(s, tmp, &sm->subscriptions, struct subscription,
+			      list) {
 		if (event_add(s, buf)) {
-			struct subscription *s_old = s;
 			wpa_printf(MSG_INFO, "WPS UPnP: Dropping "
 				   "subscriber due to event backlog");
-			s = s_old->next;
-			subscription_unlink(s_old);
-			subscription_destroy(s_old);
-		} else {
-			s = s->next;
+			dl_list_del(&s->list);
+			subscription_destroy(s);
 		}
-	} while (s != sm->subscriptions);
+	}
 
 	wpabuf_free(buf);
 }
@@ -519,43 +515,6 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
  * messages).
  * This is the result of an incoming HTTP over TCP SUBSCRIBE request.
  */
-
-/* subscription_unlink -- remove from the active list */
-void subscription_unlink(struct subscription *s)
-{
-	struct upnp_wps_device_sm *sm = s->sm;
-
-	if (s->next == s) {
-		/* only one? */
-		sm->subscriptions = NULL;
-	} else  {
-		if (sm->subscriptions == s)
-			sm->subscriptions = s->next;
-		s->next->prev = s->prev;
-		s->prev->next = s->next;
-	}
-	sm->n_subscriptions--;
-}
-
-
-/* subscription_link_to_end -- link to end of active list
- * (should have high expiry time!)
- */
-static void subscription_link_to_end(struct subscription *s)
-{
-	struct upnp_wps_device_sm *sm = s->sm;
-
-	if (sm->subscriptions) {
-		s->next = sm->subscriptions;
-		s->prev = s->next->prev;
-		s->prev->next = s;
-		s->next->prev = s;
-	} else {
-		sm->subscriptions = s->next = s->prev = s;
-	}
-	sm->n_subscriptions++;
-}
-
 
 /* subscription_destroy -- destroy an unlinked subscription
  * Be sure to unlink first if necessary.
@@ -573,10 +532,13 @@ void subscription_destroy(struct subscription *s)
 /* subscription_list_age -- remove expired subscriptions */
 static void subscription_list_age(struct upnp_wps_device_sm *sm, time_t now)
 {
-	struct subscription *s;
-	while ((s = sm->subscriptions) != NULL && s->timeout_time < now) {
+	struct subscription *s, *tmp;
+	dl_list_for_each_safe(s, tmp, &sm->subscriptions,
+			      struct subscription, list) {
+		if (s->timeout_time > now)
+			break;
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Removing aged subscription");
-		subscription_unlink(s);
+		dl_list_del(&s->list);
 		subscription_destroy(s);
 	}
 }
@@ -588,17 +550,11 @@ static void subscription_list_age(struct upnp_wps_device_sm *sm, time_t now)
 struct subscription * subscription_find(struct upnp_wps_device_sm *sm,
 					const u8 uuid[UUID_LEN])
 {
-	struct subscription *s0 = sm->subscriptions;
-	struct subscription *s = s0;
-
-	if (s0 == NULL)
-		return NULL;
-	do {
+	struct subscription *s;
+	dl_list_for_each(s, &sm->subscriptions, struct subscription, list) {
 		if (os_memcmp(s->uuid, uuid, UUID_LEN) == 0)
 			return s; /* Found match */
-		s = s->next;
-	} while (s != s0);
-
+	}
 	return NULL;
 }
 
@@ -715,11 +671,12 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	subscription_list_age(sm, now);
 
 	/* If too many subscriptions, remove oldest */
-	if (sm->n_subscriptions >= MAX_SUBSCRIPTIONS) {
-		s = sm->subscriptions;
+	if (dl_list_len(&sm->subscriptions) >= MAX_SUBSCRIPTIONS) {
+		s = dl_list_first(&sm->subscriptions, struct subscription,
+				  list);
 		wpa_printf(MSG_INFO, "WPS UPnP: Too many subscriptions, "
 			   "trashing oldest");
-		subscription_unlink(s);
+		dl_list_del(&s->list);
 		subscription_destroy(s);
 	}
 
@@ -733,14 +690,14 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	uuid_make(s->uuid);
 	subscr_addr_list_create(s, callback_urls);
 	/* Add to end of list, since it has the highest expiration time */
-	subscription_link_to_end(s);
+	dl_list_add_tail(&sm->subscriptions, &s->list);
 	/* Queue up immediate event message (our last event)
 	 * as required by UPnP spec.
 	 */
 	if (subscription_first_event(s)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Dropping subscriber due to "
 			   "event backlog");
-		subscription_unlink(s);
+		dl_list_del(&s->list);
 		subscription_destroy(s);
 		return NULL;
 	}
@@ -762,10 +719,10 @@ struct subscription * subscription_renew(struct upnp_wps_device_sm *sm,
 	if (s == NULL)
 		return NULL;
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Subscription renewed");
-	subscription_unlink(s);
+	dl_list_del(&s->list);
 	s->timeout_time = expire;
 	/* add back to end of list, since it now has highest expiry */
-	subscription_link_to_end(s);
+	dl_list_add_tail(&sm->subscriptions, &s->list);
 	return s;
 }
 
@@ -950,6 +907,16 @@ fail:
 }
 
 
+static void upnp_wps_free_subscriptions(struct dl_list *head)
+{
+	struct subscription *s, *tmp;
+	dl_list_for_each_safe(s, tmp, head, struct subscription, list) {
+		dl_list_del(&s->list);
+		subscription_destroy(s);
+	}
+}
+
+
 /**
  * upnp_wps_device_stop - Stop WPS UPnP operations on an interface
  * @sm: WPS UPnP state machine from upnp_wps_device_init()
@@ -963,11 +930,7 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 	web_listener_stop(sm);
 	while (sm->msearch_replies)
 		msearchreply_state_machine_stop(sm->msearch_replies);
-	while (sm->subscriptions)  {
-		struct subscription *s = sm->subscriptions;
-		subscription_unlink(s);
-		subscription_destroy(s);
-	}
+	upnp_wps_free_subscriptions(&sm->subscriptions);
 
 	advertisement_state_machine_stop(sm, 1);
 
@@ -1095,6 +1058,7 @@ upnp_wps_device_init(struct upnp_wps_device_ctx *ctx, struct wps_context *wps,
 	sm->ctx = ctx;
 	sm->wps = wps;
 	sm->priv = priv;
+	dl_list_init(&sm->subscriptions);
 
 	return sm;
 }
@@ -1107,5 +1071,5 @@ upnp_wps_device_init(struct upnp_wps_device_ctx *ctx, struct wps_context *wps,
  */
 int upnp_wps_subscribers(struct upnp_wps_device_sm *sm)
 {
-	return sm->subscriptions != NULL;
+	return !dl_list_empty(&sm->subscriptions);
 }

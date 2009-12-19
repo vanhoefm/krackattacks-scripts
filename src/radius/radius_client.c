@@ -1297,6 +1297,12 @@ void radius_client_deinit(struct radius_client_data *radius)
 		eloop_unregister_read_sock(radius->auth_serv_sock);
 	if (radius->acct_serv_sock >= 0)
 		eloop_unregister_read_sock(radius->acct_serv_sock);
+#ifdef CONFIG_IPV6
+	if (radius->auth_serv_sock6 >= 0)
+		eloop_unregister_read_sock(radius->auth_serv_sock6);
+	if (radius->acct_serv_sock6 >= 0)
+		eloop_unregister_read_sock(radius->acct_serv_sock6);
+#endif /* CONFIG_IPV6 */
 
 	eloop_cancel_timeout(radius_retry_primary_timer, radius, NULL);
 

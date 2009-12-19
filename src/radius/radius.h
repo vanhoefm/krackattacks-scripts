@@ -180,17 +180,7 @@ struct radius_msg {
 	/**
 	 * buf - Allocated buffer for RADIUS message
 	 */
-	unsigned char *buf;
-
-	/**
-	 * buf_size - Total size of the allocated buf in octets
-	 */
-	size_t buf_size;
-
-	/**
-	 * buf_used - bytes used in buf
-	 */
-	size_t buf_used;
+	struct wpabuf *buf;
 
 	/**
 	 * hdr - Pointer to the RADIUS header in buf

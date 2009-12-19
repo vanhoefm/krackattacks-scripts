@@ -15,6 +15,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/wpabuf.h"
 #include "crypto/md5.h"
 #include "crypto/crypto.h"
 #include "radius.h"
@@ -23,7 +24,8 @@
 static struct radius_attr_hdr *
 radius_get_attr_hdr(struct radius_msg *msg, int idx)
 {
-	return (struct radius_attr_hdr *) (msg->buf + msg->attr_pos[idx]);
+	return (struct radius_attr_hdr *)
+		(wpabuf_mhead_u8(msg->buf) + msg->attr_pos[idx]);
 }
 
 
@@ -34,27 +36,12 @@ static void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier)
 }
 
 
-static int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
+static int radius_msg_initialize(struct radius_msg *msg)
 {
-	if (init_len < sizeof(struct radius_hdr))
-		return -1;
-
-	msg->buf = os_zalloc(init_len);
-	if (msg->buf == NULL)
-		return -1;
-
-	msg->buf_size = init_len;
-	msg->hdr = (struct radius_hdr *) msg->buf;
-	msg->buf_used = sizeof(*msg->hdr);
-
 	msg->attr_pos =
 		os_zalloc(RADIUS_DEFAULT_ATTR_COUNT * sizeof(*msg->attr_pos));
-	if (msg->attr_pos == NULL) {
-		os_free(msg->buf);
-		msg->buf = NULL;
-		msg->hdr = NULL;
+	if (msg->attr_pos == NULL)
 		return -1;
-	}
 
 	msg->attr_size = RADIUS_DEFAULT_ATTR_COUNT;
 	msg->attr_used = 0;
@@ -80,10 +67,12 @@ struct radius_msg * radius_msg_new(u8 code, u8 identifier)
 	if (msg == NULL)
 		return NULL;
 
-	if (radius_msg_initialize(msg, RADIUS_DEFAULT_MSG_SIZE)) {
-		os_free(msg);
+	msg->buf = wpabuf_alloc(RADIUS_DEFAULT_MSG_SIZE);
+	if (msg->buf == NULL || radius_msg_initialize(msg)) {
+		radius_msg_free(msg);
 		return NULL;
 	}
+	msg->hdr = wpabuf_put(msg->buf, sizeof(struct radius_hdr));
 
 	radius_msg_set_hdr(msg, code, identifier);
 
@@ -100,7 +89,7 @@ void radius_msg_free(struct radius_msg *msg)
 	if (msg == NULL)
 		return;
 
-	os_free(msg->buf);
+	wpabuf_free(msg->buf);
 	os_free(msg->attr_pos);
 	os_free(msg);
 }
@@ -315,19 +304,19 @@ int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
 					   RADIUS_ATTR_MESSAGE_AUTHENTICATOR,
 					   auth, MD5_MAC_LEN);
 		if (attr == NULL) {
-			printf("WARNING: Could not add "
-			       "Message-Authenticator\n");
+			wpa_printf(MSG_WARNING, "RADIUS: Could not add "
+				   "Message-Authenticator");
 			return -1;
 		}
-		msg->hdr->length = htons(msg->buf_used);
-		hmac_md5(secret, secret_len, msg->buf, msg->buf_used,
-			 (u8 *) (attr + 1));
+		msg->hdr->length = htons(wpabuf_len(msg->buf));
+		hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
+			 wpabuf_len(msg->buf), (u8 *) (attr + 1));
 	} else
-		msg->hdr->length = htons(msg->buf_used);
+		msg->hdr->length = htons(wpabuf_len(msg->buf));
 
-	if (msg->buf_used > 0xffff) {
-		printf("WARNING: too long RADIUS message (%lu)\n",
-		       (unsigned long) msg->buf_used);
+	if (wpabuf_len(msg->buf) > 0xffff) {
+		wpa_printf(MSG_WARNING, "RADIUS: Too long message (%lu)",
+			   (unsigned long) wpabuf_len(msg->buf));
 		return -1;
 	}
 	return 0;
@@ -349,26 +338,26 @@ int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 		printf("WARNING: Could not add Message-Authenticator\n");
 		return -1;
 	}
-	msg->hdr->length = htons(msg->buf_used);
+	msg->hdr->length = htons(wpabuf_len(msg->buf));
 	os_memcpy(msg->hdr->authenticator, req_authenticator,
 		  sizeof(msg->hdr->authenticator));
-	hmac_md5(secret, secret_len, msg->buf, msg->buf_used,
-		 (u8 *) (attr + 1));
+	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
+		 wpabuf_len(msg->buf), (u8 *) (attr + 1));
 
 	/* ResponseAuth = MD5(Code+ID+Length+RequestAuth+Attributes+Secret) */
 	addr[0] = (u8 *) msg->hdr;
 	len[0] = 1 + 1 + 2;
 	addr[1] = req_authenticator;
 	len[1] = MD5_MAC_LEN;
-	addr[2] = (u8 *) (msg->hdr + 1);
-	len[2] = msg->buf_used - sizeof(*msg->hdr);
+	addr[2] = wpabuf_head_u8(msg->buf) + sizeof(struct radius_hdr);
+	len[2] = wpabuf_len(msg->buf) - sizeof(struct radius_hdr);
 	addr[3] = secret;
 	len[3] = secret_len;
 	md5_vector(4, addr, len, msg->hdr->authenticator);
 
-	if (msg->buf_used > 0xffff) {
-		printf("WARNING: too long RADIUS message (%lu)\n",
-		       (unsigned long) msg->buf_used);
+	if (wpabuf_len(msg->buf) > 0xffff) {
+		wpa_printf(MSG_WARNING, "RADIUS: Too long message (%lu)",
+			   (unsigned long) wpabuf_len(msg->buf));
 		return -1;
 	}
 	return 0;
@@ -381,17 +370,17 @@ void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 	const u8 *addr[2];
 	size_t len[2];
 
-	msg->hdr->length = htons(msg->buf_used);
+	msg->hdr->length = htons(wpabuf_len(msg->buf));
 	os_memset(msg->hdr->authenticator, 0, MD5_MAC_LEN);
-	addr[0] = msg->buf;
-	len[0] = msg->buf_used;
+	addr[0] = wpabuf_head(msg->buf);
+	len[0] = wpabuf_len(msg->buf);
 	addr[1] = secret;
 	len[1] = secret_len;
 	md5_vector(2, addr, len, msg->hdr->authenticator);
 
-	if (msg->buf_used > 0xffff) {
-		printf("WARNING: too long RADIUS messages (%lu)\n",
-		       (unsigned long) msg->buf_used);
+	if (wpabuf_len(msg->buf) > 0xffff) {
+		wpa_printf(MSG_WARNING, "RADIUS: Too long messages (%lu)",
+			   (unsigned long) wpabuf_len(msg->buf));
 	}
 }
 
@@ -412,7 +401,8 @@ static int radius_msg_add_attr_to_array(struct radius_msg *msg,
 		msg->attr_size = nlen;
 	}
 
-	msg->attr_pos[msg->attr_used++] = (unsigned char *) attr - msg->buf;
+	msg->attr_pos[msg->attr_used++] =
+		(unsigned char *) attr - wpabuf_head_u8(msg->buf);
 
 	return 0;
 }
@@ -430,31 +420,19 @@ struct radius_attr_hdr *radius_msg_add_attr(struct radius_msg *msg, u8 type,
 		return NULL;
 	}
 
-	buf_needed = msg->buf_used + sizeof(*attr) + data_len;
+	buf_needed = sizeof(*attr) + data_len;
 
-	if (msg->buf_size < buf_needed) {
+	if (wpabuf_tailroom(msg->buf) < buf_needed) {
 		/* allocate more space for message buffer */
-		unsigned char *nbuf;
-		size_t nlen = msg->buf_size;
-
-		while (nlen < buf_needed)
-			nlen *= 2;
-		nbuf = os_realloc(msg->buf, nlen);
-		if (nbuf == NULL)
+		if (wpabuf_resize(&msg->buf, buf_needed) < 0)
 			return NULL;
-		msg->buf = nbuf;
-		msg->hdr = (struct radius_hdr *) msg->buf;
-		os_memset(msg->buf + msg->buf_size, 0, nlen - msg->buf_size);
-		msg->buf_size = nlen;
+		msg->hdr = wpabuf_mhead(msg->buf);
 	}
 
-	attr = (struct radius_attr_hdr *) (msg->buf + msg->buf_used);
+	attr = wpabuf_put(msg->buf, sizeof(struct radius_attr_hdr));
 	attr->type = type;
 	attr->length = sizeof(*attr) + data_len;
-	if (data_len > 0)
-		os_memcpy(attr + 1, data, data_len);
-
-	msg->buf_used += sizeof(*attr) + data_len;
+	wpabuf_put_data(msg->buf, data, data_len);
 
 	if (radius_msg_add_attr_to_array(msg, attr))
 		return NULL;
@@ -500,17 +478,16 @@ struct radius_msg * radius_msg_parse(const u8 *data, size_t len)
 	if (msg == NULL)
 		return NULL;
 
-	if (radius_msg_initialize(msg, msg_len)) {
-		os_free(msg);
+	msg->buf = wpabuf_alloc_copy(data, msg_len);
+	if (msg->buf == NULL || radius_msg_initialize(msg)) {
+		radius_msg_free(msg);
 		return NULL;
 	}
-
-	os_memcpy(msg->buf, data, msg_len);
-	msg->buf_size = msg->buf_used = msg_len;
+	msg->hdr = wpabuf_mhead(msg->buf);
 
 	/* parse attributes */
-	pos = (unsigned char *) (msg->hdr + 1);
-	end = msg->buf + msg->buf_used;
+	pos = wpabuf_mhead_u8(msg->buf) + sizeof(struct radius_hdr);
+	end = wpabuf_mhead_u8(msg->buf) + wpabuf_len(msg->buf);
 	while (pos < end) {
 		if ((size_t) (end - pos) < sizeof(*attr))
 			goto fail;
@@ -633,7 +610,8 @@ int radius_msg_verify_msg_auth(struct radius_msg *msg, const u8 *secret,
 		os_memcpy(msg->hdr->authenticator, req_auth,
 			  sizeof(msg->hdr->authenticator));
 	}
-	hmac_md5(secret, secret_len, msg->buf, msg->buf_used, auth);
+	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
+		 wpabuf_len(msg->buf), auth);
 	os_memcpy(attr + 1, orig, MD5_MAC_LEN);
 	if (req_auth) {
 		os_memcpy(msg->hdr->authenticator, orig_authenticator,
@@ -672,8 +650,8 @@ int radius_msg_verify(struct radius_msg *msg, const u8 *secret,
 	len[0] = 1 + 1 + 2;
 	addr[1] = sent_msg->hdr->authenticator;
 	len[1] = MD5_MAC_LEN;
-	addr[2] = (u8 *) (msg->hdr + 1);
-	len[2] = msg->buf_used - sizeof(*msg->hdr);
+	addr[2] = wpabuf_head_u8(msg->buf) + sizeof(struct radius_hdr);
+	len[2] = wpabuf_len(msg->buf) - sizeof(struct radius_hdr);
 	addr[3] = secret;
 	len[3] = secret_len;
 	md5_vector(4, addr, len, hash);

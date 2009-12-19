@@ -637,7 +637,8 @@ static int radius_server_reject(struct radius_server_data *data,
 
 	data->counters.access_rejects++;
 	client->counters.access_rejects++;
-	if (sendto(data->auth_sock, msg->buf, msg->buf_used, 0,
+	if (sendto(data->auth_sock, wpabuf_head(msg->buf),
+		   wpabuf_len(msg->buf), 0,
 		   (struct sockaddr *) from, sizeof(*from)) < 0) {
 		perror("sendto[RADIUS SRV]");
 		ret = -1;
@@ -705,8 +706,9 @@ static int radius_server_request(struct radius_server_data *data,
 		client->counters.dup_access_requests++;
 
 		if (sess->last_reply) {
-			res = sendto(data->auth_sock, sess->last_reply->buf,
-				     sess->last_reply->buf_used, 0,
+			res = sendto(data->auth_sock,
+				     wpabuf_head(sess->last_reply->buf),
+				     wpabuf_len(sess->last_reply->buf), 0,
 				     (struct sockaddr *) from, fromlen);
 			if (res < 0) {
 				perror("sendto[RADIUS SRV]");
@@ -796,7 +798,8 @@ static int radius_server_request(struct radius_server_data *data,
 			client->counters.access_challenges++;
 			break;
 		}
-		res = sendto(data->auth_sock, reply->buf, reply->buf_used, 0,
+		res = sendto(data->auth_sock, wpabuf_head(reply->buf),
+			     wpabuf_len(reply->buf), 0,
 			     (struct sockaddr *) from, fromlen);
 		if (res < 0) {
 			perror("sendto[RADIUS SRV]");

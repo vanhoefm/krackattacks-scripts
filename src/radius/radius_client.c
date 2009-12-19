@@ -357,7 +357,8 @@ static int radius_client_retransmit(struct radius_client_data *radius,
 		       entry->msg->hdr->identifier);
 
 	os_get_time(&entry->last_attempt);
-	if (send(s, entry->msg->buf, entry->msg->buf_used, 0) < 0)
+	if (send(s, wpabuf_head(entry->msg->buf), wpabuf_len(entry->msg->buf),
+		 0) < 0)
 		radius_client_handle_send_error(radius, s, entry->msg_type);
 
 	entry->next_try = now + entry->next_wait;
@@ -673,7 +674,7 @@ int radius_client_send(struct radius_client_data *radius,
 	if (conf->msg_dumps)
 		radius_msg_dump(msg);
 
-	res = send(s, msg->buf, msg->buf_used, 0);
+	res = send(s, wpabuf_head(msg->buf), wpabuf_len(msg->buf), 0);
 	if (res < 0)
 		radius_client_handle_send_error(radius, s, msg_type);
 

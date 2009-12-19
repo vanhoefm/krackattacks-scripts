@@ -315,6 +315,14 @@ struct wpabuf * http_client_get_body(struct http_client *c)
 }
 
 
+char * http_client_get_hdr_line(struct http_client *c, const char *tag)
+{
+	if (c->hread == NULL)
+		return NULL;
+	return httpread_hdr_line_get(c->hread, tag);
+}
+
+
 char * http_link_update(char *url, const char *base)
 {
 	char *n;

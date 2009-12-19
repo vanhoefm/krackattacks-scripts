@@ -28,6 +28,7 @@
 #include "wps_er.h"
 
 
+static void wps_er_deinit_finish(void *eloop_data, void *user_ctx);
 static void wps_er_ap_timeout(void *eloop_data, void *user_ctx);
 static void wps_er_sta_timeout(void *eloop_data, void *user_ctx);
 static void wps_er_ap_process(struct wps_er_ap *ap, struct wpabuf *msg);
@@ -148,19 +149,12 @@ static void wps_er_ap_event(struct wps_context *wps, struct wps_er_ap *ap,
 }
 
 
-static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
+static void wps_er_ap_free(struct wps_er_ap *ap)
 {
-	/* TODO: if ap->subscribed, unsubscribe from events if the AP is still
-	 * alive */
-	wpa_printf(MSG_DEBUG, "WPS ER: Removing AP entry for %s (%s)",
-		   inet_ntoa(ap->addr), ap->location);
-	eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
-	wps_er_ap_event(er->wps, ap, WPS_EV_ER_AP_REMOVE);
-	os_free(ap->location);
 	http_client_free(ap->http);
-	if (ap->wps)
-		wps_deinit(ap->wps);
+	ap->http = NULL;
 
+	os_free(ap->location);
 	os_free(ap->friendly_name);
 	os_free(ap->manufacturer);
 	os_free(ap->manufacturer_url);
@@ -178,9 +172,128 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 
 	os_free(ap->ap_settings);
 
-	wps_er_sta_remove_all(ap);
-
 	os_free(ap);
+}
+
+
+static void wps_er_ap_unsubscribed(struct wps_er *er, struct wps_er_ap *ap)
+{
+	wpa_printf(MSG_DEBUG, "WPS ER: Unsubscribed from AP %s (%s)",
+		   inet_ntoa(ap->addr), ap->location);
+	dl_list_del(&ap->list);
+	wps_er_ap_free(ap);
+
+	if (er->deinitializing && dl_list_empty(&er->ap_unsubscribing)) {
+		eloop_cancel_timeout(wps_er_deinit_finish, er, NULL);
+		wps_er_deinit_finish(er, NULL);
+	}
+}
+
+
+static void wps_er_http_unsubscribe_cb(void *ctx, struct http_client *c,
+				       enum http_client_event event)
+{
+	struct wps_er_ap *ap = ctx;
+
+	switch (event) {
+	case HTTP_CLIENT_OK:
+		wpa_printf(MSG_DEBUG, "WPS ER: Unsubscribed from events");
+		ap->subscribed = 0;
+		break;
+	case HTTP_CLIENT_FAILED:
+	case HTTP_CLIENT_INVALID_REPLY:
+	case HTTP_CLIENT_TIMEOUT:
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to unsubscribe from "
+			   "events");
+		break;
+	}
+	http_client_free(ap->http);
+	ap->http = NULL;
+
+	/*
+	 * Need to get rid of the AP entry regardless of whether we managed to
+	 * unsubscribe cleanly or not.
+	 */
+	wps_er_ap_unsubscribed(ap->er, ap);
+}
+
+
+static void wps_er_ap_unsubscribe(struct wps_er *er, struct wps_er_ap *ap)
+{
+	struct wpabuf *req;
+	struct sockaddr_in dst;
+	char *url, *path;
+	char sid[100];
+
+	if (ap->event_sub_url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No eventSubURL - cannot "
+			   "subscribe");
+		goto fail;
+	}
+	if (ap->http) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending HTTP request - cannot "
+			   "send subscribe request");
+		goto fail;
+	}
+
+	url = http_client_url_parse(ap->event_sub_url, &dst, &path);
+	if (url == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse eventSubURL");
+		goto fail;
+	}
+
+	req = wpabuf_alloc(os_strlen(ap->event_sub_url) + 1000);
+	if (req == NULL) {
+		os_free(url);
+		goto fail;
+	}
+	uuid_bin2str(ap->sid, sid, sizeof(sid));
+	wpabuf_printf(req,
+		      "UNSUBSCRIBE %s HTTP/1.1\r\n"
+		      "HOST: %s:%d\r\n"
+		      "SID: uuid:%s\r\n"
+		      "\r\n",
+		      path, inet_ntoa(dst.sin_addr), ntohs(dst.sin_port), sid);
+	os_free(url);
+	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Unsubscription request",
+			  wpabuf_head(req), wpabuf_len(req));
+
+	ap->http = http_client_addr(&dst, req, 1000,
+				    wps_er_http_unsubscribe_cb, ap);
+	if (ap->http == NULL) {
+		wpabuf_free(req);
+		goto fail;
+	}
+	return;
+
+fail:
+	/*
+	 * Need to get rid of the AP entry even when we fail to unsubscribe
+	 * cleanly.
+	 */
+	wps_er_ap_unsubscribed(ap->er, ap);
+}
+
+static void wps_er_ap_remove_entry(struct wps_er *er, struct wps_er_ap *ap)
+{
+	wpa_printf(MSG_DEBUG, "WPS ER: Removing AP entry for %s (%s)",
+		   inet_ntoa(ap->addr), ap->location);
+	eloop_cancel_timeout(wps_er_ap_timeout, er, ap);
+	wps_er_sta_remove_all(ap);
+	wps_er_ap_event(er->wps, ap, WPS_EV_ER_AP_REMOVE);
+	http_client_free(ap->http);
+	ap->http = NULL;
+	if (ap->wps) {
+		wps_deinit(ap->wps);
+		ap->wps = NULL;
+	}
+
+	dl_list_del(&ap->list);
+	if (ap->subscribed) {
+		dl_list_add(&er->ap_unsubscribing, &ap->list);
+		wps_er_ap_unsubscribe(er, ap);
+	} else
+		wps_er_ap_free(ap);
 }
 
 
@@ -189,8 +302,42 @@ static void wps_er_ap_timeout(void *eloop_data, void *user_ctx)
 	struct wps_er *er = eloop_data;
 	struct wps_er_ap *ap = user_ctx;
 	wpa_printf(MSG_DEBUG, "WPS ER: AP advertisement timed out");
-	dl_list_del(&ap->list);
-	wps_er_ap_free(er, ap);
+	wps_er_ap_remove_entry(er, ap);
+}
+
+
+static int wps_er_get_sid(struct wps_er_ap *ap, char *sid)
+{
+	char *pos;
+	char txt[100];
+
+	if (!sid) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No SID received from %s (%s)",
+			   inet_ntoa(ap->addr), ap->location);
+		return -1;
+	}
+
+	pos = os_strstr(sid, "uuid:");
+	if (!pos) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Invalid SID received from "
+			   "%s (%s): '%s'", inet_ntoa(ap->addr), ap->location,
+			   sid);
+		return -1;
+	}
+
+	pos += 5;
+	if (uuid_str2bin(pos, ap->sid) < 0) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Invalid SID received from "
+			   "%s (%s): '%s'", inet_ntoa(ap->addr), ap->location,
+			   sid);
+		return -1;
+	}
+
+	uuid_bin2str(ap->sid, txt, sizeof(txt));
+	wpa_printf(MSG_DEBUG, "WPS ER: SID for subscription with %s (%s): %s",
+		   inet_ntoa(ap->addr), ap->location, txt);
+
+	return 0;
 }
 
 
@@ -202,6 +349,8 @@ static void wps_er_http_subscribe_cb(void *ctx, struct http_client *c,
 	switch (event) {
 	case HTTP_CLIENT_OK:
 		wpa_printf(MSG_DEBUG, "WPS ER: Subscribed to events");
+		ap->subscribed = 1;
+		wps_er_get_sid(ap, http_client_get_hdr_line(c, "SID"));
 		wps_er_ap_event(ap->er->wps, ap, WPS_EV_ER_AP_ADD);
 		break;
 	case HTTP_CLIENT_FAILED:
@@ -422,8 +571,7 @@ void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr)
 	struct wps_er_ap *ap;
 	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
 		if (ap->addr.s_addr == addr->s_addr) {
-			dl_list_del(&ap->list);
-			wps_er_ap_free(er, ap);
+			wps_er_ap_remove_entry(er, ap);
 			return;
 		}
 	}
@@ -434,7 +582,7 @@ static void wps_er_ap_remove_all(struct wps_er *er)
 {
 	struct wps_er_ap *prev, *ap;
 	dl_list_for_each_safe(ap, prev, &er->ap, struct wps_er_ap, list)
-		wps_er_ap_free(er, ap);
+		wps_er_ap_remove_entry(er, ap);
 }
 
 
@@ -999,6 +1147,7 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 	if (er == NULL)
 		return NULL;
 	dl_list_init(&er->ap);
+	dl_list_init(&er->ap_unsubscribing);
 
 	er->multicast_sd = -1;
 	er->ssdp_sd = -1;
@@ -1052,6 +1201,16 @@ void wps_er_refresh(struct wps_er *er)
 }
 
 
+static void wps_er_deinit_finish(void *eloop_data, void *user_ctx)
+{
+	struct wps_er *er = eloop_data;
+	wpa_printf(MSG_DEBUG, "WPS ER: Finishing deinit");
+	os_free(er->ip_addr_text);
+	os_free(er->mac_addr_text);
+	os_free(er);
+}
+
+
 void wps_er_deinit(struct wps_er *er)
 {
 	if (er == NULL)
@@ -1059,9 +1218,9 @@ void wps_er_deinit(struct wps_er *er)
 	http_server_deinit(er->http_srv);
 	wps_er_ap_remove_all(er);
 	wps_er_ssdp_deinit(er);
-	os_free(er->ip_addr_text);
-	os_free(er->mac_addr_text);
-	os_free(er);
+	eloop_register_timeout(5, 0, wps_er_deinit_finish, er, NULL);
+	wpa_printf(MSG_DEBUG, "WPS ER: Finish deinit from timeout");
+	er->deinitializing = 1;
 }
 
 

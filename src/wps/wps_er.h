@@ -64,6 +64,7 @@ struct wps_er_ap {
 	char *event_sub_url;
 
 	int subscribed;
+	u8 sid[WPS_UUID_LEN];
 	unsigned int id;
 
 	struct wps_credential *ap_settings;
@@ -81,10 +82,12 @@ struct wps_er {
 	int multicast_sd;
 	int ssdp_sd;
 	struct dl_list ap;
+	struct dl_list ap_unsubscribing;
 	struct http_server *http_srv;
 	int http_port;
 	unsigned int next_ap_id;
 	unsigned int event_id;
+	int deinitializing;
 };
 
 

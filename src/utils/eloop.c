@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "trace.h"
+#include "list.h"
 #include "eloop.h"
 
 
@@ -28,11 +29,11 @@ struct eloop_sock {
 };
 
 struct eloop_timeout {
+	struct dl_list list;
 	struct os_time time;
 	void *eloop_data;
 	void *user_data;
 	eloop_timeout_handler handler;
-	struct eloop_timeout *next;
 	WPA_TRACE_INFO
 };
 
@@ -56,7 +57,7 @@ struct eloop_data {
 	struct eloop_sock_table writers;
 	struct eloop_sock_table exceptions;
 
-	struct eloop_timeout *timeout;
+	struct dl_list timeout;
 
 	int signal_count;
 	struct eloop_signal *signals;
@@ -82,6 +83,7 @@ static void eloop_sigsegv_handler(int sig)
 int eloop_init(void)
 {
 	os_memset(&eloop, 0, sizeof(eloop));
+	dl_list_init(&eloop.timeout);
 #ifdef WPA_TRACE
 	signal(SIGSEGV, eloop_sigsegv_handler);
 #endif /* WPA_TRACE */
@@ -251,7 +253,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 			   eloop_timeout_handler handler,
 			   void *eloop_data, void *user_data)
 {
-	struct eloop_timeout *timeout, *tmp, *prev;
+	struct eloop_timeout *timeout, *tmp;
 
 	timeout = os_malloc(sizeof(*timeout));
 	if (timeout == NULL)
@@ -269,30 +271,16 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	timeout->eloop_data = eloop_data;
 	timeout->user_data = user_data;
 	timeout->handler = handler;
-	timeout->next = NULL;
 	wpa_trace_record(timeout);
 
-	if (eloop.timeout == NULL) {
-		eloop.timeout = timeout;
-		return 0;
+	/* Maintain timeouts in order of increasing time */
+	dl_list_for_each(tmp, &eloop.timeout, struct eloop_timeout, list) {
+		if (os_time_before(&timeout->time, &tmp->time)) {
+			dl_list_add(tmp->list.prev, &timeout->list);
+			return 0;
+		}
 	}
-
-	prev = NULL;
-	tmp = eloop.timeout;
-	while (tmp != NULL) {
-		if (os_time_before(&timeout->time, &tmp->time))
-			break;
-		prev = tmp;
-		tmp = tmp->next;
-	}
-
-	if (prev == NULL) {
-		timeout->next = eloop.timeout;
-		eloop.timeout = timeout;
-	} else {
-		timeout->next = prev->next;
-		prev->next = timeout;
-	}
+	dl_list_add_tail(&eloop.timeout, &timeout->list);
 
 	return 0;
 }
@@ -301,29 +289,20 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 int eloop_cancel_timeout(eloop_timeout_handler handler,
 			 void *eloop_data, void *user_data)
 {
-	struct eloop_timeout *timeout, *prev, *next;
+	struct eloop_timeout *timeout, *prev;
 	int removed = 0;
 
-	prev = NULL;
-	timeout = eloop.timeout;
-	while (timeout != NULL) {
-		next = timeout->next;
-
+	dl_list_for_each_safe(timeout, prev, &eloop.timeout,
+			      struct eloop_timeout, list) {
 		if (timeout->handler == handler &&
 		    (timeout->eloop_data == eloop_data ||
 		     eloop_data == ELOOP_ALL_CTX) &&
 		    (timeout->user_data == user_data ||
 		     user_data == ELOOP_ALL_CTX)) {
-			if (prev == NULL)
-				eloop.timeout = next;
-			else
-				prev->next = next;
+			dl_list_del(&timeout->list);
 			os_free(timeout);
 			removed++;
-		} else
-			prev = timeout;
-
-		timeout = next;
+		}
 	}
 
 	return removed;
@@ -335,14 +314,11 @@ int eloop_is_timeout_registered(eloop_timeout_handler handler,
 {
 	struct eloop_timeout *tmp;
 
-	tmp = eloop.timeout;
-	while (tmp != NULL) {
+	dl_list_for_each(tmp, &eloop.timeout, struct eloop_timeout, list) {
 		if (tmp->handler == handler &&
 		    tmp->eloop_data == eloop_data &&
 		    tmp->user_data == user_data)
 			return 1;
-
-		tmp = tmp->next;
 	}
 
 	return 0;
@@ -472,12 +448,15 @@ void eloop_run(void)
 	}
 
 	while (!eloop.terminate &&
-	       (eloop.timeout || eloop.readers.count > 0 ||
+	       (!dl_list_empty(&eloop.timeout) || eloop.readers.count > 0 ||
 		eloop.writers.count > 0 || eloop.exceptions.count > 0)) {
-		if (eloop.timeout) {
+		struct eloop_timeout *timeout;
+		timeout = dl_list_first(&eloop.timeout, struct eloop_timeout,
+					list);
+		if (timeout) {
 			os_get_time(&now);
-			if (os_time_before(&now, &eloop.timeout->time))
-				os_time_sub(&eloop.timeout->time, &now, &tv);
+			if (os_time_before(&now, &timeout->time))
+				os_time_sub(&timeout->time, &now, &tv);
 			else
 				tv.sec = tv.usec = 0;
 #if 0
@@ -492,7 +471,7 @@ void eloop_run(void)
 		eloop_sock_table_set_fds(&eloop.writers, wfds);
 		eloop_sock_table_set_fds(&eloop.exceptions, efds);
 		res = select(eloop.max_sock + 1, rfds, wfds, efds,
-			     eloop.timeout ? &_tv : NULL);
+			     timeout ? &_tv : NULL);
 		if (res < 0 && errno != EINTR && errno != 0) {
 			perror("select");
 			goto out;
@@ -500,16 +479,13 @@ void eloop_run(void)
 		eloop_process_pending_signals();
 
 		/* check if some registered timeouts have occurred */
-		if (eloop.timeout) {
-			struct eloop_timeout *tmp;
-
+		if (timeout) {
 			os_get_time(&now);
-			if (!os_time_before(&now, &eloop.timeout->time)) {
-				tmp = eloop.timeout;
-				eloop.timeout = eloop.timeout->next;
-				tmp->handler(tmp->eloop_data,
-					     tmp->user_data);
-				os_free(tmp);
+			if (!os_time_before(&now, &timeout->time)) {
+				dl_list_del(&timeout->list);
+				timeout->handler(timeout->eloop_data,
+						 timeout->user_data);
+				os_free(timeout);
 			}
 
 		}
@@ -540,25 +516,22 @@ void eloop_destroy(void)
 	struct eloop_timeout *timeout, *prev;
 	struct os_time now;
 
-	timeout = eloop.timeout;
-	if (timeout)
-		os_get_time(&now);
-	while (timeout != NULL) {
+	os_get_time(&now);
+	dl_list_for_each_safe(timeout, prev, &eloop.timeout,
+			      struct eloop_timeout, list) {
 		int sec, usec;
-		prev = timeout;
-		timeout = timeout->next;
-		sec = prev->time.sec - now.sec;
-		usec = prev->time.usec - now.usec;
-		if (prev->time.usec < now.usec) {
+		sec = timeout->time.sec - now.sec;
+		usec = timeout->time.usec - now.usec;
+		if (timeout->time.usec < now.usec) {
 			sec--;
 			usec += 1000000;
 		}
-		printf("ELOOP: remaining timeout: %d.%06d eloop_data=%p "
-		       "user_data=%p handler=%p\n",
-		       sec, usec, prev->eloop_data, prev->user_data,
-		       prev->handler);
-		wpa_trace_dump("eloop timeout", prev);
-		os_free(prev);
+		wpa_printf(MSG_INFO, "ELOOP: remaining timeout: %d.%06d "
+			   "eloop_data=%p user_data=%p handler=%p",
+			   sec, usec, timeout->eloop_data, timeout->user_data,
+			   timeout->handler);
+		wpa_trace_dump("eloop timeout", timeout);
+		os_free(timeout);
 	}
 	eloop_sock_table_destroy(&eloop.readers);
 	eloop_sock_table_destroy(&eloop.writers);

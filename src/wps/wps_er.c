@@ -1161,19 +1161,19 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 			   er->mac_addr, &er->mac_addr_text)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get IP/MAC address "
 			   "for %s. Does it have IP address?", ifname);
-		wps_er_deinit(er);
+		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}
 
 	if (wps_er_ssdp_init(er) < 0) {
-		wps_er_deinit(er);
+		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}
 
 	addr.s_addr = er->ip_addr;
 	er->http_srv = http_server_init(&addr, -1, wps_er_http_req, er);
 	if (er->http_srv == NULL) {
-		wps_er_deinit(er);
+		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}
 	er->http_port = http_server_get_port(er->http_srv);
@@ -1204,23 +1204,35 @@ void wps_er_refresh(struct wps_er *er)
 static void wps_er_deinit_finish(void *eloop_data, void *user_ctx)
 {
 	struct wps_er *er = eloop_data;
+	void (*deinit_done_cb)(void *ctx);
+	void *deinit_done_ctx;
+
 	wpa_printf(MSG_DEBUG, "WPS ER: Finishing deinit");
+
+	deinit_done_cb = er->deinit_done_cb;
+	deinit_done_ctx = er->deinit_done_ctx;
 	os_free(er->ip_addr_text);
 	os_free(er->mac_addr_text);
 	os_free(er);
+
+	if (deinit_done_cb)
+		deinit_done_cb(deinit_done_ctx);
 }
 
 
-void wps_er_deinit(struct wps_er *er)
+void wps_er_deinit(struct wps_er *er, void (*cb)(void *ctx), void *ctx)
 {
 	if (er == NULL)
 		return;
 	http_server_deinit(er->http_srv);
 	wps_er_ap_remove_all(er);
 	wps_er_ssdp_deinit(er);
-	eloop_register_timeout(5, 0, wps_er_deinit_finish, er, NULL);
+	eloop_register_timeout(dl_list_empty(&er->ap_unsubscribing) ? 0 : 5, 0,
+			       wps_er_deinit_finish, er, NULL);
 	wpa_printf(MSG_DEBUG, "WPS ER: Finish deinit from timeout");
 	er->deinitializing = 1;
+	er->deinit_done_cb = cb;
+	er->deinit_done_ctx = ctx;
 }
 
 

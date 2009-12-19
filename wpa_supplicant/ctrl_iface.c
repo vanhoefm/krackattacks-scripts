@@ -1714,7 +1714,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_reload_configuration(wpa_s))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
-		eloop_terminate();
+		wpa_supplicant_terminate_proc(wpa_s->global);
 	} else if (os_strncmp(buf, "BSSID ", 6) == 0) {
 		if (wpa_supplicant_ctrl_iface_bssid(wpa_s, buf + 6))
 			reply_len = -1;
@@ -2007,7 +2007,7 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 		reply_len = wpa_supplicant_global_iface_interfaces(
 			global, reply, reply_size);
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
-		eloop_terminate();
+		wpa_supplicant_terminate_proc(global);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

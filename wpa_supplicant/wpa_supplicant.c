@@ -546,6 +546,23 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s, wpa_states state)
 }
 
 
+void wpa_supplicant_terminate_proc(struct wpa_global *global)
+{
+	int pending = 0;
+#ifdef CONFIG_WPS
+	struct wpa_supplicant *wpa_s = global->ifaces;
+	while (wpa_s) {
+		if (wpas_wps_terminate_pending(wpa_s) == 1)
+			pending = 1;
+		wpa_s = wpa_s->next;
+	}
+#endif /* CONFIG_WPS */
+	if (pending)
+		return;
+	eloop_terminate();
+}
+
+
 static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 {
 	struct wpa_global *global = signal_ctx;
@@ -554,7 +571,7 @@ static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_TERMINATING "- signal %d "
 			"received", sig);
 	}
-	eloop_terminate();
+	wpa_supplicant_terminate_proc(global);
 }
 
 
@@ -653,7 +670,7 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 	wpa_printf(MSG_DEBUG, "Signal %d received - reconfiguring", sig);
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		if (wpa_supplicant_reload_configuration(wpa_s) < 0) {
-			eloop_terminate();
+			wpa_supplicant_terminate_proc(global);
 		}
 	}
 }

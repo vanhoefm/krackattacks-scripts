@@ -888,7 +888,7 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 		return;
 
 #ifdef CONFIG_WPS_ER
-	wps_er_deinit(wpa_s->wps_er);
+	wps_er_deinit(wpa_s->wps_er, NULL, NULL);
 	wpa_s->wps_er = NULL;
 #endif /* CONFIG_WPS_ER */
 
@@ -1131,7 +1131,7 @@ int wpas_wps_er_start(struct wpa_supplicant *wpa_s)
 int wpas_wps_er_stop(struct wpa_supplicant *wpa_s)
 {
 #ifdef CONFIG_WPS_ER
-	wps_er_deinit(wpa_s->wps_er);
+	wps_er_deinit(wpa_s->wps_er, NULL, NULL);
 	wpa_s->wps_er = NULL;
 #endif /* CONFIG_WPS_ER */
 	return 0;
@@ -1174,4 +1174,24 @@ int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
 	return wps_er_learn(wpa_s->wps_er, u, (const u8 *) pin,
 			    os_strlen(pin));
 }
+
+
+static void wpas_wps_terminate_cb(void *ctx)
+{
+	wpa_printf(MSG_DEBUG, "WPS ER: Terminated");
+	eloop_terminate();
+}
 #endif /* CONFIG_WPS_ER */
+
+
+int wpas_wps_terminate_pending(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_WPS_ER
+	if (wpa_s->wps_er) {
+		wps_er_deinit(wpa_s->wps_er, wpas_wps_terminate_cb, wpa_s);
+		wpa_s->wps_er = NULL;
+		return 1;
+	}
+#endif /* CONFIG_WPS_ER */
+	return 0;
+}

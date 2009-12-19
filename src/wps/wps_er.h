@@ -88,6 +88,8 @@ struct wps_er {
 	unsigned int next_ap_id;
 	unsigned int event_id;
 	int deinitializing;
+	void (*deinit_done_cb)(void *ctx);
+	void *deinit_done_ctx;
 };
 
 

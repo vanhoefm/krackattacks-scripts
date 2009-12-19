@@ -478,6 +478,7 @@ void wpa_supplicant_deinit(struct wpa_global *global);
 
 int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid);
+void wpa_supplicant_terminate_proc(struct wpa_global *global);
 
 /* scan.c */
 int wpa_supplicant_enabled_networks(struct wpa_config *conf);

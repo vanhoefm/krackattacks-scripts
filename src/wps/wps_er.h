@@ -15,8 +15,10 @@
 #ifndef WPS_ER_H
 #define WPS_ER_H
 
+#include "utils/list.h"
+
 struct wps_er_sta {
-	struct wps_er_sta *next;
+	struct dl_list list;
 	struct wps_er_ap *ap;
 	u8 addr[ETH_ALEN];
 	u16 config_methods;
@@ -34,9 +36,9 @@ struct wps_er_sta {
 };
 
 struct wps_er_ap {
-	struct wps_er_ap *next;
+	struct dl_list list;
 	struct wps_er *er;
-	struct wps_er_sta *sta; /* list of STAs/Enrollees using this AP */
+	struct dl_list sta; /* list of STAs/Enrollees using this AP */
 	struct in_addr addr;
 	char *location;
 	struct http_client *http;
@@ -78,7 +80,7 @@ struct wps_er {
 	unsigned ip_addr; /* IP address of network i.f. we use (host order) */
 	int multicast_sd;
 	int ssdp_sd;
-	struct wps_er_ap *ap;
+	struct dl_list ap;
 	struct http_server *http_srv;
 	int http_port;
 	unsigned int next_ap_id;

@@ -63,11 +63,10 @@ static void wps_er_sta_event(struct wps_context *wps, struct wps_er_sta *sta,
 
 static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr)
 {
-	struct wps_er_sta *sta = ap->sta;
-	while (sta) {
+	struct wps_er_sta *sta;
+	dl_list_for_each(sta, &ap->sta, struct wps_er_sta, list) {
 		if (os_memcmp(sta->addr, addr, ETH_ALEN) == 0)
 			return sta;
-		sta = sta->next;
 	}
 	return NULL;
 }
@@ -89,38 +88,11 @@ static void wps_er_sta_free(struct wps_er_sta *sta)
 }
 
 
-static void wps_er_sta_unlink(struct wps_er_sta *sta)
-{
-	struct wps_er_sta *prev, *tmp;
-	struct wps_er_ap *ap = sta->ap;
-	tmp = ap->sta;
-	prev = NULL;
-	while (tmp) {
-		if (tmp == sta) {
-			if (prev)
-				prev->next = sta->next;
-			else
-				ap->sta = sta->next;
-			return;
-		}
-		prev = tmp;
-		tmp = tmp->next;
-	}
-}
-
-
 static void wps_er_sta_remove_all(struct wps_er_ap *ap)
 {
 	struct wps_er_sta *prev, *sta;
-
-	sta = ap->sta;
-	ap->sta = NULL;
-
-	while (sta) {
-		prev = sta;
-		sta = sta->next;
-		wps_er_sta_free(prev);
-	}
+	dl_list_for_each_safe(sta, prev, &ap->sta, struct wps_er_sta, list)
+		wps_er_sta_free(sta);
 }
 
 
@@ -128,24 +100,24 @@ static struct wps_er_ap * wps_er_ap_get(struct wps_er *er,
 					struct in_addr *addr, const u8 *uuid)
 {
 	struct wps_er_ap *ap;
-	for (ap = er->ap; ap; ap = ap->next) {
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
 		if ((addr == NULL || ap->addr.s_addr == addr->s_addr) &&
 		    (uuid == NULL ||
 		     os_memcmp(uuid, ap->uuid, WPS_UUID_LEN) == 0))
-			break;
+			return ap;
 	}
-	return ap;
+	return NULL;
 }
 
 
 static struct wps_er_ap * wps_er_ap_get_id(struct wps_er *er, unsigned int id)
 {
 	struct wps_er_ap *ap;
-	for (ap = er->ap; ap; ap = ap->next) {
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
 		if (ap->id == id)
-			break;
+			return ap;
 	}
-	return ap;
+	return NULL;
 }
 
 
@@ -212,31 +184,12 @@ static void wps_er_ap_free(struct wps_er *er, struct wps_er_ap *ap)
 }
 
 
-static void wps_er_ap_unlink(struct wps_er *er, struct wps_er_ap *ap)
-{
-	struct wps_er_ap *prev, *tmp;
-	tmp = er->ap;
-	prev = NULL;
-	while (tmp) {
-		if (tmp == ap) {
-			if (prev)
-				prev->next = ap->next;
-			else
-				er->ap = ap->next;
-			return;
-		}
-		prev = tmp;
-		tmp = tmp->next;
-	}
-}
-
-
 static void wps_er_ap_timeout(void *eloop_data, void *user_ctx)
 {
 	struct wps_er *er = eloop_data;
 	struct wps_er_ap *ap = user_ctx;
 	wpa_printf(MSG_DEBUG, "WPS ER: AP advertisement timed out");
-	wps_er_ap_unlink(er, ap);
+	dl_list_del(&ap->list);
 	wps_er_ap_free(er, ap);
 }
 
@@ -441,6 +394,7 @@ void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
 	ap = os_zalloc(sizeof(*ap));
 	if (ap == NULL)
 		return;
+	dl_list_init(&ap->sta);
 	ap->er = er;
 	ap->id = ++er->next_ap_id;
 	ap->location = os_strdup(location);
@@ -448,8 +402,7 @@ void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
 		os_free(ap);
 		return;
 	}
-	ap->next = er->ap;
-	er->ap = ap;
+	dl_list_add(&er->ap, &ap->list);
 
 	ap->addr.s_addr = addr->s_addr;
 	os_memcpy(ap->uuid, uuid, WPS_UUID_LEN);
@@ -466,19 +419,13 @@ void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
 
 void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr)
 {
-	struct wps_er_ap *prev = NULL, *ap = er->ap;
-
-	while (ap) {
+	struct wps_er_ap *ap;
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
 		if (ap->addr.s_addr == addr->s_addr) {
-			if (prev)
-				prev->next = ap->next;
-			else
-				er->ap = ap->next;
+			dl_list_del(&ap->list);
 			wps_er_ap_free(er, ap);
 			return;
 		}
-		prev = ap;
-		ap = ap->next;
 	}
 }
 
@@ -486,15 +433,8 @@ void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr)
 static void wps_er_ap_remove_all(struct wps_er *er)
 {
 	struct wps_er_ap *prev, *ap;
-
-	ap = er->ap;
-	er->ap = NULL;
-
-	while (ap) {
-		prev = ap;
-		ap = ap->next;
-		wps_er_ap_free(er, prev);
-	}
+	dl_list_for_each_safe(ap, prev, &er->ap, struct wps_er_ap, list)
+		wps_er_ap_free(er, ap);
 }
 
 
@@ -549,7 +489,7 @@ static void wps_er_sta_timeout(void *eloop_data, void *user_ctx)
 {
 	struct wps_er_sta *sta = eloop_data;
 	wpa_printf(MSG_DEBUG, "WPS ER: STA entry timed out");
-	wps_er_sta_unlink(sta);
+	dl_list_del(&sta->list);
 	wps_er_sta_free(sta);
 }
 
@@ -579,8 +519,7 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 			return NULL;
 		os_memcpy(sta->addr, addr, ETH_ALEN);
 		sta->ap = ap;
-		sta->next = ap->sta;
-		ap->sta = sta;
+		dl_list_add(&ap->sta, &sta->list);
 		new_sta = 1;
 	}
 
@@ -1059,6 +998,7 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 	er = os_zalloc(sizeof(*er));
 	if (er == NULL)
 		return NULL;
+	dl_list_init(&er->ap);
 
 	er->multicast_sd = -1;
 	er->ssdp_sd = -1;
@@ -1102,9 +1042,9 @@ void wps_er_refresh(struct wps_er *er)
 	struct wps_er_ap *ap;
 	struct wps_er_sta *sta;
 
-	for (ap = er->ap; ap; ap = ap->next) {
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
 		wps_er_ap_event(er->wps, ap, WPS_EV_ER_AP_ADD);
-		for (sta = ap->sta; sta; sta = sta->next)
+		dl_list_for_each(sta, &ap->sta, struct wps_er_sta, list)
 			wps_er_sta_event(er->wps, sta, WPS_EV_ER_ENROLLEE_ADD);
 	}
 
@@ -1230,7 +1170,7 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 		return;
 	}
 
-	for (ap = er->ap; ap; ap = ap->next)
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list)
 		wps_er_send_set_sel_reg(ap, msg);
 
 	wpabuf_free(msg);

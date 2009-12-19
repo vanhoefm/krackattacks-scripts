@@ -660,10 +660,12 @@ static int hostapd_wpa_auth_for_each_auth(
 	void *ctx, int (*cb)(struct wpa_authenticator *sm, void *ctx),
 	void *cb_ctx)
 {
+	struct hostapd_data *hapd = ctx;
 	struct wpa_auth_iface_iter_data data;
 	data.cb = cb;
 	data.cb_ctx = cb_ctx;
-	return hostapd_for_each_interface(wpa_auth_iface_iter, &data);
+	return hostapd_for_each_interface(hapd->iface->interfaces,
+					  wpa_auth_iface_iter, &data);
 }
 
 

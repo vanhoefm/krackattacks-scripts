@@ -38,10 +38,10 @@ struct hapd_interfaces {
 };
 
 
-int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
+int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
+			       int (*cb)(struct hostapd_iface *iface,
 					 void *ctx), void *ctx)
 {
-	struct hapd_interfaces *interfaces = eloop_get_user_data();
 	size_t i;
 	int ret;
 
@@ -221,8 +221,9 @@ fail:
 }
 
 
-static struct hostapd_iface * hostapd_interface_init(const char *config_fname,
-						     int debug)
+static struct hostapd_iface *
+hostapd_interface_init(struct hapd_interfaces *interfaces,
+		       const char *config_fname, int debug)
 {
 	struct hostapd_iface *iface;
 	int k;
@@ -231,6 +232,7 @@ static struct hostapd_iface * hostapd_interface_init(const char *config_fname,
 	iface = hostapd_init(config_fname);
 	if (!iface)
 		return NULL;
+	iface->interfaces = interfaces;
 
 	for (k = 0; k < debug; k++) {
 		if (iface->bss[0]->conf->logger_stdout_level > 0)
@@ -262,16 +264,18 @@ static void handle_term(int sig, void *eloop_ctx, void *signal_ctx)
  */
 static void handle_reload(int sig, void *eloop_ctx, void *signal_ctx)
 {
+	struct hapd_interfaces *interfaces = eloop_ctx;
 	wpa_printf(MSG_DEBUG, "Signal %d received - reloading configuration",
 		   sig);
-	hostapd_for_each_interface(handle_reload_iface, NULL);
+	hostapd_for_each_interface(interfaces, handle_reload_iface, NULL);
 }
 
 
 static void handle_dump_state(int sig, void *eloop_ctx, void *signal_ctx)
 {
 #ifdef HOSTAPD_DUMP_STATE
-	hostapd_for_each_interface(handle_dump_state_iface, NULL);
+	struct hapd_interfaces *interfaces = eloop_ctx;
+	hostapd_for_each_interface(interfaces, handle_dump_state_iface, NULL);
 #endif /* HOSTAPD_DUMP_STATE */
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -449,7 +453,8 @@ int main(int argc, char *argv[])
 
 	/* Initialize interfaces */
 	for (i = 0; i < interfaces.count; i++) {
-		interfaces.iface[i] = hostapd_interface_init(argv[optind + i],
+		interfaces.iface[i] = hostapd_interface_init(&interfaces,
+							     argv[optind + i],
 							     debug);
 		if (!interfaces.iface[i])
 			goto out;

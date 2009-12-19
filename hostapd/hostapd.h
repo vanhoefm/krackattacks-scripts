@@ -21,6 +21,7 @@ struct wpa_driver_ops;
 struct wpa_ctrl_dst;
 struct radius_server_data;
 struct upnp_wps_device_sm;
+struct hapd_interfaces;
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 struct full_dynamic_vlan;
@@ -119,6 +120,7 @@ struct hostapd_data {
  * struct hostapd_iface - hostapd per-interface data structure
  */
 struct hostapd_iface {
+	struct hapd_interfaces *interfaces;
 	void *owner;
 	char *config_fname;
 	struct hostapd_config *conf;
@@ -180,7 +182,8 @@ void hostapd_interface_deinit(struct hostapd_iface *iface);
 int handle_reload_iface(struct hostapd_iface *iface, void *ctx);
 int handle_dump_state_iface(struct hostapd_iface *iface, void *ctx);
 
-int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
+int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
+			       int (*cb)(struct hostapd_iface *iface,
 					 void *ctx), void *ctx);
 
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

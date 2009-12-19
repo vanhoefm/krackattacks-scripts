@@ -69,7 +69,8 @@ static void hostapd_prune_associations(struct hostapd_data *hapd,
 	struct prune_data data;
 	data.hapd = hapd;
 	data.addr = sta->addr;
-	hostapd_for_each_interface(prune_associations, &data);
+	hostapd_for_each_interface(hapd->iface->interfaces,
+				   prune_associations, &data);
 }
 
 

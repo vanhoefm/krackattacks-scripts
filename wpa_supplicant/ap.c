@@ -33,7 +33,14 @@
 #include "ap.h"
 
 
-int hostapd_for_each_interface(int (*cb)(struct hostapd_iface *iface,
+struct hapd_interfaces {
+	size_t count;
+	struct hostapd_iface **iface;
+};
+
+
+int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
+			       int (*cb)(struct hostapd_iface *iface,
 					 void *ctx), void *ctx)
 {
 	/* TODO */

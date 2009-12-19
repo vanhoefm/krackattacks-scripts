@@ -280,49 +280,14 @@ static void subscr_addr_delete(struct subscr_addr *a)
 }
 
 
-/* subscr_addr_unlink -- unlink subscriber address from linked list */
-static void subscr_addr_unlink(struct subscription *s, struct subscr_addr *a)
-{
-	struct subscr_addr **listp = &s->addr_list;
-	s->n_addr--;
-	a->next->prev = a->prev;
-	a->prev->next = a->next;
-	if (*listp == a) {
-		if (a == a->next) {
-			/* last in queue */
-			*listp = NULL;
-			assert(s->n_addr == 0);
-		} else {
-			*listp = a->next;
-		}
-	}
-}
-
-
 /* subscr_addr_free_all -- unlink and delete list of subscriber addresses. */
 static void subscr_addr_free_all(struct subscription *s)
 {
-	struct subscr_addr **listp = &s->addr_list;
-	struct subscr_addr *a;
-	while ((a = *listp) != NULL) {
-		subscr_addr_unlink(s, a);
+	struct subscr_addr *a, *tmp;
+	dl_list_for_each_safe(a, tmp, &s->addr_list, struct subscr_addr, list)
+	{
+		dl_list_del(&a->list);
 		subscr_addr_delete(a);
-	}
-}
-
-
-/* subscr_addr_link -- add subscriber address to list of addresses */
-static void subscr_addr_link(struct subscription *s, struct subscr_addr *a)
-{
-	struct subscr_addr **listp = &s->addr_list;
-	s->n_addr++;
-	if (*listp == NULL) {
-		*listp = a->next = a->prev = a;
-	} else {
-		a->next = *listp;
-		a->prev = (*listp)->prev;
-		a->prev->next = a;
-		a->next->prev = a;
 	}
 }
 
@@ -403,7 +368,7 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 	}
 	for (rp = result; rp; rp = rp->ai_next) {
 		/* Limit no. of address to avoid denial of service attack */
-		if (s->n_addr >= MAX_ADDR_PER_SUBSCRIPTION) {
+		if (dl_list_len(&s->addr_list) >= MAX_ADDR_PER_SUBSCRIPTION) {
 			wpa_printf(MSG_INFO, "WPS UPnP: subscr_addr_add_url: "
 				   "Ignoring excessive addresses");
 			break;
@@ -425,7 +390,7 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 		os_memcpy(&a->saddr, rp->ai_addr, sizeof(a->saddr));
 		a->saddr.sin_port = htons(port);
 
-		subscr_addr_link(s, a);
+		dl_list_add(&s->addr_list, &a->list);
 		a = NULL;       /* don't free it below */
 	}
 
@@ -598,8 +563,7 @@ static void subscription_link_to_end(struct subscription *s)
 void subscription_destroy(struct subscription *s)
 {
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Destroy subscription %p", s);
-	if (s->addr_list)
-		subscr_addr_free_all(s);
+	subscr_addr_free_all(s);
 	event_delete_all(s);
 	upnp_er_remove_notification(s);
 	os_free(s);
@@ -762,6 +726,7 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	s = os_zalloc(sizeof(*s));
 	if (s == NULL)
 		return NULL;
+	dl_list_init(&s->addr_list);
 
 	s->sm = sm;
 	s->timeout_time = expire;

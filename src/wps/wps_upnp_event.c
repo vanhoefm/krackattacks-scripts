@@ -50,7 +50,7 @@ struct wps_event_ {
 	struct wps_event_ *prev;        /* double linked list */
 	struct subscription *s;         /* parent */
 	unsigned subscriber_sequence;   /* which event for this subscription*/
-	int retry;                      /* which retry */
+	unsigned int retry;             /* which retry */
 	struct subscr_addr *addr;       /* address to connect to */
 	struct wpabuf *data;            /* event data to send */
 	struct http_client *http_event;
@@ -170,7 +170,7 @@ static void event_retry(struct wps_event_ *e, int do_next_address)
 
 	if (do_next_address)
 		e->retry++;
-	if (e->retry >= s->n_addr) {
+	if (e->retry >= dl_list_len(&s->addr_list)) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Giving up on sending event "
 			   "for %s", e->addr->domain_and_port);
 		return;
@@ -271,23 +271,26 @@ static void event_http_cb(void *ctx, struct http_client *c,
 static int event_send_start(struct subscription *s)
 {
 	struct wps_event_ *e;
-	int itry;
+	unsigned int itry;
 	struct wpabuf *buf;
 
 	/*
 	 * Assume we are called ONLY with no current event and ONLY with
 	 * nonempty event queue and ONLY with at least one address to send to.
 	 */
-	assert(s->addr_list != NULL);
+	assert(!dl_list_empty(&s->addr_list));
 	assert(s->current_event == NULL);
 	assert(s->event_queue != NULL);
 
 	s->current_event = e = event_dequeue(s);
 
-	/* Use address acc. to no. of retries */
-	e->addr = s->addr_list;
-	for (itry = 0; itry < e->retry; itry++)
-		e->addr = e->addr->next;
+	/* Use address according to number of retries */
+	itry = 0;
+	dl_list_for_each(e->addr, &s->addr_list, struct subscr_addr, list)
+		if (itry++ == e->retry)
+			break;
+	if (itry < e->retry)
+		return -1;
 
 	buf = event_build_message(e);
 	if (buf == NULL) {
@@ -320,7 +323,7 @@ static void event_send_all_later_handler(void *eloop_data, void *user_ctx)
 	if (s == NULL)
 		return;
 	do {
-		if (s->addr_list == NULL) {
+		if (dl_list_empty(&s->addr_list)) {
 			/* if we've given up on all addresses */
 			wpa_printf(MSG_DEBUG, "WPS UPnP: Removing "
 				   "subscription with no addresses");

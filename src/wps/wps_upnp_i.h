@@ -11,6 +11,7 @@
 #ifndef WPS_UPNP_I_H
 #define WPS_UPNP_I_H
 
+#include "utils/list.h"
 #include "http.h"
 
 #define UPNP_MULTICAST_ADDRESS  "239.255.255.250" /* for UPnP multicasting */
@@ -66,9 +67,7 @@ struct advertisement_state_machine {
  * for a subscriber until we find one that seems to work.
  */
 struct subscr_addr {
-	/* double linked list */
-	struct subscr_addr *next;
-	struct subscr_addr *prev;
+	struct dl_list list;
 	struct subscription *s; /* parent */
 	char *domain_and_port; /* domain and port part of url */
 	char *path; /* "filepath" part of url (from "mem") */
@@ -95,8 +94,7 @@ struct subscription {
 	 */
 	u8 uuid[UUID_LEN];
 	/* Linked list of address alternatives (rotate through on failure) */
-	struct subscr_addr *addr_list;
-	int n_addr; /* Number of addresses in list */
+	struct dl_list addr_list;
 	struct wps_event_ *event_queue; /* Queued event messages. */
 	int n_queue; /* How many events are queued */
 	struct wps_event_ *current_event; /* non-NULL if being sent (not in q)

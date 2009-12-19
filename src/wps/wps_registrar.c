@@ -2764,10 +2764,13 @@ static void wps_registrar_sel_reg_union(struct wps_registrar *reg)
 
 	s = reg->wps->wps_upnp->subscriptions;
 	while (s) {
-		if (s->addr_list)
+		struct subscr_addr *sa;
+		sa = dl_list_first(&s->addr_list, struct subscr_addr, list);
+		if (sa) {
 			wpa_printf(MSG_DEBUG, "WPS: External Registrar %s:%d",
-				   inet_ntoa(s->addr_list->saddr.sin_addr),
-				   ntohs(s->addr_list->saddr.sin_port));
+				   inet_ntoa(sa->saddr.sin_addr),
+				   ntohs(sa->saddr.sin_port));
+		}
 		if (s->selected_registrar)
 			wps_registrar_sel_reg_add(reg, s);
 		else

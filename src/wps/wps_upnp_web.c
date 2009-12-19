@@ -541,13 +541,9 @@ static int find_er_addr(struct subscription *s, struct sockaddr_in *cli)
 {
 	struct subscr_addr *a;
 
-	a = s->addr_list;
-	while (a) {
+	dl_list_for_each(a, &s->addr_list, struct subscr_addr, list) {
 		if (cli->sin_addr.s_addr == a->saddr.sin_addr.s_addr)
 			return 1;
-		a = a->next;
-		if (a == s->addr_list)
-			break;
 	}
 	return 0;
 }
@@ -1134,11 +1130,12 @@ static void web_connection_parse_unsubscribe(struct upnp_wps_device_sm *sm,
 	if (got_uuid) {
 		s = subscription_find(sm, uuid);
 		if (s) {
+			struct subscr_addr *sa;
+			sa = dl_list_first(&s->addr_list, struct subscr_addr,
+					   list);
 			wpa_printf(MSG_DEBUG, "WPS UPnP: Unsubscribing %p %s",
-				   s,
-				   (s && s->addr_list &&
-				    s->addr_list->domain_and_port) ?
-				   s->addr_list->domain_and_port : "-null-");
+				   s, (sa && sa->domain_and_port) ?
+				   sa->domain_and_port : "-null-");
 			subscription_unlink(s);
 			subscription_destroy(s);
 		}

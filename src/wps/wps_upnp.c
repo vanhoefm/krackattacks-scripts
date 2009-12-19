@@ -377,7 +377,6 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 		a = os_zalloc(sizeof(*a) + alloc_len);
 		if (a == NULL)
 			continue;
-		a->s = s;
 		mem = (void *) (a + 1);
 		a->domain_and_port = mem;
 		strcpy(mem, domain_and_port);

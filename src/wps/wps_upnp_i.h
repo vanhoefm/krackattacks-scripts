@@ -68,7 +68,6 @@ struct advertisement_state_machine {
  */
 struct subscr_addr {
 	struct dl_list list;
-	struct subscription *s; /* parent */
 	char *domain_and_port; /* domain and port part of url */
 	char *path; /* "filepath" part of url (from "mem") */
 	struct sockaddr_in saddr; /* address for doing connect */

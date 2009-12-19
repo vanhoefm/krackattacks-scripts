@@ -720,6 +720,10 @@ hostapd: $(BCHECK) $(OBJS)
 	$(CC) $(LDFLAGS) -o hostapd $(OBJS) $(LIBS)
 
 OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
+ifdef CONFIG_WPA_TRACE
+OBJS_c += ../src/utils/trace.o
+OBJS_c += ../src/utils/wpa_debug.o
+endif
 hostapd_cli: $(OBJS_c)
 	$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c)
 

@@ -71,6 +71,9 @@ OBJS_c += ../src/utils/os_$(CONFIG_OS).o
 ifdef CONFIG_WPA_TRACE
 CFLAGS += -DWPA_TRACE
 OBJS += ../src/utils/trace.o
+OBJS_p += ../src/utils/trace.o
+OBJS_c += ../src/utils/trace.o
+OBJS_c += ../src/utils/wpa_debug.o
 endif
 
 ifndef CONFIG_ELOOP

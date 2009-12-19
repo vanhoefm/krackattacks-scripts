@@ -29,7 +29,7 @@ void wpa_trace_dump_func(const char *title, void **btrace, int btrace_num)
 	for (i = 0; i < btrace_num; i++)
 		wpa_printf(MSG_INFO, "[%d]: %p: %s",
 			   i, btrace[i], sym ? sym[i] : "");
-	os_free(sym);
+	free(sym);
 	wpa_printf(MSG_INFO, "WPA_TRACE: %s - END", title);
 }
 

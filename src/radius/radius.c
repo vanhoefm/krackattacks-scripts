@@ -20,9 +20,6 @@
 #include "radius.h"
 
 
-static int radius_msg_initialize(struct radius_msg *msg, size_t init_len);
-
-
 static struct radius_attr_hdr *
 radius_get_attr_hdr(struct radius_msg *msg, int idx)
 {
@@ -37,31 +34,11 @@ static void radius_msg_set_hdr(struct radius_msg *msg, u8 code, u8 identifier)
 }
 
 
-struct radius_msg *radius_msg_new(u8 code, u8 identifier)
-{
-	struct radius_msg *msg;
-
-	msg = os_malloc(sizeof(*msg));
-	if (msg == NULL)
-		return NULL;
-
-	if (radius_msg_initialize(msg, RADIUS_DEFAULT_MSG_SIZE)) {
-		os_free(msg);
-		return NULL;
-	}
-
-	radius_msg_set_hdr(msg, code, identifier);
-
-	return msg;
-}
-
-
 static int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
 {
-	if (msg == NULL || init_len < sizeof(struct radius_hdr))
+	if (init_len < sizeof(struct radius_hdr))
 		return -1;
 
-	os_memset(msg, 0, sizeof(*msg));
 	msg->buf = os_zalloc(init_len);
 	if (msg->buf == NULL)
 		return -1;
@@ -83,6 +60,25 @@ static int radius_msg_initialize(struct radius_msg *msg, size_t init_len)
 	msg->attr_used = 0;
 
 	return 0;
+}
+
+
+struct radius_msg * radius_msg_new(u8 code, u8 identifier)
+{
+	struct radius_msg *msg;
+
+	msg = os_zalloc(sizeof(*msg));
+	if (msg == NULL)
+		return NULL;
+
+	if (radius_msg_initialize(msg, RADIUS_DEFAULT_MSG_SIZE)) {
+		os_free(msg);
+		return NULL;
+	}
+
+	radius_msg_set_hdr(msg, code, identifier);
+
+	return msg;
 }
 
 
@@ -480,7 +476,7 @@ struct radius_msg *radius_msg_parse(const u8 *data, size_t len)
 		       (unsigned long) len - msg_len);
 	}
 
-	msg = os_malloc(sizeof(*msg));
+	msg = os_zalloc(sizeof(*msg));
 	if (msg == NULL)
 		return NULL;
 

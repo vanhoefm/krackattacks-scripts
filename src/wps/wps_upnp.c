@@ -945,8 +945,6 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 	event_send_stop_all(sm);
 	os_free(sm->wlanevent);
 	sm->wlanevent = NULL;
-	os_free(sm->net_if);
-	sm->net_if = NULL;
 	os_free(sm->mac_addr_text);
 	sm->mac_addr_text = NULL;
 	os_free(sm->ip_addr_text);
@@ -974,7 +972,6 @@ int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if)
 	if (sm->started)
 		upnp_wps_device_stop(sm);
 
-	sm->net_if = strdup(net_if);
 	sm->multicast_sd = -1;
 	sm->ssdp_sd = -1;
 	sm->started = 1;

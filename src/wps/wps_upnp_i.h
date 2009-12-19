@@ -113,7 +113,6 @@ struct upnp_wps_device_sm {
 	char *root_dir;
 	char *desc_url;
 	int started; /* nonzero if we are active */
-	char *net_if; /* network interface we use */
 	char *mac_addr_text; /* mac addr of network i.f. we use */
 	u8 mac_addr[ETH_ALEN]; /* mac addr of network i.f. we use */
 	char *ip_addr_text; /* IP address of network i.f. we use */

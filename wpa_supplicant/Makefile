@@ -764,6 +764,9 @@ OBJS += ../src/crypto/tls_schannel.o
 endif
 OBJS += ../src/crypto/crypto_cryptoapi.o
 OBJS_p += ../src/crypto/crypto_cryptoapi.o
+ifdef NEED_FIPS186_2_PRF
+OBJS += ../src/crypto/fips_prf_cryptoapi.o
+endif
 CONFIG_INTERNAL_SHA256=y
 CONFIG_INTERNAL_RC4=y
 CONFIG_INTERNAL_DH_GROUP5=y

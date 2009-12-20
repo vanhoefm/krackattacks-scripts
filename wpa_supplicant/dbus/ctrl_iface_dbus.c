@@ -16,8 +16,8 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "config.h"
-#include "wpa_supplicant_i.h"
+#include "../config.h"
+#include "../wpa_supplicant_i.h"
 #include "drivers/driver.h"
 #include "wps/wps.h"
 #include "ctrl_iface_dbus.h"

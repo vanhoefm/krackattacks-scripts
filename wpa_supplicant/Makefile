@@ -1028,8 +1028,8 @@ endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
-DBUS_OBJS += ctrl_iface_dbus.o ctrl_iface_dbus_handlers.o
-DBUS_OBJS += dbus_dict_helpers.o
+DBUS_OBJS += dbus/ctrl_iface_dbus.o dbus/ctrl_iface_dbus_handlers.o
+DBUS_OBJS += dbus/dbus_dict_helpers.o
 ifndef DBUS_LIBS
 DBUS_LIBS := $(shell pkg-config --libs dbus-1)
 endif
@@ -1052,9 +1052,9 @@ endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_NEW
-DBUS_OBJS ?= dbus_dict_helpers.o
-DBUS_OBJS += ctrl_iface_dbus_new_helpers.o
-DBUS_OBJS += ctrl_iface_dbus_new.o ctrl_iface_dbus_new_handlers.o
+DBUS_OBJS ?= dbus/dbus_dict_helpers.o
+DBUS_OBJS += dbus/ctrl_iface_dbus_new_helpers.o
+DBUS_OBJS += dbus/ctrl_iface_dbus_new.o dbus/ctrl_iface_dbus_new_handlers.o
 ifndef DBUS_LIBS
 DBUS_LIBS := $(shell pkg-config --libs dbus-1)
 endif

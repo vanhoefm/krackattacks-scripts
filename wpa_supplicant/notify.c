@@ -18,8 +18,8 @@
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "wps_supplicant.h"
-#include "ctrl_iface_dbus.h"
-#include "ctrl_iface_dbus_new.h"
+#include "dbus/ctrl_iface_dbus.h"
+#include "dbus/ctrl_iface_dbus_new.h"
 #include "notify.h"
 
 int wpas_notify_supplicant_initialized(struct wpa_global *global)

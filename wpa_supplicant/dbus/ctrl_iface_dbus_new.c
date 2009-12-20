@@ -16,8 +16,8 @@
 #include "includes.h"
 
 #include "common.h"
-#include "config.h"
-#include "wpa_supplicant_i.h"
+#include "../config.h"
+#include "../wpa_supplicant_i.h"
 #include "drivers/driver.h"
 #include "wps/wps.h"
 #include "ctrl_iface_dbus_new_helpers.h"

@@ -975,6 +975,33 @@ static int tls_connection_verify_peer(struct tls_connection *conn,
 }
 
 
+static struct wpabuf * gnutls_get_appl_data(struct tls_connection *conn)
+{
+	int res;
+	struct wpabuf *ad;
+	wpa_printf(MSG_DEBUG, "GnuTLS: Check for possible Application Data");
+	ad = wpabuf_alloc((wpabuf_len(conn->pull_buf) + 500) * 3);
+	if (ad == NULL)
+		return NULL;
+
+	res = gnutls_record_recv(conn->session, wpabuf_mhead(ad),
+				 wpabuf_size(ad));
+	wpa_printf(MSG_DEBUG, "GnuTLS: gnutls_record_recv: %d", res);
+	if (res < 0) {
+		wpa_printf(MSG_DEBUG, "%s - gnutls_ia_recv failed: %d "
+			   "(%s)", __func__, (int) res,
+			   gnutls_strerror(res));
+		wpabuf_free(ad);
+		return NULL;
+	}
+
+	wpabuf_put(ad, res);
+	wpa_printf(MSG_DEBUG, "GnuTLS: Received %d bytes of Application Data",
+		   res);
+	return ad;
+}
+
+
 struct wpabuf * tls_connection_handshake(void *tls_ctx,
 					 struct tls_connection *conn,
 					 const struct wpabuf *in_data,
@@ -1067,6 +1094,9 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 						global->session_data,
 						&global->session_data_size);
 		}
+
+		if (conn->pull_buf && appl_data)
+			*appl_data = gnutls_get_appl_data(conn);
 	}
 
 out:

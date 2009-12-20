@@ -124,8 +124,6 @@ DBusMessage * wpas_dbus_getter_network_properties(
 DBusMessage * wpas_dbus_setter_network_properties(
 	DBusMessage *message, struct network_handler_args *net);
 
-
-#ifdef CONFIG_WPS
 DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 					  struct wpa_supplicant *wpa_s);
 
@@ -137,6 +135,5 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 
 DBusMessage * wpas_dbus_getter_credentials(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s);
-#endif /* CONFIG_WPS */
 
 #endif /* CTRL_IFACE_DBUS_HANDLERS_NEW_H */

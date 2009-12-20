@@ -86,7 +86,6 @@ DBusMessage * wpas_dbus_iface_set_blobs(DBusMessage *message,
 DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s);
 
-#ifdef CONFIG_WPS
 DBusMessage * wpas_dbus_iface_wps_pbc(DBusMessage *message,
 				      struct wpa_supplicant *wpa_s);
 
@@ -95,7 +94,6 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 
 DBusMessage * wpas_dbus_iface_wps_reg(DBusMessage *message,
 				      struct wpa_supplicant *wpa_s);
-#endif /* CONFIG_WPS */
 
 #endif /* CONFIG_CTRL_IFACE_DBUS */
 

@@ -71,7 +71,6 @@ struct wpas_dbus_callbacks {
 				    enum wpas_dbus_prop property);
 	void (*signal_debug_params_changed)(struct wpa_global *global);
 
-#ifdef CONFIG_WPS
 	void (*signal_wps_event_success)(struct wpa_supplicant *wpa_s);
 	void (*signal_wps_event_fail)(struct wpa_supplicant *wpa_s,
 				      struct wps_event_fail *fail);
@@ -79,7 +78,6 @@ struct wpas_dbus_callbacks {
 				     struct wps_event_m2d *m2d);
 	void (*signal_wps_credentials)(struct wpa_supplicant *wpa_s,
 				       const struct wps_credential *cred);
-#endif /* CONFIG_WPS */
 };
 
 

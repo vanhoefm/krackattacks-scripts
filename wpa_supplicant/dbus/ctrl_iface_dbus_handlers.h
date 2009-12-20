@@ -15,8 +15,6 @@
 #ifndef CTRL_IFACE_DBUS_HANDLERS_H
 #define CTRL_IFACE_DBUS_HANDLERS_H
 
-#ifdef CONFIG_CTRL_IFACE_DBUS
-
 DBusMessage * wpas_dbus_new_invalid_iface_error(DBusMessage *message);
 
 DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
@@ -95,7 +93,9 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 DBusMessage * wpas_dbus_iface_wps_reg(DBusMessage *message,
 				      struct wpa_supplicant *wpa_s);
 
-#endif /* CONFIG_CTRL_IFACE_DBUS */
+DBusMessage * wpas_dbus_new_success_reply(DBusMessage *message);
+DBusMessage * wpas_dbus_new_invalid_opts_error(DBusMessage *message,
+					       const char *arg);
 
 #endif /* CTRL_IFACE_DBUS_HANDLERS_H */
 

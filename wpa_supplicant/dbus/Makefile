@@ -30,7 +30,10 @@ endif
 	@$(E) "  CC " $<
 
 
-#CFLAGS += -DCONFIG_WPS
+ifdef CONFIG_WPS
+CFLAGS += -DCONFIG_WPS
+endif
+
 CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_NEW
 CFLAGS += -DCONFIG_CTRL_IFACE_DBUS
 
@@ -67,6 +70,11 @@ LIB_OBJS= \
 	ctrl_iface_dbus_new_handlers.o \
 	ctrl_iface_dbus_new_helpers.o \
 	dbus_dict_helpers.o
+
+ifdef CONFIG_WPS
+LIB_OBJS += dbus_handlers_wps.o
+LIB_OBJS += dbus_new_handlers_wps.o
+endif
 
 libwpadbus.a: $(LIB_OBJS)
 	$(AR) crT $@ $?

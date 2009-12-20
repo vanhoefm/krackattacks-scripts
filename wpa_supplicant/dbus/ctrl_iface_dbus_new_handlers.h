@@ -136,4 +136,9 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 DBusMessage * wpas_dbus_getter_credentials(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_error_invald_args(DBusMessage *message,
+					  const char *arg);
+DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,
+					    const char *arg);
+
 #endif /* CTRL_IFACE_DBUS_HANDLERS_NEW_H */

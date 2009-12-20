@@ -369,7 +369,6 @@ static void eloop_process_pending_signals(void)
 		if (eloop.signals[i].signaled) {
 			eloop.signals[i].signaled = 0;
 			eloop.signals[i].handler(eloop.signals[i].sig,
-						 eloop.user_data,
 						 eloop.signals[i].user_data);
 		}
 	}
@@ -377,7 +376,6 @@ static void eloop_process_pending_signals(void)
 	if (eloop.term_signal.signaled) {
 		eloop.term_signal.signaled = 0;
 		eloop.term_signal.handler(eloop.term_signal.sig,
-					  eloop.user_data,
 					  eloop.term_signal.user_data);
 	}
 }

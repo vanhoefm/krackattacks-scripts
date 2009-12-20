@@ -843,7 +843,8 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 }
 
 
-static int tls_connection_verify_peer(struct tls_connection *conn)
+static int tls_connection_verify_peer(struct tls_connection *conn,
+				      gnutls_alert_description_t *err)
 {
 	unsigned int status, num_certs, i;
 	struct os_time now;
@@ -853,22 +854,39 @@ static int tls_connection_verify_peer(struct tls_connection *conn)
 	if (gnutls_certificate_verify_peers2(conn->session, &status) < 0) {
 		wpa_printf(MSG_INFO, "TLS: Failed to verify peer "
 			   "certificate chain");
+		*err = GNUTLS_A_INTERNAL_ERROR;
 		return -1;
 	}
 
 	if (conn->verify_peer && (status & GNUTLS_CERT_INVALID)) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate not trusted");
+		if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
+			wpa_printf(MSG_INFO, "TLS: Certificate uses insecure "
+				   "algorithm");
+			*err = GNUTLS_A_INSUFFICIENT_SECURITY;
+		}
+		if (status & GNUTLS_CERT_NOT_ACTIVATED) {
+			wpa_printf(MSG_INFO, "TLS: Certificate not yet "
+				   "activated");
+			*err = GNUTLS_A_CERTIFICATE_EXPIRED;
+		}
+		if (status & GNUTLS_CERT_EXPIRED) {
+			wpa_printf(MSG_INFO, "TLS: Certificate expired");
+			*err = GNUTLS_A_CERTIFICATE_EXPIRED;
+		}
 		return -1;
 	}
 
 	if (status & GNUTLS_CERT_SIGNER_NOT_FOUND) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate does not have a "
 			   "known issuer");
+		*err = GNUTLS_A_UNKNOWN_CA;
 		return -1;
 	}
 
 	if (status & GNUTLS_CERT_REVOKED) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate has been revoked");
+		*err = GNUTLS_A_CERTIFICATE_REVOKED;
 		return -1;
 	}
 
@@ -878,6 +896,7 @@ static int tls_connection_verify_peer(struct tls_connection *conn)
 	if (certs == NULL) {
 		wpa_printf(MSG_INFO, "TLS: No peer certificate chain "
 			   "received");
+		*err = GNUTLS_A_UNKNOWN_CA;
 		return -1;
 	}
 
@@ -887,6 +906,7 @@ static int tls_connection_verify_peer(struct tls_connection *conn)
 		if (gnutls_x509_crt_init(&cert) < 0) {
 			wpa_printf(MSG_INFO, "TLS: Certificate initialization "
 				   "failed");
+			*err = GNUTLS_A_BAD_CERTIFICATE;
 			return -1;
 		}
 
@@ -895,6 +915,7 @@ static int tls_connection_verify_peer(struct tls_connection *conn)
 			wpa_printf(MSG_INFO, "TLS: Could not parse peer "
 				   "certificate %d/%d", i + 1, num_certs);
 			gnutls_x509_crt_deinit(cert);
+			*err = GNUTLS_A_BAD_CERTIFICATE;
 			return -1;
 		}
 
@@ -920,6 +941,7 @@ static int tls_connection_verify_peer(struct tls_connection *conn)
 				   "not valid at this time",
 				   i + 1, num_certs);
 			gnutls_x509_crt_deinit(cert);
+			*err = GNUTLS_A_CERTIFICATE_EXPIRED;
 			return -1;
 		}
 
@@ -979,12 +1001,15 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 		}
 	} else {
 		size_t size;
+		gnutls_alert_description_t err;
 
-		if (conn->verify_peer && tls_connection_verify_peer(conn)) {
+		if (conn->verify_peer &&
+		    tls_connection_verify_peer(conn, &err)) {
 			wpa_printf(MSG_INFO, "TLS: Peer certificate chain "
 				   "failed validation");
 			conn->failed++;
-			return NULL;
+			gnutls_alert_send(conn->session, GNUTLS_AL_FATAL, err);
+			goto out;
 		}
 
 #ifdef CONFIG_GNUTLS_EXTRA
@@ -1021,6 +1046,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 		}
 	}
 
+out:
 	out_data = conn->push_buf;
 	conn->push_buf = NULL;
 	return out_data;

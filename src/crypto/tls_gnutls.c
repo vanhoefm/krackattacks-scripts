@@ -1271,7 +1271,7 @@ int tls_get_cipher(void *ssl_ctx, struct tls_connection *conn,
 int tls_connection_enable_workaround(void *ssl_ctx,
 				     struct tls_connection *conn)
 {
-	/* TODO: set SSL_OP_DONT_INSERT_EMPTY_FRAGMENTS */
+	gnutls_record_disable_padding(conn->session);
 	return 0;
 }
 

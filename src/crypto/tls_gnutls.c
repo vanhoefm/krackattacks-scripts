@@ -1336,16 +1336,15 @@ int tls_connection_set_ia(void *tls_ctx, struct tls_connection *conn,
 }
 
 
-int tls_connection_ia_send_phase_finished(void *tls_ctx,
-					  struct tls_connection *conn,
-					  int final,
-					  u8 *out_data, size_t out_len)
+struct wpabuf * tls_connection_ia_send_phase_finished(
+	void *tls_ctx, struct tls_connection *conn, int final)
 {
 #ifdef GNUTLS_IA
 	int ret;
+	struct wpabuf *buf;
 
 	if (conn == NULL || conn->session == NULL || !conn->tls_ia)
-		return -1;
+		return NULL;
 
 	ret = gnutls_ia_permute_inner_secret(conn->session,
 					     conn->session_keys_len,
@@ -1359,26 +1358,21 @@ int tls_connection_ia_send_phase_finished(void *tls_ctx,
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to permute inner secret: %s",
 			   __func__, gnutls_strerror(ret));
-		return -1;
+		return NULL;
 	}
 
 	ret = gnutls_ia_endphase_send(conn->session, final);
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "%s: Failed to send endphase: %s",
 			   __func__, gnutls_strerror(ret));
-		return -1;
+		return NULL;
 	}
 
-	if (conn->push_buf == NULL)
-		return -1;
-	if (wpabuf_len(conn->push_buf) < out_len)
-		out_len = wpabuf_len(conn->push_buf);
-	os_memcpy(out_data, wpabuf_head(conn->push_buf), out_len);
-	wpabuf_free(conn->push_buf);
+	buf = conn->push_buf;
 	conn->push_buf = NULL;
-	return out_len;
+	return buf;
 #else /* GNUTLS_IA */
-	return -1;
+	return NULL;
 #endif /* GNUTLS_IA */
 }
 

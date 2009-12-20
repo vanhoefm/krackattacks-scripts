@@ -649,12 +649,10 @@ unsigned int tls_capabilities(void *tls_ctx)
 }
 
 
-int tls_connection_ia_send_phase_finished(void *tls_ctx,
-					  struct tls_connection *conn,
-					  int final,
-					  u8 *out_data, size_t out_len)
+struct wpabuf * tls_connection_ia_send_phase_finished(
+	void *tls_ctx, struct tls_connection *conn, int final)
 {
-	return -1;
+	return NULL;
 }
 
 

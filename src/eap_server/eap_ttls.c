@@ -519,25 +519,8 @@ static struct wpabuf * eap_ttls_build_phase2_mschapv2(
 static struct wpabuf * eap_ttls_build_phase_finished(
 	struct eap_sm *sm, struct eap_ttls_data *data, int final)
 {
-	int len;
-	struct wpabuf *req;
-	const int max_len = 300;
-
-	req = wpabuf_alloc(max_len);
-	if (req == NULL)
-		return NULL;
-
-	len = tls_connection_ia_send_phase_finished(sm->ssl_ctx,
-						    data->ssl.conn, final,
-						    wpabuf_mhead(req),
-						    max_len);
-	if (len < 0) {
-		wpabuf_free(req);
-		return NULL;
-	}
-	wpabuf_put(req, len);
-
-	return req;
+	return tls_connection_ia_send_phase_finished(sm->ssl_ctx,
+						     data->ssl.conn, final);
 }
 
 

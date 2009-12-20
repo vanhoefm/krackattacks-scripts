@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "crypto/ms_funcs.h"
+#include "crypto/sha1.h"
 #include "crypto/tls.h"
 #include "eap_common/chap.h"
 #include "eap_common/eap_ttls.h"
@@ -1030,27 +1031,25 @@ static int eap_ttls_phase2_request(struct eap_sm *sm,
 static struct wpabuf * eap_ttls_build_phase_finished(
 	struct eap_sm *sm, struct eap_ttls_data *data, int id, int final)
 {
-	int len;
-	struct wpabuf *req;
-	u8 *pos;
-	const int max_len = 300;
+	struct wpabuf *req, *buf;
 
-	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TTLS, 1 + max_len,
-			    EAP_CODE_RESPONSE, id);
-	if (req == NULL)
+	buf = tls_connection_ia_send_phase_finished(sm->ssl_ctx,
+						    data->ssl.conn,
+						    final);
+	if (buf == NULL)
 		return NULL;
 
-	wpabuf_put_u8(req, data->ttls_version);
-
-	pos = wpabuf_put(req, 0);
-	len = tls_connection_ia_send_phase_finished(sm->ssl_ctx,
-						    data->ssl.conn,
-						    final, pos, max_len);
-	if (len < 0) {
-		wpabuf_free(req);
+	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TTLS,
+			    1 + wpabuf_len(buf),
+			    EAP_CODE_RESPONSE, id);
+	if (req == NULL) {
+		wpabuf_free(buf);
 		return NULL;
 	}
-	wpabuf_put(req, len);
+
+	wpabuf_put_u8(req, data->ttls_version);
+	wpabuf_put_buf(req, buf);
+	wpabuf_free(buf);
 	eap_update_len(req);
 
 	return req;

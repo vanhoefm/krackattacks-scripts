@@ -484,16 +484,13 @@ unsigned int tls_capabilities(void *tls_ctx);
  * @tls_ctx: TLS context data from tls_init()
  * @conn: Connection context data from tls_connection_init()
  * @final: 1 = FinalPhaseFinished, 0 = IntermediatePhaseFinished
- * @out_data: Pointer to output buffer (encrypted TLS/IA data)
- * @out_len: Maximum out_data length 
- * Returns: Number of bytes written to out_data on success, -1 on failure
+ * Returns: Encrypted TLS/IA data, %NULL on failure
  *
  * This function is used to send the TLS/IA end phase message, e.g., when the
  * EAP server completes EAP-TTLSv1.
  */
-int __must_check tls_connection_ia_send_phase_finished(
-	void *tls_ctx, struct tls_connection *conn, int final,
-	u8 *out_data, size_t out_len);
+struct wpabuf * tls_connection_ia_send_phase_finished(
+	void *tls_ctx, struct tls_connection *conn, int final);
 
 /**
  * tls_connection_ia_final_phase_finished - Has final phase been completed

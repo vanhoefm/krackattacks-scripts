@@ -17,7 +17,7 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "ctrl_iface_dbus_new_helpers.h"
+#include "dbus_new_helpers.h"
 
 /**
  * struct wpa_dbus_method_desc - DBus method description

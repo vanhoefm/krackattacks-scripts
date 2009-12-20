@@ -19,9 +19,9 @@
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../wps_supplicant.h"
-#include "ctrl_iface_dbus_new_helpers.h"
-#include "ctrl_iface_dbus_new.h"
-#include "ctrl_iface_dbus_new_handlers.h"
+#include "dbus_new_helpers.h"
+#include "dbus_new.h"
+#include "dbus_new_handlers.h"
 #include "dbus_dict_helpers.h"
 
 /**

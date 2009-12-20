@@ -1028,7 +1028,7 @@ endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
-DBUS_OBJS += dbus/ctrl_iface_dbus.o dbus/ctrl_iface_dbus_handlers.o
+DBUS_OBJS += dbus/dbus.o dbus/dbus_handlers.o
 ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_handlers_wps.o
 endif
@@ -1056,8 +1056,8 @@ endif
 ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_NEW
 DBUS_OBJS ?= dbus/dbus_dict_helpers.o
-DBUS_OBJS += dbus/ctrl_iface_dbus_new_helpers.o
-DBUS_OBJS += dbus/ctrl_iface_dbus_new.o dbus/ctrl_iface_dbus_new_handlers.o
+DBUS_OBJS += dbus/dbus_new_helpers.o
+DBUS_OBJS += dbus/dbus_new.o dbus/dbus_new_handlers.o
 ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_new_handlers_wps.o
 endif

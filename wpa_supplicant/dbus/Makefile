@@ -64,11 +64,11 @@ DBUS_INCLUDE += -DDBUS_VERSION_MINOR=$(DBUS_VERSION_MINOR)
 CFLAGS += $(DBUS_INCLUDE)
 
 LIB_OBJS= \
-	ctrl_iface_dbus.o \
-	ctrl_iface_dbus_handlers.o \
-	ctrl_iface_dbus_new.o \
-	ctrl_iface_dbus_new_handlers.o \
-	ctrl_iface_dbus_new_helpers.o \
+	dbus.o \
+	dbus_handlers.o \
+	dbus_new.o \
+	dbus_new_handlers.o \
+	dbus_new_helpers.o \
 	dbus_dict_helpers.o
 
 ifdef CONFIG_WPS

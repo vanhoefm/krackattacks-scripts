@@ -16,14 +16,14 @@
 #include "includes.h"
 
 #include "common.h"
-#include "../config.h"
-#include "../wpa_supplicant_i.h"
 #include "drivers/driver.h"
 #include "wps/wps.h"
-#include "ctrl_iface_dbus_new_helpers.h"
+#include "../config.h"
+#include "../wpa_supplicant_i.h"
+#include "dbus_new_helpers.h"
 #include "dbus_dict_helpers.h"
-#include "ctrl_iface_dbus_new.h"
-#include "ctrl_iface_dbus_new_handlers.h"
+#include "dbus_new.h"
+#include "dbus_new_handlers.h"
 
 /**
  * wpas_dbus_set_path - Assign a dbus path to an interface

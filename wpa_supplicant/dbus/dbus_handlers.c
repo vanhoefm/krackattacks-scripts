@@ -15,18 +15,18 @@
 #include "includes.h"
 
 #include "common.h"
+#include "eap_peer/eap_methods.h"
+#include "common/ieee802_11_defs.h"
+#include "eapol_supp/eapol_supp_sm.h"
+#include "rsn_supp/wpa.h"
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../driver_i.h"
-#include "ctrl_iface_dbus.h"
-#include "ctrl_iface_dbus_handlers.h"
 #include "../notify.h"
-#include "eap_peer/eap_methods.h"
-#include "dbus_dict_helpers.h"
-#include "common/ieee802_11_defs.h"
 #include "../wpas_glue.h"
-#include "eapol_supp/eapol_supp_sm.h"
-#include "rsn_supp/wpa.h"
+#include "dbus.h"
+#include "dbus_handlers.h"
+#include "dbus_dict_helpers.h"
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;

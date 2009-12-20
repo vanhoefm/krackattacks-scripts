@@ -16,12 +16,12 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "../config.h"
-#include "../wpa_supplicant_i.h"
 #include "drivers/driver.h"
 #include "wps/wps.h"
-#include "ctrl_iface_dbus.h"
-#include "ctrl_iface_dbus_handlers.h"
+#include "../config.h"
+#include "../wpa_supplicant_i.h"
+#include "dbus.h"
+#include "dbus_handlers.h"
 
 #define _DBUS_VERSION (DBUS_VERSION_MAJOR << 8 | DBUS_VERSION_MINOR)
 #define DBUS_VER(major, minor) ((major) << 8 | (minor))

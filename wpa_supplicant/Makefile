@@ -1336,6 +1336,7 @@ tests: test-eap_sim_common
 
 clean:
 	$(MAKE) -C ../src clean
+	$(MAKE) -C dbus clean
 	rm -f core *~ *.o *.d eap_*.so $(ALL) $(WINALL) eapol_test preauth_test
 	rm -f wpa_priv
 

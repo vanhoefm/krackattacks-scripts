@@ -456,32 +456,33 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 }
 
 
-u8 * tls_connection_handshake(void *tls_ctx, struct tls_connection *conn,
-			      const u8 *in_data, size_t in_len,
-			      size_t *out_len, u8 **appl_data,
-			      size_t *appl_data_len)
+struct wpabuf * tls_connection_handshake(void *tls_ctx,
+					 struct tls_connection *conn,
+					 const struct wpabuf *in_data,
+					 struct wpabuf **appl_data)
 {
-	u8 *out_data;
+	struct wpabuf *out_data;
 
 	wpa_printf(MSG_DEBUG, "NSS: handshake: in_len=%u",
-		   (unsigned int) in_len);
+		   in_data ? (unsigned int) wpabuf_len(in_data) : 0);
 
 	if (appl_data)
 		*appl_data = NULL;
 
-	if (in_data && in_len) {
+	if (in_data && wpabuf_len(in_data) > 0) {
 		if (conn->pull_buf) {
 			wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in "
 				   "pull_buf", __func__,
 				   (unsigned long) conn->pull_buf_len);
 			os_free(conn->pull_buf);
 		}
-		conn->pull_buf = os_malloc(in_len);
+		conn->pull_buf = os_malloc(wpabuf_len(in_data));
 		if (conn->pull_buf == NULL)
 			return NULL;
-		os_memcpy(conn->pull_buf, in_data, in_len);
+		os_memcpy(conn->pull_buf, wpabuf_head(in_data),
+			  wpabuf_len(in_data));
 		conn->pull_buf_offset = conn->pull_buf;
-		conn->pull_buf_len = in_len;
+		conn->pull_buf_len = wpabuf_len(in_data);
 	}
 
 	SSL_ForceHandshake(conn->fd);
@@ -491,79 +492,93 @@ u8 * tls_connection_handshake(void *tls_ctx, struct tls_connection *conn,
 		conn->push_buf = os_malloc(1);
 	}
 
-	out_data = conn->push_buf;
-	*out_len = conn->push_buf_len;
+	if (conn->push_buf == NULL)
+		return NULL;
+	out_data = wpabuf_alloc_ext_data(conn->push_buf, conn->push_buf_len);
+	if (out_data == NULL)
+		os_free(conn->push_buf);
 	conn->push_buf = NULL;
 	conn->push_buf_len = 0;
 	return out_data;
 }
 
 
-u8 * tls_connection_server_handshake(void *tls_ctx,
-				     struct tls_connection *conn,
-				     const u8 *in_data, size_t in_len,
-				     size_t *out_len)
+struct wpabuf * tls_connection_server_handshake(void *tls_ctx,
+						struct tls_connection *conn,
+						const struct wpabuf *in_data,
+						struct wpabuf **appl_data)
 {
 	return NULL;
 }
 
 
-int tls_connection_encrypt(void *tls_ctx, struct tls_connection *conn,
-			   const u8 *in_data, size_t in_len,
-			   u8 *out_data, size_t out_len)
+struct wpabuf * tls_connection_encrypt(void *tls_ctx,
+				       struct tls_connection *conn,
+				       const struct wpabuf *in_data)
 {
 	PRInt32 res;
+	struct wpabuf *buf;
 
-	wpa_printf(MSG_DEBUG, "NSS: encrypt %d bytes", (int) in_len);
-	res = PR_Send(conn->fd, in_data, in_len, 0, 0);
+	wpa_printf(MSG_DEBUG, "NSS: encrypt %d bytes",
+		   (int) wpabuf_len(in_data));
+	res = PR_Send(conn->fd, wpabuf_head(in_data), wpabuf_len(in_data), 0,
+		      0);
 	if (res < 0) {
 		wpa_printf(MSG_ERROR, "NSS: Encryption failed");
-		return -1;
+		return NULL;
 	}
 	if (conn->push_buf == NULL)
-		return -1;
-	if (conn->push_buf_len < out_len)
-		out_len = conn->push_buf_len;
-	else if (conn->push_buf_len > out_len) {
-		wpa_printf(MSG_INFO, "NSS: Not enough buffer space for "
-			   "encrypted message (in_len=%lu push_buf_len=%lu "
-			   "out_len=%lu",
-			   (unsigned long) in_len,
-			   (unsigned long) conn->push_buf_len,
-			   (unsigned long) out_len);
-	}
-	os_memcpy(out_data, conn->push_buf, out_len);
-	os_free(conn->push_buf);
+		return NULL;
+	buf = wpabuf_alloc_ext_data(conn->push_buf, conn->push_buf_len);
+	if (buf == NULL)
+		os_free(conn->push_buf);
 	conn->push_buf = NULL;
 	conn->push_buf_len = 0;
-	return out_len;
+	return buf;
 }
 
 
-int tls_connection_decrypt(void *tls_ctx, struct tls_connection *conn,
-			   const u8 *in_data, size_t in_len,
-			   u8 *out_data, size_t out_len)
+struct wpabuf * tls_connection_decrypt(void *tls_ctx,
+				       struct tls_connection *conn,
+				       const struct wpabuf *in_data)
 {
 	PRInt32 res;
+	struct wpabuf *out;
 
-	wpa_printf(MSG_DEBUG, "NSS: decrypt %d bytes", (int) in_len);
+	wpa_printf(MSG_DEBUG, "NSS: decrypt %d bytes",
+		   (int) wpabuf_len(in_data));
 	if (conn->pull_buf) {
 		wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in "
 			   "pull_buf", __func__,
 			   (unsigned long) conn->pull_buf_len);
 		os_free(conn->pull_buf);
 	}
-	conn->pull_buf = os_malloc(in_len);
+	conn->pull_buf = os_malloc(wpabuf_len(in_data));
 	if (conn->pull_buf == NULL)
-		return -1;
-	os_memcpy(conn->pull_buf, in_data, in_len);
+		return NULL;
+	os_memcpy(conn->pull_buf, wpabuf_head(in_data), wpabuf_len(in_data));
 	conn->pull_buf_offset = conn->pull_buf;
-	conn->pull_buf_len = in_len;
+	conn->pull_buf_len = wpabuf_len(in_data);
 
-	res = PR_Recv(conn->fd, out_data, out_len, 0, 0);
+	/*
+	 * Even though we try to disable TLS compression, it is possible that
+	 * this cannot be done with all TLS libraries. Add extra buffer space
+	 * to handle the possibility of the decrypted data being longer than
+	 * input data.
+	 */
+	out = wpabuf_alloc((wpabuf_len(in_data) + 500) * 3);
+	if (out == NULL)
+		return NULL;
+
+	res = PR_Recv(conn->fd, wpabuf_mhead(out), wpabuf_size(out), 0, 0);
 	wpa_printf(MSG_DEBUG, "NSS: PR_Recv: %d", res);
+	if (res < 0) {
+		wpabuf_free(out);
+		return NULL;
+	}
+	wpabuf_put(out, res);
 
-	return res;
+	return out;
 }
 
 

@@ -1,6 +1,6 @@
 /*
- * hostapd / EAP-TLS/PEAP/TTLS/FAST common functions
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * EAP-TLS/PEAP/TTLS/FAST server common functions
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -239,30 +239,22 @@ static int eap_server_tls_process_fragment(struct eap_ssl_data *data,
 
 int eap_server_tls_phase1(struct eap_sm *sm, struct eap_ssl_data *data)
 {
-	u8 *next;
-	size_t next_len;
-
-	next = tls_connection_server_handshake(
-		sm->ssl_ctx, data->conn,
-		wpabuf_mhead(data->in_buf),
-		wpabuf_len(data->in_buf),
-		&next_len);
-	if (next == NULL) {
-		wpa_printf(MSG_INFO, "SSL: TLS processing failed");
-		return -1;
-	}
 	if (data->out_buf) {
 		/* This should not happen.. */
 		wpa_printf(MSG_INFO, "SSL: pending tls_out data when "
 			   "processing new message");
-		os_free(data->out_buf);
+		wpabuf_free(data->out_buf);
 		WPA_ASSERT(data->out_buf == NULL);
 	}
-	data->out_buf = wpabuf_alloc_ext_data(next, next_len);
+
+	data->out_buf = tls_connection_server_handshake(sm->ssl_ctx,
+							data->conn,
+							data->in_buf, NULL);
 	if (data->out_buf == NULL) {
-		os_free(next);
+		wpa_printf(MSG_INFO, "SSL: TLS processing failed");
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -337,27 +329,16 @@ static void eap_server_tls_free_in_buf(struct eap_ssl_data *data)
 
 struct wpabuf * eap_server_tls_encrypt(struct eap_sm *sm,
 				       struct eap_ssl_data *data,
-				       const u8 *plain, size_t plain_len)
+				       const struct wpabuf *plain)
 {
-	int res;
 	struct wpabuf *buf;
-	size_t buf_len;
 
-	/* reserve some extra room for encryption overhead */
-	buf_len = plain_len + 300;
-	buf = wpabuf_alloc(buf_len);
-	if (buf == NULL)
-		return NULL;
-	res = tls_connection_encrypt(sm->ssl_ctx, data->conn,
-				     plain, plain_len, wpabuf_put(buf, 0),
-				     buf_len);
-	if (res < 0) {
+	buf = tls_connection_encrypt(sm->ssl_ctx, data->conn,
+				     plain);
+	if (buf == NULL) {
 		wpa_printf(MSG_INFO, "SSL: Failed to encrypt Phase 2 data");
-		wpabuf_free(buf);
 		return NULL;
 	}
-
-	wpabuf_put(buf, res);
 
 	return buf;
 }

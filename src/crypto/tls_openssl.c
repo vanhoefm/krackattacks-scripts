@@ -1,5 +1,5 @@
 /*
- * WPA Supplicant / SSL/TLS interface functions for openssl
+ * SSL/TLS interface functions for OpenSSL
  * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -1990,30 +1990,30 @@ int tls_connection_prf(void *tls_ctx, struct tls_connection *conn,
 }
 
 
-u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
-			      const u8 *in_data, size_t in_len,
-			      size_t *out_len, u8 **appl_data,
-			      size_t *appl_data_len)
+static struct wpabuf *
+openssl_handshake(struct tls_connection *conn, const struct wpabuf *in_data,
+		  int server)
 {
 	int res;
-	u8 *out_data;
-
-	if (appl_data)
-		*appl_data = NULL;
+	struct wpabuf *out_data;
 
 	/*
 	 * Give TLS handshake data from the server (if available) to OpenSSL
 	 * for processing.
 	 */
 	if (in_data &&
-	    BIO_write(conn->ssl_in, in_data, in_len) < 0) {
+	    BIO_write(conn->ssl_in, wpabuf_head(in_data), wpabuf_len(in_data))
+	    < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Handshake failed - BIO_write");
 		return NULL;
 	}
 
 	/* Initiate TLS handshake or continue the existing handshake */
-	res = SSL_connect(conn->ssl);
+	if (server)
+		res = SSL_accept(conn->ssl);
+	else
+		res = SSL_connect(conn->ssl);
 	if (res != 1) {
 		int err = SSL_get_error(conn->ssl, res);
 		if (err == SSL_ERROR_WANT_READ)
@@ -2031,7 +2031,7 @@ u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
 	/* Get the TLS handshake data to be sent to the server */
 	res = BIO_ctrl_pending(conn->ssl_out);
 	wpa_printf(MSG_DEBUG, "SSL: %d bytes pending from ssl_out", res);
-	out_data = os_malloc(res == 0 ? 1 : res);
+	out_data = wpabuf_alloc(res);
 	if (out_data == NULL) {
 		wpa_printf(MSG_DEBUG, "SSL: Failed to allocate memory for "
 			   "handshake output (%d bytes)", res);
@@ -2039,10 +2039,10 @@ u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
 			tls_show_errors(MSG_INFO, __func__,
 					"BIO_reset failed");
 		}
-		*out_len = 0;
 		return NULL;
 	}
-	res = res == 0 ? 0 : BIO_read(conn->ssl_out, out_data, res);
+	res = res == 0 ? 0 : BIO_read(conn->ssl_out, wpabuf_mhead(out_data),
+				      res);
 	if (res < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Handshake failed - BIO_read");
@@ -2050,169 +2050,168 @@ u8 * tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
 			tls_show_errors(MSG_INFO, __func__,
 					"BIO_reset failed");
 		}
-		*out_len = 0;
+		wpabuf_free(out_data);
 		return NULL;
 	}
-	*out_len = res;
-
-	if (SSL_is_init_finished(conn->ssl) && appl_data) {
-		*appl_data = os_malloc(in_len);
-		if (*appl_data) {
-			res = SSL_read(conn->ssl, *appl_data, in_len);
-			if (res < 0) {
-				int err = SSL_get_error(conn->ssl, res);
-				if (err == SSL_ERROR_WANT_READ ||
-				    err == SSL_ERROR_WANT_WRITE) {
-					wpa_printf(MSG_DEBUG,
-						   "SSL: No Application Data "
-						   "included");
-				} else {
-					tls_show_errors(MSG_INFO, __func__,
-							"Failed to read "
-							"possible "
-							"Application Data");
-				}
-				os_free(*appl_data);
-				*appl_data = NULL;
-			} else {
-				*appl_data_len = res;
-				wpa_hexdump_key(MSG_MSGDUMP, "SSL: Application"
-						" Data in Finish message",
-						*appl_data, *appl_data_len);
-			}
-		}
-	}
+	wpabuf_put(out_data, res);
 
 	return out_data;
 }
 
 
-u8 * tls_connection_server_handshake(void *ssl_ctx,
-				     struct tls_connection *conn,
-				     const u8 *in_data, size_t in_len,
-				     size_t *out_len)
+static struct wpabuf *
+openssl_get_appl_data(struct tls_connection *conn, size_t max_len)
 {
+	struct wpabuf *appl_data;
 	int res;
-	u8 *out_data;
 
-	/*
-	 * Give TLS handshake data from the client (if available) to OpenSSL
-	 * for processing.
-	 */
-	if (in_data &&
-	    BIO_write(conn->ssl_in, in_data, in_len) < 0) {
-		tls_show_errors(MSG_INFO, __func__,
-				"Handshake failed - BIO_write");
+	appl_data = wpabuf_alloc(max_len + 100);
+	if (appl_data == NULL)
 		return NULL;
-	}
 
-	/* Initiate TLS handshake or continue the existing handshake */
-	res = SSL_accept(conn->ssl);
-	if (res != 1) {
+	res = SSL_read(conn->ssl, wpabuf_mhead(appl_data),
+		       wpabuf_size(appl_data));
+	if (res < 0) {
 		int err = SSL_get_error(conn->ssl, res);
-		if (err == SSL_ERROR_WANT_READ)
-			wpa_printf(MSG_DEBUG, "SSL: SSL_accept - want "
-				   "more data");
-		else if (err == SSL_ERROR_WANT_WRITE)
-			wpa_printf(MSG_DEBUG, "SSL: SSL_accept - want to "
-				   "write");
-		else {
-			tls_show_errors(MSG_INFO, __func__, "SSL_accept");
-			return NULL;
+		if (err == SSL_ERROR_WANT_READ ||
+		    err == SSL_ERROR_WANT_WRITE) {
+			wpa_printf(MSG_DEBUG, "SSL: No Application Data "
+				   "included");
+		} else {
+			tls_show_errors(MSG_INFO, __func__,
+					"Failed to read possible "
+					"Application Data");
 		}
+		wpabuf_free(appl_data);
+		return NULL;
 	}
 
-	/* Get the TLS handshake data to be sent to the client */
-	res = BIO_ctrl_pending(conn->ssl_out);
-	wpa_printf(MSG_DEBUG, "SSL: %d bytes pending from ssl_out", res);
-	out_data = os_malloc(res == 0 ? 1 : res);
-	if (out_data == NULL) {
-		wpa_printf(MSG_DEBUG, "SSL: Failed to allocate memory for "
-			   "handshake output (%d bytes)", res);
-		if (BIO_reset(conn->ssl_out) < 0) {
-			tls_show_errors(MSG_INFO, __func__,
-					"BIO_reset failed");
-		}
-		*out_len = 0;
+	wpabuf_put(appl_data, res);
+	wpa_hexdump_buf_key(MSG_MSGDUMP, "SSL: Application Data in Finished "
+			    "message", appl_data);
+
+	return appl_data;
+}
+
+
+static struct wpabuf *
+openssl_connection_handshake(struct tls_connection *conn,
+			     const struct wpabuf *in_data,
+			     struct wpabuf **appl_data, int server)
+{
+	struct wpabuf *out_data;
+
+	if (appl_data)
+		*appl_data = NULL;
+
+	out_data = openssl_handshake(conn, in_data, server);
+	if (out_data == NULL)
 		return NULL;
-	}
-	res = res == 0 ? 0 : BIO_read(conn->ssl_out, out_data, res);
-	if (res < 0) {
-		tls_show_errors(MSG_INFO, __func__,
-				"Handshake failed - BIO_read");
-		if (BIO_reset(conn->ssl_out) < 0) {
-			tls_show_errors(MSG_INFO, __func__,
-					"BIO_reset failed");
-		}
-		*out_len = 0;
-		return NULL;
-	}
-	*out_len = res;
+
+	if (SSL_is_init_finished(conn->ssl) && appl_data && in_data)
+		*appl_data = openssl_get_appl_data(conn, wpabuf_len(in_data));
+
 	return out_data;
 }
 
 
-int tls_connection_encrypt(void *ssl_ctx, struct tls_connection *conn,
-			   const u8 *in_data, size_t in_len,
-			   u8 *out_data, size_t out_len)
+struct wpabuf *
+tls_connection_handshake(void *ssl_ctx, struct tls_connection *conn,
+			 const struct wpabuf *in_data,
+			 struct wpabuf **appl_data)
+{
+	return openssl_connection_handshake(conn, in_data, appl_data, 0);
+}
+
+
+struct wpabuf * tls_connection_server_handshake(void *tls_ctx,
+						struct tls_connection *conn,
+						const struct wpabuf *in_data,
+						struct wpabuf **appl_data)
+{
+	return openssl_connection_handshake(conn, in_data, appl_data, 1);
+}
+
+
+struct wpabuf * tls_connection_encrypt(void *tls_ctx,
+				       struct tls_connection *conn,
+				       const struct wpabuf *in_data)
 {
 	int res;
+	struct wpabuf *buf;
 
 	if (conn == NULL)
-		return -1;
+		return NULL;
 
 	/* Give plaintext data for OpenSSL to encrypt into the TLS tunnel. */
 	if ((res = BIO_reset(conn->ssl_in)) < 0 ||
 	    (res = BIO_reset(conn->ssl_out)) < 0) {
 		tls_show_errors(MSG_INFO, __func__, "BIO_reset failed");
-		return res;
+		return NULL;
 	}
-	res = SSL_write(conn->ssl, in_data, in_len);
+	res = SSL_write(conn->ssl, wpabuf_head(in_data), wpabuf_len(in_data));
 	if (res < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Encryption failed - SSL_write");
-		return res;
+		return NULL;
 	}
 
 	/* Read encrypted data to be sent to the server */
-	res = BIO_read(conn->ssl_out, out_data, out_len);
+	buf = wpabuf_alloc(wpabuf_len(in_data) + 300);
+	if (buf == NULL)
+		return NULL;
+	res = BIO_read(conn->ssl_out, wpabuf_mhead(buf), wpabuf_size(buf));
 	if (res < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Encryption failed - BIO_read");
-		return res;
+		wpabuf_free(buf);
+		return NULL;
 	}
+	wpabuf_put(buf, res);
 
-	return res;
+	return buf;
 }
 
 
-int tls_connection_decrypt(void *ssl_ctx, struct tls_connection *conn,
-			   const u8 *in_data, size_t in_len,
-			   u8 *out_data, size_t out_len)
+struct wpabuf * tls_connection_decrypt(void *tls_ctx,
+				       struct tls_connection *conn,
+				       const struct wpabuf *in_data)
 {
 	int res;
+	struct wpabuf *buf;
 
 	/* Give encrypted data from TLS tunnel for OpenSSL to decrypt. */
-	res = BIO_write(conn->ssl_in, in_data, in_len);
+	res = BIO_write(conn->ssl_in, wpabuf_head(in_data),
+			wpabuf_len(in_data));
 	if (res < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Decryption failed - BIO_write");
-		return res;
+		return NULL;
 	}
 	if (BIO_reset(conn->ssl_out) < 0) {
 		tls_show_errors(MSG_INFO, __func__, "BIO_reset failed");
-		return res;
+		return NULL;
 	}
 
 	/* Read decrypted data for further processing */
-	res = SSL_read(conn->ssl, out_data, out_len);
+	/*
+	 * Even though we try to disable TLS compression, it is possible that
+	 * this cannot be done with all TLS libraries. Add extra buffer space
+	 * to handle the possibility of the decrypted data being longer than
+	 * input data.
+	 */
+	buf = wpabuf_alloc((wpabuf_len(in_data) + 500) * 3);
+	if (buf == NULL)
+		return NULL;
+	res = SSL_read(conn->ssl, wpabuf_mhead(buf), wpabuf_size(buf));
 	if (res < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Decryption failed - SSL_read");
-		return res;
+		return NULL;
 	}
+	wpabuf_put(buf, res);
 
-	return res;
+	return buf;
 }
 
 

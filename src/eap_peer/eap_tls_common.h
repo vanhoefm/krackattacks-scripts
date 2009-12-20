@@ -1,6 +1,6 @@
 /*
  * EAP peer: EAP-TLS/PEAP/TTLS/FAST common functions
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -27,12 +27,7 @@ struct eap_ssl_data {
 	/**
 	 * tls_out - TLS message to be sent out in fragments
 	 */
-	u8 *tls_out;
-
-	/**
-	 * tls_out_len - Total length of the outgoing TLS message
-	 */
-	size_t tls_out_len;
+	struct wpabuf *tls_out;
 
 	/**
 	 * tls_out_pos - The current position in the outgoing TLS message
@@ -47,12 +42,7 @@ struct eap_ssl_data {
 	/**
 	 * tls_in - Received TLS message buffer for re-assembly
 	 */
-	u8 *tls_in;
-
-	/**
-	 * tls_in_len - Number of bytes of the received TLS message in tls_in
-	 */
-	size_t tls_in_len;
+	struct wpabuf *tls_in;
 
 	/**
 	 * tls_in_left - Number of remaining bytes in the incoming TLS message
@@ -102,9 +92,6 @@ int eap_peer_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 void eap_peer_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data);
 u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 			     const char *label, size_t len);
-const u8 * eap_peer_tls_data_reassemble(
-	struct eap_ssl_data *data, const u8 *in_data, size_t in_len,
-	size_t *out_len, int *need_more_input);
 int eap_peer_tls_process_helper(struct eap_sm *sm, struct eap_ssl_data *data,
 				EapType eap_type, int peap_version,
 				u8 id, const u8 *in_data, size_t in_len,

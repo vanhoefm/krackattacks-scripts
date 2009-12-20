@@ -816,8 +816,7 @@ static int eap_fast_encrypt_phase2(struct eap_sm *sm,
 
 	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-FAST: Encrypting Phase 2 TLVs",
 			    plain);
-	encr = eap_server_tls_encrypt(sm, &data->ssl, wpabuf_mhead(plain),
-				      wpabuf_len(plain));
+	encr = eap_server_tls_encrypt(sm, &data->ssl, plain);
 	wpabuf_free(plain);
 
 	if (data->ssl.out_buf && piggyback) {
@@ -1121,7 +1120,7 @@ static void eap_fast_process_phase2_eap(struct eap_sm *sm,
 }
 
 
-static int eap_fast_parse_tlvs(u8 *data, size_t data_len,
+static int eap_fast_parse_tlvs(struct wpabuf *data,
 			       struct eap_fast_tlv_parse *tlv)
 {
 	int mandatory, tlv_type, len, res;
@@ -1129,8 +1128,8 @@ static int eap_fast_parse_tlvs(u8 *data, size_t data_len,
 
 	os_memset(tlv, 0, sizeof(*tlv));
 
-	pos = data;
-	end = data + data_len;
+	pos = wpabuf_mhead(data);
+	end = pos + wpabuf_len(data);
 	while (pos + 4 < end) {
 		mandatory = pos[0] & 0x80;
 		tlv_type = WPA_GET_BE16(pos) & 0x3fff;
@@ -1241,12 +1240,12 @@ static int eap_fast_pac_type(u8 *pac, size_t len, u16 type)
 
 static void eap_fast_process_phase2_tlvs(struct eap_sm *sm,
 					 struct eap_fast_data *data,
-					 u8 *in_data, size_t in_len)
+					 struct wpabuf *in_data)
 {
 	struct eap_fast_tlv_parse tlv;
 	int check_crypto_binding = data->state == CRYPTO_BINDING;
 
-	if (eap_fast_parse_tlvs(in_data, in_len, &tlv) < 0) {
+	if (eap_fast_parse_tlvs(in_data, &tlv) < 0) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Failed to parse received "
 			   "Phase 2 TLVs");
 		return;
@@ -1373,70 +1372,44 @@ static void eap_fast_process_phase2(struct eap_sm *sm,
 				    struct eap_fast_data *data,
 				    struct wpabuf *in_buf)
 {
-	u8 *in_decrypted;
-	int len_decrypted;
-	size_t buf_len;
-	u8 *in_data;
-	size_t in_len;
-
-	in_data = wpabuf_mhead(in_buf);
-	in_len = wpabuf_len(in_buf);
+	struct wpabuf *in_decrypted;
 
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Received %lu bytes encrypted data for"
-		   " Phase 2", (unsigned long) in_len);
+		   " Phase 2", (unsigned long) wpabuf_len(in_buf));
 
 	if (data->pending_phase2_resp) {
 		wpa_printf(MSG_DEBUG, "EAP-PEAP: Pending Phase 2 response - "
 			   "skip decryption and use old data");
-		eap_fast_process_phase2_tlvs(
-			sm, data, wpabuf_mhead(data->pending_phase2_resp),
-			wpabuf_len(data->pending_phase2_resp));
+		eap_fast_process_phase2_tlvs(sm, data,
+					     data->pending_phase2_resp);
 		wpabuf_free(data->pending_phase2_resp);
 		data->pending_phase2_resp = NULL;
 		return;
 	}
 
-	buf_len = in_len;
-	/*
-	 * Even though we try to disable TLS compression, it is possible that
-	 * this cannot be done with all TLS libraries. Add extra buffer space
-	 * to handle the possibility of the decrypted data being longer than
-	 * input data.
-	 */
-	buf_len += 500;
-	buf_len *= 3;
-	in_decrypted = os_malloc(buf_len);
+	in_decrypted = tls_connection_decrypt(sm->ssl_ctx, data->ssl.conn,
+					      in_buf);
 	if (in_decrypted == NULL) {
-		wpa_printf(MSG_WARNING, "EAP-FAST: Failed to allocate memory "
-			   "for decryption");
-		return;
-	}
-
-	len_decrypted = tls_connection_decrypt(sm->ssl_ctx, data->ssl.conn,
-					       in_data, in_len,
-					       in_decrypted, buf_len);
-	if (len_decrypted < 0) {
 		wpa_printf(MSG_INFO, "EAP-FAST: Failed to decrypt Phase 2 "
 			   "data");
-		os_free(in_decrypted);
 		eap_fast_state(data, FAILURE);
 		return;
 	}
 
-	wpa_hexdump_key(MSG_DEBUG, "EAP-FAST: Decrypted Phase 2 TLVs",
-			in_decrypted, len_decrypted);
+	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-FAST: Decrypted Phase 2 TLVs",
+			    in_decrypted);
 
-	eap_fast_process_phase2_tlvs(sm, data, in_decrypted, len_decrypted);
+	eap_fast_process_phase2_tlvs(sm, data, in_decrypted);
 
 	if (sm->method_pending == METHOD_PENDING_WAIT) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Phase2 method is in "
 			   "pending wait state - save decrypted response");
 		wpabuf_free(data->pending_phase2_resp);
-		data->pending_phase2_resp = wpabuf_alloc_copy(in_decrypted,
-							      len_decrypted);
+		data->pending_phase2_resp = in_decrypted;
+		return;
 	}
 
-	os_free(in_decrypted);
+	wpabuf_free(in_decrypted);
 }
 
 

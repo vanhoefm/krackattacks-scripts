@@ -163,14 +163,14 @@ struct eap_ttls_avp {
 };
 
 
-static int eap_ttls_avp_parse(u8 *buf, size_t len, struct eap_ttls_avp *parse)
+static int eap_ttls_avp_parse(struct wpabuf *buf, struct eap_ttls_avp *parse)
 {
 	struct ttls_avp *avp;
 	u8 *pos;
 	int left;
 
-	pos = buf;
-	left = len;
+	pos = wpabuf_mhead(buf);
+	left = wpabuf_len(buf);
 	os_memset(parse, 0, sizeof(*parse));
 
 	while (left > 0) {
@@ -449,8 +449,6 @@ static struct wpabuf * eap_ttls_build_phase2_eap_req(
 	struct eap_sm *sm, struct eap_ttls_data *data, u8 id)
 {
 	struct wpabuf *buf, *encr_req;
-	u8 *req;
-	size_t req_len;
 
 
 	buf = data->phase2_method->buildReq(sm, data->phase2_priv, id);
@@ -467,12 +465,10 @@ static struct wpabuf * eap_ttls_build_phase2_eap_req(
 		return NULL;
 	}
 
-	req = wpabuf_mhead(buf);
-	req_len = wpabuf_len(buf);
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS/EAP: Encrypt encapsulated Phase "
-			"2 data", req, req_len);
+	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-TTLS/EAP: Encrypt encapsulated "
+			    "Phase 2 data", buf);
 
-	encr_req = eap_server_tls_encrypt(sm, &data->ssl, req, req_len);
+	encr_req = eap_server_tls_encrypt(sm, &data->ssl, buf);
 	wpabuf_free(buf);
 
 	return encr_req;
@@ -482,10 +478,9 @@ static struct wpabuf * eap_ttls_build_phase2_eap_req(
 static struct wpabuf * eap_ttls_build_phase2_mschapv2(
 	struct eap_sm *sm, struct eap_ttls_data *data)
 {
-	struct wpabuf *encr_req;
+	struct wpabuf *encr_req, msgbuf;
 	u8 *req, *pos, *end;
 	int ret;
-	size_t req_len;
 
 	pos = req = os_malloc(100);
 	if (req == NULL)
@@ -510,11 +505,11 @@ static struct wpabuf * eap_ttls_build_phase2_mschapv2(
 		AVP_PAD(req, pos);
 	}
 
-	req_len = pos - req;
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Encrypting Phase 2 "
-			"data", req, req_len);
+	wpabuf_set(&msgbuf, req, pos - req);
+	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Encrypting Phase 2 "
+			    "data", &msgbuf);
 
-	encr_req = eap_server_tls_encrypt(sm, &data->ssl, req, req_len);
+	encr_req = eap_server_tls_encrypt(sm, &data->ssl, &msgbuf);
 	os_free(req);
 
 	return encr_req;
@@ -1126,18 +1121,11 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 				    struct eap_ttls_data *data,
 				    struct wpabuf *in_buf)
 {
-	u8 *in_decrypted;
-	int len_decrypted;
+	struct wpabuf *in_decrypted;
 	struct eap_ttls_avp parse;
-	size_t buf_len;
-	u8 *in_data;
-	size_t in_len;
-
-	in_data = wpabuf_mhead(in_buf);
-	in_len = wpabuf_len(in_buf);
 
 	wpa_printf(MSG_DEBUG, "EAP-TTLS: received %lu bytes encrypted data for"
-		   " Phase 2", (unsigned long) in_len);
+		   " Phase 2", (unsigned long) wpabuf_len(in_buf));
 
 	if (data->pending_phase2_eap_resp) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: Pending Phase 2 EAP response "
@@ -1150,35 +1138,17 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 		return;
 	}
 
-	buf_len = in_len;
-	/*
-	 * Even though we try to disable TLS compression, it is possible that
-	 * this cannot be done with all TLS libraries. Add extra buffer space
-	 * to handle the possibility of the decrypted data being longer than
-	 * input data.
-	 */
-	buf_len += 500;
-	buf_len *= 3;
-	in_decrypted = os_malloc(buf_len);
+	in_decrypted = tls_connection_decrypt(sm->ssl_ctx, data->ssl.conn,
+					      in_buf);
 	if (in_decrypted == NULL) {
-		wpa_printf(MSG_WARNING, "EAP-TTLS: failed to allocate memory "
-			   "for decryption");
-		return;
-	}
-
-	len_decrypted = tls_connection_decrypt(sm->ssl_ctx, data->ssl.conn,
-					       in_data, in_len,
-					       in_decrypted, buf_len);
-	if (len_decrypted < 0) {
 		wpa_printf(MSG_INFO, "EAP-TTLS: Failed to decrypt Phase 2 "
 			   "data");
-		os_free(in_decrypted);
 		eap_ttls_state(data, FAILURE);
 		return;
 	}
 
 	if (data->state == PHASE_FINISHED) {
-		if (len_decrypted == 0 &&
+		if (wpabuf_len(in_decrypted) == 0 &&
 		    tls_connection_ia_final_phase_finished(sm->ssl_ctx,
 							   data->ssl.conn)) {
 			wpa_printf(MSG_DEBUG, "EAP-TTLS: FinalPhaseFinished "
@@ -1190,16 +1160,16 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 			eap_ttls_state(data, FAILURE);
 		}
 
-		os_free(in_decrypted);
+		wpabuf_free(in_decrypted);
 		return;
 	}
 
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Decrypted Phase 2 EAP",
-			in_decrypted, len_decrypted);
+	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-TTLS: Decrypted Phase 2 EAP",
+			    in_decrypted);
 
-	if (eap_ttls_avp_parse(in_decrypted, len_decrypted, &parse) < 0) {
+	if (eap_ttls_avp_parse(in_decrypted, &parse) < 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: Failed to parse AVPs");
-		os_free(in_decrypted);
+		wpabuf_free(in_decrypted);
 		eap_ttls_state(data, FAILURE);
 		return;
 	}
@@ -1257,7 +1227,7 @@ static void eap_ttls_process_phase2(struct eap_sm *sm,
 	}
 
 done:
-	os_free(in_decrypted);
+	wpabuf_free(in_decrypted);
 	os_free(parse.eap);
 }
 

@@ -1,6 +1,6 @@
 /*
- * hostapd / EAP-TLS/PEAP/TTLS/FAST common functions
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * EAP-TLS/PEAP/TTLS/FAST server common functions
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -53,7 +53,7 @@ struct wpabuf * eap_server_tls_build_ack(u8 id, int eap_type, int version);
 int eap_server_tls_phase1(struct eap_sm *sm, struct eap_ssl_data *data);
 struct wpabuf * eap_server_tls_encrypt(struct eap_sm *sm,
 				       struct eap_ssl_data *data,
-				       const u8 *plain, size_t plain_len);
+				       const struct wpabuf *plain);
 int eap_server_tls_process(struct eap_sm *sm, struct eap_ssl_data *data,
 			   struct wpabuf *respData, void *priv, int eap_type,
 			   int (*proc_version)(struct eap_sm *sm, void *priv,

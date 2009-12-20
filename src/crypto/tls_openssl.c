@@ -2207,6 +2207,7 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 	if (res < 0) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Decryption failed - SSL_read");
+		wpabuf_free(buf);
 		return NULL;
 	}
 	wpabuf_put(buf, res);

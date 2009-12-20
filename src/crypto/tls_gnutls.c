@@ -591,6 +591,17 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 				return -1;
 			}
 		}
+
+		if (params->flags & TLS_CONN_ALLOW_SIGN_RSA_MD5) {
+			gnutls_certificate_set_verify_flags(
+				conn->xcred, GNUTLS_VERIFY_ALLOW_SIGN_RSA_MD5);
+		}
+
+		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
+			gnutls_certificate_set_verify_flags(
+				conn->xcred,
+				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
+		}
 	}
 
 	if (params->client_cert && params->private_key) {
@@ -710,6 +721,18 @@ int tls_global_set_params(void *tls_ctx,
 					   gnutls_strerror(ret));
 				goto fail;
 			}
+		}
+
+		if (params->flags & TLS_CONN_ALLOW_SIGN_RSA_MD5) {
+			gnutls_certificate_set_verify_flags(
+				global->xcred,
+				GNUTLS_VERIFY_ALLOW_SIGN_RSA_MD5);
+		}
+
+		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
+			gnutls_certificate_set_verify_flags(
+				global->xcred,
+				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
 		}
 	}
 

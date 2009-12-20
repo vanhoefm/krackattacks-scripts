@@ -74,6 +74,14 @@ OBJS += ../src/utils/trace.o
 OBJS_p += ../src/utils/trace.o
 OBJS_c += ../src/utils/trace.o
 OBJS_c += ../src/utils/wpa_debug.o
+LDFLAGS += -rdynamic
+CFLAGS += -funwind-tables
+ifdef CONFIG_WPA_TRACE_BFD
+CFLAGS += -DWPA_TRACE_BFD
+LIBS += -lbfd
+LIBS_p += -lbfd
+LIBS_c += -lbfd
+endif
 endif
 
 ifndef CONFIG_ELOOP

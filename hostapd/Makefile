@@ -51,6 +51,13 @@ CFLAGS += -DHOSTAPD
 ifdef CONFIG_WPA_TRACE
 CFLAGS += -DWPA_TRACE
 OBJS += ../src/utils/trace.o
+LDFLAGS += -rdynamic
+CFLAGS += -funwind-tables
+ifdef CONFIG_WPA_TRACE_BFD
+CFLAGS += -DWPA_TRACE_BFD
+LIBS += -lbfd
+LIBS_c += -lbfd
+endif
 endif
 
 OBJS += ../src/utils/eloop.o
@@ -725,7 +732,7 @@ OBJS_c += ../src/utils/trace.o
 OBJS_c += ../src/utils/wpa_debug.o
 endif
 hostapd_cli: $(OBJS_c)
-	$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c)
+	$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c) $(LIBS_c)
 
 NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS) ../src/crypto/rc4.o ../src/crypto/md5.o
 ifdef CONFIG_INTERNAL_MD5

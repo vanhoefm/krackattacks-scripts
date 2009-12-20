@@ -777,3 +777,13 @@ int crypto_global_init(void)
 void crypto_global_deinit(void)
 {
 }
+
+
+int crypto_mod_exp(const u8 *base, size_t base_len,
+		   const u8 *power, size_t power_len,
+		   const u8 *modulus, size_t modulus_len,
+		   u8 *result, size_t *result_len)
+{
+	/* TODO */
+	return -1;
+}

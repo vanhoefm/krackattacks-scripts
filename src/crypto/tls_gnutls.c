@@ -1417,3 +1417,11 @@ int tls_connection_ia_permute_inner_secret(void *tls_ctx,
 	return -1;
 #endif /* GNUTLS_IA */
 }
+
+
+int tls_connection_set_session_ticket_cb(void *tls_ctx,
+					 struct tls_connection *conn,
+					 tls_session_ticket_cb cb, void *ctx)
+{
+	return -1;
+}

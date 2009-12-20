@@ -112,8 +112,9 @@ struct tls_connection {
 	int established;
 	int verify_peer;
 
-	u8 *push_buf, *pull_buf, *pull_buf_offset;
-	size_t push_buf_len, pull_buf_len;
+	struct wpabuf *push_buf;
+	struct wpabuf *pull_buf;
+	const u8 *pull_buf_offset;
 
 	int params_set;
 	gnutls_certificate_credentials_t xcred;
@@ -241,22 +242,22 @@ static ssize_t tls_pull_func(gnutls_transport_ptr ptr, void *buf,
 			     size_t len)
 {
 	struct tls_connection *conn = (struct tls_connection *) ptr;
-	u8 *end;
+	const u8 *end;
 	if (conn->pull_buf == NULL) {
 		errno = EWOULDBLOCK;
 		return -1;
 	}
 
-	end = conn->pull_buf + conn->pull_buf_len;
+	end = wpabuf_head_u8(conn->pull_buf) + wpabuf_len(conn->pull_buf);
 	if ((size_t) (end - conn->pull_buf_offset) < len)
 		len = end - conn->pull_buf_offset;
 	os_memcpy(buf, conn->pull_buf_offset, len);
 	conn->pull_buf_offset += len;
 	if (conn->pull_buf_offset == end) {
 		wpa_printf(MSG_DEBUG, "%s - pull_buf consumed", __func__);
-		os_free(conn->pull_buf);
-		conn->pull_buf = conn->pull_buf_offset = NULL;
-		conn->pull_buf_len = 0;
+		wpabuf_free(conn->pull_buf);
+		conn->pull_buf = NULL;
+		conn->pull_buf_offset = NULL;
 	} else {
 		wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in pull_buf",
 			   __func__,
@@ -270,16 +271,12 @@ static ssize_t tls_push_func(gnutls_transport_ptr ptr, const void *buf,
 			     size_t len)
 {
 	struct tls_connection *conn = (struct tls_connection *) ptr;
-	u8 *nbuf;
 
-	nbuf = os_realloc(conn->push_buf, conn->push_buf_len + len);
-	if (nbuf == NULL) {
+	if (wpabuf_resize(&conn->push_buf, len) < 0) {
 		errno = ENOMEM;
 		return -1;
 	}
-	os_memcpy(nbuf + conn->push_buf_len, buf, len);
-	conn->push_buf = nbuf;
-	conn->push_buf_len += len;
+	wpabuf_put_data(conn->push_buf, buf, len);
 
 	return len;
 }
@@ -383,8 +380,8 @@ void tls_connection_deinit(void *ssl_ctx, struct tls_connection *conn)
 	os_free(conn->pre_shared_secret);
 	os_free(conn->subject_match);
 	os_free(conn->altsubject_match);
-	os_free(conn->push_buf);
-	os_free(conn->pull_buf);
+	wpabuf_free(conn->push_buf);
+	wpabuf_free(conn->pull_buf);
 	os_free(conn);
 }
 
@@ -407,9 +404,8 @@ int tls_connection_shutdown(void *ssl_ctx, struct tls_connection *conn)
 	 * because the connection was already terminated in practice
 	 * and "close notify" shutdown alert would confuse AS. */
 	gnutls_bye(conn->session, GNUTLS_SHUT_RDWR);
-	os_free(conn->push_buf);
+	wpabuf_free(conn->push_buf);
 	conn->push_buf = NULL;
-	conn->push_buf_len = 0;
 	conn->established = 0;
 	conn->final_phase_finished = 0;
 #ifdef GNUTLS_IA
@@ -950,16 +946,13 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 		if (conn->pull_buf) {
 			wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in "
 				   "pull_buf", __func__,
-				   (unsigned long) conn->pull_buf_len);
-			os_free(conn->pull_buf);
+				   (unsigned long) wpabuf_len(conn->pull_buf));
+			wpabuf_free(conn->pull_buf);
 		}
-		conn->pull_buf = os_malloc(wpabuf_len(in_data));
+		conn->pull_buf = wpabuf_dup(in_data);
 		if (conn->pull_buf == NULL)
 			return NULL;
-		os_memcpy(conn->pull_buf, wpabuf_head(in_data),
-			  wpabuf_len(in_data));
-		conn->pull_buf_offset = conn->pull_buf;
-		conn->pull_buf_len = wpabuf_len(in_data);
+		conn->pull_buf_offset = wpabuf_head(conn->pull_buf);
 	}
 
 	ret = gnutls_handshake(conn->session);
@@ -970,7 +963,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 			    conn->push_buf == NULL) {
 				/* Need to return something to trigger
 				 * completion of EAP-TLS. */
-				conn->push_buf = os_malloc(1);
+				conn->push_buf = wpabuf_alloc(0);
 			}
 			break;
 		case GNUTLS_E_FATAL_ALERT_RECEIVED:
@@ -1011,7 +1004,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 		conn->established = 1;
 		if (conn->push_buf == NULL) {
 			/* Need to return something to get final TLS ACK. */
-			conn->push_buf = os_malloc(1);
+			conn->push_buf = wpabuf_alloc(0);
 		}
 
 		gnutls_session_get_data(conn->session, NULL, &size);
@@ -1028,13 +1021,8 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 		}
 	}
 
-	if (conn->push_buf == NULL)
-		return NULL;
-	out_data = wpabuf_alloc_ext_data(conn->push_buf, conn->push_buf_len);
-	if (out_data == NULL)
-		os_free(conn->push_buf);
+	out_data = conn->push_buf;
 	conn->push_buf = NULL;
-	conn->push_buf_len = 0;
 	return out_data;
 }
 
@@ -1068,13 +1056,9 @@ struct wpabuf * tls_connection_encrypt(void *tls_ctx,
 			   __func__, gnutls_strerror(res));
 		return NULL;
 	}
-	if (conn->push_buf == NULL)
-		return NULL;
-	buf = wpabuf_alloc_ext_data(conn->push_buf, conn->push_buf_len);
-	if (buf == NULL)
-		os_free(conn->push_buf);
+
+	buf = conn->push_buf;
 	conn->push_buf = NULL;
-	conn->push_buf_len = 0;
 	return buf;
 }
 
@@ -1089,15 +1073,13 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 	if (conn->pull_buf) {
 		wpa_printf(MSG_DEBUG, "%s - %lu bytes remaining in "
 			   "pull_buf", __func__,
-			   (unsigned long) conn->pull_buf_len);
-		os_free(conn->pull_buf);
+			   (unsigned long) wpabuf_len(conn->pull_buf));
+		wpabuf_free(conn->pull_buf);
 	}
-	conn->pull_buf = os_malloc(wpabuf_len(in_data));
+	conn->pull_buf = wpabuf_dup(in_data);
 	if (conn->pull_buf == NULL)
 		return NULL;
-	os_memcpy(conn->pull_buf, wpabuf_head(in_data), wpabuf_len(in_data));
-	conn->pull_buf_offset = conn->pull_buf;
-	conn->pull_buf_len = wpabuf_len(in_data);
+	conn->pull_buf_offset = wpabuf_head(conn->pull_buf);
 
 	/*
 	 * Even though we try to disable TLS compression, it is possible that
@@ -1340,12 +1322,11 @@ int tls_connection_ia_send_phase_finished(void *tls_ctx,
 
 	if (conn->push_buf == NULL)
 		return -1;
-	if (conn->push_buf_len < out_len)
-		out_len = conn->push_buf_len;
-	os_memcpy(out_data, conn->push_buf, out_len);
-	os_free(conn->push_buf);
+	if (wpabuf_len(conn->push_buf) < out_len)
+		out_len = wpabuf_len(conn->push_buf);
+	os_memcpy(out_data, wpabuf_head(conn->push_buf), out_len);
+	wpabuf_free(conn->push_buf);
 	conn->push_buf = NULL;
-	conn->push_buf_len = 0;
 	return out_len;
 #else /* GNUTLS_IA */
 	return -1;

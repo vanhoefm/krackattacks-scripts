@@ -1263,7 +1263,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 		sm->m->reset(sm, sm->eap_method_priv);
 	wpabuf_free(sm->eap_if.eapReqData);
 	os_free(sm->eap_if.eapKeyData);
-	os_free(sm->lastReqData);
+	wpabuf_free(sm->lastReqData);
 	wpabuf_free(sm->eap_if.eapRespData);
 	os_free(sm->identity);
 	os_free(sm->pac_opaque_encr_key);

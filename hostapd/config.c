@@ -448,31 +448,41 @@ static int hostapd_config_read_wpa_psk(const char *fname,
 }
 
 
+static int hostapd_derive_psk(struct hostapd_ssid *ssid)
+{
+	ssid->wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
+	if (ssid->wpa_psk == NULL) {
+		wpa_printf(MSG_ERROR, "Unable to alloc space for PSK");
+		return -1;
+	}
+	wpa_hexdump_ascii(MSG_DEBUG, "SSID",
+			  (u8 *) ssid->ssid, ssid->ssid_len);
+	wpa_hexdump_ascii_key(MSG_DEBUG, "PSK (ASCII passphrase)",
+			      (u8 *) ssid->wpa_passphrase,
+			      os_strlen(ssid->wpa_passphrase));
+	pbkdf2_sha1(ssid->wpa_passphrase,
+		    ssid->ssid, ssid->ssid_len,
+		    4096, ssid->wpa_psk->psk, PMK_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "PSK (from passphrase)",
+			ssid->wpa_psk->psk, PMK_LEN);
+	return 0;
+}
+
+
 int hostapd_setup_wpa_psk(struct hostapd_bss_config *conf)
 {
 	struct hostapd_ssid *ssid = &conf->ssid;
 
 	if (ssid->wpa_passphrase != NULL) {
 		if (ssid->wpa_psk != NULL) {
-			wpa_printf(MSG_ERROR, "Warning: both WPA PSK and "
-				   "passphrase set. Using passphrase.");
-			os_free(ssid->wpa_psk);
+			wpa_printf(MSG_DEBUG, "Using pre-configured WPA PSK "
+				   "instead of passphrase");
+		} else {
+			wpa_printf(MSG_DEBUG, "Deriving WPA PSK based on "
+				   "passphrase");
+			if (hostapd_derive_psk(ssid) < 0)
+				return -1;
 		}
-		ssid->wpa_psk = os_zalloc(sizeof(struct hostapd_wpa_psk));
-		if (ssid->wpa_psk == NULL) {
-			wpa_printf(MSG_ERROR, "Unable to alloc space for PSK");
-			return -1;
-		}
-		wpa_hexdump_ascii(MSG_DEBUG, "SSID",
-				  (u8 *) ssid->ssid, ssid->ssid_len);
-		wpa_hexdump_ascii(MSG_DEBUG, "PSK (ASCII passphrase)",
-				  (u8 *) ssid->wpa_passphrase,
-				  os_strlen(ssid->wpa_passphrase));
-		pbkdf2_sha1(ssid->wpa_passphrase,
-			    ssid->ssid, ssid->ssid_len,
-			    4096, ssid->wpa_psk->psk, PMK_LEN);
-		wpa_hexdump(MSG_DEBUG, "PSK (from passphrase)",
-			    ssid->wpa_psk->psk, PMK_LEN);
 		ssid->wpa_psk->group = 1;
 	}
 

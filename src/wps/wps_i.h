@@ -113,6 +113,8 @@ struct wps_data {
 	void *ap_settings_cb_ctx;
 
 	struct wps_credential *use_cred;
+
+	int use_psk_key;
 };
 
 

@@ -619,6 +619,11 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		wps->network_key_len = conf->ssid.wep.len[0];
 	}
 
+	if (conf->ssid.wpa_psk) {
+		os_memcpy(wps->psk, conf->ssid.wpa_psk->psk, PMK_LEN);
+		wps->psk_set = 1;
+	}
+
 	if (conf->wps_state == WPS_STATE_NOT_CONFIGURED) {
 		/* Override parameters to enable security by default */
 		wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;

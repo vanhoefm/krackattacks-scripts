@@ -147,6 +147,15 @@ struct wps_config {
 	 * peer_addr: MAC address of the peer in AP; %NULL if not AP
 	 */
 	const u8 *peer_addr;
+
+	/**
+	 * use_psk_key - Use PSK format key in Credential
+	 *
+	 * Force PSK format to be used instead of ASCII passphrase when
+	 * building Credential for an Enrollee. The PSK value is set in
+	 * struct wpa_context::psk.
+	 */
+	int use_psk_key;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);
@@ -554,6 +563,14 @@ struct wps_context {
 	 * If %NULL, Registrar will generate per-device PSK. In addition, AP
 	 * uses this when acting as an Enrollee to notify Registrar of the
 	 * current configuration.
+	 *
+	 * When using WPA/WPA2-Person, this key can be either the ASCII
+	 * passphrase (8..63 characters) or the 32-octet PSK (64 hex
+	 * characters). When this is set to the ASCII passphrase, the PSK can
+	 * be provided in the psk buffer and used per-Enrollee to control which
+	 * key type is included in the Credential (e.g., to reduce calculation
+	 * need on low-powered devices by provisioning PSK while still allowing
+	 * other devices to get the passphrase).
 	 */
 	u8 *network_key;
 
@@ -561,6 +578,19 @@ struct wps_context {
 	 * network_key_len - Length of network_key in octets
 	 */
 	size_t network_key_len;
+
+	/**
+	 * psk - The current network PSK
+	 *
+	 * This optional value can be used to provide the current PSK if
+	 * network_key is set to the ASCII passphrase.
+	 */
+	u8 psk[32];
+
+	/**
+	 * psk_set - Whether psk value is set
+	 */
+	int psk_set;
 
 	/**
 	 * ap_settings - AP Settings override for M7 (only used at AP)

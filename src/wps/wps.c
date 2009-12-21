@@ -104,6 +104,8 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 	if (cfg->peer_addr)
 		os_memcpy(data->peer_dev.mac_addr, cfg->peer_addr, ETH_ALEN);
 
+	data->use_psk_key = cfg->use_psk_key;
+
 	return data;
 }
 

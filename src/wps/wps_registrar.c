@@ -1120,7 +1120,8 @@ static int wps_build_cred_encr_type(struct wpabuf *msg,
 static int wps_build_cred_network_key(struct wpabuf *msg,
 				      const struct wps_credential *cred)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * Network Key");
+	wpa_printf(MSG_DEBUG, "WPS:  * Network Key (len=%d)",
+		   (int) cred->key_len);
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);
 	wpabuf_put_be16(msg, cred->key_len);
 	wpabuf_put_data(msg, cred->key, cred->key_len);
@@ -1233,6 +1234,12 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 				      wps->new_psk, wps->new_psk_len);
 		os_memcpy(wps->cred.key, wps->new_psk, wps->new_psk_len);
 		wps->cred.key_len = wps->new_psk_len;
+	} else if (wps->use_psk_key && wps->wps->psk_set) {
+		char hex[65];
+		wpa_printf(MSG_DEBUG, "WPS: Use PSK format for Network Key");
+		wpa_snprintf_hex(hex, sizeof(hex), wps->wps->psk, 32);
+		os_memcpy(wps->cred.key, hex, 32 * 2);
+		wps->cred.key_len = 32 * 2;
 	} else if (wps->wps->network_key) {
 		os_memcpy(wps->cred.key, wps->wps->network_key,
 			  wps->wps->network_key_len);

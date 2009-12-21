@@ -19,6 +19,9 @@
 
 #ifdef WPA_TRACE
 
+static struct dl_list active_references =
+{ &active_references, &active_references };
+
 #ifdef WPA_TRACE_BFD
 #include <bfd.h>
 #include <demangle.h>
@@ -253,6 +256,29 @@ void wpa_trace_show(const char *title)
 	} info;
 	wpa_trace_record(&info);
 	wpa_trace_dump(title, &info);
+}
+
+
+void wpa_trace_add_ref_func(struct wpa_trace_ref *ref, const void *addr)
+{
+	if (addr == NULL)
+		return;
+	ref->addr = addr;
+	wpa_trace_record(ref);
+	dl_list_add(&active_references, &ref->list);
+}
+
+
+void wpa_trace_check_ref(const void *addr)
+{
+	struct wpa_trace_ref *ref;
+	dl_list_for_each(ref, &active_references, struct wpa_trace_ref, list) {
+		if (addr != ref->addr)
+			continue;
+		wpa_trace_show("Freeing referenced memory");
+		wpa_trace_dump("Reference registration", ref);
+		abort();
+	}
 }
 
 #endif /* WPA_TRACE */

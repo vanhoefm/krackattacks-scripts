@@ -25,6 +25,8 @@ struct eloop_sock {
 	void *eloop_data;
 	void *user_data;
 	eloop_sock_handler handler;
+	WPA_TRACE_REF(eloop);
+	WPA_TRACE_REF(user);
 	WPA_TRACE_INFO
 };
 
@@ -34,6 +36,8 @@ struct eloop_timeout {
 	void *eloop_data;
 	void *user_data;
 	eloop_timeout_handler handler;
+	WPA_TRACE_REF(eloop);
+	WPA_TRACE_REF(user);
 	WPA_TRACE_INFO
 };
 
@@ -72,11 +76,45 @@ static struct eloop_data eloop;
 
 
 #ifdef WPA_TRACE
+
 static void eloop_sigsegv_handler(int sig)
 {
 	wpa_trace_show("eloop SIGSEGV");
 	abort();
 }
+
+static void eloop_trace_sock_add_ref(struct eloop_sock_table *table)
+{
+	int i;
+	if (table == NULL || table->table == NULL)
+		return;
+	for (i = 0; i < table->count; i++) {
+		wpa_trace_add_ref(&table->table[i], eloop,
+				  table->table[i].eloop_data);
+		wpa_trace_add_ref(&table->table[i], user,
+				  table->table[i].user_data);
+	}
+}
+
+
+static void eloop_trace_sock_remove_ref(struct eloop_sock_table *table)
+{
+	int i;
+	if (table == NULL || table->table == NULL)
+		return;
+	for (i = 0; i < table->count; i++) {
+		wpa_trace_remove_ref(&table->table[i], eloop,
+				     table->table[i].eloop_data);
+		wpa_trace_remove_ref(&table->table[i], user,
+				     table->table[i].user_data);
+	}
+}
+
+#else /* WPA_TRACE */
+
+#define eloop_trace_sock_add_ref(table) do { } while (0)
+#define eloop_trace_sock_remove_ref(table) do { } while (0)
+
 #endif /* WPA_TRACE */
 
 
@@ -100,6 +138,7 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
 	if (table == NULL)
 		return -1;
 
+	eloop_trace_sock_remove_ref(table);
 	tmp = (struct eloop_sock *)
 		os_realloc(table->table,
 			   (table->count + 1) * sizeof(struct eloop_sock));
@@ -116,6 +155,7 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
 	if (sock > eloop.max_sock)
 		eloop.max_sock = sock;
 	table->changed = 1;
+	eloop_trace_sock_add_ref(table);
 
 	return 0;
 }
@@ -135,6 +175,7 @@ static void eloop_sock_table_remove_sock(struct eloop_sock_table *table,
 	}
 	if (i == table->count)
 		return;
+	eloop_trace_sock_remove_ref(table);
 	if (i != table->count - 1) {
 		os_memmove(&table->table[i], &table->table[i + 1],
 			   (table->count - i - 1) *
@@ -142,6 +183,7 @@ static void eloop_sock_table_remove_sock(struct eloop_sock_table *table,
 	}
 	table->count--;
 	table->changed = 1;
+	eloop_trace_sock_add_ref(table);
 }
 
 
@@ -272,6 +314,8 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	timeout->eloop_data = eloop_data;
 	timeout->user_data = user_data;
 	timeout->handler = handler;
+	wpa_trace_add_ref(timeout, eloop, eloop_data);
+	wpa_trace_add_ref(timeout, user, user_data);
 	wpa_trace_record(timeout);
 
 	/* Maintain timeouts in order of increasing time */
@@ -284,6 +328,14 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 	dl_list_add_tail(&eloop.timeout, &timeout->list);
 
 	return 0;
+}
+
+
+static void eloop_remove_timeout(struct eloop_timeout *timeout)
+{
+	wpa_trace_remove_ref(timeout, eloop, timeout->eloop_data);
+	wpa_trace_remove_ref(timeout, user, timeout->user_data);
+	os_free(timeout);
 }
 
 
@@ -301,7 +353,7 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 		    (timeout->user_data == user_data ||
 		     user_data == ELOOP_ALL_CTX)) {
 			dl_list_del(&timeout->list);
-			os_free(timeout);
+			eloop_remove_timeout(timeout);
 			removed++;
 		}
 	}
@@ -480,7 +532,7 @@ void eloop_run(void)
 				dl_list_del(&timeout->list);
 				timeout->handler(timeout->eloop_data,
 						 timeout->user_data);
-				os_free(timeout);
+				eloop_remove_timeout(timeout);
 			}
 
 		}
@@ -526,7 +578,8 @@ void eloop_destroy(void)
 			   sec, usec, timeout->eloop_data, timeout->user_data,
 			   timeout->handler);
 		wpa_trace_dump("eloop timeout", timeout);
-		os_free(timeout);
+		dl_list_del(&timeout->list);
+		eloop_remove_timeout(timeout);
 	}
 	eloop_sock_table_destroy(&eloop.readers);
 	eloop_sock_table_destroy(&eloop.writers);

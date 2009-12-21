@@ -407,6 +407,7 @@ void os_free(void *ptr)
 	dl_list_del(&a->list);
 	a->magic = FREED_MAGIC;
 
+	wpa_trace_check_ref(ptr);
 	free(a);
 }
 

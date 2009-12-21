@@ -2056,7 +2056,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 		return NL_SKIP;
 
 	nla_for_each_nested(nl_band, tb_msg[NL80211_ATTR_WIPHY_BANDS], rem_band) {
-		mode = realloc(phy_info->modes, (*phy_info->num_modes + 1) * sizeof(*mode));
+		mode = os_realloc(phy_info->modes, (*phy_info->num_modes + 1) * sizeof(*mode));
 		if (!mode)
 			return NL_SKIP;
 		phy_info->modes = mode;
@@ -2102,7 +2102,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			mode->num_channels++;
 		}
 
-		mode->channels = calloc(mode->num_channels, sizeof(struct hostapd_channel_data));
+		mode->channels = os_zalloc(mode->num_channels * sizeof(struct hostapd_channel_data));
 		if (!mode->channels)
 			return NL_SKIP;
 
@@ -2164,7 +2164,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			mode->num_rates++;
 		}
 
-		mode->rates = calloc(mode->num_rates, sizeof(int));
+		mode->rates = os_zalloc(mode->num_rates * sizeof(int));
 		if (!mode->rates)
 			return NL_SKIP;
 

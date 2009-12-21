@@ -391,7 +391,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->eap_server = 1;
 	bss->wps_state = 2;
 	bss->ap_setup_locked = 1;
-	bss->config_methods = os_strdup("display push_button");
+	bss->config_methods = os_strdup("display push_button keypad");
 #endif /* CONFIG_WPS */
 
 	return 0;

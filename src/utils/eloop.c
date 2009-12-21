@@ -230,11 +230,14 @@ static void eloop_sock_table_destroy(struct eloop_sock_table *table)
 		for (i = 0; i < table->count && table->table; i++) {
 			wpa_printf(MSG_INFO, "ELOOP: remaining socket: "
 				   "sock=%d eloop_data=%p user_data=%p "
-				   "handler=%p\n",
+				   "handler=%p",
 				   table->table[i].sock,
 				   table->table[i].eloop_data,
 				   table->table[i].user_data,
 				   table->table[i].handler);
+			wpa_trace_dump_funcname("eloop unregistered socket "
+						"handler",
+						table->table[i].handler);
 			wpa_trace_dump("eloop sock", &table->table[i]);
 		}
 		os_free(table->table);
@@ -577,6 +580,8 @@ void eloop_destroy(void)
 			   "eloop_data=%p user_data=%p handler=%p",
 			   sec, usec, timeout->eloop_data, timeout->user_data,
 			   timeout->handler);
+		wpa_trace_dump_funcname("eloop unregistered timeout handler",
+					timeout->handler);
 		wpa_trace_dump("eloop timeout", timeout);
 		dl_list_del(&timeout->list);
 		eloop_remove_timeout(timeout);

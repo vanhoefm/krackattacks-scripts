@@ -113,8 +113,6 @@ static void read_syms(bfd *abfd)
 		syms = NULL;
 		return;
 	}
-	wpa_printf(MSG_INFO, "BFD: Read %ld symbols (%ld bytes)",
-		   symcount, storage);
 }
 
 
@@ -223,7 +221,6 @@ static void wpa_trace_bfd_init(void)
 		get_prg_fname();
 		if (!prg_fname)
 			return;
-		wpa_printf(MSG_INFO, "BFD[%s]", prg_fname);
 	}
 
 	if (!cached_abfd) {
@@ -239,6 +236,14 @@ static void wpa_trace_bfd_init(void)
 		wpa_printf(MSG_INFO, "Failed to read symbols");
 		return;
 	}
+}
+
+
+void wpa_trace_dump_funcname(const char *title, void *pc)
+{
+	wpa_printf(MSG_INFO, "WPA_TRACE: %s: %p", title, pc);
+	wpa_trace_bfd_init();
+	wpa_trace_bfd_addr(pc);
 }
 
 #else /* WPA_TRACE_BFD */

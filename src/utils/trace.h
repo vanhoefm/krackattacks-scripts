@@ -60,4 +60,15 @@ void wpa_trace_check_ref(const void *addr);
 
 #endif /* WPA_TRACE */
 
+
+#ifdef WPA_TRACE_BFD
+
+void wpa_trace_dump_funcname(const char *title, void *pc);
+
+#else /* WPA_TRACE_BFD */
+
+#define wpa_trace_dump_funcname(title, pc) do { } while (0)
+
+#endif /* WPA_TRACE_BFD */
+
 #endif /* TRACE_H */

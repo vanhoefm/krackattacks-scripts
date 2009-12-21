@@ -3050,7 +3050,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 			   "failed: %d (%s)",
 			   (unsigned long) len, errno, strerror(errno));
 	}
-	free(hdr);
+	os_free(hdr);
 
 	return res;
 }
@@ -3654,8 +3654,8 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 	else
 		old = NULL;
 
-	drv->if_indices = realloc(old,
-				  sizeof(int) * (drv->num_if_indices + 1));
+	drv->if_indices = os_realloc(old,
+				     sizeof(int) * (drv->num_if_indices + 1));
 	if (!drv->if_indices) {
 		if (!old)
 			drv->if_indices = drv->default_if_indices;

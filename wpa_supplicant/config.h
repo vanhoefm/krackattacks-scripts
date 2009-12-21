@@ -298,6 +298,16 @@ struct wpa_config {
 	char *device_type;
 
 	/**
+	 * config_methods - Config Methods
+	 *
+	 * This is a space-separated list of supported WPS configuration
+	 * methods. For example, "label display push_button keypad".
+	 * Available methods: usba ethernet label display ext_nfc_token
+	 * int_nfc_token nfc_interface push_button keypad.
+	 */
+	char *config_methods;
+
+	/**
 	 * os_version - OS Version (WPS)
 	 * 4-octet operating system version number
 	 */

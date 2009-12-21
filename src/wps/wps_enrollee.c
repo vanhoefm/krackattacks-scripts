@@ -119,7 +119,6 @@ static int wps_build_e_snonce2(struct wps_data *wps, struct wpabuf *msg)
 static struct wpabuf * wps_build_m1(struct wps_data *wps)
 {
 	struct wpabuf *msg;
-	u16 methods;
 
 	if (os_get_random(wps->nonce_e, WPS_NONCE_LEN) < 0)
 		return NULL;
@@ -131,16 +130,6 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	if (msg == NULL)
 		return NULL;
 
-	methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
-#ifdef CONFIG_WPS_UFD
-	methods |= WPS_CONFIG_USBA;
-#endif /* CONFIG_WPS_UFD */
-#ifdef CONFIG_WPS_NFC
-	methods |= WPS_CONFIG_NFC_INTERFACE;
-#endif /* CONFIG_WPS_NFC */
-	if (wps->pbc)
-		methods |= WPS_CONFIG_PUSHBUTTON;
-
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_M1) ||
 	    wps_build_uuid_e(msg, wps->uuid_e) ||
@@ -150,7 +139,7 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_auth_type_flags(wps, msg) ||
 	    wps_build_encr_type_flags(wps, msg) ||
 	    wps_build_conn_type_flags(wps, msg) ||
-	    wps_build_config_methods(msg, methods) ||
+	    wps_build_config_methods(msg, wps->wps->config_methods) ||
 	    wps_build_wps_state(wps, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
 	    wps_build_rf_bands(&wps->wps->dev, msg) ||

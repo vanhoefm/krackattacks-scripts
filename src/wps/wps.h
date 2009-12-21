@@ -715,5 +715,6 @@ int wps_dev_type_str2bin(const char *str, u8 dev_type[WPS_DEV_TYPE_LEN]);
 char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
 			    size_t buf_len);
 void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid);
+u16 wps_config_methods_str2bin(const char *str);
 
 #endif /* WPS_H */

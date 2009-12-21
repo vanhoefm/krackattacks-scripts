@@ -249,6 +249,8 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 		hk, TEXT("serial_number"));
 	config->device_type = wpa_config_read_reg_string(
 		hk, TEXT("device_type"));
+	config->config_methods = wpa_config_read_reg_string(
+		hk, TEXT("config_methods"));
 	if (wpa_config_read_global_os_version(config, hk))
 		errors++;
 	wpa_config_read_reg_dword(hk, TEXT("wps_cred_processing"),
@@ -569,6 +571,8 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 	wpa_config_write_reg_string(hk, "serial_number",
 				    config->serial_number);
 	wpa_config_write_reg_string(hk, "device_type", config->device_type);
+	wpa_config_write_reg_string(hk, "config_methods",
+				    config->config_methods);
 	if (WPA_GET_BE32(config->os_version)) {
 		char vbuf[10];
 		os_snprintf(vbuf, sizeof(vbuf), "%08x",

@@ -454,6 +454,7 @@ static const struct global_parse_data global_fields[] = {
 	{ STR_RANGE(serial_number, 0, 32) },
 	{ STR(device_type) },
 	{ FUNC(os_version) },
+	{ STR(config_methods) },
 	{ INT_RANGE(wps_cred_processing, 0, 2) },
 #endif /* CONFIG_WPS */
 	{ FUNC(country) }
@@ -878,6 +879,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (WPA_GET_BE32(config->os_version))
 		fprintf(f, "os_version=%08x\n",
 			WPA_GET_BE32(config->os_version));
+	if (config->config_methods)
+		fprintf(f, "config_methods=%s\n", config->config_methods);
 	if (config->wps_cred_processing)
 		fprintf(f, "wps_cred_processing=%d\n",
 			config->wps_cred_processing);

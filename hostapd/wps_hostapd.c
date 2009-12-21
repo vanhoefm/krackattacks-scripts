@@ -531,17 +531,8 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		os_strdup(hapd->conf->model_number) : NULL;
 	wps->dev.serial_number = hapd->conf->serial_number ?
 		os_strdup(hapd->conf->serial_number) : NULL;
-	if (hapd->conf->config_methods) {
-		char *m = hapd->conf->config_methods;
-		if (os_strstr(m, "label"))
-			wps->config_methods |= WPS_CONFIG_LABEL;
-		if (os_strstr(m, "display"))
-			wps->config_methods |= WPS_CONFIG_DISPLAY;
-		if (os_strstr(m, "push_button"))
-			wps->config_methods |= WPS_CONFIG_PUSHBUTTON;
-		if (os_strstr(m, "keypad"))
-			wps->config_methods |= WPS_CONFIG_KEYPAD;
-	}
+	wps->config_methods =
+		wps_config_methods_str2bin(hapd->conf->config_methods);
 	if (hapd->conf->device_type &&
 	    wps_dev_type_str2bin(hapd->conf->device_type,
 				 wps->dev.pri_dev_type) < 0) {

@@ -595,3 +595,42 @@ void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid)
 	/* Variant specified in RFC 4122 */
 	uuid[8] = 0x80 | (uuid[8] & 0x3f);
 }
+
+
+u16 wps_config_methods_str2bin(const char *str)
+{
+	u16 methods = 0;
+
+	if (str == NULL) {
+		/* Default to enabling methods based on build configuration */
+		methods |= WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
+			WPS_CONFIG_KEYPAD;
+#ifdef CONFIG_WPS_UFD
+		methods |= WPS_CONFIG_USBA;
+#endif /* CONFIG_WPS_UFD */
+#ifdef CONFIG_WPS_NFC
+		methods |= WPS_CONFIG_NFC_INTERFACE;
+#endif /* CONFIG_WPS_NFC */
+	} else {
+		if (os_strstr(str, "usba"))
+			methods |= WPS_CONFIG_USBA;
+		if (os_strstr(str, "ethernet"))
+			methods |= WPS_CONFIG_ETHERNET;
+		if (os_strstr(str, "label"))
+			methods |= WPS_CONFIG_LABEL;
+		if (os_strstr(str, "display"))
+			methods |= WPS_CONFIG_DISPLAY;
+		if (os_strstr(str, "ext_nfc_token"))
+			methods |= WPS_CONFIG_EXT_NFC_TOKEN;
+		if (os_strstr(str, "int_nfc_token"))
+			methods |= WPS_CONFIG_INT_NFC_TOKEN;
+		if (os_strstr(str, "nfc_interface"))
+			methods |= WPS_CONFIG_NFC_INTERFACE;
+		if (os_strstr(str, "push_button"))
+			methods |= WPS_CONFIG_PUSHBUTTON;
+		if (os_strstr(str, "keypad"))
+			methods |= WPS_CONFIG_KEYPAD;
+	}
+
+	return methods;
+}

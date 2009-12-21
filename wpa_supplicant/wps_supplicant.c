@@ -841,6 +841,8 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->dev.model_name = wpa_s->conf->model_name;
 	wps->dev.model_number = wpa_s->conf->model_number;
 	wps->dev.serial_number = wpa_s->conf->serial_number;
+	wps->config_methods =
+		wps_config_methods_str2bin(wpa_s->conf->config_methods);
 	if (wpa_s->conf->device_type &&
 	    wps_dev_type_str2bin(wpa_s->conf->device_type,
 				 wps->dev.pri_dev_type) < 0) {
@@ -1116,8 +1118,6 @@ int wpas_wps_er_start(struct wpa_supplicant *wpa_s)
 		wps_er_refresh(wpa_s->wps_er);
 		return 0;
 	}
-	wpa_s->wps->config_methods |= WPS_CONFIG_DISPLAY;
-	wpa_s->wps->config_methods |= WPS_CONFIG_KEYPAD;
 	wpa_s->wps_er = wps_er_init(wpa_s->wps, wpa_s->ifname);
 	if (wpa_s->wps_er == NULL)
 		return -1;

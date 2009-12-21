@@ -28,6 +28,7 @@
 #include "eap_common/eap_wsc_common.h"
 #include "wps/wps.h"
 #include "config_ssid.h"
+#include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "ap.h"
@@ -391,7 +392,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->eap_server = 1;
 	bss->wps_state = 2;
 	bss->ap_setup_locked = 1;
-	bss->config_methods = os_strdup("display push_button keypad");
+	if (wpa_s->conf->config_methods)
+		bss->config_methods = os_strdup(wpa_s->conf->config_methods);
+	if (wpa_s->conf->device_type)
+		bss->device_type = os_strdup(wpa_s->conf->device_type);
 #endif /* CONFIG_WPS */
 
 	return 0;

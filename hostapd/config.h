@@ -12,8 +12,8 @@
  * See README and COPYING for more details.
  */
 
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef HOSTAPD_CONFIG_H
+#define HOSTAPD_CONFIG_H
 
 #include "common/defs.h"
 #include "ip_addr.h"
@@ -386,4 +386,4 @@ const struct hostapd_eap_user *
 hostapd_get_eap_user(const struct hostapd_bss_config *conf, const u8 *identity,
 		     size_t identity_len, int phase2);
 
-#endif /* CONFIG_H */
+#endif /* HOSTAPD_CONFIG_H */

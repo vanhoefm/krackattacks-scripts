@@ -2485,6 +2485,8 @@ void hostapd_config_free(struct hostapd_config *conf)
 	for (i = 0; i < conf->num_bss; i++)
 		hostapd_config_free_bss(&conf->bss[i]);
 	os_free(conf->bss);
+	os_free(conf->supported_rates);
+	os_free(conf->basic_rates);
 
 	os_free(conf);
 }

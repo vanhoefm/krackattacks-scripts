@@ -337,3 +337,13 @@ int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 	return 0;
 }
 #endif /* CONFIG_WPS_OOB */
+
+
+int wps_build_req_to_enroll(struct wpabuf *msg)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Request to Enroll (1)");
+	wpabuf_put_be16(msg, ATTR_REQUEST_TO_ENROLL);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, 1);
+	return 0;
+}

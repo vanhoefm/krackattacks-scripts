@@ -302,9 +302,12 @@ struct wpa_config {
 	 * config_methods - Config Methods
 	 *
 	 * This is a space-separated list of supported WPS configuration
-	 * methods. For example, "label display push_button keypad".
+	 * methods. For example, "label virtual_display virtual_push_button
+	 * keypad".
 	 * Available methods: usba ethernet label display ext_nfc_token
-	 * int_nfc_token nfc_interface push_button keypad.
+	 * int_nfc_token nfc_interface push_button keypad
+	 * virtual_display physical_display
+	 * virtual_push_button physical_push_button.
 	 */
 	char *config_methods;
 

@@ -426,10 +426,22 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	len = wpabuf_put(ie, 1);
 	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
 
-	if (pbc)
+	if (pbc) {
 		methods = WPS_CONFIG_PUSHBUTTON;
-	else {
+		/*
+		 * TODO: At least in theory, should figure out whether this
+		 * Probe Request was triggered with physical or virtual
+		 * pushbutton.
+		 */
+		methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
+	} else {
+		/*
+		 * TODO: At least in theory, should figure out whether this
+		 * Probe Request was triggered using physical or virtual
+		 * display.
+		 */
 		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
+			WPS_CONFIG_VIRT_DISPLAY |
 			WPS_CONFIG_KEYPAD;
 #ifdef CONFIG_WPS_UFD
 		methods |= WPS_CONFIG_USBA;

@@ -19,8 +19,7 @@
 #include "wps_dev_attr.h"
 
 
-static int wps_build_manufacturer(struct wps_device_data *dev,
-				  struct wpabuf *msg)
+int wps_build_manufacturer(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;
 	wpa_printf(MSG_DEBUG, "WPS:  * Manufacturer");
@@ -42,8 +41,7 @@ static int wps_build_manufacturer(struct wps_device_data *dev,
 }
 
 
-static int wps_build_model_name(struct wps_device_data *dev,
-				struct wpabuf *msg)
+int wps_build_model_name(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;
 	wpa_printf(MSG_DEBUG, "WPS:  * Model Name");
@@ -65,8 +63,7 @@ static int wps_build_model_name(struct wps_device_data *dev,
 }
 
 
-static int wps_build_model_number(struct wps_device_data *dev,
-				  struct wpabuf *msg)
+int wps_build_model_number(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;
 	wpa_printf(MSG_DEBUG, "WPS:  * Model Number");
@@ -121,7 +118,7 @@ int wps_build_primary_dev_type(struct wps_device_data *dev, struct wpabuf *msg)
 }
 
 
-static int wps_build_dev_name(struct wps_device_data *dev, struct wpabuf *msg)
+int wps_build_dev_name(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;
 	wpa_printf(MSG_DEBUG, "WPS:  * Device Name");

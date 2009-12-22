@@ -450,6 +450,10 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
 				      DEV_PW_DEFAULT) ||
 	    wps_build_version2(ie) ||
+	    wps_build_manufacturer(dev, ie) ||
+	    wps_build_model_name(dev, ie) ||
+	    wps_build_model_number(dev, ie) ||
+	    wps_build_dev_name(dev, ie) ||
 	    (req_type == WPS_REQ_ENROLLEE &&
 	     wps_build_req_to_enroll(ie))) {
 		wpabuf_free(ie);

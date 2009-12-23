@@ -279,14 +279,11 @@ functionality. Most of the tests for cryptographic algorithms are
 using standard test vectors to validate functionality. These tests can
 be useful especially when verifying port to a new CPU target.
 
-In most cases, these tests are implemented in the end of the same file
-with functions that are normally commented out, but ca be included by
-defining a pre-processor variable when building the file separately.
-The details of the needed build options are included in the Makefile
-(test-* targets). All automated unit tests can be run with
+The test programs are collected in the tests subdirectory. All
+automated unit tests can be run with
 
 \verbatim
-make tests
+make run-tests
 \endverbatim
 
 This make target builds and runs each test and terminates with zero

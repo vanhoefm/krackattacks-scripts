@@ -4,7 +4,8 @@
 [ \ref eapol_test "eapol_test" |
 \ref preauth_test "preauth_test" |
 \ref driver_test "driver_test" |
-\ref unit_tests "Unit tests" ]
+\ref unit_tests "Unit tests" |
+\ref wpa_trace "Tracing code" ]
 
 %wpa_supplicant source tree includes number of testing and development
 tools that make it easier to test the programs without having to setup
@@ -288,5 +289,75 @@ make run-tests
 
 This make target builds and runs each test and terminates with zero
 exit code if all tests were completed successfully.
+
+
+\section wpa_trace Tracing code for developer debuggin
+
+%wpa_supplicant and hostapd can be built with tracing code that will
+track and analyze memory allocations and other resource registrations
+and certain API uses. If incorrect use is detected, a backtrace of the
+call location (and/or allocation location) is shown. This can also be
+used to detect certain categories of memory leaks and report them
+automatically when the program is terminated. The report will also
+include information about forgotten eloop events.
+
+The trace code can be enabled with CONFIG_WPA_TRACE=y build
+option. More verbose backtrace information can be generated if libbfd
+is available and the binaries are not stripped of symbol
+information. This is enabled with CONFIG_WPA_TRACE_BFD=y.
+
+For example, a memory leak (forgotten os_free() call) would show up
+like this when the program is terminated:
+
+\verbatim
+MEMLEAK[0x82d200]: len 128
+WPA_TRACE: memleak - START
+[0]: ./wpa_supplicant(os_malloc+0x59) [0x41a5e9]
+     os_malloc() ../src/utils/os_unix.c:359
+[1]: ./wpa_supplicant(os_zalloc+0x16) [0x41a676]
+     os_zalloc() ../src/utils/os_unix.c:418
+[2]: ./wpa_supplicant(wpa_supplicant_init+0x38) [0x48b508]
+     wpa_supplicant_init() wpa_supplicant.c:2315
+[3]: ./wpa_supplicant(main+0x2f3) [0x491073]
+     main() main.c:252
+WPA_TRACE: memleak - END
+MEMLEAK: total 128 bytes
+\endverbatim
+
+Another type of error that can be detected is freeing of memory area
+that was registered for some use and is still be referenced:
+
+\verbatim
+WPA_TRACE: Freeing referenced memory - START
+[2]: ./wpa_supplicant(os_free+0x5c) [0x41a53c]
+     os_free() ../src/utils/os_unix.c:411
+[3]: ./wpa_supplicant(wpa_supplicant_remove_iface+0x30) [0x48b380]
+     wpa_supplicant_remove_iface() wpa_supplicant.c:2259
+[4]: ./wpa_supplicant(wpa_supplicant_deinit+0x20) [0x48b3e0]
+     wpa_supplicant_deinit() wpa_supplicant.c:2430
+[5]: ./wpa_supplicant(main+0x357) [0x4910d7]
+     main() main.c:276
+WPA_TRACE: Freeing referenced memory - END
+WPA_TRACE: Reference registration - START
+[1]: ./wpa_supplicant [0x41c040]
+     eloop_trace_sock_add_ref() ../src/utils/eloop.c:94
+[2]: ./wpa_supplicant(wpa_supplicant_ctrl_iface_deinit+0x17) [0x473247]
+     wpa_supplicant_ctrl_iface_deinit() ctrl_iface_unix.c:436
+[3]: ./wpa_supplicant [0x48b21c]
+     wpa_supplicant_cleanup() wpa_supplicant.c:378
+     wpa_supplicant_deinit_iface() wpa_supplicant.c:2155
+[4]: ./wpa_supplicant(wpa_supplicant_remove_iface+0x30) [0x48b380]
+     wpa_supplicant_remove_iface() wpa_supplicant.c:2259
+[5]: ./wpa_supplicant(wpa_supplicant_deinit+0x20) [0x48b3e0]
+     wpa_supplicant_deinit() wpa_supplicant.c:2430
+[6]: ./wpa_supplicant(main+0x357) [0x4910d7]
+     main() main.c:276
+WPA_TRACE: Reference registration - END
+Aborted
+\endverbatim
+
+This type of error results in showing backtraces for both the location
+where the incorrect freeing happened and the location where the memory
+area was marked referenced.
 
 */

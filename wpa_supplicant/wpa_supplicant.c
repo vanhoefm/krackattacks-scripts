@@ -2032,7 +2032,7 @@ next_driver:
 	wpa_s->drv_priv = wpa_drv_init(wpa_s, wpa_s->ifname);
 	if (wpa_s->drv_priv == NULL) {
 		const char *pos;
-		pos = os_strchr(driver, ',');
+		pos = driver ? os_strchr(driver, ',') : NULL;
 		if (pos) {
 			wpa_printf(MSG_DEBUG, "Failed to initialize driver "
 				   "interface - try next driver wrapper");

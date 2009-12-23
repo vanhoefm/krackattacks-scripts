@@ -1445,9 +1445,9 @@ static int eap_fast_process_start(struct eap_sm *sm,
 
 	/* EAP-FAST Version negotiation (section 3.1) */
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Start (server ver=%d, own ver=%d)",
-		   flags & EAP_PEAP_VERSION_MASK, data->fast_version);
-	if ((flags & EAP_PEAP_VERSION_MASK) < data->fast_version)
-		data->fast_version = flags & EAP_PEAP_VERSION_MASK;
+		   flags & EAP_TLS_VERSION_MASK, data->fast_version);
+	if ((flags & EAP_TLS_VERSION_MASK) < data->fast_version)
+		data->fast_version = flags & EAP_TLS_VERSION_MASK;
 	wpa_printf(MSG_DEBUG, "EAP-FAST: Using FAST version %d",
 		   data->fast_version);
 

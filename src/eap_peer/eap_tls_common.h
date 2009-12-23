@@ -71,7 +71,7 @@ struct eap_ssl_data {
 	int tls_ia;
 
 	/**
-	 * eap - Pointer to EAP state machine allocated with eap_peer_sm_init()
+	 * eap - EAP state machine allocated with eap_peer_sm_init()
 	 */
 	struct eap_sm *eap;
 };
@@ -81,7 +81,7 @@ struct eap_ssl_data {
 #define EAP_TLS_FLAGS_LENGTH_INCLUDED 0x80
 #define EAP_TLS_FLAGS_MORE_FRAGMENTS 0x40
 #define EAP_TLS_FLAGS_START 0x20
-#define EAP_PEAP_VERSION_MASK 0x07
+#define EAP_TLS_VERSION_MASK 0x07
 
  /* could be up to 128 bytes, but only the first 64 bytes are used */
 #define EAP_TLS_KEY_LEN 64

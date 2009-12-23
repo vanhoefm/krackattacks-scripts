@@ -15,19 +15,46 @@
 #ifndef EAP_TLS_COMMON_H
 #define EAP_TLS_COMMON_H
 
+/**
+ * struct eap_ssl_data - TLS data for EAP methods
+ */
 struct eap_ssl_data {
+	/**
+	 * conn - TLS connection context data from tls_connection_init()
+	 */
 	struct tls_connection *conn;
 
+	/**
+	 * tls_out - TLS message to be sent out in fragments
+	 */
+	struct wpabuf *tls_out;
+
+	/**
+	 * tls_out_pos - The current position in the outgoing TLS message
+	 */
+	size_t tls_out_pos;
+
+	/**
+	 * tls_out_limit - Maximum fragment size for outgoing TLS messages
+	 */
 	size_t tls_out_limit;
 
+	/**
+	 * tls_in - Received TLS message buffer for re-assembly
+	 */
+	struct wpabuf *tls_in;
+
+	/**
+	 * phase2 - Whether this TLS connection is used in EAP phase 2 (tunnel)
+	 */
 	int phase2;
 
+	/**
+	 * eap - EAP state machine allocated with eap_server_sm_init()
+	 */
 	struct eap_sm *eap;
 
 	enum { MSG, FRAG_ACK, WAIT_FRAG_ACK } state;
-	struct wpabuf *in_buf;
-	struct wpabuf *out_buf;
-	size_t out_used;
 	struct wpabuf tmpbuf;
 };
 

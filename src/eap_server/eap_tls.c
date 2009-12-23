@@ -169,7 +169,7 @@ static void eap_tls_process_msg(struct eap_sm *sm, void *priv,
 				const struct wpabuf *respData)
 {
 	struct eap_tls_data *data = priv;
-	if (data->state == SUCCESS && wpabuf_len(data->ssl.in_buf) == 0) {
+	if (data->state == SUCCESS && wpabuf_len(data->ssl.tls_in) == 0) {
 		wpa_printf(MSG_DEBUG, "EAP-TLS: Client acknowledged final TLS "
 			   "handshake message");
 		return;

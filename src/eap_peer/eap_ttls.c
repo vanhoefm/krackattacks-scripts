@@ -1669,10 +1669,10 @@ static int eap_ttls_process_start(struct eap_sm *sm,
 	struct eap_peer_config *config = eap_get_config(sm);
 
 	wpa_printf(MSG_DEBUG, "EAP-TTLS: Start (server ver=%d, own ver=%d)",
-		   flags & EAP_PEAP_VERSION_MASK, data->ttls_version);
+		   flags & EAP_TLS_VERSION_MASK, data->ttls_version);
 #if EAP_TTLS_VERSION > 0
-	if ((flags & EAP_PEAP_VERSION_MASK) < data->ttls_version)
-		data->ttls_version = flags & EAP_PEAP_VERSION_MASK;
+	if ((flags & EAP_TLS_VERSION_MASK) < data->ttls_version)
+		data->ttls_version = flags & EAP_TLS_VERSION_MASK;
 	if (data->force_ttls_version >= 0 &&
 	    data->force_ttls_version != data->ttls_version) {
 		wpa_printf(MSG_WARNING, "EAP-TTLS: Failed to select "

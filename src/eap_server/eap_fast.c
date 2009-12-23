@@ -819,25 +819,25 @@ static int eap_fast_encrypt_phase2(struct eap_sm *sm,
 	encr = eap_server_tls_encrypt(sm, &data->ssl, plain);
 	wpabuf_free(plain);
 
-	if (data->ssl.out_buf && piggyback) {
+	if (data->ssl.tls_out && piggyback) {
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Piggyback Phase 2 data "
 			   "(len=%d) with last Phase 1 Message (len=%d "
 			   "used=%d)",
 			   (int) wpabuf_len(encr),
-			   (int) wpabuf_len(data->ssl.out_buf),
-			   (int) data->ssl.out_used);
-		if (wpabuf_resize(&data->ssl.out_buf, wpabuf_len(encr)) < 0) {
+			   (int) wpabuf_len(data->ssl.tls_out),
+			   (int) data->ssl.tls_out_pos);
+		if (wpabuf_resize(&data->ssl.tls_out, wpabuf_len(encr)) < 0) {
 			wpa_printf(MSG_WARNING, "EAP-FAST: Failed to resize "
 				   "output buffer");
 			wpabuf_free(encr);
 			return -1;
 		}
-		wpabuf_put_buf(data->ssl.out_buf, encr);
+		wpabuf_put_buf(data->ssl.tls_out, encr);
 		wpabuf_free(encr);
 	} else {
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = encr;
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = encr;
 	}
 
 	return 0;
@@ -1448,7 +1448,7 @@ static int eap_fast_process_phase1(struct eap_sm *sm,
 	}
 
 	if (!tls_connection_established(sm->ssl_ctx, data->ssl.conn) ||
-	    wpabuf_len(data->ssl.out_buf) > 0)
+	    wpabuf_len(data->ssl.tls_out) > 0)
 		return 1;
 
 	/*
@@ -1514,7 +1514,7 @@ static void eap_fast_process_msg(struct eap_sm *sm, void *priv,
 	case PHASE2_METHOD:
 	case CRYPTO_BINDING:
 	case REQUEST_PAC:
-		eap_fast_process_phase2(sm, data, data->ssl.in_buf);
+		eap_fast_process_phase2(sm, data, data->ssl.tls_in);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Unexpected state %d in %s",

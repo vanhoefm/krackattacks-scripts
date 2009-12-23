@@ -549,20 +549,20 @@ static struct wpabuf * eap_ttls_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		}
 		break;
 	case PHASE2_METHOD:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_ttls_build_phase2_eap_req(sm, data,
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_ttls_build_phase2_eap_req(sm, data,
 								  id);
 		break;
 	case PHASE2_MSCHAPV2_RESP:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_ttls_build_phase2_mschapv2(sm, data);
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_ttls_build_phase2_mschapv2(sm, data);
 		break;
 	case PHASE_FINISHED:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_ttls_build_phase_finished(sm, data, 1);
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_ttls_build_phase_finished(sm, data, 1);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP-TTLS: %s - unexpected state %d",
@@ -1271,11 +1271,11 @@ static void eap_ttls_process_msg(struct eap_sm *sm, void *priv,
 	case PHASE2_START:
 	case PHASE2_METHOD:
 	case PHASE_FINISHED:
-		eap_ttls_process_phase2(sm, data, data->ssl.in_buf);
+		eap_ttls_process_phase2(sm, data, data->ssl.tls_in);
 		eap_ttls_start_tnc(sm, data);
 		break;
 	case PHASE2_MSCHAPV2_RESP:
-		if (data->mschapv2_resp_ok && wpabuf_len(data->ssl.in_buf) ==
+		if (data->mschapv2_resp_ok && wpabuf_len(data->ssl.tls_in) ==
 		    0) {
 			wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2: Peer "
 				   "acknowledged response");
@@ -1290,7 +1290,7 @@ static void eap_ttls_process_msg(struct eap_sm *sm, void *priv,
 				   "frame from peer (payload len %lu, "
 				   "expected empty frame)",
 				   (unsigned long)
-				   wpabuf_len(data->ssl.in_buf));
+				   wpabuf_len(data->ssl.tls_in));
 			eap_ttls_state(data, FAILURE);
 		}
 		eap_ttls_start_tnc(sm, data);

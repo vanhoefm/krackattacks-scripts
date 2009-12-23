@@ -58,8 +58,8 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 void eap_server_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data)
 {
 	tls_connection_deinit(sm->ssl_ctx, data->conn);
-	os_free(data->in_buf);
-	os_free(data->out_buf);
+	os_free(data->tls_in);
+	os_free(data->tls_out);
 }
 
 
@@ -114,17 +114,17 @@ struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 	size_t send_len, plen;
 
 	wpa_printf(MSG_DEBUG, "SSL: Generating Request");
-	if (data->out_buf == NULL) {
-		wpa_printf(MSG_ERROR, "SSL: out_buf NULL in %s", __func__);
+	if (data->tls_out == NULL) {
+		wpa_printf(MSG_ERROR, "SSL: tls_out NULL in %s", __func__);
 		return NULL;
 	}
 
 	flags = version;
-	send_len = wpabuf_len(data->out_buf) - data->out_used;
+	send_len = wpabuf_len(data->tls_out) - data->tls_out_pos;
 	if (1 + send_len > data->tls_out_limit) {
 		send_len = data->tls_out_limit - 1;
 		flags |= EAP_TLS_FLAGS_MORE_FRAGMENTS;
-		if (data->out_used == 0) {
+		if (data->tls_out_pos == 0) {
 			flags |= EAP_TLS_FLAGS_LENGTH_INCLUDED;
 			send_len -= 4;
 		}
@@ -141,25 +141,25 @@ struct wpabuf * eap_server_tls_build_msg(struct eap_ssl_data *data,
 
 	wpabuf_put_u8(req, flags); /* Flags */
 	if (flags & EAP_TLS_FLAGS_LENGTH_INCLUDED)
-		wpabuf_put_be32(req, wpabuf_len(data->out_buf));
+		wpabuf_put_be32(req, wpabuf_len(data->tls_out));
 
-	wpabuf_put_data(req, wpabuf_head_u8(data->out_buf) + data->out_used,
+	wpabuf_put_data(req, wpabuf_head_u8(data->tls_out) + data->tls_out_pos,
 			send_len);
-	data->out_used += send_len;
+	data->tls_out_pos += send_len;
 
-	if (data->out_used == wpabuf_len(data->out_buf)) {
+	if (data->tls_out_pos == wpabuf_len(data->tls_out)) {
 		wpa_printf(MSG_DEBUG, "SSL: Sending out %lu bytes "
 			   "(message sent completely)",
 			   (unsigned long) send_len);
-		wpabuf_free(data->out_buf);
-		data->out_buf = NULL;
-		data->out_used = 0;
+		wpabuf_free(data->tls_out);
+		data->tls_out = NULL;
+		data->tls_out_pos = 0;
 		data->state = MSG;
 	} else {
 		wpa_printf(MSG_DEBUG, "SSL: Sending out %lu bytes "
 			   "(%lu more to send)", (unsigned long) send_len,
-			   (unsigned long) wpabuf_len(data->out_buf) -
-			   data->out_used);
+			   (unsigned long) wpabuf_len(data->tls_out) -
+			   data->tls_out_pos);
 		data->state = WAIT_FRAG_ACK;
 	}
 
@@ -185,15 +185,15 @@ static int eap_server_tls_process_cont(struct eap_ssl_data *data,
 				       const u8 *buf, size_t len)
 {
 	/* Process continuation of a pending message */
-	if (len > wpabuf_tailroom(data->in_buf)) {
+	if (len > wpabuf_tailroom(data->tls_in)) {
 		wpa_printf(MSG_DEBUG, "SSL: Fragment overflow");
 		return -1;
 	}
 
-	wpabuf_put_data(data->in_buf, buf, len);
+	wpabuf_put_data(data->tls_in, buf, len);
 	wpa_printf(MSG_DEBUG, "SSL: Received %lu bytes, waiting for %lu "
 		   "bytes more", (unsigned long) len,
-		   (unsigned long) wpabuf_tailroom(data->in_buf));
+		   (unsigned long) wpabuf_tailroom(data->tls_in));
 
 	return 0;
 }
@@ -204,13 +204,13 @@ static int eap_server_tls_process_fragment(struct eap_ssl_data *data,
 					   const u8 *buf, size_t len)
 {
 	/* Process a fragment that is not the last one of the message */
-	if (data->in_buf == NULL && !(flags & EAP_TLS_FLAGS_LENGTH_INCLUDED)) {
+	if (data->tls_in == NULL && !(flags & EAP_TLS_FLAGS_LENGTH_INCLUDED)) {
 		wpa_printf(MSG_DEBUG, "SSL: No Message Length field in a "
 			   "fragmented packet");
 		return -1;
 	}
 
-	if (data->in_buf == NULL) {
+	if (data->tls_in == NULL) {
 		/* First fragment of the message */
 
 		/* Limit length to avoid rogue peers from causing large
@@ -221,16 +221,16 @@ static int eap_server_tls_process_fragment(struct eap_ssl_data *data,
 			return -1;
 		}
 
-		data->in_buf = wpabuf_alloc(message_length);
-		if (data->in_buf == NULL) {
+		data->tls_in = wpabuf_alloc(message_length);
+		if (data->tls_in == NULL) {
 			wpa_printf(MSG_DEBUG, "SSL: No memory for message");
 			return -1;
 		}
-		wpabuf_put_data(data->in_buf, buf, len);
+		wpabuf_put_data(data->tls_in, buf, len);
 		wpa_printf(MSG_DEBUG, "SSL: Received %lu bytes in first "
 			   "fragment, waiting for %lu bytes more",
 			   (unsigned long) len,
-			   (unsigned long) wpabuf_tailroom(data->in_buf));
+			   (unsigned long) wpabuf_tailroom(data->tls_in));
 	}
 
 	return 0;
@@ -239,24 +239,24 @@ static int eap_server_tls_process_fragment(struct eap_ssl_data *data,
 
 int eap_server_tls_phase1(struct eap_sm *sm, struct eap_ssl_data *data)
 {
-	if (data->out_buf) {
+	if (data->tls_out) {
 		/* This should not happen.. */
 		wpa_printf(MSG_INFO, "SSL: pending tls_out data when "
 			   "processing new message");
-		wpabuf_free(data->out_buf);
-		WPA_ASSERT(data->out_buf == NULL);
+		wpabuf_free(data->tls_out);
+		WPA_ASSERT(data->tls_out == NULL);
 	}
 
-	data->out_buf = tls_connection_server_handshake(sm->ssl_ctx,
+	data->tls_out = tls_connection_server_handshake(sm->ssl_ctx,
 							data->conn,
-							data->in_buf, NULL);
-	if (data->out_buf == NULL) {
+							data->tls_in, NULL);
+	if (data->tls_out == NULL) {
 		wpa_printf(MSG_INFO, "SSL: TLS processing failed");
 		return -1;
 	}
 	if (tls_connection_get_failed(sm->ssl_ctx, data->conn)) {
 		/* TLS processing has failed - return error */
-		wpa_printf(MSG_DEBUG, "SSL: Failed - out_buf available to "
+		wpa_printf(MSG_DEBUG, "SSL: Failed - tls_out available to "
 			   "report error");
 		return -1;
 	}
@@ -297,7 +297,7 @@ static int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
 		return 1;
 	}
 
-	if (data->in_buf &&
+	if (data->tls_in &&
 	    eap_server_tls_process_cont(data, *pos, end - *pos) < 0)
 		return -1;
 		
@@ -315,10 +315,10 @@ static int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
 		data->state = MSG;
 	}
 
-	if (data->in_buf == NULL) {
+	if (data->tls_in == NULL) {
 		/* Wrap unfragmented messages as wpabuf without extra copy */
 		wpabuf_set(&data->tmpbuf, *pos, end - *pos);
-		data->in_buf = &data->tmpbuf;
+		data->tls_in = &data->tmpbuf;
 	}
 
 	return 0;
@@ -327,9 +327,9 @@ static int eap_server_tls_reassemble(struct eap_ssl_data *data, u8 flags,
 
 static void eap_server_tls_free_in_buf(struct eap_ssl_data *data)
 {
-	if (data->in_buf != &data->tmpbuf)
-		wpabuf_free(data->in_buf);
-	data->in_buf = NULL;
+	if (data->tls_in != &data->tmpbuf)
+		wpabuf_free(data->tls_in);
+	data->tls_in = NULL;
 }
 
 

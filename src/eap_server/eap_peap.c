@@ -515,32 +515,32 @@ static struct wpabuf * eap_peap_buildReq(struct eap_sm *sm, void *priv, u8 id)
 		break;
 	case PHASE2_ID:
 	case PHASE2_METHOD:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_peap_build_phase2_req(sm, data, id);
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_peap_build_phase2_req(sm, data, id);
 		break;
 #ifdef EAP_SERVER_TNC
 	case PHASE2_SOH:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_peap_build_phase2_soh(sm, data, id);
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_peap_build_phase2_soh(sm, data, id);
 		break;
 #endif /* EAP_SERVER_TNC */
 	case PHASE2_TLV:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_peap_build_phase2_tlv(sm, data, id);
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_peap_build_phase2_tlv(sm, data, id);
 		break;
 	case SUCCESS_REQ:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_peap_build_phase2_term(sm, data, id,
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_peap_build_phase2_term(sm, data, id,
 							       1);
 		break;
 	case FAILURE_REQ:
-		wpabuf_free(data->ssl.out_buf);
-		data->ssl.out_used = 0;
-		data->ssl.out_buf = eap_peap_build_phase2_term(sm, data, id,
+		wpabuf_free(data->ssl.tls_out);
+		data->ssl.tls_out_pos = 0;
+		data->ssl.tls_out = eap_peap_build_phase2_term(sm, data, id,
 							       0);
 		break;
 	default:
@@ -1207,11 +1207,11 @@ static int eap_peapv2_start_phase2(struct eap_sm *sm,
 			buf);
 
 	/* Append TLS data into the pending buffer after the Server Finished */
-	if (wpabuf_resize(&data->ssl.out_buf, wpabuf_len(buf)) < 0) {
+	if (wpabuf_resize(&data->ssl.tls_out, wpabuf_len(buf)) < 0) {
 		wpabuf_free(buf);
 		return -1;
 	}
-	wpabuf_put_buf(data->ssl.out_buf, buf);
+	wpabuf_put_buf(data->ssl.tls_out, buf);
 	wpabuf_free(buf);
 
 	return 0;
@@ -1270,7 +1270,7 @@ static void eap_peap_process_msg(struct eap_sm *sm, void *priv,
 	case PHASE2_METHOD:
 	case PHASE2_SOH:
 	case PHASE2_TLV:
-		eap_peap_process_phase2(sm, data, respData, data->ssl.in_buf);
+		eap_peap_process_phase2(sm, data, respData, data->ssl.tls_in);
 		break;
 	case SUCCESS_REQ:
 		eap_peap_state(data, SUCCESS);

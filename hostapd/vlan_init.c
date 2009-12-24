@@ -2,6 +2,7 @@
  * hostapd / VLAN initialization
  * Copyright 2003, Instant802 Networks, Inc.
  * Copyright 2005-2006, Devicescape Software, Inc.
+ * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +18,7 @@
 
 #include "common.h"
 #include "hostapd.h"
-#include "driver_i.h"
+#include "config.h"
 #include "vlan_init.h"
 
 
@@ -680,8 +681,7 @@ static int vlan_dynamic_add(struct hostapd_data *hapd,
 {
 	while (vlan) {
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
-		    hostapd_if_add(hapd, WPA_IF_AP_VLAN, vlan->ifname, NULL,
-				   NULL)) {
+		    hapd->drv.vlan_if_add(hapd, vlan->ifname)) {
 			if (errno != EEXIST) {
 				printf("Could not add VLAN iface: %s: %s\n",
 				       vlan->ifname, strerror(errno));
@@ -705,7 +705,7 @@ static void vlan_dynamic_remove(struct hostapd_data *hapd,
 		next = vlan->next;
 
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
-		    hostapd_if_remove(hapd, WPA_IF_AP_VLAN, vlan->ifname)) {
+		    hapd->drv.vlan_if_remove(hapd, vlan->ifname)) {
 			printf("Could not remove VLAN iface: %s: %s\n",
 			       vlan->ifname, strerror(errno));
 		}
@@ -776,7 +776,7 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 		    pos);
 	os_free(ifname);
 
-	if (hostapd_if_add(hapd, WPA_IF_AP_VLAN, n->ifname, NULL, NULL)) {
+	if (hapd->drv.vlan_if_add(hapd, n->ifname)) {
 		os_free(n);
 		return NULL;
 	}
@@ -808,7 +808,7 @@ int vlan_remove_dynamic(struct hostapd_data *hapd, int vlan_id)
 		return 1;
 
 	if (vlan->dynamic_vlan == 0)
-		hostapd_if_remove(hapd, WPA_IF_AP_VLAN, vlan->ifname);
+		hapd->drv.vlan_if_remove(hapd, vlan->ifname);
 
 	return 0;
 }

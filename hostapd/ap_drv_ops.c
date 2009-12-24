@@ -238,6 +238,18 @@ static int hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
 }
 
 
+static int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
+{
+	return hostapd_if_add(hapd, WPA_IF_AP_VLAN, ifname, NULL, NULL);
+}
+
+static int hostapd_vlan_if_remove(struct hostapd_data *hapd,
+				  const char *ifname)
+{
+	return hostapd_if_remove(hapd, WPA_IF_AP_VLAN, ifname);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -253,4 +265,6 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->set_radius_acl_expire = hostapd_set_radius_acl_expire;
 	ops->set_bss_params = hostapd_set_bss_params;
 	ops->set_beacon = hostapd_set_beacon;
+	ops->vlan_if_add = hostapd_vlan_if_add;
+	ops->vlan_if_remove = hostapd_vlan_if_remove;
 }

@@ -74,6 +74,8 @@ struct hostapd_driver_ops {
 			  const u8 *head, size_t head_len,
 			  const u8 *tail, size_t tail_len, int dtim_period,
 			  int beacon_int);
+	int (*vlan_if_add)(struct hostapd_data *hapd, const char *ifname);
+	int (*vlan_if_remove)(struct hostapd_data *hapd, const char *ifname);
 };
 
 /**

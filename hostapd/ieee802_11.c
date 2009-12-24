@@ -16,11 +16,10 @@
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
-#include <net/if.h>
-
 #include "common.h"
 #include "eloop.h"
 #include "crypto/crypto.h"
+#include "drivers/driver.h"
 #include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
@@ -35,7 +34,7 @@
 #include "wme.h"
 #include "ap_list.h"
 #include "accounting.h"
-#include "driver_i.h"
+#include "config.h"
 #include "mlme.h"
 
 
@@ -1550,11 +1549,10 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		hostapd_get_ht_capab(hapd, sta->ht_capabilities, &ht_cap);
 #endif /* CONFIG_IEEE80211N */
 
-	if (hostapd_sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,
-			    sta->capability, sta->supported_rates,
-			    sta->supported_rates_len, sta->listen_interval,
-			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL))
-	{
+	if (hapd->drv.sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,
+			      sta->capability, sta->supported_rates,
+			      sta->supported_rates_len, sta->listen_interval,
+			      sta->flags & WLAN_STA_HT ? &ht_cap : NULL)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
 			       "Could not add STA to kernel driver");

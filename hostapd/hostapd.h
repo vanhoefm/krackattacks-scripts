@@ -25,10 +25,8 @@ struct hapd_interfaces;
 struct hostapd_data;
 struct sta_info;
 struct hostap_sta_driver_data;
-
-#ifdef CONFIG_FULL_DYNAMIC_VLAN
+struct ieee80211_ht_capabilities;
 struct full_dynamic_vlan;
-#endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 struct hostapd_probereq_cb {
 	void (*cb)(void *ctx, const u8 *sa, const u8 *ie, size_t ie_len);
@@ -85,6 +83,11 @@ struct hostapd_driver_ops {
 			  int reason);
 	int (*sta_disassoc)(struct hostapd_data *hapd, const u8 *addr,
 			    int reason);
+	int (*sta_add)(const char *ifname, struct hostapd_data *hapd,
+		       const u8 *addr, u16 aid, u16 capability,
+		       const u8 *supp_rates, size_t supp_rates_len,
+		       u16 listen_interval,
+		       const struct ieee80211_ht_capabilities *ht_capab);
 	int (*sta_remove)(struct hostapd_data *hapd, const u8 *addr);
 };
 

@@ -135,30 +135,6 @@ hostapd_set_countermeasures(struct hostapd_data *hapd, int enabled)
 }
 
 static inline int
-hostapd_sta_add(const char *ifname, struct hostapd_data *hapd, const u8 *addr,
-		u16 aid, u16 capability, const u8 *supp_rates,
-		size_t supp_rates_len, u16 listen_interval,
-		const struct ieee80211_ht_capabilities *ht_capabilities)
-{
-	struct hostapd_sta_add_params params;
-
-	if (hapd->driver == NULL)
-		return 0;
-	if (hapd->driver->sta_add == NULL)
-		return 0;
-
-	os_memset(&params, 0, sizeof(params));
-	params.addr = addr;
-	params.aid = aid;
-	params.capability = capability;
-	params.supp_rates = supp_rates;
-	params.supp_rates_len = supp_rates_len;
-	params.listen_interval = listen_interval;
-	params.ht_capabilities = ht_capabilities;
-	return hapd->driver->sta_add(ifname, hapd->drv_priv, &params);
-}
-
-static inline int
 hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq, int channel,
 		 int ht_enabled, int sec_channel_offset)
 {

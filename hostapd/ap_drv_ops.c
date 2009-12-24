@@ -297,6 +297,31 @@ static int hostapd_sta_disassoc(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
+static int hostapd_sta_add(const char *ifname, struct hostapd_data *hapd,
+			   const u8 *addr, u16 aid, u16 capability,
+			   const u8 *supp_rates, size_t supp_rates_len,
+			   u16 listen_interval,
+			   const struct ieee80211_ht_capabilities *ht_capab)
+{
+	struct hostapd_sta_add_params params;
+
+	if (hapd->driver == NULL)
+		return 0;
+	if (hapd->driver->sta_add == NULL)
+		return 0;
+
+	os_memset(&params, 0, sizeof(params));
+	params.addr = addr;
+	params.aid = aid;
+	params.capability = capability;
+	params.supp_rates = supp_rates;
+	params.supp_rates_len = supp_rates_len;
+	params.listen_interval = listen_interval;
+	params.ht_capabilities = ht_capab;
+	return hapd->driver->sta_add(ifname, hapd->drv_priv, &params);
+}
+
+
 static int hostapd_sta_remove(struct hostapd_data *hapd, const u8 *addr)
 {
 	if (hapd->driver == NULL || hapd->driver->sta_remove == NULL)
@@ -327,5 +352,6 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->get_inact_sec = hostapd_get_inact_sec;
 	ops->sta_deauth = hostapd_sta_deauth;
 	ops->sta_disassoc = hostapd_sta_disassoc;
+	ops->sta_add = hostapd_sta_add;
 	ops->sta_remove = hostapd_sta_remove;
 }

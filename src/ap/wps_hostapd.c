@@ -165,7 +165,7 @@ static void wps_reload_config(void *eloop_data, void *user_ctx)
 	struct hostapd_iface *iface = eloop_data;
 
 	wpa_printf(MSG_DEBUG, "WPS: Reload configuration data");
-	if (hostapd_reload_config(iface) < 0) {
+	if (iface->reload_config(iface) < 0) {
 		wpa_printf(MSG_WARNING, "WPS: Failed to reload the updated "
 			   "configuration");
 	}

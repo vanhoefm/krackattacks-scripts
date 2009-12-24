@@ -20,7 +20,7 @@
 #include "ap/wpa.h"
 #include "ap/ieee802_11.h"
 #include "ap/sta_info.h"
-#include "wps_hostapd.h"
+#include "ap/wps_hostapd.h"
 #include "ctrl_iface_ap.h"
 
 

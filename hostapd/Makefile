@@ -38,6 +38,7 @@ OBJS += config_file.o
 OBJS += drv_callbacks.o
 OBJS += ap_drv_ops.o
 
+OBJS += ../src/ap/utils.o
 OBJS += ../src/ap/ieee802_1x.o
 OBJS += ../src/ap/config.o
 OBJS += ../src/ap/ieee802_11_auth.o
@@ -289,7 +290,7 @@ endif
 ifdef CONFIG_WPS
 CFLAGS += -DCONFIG_WPS -DEAP_SERVER_WSC
 OBJS += ../src/utils/uuid.o
-OBJS += wps_hostapd.o
+OBJS += ../src/ap/wps_hostapd.o
 OBJS += ../src/eap_server/eap_wsc.o ../src/eap_common/eap_wsc_common.o
 OBJS += ../src/wps/wps.o
 OBJS += ../src/wps/wps_common.o

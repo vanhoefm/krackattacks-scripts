@@ -24,9 +24,9 @@
 #include "ap/ieee802_1x.h"
 #include "ap/wpa.h"
 #include "ap/wmm.h"
+#include "ap/wps_hostapd.h"
 #include "driver_i.h"
 #include "iapp.h"
-#include "wps_hostapd.h"
 
 
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)

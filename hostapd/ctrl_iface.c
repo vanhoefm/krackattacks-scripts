@@ -31,8 +31,8 @@
 #include "ap/ieee802_11.h"
 #include "ap/sta_info.h"
 #include "ap/accounting.h"
+#include "ap/wps_hostapd.h"
 #include "ctrl_iface.h"
-#include "wps_hostapd.h"
 #include "ctrl_iface_ap.h"
 
 

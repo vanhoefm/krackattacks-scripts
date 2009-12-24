@@ -37,11 +37,11 @@
 #include "ap/tkip_countermeasures.h"
 #include "ap/vlan_init.h"
 #include "ap/wpa.h"
+#include "ap/wps_hostapd.h"
 #include "hw_features.h"
 #include "iapp.h"
 #include "driver_i.h"
 #include "ctrl_iface.h"
-#include "wps_hostapd.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);
@@ -1463,29 +1463,6 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 	for (j = 0; j < iface->num_bss; j++)
 		os_free(iface->bss[j]);
 	hostapd_cleanup_iface(iface);
-}
-
-
-int hostapd_register_probereq_cb(struct hostapd_data *hapd,
-				 void (*cb)(void *ctx, const u8 *sa,
-					    const u8 *ie, size_t ie_len),
-				 void *ctx)
-{
-	struct hostapd_probereq_cb *n;
-
-	n = os_realloc(hapd->probereq_cb, (hapd->num_probereq_cb + 1) *
-		       sizeof(struct hostapd_probereq_cb));
-	if (n == NULL)
-		return -1;
-
-	hapd->probereq_cb = n;
-	n = &hapd->probereq_cb[hapd->num_probereq_cb];
-	hapd->num_probereq_cb++;
-
-	n->cb = cb;
-	n->ctx = ctx;
-
-	return 0;
 }
 
 

@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
 
 	radius_client_deinit(ctx.radius);
 	os_free(srv->shared_secret);
+	os_free(srv);
 
 	eloop_destroy();
 	os_program_deinit();

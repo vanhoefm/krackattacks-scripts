@@ -126,15 +126,6 @@ hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
 }
 
 static inline int
-hostapd_set_countermeasures(struct hostapd_data *hapd, int enabled)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->hapd_set_countermeasures == NULL)
-		return 0;
-	return hapd->driver->hapd_set_countermeasures(hapd->drv_priv, enabled);
-}
-
-static inline int
 hostapd_set_freq(struct hostapd_data *hapd, int mode, int freq, int channel,
 		 int ht_enabled, int sec_channel_offset)
 {

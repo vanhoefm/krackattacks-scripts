@@ -330,6 +330,15 @@ static int hostapd_sta_remove(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+static int hostapd_set_countermeasures(struct hostapd_data *hapd, int enabled)
+{
+	if (hapd->driver == NULL ||
+	    hapd->driver->hapd_set_countermeasures == NULL)
+		return 0;
+	return hapd->driver->hapd_set_countermeasures(hapd->drv_priv, enabled);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -354,4 +363,5 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->sta_disassoc = hostapd_sta_disassoc;
 	ops->sta_add = hostapd_sta_add;
 	ops->sta_remove = hostapd_sta_remove;
+	ops->set_countermeasures = hostapd_set_countermeasures;
 }

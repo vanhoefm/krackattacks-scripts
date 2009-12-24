@@ -89,6 +89,7 @@ struct hostapd_driver_ops {
 		       u16 listen_interval,
 		       const struct ieee80211_ht_capabilities *ht_capab);
 	int (*sta_remove)(struct hostapd_data *hapd, const u8 *addr);
+	int (*set_countermeasures)(struct hostapd_data *hapd, int enabled);
 };
 
 /**

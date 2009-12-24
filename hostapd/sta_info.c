@@ -721,3 +721,22 @@ void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 #endif /* CONFIG_IEEE80211W */
+
+
+void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
+		       const u8 *addr, u16 reason)
+{
+
+	if (sta == NULL && addr)
+		sta = ap_get_sta(hapd, addr);
+
+	if (addr)
+		hostapd_sta_deauth(hapd, addr, reason);
+
+	if (sta == NULL)
+		return;
+	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC | WLAN_STA_AUTHORIZED);
+	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
+	eloop_register_timeout(0, 0, ap_handle_timer, hapd, sta);
+	sta->timeout_next = STA_REMOVE;
+}

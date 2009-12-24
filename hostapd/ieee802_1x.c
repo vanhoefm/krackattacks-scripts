@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.1X-2004 Authenticator
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -31,7 +31,7 @@
 #include "wpa.h"
 #include "preauth.h"
 #include "pmksa_cache.h"
-#include "driver_i.h"
+#include "config.h"
 #include "hw_features.h"
 #include "eap_server/eap.h"
 
@@ -70,7 +70,7 @@ static void ieee802_1x_send(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta->flags & WLAN_STA_PREAUTH) {
 		rsn_preauth_send(hapd, sta, buf, len);
 	} else {
-		hostapd_send_eapol(hapd, sta->addr, buf, len, encrypt);
+		hapd->drv.send_eapol(hapd, sta->addr, buf, len, encrypt);
 	}
 
 	os_free(buf);
@@ -90,10 +90,7 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 			wpa_msg(hapd->msg_ctx, MSG_INFO,
 				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 		sta->flags |= WLAN_STA_AUTHORIZED;
-		res = hostapd_sta_set_flags(hapd, sta->addr,
-					    hostapd_sta_flags_to_drv(
-						    sta->flags),
-					    WPA_STA_AUTHORIZED, ~0);
+		res = hapd->drv.set_authorized(hapd, sta, 1);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "authorizing port");
 	} else {
@@ -103,10 +100,7 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 				AP_STA_DISCONNECTED MACSTR,
 				MAC2STR(sta->addr));
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
-		res = hostapd_sta_set_flags(hapd, sta->addr,
-					    hostapd_sta_flags_to_drv(
-						    sta->flags),
-					    0, ~WPA_STA_AUTHORIZED);
+		res = hapd->drv.set_authorized(hapd, sta, 0);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "unauthorizing port");
 	}
@@ -235,8 +229,8 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 	wpa_hexdump_key(MSG_DEBUG, "Default WEP key (dynamic VLAN)",
 			key->key[key->idx], key->len[key->idx]);
 
-	if (hostapd_set_key(ifname, hapd, WPA_ALG_WEP, NULL, key->idx, 1,
-			    NULL, 0, key->key[key->idx], key->len[key->idx]))
+	if (hapd->drv.set_key(ifname, hapd, WPA_ALG_WEP, NULL, key->idx, 1,
+			      NULL, 0, key->key[key->idx], key->len[key->idx]))
 		printf("Could not set dynamic VLAN WEP encryption key.\n");
 
 	hostapd_set_drv_ieee8021x(hapd, ifname, 1);
@@ -351,9 +345,9 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 
 		/* TODO: set encryption in TX callback, i.e., only after STA
 		 * has ACKed EAPOL-Key frame */
-		if (hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP,
-				    sta->addr, 0, 1, NULL, 0, ikey,
-				    hapd->conf->individual_wep_key_len)) {
+		if (hapd->drv.set_key(hapd->conf->iface, hapd, WPA_ALG_WEP,
+				      sta->addr, 0, 1, NULL, 0, ikey,
+				      hapd->conf->individual_wep_key_len)) {
 			wpa_printf(MSG_ERROR, "Could not set individual WEP "
 				   "encryption.");
 		}
@@ -365,10 +359,7 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 
 const char *radius_mode_txt(struct hostapd_data *hapd)
 {
-	if (hapd->iface->current_mode == NULL)
-		return "802.11";
-
-	switch (hapd->iface->current_mode->mode) {
+	switch (hapd->iface->conf->hw_mode) {
 	case HOSTAPD_MODE_IEEE80211A:
 		return "802.11a";
 	case HOSTAPD_MODE_IEEE80211G:
@@ -1373,13 +1364,8 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 		 * could only be sent if the EAP peer actually replied).
 		 */
 		sm->eap_if->portEnabled = FALSE;
-		hostapd_sta_deauth(hapd, sta->addr,
-				   WLAN_REASON_PREV_AUTH_NOT_VALID);
-		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
-				WLAN_STA_AUTHORIZED);
-		eloop_cancel_timeout(ap_handle_timer, hapd, sta);
-		eloop_register_timeout(0, 0, ap_handle_timer, hapd, sta);
-		sta->timeout_next = STA_REMOVE;
+		ap_sta_disconnect(hapd, sta, sta->addr,
+				  WLAN_REASON_PREV_AUTH_NOT_VALID);
 	}
 }
 
@@ -1446,10 +1432,10 @@ static void ieee802_1x_rekey(void *eloop_ctx, void *timeout_ctx)
 
 	/* TODO: Could setup key for RX here, but change default TX keyid only
 	 * after new broadcast key has been sent to all stations. */
-	if (hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
-			    eapol->default_wep_key_idx, 1, NULL, 0,
-			    eapol->default_wep_key,
-			    hapd->conf->default_wep_key_len)) {
+	if (hapd->drv.set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
+			      eapol->default_wep_key_idx, 1, NULL, 0,
+			      eapol->default_wep_key,
+			      hapd->conf->default_wep_key_len)) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_WARNING, "failed to configure a "
 			       "new broadcast key");
@@ -1669,8 +1655,9 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 
 	if (hapd->conf->default_wep_key_len) {
 		for (i = 0; i < 4; i++)
-			hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
-					NULL, i, 0, NULL, 0, NULL, 0);
+			hapd->drv.set_key(hapd->conf->iface, hapd,
+					  WPA_ALG_NONE, NULL, i, 0, NULL, 0,
+					  NULL, 0);
 
 		ieee802_1x_rekey(hapd, NULL);
 

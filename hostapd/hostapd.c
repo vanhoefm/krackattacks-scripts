@@ -204,8 +204,8 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 	int i;
 
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
-		if (hostapd_set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,
-				    i == 0 ? 1 : 0, NULL, 0, NULL, 0)) {
+		if (hapd->drv.set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,
+				      i == 0 ? 1 : 0, NULL, 0, NULL, 0)) {
 			wpa_printf(MSG_DEBUG, "Failed to clear default "
 				   "encryption keys (ifname=%s keyidx=%d)",
 				   ifname, i);
@@ -214,9 +214,9 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211W
 	if (hapd->conf->ieee80211w) {
 		for (i = NUM_WEP_KEYS; i < NUM_WEP_KEYS + 2; i++) {
-			if (hostapd_set_key(ifname, hapd, WPA_ALG_NONE, NULL,
-					    i, i == 0 ? 1 : 0, NULL, 0,
-					    NULL, 0)) {
+			if (hapd->drv.set_key(ifname, hapd, WPA_ALG_NONE, NULL,
+					      i, i == 0 ? 1 : 0, NULL, 0,
+					      NULL, 0)) {
 				wpa_printf(MSG_DEBUG, "Failed to clear "
 					   "default mgmt encryption keys "
 					   "(ifname=%s keyidx=%d)", ifname, i);
@@ -241,9 +241,11 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 
 	idx = ssid->wep.idx;
 	if (ssid->wep.default_len &&
-	    hostapd_set_key(hapd->conf->iface,
-			    hapd, WPA_ALG_WEP, NULL, idx, idx == ssid->wep.idx,
-			    NULL, 0, ssid->wep.key[idx], ssid->wep.len[idx])) {
+	    hapd->drv.set_key(hapd->conf->iface,
+			      hapd, WPA_ALG_WEP, NULL, idx,
+			      idx == ssid->wep.idx,
+			      NULL, 0, ssid->wep.key[idx],
+			      ssid->wep.len[idx])) {
 		wpa_printf(MSG_WARNING, "Could not set WEP encryption.");
 		errors++;
 	}
@@ -261,9 +263,9 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 				continue;
 
 			idx = key->idx;
-			if (hostapd_set_key(ifname, hapd, WPA_ALG_WEP, NULL,
-					    idx, idx == key->idx, NULL, 0,
-					    key->key[idx], key->len[idx])) {
+			if (hapd->drv.set_key(ifname, hapd, WPA_ALG_WEP, NULL,
+					      idx, idx == key->idx, NULL, 0,
+					      key->key[idx], key->len[idx])) {
 				wpa_printf(MSG_WARNING, "Could not set "
 					   "dynamic VLAN WEP encryption.");
 				errors++;
@@ -399,10 +401,10 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 
 	for (i = 0; i < 4; i++) {
 		if (hapd->conf->ssid.wep.key[i] &&
-		    hostapd_set_key(iface, hapd, WPA_ALG_WEP, NULL, i,
-				    i == hapd->conf->ssid.wep.idx, NULL, 0,
-				    hapd->conf->ssid.wep.key[i],
-				    hapd->conf->ssid.wep.len[i])) {
+		    hapd->drv.set_key(iface, hapd, WPA_ALG_WEP, NULL, i,
+				      i == hapd->conf->ssid.wep.idx, NULL, 0,
+				      hapd->conf->ssid.wep.key[i],
+				      hapd->conf->ssid.wep.len[i])) {
 			wpa_printf(MSG_WARNING, "Could not set WEP "
 				   "encryption.");
 			return -1;
@@ -474,20 +476,10 @@ static void hostapd_wpa_auth_disconnect(void *ctx, const u8 *addr,
 					u16 reason)
 {
 	struct hostapd_data *hapd = ctx;
-	struct sta_info *sta;
-
 	wpa_printf(MSG_DEBUG, "%s: WPA authenticator requests disconnect: "
 		   "STA " MACSTR " reason %d",
 		   __func__, MAC2STR(addr), reason);
-
-	sta = ap_get_sta(hapd, addr);
-	hostapd_sta_deauth(hapd, addr, reason);
-	if (sta == NULL)
-		return;
-	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC | WLAN_STA_AUTHORIZED);
-	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
-	eloop_register_timeout(0, 0, ap_handle_timer, hapd, sta);
-	sta->timeout_next = STA_REMOVE;
+	ap_sta_disconnect(hapd, NULL, addr, reason);
 }
 
 
@@ -604,8 +596,8 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, wpa_alg alg,
 			return -1;
 	}
 
-	return hostapd_set_key(ifname, hapd, alg, addr, idx, 1, NULL, 0,
-			       key, key_len);
+	return hapd->drv.set_key(ifname, hapd, alg, addr, idx, 1, NULL, 0,
+				 key, key_len);
 }
 
 
@@ -622,7 +614,7 @@ static int hostapd_wpa_auth_send_eapol(void *ctx, const u8 *addr,
 				       int encrypt)
 {
 	struct hostapd_data *hapd = ctx;
-	return hostapd_send_eapol(hapd, addr, data, data_len, encrypt);
+	return hapd->drv.send_eapol(hapd, addr, data, data_len, encrypt);
 }
 
 

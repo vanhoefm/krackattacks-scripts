@@ -662,9 +662,9 @@ int vlan_setup_encryption_dyn(struct hostapd_data *hapd,
 	 * functions for setting up dynamic broadcast keys. */
 	for (i = 0; i < 4; i++) {
 		if (mssid->wep.key[i] &&
-		    hostapd_set_key(dyn_vlan, hapd, WPA_ALG_WEP, NULL, i,
-				    i == mssid->wep.idx, NULL, 0,
-				    mssid->wep.key[i], mssid->wep.len[i])) {
+		    hapd->drv.set_key(dyn_vlan, hapd, WPA_ALG_WEP, NULL, i,
+				      i == mssid->wep.idx, NULL, 0,
+				      mssid->wep.key[i], mssid->wep.len[i])) {
 			printf("VLAN: Could not set WEP encryption for "
 			       "dynamic VLAN.\n");
 			return -1;

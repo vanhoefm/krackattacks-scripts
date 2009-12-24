@@ -306,10 +306,7 @@ static void iapp_process_add_notify(struct iapp_data *iapp,
 	hostapd_logger(iapp->hapd, add->mac_addr, HOSTAPD_MODULE_IAPP,
 		       HOSTAPD_LEVEL_DEBUG,
 		       "Removing STA due to IAPP ADD-notify");
-	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC | WLAN_STA_AUTHORIZED);
-	eloop_cancel_timeout(ap_handle_timer, iapp->hapd, sta);
-	eloop_register_timeout(0, 0, ap_handle_timer, iapp->hapd, sta);
-	sta->timeout_next = STA_REMOVE;
+	ap_sta_disconnect(iapp->hapd, sta, NULL, 0);
 }
 
 

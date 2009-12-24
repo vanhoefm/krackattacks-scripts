@@ -1,6 +1,6 @@
 /*
  * hostapd / Initialization and configuration
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +15,8 @@
 #ifndef HOSTAPD_H
 #define HOSTAPD_H
 
+#include "common/defs.h"
+
 #define MAX_VLAN_ID 4094
 
 struct wpa_driver_ops;
@@ -23,6 +25,7 @@ struct radius_server_data;
 struct upnp_wps_device_sm;
 struct hapd_interfaces;
 struct hostapd_data;
+struct sta_info;
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 struct full_dynamic_vlan;
@@ -47,6 +50,14 @@ struct hostapd_driver_ops {
 			     const struct wpabuf *probe);
 	int (*send_mgmt_frame)(struct hostapd_data *hapd, const void *msg,
 			       size_t len);
+	int (*send_eapol)(struct hostapd_data *hapd, const u8 *addr,
+			  const u8 *data, size_t data_len, int encrypt);
+	int (*set_authorized)(struct hostapd_data *hapd, struct sta_info *sta,
+			      int authorized);
+	int (*set_key)(const char *ifname, struct hostapd_data *hapd,
+		       wpa_alg alg, const u8 *addr, int key_idx,
+		       int set_tx, const u8 *seq, size_t seq_len,
+		       const u8 *key, size_t key_len);
 };
 
 /**

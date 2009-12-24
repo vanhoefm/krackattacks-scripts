@@ -20,6 +20,21 @@
 #include "driver_i.h"
 
 
+static int hostapd_sta_flags_to_drv(int flags)
+{
+	int res = 0;
+	if (flags & WLAN_STA_AUTHORIZED)
+		res |= WPA_STA_AUTHORIZED;
+	if (flags & WLAN_STA_WMM)
+		res |= WPA_STA_WMM;
+	if (flags & WLAN_STA_SHORT_PREAMBLE)
+		res |= WPA_STA_SHORT_PREAMBLE;
+	if (flags & WLAN_STA_MFP)
+		res |= WPA_STA_MFP;
+	return res;
+}
+
+
 static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd,
 				 const struct wpabuf *beacon,
 				 const struct wpabuf *proberesp)
@@ -98,6 +113,22 @@ static int hostapd_sta_clear_stats(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+static int hostapd_set_sta_flags(struct hostapd_data *hapd,
+				 struct sta_info *sta)
+{
+	int set_flags, total_flags, flags_and, flags_or;
+	total_flags = hostapd_sta_flags_to_drv(sta->flags);
+	set_flags = WPA_STA_SHORT_PREAMBLE | WPA_STA_WMM | WPA_STA_MFP;
+	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa &&
+	    sta->flags & WLAN_STA_AUTHORIZED)
+		set_flags |= WPA_STA_AUTHORIZED;
+	flags_or = total_flags & set_flags;
+	flags_and = total_flags | ~set_flags;
+	return hostapd_sta_set_flags(hapd, sta->addr, total_flags,
+				     flags_or, flags_and);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -107,4 +138,5 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->set_key = hostapd_set_key;
 	ops->read_sta_data = hostapd_read_sta_data;
 	ops->sta_clear_stats = hostapd_sta_clear_stats;
+	ops->set_sta_flags = hostapd_set_sta_flags;
 }

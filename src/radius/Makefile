@@ -10,7 +10,7 @@ install:
 
 include ../lib.rules
 
-CFLAGS += -DCONFIG_IPV6
+#CFLAGS += -DCONFIG_IPV6
 
 LIB_OBJS= \
 	radius.o \

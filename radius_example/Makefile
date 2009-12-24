@@ -31,6 +31,8 @@ LIBS += ../src/utils/libutils.a
 ../src/radius/libradius.a:
 	$(MAKE) -C ../src/radius
 
+#CLAGS += -DCONFIG_IPV6
+
 OBJS_ex = radius_example.o
 
 radius_example: $(OBJS_ex) $(LIBS)

@@ -201,11 +201,14 @@ void handle_probe_req(struct hostapd_data *hapd,
 	const u8 *ie;
 	size_t ssid_len, ie_len;
 	struct sta_info *sta = NULL;
+	size_t i;
 
 	ie = mgmt->u.probe_req.variable;
 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
 
-	hostapd_probe_req_rx(hapd, mgmt->sa, ie, ie_len);
+	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
+		hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
+					mgmt->sa, ie, ie_len);
 
 	if (!hapd->iconf->send_probe_response)
 		return;

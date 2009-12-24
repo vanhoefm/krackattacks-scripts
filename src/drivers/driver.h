@@ -1992,8 +1992,6 @@ void wpa_scan_sort_results(struct wpa_scan_results *res);
 struct sta_info;
 struct ieee80211_hdr;
 
-void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
-			   int reassoc);
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);

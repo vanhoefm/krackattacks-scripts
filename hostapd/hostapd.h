@@ -219,5 +219,7 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 
 int eap_server_register_methods(void);
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops);
+void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
+			   int reassoc);
 
 #endif /* HOSTAPD_H */

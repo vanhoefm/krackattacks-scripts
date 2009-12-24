@@ -1486,3 +1486,91 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 
 	return 0;
 }
+
+
+struct prune_data {
+	struct hostapd_data *hapd;
+	const u8 *addr;
+};
+
+static int prune_associations(struct hostapd_iface *iface, void *ctx)
+{
+	struct prune_data *data = ctx;
+	struct sta_info *osta;
+	struct hostapd_data *ohapd;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		ohapd = iface->bss[j];
+		if (ohapd == data->hapd)
+			continue;
+		osta = ap_get_sta(ohapd, data->addr);
+		if (!osta)
+			continue;
+
+		ap_sta_disassociate(ohapd, osta, WLAN_REASON_UNSPECIFIED);
+	}
+
+	return 0;
+}
+
+/**
+ * hostapd_prune_associations - Remove extraneous associations
+ * @hapd: Pointer to BSS data for the most recent association
+ * @sta: Pointer to the associated STA data
+ *
+ * This function looks through all radios and BSS's for previous
+ * (stale) associations of STA. If any are found they are removed.
+ */
+static void hostapd_prune_associations(struct hostapd_data *hapd,
+				       struct sta_info *sta)
+{
+	struct prune_data data;
+	data.hapd = hapd;
+	data.addr = sta->addr;
+	hostapd_for_each_interface(hapd->iface->interfaces,
+				   prune_associations, &data);
+}
+
+
+/**
+ * hostapd_new_assoc_sta - Notify that a new station associated with the AP
+ * @hapd: Pointer to BSS data
+ * @sta: Pointer to the associated STA data
+ * @reassoc: 1 to indicate this was a re-association; 0 = first association
+ *
+ * This function will be called whenever a station associates with the AP. It
+ * can be called from ieee802_11.c for drivers that export MLME to hostapd and
+ * from drv_callbacks.c based on driver events for drivers that take care of
+ * management frames (IEEE 802.11 authentication and association) internally.
+ */
+void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
+			   int reassoc)
+{
+	if (hapd->tkip_countermeasures) {
+		hostapd_sta_deauth(hapd, sta->addr,
+				   WLAN_REASON_MICHAEL_MIC_FAILURE);
+		return;
+	}
+
+	hostapd_prune_associations(hapd, sta);
+
+	/* IEEE 802.11F (IAPP) */
+	if (hapd->conf->ieee802_11f)
+		iapp_new_station(hapd->iapp, sta);
+
+	/* Start accounting here, if IEEE 802.1X and WPA are not used.
+	 * IEEE 802.1X/WPA code will start accounting after the station has
+	 * been authorized. */
+	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa)
+		accounting_sta_start(hapd, sta);
+
+	/* Start IEEE 802.1X authentication process for new stations */
+	ieee802_1x_new_station(hapd, sta);
+	if (reassoc) {
+		if (sta->auth_alg != WLAN_AUTH_FT &&
+		    !(sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS)))
+			wpa_auth_sm_event(sta->wpa_sm, WPA_REAUTH);
+	} else
+		wpa_auth_sta_associated(hapd->wpa_auth, sta->wpa_sm);
+}

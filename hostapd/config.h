@@ -1,5 +1,5 @@
 /*
- * hostapd / Configuration file
+ * hostapd / Configuration definitions and helpers functions
  * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,6 +18,9 @@
 #include "common/defs.h"
 #include "ip_addr.h"
 #include "common/wpa_common.h"
+
+#define MAX_STA_COUNT 2007
+#define MAX_VLAN_ID 4094
 
 typedef u8 macaddr[ETH_ALEN];
 
@@ -371,7 +374,7 @@ struct hostapd_config {
 int hostapd_mac_comp(const void *a, const void *b);
 int hostapd_mac_comp_empty(const void *a);
 struct hostapd_config * hostapd_config_defaults(void);
-struct hostapd_config * hostapd_config_read(const char *fname);
+void hostapd_config_defaults_bss(struct hostapd_bss_config *bss);
 void hostapd_config_free(struct hostapd_config *conf);
 int hostapd_maclist_found(struct mac_acl_entry *list, int num_entries,
 			  const u8 *addr, int *vlan_id);

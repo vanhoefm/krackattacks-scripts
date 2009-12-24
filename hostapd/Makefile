@@ -33,7 +33,7 @@ LIBS += -lws2_32
 endif
 
 OBJS =	hostapd.o main.o ieee802_1x.o \
-	config.o ieee802_11_auth.o \
+	config.o config_file.o ieee802_11_auth.o \
 	sta_info.o wpa.o \
 	preauth.o pmksa_cache.o \
 	drv_callbacks.o \

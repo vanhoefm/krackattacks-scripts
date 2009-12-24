@@ -127,7 +127,9 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	struct wpa_auth_config wpa_auth_conf;
 	size_t j;
 
-	newconf = hostapd_config_read(iface->config_fname);
+	if (iface->config_read_cb == NULL)
+		return -1;
+	newconf = iface->config_read_cb(iface->config_fname);
 	if (newconf == NULL)
 		return -1;
 

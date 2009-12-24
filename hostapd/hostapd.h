@@ -17,8 +17,6 @@
 
 #include "common/defs.h"
 
-#define MAX_VLAN_ID 4094
-
 struct wpa_driver_ops;
 struct wpa_ctrl_dst;
 struct radius_server_data;
@@ -141,6 +139,7 @@ struct hostapd_data {
 struct hostapd_iface {
 	struct hapd_interfaces *interfaces;
 	void *owner;
+	struct hostapd_config * (*config_read_cb)(const char *config_fname);
 	char *config_fname;
 	struct hostapd_config *conf;
 

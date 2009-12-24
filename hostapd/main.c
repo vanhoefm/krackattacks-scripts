@@ -25,6 +25,7 @@
 #include "eap_server/tncs.h"
 #include "hostapd.h"
 #include "config.h"
+#include "config_file.h"
 
 
 extern int wpa_debug_level;
@@ -178,6 +179,7 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 	if (hapd_iface == NULL)
 		goto fail;
 
+	hapd_iface->config_read_cb = hostapd_config_read;
 	hapd_iface->config_fname = os_strdup(config_file);
 	if (hapd_iface->config_fname == NULL)
 		goto fail;

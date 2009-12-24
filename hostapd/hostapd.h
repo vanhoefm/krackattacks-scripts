@@ -22,6 +22,7 @@ struct wpa_ctrl_dst;
 struct radius_server_data;
 struct upnp_wps_device_sm;
 struct hapd_interfaces;
+struct hostapd_data;
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 struct full_dynamic_vlan;
@@ -39,6 +40,13 @@ struct hostapd_rate_data {
 	int flags; /* HOSTAPD_RATE_ flags */
 };
 
+
+struct hostapd_driver_ops {
+	int (*set_ap_wps_ie)(struct hostapd_data *hapd,
+			     const u8 *beacon_ie, size_t beacon_ie_len,
+			     const u8 *probe_resp_ie,
+			     size_t probe_resp_ie_len);
+};
 
 /**
  * struct hostapd_data - hostapd per-BSS data structure
@@ -67,6 +75,7 @@ struct hostapd_data {
 
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;
+	struct hostapd_driver_ops drv;
 
 	void *msg_ctx; /* ctx for wpa_msg() calls */
 
@@ -195,5 +204,6 @@ int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
 int hostapd_sta_flags_to_drv(int flags);
 
 int eap_server_register_methods(void);
+void hostapd_set_driver_ops(struct hostapd_driver_ops *ops);
 
 #endif /* HOSTAPD_H */

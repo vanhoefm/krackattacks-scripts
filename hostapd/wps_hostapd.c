@@ -27,7 +27,7 @@
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
 #include "hostapd.h"
-#include "driver_i.h"
+#include "config.h"
 #include "sta_info.h"
 #include "wps_hostapd.h"
 
@@ -109,8 +109,6 @@ static int hostapd_wps_set_ie_cb(void *ctx, const u8 *beacon_ie,
 		os_memcpy(hapd->wps_beacon_ie, beacon_ie, beacon_ie_len);
 		hapd->wps_beacon_ie_len = beacon_ie_len;
 	}
-	hostapd_set_wps_beacon_ie(hapd, hapd->wps_beacon_ie,
-				  hapd->wps_beacon_ie_len);
 
 	os_free(hapd->wps_probe_resp_ie);
 	if (probe_resp_ie_len == 0) {
@@ -126,8 +124,10 @@ static int hostapd_wps_set_ie_cb(void *ctx, const u8 *beacon_ie,
 			  probe_resp_ie_len);
 		hapd->wps_probe_resp_ie_len = probe_resp_ie_len;
 	}
-	hostapd_set_wps_probe_resp_ie(hapd, hapd->wps_probe_resp_ie,
-				      hapd->wps_probe_resp_ie_len);
+	hapd->drv.set_ap_wps_ie(hapd, hapd->wps_beacon_ie,
+				hapd->wps_beacon_ie_len,
+				hapd->wps_probe_resp_ie,
+				hapd->wps_probe_resp_ie_len);
 
 	return 0;
 }
@@ -480,12 +480,12 @@ static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 	os_free(hapd->wps_beacon_ie);
 	hapd->wps_beacon_ie = NULL;
 	hapd->wps_beacon_ie_len = 0;
-	hostapd_set_wps_beacon_ie(hapd, NULL, 0);
 
 	os_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = NULL;
 	hapd->wps_probe_resp_ie_len = 0;
-	hostapd_set_wps_probe_resp_ie(hapd, NULL, 0);
+
+	hapd->drv.set_ap_wps_ie(hapd, NULL, 0, NULL, 0);
 }
 
 

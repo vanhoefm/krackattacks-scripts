@@ -39,6 +39,7 @@ OBJS =	hostapd.o main.o ieee802_1x.o \
 	drv_callbacks.o \
 	tkip_countermeasures.o \
 	mlme.o wpa_auth_ie.o
+OBJS += ap_drv_ops.o
 NEED_RC4=y
 NEED_AES=y
 NEED_MD5=y

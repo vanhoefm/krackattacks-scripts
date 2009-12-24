@@ -597,6 +597,7 @@ OBJS += ../hostapd/ieee802_1x.o
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
 OBJS += ../hostapd/ieee802_11_auth.o
 OBJS += ../hostapd/drv_callbacks.o
+OBJS += ../hostapd/ap_drv_ops.o
 ifdef CONFIG_CTRL_IFACE
 OBJS += ../hostapd/ctrl_iface_ap.o
 endif

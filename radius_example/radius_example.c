@@ -39,7 +39,8 @@ static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 /* Process the RADIUS frames from Authentication Server */
 static RadiusRxResult receive_auth(struct radius_msg *msg,
 				   struct radius_msg *req,
-				   u8 *shared_secret, size_t shared_secret_len,
+				   const u8 *shared_secret,
+				   size_t shared_secret_len,
 				   void *data)
 {
 	/* struct radius_ctx *ctx = data; */

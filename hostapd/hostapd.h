@@ -95,6 +95,9 @@ struct hostapd_data {
 	void *drv_priv;
 	struct hostapd_driver_ops drv;
 
+	void (*new_assoc_sta_cb)(struct hostapd_data *hapd,
+				 struct sta_info *sta, int reassoc);
+
 	void *msg_ctx; /* ctx for wpa_msg() calls */
 
 	struct radius_client_data *radius;

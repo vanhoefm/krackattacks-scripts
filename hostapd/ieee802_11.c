@@ -1578,7 +1578,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FT);
 	else
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC);
-	hostapd_new_assoc_sta(hapd, sta, !new_assoc);
+	hapd->new_assoc_sta_cb(hapd, sta, !new_assoc);
 
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
 

@@ -1381,6 +1381,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 		return NULL;
 
 	hostapd_set_driver_ops(&hapd->drv);
+	hapd->new_assoc_sta_cb = hostapd_new_assoc_sta;
 	hapd->iconf = conf;
 	hapd->conf = bss;
 	hapd->iface = hapd_iface;

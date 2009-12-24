@@ -819,9 +819,6 @@ static void wps_cb_reg_success(struct wps_registrar *reg, const u8 *mac_addr,
 static int wps_cb_set_ie(struct wps_registrar *reg, struct wpabuf *beacon_ie,
 			 struct wpabuf *probe_resp_ie)
 {
-	if (reg->set_ie_cb == NULL)
-		return 0;
-
 	return reg->set_ie_cb(reg->cb_ctx, beacon_ie, probe_resp_ie);
 }
 
@@ -880,6 +877,9 @@ static int wps_set_ie(struct wps_registrar *reg)
 {
 	struct wpabuf *beacon;
 	struct wpabuf *probe;
+
+	if (reg->set_ie_cb == NULL)
+		return 0;
 
 	wpa_printf(MSG_DEBUG, "WPS: Build Beacon and Probe Response IEs");
 

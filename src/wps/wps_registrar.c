@@ -99,8 +99,8 @@ struct wps_registrar {
 
 	int (*new_psk_cb)(void *ctx, const u8 *mac_addr, const u8 *psk,
 			  size_t psk_len);
-	int (*set_ie_cb)(void *ctx, const u8 *beacon_ie, size_t beacon_ie_len,
-			 const u8 *probe_resp_ie, size_t probe_resp_ie_len);
+	int (*set_ie_cb)(void *ctx, struct wpabuf *beacon_ie,
+			 struct wpabuf *probe_resp_ie);
 	void (*pin_needed_cb)(void *ctx, const u8 *uuid_e,
 			      const struct wps_device_data *dev);
 	void (*reg_success_cb)(void *ctx, const u8 *mac_addr,
@@ -816,17 +816,13 @@ static void wps_cb_reg_success(struct wps_registrar *reg, const u8 *mac_addr,
 }
 
 
-static int wps_cb_set_ie(struct wps_registrar *reg,
-			 const struct wpabuf *beacon_ie,
-			 const struct wpabuf *probe_resp_ie)
+static int wps_cb_set_ie(struct wps_registrar *reg, struct wpabuf *beacon_ie,
+			 struct wpabuf *probe_resp_ie)
 {
 	if (reg->set_ie_cb == NULL)
 		return 0;
 
-	return reg->set_ie_cb(reg->cb_ctx, wpabuf_head(beacon_ie),
-			      wpabuf_len(beacon_ie),
-			      wpabuf_head(probe_resp_ie),
-			      wpabuf_len(probe_resp_ie));
+	return reg->set_ie_cb(reg->cb_ctx, beacon_ie, probe_resp_ie);
 }
 
 
@@ -884,7 +880,6 @@ static int wps_set_ie(struct wps_registrar *reg)
 {
 	struct wpabuf *beacon;
 	struct wpabuf *probe;
-	int ret;
 
 	wpa_printf(MSG_DEBUG, "WPS: Build Beacon and Probe Response IEs");
 
@@ -950,11 +945,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 		wpabuf_put_data(probe, ms_wps, sizeof(ms_wps));
 	}
 
-	ret = wps_cb_set_ie(reg, beacon, probe);
-	wpabuf_free(beacon);
-	wpabuf_free(probe);
-
-	return ret;
+	return wps_cb_set_ie(reg, beacon, probe);
 }
 
 

@@ -20,16 +20,13 @@
 
 
 static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd,
-				 const u8 *beacon_ie, size_t beacon_ie_len,
-				 const u8 *probe_resp_ie,
-				 size_t probe_resp_ie_len)
+				 const struct wpabuf *beacon,
+				 const struct wpabuf *proberesp)
 {
-	if (hostapd_set_wps_beacon_ie(hapd, hapd->wps_beacon_ie,
-				      hapd->wps_beacon_ie_len) < 0 ||
-	    hostapd_set_wps_probe_resp_ie(hapd, hapd->wps_probe_resp_ie,
-					  hapd->wps_probe_resp_ie_len) < 0)
-		return -1;
-	return 0;
+	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
+		return 0;
+	return hapd->driver->set_ap_wps_ie(hapd->conf->iface, hapd->drv_priv,
+					   beacon, proberesp);
 }
 
 

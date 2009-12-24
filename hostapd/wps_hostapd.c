@@ -90,46 +90,16 @@ static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
 }
 
 
-static int hostapd_wps_set_ie_cb(void *ctx, const u8 *beacon_ie,
-				 size_t beacon_ie_len, const u8 *probe_resp_ie,
-				 size_t probe_resp_ie_len)
+static int hostapd_wps_set_ie_cb(void *ctx, struct wpabuf *beacon_ie,
+				 struct wpabuf *probe_resp_ie)
 {
 	struct hostapd_data *hapd = ctx;
-
-	os_free(hapd->wps_beacon_ie);
-	if (beacon_ie_len == 0) {
-		hapd->wps_beacon_ie = NULL;
-		hapd->wps_beacon_ie_len = 0;
-	} else {
-		hapd->wps_beacon_ie = os_malloc(beacon_ie_len);
-		if (hapd->wps_beacon_ie == NULL) {
-			hapd->wps_beacon_ie_len = 0;
-			return -1;
-		}
-		os_memcpy(hapd->wps_beacon_ie, beacon_ie, beacon_ie_len);
-		hapd->wps_beacon_ie_len = beacon_ie_len;
-	}
-
-	os_free(hapd->wps_probe_resp_ie);
-	if (probe_resp_ie_len == 0) {
-		hapd->wps_probe_resp_ie = NULL;
-		hapd->wps_probe_resp_ie_len = 0;
-	} else {
-		hapd->wps_probe_resp_ie = os_malloc(probe_resp_ie_len);
-		if (hapd->wps_probe_resp_ie == NULL) {
-			hapd->wps_probe_resp_ie_len = 0;
-			return -1;
-		}
-		os_memcpy(hapd->wps_probe_resp_ie, probe_resp_ie,
-			  probe_resp_ie_len);
-		hapd->wps_probe_resp_ie_len = probe_resp_ie_len;
-	}
-	hapd->drv.set_ap_wps_ie(hapd, hapd->wps_beacon_ie,
-				hapd->wps_beacon_ie_len,
-				hapd->wps_probe_resp_ie,
-				hapd->wps_probe_resp_ie_len);
-
-	return 0;
+	wpabuf_free(hapd->wps_beacon_ie);
+	hapd->wps_beacon_ie = beacon_ie;
+	wpabuf_free(hapd->wps_probe_resp_ie);
+	hapd->wps_probe_resp_ie = probe_resp_ie;
+	return hapd->drv.set_ap_wps_ie(hapd, hapd->wps_beacon_ie,
+				       hapd->wps_probe_resp_ie);
 }
 
 
@@ -477,15 +447,13 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 
 static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 {
-	os_free(hapd->wps_beacon_ie);
+	wpabuf_free(hapd->wps_beacon_ie);
 	hapd->wps_beacon_ie = NULL;
-	hapd->wps_beacon_ie_len = 0;
 
-	os_free(hapd->wps_probe_resp_ie);
+	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = NULL;
-	hapd->wps_probe_resp_ie_len = 0;
 
-	hapd->drv.set_ap_wps_ie(hapd, NULL, 0, NULL, 0);
+	hapd->drv.set_ap_wps_ie(hapd, NULL, NULL);
 }
 
 

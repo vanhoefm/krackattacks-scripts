@@ -822,64 +822,64 @@ static int test_driver_set_generic_elem(const char *ifname, void *priv,
 }
 
 
-static int test_driver_set_wps_beacon_ie(const char *ifname, void *priv,
-					 const u8 *ie, size_t len)
+static int test_driver_set_ap_wps_ie(const char *ifname, void *priv,
+				     const struct wpabuf *beacon,
+				     const struct wpabuf *proberesp)
 {
 	struct wpa_driver_test_data *drv = priv;
 	struct test_driver_bss *bss;
 
-	wpa_hexdump(MSG_DEBUG, "test_driver: Beacon WPS IE", ie, len);
 	bss = test_driver_get_bss(drv, ifname);
 	if (bss == NULL)
 		return -1;
+
+	if (beacon == NULL)
+		wpa_printf(MSG_DEBUG, "test_driver: Clear Beacon WPS IE");
+	else
+		wpa_hexdump_buf(MSG_DEBUG, "test_driver: Beacon WPS IE",
+				beacon);
 
 	os_free(bss->wps_beacon_ie);
 
-	if (ie == NULL) {
+	if (beacon == NULL) {
 		bss->wps_beacon_ie = NULL;
 		bss->wps_beacon_ie_len = 0;
-		return 0;
+	} else {
+		bss->wps_beacon_ie = os_malloc(wpabuf_len(beacon));
+		if (bss->wps_beacon_ie == NULL) {
+			bss->wps_beacon_ie_len = 0;
+			return -1;
+		}
+
+		os_memcpy(bss->wps_beacon_ie, wpabuf_head(beacon),
+			  wpabuf_len(beacon));
+		bss->wps_beacon_ie_len = wpabuf_len(beacon);
 	}
 
-	bss->wps_beacon_ie = os_malloc(len);
-	if (bss->wps_beacon_ie == NULL) {
-		bss->wps_beacon_ie_len = 0;
-		return -1;
-	}
-
-	memcpy(bss->wps_beacon_ie, ie, len);
-	bss->wps_beacon_ie_len = len;
-	return 0;
-}
-
-
-static int test_driver_set_wps_probe_resp_ie(const char *ifname, void *priv,
-					     const u8 *ie, size_t len)
-{
-	struct wpa_driver_test_data *drv = priv;
-	struct test_driver_bss *bss;
-
-	wpa_hexdump(MSG_DEBUG, "test_driver: ProbeResp WPS IE", ie, len);
-	bss = test_driver_get_bss(drv, ifname);
-	if (bss == NULL)
-		return -1;
+	if (proberesp == NULL)
+		wpa_printf(MSG_DEBUG, "test_driver: Clear Probe Response WPS "
+			   "IE");
+	else
+		wpa_hexdump_buf(MSG_DEBUG, "test_driver: Probe Response WPS "
+				"IE", proberesp);
 
 	os_free(bss->wps_probe_resp_ie);
 
-	if (ie == NULL) {
+	if (proberesp == NULL) {
 		bss->wps_probe_resp_ie = NULL;
 		bss->wps_probe_resp_ie_len = 0;
-		return 0;
+	} else {
+		bss->wps_probe_resp_ie = os_malloc(wpabuf_len(proberesp));
+		if (bss->wps_probe_resp_ie == NULL) {
+			bss->wps_probe_resp_ie_len = 0;
+			return -1;
+		}
+
+		os_memcpy(bss->wps_probe_resp_ie, wpabuf_head(proberesp),
+			  wpabuf_len(proberesp));
+		bss->wps_probe_resp_ie_len = wpabuf_len(proberesp);
 	}
 
-	bss->wps_probe_resp_ie = os_malloc(len);
-	if (bss->wps_probe_resp_ie == NULL) {
-		bss->wps_probe_resp_ie_len = 0;
-		return -1;
-	}
-
-	memcpy(bss->wps_probe_resp_ie, ie, len);
-	bss->wps_probe_resp_ie_len = len;
 	return 0;
 }
 
@@ -2429,8 +2429,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.set_sta_vlan = test_driver_set_sta_vlan,
 	.sta_add = test_driver_sta_add,
 	.send_ether = test_driver_send_ether,
-	.set_wps_beacon_ie = test_driver_set_wps_beacon_ie,
-	.set_wps_probe_resp_ie = test_driver_set_wps_probe_resp_ie,
+	.set_ap_wps_ie = test_driver_set_ap_wps_ie,
 	.get_bssid = wpa_driver_test_get_bssid,
 	.get_ssid = wpa_driver_test_get_ssid,
 	.set_key = wpa_driver_test_set_key,

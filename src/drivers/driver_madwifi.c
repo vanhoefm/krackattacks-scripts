@@ -818,22 +818,21 @@ madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 }
 
 static int
-madwifi_set_wps_beacon_ie(const char *ifname, void *priv, const u8 *ie,
-			  size_t len)
+madwifi_set_ap_wps_ie(const char *ifname, void *priv,
+		      const struct wpabuf *beacon,
+		      const struct wpabuf *proberesp)
 {
-	return madwifi_set_wps_ie(priv, ie, len, IEEE80211_APPIE_FRAME_BEACON);
-}
-
-static int
-madwifi_set_wps_probe_resp_ie(const char *ifname, void *priv, const u8 *ie,
-			      size_t len)
-{
-	return madwifi_set_wps_ie(priv, ie, len,
+	if (madwifi_set_wps_ie(priv, beacon ? wpabuf_head(beacon) : NULL,
+			       beacon ? wpabuf_len(beacon) : 0,
+			       IEEE80211_APPIE_FRAME_BEACON) < 0)
+		return -1;
+	return madwifi_set_wps_ie(priv,
+				  proberesp ? wpabuf_head(proberesp) : NULL,
+				  proberesp ? wpabuf_len(proberesp) : 0,
 				  IEEE80211_APPIE_FRAME_PROBE_RESP);
 }
 #else /* CONFIG_WPS */
-#define madwifi_set_wps_beacon_ie NULL
-#define madwifi_set_wps_probe_resp_ie NULL
+#define madwifi_set_ap_wps_ie NULL
 #endif /* CONFIG_WPS */
 
 static int
@@ -1864,8 +1863,7 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.hapd_set_countermeasures	= madwifi_set_countermeasures,
 	.sta_clear_stats        = madwifi_sta_clear_stats,
 	.commit			= madwifi_commit,
-	.set_wps_beacon_ie	= madwifi_set_wps_beacon_ie,
-	.set_wps_probe_resp_ie	= madwifi_set_wps_probe_resp_ie,
+	.set_ap_wps_ie		= madwifi_set_ap_wps_ie,
 #else /* HOSTAPD */
 	.get_bssid		= wpa_driver_madwifi_get_bssid,
 	.get_ssid		= wpa_driver_madwifi_get_ssid,

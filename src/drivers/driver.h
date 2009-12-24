@@ -1491,34 +1491,21 @@ struct wpa_driver_ops {
 			     const u8 *ht_oper, size_t ht_oper_len);
 
 	/**
-	 * set_wps_beacon_ie - Add WPS IE into Beacon frames (AP only)
+	 * set_ap_wps_ie - Add WPS IE into Beacon/Probe Response frames (AP)
 	 * @ifname: The interface name (main or virtual BSS)
 	 * @priv: Private driver interface data
-	 * @ie: WPS IE
-	 * @len: Length of the ie buffer in octets
+	 * @beacon: WPS IE for Beacon frames
+	 * @proberesp: WPS IE for Probe Response frames
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This is an optional function to add WPS IE in the kernel driver for
-	 * Beacon frames. This can be left undefined (set to %NULL) if the
-	 * driver uses the Beacon template from set_beacon().
+	 * Beacon and Probe Response frames. This can be left undefined (set
+	 * to %NULL) if the driver uses the Beacon template from set_beacon()
+	 * and does not process Probe Request frames.
 	 */
-	int (*set_wps_beacon_ie)(const char *ifname, void *priv,
-				 const u8 *ie, size_t len);
-
-	/**
-	 * set_wps_probe_resp_ie - Add WPS IE into Probe Response frames (AP)
-	 * @ifname: The interface name (main or virtual BSS)
-	 * @priv: Private driver interface data
-	 * @ie: WPS IE
-	 * @len: Length of the ie buffer in octets
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This is an optional function to add WPS IE in the kernel driver for
-	 * Beacon frames. This can be left undefined (set to %NULL) if the
-	 * driver does process Probe Request frames.
-	 */
-	int (*set_wps_probe_resp_ie)(const char *ifname, void *priv,
-				     const u8 *ie, size_t len);
+	int (*set_ap_wps_ie)(const char *ifname, void *priv,
+			     const struct wpabuf *beacon,
+			     const struct wpabuf *proberesp);
 
 	/**
 	 * set_supp_port - Set IEEE 802.1X Supplicant Port status

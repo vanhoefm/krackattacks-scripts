@@ -43,9 +43,8 @@ struct hostapd_rate_data {
 
 struct hostapd_driver_ops {
 	int (*set_ap_wps_ie)(struct hostapd_data *hapd,
-			     const u8 *beacon_ie, size_t beacon_ie_len,
-			     const u8 *probe_resp_ie,
-			     size_t probe_resp_ie_len);
+			     const struct wpabuf *beacon,
+			     const struct wpabuf *probe);
 };
 
 /**
@@ -112,10 +111,8 @@ struct hostapd_data {
 	struct wps_context *wps;
 
 #ifdef CONFIG_WPS
-	u8 *wps_beacon_ie;
-	size_t wps_beacon_ie_len;
-	u8 *wps_probe_resp_ie;
-	size_t wps_probe_resp_ie_len;
+	struct wpabuf *wps_beacon_ie;
+	struct wpabuf *wps_probe_resp_ie;
 	unsigned int ap_pin_failures;
 	struct upnp_wps_device_sm *wps_upnp;
 #endif /* CONFIG_WPS */

@@ -3242,8 +3242,7 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* set_radius_acl_auth */,
 	NULL /* set_radius_acl_expire */,
 	NULL /* set_ht_params */,
-	NULL /* set_wps_beacon_ie */,
-	NULL /* set_wps_probe_resp_ie */,
+	NULL /* set_ap_wps_ie */,
 	NULL /* set_supp_port */,
 	NULL /* set_wds_sta */
 };

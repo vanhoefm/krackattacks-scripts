@@ -309,9 +309,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 #ifdef CONFIG_WPS
 	if (hapd->conf->wps_state && hapd->wps_probe_resp_ie) {
-		os_memcpy(pos, hapd->wps_probe_resp_ie,
-			  hapd->wps_probe_resp_ie_len);
-		pos += hapd->wps_probe_resp_ie_len;
+		os_memcpy(pos, wpabuf_head(hapd->wps_probe_resp_ie),
+			  wpabuf_len(hapd->wps_probe_resp_ie));
+		pos += wpabuf_len(hapd->wps_probe_resp_ie);
 	}
 #endif /* CONFIG_WPS */
 
@@ -422,9 +422,9 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 #ifdef CONFIG_WPS
 	if (hapd->conf->wps_state && hapd->wps_beacon_ie) {
-		os_memcpy(tailpos, hapd->wps_beacon_ie,
-			  hapd->wps_beacon_ie_len);
-		tailpos += hapd->wps_beacon_ie_len;
+		os_memcpy(tailpos, wpabuf_head(hapd->wps_beacon_ie),
+			  wpabuf_len(hapd->wps_beacon_ie));
+		tailpos += wpabuf_len(hapd->wps_beacon_ie);
 	}
 #endif /* CONFIG_WPS */
 

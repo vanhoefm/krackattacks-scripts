@@ -224,16 +224,15 @@ struct wps_registrar_config {
 	 * set_ie_cb - Callback for WPS IE changes
 	 * @ctx: Higher layer context data (cb_ctx)
 	 * @beacon_ie: WPS IE for Beacon
-	 * @beacon_ie_len: WPS IE length for Beacon
 	 * @probe_resp_ie: WPS IE for Probe Response
-	 * @probe_resp_ie_len: WPS IE length for Probe Response
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This callback is called whenever the WPS IE in Beacon or Probe
-	 * Response frames needs to be changed (AP only).
+	 * Response frames needs to be changed (AP only). Callee is responsible
+	 * for freeing the buffers.
 	 */
-	int (*set_ie_cb)(void *ctx, const u8 *beacon_ie, size_t beacon_ie_len,
-			 const u8 *probe_resp_ie, size_t probe_resp_ie_len);
+	int (*set_ie_cb)(void *ctx, struct wpabuf *beacon_ie,
+			 struct wpabuf *probe_resp_ie);
 
 	/**
 	 * pin_needed_cb - Callback for requesting a PIN

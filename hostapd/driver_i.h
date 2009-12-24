@@ -454,26 +454,6 @@ hostapd_drv_none(struct hostapd_data *hapd)
 	return hapd->driver && os_strcmp(hapd->driver->name, "none") == 0;
 }
 
-static inline int
-hostapd_set_wps_beacon_ie(struct hostapd_data *hapd, const u8 *ie, size_t len)
-{
-	if (hapd->driver == NULL || hapd->driver->set_wps_beacon_ie == NULL)
-		return 0;
-	return hapd->driver->set_wps_beacon_ie(hapd->conf->iface,
-					       hapd->drv_priv, ie, len);
-}
-
-static inline int
-hostapd_set_wps_probe_resp_ie(struct hostapd_data *hapd, const u8 *ie,
-			      size_t len)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->set_wps_probe_resp_ie == NULL)
-		return 0;
-	return hapd->driver->set_wps_probe_resp_ie(hapd->conf->iface,
-						   hapd->drv_priv, ie, len);
-}
-
 static inline int hostapd_driver_scan(struct hostapd_data *hapd,
 				      struct wpa_driver_scan_params *params)
 {

@@ -392,8 +392,10 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 
 	hostapd_broadcast_wep_set(hapd);
 
-	if (hapd->conf->ssid.wep.default_len)
+	if (hapd->conf->ssid.wep.default_len) {
+		hostapd_set_privacy(hapd, 1);
 		return 0;
+	}
 
 	for (i = 0; i < 4; i++) {
 		if (hapd->conf->ssid.wep.key[i] &&

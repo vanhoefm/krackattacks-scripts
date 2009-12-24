@@ -1668,8 +1668,6 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 #endif /* CONFIG_NO_RADIUS */
 
 	if (hapd->conf->default_wep_key_len) {
-		hostapd_set_privacy(hapd, 1);
-
 		for (i = 0; i < 4; i++)
 			hostapd_set_key(hapd->conf->iface, hapd, WPA_ALG_NONE,
 					NULL, i, 0, NULL, 0, NULL, 0);

@@ -250,6 +250,61 @@ static int hostapd_vlan_if_remove(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr,
+			       int aid, int val)
+{
+	if (hapd->driver == NULL || hapd->driver->set_wds_sta == NULL)
+		return 0;
+	return hapd->driver->set_wds_sta(hapd->drv_priv, addr, aid, val);
+}
+
+
+static int hostapd_set_sta_vlan(const char *ifname, struct hostapd_data *hapd,
+				const u8 *addr, int vlan_id)
+{
+	if (hapd->driver == NULL || hapd->driver->set_sta_vlan == NULL)
+		return 0;
+	return hapd->driver->set_sta_vlan(hapd->drv_priv, addr, ifname,
+					  vlan_id);
+}
+
+
+static int hostapd_get_inact_sec(struct hostapd_data *hapd, const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->get_inact_sec == NULL)
+		return 0;
+	return hapd->driver->get_inact_sec(hapd->drv_priv, addr);
+}
+
+
+static int hostapd_sta_deauth(struct hostapd_data *hapd, const u8 *addr,
+			      int reason)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
+		return 0;
+	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
+					reason);
+}
+
+
+static int hostapd_sta_disassoc(struct hostapd_data *hapd, const u8 *addr,
+				int reason)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
+		return 0;
+	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
+					  reason);
+}
+
+
+static int hostapd_sta_remove(struct hostapd_data *hapd, const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_remove == NULL)
+		return 0;
+	return hapd->driver->sta_remove(hapd->drv_priv, addr);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -267,4 +322,10 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->set_beacon = hostapd_set_beacon;
 	ops->vlan_if_add = hostapd_vlan_if_add;
 	ops->vlan_if_remove = hostapd_vlan_if_remove;
+	ops->set_wds_sta = hostapd_set_wds_sta;
+	ops->set_sta_vlan = hostapd_set_sta_vlan;
+	ops->get_inact_sec = hostapd_get_inact_sec;
+	ops->sta_deauth = hostapd_sta_deauth;
+	ops->sta_disassoc = hostapd_sta_disassoc;
+	ops->sta_remove = hostapd_sta_remove;
 }

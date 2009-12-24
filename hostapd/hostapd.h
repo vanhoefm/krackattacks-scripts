@@ -76,6 +76,16 @@ struct hostapd_driver_ops {
 			  int beacon_int);
 	int (*vlan_if_add)(struct hostapd_data *hapd, const char *ifname);
 	int (*vlan_if_remove)(struct hostapd_data *hapd, const char *ifname);
+	int (*set_wds_sta)(struct hostapd_data *hapd, const u8 *addr, int aid,
+			   int val);
+	int (*set_sta_vlan)(const char *ifname, struct hostapd_data *hapd,
+			    const u8 *addr, int vlan_id);
+	int (*get_inact_sec)(struct hostapd_data *hapd, const u8 *addr);
+	int (*sta_deauth)(struct hostapd_data *hapd, const u8 *addr,
+			  int reason);
+	int (*sta_disassoc)(struct hostapd_data *hapd, const u8 *addr,
+			    int reason);
+	int (*sta_remove)(struct hostapd_data *hapd, const u8 *addr);
 };
 
 /**

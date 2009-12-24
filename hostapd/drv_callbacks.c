@@ -117,7 +117,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 #endif /* CONFIG_IEEE80211W */
 			else
 				resp = WLAN_REASON_INVALID_IE;
-			hostapd_sta_disassoc(hapd, sta->addr, resp);
+			hapd->drv.sta_disassoc(hapd, sta->addr, resp);
 			ap_free_sta(hapd, sta);
 			return -1;
 		}

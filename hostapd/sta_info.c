@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,17 +15,18 @@
 #include "includes.h"
 
 #include "common.h"
+#include "radius/radius.h"
+#include "radius/radius_client.h"
+#include "drivers/driver.h"
 #include "hostapd.h"
 #include "sta_info.h"
 #include "eloop.h"
 #include "accounting.h"
 #include "ieee802_1x.h"
 #include "ieee802_11.h"
-#include "radius/radius.h"
 #include "wpa.h"
 #include "preauth.h"
-#include "radius/radius_client.h"
-#include "driver_i.h"
+#include "config.h"
 #include "beacon.h"
 #include "hw_features.h"
 #include "mlme.h"
@@ -120,10 +121,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	accounting_sta_stop(hapd, sta);
 
-	hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 0);
+	hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 0);
 	if (!ap_sta_in_other_bss(hapd, sta, WLAN_STA_ASSOC) &&
 	    !(sta->flags & WLAN_STA_PREAUTH))
-		hostapd_sta_remove(hapd, sta->addr);
+		hapd->drv.sta_remove(hapd, sta->addr);
 
 	ap_sta_hash_del(hapd, sta);
 	ap_sta_list_del(hapd, sta);
@@ -253,7 +254,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		int inactive_sec;
 		wpa_printf(MSG_DEBUG, "Checking STA " MACSTR " inactivity:",
 			   MAC2STR(sta->addr));
-		inactive_sec = hostapd_get_inact_sec(hapd, sta->addr);
+		inactive_sec = hapd->drv.get_inact_sec(hapd, sta->addr);
 		if (inactive_sec == -1) {
 			wpa_printf(MSG_DEBUG, "Could not get station info "
 				   "from kernel driver for " MACSTR ".",
@@ -328,10 +329,10 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			   MAC2STR(sta->addr));
 
 		if (deauth) {
-			hostapd_sta_deauth(hapd, sta->addr,
-					   WLAN_REASON_PREV_AUTH_NOT_VALID);
+			hapd->drv.sta_deauth(hapd, sta->addr,
+					     WLAN_REASON_PREV_AUTH_NOT_VALID);
 		} else {
-			hostapd_sta_disassoc(
+			hapd->drv.sta_disassoc(
 				hapd, sta->addr,
 				WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY);
 		}
@@ -395,7 +396,7 @@ static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx)
 		RADIUS_ACCT_TERMINATE_CAUSE_SESSION_TIMEOUT;
 	os_memcpy(addr, sta->addr, ETH_ALEN);
 	ap_free_sta(hapd, sta);
-	hostapd_sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
+	hapd->drv.sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
 }
 
 
@@ -460,7 +461,7 @@ static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta)
 
 	wpa_printf(MSG_DEBUG, "Removing STA " MACSTR " from kernel driver",
 		   MAC2STR(sta->addr));
-	if (hostapd_sta_remove(hapd, sta->addr) &&
+	if (hapd->drv.sta_remove(hapd, sta->addr) &&
 	    sta->flags & WLAN_STA_ASSOC) {
 		wpa_printf(MSG_DEBUG, "Could not remove station " MACSTR
 			   " from kernel driver.", MAC2STR(sta->addr));
@@ -633,7 +634,7 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 	if (wpa_auth_sta_set_vlan(sta->wpa_sm, sta->vlan_id) < 0)
 		wpa_printf(MSG_INFO, "Failed to update VLAN-ID for WPA");
 
-	return hostapd_set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
+	return hapd->drv.set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
 #else /* CONFIG_NO_VLAN */
 	return 0;
 #endif /* CONFIG_NO_VLAN */
@@ -731,7 +732,7 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 		sta = ap_get_sta(hapd, addr);
 
 	if (addr)
-		hostapd_sta_deauth(hapd, addr, reason);
+		hapd->drv.sta_deauth(hapd, addr, reason);
 
 	if (sta == NULL)
 		return;

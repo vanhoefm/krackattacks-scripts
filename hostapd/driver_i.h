@@ -108,32 +108,6 @@ hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
 }
 
 static inline int
-hostapd_sta_deauth(struct hostapd_data *hapd, const u8 *addr, int reason)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
-		return 0;
-	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
-					reason);
-}
-
-static inline int
-hostapd_sta_disassoc(struct hostapd_data *hapd, const u8 *addr, int reason)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
-		return 0;
-	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
-					  reason);
-}
-
-static inline int
-hostapd_sta_remove(struct hostapd_data *hapd, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_remove == NULL)
-		return 0;
-	return hapd->driver->sta_remove(hapd->drv_priv, addr);
-}
-
-static inline int
 hostapd_get_ssid(struct hostapd_data *hapd, u8 *buf, size_t len)
 {
 	if (hapd->driver == NULL || hapd->driver->hapd_get_ssid == NULL)
@@ -182,14 +156,6 @@ hostapd_sta_add(const char *ifname, struct hostapd_data *hapd, const u8 *addr,
 	params.listen_interval = listen_interval;
 	params.ht_capabilities = ht_capabilities;
 	return hapd->driver->sta_add(ifname, hapd->drv_priv, &params);
-}
-
-static inline int
-hostapd_get_inact_sec(struct hostapd_data *hapd, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->get_inact_sec == NULL)
-		return 0;
-	return hapd->driver->get_inact_sec(hapd->drv_priv, addr);
 }
 
 static inline int
@@ -326,24 +292,6 @@ hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 		return NULL;
 	return hapd->driver->get_hw_feature_data(hapd->drv_priv, num_modes,
 						 flags);
-}
-
-static inline int
-hostapd_set_sta_vlan(const char *ifname, struct hostapd_data *hapd,
-		     const u8 *addr, int vlan_id)
-{
-	if (hapd->driver == NULL || hapd->driver->set_sta_vlan == NULL)
-		return 0;
-	return hapd->driver->set_sta_vlan(hapd->drv_priv, addr, ifname, vlan_id);
-}
-
-static inline int
-hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr, int aid,
-		    int val)
-{
-	if (hapd->driver == NULL || hapd->driver->set_wds_sta == NULL)
-		return 0;
-	return hapd->driver->set_wds_sta(hapd->drv_priv, addr, aid, val);
 }
 
 static inline int

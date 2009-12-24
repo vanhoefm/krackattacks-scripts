@@ -18,6 +18,7 @@ CFLAGS += -I../src/utils
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/os_unix.o
 OBJS += ../src/utils/wpa_debug.o
+OBJS += ../src/utils/wpabuf.o
 OBJS += ../src/utils/eloop.o
 OBJS += ../src/utils/ip_addr.o
 OBJS += ../src/crypto/md5.o ../src/crypto/md5-internal.o

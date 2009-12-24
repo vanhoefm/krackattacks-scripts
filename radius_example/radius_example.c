@@ -44,7 +44,7 @@ static RadiusRxResult receive_auth(struct radius_msg *msg,
 {
 	/* struct radius_ctx *ctx = data; */
 	printf("Received RADIUS Authentication message; code=%d\n",
-	       msg->hdr->code);
+	       radius_msg_get_hdr(msg)->code);
 
 	/* We're done for this example, so request eloop to terminate. */
 	eloop_terminate();

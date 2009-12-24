@@ -129,6 +129,25 @@ static int hostapd_set_sta_flags(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd,
+				     const char *ifname, int enabled)
+{
+	struct wpa_bss_params params;
+	os_memset(&params, 0, sizeof(params));
+	params.ifname = ifname;
+	params.enabled = enabled;
+	if (enabled) {
+		params.wpa = hapd->conf->wpa;
+		params.ieee802_1x = hapd->conf->ieee802_1x;
+		params.wpa_group = hapd->conf->wpa_group;
+		params.wpa_pairwise = hapd->conf->wpa_pairwise;
+		params.wpa_key_mgmt = hapd->conf->wpa_key_mgmt;
+		params.rsn_preauth = hapd->conf->rsn_preauth;
+	}
+	return hostapd_set_ieee8021x(hapd, &params);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -139,4 +158,5 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->read_sta_data = hostapd_read_sta_data;
 	ops->sta_clear_stats = hostapd_sta_clear_stats;
 	ops->set_sta_flags = hostapd_set_sta_flags;
+	ops->set_drv_ieee8021x = hostapd_set_drv_ieee8021x;
 }

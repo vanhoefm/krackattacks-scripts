@@ -62,6 +62,8 @@ struct hostapd_driver_ops {
 			     const u8 *addr);
 	int (*sta_clear_stats)(struct hostapd_data *hapd, const u8 *addr);
 	int (*set_sta_flags)(struct hostapd_data *hapd, struct sta_info *sta);
+	int (*set_drv_ieee8021x)(struct hostapd_data *hapd, const char *ifname,
+				 int enabled);
 };
 
 /**
@@ -214,8 +216,6 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 				 void (*cb)(void *ctx, const u8 *sa,
 					    const u8 *ie, size_t ie_len),
 				 void *ctx);
-int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
-			      int enabled);
 
 int eap_server_register_methods(void);
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops);

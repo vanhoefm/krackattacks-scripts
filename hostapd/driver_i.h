@@ -368,25 +368,6 @@ hostapd_driver_commit(struct hostapd_data *hapd)
 }
 
 static inline int
-hostapd_set_radius_acl_auth(struct hostapd_data *hapd, const u8 *mac,
-			    int accepted, u32 session_timeout)
-{
-	if (hapd->driver == NULL || hapd->driver->set_radius_acl_auth == NULL)
-		return 0;
-	return hapd->driver->set_radius_acl_auth(hapd->drv_priv, mac, accepted,
-						 session_timeout);
-}
-
-static inline int
-hostapd_set_radius_acl_expire(struct hostapd_data *hapd, const u8 *mac)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->set_radius_acl_expire == NULL)
-		return 0;
-	return hapd->driver->set_radius_acl_expire(hapd->drv_priv, mac);
-}
-
-static inline int
 hostapd_set_ht_params(const char *ifname, struct hostapd_data *hapd,
 		      const u8 *ht_capab, size_t ht_capab_len,
 		      const u8 *ht_oper, size_t ht_oper_len)

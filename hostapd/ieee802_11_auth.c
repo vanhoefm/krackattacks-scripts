@@ -29,9 +29,6 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eloop.h"
-#ifdef CONFIG_DRIVER_RADIUS_ACL
-#include "driver_i.h"
-#endif /* CONFIG_DRIVER_RADIUS_ACL */
 
 #define RADIUS_ACL_TIMEOUT 30
 
@@ -323,7 +320,7 @@ static void hostapd_acl_expire_cache(struct hostapd_data *hapd, time_t now)
 			else
 				hapd->acl_cache = entry->next;
 #ifdef CONFIG_DRIVER_RADIUS_ACL
-			hostapd_set_radius_acl_expire(hapd, entry->addr);
+			hapd->drv.set_radius_acl_expire(hapd, entry->addr);
 #endif /* CONFIG_DRIVER_RADIUS_ACL */
 			tmp = entry;
 			entry = entry->next;
@@ -463,8 +460,8 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	hapd->acl_cache = cache;
 
 #ifdef CONFIG_DRIVER_RADIUS_ACL
-	hostapd_set_radius_acl_auth(hapd, query->addr, cache->accepted,
-				    cache->session_timeout);
+	hapd->drv.set_radius_acl_auth(hapd, query->addr, cache->accepted,
+				      cache->session_timeout);
 #else /* CONFIG_DRIVER_RADIUS_ACL */
 #ifdef NEED_AP_MLME
 	/* Re-send original authentication frame for 802.11 processing */

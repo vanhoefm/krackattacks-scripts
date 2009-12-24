@@ -64,6 +64,11 @@ struct hostapd_driver_ops {
 	int (*set_sta_flags)(struct hostapd_data *hapd, struct sta_info *sta);
 	int (*set_drv_ieee8021x)(struct hostapd_data *hapd, const char *ifname,
 				 int enabled);
+	int (*set_radius_acl_auth)(struct hostapd_data *hapd,
+				   const u8 *mac, int accepted,
+				   u32 session_timeout);
+	int (*set_radius_acl_expire)(struct hostapd_data *hapd,
+				     const u8 *mac);
 };
 
 /**

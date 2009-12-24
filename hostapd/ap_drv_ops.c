@@ -148,6 +148,27 @@ static int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_set_radius_acl_auth(struct hostapd_data *hapd,
+				       const u8 *mac, int accepted,
+				       u32 session_timeout)
+{
+	if (hapd->driver == NULL || hapd->driver->set_radius_acl_auth == NULL)
+		return 0;
+	return hapd->driver->set_radius_acl_auth(hapd->drv_priv, mac, accepted,
+						 session_timeout);
+}
+
+
+static int hostapd_set_radius_acl_expire(struct hostapd_data *hapd,
+					 const u8 *mac)
+{
+	if (hapd->driver == NULL ||
+	    hapd->driver->set_radius_acl_expire == NULL)
+		return 0;
+	return hapd->driver->set_radius_acl_expire(hapd->drv_priv, mac);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -159,4 +180,6 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->sta_clear_stats = hostapd_sta_clear_stats;
 	ops->set_sta_flags = hostapd_set_sta_flags;
 	ops->set_drv_ieee8021x = hostapd_set_drv_ieee8021x;
+	ops->set_radius_acl_auth = hostapd_set_radius_acl_auth;
+	ops->set_radius_acl_expire = hostapd_set_radius_acl_expire;
 }

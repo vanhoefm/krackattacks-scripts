@@ -336,6 +336,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 
 static void eloop_remove_timeout(struct eloop_timeout *timeout)
 {
+	dl_list_del(&timeout->list);
 	wpa_trace_remove_ref(timeout, eloop, timeout->eloop_data);
 	wpa_trace_remove_ref(timeout, user, timeout->user_data);
 	os_free(timeout);
@@ -355,7 +356,6 @@ int eloop_cancel_timeout(eloop_timeout_handler handler,
 		     eloop_data == ELOOP_ALL_CTX) &&
 		    (timeout->user_data == user_data ||
 		     user_data == ELOOP_ALL_CTX)) {
-			dl_list_del(&timeout->list);
 			eloop_remove_timeout(timeout);
 			removed++;
 		}
@@ -532,10 +532,11 @@ void eloop_run(void)
 		if (timeout) {
 			os_get_time(&now);
 			if (!os_time_before(&now, &timeout->time)) {
-				dl_list_del(&timeout->list);
-				timeout->handler(timeout->eloop_data,
-						 timeout->user_data);
+				void *eloop_data = timeout->eloop_data;
+				void *user_data = timeout->user_data;
 				eloop_remove_timeout(timeout);
+				timeout->handler(eloop_data,
+						 user_data);
 			}
 
 		}
@@ -583,7 +584,6 @@ void eloop_destroy(void)
 		wpa_trace_dump_funcname("eloop unregistered timeout handler",
 					timeout->handler);
 		wpa_trace_dump("eloop timeout", timeout);
-		dl_list_del(&timeout->list);
 		eloop_remove_timeout(timeout);
 	}
 	eloop_sock_table_destroy(&eloop.readers);

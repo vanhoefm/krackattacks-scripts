@@ -315,7 +315,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_WPS */
 
-	if (hostapd_send_mgmt_frame(hapd, resp, pos - (u8 *) resp) < 0)
+	if (hapd->drv.send_mgmt_frame(hapd, resp, pos - (u8 *) resp) < 0)
 		perror("handle_probe_req: send");
 
 	os_free(resp);

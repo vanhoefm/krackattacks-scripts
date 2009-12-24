@@ -317,7 +317,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			  ETH_ALEN);
 		os_memcpy(hdr.IEEE80211_SA_FROMDS, hapd->own_addr, ETH_ALEN);
 
-		if (hostapd_send_mgmt_frame(hapd, &hdr, sizeof(hdr)) < 0)
+		if (hapd->drv.send_mgmt_frame(hapd, &hdr, sizeof(hdr)) < 0)
 			perror("ap_handle_timer: send");
 #endif /* CONFIG_NATIVE_WINDOWS */
 	} else if (sta->timeout_next != STA_REMOVE) {

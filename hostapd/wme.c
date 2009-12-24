@@ -20,7 +20,7 @@
 #include "ieee802_11.h"
 #include "wme.h"
 #include "sta_info.h"
-#include "driver_i.h"
+#include "config.h"
 
 
 /* TODO: maintain separate sequence and fragment numbers for each AC
@@ -144,7 +144,7 @@ static void wmm_send_action(struct hostapd_data *hapd, const u8 *addr,
 	os_memcpy(t, tspec, sizeof(struct wmm_tspec_element));
 	len = ((u8 *) (t + 1)) - buf;
 
-	if (hostapd_send_mgmt_frame(hapd, m, len) < 0)
+	if (hapd->drv.send_mgmt_frame(hapd, m, len) < 0)
 		perror("wmm_send_action: send");
 }
 

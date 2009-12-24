@@ -45,6 +45,8 @@ struct hostapd_driver_ops {
 	int (*set_ap_wps_ie)(struct hostapd_data *hapd,
 			     const struct wpabuf *beacon,
 			     const struct wpabuf *probe);
+	int (*send_mgmt_frame)(struct hostapd_data *hapd, const void *msg,
+			       size_t len);
 };
 
 /**

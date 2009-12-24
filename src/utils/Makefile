@@ -11,6 +11,7 @@ install:
 include ../lib.rules
 
 #CFLAGS += -DWPA_TRACE
+CFLAGS += -DCONFIG_IPV6
 
 LIB_OBJS= \
 	base64.o \

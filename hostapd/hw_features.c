@@ -2,7 +2,7 @@
  * hostapd / Hardware feature query and different modes
  * Copyright 2002-2003, Instant802 Networks, Inc.
  * Copyright 2005-2006, Devicescape Software, Inc.
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,16 +14,16 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "hostapd.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
-#include "eloop.h"
+#include "ap/hostapd.h"
+#include "ap/config.h"
 #include "hw_features.h"
 #include "driver_i.h"
-#include "config.h"
 
 
 void hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,

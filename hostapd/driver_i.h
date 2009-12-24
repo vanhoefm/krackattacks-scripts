@@ -16,7 +16,7 @@
 #define DRIVER_I_H
 
 #include "drivers/driver.h"
-#include "config.h"
+#include "ap/config.h"
 
 static inline void *
 hostapd_driver_init(struct hostapd_data *hapd, const u8 *bssid)

@@ -23,8 +23,9 @@
 #include "drivers/driver.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
-#include "wpa.h"
-#include "config.h"
+#include "ap/wpa.h"
+#include "ap/config.h"
+#include "config_file.h"
 
 
 extern struct wpa_driver_ops *wpa_drivers[];

@@ -1,6 +1,6 @@
 /*
  * hostapd / AP table
- * Copyright (c) 2002-2003, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2003-2004, Instant802 Networks, Inc.
  * Copyright (c) 2006, Devicescape Software, Inc.
  *
@@ -14,18 +14,17 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "drivers/driver.h"
 #include "hostapd.h"
 #include "config.h"
 #include "ieee802_11.h"
-#include "eloop.h"
 #include "sta_info.h"
-#include "ap_list.h"
-#include "hw_features.h"
 #include "beacon.h"
-#include "drivers/driver.h"
+#include "ap_list.h"
 
 
 /* AP list is a double linked list with head->prev pointing to the end of the

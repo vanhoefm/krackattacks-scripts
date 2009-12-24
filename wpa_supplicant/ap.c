@@ -16,10 +16,10 @@
 #include "includes.h"
 
 #include "common.h"
-#include "../hostapd/hostapd.h"
-#include "../hostapd/config.h"
+#include "ap/hostapd.h"
+#include "ap/config.h"
 #ifdef NEED_AP_MLME
-#include "../hostapd/ieee802_11.h"
+#include "ap/ieee802_11.h"
 #endif /* NEED_AP_MLME */
 #include "../hostapd/wps_hostapd.h"
 #include "../hostapd/ctrl_iface_ap.h"

@@ -588,14 +588,14 @@ CFLAGS += -DCONFIG_NO_RADIUS
 CFLAGS += -DCONFIG_NO_ACCOUNTING
 CFLAGS += -DCONFIG_NO_VLAN
 OBJS += ../hostapd/hostapd.o
-OBJS += ../hostapd/config.o
+OBJS += ../src/ap/config.o
 OBJS += ../src/utils/ip_addr.o
-OBJS += ../hostapd/sta_info.o
-OBJS += ../hostapd/tkip_countermeasures.o
-OBJS += ../hostapd/mlme.o
-OBJS += ../hostapd/ieee802_1x.o
+OBJS += ../src/ap/sta_info.o
+OBJS += ../src/ap/tkip_countermeasures.o
+OBJS += ../src/ap/mlme.o
+OBJS += ../src/ap/ieee802_1x.o
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
-OBJS += ../hostapd/ieee802_11_auth.o
+OBJS += ../src/ap/ieee802_11_auth.o
 OBJS += ../hostapd/drv_callbacks.o
 OBJS += ../hostapd/ap_drv_ops.o
 ifdef CONFIG_CTRL_IFACE
@@ -612,13 +612,13 @@ CFLAGS += -DCONFIG_IEEE80211N
 endif
 
 ifdef NEED_AP_MLME
-OBJS += ../hostapd/beacon.o
-OBJS += ../hostapd/wme.o
-OBJS += ../hostapd/ap_list.o
-OBJS += ../hostapd/ieee802_11.o
+OBJS += ../src/ap/beacon.o
+OBJS += ../src/ap/wmm.o
+OBJS += ../src/ap/ap_list.o
+OBJS += ../src/ap/ieee802_11.o
 OBJS += ../hostapd/hw_features.o
 ifdef CONFIG_IEEE80211N
-OBJS += ../hostapd/ieee802_11_ht.o
+OBJS += ../src/ap/ieee802_11_ht.o
 endif
 CFLAGS += -DNEED_AP_MLME
 endif
@@ -632,14 +632,14 @@ endif
 ifdef NEED_RSN_AUTHENTICATOR
 CFLAGS += -DCONFIG_NO_RADIUS
 NEED_AES_WRAP=y
-OBJS += ../hostapd/wpa.o
-OBJS += ../hostapd/wpa_auth_ie.o
-OBJS += ../hostapd/pmksa_cache.o
+OBJS += ../src/ap/wpa.o
+OBJS += ../src/ap/wpa_auth_ie.o
+OBJS += ../src/ap/pmksa_cache.o
 ifdef CONFIG_IEEE80211R
-OBJS += ../hostapd/wpa_ft.o
+OBJS += ../src/ap/wpa_ft.o
 endif
 ifdef CONFIG_PEERKEY
-OBJS += ../hostapd/peerkey.o
+OBJS += ../src/ap/peerkey.o
 endif
 endif
 
@@ -658,18 +658,18 @@ endif
 
 ifdef CONFIG_AUTHENTICATOR
 OBJS_h += ../src/eapol_auth/eapol_auth_sm.o
-OBJS_h += ../hostapd/ieee802_1x.o
+OBJS_h += ../src/ap/ieee802_1x.o
 endif
 
 ifdef CONFIG_WPA_AUTHENTICATOR
-OBJS_h += ../hostapd/wpa.o
-OBJS_h += ../hostapd/wpa_auth_ie.o
-OBJS_h += ../hostapd/pmksa_cache.o
+OBJS_h += ../src/ap/wpa.o
+OBJS_h += ../src/ap/wpa_auth_ie.o
+OBJS_h += ../src/ap/pmksa_cache.o
 ifdef CONFIG_IEEE80211R
-OBJS_h += ../hostapd/wpa_ft.o
+OBJS_h += ../src/ap/wpa_ft.o
 endif
 ifdef CONFIG_PEERKEY
-OBJS_h += ../hostapd/peerkey.o
+OBJS_h += ../src/ap/peerkey.o
 endif
 endif
 

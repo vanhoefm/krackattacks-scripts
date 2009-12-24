@@ -12,12 +12,12 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "crypto/crypto.h"
 #include "drivers/driver.h"
 #include "common/wpa_ctrl.h"
@@ -26,12 +26,11 @@
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "beacon.h"
-#include "hw_features.h"
 #include "ieee802_11_auth.h"
 #include "sta_info.h"
 #include "ieee802_1x.h"
 #include "wpa.h"
-#include "wme.h"
+#include "wmm.h"
 #include "ap_list.h"
 #include "accounting.h"
 #include "config.h"

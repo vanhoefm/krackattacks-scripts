@@ -19,7 +19,7 @@
 #include "config.h"
 #include "wpa.h"
 #include "ieee802_11.h"
-#include "wme.h"
+#include "wmm.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
 

@@ -15,11 +15,11 @@
 #include "includes.h"
 
 #include "common.h"
-#include "hostapd.h"
-#include "ieee802_1x.h"
-#include "wpa.h"
-#include "ieee802_11.h"
-#include "sta_info.h"
+#include "ap/hostapd.h"
+#include "ap/ieee802_1x.h"
+#include "ap/wpa.h"
+#include "ap/ieee802_11.h"
+#include "ap/sta_info.h"
 #include "wps_hostapd.h"
 #include "ctrl_iface_ap.h"
 

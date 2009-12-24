@@ -32,14 +32,23 @@ CFLAGS += -DCONFIG_NATIVE_WINDOWS
 LIBS += -lws2_32
 endif
 
-OBJS =	hostapd.o main.o ieee802_1x.o \
-	config.o config_file.o ieee802_11_auth.o \
-	sta_info.o wpa.o \
-	preauth.o pmksa_cache.o \
-	drv_callbacks.o \
-	tkip_countermeasures.o \
-	mlme.o wpa_auth_ie.o
+OBJS = hostapd.o
+OBJS += main.o
+OBJS += config_file.o
+OBJS += drv_callbacks.o
 OBJS += ap_drv_ops.o
+
+OBJS += ../src/ap/ieee802_1x.o
+OBJS += ../src/ap/config.o
+OBJS += ../src/ap/ieee802_11_auth.o
+OBJS += ../src/ap/sta_info.o
+OBJS += ../src/ap/wpa.o
+OBJS += ../src/ap/tkip_countermeasures.o
+OBJS += ../src/ap/mlme.o
+OBJS += ../src/ap/wpa_auth_ie.o
+OBJS += ../src/ap/preauth.o
+OBJS += ../src/ap/pmksa_cache.o
+
 NEED_RC4=y
 NEED_AES=y
 NEED_MD5=y
@@ -93,13 +102,13 @@ endif
 ifdef CONFIG_NO_ACCOUNTING
 CFLAGS += -DCONFIG_NO_ACCOUNTING
 else
-OBJS += accounting.o
+OBJS += ../src/ap/accounting.o
 endif
 
 ifdef CONFIG_NO_VLAN
 CFLAGS += -DCONFIG_NO_VLAN
 else
-OBJS += vlan_init.o
+OBJS += ../src/ap/vlan_init.o
 endif
 
 ifdef CONFIG_NO_CTRL_IFACE
@@ -125,7 +134,7 @@ endif
 
 ifdef CONFIG_PEERKEY
 CFLAGS += -DCONFIG_PEERKEY
-OBJS += peerkey.o
+OBJS += ../src/ap/peerkey.o
 endif
 
 ifdef CONFIG_IEEE80211W
@@ -136,7 +145,7 @@ endif
 
 ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R
-OBJS += wpa_ft.o
+OBJS += ../src/ap/wpa_ft.o
 NEED_SHA256=y
 NEED_AES_OMAC1=y
 NEED_AES_UNWRAP=y
@@ -677,10 +686,13 @@ OBJS += ../src/utils/base64.o
 endif
 
 ifdef NEED_AP_MLME
-OBJS += beacon.o wme.o ap_list.o ieee802_11.o
+OBJS += ../src/ap/beacon.o
+OBJS += ../src/ap/wmm.o
+OBJS += ../src/ap/ap_list.o
+OBJS += ../src/ap/ieee802_11.o
 OBJS += hw_features.o
 ifdef CONFIG_IEEE80211N
-OBJS += ieee802_11_ht.o
+OBJS += ../src/ap/ieee802_11_ht.o
 endif
 CFLAGS += -DNEED_AP_MLME
 endif

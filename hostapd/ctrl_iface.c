@@ -21,18 +21,18 @@
 #include <stddef.h>
 
 #include "common.h"
-#include "hostapd.h"
 #include "eloop.h"
-#include "config.h"
-#include "ieee802_1x.h"
-#include "wpa.h"
-#include "radius/radius_client.h"
-#include "ieee802_11.h"
-#include "ctrl_iface.h"
-#include "sta_info.h"
-#include "accounting.h"
-#include "wps_hostapd.h"
 #include "drivers/driver.h"
+#include "radius/radius_client.h"
+#include "ap/hostapd.h"
+#include "ap/config.h"
+#include "ap/ieee802_1x.h"
+#include "ap/wpa.h"
+#include "ap/ieee802_11.h"
+#include "ap/sta_info.h"
+#include "ap/accounting.h"
+#include "ctrl_iface.h"
+#include "wps_hostapd.h"
 #include "ctrl_iface_ap.h"
 
 

@@ -16,11 +16,11 @@
 
 #include "common.h"
 #include "l2_packet/l2_packet.h"
-#include "wpa_supplicant_i.h"
 #include "rsn_supp/wpa.h"
 #include "rsn_supp/wpa_ie.h"
+#include "ap/wpa.h"
+#include "wpa_supplicant_i.h"
 #include "driver_i.h"
-#include "../hostapd/wpa.h"
 #include "ibss_rsn.h"
 
 

@@ -12,11 +12,11 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "eloop.h"
-#include "uuid.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "utils/uuid.h"
 #include "crypto/dh_groups.h"
 #include "common/wpa_ctrl.h"
 #include "common/ieee802_11_defs.h"
@@ -26,9 +26,9 @@
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
-#include "hostapd.h"
-#include "config.h"
-#include "sta_info.h"
+#include "ap/hostapd.h"
+#include "ap/config.h"
+#include "ap/sta_info.h"
 #include "wps_hostapd.h"
 
 

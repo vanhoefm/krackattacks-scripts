@@ -18,9 +18,9 @@
 #include "common.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
-#include "wme.h"
 #include "sta_info.h"
 #include "config.h"
+#include "wmm.h"
 
 
 /* TODO: maintain separate sequence and fragment numbers for each AC

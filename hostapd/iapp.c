@@ -37,7 +37,7 @@
  * - IEEE 802.11 context transfer
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 #include <net/if.h>
 #include <sys/ioctl.h>
 #ifdef USE_KERNEL_HEADERS
@@ -46,13 +46,13 @@
 #include <netpacket/packet.h>
 #endif /* USE_KERNEL_HEADERS */
 
-#include "common.h"
-#include "hostapd.h"
-#include "config.h"
-#include "ieee802_11.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "ap/hostapd.h"
+#include "ap/config.h"
+#include "ap/ieee802_11.h"
+#include "ap/sta_info.h"
 #include "iapp.h"
-#include "eloop.h"
-#include "sta_info.h"
 
 
 #define IAPP_MULTICAST "224.0.1.178"

@@ -32,7 +32,6 @@
 #include "preauth.h"
 #include "pmksa_cache.h"
 #include "config.h"
-#include "hw_features.h"
 #include "eap_server/eap.h"
 
 

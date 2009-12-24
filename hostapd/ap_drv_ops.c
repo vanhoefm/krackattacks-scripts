@@ -15,9 +15,9 @@
 #include "includes.h"
 
 #include "common.h"
-#include "hostapd.h"
-#include "ieee802_11.h"
-#include "sta_info.h"
+#include "ap/hostapd.h"
+#include "ap/ieee802_11.h"
+#include "ap/sta_info.h"
 #include "driver_i.h"
 
 

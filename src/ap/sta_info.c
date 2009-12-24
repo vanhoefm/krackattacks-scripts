@@ -28,7 +28,6 @@
 #include "preauth.h"
 #include "config.h"
 #include "beacon.h"
-#include "hw_features.h"
 #include "mlme.h"
 #include "vlan_init.h"
 

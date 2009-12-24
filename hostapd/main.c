@@ -23,8 +23,8 @@
 #include "common/version.h"
 #include "eap_server/eap.h"
 #include "eap_server/tncs.h"
-#include "hostapd.h"
-#include "config.h"
+#include "ap/hostapd.h"
+#include "ap/config.h"
 #include "config_file.h"
 
 

@@ -69,6 +69,11 @@ struct hostapd_driver_ops {
 				   u32 session_timeout);
 	int (*set_radius_acl_expire)(struct hostapd_data *hapd,
 				     const u8 *mac);
+	int (*set_bss_params)(struct hostapd_data *hapd, int use_protection);
+	int (*set_beacon)(const char *ifname, struct hostapd_data *hapd,
+			  const u8 *head, size_t head_len,
+			  const u8 *tail, size_t tail_len, int dtim_period,
+			  int beacon_int);
 };
 
 /**

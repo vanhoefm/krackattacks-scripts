@@ -25,9 +25,9 @@
 #include "wme.h"
 #include "beacon.h"
 #include "hw_features.h"
-#include "driver_i.h"
+#include "drivers/driver.h"
+#include "config.h"
 #include "sta_info.h"
-#include "wps_hostapd.h"
 
 
 static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
@@ -333,11 +333,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 {
 	struct ieee80211_mgmt *head;
 	u8 *pos, *tail, *tailpos;
-	int preamble;
 	u16 capab_info;
 	size_t head_len, tail_len;
-	int cts_protection = ((ieee802_11_erp_info(hapd) &
-			      ERP_INFO_USE_PROTECTION) ? 1 : 0);
 
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512
@@ -405,22 +402,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	tailpos = hostapd_eid_wmm(hapd, tailpos);
 
 #ifdef CONFIG_IEEE80211N
-	if (hapd->iconf->ieee80211n) {
-		u8 *ht_capab, *ht_oper;
-		ht_capab = tailpos;
-		tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);
-
-		ht_oper = tailpos;
-		tailpos = hostapd_eid_ht_operation(hapd, tailpos);
-
-		if (tailpos > ht_oper && ht_oper > ht_capab &&
-		    hostapd_set_ht_params(hapd->conf->iface, hapd,
-					  ht_capab + 2, ht_capab[1],
-					  ht_oper + 2, ht_oper[1])) {
-			wpa_printf(MSG_ERROR, "Could not set HT capabilities "
-				   "for kernel driver");
-		}
-	}
+	tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);
+	tailpos = hostapd_eid_ht_operation(hapd, tailpos);
 #endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_WPS
@@ -433,35 +416,18 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
-	if (hostapd_set_beacon(hapd->conf->iface, hapd, (u8 *) head, head_len,
-			       tail, tail_len, hapd->conf->dtim_period,
-			       hapd->iconf->beacon_int))
+	if (hapd->drv.set_beacon(hapd->conf->iface, hapd,
+				 (u8 *) head, head_len,
+				 tail, tail_len, hapd->conf->dtim_period,
+				 hapd->iconf->beacon_int))
 		wpa_printf(MSG_ERROR, "Failed to set beacon head/tail or DTIM "
 			   "period");
 
 	os_free(tail);
 	os_free(head);
 
-	if (hostapd_set_cts_protect(hapd, cts_protection))
-		wpa_printf(MSG_ERROR, "Failed to set CTS protect in kernel "
-			   "driver");
-
-	if (hapd->iface->current_mode &&
-	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G &&
-	    hostapd_set_short_slot_time(hapd,
-					hapd->iface->num_sta_no_short_slot_time
-					> 0 ? 0 : 1))
-		wpa_printf(MSG_ERROR, "Failed to set Short Slot Time option "
-			   "in kernel driver");
-
-	if (hapd->iface->num_sta_no_short_preamble == 0 &&
-	    hapd->iconf->preamble == SHORT_PREAMBLE)
-		preamble = SHORT_PREAMBLE;
-	else
-		preamble = LONG_PREAMBLE;
-	if (hostapd_set_preamble(hapd, preamble))
-		wpa_printf(MSG_ERROR, "Could not set preamble for kernel "
-			   "driver");
+	hapd->drv.set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
+					  ERP_INFO_USE_PROTECTION));
 }
 
 

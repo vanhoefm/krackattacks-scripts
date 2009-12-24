@@ -256,19 +256,6 @@ hostapd_set_country(struct hostapd_data *hapd, const char *country)
 }
 
 static inline int
-hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
-		   const u8 *head, size_t head_len,
-		   const u8 *tail, size_t tail_len, int dtim_period,
-		   int beacon_int)
-{
-	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
-		return 0;
-	return hapd->driver->set_beacon(ifname, hapd->drv_priv,
-					head, head_len, tail, tail_len,
-					dtim_period, beacon_int);
-}
-
-static inline int
 hostapd_set_cts_protect(struct hostapd_data *hapd, int value)
 {
 	if (hapd->driver == NULL || hapd->driver->set_cts_protect == NULL)

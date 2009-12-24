@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "hostapd.h"
+#include "ieee802_11.h"
 #include "sta_info.h"
 #include "driver_i.h"
 
@@ -169,6 +170,74 @@ static int hostapd_set_radius_acl_expire(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_set_bss_params(struct hostapd_data *hapd,
+				  int use_protection)
+{
+	int ret = 0;
+	int preamble;
+#ifdef CONFIG_IEEE80211N
+	u8 buf[60], *ht_capab, *ht_oper, *pos;
+
+	pos = buf;
+	ht_capab = pos;
+	pos = hostapd_eid_ht_capabilities(hapd, pos);
+	ht_oper = pos;
+	pos = hostapd_eid_ht_operation(hapd, pos);
+	if (pos > ht_oper && ht_oper > ht_capab &&
+	    hostapd_set_ht_params(hapd->conf->iface, hapd,
+				  ht_capab + 2, ht_capab[1],
+				  ht_oper + 2, ht_oper[1])) {
+		wpa_printf(MSG_ERROR, "Could not set HT capabilities "
+			   "for kernel driver");
+		ret = -1;
+	}
+
+#endif /* CONFIG_IEEE80211N */
+
+	if (hostapd_set_cts_protect(hapd, use_protection)) {
+		wpa_printf(MSG_ERROR, "Failed to set CTS protect in kernel "
+			   "driver");
+		ret = -1;
+	}
+
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G &&
+	    hostapd_set_short_slot_time(hapd,
+					hapd->iface->num_sta_no_short_slot_time
+					> 0 ? 0 : 1)) {
+		wpa_printf(MSG_ERROR, "Failed to set Short Slot Time option "
+			   "in kernel driver");
+		ret = -1;
+	}
+
+	if (hapd->iface->num_sta_no_short_preamble == 0 &&
+	    hapd->iconf->preamble == SHORT_PREAMBLE)
+		preamble = SHORT_PREAMBLE;
+	else
+		preamble = LONG_PREAMBLE;
+	if (hostapd_set_preamble(hapd, preamble)) {
+		wpa_printf(MSG_ERROR, "Could not set preamble for kernel "
+			   "driver");
+		ret = -1;
+	}
+
+	return ret;
+}
+
+
+static int hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
+			      const u8 *head, size_t head_len,
+			      const u8 *tail, size_t tail_len, int dtim_period,
+			      int beacon_int)
+{
+	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
+		return 0;
+	return hapd->driver->set_beacon(ifname, hapd->drv_priv,
+					head, head_len, tail, tail_len,
+					dtim_period, beacon_int);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -182,4 +251,6 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->set_drv_ieee8021x = hostapd_set_drv_ieee8021x;
 	ops->set_radius_acl_auth = hostapd_set_radius_acl_auth;
 	ops->set_radius_acl_expire = hostapd_set_radius_acl_expire;
+	ops->set_bss_params = hostapd_set_bss_params;
+	ops->set_beacon = hostapd_set_beacon;
 }

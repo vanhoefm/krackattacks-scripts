@@ -1689,13 +1689,22 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
-void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src)
+void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
+				int wds)
 {
 	struct sta_info *sta;
 
 	sta = ap_get_sta(hapd, src);
-	if (sta && (sta->flags & WLAN_STA_ASSOC))
+	if (sta && (sta->flags & WLAN_STA_ASSOC)) {
+		if (wds && !(sta->flags & WLAN_STA_WDS)) {
+			wpa_printf(MSG_DEBUG, "Enable 4-address WDS mode for "
+				   "STA " MACSTR " (aid %u)",
+				   MAC2STR(sta->addr), sta->aid);
+			sta->flags |= WLAN_STA_WDS;
+			hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 1);
+		}
 		return;
+	}
 
 	wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated STA "
 		   MACSTR, MAC2STR(src));

@@ -1527,6 +1527,16 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_supp_port)(void *priv, int authorized);
+
+	/**
+	 * set_wds_sta - Bind a station into a 4-address WDS (AP only)
+	 * @priv: Private driver interface data
+	 * @addr: MAC address of the associated station
+	 * @aid: Association ID
+	 * @val: 1 = bind to 4-address WDS; 0 = unbind
+	 * Returns: 0 on success, -1 on failure
+	 */
+	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val);
 };
 
 /**

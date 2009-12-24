@@ -299,6 +299,7 @@ static const u8 * get_hdr_bssid(const struct ieee80211_hdr *hdr, size_t len)
 		if (len < 24)
 			return NULL;
 		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
+		case WLAN_FC_FROMDS | WLAN_FC_TODS:
 		case WLAN_FC_TODS:
 			return hdr->addr1;
 		case WLAN_FC_FROMDS:
@@ -344,11 +345,14 @@ static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
 					const struct ieee80211_hdr *hdr,
 					size_t len)
 {
+	u16 fc = le_to_host16(hdr->frame_control);
 	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
 	if (hapd == NULL || hapd == HAPD_BROADCAST)
 		return;
 
-	ieee802_11_rx_from_unknown(hapd, hdr->addr2);
+	ieee802_11_rx_from_unknown(hapd, hdr->addr2,
+				   (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
+				   (WLAN_FC_TODS | WLAN_FC_FROMDS));
 }
 
 

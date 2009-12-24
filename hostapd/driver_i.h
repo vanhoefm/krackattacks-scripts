@@ -400,6 +400,15 @@ hostapd_set_sta_vlan(const char *ifname, struct hostapd_data *hapd,
 }
 
 static inline int
+hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr, int aid,
+		    int val)
+{
+	if (hapd->driver == NULL || hapd->driver->set_wds_sta == NULL)
+		return 0;
+	return hapd->driver->set_wds_sta(hapd->drv_priv, addr, aid, val);
+}
+
+static inline int
 hostapd_driver_commit(struct hostapd_data *hapd)
 {
 	if (hapd->driver == NULL || hapd->driver->commit == NULL)

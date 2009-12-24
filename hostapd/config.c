@@ -1534,6 +1534,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   line, pos);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "wds_sta") == 0) {
+			bss->wds_sta = atoi(pos);
 		} else if (os_strcmp(buf, "ap_max_inactivity") == 0) {
 			bss->ap_max_inactivity = atoi(pos);
 		} else if (os_strcmp(buf, "country_code") == 0) {

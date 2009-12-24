@@ -507,7 +507,10 @@ void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
 {
 #ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
-	ieee802_11_rx_from_unknown(wpa_s->ap_iface->bss[0], hdr->addr2);
+	u16 fc = le_to_host16(hdr->frame_control);
+	ieee802_11_rx_from_unknown(wpa_s->ap_iface->bss[0], hdr->addr2,
+				   (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
+				   (WLAN_FC_TODS | WLAN_FC_FROMDS));
 #endif /* NEED_AP_MLME */
 }
 

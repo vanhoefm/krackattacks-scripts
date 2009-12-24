@@ -120,6 +120,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	accounting_sta_stop(hapd, sta);
 
+	hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 0);
 	if (!ap_sta_in_other_bss(hapd, sta, WLAN_STA_ASSOC) &&
 	    !(sta->flags & WLAN_STA_PREAUTH))
 		hostapd_sta_remove(hapd, sta->addr);

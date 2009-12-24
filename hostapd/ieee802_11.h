@@ -65,6 +65,7 @@ u16 copy_sta_ht_capab(struct sta_info *sta, const u8 *ht_capab,
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);
-void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src);
+void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
+				int wds);
 
 #endif /* IEEE802_11_H */

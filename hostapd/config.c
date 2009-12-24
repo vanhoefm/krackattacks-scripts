@@ -26,9 +26,6 @@
 #include "config.h"
 
 
-extern struct wpa_driver_ops *wpa_drivers[];
-
-
 static void hostapd_config_free_vlan(struct hostapd_bss_config *bss)
 {
 	struct hostapd_vlan *vlan, *prev;
@@ -110,15 +107,6 @@ struct hostapd_config * hostapd_config_defaults(void)
 	if (conf == NULL || bss == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for "
 			   "configuration data.");
-		os_free(conf);
-		os_free(bss);
-		return NULL;
-	}
-
-	/* set default driver based on configuration */
-	conf->driver = wpa_drivers[0];
-	if (conf->driver == NULL) {
-		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
 		os_free(conf);
 		os_free(bss);
 		return NULL;

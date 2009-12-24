@@ -1,6 +1,6 @@
 /*
  * hostapd / RADIUS Accounting
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,12 +16,13 @@
 
 #include "common.h"
 #include "hostapd.h"
+#include "drivers/driver.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eloop.h"
 #include "accounting.h"
 #include "ieee802_1x.h"
-#include "driver_i.h"
+#include "config.h"
 #include "sta_info.h"
 
 
@@ -185,7 +186,7 @@ static int accounting_sta_update_stats(struct hostapd_data *hapd,
 				       struct sta_info *sta,
 				       struct hostap_sta_driver_data *data)
 {
-	if (hostapd_read_sta_data(hapd, data, sta->addr))
+	if (hapd->drv.read_sta_data(hapd, data, sta->addr))
 		return -1;
 
 	if (sta->last_rx_bytes > data->rx_bytes)
@@ -248,7 +249,7 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 	time(&sta->acct_session_start);
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
 	sta->acct_input_gigawords = sta->acct_output_gigawords = 0;
-	hostapd_sta_clear_stats(hapd, sta->addr);
+	hapd->drv.sta_clear_stats(hapd, sta->addr);
 
 	if (!hapd->conf->radius->acct_server)
 		return;

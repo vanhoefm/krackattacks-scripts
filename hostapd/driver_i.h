@@ -108,15 +108,6 @@ hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
 }
 
 static inline int
-hostapd_read_sta_data(struct hostapd_data *hapd,
-		      struct hostap_sta_driver_data *data, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->read_sta_data == NULL)
-		return -1;
-	return hapd->driver->read_sta_data(hapd->drv_priv, data, addr);
-}
-
-static inline int
 hostapd_sta_deauth(struct hostapd_data *hapd, const u8 *addr, int reason)
 {
 	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
@@ -262,14 +253,6 @@ hostapd_set_country(struct hostapd_data *hapd, const char *country)
 	    hapd->driver->set_country == NULL)
 		return 0;
 	return hapd->driver->set_country(hapd->drv_priv, country);
-}
-
-static inline int
-hostapd_sta_clear_stats(struct hostapd_data *hapd, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_clear_stats == NULL)
-		return 0;
-	return hapd->driver->sta_clear_stats(hapd->drv_priv, addr);
 }
 
 static inline int

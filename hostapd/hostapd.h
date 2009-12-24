@@ -24,6 +24,7 @@ struct upnp_wps_device_sm;
 struct hapd_interfaces;
 struct hostapd_data;
 struct sta_info;
+struct hostap_sta_driver_data;
 
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 struct full_dynamic_vlan;
@@ -56,6 +57,10 @@ struct hostapd_driver_ops {
 		       wpa_alg alg, const u8 *addr, int key_idx,
 		       int set_tx, const u8 *seq, size_t seq_len,
 		       const u8 *key, size_t key_len);
+	int (*read_sta_data)(struct hostapd_data *hapd,
+			     struct hostap_sta_driver_data *data,
+			     const u8 *addr);
+	int (*sta_clear_stats)(struct hostapd_data *hapd, const u8 *addr);
 };
 
 /**

@@ -80,6 +80,24 @@ static int hostapd_set_key(const char *ifname, struct hostapd_data *hapd,
 }
 
 
+static int hostapd_read_sta_data(struct hostapd_data *hapd,
+				 struct hostap_sta_driver_data *data,
+				 const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->read_sta_data == NULL)
+		return -1;
+	return hapd->driver->read_sta_data(hapd->drv_priv, data, addr);
+}
+
+
+static int hostapd_sta_clear_stats(struct hostapd_data *hapd, const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_clear_stats == NULL)
+		return 0;
+	return hapd->driver->sta_clear_stats(hapd->drv_priv, addr);
+}
+
+
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
@@ -87,4 +105,6 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->send_eapol = hostapd_send_eapol;
 	ops->set_authorized = hostapd_set_authorized;
 	ops->set_key = hostapd_set_key;
+	ops->read_sta_data = hostapd_read_sta_data;
+	ops->sta_clear_stats = hostapd_sta_clear_stats;
 }

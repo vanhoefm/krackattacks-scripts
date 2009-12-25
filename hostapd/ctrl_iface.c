@@ -32,8 +32,8 @@
 #include "ap/sta_info.h"
 #include "ap/accounting.h"
 #include "ap/wps_hostapd.h"
+#include "ap/ctrl_iface_ap.h"
 #include "ctrl_iface.h"
-#include "ctrl_iface_ap.h"
 
 
 struct wpa_ctrl_dst {

@@ -600,7 +600,7 @@ OBJS += ../src/ap/ieee802_11_auth.o
 OBJS += ../hostapd/drv_callbacks.o
 OBJS += ../hostapd/ap_drv_ops.o
 ifdef CONFIG_CTRL_IFACE
-OBJS += ../hostapd/ctrl_iface_ap.o
+OBJS += ../src/ap/ctrl_iface_ap.o
 endif
 
 CFLAGS += -DEAP_SERVER -DEAP_SERVER_IDENTITY

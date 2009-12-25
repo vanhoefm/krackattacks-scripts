@@ -22,7 +22,7 @@
 #include "ap/ieee802_11.h"
 #endif /* NEED_AP_MLME */
 #include "ap/wps_hostapd.h"
-#include "../hostapd/ctrl_iface_ap.h"
+#include "ap/ctrl_iface_ap.h"
 #include "eap_common/eap_defs.h"
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"

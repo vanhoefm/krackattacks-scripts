@@ -116,7 +116,7 @@ ifdef CONFIG_NO_CTRL_IFACE
 CFLAGS += -DCONFIG_NO_CTRL_IFACE
 else
 OBJS += ctrl_iface.o
-OBJS += ctrl_iface_ap.o
+OBJS += ../src/ap/ctrl_iface_ap.o
 endif
 
 OBJS += ../src/crypto/md5.o

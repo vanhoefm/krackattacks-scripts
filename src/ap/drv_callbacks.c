@@ -17,6 +17,7 @@
 #include "utils/common.h"
 #include "radius/radius.h"
 #include "drivers/driver.h"
+#include "common/ieee802_11_defs.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"

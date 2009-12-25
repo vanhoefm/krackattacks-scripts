@@ -17,6 +17,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
 #include "ieee802_11.h"
 #include "wpa_auth.h"
 #include "sta_info.h"

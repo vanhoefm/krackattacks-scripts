@@ -48,6 +48,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
 #include "hostapd.h"
 #include "ap_config.h"
 #include "ieee802_11.h"

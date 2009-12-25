@@ -19,6 +19,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "utils/state_machine.h"
+#include "common/ieee802_11_defs.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"

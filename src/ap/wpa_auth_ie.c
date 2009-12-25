@@ -15,6 +15,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "ap_config.h"
 #include "ieee802_11.h"

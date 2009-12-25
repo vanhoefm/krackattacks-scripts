@@ -16,6 +16,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "drivers/driver.h"

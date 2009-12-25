@@ -15,6 +15,8 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "crypto/aes_wrap.h"
 #include "ap_config.h"
 #include "ieee802_11.h"

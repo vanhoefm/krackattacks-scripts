@@ -18,6 +18,8 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
 #include "ap_config.h"

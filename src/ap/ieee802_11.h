@@ -15,13 +15,11 @@
 #ifndef IEEE802_11_H
 #define IEEE802_11_H
 
-#include "common/ieee802_11_defs.h"
-#include "common/ieee802_11_common.h"
-
 struct hostapd_iface;
 struct hostapd_data;
 struct sta_info;
 struct hostapd_frame_info;
+struct ieee80211_ht_capabilities;
 
 void ieee802_11_send_deauth(struct hostapd_data *hapd, const u8 *addr,
 			    u16 reason);

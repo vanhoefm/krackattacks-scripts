@@ -16,6 +16,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
 #include "ap_config.h"

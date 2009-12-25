@@ -228,6 +228,10 @@ struct hostapd_iface {
 
 	int (*ctrl_iface_init)(struct hostapd_data *hapd);
 	void (*ctrl_iface_deinit)(struct hostapd_data *hapd);
+
+	int (*for_each_interface)(struct hapd_interfaces *interfaces,
+				  int (*cb)(struct hostapd_iface *iface,
+					    void *ctx), void *ctx);
 };
 
 /* hostapd.c */
@@ -241,11 +245,6 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err);
 void hostapd_interface_deinit(struct hostapd_iface *iface);
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
-
-/* main.c */
-int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
-			       int (*cb)(struct hostapd_iface *iface,
-					 void *ctx), void *ctx);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

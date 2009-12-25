@@ -43,9 +43,9 @@ struct hapd_interfaces {
 };
 
 
-int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
-			       int (*cb)(struct hostapd_iface *iface,
-					 void *ctx), void *ctx)
+static int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
+				      int (*cb)(struct hostapd_iface *iface,
+						void *ctx), void *ctx)
 {
 	size_t i;
 	int ret;
@@ -190,6 +190,7 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 		goto fail;
 	hapd_iface->ctrl_iface_init = hostapd_ctrl_iface_init;
 	hapd_iface->ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
+	hapd_iface->for_each_interface = hostapd_for_each_interface;
 
 	conf = hostapd_config_read(hapd_iface->config_fname);
 	if (conf == NULL)

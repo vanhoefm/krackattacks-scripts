@@ -16,6 +16,7 @@
 
 #include "utils/common.h"
 #include "radius/radius.h"
+#include "drivers/driver.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -27,7 +28,6 @@
 #include "wmm.h"
 #include "wps_hostapd.h"
 #include "ap_config.h"
-#include "driver_i.h"
 
 
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)

@@ -20,9 +20,10 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "drivers/driver.h"
 #include "hostapd.h"
 #include "ap_config.h"
-#include "driver_i.h"
+#include "ap_drv_ops.h"
 #include "hw_features.h"
 
 

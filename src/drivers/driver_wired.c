@@ -214,14 +214,14 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	memset(&ifr, 0, sizeof(ifr));
+	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
 	if (ioctl(drv->sock, SIOCGIFINDEX, &ifr) != 0) {
 		perror("ioctl(SIOCGIFINDEX)");
 		return -1;
 	}
 
-	memset(&addr, 0, sizeof(addr));
+	os_memset(&addr, 0, sizeof(addr));
 	addr.sll_family = AF_PACKET;
 	addr.sll_ifindex = ifr.ifr_ifindex;
 	wpa_printf(MSG_DEBUG, "Opening raw packet socket for ifindex %d",
@@ -240,7 +240,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	memset(&ifr, 0, sizeof(ifr));
+	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
 	if (ioctl(drv->sock, SIOCGIFHWADDR, &ifr) != 0) {
 		perror("ioctl(SIOCGIFHWADDR)");
@@ -252,7 +252,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		       ifr.ifr_hwaddr.sa_family);
 		return -1;
 	}
-	memcpy(own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+	os_memcpy(own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
 
 	/* setup dhcp listen socket for sta detection */
 	if ((drv->dhcp_sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
@@ -266,7 +266,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	memset(&addr2, 0, sizeof(addr2));
+	os_memset(&addr2, 0, sizeof(addr2));
 	addr2.sin_family = AF_INET;
 	addr2.sin_port = htons(67);
 	addr2.sin_addr.s_addr = INADDR_ANY;
@@ -282,7 +282,7 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-	memset(&ifr, 0, sizeof(ifr));
+	os_memset(&ifr, 0, sizeof(ifr));
 	os_strlcpy(ifr.ifr_ifrn.ifrn_name, drv->ifname, IFNAMSIZ);
 	if (setsockopt(drv->dhcp_sock, SOL_SOCKET, SO_BINDTODEVICE,
 		       (char *) &ifr, sizeof(ifr)) < 0) {
@@ -318,16 +318,16 @@ static int wired_send_eapol(void *priv, const u8 *addr,
 		return -1;
 	}
 
-	memcpy(hdr->dest, drv->use_pae_group_addr ? pae_group_addr : addr,
-	       ETH_ALEN);
-	memcpy(hdr->src, own_addr, ETH_ALEN);
+	os_memcpy(hdr->dest, drv->use_pae_group_addr ? pae_group_addr : addr,
+		  ETH_ALEN);
+	os_memcpy(hdr->src, own_addr, ETH_ALEN);
 	hdr->ethertype = htons(ETH_P_PAE);
 
 	pos = (u8 *) (hdr + 1);
-	memcpy(pos, data, data_len);
+	os_memcpy(pos, data, data_len);
 
 	res = send(drv->sock, (u8 *) hdr, len, 0);
-	free(hdr);
+	os_free(hdr);
 
 	if (res < 0) {
 		perror("wired_send_eapol: send");
@@ -355,7 +355,7 @@ static void * wired_driver_hapd_init(struct hostapd_data *hapd,
 	drv->use_pae_group_addr = params->use_pae_group_addr;
 
 	if (wired_init_sockets(drv, params->own_addr)) {
-		free(drv);
+		os_free(drv);
 		return NULL;
 	}
 
@@ -373,7 +373,7 @@ static void wired_driver_hapd_deinit(void *priv)
 	if (drv->dhcp_sock >= 0)
 		close(drv->dhcp_sock);
 
-	free(drv);
+	os_free(drv);
 }
 
 

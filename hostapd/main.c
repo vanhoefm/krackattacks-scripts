@@ -291,7 +291,13 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 
 	if (hostapd_driver_init(iface) ||
 	    hostapd_setup_interface(iface)) {
+		const struct wpa_driver_ops *driver;
+		void *drv_priv;
+		driver = iface->bss[0]->driver;
+		drv_priv = iface->bss[0]->drv_priv;
 		hostapd_interface_deinit(iface);
+		if (driver && driver->hapd_deinit)
+			driver->hapd_deinit(drv_priv);
 		return NULL;
 	}
 
@@ -532,8 +538,16 @@ int main(int argc, char *argv[])
 
  out:
 	/* Deinitialize all interfaces */
-	for (i = 0; i < interfaces.count; i++)
-		hostapd_interface_deinit(interfaces.iface[i]);
+	for (i = 0; i < interfaces.count; i++) {
+		struct hostapd_iface *iface = interfaces.iface[i];
+		const struct wpa_driver_ops *driver;
+		void *drv_priv;
+		driver = iface->bss[0]->driver;
+		drv_priv = iface->bss[0]->drv_priv;
+		hostapd_interface_deinit(iface);
+		if (driver && driver->hapd_deinit)
+			driver->hapd_deinit(drv_priv);
+	}
 	os_free(interfaces.iface);
 
 	hostapd_global_deinit(pid_file);

@@ -18,14 +18,6 @@
 #include "drivers/driver.h"
 #include "ap/config.h"
 
-static inline void
-hostapd_driver_deinit(struct hostapd_data *hapd)
-{
-	if (hapd->driver == NULL || hapd->driver->hapd_deinit == NULL)
-		return;
-	hapd->driver->hapd_deinit(hapd->drv_priv);
-}
-
 static inline int
 hostapd_set_ieee8021x(struct hostapd_data *hapd, struct wpa_bss_params *params)
 {

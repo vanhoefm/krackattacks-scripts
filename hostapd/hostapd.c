@@ -819,8 +819,6 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 		hostapd_free_stas(hapd);
 		hostapd_flush_old_stations(hapd);
 		hostapd_cleanup(hapd);
-		if (j == iface->num_bss - 1 && hapd->driver)
-			hostapd_driver_deinit(hapd);
 	}
 	for (j = 0; j < iface->num_bss; j++)
 		os_free(iface->bss[j]);

@@ -519,11 +519,18 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 {
+	const struct wpa_driver_ops *driver;
+	void *drv_priv;
+
 	if (wpa_s->ap_iface == NULL)
 		return;
 
+	driver = wpa_s->ap_iface->bss[0]->driver;
+	drv_priv = wpa_s->ap_iface->bss[0]->drv_priv;
 	hostapd_interface_deinit(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
+	if (driver && driver->hapd_deinit)
+		driver->hapd_deinit(drv_priv);
 }
 
 

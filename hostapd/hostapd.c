@@ -1199,26 +1199,14 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 static int setup_interface(struct hostapd_iface *iface)
 {
 	struct hostapd_data *hapd = iface->bss[0];
-	struct hostapd_bss_config *conf = hapd->conf;
 	size_t i;
 	char country[4];
-	u8 *b = conf->bssid;
 
 	/*
-	 * Initialize the driver interface and make sure that all BSSes get
-	 * configured with a pointer to this driver interface.
+	 * Make sure that all BSSes get configured with a pointer to the same
+	 * driver interface.
 	 */
-	if (!(b[0] | b[1] | b[2] | b[3] | b[4] | b[5]))
-		b = NULL;
-	hapd->drv_priv = hostapd_driver_init(hapd, b);
-
-	if (hapd->drv_priv == NULL) {
-		wpa_printf(MSG_ERROR, "%s driver initialization failed.",
-			   hapd->driver ? hapd->driver->name : "Unknown");
-		hapd->driver = NULL;
-		return -1;
-	}
-	for (i = 0; i < iface->num_bss; i++) {
+	for (i = 1; i < iface->num_bss; i++) {
 		iface->bss[i]->driver = hapd->driver;
 		iface->bss[i]->drv_priv = hapd->drv_priv;
 	}

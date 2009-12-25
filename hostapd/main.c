@@ -21,6 +21,7 @@
 #include "eloop.h"
 #include "crypto/tls.h"
 #include "common/version.h"
+#include "drivers/driver.h"
 #include "eap_server/eap.h"
 #include "eap_server/tncs.h"
 #include "ap/hostapd.h"
@@ -224,6 +225,56 @@ fail:
 }
 
 
+static int hostapd_driver_init(struct hostapd_iface *iface)
+{
+	struct wpa_init_params params;
+	size_t i;
+	struct hostapd_data *hapd = iface->bss[0];
+	struct hostapd_bss_config *conf = hapd->conf;
+	u8 *b = conf->bssid;
+
+	if (hapd->driver == NULL || hapd->driver->hapd_init == NULL) {
+		wpa_printf(MSG_ERROR, "No hostapd driver wrapper available");
+		return -1;
+	}
+
+	/* Initialize the driver interface */
+	if (!(b[0] | b[1] | b[2] | b[3] | b[4] | b[5]))
+		b = NULL;
+
+	os_memset(&params, 0, sizeof(params));
+	params.bssid = b;
+	params.ifname = hapd->conf->iface;
+	params.ssid = (const u8 *) hapd->conf->ssid.ssid;
+	params.ssid_len = hapd->conf->ssid.ssid_len;
+	params.test_socket = hapd->conf->test_socket;
+	params.use_pae_group_addr = hapd->conf->use_pae_group_addr;
+
+	params.num_bridge = hapd->iface->num_bss;
+	params.bridge = os_zalloc(hapd->iface->num_bss * sizeof(char *));
+	if (params.bridge == NULL)
+		return -1;
+	for (i = 0; i < hapd->iface->num_bss; i++) {
+		struct hostapd_data *bss = hapd->iface->bss[i];
+		if (bss->conf->bridge[0])
+			params.bridge[i] = bss->conf->bridge;
+	}
+
+	params.own_addr = hapd->own_addr;
+
+	hapd->drv_priv = hapd->driver->hapd_init(hapd, &params);
+	os_free(params.bridge);
+	if (hapd->drv_priv == NULL) {
+		wpa_printf(MSG_ERROR, "%s driver initialization failed.",
+			   hapd->driver->name);
+		hapd->driver = NULL;
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static struct hostapd_iface *
 hostapd_interface_init(struct hapd_interfaces *interfaces,
 		       const char *config_fname, int debug)
@@ -242,7 +293,8 @@ hostapd_interface_init(struct hapd_interfaces *interfaces,
 			iface->bss[0]->conf->logger_stdout_level--;
 	}
 
-	if (hostapd_setup_interface(iface)) {
+	if (hostapd_driver_init(iface) ||
+	    hostapd_setup_interface(iface)) {
 		hostapd_interface_deinit(iface);
 		return NULL;
 	}

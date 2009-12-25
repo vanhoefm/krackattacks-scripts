@@ -18,42 +18,6 @@
 #include "drivers/driver.h"
 #include "ap/config.h"
 
-static inline void *
-hostapd_driver_init(struct hostapd_data *hapd, const u8 *bssid)
-{
-	struct wpa_init_params params;
-	void *ret;
-	size_t i;
-
-	if (hapd->driver == NULL || hapd->driver->hapd_init == NULL)
-		return NULL;
-
-	os_memset(&params, 0, sizeof(params));
-	params.bssid = bssid;
-	params.ifname = hapd->conf->iface;
-	params.ssid = (const u8 *) hapd->conf->ssid.ssid;
-	params.ssid_len = hapd->conf->ssid.ssid_len;
-	params.test_socket = hapd->conf->test_socket;
-	params.use_pae_group_addr = hapd->conf->use_pae_group_addr;
-
-	params.num_bridge = hapd->iface->num_bss;
-	params.bridge = os_zalloc(hapd->iface->num_bss * sizeof(char *));
-	if (params.bridge == NULL)
-		return NULL;
-	for (i = 0; i < hapd->iface->num_bss; i++) {
-		struct hostapd_data *bss = hapd->iface->bss[i];
-		if (bss->conf->bridge[0])
-			params.bridge[i] = bss->conf->bridge;
-	}
-
-	params.own_addr = hapd->own_addr;
-
-	ret = hapd->driver->hapd_init(hapd, &params);
-	os_free(params.bridge);
-
-	return ret;
-}
-
 static inline void
 hostapd_driver_deinit(struct hostapd_data *hapd)
 {

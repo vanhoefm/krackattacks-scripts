@@ -402,6 +402,40 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 }
 
 
+static int hostapd_driver_init(struct hostapd_iface *iface)
+{
+	struct wpa_init_params params;
+	struct hostapd_data *hapd = iface->bss[0];
+
+	if (hapd->driver == NULL || hapd->driver->hapd_init == NULL) {
+		wpa_printf(MSG_ERROR, "No hostapd driver wrapper available");
+		return -1;
+	}
+
+	os_memset(&params, 0, sizeof(params));
+	params.ifname = hapd->conf->iface;
+	params.ssid = (const u8 *) hapd->conf->ssid.ssid;
+	params.ssid_len = hapd->conf->ssid.ssid_len;
+
+	params.num_bridge = hapd->iface->num_bss;
+	params.bridge = os_zalloc(hapd->iface->num_bss * sizeof(char *));
+	if (params.bridge == NULL)
+		return -1;
+	params.own_addr = hapd->own_addr;
+
+	hapd->drv_priv = hapd->driver->hapd_init(hapd, &params);
+	os_free(params.bridge);
+	if (hapd->drv_priv == NULL) {
+		wpa_printf(MSG_ERROR, "%s driver initialization failed.",
+			   hapd->driver->name);
+		hapd->driver = NULL;
+		return -1;
+	}
+
+	return 0;
+}
+
+
 int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {
@@ -468,7 +502,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		hapd_iface->bss[i]->msg_ctx = wpa_s;
 	}
 
-	if (hostapd_setup_interface(wpa_s->ap_iface)) {
+	if (hostapd_driver_init(wpa_s->ap_iface) ||
+	    hostapd_setup_interface(wpa_s->ap_iface)) {
 		wpa_printf(MSG_ERROR, "Failed to initialize AP interface");
 		wpa_supplicant_ap_deinit(wpa_s);
 		return -1;

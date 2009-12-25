@@ -31,6 +31,7 @@
 #include "ap/accounting.h"
 #include "ap/ap_list.h"
 #include "ap/beacon.h"
+#include "ap/iapp.h"
 #include "ap/ieee802_1x.h"
 #include "ap/ieee802_11_auth.h"
 #include "ap/preauth.h"
@@ -39,7 +40,6 @@
 #include "ap/wpa.h"
 #include "ap/wps_hostapd.h"
 #include "hw_features.h"
-#include "iapp.h"
 #include "driver_i.h"
 #include "ctrl_iface.h"
 

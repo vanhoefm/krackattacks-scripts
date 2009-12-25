@@ -39,6 +39,7 @@ OBJS += drv_callbacks.o
 OBJS += ap_drv_ops.o
 
 OBJS += ../src/ap/utils.o
+OBJS += ../src/ap/authsrv.o
 OBJS += ../src/ap/ieee802_1x.o
 OBJS += ../src/ap/config.o
 OBJS += ../src/ap/ieee802_11_auth.o

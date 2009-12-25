@@ -589,6 +589,7 @@ CFLAGS += -DCONFIG_NO_ACCOUNTING
 CFLAGS += -DCONFIG_NO_VLAN
 OBJS += ../hostapd/hostapd.o
 OBJS += ../src/ap/utils.o
+OBJS += ../src/ap/authsrv.o
 OBJS += ../src/ap/config.o
 OBJS += ../src/utils/ip_addr.o
 OBJS += ../src/ap/sta_info.o

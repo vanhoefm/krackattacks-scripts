@@ -211,12 +211,6 @@ fail:
 	if (conf)
 		hostapd_config_free(conf);
 	if (hapd_iface) {
-		for (i = 0; hapd_iface->bss && i < hapd_iface->num_bss; i++) {
-			hapd = hapd_iface->bss[i];
-			if (hapd && hapd->ssl_ctx)
-				tls_deinit(hapd->ssl_ctx);
-		}
-
 		os_free(hapd_iface->config_fname);
 		os_free(hapd_iface->bss);
 		os_free(hapd_iface);

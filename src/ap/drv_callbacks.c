@@ -26,6 +26,7 @@
 #include "wpa_auth.h"
 #include "wmm.h"
 #include "wps_hostapd.h"
+#include "ap_config.h"
 #include "driver_i.h"
 
 

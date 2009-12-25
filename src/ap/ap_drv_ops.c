@@ -12,12 +12,13 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "ap/hostapd.h"
-#include "ap/ieee802_11.h"
-#include "ap/sta_info.h"
+#include "utils/common.h"
+#include "hostapd.h"
+#include "ieee802_11.h"
+#include "sta_info.h"
+#include "ap_config.h"
 #include "driver_i.h"
 #include "ap_drv_ops.h"
 
@@ -365,4 +366,60 @@ void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 	ops->sta_add = hostapd_sta_add;
 	ops->sta_remove = hostapd_sta_remove;
 	ops->set_countermeasures = hostapd_set_countermeasures;
+}
+
+
+int hostapd_set_privacy(struct hostapd_data *hapd, int enabled)
+{
+	if (hapd->driver == NULL || hapd->driver->set_privacy == NULL)
+		return 0;
+	return hapd->driver->set_privacy(hapd->conf->iface, hapd->drv_priv,
+					 enabled);
+}
+
+
+int hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
+			     size_t elem_len)
+{
+	if (hapd->driver == NULL || hapd->driver->set_generic_elem == NULL)
+		return 0;
+	return hapd->driver->set_generic_elem(hapd->conf->iface,
+					      hapd->drv_priv, elem, elem_len);
+}
+
+
+int hostapd_get_ssid(struct hostapd_data *hapd, u8 *buf, size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->hapd_get_ssid == NULL)
+		return 0;
+	return hapd->driver->hapd_get_ssid(hapd->conf->iface, hapd->drv_priv,
+					   buf, len);
+}
+
+
+int hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->hapd_set_ssid == NULL)
+		return 0;
+	return hapd->driver->hapd_set_ssid(hapd->conf->iface, hapd->drv_priv,
+					   buf, len);
+}
+
+
+int hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
+		   const char *ifname, const u8 *addr, void *bss_ctx)
+{
+	if (hapd->driver == NULL || hapd->driver->if_add == NULL)
+		return -1;
+	return hapd->driver->if_add(hapd->conf->iface, hapd->drv_priv, type,
+				    ifname, addr, bss_ctx);
+}
+
+
+int hostapd_if_remove(struct hostapd_data *hapd, enum wpa_driver_if_type type,
+		      const char *ifname)
+{
+	if (hapd->driver == NULL || hapd->driver->if_remove == NULL)
+		return -1;
+	return hapd->driver->if_remove(hapd->drv_priv, type, ifname);
 }

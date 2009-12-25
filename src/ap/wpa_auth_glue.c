@@ -25,8 +25,10 @@
 #include "preauth_auth.h"
 #include "sta_info.h"
 #include "tkip_countermeasures.h"
-#include "wpa_auth.h"
 #include "driver_i.h"
+#include "ap_drv_ops.h"
+#include "ap_config.h"
+#include "wpa_auth.h"
 
 
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,

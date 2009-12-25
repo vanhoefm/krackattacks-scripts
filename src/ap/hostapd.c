@@ -34,6 +34,7 @@
 #include "driver_i.h"
 #include "wpa_auth_glue.h"
 #include "ap_drv_ops.h"
+#include "ap_config.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);

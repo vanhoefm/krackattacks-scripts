@@ -16,7 +16,6 @@
 #define DRIVER_I_H
 
 #include "drivers/driver.h"
-#include "ap/ap_config.h"
 
 static inline int
 hostapd_set_ieee8021x(struct hostapd_data *hapd, struct wpa_bss_params *params)
@@ -24,15 +23,6 @@ hostapd_set_ieee8021x(struct hostapd_data *hapd, struct wpa_bss_params *params)
 	if (hapd->driver == NULL || hapd->driver->set_ieee8021x == NULL)
 		return 0;
 	return hapd->driver->set_ieee8021x(hapd->drv_priv, params);
-}
-
-static inline int
-hostapd_set_privacy(struct hostapd_data *hapd, int enabled)
-{
-	if (hapd->driver == NULL || hapd->driver->set_privacy == NULL)
-		return 0;
-	return hapd->driver->set_privacy(hapd->conf->iface, hapd->drv_priv,
-					 enabled);
 }
 
 static inline int
@@ -51,34 +41,6 @@ hostapd_flush(struct hostapd_data *hapd)
 	if (hapd->driver == NULL || hapd->driver->flush == NULL)
 		return 0;
 	return hapd->driver->flush(hapd->drv_priv);
-}
-
-static inline int
-hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
-			 size_t elem_len)
-{
-	if (hapd->driver == NULL || hapd->driver->set_generic_elem == NULL)
-		return 0;
-	return hapd->driver->set_generic_elem(hapd->conf->iface,
-					      hapd->drv_priv, elem, elem_len);
-}
-
-static inline int
-hostapd_get_ssid(struct hostapd_data *hapd, u8 *buf, size_t len)
-{
-	if (hapd->driver == NULL || hapd->driver->hapd_get_ssid == NULL)
-		return 0;
-	return hapd->driver->hapd_get_ssid(hapd->conf->iface, hapd->drv_priv,
-					   buf, len);
-}
-
-static inline int
-hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
-{
-	if (hapd->driver == NULL || hapd->driver->hapd_set_ssid == NULL)
-		return 0;
-	return hapd->driver->hapd_set_ssid(hapd->conf->iface, hapd->drv_priv,
-					   buf, len);
 }
 
 static inline int
@@ -185,25 +147,6 @@ hostapd_valid_bss_mask(struct hostapd_data *hapd, const u8 *addr,
 	if (hapd->driver == NULL || hapd->driver->valid_bss_mask == NULL)
 		return 1;
 	return hapd->driver->valid_bss_mask(hapd->drv_priv, addr, mask);
-}
-
-static inline int
-hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
-	       const char *ifname, const u8 *addr, void *bss_ctx)
-{
-	if (hapd->driver == NULL || hapd->driver->if_add == NULL)
-		return -1;
-	return hapd->driver->if_add(hapd->conf->iface, hapd->drv_priv, type,
-				    ifname, addr, bss_ctx);
-}
-
-static inline int
-hostapd_if_remove(struct hostapd_data *hapd, enum wpa_driver_if_type type,
-		  const char *ifname)
-{
-	if (hapd->driver == NULL || hapd->driver->if_remove == NULL)
-		return -1;
-	return hapd->driver->if_remove(hapd->drv_priv, type, ifname);
 }
 
 static inline struct hostapd_hw_modes *

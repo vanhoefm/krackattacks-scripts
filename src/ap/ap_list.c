@@ -20,7 +20,7 @@
 #include "utils/eloop.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
-#include "config.h"
+#include "ap_config.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
 #include "beacon.h"

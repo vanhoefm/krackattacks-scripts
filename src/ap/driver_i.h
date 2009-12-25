@@ -16,7 +16,7 @@
 #define DRIVER_I_H
 
 #include "drivers/driver.h"
-#include "ap/config.h"
+#include "ap/ap_config.h"
 
 static inline int
 hostapd_set_ieee8021x(struct hostapd_data *hapd, struct wpa_bss_params *params)

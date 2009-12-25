@@ -12,22 +12,22 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "utils/state_machine.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
 #include "eapol_auth/eapol_auth_sm.h"
-#include "config.h"
-#include "wpa.h"
+#include "ap_config.h"
 #include "ieee802_11.h"
-#include "pmksa_cache.h"
-#include "state_machine.h"
+#include "wpa_auth.h"
+#include "pmksa_cache_auth.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
 

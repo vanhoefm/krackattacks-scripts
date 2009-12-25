@@ -42,15 +42,15 @@ OBJS += ../src/ap/ap_drv_ops.o
 OBJS += ../src/ap/utils.o
 OBJS += ../src/ap/authsrv.o
 OBJS += ../src/ap/ieee802_1x.o
-OBJS += ../src/ap/config.o
+OBJS += ../src/ap/ap_config.o
 OBJS += ../src/ap/ieee802_11_auth.o
 OBJS += ../src/ap/sta_info.o
-OBJS += ../src/ap/wpa.o
+OBJS += ../src/ap/wpa_auth.o
 OBJS += ../src/ap/tkip_countermeasures.o
-OBJS += ../src/ap/mlme.o
+OBJS += ../src/ap/ap_mlme.o
 OBJS += ../src/ap/wpa_auth_ie.o
-OBJS += ../src/ap/preauth.o
-OBJS += ../src/ap/pmksa_cache.o
+OBJS += ../src/ap/preauth_auth.o
+OBJS += ../src/ap/pmksa_cache_auth.o
 
 NEED_RC4=y
 NEED_AES=y
@@ -137,7 +137,7 @@ endif
 
 ifdef CONFIG_PEERKEY
 CFLAGS += -DCONFIG_PEERKEY
-OBJS += ../src/ap/peerkey.o
+OBJS += ../src/ap/peerkey_auth.o
 endif
 
 ifdef CONFIG_IEEE80211W
@@ -148,7 +148,7 @@ endif
 
 ifdef CONFIG_IEEE80211R
 CFLAGS += -DCONFIG_IEEE80211R
-OBJS += ../src/ap/wpa_ft.o
+OBJS += ../src/ap/wpa_auth_ft.o
 NEED_SHA256=y
 NEED_AES_OMAC1=y
 NEED_AES_UNWRAP=y

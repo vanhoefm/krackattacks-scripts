@@ -591,11 +591,11 @@ OBJS += ../src/ap/hostapd.o
 OBJS += ../src/ap/wpa_auth_glue.o
 OBJS += ../src/ap/utils.o
 OBJS += ../src/ap/authsrv.o
-OBJS += ../src/ap/config.o
+OBJS += ../src/ap/ap_config.o
 OBJS += ../src/utils/ip_addr.o
 OBJS += ../src/ap/sta_info.o
 OBJS += ../src/ap/tkip_countermeasures.o
-OBJS += ../src/ap/mlme.o
+OBJS += ../src/ap/ap_mlme.o
 OBJS += ../src/ap/ieee802_1x.o
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
 OBJS += ../src/ap/ieee802_11_auth.o
@@ -635,14 +635,14 @@ endif
 ifdef NEED_RSN_AUTHENTICATOR
 CFLAGS += -DCONFIG_NO_RADIUS
 NEED_AES_WRAP=y
-OBJS += ../src/ap/wpa.o
+OBJS += ../src/ap/wpa_auth.o
 OBJS += ../src/ap/wpa_auth_ie.o
-OBJS += ../src/ap/pmksa_cache.o
+OBJS += ../src/ap/pmksa_cache_auth.o
 ifdef CONFIG_IEEE80211R
-OBJS += ../src/ap/wpa_ft.o
+OBJS += ../src/ap/wpa_auth_ft.o
 endif
 ifdef CONFIG_PEERKEY
-OBJS += ../src/ap/peerkey.o
+OBJS += ../src/ap/peerkey_auth.o
 endif
 endif
 
@@ -665,14 +665,14 @@ OBJS_h += ../src/ap/ieee802_1x.o
 endif
 
 ifdef CONFIG_WPA_AUTHENTICATOR
-OBJS_h += ../src/ap/wpa.o
+OBJS_h += ../src/ap/wpa_auth.o
 OBJS_h += ../src/ap/wpa_auth_ie.o
-OBJS_h += ../src/ap/pmksa_cache.o
+OBJS_h += ../src/ap/pmksa_cache_auth.o
 ifdef CONFIG_IEEE80211R
-OBJS_h += ../src/ap/wpa_ft.o
+OBJS_h += ../src/ap/wpa_auth_ft.o
 endif
 ifdef CONFIG_PEERKEY
-OBJS_h += ../src/ap/peerkey.o
+OBJS_h += ../src/ap/peerkey_auth.o
 endif
 endif
 

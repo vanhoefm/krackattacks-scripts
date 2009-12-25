@@ -12,22 +12,22 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
 #ifdef CONFIG_RSN_PREAUTH
 
-#include "common.h"
-#include "hostapd.h"
-#include "config.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "l2_packet/l2_packet.h"
-#include "ieee802_1x.h"
-#include "eloop.h"
-#include "sta_info.h"
 #include "common/wpa_common.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
-#include "wpa.h"
-#include "preauth.h"
+#include "hostapd.h"
+#include "ap_config.h"
+#include "ieee802_1x.h"
+#include "sta_info.h"
+#include "wpa_auth.h"
+#include "preauth_auth.h"
 
 #ifndef ETH_P_PREAUTH
 #define ETH_P_PREAUTH 0x88C7 /* IEEE 802.11i pre-authentication */

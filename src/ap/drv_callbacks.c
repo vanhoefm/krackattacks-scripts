@@ -12,20 +12,20 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "radius/radius.h"
-#include "ap/hostapd.h"
-#include "ap/ieee802_11.h"
-#include "ap/sta_info.h"
-#include "ap/accounting.h"
-#include "ap/tkip_countermeasures.h"
-#include "ap/iapp.h"
-#include "ap/ieee802_1x.h"
-#include "ap/wpa.h"
-#include "ap/wmm.h"
-#include "ap/wps_hostapd.h"
+#include "hostapd.h"
+#include "ieee802_11.h"
+#include "sta_info.h"
+#include "accounting.h"
+#include "tkip_countermeasures.h"
+#include "iapp.h"
+#include "ieee802_1x.h"
+#include "wpa_auth.h"
+#include "wmm.h"
+#include "wps_hostapd.h"
 #include "driver_i.h"
 
 

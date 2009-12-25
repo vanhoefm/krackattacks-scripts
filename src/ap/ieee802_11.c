@@ -24,17 +24,17 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "hostapd.h"
-#include "ieee802_11.h"
 #include "beacon.h"
 #include "ieee802_11_auth.h"
 #include "sta_info.h"
 #include "ieee802_1x.h"
-#include "wpa.h"
+#include "wpa_auth.h"
 #include "wmm.h"
 #include "ap_list.h"
 #include "accounting.h"
-#include "config.h"
-#include "mlme.h"
+#include "ap_config.h"
+#include "ap_mlme.h"
+#include "ieee802_11.h"
 
 
 u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)

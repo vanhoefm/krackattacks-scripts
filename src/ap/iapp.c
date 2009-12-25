@@ -48,10 +48,10 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
-#include "ap/hostapd.h"
-#include "ap/config.h"
-#include "ap/ieee802_11.h"
-#include "ap/sta_info.h"
+#include "hostapd.h"
+#include "ap_config.h"
+#include "ieee802_11.h"
+#include "sta_info.h"
 #include "iapp.h"
 
 

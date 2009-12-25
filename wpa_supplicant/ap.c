@@ -13,11 +13,11 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "ap/hostapd.h"
-#include "ap/config.h"
+#include "ap/ap_config.h"
 #ifdef NEED_AP_MLME
 #include "ap/ieee802_11.h"
 #endif /* NEED_AP_MLME */

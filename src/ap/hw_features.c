@@ -20,10 +20,10 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
-#include "ap/hostapd.h"
-#include "ap/config.h"
-#include "hw_features.h"
+#include "hostapd.h"
+#include "ap_config.h"
 #include "driver_i.h"
+#include "hw_features.h"
 
 
 void hostapd_free_hw_features(struct hostapd_hw_modes *hw_features,

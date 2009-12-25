@@ -1,6 +1,6 @@
 /*
  * hostapd / UNIX domain socket -based control interface
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,7 +12,7 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
@@ -20,14 +20,14 @@
 #include <sys/stat.h>
 #include <stddef.h>
 
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "drivers/driver.h"
 #include "radius/radius_client.h"
 #include "ap/hostapd.h"
-#include "ap/config.h"
+#include "ap/ap_config.h"
 #include "ap/ieee802_1x.h"
-#include "ap/wpa.h"
+#include "ap/wpa_auth.h"
 #include "ap/ieee802_11.h"
 #include "ap/sta_info.h"
 #include "ap/accounting.h"

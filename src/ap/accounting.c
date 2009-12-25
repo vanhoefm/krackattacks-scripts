@@ -12,18 +12,18 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "hostapd.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "drivers/driver.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
-#include "eloop.h"
-#include "accounting.h"
+#include "hostapd.h"
 #include "ieee802_1x.h"
-#include "config.h"
+#include "ap_config.h"
 #include "sta_info.h"
+#include "accounting.h"
 
 
 /* Default interval in seconds for polling TX/RX octets from the driver if

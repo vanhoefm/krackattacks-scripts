@@ -12,16 +12,15 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "sta_info.h"
-#include "config.h"
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
-#include "pmksa_cache.h"
+#include "sta_info.h"
+#include "ap_config.h"
+#include "pmksa_cache_auth.h"
 
 
 static const int pmksa_cache_max_entries = 1024;

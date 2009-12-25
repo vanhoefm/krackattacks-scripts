@@ -12,15 +12,15 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "hostapd.h"
-#include "eloop.h"
-#include "sta_info.h"
-#include "mlme.h"
-#include "wpa.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "hostapd.h"
+#include "sta_info.h"
+#include "ap_mlme.h"
+#include "wpa_auth.h"
 #include "tkip_countermeasures.h"
 
 

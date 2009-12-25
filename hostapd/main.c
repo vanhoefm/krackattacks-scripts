@@ -12,20 +12,20 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 #ifndef CONFIG_NATIVE_WINDOWS
 #include <syslog.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "crypto/tls.h"
 #include "common/version.h"
 #include "drivers/driver.h"
 #include "eap_server/eap.h"
 #include "eap_server/tncs.h"
 #include "ap/hostapd.h"
-#include "ap/config.h"
+#include "ap/ap_config.h"
 #include "config_file.h"
 #include "eap_register.h"
 #include "dump_state.h"

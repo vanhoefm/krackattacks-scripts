@@ -13,12 +13,12 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
-#include "config.h"
+#include "ap_config.h"
 #include "sta_info.h"
 #include "beacon.h"
 #include "ieee802_11.h"

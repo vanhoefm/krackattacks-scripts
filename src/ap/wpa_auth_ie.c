@@ -12,14 +12,14 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "config.h"
-#include "ieee802_11.h"
+#include "utils/common.h"
 #include "eapol_auth/eapol_auth_sm.h"
-#include "wpa.h"
-#include "pmksa_cache.h"
+#include "ap_config.h"
+#include "ieee802_11.h"
+#include "wpa_auth.h"
+#include "pmksa_cache_auth.h"
 #include "wpa_auth_ie.h"
 #include "wpa_auth_i.h"
 

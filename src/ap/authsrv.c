@@ -21,7 +21,7 @@
 #include "eapol_auth/eapol_auth_sm.h"
 #include "radius/radius_server.h"
 #include "hostapd.h"
-#include "config.h"
+#include "ap_config.h"
 #include "sta_info.h"
 #include "authsrv.h"
 

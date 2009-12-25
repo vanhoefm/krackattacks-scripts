@@ -12,18 +12,18 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "crypto/sha1.h"
 #include "radius/radius_client.h"
 #include "common/ieee802_11_defs.h"
 #include "common/eapol_common.h"
 #include "eap_common/eap_wsc_common.h"
 #include "eap_server/eap.h"
-#include "wpa.h"
+#include "wpa_auth.h"
 #include "sta_info.h"
-#include "config.h"
+#include "ap_config.h"
 
 
 static void hostapd_config_free_vlan(struct hostapd_bss_config *bss)

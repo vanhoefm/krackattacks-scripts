@@ -12,27 +12,27 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "crypto/md5.h"
 #include "crypto/crypto.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
+#include "eap_server/eap.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "hostapd.h"
-#include "ieee802_1x.h"
 #include "accounting.h"
 #include "sta_info.h"
-#include "wpa.h"
-#include "preauth.h"
-#include "pmksa_cache.h"
-#include "config.h"
-#include "eap_server/eap.h"
+#include "wpa_auth.h"
+#include "preauth_auth.h"
+#include "pmksa_cache_auth.h"
+#include "ap_config.h"
+#include "ieee802_1x.h"
 
 
 static void ieee802_1x_finished(struct hostapd_data *hapd,

@@ -12,16 +12,16 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "radius/radius_client.h"
 #include "radius/radius_server.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
 #include "ap/hostapd.h"
-#include "ap/config.h"
+#include "ap/ap_config.h"
 #include "ap/sta_info.h"
 #include "dump_state.h"
 

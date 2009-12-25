@@ -2,6 +2,7 @@
  * hostapd / WMM (Wi-Fi Multimedia)
  * Copyright 2002-2003, Instant802 Networks, Inc.
  * Copyright 2005-2006, Devicescape Software, Inc.
+ * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -13,13 +14,13 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
-#include "config.h"
+#include "ap_config.h"
 #include "wmm.h"
 
 

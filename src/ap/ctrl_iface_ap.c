@@ -12,15 +12,15 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "ap/hostapd.h"
-#include "ap/ieee802_1x.h"
-#include "ap/wpa.h"
-#include "ap/ieee802_11.h"
-#include "ap/sta_info.h"
-#include "ap/wps_hostapd.h"
+#include "utils/common.h"
+#include "hostapd.h"
+#include "ieee802_1x.h"
+#include "wpa_auth.h"
+#include "ieee802_11.h"
+#include "sta_info.h"
+#include "wps_hostapd.h"
 #include "ctrl_iface_ap.h"
 
 

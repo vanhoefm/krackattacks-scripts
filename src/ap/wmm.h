@@ -17,6 +17,7 @@
 #define WME_H
 
 struct ieee80211_mgmt;
+struct wmm_tspec_element;
 
 u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid);
 int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid,

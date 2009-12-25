@@ -12,24 +12,24 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
-#include "sta_info.h"
-#include "eloop.h"
 #include "accounting.h"
 #include "ieee802_1x.h"
 #include "ieee802_11.h"
-#include "wpa.h"
-#include "preauth.h"
-#include "config.h"
+#include "wpa_auth.h"
+#include "preauth_auth.h"
+#include "ap_config.h"
 #include "beacon.h"
-#include "mlme.h"
+#include "ap_mlme.h"
 #include "vlan_init.h"
+#include "sta_info.h"
 
 static int ap_sta_in_other_bss(struct hostapd_data *hapd,
 			       struct sta_info *sta, u32 flags);

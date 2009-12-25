@@ -12,19 +12,19 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 #ifndef CONFIG_NATIVE_WINDOWS
 #include <grp.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-#include "common.h"
-#include "uuid.h"
+#include "utils/common.h"
+#include "utils/uuid.h"
 #include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
 #include "eap_server/eap.h"
 #include "radius/radius_client.h"
-#include "ap/wpa.h"
-#include "ap/config.h"
+#include "ap/wpa_auth.h"
+#include "ap/ap_config.h"
 #include "config_file.h"
 
 

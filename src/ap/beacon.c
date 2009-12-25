@@ -14,19 +14,19 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
 #ifndef CONFIG_NATIVE_WINDOWS
 
-#include "common.h"
+#include "utils/common.h"
+#include "drivers/driver.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
-#include "wpa.h"
+#include "wpa_auth.h"
 #include "wmm.h"
-#include "beacon.h"
-#include "drivers/driver.h"
-#include "config.h"
+#include "ap_config.h"
 #include "sta_info.h"
+#include "beacon.h"
 
 
 static u8 ieee802_11_erp_info(struct hostapd_data *hapd)

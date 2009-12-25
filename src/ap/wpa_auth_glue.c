@@ -20,12 +20,12 @@
 #include "eapol_auth/eapol_auth_sm_i.h"
 #include "eap_server/eap.h"
 #include "l2_packet/l2_packet.h"
-#include "ap/hostapd.h"
-#include "ap/ieee802_1x.h"
-#include "ap/preauth.h"
-#include "ap/sta_info.h"
-#include "ap/tkip_countermeasures.h"
-#include "ap/wpa.h"
+#include "hostapd.h"
+#include "ieee802_1x.h"
+#include "preauth_auth.h"
+#include "sta_info.h"
+#include "tkip_countermeasures.h"
+#include "wpa_auth.h"
 #include "driver_i.h"
 
 

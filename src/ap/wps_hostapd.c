@@ -1,6 +1,6 @@
 /*
  * hostapd / WPS integration
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -26,9 +26,9 @@
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
-#include "ap/hostapd.h"
-#include "ap/config.h"
-#include "ap/sta_info.h"
+#include "hostapd.h"
+#include "ap_config.h"
+#include "sta_info.h"
 #include "wps_hostapd.h"
 
 

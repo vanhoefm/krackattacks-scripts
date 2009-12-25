@@ -14,11 +14,11 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "hostapd.h"
-#include "config.h"
+#include "ap_config.h"
 #include "vlan_init.h"
 
 
@@ -31,7 +31,7 @@
 #include <linux/if_bridge.h>
 
 #include "drivers/priv_netlink.h"
-#include "eloop.h"
+#include "utils/eloop.h"
 
 
 struct full_dynamic_vlan {

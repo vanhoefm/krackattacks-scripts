@@ -1,6 +1,6 @@
 /*
  * hostapd - IEEE 802.11r - Fast BSS Transition
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,14 +12,14 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "crypto/aes_wrap.h"
-#include "config.h"
-#include "wpa.h"
+#include "ap_config.h"
 #include "ieee802_11.h"
 #include "wmm.h"
+#include "wpa_auth.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
 

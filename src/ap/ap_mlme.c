@@ -14,13 +14,13 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
 #include "ieee802_11.h"
-#include "wpa.h"
+#include "wpa_auth.h"
 #include "sta_info.h"
-#include "mlme.h"
+#include "ap_mlme.h"
 
 
 #ifndef CONFIG_NO_HOSTAPD_LOGGER

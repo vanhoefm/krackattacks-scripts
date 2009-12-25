@@ -15,6 +15,8 @@
 #include "includes.h"
 
 #include "common.h"
+#include "common/ieee802_11_defs.h"
+#include "sta_info.h"
 #include "hostapd.h"
 
 
@@ -38,4 +40,48 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 	n->ctx = ctx;
 
 	return 0;
+}
+
+
+struct prune_data {
+	struct hostapd_data *hapd;
+	const u8 *addr;
+};
+
+static int prune_associations(struct hostapd_iface *iface, void *ctx)
+{
+	struct prune_data *data = ctx;
+	struct sta_info *osta;
+	struct hostapd_data *ohapd;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		ohapd = iface->bss[j];
+		if (ohapd == data->hapd)
+			continue;
+		osta = ap_get_sta(ohapd, data->addr);
+		if (!osta)
+			continue;
+
+		ap_sta_disassociate(ohapd, osta, WLAN_REASON_UNSPECIFIED);
+	}
+
+	return 0;
+}
+
+/**
+ * hostapd_prune_associations - Remove extraneous associations
+ * @hapd: Pointer to BSS data for the most recent association
+ * @addr: Associated STA address
+ *
+ * This function looks through all radios and BSS's for previous
+ * (stale) associations of STA. If any are found they are removed.
+ */
+void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct prune_data data;
+	data.hapd = hapd;
+	data.addr = addr;
+	hostapd_for_each_interface(hapd->iface->interfaces,
+				   prune_associations, &data);
 }

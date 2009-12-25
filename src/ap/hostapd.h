@@ -246,6 +246,7 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 				 void (*cb)(void *ctx, const u8 *sa,
 					    const u8 *ie, size_t ie_len),
 				 void *ctx);
+void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr);
 
 int eap_server_register_methods(void);
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops);

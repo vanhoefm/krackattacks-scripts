@@ -66,6 +66,7 @@ struct wpa_driver_test_global {
 struct wpa_driver_test_data {
 	struct wpa_driver_test_global *global;
 	void *ctx;
+	char ifname[IFNAMSIZ + 1];
 	u8 own_addr[ETH_ALEN];
 	int test_socket;
 #ifdef DRIVER_TEST_UNIX
@@ -785,7 +786,7 @@ test_driver_get_bss(struct wpa_driver_test_data *drv, const char *ifname)
 	struct test_driver_bss *bss;
 
 	for (bss = drv->bss; bss; bss = bss->next) {
-		if (strcmp(bss->ifname, ifname) == 0)
+		if (os_strcmp(bss->ifname, ifname) == 0)
 			return bss;
 	}
 	return NULL;
@@ -1031,20 +1032,20 @@ static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, ifname);
 	wpa_hexdump_ascii(MSG_DEBUG, "test_driver_set_ssid: SSID", buf, len);
 
-	for (bss = drv->bss; bss; bss = bss->next) {
-		if (strcmp(bss->ifname, ifname) != 0)
-			continue;
-
-		if (len < 0 || (size_t) len > sizeof(bss->ssid))
-			return -1;
-
-		memcpy(bss->ssid, buf, len);
-		bss->ssid_len = len;
-
-		return 0;
+	bss = test_driver_get_bss(drv, ifname);
+	if (bss == NULL) {
+		wpa_printf(MSG_DEBUG, "%s(ifname=%s): failed to find BSS data",
+			   __func__, ifname);
+		return -1;
 	}
 
-	return -1;
+	if (len < 0 || (size_t) len > sizeof(bss->ssid))
+		return -1;
+
+	os_memcpy(bss->ssid, buf, len);
+	bss->ssid_len = len;
+
+	return 0;
 }
 
 
@@ -1056,16 +1057,13 @@ static int test_driver_set_privacy(const char *ifname, void *priv, int enabled)
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s enabled=%d)",
 		   __func__, ifname, enabled);
 
-	for (bss = drv->bss; bss; bss = bss->next) {
-		if (strcmp(bss->ifname, ifname) != 0)
-			continue;
+	bss = test_driver_get_bss(drv, ifname);
+	if (bss == NULL)
+		return -1;
 
-		bss->privacy = enabled;
+	bss->privacy = enabled;
 
-		return 0;
-	}
-
-	return -1;
+	return 0;
 }
 
 
@@ -1104,10 +1102,7 @@ static int test_driver_sta_add(const char *ifname, void *priv,
 		return -1;
 	}
 
-	for (bss = drv->bss; bss; bss = bss->next) {
-		if (strcmp(ifname, bss->ifname) == 0)
-			break;
-	}
+	bss = test_driver_get_bss(drv, ifname);
 	if (bss == NULL) {
 		wpa_printf(MSG_DEBUG, "%s: No matching interface found from "
 			   "configured BSSes", __func__);
@@ -1120,6 +1115,31 @@ static int test_driver_sta_add(const char *ifname, void *priv,
 }
 
 
+static struct wpa_driver_test_data * test_alloc_data(void *ctx,
+						     const char *ifname)
+{
+	struct wpa_driver_test_data *drv;
+
+	drv = os_zalloc(sizeof(struct wpa_driver_test_data));
+	if (drv == NULL) {
+		wpa_printf(MSG_ERROR, "Could not allocate memory for test "
+			   "driver data");
+		return NULL;
+	}
+
+	drv->ctx = ctx;
+	os_strlcpy(drv->ifname, ifname, IFNAMSIZ);
+
+	/* Generate a MAC address to help testing with multiple STAs */
+	drv->own_addr[0] = 0x02; /* locally administered */
+	sha1_prf((const u8 *) ifname, os_strlen(ifname),
+		 "test mac addr generation",
+		 NULL, 0, drv->own_addr + 1, ETH_ALEN - 1);
+
+	return drv;
+}
+
+
 static void * test_driver_init(struct hostapd_data *hapd,
 			       struct wpa_init_params *params)
 {
@@ -1129,31 +1149,22 @@ static void * test_driver_init(struct hostapd_data *hapd,
 	struct sockaddr *addr;
 	socklen_t alen;
 
-	drv = os_zalloc(sizeof(struct wpa_driver_test_data));
-	if (drv == NULL) {
-		printf("Could not allocate memory for test driver data\n");
+	drv = test_alloc_data(hapd, params->ifname);
+	if (drv == NULL)
 		return NULL;
-	}
 	drv->ap = 1;
 	drv->bss = os_zalloc(sizeof(*drv->bss));
 	if (drv->bss == NULL) {
-		printf("Could not allocate memory for test driver BSS data\n");
+		wpa_printf(MSG_ERROR, "Could not allocate memory for test "
+			   "driver BSS data");
 		os_free(drv);
 		return NULL;
 	}
 
-	drv->ctx = hapd;
 	drv->bss->bss_ctx = hapd;
-
-	/* Generate a MAC address to help testing with multiple APs */
-	params->own_addr[0] = 0x02; /* locally administered */
-	sha1_prf((const u8 *) params->ifname, strlen(params->ifname),
-		 "hostapd test bssid generation",
-		 params->ssid, params->ssid_len,
-		 params->own_addr + 1, ETH_ALEN - 1);
-
 	os_strlcpy(drv->bss->ifname, params->ifname, IFNAMSIZ);
-	memcpy(drv->bss->bssid, params->own_addr, ETH_ALEN);
+	os_memcpy(drv->bss->bssid, drv->own_addr, ETH_ALEN);
+	os_memcpy(params->own_addr, drv->own_addr, ETH_ALEN);
 
 	if (params->test_socket) {
 		if (os_strlen(params->test_socket) >=
@@ -1494,6 +1505,7 @@ static int wpa_driver_test_associate(
 		bss = drv->bss = os_zalloc(sizeof(*drv->bss));
 		if (bss == NULL)
 			return -1;
+		os_strlcpy(bss->ifname, drv->ifname, IFNAMSIZ);
 		os_memcpy(bss->bssid, drv->own_addr, ETH_ALEN);
 		os_memcpy(bss->ssid, params->ssid, params->ssid_len);
 		bss->ssid_len = params->ssid_len;
@@ -1891,11 +1903,10 @@ static void * wpa_driver_test_init2(void *ctx, const char *ifname,
 {
 	struct wpa_driver_test_data *drv;
 
-	drv = os_zalloc(sizeof(*drv));
+	drv = test_alloc_data(ctx, ifname);
 	if (drv == NULL)
 		return NULL;
 	drv->global = global_priv;
-	drv->ctx = ctx;
 	drv->test_socket = -1;
 
 	/* Set dummy BSSID and SSID for testing. */
@@ -1908,11 +1919,6 @@ static void * wpa_driver_test_init2(void *ctx, const char *ifname,
 	os_memcpy(drv->ssid, "test", 5);
 	drv->ssid_len = 4;
 
-	/* Generate a MAC address to help testing with multiple STAs */
-	drv->own_addr[0] = 0x02; /* locally administered */
-	sha1_prf((const u8 *) ifname, os_strlen(ifname),
-		 "wpa_supplicant test mac addr generation",
-		 NULL, 0, drv->own_addr + 1, ETH_ALEN - 1);
 	eloop_register_timeout(1, 0, wpa_driver_test_poll, drv, NULL);
 
 	return drv;

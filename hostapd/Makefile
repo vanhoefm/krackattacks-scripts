@@ -33,6 +33,7 @@ LIBS += -lws2_32
 endif
 
 OBJS = hostapd.o
+OBJS += wpa_auth_glue.o
 OBJS += main.o
 OBJS += config_file.o
 OBJS += drv_callbacks.o

@@ -588,6 +588,7 @@ CFLAGS += -DCONFIG_NO_RADIUS
 CFLAGS += -DCONFIG_NO_ACCOUNTING
 CFLAGS += -DCONFIG_NO_VLAN
 OBJS += ../hostapd/hostapd.o
+OBJS += ../hostapd/wpa_auth_glue.o
 OBJS += ../src/ap/utils.o
 OBJS += ../src/ap/authsrv.o
 OBJS += ../src/ap/config.o

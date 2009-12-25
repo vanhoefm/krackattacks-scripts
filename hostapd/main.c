@@ -29,6 +29,7 @@
 #include "config_file.h"
 #include "eap_register.h"
 #include "dump_state.h"
+#include "ctrl_iface.h"
 
 
 extern int wpa_debug_level;
@@ -187,6 +188,8 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 	hapd_iface->config_fname = os_strdup(config_file);
 	if (hapd_iface->config_fname == NULL)
 		goto fail;
+	hapd_iface->ctrl_iface_init = hostapd_ctrl_iface_init;
+	hapd_iface->ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
 
 	conf = hostapd_config_read(hapd_iface->config_fname);
 	if (conf == NULL)

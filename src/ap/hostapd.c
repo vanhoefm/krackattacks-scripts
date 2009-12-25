@@ -32,7 +32,6 @@
 #include "ap/wps_hostapd.h"
 #include "hw_features.h"
 #include "driver_i.h"
-#include "ctrl_iface.h"
 #include "wpa_auth_glue.h"
 #include "ap_drv_ops.h"
 
@@ -201,7 +200,8 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
  */
 static void hostapd_cleanup(struct hostapd_data *hapd)
 {
-	hostapd_ctrl_iface_deinit(hapd);
+	if (hapd->iface->ctrl_iface_deinit)
+		hapd->iface->ctrl_iface_deinit(hapd);
 
 	iapp_deinit(hapd->iapp);
 	hapd->iapp = NULL;
@@ -583,7 +583,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		return -1;
 	}
 
-	if (hostapd_ctrl_iface_init(hapd)) {
+	if (hapd->iface->ctrl_iface_init &&
+	    hapd->iface->ctrl_iface_init(hapd)) {
 		wpa_printf(MSG_ERROR, "Failed to setup control interface");
 		return -1;
 	}

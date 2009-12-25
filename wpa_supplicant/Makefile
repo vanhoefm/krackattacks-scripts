@@ -587,8 +587,8 @@ OBJS += ap.o
 CFLAGS += -DCONFIG_NO_RADIUS
 CFLAGS += -DCONFIG_NO_ACCOUNTING
 CFLAGS += -DCONFIG_NO_VLAN
-OBJS += ../hostapd/hostapd.o
-OBJS += ../hostapd/wpa_auth_glue.o
+OBJS += ../src/ap/hostapd.o
+OBJS += ../src/ap/wpa_auth_glue.o
 OBJS += ../src/ap/utils.o
 OBJS += ../src/ap/authsrv.o
 OBJS += ../src/ap/config.o
@@ -599,8 +599,8 @@ OBJS += ../src/ap/mlme.o
 OBJS += ../src/ap/ieee802_1x.o
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
 OBJS += ../src/ap/ieee802_11_auth.o
-OBJS += ../hostapd/drv_callbacks.o
-OBJS += ../hostapd/ap_drv_ops.o
+OBJS += ../src/ap/drv_callbacks.o
+OBJS += ../src/ap/ap_drv_ops.o
 ifdef CONFIG_CTRL_IFACE
 OBJS += ../src/ap/ctrl_iface_ap.o
 endif
@@ -619,7 +619,7 @@ OBJS += ../src/ap/beacon.o
 OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o
 OBJS += ../src/ap/ieee802_11.o
-OBJS += ../hostapd/hw_features.o
+OBJS += ../src/ap/hw_features.o
 ifdef CONFIG_IEEE80211N
 OBJS += ../src/ap/ieee802_11_ht.o
 endif

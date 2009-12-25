@@ -32,13 +32,13 @@ CFLAGS += -DCONFIG_NATIVE_WINDOWS
 LIBS += -lws2_32
 endif
 
-OBJS = hostapd.o
-OBJS += wpa_auth_glue.o
 OBJS += main.o
 OBJS += config_file.o
-OBJS += drv_callbacks.o
-OBJS += ap_drv_ops.o
 
+OBJS += ../src/ap/hostapd.o
+OBJS += ../src/ap/wpa_auth_glue.o
+OBJS += ../src/ap/drv_callbacks.o
+OBJS += ../src/ap/ap_drv_ops.o
 OBJS += ../src/ap/utils.o
 OBJS += ../src/ap/authsrv.o
 OBJS += ../src/ap/ieee802_1x.o
@@ -693,7 +693,7 @@ OBJS += ../src/ap/beacon.o
 OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o
 OBJS += ../src/ap/ieee802_11.o
-OBJS += hw_features.o
+OBJS += ../src/ap/hw_features.o
 ifdef CONFIG_IEEE80211N
 OBJS += ../src/ap/ieee802_11_ht.o
 endif

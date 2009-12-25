@@ -225,6 +225,9 @@ struct hostapd_iface {
 
 	u16 ht_op_mode;
 	void (*scan_cb)(struct hostapd_iface *iface);
+
+	int (*ctrl_iface_init)(struct hostapd_data *hapd);
+	void (*ctrl_iface_deinit)(struct hostapd_data *hapd);
 };
 
 /* hostapd.c */

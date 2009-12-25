@@ -49,17 +49,6 @@ int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
 }
 
 
-int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
-{
-	return 0;
-}
-
-
-void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
-{
-}
-
-
 static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid,
 				  struct hostapd_config *conf)

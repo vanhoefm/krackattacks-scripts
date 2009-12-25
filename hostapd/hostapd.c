@@ -34,6 +34,7 @@
 #include "driver_i.h"
 #include "ctrl_iface.h"
 #include "wpa_auth_glue.h"
+#include "ap_drv_ops.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);
@@ -106,16 +107,6 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 
 	wpa_printf(MSG_DEBUG, "Reconfigured interface %s", hapd->conf->iface);
 
-	return 0;
-}
-
-
-int handle_reload_iface(struct hostapd_iface *iface, void *ctx)
-{
-	if (hostapd_reload_config(iface) < 0) {
-		wpa_printf(MSG_WARNING, "Failed to read new configuration "
-			   "file - continuing with old.");
-	}
 	return 0;
 }
 

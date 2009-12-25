@@ -19,6 +19,7 @@
 #include "ap/ieee802_11.h"
 #include "ap/sta_info.h"
 #include "driver_i.h"
+#include "ap_drv_ops.h"
 
 
 static int hostapd_sta_flags_to_drv(int flags)

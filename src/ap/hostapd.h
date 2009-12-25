@@ -227,6 +227,7 @@ struct hostapd_iface {
 	void (*scan_cb)(struct hostapd_iface *iface);
 };
 
+/* hostapd.c */
 int hostapd_reload_config(struct hostapd_iface *iface);
 struct hostapd_data *
 hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
@@ -235,22 +236,19 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 int hostapd_setup_interface(struct hostapd_iface *iface);
 int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err);
 void hostapd_interface_deinit(struct hostapd_iface *iface);
-int handle_reload_iface(struct hostapd_iface *iface, void *ctx);
-int handle_dump_state_iface(struct hostapd_iface *iface, void *ctx);
+void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
+			   int reassoc);
 
+/* main.c */
 int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
 			       int (*cb)(struct hostapd_iface *iface,
 					 void *ctx), void *ctx);
 
+/* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 				 void (*cb)(void *ctx, const u8 *sa,
 					    const u8 *ie, size_t ie_len),
 				 void *ctx);
 void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr);
-
-int eap_server_register_methods(void);
-void hostapd_set_driver_ops(struct hostapd_driver_ops *ops);
-void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
-			   int reassoc);
 
 #endif /* HOSTAPD_H */

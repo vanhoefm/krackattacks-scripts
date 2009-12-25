@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "eap_server/eap_methods.h"
+#include "eap_register.h"
 
 
 /**

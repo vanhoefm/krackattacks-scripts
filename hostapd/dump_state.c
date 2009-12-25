@@ -12,7 +12,6 @@
  * See README and COPYING for more details.
  */
 
-
 #include "includes.h"
 
 #include "common.h"
@@ -24,6 +23,7 @@
 #include "ap/hostapd.h"
 #include "ap/config.h"
 #include "ap/sta_info.h"
+#include "dump_state.h"
 
 
 static void fprint_char(FILE *f, char c)

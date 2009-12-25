@@ -27,6 +27,8 @@
 #include "ap/hostapd.h"
 #include "ap/config.h"
 #include "config_file.h"
+#include "eap_register.h"
+#include "dump_state.h"
 
 
 extern int wpa_debug_level;
@@ -308,6 +310,17 @@ static void handle_term(int sig, void *signal_ctx)
 
 
 #ifndef CONFIG_NATIVE_WINDOWS
+
+static int handle_reload_iface(struct hostapd_iface *iface, void *ctx)
+{
+	if (hostapd_reload_config(iface) < 0) {
+		wpa_printf(MSG_WARNING, "Failed to read new configuration "
+			   "file - continuing with old.");
+	}
+	return 0;
+}
+
+
 /**
  * handle_reload - SIGHUP handler to reload configuration
  */

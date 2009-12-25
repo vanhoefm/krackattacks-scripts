@@ -77,9 +77,6 @@ extern struct wpa_driver_ops wpa_driver_atheros_ops; /* driver_atheros.c */
 #ifdef CONFIG_DRIVER_NONE
 extern struct wpa_driver_ops wpa_driver_none_ops; /* driver_none.c */
 #endif /* CONFIG_DRIVER_NONE */
-#ifdef CONFIG_AP
-extern struct wpa_driver_ops ap_driver_ops; /* wpa_supplicant/ap.c */
-#endif /* CONFIG_AP */
 
 
 struct wpa_driver_ops *wpa_drivers[] =
@@ -144,8 +141,5 @@ struct wpa_driver_ops *wpa_drivers[] =
 #ifdef CONFIG_DRIVER_NONE
 	&wpa_driver_none_ops,
 #endif /* CONFIG_DRIVER_NONE */
-#ifdef CONFIG_AP
-	&ap_driver_ops,
-#endif /* CONFIG_AP */
 	NULL
 };

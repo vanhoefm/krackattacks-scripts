@@ -60,257 +60,14 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 }
 
 
-struct ap_driver_data {
-	struct hostapd_data *hapd;
-};
-
-
-static void * ap_driver_init(struct hostapd_data *hapd,
-			     struct wpa_init_params *params)
-{
-	struct ap_driver_data *drv;
-	struct wpa_supplicant *wpa_s = hapd->iface->owner;
-
-	drv = os_zalloc(sizeof(struct ap_driver_data));
-	if (drv == NULL) {
-		wpa_printf(MSG_ERROR, "Could not allocate memory for AP "
-			   "driver data");
-		return NULL;
-	}
-	drv->hapd = hapd;
-	os_memcpy(hapd->own_addr, wpa_s->own_addr, ETH_ALEN);
-
-	return drv;
-}
-
-
-static void ap_driver_deinit(void *priv)
-{
-	struct ap_driver_data *drv = priv;
-
-	os_free(drv);
-}
-
-
-static int ap_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
-				u16 proto, const u8 *data, size_t data_len)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_set_key(const char *iface, void *priv, wpa_alg alg,
-			     const u8 *addr, int key_idx, int set_tx,
-			     const u8 *seq, size_t seq_len, const u8 *key,
-			     size_t key_len)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_set_key(wpa_s, alg, addr, key_idx, set_tx, seq, seq_len,
-			       key, key_len);
-}
-
-
-static int ap_driver_get_seqnum(const char *iface, void *priv, const u8 *addr,
-				int idx, u8 *seq)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_flush(void *priv)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_read_sta_data(void *priv,
-				   struct hostap_sta_driver_data *data,
-				   const u8 *addr)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_sta_set_flags(void *priv, const u8 *addr, int total_flags,
-				   int flags_or, int flags_and)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_sta_set_flags(wpa_s, addr, total_flags, flags_or,
-				     flags_and);
-}
-
-
-static int ap_driver_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
-				int reason)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_sta_disassoc(void *priv, const u8 *own_addr,
-				  const u8 *addr, int reason)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_sta_remove(void *priv, const u8 *addr)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_sta_remove(wpa_s, addr);
-}
-
-
-static int ap_driver_send_mlme(void *priv, const u8 *data, size_t len)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_send_mlme(wpa_s, data, len);
-}
-
-
-static int ap_driver_sta_add(const char *ifname, void *priv,
-			     struct hostapd_sta_add_params *params)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_sta_add(wpa_s, params);
-}
-
-
-static int ap_driver_get_inact_sec(void *priv, const u8 *addr)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_set_freq(void *priv, struct hostapd_freq_params *freq)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return 0;
-}
-
-
-static int ap_driver_set_beacon(const char *iface, void *priv,
-				const u8 *head, size_t head_len,
-				const u8 *tail, size_t tail_len,
-				int dtim_period, int beacon_int)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_set_beacon(wpa_s, head, head_len, tail, tail_len,
-				  dtim_period, beacon_int);
-}
-
-
-static int ap_driver_set_cts_protect(void *priv, int value)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_set_preamble(void *priv, int value)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_set_short_slot_time(void *priv, int value)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static int ap_driver_set_tx_queue_params(void *priv, int queue, int aifs,
-					 int cw_min, int cw_max,
-					 int burst_time)
-{
-	wpa_printf(MSG_DEBUG, "AP TODO: %s", __func__);
-	return -1;
-}
-
-
-static struct hostapd_hw_modes *ap_driver_get_hw_feature_data(void *priv,
-							      u16 *num_modes,
-							      u16 *flags)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_get_hw_feature_data(wpa_s, num_modes, flags);
-}
-
-
-static int ap_driver_hapd_send_eapol(void *priv, const u8 *addr,
-				     const u8 *data, size_t data_len,
-				     int encrypt, const u8 *own_addr)
-{
-	struct ap_driver_data *drv = priv;
-	struct wpa_supplicant *wpa_s = drv->hapd->iface->owner;
-	return wpa_drv_hapd_send_eapol(wpa_s, addr, data, data_len, encrypt,
-				       own_addr);
-}
-
-
-struct wpa_driver_ops ap_driver_ops =
-{
-	.name = "wpa_supplicant",
-	.hapd_init = ap_driver_init,
-	.hapd_deinit = ap_driver_deinit,
-	.send_ether = ap_driver_send_ether,
-	.set_key = ap_driver_set_key,
-	.get_seqnum = ap_driver_get_seqnum,
-	.flush = ap_driver_flush,
-	.read_sta_data = ap_driver_read_sta_data,
-	.sta_set_flags = ap_driver_sta_set_flags,
-	.sta_deauth = ap_driver_sta_deauth,
-	.sta_disassoc = ap_driver_sta_disassoc,
-	.sta_remove = ap_driver_sta_remove,
-	.send_mlme = ap_driver_send_mlme,
-	.sta_add = ap_driver_sta_add,
-	.get_inact_sec = ap_driver_get_inact_sec,
-	.set_freq = ap_driver_set_freq,
-	.set_beacon = ap_driver_set_beacon,
-	.set_cts_protect = ap_driver_set_cts_protect,
-	.set_preamble = ap_driver_set_preamble,
-	.set_short_slot_time = ap_driver_set_short_slot_time,
-	.set_tx_queue_params = ap_driver_set_tx_queue_params,
-	.get_hw_feature_data = ap_driver_get_hw_feature_data,
-	.hapd_send_eapol = ap_driver_hapd_send_eapol,
-};
-
-
-extern struct wpa_driver_ops *wpa_drivers[];
-
 static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *ssid,
 				  struct hostapd_config *conf)
 {
 	struct hostapd_bss_config *bss = &conf->bss[0];
-	int j, pairwise;
+	int pairwise;
 
-	for (j = 0; wpa_drivers[j]; j++) {
-		if (os_strcmp("wpa_supplicant", wpa_drivers[j]->name) == 0) {
-			conf->driver = wpa_drivers[j];
-			break;
-		}
-	}
-	if (conf->driver == NULL) {
-		wpa_printf(MSG_ERROR, "No AP driver ops found");
-		return -1;
-	}
+	conf->driver = wpa_s->driver;
 
 	os_strlcpy(bss->iface, wpa_s->ifname, sizeof(bss->iface));
 
@@ -402,40 +159,6 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 }
 
 
-static int hostapd_driver_init(struct hostapd_iface *iface)
-{
-	struct wpa_init_params params;
-	struct hostapd_data *hapd = iface->bss[0];
-
-	if (hapd->driver == NULL || hapd->driver->hapd_init == NULL) {
-		wpa_printf(MSG_ERROR, "No hostapd driver wrapper available");
-		return -1;
-	}
-
-	os_memset(&params, 0, sizeof(params));
-	params.ifname = hapd->conf->iface;
-	params.ssid = (const u8 *) hapd->conf->ssid.ssid;
-	params.ssid_len = hapd->conf->ssid.ssid_len;
-
-	params.num_bridge = hapd->iface->num_bss;
-	params.bridge = os_zalloc(hapd->iface->num_bss * sizeof(char *));
-	if (params.bridge == NULL)
-		return -1;
-	params.own_addr = hapd->own_addr;
-
-	hapd->drv_priv = hapd->driver->hapd_init(hapd, &params);
-	os_free(params.bridge);
-	if (hapd->drv_priv == NULL) {
-		wpa_printf(MSG_ERROR, "%s driver initialization failed.",
-			   hapd->driver->name);
-		hapd->driver = NULL;
-		return -1;
-	}
-
-	return 0;
-}
-
-
 int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {
@@ -502,8 +225,11 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		hapd_iface->bss[i]->msg_ctx = wpa_s;
 	}
 
-	if (hostapd_driver_init(wpa_s->ap_iface) ||
-	    hostapd_setup_interface(wpa_s->ap_iface)) {
+	os_memcpy(hapd_iface->bss[0]->own_addr, wpa_s->own_addr, ETH_ALEN);
+	hapd_iface->bss[0]->driver = wpa_s->driver;
+	hapd_iface->bss[0]->drv_priv = wpa_s->drv_priv;
+
+	if (hostapd_setup_interface(wpa_s->ap_iface)) {
 		wpa_printf(MSG_ERROR, "Failed to initialize AP interface");
 		wpa_supplicant_ap_deinit(wpa_s);
 		return -1;
@@ -519,18 +245,11 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 {
-	const struct wpa_driver_ops *driver;
-	void *drv_priv;
-
 	if (wpa_s->ap_iface == NULL)
 		return;
 
-	driver = wpa_s->ap_iface->bss[0]->driver;
-	drv_priv = wpa_s->ap_iface->bss[0]->drv_priv;
 	hostapd_interface_deinit(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
-	if (driver && driver->hapd_deinit)
-		driver->hapd_deinit(drv_priv);
 }
 
 

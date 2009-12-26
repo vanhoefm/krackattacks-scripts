@@ -534,9 +534,10 @@ void eloop_run(void)
 			if (!os_time_before(&now, &timeout->time)) {
 				void *eloop_data = timeout->eloop_data;
 				void *user_data = timeout->user_data;
+				eloop_timeout_handler handler =
+					timeout->handler;
 				eloop_remove_timeout(timeout);
-				timeout->handler(eloop_data,
-						 user_data);
+				handler(eloop_data, user_data);
 			}
 
 		}

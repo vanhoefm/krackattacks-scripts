@@ -234,10 +234,8 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter_dict;
 
-	if (!wpa_dbus_dict_open_read(iter, &iter_dict)) {
-		reply = wpas_dbus_error_invald_args(message, NULL);
-		goto out;
-	}
+	if (!wpa_dbus_dict_open_read(iter, &iter_dict))
+		return wpas_dbus_error_invald_args(message, NULL);
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 		char *value = NULL;
@@ -245,7 +243,7 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 		int ret;
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry)) {
 			reply = wpas_dbus_error_invald_args(message, NULL);
-			goto out;
+			break;
 		}
 		if (entry.type == DBUS_TYPE_ARRAY &&
 		    entry.array_type == DBUS_TYPE_BYTE) {
@@ -262,55 +260,46 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 					       entry.array_len);
 			if (ret <= 0)
 				goto error;
-		} else {
-			if (entry.type == DBUS_TYPE_STRING) {
-				if (should_quote_opt(entry.key)) {
-					size = os_strlen(entry.str_value);
-					if (size <= 0)
-						goto error;
+		} else if (entry.type == DBUS_TYPE_STRING) {
+			if (should_quote_opt(entry.key)) {
+				size = os_strlen(entry.str_value);
+				if (size <= 0)
+					goto error;
 
-					size += 3;
-					value = os_zalloc(size);
-					if (value == NULL)
-						goto error;
+				size += 3;
+				value = os_zalloc(size);
+				if (value == NULL)
+					goto error;
 
-					ret = os_snprintf(value, size,
-							  "\"%s\"",
-							  entry.str_value);
-					if (ret < 0 ||
-					    (size_t) ret != (size - 1))
-						goto error;
-				} else {
-					value = os_strdup(entry.str_value);
-					if (value == NULL)
-						goto error;
-				}
+				ret = os_snprintf(value, size, "\"%s\"",
+						  entry.str_value);
+				if (ret < 0 || (size_t) ret != (size - 1))
+					goto error;
 			} else {
-				if (entry.type == DBUS_TYPE_UINT32) {
-					value = os_zalloc(size);
-					if (value == NULL)
-						goto error;
-
-					ret = os_snprintf(value, size, "%u",
-							  entry.uint32_value);
-					if (ret <= 0)
-						goto error;
-				} else {
-					if (entry.type == DBUS_TYPE_INT32) {
-						value = os_zalloc(size);
-						if (value == NULL)
-							goto error;
-
-						ret = os_snprintf(
-							value, size, "%d",
-							entry.int32_value);
-						if (ret <= 0)
-							goto error;
-					} else
-						goto error;
-				}
+				value = os_strdup(entry.str_value);
+				if (value == NULL)
+					goto error;
 			}
-		}
+		} else if (entry.type == DBUS_TYPE_UINT32) {
+			value = os_zalloc(size);
+			if (value == NULL)
+				goto error;
+
+			ret = os_snprintf(value, size, "%u",
+					  entry.uint32_value);
+			if (ret <= 0)
+				goto error;
+		} else if (entry.type == DBUS_TYPE_INT32) {
+			value = os_zalloc(size);
+			if (value == NULL)
+				goto error;
+
+			ret = os_snprintf(value, size, "%d",
+					  entry.int32_value);
+			if (ret <= 0)
+				goto error;
+		} else
+			goto error;
 
 		if (wpa_config_set(ssid, entry.key, value, 0) < 0)
 			goto error;
@@ -330,7 +319,7 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 		wpa_dbus_dict_entry_clear(&entry);
 		break;
 	}
-out:
+
 	return reply;
 }
 

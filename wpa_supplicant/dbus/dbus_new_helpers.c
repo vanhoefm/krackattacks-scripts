@@ -1030,6 +1030,8 @@ static DBusHandlerResult message_handler(DBusConnection *connection,
 	msg_interface = dbus_message_get_interface(message);
 	if (!method || !path || !msg_interface)
 		goto out;
+	wpa_printf(MSG_MSGDUMP, "dbus: %s.%s (%s)",
+		   msg_interface, method, path);
 
 	/* if message is introspection method call */
 	if (!os_strncmp(WPA_DBUS_INTROSPECTION_METHOD, method,

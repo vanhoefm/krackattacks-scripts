@@ -2141,7 +2141,8 @@ next_driver:
 }
 
 
-static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s)
+static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
+					int notify)
 {
 	if (wpa_s->drv_priv) {
 		wpa_supplicant_deauthenticate(wpa_s,
@@ -2151,7 +2152,8 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s)
 		wpa_clear_keys(wpa_s, NULL);
 	}
 
-	wpas_notify_iface_removed(wpa_s);
+	if (notify)
+		wpas_notify_iface_removed(wpa_s);
 
 	wpa_supplicant_cleanup(wpa_s);
 
@@ -2205,14 +2207,14 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (wpa_supplicant_init_iface(wpa_s, &t_iface)) {
 		wpa_printf(MSG_DEBUG, "Failed to add interface %s",
 			   iface->ifname);
-		wpa_supplicant_deinit_iface(wpa_s);
+		wpa_supplicant_deinit_iface(wpa_s, 0);
 		os_free(wpa_s);
 		return NULL;
 	}
 
 	/* Notify the control interfaces about new iface */
 	if (wpas_notify_iface_added(wpa_s)) {
-		wpa_supplicant_deinit_iface(wpa_s);
+		wpa_supplicant_deinit_iface(wpa_s, 1);
 		os_free(wpa_s);
 		return NULL;
 	}
@@ -2256,7 +2258,7 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 	wpa_printf(MSG_DEBUG, "Removing interface %s", wpa_s->ifname);
 
-	wpa_supplicant_deinit_iface(wpa_s);
+	wpa_supplicant_deinit_iface(wpa_s, 1);
 	os_free(wpa_s);
 
 	return 0;

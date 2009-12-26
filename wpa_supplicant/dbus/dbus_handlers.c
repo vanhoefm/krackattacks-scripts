@@ -129,22 +129,24 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 				goto error;
 			if (!strcmp(entry.key, "driver") &&
 			    (entry.type == DBUS_TYPE_STRING)) {
-				iface.driver = strdup(entry.str_value);
+				iface.driver = os_strdup(entry.str_value);
 				if (iface.driver == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "driver-params") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
-				iface.driver_param = strdup(entry.str_value);
+				iface.driver_param =
+					os_strdup(entry.str_value);
 				if (iface.driver_param == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "config-file") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
-				iface.confname = strdup(entry.str_value);
+				iface.confname = os_strdup(entry.str_value);
 				if (iface.confname == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "bridge-ifname") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
-				iface.bridge_ifname = strdup(entry.str_value);
+				iface.bridge_ifname =
+					os_strdup(entry.str_value);
 				if (iface.bridge_ifname == NULL)
 					goto error;
 			} else {

@@ -654,8 +654,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 		char byte;
 
 		if ((count % BYTE_ARRAY_CHUNK_SIZE) == 0 && count != 0) {
-			buffer = realloc(buffer, BYTE_ARRAY_ITEM_SIZE *
-					 (count + BYTE_ARRAY_CHUNK_SIZE));
+			buffer = os_realloc(buffer, BYTE_ARRAY_ITEM_SIZE *
+					    (count + BYTE_ARRAY_CHUNK_SIZE));
 			if (buffer == NULL) {
 				perror("_wpa_dbus_dict_entry_get_byte_array["
 				       "dbus] out of memory trying to "
@@ -673,7 +673,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 
 	/* Zero-length arrays are valid. */
 	if (entry->array_len == 0) {
-		free(entry->bytearray_value);
+		os_free(entry->bytearray_value);
 		entry->bytearray_value = NULL;
 	}
 
@@ -712,8 +712,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		char *str;
 
 		if ((count % STR_ARRAY_CHUNK_SIZE) == 0 && count != 0) {
-			buffer = realloc(buffer, STR_ARRAY_ITEM_SIZE *
-					 (count + STR_ARRAY_CHUNK_SIZE));
+			buffer = os_realloc(buffer, STR_ARRAY_ITEM_SIZE *
+					    (count + STR_ARRAY_CHUNK_SIZE));
 			if (buffer == NULL) {
 				perror("_wpa_dbus_dict_entry_get_string_array["
 				       "dbus] out of memory trying to "
@@ -724,7 +724,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		entry->strarray_value = buffer;
 
 		dbus_message_iter_get_basic(iter, &value);
-		str = strdup(value);
+		str = os_strdup(value);
 		if (str == NULL) {
 			perror("_wpa_dbus_dict_entry_get_string_array[dbus] "
 			       "out of memory trying to duplicate the string "
@@ -738,7 +738,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 
 	/* Zero-length arrays are valid. */
 	if (entry->array_len == 0) {
-		free(entry->strarray_value);
+		os_free(entry->strarray_value);
 		entry->strarray_value = NULL;
 	}
 
@@ -789,7 +789,7 @@ static dbus_bool_t _wpa_dbus_dict_fill_value_from_variant(
 	case DBUS_TYPE_STRING: {
 		const char *v;
 		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->str_value = strdup(v);
+		entry->str_value = os_strdup(v);
 		break;
 	}
 	case DBUS_TYPE_BOOLEAN: {
@@ -849,7 +849,7 @@ static dbus_bool_t _wpa_dbus_dict_fill_value_from_variant(
 	case DBUS_TYPE_OBJECT_PATH: {
 		char *v;
 		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->str_value = strdup(v);
+		entry->str_value = os_strdup(v);
 		break;
 	}
 	case DBUS_TYPE_ARRAY: {
@@ -956,17 +956,17 @@ void wpa_dbus_dict_entry_clear(struct wpa_dbus_dict_entry *entry)
 	switch (entry->type) {
 	case DBUS_TYPE_OBJECT_PATH:
 	case DBUS_TYPE_STRING:
-		free(entry->str_value);
+		os_free(entry->str_value);
 		break;
 	case DBUS_TYPE_ARRAY:
 		switch (entry->array_type) {
 		case DBUS_TYPE_BYTE:
-			free(entry->bytearray_value);
+			os_free(entry->bytearray_value);
 			break;
 		case DBUS_TYPE_STRING:
 			for (i = 0; i < entry->array_len; i++)
-				free(entry->strarray_value[i]);
-			free(entry->strarray_value);
+				os_free(entry->strarray_value[i]);
+			os_free(entry->strarray_value);
 			break;
 		}
 		break;

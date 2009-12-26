@@ -375,17 +375,17 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 			goto error;
 		if (!strcmp(entry.key, "Driver") &&
 		    (entry.type == DBUS_TYPE_STRING)) {
-			iface.driver = strdup(entry.str_value);
+			iface.driver = os_strdup(entry.str_value);
 			if (iface.driver == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "Ifname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
-			iface.ifname = strdup(entry.str_value);
+			iface.ifname = os_strdup(entry.str_value);
 			if (iface.ifname == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "BridgeIfname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
-			iface.bridge_ifname = strdup(entry.str_value);
+			iface.bridge_ifname = os_strdup(entry.str_value);
 			if (iface.bridge_ifname == NULL)
 				goto error;
 		} else {
@@ -1512,7 +1512,7 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 	os_memcpy(blob->data, blob_data, blob_len);
 
 	blob->len = blob_len;
-	blob->name = strdup(blob_name);
+	blob->name = os_strdup(blob_name);
 	if (!blob->name) {
 		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
 		       "trying to copy blob name");

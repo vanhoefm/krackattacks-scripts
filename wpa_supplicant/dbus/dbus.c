@@ -300,7 +300,7 @@ char * wpas_dbus_decompose_object_path(const char *path, char **network,
 	if ((path + dev_path_prefix_len)[0] == '\0')
 		return NULL;
 
-	obj_path_only = strdup(path);
+	obj_path_only = os_strdup(path);
 	if (obj_path_only == NULL)
 		return NULL;
 
@@ -317,13 +317,13 @@ char * wpas_dbus_decompose_object_path(const char *path, char **network,
 				strlen(WPAS_DBUS_NETWORKS_PART "/");
 			*network = NULL;
 			if (strlen(net_name))
-				*network = strdup(net_name);
+				*network = os_strdup(net_name);
 		} else if (bssid && bssid_part) {
 			/* Deal with a request for a scanned BSSID */
 			const char *bssid_name = bssid_part +
 				strlen(WPAS_DBUS_BSSIDS_PART "/");
 			if (strlen(bssid_name))
-				*bssid = strdup(bssid_name);
+				*bssid = os_strdup(bssid_name);
 			else
 				*bssid = NULL;
 		}
@@ -565,9 +565,9 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 	}
 
 out:
-	free(iface_obj_path);
-	free(network);
-	free(bssid);
+	os_free(iface_obj_path);
+	os_free(network);
+	os_free(bssid);
 	return reply ? DBUS_HANDLER_RESULT_HANDLED :
 		DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
 }
@@ -1045,7 +1045,7 @@ void wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface)
 	}
 
 	memset(iface, 0, sizeof(struct ctrl_iface_dbus_priv));
-	free(iface);
+	os_free(iface);
 }
 
 
@@ -1099,7 +1099,7 @@ int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 	ret = 0;
 
 out:
-	free(path);
+	os_free(path);
 	return ret;
 }
 
@@ -1130,7 +1130,7 @@ int wpas_dbus_unregister_iface(struct wpa_supplicant *wpa_s)
 	if (!dbus_connection_unregister_object_path(con, path))
 		return -1;
 
-	free(wpa_s->dbus_path);
+	os_free(wpa_s->dbus_path);
 	wpa_s->dbus_path = NULL;
 
 	return 0;
@@ -1170,7 +1170,7 @@ int wpa_supplicant_set_dbus_path(struct wpa_supplicant *wpa_s,
 		return -1;
 	if (wpa_s->dbus_path)
 		return -1;
-	wpa_s->dbus_path = strdup(path);
+	wpa_s->dbus_path = os_strdup(path);
 	return 0;
 }
 

@@ -452,7 +452,7 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 				      const struct wpa_eapol_key *key)
 {
 	int keylen, rsclen;
-	wpa_alg alg;
+	enum wpa_alg alg;
 	const u8 *key_rsc;
 	u8 null_rsc[8] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -506,7 +506,8 @@ static int wpa_supplicant_install_ptk(struct wpa_sm *sm,
 
 static int wpa_supplicant_check_group_cipher(int group_cipher,
 					     int keylen, int maxkeylen,
-					     int *key_rsc_len, wpa_alg *alg)
+					     int *key_rsc_len,
+					     enum wpa_alg *alg)
 {
 	int ret = 0;
 
@@ -560,7 +561,7 @@ static int wpa_supplicant_check_group_cipher(int group_cipher,
 
 
 struct wpa_gtk_data {
-	wpa_alg alg;
+	enum wpa_alg alg;
 	int tx, key_rsc_len, keyidx;
 	u8 gtk[32];
 	int gtk_len;

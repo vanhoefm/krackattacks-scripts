@@ -60,7 +60,7 @@ static int supp_get_bssid(void *ctx, u8 *bssid)
 }
 
 
-static void supp_set_state(void *ctx, wpa_states state)
+static void supp_set_state(void *ctx, enum wpa_states state)
 {
 	wpa_printf(MSG_DEBUG, "SUPP: %s(state=%d)", __func__, state);
 }
@@ -143,7 +143,7 @@ static int supp_get_beacon_ie(void *ctx)
 }
 
 
-static int supp_set_key(void *ctx, wpa_alg alg,
+static int supp_set_key(void *ctx, enum wpa_alg alg,
 			const u8 *addr, int key_idx, int set_tx,
 			const u8 *seq, size_t seq_len,
 			const u8 *key, size_t key_len)

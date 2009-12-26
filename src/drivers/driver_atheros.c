@@ -411,9 +411,9 @@ madwifi_del_key(void *priv, const u8 *addr, int key_idx)
 }
 
 static int
-madwifi_set_key(const char *ifname, void *priv, wpa_alg alg, const u8 *addr,
-		int key_idx, int set_tx, const u8 *seq, size_t seq_len,
-		const u8 *key, size_t key_len)
+madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
+		const u8 *addr, int key_idx, int set_tx, const u8 *seq,
+		size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct ieee80211req_key wk;

@@ -52,7 +52,7 @@ struct hostapd_driver_ops {
 	int (*set_authorized)(struct hostapd_data *hapd, struct sta_info *sta,
 			      int authorized);
 	int (*set_key)(const char *ifname, struct hostapd_data *hapd,
-		       wpa_alg alg, const u8 *addr, int key_idx,
+		       enum wpa_alg alg, const u8 *addr, int key_idx,
 		       int set_tx, const u8 *seq, size_t seq_len,
 		       const u8 *key, size_t key_len);
 	int (*read_sta_data)(struct hostapd_data *hapd,

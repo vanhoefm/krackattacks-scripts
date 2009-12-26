@@ -163,7 +163,7 @@ static int wpa_driver_broadcom_set_wpa(void *priv, int enable)
 }
 
 static int wpa_driver_broadcom_set_key(const char *ifname, void *priv,
-				       wpa_alg alg,
+				       enum wpa_alg alg,
 				       const u8 *addr, int key_idx, int set_tx,
 				       const u8 *seq, size_t seq_len,
 				       const u8 *key, size_t key_len)

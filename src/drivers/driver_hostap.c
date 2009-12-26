@@ -429,8 +429,9 @@ static int hostapd_ioctl(void *priv, struct prism2_hostapd_param *param,
 
 
 static int wpa_driver_hostap_set_key(const char *ifname, void *priv,
-				     wpa_alg alg, const u8 *addr, int key_idx,
-				     int set_tx, const u8 *seq, size_t seq_len,
+				     enum wpa_alg alg, const u8 *addr,
+				     int key_idx, int set_tx,
+				     const u8 *seq, size_t seq_len,
 				     const u8 *key, size_t key_len)
 {
 	struct hostap_driver_data *drv = priv;
@@ -1275,8 +1276,9 @@ static void show_set_key_error(struct prism2_hostapd_param *param)
 
 
 static int wpa_driver_hostap_set_key(const char *ifname, void *priv,
-				     wpa_alg alg, const u8 *addr, int key_idx,
-				     int set_tx, const u8 *seq, size_t seq_len,
+				     enum wpa_alg alg, const u8 *addr,
+				     int key_idx, int set_tx,
+				     const u8 *seq, size_t seq_len,
 				     const u8 *key, size_t key_len)
 {
 	struct wpa_driver_hostap_data *drv = priv;

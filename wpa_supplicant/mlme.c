@@ -99,7 +99,7 @@ static void ieee80211_build_tspec(struct wpabuf *buf);
 
 
 static int ieee80211_sta_set_channel(struct wpa_supplicant *wpa_s,
-				     hostapd_hw_mode phymode, int chan,
+				     enum hostapd_hw_mode phymode, int chan,
 				     int freq)
 {
 	size_t i;

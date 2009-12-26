@@ -683,8 +683,8 @@ void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s)
  * Notify listeners that wpa_supplicant has changed state
  */
 void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
-					     wpa_states new_state,
-					     wpa_states old_state)
+					     enum wpa_states new_state,
+					     enum wpa_states old_state)
 {
 	struct ctrl_iface_dbus_priv *iface;
 	DBusMessage *_signal = NULL;

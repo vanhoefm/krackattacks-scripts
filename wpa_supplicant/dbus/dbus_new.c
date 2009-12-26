@@ -423,8 +423,8 @@ static void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s,
  * Notify listeners that wpa_supplicant has changed state
  */
 static void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
-					   wpa_states new_state,
-					   wpa_states old_state)
+					   enum wpa_states new_state,
+					   enum wpa_states old_state)
 {
 	struct ctrl_iface_dbus_new_priv *iface;
 	DBusMessage *_signal = NULL;

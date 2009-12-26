@@ -27,11 +27,11 @@ struct wpa_sm_ctx {
 	void *ctx; /* pointer to arbitrary upper level context */
 	void *msg_ctx; /* upper level context for wpa_msg() calls */
 
-	void (*set_state)(void *ctx, wpa_states state);
-	wpa_states (*get_state)(void *ctx);
+	void (*set_state)(void *ctx, enum wpa_states state);
+	enum wpa_states (*get_state)(void *ctx);
 	void (*deauthenticate)(void * ctx, int reason_code); 
 	void (*disassociate)(void *ctx, int reason_code);
-	int (*set_key)(void *ctx, wpa_alg alg,
+	int (*set_key)(void *ctx, enum wpa_alg alg,
 		       const u8 *addr, int key_idx, int set_tx,
 		       const u8 *seq, size_t seq_len,
 		       const u8 *key, size_t key_len);

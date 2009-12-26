@@ -33,9 +33,8 @@ struct wpa_driver_ndiswrapper_data {
 };
 
 
-struct wpa_key
-{
-	wpa_alg alg;
+struct wpa_key {
+	enum wpa_alg alg;
 	const u8 *addr;
 	int key_index;
 	int set_tx;
@@ -45,17 +44,16 @@ struct wpa_key
 	size_t key_len;
 };
 
-struct wpa_assoc_info
-{
+struct wpa_assoc_info {
 	const u8 *bssid;
 	const u8 *ssid;
 	size_t ssid_len;
 	int freq;
 	const u8 *wpa_ie;
 	size_t wpa_ie_len;
-	wpa_cipher pairwise_suite;
-	wpa_cipher group_suite;
-	wpa_key_mgmt key_mgmt_suite;
+	enum wpa_cipher pairwise_suite;
+	enum wpa_cipher group_suite;
+	enum wpa_key_mgmt key_mgmt_suite;
 	int auth_alg;
 	int mode;
 };
@@ -113,8 +111,9 @@ static int wpa_ndiswrapper_set_wpa(void *priv, int enabled)
 	return ret;
 }
 
-static int wpa_ndiswrapper_set_key(const char *ifname, void *priv, wpa_alg alg,
-				   const u8 *addr, int key_idx, int set_tx,
+static int wpa_ndiswrapper_set_key(const char *ifname, void *priv,
+				   enum wpa_alg alg, const u8 *addr,
+				   int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {

@@ -970,8 +970,9 @@ static int wpa_driver_ndis_add_wep(struct wpa_driver_ndis_data *drv,
 }
 
 
-static int wpa_driver_ndis_set_key(const char *ifname, void *priv, wpa_alg alg,
-				   const u8 *addr, int key_idx, int set_tx,
+static int wpa_driver_ndis_set_key(const char *ifname, void *priv,
+				   enum wpa_alg alg, const u8 *addr,
+				   int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {

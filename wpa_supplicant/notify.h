@@ -24,7 +24,8 @@ void wpas_notify_supplicant_deinitialized(struct wpa_global *global);
 int wpas_notify_iface_added(struct wpa_supplicant *wpa_s);
 void wpas_notify_iface_removed(struct wpa_supplicant *wpa_s);
 void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
-			       wpa_states new_state, wpa_states old_state);
+			       enum wpa_states new_state,
+			       enum wpa_states old_state);
 void wpas_notify_network_changed(struct wpa_supplicant *wpa_s);
 void wpas_notify_ap_scan_changed(struct wpa_supplicant *wpa_s);
 void wpas_notify_bssid_changed(struct wpa_supplicant *wpa_s);

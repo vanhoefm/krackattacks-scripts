@@ -92,8 +92,8 @@ void wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface);
 void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
-					     wpa_states new_state,
-					     wpa_states old_state);
+					     enum wpa_states new_state,
+					     enum wpa_states old_state);
 void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 					 const struct wps_credential *cred);
 
@@ -141,8 +141,8 @@ wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 
 static inline void
 wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
-					wpa_states new_state,
-					wpa_states old_state)
+					enum wpa_states new_state,
+					enum wpa_states old_state)
 {
 }
 

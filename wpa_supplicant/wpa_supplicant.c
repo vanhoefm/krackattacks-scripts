@@ -143,7 +143,7 @@ static int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
 {
 	u8 key[32];
 	size_t keylen;
-	wpa_alg alg;
+	enum wpa_alg alg;
 	u8 seq[6] = { 0 };
 
 	/* IBSS/WPA-None uses only one key (Group) for both receiving and
@@ -478,7 +478,7 @@ void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr)
  * @state: State (wpa_state; WPA_*)
  * Returns: The state name as a printable text string
  */
-const char * wpa_supplicant_state_txt(int state)
+const char * wpa_supplicant_state_txt(enum wpa_states state)
 {
 	switch (state) {
 	case WPA_DISCONNECTED:
@@ -513,7 +513,8 @@ const char * wpa_supplicant_state_txt(int state)
  * This function is called whenever the connection state changes, e.g.,
  * association is completed for WPA/WPA2 4-Way Handshake is started.
  */
-void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s, wpa_states state)
+void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
+			      enum wpa_states state)
 {
 	wpa_printf(MSG_DEBUG, "State: %s -> %s",
 		   wpa_supplicant_state_txt(wpa_s->wpa_state),
@@ -577,7 +578,7 @@ static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 
 static void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 {
-	wpa_states old_state = wpa_s->wpa_state;
+	enum wpa_states old_state = wpa_s->wpa_state;
 	wpa_s->pairwise_cipher = 0;
 	wpa_s->group_cipher = 0;
 	wpa_s->mgmt_group_cipher = 0;
@@ -676,7 +677,7 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 }
 
 
-static wpa_cipher cipher_suite2driver(int cipher)
+static enum wpa_cipher cipher_suite2driver(int cipher)
 {
 	switch (cipher) {
 	case WPA_CIPHER_NONE:
@@ -694,7 +695,7 @@ static wpa_cipher cipher_suite2driver(int cipher)
 }
 
 
-static wpa_key_mgmt key_mgmt2driver(int key_mgmt)
+static enum wpa_key_mgmt key_mgmt2driver(int key_mgmt)
 {
 	switch (key_mgmt) {
 	case WPA_KEY_MGMT_NONE:
@@ -980,7 +981,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
 	int algs = AUTH_ALG_OPEN_SYSTEM;
-	wpa_cipher cipher_pairwise, cipher_group;
+	enum wpa_cipher cipher_pairwise, cipher_group;
 	struct wpa_driver_associate_params params;
 	int wep_keys_set = 0;
 	struct wpa_driver_capa capa;

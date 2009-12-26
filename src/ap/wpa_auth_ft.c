@@ -832,7 +832,7 @@ static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 
 static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 				   int vlan_id,
-				   wpa_alg alg, const u8 *addr, int idx,
+				   enum wpa_alg alg, const u8 *addr, int idx,
 				   u8 *key, size_t key_len)
 {
 	if (wpa_auth->cb.set_key == NULL)
@@ -844,7 +844,7 @@ static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 
 static void wpa_ft_install_ptk(struct wpa_state_machine *sm)
 {
-	wpa_alg alg;
+	enum wpa_alg alg;
 	int klen;
 
 	/* MLME-SETKEYS.request(PTK) */

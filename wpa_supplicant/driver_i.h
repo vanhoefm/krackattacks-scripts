@@ -103,8 +103,9 @@ static inline int wpa_drv_get_ssid(struct wpa_supplicant *wpa_s, u8 *ssid)
 	return -1;
 }
 
-static inline int wpa_drv_set_key(struct wpa_supplicant *wpa_s, wpa_alg alg,
-				   const u8 *addr, int key_idx, int set_tx,
+static inline int wpa_drv_set_key(struct wpa_supplicant *wpa_s,
+				  enum wpa_alg alg, const u8 *addr,
+				  int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {
@@ -236,7 +237,7 @@ wpa_drv_get_hw_feature_data(struct wpa_supplicant *wpa_s, u16 *num_modes,
 }
 
 static inline int wpa_drv_set_channel(struct wpa_supplicant *wpa_s,
-				      hostapd_hw_mode phymode, int chan,
+				      enum hostapd_hw_mode phymode, int chan,
 				      int freq)
 {
 	if (wpa_s->driver->set_channel)

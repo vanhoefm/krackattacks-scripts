@@ -52,8 +52,8 @@ struct wpas_dbus_callbacks {
 	void (*signal_network_selected)(struct wpa_supplicant *wpa_s, int id);
 
 	void (*signal_state_changed)(struct wpa_supplicant *wpa_s,
-				     wpa_states new_state,
-				     wpa_states old_state);
+				     enum wpa_states new_state,
+				     enum wpa_states old_state);
 
 	int (*register_network)(struct wpa_supplicant *wpa_s,
 				struct wpa_ssid *ssid);

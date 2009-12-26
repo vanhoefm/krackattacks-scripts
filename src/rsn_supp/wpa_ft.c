@@ -457,7 +457,7 @@ static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 static int wpa_ft_install_ptk(struct wpa_sm *sm, const u8 *bssid)
 {
 	int keylen;
-	wpa_alg alg;
+	enum wpa_alg alg;
 	u8 null_rsc[6] = { 0, 0, 0, 0, 0, 0 };
 
 	wpa_printf(MSG_DEBUG, "FT: Installing PTK to the driver.");
@@ -662,7 +662,7 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 {
 	u8 gtk[32];
 	int keyidx;
-	wpa_alg alg;
+	enum wpa_alg alg;
 	size_t gtk_len, keylen, rsc_len;
 
 	if (gtk_elem == NULL) {

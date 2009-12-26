@@ -210,7 +210,7 @@ static int hostapd_wpa_auth_get_msk(void *ctx, const u8 *addr, u8 *msk,
 }
 
 
-static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, wpa_alg alg,
+static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 				    const u8 *addr, int idx, u8 *key,
 				    size_t key_len)
 {

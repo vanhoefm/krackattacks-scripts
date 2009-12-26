@@ -85,7 +85,8 @@ void wpas_notify_iface_removed(struct wpa_supplicant *wpa_s)
 
 
 void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
-			       wpa_states new_state, wpa_states old_state)
+			       enum wpa_states new_state,
+			       enum wpa_states old_state)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 

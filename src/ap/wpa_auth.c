@@ -104,7 +104,7 @@ static inline int wpa_auth_get_msk(struct wpa_authenticator *wpa_auth,
 
 static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 				   int vlan_id,
-				   wpa_alg alg, const u8 *addr, int idx,
+				   enum wpa_alg alg, const u8 *addr, int idx,
 				   u8 *key, size_t key_len)
 {
 	if (wpa_auth->cb.set_key == NULL)
@@ -1239,7 +1239,7 @@ void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 }
 
 
-static wpa_alg wpa_alg_enum(int alg)
+static enum wpa_alg wpa_alg_enum(int alg)
 {
 	switch (alg) {
 	case WPA_CIPHER_CCMP:
@@ -1638,7 +1638,7 @@ SM_STATE(WPA_PTK, PTKINITDONE)
 	SM_ENTRY_MA(WPA_PTK, PTKINITDONE, wpa_ptk);
 	sm->EAPOLKeyReceived = FALSE;
 	if (sm->Pair) {
-		wpa_alg alg;
+		enum wpa_alg alg;
 		int klen;
 		if (sm->pairwise == WPA_CIPHER_TKIP) {
 			alg = WPA_ALG_TKIP;

@@ -215,7 +215,7 @@ struct wpa_client_mlme {
 	size_t extra_ie_len;
 	u8 *extra_probe_ie; /* to be added to the end of ProbeReq */
 	size_t extra_probe_ie_len;
-	wpa_key_mgmt key_mgmt;
+	enum wpa_key_mgmt key_mgmt;
 
 	/* The last AssocReq/Resp IEs */
 	u8 *assocreq_ies, *assocresp_ies;
@@ -269,7 +269,7 @@ struct wpa_client_mlme {
 
 	int cts_protect_erp_frames;
 
-	hostapd_hw_mode phymode; /* current mode */
+	enum hostapd_hw_mode phymode; /* current mode */
 	struct hostapd_hw_modes *modes;
 	size_t num_modes;
 	unsigned int hw_modes; /* bitfield of allowed hardware modes;
@@ -353,7 +353,7 @@ struct wpa_supplicant {
 
 	struct ctrl_iface_priv *ctrl_iface;
 
-	wpa_states wpa_state;
+	enum wpa_states wpa_state;
 	int scanning;
 	int new_connection;
 	int reassociated_connection;
@@ -428,7 +428,7 @@ int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
 
 int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s);
 
-const char * wpa_supplicant_state_txt(int state);
+const char * wpa_supplicant_state_txt(enum wpa_states state);
 int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 			      struct wpa_scan_res *bss,
@@ -444,7 +444,8 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s);
 void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr);
 void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec);
-void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s, wpa_states state);
+void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
+			      enum wpa_states state);
 struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_cancel_auth_timeout(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,

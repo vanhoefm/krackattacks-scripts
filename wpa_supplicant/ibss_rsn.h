@@ -24,7 +24,7 @@ struct ibss_rsn_peer {
 	u8 addr[ETH_ALEN];
 
 	struct wpa_sm *supp;
-	wpa_states supp_state;
+	enum wpa_states supp_state;
 	u8 supp_ie[80];
 	size_t supp_ie_len;
 

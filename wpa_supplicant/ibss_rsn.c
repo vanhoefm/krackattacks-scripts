@@ -18,7 +18,7 @@
 #include "l2_packet/l2_packet.h"
 #include "rsn_supp/wpa.h"
 #include "rsn_supp/wpa_ie.h"
-#include "ap/wpa.h"
+#include "ap/wpa_auth.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "ibss_rsn.h"
@@ -32,7 +32,7 @@ static void ibss_rsn_free(struct ibss_rsn_peer *peer)
 }
 
 
-static void supp_set_state(void *ctx, wpa_states state)
+static void supp_set_state(void *ctx, enum wpa_states state)
 {
 	struct ibss_rsn_peer *peer = ctx;
 	peer->supp_state = state;
@@ -100,7 +100,7 @@ static int supp_get_beacon_ie(void *ctx)
 }
 
 
-static int supp_set_key(void *ctx, wpa_alg alg,
+static int supp_set_key(void *ctx, enum wpa_alg alg,
 			const u8 *addr, int key_idx, int set_tx,
 			const u8 *seq, size_t seq_len,
 			const u8 *key, size_t key_len)
@@ -238,8 +238,8 @@ static int auth_send_eapol(void *ctx, const u8 *addr, const u8 *data,
 }
 
 
-static int auth_set_key(void *ctx, int vlan_id, wpa_alg alg, const u8 *addr,
-			int idx, u8 *key, size_t key_len)
+static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
+			const u8 *addr, int idx, u8 *key, size_t key_len)
 {
 	struct ibss_rsn *ibss_rsn = ctx;
 	u8 seq[6];

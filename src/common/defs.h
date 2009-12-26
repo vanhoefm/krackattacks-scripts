@@ -79,16 +79,35 @@ static inline int wpa_key_mgmt_sha256(int akm)
 #define WPA_AUTH_ALG_LEAP BIT(2)
 
 
-typedef enum { WPA_ALG_NONE, WPA_ALG_WEP, WPA_ALG_TKIP, WPA_ALG_CCMP,
-	       WPA_ALG_IGTK, WPA_ALG_PMK } wpa_alg;
-typedef enum { CIPHER_NONE, CIPHER_WEP40, CIPHER_TKIP, CIPHER_CCMP,
-	       CIPHER_WEP104 } wpa_cipher;
-typedef enum { KEY_MGMT_802_1X, KEY_MGMT_PSK, KEY_MGMT_NONE,
-	       KEY_MGMT_802_1X_NO_WPA, KEY_MGMT_WPA_NONE,
-	       KEY_MGMT_FT_802_1X, KEY_MGMT_FT_PSK,
-	       KEY_MGMT_802_1X_SHA256, KEY_MGMT_PSK_SHA256,
-	       KEY_MGMT_WPS
-} wpa_key_mgmt;
+enum wpa_alg {
+	WPA_ALG_NONE,
+	WPA_ALG_WEP,
+	WPA_ALG_TKIP,
+	WPA_ALG_CCMP,
+	WPA_ALG_IGTK,
+	WPA_ALG_PMK
+};
+
+enum wpa_cipher {
+	CIPHER_NONE,
+	CIPHER_WEP40,
+	CIPHER_TKIP,
+	CIPHER_CCMP,
+	CIPHER_WEP104
+};
+
+enum wpa_key_mgmt {
+	KEY_MGMT_802_1X,
+	KEY_MGMT_PSK,
+	KEY_MGMT_NONE,
+	KEY_MGMT_802_1X_NO_WPA,
+	KEY_MGMT_WPA_NONE,
+	KEY_MGMT_FT_802_1X,
+	KEY_MGMT_FT_PSK,
+	KEY_MGMT_802_1X_SHA256,
+	KEY_MGMT_PSK_SHA256,
+	KEY_MGMT_WPS
+};
 
 /**
  * enum wpa_states - wpa_supplicant state
@@ -100,7 +119,7 @@ typedef enum { KEY_MGMT_802_1X, KEY_MGMT_PSK, KEY_MGMT_NONE,
  * wrapper functions wpa_sm_get_state() and wpa_sm_set_state() should be used
  * to access the state variable.
  */
-typedef enum {
+enum wpa_states {
 	/**
 	 * WPA_DISCONNECTED - Disconnected state
 	 *
@@ -196,7 +215,7 @@ typedef enum {
 	 * fully configured.
 	 */
 	WPA_COMPLETED
-} wpa_states;
+};
 
 #define MLME_SETPROTECTION_PROTECT_TYPE_NONE 0
 #define MLME_SETPROTECTION_PROTECT_TYPE_RX 1
@@ -213,11 +232,11 @@ enum mfp_options {
 	IEEE80211W_REQUIRED = 2
 };
 
-typedef enum {
+enum hostapd_hw_mode {
 	HOSTAPD_MODE_IEEE80211B,
 	HOSTAPD_MODE_IEEE80211G,
 	HOSTAPD_MODE_IEEE80211A,
 	NUM_HOSTAPD_MODES
-} hostapd_hw_mode;
+};
 
 #endif /* DEFS_H */

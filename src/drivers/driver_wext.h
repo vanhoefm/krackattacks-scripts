@@ -53,7 +53,7 @@ int wpa_driver_wext_get_ssid(void *priv, u8 *ssid);
 int wpa_driver_wext_set_ssid(void *priv, const u8 *ssid, size_t ssid_len);
 int wpa_driver_wext_set_freq(void *priv, int freq);
 int wpa_driver_wext_set_mode(void *priv, int mode);
-int wpa_driver_wext_set_key(const char *ifname, void *priv, wpa_alg alg,
+int wpa_driver_wext_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 			    const u8 *addr, int key_idx,
 			    int set_tx, const u8 *seq, size_t seq_len,
 			    const u8 *key, size_t key_len);

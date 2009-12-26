@@ -189,8 +189,9 @@ static int wpa_driver_atmel_set_wpa(void *priv, int enabled)
 
 
 static int wpa_driver_atmel_set_key(const char *ifname, void *priv,
-				    wpa_alg alg, const u8 *addr, int key_idx,
-				    int set_tx, const u8 *seq, size_t seq_len,
+				    enum wpa_alg alg, const u8 *addr,
+				    int key_idx, int set_tx,
+				    const u8 *seq, size_t seq_len,
 				    const u8 *key, size_t key_len)
 {
 	struct wpa_driver_atmel_data *drv = priv;
@@ -337,7 +338,7 @@ static int wpa_driver_atmel_disassociate(void *priv, const u8 *addr,
 
 #if 0
 /* Atmel driver uses specific values for each cipher suite */
-static int convertSuiteToDriver(wpa_cipher suite)
+static int convertSuiteToDriver(enum wpa_cipher suite)
 {
     u8 suite_type;
     

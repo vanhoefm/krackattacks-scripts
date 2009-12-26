@@ -1620,8 +1620,8 @@ nla_put_failure:
 
 
 static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
-				      wpa_alg alg, const u8 *addr, int key_idx,
-				      int set_tx,
+				      enum wpa_alg alg, const u8 *addr,
+				      int key_idx, int set_tx,
 				      const u8 *seq, size_t seq_len,
 				      const u8 *key, size_t key_len)
 {
@@ -1730,7 +1730,7 @@ nla_put_failure:
 }
 
 
-static int nl_add_key(struct nl_msg *msg, wpa_alg alg,
+static int nl_add_key(struct nl_msg *msg, enum wpa_alg alg,
 		      int key_idx, int defkey,
 		      const u8 *seq, size_t seq_len,
 		      const u8 *key, size_t key_len)

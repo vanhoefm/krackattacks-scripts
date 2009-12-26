@@ -1407,8 +1407,9 @@ static struct wpa_scan_results * wpa_driver_test_get_scan_results2(void *priv)
 }
 
 
-static int wpa_driver_test_set_key(const char *ifname, void *priv, wpa_alg alg,
-				   const u8 *addr, int key_idx, int set_tx,
+static int wpa_driver_test_set_key(const char *ifname, void *priv,
+				   enum wpa_alg alg, const u8 *addr,
+				   int key_idx, int set_tx,
 				   const u8 *seq, size_t seq_len,
 				   const u8 *key, size_t key_len)
 {
@@ -2276,7 +2277,8 @@ static int wpa_driver_test_mlme_setprotection(void *priv, const u8 *addr,
 }
 
 
-static int wpa_driver_test_set_channel(void *priv, hostapd_hw_mode phymode,
+static int wpa_driver_test_set_channel(void *priv,
+				       enum hostapd_hw_mode phymode,
 				       int chan, int freq)
 {
 	wpa_printf(MSG_DEBUG, "%s: phymode=%d chan=%d freq=%d",

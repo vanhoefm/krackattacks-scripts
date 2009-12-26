@@ -109,13 +109,13 @@ struct wpa_sm {
 };
 
 
-static inline void wpa_sm_set_state(struct wpa_sm *sm, wpa_states state)
+static inline void wpa_sm_set_state(struct wpa_sm *sm, enum wpa_states state)
 {
 	WPA_ASSERT(sm->ctx->set_state);
 	sm->ctx->set_state(sm->ctx->ctx, state);
 }
 
-static inline wpa_states wpa_sm_get_state(struct wpa_sm *sm)
+static inline enum wpa_states wpa_sm_get_state(struct wpa_sm *sm)
 {
 	WPA_ASSERT(sm->ctx->get_state);
 	return sm->ctx->get_state(sm->ctx->ctx);
@@ -133,7 +133,7 @@ static inline void wpa_sm_disassociate(struct wpa_sm *sm, int reason_code)
 	sm->ctx->disassociate(sm->ctx->ctx, reason_code);
 }
 
-static inline int wpa_sm_set_key(struct wpa_sm *sm, wpa_alg alg,
+static inline int wpa_sm_set_key(struct wpa_sm *sm, enum wpa_alg alg,
 				 const u8 *addr, int key_idx, int set_tx,
 				 const u8 *seq, size_t seq_len,
 				 const u8 *key, size_t key_len)

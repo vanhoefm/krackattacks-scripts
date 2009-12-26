@@ -377,7 +377,7 @@ static void _wpa_supplicant_cancel_auth_timeout(void *wpa_s)
 }
 
 
-static void _wpa_supplicant_set_state(void *wpa_s, wpa_states state)
+static void _wpa_supplicant_set_state(void *wpa_s, enum wpa_states state)
 {
 	wpa_supplicant_set_state(wpa_s, state);
 }
@@ -388,13 +388,13 @@ static void _wpa_supplicant_set_state(void *wpa_s, wpa_states state)
  * @wpa_s: Pointer to wpa_supplicant data
  * Returns: The current connection state (WPA_*)
  */
-static wpa_states wpa_supplicant_get_state(struct wpa_supplicant *wpa_s)
+static enum wpa_states wpa_supplicant_get_state(struct wpa_supplicant *wpa_s)
 {
 	return wpa_s->wpa_state;
 }
 
 
-static wpa_states _wpa_supplicant_get_state(void *wpa_s)
+static enum wpa_states _wpa_supplicant_get_state(void *wpa_s)
 {
 	return wpa_supplicant_get_state(wpa_s);
 }
@@ -433,7 +433,7 @@ static int wpa_supplicant_get_bssid(void *ctx, u8 *bssid)
 }
 
 
-static int wpa_supplicant_set_key(void *_wpa_s, wpa_alg alg,
+static int wpa_supplicant_set_key(void *_wpa_s, enum wpa_alg alg,
 				  const u8 *addr, int key_idx, int set_tx,
 				  const u8 *seq, size_t seq_len,
 				  const u8 *key, size_t key_len)

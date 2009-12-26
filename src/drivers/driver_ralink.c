@@ -1191,7 +1191,7 @@ static int wpa_driver_ralink_add_wep(struct wpa_driver_ralink_data *drv,
 }
 
 static int wpa_driver_ralink_set_key(const char *ifname, void *priv,
-				     wpa_alg alg, const u8 *addr,
+				     enum wpa_alg alg, const u8 *addr,
 				     int key_idx, int set_tx,
 				     const u8 *seq, size_t seq_len,
 				     const u8 *key, size_t key_len)

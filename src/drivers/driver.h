@@ -32,7 +32,7 @@ struct hostapd_channel_data {
 };
 
 struct hostapd_hw_modes {
-	hostapd_hw_mode mode;
+	enum hostapd_hw_mode mode;
 	int num_channels;
 	struct hostapd_channel_data *channels;
 	int num_rates;
@@ -243,9 +243,9 @@ struct wpa_driver_associate_params {
 
 	/* The selected pairwise/group cipher and key management
 	 * suites. These are usually ignored if @wpa_ie is used. */
-	wpa_cipher pairwise_suite;
-	wpa_cipher group_suite;
-	wpa_key_mgmt key_mgmt_suite;
+	enum wpa_cipher pairwise_suite;
+	enum wpa_cipher group_suite;
+	enum wpa_key_mgmt key_mgmt_suite;
 
 	/**
 	 * auth_alg - Allowed authentication algorithms
@@ -586,7 +586,7 @@ struct wpa_driver_ops {
 	 * in driver_*.c set_key() implementation, see driver_ndis.c for an
 	 * example on how this can be done.
 	 */
-	int (*set_key)(const char *ifname, void *priv, wpa_alg alg,
+	int (*set_key)(const char *ifname, void *priv, enum wpa_alg alg,
 		       const u8 *addr, int key_idx, int set_tx,
 		       const u8 *seq, size_t seq_len,
 		       const u8 *key, size_t key_len);
@@ -867,7 +867,7 @@ struct wpa_driver_ops {
 	 * This function is only needed for drivers that export MLME
 	 * (management frame processing) to wpa_supplicant.
 	 */
-	int (*set_channel)(void *priv, hostapd_hw_mode phymode, int chan,
+	int (*set_channel)(void *priv, enum hostapd_hw_mode phymode, int chan,
 			   int freq);
 
 	/**

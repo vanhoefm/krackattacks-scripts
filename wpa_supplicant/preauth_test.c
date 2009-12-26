@@ -91,14 +91,14 @@ static u8 * _wpa_alloc_eapol(void *wpa_s, u8 type,
 }
 
 
-static void _wpa_supplicant_set_state(void *ctx, wpa_states state)
+static void _wpa_supplicant_set_state(void *ctx, enum wpa_states state)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	wpa_s->wpa_state = state;
 }
 
 
-static wpa_states _wpa_supplicant_get_state(void *ctx)
+static enum wpa_states _wpa_supplicant_get_state(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	return wpa_s->wpa_state;
@@ -139,7 +139,7 @@ static int wpa_supplicant_get_bssid(void *wpa_s, u8 *bssid)
 }
 
 
-static int wpa_supplicant_set_key(void *wpa_s, wpa_alg alg,
+static int wpa_supplicant_set_key(void *wpa_s, enum wpa_alg alg,
 				  const u8 *addr, int key_idx, int set_tx,
 				  const u8 *seq, size_t seq_len,
 				  const u8 *key, size_t key_len)

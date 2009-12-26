@@ -1090,6 +1090,12 @@ static void wpas_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_new_priv *iface)
 }
 
 
+static void wpa_dbus_free(void *ptr)
+{
+	os_free(ptr);
+}
+
+
 /**
  * wpas_dbus_register_network - Register a configured network with dbus
  * @wpa_s: wpa_supplicant interface structure
@@ -1161,7 +1167,7 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 				   wpas_dbus_getter_enabled,
 				   (WPADBusPropertyAccessor)
 				   wpas_dbus_setter_enabled,
-				   arg1, os_free, RW);
+				   arg1, wpa_dbus_free, RW);
 
 	/* Properties property */
 	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
@@ -1170,7 +1176,7 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 				   wpas_dbus_getter_network_properties,
 				   (WPADBusPropertyAccessor)
 				   wpas_dbus_setter_network_properties,
-				   arg2, os_free, RW);
+				   arg2, wpa_dbus_free, RW);
 
 	/* PropertiesChanged signal */
 	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
@@ -1329,7 +1335,7 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 				   "Properties", "a{sv}",
 				   (WPADBusPropertyAccessor)
 				   wpas_dbus_getter_bss_properties, NULL,
-				   arg, os_free, R);
+				   arg, wpa_dbus_free, R);
 
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, bss_obj_path,
 					       wpa_s->ifname, obj_desc)) {

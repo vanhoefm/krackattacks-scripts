@@ -1640,7 +1640,7 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	/* unregister all BSSs and networks from dbus */
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
+	for (i = 0; wpa_s->scan_res && i < wpa_s->scan_res->num; i++) {
 		wpas_dbus_unregister_bss(wpa_s,
 					 wpa_s->scan_res->res[i]->bssid);
 	}

@@ -188,7 +188,7 @@ static struct wpa_scan_res * find_scan_result(struct bss_handler_args *bss)
 {
 	struct wpa_scan_results *results = bss->wpa_s->scan_res;
 	size_t i;
-	for (i = 0; i < results->num; i++) {
+	for (i = 0; results && i < results->num; i++) {
 		if (!os_memcmp(results->res[i]->bssid, bss->bssid, ETH_ALEN))
 			return results->res[i];
 	}
@@ -2287,7 +2287,7 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		size_t i;
-		for (i = 0; i < wpa_s->scan_res->num; i++) {
+		for (i = 0; wpa_s->scan_res && i < wpa_s->scan_res->num; i++) {
 			struct wpa_scan_res *res = wpa_s->scan_res->res[i];
 			if (!os_memcmp(wpa_s->bssid, res->bssid, ETH_ALEN)) {
 				is_bssid_known = 1;

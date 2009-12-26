@@ -997,6 +997,174 @@ static int is_signature_correct(DBusMessage *message,
 }
 
 
+static DBusMessage * properties_get_all(DBusMessage *message, char *interface,
+					struct wpa_dbus_object_desc *obj_dsc)
+{
+	if (os_strcmp(dbus_message_get_signature(message), "s") != 0)
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      NULL);
+
+	return get_all_properties(message, interface,
+				  obj_dsc->properties);
+}
+
+
+static DBusMessage * properties_get(DBusMessage *message,
+				    struct wpa_dbus_property_desc *dsc)
+{
+	if (os_strcmp(dbus_message_get_signature(message), "ss"))
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      NULL);
+
+	if (dsc->access != W && dsc->getter)
+		return dsc->getter(message, dsc->user_data);
+
+	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+				      "Property is write-only");
+}
+
+
+static DBusMessage * properties_set(DBusMessage *message,
+				    struct wpa_dbus_property_desc *dsc)
+{
+	if (os_strcmp(dbus_message_get_signature(message), "ssv"))
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      NULL);
+
+	if (dsc->access != R && dsc->setter)
+		return dsc->setter(message, dsc->user_data);
+
+	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+				      "Property is read-only");
+}
+
+
+static DBusMessage *
+properties_get_or_set(DBusMessage *message, DBusMessageIter *iter,
+		      char *interface,
+		      struct wpa_dbus_object_desc *obj_dsc)
+{
+	struct wpa_dbus_property_desc *property_dsc;
+	char *property;
+	const char *method;
+
+	method = dbus_message_get_member(message);
+	property_dsc = obj_dsc->properties;
+
+	/* Second argument: property name (DBUS_TYPE_STRING) */
+	if (!dbus_message_iter_next(iter) ||
+	    dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_STRING) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      NULL);
+	}
+	dbus_message_iter_get_basic(iter, &property);
+
+	while (property_dsc) {
+		/* compare property names and
+		 * interfaces */
+		if (!os_strncmp(property_dsc->dbus_property, property,
+				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) &&
+		    !os_strncmp(property_dsc->dbus_interface, interface,
+				WPAS_DBUS_INTERFACE_MAX))
+			break;
+
+		property_dsc = property_dsc->next;
+	}
+	if (property_dsc == NULL) {
+		wpa_printf(MSG_DEBUG, "no property handler for %s.%s on %s",
+			   interface, property,
+			   dbus_message_get_path(message));
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "No such property");
+	}
+
+	if (os_strncmp(WPA_DBUS_PROPERTIES_GET, method,
+		       WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) == 0)
+		return properties_get(message, property_dsc);
+
+	return properties_set(message, property_dsc);
+}
+
+
+static DBusMessage * properties_handler(DBusMessage *message,
+					struct wpa_dbus_object_desc *obj_dsc)
+{
+	DBusMessageIter iter;
+	char *interface;
+	const char *method;
+
+	method = dbus_message_get_member(message);
+	dbus_message_iter_init(message, &iter);
+
+	if (!os_strncmp(WPA_DBUS_PROPERTIES_GET, method,
+			WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) ||
+	    !os_strncmp(WPA_DBUS_PROPERTIES_SET, method,
+			WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) ||
+	    !os_strncmp(WPA_DBUS_PROPERTIES_GETALL, method,
+			WPAS_DBUS_METHOD_SIGNAL_PROP_MAX)) {
+		/* First argument: interface name (DBUS_TYPE_STRING) */
+		if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_STRING)
+		{
+			return dbus_message_new_error(message,
+						      DBUS_ERROR_INVALID_ARGS,
+						      NULL);
+		}
+
+		dbus_message_iter_get_basic(&iter, &interface);
+
+		if (!os_strncmp(WPA_DBUS_PROPERTIES_GETALL, method,
+				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX)) {
+			/* GetAll */
+			return properties_get_all(message, interface, obj_dsc);
+		}
+		/* Get or Set */
+		return properties_get_or_set(message, &iter, interface,
+					     obj_dsc);
+	}
+	return dbus_message_new_error(message, DBUS_ERROR_UNKNOWN_METHOD,
+				      NULL);
+}
+
+
+static DBusMessage * msg_method_handler(DBusMessage *message,
+					struct wpa_dbus_object_desc *obj_dsc)
+{
+	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
+	const char *method;
+	const char *msg_interface;
+
+	method = dbus_message_get_member(message);
+	msg_interface = dbus_message_get_interface(message);
+
+	/* try match call to any registered method */
+	while (method_dsc) {
+		/* compare method names and interfaces */
+		if (!os_strncmp(method_dsc->dbus_method, method,
+				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) &&
+		    !os_strncmp(method_dsc->dbus_interface, msg_interface,
+				WPAS_DBUS_INTERFACE_MAX))
+			break;
+
+		method_dsc = method_dsc->next;
+	}
+	if (method_dsc == NULL) {
+		wpa_printf(MSG_DEBUG, "no method handler for %s.%s on %s",
+			   msg_interface, method,
+			   dbus_message_get_path(message));
+		return dbus_message_new_error(message,
+					      DBUS_ERROR_UNKNOWN_METHOD, NULL);
+	}
+
+	if (!is_signature_correct(message, method_dsc)) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      NULL);
+	}
+
+	return method_dsc->method_handler(message,
+					  method_dsc->handler_argument);
+}
+
+
 /**
  * message_handler - Handles incoming DBus messages
  * @connection: DBus connection on which message was received
@@ -1008,8 +1176,8 @@ static int is_signature_correct(DBusMessage *message,
  * of the special cases i.e. introspection call or properties get/getall/set
  * methods and handles it. Else it iterates over registered methods list
  * and tries to match method's name and interface to those read from message
- * If appropriate method was found it's handler function is called and
- * response is sent. Otherwise the DBUS_ERROR_UNKNOWN_METHOD error message
+ * If appropriate method was found its handler function is called and
+ * response is sent. Otherwise, the DBUS_ERROR_UNKNOWN_METHOD error message
  * will be sent.
  */
 static DBusHandlerResult message_handler(DBusConnection *connection,
@@ -1019,17 +1187,15 @@ static DBusHandlerResult message_handler(DBusConnection *connection,
 	const char *method;
 	const char *path;
 	const char *msg_interface;
-
-#define MESSAGE_UNHANDLED (DBusMessage *) 1
-
-	DBusMessage *reply = MESSAGE_UNHANDLED;
+	DBusMessage *reply;
 
 	/* get method, interface and path the message is addressed to */
 	method = dbus_message_get_member(message);
 	path = dbus_message_get_path(message);
 	msg_interface = dbus_message_get_interface(message);
 	if (!method || !path || !msg_interface)
-		goto out;
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
 	wpa_printf(MSG_MSGDUMP, "dbus: %s.%s (%s)",
 		   msg_interface, method, path);
 
@@ -1039,162 +1205,23 @@ static DBusHandlerResult message_handler(DBusConnection *connection,
 	    !os_strncmp(WPA_DBUS_INTROSPECTION_INTERFACE, msg_interface,
 			WPAS_DBUS_INTERFACE_MAX))
 		reply = introspect(message, obj_dsc);
-	else if (!strncmp(WPA_DBUS_PROPERTIES_INTERFACE, msg_interface,
-			  WPAS_DBUS_INTERFACE_MAX)) {
+	else if (!os_strncmp(WPA_DBUS_PROPERTIES_INTERFACE, msg_interface,
+			     WPAS_DBUS_INTERFACE_MAX)) {
 		/* if message is properties method call */
-		DBusMessageIter iter;
-		char *interface;
-		char *property;
-
-		dbus_message_iter_init(message, &iter);
-
-		if (!os_strncmp(WPA_DBUS_PROPERTIES_GET, method,
-				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) ||
-		    !os_strncmp(WPA_DBUS_PROPERTIES_SET, method,
-				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) ||
-		    !os_strncmp(WPA_DBUS_PROPERTIES_GETALL, method,
-				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX)) {
-			/* First argument: interface name (DBUS_TYPE_STRING) */
-			if (dbus_message_iter_get_arg_type(&iter) !=
-			    DBUS_TYPE_STRING) {
-				reply = dbus_message_new_error(
-					message, DBUS_ERROR_INVALID_ARGS,
-					NULL);
-				goto out;
-			}
-
-			dbus_message_iter_get_basic(&iter, &interface);
-
-			/* GetAll */
-			if (!os_strncmp(WPA_DBUS_PROPERTIES_GETALL, method,
-					WPAS_DBUS_METHOD_SIGNAL_PROP_MAX)) {
-				if (os_strcmp(dbus_message_get_signature(
-						      message), "s"))
-					reply = dbus_message_new_error(
-						message,
-						DBUS_ERROR_INVALID_ARGS, NULL);
-				else
-					reply = get_all_properties(
-						message, interface,
-						obj_dsc->properties);
-			} else {
-				/* Get or Set */
-				struct wpa_dbus_property_desc *property_dsc;
-				property_dsc = obj_dsc->properties;
-
-				/* Second argument: property name
-				 * (DBUS_TYPE_STRING) */
-				if (!dbus_message_iter_next(&iter) ||
-				    dbus_message_iter_get_arg_type(&iter) !=
-				    DBUS_TYPE_STRING) {
-					reply = dbus_message_new_error(
-						message,
-						DBUS_ERROR_INVALID_ARGS, NULL);
-					goto out;
-				}
-				dbus_message_iter_get_basic(&iter, &property);
-
-				while (property_dsc) {
-					/* compare property names and
-					 * interfaces */
-					if (!os_strncmp(property_dsc->dbus_property,
-							property,
-							WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) &&
-					    !os_strncmp(property_dsc->dbus_interface, interface,
-							WPAS_DBUS_INTERFACE_MAX))
-						break;
-
-					property_dsc = property_dsc->next;
-				}
-				if (property_dsc) {
-					/* Get */
-					if (!os_strncmp(WPA_DBUS_PROPERTIES_GET, method,
-							WPAS_DBUS_METHOD_SIGNAL_PROP_MAX)) {
-						if (os_strcmp(dbus_message_get_signature(message), "ss"))
-							reply = dbus_message_new_error(message,
-										       DBUS_ERROR_INVALID_ARGS, NULL);
-						else if (property_dsc->access != W &&
-							 property_dsc->getter)
-							reply = property_dsc->getter(message,
-										     property_dsc->user_data);
-						else
-							reply = dbus_message_new_error(message,
-										       DBUS_ERROR_INVALID_ARGS,
-										       "Property is write-only");
-					} else {
-						/* Set */
-						if (os_strcmp(dbus_message_get_signature(message), "ssv"))
-							reply = dbus_message_new_error(message,
-										       DBUS_ERROR_INVALID_ARGS, NULL);
-						else if (property_dsc->access != R &&
-							 property_dsc->setter) {
-							reply = property_dsc->setter
-								(message, property_dsc->user_data);
-						} else {
-							reply = dbus_message_new_error(message,
-										       DBUS_ERROR_INVALID_ARGS,
-										       "Property is read-only");
-						}
-					}
-				} else {
-					wpa_printf(MSG_DEBUG, "no property handler for %s.%s\n"
-						   "on %s", interface, property, path);
-					reply = dbus_message_new_error(message,
-								       DBUS_ERROR_INVALID_ARGS,
-								       "No such property");
-				}
-			}
-		} else {
-			reply = dbus_message_new_error(
-				message, DBUS_ERROR_UNKNOWN_METHOD, NULL);
-			goto out;
-		}
+		reply = properties_handler(message, obj_dsc);
 	} else {
-		struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
-
-		/* try match call to any registered method */
-		while (method_dsc) {
-			/* compare method names and interfaces */
-			if (!os_strncmp(method_dsc->dbus_method, method,
-					WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) &&
-			    !os_strncmp(method_dsc->dbus_interface,
-					msg_interface,
-					WPAS_DBUS_INTERFACE_MAX))
-				break;
-
-			method_dsc = method_dsc->next;
-		}
-		if (method_dsc) {
-			if (is_signature_correct(message, method_dsc)) {
-				reply = method_dsc->method_handler(
-					message, method_dsc->handler_argument);
-			} else {
-				reply = dbus_message_new_error(
-					message, DBUS_ERROR_INVALID_ARGS,
-					NULL);
-			}
-		} else {
-			wpa_printf(MSG_DEBUG, "no method handler for %s.%s "
-				   "on %s", msg_interface, method, path);
-			reply = dbus_message_new_error(
-				message, DBUS_ERROR_UNKNOWN_METHOD, NULL);
-		}
+		reply = msg_method_handler(message, obj_dsc);
 	}
 
-out:
-	/* If the message was handled, send back the reply */
-	if (reply != MESSAGE_UNHANDLED) {
-		/* If handler succeed returning NULL, reply empty message */
-		if (!reply)
-			reply = dbus_message_new_method_return(message);
-		if (reply) {
-			if (!dbus_message_get_no_reply(message))
-				dbus_connection_send(connection, reply, NULL);
-			dbus_message_unref(reply);
-		}
-		return DBUS_HANDLER_RESULT_HANDLED;
-	} else
-		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+	/* If handler succeed returning NULL, reply empty message */
+	if (!reply)
+		reply = dbus_message_new_method_return(message);
+	if (reply) {
+		if (!dbus_message_get_no_reply(message))
+			dbus_connection_send(connection, reply, NULL);
+		dbus_message_unref(reply);
+	}
+	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
 

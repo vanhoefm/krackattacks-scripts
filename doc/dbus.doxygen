@@ -1,0 +1,656 @@
+/**
+\page dbus %wpa_supplicant D-Bus API
+
+This section documents the %wpa_supplicant D-Bus API. Every D-Bus
+interface implemented by %wpa_supplicant is described here including
+their methods, signals, and properties with arguments, returned
+values, and possible errors.
+
+Interfaces:
+- \ref dbus_main
+- \ref dbus_interface
+- \ref dbus_wps
+- \ref dbus_bss
+- \ref dbus_network
+
+
+\section dbus_main fi.w1.wpa_supplicant1
+
+Interface implemented by the main %wpa_supplicant D-Bus object
+registered in the bus with fi.w1.wpa_supplicant1 name.
+
+\subsection dbus_main_methods Methods
+
+    <ul>
+      <li>
+	<h3>CreateInterface ( a{sv} : args ) --> o : interface</h3>
+	<p>Registers a wireless interface in %wpa_supplicant.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : args</dt>
+	  <dd>
+	    A dictionary with arguments used to add the interface to %wpa_supplicant. The dictionary may contain the following entries:
+	    <table>
+	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
+	      <tr><td>Ifname</td><td>s</td><td>Name of the network interface to control, e.g., wlan0</td><td>Yes</td>
+	      <tr><td>Bridge_ifname</td><td>s</td><td>Name of the bridge interface to control, e.g., br0</td><td>No</td>
+	      <tr><td>Driver</td><td>s</td><td>Driver name which the interface uses, e.g., nl80211</td><td>No</td>
+	    </table>
+	  </dd>
+	</dl>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>o : interface</dt>
+	  <dd>A D-Bus path to object representing created interface</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InterfaceExists</dt>
+	  <dd>%wpa_supplicant already controls this interface.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Creating interface failed for an unknown reason.</dd>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>Invalid entries were found in the passed argument.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>RemoveInterface ( o : interface ) --> nothing</h3>
+	<p>Deregisters a wireless interface from %wpa_supplicant.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : interface</dt>
+	  <dd>A D-Bus path to an object representing an interface to remove returned by CreateInterface</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InterfaceUnknown</dt>
+	  <dd>Object pointed by the path doesn't exist or doesn't represent an interface.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Removing interface failed for an unknown reason.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>GetInterface ( s : ifname ) --> o : interface</h3>
+	<p>Returns a D-Bus path to an object related to an interface which %wpa_supplicant already controls.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : ifname</dt>
+	  <dd>Name of the network interface, e.g., wlan0</dd>
+	</dl>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>o : interface</dt>
+	  <dd>A D-Bus path to an object representing an interface</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InterfaceUnknown</dt>
+	  <dd>An interface with the passed name in not controlled by %wpa_supplicant.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Getting an interface object path failed for an unknown reason.</dd>
+	</dl>
+      </li>
+    </ul>
+
+\subsection dbus_main_properties Properties
+
+    <ul>
+      <li>
+	<h3>DebugParams - (ibb) - (read/write)</h3>
+	<p>A structure describing debugging properties. The structure elements are (in order): debug level (i), show timestamps (b), show keys (b).</p>
+      </li>
+
+      <li>
+	<h3>Interfaces - ao - (read)</h3>
+	<p>An array with paths to D-Bus objects representing controlled interfaces each.</p>
+      </li>
+
+      <li>
+	<h3>EapMethods - as - (read)</h3>
+	<p>An array with supported EAP methods names.</p>
+      </li>
+    </ul>
+
+\subsection dbus_main_signals Signals
+
+    <ul>
+      <li>
+	<h3>InterfaceAdded ( o : interface )</h3>
+	<p>A new interface was added to %wpa_supplicant.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : interface</dt>
+	  <dd>A D-Bus path to an object representing the added interface</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>InterfaceRemoved ( o : interface )</h3>
+	<p>An interface was removed from %wpa_supplicant.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : interface</dt>
+	  <dd>A D-Bus path to an object representing the removed interface</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>PropertiesChanged ( a{sv} : properties )</h3>
+	<p>Some properties have changed.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "DebugParams"</dd>
+	</dl>
+      </li>
+    </ul>
+
+
+\section dbus_interface fi.w1.wpa_supplicant1.Interface
+
+Interface implemented by objects related to network interface added to
+%wpa_supplicant, i.e., returned by
+fi.w1.wpa_supplicant1.CreateInterface.
+
+\subsection dbus_interface_methods Methods
+
+    <ul>
+      <li>
+	<h3>Scan ( a{sv} : args ) --> nothing</h3>
+	<p>Triggers a scan.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : args</dt>
+	  <dd>
+	    A dictionary with arguments describing scan type:
+	    <table>
+	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
+	      <tr><td>Type</td><td>s</td><td>Type of the scan. Possible values: "active", "passive"</td><td>Yes</td>
+	      <tr><td>SSIDs</td><td>aay</td><td>Array of SSIDs to scan for (applies only if scan type is active)</td><td>No</td>
+	      <tr><td>IEs</td><td>aay</td><td>Information elements to used in active scan (applies only if scan type is active)</td><td>No</td>
+	      <tr><td>Channels</td><td>a(uu)</td><td>Array of frequencies to scan in form of (center, width) in MHz.</td><td>No</td>
+	    </table>
+	  </dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>Invalid entries were found in the passed argument.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>Disconnect ( ) --> nothing</h3>
+	<p>Disassociates the interface from current network.</p>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.Interface.NotConnected</dt>
+	  <dd>Interface is not connected to any network.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>AddNetwork ( a{sv} : args ) --> o : network</h3>
+	<p>Adds a new network to the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : args</dt>
+	  <dd>A dictionary with network configuration. Dictionary entries are equivalent to entries in the "network" block in %wpa_supplicant configuration file. Entry values should be appropriate type to the entry, e.g., an entry with key "frequency" should have value type int.</dd>
+	</dl>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing a configured network</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>Invalid entries were found in the passed argument.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Adding network failed for an unknown reason.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>RemoveNetwork ( o : network ) --> nothing</h3>
+	<p>Removes a configured network from the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing a configured network returned by fi.w1.wpa_supplicant1.Interface.AddNetwork</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.Interface.NetworkUnknown</dt>
+	  <dd>A passed path doesn't point to any network object.</dd>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>A passed path doesn't point to any network object.</dd>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Removing network failed for an unknown reason.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>SelectNetwork ( o : network ) --> nothing</h3>
+	<p>Attempt association with a configured network.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing a configured network returned by fi.w1.wpa_supplicant1.Interface.AddNetwork</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.Interface.NetworkUnknown</dt>
+	  <dd>A passed path doesn't point to any network object.</dd>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>A passed path doesn't point to any network object.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>AddBlob ( s : name, ay : data ) --> nothing</h3>
+	<p>Adds a blob to the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : name</dt>
+	  <dd>A name of a blob</dd>
+	  <dt>ay : data</dt>
+	  <dd>A blob data</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.Interface.BlobExists</dt>
+	  <dd>A blob with the specified name already exists.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>RemoveBlob ( s : name ) --> nothing</h3>
+	<p>Removes the blob from the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : name</dt>
+	  <dd>A name of the blob to remove</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.Interface.BlobUnknown</dt>
+	  <dd>A blob with the specified name doesn't exist.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>GetBlob ( s : name ) --> ay : data</h3>
+	<p>Returns the blob data of a previously added blob.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : name</dt>
+	  <dd>A name of the blob</dd>
+	</dl>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>ay : data</dt>
+	  <dd>A blob data</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.Interface.BlobUnknown</dt>
+	  <dd>A blob with the specified name doesn't exist.</dd>
+	</dl>
+      </li>
+    </ul>
+
+\subsection dbus_interface_properties Properties
+
+    <ul>
+      <li>
+	<h3>Capabilities - a{sv} - (read)</h3>
+	<p>Capabilities of the interface. Dictionary contains following entries:</p>
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th>
+	  <tr><td>Pairwise</td><td>as</td><td>Possible array elements: "ccmp", "tkip", "none"</td>
+	  <tr><td>Group</td><td>as</td><td>Possible array elements: "ccmp", "tkip", "wep104", "wep40"</td>
+	  <tr><td>KeyMgmt</td><td>as</td><td>Possible array elements: "wpa-psk", "wpa-eap", "ieee8021x", "wpa-none", "wps", "none"</td>
+	  <tr><td>Protocol</td><td>as</td><td>Possible array elements: "rsn", "wpa"</td>
+	  <tr><td>AuthAlg</td><td>as</td><td>Possible array elements: "open", "shared", "leap"</td>
+	  <tr><td>Scan</td><td>as</td><td>Possible array elements: "active", "passive", "ssid"</td>
+	  <tr><td>Modes</td><td>as</td><td>Possible array elements: "infrastructure", "ad-hoc", "ap"</td>
+	</table>
+      </li>
+
+      <li>
+	<h3>State - s - (read)</h3>
+	<p>A state of the interface. Possible values are: return "disconnected", "inactive", "scanning", "authenticating", "associating", "associated", "4way_handshake", "group_handshake", "completed","unknown".</p>
+      </li>
+
+      <li>
+	<h3>Scanning - b - (read)</h3>
+	<p>Determines if the interface is already scanning or not</p>
+      </li>
+
+      <li>
+	<h3>ApScan - u - (read/write)</h3>
+	<p>Identical to ap_scan entry in %wpa_supplicant configuration file. Possible values are 0, 1 or 2.</p>
+      </li>
+
+      <li>
+	<h3>Ifname - s - (read)</h3>
+	<p>Name of network interface controlled by the interface, e.g., wlan0.</p>
+      </li>
+
+      <li>
+	<h3>BridgeIfname - s - (read)</h3>
+	<p>Name of bridge network interface controlled by the interface, e.g., br0.</p>
+      </li>
+
+      <li>
+	<h3>Driver - s - (read)</h3>
+	<p>Name of driver used by the interface, e.g., nl80211.</p>
+      </li>
+
+      <li>
+	<h3>CurrentBSS - o - (read)</h3>
+	<p>Path to D-Bus object representing BSS which %wpa_supplicant is associated with, or "/" if is not associated at all.</p>
+      </li>
+
+      <li>
+	<h3>CurrentNetwork - o - (read)</h3>
+	<p>Path to D-Bus object representing configured network which %wpa_supplicant uses at the moment, or "/" if doesn't use any.</p>
+      </li>
+
+      <li>
+	<h3>Blobs - as - (read)</h3>
+	<p>List of blobs names added to the Interface.</p>
+      </li>
+
+      <li>
+	<h3>BSSs - ao - (read)</h3>
+	<p>List of D-Bus objects paths representing BSSs known to the interface, i.e., scan results.</p>
+      </li>
+
+      <li>
+	<h3>Networks - ao - (read)</h3>
+	<p>List of D-Bus objects paths representing configured networks.</p>
+      </li>
+    </ul>
+
+\subsection dbus_interface_signals Signals
+
+    <ul>
+      <li>
+	<h3>ScanDone ( b : success )</h3>
+	<p>Scanning finished. </p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : success</dt>
+	  <dd>Determines if scanning was successful. If so, results are available.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>StateChanged ( s : newState, s : oldState )</h3>
+	<p>Interface state has changed.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : newState</dt>
+	  <dd>A state which the interface goes to</dd>
+	  <dt>s : oldState</dt>
+	  <dd>A state which the interface goes from</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>BSSAdded ( o : BSS )</h3>
+	<p>Interface became aware of a new BSS.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : BSS</dt>
+	  <dd>A D-Bus path to an object representing the new BSS.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>BSSRemoved ( o : BSS )</h3>
+	<p>BSS disappeared.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : BSS</dt>
+	  <dd>A D-Bus path to an object representing the BSS.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>BlobAdded ( s : blobName )</h3>
+	<p>A new blob has been added to the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : blobName</dt>
+	  <dd>A name of the added blob.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>BlobRemoved ( s : blobName )</h3>
+	<p>A blob has been removed from the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : blobName</dt>
+	  <dd>A name of the removed blob.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>NetworkAdded ( o : network )</h3>
+	<p>A new network has been added to the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing the added network.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>NetworkRemoved ( o : network )</h3>
+	<p>The network has been removed from the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing the removed network.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>NetworkSelected ( o : network )</h3>
+	<p>The network has been selected.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>o : network</dt>
+	  <dd>A D-Bus path to an object representing the selected network.</dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>PropertiesChanged ( a{sv} : properties )</h3>
+	<p>Some properties have changed.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "ApScan", "Scanning", "CurrentBSS", "CurrentNetwork"</dd>
+	</dl>
+      </li>
+    </ul>
+
+
+\section dbus_wps fi.w1.wpa_supplicant1.Interface.WPS
+
+Interface implemented by objects related to network interface added to
+&wpa_supplicant, i.e., returned by fi.w1.wpa_supplicant1.CreateInterface.
+
+\subsection dbus_wps_methods Methods
+
+    <ul>
+      <li>
+	<h3>Start ( a{sv} : args ) --> a{sv} : output</h3>
+	<p>Starts WPS configuration.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : args</dt>
+	  <dd>
+	    A dictionary with arguments used to start WPS configuration. The dictionary may contain the following entries:
+	    <table>
+	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
+	      <tr><td>Role</td><td>s</td><td>The device's role. Possible values are "enrollee" and "registrar".</td><td>Yes</td>
+	      <tr><td>Type</td><td>s</td><td>WPS authentication type. Applies only for enrollee role. Possible values are "pin" and "pbc".</td><td>Yes, for enrollee role; otherwise no</td>
+	      <tr><td>Pin</td><td>s</td><td>WPS Pin.</td><td>Yes, for registrar role; otherwise optional</td>
+	      <tr><td>Bssid</td><td>ay</td><td></td><td>No</td>
+	    </table>
+	  </dd>
+	</dl>
+	<h4>Returns</h4>
+	<dl>
+	  <dt>a{sv} : output</dt>
+	  <dd>
+	    <table>
+	      <tr><th>Key</th><th>Value type</th><th>Description</th><th>Required</th>
+	      <tr><td>Pin</td><td>s</td><td>Newly generated PIN, if not specified for enrollee role and pin authentication type.</td><td>No</td>
+	    </table>
+	  </dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.UnknownError</dt>
+	  <dd>Starting WPS configuration failed for an unknown reason.</dd>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>Invalid entries were found in the passed argument.</dd>
+	</dl>
+      </li>
+    </ul>
+
+\subsection dbus_wps_properties Properties
+
+    <ul>
+      <li>
+	<h3>ProcessCredentials - b - (read/write)</h3>
+	<p>Determines if the interface will process the credentials (credentials_processed configuration file parameter).</p>
+      </li>
+    </ul>
+
+\subsection dbus_wps_signals Signals
+
+    <ul>
+      <li>
+	<h3>Event ( s : name, a{sv} : args )</h3>
+	<p>WPS event occurred.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : event</dt>
+	  <dd>Event type. Possible values are: "success, "fail" and "m2d"</dd>
+	  <dt>a{sv} : args</dt>
+	  <dd>
+	    Event arguments. Empty for success event, one entry ( "msg" : i ) for fail event and following entries for m2d event:
+	    <table>
+	      <tr><th>config_methods</th><th>Value type</th>
+	      <tr><td>manufacturer</td><td>q</td>
+	      <tr><td>model_name</td><td>ay</td>
+	      <tr><td>model_number</td><td>ay</td>
+	      <tr><td>serial_number</td><td>ay</td>
+	      <tr><td>dev_name</td><td>ay</td>
+	      <tr><td>primary_dev_type</td><td>ay</td>
+	      <tr><td>config_error</td><td>q</td>
+	      <tr><td>dev_password_id</td><td>q</td>
+	    </table>
+	  </dd>
+	</dl>
+      </li>
+
+      <li>
+	<h3>Credentials ( a{sv} : credentials )</h3>
+	<p>WPS credentials. Dictionary contains:</p>
+	<table>
+	  <tr><th>Key</th><th>Value type</th><th>Description</th>
+	  <tr><td>BSSID</td><td>ay</td><td></td>
+	  <tr><td>SSID</td><td>s</td><td></td>
+	  <tr><td>AuthType</td><td>as</td><td>Possible array elements: "open", "shared", "wpa-psk", "wpa-eap", "wpa2-eap", "wpa2-psk"</td>
+	  <tr><td>EncrType</td><td>as</td><td>Possible array elements: "none", "wep", "tkip", "aes"</td>
+	  <tr><td>Key</td><td>ay</td><td>Key data</td>
+	  <tr><td>KeyIndex</td><td>u</td><td>Key index</td>
+	</table>
+      </li>
+
+      <li>
+	<h3>PropertiesChanged ( a{sv} : properties )</h3>
+	<p>Some properties have changed.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "ProcessCredentials"</dd>
+	</dl>
+      </li>
+    </ul>
+
+
+\section dbus_bss fi.w1.wpa_supplicant1.Interface.BSS
+
+Interface implemented by objects representing a scanned BSSs, i.e.,
+scan results.
+
+\subsection dbus_bss_properties Properties
+
+    <ul>
+      <li>
+	<h3>Properties - a{sv} - (read)</h3>
+	<p>Properties of scanned BSS. Dictionary contains following entries:</p>
+	<table>
+	  <tr><th>Key</th><th>Value type</th>
+	  <tr><td>BSSID</td><td>ay</td>
+	  <tr><td>SSID</td><td>ay</td>
+	  <tr><td>WPAIE</td><td>ay</td>
+	  <tr><td>RSNIE</td><td>ay</td>
+	  <tr><td>WPSIE</td><td>ay</td>
+	  <tr><td>Frequency</td><td>i</td>
+	  <tr><td>Capabilities</td><td>q</td>
+	  <tr><td>Quality</td><td>i</td>
+	  <tr><td>Noise</td><td>i</td>
+	  <tr><td>Level</td><td>i</td>
+	  <tr><td>MaxRate</td><td>i</td>
+	</table>
+      </li>
+    </ul>
+
+
+\section dbus_network fi.w1.wpa_supplicant1.Interface.Network
+
+Interface implemented by objects representing configured networks,
+i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.
+
+\subsection dbus_network_properties Properties
+
+    <ul>
+      <li>
+	<h3>Enabled - b - (read/write)</h3>
+	<p>Determines if the configured network is enabled or not.</p>
+      </li>
+
+      <li>
+	<h3>Properties - a{sv} - (read)</h3>
+	<p>Properties of the configured network. Dictionary contains entries from "network" block of %wpa_supplicant configuration file. All values are string type, e.g., frequency is "2437", not 2437.
+      </li>
+    </ul>
+
+\subsection dbus_network_signals Signals
+
+    <ul>
+      <li>
+	<h3>PropertiesChanged ( a{sv} : properties )</h3>
+	<p>Some properties have changed.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "Enabled"</dd>
+	</dl>
+      </li>
+    </ul>
+
+*/

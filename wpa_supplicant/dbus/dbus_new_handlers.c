@@ -889,6 +889,268 @@ out:
 }
 
 
+static int wpas_dbus_get_scan_type(DBusMessage *message, DBusMessageIter *var,
+				   char **type, DBusMessage **reply)
+{
+	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_STRING) {
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+			   "Type must be a string");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong Type value type. String required");
+		return -1;
+	}
+	dbus_message_iter_get_basic(var, type);
+	return 0;
+}
+
+
+static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
+				    struct wpa_driver_scan_params *params,
+				    DBusMessage **reply)
+{
+	struct wpa_driver_scan_ssid *ssids = params->ssids;
+	size_t ssids_num = 0;
+	u8 *ssid;
+	DBusMessageIter array_iter, sub_array_iter;
+	char *val;
+	int len;
+
+	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_ARRAY) {
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ssids "
+			   "must be an array of arrays of bytes");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong SSIDs value type. Array of arrays of "
+			"bytes required");
+		return -1;
+	}
+
+	dbus_message_iter_recurse(var, &array_iter);
+
+	if (dbus_message_iter_get_arg_type(&array_iter) != DBUS_TYPE_ARRAY ||
+	    dbus_message_iter_get_element_type(&array_iter) != DBUS_TYPE_BYTE)
+	{
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ssids "
+			   "must be an array of arrays of bytes");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong SSIDs value type. Array of arrays of "
+			"bytes required");
+		return -1;
+	}
+
+	while (dbus_message_iter_get_arg_type(&array_iter) == DBUS_TYPE_ARRAY)
+	{
+		if (ssids_num >= WPAS_MAX_SCAN_SSIDS) {
+			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+				   "Too many ssids specified on scan dbus "
+				   "call");
+			*reply = wpas_dbus_error_invald_args(
+				message, "Too many ssids specified. Specify "
+				"at most four");
+			return -1;
+		}
+
+		dbus_message_iter_recurse(&array_iter, &sub_array_iter);
+
+		dbus_message_iter_get_fixed_array(&sub_array_iter, &val, &len);
+		if (len == 0) {
+			dbus_message_iter_next(&array_iter);
+			continue;
+		}
+
+		ssid = os_malloc(len);
+		if (ssid == NULL) {
+			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+				   "out of memory. Cannot allocate memory for "
+				   "SSID");
+			*reply = dbus_message_new_error(
+				message, DBUS_ERROR_NO_MEMORY, NULL);
+			return -1;
+		}
+		os_memcpy(ssid, val, len);
+		ssids[ssids_num].ssid = ssid;
+		ssids[ssids_num].ssid_len = len;
+
+		dbus_message_iter_next(&array_iter);
+		ssids_num++;
+	}
+
+	params->num_ssids = ssids_num;
+	return 0;
+}
+
+
+static int wpas_dbus_get_scan_ies(DBusMessage *message, DBusMessageIter *var,
+				  struct wpa_driver_scan_params *params,
+				  DBusMessage **reply)
+{
+	u8 *ies = NULL, *nies;
+	int ies_len = 0;
+	DBusMessageIter array_iter, sub_array_iter;
+	char *val;
+	int len;
+
+	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_ARRAY) {
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ies must "
+			   "be an array of arrays of bytes");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong IEs value type. Array of arrays of "
+			"bytes required");
+		return -1;
+	}
+
+	dbus_message_iter_recurse(var, &array_iter);
+
+	if (dbus_message_iter_get_arg_type(&array_iter) != DBUS_TYPE_ARRAY ||
+	    dbus_message_iter_get_element_type(&array_iter) != DBUS_TYPE_BYTE)
+	{
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ies must "
+			   "be an array of arrays of bytes");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong IEs value type. Array required");
+		return -1;
+	}
+
+	while (dbus_message_iter_get_arg_type(&array_iter) == DBUS_TYPE_ARRAY)
+	{
+		dbus_message_iter_recurse(&array_iter, &sub_array_iter);
+
+		dbus_message_iter_get_fixed_array(&sub_array_iter, &val, &len);
+		if (len == 0) {
+			dbus_message_iter_next(&array_iter);
+			continue;
+		}
+
+		nies = os_realloc(ies, ies_len + len);
+		if (nies == NULL) {
+			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+				   "out of memory. Cannot allocate memory for "
+				   "IE");
+			os_free(ies);
+			*reply = dbus_message_new_error(
+				message, DBUS_ERROR_NO_MEMORY, NULL);
+			return -1;
+		}
+		ies = nies;
+		os_memcpy(ies + ies_len, val, len);
+		ies_len += len;
+
+		dbus_message_iter_next(&array_iter);
+	}
+
+	params->extra_ies = ies;
+	params->extra_ies_len = ies_len;
+	return 0;
+}
+
+
+static int wpas_dbus_get_scan_channels(DBusMessage *message,
+				       DBusMessageIter *var,
+				       struct wpa_driver_scan_params *params,
+				       DBusMessage **reply)
+{
+	DBusMessageIter array_iter, sub_array_iter;
+	int *freqs = NULL, *nfreqs;
+	int freqs_num = 0;
+
+	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_ARRAY) {
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+			   "Channels must be an array of structs");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong Channels value type. Array of structs "
+			"required");
+		return -1;
+	}
+
+	dbus_message_iter_recurse(var, &array_iter);
+
+	if (dbus_message_iter_get_arg_type(&array_iter) != DBUS_TYPE_STRUCT) {
+		wpa_printf(MSG_DEBUG,
+			   "wpas_dbus_handler_scan[dbus]: Channels must be an "
+			   "array of structs");
+		*reply = wpas_dbus_error_invald_args(
+			message, "Wrong Channels value type. Array of structs "
+			"required");
+		return -1;
+	}
+
+	while (dbus_message_iter_get_arg_type(&array_iter) == DBUS_TYPE_STRUCT)
+	{
+		int freq, width;
+
+		dbus_message_iter_recurse(&array_iter, &sub_array_iter);
+
+		if (dbus_message_iter_get_arg_type(&sub_array_iter) !=
+		    DBUS_TYPE_UINT32) {
+			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+				   "Channel must by specified by struct of "
+				   "two UINT32s %c",
+				   dbus_message_iter_get_arg_type(
+					   &sub_array_iter));
+			*reply = wpas_dbus_error_invald_args(
+				message, "Wrong Channel struct. Two UINT32s "
+				"required");
+			os_free(freqs);
+			return -1;
+		}
+		dbus_message_iter_get_basic(&sub_array_iter, &freq);
+
+		if (!dbus_message_iter_next(&sub_array_iter) ||
+		    dbus_message_iter_get_arg_type(&sub_array_iter) !=
+		    DBUS_TYPE_UINT32) {
+			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+				   "Channel must by specified by struct of "
+				   "two UINT32s");
+			*reply = wpas_dbus_error_invald_args(
+				message,
+				"Wrong Channel struct. Two UINT32s required");
+			os_free(freqs);
+			return -1;
+		}
+
+		dbus_message_iter_get_basic(&sub_array_iter, &width);
+
+#define FREQS_ALLOC_CHUNK 32
+		if (freqs_num % FREQS_ALLOC_CHUNK == 0) {
+			nfreqs = os_realloc(freqs, sizeof(int) *
+					    (freqs_num + FREQS_ALLOC_CHUNK));
+			if (nfreqs == NULL)
+				os_free(freqs);
+			freqs = nfreqs;
+		}
+		if (freqs == NULL) {
+			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+				   "out of memory. can't allocate memory for "
+				   "freqs");
+			*reply = dbus_message_new_error(
+				message, DBUS_ERROR_NO_MEMORY, NULL);
+			return -1;
+		}
+
+		freqs[freqs_num] = freq;
+
+		freqs_num++;
+		dbus_message_iter_next(&array_iter);
+	}
+
+	nfreqs = os_realloc(freqs,
+			    sizeof(int) * (freqs_num + 1));
+	if (nfreqs == NULL)
+		os_free(freqs);
+	freqs = nfreqs;
+	if (freqs == NULL) {
+		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
+			   "out of memory. Can't allocate memory for freqs");
+		*reply = dbus_message_new_error(
+			message, DBUS_ERROR_NO_MEMORY, NULL);
+		return -1;
+	}
+	freqs[freqs_num] = 0;
+
+	params->freqs = freqs;
+	return 0;
+}
+
+
 /**
  * wpas_dbus_handler_scan - Request a wireless scan on an interface
  * @message: Pointer to incoming dbus message
@@ -902,16 +1164,11 @@ out:
 DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				     struct wpa_supplicant *wpa_s)
 {
-	DBusMessage * reply = NULL;
-	DBusMessageIter iter, dict_iter, entry_iter, variant_iter,
-		array_iter, sub_array_iter;
-	char *key = NULL, *val, *type = NULL;
-	int len;
-	int freqs_num = 0;
-	int ssids_num = 0;
-	int ies_len = 0;
-
+	DBusMessage *reply = NULL;
+	DBusMessageIter iter, dict_iter, entry_iter, variant_iter;
+	char *key = NULL, *type = NULL;
 	struct wpa_driver_scan_params params;
+	size_t i;
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -926,276 +1183,26 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		dbus_message_iter_next(&entry_iter);
 		dbus_message_iter_recurse(&entry_iter, &variant_iter);
 
-		if (!os_strcmp(key, "Type")) {
-			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-			    DBUS_TYPE_STRING) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
-					   "[dbus]: Type must be a string");
-				reply = wpas_dbus_error_invald_args(
-					message, "Wrong Type value type. "
-					"String required");
+		if (os_strcmp(key, "Type") == 0) {
+			if (wpas_dbus_get_scan_type(message, &variant_iter,
+						    &type, &reply) < 0)
 				goto out;
-			}
-
-			dbus_message_iter_get_basic(&variant_iter, &type);
-
-		} else if (!strcmp(key, "SSIDs")) {
-			struct wpa_driver_scan_ssid *ssids = params.ssids;
-
-			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-			    DBUS_TYPE_ARRAY) {
-
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
-					   "[dbus]: ssids must be an array of "
-					   "arrays of bytes");
-				reply = wpas_dbus_error_invald_args(
-					message,
-					"Wrong SSIDs value type. "
-					"Array of arrays of bytes required");
+		} else if (os_strcmp(key, "SSIDs") == 0) {
+			if (wpas_dbus_get_scan_ssids(message, &variant_iter,
+						     &params, &reply) < 0)
 				goto out;
-			}
-
-			dbus_message_iter_recurse(&variant_iter, &array_iter);
-
-			if (dbus_message_iter_get_arg_type(&array_iter) !=
-			    DBUS_TYPE_ARRAY ||
-			    dbus_message_iter_get_element_type(&array_iter) !=
-			    DBUS_TYPE_BYTE) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
-					   "[dbus]: ssids must be an array of "
-					   "arrays of bytes");
-				reply = wpas_dbus_error_invald_args(
-					message,
-					"Wrong SSIDs value type. "
-					"Array of arrays of bytes required");
+		} else if (os_strcmp(key, "IEs") == 0) {
+			if (wpas_dbus_get_scan_ies(message, &variant_iter,
+						   &params, &reply) < 0)
 				goto out;
-			}
-
-			while (dbus_message_iter_get_arg_type(&array_iter) ==
-			       DBUS_TYPE_ARRAY) {
-				if (ssids_num >= WPAS_MAX_SCAN_SSIDS) {
-					wpa_printf(MSG_DEBUG,
-						   "wpas_dbus_handler_scan"
-						   "[dbus]: To many ssids "
-						   "specified on scan dbus "
-						   "call");
-					reply = wpas_dbus_error_invald_args(
-						message,
-						"To many ssids specified. "
-						"Specify at most four");
-					goto out;
-				}
-
-				dbus_message_iter_recurse(&array_iter,
-							  &sub_array_iter);
-
-
-				dbus_message_iter_get_fixed_array(
-					&sub_array_iter, &val, &len);
-
-				if (len == 0) {
-					dbus_message_iter_next(&array_iter);
-					continue;
-				}
-
-				ssids[ssids_num].ssid =
-					os_malloc(sizeof(u8) * len);
-				if (!ssids[ssids_num].ssid) {
-					wpa_printf(MSG_DEBUG,
-						   "wpas_dbus_handler_scan"
-						   "[dbus]: out of memory. "
-						   "Cannot allocate memory "
-						   "for SSID");
-					reply = dbus_message_new_error(
-						message,
-						DBUS_ERROR_NO_MEMORY, NULL);
-					goto out;
-				}
-				os_memcpy((void *) ssids[ssids_num].ssid, val,
-					  sizeof(u8) * len);
-				ssids[ssids_num].ssid_len = len;
-
-				dbus_message_iter_next(&array_iter);
-				ssids_num++;;
-			}
-
-			params.num_ssids = ssids_num;
-		} else if (!strcmp(key, "IEs")) {
-			u8 *ies = NULL;
-
-			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-			    DBUS_TYPE_ARRAY) {
-
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
-					   "[dbus]: ies must be an array of "
-					   "arrays of bytes");
-				reply = wpas_dbus_error_invald_args(
-					message,
-					"Wrong IEs value type. "
-					"Array of arrays of bytes required");
+		} else if (os_strcmp(key, "Channels") == 0) {
+			if (wpas_dbus_get_scan_channels(message, &variant_iter,
+							&params, &reply) < 0)
 				goto out;
-			}
-
-			dbus_message_iter_recurse(&variant_iter, &array_iter);
-
-			if (dbus_message_iter_get_arg_type(&array_iter) !=
-			    DBUS_TYPE_ARRAY ||
-			    dbus_message_iter_get_element_type(&array_iter) !=
-			    DBUS_TYPE_BYTE) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan"
-					   "[dbus]: ies must be an array of "
-					   "arrays of bytes");
-				reply = wpas_dbus_error_invald_args(
-					message, "Wrong IEs value type. Array "
-					"required");
-				goto out;
-			}
-
-			while (dbus_message_iter_get_arg_type(&array_iter) ==
-			       DBUS_TYPE_ARRAY) {
-				dbus_message_iter_recurse(&array_iter,
-							  &sub_array_iter);
-
-				dbus_message_iter_get_fixed_array(
-					&sub_array_iter, &val, &len);
-
-				if (len == 0) {
-					dbus_message_iter_next(&array_iter);
-					continue;
-				}
-
-				ies = os_realloc(ies, ies_len + len);
-				if (!ies) {
-					wpa_printf(MSG_DEBUG,
-						   "wpas_dbus_handler_scan"
-						   "[dbus]: out of memory. "
-						   "Cannot allocate memory "
-						   "for IE");
-					reply = dbus_message_new_error(
-						message,
-						DBUS_ERROR_NO_MEMORY, NULL);
-					goto out;
-				}
-				os_memcpy(ies + ies_len, val,
-					  sizeof(u8) * len);
-				ies_len += len;
-
-				dbus_message_iter_next(&array_iter);
-			}
-
-			params.extra_ies = ies;
-			params.extra_ies_len = ies_len;
-		} else if (!strcmp(key, "Channels")) {
-			int *freqs = NULL;
-
-			if (dbus_message_iter_get_arg_type(&variant_iter) !=
-			    DBUS_TYPE_ARRAY) {
-
-				wpa_printf(MSG_DEBUG,
-					   "wpas_dbus_handler_scan[dbus]: "
-					   "Channels must be an array of "
-					   "structs");
-				reply = wpas_dbus_error_invald_args(
-					message,
-					"Wrong Channels value type. "
-					"Array of structs required");
-				goto out;
-			}
-
-			dbus_message_iter_recurse(&variant_iter, &array_iter);
-
-			if (dbus_message_iter_get_arg_type(&array_iter) !=
-			    DBUS_TYPE_STRUCT) {
-				wpa_printf(MSG_DEBUG,
-					   "wpas_dbus_handler_scan[dbus]: "
-					   "Channels must be an array of "
-					   "structs");
-				reply = wpas_dbus_error_invald_args(
-					message,
-					"Wrong Channels value type. "
-					"Array of structs required");
-				goto out;
-			}
-
-			while (dbus_message_iter_get_arg_type(&array_iter) ==
-			       DBUS_TYPE_STRUCT) {
-				int freq, width;
-
-				dbus_message_iter_recurse(&array_iter,
-							  &sub_array_iter);
-
-				if (dbus_message_iter_get_arg_type(
-					    &sub_array_iter) !=
-				    DBUS_TYPE_UINT32) {
-					wpa_printf(MSG_DEBUG,
-						   "wpas_dbus_handler_scan"
-						   "[dbus]: Channel must by "
-						   "specified by struct of "
-						   "two UINT32s %c",
-						   dbus_message_iter_get_arg_type(&sub_array_iter));
-					reply = wpas_dbus_error_invald_args(
-						message,
-						"Wrong Channel struct. Two "
-						"UINT32s required");
-					os_free(freqs);
-					goto out;
-				}
-				dbus_message_iter_get_basic(&sub_array_iter,
-							    &freq);
-
-				if (!dbus_message_iter_next(&sub_array_iter) ||
-				    dbus_message_iter_get_arg_type(
-					    &sub_array_iter) !=
-				    DBUS_TYPE_UINT32) {
-					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						   "Channel must by specified by struct of "
-						   "two UINT32s");
-					reply = wpas_dbus_error_invald_args(message,
-									    "Wrong Channel struct. Two UINT32s required");
-					os_free(freqs);
-					goto out;
-				}
-
-				dbus_message_iter_get_basic(&sub_array_iter, &width);
-
-#define FREQS_ALLOC_CHUNK 32
-				if (freqs_num % FREQS_ALLOC_CHUNK == 0) {
-					freqs = os_realloc(freqs,
-							   sizeof(int) * (freqs_num + FREQS_ALLOC_CHUNK));
-				}
-				if (!freqs) {
-					wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-						   "out of memory. can't allocate memory for freqs");
-					reply = dbus_message_new_error(
-						message,
-						DBUS_ERROR_NO_MEMORY, NULL);
-					goto out;
-				}
-
-				freqs[freqs_num] = freq;
-
-				freqs_num++;
-				dbus_message_iter_next(&array_iter);
-			}
-
-			freqs = os_realloc(freqs,
-					   sizeof(int) * (freqs_num + 1));
-			if (!freqs) {
-				wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-					   "out of memory. can't allocate memory for freqs");
-				reply = dbus_message_new_error(
-					message, DBUS_ERROR_NO_MEMORY, NULL);
-				goto out;
-			}
-			freqs[freqs_num] = 0;
-
-			params.freqs = freqs;
 		} else {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 				   "Unknown argument %s", key);
-			reply = wpas_dbus_error_invald_args(
-				message,
-				"Wrong Channel struct. Two UINT32s required");
+			reply = wpas_dbus_error_invald_args(message, key);
 			goto out;
 		}
 
@@ -1209,15 +1216,15 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		goto out;
 	}
 
-	if (!strcmp(type, "passive")) {
-		if (ssids_num || ies_len) {
+	if (!os_strcmp(type, "passive")) {
+		if (params.num_ssids || params.extra_ies_len) {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 				   "SSIDs or IEs specified for passive scan.");
 			reply = wpas_dbus_error_invald_args(
 				message, "You can specify only Channels in "
 				"passive scan");
 			goto out;
-		} else if (freqs_num > 0) {
+		} else if (params.freqs && params.freqs[0]) {
 			/* wildcard ssid */
 			params.num_ssids++;
 			wpa_supplicant_trigger_scan(wpa_s, &params);
@@ -1225,7 +1232,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 			wpa_s->scan_req = 2;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
-	} else if (!strcmp(type, "active")) {
+	} else if (!os_strcmp(type, "active")) {
 		wpa_supplicant_trigger_scan(wpa_s, &params);
 	} else {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
@@ -1236,6 +1243,8 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 	}
 
 out:
+	for (i = 0; i < WPAS_MAX_SCAN_SSIDS; i++)
+		os_free((u8 *) params.ssids[i].ssid);
 	os_free((u8 *) params.extra_ies);
 	os_free(params.freqs);
 	return reply;

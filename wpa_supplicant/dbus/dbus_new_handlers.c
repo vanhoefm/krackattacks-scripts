@@ -905,7 +905,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 	DBusMessage * reply = NULL;
 	DBusMessageIter iter, dict_iter, entry_iter, variant_iter,
 		array_iter, sub_array_iter;
-	char *key, *val, *type = NULL;
+	char *key = NULL, *val, *type = NULL;
 	int len;
 	int freqs_num = 0;
 	int ssids_num = 0;

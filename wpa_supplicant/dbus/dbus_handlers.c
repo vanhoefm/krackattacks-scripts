@@ -75,15 +75,6 @@ DBusMessage * wpas_dbus_new_success_reply(DBusMessage *message)
 }
 
 
-static void wpas_dbus_free_wpa_interface(struct wpa_interface *iface)
-{
-	os_free((char *) iface->driver);
-	os_free((char *) iface->driver_param);
-	os_free((char *) iface->confname);
-	os_free((char *) iface->bridge_ifname);
-}
-
-
 /**
  * wpas_dbus_global_add_interface - Request registration of a network interface
  * @message: Pointer to incoming dbus message
@@ -98,12 +89,13 @@ static void wpas_dbus_free_wpa_interface(struct wpa_interface *iface)
 DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 					     struct wpa_global *global)
 {
-	struct wpa_interface iface;
 	char *ifname = NULL;
+	char *driver = NULL;
+	char *driver_param = NULL;
+	char *confname = NULL;
+	char *bridge_ifname = NULL;
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter;
-
-	os_memset(&iface, 0, sizeof(iface));
 
 	dbus_message_iter_init(message, &iter);
 
@@ -115,7 +107,6 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 	dbus_message_iter_get_basic(&iter, &ifname);
 	if (!os_strlen(ifname))
 		goto error;
-	iface.ifname = ifname;
 
 	/* Second argument: dict of options */
 	if (dbus_message_iter_next(&iter)) {
@@ -129,31 +120,32 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 				goto error;
 			if (!strcmp(entry.key, "driver") &&
 			    (entry.type == DBUS_TYPE_STRING)) {
-				iface.driver = os_strdup(entry.str_value);
-				if (iface.driver == NULL)
+				driver = os_strdup(entry.str_value);
+				wpa_dbus_dict_entry_clear(&entry);
+				if (driver == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "driver-params") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
-				iface.driver_param =
-					os_strdup(entry.str_value);
-				if (iface.driver_param == NULL)
+				driver_param = os_strdup(entry.str_value);
+				wpa_dbus_dict_entry_clear(&entry);
+				if (driver_param == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "config-file") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
-				iface.confname = os_strdup(entry.str_value);
-				if (iface.confname == NULL)
+				confname = os_strdup(entry.str_value);
+				wpa_dbus_dict_entry_clear(&entry);
+				if (confname == NULL)
 					goto error;
 			} else if (!strcmp(entry.key, "bridge-ifname") &&
 				   (entry.type == DBUS_TYPE_STRING)) {
-				iface.bridge_ifname =
-					os_strdup(entry.str_value);
-				if (iface.bridge_ifname == NULL)
+				bridge_ifname = os_strdup(entry.str_value);
+				wpa_dbus_dict_entry_clear(&entry);
+				if (bridge_ifname == NULL)
 					goto error;
 			} else {
 				wpa_dbus_dict_entry_clear(&entry);
 				goto error;
 			}
-			wpa_dbus_dict_entry_clear(&entry);
 		}
 	}
 
@@ -161,13 +153,20 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 	 * Try to get the wpa_supplicant record for this iface, return
 	 * an error if we already control it.
 	 */
-	if (wpa_supplicant_get_iface(global, iface.ifname) != NULL) {
+	if (wpa_supplicant_get_iface(global, ifname) != NULL) {
 		reply = dbus_message_new_error(message,
 					       WPAS_ERROR_EXISTS_ERROR,
 					       "wpa_supplicant already "
 					       "controls this interface.");
 	} else {
 		struct wpa_supplicant *wpa_s;
+		struct wpa_interface iface;
+		os_memset(&iface, 0, sizeof(iface));
+		iface.ifname = ifname;
+		iface.driver = driver;
+		iface.driver_param = driver_param;
+		iface.confname = confname;
+		iface.bridge_ifname = bridge_ifname;
 		/* Otherwise, have wpa_supplicant attach to it. */
 		if ((wpa_s = wpa_supplicant_add_iface(global, &iface))) {
 			const char *path = wpa_supplicant_get_dbus_path(wpa_s);
@@ -182,12 +181,17 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 						       "interface.");
 		}
 	}
-	wpas_dbus_free_wpa_interface(&iface);
+
+out:
+	os_free(driver);
+	os_free(driver_param);
+	os_free(confname);
+	os_free(bridge_ifname);
 	return reply;
 
 error:
-	wpas_dbus_free_wpa_interface(&iface);
-	return wpas_dbus_new_invalid_opts_error(message, NULL);
+	reply = wpas_dbus_new_invalid_opts_error(message, NULL);
+	goto out;
 }
 
 

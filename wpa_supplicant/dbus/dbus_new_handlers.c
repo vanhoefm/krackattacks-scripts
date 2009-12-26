@@ -167,15 +167,6 @@ DBusMessage * wpas_dbus_error_invald_args(DBusMessage *message,
 }
 
 
-static void free_wpa_interface(struct wpa_interface *iface)
-{
-	os_free((char *) iface->driver);
-	os_free((char *) iface->driver_param);
-	os_free((char *) iface->confname);
-	os_free((char *) iface->bridge_ifname);
-}
-
-
 static const char *dont_quote[] = {
 	"key_mgmt", "proto", "pairwise", "auth_alg", "group", "eap",
 	"opensc_engine_path", "pkcs11_engine_path", "pkcs11_module_path",
@@ -351,20 +342,20 @@ out:
  * Returns: The object path of the new interface object,
  *          or a dbus error message with more information
  *
- * Handler function for "addInterface" method call. Handles requests
+ * Handler function for "CreateInterface" method call. Handles requests
  * by dbus clients to register a network interface that wpa_supplicant
  * will manage.
  */
 DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 						 struct wpa_global *global)
 {
-	struct wpa_interface iface;
 	DBusMessageIter iter_dict;
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter;
 	struct wpa_dbus_dict_entry entry;
-
-	os_memset(&iface, 0, sizeof(iface));
+	char *driver = NULL;
+	char *ifname = NULL;
+	char *bridge_ifname = NULL;
 
 	dbus_message_iter_init(message, &iter);
 
@@ -375,37 +366,47 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 			goto error;
 		if (!strcmp(entry.key, "Driver") &&
 		    (entry.type == DBUS_TYPE_STRING)) {
-			iface.driver = os_strdup(entry.str_value);
-			if (iface.driver == NULL)
+			driver = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
+			if (driver == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "Ifname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
-			iface.ifname = os_strdup(entry.str_value);
-			if (iface.ifname == NULL)
+			ifname = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
+			if (ifname == NULL)
 				goto error;
 		} else if (!strcmp(entry.key, "BridgeIfname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
-			iface.bridge_ifname = os_strdup(entry.str_value);
-			if (iface.bridge_ifname == NULL)
+			bridge_ifname = os_strdup(entry.str_value);
+			wpa_dbus_dict_entry_clear(&entry);
+			if (bridge_ifname == NULL)
 				goto error;
 		} else {
 			wpa_dbus_dict_entry_clear(&entry);
 			goto error;
 		}
-		wpa_dbus_dict_entry_clear(&entry);
 	}
+
+	if (ifname == NULL)
+		goto error; /* Required Ifname argument missing */
 
 	/*
 	 * Try to get the wpa_supplicant record for this iface, return
 	 * an error if we already control it.
 	 */
-	if (wpa_supplicant_get_iface(global, iface.ifname) != NULL) {
+	if (wpa_supplicant_get_iface(global, ifname) != NULL) {
 		reply = dbus_message_new_error(message,
 					       WPAS_DBUS_ERROR_IFACE_EXISTS,
 					       "wpa_supplicant already "
 					       "controls this interface.");
 	} else {
 		struct wpa_supplicant *wpa_s;
+		struct wpa_interface iface;
+		os_memset(&iface, 0, sizeof(iface));
+		iface.driver = driver;
+		iface.ifname = ifname;
+		iface.bridge_ifname = bridge_ifname;
 		/* Otherwise, have wpa_supplicant attach to it. */
 		if ((wpa_s = wpa_supplicant_add_iface(global, &iface))) {
 			const char *path = wpas_dbus_get_path(wpa_s);
@@ -418,12 +419,16 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 				"interface.");
 		}
 	}
-	free_wpa_interface(&iface);
+
+out:
+	os_free(driver);
+	os_free(ifname);
+	os_free(bridge_ifname);
 	return reply;
 
 error:
-	free_wpa_interface(&iface);
-	return wpas_dbus_error_invald_args(message, NULL);
+	reply = wpas_dbus_error_invald_args(message, NULL);
+	goto out;
 }
 
 

@@ -244,7 +244,7 @@ void wpas_notify_bss_added(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
-		cbs->register_bss(wpa_s, bssid);
+		cbs->register_bss(wpa_s, bssid, id);
 	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_BSS_ADDED "%u " MACSTR,
 		     id, MAC2STR(bssid));
 }
@@ -255,7 +255,7 @@ void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
-		cbs->unregister_bss(wpa_s, bssid);
+		cbs->unregister_bss(wpa_s, bssid, id);
 	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_BSS_REMOVED "%u " MACSTR,
 		     id, MAC2STR(bssid));
 }

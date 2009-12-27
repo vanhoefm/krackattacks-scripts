@@ -63,9 +63,10 @@ struct wpas_dbus_callbacks {
 	void (*signal_network_enabled_changed)(struct wpa_supplicant *wpa_s,
 					       struct wpa_ssid *ssid);
 
-	int (*register_bss)(struct wpa_supplicant *wpa_s, u8 bssid[ETH_ALEN]);
+	int (*register_bss)(struct wpa_supplicant *wpa_s, u8 bssid[ETH_ALEN],
+			    unsigned int id);
 	int (*unregister_bss)(struct wpa_supplicant *wpa_s,
-			      u8 bssid[ETH_ALEN]);
+			      u8 bssid[ETH_ALEN], unsigned int id);
 
 	void (*signal_prop_changed)(struct wpa_supplicant *wpa_s,
 				    enum wpas_dbus_prop property);
@@ -122,8 +123,6 @@ struct wpas_dbus_callbacks {
 	WPAS_DBUS_NEW_IFACE_INTERFACE ".BlobExists"
 #define WPAS_DBUS_ERROR_BLOB_UNKNOWN \
 	WPAS_DBUS_NEW_IFACE_INTERFACE ".BlobUnknown"
-
-#define WPAS_DBUS_BSSID_FORMAT "%02x%02x%02x%02x%02x%02x"
 
 struct wpas_dbus_callbacks * wpas_dbus_get_callbacks(void);
 const char * wpas_dbus_get_path(struct wpa_supplicant *wpa_s);

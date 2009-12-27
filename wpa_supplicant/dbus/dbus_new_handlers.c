@@ -2,6 +2,7 @@
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
  * Copyright (c) 2009, Witold Sowa <witold.sowa@gmail.com>
+ * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,6 +25,7 @@
 #include "../driver_i.h"
 #include "../notify.h"
 #include "../wpas_glue.h"
+#include "../bss.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
@@ -183,18 +185,6 @@ static dbus_bool_t should_quote_opt(const char *key)
 	}
 	return TRUE;
 }
-
-static struct wpa_scan_res * find_scan_result(struct bss_handler_args *bss)
-{
-	struct wpa_scan_results *results = bss->wpa_s->scan_res;
-	size_t i;
-	for (i = 0; results && i < results->num; i++) {
-		if (!os_memcmp(results->res[i]->bssid, bss->bssid, ETH_ALEN))
-			return results->res[i];
-	}
-	return NULL;
-}
-
 
 /**
  * get_iface_by_dbus_path - Get a new network interface
@@ -2274,7 +2264,7 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 	DBusMessageIter iter, variant_iter;
 	const char *path = wpas_dbus_get_path(wpa_s);
 	char *bss_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	int is_bssid_known = 0;
+	struct wpa_bss *bss = NULL;
 
 	if (bss_obj_path == NULL) {
 		perror("wpas_dbus_getter_current_bss[dbus]: out of "
@@ -2283,22 +2273,14 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 					      NULL);
 	}
 
-	if (!is_zero_ether_addr(wpa_s->bssid)) {
-		size_t i;
-		for (i = 0; wpa_s->scan_res && i < wpa_s->scan_res->num; i++) {
-			struct wpa_scan_res *res = wpa_s->scan_res->res[i];
-			if (!os_memcmp(wpa_s->bssid, res->bssid, ETH_ALEN)) {
-				is_bssid_known = 1;
-				break;
-			}
-		}
-	}
+	/* TODO: store current BSS or BSS id in wpa_s */
+	if (!is_zero_ether_addr(wpa_s->bssid))
+		bss = wpa_bss_get_bssid(wpa_s, wpa_s->bssid);
 
-	if (is_bssid_known)
+	if (bss)
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/"
-			    WPAS_DBUS_BSSID_FORMAT,
-			    path, MAC2STR(wpa_s->bssid));
+			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
+			    path, bss->id);
 	else
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 
@@ -2465,15 +2447,7 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, array_iter;
-	size_t i;
-
-	/* Ensure we've actually got scan results to return */
-	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s) < 0) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bsss[dbus]: "
-			   "An error occurred getting scan results.");
-		return wpas_dbus_error_unknown_error(message, NULL);
-	}
+	struct wpa_bss *bss;
 
 	/* Create and initialize the return message */
 	if (message == NULL)
@@ -2504,8 +2478,7 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 	}
 
 	/* Loop through scan results and append each result's object path */
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		struct wpa_scan_res *res = wpa_s->scan_res->res[i];
+	dl_list_for_each(bss, &wpa_s->bss_id, struct wpa_bss, list_id) {
 		char *path;
 
 		path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
@@ -2518,14 +2491,10 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 						       NULL);
 			goto out;
 		}
-		/* Construct the object path for this BSS. Note that ':'
-		 * is not a valid character in dbus object paths.
-		 */
+		/* Construct the object path for this BSS. */
 		os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/"
-			    WPAS_DBUS_BSSID_FORMAT,
-			    wpas_dbus_get_path(wpa_s),
-			    MAC2STR(res->bssid));
+			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
+			    wpas_dbus_get_path(wpa_s), bss->id);
 		dbus_message_iter_append_basic(&array_iter,
 					       DBUS_TYPE_OBJECT_PATH, &path);
 		os_free(path);
@@ -2798,7 +2767,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, iter_dict, variant_iter;
 	const u8 *ie;
-	struct wpa_scan_res *res = find_scan_result(bss);
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
 
 	if (res == NULL)
 		return NULL;
@@ -2826,7 +2795,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 					     ETH_ALEN))
 		goto error;
 
-	ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
+	ie = wpa_bss_get_ie(res, WLAN_EID_SSID);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "SSID",
 						     (const char *) (ie + 2),
@@ -2834,7 +2803,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 		goto error;
 	}
 
-	ie = wpa_scan_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
+	ie = wpa_bss_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "WPAIE",
 						     (const char *) ie,
@@ -2842,7 +2811,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 			goto error;
 	}
 
-	ie = wpa_scan_get_ie(res, WLAN_EID_RSN);
+	ie = wpa_bss_get_ie(res, WLAN_EID_RSN);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "RSNIE",
 						     (const char *) ie,
@@ -2850,7 +2819,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 			goto error;
 	}
 
-	ie = wpa_scan_get_vendor_ie(res, WPS_IE_VENDOR_TYPE);
+	ie = wpa_bss_get_vendor_ie(res, WPS_IE_VENDOR_TYPE);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "WPSIE",
 						     (const char *) ie,
@@ -2876,7 +2845,7 @@ DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
 	    !wpa_dbus_dict_append_int32(&iter_dict, "Level", res->level))
 		goto error;
 	if (!wpa_dbus_dict_append_int32(&iter_dict, "MaxRate",
-					wpa_scan_get_max_rate(res) * 500000))
+					wpa_bss_get_max_rate(res) * 500000))
 		goto error;
 
 	if (!wpa_dbus_dict_close_write(&iter, &iter_dict))

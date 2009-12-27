@@ -22,7 +22,7 @@ struct network_handler_args {
 
 struct bss_handler_args {
 	struct wpa_supplicant *wpa_s;
-	u8 bssid[ETH_ALEN];
+	unsigned int id;
 };
 
 DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,

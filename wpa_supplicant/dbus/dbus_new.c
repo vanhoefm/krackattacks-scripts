@@ -2,6 +2,7 @@
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
  * Copyright (c) 2009, Witold Sowa <witold.sowa@gmail.com>
+ * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,10 +17,10 @@
 #include "includes.h"
 
 #include "common.h"
-#include "drivers/driver.h"
 #include "wps/wps.h"
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
+#include "../bss.h"
 #include "dbus_new_helpers.h"
 #include "dbus_dict_helpers.h"
 #include "dbus_new.h"
@@ -1242,12 +1243,13 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
  * wpas_dbus_unregister_bss - Unregister a scanned BSS from dbus
  * @wpa_s: wpa_supplicant interface structure
  * @bssid: scanned network bssid
+ * @id: unique BSS identifier
  * Returns: 0 on success, -1 on failure
  *
  * Unregisters BSS representing object from dbus
  */
 static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
-				    u8 bssid[ETH_ALEN])
+				    u8 bssid[ETH_ALEN], unsigned int id)
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
 	char *bss_obj_path;
@@ -1264,8 +1266,8 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 		return -1;
 
 	os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/" WPAS_DBUS_BSSID_FORMAT,
-		    wpas_dbus_get_path(wpa_s), MAC2STR(bssid));
+		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
+		    wpas_dbus_get_path(wpa_s), id);
 
 	if (wpa_dbus_unregister_object_per_iface(ctrl_iface, bss_obj_path)) {
 		wpa_printf(MSG_ERROR,
@@ -1286,12 +1288,13 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
  * wpas_dbus_register_bss - Register a scanned BSS with dbus
  * @wpa_s: wpa_supplicant interface structure
  * @bssid: scanned network bssid
+ * @id: unique BSS identifier
  * Returns: 0 on success, -1 on failure
  *
  * Registers BSS representing object with dbus
  */
 static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
-				  u8 bssid[ETH_ALEN])
+				  u8 bssid[ETH_ALEN], unsigned int id)
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
@@ -1311,8 +1314,8 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 		return -1;
 
 	os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/" WPAS_DBUS_BSSID_FORMAT,
-		    wpas_dbus_get_path(wpa_s), MAC2STR(bssid));
+		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
+		    wpas_dbus_get_path(wpa_s), id);
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
@@ -1328,7 +1331,7 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 		goto err;
 	}
 	arg->wpa_s = wpa_s;
-	os_memcpy(arg->bssid, bssid, ETH_ALEN);
+	arg->id = id;
 
 	/* Properties property */
 	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_BSSID,
@@ -1636,7 +1639,7 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
 	struct wpa_ssid *ssid;
-	size_t i;
+	struct wpa_bss *bss;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -1646,10 +1649,8 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	/* unregister all BSSs and networks from dbus */
-	for (i = 0; wpa_s->scan_res && i < wpa_s->scan_res->num; i++) {
-		wpas_dbus_unregister_bss(wpa_s,
-					 wpa_s->scan_res->res[i]->bssid);
-	}
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list)
+		wpas_dbus_unregister_bss(wpa_s, bss->bssid, bss->id);
 
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {

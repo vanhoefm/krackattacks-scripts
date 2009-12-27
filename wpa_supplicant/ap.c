@@ -16,6 +16,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #ifdef NEED_AP_MLME

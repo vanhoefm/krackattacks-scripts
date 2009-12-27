@@ -243,6 +243,7 @@ hostapd_alloc_bss_data(struct hostapd_iface *hapd_iface,
 int hostapd_setup_interface(struct hostapd_iface *iface);
 int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err);
 void hostapd_interface_deinit(struct hostapd_iface *iface);
+void hostapd_interface_free(struct hostapd_iface *iface);
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
 

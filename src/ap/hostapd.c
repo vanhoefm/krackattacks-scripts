@@ -822,6 +822,12 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 		hostapd_flush_old_stations(hapd);
 		hostapd_cleanup(hapd);
 	}
+}
+
+
+void hostapd_interface_free(struct hostapd_iface *iface)
+{
+	size_t j;
 	for (j = 0; j < iface->num_bss; j++)
 		os_free(iface->bss[j]);
 	hostapd_cleanup_iface(iface);

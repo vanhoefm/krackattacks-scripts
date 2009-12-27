@@ -223,6 +223,7 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 		return;
 
 	hostapd_interface_deinit(wpa_s->ap_iface);
+	hostapd_interface_free(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
 }
 

@@ -12,27 +12,28 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "eloop.h"
-#include "rsn_supp/wpa.h"
-#include "config.h"
-#include "eapol_supp/eapol_supp_sm.h"
-#include "wpa_supplicant_i.h"
-#include "driver_i.h"
-#include "ctrl_iface.h"
-#include "l2_packet/l2_packet.h"
-#include "rsn_supp/preauth.h"
-#include "rsn_supp/pmksa_cache.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "eap_peer/eap.h"
-#include "common/ieee802_11_defs.h"
-#include "wps_supplicant.h"
+#include "eapol_supp/eapol_supp_sm.h"
+#include "rsn_supp/wpa.h"
+#include "rsn_supp/preauth.h"
+#include "rsn_supp/pmksa_cache.h"
+#include "l2_packet/l2_packet.h"
 #include "wps/wps.h"
+#include "config.h"
+#include "wpa_supplicant_i.h"
+#include "driver_i.h"
+#include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "ap.h"
 #include "notify.h"
+#include "bss.h"
+#include "ctrl_iface.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -762,18 +763,16 @@ static char * wpa_supplicant_ie_txt(char *pos, char *end, const char *proto,
 	return pos;
 }
 
-static char * wpa_supplicant_wps_ie_txt(char *pos, char *end,
-					const struct wpa_scan_res *res)
-{
+
 #ifdef CONFIG_WPS
-	struct wpabuf *wps_ie;
+static char * wpa_supplicant_wps_ie_txt_buf(char *pos, char *end,
+					    struct wpabuf *wps_ie)
+{
 	int ret;
 	const char *txt;
 
-	wps_ie = wpa_scan_get_vendor_ie_multi(res, WPS_IE_VENDOR_TYPE);
 	if (wps_ie == NULL)
 		return pos;
-
 	if (wps_is_selected_pbc_registrar(wps_ie))
 		txt = "[WPS-PBC]";
 	else if (wps_is_selected_pin_registrar(wps_ie))
@@ -785,9 +784,34 @@ static char * wpa_supplicant_wps_ie_txt(char *pos, char *end,
 	if (ret >= 0 && ret < end - pos)
 		pos += ret;
 	wpabuf_free(wps_ie);
+	return pos;
+}
 #endif /* CONFIG_WPS */
 
+
+static char * wpa_supplicant_wps_ie_txt(char *pos, char *end,
+					const struct wpa_scan_res *res)
+{
+#ifdef CONFIG_WPS
+	struct wpabuf *wps_ie;
+	wps_ie = wpa_scan_get_vendor_ie_multi(res, WPS_IE_VENDOR_TYPE);
+	return wpa_supplicant_wps_ie_txt_buf(pos, end, wps_ie);
+#else /* CONFIG_WPS */
 	return pos;
+#endif /* CONFIG_WPS */
+}
+
+
+static char * wpa_supplicant_wps_ie_txt_bss(char *pos, char *end,
+					    const struct wpa_bss *bss)
+{
+#ifdef CONFIG_WPS
+	struct wpabuf *wps_ie;
+	wps_ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+	return wpa_supplicant_wps_ie_txt_buf(pos, end, wps_ie);
+#else /* CONFIG_WPS */
+	return pos;
+#endif /* CONFIG_WPS */
 }
 
 
@@ -1467,36 +1491,49 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 {
 	u8 bssid[ETH_ALEN];
 	size_t i;
-	struct wpa_scan_results *results;
-	struct wpa_scan_res *bss;
+	struct wpa_bss *bss;
 	int ret;
 	char *pos, *end;
 	const u8 *ie, *ie2;
 
-	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s) < 0)
-		return 0;
-
-	results = wpa_s->scan_res;
-	if (results == NULL)
-		return 0;
-
-	if (hwaddr_aton(cmd, bssid) == 0) {
-		for (i = 0; i < results->num; i++) {
-			if (os_memcmp(bssid, results->res[i]->bssid, ETH_ALEN)
-			    == 0)
-				break;
+	if (os_strcmp(cmd, "FIRST") == 0)
+		bss = dl_list_first(&wpa_s->bss, struct wpa_bss, list);
+	else if (os_strncmp(cmd, "ID-", 3) == 0) {
+		i = atoi(cmd + 3);
+		bss = wpa_bss_get_id(wpa_s, i);
+	} else if (os_strncmp(cmd, "NEXT-", 5) == 0) {
+		i = atoi(cmd + 5);
+		bss = wpa_bss_get_id(wpa_s, i);
+		if (bss) {
+			struct dl_list *next = bss->list_id.next;
+			if (next == &wpa_s->bss_id)
+				bss = NULL;
+			else
+				bss = dl_list_entry(next, struct wpa_bss,
+						    list_id);
 		}
-	} else
+	} else if (hwaddr_aton(cmd, bssid) == 0)
+		bss = wpa_bss_get_bssid(wpa_s, bssid);
+	else {
+		struct wpa_bss *tmp;
 		i = atoi(cmd);
+		bss = NULL;
+		dl_list_for_each(tmp, &wpa_s->bss_id, struct wpa_bss, list_id)
+		{
+			if (i-- == 0) {
+				bss = tmp;
+				break;
+			}
+		}
+	}
 
-	if (i >= results->num || results->res[i] == NULL)
-		return 0; /* no match found */
+	if (bss == NULL)
+		return 0;
 
-	bss = results->res[i];
 	pos = buf;
 	end = buf + buflen;
 	ret = os_snprintf(pos, end - pos,
+			  "id=%u\n"
 			  "bssid=" MACSTR "\n"
 			  "freq=%d\n"
 			  "beacon_int=%d\n"
@@ -1506,6 +1543,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 			  "level=%d\n"
 			  "tsf=%016llu\n"
 			  "ie=",
+			  bss->id,
 			  MAC2STR(bss->bssid), bss->freq, bss->beacon_int,
 			  bss->caps, bss->qual, bss->noise, bss->level,
 			  (unsigned long long) bss->tsf);
@@ -1531,13 +1569,13 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		return pos - buf;
 	pos += ret;
 
-	ie = wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
+	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 	if (ie)
 		pos = wpa_supplicant_ie_txt(pos, end, "WPA", ie, 2 + ie[1]);
-	ie2 = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+	ie2 = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	if (ie2)
 		pos = wpa_supplicant_ie_txt(pos, end, "WPA2", ie2, 2 + ie2[1]);
-	pos = wpa_supplicant_wps_ie_txt(pos, end, bss);
+	pos = wpa_supplicant_wps_ie_txt_bss(pos, end, bss);
 	if (!ie && !ie2 && bss->caps & IEEE80211_CAP_PRIVACY) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
 		if (ret < 0 || ret >= end - pos)
@@ -1556,9 +1594,8 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		return pos - buf;
 	pos += ret;
 
-	ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
 	ret = os_snprintf(pos, end - pos, "ssid=%s\n",
-			  ie ? wpa_ssid_txt(ie + 2, ie[1]) : "");
+			  wpa_ssid_txt(bss->ssid, bss->ssid_len));
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;

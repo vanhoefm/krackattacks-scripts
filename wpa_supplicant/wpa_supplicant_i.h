@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Internal definitions
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,6 +15,7 @@
 #ifndef WPA_SUPPLICANT_I_H
 #define WPA_SUPPLICANT_I_H
 
+#include "utils/list.h"
 #include "common/defs.h"
 
 extern const char *wpa_supplicant_version;
@@ -344,6 +345,10 @@ struct wpa_supplicant {
 #define WILDCARD_SSID_SCAN ((struct wpa_ssid *) 1)
 
 	struct wpa_scan_results *scan_res;
+	struct dl_list bss; /* struct wpa_bss::list */
+	size_t num_bss;
+	unsigned int bss_update_idx;
+	unsigned int bss_next_id;
 
 	struct wpa_driver_ops *driver;
 	int interface_removed; /* whether the network interface has been

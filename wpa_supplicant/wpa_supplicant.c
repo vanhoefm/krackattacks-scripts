@@ -44,6 +44,7 @@
 #include "ap.h"
 #include "notify.h"
 #include "bgscan.h"
+#include "bss.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -398,6 +399,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpa_scan_results_free(wpa_s->scan_res);
 	wpa_s->scan_res = NULL;
+#ifdef CONFIG_BSS_TABLE
+	wpa_bss_deinit(wpa_s);
+#endif /* CONFIG_BSS_TABLE */
 
 	wpa_supplicant_cancel_scan(wpa_s);
 	wpa_supplicant_cancel_auth_timeout(wpa_s);
@@ -1559,64 +1563,16 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 }
 
 
-static void notify_bss_changes(struct wpa_supplicant *wpa_s,
-			       u8 (*prev_bssids)[ETH_ALEN], int prev_num,
-			       struct wpa_scan_results *new)
-{
-	int new_num, i, j;
-
-	new_num = new != NULL ? new->num : 0;
-	if (prev_bssids == NULL)
-		prev_num = 0;
-
-	for (i = 0; i < prev_num; i++) {
-		for (j = 0; j < new_num; j++) {
-			if (!os_memcmp(prev_bssids[i], new->res[j]->bssid,
-				       ETH_ALEN))
-				break;
-		}
-		if (j == new_num)
-			wpas_notify_bss_removed(wpa_s, prev_bssids[i]);
-	}
-	for (i = 0; i < new_num; i++) {
-		for (j = 0; j < prev_num; j++) {
-			if (!os_memcmp(new->res[i]->bssid, prev_bssids[j],
-				       ETH_ALEN))
-				break;
-		}
-		if (j == prev_num)
-			wpas_notify_bss_added(wpa_s, new->res[i]->bssid);
-	}
-}
-
-
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
  * Returns: 0 on success, -1 on failure
  *
- * This function is request the current scan results from the driver and stores
- * a local copy of the results in wpa_s->scan_res.
+ * This function request the current scan results from the driver and updates
+ * the local BSS list wpa_s->bss.
  */
 int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 {
-	int ret, i, prev_scan_res_num;
-	u8 (*prev_scan_bssids)[ETH_ALEN];
-
-	prev_scan_res_num = wpa_s->scan_res ? wpa_s->scan_res->num : 0;
-	prev_scan_bssids = os_malloc(prev_scan_res_num * ETH_ALEN);
-
-	if (prev_scan_bssids) {
-		for (i = 0; i < prev_scan_res_num; i++) {
-			os_memcpy(prev_scan_bssids[i],
-				  wpa_s->scan_res->res[i]->bssid, ETH_ALEN);
-		}
-	} else {
-		wpa_printf(MSG_WARNING, "Not enough memory for old scan "
-			   "results list");
-		prev_scan_res_num = 0;
-	}
-
 	wpa_scan_results_free(wpa_s->scan_res);
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		wpa_s->scan_res = ieee80211_sta_get_scan_results(wpa_s);
@@ -1624,17 +1580,23 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 		wpa_s->scan_res = wpa_drv_get_scan_results2(wpa_s);
 	if (wpa_s->scan_res == NULL) {
 		wpa_printf(MSG_DEBUG, "Failed to get scan results");
-		ret = -1;
-	} else {
-		ret = 0;
-		wpa_scan_sort_results(wpa_s->scan_res);
+		return -1;
 	}
 
-	notify_bss_changes(wpa_s, prev_scan_bssids, prev_scan_res_num,
-			   wpa_s->scan_res);
-	os_free(prev_scan_bssids);
+	wpa_scan_sort_results(wpa_s->scan_res);
 
-	return ret;
+#ifdef CONFIG_BSS_TABLE
+	{
+		size_t i;
+		wpa_bss_update_start(wpa_s);
+		for (i = 0; i < wpa_s->scan_res->num; i++)
+			wpa_bss_update_scan_res(wpa_s,
+						wpa_s->scan_res->res[i]);
+		wpa_bss_update_end(wpa_s);
+	}
+#endif /* CONFIG_BSS_TABLE */
+
+	return 0;
 }
 
 
@@ -2136,6 +2098,11 @@ next_driver:
 		return -1;
 	}
 #endif /* CONFIG_IBSS_RSN */
+
+#ifdef CONFIG_BSS_TABLE
+	if (wpa_bss_init(wpa_s) < 0)
+		return -1;
+#endif /* CONFIG_BSS_TABLE */
 
 	return 0;
 }

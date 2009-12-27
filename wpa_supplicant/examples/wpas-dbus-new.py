@@ -32,6 +32,37 @@ def list_interfaces(wpas_obj):
 def stateChanged(newState, oldState):
 	print "StateChanged(%s -> %s)" % (oldState, newState)
 
+def showBss(bss):
+	net_obj = bus.get_object(WPAS_DBUS_SERVICE, bss)
+	net = dbus.Interface(net_obj, WPAS_DBUS_BSS_INTERFACE)
+	props = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Properties',
+			    dbus_interface=dbus.PROPERTIES_IFACE)
+	#print props
+
+	# Convert the byte-array for SSID and BSSID to printable strings
+	bssid = ""
+	for item in props['BSSID']:
+		bssid = bssid + ":%02x" % item
+	bssid = bssid[1:]
+	ssid = byte_array_to_string(props["SSID"])
+
+	wpa = "no"
+	if props.has_key("WPAIE"):
+		wpa = "yes"
+	wpa2 = "no"
+	if props.has_key("RSNIE"):
+		wpa2 = "yes"
+	freq = 0
+	if props.has_key("Frequency"):
+		freq = props["Frequency"]
+	caps = props["Capabilities"]
+	qual = props["Quality"]
+	level = props["Level"]
+	noise = props["Noise"]
+	maxrate = props["MaxRate"] / 1000000
+
+	print "  %s  ::  ssid='%s'  wpa=%s  wpa2=%s  quality=%d%%  rate=%d  freq=%d" % (bssid, ssid, wpa, wpa2, qual, maxrate, freq)
+
 def scanDone(success):
 	gobject.MainLoop().quit()
 	print "Scan done: success=%s" % success
@@ -42,35 +73,14 @@ def scanDone(success):
 	print "Scanned wireless networks:"
 	for opath in res:
 		print opath
-		net_obj = bus.get_object(WPAS_DBUS_SERVICE, opath)
-		net = dbus.Interface(net_obj, WPAS_DBUS_BSS_INTERFACE)
-		props = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Properties',
-				    dbus_interface=dbus.PROPERTIES_IFACE)
-		#print props
+		showBss(opath)
 
-		# Convert the byte-array for SSID and BSSID to printable strings
-		bssid = ""
-		for item in props['BSSID']:
-			bssid = bssid + ":%02x" % item
-		bssid = bssid[1:]
-		ssid = byte_array_to_string(props["SSID"])
+def bssAdded(bss):
+	print "BSS added: %s" % (bss)
+	showBss(bss)
 
-		wpa = "no"
-		if props.has_key("WPAIE"):
-			wpa = "yes"
-		wpa2 = "no"
-		if props.has_key("RSNIE"):
-			wpa2 = "yes"
-		freq = 0
-		if props.has_key("Frequency"):
-			freq = props["Frequency"]
-		caps = props["Capabilities"]
-		qual = props["Quality"]
-		level = props["Level"]
-		noise = props["Noise"]
-		maxrate = props["MaxRate"] / 1000000
-
-		print "  %s  ::  ssid='%s'  wpa=%s  wpa2=%s  quality=%d%%  rate=%d  freq=%d" % (bssid, ssid, wpa, wpa2, qual, maxrate, freq)
+def bssRemoved(bss):
+	print "BSS removed: %s" % (bss)
 
 def main():
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
@@ -81,6 +91,12 @@ def main():
 	bus.add_signal_receiver(scanDone,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
 				signal_name="ScanDone")
+	bus.add_signal_receiver(bssAdded,
+				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
+				signal_name="BSSAdded")
+	bus.add_signal_receiver(bssRemoved,
+				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
+				signal_name="BSSRemoved")
 	bus.add_signal_receiver(stateChanged,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
 				signal_name="StateChanged")

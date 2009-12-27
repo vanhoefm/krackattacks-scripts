@@ -18,7 +18,7 @@
 #include <winsock2.h>
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-#include "includes.h"
+#include "utils/includes.h"
 
 #ifndef CONFIG_NATIVE_WINDOWS
 #include <sys/un.h>
@@ -27,12 +27,13 @@
 #define DRIVER_TEST_UNIX
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-#include "common.h"
-#include "driver.h"
-#include "l2_packet/l2_packet.h"
-#include "eloop.h"
-#include "crypto/sha1.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "utils/trace.h"
 #include "common/ieee802_11_defs.h"
+#include "crypto/sha1.h"
+#include "l2_packet/l2_packet.h"
+#include "driver.h"
 
 
 struct test_client_socket {
@@ -66,6 +67,7 @@ struct wpa_driver_test_global {
 struct wpa_driver_test_data {
 	struct wpa_driver_test_global *global;
 	void *ctx;
+	WPA_TRACE_REF(ctx);
 	char ifname[IFNAMSIZ + 1];
 	u8 own_addr[ETH_ALEN];
 	int test_socket;
@@ -1128,6 +1130,7 @@ static struct wpa_driver_test_data * test_alloc_data(void *ctx,
 	}
 
 	drv->ctx = ctx;
+	wpa_trace_add_ref(drv, ctx, ctx);
 	os_strlcpy(drv->ifname, ifname, IFNAMSIZ);
 
 	/* Generate a MAC address to help testing with multiple STAs */
@@ -1972,6 +1975,7 @@ static void wpa_driver_test_deinit(void *priv)
 	for (i = 0; i < MAX_SCAN_RESULTS; i++)
 		os_free(drv->scanres[i]);
 	os_free(drv->probe_req_ie);
+	wpa_trace_remove_ref(drv, ctx, drv->ctx);
 	os_free(drv);
 }
 

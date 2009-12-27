@@ -346,6 +346,7 @@ struct wpa_supplicant {
 
 	struct wpa_scan_results *scan_res;
 	struct dl_list bss; /* struct wpa_bss::list */
+	struct dl_list bss_id; /* struct wpa_bss::list_id */
 	size_t num_bss;
 	unsigned int bss_update_idx;
 	unsigned int bss_next_id;

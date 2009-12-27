@@ -25,6 +25,7 @@
 /**
  * struct wpa_bss - BSS table
  * @list: List entry for struct wpa_supplicant::bss
+ * @list_id: List entry for struct wpa_supplicant::bss_id
  * @id: Unique identifier for this BSS entry
  * @scan_miss_count: Number of counts without seeing this BSS
  * @flags: information flags about the BSS/IBSS (WPA_BSS_*)
@@ -45,6 +46,7 @@
  */
 struct wpa_bss {
 	struct dl_list list;
+	struct dl_list list_id;
 	unsigned int id;
 	unsigned int scan_miss_count;
 	unsigned int last_update_idx;
@@ -70,5 +72,12 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 void wpa_bss_update_end(struct wpa_supplicant *wpa_s);
 int wpa_bss_init(struct wpa_supplicant *wpa_s);
 void wpa_bss_deinit(struct wpa_supplicant *wpa_s);
+struct wpa_bss * wpa_bss_get_bssid(struct wpa_supplicant *wpa_s,
+				   const u8 *bssid);
+struct wpa_bss * wpa_bss_get_id(struct wpa_supplicant *wpa_s, unsigned int id);
+const u8 * wpa_bss_get_ie(const struct wpa_bss *bss, u8 ie);
+const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type);
+struct wpabuf * wpa_bss_get_vendor_ie_multi(const struct wpa_bss *bss,
+					    u32 vendor_type);
 
 #endif /* BSS_H */

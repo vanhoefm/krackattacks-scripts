@@ -55,6 +55,7 @@
 static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	dl_list_del(&bss->list);
+	dl_list_del(&bss->list_id);
 	wpa_s->num_bss--;
 	wpa_printf(MSG_DEBUG, "BSS: Remove id %u BSSID " MACSTR " SSID '%s'",
 		   bss->id, MAC2STR(bss->bssid),
@@ -122,6 +123,7 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 	os_memcpy(bss + 1, res + 1, res->ie_len);
 
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
+	dl_list_add_tail(&wpa_s->bss_id, &bss->list_id);
 	wpa_s->num_bss++;
 	wpa_printf(MSG_DEBUG, "BSS: Add new id %u BSSID " MACSTR " SSID '%s'",
 		   bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
@@ -247,6 +249,7 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 int wpa_bss_init(struct wpa_supplicant *wpa_s)
 {
 	dl_list_init(&wpa_s->bss);
+	dl_list_init(&wpa_s->bss_id);
 	eloop_register_timeout(WPA_BSS_EXPIRATION_PERIOD, 0,
 			       wpa_bss_timeout, wpa_s, NULL);
 	return 0;
@@ -259,4 +262,97 @@ void wpa_bss_deinit(struct wpa_supplicant *wpa_s)
 	eloop_cancel_timeout(wpa_bss_timeout, wpa_s, NULL);
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list)
 		wpa_bss_remove(wpa_s, bss);
+}
+
+
+struct wpa_bss * wpa_bss_get_bssid(struct wpa_supplicant *wpa_s,
+				   const u8 *bssid)
+{
+	struct wpa_bss *bss;
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
+			return bss;
+	}
+	return NULL;
+}
+
+
+struct wpa_bss * wpa_bss_get_id(struct wpa_supplicant *wpa_s, unsigned int id)
+{
+	struct wpa_bss *bss;
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (bss->id == id)
+			return bss;
+	}
+	return NULL;
+}
+
+
+const u8 * wpa_bss_get_ie(const struct wpa_bss *bss, u8 ie)
+{
+	const u8 *end, *pos;
+
+	pos = (const u8 *) (bss + 1);
+	end = pos + bss->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == ie)
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
+const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type)
+{
+	const u8 *end, *pos;
+
+	pos = (const u8 *) (bss + 1);
+	end = pos + bss->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
+struct wpabuf * wpa_bss_get_vendor_ie_multi(const struct wpa_bss *bss,
+					    u32 vendor_type)
+{
+	struct wpabuf *buf;
+	const u8 *end, *pos;
+
+	buf = wpabuf_alloc(bss->ie_len);
+	if (buf == NULL)
+		return NULL;
+
+	pos = (const u8 *) (bss + 1);
+	end = pos + bss->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			wpabuf_put_data(buf, pos + 2 + 4, pos[1] - 4);
+		pos += 2 + pos[1];
+	}
+
+	if (wpabuf_len(buf) == 0) {
+		wpabuf_free(buf);
+		buf = NULL;
+	}
+
+	return buf;
 }

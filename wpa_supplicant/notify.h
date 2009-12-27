@@ -47,8 +47,10 @@ void wpas_notify_network_added(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid);
 void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *ssid);
-void wpas_notify_bss_added(struct wpa_supplicant *wpa_s, u8 bssid[]);
-void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s, u8 bssid[]);
+void wpas_notify_bss_added(struct wpa_supplicant *wpa_s, u8 bssid[],
+			   unsigned int id);
+void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s, u8 bssid[],
+			     unsigned int id);
 void wpas_notify_blob_added(struct wpa_supplicant *wpa_s, const char *name);
 void wpas_notify_blob_removed(struct wpa_supplicant *wpa_s, const char *name);
 

@@ -60,7 +60,7 @@ static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	wpa_printf(MSG_DEBUG, "BSS: Remove id %u BSSID " MACSTR " SSID '%s'",
 		   bss->id, MAC2STR(bss->bssid),
 		   wpa_ssid_txt(bss->ssid, bss->ssid_len));
-	wpas_notify_bss_removed(wpa_s, bss->bssid);
+	wpas_notify_bss_removed(wpa_s, bss->bssid, bss->id);
 	os_free(bss);
 }
 
@@ -127,7 +127,7 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 	wpa_s->num_bss++;
 	wpa_printf(MSG_DEBUG, "BSS: Add new id %u BSSID " MACSTR " SSID '%s'",
 		   bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
-	wpas_notify_bss_added(wpa_s, res->bssid);
+	wpas_notify_bss_added(wpa_s, bss->bssid, bss->id);
 	if (wpa_s->num_bss > WPA_BSS_MAX_COUNT) {
 		/* Remove the oldest entry */
 		wpa_bss_remove(wpa_s, dl_list_first(&wpa_s->bss,

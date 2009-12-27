@@ -12,9 +12,10 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
+#include "common/wpa_ctrl.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "wps_supplicant.h"
@@ -239,20 +240,24 @@ void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 
 
 void wpas_notify_bss_added(struct wpa_supplicant *wpa_s,
-				 u8 bssid[])
+			   u8 bssid[], unsigned int id)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
 		cbs->register_bss(wpa_s, bssid);
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_BSS_ADDED "%u " MACSTR,
+		     id, MAC2STR(bssid));
 }
 
 
 void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s,
-				 u8 bssid[])
+			     u8 bssid[], unsigned int id)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
 		cbs->unregister_bss(wpa_s, bssid);
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_BSS_REMOVED "%u " MACSTR,
+		     id, MAC2STR(bssid));
 }
 
 

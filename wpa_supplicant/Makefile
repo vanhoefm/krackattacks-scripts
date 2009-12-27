@@ -40,6 +40,7 @@ install: all
 
 OBJS = config.o
 OBJS += notify.o
+OBJS += bss.o
 OBJS += eap_register.o
 OBJS += ../src/utils/common.o
 OBJS += ../src/utils/wpa_debug.o
@@ -1161,11 +1162,6 @@ OBJS += ../src/drivers/scan_helpers.o
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
 OBJS_p += $(SHA1OBJS)
-
-ifdef CONFIG_BSS_TABLE
-CFLAGS += -DCONFIG_BSS_TABLE
-OBJS += bss.o
-endif
 
 ifdef CONFIG_BGSCAN_SIMPLE
 CFLAGS += -DCONFIG_BGSCAN_SIMPLE

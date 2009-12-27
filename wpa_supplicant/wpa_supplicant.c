@@ -399,9 +399,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpa_scan_results_free(wpa_s->scan_res);
 	wpa_s->scan_res = NULL;
-#ifdef CONFIG_BSS_TABLE
 	wpa_bss_deinit(wpa_s);
-#endif /* CONFIG_BSS_TABLE */
 
 	wpa_supplicant_cancel_scan(wpa_s);
 	wpa_supplicant_cancel_auth_timeout(wpa_s);
@@ -1573,6 +1571,8 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
  */
 int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 {
+	size_t i;
+
 	wpa_scan_results_free(wpa_s->scan_res);
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		wpa_s->scan_res = ieee80211_sta_get_scan_results(wpa_s);
@@ -1585,16 +1585,10 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 
 	wpa_scan_sort_results(wpa_s->scan_res);
 
-#ifdef CONFIG_BSS_TABLE
-	{
-		size_t i;
-		wpa_bss_update_start(wpa_s);
-		for (i = 0; i < wpa_s->scan_res->num; i++)
-			wpa_bss_update_scan_res(wpa_s,
-						wpa_s->scan_res->res[i]);
-		wpa_bss_update_end(wpa_s);
-	}
-#endif /* CONFIG_BSS_TABLE */
+	wpa_bss_update_start(wpa_s);
+	for (i = 0; i < wpa_s->scan_res->num; i++)
+		wpa_bss_update_scan_res(wpa_s, wpa_s->scan_res->res[i]);
+	wpa_bss_update_end(wpa_s);
 
 	return 0;
 }
@@ -2099,10 +2093,8 @@ next_driver:
 	}
 #endif /* CONFIG_IBSS_RSN */
 
-#ifdef CONFIG_BSS_TABLE
 	if (wpa_bss_init(wpa_s) < 0)
 		return -1;
-#endif /* CONFIG_BSS_TABLE */
 
 	return 0;
 }

@@ -1071,11 +1071,14 @@ void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 		if (!ie)
 			continue;
 		if (wps_is_selected_pbc_registrar(ie))
-			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_PBC);
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     WPS_EVENT_AP_AVAILABLE_PBC);
 		else if (wps_is_selected_pin_registrar(ie))
-			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_PIN);
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     WPS_EVENT_AP_AVAILABLE_PIN);
 		else
-			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE);
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     WPS_EVENT_AP_AVAILABLE);
 		wpabuf_free(ie);
 		break;
 	}

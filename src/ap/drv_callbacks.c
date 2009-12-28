@@ -378,12 +378,18 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 #endif /* HOSTAPD */
 
 
-void hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
+int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 			 const u8 *ie, size_t ie_len)
 {
 	size_t i;
+	int ret = 0;
 
-	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
-		hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
-					sa, ie, ie_len);
+	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
+		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
+					    sa, ie, ie_len) > 0) {
+			ret = 1;
+			break;
+		}
+	}
+	return ret;
 }

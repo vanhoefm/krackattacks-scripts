@@ -29,7 +29,7 @@ struct ieee80211_ht_capabilities;
 struct full_dynamic_vlan;
 
 struct hostapd_probereq_cb {
-	void (*cb)(void *ctx, const u8 *sa, const u8 *ie, size_t ie_len);
+	int (*cb)(void *ctx, const u8 *sa, const u8 *ie, size_t ie_len);
 	void *ctx;
 };
 
@@ -249,8 +249,8 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,
-				 void (*cb)(void *ctx, const u8 *sa,
-					    const u8 *ie, size_t ie_len),
+				 int (*cb)(void *ctx, const u8 *sa,
+					   const u8 *ie, size_t ie_len),
 				 void *ctx);
 void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr);
 

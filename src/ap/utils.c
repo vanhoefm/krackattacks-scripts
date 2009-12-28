@@ -21,8 +21,8 @@
 
 
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,
-				 void (*cb)(void *ctx, const u8 *sa,
-					    const u8 *ie, size_t ie_len),
+				 int (*cb)(void *ctx, const u8 *sa,
+					   const u8 *ie, size_t ie_len),
 				 void *ctx)
 {
 	struct hostapd_probereq_cb *n;

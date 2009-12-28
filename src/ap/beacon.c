@@ -209,8 +209,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
 
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
-		hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
-					mgmt->sa, ie, ie_len);
+		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
+					    mgmt->sa, ie, ie_len) > 0)
+			return;
 
 	if (!hapd->iconf->send_probe_response)
 		return;

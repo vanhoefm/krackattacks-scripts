@@ -39,8 +39,8 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd);
 #endif /* CONFIG_WPS_UPNP */
 
-static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
-				     const u8 *ie, size_t ie_len);
+static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
+				    const u8 *ie, size_t ie_len);
 
 
 static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
@@ -738,18 +738,18 @@ error:
 #endif /* CONFIG_WPS_OOB */
 
 
-static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
-				     const u8 *ie, size_t ie_len)
+static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
+				    const u8 *ie, size_t ie_len)
 {
 	struct hostapd_data *hapd = ctx;
 	struct wpabuf *wps_ie;
 
 	if (hapd->wps == NULL)
-		return;
+		return 0;
 
 	wps_ie = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
 	if (wps_ie == NULL)
-		return;
+		return 0;
 
 	if (wpabuf_len(wps_ie) > 0) {
 		wps_registrar_probe_req_rx(hapd->wps->registrar, addr, wps_ie);
@@ -763,6 +763,8 @@ static void hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 	}
 
 	wpabuf_free(wps_ie);
+
+	return 0;
 }
 
 

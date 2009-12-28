@@ -2374,6 +2374,7 @@ static struct hostapd_hw_modes *
 wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 {
 	struct hostapd_hw_modes *modes;
+	size_t i;
 
 	*num_modes = 3;
 	*flags = 0;
@@ -2381,46 +2382,72 @@ wpa_driver_test_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 	if (modes == NULL)
 		return NULL;
 	modes[0].mode = HOSTAPD_MODE_IEEE80211G;
-	modes[0].num_channels = 1;
-	modes[0].num_rates = 1;
-	modes[0].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[0].rates = os_zalloc(sizeof(int));
+	modes[0].num_channels = 11;
+	modes[0].num_rates = 12;
+	modes[0].channels =
+		os_zalloc(11 * sizeof(struct hostapd_channel_data));
+	modes[0].rates = os_zalloc(modes[0].num_rates * sizeof(int));
 	if (modes[0].channels == NULL || modes[0].rates == NULL)
 		goto fail;
-	modes[0].channels[0].chan = 1;
-	modes[0].channels[0].freq = 2412;
-	modes[0].channels[0].flag = 0;
+	for (i = 0; i < 11; i++) {
+		modes[0].channels[i].chan = i + 1;
+		modes[0].channels[i].freq = 2412 + 5 * i;
+		modes[0].channels[i].flag = 0;
+	}
 	modes[0].rates[0] = 10;
+	modes[0].rates[1] = 20;
+	modes[0].rates[2] = 55;
+	modes[0].rates[3] = 110;
+	modes[0].rates[4] = 60;
+	modes[0].rates[5] = 90;
+	modes[0].rates[6] = 120;
+	modes[0].rates[7] = 180;
+	modes[0].rates[8] = 240;
+	modes[0].rates[9] = 360;
+	modes[0].rates[10] = 480;
+	modes[0].rates[11] = 540;
 
 	modes[1].mode = HOSTAPD_MODE_IEEE80211B;
-	modes[1].num_channels = 1;
-	modes[1].num_rates = 1;
-	modes[1].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[1].rates = os_zalloc(sizeof(int));
+	modes[1].num_channels = 11;
+	modes[1].num_rates = 4;
+	modes[1].channels =
+		os_zalloc(11 * sizeof(struct hostapd_channel_data));
+	modes[1].rates = os_zalloc(modes[1].num_rates * sizeof(int));
 	if (modes[1].channels == NULL || modes[1].rates == NULL)
 		goto fail;
-	modes[1].channels[0].chan = 1;
-	modes[1].channels[0].freq = 2412;
-	modes[1].channels[0].flag = 0;
+	for (i = 0; i < 11; i++) {
+		modes[1].channels[i].chan = i + 1;
+		modes[1].channels[i].freq = 2412 + 5 * i;
+		modes[1].channels[i].flag = 0;
+	}
 	modes[1].rates[0] = 10;
+	modes[1].rates[1] = 20;
+	modes[1].rates[2] = 55;
+	modes[1].rates[3] = 110;
 
 	modes[2].mode = HOSTAPD_MODE_IEEE80211A;
 	modes[2].num_channels = 1;
-	modes[2].num_rates = 1;
+	modes[2].num_rates = 8;
 	modes[2].channels = os_zalloc(sizeof(struct hostapd_channel_data));
-	modes[2].rates = os_zalloc(sizeof(int));
+	modes[2].rates = os_zalloc(modes[2].num_rates * sizeof(int));
 	if (modes[2].channels == NULL || modes[2].rates == NULL)
 		goto fail;
 	modes[2].channels[0].chan = 60;
 	modes[2].channels[0].freq = 5300;
 	modes[2].channels[0].flag = 0;
 	modes[2].rates[0] = 60;
+	modes[2].rates[1] = 90;
+	modes[2].rates[2] = 120;
+	modes[2].rates[3] = 180;
+	modes[2].rates[4] = 240;
+	modes[2].rates[5] = 360;
+	modes[2].rates[6] = 480;
+	modes[2].rates[7] = 540;
 
 	return modes;
 
 fail:
 	if (modes) {
-		size_t i;
 		for (i = 0; i < *num_modes; i++) {
 			os_free(modes[i].channels);
 			os_free(modes[i].rates);

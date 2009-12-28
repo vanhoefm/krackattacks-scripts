@@ -25,7 +25,7 @@ struct wpabuf_trace {
 	unsigned int magic;
 };
 
-struct wpabuf_trace * wpabuf_get_trace(const struct wpabuf *buf)
+static struct wpabuf_trace * wpabuf_get_trace(const struct wpabuf *buf)
 {
 	return (struct wpabuf_trace *)
 		((const u8 *) buf - sizeof(struct wpabuf_trace));

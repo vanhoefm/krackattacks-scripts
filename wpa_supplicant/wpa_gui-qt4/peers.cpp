@@ -45,7 +45,8 @@ enum peer_type {
 	PEER_TYPE_WPS_PIN_NEEDED,
 	PEER_TYPE_WPS_ER_AP,
 	PEER_TYPE_WPS_ER_AP_UNCONFIGURED,
-	PEER_TYPE_WPS_ER_ENROLLEE
+	PEER_TYPE_WPS_ER_ENROLLEE,
+	PEER_TYPE_WPS_ENROLLEE
 };
 
 
@@ -122,6 +123,9 @@ QString Peers::ItemType(int type)
 	case PEER_TYPE_WPS_ER_ENROLLEE:
 		title = tr("ER: WPS Enrollee");
 		break;
+	case PEER_TYPE_WPS_ENROLLEE:
+		title = tr("WPS Enrollee");
+		break;
 	}
 	return title;
 }
@@ -148,7 +152,8 @@ void Peers::context_menu(const QPoint &pos)
 		if ((type == PEER_TYPE_ASSOCIATED_STATION ||
 		     type == PEER_TYPE_AP_WPS ||
 		     type == PEER_TYPE_WPS_PIN_NEEDED ||
-		     type == PEER_TYPE_WPS_ER_ENROLLEE) &&
+		     type == PEER_TYPE_WPS_ER_ENROLLEE ||
+		     type == PEER_TYPE_WPS_ENROLLEE) &&
 		    (config_methods == -1 || (config_methods & 0x010c))) {
 			menu->addAction(tr("Enter WPS PIN"), this,
 					SLOT(enter_pin()));
@@ -160,7 +165,8 @@ void Peers::context_menu(const QPoint &pos)
 		}
 
 		if ((type == PEER_TYPE_ASSOCIATED_STATION ||
-		     type == PEER_TYPE_WPS_ER_ENROLLEE) &&
+		     type == PEER_TYPE_WPS_ER_ENROLLEE ||
+		     type == PEER_TYPE_WPS_ENROLLEE) &&
 		    config_methods >= 0 && (config_methods & 0x0080)) {
 			menu->addAction(tr("Enroll (PBC)"), this,
 					SLOT(connect_pbc()));
@@ -644,6 +650,71 @@ void Peers::event_notify(WpaMsg msg)
 		remove_enrollee_uuid(items[1]);
 		return;
 	}
+
+	if (text.startsWith(WPS_EVENT_ENROLLEE_SEEN)) {
+		/* TODO: need to time out this somehow or remove on successful
+		 * WPS run, etc. */
+		/*
+		 * WPS-ENROLLEE-SEEN 02:00:00:00:01:00
+		 * 572cf82f-c957-5653-9b16-b5cfb298abf1 1-0050F204-1 0x80 4 1
+		 * [Wireless Client]
+		 * (MAC addr, UUID-E, pri dev type, config methods,
+		 * dev passwd id, request type, [dev name])
+		 */
+		QStringList items = text.split(' ');
+		if (items.size() < 7)
+			return;
+		QString addr = items[1];
+		QString uuid = items[2];
+		QString pri_dev_type = items[3];
+		int config_methods = items[4].toInt(0, 0);
+		int dev_passwd_id = items[5].toInt();
+		QString name;
+
+		int pos = text.indexOf('[');
+		if (pos >= 0) {
+			int pos2 = text.lastIndexOf(']');
+			if (pos2 >= pos) {
+				QStringList items2 =
+					text.mid(pos + 1, pos2 - pos - 1).
+					split('|');
+				name = items2[0];
+			}
+		}
+		if (name.isEmpty())
+			name = addr;
+
+		QStandardItem *item;
+
+		item = find_uuid(uuid);
+		if (item) {
+			QVariant var = item->data(peer_role_config_methods);
+			QVariant var2 = item->data(peer_role_dev_passwd_id);
+			if ((var.isValid() && config_methods != var.toInt()) ||
+			    (var2.isValid() && dev_passwd_id != var2.toInt()))
+				remove_enrollee_uuid(uuid);
+			else
+				return;
+		}
+
+		item = new QStandardItem(*laptop_icon, name);
+		if (item) {
+			item->setData(uuid, peer_role_uuid);
+			item->setData(addr, peer_role_address);
+			item->setData(PEER_TYPE_WPS_ENROLLEE,
+				      peer_role_type);
+			item->setToolTip(ItemType(PEER_TYPE_WPS_ENROLLEE));
+			item->setData(items.join(QString("\n")),
+				      peer_role_details);
+			item->setData(pri_dev_type, peer_role_pri_dev_type);
+			item->setData(config_methods,
+				      peer_role_config_methods);
+			item->setData(dev_passwd_id, peer_role_dev_passwd_id);
+			model.appendRow(item);
+		}
+
+		return;
+	}
 }
 
 
@@ -673,8 +744,11 @@ void Peers::remove_enrollee_uuid(QString uuid)
 					  peer_role_uuid, uuid);
 	for (int i = 0; i < lst.size(); i++) {
 		QStandardItem *item = model.itemFromIndex(lst[i]);
-		if (item && item->data(peer_role_type).toInt() ==
-		    PEER_TYPE_WPS_ER_ENROLLEE)
+		if (item == NULL)
+			continue;
+		int type = item->data(peer_role_type).toInt();
+		if (type == PEER_TYPE_WPS_ER_ENROLLEE ||
+		    type == PEER_TYPE_WPS_ENROLLEE)
 			model.removeRow(lst[i].row());
 	}
 }

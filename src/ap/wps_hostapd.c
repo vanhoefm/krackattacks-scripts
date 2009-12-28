@@ -154,6 +154,29 @@ static void hostapd_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 }
 
 
+static void hostapd_wps_enrollee_seen_cb(void *ctx, const u8 *addr,
+					 const u8 *uuid_e,
+					 const u8 *pri_dev_type,
+					 u16 config_methods,
+					 u16 dev_password_id, u8 request_type,
+					 const char *dev_name)
+{
+	struct hostapd_data *hapd = ctx;
+	char uuid[40];
+	char devtype[WPS_DEV_TYPE_BUFSIZE];
+	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
+		return;
+	if (dev_name == NULL)
+		dev_name = "";
+	wpa_msg_ctrl(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ENROLLEE_SEEN MACSTR
+		     " %s %s 0x%x %u %u [%s]",
+		     MAC2STR(addr), uuid,
+		     wps_dev_type_bin2str(pri_dev_type, devtype,
+					  sizeof(devtype)),
+		     config_methods, dev_password_id, request_type, dev_name);
+}
+
+
 static int str_starts(const char *str, const char *start)
 {
 	return os_strncmp(str, start, os_strlen(start)) == 0;
@@ -596,6 +619,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	cfg.set_ie_cb = hostapd_wps_set_ie_cb;
 	cfg.pin_needed_cb = hostapd_wps_pin_needed_cb;
 	cfg.reg_success_cb = hostapd_wps_reg_success_cb;
+	cfg.enrollee_seen_cb = hostapd_wps_enrollee_seen_cb;
 	cfg.cb_ctx = hapd;
 	cfg.skip_cred_build = conf->skip_cred_build;
 	cfg.extra_cred = conf->extra_cred;

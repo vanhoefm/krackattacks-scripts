@@ -278,6 +278,22 @@ struct wps_registrar_config {
 			       u16 sel_reg_config_methods);
 
 	/**
+	 * enrollee_seen_cb - Callback for reporting Enrollee based on ProbeReq
+	 * @ctx: Higher layer context data (cb_ctx)
+	 * @addr: MAC address of the Enrollee
+	 * @uuid_e: UUID of the Enrollee
+	 * @pri_dev_type: Primary device type
+	 * @config_methods: Config Methods
+	 * @dev_password_id: Device Password ID
+	 * @request_type: Request Type
+	 * @dev_name: Device Name (if available)
+	 */
+	void (*enrollee_seen_cb)(void *ctx, const u8 *addr, const u8 *uuid_e,
+				 const u8 *pri_dev_type, u16 config_methods,
+				 u16 dev_password_id, u8 request_type,
+				 const char *dev_name);
+
+	/**
 	 * cb_ctx: Higher layer context data for Registrar callbacks
 	 */
 	void *cb_ctx;

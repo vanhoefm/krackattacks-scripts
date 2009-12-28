@@ -107,6 +107,10 @@ struct wps_registrar {
 			       const u8 *uuid_e);
 	void (*set_sel_reg_cb)(void *ctx, int sel_reg, u16 dev_passwd_id,
 			       u16 sel_reg_config_methods);
+	void (*enrollee_seen_cb)(void *ctx, const u8 *addr, const u8 *uuid_e,
+				 const u8 *pri_dev_type, u16 config_methods,
+				 u16 dev_password_id, u8 request_type,
+				 const char *dev_name);
 	void *cb_ctx;
 
 	struct dl_list pins;
@@ -456,6 +460,7 @@ wps_registrar_init(struct wps_context *wps,
 	reg->pin_needed_cb = cfg->pin_needed_cb;
 	reg->reg_success_cb = cfg->reg_success_cb;
 	reg->set_sel_reg_cb = cfg->set_sel_reg_cb;
+	reg->enrollee_seen_cb = cfg->enrollee_seen_cb;
 	reg->cb_ctx = cfg->cb_ctx;
 	reg->skip_cred_build = cfg->skip_cred_build;
 	if (cfg->extra_cred) {
@@ -768,6 +773,24 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 		wpa_printf(MSG_DEBUG, "WPS: No Config Methods attribute in "
 			   "Probe Request");
 		return;
+	}
+
+	if (reg->enrollee_seen_cb && attr.dev_password_id && attr.uuid_e &&
+	    attr.primary_dev_type && attr.request_type) {
+		char *dev_name = NULL;
+		if (attr.dev_name) {
+			dev_name = os_zalloc(attr.dev_name_len + 1);
+			if (dev_name) {
+				os_memcpy(dev_name, attr.dev_name,
+					  attr.dev_name_len);
+			}
+		}
+		reg->enrollee_seen_cb(reg->cb_ctx, addr, attr.uuid_e,
+				      attr.primary_dev_type,
+				      WPA_GET_BE16(attr.config_methods),
+				      WPA_GET_BE16(attr.dev_password_id),
+				      *attr.request_type, dev_name);
+		os_free(dev_name);
 	}
 
 	methods = WPA_GET_BE16(attr.config_methods);

@@ -73,6 +73,8 @@ extern "C" {
 /** WPS enrollment attempt timed out and was terminated */
 #define WPS_EVENT_TIMEOUT "WPS-TIMEOUT "
 
+#define WPS_EVENT_ENROLLEE_SEEN "WPS-ENROLLEE-SEEN "
+
 /* WPS ER events */
 #define WPS_EVENT_ER_AP_ADD "WPS-ER-AP-ADD "
 #define WPS_EVENT_ER_AP_REMOVE "WPS-ER-AP-REMOVE "

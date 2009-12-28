@@ -754,7 +754,7 @@ static void ieee80211_rx_mgmt_auth(struct wpa_supplicant *wpa_s,
 	u16 auth_alg, auth_transaction, status_code;
 	int adhoc;
 
-	adhoc = ssid && ssid->mode == 1;
+	adhoc = ssid && ssid->mode == WPAS_MODE_IBSS;
 
 	if (wpa_s->mlme.state != IEEE80211_AUTHENTICATE && !adhoc) {
 		wpa_printf(MSG_DEBUG, "MLME: authentication frame received "
@@ -1685,7 +1685,7 @@ static void ieee80211_rx_mgmt_probe_req(struct wpa_supplicant *wpa_s,
 	u8 *pos, *end;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
-	adhoc = ssid && ssid->mode == 1;
+	adhoc = ssid && ssid->mode == WPAS_MODE_IBSS;
 
 	if (!adhoc || wpa_s->mlme.state != IEEE80211_IBSS_JOINED ||
 	    len < 24 + 2 || wpa_s->mlme.probe_resp == NULL)
@@ -2193,7 +2193,7 @@ static void ieee80211_sta_timer(void *eloop_ctx, void *timeout_ctx)
 static void ieee80211_sta_new_auth(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
-	if (ssid && ssid->mode != 0)
+	if (ssid && ssid->mode != WPAS_MODE_INFRA)
 		return;
 
 #if 0 /* FIX */
@@ -2665,7 +2665,7 @@ int ieee80211_sta_associate(struct wpa_supplicant *wpa_s,
 	ieee80211_sta_set_channel(wpa_s, wpa_s->mlme.phymode,
 				  wpa_s->mlme.channel, wpa_s->mlme.freq);
 
-	if (params->mode == 1 && !wpa_s->mlme.bssid_set) {
+	if (params->mode == WPAS_MODE_IBSS && !wpa_s->mlme.bssid_set) {
 		os_get_time(&wpa_s->mlme.ibss_join_req);
 		wpa_s->mlme.state = IEEE80211_IBSS_SEARCH;
 		return ieee80211_sta_find_ibss(wpa_s);

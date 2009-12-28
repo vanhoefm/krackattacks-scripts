@@ -150,7 +150,7 @@ static int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
 	/* IBSS/WPA-None uses only one key (Group) for both receiving and
 	 * sending unicast and multicast packets. */
 
-	if (ssid->mode != IEEE80211_MODE_IBSS) {
+	if (ssid->mode != WPAS_MODE_IBSS) {
 		wpa_printf(MSG_INFO, "WPA: Invalid mode %d (not IBSS/ad-hoc) "
 			   "for WPA-None", ssid->mode);
 		return -1;
@@ -257,7 +257,7 @@ void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
 #ifdef CONFIG_IBSS_RSN
-	if (ssid->mode == IEEE80211_MODE_IBSS &&
+	if (ssid->mode == WPAS_MODE_IBSS &&
 	    wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
 	    wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE) {
 		/*
@@ -990,7 +990,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
 
-	if (ssid->mode == IEEE80211_MODE_AP) {
+	if (ssid->mode == WPAS_MODE_AP) {
 #ifdef CONFIG_AP
 		if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP)) {
 			wpa_printf(MSG_INFO, "Driver does not support AP "
@@ -1180,7 +1180,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		params.ssid = ssid->ssid;
 		params.ssid_len = ssid->ssid_len;
 	}
-	if (ssid->mode == 1 && ssid->frequency > 0 && params.freq == 0)
+	if (ssid->mode == WPAS_MODE_IBSS && ssid->frequency > 0 &&
+	    params.freq == 0)
 		params.freq = ssid->frequency; /* Initial channel for IBSS */
 	params.wpa_ie = wpa_ie;
 	params.wpa_ie_len = wpa_ie_len;
@@ -1253,7 +1254,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_cancel_auth_timeout(wpa_s);
 		wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 #ifdef CONFIG_IBSS_RSN
-	} else if (ssid->mode == IEEE80211_MODE_IBSS &&
+	} else if (ssid->mode == WPAS_MODE_IBSS &&
 		   wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
 		   wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE) {
 		ibss_rsn_set_psk(wpa_s->ibss_rsn, ssid->psk);
@@ -1269,10 +1270,10 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 
 		if (assoc_failed) {
 			/* give IBSS a bit more time */
- 			timeout = ssid->mode ? 10 : 5;
+			timeout = ssid->mode == WPAS_MODE_IBSS ? 10 : 5;
 		} else if (wpa_s->conf->ap_scan == 1) {
 			/* give IBSS a bit more time */
- 			timeout = ssid->mode ? 20 : 10;
+			timeout = ssid->mode == WPAS_MODE_IBSS ? 20 : 10;
 		}
 		wpa_supplicant_req_auth_timeout(wpa_s, timeout, 0);
 	}
@@ -1766,7 +1767,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 
 #ifdef CONFIG_IBSS_RSN
 	if (wpa_s->current_ssid &&
-	    wpa_s->current_ssid->mode == IEEE80211_MODE_IBSS) {
+	    wpa_s->current_ssid->mode == WPAS_MODE_IBSS) {
 		ibss_rsn_rx_eapol(wpa_s->ibss_rsn, src_addr, buf, len);
 		return;
 	}

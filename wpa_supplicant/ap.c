@@ -155,7 +155,17 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	os_memset(&params, 0, sizeof(params));
 	params.ssid = ssid->ssid;
 	params.ssid_len = ssid->ssid_len;
-	params.mode = ssid->mode;
+	switch (ssid->mode) {
+	case WPAS_MODE_INFRA:
+		params.mode = IEEE80211_MODE_INFRA;
+		break;
+	case WPAS_MODE_IBSS:
+		params.mode = IEEE80211_MODE_IBSS;
+		break;
+	case WPAS_MODE_AP:
+		params.mode = IEEE80211_MODE_AP;
+		break;
+	}
 	params.freq = ssid->frequency;
 
 	if (wpa_drv_associate(wpa_s, &params) < 0) {

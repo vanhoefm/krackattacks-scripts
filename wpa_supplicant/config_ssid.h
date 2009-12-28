@@ -280,7 +280,11 @@ struct wpa_ssid {
 	 * pairwise=NONE, group=TKIP (or CCMP, but not both), and psk must also
 	 * be set (either directly or using ASCII passphrase).
 	 */
-	int mode;
+	enum wpas_mode {
+		WPAS_MODE_INFRA = 0,
+		WPAS_MODE_IBSS = 1,
+		WPAS_MODE_AP = 2,
+	} mode;
 
 	/**
 	 * disabled - Whether this network is currently disabled

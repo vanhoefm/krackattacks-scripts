@@ -476,15 +476,15 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 			}
 
 			switch (ssid->mode) {
-			case 0:
+			case WPAS_MODE_INFRA:
 				ret = os_snprintf(pos, end - pos,
 						  "mode=station\n");
 				break;
-			case 1:
+			case WPAS_MODE_IBSS:
 				ret = os_snprintf(pos, end - pos,
 						  "mode=IBSS\n");
 				break;
-			case 2:
+			case WPAS_MODE_AP:
 				ret = os_snprintf(pos, end - pos,
 						  "mode=AP\n");
 				break;

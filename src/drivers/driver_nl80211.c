@@ -2535,6 +2535,8 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 {
 	struct nl_msg *msg;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Remove interface ifindex=%d", ifidx);
+
 #ifdef HOSTAPD
 	/* stop listening for EAPOL on this interface */
 	del_ifidx(drv, ifidx);
@@ -2603,6 +2605,8 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 	}
 
 	ifidx = if_nametoindex(ifname);
+	wpa_printf(MSG_DEBUG, "nl80211: New interface %s created: ifindex=%d",
+		   ifname, ifidx);
 
 	if (ifidx <= 0)
 		return -1;
@@ -3546,6 +3550,8 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 	}
 
 	if (nlmode == drv->nlmode) {
+		wpa_printf(MSG_DEBUG, "nl80211: Interface already in "
+			   "requested mode - ignore error");
 		ret = 0;
 		goto done; /* Already in the requested mode */
 	}
@@ -3561,8 +3567,11 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 			ret = -1;
 	}
 
-	if (!ret)
+	if (!ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Mode change succeeded while "
+			   "interface is down");
 		drv->nlmode = nlmode;
+	}
 
 done:
 	if (!ret && nlmode == NL80211_IFTYPE_AP) {
@@ -3574,6 +3583,10 @@ done:
 		/* Remove additional AP mode functionality */
 		nl80211_remove_monitor_interface(drv);
 	}
+
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: Interface mode change to %d "
+			   "from %d failed", nlmode, drv->nlmode);
 
 	return ret;
 }

@@ -61,7 +61,8 @@ struct test_driver_bss {
 };
 
 struct wpa_driver_test_global {
-	int dummy;
+	int bss_add_used;
+	u8 req_addr[ETH_ALEN];
 };
 
 struct wpa_driver_test_data {
@@ -954,6 +955,8 @@ static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid,
 
 	bss->next = drv->bss;
 	drv->bss = bss;
+	drv->global->bss_add_used = 1;
+	os_memcpy(drv->global->req_addr, bssid, ETH_ALEN);
 
 	return 0;
 }
@@ -1906,6 +1909,7 @@ static void * wpa_driver_test_init2(void *ctx, const char *ifname,
 				    void *global_priv)
 {
 	struct wpa_driver_test_data *drv;
+	struct wpa_driver_test_global *global = global_priv;
 
 	drv = test_alloc_data(ctx, ifname);
 	if (drv == NULL)
@@ -1922,6 +1926,11 @@ static void * wpa_driver_test_init2(void *ctx, const char *ifname,
 	drv->bssid[5] = 0x01;
 	os_memcpy(drv->ssid, "test", 5);
 	drv->ssid_len = 4;
+
+	if (global->bss_add_used) {
+		os_memcpy(drv->own_addr, global->req_addr, ETH_ALEN);
+		global->bss_add_used = 0;
+	}
 
 	eloop_register_timeout(1, 0, wpa_driver_test_poll, drv, NULL);
 

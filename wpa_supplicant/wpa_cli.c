@@ -1776,7 +1776,7 @@ static char * wpa_cli_cmd_gen(const char *text, int state)
 	while ((cmd = wpa_cli_commands[i].cmd)) {
 		i++;
 		if (os_strncasecmp(cmd, text, len) == 0)
-			return os_strdup(cmd);
+			return strdup(cmd);
 	}
 
 	return NULL;

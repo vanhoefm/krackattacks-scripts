@@ -262,6 +262,7 @@ struct wpa_client_mlme {
 	u8 scan_ssid[32];
 	size_t scan_ssid_len;
 	int scan_skip_11b;
+	int *scan_freqs;
 
 	struct ieee80211_sta_bss *sta_bss_list;
 #define STA_HASH_SIZE 256

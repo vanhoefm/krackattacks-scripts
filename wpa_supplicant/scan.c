@@ -186,12 +186,9 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_notify_scanning(wpa_s, 1);
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-		ieee80211_sta_set_probe_req_ie(wpa_s, params->extra_ies,
-					       params->extra_ies_len);
-		ret = ieee80211_sta_req_scan(wpa_s, params->ssids[0].ssid,
-					     params->ssids[0].ssid_len);
-	} else
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
+		ret = ieee80211_sta_req_scan(wpa_s, params);
+	else
 		ret = wpa_drv_scan(wpa_s, params);
 
 	if (ret) {

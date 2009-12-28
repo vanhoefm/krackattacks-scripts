@@ -96,6 +96,8 @@ static int ieee80211_sta_wep_configured(struct wpa_supplicant *wpa_s);
 static void ieee80211_sta_timer(void *eloop_ctx, void *timeout_ctx);
 static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx);
 static void ieee80211_build_tspec(struct wpabuf *buf);
+static int ieee80211_sta_set_probe_req_ie(struct wpa_supplicant *wpa_s,
+					  const u8 *ies, size_t ies_len);
 
 
 static int ieee80211_sta_set_channel(struct wpa_supplicant *wpa_s,
@@ -202,6 +204,7 @@ static void ieee80211_set_associated(struct wpa_supplicant *wpa_s, int assoc)
 		data.assoc_info.req_ies_len = wpa_s->mlme.assocreq_ies_len;
 		data.assoc_info.resp_ies = wpa_s->mlme.assocresp_ies;
 		data.assoc_info.resp_ies_len = wpa_s->mlme.assocresp_ies_len;
+		data.assoc_info.freq = wpa_s->mlme.freq;
 		wpa_supplicant_event(wpa_s, EVENT_ASSOC, &data);
 	} else {
 		wpa_supplicant_event(wpa_s, EVENT_DISASSOC, NULL);
@@ -2131,6 +2134,8 @@ static void ieee80211_sta_expire(struct wpa_supplicant *wpa_s)
 
 static void ieee80211_sta_merge_ibss(struct wpa_supplicant *wpa_s)
 {
+	struct wpa_driver_scan_params params;
+
 	ieee80211_reschedule_timer(wpa_s, IEEE80211_IBSS_MERGE_INTERVAL);
 
 	ieee80211_sta_expire(wpa_s);
@@ -2139,7 +2144,11 @@ static void ieee80211_sta_merge_ibss(struct wpa_supplicant *wpa_s)
 
 	wpa_printf(MSG_DEBUG, "MLME: No active IBSS STAs - trying to scan for "
 		   "other IBSS networks with same SSID (merge)");
-	ieee80211_sta_req_scan(wpa_s, wpa_s->mlme.ssid, wpa_s->mlme.ssid_len);
+	os_memset(&params, 0, sizeof(params));
+	params.ssids[0].ssid = wpa_s->mlme.ssid;
+	params.ssids[0].ssid_len = wpa_s->mlme.ssid_len;
+	params.num_ssids = wpa_s->mlme.ssid ? 1 : 0;
+	ieee80211_sta_req_scan(wpa_s, &params);
 }
 
 
@@ -2763,6 +2772,17 @@ static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx)
 		     mode->mode == HOSTAPD_MODE_IEEE80211B &&
 		     wpa_s->mlme.scan_skip_11b))
 			skip = 1;
+		if (!skip && wpa_s->mlme.scan_freqs) {
+			int i, found = 0;
+			for (i = 0; wpa_s->mlme.scan_freqs[i]; i++) {
+				if (wpa_s->mlme.scan_freqs[i] == chan->freq) {
+					found = 1;
+					break;
+				}
+			}
+			if (!found)
+				skip = 1;
+		}
 
 		if (!skip) {
 			wpa_printf(MSG_MSGDUMP,
@@ -2816,9 +2836,12 @@ static void ieee80211_sta_scan_timer(void *eloop_ctx, void *timeout_ctx)
 }
 
 
-int ieee80211_sta_req_scan(struct wpa_supplicant *wpa_s, const u8 *ssid,
-			   size_t ssid_len)
+int ieee80211_sta_req_scan(struct wpa_supplicant *wpa_s,
+			   struct wpa_driver_scan_params *params)
 {
+	const u8 *ssid = params->ssids[0].ssid;
+	size_t ssid_len = params->ssids[0].ssid_len;
+
 	if (ssid_len > MAX_SSID_LEN)
 		return -1;
 
@@ -2846,6 +2869,21 @@ int ieee80211_sta_req_scan(struct wpa_supplicant *wpa_s, const u8 *ssid,
 		return -1;
 
 	wpa_printf(MSG_DEBUG, "MLME: starting scan");
+
+	ieee80211_sta_set_probe_req_ie(wpa_s, params->extra_ies,
+				       params->extra_ies_len);
+
+	os_free(wpa_s->mlme.scan_freqs);
+	if (params->freqs) {
+		int i;
+		for (i = 0; params->freqs[i]; i++)
+			;
+		wpa_s->mlme.scan_freqs = os_malloc((i + 1) * sizeof(int));
+		if (wpa_s->mlme.scan_freqs)
+			os_memcpy(wpa_s->mlme.scan_freqs, params->freqs,
+				  (i + 1) * sizeof(int));
+	} else
+		wpa_s->mlme.scan_freqs = NULL;
 
 	ieee80211_sta_save_oper_chan(wpa_s);
 
@@ -3084,6 +3122,9 @@ void ieee80211_sta_deinit(struct wpa_supplicant *wpa_s)
 	wpa_s->mlme.ft_ies = NULL;
 	wpa_s->mlme.ft_ies_len = 0;
 #endif /* CONFIG_IEEE80211R */
+
+	os_free(wpa_s->mlme.scan_freqs);
+	wpa_s->mlme.scan_freqs = NULL;
 }
 
 
@@ -3167,8 +3208,8 @@ int ieee80211_sta_send_ft_action(struct wpa_supplicant *wpa_s, u8 action,
 #endif /* CONFIG_IEEE80211R */
 
 
-int ieee80211_sta_set_probe_req_ie(struct wpa_supplicant *wpa_s, const u8 *ies,
-				   size_t ies_len)
+static int ieee80211_sta_set_probe_req_ie(struct wpa_supplicant *wpa_s,
+					  const u8 *ies, size_t ies_len)
 {
 	os_free(wpa_s->mlme.extra_probe_ie);
 	wpa_s->mlme.extra_probe_ie = NULL;

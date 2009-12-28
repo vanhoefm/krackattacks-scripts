@@ -888,6 +888,8 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		wpa_hexdump(MSG_DEBUG, "beacon_ies",
 			    data->assoc_info.beacon_ies,
 			    data->assoc_info.beacon_ies_len);
+	if (data->assoc_info.freq)
+		wpa_printf(MSG_DEBUG, "freq=%u MHz", data->assoc_info.freq);
 
 	p = data->assoc_info.req_ies;
 	l = data->assoc_info.req_ies_len;
@@ -975,6 +977,8 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		wpa_sm_set_ap_rsn_ie(wpa_s->wpa, NULL, 0);
 	if (wpa_found || rsn_found)
 		wpa_s->ap_ies_from_associnfo = 1;
+
+	wpa_s->assoc_freq = data->assoc_info.freq;
 }
 
 

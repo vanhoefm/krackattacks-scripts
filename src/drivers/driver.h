@@ -1797,6 +1797,11 @@ union wpa_event_data {
 		/**
 		 * beacon_ies_len - Length of beacon_ies */
 		size_t beacon_ies_len;
+
+		/**
+		 * freq - Frequency of the operational channel in MHz
+		 */
+		unsigned int freq;
 	} assoc_info;
 
 	/**

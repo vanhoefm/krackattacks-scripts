@@ -326,6 +326,7 @@ struct wpa_supplicant {
 			   * before this has been cleared */
 	struct wpa_ssid *current_ssid;
 	int ap_ies_from_associnfo;
+	unsigned int assoc_freq;
 
 	/* Selected configuration (based on Beacon/ProbeResp WPA IE) */
 	int pairwise_cipher;

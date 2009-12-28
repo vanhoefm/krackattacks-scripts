@@ -91,6 +91,7 @@ struct wpa_driver_nl80211_data {
 	size_t ssid_len;
 	int nlmode;
 	int ap_scan_as_station;
+	unsigned int assoc_freq;
 
 	int monitor_sock;
 	int monitor_ifidx;
@@ -535,6 +536,8 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 		event.assoc_info.resp_ies_len =
 			len - 24 - sizeof(mgmt->u.assoc_resp);
 	}
+
+	event.assoc_info.freq = drv->assoc_freq;
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
@@ -3442,7 +3445,9 @@ static int wpa_driver_nl80211_associate(
 	if (params->freq) {
 		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
-	}
+		drv->assoc_freq = params->freq;
+	} else
+		drv->assoc_freq = 0;
 	if (params->ssid) {
 		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
 				  params->ssid, params->ssid_len);

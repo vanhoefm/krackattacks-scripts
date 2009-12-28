@@ -17,6 +17,7 @@
 
 #include "common.h"
 #include "aes.h"
+#include "aes_wrap.h"
 
 /**
  * aes_wrap - Wrap keys with AES Key Wrap Algorithm (128-bit KEK) (RFC3394)

@@ -260,6 +260,8 @@ void wpa_bss_deinit(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *n;
 	eloop_cancel_timeout(wpa_bss_timeout, wpa_s, NULL);
+	if (wpa_s->bss.next == NULL)
+		return; /* BSS table not yet initialized */
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list)
 		wpa_bss_remove(wpa_s, bss);
 }

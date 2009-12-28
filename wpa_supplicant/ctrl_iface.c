@@ -850,6 +850,12 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 			return pos - buf;
 		pos += ret;
 	}
+	if (res->caps & IEEE80211_CAP_ESS) {
+		ret = os_snprintf(pos, end - pos, "[ESS]");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
 
 	ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
 	ret = os_snprintf(pos, end - pos, "\t%s",
@@ -1584,6 +1590,12 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	}
 	if (bss->caps & IEEE80211_CAP_IBSS) {
 		ret = os_snprintf(pos, end - pos, "[IBSS]");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+	if (bss->caps & IEEE80211_CAP_ESS) {
+		ret = os_snprintf(pos, end - pos, "[ESS]");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;

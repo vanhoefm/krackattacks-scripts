@@ -202,6 +202,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	const u8 *ie;
 	size_t ssid_len, ie_len;
 	struct sta_info *sta = NULL;
+	size_t buflen;
 	size_t i;
 
 	ie = mgmt->u.probe_req.variable;
@@ -263,7 +264,12 @@ void handle_probe_req(struct hostapd_data *hapd,
 	/* TODO: verify that supp_rates contains at least one matching rate
 	 * with AP configuration */
 #define MAX_PROBERESP_LEN 768
-	resp = os_zalloc(MAX_PROBERESP_LEN);
+	buflen = MAX_PROBERESP_LEN;
+#ifdef CONFIG_WPS
+	if (hapd->wps_probe_resp_ie)
+		buflen += wpabuf_len(hapd->wps_probe_resp_ie);
+#endif /* CONFIG_WPS */
+	resp = os_zalloc(buflen);
 	if (resp == NULL)
 		return;
 	epos = ((u8 *) resp) + MAX_PROBERESP_LEN;
@@ -340,7 +346,12 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512
 	head = os_zalloc(BEACON_HEAD_BUF_SIZE);
-	tailpos = tail = os_malloc(BEACON_TAIL_BUF_SIZE);
+	tail_len = BEACON_TAIL_BUF_SIZE;
+#ifdef CONFIG_WPS
+	if (hapd->conf->wps_state && hapd->wps_beacon_ie)
+		tail_len += wpabuf_len(hapd->wps_beacon_ie);
+#endif /* CONFIG_WPS */
+	tailpos = tail = os_malloc(tail_len);
 	if (head == NULL || tail == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to set beacon data");
 		os_free(head);

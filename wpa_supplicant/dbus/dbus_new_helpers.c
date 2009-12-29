@@ -589,7 +589,7 @@ static DBusMessage * introspect(DBusMessage *message,
 				struct wpa_dbus_object_desc *obj_dsc)
 {
 
-	DBusMessage *reply = NULL;
+	DBusMessage *reply;
 	struct interfaces *ifaces, *tmp;
 	struct wpa_dbus_signal_desc *signal_dsc;
 	struct wpa_dbus_method_desc *method_dsc;
@@ -602,9 +602,6 @@ static DBusMessage * introspect(DBusMessage *message,
 	xmlNodePtr root_node = NULL, node = NULL, iface_node = NULL;
 	xmlNodePtr method_node = NULL, signal_node = NULL;
 	xmlNodePtr property_node = NULL, arg_node = NULL;
-
-	/* Create and initialize the return message */
-	reply = dbus_message_new_method_return(message);
 
 	/* root node and dtd */
 	doc = xmlNewDoc(BAD_CAST "1.0");
@@ -807,6 +804,12 @@ static DBusMessage * introspect(DBusMessage *message,
 		ifaces = ifaces->next;
 		os_free(tmp->dbus_interface);
 		os_free(tmp);
+	}
+
+	reply = dbus_message_new_method_return(message);
+	if (reply == NULL) {
+		xmlFree(intro_str);
+		return NULL;
 	}
 
 	dbus_message_append_args(reply, DBUS_TYPE_STRING, &intro_str,

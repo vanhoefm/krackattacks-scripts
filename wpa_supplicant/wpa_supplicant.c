@@ -379,6 +379,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 		wpa_s->ctrl_iface = NULL;
 	}
 	if (wpa_s->conf != NULL) {
+		struct wpa_ssid *ssid;
+		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
+			wpas_notify_network_removed(wpa_s, ssid);
 		wpa_config_free(wpa_s->conf);
 		wpa_s->conf = NULL;
 	}
@@ -2112,10 +2115,10 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 		wpa_clear_keys(wpa_s, NULL);
 	}
 
+	wpa_supplicant_cleanup(wpa_s);
+
 	if (notify)
 		wpas_notify_iface_removed(wpa_s);
-
-	wpa_supplicant_cleanup(wpa_s);
 
 	if (wpa_s->drv_priv)
 		wpa_drv_deinit(wpa_s);
@@ -2139,6 +2142,7 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 {
 	struct wpa_supplicant *wpa_s;
 	struct wpa_interface t_iface;
+	struct wpa_ssid *ssid;
 
 	if (global == NULL || iface == NULL)
 		return NULL;
@@ -2178,6 +2182,9 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 		os_free(wpa_s);
 		return NULL;
 	}
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
+		wpas_notify_network_added(wpa_s, ssid);
 
 	wpa_s->next = global->ifaces;
 	global->ifaces = wpa_s;

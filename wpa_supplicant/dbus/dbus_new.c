@@ -1062,6 +1062,8 @@ static struct ctrl_iface_dbus_new_priv * wpas_dbus_ctrl_iface_init(
 			   wpas_dbus_global_properties,
 			   wpas_dbus_global_signals);
 
+	wpa_printf(MSG_DEBUG, "dbus: Register D-Bus object '%s'",
+		   WPAS_DBUS_NEW_PATH);
 	ctrl_iface = wpa_dbus_ctrl_iface_init(global, WPAS_DBUS_NEW_PATH,
 					      WPAS_DBUS_NEW_SERVICE,
 					      obj_desc);
@@ -1084,6 +1086,8 @@ static struct ctrl_iface_dbus_new_priv * wpas_dbus_ctrl_iface_init(
 static void wpas_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_new_priv *iface)
 {
 	if (iface) {
+		wpa_printf(MSG_DEBUG, "dbus: Unregister D-Bus object '%s'",
+			   WPAS_DBUS_NEW_PATH);
 		dbus_connection_unregister_object_path(iface->con,
 						       WPAS_DBUS_NEW_PATH);
 		wpa_dbus_ctrl_iface_deinit(iface);
@@ -1135,6 +1139,8 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
 		    wpas_dbus_get_path(wpa_s), ssid->id);
 
+	wpa_printf(MSG_DEBUG, "dbus: Register network object '%s'",
+		   net_obj_path);
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
 		wpa_printf(MSG_ERROR, "Not enough memory "
@@ -1229,6 +1235,8 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
 		    wpas_dbus_get_path(wpa_s), nid);
 
+	wpa_printf(MSG_DEBUG, "dbus: Unregister network object '%s'",
+		   net_obj_path);
 	ret = wpa_dbus_unregister_object_per_iface(ctrl_iface, net_obj_path);
 
 	if (!ret)
@@ -1269,6 +1277,8 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
 		    wpas_dbus_get_path(wpa_s), id);
 
+	wpa_printf(MSG_DEBUG, "dbus: Unregister BSS object '%s'",
+		   bss_obj_path);
 	if (wpa_dbus_unregister_object_per_iface(ctrl_iface, bss_obj_path)) {
 		wpa_printf(MSG_ERROR,
 			   "Cannot unregister BSSID dbus object %s.",
@@ -1340,6 +1350,8 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 				   wpas_dbus_getter_bss_properties, NULL,
 				   arg, wpa_dbus_free, R);
 
+	wpa_printf(MSG_DEBUG, "dbus: Register BSS object '%s'",
+		   bss_obj_path);
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, bss_obj_path,
 					       wpa_s->ifname, obj_desc)) {
 		wpa_printf(MSG_ERROR,
@@ -1619,6 +1631,7 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 			   wpas_dbus_interface_properties,
 			   wpas_dbus_interface_signals);
 
+	wpa_printf(MSG_DEBUG, "dbus: Register interface object '%s'", path);
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, path, wpa_s->ifname,
 					       obj_desc))
 		goto err;
@@ -1638,8 +1651,6 @@ err:
 static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 {
 	struct ctrl_iface_dbus_new_priv *ctrl_iface;
-	struct wpa_ssid *ssid;
-	struct wpa_bss *bss;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -1648,16 +1659,8 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 	if (ctrl_iface == NULL)
 		return 0;
 
-	/* unregister all BSSs and networks from dbus */
-	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list)
-		wpas_dbus_unregister_bss(wpa_s, bss->bssid, bss->id);
-
-	ssid = wpa_s->conf->ssid;
-	while (ssid) {
-		wpas_dbus_unregister_network(wpa_s, ssid->id);
-		ssid = ssid->next;
-	}
-
+	wpa_printf(MSG_DEBUG, "dbus: Unregister interface object '%s'",
+		   wpas_dbus_get_path(wpa_s));
 	if (wpa_dbus_unregister_object_per_iface(ctrl_iface,
 						 wpas_dbus_get_path(wpa_s)))
 		return -1;

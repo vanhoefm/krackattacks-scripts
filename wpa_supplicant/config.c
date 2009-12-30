@@ -1860,12 +1860,18 @@ char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys)
 		if (field->key_data && !get_keys)
 			continue;
 		value = field->writer(field, ssid);
-		if (value == NULL || os_strlen(value) == 0)
+		if (value == NULL)
 			continue;
+		if (os_strlen(value) == 0) {
+			os_free(value);
+			continue;
+		}
 
 		key = os_strdup(field->name);
-		if (key == NULL)
+		if (key == NULL) {
+			os_free(value);
 			goto err;
+		}
 
 		props[fields_num * 2] = key;
 		props[fields_num * 2 + 1] = value;

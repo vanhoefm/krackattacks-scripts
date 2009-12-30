@@ -19,27 +19,20 @@
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "wps_supplicant.h"
+#include "dbus/dbus_common.h"
 #include "dbus/dbus.h"
 #include "dbus/dbus_new.h"
 #include "notify.h"
 
 int wpas_notify_supplicant_initialized(struct wpa_global *global)
 {
-	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
-
+#ifdef CONFIG_DBUS
 	if (global->params.dbus_ctrl_interface) {
-		if (cbs) {
-			global->dbus_new_ctrl_iface =
-				cbs->dbus_ctrl_init(global);
-			if (global->dbus_new_ctrl_iface == NULL)
-				return -1;
-		}
-
-		global->dbus_ctrl_iface =
-			wpa_supplicant_dbus_ctrl_iface_init(global);
-		if (global->dbus_ctrl_iface == NULL)
+		global->dbus = wpas_dbus_init(global);
+		if (global->dbus == NULL)
 			return -1;
 	}
+#endif /* CONFIG_DBUS */
 
 	return 0;
 }
@@ -47,13 +40,10 @@ int wpas_notify_supplicant_initialized(struct wpa_global *global)
 
 void wpas_notify_supplicant_deinitialized(struct wpa_global *global)
 {
-	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
-
-	if (cbs && global->dbus_new_ctrl_iface)
-		cbs->dbus_ctrl_deinit(global->dbus_new_ctrl_iface);
-
-	if (global->dbus_ctrl_iface)
-		wpa_supplicant_dbus_ctrl_iface_deinit(global->dbus_ctrl_iface);
+#ifdef CONFIG_DBUS
+	if (global->dbus)
+		wpas_dbus_deinit(global->dbus);
+#endif /* CONFIG_DBUS */
 }
 
 
@@ -225,7 +215,7 @@ void wpas_notify_network_added(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
-	if (wpa_s->global->dbus_new_ctrl_iface && cbs)
+	if (wpa_s->global->dbus && cbs)
 		cbs->register_network(wpa_s, ssid);
 }
 
@@ -234,7 +224,7 @@ void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *ssid)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
-	if (wpa_s->global->dbus_new_ctrl_iface && cbs)
+	if (wpa_s->global->dbus && cbs)
 		cbs->unregister_network(wpa_s, ssid->id);
 }
 

@@ -22,6 +22,7 @@ struct wpa_ssid;
 struct wps_event_m2d;
 struct wps_event_fail;
 struct wps_credential;
+enum wpa_states;
 
 enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_AP_SCAN,
@@ -31,11 +32,6 @@ enum wpas_dbus_prop {
 };
 
 struct wpas_dbus_callbacks {
-	struct ctrl_iface_dbus_new_priv * (*dbus_ctrl_init)(
-		struct wpa_global *global);
-
-	void (*dbus_ctrl_deinit)(struct ctrl_iface_dbus_new_priv *iface);
-
 	void (*signal_interface_created)(struct wpa_supplicant *wpa_s);
 	void (*signal_interface_removed)(struct wpa_supplicant *wpa_s);
 
@@ -126,6 +122,9 @@ struct wpas_dbus_callbacks {
 
 struct wpas_dbus_callbacks * wpas_dbus_get_callbacks(void);
 const char * wpas_dbus_get_path(struct wpa_supplicant *wpa_s);
+
+int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv);
+void wpas_dbus_ctrl_iface_deinit(struct wpas_dbus_priv *iface);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 

@@ -18,14 +18,6 @@
 
 #include <dbus/dbus.h>
 
-struct ctrl_iface_dbus_new_priv {
-	DBusConnection *con;
-	int should_dispatch;
-	void *application_data;
-
-	u32 next_objid;
-};
-
 typedef DBusMessage * (* WPADBusMethodHandler)(DBusMessage *message,
 					       void *user_data);
 typedef void (* WPADBusArgumentFreeFunction)(void *handler_arg);
@@ -77,20 +69,17 @@ struct wpa_dbus_argument {
 
 void free_dbus_object_desc(struct wpa_dbus_object_desc *obj_dsc);
 
-struct ctrl_iface_dbus_new_priv *
-wpa_dbus_ctrl_iface_init(void *application_data, char *dbus_path,
-			 char *dbus_service,
-			 struct wpa_dbus_object_desc *obj_desc);
-
-void wpa_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_new_priv *iface);
+int wpa_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface, char *dbus_path,
+			     char *dbus_service,
+			     struct wpa_dbus_object_desc *obj_desc);
 
 int wpa_dbus_register_object_per_iface(
-	struct ctrl_iface_dbus_new_priv *ctrl_iface,
+	struct wpas_dbus_priv *ctrl_iface,
 	const char *path, const char *ifname,
 	struct wpa_dbus_object_desc *obj_desc);
 
 int wpa_dbus_unregister_object_per_iface(
-	struct ctrl_iface_dbus_new_priv *ctrl_iface,
+	struct wpas_dbus_priv *ctrl_iface,
 	const char *path);
 
 int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
@@ -116,21 +105,18 @@ int wpa_dbus_property_register(
 	WPADBusArgumentFreeFunction user_data_free_func,
 	enum dbus_prop_access _access);
 
-void wpa_dbus_signal_property_changed(struct ctrl_iface_dbus_new_priv *iface,
+void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
 				      WPADBusPropertyAccessor property_getter,
 				      void *getter_arg,
 				      const char *path,
 				      const char *interface_name,
 				      const char *property_name);
 
-/* Methods internal to the dbus control interface */
-u32 wpa_dbus_next_objid(struct ctrl_iface_dbus_new_priv *iface);
-
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
 static inline void wpa_dbus_signal_property_changed(
-	struct ctrl_iface_dbus_new_priv *iface,
+	struct wpas_dbus_priv *iface,
 	WPADBusPropertyAccessor property_getter, void *getter_arg,
 	const char *path, const char *interface_name,
 	const char *property_name)

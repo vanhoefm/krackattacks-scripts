@@ -22,255 +22,8 @@
 #include "../wpa_supplicant_i.h"
 #include "dbus.h"
 #include "dbus_handlers.h"
-
-#define _DBUS_VERSION (DBUS_VERSION_MAJOR << 8 | DBUS_VERSION_MINOR)
-#define DBUS_VER(major, minor) ((major) << 8 | (minor))
-
-#if _DBUS_VERSION < DBUS_VER(1,1)
-#define dbus_watch_get_unix_fd dbus_watch_get_fd
-#endif
-
-
-struct ctrl_iface_dbus_priv {
-	DBusConnection *con;
-	int should_dispatch;
-	struct wpa_global *global;
-
-	u32 next_objid;
-};
-
-
-static void process_watch(struct ctrl_iface_dbus_priv *iface,
-			  DBusWatch *watch, eloop_event_type type)
-{
-	dbus_connection_ref(iface->con);
-
-	iface->should_dispatch = 0;
-
-	if (type == EVENT_TYPE_READ)
-		dbus_watch_handle(watch, DBUS_WATCH_READABLE);
-	else if (type == EVENT_TYPE_WRITE)
-		dbus_watch_handle(watch, DBUS_WATCH_WRITABLE);
-	else if (type == EVENT_TYPE_EXCEPTION)
-		dbus_watch_handle(watch, DBUS_WATCH_ERROR);
-
-	if (iface->should_dispatch) {
-		while (dbus_connection_get_dispatch_status(iface->con) ==
-		       DBUS_DISPATCH_DATA_REMAINS)
-			dbus_connection_dispatch(iface->con);
-		iface->should_dispatch = 0;
-	}
-
-	dbus_connection_unref(iface->con);
-}
-
-
-static void process_watch_exception(int sock, void *eloop_ctx, void *sock_ctx)
-{
-	process_watch(eloop_ctx, sock_ctx, EVENT_TYPE_EXCEPTION);
-}
-
-
-static void process_watch_read(int sock, void *eloop_ctx, void *sock_ctx)
-{
-	process_watch(eloop_ctx, sock_ctx, EVENT_TYPE_READ);
-}
-
-
-static void process_watch_write(int sock, void *eloop_ctx, void *sock_ctx)
-{
-	process_watch(eloop_ctx, sock_ctx, EVENT_TYPE_WRITE);
-}
-
-
-static void connection_setup_add_watch(struct ctrl_iface_dbus_priv *iface,
-				       DBusWatch *watch)
-{
-	unsigned int flags;
-	int fd;
-
-	if (!dbus_watch_get_enabled(watch))
-		return;
-
-	flags = dbus_watch_get_flags(watch);
-	fd = dbus_watch_get_unix_fd(watch);
-
-	eloop_register_sock(fd, EVENT_TYPE_EXCEPTION, process_watch_exception,
-			    iface, watch);
-
-	if (flags & DBUS_WATCH_READABLE) {
-		eloop_register_sock(fd, EVENT_TYPE_READ, process_watch_read,
-				    iface, watch);
-	}
-	if (flags & DBUS_WATCH_WRITABLE) {
-		eloop_register_sock(fd, EVENT_TYPE_WRITE, process_watch_write,
-				    iface, watch);
-	}
-
-	dbus_watch_set_data(watch, iface, NULL);
-}
-
-
-static void connection_setup_remove_watch(struct ctrl_iface_dbus_priv *iface,
-					  DBusWatch *watch)
-{
-	unsigned int flags;
-	int fd;
-
-	flags = dbus_watch_get_flags(watch);
-	fd = dbus_watch_get_unix_fd(watch);
-
-	eloop_unregister_sock(fd, EVENT_TYPE_EXCEPTION);
-
-	if (flags & DBUS_WATCH_READABLE)
-		eloop_unregister_sock(fd, EVENT_TYPE_READ);
-	if (flags & DBUS_WATCH_WRITABLE)
-		eloop_unregister_sock(fd, EVENT_TYPE_WRITE);
-
-	dbus_watch_set_data(watch, NULL, NULL);
-}
-
-
-static dbus_bool_t add_watch(DBusWatch *watch, void *data)
-{
-	connection_setup_add_watch(data, watch);
-	return TRUE;
-}
-
-
-static void remove_watch(DBusWatch *watch, void *data)
-{
-	connection_setup_remove_watch(data, watch);
-}
-
-
-static void watch_toggled(DBusWatch *watch, void *data)
-{
-	if (dbus_watch_get_enabled(watch))
-		add_watch(watch, data);
-	else
-		remove_watch(watch, data);
-}
-
-
-static void process_timeout(void *eloop_ctx, void *sock_ctx)
-{
-	DBusTimeout *timeout = sock_ctx;
-
-	dbus_timeout_handle(timeout);
-}
-
-
-static void connection_setup_add_timeout(struct ctrl_iface_dbus_priv *iface,
-					 DBusTimeout *timeout)
-{
-	if (!dbus_timeout_get_enabled(timeout))
-		return;
-
-	eloop_register_timeout(0, dbus_timeout_get_interval(timeout) * 1000,
-			       process_timeout, iface, timeout);
-
-	dbus_timeout_set_data(timeout, iface, NULL);
-}
-
-
-static void connection_setup_remove_timeout(struct ctrl_iface_dbus_priv *iface,
-					    DBusTimeout *timeout)
-{
-	eloop_cancel_timeout(process_timeout, iface, timeout);
-	dbus_timeout_set_data(timeout, NULL, NULL);
-}
-
-
-static dbus_bool_t add_timeout(DBusTimeout *timeout, void *data)
-{
-	if (!dbus_timeout_get_enabled(timeout))
-		return TRUE;
-
-	connection_setup_add_timeout(data, timeout);
-
-	return TRUE;
-}
-
-
-static void remove_timeout(DBusTimeout *timeout, void *data)
-{
-	connection_setup_remove_timeout(data, timeout);
-}
-
-
-static void timeout_toggled(DBusTimeout *timeout, void *data)
-{
-	if (dbus_timeout_get_enabled(timeout))
-		add_timeout(timeout, data);
-	else
-		remove_timeout(timeout, data);
-}
-
-
-static void process_wakeup_main(int sig, void *signal_ctx)
-{
-	struct ctrl_iface_dbus_priv *iface = signal_ctx;
-
-	if (sig != SIGPOLL || !iface->con)
-		return;
-
-	if (dbus_connection_get_dispatch_status(iface->con) !=
-	    DBUS_DISPATCH_DATA_REMAINS)
-		return;
-
-	/* Only dispatch once - we do not want to starve other events */
-	dbus_connection_ref(iface->con);
-	dbus_connection_dispatch(iface->con);
-	dbus_connection_unref(iface->con);
-}
-
-
-/**
- * wakeup_main - Attempt to wake our mainloop up
- * @data: dbus control interface private data
- *
- * Try to wake up the main eloop so it will process
- * dbus events that may have happened.
- */
-static void wakeup_main(void *data)
-{
-	struct ctrl_iface_dbus_priv *iface = data;
-
-	/* Use SIGPOLL to break out of the eloop select() */
-	raise(SIGPOLL);
-	iface->should_dispatch = 1;
-}
-
-
-/**
- * connection_setup_wakeup_main - Tell dbus about our wakeup_main function
- * @iface: dbus control interface private data
- * Returns: 0 on success, -1 on failure
- *
- * Register our wakeup_main handler with dbus
- */
-static int connection_setup_wakeup_main(struct ctrl_iface_dbus_priv *iface)
-{
-	if (eloop_register_signal(SIGPOLL, process_wakeup_main, iface))
-		return -1;
-
-	dbus_connection_set_wakeup_main_function(iface->con, wakeup_main,
-						 iface, NULL);
-
-	return 0;
-}
-
-
-/**
- * wpa_supplicant_dbus_next_objid - Return next available object id
- * @iface: dbus control interface private data
- * Returns: Object id
- */
-u32 wpa_supplicant_dbus_next_objid (struct ctrl_iface_dbus_priv *iface)
-{
-	return iface->next_objid++;
-}
+#include "dbus_common.h"
+#include "dbus_common_i.h"
 
 
 /**
@@ -587,7 +340,7 @@ out:
 static DBusHandlerResult wpas_message_handler(DBusConnection *connection,
 	DBusMessage *message, void *user_data)
 {
-	struct ctrl_iface_dbus_priv *ctrl_iface = user_data;
+	struct wpas_dbus_priv *ctrl_iface = user_data;
 	const char *method;
 	const char *path;
 	const char *msg_interface;
@@ -641,7 +394,7 @@ static DBusHandlerResult wpas_message_handler(DBusConnection *connection,
  */
 void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s)
 {
-	struct ctrl_iface_dbus_priv *iface = wpa_s->global->dbus_ctrl_iface;
+	struct wpas_dbus_priv *iface = wpa_s->global->dbus;
 	DBusMessage *_signal;
 	const char *path;
 
@@ -686,7 +439,7 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 					     enum wpa_states new_state,
 					     enum wpa_states old_state)
 {
-	struct ctrl_iface_dbus_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
 	const char *path;
 	const char *new_state_str, *old_state_str;
@@ -694,7 +447,7 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s->global == NULL)
 		return;
-	iface = wpa_s->global->dbus_ctrl_iface;
+	iface = wpa_s->global->dbus;
 	if (iface == NULL)
 		return;
 
@@ -764,7 +517,7 @@ out:
  */
 void wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 {
-	struct ctrl_iface_dbus_priv *iface = wpa_s->global->dbus_ctrl_iface;
+	struct wpas_dbus_priv *iface = wpa_s->global->dbus;
 	DBusMessage *_signal;
 	const char *path;
 	dbus_bool_t scanning = wpa_s->scanning ? TRUE : FALSE;
@@ -811,14 +564,14 @@ void wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 					 const struct wps_credential *cred)
 {
-	struct ctrl_iface_dbus_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
 	const char *path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s->global == NULL)
 		return;
-	iface = wpa_s->global->dbus_ctrl_iface;
+	iface = wpa_s->global->dbus;
 	if (iface == NULL)
 		return;
 
@@ -870,100 +623,20 @@ void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 
 
 /**
- * integrate_with_eloop - Register our mainloop integration with dbus
- * @connection: connection to the system message bus
- * @iface: a dbus control interface data structure
- * Returns: 0 on success, -1 on failure
- *
- * We register our mainloop integration functions with dbus here.
- */
-static int integrate_with_eloop(DBusConnection *connection,
-	struct ctrl_iface_dbus_priv *iface)
-{
-	if (!dbus_connection_set_watch_functions(connection, add_watch,
-						 remove_watch, watch_toggled,
-						 iface, NULL)) {
-		perror("dbus_connection_set_watch_functions[dbus]");
-		wpa_printf(MSG_ERROR, "Not enough memory to set up dbus.");
-		return -1;
-	}
-
-	if (!dbus_connection_set_timeout_functions(connection, add_timeout,
-						   remove_timeout,
-						   timeout_toggled, iface,
-						   NULL)) {
-		perror("dbus_connection_set_timeout_functions[dbus]");
-		wpa_printf(MSG_ERROR, "Not enough memory to set up dbus.");
-		return -1;
-	}
-
-	if (connection_setup_wakeup_main(iface) < 0) {
-		perror("connection_setup_wakeup_main[dbus]");
-		wpa_printf(MSG_ERROR, "Could not setup main wakeup function.");
-		return -1;
-	}
-
-	return 0;
-}
-
-
-/**
- * dispatch_initial_dbus_messages - Dispatch initial dbus messages after
- *     claiming bus name
- * @eloop_ctx: the DBusConnection to dispatch on
- * @timeout_ctx: unused
- *
- * If clients are quick to notice that wpa_supplicant claimed its bus name,
- * there may have been messages that came in before initialization was
- * all finished.  Dispatch those here.
- */
-static void dispatch_initial_dbus_messages(void *eloop_ctx, void *timeout_ctx)
-{
-	DBusConnection *con = eloop_ctx;
-
-	while (dbus_connection_get_dispatch_status(con) ==
-	       DBUS_DISPATCH_DATA_REMAINS)
-		dbus_connection_dispatch(con);
-}
-
-
-/**
  * wpa_supplicant_dbus_ctrl_iface_init - Initialize dbus control interface
  * @global: Pointer to global data from wpa_supplicant_init()
- * Returns: Pointer to dbus_ctrl_iface date or %NULL on failure
+ * Returns: 0 on success, -1 on failure
  *
  * Initialize the dbus control interface and start receiving commands from
  * external programs over the bus.
  */
-struct ctrl_iface_dbus_priv *
-wpa_supplicant_dbus_ctrl_iface_init(struct wpa_global *global)
+int wpa_supplicant_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface)
 {
-	struct ctrl_iface_dbus_priv *iface;
 	DBusError error;
 	int ret = -1;
 	DBusObjectPathVTable wpas_vtable = {
 		NULL, &wpas_message_handler, NULL, NULL, NULL, NULL
 	};
-
-	iface = os_zalloc(sizeof(struct ctrl_iface_dbus_priv));
-	if (iface == NULL)
-		return NULL;
-
-	iface->global = global;
-
-	/* Get a reference to the system bus */
-	dbus_error_init(&error);
-	iface->con = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
-	dbus_error_free(&error);
-	if (!iface->con) {
-		perror("dbus_bus_get[ctrl_iface_dbus]");
-		wpa_printf(MSG_ERROR, "Could not acquire the system bus.");
-		goto fail;
-	}
-
-	/* Tell dbus about our mainloop integration functions */
-	if (integrate_with_eloop(iface->con, iface))
-		goto fail;
 
 	/* Register the message handler for the global dbus interface */
 	if (!dbus_connection_register_object_path(iface->con,
@@ -972,7 +645,7 @@ wpa_supplicant_dbus_ctrl_iface_init(struct wpa_global *global)
 		perror("dbus_connection_register_object_path[dbus]");
 		wpa_printf(MSG_ERROR, "Could not set up DBus message "
 			   "handler.");
-		goto fail;
+		return -1;
 	}
 
 	/* Register our service with the message bus */
@@ -998,54 +671,12 @@ wpa_supplicant_dbus_ctrl_iface_init(struct wpa_global *global)
 	dbus_error_free(&error);
 
 	if (ret != 0)
-		goto fail;
+		return -1;
 
 	wpa_printf(MSG_DEBUG, "Providing DBus service '" WPAS_DBUS_SERVICE
 		   "'.");
 
-	/*
-	 * Dispatch initial DBus messages that may have come in since the bus
-	 * name was claimed above. Happens when clients are quick to notice the
-	 * wpa_supplicant service.
-	 *
-	 * FIXME: is there a better solution to this problem?
-	 */
-	eloop_register_timeout(0, 50, dispatch_initial_dbus_messages,
-	                       iface->con, NULL);
-
-	return iface;
-
-fail:
-	wpa_supplicant_dbus_ctrl_iface_deinit(iface);
-	return NULL;
-}
-
-
-/**
- * wpa_supplicant_dbus_ctrl_iface_deinit - Deinitialize dbus ctrl interface
- * @iface: Pointer to dbus private data from
- * wpa_supplicant_dbus_ctrl_iface_init()
- *
- * Deinitialize the dbus control interface that was initialized with
- * wpa_supplicant_dbus_ctrl_iface_init().
- */
-void wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface)
-{
-	if (iface == NULL)
-		return;
-
-	if (iface->con) {
-		eloop_cancel_timeout(dispatch_initial_dbus_messages,
-				     iface->con, NULL);
-		dbus_connection_set_watch_functions(iface->con, NULL, NULL,
-						    NULL, NULL, NULL);
-		dbus_connection_set_timeout_functions(iface->con, NULL, NULL,
-						      NULL, NULL, NULL);
-		dbus_connection_unref(iface->con);
-	}
-
-	memset(iface, 0, sizeof(struct ctrl_iface_dbus_priv));
-	os_free(iface);
+	return 0;
 }
 
 
@@ -1058,8 +689,7 @@ void wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface)
  */
 int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 {
-	struct ctrl_iface_dbus_priv *ctrl_iface =
-		wpa_s->global->dbus_ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface = wpa_s->global->dbus;
 	DBusConnection * con;
 	u32 next;
 	DBusObjectPathVTable vtable = {
@@ -1073,7 +703,7 @@ int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	con = ctrl_iface->con;
-	next = wpa_supplicant_dbus_next_objid(ctrl_iface);
+	next = ctrl_iface->next_objid++;
 
 	/* Create and set the interface's object path */
 	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
@@ -1113,14 +743,14 @@ out:
  */
 int wpas_dbus_unregister_iface(struct wpa_supplicant *wpa_s)
 {
-	struct ctrl_iface_dbus_priv *ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface;
 	DBusConnection *con;
 	const char *path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
-	ctrl_iface = wpa_s->global->dbus_ctrl_iface;
+	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)
 		return 0;
 

@@ -1040,6 +1040,7 @@ OBJS += ctrl_iface.o ctrl_iface_$(CONFIG_CTRL_IFACE).o
 endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS
+DBUS=y
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
 DBUS_OBJS += dbus/dbus.o dbus/dbus_handlers.o
 ifdef CONFIG_WPS
@@ -1067,6 +1068,7 @@ DBUS_CFLAGS += $(DBUS_INCLUDE)
 endif
 
 ifdef CONFIG_CTRL_IFACE_DBUS_NEW
+DBUS=y
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_NEW
 DBUS_OBJS ?= dbus/dbus_dict_helpers.o
 DBUS_OBJS += dbus/dbus_new_helpers.o
@@ -1086,6 +1088,11 @@ DBUS_INCLUDE += $(shell xml2-config --cflags)
 DBUS_LIBS += $(shell xml2-config --libs)
 endif
 DBUS_CFLAGS += $(DBUS_INCLUDE)
+endif
+
+ifdef DBUS
+DBUS_CFLAGS += -DCONFIG_DBUS
+DBUS_OBJS += dbus/dbus_common.o
 endif
 
 OBJS += $(DBUS_OBJS)

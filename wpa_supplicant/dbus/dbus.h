@@ -86,9 +86,7 @@ struct wps_credential;
 struct wpa_global;
 struct wpa_supplicant;
 
-struct ctrl_iface_dbus_priv *
-wpa_supplicant_dbus_ctrl_iface_init(struct wpa_global *global);
-void wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface);
+int wpa_supplicant_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface);
 void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
@@ -105,8 +103,6 @@ int wpas_dbus_unregister_iface(struct wpa_supplicant *wpa_s);
 
 
 /* Methods internal to the dbus control interface */
-u32 wpa_supplicant_dbus_next_objid(struct ctrl_iface_dbus_priv *iface);
-
 int wpa_supplicant_set_dbus_path(struct wpa_supplicant *wpa_s,
 				 const char *path);
 const char *wpa_supplicant_get_dbus_path(struct wpa_supplicant *wpa_s);
@@ -139,12 +135,7 @@ wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 {
 }
 
-static inline void
-wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
-					enum wpa_states new_state,
-					enum wpa_states old_state)
-{
-}
+#define wpa_supplicant_dbus_notify_state_change(w,n,o) do { } while (0)
 
 static inline void
 wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,

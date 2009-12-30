@@ -332,7 +332,7 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 
 	if ((wpa_s->conf->wps_cred_processing != 1) != old_pc)
 		wpa_dbus_signal_property_changed(
-			wpa_s->global->dbus_new_ctrl_iface,
+			wpa_s->global->dbus,
 			(WPADBusPropertyAccessor)
 			wpas_dbus_getter_process_credentials,
 			wpa_s, wpas_dbus_get_path(wpa_s),

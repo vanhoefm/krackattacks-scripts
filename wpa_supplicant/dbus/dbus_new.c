@@ -25,6 +25,8 @@
 #include "dbus_dict_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
+#include "dbus_common.h"
+#include "dbus_common_i.h"
 
 /**
  * wpas_dbus_set_path - Assign a dbus path to an interface
@@ -55,11 +57,11 @@ static int wpas_dbus_set_path(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 				       const char *sig_name)
 {
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	const char *path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -126,12 +128,12 @@ static void wpas_dbus_signal_interface_removed(struct wpa_supplicant *wpa_s)
 static void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s,
 				       int success)
 {
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	const char *path;
 	dbus_bool_t succ;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -176,11 +178,11 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 				 const char *bss_obj_path,
 				 const char *sig_name)
 {
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	const char *path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -251,11 +253,11 @@ static void wpas_dbus_signal_bss_removed(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_blob(struct wpa_supplicant *wpa_s,
 				  const char *name, const char *sig_name)
 {
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	const char *path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -326,12 +328,12 @@ static void wpas_dbus_signal_blob_removed(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 				     int id, const char *sig_name)
 {
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	const char *path;
 	char *net_obj_path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -427,7 +429,7 @@ static void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 					   enum wpa_states new_state,
 					   enum wpa_states old_state)
 {
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
 	const char *path;
 	char *new_state_str, *old_state_str;
@@ -436,7 +438,7 @@ static void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s->global == NULL)
 		return;
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 	if (iface == NULL)
 		return;
 
@@ -530,7 +532,7 @@ static void wpas_dbus_signal_network_enabled_changed(
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
 		    wpas_dbus_get_path(wpa_s), ssid->id);
 
-	wpa_dbus_signal_property_changed(wpa_s->global->dbus_new_ctrl_iface,
+	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
 					 (WPADBusPropertyAccessor)
 					 wpas_dbus_getter_enabled, &args,
 					 path, WPAS_DBUS_NEW_IFACE_NETWORK,
@@ -551,11 +553,11 @@ static void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 
 	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	char *key = "success";
 	const char *path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -605,11 +607,11 @@ static void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 
 	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	char *key = "fail";
 	const char *path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -660,11 +662,11 @@ static void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 
 	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	char *key = "m2d";
 	const char *path;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -737,14 +739,14 @@ static void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 {
 	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
-	struct ctrl_iface_dbus_new_priv *iface;
+	struct wpas_dbus_priv *iface;
 	const char *path;
 	char *auth_type[6]; /* we have six possible authorization types */
 	int at_num = 0;
 	char *encr_type[4]; /* we have four possible encryption types */
 	int et_num = 0;
 
-	iface = wpa_s->global->dbus_new_ctrl_iface;
+	iface = wpa_s->global->dbus;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
@@ -890,7 +892,7 @@ static void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	wpa_dbus_signal_property_changed(wpa_s->global->dbus_new_ctrl_iface,
+	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
 					 getter, arg,
 					 wpas_dbus_get_path(wpa_s), iface,
 					 prop);
@@ -906,7 +908,7 @@ static void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_debug_params_changed(struct wpa_global *global)
 {
 
-	wpa_dbus_signal_property_changed(global->dbus_new_ctrl_iface,
+	wpa_dbus_signal_property_changed(global->dbus,
 					 (WPADBusPropertyAccessor)
 					 wpas_dbus_getter_debug_params,
 					 global, WPAS_DBUS_NEW_PATH,
@@ -1040,58 +1042,53 @@ static const struct wpas_dbus_signal wpas_dbus_global_signals[] = {
 /**
  * wpas_dbus_ctrl_iface_init - Initialize dbus control interface
  * @global: Pointer to global data from wpa_supplicant_init()
- * Returns: Pointer to dbus_new_ctrl_iface date or %NULL on failure
+ * Returns: 0 on success or -1 on failure
  *
  * Initialize the dbus control interface for wpa_supplicantand and start
  * receiving commands from external programs over the bus.
  */
-static struct ctrl_iface_dbus_new_priv * wpas_dbus_ctrl_iface_init(
-	struct wpa_global *global)
+int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv)
 {
-	struct ctrl_iface_dbus_new_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
+	int ret;
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
 		wpa_printf(MSG_ERROR, "Not enough memory "
 			   "to create object description");
-		return NULL;
+		return -1;
 	}
 
-	wpas_dbus_register(obj_desc, global, wpas_dbus_global_methods,
+	wpas_dbus_register(obj_desc, priv->global, wpas_dbus_global_methods,
 			   wpas_dbus_global_properties,
 			   wpas_dbus_global_signals);
 
 	wpa_printf(MSG_DEBUG, "dbus: Register D-Bus object '%s'",
 		   WPAS_DBUS_NEW_PATH);
-	ctrl_iface = wpa_dbus_ctrl_iface_init(global, WPAS_DBUS_NEW_PATH,
-					      WPAS_DBUS_NEW_SERVICE,
-					      obj_desc);
-	if (!ctrl_iface)
+	ret = wpa_dbus_ctrl_iface_init(priv, WPAS_DBUS_NEW_PATH,
+				       WPAS_DBUS_NEW_SERVICE,
+				       obj_desc);
+	if (ret < 0)
 		free_dbus_object_desc(obj_desc);
 
-	return ctrl_iface;
+	return ret;
 }
 
 
 /**
  * wpas_dbus_ctrl_iface_deinit - Deinitialize dbus ctrl interface for
  * wpa_supplicant
- * @iface: Pointer to dbus private data from
- * wpas_dbus_ctrl_iface_init()
+ * @iface: Pointer to dbus private data from wpas_dbus_init()
  *
  * Deinitialize the dbus control interface that was initialized with
  * wpas_dbus_ctrl_iface_init().
  */
-static void wpas_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_new_priv *iface)
+void wpas_dbus_ctrl_iface_deinit(struct wpas_dbus_priv *iface)
 {
-	if (iface) {
-		wpa_printf(MSG_DEBUG, "dbus: Unregister D-Bus object '%s'",
-			   WPAS_DBUS_NEW_PATH);
-		dbus_connection_unregister_object_path(iface->con,
-						       WPAS_DBUS_NEW_PATH);
-		wpa_dbus_ctrl_iface_deinit(iface);
-	}
+	wpa_printf(MSG_DEBUG, "dbus: Unregister D-Bus object '%s'",
+		   WPAS_DBUS_NEW_PATH);
+	dbus_connection_unregister_object_path(iface->con,
+					       WPAS_DBUS_NEW_PATH);
 }
 
 
@@ -1112,7 +1109,7 @@ static void wpa_dbus_free(void *ptr)
 static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 				      struct wpa_ssid *ssid)
 {
-	struct ctrl_iface_dbus_new_priv *ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
 
 	struct network_handler_args *arg1 = NULL;
@@ -1128,7 +1125,7 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
-	ctrl_iface = wpa_s->global->dbus_new_ctrl_iface;
+	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)
 		return 0;
 
@@ -1217,14 +1214,14 @@ err:
  */
 static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 {
-	struct ctrl_iface_dbus_new_priv *ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface;
 	char *net_obj_path;
 	int ret;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
-	ctrl_iface = wpa_s->global->dbus_new_ctrl_iface;
+	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)
 		return 0;
 
@@ -1259,13 +1256,13 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 				    u8 bssid[ETH_ALEN], unsigned int id)
 {
-	struct ctrl_iface_dbus_new_priv *ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface;
 	char *bss_obj_path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
-	ctrl_iface = wpa_s->global->dbus_new_ctrl_iface;
+	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)
 		return 0;
 
@@ -1306,7 +1303,7 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 				  u8 bssid[ETH_ALEN], unsigned int id)
 {
-	struct ctrl_iface_dbus_new_priv *ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
 	char *bss_obj_path;
 
@@ -1315,7 +1312,7 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
-	ctrl_iface = wpa_s->global->dbus_new_ctrl_iface;
+	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)
 		return 0;
 
@@ -1597,8 +1594,7 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 
 	struct wpa_dbus_object_desc *obj_desc = NULL;
 	char *path;
-	struct ctrl_iface_dbus_new_priv *ctrl_iface =
-		wpa_s->global->dbus_new_ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface = wpa_s->global->dbus;
 	int next;
 
 	/* Do nothing if the control interface is not turned on */
@@ -1609,7 +1605,7 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 	if (path == NULL)
 		return -1;
-	next = wpa_dbus_next_objid(ctrl_iface);
+	next = ctrl_iface->next_objid++;
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    WPAS_DBUS_NEW_PATH_INTERFACES "/%u",
 		    next);
@@ -1650,12 +1646,12 @@ err:
 
 static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 {
-	struct ctrl_iface_dbus_new_priv *ctrl_iface;
+	struct wpas_dbus_priv *ctrl_iface;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
-	ctrl_iface = wpa_s->global->dbus_new_ctrl_iface;
+	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)
 		return 0;
 
@@ -1676,9 +1672,6 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 
 static struct wpas_dbus_callbacks callbacks =
 {
-	.dbus_ctrl_init = wpas_dbus_ctrl_iface_init,
-	.dbus_ctrl_deinit = wpas_dbus_ctrl_iface_deinit,
-
 	.signal_interface_created = wpas_dbus_signal_interface_created,
 	.signal_interface_removed = wpas_dbus_signal_interface_removed,
 

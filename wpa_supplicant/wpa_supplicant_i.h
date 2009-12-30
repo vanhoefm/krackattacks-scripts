@@ -41,7 +41,7 @@ struct ibss_rsn;
  */
 struct ctrl_iface_priv;
 struct ctrl_iface_global_priv;
-struct ctrl_iface_dbus_priv;
+struct wpas_dbus_priv;
 
 /**
  * struct wpa_interface - Parameters for wpa_supplicant_add_iface()
@@ -191,10 +191,7 @@ struct wpa_global {
 	struct wpa_supplicant *ifaces;
 	struct wpa_params params;
 	struct ctrl_iface_global_priv *ctrl_iface;
-	/* old DBus API data */
-	struct ctrl_iface_dbus_priv *dbus_ctrl_iface;
-	/* new DBus API data */
-	struct ctrl_iface_dbus_new_priv *dbus_new_ctrl_iface;
+	struct wpas_dbus_priv *dbus;
 	void **drv_priv;
 	size_t drv_count;
 };

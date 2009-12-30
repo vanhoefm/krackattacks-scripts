@@ -30,7 +30,8 @@ enum {
 	peer_role_pri_dev_type,
 	peer_role_ssid,
 	peer_role_config_methods,
-	peer_role_dev_passwd_id
+	peer_role_dev_passwd_id,
+	peer_role_bss_id
 };
 
 /*
@@ -320,10 +321,93 @@ void Peers::add_single_station(const char *addr)
 }
 
 
-void Peers::add_scan_results()
+void Peers::remove_bss(int id)
+{
+	if (model.rowCount() == 0)
+		return;
+
+	QModelIndexList lst = model.match(model.index(0, 0), peer_role_bss_id,
+					  id);
+	if (lst.size() == 0)
+		return;
+	model.removeRow(lst[0].row());
+}
+
+
+void Peers::add_bss(const char *cmd)
 {
 	char reply[2048];
 	size_t reply_len;
+
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
+		return;
+	reply[reply_len] = '\0';
+
+	QString bss(reply);
+	if (bss.isEmpty() || bss.startsWith("FAIL"))
+		return;
+
+	QString ssid, bssid, flags, wps_name, pri_dev_type;
+	int id = -1;
+
+	QStringList lines = bss.split(QRegExp("\\n"));
+	for (QStringList::Iterator it = lines.begin();
+	     it != lines.end(); it++) {
+		int pos = (*it).indexOf('=') + 1;
+		if (pos < 1)
+			continue;
+
+		if ((*it).startsWith("bssid="))
+			bssid = (*it).mid(pos);
+		else if ((*it).startsWith("id="))
+			id = (*it).mid(pos).toInt();
+		else if ((*it).startsWith("flags="))
+			flags = (*it).mid(pos);
+		else if ((*it).startsWith("ssid="))
+			ssid = (*it).mid(pos);
+		else if ((*it).startsWith("wps_device_name="))
+			wps_name = (*it).mid(pos);
+		else if ((*it).startsWith("wps_primary_device_type="))
+			pri_dev_type = (*it).mid(pos);
+	}
+
+	QString name = wps_name;
+	if (name.isEmpty())
+		name = ssid + "\n" + bssid;
+
+	QStandardItem *item = new QStandardItem(*ap_icon, name);
+	if (item) {
+		item->setData(bssid, peer_role_address);
+		if (id >= 0)
+			item->setData(id, peer_role_bss_id);
+		int type;
+		if (flags.contains("[WPS"))
+			type = PEER_TYPE_AP_WPS;
+		else
+			type = PEER_TYPE_AP;
+		item->setData(type, peer_role_type);
+
+		for (int i = 0; i < lines.size(); i++) {
+			if (lines[i].length() > 60) {
+				lines[i].remove(60, lines[i].length());
+				lines[i] += "..";
+			}
+		}
+		item->setToolTip(ItemType(type));
+		item->setData(lines.join("\n"), peer_role_details);
+		if (!pri_dev_type.isEmpty())
+			item->setData(pri_dev_type,
+				      peer_role_pri_dev_type);
+		if (!ssid.isEmpty())
+			item->setData(ssid, peer_role_ssid);
+		model.appendRow(item);
+	}
+}
+
+
+void Peers::add_scan_results()
+{
 	int index;
 	char cmd[20];
 
@@ -333,66 +417,7 @@ void Peers::add_scan_results()
 		if (index > 1000)
 			break;
 
-		reply_len = sizeof(reply) - 1;
-		if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
-			break;
-		reply[reply_len] = '\0';
-
-		QString bss(reply);
-		if (bss.isEmpty() || bss.startsWith("FAIL"))
-			break;
-
-		QString ssid, bssid, flags, wps_name, pri_dev_type;
-
-		QStringList lines = bss.split(QRegExp("\\n"));
-		for (QStringList::Iterator it = lines.begin();
-		     it != lines.end(); it++) {
-			int pos = (*it).indexOf('=') + 1;
-			if (pos < 1)
-				continue;
-
-			if ((*it).startsWith("bssid="))
-				bssid = (*it).mid(pos);
-			else if ((*it).startsWith("flags="))
-				flags = (*it).mid(pos);
-			else if ((*it).startsWith("ssid="))
-				ssid = (*it).mid(pos);
-			else if ((*it).startsWith("wps_device_name="))
-				wps_name = (*it).mid(pos);
-			else if ((*it).startsWith("wps_primary_device_type="))
-				pri_dev_type = (*it).mid(pos);
-		}
-
-		QString name = wps_name;
-		if (name.isEmpty())
-			name = ssid + "\n" + bssid;
-
-		QStandardItem *item = new QStandardItem(*ap_icon, name);
-		if (item) {
-			item->setData(bssid, peer_role_address);
-			int type;
-			if (flags.contains("[WPS"))
-				type = PEER_TYPE_AP_WPS;
-			else
-				type = PEER_TYPE_AP;
-			item->setData(type, peer_role_type);
-
-			for (int i = 0; i < lines.size(); i++) {
-				if (lines[i].length() > 60) {
-					lines[i].remove(
-						60, lines[i].length());
-					lines[i] += "..";
-				}
-			}
-			item->setToolTip(ItemType(type));
-			item->setData(lines.join("\n"), peer_role_details);
-			if (!pri_dev_type.isEmpty())
-				item->setData(pri_dev_type,
-					      peer_role_pri_dev_type);
-			if (!ssid.isEmpty())
-				item->setData(ssid, peer_role_ssid);
-			model.appendRow(item);
-		}
+		add_bss(cmd);
 	}
 }
 
@@ -713,6 +738,26 @@ void Peers::event_notify(WpaMsg msg)
 			model.appendRow(item);
 		}
 
+		return;
+	}
+
+	if (text.startsWith(WPA_EVENT_BSS_ADDED)) {
+		/* CTRL-EVENT-BSS-ADDED 34 00:11:22:33:44:55 */
+		QStringList items = text.split(' ');
+		if (items.size() < 2)
+			return;
+		char cmd[20];
+		snprintf(cmd, sizeof(cmd), "BSS ID-%d", items[1].toInt());
+		add_bss(cmd);
+		return;
+	}
+
+	if (text.startsWith(WPA_EVENT_BSS_REMOVED)) {
+		/* CTRL-EVENT-BSS-REMOVED 34 00:11:22:33:44:55 */
+		QStringList items = text.split(' ');
+		if (items.size() < 2)
+			return;
+		remove_bss(items[1].toInt());
 		return;
 	}
 }

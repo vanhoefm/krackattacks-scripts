@@ -24,6 +24,7 @@ struct wpas_dbus_priv {
 	int should_dispatch;
 	struct wpa_global *global;
 	u32 next_objid;
+	int dbus_new_initialized;
 };
 
 #endif /* DBUS_COMMON_I_H */

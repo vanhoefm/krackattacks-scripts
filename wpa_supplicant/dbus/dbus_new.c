@@ -1070,6 +1070,8 @@ int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv)
 				       obj_desc);
 	if (ret < 0)
 		free_dbus_object_desc(obj_desc);
+	else
+		priv->dbus_new_initialized = 1;
 
 	return ret;
 }
@@ -1085,6 +1087,8 @@ int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv)
  */
 void wpas_dbus_ctrl_iface_deinit(struct wpas_dbus_priv *iface)
 {
+	if (!iface->dbus_new_initialized)
+		return;
 	wpa_printf(MSG_DEBUG, "dbus: Unregister D-Bus object '%s'",
 		   WPAS_DBUS_NEW_PATH);
 	dbus_connection_unregister_object_path(iface->con,

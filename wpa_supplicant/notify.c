@@ -20,7 +20,7 @@
 #include "wpa_supplicant_i.h"
 #include "wps_supplicant.h"
 #include "dbus/dbus_common.h"
-#include "dbus/dbus.h"
+#include "dbus/dbus_old.h"
 #include "dbus/dbus_new.h"
 #include "notify.h"
 

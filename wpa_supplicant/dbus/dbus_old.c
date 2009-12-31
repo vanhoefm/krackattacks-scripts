@@ -20,8 +20,8 @@
 #include "wps/wps.h"
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
-#include "dbus.h"
-#include "dbus_handlers.h"
+#include "dbus_old.h"
+#include "dbus_old_handlers.h"
 #include "dbus_common.h"
 #include "dbus_common_i.h"
 

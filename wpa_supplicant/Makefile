@@ -1042,9 +1042,9 @@ endif
 ifdef CONFIG_CTRL_IFACE_DBUS
 DBUS=y
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
-DBUS_OBJS += dbus/dbus.o dbus/dbus_handlers.o
+DBUS_OBJS += dbus/dbus_old.o dbus/dbus_old_handlers.o
 ifdef CONFIG_WPS
-DBUS_OBJS += dbus/dbus_handlers_wps.o
+DBUS_OBJS += dbus/dbus_old_handlers_wps.o
 endif
 DBUS_OBJS += dbus/dbus_dict_helpers.o
 ifndef DBUS_LIBS

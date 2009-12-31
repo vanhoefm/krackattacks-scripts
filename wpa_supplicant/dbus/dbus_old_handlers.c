@@ -24,8 +24,8 @@
 #include "../driver_i.h"
 #include "../notify.h"
 #include "../wpas_glue.h"
-#include "dbus.h"
-#include "dbus_handlers.h"
+#include "dbus_old.h"
+#include "dbus_old_handlers.h"
 #include "dbus_dict_helpers.h"
 
 extern int wpa_debug_level;

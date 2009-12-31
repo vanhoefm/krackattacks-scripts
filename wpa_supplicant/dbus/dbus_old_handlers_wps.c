@@ -18,8 +18,8 @@
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../wps_supplicant.h"
-#include "dbus.h"
-#include "dbus_handlers.h"
+#include "dbus_old.h"
+#include "dbus_old_handlers.h"
 
 /**
  * wpas_dbus_iface_wps_pbc - Request credentials using WPS PBC method

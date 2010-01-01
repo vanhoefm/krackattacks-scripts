@@ -25,9 +25,13 @@ def byte_array_to_string(s):
 	return r
 
 def list_interfaces(wpas_obj):
-	ifaces = wpas_obj.Interfaces
-	for i in ifaces:
-		print "%s" (i)
+	ifaces = wpas_obj.Get(WPAS_DBUS_INTERFACE, 'Interfaces',
+			      dbus_interface=dbus.PROPERTIES_IFACE)
+	for path in ifaces:
+		if_obj = bus.get_object(WPAS_DBUS_SERVICE, path)
+		ifname = if_obj.Get(WPAS_DBUS_INTERFACES_INTERFACE, 'Ifname',
+			      dbus_interface=dbus.PROPERTIES_IFACE)
+		print ifname
 
 def stateChanged(newState, oldState):
 	print "StateChanged(%s -> %s)" % (oldState, newState)
@@ -91,6 +95,11 @@ def main():
 	global bus
 	bus = dbus.SystemBus()
 	wpas_obj = bus.get_object(WPAS_DBUS_SERVICE, WPAS_DBUS_OPATH)
+
+	if len(sys.argv) != 2:
+		list_interfaces(wpas_obj)
+		os._exit(1)
+
 	wpas = dbus.Interface(wpas_obj, WPAS_DBUS_INTERFACE)
 	bus.add_signal_receiver(scanDone,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
@@ -104,10 +113,6 @@ def main():
 	bus.add_signal_receiver(stateChanged,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
 				signal_name="StateChanged")
-
-	if len(sys.argv) != 2:
-		list_interfaces(wpas_obj)
-		os._exit(1)
 
 	ifname = sys.argv[1]
 

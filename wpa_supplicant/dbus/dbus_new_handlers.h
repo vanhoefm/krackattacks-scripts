@@ -25,6 +25,18 @@ struct bss_handler_args {
 	unsigned int id;
 };
 
+DBusMessage * wpas_dbus_simple_property_getter(DBusMessage *message,
+					       const int type,
+					       const void *val);
+
+DBusMessage * wpas_dbus_simple_property_setter(DBusMessage *message,
+					       const int type, void *val);
+
+DBusMessage * wpas_dbus_simple_array_property_getter(DBusMessage *message,
+						     const int type,
+						     const void *array,
+						     size_t array_len);
+
 DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 						 struct wpa_global *global);
 

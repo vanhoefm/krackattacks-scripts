@@ -254,39 +254,9 @@ out:
 DBusMessage * wpas_dbus_getter_process_credentials(
 	DBusMessage *message, struct wpa_supplicant *wpa_s)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter;
 	dbus_bool_t process = (wpa_s->conf->wps_cred_processing != 1);
-
-	if (message == NULL)
-		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
-	else
-		reply = dbus_message_new_method_return(message);
-
-	if (reply != NULL) {
-		dbus_message_iter_init_append(reply, &iter);
-		if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-						      "b", &variant_iter) ||
-		    !dbus_message_iter_append_basic(&variant_iter,
-						    DBUS_TYPE_BOOLEAN,
-						    &process) ||
-		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
-
-			perror("wpas_dbus_getter_process_credentials[dbus]: "
-			       "out of memory to put value into message.");
-			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-		}
-	} else {
-		perror("wpas_dbus_getter_process_credentials[dbus]: out of "
-		       "memory to create reply message.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-	}
-
-	return reply;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BOOLEAN,
+						&process);
 }
 
 
@@ -303,29 +273,12 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 	DBusMessage *message, struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter;
 	dbus_bool_t process_credentials, old_pc;
 
-	if (!dbus_message_iter_init(message, &iter)) {
-		perror("wpas_dbus_getter_ap_scan[dbus]: out of "
-		       "memory to return scanning state.");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	/* omit first and second argument and get value from third*/
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_recurse(&iter, &variant_iter);
-
-	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_BOOLEAN)
-	{
-		reply = wpas_dbus_error_invald_args(message,
-						    "BOOLEAN required");
-		goto out;
-	}
-	dbus_message_iter_get_basic(&variant_iter, &process_credentials);
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_UINT32,
+						 &process_credentials);
+	if (reply)
+		return reply;
 
 	old_pc = (wpa_s->conf->wps_cred_processing != 1);
 	wpa_s->conf->wps_cred_processing = (process_credentials ? 2 : 1);
@@ -339,6 +292,5 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 			WPAS_DBUS_NEW_IFACE_WPS,
 			"ProcessCredentials");
 
-out:
-	return reply;
+	return NULL;
 }

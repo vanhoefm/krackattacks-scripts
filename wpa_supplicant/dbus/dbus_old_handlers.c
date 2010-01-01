@@ -362,10 +362,9 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 	/* Ensure we've actually got scan results to return */
 	if (wpa_s->scan_res == NULL &&
 	    wpa_supplicant_get_scan_results(wpa_s) < 0) {
-		reply = dbus_message_new_error(message, WPAS_ERROR_SCAN_ERROR,
-					       "An error ocurred getting scan "
+		return dbus_message_new_error(message, WPAS_ERROR_SCAN_ERROR,
+					      "An error ocurred getting scan "
 					       "results.");
-		goto out;
 	}
 
 	/* Create and initialize the return message */
@@ -382,11 +381,8 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 
 		path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 		if (path == NULL) {
-			perror("wpas_dbus_iface_scan_results[dbus]: out of "
-			       "memory.");
-			wpa_printf(MSG_ERROR, "dbus control interface: not "
-				   "enough memory to send scan results "
-				   "signal.");
+			wpa_printf(MSG_ERROR, "dbus: Not enough memory to "
+				   "send scan results signal");
 			break;
 		}
 		/* Construct the object path for this network.  Note that ':'
@@ -403,7 +399,6 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 
 	dbus_message_iter_close_container(&iter, &sub_iter);
 
-out:
 	return reply;
 }
 
@@ -810,11 +805,8 @@ DBusMessage * wpas_dbus_iface_add_network(DBusMessage *message,
 
 	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 	if (path == NULL) {
-		perror("wpas_dbus_iface_scan_results[dbus]: out of "
-		       "memory.");
-		wpa_printf(MSG_ERROR, "dbus control interface: not "
-			   "enough memory to send scan results "
-			   "signal.");
+		wpa_printf(MSG_ERROR, "dbus: Not enough memory to send scan "
+			   "results signal");
 		goto out;
 	}
 
@@ -1324,10 +1316,8 @@ DBusMessage * wpas_dbus_iface_get_scanning(DBusMessage *message,
 		dbus_message_append_args(reply, DBUS_TYPE_BOOLEAN, &scanning,
 					 DBUS_TYPE_INVALID);
 	} else {
-		perror("wpas_dbus_iface_get_scanning[dbus]: out of "
-		       "memory.");
-		wpa_printf(MSG_ERROR, "dbus control interface: not enough "
-			   "memory to return scanning state.");
+		wpa_printf(MSG_ERROR, "dbus: Not enough memory to return "
+			   "scanning state");
 	}
 
 	return reply;

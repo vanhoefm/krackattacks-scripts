@@ -550,9 +550,8 @@ int wpa_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface,
 	if (!dbus_connection_register_object_path(iface->con,
 						  dbus_path, &wpa_vtable,
 						  obj_desc)) {
-		perror("dbus_connection_register_object_path[dbus]");
-		wpa_printf(MSG_ERROR, "Could not set up DBus message "
-			   "handler.");
+		wpa_printf(MSG_ERROR, "dbus: Could not set up message "
+			   "handler");
 		return -1;
 	}
 
@@ -566,14 +565,12 @@ int wpa_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface,
 	case DBUS_REQUEST_NAME_REPLY_EXISTS:
 	case DBUS_REQUEST_NAME_REPLY_IN_QUEUE:
 	case DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER:
-		perror("dbus_bus_request_name[dbus]");
-		wpa_printf(MSG_ERROR, "Could not request DBus service name: "
-			   "already registered.");
+		wpa_printf(MSG_ERROR, "dbus: Could not request service name: "
+			   "already registered");
 		break;
 	default:
-		perror("dbus_bus_request_name[dbus]");
-		wpa_printf(MSG_ERROR, "Could not request DBus service name: "
-			   "%s %s.", error.name, error.message);
+		wpa_printf(MSG_ERROR, "dbus: Could not request service name: "
+			   "%s %s", error.name, error.message);
 		break;
 	}
 	dbus_error_free(&error);
@@ -619,10 +616,8 @@ int wpa_dbus_register_object_per_iface(
 	/* Register the message handler for the interface functions */
 	if (!dbus_connection_register_object_path(con, path, &vtable,
 						  obj_desc)) {
-		perror("wpa_dbus_register_iface [dbus]");
-		wpa_printf(MSG_ERROR, "Could not set up DBus message "
-			   "handler for interface %s\n"
-			   "and object %s.", ifname, path);
+		wpa_printf(MSG_ERROR, "dbus: Could not set up message "
+			   "handler for interface %s object %s", ifname, path);
 		return -1;
 	}
 

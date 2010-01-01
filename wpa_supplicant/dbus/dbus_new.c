@@ -458,26 +458,13 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
 					  WPAS_DBUS_NEW_IFACE_INTERFACE,
 					  "StateChanged");
-	if (_signal == NULL) {
-		perror("wpas_dbus_signal_state_changed[dbus]: "
-		       "couldn't create dbus signal; likely out of memory");
-		wpa_printf(MSG_ERROR,
-		           "wpas_dbus_signal_state_changed[dbus]: "
-		           "couldn't create dbus signal; likely out of "
-		           "memory.");
+	if (_signal == NULL)
 		return;
-	}
 
 	new_state_str = os_strdup(wpa_supplicant_state_txt(new_state));
 	old_state_str = os_strdup(wpa_supplicant_state_txt(old_state));
-	if (new_state_str == NULL || old_state_str == NULL) {
-		perror("wpas_dbus_signal_state_changed[dbus]: "
-		       "couldn't convert state strings");
-		wpa_printf(MSG_ERROR,
-		           "wpas_dbus_signal_state_changed[dbus]: "
-		           "couldn't convert state strings.");
+	if (new_state_str == NULL || old_state_str == NULL)
 		goto out;
-	}
 
 	/* make state string lowercase to fit new DBus API convention */
 	tmp = new_state_str;
@@ -495,12 +482,10 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 	                              DBUS_TYPE_STRING, &new_state_str,
 	                              DBUS_TYPE_STRING, &old_state_str,
 	                              DBUS_TYPE_INVALID)) {
-		perror("wpas_dbus_signal_state_changed[dbus]: "
-		       "not enough memory to construct state change signal.");
 		wpa_printf(MSG_ERROR,
-		           "wpas_dbus_signal_state_changed[dbus]: "
+		           "dbus: wpas_dbus_signal_state_changed: "
 		           "not enough memory to construct state change "
-		           "signal.");
+		           "signal");
 		goto out;
 	}
 
@@ -730,19 +715,13 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
 					  WPAS_DBUS_NEW_IFACE_WPS,
 					  "Credentials");
-	if (!_signal) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_cred[dbus]: "
-			   "out of memory when creating a signal");
+	if (!_signal)
 		return;
-	}
 
 	dbus_message_iter_init_append(_signal, &iter);
 
-	if (!wpa_dbus_dict_open_write(&iter, &dict_iter)) {
-		perror("wpas_dbus_signal_wps_cred[dbus]: out of memory "
-		       "when opening a dictionary");
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
 		goto nomem;
-	}
 
 	if (cred->auth_type & WPS_AUTH_OPEN)
 		auth_type[at_num++] = "open";
@@ -771,11 +750,8 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 		if (!wpa_dbus_dict_append_byte_array(
 			    &dict_iter, "BSSID",
 			    (const char *) wpa_s->current_ssid->bssid,
-			    ETH_ALEN)) {
-			perror("wpas_dbus_signal_wps_cred[dbus]: out of "
-			       "memory when appending bssid to dictionary");
+			    ETH_ALEN))
 			goto nomem;
-		}
 	}
 
 	if (!(wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
@@ -791,17 +767,11 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 					      (const char *) cred->key,
 					      cred->key_len) &&
 	      wpa_dbus_dict_append_uint32(&dict_iter, "KeyIndex",
-					  cred->key_idx))) {
-		perror("wpas_dbus_signal_wps_cred[dbus]: out of memory "
-		       "when appending to dictionary");
+					  cred->key_idx)))
 		goto nomem;
-	}
 
-	if (!wpa_dbus_dict_close_write(&iter, &dict_iter)) {
-		perror("wpas_dbus_signal_wps_cred[dbus]: out of memory "
-		       "when closing a dictionary");
+	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
 		goto nomem;
-	}
 
 	dbus_connection_send(iface->con, _signal, NULL);
 

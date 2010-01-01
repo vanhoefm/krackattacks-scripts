@@ -709,16 +709,11 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 
 	path = wpa_s->dbus_new_path;
 	reply = dbus_message_new_method_return(message);
-	if (reply == NULL) {
-		perror("wpas_dbus_handler_get_interface[dbus]: out of memory "
-		       "when creating reply");
+	if (reply == NULL)
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);
-	}
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
 				      DBUS_TYPE_INVALID)) {
-		perror("wpas_dbus_handler_get_interface[dbus]: out of memory "
-		       "when appending argument to reply");
 		dbus_message_unref(reply);
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);
@@ -1338,8 +1333,6 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 
 	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 	if (path == NULL) {
-		perror("wpas_dbus_handler_add_network[dbus]: out of "
-		       "memory.");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto err;
@@ -1376,16 +1369,12 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
-		perror("wpas_dbus_handler_add_network[dbus]: out of memory "
-		       "when creating reply");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto err;
 	}
 	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
 				      DBUS_TYPE_INVALID)) {
-		perror("wpas_dbus_handler_add_network[dbus]: out of memory "
-		       "when appending argument to reply");
 		dbus_message_unref(reply);
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
@@ -1552,8 +1541,6 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 
 	blob = os_zalloc(sizeof(*blob));
 	if (!blob) {
-		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-		       "trying to allocate blob struct");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto err;
@@ -1561,8 +1548,6 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 
 	blob->data = os_malloc(blob_len);
 	if (!blob->data) {
-		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-		       "trying to allocate blob data");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto err;
@@ -1572,8 +1557,6 @@ DBusMessage * wpas_dbus_handler_add_blob(DBusMessage *message,
 	blob->len = blob_len;
 	blob->name = os_strdup(blob_name);
 	if (!blob->name) {
-		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-		       "trying to copy blob name");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto err;
@@ -1623,8 +1606,6 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 
 	reply = dbus_message_new_method_return(message);
 	if (!reply) {
-		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-		       "trying to allocate return message");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto out;
@@ -1636,8 +1617,6 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 					      DBUS_TYPE_BYTE_AS_STRING,
 					      &array_iter)) {
 		dbus_message_unref(reply);
-		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-		       "trying to open array");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto out;
@@ -1646,8 +1625,6 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 	if (!dbus_message_iter_append_fixed_array(&array_iter, DBUS_TYPE_BYTE,
 						  &(blob->data), blob->len)) {
 		dbus_message_unref(reply);
-		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-		       "trying to append data to array");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto out;
@@ -1655,8 +1632,6 @@ DBusMessage * wpas_dbus_handler_get_blob(DBusMessage *message,
 
 	if (!dbus_message_iter_close_container(&iter, &array_iter)) {
 		dbus_message_unref(reply);
-		perror("wpas_dbus_handler_get_blob[dbus] out of memory when "
-		       "trying to close array");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto out;
@@ -2142,12 +2117,9 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 	char *bss_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 	struct wpa_bss *bss = NULL;
 
-	if (bss_obj_path == NULL) {
-		perror("wpas_dbus_getter_current_bss[dbus]: out of "
-		       "memory to allocate result argument.");
+	if (bss_obj_path == NULL)
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);
-	}
 
 	/* TODO: store current BSS or BSS id in wpa_s */
 	if (!is_zero_ether_addr(wpa_s->bssid))
@@ -2184,12 +2156,9 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 	DBusMessage *reply = NULL;
 	char *net_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 
-	if (net_obj_path == NULL) {
-		perror("wpas_dbus_getter_current_network[dbus]: out of "
-		       "memory to allocate result argument.");
+	if (net_obj_path == NULL)
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);
-	}
 
 	if (wpa_s->current_ssid)
 		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
@@ -2260,8 +2229,6 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 	dl_list_for_each(bss, &wpa_s->bss_id, struct wpa_bss, list_id) {
 		paths[i] = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 		if (paths[i] == NULL) {
-			perror("wpas_dbus_getter_bsss[dbus]: out of "
-			       "memory.");
 			reply = dbus_message_new_error(message,
 						       DBUS_ERROR_NO_MEMORY,
 						       NULL);
@@ -2319,11 +2286,8 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 
 	/* Loop through configured networks and append object path of each */
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
-
 		paths[i] = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 		if (paths[i] == NULL) {
-			perror("wpas_dbus_getter_networks[dbus]: out of "
-			       "memory.");
 			reply = dbus_message_new_error(message,
 						       DBUS_ERROR_NO_MEMORY,
 						       NULL);
@@ -2367,132 +2331,57 @@ DBusMessage * wpas_dbus_getter_blobs(DBusMessage *message,
 		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
 	else
 		reply = dbus_message_new_method_return(message);
-	if (!reply) {
-		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-		       "trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
+	if (!reply)
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					      "a{say}", &variant_iter)) {
-		dbus_message_unref(reply);
-		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-		       "trying to open variant");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      "a{say}", &variant_iter) ||
+	    !dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
 					      "{say}", &dict_iter)) {
 		dbus_message_unref(reply);
-		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-		       "trying to open dictionary");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
 	blob = wpa_s->conf->blobs;
 	while (blob) {
 		if (!dbus_message_iter_open_container(&dict_iter,
 						      DBUS_TYPE_DICT_ENTRY,
-						      NULL, &entry_iter)) {
-			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory "
-			       "when trying to open entry");
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
-		}
-
-		if (!dbus_message_iter_append_basic(&entry_iter,
+						      NULL, &entry_iter) ||
+		    !dbus_message_iter_append_basic(&entry_iter,
 						    DBUS_TYPE_STRING,
-						    &(blob->name))) {
-			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory "
-			       "when trying to append blob name");
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
-		}
-
-		if (!dbus_message_iter_open_container(&entry_iter,
+						    &(blob->name)) ||
+		    !dbus_message_iter_open_container(&entry_iter,
 						      DBUS_TYPE_ARRAY,
 						      DBUS_TYPE_BYTE_AS_STRING,
-						      &array_iter)) {
-			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory "
-			       "when trying to open array");
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
-		}
-
-		if (!dbus_message_iter_append_fixed_array(&array_iter,
+						      &array_iter) ||
+		    !dbus_message_iter_append_fixed_array(&array_iter,
 							  DBUS_TYPE_BYTE,
 							  &(blob->data),
-							  blob->len)) {
-			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory "
-			       "when trying to append blob data");
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
-		}
-
-		if (!dbus_message_iter_close_container(&entry_iter,
-						       &array_iter)) {
-			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory "
-			       "when trying to close array");
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
-		}
-
-		if (!dbus_message_iter_close_container(&dict_iter,
+							  blob->len) ||
+		    !dbus_message_iter_close_container(&entry_iter,
+						       &array_iter) ||
+		    !dbus_message_iter_close_container(&dict_iter,
 						       &entry_iter)) {
 			dbus_message_unref(reply);
-			perror("wpas_dbus_getter_blobs[dbus] out of memory "
-			       "when trying to close entry");
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
+			return dbus_message_new_error(message,
+						      DBUS_ERROR_NO_MEMORY,
+						      NULL);
 		}
 
 		blob = blob->next;
 	}
 
-	if (!dbus_message_iter_close_container(&variant_iter, &dict_iter)) {
+	if (!dbus_message_iter_close_container(&variant_iter, &dict_iter) ||
+	    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 		dbus_message_unref(reply);
-		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-		       "trying to close dictionary");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
-	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
-		dbus_message_unref(reply);
-		perror("wpas_dbus_getter_blobs[dbus] out of memory when "
-		       "trying to close variant");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-out:
 	return reply;
 }
 
@@ -2835,20 +2724,15 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	DBusMessageIter	iter, variant_iter, dict_iter;
 	char **iterator;
 	char **props = wpa_config_get_all(net->ssid, 0);
-	if (!props) {
-		perror("wpas_dbus_getter_network_properties[dbus] couldn't "
-		       "read network properties. out of memory.");
+	if (!props)
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);
-	}
 
 	if (message == NULL)
 		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
 	else
 		reply = dbus_message_new_method_return(message);
 	if (!reply) {
-		perror("wpas_dbus_getter_network_properties[dbus] out of "
-		       "memory when trying to initialize return message");
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
 		goto out;
@@ -2857,18 +2741,8 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	dbus_message_iter_init_append(reply, &iter);
 
 	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-			"a{sv}", &variant_iter)) {
-		perror("wpas_dbus_getter_network_properties[dbus] out of "
-		       "memory when trying to open variant container");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!wpa_dbus_dict_open_write(&variant_iter, &dict_iter)) {
-		perror("wpas_dbus_getter_network_properties[dbus] out of "
-		       "memory when trying to open dict");
+			"a{sv}", &variant_iter) ||
+	    !wpa_dbus_dict_open_write(&variant_iter, &dict_iter)) {
 		dbus_message_unref(reply);
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);
@@ -2879,8 +2753,6 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	while (*iterator) {
 		if (!wpa_dbus_dict_append_string(&dict_iter, *iterator,
 						 *(iterator + 1))) {
-			perror("wpas_dbus_getter_network_properties[dbus] out "
-			       "of memory when trying to add entry");
 			dbus_message_unref(reply);
 			reply = dbus_message_new_error(message,
 						       DBUS_ERROR_NO_MEMORY,
@@ -2891,18 +2763,8 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	}
 
 
-	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter)) {
-		perror("wpas_dbus_getter_network_properties[dbus] out of "
-		       "memory when trying to close dictionary");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
-		perror("wpas_dbus_getter_network_properties[dbus] out of "
-		       "memory when trying to close variant container");
+	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
+	    !dbus_message_iter_close_container(&iter, &variant_iter)) {
 		dbus_message_unref(reply);
 		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					       NULL);

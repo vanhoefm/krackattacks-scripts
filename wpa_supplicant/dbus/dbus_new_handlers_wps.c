@@ -67,9 +67,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 					   "wpas_dbus_handler_wps_start"
 					   "[dbus]: "
 					   "wrong Role type. string required");
-				reply = wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invald_args(
 					message, "Role must be a string");
-				goto out;
 			}
 			dbus_message_iter_get_basic(&variant_iter, &val);
 			if (os_strcmp(val, "enrollee") == 0)
@@ -80,8 +79,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "unknown role %s", val);
-				reply = wpas_dbus_error_invald_args(message, val);
-				goto out;
+				return wpas_dbus_error_invald_args(message,
+								   val);
 			}
 		} else if (strcmp(key, "Type") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
@@ -90,9 +89,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Type type. string required");
-				reply = wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invald_args(
 					message, "Type must be a string");
-				goto out;
 			}
 			dbus_message_iter_get_basic(&variant_iter, &val);
 			if (os_strcmp(val, "pin") == 0)
@@ -103,9 +101,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "unknown type %s", val);
-				reply = wpas_dbus_error_invald_args(message,
-								    val);
-				goto out;
+				return wpas_dbus_error_invald_args(message,
+								   val);
 			}
 		} else if (strcmp(key, "Bssid") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
@@ -116,9 +113,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Bssid type. byte array required");
-				reply = wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invald_args(
 					message, "Bssid must be a byte array");
-				goto out;
 			}
 			dbus_message_iter_recurse(&variant_iter, &array_iter);
 			dbus_message_iter_get_fixed_array(&array_iter, &bssid,
@@ -127,9 +123,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Bssid length %d", len);
-				reply = wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invald_args(
 					message, "Bssid is wrong length");
-				goto out;
 			}
 		}
 		else if (os_strcmp(key, "Pin") == 0) {
@@ -139,17 +134,15 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Pin type. string required");
-				reply = wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invald_args(
 					message, "Pin must be a string");
-				goto out;
 			}
 			dbus_message_iter_get_basic(&variant_iter, &pin);
 		} else {
 			wpa_printf(MSG_DEBUG,
 				   "wpas_dbus_handler_wps_start[dbus]: "
 				   "unknown key %s", key);
-			reply = wpas_dbus_error_invald_args(message, key);
-			goto out;
+			return wpas_dbus_error_invald_args(message, key);
 		}
 
 		dbus_message_iter_next(&dict_iter);
@@ -158,23 +151,20 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	if (role == 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
 			   "Role not specified");
-		reply = wpas_dbus_error_invald_args(message,
-						    "Role not specified");
-		goto out;
+		return wpas_dbus_error_invald_args(message,
+						   "Role not specified");
 	}
 	else if (role == 1 && type == 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
 			   "Type not specified");
-		reply = wpas_dbus_error_invald_args(message,
-						    "Type not specified");
-		goto out;
+		return wpas_dbus_error_invald_args(message,
+						   "Type not specified");
 	}
 	else if (role == 2 && pin == NULL) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
 			   "Pin required for registrar role.");
-		reply = wpas_dbus_error_invald_args(
+		return wpas_dbus_error_invald_args(
 			message, "Pin required for registrar role.");
-		goto out;
 	}
 
 	if (role == 2)
@@ -191,52 +181,38 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 			   "wpas_wps_failed in role %s and key %s.",
 			   (role == 1 ? "enrollee" : "registrar"),
 			   (type == 0 ? "" : (type == 1 ? "pin" : "pbc")));
-		reply = wpas_dbus_error_unknown_error(message,
-						      "wps start failed");
-		goto out;
+		return wpas_dbus_error_unknown_error(message,
+						     "wps start failed");
 	}
 
 	reply = dbus_message_new_method_return(message);
 	if (!reply) {
-		perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-		       "when creating reply");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
 	dbus_message_iter_init_append(reply, &iter);
 	if (!wpa_dbus_dict_open_write(&iter, &dict_iter)) {
-		perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-		       "when opening dictionary");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
 	if (os_strlen(npin) > 0) {
 		if (!wpa_dbus_dict_append_string(&dict_iter, "Pin", npin)) {
-			perror("wpas_dbus_handler_wps_start[dbus]: "
-			       "out of memory when appending pin");
 			dbus_message_unref(reply);
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
-			goto out;
+			return dbus_message_new_error(message,
+						      DBUS_ERROR_NO_MEMORY,
+						      NULL);
 		}
 	}
 
 	if (!wpa_dbus_dict_close_write(&iter, &dict_iter)) {
-		perror("wpas_dbus_handler_wps_start[dbus]: out of memory "
-		       "when closing dictionary");
 		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
 	}
 
-out:
 	return reply;
 }
 

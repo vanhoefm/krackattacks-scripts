@@ -636,17 +636,14 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 {
 	dbus_uint32_t count = 0;
 	dbus_bool_t success = FALSE;
-	char *buffer;
+	char *buffer, *nbuffer;;
 
 	entry->bytearray_value = NULL;
 	entry->array_type = DBUS_TYPE_BYTE;
 
 	buffer = os_zalloc(BYTE_ARRAY_ITEM_SIZE * BYTE_ARRAY_CHUNK_SIZE);
-	if (!buffer) {
-		perror("_wpa_dbus_dict_entry_get_byte_array[dbus]: out of "
-		       "memory");
-		goto done;
-	}
+	if (!buffer)
+		return FALSE;
 
 	entry->bytearray_value = buffer;
 	entry->array_len = 0;
@@ -654,14 +651,17 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 		char byte;
 
 		if ((count % BYTE_ARRAY_CHUNK_SIZE) == 0 && count != 0) {
-			buffer = os_realloc(buffer, BYTE_ARRAY_ITEM_SIZE *
-					    (count + BYTE_ARRAY_CHUNK_SIZE));
-			if (buffer == NULL) {
-				perror("_wpa_dbus_dict_entry_get_byte_array["
-				       "dbus] out of memory trying to "
-				       "retrieve the string array");
+			nbuffer = os_realloc(buffer, BYTE_ARRAY_ITEM_SIZE *
+					     (count + BYTE_ARRAY_CHUNK_SIZE));
+			if (nbuffer == NULL) {
+				os_free(buffer);
+				wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_"
+					   "entry_get_byte_array out of "
+					   "memory trying to retrieve the "
+					   "string array");
 				goto done;
 			}
+			buffer = nbuffer;
 		}
 		entry->bytearray_value = buffer;
 
@@ -693,17 +693,14 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 {
 	dbus_uint32_t count = 0;
 	dbus_bool_t success = FALSE;
-	char **buffer;
+	char **buffer, **nbuffer;
 
 	entry->strarray_value = NULL;
 	entry->array_type = DBUS_TYPE_STRING;
 
 	buffer = os_zalloc(STR_ARRAY_ITEM_SIZE * STR_ARRAY_CHUNK_SIZE);
-	if (buffer == NULL) {
-		perror("_wpa_dbus_dict_entry_get_string_array[dbus] out of "
-		       "memory trying to retrieve a string array");
-		goto done;
-	}
+	if (buffer == NULL)
+		return FALSE;
 
 	entry->strarray_value = buffer;
 	entry->array_len = 0;
@@ -712,23 +709,26 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_string_array(
 		char *str;
 
 		if ((count % STR_ARRAY_CHUNK_SIZE) == 0 && count != 0) {
-			buffer = os_realloc(buffer, STR_ARRAY_ITEM_SIZE *
-					    (count + STR_ARRAY_CHUNK_SIZE));
-			if (buffer == NULL) {
-				perror("_wpa_dbus_dict_entry_get_string_array["
-				       "dbus] out of memory trying to "
-				       "retrieve the string array");
+			nbuffer = os_realloc(buffer, STR_ARRAY_ITEM_SIZE *
+					     (count + STR_ARRAY_CHUNK_SIZE));
+			if (nbuffer == NULL) {
+				os_free(buffer);
+				wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_"
+					   "entry_get_string_array out of "
+					   "memory trying to retrieve the "
+					   "string array");
 				goto done;
 			}
+			buffer = nbuffer;
 		}
 		entry->strarray_value = buffer;
 
 		dbus_message_iter_get_basic(iter, &value);
 		str = os_strdup(value);
 		if (str == NULL) {
-			perror("_wpa_dbus_dict_entry_get_string_array[dbus] "
-			       "out of memory trying to duplicate the string "
-			       "array");
+			wpa_printf(MSG_ERROR, "dbus: _wpa_dbus_dict_entry_get_"
+				   "string_array out of memory trying to "
+				   "duplicate the string array");
 			goto done;
 		}
 		entry->strarray_value[count] = str;
@@ -933,10 +933,8 @@ error:
  */
 dbus_bool_t wpa_dbus_dict_has_dict_entry(DBusMessageIter *iter_dict)
 {
-	if (!iter_dict) {
-		perror("wpa_dbus_dict_has_dict_entry[dbus]: out of memory");
+	if (!iter_dict)
 		return FALSE;
-	}
 	return dbus_message_iter_get_arg_type(iter_dict) ==
 		DBUS_TYPE_DICT_ENTRY;
 }

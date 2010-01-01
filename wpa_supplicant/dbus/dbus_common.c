@@ -291,8 +291,7 @@ static int integrate_with_eloop(struct wpas_dbus_priv *priv)
 	if (!dbus_connection_set_watch_functions(priv->con, add_watch,
 						 remove_watch, watch_toggled,
 						 priv, NULL)) {
-		perror("dbus_connection_set_watch_functions[dbus]");
-		wpa_printf(MSG_ERROR, "Not enough memory to set up dbus.");
+		wpa_printf(MSG_ERROR, "dbus: Not enough memory to set up");
 		return -1;
 	}
 
@@ -300,14 +299,13 @@ static int integrate_with_eloop(struct wpas_dbus_priv *priv)
 						   remove_timeout,
 						   timeout_toggled, priv,
 						   NULL)) {
-		perror("dbus_connection_set_timeout_functions[dbus]");
-		wpa_printf(MSG_ERROR, "Not enough memory to set up dbus.");
+		wpa_printf(MSG_ERROR, "dbus: Not enough memory to set up");
 		return -1;
 	}
 
 	if (connection_setup_wakeup_main(priv) < 0) {
-		perror("connection_setup_wakeup_main[dbus]");
-		wpa_printf(MSG_ERROR, "Could not setup main wakeup function.");
+		wpa_printf(MSG_ERROR, "dbus: Could not setup main wakeup "
+			   "function");
 		return -1;
 	}
 

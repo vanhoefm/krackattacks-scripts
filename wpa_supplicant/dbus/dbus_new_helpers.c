@@ -35,10 +35,6 @@ struct wpa_dbus_method_desc {
 
 	/* method handling function */
 	WPADBusMethodHandler method_handler;
-	/* handler function argument */
-	void *handler_argument;
-	/* function used to free handler argument */
-	WPADBusArgumentFreeFunction argument_free_func;
 
 	/* number of method arguments */
 	int args_num;
@@ -87,10 +83,6 @@ struct wpa_dbus_property_desc {
 	WPADBusPropertyAccessor getter;
 	/* property setter function */
 	WPADBusPropertyAccessor setter;
-	/* argument for getter and setter functions */
-	void *user_data;
-	/* function used to free accessors argument */
-	WPADBusArgumentFreeFunction user_data_free_func;
 };
 
 
@@ -629,13 +621,16 @@ static void recursive_iter_copy(DBusMessageIter *from, DBusMessageIter *to)
  */
 static DBusMessage * get_all_properties(
 	DBusMessage *message, char *interface,
-	struct wpa_dbus_property_desc *property_dsc)
+	struct wpa_dbus_object_desc *obj_dsc)
 {
 	/* Create and initialize the return message */
 	DBusMessage *reply = dbus_message_new_method_return(message);
 	DBusMessage *getterReply = NULL;
 	DBusMessageIter iter, dict_iter, entry_iter, ret_iter;
 	int counter = 0;
+	struct wpa_dbus_property_desc *property_dsc;
+
+	property_dsc = obj_dsc->properties;
 
 	dbus_message_iter_init_append(reply, &iter);
 
@@ -652,7 +647,7 @@ static DBusMessage * get_all_properties(
 		    property_dsc->access != W && property_dsc->getter) {
 
 			getterReply = property_dsc->getter(
-				message, property_dsc->user_data);
+				message, obj_dsc->user_data);
 			dbus_message_iter_init(getterReply, &ret_iter);
 
 			dbus_message_iter_open_container(&dict_iter,
@@ -719,20 +714,20 @@ static DBusMessage * properties_get_all(DBusMessage *message, char *interface,
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      NULL);
 
-	return get_all_properties(message, interface,
-				  obj_dsc->properties);
+	return get_all_properties(message, interface, obj_dsc);
 }
 
 
 static DBusMessage * properties_get(DBusMessage *message,
-				    struct wpa_dbus_property_desc *dsc)
+				    struct wpa_dbus_property_desc *dsc,
+				    void *user_data)
 {
 	if (os_strcmp(dbus_message_get_signature(message), "ss"))
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      NULL);
 
 	if (dsc->access != W && dsc->getter)
-		return dsc->getter(message, dsc->user_data);
+		return dsc->getter(message, user_data);
 
 	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 				      "Property is write-only");
@@ -740,14 +735,15 @@ static DBusMessage * properties_get(DBusMessage *message,
 
 
 static DBusMessage * properties_set(DBusMessage *message,
-				    struct wpa_dbus_property_desc *dsc)
+				    struct wpa_dbus_property_desc *dsc,
+				    void *user_data)
 {
 	if (os_strcmp(dbus_message_get_signature(message), "ssv"))
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      NULL);
 
 	if (dsc->access != R && dsc->setter)
-		return dsc->setter(message, dsc->user_data);
+		return dsc->setter(message, user_data);
 
 	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 				      "Property is read-only");
@@ -795,9 +791,10 @@ properties_get_or_set(DBusMessage *message, DBusMessageIter *iter,
 
 	if (os_strncmp(WPA_DBUS_PROPERTIES_GET, method,
 		       WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) == 0)
-		return properties_get(message, property_dsc);
+		return properties_get(message, property_dsc,
+				      obj_dsc->user_data);
 
-	return properties_set(message, property_dsc);
+	return properties_set(message, property_dsc, obj_dsc->user_data);
 }
 
 
@@ -876,7 +873,7 @@ static DBusMessage * msg_method_handler(DBusMessage *message,
 	}
 
 	return method_dsc->method_handler(message,
-					  method_dsc->handler_argument);
+					  obj_dsc->user_data);
 }
 
 
@@ -973,10 +970,6 @@ void free_dbus_object_desc(struct wpa_dbus_object_desc *obj_dsc)
 			os_free(tmp_met_dsc->args[i].type);
 		}
 
-		if (tmp_met_dsc->argument_free_func)
-			tmp_met_dsc->argument_free_func(
-				tmp_met_dsc->handler_argument);
-
 		os_free(tmp_met_dsc);
 	}
 
@@ -1009,12 +1002,12 @@ void free_dbus_object_desc(struct wpa_dbus_object_desc *obj_dsc)
 		os_free(tmp_prop_dsc->dbus_property);
 		os_free(tmp_prop_dsc->type);
 
-		if (tmp_prop_dsc->user_data_free_func)
-			tmp_prop_dsc->user_data_free_func(
-				tmp_prop_dsc->user_data);
-
 		os_free(tmp_prop_dsc);
 	}
+
+	/* free handler's argument */
+	if (obj_dsc->user_data_free_func)
+		obj_dsc->user_data_free_func(obj_dsc->user_data);
 
 	os_free(obj_dsc);
 }
@@ -1159,24 +1152,19 @@ int wpa_dbus_unregister_object_per_iface(
  * @dbus_interface: DBus interface under which method will be registered
  * @dbus_method: a name the method will be registered with
  * @method_handler: a function which will be called to handle this method call
- * @handler_argument: an additional argument passed to handler function
- * @argument_free_func: function used to free handler argument
  * @args: method arguments list
  * Returns: Zero on success and -1 on failure
  *
  * Registers DBus method under given name and interface for the object.
- * Method calls will be handled with given handling function and optional
- * argument passed to this function. Handler function is required to return
- * a DBusMessage pointer which will be response to method call. Any method
- * call before being handled must have registered appropriate handler by
- * using this function.
+ * Method calls will be handled with given handling function.
+ * Handler function is required to return a DBusMessage pointer which
+ * will be response to method call. Any method call before being handled
+ * must have registered appropriate handler by using this function.
  */
 int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 			     const char *dbus_interface,
 			     const char *dbus_method,
 			     WPADBusMethodHandler method_handler,
-			     void *handler_argument,
-			     WPADBusArgumentFreeFunction argument_free_func,
 			     const struct wpa_dbus_argument args[])
 {
 	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
@@ -1246,8 +1234,6 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 		goto err;
 
 	method_dsc->method_handler = method_handler;
-	method_dsc->handler_argument = handler_argument;
-	method_dsc->argument_free_func = argument_free_func;
 	method_dsc->next = NULL;
 
 	return 0;
@@ -1393,17 +1379,14 @@ err:
  * @type: a property type signature in form of DBus type description
  * @getter: a function called in order to get property value
  * @setter: a function called in order to set property value
- * @user_data: additional argument passed to setter or getter
- * @user_data_free_func: function used to free additional argument
  * @access: property access permissions specifier (R, W or RW)
  * Returns: Zero on success and -1 on failure
  *
  * Registers DBus property under given name and interface for the object.
- * Property are set with giver setter function and get with getter.
- * Additional argument is passed to getter or setter. Getter or setter
- * are required to return DBusMessage which is response to Set/Get method
- * calls. Every property must be registered by this function before being
- * used.
+ * Properties are set with giver setter function and get with getter.Getter
+ * or setter are required to return DBusMessage which is response to Set/Get
+ * method calls. Every property must be registered by this function before
+ * being used.
  */
 int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 			       const char *dbus_interface,
@@ -1411,8 +1394,6 @@ int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 			       const char *type,
 			       WPADBusPropertyAccessor getter,
 			       WPADBusPropertyAccessor setter,
-			       void *user_data,
-			       WPADBusArgumentFreeFunction user_data_free_func,
 			       enum dbus_prop_access _access)
 {
 	struct wpa_dbus_property_desc *property_dsc = obj_dsc->properties;
@@ -1458,8 +1439,6 @@ int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 
 	property_dsc->getter = getter;
 	property_dsc->setter = setter;
-	property_dsc->user_data = user_data;
-	property_dsc->user_data_free_func = user_data_free_func;
 	property_dsc->access = _access;
 	property_dsc->next = NULL;
 

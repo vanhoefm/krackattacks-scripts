@@ -942,16 +942,20 @@ struct wpas_dbus_signal {
 
 static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
 			       void *priv,
+			       WPADBusArgumentFreeFunction priv_free,
 			       const struct wpas_dbus_method *methods,
 			       const struct wpas_dbus_property *properties,
 			       const struct wpas_dbus_signal *signals)
 {
 	int i;
 
+	obj_desc->user_data = priv;
+	obj_desc->user_data_free_func = priv_free;
+
 	for (i = 0; methods && methods[i].name; i++) {
 		wpa_dbus_method_register(obj_desc, methods[i].iface,
 					 methods[i].name, methods[i].handler,
-					 priv, NULL, methods[i].args);
+					 methods[i].args);
 	}
 
 	for (i = 0; properties && properties[i].name; i++) {
@@ -960,7 +964,7 @@ static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
 					   properties[i].type,
 					   properties[i].getter,
 					   properties[i].setter,
-					   priv, NULL, properties[i]._access);
+					   properties[i]._access);
 	}
 
 	for (i = 0; signals && signals[i].name; i++) {
@@ -1059,7 +1063,8 @@ int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv)
 		return -1;
 	}
 
-	wpas_dbus_register(obj_desc, priv->global, wpas_dbus_global_methods,
+	wpas_dbus_register(obj_desc, priv->global, NULL,
+			   wpas_dbus_global_methods,
 			   wpas_dbus_global_properties,
 			   wpas_dbus_global_signals);
 
@@ -1102,6 +1107,32 @@ static void wpa_dbus_free(void *ptr)
 }
 
 
+static const struct wpas_dbus_property wpas_dbus_network_properties[] = {
+	{ "Properties", WPAS_DBUS_NEW_IFACE_NETWORK, "a{sv}",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_network_properties,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_network_properties,
+	  RW
+	},
+	{ "Enabled", WPAS_DBUS_NEW_IFACE_NETWORK, "b",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_enabled,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_enabled,
+	  RW
+	},
+	{ NULL, NULL, NULL, NULL, NULL, 0 }
+};
+
+
+static const struct wpas_dbus_signal wpas_dbus_network_signals[] = {
+	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_NETWORK,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ NULL, NULL, { END_ARGS } }
+};
+
+
 /**
  * wpas_dbus_register_network - Register a configured network with dbus
  * @wpa_s: wpa_supplicant interface structure
@@ -1116,15 +1147,9 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
 
-	struct network_handler_args *arg1 = NULL;
-	struct network_handler_args *arg2 = NULL;
+	struct network_handler_args *arg = NULL;
 
 	char *net_obj_path;
-
-	struct wpa_dbus_argument sargs[] = {
-		{ "properties", "a{sv}", ARG_OUT },
-		END_ARGS
-	};
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -1150,45 +1175,19 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	}
 
 	/* allocate memory for handlers arguments */
-	arg1 =	os_zalloc(sizeof(struct network_handler_args));
-	if (!arg1) {
-		wpa_printf(MSG_ERROR, "Not enough memory "
-			   "to create arguments for method");
-		goto err;
-	}
-	arg2 =	os_zalloc(sizeof(struct network_handler_args));
-	if (!arg2) {
+	arg = os_zalloc(sizeof(struct network_handler_args));
+	if (!arg) {
 		wpa_printf(MSG_ERROR, "Not enough memory "
 			   "to create arguments for method");
 		goto err;
 	}
 
-	arg1->wpa_s = wpa_s;
-	arg1->ssid = ssid;
-	arg2->wpa_s = wpa_s;
-	arg2->ssid = ssid;
+	arg->wpa_s = wpa_s;
+	arg->ssid = ssid;
 
-	/* Enabled property */
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
-				   "Enabled", "b",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_enabled,
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_setter_enabled,
-				   arg1, wpa_dbus_free, RW);
-
-	/* Properties property */
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
-				   "Properties", "a{sv}",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_network_properties,
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_setter_network_properties,
-				   arg2, wpa_dbus_free, RW);
-
-	/* PropertiesChanged signal */
-	wpa_dbus_signal_register(obj_desc, WPAS_DBUS_NEW_IFACE_NETWORK,
-				 "PropertiesChanged", sargs);
+	wpas_dbus_register(obj_desc, arg, wpa_dbus_free, NULL,
+			   wpas_dbus_network_properties,
+			   wpas_dbus_network_signals);
 
 	if (wpa_dbus_register_object_per_iface(ctrl_iface, net_obj_path,
 					       wpa_s->ifname, obj_desc))
@@ -1202,8 +1201,7 @@ static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 err:
 	os_free(net_obj_path);
 	os_free(obj_desc);
-	os_free(arg1);
-	os_free(arg2);
+	os_free(arg);
 	return -1;
 }
 
@@ -1246,6 +1244,27 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 	os_free(net_obj_path);
 	return ret;
 }
+
+
+static const struct wpas_dbus_property wpas_dbus_bss_properties[] = {
+	{ "Properties", WPAS_DBUS_NEW_IFACE_BSSID, "a{sv}",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_properties,
+	  NULL,
+	  R
+	},
+	{ NULL, NULL, NULL, NULL, NULL, 0 }
+};
+
+
+static const struct wpas_dbus_signal wpas_dbus_bss_signals[] = {
+	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_BSSID,
+	  {
+		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ NULL, NULL, { END_ARGS } }
+};
 
 
 /**
@@ -1344,12 +1363,9 @@ static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 	arg->wpa_s = wpa_s;
 	arg->id = id;
 
-	/* Properties property */
-	wpa_dbus_property_register(obj_desc, WPAS_DBUS_NEW_IFACE_BSSID,
-				   "Properties", "a{sv}",
-				   (WPADBusPropertyAccessor)
-				   wpas_dbus_getter_bss_properties, NULL,
-				   arg, wpa_dbus_free, R);
+	wpas_dbus_register(obj_desc, arg, wpa_dbus_free, NULL,
+			   wpas_dbus_bss_properties,
+			   wpas_dbus_bss_signals);
 
 	wpa_printf(MSG_DEBUG, "dbus: Register BSS object '%s'",
 		   bss_obj_path);
@@ -1627,7 +1643,7 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 		goto err;
 	}
 
-	wpas_dbus_register(obj_desc, wpa_s, wpas_dbus_interface_methods,
+	wpas_dbus_register(obj_desc, wpa_s, NULL, wpas_dbus_interface_methods,
 			   wpas_dbus_interface_properties,
 			   wpas_dbus_interface_signals);
 

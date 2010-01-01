@@ -27,9 +27,17 @@ typedef DBusMessage * (* WPADBusPropertyAccessor)(DBusMessage *message,
 
 struct wpa_dbus_object_desc {
 	DBusConnection *connection;
+
+	/* list of methods, properties and signals registered with object */
 	struct wpa_dbus_method_desc *methods;
 	struct wpa_dbus_signal_desc *signals;
 	struct wpa_dbus_property_desc *properties;
+
+	/* argument for method handlers and properties
+	 * getter and setter functions */
+	void *user_data;
+	/* function used to free above argument */
+	WPADBusArgumentFreeFunction user_data_free_func;
 };
 
 enum dbus_prop_access { R, W, RW };
@@ -86,8 +94,6 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 			     const char *dbus_interface,
 			     const char *dbus_method,
 			     WPADBusMethodHandler method_handler,
-			     void *handler_argument,
-			     WPADBusArgumentFreeFunction argument_free_func,
 			     const struct wpa_dbus_argument args[]);
 
 int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
@@ -101,8 +107,6 @@ int wpa_dbus_property_register(
 	const char *type,
 	WPADBusPropertyAccessor getter,
 	WPADBusPropertyAccessor setter,
-	void *user_data,
-	WPADBusArgumentFreeFunction user_data_free_func,
 	enum dbus_prop_access _access);
 
 void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,

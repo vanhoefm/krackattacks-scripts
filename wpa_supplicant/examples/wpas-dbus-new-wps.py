@@ -65,9 +65,10 @@ def main():
 	ifname = sys.argv[1]
 
 	path = wpas.GetInterface(ifname)
-	global if_obj
 	if_obj = bus.get_object(WPAS_DBUS_SERVICE, path)
-	global iface
+	if_obj.Set(WPAS_DBUS_WPS_INTERFACE, 'ProcessCredentials',
+		   dbus.Boolean(1),
+		   dbus_interface=dbus.PROPERTIES_IFACE)
 	wps = dbus.Interface(if_obj, WPAS_DBUS_WPS_INTERFACE)
 	wps.Start({'Role': 'enrollee', 'Type': 'pbc'})
 

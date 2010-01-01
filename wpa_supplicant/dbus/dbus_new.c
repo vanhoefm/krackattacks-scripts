@@ -28,24 +28,6 @@
 #include "dbus_common.h"
 #include "dbus_common_i.h"
 
-/**
- * wpas_dbus_set_path - Assign a dbus path to an interface
- * @wpa_s: wpa_supplicant interface structure
- * @path: dbus path to set on the interface
- * Returns: 0 on success, -1 on error
- */
-static int wpas_dbus_set_path(struct wpa_supplicant *wpa_s,
-			      const char *path)
-{
-	u32 len = os_strlen(path);
-	if (len >= WPAS_DBUS_OBJECT_PATH_MAX)
-		return -1;
-	if (wpa_s->dbus_new_path)
-		return -1;
-	wpa_s->dbus_new_path = os_strdup(path);
-	return 0;
-}
-
 
 /**
  * wpas_dbus_signal_interface - Send a interface related event signal
@@ -1766,7 +1748,6 @@ int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 {
 
 	struct wpa_dbus_object_desc *obj_desc = NULL;
-	char *path;
 	struct wpas_dbus_priv *ctrl_iface = wpa_s->global->dbus;
 	int next;
 
@@ -1775,19 +1756,13 @@ int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	/* Create and set the interface's object path */
-	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	if (path == NULL)
+	wpa_s->dbus_new_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
+	if (wpa_s->dbus_new_path == NULL)
 		return -1;
 	next = ctrl_iface->next_objid++;
-	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+	os_snprintf(wpa_s->dbus_new_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    WPAS_DBUS_NEW_PATH_INTERFACES "/%u",
 		    next);
-	if (wpas_dbus_set_path(wpa_s, path)) {
-		wpa_printf(MSG_DEBUG,
-			   "Failed to set dbus path for interface %s",
-			   wpa_s->ifname);
-		goto err;
-	}
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
@@ -1800,19 +1775,21 @@ int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 			   wpas_dbus_interface_properties,
 			   wpas_dbus_interface_signals);
 
-	wpa_printf(MSG_DEBUG, "dbus: Register interface object '%s'", path);
-	if (wpa_dbus_register_object_per_iface(ctrl_iface, path, wpa_s->ifname,
-					       obj_desc))
+	wpa_printf(MSG_DEBUG, "dbus: Register interface object '%s'",
+		   wpa_s->dbus_new_path);
+	if (wpa_dbus_register_object_per_iface(ctrl_iface,
+					       wpa_s->dbus_new_path,
+					       wpa_s->ifname, obj_desc))
 		goto err;
 
 	wpas_dbus_signal_interface_added(wpa_s);
 
-	os_free(path);
 	return 0;
 
 err:
+	os_free(wpa_s->dbus_new_path);
+	wpa_s->dbus_new_path = NULL;
 	os_free(obj_desc);
-	os_free(path);
 	return -1;
 }
 

@@ -696,7 +696,6 @@ int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 	DBusObjectPathVTable vtable = {
 		NULL, &wpas_iface_message_handler, NULL, NULL, NULL, NULL
 	};
-	char *path;
 	int ret = -1;
 
 	/* Do nothing if the control interface is not turned on */
@@ -707,21 +706,16 @@ int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 	next = ctrl_iface->next_objid++;
 
 	/* Create and set the interface's object path */
-	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	if (path == NULL)
+	wpa_s->dbus_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
+	if (wpa_s->dbus_path == NULL)
 		return -1;
-	snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
-		 WPAS_DBUS_PATH_INTERFACES "/%u",
-		 next);
-	if (wpa_supplicant_set_dbus_path(wpa_s, path)) {
-		wpa_printf(MSG_DEBUG,
-		           "Failed to set dbus path for interface %s",
-			   wpa_s->ifname);
-		goto out;
-	}
+	os_snprintf(wpa_s->dbus_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    WPAS_DBUS_PATH_INTERFACES "/%u",
+		    next);
 
 	/* Register the message handler for the interface functions */
-	if (!dbus_connection_register_fallback(con, path, &vtable, wpa_s)) {
+	if (!dbus_connection_register_fallback(con, wpa_s->dbus_path, &vtable,
+					       wpa_s)) {
 		perror("wpas_dbus_register_iface [dbus]");
 		wpa_printf(MSG_ERROR, "Could not set up DBus message "
 			   "handler for interface %s.", wpa_s->ifname);
@@ -730,7 +724,6 @@ int wpas_dbus_register_iface(struct wpa_supplicant *wpa_s)
 	ret = 0;
 
 out:
-	os_free(path);
 	return ret;
 }
 
@@ -784,25 +777,6 @@ struct wpa_supplicant * wpa_supplicant_get_iface_by_dbus_path(
 			return wpa_s;
 	}
 	return NULL;
-}
-
-
-/**
- * wpa_supplicant_set_dbus_path - Assign a dbus path to an interface
- * @wpa_s: wpa_supplicant interface structure
- * @path: dbus path to set on the interface
- * Returns: 0 on succes, -1 on error
- */
-int wpa_supplicant_set_dbus_path(struct wpa_supplicant *wpa_s,
-				  const char *path)
-{
-	u32 len = strlen (path);
-	if (len >= WPAS_DBUS_OBJECT_PATH_MAX)
-		return -1;
-	if (wpa_s->dbus_path)
-		return -1;
-	wpa_s->dbus_path = os_strdup(path);
-	return 0;
 }
 
 

@@ -648,6 +648,8 @@ static DBusMessage * get_all_properties(
 
 			getterReply = property_dsc->getter(
 				message, obj_dsc->user_data);
+			if (getterReply == NULL)
+				goto skip;
 			dbus_message_iter_init(getterReply, &ret_iter);
 
 			dbus_message_iter_open_container(&dict_iter,
@@ -662,6 +664,7 @@ static DBusMessage * get_all_properties(
 			dbus_message_iter_close_container(&dict_iter,
 							  &entry_iter);
 			dbus_message_unref(getterReply);
+		skip:
 			counter++;
 		}
 		property_dsc = property_dsc->next;

@@ -36,6 +36,14 @@
 #endif
 
 
+static void dispatch_data(DBusConnection *con)
+{
+	while (dbus_connection_get_dispatch_status(con) ==
+	       DBUS_DISPATCH_DATA_REMAINS)
+		dbus_connection_dispatch(con);
+}
+
+
 /**
  * dispatch_initial_dbus_messages - Dispatch initial dbus messages after
  *     claiming bus name
@@ -49,10 +57,7 @@
 static void dispatch_initial_dbus_messages(void *eloop_ctx, void *timeout_ctx)
 {
 	DBusConnection *con = eloop_ctx;
-
-	while (dbus_connection_get_dispatch_status(con) ==
-	       DBUS_DISPATCH_DATA_REMAINS)
-		dbus_connection_dispatch(con);
+	dispatch_data(con);
 }
 
 
@@ -71,9 +76,7 @@ static void process_watch(struct wpas_dbus_priv *priv,
 		dbus_watch_handle(watch, DBUS_WATCH_ERROR);
 
 	if (priv->should_dispatch) {
-		while (dbus_connection_get_dispatch_status(priv->con) ==
-		       DBUS_DISPATCH_DATA_REMAINS)
-			dbus_connection_dispatch(priv->con);
+		dispatch_data(priv->con);
 		priv->should_dispatch = 0;
 	}
 
@@ -99,14 +102,14 @@ static void process_watch_write(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-static void connection_setup_add_watch(struct wpas_dbus_priv *priv,
-				       DBusWatch *watch)
+static dbus_bool_t add_watch(DBusWatch *watch, void *data)
 {
+	struct wpas_dbus_priv *priv = data;
 	unsigned int flags;
 	int fd;
 
 	if (!dbus_watch_get_enabled(watch))
-		return;
+		return TRUE;
 
 	flags = dbus_watch_get_flags(watch);
 	fd = dbus_watch_get_unix_fd(watch);
@@ -124,11 +127,12 @@ static void connection_setup_add_watch(struct wpas_dbus_priv *priv,
 	}
 
 	dbus_watch_set_data(watch, priv, NULL);
+
+	return TRUE;
 }
 
 
-static void connection_setup_remove_watch(struct wpas_dbus_priv *priv,
-					  DBusWatch *watch)
+static void remove_watch(DBusWatch *watch, void *data)
 {
 	unsigned int flags;
 	int fd;
@@ -147,19 +151,6 @@ static void connection_setup_remove_watch(struct wpas_dbus_priv *priv,
 }
 
 
-static dbus_bool_t add_watch(DBusWatch *watch, void *data)
-{
-	connection_setup_add_watch(data, watch);
-	return TRUE;
-}
-
-
-static void remove_watch(DBusWatch *watch, void *data)
-{
-	connection_setup_remove_watch(data, watch);
-}
-
-
 static void watch_toggled(DBusWatch *watch, void *data)
 {
 	if (dbus_watch_get_enabled(watch))
@@ -172,38 +163,20 @@ static void watch_toggled(DBusWatch *watch, void *data)
 static void process_timeout(void *eloop_ctx, void *sock_ctx)
 {
 	DBusTimeout *timeout = sock_ctx;
-
 	dbus_timeout_handle(timeout);
-}
-
-
-static void connection_setup_add_timeout(struct wpas_dbus_priv *priv,
-					 DBusTimeout *timeout)
-{
-	if (!dbus_timeout_get_enabled(timeout))
-		return;
-
-	eloop_register_timeout(0, dbus_timeout_get_interval(timeout) * 1000,
-			       process_timeout, priv, timeout);
-
-	dbus_timeout_set_data(timeout, priv, NULL);
-}
-
-
-static void connection_setup_remove_timeout(struct wpas_dbus_priv *priv,
-					    DBusTimeout *timeout)
-{
-	eloop_cancel_timeout(process_timeout, priv, timeout);
-	dbus_timeout_set_data(timeout, NULL, NULL);
 }
 
 
 static dbus_bool_t add_timeout(DBusTimeout *timeout, void *data)
 {
+	struct wpas_dbus_priv *priv = data;
 	if (!dbus_timeout_get_enabled(timeout))
 		return TRUE;
 
-	connection_setup_add_timeout(data, timeout);
+	eloop_register_timeout(0, dbus_timeout_get_interval(timeout) * 1000,
+			       process_timeout, priv, timeout);
+
+	dbus_timeout_set_data(timeout, priv, NULL);
 
 	return TRUE;
 }
@@ -211,7 +184,9 @@ static dbus_bool_t add_timeout(DBusTimeout *timeout, void *data)
 
 static void remove_timeout(DBusTimeout *timeout, void *data)
 {
-	connection_setup_remove_timeout(data, timeout);
+	struct wpas_dbus_priv *priv = data;
+	eloop_cancel_timeout(process_timeout, priv, timeout);
+	dbus_timeout_set_data(timeout, NULL, NULL);
 }
 
 
@@ -260,54 +235,29 @@ static void wakeup_main(void *data)
 
 
 /**
- * connection_setup_wakeup_main - Tell dbus about our wakeup_main function
- * @priv: dbus control interface private data
- * Returns: 0 on success, -1 on failure
- *
- * Register our wakeup_main handler with dbus
- */
-static int connection_setup_wakeup_main(struct wpas_dbus_priv *priv)
-{
-	if (eloop_register_signal(SIGPOLL, process_wakeup_main, priv))
-		return -1;
-
-	dbus_connection_set_wakeup_main_function(priv->con, wakeup_main,
-						 priv, NULL);
-
-	return 0;
-}
-
-
-/**
  * integrate_with_eloop - Register our mainloop integration with dbus
  * @connection: connection to the system message bus
  * @priv: a dbus control interface data structure
  * Returns: 0 on success, -1 on failure
- *
- * We register our mainloop integration functions with dbus here.
  */
 static int integrate_with_eloop(struct wpas_dbus_priv *priv)
 {
 	if (!dbus_connection_set_watch_functions(priv->con, add_watch,
 						 remove_watch, watch_toggled,
-						 priv, NULL)) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to set up");
-		return -1;
-	}
-
-	if (!dbus_connection_set_timeout_functions(priv->con, add_timeout,
+						 priv, NULL) ||
+	    !dbus_connection_set_timeout_functions(priv->con, add_timeout,
 						   remove_timeout,
 						   timeout_toggled, priv,
 						   NULL)) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to set up");
+		wpa_printf(MSG_ERROR, "dbus: Failed to set callback "
+			   "functions");
 		return -1;
 	}
 
-	if (connection_setup_wakeup_main(priv) < 0) {
-		wpa_printf(MSG_ERROR, "dbus: Could not setup main wakeup "
-			   "function");
+	if (eloop_register_signal(SIGPOLL, process_wakeup_main, priv))
 		return -1;
-	}
+	dbus_connection_set_wakeup_main_function(priv->con, wakeup_main,
+						 priv, NULL);
 
 	return 0;
 }
@@ -316,16 +266,17 @@ static int integrate_with_eloop(struct wpas_dbus_priv *priv)
 static int wpas_dbus_init_common(struct wpas_dbus_priv *priv)
 {
 	DBusError error;
+	int ret = 0;
 
 	/* Get a reference to the system bus */
 	dbus_error_init(&error);
 	priv->con = dbus_bus_get(DBUS_BUS_SYSTEM, &error);
-	dbus_error_free(&error);
 	if (!priv->con) {
 		wpa_printf(MSG_ERROR, "dbus: Could not acquire the system "
-			   "bus: %s", strerror(errno));
-		return -1;
+			   "bus: %s - %s", error.name, error.message);
+		ret = -1;
 	}
+	dbus_error_free(&error);
 
 	return 0;
 }

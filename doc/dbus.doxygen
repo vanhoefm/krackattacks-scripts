@@ -508,7 +508,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 \section dbus_wps fi.w1.wpa_supplicant1.Interface.WPS
 
 Interface implemented by objects related to network interface added to
-&wpa_supplicant, i.e., returned by fi.w1.wpa_supplicant1.CreateInterface.
+%wpa_supplicant, i.e., returned by fi.w1.wpa_supplicant1.CreateInterface.
 
 \subsection dbus_wps_methods Methods
 

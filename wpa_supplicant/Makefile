@@ -1083,6 +1083,7 @@ ifndef DBUS_INCLUDE
 DBUS_INCLUDE := $(shell pkg-config --cflags dbus-1)
 endif
 ifdef CONFIG_CTRL_IFACE_DBUS_INTRO
+DBUS_OBJS += dbus/dbus_new_introspect.o
 DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS_INTRO
 DBUS_INCLUDE += $(shell xml2-config --cflags)
 DBUS_LIBS += $(shell xml2-config --libs)

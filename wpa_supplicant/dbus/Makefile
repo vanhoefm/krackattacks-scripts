@@ -70,6 +70,7 @@ LIB_OBJS= \
 	dbus_new.o \
 	dbus_new_handlers.o \
 	dbus_new_helpers.o \
+	dbus_new_introspect.o \
 	dbus_dict_helpers.o
 
 ifdef CONFIG_WPS

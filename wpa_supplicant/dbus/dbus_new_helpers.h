@@ -52,6 +52,69 @@ struct wpa_dbus_argument {
 
 #define END_ARGS { NULL, NULL, ARG_IN }
 
+/**
+ * struct wpa_dbus_method_desc - DBus method description
+ */
+struct wpa_dbus_method_desc {
+	/* pointer to next description in list */
+	struct wpa_dbus_method_desc *next;
+
+	/* method interface */
+	char *dbus_interface;
+	/* method name */
+	char *dbus_method;
+
+	/* method handling function */
+	WPADBusMethodHandler method_handler;
+
+	/* number of method arguments */
+	int args_num;
+	/* array of arguments */
+	struct wpa_dbus_argument args[];
+};
+
+/**
+ * struct wpa_dbus_signal_desc - DBus signal description
+ */
+struct wpa_dbus_signal_desc {
+	/* pointer to next description in list */
+	struct wpa_dbus_signal_desc *next;
+
+	/* signal interface */
+	char *dbus_interface;
+	/* signal name */
+	char *dbus_signal;
+
+	/* number of signal arguments */
+	int args_num;
+	/* array of arguments */
+	struct wpa_dbus_argument args[0];
+};
+
+/**
+ * struct wpa_dbus_property_desc - DBus property description
+ */
+struct wpa_dbus_property_desc {
+	/* pointer to next description in list */
+	struct wpa_dbus_property_desc *next;
+
+	/* property interface */
+	char *dbus_interface;
+	/* property name */
+	char *dbus_property;
+	/* property type signature in DBus type notation */
+	char *type;
+
+	/* property access permissions */
+	enum dbus_prop_access access;
+
+	/* property getter function */
+	WPADBusPropertyAccessor getter;
+	/* property setter function */
+	WPADBusPropertyAccessor setter;
+};
+
+
 #ifndef SIGPOLL
 #ifdef SIGIO
 /*
@@ -117,5 +180,8 @@ void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
 void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
 				    const char *path, const char *interface,
 				    DBusMessageIter *dict_iter);
+
+DBusMessage * wpa_dbus_introspect(DBusMessage *message,
+				  struct wpa_dbus_object_desc *obj_dsc);
 
 #endif /* WPA_DBUS_CTRL_H */

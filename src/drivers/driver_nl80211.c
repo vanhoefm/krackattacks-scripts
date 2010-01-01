@@ -979,6 +979,9 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		WPA_DRIVER_CAPA_ENC_WEP104 |
 		WPA_DRIVER_CAPA_ENC_TKIP |
 		WPA_DRIVER_CAPA_ENC_CCMP;
+	drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
+		WPA_DRIVER_AUTH_SHARED |
+		WPA_DRIVER_AUTH_LEAP;
 
 	drv->capa.max_scan_ssids = info.max_scan_ssids;
 	if (info.ap_supported)

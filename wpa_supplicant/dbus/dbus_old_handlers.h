@@ -16,6 +16,7 @@
 #define CTRL_IFACE_DBUS_HANDLERS_H
 
 DBusMessage * wpas_dbus_new_invalid_iface_error(DBusMessage *message);
+DBusMessage * wpas_dbus_new_invalid_network_error(DBusMessage *message);
 
 DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 					     struct wpa_global *global);

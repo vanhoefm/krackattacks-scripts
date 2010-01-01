@@ -83,8 +83,6 @@ struct wpas_dbus_callbacks {
 
 #ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 
-#include <dbus/dbus.h>
-
 #define WPAS_DBUS_OBJECT_PATH_MAX 150
 
 #define WPAS_DBUS_NEW_SERVICE		"fi.w1.wpa_supplicant1"

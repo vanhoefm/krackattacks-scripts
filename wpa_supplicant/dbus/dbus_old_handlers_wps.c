@@ -13,6 +13,7 @@
  */
 
 #include "includes.h"
+#include <dbus/dbus.h>
 
 #include "common.h"
 #include "../config.h"

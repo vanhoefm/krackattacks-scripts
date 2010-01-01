@@ -19,8 +19,6 @@ struct wps_credential;
 
 #ifdef CONFIG_CTRL_IFACE_DBUS
 
-#include <dbus/dbus.h>
-
 #define WPAS_DBUS_OBJECT_PATH_MAX 150
 
 #define WPAS_DBUS_SERVICE	"fi.epitest.hostap.WPASupplicant"
@@ -98,9 +96,6 @@ int wpa_supplicant_set_dbus_path(struct wpa_supplicant *wpa_s,
 const char *wpa_supplicant_get_dbus_path(struct wpa_supplicant *wpa_s);
 struct wpa_supplicant * wpa_supplicant_get_iface_by_dbus_path(
 	struct wpa_global *global, const char *path);
-
-DBusMessage * wpas_dbus_new_invalid_iface_error(DBusMessage *message);
-DBusMessage * wpas_dbus_new_invalid_network_error(DBusMessage *message);
 
 #else /* CONFIG_CTRL_IFACE_DBUS */
 

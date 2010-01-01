@@ -2562,109 +2562,268 @@ out:
 
 
 /**
- * wpas_dbus_getter_bss_properties - Return the properties of a scanned bss
+ * wpas_dbus_getter_bss_bssid - Return the BSSID of a BSS
  * @message: Pointer to incoming dbus message
- * @bss: a pair of interface describing structure and bss' bssid
- * Returns: a dbus message containing the properties for the requested bss
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the bssid for the requested bss
  *
- * Getter for "Properties" property.
+ * Getter for "BSSID" property.
  */
-DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
-					      struct bss_handler_args *bss)
+DBusMessage * wpas_dbus_getter_bss_bssid(DBusMessage *message,
+					 struct bss_handler_args *bss)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, iter_dict, variant_iter;
-	const u8 *ie;
 	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
 
-	if (res == NULL)
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_bssid[dbus]: no "
+			   "bss with id %d found", bss->id);
 		return NULL;
+	}
 
-	/* Dump the properties into a dbus message */
-	if (message == NULL)
-		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
+	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
+						      res->bssid, ETH_ALEN);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_ssid - Return the SSID of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the ssid for the requested bss
+ *
+ * Getter for "SSID" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_ssid(DBusMessage *message,
+					      struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_ssid[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
+	}
+
+	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
+						      res->ssid,
+						      res->ssid_len);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_privacy - Return the privacy flag of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the privacy flag value of requested bss
+ *
+ * Getter for "Privacy" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_privacy(DBusMessage *message,
+					   struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	dbus_bool_t privacy;
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_privacy[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
+	}
+
+	privacy = res->caps && IEEE80211_CAP_PRIVACY ? TRUE : FALSE;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BOOLEAN,
+						&privacy);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_mode - Return the mode of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the mode of requested bss
+ *
+ * Getter for "Mode" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_mode(DBusMessage *message,
+					struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	const char *mode;
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_mode[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
+	}
+
+	if (res->caps & IEEE80211_CAP_IBSS)
+		mode = "ad-hoc";
 	else
-		reply = dbus_message_new_method_return(message);
+		mode = "infrastructure";
 
-	if (!reply)
-		goto error;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_STRING,
+						&mode);
+}
 
-	dbus_message_iter_init_append(reply, &iter);
 
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					      "a{sv}", &variant_iter))
-		goto error;
+/**
+ * wpas_dbus_getter_bss_level - Return the signal strength of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the signal strength of requested bss
+ *
+ * Getter for "Level" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_signal(DBusMessage *message,
+					  struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
 
-	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
-		goto error;
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_signal[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
+	}
 
-	if (!wpa_dbus_dict_append_byte_array(&iter_dict, "BSSID",
-					     (const char *) res->bssid,
-					     ETH_ALEN))
-		goto error;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_INT16,
+						&res->level);
+}
 
-	ie = wpa_bss_get_ie(res, WLAN_EID_SSID);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "SSID",
-						     (const char *) (ie + 2),
-						     ie[1]))
-		goto error;
+
+/**
+ * wpas_dbus_getter_bss_frequency - Return the frequency of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the frequency of requested bss
+ *
+ * Getter for "Frequency" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_frequency(DBusMessage *message,
+					     struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_frequency[dbus]: "
+			   "no bss with id %d found", bss->id);
+		return NULL;
+	}
+
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_UINT16,
+						&res->freq);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_max_rate - Return the maximal rate of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the maximal data rate of requested bss
+ *
+ * Getter for "MaxRate" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_max_rate(DBusMessage *message,
+					    struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	int max_rate;
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_max_rate[dbus]: "
+			   "no bss with id %d found", bss->id);
+		return NULL;
+	}
+
+	max_rate = wpa_bss_get_max_rate(res);
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_UINT16,
+						&max_rate);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_wpaie - Return the WPA IE of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the WPA information elements
+ * of requested bss
+ *
+ * Getter for "WPAIE" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_wpaie(DBusMessage *message,
+					 struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	const u8 *ie;
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_wpaie[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
 	}
 
 	ie = wpa_bss_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "WPAIE",
-						     (const char *) ie,
-						     ie[1] + 2))
-			goto error;
+	if (!ie)
+		return NULL;
+	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
+						      ie, ie[1] + 2);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_rsnie - Return the RSN IE of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the RSN information elements
+ * of requested bss
+ *
+ * Getter for "RSNIE" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_rsnie(DBusMessage *message,
+					 struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	const u8 *ie;
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_rsnie[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
 	}
 
 	ie = wpa_bss_get_ie(res, WLAN_EID_RSN);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "RSNIE",
-						     (const char *) ie,
-						     ie[1] + 2))
-			goto error;
+	if (!ie)
+		return NULL;
+	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
+						      ie, ie[1] + 2);
+}
+
+
+/**
+ * wpas_dbus_getter_bss_wpsie - Return the WPS IE of a BSS
+ * @message: Pointer to incoming dbus message
+ * @bss: a pair of interface describing structure and bss's id
+ * Returns: a dbus message containing the WPS information elements
+ * of requested bss
+ *
+ * Getter for "WPSIE" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_wpsie(DBusMessage *message,
+					 struct bss_handler_args *bss)
+{
+	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	const u8 *ie;
+
+	if (!res) {
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_wpsie[dbus]: no "
+			   "bss with id %d found", bss->id);
+		return NULL;
 	}
 
 	ie = wpa_bss_get_vendor_ie(res, WPS_IE_VENDOR_TYPE);
-	if (ie) {
-		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "WPSIE",
-						     (const char *) ie,
-						     ie[1] + 2))
-			goto error;
-	}
-
-	if (res->freq) {
-		if (!wpa_dbus_dict_append_int32(&iter_dict, "Frequency",
-						res->freq))
-			goto error;
-	}
-	if (!wpa_dbus_dict_append_uint16(&iter_dict, "Capabilities",
-					 res->caps))
-		goto error;
-	if (!(res->flags & WPA_SCAN_QUAL_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "Quality", res->qual))
-		goto error;
-	if (!(res->flags & WPA_SCAN_NOISE_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "Noise", res->noise))
-		goto error;
-	if (!(res->flags & WPA_SCAN_LEVEL_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "Level", res->level))
-		goto error;
-	if (!wpa_dbus_dict_append_int32(&iter_dict, "MaxRate",
-					wpa_bss_get_max_rate(res) * 500000))
-		goto error;
-
-	if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
-		goto error;
-
-	return reply;
-
-error:
-	if (reply)
-		dbus_message_unref(reply);
-	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+	if (!ie)
+		return NULL;
+	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
+						      ie, ie[1] + 2);
 }
 
 

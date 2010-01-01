@@ -1247,8 +1247,53 @@ static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 
 
 static const struct wpas_dbus_property wpas_dbus_bss_properties[] = {
-	{ "Properties", WPAS_DBUS_NEW_IFACE_BSSID, "a{sv}",
-	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_properties,
+	{ "SSID", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_ssid,
+	  NULL,
+	  R
+	},
+	{ "BSSID", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_bssid,
+	  NULL,
+	  R
+	},
+	{ "Privacy", WPAS_DBUS_NEW_IFACE_BSSID, "b",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_privacy,
+	  NULL,
+	  R
+	},
+	{ "Mode", WPAS_DBUS_NEW_IFACE_BSSID, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_mode,
+	  NULL,
+	  R
+	},
+	{ "Signal", WPAS_DBUS_NEW_IFACE_BSSID, "n",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_signal,
+	  NULL,
+	  R
+	},
+	{ "Frequency", WPAS_DBUS_NEW_IFACE_BSSID, "q",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_frequency,
+	  NULL,
+	  R
+	},
+	{ "MaxRate", WPAS_DBUS_NEW_IFACE_BSSID, "q",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_max_rate,
+	  NULL,
+	  R
+	},
+	{ "WPAIE", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpaie,
+	  NULL,
+	  R
+	},
+	{ "RSNIE", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_rsnie,
+	  NULL,
+	  R
+	},
+	{ "WPSIE", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpsie,
 	  NULL,
 	  R
 	},

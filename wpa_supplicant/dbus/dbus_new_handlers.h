@@ -121,8 +121,35 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_blobs(DBusMessage *message,
 				     struct wpa_supplicant *bss);
 
-DBusMessage * wpas_dbus_getter_bss_properties(DBusMessage *message,
-					      struct bss_handler_args *bss);
+DBusMessage * wpas_dbus_getter_bss_bssid(DBusMessage *message,
+					 struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_ssid(DBusMessage *message,
+					struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_privacy(DBusMessage *message,
+					   struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_mode(DBusMessage *message,
+					struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_signal(DBusMessage *message,
+					  struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_frequency(DBusMessage *message,
+					     struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_max_rate(DBusMessage *message,
+					    struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_wpaie(DBusMessage *message,
+					 struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_rsnie(DBusMessage *message,
+					 struct bss_handler_args *bss);
+
+DBusMessage * wpas_dbus_getter_bss_wpsie(DBusMessage *message,
+					 struct bss_handler_args *bss);
 
 DBusMessage * wpas_dbus_getter_enabled(DBusMessage *message,
 				       struct network_handler_args *net);

@@ -600,22 +600,44 @@ scan results.
 
     <ul>
       <li>
-	<h3>Properties - a{sv} - (read)</h3>
-	<p>Properties of scanned BSS. Dictionary contains following entries:</p>
-	<table>
-	  <tr><th>Key</th><th>Value type</th>
-	  <tr><td>BSSID</td><td>ay</td>
-	  <tr><td>SSID</td><td>ay</td>
-	  <tr><td>WPAIE</td><td>ay</td>
-	  <tr><td>RSNIE</td><td>ay</td>
-	  <tr><td>WPSIE</td><td>ay</td>
-	  <tr><td>Frequency</td><td>i</td>
-	  <tr><td>Capabilities</td><td>q</td>
-	  <tr><td>Quality</td><td>i</td>
-	  <tr><td>Noise</td><td>i</td>
-	  <tr><td>Level</td><td>i</td>
-	  <tr><td>MaxRate</td><td>i</td>
-	</table>
+	<h3>BSSID - ay - (read)</h3>
+	<p>BSSID of the BSS.</p>
+      </li>
+      <li>
+	<h3>SSID - ay - (read)</h3>
+	<p>SSID of the BSS.</p>
+      </li>
+      <li>
+	<h3>WPAIE - ay - (read)</h3>
+	<p>WPA information element of the BSS. The second byte contain number of bytes following it.</p>
+      </li>
+      <li>
+	<h3>RSNIE - ay - (read)</h3>
+	<p>RSN information element of the BSS. The second byte contain number of bytes following it.</p>
+      </li>
+      <li>
+	<h3>WPSIE - ay - (read)</h3>
+	<p>WPS information element of the BSS. The second byte contain number of bytes following it.</p>
+      </li>
+      <li>
+	<h3>Privacy - b - (read)</h3>
+	<p>Indicates if BSS supports privacy.</p>
+      </li>
+      <li>
+	<h3>Mode - s - (read)</h3>
+	<p>Describes mode of the BSS. Possible values are: "ad-hoc" and "infrastructure".</p>
+      </li>
+      <li>
+	<h3>Frequency - q - (read)</h3>
+	<p>Frequency of the BSS in MHz.</p>
+      </li>
+      <li>
+	<h3>MaxRate - q - (read)</h3>
+	<p>Maximal data rate of the BSS in bits per second.</p>
+      </li>
+      <li>
+	<h3>Signal - n - (read)</h3>
+	<p>Signal strength of the BSS.</p>
       </li>
     </ul>
 

@@ -30,26 +30,69 @@ struct interfaces {
 };
 
 
-static void add_interface(struct dl_list *list, const char *dbus_interface)
+static struct interfaces * add_interface(struct dl_list *list,
+					 const char *dbus_interface)
 {
 	struct interfaces *iface;
 
 	dl_list_for_each(iface, list, struct interfaces, list) {
 		if (os_strcmp(iface->dbus_interface, dbus_interface) == 0)
-			return; /* already in the list */
+			return iface; /* already in the list */
 	}
 
 	iface = os_zalloc(sizeof(struct interfaces));
 	if (!iface)
-		return;
+		return NULL;
 	iface->xml = wpabuf_alloc(3000);
 	if (iface->xml == NULL) {
 		os_free(iface);
-		return;
+		return NULL;
 	}
 	wpabuf_printf(iface->xml, "<interface name=\"%s\">", dbus_interface);
 	dl_list_add_tail(list, &iface->list);
 	iface->dbus_interface = os_strdup(dbus_interface);
+	return iface;
+}
+
+
+static void add_arg(struct wpabuf *xml, const char *name, const char *type,
+		    const char *direction)
+{
+	wpabuf_printf(xml, "<arg name=\"%s\"", name);
+	if (type)
+		wpabuf_printf(xml, " type=\"%s\"", type);
+	if (direction)
+		wpabuf_printf(xml, " direction=\"%s\"", direction);
+	wpabuf_put_str(xml, "/>");
+}
+
+
+static void add_entry(struct wpabuf *xml, char *type, char *name, int args_num,
+		      struct wpa_dbus_argument *args, int include_dir)
+{
+	int i;
+	if (args_num == 0) {
+		wpabuf_printf(xml, "<%s name=\"%s\"/>", type, name);
+		return;
+	}
+	wpabuf_printf(xml, "<%s name=\"%s\">", type, name);
+	for (i = 0; i < args_num; i++) {
+		struct wpa_dbus_argument *arg = &args[i];
+		add_arg(xml, arg->name, arg->type,
+			include_dir ? (arg->dir == ARG_IN ? "in" : "out") :
+			NULL);
+	}
+	wpabuf_printf(xml, "</%s>", type);
+}
+
+
+static void add_property(struct wpabuf *xml,
+			 struct wpa_dbus_property_desc *dsc)
+{
+	wpabuf_printf(xml, "<property name=\"%s\" type=\"%s\" access=\"%s\"/>",
+		      dsc->dbus_property, dsc->type,
+		      (dsc->access == R ? "read" :
+		       (dsc->access == W ? "write" : "readwrite")));
 }
 
 
@@ -57,8 +100,13 @@ static void extract_interfaces_methods(struct dl_list *list,
 				       struct wpa_dbus_method_desc *methods)
 {
 	struct wpa_dbus_method_desc *dsc;
-	for (dsc = methods; dsc; dsc = dsc->next)
-		add_interface(list, dsc->dbus_interface);
+	struct interfaces *iface;
+	for (dsc = methods; dsc; dsc = dsc->next) {
+		iface = add_interface(list, dsc->dbus_interface);
+		if (iface)
+			add_entry(iface->xml, "method", dsc->dbus_method,
+				  dsc->args_num, dsc->args, 1);
+	}
 }
 
 
@@ -66,8 +114,13 @@ static void extract_interfaces_signals(struct dl_list *list,
 				       struct wpa_dbus_signal_desc *signals)
 {
 	struct wpa_dbus_signal_desc *dsc;
-	for (dsc = signals; dsc; dsc = dsc->next)
-		add_interface(list, dsc->dbus_interface);
+	struct interfaces *iface;
+	for (dsc = signals; dsc; dsc = dsc->next) {
+		iface = add_interface(list, dsc->dbus_interface);
+		if (iface)
+			add_entry(iface->xml, "signal", dsc->dbus_signal,
+				  dsc->args_num, dsc->args, 0);
+	}
 }
 
 
@@ -75,8 +128,12 @@ static void extract_interfaces_properties(
 	struct dl_list *list, struct wpa_dbus_property_desc *properties)
 {
 	struct wpa_dbus_property_desc *dsc;
-	for (dsc = properties; dsc; dsc = dsc->next)
-		add_interface(list, dsc->dbus_interface);
+	struct interfaces *iface;
+	for (dsc = properties; dsc; dsc = dsc->next) {
+		iface = add_interface(list, dsc->dbus_interface);
+		if (iface)
+			add_property(iface->xml, dsc);
+	}
 }
 
 
@@ -103,25 +160,15 @@ static void add_interfaces(struct dl_list *list, struct wpabuf *xml)
 {
 	struct interfaces *iface, *n;
 	dl_list_for_each_safe(iface, n, list, struct interfaces, list) {
-		wpabuf_put_buf(xml, iface->xml);
-		wpabuf_put_str(xml, "</interface>");
+		if (wpabuf_len(iface->xml) + 20 < wpabuf_tailroom(xml)) {
+			wpabuf_put_buf(xml, iface->xml);
+			wpabuf_put_str(xml, "</interface>");
+		}
 		dl_list_del(&iface->list);
 		wpabuf_free(iface->xml);
 		os_free(iface->dbus_interface);
 		os_free(iface);
 	}
-}
-
-
-static struct interfaces * get_interface(struct dl_list *list,
-					 const char *dbus_interface)
-{
-	struct interfaces *iface;
-	dl_list_for_each(iface, list, struct interfaces, list) {
-		if (os_strcmp(iface->dbus_interface, dbus_interface) == 0)
-			return iface;
-	}
-	return NULL;
 }
 
 
@@ -136,18 +183,6 @@ static void add_child_nodes(struct wpabuf *xml, DBusConnection *con,
 	for (i = 0; children[i]; i++)
 		wpabuf_printf(xml, "<node name=\"%s\"/>", children[i]);
 	dbus_free_string_array(children);
-}
-
-
-static void add_arg(struct wpabuf *xml, const char *name, const char *type,
-		    const char *direction)
-{
-	wpabuf_printf(xml, "<arg name=\"%s\"", name);
-	if (type)
-		wpabuf_printf(xml, " type=\"%s\"", type);
-	if (direction)
-		wpabuf_printf(xml, " direction=\"%s\"", direction);
-	wpabuf_put_str(xml, "/>");
 }
 
 
@@ -189,91 +224,12 @@ static void add_properties_interface(struct wpabuf *xml)
 }
 
 
-static void add_entry(struct wpabuf *xml, char *type, char *name, int args_num,
-		      struct wpa_dbus_argument *args, int include_dir)
-{
-	int i;
-	if (args_num == 0) {
-		wpabuf_printf(xml, "<%s name=\"%s\"/>", type, name);
-		return;
-	}
-	wpabuf_printf(xml, "<%s name=\"%s\">", type, name);
-	for (i = 0; i < args_num; i++) {
-		struct wpa_dbus_argument *arg = &args[i];
-		add_arg(xml, arg->name, arg->type,
-			include_dir ? (arg->dir == ARG_IN ? "in" : "out") :
-			NULL);
-	}
-	wpabuf_printf(xml, "</%s>", type);
-}
-
-
-static void add_property(struct wpabuf *xml,
-			 struct wpa_dbus_property_desc *dsc)
-{
-	wpabuf_printf(xml, "<property name=\"%s\" type=\"%s\" access=\"%s\"/>",
-		      dsc->dbus_property, dsc->type,
-		      (dsc->access == R ? "read" :
-		       (dsc->access == W ? "write" : "readwrite")));
-}
-
-
-static void create_method_nodes(struct dl_list *list,
-				struct wpa_dbus_method_desc *methods)
-{
-	struct wpa_dbus_method_desc *dsc;
-	struct interfaces *iface;
-
-	for (dsc = methods; dsc; dsc = dsc->next) {
-		iface = get_interface(list, dsc->dbus_interface);
-		if (!iface)
-			continue;
-		add_entry(iface->xml, "method", dsc->dbus_method,
-			  dsc->args_num, dsc->args, 1);
-	}
-}
-
-
-static void create_signal_nodes(struct dl_list *list,
-				struct wpa_dbus_signal_desc *signals)
-{
-	struct wpa_dbus_signal_desc *dsc;
-	struct interfaces *iface;
-
-	for (dsc = signals; dsc; dsc = dsc->next) {
-		iface = get_interface(list, dsc->dbus_interface);
-		if (!iface)
-			continue;
-		add_entry(iface->xml, "signal", dsc->dbus_signal,
-			  dsc->args_num, dsc->args, 0);
-	}
-}
-
-
-static void create_property_nodes(struct dl_list *list,
-				  struct wpa_dbus_property_desc *properties)
-{
-	struct wpa_dbus_property_desc *dsc;
-	struct interfaces *iface;
-
-	for (dsc = properties; dsc; dsc = dsc->next) {
-		iface = get_interface(list, dsc->dbus_interface);
-		if (!iface)
-			continue;
-		add_property(iface->xml, dsc);
-	}
-}
-
-
 static void add_wpas_interfaces(struct wpabuf *xml,
 				struct wpa_dbus_object_desc *obj_dsc)
 {
 	struct dl_list ifaces;
 	dl_list_init(&ifaces);
 	extract_interfaces(&ifaces, obj_dsc);
-	create_method_nodes(&ifaces, obj_dsc->methods);
-	create_signal_nodes(&ifaces, obj_dsc->signals);
-	create_property_nodes(&ifaces, obj_dsc->properties);
 	add_interfaces(&ifaces, xml);
 }
 
@@ -293,7 +249,6 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 
 	DBusMessage *reply;
 	struct wpabuf *xml;
-	const char *intro_str;
 
 	xml = wpabuf_alloc(4000);
 	if (xml == NULL)
@@ -306,20 +261,17 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 	add_introspectable_interface(xml);
 	add_properties_interface(xml);
 	add_wpas_interfaces(xml, obj_dsc);
-
 	add_child_nodes(xml, obj_dsc->connection,
 			dbus_message_get_path(message));
+
 	wpabuf_put_str(xml, "</node>\n");
 
 	reply = dbus_message_new_method_return(message);
-	if (reply == NULL) {
-		wpabuf_free(xml);
-		return NULL;
+	if (reply) {
+		const char *intro_str = wpabuf_head(xml);
+		dbus_message_append_args(reply, DBUS_TYPE_STRING, &intro_str,
+					 DBUS_TYPE_INVALID);
 	}
-
-	intro_str = wpabuf_head(xml);
-	dbus_message_append_args(reply, DBUS_TYPE_STRING, &intro_str,
-				 DBUS_TYPE_INVALID);
 	wpabuf_free(xml);
 
 	return reply;

@@ -799,6 +799,11 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 
 	wpa_printf(MSG_DEBUG, "WPS: Probe Request for PBC received from "
 		   MACSTR, MAC2STR(addr));
+	if (attr.uuid_e == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: Invalid Probe Request WPS IE: No "
+			   "UUID-E included");
+		return;
+	}
 
 	wps_registrar_add_pbc_session(reg, addr, attr.uuid_e);
 	if (wps_registrar_pbc_overlap(reg, addr, attr.uuid_e)) {

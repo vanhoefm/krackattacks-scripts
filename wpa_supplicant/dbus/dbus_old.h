@@ -114,17 +114,6 @@ DBusMessage * wpas_dbus_new_invalid_network_error(DBusMessage *message);
 
 #else /* CONFIG_CTRL_IFACE_DBUS */
 
-static inline struct ctrl_iface_dbus_priv *
-wpa_supplicant_dbus_ctrl_iface_init(struct wpa_global *global)
-{
-	return (struct ctrl_iface_dbus_priv *) 1;
-}
-
-static inline void
-wpa_supplicant_dbus_ctrl_iface_deinit(struct ctrl_iface_dbus_priv *iface)
-{
-}
-
 static inline void
 wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s)
 {

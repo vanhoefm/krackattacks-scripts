@@ -51,14 +51,16 @@ static int wpas_dbus_set_path(struct wpa_supplicant *wpa_s,
  * wpas_dbus_signal_interface - Send a interface related event signal
  * @wpa_s: %wpa_supplicant network interface data
  * @sig_name: signal name - InterfaceAdded or InterfaceRemoved
+ * @properties: determines if add second argument with object properties
  *
  * Notify listeners about event related with interface
  */
 static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
-				       const char *sig_name)
+				       const char *sig_name, int properties)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
+	DBusMessageIter iter, iter_dict;
 	const char *path;
 
 	iface = wpa_s->global->dbus;
@@ -82,13 +84,32 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (dbus_message_append_args(_signal, DBUS_TYPE_OBJECT_PATH, &path,
-				     DBUS_TYPE_INVALID)) {
-		dbus_connection_send(iface->con, _signal, NULL);
-	} else {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_interface[dbus]: "
-			   "not enough memory to construct signal.");
+	dbus_message_iter_init_append(_signal, &iter);
+
+	if(!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+					   &path))
+		goto err;
+
+	if (properties) {
+		if (!wpa_dbus_dict_open_write(&iter, &iter_dict))
+			goto err;
+
+		wpa_dbus_get_object_properties(iface, path,
+					       WPAS_DBUS_NEW_IFACE_INTERFACE,
+					       &iter_dict);
+
+		if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
+			goto err;
 	}
+
+	dbus_connection_send(iface->con, _signal, NULL);
+
+	dbus_message_unref(_signal);
+	return;
+
+err:
+	wpa_printf(MSG_ERROR, "wpas_dbus_signal_interface[dbus]: "
+		   "not enough memory to construct signal.");
 	dbus_message_unref(_signal);
 }
 
@@ -101,7 +122,7 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
  */
 static void wpas_dbus_signal_interface_created(struct wpa_supplicant *wpa_s)
 {
-	wpas_dbus_signal_interface(wpa_s, "InterfaceCreated");
+	wpas_dbus_signal_interface(wpa_s, "InterfaceCreated", TRUE);
 }
 
 
@@ -113,7 +134,7 @@ static void wpas_dbus_signal_interface_created(struct wpa_supplicant *wpa_s)
  */
 static void wpas_dbus_signal_interface_removed(struct wpa_supplicant *wpa_s)
 {
-	wpas_dbus_signal_interface(wpa_s, "InterfaceRemoved");
+	wpas_dbus_signal_interface(wpa_s, "InterfaceRemoved", FALSE);
 
 }
 
@@ -171,15 +192,17 @@ static void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s,
  * @wpa_s: %wpa_supplicant network interface data
  * @bss_obj_path: BSS object path
  * @sig_name: signal name - BSSAdded or BSSRemoved
+ * @properties: determines if add second argument with object properties
  *
  * Notify listeners about event related with BSS
  */
 static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 				 const char *bss_obj_path,
-				 const char *sig_name)
+				 const char *sig_name, int properties)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
+	DBusMessageIter iter, iter_dict;
 	const char *path;
 
 	iface = wpa_s->global->dbus;
@@ -203,13 +226,32 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (dbus_message_append_args(_signal, DBUS_TYPE_OBJECT_PATH,
-				     &bss_obj_path, DBUS_TYPE_INVALID)) {
-		dbus_connection_send(iface->con, _signal, NULL);
-	} else {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_bss[dbus]: "
-			   "not enough memory to construct signal.");
+	dbus_message_iter_init_append(_signal, &iter);
+
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+					    &bss_obj_path))
+		goto err;
+
+	if (properties) {
+		if (!wpa_dbus_dict_open_write(&iter, &iter_dict))
+			goto err;
+
+		wpa_dbus_get_object_properties(iface, bss_obj_path,
+					       WPAS_DBUS_NEW_IFACE_BSSID,
+					       &iter_dict);
+
+		if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
+			goto err;
 	}
+
+	dbus_connection_send(iface->con, _signal, NULL);
+
+	dbus_message_unref(_signal);
+	return;
+
+err:
+	wpa_printf(MSG_ERROR, "wpas_dbus_signal_bss[dbus]: "
+		   "not enough memory to construct signal.");
 	dbus_message_unref(_signal);
 }
 
@@ -224,7 +266,7 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_bss_added(struct wpa_supplicant *wpa_s,
 				       const char *bss_obj_path)
 {
-	wpas_dbus_signal_bss(wpa_s, bss_obj_path, "BSSAdded");
+	wpas_dbus_signal_bss(wpa_s, bss_obj_path, "BSSAdded", TRUE);
 }
 
 
@@ -238,7 +280,7 @@ static void wpas_dbus_signal_bss_added(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_bss_removed(struct wpa_supplicant *wpa_s,
 					 const char *bss_obj_path)
 {
-	wpas_dbus_signal_bss(wpa_s, bss_obj_path, "BSSRemoved");
+	wpas_dbus_signal_bss(wpa_s, bss_obj_path, "BSSRemoved", FALSE);
 }
 
 
@@ -322,14 +364,17 @@ static void wpas_dbus_signal_blob_removed(struct wpa_supplicant *wpa_s,
  * @wpa_s: %wpa_supplicant network interface data
  * @id: new network id
  * @sig_name: signal name - NetworkAdded, NetworkRemoved or NetworkSelected
+ * @properties: determines if add second argument with object properties
  *
  * Notify listeners about event related with configured network
  */
 static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
-				     int id, const char *sig_name)
+				     int id, const char *sig_name,
+				     int properties)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
+	DBusMessageIter iter, iter_dict;
 	const char *path;
 	char *net_obj_path;
 
@@ -362,14 +407,33 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (dbus_message_append_args(_signal, DBUS_TYPE_OBJECT_PATH,
-				     &net_obj_path, DBUS_TYPE_INVALID)) {
-		dbus_connection_send(iface->con, _signal, NULL);
-	} else {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_network[dbus]: "
-			   "not enough memory to construct signal.");
+	dbus_message_iter_init_append(_signal, &iter);
+
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+					    &net_obj_path))
+		goto err;
+
+	if (properties) {
+		if (!wpa_dbus_dict_open_write(&iter, &iter_dict))
+			goto err;
+
+		wpa_dbus_get_object_properties(iface, net_obj_path,
+					       WPAS_DBUS_NEW_IFACE_NETWORK,
+					       &iter_dict);
+
+		if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
+			goto err;
 	}
 
+	dbus_connection_send(iface->con, _signal, NULL);
+
+	os_free(net_obj_path);
+	dbus_message_unref(_signal);
+	return;
+
+err:
+	wpa_printf(MSG_ERROR, "wpas_dbus_signal_network[dbus]: "
+		   "not enough memory to construct signal.");
 	os_free(net_obj_path);
 	dbus_message_unref(_signal);
 }
@@ -385,7 +449,7 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_network_added(struct wpa_supplicant *wpa_s,
 					   int id)
 {
-	wpas_dbus_signal_network(wpa_s, id, "NetworkAdded");
+	wpas_dbus_signal_network(wpa_s, id, "NetworkAdded", TRUE);
 }
 
 
@@ -399,7 +463,7 @@ static void wpas_dbus_signal_network_added(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_network_removed(struct wpa_supplicant *wpa_s,
 					     int id)
 {
-	wpas_dbus_signal_network(wpa_s, id, "NetworkRemoved");
+	wpas_dbus_signal_network(wpa_s, id, "NetworkRemoved", FALSE);
 }
 
 
@@ -413,7 +477,7 @@ static void wpas_dbus_signal_network_removed(struct wpa_supplicant *wpa_s,
 static void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s,
 					      int id)
 {
-	wpas_dbus_signal_network(wpa_s, id, "NetworkSelected");
+	wpas_dbus_signal_network(wpa_s, id, "NetworkSelected", FALSE);
 }
 
 
@@ -1013,7 +1077,7 @@ static const struct wpas_dbus_property wpas_dbus_global_properties[] = {
 	  R
 	},
 	{ "EapMethods", WPAS_DBUS_NEW_INTERFACE, "as",
-	  wpas_dbus_getter_eap_methods,
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_eap_methods,
 	  NULL,
 	  R
 	},
@@ -1024,6 +1088,7 @@ static const struct wpas_dbus_signal wpas_dbus_global_signals[] = {
 	{ "InterfaceAdded", WPAS_DBUS_NEW_INTERFACE,
 	  {
 		  { "path", "o", ARG_OUT },
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},
@@ -1584,6 +1649,7 @@ static const struct wpas_dbus_signal wpas_dbus_interface_signals[] = {
 	{ "BSSAdded", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "path", "o", ARG_OUT },
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},
@@ -1608,6 +1674,7 @@ static const struct wpas_dbus_signal wpas_dbus_interface_signals[] = {
 	{ "NetworkAdded", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "path", "o", ARG_OUT },
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},

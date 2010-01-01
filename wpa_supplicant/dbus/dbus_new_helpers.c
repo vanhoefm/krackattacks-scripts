@@ -607,6 +607,52 @@ static void recursive_iter_copy(DBusMessageIter *from, DBusMessageIter *to)
 }
 
 
+static unsigned int fill_dict_with_properties(
+	DBusMessageIter *dict_iter, struct wpa_dbus_property_desc *props,
+	const char *interface, const void *user_data)
+{
+	DBusMessage *reply;
+	DBusMessageIter entry_iter, ret_iter;
+	unsigned int counter = 0;
+	struct wpa_dbus_property_desc *property_dsc;
+
+	for (property_dsc = props; property_dsc;
+	     property_dsc = property_dsc->next) {
+		if (!os_strncmp(property_dsc->dbus_interface, interface,
+				WPAS_DBUS_INTERFACE_MAX) &&
+		    property_dsc->access != W && property_dsc->getter) {
+			reply = property_dsc->getter(NULL, user_data);
+			if (!reply)
+				continue;
+
+			if (dbus_message_get_type(reply) ==
+			    DBUS_MESSAGE_TYPE_ERROR) {
+				dbus_message_unref(reply);
+				continue;
+			}
+
+			dbus_message_iter_init(reply, &ret_iter);
+
+			dbus_message_iter_open_container(dict_iter,
+							 DBUS_TYPE_DICT_ENTRY,
+							 NULL, &entry_iter);
+			dbus_message_iter_append_basic(
+				&entry_iter, DBUS_TYPE_STRING,
+				&(property_dsc->dbus_property));
+
+			recursive_iter_copy(&ret_iter, &entry_iter);
+
+			dbus_message_iter_close_container(dict_iter,
+							  &entry_iter);
+			dbus_message_unref(reply);
+			counter++;
+		}
+	}
+
+	return counter;
+}
+
+
 /**
  * get_all_properties - Responds for GetAll properties calls on object
  * @message: Message with GetAll call
@@ -625,12 +671,8 @@ static DBusMessage * get_all_properties(
 {
 	/* Create and initialize the return message */
 	DBusMessage *reply = dbus_message_new_method_return(message);
-	DBusMessage *getterReply = NULL;
-	DBusMessageIter iter, dict_iter, entry_iter, ret_iter;
-	int counter = 0;
-	struct wpa_dbus_property_desc *property_dsc;
-
-	property_dsc = obj_dsc->properties;
+	DBusMessageIter iter, dict_iter;
+	int props_num;
 
 	dbus_message_iter_init_append(reply, &iter);
 
@@ -641,37 +683,12 @@ static DBusMessage * get_all_properties(
 					 DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
 					 &dict_iter);
 
-	while (property_dsc) {
-		if (!os_strncmp(property_dsc->dbus_interface, interface,
-				WPAS_DBUS_INTERFACE_MAX) &&
-		    property_dsc->access != W && property_dsc->getter) {
+	props_num = fill_dict_with_properties(&dict_iter,obj_dsc->properties,
+					      interface, obj_dsc->user_data);
 
-			getterReply = property_dsc->getter(
-				message, obj_dsc->user_data);
-			if (getterReply == NULL)
-				goto skip;
-			dbus_message_iter_init(getterReply, &ret_iter);
-
-			dbus_message_iter_open_container(&dict_iter,
-							 DBUS_TYPE_DICT_ENTRY,
-							 NULL, &entry_iter);
-			dbus_message_iter_append_basic(
-				&entry_iter, DBUS_TYPE_STRING,
-				&(property_dsc->dbus_property));
-
-			recursive_iter_copy(&ret_iter, &entry_iter);
-
-			dbus_message_iter_close_container(&dict_iter,
-							  &entry_iter);
-			dbus_message_unref(getterReply);
-		skip:
-			counter++;
-		}
-		property_dsc = property_dsc->next;
-	}
 	dbus_message_iter_close_container(&iter, &dict_iter);
 
-	if (counter == 0) {
+	if (props_num == 0) {
 		dbus_message_unref(reply);
 		reply = dbus_message_new_error(message,
 					       DBUS_ERROR_INVALID_ARGS,
@@ -1573,4 +1590,35 @@ err:
 	dbus_message_unref(getter_reply);
 	dbus_message_unref(_signal);
 
+}
+
+
+/**
+ * wpa_dbus_get_object_properties - Put object's properties into dictionary
+ * @iface: dbus priv struct
+ * @path: path to DBus object which properties will be obtained
+ * @interface: interface name which properties will be obtained
+ * @dict_iter: correct, open DBus dictionary iterator.
+ *
+ * Iterates over all properties registered with object and execute getters
+ * of those, which are readable and which interface matches interface
+ * specified as argument. Obtained properties values are stored in
+ * dict_iter dictionary.
+ */
+void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
+				    const char *path, const char *interface,
+				    DBusMessageIter *dict_iter)
+{
+	struct wpa_dbus_object_desc *obj_desc = NULL;
+
+	dbus_connection_get_object_path_data(iface->con, path,
+					     (void **) &obj_desc);
+	if (!obj_desc) {
+		wpa_printf(MSG_ERROR, "dbus: wpa_dbus_get_object_properties: "
+			   "could not obtain object's private data: %s", path);
+		return;
+	}
+
+	fill_dict_with_properties(dict_iter, obj_desc->properties,
+				  interface, obj_desc->user_data);
 }

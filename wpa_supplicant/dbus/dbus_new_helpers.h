@@ -23,7 +23,7 @@ typedef DBusMessage * (* WPADBusMethodHandler)(DBusMessage *message,
 typedef void (* WPADBusArgumentFreeFunction)(void *handler_arg);
 
 typedef DBusMessage * (* WPADBusPropertyAccessor)(DBusMessage *message,
-						  void *user_data);
+						  const void *user_data);
 
 struct wpa_dbus_object_desc {
 	DBusConnection *connection;
@@ -116,6 +116,9 @@ void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
 				      const char *interface_name,
 				      const char *property_name);
 
+void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
+				    const char *path, const char *interface,
+				    DBusMessageIter *dict_iter);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 

@@ -117,12 +117,16 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
     <ul>
       <li>
-	<h3>InterfaceAdded ( o : interface )</h3>
+	<h3>InterfaceAdded ( o : interface, a{sv} : properties )</h3>
 	<p>A new interface was added to %wpa_supplicant.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>o : interface</dt>
 	  <dd>A D-Bus path to an object representing the added interface</dd>
+	</dl>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary containing properties of added interface.</dd>
 	</dl>
       </li>
 
@@ -402,12 +406,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
-	<h3>BSSAdded ( o : BSS )</h3>
+	<h3>BSSAdded ( o : BSS, a{sv} : properties )</h3>
 	<p>Interface became aware of a new BSS.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>o : BSS</dt>
 	  <dd>A D-Bus path to an object representing the new BSS.</dd>
+	</dl>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary containing properties of added BSS.</dd>
 	</dl>
       </li>
 
@@ -442,12 +450,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
-	<h3>NetworkAdded ( o : network )</h3>
+	<h3>NetworkAdded ( o : network, a{sv} : properties )</h3>
 	<p>A new network has been added to the interface.</p>
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>o : network</dt>
 	  <dd>A D-Bus path to an object representing the added network.</dd>
+	</dl>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary containing properties of added network.</dd>
 	</dl>
       </li>
 

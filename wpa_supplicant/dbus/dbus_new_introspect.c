@@ -41,14 +41,15 @@ struct interfaces {
 static struct interfaces * extract_interfaces(
 	struct wpa_dbus_object_desc *obj_dsc, xmlNodePtr root_node)
 {
-	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
-	struct wpa_dbus_signal_desc *signal_dsc = obj_dsc->signals;
-	struct wpa_dbus_property_desc *property_dsc = obj_dsc->properties;
+	struct wpa_dbus_method_desc *method_dsc;
+	struct wpa_dbus_signal_desc *signal_dsc;
+	struct wpa_dbus_property_desc *property_dsc;
 	struct interfaces *head = NULL;
 	struct interfaces *iface, *last;
 
 	/* extract interfaces from methods */
-	while (method_dsc) {
+	for (method_dsc = obj_dsc->methods; method_dsc;
+	     method_dsc = method_dsc->next) {
 		iface = head;
 		last = NULL;
 
@@ -60,18 +61,12 @@ static struct interfaces * extract_interfaces(
 			last = iface;
 			iface = iface->next;
 		}
-		if (iface) {
-			method_dsc = method_dsc->next;
+		if (iface)
 			continue;
-		}
 
 		iface = os_zalloc(sizeof(struct interfaces));
-		if (!iface) {
-			wpa_printf(MSG_ERROR, "Not enough memory to create "
-				"interface introspection data");
-			method_dsc = method_dsc->next;
+		if (!iface)
 			continue;
-		}
 
 		if (last)
 			last->next = iface;
@@ -79,25 +74,19 @@ static struct interfaces * extract_interfaces(
 			head = iface;
 
 		iface->dbus_interface = os_strdup(method_dsc->dbus_interface);
-		if (!iface->dbus_interface) {
-			wpa_printf(MSG_ERROR, "Not enough memory to create "
-				   "interface introspection data (interface "
-				   "name)");
-			method_dsc = method_dsc->next;
+		if (!iface->dbus_interface)
 			continue;
-		}
 
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",
 						    NULL);
 		xmlNewProp(iface->interface_node, BAD_CAST "name",
 			   BAD_CAST method_dsc->dbus_interface);
-
-		method_dsc = method_dsc->next;
 	}
 
 	/* extract interfaces from signals */
-	while (signal_dsc) {
+	for (signal_dsc = obj_dsc->signals; signal_dsc;
+	     signal_dsc = signal_dsc->next) {
 		iface = head;
 		last = NULL;
 
@@ -109,18 +98,12 @@ static struct interfaces * extract_interfaces(
 			last = iface;
 			iface = iface->next;
 		}
-		if (iface) {
-			signal_dsc = signal_dsc->next;
+		if (iface)
 			continue;
-		}
 
 		iface = os_zalloc(sizeof(struct interfaces));
-		if (!iface) {
-			wpa_printf(MSG_ERROR, "Not enough memory to create "
-				   "interface introspection data");
-			signal_dsc = signal_dsc->next;
+		if (!iface)
 			continue;
-		}
 
 		if (last)
 			last->next = iface;
@@ -128,25 +111,19 @@ static struct interfaces * extract_interfaces(
 			head = iface;
 
 		iface->dbus_interface = os_strdup(signal_dsc->dbus_interface);
-		if (!iface->dbus_interface) {
-			wpa_printf(MSG_ERROR, "Not enough memory to create "
-				   "interface introspection data (interface "
-				   "name)");
-			signal_dsc = signal_dsc->next;
+		if (!iface->dbus_interface)
 			continue;
-		}
 
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",
 						    NULL);
 		xmlNewProp(iface->interface_node, BAD_CAST "name",
 			   BAD_CAST signal_dsc->dbus_interface);
-
-		signal_dsc = signal_dsc->next;
 	}
 
 	/* extract interfaces from properties */
-	while (property_dsc) {
+	for (property_dsc = obj_dsc->properties; property_dsc;
+	     property_dsc = property_dsc->next) {
 		iface = head;
 		last = NULL;
 
@@ -158,18 +135,12 @@ static struct interfaces * extract_interfaces(
 			last = iface;
 			iface = iface->next;
 		}
-		if (iface) {
-			property_dsc = property_dsc->next;
+		if (iface)
 			continue;
-		}
 
 		iface = os_zalloc(sizeof(struct interfaces));
-		if (!iface) {
-			wpa_printf(MSG_ERROR, "Not enough memory to create "
-				   "interface introspection data");
-			property_dsc = property_dsc->next;
+		if (!iface)
 			continue;
-		}
 
 		if (last)
 			last->next = iface;
@@ -178,21 +149,14 @@ static struct interfaces * extract_interfaces(
 
 		iface->dbus_interface =
 			os_strdup(property_dsc->dbus_interface);
-		if (!iface->dbus_interface) {
-			wpa_printf(MSG_ERROR, "Not enough memory to create "
-				   "interface introspection data (interface "
-				   "name)");
-			property_dsc = property_dsc->next;
+		if (!iface->dbus_interface)
 			continue;
-		}
 
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",
 						    NULL);
 		xmlNewProp(iface->interface_node, BAD_CAST "name",
 			   BAD_CAST property_dsc->dbus_interface);
-
-		property_dsc = property_dsc->next;
 	}
 
 	return head;
@@ -306,9 +270,8 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 	ifaces = extract_interfaces(obj_dsc, root_node);
 
 	/* create methods' nodes */
-	method_dsc = obj_dsc->methods;
-	while (method_dsc) {
-
+	for (method_dsc = obj_dsc->methods; method_dsc;
+	     method_dsc = method_dsc->next) {
 		struct interfaces *iface = ifaces;
 		while (iface) {
 			if (!os_strcmp(iface->dbus_interface,
@@ -340,13 +303,11 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 				   BAD_CAST (arg.dir == ARG_IN ?
 					     "in" : "out"));
 		}
-		method_dsc = method_dsc->next;
 	}
 
 	/* create signals' nodes */
-	signal_dsc = obj_dsc->signals;
-	while (signal_dsc) {
-
+	for (signal_dsc = obj_dsc->signals; signal_dsc;
+	     signal_dsc = signal_dsc->next) {
 		struct interfaces *iface = ifaces;
 		while (iface) {
 			if (!os_strcmp(iface->dbus_interface,
@@ -375,13 +336,11 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 			xmlNewProp(arg_node, BAD_CAST "type",
 				   BAD_CAST arg.type);
 		}
-		signal_dsc = signal_dsc->next;
 	}
 
 	/* create properties' nodes */
-	property_dsc = obj_dsc->properties;
-	while (property_dsc) {
-
+	for (property_dsc = obj_dsc->properties; property_dsc;
+	     property_dsc = property_dsc->next) {
 		struct interfaces *iface = ifaces;
 		while (iface) {
 			if (!os_strcmp(iface->dbus_interface,
@@ -403,8 +362,6 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 			   (property_dsc->access == R ? "read" :
 			    (property_dsc->access == W ?
 			     "write" : "readwrite")));
-
-		property_dsc = property_dsc->next;
 	}
 
 	/* add child nodes to introspection tree; */
@@ -442,4 +399,3 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 
 	return reply;
 }
-

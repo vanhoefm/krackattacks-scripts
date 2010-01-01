@@ -433,6 +433,8 @@ DBusMessage * wpas_dbus_simple_property_setter(DBusMessage *message,
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
 	if (dbus_message_iter_get_arg_type(&variant_iter) != type) {
+		wpa_printf(MSG_DEBUG, "dbus: wpas_dbus_simple_property_setter:"
+			   " wrong property type");
 		return wpas_dbus_error_invalid_args(message,
 						    "wrong property type");
 	}

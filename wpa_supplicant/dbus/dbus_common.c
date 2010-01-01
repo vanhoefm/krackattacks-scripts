@@ -278,7 +278,7 @@ static int wpas_dbus_init_common(struct wpas_dbus_priv *priv)
 	}
 	dbus_error_free(&error);
 
-	return 0;
+	return ret;
 }
 
 

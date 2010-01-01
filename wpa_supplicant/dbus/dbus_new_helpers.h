@@ -52,8 +52,6 @@ struct wpa_dbus_argument {
 
 #define END_ARGS { NULL, NULL, ARG_IN }
 
-#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
-
 #ifndef SIGPOLL
 #ifdef SIGIO
 /*
@@ -119,17 +117,5 @@ void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
 void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
 				    const char *path, const char *interface,
 				    DBusMessageIter *dict_iter);
-
-#else /* CONFIG_CTRL_IFACE_DBUS_NEW */
-
-static inline void wpa_dbus_signal_property_changed(
-	struct wpas_dbus_priv *iface,
-	WPADBusPropertyAccessor property_getter, void *getter_arg,
-	const char *path, const char *interface_name,
-	const char *property_name)
-{
-}
-
-#endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
 #endif /* WPA_DBUS_CTRL_H */

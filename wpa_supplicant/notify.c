@@ -267,9 +267,25 @@ void wpas_notify_blob_removed(struct wpa_supplicant *wpa_s, const char *name)
 }
 
 
-void wpas_notify_debug_params_changed(struct wpa_global *global)
+void wpas_notify_debug_level_changed(struct wpa_global *global)
 {
 	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
 	if (cbs)
-		cbs->signal_debug_params_changed(global);
+		cbs->signal_debug_level_changed(global);
+}
+
+
+void wpas_notify_debug_timestamp_changed(struct wpa_global *global)
+{
+	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
+	if (cbs)
+		cbs->signal_debug_timestamp_changed(global);
+}
+
+
+void wpas_notify_debug_show_keys_changed(struct wpa_global *global)
+{
+	struct wpas_dbus_callbacks *cbs = wpas_dbus_get_callbacks();
+	if (cbs)
+		cbs->signal_debug_show_keys_changed(global);
 }

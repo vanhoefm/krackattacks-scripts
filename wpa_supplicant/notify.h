@@ -54,6 +54,8 @@ void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s, u8 bssid[],
 void wpas_notify_blob_added(struct wpa_supplicant *wpa_s, const char *name);
 void wpas_notify_blob_removed(struct wpa_supplicant *wpa_s, const char *name);
 
-void wpas_notify_debug_params_changed(struct wpa_global *global);
+void wpas_notify_debug_level_changed(struct wpa_global *global);
+void wpas_notify_debug_timestamp_changed(struct wpa_global *global);
+void wpas_notify_debug_show_keys_changed(struct wpa_global *global);
 
 #endif /* NOTIFY_H */

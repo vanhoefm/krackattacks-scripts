@@ -735,190 +735,135 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 
 
 /**
- * wpas_dbus_getter_debug_params - Get the debug params
+ * wpas_dbus_getter_debug_level - Get debug level
  * @message: Pointer to incoming dbus message
  * @global: %wpa_supplicant global data structure
- * Returns: DBus message with struct containing debug params.
+ * Returns: DBus message with value of debug level
  *
- * Getter for "DebugParams" property.
+ * Getter for "DebugLevel" property.
  */
-DBusMessage * wpas_dbus_getter_debug_params(DBusMessage *message,
-					    struct wpa_global *global)
+DBusMessage * wpas_dbus_getter_debug_level(DBusMessage *message,
+					   struct wpa_global *global)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter, struct_iter;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BYTE,
+						&wpa_debug_level);
 
-	if (message == NULL)
-		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
-	else
-		reply = dbus_message_new_method_return(message);
-	if (!reply) {
-		perror("wpas_dbus_getter_network_properties[dbus] out of "
-		       "memory when trying to initialize return message");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	dbus_message_iter_init_append(reply, &iter);
-
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
-					      "(ibb)", &variant_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to open variant");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_STRUCT,
-					      NULL, &struct_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to open struct");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_append_basic(&struct_iter, DBUS_TYPE_INT32,
-					    &wpa_debug_level)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to append value to struct");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_append_basic(&struct_iter, DBUS_TYPE_BOOLEAN,
-					    &wpa_debug_timestamp)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to append value to struct");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_append_basic(&struct_iter, DBUS_TYPE_BOOLEAN,
-					    &wpa_debug_show_keys)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to append value to struct");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_close_container(&variant_iter, &struct_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to close struct");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-	if (!dbus_message_iter_close_container(&iter, &variant_iter)) {
-		perror("wpas_dbus_getter_debug_params[dbus] out of memory "
-		       "when trying to close variant");
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-
-out:
-	return reply;
 }
 
 
 /**
- * wpas_dbus_setter_debugparams - Set the debug params
+ * wpas_dbus_getter_debug_timestamp - Get debug timestamp
  * @message: Pointer to incoming dbus message
  * @global: %wpa_supplicant global data structure
- * Returns: NULL indicating success or a dbus error message with more
- * information
+ * Returns: DBus message with value of debug timestamp
  *
- * Setter for "DebugParams" property.
+ * Getter for "DebugTimestamp" property.
  */
-DBusMessage * wpas_dbus_setter_debug_params(DBusMessage *message,
-					    struct wpa_global *global)
+DBusMessage * wpas_dbus_getter_debug_timestamp(DBusMessage *message,
+					       struct wpa_global *global)
+{
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BOOLEAN,
+						&wpa_debug_timestamp);
+
+}
+
+
+/**
+ * wpas_dbus_getter_debug_show_keys - Get debug show keys
+ * @message: Pointer to incoming dbus message
+ * @global: %wpa_supplicant global data structure
+ * Returns: DBus message with value of debug show_keys
+ *
+ * Getter for "DebugShowKeys" property.
+ */
+DBusMessage * wpas_dbus_getter_debug_show_keys(DBusMessage *message,
+					       struct wpa_global *global)
+{
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BOOLEAN,
+						&wpa_debug_show_keys);
+
+}
+
+/**
+ * wpas_dbus_setter_debug_level - Set debug level
+ * @message: Pointer to incoming dbus message
+ * @global: %wpa_supplicant global data structure
+ * Returns: %NULL or DBus error message
+ *
+ * Setter for "DebugLevel" property.
+ */
+DBusMessage * wpas_dbus_setter_debug_level(DBusMessage *message,
+					   struct wpa_global *global)
 {
 	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter, struct_iter;
-	int debug_level;
-	dbus_bool_t debug_timestamp;
-	dbus_bool_t debug_show_keys;
+	dbus_uint16_t val;
 
-	if (!dbus_message_iter_init(message, &iter)) {
-		perror("wpas_dbus_handler_add_blob[dbus] out of memory when "
-		       "trying to initialize message iterator");
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto out;
-	}
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_next(&iter);
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_INT16,
+						 &val);
+	if (reply)
+		return reply;
 
-	dbus_message_iter_recurse(&iter, &variant_iter);
-
-	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_STRUCT)
-	{
-		reply = wpas_dbus_error_invald_args(
-			message, "Argument must by a structure");
-		goto out;
-	}
-
-	dbus_message_iter_recurse(&variant_iter, &struct_iter);
-
-
-	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_INT32) {
-		reply = wpas_dbus_error_invald_args(
-			message, "First struct argument must by an INT32");
-		goto out;
-	}
-
-	dbus_message_iter_get_basic(&struct_iter, &debug_level);
-	if (!dbus_message_iter_next(&struct_iter)) {
-		reply = wpas_dbus_error_invald_args(
-			message, "Not enough elements in struct");
-		goto out;
-	}
-
-	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_BOOLEAN)
-	{
-		reply = wpas_dbus_error_invald_args(
-			message, "Second struct argument must by a boolean");
-		goto out;
-	}
-	dbus_message_iter_get_basic(&struct_iter, &debug_timestamp);
-	if (!dbus_message_iter_next(&struct_iter)) {
-		reply = wpas_dbus_error_invald_args(
-			message, "Not enough elements in struct");
-		goto out;
-	}
-
-	if (dbus_message_iter_get_arg_type(&struct_iter) != DBUS_TYPE_BOOLEAN)
-	{
-		reply = wpas_dbus_error_invald_args(
-			message, "Third struct argument must by an boolean");
-		goto out;
-	}
-	dbus_message_iter_get_basic(&struct_iter, &debug_show_keys);
-
-	if (wpa_supplicant_set_debug_params(global, debug_level,
-					    debug_timestamp ? 1 : 0,
-					    debug_show_keys ? 1 : 0)) {
-		reply = wpas_dbus_error_invald_args(
+	if (wpa_supplicant_set_debug_params(global, val, wpa_debug_timestamp,
+					    wpa_debug_show_keys)) {
+		dbus_message_unref(reply);
+		return wpas_dbus_error_invald_args(
 			message, "Wrong debug level value");
-		goto out;
 	}
 
-out:
-	return reply;
+	return NULL;
+}
+
+
+/**
+ * wpas_dbus_setter_debug_timestamp - Set debug timestamp
+ * @message: Pointer to incoming dbus message
+ * @global: %wpa_supplicant global data structure
+ * Returns: %NULL or DBus error message
+ *
+ * Setter for "DebugTimestamp" property.
+ */
+DBusMessage * wpas_dbus_setter_debug_timestamp(DBusMessage *message,
+					       struct wpa_global *global)
+{
+	DBusMessage *reply = NULL;
+	dbus_bool_t val;
+
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_BOOLEAN,
+						 &val);
+	if (reply)
+		return reply;
+
+	wpa_supplicant_set_debug_params(global, wpa_debug_level, val ? 1 : 0,
+					wpa_debug_show_keys);
+
+	return NULL;
+}
+
+
+/**
+ * wpas_dbus_setter_debug_show_keys - Set debug show keys
+ * @message: Pointer to incoming dbus message
+ * @global: %wpa_supplicant global data structure
+ * Returns: %NULL or DBus error message
+ *
+ * Setter for "DebugShowKeys" property.
+ */
+DBusMessage * wpas_dbus_setter_debug_show_keys(DBusMessage *message,
+					       struct wpa_global *global)
+{
+	DBusMessage *reply = NULL;
+	dbus_bool_t val;
+
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_BOOLEAN,
+						 &val);
+	if (reply)
+		return reply;
+
+	wpa_supplicant_set_debug_params(global, wpa_debug_level,
+					wpa_debug_timestamp,
+					val ? 1 : 0);
+
+	return NULL;
 }
 
 

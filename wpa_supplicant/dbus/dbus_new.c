@@ -964,20 +964,53 @@ static void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 
 
 /**
- * wpas_dbus_signal_debug_params_changed - Signals change of debug params
+ * wpas_dbus_signal_debug_level_changed - Signals change of debug param
  * @global: wpa_global structure
  *
- * Sends ProertyChanged signals informing that debug params has changed.
+ * Sends ProertyChanged signals informing that debug level has changed.
  */
-static void wpas_dbus_signal_debug_params_changed(struct wpa_global *global)
+static void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
 {
-
 	wpa_dbus_signal_property_changed(global->dbus,
 					 (WPADBusPropertyAccessor)
-					 wpas_dbus_getter_debug_params,
+					 wpas_dbus_getter_debug_level,
 					 global, WPAS_DBUS_NEW_PATH,
 					 WPAS_DBUS_NEW_INTERFACE,
-					 "DebugParams");
+					 "DebugLevel");
+}
+
+
+/**
+ * wpas_dbus_signal_debug_timestamp_changed - Signals change of debug param
+ * @global: wpa_global structure
+ *
+ * Sends ProertyChanged signals informing that debug timestamp has changed.
+ */
+static void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
+{
+	wpa_dbus_signal_property_changed(global->dbus,
+					 (WPADBusPropertyAccessor)
+					 wpas_dbus_getter_debug_timestamp,
+					 global, WPAS_DBUS_NEW_PATH,
+					 WPAS_DBUS_NEW_INTERFACE,
+					 "DebugTimestamp");
+}
+
+
+/**
+ * wpas_dbus_signal_debug_show_keys_changed - Signals change of debug param
+ * @global: wpa_global structure
+ *
+ * Sends ProertyChanged signals informing that debug show_keys has changed.
+ */
+static void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global)
+{
+	wpa_dbus_signal_property_changed(global->dbus,
+					 (WPADBusPropertyAccessor)
+					 wpas_dbus_getter_debug_show_keys,
+					 global, WPAS_DBUS_NEW_PATH,
+					 WPAS_DBUS_NEW_INTERFACE,
+					 "DebugShowKeys");
 }
 
 
@@ -1066,9 +1099,19 @@ static const struct wpas_dbus_method wpas_dbus_global_methods[] = {
 };
 
 static const struct wpas_dbus_property wpas_dbus_global_properties[] = {
-	{ "DebugParams", WPAS_DBUS_NEW_INTERFACE, "(ibb)",
-	  (WPADBusPropertyAccessor) &wpas_dbus_getter_debug_params,
-	  (WPADBusPropertyAccessor) &wpas_dbus_setter_debug_params,
+	{ "DebugLevel", WPAS_DBUS_NEW_INTERFACE, "y",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_debug_level,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_debug_level,
+	  RW
+	},
+	{ "DebugTimestamp", WPAS_DBUS_NEW_INTERFACE, "b",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_debug_timestamp,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_debug_timestamp,
+	  RW
+	},
+	{ "DebugShowKeys", WPAS_DBUS_NEW_INTERFACE, "b",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_debug_show_keys,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_debug_show_keys,
 	  RW
 	},
 	{ "Interfaces", WPAS_DBUS_NEW_INTERFACE, "ao",
@@ -1828,7 +1871,12 @@ static struct wpas_dbus_callbacks callbacks =
 	.unregister_bss = wpas_dbus_unregister_bss,
 
 	.signal_prop_changed = wpas_dbus_signal_prop_changed,
-	.signal_debug_params_changed = wpas_dbus_signal_debug_params_changed,
+
+	.signal_debug_level_changed = wpas_dbus_signal_debug_level_changed,
+	.signal_debug_timestamp_changed =
+	wpas_dbus_signal_debug_timestamp_changed,
+	.signal_debug_show_keys_changed =
+	wpas_dbus_signal_debug_show_keys_changed,
 
 #ifdef CONFIG_WPS
 	.signal_wps_event_success = wpas_dbus_signal_wps_event_success,

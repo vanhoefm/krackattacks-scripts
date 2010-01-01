@@ -98,8 +98,18 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
     <ul>
       <li>
-	<h3>DebugParams - (ibb) - (read/write)</h3>
-	<p>A structure describing debugging properties. The structure elements are (in order): debug level (i), show timestamps (b), show keys (b).</p>
+	<h3>DebugLevel - y - (read/write)</h3>
+	<p>Global %wpa_supplicant debuging level. Possible values are 0, 1, 2, 3 and 4</p>
+      </li>
+
+      <li>
+	<h3>DebugTimestamp - b - (read/write)</h3>
+	<p>Global %wpa_supplicant debuging parameter. Determines if timestamps are shown in debug logs.</p>
+      </li>
+
+      <li>
+	<h3>DebugShowKeys - b - (read/write)</h3>
+	<p>Global %wpa_supplicant debuging parameter. Determines if secrets are shown in debug logs.</p>
       </li>
 
       <li>

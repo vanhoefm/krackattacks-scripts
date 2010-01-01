@@ -66,7 +66,10 @@ struct wpas_dbus_callbacks {
 
 	void (*signal_prop_changed)(struct wpa_supplicant *wpa_s,
 				    enum wpas_dbus_prop property);
-	void (*signal_debug_params_changed)(struct wpa_global *global);
+
+	void (*signal_debug_level_changed)(struct wpa_global *global);
+	void (*signal_debug_timestamp_changed)(struct wpa_global *global);
+	void (*signal_debug_show_keys_changed)(struct wpa_global *global);
 
 	void (*signal_wps_event_success)(struct wpa_supplicant *wpa_s);
 	void (*signal_wps_event_fail)(struct wpa_supplicant *wpa_s,

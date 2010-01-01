@@ -1556,10 +1556,12 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 	wpa_debug_timestamp = debug_timestamp ? 1 : 0;
 	wpa_debug_show_keys = debug_show_keys ? 1 : 0;
 
-	if (wpa_debug_level != old_level ||
-	    wpa_debug_timestamp != old_timestamp ||
-	    wpa_debug_show_keys != old_show_keys)
-		wpas_notify_debug_params_changed(global);
+	if (wpa_debug_level != old_level)
+		wpas_notify_debug_level_changed(global);
+	if (wpa_debug_timestamp != old_timestamp)
+		wpas_notify_debug_timestamp_changed(global);
+	if (wpa_debug_show_keys != old_show_keys)
+		wpas_notify_debug_show_keys_changed(global);
 
 	return 0;
 }

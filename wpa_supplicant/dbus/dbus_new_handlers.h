@@ -46,11 +46,23 @@ DBusMessage * wpas_dbus_handler_remove_interface(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 					      struct wpa_global *global);
 
-DBusMessage * wpas_dbus_getter_debug_params(DBusMessage *message,
-					    struct wpa_global *global);
+DBusMessage * wpas_dbus_getter_debug_level(DBusMessage *message,
+					   struct wpa_global *global);
 
-DBusMessage * wpas_dbus_setter_debug_params(DBusMessage *message,
-					    struct wpa_global *global);
+DBusMessage * wpas_dbus_getter_debug_timestamp(DBusMessage *message,
+					       struct wpa_global *global);
+
+DBusMessage * wpas_dbus_getter_debug_show_keys(DBusMessage *message,
+					       struct wpa_global *global);
+
+DBusMessage * wpas_dbus_setter_debug_level(DBusMessage *message,
+					   struct wpa_global *global);
+
+DBusMessage * wpas_dbus_setter_debug_timestamp(DBusMessage *message,
+					       struct wpa_global *global);
+
+DBusMessage * wpas_dbus_setter_debug_show_keys(DBusMessage *message,
+					       struct wpa_global *global);
 
 DBusMessage * wpas_dbus_getter_interfaces(DBusMessage *message,
 					  struct wpa_global *global);

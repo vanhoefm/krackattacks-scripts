@@ -27,30 +27,16 @@ struct interfaces {
 	xmlNodePtr interface_node;
 };
 
-/**
- * extract_interfaces - Extract interfaces from methods, signals and props
- * @obj_dsc: Description of object from which interfaces will be extracted
- * @root_node: root node of XML introspection document
- * Returns: List of interfaces found in object description
- *
- * Iterates over all methods, signals and properties registered with
- * object and collects all declared DBus interfaces and create interface's
- * node in XML root node for each. Returned list elements contains interface
- * name and XML node of corresponding interface.
- */
-static struct interfaces * extract_interfaces(
-	struct wpa_dbus_object_desc *obj_dsc, xmlNodePtr root_node)
+
+static void extract_interfaces_methods(struct interfaces **head,
+				       struct wpa_dbus_method_desc *methods)
 {
 	struct wpa_dbus_method_desc *method_dsc;
-	struct wpa_dbus_signal_desc *signal_dsc;
-	struct wpa_dbus_property_desc *property_dsc;
-	struct interfaces *head = NULL;
 	struct interfaces *iface, *last;
 
 	/* extract interfaces from methods */
-	for (method_dsc = obj_dsc->methods; method_dsc;
-	     method_dsc = method_dsc->next) {
-		iface = head;
+	for (method_dsc = methods; method_dsc; method_dsc = method_dsc->next) {
+		iface = *head;
 		last = NULL;
 
 		/* go to next method if its interface is already extracted */
@@ -71,23 +57,23 @@ static struct interfaces * extract_interfaces(
 		if (last)
 			last->next = iface;
 		else
-			head = iface;
+			*head = iface;
 
 		iface->dbus_interface = os_strdup(method_dsc->dbus_interface);
-		if (!iface->dbus_interface)
-			continue;
-
-		iface->interface_node = xmlNewChild(root_node, NULL,
-						    BAD_CAST "interface",
-						    NULL);
-		xmlNewProp(iface->interface_node, BAD_CAST "name",
-			   BAD_CAST method_dsc->dbus_interface);
 	}
+}
+
+
+static void extract_interfaces_signals(struct interfaces **head,
+				       struct wpa_dbus_signal_desc *signals)
+{
+	struct wpa_dbus_signal_desc *signal_dsc;
+	struct interfaces *iface, *last;
 
 	/* extract interfaces from signals */
-	for (signal_dsc = obj_dsc->signals; signal_dsc;
+	for (signal_dsc = signals; signal_dsc;
 	     signal_dsc = signal_dsc->next) {
-		iface = head;
+		iface = *head;
 		last = NULL;
 
 		/* go to next signal if its interface is already extracted */
@@ -108,23 +94,23 @@ static struct interfaces * extract_interfaces(
 		if (last)
 			last->next = iface;
 		else
-			head = iface;
+			*head = iface;
 
 		iface->dbus_interface = os_strdup(signal_dsc->dbus_interface);
-		if (!iface->dbus_interface)
-			continue;
-
-		iface->interface_node = xmlNewChild(root_node, NULL,
-						    BAD_CAST "interface",
-						    NULL);
-		xmlNewProp(iface->interface_node, BAD_CAST "name",
-			   BAD_CAST signal_dsc->dbus_interface);
 	}
+}
+
+
+static void extract_interfaces_properties(
+	struct interfaces **head, struct wpa_dbus_property_desc *properties)
+{
+	struct wpa_dbus_property_desc *property_dsc;
+	struct interfaces *iface, *last;
 
 	/* extract interfaces from properties */
-	for (property_dsc = obj_dsc->properties; property_dsc;
+	for (property_dsc = properties; property_dsc;
 	     property_dsc = property_dsc->next) {
-		iface = head;
+		iface = *head;
 		last = NULL;
 
 		/* go to next property if its interface is already extracted */
@@ -145,18 +131,42 @@ static struct interfaces * extract_interfaces(
 		if (last)
 			last->next = iface;
 		else
-			head = iface;
+			*head = iface;
 
 		iface->dbus_interface =
 			os_strdup(property_dsc->dbus_interface);
-		if (!iface->dbus_interface)
-			continue;
+	}
+}
 
+
+/**
+ * extract_interfaces - Extract interfaces from methods, signals and props
+ * @obj_dsc: Description of object from which interfaces will be extracted
+ * @root_node: root node of XML introspection document
+ * Returns: List of interfaces found in object description
+ *
+ * Iterates over all methods, signals and properties registered with
+ * object and collects all declared DBus interfaces and create interface's
+ * node in XML root node for each. Returned list elements contains interface
+ * name and XML node of corresponding interface.
+ */
+static struct interfaces * extract_interfaces(
+	struct wpa_dbus_object_desc *obj_dsc, xmlNodePtr root_node)
+{
+	struct interfaces *head = NULL, *iface;
+
+	extract_interfaces_methods(&head, obj_dsc->methods);
+	extract_interfaces_signals(&head, obj_dsc->signals);
+	extract_interfaces_properties(&head, obj_dsc->properties);
+
+	for (iface = head; iface; iface = iface->next) {
+		if (iface->dbus_interface == NULL)
+			continue;
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",
 						    NULL);
 		xmlNewProp(iface->interface_node, BAD_CAST "name",
-			   BAD_CAST property_dsc->dbus_interface);
+			   BAD_CAST iface->dbus_interface);
 	}
 
 	return head;

@@ -673,7 +673,7 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
 	struct wpa_dbus_method_desc *prev_desc;
 	int args_num = 0;
-	int interface_len, method_len, i, len, error;
+	int i, error;
 
 	prev_desc = NULL;
 	while (method_dsc) {
@@ -698,38 +698,30 @@ int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
 		prev_desc->next = method_dsc;
 
 	/* copy interface name */
-	interface_len = os_strlen(dbus_interface) + 1;
-	method_dsc->dbus_interface = os_malloc(interface_len);
+	method_dsc->dbus_interface = os_strdup(dbus_interface);
 	if (!method_dsc->dbus_interface)
 		goto err;
-	os_strncpy(method_dsc->dbus_interface, dbus_interface, interface_len);
 
 	/* copy method name */
-	method_len = os_strlen(dbus_method) + 1;
-	method_dsc->dbus_method = os_malloc(method_len);
+	method_dsc->dbus_method = os_strdup(dbus_method);
 	if (!method_dsc->dbus_method)
 		goto err;
-	os_strncpy(method_dsc->dbus_method, dbus_method, method_len);
 
 	/* copy arguments */
 	error = 0;
 	method_dsc->args_num = args_num;
 	for (i = 0; i < args_num; i++) {
-		len = os_strlen(args[i].name) + 1;
-		method_dsc->args[i].name = os_malloc(len);
+		method_dsc->args[i].name = os_strdup(args[i].name);
 		if (!method_dsc->args[i].name) {
 			error = 1;
 			continue;
 		}
-		os_strncpy(method_dsc->args[i].name, args[i].name, len);
 
-		len = os_strlen(args[i].type) + 1;
-		method_dsc->args[i].type = os_malloc(len);
+		method_dsc->args[i].type = os_strdup(args[i].type);
 		if (!method_dsc->args[i].type) {
 			error = 1;
 			continue;
 		}
-		os_strncpy(method_dsc->args[i].type, args[i].type, len);
 
 		method_dsc->args[i].dir = args[i].dir;
 	}
@@ -787,7 +779,7 @@ int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
 	struct wpa_dbus_signal_desc *signal_dsc = obj_dsc->signals;
 	struct wpa_dbus_signal_desc *prev_desc;
 	int args_num = 0;
-	int interface_len, signal_len, i, len, error = 0;
+	int i, error = 0;
 
 	prev_desc = NULL;
 	while (signal_dsc) {
@@ -812,37 +804,29 @@ int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
 		prev_desc->next = signal_dsc;
 
 	/* copy interface name */
-	interface_len = strlen(dbus_interface) + 1;
-	signal_dsc->dbus_interface = os_malloc(interface_len);
+	signal_dsc->dbus_interface = os_strdup(dbus_interface);
 	if (!signal_dsc->dbus_interface)
 		goto err;
-	os_strncpy(signal_dsc->dbus_interface, dbus_interface, interface_len);
 
 	/* copy signal name */
-	signal_len = strlen(dbus_signal) + 1;
-	signal_dsc->dbus_signal = os_malloc(signal_len);
+	signal_dsc->dbus_signal = os_strdup(dbus_signal);
 	if (!signal_dsc->dbus_signal)
 		goto err;
-	os_strncpy(signal_dsc->dbus_signal, dbus_signal, signal_len);
 
 	/* copy arguments */
 	signal_dsc->args_num = args_num;
 	for (i = 0; i < args_num; i++) {
-		len = os_strlen(args[i].name) + 1;
-		signal_dsc->args[i].name = os_malloc(len);
+		signal_dsc->args[i].name = os_strdup(args[i].name);
 		if (!signal_dsc->args[i].name) {
 			error = 1;
 			continue;
 		}
-		os_strncpy(signal_dsc->args[i].name, args[i].name, len);
 
-		len = strlen(args[i].type) + 1;
-		signal_dsc->args[i].type = os_malloc(len);
+		signal_dsc->args[i].type = os_strdup(args[i].type);
 		if (!signal_dsc->args[i].type) {
 			error = 1;
 			continue;
 		}
-		os_strncpy(signal_dsc->args[i].type, args[i].type, len);
 	}
 	if (error)
 		goto err;
@@ -901,7 +885,6 @@ int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 {
 	struct wpa_dbus_property_desc *property_dsc = obj_dsc->properties;
 	struct wpa_dbus_property_desc *prev_desc;
-	int interface_len, property_len, type_len;
 
 	prev_desc = NULL;
 	while (property_dsc) {
@@ -919,26 +902,19 @@ int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
 		prev_desc->next = property_dsc;
 
 	/* copy interface name */
-	interface_len = os_strlen(dbus_interface) + 1;
-	property_dsc->dbus_interface = os_malloc(interface_len);
+	property_dsc->dbus_interface = os_strdup(dbus_interface);
 	if (!property_dsc->dbus_interface)
 		goto err;
-	os_strncpy(property_dsc->dbus_interface, dbus_interface,
-		   interface_len);
 
 	/* copy property name */
-	property_len = os_strlen(dbus_property) + 1;
-	property_dsc->dbus_property = os_malloc(property_len);
+	property_dsc->dbus_property = os_strdup(dbus_property);
 	if (!property_dsc->dbus_property)
 		goto err;
-	os_strncpy(property_dsc->dbus_property, dbus_property, property_len);
 
 	/* copy property type */
-	type_len = os_strlen(type) + 1;
-	property_dsc->type = os_malloc(type_len);
+	property_dsc->type = os_strdup(type);
 	if (!property_dsc->type)
 		goto err;
-	os_strncpy(property_dsc->type, type, type_len);
 
 	property_dsc->getter = getter;
 	property_dsc->setter = setter;

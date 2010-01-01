@@ -46,7 +46,6 @@ static struct interfaces * extract_interfaces(
 	struct wpa_dbus_property_desc *property_dsc = obj_dsc->properties;
 	struct interfaces *head = NULL;
 	struct interfaces *iface, *last;
-	int len;
 
 	/* extract interfaces from methods */
 	while (method_dsc) {
@@ -79,8 +78,7 @@ static struct interfaces * extract_interfaces(
 		else
 			head = iface;
 
-		len = os_strlen(method_dsc->dbus_interface) + 1;
-		iface->dbus_interface = os_malloc(len);
+		iface->dbus_interface = os_strdup(method_dsc->dbus_interface);
 		if (!iface->dbus_interface) {
 			wpa_printf(MSG_ERROR, "Not enough memory to create "
 				   "interface introspection data (interface "
@@ -88,8 +86,6 @@ static struct interfaces * extract_interfaces(
 			method_dsc = method_dsc->next;
 			continue;
 		}
-		os_strncpy(iface->dbus_interface, method_dsc->dbus_interface,
-			   len);
 
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",
@@ -131,8 +127,7 @@ static struct interfaces * extract_interfaces(
 		else
 			head = iface;
 
-		len = os_strlen(signal_dsc->dbus_interface) + 1;
-		iface->dbus_interface = os_malloc(len);
+		iface->dbus_interface = os_strdup(signal_dsc->dbus_interface);
 		if (!iface->dbus_interface) {
 			wpa_printf(MSG_ERROR, "Not enough memory to create "
 				   "interface introspection data (interface "
@@ -140,8 +135,6 @@ static struct interfaces * extract_interfaces(
 			signal_dsc = signal_dsc->next;
 			continue;
 		}
-		os_strncpy(iface->dbus_interface, signal_dsc->dbus_interface,
-			   len);
 
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",
@@ -183,8 +176,8 @@ static struct interfaces * extract_interfaces(
 		else
 			head = iface;
 
-		len = os_strlen(property_dsc->dbus_interface) + 1;
-		iface->dbus_interface = os_malloc(len);
+		iface->dbus_interface =
+			os_strdup(property_dsc->dbus_interface);
 		if (!iface->dbus_interface) {
 			wpa_printf(MSG_ERROR, "Not enough memory to create "
 				   "interface introspection data (interface "
@@ -192,8 +185,6 @@ static struct interfaces * extract_interfaces(
 			property_dsc = property_dsc->next;
 			continue;
 		}
-		os_strncpy(iface->dbus_interface, property_dsc->dbus_interface,
-			   len);
 
 		iface->interface_node = xmlNewChild(root_node, NULL,
 						    BAD_CAST "interface",

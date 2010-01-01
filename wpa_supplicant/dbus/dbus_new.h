@@ -31,58 +31,6 @@ enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_CURRENT_NETWORK,
 };
 
-struct wpas_dbus_callbacks {
-	void (*signal_interface_added)(struct wpa_supplicant *wpa_s);
-	void (*signal_interface_removed)(struct wpa_supplicant *wpa_s);
-
-	int (*register_interface)(struct wpa_supplicant *wpa_s);
-	int (*unregister_interface)(struct wpa_supplicant *wpa_s);
-
-	void (*signal_scan_done)(struct wpa_supplicant *wpa_s, int success);
-
-	void (*signal_blob_added)(struct wpa_supplicant *wpa_s,
-				  const char *name);
-	void (*signal_blob_removed)(struct wpa_supplicant *wpa_s,
-				    const char *name);
-
-	void (*signal_network_selected)(struct wpa_supplicant *wpa_s, int id);
-
-	void (*signal_state_changed)(struct wpa_supplicant *wpa_s,
-				     enum wpa_states new_state,
-				     enum wpa_states old_state);
-
-	int (*register_network)(struct wpa_supplicant *wpa_s,
-				struct wpa_ssid *ssid);
-	int (*unregister_network)(struct wpa_supplicant *wpa_s,
-				  int nid);
-
-	void (*signal_network_enabled_changed)(struct wpa_supplicant *wpa_s,
-					       struct wpa_ssid *ssid);
-
-	int (*register_bss)(struct wpa_supplicant *wpa_s, u8 bssid[ETH_ALEN],
-			    unsigned int id);
-	int (*unregister_bss)(struct wpa_supplicant *wpa_s,
-			      u8 bssid[ETH_ALEN], unsigned int id);
-
-	void (*signal_prop_changed)(struct wpa_supplicant *wpa_s,
-				    enum wpas_dbus_prop property);
-
-	void (*signal_debug_level_changed)(struct wpa_global *global);
-	void (*signal_debug_timestamp_changed)(struct wpa_global *global);
-	void (*signal_debug_show_keys_changed)(struct wpa_global *global);
-
-	void (*signal_wps_event_success)(struct wpa_supplicant *wpa_s);
-	void (*signal_wps_event_fail)(struct wpa_supplicant *wpa_s,
-				      struct wps_event_fail *fail);
-	void (*signal_wps_event_m2d)(struct wpa_supplicant *wpa_s,
-				     struct wps_event_m2d *m2d);
-	void (*signal_wps_credentials)(struct wpa_supplicant *wpa_s,
-				       const struct wps_credential *cred);
-};
-
-
-#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
-
 #define WPAS_DBUS_OBJECT_PATH_MAX 150
 
 #define WPAS_DBUS_NEW_SERVICE		"fi.w1.wpa_supplicant1"
@@ -121,17 +69,148 @@ struct wpas_dbus_callbacks {
 #define WPAS_DBUS_ERROR_BLOB_UNKNOWN \
 	WPAS_DBUS_NEW_IFACE_INTERFACE ".BlobUnknown"
 
-struct wpas_dbus_callbacks * wpas_dbus_get_callbacks(void);
+
+#ifdef CONFIG_CTRL_IFACE_DBUS_NEW
+
 const char * wpas_dbus_get_path(struct wpa_supplicant *wpa_s);
 
 int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv);
 void wpas_dbus_ctrl_iface_deinit(struct wpas_dbus_priv *iface);
 
+int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s);
+int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s);
+void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
+				    enum wpa_states new_state,
+				    enum wpa_states old_state);
+void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
+				   enum wpas_dbus_prop property);
+void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
+					      struct wpa_ssid *ssid);
+void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id);
+void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success);
+void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
+			       const struct wps_credential *cred);
+void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
+				    struct wps_event_m2d *m2d);
+void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
+				     struct wps_event_fail *fail);
+void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s);
+int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
+			       struct wpa_ssid *ssid);
+int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid);
+int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
+			     u8 bssid[ETH_ALEN], unsigned int id);
+int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
+			   u8 bssid[ETH_ALEN], unsigned int id);
+void wpas_dbus_signal_blob_added(struct wpa_supplicant *wpa_s,
+				 const char *name);
+void wpas_dbus_signal_blob_removed(struct wpa_supplicant *wpa_s,
+				   const char *name);
+void wpas_dbus_signal_debug_level_changed(struct wpa_global *global);
+void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global);
+void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global);
+
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
-static inline struct wpas_dbus_callbacks * wpas_dbus_get_callbacks(void)
+static inline int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 {
-	return NULL;
+	return 0;
+}
+
+static inline int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
+{
+	return 0;
+}
+
+#define wpas_dbus_signal_state_changed(w, n, o) do { } while (0)
+
+static inline void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
+						 enum wpas_dbus_prop property)
+{
+}
+
+static inline void wpas_dbus_signal_network_enabled_changed(
+	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
+{
+}
+
+static inline void wpas_dbus_signal_network_selected(
+	struct wpa_supplicant *wpa_s, int id)
+{
+}
+
+static inline void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s,
+					      int success)
+{
+}
+
+static inline void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
+					     const struct wps_credential *cred)
+{
+}
+
+static inline void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
+						  struct wps_event_m2d *m2d)
+{
+}
+
+static inline void wpas_dbus_signal_wps_event_fail(
+	struct wpa_supplicant *wpa_s, struct wps_event_fail *fail)
+{
+}
+
+static inline void wpas_dbus_signal_wps_event_success(
+	struct wpa_supplicant *wpa_s)
+{
+}
+
+static inline int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
+					     struct wpa_ssid *ssid)
+{
+	return 0;
+}
+
+static inline int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s,
+					       int nid)
+{
+	return 0;
+}
+
+static inline int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
+					   u8 bssid[ETH_ALEN], unsigned int id)
+{
+	return 0;
+}
+
+static inline int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
+					 u8 bssid[ETH_ALEN], unsigned int id)
+{
+	return 0;
+}
+
+static inline void wpas_dbus_signal_blob_added(struct wpa_supplicant *wpa_s,
+					       const char *name)
+{
+}
+
+static inline void wpas_dbus_signal_blob_removed(struct wpa_supplicant *wpa_s,
+						 const char *name)
+{
+}
+
+static inline void wpas_dbus_signal_debug_level_changed(
+	struct wpa_global *global)
+{
+}
+
+static inline void wpas_dbus_signal_debug_timestamp_changed(
+	struct wpa_global *global)
+{
+}
+
+static inline void wpas_dbus_signal_debug_show_keys_changed(
+	struct wpa_global *global)
+{
 }
 
 #endif /* CONFIG_CTRL_IFACE_DBUS_NEW */

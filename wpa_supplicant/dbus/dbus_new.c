@@ -146,8 +146,7 @@ static void wpas_dbus_signal_interface_removed(struct wpa_supplicant *wpa_s)
  *
  * Notify listeners about finishing a scan
  */
-static void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s,
-				       int success)
+void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
@@ -338,8 +337,8 @@ static void wpas_dbus_signal_blob(struct wpa_supplicant *wpa_s,
  *
  * Notify listeners about adding a new blob
  */
-static void wpas_dbus_signal_blob_added(struct wpa_supplicant *wpa_s,
-					const char *name)
+void wpas_dbus_signal_blob_added(struct wpa_supplicant *wpa_s,
+				 const char *name)
 {
 	wpas_dbus_signal_blob(wpa_s, name, "BlobAdded");
 }
@@ -352,8 +351,8 @@ static void wpas_dbus_signal_blob_added(struct wpa_supplicant *wpa_s,
  *
  * Notify listeners about removing blob
  */
-static void wpas_dbus_signal_blob_removed(struct wpa_supplicant *wpa_s,
-					  const char *name)
+void wpas_dbus_signal_blob_removed(struct wpa_supplicant *wpa_s,
+				   const char *name)
 {
 	wpas_dbus_signal_blob(wpa_s, name, "BlobRemoved");
 }
@@ -474,8 +473,7 @@ static void wpas_dbus_signal_network_removed(struct wpa_supplicant *wpa_s,
  *
  * Notify listeners about selecting a network
  */
-static void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s,
-					      int id)
+void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id)
 {
 	wpas_dbus_signal_network(wpa_s, id, "NetworkSelected", FALSE);
 }
@@ -489,9 +487,9 @@ static void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s,
  *
  * Notify listeners that wpa_supplicant has changed state
  */
-static void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
-					   enum wpa_states new_state,
-					   enum wpa_states old_state)
+void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
+				    enum wpa_states new_state,
+				    enum wpa_states old_state)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
@@ -585,8 +583,8 @@ out:
  * Sends PropertyChanged signals containing new value of Enabled property
  * for specified network
  */
-static void wpas_dbus_signal_network_enabled_changed(
-	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
+void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
+					      struct wpa_ssid *ssid)
 {
 
 	struct network_handler_args args = {wpa_s, ssid};
@@ -612,7 +610,7 @@ static void wpas_dbus_signal_network_enabled_changed(
  *
  * Sends Event dbus signal with name "success" and empty dict as arguments
  */
-static void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
+void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 
 	DBusMessage *_signal = NULL;
@@ -665,8 +663,8 @@ out:
  * Sends Event dbus signal with name "fail" and dictionary containing
  * "msg field with fail message number (int32) as arguments
  */
-static void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
-					    struct wps_event_fail *fail)
+void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
+				     struct wps_event_fail *fail)
 {
 
 	DBusMessage *_signal = NULL;
@@ -720,8 +718,8 @@ out:
  * Sends Event dbus signal with name "m2d" and dictionary containing
  * fields of wps_event_m2d structure.
  */
-static void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
-					   struct wps_event_m2d *m2d)
+void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
+				    struct wps_event_m2d *m2d)
 {
 
 	DBusMessage *_signal = NULL;
@@ -798,8 +796,8 @@ out:
  *
  * Sends signal with credentials in directory argument
  */
-static void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
-				      const struct wps_credential *cred)
+void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
+			       const struct wps_credential *cred)
 {
 	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
@@ -915,8 +913,8 @@ nomem:
  * Sends ProertyChanged signals with path, interface and arguments
  * depending on which property has changed.
  */
-static void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
-					  enum wpas_dbus_prop property)
+void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
+				   enum wpas_dbus_prop property)
 {
 	WPADBusPropertyAccessor getter;
 	char *iface;
@@ -969,7 +967,7 @@ static void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
  *
  * Sends ProertyChanged signals informing that debug level has changed.
  */
-static void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
+void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
 {
 	wpa_dbus_signal_property_changed(global->dbus,
 					 (WPADBusPropertyAccessor)
@@ -986,7 +984,7 @@ static void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
  *
  * Sends ProertyChanged signals informing that debug timestamp has changed.
  */
-static void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
+void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
 {
 	wpa_dbus_signal_property_changed(global->dbus,
 					 (WPADBusPropertyAccessor)
@@ -1003,7 +1001,7 @@ static void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
  *
  * Sends ProertyChanged signals informing that debug show_keys has changed.
  */
-static void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global)
+void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global)
 {
 	wpa_dbus_signal_property_changed(global->dbus,
 					 (WPADBusPropertyAccessor)
@@ -1249,8 +1247,8 @@ static const struct wpas_dbus_signal wpas_dbus_network_signals[] = {
  *
  * Registers network representing object with dbus
  */
-static int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
-				      struct wpa_ssid *ssid)
+int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
+			       struct wpa_ssid *ssid)
 {
 	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
@@ -1322,7 +1320,7 @@ err:
  *
  * Unregisters network representing object from dbus
  */
-static int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
+int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 {
 	struct wpas_dbus_priv *ctrl_iface;
 	char *net_obj_path;
@@ -1429,8 +1427,8 @@ static const struct wpas_dbus_signal wpas_dbus_bss_signals[] = {
  *
  * Unregisters BSS representing object from dbus
  */
-static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
-				    u8 bssid[ETH_ALEN], unsigned int id)
+int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
+			     u8 bssid[ETH_ALEN], unsigned int id)
 {
 	struct wpas_dbus_priv *ctrl_iface;
 	char *bss_obj_path;
@@ -1476,8 +1474,8 @@ static int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
  *
  * Registers BSS representing object with dbus
  */
-static int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
-				  u8 bssid[ETH_ALEN], unsigned int id)
+int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
+			   u8 bssid[ETH_ALEN], unsigned int id)
 {
 	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
@@ -1764,7 +1762,7 @@ static const struct wpas_dbus_signal wpas_dbus_interface_signals[] = {
 };
 
 
-static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
+int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 {
 
 	struct wpa_dbus_object_desc *obj_desc = NULL;
@@ -1819,7 +1817,7 @@ err:
 }
 
 
-static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
+int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 {
 	struct wpas_dbus_priv *ctrl_iface;
 
@@ -1842,54 +1840,6 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 	wpa_s->dbus_new_path = NULL;
 
 	return 0;
-}
-
-
-static struct wpas_dbus_callbacks callbacks =
-{
-	.signal_interface_added = wpas_dbus_signal_interface_added,
-	.signal_interface_removed = wpas_dbus_signal_interface_removed,
-
-	.register_interface = wpas_dbus_register_interface,
-	.unregister_interface = wpas_dbus_unregister_interface,
-
-	.signal_scan_done = wpas_dbus_signal_scan_done,
-
-	.signal_blob_added = wpas_dbus_signal_blob_added,
-	.signal_blob_removed = wpas_dbus_signal_blob_removed,
-
-	.signal_network_selected = wpas_dbus_signal_network_selected,
-
-	.signal_state_changed = wpas_dbus_signal_state_changed,
-	.register_network = wpas_dbus_register_network,
-	.unregister_network = wpas_dbus_unregister_network,
-
-	.signal_network_enabled_changed =
-	wpas_dbus_signal_network_enabled_changed,
-
-	.register_bss = wpas_dbus_register_bss,
-	.unregister_bss = wpas_dbus_unregister_bss,
-
-	.signal_prop_changed = wpas_dbus_signal_prop_changed,
-
-	.signal_debug_level_changed = wpas_dbus_signal_debug_level_changed,
-	.signal_debug_timestamp_changed =
-	wpas_dbus_signal_debug_timestamp_changed,
-	.signal_debug_show_keys_changed =
-	wpas_dbus_signal_debug_show_keys_changed,
-
-#ifdef CONFIG_WPS
-	.signal_wps_event_success = wpas_dbus_signal_wps_event_success,
-	.signal_wps_event_fail = wpas_dbus_signal_wps_event_fail,
-	.signal_wps_event_m2d = wpas_dbus_signal_wps_event_m2d,
-	.signal_wps_credentials = wpas_dbus_signal_wps_cred,
-#endif /* CONFIG_WPS */
-};
-
-
-struct wpas_dbus_callbacks * wpas_dbus_get_callbacks(void)
-{
-	return &callbacks;
 }
 
 

@@ -99,17 +99,19 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
     <ul>
       <li>
 	<h3>DebugLevel - y - (read/write)</h3>
-	<p>Global %wpa_supplicant debuging level. Possible values are 0, 1, 2, 3 and 4</p>
+	<p>Global %wpa_supplicant debugging level. Possible values are
+	0 (verbose debugging), 1 (debugging), 2 (informative), 3 (warnings),
+	and 4 (errors).</p>
       </li>
 
       <li>
 	<h3>DebugTimestamp - b - (read/write)</h3>
-	<p>Global %wpa_supplicant debuging parameter. Determines if timestamps are shown in debug logs.</p>
+	<p>Global %wpa_supplicant debugging parameter. Determines if timestamps are shown in debug logs.</p>
       </li>
 
       <li>
 	<h3>DebugShowKeys - b - (read/write)</h3>
-	<p>Global %wpa_supplicant debuging parameter. Determines if secrets are shown in debug logs.</p>
+	<p>Global %wpa_supplicant debugging parameter. Determines if secrets are shown in debug logs.</p>
       </li>
 
       <li>

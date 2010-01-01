@@ -72,8 +72,6 @@ enum wpas_dbus_prop {
 
 #ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 
-const char * wpas_dbus_get_path(struct wpa_supplicant *wpa_s);
-
 int wpas_dbus_ctrl_iface_init(struct wpas_dbus_priv *priv);
 void wpas_dbus_ctrl_iface_deinit(struct wpas_dbus_priv *iface);
 

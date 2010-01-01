@@ -397,23 +397,13 @@ void wpa_supplicant_dbus_notify_scan_results(struct wpa_supplicant *wpa_s)
 {
 	struct wpas_dbus_priv *iface = wpa_s->global->dbus;
 	DBusMessage *_signal;
-	const char *path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
 		return;
 
-	path = wpa_supplicant_get_dbus_path(wpa_s);
-	if (path == NULL) {
-		perror("wpa_supplicant_dbus_notify_scan_results[dbus]: "
-		       "interface didn't have a dbus path");
-		wpa_printf(MSG_ERROR,
-		           "wpa_supplicant_dbus_notify_scan_results[dbus]: "
-		           "interface didn't have a dbus path; can't send "
-		           "scan result signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_path,
+					  WPAS_DBUS_IFACE_INTERFACE,
 					  "ScanResultsAvailable");
 	if (_signal == NULL) {
 		perror("wpa_supplicant_dbus_notify_scan_results[dbus]: "
@@ -442,7 +432,6 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
-	const char *path;
 	const char *new_state_str, *old_state_str;
 
 	/* Do nothing if the control interface is not turned on */
@@ -456,17 +445,8 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 	if (new_state == old_state)
 		return;
 
-	path = wpa_supplicant_get_dbus_path(wpa_s);
-	if (path == NULL) {
-		perror("wpa_supplicant_dbus_notify_state_change[dbus]: "
-		       "interface didn't have a dbus path");
-		wpa_printf(MSG_ERROR,
-		           "wpa_supplicant_dbus_notify_state_change[dbus]: "
-		           "interface didn't have a dbus path; can't send "
-		           "signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_path,
+					  WPAS_DBUS_IFACE_INTERFACE,
 					  "StateChange");
 	if (_signal == NULL) {
 		perror("wpa_supplicant_dbus_notify_state_change[dbus]: "
@@ -520,23 +500,14 @@ void wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 {
 	struct wpas_dbus_priv *iface = wpa_s->global->dbus;
 	DBusMessage *_signal;
-	const char *path;
 	dbus_bool_t scanning = wpa_s->scanning ? TRUE : FALSE;
 
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
 		return;
 
-	path = wpa_supplicant_get_dbus_path(wpa_s);
-	if (path == NULL) {
-		perror("wpa_supplicant_dbus_notify_scanning[dbus]: interface "
-		       "didn't have a dbus path");
-		wpa_printf(MSG_ERROR,
-		           "%s[dbus]: interface didn't have a dbus path; "
-			   "can't send scanning signal.", __FUNCTION__);
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_path,
+					  WPAS_DBUS_IFACE_INTERFACE,
 					  "Scanning");
 	if (_signal == NULL) {
 		perror("wpa_supplicant_dbus_notify_scanning[dbus]: couldn't "
@@ -567,7 +538,6 @@ void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
-	const char *path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s->global == NULL)
@@ -576,17 +546,8 @@ void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpa_supplicant_get_dbus_path(wpa_s);
-	if (path == NULL) {
-		perror("wpa_supplicant_dbus_notify_wps_cred[dbus]: "
-		       "interface didn't have a dbus path");
-		wpa_printf(MSG_ERROR,
-		           "wpa_supplicant_dbus_notify_wps_cred[dbus]: "
-		           "interface didn't have a dbus path; can't send "
-		           "signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_path,
+					  WPAS_DBUS_IFACE_INTERFACE,
 					  "WpsCred");
 	if (_signal == NULL) {
 		perror("wpa_supplicant_dbus_notify_wps_cred[dbus]: "
@@ -739,7 +700,6 @@ int wpas_dbus_unregister_iface(struct wpa_supplicant *wpa_s)
 {
 	struct wpas_dbus_priv *ctrl_iface;
 	DBusConnection *con;
-	const char *path;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -749,9 +709,7 @@ int wpas_dbus_unregister_iface(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	con = ctrl_iface->con;
-	path = wpa_supplicant_get_dbus_path(wpa_s);
-
-	if (!dbus_connection_unregister_object_path(con, path))
+	if (!dbus_connection_unregister_object_path(con, wpa_s->dbus_path))
 		return -1;
 
 	os_free(wpa_s->dbus_path);
@@ -777,15 +735,4 @@ struct wpa_supplicant * wpa_supplicant_get_iface_by_dbus_path(
 			return wpa_s;
 	}
 	return NULL;
-}
-
-
-/**
- * wpa_supplicant_get_dbus_path - Get an interface's dbus path
- * @wpa_s: %wpa_supplicant interface structure
- * Returns: Interface's dbus object path, or %NULL on error
- */
-const char * wpa_supplicant_get_dbus_path(struct wpa_supplicant *wpa_s)
-{
-	return wpa_s->dbus_path;
 }

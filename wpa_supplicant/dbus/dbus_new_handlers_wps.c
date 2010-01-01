@@ -288,7 +288,7 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 			wpa_s->global->dbus,
 			(WPADBusPropertyAccessor)
 			wpas_dbus_getter_process_credentials,
-			wpa_s, wpas_dbus_get_path(wpa_s),
+			wpa_s, wpa_s->dbus_new_path,
 			WPAS_DBUS_NEW_IFACE_WPS,
 			"ProcessCredentials");
 

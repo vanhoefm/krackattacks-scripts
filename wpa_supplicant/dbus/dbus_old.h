@@ -91,7 +91,6 @@ int wpas_dbus_unregister_iface(struct wpa_supplicant *wpa_s);
 
 
 /* Methods internal to the dbus control interface */
-const char *wpa_supplicant_get_dbus_path(struct wpa_supplicant *wpa_s);
 struct wpa_supplicant * wpa_supplicant_get_iface_by_dbus_path(
 	struct wpa_global *global, const char *path);
 

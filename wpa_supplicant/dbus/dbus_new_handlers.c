@@ -626,7 +626,7 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 		iface.bridge_ifname = bridge_ifname;
 		/* Otherwise, have wpa_supplicant attach to it. */
 		if ((wpa_s = wpa_supplicant_add_iface(global, &iface))) {
-			const char *path = wpas_dbus_get_path(wpa_s);
+			const char *path = wpa_s->dbus_new_path;
 			reply = dbus_message_new_method_return(message);
 			dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH,
 			                         &path, DBUS_TYPE_INVALID);
@@ -707,13 +707,7 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 	if (wpa_s == NULL)
 		return wpas_dbus_error_iface_unknown(message);
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_handler_get_interface[dbus]: "
-			   "interface has no dbus object path set");
-		return wpas_dbus_error_unknown_error(message, "path not set");
-	}
-
+	path = wpa_s->dbus_new_path;
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
 		perror("wpas_dbus_handler_get_interface[dbus]: out of memory "
@@ -896,7 +890,7 @@ DBusMessage * wpas_dbus_getter_interfaces(DBusMessage *message,
 	}
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
-		paths[i] = wpas_dbus_get_path(wpa_s);
+		paths[i] = wpa_s->dbus_new_path;
 
 	reply = wpas_dbus_simple_array_property_getter(message,
 						       DBUS_TYPE_OBJECT_PATH,
@@ -1378,8 +1372,7 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 	/* Construct the object path for this network. */
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
-		    wpas_dbus_get_path(wpa_s),
-		    ssid->id);
+		    wpa_s->dbus_new_path, ssid->id);
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
@@ -1435,7 +1428,7 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, &net_id, NULL);
-	if (iface == NULL || strcmp(iface, wpas_dbus_get_path(wpa_s)) != 0) {
+	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invald_args(message, op);
 		goto out;
 	}
@@ -1497,7 +1490,7 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, &net_id, NULL);
-	if (iface == NULL || strcmp(iface, wpas_dbus_get_path(wpa_s)) != 0) {
+	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invald_args(message, op);
 		goto out;
 	}
@@ -2146,7 +2139,6 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
-	const char *path = wpas_dbus_get_path(wpa_s);
 	char *bss_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 	struct wpa_bss *bss = NULL;
 
@@ -2164,7 +2156,7 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 	if (bss)
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
-			    path, bss->id);
+			    wpa_s->dbus_new_path, bss->id);
 	else
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 
@@ -2190,7 +2182,6 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 					       struct wpa_supplicant *wpa_s)
 {
 	DBusMessage *reply = NULL;
-	const char *path = wpas_dbus_get_path(wpa_s);
 	char *net_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 
 	if (net_obj_path == NULL) {
@@ -2202,8 +2193,8 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 
 	if (wpa_s->current_ssid)
 		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-			    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u", path,
-			    wpa_s->current_ssid->id);
+			    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
+			    wpa_s->dbus_new_path, wpa_s->current_ssid->id);
 	else
 		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 
@@ -2279,7 +2270,7 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 		/* Construct the object path for this BSS. */
 		os_snprintf(paths[i++], WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
-			    wpas_dbus_get_path(wpa_s), bss->id);
+			    wpa_s->dbus_new_path, bss->id);
 	}
 
 	reply = wpas_dbus_simple_array_property_getter(message,
@@ -2342,7 +2333,7 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 		/* Construct the object path for this network. */
 		os_snprintf(paths[i++], WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
-			    wpas_dbus_get_path(wpa_s), ssid->id);
+			    wpa_s->dbus_new_path, ssid->id);
 	}
 
 	reply = wpas_dbus_simple_array_property_getter(message,

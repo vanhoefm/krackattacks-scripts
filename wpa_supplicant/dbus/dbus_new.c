@@ -51,13 +51,6 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_interface[dbus]: "
-			   "Interface doesn't have a dbus path. "
-			   "Can't send signal.");
-		return;
-	}
 	_signal = dbus_message_new_signal(WPAS_DBUS_NEW_PATH,
 					  WPAS_DBUS_NEW_INTERFACE, sig_name);
 	if (_signal == NULL) {
@@ -68,7 +61,8 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 
 	dbus_message_iter_init_append(_signal, &iter);
 
-	if(!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+	path = wpa_s->dbus_new_path;
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
 					   &path))
 		goto err;
 
@@ -132,7 +126,6 @@ void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
-	const char *path;
 	dbus_bool_t succ;
 
 	iface = wpa_s->global->dbus;
@@ -141,14 +134,8 @@ void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_scan_done[dbus]: "
-			   "Interface doesn't have a dbus path. "
-			   "Can't send signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_INTERFACE,
 					  "ScanDone");
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_scan_done[dbus]: "
@@ -184,7 +171,6 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	DBusMessageIter iter, iter_dict;
-	const char *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -192,14 +178,8 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_bss[dbus]: "
-			   "Interface doesn't have a dbus path. "
-			   "Can't send signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_INTERFACE,
 					  sig_name);
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_bss[dbus]: "
@@ -278,7 +258,6 @@ static void wpas_dbus_signal_blob(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
-	const char *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -286,14 +265,8 @@ static void wpas_dbus_signal_blob(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_blob[dbus]: "
-			   "Interface doesn't have a dbus path. "
-			   "Can't send signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_INTERFACE,
 					  sig_name);
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_blob[dbus]: "
@@ -356,7 +329,6 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal;
 	DBusMessageIter iter, iter_dict;
-	const char *path;
 	char *net_obj_path;
 
 	iface = wpa_s->global->dbus;
@@ -365,21 +337,15 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_network[dbus]: "
-			   "Interface doesn't have a dbus path. "
-			   "Can't send signal.");
-		return;
-	}
-
 	net_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 	if (net_obj_path == NULL)
 		return;
 	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u", path, id);
+		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
+		    wpa_s->dbus_new_path, id);
 
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_INTERFACE,
 					  sig_name);
 	if (_signal == NULL) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_network[dbus]: "
@@ -475,7 +441,6 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_priv *iface;
 	DBusMessage *_signal = NULL;
-	const char *path;
 	char *new_state_str, *old_state_str;
 	char *tmp;
 
@@ -490,17 +455,8 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 	if (new_state == old_state)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (path == NULL) {
-		perror("wpas_dbus_signal_state_changed[dbus]: "
-		       "interface didn't have a dbus path");
-		wpa_printf(MSG_ERROR,
-		           "wpas_dbus_signal_state_changed[dbus]: "
-		           "interface didn't have a dbus path; can't send "
-		           "signal.");
-		return;
-	}
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_INTERFACE,
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_INTERFACE,
 					  "StateChanged");
 	if (_signal == NULL) {
 		perror("wpas_dbus_signal_state_changed[dbus]: "
@@ -574,7 +530,7 @@ void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 	char path[WPAS_DBUS_OBJECT_PATH_MAX];
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
-		    wpas_dbus_get_path(wpa_s), ssid->id);
+		    wpa_s->dbus_new_path, ssid->id);
 
 	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
 					 (WPADBusPropertyAccessor)
@@ -599,7 +555,6 @@ void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *key = "success";
-	const char *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -607,15 +562,8 @@ void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (!path) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_success"
-			   "[dbus]: interface has no dbus path set");
-		return;
-	}
-
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_WPS,
-					  "Event");
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_WPS, "Event");
 	if (!_signal) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_success"
 			   "[dbus]: out of memory when creating a signal");
@@ -653,7 +601,6 @@ void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *key = "fail";
-	const char *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -661,15 +608,8 @@ void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (!path) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_fail[dbus]: "
-			   "interface has no dbus path set");
-		return;
-	}
-
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_WPS,
-					  "Event");
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_WPS, "Event");
 	if (!_signal) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_fail[dbus]: "
 			   "out of memory when creating a signal");
@@ -708,7 +648,6 @@ void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *key = "m2d";
-	const char *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -716,15 +655,8 @@ void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (!path) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_m2d[dbus]: "
-			   "interface has no dbus path set");
-		return;
-	}
-
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_WPS,
-					  "Event");
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_WPS, "Event");
 	if (!_signal) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_m2d[dbus]: "
 			   "out of memory when creating a signal");
@@ -784,7 +716,6 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 	DBusMessage *_signal = NULL;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
-	const char *path;
 	char *auth_type[6]; /* we have six possible authorization types */
 	int at_num = 0;
 	char *encr_type[4]; /* we have four possible encryption types */
@@ -796,14 +727,8 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	path = wpas_dbus_get_path(wpa_s);
-	if (!path) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_cred[dbus]: "
-			   "interface has no dbus path set");
-		return;
-	}
-
-	_signal = dbus_message_new_signal(path, WPAS_DBUS_NEW_IFACE_WPS,
+	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
+					  WPAS_DBUS_NEW_IFACE_WPS,
 					  "Credentials");
 	if (!_signal) {
 		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_cred[dbus]: "
@@ -937,9 +862,8 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
-					 getter, arg,
-					 wpas_dbus_get_path(wpa_s), iface,
-					 prop);
+					 getter, arg, wpa_s->dbus_new_path,
+					 iface, prop);
 }
 
 
@@ -1251,7 +1175,7 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 		return -1;
 	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
-		    wpas_dbus_get_path(wpa_s), ssid->id);
+		    wpa_s->dbus_new_path, ssid->id);
 
 	wpa_printf(MSG_DEBUG, "dbus: Register network object '%s'",
 		   net_obj_path);
@@ -1320,7 +1244,7 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 		return -1;
 	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
-		    wpas_dbus_get_path(wpa_s), nid);
+		    wpa_s->dbus_new_path, nid);
 
 	wpa_printf(MSG_DEBUG, "dbus: Unregister network object '%s'",
 		   net_obj_path);
@@ -1428,7 +1352,7 @@ int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 
 	os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
-		    wpas_dbus_get_path(wpa_s), id);
+		    wpa_s->dbus_new_path, id);
 
 	wpa_printf(MSG_DEBUG, "dbus: Unregister BSS object '%s'",
 		   bss_obj_path);
@@ -1478,7 +1402,7 @@ int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 
 	os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
-		    wpas_dbus_get_path(wpa_s), id);
+		    wpa_s->dbus_new_path, id);
 
 	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
 	if (!obj_desc) {
@@ -1806,9 +1730,9 @@ int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "dbus: Unregister interface object '%s'",
-		   wpas_dbus_get_path(wpa_s));
+		   wpa_s->dbus_new_path);
 	if (wpa_dbus_unregister_object_per_iface(ctrl_iface,
-						 wpas_dbus_get_path(wpa_s)))
+						 wpa_s->dbus_new_path))
 		return -1;
 
 	wpas_dbus_signal_interface_removed(wpa_s);
@@ -1817,15 +1741,4 @@ int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 	wpa_s->dbus_new_path = NULL;
 
 	return 0;
-}
-
-
-/**
- * wpas_dbus_get_path - Get an interface's dbus path
- * @wpa_s: %wpa_supplicant interface structure
- * Returns: Interface's dbus object path, or %NULL on error
- */
-const char * wpas_dbus_get_path(struct wpa_supplicant *wpa_s)
-{
-	return wpa_s->dbus_new_path;
 }

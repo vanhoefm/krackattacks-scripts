@@ -170,7 +170,7 @@ DBusMessage * wpas_dbus_global_add_interface(DBusMessage *message,
 		iface.bridge_ifname = bridge_ifname;
 		/* Otherwise, have wpa_supplicant attach to it. */
 		if ((wpa_s = wpa_supplicant_add_iface(global, &iface))) {
-			const char *path = wpa_supplicant_get_dbus_path(wpa_s);
+			const char *path = wpa_s->dbus_path;
 			reply = dbus_message_new_method_return(message);
 			dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH,
 			                         &path, DBUS_TYPE_INVALID);
@@ -272,15 +272,7 @@ DBusMessage * wpas_dbus_global_get_interface(DBusMessage *message,
 		goto out;
 	}
 
-	path = wpa_supplicant_get_dbus_path(wpa_s);
-	if (path == NULL) {
-		reply = dbus_message_new_error(message,
-		                               WPAS_ERROR_INTERNAL_ERROR,
-		                               "an internal error occurred "
-		                               "getting the interface.");
-		goto out;
-	}
-
+	path = wpa_s->dbus_path;
 	reply = dbus_message_new_method_return(message);
 	dbus_message_append_args(reply,
 	                         DBUS_TYPE_OBJECT_PATH, &path,
@@ -403,8 +395,7 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 		os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_BSSIDS_PART "/"
 			    WPAS_DBUS_BSSID_FORMAT,
-			    wpa_supplicant_get_dbus_path(wpa_s),
-			    MAC2STR(res->bssid));
+			    wpa_s->dbus_path, MAC2STR(res->bssid));
 		dbus_message_iter_append_basic(&sub_iter,
 					       DBUS_TYPE_OBJECT_PATH, &path);
 		os_free(path);
@@ -842,8 +833,7 @@ DBusMessage * wpas_dbus_iface_add_network(DBusMessage *message,
 	/* Construct the object path for this network. */
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NETWORKS_PART "/%d",
-		    wpa_supplicant_get_dbus_path(wpa_s),
-		    ssid->id);
+		    wpa_s->dbus_path, ssid->id);
 
 	reply = dbus_message_new_method_return(message);
 	dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH,
@@ -888,7 +878,7 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 	}
 
 	/* Ensure the network is actually a child of this interface */
-	if (strcmp(iface, wpa_supplicant_get_dbus_path(wpa_s)) != 0) {
+	if (os_strcmp(iface, wpa_s->dbus_path) != 0) {
 		reply = wpas_dbus_new_invalid_network_error(message);
 		goto out;
 	}
@@ -1116,7 +1106,6 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 		/* Any network */
 		ssid = NULL;
 	} else {
-		const char *obj_path;
 		int nid;
 
 		if (!dbus_message_get_args(message, NULL,
@@ -1136,8 +1125,7 @@ DBusMessage * wpas_dbus_iface_select_network(DBusMessage *message,
 			goto out;
 		}
 		/* Ensure the object path really points to this interface */
-		obj_path = wpa_supplicant_get_dbus_path(wpa_s);
-		if (os_strcmp(iface_obj_path, obj_path) != 0) {
+		if (os_strcmp(iface_obj_path, wpa_s->dbus_path) != 0) {
 			reply = wpas_dbus_new_invalid_network_error(message);
 			goto out;
 		}

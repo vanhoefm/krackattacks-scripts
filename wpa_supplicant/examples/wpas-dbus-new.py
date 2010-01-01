@@ -35,33 +35,37 @@ def stateChanged(newState, oldState):
 def showBss(bss):
 	net_obj = bus.get_object(WPAS_DBUS_SERVICE, bss)
 	net = dbus.Interface(net_obj, WPAS_DBUS_BSS_INTERFACE)
-	props = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Properties',
-			    dbus_interface=dbus.PROPERTIES_IFACE)
-	#print props
 
 	# Convert the byte-array for SSID and BSSID to printable strings
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'BSSID',
+			  dbus_interface=dbus.PROPERTIES_IFACE)
 	bssid = ""
-	for item in props['BSSID']:
+	for item in val:
 		bssid = bssid + ":%02x" % item
 	bssid = bssid[1:]
-	ssid = byte_array_to_string(props["SSID"])
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'SSID',
+			  dbus_interface=dbus.PROPERTIES_IFACE)
+	ssid = byte_array_to_string(val)
 
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'WPAIE',
+			  dbus_interface=dbus.PROPERTIES_IFACE)
 	wpa = "no"
-	if props.has_key("WPAIE"):
+	if val != None:
 		wpa = "yes"
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'RSNIE',
+			  dbus_interface=dbus.PROPERTIES_IFACE)
 	wpa2 = "no"
-	if props.has_key("RSNIE"):
+	if val != None:
 		wpa2 = "yes"
-	freq = 0
-	if props.has_key("Frequency"):
-		freq = props["Frequency"]
-	caps = props["Capabilities"]
-	qual = props["Quality"]
-	level = props["Level"]
-	noise = props["Noise"]
-	maxrate = props["MaxRate"] / 1000000
+	freq = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Frequency',
+			   dbus_interface=dbus.PROPERTIES_IFACE)
+	signal = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Signal',
+			     dbus_interface=dbus.PROPERTIES_IFACE)
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'MaxRate',
+			  dbus_interface=dbus.PROPERTIES_IFACE)
+	maxrate = val / 1000000
 
-	print "  %s  ::  ssid='%s'  wpa=%s  wpa2=%s  quality=%d%%  rate=%d  freq=%d" % (bssid, ssid, wpa, wpa2, qual, maxrate, freq)
+	print "  %s  ::  ssid='%s'  wpa=%s  wpa2=%s  signal=%d  rate=%d  freq=%d" % (bssid, ssid, wpa, wpa2, signal, maxrate, freq)
 
 def scanDone(success):
 	gobject.MainLoop().quit()
@@ -75,7 +79,7 @@ def scanDone(success):
 		print opath
 		showBss(opath)
 
-def bssAdded(bss):
+def bssAdded(bss, properties):
 	print "BSS added: %s" % (bss)
 	showBss(bss)
 

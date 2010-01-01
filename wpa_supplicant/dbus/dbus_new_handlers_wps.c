@@ -313,7 +313,7 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 	DBusMessage *reply = NULL;
 	dbus_bool_t process_credentials, old_pc;
 
-	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_UINT32,
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_BOOLEAN,
 						 &process_credentials);
 	if (reply)
 		return reply;

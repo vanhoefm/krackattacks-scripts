@@ -1,7 +1,8 @@
 /*
- * WPA Supplicant / dbus-based control interface
+ * wpa_supplicant - D-Bus introspection
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
  * Copyright (c) 2009, Witold Sowa <witold.sowa@gmail.com>
+ * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -14,162 +15,266 @@
  */
 
 #include "utils/includes.h"
-#include <libxml/tree.h>
 
 #include "utils/common.h"
+#include "utils/list.h"
+#include "utils/wpabuf.h"
 #include "dbus_common_i.h"
 #include "dbus_new_helpers.h"
 
 
 struct interfaces {
-	struct interfaces *next;
+	struct dl_list list;
 	char *dbus_interface;
-	xmlNodePtr interface_node;
+	struct wpabuf *xml;
 };
 
 
-static void extract_interfaces_methods(struct interfaces **head,
-				       struct wpa_dbus_method_desc *methods)
+static void add_interface(struct dl_list *list, const char *dbus_interface)
 {
-	struct wpa_dbus_method_desc *method_dsc;
-	struct interfaces *iface, *last;
+	struct interfaces *iface;
 
-	/* extract interfaces from methods */
-	for (method_dsc = methods; method_dsc; method_dsc = method_dsc->next) {
-		iface = *head;
-		last = NULL;
-
-		/* go to next method if its interface is already extracted */
-		while (iface) {
-			if (!os_strcmp(iface->dbus_interface,
-				       method_dsc->dbus_interface))
-				break;
-			last = iface;
-			iface = iface->next;
-		}
-		if (iface)
-			continue;
-
-		iface = os_zalloc(sizeof(struct interfaces));
-		if (!iface)
-			continue;
-
-		if (last)
-			last->next = iface;
-		else
-			*head = iface;
-
-		iface->dbus_interface = os_strdup(method_dsc->dbus_interface);
+	dl_list_for_each(iface, list, struct interfaces, list) {
+		if (os_strcmp(iface->dbus_interface, dbus_interface) == 0)
+			return; /* already in the list */
 	}
+
+	iface = os_zalloc(sizeof(struct interfaces));
+	if (!iface)
+		return;
+	iface->xml = wpabuf_alloc(3000);
+	if (iface->xml == NULL) {
+		os_free(iface);
+		return;
+	}
+	wpabuf_printf(iface->xml, "<interface name=\"%s\">", dbus_interface);
+	dl_list_add_tail(list, &iface->list);
+	iface->dbus_interface = os_strdup(dbus_interface);
 }
 
 
-static void extract_interfaces_signals(struct interfaces **head,
+static void extract_interfaces_methods(struct dl_list *list,
+				       struct wpa_dbus_method_desc *methods)
+{
+	struct wpa_dbus_method_desc *dsc;
+	for (dsc = methods; dsc; dsc = dsc->next)
+		add_interface(list, dsc->dbus_interface);
+}
+
+
+static void extract_interfaces_signals(struct dl_list *list,
 				       struct wpa_dbus_signal_desc *signals)
 {
-	struct wpa_dbus_signal_desc *signal_dsc;
-	struct interfaces *iface, *last;
-
-	/* extract interfaces from signals */
-	for (signal_dsc = signals; signal_dsc;
-	     signal_dsc = signal_dsc->next) {
-		iface = *head;
-		last = NULL;
-
-		/* go to next signal if its interface is already extracted */
-		while (iface) {
-			if (!os_strcmp(iface->dbus_interface,
-				       signal_dsc->dbus_interface))
-				break;
-			last = iface;
-			iface = iface->next;
-		}
-		if (iface)
-			continue;
-
-		iface = os_zalloc(sizeof(struct interfaces));
-		if (!iface)
-			continue;
-
-		if (last)
-			last->next = iface;
-		else
-			*head = iface;
-
-		iface->dbus_interface = os_strdup(signal_dsc->dbus_interface);
-	}
+	struct wpa_dbus_signal_desc *dsc;
+	for (dsc = signals; dsc; dsc = dsc->next)
+		add_interface(list, dsc->dbus_interface);
 }
 
 
 static void extract_interfaces_properties(
-	struct interfaces **head, struct wpa_dbus_property_desc *properties)
+	struct dl_list *list, struct wpa_dbus_property_desc *properties)
 {
-	struct wpa_dbus_property_desc *property_dsc;
-	struct interfaces *iface, *last;
-
-	/* extract interfaces from properties */
-	for (property_dsc = properties; property_dsc;
-	     property_dsc = property_dsc->next) {
-		iface = *head;
-		last = NULL;
-
-		/* go to next property if its interface is already extracted */
-		while (iface) {
-			if (!os_strcmp(iface->dbus_interface,
-				       property_dsc->dbus_interface))
-				break;
-			last = iface;
-			iface = iface->next;
-		}
-		if (iface)
-			continue;
-
-		iface = os_zalloc(sizeof(struct interfaces));
-		if (!iface)
-			continue;
-
-		if (last)
-			last->next = iface;
-		else
-			*head = iface;
-
-		iface->dbus_interface =
-			os_strdup(property_dsc->dbus_interface);
-	}
+	struct wpa_dbus_property_desc *dsc;
+	for (dsc = properties; dsc; dsc = dsc->next)
+		add_interface(list, dsc->dbus_interface);
 }
 
 
 /**
  * extract_interfaces - Extract interfaces from methods, signals and props
+ * @list: Interface list to be filled
  * @obj_dsc: Description of object from which interfaces will be extracted
- * @root_node: root node of XML introspection document
- * Returns: List of interfaces found in object description
  *
- * Iterates over all methods, signals and properties registered with
- * object and collects all declared DBus interfaces and create interface's
- * node in XML root node for each. Returned list elements contains interface
+ * Iterates over all methods, signals, and properties registered with an
+ * object and collects all declared DBus interfaces and create interfaces'
+ * node in XML root node for each. Returned list elements contain interface
  * name and XML node of corresponding interface.
  */
-static struct interfaces * extract_interfaces(
-	struct wpa_dbus_object_desc *obj_dsc, xmlNodePtr root_node)
+static void extract_interfaces(struct dl_list *list,
+			       struct wpa_dbus_object_desc *obj_dsc)
 {
-	struct interfaces *head = NULL, *iface;
+	extract_interfaces_methods(list, obj_dsc->methods);
+	extract_interfaces_signals(list, obj_dsc->signals);
+	extract_interfaces_properties(list, obj_dsc->properties);
+}
 
-	extract_interfaces_methods(&head, obj_dsc->methods);
-	extract_interfaces_signals(&head, obj_dsc->signals);
-	extract_interfaces_properties(&head, obj_dsc->properties);
 
-	for (iface = head; iface; iface = iface->next) {
-		if (iface->dbus_interface == NULL)
-			continue;
-		iface->interface_node = xmlNewChild(root_node, NULL,
-						    BAD_CAST "interface",
-						    NULL);
-		xmlNewProp(iface->interface_node, BAD_CAST "name",
-			   BAD_CAST iface->dbus_interface);
+static void add_interfaces(struct dl_list *list, struct wpabuf *xml)
+{
+	struct interfaces *iface, *n;
+	dl_list_for_each_safe(iface, n, list, struct interfaces, list) {
+		wpabuf_put_buf(xml, iface->xml);
+		wpabuf_put_str(xml, "</interface>");
+		dl_list_del(&iface->list);
+		wpabuf_free(iface->xml);
+		os_free(iface->dbus_interface);
+		os_free(iface);
 	}
+}
 
-	return head;
+
+static struct interfaces * get_interface(struct dl_list *list,
+					 const char *dbus_interface)
+{
+	struct interfaces *iface;
+	dl_list_for_each(iface, list, struct interfaces, list) {
+		if (os_strcmp(iface->dbus_interface, dbus_interface) == 0)
+			return iface;
+	}
+	return NULL;
+}
+
+
+static void add_child_nodes(struct wpabuf *xml, DBusConnection *con,
+			    const char *path)
+{
+	char **children;
+	int i;
+
+	/* add child nodes to introspection tree */
+	dbus_connection_list_registered(con, path, &children);
+	for (i = 0; children[i]; i++)
+		wpabuf_printf(xml, "<node name=\"%s\"/>", children[i]);
+	dbus_free_string_array(children);
+}
+
+
+static void add_arg(struct wpabuf *xml, const char *name, const char *type,
+		    const char *direction)
+{
+	wpabuf_printf(xml, "<arg name=\"%s\"", name);
+	if (type)
+		wpabuf_printf(xml, " type=\"%s\"", type);
+	if (direction)
+		wpabuf_printf(xml, " direction=\"%s\"", direction);
+	wpabuf_put_str(xml, "/>");
+}
+
+
+static void add_introspectable_interface(struct wpabuf *xml)
+{
+	wpabuf_printf(xml, "<interface name=\"%s\">"
+		      "<method name=\"%s\">"
+		      "<arg name=\"data\" type=\"s\" direction=\"out\"/>"
+		      "</method>"
+		      "</interface>",
+		      WPA_DBUS_INTROSPECTION_INTERFACE,
+		      WPA_DBUS_INTROSPECTION_METHOD);
+}
+
+
+static void add_properties_interface(struct wpabuf *xml)
+{
+	wpabuf_printf(xml, "<interface name=\"%s\">",
+		      WPA_DBUS_PROPERTIES_INTERFACE);
+
+	wpabuf_printf(xml, "<method name=\"%s\">", WPA_DBUS_PROPERTIES_GET);
+	add_arg(xml, "interface", "s", "in");
+	add_arg(xml, "propname", "s", "in");
+	add_arg(xml, "value", "v", "out");
+	wpabuf_put_str(xml, "</method>");
+
+	wpabuf_printf(xml, "<method name=\"%s\">", WPA_DBUS_PROPERTIES_GETALL);
+	add_arg(xml, "interface", "s", "in");
+	add_arg(xml, "props", "a{sv}", "out");
+	wpabuf_put_str(xml, "</method>");
+
+	wpabuf_printf(xml, "<method name=\"%s\">", WPA_DBUS_PROPERTIES_SET);
+	add_arg(xml, "interface", "s", "in");
+	add_arg(xml, "propname", "s", "in");
+	add_arg(xml, "value", "v", "in");
+	wpabuf_put_str(xml, "</method>");
+
+	wpabuf_put_str(xml, "</interface>");
+}
+
+
+static void add_entry(struct wpabuf *xml, char *type, char *name, int args_num,
+		      struct wpa_dbus_argument *args, int include_dir)
+{
+	int i;
+	if (args_num == 0) {
+		wpabuf_printf(xml, "<%s name=\"%s\"/>", type, name);
+		return;
+	}
+	wpabuf_printf(xml, "<%s name=\"%s\">", type, name);
+	for (i = 0; i < args_num; i++) {
+		struct wpa_dbus_argument *arg = &args[i];
+		add_arg(xml, arg->name, arg->type,
+			include_dir ? (arg->dir == ARG_IN ? "in" : "out") :
+			NULL);
+	}
+	wpabuf_printf(xml, "</%s>", type);
+}
+
+
+static void add_property(struct wpabuf *xml,
+			 struct wpa_dbus_property_desc *dsc)
+{
+	wpabuf_printf(xml, "<property name=\"%s\" type=\"%s\" access=\"%s\"/>",
+		      dsc->dbus_property, dsc->type,
+		      (dsc->access == R ? "read" :
+		       (dsc->access == W ? "write" : "readwrite")));
+}
+
+
+static void create_method_nodes(struct dl_list *list,
+				struct wpa_dbus_method_desc *methods)
+{
+	struct wpa_dbus_method_desc *dsc;
+	struct interfaces *iface;
+
+	for (dsc = methods; dsc; dsc = dsc->next) {
+		iface = get_interface(list, dsc->dbus_interface);
+		if (!iface)
+			continue;
+		add_entry(iface->xml, "method", dsc->dbus_method,
+			  dsc->args_num, dsc->args, 1);
+	}
+}
+
+
+static void create_signal_nodes(struct dl_list *list,
+				struct wpa_dbus_signal_desc *signals)
+{
+	struct wpa_dbus_signal_desc *dsc;
+	struct interfaces *iface;
+
+	for (dsc = signals; dsc; dsc = dsc->next) {
+		iface = get_interface(list, dsc->dbus_interface);
+		if (!iface)
+			continue;
+		add_entry(iface->xml, "signal", dsc->dbus_signal,
+			  dsc->args_num, dsc->args, 0);
+	}
+}
+
+
+static void create_property_nodes(struct dl_list *list,
+				  struct wpa_dbus_property_desc *properties)
+{
+	struct wpa_dbus_property_desc *dsc;
+	struct interfaces *iface;
+
+	for (dsc = properties; dsc; dsc = dsc->next) {
+		iface = get_interface(list, dsc->dbus_interface);
+		if (!iface)
+			continue;
+		add_property(iface->xml, dsc);
+	}
+}
+
+
+static void add_wpas_interfaces(struct wpabuf *xml,
+				struct wpa_dbus_object_desc *obj_dsc)
+{
+	struct dl_list ifaces;
+	dl_list_init(&ifaces);
+	extract_interfaces(&ifaces, obj_dsc);
+	create_method_nodes(&ifaces, obj_dsc->methods);
+	create_signal_nodes(&ifaces, obj_dsc->signals);
+	create_property_nodes(&ifaces, obj_dsc->properties);
+	add_interfaces(&ifaces, xml);
 }
 
 
@@ -187,225 +292,35 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 {
 
 	DBusMessage *reply;
-	struct interfaces *ifaces, *tmp;
-	struct wpa_dbus_signal_desc *signal_dsc;
-	struct wpa_dbus_method_desc *method_dsc;
-	struct wpa_dbus_property_desc *property_dsc;
-	xmlChar *intro_str;
-	char **children;
-	int i, s;
+	struct wpabuf *xml;
+	const char *intro_str;
 
-	xmlDocPtr doc = NULL;
-	xmlNodePtr root_node = NULL, node = NULL, iface_node = NULL;
-	xmlNodePtr method_node = NULL, signal_node = NULL;
-	xmlNodePtr property_node = NULL, arg_node = NULL;
+	xml = wpabuf_alloc(4000);
+	if (xml == NULL)
+		return NULL;
 
-	/* root node and dtd */
-	doc = xmlNewDoc(BAD_CAST "1.0");
-	root_node = xmlNewNode(NULL, BAD_CAST "node");
-	xmlDocSetRootElement(doc, root_node);
-	xmlCreateIntSubset(doc, BAD_CAST "node",
-			   BAD_CAST DBUS_INTROSPECT_1_0_XML_PUBLIC_IDENTIFIER,
-			   BAD_CAST DBUS_INTROSPECT_1_0_XML_SYSTEM_IDENTIFIER);
+	wpabuf_put_str(xml, "<?xml version=\"1.0\"?>\n");
+	wpabuf_put_str(xml, DBUS_INTROSPECT_1_0_XML_DOCTYPE_DECL_NODE);
+	wpabuf_put_str(xml, "<node>");
 
-	/* Add Introspectable interface */
-	iface_node = xmlNewChild(root_node, NULL, BAD_CAST "interface", NULL);
-	xmlNewProp(iface_node, BAD_CAST "name",
-		   BAD_CAST WPA_DBUS_INTROSPECTION_INTERFACE);
+	add_introspectable_interface(xml);
+	add_properties_interface(xml);
+	add_wpas_interfaces(xml, obj_dsc);
 
-	/* Add Introspect method */
-	method_node = xmlNewChild(iface_node, NULL, BAD_CAST "method", NULL);
-	xmlNewProp(method_node, BAD_CAST "name",
-		   BAD_CAST WPA_DBUS_INTROSPECTION_METHOD);
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "data");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "s");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "out");
-
-
-	/* Add Properties interface */
-	iface_node = xmlNewChild(root_node, NULL,
-				 BAD_CAST "interface", NULL);
-	xmlNewProp(iface_node, BAD_CAST "name",
-		   BAD_CAST WPA_DBUS_PROPERTIES_INTERFACE);
-
-	/* Add Get method */
-	method_node = xmlNewChild(iface_node, NULL, BAD_CAST "method", NULL);
-	xmlNewProp(method_node, BAD_CAST "name",
-		   BAD_CAST WPA_DBUS_PROPERTIES_GET);
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "interface");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "s");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "in");
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "propname");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "s");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "in");
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "value");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "v");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "out");
-	method_node = xmlNewChild(iface_node, NULL, BAD_CAST "method", NULL);
-
-	/* Add GetAll method */
-	xmlNewProp(method_node, BAD_CAST "name",
-		   BAD_CAST WPA_DBUS_PROPERTIES_GETALL);
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "interface");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "s");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "in");
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "props");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "a{sv}");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "out");
-	method_node = xmlNewChild(iface_node, NULL, BAD_CAST "method", NULL);
-
-	/* Add Set method */
-	xmlNewProp(method_node, BAD_CAST "name",
-		   BAD_CAST WPA_DBUS_PROPERTIES_SET);
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "interface");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "s");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "in");
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "propname");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "s");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "in");
-	arg_node = xmlNewChild(method_node, NULL, BAD_CAST "arg", NULL);
-	xmlNewProp(arg_node, BAD_CAST "name", BAD_CAST "value");
-	xmlNewProp(arg_node, BAD_CAST "type", BAD_CAST "v");
-	xmlNewProp(arg_node, BAD_CAST "direction", BAD_CAST "in");
-
-	/* get all interfaces registered with object */
-	ifaces = extract_interfaces(obj_dsc, root_node);
-
-	/* create methods' nodes */
-	for (method_dsc = obj_dsc->methods; method_dsc;
-	     method_dsc = method_dsc->next) {
-		struct interfaces *iface = ifaces;
-		while (iface) {
-			if (!os_strcmp(iface->dbus_interface,
-				       method_dsc->dbus_interface))
-				break;
-			iface = iface->next;
-		}
-		if (!iface)
-			continue;
-
-		iface_node = iface->interface_node;
-		method_node = xmlNewChild(iface_node, NULL, BAD_CAST "method",
-					  NULL);
-		xmlNewProp(method_node, BAD_CAST "name",
-			   BAD_CAST method_dsc->dbus_method);
-
-		/* create args' nodes */
-		for (i = 0; i < method_dsc->args_num; i++) {
-			struct wpa_dbus_argument arg = method_dsc->args[i];
-			arg_node = xmlNewChild(method_node, NULL,
-					       BAD_CAST "arg", NULL);
-			if (arg.name && strlen(arg.name)) {
-				xmlNewProp(arg_node, BAD_CAST "name",
-					   BAD_CAST arg.name);
-			}
-			xmlNewProp(arg_node, BAD_CAST "type",
-				   BAD_CAST arg.type);
-			xmlNewProp(arg_node, BAD_CAST "direction",
-				   BAD_CAST (arg.dir == ARG_IN ?
-					     "in" : "out"));
-		}
-	}
-
-	/* create signals' nodes */
-	for (signal_dsc = obj_dsc->signals; signal_dsc;
-	     signal_dsc = signal_dsc->next) {
-		struct interfaces *iface = ifaces;
-		while (iface) {
-			if (!os_strcmp(iface->dbus_interface,
-				       signal_dsc->dbus_interface))
-				break;
-			iface = iface->next;
-		}
-		if (!iface)
-			continue;
-
-		iface_node = iface->interface_node;
-		signal_node = xmlNewChild(iface_node, NULL, BAD_CAST "signal",
-					  NULL);
-		xmlNewProp(signal_node, BAD_CAST "name",
-			   BAD_CAST signal_dsc->dbus_signal);
-
-		/* create args' nodes */
-		for (i = 0; i < signal_dsc->args_num; i++) {
-			struct wpa_dbus_argument arg = signal_dsc->args[i];
-			arg_node = xmlNewChild(signal_node, NULL,
-					       BAD_CAST "arg", NULL);
-			if (arg.name && strlen(arg.name)) {
-				xmlNewProp(arg_node, BAD_CAST "name",
-					   BAD_CAST arg.name);
-			}
-			xmlNewProp(arg_node, BAD_CAST "type",
-				   BAD_CAST arg.type);
-		}
-	}
-
-	/* create properties' nodes */
-	for (property_dsc = obj_dsc->properties; property_dsc;
-	     property_dsc = property_dsc->next) {
-		struct interfaces *iface = ifaces;
-		while (iface) {
-			if (!os_strcmp(iface->dbus_interface,
-				       property_dsc->dbus_interface))
-				break;
-			iface = iface->next;
-		}
-		if (!iface)
-			continue;
-
-		iface_node = iface->interface_node;
-		property_node = xmlNewChild(iface_node, NULL,
-					    BAD_CAST "property", NULL);
-		xmlNewProp(property_node, BAD_CAST "name",
-			   BAD_CAST property_dsc->dbus_property);
-		xmlNewProp(property_node, BAD_CAST "type",
-			   BAD_CAST property_dsc->type);
-		xmlNewProp(property_node, BAD_CAST "access", BAD_CAST
-			   (property_dsc->access == R ? "read" :
-			    (property_dsc->access == W ?
-			     "write" : "readwrite")));
-	}
-
-	/* add child nodes to introspection tree; */
-	dbus_connection_list_registered(obj_dsc->connection,
-					dbus_message_get_path(message),
-					&children);
-	for (i = 0; children[i]; i++) {
-		node = xmlNewChild(root_node, NULL, BAD_CAST "node", NULL);
-		xmlNewProp(node, BAD_CAST "name", BAD_CAST children[i]);
-	}
-	dbus_free_string_array(children);
-
-
-	xmlDocDumpFormatMemory(doc, &intro_str, &s, 1);
-
-	xmlFreeDoc(doc);
-
-	while (ifaces) {
-		tmp = ifaces;
-		ifaces = ifaces->next;
-		os_free(tmp->dbus_interface);
-		os_free(tmp);
-	}
+	add_child_nodes(xml, obj_dsc->connection,
+			dbus_message_get_path(message));
+	wpabuf_put_str(xml, "</node>\n");
 
 	reply = dbus_message_new_method_return(message);
 	if (reply == NULL) {
-		xmlFree(intro_str);
+		wpabuf_free(xml);
 		return NULL;
 	}
 
+	intro_str = wpabuf_head(xml);
 	dbus_message_append_args(reply, DBUS_TYPE_STRING, &intro_str,
 				 DBUS_TYPE_INVALID);
-
-	xmlFree(intro_str);
+	wpabuf_free(xml);
 
 	return reply;
 }

@@ -73,9 +73,9 @@ static void usage(void)
 	       "  -p = driver parameters\n"
 	       "  -P = PID file\n"
 	       "  -q = decrease debugging verbosity (-qq even less)\n");
-#if defined(CONFIG_CTRL_IFACE_DBUS) || defined(CONFIG_CTRL_IFACE_DBUS_NEW)
+#ifdef CONFIG_DBUS
 	printf("  -u = enable DBus control interface\n");
-#endif /* CONFIG_CTRL_IFACE_DBUS || CONFIG_CTRL_IFACE_DBUS_NEW */
+#endif /* CONFIG_DBUS */
 	printf("  -v = show version\n"
 	       "  -W = wait for a control interface monitor before starting\n"
 	       "  -N = start describing new interface\n");
@@ -218,11 +218,11 @@ int main(int argc, char *argv[])
 		case 't':
 			params.wpa_debug_timestamp++;
 			break;
-#if defined(CONFIG_CTRL_IFACE_DBUS) || defined(CONFIG_CTRL_IFACE_DBUS_NEW)
+#ifdef CONFIG_DBUS
 		case 'u':
 			params.dbus_ctrl_interface = 1;
 			break;
-#endif /* CONFIG_CTRL_IFACE_DBUS || CONFIG_CTRL_IFACE_DBUS_NEW */
+#endif /* CONFIG_DBUS */
 		case 'v':
 			printf("%s\n", wpa_supplicant_version);
 			exitcode = 0;

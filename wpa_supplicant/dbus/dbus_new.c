@@ -115,14 +115,14 @@ err:
 
 
 /**
- * wpas_dbus_signal_interface_created - Send a interface created signal
+ * wpas_dbus_signal_interface_added - Send a interface created signal
  * @wpa_s: %wpa_supplicant network interface data
  *
  * Notify listeners about creating new interface
  */
-static void wpas_dbus_signal_interface_created(struct wpa_supplicant *wpa_s)
+static void wpas_dbus_signal_interface_added(struct wpa_supplicant *wpa_s)
 {
-	wpas_dbus_signal_interface(wpa_s, "InterfaceCreated", TRUE);
+	wpas_dbus_signal_interface(wpa_s, "InterfaceAdded", TRUE);
 }
 
 
@@ -1764,7 +1764,7 @@ static int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 					       obj_desc))
 		goto err;
 
-	wpas_dbus_signal_interface_created(wpa_s);
+	wpas_dbus_signal_interface_added(wpa_s);
 
 	os_free(path);
 	return 0;
@@ -1804,7 +1804,7 @@ static int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 
 static struct wpas_dbus_callbacks callbacks =
 {
-	.signal_interface_created = wpas_dbus_signal_interface_created,
+	.signal_interface_added = wpas_dbus_signal_interface_added,
 	.signal_interface_removed = wpas_dbus_signal_interface_removed,
 
 	.register_interface = wpas_dbus_register_interface,

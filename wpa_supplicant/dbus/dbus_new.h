@@ -32,7 +32,7 @@ enum wpas_dbus_prop {
 };
 
 struct wpas_dbus_callbacks {
-	void (*signal_interface_created)(struct wpa_supplicant *wpa_s);
+	void (*signal_interface_added)(struct wpa_supplicant *wpa_s);
 	void (*signal_interface_removed)(struct wpa_supplicant *wpa_s);
 
 	int (*register_interface)(struct wpa_supplicant *wpa_s);

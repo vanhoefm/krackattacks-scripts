@@ -147,13 +147,13 @@ static DBusMessage * wpas_dbus_error_network_unknown(DBusMessage *message)
 
 
 /**
- * wpas_dbus_error_invald_args - Return a new InvalidArgs error message
+ * wpas_dbus_error_invalid_args - Return a new InvalidArgs error message
  * @message: Pointer to incoming dbus message this error refers to
  * Returns: a dbus error message
  *
  * Convenience function to create and return an invalid options error
  */
-DBusMessage * wpas_dbus_error_invald_args(DBusMessage *message,
+DBusMessage * wpas_dbus_error_invalid_args(DBusMessage *message,
 					  const char *arg)
 {
 	DBusMessage *reply;
@@ -225,14 +225,14 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 	DBusMessageIter	iter_dict;
 
 	if (!wpa_dbus_dict_open_read(iter, &iter_dict))
-		return wpas_dbus_error_invald_args(message, NULL);
+		return wpas_dbus_error_invalid_args(message, NULL);
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 		char *value = NULL;
 		size_t size = 50;
 		int ret;
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry)) {
-			reply = wpas_dbus_error_invald_args(message, NULL);
+			reply = wpas_dbus_error_invalid_args(message, NULL);
 			break;
 		}
 		if (entry.type == DBUS_TYPE_ARRAY &&
@@ -305,7 +305,7 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 
 	error:
 		os_free(value);
-		reply = wpas_dbus_error_invald_args(message, entry.key);
+		reply = wpas_dbus_error_invalid_args(message, entry.key);
 		wpa_dbus_dict_entry_clear(&entry);
 		break;
 	}
@@ -433,8 +433,8 @@ DBusMessage * wpas_dbus_simple_property_setter(DBusMessage *message,
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
 	if (dbus_message_iter_get_arg_type(&variant_iter) != type) {
-		return wpas_dbus_error_invald_args(message,
-						   "wrong property type");
+		return wpas_dbus_error_invalid_args(message,
+						    "wrong property type");
 	}
 	dbus_message_iter_get_basic(&variant_iter, val);
 
@@ -644,7 +644,7 @@ out:
 	return reply;
 
 error:
-	reply = wpas_dbus_error_invald_args(message, NULL);
+	reply = wpas_dbus_error_invalid_args(message, NULL);
 	goto out;
 }
 
@@ -795,7 +795,7 @@ DBusMessage * wpas_dbus_setter_debug_level(DBusMessage *message,
 	if (wpa_supplicant_set_debug_params(global, val, wpa_debug_timestamp,
 					    wpa_debug_show_keys)) {
 		dbus_message_unref(reply);
-		return wpas_dbus_error_invald_args(
+		return wpas_dbus_error_invalid_args(
 			message, "Wrong debug level value");
 	}
 
@@ -935,7 +935,7 @@ static int wpas_dbus_get_scan_type(DBusMessage *message, DBusMessageIter *var,
 	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_STRING) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 			   "Type must be a string");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong Type value type. String required");
 		return -1;
 	}
@@ -958,7 +958,7 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_ARRAY) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ssids "
 			   "must be an array of arrays of bytes");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong SSIDs value type. Array of arrays of "
 			"bytes required");
 		return -1;
@@ -971,7 +971,7 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 	{
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ssids "
 			   "must be an array of arrays of bytes");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong SSIDs value type. Array of arrays of "
 			"bytes required");
 		return -1;
@@ -983,7 +983,7 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 				   "Too many ssids specified on scan dbus "
 				   "call");
-			*reply = wpas_dbus_error_invald_args(
+			*reply = wpas_dbus_error_invalid_args(
 				message, "Too many ssids specified. Specify "
 				"at most four");
 			return -1;
@@ -1032,7 +1032,7 @@ static int wpas_dbus_get_scan_ies(DBusMessage *message, DBusMessageIter *var,
 	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_ARRAY) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ies must "
 			   "be an array of arrays of bytes");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong IEs value type. Array of arrays of "
 			"bytes required");
 		return -1;
@@ -1045,7 +1045,7 @@ static int wpas_dbus_get_scan_ies(DBusMessage *message, DBusMessageIter *var,
 	{
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: ies must "
 			   "be an array of arrays of bytes");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong IEs value type. Array required");
 		return -1;
 	}
@@ -1095,7 +1095,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 	if (dbus_message_iter_get_arg_type(var) != DBUS_TYPE_ARRAY) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 			   "Channels must be an array of structs");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong Channels value type. Array of structs "
 			"required");
 		return -1;
@@ -1107,7 +1107,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 		wpa_printf(MSG_DEBUG,
 			   "wpas_dbus_handler_scan[dbus]: Channels must be an "
 			   "array of structs");
-		*reply = wpas_dbus_error_invald_args(
+		*reply = wpas_dbus_error_invalid_args(
 			message, "Wrong Channels value type. Array of structs "
 			"required");
 		return -1;
@@ -1126,7 +1126,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 				   "two UINT32s %c",
 				   dbus_message_iter_get_arg_type(
 					   &sub_array_iter));
-			*reply = wpas_dbus_error_invald_args(
+			*reply = wpas_dbus_error_invalid_args(
 				message, "Wrong Channel struct. Two UINT32s "
 				"required");
 			os_free(freqs);
@@ -1140,7 +1140,7 @@ static int wpas_dbus_get_scan_channels(DBusMessage *message,
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 				   "Channel must by specified by struct of "
 				   "two UINT32s");
-			*reply = wpas_dbus_error_invald_args(
+			*reply = wpas_dbus_error_invalid_args(
 				message,
 				"Wrong Channel struct. Two UINT32s required");
 			os_free(freqs);
@@ -1242,7 +1242,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		} else {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 				   "Unknown argument %s", key);
-			reply = wpas_dbus_error_invald_args(message, key);
+			reply = wpas_dbus_error_invalid_args(message, key);
 			goto out;
 		}
 
@@ -1252,7 +1252,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 	if (!type) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 			   "Scan type not specified");
-		reply = wpas_dbus_error_invald_args(message, key);
+		reply = wpas_dbus_error_invalid_args(message, key);
 		goto out;
 	}
 
@@ -1260,7 +1260,7 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 		if (params.num_ssids || params.extra_ies_len) {
 			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 				   "SSIDs or IEs specified for passive scan.");
-			reply = wpas_dbus_error_invald_args(
+			reply = wpas_dbus_error_invalid_args(
 				message, "You can specify only Channels in "
 				"passive scan");
 			goto out;
@@ -1277,8 +1277,8 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 	} else {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
 			   "Unknown scan type: %s", type);
-		reply = wpas_dbus_error_invald_args(message,
-						    "Wrong scan type");
+		reply = wpas_dbus_error_invalid_args(message,
+						     "Wrong scan type");
 		goto out;
 	}
 
@@ -1418,13 +1418,13 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, &net_id, NULL);
 	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
-		reply = wpas_dbus_error_invald_args(message, op);
+		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
 	id = strtoul(net_id, NULL, 10);
 	if (errno == EINVAL) {
-		reply = wpas_dbus_error_invald_args(message, op);
+		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
@@ -1480,13 +1480,13 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 	/* is actually a child of this interface */
 	iface = wpas_dbus_new_decompose_object_path(op, &net_id, NULL);
 	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
-		reply = wpas_dbus_error_invald_args(message, op);
+		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
 	id = strtoul(net_id, NULL, 10);
 	if (errno == EINVAL) {
-		reply = wpas_dbus_error_invald_args(message, op);
+		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
 	}
 
@@ -2050,7 +2050,7 @@ DBusMessage * wpas_dbus_setter_ap_scan(DBusMessage *message,
 		return reply;
 
 	if (wpa_supplicant_set_ap_scan(wpa_s, ap_scan)) {
-		return wpas_dbus_error_invald_args(
+		return wpas_dbus_error_invalid_args(
 			message, "ap_scan must equal 0, 1 or 2");
 	}
 	return NULL;

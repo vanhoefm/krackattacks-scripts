@@ -67,7 +67,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 					   "wpas_dbus_handler_wps_start"
 					   "[dbus]: "
 					   "wrong Role type. string required");
-				return wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invalid_args(
 					message, "Role must be a string");
 			}
 			dbus_message_iter_get_basic(&variant_iter, &val);
@@ -79,8 +79,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "unknown role %s", val);
-				return wpas_dbus_error_invald_args(message,
-								   val);
+				return wpas_dbus_error_invalid_args(message,
+								    val);
 			}
 		} else if (strcmp(key, "Type") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
@@ -89,7 +89,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Type type. string required");
-				return wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invalid_args(
 					message, "Type must be a string");
 			}
 			dbus_message_iter_get_basic(&variant_iter, &val);
@@ -101,8 +101,8 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "unknown type %s", val);
-				return wpas_dbus_error_invald_args(message,
-								   val);
+				return wpas_dbus_error_invalid_args(message,
+								    val);
 			}
 		} else if (strcmp(key, "Bssid") == 0) {
 			dbus_message_iter_recurse(&entry_iter, &variant_iter);
@@ -113,7 +113,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Bssid type. byte array required");
-				return wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invalid_args(
 					message, "Bssid must be a byte array");
 			}
 			dbus_message_iter_recurse(&variant_iter, &array_iter);
@@ -123,7 +123,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Bssid length %d", len);
-				return wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invalid_args(
 					message, "Bssid is wrong length");
 			}
 		}
@@ -134,7 +134,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 				wpa_printf(MSG_DEBUG,
 					   "wpas_dbus_handler_wps_start[dbus]: "
 					   "wrong Pin type. string required");
-				return wpas_dbus_error_invald_args(
+				return wpas_dbus_error_invalid_args(
 					message, "Pin must be a string");
 			}
 			dbus_message_iter_get_basic(&variant_iter, &pin);
@@ -142,7 +142,7 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 			wpa_printf(MSG_DEBUG,
 				   "wpas_dbus_handler_wps_start[dbus]: "
 				   "unknown key %s", key);
-			return wpas_dbus_error_invald_args(message, key);
+			return wpas_dbus_error_invalid_args(message, key);
 		}
 
 		dbus_message_iter_next(&dict_iter);
@@ -151,19 +151,19 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 	if (role == 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
 			   "Role not specified");
-		return wpas_dbus_error_invald_args(message,
-						   "Role not specified");
+		return wpas_dbus_error_invalid_args(message,
+						    "Role not specified");
 	}
 	else if (role == 1 && type == 0) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
 			   "Type not specified");
-		return wpas_dbus_error_invald_args(message,
-						   "Type not specified");
+		return wpas_dbus_error_invalid_args(message,
+						    "Type not specified");
 	}
 	else if (role == 2 && pin == NULL) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_wps_start[dbus]: "
 			   "Pin required for registrar role.");
-		return wpas_dbus_error_invald_args(
+		return wpas_dbus_error_invalid_args(
 			message, "Pin required for registrar role.");
 	}
 

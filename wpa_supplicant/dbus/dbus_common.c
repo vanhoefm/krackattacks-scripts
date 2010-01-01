@@ -25,6 +25,17 @@
 #include "dbus_old.h"
 
 
+#ifndef SIGPOLL
+#ifdef SIGIO
+/*
+ * If we do not have SIGPOLL, try to use SIGIO instead. This is needed for
+ * FreeBSD.
+ */
+#define SIGPOLL SIGIO
+#endif
+#endif
+
+
 /**
  * dispatch_initial_dbus_messages - Dispatch initial dbus messages after
  *     claiming bus name

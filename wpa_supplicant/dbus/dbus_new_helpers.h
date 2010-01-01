@@ -115,16 +115,6 @@ struct wpa_dbus_property_desc {
 };
 
 
-#ifndef SIGPOLL
-#ifdef SIGIO
-/*
- * If we do not have SIGPOLL, try to use SIGIO instead. This is needed for
- * FreeBSD.
- */
-#define SIGPOLL SIGIO
-#endif
-#endif
-
 #define WPAS_DBUS_OBJECT_PATH_MAX 150
 #define WPAS_DBUS_INTERFACE_MAX 150
 #define WPAS_DBUS_METHOD_SIGNAL_PROP_MAX 50

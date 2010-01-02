@@ -33,7 +33,7 @@
  * wpas_dbus_signal_interface - Send a interface related event signal
  * @wpa_s: %wpa_supplicant network interface data
  * @sig_name: signal name - InterfaceAdded or InterfaceRemoved
- * @properties: determines if add second argument with object properties
+ * @properties: Whether to add second argument with object properties
  *
  * Notify listeners about event related with interface
  */
@@ -41,9 +41,8 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 				       const char *sig_name, int properties)
 {
 	struct wpas_dbus_priv *iface;
-	DBusMessage *_signal;
+	DBusMessage *msg;
 	DBusMessageIter iter, iter_dict;
-	const char *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -51,26 +50,21 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(WPAS_DBUS_NEW_PATH,
-					  WPAS_DBUS_NEW_INTERFACE, sig_name);
-	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_interface[dbus]: "
-			   "enough memory to send scan results signal.");
+	msg = dbus_message_new_signal(WPAS_DBUS_NEW_PATH,
+				      WPAS_DBUS_NEW_INTERFACE, sig_name);
+	if (msg == NULL)
 		return;
-	}
 
-	dbus_message_iter_init_append(_signal, &iter);
-
-	path = wpa_s->dbus_new_path;
+	dbus_message_iter_init_append(msg, &iter);
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					   &path))
+					    &wpa_s->dbus_new_path))
 		goto err;
 
 	if (properties) {
 		if (!wpa_dbus_dict_open_write(&iter, &iter_dict))
 			goto err;
 
-		wpa_dbus_get_object_properties(iface, path,
+		wpa_dbus_get_object_properties(iface, wpa_s->dbus_new_path,
 					       WPAS_DBUS_NEW_IFACE_INTERFACE,
 					       &iter_dict);
 
@@ -78,15 +72,13 @@ static void wpas_dbus_signal_interface(struct wpa_supplicant *wpa_s,
 			goto err;
 	}
 
-	dbus_connection_send(iface->con, _signal, NULL);
-
-	dbus_message_unref(_signal);
+	dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
 	return;
 
 err:
-	wpa_printf(MSG_ERROR, "wpas_dbus_signal_interface[dbus]: "
-		   "not enough memory to construct signal.");
-	dbus_message_unref(_signal);
+	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
 }
 
 
@@ -125,7 +117,7 @@ static void wpas_dbus_signal_interface_removed(struct wpa_supplicant *wpa_s)
 void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
 {
 	struct wpas_dbus_priv *iface;
-	DBusMessage *_signal;
+	DBusMessage *msg;
 	dbus_bool_t succ;
 
 	iface = wpa_s->global->dbus;
@@ -134,24 +126,19 @@ void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_INTERFACE,
-					  "ScanDone");
-	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_scan_done[dbus]: "
-			   "enough memory to send signal.");
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      "ScanDone");
+	if (msg == NULL)
 		return;
-	}
 
 	succ = success ? TRUE : FALSE;
-	if (dbus_message_append_args(_signal, DBUS_TYPE_BOOLEAN, &succ,
-				     DBUS_TYPE_INVALID)) {
-		dbus_connection_send(iface->con, _signal, NULL);
-	} else {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_scan_done[dbus]: "
-			   "not enough memory to construct signal.");
-	}
-	dbus_message_unref(_signal);
+	if (dbus_message_append_args(msg, DBUS_TYPE_BOOLEAN, &succ,
+				     DBUS_TYPE_INVALID))
+		dbus_connection_send(iface->con, msg, NULL);
+	else
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
 }
 
 
@@ -160,7 +147,7 @@ void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success)
  * @wpa_s: %wpa_supplicant network interface data
  * @bss_obj_path: BSS object path
  * @sig_name: signal name - BSSAdded or BSSRemoved
- * @properties: determines if add second argument with object properties
+ * @properties: Whether to add second argument with object properties
  *
  * Notify listeners about event related with BSS
  */
@@ -169,7 +156,7 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 				 const char *sig_name, int properties)
 {
 	struct wpas_dbus_priv *iface;
-	DBusMessage *_signal;
+	DBusMessage *msg;
 	DBusMessageIter iter, iter_dict;
 
 	iface = wpa_s->global->dbus;
@@ -178,17 +165,13 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_INTERFACE,
-					  sig_name);
-	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_bss[dbus]: "
-			   "enough memory to send signal.");
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      sig_name);
+	if (msg == NULL)
 		return;
-	}
 
-	dbus_message_iter_init_append(_signal, &iter);
-
+	dbus_message_iter_init_append(msg, &iter);
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
 					    &bss_obj_path))
 		goto err;
@@ -205,15 +188,13 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 			goto err;
 	}
 
-	dbus_connection_send(iface->con, _signal, NULL);
-
-	dbus_message_unref(_signal);
+	dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
 	return;
 
 err:
-	wpa_printf(MSG_ERROR, "wpas_dbus_signal_bss[dbus]: "
-		   "not enough memory to construct signal.");
-	dbus_message_unref(_signal);
+	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
 }
 
 
@@ -257,7 +238,7 @@ static void wpas_dbus_signal_blob(struct wpa_supplicant *wpa_s,
 				  const char *name, const char *sig_name)
 {
 	struct wpas_dbus_priv *iface;
-	DBusMessage *_signal;
+	DBusMessage *msg;
 
 	iface = wpa_s->global->dbus;
 
@@ -265,23 +246,18 @@ static void wpas_dbus_signal_blob(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_INTERFACE,
-					  sig_name);
-	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_blob[dbus]: "
-			   "enough memory to send signal.");
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      sig_name);
+	if (msg == NULL)
 		return;
-	}
 
-	if (dbus_message_append_args(_signal, DBUS_TYPE_STRING, &name,
-				     DBUS_TYPE_INVALID)) {
-		dbus_connection_send(iface->con, _signal, NULL);
-	} else {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_blob[dbus]: "
-			   "not enough memory to construct signal.");
-	}
-	dbus_message_unref(_signal);
+	if (dbus_message_append_args(msg, DBUS_TYPE_STRING, &name,
+				     DBUS_TYPE_INVALID))
+		dbus_connection_send(iface->con, msg, NULL);
+	else
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
 }
 
 
@@ -327,9 +303,9 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 				     int properties)
 {
 	struct wpas_dbus_priv *iface;
-	DBusMessage *_signal;
+	DBusMessage *msg;
 	DBusMessageIter iter, iter_dict;
-	char *net_obj_path;
+	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
 
 	iface = wpa_s->global->dbus;
 
@@ -337,27 +313,20 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	net_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	if (net_obj_path == NULL)
-		return;
 	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
 		    wpa_s->dbus_new_path, id);
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_INTERFACE,
-					  sig_name);
-	if (_signal == NULL) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_network[dbus]: "
-			   "enough memory to send signal.");
-		os_free(net_obj_path);
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      sig_name);
+	if (msg == NULL)
 		return;
-	}
 
-	dbus_message_iter_init_append(_signal, &iter);
-
+	dbus_message_iter_init_append(msg, &iter);
+	path = net_obj_path;
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
-					    &net_obj_path))
+					    &path))
 		goto err;
 
 	if (properties) {
@@ -372,17 +341,14 @@ static void wpas_dbus_signal_network(struct wpa_supplicant *wpa_s,
 			goto err;
 	}
 
-	dbus_connection_send(iface->con, _signal, NULL);
+	dbus_connection_send(iface->con, msg, NULL);
 
-	os_free(net_obj_path);
-	dbus_message_unref(_signal);
+	dbus_message_unref(msg);
 	return;
 
 err:
-	wpa_printf(MSG_ERROR, "wpas_dbus_signal_network[dbus]: "
-		   "not enough memory to construct signal.");
-	os_free(net_obj_path);
-	dbus_message_unref(_signal);
+	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
 }
 
 
@@ -427,6 +393,15 @@ void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id)
 }
 
 
+static void str_to_lower(char *s)
+{
+	while (*s) {
+		*s = tolower(*s);
+		s++;
+	}
+}
+
+
 /**
  * wpas_dbus_signal_state_changed - Send a state changed signal
  * @wpa_s: %wpa_supplicant network interface data
@@ -440,9 +415,8 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 				    enum wpa_states old_state)
 {
 	struct wpas_dbus_priv *iface;
-	DBusMessage *_signal = NULL;
+	DBusMessage *msg;
 	char *new_state_str, *old_state_str;
-	char *tmp;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s->global == NULL)
@@ -455,10 +429,10 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 	if (new_state == old_state)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_INTERFACE,
-					  "StateChanged");
-	if (_signal == NULL)
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      "StateChanged");
+	if (msg == NULL)
 		return;
 
 	new_state_str = os_strdup(wpa_supplicant_state_txt(new_state));
@@ -467,32 +441,22 @@ void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
 		goto out;
 
 	/* make state string lowercase to fit new DBus API convention */
-	tmp = new_state_str;
-	while (*tmp) {
-		*tmp = tolower(*tmp);
-		tmp++;
-	}
-	tmp = old_state_str;
-	while (*tmp) {
-		*tmp = tolower(*tmp);
-		tmp++;
-	}
+	str_to_lower(new_state_str);
+	str_to_lower(old_state_str);
 
-	if (!dbus_message_append_args(_signal,
+	if (!dbus_message_append_args(msg,
 	                              DBUS_TYPE_STRING, &new_state_str,
 	                              DBUS_TYPE_STRING, &old_state_str,
 	                              DBUS_TYPE_INVALID)) {
-		wpa_printf(MSG_ERROR,
-		           "dbus: wpas_dbus_signal_state_changed: "
-		           "not enough memory to construct state change "
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct state change "
 		           "signal");
 		goto out;
 	}
 
-	dbus_connection_send(iface->con, _signal, NULL);
+	dbus_connection_send(iface->con, msg, NULL);
 
 out:
-	dbus_message_unref(_signal);
+	dbus_message_unref(msg);
 	os_free(new_state_str);
 	os_free(old_state_str);
 }
@@ -510,8 +474,7 @@ void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 					      struct wpa_ssid *ssid)
 {
 
-	struct network_handler_args args = {wpa_s, ssid};
-
+	struct network_handler_args args = { wpa_s, ssid };
 	char path[WPAS_DBUS_OBJECT_PATH_MAX];
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
@@ -536,7 +499,7 @@ void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 {
 
-	DBusMessage *_signal = NULL;
+	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *key = "success";
@@ -547,27 +510,21 @@ void wpas_dbus_signal_wps_event_success(struct wpa_supplicant *wpa_s)
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_WPS, "Event");
-	if (!_signal) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_success"
-			   "[dbus]: out of memory when creating a signal");
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_WPS, "Event");
+	if (msg == NULL)
 		return;
-	}
 
-	dbus_message_iter_init_append(_signal, &iter);
+	dbus_message_iter_init_append(msg, &iter);
 
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) ||
 	    !wpa_dbus_dict_open_write(&iter, &dict_iter) ||
-	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_success"
-			   "[dbus]: out of memory");
-		goto out;
-	}
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 
-	dbus_connection_send(iface->con, _signal, NULL);
-out:
-	dbus_message_unref(_signal);
+	dbus_message_unref(msg);
 }
 
 
@@ -582,7 +539,7 @@ void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 				     struct wps_event_fail *fail)
 {
 
-	DBusMessage *_signal = NULL;
+	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *key = "fail";
@@ -593,28 +550,22 @@ void wpas_dbus_signal_wps_event_fail(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_WPS, "Event");
-	if (!_signal) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_fail[dbus]: "
-			   "out of memory when creating a signal");
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_WPS, "Event");
+	if (msg == NULL)
 		return;
-	}
 
-	dbus_message_iter_init_append(_signal, &iter);
+	dbus_message_iter_init_append(msg, &iter);
 
 	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) ||
 	    !wpa_dbus_dict_open_write(&iter, &dict_iter) ||
 	    !wpa_dbus_dict_append_int32(&dict_iter, "msg", fail->msg) ||
-	    !wpa_dbus_dict_close_write(&iter, &dict_iter)) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_fail[dbus]: "
-			   "out of memory");
-		goto out;
-	}
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 
-	dbus_connection_send(iface->con, _signal, NULL);
-out:
-	dbus_message_unref(_signal);
+	dbus_message_unref(msg);
 }
 
 
@@ -629,7 +580,7 @@ void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 				    struct wps_event_m2d *m2d)
 {
 
-	DBusMessage *_signal = NULL;
+	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *key = "m2d";
@@ -640,52 +591,46 @@ void wpas_dbus_signal_wps_event_m2d(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_WPS, "Event");
-	if (!_signal) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_m2d[dbus]: "
-			   "out of memory when creating a signal");
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_WPS, "Event");
+	if (msg == NULL)
 		return;
-	}
 
-	dbus_message_iter_init_append(_signal, &iter);
+	dbus_message_iter_init_append(msg, &iter);
 
-	if (!(dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) &&
-	      wpa_dbus_dict_open_write(&iter, &dict_iter) &&
-	      wpa_dbus_dict_append_uint16(&dict_iter, "config_methods",
-					  m2d->config_methods) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "manufacturer",
-					      (const char *) m2d->manufacturer,
-					      m2d->manufacturer_len) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "model_name",
-					      (const char *) m2d->model_name,
-					      m2d->model_name_len) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "model_number",
-					      (const char *) m2d->model_number,
-					      m2d->model_number_len) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "serial_number",
-					      (const char *)
-					      m2d->serial_number,
-					      m2d->serial_number_len) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "dev_name",
-					      (const char *) m2d->dev_name,
-					      m2d->dev_name_len) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "primary_dev_type",
-					      (const char *)
-					      m2d->primary_dev_type, 8) &&
-	      wpa_dbus_dict_append_uint16(&dict_iter, "config_error",
-					  m2d->config_error) &&
-	      wpa_dbus_dict_append_uint16(&dict_iter, "dev_password_id",
-					  m2d->dev_password_id) &&
-	      wpa_dbus_dict_close_write(&iter, &dict_iter))) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_wps_event_m2d[dbus]: "
-			   "out of memory");
-		goto out;
-	}
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) ||
+	    !wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_uint16(&dict_iter, "config_methods",
+					 m2d->config_methods) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "manufacturer",
+					     (const char *) m2d->manufacturer,
+					     m2d->manufacturer_len) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "model_name",
+					     (const char *) m2d->model_name,
+					     m2d->model_name_len) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "model_number",
+					     (const char *) m2d->model_number,
+					     m2d->model_number_len) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "serial_number",
+					     (const char *)
+					     m2d->serial_number,
+					     m2d->serial_number_len) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "dev_name",
+					     (const char *) m2d->dev_name,
+					     m2d->dev_name_len) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "primary_dev_type",
+					     (const char *)
+					     m2d->primary_dev_type, 8) ||
+	    !wpa_dbus_dict_append_uint16(&dict_iter, "config_error",
+					 m2d->config_error) ||
+	    !wpa_dbus_dict_append_uint16(&dict_iter, "dev_password_id",
+					 m2d->dev_password_id) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
 
-	dbus_connection_send(iface->con, _signal, NULL);
-out:
-	dbus_message_unref(_signal);
+	dbus_message_unref(msg);
 }
 
 
@@ -698,7 +643,7 @@ out:
 void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 			       const struct wps_credential *cred)
 {
-	DBusMessage *_signal = NULL;
+	DBusMessage *msg;
 	DBusMessageIter iter, dict_iter;
 	struct wpas_dbus_priv *iface;
 	char *auth_type[6]; /* we have six possible authorization types */
@@ -712,14 +657,13 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 	if (iface == NULL)
 		return;
 
-	_signal = dbus_message_new_signal(wpa_s->dbus_new_path,
-					  WPAS_DBUS_NEW_IFACE_WPS,
-					  "Credentials");
-	if (!_signal)
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_WPS,
+				      "Credentials");
+	if (msg == NULL)
 		return;
 
-	dbus_message_iter_init_append(_signal, &iter);
-
+	dbus_message_iter_init_append(msg, &iter);
 	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
 		goto nomem;
 
@@ -754,29 +698,27 @@ void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 			goto nomem;
 	}
 
-	if (!(wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
-					      (const char *) cred->ssid,
-					      cred->ssid_len) &&
-	      wpa_dbus_dict_append_string_array(&dict_iter, "AuthType",
-						(const char **) auth_type,
-						at_num) &&
-	      wpa_dbus_dict_append_string_array(&dict_iter, "EncrType",
-						(const char **) encr_type,
-						et_num) &&
-	      wpa_dbus_dict_append_byte_array(&dict_iter, "Key",
-					      (const char *) cred->key,
-					      cred->key_len) &&
-	      wpa_dbus_dict_append_uint32(&dict_iter, "KeyIndex",
-					  cred->key_idx)))
+	if (!wpa_dbus_dict_append_byte_array(&dict_iter, "SSID",
+					     (const char *) cred->ssid,
+					     cred->ssid_len) ||
+	    !wpa_dbus_dict_append_string_array(&dict_iter, "AuthType",
+					       (const char **) auth_type,
+					       at_num) ||
+	    !wpa_dbus_dict_append_string_array(&dict_iter, "EncrType",
+					       (const char **) encr_type,
+					       et_num) ||
+	    !wpa_dbus_dict_append_byte_array(&dict_iter, "Key",
+					     (const char *) cred->key,
+					     cred->key_len) ||
+	    !wpa_dbus_dict_append_uint32(&dict_iter, "KeyIndex",
+					 cred->key_idx) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
 		goto nomem;
 
-	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
-		goto nomem;
-
-	dbus_connection_send(iface->con, _signal, NULL);
+	dbus_connection_send(iface->con, msg, NULL);
 
 nomem:
-	dbus_message_unref(_signal);
+	dbus_message_unref(msg);
 }
 
 #endif /* CONFIG_WPS */
@@ -794,46 +736,36 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 				   enum wpas_dbus_prop property)
 {
 	WPADBusPropertyAccessor getter;
-	char *iface;
 	char *prop;
-	void *arg;
 
 	switch (property) {
 	case WPAS_DBUS_PROP_AP_SCAN:
 		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_ap_scan;
-		arg = wpa_s;
-		iface = WPAS_DBUS_NEW_IFACE_INTERFACE;
 		prop = "ApScan";
 		break;
 	case WPAS_DBUS_PROP_SCANNING:
 		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_scanning;
-		arg = wpa_s;
-		iface = WPAS_DBUS_NEW_IFACE_INTERFACE;
 		prop = "Scanning";
 		break;
 	case WPAS_DBUS_PROP_CURRENT_BSS:
 		getter = (WPADBusPropertyAccessor)
 			wpas_dbus_getter_current_bss;
-		arg = wpa_s;
-		iface = WPAS_DBUS_NEW_IFACE_INTERFACE;
 		prop = "CurrentBSS";
 		break;
 	case WPAS_DBUS_PROP_CURRENT_NETWORK:
 		getter = (WPADBusPropertyAccessor)
 			wpas_dbus_getter_current_network;
-		arg = wpa_s;
-		iface = WPAS_DBUS_NEW_IFACE_INTERFACE;
 		prop = "CurrentNetwork";
 		break;
 	default:
-		wpa_printf(MSG_ERROR, "wpas_dbus_signal_prop_changed[dbus]: "
-			   "Unknown Property enum value %d", property);
+		wpa_printf(MSG_ERROR, "dbus: %s: Unknown Property value %d",
+			   __func__, property);
 		return;
 	}
 
 	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
-					 getter, arg, wpa_s->dbus_new_path,
-					 iface, prop);
+					 getter, wpa_s, wpa_s->dbus_new_path,
+					 WPAS_DBUS_NEW_IFACE_INTERFACE, prop);
 }
 
 

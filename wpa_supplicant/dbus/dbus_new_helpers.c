@@ -37,7 +37,7 @@ static void recursive_iter_copy(DBusMessageIter *from, DBusMessageIter *to)
 	int type;
 
 	/* iterate over iterator to copy */
-	while ((type = dbus_message_iter_get_arg_type (from)) !=
+	while ((type = dbus_message_iter_get_arg_type(from)) !=
 	       DBUS_TYPE_INVALID) {
 
 		/* simply copy basic type entries */
@@ -49,12 +49,12 @@ static void recursive_iter_copy(DBusMessageIter *from, DBusMessageIter *to)
 				 * 8 bytes
 				 */
 				dbus_uint64_t v;
-				dbus_message_iter_get_basic (from, &v);
-				dbus_message_iter_append_basic (to, type, &v);
+				dbus_message_iter_get_basic(from, &v);
+				dbus_message_iter_append_basic(to, type, &v);
 			} else {
 				char *v;
-				dbus_message_iter_get_basic (from, &v);
-				dbus_message_iter_append_basic (to, type, &v);
+				dbus_message_iter_get_basic(from, &v);
+				dbus_message_iter_append_basic(to, type, &v);
 			}
 		} else {
 			/* recursively copy container type entries */
@@ -960,90 +960,62 @@ void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
 {
 
 	DBusConnection *connection;
-	DBusMessage *_signal, *getter_reply;
+	DBusMessage *msg, *getter_reply;
 	DBusMessageIter prop_iter, signal_iter, dict_iter, entry_iter;
 
 	if (!iface)
 		return;
 	connection = iface->con;
 
-	if (!property_getter) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: property getter not specified");
-		return;
-	}
-
-	if (!path || !interface_name || !property_name) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: path interface of property not specified");
+	if (!property_getter || !path || !interface_name || !property_name) {
+		wpa_printf(MSG_ERROR, "dbus: %s: A parameter not specified",
+			   __func__);
 		return;
 	}
 
 	getter_reply = property_getter(NULL, getter_arg);
 	if (!getter_reply ||
 	    dbus_message_get_type(getter_reply) == DBUS_MESSAGE_TYPE_ERROR) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: cannot get new value of property %s",
-			   property_name);
+		wpa_printf(MSG_ERROR, "dbus: %s: Cannot get new value of "
+			   "property %s", __func__, property_name);
 		return;
 	}
 
-	_signal = dbus_message_new_signal(path, interface_name,
-					  "PropertiesChanged");
-	if (!_signal) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: cannot allocate signal");
+	msg = dbus_message_new_signal(path, interface_name,
+				      "PropertiesChanged");
+	if (msg == NULL) {
 		dbus_message_unref(getter_reply);
 		return;
 	}
 
 	dbus_message_iter_init(getter_reply, &prop_iter);
-	dbus_message_iter_init_append(_signal, &signal_iter);
+	dbus_message_iter_init_append(msg, &signal_iter);
 
 	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
-					      "{sv}", &dict_iter)) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: out of memory. cannot open dictionary");
+					      "{sv}", &dict_iter) ||
+	    !dbus_message_iter_open_container(&dict_iter, DBUS_TYPE_DICT_ENTRY,
+					      NULL, &entry_iter) ||
+	    !dbus_message_iter_append_basic(&entry_iter, DBUS_TYPE_STRING,
+					    &property_name))
 		goto err;
-	}
-
-	if (!dbus_message_iter_open_container(&dict_iter, DBUS_TYPE_DICT_ENTRY,
-					      NULL, &entry_iter)) {
-		wpa_printf(MSG_ERROR, "iwpa_dbus_signal_property_changed"
-			   "[dbus]: out of memory. cannot open dictionary "
-			   "element");
-		goto err;
-	}
-
-	if (!dbus_message_iter_append_basic(&entry_iter, DBUS_TYPE_STRING,
-					    &property_name)) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: out of memory. cannot open add property "
-			   "name");
-		goto err;
-	}
 
 	recursive_iter_copy(&prop_iter, &entry_iter);
 
-	if (!dbus_message_iter_close_container(&dict_iter, &entry_iter)) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: out of memory. cannot close dictionary "
-			   "element");
+	if (!dbus_message_iter_close_container(&dict_iter, &entry_iter) ||
+	    !dbus_message_iter_close_container(&signal_iter, &dict_iter))
 		goto err;
-	}
 
-	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter)) {
-		wpa_printf(MSG_ERROR, "wpa_dbus_signal_property_changed"
-			   "[dbus]: out of memory. cannot close dictionary");
-		goto err;
-	}
+	dbus_connection_send(connection, msg, NULL);
 
-	dbus_connection_send(connection, _signal, NULL);
+out:
+	dbus_message_unref(getter_reply);
+	dbus_message_unref(msg);
+	return;
 
 err:
-	dbus_message_unref(getter_reply);
-	dbus_message_unref(_signal);
-
+	wpa_printf(MSG_DEBUG, "dbus: %s: Failed to construct signal",
+		   __func__);
+	goto out;
 }
 
 

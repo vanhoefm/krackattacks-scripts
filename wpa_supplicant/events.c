@@ -1037,6 +1037,17 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 			return;
 		}
+		if (wpa_s->current_ssid) {
+			struct wpa_bss *bss = NULL;
+			struct wpa_ssid *ssid = wpa_s->current_ssid;
+			if (ssid->ssid_len > 0)
+				bss = wpa_bss_get(wpa_s, bssid,
+						  ssid->ssid, ssid->ssid_len);
+			if (!bss)
+				bss = wpa_bss_get_bssid(wpa_s, bssid);
+			if (bss)
+				wpa_s->current_bss = bss;
+		}
 	}
 
 #ifdef CONFIG_SME

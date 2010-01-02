@@ -271,7 +271,8 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 	t.sec -= WPA_BSS_EXPIRATION_AGE;
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
-		if (os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) == 0 ||
+		if (bss == wpa_s->current_bss ||
+		    os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) == 0 ||
 		    os_memcmp(bss->bssid, wpa_s->pending_bssid, ETH_ALEN) == 0)
 			continue; /* do not expire BSSes that are in use */
 

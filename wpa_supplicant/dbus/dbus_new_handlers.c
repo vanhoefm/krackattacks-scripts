@@ -2086,20 +2086,15 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 {
 	DBusMessage *reply = NULL;
 	char *bss_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	struct wpa_bss *bss = NULL;
 
 	if (bss_obj_path == NULL)
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);
 
-	/* TODO: store current BSS or BSS id in wpa_s */
-	if (!is_zero_ether_addr(wpa_s->bssid))
-		bss = wpa_bss_get_bssid(wpa_s, wpa_s->bssid);
-
-	if (bss)
+	if (wpa_s->current_bss)
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
-			    wpa_s->dbus_new_path, bss->id);
+			    wpa_s->dbus_new_path, wpa_s->current_bss->id);
 	else
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
 

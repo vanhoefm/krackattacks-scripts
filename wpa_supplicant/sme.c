@@ -47,6 +47,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	wpa_s->current_bss = bss;
+
 	os_memset(&params, 0, sizeof(params));
 	wpa_s->reassociate = 0;
 

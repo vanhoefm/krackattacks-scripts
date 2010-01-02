@@ -323,6 +323,7 @@ struct wpa_supplicant {
 	int disconnected; /* all connections disabled; i.e., do no reassociate
 			   * before this has been cleared */
 	struct wpa_ssid *current_ssid;
+	struct wpa_bss *current_bss;
 	int ap_ies_from_associnfo;
 	unsigned int assoc_freq;
 

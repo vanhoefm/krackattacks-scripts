@@ -998,6 +998,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			return;
 		}
 		wpa_supplicant_create_ap(wpa_s, ssid);
+		wpa_s->current_bss = bss;
 #else /* CONFIG_AP */
 		wpa_printf(MSG_ERROR, "AP mode support not included in the "
 			   "build");
@@ -1291,6 +1292,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = ssid;
+	wpa_s->current_bss = bss;
 	wpa_supplicant_rsn_supp_set_config(wpa_s, wpa_s->current_ssid);
 	wpa_supplicant_initiate_eapol(wpa_s);
 	if (old_ssid != wpa_s->current_ssid)
@@ -1323,6 +1325,7 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_mark_disassoc(wpa_s);
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = NULL;
+	wpa_s->current_bss = NULL;
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	if (old_ssid != wpa_s->current_ssid)
@@ -1356,6 +1359,7 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_mark_disassoc(wpa_s);
 	old_ssid = wpa_s->current_ssid;
 	wpa_s->current_ssid = NULL;
+	wpa_s->current_bss = NULL;
 	wpa_sm_set_config(wpa_s->wpa, NULL);
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	if (old_ssid != wpa_s->current_ssid)

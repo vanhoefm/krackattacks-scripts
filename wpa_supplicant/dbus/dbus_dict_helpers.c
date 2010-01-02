@@ -140,6 +140,9 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_basic(DBusMessageIter *iter_dict,
 	DBusMessageIter iter_dict_entry, iter_dict_val;
 	const char *type_as_string = NULL;
 
+	if (key == NULL)
+		return FALSE;
+
 	type_as_string = _wpa_get_type_as_string_from_type(value_type);
 	if (!type_as_string)
 		return FALSE;
@@ -218,7 +221,7 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_byte_array(
 dbus_bool_t wpa_dbus_dict_append_string(DBusMessageIter *iter_dict,
 					const char *key, const char *value)
 {
-	if (!key || !value)
+	if (!value)
 		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_STRING,
 					      &value);
@@ -238,8 +241,6 @@ dbus_bool_t wpa_dbus_dict_append_string(DBusMessageIter *iter_dict,
 dbus_bool_t wpa_dbus_dict_append_byte(DBusMessageIter *iter_dict,
 				      const char *key, const char value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_BYTE,
 					      &value);
 }
@@ -258,8 +259,6 @@ dbus_bool_t wpa_dbus_dict_append_byte(DBusMessageIter *iter_dict,
 dbus_bool_t wpa_dbus_dict_append_bool(DBusMessageIter *iter_dict,
 				      const char *key, const dbus_bool_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key,
 					      DBUS_TYPE_BOOLEAN, &value);
 }
@@ -279,8 +278,6 @@ dbus_bool_t wpa_dbus_dict_append_int16(DBusMessageIter *iter_dict,
 				       const char *key,
 				       const dbus_int16_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_INT16,
 					      &value);
 }
@@ -300,8 +297,6 @@ dbus_bool_t wpa_dbus_dict_append_uint16(DBusMessageIter *iter_dict,
 					const char *key,
 					const dbus_uint16_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_UINT16,
 					      &value);
 }
@@ -321,8 +316,6 @@ dbus_bool_t wpa_dbus_dict_append_int32(DBusMessageIter *iter_dict,
 				       const char *key,
 				       const dbus_int32_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_INT32,
 					      &value);
 }
@@ -342,8 +335,6 @@ dbus_bool_t wpa_dbus_dict_append_uint32(DBusMessageIter *iter_dict,
 					const char *key,
 					const dbus_uint32_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_UINT32,
 					      &value);
 }
@@ -363,8 +354,6 @@ dbus_bool_t wpa_dbus_dict_append_int64(DBusMessageIter *iter_dict,
 				       const char *key,
 				       const dbus_int64_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_INT64,
 					      &value);
 }
@@ -384,8 +373,6 @@ dbus_bool_t wpa_dbus_dict_append_uint64(DBusMessageIter *iter_dict,
 					const char *key,
 					const dbus_uint64_t value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_UINT64,
 					      &value);
 }
@@ -402,11 +389,8 @@ dbus_bool_t wpa_dbus_dict_append_uint64(DBusMessageIter *iter_dict,
  *
  */
 dbus_bool_t wpa_dbus_dict_append_double(DBusMessageIter *iter_dict,
-					const char * key,
-					const double value)
+					const char *key, const double value)
 {
-	if (!key)
-		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key, DBUS_TYPE_DOUBLE,
 					      &value);
 }
@@ -426,7 +410,7 @@ dbus_bool_t wpa_dbus_dict_append_object_path(DBusMessageIter *iter_dict,
 					     const char *key,
 					     const char *value)
 {
-	if (!key || !value)
+	if (!value)
 		return FALSE;
 	return _wpa_dbus_add_dict_entry_basic(iter_dict, key,
 					      DBUS_TYPE_OBJECT_PATH, &value);

@@ -30,6 +30,7 @@
 #include "common/wpa_ctrl.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
+#include "bss.h"
 
 
 #ifndef CONFIG_NO_CONFIG_BLOBS
@@ -300,35 +301,29 @@ static void wpa_supplicant_notify_eapol_done(void *ctx)
 
 static int wpa_get_beacon_ie(struct wpa_supplicant *wpa_s)
 {
-	size_t i;
 	int ret = 0;
-	struct wpa_scan_res *curr = NULL;
+	struct wpa_bss *curr = NULL, *bss;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	const u8 *ie;
 
-	if (wpa_s->scan_res == NULL)
-		return -1;
-
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		struct wpa_scan_res *r = wpa_s->scan_res->res[i];
-		if (os_memcmp(r->bssid, wpa_s->bssid, ETH_ALEN) != 0)
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) != 0)
 			continue;
-		ie = wpa_scan_get_ie(r, WLAN_EID_SSID);
 		if (ssid == NULL ||
-		    ((ie && ie[1] == ssid->ssid_len &&
-		      os_memcmp(ie + 2, ssid->ssid, ssid->ssid_len) == 0) ||
+		    ((bss->ssid_len == ssid->ssid_len &&
+		      os_memcmp(bss->ssid, ssid->ssid, ssid->ssid_len) == 0) ||
 		     ssid->ssid_len == 0)) {
-			curr = r;
+			curr = bss;
 			break;
 		}
 	}
 
 	if (curr) {
-		ie = wpa_scan_get_vendor_ie(curr, WPA_IE_VENDOR_TYPE);
+		ie = wpa_bss_get_vendor_ie(curr, WPA_IE_VENDOR_TYPE);
 		if (wpa_sm_set_ap_wpa_ie(wpa_s->wpa, ie, ie ? 2 + ie[1] : 0))
 			ret = -1;
 
-		ie = wpa_scan_get_ie(curr, WLAN_EID_RSN);
+		ie = wpa_bss_get_ie(curr, WLAN_EID_RSN);
 		if (wpa_sm_set_ap_rsn_ie(wpa_s->wpa, ie, ie ? 2 + ie[1] : 0))
 			ret = -1;
 	} else {

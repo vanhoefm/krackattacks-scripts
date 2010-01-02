@@ -787,14 +787,7 @@ DBusMessage * wpas_dbus_iface_add_network(DBusMessage *message,
 {
 	DBusMessage *reply = NULL;
 	struct wpa_ssid *ssid;
-	char *path = NULL;
-
-	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	if (path == NULL) {
-		wpa_printf(MSG_ERROR, "dbus: Not enough memory to send scan "
-			   "results signal");
-		goto out;
-	}
+	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *path = path_buf;
 
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL) {
@@ -818,7 +811,6 @@ DBusMessage * wpas_dbus_iface_add_network(DBusMessage *message,
 				 &path, DBUS_TYPE_INVALID);
 
 out:
-	os_free(path);
 	return reply;
 }
 

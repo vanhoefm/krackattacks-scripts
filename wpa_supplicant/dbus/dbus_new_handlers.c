@@ -1300,14 +1300,7 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter;
 	struct wpa_ssid *ssid = NULL;
-	char *path = NULL;
-
-	path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-	if (path == NULL) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
-		goto err;
-	}
+	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *path = path_buf;
 
 	dbus_message_iter_init(message, &iter);
 
@@ -1352,7 +1345,6 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 		goto err;
 	}
 
-	os_free(path);
 	return reply;
 
 err:
@@ -1360,7 +1352,6 @@ err:
 		wpas_notify_network_removed(wpa_s, ssid);
 		wpa_config_remove_network(wpa_s->conf, ssid->id);
 	}
-	os_free(path);
 	return reply;
 }
 
@@ -2084,12 +2075,8 @@ DBusMessage * wpas_dbus_getter_driver(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s)
 {
-	DBusMessage *reply = NULL;
-	char *bss_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-
-	if (bss_obj_path == NULL)
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+	DBusMessage *reply;
+	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *bss_obj_path = path_buf;
 
 	if (wpa_s->current_bss)
 		os_snprintf(bss_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
@@ -2102,7 +2089,6 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 						 DBUS_TYPE_OBJECT_PATH,
 						 &bss_obj_path);
 
-	os_free(bss_obj_path);
 	return reply;
 }
 
@@ -2119,12 +2105,8 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 					       struct wpa_supplicant *wpa_s)
 {
-	DBusMessage *reply = NULL;
-	char *net_obj_path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-
-	if (net_obj_path == NULL)
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+	DBusMessage *reply;
+	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *net_obj_path = path_buf;
 
 	if (wpa_s->current_ssid)
 		os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
@@ -2137,7 +2119,6 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 						 DBUS_TYPE_OBJECT_PATH,
 						 &net_obj_path);
 
-	os_free(net_obj_path);
 	return reply;
 }
 
@@ -2211,7 +2192,7 @@ DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 						       paths, wpa_s->num_bss);
 
 out:
-	while(i)
+	while (i)
 		os_free(paths[--i]);
 	os_free(paths);
 	return reply;

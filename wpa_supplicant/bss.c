@@ -65,9 +65,8 @@ static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 }
 
 
-static struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s,
-				    const u8 *bssid, const u8 *ssid,
-				    size_t ssid_len)
+struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,
+			     const u8 *ssid, size_t ssid_len)
 {
 	struct wpa_bss *bss;
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {

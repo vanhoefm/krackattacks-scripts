@@ -30,6 +30,7 @@
 #include "driver_i.h"
 #include "notify.h"
 #include "blacklist.h"
+#include "bss.h"
 #include "wps_supplicant.h"
 
 
@@ -93,8 +94,7 @@ static void wpas_wps_security_workaround(struct wpa_supplicant *wpa_s,
 					 const struct wps_credential *cred)
 {
 	struct wpa_driver_capa capa;
-	size_t i;
-	struct wpa_scan_res *bss;
+	struct wpa_bss *bss;
 	const u8 *ie;
 	struct wpa_ie_data adv;
 	int wpa2 = 0, ccmp = 0;
@@ -110,38 +110,22 @@ static void wpas_wps_security_workaround(struct wpa_supplicant *wpa_s,
 	if (wpa_drv_get_capa(wpa_s, &capa))
 		return; /* Unknown what driver supports */
 
-	if (wpa_supplicant_get_scan_results(wpa_s) || wpa_s->scan_res == NULL)
-		return; /* Could not get scan results for checking advertised
-			 * parameters */
-
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		bss = wpa_s->scan_res->res[i];
-		if (os_memcmp(bss->bssid, cred->mac_addr, ETH_ALEN) != 0)
-			continue;
-		ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
-		if (ie == NULL)
-			continue;
-		if (ie[1] != ssid->ssid_len || ssid->ssid == NULL ||
-		    os_memcmp(ie + 2, ssid->ssid, ssid->ssid_len) != 0)
-			continue;
-
-		wpa_printf(MSG_DEBUG, "WPS: AP found from scan results");
-		break;
-	}
-
-	if (i == wpa_s->scan_res->num) {
-		wpa_printf(MSG_DEBUG, "WPS: The AP was not found from scan "
-			   "results - use credential as-is");
+	bss = wpa_bss_get(wpa_s, cred->mac_addr, ssid->ssid, ssid->ssid_len);
+	if (bss == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: The AP was not found from BSS "
+			   "table - use credential as-is");
 		return;
 	}
 
-	ie = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+	wpa_printf(MSG_DEBUG, "WPS: AP found from BSS table");
+
+	ie = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	if (ie && wpa_parse_wpa_ie(ie, 2 + ie[1], &adv) == 0) {
 		wpa2 = 1;
 		if (adv.pairwise_cipher & WPA_CIPHER_CCMP)
 			ccmp = 1;
 	} else {
-		ie = wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
+		ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 		if (ie && wpa_parse_wpa_ie(ie, 2 + ie[1], &adv) == 0 &&
 		    adv.pairwise_cipher & WPA_CIPHER_CCMP)
 			ccmp = 1;
@@ -588,34 +572,22 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 	}
 
 	if (bssid) {
-		size_t i;
+		struct wpa_bss *bss;
 		int count = 0;
 
 		os_memcpy(ssid->bssid, bssid, ETH_ALEN);
 		ssid->bssid_set = 1;
 
-		/* Try to get SSID from scan results */
-		if (wpa_s->scan_res == NULL &&
-		    wpa_supplicant_get_scan_results(wpa_s) < 0)
-			return ssid; /* Could not find any scan results */
-
-		for (i = 0; i < wpa_s->scan_res->num; i++) {
-			const u8 *ie;
-			struct wpa_scan_res *res;
-
-			res = wpa_s->scan_res->res[i];
-			if (os_memcmp(bssid, res->bssid, ETH_ALEN) != 0)
+		dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+			if (os_memcmp(bssid, bss->bssid, ETH_ALEN) != 0)
 				continue;
 
-			ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
-			if (ie == NULL)
-				break;
 			os_free(ssid->ssid);
-			ssid->ssid = os_malloc(ie[1]);
+			ssid->ssid = os_malloc(bss->ssid_len);
 			if (ssid->ssid == NULL)
 				break;
-			os_memcpy(ssid->ssid, ie + 2, ie[1]);
-			ssid->ssid_len = ie[1];
+			os_memcpy(ssid->ssid, bss->ssid, bss->ssid_len);
+			ssid->ssid_len = bss->ssid_len;
 			wpa_hexdump_ascii(MSG_DEBUG, "WPS: Picked SSID from "
 					  "scan results",
 					  ssid->ssid, ssid->ssid_len);

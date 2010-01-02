@@ -25,6 +25,8 @@ dbus_bool_t wpa_dbus_dict_open_write(DBusMessageIter *iter,
 dbus_bool_t wpa_dbus_dict_close_write(DBusMessageIter *iter,
 				      DBusMessageIter *iter_dict);
 
+const char * wpa_dbus_type_as_string(const int type);
+
 dbus_bool_t wpa_dbus_dict_append_string(DBusMessageIter *iter_dict,
 					const char *key, const char *value);
 

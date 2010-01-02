@@ -314,37 +314,6 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 }
 
 
-static const char * _get_dbus_type_as_string(const int type)
-{
-	switch(type) {
-	case DBUS_TYPE_BYTE:
-		return DBUS_TYPE_BYTE_AS_STRING;
-	case DBUS_TYPE_BOOLEAN:
-		return DBUS_TYPE_BOOLEAN_AS_STRING;
-	case DBUS_TYPE_INT16:
-		return DBUS_TYPE_INT16_AS_STRING;
-	case DBUS_TYPE_UINT16:
-		return DBUS_TYPE_UINT16_AS_STRING;
-	case DBUS_TYPE_INT32:
-		return DBUS_TYPE_INT32_AS_STRING;
-	case DBUS_TYPE_UINT32:
-		return DBUS_TYPE_UINT32_AS_STRING;
-	case DBUS_TYPE_INT64:
-		return DBUS_TYPE_INT64_AS_STRING;
-	case DBUS_TYPE_UINT64:
-		return DBUS_TYPE_UINT64_AS_STRING;
-	case DBUS_TYPE_DOUBLE:
-		return DBUS_TYPE_DOUBLE_AS_STRING;
-	case DBUS_TYPE_STRING:
-		return DBUS_TYPE_STRING_AS_STRING;
-	case DBUS_TYPE_OBJECT_PATH:
-		return DBUS_TYPE_OBJECT_PATH_AS_STRING;
-	default:
-		return NULL;
-	}
-}
-
-
 /**
  * wpas_dbus_simple_property_getter - Get basic type property
  * @message: Pointer to incoming dbus message
@@ -376,7 +345,7 @@ DBusMessage * wpas_dbus_simple_property_getter(DBusMessage *message,
 		dbus_message_iter_init_append(reply, &iter);
 		if (!dbus_message_iter_open_container(
 			    &iter, DBUS_TYPE_VARIANT,
-			    _get_dbus_type_as_string(type), &variant_iter) ||
+			    wpa_dbus_type_as_string(type), &variant_iter) ||
 		    !dbus_message_iter_append_basic(&variant_iter, type,
 						    val) ||
 		    !dbus_message_iter_close_container(&iter, &variant_iter)) {
@@ -474,7 +443,7 @@ DBusMessage * wpas_dbus_simple_array_property_getter(DBusMessage *message,
 		return wpas_dbus_error_unknown_error(message, NULL);
 	}
 
-	sub_type_str = _get_dbus_type_as_string(type);
+	sub_type_str = wpa_dbus_type_as_string(type);
 	type_str[1] = sub_type_str[0];
 
 	if (message == NULL)

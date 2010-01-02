@@ -69,7 +69,7 @@ dbus_bool_t wpa_dbus_dict_close_write(DBusMessageIter *iter,
 }
 
 
-static const char * _wpa_get_type_as_string_from_type(const int type)
+const char * wpa_dbus_type_as_string(const int type)
 {
 	switch(type) {
 	case DBUS_TYPE_BYTE:
@@ -143,7 +143,7 @@ static dbus_bool_t _wpa_dbus_add_dict_entry_basic(DBusMessageIter *iter_dict,
 	if (key == NULL)
 		return FALSE;
 
-	type_as_string = _wpa_get_type_as_string_from_type(value_type);
+	type_as_string = wpa_dbus_type_as_string(value_type);
 	if (!type_as_string)
 		return FALSE;
 

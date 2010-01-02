@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant / WPS integration
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -993,30 +993,28 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 
 
 int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
-			      struct wpa_scan_res *selected,
-			      struct wpa_ssid *ssid)
+			      struct wpa_bss *selected, struct wpa_ssid *ssid)
 {
 	const u8 *sel_uuid, *uuid;
-	size_t i;
 	struct wpabuf *wps_ie;
 	int ret = 0;
+	struct wpa_bss *bss;
 
 	if (!eap_is_wps_pbc_enrollee(&ssid->eap))
 		return 0;
 
 	/* Make sure that only one AP is in active PBC mode */
-	wps_ie = wpa_scan_get_vendor_ie_multi(selected, WPS_IE_VENDOR_TYPE);
+	wps_ie = wpa_bss_get_vendor_ie_multi(selected, WPS_IE_VENDOR_TYPE);
 	if (wps_ie)
 		sel_uuid = wps_get_uuid_e(wps_ie);
 	else
 		sel_uuid = NULL;
 
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		struct wpa_scan_res *bss = wpa_s->scan_res->res[i];
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		struct wpabuf *ie;
 		if (bss == selected)
 			continue;
-		ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
 		if (!ie)
 			continue;
 		if (!wps_is_selected_pbc_registrar(ie)) {
@@ -1044,15 +1042,14 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 
 void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 {
-	size_t i;
+	struct wpa_bss *bss;
 
 	if (wpa_s->disconnected || wpa_s->wpa_state >= WPA_ASSOCIATED)
 		return;
 
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		struct wpa_scan_res *bss = wpa_s->scan_res->res[i];
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		struct wpabuf *ie;
-		ie = wpa_scan_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
+		ie = wpa_bss_get_vendor_ie_multi(bss, WPS_IE_VENDOR_TYPE);
 		if (!ie)
 			continue;
 		if (wps_is_selected_pbc_registrar(ie))

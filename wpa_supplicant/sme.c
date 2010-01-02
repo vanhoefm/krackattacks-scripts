@@ -27,10 +27,11 @@
 #include "wps_supplicant.h"
 #include "notify.h"
 #include "blacklist.h"
+#include "bss.h"
 #include "sme.h"
 
 void sme_authenticate(struct wpa_supplicant *wpa_s,
-		      struct wpa_scan_res *bss, struct wpa_ssid *ssid)
+		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
 	struct wpa_driver_auth_params params;
 	struct wpa_ssid *old_ssid;
@@ -51,13 +52,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 	params.freq = bss->freq;
 	params.bssid = bss->bssid;
-	ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
-	if (ie == NULL) {
-		wpa_printf(MSG_ERROR, "SME: SSID not available for the BSS");
-		return;
-	}
-	params.ssid = ie + 2;
-	params.ssid_len = ie[1];
+	params.ssid = bss->ssid;
+	params.ssid_len = bss->ssid_len;
 
 	if (wpa_s->sme.ssid_len != params.ssid_len ||
 	    os_memcmp(wpa_s->sme.ssid, params.ssid, params.ssid_len) != 0)
@@ -105,8 +101,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);
 
-	if (bss && (wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
-		    wpa_scan_get_ie(bss, WLAN_EID_RSN)) &&
+	if (bss && (wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
+		    wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
 	    (ssid->key_mgmt & (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
 			       WPA_KEY_MGMT_FT_IEEE8021X |
 			       WPA_KEY_MGMT_FT_PSK |
@@ -161,7 +157,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	ie = wpa_scan_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
+	ie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
 	if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
 		md = ie + 2;
 	wpa_sm_set_ft_params(wpa_s->wpa, md, NULL, 0, NULL);
@@ -210,7 +206,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		break;
 	}
 	if (ssid->ieee80211w != NO_IEEE80211W && bss) {
-		const u8 *rsn = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data _ie;
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &_ie) == 0 &&
 		    _ie.capabilities &

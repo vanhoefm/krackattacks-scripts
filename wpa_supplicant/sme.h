@@ -18,7 +18,7 @@
 #ifdef CONFIG_SME
 
 void sme_authenticate(struct wpa_supplicant *wpa_s,
-		      struct wpa_scan_res *bss, struct wpa_ssid *ssid);
+		      struct wpa_bss *bss, struct wpa_ssid *ssid);
 void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data);
 int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 		      const u8 *ies, size_t ies_len);
@@ -34,7 +34,7 @@ void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 #else /* CONFIG_SME */
 
 static inline void sme_authenticate(struct wpa_supplicant *wpa_s,
-				    struct wpa_scan_res *bss,
+				    struct wpa_bss *bss,
 				    struct wpa_ssid *ssid)
 {
 }

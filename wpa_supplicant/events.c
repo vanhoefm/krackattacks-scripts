@@ -36,6 +36,7 @@
 #include "sme.h"
 #include "bgscan.h"
 #include "ap.h"
+#include "bss.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -389,7 +390,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_scan_res *
+static struct wpa_bss *
 wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *group,
 			      struct wpa_ssid **selected_ssid)
@@ -476,7 +477,7 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 				   MAC2STR(bss->bssid),
 				   wpa_ssid_txt(ssid_, ssid_len));
 			*selected_ssid = ssid;
-			return bss;
+			return wpa_bss_get(wpa_s, bss->bssid, ssid_, ssid_len);
 		}
 	}
 
@@ -484,7 +485,7 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_scan_res *
+static struct wpa_bss *
 wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 				  struct wpa_ssid *group,
 				  struct wpa_ssid **selected_ssid)
@@ -602,7 +603,7 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 				   MAC2STR(bss->bssid),
 				   wpa_ssid_txt(ssid_, ssid_len));
 			*selected_ssid = ssid;
-			return bss;
+			return wpa_bss_get(wpa_s, bss->bssid, ssid_, ssid_len);
 		}
 	}
 
@@ -610,11 +611,11 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 }
 
 
-static struct wpa_scan_res *
+static struct wpa_bss *
 wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 			  struct wpa_ssid **selected_ssid)
 {
-	struct wpa_scan_res *selected;
+	struct wpa_bss *selected;
 
 	wpa_printf(MSG_DEBUG, "Selecting BSS from priority group %d",
 		   group->priority);
@@ -630,11 +631,11 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 }
 
 
-static struct wpa_scan_res *
+static struct wpa_bss *
 wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 			    struct wpa_ssid **selected_ssid)
 {
-	struct wpa_scan_res *selected = NULL;
+	struct wpa_bss *selected = NULL;
 	int prio;
 
 	while (selected == NULL) {
@@ -683,7 +684,7 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 
 
 static void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
-				   struct wpa_scan_res *selected,
+				   struct wpa_bss *selected,
 				   struct wpa_ssid *ssid)
 {
 	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
@@ -766,7 +767,7 @@ static void wpa_supplicant_rsn_preauth_scan_results(
 static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data)
 {
-	struct wpa_scan_res *selected;
+	struct wpa_bss *selected;
 	struct wpa_ssid *ssid = NULL;
 
 	wpa_supplicant_notify_scanning(wpa_s, 0);

@@ -791,8 +791,7 @@ static int wpa_supplicant_suites_from_ai(struct wpa_supplicant *wpa_s,
  * available).
  */
 int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
-			      struct wpa_scan_res *bss,
-			      struct wpa_ssid *ssid,
+			      struct wpa_bss *bss, struct wpa_ssid *ssid,
 			      u8 *wpa_ie, size_t *wpa_ie_len)
 {
 	struct wpa_ie_data ie;
@@ -800,8 +799,8 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	const u8 *bss_wpa, *bss_rsn;
 
 	if (bss) {
-		bss_wpa = wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
-		bss_rsn = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+		bss_wpa = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
+		bss_rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	} else
 		bss_wpa = bss_rsn = NULL;
 
@@ -980,7 +979,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
  * This function is used to request %wpa_supplicant to associate with a BSS.
  */
 void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
-			      struct wpa_scan_res *bss, struct wpa_ssid *ssid)
+			      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
 	u8 wpa_ie[80];
 	size_t wpa_ie_len;
@@ -1017,19 +1016,18 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	wpa_s->reassociate = 0;
 	if (bss) {
 #ifdef CONFIG_IEEE80211R
-		const u8 *md = NULL;
+		const u8 *ie, *md = NULL;
 #endif /* CONFIG_IEEE80211R */
-		const u8 *ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
 		wpa_msg(wpa_s, MSG_INFO, "Trying to associate with " MACSTR
 			" (SSID='%s' freq=%d MHz)", MAC2STR(bss->bssid),
-			ie ? wpa_ssid_txt(ie + 2, ie[1]) : "", bss->freq);
+			wpa_ssid_txt(bss->ssid, bss->ssid_len), bss->freq);
 		bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 		os_memset(wpa_s->bssid, 0, ETH_ALEN);
 		os_memcpy(wpa_s->pending_bssid, bss->bssid, ETH_ALEN);
 		if (bssid_changed)
 			wpas_notify_bssid_changed(wpa_s);
 #ifdef CONFIG_IEEE80211R
-		ie = wpa_scan_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
+		ie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
 		if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
 			md = ie + 2;
 		wpa_sm_set_ft_params(wpa_s->wpa, md, NULL, 0, NULL);
@@ -1083,8 +1081,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			   algs);
 	}
 
-	if (bss && (wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
-		    wpa_scan_get_ie(bss, WLAN_EID_RSN)) &&
+	if (bss && (wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
+		    wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
 	    (ssid->key_mgmt & (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
 			       WPA_KEY_MGMT_FT_IEEE8021X |
 			       WPA_KEY_MGMT_FT_PSK |
@@ -1174,10 +1172,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
 	os_memset(&params, 0, sizeof(params));
 	if (bss) {
-		const u8 *ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
 		params.bssid = bss->bssid;
-		params.ssid = ie ? ie + 2 : (u8 *) "";
-		params.ssid_len = ie ? ie[1] : 0;
+		params.ssid = bss->ssid;
+		params.ssid_len = bss->ssid_len;
 		params.freq = bss->freq;
 	} else {
 		params.ssid = ssid->ssid;
@@ -1223,7 +1220,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		break;
 	}
 	if (ssid->ieee80211w != NO_IEEE80211W && bss) {
-		const u8 *rsn = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data ie;
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &ie) == 0 &&
 		    ie.capabilities &

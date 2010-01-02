@@ -20,6 +20,8 @@
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 
+struct wpa_bss;
+
 struct wps_new_ap_settings {
 	const char *ssid_hex;
 	const char *auth;
@@ -43,8 +45,7 @@ int wpas_wps_ssid_bss_match(struct wpa_supplicant *wpa_s,
 int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid, struct wpa_scan_res *bss);
 int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
-			      struct wpa_scan_res *selected,
-			      struct wpa_ssid *ssid);
+			      struct wpa_bss *selected, struct wpa_ssid *ssid);
 void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s);
 int wpas_wps_searching(struct wpa_supplicant *wpa_s);
 int wpas_wps_scan_result_text(const u8 *ies, size_t ies_len, char *pos,

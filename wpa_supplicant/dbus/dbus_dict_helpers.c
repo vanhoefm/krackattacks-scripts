@@ -765,87 +765,52 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 
 
 static dbus_bool_t _wpa_dbus_dict_fill_value_from_variant(
-	struct wpa_dbus_dict_entry *entry, DBusMessageIter *iter_dict_val)
+	struct wpa_dbus_dict_entry *entry, DBusMessageIter *iter)
 {
-	dbus_bool_t success = TRUE;
+	const char *v;
 
 	switch (entry->type) {
-	case DBUS_TYPE_STRING: {
-		const char *v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
+	case DBUS_TYPE_OBJECT_PATH:
+	case DBUS_TYPE_STRING:
+		dbus_message_iter_get_basic(iter, &v);
 		entry->str_value = os_strdup(v);
+		if (entry->str_value == NULL)
+			return FALSE;
 		break;
-	}
-	case DBUS_TYPE_BOOLEAN: {
-		dbus_bool_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->bool_value = v;
+	case DBUS_TYPE_BOOLEAN:
+		dbus_message_iter_get_basic(iter, &entry->bool_value);
 		break;
-	}
-	case DBUS_TYPE_BYTE: {
-		char v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->byte_value = v;
+	case DBUS_TYPE_BYTE:
+		dbus_message_iter_get_basic(iter, &entry->byte_value);
 		break;
-	}
-	case DBUS_TYPE_INT16: {
-		dbus_int16_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->int16_value = v;
+	case DBUS_TYPE_INT16:
+		dbus_message_iter_get_basic(iter, &entry->int16_value);
 		break;
-	}
-	case DBUS_TYPE_UINT16: {
-		dbus_uint16_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->uint16_value = v;
+	case DBUS_TYPE_UINT16:
+		dbus_message_iter_get_basic(iter, &entry->uint16_value);
 		break;
-	}
-	case DBUS_TYPE_INT32: {
-		dbus_int32_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->int32_value = v;
+	case DBUS_TYPE_INT32:
+		dbus_message_iter_get_basic(iter, &entry->int32_value);
 		break;
-	}
-	case DBUS_TYPE_UINT32: {
-		dbus_uint32_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->uint32_value = v;
+	case DBUS_TYPE_UINT32:
+		dbus_message_iter_get_basic(iter, &entry->uint32_value);
 		break;
-	}
-	case DBUS_TYPE_INT64: {
-		dbus_int64_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->int64_value = v;
+	case DBUS_TYPE_INT64:
+		dbus_message_iter_get_basic(iter, &entry->int64_value);
 		break;
-	}
-	case DBUS_TYPE_UINT64: {
-		dbus_uint64_t v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->uint64_value = v;
+	case DBUS_TYPE_UINT64:
+		dbus_message_iter_get_basic(iter, &entry->uint64_value);
 		break;
-	}
-	case DBUS_TYPE_DOUBLE: {
-		double v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->double_value = v;
+	case DBUS_TYPE_DOUBLE:
+		dbus_message_iter_get_basic(iter, &entry->double_value);
 		break;
-	}
-	case DBUS_TYPE_OBJECT_PATH: {
-		char *v;
-		dbus_message_iter_get_basic(iter_dict_val, &v);
-		entry->str_value = os_strdup(v);
-		break;
-	}
-	case DBUS_TYPE_ARRAY: {
-		success = _wpa_dbus_dict_entry_get_array(iter_dict_val, entry);
-		break;
-	}
+	case DBUS_TYPE_ARRAY:
+		return _wpa_dbus_dict_entry_get_array(iter, entry);
 	default:
-		success = FALSE;
-		break;
+		return FALSE;
 	}
 
-	return success;
+	return TRUE;
 }
 
 

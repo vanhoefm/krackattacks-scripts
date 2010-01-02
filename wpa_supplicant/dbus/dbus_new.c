@@ -1018,7 +1018,7 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 {
 	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
-	struct network_handler_args *arg = NULL;
+	struct network_handler_args *arg;
 	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
 
 	/* Do nothing if the control interface is not turned on */
@@ -1065,8 +1065,7 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	return 0;
 
 err:
-	os_free(obj_desc);
-	os_free(arg);
+	free_dbus_object_desc(obj_desc);
 	return -1;
 }
 
@@ -1228,7 +1227,7 @@ int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 	struct wpas_dbus_priv *ctrl_iface;
 	struct wpa_dbus_object_desc *obj_desc;
 	char bss_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
-	struct bss_handler_args *arg = NULL;
+	struct bss_handler_args *arg;
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -1276,8 +1275,7 @@ int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 	return 0;
 
 err:
-	os_free(obj_desc);
-	os_free(arg);
+	free_dbus_object_desc(obj_desc);
 	return -1;
 }
 
@@ -1548,7 +1546,7 @@ int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s)
 err:
 	os_free(wpa_s->dbus_new_path);
 	wpa_s->dbus_new_path = NULL;
-	os_free(obj_desc);
+	free_dbus_object_desc(obj_desc);
 	return -1;
 }
 

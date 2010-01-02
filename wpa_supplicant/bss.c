@@ -148,12 +148,15 @@ static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		bss->ie_len = res->ie_len;
 	} else {
 		struct wpa_bss *nbss;
+		struct dl_list *prev = bss->list_id.prev;
+		dl_list_del(&bss->list_id);
 		nbss = os_realloc(bss, sizeof(*bss) + res->ie_len);
 		if (nbss) {
 			bss = nbss;
 			os_memcpy(bss + 1, res + 1, res->ie_len);
 			bss->ie_len = res->ie_len;
 		}
+		dl_list_add(prev, &bss->list_id);
 	}
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
 }

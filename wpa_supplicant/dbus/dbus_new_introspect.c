@@ -67,17 +67,17 @@ static void add_arg(struct wpabuf *xml, const char *name, const char *type,
 }
 
 
-static void add_entry(struct wpabuf *xml, char *type, char *name, int args_num,
-		      struct wpa_dbus_argument *args, int include_dir)
+static void add_entry(struct wpabuf *xml, const char *type, const char *name,
+		      const struct wpa_dbus_argument *args, int include_dir)
 {
-	int i;
-	if (args_num == 0) {
+	const struct wpa_dbus_argument *arg;
+
+	if (args == NULL || args->name == NULL) {
 		wpabuf_printf(xml, "<%s name=\"%s\"/>", type, name);
 		return;
 	}
 	wpabuf_printf(xml, "<%s name=\"%s\">", type, name);
-	for (i = 0; i < args_num; i++) {
-		struct wpa_dbus_argument *arg = &args[i];
+	for (arg = args; arg && arg->name; arg++) {
 		add_arg(xml, arg->name, arg->type,
 			include_dir ? (arg->dir == ARG_IN ? "in" : "out") :
 			NULL);
@@ -87,7 +87,7 @@ static void add_entry(struct wpabuf *xml, char *type, char *name, int args_num,
 
 
 static void add_property(struct wpabuf *xml,
-			 struct wpa_dbus_property_desc *dsc)
+			 const struct wpa_dbus_property_desc *dsc)
 {
 	wpabuf_printf(xml, "<property name=\"%s\" type=\"%s\" access=\"%s\"/>",
 		      dsc->dbus_property, dsc->type,
@@ -96,40 +96,40 @@ static void add_property(struct wpabuf *xml,
 }
 
 
-static void extract_interfaces_methods(struct dl_list *list,
-				       struct wpa_dbus_method_desc *methods)
+static void extract_interfaces_methods(
+	struct dl_list *list, const struct wpa_dbus_method_desc *methods)
 {
-	struct wpa_dbus_method_desc *dsc;
+	const struct wpa_dbus_method_desc *dsc;
 	struct interfaces *iface;
-	for (dsc = methods; dsc; dsc = dsc->next) {
+	for (dsc = methods; dsc && dsc->dbus_method; dsc++) {
 		iface = add_interface(list, dsc->dbus_interface);
 		if (iface)
 			add_entry(iface->xml, "method", dsc->dbus_method,
-				  dsc->args_num, dsc->args, 1);
+				  dsc->args, 1);
 	}
 }
 
 
-static void extract_interfaces_signals(struct dl_list *list,
-				       struct wpa_dbus_signal_desc *signals)
+static void extract_interfaces_signals(
+	struct dl_list *list, const struct wpa_dbus_signal_desc *signals)
 {
-	struct wpa_dbus_signal_desc *dsc;
+	const struct wpa_dbus_signal_desc *dsc;
 	struct interfaces *iface;
-	for (dsc = signals; dsc; dsc = dsc->next) {
+	for (dsc = signals; dsc && dsc->dbus_signal; dsc++) {
 		iface = add_interface(list, dsc->dbus_interface);
 		if (iface)
 			add_entry(iface->xml, "signal", dsc->dbus_signal,
-				  dsc->args_num, dsc->args, 0);
+				  dsc->args, 0);
 	}
 }
 
 
 static void extract_interfaces_properties(
-	struct dl_list *list, struct wpa_dbus_property_desc *properties)
+	struct dl_list *list, const struct wpa_dbus_property_desc *properties)
 {
-	struct wpa_dbus_property_desc *dsc;
+	const struct wpa_dbus_property_desc *dsc;
 	struct interfaces *iface;
-	for (dsc = properties; dsc; dsc = dsc->next) {
+	for (dsc = properties; dsc && dsc->dbus_property; dsc++) {
 		iface = add_interface(list, dsc->dbus_interface);
 		if (iface)
 			add_property(iface->xml, dsc);

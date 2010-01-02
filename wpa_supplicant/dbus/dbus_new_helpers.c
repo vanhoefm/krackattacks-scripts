@@ -84,20 +84,19 @@ static void recursive_iter_copy(DBusMessageIter *from, DBusMessageIter *to)
 
 
 static unsigned int fill_dict_with_properties(
-	DBusMessageIter *dict_iter, struct wpa_dbus_property_desc *props,
+	DBusMessageIter *dict_iter, const struct wpa_dbus_property_desc *props,
 	const char *interface, const void *user_data)
 {
 	DBusMessage *reply;
 	DBusMessageIter entry_iter, ret_iter;
 	unsigned int counter = 0;
-	struct wpa_dbus_property_desc *property_dsc;
+	const struct wpa_dbus_property_desc *dsc;
 
-	for (property_dsc = props; property_dsc;
-	     property_dsc = property_dsc->next) {
-		if (!os_strncmp(property_dsc->dbus_interface, interface,
+	for (dsc = props; dsc && dsc->dbus_property; dsc++) {
+		if (!os_strncmp(dsc->dbus_interface, interface,
 				WPAS_DBUS_INTERFACE_MAX) &&
-		    property_dsc->access != W && property_dsc->getter) {
-			reply = property_dsc->getter(NULL, user_data);
+		    dsc->access != W && dsc->getter) {
+			reply = dsc->getter(NULL, user_data);
 			if (!reply)
 				continue;
 
@@ -114,7 +113,7 @@ static unsigned int fill_dict_with_properties(
 							 NULL, &entry_iter);
 			dbus_message_iter_append_basic(
 				&entry_iter, DBUS_TYPE_STRING,
-				&(property_dsc->dbus_property));
+				&dsc->dbus_property);
 
 			recursive_iter_copy(&ret_iter, &entry_iter);
 
@@ -159,7 +158,7 @@ static DBusMessage * get_all_properties(
 					 DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
 					 &dict_iter);
 
-	props_num = fill_dict_with_properties(&dict_iter,obj_dsc->properties,
+	props_num = fill_dict_with_properties(&dict_iter, obj_dsc->properties,
 					      interface, obj_dsc->user_data);
 
 	dbus_message_iter_close_container(&iter, &dict_iter);
@@ -177,22 +176,22 @@ static DBusMessage * get_all_properties(
 
 
 static int is_signature_correct(DBusMessage *message,
-				struct wpa_dbus_method_desc *method_dsc)
+				const struct wpa_dbus_method_desc *method_dsc)
 {
 	/* According to DBus documentation max length of signature is 255 */
 #define MAX_SIG_LEN 256
 	char registered_sig[MAX_SIG_LEN], *pos;
 	const char *sig = dbus_message_get_signature(message);
-	int i, ret;
+	int ret;
+	const struct wpa_dbus_argument *arg;
 
 	pos = registered_sig;
 	*pos = '\0';
 
-	for (i = 0; i < method_dsc->args_num; i++) {
-		struct wpa_dbus_argument arg = method_dsc->args[i];
-		if (arg.dir == ARG_IN) {
+	for (arg = method_dsc->args; arg && arg->name; arg++) {
+		if (arg->dir == ARG_IN) {
 			size_t blen = registered_sig + MAX_SIG_LEN - pos;
-			ret = os_snprintf(pos, blen, "%s", arg.type);
+			ret = os_snprintf(pos, blen, "%s", arg->type);
 			if (ret < 0 || (size_t) ret >= blen)
 				return 0;
 			pos += ret;
@@ -215,7 +214,7 @@ static DBusMessage * properties_get_all(DBusMessage *message, char *interface,
 
 
 static DBusMessage * properties_get(DBusMessage *message,
-				    struct wpa_dbus_property_desc *dsc,
+				    const struct wpa_dbus_property_desc *dsc,
 				    void *user_data)
 {
 	if (os_strcmp(dbus_message_get_signature(message), "ss"))
@@ -231,7 +230,7 @@ static DBusMessage * properties_get(DBusMessage *message,
 
 
 static DBusMessage * properties_set(DBusMessage *message,
-				    struct wpa_dbus_property_desc *dsc,
+				    const struct wpa_dbus_property_desc *dsc,
 				    void *user_data)
 {
 	if (os_strcmp(dbus_message_get_signature(message), "ssv"))
@@ -251,7 +250,7 @@ properties_get_or_set(DBusMessage *message, DBusMessageIter *iter,
 		      char *interface,
 		      struct wpa_dbus_object_desc *obj_dsc)
 {
-	struct wpa_dbus_property_desc *property_dsc;
+	const struct wpa_dbus_property_desc *property_dsc;
 	char *property;
 	const char *method;
 
@@ -266,7 +265,7 @@ properties_get_or_set(DBusMessage *message, DBusMessageIter *iter,
 	}
 	dbus_message_iter_get_basic(iter, &property);
 
-	while (property_dsc) {
+	while (property_dsc && property_dsc->dbus_property) {
 		/* compare property names and
 		 * interfaces */
 		if (!os_strncmp(property_dsc->dbus_property, property,
@@ -275,9 +274,9 @@ properties_get_or_set(DBusMessage *message, DBusMessageIter *iter,
 				WPAS_DBUS_INTERFACE_MAX))
 			break;
 
-		property_dsc = property_dsc->next;
+		property_dsc++;
 	}
-	if (property_dsc == NULL) {
+	if (property_dsc == NULL || property_dsc->dbus_property == NULL) {
 		wpa_printf(MSG_DEBUG, "no property handler for %s.%s on %s",
 			   interface, property,
 			   dbus_message_get_path(message));
@@ -337,7 +336,7 @@ static DBusMessage * properties_handler(DBusMessage *message,
 static DBusMessage * msg_method_handler(DBusMessage *message,
 					struct wpa_dbus_object_desc *obj_dsc)
 {
-	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
+	const struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
 	const char *method;
 	const char *msg_interface;
 
@@ -345,7 +344,7 @@ static DBusMessage * msg_method_handler(DBusMessage *message,
 	msg_interface = dbus_message_get_interface(message);
 
 	/* try match call to any registered method */
-	while (method_dsc) {
+	while (method_dsc && method_dsc->dbus_method) {
 		/* compare method names and interfaces */
 		if (!os_strncmp(method_dsc->dbus_method, method,
 				WPAS_DBUS_METHOD_SIGNAL_PROP_MAX) &&
@@ -353,9 +352,9 @@ static DBusMessage * msg_method_handler(DBusMessage *message,
 				WPAS_DBUS_INTERFACE_MAX))
 			break;
 
-		method_dsc = method_dsc->next;
+		method_dsc++;
 	}
-	if (method_dsc == NULL) {
+	if (method_dsc == NULL || method_dsc->dbus_method == NULL) {
 		wpa_printf(MSG_DEBUG, "no method handler for %s.%s on %s",
 			   msg_interface, method,
 			   dbus_message_get_path(message));
@@ -450,63 +449,8 @@ static DBusHandlerResult message_handler(DBusConnection *connection,
  */
 void free_dbus_object_desc(struct wpa_dbus_object_desc *obj_dsc)
 {
-	struct wpa_dbus_method_desc *method_dsc, *tmp_met_dsc;
-	struct wpa_dbus_signal_desc *signal_dsc, *tmp_sig_dsc;
-	struct wpa_dbus_property_desc *property_dsc, *tmp_prop_dsc;
-	int i;
-
 	if (!obj_dsc)
 		return;
-
-	/* free methods */
-	method_dsc = obj_dsc->methods;
-
-	while (method_dsc) {
-		tmp_met_dsc = method_dsc;
-		method_dsc = method_dsc->next;
-
-		os_free(tmp_met_dsc->dbus_interface);
-		os_free(tmp_met_dsc->dbus_method);
-
-		for (i = 0; i < tmp_met_dsc->args_num; i++) {
-			os_free(tmp_met_dsc->args[i].name);
-			os_free(tmp_met_dsc->args[i].type);
-		}
-
-		os_free(tmp_met_dsc);
-	}
-
-	/* free signals */
-	signal_dsc = obj_dsc->signals;
-
-	while (signal_dsc) {
-		tmp_sig_dsc = signal_dsc;
-		signal_dsc = signal_dsc->next;
-
-		os_free(tmp_sig_dsc->dbus_interface);
-		os_free(tmp_sig_dsc->dbus_signal);
-
-		for (i = 0; i < tmp_sig_dsc->args_num; i++) {
-			os_free(tmp_sig_dsc->args[i].name);
-			os_free(tmp_sig_dsc->args[i].type);
-		}
-
-		os_free(tmp_sig_dsc);
-	}
-
-	/* free properties */
-	property_dsc = obj_dsc->properties;
-
-	while (property_dsc) {
-		tmp_prop_dsc = property_dsc;
-		property_dsc = property_dsc->next;
-
-		os_free(tmp_prop_dsc->dbus_interface);
-		os_free(tmp_prop_dsc->dbus_property);
-		os_free(tmp_prop_dsc->type);
-
-		os_free(tmp_prop_dsc);
-	}
 
 	/* free handler's argument */
 	if (obj_dsc->user_data_free_func)
@@ -641,300 +585,6 @@ int wpa_dbus_unregister_object_per_iface(
 		return -1;
 
 	return 0;
-}
-
-
-/**
- * wpa_dbus_method_register - Registers DBus method for given object
- * @obj_dsc: Object description for which a method will be registered
- * @dbus_interface: DBus interface under which method will be registered
- * @dbus_method: a name the method will be registered with
- * @method_handler: a function which will be called to handle this method call
- * @args: method arguments list
- * Returns: Zero on success and -1 on failure
- *
- * Registers DBus method under given name and interface for the object.
- * Method calls will be handled with given handling function.
- * Handler function is required to return a DBusMessage pointer which
- * will be response to method call. Any method call before being handled
- * must have registered appropriate handler by using this function.
- */
-int wpa_dbus_method_register(struct wpa_dbus_object_desc *obj_dsc,
-			     const char *dbus_interface,
-			     const char *dbus_method,
-			     WPADBusMethodHandler method_handler,
-			     const struct wpa_dbus_argument args[])
-{
-	struct wpa_dbus_method_desc *method_dsc = obj_dsc->methods;
-	struct wpa_dbus_method_desc *prev_desc;
-	int args_num = 0;
-	int i, error;
-
-	prev_desc = NULL;
-	while (method_dsc) {
-		prev_desc = method_dsc;
-		method_dsc = method_dsc->next;
-	}
-
-	/* count args */
-	if (args) {
-		while (args[args_num].name && args[args_num].type)
-			args_num++;
-	}
-
-	method_dsc = os_zalloc(sizeof(struct wpa_dbus_method_desc) +
-			       args_num * sizeof(struct wpa_dbus_argument));
-	if (!method_dsc)
-		goto err;
-
-	if (prev_desc == NULL)
-		obj_dsc->methods = method_dsc;
-	else
-		prev_desc->next = method_dsc;
-
-	/* copy interface name */
-	method_dsc->dbus_interface = os_strdup(dbus_interface);
-	if (!method_dsc->dbus_interface)
-		goto err;
-
-	/* copy method name */
-	method_dsc->dbus_method = os_strdup(dbus_method);
-	if (!method_dsc->dbus_method)
-		goto err;
-
-	/* copy arguments */
-	error = 0;
-	method_dsc->args_num = args_num;
-	for (i = 0; i < args_num; i++) {
-		method_dsc->args[i].name = os_strdup(args[i].name);
-		if (!method_dsc->args[i].name) {
-			error = 1;
-			continue;
-		}
-
-		method_dsc->args[i].type = os_strdup(args[i].type);
-		if (!method_dsc->args[i].type) {
-			error = 1;
-			continue;
-		}
-
-		method_dsc->args[i].dir = args[i].dir;
-	}
-	if (error)
-		goto err;
-
-	method_dsc->method_handler = method_handler;
-	method_dsc->next = NULL;
-
-	return 0;
-
-err:
-	wpa_printf(MSG_WARNING, "Failed to register dbus method %s in "
-		   "interface %s", dbus_method, dbus_interface);
-	if (method_dsc) {
-		os_free(method_dsc->dbus_interface);
-		os_free(method_dsc->dbus_method);
-		for (i = 0; i < method_dsc->args_num; i++) {
-			os_free(method_dsc->args[i].name);
-			os_free(method_dsc->args[i].type);
-		}
-
-		if (prev_desc == NULL)
-			obj_dsc->methods = NULL;
-		else
-			prev_desc->next = NULL;
-
-		os_free(method_dsc);
-	}
-
-	return -1;
-}
-
-
-/**
- * wpa_dbus_signal_register - Registers DBus signal for given object
- * @obj_dsc: Object description for which a signal will be registered
- * @dbus_interface: DBus interface under which signal will be registered
- * @dbus_signal: a name the signal will be registered with
- * @args: signal arguments list
- * Returns: Zero on success and -1 on failure
- *
- * Registers DBus signal under given name and interface for the object.
- * Signal registration is NOT required in order to send signals, but not
- * registered signals will not be respected in introspection data
- * therefore it is highly recommended to register every signal before
- * using it.
- */
-int wpa_dbus_signal_register(struct wpa_dbus_object_desc *obj_dsc,
-			     const char *dbus_interface,
-			     const char *dbus_signal,
-			     const struct wpa_dbus_argument args[])
-{
-
-	struct wpa_dbus_signal_desc *signal_dsc = obj_dsc->signals;
-	struct wpa_dbus_signal_desc *prev_desc;
-	int args_num = 0;
-	int i, error = 0;
-
-	prev_desc = NULL;
-	while (signal_dsc) {
-		prev_desc = signal_dsc;
-		signal_dsc = signal_dsc->next;
-	}
-
-	/* count args */
-	if (args) {
-		while (args[args_num].name && args[args_num].type)
-			args_num++;
-	}
-
-	signal_dsc = os_zalloc(sizeof(struct wpa_dbus_signal_desc) +
-			       args_num * sizeof(struct wpa_dbus_argument));
-	if (!signal_dsc)
-		goto err;
-
-	if (prev_desc == NULL)
-		obj_dsc->signals = signal_dsc;
-	else
-		prev_desc->next = signal_dsc;
-
-	/* copy interface name */
-	signal_dsc->dbus_interface = os_strdup(dbus_interface);
-	if (!signal_dsc->dbus_interface)
-		goto err;
-
-	/* copy signal name */
-	signal_dsc->dbus_signal = os_strdup(dbus_signal);
-	if (!signal_dsc->dbus_signal)
-		goto err;
-
-	/* copy arguments */
-	signal_dsc->args_num = args_num;
-	for (i = 0; i < args_num; i++) {
-		signal_dsc->args[i].name = os_strdup(args[i].name);
-		if (!signal_dsc->args[i].name) {
-			error = 1;
-			continue;
-		}
-
-		signal_dsc->args[i].type = os_strdup(args[i].type);
-		if (!signal_dsc->args[i].type) {
-			error = 1;
-			continue;
-		}
-	}
-	if (error)
-		goto err;
-
-	signal_dsc->next = NULL;
-
-	return 0;
-
-err:
-	wpa_printf(MSG_WARNING, "Failed to register dbus signal %s in "
-		   "interface %s", dbus_signal, dbus_interface);
-	if (signal_dsc) {
-		os_free(signal_dsc->dbus_interface);
-		os_free(signal_dsc->dbus_signal);
-		for (i = 0; i < signal_dsc->args_num; i++) {
-			os_free(signal_dsc->args[i].name);
-			os_free(signal_dsc->args[i].type);
-		}
-
-		if (prev_desc == NULL)
-			obj_dsc->signals = NULL;
-		else
-			prev_desc->next = NULL;
-
-		os_free(signal_dsc);
-	}
-
-	return -1;
-}
-
-
-/**
- * wpa_dbus_property_register - Registers DBus property for given object
- * @obj_dsc: Object description for which a property will be registered
- * @dbus_interface: DBus interface under which method will be registered
- * @dbus_property: a name the property will be registered with
- * @type: a property type signature in form of DBus type description
- * @getter: a function called in order to get property value
- * @setter: a function called in order to set property value
- * @access: property access permissions specifier (R, W or RW)
- * Returns: Zero on success and -1 on failure
- *
- * Registers DBus property under given name and interface for the object.
- * Properties are set with giver setter function and get with getter.Getter
- * or setter are required to return DBusMessage which is response to Set/Get
- * method calls. Every property must be registered by this function before
- * being used.
- */
-int wpa_dbus_property_register(struct wpa_dbus_object_desc *obj_dsc,
-			       const char *dbus_interface,
-			       const char *dbus_property,
-			       const char *type,
-			       WPADBusPropertyAccessor getter,
-			       WPADBusPropertyAccessor setter,
-			       enum dbus_prop_access _access)
-{
-	struct wpa_dbus_property_desc *property_dsc = obj_dsc->properties;
-	struct wpa_dbus_property_desc *prev_desc;
-
-	prev_desc = NULL;
-	while (property_dsc) {
-		prev_desc = property_dsc;
-		property_dsc = property_dsc->next;
-	}
-
-	property_dsc = os_zalloc(sizeof(struct wpa_dbus_property_desc));
-	if (!property_dsc)
-		goto err;
-
-	if (prev_desc == NULL)
-		obj_dsc->properties = property_dsc;
-	else
-		prev_desc->next = property_dsc;
-
-	/* copy interface name */
-	property_dsc->dbus_interface = os_strdup(dbus_interface);
-	if (!property_dsc->dbus_interface)
-		goto err;
-
-	/* copy property name */
-	property_dsc->dbus_property = os_strdup(dbus_property);
-	if (!property_dsc->dbus_property)
-		goto err;
-
-	/* copy property type */
-	property_dsc->type = os_strdup(type);
-	if (!property_dsc->type)
-		goto err;
-
-	property_dsc->getter = getter;
-	property_dsc->setter = setter;
-	property_dsc->access = _access;
-	property_dsc->next = NULL;
-
-	return 0;
-
-err:
-	wpa_printf(MSG_WARNING, "Failed to register dbus property %s in "
-		   "interface %s", dbus_property, dbus_interface);
-	if (property_dsc) {
-		os_free(property_dsc->dbus_interface);
-		os_free(property_dsc->dbus_property);
-		os_free(property_dsc->type);
-
-		if (prev_desc == NULL)
-			obj_dsc->properties = NULL;
-		else
-			prev_desc->next = NULL;
-
-		os_free(property_dsc);
-	}
-
-	return -1;
 }
 
 

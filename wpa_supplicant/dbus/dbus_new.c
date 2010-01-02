@@ -820,64 +820,22 @@ void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global)
 }
 
 
-struct wpas_dbus_method {
-	const char *name;
-	const char *iface;
-	WPADBusMethodHandler handler;
-	struct wpa_dbus_argument args[3];
-};
-
-struct wpas_dbus_property {
-	const char *name;
-	const char *iface;
-	const char *type;
-	WPADBusPropertyAccessor getter;
-	WPADBusPropertyAccessor setter;
-	enum dbus_prop_access _access;
-};
-
-struct wpas_dbus_signal {
-	const char *name;
-	const char *iface;
-	struct wpa_dbus_argument args[3];
-};
-
-
 static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
 			       void *priv,
 			       WPADBusArgumentFreeFunction priv_free,
-			       const struct wpas_dbus_method *methods,
-			       const struct wpas_dbus_property *properties,
-			       const struct wpas_dbus_signal *signals)
+			       const struct wpa_dbus_method_desc *methods,
+			       const struct wpa_dbus_property_desc *properties,
+			       const struct wpa_dbus_signal_desc *signals)
 {
-	int i;
-
 	obj_desc->user_data = priv;
 	obj_desc->user_data_free_func = priv_free;
-
-	for (i = 0; methods && methods[i].name; i++) {
-		wpa_dbus_method_register(obj_desc, methods[i].iface,
-					 methods[i].name, methods[i].handler,
-					 methods[i].args);
-	}
-
-	for (i = 0; properties && properties[i].name; i++) {
-		wpa_dbus_property_register(obj_desc, properties[i].iface,
-					   properties[i].name,
-					   properties[i].type,
-					   properties[i].getter,
-					   properties[i].setter,
-					   properties[i]._access);
-	}
-
-	for (i = 0; signals && signals[i].name; i++) {
-		wpa_dbus_signal_register(obj_desc, signals[i].iface,
-					 signals[i].name, signals[i].args);
-	}
+	obj_desc->methods = methods;
+	obj_desc->properties = properties;
+	obj_desc->signals = signals;
 }
 
 
-static const struct wpas_dbus_method wpas_dbus_global_methods[] = {
+static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 	{ "CreateInterface", WPAS_DBUS_NEW_INTERFACE,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_create_interface,
 	  {
@@ -904,7 +862,7 @@ static const struct wpas_dbus_method wpas_dbus_global_methods[] = {
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 
-static const struct wpas_dbus_property wpas_dbus_global_properties[] = {
+static const struct wpa_dbus_property_desc wpas_dbus_global_properties[] = {
 	{ "DebugLevel", WPAS_DBUS_NEW_INTERFACE, "y",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_debug_level,
 	  (WPADBusPropertyAccessor) wpas_dbus_setter_debug_level,
@@ -933,7 +891,7 @@ static const struct wpas_dbus_property wpas_dbus_global_properties[] = {
 	{ NULL, NULL, NULL, NULL, NULL, 0 }
 };
 
-static const struct wpas_dbus_signal wpas_dbus_global_signals[] = {
+static const struct wpa_dbus_signal_desc wpas_dbus_global_signals[] = {
 	{ "InterfaceAdded", WPAS_DBUS_NEW_INTERFACE,
 	  {
 		  { "path", "o", ARG_OUT },
@@ -1021,7 +979,7 @@ static void wpa_dbus_free(void *ptr)
 }
 
 
-static const struct wpas_dbus_property wpas_dbus_network_properties[] = {
+static const struct wpa_dbus_property_desc wpas_dbus_network_properties[] = {
 	{ "Properties", WPAS_DBUS_NEW_IFACE_NETWORK, "a{sv}",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_network_properties,
 	  (WPADBusPropertyAccessor) wpas_dbus_setter_network_properties,
@@ -1036,7 +994,7 @@ static const struct wpas_dbus_property wpas_dbus_network_properties[] = {
 };
 
 
-static const struct wpas_dbus_signal wpas_dbus_network_signals[] = {
+static const struct wpa_dbus_signal_desc wpas_dbus_network_signals[] = {
 	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_NETWORK,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
@@ -1149,7 +1107,7 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 }
 
 
-static const struct wpas_dbus_property wpas_dbus_bss_properties[] = {
+static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 	{ "SSID", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_ssid,
 	  NULL,
@@ -1204,7 +1162,7 @@ static const struct wpas_dbus_property wpas_dbus_bss_properties[] = {
 };
 
 
-static const struct wpas_dbus_signal wpas_dbus_bss_signals[] = {
+static const struct wpa_dbus_signal_desc wpas_dbus_bss_signals[] = {
 	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_BSSID,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
@@ -1324,7 +1282,7 @@ err:
 }
 
 
-static const struct wpas_dbus_method wpas_dbus_interface_methods[] = {
+static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	{ "Scan", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_scan,
 	  {
@@ -1396,7 +1354,7 @@ static const struct wpas_dbus_method wpas_dbus_interface_methods[] = {
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 
-static const struct wpas_dbus_property wpas_dbus_interface_properties[] = {
+static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	{ "Capabilities", WPAS_DBUS_NEW_IFACE_INTERFACE, "a{sv}",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_capabilities,
 	  NULL, R
@@ -1456,7 +1414,7 @@ static const struct wpas_dbus_property wpas_dbus_interface_properties[] = {
 	{ NULL, NULL, NULL, NULL, NULL, 0 }
 };
 
-static const struct wpas_dbus_signal wpas_dbus_interface_signals[] = {
+static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "ScanDone", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "success", "b", ARG_OUT },

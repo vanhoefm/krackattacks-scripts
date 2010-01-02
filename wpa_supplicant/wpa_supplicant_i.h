@@ -28,8 +28,6 @@ extern const char *wpa_supplicant_full_license4;
 extern const char *wpa_supplicant_full_license5;
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
-struct wpa_scan_result;
-struct wpa_scan_res;
 struct wpa_sm;
 struct wpa_supplicant;
 struct ibss_rsn;
@@ -345,7 +343,6 @@ struct wpa_supplicant {
 					  */
 #define WILDCARD_SSID_SCAN ((struct wpa_ssid *) 1)
 
-	struct wpa_scan_results *scan_res;
 	struct dl_list bss; /* struct wpa_bss::list */
 	struct dl_list bss_id; /* struct wpa_bss::list_id */
 	size_t num_bss;
@@ -446,8 +443,10 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_set_non_wpa_policy(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid);
 void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s);
-int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
-				    struct scan_info *info, int new_scan);
+struct wpa_scan_results *
+wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
+				struct scan_info *info, int new_scan);
+int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s);
 void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr);
 void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec);

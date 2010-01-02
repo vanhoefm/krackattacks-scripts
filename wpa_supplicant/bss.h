@@ -15,6 +15,8 @@
 #ifndef BSS_H
 #define BSS_H
 
+struct wpa_scan_res;
+
 #define WPA_BSS_QUAL_INVALID		BIT(0)
 #define WPA_BSS_NOISE_INVALID		BIT(1)
 #define WPA_BSS_LEVEL_INVALID		BIT(2)

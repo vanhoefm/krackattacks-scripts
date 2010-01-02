@@ -21,6 +21,7 @@
 #include "wps/wps_defs.h"
 
 struct wpa_bss;
+struct wpa_scan_res;
 
 struct wps_new_ap_settings {
 	const char *ssid_hex;

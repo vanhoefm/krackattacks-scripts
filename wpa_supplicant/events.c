@@ -392,6 +392,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 
 static struct wpa_bss *
 wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
+			      struct wpa_scan_results *scan_res,
 			      struct wpa_ssid *group,
 			      struct wpa_ssid **selected_ssid)
 {
@@ -402,10 +403,10 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 	const u8 *ie;
 
 	wpa_printf(MSG_DEBUG, "Try to find WPA-enabled AP");
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
+	for (i = 0; i < scan_res->num; i++) {
 		const u8 *ssid_;
 		u8 wpa_ie_len, rsn_ie_len, ssid_len;
-		bss = wpa_s->scan_res->res[i];
+		bss = scan_res->res[i];
 
 		ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
 		ssid_ = ie ? ie + 2 : (u8 *) "";
@@ -487,6 +488,7 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 
 static struct wpa_bss *
 wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
+				  struct wpa_scan_results *scan_res,
 				  struct wpa_ssid *group,
 				  struct wpa_ssid **selected_ssid)
 {
@@ -497,10 +499,10 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 	const u8 *ie;
 
 	wpa_printf(MSG_DEBUG, "Try to find non-WPA AP");
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
+	for (i = 0; i < scan_res->num; i++) {
 		const u8 *ssid_;
 		u8 wpa_ie_len, rsn_ie_len, ssid_len;
-		bss = wpa_s->scan_res->res[i];
+		bss = scan_res->res[i];
 
 		ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
 		ssid_ = ie ? ie + 2 : (u8 *) "";
@@ -612,7 +614,9 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 
 
 static struct wpa_bss *
-wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
+wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s,
+			  struct wpa_scan_results *scan_res,
+			  struct wpa_ssid *group,
 			  struct wpa_ssid **selected_ssid)
 {
 	struct wpa_bss *selected;
@@ -621,18 +625,21 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
 		   group->priority);
 
 	/* First, try to find WPA-enabled AP */
-	selected = wpa_supplicant_select_bss_wpa(wpa_s, group, selected_ssid);
+	selected = wpa_supplicant_select_bss_wpa(wpa_s, scan_res, group,
+						 selected_ssid);
 	if (selected)
 		return selected;
 
 	/* If no WPA-enabled AP found, try to find non-WPA AP, if configuration
 	 * allows this. */
-	return wpa_supplicant_select_bss_non_wpa(wpa_s, group, selected_ssid);
+	return wpa_supplicant_select_bss_non_wpa(wpa_s, scan_res, group,
+						 selected_ssid);
 }
 
 
 static struct wpa_bss *
 wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
+			    struct wpa_scan_results *scan_res,
 			    struct wpa_ssid **selected_ssid)
 {
 	struct wpa_bss *selected = NULL;
@@ -641,7 +648,7 @@ wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 	while (selected == NULL) {
 		for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
 			selected = wpa_supplicant_select_bss(
-				wpa_s, wpa_s->conf->pssid[prio],
+				wpa_s, scan_res, wpa_s->conf->pssid[prio],
 				selected_ssid);
 			if (selected)
 				break;
@@ -736,19 +743,21 @@ wpa_supplicant_pick_new_network(struct wpa_supplicant *wpa_s)
 }
 
 
+/* TODO: move the rsn_preauth_scan_result*() to be called from notify.c based
+ * on BSS added and BSS changed events */
 static void wpa_supplicant_rsn_preauth_scan_results(
-	struct wpa_supplicant *wpa_s)
+	struct wpa_supplicant *wpa_s, struct wpa_scan_results *scan_res)
 {
 	int i;
 
 	if (rsn_preauth_scan_results(wpa_s->wpa) < 0)
 		return;
 
-	for (i = wpa_s->scan_res->num - 1; i >= 0; i--) {
+	for (i = scan_res->num - 1; i >= 0; i--) {
 		const u8 *ssid, *rsn;
 		struct wpa_scan_res *r;
 
-		r = wpa_s->scan_res->res[i];
+		r = scan_res->res[i];
 
 		ssid = wpa_scan_get_ie(r, WLAN_EID_SSID);
 		if (ssid == NULL)
@@ -769,11 +778,14 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_bss *selected;
 	struct wpa_ssid *ssid = NULL;
+	struct wpa_scan_results *scan_res;
 
 	wpa_supplicant_notify_scanning(wpa_s, 0);
 
-	if (wpa_supplicant_get_scan_results(wpa_s, data ? &data->scan_info :
-					    NULL, 1) < 0) {
+	scan_res = wpa_supplicant_get_scan_results(wpa_s,
+						   data ? &data->scan_info :
+						   NULL, 1);
+	if (scan_res == NULL) {
 		if (wpa_s->conf->ap_scan == 2)
 			return;
 		wpa_printf(MSG_DEBUG, "Failed to get scan results - try "
@@ -787,7 +799,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	 * and there were no results.
 	 */
 	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1 &&
-	    wpa_s->scan_res->num == 0) {
+	    scan_res->num == 0) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Cached scan results are "
 			"empty - not posting");
 	} else {
@@ -798,20 +810,27 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpas_notify_scan_done(wpa_s, 1);
 
-	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s)))
-		return;
-
-	if (wpa_s->disconnected) {
-		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s))) {
+		wpa_scan_results_free(scan_res);
 		return;
 	}
 
-	if (bgscan_notify_scan(wpa_s) == 1)
+	if (wpa_s->disconnected) {
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+		wpa_scan_results_free(scan_res);
 		return;
+	}
 
-	wpa_supplicant_rsn_preauth_scan_results(wpa_s);
+	if (bgscan_notify_scan(wpa_s) == 1) {
+		wpa_scan_results_free(scan_res);
+		return;
+	}
 
-	selected = wpa_supplicant_pick_network(wpa_s, &ssid);
+	wpa_supplicant_rsn_preauth_scan_results(wpa_s, scan_res);
+
+	selected = wpa_supplicant_pick_network(wpa_s, scan_res, &ssid);
+	wpa_scan_results_free(scan_res);
+
 	if (selected) {
 		wpa_supplicant_connect(wpa_s, selected, ssid);
 	} else {

@@ -33,6 +33,7 @@ struct wpa_scan_res;
 struct wpa_sm;
 struct wpa_supplicant;
 struct ibss_rsn;
+struct scan_info;
 
 /*
  * Forward declarations of private structures used within the ctrl_iface
@@ -445,7 +446,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_set_non_wpa_policy(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid);
 void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s);
-int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s);
+int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
+				    struct scan_info *info, int new_scan);
 void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr);
 void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec);

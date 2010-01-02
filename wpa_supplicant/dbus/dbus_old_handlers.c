@@ -361,7 +361,7 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 
 	/* Ensure we've actually got scan results to return */
 	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s) < 0) {
+	    wpa_supplicant_get_scan_results(wpa_s, NULL, 0) < 0) {
 		return dbus_message_new_error(message, WPAS_ERROR_SCAN_ERROR,
 					      "An error ocurred getting scan "
 					       "results.");

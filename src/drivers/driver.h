@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - driver interface definition
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1577,7 +1577,8 @@ typedef enum wpa_event_type {
 	 * EVENT_SCAN_RESULTS call. If such event is not available from the
 	 * driver, the driver wrapper code is expected to use a registered
 	 * timeout to generate EVENT_SCAN_RESULTS call after the time that the
-	 * scan is expected to be completed.
+	 * scan is expected to be completed. Optional information about
+	 * completed scan can be provided with union wpa_event_data::scan_info.
 	 */
 	EVENT_SCAN_RESULTS,
 
@@ -1948,6 +1949,23 @@ union wpa_event_data {
 		size_t frame_len;
 		struct hostapd_frame_info *fi;
 	} rx_mgmt;
+
+	/**
+	 * struct scan_info - Optional data for EVENT_SCAN_RESULTS events
+	 * @aborted: Whether the scan was aborted
+	 * @freqs: Scanned frequencies in MHz (%NULL = all channels scanned)
+	 * @num_freqs: Number of entries in freqs array
+	 * @ssids: Scanned SSIDs (%NULL or zero-length SSID indicates wildcard
+	 *	SSID)
+	 * @num_ssids: Number of entries in ssids array
+	 */
+	struct scan_info {
+		int aborted;
+		const int *freqs;
+		size_t num_freqs;
+		struct wpa_driver_scan_ssid ssids[WPAS_MAX_SCAN_SSIDS];
+		size_t num_ssids;
+	} scan_info;
 };
 
 /**

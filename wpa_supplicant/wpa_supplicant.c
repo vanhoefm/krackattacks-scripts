@@ -1570,12 +1570,15 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
+ * @info: Information about what was scanned or %NULL if not available
+ * @new_scan: Whether a new scan was performed
  * Returns: 0 on success, -1 on failure
  *
  * This function request the current scan results from the driver and updates
  * the local BSS list wpa_s->bss.
  */
-int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
+int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
+				    struct scan_info *info, int new_scan)
 {
 	size_t i;
 
@@ -1594,7 +1597,7 @@ int wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s)
 	wpa_bss_update_start(wpa_s);
 	for (i = 0; i < wpa_s->scan_res->num; i++)
 		wpa_bss_update_scan_res(wpa_s, wpa_s->scan_res->res[i]);
-	wpa_bss_update_end(wpa_s);
+	wpa_bss_update_end(wpa_s, info, new_scan);
 
 	return 0;
 }

@@ -348,7 +348,7 @@ static int wpa_supplicant_get_beacon_ie(void *ctx)
 
 	/* No WPA/RSN IE found in the cached scan results. Try to get updated
 	 * scan results from the driver. */
-	if (wpa_supplicant_get_scan_results(wpa_s) < 0) {
+	if (wpa_supplicant_get_scan_results(wpa_s, NULL, 0) < 0) {
 		return -1;
 	}
 

@@ -1,6 +1,6 @@
 /*
  * BSS table
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -69,7 +69,8 @@ struct wpa_bss {
 void wpa_bss_update_start(struct wpa_supplicant *wpa_s);
 void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			     struct wpa_scan_res *res);
-void wpa_bss_update_end(struct wpa_supplicant *wpa_s);
+void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
+			int new_scan);
 int wpa_bss_init(struct wpa_supplicant *wpa_s);
 void wpa_bss_deinit(struct wpa_supplicant *wpa_s);
 struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,

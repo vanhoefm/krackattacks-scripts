@@ -185,7 +185,7 @@ static DBusMessage * wpas_dispatch_bssid_method(DBusMessage *message,
 
 	/* Ensure we actually have scan data */
 	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s) < 0) {
+	    wpa_supplicant_get_scan_results(wpa_s, NULL, 0) < 0) {
 		reply = wpas_dbus_new_invalid_bssid_error(message);
 		goto out;
 	}

@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Driver event processing
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -763,14 +763,16 @@ static void wpa_supplicant_rsn_preauth_scan_results(
 }
 
 
-static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s)
+static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
+					      union wpa_event_data *data)
 {
 	struct wpa_scan_res *selected;
 	struct wpa_ssid *ssid = NULL;
 
 	wpa_supplicant_notify_scanning(wpa_s, 0);
 
-	if (wpa_supplicant_get_scan_results(wpa_s) < 0) {
+	if (wpa_supplicant_get_scan_results(wpa_s, data ? &data->scan_info :
+					    NULL, 1) < 0) {
 		if (wpa_s->conf->ap_scan == 2)
 			return;
 		wpa_printf(MSG_DEBUG, "Failed to get scan results - try "
@@ -1402,7 +1404,7 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 		break;
 #ifndef CONFIG_NO_SCAN_PROCESSING
 	case EVENT_SCAN_RESULTS:
-		wpa_supplicant_event_scan_results(wpa_s);
+		wpa_supplicant_event_scan_results(wpa_s, data);
 		break;
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 	case EVENT_ASSOCINFO:

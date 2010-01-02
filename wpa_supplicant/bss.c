@@ -1,6 +1,6 @@
 /*
  * BSS table
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -195,16 +195,58 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpa_bss_update_end(struct wpa_supplicant *wpa_s)
+static int wpa_bss_included_in_scan(const struct wpa_bss *bss,
+				    const struct scan_info *info)
+{
+	int found;
+	size_t i;
+
+	if (info == NULL)
+		return 1;
+
+	if (info->num_freqs) {
+		found = 0;
+		for (i = 0; i < info->num_freqs; i++) {
+			if (bss->freq == info->freqs[i]) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			return 0;
+	}
+
+	if (info->num_ssids) {
+		found = 0;
+		for (i = 0; i < info->num_ssids; i++) {
+			const struct wpa_driver_scan_ssid *s = &info->ssids[i];
+			if ((s->ssid == NULL || s->ssid_len == 0) ||
+			    (s->ssid_len == bss->ssid_len &&
+			     os_memcmp(s->ssid, bss->ssid, bss->ssid_len) ==
+			     0)) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found)
+			return 0;
+	}
+
+	return 1;
+}
+
+
+void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
+			int new_scan)
 {
 	struct wpa_bss *bss, *n;
 
-	/* TODO: expire only entries that were on the scanned frequencies/SSIDs
-	 * list; need to get info from driver about scanned frequencies and
-	 * SSIDs to be able to figure out which entries should be expired based
-	 * on this */
+	if (!new_scan)
+		return; /* do not expire entries without new scan */
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
+		if (!wpa_bss_included_in_scan(bss, info))
+			continue; /* expire only BSSes that were scanned */
 		if (bss->last_update_idx < wpa_s->bss_update_idx)
 			bss->scan_miss_count++;
 		if (bss->scan_miss_count >= WPA_BSS_EXPIRATION_SCAN_COUNT) {

@@ -882,7 +882,7 @@ static int wpa_supplicant_ctrl_iface_scan_results(
 	size_t i;
 
 	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s) < 0)
+	    wpa_supplicant_get_scan_results(wpa_s, NULL, 0) < 0)
 		return 0;
 
 	pos = buf;

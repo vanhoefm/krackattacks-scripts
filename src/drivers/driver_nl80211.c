@@ -1,6 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211
- * Copyright (c) 2002-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2010, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2003-2004, Instant802 Networks, Inc.
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
@@ -707,6 +707,47 @@ static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
+			    struct nlattr *tb[])
+{
+	union wpa_event_data event;
+	struct nlattr *nl;
+	int rem;
+	struct scan_info *info;
+#define MAX_REPORT_FREQS 50
+	int freqs[MAX_REPORT_FREQS];
+	int num_freqs = 0;
+
+	os_memset(&event, 0, sizeof(event));
+	info = &event.scan_info;
+	info->aborted = aborted;
+
+	if (tb[NL80211_ATTR_SCAN_SSIDS]) {
+		nla_for_each_nested(nl, tb[NL80211_ATTR_SCAN_SSIDS], rem) {
+			struct wpa_driver_scan_ssid *s =
+				&info->ssids[info->num_ssids];
+			s->ssid = nla_data(nl);
+			s->ssid_len = nla_len(nl);
+			info->num_ssids++;
+			if (info->num_ssids == WPAS_MAX_SCAN_SSIDS)
+				break;
+		}
+	}
+	if (tb[NL80211_ATTR_SCAN_FREQUENCIES]) {
+		nla_for_each_nested(nl, tb[NL80211_ATTR_SCAN_FREQUENCIES], rem)
+		{
+			freqs[num_freqs] = nla_get_u32(nl);
+			num_freqs++;
+			if (num_freqs == MAX_REPORT_FREQS - 1)
+				break;
+		}
+		info->freqs = freqs;
+		info->num_freqs = num_freqs;
+	}
+	wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, &event);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -742,7 +783,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 		drv->scan_complete_events = 1;
 		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
 				     drv->ctx);
-		wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, NULL);
+		send_scan_event(drv, 0, tb);
 		break;
 	case NL80211_CMD_SCAN_ABORTED:
 		wpa_printf(MSG_DEBUG, "nl80211: Scan aborted");
@@ -752,7 +793,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 		 */
 		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
 				     drv->ctx);
-		wpa_supplicant_event(drv->ctx, EVENT_SCAN_RESULTS, NULL);
+		send_scan_event(drv, 1, tb);
 		break;
 	case NL80211_CMD_AUTHENTICATE:
 	case NL80211_CMD_ASSOCIATE:

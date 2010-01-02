@@ -25,6 +25,7 @@
 #include "../driver_i.h"
 #include "../notify.h"
 #include "../wpas_glue.h"
+#include "../bss.h"
 #include "dbus_old.h"
 #include "dbus_old_handlers.h"
 #include "dbus_dict_helpers.h"
@@ -357,15 +358,7 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter;
 	DBusMessageIter sub_iter;
-	size_t i;
-
-	/* Ensure we've actually got scan results to return */
-	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s, NULL, 0) < 0) {
-		return dbus_message_new_error(message, WPAS_ERROR_SCAN_ERROR,
-					      "An error ocurred getting scan "
-					       "results.");
-	}
+	struct wpa_bss *bss;
 
 	/* Create and initialize the return message */
 	reply = dbus_message_new_method_return(message);
@@ -375,26 +368,19 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 					 &sub_iter);
 
 	/* Loop through scan results and append each result's object path */
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		struct wpa_scan_res *res = wpa_s->scan_res->res[i];
-		char *path;
+	dl_list_for_each(bss, &wpa_s->bss_id, struct wpa_bss, list_id) {
+		char path_buf[WPAS_DBUS_OBJECT_PATH_MAX];
+		char *path = path_buf;
 
-		path = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
-		if (path == NULL) {
-			wpa_printf(MSG_ERROR, "dbus: Not enough memory to "
-				   "send scan results signal");
-			break;
-		}
 		/* Construct the object path for this network.  Note that ':'
 		 * is not a valid character in dbus object paths.
 		 */
 		os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 			    "%s/" WPAS_DBUS_BSSIDS_PART "/"
 			    WPAS_DBUS_BSSID_FORMAT,
-			    wpa_s->dbus_path, MAC2STR(res->bssid));
+			    wpa_s->dbus_path, MAC2STR(bss->bssid));
 		dbus_message_iter_append_basic(&sub_iter,
 					       DBUS_TYPE_OBJECT_PATH, &path);
-		os_free(path);
 	}
 
 	dbus_message_iter_close_container(&iter, &sub_iter);
@@ -415,9 +401,9 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
  */
 DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 					 struct wpa_supplicant *wpa_s,
-					 struct wpa_scan_res *res)
+					 struct wpa_bss *bss)
 {
-	DBusMessage *reply = NULL;
+	DBusMessage *reply;
 	DBusMessageIter iter, iter_dict;
 	const u8 *ie;
 
@@ -429,11 +415,11 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 		goto error;
 
 	if (!wpa_dbus_dict_append_byte_array(&iter_dict, "bssid",
-					     (const char *) res->bssid,
+					     (const char *) bss->bssid,
 					     ETH_ALEN))
 		goto error;
 
-	ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
+	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "ssid",
 						     (const char *) (ie + 2),
@@ -441,7 +427,7 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 		goto error;
 	}
 
-	ie = wpa_scan_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
+	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "wpaie",
 						     (const char *) ie,
@@ -449,7 +435,7 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 			goto error;
 	}
 
-	ie = wpa_scan_get_ie(res, WLAN_EID_RSN);
+	ie = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "rsnie",
 						     (const char *) ie,
@@ -457,7 +443,7 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 			goto error;
 	}
 
-	ie = wpa_scan_get_vendor_ie(res, WPS_IE_VENDOR_TYPE);
+	ie = wpa_bss_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE);
 	if (ie) {
 		if (!wpa_dbus_dict_append_byte_array(&iter_dict, "wpsie",
 						     (const char *) ie,
@@ -465,25 +451,25 @@ DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 			goto error;
 	}
 
-	if (res->freq) {
+	if (bss->freq) {
 		if (!wpa_dbus_dict_append_int32(&iter_dict, "frequency",
-						res->freq))
+						bss->freq))
 			goto error;
 	}
 	if (!wpa_dbus_dict_append_uint16(&iter_dict, "capabilities",
-					 res->caps))
+					 bss->caps))
 		goto error;
-	if (!(res->flags & WPA_SCAN_QUAL_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "quality", res->qual))
+	if (!(bss->flags & WPA_BSS_QUAL_INVALID) &&
+	    !wpa_dbus_dict_append_int32(&iter_dict, "quality", bss->qual))
 		goto error;
-	if (!(res->flags & WPA_SCAN_NOISE_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "noise", res->noise))
+	if (!(bss->flags & WPA_BSS_NOISE_INVALID) &&
+	    !wpa_dbus_dict_append_int32(&iter_dict, "noise", bss->noise))
 		goto error;
-	if (!(res->flags & WPA_SCAN_LEVEL_INVALID) &&
-	    !wpa_dbus_dict_append_int32(&iter_dict, "level", res->level))
+	if (!(bss->flags & WPA_BSS_LEVEL_INVALID) &&
+	    !wpa_dbus_dict_append_int32(&iter_dict, "level", bss->level))
 		goto error;
 	if (!wpa_dbus_dict_append_int32(&iter_dict, "maxrate",
-					wpa_scan_get_max_rate(res) * 500000))
+					wpa_bss_get_max_rate(bss) * 500000))
 		goto error;
 
 	if (!wpa_dbus_dict_close_write(&iter, &iter_dict))

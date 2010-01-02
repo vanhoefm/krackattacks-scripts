@@ -15,6 +15,8 @@
 #ifndef CTRL_IFACE_DBUS_HANDLERS_H
 #define CTRL_IFACE_DBUS_HANDLERS_H
 
+struct wpa_bss;
+
 DBusMessage * wpas_dbus_new_invalid_iface_error(DBusMessage *message);
 DBusMessage * wpas_dbus_new_invalid_network_error(DBusMessage *message);
 
@@ -38,7 +40,7 @@ DBusMessage * wpas_dbus_iface_scan_results(DBusMessage *message,
 
 DBusMessage * wpas_dbus_bssid_properties(DBusMessage *message,
 					 struct wpa_supplicant *wpa_s,
-					 struct wpa_scan_res *res);
+					 struct wpa_bss *bss);
 
 DBusMessage * wpas_dbus_iface_capabilities(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s);

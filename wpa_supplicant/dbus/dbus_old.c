@@ -17,10 +17,10 @@
 
 #include "common.h"
 #include "eloop.h"
-#include "drivers/driver.h"
 #include "wps/wps.h"
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
+#include "../bss.h"
 #include "dbus_old.h"
 #include "dbus_old_handlers.h"
 #include "dbus_common.h"
@@ -176,45 +176,23 @@ static DBusMessage * wpas_dispatch_network_method(DBusMessage *message,
  */
 static DBusMessage * wpas_dispatch_bssid_method(DBusMessage *message,
 						struct wpa_supplicant *wpa_s,
-						const char *bssid)
+						const char *bssid_txt)
 {
-	DBusMessage *reply = NULL;
-	const char *method = dbus_message_get_member(message);
-	struct wpa_scan_res *res = NULL;
-	size_t i;
+	u8 bssid[ETH_ALEN];
+	struct wpa_bss *bss;
 
-	/* Ensure we actually have scan data */
-	if (wpa_s->scan_res == NULL &&
-	    wpa_supplicant_get_scan_results(wpa_s, NULL, 0) < 0) {
-		reply = wpas_dbus_new_invalid_bssid_error(message);
-		goto out;
-	}
+	if (hexstr2bin(bssid_txt, bssid, ETH_ALEN) < 0)
+		return wpas_dbus_new_invalid_bssid_error(message);
 
-	/* Find the bssid's scan data */
-	for (i = 0; i < wpa_s->scan_res->num; i++) {
-		struct wpa_scan_res *search_res = wpa_s->scan_res->res[i];
-		char mac_str[18];
-
-		memset(mac_str, 0, sizeof(mac_str));
-		snprintf(mac_str, sizeof(mac_str) - 1, WPAS_DBUS_BSSID_FORMAT,
-			 MAC2STR(search_res->bssid));
-		if (!strcmp(bssid, mac_str)) {
-			res = search_res;
-			break;
-		}
-	}
-
-	if (!res) {
-		reply = wpas_dbus_new_invalid_bssid_error(message);
-		goto out;
-	}
+	bss = wpa_bss_get_bssid(wpa_s, bssid);
+	if (bss == NULL)
+		return wpas_dbus_new_invalid_bssid_error(message);
 
 	/* Dispatch the method call against the scanned bssid */
-	if (!strcmp(method, "properties"))
-		reply = wpas_dbus_bssid_properties(message, wpa_s, res);
+	if (os_strcmp(dbus_message_get_member(message), "properties") == 0)
+		return wpas_dbus_bssid_properties(message, wpa_s, bss);
 
-out:
-	return reply;
+	return NULL;
 }
 
 

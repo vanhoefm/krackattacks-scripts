@@ -26,6 +26,7 @@
 #include "../notify.h"
 #include "../wpas_glue.h"
 #include "../bss.h"
+#include "../scan.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"

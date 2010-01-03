@@ -19,6 +19,7 @@
 #include "drivers/driver.h"
 #include "config_ssid.h"
 #include "wpa_supplicant_i.h"
+#include "scan.h"
 #include "bgscan.h"
 
 struct bgscan_simple_data {

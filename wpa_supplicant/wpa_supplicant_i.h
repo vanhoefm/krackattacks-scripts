@@ -444,10 +444,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_set_non_wpa_policy(struct wpa_supplicant *wpa_s,
 				       struct wpa_ssid *ssid);
 void wpa_supplicant_initiate_eapol(struct wpa_supplicant *wpa_s);
-struct wpa_scan_results *
-wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
-				struct scan_info *info, int new_scan);
-int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s);
 void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr);
 void wpa_supplicant_req_auth_timeout(struct wpa_supplicant *wpa_s,
 				     int sec, int usec);
@@ -489,16 +485,6 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_terminate_proc(struct wpa_global *global);
 void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 			     const u8 *buf, size_t len);
-
-/* scan.c */
-int wpa_supplicant_enabled_networks(struct wpa_config *conf);
-void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec);
-void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s);
-void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,
-				    int scanning);
-struct wpa_driver_scan_params;
-int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
-				struct wpa_driver_scan_params *params);
 
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);

@@ -31,6 +31,7 @@
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
 #include "bss.h"
+#include "scan.h"
 
 
 #ifndef CONFIG_NO_CONFIG_BLOBS

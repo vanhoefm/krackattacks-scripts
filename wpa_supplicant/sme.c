@@ -28,6 +28,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "bss.h"
+#include "scan.h"
 #include "sme.h"
 
 void sme_authenticate(struct wpa_supplicant *wpa_s,

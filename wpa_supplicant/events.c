@@ -39,6 +39,7 @@
 #include "ap.h"
 #include "bss.h"
 #include "mlme.h"
+#include "scan.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)

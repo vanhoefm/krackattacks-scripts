@@ -31,6 +31,7 @@
 #include "notify.h"
 #include "blacklist.h"
 #include "bss.h"
+#include "scan.h"
 #include "wps_supplicant.h"
 
 

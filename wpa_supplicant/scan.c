@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Scanning
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -12,16 +12,19 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
-#include "eloop.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "mlme.h"
 #include "wps_supplicant.h"
 #include "notify.h"
+#include "bss.h"
+#include "scan.h"
 
 
 static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
@@ -434,3 +437,176 @@ void wpa_supplicant_notify_scanning(struct wpa_supplicant *wpa_s,
 	}
 }
 
+
+static int wpa_scan_get_max_rate(const struct wpa_scan_res *res)
+{
+	int rate = 0;
+	const u8 *ie;
+	int i;
+
+	ie = wpa_scan_get_ie(res, WLAN_EID_SUPP_RATES);
+	for (i = 0; ie && i < ie[1]; i++) {
+		if ((ie[i + 2] & 0x7f) > rate)
+			rate = ie[i + 2] & 0x7f;
+	}
+
+	ie = wpa_scan_get_ie(res, WLAN_EID_EXT_SUPP_RATES);
+	for (i = 0; ie && i < ie[1]; i++) {
+		if ((ie[i + 2] & 0x7f) > rate)
+			rate = ie[i + 2] & 0x7f;
+	}
+
+	return rate;
+}
+
+
+const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,
+				  u32 vendor_type)
+{
+	const u8 *end, *pos;
+
+	pos = (const u8 *) (res + 1);
+	end = pos + res->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
+struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
+					     u32 vendor_type)
+{
+	struct wpabuf *buf;
+	const u8 *end, *pos;
+
+	buf = wpabuf_alloc(res->ie_len);
+	if (buf == NULL)
+		return NULL;
+
+	pos = (const u8 *) (res + 1);
+	end = pos + res->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			wpabuf_put_data(buf, pos + 2 + 4, pos[1] - 4);
+		pos += 2 + pos[1];
+	}
+
+	if (wpabuf_len(buf) == 0) {
+		wpabuf_free(buf);
+		buf = NULL;
+	}
+
+	return buf;
+}
+
+
+/* Compare function for sorting scan results. Return >0 if @b is considered
+ * better. */
+static int wpa_scan_result_compar(const void *a, const void *b)
+{
+	struct wpa_scan_res **_wa = (void *) a;
+	struct wpa_scan_res **_wb = (void *) b;
+	struct wpa_scan_res *wa = *_wa;
+	struct wpa_scan_res *wb = *_wb;
+	int wpa_a, wpa_b, maxrate_a, maxrate_b;
+
+	/* WPA/WPA2 support preferred */
+	wpa_a = wpa_scan_get_vendor_ie(wa, WPA_IE_VENDOR_TYPE) != NULL ||
+		wpa_scan_get_ie(wa, WLAN_EID_RSN) != NULL;
+	wpa_b = wpa_scan_get_vendor_ie(wb, WPA_IE_VENDOR_TYPE) != NULL ||
+		wpa_scan_get_ie(wb, WLAN_EID_RSN) != NULL;
+
+	if (wpa_b && !wpa_a)
+		return 1;
+	if (!wpa_b && wpa_a)
+		return -1;
+
+	/* privacy support preferred */
+	if ((wa->caps & IEEE80211_CAP_PRIVACY) == 0 &&
+	    (wb->caps & IEEE80211_CAP_PRIVACY))
+		return 1;
+	if ((wa->caps & IEEE80211_CAP_PRIVACY) &&
+	    (wb->caps & IEEE80211_CAP_PRIVACY) == 0)
+		return -1;
+
+	/* best/max rate preferred if signal level close enough XXX */
+	if ((wa->level && wb->level && abs(wb->level - wa->level) < 5) ||
+	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
+		maxrate_a = wpa_scan_get_max_rate(wa);
+		maxrate_b = wpa_scan_get_max_rate(wb);
+		if (maxrate_a != maxrate_b)
+			return maxrate_b - maxrate_a;
+	}
+
+	/* use freq for channel preference */
+
+	/* all things being equal, use signal level; if signal levels are
+	 * identical, use quality values since some drivers may only report
+	 * that value and leave the signal level zero */
+	if (wb->level == wa->level)
+		return wb->qual - wa->qual;
+	return wb->level - wa->level;
+}
+
+
+/**
+ * wpa_supplicant_get_scan_results - Get scan results
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @info: Information about what was scanned or %NULL if not available
+ * @new_scan: Whether a new scan was performed
+ * Returns: Scan results, %NULL on failure
+ *
+ * This function request the current scan results from the driver and updates
+ * the local BSS list wpa_s->bss. The caller is responsible for freeing the
+ * results with wpa_scan_results_free().
+ */
+struct wpa_scan_results *
+wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
+				struct scan_info *info, int new_scan)
+{
+	struct wpa_scan_results *scan_res;
+	size_t i;
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
+		scan_res = ieee80211_sta_get_scan_results(wpa_s);
+	else
+		scan_res = wpa_drv_get_scan_results2(wpa_s);
+	if (scan_res == NULL) {
+		wpa_printf(MSG_DEBUG, "Failed to get scan results");
+		return NULL;
+	}
+
+	qsort(scan_res->res, scan_res->num, sizeof(struct wpa_scan_res *),
+	      wpa_scan_result_compar);
+
+	wpa_bss_update_start(wpa_s);
+	for (i = 0; i < scan_res->num; i++)
+		wpa_bss_update_scan_res(wpa_s, scan_res->res[i]);
+	wpa_bss_update_end(wpa_s, info, new_scan);
+
+	return scan_res;
+}
+
+
+int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_scan_results *scan_res;
+	scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL, 0);
+	if (scan_res == NULL)
+		return -1;
+	wpa_scan_results_free(scan_res);
+
+	return 0;
+}

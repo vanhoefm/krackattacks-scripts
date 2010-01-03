@@ -33,6 +33,7 @@
 #include "ap.h"
 #include "notify.h"
 #include "bss.h"
+#include "scan.h"
 #include "ctrl_iface.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];

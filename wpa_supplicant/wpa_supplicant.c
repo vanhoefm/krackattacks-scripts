@@ -45,6 +45,7 @@
 #include "notify.h"
 #include "bgscan.h"
 #include "bss.h"
+#include "scan.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -1561,56 +1562,6 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 		wpas_notify_debug_timestamp_changed(global);
 	if (wpa_debug_show_keys != old_show_keys)
 		wpas_notify_debug_show_keys_changed(global);
-
-	return 0;
-}
-
-
-/**
- * wpa_supplicant_get_scan_results - Get scan results
- * @wpa_s: Pointer to wpa_supplicant data
- * @info: Information about what was scanned or %NULL if not available
- * @new_scan: Whether a new scan was performed
- * Returns: Scan results, %NULL on failure
- *
- * This function request the current scan results from the driver and updates
- * the local BSS list wpa_s->bss. The caller is responsible for freeing the
- * results with wpa_scan_results_free().
- */
-struct wpa_scan_results *
-wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
-				struct scan_info *info, int new_scan)
-{
-	struct wpa_scan_results *scan_res;
-	size_t i;
-
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		scan_res = ieee80211_sta_get_scan_results(wpa_s);
-	else
-		scan_res = wpa_drv_get_scan_results2(wpa_s);
-	if (scan_res == NULL) {
-		wpa_printf(MSG_DEBUG, "Failed to get scan results");
-		return NULL;
-	}
-
-	wpa_scan_sort_results(scan_res);
-
-	wpa_bss_update_start(wpa_s);
-	for (i = 0; i < scan_res->num; i++)
-		wpa_bss_update_scan_res(wpa_s, scan_res->res[i]);
-	wpa_bss_update_end(wpa_s, info, new_scan);
-
-	return scan_res;
-}
-
-
-int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s)
-{
-	struct wpa_scan_results *scan_res;
-	scan_res = wpa_supplicant_get_scan_results(wpa_s, NULL, 0);
-	if (scan_res == NULL)
-		return -1;
-	wpa_scan_results_free(scan_res);
 
 	return 0;
 }

@@ -1518,6 +1518,22 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val);
+
+	/**
+	 * probe_req_report - Request Probe Request frames to be indicated
+	 * @priv: Private driver interface data
+	 * @report: Whether to report received Probe Request frames
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 *
+	 * This command can be used to request the driver to indicate when
+	 * Probe Request frames are received with EVENT_RX_PROBE_REQ events.
+	 * Since this operation may require extra resources, e.g., due to less
+	 * optimal hardware/firmware RX filtering, many drivers may disable
+	 * Probe Request reporting at least in station mode. This command is
+	 * used to notify the driver when the Probe Request frames need to be
+	 * reported, e.g., during remain-on-channel operations.
+	 */
+	int (*probe_req_report)(void *priv, int report);
 };
 
 /**
@@ -1732,7 +1748,11 @@ enum wpa_event_type {
 	 *
 	 * This event is used to indicate when a Probe Request frame has been
 	 * received. Information about the received frame is included in
-	 * union wpa_event_data::rx_probe_req.
+	 * union wpa_event_data::rx_probe_req. The driver is required to report
+	 * these events only after successfully completed probe_req_report()
+	 * commands to request the events (i.e., report parameter is non-zero)
+	 * in station mode. In AP mode, Probe Request frames should always be
+	 * reported.
 	 */
 	EVENT_RX_PROBE_REQ
 };

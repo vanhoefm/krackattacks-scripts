@@ -100,6 +100,8 @@ struct wpa_driver_test_data {
 	struct test_client_socket *cli;
 	struct test_driver_bss *bss;
 	int udp_port;
+
+	int probe_req_report;
 };
 
 
@@ -1779,6 +1781,24 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 	event.mlme_rx.buf = data;
 	event.mlme_rx.len = data_len;
 	wpa_supplicant_event(drv->ctx, EVENT_MLME_RX, &event);
+
+	if (drv->probe_req_report && data_len >= 24) {
+		const struct ieee80211_mgmt *mgmt;
+		u16 fc;
+
+		mgmt = (const struct ieee80211_mgmt *) data;
+		fc = le_to_host16(mgmt->frame_control);
+		if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_PROBE_REQ) {
+			os_memset(&event, 0, sizeof(event));
+			event.rx_probe_req.sa = mgmt->sa;
+			event.rx_probe_req.ie = mgmt->u.probe_req.variable;
+			event.rx_probe_req.ie_len =
+				data_len - (mgmt->u.probe_req.variable - data);
+			wpa_supplicant_event(drv->ctx, EVENT_RX_PROBE_REQ,
+					     &event);
+		}
+	}
 }
 
 
@@ -2442,6 +2462,15 @@ fail:
 }
 
 
+static int wpa_driver_test_probe_req_report(void *priv, int report)
+{
+	struct wpa_driver_test_data *drv = priv;
+	wpa_printf(MSG_DEBUG, "%s(report=%d)", __func__, report);
+	drv->probe_req_report = report;
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_test_ops = {
 	"test",
 	"wpa_supplicant test driver",
@@ -2485,4 +2514,5 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.init2 = wpa_driver_test_init2,
 	.get_interfaces = wpa_driver_test_get_interfaces,
 	.scan2 = wpa_driver_test_scan,
+	.probe_req_report = wpa_driver_test_probe_req_report,
 };

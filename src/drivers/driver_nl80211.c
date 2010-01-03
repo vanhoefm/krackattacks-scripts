@@ -95,6 +95,7 @@ struct wpa_driver_nl80211_data {
 
 	int monitor_sock;
 	int monitor_ifidx;
+	int probe_req_report;
 
 	unsigned int beacon_set:1;
 
@@ -133,6 +134,9 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 					enum wpa_driver_if_type type,
 					const char *ifname);
 #endif /* HOSTAPD */
+
+static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
+							void *timeout_ctx);
 
 
 /* nl80211 code */
@@ -1292,10 +1296,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	struct wpa_driver_nl80211_data *drv = priv;
 
 	nl80211_remove_monitor_interface(drv);
-	if (drv->monitor_sock >= 0) {
-		eloop_unregister_read_sock(drv->monitor_sock);
-		close(drv->monitor_sock);
-	}
 
 	if (drv->nlmode == NL80211_IFTYPE_AP)
 		wpa_driver_nl80211_del_beacon(drv);
@@ -1338,6 +1338,9 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	nl_handle_destroy(drv->nl_handle);
 	nl_handle_destroy(drv->nl_handle_event);
 	nl_cb_put(drv->nl_cb);
+
+	eloop_cancel_timeout(wpa_driver_nl80211_probe_req_report_timeout,
+			     drv, NULL);
 
 	os_free(drv);
 }
@@ -2772,6 +2775,12 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
+	if (drv->nlmode == NL80211_IFTYPE_STATION && !drv->probe_req_report) {
+		wpa_printf(MSG_DEBUG, "nl80211: Ignore monitor interface "
+			   "frame since Probe Request reporting is disabled");
+		return;
+	}
+
 	if (ieee80211_radiotap_iterator_init(&iter, (void*)buf, len)) {
 		printf("received invalid radiotap frame\n");
 		return;
@@ -2974,6 +2983,11 @@ static void nl80211_remove_monitor_interface(
 	if (drv->monitor_ifidx >= 0) {
 		nl80211_remove_iface(drv, drv->monitor_ifidx);
 		drv->monitor_ifidx = -1;
+	}
+	if (drv->monitor_sock >= 0) {
+		eloop_unregister_read_sock(drv->monitor_sock);
+		close(drv->monitor_sock);
+		drv->monitor_sock = -1;
 	}
 }
 
@@ -4403,6 +4417,62 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 }
 
 
+static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
+							void *timeout_ctx)
+{
+	struct wpa_driver_nl80211_data *drv = eloop_ctx;
+	if (drv->monitor_ifidx < 0)
+		return; /* monitor interface already removed */
+
+	if (drv->nlmode != NL80211_IFTYPE_STATION)
+		return; /* not in station mode anymore */
+
+	if (drv->probe_req_report)
+		return; /* reporting enabled */
+
+	wpa_printf(MSG_DEBUG, "nl80211: Remove monitor interface due to no "
+		   "Probe Request reporting needed anymore");
+	nl80211_remove_monitor_interface(drv);
+}
+
+
+static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+
+	if (drv->nlmode != NL80211_IFTYPE_STATION) {
+		wpa_printf(MSG_DEBUG, "nl80211: probe_req_report control only "
+			   "allowed in station mode (iftype=%d)",
+			   drv->nlmode);
+		return -1;
+	}
+	drv->probe_req_report = report;
+
+	if (report) {
+		eloop_cancel_timeout(
+			wpa_driver_nl80211_probe_req_report_timeout,
+			drv, NULL);
+		if (drv->monitor_ifidx < 0 &&
+		    nl80211_create_monitor_interface(drv))
+			return -1;
+	} else {
+		/*
+		 * It takes a while to remove the monitor interface, so try to
+		 * avoid doing this if it is needed again shortly. Instead,
+		 * schedule the interface to be removed later if no need for it
+		 * is seen.
+		 */
+		wpa_printf(MSG_DEBUG, "nl80211: Scheduling monitor interface "
+			   "to be removed after 10 seconds of no use");
+		eloop_register_timeout(
+			10, 0, wpa_driver_nl80211_probe_req_report_timeout,
+			drv, NULL);
+	}
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -4451,4 +4521,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_sta_vlan = i802_set_sta_vlan,
 	.set_wds_sta = i802_set_wds_sta,
 #endif /* HOSTAPD */
+	.probe_req_report = wpa_driver_nl80211_probe_req_report,
 };

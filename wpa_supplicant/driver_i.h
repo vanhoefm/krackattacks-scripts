@@ -383,4 +383,13 @@ static inline int wpa_drv_set_supp_port(struct wpa_supplicant *wpa_s,
 	return 0;
 }
 
+static inline int wpa_drv_probe_req_report(struct wpa_supplicant *wpa_s,
+					   int report)
+{
+	if (wpa_s->driver->probe_req_report)
+		return wpa_s->driver->probe_req_report(wpa_s->drv_priv,
+						       report);
+	return -1;
+}
+
 #endif /* DRIVER_I_H */

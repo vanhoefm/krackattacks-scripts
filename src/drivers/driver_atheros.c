@@ -649,9 +649,8 @@ static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 {
 	struct madwifi_driver_data *drv = ctx;
 	const struct ieee80211_mgmt *mgmt;
-	const u8 *end, *ie;
 	u16 fc;
-	size_t ie_len;
+	union wpa_event_data event;
 
 	/* Send Probe Request information to WPS processing */
 
@@ -664,11 +663,12 @@ static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 	    WLAN_FC_GET_STYPE(fc) != WLAN_FC_STYPE_PROBE_REQ)
 		return;
 
-	end = buf + len;
-	ie = mgmt->u.probe_req.variable;
-	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
-
-	hostapd_probe_req_rx(drv->hapd, mgmt->sa, ie, ie_len);
+	os_memset(&event, 0, sizeof(event));
+	event.rx_probe_req.sa = mgmt->sa;
+	event.rx_probe_req.ie = mgmt->u.probe_req.variable;
+	event.rx_probe_req.ie_len =
+		len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
+	wpa_supplicant_event(drv->hapd, EVENT_RX_PROBE_REQ, &event);
 }
 #endif /* CONFIG_WPS */
 

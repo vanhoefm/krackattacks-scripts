@@ -485,6 +485,7 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 	u8 sa[ETH_ALEN];
 	u8 ie[512];
 	size_t ielen;
+	union wpa_event_data event;
 
 	/* data: optional [ ' ' | STA-addr | ' ' | IEs(hex) ] */
 
@@ -511,9 +512,11 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 			   MAC2STR(sa));
 		wpa_hexdump(MSG_MSGDUMP, "test_driver: scan IEs", ie, ielen);
 
-#ifdef HOSTAPD
-		hostapd_probe_req_rx(drv->ctx, sa, ie, ielen);
-#endif /* HOSTAPD */
+		os_memset(&event, 0, sizeof(event));
+		event.rx_probe_req.sa = sa;
+		event.rx_probe_req.ie = ie;
+		event.rx_probe_req.ie_len = ielen;
+		wpa_supplicant_event(drv->ctx, EVENT_RX_PROBE_REQ, &event);
 	}
 
 	for (bss = drv->bss; bss; bss = bss->next) {

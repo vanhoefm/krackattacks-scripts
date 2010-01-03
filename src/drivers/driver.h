@@ -1725,7 +1725,16 @@ typedef enum wpa_event_type {
 	 *
 	 * This event is used only by driver_test.c and userspace MLME.
 	 */
-	EVENT_MLME_RX
+	EVENT_MLME_RX,
+
+	/**
+	 * EVENT_RX_PROBE_REQ - Indicate received Probe Request frame
+	 *
+	 * This event is used to indicate when a Probe Request frame has been
+	 * received. Information about the received frame is included in
+	 * union wpa_event_data::rx_probe_req.
+	 */
+	EVENT_RX_PROBE_REQ,
 } wpa_event_type;
 
 
@@ -1978,6 +1987,26 @@ union wpa_event_data {
 		int channel;
 		int ssi;
 	} mlme_rx;
+
+	/**
+	 * struct rx_probe_req - Data for EVENT_RX_PROBE_REQ events
+	 */
+	struct rx_probe_req {
+		/**
+		 * sa - Source address of the received Probe Request frame
+		 */
+		const u8 *sa;
+
+		/**
+		 * ie - IEs from the Probe Request body
+		 */
+		const u8 *ie;
+
+		/**
+		 * ie_len - Length of ie buffer in octets
+		 */
+		size_t ie_len;
+	} rx_probe_req;
 };
 
 /**
@@ -2021,7 +2050,6 @@ void wpa_scan_sort_results(struct wpa_scan_results *res);
 
 /* hostapd functions for driver wrappers */
 
-struct sta_info;
 struct ieee80211_hdr;
 
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr);
@@ -2039,7 +2067,5 @@ struct hostapd_frame_info {
 
 struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 					  const u8 *addr);
-int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
-			 const u8 *ie, size_t ie_len);
 
 #endif /* DRIVER_H */

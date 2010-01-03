@@ -321,6 +321,23 @@ static void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, const u8 *buf,
 #endif /* NEED_AP_MLME */
 
 
+static int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
+				const u8 *ie, size_t ie_len)
+{
+	size_t i;
+	int ret = 0;
+
+	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
+		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
+					    sa, ie, ie_len) > 0) {
+			ret = 1;
+			break;
+		}
+	}
+	return ret;
+}
+
+
 void wpa_supplicant_event(void *ctx, wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -369,6 +386,11 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 				data->rx_mgmt.frame_len, data->rx_mgmt.fi);
 		break;
 #endif /* NEED_AP_MLME */
+	case EVENT_RX_PROBE_REQ:
+		hostapd_probe_req_rx(hapd, data->rx_probe_req.sa,
+				     data->rx_probe_req.ie,
+				     data->rx_probe_req.ie_len);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;
@@ -376,20 +398,3 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 }
 
 #endif /* HOSTAPD */
-
-
-int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
-			 const u8 *ie, size_t ie_len)
-{
-	size_t i;
-	int ret = 0;
-
-	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
-		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
-					    sa, ie, ie_len) > 0) {
-			ret = 1;
-			break;
-		}
-	}
-	return ret;
-}

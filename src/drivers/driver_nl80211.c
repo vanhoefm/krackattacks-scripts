@@ -98,6 +98,9 @@ struct wpa_driver_nl80211_data {
 	int probe_req_report;
 
 	unsigned int beacon_set:1;
+	unsigned int pending_remain_on_chan:1;
+
+	u64 remain_on_chan_cookie;
 
 #ifdef HOSTAPD
 	int eapol_sock; /* socket for EAPOL frames */
@@ -709,6 +712,53 @@ static void mlme_event_join_ibss(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void mlme_event_remain_on_channel(struct wpa_driver_nl80211_data *drv,
+					 int cancel_event, struct nlattr *tb[])
+{
+	unsigned int freq, chan_type, duration;
+	union wpa_event_data data;
+	u64 cookie;
+
+	if (tb[NL80211_ATTR_WIPHY_FREQ])
+		freq = nla_get_u32(tb[NL80211_ATTR_WIPHY_FREQ]);
+	else
+		freq = 0;
+
+	if (tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE])
+		chan_type = nla_get_u32(tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]);
+	else
+		chan_type = 0;
+
+	if (tb[NL80211_ATTR_DURATION])
+		duration = nla_get_u32(tb[NL80211_ATTR_DURATION]);
+	else
+		duration = 0;
+
+	if (tb[NL80211_ATTR_COOKIE])
+		cookie = nla_get_u64(tb[NL80211_ATTR_COOKIE]);
+	else
+		cookie = 0;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Remain-on-channel event (cancel=%d "
+		   "freq=%u channel_type=%u duration=%u cookie=0x%llx (%s))",
+		   cancel_event, freq, chan_type, duration,
+		   (long long unsigned int) cookie,
+		   cookie == drv->remain_on_chan_cookie ? "match" : "unknown");
+
+	if (cookie != drv->remain_on_chan_cookie)
+		return; /* not for us */
+
+	drv->pending_remain_on_chan = !cancel_event;
+
+	os_memset(&data, 0, sizeof(data));
+	data.remain_on_channel.freq = freq;
+	data.remain_on_channel.duration = duration;
+	wpa_supplicant_event(drv->ctx, cancel_event ?
+			     EVENT_CANCEL_REMAIN_ON_CHANNEL :
+			     EVENT_REMAIN_ON_CHANNEL, &data);
+}
+
+
 static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 			    struct nlattr *tb[])
 {
@@ -830,6 +880,12 @@ static int process_event(struct nl_msg *msg, void *arg)
 		break;
 	case NL80211_CMD_JOIN_IBSS:
 		mlme_event_join_ibss(drv, tb);
+		break;
+	case NL80211_CMD_REMAIN_ON_CHANNEL:
+		mlme_event_remain_on_channel(drv, 0, tb);
+		break;
+	case NL80211_CMD_CANCEL_REMAIN_ON_CHANNEL:
+		mlme_event_remain_on_channel(drv, 1, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
@@ -4415,6 +4471,90 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 }
 
 
+static int cookie_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	u64 *cookie = arg;
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (tb[NL80211_ATTR_COOKIE])
+		*cookie = nla_get_u64(tb[NL80211_ATTR_COOKIE]);
+	return NL_SKIP;
+}
+
+
+static int wpa_driver_nl80211_remain_on_channel(void *priv, unsigned int freq,
+						unsigned int duration)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret;
+	u64 cookie;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_REMAIN_ON_CHANNEL, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
+	NLA_PUT_U32(msg, NL80211_ATTR_DURATION, duration);
+
+	cookie = 0;
+	ret = send_and_recv_msgs(drv, msg, cookie_handler, &cookie);
+	if (ret == 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Remain-on-channel cookie "
+			   "0x%llx for freq=%u MHz duration=%u",
+			   (long long unsigned int) cookie, freq, duration);
+		drv->remain_on_chan_cookie = cookie;
+		return 0;
+	}
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to request remain-on-channel "
+		   "(freq=%d): %d (%s)", freq, ret, strerror(-ret));
+nla_put_failure:
+	return -1;
+}
+
+
+static int wpa_driver_nl80211_cancel_remain_on_channel(void *priv)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct nl_msg *msg;
+	int ret;
+
+	if (!drv->pending_remain_on_chan) {
+		wpa_printf(MSG_DEBUG, "nl80211: No pending remain-on-channel "
+			   "to cancel");
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Cancel remain-on-channel with cookie "
+		   "0x%llx",
+		   (long long unsigned int) drv->remain_on_chan_cookie);
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_CANCEL_REMAIN_ON_CHANNEL, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U64(msg, NL80211_ATTR_COOKIE, drv->remain_on_chan_cookie);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret == 0)
+		return 0;
+	wpa_printf(MSG_DEBUG, "nl80211: Failed to cancel remain-on-channel: "
+		   "%d (%s)", ret, strerror(-ret));
+nla_put_failure:
+	return -1;
+}
+
+
 static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
 							void *timeout_ctx)
 {
@@ -4543,6 +4683,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_sta_vlan = i802_set_sta_vlan,
 	.set_wds_sta = i802_set_wds_sta,
 #endif /* HOSTAPD */
+	.remain_on_channel = wpa_driver_nl80211_remain_on_channel,
+	.cancel_remain_on_channel =
+	wpa_driver_nl80211_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_nl80211_probe_req_report,
 	.alloc_interface_addr = wpa_driver_nl80211_alloc_interface_addr,
 	.release_interface_addr = wpa_driver_nl80211_release_interface_addr,

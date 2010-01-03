@@ -383,6 +383,17 @@ static inline int wpa_drv_set_supp_port(struct wpa_supplicant *wpa_s,
 	return 0;
 }
 
+static inline int wpa_drv_send_action(struct wpa_supplicant *wpa_s,
+				      unsigned int freq,
+				      const u8 *dst, const u8 *src,
+				      const u8 *data, size_t data_len)
+{
+	if (wpa_s->driver->send_action)
+		return wpa_s->driver->send_action(wpa_s->drv_priv, freq,
+						  dst, src, data, data_len);
+	return -1;
+}
+
 static inline int wpa_drv_alloc_interface_addr(struct wpa_supplicant *wpa_s,
 					       u8 *addr)
 {
@@ -397,6 +408,25 @@ static inline void wpa_drv_release_interface_addr(struct wpa_supplicant *wpa_s,
 {
 	if (wpa_s->driver->release_interface_addr)
 		wpa_s->driver->release_interface_addr(wpa_s->drv_priv, addr);
+}
+
+static inline int wpa_drv_remain_on_channel(struct wpa_supplicant *wpa_s,
+					    unsigned int freq,
+					    unsigned int duration)
+{
+	if (wpa_s->driver->remain_on_channel)
+		return wpa_s->driver->remain_on_channel(wpa_s->drv_priv, freq,
+							duration);
+	return -1;
+}
+
+static inline int wpa_drv_cancel_remain_on_channel(
+	struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->cancel_remain_on_channel)
+		return wpa_s->driver->cancel_remain_on_channel(
+			wpa_s->drv_priv);
+	return -1;
 }
 
 static inline int wpa_drv_probe_req_report(struct wpa_supplicant *wpa_s,

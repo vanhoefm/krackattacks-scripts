@@ -1520,6 +1520,27 @@ struct wpa_driver_ops {
 	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val);
 
 	/**
+	 * send_action - Transmit an Action frame
+	 * @priv: Private driver interface data
+	 * @freq: Frequency (in MHz) of the channel
+	 * @dst: Destination MAC address
+	 * @src: Source MAC address
+	 * @data: Frame body
+	 * @data_len: data length in octets
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This command can be used to request the driver to transmit an action
+	 * frame to the specified destination. If a remain-on-channel duration
+	 * is in progress, the frame is transmitted on that channel. Otherwise,
+	 * the frame is transmitted on the current operational channel if in
+	 * associated state in station mode or if operating as an AP. If none
+	 * of these conditions is in effect, send_action() cannot be used.
+	 */
+	int (*send_action)(void *priv, unsigned int freq,
+			   const u8 *dst, const u8 *src,
+			   const u8 *data, size_t data_len);
+
+	/**
 	 * alloc_interface_addr - Allocate a virtual interface address
 	 * @priv: Private driver interface data
 	 * @addr: Buffer for returning the address
@@ -1548,6 +1569,44 @@ struct wpa_driver_ops {
 	 * driver to release the pending allocation for a new interface.
 	 */
 	void (*release_interface_addr)(void *priv, const u8 *addr);
+
+	/**
+	 * remain_on_channel - Remain awake on a channel
+	 * @priv: Private driver interface data
+	 * @freq: Frequency (in MHz) of the channel
+	 * @duration: Duration in milliseconds
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This command is used to request the driver to remain awake on the
+	 * specified channel for the specified duration and report received
+	 * Action frames with EVENT_RX_ACTION events. Optionally, received
+	 * Probe Request frames may also be requested to be reported by calling
+	 * probe_req_report(). These will be reported with EVENT_RX_PROBE_REQ.
+	 *
+	 * The driver may not be at the requested channel when this function
+	 * returns, i.e., the return code is only indicating whether the
+	 * request was accepted. The caller will need to wait until the
+	 * EVENT_REMAIN_ON_CHANNEL event indicates that the driver has
+	 * completed the channel change. This may take some time due to other
+	 * need for the radio and the caller should be prepared to timing out
+	 * its wait since there are no guarantees on when this request can be
+	 * executed.
+	 */
+	int (*remain_on_channel)(void *priv, unsigned int freq,
+				 unsigned int duration);
+
+	/**
+	 * cancel_remain_on_channel - Cancel remain-on-channel operation
+	 * @priv: Private driver interface data
+	 *
+	 * This command can be used to cancel a remain-on-channel operation
+	 * before its originally requested duration has passed. This could be
+	 * used, e.g., when remain_on_channel() is used to request extra time
+	 * to receive a response to an Action frame and the response is
+	 * received when there is still unneeded time remaining on the
+	 * remain-on-channel operation.
+	 */
+	int (*cancel_remain_on_channel)(void *priv);
 
 	/**
 	 * probe_req_report - Request Probe Request frames to be indicated
@@ -1765,6 +1824,34 @@ enum wpa_event_type {
 	 * EVENT_RX_MGMT - Report RX of a management frame
 	 */
 	EVENT_RX_MGMT,
+
+	/**
+	 * EVENT_RX_ACTION - Action frame received
+	 *
+	 * This event is used to indicate when an Action frame has been
+	 * received. Information about the received frame is included in
+	 * union wpa_event_data::rx_action.
+	 */
+	EVENT_RX_ACTION,
+
+	/**
+	 * EVENT_REMAIN_ON_CHANNEL - Remain-on-channel duration started
+	 *
+	 * This event is used to indicate when the driver has started the
+	 * requested remain-on-channel duration. Information about the
+	 * operation is included in union wpa_event_data::remain_on_channel.
+	 */
+	EVENT_REMAIN_ON_CHANNEL,
+
+	/**
+	 * EVENT_CANCEL_REMAIN_ON_CHANNEL - Remain-on-channel timed out
+	 *
+	 * This event is used to indicate when the driver has completed
+	 * remain-on-channel duration, i.e., may noot be available on the
+	 * requested channel anymore. Information about the
+	 * operation is included in union wpa_event_data::remain_on_channel.
+	 */
+	EVENT_CANCEL_REMAIN_ON_CHANNEL,
 
 	/**
 	 * EVENT_MLME_RX - Report reception of frame for MLME (test use only)
@@ -2010,6 +2097,53 @@ union wpa_event_data {
 		u32 datarate;
 		u32 ssi_signal;
 	} rx_mgmt;
+
+	/**
+	 * struct rx_action - Data for EVENT_RX_ACTION events
+	 */
+	struct rx_action {
+		/**
+		 * sa - Source address of the received Action frame
+		 */
+		const u8 *sa;
+
+		/**
+		 * category - Action frame category
+		 */
+		u8 category;
+
+		/**
+		 * data - Action frame body after category field
+		 */
+		const u8 *data;
+
+		/**
+		 * len - Length of data in octets
+		 */
+		size_t len;
+
+		/**
+		 * freq - Frequency (in MHz) on which the frame was received
+		 */
+		int freq;
+	} rx_action;
+
+	/**
+	 * struct remain_on_channel - Data for EVENT_REMAIN_ON_CHANNEL events
+	 *
+	 * This is also used with EVENT_CANCEL_REMAIN_ON_CHANNEL events.
+	 */
+	struct remain_on_channel {
+		/**
+		 * freq - Channel frequency in MHz
+		 */
+		unsigned int freq;
+
+		/**
+		 * duration - Duration to remain on the channel in milliseconds
+		 */
+		unsigned int duration;
+	} remain_on_channel;
 
 	/**
 	 * struct scan_info - Optional data for EVENT_SCAN_RESULTS events

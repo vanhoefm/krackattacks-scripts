@@ -104,6 +104,10 @@ struct wpa_driver_test_data {
 	int alloc_iface_idx;
 
 	int probe_req_report;
+	unsigned int remain_on_channel_freq;
+	unsigned int remain_on_channel_duration;
+
+	int current_freq;
 };
 
 
@@ -112,6 +116,7 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 				  const char *dir, int ap);
 static void wpa_driver_test_close_test_socket(
 	struct wpa_driver_test_data *drv);
+static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx);
 
 
 static void test_driver_free_bss(struct test_driver_bss *bss)
@@ -1986,6 +1991,7 @@ static void wpa_driver_test_deinit(void *priv)
 	wpa_driver_test_close_test_socket(drv);
 	eloop_cancel_timeout(wpa_driver_test_scan_timeout, drv, drv->ctx);
 	eloop_cancel_timeout(wpa_driver_test_poll, drv, NULL);
+	eloop_cancel_timeout(test_remain_on_channel_timeout, drv, NULL);
 	os_free(drv->test_dir);
 	for (i = 0; i < MAX_SCAN_RESULTS; i++)
 		os_free(drv->scanres[i]);
@@ -2300,8 +2306,10 @@ static int wpa_driver_test_set_channel(void *priv,
 				       enum hostapd_hw_mode phymode,
 				       int chan, int freq)
 {
+	struct wpa_driver_test_data *drv = priv;
 	wpa_printf(MSG_DEBUG, "%s: phymode=%d chan=%d freq=%d",
 		   __func__, phymode, chan, freq);
+	drv->current_freq = freq;
 	return 0;
 }
 
@@ -2464,6 +2472,56 @@ fail:
 }
 
 
+static int wpa_driver_test_set_freq(void *priv,
+				    struct hostapd_freq_params *freq)
+{
+	struct wpa_driver_test_data *drv = priv;
+	wpa_printf(MSG_DEBUG, "test: set_freq %u MHz", freq->freq);
+	drv->current_freq = freq->freq;
+	return 0;
+}
+
+
+static int wpa_driver_test_send_action(void *priv, unsigned int freq,
+				       const u8 *dst, const u8 *src,
+				       const u8 *data, size_t data_len)
+{
+	struct wpa_driver_test_data *drv = priv;
+	int ret = -1;
+	u8 *buf;
+	struct ieee80211_hdr *hdr;
+
+	wpa_printf(MSG_DEBUG, "test: Send Action frame");
+
+	if ((drv->remain_on_channel_freq &&
+	     freq != drv->remain_on_channel_freq) ||
+	    (drv->remain_on_channel_freq == 0 &&
+	     freq != (unsigned int) drv->current_freq)) {
+		wpa_printf(MSG_DEBUG, "test: Reject Action frame TX on "
+			   "unexpected channel: freq=%u MHz (current_freq=%u "
+			   "MHz, remain-on-channel freq=%u MHz)",
+			   freq, drv->current_freq,
+			   drv->remain_on_channel_freq);
+		return -1;
+	}
+
+	buf = os_zalloc(24 + data_len);
+	if (buf == NULL)
+		return ret;
+	os_memcpy(buf + 24, data, data_len);
+	hdr = (struct ieee80211_hdr *) buf;
+	hdr->frame_control =
+		IEEE80211_FC(WLAN_FC_TYPE_MGMT, WLAN_FC_STYPE_ACTION);
+	os_memcpy(hdr->addr1, dst, ETH_ALEN);
+	os_memcpy(hdr->addr2, src, ETH_ALEN);
+	os_memcpy(hdr->addr3, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
+
+	ret = wpa_driver_test_send_mlme(priv, buf, 24 + data_len);
+	os_free(buf);
+	return ret;
+}
+
+
 static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr)
 {
 	struct wpa_driver_test_data *drv = priv;
@@ -2479,6 +2537,64 @@ static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr)
 
 static void wpa_driver_test_release_interface_addr(void *priv, const u8 *addr)
 {
+}
+
+
+static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_driver_test_data *drv = eloop_ctx;
+	union wpa_event_data data;
+
+	wpa_printf(MSG_DEBUG, "test: Remain-on-channel timeout");
+
+	os_memset(&data, 0, sizeof(data));
+	data.remain_on_channel.freq = drv->remain_on_channel_freq;
+	data.remain_on_channel.duration = drv->remain_on_channel_duration;
+	wpa_supplicant_event(drv->ctx, EVENT_CANCEL_REMAIN_ON_CHANNEL, &data);
+
+	drv->remain_on_channel_freq = 0;
+}
+
+
+static int wpa_driver_test_remain_on_channel(void *priv, unsigned int freq,
+					     unsigned int duration)
+{
+	struct wpa_driver_test_data *drv = priv;
+	union wpa_event_data data;
+
+	wpa_printf(MSG_DEBUG, "%s(freq=%u, duration=%u)",
+		   __func__, freq, duration);
+	if (drv->remain_on_channel_freq &&
+	    drv->remain_on_channel_freq != freq) {
+		wpa_printf(MSG_DEBUG, "test: Refuse concurrent "
+			   "remain_on_channel request");
+		return -1;
+	}
+
+	drv->remain_on_channel_freq = freq;
+	drv->remain_on_channel_duration = duration;
+	eloop_cancel_timeout(test_remain_on_channel_timeout, drv, NULL);
+	eloop_register_timeout(duration / 1000, (duration % 1000) * 1000,
+			       test_remain_on_channel_timeout, drv, NULL);
+
+	os_memset(&data, 0, sizeof(data));
+	data.remain_on_channel.freq = freq;
+	data.remain_on_channel.duration = duration;
+	wpa_supplicant_event(drv->ctx, EVENT_REMAIN_ON_CHANNEL, &data);
+
+	return 0;
+}
+
+
+static int wpa_driver_test_cancel_remain_on_channel(void *priv)
+{
+	struct wpa_driver_test_data *drv = priv;
+	wpa_printf(MSG_DEBUG, "%s", __func__);
+	if (!drv->remain_on_channel_freq)
+		return -1;
+	drv->remain_on_channel_freq = 0;
+	eloop_cancel_timeout(test_remain_on_channel_timeout, drv, NULL);
+	return 0;
 }
 
 
@@ -2534,7 +2650,11 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.init2 = wpa_driver_test_init2,
 	.get_interfaces = wpa_driver_test_get_interfaces,
 	.scan2 = wpa_driver_test_scan,
+	.set_freq = wpa_driver_test_set_freq,
+	.send_action = wpa_driver_test_send_action,
 	.alloc_interface_addr = wpa_driver_test_alloc_interface_addr,
 	.release_interface_addr = wpa_driver_test_release_interface_addr,
+	.remain_on_channel = wpa_driver_test_remain_on_channel,
+	.cancel_remain_on_channel = wpa_driver_test_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_test_probe_req_report,
 };

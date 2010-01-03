@@ -256,9 +256,9 @@ static struct hostapd_data * get_hapd_bssid(struct hostapd_iface *iface,
 
 
 static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
-					const struct ieee80211_hdr *hdr,
-					size_t len)
+					const u8 *frame, size_t len)
 {
+	const struct ieee80211_hdr *hdr = (const struct ieee80211_hdr *) frame;
 	u16 fc = le_to_host16(hdr->frame_control);
 	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
 	if (hapd == NULL || hapd == HAPD_BROADCAST)
@@ -378,7 +378,7 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 		}
 		break;
 	case EVENT_RX_FROM_UNKNOWN:
-		hostapd_rx_from_unknown_sta(hapd, data->rx_from_unknown.hdr,
+		hostapd_rx_from_unknown_sta(hapd, data->rx_from_unknown.frame,
 					    data->rx_from_unknown.len);
 		break;
 	case EVENT_RX_MGMT:

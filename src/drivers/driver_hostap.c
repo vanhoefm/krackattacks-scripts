@@ -83,7 +83,7 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 
 	sa = hdr->addr2;
 	os_memset(&event, 0, sizeof(event));
-	event.rx_from_unknown.hdr = hdr;
+	event.rx_from_unknown.frame = buf;
 	event.rx_from_unknown.len = len;
 	wpa_supplicant_event(drv->hapd, EVENT_RX_FROM_UNKNOWN, &event);
 

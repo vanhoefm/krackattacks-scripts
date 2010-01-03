@@ -1947,7 +1947,7 @@ union wpa_event_data {
 	 * struct rx_from_unknown - Data for EVENT_RX_FROM_UNKNOWN events
 	 */
 	struct rx_from_unknown {
-		const struct ieee80211_hdr *hdr;
+		const u8 *frame;
 		size_t len;
 	} rx_from_unknown;
 
@@ -2049,8 +2049,6 @@ void wpa_scan_results_free(struct wpa_scan_results *res);
 void wpa_scan_sort_results(struct wpa_scan_results *res);
 
 /* hostapd functions for driver wrappers */
-
-struct ieee80211_hdr;
 
 int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,

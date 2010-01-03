@@ -2715,11 +2715,11 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 
 
 static void from_unknown_sta(struct wpa_driver_nl80211_data *drv,
-			     struct ieee80211_hdr *hdr, size_t len)
+			     u8 *buf, size_t len)
 {
 	union wpa_event_data event;
 	os_memset(&event, 0, sizeof(event));
-	event.rx_from_unknown.hdr = hdr;
+	event.rx_from_unknown.frame = buf;
 	event.rx_from_unknown.len = len;
 	wpa_supplicant_event(drv->ctx, EVENT_RX_FROM_UNKNOWN, &event);
 }
@@ -2747,10 +2747,10 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 	case WLAN_FC_TYPE_CTRL:
 		/* can only get here with PS-Poll frames */
 		wpa_printf(MSG_DEBUG, "CTRL");
-		from_unknown_sta(drv, hdr, len);
+		from_unknown_sta(drv, buf, len);
 		break;
 	case WLAN_FC_TYPE_DATA:
-		from_unknown_sta(drv, hdr, len);
+		from_unknown_sta(drv, buf, len);
 		break;
 	}
 }

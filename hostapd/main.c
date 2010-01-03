@@ -279,6 +279,8 @@ static void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 {
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;
+	if (iface == NULL)
+		return;
 	driver = iface->bss[0]->driver;
 	drv_priv = iface->bss[0]->drv_priv;
 	hostapd_interface_deinit(iface);

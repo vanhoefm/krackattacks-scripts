@@ -1871,7 +1871,18 @@ enum wpa_event_type {
 	 * in station mode. In AP mode, Probe Request frames should always be
 	 * reported.
 	 */
-	EVENT_RX_PROBE_REQ
+	EVENT_RX_PROBE_REQ,
+
+	/**
+	 * EVENT_NEW_STA - New wired device noticed
+	 *
+	 * This event is used to indicate that a new device has been detected
+	 * in a network that does not use association-like functionality (i.e.,
+	 * mainly wired Ethernet). This can be used to start EAPOL
+	 * authenticator when receiving a frame from a device. The address of
+	 * the device is included in union wpa_event_data::new_sta.
+	 */
+	EVENT_NEW_STA
 };
 
 
@@ -2192,6 +2203,13 @@ union wpa_event_data {
 		 */
 		size_t ie_len;
 	} rx_probe_req;
+
+	/**
+	 * struct new_sta - Data for EVENT_NEW_STA events
+	 */
+	struct new_sta {
+		const u8 *addr;
+	} new_sta;
 };
 
 /**
@@ -2235,7 +2253,6 @@ void wpa_scan_sort_results(struct wpa_scan_results *res);
 
 /* hostapd functions for driver wrappers */
 
-int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);

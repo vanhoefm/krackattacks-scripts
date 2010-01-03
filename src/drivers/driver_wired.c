@@ -118,6 +118,7 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 	struct ieee8023_hdr *hdr;
 	u8 *pos, *sa;
 	size_t left;
+	union wpa_event_data event;
 
 	/* must contain at least ieee8023_hdr 6 byte source, 6 byte dest,
 	 * 2 byte ethertype */
@@ -133,7 +134,9 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 		case ETH_P_PAE:
 			wpa_printf(MSG_MSGDUMP, "Received EAPOL packet");
 			sa = hdr->src;
-			hostapd_notif_new_sta(ctx, sa);
+			os_memset(&event, 0, sizeof(event));
+			event.new_sta.addr = sa;
+			wpa_supplicant_event(ctx, EVENT_NEW_STA, &event);
 
 			pos = (u8 *) (hdr + 1);
 			left = len - sizeof(*hdr);
@@ -167,11 +170,11 @@ static void handle_read(int sock, void *eloop_ctx, void *sock_ctx)
 
 static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 {
-#ifdef HOSTAPD
 	int len;
 	unsigned char buf[3000];
 	struct dhcp_message *msg;
 	u8 *mac_address;
+	union wpa_event_data event;
 
 	len = recv(sock, buf, sizeof(buf), 0);
 	if (len < 0) {
@@ -191,8 +194,9 @@ static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 	wpa_printf(MSG_MSGDUMP, "Got DHCP broadcast packet from " MACSTR,
 		   MAC2STR(mac_address));
 
-	hostapd_notif_new_sta(eloop_ctx, mac_address);
-#endif /* HOSTAPD */
+	os_memset(&event, 0, sizeof(event));
+	event.new_sta.addr = mac_address;
+	wpa_supplicant_event(eloop_ctx, EVENT_NEW_STA, &event);
 }
 
 

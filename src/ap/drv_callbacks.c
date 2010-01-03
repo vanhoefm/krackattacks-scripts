@@ -31,7 +31,7 @@
 #include "ap_config.h"
 
 
-int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)
+static int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)
 {
 	struct sta_info *sta = ap_get_sta(hapd, addr);
 	if (sta)
@@ -395,6 +395,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				     data->rx_probe_req.ie,
 				     data->rx_probe_req.ie_len);
 		break;
+	case EVENT_NEW_STA:
+		hostapd_notif_new_sta(hapd, data->new_sta.addr);
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

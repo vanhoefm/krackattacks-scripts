@@ -109,25 +109,6 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 static void wpa_driver_test_close_test_socket(
 	struct wpa_driver_test_data *drv);
 
-#ifdef CONFIG_AP
-void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
-		struct hostapd_frame_info *fi);
-void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype, int ok);
-
-#else /* CONFIG_AP */
-#ifndef HOSTAPD
-static inline void ap_mgmt_rx(void *ctx, u8 *buf, size_t len, u16 stype,
-			      struct hostapd_frame_info *fi)
-{
-}
-
-static inline void ap_mgmt_tx_cb(void *ctx, u8 *buf, size_t len, u16 stype,
-				 int ok)
-{
-}
-#endif /* HOSTAPD */
-#endif /* CONFIG_AP */
-
 
 static void test_driver_free_bss(struct test_driver_bss *bss)
 {

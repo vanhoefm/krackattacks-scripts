@@ -266,7 +266,6 @@ nla_put_failure:
 }
 
 
-#ifdef HOSTAPD
 static int get_ifhwaddr(struct wpa_driver_nl80211_data *drv,
 			const char *ifname, u8 *addr)
 {
@@ -309,7 +308,6 @@ static int set_ifhwaddr(struct wpa_driver_nl80211_data *drv,
 
 	return 0;
 }
-#endif /* HOSTAPD */
 
 
 static int wpa_driver_nl80211_get_bssid(void *priv, u8 *bssid)
@@ -2661,13 +2659,13 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 #ifdef HOSTAPD
 	/* start listening for EAPOL on this interface */
 	add_ifidx(drv, ifidx);
+#endif /* HOSTAPD */
 
-	if (addr && iftype == NL80211_IFTYPE_AP &&
+	if (addr && iftype != NL80211_IFTYPE_MONITOR &&
 	    set_ifhwaddr(drv, ifname, addr)) {
 		nl80211_remove_iface(drv, ifidx);
 		return -1;
 	}
-#endif /* HOSTAPD */
 
 	return ifidx;
 }
@@ -4473,6 +4471,30 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 }
 
 
+static int wpa_driver_nl80211_alloc_interface_addr(void *priv, u8 *addr)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+
+	if (get_ifhwaddr(drv, drv->ifname, addr) < 0)
+		return -1;
+
+	if (addr[0] & 0x02) {
+		/* TODO: add support for generating multiple addresses */
+		addr[0] ^= 0x80;
+	} else
+		addr[0] = 0x02; /* locally administered */
+
+	return 0;
+}
+
+
+static void wpa_driver_nl80211_release_interface_addr(void *priv,
+						      const u8 *addr)
+{
+	/* TODO: keep list of allocated address and release them here */
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -4522,4 +4544,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_wds_sta = i802_set_wds_sta,
 #endif /* HOSTAPD */
 	.probe_req_report = wpa_driver_nl80211_probe_req_report,
+	.alloc_interface_addr = wpa_driver_nl80211_alloc_interface_addr,
+	.release_interface_addr = wpa_driver_nl80211_release_interface_addr,
 };

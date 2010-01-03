@@ -101,6 +101,8 @@ struct wpa_driver_test_data {
 	struct test_driver_bss *bss;
 	int udp_port;
 
+	int alloc_iface_idx;
+
 	int probe_req_report;
 };
 
@@ -2462,6 +2464,24 @@ fail:
 }
 
 
+static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr)
+{
+	struct wpa_driver_test_data *drv = priv;
+	drv->alloc_iface_idx++;
+	addr[0] = 0x02; /* locally administered */
+	sha1_prf(drv->own_addr, ETH_ALEN, "hostapd test addr generation",
+		 (const u8 *) &drv->alloc_iface_idx,
+		 sizeof(drv->alloc_iface_idx),
+		 addr + 1, ETH_ALEN - 1);
+	return 0;
+}
+
+
+static void wpa_driver_test_release_interface_addr(void *priv, const u8 *addr)
+{
+}
+
+
 static int wpa_driver_test_probe_req_report(void *priv, int report)
 {
 	struct wpa_driver_test_data *drv = priv;
@@ -2514,5 +2534,7 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.init2 = wpa_driver_test_init2,
 	.get_interfaces = wpa_driver_test_get_interfaces,
 	.scan2 = wpa_driver_test_scan,
+	.alloc_interface_addr = wpa_driver_test_alloc_interface_addr,
+	.release_interface_addr = wpa_driver_test_release_interface_addr,
 	.probe_req_report = wpa_driver_test_probe_req_report,
 };

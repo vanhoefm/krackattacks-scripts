@@ -383,6 +383,22 @@ static inline int wpa_drv_set_supp_port(struct wpa_supplicant *wpa_s,
 	return 0;
 }
 
+static inline int wpa_drv_alloc_interface_addr(struct wpa_supplicant *wpa_s,
+					       u8 *addr)
+{
+	if (wpa_s->driver->alloc_interface_addr)
+		return wpa_s->driver->alloc_interface_addr(wpa_s->drv_priv,
+							   addr);
+	return -1;
+}
+
+static inline void wpa_drv_release_interface_addr(struct wpa_supplicant *wpa_s,
+						  const u8 *addr)
+{
+	if (wpa_s->driver->release_interface_addr)
+		wpa_s->driver->release_interface_addr(wpa_s->drv_priv, addr);
+}
+
 static inline int wpa_drv_probe_req_report(struct wpa_supplicant *wpa_s,
 					   int report)
 {

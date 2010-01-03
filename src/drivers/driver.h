@@ -1520,6 +1520,36 @@ struct wpa_driver_ops {
 	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val);
 
 	/**
+	 * alloc_interface_addr - Allocate a virtual interface address
+	 * @priv: Private driver interface data
+	 * @addr: Buffer for returning the address
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This command pre-allocates an interface address for a new virtual
+	 * interface. This can be used before creating a virtual interface if
+	 * the interface mode (e.g., AP vs. station) is not yet known, but the
+	 * address of the virtual interface is already needed. This helps with
+	 * drivers that cannot change interface mode without destroying and
+	 * re-creating the interface.
+	 *
+	 * The allocated address can be used in a bss_add() call to request a
+	 * specific bssid.
+	 */
+	int (*alloc_interface_addr)(void *priv, u8 *addr);
+
+	/**
+	 * release_interface_addr - Release a virtual interface address
+	 * @priv: Private driver interface data
+	 * @addr: Address to be freed from alloc_interface_addr()
+	 *
+	 * This command is used to release a virtual interface address that was
+	 * allocated with alloc_interface_addr(), but has not yet been used
+	 * with bss_add() to actually create the interface. This allows the
+	 * driver to release the pending allocation for a new interface.
+	 */
+	void (*release_interface_addr)(void *priv, const u8 *addr);
+
+	/**
 	 * probe_req_report - Request Probe Request frames to be indicated
 	 * @priv: Private driver interface data
 	 * @report: Whether to report received Probe Request frames

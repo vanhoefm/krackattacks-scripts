@@ -15,13 +15,14 @@
 #ifndef WPS_SUPPLICANT_H
 #define WPS_SUPPLICANT_H
 
+struct wpa_scan_res;
+
 #ifdef CONFIG_WPS
 
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 
 struct wpa_bss;
-struct wpa_scan_res;
 
 struct wps_new_ap_settings {
 	const char *ssid_hex;
@@ -96,7 +97,7 @@ static inline int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
-					    struct wpa_scan_res *selected,
+					    struct wpa_bss *selected,
 					    struct wpa_ssid *ssid)
 {
 	return 0;

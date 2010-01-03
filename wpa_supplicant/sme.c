@@ -35,7 +35,9 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_driver_auth_params params;
 	struct wpa_ssid *old_ssid;
+#ifdef CONFIG_IEEE80211R
 	const u8 *ie;
+#endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_IEEE80211R
 	const u8 *md = NULL;
 #endif /* CONFIG_IEEE80211R */

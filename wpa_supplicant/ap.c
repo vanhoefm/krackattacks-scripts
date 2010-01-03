@@ -249,11 +249,12 @@ void ap_tx_status(void *ctx, const u8 *addr,
 }
 
 
-void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
-			    size_t len)
+void ap_rx_from_unknown_sta(void *ctx, const u8 *frame, size_t len)
 {
 #ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
+	const struct ieee80211_hdr *hdr =
+		(const struct ieee80211_hdr *) frame;
 	u16 fc = le_to_host16(hdr->frame_control);
 	ieee802_11_rx_from_unknown(wpa_s->ap_iface->bss[0], hdr->addr2,
 				   (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==

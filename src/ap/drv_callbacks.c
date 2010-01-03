@@ -31,27 +31,6 @@
 #include "ap_config.h"
 
 
-static int hostapd_notif_new_sta(struct hostapd_data *hapd, const u8 *addr)
-{
-	struct sta_info *sta = ap_get_sta(hapd, addr);
-	if (sta)
-		return 0;
-
-	wpa_printf(MSG_DEBUG, "Data frame from unknown STA " MACSTR
-		   " - adding a new STA", MAC2STR(addr));
-	sta = ap_sta_add(hapd, addr);
-	if (sta) {
-		hostapd_new_assoc_sta(hapd, sta, 0);
-	} else {
-		wpa_printf(MSG_DEBUG, "Failed to add STA entry for " MACSTR,
-			   MAC2STR(addr));
-		return -1;
-	}
-
-	return 0;
-}
-
-
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen)
 {
@@ -163,29 +142,6 @@ void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr)
 	sta->acct_terminate_cause = RADIUS_ACCT_TERMINATE_CAUSE_USER_REQUEST;
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
 	ap_free_sta(hapd, sta);
-}
-
-
-void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
-			   const u8 *buf, size_t len)
-{
-	ieee802_1x_receive(hapd, sa, buf, len);
-}
-
-
-struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
-					  const u8 *addr)
-{
-	struct hostapd_iface *iface = hapd->iface;
-	size_t j;
-
-	for (j = 0; j < iface->num_bss; j++) {
-		hapd = iface->bss[j];
-		if (ap_get_sta(hapd, addr))
-			return hapd;
-	}
-
-	return NULL;
 }
 
 
@@ -343,6 +299,44 @@ static int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 }
 
 
+static int hostapd_event_new_sta(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	if (sta)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "Data frame from unknown STA " MACSTR
+		   " - adding a new STA", MAC2STR(addr));
+	sta = ap_sta_add(hapd, addr);
+	if (sta) {
+		hostapd_new_assoc_sta(hapd, sta, 0);
+	} else {
+		wpa_printf(MSG_DEBUG, "Failed to add STA entry for " MACSTR,
+			   MAC2STR(addr));
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static void hostapd_event_eapol_rx(struct hostapd_data *hapd, const u8 *src,
+				   const u8 *data, size_t data_len)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		if (ap_get_sta(iface->bss[j], src)) {
+			hapd = iface->bss[j];
+			break;
+		}
+	}
+
+	ieee802_1x_receive(hapd, src, data, data_len);
+}
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -396,7 +390,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				     data->rx_probe_req.ie_len);
 		break;
 	case EVENT_NEW_STA:
-		hostapd_notif_new_sta(hapd, data->new_sta.addr);
+		hostapd_event_new_sta(hapd, data->new_sta.addr);
+		break;
+	case EVENT_EAPOL_RX:
+		hostapd_event_eapol_rx(hapd, data->eapol_rx.src,
+				       data->eapol_rx.data,
+				       data->eapol_rx.data_len);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

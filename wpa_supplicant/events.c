@@ -1515,7 +1515,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 	}
 #endif /* CONFIG_CLIENT_MLME */
-
+	case EVENT_EAPOL_RX:
+		wpa_supplicant_rx_eapol(wpa_s, data->eapol_rx.src,
+					data->eapol_rx.data,
+					data->eapol_rx.data_len);
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

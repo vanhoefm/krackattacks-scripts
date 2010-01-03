@@ -4234,11 +4234,12 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 
 	if (have_ifidx(drv, lladdr.sll_ifindex)) {
-		void *ctx;
-		ctx = hostapd_sta_get_bss(drv->ctx, lladdr.sll_addr);
-		if (!ctx)
-			return;
-		hostapd_eapol_receive(ctx, lladdr.sll_addr, buf, len);
+		union wpa_event_data event;
+		os_memset(&event, 0, sizeof(event));
+		event.eapol_rx.src = lladdr.sll_addr;
+		event.eapol_rx.data = buf;
+		event.eapol_rx.data_len = len;
+		wpa_supplicant_event(drv->ctx, EVENT_EAPOL_RX, &event);
 	}
 }
 

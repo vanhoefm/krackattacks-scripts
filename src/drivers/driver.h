@@ -795,9 +795,9 @@ struct wpa_driver_ops {
 	 * with driver specific functionality. If this function pointer is set,
 	 * l2_packet module is not used at all and the driver interface code is
 	 * responsible for receiving and sending all EAPOL packets. The
-	 * received EAPOL packets are sent to core code by calling
-	 * wpa_supplicant_rx_eapol(). The driver interface is required to
-	 * implement get_mac_addr() handler if send_eapol() is used.
+	 * received EAPOL packets are sent to core code with EVENT_EAPOL_RX
+	 * event. The driver interface is required to implement get_mac_addr()
+	 * handler if send_eapol() is used.
 	 */
 	int (*send_eapol)(void *priv, const u8 *dest, u16 proto,
 			  const u8 *data, size_t data_len);
@@ -1882,7 +1882,17 @@ enum wpa_event_type {
 	 * authenticator when receiving a frame from a device. The address of
 	 * the device is included in union wpa_event_data::new_sta.
 	 */
-	EVENT_NEW_STA
+	EVENT_NEW_STA,
+
+	/**
+	 * EVENT_EAPOL_RX - Report received EAPOL frame
+	 *
+	 * When in AP mode with hostapd, this event is required to be used to
+	 * deliver the receive EAPOL frames from the driver. With
+	 * %wpa_supplicant, this event is used only if the send_eapol() handler
+	 * is used to override the use of l2_packet for EAPOL frame TX.
+	 */
+	EVENT_EAPOL_RX
 };
 
 
@@ -2210,6 +2220,15 @@ union wpa_event_data {
 	struct new_sta {
 		const u8 *addr;
 	} new_sta;
+
+	/**
+	 * struct eapol_rx - Data for EVENT_EAPOL_RX events
+	 */
+	struct eapol_rx {
+		const u8 *src;
+		const u8 *data;
+		size_t data_len;
+	} eapol_rx;
 };
 
 /**
@@ -2225,23 +2244,6 @@ union wpa_event_data {
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data);
 
-/**
- * wpa_supplicant_rx_eapol - Deliver a received EAPOL frame to wpa_supplicant
- * @ctx: Context pointer (wpa_s); this is the ctx variable registered
- *	with struct wpa_driver_ops::init()
- * @src_addr: Source address of the EAPOL frame
- * @buf: EAPOL data starting from the EAPOL header (i.e., no Ethernet header)
- * @len: Length of the EAPOL data
- *
- * This function is called for each received EAPOL frame. Most driver
- * interfaces rely on more generic OS mechanism for receiving frames through
- * l2_packet, but if such a mechanism is not available, the driver wrapper may
- * take care of received EAPOL frames and deliver them to the core supplicant
- * code by calling this function.
- */
-void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
-			     const u8 *buf, size_t len);
-
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie);
 const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,
 				  u32 vendor_type);
@@ -2256,10 +2258,5 @@ void wpa_scan_sort_results(struct wpa_scan_results *res);
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
-void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
-			   const u8 *buf, size_t len);
-
-struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
-					  const u8 *addr);
 
 #endif /* DRIVER_H */

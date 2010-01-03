@@ -1143,9 +1143,12 @@ static void
 handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 {
 	struct madwifi_driver_data *drv = ctx;
-	hostapd_eapol_receive(drv->hapd, src_addr,
-			      buf + sizeof(struct l2_ethhdr),
-			      len - sizeof(struct l2_ethhdr));
+	union wpa_event_data event;
+	os_memset(&event, 0, sizeof(event));
+	event.eapol_rx.src = src_addr;
+	event.eapol_rx.data = buf + sizeof(struct l2_ethhdr);
+	event.eapol_rx.data_len = len - sizeof(struct l2_ethhdr);
+	wpa_supplicant_event(drv->hapd, EVENT_EAPOL_RX, &event);
 }
 
 static void *

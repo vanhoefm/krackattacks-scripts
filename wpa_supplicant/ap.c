@@ -22,6 +22,7 @@
 #ifdef NEED_AP_MLME
 #include "ap/ieee802_11.h"
 #endif /* NEED_AP_MLME */
+#include "ap/ieee802_1x.h"
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
 #include "eap_common/eap_defs.h"
@@ -289,7 +290,7 @@ void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok)
 void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,
 				const u8 *src_addr, const u8 *buf, size_t len)
 {
-	hostapd_eapol_receive(wpa_s->ap_iface->bss[0], src_addr, buf, len);
+	ieee802_1x_receive(wpa_s->ap_iface->bss[0], src_addr, buf, len);
 }
 
 

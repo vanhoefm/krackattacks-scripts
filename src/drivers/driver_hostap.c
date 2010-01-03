@@ -112,7 +112,11 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 	left -= 2;
 	switch (ethertype) {
 	case ETH_P_PAE:
-		hostapd_eapol_receive(drv->hapd, sa, pos, left);
+		os_memset(&event, 0, sizeof(event));
+		event.eapol_rx.src = sa;
+		event.eapol_rx.data = pos;
+		event.eapol_rx.data_len = left;
+		wpa_supplicant_event(drv->hapd, EVENT_EAPOL_RX, &event);
 		break;
 
 	default:

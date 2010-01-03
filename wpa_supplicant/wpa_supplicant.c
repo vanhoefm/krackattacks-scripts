@@ -1722,6 +1722,20 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 }
 
 
+/**
+ * wpa_supplicant_rx_eapol - Deliver a received EAPOL frame to wpa_supplicant
+ * @ctx: Context pointer (wpa_s); this is the ctx variable registered
+ *	with struct wpa_driver_ops::init()
+ * @src_addr: Source address of the EAPOL frame
+ * @buf: EAPOL data starting from the EAPOL header (i.e., no Ethernet header)
+ * @len: Length of the EAPOL data
+ *
+ * This function is called for each received EAPOL frame. Most driver
+ * interfaces rely on more generic OS mechanism for receiving frames through
+ * l2_packet, but if such a mechanism is not available, the driver wrapper may
+ * take care of received EAPOL frames and deliver them to the core supplicant
+ * code by calling this function.
+ */
 void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 			     const u8 *buf, size_t len)
 {

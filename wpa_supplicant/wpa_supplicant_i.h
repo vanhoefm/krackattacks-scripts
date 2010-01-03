@@ -487,6 +487,8 @@ void wpa_supplicant_deinit(struct wpa_global *global);
 int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid);
 void wpa_supplicant_terminate_proc(struct wpa_global *global);
+void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
+			     const u8 *buf, size_t len);
 
 /* scan.c */
 int wpa_supplicant_enabled_networks(struct wpa_config *conf);

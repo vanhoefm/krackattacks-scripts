@@ -162,6 +162,14 @@ static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 }
 
 
+static int wpa_bss_in_use(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	return bss == wpa_s->current_bss ||
+		os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) == 0 ||
+		os_memcmp(bss->bssid, wpa_s->pending_bssid, ETH_ALEN) == 0;
+}
+
+
 void wpa_bss_update_start(struct wpa_supplicant *wpa_s)
 {
 	wpa_s->bss_update_idx++;
@@ -248,6 +256,8 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 		return; /* do not expire entries without new scan */
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
+		if (wpa_bss_in_use(wpa_s, bss))
+			continue;
 		if (!wpa_bss_included_in_scan(bss, info))
 			continue; /* expire only BSSes that were scanned */
 		if (bss->last_update_idx < wpa_s->bss_update_idx)
@@ -274,10 +284,8 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 	t.sec -= WPA_BSS_EXPIRATION_AGE;
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
-		if (bss == wpa_s->current_bss ||
-		    os_memcmp(bss->bssid, wpa_s->bssid, ETH_ALEN) == 0 ||
-		    os_memcmp(bss->bssid, wpa_s->pending_bssid, ETH_ALEN) == 0)
-			continue; /* do not expire BSSes that are in use */
+		if (wpa_bss_in_use(wpa_s, bss))
+			continue;
 
 		if (os_time_before(&bss->last_update, &t)) {
 			wpa_printf(MSG_DEBUG, "BSS: Expire BSS %u due to age",

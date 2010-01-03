@@ -622,10 +622,7 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 	sendto(drv->test_socket, cmd, strlen(cmd), 0,
 	       (struct sockaddr *) from, fromlen);
 
-#ifdef HOSTAPD
-	if (hostapd_notif_assoc(bss->bss_ctx, cli->addr, ie, ielen) < 0)
-		wpa_printf(MSG_DEBUG, "test_driver: failed to add new STA");
-#endif /* HOSTAPD */
+	drv_event_assoc(bss->bss_ctx, cli->addr, ie, ielen);
 }
 
 
@@ -638,9 +635,7 @@ static void test_driver_disassoc(struct wpa_driver_test_data *drv,
 	if (!cli)
 		return;
 
-#ifdef HOSTAPD
-	hostapd_notif_disassoc(drv->ctx, cli->addr);
-#endif /* HOSTAPD */
+	drv_event_disassoc(drv->ctx, cli->addr);
 }
 
 

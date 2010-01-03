@@ -260,4 +260,9 @@ int hostapd_register_probereq_cb(struct hostapd_data *hapd,
 				 void *ctx);
 void hostapd_prune_associations(struct hostapd_data *hapd, const u8 *addr);
 
+/* drv_callbacks.c (TODO: move to somewhere else?) */
+int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
+			const u8 *ie, size_t ielen);
+void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
+
 #endif /* HOSTAPD_H */

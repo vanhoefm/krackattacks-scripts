@@ -397,6 +397,19 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				       data->eapol_rx.data,
 				       data->eapol_rx.data_len);
 		break;
+	case EVENT_ASSOC:
+		hostapd_notif_assoc(hapd, data->assoc_info.addr,
+				    data->assoc_info.req_ies,
+				    data->assoc_info.req_ies_len);
+		break;
+	case EVENT_DISASSOC:
+		if (data)
+			hostapd_notif_disassoc(hapd, data->disassoc_info.addr);
+		break;
+	case EVENT_DEAUTH:
+		if (data)
+			hostapd_notif_disassoc(hapd, data->deauth_info.addr);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

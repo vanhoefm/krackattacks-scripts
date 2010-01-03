@@ -246,6 +246,7 @@ wpa_driver_wext_event_wireless_custom(void *ctx, char *custom)
 	} else if (os_strncmp(custom, "ASSOCINFO(ReqIEs=", 17) == 0) {
 		char *spos;
 		int bytes;
+		u8 *req_ies = NULL, *resp_ies = NULL;
 
 		spos = custom + 17;
 
@@ -254,12 +255,12 @@ wpa_driver_wext_event_wireless_custom(void *ctx, char *custom)
 			return;
 		bytes /= 2;
 
-		data.assoc_info.req_ies = os_malloc(bytes);
-		if (data.assoc_info.req_ies == NULL)
+		req_ies = os_malloc(bytes);
+		if (req_ies == NULL)
 			return;
-
+		hexstr2bin(spos, req_ies, bytes);
+		data.assoc_info.req_ies = req_ies;
 		data.assoc_info.req_ies_len = bytes;
-		hexstr2bin(spos, data.assoc_info.req_ies, bytes);
 
 		spos += bytes * 2;
 
@@ -274,19 +275,19 @@ wpa_driver_wext_event_wireless_custom(void *ctx, char *custom)
 				goto done;
 			bytes /= 2;
 
-			data.assoc_info.resp_ies = os_malloc(bytes);
-			if (data.assoc_info.resp_ies == NULL)
+			resp_ies = os_malloc(bytes);
+			if (resp_ies == NULL)
 				goto done;
-
+			hexstr2bin(spos, resp_ies, bytes);
+			data.assoc_info.resp_ies = resp_ies;
 			data.assoc_info.resp_ies_len = bytes;
-			hexstr2bin(spos, data.assoc_info.resp_ies, bytes);
 		}
 
 		wpa_supplicant_event(ctx, EVENT_ASSOCINFO, &data);
 
 	done:
-		os_free(data.assoc_info.resp_ies);
-		os_free(data.assoc_info.req_ies);
+		os_free(resp_ies);
+		os_free(req_ies);
 #ifdef CONFIG_PEERKEY
 	} else if (os_strncmp(custom, "STKSTART.request=", 17) == 0) {
 		if (hwaddr_aton(custom + 17, data.stkstart.peer)) {
@@ -402,19 +403,19 @@ static void wpa_driver_wext_event_assoc_ies(struct wpa_driver_wext_data *drv)
 	os_memset(&data, 0, sizeof(data));
 	if (drv->assoc_req_ies) {
 		data.assoc_info.req_ies = drv->assoc_req_ies;
-		drv->assoc_req_ies = NULL;
 		data.assoc_info.req_ies_len = drv->assoc_req_ies_len;
 	}
 	if (drv->assoc_resp_ies) {
 		data.assoc_info.resp_ies = drv->assoc_resp_ies;
-		drv->assoc_resp_ies = NULL;
 		data.assoc_info.resp_ies_len = drv->assoc_resp_ies_len;
 	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOCINFO, &data);
 
-	os_free(data.assoc_info.req_ies);
-	os_free(data.assoc_info.resp_ies);
+	os_free(drv->assoc_req_ies);
+	drv->assoc_req_ies = NULL;
+	os_free(drv->assoc_resp_ies);
+	drv->assoc_resp_ies = NULL;
 }
 
 

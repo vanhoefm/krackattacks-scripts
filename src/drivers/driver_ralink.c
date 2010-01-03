@@ -452,6 +452,7 @@ wpa_driver_ralink_event_wireless_custom(struct wpa_driver_ralink_data *drv,
 					void *ctx, char *custom)
 {
 	union wpa_event_data data;
+	u8 *req_ies = NULL, *resp_ies = NULL;
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
@@ -480,12 +481,12 @@ wpa_driver_ralink_event_wireless_custom(struct wpa_driver_ralink_data *drv,
 		 */
 		bytes = drv->assoc_req_ies_len;
 
-		data.assoc_info.req_ies = os_malloc(bytes);
-		if (data.assoc_info.req_ies == NULL)
+		req_ies = os_malloc(bytes);
+		if (req_ies == NULL)
 			return;
-
+		os_memcpy(req_ies, spos, bytes);
+		data.assoc_info.req_ies = req_ies;
 		data.assoc_info.req_ies_len = bytes;
-		os_memcpy(data.assoc_info.req_ies, spos, bytes);
 
 		/* skip the '\0' byte */
 		spos += bytes + 1;
@@ -501,21 +502,20 @@ wpa_driver_ralink_event_wireless_custom(struct wpa_driver_ralink_data *drv,
 			if (!bytes)
 				goto done;
 
-
-			data.assoc_info.resp_ies = os_malloc(bytes);
-			if (data.assoc_info.resp_ies == NULL)
+			resp_ies = os_malloc(bytes);
+			if (resp_ies == NULL)
 				goto done;
-
+			os_memcpy(resp_ies, spos, bytes);
+			data.assoc_info.resp_ies = resp_ies;
 			data.assoc_info.resp_ies_len = bytes;
-			os_memcpy(data.assoc_info.resp_ies, spos, bytes);
 		}
 
 		wpa_supplicant_event(ctx, EVENT_ASSOCINFO, &data);
 
-		/* free allocated memory */
 	done:
-		os_free(data.assoc_info.resp_ies);
-		os_free(data.assoc_info.req_ies);
+		/* free allocated memory */
+		os_free(resp_ies);
+		os_free(req_ies);
 	}
 }
 

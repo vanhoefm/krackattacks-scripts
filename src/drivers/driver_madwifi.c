@@ -835,12 +835,12 @@ madwifi_set_ap_wps_ie(const char *ifname, void *priv,
 #define madwifi_set_ap_wps_ie NULL
 #endif /* CONFIG_WPS */
 
-static int
+static void
 madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
 	struct hostapd_data *hapd = drv->hapd;
 	struct ieee80211req_wpaie ie;
-	int ielen = 0, res;
+	int ielen = 0;
 	u8 *iebuf = NULL;
 
 	/*
@@ -879,15 +879,13 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 		ielen += 2;
 
 no_ie:
-	res = hostapd_notif_assoc(hapd, addr, iebuf, ielen);
+	drv_event_assoc(hapd, addr, iebuf, ielen);
 
 	if (memcmp(addr, drv->acct_mac, ETH_ALEN) == 0) {
 		/* Cached accounting data is not valid anymore. */
 		memset(drv->acct_mac, 0, ETH_ALEN);
 		memset(&drv->acct_data, 0, sizeof(drv->acct_data));
 	}
-
-	return res;
 }
 
 static void
@@ -980,8 +978,8 @@ madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
 
 		switch (iwe->cmd) {
 		case IWEVEXPIRED:
-			hostapd_notif_disassoc(drv->hapd,
-					       (u8 *) iwe->u.addr.sa_data);
+			drv_event_disassoc(drv->hapd,
+					   (u8 *) iwe->u.addr.sa_data);
 			break;
 		case IWEVREGISTERED:
 			madwifi_new_sta(drv, (u8 *) iwe->u.addr.sa_data);

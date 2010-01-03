@@ -233,7 +233,8 @@ static void wpa_driver_broadcom_event_receive(int sock, void *ctx,
 	int left;
 	wl_wpa_header_t *wwh;
 	union wpa_event_data data;
-	
+	u8 *resp_ies = NULL;
+
 	if ((left = recv(sock, buf, sizeof buf, 0)) < 0)
 		return;
 
@@ -257,21 +258,16 @@ static void wpa_driver_broadcom_event_receive(int sock, void *ctx,
 		wpa_printf(MSG_DEBUG, "BROADCOM: ASSOC MESSAGE (left: %d)",
 			   left);
 		if (left > 0) {
-			data.assoc_info.resp_ies = os_malloc(left);
-			if (data.assoc_info.resp_ies == NULL)
+			resp_ies = os_malloc(left);
+			if (resp_ies == NULL)
 				return;
-			os_memcpy(data.assoc_info.resp_ies,
-				  buf + WL_WPA_HEADER_LEN, left);
+			os_memcpy(resp_ies, buf + WL_WPA_HEADER_LEN, left);
+			data.assoc_info.resp_ies = resp_ies;
 			data.assoc_info.resp_ies_len = left;
-			wpa_hexdump(MSG_MSGDUMP, "BROADCOM: copying %d bytes "
-				    "into resp_ies",
-				    data.assoc_info.resp_ies, left);
 		}
-		/* data.assoc_info.req_ies = NULL; */
-		/* data.assoc_info.req_ies_len = 0; */
 
-		wpa_supplicant_event(ctx, EVENT_ASSOCINFO, &data);
-		wpa_supplicant_event(ctx, EVENT_ASSOC, NULL);
+		wpa_supplicant_event(ctx, EVENT_ASSOC, &data);
+		os_free(resp_ies);
 		break;
 	case WLC_DISASSOC_MSG:
 		wpa_printf(MSG_DEBUG, "BROADCOM: DISASSOC MESSAGE");
@@ -292,7 +288,6 @@ static void wpa_driver_broadcom_event_receive(int sock, void *ctx,
 			   wwh->type);
 		break;
 	}
-	os_free(data.assoc_info.resp_ies);
 }	
 
 static void * wpa_driver_broadcom_init(void *ctx, const char *ifname)

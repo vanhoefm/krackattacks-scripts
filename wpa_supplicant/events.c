@@ -27,6 +27,7 @@
 #include "rsn_supp/pmksa_cache.h"
 #include "common/wpa_ctrl.h"
 #include "eap_peer/eap.h"
+#include "ap/hostapd.h"
 #include "notify.h"
 #include "common/ieee802_11_defs.h"
 #include "blacklist.h"
@@ -1009,10 +1010,21 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 				       union wpa_event_data *data)
 {
 	u8 bssid[ETH_ALEN];
-	int ft_completed = wpa_ft_is_completed(wpa_s->wpa);
+	int ft_completed;
 	int bssid_changed;
 	struct wpa_driver_capa capa;
 
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		hostapd_notif_assoc(wpa_s->ap_iface->bss[0],
+				    data->assoc_info.addr,
+				    data->assoc_info.req_ies,
+				    data->assoc_info.req_ies_len);
+		return;
+	}
+#endif /* CONFIG_AP */
+
+	ft_completed = wpa_ft_is_completed(wpa_s->wpa);
 	if (data)
 		wpa_supplicant_event_associnfo(wpa_s, data);
 
@@ -1425,10 +1437,24 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_assoc(wpa_s, data);
 		break;
 	case EVENT_DISASSOC:
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface && data) {
+			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
+					       data->disassoc_info.addr);
+			break;
+		}
+#endif /* CONFIG_AP */
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_disassoc(wpa_s, data);
 		/* fall through */
 	case EVENT_DEAUTH:
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface && data) {
+			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
+					       data->deauth_info.addr);
+			break;
+		}
+#endif /* CONFIG_AP */
 		wpa_supplicant_event_disassoc(wpa_s);
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:

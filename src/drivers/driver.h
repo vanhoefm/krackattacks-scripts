@@ -1651,6 +1651,7 @@ enum wpa_event_type {
 	 * sending either of these frames to the current AP. If the driver
 	 * supports separate deauthentication event, EVENT_DISASSOC should only
 	 * be used for disassociation and EVENT_DEAUTH for deauthentication.
+	 * In AP mode, union wpa_event_data::disassoc_info is required.
 	 */
 	EVENT_DISASSOC,
 
@@ -1778,6 +1779,7 @@ enum wpa_event_type {
 	 * This event should be called when authentication is lost either due
 	 * to receiving deauthenticate frame from the AP or when sending that
 	 * frame to the current AP.
+	 * In AP mode, union wpa_event_data::deauth_info is required.
 	 */
 	EVENT_DEAUTH,
 
@@ -1920,7 +1922,7 @@ union wpa_event_data {
 		 * This should start with the first IE (fixed fields before IEs
 		 * are not included).
 		 */
-		u8 *req_ies;
+		const u8 *req_ies;
 
 		/**
 		 * req_ies_len - Length of req_ies in bytes
@@ -1938,7 +1940,7 @@ union wpa_event_data {
 		 * This should start with the first IE (fixed fields before IEs
 		 * are not included).
 		 */
-		u8 *resp_ies;
+		const u8 *resp_ies;
 
 		/**
 		 * resp_ies_len - Length of resp_ies in bytes
@@ -1961,7 +1963,7 @@ union wpa_event_data {
 		 * This should start with the first IE (fixed fields before IEs
 		 * are not included).
 		 */
-		u8 *beacon_ies;
+		const u8 *beacon_ies;
 
 		/**
 		 * beacon_ies_len - Length of beacon_ies */
@@ -1971,7 +1973,32 @@ union wpa_event_data {
 		 * freq - Frequency of the operational channel in MHz
 		 */
 		unsigned int freq;
+
+		/**
+		 * addr - Station address (for AP mode)
+		 */
+		const u8 *addr;
 	} assoc_info;
+
+	/**
+	 * struct disassoc_info - Data for EVENT_DISASSOC events
+	 */
+	struct disassoc_info {
+		/**
+		 * addr - Station address (for AP mode)
+		 */
+		const u8 *addr;
+	} disassoc_info;
+
+	/**
+	 * struct deauth_info - Data for EVENT_DEAUTH events
+	 */
+	struct deauth_info {
+		/**
+		 * addr - Station address (for AP mode)
+		 */
+		const u8 *addr;
+	} deauth_info;
 
 	/**
 	 * struct michael_mic_failure - Data for EVENT_MICHAEL_MIC_FAILURE
@@ -2253,10 +2280,29 @@ int wpa_scan_get_max_rate(const struct wpa_scan_res *res);
 void wpa_scan_results_free(struct wpa_scan_results *res);
 void wpa_scan_sort_results(struct wpa_scan_results *res);
 
-/* hostapd functions for driver wrappers */
 
-int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
-			const u8 *ie, size_t ielen);
-void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
+/*
+ * The following inline functions are provided for convenience to simplify
+ * event indication for some of the common events.
+ */
+
+static inline void drv_event_assoc(void *ctx, const u8 *addr, const u8 *ie,
+				   size_t ielen)
+{
+	union wpa_event_data event;
+	os_memset(&event, 0, sizeof(event));
+	event.assoc_info.req_ies = ie;
+	event.assoc_info.req_ies_len = ielen;
+	event.assoc_info.addr = addr;
+	wpa_supplicant_event(ctx, EVENT_ASSOC, &event);
+}
+
+static inline void drv_event_disassoc(void *ctx, const u8 *addr)
+{
+	union wpa_event_data event;
+	os_memset(&event, 0, sizeof(event));
+	event.disassoc_info.addr = addr;
+	wpa_supplicant_event(ctx, EVENT_DISASSOC, &event);
+}
 
 #endif /* DRIVER_H */

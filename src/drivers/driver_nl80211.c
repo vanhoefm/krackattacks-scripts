@@ -4257,7 +4257,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		goto failed;
 
 	if (params->bssid) {
-		if (linux_set_ifhwaddr(drv->ioctl-sock, drv->ifname,
+		if (linux_set_ifhwaddr(drv->ioctl_sock, drv->ifname,
 				       params->bssid))
 			goto failed;
 	}

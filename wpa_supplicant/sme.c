@@ -199,18 +199,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211W
-	switch (ssid->ieee80211w) {
-	case NO_IEEE80211W:
-		wpa_s->sme.mfp = NO_MGMT_FRAME_PROTECTION;
-		break;
-	case IEEE80211W_OPTIONAL:
-		wpa_s->sme.mfp = MGMT_FRAME_PROTECTION_OPTIONAL;
-		break;
-	case IEEE80211W_REQUIRED:
-		wpa_s->sme.mfp = MGMT_FRAME_PROTECTION_REQUIRED;
-		break;
-	}
-	if (ssid->ieee80211w != NO_IEEE80211W && bss) {
+	wpa_s->sme.mfp = ssid->ieee80211w;
+	if (ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION && bss) {
 		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data _ie;
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &_ie) == 0 &&

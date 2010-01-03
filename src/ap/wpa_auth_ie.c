@@ -221,9 +221,9 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		capab |= (RSN_NUM_REPLAY_COUNTERS_16 << 2);
 	}
 #ifdef CONFIG_IEEE80211W
-	if (conf->ieee80211w != WPA_NO_IEEE80211W) {
+	if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
 		capab |= WPA_CAPABILITY_MFPC;
-		if (conf->ieee80211w == IEEE80211W_REQUIRED)
+		if (conf->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED)
 			capab |= WPA_CAPABILITY_MFPR;
 	}
 #endif /* CONFIG_IEEE80211W */
@@ -241,7 +241,7 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	}
 
 #ifdef CONFIG_IEEE80211W
-	if (conf->ieee80211w != WPA_NO_IEEE80211W) {
+	if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
 		if (pos + 2 + 4 > buf + len)
 			return -1;
 		if (pmkid == NULL) {
@@ -613,7 +613,7 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 	}
 
 #ifdef CONFIG_IEEE80211W
-	if (wpa_auth->conf.ieee80211w == WPA_IEEE80211W_REQUIRED) {
+	if (wpa_auth->conf.ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED) {
 		if (!(data.capabilities & WPA_CAPABILITY_MFPC)) {
 			wpa_printf(MSG_DEBUG, "Management frame protection "
 				   "required, but client did not enable it");
@@ -633,7 +633,7 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 		}
 	}
 
-	if (wpa_auth->conf.ieee80211w == WPA_NO_IEEE80211W ||
+	if (wpa_auth->conf.ieee80211w == NO_MGMT_FRAME_PROTECTION ||
 	    !(data.capabilities & WPA_CAPABILITY_MFPC))
 		sm->mgmt_frame_prot = 0;
 	else

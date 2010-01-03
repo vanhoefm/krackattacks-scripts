@@ -1926,7 +1926,7 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 		       group->GTK[group->GN - 1], group->GTK_len);
 
 #ifdef CONFIG_IEEE80211W
-	if (wpa_auth->conf.ieee80211w != WPA_NO_IEEE80211W) {
+	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION) {
 		if (os_get_random(group->IGTK[group->GN_igtk - 4],
 				  WPA_IGTK_LEN) < 0) {
 			wpa_printf(MSG_INFO, "RSN: Failed to get new random "
@@ -2029,7 +2029,7 @@ static void wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
 			 group->GTK_len);
 
 #ifdef CONFIG_IEEE80211W
-	if (wpa_auth->conf.ieee80211w != WPA_NO_IEEE80211W) {
+	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION) {
 		wpa_auth_set_key(wpa_auth, group->vlan_id, WPA_ALG_IGTK,
 				 NULL, group->GN_igtk,
 				 group->IGTK[group->GN_igtk - 4],

@@ -232,10 +232,13 @@ enum wpa_states {
 #define MLME_SETPROTECTION_KEY_TYPE_PAIRWISE 1
 
 
+/**
+ * enum mfp_options - Management frame protection (IEEE 802.11w) options
+ */
 enum mfp_options {
-	NO_IEEE80211W = 0,
-	IEEE80211W_OPTIONAL = 1,
-	IEEE80211W_REQUIRED = 2
+	NO_MGMT_FRAME_PROTECTION = 0,
+	MGMT_FRAME_PROTECTION_OPTIONAL = 1,
+	MGMT_FRAME_PROTECTION_REQUIRED = 2
 };
 
 /**

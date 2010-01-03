@@ -339,7 +339,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 		if (!(ie.capabilities & WPA_CAPABILITY_MFPC) &&
-		    ssid->ieee80211w == IEEE80211W_REQUIRED) {
+		    ssid->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED) {
 			wpa_printf(MSG_DEBUG, "   skip RSN IE - no mgmt frame "
 				   "protection");
 			break;

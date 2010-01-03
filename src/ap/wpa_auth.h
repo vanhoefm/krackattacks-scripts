@@ -141,11 +141,7 @@ struct wpa_auth_config {
 	int wmm_enabled;
 	int okc;
 #ifdef CONFIG_IEEE80211W
-	enum {
-		WPA_NO_IEEE80211W = 0,
-		WPA_IEEE80211W_OPTIONAL = 1,
-		WPA_IEEE80211W_REQUIRED = 2
-	} ieee80211w;
+	enum mfp_options ieee80211w;
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_IEEE80211R
 #define SSID_LEN 32

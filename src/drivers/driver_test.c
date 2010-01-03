@@ -308,6 +308,8 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	int ret = 0;
 	struct ieee80211_hdr *hdr;
 	u16 fc;
+	char cmd[50];
+	int freq;
 #ifdef HOSTAPD
 	char desttxt[30];
 #endif /* HOSTAPD */
@@ -330,8 +332,15 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	snprintf(desttxt, sizeof(desttxt), MACSTR, MAC2STR(dest));
 #endif /* HOSTAPD */
 
-	io[0].iov_base = "MLME ";
-	io[0].iov_len = 5;
+	if (drv->remain_on_channel_freq)
+		freq = drv->remain_on_channel_freq;
+	else
+		freq = drv->current_freq;
+	wpa_printf(MSG_DEBUG, "test_driver(%s): MLME TX on freq %d MHz",
+		   drv->ifname, freq);
+	os_snprintf(cmd, sizeof(cmd), "MLME freq=%d ", freq);
+	io[0].iov_base = cmd;
+	io[0].iov_len = os_strlen(cmd);
 	io[1].iov_base = (void *) data;
 	io[1].iov_len = data_len;
 
@@ -704,6 +713,35 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 	struct ieee80211_hdr *hdr;
 	u16 fc;
 	union wpa_event_data event;
+	int freq = 0, own_freq;
+
+	if (datalen > 6 && os_memcmp(data, "freq=", 5) == 0) {
+		size_t pos;
+		for (pos = 5; pos < datalen; pos++) {
+			if (data[pos] == ' ')
+				break;
+		}
+		if (pos < datalen) {
+			freq = atoi((const char *) &data[5]);
+			wpa_printf(MSG_DEBUG, "test_driver(%s): MLME RX on "
+				   "freq %d MHz", drv->ifname, freq);
+			pos++;
+			data += pos;
+			datalen -= pos;
+		}
+	}
+
+	if (drv->remain_on_channel_freq)
+		own_freq = drv->remain_on_channel_freq;
+	else
+		own_freq = drv->current_freq;
+
+	if (freq && own_freq && freq != own_freq) {
+		wpa_printf(MSG_DEBUG, "test_driver(%s): Ignore MLME RX on "
+			   "another frequency %d MHz (own %d MHz)",
+			   drv->ifname, freq, own_freq);
+		return;
+	}
 
 	hdr = (struct ieee80211_hdr *) data;
 
@@ -1783,10 +1821,41 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 				 socklen_t fromlen,
 				 const u8 *data, size_t data_len)
 {
+	int freq = 0, own_freq;
 	union wpa_event_data event;
+
+	if (data_len > 6 && os_memcmp(data, "freq=", 5) == 0) {
+		size_t pos;
+		for (pos = 5; pos < data_len; pos++) {
+			if (data[pos] == ' ')
+				break;
+		}
+		if (pos < data_len) {
+			freq = atoi((const char *) &data[5]);
+			wpa_printf(MSG_DEBUG, "test_driver(%s): MLME RX on "
+				   "freq %d MHz", drv->ifname, freq);
+			pos++;
+			data += pos;
+			data_len -= pos;
+		}
+	}
+
+	if (drv->remain_on_channel_freq)
+		own_freq = drv->remain_on_channel_freq;
+	else
+		own_freq = drv->current_freq;
+
+	if (freq && own_freq && freq != own_freq) {
+		wpa_printf(MSG_DEBUG, "test_driver(%s): Ignore MLME RX on "
+			   "another frequency %d MHz (own %d MHz)",
+			   drv->ifname, freq, own_freq);
+		return;
+	}
+
 	os_memset(&event, 0, sizeof(event));
 	event.mlme_rx.buf = data;
 	event.mlme_rx.len = data_len;
+	event.mlme_rx.freq = freq;
 	wpa_supplicant_event(drv->ctx, EVENT_MLME_RX, &event);
 
 	if (drv->probe_req_report && data_len >= 24) {

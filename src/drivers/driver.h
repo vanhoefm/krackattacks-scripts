@@ -1523,7 +1523,7 @@ struct wpa_driver_ops {
 /**
  * enum wpa_event_type - Event type for wpa_supplicant_event() calls
  */
-typedef enum wpa_event_type {
+enum wpa_event_type {
 	/**
 	 * EVENT_ASSOC - Association completed
 	 *
@@ -1734,8 +1734,8 @@ typedef enum wpa_event_type {
 	 * received. Information about the received frame is included in
 	 * union wpa_event_data::rx_probe_req.
 	 */
-	EVENT_RX_PROBE_REQ,
-} wpa_event_type;
+	EVENT_RX_PROBE_REQ
+};
 
 
 /**
@@ -2020,7 +2020,7 @@ union wpa_event_data {
  * Driver wrapper code should call this function whenever an event is received
  * from the driver.
  */
-void wpa_supplicant_event(void *ctx, wpa_event_type event,
+void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data);
 
 /**

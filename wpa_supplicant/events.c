@@ -1412,7 +1412,7 @@ static void wpa_supplicant_event_ibss_rsn_start(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IBSS_RSN */
 
 
-void wpa_supplicant_event(void *ctx, wpa_event_type event,
+void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;

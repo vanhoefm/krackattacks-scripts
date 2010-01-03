@@ -343,7 +343,7 @@ static int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 }
 
 
-void wpa_supplicant_event(void *ctx, wpa_event_type event,
+void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct hostapd_data *hapd = ctx;

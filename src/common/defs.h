@@ -88,6 +88,9 @@ enum wpa_alg {
 	WPA_ALG_PMK
 };
 
+/**
+ * enum wpa_cipher - Cipher suites
+ */
 enum wpa_cipher {
 	CIPHER_NONE,
 	CIPHER_WEP40,
@@ -96,6 +99,9 @@ enum wpa_cipher {
 	CIPHER_WEP104
 };
 
+/**
+ * enum wpa_key_mgmt - Key management suites
+ */
 enum wpa_key_mgmt {
 	KEY_MGMT_802_1X,
 	KEY_MGMT_PSK,
@@ -232,6 +238,9 @@ enum mfp_options {
 	IEEE80211W_REQUIRED = 2
 };
 
+/**
+ * enum hostapd_hw_mode - Hardware mode
+ */
 enum hostapd_hw_mode {
 	HOSTAPD_MODE_IEEE80211B,
 	HOSTAPD_MODE_IEEE80211G,

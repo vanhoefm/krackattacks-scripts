@@ -1,5 +1,5 @@
 /*
- * WPA Supplicant - driver interface definition
+ * Driver interface definition
  * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -10,6 +10,14 @@
  * license.
  *
  * See README and COPYING for more details.
+ *
+ * This file defines a driver interface used by both %wpa_supplicant and
+ * hostapd. The first part of the file defines data structures used in various
+ * driver operations. This is followed by the struct wpa_driver_ops that each
+ * driver wrapper will beed to define with callback functions for requesting
+ * driver operations. After this, there are definitions for driver event
+ * reporting with wpa_supplicant_event() and some convenience helper functions
+ * that can be used to report events.
  */
 
 #ifndef DRIVER_H
@@ -24,21 +32,73 @@
 #define HOSTAPD_CHAN_NO_IBSS 0x00000004
 #define HOSTAPD_CHAN_RADAR 0x00000008
 
+/**
+ * struct hostapd_channel_data - Channel information
+ */
 struct hostapd_channel_data {
-	short chan; /* channel number (IEEE 802.11) */
-	short freq; /* frequency in MHz */
-	int flag; /* flag for hostapd use (HOSTAPD_CHAN_*) */
-	u8 max_tx_power; /* maximum transmit power in dBm */
+	/**
+	 * chan - Channel number (IEEE 802.11)
+	 */
+	short chan;
+
+	/**
+	 * freq - Frequency in MHz
+	 */
+	short freq;
+
+	/**
+	 * flag - Channel flags (HOSTAPD_CHAN_*)
+	 */
+	int flag;
+
+	/**
+	 * max_tx_power - maximum transmit power in dBm
+	 */
+	u8 max_tx_power;
 };
 
+/**
+ * struct hostapd_hw_modes - Supported hardware mode information
+ */
 struct hostapd_hw_modes {
+	/**
+	 * mode - Hardware mode
+	 */
 	enum hostapd_hw_mode mode;
+
+	/**
+	 * num_channels - Number of entries in the channels array
+	 */
 	int num_channels;
+
+	/**
+	 * channels - Array of supported channels
+	 */
 	struct hostapd_channel_data *channels;
+
+	/**
+	 * num_rates - Number of entries in the rates array
+	 */
 	int num_rates;
-	int *rates; /* array of rates in 100 kbps units */
+
+	/**
+	 * rates - Array of supported rates in 100 kbps units
+	 */
+	int *rates;
+
+	/**
+	 * ht_capab - HT (IEEE 802.11n) capabilities
+	 */
 	u16 ht_capab;
+
+	/**
+	 * mcs_set - MCS (IEEE 802.11n) rate parameters
+	 */
 	u8 mcs_set[16];
+
+	/**
+	 * a_mpdu_params - A-MPDU (IEEE 802.11n) parameters
+	 */
 	u8 a_mpdu_params;
 };
 
@@ -208,6 +268,10 @@ struct wpa_driver_associate_params {
 	 * ssid - The selected SSID
 	 */
 	const u8 *ssid;
+
+	/**
+	 * ssid_len - Length of the SSID (1..32)
+	 */
 	size_t ssid_len;
 
 	/**
@@ -236,15 +300,31 @@ struct wpa_driver_associate_params {
 	 * When using WPS, wpa_ie is used for WPS IE instead of WPA/RSN IE.
 	 */
 	const u8 *wpa_ie;
+
 	/**
 	 * wpa_ie_len - length of the wpa_ie
 	 */
 	size_t wpa_ie_len;
 
-	/* The selected pairwise/group cipher and key management
-	 * suites. These are usually ignored if @wpa_ie is used. */
+	/**
+	 * pairwise_suite - Selected pairwise cipher suite
+	 *
+	 * This is usually ignored if @wpa_ie is used.
+	 */
 	enum wpa_cipher pairwise_suite;
+
+	/**
+	 * group_suite - Selected group cipher suite
+	 *
+	 * This is usually ignored if @wpa_ie is used.
+	 */
 	enum wpa_cipher group_suite;
+
+	/**
+	 * key_mgmt_suite - Selected key management suite
+	 *
+	 * This is usually ignored if @wpa_ie is used.
+	 */
 	enum wpa_key_mgmt key_mgmt_suite;
 
 	/**
@@ -844,7 +924,7 @@ struct wpa_driver_ops {
 	 * failure. Caller is responsible for freeing this.
 	 *
 	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to wpa_supplicant.
+	 * (management frame processing) to %wpa_supplicant or hostapd.
 	 */
 	struct hostapd_hw_modes * (*get_hw_feature_data)(void *priv,
 							 u16 *num_modes,
@@ -1624,6 +1704,7 @@ struct wpa_driver_ops {
 	 */
 	int (*probe_req_report)(void *priv, int report);
 };
+
 
 /**
  * enum wpa_event_type - Event type for wpa_supplicant_event() calls

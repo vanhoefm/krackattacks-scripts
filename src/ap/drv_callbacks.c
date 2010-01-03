@@ -270,15 +270,15 @@ static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
 }
 
 
-static void hostapd_mgmt_rx(struct hostapd_data *hapd, const u8 *buf,
-			    size_t len, struct hostapd_frame_info *fi)
+static void hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 {
 	struct hostapd_iface *iface = hapd->iface;
 	const struct ieee80211_hdr *hdr;
 	const u8 *bssid;
+	struct hostapd_frame_info fi;
 
-	hdr = (const struct ieee80211_hdr *) buf;
-	bssid = get_hdr_bssid(hdr, len);
+	hdr = (const struct ieee80211_hdr *) rx_mgmt->frame;
+	bssid = get_hdr_bssid(hdr, rx_mgmt->frame_len);
 	if (bssid == NULL)
 		return;
 
@@ -298,12 +298,17 @@ static void hostapd_mgmt_rx(struct hostapd_data *hapd, const u8 *buf,
 			return;
 	}
 
+	os_memset(&fi, 0, sizeof(fi));
+	fi.datarate = rx_mgmt->datarate;
+	fi.ssi_signal = rx_mgmt->ssi_signal;
+
 	if (hapd == HAPD_BROADCAST) {
 		size_t i;
 		for (i = 0; i < iface->num_bss; i++)
-			ieee802_11_mgmt(iface->bss[i], buf, len, fi);
+			ieee802_11_mgmt(iface->bss[i], rx_mgmt->frame,
+					rx_mgmt->frame_len, &fi);
 	} else
-		ieee802_11_mgmt(hapd, buf, len, fi);
+		ieee802_11_mgmt(hapd, rx_mgmt->frame, rx_mgmt->frame_len, &fi);
 }
 
 
@@ -382,8 +387,7 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 					    data->rx_from_unknown.len);
 		break;
 	case EVENT_RX_MGMT:
-		hostapd_mgmt_rx(hapd, data->rx_mgmt.frame,
-				data->rx_mgmt.frame_len, data->rx_mgmt.fi);
+		hostapd_mgmt_rx(hapd, &data->rx_mgmt);
 		break;
 #endif /* NEED_AP_MLME */
 	case EVENT_RX_PROBE_REQ:

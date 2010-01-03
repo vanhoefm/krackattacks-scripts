@@ -40,6 +40,12 @@ struct hostapd_rate_data {
 	int flags; /* HOSTAPD_RATE_ flags */
 };
 
+struct hostapd_frame_info {
+	u32 channel;
+	u32 datarate;
+	u32 ssi_signal;
+};
+
 
 struct hostapd_driver_ops {
 	int (*set_ap_wps_ie)(struct hostapd_data *hapd,

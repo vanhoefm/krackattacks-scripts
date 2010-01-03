@@ -1957,7 +1957,8 @@ union wpa_event_data {
 	struct rx_mgmt {
 		const u8 *frame;
 		size_t frame_len;
-		struct hostapd_frame_info *fi;
+		u32 datarate;
+		u32 ssi_signal;
 	} rx_mgmt;
 
 	/**
@@ -2056,12 +2057,6 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
 void hostapd_eapol_receive(struct hostapd_data *hapd, const u8 *sa,
 			   const u8 *buf, size_t len);
-
-struct hostapd_frame_info {
-	u32 channel;
-	u32 datarate;
-	u32 ssi_signal;
-};
 
 struct hostapd_data * hostapd_sta_get_bss(struct hostapd_data *hapd,
 					  const u8 *addr);

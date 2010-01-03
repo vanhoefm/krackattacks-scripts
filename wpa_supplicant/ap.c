@@ -262,12 +262,16 @@ void ap_rx_from_unknown_sta(void *ctx, const struct ieee80211_hdr *hdr,
 }
 
 
-void ap_mgmt_rx(void *ctx, const u8 *buf, size_t len,
-		struct hostapd_frame_info *fi)
+void ap_mgmt_rx(void *ctx, struct rx_mgmt *rx_mgmt)
 {
 #ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
-	ieee802_11_mgmt(wpa_s->ap_iface->bss[0], buf, len, fi);
+	struct hostapd_frame_info fi;
+	os_memset(&fi, 0, sizeof(fi));
+	fi.datarate = rx_mgmt->datarate;
+	fi.ssi_signal = rx_mgmt->ssi_signal;
+	ieee802_11_mgmt(wpa_s->ap_iface->bss[0], rx_mgmt->frame,
+			rx_mgmt->frame_len, &fi);
 #endif /* NEED_AP_MLME */
 }
 

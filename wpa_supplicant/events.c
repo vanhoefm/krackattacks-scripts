@@ -1500,8 +1500,7 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 	case EVENT_RX_MGMT:
 		if (wpa_s->ap_iface == NULL)
 			break;
-		ap_mgmt_rx(wpa_s, data->rx_mgmt.frame,
-			   data->rx_mgmt.frame_len, data->rx_mgmt.fi);
+		ap_mgmt_rx(wpa_s, &data->rx_mgmt);
 		break;
 #endif /* CONFIG_AP */
 #ifdef CONFIG_CLIENT_MLME

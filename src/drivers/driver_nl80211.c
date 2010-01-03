@@ -2726,8 +2726,7 @@ static void from_unknown_sta(struct wpa_driver_nl80211_data *drv,
 
 
 static void handle_frame(struct wpa_driver_nl80211_data *drv,
-			 u8 *buf, size_t len,
-			 struct hostapd_frame_info *hfi)
+			 u8 *buf, size_t len, int datarate, int ssi_signal)
 {
 	struct ieee80211_hdr *hdr;
 	u16 fc;
@@ -2741,7 +2740,8 @@ static void handle_frame(struct wpa_driver_nl80211_data *drv,
 		os_memset(&event, 0, sizeof(event));
 		event.rx_mgmt.frame = buf;
 		event.rx_mgmt.frame_len = len;
-		event.rx_mgmt.fi = hfi;
+		event.rx_mgmt.datarate = datarate;
+		event.rx_mgmt.ssi_signal = ssi_signal;
 		wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
 		break;
 	case WLAN_FC_TYPE_CTRL:
@@ -2763,7 +2763,7 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 	unsigned char buf[3000];
 	struct ieee80211_radiotap_iterator iter;
 	int ret;
-	struct hostapd_frame_info hfi;
+	int datarate = 0, ssi_signal = 0;
 	int injected = 0, failed = 0, rxflags = 0;
 
 	len = recv(sock, buf, sizeof(buf), 0);
@@ -2776,8 +2776,6 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		printf("received invalid radiotap frame\n");
 		return;
 	}
-
-	memset(&hfi, 0, sizeof(hfi));
 
 	while (1) {
 		ret = ieee80211_radiotap_iterator_next(&iter);
@@ -2803,15 +2801,13 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		case IEEE80211_RADIOTAP_DATA_RETRIES:
 			break;
 		case IEEE80211_RADIOTAP_CHANNEL:
-			/* TODO convert from freq/flags to channel number
-			hfi.channel = XXX;
-			 */
+			/* TODO: convert from freq/flags to channel number */
 			break;
 		case IEEE80211_RADIOTAP_RATE:
-			hfi.datarate = *iter.this_arg * 5;
+			datarate = *iter.this_arg * 5;
 			break;
 		case IEEE80211_RADIOTAP_DB_ANTSIGNAL:
-			hfi.ssi_signal = *iter.this_arg;
+			ssi_signal = *iter.this_arg;
 			break;
 		}
 	}
@@ -2821,7 +2817,7 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 
 	if (!injected)
 		handle_frame(drv, buf + iter.max_length,
-			     len - iter.max_length, &hfi);
+			     len - iter.max_length, datarate, ssi_signal);
 	else
 		handle_tx_callback(drv->ctx, buf + iter.max_length,
 				   len - iter.max_length, !failed);

@@ -460,6 +460,25 @@ static int wpa_scan_get_max_rate(const struct wpa_scan_res *res)
 }
 
 
+const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
+{
+	const u8 *end, *pos;
+
+	pos = (const u8 *) (res + 1);
+	end = pos + res->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == ie)
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
 const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,
 				  u32 vendor_type)
 {
@@ -609,4 +628,18 @@ int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s)
 	wpa_scan_results_free(scan_res);
 
 	return 0;
+}
+
+
+void wpa_scan_results_free(struct wpa_scan_results *res)
+{
+	size_t i;
+
+	if (res == NULL)
+		return;
+
+	for (i = 0; i < res->num; i++)
+		os_free(res->res[i]);
+	os_free(res->res);
+	os_free(res);
 }

@@ -58,7 +58,6 @@ NEED_MD5=y
 NEED_SHA1=y
 
 OBJS += ../src/drivers/drivers.o
-OBJS += ../src/drivers/scan_helpers.o
 CFLAGS += -DHOSTAPD
 
 ifdef CONFIG_WPA_TRACE

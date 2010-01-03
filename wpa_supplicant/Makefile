@@ -1164,7 +1164,6 @@ ifdef CONFIG_FIPS
 CFLAGS += -DCONFIG_FIPS
 endif
 
-OBJS += ../src/drivers/scan_helpers.o
 OBJS += $(SHA1OBJS) $(DESOBJS)
 
 OBJS_p += $(SHA1OBJS)
@@ -1197,7 +1196,7 @@ OBJS_t2 := $(OBJS) $(OBJS_l2) preauth_test.o
 OBJS += $(CONFIG_MAIN).o
 
 ifdef CONFIG_PRIVSEP
-OBJS_priv += $(OBJS_d) ../src/drivers/drivers.o ../src/drivers/scan_helpers.o
+OBJS_priv += $(OBJS_d) ../src/drivers/drivers.o
 OBJS_priv += $(OBJS_l2)
 OBJS_priv += ../src/utils/os_$(CONFIG_OS).o
 OBJS_priv += ../src/utils/$(CONFIG_ELOOP).o

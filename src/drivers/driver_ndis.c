@@ -792,6 +792,25 @@ static int wpa_driver_ndis_scan(void *priv,
 }
 
 
+static const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
+{
+	const u8 *end, *pos;
+
+	pos = (const u8 *) (res + 1);
+	end = pos + res->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == ie)
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
 static struct wpa_scan_res * wpa_driver_ndis_add_scan_ssid(
 	struct wpa_scan_res *r, NDIS_802_11_SSID *ssid)
 {

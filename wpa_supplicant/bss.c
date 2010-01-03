@@ -20,6 +20,7 @@
 #include "drivers/driver.h"
 #include "wpa_supplicant_i.h"
 #include "notify.h"
+#include "scan.h"
 #include "bss.h"
 
 

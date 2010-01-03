@@ -2271,9 +2271,6 @@ union wpa_event_data {
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data);
 
-const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie);
-void wpa_scan_results_free(struct wpa_scan_results *res);
-
 
 /*
  * The following inline functions are provided for convenience to simplify

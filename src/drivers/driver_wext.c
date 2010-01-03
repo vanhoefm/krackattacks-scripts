@@ -29,6 +29,7 @@
 #include "common/wpa_common.h"
 #include "priv_netlink.h"
 #include "netlink.h"
+#include "linux_ioctl.h"
 #include "driver.h"
 #include "driver_wext.h"
 
@@ -685,62 +686,6 @@ static void wpa_driver_wext_event_rtm_dellink(void *ctx, struct ifinfomsg *ifi,
 }
 
 
-static int wpa_driver_wext_get_ifflags_ifname(struct wpa_driver_wext_data *drv,
-					      const char *ifname, int *flags)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, (caddr_t) &ifr) < 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		return -1;
-	}
-	*flags = ifr.ifr_flags & 0xffff;
-	return 0;
-}
-
-
-/**
- * wpa_driver_wext_get_ifflags - Get interface flags (SIOCGIFFLAGS)
- * @drv: driver_wext private data
- * @flags: Pointer to returned flags value
- * Returns: 0 on success, -1 on failure
- */
-int wpa_driver_wext_get_ifflags(struct wpa_driver_wext_data *drv, int *flags)
-{
-	return wpa_driver_wext_get_ifflags_ifname(drv, drv->ifname, flags);
-}
-
-
-static int wpa_driver_wext_set_ifflags_ifname(struct wpa_driver_wext_data *drv,
-					      const char *ifname, int flags)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	ifr.ifr_flags = flags & 0xffff;
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, (caddr_t) &ifr) < 0) {
-		perror("SIOCSIFFLAGS");
-		return -1;
-	}
-	return 0;
-}
-
-
-/**
- * wpa_driver_wext_set_ifflags - Set interface flags (SIOCSIFFLAGS)
- * @drv: driver_wext private data
- * @flags: New value for flags
- * Returns: 0 on success, -1 on failure
- */
-int wpa_driver_wext_set_ifflags(struct wpa_driver_wext_data *drv, int flags)
-{
-	return wpa_driver_wext_set_ifflags_ifname(drv, drv->ifname, flags);
-}
-
-
 /**
  * wpa_driver_wext_init - Initialize WE driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -798,32 +743,8 @@ err1:
 
 static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 {
-	int flags;
-
-	if (wpa_driver_wext_get_ifflags(drv, &flags) != 0) {
-		wpa_printf(MSG_ERROR, "Could not get interface '%s' flags",
-			   drv->ifname);
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1) < 0)
 		return -1;
-	}
-
-	if (!(flags & IFF_UP)) {
-		if (wpa_driver_wext_set_ifflags(drv, flags | IFF_UP) != 0) {
-			wpa_printf(MSG_ERROR, "Could not set interface '%s' "
-				   "UP", drv->ifname);
-			return -1;
-		} else {
-			/*
-			 * Wait some time to allow driver to initialize before
-			 * starting configuring the driver. This seems to be
-			 * needed at least some drivers that load firmware etc.
-			 * when the interface is set up.
-			 */
-			wpa_printf(MSG_DEBUG, "Interface %s set UP - waiting "
-				   "a second for the driver to complete "
-				   "initialization", drv->ifname);
-			sleep(1);
-		}
-	}
 
 	/*
 	 * Make sure that the driver does not have any obsolete PMKID entries.
@@ -879,7 +800,6 @@ static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 void wpa_driver_wext_deinit(void *priv)
 {
 	struct wpa_driver_wext_data *drv = priv;
-	int flags;
 
 	wpa_driver_wext_set_auth_param(drv, IW_AUTH_WPA_ENABLED, 0);
 
@@ -897,8 +817,7 @@ void wpa_driver_wext_deinit(void *priv)
 	if (drv->mlme_sock >= 0)
 		eloop_unregister_read_sock(drv->mlme_sock);
 
-	if (wpa_driver_wext_get_ifflags(drv, &flags) == 0)
-		(void) wpa_driver_wext_set_ifflags(drv, flags & ~IFF_UP);
+	(void) linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 0);
 
 	close(drv->ioctl_sock);
 	if (drv->mlme_sock >= 0)
@@ -2062,7 +1981,7 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 {
 	struct wpa_driver_wext_data *drv = priv;
 	struct iwreq iwr;
-	int ret = -1, flags;
+	int ret = -1;
 	unsigned int new_mode = mode ? IW_MODE_ADHOC : IW_MODE_INFRA;
 
 	os_memset(&iwr, 0, sizeof(iwr));
@@ -2092,9 +2011,7 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 		goto done;
 	}
 
-	if (wpa_driver_wext_get_ifflags(drv, &flags) == 0) {
-		(void) wpa_driver_wext_set_ifflags(drv, flags & ~IFF_UP);
-
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 0) == 0) {
 		/* Try to set the mode again while the interface is down */
 		iwr.u.mode = new_mode;
 		if (ioctl(drv->ioctl_sock, SIOCSIWMODE, &iwr) < 0)
@@ -2102,11 +2019,7 @@ int wpa_driver_wext_set_mode(void *priv, int mode)
 		else
 			ret = 0;
 
-		/* Ignore return value of get_ifflags to ensure that the device
-		 * is always up like it was before this function was called.
-		 */
-		(void) wpa_driver_wext_get_ifflags(drv, &flags);
-		(void) wpa_driver_wext_set_ifflags(drv, flags | IFF_UP);
+		(void) linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1);
 	}
 
 done:

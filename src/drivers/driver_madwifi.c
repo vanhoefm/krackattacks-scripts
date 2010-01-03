@@ -74,6 +74,7 @@
 
 #include "priv_netlink.h"
 #include "netlink.h"
+#include "linux_ioctl.h"
 #include "l2_packet/l2_packet.h"
 
 
@@ -312,39 +313,6 @@ madwifi_configure_wpa(struct madwifi_driver_data *drv,
 		printf("Unable to set WPA to %u\n", params->wpa);
 		return -1;
 	}
-	return 0;
-}
-
-
-static int
-madwifi_set_iface_flags(void *priv, int dev_up)
-{
-	struct madwifi_driver_data *drv = priv;
-	struct ifreq ifr;
-
-	wpa_printf(MSG_DEBUG, "%s: dev_up=%d", __func__, dev_up);
-
-	if (drv->ioctl_sock < 0)
-		return -1;
-
-	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->iface, IFNAMSIZ);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		return -1;
-	}
-
-	if (dev_up)
-		ifr.ifr_flags |= IFF_UP;
-	else
-		ifr.ifr_flags &= ~IFF_UP;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
-		return -1;
-	}
-
 	return 0;
 }
 
@@ -1202,7 +1170,8 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 		goto bad;
 	}
 
-	madwifi_set_iface_flags(drv, 0);	/* mark down during setup */
+	/* mark down during setup */
+	linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
 	madwifi_set_privacy(drv->iface, drv, 0); /* default to no privacy */
 
 	madwifi_receive_probe_req(drv);
@@ -1228,7 +1197,7 @@ madwifi_deinit(void *priv)
 	struct madwifi_driver_data *drv = priv;
 
 	netlink_deinit(drv->netlink);
-	(void) madwifi_set_iface_flags(drv, 0);
+	(void) linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
 	if (drv->sock_recv != NULL && drv->sock_recv != drv->sock_xmit)
@@ -1292,7 +1261,8 @@ madwifi_set_countermeasures(void *priv, int enabled)
 static int
 madwifi_commit(void *priv)
 {
-	return madwifi_set_iface_flags(priv, 1);
+	struct madwifi_driver_data *drv = priv;
+	return linux_set_iface_flags(drv->ioctl_sock, drv->iface, 1);
 }
 
 #else /* HOSTAPD */

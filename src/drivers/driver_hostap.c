@@ -30,6 +30,7 @@
 
 #include "priv_netlink.h"
 #include "netlink.h"
+#include "linux_ioctl.h"
 #include "common/ieee802_11_defs.h"
 
 
@@ -371,31 +372,15 @@ static int hostap_set_iface_flags(void *priv, int dev_up)
 {
 	struct hostap_driver_data *drv = priv;
 	struct ifreq ifr;
+	char ifname[IFNAMSIZ];
 
-	if (drv->ioctl_sock < 0)
+	os_snprintf(ifname, IFNAMSIZ, "%sap", drv->iface);
+	if (linux_set_iface_flags(drv->ioctl_sock, ifname, dev_up) < 0)
 		return -1;
-
-	memset(&ifr, 0, sizeof(ifr));
-	snprintf(ifr.ifr_name, IFNAMSIZ, "%sap", drv->iface);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		return -1;
-	}
-
-	if (dev_up)
-		ifr.ifr_flags |= IFF_UP;
-	else
-		ifr.ifr_flags &= ~IFF_UP;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
-		return -1;
-	}
 
 	if (dev_up) {
 		memset(&ifr, 0, sizeof(ifr));
-		snprintf(ifr.ifr_name, IFNAMSIZ, "%sap", drv->iface);
+		os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 		ifr.ifr_mtu = HOSTAPD_MTU;
 		if (ioctl(drv->ioctl_sock, SIOCSIFMTU, &ifr) != 0) {
 			perror("ioctl[SIOCSIFMTU]");

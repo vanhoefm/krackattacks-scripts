@@ -6,6 +6,7 @@ DRV_OBJS += ../src/drivers/driver_hostap.o
 CONFIG_WIRELESS_EXTENSION=y
 NEED_AP_MLME=y
 NEED_NETLINK=y
+NEED_LINUX_IOCTL=y
 endif
 
 ifdef CONFIG_DRIVER_WIRED
@@ -19,6 +20,7 @@ DRV_OBJS += ../src/drivers/driver_madwifi.o
 CONFIG_WIRELESS_EXTENSION=y
 CONFIG_L2_PACKET=linux
 NEED_NETLINK=y
+NEED_LINUX_IOCTL=y
 endif
 
 ifdef CONFIG_DRIVER_NL80211
@@ -28,6 +30,7 @@ DRV_OBJS += ../src/utils/radiotap.o
 NEED_SME=y
 NEED_AP_MLME=y
 NEED_NETLINK=y
+NEED_LINUX_IOCTL=y
 DRV_LIBS += -lnl
 
 ifdef CONFIG_LIBNL20
@@ -72,6 +75,7 @@ ifdef CONFIG_DRIVER_WEXT
 DRV_WPA_CFLAGS += -DCONFIG_DRIVER_WEXT
 CONFIG_WIRELESS_EXTENSION=y
 NEED_NETLINK=y
+NEED_LINUX_IOCTL=y
 endif
 
 ifdef CONFIG_DRIVER_HERMES
@@ -96,6 +100,7 @@ ifdef CONFIG_DRIVER_RALINK
 DRV_WPA_CFLAGS += -DCONFIG_DRIVER_RALINK
 DRV_WPA_OBJS += ../src/drivers/driver_ralink.o
 NEED_NETLINK=y
+NEED_LINUX_IOCTL=y
 endif
 
 ifdef CONFIG_DRIVER_BROADCOM
@@ -157,6 +162,11 @@ endif
 ifdef NEED_NETLINK
 DRV_OBJS += ../src/drivers/netlink.o
 endif
+
+ifdef NEED_LINUX_IOCTL
+DRV_OBJS += ../src/drivers/linux_ioctl.o
+endif
+
 
 ##### COMMON VARS
 DRV_BOTH_CFLAGS := $(DRV_CFLAGS) $(DRV_WPA_CFLAGS) $(DRV_AP_CFLAGS)

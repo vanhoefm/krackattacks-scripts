@@ -25,6 +25,7 @@
 #include "common/ieee802_11_defs.h"
 #include "priv_netlink.h"
 #include "netlink.h"
+#include "linux_ioctl.h"
 #include "driver_ralink.h"
 
 static void wpa_driver_ralink_scan_timeout(void *eloop_ctx, void *timeout_ctx);
@@ -762,38 +763,6 @@ ralink_get_we_version_compiled(struct wpa_driver_ralink_data *drv)
 	return 0;
 }
 
-static int
-ralink_set_iface_flags(void *priv, int dev_up)
-{
-	struct wpa_driver_ralink_data *drv = priv;
-	struct ifreq ifr;
-
-	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
-
-	if (drv->ioctl_sock < 0)
-		return -1;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_snprintf(ifr.ifr_name, IFNAMSIZ, "%s", drv->ifname);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		return -1;
-	}
-
-	if (dev_up)
-		ifr.ifr_flags |= IFF_UP;
-	else
-		ifr.ifr_flags &= ~IFF_UP;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
-		return -1;
-	}
-
-	return 0;
-}
-
 static void * wpa_driver_ralink_init(void *ctx, const char *ifname)
 {
 	int s;
@@ -846,7 +815,7 @@ static void * wpa_driver_ralink_init(void *ctx, const char *ifname)
 
 	drv->no_of_pmkid = 4; /* Number of PMKID saved supported */
 
-	ralink_set_iface_flags(drv, 1);	/* mark up during setup */
+	linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1);
 	ralink_get_we_version_compiled(drv);
 	wpa_driver_ralink_flush_pmkid(drv);
 
@@ -897,7 +866,7 @@ static void wpa_driver_ralink_deinit(void *priv)
 		wpa_driver_ralink_flush_pmkid(drv);
 
 		sleep(1);
-		/* ralink_set_iface_flags(drv, 0); */
+		/* linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 0); */
 	}
 
 	eloop_cancel_timeout(wpa_driver_ralink_scan_timeout, drv, drv->ctx);

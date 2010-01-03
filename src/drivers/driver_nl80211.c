@@ -31,6 +31,7 @@
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "netlink.h"
+#include "linux_ioctl.h"
 #include "radiotap.h"
 #include "radiotap_iter.h"
 #include "driver.h"
@@ -915,43 +916,6 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 }
 
 
-static int hostapd_set_iface_flags(struct wpa_driver_nl80211_data *drv,
-				   const char *ifname, int dev_up)
-{
-	struct ifreq ifr;
-
-	if (drv->ioctl_sock < 0)
-		return -1;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		wpa_printf(MSG_DEBUG, "Could not read interface flags (%s)",
-			   ifname);
-		return -1;
-	}
-
-	if (dev_up) {
-		if (ifr.ifr_flags & IFF_UP)
-			return 0;
-		ifr.ifr_flags |= IFF_UP;
-	} else {
-		if (!(ifr.ifr_flags & IFF_UP))
-			return 0;
-		ifr.ifr_flags &= ~IFF_UP;
-	}
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
-		return -1;
-	}
-
-	return 0;
-}
-
-
 /**
  * wpa_driver_nl80211_set_country - ask nl80211 to set the regulatory domain
  * @priv: driver_nl80211 private data
@@ -1289,9 +1253,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			   "use managed mode");
 	}
 
-	if (hostapd_set_iface_flags(drv, drv->ifname, 1)) {
-		wpa_printf(MSG_ERROR, "Could not set interface '%s' "
-			   "UP", drv->ifname);
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1)) {
+		wpa_printf(MSG_ERROR, "Could not set interface '%s' UP",
+			   drv->ifname);
 		return -1;
 	}
 
@@ -1379,7 +1343,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv, drv->ctx);
 
-	(void) hostapd_set_iface_flags(drv, drv->ifname, 0);
+	(void) linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 0);
 	wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA);
 
 	if (drv->ioctl_sock >= 0)
@@ -3078,7 +3042,7 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	if (drv->monitor_ifidx < 0)
 		return -1;
 
-	if (hostapd_set_iface_flags(drv, buf, 1))
+	if (linux_set_iface_flags(drv->ioctl_sock, buf, 1))
 		goto error;
 
 	memset(&ll, 0, sizeof(ll));
@@ -3682,10 +3646,10 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 	 * take the device down, try to set the mode again, and bring the
 	 * device back up.
 	 */
-	if (hostapd_set_iface_flags(drv, drv->ifname, 0) == 0) {
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 0) == 0) {
 		/* Try to set the mode again while the interface is down */
 		ret = nl80211_set_mode(drv, drv->ifindex, nlmode);
-		if (hostapd_set_iface_flags(drv, drv->ifname, 1))
+		if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1))
 			ret = -1;
 	}
 
@@ -4222,7 +4186,7 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val)
 		if (nl80211_create_iface(priv, name, NL80211_IFTYPE_AP_VLAN,
 					 NULL, 1) < 0)
 			return -1;
-		hostapd_set_iface_flags(drv, name, 1);
+		linux_set_iface_flags(drv->ioctl_sock, name, 1);
 		return i802_set_sta_vlan(priv, addr, name, 0);
 	} else {
 		i802_set_sta_vlan(priv, addr, drv->ifname, 0);
@@ -4334,7 +4298,7 @@ static void *i802_init(struct hostapd_data *hapd,
 	/* start listening for EAPOL on the default AP interface */
 	add_ifidx(drv, drv->ifindex);
 
-	if (hostapd_set_iface_flags(drv, drv->ifname, 0))
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 0))
 		goto failed;
 
 	if (params->bssid) {
@@ -4348,7 +4312,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		goto failed;
 	}
 
-	if (hostapd_set_iface_flags(drv, drv->ifname, 1))
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1))
 		goto failed;
 
 	drv->eapol_sock = socket(PF_PACKET, SOCK_DGRAM, htons(ETH_P_PAE));
@@ -4435,8 +4399,8 @@ static int wpa_driver_nl80211_if_add(const char *iface, void *priv,
 
 #ifdef HOSTAPD
 	if (type == WPA_IF_AP_BSS) {
-		if (hostapd_set_iface_flags(priv, ifname, 1)) {
-			nl80211_remove_iface(priv, ifidx);
+		if (linux_set_iface_flags(drv->ioctl_sock, ifname, 1)) {
+			nl80211_remove_iface(drv, ifidx);
 			os_free(bss);
 			return -1;
 		}

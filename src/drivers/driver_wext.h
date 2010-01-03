@@ -45,8 +45,6 @@ struct wpa_driver_wext_data {
 	int scan_complete_events;
 };
 
-int wpa_driver_wext_get_ifflags(struct wpa_driver_wext_data *drv, int *flags);
-int wpa_driver_wext_set_ifflags(struct wpa_driver_wext_data *drv, int flags);
 int wpa_driver_wext_get_bssid(void *priv, u8 *bssid);
 int wpa_driver_wext_set_bssid(void *priv, const u8 *bssid);
 int wpa_driver_wext_get_ssid(void *priv, u8 *ssid);

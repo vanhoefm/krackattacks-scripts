@@ -404,12 +404,6 @@ struct wpa_driver_capa {
 };
 
 
-struct ieee80211_rx_status {
-        int channel;
-        int ssi;
-};
-
-
 struct hostapd_data;
 
 struct hostap_sta_driver_data {
@@ -1724,7 +1718,14 @@ typedef enum wpa_event_type {
 	/**
 	 * EVENT_RX_MGMT - Report RX of a management frame
 	 */
-	EVENT_RX_MGMT
+	EVENT_RX_MGMT,
+
+	/**
+	 * EVENT_MLME_RX - Report reception of frame for MLME (test use only)
+	 *
+	 * This event is used only by driver_test.c and userspace MLME.
+	 */
+	EVENT_MLME_RX
 } wpa_event_type;
 
 
@@ -1966,6 +1967,17 @@ union wpa_event_data {
 		struct wpa_driver_scan_ssid ssids[WPAS_MAX_SCAN_SSIDS];
 		size_t num_ssids;
 	} scan_info;
+
+	/**
+	 * struct mlme_rx - Data for EVENT_MLME_RX events
+	 */
+	struct mlme_rx {
+		const u8 *buf;
+		size_t len;
+		int freq;
+		int channel;
+		int ssi;
+	} mlme_rx;
 };
 
 /**
@@ -1997,9 +2009,6 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
  */
 void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 			     const u8 *buf, size_t len);
-
-void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
-			   struct ieee80211_rx_status *rx_status);
 
 const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie);
 const u8 * wpa_scan_get_vendor_ie(const struct wpa_scan_res *res,

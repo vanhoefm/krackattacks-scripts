@@ -19,6 +19,12 @@
 
 struct wpa_supplicant;
 
+struct ieee80211_rx_status {
+	int freq;
+        int channel;
+        int ssi;
+};
+
 #ifdef CONFIG_CLIENT_MLME
 
 int ieee80211_sta_init(struct wpa_supplicant *wpa_s);

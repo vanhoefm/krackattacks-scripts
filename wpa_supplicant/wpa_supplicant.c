@@ -1819,14 +1819,6 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 }
 
 
-void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
-			   struct ieee80211_rx_status *rx_status)
-{
-	struct wpa_supplicant *wpa_s = ctx;
-	ieee80211_sta_rx(wpa_s, buf, len, rx_status);
-}
-
-
 /**
  * wpa_supplicant_driver_init - Initialize driver interface parameters
  * @wpa_s: Pointer to wpa_supplicant data

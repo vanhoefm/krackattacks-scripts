@@ -915,35 +915,6 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 }
 
 
-#ifdef CONFIG_CLIENT_MLME
-void wpa_supplicant_sta_rx(void *ctx, const u8 *buf, size_t len,
-			   struct ieee80211_rx_status *rx_status)
-{
-	struct wpa_priv_interface *iface = ctx;
-	struct msghdr msg;
-	struct iovec io[3];
-	int event = PRIVSEP_EVENT_STA_RX;
-
-	wpa_printf(MSG_DEBUG, "STA RX from driver");
-	io[0].iov_base = &event;
-	io[0].iov_len = sizeof(event);
-	io[1].iov_base = (u8 *) rx_status;
-	io[1].iov_len = sizeof(*rx_status);
-	io[2].iov_base = (u8 *) buf;
-	io[2].iov_len = len;
-
-	os_memset(&msg, 0, sizeof(msg));
-	msg.msg_iov = io;
-	msg.msg_iovlen = 3;
-	msg.msg_name = &iface->drv_addr;
-	msg.msg_namelen = sizeof(iface->drv_addr);
-
-	if (sendmsg(iface->fd, &msg, 0) < 0)
-		perror("sendmsg(wpas_socket)");
-}
-#endif /* CONFIG_CLIENT_MLME */
-
-
 static void wpa_priv_terminate(int sig, void *eloop_ctx, void *signal_ctx)
 {
 	wpa_printf(MSG_DEBUG, "wpa_priv termination requested");

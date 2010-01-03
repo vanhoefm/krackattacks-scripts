@@ -37,6 +37,7 @@
 #include "bgscan.h"
 #include "ap.h"
 #include "bss.h"
+#include "mlme.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -1503,6 +1504,19 @@ void wpa_supplicant_event(void *ctx, wpa_event_type event,
 			   data->rx_mgmt.frame_len, data->rx_mgmt.fi);
 		break;
 #endif /* CONFIG_AP */
+#ifdef CONFIG_CLIENT_MLME
+	case EVENT_MLME_RX: {
+		struct ieee80211_rx_status rx_status;
+		os_memset(&rx_status, 0, sizeof(rx_status));
+		rx_status.freq = data->mlme_rx.freq;
+		rx_status.channel = data->mlme_rx.channel;
+		rx_status.ssi = data->mlme_rx.ssi;
+		ieee80211_sta_rx(wpa_s, data->mlme_rx.buf, data->mlme_rx.len,
+				 &rx_status);
+		break;
+	}
+#endif /* CONFIG_CLIENT_MLME */
+
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

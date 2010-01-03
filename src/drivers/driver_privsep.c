@@ -432,16 +432,9 @@ static void wpa_driver_privsep_event_ft_response(void *ctx, u8 *buf,
 
 static void wpa_driver_privsep_event_rx_eapol(void *ctx, u8 *buf, size_t len)
 {
-	union wpa_event_data event;
-
 	if (len < ETH_ALEN)
 		return;
-
-	os_memset(&event, 0, sizeof(event));
-	event.eapol_rx.src = buf;
-	event.eapol_rx.data = buf + ETH_ALEN;
-	event.eapol_rx.data_len = len - ETH_ALEN;
-	wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
+	drv_event_eapol_rx(ctx, buf, buf + ETH_ALEN, len - ETH_ALEN);
 }
 
 

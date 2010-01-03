@@ -4233,14 +4233,8 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
-	if (have_ifidx(drv, lladdr.sll_ifindex)) {
-		union wpa_event_data event;
-		os_memset(&event, 0, sizeof(event));
-		event.eapol_rx.src = lladdr.sll_addr;
-		event.eapol_rx.data = buf;
-		event.eapol_rx.data_len = len;
-		wpa_supplicant_event(drv->ctx, EVENT_EAPOL_RX, &event);
-	}
+	if (have_ifidx(drv, lladdr.sll_ifindex))
+		drv_event_eapol_rx(drv->ctx, lladdr.sll_addr, buf, len);
 }
 
 

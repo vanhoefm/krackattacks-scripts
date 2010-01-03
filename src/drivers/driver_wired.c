@@ -140,12 +140,7 @@ static void handle_data(void *ctx, unsigned char *buf, size_t len)
 
 			pos = (u8 *) (hdr + 1);
 			left = len - sizeof(*hdr);
-
-			os_memset(&event, 0, sizeof(event));
-			event.eapol_rx.src = sa;
-			event.eapol_rx.data = pos;
-			event.eapol_rx.data_len = left;
-			wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
+			drv_event_eapol_rx(ctx, sa, pos, left);
 		break;
 
 	default:

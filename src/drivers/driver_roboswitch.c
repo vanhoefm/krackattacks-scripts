@@ -179,14 +179,8 @@ static void wpa_driver_roboswitch_receive(void *priv, const u8 *src_addr,
 	struct wpa_driver_roboswitch_data *drv = priv;
 
 	if (len > 14 && WPA_GET_BE16(buf + 12) == ETH_P_EAPOL &&
-	    os_memcmp(buf, drv->own_addr, ETH_ALEN) == 0) {
-		union wpa_event_data event;
-		os_memset(&event, 0, sizeof(event));
-		event.eapol_rx.src = src_addr;
-		event.eapol_rx.data = buf + 14;
-		event.eapol_rx.data_len = len - 14;
-		wpa_supplicant_event(drv->ctx, EVENT_EAPOL_RX, &event);
-	}
+	    os_memcmp(buf, drv->own_addr, ETH_ALEN) == 0)
+		drv_event_eapol_rx(drv->ctx, src_addr, buf + 14, len - 14);
 }
 
 

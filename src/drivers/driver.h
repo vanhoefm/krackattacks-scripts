@@ -2305,4 +2305,15 @@ static inline void drv_event_disassoc(void *ctx, const u8 *addr)
 	wpa_supplicant_event(ctx, EVENT_DISASSOC, &event);
 }
 
+static inline void drv_event_eapol_rx(void *ctx, const u8 *src, const u8 *data,
+				      size_t data_len)
+{
+	union wpa_event_data event;
+	os_memset(&event, 0, sizeof(event));
+	event.eapol_rx.src = src;
+	event.eapol_rx.data = data;
+	event.eapol_rx.data_len = data_len;
+	wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
+}
+
 #endif /* DRIVER_H */

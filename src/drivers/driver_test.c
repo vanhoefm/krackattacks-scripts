@@ -647,8 +647,6 @@ static void test_driver_eapol(struct wpa_driver_test_data *drv,
 	struct test_client_socket *cli;
 #endif /* HOSTAPD */
 	const u8 *src = NULL;
-	union wpa_event_data event;
-	void *ctx;
 
 	if (datalen > 14) {
 		/* Skip Ethernet header */
@@ -661,29 +659,19 @@ static void test_driver_eapol(struct wpa_driver_test_data *drv,
 		datalen -= 14;
 	}
 
-	os_memset(&event, 0, sizeof(event));
-	event.eapol_rx.data = data;
-	event.eapol_rx.data_len = datalen;
-
 #ifdef HOSTAPD
 	cli = test_driver_get_cli(drv, from, fromlen);
 	if (cli) {
-		event.eapol_rx.src = cli->addr;
-		ctx = cli->bss->bss_ctx;
+		drv_event_eapol_rx(cli->bss->bss_ctx, cli->addr, data,
+				   datalen);
 	} else {
 		wpa_printf(MSG_DEBUG, "test_socket: EAPOL from unknown "
 			   "client");
-		return;
 	}
 #else /* HOSTAPD */
-	if (src) {
-		event.eapol_rx.src = src;
-		ctx = drv->ctx;
-	} else
-		return;
+	if (src)
+		drv_event_eapol_rx(drv->ctx, src, data, datalen);
 #endif /* HOSTAPD */
-
-	wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
 }
 
 
@@ -1811,7 +1799,6 @@ static void wpa_driver_test_eapol(struct wpa_driver_test_data *drv,
 				  const u8 *data, size_t data_len)
 {
 	const u8 *src = drv->bssid;
-	union wpa_event_data event;
 
 	if (data_len > 14) {
 		/* Skip Ethernet header */
@@ -1820,11 +1807,7 @@ static void wpa_driver_test_eapol(struct wpa_driver_test_data *drv,
 		data_len -= 14;
 	}
 
-	os_memset(&event, 0, sizeof(event));
-	event.eapol_rx.src = src;
-	event.eapol_rx.data = data;
-	event.eapol_rx.data_len = data_len;
-	wpa_supplicant_event(drv->ctx, EVENT_EAPOL_RX, &event);
+	drv_event_eapol_rx(drv->ctx, src, data, data_len);
 }
 
 

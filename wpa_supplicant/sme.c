@@ -68,27 +68,21 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	os_memcpy(wpa_s->sme.ssid, params.ssid, params.ssid_len);
 	wpa_s->sme.ssid_len = params.ssid_len;
 
-	params.auth_alg = AUTH_ALG_OPEN_SYSTEM;
+	params.auth_alg = WPA_AUTH_ALG_OPEN;
 #ifdef IEEE8021X_EAPOL
 	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (ssid->leap) {
 			if (ssid->non_leap == 0)
-				params.auth_alg = AUTH_ALG_LEAP;
+				params.auth_alg = WPA_AUTH_ALG_LEAP;
 			else
-				params.auth_alg |= AUTH_ALG_LEAP;
+				params.auth_alg |= WPA_AUTH_ALG_LEAP;
 		}
 	}
 #endif /* IEEE8021X_EAPOL */
 	wpa_printf(MSG_DEBUG, "Automatic auth_alg selection: 0x%x",
 		   params.auth_alg);
 	if (ssid->auth_alg) {
-		params.auth_alg = 0;
-		if (ssid->auth_alg & WPA_AUTH_ALG_OPEN)
-			params.auth_alg |= AUTH_ALG_OPEN_SYSTEM;
-		if (ssid->auth_alg & WPA_AUTH_ALG_SHARED)
-			params.auth_alg |= AUTH_ALG_SHARED_KEY;
-		if (ssid->auth_alg & WPA_AUTH_ALG_LEAP)
-			params.auth_alg |= AUTH_ALG_LEAP;
+		params.auth_alg = ssid->auth_alg;
 		wpa_printf(MSG_DEBUG, "Overriding auth_alg selection: 0x%x",
 			   params.auth_alg);
 	}
@@ -191,7 +185,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		    os_memcmp(md, wpa_s->sme.mobility_domain, 2) == 0) {
 			wpa_printf(MSG_DEBUG, "SME: Trying to use FT "
 				   "over-the-air");
-			params.auth_alg = AUTH_ALG_FT;
+			params.auth_alg = WPA_AUTH_ALG_FT;
 			params.ie = wpa_s->sme.ft_ies;
 			params.ie_len = wpa_s->sme.ft_ies_len;
 		}

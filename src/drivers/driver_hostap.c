@@ -1533,11 +1533,11 @@ static int wpa_driver_hostap_set_auth_alg(void *priv, int auth_alg)
 	struct wpa_driver_hostap_data *drv = priv;
 	int algs = 0;
 
-	if (auth_alg & AUTH_ALG_OPEN_SYSTEM)
+	if (auth_alg & WPA_AUTH_ALG_OPEN)
 		algs |= 1;
-	if (auth_alg & AUTH_ALG_SHARED_KEY)
+	if (auth_alg & WPA_AUTH_ALG_SHARED)
 		algs |= 2;
-	if (auth_alg & AUTH_ALG_LEAP)
+	if (auth_alg & WPA_AUTH_ALG_LEAP)
 		algs |= 4;
 	if (algs == 0)
 		algs = 1; /* at least one algorithm should be set */

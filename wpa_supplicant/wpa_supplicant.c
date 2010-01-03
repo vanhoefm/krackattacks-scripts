@@ -983,7 +983,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	u8 wpa_ie[80];
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
-	int algs = AUTH_ALG_OPEN_SYSTEM;
+	int algs = WPA_AUTH_ALG_OPEN;
 	enum wpa_cipher cipher_pairwise, cipher_group;
 	struct wpa_driver_associate_params params;
 	int wep_keys_set = 0;
@@ -1062,21 +1062,15 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	if (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		if (ssid->leap) {
 			if (ssid->non_leap == 0)
-				algs = AUTH_ALG_LEAP;
+				algs = WPA_AUTH_ALG_LEAP;
 			else
-				algs |= AUTH_ALG_LEAP;
+				algs |= WPA_AUTH_ALG_LEAP;
 		}
 	}
 #endif /* IEEE8021X_EAPOL */
 	wpa_printf(MSG_DEBUG, "Automatic auth_alg selection: 0x%x", algs);
 	if (ssid->auth_alg) {
-		algs = 0;
-		if (ssid->auth_alg & WPA_AUTH_ALG_OPEN)
-			algs |= AUTH_ALG_OPEN_SYSTEM;
-		if (ssid->auth_alg & WPA_AUTH_ALG_SHARED)
-			algs |= AUTH_ALG_SHARED_KEY;
-		if (ssid->auth_alg & WPA_AUTH_ALG_LEAP)
-			algs |= AUTH_ALG_LEAP;
+		algs = ssid->auth_alg;
 		wpa_printf(MSG_DEBUG, "Overriding auth_alg selection: 0x%x",
 			   algs);
 	}

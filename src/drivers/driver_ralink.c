@@ -1406,8 +1406,8 @@ wpa_driver_ralink_associate(void *priv,
 #endif /* CONFIG_WPS */
 
 		if (params->wpa_ie == NULL || params->wpa_ie_len == 0) {
-			if (params->auth_alg & AUTH_ALG_SHARED_KEY) {
-				if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
+			if (params->auth_alg & WPA_AUTH_ALG_SHARED) {
+				if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 					auth_mode = Ndis802_11AuthModeAutoSwitch;
 				else
 					auth_mode = Ndis802_11AuthModeShared;

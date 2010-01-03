@@ -103,11 +103,6 @@ struct hostapd_hw_modes {
 };
 
 
-#define AUTH_ALG_OPEN_SYSTEM	0x01
-#define AUTH_ALG_SHARED_KEY	0x02
-#define AUTH_ALG_LEAP		0x04
-#define AUTH_ALG_FT		0x08
-
 #define IEEE80211_MODE_INFRA	0
 #define IEEE80211_MODE_IBSS	1
 #define IEEE80211_MODE_AP	2
@@ -329,7 +324,7 @@ struct wpa_driver_associate_params {
 
 	/**
 	 * auth_alg - Allowed authentication algorithms
-	 * Bit field of AUTH_ALG_*
+	 * Bit field of WPA_AUTH_ALG_*
 	 */
 	int auth_alg;
 

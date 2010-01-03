@@ -234,10 +234,8 @@ struct wpa_client_mlme {
 
 	struct os_time last_probe;
 
-#define IEEE80211_AUTH_ALG_OPEN BIT(0)
-#define IEEE80211_AUTH_ALG_SHARED_KEY BIT(1)
-#define IEEE80211_AUTH_ALG_LEAP BIT(2)
-	unsigned int auth_algs; /* bitfield of allowed auth algs */
+	unsigned int auth_algs; /* bitfield of allowed auth algs
+				 * (WPA_AUTH_ALG_*) */
 	int auth_alg; /* currently used IEEE 802.11 authentication algorithm */
 	int auth_transaction;
 

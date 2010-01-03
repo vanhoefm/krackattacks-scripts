@@ -2089,13 +2089,13 @@ retry:
 	 * TODO: if multiple auth_alg options enabled, try them one by one if
 	 * the AP rejects authentication due to unknown auth alg
 	 */
-	if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
+	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-	else if (params->auth_alg & AUTH_ALG_SHARED_KEY)
+	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
 		type = NL80211_AUTHTYPE_SHARED_KEY;
-	else if (params->auth_alg & AUTH_ALG_LEAP)
+	else if (params->auth_alg & WPA_AUTH_ALG_LEAP)
 		type = NL80211_AUTHTYPE_NETWORK_EAP;
-	else if (params->auth_alg & AUTH_ALG_FT)
+	else if (params->auth_alg & WPA_AUTH_ALG_FT)
 		type = NL80211_AUTHTYPE_FT;
 	else
 		goto nla_put_failure;
@@ -3427,13 +3427,13 @@ static int wpa_driver_nl80211_connect(
 		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
 			params->wpa_ie);
 
-	if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
+	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
-	else if (params->auth_alg & AUTH_ALG_SHARED_KEY)
+	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
 		type = NL80211_AUTHTYPE_SHARED_KEY;
-	else if (params->auth_alg & AUTH_ALG_LEAP)
+	else if (params->auth_alg & WPA_AUTH_ALG_LEAP)
 		type = NL80211_AUTHTYPE_NETWORK_EAP;
-	else if (params->auth_alg & AUTH_ALG_FT)
+	else if (params->auth_alg & WPA_AUTH_ALG_FT)
 		type = NL80211_AUTHTYPE_FT;
 	else
 		goto nla_put_failure;

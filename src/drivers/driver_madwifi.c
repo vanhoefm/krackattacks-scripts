@@ -1662,10 +1662,10 @@ wpa_driver_madwifi_set_auth_alg(void *priv, int auth_alg)
 	struct wpa_driver_madwifi_data *drv = priv;
 	int authmode;
 
-	if ((auth_alg & AUTH_ALG_OPEN_SYSTEM) &&
-	    (auth_alg & AUTH_ALG_SHARED_KEY))
+	if ((auth_alg & WPA_AUTH_ALG_OPEN) &&
+	    (auth_alg & WPA_AUTH_ALG_SHARED))
 		authmode = IEEE80211_AUTH_AUTO;
-	else if (auth_alg & AUTH_ALG_SHARED_KEY)
+	else if (auth_alg & WPA_AUTH_ALG_SHARED)
 		authmode = IEEE80211_AUTH_SHARED;
 	else
 		authmode = IEEE80211_AUTH_OPEN;

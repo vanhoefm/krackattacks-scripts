@@ -827,12 +827,11 @@ static void ieee80211_rx_mgmt_auth(struct wpa_supplicant *wpa_s,
 			u8 algs[num_algs];
 			int i, pos;
 			algs[0] = algs[1] = algs[2] = 0xff;
-			if (wpa_s->mlme.auth_algs & IEEE80211_AUTH_ALG_OPEN)
+			if (wpa_s->mlme.auth_algs & WPA_AUTH_ALG_OPEN)
 				algs[0] = WLAN_AUTH_OPEN;
-			if (wpa_s->mlme.auth_algs &
-			    IEEE80211_AUTH_ALG_SHARED_KEY)
+			if (wpa_s->mlme.auth_algs & WPA_AUTH_ALG_SHARED)
 				algs[1] = WLAN_AUTH_SHARED_KEY;
-			if (wpa_s->mlme.auth_algs & IEEE80211_AUTH_ALG_LEAP)
+			if (wpa_s->mlme.auth_algs & WPA_AUTH_ALG_LEAP)
 				algs[2] = WLAN_AUTH_LEAP;
 			if (wpa_s->mlme.auth_alg == WLAN_AUTH_OPEN)
 				pos = 0;
@@ -2206,11 +2205,11 @@ static void ieee80211_sta_new_auth(struct wpa_supplicant *wpa_s)
 	wpa_s->mlme.wmm_last_param_set = -1; /* allow any WMM update */
 
 
-	if (wpa_s->mlme.auth_algs & IEEE80211_AUTH_ALG_OPEN)
+	if (wpa_s->mlme.auth_algs & WPA_AUTH_ALG_OPEN)
 		wpa_s->mlme.auth_alg = WLAN_AUTH_OPEN;
-	else if (wpa_s->mlme.auth_algs & IEEE80211_AUTH_ALG_SHARED_KEY)
+	else if (wpa_s->mlme.auth_algs & WPA_AUTH_ALG_SHARED)
 		wpa_s->mlme.auth_alg = WLAN_AUTH_SHARED_KEY;
-	else if (wpa_s->mlme.auth_algs & IEEE80211_AUTH_ALG_LEAP)
+	else if (wpa_s->mlme.auth_algs & WPA_AUTH_ALG_LEAP)
 		wpa_s->mlme.auth_alg = WLAN_AUTH_LEAP;
 	else
 		wpa_s->mlme.auth_alg = WLAN_AUTH_OPEN;

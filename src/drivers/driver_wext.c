@@ -1907,9 +1907,9 @@ wpa_driver_wext_auth_alg_fallback(struct wpa_driver_wext_data *drv,
 	if (!drv->use_crypt) {
 		iwr.u.encoding.flags |= IW_ENCODE_DISABLED;
 	} else {
-		if (params->auth_alg & AUTH_ALG_OPEN_SYSTEM)
+		if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 			iwr.u.encoding.flags |= IW_ENCODE_OPEN;
-		if (params->auth_alg & AUTH_ALG_SHARED_KEY)
+		if (params->auth_alg & WPA_AUTH_ALG_SHARED)
 			iwr.u.encoding.flags |= IW_ENCODE_RESTRICTED;
 	}
 
@@ -2034,11 +2034,11 @@ static int wpa_driver_wext_set_auth_alg(void *priv, int auth_alg)
 	struct wpa_driver_wext_data *drv = priv;
 	int algs = 0, res;
 
-	if (auth_alg & AUTH_ALG_OPEN_SYSTEM)
+	if (auth_alg & WPA_AUTH_ALG_OPEN)
 		algs |= IW_AUTH_ALG_OPEN_SYSTEM;
-	if (auth_alg & AUTH_ALG_SHARED_KEY)
+	if (auth_alg & WPA_AUTH_ALG_SHARED)
 		algs |= IW_AUTH_ALG_SHARED_KEY;
-	if (auth_alg & AUTH_ALG_LEAP)
+	if (auth_alg & WPA_AUTH_ALG_LEAP)
 		algs |= IW_AUTH_ALG_LEAP;
 	if (algs == 0) {
 		/* at least one algorithm should be set */

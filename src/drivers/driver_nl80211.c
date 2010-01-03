@@ -18,7 +18,6 @@
 
 #include "includes.h"
 #include <sys/ioctl.h>
-#include <net/if_arp.h>
 #include <net/if.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
@@ -267,50 +266,6 @@ static int nl_get_multicast_id(struct wpa_driver_nl80211_data *drv,
 nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
-}
-
-
-static int get_ifhwaddr(struct wpa_driver_nl80211_data *drv,
-			const char *ifname, u8 *addr)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	if (ioctl(drv->ioctl_sock, SIOCGIFHWADDR, &ifr)) {
-		wpa_printf(MSG_ERROR, "%s: ioctl(SIOCGIFHWADDR): %d (%s)",
-			   ifname, errno, strerror(errno));
-		return -1;
-	}
-
-	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-		wpa_printf(MSG_ERROR, "%s: Invalid HW-addr family 0x%04x",
-			   ifname, ifr.ifr_hwaddr.sa_family);
-		return -1;
-	}
-	os_memcpy(addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-
-	return 0;
-}
-
-
-static int set_ifhwaddr(struct wpa_driver_nl80211_data *drv,
-			const char *ifname, const u8 *addr)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
-	os_memcpy(ifr.ifr_hwaddr.sa_data, addr, ETH_ALEN);
-	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFHWADDR, &ifr)) {
-		wpa_printf(MSG_DEBUG, "%s: ioctl(SIOCSIFHWADDR): %d (%s)",
-			   ifname, errno, strerror(errno));
-		return -1;
-	}
-
-	return 0;
 }
 
 
@@ -2696,7 +2651,7 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 #endif /* HOSTAPD */
 
 	if (addr && iftype != NL80211_IFTYPE_MONITOR &&
-	    set_ifhwaddr(drv, ifname, addr)) {
+	    linux_set_ifhwaddr(drv->ioctl_sock, ifname, addr)) {
 		nl80211_remove_iface(drv, ifidx);
 		return -1;
 	}
@@ -4302,7 +4257,8 @@ static void *i802_init(struct hostapd_data *hapd,
 		goto failed;
 
 	if (params->bssid) {
-		if (set_ifhwaddr(drv, drv->ifname, params->bssid))
+		if (linux_set_ifhwaddr(drv->ioctl-sock, drv->ifname,
+				       params->bssid))
 			goto failed;
 	}
 
@@ -4327,7 +4283,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		goto failed;
 	}
 
-	if (get_ifhwaddr(drv, drv->ifname, params->own_addr))
+	if (linux_get_ifhwaddr(drv->ioctl_sock, drv->ifname, params->own_addr))
 		goto failed;
 
 	return drv;
@@ -4588,7 +4544,7 @@ static int wpa_driver_nl80211_alloc_interface_addr(void *priv, u8 *addr)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 
-	if (get_ifhwaddr(drv, drv->ifname, addr) < 0)
+	if (linux_get_ifhwaddr(drv->ioctl_sock, drv->ifname, addr) < 0)
 		return -1;
 
 	if (addr[0] & 0x02) {

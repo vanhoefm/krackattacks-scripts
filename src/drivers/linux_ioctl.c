@@ -15,6 +15,7 @@
 #include "utils/includes.h"
 #include <sys/ioctl.h>
 #include <net/if.h>
+#include <net/if_arp.h>
 
 #include "utils/common.h"
 #include "linux_ioctl.h"
@@ -48,6 +49,48 @@ int linux_set_iface_flags(int sock, const char *ifname, int dev_up)
 
 	if (ioctl(sock, SIOCSIFFLAGS, &ifr) != 0) {
 		wpa_printf(MSG_ERROR, "Could not set interface %s flags: %s",
+			   ifname, strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+
+int linux_get_ifhwaddr(int sock, const char *ifname, u8 *addr)
+{
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	if (ioctl(sock, SIOCGIFHWADDR, &ifr)) {
+		wpa_printf(MSG_ERROR, "Could not get interface %s hwaddr: %s",
+			   ifname, strerror(errno));
+		return -1;
+	}
+
+	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
+		wpa_printf(MSG_ERROR, "%s: Invalid HW-addr family 0x%04x",
+			   ifname, ifr.ifr_hwaddr.sa_family);
+		return -1;
+	}
+	os_memcpy(addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+
+	return 0;
+}
+
+
+int linux_set_ifhwaddr(int sock, const char *ifname, const u8 *addr)
+{
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+	os_memcpy(ifr.ifr_hwaddr.sa_data, addr, ETH_ALEN);
+	ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+
+	if (ioctl(sock, SIOCSIFHWADDR, &ifr)) {
+		wpa_printf(MSG_DEBUG, "Could not set interface %s hwaddr: %s",
 			   ifname, strerror(errno));
 		return -1;
 	}

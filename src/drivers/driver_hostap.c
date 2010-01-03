@@ -269,21 +269,7 @@ static int hostap_init_sockets(struct hostap_driver_data *drv, u8 *own_addr)
 		return -1;
 	}
 
-        memset(&ifr, 0, sizeof(ifr));
-        os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
-        if (ioctl(drv->sock, SIOCGIFHWADDR, &ifr) != 0) {
-		perror("ioctl(SIOCGIFHWADDR)");
-		return -1;
-        }
-
-	if (ifr.ifr_hwaddr.sa_family != ARPHRD_ETHER) {
-		printf("Invalid HW-addr family 0x%04x\n",
-		       ifr.ifr_hwaddr.sa_family);
-		return -1;
-	}
-	os_memcpy(own_addr, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
-
-	return 0;
+	return linux_get_ifhwaddr(drv->sock, drv->iface, own_addr);
 }
 
 

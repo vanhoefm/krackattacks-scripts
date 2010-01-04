@@ -863,7 +863,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 };
 
 static const struct wpa_dbus_property_desc wpas_dbus_global_properties[] = {
-	{ "DebugLevel", WPAS_DBUS_NEW_INTERFACE, "y",
+	{ "DebugLevel", WPAS_DBUS_NEW_INTERFACE, "s",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_debug_level,
 	  (WPADBusPropertyAccessor) wpas_dbus_setter_debug_level,
 	  RW

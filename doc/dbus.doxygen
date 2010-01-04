@@ -98,10 +98,10 @@ registered in the bus with fi.w1.wpa_supplicant1 name.
 
     <ul>
       <li>
-	<h3>DebugLevel - y - (read/write)</h3>
+	<h3>DebugLevel - s - (read/write)</h3>
 	<p>Global %wpa_supplicant debugging level. Possible values are
-	0 (verbose debugging), 1 (debugging), 2 (informative), 3 (warnings),
-	and 4 (errors).</p>
+	"msgdump" (verbose debugging), "debug" (debugging),
+	"info" (informative), "warning" (warnings), and "error" (errors).</p>
       </li>
 
       <li>

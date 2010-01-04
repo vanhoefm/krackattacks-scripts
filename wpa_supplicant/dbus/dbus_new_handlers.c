@@ -36,6 +36,10 @@ extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
 
+static const char *debug_strings[] = {
+	"msgdump", "debug", "info", "warning", "error", NULL
+};
+
 
 /**
  * wpas_dbus_new_decompose_object_path - Decompose an interface object path into parts
@@ -706,9 +710,15 @@ DBusMessage * wpas_dbus_handler_get_interface(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_debug_level(DBusMessage *message,
 					   struct wpa_global *global)
 {
-	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BYTE,
-						&wpa_debug_level);
-
+	const char *str;
+	int idx = wpa_debug_level;
+	if (idx < 0)
+		idx = 0;
+	if (idx > 4)
+		idx = 4;
+	str = debug_strings[idx];
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_STRING,
+						&str);
 }
 
 
@@ -756,15 +766,23 @@ DBusMessage * wpas_dbus_getter_debug_show_keys(DBusMessage *message,
 DBusMessage * wpas_dbus_setter_debug_level(DBusMessage *message,
 					   struct wpa_global *global)
 {
-	DBusMessage *reply = NULL;
-	dbus_uint16_t val;
+	DBusMessage *reply;
+	const char *str = NULL;
+	int i, val = -1;
 
-	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_INT16,
-						 &val);
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_STRING,
+						 &str);
 	if (reply)
 		return reply;
 
-	if (wpa_supplicant_set_debug_params(global, val, wpa_debug_timestamp,
+	for (i = 0; debug_strings[i]; i++)
+		if (os_strcmp(debug_strings[i], str) == 0) {
+			val = i;
+			break;
+		}
+
+	if (val < 0 ||
+	    wpa_supplicant_set_debug_params(global, val, wpa_debug_timestamp,
 					    wpa_debug_show_keys)) {
 		dbus_message_unref(reply);
 		return wpas_dbus_error_invalid_args(
@@ -786,7 +804,7 @@ DBusMessage * wpas_dbus_setter_debug_level(DBusMessage *message,
 DBusMessage * wpas_dbus_setter_debug_timestamp(DBusMessage *message,
 					       struct wpa_global *global)
 {
-	DBusMessage *reply = NULL;
+	DBusMessage *reply;
 	dbus_bool_t val;
 
 	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_BOOLEAN,
@@ -812,7 +830,7 @@ DBusMessage * wpas_dbus_setter_debug_timestamp(DBusMessage *message,
 DBusMessage * wpas_dbus_setter_debug_show_keys(DBusMessage *message,
 					       struct wpa_global *global)
 {
-	DBusMessage *reply = NULL;
+	DBusMessage *reply;
 	dbus_bool_t val;
 
 	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_BOOLEAN,

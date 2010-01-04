@@ -644,8 +644,8 @@ scan results.
 	<p>Frequency of the BSS in MHz.</p>
       </li>
       <li>
-	<h3>MaxRate - q - (read)</h3>
-	<p>Maximal data rate of the BSS in bits per second.</p>
+	<h3>Rates - au - (read)</h3>
+	<p>Descending ordered array of rates supported by the BSS in bits per second.</p>
       </li>
       <li>
 	<h3>Signal - n - (read)</h3>

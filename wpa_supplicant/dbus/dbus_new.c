@@ -1072,8 +1072,8 @@ static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 	  NULL,
 	  R
 	},
-	{ "MaxRate", WPAS_DBUS_NEW_IFACE_BSSID, "q",
-	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_max_rate,
+	{ "Rates", WPAS_DBUS_NEW_IFACE_BSSID, "au",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_rates,
 	  NULL,
 	  R
 	},

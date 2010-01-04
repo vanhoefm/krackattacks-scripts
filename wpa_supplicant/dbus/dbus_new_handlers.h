@@ -151,8 +151,8 @@ DBusMessage * wpas_dbus_getter_bss_signal(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_bss_frequency(DBusMessage *message,
 					     struct bss_handler_args *bss);
 
-DBusMessage * wpas_dbus_getter_bss_max_rate(DBusMessage *message,
-					    struct bss_handler_args *bss);
+DBusMessage * wpas_dbus_getter_bss_rates(DBusMessage *message,
+					 struct bss_handler_args *bss);
 
 DBusMessage * wpas_dbus_getter_bss_wpaie(DBusMessage *message,
 					 struct bss_handler_args *bss);

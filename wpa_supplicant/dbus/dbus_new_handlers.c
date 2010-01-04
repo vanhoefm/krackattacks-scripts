@@ -2505,29 +2505,58 @@ DBusMessage * wpas_dbus_getter_bss_frequency(DBusMessage *message,
 }
 
 
+static int cmp_u8s_desc(const void *a, const void *b)
+{
+	return (*(u8 *) b - *(u8 *) a);
+}
+
+
 /**
- * wpas_dbus_getter_bss_max_rate - Return the maximal rate of a BSS
+ * wpas_dbus_getter_bss_rates - Return available bit rates of a BSS
  * @message: Pointer to incoming dbus message
  * @bss: a pair of interface describing structure and bss's id
- * Returns: a dbus message containing the maximal data rate of requested bss
+ * Returns: a dbus message containing sorted array of bit rates
  *
- * Getter for "MaxRate" property.
+ * Getter for "Rates" property.
  */
-DBusMessage * wpas_dbus_getter_bss_max_rate(DBusMessage *message,
+DBusMessage * wpas_dbus_getter_bss_rates(DBusMessage *message,
 					    struct bss_handler_args *bss)
 {
+	DBusMessage *reply;
 	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
-	int max_rate;
+	u8 *ie_rates = NULL;
+	u32 *real_rates;
+	int rates_num, i;
 
 	if (!res) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_max_rate[dbus]: "
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_rates[dbus]: "
 			   "no bss with id %d found", bss->id);
 		return NULL;
 	}
 
-	max_rate = wpa_bss_get_max_rate(res);
-	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_UINT16,
-						&max_rate);
+	rates_num = wpa_bss_get_bit_rates(res, &ie_rates);
+	if (rates_num < 0)
+		return NULL;
+
+	qsort(ie_rates, rates_num, 1, cmp_u8s_desc);
+
+	real_rates = os_malloc(sizeof(u32) * rates_num);
+	if (!real_rates) {
+		os_free(ie_rates);
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
+	}
+
+	for (i = 0; i < rates_num; i++)
+		real_rates[i] = ie_rates[i] * 500000;
+
+	reply = wpas_dbus_simple_array_property_getter(message,
+						       DBUS_TYPE_UINT32,
+						       real_rates, rates_num);
+
+	os_free(ie_rates);
+	os_free(real_rates);
+	return reply;
 }
 
 

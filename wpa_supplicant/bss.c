@@ -434,3 +434,27 @@ int wpa_bss_get_max_rate(const struct wpa_bss *bss)
 
 	return rate;
 }
+
+
+int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates)
+{
+	const u8 *ie, *ie2;
+	int i, j, len;
+
+	ie = wpa_bss_get_ie(bss, WLAN_EID_SUPP_RATES);
+	ie2 = wpa_bss_get_ie(bss, WLAN_EID_EXT_SUPP_RATES);
+
+	len = (ie ? ie[1] : 0) + (ie2 ? ie2[1] : 0);
+
+	*rates = os_malloc(len);
+	if (!rates)
+		return -1;
+
+	for (i = 0; ie && i < ie[1]; i++)
+		(*rates)[i] = ie[i + 2] & 0x7f;
+
+	for (j = 0; ie2 && j < ie2[1]; j++)
+		(*rates)[i + j] = ie2[j + 2] & 0x7f;
+
+	return len;
+}

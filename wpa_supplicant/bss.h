@@ -40,7 +40,7 @@ struct wpa_scan_res;
  * @noise: noise level
  * @level: signal level
  * @tsf: Timestamp of last Beacon/Probe Response frame
- * @last_update: Time of the last update (i.e., Beacon or Probe Response RX) 
+ * @last_update: Time of the last update (i.e., Beacon or Probe Response RX)
  * @ie_len: length of the following IE field in octets
  *
  * This structure is used to store information about neighboring BSSes in
@@ -85,5 +85,6 @@ const u8 * wpa_bss_get_vendor_ie(const struct wpa_bss *bss, u32 vendor_type);
 struct wpabuf * wpa_bss_get_vendor_ie_multi(const struct wpa_bss *bss,
 					    u32 vendor_type);
 int wpa_bss_get_max_rate(const struct wpa_bss *bss);
+int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates);
 
 #endif /* BSS_H */

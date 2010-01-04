@@ -66,9 +66,12 @@ def showBss(bss):
 			   dbus_interface=dbus.PROPERTIES_IFACE)
 	signal = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Signal',
 			     dbus_interface=dbus.PROPERTIES_IFACE)
-	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'MaxRate',
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Rates',
 			  dbus_interface=dbus.PROPERTIES_IFACE)
-	maxrate = val / 1000000
+	if len(val) > 0:
+		maxrate = val[0] / 1000000
+	else:
+		maxrate = 0
 
 	print "  %s  ::  ssid='%s'  wpa=%s  wpa2=%s  signal=%d  rate=%d  freq=%d" % (bssid, ssid, wpa, wpa2, signal, maxrate, freq)
 

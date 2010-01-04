@@ -13,11 +13,13 @@
  * See README and COPYING for more details.
  */
 
-#include "includes.h"
+#include "utils/includes.h"
 
-#include "common.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "dbus_common.h"
 #include "dbus_common_i.h"
+#include "dbus_new.h"
 #include "dbus_new_helpers.h"
 
 
@@ -435,6 +437,9 @@ static DBusHandlerResult message_handler(DBusConnection *connection,
 			dbus_connection_send(connection, reply, NULL);
 		dbus_message_unref(reply);
 	}
+
+	wpa_dbus_flush_all_changed_properties(connection);
+
 	return DBUS_HANDLER_RESULT_HANDLED;
 }
 
@@ -456,6 +461,8 @@ void free_dbus_object_desc(struct wpa_dbus_object_desc *obj_dsc)
 	if (obj_dsc->user_data_free_func)
 		obj_dsc->user_data_free_func(obj_dsc->user_data);
 
+	os_free(obj_dsc->path);
+	os_free(obj_dsc->prop_changed_flags);
 	os_free(obj_dsc);
 }
 
@@ -489,6 +496,7 @@ int wpa_dbus_ctrl_iface_init(struct wpas_dbus_priv *iface,
 	};
 
 	obj_desc->connection = iface->con;
+	obj_desc->path = os_strdup(dbus_path);
 
 	/* Register the message handler for the global dbus interface */
 	if (!dbus_connection_register_object_path(iface->con,
@@ -556,6 +564,7 @@ int wpa_dbus_register_object_per_iface(
 
 	con = ctrl_iface->con;
 	obj_desc->connection = con;
+	obj_desc->path = os_strdup(path);
 
 	/* Register the message handler for the interface functions */
 	if (!dbus_connection_register_object_path(con, path, &vtable,
@@ -567,6 +576,9 @@ int wpa_dbus_register_object_per_iface(
 
 	return 0;
 }
+
+
+static void flush_object_timeout_handler(void *eloop_ctx, void *timeout_ctx);
 
 
 /**
@@ -581,6 +593,9 @@ int wpa_dbus_unregister_object_per_iface(
 	struct wpas_dbus_priv *ctrl_iface, const char *path)
 {
 	DBusConnection *con = ctrl_iface->con;
+
+	eloop_cancel_timeout(flush_object_timeout_handler, con, (void *) path);
+
 	if (!dbus_connection_unregister_object_path(con, path))
 		return -1;
 
@@ -588,77 +603,83 @@ int wpa_dbus_unregister_object_per_iface(
 }
 
 
-/**
- * wpas_dbus_signal_network_added - Send a property changed signal
- * @iface: dbus priv struct
- * @property_getter: propperty getter used to fetch new property value
- * @getter_arg: argument passed to property getter
- * @path: path to object which property has changed
- * @interface_name: signal and property interface
- * @property_name: name of property which has changed
- *
- * Notify listeners about changing value of some property. Signal
- * contains property name and its value fetched using given property
- * getter.
- */
-void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
-				      WPADBusPropertyAccessor property_getter,
-				      void *getter_arg,
-				      const char *path,
-				      const char *interface_name,
-				      const char *property_name)
+static void put_changed_properties(const struct wpa_dbus_object_desc *obj_dsc,
+				   const char *interface,
+				   DBusMessageIter *dict_iter)
 {
+	DBusMessage *getter_reply;
+	DBusMessageIter prop_iter, entry_iter;
+	const struct wpa_dbus_property_desc *dsc;
+	int i;
 
-	DBusConnection *connection;
-	DBusMessage *msg, *getter_reply;
-	DBusMessageIter prop_iter, signal_iter, dict_iter, entry_iter;
+	for (dsc = obj_dsc->properties, i = 0; dsc && dsc->dbus_property;
+	     dsc++, i++) {
+		if (obj_dsc->prop_changed_flags == NULL ||
+		    !obj_dsc->prop_changed_flags[i])
+			continue;
+		if (os_strcmp(dsc->dbus_interface, interface) != 0)
+			continue;
+		obj_dsc->prop_changed_flags[i] = 0;
 
-	if (!iface)
-		return;
-	connection = iface->con;
+		getter_reply = dsc->getter(NULL, obj_dsc->user_data);
+		if (!getter_reply ||
+		    dbus_message_get_type(getter_reply) ==
+		    DBUS_MESSAGE_TYPE_ERROR) {
+			wpa_printf(MSG_ERROR, "dbus: %s: Cannot get new value "
+				   "of property %s", __func__,
+				   dsc->dbus_property);
+			continue;
+		}
 
-	if (!property_getter || !path || !interface_name || !property_name) {
-		wpa_printf(MSG_ERROR, "dbus: %s: A parameter not specified",
-			   __func__);
-		return;
-	}
+		if (!dbus_message_iter_init(getter_reply, &prop_iter) ||
+		    !dbus_message_iter_open_container(dict_iter,
+						      DBUS_TYPE_DICT_ENTRY,
+						      NULL, &entry_iter) ||
+		    !dbus_message_iter_append_basic(&entry_iter,
+						    DBUS_TYPE_STRING,
+						    &dsc->dbus_property))
+			goto err;
 
-	getter_reply = property_getter(NULL, getter_arg);
-	if (!getter_reply ||
-	    dbus_message_get_type(getter_reply) == DBUS_MESSAGE_TYPE_ERROR) {
-		wpa_printf(MSG_ERROR, "dbus: %s: Cannot get new value of "
-			   "property %s", __func__, property_name);
-		return;
-	}
+		recursive_iter_copy(&prop_iter, &entry_iter);
 
-	msg = dbus_message_new_signal(path, interface_name,
-				      "PropertiesChanged");
-	if (msg == NULL) {
+		if (!dbus_message_iter_close_container(dict_iter, &entry_iter))
+			goto err;
+
 		dbus_message_unref(getter_reply);
-		return;
 	}
 
-	dbus_message_iter_init(getter_reply, &prop_iter);
+	return;
+
+err:
+	wpa_printf(MSG_ERROR, "dbus: %s: Cannot construct signal", __func__);
+}
+
+
+static void send_prop_changed_signal(
+	DBusConnection *con, const char *path, const char *interface,
+	const struct wpa_dbus_object_desc *obj_dsc)
+{
+	DBusMessage *msg;
+	DBusMessageIter signal_iter, dict_iter;
+
+	msg = dbus_message_new_signal(path, interface, "PropertiesChanged");
+	if (msg == NULL)
+		return;
+
 	dbus_message_iter_init_append(msg, &signal_iter);
 
 	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
-					      "{sv}", &dict_iter) ||
-	    !dbus_message_iter_open_container(&dict_iter, DBUS_TYPE_DICT_ENTRY,
-					      NULL, &entry_iter) ||
-	    !dbus_message_iter_append_basic(&entry_iter, DBUS_TYPE_STRING,
-					    &property_name))
+					      "{sv}", &dict_iter))
 		goto err;
 
-	recursive_iter_copy(&prop_iter, &entry_iter);
+	put_changed_properties(obj_dsc, interface, &dict_iter);
 
-	if (!dbus_message_iter_close_container(&dict_iter, &entry_iter) ||
-	    !dbus_message_iter_close_container(&signal_iter, &dict_iter))
+	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
 		goto err;
 
-	dbus_connection_send(connection, msg, NULL);
+	dbus_connection_send(con, msg, NULL);
 
 out:
-	dbus_message_unref(getter_reply);
 	dbus_message_unref(msg);
 	return;
 
@@ -666,6 +687,151 @@ err:
 	wpa_printf(MSG_DEBUG, "dbus: %s: Failed to construct signal",
 		   __func__);
 	goto out;
+}
+
+
+static void flush_object_timeout_handler(void *eloop_ctx, void *timeout_ctx)
+{
+	DBusConnection *con = eloop_ctx;
+	const char *path = timeout_ctx;
+
+	wpa_printf(MSG_DEBUG, "dbus: %s: Timeout - sending changed properties "
+		   "of object %s", __func__, path);
+	wpa_dbus_flush_object_changed_properties(con, path);
+}
+
+
+static void recursive_flush_changed_properties(DBusConnection *con,
+					       const char *path)
+{
+	char **objects = NULL;
+	char subobj_path[WPAS_DBUS_OBJECT_PATH_MAX];
+	int i;
+
+	wpa_dbus_flush_object_changed_properties(con, path);
+
+	if (!dbus_connection_list_registered(con, path, &objects))
+		goto out;
+
+	for (i = 0; objects[i]; i++) {
+		os_snprintf(subobj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/%s", path, objects[i]);
+		recursive_flush_changed_properties(con, subobj_path);
+	}
+
+out:
+	dbus_free_string_array(objects);
+}
+
+
+/**
+ * wpa_dbus_flush_all_changed_properties - Send all PropertiesChanged signals
+ * @con: DBus connection
+ *
+ * Traverses through all registered objects and sends PropertiesChanged for
+ * each properties.
+ */
+void wpa_dbus_flush_all_changed_properties(DBusConnection *con)
+{
+	recursive_flush_changed_properties(con, WPAS_DBUS_NEW_PATH);
+}
+
+
+/**
+ * wpa_dbus_flush_object_changed_properties - Send PropertiesChanged for object
+ * @con: DBus connection
+ * @path: path to a DBus object for which PropertiesChanged will be sent.
+ *
+ * Iterates over all properties registered with object and for each interface
+ * containing properties marked as changed, sends a PropertiesChanged signal
+ * containing names and new values of properties that have changed.
+ *
+ * You need to call this function after wpa_dbus_mark_property_changed()
+ * if you want to send PropertiesChanged signal immediately (i.e., without
+ * waiting timeout to expire). PropertiesChanged signal for an object is sent
+ * automatically short time after first marking property as changed. All
+ * PropertiesChanged signals are sent automatically after responding on DBus
+ * message, so if you marked a property changed as a result of DBus call
+ * (e.g., param setter), you usually do not need to call this function.
+ */
+void wpa_dbus_flush_object_changed_properties(DBusConnection *con,
+					      const char *path)
+{
+	struct wpa_dbus_object_desc *obj_desc = NULL;
+	const struct wpa_dbus_property_desc *dsc;
+	int i;
+
+	eloop_cancel_timeout(flush_object_timeout_handler, con, (void *) path);
+
+	dbus_connection_get_object_path_data(con, path, (void **) &obj_desc);
+
+	if (!obj_desc)
+		return;
+
+	dsc = obj_desc->properties;
+	for (dsc = obj_desc->properties, i = 0; dsc && dsc->dbus_property;
+	     dsc++, i++) {
+		if (obj_desc->prop_changed_flags == NULL ||
+		    !obj_desc->prop_changed_flags[i])
+			continue;
+		send_prop_changed_signal(con, path, dsc->dbus_interface,
+					 obj_desc);
+	}
+}
+
+
+#define WPA_DBUS_SEND_PROP_CHANGED_TIMEOUT 5000
+
+
+/**
+ * wpa_dbus_mark_property_changed - Mark a property as changed and
+ * @iface: dbus priv struct
+ * @path: path to DBus object which property has changed
+ * @interface: interface containing changed property
+ * @property: property name which has changed
+ *
+ * Iterates over all properties registered with an object and marks the one
+ * given in parameters as changed. All parameters registered for an object
+ * within a single interface will be aggregated together and sent in one
+ * PropertiesChanged signal when function
+ * wpa_dbus_flush_object_changed_properties() is called.
+ */
+void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
+				    const char *path, const char *interface,
+				    const char *property)
+{
+	struct wpa_dbus_object_desc *obj_desc = NULL;
+	const struct wpa_dbus_property_desc *dsc;
+	int i = 0;
+
+	dbus_connection_get_object_path_data(iface->con, path,
+					     (void **) &obj_desc);
+	if (!obj_desc) {
+		wpa_printf(MSG_ERROR, "dbus: wpa_dbus_property_changed: "
+			   "could not obtain object's private data: %s", path);
+		return;
+	}
+
+	for (dsc = obj_desc->properties; dsc && dsc->dbus_property; dsc++, i++)
+		if (os_strcmp(property, dsc->dbus_property) == 0 &&
+		    os_strcmp(interface, dsc->dbus_interface) == 0) {
+			if (obj_desc->prop_changed_flags)
+				obj_desc->prop_changed_flags[i] = 1;
+			break;
+		}
+
+	if (!dsc || !dsc->dbus_property) {
+		wpa_printf(MSG_ERROR, "dbus: wpa_dbus_property_changed: "
+			   "no property %s in object %s", property, path);
+		return;
+	}
+
+	if (!eloop_is_timeout_registered(flush_object_timeout_handler,
+					 iface->con, obj_desc->path)) {
+		eloop_register_timeout(0, WPA_DBUS_SEND_PROP_CHANGED_TIMEOUT,
+				       flush_object_timeout_handler,
+				       iface->con, obj_desc->path);
+	}
 }
 
 

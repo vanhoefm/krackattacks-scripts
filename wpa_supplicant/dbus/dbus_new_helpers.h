@@ -27,11 +27,15 @@ typedef DBusMessage * (* WPADBusPropertyAccessor)(DBusMessage *message,
 
 struct wpa_dbus_object_desc {
 	DBusConnection *connection;
+	char *path;
 
 	/* list of methods, properties and signals registered with object */
 	const struct wpa_dbus_method_desc *methods;
 	const struct wpa_dbus_signal_desc *signals;
 	const struct wpa_dbus_property_desc *properties;
+
+	/* property changed flags */
+	u8 *prop_changed_flags;
 
 	/* argument for method handlers and properties
 	 * getter and setter functions */
@@ -123,16 +127,19 @@ int wpa_dbus_unregister_object_per_iface(
 	struct wpas_dbus_priv *ctrl_iface,
 	const char *path);
 
-void wpa_dbus_signal_property_changed(struct wpas_dbus_priv *iface,
-				      WPADBusPropertyAccessor property_getter,
-				      void *getter_arg,
-				      const char *path,
-				      const char *interface_name,
-				      const char *property_name);
-
 void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
 				    const char *path, const char *interface,
 				    DBusMessageIter *dict_iter);
+
+
+void wpa_dbus_flush_all_changed_properties(DBusConnection *con);
+
+void wpa_dbus_flush_object_changed_properties(DBusConnection *con,
+					      const char *path);
+
+void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
+				    const char *path, const char *interface,
+				    const char *property);
 
 DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 				  struct wpa_dbus_object_desc *obj_dsc);

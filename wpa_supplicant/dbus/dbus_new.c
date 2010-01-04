@@ -405,17 +405,13 @@ void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 					      struct wpa_ssid *ssid)
 {
 
-	struct network_handler_args args = { wpa_s, ssid };
 	char path[WPAS_DBUS_OBJECT_PATH_MAX];
 	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%d",
 		    wpa_s->dbus_new_path, ssid->id);
 
-	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
-					 (WPADBusPropertyAccessor)
-					 wpas_dbus_getter_enabled, &args,
-					 path, WPAS_DBUS_NEW_IFACE_NETWORK,
-					 "Enabled");
+	wpa_dbus_mark_property_changed(wpa_s->global->dbus, path,
+				       WPAS_DBUS_NEW_IFACE_NETWORK, "Enabled");
 }
 
 
@@ -698,9 +694,9 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	wpa_dbus_signal_property_changed(wpa_s->global->dbus,
-					 getter, wpa_s, wpa_s->dbus_new_path,
-					 WPAS_DBUS_NEW_IFACE_INTERFACE, prop);
+	wpa_dbus_mark_property_changed(wpa_s->global->dbus,
+				       wpa_s->dbus_new_path,
+				       WPAS_DBUS_NEW_IFACE_INTERFACE, prop);
 }
 
 
@@ -712,12 +708,9 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
  */
 void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
 {
-	wpa_dbus_signal_property_changed(global->dbus,
-					 (WPADBusPropertyAccessor)
-					 wpas_dbus_getter_debug_level,
-					 global, WPAS_DBUS_NEW_PATH,
-					 WPAS_DBUS_NEW_INTERFACE,
-					 "DebugLevel");
+	wpa_dbus_mark_property_changed(global->dbus, WPAS_DBUS_NEW_PATH,
+				       WPAS_DBUS_NEW_INTERFACE,
+				       "DebugLevel");
 }
 
 
@@ -729,12 +722,9 @@ void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
  */
 void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
 {
-	wpa_dbus_signal_property_changed(global->dbus,
-					 (WPADBusPropertyAccessor)
-					 wpas_dbus_getter_debug_timestamp,
-					 global, WPAS_DBUS_NEW_PATH,
-					 WPAS_DBUS_NEW_INTERFACE,
-					 "DebugTimestamp");
+	wpa_dbus_mark_property_changed(global->dbus, WPAS_DBUS_NEW_PATH,
+				       WPAS_DBUS_NEW_INTERFACE,
+				       "DebugTimestamp");
 }
 
 
@@ -746,12 +736,9 @@ void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
  */
 void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global)
 {
-	wpa_dbus_signal_property_changed(global->dbus,
-					 (WPADBusPropertyAccessor)
-					 wpas_dbus_getter_debug_show_keys,
-					 global, WPAS_DBUS_NEW_PATH,
-					 WPAS_DBUS_NEW_INTERFACE,
-					 "DebugShowKeys");
+	wpa_dbus_mark_property_changed(global->dbus, WPAS_DBUS_NEW_PATH,
+				       WPAS_DBUS_NEW_INTERFACE,
+				       "DebugShowKeys");
 }
 
 
@@ -762,11 +749,21 @@ static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
 			       const struct wpa_dbus_property_desc *properties,
 			       const struct wpa_dbus_signal_desc *signals)
 {
+	int n;
+
 	obj_desc->user_data = priv;
 	obj_desc->user_data_free_func = priv_free;
 	obj_desc->methods = methods;
 	obj_desc->properties = properties;
 	obj_desc->signals = signals;
+
+	for (n = 0; properties && properties->dbus_property; properties++);
+		n++;
+
+	obj_desc->prop_changed_flags = os_zalloc(n);
+	if (!obj_desc->prop_changed_flags)
+		wpa_printf(MSG_DEBUG, "dbus: %s: can't register handlers",
+			   __func__);
 }
 
 

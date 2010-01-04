@@ -322,13 +322,10 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 	wpa_s->conf->wps_cred_processing = (process_credentials ? 2 : 1);
 
 	if ((wpa_s->conf->wps_cred_processing != 1) != old_pc)
-		wpa_dbus_signal_property_changed(
-			wpa_s->global->dbus,
-			(WPADBusPropertyAccessor)
-			wpas_dbus_getter_process_credentials,
-			wpa_s, wpa_s->dbus_new_path,
-			WPAS_DBUS_NEW_IFACE_WPS,
-			"ProcessCredentials");
+		wpa_dbus_mark_property_changed(wpa_s->global->dbus,
+					       wpa_s->dbus_new_path,
+					       WPAS_DBUS_NEW_IFACE_WPS,
+					       "ProcessCredentials");
 
 	return NULL;
 }

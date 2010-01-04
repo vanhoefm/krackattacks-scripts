@@ -27,6 +27,7 @@ enum wpa_states;
 enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_AP_SCAN,
 	WPAS_DBUS_PROP_SCANNING,
+	WPAS_DBUS_PROP_STATE,
 	WPAS_DBUS_PROP_CURRENT_BSS,
 	WPAS_DBUS_PROP_CURRENT_NETWORK,
 };
@@ -77,9 +78,6 @@ void wpas_dbus_ctrl_iface_deinit(struct wpas_dbus_priv *iface);
 
 int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s);
 int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s);
-void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
-				    enum wpa_states new_state,
-				    enum wpa_states old_state);
 void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 				   enum wpas_dbus_prop property);
 void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,

@@ -78,7 +78,7 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 						old_state);
 
 	/* notify the new DBus API */
-	wpas_dbus_signal_state_changed(wpa_s, new_state, old_state);
+	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_STATE);
 }
 
 
@@ -118,6 +118,7 @@ void wpas_notify_scanning(struct wpa_supplicant *wpa_s)
 {
 	/* notify the old DBus API */
 	wpa_supplicant_dbus_notify_scanning(wpa_s);
+
 	/* notify the new DBus API */
 	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_SCANNING);
 }

@@ -406,18 +406,6 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
-	<h3>StateChanged ( s : newState, s : oldState )</h3>
-	<p>Interface state has changed.</p>
-	<h4>Arguments</h4>
-	<dl>
-	  <dt>s : newState</dt>
-	  <dd>A state which the interface goes to</dd>
-	  <dt>s : oldState</dt>
-	  <dd>A state which the interface goes from</dd>
-	</dl>
-      </li>
-
-      <li>
 	<h3>BSSAdded ( o : BSS, a{sv} : properties )</h3>
 	<p>Interface became aware of a new BSS.</p>
 	<h4>Arguments</h4>
@@ -501,7 +489,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<h4>Arguments</h4>
 	<dl>
 	  <dt>a{sv} : properties</dt>
-	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "ApScan", "Scanning", "CurrentBSS", "CurrentNetwork"</dd>
+	  <dd>A dictionary with pairs of properties names which have changed and theirs new values. Possible dictionary keys are: "ApScan", "Scanning", "State", "CurrentBSS", "CurrentNetwork"</dd>
 	</dl>
       </li>
     </ul>

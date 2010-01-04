@@ -520,14 +520,14 @@ const char * wpa_supplicant_state_txt(enum wpa_states state)
 void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 			      enum wpa_states state)
 {
+	enum wpa_states old_state = wpa_s->wpa_state;
+
 	wpa_printf(MSG_DEBUG, "State: %s -> %s",
 		   wpa_supplicant_state_txt(wpa_s->wpa_state),
 		   wpa_supplicant_state_txt(state));
 
 	if (state != WPA_SCANNING)
 		wpa_supplicant_notify_scanning(wpa_s, 0);
-
-	wpas_notify_state_changed(wpa_s, state, wpa_s->wpa_state);
 
 	if (state == WPA_COMPLETED && wpa_s->new_connection) {
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
@@ -548,6 +548,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_drv_set_operstate(wpa_s, 0);
 	}
 	wpa_s->wpa_state = state;
+
+	if (wpa_s->wpa_state != old_state)
+		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
 }
 
 
@@ -583,12 +586,15 @@ static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 static void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 {
 	enum wpa_states old_state = wpa_s->wpa_state;
+
 	wpa_s->pairwise_cipher = 0;
 	wpa_s->group_cipher = 0;
 	wpa_s->mgmt_group_cipher = 0;
 	wpa_s->key_mgmt = 0;
 	wpa_s->wpa_state = WPA_DISCONNECTED;
-	wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
+
+	if (wpa_s->wpa_state != old_state)
+		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
 }
 
 

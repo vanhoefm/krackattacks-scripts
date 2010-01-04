@@ -393,75 +393,6 @@ void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id)
 }
 
 
-static void str_to_lower(char *s)
-{
-	while (*s) {
-		*s = tolower(*s);
-		s++;
-	}
-}
-
-
-/**
- * wpas_dbus_signal_state_changed - Send a state changed signal
- * @wpa_s: %wpa_supplicant network interface data
- * @new_state: new state wpa_supplicant is entering
- * @old_state: old state wpa_supplicant is leaving
- *
- * Notify listeners that wpa_supplicant has changed state
- */
-void wpas_dbus_signal_state_changed(struct wpa_supplicant *wpa_s,
-				    enum wpa_states new_state,
-				    enum wpa_states old_state)
-{
-	struct wpas_dbus_priv *iface;
-	DBusMessage *msg;
-	char *new_state_str, *old_state_str;
-
-	/* Do nothing if the control interface is not turned on */
-	if (wpa_s->global == NULL)
-		return;
-	iface = wpa_s->global->dbus;
-	if (iface == NULL)
-		return;
-
-	/* Only send signal if state really changed */
-	if (new_state == old_state)
-		return;
-
-	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
-				      WPAS_DBUS_NEW_IFACE_INTERFACE,
-				      "StateChanged");
-	if (msg == NULL)
-		return;
-
-	new_state_str = os_strdup(wpa_supplicant_state_txt(new_state));
-	old_state_str = os_strdup(wpa_supplicant_state_txt(old_state));
-	if (new_state_str == NULL || old_state_str == NULL)
-		goto out;
-
-	/* make state string lowercase to fit new DBus API convention */
-	str_to_lower(new_state_str);
-	str_to_lower(old_state_str);
-
-	if (!dbus_message_append_args(msg,
-	                              DBUS_TYPE_STRING, &new_state_str,
-	                              DBUS_TYPE_STRING, &old_state_str,
-	                              DBUS_TYPE_INVALID)) {
-		wpa_printf(MSG_ERROR, "dbus: Failed to construct state change "
-		           "signal");
-		goto out;
-	}
-
-	dbus_connection_send(iface->con, msg, NULL);
-
-out:
-	dbus_message_unref(msg);
-	os_free(new_state_str);
-	os_free(old_state_str);
-}
-
-
 /**
  * wpas_dbus_signal_network_enabled_changed - Signals Enabled property changes
  * @wpa_s: %wpa_supplicant network interface data
@@ -746,6 +677,10 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 	case WPAS_DBUS_PROP_SCANNING:
 		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_scanning;
 		prop = "Scanning";
+		break;
+	case WPAS_DBUS_PROP_STATE:
+		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_state;
+		prop = "State";
 		break;
 	case WPAS_DBUS_PROP_CURRENT_BSS:
 		getter = (WPADBusPropertyAccessor)
@@ -1416,13 +1351,6 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "ScanDone", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "success", "b", ARG_OUT },
-		  END_ARGS
-	  }
-	},
-	{ "StateChanged", WPAS_DBUS_NEW_IFACE_INTERFACE,
-	  {
-		  { "newState", "s", ARG_OUT },
-		  { "oldState", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

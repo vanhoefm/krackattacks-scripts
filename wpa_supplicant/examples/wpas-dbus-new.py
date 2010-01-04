@@ -33,8 +33,9 @@ def list_interfaces(wpas_obj):
 			      dbus_interface=dbus.PROPERTIES_IFACE)
 		print ifname
 
-def stateChanged(newState, oldState):
-	print "StateChanged(%s -> %s)" % (oldState, newState)
+def propertiesChanged(properties):
+	if properties.has_key("State"):
+		print "PropertiesChanged: State: %s" % (properties["State"])
 
 def showBss(bss):
 	net_obj = bus.get_object(WPAS_DBUS_SERVICE, bss)
@@ -110,9 +111,9 @@ def main():
 	bus.add_signal_receiver(bssRemoved,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
 				signal_name="BSSRemoved")
-	bus.add_signal_receiver(stateChanged,
+	bus.add_signal_receiver(propertiesChanged,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
-				signal_name="StateChanged")
+				signal_name="PropertiesChanged")
 
 	ifname = sys.argv[1]
 

@@ -13,8 +13,9 @@ WPAS_DBUS_OPATH = "/fi/w1/wpa_supplicant1"
 WPAS_DBUS_INTERFACES_INTERFACE = "fi.w1.wpa_supplicant1.Interface"
 WPAS_DBUS_WPS_INTERFACE = "fi.w1.wpa_supplicant1.Interface.WPS"
 
-def stateChanged(newState, oldState):
-	print "StateChanged(%s -> %s)" % (oldState, newState)
+def propertiesChanged(properties):
+	if properties.has_key("State"):
+		print "PropertiesChanged: State: %s" % (properties["State"])
 
 def scanDone(success):
 	print "Scan done: success=%s" % success
@@ -52,9 +53,9 @@ def main():
 	bus.add_signal_receiver(bssRemoved,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
 				signal_name="BSSRemoved")
-	bus.add_signal_receiver(stateChanged,
+	bus.add_signal_receiver(propertiesChanged,
 				dbus_interface=WPAS_DBUS_INTERFACES_INTERFACE,
-				signal_name="StateChanged")
+				signal_name="PropertiesChanged")
 	bus.add_signal_receiver(wpsEvent,
 				dbus_interface=WPAS_DBUS_WPS_INTERFACE,
 				signal_name="Event")

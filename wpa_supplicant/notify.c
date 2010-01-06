@@ -209,6 +209,64 @@ void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_bss_freq_changed(struct wpa_supplicant *wpa_s,
+				  unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_FREQ, id);
+}
+
+
+void wpas_notify_bss_signal_changed(struct wpa_supplicant *wpa_s,
+				    unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_SIGNAL,
+					  id);
+}
+
+
+void wpas_notify_bss_privacy_changed(struct wpa_supplicant *wpa_s,
+				     unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_PRIVACY,
+					  id);
+}
+
+
+void wpas_notify_bss_mode_changed(struct wpa_supplicant *wpa_s,
+				  unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_MODE, id);
+}
+
+
+void wpas_notify_bss_wpaie_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_WPAIE, id);
+}
+
+
+void wpas_notify_bss_rsnie_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_RSNIE, id);
+}
+
+
+void wpas_notify_bss_wps_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_WPSIE, id);
+}
+
+
+void wpas_notify_bss_rates_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id)
+{
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_RATES, id);
+}
+
+
 void wpas_notify_blob_added(struct wpa_supplicant *wpa_s, const char *name)
 {
 	wpas_dbus_signal_blob_added(wpa_s, name);

@@ -701,6 +701,62 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 
 
 /**
+ * wpas_dbus_bss_signal_prop_changed - Signals change of BSS property
+ * @wpa_s: %wpa_supplicant network interface data
+ * @property: indicates which property has changed
+ * @id: unique BSS identifier
+ *
+ * Sends PropertyChanged signals with path, interface, and arguments depending
+ * on which property has changed.
+ */
+void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
+				       enum wpas_dbus_bss_prop property,
+				       unsigned int id)
+{
+	char path[WPAS_DBUS_OBJECT_PATH_MAX];
+	char *prop;
+
+	switch (property) {
+	case WPAS_DBUS_BSS_PROP_SIGNAL:
+		prop = "Signal";
+		break;
+	case WPAS_DBUS_BSS_PROP_FREQ:
+		prop = "Frequency";
+		break;
+	case WPAS_DBUS_BSS_PROP_MODE:
+		prop = "Mode";
+		break;
+	case WPAS_DBUS_BSS_PROP_PRIVACY:
+		prop = "Privacy";
+		break;
+	case WPAS_DBUS_BSS_PROP_RATES:
+		prop = "Rates";
+		break;
+	case WPAS_DBUS_BSS_PROP_WPAIE:
+		prop = "WPAIE";
+		break;
+	case WPAS_DBUS_BSS_PROP_RSNIE:
+		prop = "RSNIE";
+		break;
+	case WPAS_DBUS_BSS_PROP_WPSIE:
+		prop = "WPSIE";
+		break;
+	default:
+		wpa_printf(MSG_ERROR, "dbus: %s: Unknown Property value %d",
+			   __func__, property);
+		return;
+	}
+
+	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_BSSIDS_PART "/%u",
+		    wpa_s->dbus_new_path, id);
+
+	wpa_dbus_mark_property_changed(wpa_s->global->dbus, path,
+				       WPAS_DBUS_NEW_IFACE_BSSID, prop);
+}
+
+
+/**
  * wpas_dbus_signal_debug_level_changed - Signals change of debug param
  * @global: wpa_global structure
  *

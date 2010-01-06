@@ -32,6 +32,17 @@ enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_CURRENT_NETWORK,
 };
 
+enum wpas_dbus_bss_prop {
+	WPAS_DBUS_BSS_PROP_SIGNAL,
+	WPAS_DBUS_BSS_PROP_FREQ,
+	WPAS_DBUS_BSS_PROP_MODE,
+	WPAS_DBUS_BSS_PROP_PRIVACY,
+	WPAS_DBUS_BSS_PROP_RATES,
+	WPAS_DBUS_BSS_PROP_WPAIE,
+	WPAS_DBUS_BSS_PROP_RSNIE,
+	WPAS_DBUS_BSS_PROP_WPSIE,
+};
+
 #define WPAS_DBUS_OBJECT_PATH_MAX 150
 
 #define WPAS_DBUS_NEW_SERVICE		"fi.w1.wpa_supplicant1"
@@ -80,6 +91,9 @@ int wpas_dbus_register_interface(struct wpa_supplicant *wpa_s);
 int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s);
 void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 				   enum wpas_dbus_prop property);
+void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
+				       enum wpas_dbus_bss_prop property,
+				       unsigned int id);
 void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 					      struct wpa_ssid *ssid);
 void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id);
@@ -122,6 +136,12 @@ static inline int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 
 static inline void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 						 enum wpas_dbus_prop property)
+{
+}
+
+static inline void wpas_dbus_bss_signal_prop_changed(
+	struct wpa_supplicant *wpa_s, enum wpas_dbus_bss_prop property,
+	unsigned int id)
 {
 }
 

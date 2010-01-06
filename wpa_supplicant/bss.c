@@ -52,6 +52,15 @@
  */
 #define WPA_BSS_EXPIRATION_SCAN_COUNT 2
 
+#define WPA_BSS_FREQ_CHANGED_FLAG	BIT(0)
+#define WPA_BSS_SIGNAL_CHANGED_FLAG	BIT(1)
+#define WPA_BSS_PRIVACY_CHANGED_FLAG	BIT(2)
+#define WPA_BSS_MODE_CHANGED_FLAG	BIT(3)
+#define WPA_BSS_WPAIE_CHANGED_FLAG	BIT(4)
+#define WPA_BSS_RSNIE_CHANGED_FLAG	BIT(5)
+#define WPA_BSS_WPS_CHANGED_FLAG	BIT(6)
+#define WPA_BSS_RATES_CHANGED_FLAG	BIT(7)
+
 
 static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
@@ -136,9 +145,129 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 }
 
 
+static int are_ies_equal(const struct wpa_bss *old,
+			 const struct wpa_scan_res *new, u32 ie)
+{
+	const u8 *old_ie, *new_ie;
+	struct wpabuf *old_ie_buff = NULL;
+	struct wpabuf *new_ie_buff = NULL;
+	int new_ie_len, old_ie_len, ret, is_multi;
+
+	switch (ie) {
+	case WPA_IE_VENDOR_TYPE:
+		old_ie = wpa_bss_get_vendor_ie(old, ie);
+		new_ie = wpa_scan_get_vendor_ie(new, ie);
+		is_multi = 0;
+		break;
+	case WPS_IE_VENDOR_TYPE:
+		old_ie_buff = wpa_bss_get_vendor_ie_multi(old, ie);
+		new_ie_buff = wpa_scan_get_vendor_ie_multi(new, ie);
+		is_multi = 1;
+		break;
+	case WLAN_EID_RSN:
+	case WLAN_EID_SUPP_RATES:
+	case WLAN_EID_EXT_SUPP_RATES:
+		old_ie = wpa_bss_get_ie(old, ie);
+		new_ie = wpa_scan_get_ie(new, ie);
+		is_multi = 0;
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "bss: %s: cannot compare IEs", __func__);
+		return 0;
+	}
+
+	if (is_multi) {
+		/* in case of multiple IEs stored in buffer */
+		old_ie = old_ie_buff ? wpabuf_head_u8(old_ie_buff) : NULL;
+		new_ie = new_ie_buff ? wpabuf_head_u8(new_ie_buff) : NULL;
+		old_ie_len = old_ie_buff ? wpabuf_len(old_ie_buff) : 0;
+		new_ie_len = new_ie_buff ? wpabuf_len(new_ie_buff) : 0;
+	} else {
+		/* in case of single IE */
+		old_ie_len = old_ie ? old_ie[1] + 2 : 0;
+		new_ie_len = new_ie ? new_ie[1] + 2 : 0;
+	}
+
+	ret = (old_ie_len == new_ie_len &&
+	       os_memcmp(old_ie, new_ie, old_ie_len) == 0);
+
+	wpabuf_free(old_ie_buff);
+	wpabuf_free(new_ie_buff);
+
+	return ret;
+}
+
+
+static u32 wpa_bss_compare_res(const struct wpa_bss *old,
+			       const struct wpa_scan_res *new)
+{
+	u32 changes = 0;
+	int caps_diff = old->caps ^ new->caps;
+
+	if (old->freq != new->freq)
+		changes |= WPA_BSS_FREQ_CHANGED_FLAG;
+
+	if (old->level != new->level)
+		changes |= WPA_BSS_SIGNAL_CHANGED_FLAG;
+
+	if (caps_diff & IEEE80211_CAP_PRIVACY)
+		changes |= WPA_BSS_PRIVACY_CHANGED_FLAG;
+
+	if (caps_diff & IEEE80211_CAP_IBSS)
+		changes |= WPA_BSS_MODE_CHANGED_FLAG;
+
+	if (!are_ies_equal(old, new, WPA_IE_VENDOR_TYPE))
+		changes |= WPA_BSS_WPAIE_CHANGED_FLAG;
+
+	if (!are_ies_equal(old, new, WLAN_EID_RSN))
+		changes |= WPA_BSS_RSNIE_CHANGED_FLAG;
+
+	if (!are_ies_equal(old, new, WPS_IE_VENDOR_TYPE))
+		changes |= WPA_BSS_WPS_CHANGED_FLAG;
+
+	if (!are_ies_equal(old, new, WLAN_EID_SUPP_RATES) ||
+	    !are_ies_equal(old, new, WLAN_EID_EXT_SUPP_RATES))
+		changes |= WPA_BSS_RATES_CHANGED_FLAG;
+
+	return changes;
+}
+
+
+static void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
+			       const struct wpa_bss *bss)
+{
+	if (changes & WPA_BSS_FREQ_CHANGED_FLAG)
+		wpas_notify_bss_freq_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_SIGNAL_CHANGED_FLAG)
+		wpas_notify_bss_signal_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_PRIVACY_CHANGED_FLAG)
+		wpas_notify_bss_privacy_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_MODE_CHANGED_FLAG)
+		wpas_notify_bss_mode_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_WPAIE_CHANGED_FLAG)
+		wpas_notify_bss_wpaie_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_RSNIE_CHANGED_FLAG)
+		wpas_notify_bss_rsnie_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_WPS_CHANGED_FLAG)
+		wpas_notify_bss_wps_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_RATES_CHANGED_FLAG)
+		wpas_notify_bss_rates_changed(wpa_s, bss->id);
+}
+
+
 static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			   struct wpa_scan_res *res)
 {
+	u32 changes;
+
+	changes = wpa_bss_compare_res(bss, res);
 	bss->scan_miss_count = 0;
 	bss->last_update_idx = wpa_s->bss_update_idx;
 	wpa_bss_copy_res(bss, res);
@@ -160,6 +289,8 @@ static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		dl_list_add(prev, &bss->list_id);
 	}
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
+
+	notify_bss_changes(wpa_s, changes, bss);
 }
 
 

@@ -51,6 +51,22 @@ void wpas_notify_bss_added(struct wpa_supplicant *wpa_s, u8 bssid[],
 			   unsigned int id);
 void wpas_notify_bss_removed(struct wpa_supplicant *wpa_s, u8 bssid[],
 			     unsigned int id);
+void wpas_notify_bss_freq_changed(struct wpa_supplicant *wpa_s,
+				  unsigned int id);
+void wpas_notify_bss_signal_changed(struct wpa_supplicant *wpa_s,
+				    unsigned int id);
+void wpas_notify_bss_privacy_changed(struct wpa_supplicant *wpa_s,
+				     unsigned int id);
+void wpas_notify_bss_mode_changed(struct wpa_supplicant *wpa_s,
+				  unsigned int id);
+void wpas_notify_bss_wpaie_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id);
+void wpas_notify_bss_rsnie_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id);
+void wpas_notify_bss_wps_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id);
+void wpas_notify_bss_rates_changed(struct wpa_supplicant *wpa_s,
+				   unsigned int id);
 void wpas_notify_blob_added(struct wpa_supplicant *wpa_s, const char *name);
 void wpas_notify_blob_removed(struct wpa_supplicant *wpa_s, const char *name);
 

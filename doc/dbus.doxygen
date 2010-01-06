@@ -653,6 +653,20 @@ scan results.
       </li>
     </ul>
 
+\subsection dbus_bss_signals Signals
+
+    <ul>
+      <li>
+	<h3>PropertiesChanged ( a{sv} : properties )</h3>
+	<p>Some properties have changed.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>a{sv} : properties</dt>
+	  <dd>A dictionary with pairs of properties names which have changed and theirs new values.</dd>
+	</dl>
+      </li>
+    </ul>
+
 
 \section dbus_network fi.w1.wpa_supplicant1.Interface.Network
 

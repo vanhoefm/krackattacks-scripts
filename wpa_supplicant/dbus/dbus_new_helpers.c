@@ -810,6 +810,9 @@ void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
 	const struct wpa_dbus_property_desc *dsc;
 	int i = 0;
 
+	if (iface == NULL)
+		return;
+
 	dbus_connection_get_object_path_data(iface->con, path,
 					     (void **) &obj_desc);
 	if (!obj_desc) {

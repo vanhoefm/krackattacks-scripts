@@ -757,7 +757,7 @@ static void wpas_dbus_register(struct wpa_dbus_object_desc *obj_desc,
 	obj_desc->properties = properties;
 	obj_desc->signals = signals;
 
-	for (n = 0; properties && properties->dbus_property; properties++);
+	for (n = 0; properties && properties->dbus_property; properties++)
 		n++;
 
 	obj_desc->prop_changed_flags = os_zalloc(n);

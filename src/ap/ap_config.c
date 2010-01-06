@@ -92,15 +92,15 @@ struct hostapd_config * hostapd_config_defaults(void)
 	struct hostapd_config *conf;
 	struct hostapd_bss_config *bss;
 	int i;
-	const int aCWmin = 15, aCWmax = 1024;
+	const int aCWmin = 4, aCWmax = 10;
 	const struct hostapd_wmm_ac_params ac_bk =
 		{ aCWmin, aCWmax, 7, 0, 0 }; /* background traffic */
 	const struct hostapd_wmm_ac_params ac_be =
 		{ aCWmin, aCWmax, 3, 0, 0 }; /* best effort traffic */
 	const struct hostapd_wmm_ac_params ac_vi = /* video traffic */
-		{ aCWmin >> 1, aCWmin, 2, 3000 / 32, 1 };
+		{ aCWmin - 1, aCWmin, 2, 3000 / 32, 1 };
 	const struct hostapd_wmm_ac_params ac_vo = /* voice traffic */
-		{ aCWmin >> 2, aCWmin >> 1, 2, 1500 / 32, 1 };
+		{ aCWmin - 2, aCWmin - 1, 2, 1500 / 32, 1 };
 
 	conf = os_zalloc(sizeof(*conf));
 	bss = os_zalloc(sizeof(*bss));

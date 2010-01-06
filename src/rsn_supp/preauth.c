@@ -1,6 +1,6 @@
 /*
- * WPA Supplicant - RSN pre-authentication
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * RSN pre-authentication (supplicant)
+ * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -31,7 +31,7 @@
 
 
 struct rsn_pmksa_candidate {
-	struct rsn_pmksa_candidate *next;
+	struct dl_list list;
 	u8 bssid[ETH_ALEN];
 	int priority;
 };
@@ -43,18 +43,14 @@ struct rsn_pmksa_candidate {
  */
 void pmksa_candidate_free(struct wpa_sm *sm)
 {
-	struct rsn_pmksa_candidate *entry, *prev;
+	struct rsn_pmksa_candidate *entry, *n;
 
 	if (sm == NULL)
 		return;
 
-	entry = sm->pmksa_candidates;
-	sm->pmksa_candidates = NULL;
-	while (entry) {
-		prev = entry;
-		entry = entry->next;
-		os_free(prev);
-	}
+	dl_list_for_each_safe(entry, n, &sm->pmksa_candidates,
+			      struct rsn_pmksa_candidate, list)
+		os_free(entry);
 }
 
 
@@ -292,9 +288,9 @@ void rsn_preauth_deinit(struct wpa_sm *sm)
  */
 void rsn_preauth_candidate_process(struct wpa_sm *sm)
 {
-	struct rsn_pmksa_candidate *candidate;
+	struct rsn_pmksa_candidate *candidate, *n;
 
-	if (sm->pmksa_candidates == NULL)
+	if (dl_list_empty(&sm->pmksa_candidates))
 		return;
 
 	/* TODO: drop priority for old candidate entries */
@@ -311,9 +307,9 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 		return; /* invalid state for new pre-auth */
 	}
 
-	while (sm->pmksa_candidates) {
+	dl_list_for_each_safe(candidate, n, &sm->pmksa_candidates,
+			      struct rsn_pmksa_candidate, list) {
 		struct rsn_pmksa_cache_entry *p = NULL;
-		candidate = sm->pmksa_candidates;
 		p = pmksa_cache_get(sm->pmksa, candidate->bssid, NULL);
 		if (os_memcmp(sm->bssid, candidate->bssid, ETH_ALEN) != 0 &&
 		    (p == NULL || p->opportunistic)) {
@@ -321,7 +317,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 				"candidate " MACSTR
 				" selected for pre-authentication",
 				MAC2STR(candidate->bssid));
-			sm->pmksa_candidates = candidate->next;
+			dl_list_del(&candidate->list);
 			rsn_preauth_init(sm, candidate->bssid,
 					 sm->eap_conf_ctx);
 			os_free(candidate);
@@ -336,7 +332,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 			wpa_sm_add_pmkid(sm, candidate->bssid, p->pmkid);
 		}
 
-		sm->pmksa_candidates = candidate->next;
+		dl_list_del(&candidate->list);
 		os_free(candidate);
 	}
 	wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: no more pending PMKSA "
@@ -358,7 +354,7 @@ void rsn_preauth_candidate_process(struct wpa_sm *sm)
 void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 			 int prio, int preauth)
 {
-	struct rsn_pmksa_candidate *cand, *prev, *pos;
+	struct rsn_pmksa_candidate *cand, *pos;
 
 	if (sm->network_ctx && sm->proactive_key_caching)
 		pmksa_cache_get_opportunistic(sm->pmksa, sm->network_ctx,
@@ -372,18 +368,13 @@ void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 
 	/* If BSSID already on candidate list, update the priority of the old
 	 * entry. Do not override priority based on normal scan results. */
-	prev = NULL;
-	cand = sm->pmksa_candidates;
-	while (cand) {
-		if (os_memcmp(cand->bssid, bssid, ETH_ALEN) == 0) {
-			if (prev)
-				prev->next = cand->next;
-			else
-				sm->pmksa_candidates = cand->next;
+	cand = NULL;
+	dl_list_for_each(pos, &sm->pmksa_candidates,
+			 struct rsn_pmksa_candidate, list) {
+		if (os_memcmp(pos->bssid, bssid, ETH_ALEN) == 0) {
+			cand = pos;
 			break;
 		}
-		prev = cand;
-		cand = cand->next;
 	}
 
 	if (cand) {
@@ -399,19 +390,16 @@ void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 
 	/* Add candidate to the list; order by increasing priority value. i.e.,
 	 * highest priority (smallest value) first. */
-	prev = NULL;
-	pos = sm->pmksa_candidates;
-	while (pos) {
-		if (cand->priority <= pos->priority)
+	dl_list_for_each(pos, &sm->pmksa_candidates,
+			 struct rsn_pmksa_candidate, list) {
+		if (cand->priority <= pos->priority) {
+			dl_list_add(pos->list.prev, &cand->list);
+			cand = NULL;
 			break;
-		prev = pos;
-		pos = pos->next;
+		}
 	}
-	cand->next = pos;
-	if (prev)
-		prev->next = cand;
-	else
-		sm->pmksa_candidates = cand;
+	if (cand)
+		dl_list_add_tail(&sm->pmksa_candidates, &cand->list);
 
 	wpa_msg(sm->ctx->msg_ctx, MSG_DEBUG, "RSN: added PMKSA cache "
 		"candidate " MACSTR " prio %d", MAC2STR(bssid), prio);

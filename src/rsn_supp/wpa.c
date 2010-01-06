@@ -1809,6 +1809,7 @@ struct wpa_sm * wpa_sm_init(struct wpa_sm_ctx *ctx)
 	sm = os_zalloc(sizeof(*sm));
 	if (sm == NULL)
 		return NULL;
+	dl_list_init(&sm->pmksa_candidates);
 	sm->renew_snonce = 1;
 	sm->ctx = ctx;
 

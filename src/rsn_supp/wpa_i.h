@@ -1,6 +1,6 @@
 /*
- * wpa_supplicant - Internal WPA state machine definitions
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Internal WPA/RSN supplicant state machine definitions
+ * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -15,7 +15,8 @@
 #ifndef WPA_I_H
 #define WPA_I_H
 
-struct rsn_pmksa_candidate;
+#include "utils/list.h"
+
 struct wpa_peerkey;
 struct wpa_eapol_key;
 
@@ -38,7 +39,7 @@ struct wpa_sm {
 
 	struct rsn_pmksa_cache *pmksa; /* PMKSA cache */
 	struct rsn_pmksa_cache_entry *cur_pmksa; /* current PMKSA entry */
-	struct rsn_pmksa_candidate *pmksa_candidates;
+	struct dl_list pmksa_candidates;
 
 	struct l2_packet_data *l2_preauth;
 	struct l2_packet_data *l2_preauth_br;

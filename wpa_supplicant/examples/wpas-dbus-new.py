@@ -76,7 +76,6 @@ def showBss(bss):
 	print "  %s  ::  ssid='%s'  wpa=%s  wpa2=%s  signal=%d  rate=%d  freq=%d" % (bssid, ssid, wpa, wpa2, signal, maxrate, freq)
 
 def scanDone(success):
-	gobject.MainLoop().quit()
 	print "Scan done: success=%s" % success
 	
 	res = if_obj.Get(WPAS_DBUS_INTERFACES_INTERFACE, 'BSSs',

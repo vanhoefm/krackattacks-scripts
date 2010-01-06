@@ -1073,7 +1073,8 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 	int ret;
 
 	/* Do nothing if the control interface is not turned on */
-	if (wpa_s == NULL || wpa_s->global == NULL)
+	if (wpa_s == NULL || wpa_s->global == NULL ||
+	    wpa_s->dbus_new_path == NULL)
 		return 0;
 	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)

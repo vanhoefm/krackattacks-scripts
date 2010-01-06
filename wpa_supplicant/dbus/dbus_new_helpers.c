@@ -593,8 +593,16 @@ int wpa_dbus_unregister_object_per_iface(
 	struct wpas_dbus_priv *ctrl_iface, const char *path)
 {
 	DBusConnection *con = ctrl_iface->con;
+	struct wpa_dbus_object_desc *obj_desc = NULL;
 
-	eloop_cancel_timeout(flush_object_timeout_handler, con, (void *) path);
+	dbus_connection_get_object_path_data(con, path, (void **) &obj_desc);
+	if (!obj_desc) {
+		wpa_printf(MSG_ERROR, "dbus: %s: Could not obtain object's "
+			   "private data: %s", __func__, path);
+	} else {
+		eloop_cancel_timeout(flush_object_timeout_handler, con,
+				     obj_desc);
+	}
 
 	if (!dbus_connection_unregister_object_path(con, path))
 		return -1;
@@ -693,11 +701,11 @@ err:
 static void flush_object_timeout_handler(void *eloop_ctx, void *timeout_ctx)
 {
 	DBusConnection *con = eloop_ctx;
-	const char *path = timeout_ctx;
+	struct wpa_dbus_object_desc *obj_desc = timeout_ctx;
 
 	wpa_printf(MSG_DEBUG, "dbus: %s: Timeout - sending changed properties "
-		   "of object %s", __func__, path);
-	wpa_dbus_flush_object_changed_properties(con, path);
+		   "of object %s", __func__, obj_desc->path);
+	wpa_dbus_flush_object_changed_properties(con, obj_desc->path);
 }
 
 
@@ -761,12 +769,10 @@ void wpa_dbus_flush_object_changed_properties(DBusConnection *con,
 	const struct wpa_dbus_property_desc *dsc;
 	int i;
 
-	eloop_cancel_timeout(flush_object_timeout_handler, con, (void *) path);
-
 	dbus_connection_get_object_path_data(con, path, (void **) &obj_desc);
-
 	if (!obj_desc)
 		return;
+	eloop_cancel_timeout(flush_object_timeout_handler, con, obj_desc);
 
 	dsc = obj_desc->properties;
 	for (dsc = obj_desc->properties, i = 0; dsc && dsc->dbus_property;
@@ -830,7 +836,7 @@ void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
 					 iface->con, obj_desc->path)) {
 		eloop_register_timeout(0, WPA_DBUS_SEND_PROP_CHANGED_TIMEOUT,
 				       flush_object_timeout_handler,
-				       iface->con, obj_desc->path);
+				       iface->con, obj_desc);
 	}
 }
 

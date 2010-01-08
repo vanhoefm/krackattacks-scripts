@@ -695,6 +695,15 @@ void * tls_init(const struct tls_config *conf)
 		 * be added here. */
 
 #ifdef PKCS12_FUNCS
+#ifndef OPENSSL_NO_RC2
+		/*
+		 * 40-bit RC2 is commonly used in PKCS#12 files, so enable it.
+		 * This is enabled by PKCS12_PBE_add() in OpenSSL 0.9.8
+		 * versions, but it looks like OpenSSL 1.0.0 does not do that
+		 * anymore.
+		 */
+		EVP_add_cipher(EVP_rc2_40_cbc());
+#endif /* OPENSSL_NO_RC2 */
 		PKCS12_PBE_add();
 #endif  /* PKCS12_FUNCS */
 	}

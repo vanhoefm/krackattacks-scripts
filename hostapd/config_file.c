@@ -1155,6 +1155,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 	if (conf->driver == NULL) {
 		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
 		hostapd_config_free(conf);
+		fclose(f);
 		return NULL;
 	}
 

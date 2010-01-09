@@ -38,20 +38,20 @@ def main():
 			 dbus_interface=dbus.PROPERTIES_IFACE)
 	if len(res) > 0:
 		bss_obj = bus.get_object("fi.w1.wpa_supplicant1", res[0])
-		props = bss_obj.GetAll("fi.w1.wpa_supplicant1.Interface.BSS",
+		props = bss_obj.GetAll("fi.w1.wpa_supplicant1.BSS",
 				       dbus_interface=dbus.PROPERTIES_IFACE)
 		print
-		print "GetAll(fi.w1.wpa_supplicant1.Interface.BSS, %s):" % (res[0])
+		print "GetAll(fi.w1.wpa_supplicant1.BSS, %s):" % (res[0])
 		print props
 
 	res = if_obj.Get("fi.w1.wpa_supplicant1.Interface", 'Networks',
 			 dbus_interface=dbus.PROPERTIES_IFACE)
 	if len(res) > 0:
 		net_obj = bus.get_object("fi.w1.wpa_supplicant1", res[0])
-		props = net_obj.GetAll("fi.w1.wpa_supplicant1.Interface.Network",
+		props = net_obj.GetAll("fi.w1.wpa_supplicant1.Network",
 				       dbus_interface=dbus.PROPERTIES_IFACE)
 		print
-		print "GetAll(fi.w1.wpa_supplicant1.Interface.Network, %s):" % (res[0])
+		print "GetAll(fi.w1.wpa_supplicant1.Network, %s):" % (res[0])
 		print props
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ WPAS_DBUS_OPATH = "/fi/w1/wpa_supplicant1"
 
 WPAS_DBUS_INTERFACES_INTERFACE = "fi.w1.wpa_supplicant1.Interface"
 WPAS_DBUS_INTERFACES_OPATH = "/fi/w1/wpa_supplicant1/Interfaces"
-WPAS_DBUS_BSS_INTERFACE = "fi.w1.wpa_supplicant1.Interface.BSS"
+WPAS_DBUS_BSS_INTERFACE = "fi.w1.wpa_supplicant1.BSS"
 
 def byte_array_to_string(s):
 	import urllib

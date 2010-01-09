@@ -202,7 +202,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	<p>Disassociates the interface from current network.</p>
 	<h4>Possible errors</h4>
 	<dl>
-	  <dt>fi.w1.wpa_supplicant1.Interface.NotConnected</dt>
+	  <dt>fi.w1.wpa_supplicant1.NotConnected</dt>
 	  <dd>Interface is not connected to any network.</dd>
 	</dl>
       </li>
@@ -239,7 +239,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
 	<h4>Possible errors</h4>
 	<dl>
-	  <dt>fi.w1.wpa_supplicant1.Interface.NetworkUnknown</dt>
+	  <dt>fi.w1.wpa_supplicant1.NetworkUnknown</dt>
 	  <dd>A passed path doesn't point to any network object.</dd>
 	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
 	  <dd>A passed path doesn't point to any network object.</dd>
@@ -258,7 +258,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
 	<h4>Possible errors</h4>
 	<dl>
-	  <dt>fi.w1.wpa_supplicant1.Interface.NetworkUnknown</dt>
+	  <dt>fi.w1.wpa_supplicant1.NetworkUnknown</dt>
 	  <dd>A passed path doesn't point to any network object.</dd>
 	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
 	  <dd>A passed path doesn't point to any network object.</dd>
@@ -277,7 +277,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
 	<h4>Possible errors</h4>
 	<dl>
-	  <dt>fi.w1.wpa_supplicant1.Interface.BlobExists</dt>
+	  <dt>fi.w1.wpa_supplicant1.BlobExists</dt>
 	  <dd>A blob with the specified name already exists.</dd>
 	</dl>
       </li>
@@ -292,7 +292,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
 	<h4>Possible errors</h4>
 	<dl>
-	  <dt>fi.w1.wpa_supplicant1.Interface.BlobUnknown</dt>
+	  <dt>fi.w1.wpa_supplicant1.BlobUnknown</dt>
 	  <dd>A blob with the specified name doesn't exist.</dd>
 	</dl>
       </li>
@@ -312,7 +312,7 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	</dl>
 	<h4>Possible errors</h4>
 	<dl>
-	  <dt>fi.w1.wpa_supplicant1.Interface.BlobUnknown</dt>
+	  <dt>fi.w1.wpa_supplicant1.BlobUnknown</dt>
 	  <dd>A blob with the specified name doesn't exist.</dd>
 	</dl>
       </li>
@@ -603,7 +603,7 @@ Interface implemented by objects related to network interface added to
     </ul>
 
 
-\section dbus_bss fi.w1.wpa_supplicant1.Interface.BSS
+\section dbus_bss fi.w1.wpa_supplicant1.BSS
 
 Interface implemented by objects representing a scanned BSSs, i.e.,
 scan results.
@@ -668,7 +668,7 @@ scan results.
     </ul>
 
 
-\section dbus_network fi.w1.wpa_supplicant1.Interface.Network
+\section dbus_network fi.w1.wpa_supplicant1.Network
 
 Interface implemented by objects representing configured networks,
 i.e., returned by fi.w1.wpa_supplicant1.Interface.AddNetwork.

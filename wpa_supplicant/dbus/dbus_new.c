@@ -1,7 +1,7 @@
 /*
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
- * Copyright (c) 2009, Witold Sowa <witold.sowa@gmail.com>
+ * Copyright (c) 2009-2010, Witold Sowa <witold.sowa@gmail.com>
  * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -181,7 +181,7 @@ static void wpas_dbus_signal_bss(struct wpa_supplicant *wpa_s,
 			goto err;
 
 		wpa_dbus_get_object_properties(iface, bss_obj_path,
-					       WPAS_DBUS_NEW_IFACE_BSSID,
+					       WPAS_DBUS_NEW_IFACE_BSS,
 					       &iter_dict);
 
 		if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
@@ -752,7 +752,7 @@ void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
 		    wpa_s->dbus_new_path, id);
 
 	wpa_dbus_mark_property_changed(wpa_s->global->dbus, path,
-				       WPAS_DBUS_NEW_IFACE_BSSID, prop);
+				       WPAS_DBUS_NEW_IFACE_BSS, prop);
 }
 
 
@@ -1096,52 +1096,52 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 
 
 static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
-	{ "SSID", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	{ "SSID", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_ssid,
 	  NULL,
 	  R
 	},
-	{ "BSSID", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	{ "BSSID", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_bssid,
 	  NULL,
 	  R
 	},
-	{ "Privacy", WPAS_DBUS_NEW_IFACE_BSSID, "b",
+	{ "Privacy", WPAS_DBUS_NEW_IFACE_BSS, "b",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_privacy,
 	  NULL,
 	  R
 	},
-	{ "Mode", WPAS_DBUS_NEW_IFACE_BSSID, "s",
+	{ "Mode", WPAS_DBUS_NEW_IFACE_BSS, "s",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_mode,
 	  NULL,
 	  R
 	},
-	{ "Signal", WPAS_DBUS_NEW_IFACE_BSSID, "n",
+	{ "Signal", WPAS_DBUS_NEW_IFACE_BSS, "n",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_signal,
 	  NULL,
 	  R
 	},
-	{ "Frequency", WPAS_DBUS_NEW_IFACE_BSSID, "q",
+	{ "Frequency", WPAS_DBUS_NEW_IFACE_BSS, "q",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_frequency,
 	  NULL,
 	  R
 	},
-	{ "Rates", WPAS_DBUS_NEW_IFACE_BSSID, "au",
+	{ "Rates", WPAS_DBUS_NEW_IFACE_BSS, "au",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_rates,
 	  NULL,
 	  R
 	},
-	{ "WPAIE", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	{ "WPAIE", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpaie,
 	  NULL,
 	  R
 	},
-	{ "RSNIE", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	{ "RSNIE", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_rsnie,
 	  NULL,
 	  R
 	},
-	{ "WPSIE", WPAS_DBUS_NEW_IFACE_BSSID, "ay",
+	{ "WPSIE", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpsie,
 	  NULL,
 	  R
@@ -1151,7 +1151,7 @@ static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 
 
 static const struct wpa_dbus_signal_desc wpas_dbus_bss_signals[] = {
-	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_BSSID,
+	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_BSS,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS

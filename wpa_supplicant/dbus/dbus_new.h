@@ -1,7 +1,7 @@
 /*
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
- * Copyright (c) 2009, Witold Sowa <witold.sowa@gmail.com>
+ * Copyright (c) 2009-2010, Witold Sowa <witold.sowa@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -54,10 +54,10 @@ enum wpas_dbus_bss_prop {
 #define WPAS_DBUS_NEW_IFACE_WPS WPAS_DBUS_NEW_IFACE_INTERFACE ".WPS"
 
 #define WPAS_DBUS_NEW_NETWORKS_PART "Networks"
-#define WPAS_DBUS_NEW_IFACE_NETWORK WPAS_DBUS_NEW_IFACE_INTERFACE ".Network"
+#define WPAS_DBUS_NEW_IFACE_NETWORK WPAS_DBUS_NEW_INTERFACE ".Network"
 
 #define WPAS_DBUS_NEW_BSSIDS_PART "BSSs"
-#define WPAS_DBUS_NEW_IFACE_BSSID WPAS_DBUS_NEW_IFACE_INTERFACE ".BSS"
+#define WPAS_DBUS_NEW_IFACE_BSS	WPAS_DBUS_NEW_INTERFACE ".BSS"
 
 
 /* Errors */
@@ -72,14 +72,14 @@ enum wpas_dbus_bss_prop {
 	WPAS_DBUS_NEW_INTERFACE ".InterfaceUnknown"
 
 #define WPAS_DBUS_ERROR_NOT_CONNECTED \
-	WPAS_DBUS_NEW_IFACE_INTERFACE ".NotConnected"
+	WPAS_DBUS_NEW_INTERFACE ".NotConnected"
 #define WPAS_DBUS_ERROR_NETWORK_UNKNOWN \
-	WPAS_DBUS_NEW_IFACE_INTERFACE ".NetworkUnknown"
+	WPAS_DBUS_NEW_INTERFACE ".NetworkUnknown"
 
 #define WPAS_DBUS_ERROR_BLOB_EXISTS \
-	WPAS_DBUS_NEW_IFACE_INTERFACE ".BlobExists"
+	WPAS_DBUS_NEW_INTERFACE ".BlobExists"
 #define WPAS_DBUS_ERROR_BLOB_UNKNOWN \
-	WPAS_DBUS_NEW_IFACE_INTERFACE ".BlobUnknown"
+	WPAS_DBUS_NEW_INTERFACE ".BlobUnknown"
 
 
 #ifdef CONFIG_CTRL_IFACE_DBUS_NEW

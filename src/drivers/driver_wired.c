@@ -112,6 +112,7 @@ static int wired_multicast_membership(int sock, int ifindex,
 }
 
 
+#ifdef __linux__
 static void handle_data(void *ctx, unsigned char *buf, size_t len)
 {
 #ifdef HOSTAPD
@@ -197,10 +198,12 @@ static void handle_dhcp(int sock, void *eloop_ctx, void *sock_ctx)
 	event.new_sta.addr = mac_address;
 	wpa_supplicant_event(eloop_ctx, EVENT_NEW_STA, &event);
 }
+#endif /* __linux__ */
 
 
 static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 {
+#ifdef __linux__
 	struct ifreq ifr;
 	struct sockaddr_ll addr;
 	struct sockaddr_in addr2;
@@ -300,6 +303,9 @@ static int wired_init_sockets(struct wpa_driver_wired_data *drv, u8 *own_addr)
 	}
 
 	return 0;
+#else /* __linux__ */
+	return -1;
+#endif /* __linux__ */
 }
 
 

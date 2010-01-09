@@ -1156,9 +1156,8 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 	er->wps = wps;
 	os_get_random((unsigned char *) &er->event_id, sizeof(er->event_id));
 
-	if (get_netif_info(ifname,
-			   &er->ip_addr, &er->ip_addr_text,
-			   er->mac_addr, &er->mac_addr_text)) {
+	if (get_netif_info(ifname, &er->ip_addr, &er->ip_addr_text,
+			   er->mac_addr)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get IP/MAC address "
 			   "for %s. Does it have IP address?", ifname);
 		wps_er_deinit(er, NULL, NULL);
@@ -1178,9 +1177,8 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 	}
 	er->http_port = http_server_get_port(er->http_srv);
 
-	wpa_printf(MSG_DEBUG, "WPS ER: Start (ifname=%s ip_addr=%s "
-		   "mac_addr=%s)",
-		   er->ifname, er->ip_addr_text, er->mac_addr_text);
+	wpa_printf(MSG_DEBUG, "WPS ER: Start (ifname=%s ip_addr=%s)",
+		   er->ifname, er->ip_addr_text);
 
 	return er;
 }
@@ -1212,7 +1210,6 @@ static void wps_er_deinit_finish(void *eloop_data, void *user_ctx)
 	deinit_done_cb = er->deinit_done_cb;
 	deinit_done_ctx = er->deinit_done_ctx;
 	os_free(er->ip_addr_text);
-	os_free(er->mac_addr_text);
 	os_free(er);
 
 	if (deinit_done_cb)

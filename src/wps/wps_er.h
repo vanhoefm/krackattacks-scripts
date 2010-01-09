@@ -75,7 +75,6 @@ struct wps_er_ap {
 struct wps_er {
 	struct wps_context *wps;
 	char ifname[17];
-	char *mac_addr_text; /* mac addr of network i.f. we use */
 	u8 mac_addr[ETH_ALEN]; /* mac addr of network i.f. we use */
 	char *ip_addr_text; /* IP address of network i.f. we use */
 	unsigned ip_addr; /* IP address of network i.f. we use (host order) */

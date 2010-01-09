@@ -844,11 +844,10 @@ static int eth_get(const char *device, u8 ea[ETH_ALEN])
  * @ip_addr: Buffer for returning IP address in network byte order
  * @ip_addr_text: Buffer for returning a pointer to allocated IP address text
  * @mac: Buffer for returning MAC address
- * @mac_addr_text: Buffer for returning allocated MAC address text
  * Returns: 0 on success, -1 on failure
  */
 int get_netif_info(const char *net_if, unsigned *ip_addr, char **ip_addr_text,
-		   u8 mac[ETH_ALEN], char **mac_addr_text)
+		   u8 mac[ETH_ALEN])
 {
 	struct ifreq req;
 	int sock = -1;
@@ -856,8 +855,7 @@ int get_netif_info(const char *net_if, unsigned *ip_addr, char **ip_addr_text,
 	struct in_addr in_addr;
 
 	*ip_addr_text = os_zalloc(16);
-	*mac_addr_text = os_zalloc(18);
-	if (*ip_addr_text == NULL || *mac_addr_text == NULL)
+	if (*ip_addr_text == NULL)
 		goto fail;
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -891,7 +889,6 @@ int get_netif_info(const char *net_if, unsigned *ip_addr, char **ip_addr_text,
 #else
 #error MAC address fetch not implemented
 #endif
-	os_snprintf(*mac_addr_text, 18, MACSTR, MAC2STR(mac));
 
 	close(sock);
 	return 0;
@@ -901,8 +898,6 @@ fail:
 		close(sock);
 	os_free(*ip_addr_text);
 	*ip_addr_text = NULL;
-	os_free(*mac_addr_text);
-	*mac_addr_text = NULL;
 	return -1;
 }
 
@@ -945,8 +940,6 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 	event_send_stop_all(sm);
 	os_free(sm->wlanevent);
 	sm->wlanevent = NULL;
-	os_free(sm->mac_addr_text);
-	sm->mac_addr_text = NULL;
 	os_free(sm->ip_addr_text);
 	sm->ip_addr_text = NULL;
 	if (sm->multicast_sd >= 0)
@@ -982,9 +975,8 @@ int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if)
 		goto fail;
 
 	/* Determine which IP and mac address we're using */
-	if (get_netif_info(net_if,
-			   &sm->ip_addr, &sm->ip_addr_text,
-			   sm->mac_addr, &sm->mac_addr_text)) {
+	if (get_netif_info(net_if, &sm->ip_addr, &sm->ip_addr_text,
+			   sm->mac_addr)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get IP/MAC address "
 			   "for %s. Does it have IP address?", net_if);
 		goto fail;

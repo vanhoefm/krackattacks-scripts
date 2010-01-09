@@ -35,8 +35,8 @@
 #include <netproto/802_11/ieee80211_dragonfly.h>
 #else /* __DragonFly__ */
 #include <net80211/ieee80211.h>
-#include <net80211/ieee80211_crypto.h>
 #include <net80211/ieee80211_ioctl.h>
+#include <net80211/ieee80211_crypto.h>
 #endif /* __DragonFly__ */
 #if __FreeBSD__
 #include <net80211/ieee80211_freebsd.h>
@@ -965,7 +965,11 @@ static int
 wpa_driver_bsd_set_wpa_ie(struct wpa_driver_bsd_data *drv,
 	const u8 *wpa_ie, size_t wpa_ie_len)
 {
+#ifdef IEEE80211_IOC_APPIE
+	return set80211var(drv, IEEE80211_IOC_APPIE, wpa_ie, wpa_ie_len);
+#else /* IEEE80211_IOC_APPIE */
 	return set80211var(drv, IEEE80211_IOC_OPTIE, wpa_ie, wpa_ie_len);
+#endif /* IEEE80211_IOC_APPIE */
 }
 
 static int

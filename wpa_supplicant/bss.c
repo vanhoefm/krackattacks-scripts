@@ -578,7 +578,7 @@ int wpa_bss_get_bit_rates(const struct wpa_bss *bss, u8 **rates)
 	len = (ie ? ie[1] : 0) + (ie2 ? ie2[1] : 0);
 
 	*rates = os_malloc(len);
-	if (!rates)
+	if (!*rates)
 		return -1;
 
 	for (i = 0; ie && i < ie[1]; i++)

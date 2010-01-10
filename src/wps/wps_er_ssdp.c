@@ -96,7 +96,12 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 				pos2 += 5;
 				while (*pos2 == ' ')
 					pos2++;
-				uuid_str2bin(pos2, uuid);
+				if (uuid_str2bin(pos2, uuid) < 0) {
+					wpa_printf(MSG_DEBUG, "WPS ER: "
+						   "Invalid UUID in USN: %s",
+						   pos2);
+					return;
+				}
 			}
 		}
 	}

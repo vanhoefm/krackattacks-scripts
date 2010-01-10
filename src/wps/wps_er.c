@@ -479,7 +479,8 @@ static void wps_er_parse_device_description(struct wps_er_ap *ap,
 	pos = os_strstr(ap->udn, "uuid:");
 	if (pos) {
 		pos += 5;
-		uuid_str2bin(pos, ap->uuid);
+		if (uuid_str2bin(pos, ap->uuid) < 0)
+			wpa_printf(MSG_DEBUG, "WPS ER: Invalid UUID in UDN");
 	}
 
 	ap->upc = xml_get_first_item(data, "UPC");

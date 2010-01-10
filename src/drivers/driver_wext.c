@@ -257,9 +257,9 @@ wpa_driver_wext_event_wireless_custom(void *ctx, char *custom)
 		bytes /= 2;
 
 		req_ies = os_malloc(bytes);
-		if (req_ies == NULL)
-			return;
-		hexstr2bin(spos, req_ies, bytes);
+		if (req_ies == NULL ||
+		    hexstr2bin(spos, req_ies, bytes) < 0)
+			goto done;
 		data.assoc_info.req_ies = req_ies;
 		data.assoc_info.req_ies_len = bytes;
 
@@ -277,9 +277,9 @@ wpa_driver_wext_event_wireless_custom(void *ctx, char *custom)
 			bytes /= 2;
 
 			resp_ies = os_malloc(bytes);
-			if (resp_ies == NULL)
+			if (resp_ies == NULL ||
+			    hexstr2bin(spos, resp_ies, bytes) < 0)
 				goto done;
-			hexstr2bin(spos, resp_ies, bytes);
 			data.assoc_info.resp_ies = resp_ies;
 			data.assoc_info.resp_ies_len = bytes;
 		}

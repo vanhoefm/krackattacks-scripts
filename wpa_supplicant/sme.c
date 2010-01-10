@@ -100,8 +100,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);
 
-	if (bss && (wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
-		    wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
+	if ((wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
+	     wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
 	    (ssid->key_mgmt & (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
 			       WPA_KEY_MGMT_FT_IEEE8021X |
 			       WPA_KEY_MGMT_FT_PSK |
@@ -194,7 +194,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_IEEE80211W
 	wpa_s->sme.mfp = ssid->ieee80211w;
-	if (ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION && bss) {
+	if (ssid->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
 		const u8 *rsn = wpa_bss_get_ie(bss, WLAN_EID_RSN);
 		struct wpa_ie_data _ie;
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &_ie) == 0 &&

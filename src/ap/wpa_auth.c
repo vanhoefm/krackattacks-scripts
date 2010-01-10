@@ -38,7 +38,7 @@
 
 
 static void wpa_send_eapol_timeout(void *eloop_ctx, void *timeout_ctx);
-static void wpa_sm_step(struct wpa_state_machine *sm);
+static int wpa_sm_step(struct wpa_state_machine *sm);
 static int wpa_verify_key_mic(struct wpa_ptk *PTK, u8 *data, size_t data_len);
 static void wpa_sm_call_step(void *eloop_ctx, void *timeout_ctx);
 static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
@@ -520,7 +520,8 @@ void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 	sm->started = 1;
 
 	sm->Init = TRUE;
-	wpa_sm_step(sm);
+	if (wpa_sm_step(sm) == 1)
+		return; /* should not really happen */
 	sm->Init = FALSE;
 	sm->AuthenticationRequest = TRUE;
 	wpa_sm_step(sm);
@@ -2059,17 +2060,17 @@ static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 }
 
 
-static void wpa_sm_step(struct wpa_state_machine *sm)
+static int wpa_sm_step(struct wpa_state_machine *sm)
 {
 	if (sm == NULL)
-		return;
+		return 0;
 
 	if (sm->in_step_loop) {
 		/* This should not happen, but if it does, make sure we do not
 		 * end up freeing the state machine too early by exiting the
 		 * recursive call. */
 		wpa_printf(MSG_ERROR, "WPA: wpa_sm_step() called recursively");
-		return;
+		return 0;
 	}
 
 	sm->in_step_loop = 1;
@@ -2094,7 +2095,9 @@ static void wpa_sm_step(struct wpa_state_machine *sm)
 		wpa_printf(MSG_DEBUG, "WPA: Completing pending STA state "
 			   "machine deinit for " MACSTR, MAC2STR(sm->addr));
 		wpa_free_sta_sm(sm);
+		return 1;
 	}
+	return 0;
 }
 
 

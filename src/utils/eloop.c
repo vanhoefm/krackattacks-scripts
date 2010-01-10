@@ -301,7 +301,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 {
 	struct eloop_timeout *timeout, *tmp;
 
-	timeout = os_malloc(sizeof(*timeout));
+	timeout = os_zalloc(sizeof(*timeout));
 	if (timeout == NULL)
 		return -1;
 	if (os_get_time(&timeout->time) < 0) {

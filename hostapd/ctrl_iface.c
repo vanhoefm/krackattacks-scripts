@@ -165,10 +165,10 @@ static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE SA_QUERY %s", txtaddr);
 
-	if (hwaddr_aton(txtaddr, addr))
+	if (hwaddr_aton(txtaddr, addr) ||
+	    os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN) < 0)
 		return -1;
 
-	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
 	ieee802_11_send_sa_query_req(hapd, addr, trans_id);
 
 	return 0;

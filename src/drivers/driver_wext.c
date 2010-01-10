@@ -1710,11 +1710,13 @@ static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 		 * even if it does not understand SIOCSIWMLME commands (or
 		 * tries to associate automatically after deauth/disassoc).
 		 */
-		wpa_driver_wext_set_bssid(drv, null_bssid);
-
 		for (i = 0; i < 32; i++)
 			ssid[i] = rand() & 0xFF;
-		wpa_driver_wext_set_ssid(drv, ssid, 32);
+		if (wpa_driver_wext_set_bssid(drv, null_bssid) < 0 ||
+		    wpa_driver_wext_set_ssid(drv, ssid, 32) < 0) {
+			wpa_printf(MSG_DEBUG, "WEXT: Failed to set bogus "
+				   "BSSID/SSID to disconnect");
+		}
 	}
 }
 

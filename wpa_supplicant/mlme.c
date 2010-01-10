@@ -2146,7 +2146,7 @@ static void ieee80211_sta_merge_ibss(struct wpa_supplicant *wpa_s)
 	os_memset(&params, 0, sizeof(params));
 	params.ssids[0].ssid = wpa_s->mlme.ssid;
 	params.ssids[0].ssid_len = wpa_s->mlme.ssid_len;
-	params.num_ssids = wpa_s->mlme.ssid ? 1 : 0;
+	params.num_ssids = wpa_s->mlme.ssid_len ? 1 : 0;
 	ieee80211_sta_req_scan(wpa_s, &params);
 }
 

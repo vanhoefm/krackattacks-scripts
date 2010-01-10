@@ -634,6 +634,8 @@ static int wpa_supplicant_process_smk_error(
 
 	if (kde.mac_addr && kde.mac_addr_len >= ETH_ALEN)
 		os_memcpy(peer, kde.mac_addr, ETH_ALEN);
+	else
+		os_memset(peer, 0, ETH_ALEN);
 	os_memcpy(&error, kde.error, sizeof(error));
 	error_type = be_to_host16(error.error_type);
 	wpa_msg(sm->ctx->msg_ctx, MSG_INFO,

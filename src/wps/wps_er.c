@@ -1154,7 +1154,11 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 
 	os_strlcpy(er->ifname, ifname, sizeof(er->ifname));
 	er->wps = wps;
-	os_get_random((unsigned char *) &er->event_id, sizeof(er->event_id));
+	if (os_get_random((unsigned char *) &er->event_id,
+			  sizeof(er->event_id)) < 0) {
+		wps_er_deinit(er, NULL, NULL);
+		return NULL;
+	}
 
 	if (get_netif_info(ifname, &er->ip_addr, &er->ip_addr_text,
 			   er->mac_addr)) {

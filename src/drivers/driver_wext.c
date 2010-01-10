@@ -1133,8 +1133,9 @@ static void wext_get_scan_custom(struct iw_event *iwe,
 		tmp = os_realloc(res->ie, res->ie_len + bytes);
 		if (tmp == NULL)
 			return;
-		hexstr2bin(spos, tmp + res->ie_len, bytes);
 		res->ie = tmp;
+		if (hexstr2bin(spos, tmp + res->ie_len, bytes) < 0)
+			return;
 		res->ie_len += bytes;
 	} else if (clen > 7 && os_strncmp(custom, "rsn_ie=", 7) == 0) {
 		char *spos;
@@ -1147,8 +1148,9 @@ static void wext_get_scan_custom(struct iw_event *iwe,
 		tmp = os_realloc(res->ie, res->ie_len + bytes);
 		if (tmp == NULL)
 			return;
-		hexstr2bin(spos, tmp + res->ie_len, bytes);
 		res->ie = tmp;
+		if (hexstr2bin(spos, tmp + res->ie_len, bytes) < 0)
+			return;
 		res->ie_len += bytes;
 	} else if (clen > 4 && os_strncmp(custom, "tsf=", 4) == 0) {
 		char *spos;
@@ -1161,7 +1163,10 @@ static void wext_get_scan_custom(struct iw_event *iwe,
 			return;
 		}
 		bytes /= 2;
-		hexstr2bin(spos, bin, bytes);
+		if (hexstr2bin(spos, bin, bytes) < 0) {
+			wpa_printf(MSG_DEBUG, "WEXT: Invalid TSF value");
+			return;
+		}
 		res->res.tsf += WPA_GET_BE64(bin);
 	}
 }

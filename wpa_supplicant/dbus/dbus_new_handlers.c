@@ -2421,7 +2421,7 @@ DBusMessage * wpas_dbus_getter_bss_privacy(DBusMessage *message,
 		return NULL;
 	}
 
-	privacy = res->caps && IEEE80211_CAP_PRIVACY ? TRUE : FALSE;
+	privacy = (res->caps & IEEE80211_CAP_PRIVACY) ? TRUE : FALSE;
 	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BOOLEAN,
 						&privacy);
 }

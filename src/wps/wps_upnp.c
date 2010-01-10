@@ -565,8 +565,11 @@ static struct wpabuf * build_fake_wsc_ack(void)
 		return NULL;
 	wpabuf_put_u8(msg, UPNP_WPS_WLANEVENT_TYPE_EAP);
 	wpabuf_put_str(msg, "00:00:00:00:00:00");
-	wps_build_version(msg);
-	wps_build_msg_type(msg, WPS_WSC_ACK);
+	if (wps_build_version(msg) ||
+	    wps_build_msg_type(msg, WPS_WSC_ACK)) {
+		wpabuf_free(msg);
+		return NULL;
+	}
 	/* Enrollee Nonce */
 	wpabuf_put_be16(msg, ATTR_ENROLLEE_NONCE);
 	wpabuf_put_be16(msg, WPS_NONCE_LEN);

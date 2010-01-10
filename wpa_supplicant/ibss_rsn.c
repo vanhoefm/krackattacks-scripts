@@ -261,7 +261,8 @@ static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 		 * In IBSS RSN, the pairwise key from the 4-way handshake
 		 * initiated by the peer with highest MAC address is used.
 		 */
-		if (os_memcmp(ibss_rsn->wpa_s->own_addr, addr, ETH_ALEN) < 0) {
+		if (addr == NULL ||
+		    os_memcmp(ibss_rsn->wpa_s->own_addr, addr, ETH_ALEN) < 0) {
 			wpa_printf(MSG_DEBUG, "AUTH: Do not use this PTK");
 			return 0;
 		}

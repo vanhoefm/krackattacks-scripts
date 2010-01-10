@@ -326,9 +326,11 @@ static int ibss_rsn_auth_init(struct ibss_rsn *ibss_rsn,
 		return -1;
 	}
 
-	wpa_auth_sm_event(peer->auth, WPA_ASSOC);
+	if (wpa_auth_sm_event(peer->auth, WPA_ASSOC))
+		return -1;
 
-	wpa_auth_sta_associated(ibss_rsn->auth_group, peer->auth);
+	if (wpa_auth_sta_associated(ibss_rsn->auth_group, peer->auth))
+		return -1;
 
 	return 0;
 }

@@ -493,26 +493,25 @@ wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr)
 }
 
 
-void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
-			     struct wpa_state_machine *sm)
+int wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
+			    struct wpa_state_machine *sm)
 {
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
-		return;
+		return -1;
 
 #ifdef CONFIG_IEEE80211R
 	if (sm->ft_completed) {
 		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG,
 				"FT authentication already completed - do not "
 				"start 4-way handshake");
-		return;
+		return 0;
 	}
 #endif /* CONFIG_IEEE80211R */
 
 	if (sm->started) {
 		os_memset(&sm->key_replay, 0, sizeof(sm->key_replay));
 		sm->ReAuthenticationRequest = TRUE;
-		wpa_sm_step(sm);
-		return;
+		return wpa_sm_step(sm);
 	}
 
 	wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG,
@@ -521,10 +520,10 @@ void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
 
 	sm->Init = TRUE;
 	if (wpa_sm_step(sm) == 1)
-		return; /* should not really happen */
+		return 1; /* should not really happen */
 	sm->Init = FALSE;
 	sm->AuthenticationRequest = TRUE;
-	wpa_sm_step(sm);
+	return wpa_sm_step(sm);
 }
 
 
@@ -1178,12 +1177,12 @@ void wpa_remove_ptk(struct wpa_state_machine *sm)
 }
 
 
-void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
+int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 {
 	int remove_ptk = 1;
 
 	if (sm == NULL)
-		return;
+		return -1;
 
 	wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			 "event %d notification", event);
@@ -1213,7 +1212,7 @@ void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 #ifdef CONFIG_IEEE80211R
 		/* Using FT protocol, not WPA auth state machine */
 		sm->ft_completed = 1;
-		return;
+		return 0;
 #else /* CONFIG_IEEE80211R */
 		break;
 #endif /* CONFIG_IEEE80211R */
@@ -1236,7 +1235,7 @@ void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 			wpa_remove_ptk(sm);
 	}
 
-	wpa_sm_step(sm);
+	return wpa_sm_step(sm);
 }
 
 

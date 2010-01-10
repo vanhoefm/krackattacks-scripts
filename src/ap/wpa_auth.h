@@ -219,8 +219,8 @@ int wpa_validate_wpa_ie(struct wpa_authenticator *wpa_auth,
 int wpa_auth_uses_mfp(struct wpa_state_machine *sm);
 struct wpa_state_machine *
 wpa_auth_sta_init(struct wpa_authenticator *wpa_auth, const u8 *addr);
-void wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
-			     struct wpa_state_machine *sm);
+int wpa_auth_sta_associated(struct wpa_authenticator *wpa_auth,
+			    struct wpa_state_machine *sm);
 void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm);
 void wpa_auth_sta_deinit(struct wpa_state_machine *sm);
 void wpa_receive(struct wpa_authenticator *wpa_auth,
@@ -231,7 +231,7 @@ typedef enum {
 	WPA_REAUTH_EAPOL, WPA_ASSOC_FT
 } wpa_event;
 void wpa_remove_ptk(struct wpa_state_machine *sm);
-void wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event);
+int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event);
 void wpa_auth_sm_notify(struct wpa_state_machine *sm);
 void wpa_gtk_rekey(struct wpa_authenticator *wpa_auth);
 int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen);

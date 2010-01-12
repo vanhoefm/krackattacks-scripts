@@ -1,6 +1,6 @@
 /*
- * WPA Supplicant - driver interaction with generic Linux Wireless Extensions
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Driver interaction with generic Linux Wireless Extensions
+ * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -20,6 +20,7 @@
 
 #include "includes.h"
 #include <sys/ioctl.h>
+#include <sys/stat.h>
 #include <net/if_arp.h>
 
 #include "wireless_copy.h"
@@ -697,12 +698,20 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wext_data *drv;
 	struct netlink_config *cfg;
+	char path[128];
+	struct stat buf;
 
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
 	drv->ctx = ctx;
 	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
+
+	os_snprintf(path, sizeof(path), "/sys/class/net/%s/phy80211", ifname);
+	if (stat(path, &buf) == 0) {
+		wpa_printf(MSG_DEBUG, "WEXT: cfg80211-based driver detected");
+		drv->cfg80211 = 1;
+	}
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
@@ -1709,6 +1718,19 @@ static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 	}
 
 	if (iwr.u.mode == IW_MODE_INFRA) {
+		if (drv->cfg80211) {
+			/*
+			 * cfg80211 supports SIOCSIWMLME commands, so there is
+			 * no need for the random SSID hack, but clear the
+			 * BSSID and SSID.
+			 */
+			if (wpa_driver_wext_set_bssid(drv, null_bssid) < 0 ||
+			    wpa_driver_wext_set_ssid(drv, (u8 *) "", 0) < 0) {
+				wpa_printf(MSG_DEBUG, "WEXT: Failed to clear "
+					   "to disconnect");
+			}
+			return;
+		}
 		/*
 		 * Clear the BSSID selection and set a random SSID to make sure
 		 * the driver will not be trying to associate with something
@@ -1858,6 +1880,14 @@ int wpa_driver_wext_associate(void *priv,
 
 	wpa_printf(MSG_DEBUG, "%s", __FUNCTION__);
 
+	if (drv->cfg80211) {
+		/*
+		 * Stop cfg80211 from trying to associate before we are done
+		 * with all parameters.
+		 */
+		wpa_driver_wext_set_ssid(drv, (u8 *) "", 0);
+	}
+
 	if (wpa_driver_wext_set_drop_unencrypted(drv, params->drop_unencrypted)
 	    < 0)
 		ret = -1;
@@ -1945,10 +1975,14 @@ int wpa_driver_wext_associate(void *priv,
 #endif /* CONFIG_IEEE80211W */
 	if (params->freq && wpa_driver_wext_set_freq(drv, params->freq) < 0)
 		ret = -1;
-	if (wpa_driver_wext_set_ssid(drv, params->ssid, params->ssid_len) < 0)
+	if (!drv->cfg80211 &&
+	    wpa_driver_wext_set_ssid(drv, params->ssid, params->ssid_len) < 0)
 		ret = -1;
 	if (params->bssid &&
 	    wpa_driver_wext_set_bssid(drv, params->bssid) < 0)
+		ret = -1;
+	if (drv->cfg80211 &&
+	    wpa_driver_wext_set_ssid(drv, params->ssid, params->ssid_len) < 0)
 		ret = -1;
 
 	return ret;

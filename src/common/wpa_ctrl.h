@@ -48,9 +48,9 @@ extern "C" {
 #define WPA_EVENT_EAP_FAILURE "CTRL-EVENT-EAP-FAILURE "
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
-/** A BSS entry was added (followed by BSS entry id and BSSID) */
+/** A new BSS entry was added (followed by BSS entry id and BSSID) */
 #define WPA_EVENT_BSS_ADDED "CTRL-EVENT-BSS-ADDED "
-/** A BSS entry was added (followed by BSS entry id and BSSID) */
+/** A BSS entry was removed (followed by BSS entry id and BSSID) */
 #define WPA_EVENT_BSS_REMOVED "CTRL-EVENT-BSS-REMOVED "
 
 /** WPS overlap detected in PBC mode */

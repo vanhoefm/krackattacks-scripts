@@ -41,7 +41,8 @@ struct wpa_scan_res;
  * @level: signal level
  * @tsf: Timestamp of last Beacon/Probe Response frame
  * @last_update: Time of the last update (i.e., Beacon or Probe Response RX)
- * @ie_len: length of the following IE field in octets
+ * @ie_len: length of the following IE field in octets (from Probe Response)
+ * @beacon_ie_len: length of the following Beacon IE field in octets
  *
  * This structure is used to store information about neighboring BSSes in
  * generic format. It is mainly updated based on scan results from the driver.
@@ -65,7 +66,9 @@ struct wpa_bss {
 	u64 tsf;
 	struct os_time last_update;
 	size_t ie_len;
+	size_t beacon_ie_len;
 	/* followed by ie_len octets of IEs */
+	/* followed by beacon_ie_len octets of IEs */
 };
 
 void wpa_bss_update_start(struct wpa_supplicant *wpa_s);

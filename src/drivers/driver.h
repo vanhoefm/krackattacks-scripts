@@ -132,6 +132,7 @@ struct hostapd_hw_modes {
  * @age: Age of the information in milliseconds (i.e., how many milliseconds
  * ago the last Beacon or Probe Response frame was received)
  * @ie_len: length of the following IE field in octets
+ * @beacon_ie_len: length of the following Beacon IE field in octets
  *
  * This structure is used as a generic format for scan results from the
  * driver. Each driver interface implementation is responsible for converting
@@ -154,7 +155,14 @@ struct wpa_scan_res {
 	u64 tsf;
 	unsigned int age;
 	size_t ie_len;
-	/* followed by ie_len octets of IEs */
+	size_t beacon_ie_len;
+	/*
+	 * Followed by ie_len octets of IEs from Probe Response frame (or if
+	 * the driver does not indicate source of IEs, these may also be from
+	 * Beacon frame). After the first set of IEs, another set of IEs may
+	 * follow (with beacon_ie_len octets of data) if the driver provides
+	 * both IE sets.
+	 */
 };
 
 /**

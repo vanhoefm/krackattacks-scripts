@@ -1481,12 +1481,14 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_BSS_SIGNAL_UNSPEC] = { .type = NLA_U8 },
 		[NL80211_BSS_STATUS] = { .type = NLA_U32 },
 		[NL80211_BSS_SEEN_MS_AGO] = { .type = NLA_U32 },
+		[NL80211_BSS_BEACON_IES] = { .type = NLA_UNSPEC },
 	};
 	struct wpa_scan_results *res = arg;
 	struct wpa_scan_res **tmp;
 	struct wpa_scan_res *r;
-	const u8 *ie;
-	size_t ie_len;
+	const u8 *ie, *beacon_ie;
+	size_t ie_len, beacon_ie_len;
+	u8 *pos;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -1502,8 +1504,15 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		ie = NULL;
 		ie_len = 0;
 	}
+	if (bss[NL80211_BSS_BEACON_IES]) {
+		beacon_ie = nla_data(bss[NL80211_BSS_BEACON_IES]);
+		beacon_ie_len = nla_len(bss[NL80211_BSS_BEACON_IES]);
+	} else {
+		beacon_ie = NULL;
+		beacon_ie_len = 0;
+	}
 
-	r = os_zalloc(sizeof(*r) + ie_len);
+	r = os_zalloc(sizeof(*r) + ie_len + beacon_ie_len);
 	if (r == NULL)
 		return NL_SKIP;
 	if (bss[NL80211_BSS_BSSID])
@@ -1530,8 +1539,14 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 	if (bss[NL80211_BSS_SEEN_MS_AGO])
 		r->age = nla_get_u32(bss[NL80211_BSS_SEEN_MS_AGO]);
 	r->ie_len = ie_len;
-	if (ie)
-		os_memcpy(r + 1, ie, ie_len);
+	pos = (u8 *) (r + 1);
+	if (ie) {
+		os_memcpy(pos, ie, ie_len);
+		pos += ie_len;
+	}
+	r->beacon_ie_len = beacon_ie_len;
+	if (beacon_ie)
+		os_memcpy(pos, beacon_ie, beacon_ie_len);
 
 	if (bss[NL80211_BSS_STATUS]) {
 		enum nl80211_bss_status status;

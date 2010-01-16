@@ -120,7 +120,7 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_bss *bss;
 
-	bss = os_zalloc(sizeof(*bss) + res->ie_len);
+	bss = os_zalloc(sizeof(*bss) + res->ie_len + res->beacon_ie_len);
 	if (bss == NULL)
 		return;
 	bss->id = wpa_s->bss_next_id++;
@@ -129,7 +129,8 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 	os_memcpy(bss->ssid, ssid, ssid_len);
 	bss->ssid_len = ssid_len;
 	bss->ie_len = res->ie_len;
-	os_memcpy(bss + 1, res + 1, res->ie_len);
+	bss->beacon_ie_len = res->beacon_ie_len;
+	os_memcpy(bss + 1, res + 1, res->ie_len + res->beacon_ie_len);
 
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
 	dl_list_add_tail(&wpa_s->bss_id, &bss->list_id);
@@ -273,18 +274,23 @@ static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 	wpa_bss_copy_res(bss, res);
 	/* Move the entry to the end of the list */
 	dl_list_del(&bss->list);
-	if (bss->ie_len >= res->ie_len) {
-		os_memcpy(bss + 1, res + 1, res->ie_len);
+	if (bss->ie_len + bss->beacon_ie_len >=
+	    res->ie_len + res->beacon_ie_len) {
+		os_memcpy(bss + 1, res + 1, res->ie_len + res->beacon_ie_len);
 		bss->ie_len = res->ie_len;
+		bss->beacon_ie_len = res->beacon_ie_len;
 	} else {
 		struct wpa_bss *nbss;
 		struct dl_list *prev = bss->list_id.prev;
 		dl_list_del(&bss->list_id);
-		nbss = os_realloc(bss, sizeof(*bss) + res->ie_len);
+		nbss = os_realloc(bss, sizeof(*bss) + res->ie_len +
+				  res->beacon_ie_len);
 		if (nbss) {
 			bss = nbss;
-			os_memcpy(bss + 1, res + 1, res->ie_len);
+			os_memcpy(bss + 1, res + 1,
+				  res->ie_len + res->beacon_ie_len);
 			bss->ie_len = res->ie_len;
+			bss->beacon_ie_len = res->beacon_ie_len;
 		}
 		dl_list_add(prev, &bss->list_id);
 	}

@@ -1119,6 +1119,7 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	struct madwifi_driver_data *drv;
 	struct ifreq ifr;
 	struct iwreq iwr;
+	char brname[IFNAMSIZ];
 
 	drv = os_zalloc(sizeof(struct madwifi_driver_data));
 	if (drv == NULL) {
@@ -1154,6 +1155,13 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 		drv->sock_recv = l2_packet_init(params->bridge[0], NULL,
 						ETH_P_EAPOL, handle_read, drv,
 						1);
+		if (drv->sock_recv == NULL)
+			goto bad;
+	} else if (linux_br_get(brname, drv->iface) == 0) {
+		wpa_printf(MSG_DEBUG, "Interface in bridge %s; configure for "
+			   "EAPOL receive", brname);
+		drv->sock_recv = l2_packet_init(brname, NULL, ETH_P_EAPOL,
+						handle_read, drv, 1);
 		if (drv->sock_recv == NULL)
 			goto bad;
 	} else

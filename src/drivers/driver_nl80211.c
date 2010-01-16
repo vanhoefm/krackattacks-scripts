@@ -68,6 +68,7 @@ struct wpa_driver_nl80211_data {
 	struct netlink_data *netlink;
 	int ioctl_sock; /* socket for ioctl() use */
 	char ifname[IFNAMSIZ + 1];
+	char brname[IFNAMSIZ];
 	int ifindex;
 	int if_removed;
 	struct wpa_driver_capa capa;
@@ -100,6 +101,8 @@ struct wpa_driver_nl80211_data {
 
 	unsigned int beacon_set:1;
 	unsigned int pending_remain_on_chan:1;
+	unsigned int added_bridge:1;
+	unsigned int added_if_into_bridge:1;
 
 	u64 remain_on_chan_cookie;
 
@@ -1270,6 +1273,20 @@ static int wpa_driver_nl80211_del_beacon(struct wpa_driver_nl80211_data *drv)
 static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
+
+	if (drv->added_if_into_bridge) {
+		if (linux_br_del_if(drv->ioctl_sock, drv->brname, drv->ifname)
+		    < 0)
+			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
+				   "interface %s from bridge %s: %s",
+				   drv->ifname, drv->brname, strerror(errno));
+	}
+	if (drv->added_bridge) {
+		if (linux_br_del(drv->ioctl_sock, drv->brname) < 0)
+			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
+				   "bridge %s: %s",
+				   drv->brname, strerror(errno));
+	}
 
 	nl80211_remove_monitor_interface(drv);
 
@@ -4246,11 +4263,66 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 
+static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
+			     const char *brname, const char *ifname)
+{
+	int ifindex;
+	char in_br[IFNAMSIZ];
+
+	os_strlcpy(drv->brname, brname, IFNAMSIZ);
+	ifindex = if_nametoindex(brname);
+	if (ifindex == 0) {
+		/*
+		 * Bridge was configured, but the bridge device does
+		 * not exist. Try to add it now.
+		 */
+		if (linux_br_add(drv->ioctl_sock, brname) < 0) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to add the "
+				   "bridge interface %s: %s",
+				   brname, strerror(errno));
+			return -1;
+		}
+		drv->added_bridge = 1;
+		add_ifidx(drv, if_nametoindex(brname));
+	}
+
+	if (linux_br_get(in_br, ifname) == 0) {
+		if (os_strcmp(in_br, brname) == 0)
+			return 0; /* already in the bridge */
+
+		wpa_printf(MSG_DEBUG, "nl80211: Removing interface %s from "
+			   "bridge %s", ifname, in_br);
+		if (linux_br_del_if(drv->ioctl_sock, in_br, ifname) < 0) {
+			wpa_printf(MSG_ERROR, "nl80211: Failed to "
+				   "remove interface %s from bridge "
+				   "%s: %s",
+				   ifname, brname, strerror(errno));
+			return -1;
+		}
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Adding interface %s into bridge %s",
+		   ifname, brname);
+	if (linux_br_add_if(drv->ioctl_sock, brname, ifname) < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to add interface %s "
+			   "into bridge %s: %s",
+			   ifname, brname, strerror(errno));
+		return -1;
+	}
+	drv->added_if_into_bridge = 1;
+
+	return 0;
+}
+
+
 static void *i802_init(struct hostapd_data *hapd,
 		       struct wpa_init_params *params)
 {
 	struct wpa_driver_nl80211_data *drv;
 	size_t i;
+	char brname[IFNAMSIZ];
+	int ifindex, br_ifindex;
+	int br_added = 0;
 
 	drv = wpa_driver_nl80211_init(hapd, params->ifname);
 	if (drv == NULL)
@@ -4258,12 +4330,29 @@ static void *i802_init(struct hostapd_data *hapd,
 
 	drv->bss.ifindex = drv->ifindex;
 
+	if (linux_br_get(brname, params->ifname) == 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Interface %s is in bridge %s",
+			   params->ifname, brname);
+		br_ifindex = if_nametoindex(brname);
+	} else {
+		brname[0] = '\0';
+		br_ifindex = 0;
+	}
+
 	drv->num_if_indices = sizeof(drv->default_if_indices) / sizeof(int);
 	drv->if_indices = drv->default_if_indices;
 	for (i = 0; i < params->num_bridge; i++) {
-		if (params->bridge[i])
-			add_ifidx(drv, if_nametoindex(params->bridge[i]));
+		if (params->bridge[i]) {
+			ifindex = if_nametoindex(params->bridge[i]);
+			if (ifindex)
+				add_ifidx(drv, ifindex);
+			if (ifindex == br_ifindex)
+				br_added = 1;
+		}
 	}
+	if (!br_added && br_ifindex &&
+	    (params->num_bridge == 0 || !params->bridge[0]))
+		add_ifidx(drv, br_ifindex);
 
 	/* start listening for EAPOL on the default AP interface */
 	add_ifidx(drv, drv->ifindex);
@@ -4282,6 +4371,10 @@ static void *i802_init(struct hostapd_data *hapd,
 			   "into AP mode", drv->ifname);
 		goto failed;
 	}
+
+	if (params->num_bridge && params->bridge[0] &&
+	    i802_check_bridge(drv, params->bridge[0], params->ifname) < 0)
+		goto failed;
 
 	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1))
 		goto failed;

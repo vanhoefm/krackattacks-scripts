@@ -1557,6 +1557,7 @@ static int wpa_driver_test_associate(
 		bss = drv->bss = os_zalloc(sizeof(*drv->bss));
 		if (bss == NULL)
 			return -1;
+		bss->bss_ctx = drv->ctx;
 		os_strlcpy(bss->ifname, drv->ifname, IFNAMSIZ);
 		os_memcpy(bss->bssid, drv->own_addr, ETH_ALEN);
 		os_memcpy(bss->ssid, params->ssid, params->ssid_len);

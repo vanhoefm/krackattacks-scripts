@@ -449,4 +449,11 @@ static inline int wpa_drv_disable_11b_rates(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_deinit_ap(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->deinit_ap)
+		return wpa_s->driver->deinit_ap(wpa_s->drv_priv);
+	return 0;
+}
+
 #endif /* DRIVER_I_H */

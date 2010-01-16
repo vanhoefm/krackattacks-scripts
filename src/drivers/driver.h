@@ -1708,6 +1708,17 @@ struct wpa_driver_ops {
 	 * 802.11b-only devices.
 	 */
 	int (*disable_11b_rates)(void *priv, int disabled);
+
+	/**
+	 * deinit_ap - Deinitialize AP mode
+	 * @priv: Private driver interface data
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 *
+	 * This optional function can be used to disable AP mode related
+	 * configuration and change the driver mode to station mode to allow
+	 * normal station operations like scanning to be completed.
+	 */
+	int (*deinit_ap)(void *priv);
 };
 
 

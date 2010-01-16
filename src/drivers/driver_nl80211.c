@@ -1959,6 +1959,9 @@ static int wpa_driver_nl80211_authenticate(
 
 	drv->associated = 0;
 	os_memset(drv->auth_bssid, 0, ETH_ALEN);
+	/* FIX: IBSS mode */
+	if (drv->nlmode != NL80211_IFTYPE_STATION)
+		wpa_driver_nl80211_set_mode(priv, IEEE80211_MODE_INFRA);
 
 	if (wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA) < 0)
 		return -1;
@@ -3632,6 +3635,9 @@ done:
 	} else if (!ret && nlmode != NL80211_IFTYPE_AP) {
 		/* Remove additional AP mode functionality */
 		nl80211_remove_monitor_interface(drv);
+#ifndef HOSTAPD
+		drv->beacon_set = 0;
+#endif /* HOSTAPD */
 	}
 
 	if (ret)
@@ -4629,6 +4635,16 @@ static int wpa_driver_nl80211_disable_11b_rates(void *priv, int disabled)
 }
 
 
+static int wpa_driver_nl80211_deinit_ap(void *priv)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	if (drv->nlmode != NL80211_IFTYPE_AP)
+		return -1;
+	wpa_driver_nl80211_del_beacon(drv);
+	return wpa_driver_nl80211_set_mode(drv, IEEE80211_MODE_INFRA);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -4684,4 +4700,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.alloc_interface_addr = wpa_driver_nl80211_alloc_interface_addr,
 	.release_interface_addr = wpa_driver_nl80211_release_interface_addr,
 	.disable_11b_rates = wpa_driver_nl80211_disable_11b_rates,
+	.deinit_ap = wpa_driver_nl80211_deinit_ap,
 };

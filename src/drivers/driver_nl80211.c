@@ -96,6 +96,7 @@ struct wpa_driver_nl80211_data {
 	int monitor_sock;
 	int monitor_ifidx;
 	int probe_req_report;
+	int disable_11b_rates;
 
 	unsigned int beacon_set:1;
 	unsigned int pending_remain_on_chan:1;
@@ -140,6 +141,8 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 
 static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
 							void *timeout_ctx);
+static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
+				     int ifindex, int disabled);
 
 
 /* nl80211 code */
@@ -1292,6 +1295,9 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	wpa_driver_nl80211_free_bss(drv);
 #endif /* HOSTAPD */
+
+	if (drv->disable_11b_rates)
+		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
 
 	netlink_send_oper_ifla(drv->netlink, drv->ifindex, 0, IF_OPER_UP);
 	netlink_deinit(drv->netlink);
@@ -2679,6 +2685,9 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 		ret = nl80211_create_iface_once(drv, ifname, iftype, addr,
 						wds);
 	}
+
+	if (ret >= 0 && drv->disable_11b_rates)
+		nl80211_disable_11b_rates(drv, ret, 1);
 
 	return ret;
 }
@@ -4564,6 +4573,62 @@ static void wpa_driver_nl80211_release_interface_addr(void *priv,
 }
 
 
+static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
+				     int ifindex, int disabled)
+{
+	struct nl_msg *msg;
+	struct nlattr *bands, *band;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_TX_BITRATE_MASK, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
+
+	bands = nla_nest_start(msg, NL80211_ATTR_TX_RATES);
+	if (!bands)
+		goto nla_put_failure;
+
+	/*
+	 * Disable 2 GHz rates 1, 2, 5.5, 11 Mbps by masking out everything
+	 * else apart from 6, 9, 12, 18, 24, 36, 48, 54 Mbps from non-MCS
+	 * rates. All 5 GHz rates are left enabled.
+	 */
+	band = nla_nest_start(msg, NL80211_BAND_2GHZ);
+	if (!band)
+		goto nla_put_failure;
+	NLA_PUT(msg, NL80211_TXRATE_LEGACY, 8,
+		"\x0c\x12\x18\x24\x30\x48\x60\x6c");
+	nla_nest_end(msg, band);
+
+	nla_nest_end(msg, bands);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Set TX rates failed: ret=%d "
+			   "(%s)", ret, strerror(-ret));
+	}
+
+	return ret;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -1;
+}
+
+
+static int wpa_driver_nl80211_disable_11b_rates(void *priv, int disabled)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	drv->disable_11b_rates = disabled;
+	return nl80211_disable_11b_rates(drv, drv->ifindex, disabled);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -4618,4 +4683,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.probe_req_report = wpa_driver_nl80211_probe_req_report,
 	.alloc_interface_addr = wpa_driver_nl80211_alloc_interface_addr,
 	.release_interface_addr = wpa_driver_nl80211_release_interface_addr,
+	.disable_11b_rates = wpa_driver_nl80211_disable_11b_rates,
 };

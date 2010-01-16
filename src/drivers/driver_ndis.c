@@ -3270,5 +3270,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* release_interface_addr */,
 	NULL /* remain_on_channel */,
 	NULL /* cancel_remain_on_channel */,
-	NULL /* probe_req_report */
+	NULL /* probe_req_report */,
+	NULL /* disable_11b_rates */
 };

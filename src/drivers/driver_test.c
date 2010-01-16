@@ -1692,6 +1692,25 @@ static int wpa_driver_test_disassociate(void *priv, const u8 *addr,
 }
 
 
+static const u8 * wpa_scan_get_ie(const struct wpa_scan_res *res, u8 ie)
+{
+	const u8 *end, *pos;
+
+	pos = (const u8 *) (res + 1);
+	end = pos + res->ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == ie)
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
 static void wpa_driver_test_scanresp(struct wpa_driver_test_data *drv,
 				     struct sockaddr *from,
 				     socklen_t fromlen,
@@ -1702,6 +1721,7 @@ static void wpa_driver_test_scanresp(struct wpa_driver_test_data *drv,
 	size_t len;
 	u8 *ie_pos, *ie_start, *ie_end;
 #define MAX_IE_LEN 1000
+	const u8 *ds_params;
 
 	wpa_printf(MSG_DEBUG, "test_driver: SCANRESP %s", data);
 	if (drv->num_scanres >= MAX_SCAN_RESULTS) {
@@ -1774,6 +1794,12 @@ static void wpa_driver_test_scanresp(struct wpa_driver_test_data *drv,
 			res->caps |= IEEE80211_CAP_PRIVACY;
 		if (os_strstr(pos, "IBSS"))
 			res->caps |= IEEE80211_CAP_IBSS;
+	}
+
+	ds_params = wpa_scan_get_ie(res, WLAN_EID_DS_PARAMS);
+	if (ds_params && ds_params[1] > 0) {
+		if (ds_params[2] >= 1 && ds_params[2] <= 13)
+			res->freq = 2407 + ds_params[2] * 5;
 	}
 
 	os_free(drv->scanres[drv->num_scanres]);

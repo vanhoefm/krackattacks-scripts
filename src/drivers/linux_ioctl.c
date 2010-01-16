@@ -186,7 +186,8 @@ int linux_br_get(char *brname, const char *ifname)
 	char path[128], brlink[128], *pos;
 	os_snprintf(path, sizeof(path), "/sys/class/net/%s/brport/bridge",
 		    ifname);
-	if (readlink(path, brlink, sizeof(brlink)) < 0)
+	os_memset(brlink, 0, sizeof(brlink));
+	if (readlink(path, brlink, sizeof(brlink) - 1) < 0)
 		return -1;
 	pos = os_strrchr(brlink, '/');
 	if (pos == NULL)

@@ -1,5 +1,31 @@
 ChangeLog for wpa_supplicant
 
+2010-01-16 - v0.7.1
+	* cleaned up driver wrapper API (struct wpa_driver_ops); the new API
+	  is not fully backwards compatible, so out-of-tree driver wrappers
+	  will need modifications
+	* cleaned up various module interfaces
+	* merge hostapd and wpa_supplicant developers' documentation into a
+	  single document
+	* nl80211: use explicit deauthentication to clear cfg80211 state to
+	  avoid issues when roaming between APs
+	* dbus: major design changes in the new D-Bus API
+	  (fi.w1.wpa_supplicant1)
+	* nl80211: added support for IBSS networks
+	* added internal debugging mechanism with backtrace support and memory
+	  allocation/freeing validation, etc. tests (CONFIG_WPA_TRACE=y)
+	* added WPS ER unsubscription command to more cleanly unregister from
+	  receiving UPnP events when ER is terminated
+	* cleaned up AP mode operations to avoid need for virtual driver_ops
+	  wrapper
+	* added BSS table to maintain more complete scan result information
+	  over multiple scans (that may include only partial results)
+	* wpa_gui-qt4: update Peers dialog information more dynamically while
+	  the dialog is kept open
+	* fixed PKCS#12 use with OpenSSL 1.0.0
+	* driver_wext: Added cfg80211-specific optimization to avoid some
+	  unnecessary scans and to speed up association
+
 2009-11-21 - v0.7.0
 	* increased wpa_cli ping interval to 5 seconds and made this
 	  configurable with a new command line options (-G<seconds>)

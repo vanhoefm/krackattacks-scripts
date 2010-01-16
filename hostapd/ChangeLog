@@ -1,5 +1,32 @@
 ChangeLog for hostapd
 
+2010-01-16 - v0.7.1
+	* cleaned up driver wrapper API (struct wpa_driver_ops); the new API
+	  is not fully backwards compatible, so out-of-tree driver wrappers
+	  will need modifications
+	* cleaned up various module interfaces
+	* merge hostapd and wpa_supplicant developers' documentation into a
+	  single document
+	* fixed HT Capabilities IE with nl80211 drivers
+	* moved generic AP functionality code into src/ap
+	* WPS: handle Selected Registrar as union of info from all Registrars
+	* remove obsolte Prism54.org driver wrapper
+	* added internal debugging mechanism with backtrace support and memory
+	  allocation/freeing validation, etc. tests (CONFIG_WPA_TRACE=y)
+	* EAP-FAST server: piggyback Phase 2 start with the end of Phase 1
+	* WPS: add support for dynamically selecting whether to provision the
+	  PSK as an ASCII passphrase or PSK
+	* added support for WDS (4-address frame) mode with per-station virtual
+	  interfaces (wds_sta=1 in config file; only supported with
+	  driver=nl80211 for now)
+	* fixed WPS Probe Request processing to handle missing required
+	  attribute
+	* fixed PKCS#12 use with OpenSSL 1.0.0
+	* detect bridge interface automatically so that bridge parameter in
+	  hostapd.conf becomes optional (though, it may now be used to
+	  automatically add then WLAN interface into a bridge with
+	  driver=nl80211)
+
 2009-11-21 - v0.7.0
 	* increased hostapd_cli ping interval to 5 seconds and made this
 	  configurable with a new command line options (-G<seconds>)

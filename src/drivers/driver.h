@@ -1594,8 +1594,9 @@ struct wpa_driver_ops {
 	 * send_action - Transmit an Action frame
 	 * @priv: Private driver interface data
 	 * @freq: Frequency (in MHz) of the channel
-	 * @dst: Destination MAC address
-	 * @src: Source MAC address
+	 * @dst: Destination MAC address (Address 1)
+	 * @src: Source MAC address (Address 2)
+	 * @bssid: BSSID (Address 3)
 	 * @data: Frame body
 	 * @data_len: data length in octets
 	 * Returns: 0 on success, -1 on failure
@@ -1608,7 +1609,7 @@ struct wpa_driver_ops {
 	 * of these conditions is in effect, send_action() cannot be used.
 	 */
 	int (*send_action)(void *priv, unsigned int freq,
-			   const u8 *dst, const u8 *src,
+			   const u8 *dst, const u8 *src, const u8 *bssid,
 			   const u8 *data, size_t data_len);
 
 	/**
@@ -2236,9 +2237,19 @@ union wpa_event_data {
 	 */
 	struct rx_action {
 		/**
+		 * da - Destination address of the received Action frame
+		 */
+		const u8 *da;
+
+		/**
 		 * sa - Source address of the received Action frame
 		 */
 		const u8 *sa;
+
+		/**
+		 * bssid - Address 3 of the received Action frame
+		 */
+		const u8 *bssid;
 
 		/**
 		 * category - Action frame category

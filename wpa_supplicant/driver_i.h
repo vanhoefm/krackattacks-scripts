@@ -386,11 +386,13 @@ static inline int wpa_drv_set_supp_port(struct wpa_supplicant *wpa_s,
 static inline int wpa_drv_send_action(struct wpa_supplicant *wpa_s,
 				      unsigned int freq,
 				      const u8 *dst, const u8 *src,
+				      const u8 *bssid,
 				      const u8 *data, size_t data_len)
 {
 	if (wpa_s->driver->send_action)
 		return wpa_s->driver->send_action(wpa_s->drv_priv, freq,
-						  dst, src, data, data_len);
+						  dst, src, bssid, data,
+						  data_len);
 	return -1;
 }
 
@@ -435,6 +437,15 @@ static inline int wpa_drv_probe_req_report(struct wpa_supplicant *wpa_s,
 	if (wpa_s->driver->probe_req_report)
 		return wpa_s->driver->probe_req_report(wpa_s->drv_priv,
 						       report);
+	return -1;
+}
+
+static inline int wpa_drv_disable_11b_rates(struct wpa_supplicant *wpa_s,
+					    int disabled)
+{
+	if (wpa_s->driver->disable_11b_rates)
+		return wpa_s->driver->disable_11b_rates(wpa_s->drv_priv,
+							disabled);
 	return -1;
 }
 

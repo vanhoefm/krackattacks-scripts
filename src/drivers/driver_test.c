@@ -2548,6 +2548,7 @@ static int wpa_driver_test_set_freq(void *priv,
 
 static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 				       const u8 *dst, const u8 *src,
+				       const u8 *bssid,
 				       const u8 *data, size_t data_len)
 {
 	struct wpa_driver_test_data *drv = priv;
@@ -2578,7 +2579,7 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 		IEEE80211_FC(WLAN_FC_TYPE_MGMT, WLAN_FC_STYPE_ACTION);
 	os_memcpy(hdr->addr1, dst, ETH_ALEN);
 	os_memcpy(hdr->addr2, src, ETH_ALEN);
-	os_memcpy(hdr->addr3, "\xff\xff\xff\xff\xff\xff", ETH_ALEN);
+	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
 	ret = wpa_driver_test_send_mlme(priv, buf, 24 + data_len);
 	os_free(buf);

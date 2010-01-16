@@ -60,6 +60,7 @@
 #define WPA_BSS_RSNIE_CHANGED_FLAG	BIT(5)
 #define WPA_BSS_WPS_CHANGED_FLAG	BIT(6)
 #define WPA_BSS_RATES_CHANGED_FLAG	BIT(7)
+#define WPA_BSS_IES_CHANGED_FLAG	BIT(8)
 
 
 static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
@@ -217,6 +218,11 @@ static u32 wpa_bss_compare_res(const struct wpa_bss *old,
 	if (caps_diff & IEEE80211_CAP_IBSS)
 		changes |= WPA_BSS_MODE_CHANGED_FLAG;
 
+	if (old->ie_len == new->ie_len &&
+	    os_memcmp(old + 1, new + 1, old->ie_len) == 0)
+		return changes;
+	changes |= WPA_BSS_IES_CHANGED_FLAG;
+
 	if (!are_ies_equal(old, new, WPA_IE_VENDOR_TYPE))
 		changes |= WPA_BSS_WPAIE_CHANGED_FLAG;
 
@@ -257,6 +263,9 @@ static void notify_bss_changes(struct wpa_supplicant *wpa_s, u32 changes,
 
 	if (changes & WPA_BSS_WPS_CHANGED_FLAG)
 		wpas_notify_bss_wps_changed(wpa_s, bss->id);
+
+	if (changes & WPA_BSS_IES_CHANGED_FLAG)
+		wpas_notify_bss_ies_changed(wpa_s, bss->id);
 
 	if (changes & WPA_BSS_RATES_CHANGED_FLAG)
 		wpas_notify_bss_rates_changed(wpa_s, bss->id);

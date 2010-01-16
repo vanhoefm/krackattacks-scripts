@@ -52,15 +52,15 @@ def showBss(bss):
 			  dbus_interface=dbus.PROPERTIES_IFACE)
 	ssid = byte_array_to_string(val)
 
-	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'WPAIE',
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'WPA',
 			  dbus_interface=dbus.PROPERTIES_IFACE)
 	wpa = "no"
-	if val != None:
+	if len(val["KeyMgmt"]) > 0:
 		wpa = "yes"
-	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'RSNIE',
+	val = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'RSN',
 			  dbus_interface=dbus.PROPERTIES_IFACE)
 	wpa2 = "no"
-	if val != None:
+	if len(val["KeyMgmt"]) > 0:
 		wpa2 = "yes"
 	freq = net_obj.Get(WPAS_DBUS_BSS_INTERFACE, 'Frequency',
 			   dbus_interface=dbus.PROPERTIES_IFACE)

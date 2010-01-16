@@ -242,21 +242,27 @@ void wpas_notify_bss_mode_changed(struct wpa_supplicant *wpa_s,
 void wpas_notify_bss_wpaie_changed(struct wpa_supplicant *wpa_s,
 				   unsigned int id)
 {
-	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_WPAIE, id);
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_WPA, id);
 }
 
 
 void wpas_notify_bss_rsnie_changed(struct wpa_supplicant *wpa_s,
 				   unsigned int id)
 {
-	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_RSNIE, id);
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_RSN, id);
 }
 
 
 void wpas_notify_bss_wps_changed(struct wpa_supplicant *wpa_s,
+				 unsigned int id)
+{
+}
+
+
+void wpas_notify_bss_ies_changed(struct wpa_supplicant *wpa_s,
 				   unsigned int id)
 {
-	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_WPSIE, id);
+	wpas_dbus_bss_signal_prop_changed(wpa_s, WPAS_DBUS_BSS_PROP_IES, id);
 }
 
 

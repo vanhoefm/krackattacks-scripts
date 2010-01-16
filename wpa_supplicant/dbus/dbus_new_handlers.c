@@ -1,7 +1,7 @@
 /*
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
- * Copyright (c) 2009, Witold Sowa <witold.sowa@gmail.com>
+ * Copyright (c) 2009-2010, Witold Sowa <witold.sowa@gmail.com>
  * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,7 @@
 #include "common/ieee802_11_defs.h"
 #include "eap_peer/eap_methods.h"
 #include "eapol_supp/eapol_supp_sm.h"
+#include "rsn_supp/wpa.h"
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../driver_i.h"
@@ -2560,90 +2561,199 @@ DBusMessage * wpas_dbus_getter_bss_rates(DBusMessage *message,
 }
 
 
+static DBusMessage * wpas_dbus_get_bss_security_prop(
+	DBusMessage *message, struct wpa_ie_data *ie_data)
+{
+	DBusMessage *reply;
+	DBusMessageIter iter, iter_dict, variant_iter;
+	const char *group;
+	const char *pairwise[2]; /* max 2 pairwise ciphers is supported */
+	const char *key_mgmt[7]; /* max 7 key managements may be supported */
+	int n;
+
+	if (message == NULL)
+		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
+	else
+		reply = dbus_message_new_method_return(message);
+	if (!reply)
+		goto nomem;
+
+	dbus_message_iter_init_append(reply, &iter);
+	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+					      "a{sv}", &variant_iter))
+		goto nomem;
+
+	if (!wpa_dbus_dict_open_write(&variant_iter, &iter_dict))
+		goto nomem;
+
+	/* KeyMgmt */
+	n = 0;
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_PSK)
+		key_mgmt[n++] = "wpa-psk";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_FT_PSK)
+		key_mgmt[n++] = "wpa-ft-psk";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
+		key_mgmt[n++] = "wpa-psk-sha256";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_IEEE8021X)
+		key_mgmt[n++] = "wpa-eap";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X)
+		key_mgmt[n++] = "wpa-ft-eap";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
+		key_mgmt[n++] = "wpa-eap-sha256";
+	if (ie_data->key_mgmt & WPA_KEY_MGMT_NONE)
+		key_mgmt[n++] = "wpa-none";
+
+	if (!wpa_dbus_dict_append_string_array(&iter_dict, "KeyMgmt",
+					       key_mgmt, n))
+		goto nomem;
+
+	/* Group */
+	switch (ie_data->group_cipher) {
+	case WPA_CIPHER_WEP40:
+		group = "wep40";
+		break;
+	case WPA_CIPHER_TKIP:
+		group = "tkip";
+		break;
+	case WPA_CIPHER_CCMP:
+		group = "ccmp";
+		break;
+	case WPA_CIPHER_WEP104:
+		group = "wep104";
+		break;
+	default:
+		group = "";
+		break;
+	}
+
+	if (!wpa_dbus_dict_append_string(&iter_dict, "Group", group))
+		goto nomem;
+
+	/* Pairwise */
+	n = 0;
+	if (ie_data->pairwise_cipher & WPA_CIPHER_TKIP)
+		pairwise[n++] = "tkip";
+	if (ie_data->pairwise_cipher & WPA_CIPHER_CCMP)
+		pairwise[n++] = "ccmp";
+
+	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Pairwise",
+					       pairwise, n))
+		goto nomem;
+
+	/* Management group (RSN only) */
+	if (ie_data->proto == WPA_PROTO_RSN) {
+		switch (ie_data->mgmt_group_cipher) {
+#ifdef CONFIG_IEEE80211W
+		case WPA_CIPHER_AES_128_CMAC:
+			group = "aes128cmac";
+			break;
+#endif /* CONFIG_IEEE80211W */
+		default:
+			group = "";
+			break;
+		}
+
+		if (!wpa_dbus_dict_append_string(&iter_dict, "MgmtGroup",
+						 group))
+			goto nomem;
+	}
+
+	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
+		goto nomem;
+	if (!dbus_message_iter_close_container(&iter, &variant_iter))
+		goto nomem;
+
+	return reply;
+
+nomem:
+	if (reply)
+		dbus_message_unref(reply);
+
+	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+}
+
+
 /**
- * wpas_dbus_getter_bss_wpaie - Return the WPA IE of a BSS
+ * wpas_dbus_getter_bss_wpa - Return the WPA options of a BSS
  * @message: Pointer to incoming dbus message
  * @bss: a pair of interface describing structure and bss's id
- * Returns: a dbus message containing the WPA information elements
- * of requested bss
+ * Returns: a dbus message containing the WPA options of requested bss
  *
- * Getter for "WPAIE" property.
+ * Getter for "WPA" property.
  */
-DBusMessage * wpas_dbus_getter_bss_wpaie(DBusMessage *message,
-					 struct bss_handler_args *bss)
+DBusMessage * wpas_dbus_getter_bss_wpa(DBusMessage *message,
+				       struct bss_handler_args *bss)
 {
 	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	struct wpa_ie_data wpa_data;
 	const u8 *ie;
 
 	if (!res) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_wpaie[dbus]: no "
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_wpa[dbus]: no "
 			   "bss with id %d found", bss->id);
 		return NULL;
 	}
 
+	os_memset(&wpa_data, 0, sizeof(wpa_data));
 	ie = wpa_bss_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
-	if (!ie)
-		return NULL;
-	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
-						      ie, ie[1] + 2);
+	if (ie)
+		wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data);
+
+	return wpas_dbus_get_bss_security_prop(message, &wpa_data);
 }
 
 
 /**
- * wpas_dbus_getter_bss_rsnie - Return the RSN IE of a BSS
+ * wpas_dbus_getter_bss_rsn - Return the RSN options of a BSS
  * @message: Pointer to incoming dbus message
  * @bss: a pair of interface describing structure and bss's id
- * Returns: a dbus message containing the RSN information elements
- * of requested bss
+ * Returns: a dbus message containing the RSN options of requested bss
  *
- * Getter for "RSNIE" property.
+ * Getter for "RSN" property.
  */
-DBusMessage * wpas_dbus_getter_bss_rsnie(DBusMessage *message,
-					 struct bss_handler_args *bss)
+DBusMessage * wpas_dbus_getter_bss_rsn(DBusMessage *message,
+				       struct bss_handler_args *bss)
 {
 	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
+	struct wpa_ie_data wpa_data;
 	const u8 *ie;
 
 	if (!res) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_rsnie[dbus]: no "
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_rsn[dbus]: no "
 			   "bss with id %d found", bss->id);
 		return NULL;
 	}
 
+	os_memset(&wpa_data, 0, sizeof(wpa_data));
 	ie = wpa_bss_get_ie(res, WLAN_EID_RSN);
-	if (!ie)
-		return NULL;
-	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
-						      ie, ie[1] + 2);
+	if (ie)
+		wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data);
+
+	return wpas_dbus_get_bss_security_prop(message, &wpa_data);
 }
 
 
 /**
- * wpas_dbus_getter_bss_wpsie - Return the WPS IE of a BSS
+ * wpas_dbus_getter_bss_ies - Return all IEs of a BSS
  * @message: Pointer to incoming dbus message
  * @bss: a pair of interface describing structure and bss's id
- * Returns: a dbus message containing the WPS information elements
- * of requested bss
+ * Returns: a dbus message containing IEs byte array
  *
- * Getter for "WPSIE" property.
+ * Getter for "IEs" property.
  */
-DBusMessage * wpas_dbus_getter_bss_wpsie(DBusMessage *message,
-					 struct bss_handler_args *bss)
+DBusMessage * wpas_dbus_getter_bss_ies(DBusMessage *message,
+				       struct bss_handler_args *bss)
 {
 	struct wpa_bss *res = wpa_bss_get_id(bss->wpa_s, bss->id);
-	const u8 *ie;
 
 	if (!res) {
-		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_wpsie[dbus]: no "
+		wpa_printf(MSG_ERROR, "wpas_dbus_getter_bss_ies[dbus]: no "
 			   "bss with id %d found", bss->id);
 		return NULL;
 	}
 
-	ie = wpa_bss_get_vendor_ie(res, WPS_IE_VENDOR_TYPE);
-	if (!ie)
-		return NULL;
 	return wpas_dbus_simple_array_property_getter(message, DBUS_TYPE_BYTE,
-						      ie, ie[1] + 2);
+						      res + 1, res->ie_len);
 }
 
 

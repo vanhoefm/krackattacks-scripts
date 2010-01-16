@@ -1,6 +1,7 @@
 /*
  * WPA Supplicant / dbus-based control interface
  * Copyright (c) 2006, Dan Williams <dcbw@redhat.com> and Red Hat, Inc.
+ * Copyright (c) 2009-2010, Witold Sowa <witold.sowa@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -154,14 +155,14 @@ DBusMessage * wpas_dbus_getter_bss_frequency(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_bss_rates(DBusMessage *message,
 					 struct bss_handler_args *bss);
 
-DBusMessage * wpas_dbus_getter_bss_wpaie(DBusMessage *message,
-					 struct bss_handler_args *bss);
+DBusMessage * wpas_dbus_getter_bss_wpa(DBusMessage *message,
+				       struct bss_handler_args *bss);
 
-DBusMessage * wpas_dbus_getter_bss_rsnie(DBusMessage *message,
-					 struct bss_handler_args *bss);
+DBusMessage * wpas_dbus_getter_bss_rsn(DBusMessage *message,
+				       struct bss_handler_args *bss);
 
-DBusMessage * wpas_dbus_getter_bss_wpsie(DBusMessage *message,
-					 struct bss_handler_args *bss);
+DBusMessage * wpas_dbus_getter_bss_ies(DBusMessage *message,
+				       struct bss_handler_args *bss);
 
 DBusMessage * wpas_dbus_getter_enabled(DBusMessage *message,
 				       struct network_handler_args *net);

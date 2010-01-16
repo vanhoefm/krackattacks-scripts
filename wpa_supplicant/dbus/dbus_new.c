@@ -732,14 +732,14 @@ void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
 	case WPAS_DBUS_BSS_PROP_RATES:
 		prop = "Rates";
 		break;
-	case WPAS_DBUS_BSS_PROP_WPAIE:
-		prop = "WPAIE";
+	case WPAS_DBUS_BSS_PROP_WPA:
+		prop = "WPA";
 		break;
-	case WPAS_DBUS_BSS_PROP_RSNIE:
-		prop = "RSNIE";
+	case WPAS_DBUS_BSS_PROP_RSN:
+		prop = "RSN";
 		break;
-	case WPAS_DBUS_BSS_PROP_WPSIE:
-		prop = "WPSIE";
+	case WPAS_DBUS_BSS_PROP_IES:
+		prop = "IEs";
 		break;
 	default:
 		wpa_printf(MSG_ERROR, "dbus: %s: Unknown Property value %d",
@@ -1131,18 +1131,18 @@ static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 	  NULL,
 	  R
 	},
-	{ "WPAIE", WPAS_DBUS_NEW_IFACE_BSS, "ay",
-	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpaie,
+	{ "WPA", WPAS_DBUS_NEW_IFACE_BSS, "a{sv}",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpa,
 	  NULL,
 	  R
 	},
-	{ "RSNIE", WPAS_DBUS_NEW_IFACE_BSS, "ay",
-	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_rsnie,
+	{ "RSN", WPAS_DBUS_NEW_IFACE_BSS, "a{sv}",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_rsn,
 	  NULL,
 	  R
 	},
-	{ "WPSIE", WPAS_DBUS_NEW_IFACE_BSS, "ay",
-	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_wpsie,
+	{ "IEs", WPAS_DBUS_NEW_IFACE_BSS, "ay",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_ies,
 	  NULL,
 	  R
 	},

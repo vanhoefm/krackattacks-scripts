@@ -93,6 +93,8 @@ struct wpa_driver_test_data {
 	int associated;
 	u8 *probe_req_ie;
 	size_t probe_req_ie_len;
+	u8 probe_req_ssid[32];
+	size_t probe_req_ssid_len;
 	int ibss;
 	int privacy;
 	int ap;
@@ -1319,6 +1321,16 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 		pos += wpa_snprintf_hex(pos, end - pos, drv->probe_req_ie,
 					drv->probe_req_ie_len);
 	}
+	if (drv->probe_req_ssid_len) {
+		/* Add SSID IE */
+		ret = os_snprintf(pos, end - pos, "%02x%02x",
+				  WLAN_EID_SSID,
+				  (unsigned int) drv->probe_req_ssid_len);
+		if (ret >= 0 && ret < end - pos)
+			pos += ret;
+		pos += wpa_snprintf_hex(pos, end - pos, drv->probe_req_ssid,
+					drv->probe_req_ssid_len);
+	}
 	end[-1] = '\0';
 
 	while ((dent = readdir(dir))) {
@@ -1377,6 +1389,12 @@ static int wpa_driver_test_scan(void *priv,
 	for (i = 0; i < params->num_ssids; i++)
 		wpa_hexdump(MSG_DEBUG, "Scan SSID",
 			    params->ssids[i].ssid, params->ssids[i].ssid_len);
+	drv->probe_req_ssid_len = 0;
+	if (params->num_ssids) {
+		os_memcpy(drv->probe_req_ssid, params->ssids[0].ssid,
+			  params->ssids[0].ssid_len);
+		drv->probe_req_ssid_len = params->ssids[0].ssid_len;
+	}
 	wpa_hexdump(MSG_DEBUG, "Scan extra IE(s)",
 		    params->extra_ies, params->extra_ies_len);
 

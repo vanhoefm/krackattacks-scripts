@@ -564,6 +564,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	if (hostapd_init_wps(hapd, conf))
 		return -1;
 
+	if (authsrv_init(hapd) < 0)
+		return -1;
+
 	if (ieee802_1x_init(hapd)) {
 		wpa_printf(MSG_ERROR, "IEEE 802.1X initialization failed.");
 		return -1;
@@ -596,9 +599,6 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	}
 
 	ieee802_11_set_beacon(hapd);
-
-	if (authsrv_init(hapd) < 0)
-		return -1;
 
 	return 0;
 }

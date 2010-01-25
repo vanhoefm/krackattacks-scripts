@@ -1654,15 +1654,9 @@ static void wpa_scan_results_free(struct wpa_scan_results *res)
 }
 
 
-/**
- * wpa_driver_nl80211_get_scan_results - Fetch the latest scan results
- * @priv: Pointer to private wext data from wpa_driver_nl80211_init()
- * Returns: Scan results on success, -1 on failure
- */
 static struct wpa_scan_results *
-wpa_driver_nl80211_get_scan_results(void *priv)
+nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 {
-	struct wpa_driver_nl80211_data *drv = priv;
 	struct nl_msg *msg;
 	struct wpa_scan_results *res;
 	int ret;
@@ -1683,7 +1677,6 @@ wpa_driver_nl80211_get_scan_results(void *priv)
 	if (ret == 0) {
 		wpa_printf(MSG_DEBUG, "Received scan results (%lu BSSes)",
 			   (unsigned long) res->num);
-		wpa_driver_nl80211_check_bss_status(drv, res);
 		return res;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
@@ -1692,6 +1685,48 @@ nla_put_failure:
 	nlmsg_free(msg);
 	wpa_scan_results_free(res);
 	return NULL;
+}
+
+
+/**
+ * wpa_driver_nl80211_get_scan_results - Fetch the latest scan results
+ * @priv: Pointer to private wext data from wpa_driver_nl80211_init()
+ * Returns: Scan results on success, -1 on failure
+ */
+static struct wpa_scan_results *
+wpa_driver_nl80211_get_scan_results(void *priv)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	struct wpa_scan_results *res;
+
+	res = nl80211_get_scan_results(drv);
+	if (res)
+		wpa_driver_nl80211_check_bss_status(drv, res);
+	return res;
+}
+
+
+static void nl80211_dump_scan(struct wpa_driver_nl80211_data *drv)
+{
+	struct wpa_scan_results *res;
+	size_t i;
+
+	res = nl80211_get_scan_results(drv);
+	if (res == NULL) {
+		wpa_printf(MSG_DEBUG, "nl80211: Failed to get scan results");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Scan result dump");
+	for (i = 0; i < res->num; i++) {
+		struct wpa_scan_res *r = res->res[i];
+		wpa_printf(MSG_DEBUG, "nl80211: %d/%d " MACSTR "%s%s",
+			   (int) i, (int) res->num, MAC2STR(r->bssid),
+			   r->flags & WPA_SCAN_AUTHENTICATED ? " [auth]" : "",
+			   r->flags & WPA_SCAN_ASSOCIATED ? " [assoc]" : "");
+	}
+
+	wpa_scan_results_free(res);
 }
 
 
@@ -3572,6 +3607,7 @@ static int wpa_driver_nl80211_associate(
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: MLME command failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
+		nl80211_dump_scan(drv);
 		goto nla_put_failure;
 	}
 	ret = 0;

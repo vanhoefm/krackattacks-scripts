@@ -314,6 +314,7 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
 			"failed");
+		wpa_supplicant_req_scan(wpa_s, 5, 0);
 		return;
 	}
 

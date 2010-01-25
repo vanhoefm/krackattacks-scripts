@@ -334,19 +334,19 @@ void Peers::remove_bss(int id)
 }
 
 
-void Peers::add_bss(const char *cmd)
+bool Peers::add_bss(const char *cmd)
 {
 	char reply[2048];
 	size_t reply_len;
 
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
-		return;
+		return false;
 	reply[reply_len] = '\0';
 
 	QString bss(reply);
 	if (bss.isEmpty() || bss.startsWith("FAIL"))
-		return;
+		return false;
 
 	QString ssid, bssid, flags, wps_name, pri_dev_type;
 	int id = -1;
@@ -403,6 +403,8 @@ void Peers::add_bss(const char *cmd)
 			item->setData(ssid, peer_role_ssid);
 		model.appendRow(item);
 	}
+
+	return true;
 }
 
 
@@ -417,7 +419,8 @@ void Peers::add_scan_results()
 		if (index > 1000)
 			break;
 
-		add_bss(cmd);
+		if (!add_bss(cmd))
+			break;
 	}
 }
 

@@ -776,6 +776,72 @@ static void wpa_supplicant_rsn_preauth_scan_results(
 }
 
 
+static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
+				       struct wpa_bss *selected,
+				       struct wpa_ssid *ssid,
+				       struct wpa_scan_results *scan_res)
+{
+	size_t i;
+	struct wpa_scan_res *current_bss = NULL;
+	int min_diff;
+
+	if (wpa_s->reassociate)
+		return 1; /* explicit request to reassociate */
+	if (wpa_s->wpa_state < WPA_ASSOCIATED)
+		return 1; /* we are not associated; continue */
+	if (wpa_s->current_ssid == NULL)
+		return 1; /* unknown current SSID */
+	if (wpa_s->current_ssid != ssid)
+		return 1; /* different network block */
+
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *res = scan_res->res[i];
+		const u8 *ie;
+		if (os_memcmp(res->bssid, wpa_s->bssid, ETH_ALEN) != 0)
+			continue;
+
+		ie = wpa_scan_get_ie(res, WLAN_EID_SSID);
+		if (ie == NULL)
+			continue;
+		if (ie[1] != wpa_s->current_ssid->ssid_len ||
+		    os_memcmp(ie + 2, wpa_s->current_ssid->ssid, ie[1]) != 0)
+			continue;
+		current_bss = res;
+		break;
+	}
+
+	if (!current_bss)
+		return 1; /* current BSS not seen in scan results */
+
+	wpa_printf(MSG_DEBUG, "Considering within-ESS reassociation");
+	wpa_printf(MSG_DEBUG, "Current BSS: " MACSTR " level=%d",
+		   MAC2STR(current_bss->bssid), current_bss->level);
+	wpa_printf(MSG_DEBUG, "Selected BSS: " MACSTR " level=%d",
+		   MAC2STR(selected->bssid), selected->level);
+
+	min_diff = 2;
+	if (current_bss->level < 0) {
+		if (current_bss->level < -85)
+			min_diff = 1;
+		else if (current_bss->level < -80)
+			min_diff = 2;
+		else if (current_bss->level < -75)
+			min_diff = 3;
+		else if (current_bss->level < -70)
+			min_diff = 4;
+		else
+			min_diff = 5;
+	}
+	if (abs(current_bss->level - selected->level) < min_diff) {
+		wpa_printf(MSG_DEBUG, "Skip roam - too small difference in "
+			   "signal level");
+		return 0;
+	}
+
+	return 1;
+}
+
+
 static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data)
 {
@@ -832,11 +898,17 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_rsn_preauth_scan_results(wpa_s, scan_res);
 
 	selected = wpa_supplicant_pick_network(wpa_s, scan_res, &ssid);
-	wpa_scan_results_free(scan_res);
 
 	if (selected) {
+		int skip;
+		skip = !wpa_supplicant_need_to_roam(wpa_s, selected, ssid,
+						    scan_res);
+		wpa_scan_results_free(scan_res);
+		if (skip)
+			return;
 		wpa_supplicant_connect(wpa_s, selected, ssid);
 	} else {
+		wpa_scan_results_free(scan_res);
 		wpa_printf(MSG_DEBUG, "No suitable network found");
 		ssid = wpa_supplicant_pick_new_network(wpa_s);
 		if (ssid) {

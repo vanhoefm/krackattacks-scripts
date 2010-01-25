@@ -1581,7 +1581,7 @@ static void clear_state_mismatch(struct wpa_driver_nl80211_data *drv,
 {
 	if (drv->capa.flags & WPA_DRIVER_FLAGS_SME) {
 		wpa_printf(MSG_DEBUG, "nl80211: Clear possible state "
-			   "mismatch");
+			   "mismatch (" MACSTR ")", MAC2STR(addr));
 		wpa_driver_nl80211_mlme(drv, addr,
 					NL80211_CMD_DEAUTHENTICATE,
 					WLAN_REASON_PREV_AUTH_NOT_VALID);
@@ -1610,6 +1610,7 @@ static void wpa_driver_nl80211_check_bss_status(
 					   " assoc=" MACSTR ")",
 					   MAC2STR(drv->auth_bssid),
 					   MAC2STR(drv->bssid));
+				clear_state_mismatch(drv, r->bssid);
 			}
 		}
 

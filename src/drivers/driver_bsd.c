@@ -488,6 +488,7 @@ bsd_send_eapol(struct l2_packet_data *sock_xmit, const u8 *addr,
 static int
 bsd_set_freq(int s, const char *ifname, u16 channel)
 {
+#ifdef SIOCS80211CHANNEL
 	struct ieee80211chanreq creq;
 	u32 mode;
 
@@ -507,6 +508,11 @@ bsd_set_freq(int s, const char *ifname, u16 channel)
 	os_strlcpy(creq.i_name, ifname, sizeof(creq.i_name));
 	creq.i_channel = channel;
 	return ioctl(s, SIOCS80211CHANNEL, &creq);
+#else
+	wpa_printf(MSG_ERROR, "bsd_set_freq: SIOCS80211CHANNEL not "
+		   "defined");
+	return -1;
+#endif
 }
 
 

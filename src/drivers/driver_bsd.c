@@ -795,7 +795,7 @@ bad:
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
 	if (drv != NULL)
-		free(drv);
+		os_free(drv);
 	return NULL;
 }
 
@@ -811,7 +811,7 @@ bsd_deinit(void *priv)
 		close(drv->ioctl_sock);
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);
-	free(drv);
+	os_free(drv);
 }
 
 const struct wpa_driver_ops wpa_driver_bsd_ops = {

@@ -252,6 +252,66 @@ bsd_ctrl_iface(int s, const char *ifname, int enable)
 	return 0;
 }
 
+static int
+bsd_set_key(int s, const char *ifname, enum wpa_alg alg,
+	    const unsigned char *addr, int key_idx, int set_tx, const u8 *seq,
+	    size_t seq_len, const u8 *key, size_t key_len)
+{
+	struct ieee80211req_key wk;
+
+	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%p key_idx=%d set_tx=%d "
+		   "seq_len=%zu key_len=%zu", __func__, alg, addr, key_idx,
+		   set_tx, seq_len, key_len);
+
+	os_memset(&wk, 0, sizeof(wk));
+	switch (alg) {
+	case WPA_ALG_WEP:
+		wk.ik_type = IEEE80211_CIPHER_WEP;
+		break;
+	case WPA_ALG_TKIP:
+		wk.ik_type = IEEE80211_CIPHER_TKIP;
+		break;
+	case WPA_ALG_CCMP:
+		wk.ik_type = IEEE80211_CIPHER_AES_CCM;
+		break;
+	default:
+		wpa_printf(MSG_ERROR, "%s: unknown alg=%d", __func__, alg);
+		return -1;
+	}
+
+	wk.ik_flags = IEEE80211_KEY_RECV;
+	if (set_tx)
+		wk.ik_flags |= IEEE80211_KEY_XMIT;
+
+	if (addr == NULL) {
+		os_memset(wk.ik_macaddr, 0xff, IEEE80211_ADDR_LEN);
+		wk.ik_keyix = key_idx;
+	} else {
+		os_memcpy(wk.ik_macaddr, addr, IEEE80211_ADDR_LEN);
+		/*
+		 * Deduce whether group/global or unicast key by checking
+		 * the address (yech).  Note also that we can only mark global
+		 * keys default; doing this for a unicast key is an error.
+		 */
+		if (os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
+			      IEEE80211_ADDR_LEN) == 0) {
+			wk.ik_flags |= IEEE80211_KEY_GROUP;
+			wk.ik_keyix = key_idx;
+		} else {
+			wk.ik_keyix = key_idx == 0 ? IEEE80211_KEYIX_NONE :
+				key_idx;
+		}
+	}
+	if (wk.ik_keyix != IEEE80211_KEYIX_NONE && set_tx)
+		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
+	wk.ik_keylen = key_len;
+	os_memcpy(&wk.ik_keyrsc, seq, seq_len);
+	os_memcpy(wk.ik_keydata, key, key_len);
+
+	return bsd_set80211var(s, ifname, IEEE80211_IOC_WPAKEY, &wk,
+			       sizeof(wk));
+}
+
 
 #ifdef HOSTAPD
 
@@ -276,12 +336,6 @@ struct bsd_driver_data {
 
 static int bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 			  int reason_code);
-
-static int
-set80211var(struct bsd_driver_data *drv, int op, const void *arg, int arg_len)
-{
-	return bsd_set80211var(drv->ioctl_sock, drv->iface, op, arg, arg_len);
-}
 
 static int
 get80211var(struct bsd_driver_data *drv, int op, void *arg, int arg_len)
@@ -464,52 +518,17 @@ bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags, int flags_or,
 }
 
 static int
-bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
+hostapd_bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	    const u8 *addr, int key_idx, int set_tx, const u8 *seq,
 	    size_t seq_len, const u8 *key, size_t key_len)
 {
 	struct bsd_driver_data *drv = priv;
-	struct ieee80211req_key wk;
-	u_int8_t cipher;
 
 	if (alg == WPA_ALG_NONE)
 		return bsd_del_key(drv->ioctl_sock, drv->iface, addr, key_idx);
 
-	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%s key_idx=%d",
-		   __func__, alg, ether_sprintf(addr), key_idx);
-
-	if (alg == WPA_ALG_WEP)
-		cipher = IEEE80211_CIPHER_WEP;
-	else if (alg == WPA_ALG_TKIP)
-		cipher = IEEE80211_CIPHER_TKIP;
-	else if (alg == WPA_ALG_CCMP)
-		cipher = IEEE80211_CIPHER_AES_CCM;
-	else {
-		printf("%s: unknown/unsupported algorithm %d\n",
-			__func__, alg);
-		return -1;
-	}
-
-	if (key_len > sizeof(wk.ik_keydata)) {
-		printf("%s: key length %d too big\n", __func__, (int) key_len);
-		return -3;
-	}
-
-	memset(&wk, 0, sizeof(wk));
-	wk.ik_type = cipher;
-	wk.ik_flags = IEEE80211_KEY_RECV | IEEE80211_KEY_XMIT;
-	if (addr == NULL) {
-		memset(wk.ik_macaddr, 0xff, IEEE80211_ADDR_LEN);
-		wk.ik_keyix = key_idx;
-		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
-	} else {
-		memcpy(wk.ik_macaddr, addr, IEEE80211_ADDR_LEN);
-		wk.ik_keyix = IEEE80211_KEYIX_NONE;
-	}
-	wk.ik_keylen = key_len;
-	memcpy(wk.ik_keydata, key, key_len);
-
-	return set80211var(drv, IEEE80211_IOC_WPAKEY, &wk, sizeof(wk));
+	return bsd_set_key(drv->ioctl_sock, drv->iface, alg, addr, key_idx,
+			   set_tx, seq, seq_len, key, key_len);
 }
 
 
@@ -898,7 +917,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.hapd_deinit		= bsd_deinit,
 	.set_ieee8021x		= bsd_set_ieee8021x,
 	.set_privacy		= bsd_set_privacy,
-	.set_key		= bsd_set_key,
+	.set_key		= hostapd_bsd_set_key,
 	.get_seqnum		= bsd_get_seqnum,
 	.flush			= bsd_flush,
 	.set_generic_elem	= bsd_set_opt_ie,
@@ -1051,77 +1070,20 @@ wpa_driver_bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 		       const u8 *key, size_t key_len)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-	struct ieee80211req_key wk;
-	struct ether_addr ea;
-	char *alg_name;
-	u_int8_t cipher;
 
-	if (alg == WPA_ALG_NONE)
-		return bsd_del_key(drv->sock, drv->ifname,
-				   os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
-				   IEEE80211_ADDR_LEN) == 0 ? NULL : addr,
-				   key_idx);
-
-	switch (alg) {
-	case WPA_ALG_WEP:
-		alg_name = "WEP";
-		cipher = IEEE80211_CIPHER_WEP;
-		break;
-	case WPA_ALG_TKIP:
-		alg_name = "TKIP";
-		cipher = IEEE80211_CIPHER_TKIP;
-		break;
-	case WPA_ALG_CCMP:
-		alg_name = "CCMP";
-		cipher = IEEE80211_CIPHER_AES_CCM;
-		break;
-	default:
-		wpa_printf(MSG_DEBUG, "%s: unknown/unsupported algorithm %d",
-			__func__, alg);
-		return -1;
+	if (alg == WPA_ALG_NONE) {
+		if (addr == NULL ||
+		    os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
+			      IEEE80211_ADDR_LEN) == 0)
+			return bsd_del_key(drv->sock, drv->ifname, NULL,
+					   key_idx);
+		else
+			return bsd_del_key(drv->sock, drv->ifname, addr,
+					   key_idx);
 	}
 
-	os_memcpy(&ea, addr, IEEE80211_ADDR_LEN);
-	wpa_printf(MSG_DEBUG,
-		"%s: alg=%s addr=%s key_idx=%d set_tx=%d seq_len=%zu key_len=%zu",
-		__func__, alg_name, ether_ntoa(&ea), key_idx, set_tx,
-		seq_len, key_len);
-
-	if (seq_len > sizeof(u_int64_t)) {
-		wpa_printf(MSG_DEBUG, "%s: seq_len %zu too big",
-			__func__, seq_len);
-		return -2;
-	}
-	if (key_len > sizeof(wk.ik_keydata)) {
-		wpa_printf(MSG_DEBUG, "%s: key length %zu too big",
-			__func__, key_len);
-		return -3;
-	}
-
-	os_memset(&wk, 0, sizeof(wk));
-	wk.ik_type = cipher;
-	wk.ik_flags = IEEE80211_KEY_RECV;
-	if (set_tx)
-		wk.ik_flags |= IEEE80211_KEY_XMIT;
-	os_memcpy(wk.ik_macaddr, addr, IEEE80211_ADDR_LEN);
-	/*
-	 * Deduce whether group/global or unicast key by checking
-	 * the address (yech).  Note also that we can only mark global
-	 * keys default; doing this for a unicast key is an error.
-	 */
-	if (bcmp(addr, "\xff\xff\xff\xff\xff\xff", IEEE80211_ADDR_LEN) == 0) {
-		wk.ik_flags |= IEEE80211_KEY_GROUP;
-		wk.ik_keyix = key_idx;
-	} else {
-		wk.ik_keyix = (key_idx == 0 ? IEEE80211_KEYIX_NONE : key_idx);
-	}
-	if (wk.ik_keyix != IEEE80211_KEYIX_NONE && set_tx)
-		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
-	wk.ik_keylen = key_len;
-	os_memcpy(&wk.ik_keyrsc, seq, seq_len);
-	os_memcpy(wk.ik_keydata, key, key_len);
-
-	return set80211var(drv, IEEE80211_IOC_WPAKEY, &wk, sizeof(wk));
+	return bsd_set_key(drv->sock, drv->ifname, alg, addr, key_idx, set_tx,
+			   seq, seq_len, key, key_len);
 }
 
 static int

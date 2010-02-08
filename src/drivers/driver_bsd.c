@@ -192,6 +192,26 @@ bsd_set_mediaopt(int s, const char *ifname, uint32_t mask, uint32_t mode)
 	return 0;
 }
 
+static int
+bsd_del_key(int s, const char *ifname, const u8 *addr, int key_idx)
+{
+	struct ieee80211req_del_key wk;
+
+	os_memset(&wk, 0, sizeof(wk));
+	if (addr == NULL) {
+		wpa_printf(MSG_DEBUG, "%s: key_idx=%d", __func__, key_idx);
+		wk.idk_keyix = key_idx;
+	} else {
+		wpa_printf(MSG_DEBUG, "%s: addr=" MACSTR, __func__,
+			   MAC2STR(addr));
+		os_memcpy(wk.idk_macaddr, addr, IEEE80211_ADDR_LEN);
+		wk.idk_keyix = (u_int8_t) IEEE80211_KEYIX_NONE;	/* XXX */
+	}
+
+	return bsd_set80211var(s, ifname, IEEE80211_IOC_DELKEY, &wk,
+			       sizeof(wk));
+}
+
 
 #ifdef HOSTAPD
 
@@ -439,26 +459,6 @@ bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags, int flags_or,
 }
 
 static int
-bsd_del_key(void *priv, const u8 *addr, int key_idx)
-{
-	struct bsd_driver_data *drv = priv;
-	struct ieee80211req_del_key wk;
-
-	wpa_printf(MSG_DEBUG, "%s: addr=%s key_idx=%d",
-		   __func__, ether_sprintf(addr), key_idx);
-
-	memset(&wk, 0, sizeof(wk));
-	if (addr != NULL) {
-		memcpy(wk.idk_macaddr, addr, IEEE80211_ADDR_LEN);
-		wk.idk_keyix = (u_int8_t) IEEE80211_KEYIX_NONE;	/* XXX */
-	} else {
-		wk.idk_keyix = key_idx;
-	}
-
-	return set80211var(drv, IEEE80211_IOC_DELKEY, &wk, sizeof(wk));
-}
-
-static int
 bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	    const u8 *addr, int key_idx, int set_tx, const u8 *seq,
 	    size_t seq_len, const u8 *key, size_t key_len)
@@ -468,7 +468,7 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	u_int8_t cipher;
 
 	if (alg == WPA_ALG_NONE)
-		return bsd_del_key(drv, addr, key_idx);
+		return bsd_del_key(drv->ioctl_sock, drv->iface, addr, key_idx);
 
 	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%s key_idx=%d",
 		   __func__, alg, ether_sprintf(addr), key_idx);
@@ -1080,29 +1080,6 @@ wpa_driver_bsd_set_wpa(void *priv, int enabled)
 }
 
 static int
-wpa_driver_bsd_del_key(struct wpa_driver_bsd_data *drv, int key_idx,
-		       const unsigned char *addr)
-{
-	struct ieee80211req_del_key wk;
-
-	os_memset(&wk, 0, sizeof(wk));
-	if (addr != NULL &&
-	    bcmp(addr, "\xff\xff\xff\xff\xff\xff", IEEE80211_ADDR_LEN) != 0) {
-		struct ether_addr ea;
-
-		os_memcpy(&ea, addr, IEEE80211_ADDR_LEN);
-		wpa_printf(MSG_DEBUG, "%s: addr=%s keyidx=%d",
-			__func__, ether_ntoa(&ea), key_idx);
-		os_memcpy(wk.idk_macaddr, addr, IEEE80211_ADDR_LEN);
-		wk.idk_keyix = (uint8_t) IEEE80211_KEYIX_NONE;
-	} else {
-		wpa_printf(MSG_DEBUG, "%s: keyidx=%d", __func__, key_idx);
-		wk.idk_keyix = key_idx;
-	}
-	return set80211var(drv, IEEE80211_IOC_DELKEY, &wk, sizeof(wk));
-}
-
-static int
 wpa_driver_bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 		       const unsigned char *addr, int key_idx, int set_tx,
 		       const u8 *seq, size_t seq_len,
@@ -1115,7 +1092,10 @@ wpa_driver_bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	u_int8_t cipher;
 
 	if (alg == WPA_ALG_NONE)
-		return wpa_driver_bsd_del_key(drv, key_idx, addr);
+		return bsd_del_key(drv->sock, drv->ifname,
+				   os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
+				   IEEE80211_ADDR_LEN) == 0 ? NULL : addr,
+				   key_idx);
 
 	switch (alg) {
 	case WPA_ALG_WEP:

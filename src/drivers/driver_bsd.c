@@ -226,6 +226,32 @@ bsd_send_mlme_param(int s, const char *ifname, const u8 op, const u16 reason,
 			       sizeof(mlme));
 }
 
+static int
+bsd_ctrl_iface(int s, const char *ifname, int enable)
+{
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+
+	if (ioctl(s, SIOCGIFFLAGS, &ifr) < 0) {
+		perror("ioctl[SIOCGIFFLAGS]");
+		return -1;
+	}
+
+	if (enable)
+		ifr.ifr_flags |= IFF_UP;
+	else
+		ifr.ifr_flags &= ~IFF_UP;
+
+	if (ioctl(s, SIOCSIFFLAGS, &ifr) < 0) {
+		perror("ioctl[SIOCSIFFLAGS]");
+		return -1;
+	}
+
+	return 0;
+}
+
 
 #ifdef HOSTAPD
 
@@ -368,37 +394,10 @@ bsd_configure_wpa(struct bsd_driver_data *drv, struct wpa_bss_params *params)
 	return 0;
 }
 
-
 static int
-bsd_set_iface_flags(void *priv, int dev_up)
+hostapd_bsd_ctrl_iface(struct bsd_driver_data *drv, int enable)
 {
-	struct bsd_driver_data *drv = priv;
-	struct ifreq ifr;
-
-	wpa_printf(MSG_DEBUG, "%s: dev_up=%d", __func__, dev_up);
-
-	if (drv->ioctl_sock < 0)
-		return -1;
-
-	memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->iface, sizeof(ifr.ifr_name));
-
-	if (ioctl(drv->ioctl_sock, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
-		return -1;
-	}
-
-	if (dev_up)
-		ifr.ifr_flags |= IFF_UP;
-	else
-		ifr.ifr_flags &= ~IFF_UP;
-
-	if (ioctl(drv->ioctl_sock, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
-		return -1;
-	}
-
-	return 0;
+	return bsd_ctrl_iface(drv->ioctl_sock, drv->iface, enable);
 }
 
 static int
@@ -429,7 +428,7 @@ bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 			HOSTAPD_LEVEL_WARNING, "Error enabling WPA/802.1X!");
 		return -1;
 	}
-	return bsd_set_iface_flags(priv, 1);
+	return hostapd_bsd_ctrl_iface(drv, 1);
 }
 
 static int
@@ -854,7 +853,9 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	if (l2_packet_get_own_addr(drv->sock_xmit, params->own_addr))
 		goto bad;
 
-	bsd_set_iface_flags(drv, 0);	/* mark down during setup */
+	/* mark down during setup */
+	if (hostapd_bsd_ctrl_iface(drv, 0) < 0)
+		goto bad;
 	if (bsd_wireless_event_init(drv))
 		goto bad;
 
@@ -883,7 +884,7 @@ bsd_deinit(void *priv)
 	struct bsd_driver_data *drv = priv;
 
 	bsd_wireless_event_deinit(drv);
-	(void) bsd_set_iface_flags(drv, 0);
+	hostapd_bsd_ctrl_iface(drv, 0);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
 	if (drv->sock_xmit != NULL)
@@ -957,36 +958,6 @@ get80211param(struct wpa_driver_bsd_data *drv, int op)
 		return -1;
 	}
 	return ireq.i_val;
-}
-
-static int
-getifflags(struct wpa_driver_bsd_data *drv, int *flags)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	if (ioctl(drv->sock, SIOCGIFFLAGS, (caddr_t)&ifr) < 0) {
-		perror("SIOCGIFFLAGS");
-		return errno;
-	}
-	*flags = ifr.ifr_flags & 0xffff;
-	return 0;
-}
-
-static int
-setifflags(struct wpa_driver_bsd_data *drv, int flags)
-{
-	struct ifreq ifr;
-
-	os_memset(&ifr, 0, sizeof(ifr));
-	os_strlcpy(ifr.ifr_name, drv->ifname, sizeof(ifr.ifr_name));
-	ifr.ifr_flags = flags & 0xffff;
-	if (ioctl(drv->sock, SIOCSIFFLAGS, (caddr_t)&ifr) < 0) {
-		perror("SIOCSIFFLAGS");
-		return errno;
-	}
-	return 0;
 }
 
 static int
@@ -1261,15 +1232,20 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 }
 
 static int
+wpa_driver_bsd_ctrl_iface(struct wpa_driver_bsd_data *drv, int enable)
+{
+	return bsd_ctrl_iface(drv->sock, drv->ifname, enable);
+}
+
+static int
 wpa_driver_bsd_scan(void *priv, struct wpa_driver_scan_params *params)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-	int flags;
 	const u8 *ssid = params->ssids[0].ssid;
 	size_t ssid_len = params->ssids[0].ssid_len;
 
 	/* NB: interface must be marked UP to do a scan */
-	if (getifflags(drv, &flags) != 0 || setifflags(drv, flags | IFF_UP) != 0)
+	if (wpa_driver_bsd_ctrl_iface(drv, 1) < 0)
 		return -1;
 
 	/* set desired ssid before scan */
@@ -1547,14 +1523,12 @@ static void
 wpa_driver_bsd_deinit(void *priv)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-	int flags;
 
 	wpa_driver_bsd_set_wpa(drv, 0);
 	eloop_unregister_read_sock(drv->route);
 
 	/* NB: mark interface down */
-	if (getifflags(drv, &flags) == 0)
-		(void) setifflags(drv, flags &~ IFF_UP);
+	wpa_driver_bsd_ctrl_iface(drv, 0);
 
 	wpa_driver_bsd_set_wpa_internal(drv, drv->prev_wpa, drv->prev_privacy);
 	if (set80211param(drv, IEEE80211_IOC_ROAMING, drv->prev_roaming) < 0)

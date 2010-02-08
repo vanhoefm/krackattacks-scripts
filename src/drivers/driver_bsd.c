@@ -46,6 +46,8 @@
 #include <net80211/ieee80211_netbsd.h>
 #endif
 
+#include "l2_packet/l2_packet.h"
+
 /* Generic functions for hostapd and wpa_supplicant */
 
 static int
@@ -312,6 +314,201 @@ bsd_set_key(int s, const char *ifname, enum wpa_alg alg,
 			       sizeof(wk));
 }
 
+static int
+bsd_configure_wpa(int s, const char *ifname, struct wpa_bss_params *params)
+{
+	static const char *ciphernames[] =
+		{ "WEP", "TKIP", "AES-OCB", "AES-CCM", "CKIP", "NONE" };
+	int v;
+
+	switch (params->wpa_group) {
+	case WPA_CIPHER_CCMP:
+		v = IEEE80211_CIPHER_AES_CCM;
+		break;
+	case WPA_CIPHER_TKIP:
+		v = IEEE80211_CIPHER_TKIP;
+		break;
+	case WPA_CIPHER_WEP104:
+		v = IEEE80211_CIPHER_WEP;
+		break;
+	case WPA_CIPHER_WEP40:
+		v = IEEE80211_CIPHER_WEP;
+		break;
+	case WPA_CIPHER_NONE:
+		v = IEEE80211_CIPHER_NONE;
+		break;
+	default:
+		printf("Unknown group key cipher %u\n",
+			params->wpa_group);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "%s: group key cipher=%s (%u)",
+		   __func__, ciphernames[v], v);
+	if (bsd_set80211param(s, ifname, IEEE80211_IOC_MCASTCIPHER, v)) {
+		printf("Unable to set group key cipher to %u (%s)\n",
+			v, ciphernames[v]);
+		return -1;
+	}
+	if (v == IEEE80211_CIPHER_WEP) {
+		/* key length is done only for specific ciphers */
+		v = (params->wpa_group == WPA_CIPHER_WEP104 ? 13 : 5);
+		if (bsd_set80211param(s, ifname, IEEE80211_IOC_MCASTKEYLEN,
+				      v)) {
+			printf("Unable to set group key length to %u\n", v);
+			return -1;
+		}
+	}
+
+	v = 0;
+	if (params->wpa_pairwise & WPA_CIPHER_CCMP)
+		v |= 1<<IEEE80211_CIPHER_AES_CCM;
+	if (params->wpa_pairwise & WPA_CIPHER_TKIP)
+		v |= 1<<IEEE80211_CIPHER_TKIP;
+	if (params->wpa_pairwise & WPA_CIPHER_NONE)
+		v |= 1<<IEEE80211_CIPHER_NONE;
+	wpa_printf(MSG_DEBUG, "%s: pairwise key ciphers=0x%x", __func__, v);
+	if (bsd_set80211param(s, ifname, IEEE80211_IOC_UCASTCIPHERS, v)) {
+		printf("Unable to set pairwise key ciphers to 0x%x\n", v);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "%s: key management algorithms=0x%x",
+		   __func__, params->wpa_key_mgmt);
+	if (bsd_set80211param(s, ifname, IEEE80211_IOC_KEYMGTALGS, params->wpa_key_mgmt))
+	{
+		printf("Unable to set key management algorithms to 0x%x\n",
+			params->wpa_key_mgmt);
+		return -1;
+	}
+
+	v = 0;
+	if (params->rsn_preauth)
+		v |= BIT(0);
+	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x",
+		   __func__, params->rsn_preauth);
+	if (bsd_set80211param(s, ifname, IEEE80211_IOC_RSNCAPS, v)) {
+		printf("Unable to set RSN capabilities to 0x%x\n", v);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "%s: enable WPA= 0x%x", __func__, params->wpa);
+	if (bsd_set80211param(s, ifname, IEEE80211_IOC_WPA, params->wpa)) {
+		printf("Unable to set WPA to %u\n", params->wpa);
+		return -1;
+	}
+	return 0;
+}
+
+static int
+bsd_set_ieee8021x(int s, const char *ifname, struct wpa_bss_params *params)
+{
+	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, params->enabled);
+
+	if (!params->enabled) {
+		/* XXX restore state */
+		return bsd_set80211param(s, ifname, IEEE80211_IOC_AUTHMODE,
+			IEEE80211_AUTH_AUTO);
+	}
+	if (!params->wpa && !params->ieee802_1x) {
+		wpa_printf(MSG_ERROR, "%s: No 802.1X or WPA enabled",
+			   __func__);
+		return -1;
+	}
+	if (params->wpa && bsd_configure_wpa(s, ifname, params) != 0) {
+		wpa_printf(MSG_ERROR, "%s: Failed to configure WPA state",
+			   __func__);
+		return -1;
+	}
+	if (bsd_set80211param(s, ifname, IEEE80211_IOC_AUTHMODE,
+		(params->wpa ? IEEE80211_AUTH_WPA : IEEE80211_AUTH_8021X))) {
+		wpa_printf(MSG_ERROR, "%s: Failed to enable WPA/802.1X",
+			   __func__);
+		return -1;
+	}
+	return bsd_ctrl_iface(s, ifname, 1);
+}
+
+static int
+bsd_set_sta_authorized(int s, const char *ifname, const u8 *addr,
+		       int total_flags, int flags_or, int flags_and)
+{
+	int authorized = -1;
+
+	/* For now, only support setting Authorized flag */
+	if (flags_or & WPA_STA_AUTHORIZED)
+		authorized = 1;
+	if (!(flags_and & WPA_STA_AUTHORIZED))
+		authorized = 0;
+
+	if (authorized < 0)
+		return 0;
+
+	return bsd_send_mlme_param(s, ifname, authorized ?
+				   IEEE80211_MLME_AUTHORIZE :
+				   IEEE80211_MLME_UNAUTHORIZE, 0, addr);
+}
+
+static void
+bsd_new_sta(int s, const char *ifname, void *ctx, u8 addr[IEEE80211_ADDR_LEN])
+{
+	struct ieee80211req_wpaie ie;
+	int ielen = 0;
+	u8 *iebuf = NULL;
+
+	/*
+	 * Fetch and validate any negotiated WPA/RSN parameters.
+	 */
+	memset(&ie, 0, sizeof(ie));
+	memcpy(ie.wpa_macaddr, addr, IEEE80211_ADDR_LEN);
+	if (bsd_get80211var(s, ifname, IEEE80211_IOC_WPAIE,
+			    &ie, sizeof(ie)) < 0) {
+		printf("Failed to get WPA/RSN information element.\n");
+		goto no_ie;
+	}
+	iebuf = ie.wpa_ie;
+	ielen = ie.wpa_ie[1];
+	if (ielen == 0)
+		iebuf = NULL;
+	else
+		ielen += 2;
+
+no_ie:
+	drv_event_assoc(ctx, addr, iebuf, ielen);
+}
+
+static int
+bsd_send_eapol(struct l2_packet_data *sock_xmit, const u8 *addr,
+	       const u8 *data, size_t data_len)
+{
+	wpa_hexdump(MSG_MSGDUMP, "TX EAPOL", data, data_len);
+
+	return l2_packet_send(sock_xmit, addr, ETH_P_EAPOL, data, data_len);
+}
+
+static int
+bsd_set_freq(int s, const char *ifname, u16 channel)
+{
+	struct ieee80211chanreq creq;
+	u32 mode;
+
+	if (channel < 14)
+		mode = IFM_IEEE80211_11G;
+	else if (channel == 14)
+		mode = IFM_IEEE80211_11B;
+	else
+		mode = IFM_IEEE80211_11A;
+	if (bsd_set_mediaopt(s, ifname, IFM_MMASK, mode) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set modulation mode",
+			   __func__);
+		return -1;
+	}
+
+	os_memset(&creq, 0, sizeof(creq));
+	os_strlcpy(creq.i_name, ifname, sizeof(creq.i_name));
+	creq.i_channel = channel;
+	return ioctl(s, SIOCS80211CHANNEL, &creq);
+}
+
 
 #ifdef HOSTAPD
 
@@ -322,8 +519,6 @@ bsd_set_key(int s, const char *ifname, enum wpa_alg alg,
 #undef RSN_VERSION
 #undef WPA_VERSION
 #undef WPA_OUI_TYPE
-
-#include "l2_packet/l2_packet.h"
 
 struct bsd_driver_data {
 	struct hostapd_data *hapd;		/* back pointer */
@@ -361,128 +556,10 @@ ether_sprintf(const u8 *addr)
 	return buf;
 }
 
-/*
- * Configure WPA parameters.
- */
-static int
-bsd_configure_wpa(struct bsd_driver_data *drv, struct wpa_bss_params *params)
-{
-	static const char *ciphernames[] =
-		{ "WEP", "TKIP", "AES-OCB", "AES-CCM", "CKIP", "NONE" };
-	int v;
-
-	switch (params->wpa_group) {
-	case WPA_CIPHER_CCMP:
-		v = IEEE80211_CIPHER_AES_CCM;
-		break;
-	case WPA_CIPHER_TKIP:
-		v = IEEE80211_CIPHER_TKIP;
-		break;
-	case WPA_CIPHER_WEP104:
-		v = IEEE80211_CIPHER_WEP;
-		break;
-	case WPA_CIPHER_WEP40:
-		v = IEEE80211_CIPHER_WEP;
-		break;
-	case WPA_CIPHER_NONE:
-		v = IEEE80211_CIPHER_NONE;
-		break;
-	default:
-		printf("Unknown group key cipher %u\n",
-			params->wpa_group);
-		return -1;
-	}
-	wpa_printf(MSG_DEBUG, "%s: group key cipher=%s (%u)",
-		   __func__, ciphernames[v], v);
-	if (set80211param(drv, IEEE80211_IOC_MCASTCIPHER, v)) {
-		printf("Unable to set group key cipher to %u (%s)\n",
-			v, ciphernames[v]);
-		return -1;
-	}
-	if (v == IEEE80211_CIPHER_WEP) {
-		/* key length is done only for specific ciphers */
-		v = (params->wpa_group == WPA_CIPHER_WEP104 ? 13 : 5);
-		if (set80211param(drv, IEEE80211_IOC_MCASTKEYLEN, v)) {
-			printf("Unable to set group key length to %u\n", v);
-			return -1;
-		}
-	}
-
-	v = 0;
-	if (params->wpa_pairwise & WPA_CIPHER_CCMP)
-		v |= 1<<IEEE80211_CIPHER_AES_CCM;
-	if (params->wpa_pairwise & WPA_CIPHER_TKIP)
-		v |= 1<<IEEE80211_CIPHER_TKIP;
-	if (params->wpa_pairwise & WPA_CIPHER_NONE)
-		v |= 1<<IEEE80211_CIPHER_NONE;
-	wpa_printf(MSG_DEBUG, "%s: pairwise key ciphers=0x%x", __func__, v);
-	if (set80211param(drv, IEEE80211_IOC_UCASTCIPHERS, v)) {
-		printf("Unable to set pairwise key ciphers to 0x%x\n", v);
-		return -1;
-	}
-
-	wpa_printf(MSG_DEBUG, "%s: key management algorithms=0x%x",
-		   __func__, params->wpa_key_mgmt);
-	if (set80211param(drv, IEEE80211_IOC_KEYMGTALGS, params->wpa_key_mgmt))
-	{
-		printf("Unable to set key management algorithms to 0x%x\n",
-			params->wpa_key_mgmt);
-		return -1;
-	}
-
-	v = 0;
-	if (params->rsn_preauth)
-		v |= BIT(0);
-	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x",
-		   __func__, params->rsn_preauth);
-	if (set80211param(drv, IEEE80211_IOC_RSNCAPS, v)) {
-		printf("Unable to set RSN capabilities to 0x%x\n", v);
-		return -1;
-	}
-
-	wpa_printf(MSG_DEBUG, "%s: enable WPA= 0x%x", __func__, params->wpa);
-	if (set80211param(drv, IEEE80211_IOC_WPA, params->wpa)) {
-		printf("Unable to set WPA to %u\n", params->wpa);
-		return -1;
-	}
-	return 0;
-}
-
 static int
 hostapd_bsd_ctrl_iface(struct bsd_driver_data *drv, int enable)
 {
 	return bsd_ctrl_iface(drv->ioctl_sock, drv->iface, enable);
-}
-
-static int
-bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
-{
-	struct bsd_driver_data *drv = priv;
-
-	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, params->enabled);
-
-	if (!params->enabled) {
-		/* XXX restore state */
-		return set80211param(priv, IEEE80211_IOC_AUTHMODE,
-			IEEE80211_AUTH_AUTO);
-	}
-	if (!params->wpa && !params->ieee802_1x) {
-		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
-			HOSTAPD_LEVEL_WARNING, "No 802.1X or WPA enabled!");
-		return -1;
-	}
-	if (params->wpa && bsd_configure_wpa(drv, params) != 0) {
-		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
-			HOSTAPD_LEVEL_WARNING, "Error configuring WPA state!");
-		return -1;
-	}
-	if (set80211param(priv, IEEE80211_IOC_AUTHMODE,
-		(params->wpa ? IEEE80211_AUTH_WPA : IEEE80211_AUTH_8021X))) {
-		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
-			HOSTAPD_LEVEL_WARNING, "Error enabling WPA/802.1X!");
-		return -1;
-	}
-	return hostapd_bsd_ctrl_iface(drv, 1);
 }
 
 static int
@@ -496,25 +573,13 @@ bsd_set_privacy(const char *ifname, void *priv, int enabled)
 }
 
 static int
-bsd_set_sta_authorized(void *priv, const u8 *addr, int authorized)
+hostapd_bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags,
+			  int flags_or, int flags_and)
 {
 	struct bsd_driver_data *drv = priv;
 
-	return bsd_send_mlme_param(drv->ioctl_sock, drv->iface, authorized ?
-				   IEEE80211_MLME_AUTHORIZE :
-				   IEEE80211_MLME_UNAUTHORIZE, 0, addr);
-}
-
-static int
-bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags, int flags_or,
-		  int flags_and)
-{
-	/* For now, only support setting Authorized flag */
-	if (flags_or & WPA_STA_AUTHORIZED)
-		return bsd_set_sta_authorized(priv, addr, 1);
-	if (!(flags_and & WPA_STA_AUTHORIZED))
-		return bsd_set_sta_authorized(priv, addr, 0);
-	return 0;
+	return bsd_set_sta_authorized(drv->ioctl_sock, drv->iface, addr,
+				      total_flags, flags_or, flags_and);
 }
 
 static int
@@ -632,34 +697,6 @@ bsd_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 static void
-bsd_new_sta(struct bsd_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
-{
-	struct hostapd_data *hapd = drv->hapd;
-	struct ieee80211req_wpaie ie;
-	int ielen = 0;
-	u8 *iebuf = NULL;
-
-	/*
-	 * Fetch and validate any negotiated WPA/RSN parameters.
-	 */
-	memset(&ie, 0, sizeof(ie));
-	memcpy(ie.wpa_macaddr, addr, IEEE80211_ADDR_LEN);
-	if (get80211var(drv, IEEE80211_IOC_WPAIE, &ie, sizeof(ie)) < 0) {
-		printf("Failed to get WPA/RSN information element.\n");
-		goto no_ie;
-	}
-	iebuf = ie.wpa_ie;
-	ielen = ie.wpa_ie[1];
-	if (ielen == 0)
-		iebuf = NULL;
-	else
-		ielen += 2;
-
-no_ie:
-	drv_event_assoc(hapd, addr, iebuf, ielen);
-}
-
-static void
 bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = ctx;
@@ -703,7 +740,8 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 		case RTM_IEEE80211_REJOIN:
 #endif
 			join = (struct ieee80211_join_event *) &ifan[1];
-			bsd_new_sta(drv, join->iev_addr);
+			bsd_new_sta(drv->ioctl_sock, drv->iface, drv->hapd,
+				    join->iev_addr);
 			break;
 		case RTM_IEEE80211_REPLAY:
 			/* ignore */
@@ -752,15 +790,12 @@ bsd_wireless_event_deinit(struct bsd_driver_data *drv)
 	close(drv->wext_sock);
 }
 
-
 static int
-bsd_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
-	       int encrypt, const u8 *own_addr)
+hostapd_bsd_send_eapol(void *priv, const u8 *addr, const u8 *data,
+		       size_t data_len, int encrypt, const u8 *own_addr)
 {
 	struct bsd_driver_data *drv = priv;
-	wpa_hexdump(MSG_MSGDUMP, "TX EAPOL", data, data_len);
-	return l2_packet_send(drv->sock_xmit, addr, ETH_P_EAPOL, data,
-			      data_len);
+	return bsd_send_eapol(drv->sock_xmit, addr, data, data_len);
 }
 
 static void
@@ -793,29 +828,19 @@ hostapd_bsd_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
 }
 
 static int
-bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
+hostapd_bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
 	struct bsd_driver_data *drv = priv;
-	struct ieee80211chanreq creq;
-	uint32_t mode;
 
-	if (freq->channel < 14)
-		mode = IFM_IEEE80211_11G;
-	else if (freq->channel == 14)
-		mode = IFM_IEEE80211_11B;
-	else
-		mode = IFM_IEEE80211_11A;
-	if (bsd_set_mediaopt(drv->ioctl_sock, drv->iface, IFM_MMASK,
-			     mode) < 0) {
-		wpa_printf(MSG_ERROR, "%s: failed to set modulation mode",
-			   __func__);
-		return -1;
-	}
+	return bsd_set_ieee8021x(drv->ioctl_sock, drv->iface, params);
+}
 
-	os_memset(&creq, 0, sizeof(creq));
-	os_strlcpy(creq.i_name, drv->iface, sizeof(creq.i_name));
-	creq.i_channel = freq->channel;
-	return ioctl(drv->ioctl_sock, SIOCS80211CHANNEL, &creq);
+static int
+hostapd_bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
+{
+	struct bsd_driver_data *drv = priv;
+
+	return bsd_set_freq(drv->ioctl_sock, drv->iface, freq->channel);
 }
 
 static void *
@@ -887,30 +912,33 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.name			= "bsd",
 	.hapd_init		= bsd_init,
 	.hapd_deinit		= bsd_deinit,
-	.set_ieee8021x		= bsd_set_ieee8021x,
+	.set_ieee8021x		= hostapd_bsd_set_ieee8021x,
 	.set_privacy		= bsd_set_privacy,
 	.set_key		= hostapd_bsd_set_key,
 	.get_seqnum		= bsd_get_seqnum,
 	.flush			= bsd_flush,
 	.set_generic_elem	= bsd_set_opt_ie,
-	.sta_set_flags		= bsd_sta_set_flags,
+	.sta_set_flags		= hostapd_bsd_sta_set_flags,
 	.read_sta_data		= bsd_read_sta_driver_data,
-	.hapd_send_eapol	= bsd_send_eapol,
+	.hapd_send_eapol	= hostapd_bsd_send_eapol,
 	.sta_disassoc		= bsd_sta_disassoc,
 	.sta_deauth		= bsd_sta_deauth,
 	.hapd_set_ssid		= hostapd_bsd_set_ssid,
 	.hapd_get_ssid		= hostapd_bsd_get_ssid,
-	.set_freq		= bsd_set_freq,
+	.set_freq		= hostapd_bsd_set_freq,
 };
 
 #else /* HOSTAPD */
 
 struct wpa_driver_bsd_data {
 	int	sock;			/* open socket for 802.11 ioctls */
+	struct l2_packet_data *sock_xmit;/* raw packet xmit socket */
 	int	route;			/* routing socket for events */
 	char	ifname[IFNAMSIZ+1];	/* interface name */
 	unsigned int ifindex;		/* interface index */
 	void	*ctx;
+	struct wpa_driver_capa capa;	/* driver capability */
+	int	is_ap;			/* Access point mode */
 	int	prev_roaming;		/* roaming state to restore on deinit */
 	int	prev_privacy;		/* privacy state to restore on deinit */
 	int	prev_wpa;		/* wpa state to restore on deinit */
@@ -1112,11 +1140,21 @@ wpa_driver_bsd_set_auth_alg(void *priv, int auth_alg)
 	return set80211param(drv, IEEE80211_IOC_AUTHMODE, authmode);
 }
 
+static void
+handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
+{
+	struct wpa_driver_bsd_data *drv = ctx;
+
+	drv_event_eapol_rx(drv->ctx, src_addr, buf, len);
+}
+
 static int
 wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 {
 	struct wpa_driver_bsd_data *drv = priv;
 	struct ieee80211req_mlme mlme;
+	u32 mode;
+	u16 channel;
 	int privacy;
 	int ret = 0;
 
@@ -1129,6 +1167,47 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 		, params->group_suite
 		, params->key_mgmt_suite
 	);
+
+	switch (params->mode) {
+	case IEEE80211_MODE_INFRA:
+		mode = 0 /* STA */;
+		break;
+	case IEEE80211_MODE_IBSS:
+		mode = IFM_IEEE80211_IBSS;
+		break;
+	case IEEE80211_MODE_AP:
+		mode = IFM_IEEE80211_HOSTAP;
+		break;
+	default:
+		wpa_printf(MSG_ERROR, "%s: unknown operation mode", __func__);
+		return -1;
+	}
+	if (bsd_set_mediaopt(drv->sock, drv->ifname, IFM_OMASK, mode) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set operation mode",
+			   __func__);
+		return -1;
+	}
+
+	if (params->mode == IEEE80211_MODE_AP) {
+		if (params->freq >= 2412 && params->freq <= 2472)
+			channel = (params->freq - 2407) / 5;
+		else if (params->freq == 2484)
+			channel = 14;
+		else if ((params->freq >= 5180 && params->freq <= 5240) ||
+			 (params->freq >= 5745 && params->freq <= 5825))
+			channel = (params->freq - 5000) / 5;
+		else
+			channel = 0;
+		if (bsd_set_freq(drv->sock, drv->ifname, channel) < 0)
+			return -1;
+
+		drv->sock_xmit = l2_packet_init(drv->ifname, NULL, ETH_P_EAPOL,
+						handle_read, drv, 0);
+		if (drv->sock_xmit == NULL)
+			return -1;
+		drv->is_ap = 1;
+		return 0;
+	}
 
 	if (wpa_driver_bsd_set_drop_unencrypted(drv, params->drop_unencrypted)
 	    < 0)
@@ -1178,6 +1257,20 @@ wpa_driver_bsd_scan(void *priv, struct wpa_driver_scan_params *params)
 	const u8 *ssid = params->ssids[0].ssid;
 	size_t ssid_len = params->ssids[0].ssid_len;
 
+	if (set80211param(drv, IEEE80211_IOC_ROAMING,
+			  IEEE80211_ROAMING_MANUAL) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set "
+			   "wpa_supplicant-based roaming: %s", __func__,
+			   strerror(errno));
+		return -1;
+	}
+
+	if (wpa_driver_bsd_set_wpa(drv, 1) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set wpa: %s", __func__,
+			   strerror(errno));
+		return -1;
+	}
+
 	/* NB: interface must be marked UP to do a scan */
 	if (wpa_driver_bsd_ctrl_iface(drv, 1) < 0)
 		return -1;
@@ -1200,6 +1293,8 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 	struct rt_msghdr *rtm;
 	union wpa_event_data event;
 	struct ieee80211_michael_event *mic;
+	struct ieee80211_leave_event *leave;
+	struct ieee80211_join_event *join;
 	int n;
 
 	n = read(sock, buf, sizeof(buf));
@@ -1242,13 +1337,31 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		switch (ifan->ifan_what) {
 		case RTM_IEEE80211_ASSOC:
 		case RTM_IEEE80211_REASSOC:
+			if (drv->is_ap)
+				break;
 			wpa_supplicant_event(ctx, EVENT_ASSOC, NULL);
 			break;
 		case RTM_IEEE80211_DISASSOC:
+			if (drv->is_ap)
+				break;
 			wpa_supplicant_event(ctx, EVENT_DISASSOC, NULL);
 			break;
 		case RTM_IEEE80211_SCAN:
+			if (drv->is_ap)
+				break;
 			wpa_supplicant_event(ctx, EVENT_SCAN_RESULTS, NULL);
+			break;
+		case RTM_IEEE80211_LEAVE:
+			leave = (struct ieee80211_leave_event *) &ifan[1];
+			drv_event_disassoc(ctx, leave->iev_addr);
+			break;
+		case RTM_IEEE80211_JOIN:
+#ifdef RTM_IEEE80211_REJOIN
+		case RTM_IEEE80211_REJOIN:
+#endif
+			join = (struct ieee80211_join_event *) &ifan[1];
+			bsd_new_sta(drv->sock, drv->ifname, ctx,
+				    join->iev_addr);
 			break;
 		case RTM_IEEE80211_REPLAY:
 			/* ignore */
@@ -1374,6 +1487,27 @@ wpa_driver_bsd_get_scan_results2(void *priv)
 	return res;
 }
 
+static int wpa_driver_bsd_capa(struct wpa_driver_bsd_data *drv)
+{
+	/* For now, assume TKIP, CCMP, WPA, WPA2 are supported */
+	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
+		WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
+	drv->capa.enc = WPA_DRIVER_CAPA_ENC_WEP40 |
+		WPA_DRIVER_CAPA_ENC_WEP104 |
+		WPA_DRIVER_CAPA_ENC_TKIP |
+		WPA_DRIVER_CAPA_ENC_CCMP;
+	drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
+		WPA_DRIVER_AUTH_SHARED |
+		WPA_DRIVER_AUTH_LEAP;
+
+	//drv->capa.max_scan_ssids = info.max_scan_ssids;
+	drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
+
+	return 0;
+}
+
 static void *
 wpa_driver_bsd_init(void *ctx, const char *ifname)
 {
@@ -1408,6 +1542,10 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 	drv->ctx = ctx;
 	os_strlcpy(drv->ifname, ifname, sizeof(drv->ifname));
 
+	/* Down interface during setup. */
+	if (wpa_driver_bsd_ctrl_iface(drv, 0) < 0)
+		goto fail;
+
 	if (!GETPARAM(drv, IEEE80211_IOC_ROAMING, drv->prev_roaming)) {
 		wpa_printf(MSG_DEBUG, "%s: failed to get roaming state: %s",
 			__func__, strerror(errno));
@@ -1430,19 +1568,9 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 			   __func__);
 		goto fail;
 	}
-	if (set80211param(drv, IEEE80211_IOC_ROAMING, IEEE80211_ROAMING_MANUAL) < 0) {
-		wpa_printf(MSG_DEBUG, "%s: failed to set wpa_supplicant-based "
-			   "roaming: %s", __func__, strerror(errno));
-		goto fail;
-	}
 
-	if (set80211param(drv, IEEE80211_IOC_WPA, 1+2) < 0) {
-		wpa_printf(MSG_DEBUG, "%s: failed to enable WPA support %s",
-			   __func__, strerror(errno));
+	if (wpa_driver_bsd_capa(drv))
 		goto fail;
-	}
-
-	wpa_driver_bsd_set_wpa(drv, 1);
 
 	return drv;
 fail:
@@ -1469,9 +1597,60 @@ wpa_driver_bsd_deinit(void *priv)
 		wpa_printf(MSG_DEBUG, "%s: failed to restore roaming state",
 			__func__);
 
+	if (drv->sock_xmit != NULL)
+		l2_packet_deinit(drv->sock_xmit);
 	(void) close(drv->route);		/* ioctl socket */
 	(void) close(drv->sock);		/* event socket */
 	os_free(drv);
+}
+
+static int
+wpa_driver_bsd_get_capa(void *priv, struct wpa_driver_capa *capa)
+{
+	struct wpa_driver_bsd_data *drv = priv;
+
+	os_memcpy(capa, &drv->capa, sizeof(*capa));
+	return 0;
+}
+
+static int
+wpa_driver_bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
+{
+	struct wpa_driver_bsd_data *drv = priv;
+
+	return bsd_set_ieee8021x(drv->sock, drv->ifname, params);
+}
+
+static int
+wpa_driver_bsd_hapd_set_ssid(const char *ifname, void *priv, const u8 *buf,
+			     int len)
+{
+	return wpa_driver_bsd_set_ssid(priv, buf, len);
+}
+
+static int
+wpa_driver_bsd_hapd_get_ssid(const char *ifname, void *priv, u8 *buf, int len)
+{
+	return wpa_driver_bsd_get_ssid(priv, buf);
+}
+
+static int
+wpa_driver_bsd_send_eapol(void *priv, const u8 *addr, const u8 *data,
+			  size_t data_len, int encrypt, const u8 *own_addr)
+{
+	struct wpa_driver_bsd_data *drv = priv;
+
+	return bsd_send_eapol(drv->sock_xmit, addr, data, data_len);
+}
+
+static int
+wpa_driver_bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags,
+			     int flags_or, int flags_and)
+{
+	struct wpa_driver_bsd_data *drv = priv;
+
+	return bsd_set_sta_authorized(drv->sock, drv->ifname, addr,
+				      total_flags, flags_or, flags_and);
 }
 
 
@@ -1489,6 +1668,12 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.deauthenticate		= wpa_driver_bsd_deauthenticate,
 	.disassociate		= wpa_driver_bsd_disassociate,
 	.associate		= wpa_driver_bsd_associate,
+	.get_capa		= wpa_driver_bsd_get_capa,
+	.set_ieee8021x		= wpa_driver_bsd_set_ieee8021x,
+	.hapd_set_ssid		= wpa_driver_bsd_hapd_set_ssid,
+	.hapd_get_ssid		= wpa_driver_bsd_hapd_get_ssid,
+	.hapd_send_eapol	= wpa_driver_bsd_send_eapol,
+	.sta_set_flags		= wpa_driver_bsd_sta_set_flags,
 };
 
 #endif /* HOSTAPD */

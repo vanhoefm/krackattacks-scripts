@@ -22,6 +22,7 @@
 #include "common/ieee802_11_defs.h"
 
 #include <net/if.h>
+#include <net/if_media.h>
 
 #ifdef __NetBSD__
 #include <net/if_ether.h>
@@ -140,6 +141,55 @@ bsd_set_ssid(int s, const char *ifname, const u8 *ssid, size_t ssid_len)
 #else
 	return bsd_set80211var(s, ifname, IEEE80211_IOC_SSID, ssid, ssid_len);
 #endif
+}
+
+static int
+bsd_get_if_media(int s, const char *ifname)
+{
+	struct ifmediareq ifmr;
+
+	os_memset(&ifmr, 0, sizeof(ifmr));
+	os_strlcpy(ifmr.ifm_name, ifname, sizeof(ifmr.ifm_name));
+
+	if (ioctl(s, SIOCGIFMEDIA, &ifmr) < 0) {
+		wpa_printf(MSG_ERROR, "%s: SIOCGIFMEDIA %s", __func__,
+			   strerror(errno));
+		return -1;
+	}
+
+	return ifmr.ifm_current;
+}
+
+static int
+bsd_set_if_media(int s, const char *ifname, int media)
+{
+	struct ifreq ifr;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name));
+	ifr.ifr_media = media;
+
+	if (ioctl(s, SIOCSIFMEDIA, &ifr) < 0) {
+		wpa_printf(MSG_ERROR, "%s: SIOCSIFMEDIA %s", __func__,
+			   strerror(errno));
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+bsd_set_mediaopt(int s, const char *ifname, uint32_t mask, uint32_t mode)
+{
+	int media = bsd_get_if_media(s, ifname);
+
+	if (media < 0)
+		return -1;
+	media &= ~mask;
+	media |= mode;
+	if (bsd_set_if_media(s, ifname, media) < 0)
+		return -1;
+	return 0;
 }
 
 
@@ -758,6 +808,32 @@ hostapd_bsd_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
 	return bsd_set_ssid(drv->ioctl_sock, drv->iface, buf, len);
 }
 
+static int
+bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
+{
+	struct bsd_driver_data *drv = priv;
+	struct ieee80211chanreq creq;
+	uint32_t mode;
+
+	if (freq->channel < 14)
+		mode = IFM_IEEE80211_11G;
+	else if (freq->channel == 14)
+		mode = IFM_IEEE80211_11B;
+	else
+		mode = IFM_IEEE80211_11A;
+	if (bsd_set_mediaopt(drv->ioctl_sock, drv->iface, IFM_MMASK,
+			     mode) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set modulation mode",
+			   __func__);
+		return -1;
+	}
+
+	os_memset(&creq, 0, sizeof(creq));
+	os_strlcpy(creq.i_name, drv->iface, sizeof(creq.i_name));
+	creq.i_channel = freq->channel;
+	return ioctl(drv->ioctl_sock, SIOCS80211CHANNEL, &creq);
+}
+
 static void *
 bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 {
@@ -787,6 +863,13 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	bsd_set_iface_flags(drv, 0);	/* mark down during setup */
 	if (bsd_wireless_event_init(drv))
 		goto bad;
+
+	if (bsd_set_mediaopt(drv->ioctl_sock, drv->iface, IFM_OMASK,
+			     IFM_IEEE80211_HOSTAP) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set operation mode",
+			   __func__);
+		goto bad;
+	}
 
 	return drv;
 bad:
@@ -831,6 +914,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.sta_deauth		= bsd_sta_deauth,
 	.hapd_set_ssid		= hostapd_bsd_set_ssid,
 	.hapd_get_ssid		= hostapd_bsd_get_ssid,
+	.set_freq		= bsd_set_freq,
 };
 
 #else /* HOSTAPD */
@@ -1463,6 +1547,13 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 	if (!GETPARAM(drv, IEEE80211_IOC_WPA, drv->prev_wpa)) {
 		wpa_printf(MSG_DEBUG, "%s: failed to get wpa state: %s",
 			__func__, strerror(errno));
+		goto fail;
+	}
+
+	if (bsd_set_mediaopt(drv->sock, drv->ifname, IFM_OMASK,
+			     0 /* STA */) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set operation mode",
+			   __func__);
 		goto fail;
 	}
 	if (set80211param(drv, IEEE80211_IOC_ROAMING, IEEE80211_ROAMING_MANUAL) < 0) {

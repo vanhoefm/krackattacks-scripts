@@ -136,12 +136,6 @@ DRV_WPA_LDFLAGS += -framework CoreFoundation
 DRV_WPA_LDFLAGS += -F/System/Library/PrivateFrameworks -framework Apple80211
 endif
 
-ifdef CONFIG_DRIVER_PS3
-DRV_WPA_CFLAGS += -DCONFIG_DRIVER_PS3 -m64
-DRV_WPA_OBJS += ../src/drivers/driver_ps3.o
-DRV_WPA_LDFLAGS += -m64
-endif
-
 ifdef CONFIG_DRIVER_IPHONE
 DRV_WPA_CFLAGS += -DCONFIG_DRIVER_IPHONE
 DRV_WPA_OBJS += ../src/drivers/driver_iphone.o

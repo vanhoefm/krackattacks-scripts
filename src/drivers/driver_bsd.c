@@ -212,6 +212,20 @@ bsd_del_key(int s, const char *ifname, const u8 *addr, int key_idx)
 			       sizeof(wk));
 }
 
+static int
+bsd_send_mlme_param(int s, const char *ifname, const u8 op, const u16 reason,
+		    const u8 *addr)
+{
+	struct ieee80211req_mlme mlme;
+
+	os_memset(&mlme, 0, sizeof(mlme));
+	mlme.im_op = op;
+	mlme.im_reason = reason;
+	os_memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
+	return bsd_set80211var(s, ifname, IEEE80211_IOC_MLME, &mlme,
+			       sizeof(mlme));
+}
+
 
 #ifdef HOSTAPD
 
@@ -432,18 +446,10 @@ static int
 bsd_set_sta_authorized(void *priv, const u8 *addr, int authorized)
 {
 	struct bsd_driver_data *drv = priv;
-	struct ieee80211req_mlme mlme;
 
-	wpa_printf(MSG_DEBUG, "%s: addr=%s authorized=%d",
-		   __func__, ether_sprintf(addr), authorized);
-
-	if (authorized)
-		mlme.im_op = IEEE80211_MLME_AUTHORIZE;
-	else
-		mlme.im_op = IEEE80211_MLME_UNAUTHORIZE;
-	mlme.im_reason = 0;
-	memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
-	return set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme));
+	return bsd_send_mlme_param(drv->ioctl_sock, drv->iface, authorized ?
+				   IEEE80211_MLME_AUTHORIZE :
+				   IEEE80211_MLME_UNAUTHORIZE, 0, addr);
 }
 
 static int
@@ -592,15 +598,9 @@ static int
 bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr, int reason_code)
 {
 	struct bsd_driver_data *drv = priv;
-	struct ieee80211req_mlme mlme;
 
-	wpa_printf(MSG_DEBUG, "%s: addr=%s reason_code=%d",
-		   __func__, ether_sprintf(addr), reason_code);
-
-	mlme.im_op = IEEE80211_MLME_DEAUTH;
-	mlme.im_reason = reason_code;
-	memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
-	return set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme));
+	return bsd_send_mlme_param(drv->ioctl_sock, drv->iface,
+				   IEEE80211_MLME_DEAUTH, reason_code, addr);
 }
 
 static int
@@ -608,15 +608,9 @@ bsd_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 		 int reason_code)
 {
 	struct bsd_driver_data *drv = priv;
-	struct ieee80211req_mlme mlme;
 
-	wpa_printf(MSG_DEBUG, "%s: addr=%s reason_code=%d",
-		   __func__, ether_sprintf(addr), reason_code);
-
-	mlme.im_op = IEEE80211_MLME_DISASSOC;
-	mlme.im_reason = reason_code;
-	memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
-	return set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme));
+	return bsd_send_mlme_param(drv->ioctl_sock, drv->iface,
+				   IEEE80211_MLME_DISASSOC, reason_code, addr);
 }
 
 static void
@@ -1182,28 +1176,18 @@ static int
 wpa_driver_bsd_deauthenticate(void *priv, const u8 *addr, int reason_code)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-	struct ieee80211req_mlme mlme;
 
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	os_memset(&mlme, 0, sizeof(mlme));
-	mlme.im_op = IEEE80211_MLME_DEAUTH;
-	mlme.im_reason = reason_code;
-	os_memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
-	return set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme));
+	return bsd_send_mlme_param(drv->sock, drv->ifname,
+				   IEEE80211_MLME_DEAUTH, reason_code, addr);
 }
 
 static int
 wpa_driver_bsd_disassociate(void *priv, const u8 *addr, int reason_code)
 {
 	struct wpa_driver_bsd_data *drv = priv;
-	struct ieee80211req_mlme mlme;
 
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	os_memset(&mlme, 0, sizeof(mlme));
-	mlme.im_op = IEEE80211_MLME_DISASSOC;
-	mlme.im_reason = reason_code;
-	os_memcpy(mlme.im_macaddr, addr, IEEE80211_ADDR_LEN);
-	return set80211var(drv, IEEE80211_IOC_MLME, &mlme, sizeof(mlme));
+	return bsd_send_mlme_param(drv->sock, drv->ifname,
+				   IEEE80211_MLME_DISASSOC, reason_code, addr);
 }
 
 static int

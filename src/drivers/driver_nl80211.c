@@ -2664,8 +2664,7 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
 		return;
  nla_put_failure:
-	wpa_printf(MSG_ERROR, "Failed to remove interface (ifidx=%d).\n",
-		   ifidx);
+	wpa_printf(MSG_ERROR, "Failed to remove interface (ifidx=%d)", ifidx);
 }
 
 
@@ -4218,9 +4217,11 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
-	char name[16];
+	char name[IFNAMSIZ + 1];
 
 	os_snprintf(name, sizeof(name), "%s.sta%d", drv->ifname, aid);
+	wpa_printf(MSG_DEBUG, "nl80211: Set WDS STA addr=" MACSTR
+		   " aid=%d val=%d name=%s", MAC2STR(addr), aid, val, name);
 	if (val) {
 		if (nl80211_create_iface(priv, name, NL80211_IFTYPE_AP_VLAN,
 					 NULL, 1) < 0)
@@ -4537,6 +4538,10 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 	struct wpa_driver_nl80211_data *drv = priv;
 	int ifindex = if_nametoindex(ifname);
 
+	wpa_printf(MSG_DEBUG, "nl80211: %s(type=%d ifname=%s) ifindex=%d",
+		   __func__, type, ifname, ifindex);
+	if (ifindex <= 0)
+		return -1;
 	nl80211_remove_iface(drv, ifindex);
 
 #ifdef HOSTAPD

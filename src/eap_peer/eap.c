@@ -228,8 +228,14 @@ SM_STATE(EAP, GET_METHOD)
 	if (!eap_sm_allowMethod(sm, sm->reqVendor, method)) {
 		wpa_printf(MSG_DEBUG, "EAP: vendor %u method %u not allowed",
 			   sm->reqVendor, method);
+		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
+			"vendor=%u method=%u -> NAK",
+			sm->reqVendor, method);
 		goto nak;
 	}
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
+		"vendor=%u method=%u", sm->reqVendor, method);
 
 	/*
 	 * RFC 4137 does not define specific operation for fast

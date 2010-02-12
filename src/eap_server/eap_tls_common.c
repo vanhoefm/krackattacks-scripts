@@ -21,6 +21,9 @@
 #include "eap_tls_common.h"
 
 
+static void eap_server_tls_free_in_buf(struct eap_ssl_data *data);
+
+
 int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 			    int verify_peer)
 {
@@ -58,8 +61,9 @@ int eap_server_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 void eap_server_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data)
 {
 	tls_connection_deinit(sm->ssl_ctx, data->conn);
-	os_free(data->tls_in);
-	os_free(data->tls_out);
+	eap_server_tls_free_in_buf(data);
+	wpabuf_free(data->tls_out);
+	data->tls_out = NULL;
 }
 
 

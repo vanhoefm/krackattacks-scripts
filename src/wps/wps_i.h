@@ -104,6 +104,7 @@ struct wps_data {
 	u16 config_error;
 
 	int ext_reg;
+	int int_reg;
 
 	struct wps_credential *new_ap_settings;
 

@@ -1357,6 +1357,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 		return NULL;
 	}
 
+	wps->int_reg = 1;
 	wps->state = RECV_M3;
 	return msg;
 }
@@ -1557,7 +1558,7 @@ struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
 	struct wpabuf *msg;
 
 #ifdef CONFIG_WPS_UPNP
-	if (wps->wps->wps_upnp) {
+	if (!wps->int_reg && wps->wps->wps_upnp) {
 		struct upnp_pending_message *p, *prev = NULL;
 		if (wps->ext_reg > 1)
 			wps_registrar_free_pending_m2(wps->wps);

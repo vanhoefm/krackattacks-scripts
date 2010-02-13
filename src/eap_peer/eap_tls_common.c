@@ -169,10 +169,14 @@ static int eap_tls_init_connection(struct eap_sm *sm,
 		config->pin = NULL;
 		eap_sm_request_pin(sm);
 		sm->ignore = TRUE;
+		tls_connection_deinit(sm->ssl_ctx, data->conn);
+		data->conn = NULL;
 		return -1;
 	} else if (res) {
 		wpa_printf(MSG_INFO, "TLS: Failed to set TLS connection "
 			   "parameters");
+		tls_connection_deinit(sm->ssl_ctx, data->conn);
+		data->conn = NULL;
 		return -1;
 	}
 

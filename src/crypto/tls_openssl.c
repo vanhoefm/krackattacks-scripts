@@ -1,6 +1,6 @@
 /*
  * SSL/TLS interface functions for OpenSSL
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,6 +29,7 @@
 #endif /* OPENSSL_NO_ENGINE */
 
 #include "common.h"
+#include "crypto.h"
 #include "tls.h"
 
 #if OPENSSL_VERSION_NUMBER >= 0x0090800fL
@@ -49,6 +50,15 @@
 
 static int tls_openssl_ref_count = 0;
 
+struct tls_global {
+	void (*event_cb)(void *ctx, enum tls_event ev,
+			 union tls_event_data *data);
+	void *cb_ctx;
+};
+
+static struct tls_global *tls_global = NULL;
+
+
 struct tls_connection {
 	SSL *ssl;
 	BIO *ssl_in, *ssl_out;
@@ -65,6 +75,12 @@ struct tls_connection {
 	/* SessionTicket received from OpenSSL hello_extension_cb (server) */
 	u8 *session_ticket;
 	size_t session_ticket_len;
+
+	int ca_cert_verify:1;
+	int cert_probe:1;
+	int server_cert_only:1;
+
+	u8 srv_cert_hash[32];
 };
 
 
@@ -665,6 +681,14 @@ void * tls_init(const struct tls_config *conf)
 	SSL_CTX *ssl;
 
 	if (tls_openssl_ref_count == 0) {
+		tls_global = os_zalloc(sizeof(*tls_global));
+		if (tls_global == NULL)
+			return NULL;
+		if (conf) {
+			tls_global->event_cb = conf->event_cb;
+			tls_global->cb_ctx = conf->cb_ctx;
+		}
+
 #ifdef CONFIG_FIPS
 #ifdef OPENSSL_FIPS
 		if (conf && conf->fips_mode) {
@@ -750,6 +774,8 @@ void tls_deinit(void *ssl_ctx)
 		ERR_remove_state(0);
 		ERR_free_strings();
 		EVP_cleanup();
+		os_free(tls_global);
+		tls_global = NULL;
 	}
 }
 
@@ -1016,6 +1042,124 @@ static int tls_match_altsubject(X509 *cert, const char *match)
 }
 
 
+static enum tls_fail_reason openssl_tls_fail_reason(int err)
+{
+	switch (err) {
+	case X509_V_ERR_CERT_REVOKED:
+		return TLS_FAIL_REVOKED;
+	case X509_V_ERR_CERT_NOT_YET_VALID:
+	case X509_V_ERR_CRL_NOT_YET_VALID:
+		return TLS_FAIL_NOT_YET_VALID;
+	case X509_V_ERR_CERT_HAS_EXPIRED:
+	case X509_V_ERR_CRL_HAS_EXPIRED:
+		return TLS_FAIL_EXPIRED;
+	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+	case X509_V_ERR_UNABLE_TO_GET_CRL:
+	case X509_V_ERR_UNABLE_TO_GET_CRL_ISSUER:
+	case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+	case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+	case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+	case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+	case X509_V_ERR_CERT_CHAIN_TOO_LONG:
+	case X509_V_ERR_PATH_LENGTH_EXCEEDED:
+	case X509_V_ERR_INVALID_CA:
+		return TLS_FAIL_UNTRUSTED;
+	case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
+	case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
+	case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
+	case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+	case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+	case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
+	case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
+	case X509_V_ERR_CERT_UNTRUSTED:
+	case X509_V_ERR_CERT_REJECTED:
+		return TLS_FAIL_BAD_CERTIFICATE;
+	default:
+		return TLS_FAIL_UNSPECIFIED;
+	}
+}
+
+
+static struct wpabuf * get_x509_cert(X509 *cert)
+{
+	struct wpabuf *buf;
+	u8 *tmp;
+
+	int cert_len = i2d_X509(cert, NULL);
+	if (cert_len <= 0)
+		return NULL;
+
+	buf = wpabuf_alloc(cert_len);
+	if (buf == NULL)
+		return NULL;
+
+	tmp = wpabuf_put(buf, cert_len);
+	i2d_X509(cert, &tmp);
+	return buf;
+}
+
+
+static void openssl_tls_fail_event(struct tls_connection *conn,
+				   X509 *err_cert, int err, int depth,
+				   const char *subject, const char *err_str,
+				   enum tls_fail_reason reason)
+{
+	union tls_event_data ev;
+	struct wpabuf *cert = NULL;
+
+	if (tls_global->event_cb == NULL)
+		return;
+
+	cert = get_x509_cert(err_cert);
+	os_memset(&ev, 0, sizeof(ev));
+	ev.cert_fail.reason = reason != TLS_FAIL_UNSPECIFIED ?
+		reason : openssl_tls_fail_reason(err);
+	ev.cert_fail.depth = depth;
+	ev.cert_fail.subject = subject;
+	ev.cert_fail.reason_txt = err_str;
+	ev.cert_fail.cert = cert;
+	tls_global->event_cb(tls_global->cb_ctx, TLS_CERT_CHAIN_FAILURE, &ev);
+	wpabuf_free(cert);
+}
+
+
+static void openssl_tls_cert_event(struct tls_connection *conn,
+				   X509 *err_cert, int depth,
+				   const char *subject)
+{
+	struct wpabuf *cert = NULL;
+	union tls_event_data ev;
+#ifdef CONFIG_SHA256
+	u8 hash[32];
+#endif /* CONFIG_SHA256 */
+
+	if (tls_global->event_cb == NULL)
+		return;
+
+	os_memset(&ev, 0, sizeof(ev));
+	if (conn->cert_probe) {
+		cert = get_x509_cert(err_cert);
+		ev.peer_cert.cert = cert;
+	}
+#ifdef CONFIG_SHA256
+	if (cert) {
+		const u8 *addr[1];
+		size_t len[1];
+		addr[0] = wpabuf_head(cert);
+		len[0] = wpabuf_len(cert);
+		if (sha256_vector(1, addr, len, hash) == 0) {
+			ev.peer_cert.hash = hash;
+			ev.peer_cert.hash_len = sizeof(hash);
+		}
+	}
+#endif /* CONFIG_SHA256 */
+	ev.peer_cert.depth = depth;
+	ev.peer_cert.subject = subject;
+	tls_global->event_cb(tls_global->cb_ctx, TLS_PEER_CERTIFICATE, &ev);
+	wpabuf_free(cert);
+}
+
+
 static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
 	char buf[256];
@@ -1024,6 +1168,7 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	SSL *ssl;
 	struct tls_connection *conn;
 	char *match, *altmatch;
+	const char *err_str;
 
 	err_cert = X509_STORE_CTX_get_current_cert(x509_ctx);
 	err = X509_STORE_CTX_get_error(x509_ctx);
@@ -1036,25 +1181,76 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	match = conn ? conn->subject_match : NULL;
 	altmatch = conn ? conn->altsubject_match : NULL;
 
+	if (!preverify_ok && !conn->ca_cert_verify)
+		preverify_ok = 1;
+	if (!preverify_ok && depth > 0 && conn->server_cert_only)
+		preverify_ok = 1;
+
+	err_str = X509_verify_cert_error_string(err);
+
+#ifdef CONFIG_SHA256
+	if (preverify_ok && depth == 0 && conn->server_cert_only) {
+		struct wpabuf *cert;
+		cert = get_x509_cert(err_cert);
+		if (!cert) {
+			wpa_printf(MSG_DEBUG, "OpenSSL: Could not fetch "
+				   "server certificate data");
+			preverify_ok = 0;
+		} else {
+			u8 hash[32];
+			const u8 *addr[1];
+			size_t len[1];
+			addr[0] = wpabuf_head(cert);
+			len[0] = wpabuf_len(cert);
+			if (sha256_vector(1, addr, len, hash) < 0 ||
+			    os_memcmp(conn->srv_cert_hash, hash, 32) != 0) {
+				err_str = "Server certificate mismatch";
+				err = X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN;
+				preverify_ok = 0;
+			}
+			wpabuf_free(cert);
+		}
+	}
+#endif /* CONFIG_SHA256 */
+
 	if (!preverify_ok) {
 		wpa_printf(MSG_WARNING, "TLS: Certificate verification failed,"
-			   " error %d (%s) depth %d for '%s'", err,
-			   X509_verify_cert_error_string(err), depth, buf);
-	} else {
-		wpa_printf(MSG_DEBUG, "TLS: tls_verify_cb - "
-			   "preverify_ok=%d err=%d (%s) depth=%d buf='%s'",
-			   preverify_ok, err,
-			   X509_verify_cert_error_string(err), depth, buf);
-		if (depth == 0 && match && os_strstr(buf, match) == NULL) {
-			wpa_printf(MSG_WARNING, "TLS: Subject '%s' did not "
-				   "match with '%s'", buf, match);
-			preverify_ok = 0;
-		} else if (depth == 0 && altmatch &&
-			   !tls_match_altsubject(err_cert, altmatch)) {
-			wpa_printf(MSG_WARNING, "TLS: altSubjectName match "
-				   "'%s' not found", altmatch);
-			preverify_ok = 0;
-		}
+			   " error %d (%s) depth %d for '%s'", err, err_str,
+			   depth, buf);
+		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
+				       err_str, TLS_FAIL_UNSPECIFIED);
+		return preverify_ok;
+	}
+
+	wpa_printf(MSG_DEBUG, "TLS: tls_verify_cb - preverify_ok=%d "
+		   "err=%d (%s) ca_cert_verify=%d depth=%d buf='%s'",
+		   preverify_ok, err, err_str,
+		   conn->ca_cert_verify, depth, buf);
+	if (depth == 0 && match && os_strstr(buf, match) == NULL) {
+		wpa_printf(MSG_WARNING, "TLS: Subject '%s' did not "
+			   "match with '%s'", buf, match);
+		preverify_ok = 0;
+		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
+				       "Subject mismatch",
+				       TLS_FAIL_SUBJECT_MISMATCH);
+	} else if (depth == 0 && altmatch &&
+		   !tls_match_altsubject(err_cert, altmatch)) {
+		wpa_printf(MSG_WARNING, "TLS: altSubjectName match "
+			   "'%s' not found", altmatch);
+		preverify_ok = 0;
+		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
+				       "AltSubject mismatch",
+				       TLS_FAIL_ALTSUBJECT_MISMATCH);
+	} else
+		openssl_tls_cert_event(conn, err_cert, depth, buf);
+
+	if (conn->cert_probe && preverify_ok && depth == 0) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Reject server certificate "
+			   "on probe-only run");
+		preverify_ok = 0;
+		openssl_tls_fail_event(conn, err_cert, err, depth, buf,
+				       "Server certificate chain probe",
+				       TLS_FAIL_SERVER_CHAIN_PROBE);
 	}
 
 	return preverify_ok;
@@ -1112,6 +1308,47 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 		return -1;
 	}
 
+	SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
+	conn->ca_cert_verify = 1;
+
+	if (ca_cert && os_strncmp(ca_cert, "probe://", 8) == 0) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Probe for server certificate "
+			   "chain");
+		conn->cert_probe = 1;
+		conn->ca_cert_verify = 0;
+		return 0;
+	}
+
+	if (ca_cert && os_strncmp(ca_cert, "hash://", 7) == 0) {
+#ifdef CONFIG_SHA256
+		const char *pos = ca_cert + 7;
+		if (os_strncmp(pos, "server/sha256/", 14) != 0) {
+			wpa_printf(MSG_DEBUG, "OpenSSL: Unsupported ca_cert "
+				   "hash value '%s'", ca_cert);
+			return -1;
+		}
+		pos += 14;
+		if (os_strlen(pos) != 32 * 2) {
+			wpa_printf(MSG_DEBUG, "OpenSSL: Unexpected SHA256 "
+				   "hash length in ca_cert '%s'", ca_cert);
+			return -1;
+		}
+		if (hexstr2bin(pos, conn->srv_cert_hash, 32) < 0) {
+			wpa_printf(MSG_DEBUG, "OpenSSL: Invalid SHA256 hash "
+				   "value in ca_cert '%s'", ca_cert);
+			return -1;
+		}
+		conn->server_cert_only = 1;
+		wpa_printf(MSG_DEBUG, "OpenSSL: Checking only server "
+			   "certificate match");
+		return 0;
+#else /* CONFIG_SHA256 */
+		wpa_printf(MSG_INFO, "No SHA256 included in the build - "
+			   "cannot validate server certificate hash");
+		return -1;
+#endif /* CONFIG_SHA256 */
+	}
+
 	if (ca_cert_blob) {
 		X509 *cert = d2i_X509(NULL, (OPENSSL_d2i_TYPE) &ca_cert_blob,
 				      ca_cert_blob_len);
@@ -1140,7 +1377,6 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 		X509_free(cert);
 		wpa_printf(MSG_DEBUG, "OpenSSL: %s - added ca_cert_blob "
 			   "to certificate store", __func__);
-		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
 		return 0;
 	}
 
@@ -1149,7 +1385,6 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 	    0) {
 		wpa_printf(MSG_DEBUG, "OpenSSL: Added CA certificates from "
 			   "system certificate store");
-		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
 		return 0;
 	}
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -1172,7 +1407,6 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 				   "certificate(s) loaded");
 			tls_get_errors(ssl_ctx);
 		}
-		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER, tls_verify_cb);
 #else /* OPENSSL_NO_STDIO */
 		wpa_printf(MSG_DEBUG, "OpenSSL: %s - OPENSSL_NO_STDIO",
 			   __func__);
@@ -1181,7 +1415,7 @@ static int tls_connection_ca_cert(void *_ssl_ctx, struct tls_connection *conn,
 	} else {
 		/* No ca_cert configured - do not try to verify server
 		 * certificate */
-		SSL_set_verify(conn->ssl, SSL_VERIFY_NONE, NULL);
+		conn->ca_cert_verify = 0;
 	}
 
 	return 0;
@@ -1266,10 +1500,12 @@ int tls_connection_set_verify(void *ssl_ctx, struct tls_connection *conn,
 		return -1;
 
 	if (verify_peer) {
+		conn->ca_cert_verify = 1;
 		SSL_set_verify(conn->ssl, SSL_VERIFY_PEER |
 			       SSL_VERIFY_FAIL_IF_NO_PEER_CERT |
 			       SSL_VERIFY_CLIENT_ONCE, tls_verify_cb);
 	} else {
+		conn->ca_cert_verify = 0;
 		SSL_set_verify(conn->ssl, SSL_VERIFY_NONE, NULL);
 	}
 

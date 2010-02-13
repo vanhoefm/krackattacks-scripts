@@ -1,6 +1,6 @@
 /*
  * SSL/TLS interface definition
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -28,11 +28,54 @@ struct tls_keys {
 	size_t inner_secret_len;
 };
 
+enum tls_event {
+	TLS_CERT_CHAIN_FAILURE,
+	TLS_PEER_CERTIFICATE
+};
+
+/*
+ * Note: These are used as identifier with external programs and as such, the
+ * values must not be changed.
+ */
+enum tls_fail_reason {
+	TLS_FAIL_UNSPECIFIED = 0,
+	TLS_FAIL_UNTRUSTED = 1,
+	TLS_FAIL_REVOKED = 2,
+	TLS_FAIL_NOT_YET_VALID = 3,
+	TLS_FAIL_EXPIRED = 4,
+	TLS_FAIL_SUBJECT_MISMATCH = 5,
+	TLS_FAIL_ALTSUBJECT_MISMATCH = 6,
+	TLS_FAIL_BAD_CERTIFICATE = 7,
+	TLS_FAIL_SERVER_CHAIN_PROBE = 8
+};
+
+union tls_event_data {
+	struct {
+		int depth;
+		const char *subject;
+		enum tls_fail_reason reason;
+		const char *reason_txt;
+		const struct wpabuf *cert;
+	} cert_fail;
+
+	struct {
+		int depth;
+		const char *subject;
+		const struct wpabuf *cert;
+		const u8 *hash;
+		size_t hash_len;
+	} peer_cert;
+};
+
 struct tls_config {
 	const char *opensc_engine_path;
 	const char *pkcs11_engine_path;
 	const char *pkcs11_module_path;
 	int fips_mode;
+
+	void (*event_cb)(void *ctx, enum tls_event ev,
+			 union tls_event_data *data);
+	void *cb_ctx;
 };
 
 #define TLS_CONN_ALLOW_SIGN_RSA_MD5 BIT(0)

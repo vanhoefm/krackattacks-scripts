@@ -44,6 +44,10 @@ extern "C" {
 #define WPA_EVENT_EAP_PROPOSED_METHOD "CTRL-EVENT-EAP-PROPOSED-METHOD "
 /** EAP method selected */
 #define WPA_EVENT_EAP_METHOD "CTRL-EVENT-EAP-METHOD "
+/** EAP peer certificate from TLS */
+#define WPA_EVENT_EAP_PEER_CERT "CTRL-EVENT-EAP-PEER-CERT "
+/** EAP TLS certificate chain validation error */
+#define WPA_EVENT_EAP_TLS_CERT_ERROR "CTRL-EVENT-EAP-TLS-CERT-ERROR "
 /** EAP authentication completed successfully */
 #define WPA_EVENT_EAP_SUCCESS "CTRL-EVENT-EAP-SUCCESS "
 /** EAP authentication failed (EAP-Failure received) */

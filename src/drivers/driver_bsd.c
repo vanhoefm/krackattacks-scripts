@@ -537,6 +537,7 @@ bsd_set_freq(void *priv, u16 channel)
 	struct bsd_driver_data *drv = priv;
 #ifdef SIOCS80211CHANNEL
 	struct ieee80211chanreq creq;
+#endif /* SIOCS80211CHANNEL */
 	u32 mode;
 
 	if (channel < 14)
@@ -551,15 +552,14 @@ bsd_set_freq(void *priv, u16 channel)
 		return -1;
 	}
 
+#ifdef SIOCS80211CHANNEL
 	os_memset(&creq, 0, sizeof(creq));
 	os_strlcpy(creq.i_name, drv->ifname, sizeof(creq.i_name));
 	creq.i_channel = channel;
 	return ioctl(drv->sock, SIOCS80211CHANNEL, &creq);
-#else
-	wpa_printf(MSG_ERROR, "bsd_set_freq: SIOCS80211CHANNEL not "
-		   "defined");
-	return -1;
-#endif
+#else /* SIOCS80211CHANNEL */
+	return set80211param(priv, IEEE80211_IOC_CHANNEL, channel);
+#endif /* SIOCS80211CHANNEL */
 }
 
 

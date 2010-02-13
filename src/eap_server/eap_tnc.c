@@ -453,7 +453,7 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 		   "Message Length %u", flags, message_length);
 
 	if (data->state == WAIT_FRAG_ACK) {
-		if (len != 0) {
+		if (len > 1) {
 			wpa_printf(MSG_DEBUG, "EAP-TNC: Unexpected payload "
 				   "in WAIT_FRAG_ACK state");
 			data->state = FAIL;

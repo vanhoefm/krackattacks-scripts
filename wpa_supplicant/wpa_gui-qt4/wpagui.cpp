@@ -870,9 +870,6 @@ void WpaGui::processMsg(char *msg)
 		QTimer::singleShot(5 * 1000, this, SLOT(showTrayStatus()));
 		stopWpsRun(true);
 	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE_PBC)) {
-		showTrayMessage(QSystemTrayIcon::Information, 3,
-				"Wi-Fi Protected Setup (WPS) AP\n"
-				"in active PBC mode found.");
 		wpsStatusText->setText("WPS AP in active PBC mode found");
 		if (textStatus->text() == "INACTIVE" ||
 		    textStatus->text() == "DISCONNECTED")
@@ -880,23 +877,14 @@ void WpaGui::processMsg(char *msg)
 		wpsInstructions->setText("Press the PBC button on the screen "
 					 "to start registration");
 	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE_PIN)) {
-		showTrayMessage(QSystemTrayIcon::Information, 3,
-				"Wi-Fi Protected Setup (WPS) AP\n"
-				" in active PIN mode found.");
 		wpsStatusText->setText("WPS AP with recently selected "
 				       "registrar");
 		if (textStatus->text() == "INACTIVE" ||
 		    textStatus->text() == "DISCONNECTED")
 			wpaguiTab->setCurrentWidget(wpsTab);
 	} else if (str_match(pos, WPS_EVENT_AP_AVAILABLE)) {
-		showTrayMessage(QSystemTrayIcon::Information, 3,
-				"Wi-Fi Protected Setup (WPS)\n"
-				"AP detected.");
 		wpsStatusText->setText("WPS AP detected");
 	} else if (str_match(pos, WPS_EVENT_OVERLAP)) {
-		showTrayMessage(QSystemTrayIcon::Information, 3,
-				"Wi-Fi Protected Setup (WPS)\n"
-				"PBC mode overlap detected.");
 		wpsStatusText->setText("PBC mode overlap detected");
 		wpsInstructions->setText("More than one AP is currently in "
 					 "active WPS PBC mode. Wait couple of "

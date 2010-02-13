@@ -362,6 +362,7 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 static int
 bsd_configure_wpa(void *priv, struct wpa_bss_params *params)
 {
+#ifndef IEEE80211_IOC_APPIE
 	static const char *ciphernames[] =
 		{ "WEP", "TKIP", "AES-OCB", "AES-CCM", "CKIP", "NONE" };
 	int v;
@@ -434,6 +435,7 @@ bsd_configure_wpa(void *priv, struct wpa_bss_params *params)
 		printf("Unable to set RSN capabilities to 0x%x\n", v);
 		return -1;
 	}
+#endif /* IEEE80211_IOC_APPIE */
 
 	wpa_printf(MSG_DEBUG, "%s: enable WPA= 0x%x", __func__, params->wpa);
 	if (set80211param(priv, IEEE80211_IOC_WPA, params->wpa)) {
@@ -562,6 +564,30 @@ bsd_set_freq(void *priv, u16 channel)
 #endif /* SIOCS80211CHANNEL */
 }
 
+static int
+bsd_set_opt_ie(const char *ifname, void *priv, const u8 *ie, size_t ie_len)
+{
+#ifdef IEEE80211_IOC_APPIE
+	struct bsd_driver_data *drv = priv;
+	struct ieee80211req ireq;
+
+	os_memset(&ireq, 0, sizeof(ireq));
+	os_strlcpy(ireq.i_name, drv->ifname, sizeof(ireq.i_name));
+	ireq.i_type = IEEE80211_IOC_APPIE;
+	ireq.i_val = IEEE80211_APPIE_WPA;
+	ireq.i_data = (void *) ie;
+	ireq.i_len = ie_len;
+
+	wpa_printf(MSG_DEBUG, "%s: set WPA+RSN ie (len %lu)", __func__,
+		   (unsigned long)ie_len);
+	if (ioctl(drv->sock, SIOCS80211, &ireq) < 0) {
+		perror("Unable to set WPA+RSN ie");
+		return -1;
+	}
+#endif /* IEEE80211_IOC_APPIE */
+	return 0;
+}
+
 
 #ifdef HOSTAPD
 
@@ -662,16 +688,6 @@ bsd_read_sta_driver_data(void *priv, struct hostap_sta_driver_data *data,
 		data->tx_packets = stats.is_stats.ns_tx_data;
 		data->tx_bytes = stats.is_stats.ns_tx_bytes;
 	}
-	return 0;
-}
-
-static int
-bsd_set_opt_ie(const char *ifname, void *priv, const u8 *ie, size_t ie_len)
-{
-	/*
-	 * Do nothing; we setup parameters at startup that define the
-	 * contents of the beacon information element.
-	 */
 	return 0;
 }
 
@@ -891,7 +907,7 @@ wpa_driver_bsd_set_wpa_ie(struct bsd_driver_data *drv, const u8 *wpa_ie,
 			  size_t wpa_ie_len)
 {
 #ifdef IEEE80211_IOC_APPIE
-	return set80211var(drv, IEEE80211_IOC_APPIE, wpa_ie, wpa_ie_len);
+	return bsd_set_opt_ie(drv->ifname, drv, wpa_ie, wpa_ie_len);
 #else /* IEEE80211_IOC_APPIE */
 	return set80211var(drv, IEEE80211_IOC_OPTIE, wpa_ie, wpa_ie_len);
 #endif /* IEEE80211_IOC_APPIE */
@@ -1076,8 +1092,16 @@ static int
 wpa_driver_bsd_scan(void *priv, struct wpa_driver_scan_params *params)
 {
 	struct bsd_driver_data *drv = priv;
-	const u8 *ssid = params->ssids[0].ssid;
-	size_t ssid_len = params->ssids[0].ssid_len;
+#ifdef IEEE80211_IOC_SCAN_MAX_SSID
+	struct ieee80211_scan_req sr;
+	int i;
+#endif /* IEEE80211_IOC_SCAN_MAX_SSID */
+
+	if (bsd_set_mediaopt(drv, IFM_OMASK, 0 /* STA */) < 0) {
+		wpa_printf(MSG_ERROR, "%s: failed to set operation mode",
+			   __func__);
+		return -1;
+	}
 
 	if (set80211param(drv, IEEE80211_IOC_ROAMING,
 			  IEEE80211_ROAMING_MANUAL) < 0) {
@@ -1097,12 +1121,39 @@ wpa_driver_bsd_scan(void *priv, struct wpa_driver_scan_params *params)
 	if (bsd_ctrl_iface(drv, 1) < 0)
 		return -1;
 
+#ifdef IEEE80211_IOC_SCAN_MAX_SSID
+	os_memset(&sr, 0, sizeof(sr));
+	sr.sr_flags = IEEE80211_IOC_SCAN_ACTIVE | IEEE80211_IOC_SCAN_ONCE |
+		IEEE80211_IOC_SCAN_NOJOIN;
+	sr.sr_duration = IEEE80211_IOC_SCAN_FOREVER;
+	if (params->num_ssids > 0) {
+		sr.sr_nssid = params->num_ssids;
+#if 0
+		/* Boundary check is done by upper layer */
+		if (sr.sr_nssid > IEEE80211_IOC_SCAN_MAX_SSID)
+			sr.sr_nssid = IEEE80211_IOC_SCAN_MAX_SSID;
+#endif
+
+		/* NB: check scan cache first */
+		sr.sr_flags |= IEEE80211_IOC_SCAN_CHECK;
+	}
+	for (i = 0; i < sr.sr_nssid; i++) {
+		sr.sr_ssid[i].len = params->ssids[i].ssid_len;
+		os_memcpy(sr.sr_ssid[i].ssid, params->ssids[i].ssid,
+			  sr.sr_ssid[i].len);
+	}
+
+	/* NB: net80211 delivers a scan complete event so no need to poll */
+	return set80211var(drv, IEEE80211_IOC_SCAN_REQ, &sr, sizeof(sr));
+#else /* IEEE80211_IOC_SCAN_MAX_SSID */
 	/* set desired ssid before scan */
-	if (bsd_set_ssid(drv->ifname, drv, ssid, ssid_len) < 0)
+	if (bsd_set_ssid(drv->ifname, drv, params->ssids[0].ssid,
+			 params->ssids[0].ssid_len) < 0)
 		return -1;
 
 	/* NB: net80211 delivers a scan complete event so no need to poll */
 	return set80211param(drv, IEEE80211_IOC_SCAN_REQ, 0);
+#endif /* IEEE80211_IOC_SCAN_MAX_SSID */
 }
 
 static void
@@ -1321,8 +1372,9 @@ static int wpa_driver_bsd_capa(struct bsd_driver_data *drv)
 	drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;
-
-	//drv->capa.max_scan_ssids = info.max_scan_ssids;
+#ifdef IEEE80211_IOC_SCAN_MAX_SSID
+	drv->capa.max_scan_ssids = IEEE80211_IOC_SCAN_MAX_SSID;
+#endif /* IEEE80211_IOC_SCAN_MAX_SSID */
 	drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
 
 	return 0;
@@ -1382,12 +1434,6 @@ wpa_driver_bsd_init(void *ctx, const char *ifname)
 		goto fail;
 	}
 
-	if (bsd_set_mediaopt(drv, IFM_OMASK, 0 /* STA */) < 0) {
-		wpa_printf(MSG_ERROR, "%s: failed to set operation mode",
-			   __func__);
-		goto fail;
-	}
-
 	if (wpa_driver_bsd_capa(drv))
 		goto fail;
 
@@ -1443,7 +1489,6 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.set_privacy		= bsd_set_privacy,
 	.get_seqnum		= bsd_get_seqnum,
 	.flush			= bsd_flush,
-	.set_generic_elem	= bsd_set_opt_ie,
 	.read_sta_data		= bsd_read_sta_driver_data,
 	.sta_disassoc		= bsd_sta_disassoc,
 	.sta_deauth		= bsd_sta_deauth,
@@ -1467,4 +1512,5 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.hapd_get_ssid		= bsd_get_ssid,
 	.hapd_send_eapol	= bsd_send_eapol,
 	.sta_set_flags		= bsd_set_sta_authorized,
+	.set_generic_elem	= bsd_set_opt_ie,
 };

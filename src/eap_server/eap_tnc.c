@@ -1,6 +1,6 @@
 /*
  * EAP server method: EAP-TNC (Trusted Network Connect)
- * Copyright (c) 2007-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,6 +29,8 @@ struct eap_tnc_data {
 	struct wpabuf *out_buf;
 	size_t out_used;
 	size_t fragment_size;
+	int was_done:1;
+	int was_fail:1;
 };
 
 
@@ -231,6 +233,10 @@ static struct wpabuf * eap_tnc_build_msg(struct eap_tnc_data *data, u8 id)
 			   "(%lu more to send)", (unsigned long) send_len,
 			   (unsigned long) wpabuf_len(data->out_buf) -
 			   data->out_used);
+		if (data->state == FAIL)
+			data->was_fail = 1;
+		else if (data->state == DONE)
+			data->was_done = 1;
 		data->state = WAIT_FRAG_ACK;
 	}
 
@@ -460,7 +466,12 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment acknowledged");
-		data->state = CONTINUE;
+		if (data->was_fail)
+			data->state = FAIL;
+		else if (data->was_done)
+			data->state = DONE;
+		else
+			data->state = CONTINUE;
 		return;
 	}
 

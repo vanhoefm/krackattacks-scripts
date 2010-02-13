@@ -529,10 +529,10 @@ bsd_set_freq(int s, const char *ifname, u16 channel)
 struct bsd_driver_data {
 	struct hostapd_data *hapd;		/* back pointer */
 
-	char	iface[IFNAMSIZ + 1];
+	char	ifname[IFNAMSIZ + 1];
 	struct l2_packet_data *sock_xmit;	/* raw packet xmit socket */
-	int	ioctl_sock;			/* socket for ioctl() use */
-	int	wext_sock;			/* socket for wireless events */
+	int	sock;				/* socket for ioctl() use */
+	int	route;				/* socket for wireless events */
 };
 
 static int bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
@@ -541,13 +541,13 @@ static int bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 static int
 get80211var(struct bsd_driver_data *drv, int op, void *arg, int arg_len)
 {
-	return bsd_get80211var(drv->ioctl_sock, drv->iface, op, arg, arg_len);
+	return bsd_get80211var(drv->sock, drv->ifname, op, arg, arg_len);
 }
 
 static int
 set80211param(struct bsd_driver_data *drv, int op, int arg)
 {
-	return bsd_set80211param(drv->ioctl_sock, drv->iface, op, arg);
+	return bsd_set80211param(drv->sock, drv->ifname, op, arg);
 }
 
 static const char *
@@ -565,7 +565,7 @@ ether_sprintf(const u8 *addr)
 static int
 hostapd_bsd_ctrl_iface(struct bsd_driver_data *drv, int enable)
 {
-	return bsd_ctrl_iface(drv->ioctl_sock, drv->iface, enable);
+	return bsd_ctrl_iface(drv->sock, drv->ifname, enable);
 }
 
 static int
@@ -584,7 +584,7 @@ hostapd_bsd_sta_set_flags(void *priv, const u8 *addr, int total_flags,
 {
 	struct bsd_driver_data *drv = priv;
 
-	return bsd_set_sta_authorized(drv->ioctl_sock, drv->iface, addr,
+	return bsd_set_sta_authorized(drv->sock, drv->ifname, addr,
 				      total_flags, flags_or, flags_and);
 }
 
@@ -596,9 +596,9 @@ hostapd_bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	struct bsd_driver_data *drv = priv;
 
 	if (alg == WPA_ALG_NONE)
-		return bsd_del_key(drv->ioctl_sock, drv->iface, addr, key_idx);
+		return bsd_del_key(drv->sock, drv->ifname, addr, key_idx);
 
-	return bsd_set_key(drv->ioctl_sock, drv->iface, alg, addr, key_idx,
+	return bsd_set_key(drv->sock, drv->ifname, alg, addr, key_idx,
 			   set_tx, seq, seq_len, key, key_len);
 }
 
@@ -688,7 +688,7 @@ bsd_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr, int reason_code)
 {
 	struct bsd_driver_data *drv = priv;
 
-	return bsd_send_mlme_param(drv->ioctl_sock, drv->iface,
+	return bsd_send_mlme_param(drv->sock, drv->ifname,
 				   IEEE80211_MLME_DEAUTH, reason_code, addr);
 }
 
@@ -698,7 +698,7 @@ bsd_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 {
 	struct bsd_driver_data *drv = priv;
 
-	return bsd_send_mlme_param(drv->ioctl_sock, drv->iface,
+	return bsd_send_mlme_param(drv->sock, drv->ifname,
 				   IEEE80211_MLME_DISASSOC, reason_code, addr);
 }
 
@@ -746,7 +746,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 		case RTM_IEEE80211_REJOIN:
 #endif
 			join = (struct ieee80211_join_event *) &ifan[1];
-			bsd_new_sta(drv->ioctl_sock, drv->iface, drv->hapd,
+			bsd_new_sta(drv->sock, drv->ifname, drv->hapd,
 				    join->iev_addr);
 			break;
 		case RTM_IEEE80211_REPLAY:
@@ -770,33 +770,6 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 }
 
 static int
-bsd_wireless_event_init(struct bsd_driver_data *drv)
-{
-	int s;
-
-	drv->wext_sock = -1;
-
-	s = socket(PF_ROUTE, SOCK_RAW, 0);
-	if (s < 0) {
-		perror("socket(PF_ROUTE,SOCK_RAW)");
-		return -1;
-	}
-	eloop_register_read_sock(s, bsd_wireless_event_receive, drv, NULL);
-	drv->wext_sock = s;
-
-	return 0;
-}
-
-static void
-bsd_wireless_event_deinit(struct bsd_driver_data *drv)
-{
-	if (drv->wext_sock < 0)
-		return;
-	eloop_unregister_read_sock(drv->wext_sock);
-	close(drv->wext_sock);
-}
-
-static int
 hostapd_bsd_send_eapol(void *priv, const u8 *addr, const u8 *data,
 		       size_t data_len, int encrypt, const u8 *own_addr)
 {
@@ -817,7 +790,7 @@ hostapd_bsd_get_ssid(const char *ifname, void *priv, u8 *buf, int len)
 	struct bsd_driver_data *drv = priv;
 	int ssid_len;
 
-	ssid_len = bsd_get_ssid(drv->ioctl_sock, drv->iface, buf);
+	ssid_len = bsd_get_ssid(drv->sock, drv->ifname, buf);
 	wpa_printf(MSG_DEBUG, "%s: ssid=\"%.*s\"", __func__, ssid_len, buf);
 
 	return ssid_len;
@@ -830,7 +803,7 @@ hostapd_bsd_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
 
 	wpa_printf(MSG_DEBUG, "%s: ssid=\"%.*s\"", __func__, len, buf);
 
-	return bsd_set_ssid(drv->ioctl_sock, drv->iface, buf, len);
+	return bsd_set_ssid(drv->sock, drv->ifname, buf, len);
 }
 
 static int
@@ -838,7 +811,7 @@ hostapd_bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
 	struct bsd_driver_data *drv = priv;
 
-	return bsd_set_ieee8021x(drv->ioctl_sock, drv->iface, params);
+	return bsd_set_ieee8021x(drv->sock, drv->ifname, params);
 }
 
 static int
@@ -846,7 +819,7 @@ hostapd_bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
 	struct bsd_driver_data *drv = priv;
 
-	return bsd_set_freq(drv->ioctl_sock, drv->iface, freq->channel);
+	return bsd_set_freq(drv->sock, drv->ifname, freq->channel);
 }
 
 static void *
@@ -861,14 +834,14 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	}
 
 	drv->hapd = hapd;
-	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
-	if (drv->ioctl_sock < 0) {
+	drv->sock = socket(PF_INET, SOCK_DGRAM, 0);
+	if (drv->sock < 0) {
 		perror("socket[PF_INET,SOCK_DGRAM]");
 		goto bad;
 	}
-	memcpy(drv->iface, params->ifname, sizeof(drv->iface));
+	os_strlcpy(drv->ifname, params->ifname, sizeof(drv->ifname));
 
-	drv->sock_xmit = l2_packet_init(drv->iface, NULL, ETH_P_EAPOL,
+	drv->sock_xmit = l2_packet_init(drv->ifname, NULL, ETH_P_EAPOL,
 					handle_read, drv, 0);
 	if (drv->sock_xmit == NULL)
 		goto bad;
@@ -878,10 +851,16 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 	/* mark down during setup */
 	if (hostapd_bsd_ctrl_iface(drv, 0) < 0)
 		goto bad;
-	if (bsd_wireless_event_init(drv))
-		goto bad;
 
-	if (bsd_set_mediaopt(drv->ioctl_sock, drv->iface, IFM_OMASK,
+	drv->route = socket(PF_ROUTE, SOCK_RAW, 0);
+	if (drv->route < 0) {
+		perror("socket(PF_ROUTE,SOCK_RAW)");
+		goto bad;
+	}
+	eloop_register_read_sock(drv->route, bsd_wireless_event_receive, drv,
+				 NULL);
+
+	if (bsd_set_mediaopt(drv->sock, drv->ifname, IFM_OMASK,
 			     IFM_IEEE80211_HOSTAP) < 0) {
 		wpa_printf(MSG_ERROR, "%s: failed to set operation mode",
 			   __func__);
@@ -892,8 +871,8 @@ bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 bad:
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);
-	if (drv->ioctl_sock >= 0)
-		close(drv->ioctl_sock);
+	if (drv->sock >= 0)
+		close(drv->sock);
 	if (drv != NULL)
 		os_free(drv);
 	return NULL;
@@ -905,10 +884,13 @@ bsd_deinit(void *priv)
 {
 	struct bsd_driver_data *drv = priv;
 
-	bsd_wireless_event_deinit(drv);
+	if (drv->route >= 0) {
+		eloop_unregister_read_sock(drv->route);
+		close(drv->route);
+	}
 	hostapd_bsd_ctrl_iface(drv, 0);
-	if (drv->ioctl_sock >= 0)
-		close(drv->ioctl_sock);
+	if (drv->sock >= 0)
+		close(drv->sock);
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);
 	os_free(drv);

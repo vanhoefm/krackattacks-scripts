@@ -87,6 +87,7 @@ static const char *wpa_cli_full_license =
 "\n";
 
 static struct wpa_ctrl *ctrl_conn;
+static struct wpa_ctrl *mon_conn;
 static int wpa_cli_quit = 0;
 static int wpa_cli_attached = 0;
 static int wpa_cli_connected = 0;
@@ -96,6 +97,7 @@ static char *ctrl_ifname = NULL;
 static const char *pid_file = NULL;
 static const char *action_file = NULL;
 static int ping_interval = 5;
+static int interactive = 0;
 
 
 static void print_help();
@@ -119,32 +121,58 @@ static void usage(void)
 }
 
 
-static struct wpa_ctrl * wpa_cli_open_connection(const char *ifname)
+static int wpa_cli_open_connection(const char *ifname, int attach)
 {
 #if defined(CONFIG_CTRL_IFACE_UDP) || defined(CONFIG_CTRL_IFACE_NAMED_PIPE)
 	ctrl_conn = wpa_ctrl_open(ifname);
-	return ctrl_conn;
+	if (ctrl_conn == NULL)
+		return -1;
+
+	if (attach && interactive)
+		mon_conn = wpa_ctrl_open(ifname);
+	else
+		mon_conn = NULL;
 #else /* CONFIG_CTRL_IFACE_UDP || CONFIG_CTRL_IFACE_NAMED_PIPE */
 	char *cfile;
 	int flen, res;
 
 	if (ifname == NULL)
-		return NULL;
+		return -1;
 
 	flen = os_strlen(ctrl_iface_dir) + os_strlen(ifname) + 2;
 	cfile = os_malloc(flen);
 	if (cfile == NULL)
-		return NULL;
+		return -1L;
 	res = os_snprintf(cfile, flen, "%s/%s", ctrl_iface_dir, ifname);
 	if (res < 0 || res >= flen) {
 		os_free(cfile);
-		return NULL;
+		return -1;
 	}
 
 	ctrl_conn = wpa_ctrl_open(cfile);
+	if (ctrl_conn == NULL) {
+		os_free(cfile);
+		return -1;
+	}
+
+	if (attach && interactive)
+		mon_conn = wpa_ctrl_open(cfile);
+	else
+		mon_conn = NULL;
 	os_free(cfile);
-	return ctrl_conn;
 #endif /* CONFIG_CTRL_IFACE_UDP || CONFIG_CTRL_IFACE_NAMED_PIPE */
+
+	if (mon_conn) {
+		if (wpa_ctrl_attach(mon_conn) == 0) {
+			wpa_cli_attached = 1;
+		} else {
+			printf("Warning: Failed to attach to "
+			       "wpa_supplicant.\n");
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
 
@@ -154,11 +182,15 @@ static void wpa_cli_close_connection(void)
 		return;
 
 	if (wpa_cli_attached) {
-		wpa_ctrl_detach(ctrl_conn);
+		wpa_ctrl_detach(interactive ? mon_conn : ctrl_conn);
 		wpa_cli_attached = 0;
 	}
 	wpa_ctrl_close(ctrl_conn);
 	ctrl_conn = NULL;
+	if (mon_conn) {
+		wpa_ctrl_close(mon_conn);
+		mon_conn = NULL;
+	}
 }
 
 
@@ -1160,14 +1192,8 @@ static int wpa_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	os_free(ctrl_ifname);
 	ctrl_ifname = os_strdup(argv[0]);
 
-	if (wpa_cli_open_connection(ctrl_ifname)) {
+	if (wpa_cli_open_connection(ctrl_ifname, 1)) {
 		printf("Connected to interface '%s.\n", ctrl_ifname);
-		if (wpa_ctrl_attach(ctrl_conn) == 0) {
-			wpa_cli_attached = 1;
-		} else {
-			printf("Warning: Failed to attach to "
-			       "wpa_supplicant.\n");
-		}
 	} else {
 		printf("Could not connect to interface '%s' - re-trying\n",
 		       ctrl_ifname);
@@ -1714,16 +1740,7 @@ static void wpa_cli_action_cb(char *msg, size_t len)
 static void wpa_cli_reconnect(void)
 {
 	wpa_cli_close_connection();
-	ctrl_conn = wpa_cli_open_connection(ctrl_ifname);
-	if (ctrl_conn) {
-		printf("Connection to wpa_supplicant re-established\n");
-		if (wpa_ctrl_attach(ctrl_conn) == 0) {
-			wpa_cli_attached = 1;
-		} else {
-			printf("Warning: Failed to attach to "
-			       "wpa_supplicant.\n");
-		}
-	}
+	wpa_cli_open_connection(ctrl_ifname, 1);
 }
 
 
@@ -1829,7 +1846,7 @@ static void wpa_cli_interactive(void)
 #endif /* CONFIG_READLINE */
 
 	do {
-		wpa_cli_recv_pending(ctrl_conn, 0, 0);
+		wpa_cli_recv_pending(mon_conn, 0, 0);
 #ifndef CONFIG_NATIVE_WINDOWS
 		alarm(ping_interval);
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -1853,7 +1870,7 @@ static void wpa_cli_interactive(void)
 #endif /* CONFIG_NATIVE_WINDOWS */
 		if (cmd == NULL)
 			break;
-		wpa_cli_recv_pending(ctrl_conn, 0, 0);
+		wpa_cli_recv_pending(mon_conn, 0, 0);
 		pos = cmd;
 		while (*pos != '\0') {
 			if (*pos == '\n') {
@@ -1987,8 +2004,8 @@ static void wpa_cli_alarm(int sig)
 	}
 	if (!ctrl_conn)
 		wpa_cli_reconnect();
-	if (ctrl_conn)
-		wpa_cli_recv_pending(ctrl_conn, 1, 0);
+	if (mon_conn)
+		wpa_cli_recv_pending(mon_conn, 1, 0);
 	alarm(ping_interval);
 }
 #endif /* CONFIG_NATIVE_WINDOWS */
@@ -2051,7 +2068,6 @@ static char * wpa_cli_get_default_ifname(void)
 
 int main(int argc, char *argv[])
 {
-	int interactive;
 	int warning_displayed = 0;
 	int c;
 	int daemonize = 0;
@@ -2118,31 +2134,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	for (; !global;) {
-		if (ctrl_ifname == NULL)
-			ctrl_ifname = wpa_cli_get_default_ifname();
-		ctrl_conn = wpa_cli_open_connection(ctrl_ifname);
-		if (ctrl_conn) {
-			if (warning_displayed)
-				printf("Connection established.\n");
-			break;
-		}
-
-		if (!interactive) {
-			perror("Failed to connect to wpa_supplicant - "
-			       "wpa_ctrl_open");
-			return -1;
-		}
-
-		if (!warning_displayed) {
-			printf("Could not connect to wpa_supplicant - "
-			       "re-trying\n");
-			warning_displayed = 1;
-		}
-		os_sleep(1, 0);
-		continue;
-	}
-
 #ifndef _WIN32_WCE
 	signal(SIGINT, wpa_cli_terminate);
 	signal(SIGTERM, wpa_cli_terminate);
@@ -2151,14 +2142,41 @@ int main(int argc, char *argv[])
 	signal(SIGALRM, wpa_cli_alarm);
 #endif /* CONFIG_NATIVE_WINDOWS */
 
-	if (interactive || action_file) {
-		if (wpa_ctrl_attach(ctrl_conn) == 0) {
-			wpa_cli_attached = 1;
-		} else {
-			printf("Warning: Failed to attach to "
-			       "wpa_supplicant.\n");
-			if (!interactive)
+	if (ctrl_ifname == NULL)
+		ctrl_ifname = wpa_cli_get_default_ifname();
+
+	if (interactive) {
+		for (; !global;) {
+			if (wpa_cli_open_connection(ctrl_ifname, 1) == 0) {
+				if (warning_displayed)
+					printf("Connection established.\n");
+				break;
+			}
+
+			if (!warning_displayed) {
+				printf("Could not connect to wpa_supplicant - "
+				       "re-trying\n");
+				warning_displayed = 1;
+			}
+			os_sleep(1, 0);
+			continue;
+		}
+	} else {
+		if (!global &&
+		    wpa_cli_open_connection(ctrl_ifname, 0) < 0) {
+			perror("Failed to connect to wpa_supplicant - "
+			       "wpa_ctrl_open");
+			return -1;
+		}
+
+		if (action_file) {
+			if (wpa_ctrl_attach(ctrl_conn) == 0) {
+				wpa_cli_attached = 1;
+			} else {
+				printf("Warning: Failed to attach to "
+				       "wpa_supplicant.\n");
 				return -1;
+			}
 		}
 	}
 

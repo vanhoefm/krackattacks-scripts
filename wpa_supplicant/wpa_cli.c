@@ -23,6 +23,9 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif /* CONFIG_READLINE */
+#ifdef CONFIG_WPA_CLI_FORK
+#include <sys/wait.h>
+#endif /* CONFIG_WPA_CLI_FORK */
 
 #include "common/wpa_ctrl.h"
 #include "common.h"
@@ -88,6 +91,9 @@ static const char *wpa_cli_full_license =
 
 static struct wpa_ctrl *ctrl_conn;
 static struct wpa_ctrl *mon_conn;
+#ifdef CONFIG_WPA_CLI_FORK
+static pid_t mon_pid = 0;
+#endif /* CONFIG_WPA_CLI_FORK */
 static int wpa_cli_quit = 0;
 static int wpa_cli_attached = 0;
 static int wpa_cli_connected = 0;
@@ -119,6 +125,41 @@ static void usage(void)
 	       "  default interface: first interface found in socket path\n");
 	print_help();
 }
+
+
+#ifdef CONFIG_WPA_CLI_FORK
+static void wpa_cli_monitor(void)
+{
+	char buf[256];
+	size_t len = sizeof(buf) - 1;
+	struct timeval tv;
+	fd_set rfds;
+
+	while (mon_conn) {
+		int s = wpa_ctrl_get_fd(mon_conn);
+		tv.tv_sec = 5;
+		tv.tv_usec = 0;
+		FD_ZERO(&rfds);
+		FD_SET(s, &rfds);
+		if (select(s + 1, &rfds, NULL, NULL, &tv) < 0) {
+			perror("select");
+			break;
+		}
+		if (mon_conn == NULL)
+			break;
+		if (FD_ISSET(s, &rfds)) {
+			len = sizeof(buf) - 1;
+			int res = wpa_ctrl_recv(mon_conn, buf, &len);
+			if (res < 0) {
+				perror("wpa_ctrl_recv");
+				break;
+			}
+			buf[len] = '\0';
+			printf("%s\n", buf);
+		}
+	}
+}
+#endif /* CONFIG_WPA_CLI_FORK */
 
 
 static int wpa_cli_open_connection(const char *ifname, int attach)
@@ -170,6 +211,21 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 			       "wpa_supplicant.\n");
 			return -1;
 		}
+
+#ifdef CONFIG_WPA_CLI_FORK
+		{
+			pid_t p = fork();
+			if (p < 0) {
+				perror("fork");
+				return -1;
+			}
+			if (p == 0) {
+				wpa_cli_monitor();
+				exit(0);
+			} else
+				mon_pid = p;
+		}
+#endif /* CONFIG_WPA_CLI_FORK */
 	}
 
 	return 0;
@@ -191,6 +247,14 @@ static void wpa_cli_close_connection(void)
 		wpa_ctrl_close(mon_conn);
 		mon_conn = NULL;
 	}
+#ifdef CONFIG_WPA_CLI_FORK
+	if (mon_pid) {
+		int status;
+		kill(mon_pid, SIGPIPE);
+		wait(&status);
+		mon_pid = 0;
+	}
+#endif /* CONFIG_WPA_CLI_FORK */
 }
 
 

@@ -397,11 +397,11 @@ static inline int wpa_drv_send_action(struct wpa_supplicant *wpa_s,
 }
 
 static inline int wpa_drv_alloc_interface_addr(struct wpa_supplicant *wpa_s,
-					       u8 *addr)
+					       u8 *addr, char *ifname)
 {
 	if (wpa_s->driver->alloc_interface_addr)
 		return wpa_s->driver->alloc_interface_addr(wpa_s->drv_priv,
-							   addr);
+							   addr, ifname);
 	return -1;
 }
 

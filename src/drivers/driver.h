@@ -1624,6 +1624,7 @@ struct wpa_driver_ops {
 	 * alloc_interface_addr - Allocate a virtual interface address
 	 * @priv: Private driver interface data
 	 * @addr: Buffer for returning the address
+	 * @ifname: Buffer for returning interface name (if needed)
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This command pre-allocates an interface address for a new virtual
@@ -1631,12 +1632,15 @@ struct wpa_driver_ops {
 	 * the interface mode (e.g., AP vs. station) is not yet known, but the
 	 * address of the virtual interface is already needed. This helps with
 	 * drivers that cannot change interface mode without destroying and
-	 * re-creating the interface.
+	 * re-creating the interface. If the driver requires a specific
+	 * interface name to be used, the ifname buffer (up to IFNAMSIZ
+	 * characters) will be used to indicate which name must be used for
+	 * this virtual interface.
 	 *
-	 * The allocated address can be used in a bss_add() call to request a
+	 * The allocated address can be used in a if_add() call to request a
 	 * specific bssid.
 	 */
-	int (*alloc_interface_addr)(void *priv, u8 *addr);
+	int (*alloc_interface_addr)(void *priv, u8 *addr, char *ifname);
 
 	/**
 	 * release_interface_addr - Release a virtual interface address
@@ -1645,7 +1649,7 @@ struct wpa_driver_ops {
 	 *
 	 * This command is used to release a virtual interface address that was
 	 * allocated with alloc_interface_addr(), but has not yet been used
-	 * with bss_add() to actually create the interface. This allows the
+	 * with if_add() to actually create the interface. This allows the
 	 * driver to release the pending allocation for a new interface.
 	 */
 	void (*release_interface_addr)(void *priv, const u8 *addr);

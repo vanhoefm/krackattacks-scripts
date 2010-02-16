@@ -2632,9 +2632,14 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 }
 
 
-static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr)
+static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr,
+						char *ifname)
 {
 	struct wpa_driver_test_data *drv = priv;
+
+	if (ifname)
+		ifname[0] = '\0';
+
 	drv->alloc_iface_idx++;
 	addr[0] = 0x02; /* locally administered */
 	sha1_prf(drv->own_addr, ETH_ALEN, "hostapd test addr generation",

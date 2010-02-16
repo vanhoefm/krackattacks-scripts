@@ -4705,9 +4705,13 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 }
 
 
-static int wpa_driver_nl80211_alloc_interface_addr(void *priv, u8 *addr)
+static int wpa_driver_nl80211_alloc_interface_addr(void *priv, u8 *addr,
+						   char *ifname)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
+
+	if (ifname)
+		ifname[0] = '\0';
 
 	if (linux_get_ifhwaddr(drv->ioctl_sock, drv->ifname, addr) < 0)
 		return -1;

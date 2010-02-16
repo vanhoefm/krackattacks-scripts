@@ -1331,6 +1331,56 @@ wpa_driver_bsd_get_scan_results2(void *priv)
 
 static int wpa_driver_bsd_capa(struct bsd_driver_data *drv)
 {
+#ifdef IEEE80211_IOC_DEVCAPS
+/* kernel definitions copied from net80211/ieee80211_var.h */
+#define IEEE80211_CIPHER_WEP            0
+#define IEEE80211_CIPHER_TKIP           1
+#define IEEE80211_CIPHER_AES_CCM        3
+#define IEEE80211_CRYPTO_WEP            (1<<IEEE80211_CIPHER_WEP)
+#define IEEE80211_CRYPTO_TKIP           (1<<IEEE80211_CIPHER_TKIP)
+#define IEEE80211_CRYPTO_AES_CCM        (1<<IEEE80211_CIPHER_AES_CCM)
+#define IEEE80211_C_HOSTAP      0x00000400      /* CAPABILITY: HOSTAP avail */
+#define IEEE80211_C_WPA1        0x00800000      /* CAPABILITY: WPA1 avail */
+#define IEEE80211_C_WPA2        0x01000000      /* CAPABILITY: WPA2 avail */
+	struct ieee80211_devcaps_req devcaps;
+
+	if (get80211var(drv, IEEE80211_IOC_DEVCAPS, &devcaps,
+			sizeof(devcaps)) < 0) {
+		wpa_printf(MSG_ERROR, "failed to IEEE80211_IOC_DEVCAPS: %s",
+			   strerror(errno));
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "%s: drivercaps=0x%08x,cryptocaps=0x%08x",
+		   __func__, devcaps.dc_drivercaps, devcaps.dc_cryptocaps);
+
+	if (devcaps.dc_drivercaps & IEEE80211_C_WPA1)
+		drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
+			WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK;
+	if (devcaps.dc_drivercaps & IEEE80211_C_WPA2)
+		drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
+			WPA_DRIVER_CAPA_KEY_MGMT_WPA2_PSK;
+
+	if (devcaps.dc_cryptocaps & IEEE80211_CRYPTO_WEP)
+		drv->capa.enc |= WPA_DRIVER_CAPA_ENC_WEP40 |
+			WPA_DRIVER_CAPA_ENC_WEP104;
+	if (devcaps.dc_cryptocaps & IEEE80211_CRYPTO_TKIP)
+		drv->capa.enc |= WPA_DRIVER_CAPA_ENC_TKIP;
+	if (devcaps.dc_cryptocaps & IEEE80211_CRYPTO_AES_CCM)
+		drv->capa.enc |= WPA_DRIVER_CAPA_ENC_CCMP;
+
+	if (devcaps.dc_drivercaps & IEEE80211_C_HOSTAP)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
+#undef IEEE80211_CIPHER_WEP
+#undef IEEE80211_CIPHER_TKIP
+#undef IEEE80211_CIPHER_AES_CCM
+#undef IEEE80211_CRYPTO_WEP
+#undef IEEE80211_CRYPTO_TKIP
+#undef IEEE80211_CRYPTO_AES_CCM
+#undef IEEE80211_C_HOSTAP
+#undef IEEE80211_C_WPA1
+#undef IEEE80211_C_WPA2
+#else /* IEEE80211_IOC_DEVCAPS */
 	/* For now, assume TKIP, CCMP, WPA, WPA2 are supported */
 	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA_PSK |
@@ -1340,14 +1390,16 @@ static int wpa_driver_bsd_capa(struct bsd_driver_data *drv)
 		WPA_DRIVER_CAPA_ENC_WEP104 |
 		WPA_DRIVER_CAPA_ENC_TKIP |
 		WPA_DRIVER_CAPA_ENC_CCMP;
+	drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
+#endif /* IEEE80211_IOC_DEVCAPS */
+#ifdef IEEE80211_IOC_SCAN_MAX_SSID
+	drv->capa.max_scan_ssids = IEEE80211_IOC_SCAN_MAX_SSID;
+#else /* IEEE80211_IOC_SCAN_MAX_SSID */
+	drv->capa.max_scan_ssids = 1;
+#endif /* IEEE80211_IOC_SCAN_MAX_SSID */
 	drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;
-#ifdef IEEE80211_IOC_SCAN_MAX_SSID
-	drv->capa.max_scan_ssids = IEEE80211_IOC_SCAN_MAX_SSID;
-#endif /* IEEE80211_IOC_SCAN_MAX_SSID */
-	drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
-
 	return 0;
 }
 

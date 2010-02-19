@@ -217,7 +217,7 @@ EAPDYN += ../src/eap_peer/eap_tls.so
 else
 CFLAGS += -DEAP_TLS
 OBJS += ../src/eap_peer/eap_tls.o
-OBJS_h += ../src/eap_server/eap_tls.o
+OBJS_h += ../src/eap_server/eap_server_tls.o
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -232,7 +232,7 @@ else
 CFLAGS += -DEAP_PEAP
 OBJS += ../src/eap_peer/eap_peap.o
 OBJS += ../src/eap_common/eap_peap_common.o
-OBJS_h += ../src/eap_server/eap_peap.o
+OBJS_h += ../src/eap_server/eap_server_peap.o
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -246,7 +246,7 @@ EAPDYN += ../src/eap_peer/eap_ttls.so
 else
 CFLAGS += -DEAP_TTLS
 OBJS += ../src/eap_peer/eap_ttls.o
-OBJS_h += ../src/eap_server/eap_ttls.o
+OBJS_h += ../src/eap_server/eap_server_ttls.o
 endif
 MS_FUNCS=y
 TLS_FUNCS=y
@@ -262,7 +262,7 @@ EAPDYN += ../src/eap_peer/eap_md5.so
 else
 CFLAGS += -DEAP_MD5
 OBJS += ../src/eap_peer/eap_md5.o
-OBJS_h += ../src/eap_server/eap_md5.o
+OBJS_h += ../src/eap_server/eap_server_md5.o
 endif
 CHAP=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -285,7 +285,7 @@ else
 CFLAGS += -DEAP_MSCHAPv2
 OBJS += ../src/eap_peer/eap_mschapv2.o
 OBJS += ../src/eap_peer/mschapv2.o
-OBJS_h += ../src/eap_server/eap_mschapv2.o
+OBJS_h += ../src/eap_server/eap_server_mschapv2.o
 endif
 MS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -299,7 +299,7 @@ EAPDYN += ../src/eap_peer/eap_gtc.so
 else
 CFLAGS += -DEAP_GTC
 OBJS += ../src/eap_peer/eap_gtc.o
-OBJS_h += ../src/eap_server/eap_gtc.o
+OBJS_h += ../src/eap_server/eap_server_gtc.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -324,7 +324,7 @@ EAPDYN += ../src/eap_peer/eap_sim.so
 else
 CFLAGS += -DEAP_SIM
 OBJS += ../src/eap_peer/eap_sim.o
-OBJS_h += ../src/eap_server/eap_sim.o
+OBJS_h += ../src/eap_server/eap_server_sim.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
@@ -352,7 +352,7 @@ EAPDYN += ../src/eap_peer/eap_psk.so
 else
 CFLAGS += -DEAP_PSK
 OBJS += ../src/eap_peer/eap_psk.o ../src/eap_common/eap_psk_common.o
-OBJS_h += ../src/eap_server/eap_psk.o
+OBJS_h += ../src/eap_server/eap_server_psk.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 NEED_AES=y
@@ -369,7 +369,7 @@ EAPDYN += ../src/eap_peer/eap_aka.so
 else
 CFLAGS += -DEAP_AKA
 OBJS += ../src/eap_peer/eap_aka.o
-OBJS_h += ../src/eap_server/eap_aka.o
+OBJS_h += ../src/eap_server/eap_server_aka.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 CONFIG_EAP_SIM_COMMON=y
@@ -403,7 +403,7 @@ else
 CFLAGS += -DEAP_FAST
 OBJS += ../src/eap_peer/eap_fast.o ../src/eap_peer/eap_fast_pac.o
 OBJS += ../src/eap_common/eap_fast_common.o
-OBJS_h += ../src/eap_server/eap_fast.o
+OBJS_h += ../src/eap_server/eap_server_fast.o
 endif
 TLS_FUNCS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -418,7 +418,7 @@ EAPDYN += ../src/eap_peer/eap_pax.so
 else
 CFLAGS += -DEAP_PAX
 OBJS += ../src/eap_peer/eap_pax.o ../src/eap_common/eap_pax_common.o
-OBJS_h += ../src/eap_server/eap_pax.o
+OBJS_h += ../src/eap_server/eap_server_pax.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -431,7 +431,7 @@ EAPDYN += ../src/eap_peer/eap_sake.so
 else
 CFLAGS += -DEAP_SAKE
 OBJS += ../src/eap_peer/eap_sake.o ../src/eap_common/eap_sake_common.o
-OBJS_h += ../src/eap_server/eap_sake.o
+OBJS_h += ../src/eap_server/eap_server_sake.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -444,7 +444,7 @@ EAPDYN += ../src/eap_peer/eap_gpsk.so
 else
 CFLAGS += -DEAP_GPSK
 OBJS += ../src/eap_peer/eap_gpsk.o ../src/eap_common/eap_gpsk_common.o
-OBJS_h += ../src/eap_server/eap_gpsk.o
+OBJS_h += ../src/eap_server/eap_server_gpsk.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 ifdef CONFIG_EAP_GPSK_SHA256
@@ -468,7 +468,7 @@ OBJS += ../src/wps/wps_attr_process.o
 OBJS += ../src/wps/wps_dev_attr.o
 OBJS += ../src/wps/wps_enrollee.o
 OBJS += ../src/wps/wps_registrar.o
-OBJS_h += ../src/eap_server/eap_wsc.o
+OBJS_h += ../src/eap_server/eap_server_wsc.o
 CONFIG_IEEE8021X_EAPOL=y
 NEED_DH_GROUPS=y
 NEED_SHA256=y
@@ -534,7 +534,7 @@ else
 CFLAGS += -DEAP_IKEV2
 OBJS += ../src/eap_peer/eap_ikev2.o ../src/eap_peer/ikev2.o
 OBJS += ../src/eap_common/eap_ikev2_common.o ../src/eap_common/ikev2_common.o
-OBJS_h += ../src/eap_server/eap_ikev2.o
+OBJS_h += ../src/eap_server/eap_server_ikev2.o
 OBJS_h += ../src/eap_server/ikev2.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
@@ -551,7 +551,7 @@ EAPDYN += ../src/eap_peer/eap_vendor_test.so
 else
 CFLAGS += -DEAP_VENDOR_TEST
 OBJS += ../src/eap_peer/eap_vendor_test.o
-OBJS_h += ../src/eap_server/eap_vendor_test.o
+OBJS_h += ../src/eap_server/eap_server_vendor_test.o
 endif
 CONFIG_IEEE8021X_EAPOL=y
 endif
@@ -561,7 +561,7 @@ ifdef CONFIG_EAP_TNC
 CFLAGS += -DEAP_TNC
 OBJS += ../src/eap_peer/eap_tnc.o
 OBJS += ../src/eap_peer/tncc.o
-OBJS_h += ../src/eap_server/eap_tnc.o
+OBJS_h += ../src/eap_server/eap_server_tnc.o
 OBJS_h += ../src/eap_server/tncs.o
 NEED_BASE64=y
 ifndef CONFIG_NATIVE_WINDOWS
@@ -607,9 +607,9 @@ OBJS += ../src/ap/ctrl_iface_ap.o
 endif
 
 CFLAGS += -DEAP_SERVER -DEAP_SERVER_IDENTITY
-OBJS += ../src/eap_server/eap.o
-OBJS += ../src/eap_server/eap_identity.o
-OBJS += ../src/eap_server/eap_methods.o
+OBJS += ../src/eap_server/eap_server.o
+OBJS += ../src/eap_server/eap_server_identity.o
+OBJS += ../src/eap_server/eap_server_methods.o
 
 ifdef CONFIG_IEEE80211N
 CFLAGS += -DCONFIG_IEEE80211N
@@ -629,7 +629,7 @@ endif
 ifdef CONFIG_WPS
 CFLAGS += -DEAP_SERVER_WSC
 OBJS += ../src/ap/wps_hostapd.o
-OBJS += ../src/eap_server/eap_wsc.o
+OBJS += ../src/eap_server/eap_server_wsc.o
 endif
 endif
 
@@ -649,9 +649,9 @@ endif
 
 ifdef CONFIG_EAP_SERVER
 CFLAGS += -DEAP_SERVER
-OBJS_h += ../src/eap_server/eap.o
-OBJS_h += ../src/eap_server/eap_identity.o
-OBJS_h += ../src/eap_server/eap_methods.o
+OBJS_h += ../src/eap_server/eap_server.o
+OBJS_h += ../src/eap_server/eap_server_identity.o
+OBJS_h += ../src/eap_server/eap_server_methods.o
 endif
 
 ifdef CONFIG_RADIUS_CLIENT
@@ -727,7 +727,7 @@ ifdef TLS_FUNCS
 NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, EAP_TTLS, and EAP_FAST)
 OBJS += ../src/eap_peer/eap_tls_common.o
-OBJS_h += ../src/eap_server/eap_tls_common.o
+OBJS_h += ../src/eap_server/eap_server_tls_common.o
 NEED_TLS_PRF=y
 endif
 

@@ -182,19 +182,19 @@ endif
 
 ifdef CONFIG_EAP_MD5
 CFLAGS += -DEAP_SERVER_MD5
-OBJS += ../src/eap_server/eap_md5.o
+OBJS += ../src/eap_server/eap_server_md5.o
 CHAP=y
 endif
 
 ifdef CONFIG_EAP_TLS
 CFLAGS += -DEAP_SERVER_TLS
-OBJS += ../src/eap_server/eap_tls.o
+OBJS += ../src/eap_server/eap_server_tls.o
 TLS_FUNCS=y
 endif
 
 ifdef CONFIG_EAP_PEAP
 CFLAGS += -DEAP_SERVER_PEAP
-OBJS += ../src/eap_server/eap_peap.o
+OBJS += ../src/eap_server/eap_server_peap.o
 OBJS += ../src/eap_common/eap_peap_common.o
 TLS_FUNCS=y
 CONFIG_EAP_MSCHAPV2=y
@@ -202,32 +202,32 @@ endif
 
 ifdef CONFIG_EAP_TTLS
 CFLAGS += -DEAP_SERVER_TTLS
-OBJS += ../src/eap_server/eap_ttls.o
+OBJS += ../src/eap_server/eap_server_ttls.o
 TLS_FUNCS=y
 CHAP=y
 endif
 
 ifdef CONFIG_EAP_MSCHAPV2
 CFLAGS += -DEAP_SERVER_MSCHAPV2
-OBJS += ../src/eap_server/eap_mschapv2.o
+OBJS += ../src/eap_server/eap_server_mschapv2.o
 MS_FUNCS=y
 endif
 
 ifdef CONFIG_EAP_GTC
 CFLAGS += -DEAP_SERVER_GTC
-OBJS += ../src/eap_server/eap_gtc.o
+OBJS += ../src/eap_server/eap_server_gtc.o
 endif
 
 ifdef CONFIG_EAP_SIM
 CFLAGS += -DEAP_SERVER_SIM
-OBJS += ../src/eap_server/eap_sim.o
+OBJS += ../src/eap_server/eap_server_sim.o
 CONFIG_EAP_SIM_COMMON=y
 NEED_AES_CBC=y
 endif
 
 ifdef CONFIG_EAP_AKA
 CFLAGS += -DEAP_SERVER_AKA
-OBJS += ../src/eap_server/eap_aka.o
+OBJS += ../src/eap_server/eap_server_aka.o
 CONFIG_EAP_SIM_COMMON=y
 NEED_SHA256=y
 NEED_AES_CBC=y
@@ -248,12 +248,12 @@ endif
 
 ifdef CONFIG_EAP_PAX
 CFLAGS += -DEAP_SERVER_PAX
-OBJS += ../src/eap_server/eap_pax.o ../src/eap_common/eap_pax_common.o
+OBJS += ../src/eap_server/eap_server_pax.o ../src/eap_common/eap_pax_common.o
 endif
 
 ifdef CONFIG_EAP_PSK
 CFLAGS += -DEAP_SERVER_PSK
-OBJS += ../src/eap_server/eap_psk.o ../src/eap_common/eap_psk_common.o
+OBJS += ../src/eap_server/eap_server_psk.o ../src/eap_common/eap_psk_common.o
 NEED_AES_OMAC1=y
 NEED_AES_ENCBLOCK=y
 NEED_AES_EAX=y
@@ -261,12 +261,12 @@ endif
 
 ifdef CONFIG_EAP_SAKE
 CFLAGS += -DEAP_SERVER_SAKE
-OBJS += ../src/eap_server/eap_sake.o ../src/eap_common/eap_sake_common.o
+OBJS += ../src/eap_server/eap_server_sake.o ../src/eap_common/eap_sake_common.o
 endif
 
 ifdef CONFIG_EAP_GPSK
 CFLAGS += -DEAP_SERVER_GPSK
-OBJS += ../src/eap_server/eap_gpsk.o ../src/eap_common/eap_gpsk_common.o
+OBJS += ../src/eap_server/eap_server_gpsk.o ../src/eap_common/eap_gpsk_common.o
 ifdef CONFIG_EAP_GPSK_SHA256
 CFLAGS += -DEAP_SERVER_GPSK_SHA256
 endif
@@ -276,12 +276,12 @@ endif
 
 ifdef CONFIG_EAP_VENDOR_TEST
 CFLAGS += -DEAP_SERVER_VENDOR_TEST
-OBJS += ../src/eap_server/eap_vendor_test.o
+OBJS += ../src/eap_server/eap_server_vendor_test.o
 endif
 
 ifdef CONFIG_EAP_FAST
 CFLAGS += -DEAP_SERVER_FAST
-OBJS += ../src/eap_server/eap_fast.o
+OBJS += ../src/eap_server/eap_server_fast.o
 OBJS += ../src/eap_common/eap_fast_common.o
 TLS_FUNCS=y
 NEED_T_PRF=y
@@ -292,7 +292,7 @@ ifdef CONFIG_WPS
 CFLAGS += -DCONFIG_WPS -DEAP_SERVER_WSC
 OBJS += ../src/utils/uuid.o
 OBJS += ../src/ap/wps_hostapd.o
-OBJS += ../src/eap_server/eap_wsc.o ../src/eap_common/eap_wsc_common.o
+OBJS += ../src/eap_server/eap_server_wsc.o ../src/eap_common/eap_wsc_common.o
 OBJS += ../src/wps/wps.o
 OBJS += ../src/wps/wps_common.o
 OBJS += ../src/wps/wps_attr_parse.o
@@ -349,7 +349,7 @@ endif
 
 ifdef CONFIG_EAP_IKEV2
 CFLAGS += -DEAP_SERVER_IKEV2
-OBJS += ../src/eap_server/eap_ikev2.o ../src/eap_server/ikev2.o
+OBJS += ../src/eap_server/eap_server_ikev2.o ../src/eap_server/ikev2.o
 OBJS += ../src/eap_common/eap_ikev2_common.o ../src/eap_common/ikev2_common.o
 NEED_DH_GROUPS=y
 NEED_DH_GROUPS_ALL=y
@@ -359,7 +359,7 @@ endif
 
 ifdef CONFIG_EAP_TNC
 CFLAGS += -DEAP_SERVER_TNC
-OBJS += ../src/eap_server/eap_tnc.o
+OBJS += ../src/eap_server/eap_server_tnc.o
 OBJS += ../src/eap_server/tncs.o
 NEED_BASE64=y
 ifndef CONFIG_DRIVER_BSD
@@ -369,10 +369,10 @@ endif
 
 # Basic EAP functionality is needed for EAPOL
 OBJS += eap_register.o
-OBJS += ../src/eap_server/eap.o
+OBJS += ../src/eap_server/eap_server.o
 OBJS += ../src/eap_common/eap_common.o
-OBJS += ../src/eap_server/eap_methods.o
-OBJS += ../src/eap_server/eap_identity.o
+OBJS += ../src/eap_server/eap_server_methods.o
+OBJS += ../src/eap_server/eap_server_identity.o
 CFLAGS += -DEAP_SERVER_IDENTITY
 
 ifdef CONFIG_EAP
@@ -397,7 +397,7 @@ ifdef TLS_FUNCS
 NEED_DES=y
 # Shared TLS functions (needed for EAP_TLS, EAP_PEAP, and EAP_TTLS)
 CFLAGS += -DEAP_TLS_FUNCS
-OBJS += ../src/eap_server/eap_tls_common.o
+OBJS += ../src/eap_server/eap_server_tls_common.o
 NEED_TLS_PRF=y
 endif
 

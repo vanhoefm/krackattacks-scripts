@@ -78,20 +78,20 @@ CFLAGS += -DIEEE8021X_EAPOL
 
 
 # Optional components to add EAP server support
-OBJS_server += ../src/eap_server/eap_tls.o
-OBJS_server += ../src/eap_server/eap_peap.o
-OBJS_server += ../src/eap_server/eap_ttls.o
-OBJS_server += ../src/eap_server/eap_md5.o
-OBJS_server += ../src/eap_server/eap_mschapv2.o
-OBJS_server += ../src/eap_server/eap_gtc.o
-OBJS_server += ../src/eap_server/eap_psk.o
-OBJS_server += ../src/eap_server/eap_pax.o
-OBJS_server += ../src/eap_server/eap_sake.o
-OBJS_server += ../src/eap_server/eap_gpsk.o
-OBJS_server += ../src/eap_server/eap.o
-OBJS_server += ../src/eap_server/eap_identity.o
-OBJS_server += ../src/eap_server/eap_methods.o
-OBJS_server += ../src/eap_server/eap_tls_common.o
+OBJS_server += ../src/eap_server/eap_server_tls.o
+OBJS_server += ../src/eap_server/eap_server_peap.o
+OBJS_server += ../src/eap_server/eap_server_ttls.o
+OBJS_server += ../src/eap_server/eap_server_md5.o
+OBJS_server += ../src/eap_server/eap_server_mschapv2.o
+OBJS_server += ../src/eap_server/eap_server_gtc.o
+OBJS_server += ../src/eap_server/eap_server_psk.o
+OBJS_server += ../src/eap_server/eap_server_pax.o
+OBJS_server += ../src/eap_server/eap_server_sake.o
+OBJS_server += ../src/eap_server/eap_server_gpsk.o
+OBJS_server += ../src/eap_server/eap_server.o
+OBJS_server += ../src/eap_server/eap_server_identity.o
+OBJS_server += ../src/eap_server/eap_server_methods.o
+OBJS_server += ../src/eap_server/eap_server_tls_common.o
 CFLAGS += -DEAP_SERVER
 
 

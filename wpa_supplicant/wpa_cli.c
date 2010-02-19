@@ -1347,7 +1347,7 @@ static int wpa_cli_cmd_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		       "address, is required.\n");
 		return -1;
 	}
-	snprintf(buf, sizeof(buf), "STA %s", argv[0]);
+	os_snprintf(buf, sizeof(buf), "STA %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
 }
 
@@ -1395,7 +1395,7 @@ static int wpa_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	if (wpa_ctrl_command_sta(ctrl, "STA-FIRST", addr, sizeof(addr)))
 		return 0;
 	do {
-		snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
+		os_snprintf(cmd, sizeof(cmd), "STA-NEXT %s", addr);
 	} while (wpa_ctrl_command_sta(ctrl, cmd, addr, sizeof(addr)) == 0);
 
 	return -1;

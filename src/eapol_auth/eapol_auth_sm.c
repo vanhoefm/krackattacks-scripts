@@ -1004,8 +1004,8 @@ static const char * eapol_sm_get_eap_req_id_text(void *ctx, size_t *len)
 
 static struct eapol_callbacks eapol_cb =
 {
-	.get_eap_user = eapol_sm_get_eap_user,
-	.get_eap_req_id_text = eapol_sm_get_eap_req_id_text,
+	eapol_sm_get_eap_user,
+	eapol_sm_get_eap_req_id_text
 };
 
 

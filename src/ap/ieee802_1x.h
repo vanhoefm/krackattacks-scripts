@@ -21,6 +21,10 @@ struct eapol_state_machine;
 struct hostapd_config;
 struct hostapd_bss_config;
 
+#ifdef _MSC_VER
+#pragma pack(push, 1)
+#endif /* _MSC_VER */
+
 /* RFC 3580, 4. RC4 EAPOL-Key Frame */
 
 struct ieee802_1x_eapol_key {
@@ -43,7 +47,11 @@ struct ieee802_1x_eapol_key {
 	 * represents the number of least significant octets from
 	 * MS-MPPE-Send-Key attribute to be used as the keying material;
 	 * RC4 key used in encryption = Key-IV + MS-MPPE-Recv-Key */
-} __attribute__ ((packed));
+} STRUCT_PACKED;
+
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif /* _MSC_VER */
 
 
 void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,

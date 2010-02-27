@@ -15,3 +15,5 @@ case "$1" in
 		$WPACLI resume
 		;;
 esac
+
+exit 0

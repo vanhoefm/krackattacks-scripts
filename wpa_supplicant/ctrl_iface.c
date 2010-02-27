@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1812,6 +1812,10 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = ap_ctrl_iface_sta_next(wpa_s, buf + 9, reply,
 						   reply_size);
 #endif /* CONFIG_AP */
+	} else if (os_strcmp(buf, "SUSPEND") == 0) {
+		wpas_notify_suspend(wpa_s->global);
+	} else if (os_strcmp(buf, "RESUME") == 0) {
+		wpas_notify_resume(wpa_s->global);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;
@@ -2038,6 +2042,10 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 			global, reply, reply_size);
 	} else if (os_strcmp(buf, "TERMINATE") == 0) {
 		wpa_supplicant_terminate_proc(global);
+	} else if (os_strcmp(buf, "SUSPEND") == 0) {
+		wpas_notify_suspend(global);
+	} else if (os_strcmp(buf, "RESUME") == 0) {
+		wpas_notify_resume(global);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

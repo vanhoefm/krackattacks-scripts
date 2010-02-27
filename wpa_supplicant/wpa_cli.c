@@ -1403,6 +1403,18 @@ static int wpa_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 #endif /* CONFIG_AP */
 
 
+static int wpa_cli_cmd_suspend(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "SUSPEND");
+}
+
+
+static int wpa_cli_cmd_resume(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "RESUME");
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -1597,6 +1609,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "= get information about all associated stations (AP)" },
 #endif /* CONFIG_AP */
+	{ "suspend", wpa_cli_cmd_suspend, cli_cmd_flag_none,
+	  "= notification of suspend/hibernate" },
+	{ "resume", wpa_cli_cmd_resume, cli_cmd_flag_none,
+	  "= notification of resume/thaw" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

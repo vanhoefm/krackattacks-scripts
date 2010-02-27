@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Event notifications
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -22,6 +22,8 @@
 #include "dbus/dbus_common.h"
 #include "dbus/dbus_old.h"
 #include "dbus/dbus_new.h"
+#include "driver_i.h"
+#include "scan.h"
 #include "notify.h"
 
 int wpas_notify_supplicant_initialized(struct wpa_global *global)
@@ -300,4 +302,38 @@ void wpas_notify_debug_timestamp_changed(struct wpa_global *global)
 void wpas_notify_debug_show_keys_changed(struct wpa_global *global)
 {
 	wpas_dbus_signal_debug_show_keys_changed(global);
+}
+
+
+void wpas_notify_suspend(struct wpa_global *global)
+{
+	struct wpa_supplicant *wpa_s;
+
+	os_get_time(&global->suspend_time);
+	wpa_printf(MSG_DEBUG, "System suspend notification");
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
+		wpa_drv_suspend(wpa_s);
+}
+
+
+void wpas_notify_resume(struct wpa_global *global)
+{
+	struct os_time now;
+	int slept;
+	struct wpa_supplicant *wpa_s;
+
+	if (global->suspend_time.sec == 0)
+		slept = -1;
+	else {
+		os_get_time(&now);
+		slept = now.sec - global->suspend_time.sec;
+	}
+	wpa_printf(MSG_DEBUG, "System resume notification (slept %d seconds)",
+		   slept);
+
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		wpa_drv_resume(wpa_s);
+		if (wpa_s->wpa_state == WPA_DISCONNECTED)
+			wpa_supplicant_req_scan(wpa_s, 0, 100000);
+	}
 }

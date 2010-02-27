@@ -1731,6 +1731,18 @@ struct wpa_driver_ops {
 	 * normal station operations like scanning to be completed.
 	 */
 	int (*deinit_ap)(void *priv);
+
+	/**
+	 * suspend - Notification on system suspend/hibernate event
+	 * @priv: Private driver interface data
+	 */
+	void (*suspend)(void *priv);
+
+	/**
+	 * resume - Notification on system resume/thaw event
+	 * @priv: Private driver interface data
+	 */
+	void (*resume)(void *priv);
 };
 
 

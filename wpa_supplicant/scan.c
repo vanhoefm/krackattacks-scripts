@@ -216,6 +216,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 #endif /* CONFIG_WPS */
 	struct wpa_driver_scan_params params;
 	size_t max_ssids;
+	enum wpa_states prev_state;
 
 	if (wpa_s->disconnected && !wpa_s->scan_req) {
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
@@ -271,6 +272,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	os_memset(&params, 0, sizeof(params));
 
+	prev_state = wpa_s->wpa_state;
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
@@ -368,6 +370,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	if (ret) {
 		wpa_printf(MSG_WARNING, "Failed to initiate AP scan.");
+		if (prev_state != wpa_s->wpa_state)
+			wpa_supplicant_set_state(wpa_s, prev_state);
 		wpa_supplicant_req_scan(wpa_s, 10, 0);
 	} else
 		wpa_s->scan_runs++;

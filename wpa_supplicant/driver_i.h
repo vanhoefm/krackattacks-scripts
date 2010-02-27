@@ -456,4 +456,16 @@ static inline int wpa_drv_deinit_ap(struct wpa_supplicant *wpa_s)
 	return 0;
 }
 
+static inline void wpa_drv_suspend(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->suspend)
+		wpa_s->driver->suspend(wpa_s->drv_priv);
+}
+
+static inline void wpa_drv_resume(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->resume)
+		wpa_s->driver->resume(wpa_s->drv_priv);
+}
+
 #endif /* DRIVER_I_H */

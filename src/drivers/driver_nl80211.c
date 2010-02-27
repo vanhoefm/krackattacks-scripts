@@ -4996,6 +4996,16 @@ static int wpa_driver_nl80211_deinit_ap(void *priv)
 }
 
 
+static void wpa_driver_nl80211_resume(void *priv)
+{
+	struct wpa_driver_nl80211_data *drv = priv;
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Failed to set interface up on "
+			   "resume event");
+	}
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -5053,4 +5063,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.release_interface_addr = wpa_driver_nl80211_release_interface_addr,
 	.disable_11b_rates = wpa_driver_nl80211_disable_11b_rates,
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
+	.resume = wpa_driver_nl80211_resume,
 };

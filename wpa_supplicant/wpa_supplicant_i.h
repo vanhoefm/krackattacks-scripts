@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Internal definitions
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -194,6 +194,7 @@ struct wpa_global {
 	struct wpas_dbus_priv *dbus;
 	void **drv_priv;
 	size_t drv_count;
+	struct os_time suspend_time;
 };
 
 

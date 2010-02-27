@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Event notifications
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -75,5 +75,7 @@ void wpas_notify_blob_removed(struct wpa_supplicant *wpa_s, const char *name);
 void wpas_notify_debug_level_changed(struct wpa_global *global);
 void wpas_notify_debug_timestamp_changed(struct wpa_global *global);
 void wpas_notify_debug_show_keys_changed(struct wpa_global *global);
+void wpas_notify_suspend(struct wpa_global *global);
+void wpas_notify_resume(struct wpa_global *global);
 
 #endif /* NOTIFY_H */

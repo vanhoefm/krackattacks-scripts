@@ -113,6 +113,7 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+	wpa_s->current_bss = NULL;
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);
 

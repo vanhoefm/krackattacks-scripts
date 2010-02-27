@@ -1510,6 +1510,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_assoc(wpa_s, data);
 		break;
 	case EVENT_DISASSOC:
+		wpa_printf(MSG_DEBUG, "Disassociation notification");
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface && data) {
 			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
@@ -1521,6 +1522,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			sme_event_disassoc(wpa_s, data);
 		/* fall through */
 	case EVENT_DEAUTH:
+		if (event == EVENT_DEAUTH)
+			wpa_printf(MSG_DEBUG, "Deauthentication notification");
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface && data) {
 			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],

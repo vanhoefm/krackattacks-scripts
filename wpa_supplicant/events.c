@@ -820,6 +820,14 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 	wpa_printf(MSG_DEBUG, "Selected BSS: " MACSTR " level=%d",
 		   MAC2STR(selected->bssid), selected->level);
 
+	if (wpa_s->current_ssid->bssid_set &&
+	    os_memcmp(selected->bssid, wpa_s->current_ssid->bssid, ETH_ALEN) ==
+	    0) {
+		wpa_printf(MSG_DEBUG, "Allow reassociation - selected BSS has "
+			   "preferred BSSID");
+		return 1;
+	}
+
 	min_diff = 2;
 	if (current_bss->level < 0) {
 		if (current_bss->level < -85)

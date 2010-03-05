@@ -19,14 +19,11 @@
 #include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
 #include "wpa_supplicant_i.h"
+#include "config.h"
 #include "notify.h"
 #include "scan.h"
 #include "bss.h"
 
-
-#ifndef WPA_BSS_MAX_COUNT
-#define WPA_BSS_MAX_COUNT 200
-#endif /* WPA_BSS_MAX_COUNT */
 
 /**
  * WPA_BSS_EXPIRATION_PERIOD - Period of expiration run in seconds
@@ -139,7 +136,7 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 	wpa_printf(MSG_DEBUG, "BSS: Add new id %u BSSID " MACSTR " SSID '%s'",
 		   bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
 	wpas_notify_bss_added(wpa_s, bss->bssid, bss->id);
-	if (wpa_s->num_bss > WPA_BSS_MAX_COUNT) {
+	if (wpa_s->num_bss > wpa_s->conf->bss_max_count) {
 		/* Remove the oldest entry */
 		wpa_bss_remove(wpa_s, dl_list_first(&wpa_s->bss,
 						    struct wpa_bss, list));

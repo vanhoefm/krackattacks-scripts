@@ -22,6 +22,7 @@
 #define DEFAULT_AP_SCAN 1
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 #define DEFAULT_FAST_REAUTH 1
+#define DEFAULT_BSS_MAX_COUNT 200
 
 #include "config_ssid.h"
 
@@ -331,6 +332,11 @@ struct wpa_config {
 	 *	ctrl_iface to external program(s)
 	 */
 	int wps_cred_processing;
+
+	/**
+	 * bss_max_count - Maximum number of BSS entries to keep in memory
+	 */
+	unsigned int bss_max_count;
 };
 
 

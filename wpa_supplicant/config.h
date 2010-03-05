@@ -337,6 +337,14 @@ struct wpa_config {
 	 * bss_max_count - Maximum number of BSS entries to keep in memory
 	 */
 	unsigned int bss_max_count;
+
+	/**
+	 * filter_ssids - SSID-based scan result filtering
+	 *
+	 *   0 = do not filter scan results
+	 *   1 = only include configured SSIDs in scan results/BSS table
+	 */
+	int filter_ssids;
 };
 
 

@@ -108,6 +108,9 @@ struct wpa_driver_nl80211_data {
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
 
+	struct wpa_driver_scan_filter *filter_ssids;
+	size_t num_filter_ssids;
+
 #ifdef HOSTAPD
 	int eapol_sock; /* socket for EAPOL frames */
 
@@ -1471,6 +1474,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	eloop_cancel_timeout(wpa_driver_nl80211_probe_req_report_timeout,
 			     drv, NULL);
 
+	os_free(drv->filter_ssids);
+
 	os_free(drv);
 }
 
@@ -1518,6 +1523,11 @@ static int wpa_driver_nl80211_scan(void *priv,
 		nlmsg_free(freqs);
 		return -1;
 	}
+
+	os_free(drv->filter_ssids);
+	drv->filter_ssids = params->filter_ssids;
+	params->filter_ssids = NULL;
+	drv->num_filter_ssids = params->num_filter_ssids;
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
 		    NL80211_CMD_TRIGGER_SCAN, 0);
@@ -1598,6 +1608,57 @@ nla_put_failure:
 }
 
 
+static const u8 * nl80211_get_ie(const u8 *ies, size_t ies_len, u8 ie)
+{
+	const u8 *end, *pos;
+
+	if (ies == NULL)
+		return NULL;
+
+	pos = ies;
+	end = ies + ies_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == ie)
+			return pos;
+		pos += 2 + pos[1];
+	}
+
+	return NULL;
+}
+
+
+static int nl80211_scan_filtered(struct wpa_driver_nl80211_data *drv,
+				 const u8 *ie, size_t ie_len)
+{
+	const u8 *ssid;
+	size_t i;
+
+	if (drv->filter_ssids == NULL)
+		return 0;
+
+	ssid = nl80211_get_ie(ie, ie_len, WLAN_EID_SSID);
+	if (ssid == NULL)
+		return 1;
+
+	for (i = 0; i < drv->num_filter_ssids; i++) {
+		if (ssid[1] == drv->filter_ssids[i].ssid_len &&
+		    os_memcmp(ssid + 2, drv->filter_ssids[i].ssid, ssid[1]) ==
+		    0)
+			return 0;
+	}
+
+	return 1;
+}
+
+
+struct nl80211_bss_info_arg {
+	struct wpa_driver_nl80211_data *drv;
+	struct wpa_scan_results *res;
+};
+
 static int bss_info_handler(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -1616,7 +1677,8 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		[NL80211_BSS_SEEN_MS_AGO] = { .type = NLA_U32 },
 		[NL80211_BSS_BEACON_IES] = { .type = NLA_UNSPEC },
 	};
-	struct wpa_scan_results *res = arg;
+	struct nl80211_bss_info_arg *_arg = arg;
+	struct wpa_scan_results *res = _arg->res;
 	struct wpa_scan_res **tmp;
 	struct wpa_scan_res *r;
 	const u8 *ie, *beacon_ie;
@@ -1644,6 +1706,10 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		beacon_ie = NULL;
 		beacon_ie_len = 0;
 	}
+
+	if (nl80211_scan_filtered(_arg->drv, ie ? ie : beacon_ie,
+				  ie ? ie_len : beacon_ie_len))
+		return NL_SKIP;
 
 	r = os_zalloc(sizeof(*r) + ie_len + beacon_ie_len);
 	if (r == NULL)
@@ -1793,6 +1859,7 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 	struct nl_msg *msg;
 	struct wpa_scan_results *res;
 	int ret;
+	struct nl80211_bss_info_arg arg;
 
 	res = os_zalloc(sizeof(*res));
 	if (res == NULL)
@@ -1805,7 +1872,9 @@ nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 		    NL80211_CMD_GET_SCAN, 0);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	ret = send_and_recv_msgs(drv, msg, bss_info_handler, res);
+	arg.drv = drv;
+	arg.res = res;
+	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
 	msg = NULL;
 	if (ret == 0) {
 		wpa_printf(MSG_DEBUG, "Received scan results (%lu BSSes)",

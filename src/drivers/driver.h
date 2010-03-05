@@ -237,6 +237,30 @@ struct wpa_driver_scan_params {
 	 * The frequency is set in MHz. The array is zero-terminated.
 	 */
 	int *freqs;
+
+	/**
+	 * filter_ssids - Filter for reporting SSIDs
+	 *
+	 * This optional parameter can be used to request the driver wrapper to
+	 * filter scan results to include only the specified SSIDs. %NULL
+	 * indicates that no filtering is to be done. This can be used to
+	 * reduce memory needs for scan results in environments that have large
+	 * number of APs with different SSIDs.
+	 *
+	 * The driver wrapper is allowed to take this allocated buffer into its
+	 * own use by setting the pointer to %NULL. In that case, the driver
+	 * wrapper is responsible for freeing the buffer with os_free() once it
+	 * is not needed anymore.
+	 */
+	struct wpa_driver_scan_filter {
+		u8 ssid[32];
+		size_t ssid_len;
+	} *filter_ssids;
+
+	/**
+	 * num_filter_ssids - Number of entries in filter_ssids array
+	 */
+	size_t num_filter_ssids;
 };
 
 /**

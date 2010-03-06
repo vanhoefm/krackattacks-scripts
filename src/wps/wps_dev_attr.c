@@ -284,7 +284,9 @@ static int wps_process_dev_name(struct wps_device_data *dev, const u8 *str,
 static int wps_process_primary_dev_type(struct wps_device_data *dev,
 					const u8 *dev_type)
 {
+#ifndef CONFIG_NO_STDOUT_DEBUG
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 
 	if (dev_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Primary Device Type received");

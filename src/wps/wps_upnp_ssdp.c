@@ -524,7 +524,9 @@ fail:
 static void ssdp_parse_msearch(struct upnp_wps_device_sm *sm,
 			       struct sockaddr_in *client, const char *data)
 {
+#ifndef CONFIG_NO_STDOUT_DEBUG
 	const char *start = data;
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 	const char *end;
 	int got_host = 0;
 	int got_st = 0, st_match = 0;

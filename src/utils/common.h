@@ -17,7 +17,7 @@
 
 #include "os.h"
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__GLIBC__)
 #include <endian.h>
 #include <byteswap.h>
 #endif /* __linux__ */

@@ -35,11 +35,14 @@
 #include <netproto/802_11/ieee80211_ioctl.h>
 #include <netproto/802_11/ieee80211_dragonfly.h>
 #else /* __DragonFly__ */
+#ifdef __GLIBC__
+#include <netinet/ether.h>
+#endif /* __GLIBC__ */
 #include <net80211/ieee80211.h>
 #include <net80211/ieee80211_ioctl.h>
 #include <net80211/ieee80211_crypto.h>
-#endif /* __DragonFly__ */
-#if __FreeBSD__
+#endif /* __DragonFly__ || __GLIBC__ */
+#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
 #include <net80211/ieee80211_freebsd.h>
 #endif
 #if __NetBSD__

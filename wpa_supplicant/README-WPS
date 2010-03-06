@@ -61,7 +61,6 @@ configuration that includes WPS support and Linux wireless extensions
 -based driver interface:
 
 CONFIG_DRIVER_WEXT=y
-CONFIG_EAP=y
 CONFIG_WPS=y
 
 

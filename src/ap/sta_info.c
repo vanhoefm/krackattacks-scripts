@@ -32,8 +32,8 @@
 #include "vlan_init.h"
 #include "sta_info.h"
 
-static int ap_sta_in_other_bss(struct hostapd_data *hapd,
-			       struct sta_info *sta, u32 flags);
+static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
+				       struct sta_info *sta);
 static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx);
 #ifdef CONFIG_IEEE80211W
 static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx);
@@ -123,8 +123,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	if (sta->flags & WLAN_STA_WDS)
 		hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 0);
-	if (!ap_sta_in_other_bss(hapd, sta, WLAN_STA_ASSOC) &&
-	    !(sta->flags & WLAN_STA_PREAUTH))
+
+	if (!(sta->flags & WLAN_STA_PREAUTH))
 		hapd->drv.sta_remove(hapd, sta->addr);
 
 	ap_sta_hash_del(hapd, sta);
@@ -451,6 +451,7 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	hapd->num_sta++;
 	ap_sta_hash_add(hapd, sta);
 	sta->ssid = &hapd->conf->ssid;
+	ap_sta_remove_in_other_bss(hapd, sta);
 
 	return sta;
 }
@@ -472,8 +473,8 @@ static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta)
 }
 
 
-static int ap_sta_in_other_bss(struct hostapd_data *hapd,
-			       struct sta_info *sta, u32 flags)
+static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
+				       struct sta_info *sta)
 {
 	struct hostapd_iface *iface = hapd->iface;
 	size_t i;
@@ -488,11 +489,12 @@ static int ap_sta_in_other_bss(struct hostapd_data *hapd,
 		if (bss == hapd || bss == NULL)
 			continue;
 		sta2 = ap_get_sta(bss, sta->addr);
-		if (sta2 && ((sta2->flags & flags) == flags))
-			return 1;
-	}
+		if (!sta2)
+			continue;
 
-	return 0;
+		ap_sta_disconnect(bss, sta2, sta2->addr,
+				  WLAN_REASON_PREV_AUTH_NOT_VALID);
+	}
 }
 
 
@@ -502,8 +504,7 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 	wpa_printf(MSG_DEBUG, "%s: disassociate STA " MACSTR,
 		   hapd->conf->iface, MAC2STR(sta->addr));
 	sta->flags &= ~WLAN_STA_ASSOC;
-	if (!ap_sta_in_other_bss(hapd, sta, WLAN_STA_ASSOC))
-		ap_sta_remove(hapd, sta);
+	ap_sta_remove(hapd, sta);
 	sta->timeout_next = STA_DEAUTH;
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DISASSOC, 0,
@@ -521,8 +522,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 	wpa_printf(MSG_DEBUG, "%s: deauthenticate STA " MACSTR,
 		   hapd->conf->iface, MAC2STR(sta->addr));
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
-	if (!ap_sta_in_other_bss(hapd, sta, WLAN_STA_ASSOC))
-		ap_sta_remove(hapd, sta);
+	ap_sta_remove(hapd, sta);
 	sta->timeout_next = STA_REMOVE;
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,

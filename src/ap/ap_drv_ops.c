@@ -242,7 +242,7 @@ static int hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
 
 static int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
 {
-	return hostapd_if_add(hapd, WPA_IF_AP_VLAN, ifname, NULL, NULL);
+	return hostapd_if_add(hapd, WPA_IF_AP_VLAN, ifname, NULL, NULL, NULL);
 }
 
 static int hostapd_vlan_if_remove(struct hostapd_data *hapd,
@@ -407,12 +407,13 @@ int hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
 
 
 int hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
-		   const char *ifname, const u8 *addr, void *bss_ctx)
+		   const char *ifname, const u8 *addr, void *bss_ctx,
+		   void **drv_priv)
 {
 	if (hapd->driver == NULL || hapd->driver->if_add == NULL)
 		return -1;
 	return hapd->driver->if_add(hapd->conf->iface, hapd->drv_priv, type,
-				    ifname, addr, bss_ctx);
+				    ifname, addr, bss_ctx, drv_priv);
 }
 
 

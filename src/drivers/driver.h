@@ -1497,11 +1497,13 @@ struct wpa_driver_ops {
 	 * @addr: Local address to use for the interface or %NULL to use the
 	 *	parent interface address
 	 * @bss_ctx: BSS context for %WPA_IF_AP_BSS interfaces
+	 * @drv_priv: Pointer for overwriting the driver context or %NULL if
+	 *	not allowed (applies only to %WPA_IF_AP_BSS type)
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*if_add)(const char *iface, void *priv,
 		      enum wpa_driver_if_type type, const char *ifname,
-		      const u8 *addr, void *bss_ctx);
+		      const u8 *addr, void *bss_ctx, void **drv_priv);
 
 	/**
 	 * if_remove - Remove a virtual interface

@@ -1160,8 +1160,8 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		ifan = (struct if_announcemsghdr *) rtm;
 		if (ifan->ifan_index != drv->ifindex)
 			break;
-		strlcpy(event.interface_status.ifname, drv->ifname,
-			sizeof(event.interface_status.ifname));
+		os_strlcpy(event.interface_status.ifname, drv->ifname,
+			   sizeof(event.interface_status.ifname));
 		switch (ifan->ifan_what) {
 		case IFAN_DEPARTURE:
 			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
@@ -1229,8 +1229,8 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		if (ifm->ifm_index != drv->ifindex)
 			break;
 		if ((rtm->rtm_flags & RTF_UP) == 0) {
-			strlcpy(event.interface_status.ifname, drv->ifname,
-				sizeof(event.interface_status.ifname));
+			os_strlcpy(event.interface_status.ifname, drv->ifname,
+				   sizeof(event.interface_status.ifname));
 			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
 			wpa_printf(MSG_DEBUG, "RTM_IFINFO: Interface '%s' DOWN",
 				   event.interface_status.ifname);

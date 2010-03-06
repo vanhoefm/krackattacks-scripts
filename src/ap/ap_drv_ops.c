@@ -227,14 +227,14 @@ static int hostapd_set_bss_params(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_set_beacon(const char *ifname, struct hostapd_data *hapd,
+static int hostapd_set_beacon(struct hostapd_data *hapd,
 			      const u8 *head, size_t head_len,
 			      const u8 *tail, size_t tail_len, int dtim_period,
 			      int beacon_int)
 {
 	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
 		return 0;
-	return hapd->driver->set_beacon(ifname, hapd->drv_priv,
+	return hapd->driver->set_beacon(hapd->drv_priv,
 					head, head_len, tail, tail_len,
 					dtim_period, beacon_int);
 }

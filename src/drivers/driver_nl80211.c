@@ -2682,7 +2682,7 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 }
 
 
-static int wpa_driver_nl80211_set_beacon(const char *ifname, void *priv,
+static int wpa_driver_nl80211_set_beacon(void *priv,
 					 const u8 *head, size_t head_len,
 					 const u8 *tail, size_t tail_len,
 					 int dtim_period, int beacon_int)
@@ -2693,7 +2693,7 @@ static int wpa_driver_nl80211_set_beacon(const char *ifname, void *priv,
 	u8 cmd = NL80211_CMD_NEW_BEACON;
 	int ret;
 	int beacon_set;
-	int ifindex = if_nametoindex(ifname);
+	int ifindex = if_nametoindex(bss->ifname);
 
 	beacon_set = bss->beacon_set;
 

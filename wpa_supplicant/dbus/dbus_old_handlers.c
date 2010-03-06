@@ -997,6 +997,8 @@ DBusMessage * wpas_dbus_iface_set_network(DBusMessage *message,
 		     value[0] == '"' && ssid->ssid_len) ||
 		    (os_strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
 			wpa_config_update_psk(ssid);
+		else if (os_strcmp(entry.key, "priority") == 0)
+			wpa_config_update_prio_list(wpa_s->conf);
 
 		os_free(value);
 		wpa_dbus_dict_entry_clear(&entry);

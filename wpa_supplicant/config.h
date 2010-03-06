@@ -364,6 +364,7 @@ char * wpa_config_get_no_key(struct wpa_ssid *ssid, const char *var);
 void wpa_config_update_psk(struct wpa_ssid *ssid);
 int wpa_config_add_prio_network(struct wpa_config *config,
 				struct wpa_ssid *ssid);
+int wpa_config_update_prio_list(struct wpa_config *config);
 const struct wpa_config_blob * wpa_config_get_blob(struct wpa_config *config,
 						   const char *name);
 void wpa_config_set_blob(struct wpa_config *config,

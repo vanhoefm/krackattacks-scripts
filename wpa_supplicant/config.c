@@ -1543,7 +1543,7 @@ int wpa_config_add_prio_network(struct wpa_config *config,
  * configuration when a network is being added or removed. This is also called
  * if a priority for a network is changed.
  */
-static int wpa_config_update_prio_list(struct wpa_config *config)
+int wpa_config_update_prio_list(struct wpa_config *config)
 {
 	struct wpa_ssid *ssid;
 	int ret = 0;

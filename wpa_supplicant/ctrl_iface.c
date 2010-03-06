@@ -1092,6 +1092,8 @@ static int wpa_supplicant_ctrl_iface_set_network(
 	     value[0] == '"' && ssid->ssid_len) ||
 	    (os_strcmp(name, "ssid") == 0 && ssid->passphrase))
 		wpa_config_update_psk(ssid);
+	else if (os_strcmp(name, "priority") == 0)
+		wpa_config_update_prio_list(wpa_s->conf);
 
 	return 0;
 }

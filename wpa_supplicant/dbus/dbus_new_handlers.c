@@ -214,6 +214,7 @@ static struct wpa_supplicant * get_iface_by_dbus_path(
 /**
  * set_network_properties - Set properties of a configured network
  * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
  * @ssid: wpa_ssid structure for a configured network
  * @iter: DBus message iterator containing dictionary of network
  * properties to set.
@@ -222,6 +223,7 @@ static struct wpa_supplicant * get_iface_by_dbus_path(
  * Sets network configuration with parameters given id DBus dictionary
  */
 static DBusMessage * set_network_properties(DBusMessage *message,
+					    struct wpa_supplicant *wpa_s,
 					    struct wpa_ssid *ssid,
 					    DBusMessageIter *iter)
 {
@@ -304,6 +306,8 @@ static DBusMessage * set_network_properties(DBusMessage *message,
 		     value[0] == '"' && ssid->ssid_len) ||
 		    (strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
 			wpa_config_update_psk(ssid);
+		else if (os_strcmp(entry.key, "priority") == 0)
+			wpa_config_update_prio_list(wpa_s->conf);
 
 		os_free(value);
 		wpa_dbus_dict_entry_clear(&entry);
@@ -1338,7 +1342,7 @@ DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 	ssid->disabled = 1;
 	wpa_config_set_network_defaults(ssid);
 
-	reply = set_network_properties(message, ssid, &iter);
+	reply = set_network_properties(message, wpa_s, ssid, &iter);
 	if (reply) {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_add_network[dbus]:"
 			   "control interface couldn't set network "
@@ -2911,7 +2915,8 @@ DBusMessage * wpas_dbus_setter_network_properties(
 
 	dbus_message_iter_recurse(&iter, &variant_iter);
 
-	reply = set_network_properties(message, ssid, &variant_iter);
+	reply = set_network_properties(message, net->wpa_s, ssid,
+				       &variant_iter);
 	if (reply)
 		wpa_printf(MSG_DEBUG, "dbus control interface couldn't set "
 			   "network properties");

@@ -468,8 +468,8 @@ bsd_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 }
 
 static int
-bsd_set_sta_authorized(void *priv, const u8 *addr, int total_flags,
-		       int flags_or, int flags_and)
+bsd_set_sta_authorized(const char *ifname, void *priv, const u8 *addr,
+		       int total_flags, int flags_or, int flags_and)
 {
 	int authorized = -1;
 

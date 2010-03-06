@@ -3409,9 +3409,9 @@ static u32 sta_flags_nl80211(int flags)
 }
 
 
-static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
-					    int total_flags, int flags_or,
-					    int flags_and)
+static int wpa_driver_nl80211_sta_set_flags(const char *ifname, void *priv,
+					    const u8 *addr, int total_flags,
+					    int flags_or, int flags_and)
 {
 	struct wpa_driver_nl80211_data *drv = priv;
 	struct nl_msg *msg, *flags = NULL;
@@ -3431,7 +3431,7 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 		    0, NL80211_CMD_SET_STATION, 0);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
-		    if_nametoindex(drv->ifname));
+		    if_nametoindex(ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 
 	/*

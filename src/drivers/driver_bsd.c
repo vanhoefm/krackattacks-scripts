@@ -558,7 +558,7 @@ bsd_set_freq(void *priv, u16 channel)
 }
 
 static int
-bsd_set_opt_ie(const char *ifname, void *priv, const u8 *ie, size_t ie_len)
+bsd_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 {
 #ifdef IEEE80211_IOC_APPIE
 	wpa_printf(MSG_DEBUG, "%s: set WPA+RSN ie (len %lu)", __func__,
@@ -881,7 +881,7 @@ wpa_driver_bsd_set_wpa_ie(struct bsd_driver_data *drv, const u8 *wpa_ie,
 			  size_t wpa_ie_len)
 {
 #ifdef IEEE80211_IOC_APPIE
-	return bsd_set_opt_ie(drv->ifname, drv, wpa_ie, wpa_ie_len);
+	return bsd_set_opt_ie(drv, wpa_ie, wpa_ie_len);
 #else /* IEEE80211_IOC_APPIE */
 	return set80211var(drv, IEEE80211_IOC_OPTIE, wpa_ie, wpa_ie_len);
 #endif /* IEEE80211_IOC_APPIE */

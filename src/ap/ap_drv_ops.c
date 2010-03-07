@@ -382,8 +382,7 @@ int hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
 {
 	if (hapd->driver == NULL || hapd->driver->set_generic_elem == NULL)
 		return 0;
-	return hapd->driver->set_generic_elem(hapd->conf->iface,
-					      hapd->drv_priv, elem, elem_len);
+	return hapd->driver->set_generic_elem(hapd->drv_priv, elem, elem_len);
 }
 
 

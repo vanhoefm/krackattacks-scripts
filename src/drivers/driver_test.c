@@ -815,7 +815,7 @@ static void test_driver_receive_unix(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-static int test_driver_set_generic_elem(const char *ifname, void *priv,
+static int test_driver_set_generic_elem(void *priv,
 					const u8 *elem, size_t elem_len)
 {
 	struct test_driver_bss *bss = priv;

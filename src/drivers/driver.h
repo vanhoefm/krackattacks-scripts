@@ -1251,7 +1251,6 @@ struct wpa_driver_ops {
 
 	/**
 	 * set_generic_elem - Add IEs into Beacon/Probe Response frames (AP)
-	 * @ifname: The interface name (main or virtual BSS)
 	 * @priv: Private driver interface data
 	 * @elem: Information elements
 	 * @elem_len: Length of the elem buffer in octets
@@ -1262,8 +1261,7 @@ struct wpa_driver_ops {
 	 * undefined (set to %NULL) if the driver uses the Beacon template from
 	 * set_beacon().
 	 */
-	int (*set_generic_elem)(const char *ifname, void *priv, const u8 *elem,
-				size_t elem_len);
+	int (*set_generic_elem)(void *priv, const u8 *elem, size_t elem_len);
 
 	/**
 	 * read_sta_data - Fetch station data (AP only)

@@ -653,7 +653,7 @@ madwifi_sta_clear_stats(void *priv, const u8 *addr)
 
 
 static int
-madwifi_set_opt_ie(const char *ifname, void *priv, const u8 *ie, size_t ie_len)
+madwifi_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 {
 	/*
 	 * Do nothing; we setup parameters at startup that define the

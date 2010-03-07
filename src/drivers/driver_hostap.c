@@ -745,7 +745,7 @@ static int hostapd_ioctl_set_generic_elem(struct hostap_driver_data *drv)
 }
 
 
-static int hostap_set_generic_elem(const char *ifname, void *priv,
+static int hostap_set_generic_elem(void *priv,
 				   const u8 *elem, size_t elem_len)
 {
 	struct hostap_driver_data *drv = priv;

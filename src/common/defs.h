@@ -77,7 +77,7 @@ static inline int wpa_key_mgmt_sha256(int akm)
 #define WPA_AUTH_ALG_OPEN BIT(0)
 #define WPA_AUTH_ALG_SHARED BIT(1)
 #define WPA_AUTH_ALG_LEAP BIT(2)
-#define WPA_AUTH_ALG_FT BIT(2)
+#define WPA_AUTH_ALG_FT BIT(3)
 
 
 enum wpa_alg {

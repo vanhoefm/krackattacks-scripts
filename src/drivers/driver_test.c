@@ -1,6 +1,6 @@
 /*
  * Testing driver interface for a simulated network driver
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,6 +29,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "utils/list.h"
 #include "utils/trace.h"
 #include "common/ieee802_11_defs.h"
 #include "crypto/sha1.h"
@@ -45,9 +46,10 @@ struct test_client_socket {
 };
 
 struct test_driver_bss {
-	struct test_driver_bss *next;
+	struct wpa_driver_test_data *drv;
+	struct dl_list list;
 	void *bss_ctx;
-	char ifname[IFNAMSIZ + 1];
+	char ifname[IFNAMSIZ];
 	u8 bssid[ETH_ALEN];
 	u8 *ie;
 	size_t ielen;
@@ -69,7 +71,6 @@ struct wpa_driver_test_data {
 	struct wpa_driver_test_global *global;
 	void *ctx;
 	WPA_TRACE_REF(ctx);
-	char ifname[IFNAMSIZ + 1];
 	u8 own_addr[ETH_ALEN];
 	int test_socket;
 #ifdef DRIVER_TEST_UNIX
@@ -80,9 +81,6 @@ struct wpa_driver_test_data {
 	int hostapd_addr_udp_set;
 	char *own_socket_path;
 	char *test_dir;
-	u8 bssid[ETH_ALEN];
-	u8 ssid[32];
-	size_t ssid_len;
 #define MAX_SCAN_RESULTS 30
 	struct wpa_scan_res *scanres[MAX_SCAN_RESULTS];
 	size_t num_scanres;
@@ -96,11 +94,10 @@ struct wpa_driver_test_data {
 	u8 probe_req_ssid[32];
 	size_t probe_req_ssid_len;
 	int ibss;
-	int privacy;
 	int ap;
 
 	struct test_client_socket *cli;
-	struct test_driver_bss *bss;
+	struct dl_list bss;
 	int udp_port;
 
 	int alloc_iface_idx;
@@ -132,16 +129,13 @@ static void test_driver_free_bss(struct test_driver_bss *bss)
 
 static void test_driver_free_bsses(struct wpa_driver_test_data *drv)
 {
-	struct test_driver_bss *bss, *prev_bss;
+	struct test_driver_bss *bss, *tmp;
 
-	bss = drv->bss;
-	while (bss) {
-		prev_bss = bss;
-		bss = bss->next;
-		test_driver_free_bss(prev_bss);
+	dl_list_for_each_safe(bss, tmp, &drv->bss, struct test_driver_bss,
+			      list) {
+		dl_list_del(&bss->list);
+		test_driver_free_bss(bss);
 	}
-
-	drv->bss = NULL;
 }
 
 
@@ -167,7 +161,8 @@ static int test_driver_send_eapol(void *priv, const u8 *addr, const u8 *data,
 				  size_t data_len, int encrypt,
 				  const u8 *own_addr)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct test_client_socket *cli;
 	struct msghdr msg;
 	struct iovec io[3];
@@ -212,7 +207,8 @@ static int test_driver_send_eapol(void *priv, const u8 *addr, const u8 *data,
 static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 				  u16 proto, const u8 *data, size_t data_len)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct msghdr msg;
 	struct iovec io[3];
 	struct l2_ethhdr eth;
@@ -299,7 +295,8 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 				     size_t data_len)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct msghdr msg;
 	struct iovec io[2];
 	const u8 *dest;
@@ -339,7 +336,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	else
 		freq = drv->current_freq;
 	wpa_printf(MSG_DEBUG, "test_driver(%s): MLME TX on freq %d MHz",
-		   drv->ifname, freq);
+		   dbss->ifname, freq);
 	os_snprintf(cmd, sizeof(cmd), "MLME freq=%d ", freq);
 	io[0].iov_base = cmd;
 	io[0].iov_len = os_strlen(cmd);
@@ -395,7 +392,7 @@ static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
 	closedir(dir);
 #else /* HOSTAPD */
 
-	if (os_memcmp(dest, drv->bssid, ETH_ALEN) == 0 ||
+	if (os_memcmp(dest, dbss->bssid, ETH_ALEN) == 0 ||
 	    drv->test_dir == NULL) {
 		if (drv->hostapd_addr_udp_set) {
 			msg.msg_name = &drv->hostapd_addr_udp;
@@ -520,7 +517,7 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 		wpa_supplicant_event(drv->ctx, EVENT_RX_PROBE_REQ, &event);
 	}
 
-	for (bss = drv->bss; bss; bss = bss->next) {
+	dl_list_for_each(bss, &drv->bss, struct test_driver_bss, list) {
 		pos = buf;
 		end = buf + sizeof(buf);
 
@@ -561,7 +558,7 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 	u8 ie[256], ssid[32];
 	size_t ielen, ssid_len = 0;
 	char *pos, *pos2, cmd[50];
-	struct test_driver_bss *bss;
+	struct test_driver_bss *bss, *tmp;
 
 	/* data: STA-addr SSID(hex) IEs(hex) */
 
@@ -598,10 +595,13 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 			ielen = 0;
 	}
 
-	for (bss = drv->bss; bss; bss = bss->next) {
-		if (bss->ssid_len == ssid_len &&
-		    memcmp(bss->ssid, ssid, ssid_len) == 0)
+	bss = NULL;
+	dl_list_for_each(tmp, &drv->bss, struct test_driver_bss, list) {
+		if (tmp->ssid_len == ssid_len &&
+		    os_memcmp(tmp->ssid, ssid, ssid_len) == 0) {
+			bss = tmp;
 			break;
+		}
 	}
 	if (bss == NULL) {
 		wpa_printf(MSG_DEBUG, "%s: No matching SSID found from "
@@ -712,6 +712,9 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 	u16 fc;
 	union wpa_event_data event;
 	int freq = 0, own_freq;
+	struct test_driver_bss *bss;
+
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 
 	if (datalen > 6 && os_memcmp(data, "freq=", 5) == 0) {
 		size_t pos;
@@ -722,7 +725,7 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 		if (pos < datalen) {
 			freq = atoi((const char *) &data[5]);
 			wpa_printf(MSG_DEBUG, "test_driver(%s): MLME RX on "
-				   "freq %d MHz", drv->ifname, freq);
+				   "freq %d MHz", bss->ifname, freq);
 			pos++;
 			data += pos;
 			datalen -= pos;
@@ -737,7 +740,7 @@ static void test_driver_mlme(struct wpa_driver_test_data *drv,
 	if (freq && own_freq && freq != own_freq) {
 		wpa_printf(MSG_DEBUG, "test_driver(%s): Ignore MLME RX on "
 			   "another frequency %d MHz (own %d MHz)",
-			   drv->ifname, freq, own_freq);
+			   bss->ifname, freq, own_freq);
 		return;
 	}
 
@@ -812,28 +815,10 @@ static void test_driver_receive_unix(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-static struct test_driver_bss *
-test_driver_get_bss(struct wpa_driver_test_data *drv, const char *ifname)
-{
-	struct test_driver_bss *bss;
-
-	for (bss = drv->bss; bss; bss = bss->next) {
-		if (os_strcmp(bss->ifname, ifname) == 0)
-			return bss;
-	}
-	return NULL;
-}
-
-
 static int test_driver_set_generic_elem(const char *ifname, void *priv,
 					const u8 *elem, size_t elem_len)
 {
-	struct wpa_driver_test_data *drv = priv;
-	struct test_driver_bss *bss;
-
-	bss = test_driver_get_bss(drv, ifname);
-	if (bss == NULL)
-		return -1;
+	struct test_driver_bss *bss = priv;
 
 	os_free(bss->ie);
 
@@ -859,12 +844,7 @@ static int test_driver_set_ap_wps_ie(const char *ifname, void *priv,
 				     const struct wpabuf *beacon,
 				     const struct wpabuf *proberesp)
 {
-	struct wpa_driver_test_data *drv = priv;
-	struct test_driver_bss *bss;
-
-	bss = test_driver_get_bss(drv, ifname);
-	if (bss == NULL)
-		return -1;
+	struct test_driver_bss *bss = priv;
 
 	if (beacon == NULL)
 		wpa_printf(MSG_DEBUG, "test_driver: Clear Beacon WPS IE");
@@ -920,7 +900,8 @@ static int test_driver_set_ap_wps_ie(const char *ifname, void *priv,
 static int test_driver_sta_deauth(void *priv, const u8 *own_addr,
 				  const u8 *addr, int reason)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct test_client_socket *cli;
 
 	if (drv->test_socket < 0)
@@ -944,7 +925,8 @@ static int test_driver_sta_deauth(void *priv, const u8 *own_addr,
 static int test_driver_sta_disassoc(void *priv, const u8 *own_addr,
 				    const u8 *addr, int reason)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct test_client_socket *cli;
 
 	if (drv->test_socket < 0)
@@ -966,9 +948,10 @@ static int test_driver_sta_disassoc(void *priv, const u8 *own_addr,
 
 
 static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid,
-			       void *bss_ctx)
+			       void *bss_ctx, void **drv_priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s bssid=" MACSTR ")",
@@ -979,13 +962,18 @@ static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid,
 		return -1;
 
 	bss->bss_ctx = bss_ctx;
+	bss->drv = drv;
 	os_strlcpy(bss->ifname, ifname, IFNAMSIZ);
-	memcpy(bss->bssid, bssid, ETH_ALEN);
+	os_memcpy(bss->bssid, bssid, ETH_ALEN);
 
-	bss->next = drv->bss;
-	drv->bss = bss;
-	drv->global->bss_add_used = 1;
-	os_memcpy(drv->global->req_addr, bssid, ETH_ALEN);
+	dl_list_add(&drv->bss, &bss->list);
+	if (drv->global) {
+		drv->global->bss_add_used = 1;
+		os_memcpy(drv->global->req_addr, bssid, ETH_ALEN);
+	}
+
+	if (drv_priv)
+		*drv_priv = bss;
 
 	return 0;
 }
@@ -993,20 +981,16 @@ static int test_driver_bss_add(void *priv, const char *ifname, const u8 *bssid,
 
 static int test_driver_bss_remove(void *priv, const char *ifname)
 {
-	struct wpa_driver_test_data *drv = priv;
-	struct test_driver_bss *bss, *prev;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
+	struct test_driver_bss *bss;
 	struct test_client_socket *cli, *prev_c;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, ifname);
 
-	for (prev = NULL, bss = drv->bss; bss; prev = bss, bss = bss->next) {
+	dl_list_for_each(bss, &drv->bss, struct test_driver_bss, list) {
 		if (strcmp(bss->ifname, ifname) != 0)
 			continue;
-
-		if (prev)
-			prev->next = bss->next;
-		else
-			drv->bss = bss->next;
 
 		for (prev_c = NULL, cli = drv->cli; cli;
 		     prev_c = cli, cli = cli->next) {
@@ -1020,6 +1004,7 @@ static int test_driver_bss_remove(void *priv, const char *ifname)
 			break;
 		}
 
+		dl_list_del(&bss->list);
 		test_driver_free_bss(bss);
 		return 0;
 	}
@@ -1035,7 +1020,8 @@ static int test_driver_if_add(void *priv, enum wpa_driver_if_type type,
 	wpa_printf(MSG_DEBUG, "%s(type=%d ifname=%s bss_ctx=%p)",
 		   __func__, type, ifname, bss_ctx);
 	if (type == WPA_IF_AP_BSS)
-		return test_driver_bss_add(priv, ifname, addr, bss_ctx);
+		return test_driver_bss_add(priv, ifname, addr, bss_ctx,
+					   drv_priv);
 	return 0;
 }
 
@@ -1060,18 +1046,10 @@ static int test_driver_valid_bss_mask(void *priv, const u8 *addr,
 static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
 				int len)
 {
-	struct wpa_driver_test_data *drv = priv;
-	struct test_driver_bss *bss;
+	struct test_driver_bss *bss = priv;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, ifname);
 	wpa_hexdump_ascii(MSG_DEBUG, "test_driver_set_ssid: SSID", buf, len);
-
-	bss = test_driver_get_bss(drv, ifname);
-	if (bss == NULL) {
-		wpa_printf(MSG_DEBUG, "%s(ifname=%s): failed to find BSS data",
-			   __func__, ifname);
-		return -1;
-	}
 
 	if (len < 0 || (size_t) len > sizeof(bss->ssid))
 		return -1;
@@ -1085,17 +1063,12 @@ static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
 
 static int test_driver_set_privacy(const char *ifname, void *priv, int enabled)
 {
-	struct wpa_driver_test_data *drv = priv;
-	struct test_driver_bss *bss;
+	struct test_driver_bss *dbss = priv;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s enabled=%d)",
 		   __func__, ifname, enabled);
 
-	bss = test_driver_get_bss(drv, ifname);
-	if (bss == NULL)
-		return -1;
-
-	bss->privacy = enabled;
+	dbss->privacy = enabled;
 
 	return 0;
 }
@@ -1113,9 +1086,9 @@ static int test_driver_set_sta_vlan(void *priv, const u8 *addr,
 static int test_driver_sta_add(const char *ifname, void *priv,
 			       struct hostapd_sta_add_params *params)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *bss = priv;
+	struct wpa_driver_test_data *drv = bss->drv;
 	struct test_client_socket *cli;
-	struct test_driver_bss *bss;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s addr=" MACSTR " aid=%d "
 		   "capability=0x%x listen_interval=%d)",
@@ -1136,13 +1109,6 @@ static int test_driver_sta_add(const char *ifname, void *priv,
 		return -1;
 	}
 
-	bss = test_driver_get_bss(drv, ifname);
-	if (bss == NULL) {
-		wpa_printf(MSG_DEBUG, "%s: No matching interface found from "
-			   "configured BSSes", __func__);
-		return -1;
-	}
-
 	cli->bss = bss;
 
 	return 0;
@@ -1153,6 +1119,7 @@ static struct wpa_driver_test_data * test_alloc_data(void *ctx,
 						     const char *ifname)
 {
 	struct wpa_driver_test_data *drv;
+	struct test_driver_bss *bss;
 
 	drv = os_zalloc(sizeof(struct wpa_driver_test_data));
 	if (drv == NULL) {
@@ -1161,9 +1128,19 @@ static struct wpa_driver_test_data * test_alloc_data(void *ctx,
 		return NULL;
 	}
 
+	bss = os_zalloc(sizeof(struct test_driver_bss));
+	if (bss == NULL) {
+		os_free(drv);
+		return NULL;
+	}
+
 	drv->ctx = ctx;
 	wpa_trace_add_ref(drv, ctx, ctx);
-	os_strlcpy(drv->ifname, ifname, IFNAMSIZ);
+	dl_list_init(&drv->bss);
+	dl_list_add(&drv->bss, &bss->list);
+	os_strlcpy(bss->ifname, ifname, IFNAMSIZ);
+	bss->bss_ctx = ctx;
+	bss->drv = drv;
 
 	/* Generate a MAC address to help testing with multiple STAs */
 	drv->own_addr[0] = 0x02; /* locally administered */
@@ -1183,29 +1160,23 @@ static void * test_driver_init(struct hostapd_data *hapd,
 	struct sockaddr_in addr_in;
 	struct sockaddr *addr;
 	socklen_t alen;
+	struct test_driver_bss *bss;
 
 	drv = test_alloc_data(hapd, params->ifname);
 	if (drv == NULL)
 		return NULL;
 	drv->ap = 1;
-	drv->bss = os_zalloc(sizeof(*drv->bss));
-	if (drv->bss == NULL) {
-		wpa_printf(MSG_ERROR, "Could not allocate memory for test "
-			   "driver BSS data");
-		os_free(drv);
-		return NULL;
-	}
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 
-	drv->bss->bss_ctx = hapd;
-	os_strlcpy(drv->bss->ifname, params->ifname, IFNAMSIZ);
-	os_memcpy(drv->bss->bssid, drv->own_addr, ETH_ALEN);
+	bss->bss_ctx = hapd;
+	os_memcpy(bss->bssid, drv->own_addr, ETH_ALEN);
 	os_memcpy(params->own_addr, drv->own_addr, ETH_ALEN);
 
 	if (params->test_socket) {
 		if (os_strlen(params->test_socket) >=
 		    sizeof(addr_un.sun_path)) {
 			printf("Too long test_socket path\n");
-			wpa_driver_test_deinit(drv);
+			wpa_driver_test_deinit(bss);
 			return NULL;
 		}
 		if (strncmp(params->test_socket, "DIR:", 4) == 0) {
@@ -1224,7 +1195,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 			drv->own_socket_path = os_strdup(params->test_socket);
 		}
 		if (drv->own_socket_path == NULL && drv->udp_port == 0) {
-			wpa_driver_test_deinit(drv);
+			wpa_driver_test_deinit(bss);
 			return NULL;
 		}
 
@@ -1232,7 +1203,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 					  SOCK_DGRAM, 0);
 		if (drv->test_socket < 0) {
 			perror("socket");
-			wpa_driver_test_deinit(drv);
+			wpa_driver_test_deinit(bss);
 			return NULL;
 		}
 
@@ -1255,7 +1226,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 			close(drv->test_socket);
 			if (drv->own_socket_path)
 				unlink(drv->own_socket_path);
-			wpa_driver_test_deinit(drv);
+			wpa_driver_test_deinit(bss);
 			return NULL;
 		}
 		eloop_register_read_sock(drv->test_socket,
@@ -1263,7 +1234,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 	} else
 		drv->test_socket = -1;
 
-	return drv;
+	return bss;
 }
 
 
@@ -1366,7 +1337,8 @@ static void wpa_driver_scan_dir(struct wpa_driver_test_data *drv,
 static int wpa_driver_test_scan(void *priv,
 				struct wpa_driver_scan_params *params)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	size_t i;
 
 	wpa_printf(MSG_DEBUG, "%s: priv=%p", __func__, priv);
@@ -1428,7 +1400,8 @@ static int wpa_driver_test_scan(void *priv,
 
 static struct wpa_scan_results * wpa_driver_test_get_scan_results2(void *priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct wpa_scan_results *res;
 	size_t i;
 
@@ -1496,7 +1469,8 @@ static int wpa_driver_update_mode(struct wpa_driver_test_data *drv, int ap)
 static int wpa_driver_test_associate(
 	void *priv, struct wpa_driver_associate_params *params)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s: priv=%p freq=%d pairwise_suite=%d "
 		   "group_suite=%d key_mgmt_suite=%d auth_alg=%d mode=%d",
 		   __func__, priv, params->freq, params->pairwise_suite,
@@ -1524,7 +1498,7 @@ static int wpa_driver_test_associate(
 	wpa_driver_update_mode(drv, params->mode == IEEE80211_MODE_AP);
 
 	drv->ibss = params->mode == IEEE80211_MODE_IBSS;
-	drv->privacy = params->key_mgmt_suite &
+	dbss->privacy = params->key_mgmt_suite &
 		(WPA_KEY_MGMT_IEEE8021X |
 		 WPA_KEY_MGMT_PSK |
 		 WPA_KEY_MGMT_WPA_NONE |
@@ -1533,7 +1507,7 @@ static int wpa_driver_test_associate(
 		 WPA_KEY_MGMT_IEEE8021X_SHA256 |
 		 WPA_KEY_MGMT_PSK_SHA256);
 	if (params->wep_key_len[params->wep_tx_keyidx])
-		drv->privacy = 1;
+		dbss->privacy = 1;
 
 #ifdef DRIVER_TEST_UNIX
 	if (drv->test_dir && params->bssid &&
@@ -1549,26 +1523,15 @@ static int wpa_driver_test_associate(
 #endif /* DRIVER_TEST_UNIX */
 
 	if (params->mode == IEEE80211_MODE_AP) {
-		struct test_driver_bss *bss;
-		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
-		drv->ssid_len = params->ssid_len;
-
-		test_driver_free_bsses(drv);
-		bss = drv->bss = os_zalloc(sizeof(*drv->bss));
-		if (bss == NULL)
-			return -1;
-		bss->bss_ctx = drv->ctx;
-		os_strlcpy(bss->ifname, drv->ifname, IFNAMSIZ);
-		os_memcpy(bss->bssid, drv->own_addr, ETH_ALEN);
-		os_memcpy(bss->ssid, params->ssid, params->ssid_len);
-		bss->ssid_len = params->ssid_len;
-		bss->privacy = drv->privacy;
+		os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
+		dbss->ssid_len = params->ssid_len;
+		os_memcpy(dbss->bssid, drv->own_addr, ETH_ALEN);
 		if (params->wpa_ie && params->wpa_ie_len) {
-			bss->ie = os_malloc(params->wpa_ie_len);
-			if (bss->ie) {
-				os_memcpy(bss->ie, params->wpa_ie,
+			dbss->ie = os_malloc(params->wpa_ie_len);
+			if (dbss->ie) {
+				os_memcpy(dbss->ie, params->wpa_ie,
 					  params->wpa_ie_len);
-				bss->ielen = params->wpa_ie_len;
+				dbss->ielen = params->wpa_ie_len;
 			}
 		}
 	} else if (drv->test_socket >= 0 &&
@@ -1606,19 +1569,20 @@ static int wpa_driver_test_associate(
 			return -1;
 		}
 
-		os_memcpy(drv->ssid, params->ssid, params->ssid_len);
-		drv->ssid_len = params->ssid_len;
+		os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
+		dbss->ssid_len = params->ssid_len;
 	} else {
 		drv->associated = 1;
 		if (params->mode == IEEE80211_MODE_IBSS) {
-			os_memcpy(drv->ssid, params->ssid, params->ssid_len);
-			drv->ssid_len = params->ssid_len;
+			os_memcpy(dbss->ssid, params->ssid, params->ssid_len);
+			dbss->ssid_len = params->ssid_len;
 			if (params->bssid)
-				os_memcpy(drv->bssid, params->bssid, ETH_ALEN);
+				os_memcpy(dbss->bssid, params->bssid,
+					  ETH_ALEN);
 			else {
-				os_get_random(drv->bssid, ETH_ALEN);
-				drv->bssid[0] &= ~0x01;
-				drv->bssid[0] |= 0x02;
+				os_get_random(dbss->bssid, ETH_ALEN);
+				dbss->bssid[0] &= ~0x01;
+				dbss->bssid[0] |= 0x02;
 			}
 		}
 		wpa_supplicant_event(drv->ctx, EVENT_ASSOC, NULL);
@@ -1630,17 +1594,17 @@ static int wpa_driver_test_associate(
 
 static int wpa_driver_test_get_bssid(void *priv, u8 *bssid)
 {
-	struct wpa_driver_test_data *drv = priv;
-	os_memcpy(bssid, drv->bssid, ETH_ALEN);
+	struct test_driver_bss *dbss = priv;
+	os_memcpy(bssid, dbss->bssid, ETH_ALEN);
 	return 0;
 }
 
 
 static int wpa_driver_test_get_ssid(void *priv, u8 *ssid)
 {
-	struct wpa_driver_test_data *drv = priv;
-	os_memcpy(ssid, drv->ssid, 32);
-	return drv->ssid_len;
+	struct test_driver_bss *dbss = priv;
+	os_memcpy(ssid, dbss->ssid, 32);
+	return dbss->ssid_len;
 }
 
 
@@ -1669,10 +1633,11 @@ static int wpa_driver_test_send_disassoc(struct wpa_driver_test_data *drv)
 static int wpa_driver_test_deauthenticate(void *priv, const u8 *addr,
 					  int reason_code)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s addr=" MACSTR " reason_code=%d",
 		   __func__, MAC2STR(addr), reason_code);
-	os_memset(drv->bssid, 0, ETH_ALEN);
+	os_memset(dbss->bssid, 0, ETH_ALEN);
 	drv->associated = 0;
 	wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 	return wpa_driver_test_send_disassoc(drv);
@@ -1682,10 +1647,11 @@ static int wpa_driver_test_deauthenticate(void *priv, const u8 *addr,
 static int wpa_driver_test_disassociate(void *priv, const u8 *addr,
 					int reason_code)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s addr=" MACSTR " reason_code=%d",
 		   __func__, MAC2STR(addr), reason_code);
-	os_memset(drv->bssid, 0, ETH_ALEN);
+	os_memset(dbss->bssid, 0, ETH_ALEN);
 	drv->associated = 0;
 	wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
 	return wpa_driver_test_send_disassoc(drv);
@@ -1812,8 +1778,12 @@ static void wpa_driver_test_assocresp(struct wpa_driver_test_data *drv,
 				      socklen_t fromlen,
 				      const char *data)
 {
+	struct test_driver_bss *bss;
+
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
+
 	/* ASSOCRESP BSSID <res> */
-	if (hwaddr_aton(data, drv->bssid)) {
+	if (hwaddr_aton(data, bss->bssid)) {
 		wpa_printf(MSG_DEBUG, "test_driver: invalid BSSID in "
 			   "assocresp");
 	}
@@ -1843,14 +1813,18 @@ static void wpa_driver_test_eapol(struct wpa_driver_test_data *drv,
 				  socklen_t fromlen,
 				  const u8 *data, size_t data_len)
 {
-	const u8 *src = drv->bssid;
+	const u8 *src;
+	struct test_driver_bss *bss;
+
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 
 	if (data_len > 14) {
 		/* Skip Ethernet header */
 		src = data + ETH_ALEN;
 		data += 14;
 		data_len -= 14;
-	}
+	} else
+		src = bss->bssid;
 
 	drv_event_eapol_rx(drv->ctx, src, data, data_len);
 }
@@ -1863,7 +1837,9 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 {
 	int freq = 0, own_freq;
 	union wpa_event_data event;
+	struct test_driver_bss *bss;
 
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 	if (data_len > 6 && os_memcmp(data, "freq=", 5) == 0) {
 		size_t pos;
 		for (pos = 5; pos < data_len; pos++) {
@@ -1873,7 +1849,7 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 		if (pos < data_len) {
 			freq = atoi((const char *) &data[5]);
 			wpa_printf(MSG_DEBUG, "test_driver(%s): MLME RX on "
-				   "freq %d MHz", drv->ifname, freq);
+				   "freq %d MHz", bss->ifname, freq);
 			pos++;
 			data += pos;
 			data_len -= pos;
@@ -1888,7 +1864,7 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 	if (freq && own_freq && freq != own_freq) {
 		wpa_printf(MSG_DEBUG, "test_driver(%s): Ignore MLME RX on "
 			   "another frequency %d MHz (own %d MHz)",
-			   drv->ifname, freq, own_freq);
+			   bss->ifname, freq, own_freq);
 		return;
 	}
 
@@ -1925,6 +1901,9 @@ static void wpa_driver_test_scan_cmd(struct wpa_driver_test_data *drv,
 {
 	char buf[512], *pos, *end;
 	int ret;
+	struct test_driver_bss *bss;
+
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 
 	/* data: optional [ STA-addr | ' ' | IEs(hex) ] */
 
@@ -1936,12 +1915,12 @@ static void wpa_driver_test_scan_cmd(struct wpa_driver_test_data *drv,
 
 	/* reply: SCANRESP BSSID SSID IEs */
 	ret = snprintf(pos, end - pos, "SCANRESP " MACSTR " ",
-		       MAC2STR(drv->bssid));
+		       MAC2STR(bss->bssid));
 	if (ret < 0 || ret >= end - pos)
 		return;
 	pos += ret;
 	pos += wpa_snprintf_hex(pos, end - pos,
-				drv->ssid, drv->ssid_len);
+				bss->ssid, bss->ssid_len);
 	ret = snprintf(pos, end - pos, " ");
 	if (ret < 0 || ret >= end - pos)
 		return;
@@ -1949,7 +1928,7 @@ static void wpa_driver_test_scan_cmd(struct wpa_driver_test_data *drv,
 	pos += wpa_snprintf_hex(pos, end - pos, drv->assoc_wpa_ie,
 				drv->assoc_wpa_ie_len);
 
-	if (drv->privacy) {
+	if (bss->privacy) {
 		ret = snprintf(pos, end - pos, " PRIVACY");
 		if (ret < 0 || ret >= end - pos)
 			return;
@@ -2030,22 +2009,24 @@ static void * wpa_driver_test_init2(void *ctx, const char *ifname,
 {
 	struct wpa_driver_test_data *drv;
 	struct wpa_driver_test_global *global = global_priv;
+	struct test_driver_bss *bss;
 
 	drv = test_alloc_data(ctx, ifname);
 	if (drv == NULL)
 		return NULL;
+	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
 	drv->global = global_priv;
 	drv->test_socket = -1;
 
 	/* Set dummy BSSID and SSID for testing. */
-	drv->bssid[0] = 0x02;
-	drv->bssid[1] = 0x00;
-	drv->bssid[2] = 0x00;
-	drv->bssid[3] = 0x00;
-	drv->bssid[4] = 0x00;
-	drv->bssid[5] = 0x01;
-	os_memcpy(drv->ssid, "test", 5);
-	drv->ssid_len = 4;
+	bss->bssid[0] = 0x02;
+	bss->bssid[1] = 0x00;
+	bss->bssid[2] = 0x00;
+	bss->bssid[3] = 0x00;
+	bss->bssid[4] = 0x00;
+	bss->bssid[5] = 0x01;
+	os_memcpy(bss->ssid, "test", 5);
+	bss->ssid_len = 4;
 
 	if (global->bss_add_used) {
 		os_memcpy(drv->own_addr, global->req_addr, ETH_ALEN);
@@ -2054,7 +2035,7 @@ static void * wpa_driver_test_init2(void *ctx, const char *ifname,
 
 	eloop_register_timeout(1, 0, wpa_driver_test_poll, drv, NULL);
 
-	return drv;
+	return bss;
 }
 
 
@@ -2076,7 +2057,8 @@ static void wpa_driver_test_close_test_socket(struct wpa_driver_test_data *drv)
 
 static void wpa_driver_test_deinit(void *priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	struct test_client_socket *cli, *prev;
 	int i;
 
@@ -2089,10 +2071,9 @@ static void wpa_driver_test_deinit(void *priv)
 
 #ifdef HOSTAPD
 	/* There should be only one BSS remaining at this point. */
-	if (drv->bss == NULL)
-		wpa_printf(MSG_ERROR, "%s: drv->bss == NULL", __func__);
-	else if (drv->bss->next)
-		wpa_printf(MSG_ERROR, "%s: drv->bss->next != NULL", __func__);
+	if (dl_list_len(&drv->bss) != 1)
+		wpa_printf(MSG_ERROR, "%s: %u remaining BSS entries",
+			   __func__, dl_list_len(&drv->bss));
 #endif /* HOSTAPD */
 
 	test_driver_free_bsses(drv);
@@ -2212,7 +2193,8 @@ static int wpa_driver_test_attach_udp(struct wpa_driver_test_data *drv,
 
 static int wpa_driver_test_set_param(void *priv, const char *param)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	const char *pos;
 
 	wpa_printf(MSG_DEBUG, "%s: param='%s'", __func__, param);
@@ -2289,7 +2271,8 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 
 static const u8 * wpa_driver_test_get_mac_addr(void *priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	return drv->own_addr;
 }
@@ -2298,7 +2281,8 @@ static const u8 * wpa_driver_test_get_mac_addr(void *priv)
 static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 				      const u8 *data, size_t data_len)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	char *msg;
 	size_t msg_len;
 	struct l2_ethhdr eth;
@@ -2323,7 +2307,7 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 	os_memcpy(msg + 6, &eth, sizeof(eth));
 	os_memcpy(msg + 6 + sizeof(eth), data, data_len);
 
-	if (os_memcmp(dest, drv->bssid, ETH_ALEN) == 0 ||
+	if (os_memcmp(dest, dbss->bssid, ETH_ALEN) == 0 ||
 	    drv->test_dir == NULL) {
 		if (drv->hostapd_addr_udp_set) {
 			addr = (struct sockaddr *) &drv->hostapd_addr_udp;
@@ -2370,7 +2354,8 @@ static int wpa_driver_test_send_eapol(void *priv, const u8 *dest, u16 proto,
 
 static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	os_memset(capa, 0, sizeof(*capa));
 	capa->key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
 		WPA_DRIVER_CAPA_KEY_MGMT_WPA2 |
@@ -2415,7 +2400,8 @@ static int wpa_driver_test_set_channel(void *priv,
 				       enum hostapd_hw_mode phymode,
 				       int chan, int freq)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s: phymode=%d chan=%d freq=%d",
 		   __func__, phymode, chan, freq);
 	drv->current_freq = freq;
@@ -2584,7 +2570,8 @@ fail:
 static int wpa_driver_test_set_freq(void *priv,
 				    struct hostapd_freq_params *freq)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "test: set_freq %u MHz", freq->freq);
 	drv->current_freq = freq->freq;
 	return 0;
@@ -2596,7 +2583,8 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 				       const u8 *bssid,
 				       const u8 *data, size_t data_len)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	int ret = -1;
 	u8 *buf;
 	struct ieee80211_hdr *hdr;
@@ -2635,7 +2623,8 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr,
 						char *ifname)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 
 	if (ifname)
 		ifname[0] = '\0';
@@ -2674,7 +2663,8 @@ static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx)
 static int wpa_driver_test_remain_on_channel(void *priv, unsigned int freq,
 					     unsigned int duration)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	union wpa_event_data data;
 
 	wpa_printf(MSG_DEBUG, "%s(freq=%u, duration=%u)",
@@ -2703,7 +2693,8 @@ static int wpa_driver_test_remain_on_channel(void *priv, unsigned int freq,
 
 static int wpa_driver_test_cancel_remain_on_channel(void *priv)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	if (!drv->remain_on_channel_freq)
 		return -1;
@@ -2715,7 +2706,8 @@ static int wpa_driver_test_cancel_remain_on_channel(void *priv)
 
 static int wpa_driver_test_probe_req_report(void *priv, int report)
 {
-	struct wpa_driver_test_data *drv = priv;
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
 	wpa_printf(MSG_DEBUG, "%s(report=%d)", __func__, report);
 	drv->probe_req_report = report;
 	return 0;

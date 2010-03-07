@@ -2316,7 +2316,7 @@ retry:
 			wpa_printf(MSG_DEBUG, "nl80211: Retry authentication "
 				   "after forced deauthentication");
 			wpa_driver_nl80211_deauthenticate(
-				drv, params->bssid,
+				bss, params->bssid,
 				WLAN_REASON_PREV_AUTH_NOT_VALID);
 			nlmsg_free(msg);
 			goto retry;

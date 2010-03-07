@@ -1568,7 +1568,6 @@ struct wpa_driver_ops {
 
 	/**
 	 * set_ht_params - Set HT parameters (AP only)
-	 * @ifname: The interface name (main or virtual BSS)
 	 * @priv: Private driver interface data
 	 * @ht_capab: HT Capabilities IE
 	 * @ht_capab_len: Length of ht_capab in octets
@@ -1576,7 +1575,7 @@ struct wpa_driver_ops {
 	 * @ht_oper_len: Length of ht_oper in octets
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*set_ht_params)(const char *ifname, void *priv,
+	int (*set_ht_params)(void *priv,
 			     const u8 *ht_capab, size_t ht_capab_len,
 			     const u8 *ht_oper, size_t ht_oper_len);
 

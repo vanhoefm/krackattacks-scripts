@@ -55,7 +55,7 @@ struct hostapd_hw_modes *
 hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 			    u16 *flags);
 int hostapd_driver_commit(struct hostapd_data *hapd);
-int hostapd_set_ht_params(const char *ifname, struct hostapd_data *hapd,
+int hostapd_set_ht_params(struct hostapd_data *hapd,
 			  const u8 *ht_capab, size_t ht_capab_len,
 			  const u8 *ht_oper, size_t ht_oper_len);
 int hostapd_drv_none(struct hostapd_data *hapd);

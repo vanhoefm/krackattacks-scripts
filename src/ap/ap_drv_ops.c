@@ -186,8 +186,7 @@ static int hostapd_set_bss_params(struct hostapd_data *hapd,
 	ht_oper = pos;
 	pos = hostapd_eid_ht_operation(hapd, pos);
 	if (pos > ht_oper && ht_oper > ht_capab &&
-	    hostapd_set_ht_params(hapd->conf->iface, hapd,
-				  ht_capab + 2, ht_capab[1],
+	    hostapd_set_ht_params(hapd, ht_capab + 2, ht_capab[1],
 				  ht_oper + 2, ht_oper[1])) {
 		wpa_printf(MSG_ERROR, "Could not set HT capabilities "
 			   "for kernel driver");
@@ -574,16 +573,16 @@ int hostapd_driver_commit(struct hostapd_data *hapd)
 }
 
 
-int hostapd_set_ht_params(const char *ifname, struct hostapd_data *hapd,
+int hostapd_set_ht_params(struct hostapd_data *hapd,
 			  const u8 *ht_capab, size_t ht_capab_len,
 			  const u8 *ht_oper, size_t ht_oper_len)
 {
 	if (hapd->driver == NULL || hapd->driver->set_ht_params == NULL ||
 	    ht_capab == NULL || ht_oper == NULL)
 		return 0;
-	return hapd->driver->set_ht_params(
-		ifname, hapd->drv_priv, ht_capab, ht_capab_len,
-		ht_oper, ht_oper_len);
+	return hapd->driver->set_ht_params(hapd->drv_priv,
+					   ht_capab, ht_capab_len,
+					   ht_oper, ht_oper_len);
 }
 
 

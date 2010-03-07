@@ -89,7 +89,7 @@ struct hostapd_driver_ops {
 			  int reason);
 	int (*sta_disassoc)(struct hostapd_data *hapd, const u8 *addr,
 			    int reason);
-	int (*sta_add)(const char *ifname, struct hostapd_data *hapd,
+	int (*sta_add)(struct hostapd_data *hapd,
 		       const u8 *addr, u16 aid, u16 capability,
 		       const u8 *supp_rates, size_t supp_rates_len,
 		       u16 listen_interval,

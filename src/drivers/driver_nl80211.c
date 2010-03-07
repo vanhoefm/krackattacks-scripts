@@ -2771,7 +2771,7 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_sta_add(const char *ifname, void *priv,
+static int wpa_driver_nl80211_sta_add(void *priv,
 				      struct hostapd_sta_add_params *params)
 {
 	struct i802_bss *bss = priv;
@@ -2786,7 +2786,7 @@ static int wpa_driver_nl80211_sta_add(const char *ifname, void *priv,
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, NL80211_CMD_NEW_STATION, 0);
 
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(ifname));
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr);
 	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
 	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, params->supp_rates_len,

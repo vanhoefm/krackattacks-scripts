@@ -1359,7 +1359,6 @@ struct wpa_driver_ops {
 
 	/**
 	 * sta_add - Add a station entry
-	 * @ifname: Interface (master or virtual)
 	 * @priv: Private driver interface data
 	 * @params: Station parameters
 	 * Returns: 0 on success, -1 on failure
@@ -1368,8 +1367,7 @@ struct wpa_driver_ops {
 	 * station has completed association. This is only used if the driver
 	 * does not take care of association processing.
 	 */
-	int (*sta_add)(const char *ifname, void *priv,
-		       struct hostapd_sta_add_params *params);
+	int (*sta_add)(void *priv, struct hostapd_sta_add_params *params);
 
 	/**
 	 * get_inact_sec - Get station inactivity duration (AP only)

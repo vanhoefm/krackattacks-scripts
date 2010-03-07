@@ -299,7 +299,7 @@ static int hostapd_sta_disassoc(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
-static int hostapd_sta_add(const char *ifname, struct hostapd_data *hapd,
+static int hostapd_sta_add(struct hostapd_data *hapd,
 			   const u8 *addr, u16 aid, u16 capability,
 			   const u8 *supp_rates, size_t supp_rates_len,
 			   u16 listen_interval,
@@ -320,7 +320,7 @@ static int hostapd_sta_add(const char *ifname, struct hostapd_data *hapd,
 	params.supp_rates_len = supp_rates_len;
 	params.listen_interval = listen_interval;
 	params.ht_capabilities = ht_capab;
-	return hapd->driver->sta_add(ifname, hapd->drv_priv, &params);
+	return hapd->driver->sta_add(hapd->drv_priv, &params);
 }
 
 

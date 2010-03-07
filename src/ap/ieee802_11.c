@@ -1550,9 +1550,9 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		hostapd_get_ht_capab(hapd, sta->ht_capabilities, &ht_cap);
 #endif /* CONFIG_IEEE80211N */
 
-	if (hapd->drv.sta_add(hapd->conf->iface, hapd, sta->addr, sta->aid,
-			      sta->capability, sta->supported_rates,
-			      sta->supported_rates_len, sta->listen_interval,
+	if (hapd->drv.sta_add(hapd, sta->addr, sta->aid, sta->capability,
+			      sta->supported_rates, sta->supported_rates_len,
+			      sta->listen_interval,
 			      sta->flags & WLAN_STA_HT ? &ht_cap : NULL)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,

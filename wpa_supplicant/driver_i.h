@@ -336,8 +336,7 @@ static inline int wpa_drv_sta_add(struct wpa_supplicant *wpa_s,
 				  struct hostapd_sta_add_params *params)
 {
 	if (wpa_s->driver->sta_add)
-		return wpa_s->driver->sta_add(wpa_s->ifname, wpa_s->drv_priv,
-					      params);
+		return wpa_s->driver->sta_add(wpa_s->drv_priv, params);
 	return -1;
 }
 

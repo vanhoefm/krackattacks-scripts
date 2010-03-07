@@ -624,8 +624,7 @@ static int hostap_read_sta_data(void *priv,
 }
 
 
-static int hostap_sta_add(const char *ifname, void *priv,
-			  struct hostapd_sta_add_params *params)
+static int hostap_sta_add(void *priv, struct hostapd_sta_add_params *params)
 {
 	struct hostap_driver_data *drv = priv;
 	struct prism2_hostapd_param param;

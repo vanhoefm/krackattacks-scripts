@@ -373,8 +373,7 @@ int hostapd_set_privacy(struct hostapd_data *hapd, int enabled)
 {
 	if (hapd->driver == NULL || hapd->driver->set_privacy == NULL)
 		return 0;
-	return hapd->driver->set_privacy(hapd->conf->iface, hapd->drv_priv,
-					 enabled);
+	return hapd->driver->set_privacy(hapd->drv_priv, enabled);
 }
 
 

@@ -596,7 +596,7 @@ ether_sprintf(const u8 *addr)
 }
 
 static int
-bsd_set_privacy(const char *ifname, void *priv, int enabled)
+bsd_set_privacy(void *priv, int enabled)
 {
 	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
 

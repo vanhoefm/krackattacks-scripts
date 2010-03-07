@@ -541,7 +541,7 @@ static int hostap_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 }
 
 
-static int hostap_set_privacy(const char *ifname, void *priv, int enabled)
+static int hostap_set_privacy(void *priv, int enabled)
 {
 	struct hostap_drvier_data *drv = priv;
 

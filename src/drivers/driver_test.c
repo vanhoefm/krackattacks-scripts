@@ -1061,13 +1061,11 @@ static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
 }
 
 
-static int test_driver_set_privacy(const char *ifname, void *priv, int enabled)
+static int test_driver_set_privacy(void *priv, int enabled)
 {
 	struct test_driver_bss *dbss = priv;
 
-	wpa_printf(MSG_DEBUG, "%s(ifname=%s enabled=%d)",
-		   __func__, ifname, enabled);
-
+	wpa_printf(MSG_DEBUG, "%s(enabled=%d)",  __func__, enabled);
 	dbss->privacy = enabled;
 
 	return 0;

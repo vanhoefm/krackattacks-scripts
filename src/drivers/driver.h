@@ -1219,7 +1219,7 @@ struct wpa_driver_ops {
 	 * kernel driver for Beacon frames. This can be left undefined (set to
 	 * %NULL) if the driver uses the Beacon template from set_beacon().
 	 */
-	int (*set_privacy)(const char *ifname, void *priv, int enabled);
+	int (*set_privacy)(void *priv, int enabled);
 
 	/**
 	 * get_seqnum - Fetch the current TSC/packet number (AP only)

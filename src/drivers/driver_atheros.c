@@ -304,7 +304,7 @@ madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 }
 
 static int
-madwifi_set_privacy(const char *ifname, void *priv, int enabled)
+madwifi_set_privacy(void *priv, int enabled)
 {
 	struct madwifi_driver_data *drv = priv;
 
@@ -1110,7 +1110,7 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	/* mark down during setup */
 	linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
-	madwifi_set_privacy(drv->iface, drv, 0); /* default to no privacy */
+	madwifi_set_privacy(drv, 0); /* default to no privacy */
 
 	madwifi_receive_probe_req(drv);
 

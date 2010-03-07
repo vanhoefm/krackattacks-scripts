@@ -1581,7 +1581,6 @@ struct wpa_driver_ops {
 
 	/**
 	 * set_ap_wps_ie - Add WPS IE into Beacon/Probe Response frames (AP)
-	 * @ifname: The interface name (main or virtual BSS)
 	 * @priv: Private driver interface data
 	 * @beacon: WPS IE for Beacon frames
 	 * @proberesp: WPS IE for Probe Response frames
@@ -1592,8 +1591,7 @@ struct wpa_driver_ops {
 	 * to %NULL) if the driver uses the Beacon template from set_beacon()
 	 * and does not process Probe Request frames.
 	 */
-	int (*set_ap_wps_ie)(const char *ifname, void *priv,
-			     const struct wpabuf *beacon,
+	int (*set_ap_wps_ie)(void *priv, const struct wpabuf *beacon,
 			     const struct wpabuf *proberesp);
 
 	/**

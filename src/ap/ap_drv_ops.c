@@ -44,8 +44,7 @@ static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd,
 {
 	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
 		return 0;
-	return hapd->driver->set_ap_wps_ie(hapd->conf->iface, hapd->drv_priv,
-					   beacon, proberesp);
+	return hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp);
 }
 
 

@@ -134,7 +134,7 @@ set80211param(struct bsd_driver_data *drv, int op, int arg)
 }
 
 static int
-bsd_get_ssid(const char *ifname, void *priv, u8 *ssid, int len)
+bsd_get_ssid(void *priv, u8 *ssid, int len)
 {
 	struct bsd_driver_data *drv = priv;
 #ifdef SIOCG80211NWID
@@ -155,7 +155,7 @@ bsd_get_ssid(const char *ifname, void *priv, u8 *ssid, int len)
 }
 
 static int
-bsd_set_ssid(const char *ifname, void *priv, const u8 *ssid, int ssid_len)
+bsd_set_ssid(void *priv, const u8 *ssid, int ssid_len)
 {
 	struct bsd_driver_data *drv = priv;
 #ifdef SIOCS80211NWID

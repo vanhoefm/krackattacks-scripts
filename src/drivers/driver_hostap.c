@@ -550,8 +550,7 @@ static int hostap_set_privacy(void *priv, int enabled)
 }
 
 
-static int hostap_set_ssid(const char *ifname, void *priv, const u8 *buf,
-			   int len)
+static int hostap_set_ssid(void *priv, const u8 *buf, int len)
 {
 	struct hostap_driver_data *drv = priv;
 	struct iwreq iwr;

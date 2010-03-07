@@ -1148,7 +1148,7 @@ madwifi_deinit(void *priv)
 }
 
 static int
-madwifi_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
+madwifi_set_ssid(void *priv, const u8 *buf, int len)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct iwreq iwr;
@@ -1168,7 +1168,7 @@ madwifi_set_ssid(const char *ifname, void *priv, const u8 *buf, int len)
 }
 
 static int
-madwifi_get_ssid(const char *ifname, void *priv, u8 *buf, int len)
+madwifi_get_ssid(void *priv, u8 *buf, int len)
 {
 	struct madwifi_driver_data *drv = priv;
 	struct iwreq iwr;

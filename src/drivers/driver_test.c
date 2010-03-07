@@ -1043,12 +1043,11 @@ static int test_driver_valid_bss_mask(void *priv, const u8 *addr,
 }
 
 
-static int test_driver_set_ssid(const char *ifname, void *priv, const u8 *buf,
-				int len)
+static int test_driver_set_ssid(void *priv, const u8 *buf, int len)
 {
 	struct test_driver_bss *bss = priv;
 
-	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, ifname);
+	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, bss->ifname);
 	wpa_hexdump_ascii(MSG_DEBUG, "test_driver_set_ssid: SSID", buf, len);
 
 	if (len < 0 || (size_t) len > sizeof(bss->ssid))

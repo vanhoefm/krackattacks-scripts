@@ -390,8 +390,7 @@ int hostapd_get_ssid(struct hostapd_data *hapd, u8 *buf, size_t len)
 {
 	if (hapd->driver == NULL || hapd->driver->hapd_get_ssid == NULL)
 		return 0;
-	return hapd->driver->hapd_get_ssid(hapd->conf->iface, hapd->drv_priv,
-					   buf, len);
+	return hapd->driver->hapd_get_ssid(hapd->drv_priv, buf, len);
 }
 
 
@@ -399,8 +398,7 @@ int hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
 {
 	if (hapd->driver == NULL || hapd->driver->hapd_set_ssid == NULL)
 		return 0;
-	return hapd->driver->hapd_set_ssid(hapd->conf->iface, hapd->drv_priv,
-					   buf, len);
+	return hapd->driver->hapd_set_ssid(hapd->drv_priv, buf, len);
 }
 
 

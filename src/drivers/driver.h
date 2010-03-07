@@ -1326,7 +1326,6 @@ struct wpa_driver_ops {
 
 	/**
 	 * hapd_get_ssid - Get the current SSID (AP only)
-	 * @ifname: Interface (master or virtual BSS)
 	 * @priv: Private driver interface data
 	 * @buf: Buffer for returning the SSID
 	 * @len: Maximum length of the buffer
@@ -1336,18 +1335,17 @@ struct wpa_driver_ops {
 	 * template from set_beacon() and does not reply to Probe Request
 	 * frames.
 	 */
-	int (*hapd_get_ssid)(const char *ifname, void *priv, u8 *buf, int len);
+	int (*hapd_get_ssid)(void *priv, u8 *buf, int len);
 
 	/**
 	 * hapd_set_ssid - Set SSID (AP only)
-	 * @ifname: Interface (master or virtual BSS)
 	 * @priv: Private driver interface data
 	 * @buf: SSID
 	 * @len: Length of the SSID in octets
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*hapd_set_ssid)(const char *ifname, void *priv, const u8 *buf,
-			     int len);
+	int (*hapd_set_ssid)(void *priv, const u8 *buf, int len);
+
 	/**
 	 * hapd_set_countermeasures - Enable/disable TKIP countermeasures (AP)
 	 * @priv: Private driver interface data

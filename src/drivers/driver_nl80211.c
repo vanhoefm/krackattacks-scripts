@@ -4715,7 +4715,7 @@ static int wpa_driver_nl80211_if_add(const char *iface, void *priv,
 	if (type == WPA_IF_AP_BSS) {
 		if (linux_set_iface_flags(drv->ioctl_sock, ifname, 1)) {
 			nl80211_remove_iface(drv, ifidx);
-			os_free(bss);
+			os_free(new_bss);
 			return -1;
 		}
 		os_strlcpy(new_bss->ifname, ifname, IFNAMSIZ);

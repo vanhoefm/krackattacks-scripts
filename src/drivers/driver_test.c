@@ -1028,12 +1028,12 @@ static int test_driver_bss_remove(void *priv, const char *ifname)
 }
 
 
-static int test_driver_if_add(const char *iface, void *priv,
-			      enum wpa_driver_if_type type, const char *ifname,
-			      const u8 *addr, void *bss_ctx, void **drv_priv)
+static int test_driver_if_add(void *priv, enum wpa_driver_if_type type,
+			      const char *ifname, const u8 *addr,
+			      void *bss_ctx, void **drv_priv)
 {
-	wpa_printf(MSG_DEBUG, "%s(iface=%s type=%d ifname=%s bss_ctx=%p)",
-		   __func__, iface, type, ifname, bss_ctx);
+	wpa_printf(MSG_DEBUG, "%s(type=%d ifname=%s bss_ctx=%p)",
+		   __func__, type, ifname, bss_ctx);
 	if (type == WPA_IF_AP_BSS)
 		return test_driver_bss_add(priv, ifname, addr, bss_ctx);
 	return 0;

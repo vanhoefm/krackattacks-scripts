@@ -384,7 +384,7 @@ madwifi_set_sta_authorized(void *priv, const u8 *addr, int authorized)
 }
 
 static int
-madwifi_sta_set_flags(const char *ifname, void *priv, const u8 *addr,
+madwifi_sta_set_flags(void *priv, const u8 *addr,
 		      int total_flags, int flags_or, int flags_and)
 {
 	/* For now, only support setting Authorized flag */

@@ -1411,7 +1411,6 @@ struct wpa_driver_ops {
 
 	/**
 	 * sta_set_flags - Set station flags (AP only)
-	 * @ifname: Interface name (for multi-SSID/VLAN support)
 	 * @priv: Private driver interface data
 	 * @addr: Station address
 	 * @total_flags: Bitmap of all WPA_STA_* flags currently set
@@ -1419,7 +1418,7 @@ struct wpa_driver_ops {
 	 * @flags_and: Bitmap of WPA_STA_* flags to us as a mask
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*sta_set_flags)(const char *ifname, void *priv, const u8 *addr,
+	int (*sta_set_flags)(void *priv, const u8 *addr,
 			     int total_flags, int flags_or, int flags_and);
 
 	/**

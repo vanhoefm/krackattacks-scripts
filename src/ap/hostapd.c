@@ -299,7 +299,7 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 {
 	int ret = 0;
 
-	if (hostapd_drv_none(hapd))
+	if (hostapd_drv_none(hapd) || hapd->drv_priv == NULL)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "Flushing old station entries");

@@ -1338,6 +1338,14 @@ static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 		/* Public Action frames */
 		return nl80211_register_action_frame(drv, (u8 *) "\x04", 1);
 	}
+
+	/* FT Action frames */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x06", 1) < 0)
+		return -1;
+	else
+		drv->capa.key_mgmt |= WPA_DRIVER_CAPA_KEY_MGMT_FT |
+			WPA_DRIVER_CAPA_KEY_MGMT_FT_PSK;
+
 	return 0;
 }
 
@@ -1369,8 +1377,15 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			       1, IF_OPER_DORMANT);
 #endif /* HOSTAPD */
 
-	if (nl80211_register_action_frames(drv) < 0)
-		return -1;
+	if (nl80211_register_action_frames(drv) < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Failed to register Action "
+			   "frame processing - ignore for now");
+		/*
+		 * Older kernel versions did not support this, so ignore the
+		 * error for now. Some functionality may not be available
+		 * because of this.
+		 */
+	}
 
 	return 0;
 }
@@ -5083,6 +5098,56 @@ static void wpa_driver_nl80211_resume(void *priv)
 }
 
 
+static int nl80211_send_ft_action(void *priv, u8 action, const u8 *target_ap,
+				  const u8 *ies, size_t ies_len)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int ret;
+	u8 *data, *pos;
+	size_t data_len;
+	u8 own_addr[ETH_ALEN];
+
+	if (linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, own_addr) < 0)
+		return -1;
+
+	if (action != 1) {
+		wpa_printf(MSG_ERROR, "nl80211: Unsupported send_ft_action "
+			   "action %d", action);
+		return -1;
+	}
+
+	/*
+	 * Action frame payload:
+	 * Category[1] = 6 (Fast BSS Transition)
+	 * Action[1] = 1 (Fast BSS Transition Request)
+	 * STA Address
+	 * Target AP Address
+	 * FT IEs
+	 */
+
+	data_len = ies_len;
+	data = os_malloc(2 + 2 * ETH_ALEN + data_len);
+	if (data == NULL)
+		return -1;
+	pos = data;
+	*pos++ = 0x06; /* FT Action category */
+	*pos++ = action;
+	os_memcpy(pos, own_addr, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, target_ap, ETH_ALEN);
+	pos += ETH_ALEN;
+	os_memcpy(pos, ies, ies_len);
+
+	ret = wpa_driver_nl80211_send_action(bss, drv->assoc_freq, drv->bssid,
+					     own_addr, drv->bssid,
+					     data, data_len);
+	os_free(data);
+
+	return ret;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -5141,4 +5206,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.disable_11b_rates = wpa_driver_nl80211_disable_11b_rates,
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
 	.resume = wpa_driver_nl80211_resume,
+	.send_ft_action = nl80211_send_ft_action,
 };

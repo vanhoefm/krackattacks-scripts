@@ -47,7 +47,7 @@ struct ft_rrb_frame {
 
 #define FT_R0KH_R1KH_PULL_DATA_LEN 44
 #define FT_R0KH_R1KH_RESP_DATA_LEN 76
-#define FT_R0KH_R1KH_PUSH_DATA_LEN 80
+#define FT_R0KH_R1KH_PUSH_DATA_LEN 88
 
 struct ft_r0kh_r1kh_pull_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
@@ -74,14 +74,15 @@ struct ft_r0kh_r1kh_resp_frame {
 	u8 s1kh_id[ETH_ALEN]; /* copied from pull */
 	u8 pmk_r1[PMK_LEN];
 	u8 pmk_r1_name[WPA_PMK_NAME_LEN];
-	u8 pad[4]; /* 8-octet boundary for AES key wrap */
+	le16 pairwise;
+	u8 pad[2]; /* 8-octet boundary for AES key wrap */
 	u8 key_wrap_extra[8];
 } STRUCT_PACKED;
 
 struct ft_r0kh_r1kh_push_frame {
 	u8 frame_type; /* RSN_REMOTE_FRAME_TYPE_FT_RRB */
 	u8 packet_type; /* FT_PACKET_R0KH_R1KH_PUSH */
-	le16 data_length; /* little endian length of data (80) */
+	le16 data_length; /* little endian length of data (88) */
 	u8 ap_address[ETH_ALEN];
 
 	/* Encrypted with AES key-wrap */
@@ -92,6 +93,8 @@ struct ft_r0kh_r1kh_push_frame {
 	u8 pmk_r0_name[WPA_PMK_NAME_LEN];
 	u8 pmk_r1[PMK_LEN];
 	u8 pmk_r1_name[WPA_PMK_NAME_LEN];
+	le16 pairwise;
+	u8 pad[6]; /* 8-octet boundary for AES key wrap */
 	u8 key_wrap_extra[8];
 } STRUCT_PACKED;
 

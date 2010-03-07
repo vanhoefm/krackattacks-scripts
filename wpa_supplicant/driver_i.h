@@ -326,8 +326,7 @@ static inline int wpa_drv_set_beacon(struct wpa_supplicant *wpa_s,
 				     int dtim_period, int beacon_int)
 {
 	if (wpa_s->driver->set_beacon)
-		return wpa_s->driver->set_beacon(wpa_s->ifname,
-						 wpa_s->drv_priv, head,
+		return wpa_s->driver->set_beacon(wpa_s->drv_priv, head,
 						 head_len, tail, tail_len,
 						 dtim_period, beacon_int);
 	return -1;

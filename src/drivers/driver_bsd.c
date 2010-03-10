@@ -873,7 +873,7 @@ static int
 wpa_driver_bsd_get_ssid(void *priv, u8 *ssid)
 {
 	struct bsd_driver_data *drv = priv;
-	return bsd_get_ssid(drv->ifname, drv, ssid, 0);
+	return bsd_get_ssid(drv, ssid, 0);
 }
 
 static int
@@ -1121,7 +1121,7 @@ wpa_driver_bsd_scan(void *priv, struct wpa_driver_scan_params *params)
 	return set80211var(drv, IEEE80211_IOC_SCAN_REQ, &sr, sizeof(sr));
 #else /* IEEE80211_IOC_SCAN_MAX_SSID */
 	/* set desired ssid before scan */
-	if (bsd_set_ssid(drv->ifname, drv, params->ssids[0].ssid,
+	if (bsd_set_ssid(drv, params->ssids[0].ssid,
 			 params->ssids[0].ssid_len) < 0)
 		return -1;
 

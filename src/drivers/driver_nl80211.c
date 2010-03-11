@@ -5126,8 +5126,8 @@ static int nl80211_send_ft_action(void *priv, u8 action, const u8 *target_ap,
 	 * FT IEs
 	 */
 
-	data_len = ies_len;
-	data = os_malloc(2 + 2 * ETH_ALEN + data_len);
+	data_len = 2 + 2 * ETH_ALEN + ies_len;
+	data = os_malloc(data_len);
 	if (data == NULL)
 		return -1;
 	pos = data;

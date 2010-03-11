@@ -1506,6 +1506,50 @@ static void wpa_supplicant_event_ibss_rsn_start(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IBSS_RSN */
 
 
+#ifdef CONFIG_IEEE80211R
+static void ft_rx_action(struct wpa_supplicant *wpa_s, const u8 *data,
+			 size_t len)
+{
+	const u8 *sta_addr, *target_ap_addr;
+	u16 status;
+
+	wpa_hexdump(MSG_MSGDUMP, "FT: RX Action", data, len);
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
+		return; /* only SME case supported for now */
+	if (len < 1 + 2 * ETH_ALEN + 2)
+		return;
+	if (data[0] != 2)
+		return; /* Only FT Action Response is supported for now */
+	sta_addr = data + 1;
+	target_ap_addr = data + 1 + ETH_ALEN;
+	status = WPA_GET_LE16(data + 1 + 2 * ETH_ALEN);
+	wpa_printf(MSG_DEBUG, "FT: Received FT Action Response: STA " MACSTR
+		   " TargetAP " MACSTR " status %u",
+		   MAC2STR(sta_addr), MAC2STR(target_ap_addr), status);
+
+	if (os_memcmp(sta_addr, wpa_s->own_addr, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: Foreign STA Address " MACSTR
+			   " in FT Action Response", MAC2STR(sta_addr));
+		return;
+	}
+
+	if (status) {
+		wpa_printf(MSG_DEBUG, "FT: FT Action Response indicates "
+			   "failure (status code %d)", status);
+		/* TODO: report error to FT code(?) */
+		return;
+	}
+
+	if (wpa_ft_process_response(wpa_s->wpa, data + 1 + 2 * ETH_ALEN + 2,
+				    len - (1 + 2 * ETH_ALEN + 2), 1,
+				    target_ap_addr, NULL, 0) < 0)
+		return;
+
+	/* TODO: trigger re-association with the target AP */
+}
+#endif /* CONFIG_IEEE80211R */
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -1614,6 +1658,20 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		ap_mgmt_rx(wpa_s, &data->rx_mgmt);
 		break;
 #endif /* CONFIG_AP */
+	case EVENT_RX_ACTION:
+		wpa_printf(MSG_DEBUG, "Received Action frame: SA=" MACSTR
+			   " Category=%u DataLen=%d freq=%d MHz",
+			   MAC2STR(data->rx_action.sa),
+			   data->rx_action.category, (int) data->rx_action.len,
+			   data->rx_action.freq);
+#ifdef CONFIG_IEEE80211R
+		if (data->rx_action.category == WLAN_ACTION_FT) {
+			ft_rx_action(wpa_s, data->rx_action.data,
+				     data->rx_action.len);
+			break;
+		}
+#endif /* CONFIG_IEEE80211R */
+		break;
 #ifdef CONFIG_CLIENT_MLME
 	case EVENT_MLME_RX: {
 		struct ieee80211_rx_status rx_status;

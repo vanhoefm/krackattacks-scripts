@@ -1905,14 +1905,60 @@ static char * wpa_cli_cmd_gen(const char *text, int state)
 
 static char * wpa_cli_dummy_gen(const char *text, int state)
 {
+	int i;
+
+	for (i = 0; wpa_cli_commands[i].cmd; i++) {
+		const char *cmd = wpa_cli_commands[i].cmd;
+		size_t len = os_strlen(cmd);
+		if (os_strncasecmp(rl_line_buffer, cmd, len) == 0 &&
+		    rl_line_buffer[len] == ' ') {
+			printf("\n%s\n", wpa_cli_commands[i].usage);
+			rl_on_new_line();
+			rl_redisplay();
+			break;
+		}
+	}
+
+	rl_attempted_completion_over = 1;
+	return NULL;
+}
+
+
+static char * wpa_cli_status_gen(const char *text, int state)
+{
+	static int i, len;
+	char *options[] = {
+		"verbose", NULL
+	};
+	char *t;
+
+	if (state == 0) {
+		i = 0;
+		len = os_strlen(text);
+	}
+
+	while ((t = options[i])) {
+		i++;
+		if (os_strncasecmp(t, text, len) == 0)
+			return strdup(t);
+	}
+
+	rl_attempted_completion_over = 1;
 	return NULL;
 }
 
 
 static char ** wpa_cli_completion(const char *text, int start, int end)
 {
-	return rl_completion_matches(text, start == 0 ?
-				     wpa_cli_cmd_gen : wpa_cli_dummy_gen);
+	char * (*func)(const char *text, int state);
+
+	if (start == 0)
+		func = wpa_cli_cmd_gen;
+	else if (os_strncasecmp(rl_line_buffer, "status ", 7) == 0)
+		func = wpa_cli_status_gen;
+	else
+		func = wpa_cli_dummy_gen;
+	return rl_completion_matches(text, func);
 }
 #endif /* CONFIG_READLINE */
 

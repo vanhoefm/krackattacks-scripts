@@ -255,6 +255,15 @@ static void wpa_cli_close_connection(void)
 	if (ctrl_conn == NULL)
 		return;
 
+#ifdef CONFIG_WPA_CLI_FORK
+	if (mon_pid) {
+		int status;
+		kill(mon_pid, SIGPIPE);
+		wait(&status);
+		mon_pid = 0;
+	}
+#endif /* CONFIG_WPA_CLI_FORK */
+
 	if (wpa_cli_attached) {
 		wpa_ctrl_detach(interactive ? mon_conn : ctrl_conn);
 		wpa_cli_attached = 0;
@@ -265,14 +274,6 @@ static void wpa_cli_close_connection(void)
 		wpa_ctrl_close(mon_conn);
 		mon_conn = NULL;
 	}
-#ifdef CONFIG_WPA_CLI_FORK
-	if (mon_pid) {
-		int status;
-		kill(mon_pid, SIGPIPE);
-		wait(&status);
-		mon_pid = 0;
-	}
-#endif /* CONFIG_WPA_CLI_FORK */
 }
 
 

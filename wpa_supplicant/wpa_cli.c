@@ -128,12 +128,25 @@ static void usage(void)
 
 
 #ifdef CONFIG_WPA_CLI_FORK
+static int in_query = 0;
+
+static void wpa_cli_monitor_sig(int sig)
+{
+	if (sig == SIGUSR1)
+		in_query = 1;
+	else if (sig == SIGUSR2)
+		in_query = 0;
+}
+
 static void wpa_cli_monitor(void)
 {
 	char buf[256];
 	size_t len = sizeof(buf) - 1;
 	struct timeval tv;
 	fd_set rfds;
+
+	signal(SIGUSR1, wpa_cli_monitor_sig);
+	signal(SIGUSR2, wpa_cli_monitor_sig);
 
 	while (mon_conn) {
 		int s = wpa_ctrl_get_fd(mon_conn);
@@ -142,6 +155,8 @@ static void wpa_cli_monitor(void)
 		FD_ZERO(&rfds);
 		FD_SET(s, &rfds);
 		if (select(s + 1, &rfds, NULL, NULL, &tv) < 0) {
+			if (errno == EINTR)
+				continue;
 			perror("select");
 			break;
 		}
@@ -155,7 +170,10 @@ static void wpa_cli_monitor(void)
 				break;
 			}
 			buf[len] = '\0';
+			if (in_query)
+				printf("\r");
 			printf("%s\n", buf);
+			kill(getppid(), SIGUSR1);
 		}
 	}
 }
@@ -1841,9 +1859,13 @@ static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 				wpa_cli_action_process(buf);
 			else {
 				if (in_read && first)
-					printf("\n");
+					printf("\r");
 				first = 0;
 				printf("%s\n", buf);
+#ifdef CONFIG_READLINE
+				rl_on_new_line();
+				rl_redisplay();
+#endif /* CONFIG_READLINE */
 			}
 		} else {
 			printf("Could not read pending message.\n");
@@ -1930,6 +1952,10 @@ static void wpa_cli_interactive(void)
 #ifndef CONFIG_NATIVE_WINDOWS
 		alarm(ping_interval);
 #endif /* CONFIG_NATIVE_WINDOWS */
+#ifdef CONFIG_WPA_CLI_FORK
+		if (mon_pid)
+			kill(mon_pid, SIGUSR1);
+#endif /* CONFIG_WPA_CLI_FORK */
 #ifdef CONFIG_READLINE
 		cmd = readline("> ");
 		if (cmd && *cmd) {
@@ -1985,6 +2011,10 @@ static void wpa_cli_interactive(void)
 
 		if (cmd != cmdbuf)
 			free(cmd);
+#ifdef CONFIG_WPA_CLI_FORK
+		if (mon_pid)
+			kill(mon_pid, SIGUSR2);
+#endif /* CONFIG_WPA_CLI_FORK */
 	} while (!wpa_cli_quit);
 
 #ifdef CONFIG_READLINE
@@ -2072,6 +2102,17 @@ static void wpa_cli_terminate(int sig)
 	wpa_cli_cleanup();
 	exit(0);
 }
+
+
+#ifdef CONFIG_WPA_CLI_FORK
+static void wpa_cli_usr1(int sig)
+{
+#ifdef CONFIG_READLINE
+	rl_on_new_line();
+	rl_redisplay();
+#endif /* CONFIG_READLINE */
+}
+#endif /* CONFIG_WPA_CLI_FORK */
 
 
 #ifndef CONFIG_NATIVE_WINDOWS
@@ -2221,6 +2262,9 @@ int main(int argc, char *argv[])
 #ifndef CONFIG_NATIVE_WINDOWS
 	signal(SIGALRM, wpa_cli_alarm);
 #endif /* CONFIG_NATIVE_WINDOWS */
+#ifdef CONFIG_WPA_CLI_FORK
+	signal(SIGUSR1, wpa_cli_usr1);
+#endif /* CONFIG_WPA_CLI_FORK */
 
 	if (ctrl_ifname == NULL)
 		ctrl_ifname = wpa_cli_get_default_ifname();

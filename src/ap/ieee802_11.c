@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1522,8 +1522,12 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (sta->flags & WLAN_STA_ASSOC)
 		new_assoc = 0;
 	sta->flags |= WLAN_STA_ASSOC;
-	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa) {
-		/* Open or static WEP; no separate authorization */
+	if ((!hapd->conf->ieee802_1x && !hapd->conf->wpa) ||
+	    sta->auth_alg == WLAN_AUTH_FT) {
+		/*
+		 * Open, static WEP, or FT protocol; no separate authorization
+		 * step.
+		 */
 		sta->flags |= WLAN_STA_AUTHORIZED;
 		wpa_msg(hapd->msg_ctx, MSG_INFO,
 			AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));

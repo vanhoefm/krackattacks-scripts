@@ -1,6 +1,6 @@
 /*
  * hostapd - Driver operations
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -16,6 +16,7 @@
 
 #include "utils/common.h"
 #include "drivers/driver.h"
+#include "common/ieee802_11_defs.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -121,7 +122,8 @@ static int hostapd_set_sta_flags(struct hostapd_data *hapd,
 	int set_flags, total_flags, flags_and, flags_or;
 	total_flags = hostapd_sta_flags_to_drv(sta->flags);
 	set_flags = WPA_STA_SHORT_PREAMBLE | WPA_STA_WMM | WPA_STA_MFP;
-	if (!hapd->conf->ieee802_1x && !hapd->conf->wpa &&
+	if (((!hapd->conf->ieee802_1x && !hapd->conf->wpa) ||
+	     sta->auth_alg == WLAN_AUTH_FT) &&
 	    sta->flags & WLAN_STA_AUTHORIZED)
 		set_flags |= WPA_STA_AUTHORIZED;
 	flags_or = total_flags & set_flags;

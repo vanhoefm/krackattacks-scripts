@@ -852,7 +852,7 @@ static inline int wpa_auth_set_key(struct wpa_authenticator *wpa_auth,
 }
 
 
-static void wpa_ft_install_ptk(struct wpa_state_machine *sm)
+void wpa_ft_install_ptk(struct wpa_state_machine *sm)
 {
 	enum wpa_alg alg;
 	int klen;
@@ -864,13 +864,17 @@ static void wpa_ft_install_ptk(struct wpa_state_machine *sm)
 	} else if (sm->pairwise == WPA_CIPHER_CCMP) {
 		alg = WPA_ALG_CCMP;
 		klen = 16;
-	} else
+	} else {
+		wpa_printf(MSG_DEBUG, "FT: Unknown pairwise alg 0x%x - skip "
+			   "PTK configuration", sm->pairwise);
 		return;
+	}
 
 	/* FIX: add STA entry to kernel/driver here? The set_key will fail
 	 * most likely without this.. At the moment, STA entry is added only
-	 * after association has been completed. Alternatively, could
-	 * re-configure PTK at that point(?).
+	 * after association has been completed. This function will be called
+	 * again after association to get the PTK configured, but that could be
+	 * optimized by adding the STA entry earlier.
 	 */
 	if (wpa_auth_set_key(sm->wpa_auth, 0, alg, sm->addr, 0,
 			     sm->PTK.tk1, klen))
@@ -990,6 +994,7 @@ static u16 wpa_ft_process_auth_req(struct wpa_state_machine *sm,
 			(u8 *) &sm->PTK, ptk_len);
 	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);
 
+	sm->pairwise = pairwise;
 	wpa_ft_install_ptk(sm);
 
 	buflen = 2 + sizeof(struct rsn_mdie) + 2 + sizeof(struct rsn_ftie) +

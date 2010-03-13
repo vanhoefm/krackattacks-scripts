@@ -106,6 +106,7 @@ struct wpa_sm {
 	int ft_completed;
 	int over_the_ds_in_progress;
 	u8 target_ap[ETH_ALEN]; /* over-the-DS target AP */
+	int set_ptk_after_assoc;
 #endif /* CONFIG_IEEE80211R */
 };
 

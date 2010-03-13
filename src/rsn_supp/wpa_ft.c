@@ -629,18 +629,29 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 	}
 
 	ret = wpa_ft_install_ptk(sm, bssid);
+	if (ret) {
+		/*
+		 * Some drivers do not support key configuration when we are
+		 * not associated with the target AP. Work around this by
+		 * trying again after the following reassociation gets
+		 * completed.
+		 */
+		wpa_printf(MSG_DEBUG, "FT: Failed to set PTK prior to "
+			   "association - try again after reassociation");
+		sm->set_ptk_after_assoc = 1;
+	} else
+		sm->set_ptk_after_assoc = 0;
 
-	if (ret == 0) {
-		sm->ft_completed = 1;
-		if (ft_action) {
-			/* TODO: trigger re-association to the Target AP;
-			 * MLME is now doing this automatically, but it should
-			 * really be done only if we get here successfully. */
-			os_memcpy(sm->bssid, target_ap, ETH_ALEN);
-		}
+	sm->ft_completed = 1;
+	if (ft_action) {
+		/*
+		 * The caller is expected trigger re-association with the
+		 * Target AP.
+		 */
+		os_memcpy(sm->bssid, target_ap, ETH_ALEN);
 	}
 
-	return ret;
+	return 0;
 }
 
 
@@ -895,6 +906,14 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	if (wpa_ft_process_igtk_subelem(sm, parse.igtk, parse.igtk_len) < 0)
 		return -1;
 #endif /* CONFIG_IEEE80211W */
+
+	if (sm->set_ptk_after_assoc) {
+		wpa_printf(MSG_DEBUG, "FT: Try to set PTK again now that we "
+			   "are associated");
+		if (wpa_ft_install_ptk(sm, src_addr) < 0)
+			return -1;
+		sm->set_ptk_after_assoc = 0;
+	}
 
 	if (parse.ric) {
 		wpa_hexdump(MSG_MSGDUMP, "FT: RIC Response",

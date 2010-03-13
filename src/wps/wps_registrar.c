@@ -402,7 +402,11 @@ static int wps_build_probe_config_methods(struct wps_registrar *reg,
 					  struct wpabuf *msg)
 {
 	u16 methods;
-	methods = 0;
+	/*
+	 * These are the methods that the AP supports as an Enrollee for adding
+	 * external Registrars.
+	 */
+	methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
 	wpa_printf(MSG_DEBUG, "WPS:  * Config Methods (%x)", methods);
 	wpabuf_put_be16(msg, ATTR_CONFIG_METHODS);
 	wpabuf_put_be16(msg, 2);

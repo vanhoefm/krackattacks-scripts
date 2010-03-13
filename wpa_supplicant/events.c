@@ -1545,7 +1545,16 @@ static void ft_rx_action(struct wpa_supplicant *wpa_s, const u8 *data,
 				    target_ap_addr, NULL, 0) < 0)
 		return;
 
-	sme_associate(wpa_s, WPAS_MODE_INFRA, target_ap_addr, WLAN_AUTH_FT);
+#ifdef CONFIG_SME
+	{
+		struct wpa_bss *bss;
+		bss = wpa_bss_get_bssid(wpa_s, target_ap_addr);
+		if (bss)
+			wpa_s->sme.freq = bss->freq;
+		sme_associate(wpa_s, WPAS_MODE_INFRA, target_ap_addr,
+			      WLAN_AUTH_FT);
+	}
+#endif /* CONFIG_SME */
 }
 #endif /* CONFIG_IEEE80211R */
 

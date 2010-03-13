@@ -1024,6 +1024,21 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
 #ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_SME
+	if (wpa_s->sme.auth_alg == WPA_AUTH_ALG_FT) {
+		u8 bssid[ETH_ALEN];
+		if (wpa_drv_get_bssid(wpa_s, bssid) < 0 ||
+		    wpa_ft_validate_reassoc_resp(wpa_s->wpa,
+						 data->assoc_info.resp_ies,
+						 data->assoc_info.resp_ies_len,
+						 bssid) < 0) {
+			wpa_printf(MSG_DEBUG, "FT: Validation of "
+				   "Reassociation Response failed");
+			/* TODO: force disconnection? */
+		}
+	}
+#endif /* CONFIG_SME */
+
 	p = data->assoc_info.resp_ies;
 	l = data->assoc_info.resp_ies_len;
 
@@ -1551,6 +1566,7 @@ static void ft_rx_action(struct wpa_supplicant *wpa_s, const u8 *data,
 		bss = wpa_bss_get_bssid(wpa_s, target_ap_addr);
 		if (bss)
 			wpa_s->sme.freq = bss->freq;
+		wpa_s->sme.auth_alg = WPA_AUTH_ALG_FT;
 		sme_associate(wpa_s, WPAS_MODE_INFRA, target_ap_addr,
 			      WLAN_AUTH_FT);
 	}

@@ -414,6 +414,7 @@ struct wpa_supplicant {
 		size_t ft_ies_len;
 		u8 prev_bssid[ETH_ALEN];
 		int prev_bssid_set;
+		int auth_alg;
 	} sme;
 #endif /* CONFIG_SME */
 

@@ -628,6 +628,7 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 		os_free(ft_ies);
 	}
 
+	wpa_sm_mark_authenticated(sm, bssid);
 	ret = wpa_ft_install_ptk(sm, bssid);
 	if (ret) {
 		/*

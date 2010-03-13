@@ -54,6 +54,7 @@ struct wpa_sm_ctx {
 			     size_t ies_len);
 	int (*send_ft_action)(void *ctx, u8 action, const u8 *target_ap,
 			      const u8 *ies, size_t ies_len);
+	int (*mark_authenticated)(void *ctx, const u8 *target_ap);
 };
 
 

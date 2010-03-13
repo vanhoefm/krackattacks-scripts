@@ -278,6 +278,7 @@ struct wpa_driver_auth_params {
 	const u8 *wep_key[4];
 	size_t wep_key_len[4];
 	int wep_tx_keyidx;
+	int local_state_change;
 };
 
 /**

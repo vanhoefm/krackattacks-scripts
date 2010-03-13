@@ -225,6 +225,14 @@ static inline int wpa_sm_send_ft_action(struct wpa_sm *sm, u8 action,
 	return -1;
 }
 
+static inline int wpa_sm_mark_authenticated(struct wpa_sm *sm,
+					    const u8 *target_ap)
+{
+	if (sm->ctx->mark_authenticated)
+		return sm->ctx->mark_authenticated(sm->ctx->ctx, target_ap);
+	return -1;
+}
+
 
 void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
 			int ver, const u8 *dest, u16 proto,

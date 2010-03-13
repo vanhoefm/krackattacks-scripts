@@ -489,6 +489,30 @@ static int wpa_supplicant_send_ft_action(void *ctx, u8 action,
 						    ies, ies_len);
 	return wpa_drv_send_ft_action(wpa_s, action, target_ap, ies, ies_len);
 }
+
+
+static int wpa_supplicant_mark_authenticated(void *ctx, const u8 *target_ap)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct wpa_driver_auth_params params;
+	struct wpa_bss *bss;
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
+		return -1;
+
+	bss = wpa_bss_get_bssid(wpa_s, target_ap);
+	if (bss == NULL)
+		return -1;
+
+	os_memset(&params, 0, sizeof(params));
+	params.bssid = target_ap;
+	params.freq = bss->freq;
+	params.ssid = bss->ssid;
+	params.ssid_len = bss->ssid_len;
+	params.auth_alg = WPA_AUTH_ALG_FT;
+	params.local_state_change = 1;
+	return wpa_drv_authenticate(wpa_s, &params);
+}
 #endif /* CONFIG_IEEE80211R */
 
 #endif /* CONFIG_NO_WPA */
@@ -617,6 +641,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_IEEE80211R
 	ctx->update_ft_ies = wpa_supplicant_update_ft_ies;
 	ctx->send_ft_action = wpa_supplicant_send_ft_action;
+	ctx->mark_authenticated = wpa_supplicant_mark_authenticated;
 #endif /* CONFIG_IEEE80211R */
 
 	wpa_s->wpa = wpa_sm_init(ctx);

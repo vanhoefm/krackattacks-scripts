@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - SME
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -239,7 +239,6 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 {
-	struct wpa_driver_associate_params params;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
 	if (ssid == NULL) {
@@ -285,8 +284,18 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 	}
 #endif /* CONFIG_IEEE80211R */
 
+	sme_associate(wpa_s, ssid->mode, data->auth.peer,
+		      data->auth.auth_type);
+}
+
+
+void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
+		   const u8 *bssid, u16 auth_type)
+{
+	struct wpa_driver_associate_params params;
+
 	os_memset(&params, 0, sizeof(params));
-	params.bssid = data->auth.peer;
+	params.bssid = bssid;
 	params.ssid = wpa_s->sme.ssid;
 	params.ssid_len = wpa_s->sme.ssid_len;
 	params.freq = wpa_s->sme.freq;
@@ -294,12 +303,12 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		wpa_s->sme.assoc_req_ie : NULL;
 	params.wpa_ie_len = wpa_s->sme.assoc_req_ie_len;
 #ifdef CONFIG_IEEE80211R
-	if (data->auth.auth_type == WLAN_AUTH_FT && wpa_s->sme.ft_ies) {
+	if (auth_type == WLAN_AUTH_FT && wpa_s->sme.ft_ies) {
 		params.wpa_ie = wpa_s->sme.ft_ies;
 		params.wpa_ie_len = wpa_s->sme.ft_ies_len;
 	}
 #endif /* CONFIG_IEEE80211R */
-	params.mode = ssid->mode;
+	params.mode = mode;
 	params.mgmt_frame_protection = wpa_s->sme.mfp;
 	if (wpa_s->sme.prev_bssid_set)
 		params.prev_bssid = wpa_s->sme.prev_bssid;

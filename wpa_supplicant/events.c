@@ -1545,7 +1545,7 @@ static void ft_rx_action(struct wpa_supplicant *wpa_s, const u8 *data,
 				    target_ap_addr, NULL, 0) < 0)
 		return;
 
-	/* TODO: trigger re-association with the target AP */
+	sme_associate(wpa_s, WPAS_MODE_INFRA, target_ap_addr, WLAN_AUTH_FT);
 }
 #endif /* CONFIG_IEEE80211R */
 

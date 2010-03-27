@@ -2013,7 +2013,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret == -ENOENT && alg == WPA_ALG_NONE)
+	if ((ret == -ENOENT || ret == -ENOLINK) && alg == WPA_ALG_NONE)
 		ret = 0;
 	if (ret)
 		wpa_printf(MSG_DEBUG, "nl80211: set_key failed; err=%d %s)",

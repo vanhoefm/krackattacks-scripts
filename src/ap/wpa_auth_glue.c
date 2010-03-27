@@ -270,7 +270,8 @@ static int wpa_auth_iface_iter(struct hostapd_iface *iface, void *ctx)
 	struct wpa_auth_iface_iter_data *data = ctx;
 	size_t i;
 	for (i = 0; i < iface->num_bss; i++) {
-		if (data->cb(iface->bss[i]->wpa_auth, data->cb_ctx))
+		if (iface->bss[i]->wpa_auth &&
+		    data->cb(iface->bss[i]->wpa_auth, data->cb_ctx))
 			return 1;
 	}
 	return 0;

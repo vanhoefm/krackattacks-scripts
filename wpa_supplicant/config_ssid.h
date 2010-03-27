@@ -363,6 +363,16 @@ struct wpa_ssid {
 	 * <bgscan module name>:<module parameters>
 	 */
 	char *bgscan;
+
+	/**
+	 * freq_list - Array of allowed frequencies or %NULL for all
+	 *
+	 * This is an optional zero-terminated array of frequencies in
+	 * megahertz (MHz) to allow for selecting the BSS. If set, scan results
+	 * that do not match any of the specified frequencies are not
+	 * considered when selecting a BSS.
+	 */
+	int *freq_list;
 };
 
 #endif /* CONFIG_SSID_H */

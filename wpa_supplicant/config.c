@@ -917,9 +917,9 @@ static char * wpa_config_write_auth_alg(const struct parse_data *data,
 #endif /* NO_CONFIG_WRITE */
 
 
-static int wpa_config_parse_scan_freq(const struct parse_data *data,
-				      struct wpa_ssid *ssid, int line,
-				      const char *value)
+static int * wpa_config_parse_freqs(const struct parse_data *data,
+				    struct wpa_ssid *ssid, int line,
+				    const char *value)
 {
 	int *freqs;
 	size_t used, len;
@@ -929,7 +929,7 @@ static int wpa_config_parse_scan_freq(const struct parse_data *data,
 	len = 10;
 	freqs = os_zalloc((len + 1) * sizeof(int));
 	if (freqs == NULL)
-		return -1;
+		return NULL;
 
 	pos = value;
 	while (pos) {
@@ -941,7 +941,7 @@ static int wpa_config_parse_scan_freq(const struct parse_data *data,
 			n = os_realloc(freqs, (len * 2 + 1) * sizeof(int));
 			if (n == NULL) {
 				os_free(freqs);
-				return -1;
+				return NULL;
 			}
 			for (i = len; i <= len * 2; i++)
 				n[i] = 0;
@@ -956,6 +956,19 @@ static int wpa_config_parse_scan_freq(const struct parse_data *data,
 		pos = os_strchr(pos + 1, ' ');
 	}
 
+	return freqs;
+}
+
+
+static int wpa_config_parse_scan_freq(const struct parse_data *data,
+				      struct wpa_ssid *ssid, int line,
+				      const char *value)
+{
+	int *freqs;
+
+	freqs = wpa_config_parse_freqs(data, ssid, line, value);
+	if (freqs == NULL)
+		return -1;
 	os_free(ssid->scan_freq);
 	ssid->scan_freq = freqs;
 
@@ -963,19 +976,35 @@ static int wpa_config_parse_scan_freq(const struct parse_data *data,
 }
 
 
+static int wpa_config_parse_freq_list(const struct parse_data *data,
+				      struct wpa_ssid *ssid, int line,
+				      const char *value)
+{
+	int *freqs;
+
+	freqs = wpa_config_parse_freqs(data, ssid, line, value);
+	if (freqs == NULL)
+		return -1;
+	os_free(ssid->freq_list);
+	ssid->freq_list = freqs;
+
+	return 0;
+}
+
+
 #ifndef NO_CONFIG_WRITE
-static char * wpa_config_write_scan_freq(const struct parse_data *data,
-					 struct wpa_ssid *ssid)
+static char * wpa_config_write_freqs(const struct parse_data *data,
+				     const int *freqs)
 {
 	char *buf, *pos, *end;
 	int i, ret;
 	size_t count;
 
-	if (ssid->scan_freq == NULL)
+	if (freqs == NULL)
 		return NULL;
 
 	count = 0;
-	for (i = 0; ssid->scan_freq[i]; i++)
+	for (i = 0; freqs[i]; i++)
 		count++;
 
 	pos = buf = os_zalloc(10 * count + 1);
@@ -983,9 +1012,9 @@ static char * wpa_config_write_scan_freq(const struct parse_data *data,
 		return NULL;
 	end = buf + 10 * count + 1;
 
-	for (i = 0; ssid->scan_freq[i]; i++) {
+	for (i = 0; freqs[i]; i++) {
 		ret = os_snprintf(pos, end - pos, "%s%u",
-				  i == 0 ? "" : " ", ssid->scan_freq[i]);
+				  i == 0 ? "" : " ", freqs[i]);
 		if (ret < 0 || ret >= end - pos) {
 			end[-1] = '\0';
 			return buf;
@@ -994,6 +1023,20 @@ static char * wpa_config_write_scan_freq(const struct parse_data *data,
 	}
 
 	return buf;
+}
+
+
+static char * wpa_config_write_scan_freq(const struct parse_data *data,
+					 struct wpa_ssid *ssid)
+{
+	return wpa_config_write_freqs(data, ssid->scan_freq);
+}
+
+
+static char * wpa_config_write_freq_list(const struct parse_data *data,
+					 struct wpa_ssid *ssid)
+{
+	return wpa_config_write_freqs(data, ssid->freq_list);
 }
 #endif /* NO_CONFIG_WRITE */
 
@@ -1399,6 +1442,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC(group) },
 	{ FUNC(auth_alg) },
 	{ FUNC(scan_freq) },
+	{ FUNC(freq_list) },
 #ifdef IEEE8021X_EAPOL
 	{ FUNC(eap) },
 	{ STR_LENe(identity) },
@@ -1624,6 +1668,7 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 #endif /* IEEE8021X_EAPOL */
 	os_free(ssid->id_str);
 	os_free(ssid->scan_freq);
+	os_free(ssid->freq_list);
 	os_free(ssid->bgscan);
 	os_free(ssid);
 }

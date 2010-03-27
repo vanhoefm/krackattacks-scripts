@@ -394,6 +394,20 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 }
 
 
+static int freq_allowed(int *freqs, int freq)
+{
+	int i;
+
+	if (freqs == NULL)
+		return 1;
+
+	for (i = 0; freqs[i]; i++)
+		if (freqs[i] == freq)
+			return 1;
+	return 0;
+}
+
+
 static struct wpa_bss *
 wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 			      struct wpa_scan_results *scan_res,
@@ -476,6 +490,12 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 
 			if (!wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
 				continue;
+
+			if (!freq_allowed(ssid->freq_list, bss->freq)) {
+				wpa_printf(MSG_DEBUG, "   skip - "
+					   "frequency not allowed");
+				continue;
+			}
 
 			wpa_printf(MSG_DEBUG, "   selected WPA AP "
 				   MACSTR " ssid='%s'",
@@ -601,6 +621,12 @@ wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
 			if (bss->caps & IEEE80211_CAP_IBSS) {
 				wpa_printf(MSG_DEBUG, "   skip - "
 					   "IBSS (adhoc) network");
+				continue;
+			}
+
+			if (!freq_allowed(ssid->freq_list, bss->freq)) {
+				wpa_printf(MSG_DEBUG, "   skip - "
+					   "frequency not allowed");
 				continue;
 			}
 

@@ -1546,6 +1546,9 @@ static int wpa_driver_nl80211_scan(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
 	for (i = 0; i < params->num_ssids; i++) {
+		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan SSID",
+				  params->ssids[i].ssid,
+				  params->ssids[i].ssid_len);
 		NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
 			params->ssids[i].ssid);
 	}
@@ -1553,13 +1556,18 @@ static int wpa_driver_nl80211_scan(void *priv,
 		nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
 
 	if (params->extra_ies) {
+		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan extra IEs",
+				  params->extra_ies, params->extra_ies_len);
 		NLA_PUT(msg, NL80211_ATTR_IE, params->extra_ies_len,
 			params->extra_ies);
 	}
 
 	if (params->freqs) {
-		for (i = 0; params->freqs[i]; i++)
+		for (i = 0; params->freqs[i]; i++) {
+			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
+				   "MHz", params->freqs[i]);
 			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
+		}
 		nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
 	}
 

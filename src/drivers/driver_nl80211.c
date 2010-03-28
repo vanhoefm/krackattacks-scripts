@@ -859,6 +859,7 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 	};
 	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
 	enum nl80211_cqm_rssi_threshold_event event;
+	union wpa_event_data ed;
 
 	if (tb[NL80211_ATTR_CQM] == NULL ||
 	    nla_parse_nested(cqm, NL80211_ATTR_CQM_MAX, tb[NL80211_ATTR_CQM],
@@ -870,13 +871,21 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 	if (cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] == NULL)
 		return;
 	event = nla_get_u32(cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT]);
+
+	os_memset(&ed, 0, sizeof(ed));
+
 	if (event == NL80211_CQM_RSSI_THRESHOLD_EVENT_HIGH) {
 		wpa_printf(MSG_DEBUG, "nl80211: Connection quality monitor "
 			   "event: RSSI high");
+		ed.signal_change.above_threshold = 1;
 	} else if (event == NL80211_CQM_RSSI_THRESHOLD_EVENT_LOW) {
 		wpa_printf(MSG_DEBUG, "nl80211: Connection quality monitor "
 			   "event: RSSI low");
-	}
+		ed.signal_change.above_threshold = 0;
+	} else
+		return;
+
+	wpa_supplicant_event(drv->ctx, EVENT_SIGNAL_CHANGE, &ed);
 }
 
 
@@ -5190,6 +5199,44 @@ static int nl80211_send_ft_action(void *priv, u8 action, const u8 *target_ap,
 }
 
 
+static int nl80211_signal_monitor(void *priv, int threshold, int hysteresis)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg, *cqm = NULL;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Signal monitor threshold=%d "
+		   "hysteresis=%d", threshold, hysteresis);
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_SET_CQM, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+
+	cqm = nlmsg_alloc();
+	if (cqm == NULL)
+		return -1;
+
+	NLA_PUT_U32(cqm, NL80211_ATTR_CQM_RSSI_THOLD, threshold);
+	NLA_PUT_U32(cqm, NL80211_ATTR_CQM_RSSI_HYST, hysteresis);
+	nla_put_nested(msg, NL80211_ATTR_CQM, cqm);
+
+	if (send_and_recv_msgs(drv, msg, NULL, NULL) == 0)
+		return 0;
+	msg = NULL;
+
+nla_put_failure:
+	if (cqm)
+		nlmsg_free(cqm);
+	nlmsg_free(msg);
+	return -1;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -5249,4 +5296,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
 	.resume = wpa_driver_nl80211_resume,
 	.send_ft_action = nl80211_send_ft_action,
+	.signal_monitor = nl80211_signal_monitor,
 };

@@ -1758,6 +1758,22 @@ struct wpa_driver_ops {
 	 * @priv: Private driver interface data
 	 */
 	void (*resume)(void *priv);
+
+	/**
+	 * signal_monitor - Set signal monitoring parameters
+	 * @priv: Private driver interface data
+	 * @threshold: Threshold value for signal change events; 0 = disabled
+	 * @hysteresis: Minimum change in signal strength before indicating a
+	 *	new event
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 *
+	 * This function can be used to configure monitoring of signal strength
+	 * with the current AP. Whenever signal strength drops below the
+	 * %threshold value or increases above it, EVENT_SIGNAL_CHANGE event
+	 * should be generated assuming the signal strength has changed at
+	 * least %hysteresis from the previously indicated signal change event.
+	 */
+	int (*signal_monitor)(void *priv, int threshold, int hysteresis);
 };
 
 
@@ -2030,7 +2046,16 @@ enum wpa_event_type {
 	 * %wpa_supplicant, this event is used only if the send_eapol() handler
 	 * is used to override the use of l2_packet for EAPOL frame TX.
 	 */
-	EVENT_EAPOL_RX
+	EVENT_EAPOL_RX,
+
+	/**
+	 * EVENT_SIGNAL_CHANGE - Indicate change in signal strength
+	 *
+	 * This event is used to indicate changes in the signal strength
+	 * observed in frames received from the current AP if signal strength
+	 * monitoring has been enabled with signal_monitor().
+	 */
+	EVENT_SIGNAL_CHANGE
 };
 
 
@@ -2402,6 +2427,13 @@ union wpa_event_data {
 		const u8 *data;
 		size_t data_len;
 	} eapol_rx;
+
+	/**
+	 * struct signal_change - Data for EVENT_SIGNAL_CHANGE events
+	 */
+	struct signal_change {
+		int above_threshold;
+	} signal_change;
 };
 
 /**

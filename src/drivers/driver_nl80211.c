@@ -849,6 +849,37 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 }
 
 
+static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
+			      struct nlattr *tb[])
+{
+	static struct nla_policy cqm_policy[NL80211_ATTR_CQM_MAX + 1] = {
+		[NL80211_ATTR_CQM_RSSI_THOLD] = { .type = NLA_U32 },
+		[NL80211_ATTR_CQM_RSSI_HYST] = { .type = NLA_U8 },
+		[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] = { .type = NLA_U32 },
+	};
+	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
+	enum nl80211_cqm_rssi_threshold_event event;
+
+	if (tb[NL80211_ATTR_CQM] == NULL ||
+	    nla_parse_nested(cqm, NL80211_ATTR_CQM_MAX, tb[NL80211_ATTR_CQM],
+			     cqm_policy)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Ignore invalid CQM event");
+		return;
+	}
+
+	if (cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] == NULL)
+		return;
+	event = nla_get_u32(cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT]);
+	if (event == NL80211_CQM_RSSI_THRESHOLD_EVENT_HIGH) {
+		wpa_printf(MSG_DEBUG, "nl80211: Connection quality monitor "
+			   "event: RSSI high");
+	} else if (event == NL80211_CQM_RSSI_THRESHOLD_EVENT_LOW) {
+		wpa_printf(MSG_DEBUG, "nl80211: Connection quality monitor "
+			   "event: RSSI low");
+	}
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -940,6 +971,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 		break;
 	case NL80211_CMD_CANCEL_REMAIN_ON_CHANNEL:
 		mlme_event_remain_on_channel(drv, 1, tb);
+		break;
+	case NL80211_CMD_NOTIFY_CQM:
+		nl80211_cqm_event(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

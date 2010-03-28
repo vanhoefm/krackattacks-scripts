@@ -2274,8 +2274,8 @@ retry:
 	for (i = 0; i < 4; i++) {
 		if (!params->wep_key[i])
 			continue;
-		wpa_driver_nl80211_set_key(bss->ifname, drv, WPA_ALG_WEP, NULL,
-					   i,
+		wpa_driver_nl80211_set_key(bss->ifname, priv, WPA_ALG_WEP,
+					   NULL, i,
 					   i == params->wep_tx_keyidx, NULL, 0,
 					   params->wep_key[i],
 					   params->wep_key_len[i]);

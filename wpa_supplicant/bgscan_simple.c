@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - background scan and roaming module: simple
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -19,6 +19,7 @@
 #include "drivers/driver.h"
 #include "config_ssid.h"
 #include "wpa_supplicant_i.h"
+#include "driver_i.h"
 #include "scan.h"
 #include "bgscan.h"
 
@@ -26,6 +27,10 @@ struct bgscan_simple_data {
 	struct wpa_supplicant *wpa_s;
 	const struct wpa_ssid *ssid;
 	int scan_interval;
+	int signal_threshold;
+	int short_interval; /* use if signal < threshold */
+	int long_interval; /* use if signal > threshold */
+	struct os_time last_bgscan;
 };
 
 
@@ -52,7 +57,36 @@ static void bgscan_simple_timeout(void *eloop_ctx, void *timeout_ctx)
 		wpa_printf(MSG_DEBUG, "bgscan simple: Failed to trigger scan");
 		eloop_register_timeout(data->scan_interval, 0,
 				       bgscan_simple_timeout, data, NULL);
+	} else
+		os_get_time(&data->last_bgscan);
+}
+
+
+static int bgscan_simple_get_params(struct bgscan_simple_data *data,
+				    const char *params)
+{
+	const char *pos;
+
+	if (params == NULL)
+		return 0;
+
+	data->short_interval = atoi(params);
+
+	pos = os_strchr(params, ':');
+	if (pos == NULL)
+		return 0;
+	pos++;
+	data->signal_threshold = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos == NULL) {
+		wpa_printf(MSG_ERROR, "bgscan simple: Missing scan interval "
+			   "for high signal");
+		return -1;
 	}
+	pos++;
+	data->long_interval = atoi(pos);
+
+	return 0;
 }
 
 
@@ -67,10 +101,27 @@ static void * bgscan_simple_init(struct wpa_supplicant *wpa_s,
 		return NULL;
 	data->wpa_s = wpa_s;
 	data->ssid = ssid;
-	if (params)
-		data->scan_interval = atoi(params);
-	if (data->scan_interval <= 0)
-		data->scan_interval = 30;
+	if (bgscan_simple_get_params(data, params) < 0) {
+		os_free(data);
+		return NULL;
+	}
+	if (data->short_interval <= 0)
+		data->short_interval = 30;
+	if (data->long_interval <= 0)
+		data->long_interval = 30;
+
+	wpa_printf(MSG_DEBUG, "bgscan simple: Signal strength threshold %d  "
+		   "Short bgscan interval %d  Long bgscan interval %d",
+		   data->signal_threshold, data->short_interval,
+		   data->long_interval);
+
+	if (data->signal_threshold &&
+	    wpa_drv_signal_monitor(wpa_s, data->signal_threshold, 4) < 0) {
+		wpa_printf(MSG_ERROR, "bgscan simple: Failed to enable "
+			   "signal strength monitoring");
+	}
+
+	data->scan_interval = data->short_interval;
 	eloop_register_timeout(data->scan_interval, 0, bgscan_simple_timeout,
 			       data, NULL);
 	return data;
@@ -81,6 +132,8 @@ static void bgscan_simple_deinit(void *priv)
 {
 	struct bgscan_simple_data *data = priv;
 	eloop_cancel_timeout(bgscan_simple_timeout, data, NULL);
+	if (data->signal_threshold)
+		wpa_drv_signal_monitor(data->wpa_s, 0, 0);
 	os_free(data);
 }
 
@@ -113,11 +166,46 @@ static void bgscan_simple_notify_beacon_loss(void *priv)
 }
 
 
-static void bgscan_simple_notify_signal_change(void *priv)
+static void bgscan_simple_notify_signal_change(void *priv, int above)
 {
-	wpa_printf(MSG_DEBUG, "bgscan simple: signal level changed");
-	/* TODO: if signal strength dropped enough, speed up background
-	 * scanning */
+	struct bgscan_simple_data *data = priv;
+
+	if (data->short_interval == data->long_interval ||
+	    data->signal_threshold == 0)
+		return;
+
+	wpa_printf(MSG_DEBUG, "bgscan simple: signal level changed "
+		   "(above=%d)", above);
+	if (data->scan_interval == data->long_interval && !above) {
+		wpa_printf(MSG_DEBUG, "bgscan simple: Trigger immediate scan "
+			   "and start using short bgscan interval");
+		data->scan_interval = data->short_interval;
+		eloop_cancel_timeout(bgscan_simple_timeout, data, NULL);
+		eloop_register_timeout(0, 0, bgscan_simple_timeout, data,
+				       NULL);
+	} else if (data->scan_interval == data->short_interval && above) {
+		wpa_printf(MSG_DEBUG, "bgscan simple: Start using long bgscan "
+			   "interval");
+		data->scan_interval = data->long_interval;
+		eloop_cancel_timeout(bgscan_simple_timeout, data, NULL);
+		eloop_register_timeout(data->scan_interval, 0,
+				       bgscan_simple_timeout, data, NULL);
+	} else if (!above) {
+		struct os_time now;
+		/*
+		 * Signal dropped further 4 dB. Request a new scan if we have
+		 * not yet scanned in a while.
+		 */
+		os_get_time(&now);
+		if (now.sec > data->last_bgscan.sec + 10) {
+			wpa_printf(MSG_DEBUG, "bgscan simple: Trigger "
+				   "immediate scan");
+			eloop_cancel_timeout(bgscan_simple_timeout, data,
+					     NULL);
+			eloop_register_timeout(0, 0, bgscan_simple_timeout,
+					       data, NULL);
+		}
+	}
 }
 
 

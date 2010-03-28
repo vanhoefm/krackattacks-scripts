@@ -1740,6 +1740,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					data->eapol_rx.data,
 					data->eapol_rx.data_len);
 		break;
+	case EVENT_SIGNAL_CHANGE:
+		bgscan_notify_signal_change(
+			wpa_s, data->signal_change.above_threshold);
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

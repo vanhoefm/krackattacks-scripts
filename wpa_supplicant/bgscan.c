@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - background scan and roaming interface
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -103,8 +103,8 @@ void bgscan_notify_beacon_loss(struct wpa_supplicant *wpa_s)
 }
 
 
-void bgscan_notify_signal_change(struct wpa_supplicant *wpa_s)
+void bgscan_notify_signal_change(struct wpa_supplicant *wpa_s, int above)
 {
 	if (wpa_s->bgscan && wpa_s->bgscan_priv)
-		wpa_s->bgscan->notify_signal_change(wpa_s->bgscan_priv);
+		wpa_s->bgscan->notify_signal_change(wpa_s->bgscan_priv, above);
 }

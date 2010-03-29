@@ -155,6 +155,48 @@ static int hostapd_ctrl_iface_new_sta(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
+					     const char *txtaddr)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE DEAUTHENTICATE %s", txtaddr);
+
+	if (hwaddr_aton(txtaddr, addr))
+		return -1;
+
+	hapd->drv.sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
+	sta = ap_get_sta(hapd, addr);
+	if (sta)
+		ap_sta_deauthenticate(hapd, sta,
+				      WLAN_REASON_PREV_AUTH_NOT_VALID);
+
+	return 0;
+}
+
+
+static int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
+					   const char *txtaddr)
+{
+	u8 addr[ETH_ALEN];
+	struct sta_info *sta;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE DISASSOCIATE %s", txtaddr);
+
+	if (hwaddr_aton(txtaddr, addr))
+		return -1;
+
+	hapd->drv.sta_disassoc(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
+	sta = ap_get_sta(hapd, addr);
+	if (sta)
+		ap_sta_disassociate(hapd, sta,
+				    WLAN_REASON_PREV_AUTH_NOT_VALID);
+
+	return 0;
+}
+
+
 #ifdef CONFIG_IEEE80211W
 #ifdef NEED_AP_MLME
 static int hostapd_ctrl_iface_sa_query(struct hostapd_data *hapd,
@@ -308,6 +350,12 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "NEW_STA ", 8) == 0) {
 		if (hostapd_ctrl_iface_new_sta(hapd, buf + 8))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "DEAUTHENTICATE ", 15) == 0) {
+		if (hostapd_ctrl_iface_deauthenticate(hapd, buf + 15))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "DISASSOCIATE ", 13) == 0) {
+		if (hostapd_ctrl_iface_disassociate(hapd, buf + 13))
 			reply_len = -1;
 #ifdef CONFIG_IEEE80211W
 #ifdef NEED_AP_MLME

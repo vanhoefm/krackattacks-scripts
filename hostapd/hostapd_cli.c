@@ -242,6 +242,34 @@ static int hostapd_cli_cmd_new_sta(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	char buf[64];
+	if (argc != 1) {
+		printf("Invalid 'deauthenticate' command - exactly one "
+		       "argument, STA address, is required.\n");
+		return -1;
+	}
+	snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static int hostapd_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	char buf[64];
+	if (argc != 1) {
+		printf("Invalid 'disassociate' command - exactly one "
+		       "argument, STA address, is required.\n");
+		return -1;
+	}
+	snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
 #ifdef CONFIG_IEEE80211W
 static int hostapd_cli_cmd_sa_query(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
@@ -467,6 +495,8 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "sta", hostapd_cli_cmd_sta },
 	{ "all_sta", hostapd_cli_cmd_all_sta },
 	{ "new_sta", hostapd_cli_cmd_new_sta },
+	{ "deauthenticate", hostapd_cli_cmd_deauthenticate },
+	{ "disassociate", hostapd_cli_cmd_disassociate },
 #ifdef CONFIG_IEEE80211W
 	{ "sa_query", hostapd_cli_cmd_sa_query },
 #endif /* CONFIG_IEEE80211W */

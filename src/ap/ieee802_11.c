@@ -1192,6 +1192,46 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_sa_query_request(struct hostapd_data *hapd,
+				     const struct ieee80211_mgmt *mgmt)
+{
+	struct sta_info *sta;
+	struct ieee80211_mgmt resp;
+	u8 *end;
+
+	wpa_printf(MSG_DEBUG, "IEEE 802.11: Received SA Query Request from "
+		   MACSTR, MAC2STR(mgmt->sa));
+	wpa_hexdump(MSG_DEBUG, "IEEE 802.11: SA Query Transaction ID",
+		    mgmt->u.action.u.sa_query_resp.trans_id,
+		    WLAN_SA_QUERY_TR_ID_LEN);
+
+	sta = ap_get_sta(hapd, mgmt->sa);
+	if (sta == NULL || !(sta->flags & WLAN_STA_ASSOC)) {
+		wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignore SA Query Request "
+			   "from unassociated STA " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "IEEE 802.11: Sending SA Query Response to "
+		   MACSTR, MAC2STR(mgmt->sa));
+
+	os_memset(&resp, 0, sizeof(resp));
+	resp.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					  WLAN_FC_STYPE_ACTION);
+	os_memcpy(resp.da, mgmt->sa, ETH_ALEN);
+	os_memcpy(resp.sa, hapd->own_addr, ETH_ALEN);
+	os_memcpy(resp.bssid, hapd->own_addr, ETH_ALEN);
+	resp.u.action.category = WLAN_ACTION_SA_QUERY;
+	resp.u.action.u.sa_query_req.action = WLAN_SA_QUERY_RESPONSE;
+	os_memcpy(resp.u.action.u.sa_query_req.trans_id,
+		  mgmt->u.action.u.sa_query_req.trans_id,
+		  WLAN_SA_QUERY_TR_ID_LEN);
+	end = resp.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
+	if (hapd->drv.send_mgmt_frame(hapd, &resp, end - (u8 *) &resp) < 0)
+		perror("hostapd_sa_query_request: send");
+}
+
+
 static void hostapd_sa_query_action(struct hostapd_data *hapd,
 				    const struct ieee80211_mgmt *mgmt,
 				    size_t len)
@@ -1205,6 +1245,11 @@ static void hostapd_sa_query_action(struct hostapd_data *hapd,
 	if (((u8 *) mgmt) + len < end) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.11: Too short SA Query Action "
 			   "frame (len=%lu)", (unsigned long) len);
+		return;
+	}
+
+	if (mgmt->u.action.u.sa_query_resp.action == WLAN_SA_QUERY_REQUEST) {
+		hostapd_sa_query_request(hapd, mgmt);
 		return;
 	}
 

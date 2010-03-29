@@ -160,11 +160,36 @@ static int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 {
 	u8 addr[ETH_ALEN];
 	struct sta_info *sta;
+	const char *pos;
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE DEAUTHENTICATE %s", txtaddr);
 
 	if (hwaddr_aton(txtaddr, addr))
 		return -1;
+
+	pos = os_strstr(txtaddr, " test=");
+	if (pos) {
+		struct ieee80211_mgmt mgmt;
+		int encrypt;
+		if (hapd->driver->send_frame == NULL)
+			return -1;
+		pos += 6;
+		encrypt = atoi(pos);
+		os_memset(&mgmt, 0, sizeof(mgmt));
+		mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+						  WLAN_FC_STYPE_DEAUTH);
+		os_memcpy(mgmt.da, addr, ETH_ALEN);
+		os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
+		os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
+		mgmt.u.deauth.reason_code =
+			host_to_le16(WLAN_REASON_PREV_AUTH_NOT_VALID);
+		if (hapd->driver->send_frame(hapd->drv_priv, (u8 *) &mgmt,
+					     IEEE80211_HDRLEN +
+					     sizeof(mgmt.u.deauth),
+					     encrypt) < 0)
+			return -1;
+		return 0;
+	}
 
 	hapd->drv.sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
 	sta = ap_get_sta(hapd, addr);
@@ -181,11 +206,36 @@ static int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 {
 	u8 addr[ETH_ALEN];
 	struct sta_info *sta;
+	const char *pos;
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE DISASSOCIATE %s", txtaddr);
 
 	if (hwaddr_aton(txtaddr, addr))
 		return -1;
+
+	pos = os_strstr(txtaddr, " test=");
+	if (pos) {
+		struct ieee80211_mgmt mgmt;
+		int encrypt;
+		if (hapd->driver->send_frame == NULL)
+			return -1;
+		pos += 6;
+		encrypt = atoi(pos);
+		os_memset(&mgmt, 0, sizeof(mgmt));
+		mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+						  WLAN_FC_STYPE_DISASSOC);
+		os_memcpy(mgmt.da, addr, ETH_ALEN);
+		os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
+		os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
+		mgmt.u.deauth.reason_code =
+			host_to_le16(WLAN_REASON_PREV_AUTH_NOT_VALID);
+		if (hapd->driver->send_frame(hapd->drv_priv, (u8 *) &mgmt,
+					     IEEE80211_HDRLEN +
+					     sizeof(mgmt.u.deauth),
+					     encrypt) < 0)
+			return -1;
+		return 0;
+	}
 
 	hapd->drv.sta_disassoc(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
 	sta = ap_get_sta(hapd, addr);

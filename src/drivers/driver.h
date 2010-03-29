@@ -1774,6 +1774,20 @@ struct wpa_driver_ops {
 	 * least %hysteresis from the previously indicated signal change event.
 	 */
 	int (*signal_monitor)(void *priv, int threshold, int hysteresis);
+
+	/**
+	 * send_frame - Send IEEE 802.11 frame (testing use only)
+	 * @priv: Private driver interface data
+	 * @data: IEEE 802.11 frame with IEEE 802.11 header
+	 * @data_len: Size of the frame
+	 * @encrypt: Whether to encrypt the frame (if keys are set)
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function is only used for debugging purposes and is not
+	 * required to be implemented for normal operations.
+	 */
+	int (*send_frame)(void *priv, const u8 *data, size_t data_len,
+			  int encrypt);
 };
 
 

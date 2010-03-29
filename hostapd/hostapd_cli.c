@@ -246,12 +246,16 @@ static int hostapd_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
 					  char *argv[])
 {
 	char buf[64];
-	if (argc != 1) {
+	if (argc < 1) {
 		printf("Invalid 'deauthenticate' command - exactly one "
 		       "argument, STA address, is required.\n");
 		return -1;
 	}
-	snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s", argv[0]);
+	if (argc > 1)
+		os_snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s %s",
+			    argv[0], argv[1]);
+	else
+		os_snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
 }
 
@@ -260,12 +264,16 @@ static int hostapd_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
 	char buf[64];
-	if (argc != 1) {
+	if (argc < 1) {
 		printf("Invalid 'disassociate' command - exactly one "
 		       "argument, STA address, is required.\n");
 		return -1;
 	}
-	snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
+	if (argc > 1)
+		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s %s",
+			    argv[0], argv[1]);
+	else
+		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
 }
 

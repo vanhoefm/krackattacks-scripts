@@ -5237,6 +5237,15 @@ nla_put_failure:
 }
 
 
+static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
+			      int encrypt)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -5297,4 +5306,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.resume = wpa_driver_nl80211_resume,
 	.send_ft_action = nl80211_send_ft_action,
 	.signal_monitor = nl80211_signal_monitor,
+	.send_frame = nl80211_send_frame,
 };

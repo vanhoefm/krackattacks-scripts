@@ -82,6 +82,7 @@ struct wpa_sm {
 	unsigned int mgmt_group_cipher;
 
 	int rsn_enabled; /* Whether RSN is enabled in configuration */
+	int mfp; /* 0 = disabled, 1 = optional, 2 = mandatory */
 
 	u8 *assoc_wpa_ie; /* Own WPA/RSN IE from (Re)AssocReq */
 	size_t assoc_wpa_ie_len;

@@ -2124,6 +2124,9 @@ int wpa_sm_set_param(struct wpa_sm *sm, enum wpa_sm_conf_params param,
 	case WPA_PARAM_RSN_ENABLED:
 		sm->rsn_enabled = value;
 		break;
+	case WPA_PARAM_MFP:
+		sm->mfp = value;
+		break;
 	default:
 		break;
 	}

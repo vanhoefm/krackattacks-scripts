@@ -67,7 +67,8 @@ enum wpa_sm_conf_params {
 	WPA_PARAM_GROUP,
 	WPA_PARAM_KEY_MGMT,
 	WPA_PARAM_MGMT_GROUP,
-	WPA_PARAM_RSN_ENABLED
+	WPA_PARAM_RSN_ENABLED,
+	WPA_PARAM_MFP
 };
 
 struct rsn_supp_config {

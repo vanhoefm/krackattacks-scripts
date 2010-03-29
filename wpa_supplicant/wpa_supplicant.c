@@ -958,6 +958,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MGMT_GROUP,
 			 wpa_s->mgmt_group_cipher);
+	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_MFP, ssid->ieee80211w);
 #endif /* CONFIG_IEEE80211W */
 
 	if (wpa_sm_set_assoc_wpa_ie_default(wpa_s->wpa, wpa_ie, wpa_ie_len)) {

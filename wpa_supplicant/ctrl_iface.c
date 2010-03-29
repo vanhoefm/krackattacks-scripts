@@ -1615,6 +1615,31 @@ static int wpa_supplicant_ctrl_iface_ap_scan(
 }
 
 
+static void wpa_supplicant_ctrl_iface_drop_sa(struct wpa_supplicant *wpa_s)
+{
+	u8 *bcast = (u8 *) "\xff\xff\xff\xff\xff\xff";
+
+	wpa_printf(MSG_DEBUG, "Dropping SA without deauthentication");
+	/* MLME-DELETEKEYS.request */
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 0, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 1, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 2, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 3, 0, NULL, 0, NULL, 0);
+#ifdef CONFIG_IEEE80211W
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 4, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 5, 0, NULL, 0, NULL, 0);
+#endif /* CONFIG_IEEE80211W */
+
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, wpa_s->bssid, 0, 0, NULL, 0, NULL,
+			0);
+	/* MLME-SETPROTECTION.request(None) */
+	wpa_drv_mlme_setprotection(wpa_s, wpa_s->bssid,
+				   MLME_SETPROTECTION_PROTECT_TYPE_NONE,
+				   MLME_SETPROTECTION_KEY_TYPE_PAIRWISE);
+	wpa_sm_drop_sa(wpa_s->wpa);
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -1818,6 +1843,8 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		wpas_notify_suspend(wpa_s->global);
 	} else if (os_strcmp(buf, "RESUME") == 0) {
 		wpas_notify_resume(wpa_s->global);
+	} else if (os_strcmp(buf, "DROP_SA") == 0) {
+		wpa_supplicant_ctrl_iface_drop_sa(wpa_s);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

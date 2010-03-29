@@ -123,6 +123,7 @@ int wpa_sm_rx_eapol(struct wpa_sm *sm, const u8 *src_addr,
 		    const u8 *buf, size_t len);
 int wpa_sm_parse_own_wpa_ie(struct wpa_sm *sm, struct wpa_ie_data *data);
 int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len);
+void wpa_sm_drop_sa(struct wpa_sm *sm);
 
 #else /* CONFIG_NO_WPA */
 
@@ -258,6 +259,10 @@ static inline int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf,
 					  size_t len)
 {
 	return -1;
+}
+
+static inline void wpa_sm_drop_sa(struct wpa_sm *sm)
+{
 }
 
 #endif /* CONFIG_NO_WPA */

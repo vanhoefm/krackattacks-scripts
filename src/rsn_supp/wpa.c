@@ -2379,3 +2379,14 @@ int wpa_sm_pmksa_cache_list(struct wpa_sm *sm, char *buf, size_t len)
 	return -1;
 #endif /* CONFIG_NO_WPA2 */
 }
+
+
+void wpa_sm_drop_sa(struct wpa_sm *sm)
+{
+	wpa_printf(MSG_DEBUG, "WPA: Clear old PMK and PTK");
+	sm->ptk_set = 0;
+	sm->tptk_set = 0;
+	os_memset(sm->pmk, 0, sizeof(sm->pmk));
+	os_memset(&sm->ptk, 0, sizeof(sm->ptk));
+	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
+}

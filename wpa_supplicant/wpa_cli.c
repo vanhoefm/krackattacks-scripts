@@ -1434,6 +1434,12 @@ static int wpa_cli_cmd_resume(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_drop_sa(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "DROP_SA");
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -1632,6 +1638,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "= notification of suspend/hibernate" },
 	{ "resume", wpa_cli_cmd_resume, cli_cmd_flag_none,
 	  "= notification of resume/thaw" },
+	{ "drop_sa", wpa_cli_cmd_drop_sa, cli_cmd_flag_none,
+	  "= drop SA without deauth/disassoc (test command)" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

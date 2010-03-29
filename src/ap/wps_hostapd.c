@@ -894,5 +894,7 @@ static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd)
 int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
 			    char *buf, size_t buflen)
 {
+	if (hapd->wps == NULL)
+		return 0;
 	return wps_registrar_get_info(hapd->wps->registrar, addr, buf, buflen);
 }

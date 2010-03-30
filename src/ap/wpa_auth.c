@@ -1535,7 +1535,8 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 
 	igtk.keyid[0] = gsm->GN_igtk;
 	igtk.keyid[1] = 0;
-	if (wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, igtk.pn) < 0)
+	if (gsm->wpa_group_state != WPA_GROUP_SETKEYSDONE ||
+	    wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, igtk.pn) < 0)
 		os_memset(igtk.pn, 0, sizeof(igtk.pn));
 	os_memcpy(igtk.igtk, gsm->IGTK[gsm->GN_igtk - 4], WPA_IGTK_LEN);
 	pos = wpa_add_kde(pos, RSN_KEY_DATA_IGTK,

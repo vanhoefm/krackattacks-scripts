@@ -759,7 +759,6 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 				const struct wpabuf *wps_data)
 {
 	struct wps_parse_attr attr;
-	u16 methods;
 
 	wpa_hexdump_buf(MSG_MSGDUMP,
 			"WPS: Probe Request with WPS data received",
@@ -779,7 +778,13 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 		return;
 	}
 
-	if (reg->enrollee_seen_cb && attr.dev_password_id && attr.uuid_e &&
+	if (attr.dev_password_id == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: No Device Password Id attribute "
+			   "in Probe Request");
+		return;
+	}
+
+	if (reg->enrollee_seen_cb && attr.uuid_e &&
 	    attr.primary_dev_type && attr.request_type) {
 		char *dev_name = NULL;
 		if (attr.dev_name) {
@@ -797,8 +802,7 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 		os_free(dev_name);
 	}
 
-	methods = WPA_GET_BE16(attr.config_methods);
-	if (!(methods & WPS_CONFIG_PUSHBUTTON))
+	if (WPA_GET_BE16(attr.dev_password_id) != DEV_PW_PUSHBUTTON)
 		return; /* Not PBC */
 
 	wpa_printf(MSG_DEBUG, "WPS: Probe Request for PBC received from "

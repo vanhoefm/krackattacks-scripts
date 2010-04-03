@@ -19,8 +19,6 @@
 
 #include "utils/includes.h"
 
-#ifndef CONFIG_NATIVE_WINDOWS
-
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "radius/radius.h"
@@ -524,5 +522,3 @@ void hostapd_acl_deinit(struct hostapd_data *hapd)
 		hostapd_acl_query_free(prev);
 	}
 }
-
-#endif /* CONFIG_NATIVE_WINDOWS */

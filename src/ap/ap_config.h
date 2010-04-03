@@ -234,7 +234,9 @@ struct hostapd_bss_config {
 #endif /* CONFIG_IEEE80211R */
 
 	char *ctrl_interface; /* directory for UNIX domain sockets */
+#ifndef CONFIG_NATIVE_WINDOWS
 	gid_t ctrl_interface_gid;
+#endif /* CONFIG_NATIVE_WINDOWS */
 	int ctrl_interface_gid_set;
 
 	char *ca_cert;

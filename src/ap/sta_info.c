@@ -288,6 +288,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 
 	if (sta->timeout_next == STA_NULLFUNC &&
 	    (sta->flags & WLAN_STA_ASSOC)) {
+#ifndef CONFIG_NATIVE_WINDOWS
 		/* send data frame to poll STA and check whether this frame
 		 * is ACKed */
 		struct ieee80211_hdr hdr;
@@ -295,7 +296,6 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		wpa_printf(MSG_DEBUG, "  Polling STA with data frame");
 		sta->flags |= WLAN_STA_PENDING_POLL;
 
-#ifndef CONFIG_NATIVE_WINDOWS
 		os_memset(&hdr, 0, sizeof(hdr));
 		if (hapd->driver &&
 		    os_strcmp(hapd->driver->name, "hostap") == 0) {

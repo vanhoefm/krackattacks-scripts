@@ -22,7 +22,7 @@
 
 
 struct eap_wsc_data {
-	enum { START, MSG, FRAG_ACK, WAIT_FRAG_ACK, DONE, FAIL } state;
+	enum { START, MESG, FRAG_ACK, WAIT_FRAG_ACK, DONE, FAIL } state;
 	int registrar;
 	struct wpabuf *in_buf;
 	struct wpabuf *out_buf;
@@ -40,8 +40,8 @@ static const char * eap_wsc_state_txt(int state)
 	switch (state) {
 	case START:
 		return "START";
-	case MSG:
-		return "MSG";
+	case MESG:
+		return "MESG";
 	case FRAG_ACK:
 		return "FRAG_ACK";
 	case WAIT_FRAG_ACK:
@@ -104,7 +104,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
-	data->state = registrar ? START : MSG;
+	data->state = registrar ? START : MESG;
 	data->registrar = registrar;
 
 	os_memset(&cfg, 0, sizeof(cfg));
@@ -217,7 +217,7 @@ static struct wpabuf * eap_wsc_build_msg(struct eap_wsc_data *data, u8 id)
 		wpabuf_free(data->out_buf);
 		data->out_buf = NULL;
 		data->out_used = 0;
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-WSC: Sending out %lu bytes "
 			   "(%lu more to send)", (unsigned long) send_len,
@@ -237,7 +237,7 @@ static struct wpabuf * eap_wsc_buildReq(struct eap_sm *sm, void *priv, u8 id)
 	switch (data->state) {
 	case START:
 		return eap_wsc_build_start(sm, data, id);
-	case MSG:
+	case MESG:
 		if (data->out_buf == NULL) {
 			data->out_buf = wps_get_msg(data->wps,
 						    &data->out_op_code);
@@ -390,7 +390,7 @@ static void eap_wsc_process(struct eap_sm *sm, void *priv,
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-WSC: Fragment acknowledged");
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 		return;
 	}
 
@@ -432,14 +432,14 @@ static void eap_wsc_process(struct eap_sm *sm, void *priv,
 		eap_wsc_state(data, FAIL);
 		break;
 	case WPS_CONTINUE:
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 		break;
 	case WPS_FAILURE:
 		wpa_printf(MSG_DEBUG, "EAP-WSC: WPS processing failed");
 		eap_wsc_state(data, FAIL);
 		break;
 	case WPS_PENDING:
-		eap_wsc_state(data, MSG);
+		eap_wsc_state(data, MESG);
 		sm->method_pending = METHOD_PENDING_WAIT;
 		eloop_cancel_timeout(eap_wsc_ext_reg_timeout, sm, data);
 		eloop_register_timeout(5, 0, eap_wsc_ext_reg_timeout,

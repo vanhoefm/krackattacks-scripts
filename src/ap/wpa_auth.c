@@ -14,8 +14,6 @@
 
 #include "utils/includes.h"
 
-#ifndef CONFIG_NATIVE_WINDOWS
-
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "utils/state_machine.h"
@@ -2480,5 +2478,3 @@ int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id)
 	sm->group = group;
 	return 0;
 }
-
-#endif /* CONFIG_NATIVE_WINDOWS */

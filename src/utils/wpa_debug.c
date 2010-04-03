@@ -390,6 +390,9 @@ void hostapd_logger(void *ctx, const u8 *addr, unsigned int module, int level,
 	va_end(ap);
 	if (hostapd_logger_cb)
 		hostapd_logger_cb(ctx, addr, module, level, buf, len);
+	else if (addr)
+		wpa_printf(MSG_DEBUG, "hostapd_logger: STA " MACSTR " - %s",
+			   MAC2STR(addr), buf);
 	else
 		wpa_printf(MSG_DEBUG, "hostapd_logger: %s", buf);
 	os_free(buf);

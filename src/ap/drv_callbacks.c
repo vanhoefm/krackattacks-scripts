@@ -18,6 +18,7 @@
 #include "radius/radius.h"
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -36,9 +37,30 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 {
 	struct sta_info *sta;
 	int new_assoc, res;
+	struct ieee802_11_elems elems;
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "associated");
+
+	ieee802_11_parse_elems(ie, ielen, &elems, 0);
+	if (elems.wps_ie) {
+		ie = elems.wps_ie - 2;
+		ielen = elems.wps_ie_len + 2;
+		wpa_printf(MSG_DEBUG, "STA included WPS IE in (Re)AssocReq");
+	} else if (elems.rsn_ie) {
+		ie = elems.rsn_ie - 2;
+		ielen = elems.rsn_ie_len + 2;
+		wpa_printf(MSG_DEBUG, "STA included RSN IE in (Re)AssocReq");
+	} else if (elems.wpa_ie) {
+		ie = elems.wpa_ie - 2;
+		ielen = elems.wpa_ie_len + 2;
+		wpa_printf(MSG_DEBUG, "STA included WPA IE in (Re)AssocReq");
+	} else {
+		ie = NULL;
+		ielen = 0;
+		wpa_printf(MSG_DEBUG, "STA did not include WPS/RSN/WPA IE in "
+			   "(Re)AssocReq");
+	}
 
 	sta = ap_get_sta(hapd, addr);
 	if (sta) {

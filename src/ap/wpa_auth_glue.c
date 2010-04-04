@@ -349,8 +349,10 @@ hostapd_wpa_auth_add_sta(void *ctx, const u8 *sta_addr)
 	sta = ap_sta_add(hapd, sta_addr);
 	if (sta == NULL)
 		return NULL;
-	if (sta->wpa_sm)
+	if (sta->wpa_sm) {
+		sta->auth_alg = WLAN_AUTH_FT;
 		return sta->wpa_sm;
+	}
 
 	sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth, sta->addr);
 	if (sta->wpa_sm == NULL) {

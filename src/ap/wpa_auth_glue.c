@@ -429,7 +429,9 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 
 #ifdef CONFIG_IEEE80211R
 	if (!hostapd_drv_none(hapd)) {
-		hapd->l2 = l2_packet_init(hapd->conf->iface, NULL, ETH_P_RRB,
+		hapd->l2 = l2_packet_init(hapd->conf->bridge[0] ?
+					  hapd->conf->bridge :
+					  hapd->conf->iface, NULL, ETH_P_RRB,
 					  hostapd_rrb_receive, hapd, 0);
 		if (hapd->l2 == NULL &&
 		    (hapd->driver == NULL ||

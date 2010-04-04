@@ -116,6 +116,7 @@ struct wpa_state_machine {
 					   * Request */
 	u8 r0kh_id[FT_R0KH_ID_MAX_LEN]; /* R0KH-ID from FT Auth Request */
 	size_t r0kh_id_len;
+	int ft_over_ds;
 #endif /* CONFIG_IEEE80211R */
 };
 

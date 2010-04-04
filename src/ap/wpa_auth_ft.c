@@ -1227,7 +1227,6 @@ static int wpa_ft_rrb_rx_request(struct wpa_authenticator *wpa_auth,
 			   "RRB Request");
 		return -1;
 	}
-	sm->ft_over_ds = 1;
 
 	wpa_hexdump(MSG_MSGDUMP, "FT: RRB Request Frame body", body, len);
 

@@ -1208,11 +1208,10 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 		break;
 	case WPA_ASSOC_FT:
 #ifdef CONFIG_IEEE80211R
-		if (!sm->pairwise_set || sm->ft_over_ds) {
-			wpa_printf(MSG_DEBUG, "FT: Retry PTK configuration "
-				   "after association");
-			wpa_ft_install_ptk(sm);
-		}
+		wpa_printf(MSG_DEBUG, "FT: Retry PTK configuration "
+			   "after association");
+		wpa_ft_install_ptk(sm);
+
 		/* Using FT protocol, not WPA auth state machine */
 		sm->ft_completed = 1;
 		return 0;

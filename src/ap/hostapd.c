@@ -80,13 +80,20 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 
 	if (hapd->conf->wpa && hapd->wpa_auth == NULL)
 		hostapd_setup_wpa(hapd);
-	else if (hapd->conf->wpa)
+	else if (hapd->conf->wpa) {
+		const u8 *wpa_ie;
+		size_t wpa_ie_len;
 		hostapd_reconfig_wpa(hapd);
-	else if (hapd->wpa_auth) {
+		wpa_ie = wpa_auth_get_wpa_ie(hapd->wpa_auth, &wpa_ie_len);
+		if (hostapd_set_generic_elem(hapd, wpa_ie, wpa_ie_len))
+			wpa_printf(MSG_ERROR, "Failed to configure WPA IE for "
+				   "the kernel driver.");
+	} else if (hapd->wpa_auth) {
 		wpa_deinit(hapd->wpa_auth);
 		hapd->wpa_auth = NULL;
 		hostapd_set_privacy(hapd, 0);
 		hostapd_setup_encryption(hapd->conf->iface, hapd);
+		hostapd_set_generic_elem(hapd, (u8 *) "", 0);
 	}
 
 	ieee802_11_set_beacon(hapd);

@@ -496,20 +496,43 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: PutWLANResponse");
 	msg = xml_get_base64_item(data, "NewMessage", &ret);
-	if (msg == NULL)
+	if (msg == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Could not extract NewMessage "
+			   "from PutWLANResponse");
 		return ret;
+	}
 	val = xml_get_first_item(data, "NewWLANEventType");
 	if (val == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: No NewWLANEventType in "
+			   "PutWLANResponse");
 		wpabuf_free(msg);
 		return UPNP_ARG_VALUE_INVALID;
 	}
 	ev_type = atol(val);
 	os_free(val);
 	val = xml_get_first_item(data, "NewWLANEventMAC");
-	if (val == NULL || hwaddr_aton(val, macaddr)) {
+	if (val == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: No NewWLANEventMAC in "
+			   "PutWLANResponse");
 		wpabuf_free(msg);
-		os_free(val);
 		return UPNP_ARG_VALUE_INVALID;
+	}
+	if (hwaddr_aton(val, macaddr)) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Invalid NewWLANEventMAC in "
+			   "PutWLANResponse: '%s'", val);
+		if (hwaddr_aton2(val, macaddr) > 0) {
+			/*
+			 * At least some versions of Intel PROset seem to be
+			 * using dot-deliminated MAC address format here.
+			 */
+			wpa_printf(MSG_DEBUG, "WPS UPnP: Workaround - allow "
+				   "incorrect MAC address format in "
+				   "NewWLANEventMAC");
+		} else {
+			wpabuf_free(msg);
+			os_free(val);
+			return UPNP_ARG_VALUE_INVALID;
+		}
 	}
 	os_free(val);
 	if (ev_type == UPNP_WPS_WLANEVENT_TYPE_EAP) {

@@ -728,7 +728,7 @@ verify_config:
 	fi
 
 install: all
-	for i in $(ALL); do cp $$i /usr/local/bin/$$i; done
+	for i in $(ALL); do cp -f $$i /usr/local/bin/$$i; done
 
 ../src/drivers/build.hostapd:
 	@if [ -e ../src/drivers/build.wpa_supplicant ]; then \

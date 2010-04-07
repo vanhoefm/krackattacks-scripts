@@ -605,8 +605,8 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 				 size_t max_len, int auth_alg,
 				 const u8 *req_ies, size_t req_ies_len)
 {
-	u8 *end, *mdie, *ftie, *rsnie, *r0kh_id, *subelem = NULL;
-	size_t mdie_len, ftie_len, rsnie_len, r0kh_id_len, subelem_len = 0;
+	u8 *end, *mdie, *ftie, *rsnie = NULL, *r0kh_id, *subelem = NULL;
+	size_t mdie_len, ftie_len, rsnie_len = 0, r0kh_id_len, subelem_len = 0;
 	int res;
 	struct wpa_auth_config *conf;
 	struct rsn_ftie *_ftie;
@@ -624,13 +624,18 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 
 	end = pos + max_len;
 
-	/* RSN */
-	res = wpa_write_rsn_ie(conf, pos, end - pos, sm->pmk_r1_name);
-	if (res < 0)
-		return pos;
-	rsnie = pos;
-	rsnie_len = res;
-	pos += res;
+	if (auth_alg == WLAN_AUTH_FT) {
+		/*
+		 * RSN (only present if this is a Reassociation Response and
+		 * part of a fast BSS transition)
+		 */
+		res = wpa_write_rsn_ie(conf, pos, end - pos, sm->pmk_r1_name);
+		if (res < 0)
+			return pos;
+		rsnie = pos;
+		rsnie_len = res;
+		pos += res;
+	}
 
 	/* Mobility Domain Information */
 	res = wpa_write_mdie(conf, pos, end - pos);

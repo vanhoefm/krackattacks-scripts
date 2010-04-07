@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "common/wpa_common.h"
 #include "rsn_supp/wpa.h"
@@ -294,6 +295,7 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		   const u8 *bssid, u16 auth_type)
 {
 	struct wpa_driver_associate_params params;
+	struct ieee802_11_elems elems;
 
 	os_memset(&params, 0, sizeof(params));
 	params.bssid = bssid;
@@ -320,6 +322,20 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		params.freq);
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
+
+	if (ieee802_11_parse_elems(params.wpa_ie, params.wpa_ie_len, &elems, 0)
+	    < 0) {
+		wpa_printf(MSG_DEBUG, "SME: Could not parse own IEs?!");
+		os_memset(&elems, 0, sizeof(elems));
+	}
+	if (elems.rsn_ie)
+		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, elems.rsn_ie - 2,
+					elems.rsn_ie_len + 2);
+	else if (elems.wpa_ie)
+		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, elems.wpa_ie - 2,
+					elems.wpa_ie_len + 2);
+	else
+		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "

@@ -669,3 +669,116 @@ const char * wpa_key_mgmt_txt(int key_mgmt, int proto)
 		return "UNKNOWN";
 	}
 }
+
+
+int wpa_compare_rsn_ie(int ft_initial_assoc,
+		       const u8 *ie1, size_t ie1len,
+		       const u8 *ie2, size_t ie2len)
+{
+	if (ie1len == ie2len && os_memcmp(ie1, ie2, ie1len) == 0)
+		return 0; /* identical IEs */
+
+#ifdef CONFIG_IEEE80211R
+	if (ft_initial_assoc) {
+		struct wpa_ie_data ie1d, ie2d;
+		/*
+		 * The PMKID-List in RSN IE is different between Beacon/Probe
+		 * Response/(Re)Association Request frames and EAPOL-Key
+		 * messages in FT initial mobility domain association. Allow
+		 * for this, but verify that other parts of the RSN IEs are
+		 * identical.
+		 */
+		if (wpa_parse_wpa_ie_rsn(ie1, ie1len, &ie1d) < 0 ||
+		    wpa_parse_wpa_ie_rsn(ie2, ie2len, &ie2d) < 0)
+			return -1;
+		if (ie1d.proto == ie2d.proto &&
+		    ie1d.pairwise_cipher == ie2d.pairwise_cipher &&
+		    ie1d.group_cipher == ie2d.group_cipher &&
+		    ie1d.key_mgmt == ie2d.key_mgmt &&
+		    ie1d.capabilities == ie2d.capabilities &&
+		    ie1d.mgmt_group_cipher == ie2d.mgmt_group_cipher)
+			return 0;
+	}
+#endif /* CONFIG_IEEE80211R */
+
+	return -1;
+}
+
+
+#ifdef CONFIG_IEEE80211R
+int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid)
+{
+	u8 *start, *end, *rpos, *rend;
+	int added = 0;
+
+	start = ies;
+	end = ies + ies_len;
+
+	while (start < end) {
+		if (*start == WLAN_EID_RSN)
+			break;
+		start += 2 + start[1];
+	}
+	if (start >= end) {
+		wpa_printf(MSG_ERROR, "FT: Could not find RSN IE in "
+			   "IEs data");
+		return -1;
+	}
+	wpa_hexdump(MSG_DEBUG, "FT: RSN IE before modification",
+		    start, 2 + start[1]);
+
+	/* Find start of PMKID-Count */
+	rpos = start + 2;
+	rend = rpos + start[1];
+
+	/* Skip Version and Group Data Cipher Suite */
+	rpos += 2 + 4;
+	/* Skip Pairwise Cipher Suite Count and List */
+	rpos += 2 + WPA_GET_LE16(rpos) * RSN_SELECTOR_LEN;
+	/* Skip AKM Suite Count and List */
+	rpos += 2 + WPA_GET_LE16(rpos) * RSN_SELECTOR_LEN;
+
+	if (rpos == rend) {
+		/* Add RSN Capabilities */
+		os_memmove(rpos + 2, rpos, end - rpos);
+		*rpos++ = 0;
+		*rpos++ = 0;
+	} else {
+		/* Skip RSN Capabilities */
+		rpos += 2;
+		if (rpos > rend) {
+			wpa_printf(MSG_ERROR, "FT: Could not parse RSN IE in "
+				   "IEs data");
+			return -1;
+		}
+	}
+
+	if (rpos == rend) {
+		/* No PMKID-Count field included; add it */
+		os_memmove(rpos + 2 + PMKID_LEN, rpos, end - rpos);
+		WPA_PUT_LE16(rpos, 1);
+		rpos += 2;
+		os_memcpy(rpos, pmkid, PMKID_LEN);
+		added += 2 + PMKID_LEN;
+		start[1] += 2 + PMKID_LEN;
+	} else {
+		/* PMKID-Count was included; use it */
+		if (WPA_GET_LE16(rpos) != 0) {
+			wpa_printf(MSG_ERROR, "FT: Unexpected PMKID "
+				   "in RSN IE in EAPOL-Key data");
+			return -1;
+		}
+		WPA_PUT_LE16(rpos, 1);
+		rpos += 2;
+		os_memmove(rpos + PMKID_LEN, rpos, end - rpos);
+		os_memcpy(rpos, pmkid, PMKID_LEN);
+		added += PMKID_LEN;
+		start[1] += PMKID_LEN;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "FT: RSN IE after modification "
+		    "(PMKID inserted)", start, 2 + start[1]);
+
+	return added;
+}
+#endif /* CONFIG_IEEE80211R */

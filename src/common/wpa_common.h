@@ -343,5 +343,9 @@ void rsn_pmkid(const u8 *pmk, size_t pmk_len, const u8 *aa, const u8 *spa,
 
 const char * wpa_cipher_txt(int cipher);
 const char * wpa_key_mgmt_txt(int key_mgmt, int proto);
+int wpa_compare_rsn_ie(int ft_initial_assoc,
+		       const u8 *ie1, size_t ie1len,
+		       const u8 *ie2, size_t ie2len);
+int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid);
 
 #endif /* WPA_COMMON_H */

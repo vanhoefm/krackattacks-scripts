@@ -28,7 +28,6 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 		      const struct wpa_eapol_key *key,
 		      struct wpa_ptk *ptk, size_t ptk_len)
 {
-	u8 pmk_r1_name[WPA_PMK_NAME_LEN];
 	u8 ptk_name[WPA_PMK_NAME_LEN];
 	const u8 *anonce = key->key_nonce;
 
@@ -46,11 +45,12 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 	wpa_hexdump(MSG_DEBUG, "FT: PMKR0Name",
 		    sm->pmk_r0_name, WPA_PMK_NAME_LEN);
 	wpa_derive_pmk_r1(sm->pmk_r0, sm->pmk_r0_name, sm->r1kh_id,
-			  sm->own_addr, sm->pmk_r1, pmk_r1_name);
+			  sm->own_addr, sm->pmk_r1, sm->pmk_r1_name);
 	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1", sm->pmk_r1, PMK_LEN);
-	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", pmk_r1_name, WPA_PMK_NAME_LEN);
+	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", sm->pmk_r1_name,
+		    WPA_PMK_NAME_LEN);
 	wpa_pmk_r1_to_ptk(sm->pmk_r1, sm->snonce, anonce, sm->own_addr,
-			  sm->bssid, pmk_r1_name,
+			  sm->bssid, sm->pmk_r1_name,
 			  (u8 *) ptk, ptk_len, ptk_name);
 	wpa_hexdump_key(MSG_DEBUG, "FT: PTK", (u8 *) ptk, ptk_len);
 	wpa_hexdump(MSG_DEBUG, "FT: PTKName", ptk_name, WPA_PMK_NAME_LEN);

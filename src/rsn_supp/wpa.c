@@ -261,6 +261,8 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	size_t rlen;
 	struct wpa_eapol_key *reply;
 	u8 *rbuf;
+	u8 *rsn_ie_buf = NULL;
+	size_t rsn_ie_buf_len;
 
 	if (wpa_ie == NULL) {
 		wpa_printf(MSG_WARNING, "WPA: No wpa_ie set - cannot "
@@ -268,13 +270,37 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		return -1;
 	}
 
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
+		int res;
+
+		/* Add PMKR1Name into RSN IE (PMKID-List) */
+		rsn_ie_buf_len = wpa_ie_len + 2 + 2 + PMKID_LEN;
+		rsn_ie_buf = os_malloc(rsn_ie_buf_len);
+		if (rsn_ie_buf == NULL)
+			return -1;
+		os_memcpy(rsn_ie_buf, wpa_ie, wpa_ie_len);
+		res = wpa_insert_pmkid(rsn_ie_buf, wpa_ie_len,
+				       sm->pmk_r1_name);
+		if (res < 0) {
+			os_free(rsn_ie_buf);
+			return -1;
+		}
+
+		wpa_ie = rsn_ie_buf;
+		wpa_ie_len += res;
+	}
+#endif /* CONFIG_IEEE80211R */
+
 	wpa_hexdump(MSG_DEBUG, "WPA: WPA IE for msg 2/4", wpa_ie, wpa_ie_len);
 
 	rbuf = wpa_sm_alloc_eapol(sm, IEEE802_1X_TYPE_EAPOL_KEY,
 				  NULL, sizeof(*reply) + wpa_ie_len,
 				  &rlen, (void *) &reply);
-	if (rbuf == NULL)
+	if (rbuf == NULL) {
+		os_free(rsn_ie_buf);
 		return -1;
+	}
 
 	reply->type = sm->proto == WPA_PROTO_RSN ?
 		EAPOL_KEY_TYPE_RSN : EAPOL_KEY_TYPE_WPA;
@@ -289,6 +315,7 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 
 	WPA_PUT_BE16(reply->key_data_length, wpa_ie_len);
 	os_memcpy(reply + 1, wpa_ie, wpa_ie_len);
+	os_free(rsn_ie_buf);
 
 	os_memcpy(reply->key_nonce, nonce, WPA_NONCE_LEN);
 
@@ -784,8 +811,9 @@ static int wpa_supplicant_validate_ie(struct wpa_sm *sm,
 	     (ie->wpa_ie_len != sm->ap_wpa_ie_len ||
 	      os_memcmp(ie->wpa_ie, sm->ap_wpa_ie, ie->wpa_ie_len) != 0)) ||
 	    (ie->rsn_ie && sm->ap_rsn_ie &&
-	     (ie->rsn_ie_len != sm->ap_rsn_ie_len ||
-	      os_memcmp(ie->rsn_ie, sm->ap_rsn_ie, ie->rsn_ie_len) != 0))) {
+	     wpa_compare_rsn_ie(wpa_key_mgmt_ft(sm->key_mgmt),
+				sm->ap_rsn_ie, sm->ap_rsn_ie_len,
+				ie->rsn_ie, ie->rsn_ie_len))) {
 		wpa_report_ie_mismatch(sm, "IE in 3/4 msg does not match "
 				       "with IE in Beacon/ProbeResp",
 				       src_addr, ie->wpa_ie, ie->wpa_ie_len,
@@ -917,6 +945,34 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 
 	if (wpa_supplicant_validate_ie(sm, sm->bssid, &ie) < 0)
 		goto failed;
+
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(sm->key_mgmt) && ie.rsn_ie) {
+		struct wpa_ie_data rsn;
+		/*
+		 * Verify that PMKR1Name from EAPOL-Key message 3/4 matches
+		 * with the value we derived.
+		 */
+		if (wpa_parse_wpa_ie_rsn(ie.rsn_ie, ie.rsn_ie_len, &rsn) < 0 ||
+		    rsn.num_pmkid != 1 || rsn.pmkid == NULL) {
+			wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
+				   "FT 4-way handshake message 3/4");
+			return;
+		}
+
+		if (os_memcmp(rsn.pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN) !=
+		    0) {
+			wpa_printf(MSG_DEBUG, "FT: PMKR1Name mismatch in "
+				   "FT 4-way handshake message 3/4");
+			wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from "
+				    "Authenticator",
+				    rsn.pmkid, WPA_PMK_NAME_LEN);
+			wpa_hexdump(MSG_DEBUG, "FT: Derived PMKR1Name",
+				    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
+			return;
+		}
+	}
+#endif /* CONFIG_IEEE80211R */
 
 	if (os_memcmp(sm->anonce, key->key_nonce, WPA_NONCE_LEN) != 0) {
 		wpa_printf(MSG_WARNING, "WPA: ANonce from message 1 of 4-Way "

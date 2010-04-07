@@ -609,6 +609,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	       SMK_M1, SMK_M3, SMK_ERROR } msg;
 	char *msgtxt;
 	struct wpa_eapol_ie_parse kde;
+	int ft;
 
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
 		return;
@@ -739,9 +740,12 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 					 sm->wpa_ptk_state);
 			return;
 		}
+		ft = sm->wpa == WPA_VERSION_WPA2 &&
+			wpa_key_mgmt_ft(sm->wpa_key_mgmt);
 		if (sm->wpa_ie == NULL ||
-		    sm->wpa_ie_len != key_data_length ||
-		    os_memcmp(sm->wpa_ie, key + 1, key_data_length) != 0) {
+		    wpa_compare_rsn_ie(ft,
+				       sm->wpa_ie, sm->wpa_ie_len,
+				       (u8 *) (key + 1), key_data_length)) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"WPA IE from (Re)AssocReq did not "
 					"match with msg 2/4");
@@ -755,6 +759,22 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			wpa_sta_disconnect(wpa_auth, sm->addr);
 			return;
 		}
+#ifdef CONFIG_IEEE80211R
+		if (ft) {
+			struct wpa_ie_data ie;
+			if (wpa_parse_wpa_ie_rsn((u8 *) (key + 1),
+						 key_data_length, &ie) < 0 ||
+			    ie.num_pmkid != 1 || ie.pmkid == NULL) {
+				wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
+					   "FT 4-way handshake message 2/4");
+				wpa_sta_disconnect(wpa_auth, sm->addr);
+				return;
+			}
+			os_memcpy(sm->sup_pmk_r1_name, ie.pmkid, PMKID_LEN);
+			wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from Supplicant",
+				    sm->sup_pmk_r1_name, PMKID_LEN);
+		}
+#endif /* CONFIG_IEEE80211R */
 		break;
 	case PAIRWISE_4:
 		if (sm->wpa_ptk_state != WPA_PTK_PTKINITNEGOTIATING ||
@@ -1487,6 +1507,27 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 		return;
 	}
 
+#ifdef CONFIG_IEEE80211R
+	if (sm->wpa == WPA_VERSION_WPA2 && wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		/*
+		 * Verify that PMKR1Name from EAPOL-Key message 2/4 matches
+		 * with the value we derived.
+		 */
+		if (os_memcmp(sm->sup_pmk_r1_name, sm->pmk_r1_name,
+			      WPA_PMK_NAME_LEN) != 0) {
+			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+					"PMKR1Name mismatch in FT 4-way "
+					"handshake");
+			wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from "
+				    "Supplicant",
+				    sm->sup_pmk_r1_name, WPA_PMK_NAME_LEN);
+			wpa_hexdump(MSG_DEBUG, "FT: Derived PMKR1Name",
+				    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
+			return;
+		}
+	}
+#endif /* CONFIG_IEEE80211R */
+
 	eloop_cancel_timeout(wpa_send_eapol_timeout, sm->wpa_auth, sm);
 
 	if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
@@ -1611,6 +1652,10 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 	kde_len = wpa_ie_len + ieee80211w_kde_len(sm);
 	if (gtk)
 		kde_len += 2 + RSN_SELECTOR_LEN + 2 + gtk_len;
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
+		kde_len += 2 + PMKID_LEN;
+#endif /* CONFIG_IEEE80211R */
 	kde = os_malloc(kde_len);
 	if (kde == NULL)
 		return;
@@ -1618,6 +1663,18 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 	pos = kde;
 	os_memcpy(pos, wpa_ie, wpa_ie_len);
 	pos += wpa_ie_len;
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		int res = wpa_insert_pmkid(kde, pos - kde, sm->pmk_r1_name);
+		if (res < 0) {
+			wpa_printf(MSG_ERROR, "FT: Failed to insert "
+				   "PMKR1Name into RSN IE in EAPOL-Key data");
+			os_free(kde);
+			return;
+		}
+		pos += res;
+	}
+#endif /* CONFIG_IEEE80211R */
 	if (gtk) {
 		u8 hdr[2];
 		hdr[0] = keyidx & 0x03;

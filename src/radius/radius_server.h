@@ -189,6 +189,11 @@ struct radius_server_conf {
 	 * eap_req_id_text_len - Length of eap_req_id_text buffer in octets
 	 */
 	size_t eap_req_id_text_len;
+
+	/*
+	 * msg_ctx - Context data for wpa_msg() calls
+	 */
+	void *msg_ctx;
 };
 
 

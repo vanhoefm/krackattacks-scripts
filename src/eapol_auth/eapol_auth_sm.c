@@ -816,6 +816,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	os_memset(&eap_conf, 0, sizeof(eap_conf));
 	eap_conf.eap_server = eapol->conf.eap_server;
 	eap_conf.ssl_ctx = eapol->conf.ssl_ctx;
+	eap_conf.msg_ctx = eapol->conf.msg_ctx;
 	eap_conf.eap_sim_db_priv = eapol->conf.eap_sim_db_priv;
 	eap_conf.pac_opaque_encr_key = eapol->conf.pac_opaque_encr_key;
 	eap_conf.eap_fast_a_id = eapol->conf.eap_fast_a_id;
@@ -1030,6 +1031,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	dst->individual_wep_key_len = src->individual_wep_key_len;
 	dst->eap_server = src->eap_server;
 	dst->ssl_ctx = src->ssl_ctx;
+	dst->msg_ctx = src->msg_ctx;
 	dst->eap_sim_db_priv = src->eap_sim_db_priv;
 	os_free(dst->eap_req_id_text);
 	if (src->eap_req_id_text) {

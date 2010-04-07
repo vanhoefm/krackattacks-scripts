@@ -23,6 +23,7 @@
 #include "common.h"
 #include "eap_i.h"
 #include "state_machine.h"
+#include "common/wpa_ctrl.h"
 
 #define STATE_MACHINE_DATA struct eap_sm
 #define STATE_MACHINE_DEBUG_PREFIX "EAP"
@@ -167,6 +168,9 @@ SM_STATE(EAP, INITIALIZE)
 	}
 	sm->num_rounds = 0;
 	sm->method_pending = METHOD_PENDING_NONE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_STARTED
+		MACSTR, MAC2STR(sm->peer_addr));
 }
 
 
@@ -196,6 +200,9 @@ SM_STATE(EAP, PICK_UP_METHOD)
 			sm->currentMethod = EAP_TYPE_NONE;
 		}
 	}
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
+		"method=%u", sm->currentMethod);
 }
 
 
@@ -350,6 +357,9 @@ SM_STATE(EAP, PROPOSE_METHOD)
 		sm->methodState = METHOD_CONTINUE;
 	else
 		sm->methodState = METHOD_PROPOSED;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
+		"vendor=%u method=%u", vendor, sm->currentMethod);
 }
 
 
@@ -410,6 +420,9 @@ SM_STATE(EAP, FAILURE)
 	wpabuf_free(sm->lastReqData);
 	sm->lastReqData = NULL;
 	sm->eap_if.eapFail = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_FAILURE
+		MACSTR, MAC2STR(sm->peer_addr));
 }
 
 
@@ -424,6 +437,9 @@ SM_STATE(EAP, SUCCESS)
 	if (sm->eap_if.eapKeyData)
 		sm->eap_if.eapKeyAvailable = TRUE;
 	sm->eap_if.eapSuccess = TRUE;
+
+	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_SUCCESS
+		MACSTR, MAC2STR(sm->peer_addr));
 }
 
 
@@ -1210,6 +1226,7 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	sm->eapol_cb = eapol_cb;
 	sm->MaxRetrans = 5; /* RFC 3748: max 3-5 retransmissions suggested */
 	sm->ssl_ctx = conf->ssl_ctx;
+	sm->msg_ctx = conf->msg_ctx;
 	sm->eap_sim_db_priv = conf->eap_sim_db_priv;
 	sm->backend_auth = conf->backend_auth;
 	sm->eap_server = conf->eap_server;

@@ -91,6 +91,7 @@ struct eapol_callbacks {
 
 struct eap_config {
 	void *ssl_ctx;
+	void *msg_ctx;
 	void *eap_sim_db_priv;
 	Boolean backend_auth;
 	int eap_server;

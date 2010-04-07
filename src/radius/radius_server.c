@@ -280,6 +280,11 @@ struct radius_server_data {
 	 * eap_req_id_text_len - Length of eap_req_id_text buffer in octets
 	 */
 	size_t eap_req_id_text_len;
+
+	/*
+	 * msg_ctx - Context data for wpa_msg() calls
+	 */
+	void *msg_ctx;
 };
 
 
@@ -486,6 +491,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 
 	os_memset(&eap_conf, 0, sizeof(eap_conf));
 	eap_conf.ssl_ctx = data->ssl_ctx;
+	eap_conf.msg_ctx = data->msg_ctx;
 	eap_conf.eap_sim_db_priv = data->eap_sim_db_priv;
 	eap_conf.backend_auth = TRUE;
 	eap_conf.eap_server = 1;
@@ -1229,6 +1235,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->conf_ctx = conf->conf_ctx;
 	data->eap_sim_db_priv = conf->eap_sim_db_priv;
 	data->ssl_ctx = conf->ssl_ctx;
+	data->msg_ctx = conf->msg_ctx;
 	data->ipv6 = conf->ipv6;
 	if (conf->pac_opaque_encr_key) {
 		data->pac_opaque_encr_key = os_malloc(16);

@@ -26,6 +26,7 @@ struct eapol_auth_config {
 	int individual_wep_key_len;
 	int eap_server;
 	void *ssl_ctx;
+	void *msg_ctx;
 	void *eap_sim_db_priv;
 	char *eap_req_id_text; /* a copy of this will be allocated */
 	size_t eap_req_id_text_len;

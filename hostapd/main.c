@@ -209,6 +209,7 @@ static struct hostapd_iface * hostapd_init(const char *config_file)
 					       &conf->bss[i]);
 		if (hapd == NULL)
 			goto fail;
+		hapd->msg_ctx = hapd;
 	}
 
 	return hapd_iface;

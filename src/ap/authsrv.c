@@ -104,6 +104,7 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd)
 	srv.conf_ctx = conf;
 	srv.eap_sim_db_priv = hapd->eap_sim_db_priv;
 	srv.ssl_ctx = hapd->ssl_ctx;
+	srv.msg_ctx = hapd->msg_ctx;
 	srv.pac_opaque_encr_key = conf->pac_opaque_encr_key;
 	srv.eap_fast_a_id = conf->eap_fast_a_id;
 	srv.eap_fast_a_id_len = conf->eap_fast_a_id_len;

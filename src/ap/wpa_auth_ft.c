@@ -438,20 +438,21 @@ static u8 * wpa_ft_gtk_subelem(struct wpa_state_machine *sm, size_t *len)
 		key = gsm->GTK[gsm->GN - 1];
 
 	/*
-	 * Sub-elem ID[1] | Length[1] | Key Info[1] | Key Length[1] | RSC[8] |
+	 * Sub-elem ID[1] | Length[1] | Key Info[2] | Key Length[1] | RSC[8] |
 	 * Key[5..32].
 	 */
-	subelem_len = 12 + key_len + 8;
+	subelem_len = 13 + key_len + 8;
 	subelem = os_zalloc(subelem_len);
 	if (subelem == NULL)
 		return NULL;
 
 	subelem[0] = FTIE_SUBELEM_GTK;
-	subelem[1] = 10 + key_len + 8;
-	subelem[2] = gsm->GN & 0x03; /* Key ID in B0-B1 of Key Info */
-	subelem[3] = gsm->GTK_len;
-	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN, subelem + 4);
-	if (aes_wrap(sm->PTK.kek, key_len / 8, key, subelem + 12)) {
+	subelem[1] = 11 + key_len + 8;
+	/* Key ID in B0-B1 of Key Info */
+	WPA_PUT_LE16(&subelem[2], gsm->GN & 0x03);
+	subelem[4] = gsm->GTK_len;
+	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN, subelem + 5);
+	if (aes_wrap(sm->PTK.kek, key_len / 8, key, subelem + 13)) {
 		os_free(subelem);
 		return NULL;
 	}

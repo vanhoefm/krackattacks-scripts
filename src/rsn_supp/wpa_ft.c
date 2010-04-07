@@ -685,14 +685,14 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 	wpa_hexdump_key(MSG_DEBUG, "FT: Received GTK in Reassoc Resp",
 			gtk_elem, gtk_elem_len);
 
-	if (gtk_elem_len < 10 + 24 || (gtk_elem_len - 10) % 8 ||
-	    gtk_elem_len - 18 > sizeof(gtk)) {
+	if (gtk_elem_len < 11 + 24 || (gtk_elem_len - 11) % 8 ||
+	    gtk_elem_len - 19 > sizeof(gtk)) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid GTK sub-elem "
 			   "length %lu", (unsigned long) gtk_elem_len);
 		return -1;
 	}
-	gtk_len = gtk_elem_len - 18;
-	if (aes_unwrap(sm->ptk.kek, gtk_len / 8, gtk_elem + 10, gtk)) {
+	gtk_len = gtk_elem_len - 19;
+	if (aes_unwrap(sm->ptk.kek, gtk_len / 8, gtk_elem + 11, gtk)) {
 		wpa_printf(MSG_WARNING, "FT: AES unwrap failed - could not "
 			   "decrypt GTK");
 		return -1;
@@ -730,20 +730,20 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 		return -1;
 	}
 
-	/* Key Info[1] | Key Length[1] | RSC[8] | Key[5..32]. */
+	/* Key Info[2] | Key Length[1] | RSC[8] | Key[5..32]. */
 
-	keyidx = gtk_elem[0] & 0x03;
+	keyidx = WPA_GET_LE16(gtk_elem) & 0x03;
 
-	if (gtk_elem[1] != keylen) {
+	if (gtk_elem[2] != keylen) {
 		wpa_printf(MSG_DEBUG, "FT: GTK length mismatch: received %d "
 			   "negotiated %lu",
-			   gtk_elem[1], (unsigned long) keylen);
+			   gtk_elem[2], (unsigned long) keylen);
 		return -1;
 	}
 
 	wpa_hexdump_key(MSG_DEBUG, "FT: GTK from Reassoc Resp", gtk, keylen);
 	if (wpa_sm_set_key(sm, alg, (u8 *) "\xff\xff\xff\xff\xff\xff",
-			   keyidx, 0, gtk_elem + 2, rsc_len, gtk, keylen) <
+			   keyidx, 0, gtk_elem + 3, rsc_len, gtk, keylen) <
 	    0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to the "
 			   "driver.");

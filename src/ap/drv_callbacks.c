@@ -40,6 +40,19 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	int new_assoc, res;
 	struct ieee802_11_elems elems;
 
+	if (addr == NULL) {
+		/*
+		 * This could potentially happen with unexpected event from the
+		 * driver wrapper. This was seen at least in one case where the
+		 * driver ended up being set to station mode while hostapd was
+		 * running, so better make sure we stop processing such an
+		 * event here.
+		 */
+		wpa_printf(MSG_DEBUG, "hostapd_notif_assoc: Skip event with "
+			   "no address");
+		return -1;
+	}
+
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "associated");
 

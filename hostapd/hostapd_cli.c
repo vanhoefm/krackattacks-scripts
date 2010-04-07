@@ -791,8 +791,8 @@ int main(int argc, char *argv[])
 			printf("%s\n", hostapd_cli_version);
 			return 0;
 		case 'i':
-			free(ctrl_ifname);
-			ctrl_ifname = strdup(optarg);
+			os_free(ctrl_ifname);
+			ctrl_ifname = os_strdup(optarg);
 			break;
 		case 'p':
 			ctrl_iface_dir = optarg;
@@ -816,12 +816,13 @@ int main(int argc, char *argv[])
 			DIR *dir = opendir(ctrl_iface_dir);
 			if (dir) {
 				while ((dent = readdir(dir))) {
-					if (strcmp(dent->d_name, ".") == 0 ||
-					    strcmp(dent->d_name, "..") == 0)
+					if (os_strcmp(dent->d_name, ".") == 0
+					    ||
+					    os_strcmp(dent->d_name, "..") == 0)
 						continue;
 					printf("Selected interface '%s'\n",
 					       dent->d_name);
-					ctrl_ifname = strdup(dent->d_name);
+					ctrl_ifname = os_strdup(dent->d_name);
 					break;
 				}
 				closedir(dir);
@@ -844,7 +845,7 @@ int main(int argc, char *argv[])
 			printf("Could not connect to hostapd - re-trying\n");
 			warning_displayed = 1;
 		}
-		sleep(1);
+		os_sleep(1, 0);
 		continue;
 	}
 

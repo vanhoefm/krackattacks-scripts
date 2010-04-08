@@ -132,7 +132,8 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode);
 static int
 wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv);
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
-				   const u8 *addr, int cmd, u16 reason_code);
+				   const u8 *addr, int cmd, u16 reason_code,
+				   int local_state_change);
 static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv);
 
@@ -1845,7 +1846,7 @@ static void clear_state_mismatch(struct wpa_driver_nl80211_data *drv,
 			   "mismatch (" MACSTR ")", MAC2STR(addr));
 		wpa_driver_nl80211_mlme(drv, addr,
 					NL80211_CMD_DEAUTHENTICATE,
-					WLAN_REASON_PREV_AUTH_NOT_VALID);
+					WLAN_REASON_PREV_AUTH_NOT_VALID, 1);
 	}
 }
 
@@ -2216,7 +2217,8 @@ nla_put_failure:
 
 
 static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
-				   const u8 *addr, int cmd, u16 reason_code)
+				   const u8 *addr, int cmd, u16 reason_code,
+				   int local_state_change)
 {
 	int ret = -1;
 	struct nl_msg *msg;
@@ -2230,6 +2232,8 @@ static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	NLA_PUT_U16(msg, NL80211_ATTR_REASON_CODE, reason_code);
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+	if (local_state_change)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_LOCAL_STATE_CHANGE);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
@@ -2252,7 +2256,7 @@ static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISCONNECT,
-				       reason_code);
+				       reason_code, 0);
 }
 
 
@@ -2266,7 +2270,7 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
-				       reason_code);
+				       reason_code, 0);
 }
 
 
@@ -2280,7 +2284,7 @@ static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
 	wpa_printf(MSG_DEBUG, "%s", __func__);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISASSOCIATE,
-				       reason_code);
+				       reason_code, 0);
 }
 
 
@@ -2366,6 +2370,10 @@ retry:
 		goto nla_put_failure;
 	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
 	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
+	if (params->local_state_change) {
+		wpa_printf(MSG_DEBUG, "  * Local state change only");
+		NLA_PUT_FLAG(msg, NL80211_ATTR_LOCAL_STATE_CHANGE);
+	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;
@@ -2373,7 +2381,8 @@ retry:
 		wpa_printf(MSG_DEBUG, "nl80211: MLME command failed: ret=%d "
 			   "(%s)", ret, strerror(-ret));
 		count++;
-		if (ret == -EALREADY && count == 1 && params->bssid) {
+		if (ret == -EALREADY && count == 1 && params->bssid &&
+		    !params->local_state_change) {
 			/*
 			 * mac80211 does not currently accept new
 			 * authentication if we are already authenticated. As a

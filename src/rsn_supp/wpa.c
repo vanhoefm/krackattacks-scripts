@@ -262,7 +262,6 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	struct wpa_eapol_key *reply;
 	u8 *rbuf;
 	u8 *rsn_ie_buf = NULL;
-	size_t rsn_ie_buf_len;
 
 	if (wpa_ie == NULL) {
 		wpa_printf(MSG_WARNING, "WPA: No wpa_ie set - cannot "
@@ -275,8 +274,7 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		int res;
 
 		/* Add PMKR1Name into RSN IE (PMKID-List) */
-		rsn_ie_buf_len = wpa_ie_len + 2 + 2 + PMKID_LEN;
-		rsn_ie_buf = os_malloc(rsn_ie_buf_len);
+		rsn_ie_buf = os_malloc(wpa_ie_len + 2 + 2 + PMKID_LEN);
 		if (rsn_ie_buf == NULL)
 			return -1;
 		os_memcpy(rsn_ie_buf, wpa_ie, wpa_ie_len);

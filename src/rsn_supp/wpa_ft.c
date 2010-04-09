@@ -229,7 +229,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 		  MOBILITY_DOMAIN_ID_LEN);
 	mdie->ft_capab = 0; /* FIX: copy from the target AP's MDIE */
 
-	/* FTIE[SNonce, R0KH-ID] */
+	/* FTIE[SNonce, [R1KH-ID,] R0KH-ID ] */
 	ftie_pos = pos;
 	*pos++ = WLAN_EID_FAST_BSS_TRANSITION;
 	ftie_len = pos++;
@@ -238,6 +238,13 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	os_memcpy(ftie->snonce, sm->snonce, WPA_NONCE_LEN);
 	if (anonce)
 		os_memcpy(ftie->anonce, anonce, WPA_NONCE_LEN);
+	if (kck) {
+		/* R1KH-ID sub-element in third FT message */
+		*pos++ = FTIE_SUBELEM_R1KH_ID;
+		*pos++ = FT_R1KH_ID_LEN;
+		os_memcpy(pos, sm->r1kh_id, FT_R1KH_ID_LEN);
+		pos += FT_R1KH_ID_LEN;
+	}
 	/* R0KH-ID sub-element */
 	*pos++ = FTIE_SUBELEM_R0KH_ID;
 	*pos++ = sm->r0kh_id_len;

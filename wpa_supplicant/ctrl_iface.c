@@ -136,6 +136,8 @@ static int wpa_supplicant_ctrl_iface_ft_ds(
 	struct wpa_supplicant *wpa_s, char *addr)
 {
 	u8 target_ap[ETH_ALEN];
+	struct wpa_bss *bss;
+	const u8 *mdie;
 
 	if (hwaddr_aton(addr, target_ap)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE FT_DS: invalid "
@@ -145,7 +147,13 @@ static int wpa_supplicant_ctrl_iface_ft_ds(
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE FT_DS " MACSTR, MAC2STR(target_ap));
 
-	return wpa_ft_start_over_ds(wpa_s->wpa, target_ap);
+	bss = wpa_bss_get_bssid(wpa_s, target_ap);
+	if (bss)
+		mdie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
+	else
+		mdie = NULL;
+
+	return wpa_ft_start_over_ds(wpa_s->wpa, target_ap, mdie);
 }
 #endif /* CONFIG_IEEE80211R */
 

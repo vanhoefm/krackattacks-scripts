@@ -163,7 +163,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	wpa_sm_set_ft_params(wpa_s->wpa, md, NULL, 0, NULL);
 	if (md) {
 		/* Prepare for the next transition */
-		wpa_ft_prepare_auth_request(wpa_s->wpa);
+		wpa_ft_prepare_auth_request(wpa_s->wpa, ie);
 	}
 
 	if (md && ssid->key_mgmt & (WPA_KEY_MGMT_FT_PSK |

@@ -459,7 +459,7 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 #ifdef CONFIG_IEEE80211R
 	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		/* Prepare for the next transition */
-		wpa_ft_prepare_auth_request(sm);
+		wpa_ft_prepare_auth_request(sm, NULL);
 	}
 #endif /* CONFIG_IEEE80211R */
 }
@@ -1936,7 +1936,7 @@ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
 		wpa_supplicant_key_neg_complete(sm, sm->bssid, 1);
 
 		/* Prepare for the next transition */
-		wpa_ft_prepare_auth_request(sm);
+		wpa_ft_prepare_auth_request(sm, NULL);
 
 		clear_ptk = 0;
 	}

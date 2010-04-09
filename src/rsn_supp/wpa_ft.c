@@ -115,6 +115,7 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
  * @target_ap: Target AP address
  * @ric_ies: Optional IE(s), e.g., WMM TSPEC(s), for RIC-Request or %NULL
  * @ric_ies_len: Length of ric_ies buffer in octets
+ * @ap_mdie: Mobility Domain IE from the target AP
  * Returns: Pointer to buffer with IEs or %NULL on failure
  *
  * Caller is responsible for freeing the returned buffer with os_free();
@@ -122,7 +123,8 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
 static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 			       const u8 *anonce, const u8 *pmk_name,
 			       const u8 *kck, const u8 *target_ap,
-			       const u8 *ric_ies, size_t ric_ies_len)
+			       const u8 *ric_ies, size_t ric_ies_len,
+			       const u8 *ap_mdie)
 {
 	size_t buf_len;
 	u8 *buf, *pos, *ftie_len, *ftie_pos;
@@ -227,7 +229,7 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	pos += sizeof(*mdie);
 	os_memcpy(mdie->mobility_domain, sm->mobility_domain,
 		  MOBILITY_DOMAIN_ID_LEN);
-	mdie->ft_capab = 0; /* FIX: copy from the target AP's MDIE */
+	mdie->ft_capab = ap_mdie && ap_mdie[1] >= 3 ? ap_mdie[4] : 0;
 
 	/* FTIE[SNonce, [R1KH-ID,] R0KH-ID ] */
 	ftie_pos = pos;
@@ -497,9 +499,10 @@ static int wpa_ft_install_ptk(struct wpa_sm *sm, const u8 *bssid)
 /**
  * wpa_ft_prepare_auth_request - Generate over-the-air auth request
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
+ * @mdie: Target AP MDIE
  * Returns: 0 on success, -1 on failure
  */
-int wpa_ft_prepare_auth_request(struct wpa_sm *sm)
+int wpa_ft_prepare_auth_request(struct wpa_sm *sm, const u8 *mdie)
 {
 	u8 *ft_ies;
 	size_t ft_ies_len;
@@ -511,7 +514,7 @@ int wpa_ft_prepare_auth_request(struct wpa_sm *sm)
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, sm->bssid, NULL, 0);
+				    NULL, sm->bssid, NULL, 0, mdie);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -628,7 +631,8 @@ int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, ftie->anonce,
 				    sm->pmk_r1_name, sm->ptk.kck, bssid,
-				    ric_ies, ric_ies_len);
+				    ric_ies, ric_ies_len,
+				    parse.mdie ? parse.mdie - 2 : NULL);
 	if (ft_ies) {
 		wpa_sm_update_ft_ies(sm, sm->mobility_domain,
 				     ft_ies, ft_ies_len);
@@ -936,9 +940,12 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 /**
  * wpa_ft_start_over_ds - Generate over-the-DS auth request
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
+ * @target_ap: Target AP Address
+ * @mdie: Mobility Domain IE from the target AP
  * Returns: 0 on success, -1 on failure
  */
-int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap)
+int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap,
+			 const u8 *mdie)
 {
 	u8 *ft_ies;
 	size_t ft_ies_len;
@@ -953,7 +960,7 @@ int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap)
 	}
 
 	ft_ies = wpa_ft_gen_req_ies(sm, &ft_ies_len, NULL, sm->pmk_r0_name,
-				    NULL, target_ap, NULL, 0);
+				    NULL, target_ap, NULL, 0, mdie);
 	if (ft_ies) {
 		sm->over_the_ds_in_progress = 1;
 		os_memcpy(sm->target_ap, target_ap, ETH_ALEN);

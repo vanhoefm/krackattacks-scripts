@@ -688,18 +688,22 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 	pos += res;
 
 	_ftie = (struct rsn_ftie *) (ftie + 2);
-	_ftie->mic_control[1] = 3; /* Information element count */
+	if (auth_alg == WLAN_AUTH_FT)
+		_ftie->mic_control[1] = 3; /* Information element count */
 
 	ric_start = pos;
 	if (wpa_ft_parse_ies(req_ies, req_ies_len, &parse) == 0 && parse.ric) {
 		pos = wpa_ft_process_ric(pos, end, parse.ric, parse.ric_len);
-		_ftie->mic_control[1] += ieee802_11_ie_count(ric_start,
-							     pos - ric_start);
+		if (auth_alg == WLAN_AUTH_FT)
+			_ftie->mic_control[1] +=
+				ieee802_11_ie_count(ric_start,
+						    pos - ric_start);
 	}
 	if (ric_start == pos)
 		ric_start = NULL;
 
-	if (wpa_ft_mic(sm->PTK.kck, sm->addr, sm->wpa_auth->addr, 6,
+	if (auth_alg == WLAN_AUTH_FT &&
+	    wpa_ft_mic(sm->PTK.kck, sm->addr, sm->wpa_auth->addr, 6,
 		       mdie, mdie_len, ftie, ftie_len,
 		       rsnie, rsnie_len,
 		       ric_start, ric_start ? pos - ric_start : 0,

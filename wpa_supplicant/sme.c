@@ -178,7 +178,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 			mdie = (struct rsn_mdie *) pos;
 			os_memcpy(mdie->mobility_domain, md,
 				  MOBILITY_DOMAIN_ID_LEN);
-			mdie->ft_capab = 0;
+			mdie->ft_capab = md[MOBILITY_DOMAIN_ID_LEN];
 			wpa_s->sme.assoc_req_ie_len += 5;
 		}
 

@@ -62,7 +62,7 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 /**
  * wpa_sm_set_ft_params - Set FT (IEEE 802.11r) parameters
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
- * @mobility_domain: Mobility domain identifier (2 octets)
+ * @mobility_domain: Mobility domain identifier (2 octets + 1 octet)
  * @r0kh_id: PMK-R0 key holder identity (1-48 octets)
  * @r0kh_id_len: R0KH-ID length (1-48)
  * @r1kh_id: PMK-R1 key holder identity (16 octets)
@@ -77,6 +77,9 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
 			    mobility_domain, MOBILITY_DOMAIN_ID_LEN);
 		os_memcpy(sm->mobility_domain, mobility_domain,
 			  MOBILITY_DOMAIN_ID_LEN);
+		sm->mdie_ft_capab = mobility_domain[MOBILITY_DOMAIN_ID_LEN];
+		wpa_printf(MSG_DEBUG, "FT: Capability and Policy: 0x%02x",
+			   sm->mdie_ft_capab);
 	} else if (sm)
 		os_memset(sm->mobility_domain, 0, MOBILITY_DOMAIN_ID_LEN);
 
@@ -229,7 +232,8 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 	pos += sizeof(*mdie);
 	os_memcpy(mdie->mobility_domain, sm->mobility_domain,
 		  MOBILITY_DOMAIN_ID_LEN);
-	mdie->ft_capab = ap_mdie && ap_mdie[1] >= 3 ? ap_mdie[4] : 0;
+	mdie->ft_capab = ap_mdie && ap_mdie[1] >= 3 ? ap_mdie[4] :
+		sm->mdie_ft_capab;
 
 	/* FTIE[SNonce, [R1KH-ID,] R0KH-ID ] */
 	ftie_pos = pos;

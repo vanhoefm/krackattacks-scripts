@@ -1138,6 +1138,64 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 		return WLAN_STATUS_INVALID_FTIE;
 	}
 
+	if (os_memcmp(ftie->snonce, sm->SNonce, WPA_NONCE_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: SNonce mismatch in FTIE");
+		wpa_hexdump(MSG_DEBUG, "FT: Received SNonce",
+			    ftie->snonce, WPA_NONCE_LEN);
+		wpa_hexdump(MSG_DEBUG, "FT: Expected SNonce",
+			    sm->SNonce, WPA_NONCE_LEN);
+		return -1;
+	}
+
+	if (os_memcmp(ftie->anonce, sm->ANonce, WPA_NONCE_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: ANonce mismatch in FTIE");
+		wpa_hexdump(MSG_DEBUG, "FT: Received ANonce",
+			    ftie->anonce, WPA_NONCE_LEN);
+		wpa_hexdump(MSG_DEBUG, "FT: Expected ANonce",
+			    sm->ANonce, WPA_NONCE_LEN);
+		return -1;
+	}
+
+
+	if (parse.r0kh_id == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No R0KH-ID subelem in FTIE");
+		return -1;
+	}
+
+	if (parse.r0kh_id_len != sm->r0kh_id_len ||
+	    os_memcmp(parse.r0kh_id, sm->r0kh_id, parse.r0kh_id_len) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: R0KH-ID in FTIE did not match with "
+			   "the current R0KH-ID");
+		wpa_hexdump(MSG_DEBUG, "FT: R0KH-ID in FTIE",
+			    parse.r0kh_id, parse.r0kh_id_len);
+		wpa_hexdump(MSG_DEBUG, "FT: The current R0KH-ID",
+			    sm->r0kh_id, sm->r0kh_id_len);
+		return -1;
+	}
+
+	if (parse.r1kh_id == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No R1KH-ID subelem in FTIE");
+		return -1;
+	}
+
+	if (os_memcmp(parse.r1kh_id, sm->wpa_auth->conf.r1_key_holder,
+		      FT_R1KH_ID_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: Unknown R1KH-ID used in "
+			   "ReassocReq");
+		wpa_hexdump(MSG_DEBUG, "FT: R1KH-ID in FTIE",
+			    parse.r1kh_id, FT_R1KH_ID_LEN);
+		wpa_hexdump(MSG_DEBUG, "FT: Expected R1KH-ID",
+			    sm->wpa_auth->conf.r1_key_holder, FT_R1KH_ID_LEN);
+		return -1;
+	}
+
+	if (parse.rsn_pmkid == NULL ||
+	    os_memcmp(parse.rsn_pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN)) {
+		wpa_printf(MSG_DEBUG, "FT: No matching PMKR1Name (PMKID) in "
+			   "RSNIE (pmkid=%d)", !!parse.rsn_pmkid);
+		return -1;
+	}
+
 	count = 3;
 	if (parse.ric)
 		count++;

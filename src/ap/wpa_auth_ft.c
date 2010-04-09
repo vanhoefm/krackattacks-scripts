@@ -614,6 +614,7 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 	struct rsn_ftie *_ftie;
 	struct wpa_ft_ies parse;
 	u8 *ric_start;
+	u8 *anonce, *snonce;
 
 	if (sm == NULL)
 		return pos;
@@ -652,6 +653,8 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 		subelem = wpa_ft_gtk_subelem(sm, &subelem_len);
 		r0kh_id = sm->r0kh_id;
 		r0kh_id_len = sm->r0kh_id_len;
+		anonce = sm->ANonce;
+		snonce = sm->SNonce;
 #ifdef CONFIG_IEEE80211W
 		if (sm->mgmt_frame_prot) {
 			u8 *igtk;
@@ -677,8 +680,10 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 	} else {
 		r0kh_id = conf->r0_key_holder;
 		r0kh_id_len = conf->r0_key_holder_len;
+		anonce = NULL;
+		snonce = NULL;
 	}
-	res = wpa_write_ftie(conf, r0kh_id, r0kh_id_len, NULL, NULL, pos,
+	res = wpa_write_ftie(conf, r0kh_id, r0kh_id_len, anonce, snonce, pos,
 			     end - pos, subelem, subelem_len);
 	os_free(subelem);
 	if (res < 0)

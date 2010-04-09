@@ -839,7 +839,7 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	struct wpa_ft_ies parse;
 	struct rsn_mdie *mdie;
 	struct rsn_ftie *ftie;
-	size_t count;
+	unsigned int count;
 	u8 mic[16];
 
 	wpa_hexdump(MSG_DEBUG, "FT: Response IEs", ies, ies_len);
@@ -925,6 +925,12 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	count = 3;
 	if (parse.tie)
 		count++;
+	if (ftie->mic_control[1] != count) {
+		wpa_printf(MSG_DEBUG, "FT: Unexpected IE count in MIC "
+			   "Control: received %u expected %u",
+			   ftie->mic_control[1], count);
+		return -1;
+	}
 
 	if (wpa_ft_mic(sm->ptk.kck, sm->own_addr, src_addr, 6,
 		       parse.mdie - 2, parse.mdie_len + 2,

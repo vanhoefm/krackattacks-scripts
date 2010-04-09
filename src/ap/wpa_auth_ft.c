@@ -1094,6 +1094,7 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 	struct rsn_mdie *mdie;
 	struct rsn_ftie *ftie;
 	u8 mic[16];
+	unsigned int count;
 
 	if (sm == NULL)
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;
@@ -1135,6 +1136,16 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 	if (ftie == NULL || parse.ftie_len < sizeof(*ftie)) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid FTIE");
 		return WLAN_STATUS_INVALID_FTIE;
+	}
+
+	count = 3;
+	if (parse.ric)
+		count++;
+	if (ftie->mic_control[1] != count) {
+		wpa_printf(MSG_DEBUG, "FT: Unexpected IE count in MIC "
+			   "Control: received %u expected %u",
+			   ftie->mic_control[1], count);
+		return -1;
 	}
 
 	if (wpa_ft_mic(sm->PTK.kck, sm->addr, sm->wpa_auth->addr, 5,

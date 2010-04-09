@@ -1000,8 +1000,8 @@ static void wpa_assoc_set_ft_params(struct wpa_supplicant *wpa_s,
 }
 #endif /* CONFIG_IEEE80211R */
 
-static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
-					   union wpa_event_data *data)
+static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
+					  union wpa_event_data *data)
 {
 	int l, len, found = 0, wpa_found, rsn_found;
 	const u8 *p;
@@ -1060,7 +1060,9 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 						 bssid) < 0) {
 			wpa_printf(MSG_DEBUG, "FT: Validation of "
 				   "Reassociation Response failed");
-			/* TODO: force disconnection? */
+			wpa_supplicant_deauthenticate(
+				wpa_s, WLAN_REASON_INVALID_IE);
+			return -1;
 		}
 	}
 #endif /* CONFIG_SME */
@@ -1126,6 +1128,8 @@ static void wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		wpa_s->ap_ies_from_associnfo = 1;
 
 	wpa_s->assoc_freq = data->assoc_info.freq;
+
+	return 0;
 }
 
 
@@ -1148,8 +1152,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_AP */
 
 	ft_completed = wpa_ft_is_completed(wpa_s->wpa);
-	if (data)
-		wpa_supplicant_event_associnfo(wpa_s, data);
+	if (data && wpa_supplicant_event_associnfo(wpa_s, data) < 0)
+		return;
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATED);
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)

@@ -42,6 +42,8 @@ struct wpa_eapol_ie_parse {
 #ifdef CONFIG_IEEE80211R
 	const u8 *mdie;
 	size_t mdie_len;
+	const u8 *ftie;
+	size_t ftie_len;
 #endif /* CONFIG_IEEE80211R */
 };
 

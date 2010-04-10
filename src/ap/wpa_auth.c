@@ -539,6 +539,9 @@ void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm)
 
 static void wpa_free_sta_sm(struct wpa_state_machine *sm)
 {
+#ifdef CONFIG_IEEE80211R
+	os_free(sm->assoc_resp_ftie);
+#endif /* CONFIG_IEEE80211R */
 	os_free(sm->last_rx_eapol_key);
 	os_free(sm->wpa_ie);
 	os_free(sm);
@@ -596,6 +599,56 @@ static int wpa_replay_counter_valid(struct wpa_state_machine *sm,
 	}
 	return 0;
 }
+
+
+#ifdef CONFIG_IEEE80211R
+static int ft_check_msg_2_of_4(struct wpa_authenticator *wpa_auth,
+			       struct wpa_state_machine *sm,
+			       struct wpa_eapol_ie_parse *kde)
+{
+	struct wpa_ie_data ie;
+	struct rsn_mdie *mdie;
+
+	if (wpa_parse_wpa_ie_rsn(kde->rsn_ie, kde->rsn_ie_len, &ie) < 0 ||
+	    ie.num_pmkid != 1 || ie.pmkid == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
+			   "FT 4-way handshake message 2/4");
+		return -1;
+	}
+
+	os_memcpy(sm->sup_pmk_r1_name, ie.pmkid, PMKID_LEN);
+	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from Supplicant",
+		    sm->sup_pmk_r1_name, PMKID_LEN);
+
+	if (!kde->mdie || !kde->ftie) {
+		wpa_printf(MSG_DEBUG, "FT: No %s in FT 4-way handshake "
+			   "message 2/4", kde->mdie ? "FTIE" : "MDIE");
+		return -1;
+	}
+
+	mdie = (struct rsn_mdie *) (kde->mdie + 2);
+	if (kde->mdie[1] < sizeof(struct rsn_mdie) ||
+	    os_memcmp(wpa_auth->conf.mobility_domain, mdie->mobility_domain,
+		      MOBILITY_DOMAIN_ID_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: MDIE mismatch");
+		return -1;
+	}
+
+	if (sm->assoc_resp_ftie &&
+	    (kde->ftie[1] != sm->assoc_resp_ftie[1] ||
+	     os_memcmp(kde->ftie, sm->assoc_resp_ftie,
+		       2 + sm->assoc_resp_ftie[1]) != 0)) {
+		wpa_printf(MSG_DEBUG, "FT: FTIE mismatch");
+		wpa_hexdump(MSG_DEBUG, "FT: FTIE in EAPOL-Key msg 2/4",
+			    kde->ftie, kde->ftie_len);
+		wpa_hexdump(MSG_DEBUG, "FT: FTIE in (Re)AssocResp",
+			    sm->assoc_resp_ftie, 2 + sm->assoc_resp_ftie[1]);
+		return -1;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_IEEE80211R */
 
 
 void wpa_receive(struct wpa_authenticator *wpa_auth,
@@ -776,19 +829,9 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			return;
 		}
 #ifdef CONFIG_IEEE80211R
-		if (ft) {
-			struct wpa_ie_data ie;
-			if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len,
-						 &ie) < 0 ||
-			    ie.num_pmkid != 1 || ie.pmkid == NULL) {
-				wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
-					   "FT 4-way handshake message 2/4");
-				wpa_sta_disconnect(wpa_auth, sm->addr);
-				return;
-			}
-			os_memcpy(sm->sup_pmk_r1_name, ie.pmkid, PMKID_LEN);
-			wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from Supplicant",
-				    sm->sup_pmk_r1_name, PMKID_LEN);
+		if (ft && ft_check_msg_2_of_4(wpa_auth, sm, &kde) < 0) {
+			wpa_sta_disconnect(wpa_auth, sm->addr);
+			return;
 		}
 #endif /* CONFIG_IEEE80211R */
 		break;

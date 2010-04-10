@@ -840,6 +840,9 @@ int wpa_parse_kde_ies(const u8 *buf, size_t len, struct wpa_eapol_ie_parse *ie)
 		} else if (*pos == WLAN_EID_MOBILITY_DOMAIN) {
 			ie->mdie = pos;
 			ie->mdie_len = pos[1] + 2;
+		} else if (*pos == WLAN_EID_FAST_BSS_TRANSITION) {
+			ie->ftie = pos;
+			ie->ftie_len = pos[1] + 2;
 #endif /* CONFIG_IEEE80211R */
 		} else if (*pos == WLAN_EID_VENDOR_SPECIFIC) {
 			ret = wpa_parse_generic(pos, end, ie);

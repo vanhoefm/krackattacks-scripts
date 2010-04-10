@@ -692,6 +692,11 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 	ftie_len = res;
 	pos += res;
 
+	os_free(sm->assoc_resp_ftie);
+	sm->assoc_resp_ftie = os_malloc(ftie_len);
+	if (sm->assoc_resp_ftie)
+		os_memcpy(sm->assoc_resp_ftie, ftie, ftie_len);
+
 	_ftie = (struct rsn_ftie *) (ftie + 2);
 	if (auth_alg == WLAN_AUTH_FT)
 		_ftie->mic_control[1] = 3; /* Information element count */

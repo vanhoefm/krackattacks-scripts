@@ -118,6 +118,7 @@ struct wpa_state_machine {
 	size_t r0kh_id_len;
 	u8 sup_pmk_r1_name[WPA_PMK_NAME_LEN]; /* PMKR1Name from EAPOL-Key
 					       * message 2/4 */
+	u8 *assoc_resp_ftie;
 #endif /* CONFIG_IEEE80211R */
 };
 

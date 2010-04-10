@@ -675,6 +675,9 @@ int wpa_compare_rsn_ie(int ft_initial_assoc,
 		       const u8 *ie1, size_t ie1len,
 		       const u8 *ie2, size_t ie2len)
 {
+	if (ie1 == NULL || ie2 == NULL)
+		return -1;
+
 	if (ie1len == ie2len && os_memcmp(ie1, ie2, ie1len) == 0)
 		return 0; /* identical IEs */
 

@@ -119,7 +119,7 @@ static int wpa_supplicant_ctrl_iface_stkstart(
 
 	if (hwaddr_aton(addr, peer)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE STKSTART: invalid "
-			   "address '%s'", peer);
+			   "address '%s'", addr);
 		return -1;
 	}
 
@@ -141,7 +141,7 @@ static int wpa_supplicant_ctrl_iface_ft_ds(
 
 	if (hwaddr_aton(addr, target_ap)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE FT_DS: invalid "
-			   "address '%s'", target_ap);
+			   "address '%s'", addr);
 		return -1;
 	}
 
@@ -343,7 +343,7 @@ static int wpa_supplicant_ctrl_iface_ibss_rsn(
 
 	if (hwaddr_aton(addr, peer)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE IBSS_RSN: invalid "
-			   "address '%s'", peer);
+			   "address '%s'", addr);
 		return -1;
 	}
 

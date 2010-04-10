@@ -790,6 +790,78 @@ static void wpa_report_ie_mismatch(struct wpa_sm *sm,
 }
 
 
+#ifdef CONFIG_IEEE80211R
+
+static int ft_validate_mdie(struct wpa_sm *sm,
+			    const unsigned char *src_addr,
+			    struct wpa_eapol_ie_parse *ie)
+{
+	struct rsn_mdie *mdie;
+
+	/* TODO: verify that full MDIE matches with the one from scan
+	 * results, not only mobility domain */
+
+	mdie = (struct rsn_mdie *) (ie->mdie + 2);
+	if (ie->mdie == NULL || ie->mdie_len < 2 + sizeof(*mdie) ||
+	    os_memcmp(mdie->mobility_domain, sm->mobility_domain,
+		      MOBILITY_DOMAIN_ID_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: MDIE in msg 3/4 did not "
+			   "match with the current mobility domain");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int ft_validate_rsnie(struct wpa_sm *sm,
+			     const unsigned char *src_addr,
+			     struct wpa_eapol_ie_parse *ie)
+{
+	struct wpa_ie_data rsn;
+
+	if (!ie->rsn_ie)
+		return 0;
+
+	/*
+	 * Verify that PMKR1Name from EAPOL-Key message 3/4
+	 * matches with the value we derived.
+	 */
+	if (wpa_parse_wpa_ie_rsn(ie->rsn_ie, ie->rsn_ie_len, &rsn) < 0 ||
+	    rsn.num_pmkid != 1 || rsn.pmkid == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
+			   "FT 4-way handshake message 3/4");
+		return -1;
+	}
+
+	if (os_memcmp(rsn.pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: PMKR1Name mismatch in "
+			   "FT 4-way handshake message 3/4");
+		wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from Authenticator",
+			    rsn.pmkid, WPA_PMK_NAME_LEN);
+		wpa_hexdump(MSG_DEBUG, "FT: Derived PMKR1Name",
+			    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int wpa_supplicant_validate_ie_ft(struct wpa_sm *sm,
+					 const unsigned char *src_addr,
+					 struct wpa_eapol_ie_parse *ie)
+{
+	if (ft_validate_mdie(sm, src_addr, ie) < 0 ||
+	    ft_validate_rsnie(sm, src_addr, ie) < 0)
+		return -1;
+
+	return 0;
+}
+
+#endif /* CONFIG_IEEE80211R */
+
+
 static int wpa_supplicant_validate_ie(struct wpa_sm *sm,
 				      const unsigned char *src_addr,
 				      struct wpa_eapol_ie_parse *ie)
@@ -841,19 +913,9 @@ static int wpa_supplicant_validate_ie(struct wpa_sm *sm,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
-		struct rsn_mdie *mdie;
-		/* TODO: verify that full MDIE matches with the one from scan
-		 * results, not only mobility domain */
-		mdie = (struct rsn_mdie *) (ie->mdie + 2);
-		if (ie->mdie == NULL || ie->mdie_len < 2 + sizeof(*mdie) ||
-		    os_memcmp(mdie->mobility_domain, sm->mobility_domain,
-			      MOBILITY_DOMAIN_ID_LEN) != 0) {
-			wpa_printf(MSG_DEBUG, "FT: MDIE in msg 3/4 did not "
-				   "match with the current mobility domain");
-			return -1;
-		}
-	}
+	if (wpa_key_mgmt_ft(sm->key_mgmt) &&
+	    wpa_supplicant_validate_ie_ft(sm, src_addr, ie) < 0)
+		return -1;
 #endif /* CONFIG_IEEE80211R */
 
 	return 0;
@@ -953,34 +1015,6 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 
 	if (wpa_supplicant_validate_ie(sm, sm->bssid, &ie) < 0)
 		goto failed;
-
-#ifdef CONFIG_IEEE80211R
-	if (wpa_key_mgmt_ft(sm->key_mgmt) && ie.rsn_ie) {
-		struct wpa_ie_data rsn;
-		/*
-		 * Verify that PMKR1Name from EAPOL-Key message 3/4 matches
-		 * with the value we derived.
-		 */
-		if (wpa_parse_wpa_ie_rsn(ie.rsn_ie, ie.rsn_ie_len, &rsn) < 0 ||
-		    rsn.num_pmkid != 1 || rsn.pmkid == NULL) {
-			wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
-				   "FT 4-way handshake message 3/4");
-			return;
-		}
-
-		if (os_memcmp(rsn.pmkid, sm->pmk_r1_name, WPA_PMK_NAME_LEN) !=
-		    0) {
-			wpa_printf(MSG_DEBUG, "FT: PMKR1Name mismatch in "
-				   "FT 4-way handshake message 3/4");
-			wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name from "
-				    "Authenticator",
-				    rsn.pmkid, WPA_PMK_NAME_LEN);
-			wpa_hexdump(MSG_DEBUG, "FT: Derived PMKR1Name",
-				    sm->pmk_r1_name, WPA_PMK_NAME_LEN);
-			return;
-		}
-	}
-#endif /* CONFIG_IEEE80211R */
 
 	if (os_memcmp(sm->anonce, key->key_nonce, WPA_NONCE_LEN) != 0) {
 		wpa_printf(MSG_WARNING, "WPA: ANonce from message 1 of 4-Way "

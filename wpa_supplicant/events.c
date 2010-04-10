@@ -956,58 +956,11 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 
 
-#ifdef CONFIG_IEEE80211R
-static void wpa_assoc_set_ft_params(struct wpa_supplicant *wpa_s,
-				    const u8 *ftie, const u8 *mdie)
-{
-	const u8 *mobility_domain = NULL;
-	const u8 *r0kh_id = NULL;
-	size_t r0kh_id_len = 0;
-	const u8 *r1kh_id = NULL;
-	struct rsn_ftie *hdr;
-	const u8 *pos, *end;
-
-	if (mdie == NULL || ftie == NULL)
-		return;
-
-	if (mdie[1] >= MOBILITY_DOMAIN_ID_LEN) {
-		mobility_domain = mdie + 2;
-#ifdef CONFIG_SME
-		wpa_s->sme.ft_used = 1;
-		os_memcpy(wpa_s->sme.mobility_domain, mobility_domain, 2);
-#endif /* CONFIG_SME */
-	}
-	if (ftie[1] >= sizeof(struct rsn_ftie)) {
-		end = ftie + 2 + ftie[1];
-		hdr = (struct rsn_ftie *) (ftie + 2);
-		pos = (const u8 *) (hdr + 1);
-		while (pos + 1 < end) {
-			if (pos + 2 + pos[1] > end)
-				break;
-			if (pos[0] == FTIE_SUBELEM_R1KH_ID &&
-			    pos[1] == FT_R1KH_ID_LEN)
-				r1kh_id = pos + 2;
-			else if (pos[0] == FTIE_SUBELEM_R0KH_ID &&
-				 pos[1] >= 1 && pos[1] <= FT_R0KH_ID_MAX_LEN) {
-				r0kh_id = pos + 2;
-				r0kh_id_len = pos[1];
-			}
-			pos += 2 + pos[1];
-		}
-	}
-	wpa_sm_set_ft_params(wpa_s->wpa, mobility_domain, r0kh_id,
-			     r0kh_id_len, r1kh_id);
-}
-#endif /* CONFIG_IEEE80211R */
-
 static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 					  union wpa_event_data *data)
 {
 	int l, len, found = 0, wpa_found, rsn_found;
 	const u8 *p;
-#ifdef CONFIG_IEEE80211R
-	const u8 *mdie = NULL, *ftie = NULL;
-#endif /* CONFIG_IEEE80211R */
 
 	wpa_printf(MSG_DEBUG, "Association info event");
 	if (data->assoc_info.req_ies)
@@ -1065,12 +1018,11 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 			return -1;
 		}
 	}
-#endif /* CONFIG_SME */
 
 	p = data->assoc_info.resp_ies;
 	l = data->assoc_info.resp_ies_len;
 
-	/* Go through the IEs and make a copy of the FT/MD IE, if present. */
+	/* Go through the IEs and make a copy of the MDIE, if present. */
 	while (p && l >= 2) {
 		len = p[1] + 2;
 		if (len > l) {
@@ -1078,15 +1030,20 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 				    p, l);
 			break;
 		}
-		if (p[0] == WLAN_EID_FAST_BSS_TRANSITION)
-			ftie = p;
-		else if (p[0] == WLAN_EID_MOBILITY_DOMAIN)
-			mdie = p;
+		if (p[0] == WLAN_EID_MOBILITY_DOMAIN &&
+		    p[1] >= MOBILITY_DOMAIN_ID_LEN) {
+			wpa_s->sme.ft_used = 1;
+			os_memcpy(wpa_s->sme.mobility_domain, p + 2,
+				  MOBILITY_DOMAIN_ID_LEN);
+			break;
+		}
 		l -= len;
 		p += len;
 	}
+#endif /* CONFIG_SME */
 
-	wpa_assoc_set_ft_params(wpa_s, ftie, mdie);
+	wpa_sm_set_ft_params(wpa_s->wpa, data->assoc_info.resp_ies,
+			     data->assoc_info.resp_ies_len);
 #endif /* CONFIG_IEEE80211R */
 
 	/* WPA/RSN IE from Beacon/ProbeResp */

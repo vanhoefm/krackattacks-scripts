@@ -24,6 +24,31 @@
 
 #ifdef CONFIG_IEEE80211R
 
+struct wpa_ft_ies {
+	const u8 *mdie;
+	size_t mdie_len;
+	const u8 *ftie;
+	size_t ftie_len;
+	const u8 *r1kh_id;
+	const u8 *gtk;
+	size_t gtk_len;
+	const u8 *r0kh_id;
+	size_t r0kh_id_len;
+	const u8 *rsn;
+	size_t rsn_len;
+	const u8 *rsn_pmkid;
+	const u8 *tie;
+	size_t tie_len;
+	const u8 *igtk;
+	size_t igtk_len;
+	const u8 *ric;
+	size_t ric_len;
+};
+
+static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
+			    struct wpa_ft_ies *parse);
+
+
 int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 		      const struct wpa_eapol_key *key,
 		      struct wpa_ptk *ptk, size_t ptk_len)
@@ -62,34 +87,40 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 /**
  * wpa_sm_set_ft_params - Set FT (IEEE 802.11r) parameters
  * @sm: Pointer to WPA state machine data from wpa_sm_init()
- * @mobility_domain: Mobility domain identifier (2 octets + 1 octet)
- * @r0kh_id: PMK-R0 key holder identity (1-48 octets)
- * @r0kh_id_len: R0KH-ID length (1-48)
- * @r1kh_id: PMK-R1 key holder identity (16 octets)
+ * @ies: Association Response IEs or %NULL to clear FT parameters
+ * @ies_len: Length of ies buffer in octets
  * Returns: 0 on success, -1 on failure
  */
-int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
-			 const u8 *r0kh_id, size_t r0kh_id_len,
-			 const u8 *r1kh_id)
+int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
 {
-	if (sm && mobility_domain) {
+	struct wpa_ft_ies ft;
+
+	if (sm == NULL)
+		return 0;
+
+	if (wpa_ft_parse_ies(ies, ies_len, &ft) < 0)
+		return -1;
+
+	if (ft.mdie && ft.mdie_len < MOBILITY_DOMAIN_ID_LEN + 1)
+		return -1;
+
+	if (ft.mdie) {
 		wpa_hexdump(MSG_DEBUG, "FT: Mobility domain",
-			    mobility_domain, MOBILITY_DOMAIN_ID_LEN);
-		os_memcpy(sm->mobility_domain, mobility_domain,
+			    ft.mdie, MOBILITY_DOMAIN_ID_LEN);
+		os_memcpy(sm->mobility_domain, ft.mdie,
 			  MOBILITY_DOMAIN_ID_LEN);
-		sm->mdie_ft_capab = mobility_domain[MOBILITY_DOMAIN_ID_LEN];
+		sm->mdie_ft_capab = ft.mdie[MOBILITY_DOMAIN_ID_LEN];
 		wpa_printf(MSG_DEBUG, "FT: Capability and Policy: 0x%02x",
 			   sm->mdie_ft_capab);
-	} else if (sm)
+	} else
 		os_memset(sm->mobility_domain, 0, MOBILITY_DOMAIN_ID_LEN);
 
-	if (sm && r0kh_id) {
-		if (r0kh_id_len > FT_R0KH_ID_MAX_LEN)
-			return -1;
-		wpa_hexdump(MSG_DEBUG, "FT: R0KH-ID", r0kh_id, r0kh_id_len);
-		os_memcpy(sm->r0kh_id, r0kh_id, r0kh_id_len);
-		sm->r0kh_id_len = r0kh_id_len;
-	} else if (sm) {
+	if (ft.r0kh_id) {
+		wpa_hexdump(MSG_DEBUG, "FT: R0KH-ID",
+			    ft.r0kh_id, ft.r0kh_id_len);
+		os_memcpy(sm->r0kh_id, ft.r0kh_id, ft.r0kh_id_len);
+		sm->r0kh_id_len = ft.r0kh_id_len;
+	} else {
 		/* FIX: When should R0KH-ID be cleared? We need to keep the
 		 * old R0KH-ID in order to be able to use this during FT. */
 		/*
@@ -98,10 +129,11 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
 		 */
 	}
 
-	if (sm && r1kh_id) {
-		wpa_hexdump(MSG_DEBUG, "FT: R1KH-ID", r1kh_id, FT_R1KH_ID_LEN);
-		os_memcpy(sm->r1kh_id, r1kh_id, FT_R1KH_ID_LEN);
-	} else if (sm)
+	if (ft.r1kh_id) {
+		wpa_hexdump(MSG_DEBUG, "FT: R1KH-ID",
+			    ft.r1kh_id, FT_R1KH_ID_LEN);
+		os_memcpy(sm->r1kh_id, ft.r1kh_id, FT_R1KH_ID_LEN);
+	} else
 		os_memset(sm->r1kh_id, 0, FT_R1KH_ID_LEN);
 
 	return 0;
@@ -294,28 +326,6 @@ static u8 * wpa_ft_gen_req_ies(struct wpa_sm *sm, size_t *len,
 
 	return buf;
 }
-
-
-struct wpa_ft_ies {
-	const u8 *mdie;
-	size_t mdie_len;
-	const u8 *ftie;
-	size_t ftie_len;
-	const u8 *r1kh_id;
-	const u8 *gtk;
-	size_t gtk_len;
-	const u8 *r0kh_id;
-	size_t r0kh_id_len;
-	const u8 *rsn;
-	size_t rsn_len;
-	const u8 *rsn_pmkid;
-	const u8 *tie;
-	size_t tie_len;
-	const u8 *igtk;
-	size_t igtk_len;
-	const u8 *ric;
-	size_t ric_len;
-};
 
 
 static int wpa_ft_parse_ftie(const u8 *ie, size_t ie_len,

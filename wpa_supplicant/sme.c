@@ -160,7 +160,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	ie = wpa_bss_get_ie(bss, WLAN_EID_MOBILITY_DOMAIN);
 	if (ie && ie[1] >= MOBILITY_DOMAIN_ID_LEN)
 		md = ie + 2;
-	wpa_sm_set_ft_params(wpa_s->wpa, md, NULL, 0, NULL);
+	wpa_sm_set_ft_params(wpa_s->wpa, ie, ie ? 2 + ie[1] : 0);
 	if (md) {
 		/* Prepare for the next transition */
 		wpa_ft_prepare_auth_request(wpa_s->wpa, ie);

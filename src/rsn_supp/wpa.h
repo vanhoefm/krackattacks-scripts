@@ -278,9 +278,7 @@ static inline int wpa_sm_stkstart(struct wpa_sm *sm, const u8 *peer)
 
 #ifdef CONFIG_IEEE80211R
 
-int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
-			 const u8 *r0kh_id, size_t r0kh_id_len,
-			 const u8 *r1kh_id);
+int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len);
 int wpa_ft_prepare_auth_request(struct wpa_sm *sm, const u8 *mdie);
 int wpa_ft_process_response(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			    int ft_action, const u8 *target_ap,

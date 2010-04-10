@@ -996,45 +996,6 @@ static void ieee80211_rx_mgmt_disassoc(struct wpa_supplicant *wpa_s,
 }
 
 
-static int ieee80211_ft_assoc_resp(struct wpa_supplicant *wpa_s,
-				   struct ieee802_11_elems *elems)
-{
-#ifdef CONFIG_IEEE80211R
-	const u8 *mobility_domain = NULL;
-	const u8 *r0kh_id = NULL;
-	size_t r0kh_id_len = 0;
-	const u8 *r1kh_id = NULL;
-	struct rsn_ftie *hdr;
-	const u8 *pos, *end;
-
-	if (elems->mdie && elems->mdie_len >= MOBILITY_DOMAIN_ID_LEN)
-		mobility_domain = elems->mdie;
-	if (elems->ftie && elems->ftie_len >= sizeof(struct rsn_ftie)) {
-		end = elems->ftie + elems->ftie_len;
-		hdr = (struct rsn_ftie *) elems->ftie;
-		pos = (const u8 *) (hdr + 1);
-		while (pos + 1 < end) {
-			if (pos + 2 + pos[1] > end)
-				break;
-			if (pos[0] == FTIE_SUBELEM_R1KH_ID &&
-			    pos[1] == FT_R1KH_ID_LEN)
-				r1kh_id = pos + 2;
-			else if (pos[0] == FTIE_SUBELEM_R0KH_ID &&
-				 pos[1] >= 1 && pos[1] <= FT_R0KH_ID_MAX_LEN) {
-				r0kh_id = pos + 2;
-				r0kh_id_len = pos[1];
-			}
-			pos += 2 + pos[1];
-		}
-	}
-	return wpa_sm_set_ft_params(wpa_s->wpa, mobility_domain, r0kh_id,
-				    r0kh_id_len, r1kh_id);
-#else /* CONFIG_IEEE80211R */
-	return 0;
-#endif /* CONFIG_IEEE80211R */
-}
-
-
 static void ieee80211_build_tspec(struct wpabuf *buf)
 {
 	struct wmm_tspec_element *tspec;
@@ -1194,7 +1155,8 @@ static void ieee80211_rx_mgmt_assoc_resp(struct wpa_supplicant *wpa_s,
 				   "Resp failed");
 			return;
 		}
-	} else if (ieee80211_ft_assoc_resp(wpa_s, &elems) < 0)
+	} else if (wpa_sm_set_ft_params(wpa_s->wpa, pos,
+					len - (pos - (u8 *) mgmt)) < 0)
 		return;
 
 	wpa_printf(MSG_DEBUG, "MLME: associated");

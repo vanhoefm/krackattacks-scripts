@@ -183,7 +183,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		}
 
 		if (wpa_s->sme.ft_used &&
-		    os_memcmp(md, wpa_s->sme.mobility_domain, 2) == 0) {
+		    os_memcmp(md, wpa_s->sme.mobility_domain, 2) == 0 &&
+		    wpa_sm_has_ptk(wpa_s->wpa)) {
 			wpa_printf(MSG_DEBUG, "SME: Trying to use FT "
 				   "over-the-air");
 			params.auth_alg = WPA_AUTH_ALG_FT;

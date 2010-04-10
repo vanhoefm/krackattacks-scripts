@@ -2548,3 +2548,11 @@ void wpa_sm_drop_sa(struct wpa_sm *sm)
 	os_memset(&sm->ptk, 0, sizeof(sm->ptk));
 	os_memset(&sm->tptk, 0, sizeof(sm->tptk));
 }
+
+
+int wpa_sm_has_ptk(struct wpa_sm *sm)
+{
+	if (sm == NULL)
+		return 0;
+	return sm->ptk_set;
+}

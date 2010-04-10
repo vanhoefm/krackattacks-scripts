@@ -610,6 +610,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	char *msgtxt;
 	struct wpa_eapol_ie_parse kde;
 	int ft;
+	const u8 *eapol_key_ie;
+	size_t eapol_key_ie_len;
 
 	if (wpa_auth == NULL || !wpa_auth->conf.wpa || sm == NULL)
 		return;
@@ -740,12 +742,26 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 					 sm->wpa_ptk_state);
 			return;
 		}
+		if (wpa_parse_kde_ies((u8 *) (key + 1), key_data_length,
+				      &kde) < 0) {
+			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
+					 "received EAPOL-Key msg 2/4 with "
+					 "invalid Key Data contents");
+			return;
+		}
+		if (kde.rsn_ie) {
+			eapol_key_ie = kde.rsn_ie;
+			eapol_key_ie_len = kde.rsn_ie_len;
+		} else {
+			eapol_key_ie = kde.wpa_ie;
+			eapol_key_ie_len = kde.wpa_ie_len;
+		}
 		ft = sm->wpa == WPA_VERSION_WPA2 &&
 			wpa_key_mgmt_ft(sm->wpa_key_mgmt);
 		if (sm->wpa_ie == NULL ||
 		    wpa_compare_rsn_ie(ft,
 				       sm->wpa_ie, sm->wpa_ie_len,
-				       (u8 *) (key + 1), key_data_length)) {
+				       eapol_key_ie, eapol_key_ie_len)) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"WPA IE from (Re)AssocReq did not "
 					"match with msg 2/4");
@@ -754,7 +770,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 					    sm->wpa_ie, sm->wpa_ie_len);
 			}
 			wpa_hexdump(MSG_DEBUG, "WPA IE in msg 2/4",
-				    (u8 *) (key + 1), key_data_length);
+				    eapol_key_ie, eapol_key_ie_len);
 			/* MLME-DEAUTHENTICATE.request */
 			wpa_sta_disconnect(wpa_auth, sm->addr);
 			return;
@@ -762,8 +778,8 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 #ifdef CONFIG_IEEE80211R
 		if (ft) {
 			struct wpa_ie_data ie;
-			if (wpa_parse_wpa_ie_rsn((u8 *) (key + 1),
-						 key_data_length, &ie) < 0 ||
+			if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len,
+						 &ie) < 0 ||
 			    ie.num_pmkid != 1 || ie.pmkid == NULL) {
 				wpa_printf(MSG_DEBUG, "FT: No PMKR1Name in "
 					   "FT 4-way handshake message 2/4");

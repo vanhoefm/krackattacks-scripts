@@ -1633,10 +1633,12 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		return;
 	}
 
-	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, GTK[GN])
+	/* Send EAPOL(1, 1, 1, Pair, P, RSC, ANonce, MIC(PTK), RSNIE, [MDIE],
+	   GTK[GN], IGTK, [FTIE], [TIE * 2])
 	 */
 	os_memset(rsc, 0, WPA_KEY_RSC_LEN);
 	wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN, rsc);
+	/* If FT is used, wpa_auth->wpa_ie includes both RSNIE and MDIE */
 	wpa_ie = sm->wpa_auth->wpa_ie;
 	wpa_ie_len = sm->wpa_auth->wpa_ie_len;
 	if (sm->wpa == WPA_VERSION_WPA &&
@@ -1669,8 +1671,10 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 	if (gtk)
 		kde_len += 2 + RSN_SELECTOR_LEN + 2 + gtk_len;
 #ifdef CONFIG_IEEE80211R
-	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt))
-		kde_len += 2 + PMKID_LEN;
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		kde_len += 2 + PMKID_LEN; /* PMKR1Name into RSN IE */
+		kde_len += 300; /* FTIE + 2 * TIE */
+	}
 #endif /* CONFIG_IEEE80211R */
 	kde = os_malloc(kde_len);
 	if (kde == NULL)
@@ -1699,6 +1703,40 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 				  gtk, gtk_len);
 	}
 	pos = ieee80211w_kde_add(sm, pos);
+
+#ifdef CONFIG_IEEE80211R
+	if (wpa_key_mgmt_ft(sm->wpa_key_mgmt)) {
+		int res;
+		struct wpa_auth_config *conf;
+
+		conf = &sm->wpa_auth->conf;
+		res = wpa_write_ftie(conf, conf->r0_key_holder,
+				     conf->r0_key_holder_len,
+				     NULL, NULL, pos, kde + kde_len - pos,
+				     NULL, 0);
+		if (res < 0) {
+			wpa_printf(MSG_ERROR, "FT: Failed to insert FTIE "
+				   "into EAPOL-Key Key Data");
+			os_free(kde);
+			return;
+		}
+		pos += res;
+
+		/* TIE[ReassociationDeadline] (TU) */
+		*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
+		*pos++ = 5;
+		*pos++ = WLAN_TIMEOUT_REASSOC_DEADLINE;
+		WPA_PUT_LE32(pos, conf->reassociation_deadline);
+		pos += 4;
+
+		/* TIE[KeyLifetime] (seconds) */
+		*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
+		*pos++ = 5;
+		*pos++ = WLAN_TIMEOUT_KEY_LIFETIME;
+		WPA_PUT_LE32(pos, conf->r0_key_lifetime * 60);
+		pos += 4;
+	}
+#endif /* CONFIG_IEEE80211R */
 
 	wpa_send_eapol(sm->wpa_auth, sm,
 		       (secure ? WPA_KEY_INFO_SECURE : 0) | WPA_KEY_INFO_MIC |

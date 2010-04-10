@@ -273,8 +273,12 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 	if (wpa_key_mgmt_ft(sm->key_mgmt)) {
 		int res;
 
-		/* Add PMKR1Name into RSN IE (PMKID-List) */
-		rsn_ie_buf = os_malloc(wpa_ie_len + 2 + 2 + PMKID_LEN);
+		/*
+		 * Add PMKR1Name into RSN IE (PMKID-List) and add MDIE and
+		 * FTIE from (Re)Association Response.
+		 */
+		rsn_ie_buf = os_malloc(wpa_ie_len + 2 + 2 + PMKID_LEN +
+				       sm->assoc_resp_ies_len);
 		if (rsn_ie_buf == NULL)
 			return -1;
 		os_memcpy(rsn_ie_buf, wpa_ie, wpa_ie_len);
@@ -284,9 +288,15 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 			os_free(rsn_ie_buf);
 			return -1;
 		}
+		wpa_ie_len += res;
+
+		if (sm->assoc_resp_ies) {
+			os_memcpy(rsn_ie_buf + wpa_ie_len, sm->assoc_resp_ies,
+				  sm->assoc_resp_ies_len);
+			wpa_ie_len += sm->assoc_resp_ies_len;
+		}
 
 		wpa_ie = rsn_ie_buf;
-		wpa_ie_len += res;
 	}
 #endif /* CONFIG_IEEE80211R */
 
@@ -1899,6 +1909,9 @@ void wpa_sm_deinit(struct wpa_sm *sm)
 	os_free(sm->ap_rsn_ie);
 	os_free(sm->ctx);
 	peerkey_deinit(sm);
+#ifdef CONFIG_IEEE80211R
+	os_free(sm->assoc_resp_ies);
+#endif /* CONFIG_IEEE80211R */
 	os_free(sm);
 }
 

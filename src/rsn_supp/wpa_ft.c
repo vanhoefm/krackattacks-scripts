@@ -136,6 +136,24 @@ int wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
 	} else
 		os_memset(sm->r1kh_id, 0, FT_R1KH_ID_LEN);
 
+	os_free(sm->assoc_resp_ies);
+	sm->assoc_resp_ies = os_malloc(ft.mdie_len + 2 + ft.ftie_len + 2);
+	if (sm->assoc_resp_ies) {
+		u8 *pos = sm->assoc_resp_ies;
+		if (ft.mdie) {
+			os_memcpy(pos, ft.mdie - 2, ft.mdie_len + 2);
+			pos += ft.mdie_len + 2;
+		}
+		if (ft.ftie) {
+			os_memcpy(pos, ft.ftie - 2, ft.ftie_len + 2);
+			pos += ft.ftie_len + 2;
+		}
+		sm->assoc_resp_ies_len = pos - sm->assoc_resp_ies;
+		wpa_hexdump(MSG_DEBUG, "FT: Stored MDIE and FTIE from "
+			    "(Re)Association Response",
+			    sm->assoc_resp_ies, sm->assoc_resp_ies_len);
+	}
+
 	return 0;
 }
 

@@ -109,6 +109,8 @@ struct wpa_sm {
 	u8 target_ap[ETH_ALEN]; /* over-the-DS target AP */
 	int set_ptk_after_assoc;
 	u8 mdie_ft_capab; /* FT Capability and Policy from target AP MDIE */
+	u8 *assoc_resp_ies; /* MDIE and FTIE from (Re)Association Response */
+	size_t assoc_resp_ies_len;
 #endif /* CONFIG_IEEE80211R */
 };
 

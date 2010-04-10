@@ -794,12 +794,10 @@ static void wpa_report_ie_mismatch(struct wpa_sm *sm,
 
 static int ft_validate_mdie(struct wpa_sm *sm,
 			    const unsigned char *src_addr,
-			    struct wpa_eapol_ie_parse *ie)
+			    struct wpa_eapol_ie_parse *ie,
+			    const u8 *assoc_resp_mdie)
 {
 	struct rsn_mdie *mdie;
-
-	/* TODO: verify that full MDIE matches with the one from scan
-	 * results, not only mobility domain */
 
 	mdie = (struct rsn_mdie *) (ie->mdie + 2);
 	if (ie->mdie == NULL || ie->mdie_len < 2 + sizeof(*mdie) ||
@@ -807,6 +805,44 @@ static int ft_validate_mdie(struct wpa_sm *sm,
 		      MOBILITY_DOMAIN_ID_LEN) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: MDIE in msg 3/4 did not "
 			   "match with the current mobility domain");
+		return -1;
+	}
+
+	if (assoc_resp_mdie &&
+	    (assoc_resp_mdie[1] != ie->mdie[1] ||
+	     os_memcmp(assoc_resp_mdie, ie->mdie, 2 + ie->mdie[1]) != 0)) {
+		wpa_printf(MSG_DEBUG, "FT: MDIE mismatch");
+		wpa_hexdump(MSG_DEBUG, "FT: MDIE in EAPOL-Key msg 3/4",
+			    ie->mdie, 2 + ie->mdie[1]);
+		wpa_hexdump(MSG_DEBUG, "FT: MDIE in (Re)Association Response",
+			    assoc_resp_mdie, 2 + assoc_resp_mdie[1]);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+static int ft_validate_ftie(struct wpa_sm *sm,
+			    const unsigned char *src_addr,
+			    struct wpa_eapol_ie_parse *ie,
+			    const u8 *assoc_resp_ftie)
+{
+	if (ie->ftie == NULL) {
+		wpa_printf(MSG_DEBUG, "FT: No FTIE in EAPOL-Key msg 3/4");
+		return -1;
+	}
+
+	if (assoc_resp_ftie == NULL)
+		return 0;
+
+	if (assoc_resp_ftie[1] != ie->ftie[1] ||
+	    os_memcmp(assoc_resp_ftie, ie->ftie, 2 + ie->ftie[1]) != 0) {
+		wpa_printf(MSG_DEBUG, "FT: FTIE mismatch");
+		wpa_hexdump(MSG_DEBUG, "FT: FTIE in EAPOL-Key msg 3/4",
+			    ie->ftie, 2 + ie->ftie[1]);
+		wpa_hexdump(MSG_DEBUG, "FT: FTIE in (Re)Association Response",
+			    assoc_resp_ftie, 2 + assoc_resp_ftie[1]);
 		return -1;
 	}
 
@@ -852,7 +888,28 @@ static int wpa_supplicant_validate_ie_ft(struct wpa_sm *sm,
 					 const unsigned char *src_addr,
 					 struct wpa_eapol_ie_parse *ie)
 {
-	if (ft_validate_mdie(sm, src_addr, ie) < 0 ||
+	const u8 *pos, *end, *mdie = NULL, *ftie = NULL;
+
+	if (sm->assoc_resp_ies) {
+		pos = sm->assoc_resp_ies;
+		end = pos + sm->assoc_resp_ies_len;
+		while (pos + 2 < end) {
+			if (pos + 2 + pos[1] > end)
+				break;
+			switch (*pos) {
+			case WLAN_EID_MOBILITY_DOMAIN:
+				mdie = pos;
+				break;
+			case WLAN_EID_FAST_BSS_TRANSITION:
+				ftie = pos;
+				break;
+			}
+			pos += 2 + pos[1];
+		}
+	}
+
+	if (ft_validate_mdie(sm, src_addr, ie, mdie) < 0 ||
+	    ft_validate_ftie(sm, src_addr, ie, ftie) < 0 ||
 	    ft_validate_rsnie(sm, src_addr, ie) < 0)
 		return -1;
 

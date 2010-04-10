@@ -720,9 +720,9 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
-				   struct wpa_bss *selected,
-				   struct wpa_ssid *ssid)
+void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
+			    struct wpa_bss *selected,
+			    struct wpa_ssid *ssid)
 {
 	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
 		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP

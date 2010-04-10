@@ -1440,6 +1440,26 @@ static int wpa_cli_cmd_drop_sa(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid ROAM command: needs one argument "
+		       "(target AP's BSSID)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "ROAM %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long ROAM command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -1640,6 +1660,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "= notification of resume/thaw" },
 	{ "drop_sa", wpa_cli_cmd_drop_sa, cli_cmd_flag_none,
 	  "= drop SA without deauth/disassoc (test command)" },
+	{ "roam", wpa_cli_cmd_roam,
+	  cli_cmd_flag_none,
+	  "<addr> = roam to the specified BSS" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

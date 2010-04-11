@@ -135,6 +135,24 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 }
 
 
+static void ap_public_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
+{
+}
+
+
+static int ap_probe_req_rx(void *ctx, const u8 *addr, const u8 *ie,
+			   size_t ie_len)
+{
+	return 0;
+}
+
+
+static void ap_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
+				  const u8 *uuid_e)
+{
+}
+
+
 int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {
@@ -229,6 +247,12 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		}
 
 		hapd_iface->bss[i]->msg_ctx = wpa_s;
+		hapd_iface->bss[i]->public_action_cb = ap_public_action_rx;
+		hapd_iface->bss[i]->public_action_cb_ctx = wpa_s;
+		hostapd_register_probereq_cb(hapd_iface->bss[i],
+					     ap_probe_req_rx, wpa_s);
+		hapd_iface->bss[i]->wps_reg_success_cb = ap_wps_reg_success_cb;
+		hapd_iface->bss[i]->wps_reg_success_cb_ctx = wpa_s;
 	}
 
 	os_memcpy(hapd_iface->bss[0]->own_addr, wpa_s->own_addr, ETH_ALEN);

@@ -1355,6 +1355,14 @@ static void handle_action(struct hostapd_data *hapd,
 		hostapd_sa_query_action(hapd, mgmt, len);
 		return;
 #endif /* CONFIG_IEEE80211W */
+	case WLAN_ACTION_PUBLIC:
+		if (hapd->public_action_cb) {
+			hapd->public_action_cb(hapd->public_action_cb_ctx,
+					       (u8 *) mgmt, len,
+					       hapd->iface->freq);
+			return;
+		}
+		break;
 	}
 
 	hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,

@@ -284,6 +284,10 @@ struct wpa_client_mlme {
 	size_t ft_ies_len;
 #endif /* CONFIG_IEEE80211R */
 
+	void (*public_action_cb)(void *ctx, const u8 *buf, size_t len,
+				 int freq);
+	void *public_action_cb_ctx;
+
 #else /* CONFIG_CLIENT_MLME */
 	int dummy; /* to keep MSVC happy */
 #endif /* CONFIG_CLIENT_MLME */

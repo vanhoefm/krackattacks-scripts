@@ -1976,6 +1976,14 @@ static void ieee80211_rx_mgmt_action(struct wpa_supplicant *wpa_s,
 	case WLAN_ACTION_WMM:
 		ieee80211_rx_mgmt_wmm_action(wpa_s, mgmt, len, rx_status);
 		break;
+	case WLAN_ACTION_PUBLIC:
+		if (wpa_s->mlme.public_action_cb) {
+			wpa_s->mlme.public_action_cb(
+				wpa_s->mlme.public_action_cb_ctx,
+				(u8 *) mgmt, len, rx_status->freq);
+			return;
+		}
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "MLME: unknown Action Category %d",
 			   mgmt->u.action.category);

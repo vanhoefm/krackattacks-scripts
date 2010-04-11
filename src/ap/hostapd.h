@@ -172,6 +172,10 @@ struct hostapd_data {
 	struct hostapd_probereq_cb *probereq_cb;
 	size_t num_probereq_cb;
 
+	void (*public_action_cb)(void *ctx, const u8 *buf, size_t len,
+				 int freq);
+	void *public_action_cb_ctx;
+
 	void (*wps_reg_success_cb)(void *ctx, const u8 *mac_addr,
 				   const u8 *uuid_e);
 	void *wps_reg_success_cb_ctx;
@@ -204,6 +208,7 @@ struct hostapd_iface {
 	 * current_mode->channels */
 	int num_rates;
 	struct hostapd_rate_data *current_rates;
+	int freq;
 
 	u16 hw_flags;
 

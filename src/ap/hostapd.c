@@ -689,7 +689,6 @@ static int setup_interface(struct hostapd_iface *iface)
 int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 {
 	struct hostapd_data *hapd = iface->bss[0];
-	int freq;
 	size_t j;
 	u8 *prev_addr;
 
@@ -701,13 +700,13 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 
 	wpa_printf(MSG_DEBUG, "Completing interface initialization");
 	if (hapd->iconf->channel) {
-		freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
+		iface->freq = hostapd_hw_get_freq(hapd, hapd->iconf->channel);
 		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
 			   "Frequency: %d MHz",
 			   hostapd_hw_mode_txt(hapd->iconf->hw_mode),
-			   hapd->iconf->channel, freq);
+			   hapd->iconf->channel, iface->freq);
 
-		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, freq,
+		if (hostapd_set_freq(hapd, hapd->iconf->hw_mode, iface->freq,
 				     hapd->iconf->channel,
 				     hapd->iconf->ieee80211n,
 				     hapd->iconf->secondary_channel)) {

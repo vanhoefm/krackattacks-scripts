@@ -386,6 +386,19 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 #ifdef CONFIG_WPS
+	if (params.freqs == NULL && wpa_s->after_wps && wpa_s->wps_freq) {
+		/*
+		 * Optimize post-provisioning scan based on channel used
+		 * during provisioning.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS: Scan only frequency %u MHz that "
+			   "was used during provisioning", wpa_s->wps_freq);
+		params.freqs = os_zalloc(2 * sizeof(int));
+		if (params.freqs)
+			params.freqs[0] = wpa_s->wps_freq;
+		wpa_s->after_wps--;
+	}
+
 	if (wps) {
 		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
 						wpa_s->wps->uuid, req_type);

@@ -72,6 +72,8 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 			   "try to associate with the received credential");
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
+		wpa_s->after_wps = 5;
+		wpa_s->wps_freq = wpa_s->assoc_freq;
 		wpa_s->reassociate = 1;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 		return 1;

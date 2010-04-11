@@ -425,6 +425,9 @@ struct wpa_supplicant {
 	struct wpa_ssid *bgscan_ssid;
 	const struct bgscan_ops *bgscan;
 	void *bgscan_priv;
+
+	int after_wps;
+	unsigned int wps_freq;
 };
 
 

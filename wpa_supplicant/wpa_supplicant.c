@@ -542,6 +542,7 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_s->new_connection = 0;
 		wpa_s->reassociated_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 1);
+		wpa_s->after_wps = 0;
 	} else if (state == WPA_DISCONNECTED || state == WPA_ASSOCIATING ||
 		   state == WPA_ASSOCIATED) {
 		wpa_s->new_connection = 1;

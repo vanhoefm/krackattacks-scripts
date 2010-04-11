@@ -1,5 +1,6 @@
 TEMPLATE	= app
 LANGUAGE	= C++
+TRANSLATIONS	= lang/wpa_gui_de.ts
 
 CONFIG	+= qt warn_on release
 

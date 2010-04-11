@@ -258,9 +258,11 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 	if (wpa_s->ap_iface == NULL)
 		return;
 
+	wpa_s->current_ssid = NULL;
 	hostapd_interface_deinit(wpa_s->ap_iface);
 	hostapd_interface_free(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
+	wpa_drv_deinit_ap(wpa_s);
 }
 
 

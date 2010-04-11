@@ -414,3 +414,44 @@ int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
 }
 
 #endif /* CONFIG_CTRL_IFACE */
+
+
+int wpa_supplicant_ap_mac_addr_filter(struct wpa_supplicant *wpa_s,
+				      const u8 *addr)
+{
+	struct hostapd_data *hapd;
+	struct hostapd_bss_config *conf;
+
+	if (!wpa_s->ap_iface)
+		return -1;
+
+	if (addr)
+		wpa_printf(MSG_DEBUG, "AP: Set MAC address filter: " MACSTR,
+			   MAC2STR(addr));
+	else
+		wpa_printf(MSG_DEBUG, "AP: Clear MAC address filter");
+
+	hapd = wpa_s->ap_iface->bss[0];
+	conf = hapd->conf;
+
+	os_free(conf->accept_mac);
+	conf->accept_mac = NULL;
+	conf->num_accept_mac = 0;
+	os_free(conf->deny_mac);
+	conf->deny_mac = NULL;
+	conf->num_deny_mac = 0;
+
+	if (addr == NULL) {
+		conf->macaddr_acl = ACCEPT_UNLESS_DENIED;
+		return 0;
+	}
+
+	conf->macaddr_acl = DENY_UNLESS_ACCEPTED;
+	conf->accept_mac = os_zalloc(sizeof(struct mac_acl_entry));
+	if (conf->accept_mac == NULL)
+		return -1;
+	os_memcpy(conf->accept_mac[0].addr, addr, ETH_ALEN);
+	conf->num_accept_mac = 1;
+
+	return 0;
+}

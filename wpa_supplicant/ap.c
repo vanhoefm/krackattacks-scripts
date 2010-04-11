@@ -225,6 +225,10 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
 	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 
+	if (wpa_s->ap_configured_cb)
+		wpa_s->ap_configured_cb(wpa_s->ap_configured_cb_ctx,
+					wpa_s->ap_configured_cb_data);
+
 	return 0;
 }
 

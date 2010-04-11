@@ -424,6 +424,9 @@ struct wpa_supplicant {
 
 #ifdef CONFIG_AP
 	struct hostapd_iface *ap_iface;
+	void (*ap_configured_cb)(void *ctx, void *data);
+	void *ap_configured_cb_ctx;
+	void *ap_configured_cb_data;
 #endif /* CONFIG_AP */
 
 	struct wpa_ssid *bgscan_ssid;

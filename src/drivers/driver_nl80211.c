@@ -4889,8 +4889,10 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	}
 
 	msg = nlmsg_alloc();
-	if (!msg)
+	if (!msg) {
+		os_free(buf);
 		return -1;
+	}
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
 		    NL80211_CMD_ACTION, 0);
@@ -4899,6 +4901,7 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
 	NLA_PUT(msg, NL80211_ATTR_FRAME, 24 + data_len, buf);
 	os_free(buf);
+	buf = NULL;
 
 	cookie = 0;
 	ret = send_and_recv_msgs(drv, msg, cookie_handler, &cookie);
@@ -4915,6 +4918,7 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	ret = 0;
 
 nla_put_failure:
+	os_free(buf);
 	nlmsg_free(msg);
 	return ret;
 }

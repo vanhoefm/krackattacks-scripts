@@ -140,12 +140,12 @@ static void nl80211_remove_monitor_interface(
 #ifdef HOSTAPD
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
-static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 static int wpa_driver_nl80211_if_remove(void *priv,
 					enum wpa_driver_if_type type,
 					const char *ifname);
 #endif /* HOSTAPD */
 
+static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
 							void *timeout_ctx);
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
@@ -4191,6 +4191,8 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 	return -ENOBUFS;
 }
 
+#endif /* HOSTAPD */
+
 
 /* Set kernel driver on given frequency (MHz) */
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
@@ -4201,6 +4203,8 @@ static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 					   freq->sec_channel_offset);
 }
 
+
+#ifdef HOSTAPD
 
 static int i802_set_rts(void *priv, int rts)
 {
@@ -5273,7 +5277,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_disassoc = i802_sta_disassoc,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
-	.set_freq = i802_set_freq,
 	.set_rts = i802_set_rts,
 	.set_frag = i802_set_frag,
 	.set_rate_sets = i802_set_rate_sets,
@@ -5284,6 +5287,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_sta_vlan = i802_set_sta_vlan,
 	.set_wds_sta = i802_set_wds_sta,
 #endif /* HOSTAPD */
+	.set_freq = i802_set_freq,
 	.send_action = wpa_driver_nl80211_send_action,
 	.remain_on_channel = wpa_driver_nl80211_remain_on_channel,
 	.cancel_remain_on_channel =

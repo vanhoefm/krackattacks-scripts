@@ -181,7 +181,8 @@ void Peers::context_menu(const QPoint &pos)
 		menu->addAction(tr("Properties"), this, SLOT(properties()));
 	} else {
 		ctx_item = NULL;
-		menu->addAction(QString("Refresh"), this, SLOT(ctx_refresh()));
+		menu->addAction(QString(tr("Refresh")), this,
+				SLOT(ctx_refresh()));
 	}
 
 	menu->exec(peers->mapToGlobal(pos));
@@ -223,7 +224,7 @@ void Peers::enter_pin()
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
 		msg.setIcon(QMessageBox::Warning);
-		msg.setText("Failed to set the WPS PIN.");
+		msg.setText(tr("Failed to set the WPS PIN."));
 		msg.exec();
 	}
 }
@@ -920,7 +921,7 @@ void Peers::connect_pbc()
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
 		QMessageBox msg;
 		msg.setIcon(QMessageBox::Warning);
-		msg.setText("Failed to start WPS PBC.");
+		msg.setText(tr("Failed to start WPS PBC."));
 		msg.exec();
 	}
 }

@@ -197,10 +197,12 @@ void NetworkConfig::addNetwork()
 
 	if (auth == AUTH_WPA_PSK || auth == AUTH_WPA2_PSK) {
 		if (psklen < 8 || psklen > 64) {
-			QMessageBox::warning(this, "WPA Pre-Shared Key Error",
-					     "WPA-PSK requires a passphrase "
-					     "of 8 to 63 characters\n"
-					     "or 64 hex digit PSK");
+			QMessageBox::warning(
+				this,
+				tr("WPA Pre-Shared Key Error"),
+				tr("WPA-PSK requires a passphrase of 8 to 63 "
+				   "characters\n"
+				   "or 64 hex digit PSK"));
 			pskEdit->setFocus();
 			return;
 		}
@@ -209,13 +211,14 @@ void NetworkConfig::addNetwork()
 	if (idstrEdit->isEnabled() && !idstrEdit->text().isEmpty()) {
 		QRegExp rx("^(\\w|-)+$");
 		if (rx.indexIn(idstrEdit->text()) < 0) {
-			QMessageBox::warning(this, "Network ID Error",
-					     "Network ID String contains "
-					     "non-word characters.\n"
-					     "It must be a simple string, "
-					     "without spaces, containing\n"
-					     "only characters in this range: "
-					     "[A-Za-z0-9_-]\n");
+			QMessageBox::warning(
+				this, tr("Network ID Error"),
+				tr("Network ID String contains non-word "
+				   "characters.\n"
+				   "It must be a simple string, "
+				   "without spaces, containing\n"
+				   "only characters in this range: "
+				   "[A-Za-z0-9_-]\n"));
 			idstrEdit->setFocus();
 			return;
 		}
@@ -230,9 +233,10 @@ void NetworkConfig::addNetwork()
 	if (new_network) {
 		wpagui->ctrlRequest("ADD_NETWORK", reply, &reply_len);
 		if (reply[0] == 'F') {
-			QMessageBox::warning(this, "wpa_gui", "Failed to add "
-					     "network to wpa_supplicant\n"
-					     "configuration.");
+			QMessageBox::warning(this, "wpa_gui",
+					     tr("Failed to add "
+						"network to wpa_supplicant\n"
+						"configuration."));
 			return;
 		}
 		id = atoi(reply);
@@ -406,9 +410,10 @@ void NetworkConfig::addNetwork()
 	reply_len = sizeof(reply);
 	wpagui->ctrlRequest(cmd, reply, &reply_len);
 	if (strncmp(reply, "OK", 2) != 0) {
-		QMessageBox::warning(this, "wpa_gui", "Failed to enable "
-				     "network in wpa_supplicant\n"
-				     "configuration.");
+		QMessageBox::warning(this, "wpa_gui",
+				     tr("Failed to enable "
+					"network in wpa_supplicant\n"
+					"configuration."));
 		/* Network was added, so continue anyway */
 	}
 	wpagui->triggerUpdate();
@@ -792,13 +797,12 @@ void NetworkConfig::removeNetwork()
 	char reply[10], cmd[256];
 	size_t reply_len;
 
-	if (QMessageBox::information(this, "wpa_gui",
-				     "This will permanently remove the "
-				     "network\n"
-				     "from the configuration. Do you really "
-				     "want\n"
-				     "to remove this network?", "Yes", "No")
-	    != 0)
+	if (QMessageBox::information(
+		    this, "wpa_gui",
+		    tr("This will permanently remove the network\n"
+		       "from the configuration. Do you really want\n"
+		       "to remove this network?"),
+		    tr("Yes"), tr("No")) != 0)
 		return;
 
 	snprintf(cmd, sizeof(cmd), "REMOVE_NETWORK %d", edit_network_id);
@@ -806,9 +810,9 @@ void NetworkConfig::removeNetwork()
 	wpagui->ctrlRequest(cmd, reply, &reply_len);
 	if (strncmp(reply, "OK", 2) != 0) {
 		QMessageBox::warning(this, "wpa_gui",
-				     "Failed to remove network from "
-				     "wpa_supplicant\n"
-				     "configuration.");
+				     tr("Failed to remove network from "
+					"wpa_supplicant\n"
+					"configuration."));
 	} else {
 		wpagui->triggerUpdate();
 		wpagui->ctrlRequest("SAVE_CONFIG", reply, &reply_len);

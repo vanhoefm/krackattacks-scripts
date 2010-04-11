@@ -118,6 +118,7 @@ private:
 	QAction *quitAction;
 	QMenu *tray_menu;
 	QSystemTrayIcon *tray_icon;
+	QString wpaStateTranslate(char *state);
 	void createTrayIcon(bool);
 	bool ackTrayIcon;
 	bool startInTray;

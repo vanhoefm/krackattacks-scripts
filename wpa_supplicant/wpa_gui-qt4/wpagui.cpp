@@ -460,6 +460,31 @@ int WpaGui::ctrlRequest(const char *cmd, char *buf, size_t *buflen)
 }
 
 
+QString WpaGui::wpaStateTranslate(char *state)
+{
+	if (!strcmp(state, "DISCONNECTED"))
+		return tr("Disconnected");
+	else if (!strcmp(state, "INACTIVE"))
+		return tr("Inactive");
+	else if (!strcmp(state, "SCANNING"))
+		return tr("Scanning");
+	else if (!strcmp(state, "AUTHENTICATING"))
+		return tr("Authenticating");
+	else if (!strcmp(state, "ASSOCIATING"))
+		return tr("Associating");
+	else if (!strcmp(state, "ASSOCIATED"))
+		return tr("Associated");
+	else if (!strcmp(state, "4WAY_HANDSHAKE"))
+		return tr("4-Way Handshake");
+	else if (!strcmp(state, "GROUP_HANDSHAKE"))
+		return tr("Group Handshake");
+	else if (!strcmp(state, "COMPLETED"))
+		return tr("Completed");
+	else
+		return tr("Unknown");
+}
+
+
 void WpaGui::updateStatus()
 {
 	char buf[2048], *start, *end, *pos;
@@ -528,7 +553,7 @@ void WpaGui::updateStatus()
 				textIpAddress->setText(pos);
 			} else if (strcmp(start, "wpa_state") == 0) {
 				status_updated = true;
-				textStatus->setText(pos);
+				textStatus->setText(wpaStateTranslate(pos));
 			} else if (strcmp(start, "key_mgmt") == 0) {
 				auth_updated = true;
 				textAuthentication->setText(pos);

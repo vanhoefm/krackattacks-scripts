@@ -171,6 +171,10 @@ struct hostapd_data {
 
 	struct hostapd_probereq_cb *probereq_cb;
 	size_t num_probereq_cb;
+
+	void (*wps_reg_success_cb)(void *ctx, const u8 *mac_addr,
+				   const u8 *uuid_e);
+	void *wps_reg_success_cb_ctx;
 };
 
 

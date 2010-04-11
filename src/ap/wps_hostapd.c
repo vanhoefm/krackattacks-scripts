@@ -152,6 +152,9 @@ static void hostapd_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 		return;
 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_REG_SUCCESS MACSTR " %s",
 		MAC2STR(mac_addr), uuid);
+	if (hapd->wps_reg_success_cb)
+		hapd->wps_reg_success_cb(hapd->wps_reg_success_cb_ctx,
+					 mac_addr, uuid_e);
 }
 
 

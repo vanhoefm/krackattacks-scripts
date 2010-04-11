@@ -298,8 +298,7 @@ int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap,
 #else /* CONFIG_IEEE80211R */
 
 static inline int
-wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *mobility_domain,
-		     const u8 *r0kh_id, const u8 *r1kh_id)
+wpa_sm_set_ft_params(struct wpa_sm *sm, const u8 *ies, size_t ies_len)
 {
 	return 0;
 }

@@ -660,6 +660,37 @@ static void mlme_event_action_tx_status(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
+				       enum wpa_event_type type,
+				       const u8 *frame, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	union wpa_event_data event;
+	const u8 *bssid = NULL;
+	u16 reason_code = 0;
+
+	drv->associated = 0;
+	os_memset(&event, 0, sizeof(event));
+
+	mgmt = (const struct ieee80211_mgmt *) frame;
+	if (len >= 24)
+		bssid = mgmt->bssid;
+	/* Note: Same offset for Reason Code in both frame subtypes */
+	if (len >= 24 + sizeof(mgmt->u.deauth))
+		reason_code = le_to_host16(mgmt->u.deauth.reason_code);
+
+	if (type == EVENT_DISASSOC) {
+		event.disassoc_info.addr = bssid;
+		event.disassoc_info.reason_code = reason_code;
+	} else {
+		event.deauth_info.addr = bssid;
+		event.deauth_info.reason_code = reason_code;
+	}
+
+	wpa_supplicant_event(drv->ctx, type, &event);
+}
+
+
 static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		       enum nl80211_commands cmd, struct nlattr *frame,
 		       struct nlattr *addr, struct nlattr *timed_out,
@@ -689,12 +720,12 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		mlme_event_assoc(drv, nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_DEAUTHENTICATE:
-		drv->associated = 0;
-		wpa_supplicant_event(drv->ctx, EVENT_DEAUTH, NULL);
+		mlme_event_deauth_disassoc(drv, EVENT_DEAUTH,
+					   nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_DISASSOCIATE:
-		drv->associated = 0;
-		wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
+		mlme_event_deauth_disassoc(drv, EVENT_DISASSOC,
+					   nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_ACTION:
 		mlme_event_action(drv, freq, nla_data(frame), nla_len(frame));
@@ -895,6 +926,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 	struct wpa_driver_nl80211_data *drv = arg;
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	union wpa_event_data data;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -968,7 +1000,11 @@ static int process_event(struct nl_msg *msg, void *arg)
 			break;
 		}
 		drv->associated = 0;
-		wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, NULL);
+		os_memset(&data, 0, sizeof(data));
+		if (tb[NL80211_ATTR_REASON_CODE])
+			data.disassoc_info.reason_code =
+				nla_get_u16(tb[NL80211_ATTR_REASON_CODE]);
+		wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, &data);
 		break;
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:
 		mlme_event_michael_mic_failure(drv, tb);

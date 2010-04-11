@@ -1264,7 +1264,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 }
 
 
-static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s)
+static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
+					  u16 reason_code)
 {
 	const u8 *bssid;
 #ifdef CONFIG_SME
@@ -1298,9 +1299,11 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s)
 		bssid = wpa_s->pending_bssid;
 	wpa_blacklist_add(wpa_s, bssid);
 	wpa_sm_notify_disassoc(wpa_s->wpa);
-	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "- Disconnect event - "
-		"remove keys");
+	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid=" MACSTR
+		" reason=%d",
+		MAC2STR(bssid), reason_code);
 	if (wpa_supplicant_dynamic_keys(wpa_s)) {
+		wpa_printf(MSG_DEBUG, "Disconnect event - remove keys");
 		wpa_s->keys_cleared = 0;
 		wpa_clear_keys(wpa_s, wpa_s->bssid);
 	}
@@ -1578,6 +1581,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	u16 reason_code = 0;
 
 	switch (event) {
 	case EVENT_AUTH:
@@ -1595,12 +1599,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_AP */
+		if (data)
+			reason_code = data->deauth_info.reason_code;
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_disassoc(wpa_s, data);
 		/* fall through */
 	case EVENT_DEAUTH:
-		if (event == EVENT_DEAUTH)
+		if (event == EVENT_DEAUTH) {
 			wpa_printf(MSG_DEBUG, "Deauthentication notification");
+			if (data)
+				reason_code = data->deauth_info.reason_code;
+		}
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface && data) {
 			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
@@ -1608,7 +1617,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_AP */
-		wpa_supplicant_event_disassoc(wpa_s);
+		wpa_supplicant_event_disassoc(wpa_s, reason_code);
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:
 		wpa_supplicant_event_michael_mic_failure(wpa_s, data);

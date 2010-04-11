@@ -2140,6 +2140,12 @@ union wpa_event_data {
 		 * addr - Station address (for AP mode)
 		 */
 		const u8 *addr;
+
+		/**
+		 * reason_code - Reason Code (host byte order) used in
+		 *	Deauthentication frame
+		 */
+		u16 reason_code;
 	} disassoc_info;
 
 	/**
@@ -2150,6 +2156,12 @@ union wpa_event_data {
 		 * addr - Station address (for AP mode)
 		 */
 		const u8 *addr;
+
+		/**
+		 * reason_code - Reason Code (host byte order) used in
+		 *	Deauthentication frame
+		 */
+		u16 reason_code;
 	} deauth_info;
 
 	/**

@@ -525,7 +525,9 @@ static void wpa_supplicant_ctrl_iface_send(struct ctrl_iface_priv *priv,
 					   "%d - %s",
 					   idx, errno, strerror(errno));
 				dst->errors++;
-				if (dst->errors > 10 || _errno == ENOENT) {
+				if (dst->errors > 1000 ||
+				    (_errno != ENOBUFS && dst->errors > 10) ||
+				    _errno == ENOENT) {
 					wpa_supplicant_ctrl_iface_detach(
 						priv, &dst->addr,
 						dst->addrlen);

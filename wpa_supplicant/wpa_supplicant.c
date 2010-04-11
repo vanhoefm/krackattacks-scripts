@@ -2015,6 +2015,18 @@ next_driver:
 		return -1;
 	}
 
+	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
+		wpa_s->drv_flags = capa.flags;
+		if (capa.flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
+			if (ieee80211_sta_init(wpa_s))
+				return -1;
+		}
+		wpa_s->max_scan_ssids = capa.max_scan_ssids;
+		wpa_s->max_remain_on_chan = capa.max_remain_on_chan;
+	}
+	if (wpa_s->max_remain_on_chan == 0)
+		wpa_s->max_remain_on_chan = 1000;
+
 	if (wpa_supplicant_driver_init(wpa_s) < 0)
 		return -1;
 
@@ -2045,15 +2057,6 @@ next_driver:
 			   "wpa_supplicant again.\n",
 			   wpa_s->conf->ctrl_interface);
 		return -1;
-	}
-
-	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
-		wpa_s->drv_flags = capa.flags;
-		if (capa.flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-			if (ieee80211_sta_init(wpa_s))
-				return -1;
-		}
-		wpa_s->max_scan_ssids = capa.max_scan_ssids;
 	}
 
 #ifdef CONFIG_IBSS_RSN

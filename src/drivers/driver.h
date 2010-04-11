@@ -505,6 +505,11 @@ struct wpa_driver_capa {
 	unsigned int flags;
 
 	int max_scan_ssids;
+
+	/**
+	 * max_remain_on_chan - Maximum remain-on-channel duration in msec
+	 */
+	unsigned int max_remain_on_chan;
 };
 
 

@@ -2386,6 +2386,7 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 		capa->flags |= WPA_DRIVER_FLAGS_USER_SPACE_MLME;
 	capa->flags |= WPA_DRIVER_FLAGS_AP;
 	capa->max_scan_ssids = 2;
+	capa->max_remain_on_chan = 60000;
 
 	return 0;
 }

@@ -83,6 +83,8 @@ static const char *commands_help =
 "   sta <addr>           get MIB variables for one station\n"
 "   all_sta              get MIB variables for all stations\n"
 "   new_sta <addr>       add a new station\n"
+"   deauthenticate <addr>  deauthenticate a station\n"
+"   disassociate <addr>  disassociate a station\n"
 #ifdef CONFIG_IEEE80211W
 "   sa_query <addr>      send SA Query to a station\n"
 #endif /* CONFIG_IEEE80211W */

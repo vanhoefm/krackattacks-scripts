@@ -324,6 +324,8 @@ void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,
 
 int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 {
+	if (!wpa_s->ap_iface)
+		return -1;
 	return hostapd_wps_button_pushed(wpa_s->ap_iface->bss[0]);
 }
 
@@ -332,6 +334,9 @@ int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			      const char *pin, char *buf, size_t buflen)
 {
 	int ret, ret_len = 0;
+
+	if (!wpa_s->ap_iface)
+		return -1;
 
 	if (pin == NULL) {
 		unsigned int rpin = wps_generate_pin();

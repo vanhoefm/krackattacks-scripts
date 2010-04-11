@@ -1378,11 +1378,6 @@ nla_put_failure:
 
 static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 {
-	if (0) {
-		/* Public Action frames */
-		return nl80211_register_action_frame(drv, (u8 *) "\x04", 1);
-	}
-
 	/* FT Action frames */
 	if (nl80211_register_action_frame(drv, (u8 *) "\x06", 1) < 0)
 		return -1;

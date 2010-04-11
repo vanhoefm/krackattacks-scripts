@@ -266,6 +266,11 @@ static inline void wpa_sm_drop_sa(struct wpa_sm *sm)
 {
 }
 
+static inline int wpa_sm_has_ptk(struct wpa_sm *sm)
+{
+	return 0;
+}
+
 #endif /* CONFIG_NO_WPA */
 
 #ifdef CONFIG_PEERKEY
@@ -322,11 +327,6 @@ wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 			     const u8 *src_addr)
 {
 	return -1;
-}
-
-static inline int wpa_sm_has_ptk(struct wpa_sm *sm)
-{
-	return 0;
 }
 
 #endif /* CONFIG_IEEE80211R */

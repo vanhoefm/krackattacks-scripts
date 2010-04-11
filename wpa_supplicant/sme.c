@@ -324,7 +324,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
 
-	if (ieee802_11_parse_elems(params.wpa_ie, params.wpa_ie_len, &elems, 0)
+	if (params.wpa_ie == NULL ||
+	    ieee802_11_parse_elems(params.wpa_ie, params.wpa_ie_len, &elems, 0)
 	    < 0) {
 		wpa_printf(MSG_DEBUG, "SME: Could not parse own IEs?!");
 		os_memset(&elems, 0, sizeof(elems));

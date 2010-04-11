@@ -698,7 +698,7 @@ wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 
 
 static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
-					int timeout)
+					int timeout_sec, int timeout_usec)
 {
 	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1) {
 		/*
@@ -706,7 +706,8 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 		 * complete when fetched before the first scan request.
 		 */
 		wpa_s->scan_res_tried++;
-		timeout = 0;
+		timeout_sec = 0;
+		timeout_usec = 0;
 	} else if (!wpa_supplicant_enabled_networks(wpa_s->conf)) {
 		/*
 		 * No networks are enabled; short-circuit request so
@@ -716,7 +717,7 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
 		return;
 	}
-	wpa_supplicant_req_scan(wpa_s, timeout, 0);
+	wpa_supplicant_req_scan(wpa_s, timeout_sec, timeout_usec);
 }
 
 
@@ -727,7 +728,7 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
 		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
 			"PBC session overlap");
-		wpa_supplicant_req_new_scan(wpa_s, 10);
+		wpa_supplicant_req_new_scan(wpa_s, 10, 0);
 		return;
 	}
 
@@ -742,7 +743,7 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	      os_memcmp(selected->bssid, wpa_s->pending_bssid, ETH_ALEN) !=
 	      0))) {
 		if (wpa_supplicant_scard_init(wpa_s, ssid)) {
-			wpa_supplicant_req_new_scan(wpa_s, 10);
+			wpa_supplicant_req_new_scan(wpa_s, 10, 0);
 			return;
 		}
 		wpa_supplicant_associate(wpa_s, selected, ssid);
@@ -894,7 +895,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 			return;
 		wpa_printf(MSG_DEBUG, "Failed to get scan results - try "
 			   "scanning again");
-		wpa_supplicant_req_new_scan(wpa_s, 1);
+		wpa_supplicant_req_new_scan(wpa_s, 1, 0);
 		return;
 	}
 
@@ -949,8 +950,12 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		if (ssid) {
 			wpa_printf(MSG_DEBUG, "Setup a new network");
 			wpa_supplicant_associate(wpa_s, NULL, ssid);
-		} else
-			wpa_supplicant_req_new_scan(wpa_s, 5);
+		} else {
+			int timeout_sec = 5;
+			int timeout_usec = 0;
+			wpa_supplicant_req_new_scan(wpa_s, timeout_sec,
+						    timeout_usec);
+		}
 	}
 }
 #endif /* CONFIG_NO_SCAN_PROCESSING */

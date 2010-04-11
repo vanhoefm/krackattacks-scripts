@@ -142,6 +142,7 @@ struct wpa_auth_config {
 	int eapol_version;
 	int peerkey;
 	int wmm_enabled;
+	int wmm_uapsd;
 	int okc;
 #ifdef CONFIG_IEEE80211W
 	enum mfp_options ieee80211w;

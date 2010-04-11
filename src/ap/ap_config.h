@@ -270,6 +270,7 @@ struct hostapd_bss_config {
 	int ignore_broadcast_ssid;
 
 	int wmm_enabled;
+	int wmm_uapsd;
 
 	struct hostapd_vlan *vlan, *vlan_tail;
 

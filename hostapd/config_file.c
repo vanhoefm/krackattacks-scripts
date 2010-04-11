@@ -1815,6 +1815,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "wme_enabled") == 0 ||
 			   os_strcmp(buf, "wmm_enabled") == 0) {
 			bss->wmm_enabled = atoi(pos);
+		} else if (os_strcmp(buf, "uapsd_advertisement_enabled") == 0) {
+			bss->wmm_uapsd = atoi(pos);
 		} else if (os_strncmp(buf, "wme_ac_", 7) == 0 ||
 			   os_strncmp(buf, "wmm_ac_", 7) == 0) {
 			if (hostapd_config_wmm_ac(conf, buf, pos)) {

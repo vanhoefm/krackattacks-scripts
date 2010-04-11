@@ -425,7 +425,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_printf(MSG_WARNING, "Failed to initiate AP scan.");
 		if (prev_state != wpa_s->wpa_state)
 			wpa_supplicant_set_state(wpa_s, prev_state);
-		wpa_supplicant_req_scan(wpa_s, 10, 0);
+		wpa_supplicant_req_scan(wpa_s, 1, 0);
 	} else
 		wpa_s->scan_runs++;
 }

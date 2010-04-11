@@ -481,4 +481,14 @@ static inline int wpa_drv_signal_monitor(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_set_ap_wps_ie(struct wpa_supplicant *wpa_s,
+					const struct wpabuf *beacon,
+					const struct wpabuf *proberesp)
+{
+	if (!wpa_s->driver->set_ap_wps_ie)
+		return -1;
+	return wpa_s->driver->set_ap_wps_ie(wpa_s->drv_priv, beacon,
+					    proberesp);
+}
+
 #endif /* DRIVER_I_H */

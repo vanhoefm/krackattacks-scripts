@@ -39,13 +39,20 @@ static int hostapd_sta_flags_to_drv(int flags)
 }
 
 
-static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd,
-				 const struct wpabuf *beacon,
-				 const struct wpabuf *proberesp)
+static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 {
+	struct wpabuf *beacon, *proberesp;
+	int ret;
+
 	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
 		return 0;
-	return hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp);
+
+	beacon = hapd->wps_beacon_ie;
+	proberesp = hapd->wps_probe_resp_ie;
+
+	ret = hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp);
+
+	return ret;
 }
 
 

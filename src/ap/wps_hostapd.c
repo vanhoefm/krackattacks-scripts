@@ -100,8 +100,7 @@ static int hostapd_wps_set_ie_cb(void *ctx, struct wpabuf *beacon_ie,
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = probe_resp_ie;
 	ieee802_11_set_beacon(hapd);
-	return hapd->drv.set_ap_wps_ie(hapd, hapd->wps_beacon_ie,
-				       hapd->wps_probe_resp_ie);
+	return hapd->drv.set_ap_wps_ie(hapd);
 }
 
 
@@ -478,7 +477,7 @@ static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = NULL;
 
-	hapd->drv.set_ap_wps_ie(hapd, NULL, NULL);
+	hapd->drv.set_ap_wps_ie(hapd);
 }
 
 

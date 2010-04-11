@@ -1591,10 +1591,11 @@ struct wpa_driver_ops {
 			     const u8 *ht_oper, size_t ht_oper_len);
 
 	/**
-	 * set_ap_wps_ie - Add WPS IE into Beacon/Probe Response frames (AP)
+	 * set_ap_wps_ie - Add WPS IE(s) into Beacon/Probe Response frames (AP)
 	 * @priv: Private driver interface data
-	 * @beacon: WPS IE for Beacon frames
-	 * @proberesp: WPS IE for Probe Response frames
+	 * @beacon: WPS IE(s) for Beacon frames or %NULL to remove extra IE(s)
+	 * @proberesp: WPS IE(s) for Probe Response frames or %NULL to remove
+	 *	extra IE(s)
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This is an optional function to add WPS IE in the kernel driver for

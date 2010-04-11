@@ -688,7 +688,7 @@ static void wpa_supplicant_reconfig(int sig, void *signal_ctx)
 }
 
 
-static enum wpa_cipher cipher_suite2driver(int cipher)
+enum wpa_cipher cipher_suite2driver(int cipher)
 {
 	switch (cipher) {
 	case WPA_CIPHER_NONE:
@@ -706,7 +706,7 @@ static enum wpa_cipher cipher_suite2driver(int cipher)
 }
 
 
-static enum wpa_key_mgmt key_mgmt2driver(int key_mgmt)
+enum wpa_key_mgmt key_mgmt2driver(int key_mgmt)
 {
 	switch (key_mgmt) {
 	case WPA_KEY_MGMT_NONE:

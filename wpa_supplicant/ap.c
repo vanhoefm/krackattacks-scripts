@@ -169,6 +169,26 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	}
 	params.freq = ssid->frequency;
 
+	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK)
+		wpa_s->key_mgmt = WPA_KEY_MGMT_PSK;
+	else
+		wpa_s->key_mgmt = WPA_KEY_MGMT_NONE;
+	params.key_mgmt_suite = key_mgmt2driver(wpa_s->key_mgmt);
+
+	if (ssid->pairwise_cipher & WPA_CIPHER_CCMP)
+		wpa_s->pairwise_cipher = WPA_CIPHER_CCMP;
+	else if (ssid->pairwise_cipher & WPA_CIPHER_TKIP)
+		wpa_s->pairwise_cipher = WPA_CIPHER_TKIP;
+	else if (ssid->pairwise_cipher & WPA_CIPHER_NONE)
+		wpa_s->pairwise_cipher = WPA_CIPHER_NONE;
+	else {
+		wpa_printf(MSG_WARNING, "WPA: Failed to select pairwise "
+			   "cipher.");
+		return -1;
+	}
+	params.pairwise_suite = cipher_suite2driver(wpa_s->pairwise_cipher);
+	params.group_suite = params.pairwise_suite;
+
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
 		return -1;

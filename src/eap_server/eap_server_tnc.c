@@ -29,8 +29,8 @@ struct eap_tnc_data {
 	struct wpabuf *out_buf;
 	size_t out_used;
 	size_t fragment_size;
-	int was_done:1;
-	int was_fail:1;
+	unsigned int was_done:1;
+	unsigned int was_fail:1;
 };
 
 

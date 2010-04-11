@@ -2072,8 +2072,11 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 	 */
 	if (ret || !set_tx || alg == WPA_ALG_NONE)
 		return ret;
-#ifdef HOSTAPD /* FIX: is this needed? */
+#ifdef HOSTAPD
 	if (addr)
+		return ret;
+#else /* HOSTAPD */
+	if (drv->nlmode == NL80211_IFTYPE_AP && addr)
 		return ret;
 #endif /* HOSTAPD */
 

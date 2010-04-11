@@ -899,6 +899,13 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	if (wpa_s->scan_res_handler) {
+		wpa_s->scan_res_handler(wpa_s, scan_res);
+		wpa_s->scan_res_handler = NULL;
+		wpa_scan_results_free(scan_res);
+		return;
+	}
+
 	/*
 	 * Don't post the results if this was the initial cached
 	 * and there were no results.

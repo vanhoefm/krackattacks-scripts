@@ -33,6 +33,7 @@ struct wpa_supplicant;
 struct ibss_rsn;
 struct scan_info;
 struct wpa_bss;
+struct wpa_scan_results;
 
 /*
  * Forward declarations of private structures used within the ctrl_iface
@@ -343,6 +344,8 @@ struct wpa_supplicant {
 					  */
 #define WILDCARD_SSID_SCAN ((struct wpa_ssid *) 1)
 
+	void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
+				 struct wpa_scan_results *scan_res);
 	struct dl_list bss; /* struct wpa_bss::list */
 	struct dl_list bss_id; /* struct wpa_bss::list_id */
 	size_t num_bss;

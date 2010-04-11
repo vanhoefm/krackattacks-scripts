@@ -1490,11 +1490,16 @@ struct wpa_driver_ops {
 	 * @bss_ctx: BSS context for %WPA_IF_AP_BSS interfaces
 	 * @drv_priv: Pointer for overwriting the driver context or %NULL if
 	 *	not allowed (applies only to %WPA_IF_AP_BSS type)
+	 * @force_ifname: Buffer for returning an interface name that the
+	 *	driver ended up using if it differs from the requested ifname
+	 * @if_addr: Buffer for returning the allocated interface address
+	 *	(this may differ from the requested addr if the driver cannot
+	 *	change interface address)
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*if_add)(void *priv, enum wpa_driver_if_type type,
 		      const char *ifname, const u8 *addr, void *bss_ctx,
-		      void **drv_priv);
+		      void **drv_priv, char *force_ifname, u8 *if_addr);
 
 	/**
 	 * if_remove - Remove a virtual interface
@@ -1634,40 +1639,6 @@ struct wpa_driver_ops {
 	int (*send_action)(void *priv, unsigned int freq,
 			   const u8 *dst, const u8 *src, const u8 *bssid,
 			   const u8 *data, size_t data_len);
-
-	/**
-	 * alloc_interface_addr - Allocate a virtual interface address
-	 * @priv: Private driver interface data
-	 * @addr: Buffer for returning the address
-	 * @ifname: Buffer for returning interface name (if needed)
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This command pre-allocates an interface address for a new virtual
-	 * interface. This can be used before creating a virtual interface if
-	 * the interface mode (e.g., AP vs. station) is not yet known, but the
-	 * address of the virtual interface is already needed. This helps with
-	 * drivers that cannot change interface mode without destroying and
-	 * re-creating the interface. If the driver requires a specific
-	 * interface name to be used, the ifname buffer (up to IFNAMSIZ
-	 * characters) will be used to indicate which name must be used for
-	 * this virtual interface.
-	 *
-	 * The allocated address can be used in a if_add() call to request a
-	 * specific bssid.
-	 */
-	int (*alloc_interface_addr)(void *priv, u8 *addr, char *ifname);
-
-	/**
-	 * release_interface_addr - Release a virtual interface address
-	 * @priv: Private driver interface data
-	 * @addr: Address to be freed from alloc_interface_addr()
-	 *
-	 * This command is used to release a virtual interface address that was
-	 * allocated with alloc_interface_addr(), but has not yet been used
-	 * with if_add() to actually create the interface. This allows the
-	 * driver to release the pending allocation for a new interface.
-	 */
-	void (*release_interface_addr)(void *priv, const u8 *addr);
 
 	/**
 	 * remain_on_channel - Remain awake on a channel

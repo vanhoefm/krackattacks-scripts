@@ -4760,7 +4760,8 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 
 static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				     const char *ifname, const u8 *addr,
-				     void *bss_ctx, void **drv_priv)
+				     void *bss_ctx, void **drv_priv,
+				     char *force_ifname, u8 *if_addr)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -4775,6 +4776,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	}
 #endif /* HOSTAPD */
 
+	if (addr)
+		os_memcpy(if_addr, addr, ETH_ALEN);
 	ifidx = nl80211_create_iface(drv, ifname,
 				     wpa_driver_nl80211_if_type(type), addr,
 				     0);
@@ -4784,6 +4787,10 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 #endif /* HOSTAPD */
 		return -1;
 	}
+
+	if (!addr &&
+	    linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, if_addr) < 0)
+		return -1;
 
 #ifdef HOSTAPD
 	if (type == WPA_IF_AP_BSS) {
@@ -5054,35 +5061,6 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 }
 
 
-static int wpa_driver_nl80211_alloc_interface_addr(void *priv, u8 *addr,
-						   char *ifname)
-{
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-
-	if (ifname)
-		ifname[0] = '\0';
-
-	if (linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, addr) < 0)
-		return -1;
-
-	if (addr[0] & 0x02) {
-		/* TODO: add support for generating multiple addresses */
-		addr[0] ^= 0x80;
-	} else
-		addr[0] = 0x02; /* locally administered */
-
-	return 0;
-}
-
-
-static void wpa_driver_nl80211_release_interface_addr(void *priv,
-						      const u8 *addr)
-{
-	/* TODO: keep list of allocated address and release them here */
-}
-
-
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled)
 {
@@ -5312,8 +5290,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.cancel_remain_on_channel =
 	wpa_driver_nl80211_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_nl80211_probe_req_report,
-	.alloc_interface_addr = wpa_driver_nl80211_alloc_interface_addr,
-	.release_interface_addr = wpa_driver_nl80211_release_interface_addr,
 	.disable_11b_rates = wpa_driver_nl80211_disable_11b_rates,
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
 	.resume = wpa_driver_nl80211_resume,

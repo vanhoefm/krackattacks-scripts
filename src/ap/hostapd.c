@@ -468,6 +468,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	struct hostapd_bss_config *conf = hapd->conf;
 	u8 ssid[HOSTAPD_MAX_SSID_LEN + 1];
 	int ssid_len, set_ssid;
+	char force_ifname[IFNAMSIZ];
+	u8 if_addr[ETH_ALEN];
 
 	if (!first) {
 		if (hostapd_mac_comp_empty(hapd->conf->bssid) == 0) {
@@ -492,7 +494,7 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		hapd->interface_added = 1;
 		if (hostapd_if_add(hapd->iface->bss[0], WPA_IF_AP_BSS,
 				   hapd->conf->iface, hapd->own_addr, hapd,
-				   &hapd->drv_priv)) {
+				   &hapd->drv_priv, force_ifname, if_addr)) {
 			wpa_printf(MSG_ERROR, "Failed to add BSS (BSSID="
 				   MACSTR ")", MAC2STR(hapd->own_addr));
 			return -1;

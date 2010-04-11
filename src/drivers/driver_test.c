@@ -1014,12 +1014,27 @@ static int test_driver_bss_remove(void *priv, const char *ifname)
 
 static int test_driver_if_add(void *priv, enum wpa_driver_if_type type,
 			      const char *ifname, const u8 *addr,
-			      void *bss_ctx, void **drv_priv)
+			      void *bss_ctx, void **drv_priv,
+			      char *force_ifname, u8 *if_addr)
 {
+	struct test_driver_bss *dbss = priv;
+	struct wpa_driver_test_data *drv = dbss->drv;
+
 	wpa_printf(MSG_DEBUG, "%s(type=%d ifname=%s bss_ctx=%p)",
 		   __func__, type, ifname, bss_ctx);
+	if (addr)
+		os_memcpy(if_addr, addr, ETH_ALEN);
+	else {
+		drv->alloc_iface_idx++;
+		if_addr[0] = 0x02; /* locally administered */
+		sha1_prf(drv->own_addr, ETH_ALEN,
+			 "hostapd test addr generation",
+			 (const u8 *) &drv->alloc_iface_idx,
+			 sizeof(drv->alloc_iface_idx),
+			 if_addr + 1, ETH_ALEN - 1);
+	}
 	if (type == WPA_IF_AP_BSS)
-		return test_driver_bss_add(priv, ifname, addr, bss_ctx,
+		return test_driver_bss_add(priv, ifname, if_addr, bss_ctx,
 					   drv_priv);
 	return 0;
 }
@@ -2616,30 +2631,6 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 }
 
 
-static int wpa_driver_test_alloc_interface_addr(void *priv, u8 *addr,
-						char *ifname)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-
-	if (ifname)
-		ifname[0] = '\0';
-
-	drv->alloc_iface_idx++;
-	addr[0] = 0x02; /* locally administered */
-	sha1_prf(drv->own_addr, ETH_ALEN, "hostapd test addr generation",
-		 (const u8 *) &drv->alloc_iface_idx,
-		 sizeof(drv->alloc_iface_idx),
-		 addr + 1, ETH_ALEN - 1);
-	return 0;
-}
-
-
-static void wpa_driver_test_release_interface_addr(void *priv, const u8 *addr)
-{
-}
-
-
 static void test_remain_on_channel_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_driver_test_data *drv = eloop_ctx;
@@ -2755,8 +2746,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.scan2 = wpa_driver_test_scan,
 	.set_freq = wpa_driver_test_set_freq,
 	.send_action = wpa_driver_test_send_action,
-	.alloc_interface_addr = wpa_driver_test_alloc_interface_addr,
-	.release_interface_addr = wpa_driver_test_release_interface_addr,
 	.remain_on_channel = wpa_driver_test_remain_on_channel,
 	.cancel_remain_on_channel = wpa_driver_test_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_test_probe_req_report,

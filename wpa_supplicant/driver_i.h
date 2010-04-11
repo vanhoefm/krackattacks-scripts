@@ -394,20 +394,26 @@ static inline int wpa_drv_send_action(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
-static inline int wpa_drv_alloc_interface_addr(struct wpa_supplicant *wpa_s,
-					       u8 *addr, char *ifname)
+static inline int wpa_drv_if_add(struct wpa_supplicant *wpa_s,
+				 enum wpa_driver_if_type type,
+				 const char *ifname, const u8 *addr,
+				 void *bss_ctx, char *force_ifname,
+				 u8 *if_addr)
 {
-	if (wpa_s->driver->alloc_interface_addr)
-		return wpa_s->driver->alloc_interface_addr(wpa_s->drv_priv,
-							   addr, ifname);
+	if (wpa_s->driver->if_add)
+		return wpa_s->driver->if_add(wpa_s->drv_priv, type, ifname,
+					     addr, bss_ctx, NULL, force_ifname,
+					     if_addr);
 	return -1;
 }
 
-static inline void wpa_drv_release_interface_addr(struct wpa_supplicant *wpa_s,
-						  const u8 *addr)
+static inline int wpa_drv_if_remove(struct wpa_supplicant *wpa_s,
+				    enum wpa_driver_if_type type,
+				    const char *ifname)
 {
-	if (wpa_s->driver->release_interface_addr)
-		wpa_s->driver->release_interface_addr(wpa_s->drv_priv, addr);
+	if (wpa_s->driver->if_remove)
+		return wpa_s->driver->if_remove(wpa_s->drv_priv, type, ifname);
+	return -1;
 }
 
 static inline int wpa_drv_remain_on_channel(struct wpa_supplicant *wpa_s,

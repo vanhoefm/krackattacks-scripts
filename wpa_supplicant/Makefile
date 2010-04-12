@@ -1131,6 +1131,7 @@ OBJS += ../src/utils/base64.o
 endif
 
 ifdef NEED_SME
+NEED_80211_COMMON=y
 OBJS += sme.o
 CFLAGS += -DCONFIG_SME
 endif

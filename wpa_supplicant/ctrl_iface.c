@@ -2032,7 +2032,7 @@ static int wpa_supplicant_global_iface_list(struct wpa_global *global,
 		struct wpa_driver_ops *drv = wpa_drivers[i];
 		if (drv->get_interfaces == NULL)
 			continue;
-		tmp = drv->get_interfaces(global->drv_priv);
+		tmp = drv->get_interfaces(global->drv_priv[i]);
 		if (tmp == NULL)
 			continue;
 

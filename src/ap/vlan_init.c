@@ -244,7 +244,8 @@ static int br_delbr(const char *br_name)
 static int br_addbr(const char *br_name)
 {
 	int fd;
-	unsigned long arg[2];
+	unsigned long arg[4];
+	struct ifreq ifr;
 
 	wpa_printf(MSG_DEBUG, "VLAN: br_addbr(%s)", br_name);
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -268,6 +269,21 @@ static int br_addbr(const char *br_name)
 			close(fd);
 			return -1;
 		}
+	}
+
+	/* Decrease forwarding delay to avoid EAPOL timeouts. */
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, br_name, IFNAMSIZ);
+	arg[0] = BRCTL_SET_BRIDGE_FORWARD_DELAY;
+	arg[1] = 1;
+	arg[2] = 0;
+	arg[3] = 0;
+	ifr.ifr_data = (char *) &arg;
+	if (ioctl(fd, SIOCDEVPRIVATE, &ifr) < 0) {
+		wpa_printf(MSG_ERROR, "VLAN: %s: "
+			   "BRCTL_SET_BRIDGE_FORWARD_DELAY (1 sec) failed for "
+			   "%s: %s", __func__, br_name, strerror(errno));
+		/* Continue anyway */
 	}
 
 	close(fd);

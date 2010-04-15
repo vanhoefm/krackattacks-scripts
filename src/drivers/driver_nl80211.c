@@ -4503,6 +4503,7 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
+	int ret = -ENOBUFS;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -4517,9 +4518,15 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 	NLA_PUT_U32(msg, NL80211_ATTR_STA_VLAN,
 		    if_nametoindex(ifname));
 
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (ret < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: NL80211_ATTR_STA_VLAN (addr="
+			   MACSTR " ifname=%s vlan_id=%d) failed: %d (%s)",
+			   MAC2STR(addr), ifname, vlan_id, ret,
+			   strerror(-ret));
+	}
  nla_put_failure:
-	return -ENOBUFS;
+	return ret;
 }
 
 

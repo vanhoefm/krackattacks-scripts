@@ -45,7 +45,8 @@ static int ifconfig_helper(const char *if_name, int up)
 	struct ifreq ifr;
 
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -53,7 +54,9 @@ static int ifconfig_helper(const char *if_name, int up)
 	os_strlcpy(ifr.ifr_name, if_name, IFNAMSIZ);
 
 	if (ioctl(fd, SIOCGIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCGIFFLAGS]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: ioctl(SIOCGIFFLAGS) failed "
+			   "for interface %s: %s",
+			   __func__, if_name, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -64,7 +67,9 @@ static int ifconfig_helper(const char *if_name, int up)
 		ifr.ifr_flags &= ~IFF_UP;
 
 	if (ioctl(fd, SIOCSIFFLAGS, &ifr) != 0) {
-		perror("ioctl[SIOCSIFFLAGS]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: ioctl(SIOCSIFFLAGS) failed "
+			   "for interface %s (up=%d): %s",
+			   __func__, if_name, up, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -76,12 +81,14 @@ static int ifconfig_helper(const char *if_name, int up)
 
 static int ifconfig_up(const char *if_name)
 {
+	wpa_printf(MSG_DEBUG, "VLAN: Set interface %s up", if_name);
 	return ifconfig_helper(if_name, 1);
 }
 
 
 static int ifconfig_down(const char *if_name)
 {
+	wpa_printf(MSG_DEBUG, "VLAN: Set interface %s down", if_name);
 	return ifconfig_helper(if_name, 0);
 }
 
@@ -106,16 +113,19 @@ static int br_delif(const char *br_name, const char *if_name)
 	unsigned long args[2];
 	int if_index;
 
+	wpa_printf(MSG_DEBUG, "VLAN: br_delif(%s, %s)", br_name, if_name);
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
 	if_index = if_nametoindex(if_name);
 
 	if (if_index == 0) {
-		printf("Failure determining interface index for '%s'\n",
-		       if_name);
+		wpa_printf(MSG_ERROR, "VLAN: %s: Failure determining "
+			   "interface index for '%s'",
+			   __func__, if_name);
 		close(fd);
 		return -1;
 	}
@@ -128,7 +138,9 @@ static int br_delif(const char *br_name, const char *if_name)
 
 	if (ioctl(fd, SIOCDEVPRIVATE, &ifr) < 0 && errno != EINVAL) {
 		/* No error if interface already removed. */
-		perror("ioctl[SIOCDEVPRIVATE,BRCTL_DEL_IF]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: ioctl[SIOCDEVPRIVATE,"
+			   "BRCTL_DEL_IF] failed for br_name=%s if_name=%s: "
+			   "%s", __func__, br_name, if_name, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -152,16 +164,19 @@ static int br_addif(const char *br_name, const char *if_name)
 	unsigned long args[2];
 	int if_index;
 
+	wpa_printf(MSG_DEBUG, "VLAN: br_addif(%s, %s)", br_name, if_name);
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
 	if_index = if_nametoindex(if_name);
 
 	if (if_index == 0) {
-		printf("Failure determining interface index for '%s'\n",
-		       if_name);
+		wpa_printf(MSG_ERROR, "VLAN: %s: Failure determining "
+			   "interface index for '%s'",
+			   __func__, if_name);
 		close(fd);
 		return -1;
 	}
@@ -179,7 +194,9 @@ static int br_addif(const char *br_name, const char *if_name)
 			return 1;
 		}
 
-		perror("ioctl[SIOCDEVPRIVATE,BRCTL_ADD_IF]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: ioctl[SIOCDEVPRIVATE,"
+			   "BRCTL_ADD_IF] failed for br_name=%s if_name=%s: "
+			   "%s", __func__, br_name, if_name, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -194,8 +211,10 @@ static int br_delbr(const char *br_name)
 	int fd;
 	unsigned long arg[2];
 
+	wpa_printf(MSG_DEBUG, "VLAN: br_delbr(%s)", br_name);
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -204,7 +223,8 @@ static int br_delbr(const char *br_name)
 
 	if (ioctl(fd, SIOCGIFBR, arg) < 0 && errno != ENXIO) {
 		/* No error if bridge already removed. */
-		perror("ioctl[BRCTL_DEL_BRIDGE]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: BRCTL_DEL_BRIDGE failed for "
+			   "%s: %s", __func__, br_name, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -226,8 +246,10 @@ static int br_addbr(const char *br_name)
 	int fd;
 	unsigned long arg[2];
 
+	wpa_printf(MSG_DEBUG, "VLAN: br_addbr(%s)", br_name);
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -240,7 +262,9 @@ static int br_addbr(const char *br_name)
 			close(fd);
 			return 1;
 		} else {
-			perror("ioctl[BRCTL_ADD_BRIDGE]");
+			wpa_printf(MSG_ERROR, "VLAN: %s: BRCTL_ADD_BRIDGE "
+				   "failed for %s: %s",
+				   __func__, br_name, strerror(errno));
 			close(fd);
 			return -1;
 		}
@@ -261,7 +285,8 @@ static int br_getnumports(const char *br_name)
 	struct ifreq ifr;
 
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -275,7 +300,9 @@ static int br_getnumports(const char *br_name)
 	ifr.ifr_data = (__caddr_t) arg;
 
 	if (ioctl(fd, SIOCDEVPRIVATE, &ifr) < 0) {
-		perror("ioctl[SIOCDEVPRIVATE,BRCTL_GET_PORT_LIST]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: BRCTL_GET_PORT_LIST "
+			   "failed for %s: %s",
+			   __func__, br_name, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -296,13 +323,16 @@ static int vlan_rem(const char *if_name)
 	int fd;
 	struct vlan_ioctl_args if_request;
 
+	wpa_printf(MSG_DEBUG, "VLAN: vlan_rem(%s)", if_name);
 	if ((os_strlen(if_name) + 1) > sizeof(if_request.device1)) {
-		fprintf(stderr, "Interface name to long.\n");
+		wpa_printf(MSG_ERROR, "VLAN: Interface name too long: '%s'",
+			   if_name);
 		return -1;
 	}
 
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -312,7 +342,8 @@ static int vlan_rem(const char *if_name)
 	if_request.cmd = DEL_VLAN_CMD;
 
 	if (ioctl(fd, SIOCSIFVLAN, &if_request) < 0) {
-		perror("ioctl[SIOCSIFVLAN,DEL_VLAN_CMD]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: DEL_VLAN_CMD failed for %s: "
+			   "%s", __func__, if_name, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -335,15 +366,19 @@ static int vlan_add(const char *if_name, int vid)
 	int fd;
 	struct vlan_ioctl_args if_request;
 
+	wpa_printf(MSG_DEBUG, "VLAN: vlan_add(if_name=%s, vid=%d)",
+		   if_name, vid);
 	ifconfig_up(if_name);
 
 	if ((os_strlen(if_name) + 1) > sizeof(if_request.device1)) {
-		fprintf(stderr, "Interface name to long.\n");
+		wpa_printf(MSG_ERROR, "VLAN: Interface name too long: '%s'",
+			   if_name);
 		return -1;
 	}
 
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -365,6 +400,9 @@ static int vlan_add(const char *if_name, int vid)
 			    os_strncmp(if_request.u.device2, if_name,
 				       sizeof(if_request.u.device2)) == 0) {
 				close(fd);
+				wpa_printf(MSG_DEBUG, "VLAN: vlan_add: "
+					   "if_name %s exists already",
+					   if_request.device1);
 				return 1;
 			}
 		}
@@ -378,7 +416,9 @@ static int vlan_add(const char *if_name, int vid)
 	if_request.cmd = ADD_VLAN_CMD;
 
 	if (ioctl(fd, SIOCSIFVLAN, &if_request) < 0) {
-		perror("ioctl[SIOCSIFVLAN,ADD_VLAN_CMD]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: ADD_VLAN_CMD failed for %s: "
+			   "%s",
+			   __func__, if_request.device1, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -393,8 +433,11 @@ static int vlan_set_name_type(unsigned int name_type)
 	int fd;
 	struct vlan_ioctl_args if_request;
 
+	wpa_printf(MSG_DEBUG, "VLAN: vlan_set_name_type(name_type=%u)",
+		   name_type);
 	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-		perror("socket[AF_INET,SOCK_STREAM]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(AF_INET,SOCK_STREAM) "
+			   "failed: %s", __func__, strerror(errno));
 		return -1;
 	}
 
@@ -403,7 +446,9 @@ static int vlan_set_name_type(unsigned int name_type)
 	if_request.u.name_type = name_type;
 	if_request.cmd = SET_VLAN_NAME_TYPE_CMD;
 	if (ioctl(fd, SIOCSIFVLAN, &if_request) < 0) {
-		perror("ioctl[SIOCSIFVLAN,SET_VLAN_NAME_TYPE_CMD]");
+		wpa_printf(MSG_ERROR, "VLAN: %s: SET_VLAN_NAME_TYPE_CMD "
+			   "name_type=%u failed: %s",
+			   __func__, name_type, strerror(errno));
 		close(fd);
 		return -1;
 	}
@@ -419,6 +464,8 @@ static void vlan_newlink(char *ifname, struct hostapd_data *hapd)
 	char br_name[IFNAMSIZ];
 	struct hostapd_vlan *vlan = hapd->conf->vlan;
 	char *tagged_interface = hapd->conf->ssid.vlan_tagged_interface;
+
+	wpa_printf(MSG_DEBUG, "VLAN: vlan_newlink(%s)", ifname);
 
 	while (vlan) {
 		if (os_strcmp(ifname, vlan->ifname) == 0) {
@@ -464,6 +511,8 @@ static void vlan_dellink(char *ifname, struct hostapd_data *hapd)
 	struct hostapd_vlan *first, *prev, *vlan = hapd->conf->vlan;
 	char *tagged_interface = hapd->conf->ssid.vlan_tagged_interface;
 	int numports;
+
+	wpa_printf(MSG_DEBUG, "VLAN: vlan_dellink(%s)", ifname);
 
 	first = prev = vlan;
 
@@ -563,7 +612,8 @@ static void vlan_event_receive(int sock, void *eloop_ctx, void *sock_ctx)
 			(struct sockaddr *) &from, &fromlen);
 	if (left < 0) {
 		if (errno != EINTR && errno != EAGAIN)
-			perror("recvfrom(netlink)");
+			wpa_printf(MSG_ERROR, "VLAN: %s: recvfrom failed: %s",
+				   __func__, strerror(errno));
 		return;
 	}
 
@@ -574,8 +624,9 @@ static void vlan_event_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		len = h->nlmsg_len;
 		plen = len - sizeof(*h);
 		if (len > left || plen < 0) {
-			printf("Malformed netlink message: "
-			       "len=%d left=%d plen=%d", len, left, plen);
+			wpa_printf(MSG_DEBUG, "VLAN: Malformed netlink "
+				   "message: len=%d left=%d plen=%d",
+				   len, left, plen);
 			break;
 		}
 
@@ -594,8 +645,8 @@ static void vlan_event_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 
 	if (left > 0) {
-		printf("%d extra bytes in the end of netlink message",
-		       left);
+		wpa_printf(MSG_DEBUG, "VLAN: %s: %d extra bytes in the end of "
+			   "netlink message", __func__, left);
 	}
 }
 
@@ -614,7 +665,9 @@ full_dynamic_vlan_init(struct hostapd_data *hapd)
 
 	priv->s = socket(PF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
 	if (priv->s < 0) {
-		perror("socket(PF_NETLINK,SOCK_RAW,NETLINK_ROUTE)");
+		wpa_printf(MSG_ERROR, "VLAN: %s: socket(PF_NETLINK,SOCK_RAW,"
+			   "NETLINK_ROUTE) failed: %s",
+			   __func__, strerror(errno));
 		os_free(priv);
 		return NULL;
 	}
@@ -623,7 +676,8 @@ full_dynamic_vlan_init(struct hostapd_data *hapd)
 	local.nl_family = AF_NETLINK;
 	local.nl_groups = RTMGRP_LINK;
 	if (bind(priv->s, (struct sockaddr *) &local, sizeof(local)) < 0) {
-		perror("bind(netlink)");
+		wpa_printf(MSG_ERROR, "VLAN: %s: bind(netlink) failed: %s",
+			   __func__, strerror(errno));
 		close(priv->s);
 		os_free(priv);
 		return NULL;
@@ -666,8 +720,8 @@ int vlan_setup_encryption_dyn(struct hostapd_data *hapd,
 		    hapd->drv.set_key(dyn_vlan, hapd, WPA_ALG_WEP, NULL, i,
 				      i == mssid->wep.idx, NULL, 0,
 				      mssid->wep.key[i], mssid->wep.len[i])) {
-			printf("VLAN: Could not set WEP encryption for "
-			       "dynamic VLAN.\n");
+			wpa_printf(MSG_ERROR, "VLAN: Could not set WEP "
+				   "encryption for dynamic VLAN");
 			return -1;
 		}
 	}
@@ -683,8 +737,9 @@ static int vlan_dynamic_add(struct hostapd_data *hapd,
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
 		    hapd->drv.vlan_if_add(hapd, vlan->ifname)) {
 			if (errno != EEXIST) {
-				printf("Could not add VLAN iface: %s: %s\n",
-				       vlan->ifname, strerror(errno));
+				wpa_printf(MSG_ERROR, "VLAN: Could not add "
+					   "VLAN iface: %s: %s",
+					   vlan->ifname, strerror(errno));
 				return -1;
 			}
 		}
@@ -706,8 +761,9 @@ static void vlan_dynamic_remove(struct hostapd_data *hapd,
 
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
 		    hapd->drv.vlan_if_remove(hapd, vlan->ifname)) {
-			printf("Could not remove VLAN iface: %s: %s\n",
-			       vlan->ifname, strerror(errno));
+			wpa_printf(MSG_ERROR, "VLAN: Could not remove VLAN "
+				   "iface: %s: %s",
+				   vlan->ifname, strerror(errno));
 		}
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 		if (vlan->clean)
@@ -753,6 +809,8 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 	    vlan->vlan_id != VLAN_ID_WILDCARD)
 		return NULL;
 
+	wpa_printf(MSG_DEBUG, "VLAN: %s(vlan_id=%d ifname=%s)",
+		   __func__, vlan_id, vlan->ifname);
 	ifname = os_strdup(vlan->ifname);
 	if (ifname == NULL)
 		return NULL;
@@ -794,6 +852,8 @@ int vlan_remove_dynamic(struct hostapd_data *hapd, int vlan_id)
 
 	if (vlan_id <= 0 || vlan_id > MAX_VLAN_ID)
 		return 1;
+
+	wpa_printf(MSG_DEBUG, "VLAN: %s(vlan_id=%d)", __func__, vlan_id);
 
 	vlan = hapd->conf->vlan;
 	while (vlan) {

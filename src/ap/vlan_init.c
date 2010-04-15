@@ -526,7 +526,6 @@ static void vlan_dellink(char *ifname, struct hostapd_data *hapd)
 	char br_name[IFNAMSIZ];
 	struct hostapd_vlan *first, *prev, *vlan = hapd->conf->vlan;
 	char *tagged_interface = hapd->conf->ssid.vlan_tagged_interface;
-	int numports;
 
 	wpa_printf(MSG_DEBUG, "VLAN: vlan_dellink(%s)", ifname);
 
@@ -537,19 +536,24 @@ static void vlan_dellink(char *ifname, struct hostapd_data *hapd)
 			os_snprintf(br_name, sizeof(br_name), "brvlan%d",
 				    vlan->vlan_id);
 
+			if (vlan->clean & DVLAN_CLEAN_WLAN_PORT)
+				br_delif(br_name, vlan->ifname);
+
 			if (tagged_interface) {
 				os_snprintf(vlan_ifname, sizeof(vlan_ifname),
 					    "vlan%d", vlan->vlan_id);
-
-				numports = br_getnumports(br_name);
-				if (numports == 1) {
+				if (vlan->clean & DVLAN_CLEAN_VLAN_PORT)
 					br_delif(br_name, vlan_ifname);
+				ifconfig_down(vlan_ifname);
 
+				if (vlan->clean & DVLAN_CLEAN_VLAN)
 					vlan_rem(vlan_ifname);
+			}
 
-					ifconfig_down(br_name);
-					br_delbr(br_name);
-				}
+			if ((vlan->clean & DVLAN_CLEAN_BR) &&
+			    br_getnumports(br_name) == 0) {
+				ifconfig_down(br_name);
+				br_delbr(br_name);
 			}
 
 			if (vlan == first) {

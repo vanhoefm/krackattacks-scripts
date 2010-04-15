@@ -540,6 +540,7 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 #ifndef CONFIG_NO_VLAN
 	const char *iface;
 	struct hostapd_vlan *vlan = NULL;
+	int ret;
 
 	/*
 	 * Do not proceed furthur if the vlan id remains same. We do not want
@@ -635,7 +636,13 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 	if (wpa_auth_sta_set_vlan(sta->wpa_sm, sta->vlan_id) < 0)
 		wpa_printf(MSG_INFO, "Failed to update VLAN-ID for WPA");
 
-	return hapd->drv.set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
+	ret = hapd->drv.set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
+	if (ret < 0) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_DEBUG, "could not bind the STA "
+			       "entry to vlan_id=%d", sta->vlan_id);
+	}
+	return ret;
 #else /* CONFIG_NO_VLAN */
 	return 0;
 #endif /* CONFIG_NO_VLAN */

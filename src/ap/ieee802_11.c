@@ -1620,10 +1620,12 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		 * so bind it to the selected VLAN interface now, since the
 		 * interface selection is not going to change anymore.
 		 */
-		ap_sta_bind_vlan(hapd, sta, 0);
+		if (ap_sta_bind_vlan(hapd, sta, 0) < 0)
+			goto fail;
 	} else if (sta->vlan_id) {
 		/* VLAN ID already set (e.g., by PMKSA caching), so bind STA */
-		ap_sta_bind_vlan(hapd, sta, 0);
+		if (ap_sta_bind_vlan(hapd, sta, 0) < 0)
+			goto fail;
 	}
 
 	hapd->drv.set_sta_flags(hapd, sta);

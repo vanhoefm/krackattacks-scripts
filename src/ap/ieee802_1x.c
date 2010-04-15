@@ -1282,7 +1282,8 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 		}
 #endif /* CONFIG_NO_VLAN */
 
-		ap_sta_bind_vlan(hapd, sta, old_vlanid);
+		if (ap_sta_bind_vlan(hapd, sta, old_vlanid) < 0)
+			break;
 
 		/* RFC 3580, Ch. 3.17 */
 		if (session_timeout_set && termination_action ==

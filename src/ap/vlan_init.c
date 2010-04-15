@@ -842,6 +842,8 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 	n->next = hapd->conf->vlan;
 	hapd->conf->vlan = n;
 
+	ifconfig_up(n->ifname);
+
 	return n;
 }
 

@@ -4135,7 +4135,9 @@ static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 			   "interfaces");
 		wpa_printf(MSG_ERROR, "Ignoring EAPOL on interface %d", ifidx);
 		return;
-	}
+	} else if (!old)
+		os_memcpy(drv->if_indices, drv->default_if_indices,
+			  sizeof(drv->default_if_indices));
 	drv->if_indices[drv->num_if_indices] = ifidx;
 	drv->num_if_indices++;
 }

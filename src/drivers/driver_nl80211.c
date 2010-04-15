@@ -140,6 +140,7 @@ static void nl80211_remove_monitor_interface(
 #ifdef HOSTAPD
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
+static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
 static int wpa_driver_nl80211_if_remove(void *priv,
 					enum wpa_driver_if_type type,
 					const char *ifname);
@@ -389,10 +390,12 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 	struct wpa_driver_nl80211_data *drv = ctx;
 	int attrlen, rta_len;
 	struct rtattr *attr;
+	u32 brid = 0;
 
-	if (!wpa_driver_nl80211_own_ifindex(drv, ifi->ifi_index, buf, len)) {
-		wpa_printf(MSG_DEBUG, "Ignore event for foreign ifindex %d",
-			   ifi->ifi_index);
+	if (!wpa_driver_nl80211_own_ifindex(drv, ifi->ifi_index, buf, len) &&
+	    !have_ifidx(drv, ifi->ifi_index)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Ignore event for foreign "
+			   "ifindex %d", ifi->ifi_index);
 		return;
 	}
 
@@ -424,8 +427,18 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 				drv,
 				((char *) attr) + rta_len,
 				attr->rta_len - rta_len, 0);
-		}
+		} else if (attr->rta_type == IFLA_MASTER)
+			brid = nla_get_u32((struct nlattr *) attr);
 		attr = RTA_NEXT(attr, attrlen);
+	}
+
+	if (ifi->ifi_family == AF_BRIDGE && brid) {
+		/* device has been added to bridge */
+		char namebuf[IFNAMSIZ];
+		if_indextoname(brid, namebuf);
+		wpa_printf(MSG_DEBUG, "nl80211: Add ifindex %u for bridge %s",
+			   brid, namebuf);
+		add_ifidx(drv, brid);
 	}
 }
 
@@ -437,6 +450,7 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 	struct wpa_driver_nl80211_data *drv = ctx;
 	int attrlen, rta_len;
 	struct rtattr *attr;
+	u32 brid = 0;
 
 	attrlen = len;
 	attr = (struct rtattr *) buf;
@@ -448,8 +462,18 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 				drv,
 				((char *) attr) + rta_len,
 				attr->rta_len - rta_len, 1);
-		}
+		} else if (attr->rta_type == IFLA_MASTER)
+			brid = nla_get_u32((struct nlattr *) attr);
 		attr = RTA_NEXT(attr, attrlen);
+	}
+
+	if (ifi->ifi_family == AF_BRIDGE && brid) {
+		/* device has been removed from bridge */
+		char namebuf[IFNAMSIZ];
+		if_indextoname(brid, namebuf);
+		wpa_printf(MSG_DEBUG, "nl80211: Remove ifindex %u for bridge "
+			   "%s", brid, namebuf);
+		del_ifidx(drv, brid);
 	}
 }
 
@@ -933,7 +957,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 
 	if (tb[NL80211_ATTR_IFINDEX]) {
 		int ifindex = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
-		if (ifindex != drv->ifindex) {
+		if (ifindex != drv->ifindex && !have_ifidx(drv, ifindex)) {
 			wpa_printf(MSG_DEBUG, "nl80211: Ignored event (cmd=%d)"
 				   " for foreign interface (ifindex %d)",
 				   gnlh->cmd, ifindex);

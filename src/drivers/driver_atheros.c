@@ -28,33 +28,16 @@
 #endif
 #endif /* _BYTE_ORDER */
 
-#include <net80211/ieee80211.h>
-#include <net80211/_ieee80211.h>
-#include <net80211/ieee80211_crypto.h>
+#include "os/linux/include/ieee80211_external.h"
 
-/*
- * Note, the ATH_WPS_IE setting must match with the driver build.. If the
- * driver does not include this, the IEEE80211_IOCTL_GETWPAIE ioctl will fail.
- */
-#define ATH_WPS_IE
-#include <net80211/ieee80211_ioctl.h>
 
 #ifdef CONFIG_WPS
-#ifdef IEEE80211_IOCTL_FILTERFRAME
 #include <netpacket/packet.h>
 
 #ifndef ETH_P_80211_RAW
 #define ETH_P_80211_RAW 0x0019
 #endif
-#endif /* IEEE80211_IOCTL_FILTERFRAME */
 #endif /* CONFIG_WPS */
-
-/*
- * Avoid conflicts with hostapd definitions by undefining couple of defines
- * from madwifi header files.
- */
-#undef WPA_OUI_TYPE
-#undef WME_OUI_TYPE
 
 #include "wireless_copy.h"
 
@@ -473,6 +456,9 @@ madwifi_get_seqnum(const char *ifname, void *priv, const u8 *addr, int idx,
 		 * swap it to match with the byte order used in WPA.
 		 */
 		int i;
+#ifndef WPA_KEY_RSC_LEN
+#define WPA_KEY_RSC_LEN 8
+#endif
 		u8 tmp[WPA_KEY_RSC_LEN];
 		memcpy(tmp, &wk.ik_keytsc, sizeof(wk.ik_keytsc));
 		for (i = 0; i < WPA_KEY_RSC_LEN; i++) {

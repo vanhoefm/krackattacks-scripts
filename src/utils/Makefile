@@ -1,7 +1,6 @@
 all: libutils.a
 
 clean:
-	for d in $(SUBDIRS); do make -C $$d clean; done
 	rm -f *~ *.o *.d libutils.a
 
 install:

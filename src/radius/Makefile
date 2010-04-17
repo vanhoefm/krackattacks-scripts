@@ -1,7 +1,6 @@
 all: libradius.a
 
 clean:
-	for d in $(SUBDIRS); do make -C $$d clean; done
 	rm -f *~ *.o *.d libradius.a
 
 install:

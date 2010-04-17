@@ -1,7 +1,6 @@
 all: libcrypto.a
 
 clean:
-	for d in $(SUBDIRS); do make -C $$d clean; done
 	rm -f *~ *.o *.d libcrypto.a
 
 install:

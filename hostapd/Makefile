@@ -731,7 +731,7 @@ install: all
 	for i in $(ALL); do cp -f $$i /usr/local/bin/$$i; done
 
 ../src/drivers/build.hostapd:
-	@if [ -e ../src/drivers/build.wpa_supplicant ]; then \
+	@if [ -f ../src/drivers/build.wpa_supplicant ]; then \
 		$(MAKE) -C ../src/drivers clean; \
 	fi
 	@touch ../src/drivers/build.hostapd

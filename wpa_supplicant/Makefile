@@ -26,7 +26,7 @@ verify_config:
 	fi
 
 mkconfig:
-	@if [ -e .config ]; then \
+	@if [ -f .config ]; then \
 		echo '.config exists - did not replace it'; \
 		exit 1; \
 	fi
@@ -1252,7 +1252,7 @@ endif
 dynamic_eap_methods: $(EAPDYN)
 
 ../src/drivers/build.wpa_supplicant:
-	@if [ -e ../src/drivers/build.hostapd ]; then \
+	@if [ -f ../src/drivers/build.hostapd ]; then \
 		$(MAKE) -C ../src/drivers clean; \
 	fi
 	@touch ../src/drivers/build.wpa_supplicant

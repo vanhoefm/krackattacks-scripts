@@ -800,12 +800,12 @@ static void vlan_dynamic_remove(struct hostapd_data *hapd,
 
 int vlan_init(struct hostapd_data *hapd)
 {
-	if (vlan_dynamic_add(hapd, hapd->conf->vlan))
-		return -1;
-
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	hapd->full_dynamic_vlan = full_dynamic_vlan_init(hapd);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */
+
+	if (vlan_dynamic_add(hapd, hapd->conf->vlan))
+		return -1;
 
         return 0;
 }

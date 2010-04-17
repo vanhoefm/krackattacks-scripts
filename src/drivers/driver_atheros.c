@@ -69,6 +69,108 @@ struct madwifi_driver_data {
 static int madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 			      int reason_code);
 
+static const char * athr_get_ioctl_name(int op)
+{
+	switch (op) {
+	case IEEE80211_IOCTL_SETPARAM:
+		return "SETPARAM";
+	case IEEE80211_IOCTL_GETPARAM:
+		return "GETPARAM";
+	case IEEE80211_IOCTL_SETKEY:
+		return "SETKEY";
+	case IEEE80211_IOCTL_SETWMMPARAMS:
+		return "SETWMMPARAMS";
+	case IEEE80211_IOCTL_DELKEY:
+		return "DELKEY";
+	case IEEE80211_IOCTL_GETWMMPARAMS:
+		return "GETWMMPARAMS";
+	case IEEE80211_IOCTL_SETMLME:
+		return "SETMLME";
+	case IEEE80211_IOCTL_GETCHANINFO:
+		return "GETCHANINFO";
+	case IEEE80211_IOCTL_SETOPTIE:
+		return "SETOPTIE";
+	case IEEE80211_IOCTL_GETOPTIE:
+		return "GETOPTIE";
+	case IEEE80211_IOCTL_ADDMAC:
+		return "ADDMAC";
+	case IEEE80211_IOCTL_DELMAC:
+		return "DELMAC";
+	case IEEE80211_IOCTL_GETCHANLIST:
+		return "GETCHANLIST";
+	case IEEE80211_IOCTL_SETCHANLIST:
+		return "SETCHANLIST";
+	case IEEE80211_IOCTL_KICKMAC:
+		return "KICKMAC";
+	case IEEE80211_IOCTL_CHANSWITCH:
+		return "CHANSWITCH";
+	case IEEE80211_IOCTL_GETMODE:
+		return "GETMODE";
+	case IEEE80211_IOCTL_SETMODE:
+		return "SETMODE";
+	case IEEE80211_IOCTL_GET_APPIEBUF:
+		return "GET_APPIEBUF";
+	case IEEE80211_IOCTL_SET_APPIEBUF:
+		return "SET_APPIEBUF";
+	case IEEE80211_IOCTL_SET_ACPARAMS:
+		return "SET_ACPARAMS";
+	case IEEE80211_IOCTL_FILTERFRAME:
+		return "FILTERFRAME";
+	case IEEE80211_IOCTL_SET_RTPARAMS:
+		return "SET_RTPARAMS";
+	case IEEE80211_IOCTL_SENDADDBA:
+		return "SENDADDBA";
+	case IEEE80211_IOCTL_GETADDBASTATUS:
+		return "GETADDBASTATUS";
+	case IEEE80211_IOCTL_SENDDELBA:
+		return "SENDDELBA";
+	case IEEE80211_IOCTL_SET_MEDENYENTRY:
+		return "SET_MEDENYENTRY";
+	case IEEE80211_IOCTL_SET_ADDBARESP:
+		return "SET_ADDBARESP";
+	case IEEE80211_IOCTL_GET_MACADDR:
+		return "GET_MACADDR";
+	case IEEE80211_IOCTL_SET_HBRPARAMS:
+		return "SET_HBRPARAMS";
+	case IEEE80211_IOCTL_SET_RXTIMEOUT:
+		return "SET_RXTIMEOUT";
+	case IEEE80211_IOCTL_STA_STATS:
+		return "STA_STATS";
+	case IEEE80211_IOCTL_GETWPAIE:
+		return "GETWPAIE";
+	default:
+		return "??";
+	}
+}
+
+
+static const char * athr_get_param_name(int op)
+{
+	switch (op) {
+	case IEEE80211_IOC_MCASTCIPHER:
+		return "MCASTCIPHER";
+	case IEEE80211_PARAM_MCASTKEYLEN:
+		return "MCASTKEYLEN";
+	case IEEE80211_PARAM_UCASTCIPHERS:
+		return "UCASTCIPHERS";
+	case IEEE80211_PARAM_KEYMGTALGS:
+		return "KEYMGTALGS";
+	case IEEE80211_PARAM_RSNCAPS:
+		return "RSNCAPS";
+	case IEEE80211_PARAM_WPA:
+		return "WPA";
+	case IEEE80211_PARAM_AUTHMODE:
+		return "AUTHMODE";
+	case IEEE80211_PARAM_PRIVACY:
+		return "PRIVACY";
+	case IEEE80211_PARAM_COUNTERMEASURES:
+		return "COUNTERMEASURES";
+	default:
+		return "??";
+	}
+}
+
+
 static int
 set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
 {
@@ -98,40 +200,11 @@ set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
 	}
 
 	if (ioctl(drv->ioctl_sock, op, &iwr) < 0) {
-		int first = IEEE80211_IOCTL_SETPARAM;
-		static const char *opnames[] = {
-			"ioctl[IEEE80211_IOCTL_SETPARAM]",
-			"ioctl[IEEE80211_IOCTL_GETPARAM]",
-			"ioctl[IEEE80211_IOCTL_SETKEY]",
-			"ioctl[IEEE80211_IOCTL_SETWMMPARAMS]",
-			"ioctl[IEEE80211_IOCTL_DELKEY]",
-			"ioctl[IEEE80211_IOCTL_GETWMMPARAMS]",
-			"ioctl[IEEE80211_IOCTL_SETMLME]",
-			"ioctl[IEEE80211_IOCTL_GETCHANINFO]",
-			"ioctl[IEEE80211_IOCTL_SETOPTIE]",
-			"ioctl[IEEE80211_IOCTL_GETOPTIE]",
-			"ioctl[IEEE80211_IOCTL_ADDMAC]",
-			"ioctl[IEEE80211_IOCTL_DELMAC]",
-			"ioctl[IEEE80211_IOCTL_GETCHANLIST]",
-			"ioctl[IEEE80211_IOCTL_SETCHANLIST]",
-			"ioctl[IEEE80211_IOCTL_KICKMAC]",
-			"ioctl[IEEE80211_IOCTL_CHANSWITCH]",
-			"ioctl[IEEE80211_IOCTL_GETMODE]",
-			"ioctl[IEEE80211_IOCTL_SETMODE]",
-			"ioctl[IEEE80211_IOCTL_GET_APPIEBUF]",
-			"ioctl[IEEE80211_IOCTL_SET_APPIEBUF]",
-			NULL,
-			"ioctl[IEEE80211_IOCTL_FILTERFRAME]",
-		};
-		int idx = op - first;
-		if (first <= op &&
-		    idx < (int) (sizeof(opnames) / sizeof(opnames[0])) &&
-		    opnames[idx])
-			perror(opnames[idx]);
-		else {
-			perror("ioctl[unknown???]");
-			wpa_printf(MSG_DEBUG, "Failed ioctl: 0x%x", op);
-		}
+		wpa_printf(MSG_DEBUG, "atheros: %s: %s: ioctl op=0x%x "
+			   "(%s) len=%d failed: %d (%s)",
+			   __func__, drv->iface, op,
+			   athr_get_ioctl_name(op),
+			   len, errno, strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -149,8 +222,9 @@ set80211param(struct madwifi_driver_data *drv, int op, int arg)
 
 	if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_SETPARAM, &iwr) < 0) {
 		perror("ioctl[IEEE80211_IOCTL_SETPARAM]");
-		wpa_printf(MSG_DEBUG, "%s: Failed to set parameter (op %d "
-			   "arg %d)", __func__, op, arg);
+		wpa_printf(MSG_DEBUG, "%s: %s: Failed to set parameter (op %d "
+			   "(%s) arg %d)", __func__, drv->iface, op,
+			   athr_get_param_name(op), arg);
 		return -1;
 	}
 	return 0;

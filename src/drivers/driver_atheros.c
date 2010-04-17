@@ -28,6 +28,12 @@
 #endif
 #endif /* _BYTE_ORDER */
 
+/*
+ * Note, the ATH_WPS_IE setting must match with the driver build.. If the
+ * driver does not include this, the IEEE80211_IOCTL_GETWPAIE ioctl will fail.
+ */
+#define ATH_WPS_IE
+
 #include "os/linux/include/ieee80211_external.h"
 
 

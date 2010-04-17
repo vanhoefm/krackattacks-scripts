@@ -764,7 +764,9 @@ static int vlan_dynamic_add(struct hostapd_data *hapd,
 					return -1;
 				}
 			}
+#ifdef CONFIG_FULL_DYNAMIC_VLAN
 			ifconfig_up(vlan->ifname);
+#endif /* CONFIG_FULL_DYNAMIC_VLAN */
 		}
 
 		vlan = vlan->next;
@@ -865,7 +867,9 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 	n->next = hapd->conf->vlan;
 	hapd->conf->vlan = n;
 
+#ifdef CONFIG_FULL_DYNAMIC_VLAN
 	ifconfig_up(n->ifname);
+#endif /* CONFIG_FULL_DYNAMIC_VLAN */
 
 	return n;
 }

@@ -229,6 +229,10 @@ static struct wpabuf * eap_tnc_build_msg(struct eap_tnc_data *data, u8 id)
 		wpabuf_free(data->out_buf);
 		data->out_buf = NULL;
 		data->out_used = 0;
+		if (data->was_fail)
+			data->state = FAIL;
+		else if (data->was_done)
+			data->state = DONE;
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Sending out %lu bytes "
 			   "(%lu more to send)", (unsigned long) send_len,
@@ -467,12 +471,7 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment acknowledged");
-		if (data->was_fail)
-			data->state = FAIL;
-		else if (data->was_done)
-			data->state = DONE;
-		else
-			data->state = CONTINUE;
+		data->state = CONTINUE;
 		return;
 	}
 

@@ -1,5 +1,48 @@
 ChangeLog for wpa_supplicant
 
+2010-04-18 - v0.7.2
+	* nl80211: fixed number of issues with roaming
+	* avoid unnecessary roaming if multiple APs with similar signal
+	  strength are present in scan results
+	* add TLS client events and server probing to ease design of
+	  automatic detection of EAP parameters
+	* add option for server certificate matching (SHA256 hash of the
+	  certificate) instead of trusted CA certificate configuration
+	* bsd: Cleaned up driver wrapper and added various low-level
+	  configuration options
+	* wpa_gui-qt4: do not show too frequent WPS AP available events as
+	  tray messages
+	* TNC: fixed issues with fragmentation
+	* EAP-TNC: add Flags field into fragment acknowledgement (needed to
+	  interoperate with other implementations; may potentially breaks
+	  compatibility with older wpa_supplicant/hostapd versions)
+	* wpa_cli: added option for using a separate process to receive event
+	  messages to reduce latency in showing these
+	  (CFLAGS += -DCONFIG_WPA_CLI_FORK=y in .config to enable this)
+	* maximum BSS table size can now be configured (bss_max_count)
+	* BSSes to be included in the BSS table can be filtered based on
+	  configured SSIDs to save memory (filter_ssids)
+	* fix number of issues with IEEE 802.11r/FT; this version is not
+	  backwards compatible with old versions
+	* nl80211: add support for IEEE 802.11r/FT protocol (both over-the-air
+	  and over-the-DS)
+	* add freq_list network configuration parameter to allow the AP
+	  selection to filter out entries based on the operating channel
+	* add signal strength change events for bgscan; this allows more
+	  dynamic changes to background scanning interval based on changes in
+	  the signal strength with the current AP; this improves roaming within
+	  ESS quite a bit, e.g., with bgscan="simple:30:-45:300" in the network
+	  configuration block to request background scans less frequently when
+	  signal strength remains good and to automatically trigger background
+	  scans whenever signal strength drops noticeably
+	  (this is currently only available with nl80211)
+	* add BSSID and reason code (if available) to disconnect event messages
+	* wpa_gui-qt4: more complete support for translating the GUI with
+	  linguist and add German translation
+	* fix DH padding with internal crypto code (mainly, for WPS)
+	* do not trigger initial scan automatically anymore if there are no
+	  enabled networks
+
 2010-01-16 - v0.7.1
 	* cleaned up driver wrapper API (struct wpa_driver_ops); the new API
 	  is not fully backwards compatible, so out-of-tree driver wrappers

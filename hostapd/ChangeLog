@@ -1,5 +1,32 @@
 ChangeLog for hostapd
 
+2010-04-18 - v0.7.2
+	* fix WPS internal Registrar use when an external Registrar is also
+	  active
+	* bsd: Cleaned up driver wrapper and added various low-level
+	  configuration options
+	* TNC: fixed issues with fragmentation
+	* EAP-TNC: add Flags field into fragment acknowledgement (needed to
+	  interoperate with other implementations; may potentially breaks
+	  compatibility with older wpa_supplicant/hostapd versions)
+	* cleaned up driver wrapper API for multi-BSS operations
+	* nl80211: fix multi-BSS and VLAN operations
+	* fix number of issues with IEEE 802.11r/FT; this version is not
+	  backwards compatible with old versions
+	* add SA Query Request processing in AP mode (IEEE 802.11w)
+	* fix IGTK PN in group rekeying (IEEE 802.11w)
+	* fix WPS PBC session overlap detection to use correct attribute
+	* hostapd_notif_Assoc() can now be called with all IEs to simplify
+	  driver wrappers
+	* work around interoperability issue with some WPS External Registrar
+	  implementations
+	* nl80211: fix WPS IE update
+	* hostapd_cli: add support for action script operations (run a script
+	  on hostapd events)
+	* fix DH padding with internal crypto code (mainly, for WPS)
+	* fix WPS association with both WPS IE and WPA/RSN IE present with
+	  driver wrappers that use hostapd MLME (e.g., nl80211)
+
 2010-01-16 - v0.7.1
 	* cleaned up driver wrapper API (struct wpa_driver_ops); the new API
 	  is not fully backwards compatible, so out-of-tree driver wrappers

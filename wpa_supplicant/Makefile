@@ -1346,7 +1346,10 @@ wpa_gui: wpa_gui/Makefile
 wpa_gui-qt4/Makefile:
 	qmake -o wpa_gui-qt4/Makefile wpa_gui-qt4/wpa_gui.pro 
 
-wpa_gui-qt4: wpa_gui-qt4/Makefile
+wpa_gui-qt4/lang/wpa_gui_de.qm: wpa_gui-qt4/lang/wpa_gui_de.ts
+	lrelease wpa_gui-qt4/wpa_gui.pro
+
+wpa_gui-qt4: wpa_gui-qt4/Makefile wpa_gui-qt4/lang/wpa_gui_de.qm
 	$(MAKE) -C wpa_gui-qt4
 
 TEST_EAP_SIM_COMMON_OBJS = $(SHA1OBJS) $(MD5OBJS) \

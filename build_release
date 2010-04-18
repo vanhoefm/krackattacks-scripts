@@ -131,6 +131,8 @@ EOF
     qmake -spec win32-x-g++
     make -j2
     cp release/wpa_gui.exe ../../../"$WDIR"
+    lrelease wpa_gui.pro
+    cp lang/wpa_gui_de.qm ../../../"$WDIR"
     cd ../../..
     rm -rf "$PDIR"
     zip "$WDIR.zip" "$WDIR"/*

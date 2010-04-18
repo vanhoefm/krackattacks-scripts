@@ -24,6 +24,7 @@ section
 	setOutPath $INSTDIR
 
 	File wpa_gui.exe
+	File wpa_gui_de.qm
 	File wpa_cli.exe
 	File COPYING
 	File README
@@ -82,6 +83,7 @@ section "uninstall"
 	DeleteRegKey HKLM "Software\wpa_supplicant"
 
 	delete "$INSTDIR\wpa_gui.exe"
+	delete "$INSTDIR\wpa_gui_de.qm"
 	delete "$INSTDIR\wpa_cli.exe"
 	delete "$INSTDIR\COPYING"
 	delete "$INSTDIR\README"

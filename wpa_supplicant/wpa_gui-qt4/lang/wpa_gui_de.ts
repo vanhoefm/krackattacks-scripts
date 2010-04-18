@@ -1245,18 +1245,16 @@ damit Konfigurationen gespeichert werden können.
         <translation>Stoppen des wpa_supplicant Dienstes fehlgeschlagen</translation>
     </message>
     <message>
-        <location filename="../wpagui.cpp" line="1708"/>
         <source>OpenSCManager failed: %d
 </source>
-        <translation>OpenSCManager fehlgeschlagen: %d
+        <translation type="obsolete">OpenSCManager fehlgeschlagen: %d
 </translation>
     </message>
     <message>
-        <location filename="../wpagui.cpp" line="1714"/>
         <source>OpenService failed: %d
 
 </source>
-        <translation>OpenService fehlgeschlagen: %d
+        <translation type="obsolete">OpenService fehlgeschlagen: %d
 
 </translation>
     </message>

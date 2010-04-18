@@ -1705,13 +1705,13 @@ bool WpaGui::serviceRunning()
 
 	scm = OpenSCManager(0, 0, SC_MANAGER_CONNECT);
 	if (!scm) {
-		printf(tr("OpenSCManager failed: %d\n"), (int) GetLastError());
+		printf("OpenSCManager failed: %d\n", (int) GetLastError());
 		return false;
 	}
 
 	svc = OpenService(scm, WPASVC_NAME, SERVICE_QUERY_STATUS);
 	if (!svc) {
-		printf(tr("OpenService failed: %d\n\n"), (int) GetLastError());
+		printf("OpenService failed: %d\n\n", (int) GetLastError());
 		CloseServiceHandle(scm);
 		return false;
 	}

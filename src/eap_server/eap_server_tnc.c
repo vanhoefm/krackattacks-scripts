@@ -21,8 +21,10 @@
 
 
 struct eap_tnc_data {
-	enum { START, CONTINUE, RECOMMENDATION, FRAG_ACK, WAIT_FRAG_ACK, DONE,
-	       FAIL } state;
+	enum eap_tnc_state {
+		START, CONTINUE, RECOMMENDATION, FRAG_ACK, WAIT_FRAG_ACK, DONE,
+		FAIL
+	} state;
 	enum { ALLOW, ISOLATE, NO_ACCESS, NO_RECOMMENDATION } recommendation;
 	struct tncs_data *tncs;
 	struct wpabuf *in_buf;
@@ -43,6 +45,38 @@ struct eap_tnc_data {
 #define EAP_TNC_VERSION 1
 
 
+static const char * eap_tnc_state_txt(enum eap_tnc_state state)
+{
+	switch (state) {
+	case START:
+		return "START";
+	case CONTINUE:
+		return "CONTINUE";
+	case RECOMMENDATION:
+		return "RECOMMENDATION";
+	case FRAG_ACK:
+		return "FRAG_ACK";
+	case WAIT_FRAG_ACK:
+		return "WAIT_FRAG_ACK";
+	case DONE:
+		return "DONE";
+	case FAIL:
+		return "FAIL";
+	}
+	return "??";
+}
+
+
+static void eap_tnc_set_state(struct eap_tnc_data *data,
+			      enum eap_tnc_state new_state)
+{
+	wpa_printf(MSG_DEBUG, "EAP-TNC: %s -> %s",
+		   eap_tnc_state_txt(data->state),
+		   eap_tnc_state_txt(new_state));
+	data->state = new_state;
+}
+
+
 static void * eap_tnc_init(struct eap_sm *sm)
 {
 	struct eap_tnc_data *data;
@@ -50,7 +84,7 @@ static void * eap_tnc_init(struct eap_sm *sm)
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
-	data->state = START;
+	eap_tnc_set_state(data, START);
 	data->tncs = tncs_init();
 	if (data->tncs == NULL) {
 		os_free(data);
@@ -83,13 +117,13 @@ static struct wpabuf * eap_tnc_build_start(struct eap_sm *sm,
 	if (req == NULL) {
 		wpa_printf(MSG_ERROR, "EAP-TNC: Failed to allocate memory for "
 			   "request");
-		data->state = FAIL;
+		eap_tnc_set_state(data, FAIL);
 		return NULL;
 	}
 
 	wpabuf_put_u8(req, EAP_TNC_FLAGS_START | EAP_TNC_VERSION);
 
-	data->state = CONTINUE;
+	eap_tnc_set_state(data, CONTINUE);
 
 	return req;
 }
@@ -148,17 +182,17 @@ static struct wpabuf * eap_tnc_build_recommendation(struct eap_sm *sm,
 {
 	switch (data->recommendation) {
 	case ALLOW:
-		data->state = DONE;
+		eap_tnc_set_state(data, DONE);
 		break;
 	case ISOLATE:
-		data->state = FAIL;
+		eap_tnc_set_state(data, FAIL);
 		/* TODO: support assignment to a different VLAN */
 		break;
 	case NO_ACCESS:
-		data->state = FAIL;
+		eap_tnc_set_state(data, FAIL);
 		break;
 	case NO_RECOMMENDATION:
-		data->state = DONE;
+		eap_tnc_set_state(data, DONE);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Unknown recommendation");
@@ -230,9 +264,9 @@ static struct wpabuf * eap_tnc_build_msg(struct eap_tnc_data *data, u8 id)
 		data->out_buf = NULL;
 		data->out_used = 0;
 		if (data->was_fail)
-			data->state = FAIL;
+			eap_tnc_set_state(data, FAIL);
 		else if (data->was_done)
-			data->state = DONE;
+			eap_tnc_set_state(data, DONE);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Sending out %lu bytes "
 			   "(%lu more to send)", (unsigned long) send_len,
@@ -242,7 +276,7 @@ static struct wpabuf * eap_tnc_build_msg(struct eap_tnc_data *data, u8 id)
 			data->was_fail = 1;
 		else if (data->state == DONE)
 			data->was_done = 1;
-		data->state = WAIT_FRAG_ACK;
+		eap_tnc_set_state(data, WAIT_FRAG_ACK);
 	}
 
 	return req;
@@ -338,27 +372,27 @@ static void tncs_process(struct eap_tnc_data *data, struct wpabuf *inbuf)
 	switch (res) {
 	case TNCCS_RECOMMENDATION_ALLOW:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: TNCS allowed access");
-		data->state = RECOMMENDATION;
+		eap_tnc_set_state(data, RECOMMENDATION);
 		data->recommendation = ALLOW;
 		break;
 	case TNCCS_RECOMMENDATION_NO_RECOMMENDATION:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: TNCS has no recommendation");
-		data->state = RECOMMENDATION;
+		eap_tnc_set_state(data, RECOMMENDATION);
 		data->recommendation = NO_RECOMMENDATION;
 		break;
 	case TNCCS_RECOMMENDATION_ISOLATE:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: TNCS requested isolation");
-		data->state = RECOMMENDATION;
+		eap_tnc_set_state(data, RECOMMENDATION);
 		data->recommendation = ISOLATE;
 		break;
 	case TNCCS_RECOMMENDATION_NO_ACCESS:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: TNCS rejected access");
-		data->state = RECOMMENDATION;
+		eap_tnc_set_state(data, RECOMMENDATION);
 		data->recommendation = NO_ACCESS;
 		break;
 	case TNCCS_PROCESS_ERROR:
 		wpa_printf(MSG_DEBUG, "EAP-TNC: TNCS processing error");
-		data->state = FAIL;
+		eap_tnc_set_state(data, FAIL);
 		break;
 	default:
 		break;
@@ -372,7 +406,7 @@ static int eap_tnc_process_cont(struct eap_tnc_data *data,
 	/* Process continuation of a pending message */
 	if (len > wpabuf_tailroom(data->in_buf)) {
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment overflow");
-		data->state = FAIL;
+		eap_tnc_set_state(data, FAIL);
 		return -1;
 	}
 
@@ -446,7 +480,7 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 	if (flags & EAP_TNC_FLAGS_LENGTH_INCLUDED) {
 		if (end - pos < 4) {
 			wpa_printf(MSG_DEBUG, "EAP-TNC: Message underflow");
-			data->state = FAIL;
+			eap_tnc_set_state(data, FAIL);
 			return;
 		}
 		message_length = WPA_GET_BE32(pos);
@@ -456,7 +490,7 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 			wpa_printf(MSG_DEBUG, "EAP-TNC: Invalid Message "
 				   "Length (%d; %ld remaining in this msg)",
 				   message_length, (long) (end - pos));
-			data->state = FAIL;
+			eap_tnc_set_state(data, FAIL);
 			return;
 		}
 	}
@@ -467,29 +501,29 @@ static void eap_tnc_process(struct eap_sm *sm, void *priv,
 		if (len > 1) {
 			wpa_printf(MSG_DEBUG, "EAP-TNC: Unexpected payload "
 				   "in WAIT_FRAG_ACK state");
-			data->state = FAIL;
+			eap_tnc_set_state(data, FAIL);
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-TNC: Fragment acknowledged");
-		data->state = CONTINUE;
+		eap_tnc_set_state(data, CONTINUE);
 		return;
 	}
 
 	if (data->in_buf && eap_tnc_process_cont(data, pos, end - pos) < 0) {
-		data->state = FAIL;
+		eap_tnc_set_state(data, FAIL);
 		return;
 	}
 		
 	if (flags & EAP_TNC_FLAGS_MORE_FRAGMENTS) {
 		if (eap_tnc_process_fragment(data, flags, message_length,
 					     pos, end - pos) < 0)
-			data->state = FAIL;
+			eap_tnc_set_state(data, FAIL);
 		else
-			data->state = FRAG_ACK;
+			eap_tnc_set_state(data, FRAG_ACK);
 		return;
 	} else if (data->state == FRAG_ACK) {
 		wpa_printf(MSG_DEBUG, "EAP-TNC: All fragments received");
-		data->state = CONTINUE;
+		eap_tnc_set_state(data, CONTINUE);
 	}
 
 	if (data->in_buf == NULL) {

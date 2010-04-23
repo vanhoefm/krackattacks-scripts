@@ -1274,6 +1274,24 @@ int wpa_auth_sm_event(struct wpa_state_machine *sm, wpa_event event)
 		break;
 	case WPA_REAUTH:
 	case WPA_REAUTH_EAPOL:
+		if (!sm->started) {
+			/*
+			 * When using WPS, we may end up here if the STA
+			 * manages to re-associate without the previous STA
+			 * entry getting removed. Consequently, we need to make
+			 * sure that the WPA state machines gets initialized
+			 * properly at this point.
+			 */
+			wpa_printf(MSG_DEBUG, "WPA state machine had not been "
+				   "started - initialize now");
+			sm->started = 1;
+			sm->Init = TRUE;
+			if (wpa_sm_step(sm) == 1)
+				return 1; /* should not really happen */
+			sm->Init = FALSE;
+			sm->AuthenticationRequest = TRUE;
+			break;
+		}
 		if (sm->GUpdateStationKeys) {
 			/*
 			 * Reauthentication cancels the pending group key

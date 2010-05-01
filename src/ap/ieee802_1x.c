@@ -646,8 +646,7 @@ ieee802_1x_alloc_eapol_sm(struct hostapd_data *hapd, struct sta_info *sta)
 	if (sta->flags & WLAN_STA_PREAUTH)
 		flags |= EAPOL_SM_PREAUTH;
 	if (sta->wpa_sm) {
-		if (wpa_auth_sta_get_pmksa(sta->wpa_sm))
-			flags |= EAPOL_SM_USES_WPA;
+		flags |= EAPOL_SM_USES_WPA;
 		if (wpa_auth_sta_get_pmksa(sta->wpa_sm))
 			flags |= EAPOL_SM_FROM_PMKSA_CACHE;
 	}

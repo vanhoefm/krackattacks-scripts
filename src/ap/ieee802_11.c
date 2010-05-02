@@ -850,13 +850,6 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	p = hostapd_eid_supp_rates(hapd, reply->u.assoc_resp.variable);
 	/* Extended supported rates */
 	p = hostapd_eid_ext_supp_rates(hapd, p);
-	if (sta->flags & WLAN_STA_WMM)
-		p = hostapd_eid_wmm(hapd, p);
-
-#ifdef CONFIG_IEEE80211N
-	p = hostapd_eid_ht_capabilities(hapd, p);
-	p = hostapd_eid_ht_operation(hapd, p);
-#endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_IEEE80211R
 	if (status_code == WLAN_STATUS_SUCCESS) {
@@ -872,6 +865,14 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	if (status_code == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY)
 		p = hostapd_eid_assoc_comeback_time(hapd, sta, p);
 #endif /* CONFIG_IEEE80211W */
+
+#ifdef CONFIG_IEEE80211N
+	p = hostapd_eid_ht_capabilities(hapd, p);
+	p = hostapd_eid_ht_operation(hapd, p);
+#endif /* CONFIG_IEEE80211N */
+
+	if (sta->flags & WLAN_STA_WMM)
+		p = hostapd_eid_wmm(hapd, p);
 
 	send_len += p - reply->u.assoc_resp.variable;
 

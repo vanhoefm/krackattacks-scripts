@@ -308,15 +308,16 @@ void handle_probe_req(struct hostapd_data *hapd,
 	/* Extended supported rates */
 	pos = hostapd_eid_ext_supp_rates(hapd, pos);
 
+	/* RSN, MDIE, WPA */
 	pos = hostapd_eid_wpa(hapd, pos, epos - pos, sta);
-
-	/* Wi-Fi Alliance WMM */
-	pos = hostapd_eid_wmm(hapd, pos);
 
 #ifdef CONFIG_IEEE80211N
 	pos = hostapd_eid_ht_capabilities(hapd, pos);
 	pos = hostapd_eid_ht_operation(hapd, pos);
 #endif /* CONFIG_IEEE80211N */
+
+	/* Wi-Fi Alliance WMM */
+	pos = hostapd_eid_wmm(hapd, pos);
 
 #ifdef CONFIG_WPS
 	if (hapd->conf->wps_state && hapd->wps_probe_resp_ie) {
@@ -408,16 +409,17 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	/* Extended supported rates */
 	tailpos = hostapd_eid_ext_supp_rates(hapd, tailpos);
 
+	/* RSN, MDIE, WPA */
 	tailpos = hostapd_eid_wpa(hapd, tailpos, tail + BEACON_TAIL_BUF_SIZE -
 				  tailpos, NULL);
-
-	/* Wi-Fi Alliance WMM */
-	tailpos = hostapd_eid_wmm(hapd, tailpos);
 
 #ifdef CONFIG_IEEE80211N
 	tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);
 	tailpos = hostapd_eid_ht_operation(hapd, tailpos);
 #endif /* CONFIG_IEEE80211N */
+
+	/* Wi-Fi Alliance WMM */
+	tailpos = hostapd_eid_wmm(hapd, tailpos);
 
 #ifdef CONFIG_WPS
 	if (hapd->conf->wps_state && hapd->wps_beacon_ie) {

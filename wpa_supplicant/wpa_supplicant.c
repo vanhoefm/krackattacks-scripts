@@ -1392,13 +1392,15 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 		}
 		if (wpa_s->reassociate)
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
-	} else if (wpa_s->current_ssid == NULL && ssid->disabled) {
-		/*
-		 * Try to reassociate since there is no current configuration
-		 * and a new network was made available.
-		 */
-		wpa_s->reassociate = 1;
-		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	} else if (ssid->disabled) {
+		if (wpa_s->current_ssid == NULL) {
+			/*
+			 * Try to reassociate since there is no current
+			 * configuration and a new network was made available.
+			 */
+			wpa_s->reassociate = 1;
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
+		}
 
 		was_disabled = ssid->disabled;
 

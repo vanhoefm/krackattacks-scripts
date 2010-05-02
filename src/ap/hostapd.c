@@ -97,6 +97,7 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	}
 
 	ieee802_11_set_beacon(hapd);
+	hostapd_update_wps(hapd);
 
 	if (hapd->conf->ssid.ssid_set &&
 	    hostapd_set_ssid(hapd, (u8 *) hapd->conf->ssid.ssid,

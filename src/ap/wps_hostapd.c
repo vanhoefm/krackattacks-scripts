@@ -686,6 +686,17 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 }
 
 
+void hostapd_update_wps(struct hostapd_data *hapd)
+{
+	if (hapd->wps == NULL)
+		return;
+	if (hapd->conf->wps_state)
+		wps_registrar_update_ie(hapd->wps->registrar);
+	else
+		hostapd_deinit_wps(hapd);
+}
+
+
 int hostapd_wps_add_pin(struct hostapd_data *hapd, const char *uuid,
 			const char *pin, int timeout)
 {

@@ -665,6 +665,9 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 	WPADBusPropertyAccessor getter;
 	char *prop;
 
+	if (wpa_s->dbus_new_path == NULL)
+		return; /* Skip signal since D-Bus setup is not yet ready */
+
 	switch (property) {
 	case WPAS_DBUS_PROP_AP_SCAN:
 		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_ap_scan;

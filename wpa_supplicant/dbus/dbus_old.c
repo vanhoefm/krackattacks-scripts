@@ -410,6 +410,9 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 	DBusMessage *_signal = NULL;
 	const char *new_state_str, *old_state_str;
 
+	if (wpa_s->dbus_path == NULL)
+		return; /* Skip signal since D-Bus setup is not yet ready */
+
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s->global == NULL)
 		return;

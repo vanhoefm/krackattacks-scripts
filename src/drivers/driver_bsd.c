@@ -527,13 +527,14 @@ bsd_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
 }
 
 static int
-bsd_set_freq(void *priv, u16 channel)
+bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
 	struct bsd_driver_data *drv = priv;
 #ifdef SIOCS80211CHANNEL
 	struct ieee80211chanreq creq;
 #endif /* SIOCS80211CHANNEL */
 	u32 mode;
+	int channel = freq->channel;
 
 	if (channel < 14)
 		mode = IFM_IEEE80211_11G;
@@ -550,7 +551,7 @@ bsd_set_freq(void *priv, u16 channel)
 #ifdef SIOCS80211CHANNEL
 	os_memset(&creq, 0, sizeof(creq));
 	os_strlcpy(creq.i_name, drv->ifname, sizeof(creq.i_name));
-	creq.i_channel = channel;
+	creq.i_channel = (u_int16_t)channel;
 	return ioctl(drv->sock, SIOCS80211CHANNEL, &creq);
 #else /* SIOCS80211CHANNEL */
 	return set80211param(priv, IEEE80211_IOC_CHANNEL, channel);
@@ -760,12 +761,6 @@ handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 	drv_event_eapol_rx(drv->hapd, src_addr, buf, len);
 }
 
-static int
-hostapd_bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
-{
-	return bsd_set_freq(priv, freq->channel);
-}
-
 static void *
 bsd_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 {
@@ -972,7 +967,6 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	struct bsd_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	u32 mode;
-	u16 channel;
 	int privacy;
 	int ret = 0;
 
@@ -1007,18 +1001,6 @@ wpa_driver_bsd_associate(void *priv, struct wpa_driver_associate_params *params)
 	}
 
 	if (params->mode == IEEE80211_MODE_AP) {
-		if (params->freq >= 2412 && params->freq <= 2472)
-			channel = (params->freq - 2407) / 5;
-		else if (params->freq == 2484)
-			channel = 14;
-		else if ((params->freq >= 5180 && params->freq <= 5240) ||
-			 (params->freq >= 5745 && params->freq <= 5825))
-			channel = (params->freq - 5000) / 5;
-		else
-			channel = 0;
-		if (bsd_set_freq(drv, channel) < 0)
-			return -1;
-
 		drv->sock_xmit = l2_packet_init(drv->ifname, NULL, ETH_P_EAPOL,
 						handle_read, drv, 0);
 		if (drv->sock_xmit == NULL)
@@ -1518,7 +1500,6 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.read_sta_data		= bsd_read_sta_driver_data,
 	.sta_disassoc		= bsd_sta_disassoc,
 	.sta_deauth		= bsd_sta_deauth,
-	.set_freq		= hostapd_bsd_set_freq,
 #else /* HOSTAPD */
 	.init			= wpa_driver_bsd_init,
 	.deinit			= wpa_driver_bsd_deinit,
@@ -1532,6 +1513,7 @@ const struct wpa_driver_ops wpa_driver_bsd_ops = {
 	.associate		= wpa_driver_bsd_associate,
 	.get_capa		= wpa_driver_bsd_get_capa,
 #endif /* HOSTAPD */
+	.set_freq		= bsd_set_freq,
 	.set_key		= bsd_set_key,
 	.set_ieee8021x		= bsd_set_ieee8021x,
 	.hapd_set_ssid		= bsd_set_ssid,

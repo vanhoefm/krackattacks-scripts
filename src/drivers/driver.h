@@ -2046,7 +2046,23 @@ enum wpa_event_type {
 	 * observed in frames received from the current AP if signal strength
 	 * monitoring has been enabled with signal_monitor().
 	 */
-	EVENT_SIGNAL_CHANGE
+	EVENT_SIGNAL_CHANGE,
+
+	/**
+	 * EVENT_INTERFACE_ENABLED - Notify that interface was enabled
+	 *
+	 * This event is used to indicate that the interface was enabled after
+	 * having been previously disabled, e.g., due to rfkill.
+	 */
+	EVENT_INTERFACE_ENABLED,
+
+	/**
+	 * EVENT_INTERFACE_DISABLED - Notify that interface was disabled
+	 *
+	 * This event is used to indicate that the interface was disabled,
+	 * e.g., due to rfkill.
+	 */
+	EVENT_INTERFACE_DISABLED
 };
 
 

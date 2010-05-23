@@ -489,6 +489,8 @@ const char * wpa_supplicant_state_txt(enum wpa_states state)
 		return "DISCONNECTED";
 	case WPA_INACTIVE:
 		return "INACTIVE";
+	case WPA_INTERFACE_DISABLED:
+		return "INTERFACE_DISABLED";
 	case WPA_SCANNING:
 		return "SCANNING";
 	case WPA_AUTHENTICATING:
@@ -592,7 +594,8 @@ static void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 	wpa_s->group_cipher = 0;
 	wpa_s->mgmt_group_cipher = 0;
 	wpa_s->key_mgmt = 0;
-	wpa_s->wpa_state = WPA_DISCONNECTED;
+	if (wpa_s->wpa_state != WPA_INTERFACE_DISABLED)
+		wpa_s->wpa_state = WPA_DISCONNECTED;
 
 	if (wpa_s->wpa_state != old_state)
 		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);

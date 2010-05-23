@@ -31,6 +31,7 @@ NEED_SME=y
 NEED_AP_MLME=y
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
+NEED_RFKILL=y
 DRV_LIBS += -lnl
 
 ifdef CONFIG_LIBNL20
@@ -77,6 +78,7 @@ DRV_WPA_CFLAGS += -DCONFIG_DRIVER_WEXT
 CONFIG_WIRELESS_EXTENSION=y
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
+NEED_RFKILL=y
 endif
 
 ifdef CONFIG_DRIVER_HERMES
@@ -160,6 +162,10 @@ endif
 
 ifdef NEED_LINUX_IOCTL
 DRV_OBJS += ../src/drivers/linux_ioctl.o
+endif
+
+ifdef NEED_RFKILL
+DRV_OBJS += ../src/drivers/rfkill.o
 endif
 
 

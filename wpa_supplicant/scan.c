@@ -251,6 +251,11 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	size_t max_ssids;
 	enum wpa_states prev_state;
 
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+		wpa_printf(MSG_DEBUG, "Skip scan - interface disabled");
+		return;
+	}
+
 	if (wpa_s->disconnected && !wpa_s->scan_req) {
 		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		return;

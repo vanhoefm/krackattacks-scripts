@@ -109,6 +109,9 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 {
 	int bssid_changed;
 
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
+		return;
+
 	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
@@ -1583,6 +1586,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	struct wpa_supplicant *wpa_s = ctx;
 	u16 reason_code = 0;
 
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
+	    event != EVENT_INTERFACE_ENABLED &&
+	    event != EVENT_INTERFACE_STATUS) {
+		wpa_printf(MSG_DEBUG, "Ignore event %d while interface is "
+			   "disabled", event);
+		return;
+	}
+
 	switch (event) {
 	case EVENT_AUTH:
 		sme_event_auth(wpa_s, data);
@@ -1725,6 +1736,19 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_SIGNAL_CHANGE:
 		bgscan_notify_signal_change(
 			wpa_s, data->signal_change.above_threshold);
+		break;
+	case EVENT_INTERFACE_ENABLED:
+		wpa_printf(MSG_DEBUG, "Interface was enabled");
+		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+			wpa_supplicant_set_state(wpa_s,
+						 WPA_DISCONNECTED);
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
+		}
+		break;
+	case EVENT_INTERFACE_DISABLED:
+		wpa_printf(MSG_DEBUG, "Interface was disabled");
+		wpa_supplicant_mark_disassoc(wpa_s);
+		wpa_supplicant_set_state(wpa_s, WPA_INTERFACE_DISABLED);
 		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);

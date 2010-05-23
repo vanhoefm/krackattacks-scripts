@@ -31,6 +31,7 @@
 #include "priv_netlink.h"
 #include "netlink.h"
 #include "linux_ioctl.h"
+#include "rfkill.h"
 #include "driver.h"
 #include "driver_wext.h"
 
@@ -687,6 +688,27 @@ static void wpa_driver_wext_event_rtm_dellink(void *ctx, struct ifinfomsg *ifi,
 }
 
 
+static void wpa_driver_wext_rfkill_blocked(void *ctx)
+{
+	struct wpa_driver_wext_data *drv = ctx;
+	wpa_printf(MSG_DEBUG, "WEXT: RFKILL blocked");
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED, NULL);
+}
+
+
+static void wpa_driver_wext_rfkill_unblocked(void *ctx)
+{
+	struct wpa_driver_wext_data *drv = ctx;
+	wpa_printf(MSG_DEBUG, "WEXT: RFKILL unblocked");
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1)) {
+		wpa_printf(MSG_DEBUG, "WEXT: Could not set interface UP "
+			   "after rfkill unblock");
+		return;
+	}
+	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED, NULL);
+}
+
+
 /**
  * wpa_driver_wext_init - Initialize WE driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -698,6 +720,7 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 {
 	struct wpa_driver_wext_data *drv;
 	struct netlink_config *cfg;
+	struct rfkill_config *rcfg;
 	char path[128];
 	struct stat buf;
 
@@ -731,6 +754,17 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 		goto err2;
 	}
 
+	rcfg = os_zalloc(sizeof(*rcfg));
+	if (rcfg == NULL)
+		goto err3;
+	rcfg->ctx = drv;
+	os_strlcpy(rcfg->ifname, ifname, sizeof(rcfg->ifname));
+	rcfg->blocked_cb = wpa_driver_wext_rfkill_blocked;
+	rcfg->unblocked_cb = wpa_driver_wext_rfkill_unblocked;
+	drv->rfkill = rfkill_init(rcfg);
+	if (drv->rfkill == NULL)
+		wpa_printf(MSG_DEBUG, "WEXT: RFKILL status not available");
+
 	drv->mlme_sock = -1;
 
 	if (wpa_driver_wext_finish_drv_init(drv) < 0)
@@ -741,6 +775,7 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 	return drv;
 
 err3:
+	rfkill_deinit(drv->rfkill);
 	netlink_deinit(drv->netlink);
 err2:
 	close(drv->ioctl_sock);
@@ -750,10 +785,28 @@ err1:
 }
 
 
+static void wpa_driver_wext_send_rfkill(void *eloop_ctx, void *timeout_ctx)
+{
+	wpa_supplicant_event(timeout_ctx, EVENT_INTERFACE_DISABLED, NULL);
+}
+
+
 static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 {
-	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1) < 0)
-		return -1;
+	int send_rfkill_event = 0;
+
+	if (linux_set_iface_flags(drv->ioctl_sock, drv->ifname, 1) < 0) {
+		if (rfkill_is_blocked(drv->rfkill)) {
+			wpa_printf(MSG_DEBUG, "WEXT: Could not yet enable "
+				   "interface '%s' due to rfkill",
+				   drv->ifname);
+			send_rfkill_event = 1;
+		} else {
+			wpa_printf(MSG_ERROR, "WEXT: Could not set "
+				   "interface '%s' UP", drv->ifname);
+			return -1;
+		}
+	}
 
 	/*
 	 * Make sure that the driver does not have any obsolete PMKID entries.
@@ -795,6 +848,11 @@ static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 	netlink_send_oper_ifla(drv->netlink, drv->ifindex,
 			       1, IF_OPER_DORMANT);
 
+	if (send_rfkill_event) {
+		eloop_register_timeout(0, 0, wpa_driver_wext_send_rfkill,
+				       drv, drv->ctx);
+	}
+
 	return 0;
 }
 
@@ -822,6 +880,7 @@ void wpa_driver_wext_deinit(void *priv)
 
 	netlink_send_oper_ifla(drv->netlink, drv->ifindex, 0, IF_OPER_UP);
 	netlink_deinit(drv->netlink);
+	rfkill_deinit(drv->rfkill);
 
 	if (drv->mlme_sock >= 0)
 		eloop_unregister_read_sock(drv->mlme_sock);

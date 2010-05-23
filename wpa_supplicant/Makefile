@@ -574,7 +574,9 @@ endif
 ifdef CONFIG_IEEE8021X_EAPOL
 # IEEE 802.1X/EAPOL state machines (e.g., for RADIUS authentication)
 CFLAGS += -DIEEE8021X_EAPOL
-OBJS += ../src/eapol_supp/eapol_supp_sm.o ../src/eap_peer/eap.o ../src/eap_common/eap_common.o ../src/eap_peer/eap_methods.o
+OBJS += ../src/eapol_supp/eapol_supp_sm.o
+OBJS += ../src/eap_peer/eap.o ../src/eap_peer/eap_methods.o
+NEED_EAP_COMMON=y
 ifdef CONFIG_DYNAMIC_EAP_METHODS
 CFLAGS += -DCONFIG_DYNAMIC_EAP_METHODS
 LIBS += -ldl -rdynamic
@@ -583,6 +585,7 @@ endif
 
 ifdef CONFIG_AP
 NEED_80211_COMMON=y
+NEED_EAP_COMMON=y
 NEED_RSN_AUTHENTICATOR=y
 CFLAGS += -DCONFIG_AP
 OBJS += ap.o
@@ -1145,6 +1148,10 @@ endif
 
 ifdef NEED_80211_COMMON
 OBJS += ../src/common/ieee802_11_common.o
+endif
+
+ifdef NEED_EAP_COMMON
+OBJS += ../src/eap_common/eap_common.o
 endif
 
 ifndef CONFIG_MAIN

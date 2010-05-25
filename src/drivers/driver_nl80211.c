@@ -1426,8 +1426,10 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 	rcfg->blocked_cb = wpa_driver_nl80211_rfkill_blocked;
 	rcfg->unblocked_cb = wpa_driver_nl80211_rfkill_unblocked;
 	drv->rfkill = rfkill_init(rcfg);
-	if (drv->rfkill == NULL)
+	if (drv->rfkill == NULL) {
 		wpa_printf(MSG_DEBUG, "nl80211: RFKILL status not available");
+		os_free(rcfg);
+	}
 
 	if (wpa_driver_nl80211_finish_drv_init(drv))
 		goto failed;

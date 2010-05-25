@@ -762,8 +762,10 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 	rcfg->blocked_cb = wpa_driver_wext_rfkill_blocked;
 	rcfg->unblocked_cb = wpa_driver_wext_rfkill_unblocked;
 	drv->rfkill = rfkill_init(rcfg);
-	if (drv->rfkill == NULL)
+	if (drv->rfkill == NULL) {
 		wpa_printf(MSG_DEBUG, "WEXT: RFKILL status not available");
+		os_free(rcfg);
+	}
 
 	drv->mlme_sock = -1;
 

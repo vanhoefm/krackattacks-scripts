@@ -21,14 +21,25 @@ struct x509_algorithm_identifier {
 	struct asn1_oid oid;
 };
 
+struct x509_name_attr {
+	enum x509_name_attr_type {
+		X509_NAME_ATTR_NOT_USED,
+		X509_NAME_ATTR_DC,
+		X509_NAME_ATTR_CN,
+		X509_NAME_ATTR_C,
+		X509_NAME_ATTR_L,
+		X509_NAME_ATTR_ST,
+		X509_NAME_ATTR_O,
+		X509_NAME_ATTR_OU
+	} type;
+	char *value;
+};
+
+#define X509_MAX_NAME_ATTRIBUTES 20
+
 struct x509_name {
-	char *dc; /* domainComponent */
-	char *cn; /* commonName */
-	char *c; /* countryName */
-	char *l; /* localityName */
-	char *st; /* stateOrProvinceName */
-	char *o; /* organizationName */
-	char *ou; /* organizationalUnitName */
+	struct x509_name_attr attr[X509_MAX_NAME_ATTRIBUTES];
+	size_t num_attr;
 	char *email; /* emailAddress */
 
 	/* from alternative name extension */

@@ -22,16 +22,15 @@
 
 static void x509_free_name(struct x509_name *name)
 {
-	os_free(name->dc);
-	os_free(name->cn);
-	os_free(name->c);
-	os_free(name->l);
-	os_free(name->st);
-	os_free(name->o);
-	os_free(name->ou);
+	size_t i;
+
+	for (i = 0; i < name->num_attr; i++) {
+		os_free(name->attr[i].value);
+		name->attr[i].value = NULL;
+		name->attr[i].type = X509_NAME_ATTR_NOT_USED;
+	}
+	name->num_attr = 0;
 	os_free(name->email);
-	name->dc = NULL;
-	name->cn = name->c = name->l = name->st = name->o = name->ou = NULL;
 	name->email = NULL;
 
 	os_free(name->alt_email);
@@ -154,6 +153,7 @@ static int x509_str_compare(const char *a, const char *b)
 int x509_name_compare(struct x509_name *a, struct x509_name *b)
 {
 	int res;
+	size_t i;
 
 	if (!a && b)
 		return -1;
@@ -161,28 +161,20 @@ int x509_name_compare(struct x509_name *a, struct x509_name *b)
 		return 1;
 	if (!a && !b)
 		return 0;
+	if (a->num_attr < b->num_attr)
+		return -1;
+	if (a->num_attr > b->num_attr)
+		return 1;
 
-	res = x509_str_compare(a->dc, b->dc);
-	if (res)
-		return res;
-	res = x509_str_compare(a->cn, b->cn);
-	if (res)
-		return res;
-	res = x509_str_compare(a->c, b->c);
-	if (res)
-		return res;
-	res = x509_str_compare(a->l, b->l);
-	if (res)
-		return res;
-	res = x509_str_compare(a->st, b->st);
-	if (res)
-		return res;
-	res = x509_str_compare(a->o, b->o);
-	if (res)
-		return res;
-	res = x509_str_compare(a->ou, b->ou);
-	if (res)
-		return res;
+	for (i = 0; i < a->num_attr; i++) {
+		if (a->attr[i].type < b->attr[i].type)
+			return -1;
+		if (a->attr[i].type > b->attr[i].type)
+			return -1;
+		res = x509_str_compare(a->attr[i].value, b->attr[i].value);
+		if (res)
+			return res;
+	}
 	res = x509_str_compare(a->email, b->email);
 	if (res)
 		return res;
@@ -309,7 +301,7 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 	struct asn1_hdr hdr;
 	const u8 *pos, *end, *set_pos, *set_end, *seq_pos, *seq_end;
 	struct asn1_oid oid;
-	char **fieldp;
+	char *val;
 
 	/*
 	 * Name ::= CHOICE { RDNSequence }
@@ -339,6 +331,8 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 	end = *next = pos + hdr.length;
 
 	while (pos < end) {
+		enum x509_name_attr_type type;
+
 		if (asn1_get_next(pos, end - pos, &hdr) < 0 ||
 		    hdr.class != ASN1_CLASS_UNIVERSAL ||
 		    hdr.tag != ASN1_TAG_SET) {
@@ -386,34 +380,34 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 		 * pseudonym, generation qualifier.
 		 * MUST: domainComponent (RFC 2247).
 		 */
-		fieldp = NULL;
+		type = X509_NAME_ATTR_NOT_USED;
 		if (oid.len == 4 &&
 		    oid.oid[0] == 2 && oid.oid[1] == 5 && oid.oid[2] == 4) {
 			/* id-at ::= 2.5.4 */
 			switch (oid.oid[3]) {
 			case 3:
 				/* commonName */
-				fieldp = &name->cn;
+				type = X509_NAME_ATTR_CN;
 				break;
 			case 6:
 				/*  countryName */
-				fieldp = &name->c;
+				type = X509_NAME_ATTR_C;
 				break;
 			case 7:
 				/* localityName */
-				fieldp = &name->l;
+				type = X509_NAME_ATTR_L;
 				break;
 			case 8:
 				/* stateOrProvinceName */
-				fieldp = &name->st;
+				type = X509_NAME_ATTR_ST;
 				break;
 			case 10:
 				/* organizationName */
-				fieldp = &name->o;
+				type = X509_NAME_ATTR_O;
 				break;
 			case 11:
 				/* organizationalUnitName */
-				fieldp = &name->ou;
+				type = X509_NAME_ATTR_OU;
 				break;
 			}
 		} else if (oid.len == 7 &&
@@ -422,17 +416,25 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 			   oid.oid[4] == 1 && oid.oid[5] == 9 &&
 			   oid.oid[6] == 1) {
 			/* 1.2.840.113549.1.9.1 - e-mailAddress */
-			fieldp = &name->email;
+			os_free(name->email);
+			name->email = os_malloc(hdr.length + 1);
+			if (name->email == NULL) {
+				x509_free_name(name);
+				return -1;
+			}
+			os_memcpy(name->email, hdr.payload, hdr.length);
+			name->email[hdr.length] = '\0';
+			continue;
 		} else if (oid.len == 7 &&
 			   oid.oid[0] == 0 && oid.oid[1] == 9 &&
 			   oid.oid[2] == 2342 && oid.oid[3] == 19200300 &&
 			   oid.oid[4] == 100 && oid.oid[5] == 1 &&
 			   oid.oid[6] == 25) {
 			/* 0.9.2342.19200300.100.1.25 - domainComponent */
-			fieldp = &name->dc;
+			type = X509_NAME_ATTR_DC;
 		}
 
-		if (fieldp == NULL) {
+		if (type == X509_NAME_ATTR_NOT_USED) {
 			wpa_hexdump(MSG_DEBUG, "X509: Unrecognized OID",
 				    (u8 *) oid.oid,
 				    oid.len * sizeof(oid.oid[0]));
@@ -441,24 +443,57 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 			continue;
 		}
 
-		os_free(*fieldp);
-		*fieldp = os_malloc(hdr.length + 1);
-		if (*fieldp == NULL) {
+		if (name->num_attr == X509_MAX_NAME_ATTRIBUTES) {
+			wpa_printf(MSG_INFO, "X509: Too many Name attributes");
 			x509_free_name(name);
 			return -1;
 		}
-		os_memcpy(*fieldp, hdr.payload, hdr.length);
-		(*fieldp)[hdr.length] = '\0';
-		if (os_strlen(*fieldp) != hdr.length) {
+
+		val = os_malloc(hdr.length + 1);
+		if (val == NULL) {
+			x509_free_name(name);
+			return -1;
+		}
+		os_memcpy(val, hdr.payload, hdr.length);
+		val[hdr.length] = '\0';
+		if (os_strlen(val) != hdr.length) {
 			wpa_printf(MSG_INFO, "X509: Reject certificate with "
 				   "embedded NUL byte in a string (%s[NUL])",
-				   *fieldp);
+				   val);
 			x509_free_name(name);
 			return -1;
 		}
+
+		name->attr[name->num_attr].type = type;
+		name->attr[name->num_attr].value = val;
+		name->num_attr++;
 	}
 
 	return 0;
+}
+
+
+static char * x509_name_attr_str(enum x509_name_attr_type type)
+{
+	switch (type) {
+	case X509_NAME_ATTR_NOT_USED:
+		return "[N/A]";
+	case X509_NAME_ATTR_DC:
+		return "DC";
+	case X509_NAME_ATTR_CN:
+		return "CN";
+	case X509_NAME_ATTR_C:
+		return "C";
+	case X509_NAME_ATTR_L:
+		return "L";
+	case X509_NAME_ATTR_ST:
+		return "ST";
+	case X509_NAME_ATTR_O:
+		return "O";
+	case X509_NAME_ATTR_OU:
+		return "OU";
+	}
+	return "?";
 }
 
 
@@ -472,6 +507,7 @@ void x509_name_string(struct x509_name *name, char *buf, size_t len)
 {
 	char *pos, *end;
 	int ret;
+	size_t i;
 
 	if (len == 0)
 		return;
@@ -479,52 +515,20 @@ void x509_name_string(struct x509_name *name, char *buf, size_t len)
 	pos = buf;
 	end = buf + len;
 
-	if (name->c) {
-		ret = os_snprintf(pos, end - pos, "C=%s, ", name->c);
-		if (ret < 0 || ret >= end - pos)
-			goto done;
-		pos += ret;
-	}
-	if (name->st) {
-		ret = os_snprintf(pos, end - pos, "ST=%s, ", name->st);
-		if (ret < 0 || ret >= end - pos)
-			goto done;
-		pos += ret;
-	}
-	if (name->l) {
-		ret = os_snprintf(pos, end - pos, "L=%s, ", name->l);
-		if (ret < 0 || ret >= end - pos)
-			goto done;
-		pos += ret;
-	}
-	if (name->o) {
-		ret = os_snprintf(pos, end - pos, "O=%s, ", name->o);
-		if (ret < 0 || ret >= end - pos)
-			goto done;
-		pos += ret;
-	}
-	if (name->ou) {
-		ret = os_snprintf(pos, end - pos, "OU=%s, ", name->ou);
-		if (ret < 0 || ret >= end - pos)
-			goto done;
-		pos += ret;
-	}
-	if (name->cn) {
-		ret = os_snprintf(pos, end - pos, "CN=%s, ", name->cn);
-		if (ret < 0 || ret >= end - pos)
-			goto done;
-		pos += ret;
-	}
-	if (name->dc) {
-		ret = os_snprintf(pos, end - pos, "DC=%s, ", name->dc);
+	for (i = 0; i < name->num_attr; i++) {
+		ret = os_snprintf(pos, end - pos, "%s=%s, ",
+				  x509_name_attr_str(name->attr[i].type),
+				  name->attr[i].value);
 		if (ret < 0 || ret >= end - pos)
 			goto done;
 		pos += ret;
 	}
 
 	if (pos > buf + 1 && pos[-1] == ' ' && pos[-2] == ',') {
-		*pos-- = '\0';
-		*pos-- = '\0';
+		pos--;
+		*pos = '\0';
+		pos--;
+		*pos = '\0';
 	}
 
 	if (name->email) {

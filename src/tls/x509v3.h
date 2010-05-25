@@ -22,6 +22,7 @@ struct x509_algorithm_identifier {
 };
 
 struct x509_name {
+	char *dc; /* domainComponent */
 	char *cn; /* commonName */
 	char *c; /* countryName */
 	char *l; /* localityName */

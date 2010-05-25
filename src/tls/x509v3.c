@@ -22,6 +22,7 @@
 
 static void x509_free_name(struct x509_name *name)
 {
+	os_free(name->dc);
 	os_free(name->cn);
 	os_free(name->c);
 	os_free(name->l);
@@ -29,6 +30,7 @@ static void x509_free_name(struct x509_name *name)
 	os_free(name->o);
 	os_free(name->ou);
 	os_free(name->email);
+	name->dc = NULL;
 	name->cn = name->c = name->l = name->st = name->o = name->ou = NULL;
 	name->email = NULL;
 
@@ -160,6 +162,9 @@ int x509_name_compare(struct x509_name *a, struct x509_name *b)
 	if (!a && !b)
 		return 0;
 
+	res = x509_str_compare(a->dc, b->dc);
+	if (res)
+		return res;
 	res = x509_str_compare(a->cn, b->cn);
 	if (res)
 		return res;
@@ -418,6 +423,13 @@ static int x509_parse_name(const u8 *buf, size_t len, struct x509_name *name,
 			   oid.oid[6] == 1) {
 			/* 1.2.840.113549.1.9.1 - e-mailAddress */
 			fieldp = &name->email;
+		} else if (oid.len == 7 &&
+			   oid.oid[0] == 0 && oid.oid[1] == 9 &&
+			   oid.oid[2] == 2342 && oid.oid[3] == 19200300 &&
+			   oid.oid[4] == 100 && oid.oid[5] == 1 &&
+			   oid.oid[6] == 25) {
+			/* 0.9.2342.19200300.100.1.25 - domainComponent */
+			fieldp = &name->dc;
 		}
 
 		if (fieldp == NULL) {
@@ -499,6 +511,12 @@ void x509_name_string(struct x509_name *name, char *buf, size_t len)
 	}
 	if (name->cn) {
 		ret = os_snprintf(pos, end - pos, "CN=%s, ", name->cn);
+		if (ret < 0 || ret >= end - pos)
+			goto done;
+		pos += ret;
+	}
+	if (name->dc) {
+		ret = os_snprintf(pos, end - pos, "DC=%s, ", name->dc);
 		if (ret < 0 || ret >= end - pos)
 			goto done;
 		pos += ret;

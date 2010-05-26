@@ -426,17 +426,6 @@ static int wps_build_config_methods_r(struct wps_registrar *reg,
 }
 
 
-static int wps_build_resp_type(struct wps_registrar *reg, struct wpabuf *msg)
-{
-	u8 resp = reg->wps->ap ? WPS_RESP_AP : WPS_RESP_REGISTRAR;
-	wpa_printf(MSG_DEBUG, "WPS:  * Response Type (%d)", resp);
-	wpabuf_put_be16(msg, ATTR_RESPONSE_TYPE);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, resp);
-	return 0;
-}
-
-
 /**
  * wps_registrar_init - Initialize WPS Registrar data
  * @wps: Pointer to longterm WPS context
@@ -940,7 +929,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_selected_registrar(reg, probe) ||
 	    wps_build_sel_reg_dev_password_id(reg, probe) ||
 	    wps_build_sel_reg_config_methods(reg, probe) ||
-	    wps_build_resp_type(reg, probe) ||
+	    wps_build_resp_type(probe, reg->wps->ap ? WPS_RESP_AP :
+				WPS_RESP_REGISTRAR) ||
 	    wps_build_uuid_e(probe, reg->wps->uuid) ||
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||

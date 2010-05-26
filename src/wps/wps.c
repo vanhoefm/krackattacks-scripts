@@ -289,6 +289,39 @@ struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type)
 
 
 /**
+ * wps_build_assoc_resp_ie - Build WPS IE for (Re)Association Response
+ * Returns: WPS IE or %NULL on failure
+ *
+ * The caller is responsible for freeing the buffer.
+ */
+struct wpabuf * wps_build_assoc_resp_ie(void)
+{
+	struct wpabuf *ie;
+	u8 *len;
+
+	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for (Re)Association "
+		   "Response");
+	ie = wpabuf_alloc(100);
+	if (ie == NULL)
+		return NULL;
+
+	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+	len = wpabuf_put(ie, 1);
+	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
+
+	if (wps_build_version(ie) ||
+	    wps_build_resp_type(ie, WPS_RESP_AP)) {
+		wpabuf_free(ie);
+		return NULL;
+	}
+
+	*len = wpabuf_len(ie) - 2;
+
+	return ie;
+}
+
+
+/**
  * wps_build_probe_req_ie - Build WPS IE for Probe Request
  * @pbc: Whether searching for PBC mode APs
  * @dev: Device attributes

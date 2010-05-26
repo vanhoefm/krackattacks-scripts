@@ -198,6 +198,7 @@ int wps_is_selected_pin_registrar(const struct wpabuf *msg);
 const u8 * wps_get_uuid_e(const struct wpabuf *msg);
 
 struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type);
+struct wpabuf * wps_build_assoc_resp_ie(void);
 struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 				       const u8 *uuid,
 				       enum wps_request_type req_type);

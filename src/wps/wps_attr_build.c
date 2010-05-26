@@ -74,6 +74,16 @@ int wps_build_req_type(struct wpabuf *msg, enum wps_request_type type)
 }
 
 
+int wps_build_resp_type(struct wpabuf *msg, enum wps_response_type type)
+{
+	wpa_printf(MSG_DEBUG, "WPS:  * Response Type (%d)", type);
+	wpabuf_put_be16(msg, ATTR_RESPONSE_TYPE);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, type);
+	return 0;
+}
+
+
 int wps_build_config_methods(struct wpabuf *msg, u16 methods)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Config Methods (%x)", methods);

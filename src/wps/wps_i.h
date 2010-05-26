@@ -218,6 +218,7 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
 /* wps_attr_build.c */
 int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_req_type(struct wpabuf *msg, enum wps_request_type type);
+int wps_build_resp_type(struct wpabuf *msg, enum wps_response_type type);
 int wps_build_config_methods(struct wpabuf *msg, u16 methods);
 int wps_build_uuid_e(struct wpabuf *msg, const u8 *uuid);
 int wps_build_dev_password_id(struct wpabuf *msg, u16 id);

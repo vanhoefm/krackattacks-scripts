@@ -25,6 +25,7 @@
 #include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
+#include "wps/wps.h"
 #include "hostapd.h"
 #include "beacon.h"
 #include "ieee802_11_auth.h"
@@ -873,6 +874,17 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	if (sta->flags & WLAN_STA_WMM)
 		p = hostapd_eid_wmm(hapd, p);
+
+#ifdef CONFIG_WPS
+	if (sta->flags & WLAN_STA_WPS) {
+		struct wpabuf *wps = wps_build_assoc_resp_ie();
+		if (wps) {
+			os_memcpy(p, wpabuf_head(wps), wpabuf_len(wps));
+			p += wpabuf_len(wps);
+			wpabuf_free(wps);
+		}
+	}
+#endif /* CONFIG_WPS */
 
 	send_len += p - reply->u.assoc_resp.variable;
 

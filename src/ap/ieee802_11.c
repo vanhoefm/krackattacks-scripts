@@ -686,8 +686,8 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 			   "Request - assume WPS is used");
 		sta->flags |= WLAN_STA_WPS;
 		wpabuf_free(sta->wps_ie);
-		sta->wps_ie = wpabuf_alloc_copy(elems.wps_ie + 4,
-						elems.wps_ie_len - 4);
+		sta->wps_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
+							  WPS_IE_VENDOR_TYPE);
 		wpa_ie = NULL;
 		wpa_ie_len = 0;
 	} else if (hapd->conf->wps_state && wpa_ie == NULL) {

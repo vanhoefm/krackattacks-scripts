@@ -332,7 +332,7 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 				   "length %u", len);
 			return -1;
 		}
-		attr->request_type = pos;
+		attr->response_type = pos;
 		break;
 	case ATTR_MANUFACTURER:
 		attr->manufacturer = pos;

@@ -958,38 +958,6 @@ static void wps_cb_set_sel_reg(struct wps_registrar *reg)
 }
 
 
-/* Encapsulate WPS IE data with one (or more, if needed) IE headers */
-static struct wpabuf * wps_ie_encapsulate(struct wpabuf *data)
-{
-	struct wpabuf *ie;
-	const u8 *pos, *end;
-
-	ie = wpabuf_alloc(wpabuf_len(data) + 100);
-	if (ie == NULL) {
-		wpabuf_free(data);
-		return NULL;
-	}
-
-	pos = wpabuf_head(data);
-	end = pos + wpabuf_len(data);
-
-	while (end > pos) {
-		size_t frag_len = end - pos;
-		if (frag_len > 251)
-			frag_len = 251;
-		wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-		wpabuf_put_u8(ie, 4 + frag_len);
-		wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
-		wpabuf_put_data(ie, pos, frag_len);
-		pos += frag_len;
-	}
-
-	wpabuf_free(data);
-
-	return ie;
-}
-
-
 static int wps_set_ie(struct wps_registrar *reg)
 {
 	struct wpabuf *beacon;

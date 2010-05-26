@@ -427,18 +427,13 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 				       enum wps_request_type req_type)
 {
 	struct wpabuf *ie;
-	u8 *len;
 	u16 methods;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
 
-	ie = wpabuf_alloc(200);
+	ie = wpabuf_alloc(500);
 	if (ie == NULL)
 		return NULL;
-
-	wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
-	len = wpabuf_put(ie, 1);
-	wpabuf_put_be32(ie, WPS_DEV_OUI_WFA);
 
 	if (pbc) {
 		methods = WPS_CONFIG_PUSHBUTTON;
@@ -486,9 +481,7 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 		return NULL;
 	}
 
-	*len = wpabuf_len(ie) - 2;
-
-	return ie;
+	return wps_ie_encapsulate(ie);
 }
 
 

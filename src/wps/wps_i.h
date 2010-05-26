@@ -248,6 +248,7 @@ int wps_build_conn_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_assoc_state(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps);
 int wps_build_req_to_enroll(struct wpabuf *msg);
+struct wpabuf * wps_ie_encapsulate(struct wpabuf *data);
 
 /* wps_attr_process.c */
 int wps_process_authenticator(struct wps_data *wps, const u8 *authenticator,

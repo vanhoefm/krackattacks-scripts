@@ -17,7 +17,9 @@
 #include "common.h"
 #include "wps_i.h"
 
+#ifndef CONFIG_WPS_STRICT
 #define WPS_WORKAROUNDS
+#endif /* CONFIG_WPS_STRICT */
 
 
 static int wps_set_attr(struct wps_parse_attr *attr, u16 type,

@@ -664,7 +664,7 @@ static int wps_process_r_snonce2(struct wps_data *wps, const u8 *r_snonce2)
 
 
 static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
-			      size_t cred_len)
+			      size_t cred_len, int wps2)
 {
 	struct wps_parse_attr attr;
 	struct wpabuf msg;
@@ -689,6 +689,13 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 		 * reasons, allow this to be processed since we do not really
 		 * use the MAC Address information for anything.
 		 */
+#ifdef CONFIG_WPS_STRICT
+		if (wps2) {
+			wpa_printf(MSG_INFO, "WPS: Do not accept incorrect "
+				   "MAC Address in AP Settings");
+			return -1;
+		}
+#endif /* CONFIG_WPS_STRICT */
 	}
 
 	if (wps->wps->cred_cb) {
@@ -704,7 +711,7 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 
 
 static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
-			     size_t cred_len[], size_t num_cred)
+			     size_t cred_len[], size_t num_cred, int wps2)
 {
 	size_t i;
 
@@ -718,7 +725,7 @@ static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
 	}
 
 	for (i = 0; i < num_cred; i++) {
-		if (wps_process_cred_e(wps, cred[i], cred_len[i]))
+		if (wps_process_cred_e(wps, cred[i], cred_len[i], wps2))
 			return -1;
 	}
 
@@ -728,7 +735,7 @@ static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
 
 static int wps_process_ap_settings_e(struct wps_data *wps,
 				     struct wps_parse_attr *attr,
-				     struct wpabuf *attrs)
+				     struct wpabuf *attrs, int wps2)
 {
 	struct wps_credential cred;
 
@@ -754,6 +761,13 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 		 * reasons, allow this to be processed since we do not really
 		 * use the MAC Address information for anything.
 		 */
+#ifdef CONFIG_WPS_STRICT
+		if (wps2) {
+			wpa_printf(MSG_INFO, "WPS: Do not accept incorrect "
+				   "MAC Address in AP Settings");
+			return -1;
+		}
+#endif /* CONFIG_WPS_STRICT */
 	}
 
 	if (wps->wps->cred_cb) {
@@ -994,8 +1008,9 @@ static enum wps_process_res wps_process_m8(struct wps_data *wps,
 	if (wps_parse_msg(decrypted, &eattr) < 0 ||
 	    wps_process_key_wrap_auth(wps, decrypted, eattr.key_wrap_auth) ||
 	    wps_process_creds(wps, eattr.cred, eattr.cred_len,
-			      eattr.num_cred) ||
-	    wps_process_ap_settings_e(wps, &eattr, decrypted)) {
+			      eattr.num_cred, attr->version2 != NULL) ||
+	    wps_process_ap_settings_e(wps, &eattr, decrypted,
+				      attr->version2 != NULL)) {
 		wpabuf_free(decrypted);
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;

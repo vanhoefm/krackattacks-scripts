@@ -201,6 +201,13 @@ int wps_is_selected_pbc_registrar(const struct wpabuf *msg)
 	    WPA_GET_BE16(attr.dev_password_id) != DEV_PW_PUSHBUTTON)
 		return 0;
 
+#ifdef CONFIG_WPS_STRICT
+	if (!attr.sel_reg_config_methods ||
+	    !(WPA_GET_BE16(attr.sel_reg_config_methods) &
+	      WPS_CONFIG_PUSHBUTTON))
+		return 0;
+#endif /* CONFIG_WPS_STRICT */
+
 	return 1;
 }
 
@@ -221,6 +228,13 @@ static int is_selected_pin_registrar(struct wps_parse_attr *attr)
 	if (attr->dev_password_id != NULL &&
 	    WPA_GET_BE16(attr->dev_password_id) == DEV_PW_PUSHBUTTON)
 		return 0;
+
+#ifdef CONFIG_WPS_STRICT
+	if (!attr->sel_reg_config_methods ||
+	    !(WPA_GET_BE16(attr->sel_reg_config_methods) &
+	      (WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD)))
+		return 0;
+#endif /* CONFIG_WPS_STRICT */
 
 	return 1;
 }

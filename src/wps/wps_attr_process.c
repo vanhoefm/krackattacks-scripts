@@ -264,11 +264,18 @@ static int wps_process_cred_802_1x_enabled(struct wps_credential *cred,
 }
 
 
-static void wps_workaround_cred_key(struct wps_credential *cred)
+static int wps_workaround_cred_key(struct wps_credential *cred)
 {
 	if (cred->auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK) &&
 	    cred->key_len > 8 && cred->key_len < 64 &&
 	    cred->key[cred->key_len - 1] == 0) {
+#ifdef CONFIG_WPS_STRICT
+		wpa_printf(MSG_INFO, "WPS: WPA/WPA2-Personal passphrase uses "
+			   "forbidden NULL termination");
+		wpa_hexdump_ascii_key(MSG_INFO, "WPS: Network Key",
+				      cred->key, cred->key_len);
+		return -1;
+#else /* CONFIG_WPS_STRICT */
 		/*
 		 * A deployed external registrar is known to encode ASCII
 		 * passphrases incorrectly. Remove the extra NULL termination
@@ -277,7 +284,9 @@ static void wps_workaround_cred_key(struct wps_credential *cred)
 		wpa_printf(MSG_DEBUG, "WPS: Workaround - remove NULL "
 			   "termination from ASCII passphrase");
 		cred->key_len--;
+#endif /* CONFIG_WPS_STRICT */
 	}
+	return 0;
 }
 
 
@@ -303,9 +312,7 @@ int wps_process_cred(struct wps_parse_attr *attr,
 	    wps_process_cred_802_1x_enabled(cred, attr->dot1x_enabled))
 		return -1;
 
-	wps_workaround_cred_key(cred);
-
-	return 0;
+	return wps_workaround_cred_key(cred);
 }
 
 
@@ -324,7 +331,5 @@ int wps_process_ap_settings(struct wps_parse_attr *attr,
 	    wps_process_cred_mac_addr(cred, attr->mac_addr))
 		return -1;
 
-	wps_workaround_cred_key(cred);
-
-	return 0;
+	return wps_workaround_cred_key(cred);
 }

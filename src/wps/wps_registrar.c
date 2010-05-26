@@ -27,7 +27,9 @@
 #include "wps_upnp.h"
 #include "wps_upnp_i.h"
 
+#ifndef CONFIG_WPS_STRICT
 #define WPS_WORKAROUNDS
+#endif /* CONFIG_WPS_STRICT */
 
 struct wps_uuid_pin {
 	struct dl_list list;

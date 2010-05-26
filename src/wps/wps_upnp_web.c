@@ -523,6 +523,11 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 	if (hwaddr_aton(val, macaddr)) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Invalid NewWLANEventMAC in "
 			   "PutWLANResponse: '%s'", val);
+#ifdef CONFIG_WPS_STRICT
+		wpabuf_free(msg);
+		os_free(val);
+		return UPNP_ARG_VALUE_INVALID;
+#else /* CONFIG_WPS_STRICT */
 		if (hwaddr_aton2(val, macaddr) > 0) {
 			/*
 			 * At least some versions of Intel PROset seem to be
@@ -536,6 +541,7 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 			os_free(val);
 			return UPNP_ARG_VALUE_INVALID;
 		}
+#endif /* CONFIG_WPS_STRICT */
 	}
 	os_free(val);
 	if (ev_type == UPNP_WPS_WLANEVENT_TYPE_EAP) {

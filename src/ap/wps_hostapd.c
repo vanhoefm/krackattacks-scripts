@@ -865,6 +865,7 @@ static int hostapd_rx_req_put_wlan_response(
 	 */
 
 	sta = ap_get_sta(hapd, mac_addr);
+#ifndef CONFIG_WPS_STRICT
 	if (!sta) {
 		/*
 		 * Workaround - Intel wsccmd uses bogus NewWLANEventMAC:
@@ -878,6 +879,7 @@ static int hostapd_rx_req_put_wlan_response(
 				break;
 		}
 	}
+#endif /* CONFIG_WPS_STRICT */
 
 	if (!sta) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found");

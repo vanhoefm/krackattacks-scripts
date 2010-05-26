@@ -20,6 +20,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "wps/wps.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -139,6 +140,19 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			return -1;
 		}
 	} else if (hapd->conf->wps_state) {
+#ifdef CONFIG_WPS_STRICT
+		struct wpabuf *wps;
+		wps = ieee802_11_vendor_ie_concat(ie, ielen,
+						  WPS_IE_VENDOR_TYPE);
+		if (wps && wps_validate_assoc_req(wps) < 0) {
+			hapd->drv.sta_disassoc(hapd, sta->addr,
+					       WLAN_REASON_INVALID_IE);
+			ap_free_sta(hapd, sta);
+			wpabuf_free(wps);
+			return -1;
+		}
+		wpabuf_free(wps);
+#endif /* CONFIG_WPS_STRICT */
 		if (ie && ielen > 4 && ie[0] == 0xdd && ie[1] >= 4 &&
 		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
 			sta->flags |= WLAN_STA_WPS;

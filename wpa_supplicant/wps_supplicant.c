@@ -1029,6 +1029,28 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 		ret = 1;
 	}
 
+#ifdef CONFIG_WPS_STRICT
+	if (wps_ie) {
+		if (wps_validate_beacon_probe_resp(wps_ie, bss->beacon_ie_len >
+						   0) < 0)
+			ret = 0;
+		if (bss->beacon_ie_len) {
+			struct wpabuf *bcn_wps;
+			bcn_wps = wpa_scan_get_vendor_ie_multi_beacon(
+				bss, WPS_IE_VENDOR_TYPE);
+			if (bcn_wps == NULL) {
+				wpa_printf(MSG_DEBUG, "WPS: Mandatory WPS IE "
+					   "missing from AP Beacon");
+				ret = 0;
+			} else {
+				if (wps_validate_beacon(wps_ie) < 0)
+					ret = 0;
+				wpabuf_free(bcn_wps);
+			}
+		}
+	}
+#endif /* CONFIG_WPS_STRICT */
+
 	wpabuf_free(wps_ie);
 
 	return ret;

@@ -2288,6 +2288,12 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
+	if (wps_validate_m5_encr(decrypted) < 0) {
+		wpabuf_free(decrypted);
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
 	wpa_printf(MSG_DEBUG, "WPS: Processing decrypted Encrypted Settings "
 		   "attribute");
 	if (wps_parse_msg(decrypted, &eattr) < 0 ||
@@ -2411,6 +2417,12 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
+	if (wps_validate_m7_encr(decrypted, wps->wps->ap || wps->er) < 0) {
+		wpabuf_free(decrypted);
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
 	wpa_printf(MSG_DEBUG, "WPS: Processing decrypted Encrypted Settings "
 		   "attribute");
 	if (wps_parse_msg(decrypted, &eattr) < 0 ||
@@ -2455,6 +2467,8 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 
 	switch (*attr.msg_type) {
 	case WPS_M1:
+		if (wps_validate_m1(msg) < 0)
+			return WPS_FAILURE;
 #ifdef CONFIG_WPS_UPNP
 		if (wps->wps->wps_upnp && attr.mac_addr) {
 			/* Remove old pending messages when starting new run */
@@ -2469,16 +2483,22 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 		ret = wps_process_m1(wps, &attr);
 		break;
 	case WPS_M3:
+		if (wps_validate_m3(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m3(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M3);
 		break;
 	case WPS_M5:
+		if (wps_validate_m5(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m5(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M5);
 		break;
 	case WPS_M7:
+		if (wps_validate_m7(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m7(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M7);
@@ -2803,10 +2823,16 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 	case WSC_MSG:
 		return wps_process_wsc_msg(wps, msg);
 	case WSC_ACK:
+		if (wps_validate_wsc_ack(msg) < 0)
+			return WPS_FAILURE;
 		return wps_process_wsc_ack(wps, msg);
 	case WSC_NACK:
+		if (wps_validate_wsc_nack(msg) < 0)
+			return WPS_FAILURE;
 		return wps_process_wsc_nack(wps, msg);
 	case WSC_Done:
+		if (wps_validate_wsc_done(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_wsc_done(wps, msg);
 		if (ret == WPS_FAILURE) {
 			wps->state = SEND_WSC_NACK;

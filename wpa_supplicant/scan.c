@@ -580,6 +580,40 @@ struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
 }
 
 
+struct wpabuf * wpa_scan_get_vendor_ie_multi_beacon(
+	const struct wpa_scan_res *res, u32 vendor_type)
+{
+	struct wpabuf *buf;
+	const u8 *end, *pos;
+
+	if (res->beacon_ie_len == 0)
+		return NULL;
+	buf = wpabuf_alloc(res->beacon_ie_len);
+	if (buf == NULL)
+		return NULL;
+
+	pos = (const u8 *) (res + 1);
+	pos += res->ie_len;
+	end = pos + res->beacon_ie_len;
+
+	while (pos + 1 < end) {
+		if (pos + 2 + pos[1] > end)
+			break;
+		if (pos[0] == WLAN_EID_VENDOR_SPECIFIC && pos[1] >= 4 &&
+		    vendor_type == WPA_GET_BE32(&pos[2]))
+			wpabuf_put_data(buf, pos + 2 + 4, pos[1] - 4);
+		pos += 2 + pos[1];
+	}
+
+	if (wpabuf_len(buf) == 0) {
+		wpabuf_free(buf);
+		buf = NULL;
+	}
+
+	return buf;
+}
+
+
 /* Compare function for sorting scan results. Return >0 if @b is considered
  * better. */
 static int wpa_scan_result_compar(const void *a, const void *b)

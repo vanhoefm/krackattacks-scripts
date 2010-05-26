@@ -820,6 +820,10 @@ static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 	wps_ie = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
 	if (wps_ie == NULL)
 		return 0;
+	if (wps_validate_probe_req(wps_ie) < 0) {
+		wpabuf_free(wps_ie);
+		return 0;
+	}
 
 	if (wpabuf_len(wps_ie) > 0) {
 		wps_registrar_probe_req_rx(hapd->wps->registrar, addr, wps_ie);

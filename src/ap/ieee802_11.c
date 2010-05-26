@@ -664,6 +664,11 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 							  WPS_IE_VENDOR_TYPE);
 		wpa_ie = NULL;
 		wpa_ie_len = 0;
+		if (sta->wps_ie && wps_validate_assoc_req(sta->wps_ie) < 0) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid WPS IE in "
+				   "(Re)Association Request - reject");
+			return WLAN_STATUS_INVALID_IE;
+		}
 	} else if (hapd->conf->wps_state && wpa_ie == NULL) {
 		wpa_printf(MSG_DEBUG, "STA did not include WPA/RSN IE in "
 			   "(Re)Association Request - possible WPS use");

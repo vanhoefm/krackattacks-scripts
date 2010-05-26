@@ -751,4 +751,139 @@ char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
 void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid);
 u16 wps_config_methods_str2bin(const char *str);
 
+#ifdef CONFIG_WPS_STRICT
+int wps_validate_beacon(const struct wpabuf *wps_ie);
+int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe);
+int wps_validate_probe_req(const struct wpabuf *wps_ie);
+int wps_validate_assoc_req(const struct wpabuf *wps_ie);
+int wps_validate_assoc_resp(const struct wpabuf *wps_ie);
+int wps_validate_m1(const struct wpabuf *tlvs);
+int wps_validate_m2(const struct wpabuf *tlvs);
+int wps_validate_m2d(const struct wpabuf *tlvs);
+int wps_validate_m3(const struct wpabuf *tlvs);
+int wps_validate_m4(const struct wpabuf *tlvs);
+int wps_validate_m4_encr(const struct wpabuf *tlvs);
+int wps_validate_m5(const struct wpabuf *tlvs);
+int wps_validate_m5_encr(const struct wpabuf *tlvs);
+int wps_validate_m6(const struct wpabuf *tlvs);
+int wps_validate_m6_encr(const struct wpabuf *tlvs);
+int wps_validate_m7(const struct wpabuf *tlvs);
+int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap);
+int wps_validate_m8(const struct wpabuf *tlvs);
+int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap);
+int wps_validate_wsc_ack(const struct wpabuf *tlvs);
+int wps_validate_wsc_nack(const struct wpabuf *tlvs);
+int wps_validate_wsc_done(const struct wpabuf *tlvs);
+#else /* CONFIG_WPS_STRICT */
+static inline int wps_validate_beacon(const struct wpabuf *wps_ie){
+	return 0;
+}
+
+static inline int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie,
+						 int probe)
+{
+	return 0;
+}
+
+static inline int wps_validate_probe_req(const struct wpabuf *wps_ie)
+{
+	return 0;
+}
+
+static inline int wps_validate_assoc_req(const struct wpabuf *wps_ie)
+{
+	return 0;
+}
+
+static inline int wps_validate_assoc_resp(const struct wpabuf *wps_ie)
+{
+	return 0;
+}
+
+static inline int wps_validate_m1(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m2(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m2d(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m3(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m4(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m4_encr(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m5(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m5_encr(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m6(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m6_encr(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m7(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap)
+{
+	return 0;
+}
+
+static inline int wps_validate_m8(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap)
+{
+	return 0;
+}
+
+static inline int wps_validate_wsc_ack(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_wsc_nack(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+
+static inline int wps_validate_wsc_done(const struct wpabuf *tlvs)
+{
+	return 0;
+}
+#endif /* CONFIG_WPS_STRICT */
+
 #endif /* WPS_H */

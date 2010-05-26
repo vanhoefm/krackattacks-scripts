@@ -975,6 +975,12 @@ static enum wps_process_res wps_process_m4(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
+	if (wps_validate_m4_encr(decrypted) < 0) {
+		wpabuf_free(decrypted);
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
 	wpa_printf(MSG_DEBUG, "WPS: Processing decrypted Encrypted Settings "
 		   "attribute");
 	if (wps_parse_msg(decrypted, &eattr) < 0 ||
@@ -1018,6 +1024,12 @@ static enum wps_process_res wps_process_m6(struct wps_data *wps,
 	if (decrypted == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: Failed to decrypted Encrypted "
 			   "Settings attribute");
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
+	if (wps_validate_m6_encr(decrypted) < 0) {
+		wpabuf_free(decrypted);
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
 	}
@@ -1069,6 +1081,12 @@ static enum wps_process_res wps_process_m8(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
+	if (wps_validate_m8_encr(decrypted, wps->wps->ap) < 0) {
+		wpabuf_free(decrypted);
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
 	wpa_printf(MSG_DEBUG, "WPS: Processing decrypted Encrypted Settings "
 		   "attribute");
 	if (wps_parse_msg(decrypted, &eattr) < 0 ||
@@ -1112,22 +1130,32 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 
 	switch (*attr.msg_type) {
 	case WPS_M2:
+		if (wps_validate_m2(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m2(wps, msg, &attr);
 		break;
 	case WPS_M2D:
+		if (wps_validate_m2d(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m2d(wps, &attr);
 		break;
 	case WPS_M4:
+		if (wps_validate_m4(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m4(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M4);
 		break;
 	case WPS_M6:
+		if (wps_validate_m6(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m6(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M6);
 		break;
 	case WPS_M8:
+		if (wps_validate_m8(msg) < 0)
+			return WPS_FAILURE;
 		ret = wps_process_m8(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
 			wps_fail_event(wps->wps, WPS_M8);
@@ -1300,8 +1328,12 @@ enum wps_process_res wps_enrollee_process_msg(struct wps_data *wps,
 	case WSC_UPnP:
 		return wps_process_wsc_msg(wps, msg);
 	case WSC_ACK:
+		if (wps_validate_wsc_ack(msg) < 0)
+			return WPS_FAILURE;
 		return wps_process_wsc_ack(wps, msg);
 	case WSC_NACK:
+		if (wps_validate_wsc_nack(msg) < 0)
+			return WPS_FAILURE;
 		return wps_process_wsc_nack(wps, msg);
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported op_code %d", op_code);

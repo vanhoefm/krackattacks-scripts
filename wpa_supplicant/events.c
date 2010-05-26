@@ -30,6 +30,7 @@
 #include "ap/hostapd.h"
 #include "notify.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
@@ -920,6 +921,27 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 
 	p = data->assoc_info.resp_ies;
 	l = data->assoc_info.resp_ies_len;
+
+#ifdef CONFIG_WPS_STRICT
+	if (wpa_s->current_ssid &&
+	    wpa_s->current_ssid->key_mgmt == WPA_KEY_MGMT_WPS) {
+		struct wpabuf *wps;
+		wps = ieee802_11_vendor_ie_concat(p, l, WPS_IE_VENDOR_TYPE);
+		if (wps == NULL) {
+			wpa_printf(MSG_INFO, "WPS-STRICT: AP did not include "
+				   "WPS IE in (Re)Association Response");
+			return -1;
+		}
+
+		if (wps_validate_assoc_resp(wps) < 0) {
+			wpabuf_free(wps);
+			wpa_supplicant_deauthenticate(
+				wpa_s, WLAN_REASON_INVALID_IE);
+			return -1;
+		}
+		wpabuf_free(wps);
+	}
+#endif /* CONFIG_WPS_STRICT */
 
 	/* Go through the IEs and make a copy of the MDIE, if present. */
 	while (p && l >= 2) {

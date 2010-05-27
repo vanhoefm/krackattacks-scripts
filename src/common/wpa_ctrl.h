@@ -86,6 +86,7 @@ extern "C" {
 #define WPS_EVENT_ER_AP_REMOVE "WPS-ER-AP-REMOVE "
 #define WPS_EVENT_ER_ENROLLEE_ADD "WPS-ER-ENROLLEE-ADD "
 #define WPS_EVENT_ER_ENROLLEE_REMOVE "WPS-ER-ENROLLEE-REMOVE "
+#define WPS_EVENT_ER_AP_SETTINGS "WPS-ER-AP-SETTINGS "
 
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "

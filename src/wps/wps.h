@@ -395,7 +395,12 @@ enum wps_event {
 	/**
 	 * WPS_EV_ER_ENROLLEE_REMOVE - ER: Enrollee removed
 	 */
-	WPS_EV_ER_ENROLLEE_REMOVE
+	WPS_EV_ER_ENROLLEE_REMOVE,
+
+	/**
+	 * WPS_EV_ER_AP_SETTINGS - ER: AP Settings learned
+	 */
+	WPS_EV_ER_AP_SETTINGS
 };
 
 /**
@@ -464,6 +469,11 @@ union wps_event_data {
 		const char *model_number;
 		const char *serial_number;
 	} enrollee;
+
+	struct wps_event_er_ap_settings {
+		const u8 *uuid;
+		const struct wps_credential *cred;
+	} ap_settings;
 };
 
 /**

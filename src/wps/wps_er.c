@@ -1393,6 +1393,8 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 static void wps_er_ap_settings_cb(void *ctx, const struct wps_credential *cred)
 {
 	struct wps_er_ap *ap = ctx;
+	union wps_event_data data;
+
 	wpa_printf(MSG_DEBUG, "WPS ER: AP Settings received");
 	os_free(ap->ap_settings);
 	ap->ap_settings = os_malloc(sizeof(*cred));
@@ -1401,7 +1403,11 @@ static void wps_er_ap_settings_cb(void *ctx, const struct wps_credential *cred)
 		ap->ap_settings->cred_attr = NULL;
 	}
 
-	/* TODO: send info through ctrl_iface */
+	os_memset(&data, 0, sizeof(data));
+	data.ap_settings.uuid = ap->uuid;
+	data.ap_settings.cred = cred;
+	ap->er->wps->event_cb(ap->er->wps->cb_ctx, WPS_EV_ER_AP_SETTINGS,
+			      &data);
 }
 
 

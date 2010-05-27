@@ -468,6 +468,32 @@ static void wpa_supplicant_wps_event_er_enrollee_remove(
 }
 
 
+static void wpa_supplicant_wps_event_er_ap_settings(
+	struct wpa_supplicant *wpa_s,
+	struct wps_event_er_ap_settings *ap_settings)
+{
+	char uuid_str[100];
+	char key_str[65];
+	const struct wps_credential *cred = ap_settings->cred;
+
+	key_str[0] = '\0';
+	if (cred->auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) {
+		if (cred->key_len >= 8 && cred->key_len <= 64) {
+			os_memcpy(key_str, cred->key, cred->key_len);
+			key_str[cred->key_len] = '\0';
+		}
+	}
+
+	uuid_bin2str(ap_settings->uuid, uuid_str, sizeof(uuid_str));
+	/* Use wpa_msg_ctrl to avoid showing the key in debug log */
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPS_EVENT_ER_AP_SETTINGS
+		     "uuid=%s ssid=%s auth_type=0x%04x encr_type=0x%04x "
+		     "key=%s",
+		     uuid_str, wpa_ssid_txt(cred->ssid, cred->ssid_len),
+		     cred->auth_type, cred->encr_type, key_str);
+}
+
+
 static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 				     union wps_event_data *data)
 {
@@ -501,6 +527,10 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 	case WPS_EV_ER_ENROLLEE_REMOVE:
 		wpa_supplicant_wps_event_er_enrollee_remove(wpa_s,
 							    &data->enrollee);
+		break;
+	case WPS_EV_ER_AP_SETTINGS:
+		wpa_supplicant_wps_event_er_ap_settings(wpa_s,
+							&data->ap_settings);
 		break;
 	}
 }

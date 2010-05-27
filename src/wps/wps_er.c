@@ -85,6 +85,7 @@ static void wps_er_sta_free(struct wps_er_sta *sta)
 	os_free(sta->dev_name);
 	http_client_free(sta->http);
 	eloop_cancel_timeout(wps_er_sta_timeout, sta, NULL);
+	os_free(sta->cred);
 	os_free(sta);
 }
 
@@ -953,6 +954,17 @@ static void wps_er_sta_start(struct wps_er_sta *sta, struct wpabuf *msg)
 		return;
 	sta->wps->er = 1;
 	sta->wps->use_cred = sta->ap->ap_settings;
+	if (sta->ap->ap_settings) {
+		os_free(sta->cred);
+		sta->cred = os_malloc(sizeof(*sta->cred));
+		if (sta->cred) {
+			os_memcpy(sta->cred, sta->ap->ap_settings,
+				  sizeof(*sta->cred));
+			sta->cred->cred_attr = NULL;
+			os_memcpy(sta->cred->mac_addr, sta->addr, ETH_ALEN);
+			sta->wps->use_cred = sta->cred;
+		}
+	}
 
 	wps_er_sta_process(sta, msg, WSC_MSG);
 }

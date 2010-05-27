@@ -33,6 +33,7 @@ struct wps_er_sta {
 	char *dev_name;
 	struct wps_data *wps;
 	struct http_client *http;
+	struct wps_credential *cred;
 };
 
 struct wps_er_ap {

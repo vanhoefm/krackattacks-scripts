@@ -602,7 +602,7 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	if (argc == 2)
 		res = os_snprintf(cmd, sizeof(cmd), "WPS_REG %s %s",
 				  argv[0], argv[1]);
-	else if (argc == 6) {
+	else if (argc == 5 || argc == 6) {
 		char ssid_hex[2 * 32 + 1];
 		char key_hex[2 * 64 + 1];
 		int i;
@@ -615,10 +615,13 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		}
 
 		key_hex[0] = '\0';
-		for (i = 0; i < 64; i++) {
-			if (argv[5][i] == '\0')
-				break;
-			os_snprintf(&key_hex[i * 2], 3, "%02x", argv[5][i]);
+		if (argc == 6) {
+			for (i = 0; i < 64; i++) {
+				if (argv[5][i] == '\0')
+					break;
+				os_snprintf(&key_hex[i * 2], 3, "%02x",
+					    argv[5][i]);
+			}
 		}
 
 		res = os_snprintf(cmd, sizeof(cmd),
@@ -730,6 +733,57 @@ static int wpa_cli_cmd_wps_er_learn(struct wpa_ctrl *ctrl, int argc,
 			  argv[0], argv[1]);
 	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
 		printf("Too long WPS_ER_LEARN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_wps_er_config(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc == 5 || argc == 6) {
+		char ssid_hex[2 * 32 + 1];
+		char key_hex[2 * 64 + 1];
+		int i;
+
+		ssid_hex[0] = '\0';
+		for (i = 0; i < 32; i++) {
+			if (argv[2][i] == '\0')
+				break;
+			os_snprintf(&ssid_hex[i * 2], 3, "%02x", argv[2][i]);
+		}
+
+		key_hex[0] = '\0';
+		if (argc == 6) {
+			for (i = 0; i < 64; i++) {
+				if (argv[5][i] == '\0')
+					break;
+				os_snprintf(&key_hex[i * 2], 3, "%02x",
+					    argv[5][i]);
+			}
+		}
+
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "WPS_ER_CONFIG %s %s %s %s %s %s",
+				  argv[0], argv[1], ssid_hex, argv[3], argv[4],
+				  key_hex);
+	} else {
+		printf("Invalid WPS_ER_CONFIG command: need six arguments:\n"
+		       "- AP UUID\n"
+		       "- AP PIN\n"
+		       "- new SSID\n"
+		       "- new auth (OPEN, WPAPSK, WPA2PSK)\n"
+		       "- new encr (NONE, WEP, TKIP, CCMP)\n"
+		       "- new key\n");
+		return -1;
+	}
+
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_ER_CONFIG command.\n");
 		return -1;
 	}
 	return wpa_ctrl_command(ctrl, cmd);
@@ -1647,6 +1701,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_er_learn", wpa_cli_cmd_wps_er_learn,
 	  cli_cmd_flag_sensitive,
 	  "<UUID> <PIN> = learn AP configuration" },
+	{ "wps_er_config", wpa_cli_cmd_wps_er_config,
+	  cli_cmd_flag_sensitive,
+	  "<UUID> <PIN> <SSID> <auth> <encr> <key> = configure AP" },
 	{ "ibss_rsn", wpa_cli_cmd_ibss_rsn,
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },

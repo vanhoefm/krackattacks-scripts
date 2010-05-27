@@ -1194,6 +1194,57 @@ int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
 }
 
 
+int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
+		       const char *pin, struct wps_new_ap_settings *settings)
+{
+	u8 u[UUID_LEN];
+	struct wps_credential cred;
+	size_t len;
+
+	if (uuid_str2bin(uuid, u))
+		return -1;
+	if (settings->ssid_hex == NULL || settings->auth == NULL ||
+	    settings->encr == NULL || settings->key_hex == NULL)
+		return -1;
+
+	os_memset(&cred, 0, sizeof(cred));
+	len = os_strlen(settings->ssid_hex);
+	if ((len & 1) || len > 2 * sizeof(cred.ssid) ||
+	    hexstr2bin(settings->ssid_hex, cred.ssid, len / 2))
+		return -1;
+	cred.ssid_len = len / 2;
+
+	len = os_strlen(settings->key_hex);
+	if ((len & 1) || len > 2 * sizeof(cred.key) ||
+	    hexstr2bin(settings->key_hex, cred.key, len / 2))
+		return -1;
+	cred.key_len = len / 2;
+
+	if (os_strcmp(settings->auth, "OPEN") == 0)
+		cred.auth_type = WPS_AUTH_OPEN;
+	else if (os_strcmp(settings->auth, "WPAPSK") == 0)
+		cred.auth_type = WPS_AUTH_WPAPSK;
+	else if (os_strcmp(settings->auth, "WPA2PSK") == 0)
+		cred.auth_type = WPS_AUTH_WPA2PSK;
+	else
+		return -1;
+
+	if (os_strcmp(settings->encr, "NONE") == 0)
+		cred.encr_type = WPS_ENCR_NONE;
+	else if (os_strcmp(settings->encr, "WEP") == 0)
+		cred.encr_type = WPS_ENCR_WEP;
+	else if (os_strcmp(settings->encr, "TKIP") == 0)
+		cred.encr_type = WPS_ENCR_TKIP;
+	else if (os_strcmp(settings->encr, "CCMP") == 0)
+		cred.encr_type = WPS_ENCR_AES;
+	else
+		return -1;
+
+	return wps_er_config(wpa_s->wps_er, u, (const u8 *) pin,
+			     os_strlen(pin), &cred);
+}
+
+
 static void wpas_wps_terminate_cb(void *ctx)
 {
 	wpa_printf(MSG_DEBUG, "WPS ER: Terminated");

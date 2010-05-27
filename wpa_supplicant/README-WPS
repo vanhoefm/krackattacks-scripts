@@ -236,6 +236,15 @@ wps_er_stop
 wps_er_learn <UUID> <AP PIN>
 - learn AP configuration
 
+wps_er_config <UUID> <AP PIN> <new SSID> <auth> <encr> <new key>
+- examples:
+  wps_er_config 87654321-9abc-def0-1234-56789abc0002 12345670 testing WPA2PSK CCMP 12345678
+  wpa_er_config 87654321-9abc-def0-1234-56789abc0002 12345670 clear OPEN NONE ""
+
+<auth> must be one of the following: OPEN WPAPSK WPA2PSK
+<encr> must be one of the following: NONE WEP TKIP CCMP
+
+
 wps_er_pbc <Enrollee UUID>
 - accept an Enrollee PBC using External Registrar
 

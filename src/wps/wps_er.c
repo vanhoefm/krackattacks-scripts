@@ -1501,10 +1501,26 @@ static void wps_er_ap_put_message(struct wps_er_ap *ap,
 static void wps_er_ap_process(struct wps_er_ap *ap, struct wpabuf *msg)
 {
 	enum wps_process_res res;
+	struct wps_parse_attr attr;
+	enum wsc_op_code op_code;
 
-	res = wps_process_msg(ap->wps, WSC_MSG, msg);
+	op_code = WSC_MSG;
+	if (wps_parse_msg(msg, &attr) == 0 && attr.msg_type) {
+		switch (*attr.msg_type) {
+		case WPS_WSC_ACK:
+			op_code = WSC_ACK;
+			break;
+		case WPS_WSC_NACK:
+			op_code = WSC_NACK;
+			break;
+		case WPS_WSC_DONE:
+			op_code = WSC_Done;
+			break;
+		}
+	}
+
+	res = wps_process_msg(ap->wps, op_code, msg);
 	if (res == WPS_CONTINUE) {
-		enum wsc_op_code op_code;
 		struct wpabuf *next = wps_get_msg(ap->wps, &op_code);
 		if (next) {
 			wps_er_ap_put_message(ap, next);
@@ -1668,6 +1684,67 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 	}
 
 	if (wps_er_send_get_device_info(ap, wps_er_ap_learn_m1) < 0)
+		return -1;
+
+	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */
+	wps_registrar_add_pin(er->wps->registrar, uuid, pin, pin_len, 0);
+
+	return 0;
+}
+
+
+static void wps_er_ap_config_m1(struct wps_er_ap *ap, struct wpabuf *m1)
+{
+	struct wps_config cfg;
+
+	if (ap->wps) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Protocol run already in "
+			   "progress with this AP");
+		return;
+	}
+
+	os_memset(&cfg, 0, sizeof(cfg));
+	cfg.wps = ap->er->wps;
+	cfg.registrar = 1;
+	cfg.new_ap_settings = ap->ap_settings;
+	ap->wps = wps_init(&cfg);
+	if (ap->wps == NULL)
+		return;
+	ap->wps->ap_settings_cb = NULL;
+	ap->wps->ap_settings_cb_ctx = NULL;
+
+	wps_er_ap_process(ap, m1);
+}
+
+
+int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
+		  size_t pin_len, const struct wps_credential *cred)
+{
+	struct wps_er_ap *ap;
+
+	if (er == NULL)
+		return -1;
+
+	ap = wps_er_ap_get(er, NULL, uuid);
+	if (ap == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for config "
+			   "request");
+		return -1;
+	}
+	if (ap->wps) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending operation ongoing "
+			   "with the AP - cannot start config");
+		return -1;
+	}
+
+	os_free(ap->ap_settings);
+	ap->ap_settings = os_malloc(sizeof(*cred));
+	if (ap->ap_settings == NULL)
+		return -1;
+	os_memcpy(ap->ap_settings, cred, sizeof(*cred));
+	ap->ap_settings->cred_attr = NULL;
+
+	if (wps_er_send_get_device_info(ap, wps_er_ap_config_m1) < 0)
 		return -1;
 
 	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */

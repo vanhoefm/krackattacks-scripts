@@ -330,6 +330,50 @@ static int wpa_supplicant_ctrl_iface_wps_er_learn(struct wpa_supplicant *wpa_s,
 	*pin++ = '\0';
 	return wpas_wps_er_learn(wpa_s, uuid, pin);
 }
+
+
+static int wpa_supplicant_ctrl_iface_wps_er_config(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pin;
+	char *new_ssid;
+	char *new_auth;
+	char *new_encr;
+	char *new_key;
+	struct wps_new_ap_settings ap;
+
+	pin = os_strchr(cmd, ' ');
+	if (pin == NULL)
+		return -1;
+	*pin++ = '\0';
+
+	new_ssid = os_strchr(pin, ' ');
+	if (new_ssid == NULL)
+		return -1;
+	*new_ssid++ = '\0';
+
+	new_auth = os_strchr(new_ssid, ' ');
+	if (new_auth == NULL)
+		return -1;
+	*new_auth++ = '\0';
+
+	new_encr = os_strchr(new_auth, ' ');
+	if (new_encr == NULL)
+		return -1;
+	*new_encr++ = '\0';
+
+	new_key = os_strchr(new_encr, ' ');
+	if (new_key == NULL)
+		return -1;
+	*new_key++ = '\0';
+
+	os_memset(&ap, 0, sizeof(ap));
+	ap.ssid_hex = new_ssid;
+	ap.auth = new_auth;
+	ap.encr = new_encr;
+	ap.key_hex = new_key;
+	return wpas_wps_er_config(wpa_s, cmd, pin, &ap);
+}
 #endif /* CONFIG_WPS_ER */
 
 #endif /* CONFIG_WPS */
@@ -1809,6 +1853,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_ER_LEARN ", 13) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_learn(wpa_s, buf + 13))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_ER_CONFIG ", 14) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_er_config(wpa_s, buf + 14))
 			reply_len = -1;
 #endif /* CONFIG_WPS_ER */
 #endif /* CONFIG_WPS */

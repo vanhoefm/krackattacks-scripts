@@ -41,6 +41,9 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 	if (nread <= 0)
 		return;
 	buf[nread] = '\0';
+	if (er->filter_addr.s_addr &&
+	    er->filter_addr.s_addr != addr.sin_addr.s_addr)
+		return;
 
 	wpa_printf(MSG_DEBUG, "WPS ER: Received SSDP from %s",
 		   inet_ntoa(addr.sin_addr));

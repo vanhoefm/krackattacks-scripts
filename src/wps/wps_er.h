@@ -90,6 +90,7 @@ struct wps_er {
 	int deinitializing;
 	void (*deinit_done_cb)(void *ctx);
 	void *deinit_done_ctx;
+	struct in_addr filter_addr;
 };
 
 

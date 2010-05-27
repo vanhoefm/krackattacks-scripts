@@ -1151,7 +1151,7 @@ static void wps_er_http_req(void *ctx, struct http_request *req)
 
 
 struct wps_er *
-wps_er_init(struct wps_context *wps, const char *ifname)
+wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 {
 	struct wps_er *er;
 	struct in_addr addr;
@@ -1173,6 +1173,16 @@ wps_er_init(struct wps_context *wps, const char *ifname)
 		return NULL;
 	}
 
+	if (filter) {
+		if (inet_aton(filter, &er->filter_addr) == 0) {
+			wpa_printf(MSG_INFO, "WPS UPnP: Invalid filter "
+				   "address %s", filter);
+			wps_er_deinit(er, NULL, NULL);
+			return NULL;
+		}
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Only accepting connections "
+			   "with %s", filter);
+	}
 	if (get_netif_info(ifname, &er->ip_addr, &er->ip_addr_text,
 			   er->mac_addr)) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Could not get IP/MAC address "

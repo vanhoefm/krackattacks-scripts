@@ -651,8 +651,12 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int wpa_cli_cmd_wps_er_start(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
+	char cmd[100];
+	if (argc > 0) {
+		os_snprintf(cmd, sizeof(cmd), "WPS_ER_START %s", argv[0]);
+		return wpa_ctrl_command(ctrl, cmd);
+	}
 	return wpa_ctrl_command(ctrl, "WPS_ER_START");
-
 }
 
 
@@ -1630,7 +1634,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },
 	{ "wps_er_start", wpa_cli_cmd_wps_er_start,
 	  cli_cmd_flag_none,
-	  "= start Wi-Fi Protected Setup External Registrar" },
+	  "[IP address] = start Wi-Fi Protected Setup External Registrar" },
 	{ "wps_er_stop", wpa_cli_cmd_wps_er_stop,
 	  cli_cmd_flag_none,
 	  "= stop Wi-Fi Protected Setup External Registrar" },

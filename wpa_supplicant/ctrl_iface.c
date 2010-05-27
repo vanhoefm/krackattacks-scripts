@@ -1793,7 +1793,10 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 #ifdef CONFIG_WPS_ER
 	} else if (os_strcmp(buf, "WPS_ER_START") == 0) {
-		if (wpas_wps_er_start(wpa_s))
+		if (wpas_wps_er_start(wpa_s, NULL))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_ER_START ", 13) == 0) {
+		if (wpas_wps_er_start(wpa_s, buf + 13))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "WPS_ER_STOP") == 0) {
 		if (wpas_wps_er_stop(wpa_s))

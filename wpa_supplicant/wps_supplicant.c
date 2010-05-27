@@ -1099,14 +1099,14 @@ int wpas_wps_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 }
 
 
-int wpas_wps_er_start(struct wpa_supplicant *wpa_s)
+int wpas_wps_er_start(struct wpa_supplicant *wpa_s, const char *filter)
 {
 #ifdef CONFIG_WPS_ER
 	if (wpa_s->wps_er) {
 		wps_er_refresh(wpa_s->wps_er);
 		return 0;
 	}
-	wpa_s->wps_er = wps_er_init(wpa_s->wps, wpa_s->ifname);
+	wpa_s->wps_er = wps_er_init(wpa_s->wps, wpa_s->ifname, filter);
 	if (wpa_s->wps_er == NULL)
 		return -1;
 	return 0;

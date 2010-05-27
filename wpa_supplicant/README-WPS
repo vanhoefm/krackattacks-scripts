@@ -198,3 +198,74 @@ Following control interface messages are sent out for external programs:
 WPS-CRED-RECEIVED  <hexdump of Credential attribute(s)>
 For example:
 <2>WPS-CRED-RECEIVED 100e006f10260001011045000c6a6b6d2d7770732d74657374100300020020100f000200081027004030653462303435366332363666653064333961643135353461316634626637313234333761636664623766333939653534663166316230323061643434386235102000060266a0ee1727
+
+
+wpa_supplicant as WPS External Registrar (ER)
+---------------------------------------------
+
+wpa_supplicant can be used as a WPS ER to configure an AP or enroll
+new Enrollee to join the network. This functionality uses UPnP and
+requires that a working IP connectivity is available with the AP (this
+can be either over a wired or wireless connection).
+
+Separate wpa_supplicant process can be started for WPS ER
+operations. A special "none" driver can be used in such a case to
+indicate that no local network interface is actually controlled. For
+example, following command could be used to start the ER:
+
+wpa_supplicant -Dnone -c er.conf -ieth0
+
+Sample er.conf:
+
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=admin
+device_name=WPS External Registrar
+
+
+wpa_cli commands for ER functionality:
+
+wps_er_start [IP address]
+- start WPS ER functionality
+- the optional IP address parameter can be used to filter operations only
+  to include a single AP
+- if run again while ER is active, the stored information (discovered APs
+  and Enrollees) are shown again
+
+wps_er_stop
+- stop WPS ER functionality
+
+wps_er_learn <UUID> <AP PIN>
+- learn AP configuration
+
+wps_er_pbc <Enrollee UUID>
+- accept an Enrollee PBC using External Registrar
+
+wps_er_pin <Enrollee UUID> <PIN>
+- add an Enrollee PIN to External Registrar
+
+
+WPS ER events:
+
+WPS_EVENT_ER_AP_ADD
+- WPS ER discovered an AP
+
+WPS-ER-AP-ADD 87654321-9abc-def0-1234-56789abc0002 02:11:22:33:44:55 pri_dev_type=6-0050F204-1 wps_state=1 |Very friendly name|Company|Long description of the model|WAP|http://w1.fi/|http://w1.fi/hostapd/
+
+WPS_EVENT_ER_AP_REMOVE
+- WPS ER removed an AP entry
+
+WPS-ER-AP-REMOVE 87654321-9abc-def0-1234-56789abc0002
+
+WPS_EVENT_ER_ENROLLEE_ADD
+- WPS ER discovered a new Enrollee
+
+WPS-ER-ENROLLEE-ADD 2b7093f1-d6fb-5108-adbb-bea66bb87333 02:66:a0:ee:17:27 M1=1 config_methods=0x14d dev_passwd_id=0 pri_dev_type=1-0050F204-1 |Wireless Client|Company|cmodel|123|12345|
+
+WPS_EVENT_ER_ENROLLEE_REMOVE
+- WPS ER removed an Enrollee entry
+
+WPS-ER-ENROLLEE-REMOVE 2b7093f1-d6fb-5108-adbb-bea66bb87333 02:66:a0:ee:17:27
+
+WPS-ER-AP-SETTINGS
+- WPS ER learned AP settings
+
+WPS-ER-AP-SETTINGS uuid=fd91b4ec-e3fa-5891-a57d-8c59efeed1d2 ssid=test-wps auth_type=0x0020 encr_type=0x0008 key=12345678

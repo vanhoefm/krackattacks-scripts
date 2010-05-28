@@ -74,6 +74,7 @@ struct madwifi_driver_data {
 
 static int madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 			      int reason_code);
+static int madwifi_set_privacy(void *priv, int enabled);
 
 static const char * athr_get_ioctl_name(int op)
 {
@@ -343,8 +344,11 @@ madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 
 	if (!params->enabled) {
 		/* XXX restore state */
-		return set80211param(priv, IEEE80211_PARAM_AUTHMODE,
-			IEEE80211_AUTH_AUTO);
+		if (set80211param(priv, IEEE80211_PARAM_AUTHMODE,
+				  IEEE80211_AUTH_AUTO) < 0)
+			return -1;
+		/* IEEE80211_AUTH_AUTO ends up enabling Privacy; clear that */
+		return madwifi_set_privacy(drv, 0);
 	}
 	if (!params->wpa && !params->ieee802_1x) {
 		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,

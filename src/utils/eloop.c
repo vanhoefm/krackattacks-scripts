@@ -529,6 +529,8 @@ void eloop_run(void)
 		eloop_process_pending_signals();
 
 		/* check if some registered timeouts have occurred */
+		timeout = dl_list_first(&eloop.timeout, struct eloop_timeout,
+					list);
 		if (timeout) {
 			os_get_time(&now);
 			if (!os_time_before(&now, &timeout->time)) {

@@ -698,6 +698,19 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 #endif /* CONFIG_WPS_STRICT */
 	}
 
+	if (!(wps->cred.encr_type &
+	      (WPS_ENCR_NONE | WPS_ENCR_TKIP | WPS_ENCR_AES))) {
+		if (wps->cred.encr_type & WPS_ENCR_WEP) {
+			wpa_printf(MSG_INFO, "WPS: Reject Credential "
+				   "due to WEP configuration");
+			return -2;
+		}
+
+		wpa_printf(MSG_INFO, "WPS: Reject Credential due to "
+			   "invalid encr_type 0x%x", wps->cred.encr_type);
+		return -1;
+	}
+
 	if (wps->wps->cred_cb) {
 		wps->cred.cred_attr = cred - 4;
 		wps->cred.cred_attr_len = cred_len + 4;
@@ -714,6 +727,7 @@ static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
 			     size_t cred_len[], size_t num_cred, int wps2)
 {
 	size_t i;
+	int ok = 0;
 
 	if (wps->wps->ap)
 		return 0;
@@ -725,8 +739,20 @@ static int wps_process_creds(struct wps_data *wps, const u8 *cred[],
 	}
 
 	for (i = 0; i < num_cred; i++) {
-		if (wps_process_cred_e(wps, cred[i], cred_len[i], wps2))
+		int res;
+		res = wps_process_cred_e(wps, cred[i], cred_len[i], wps2);
+		if (res == 0)
+			ok++;
+		else if (res == -2)
+			wpa_printf(MSG_DEBUG, "WPS: WEP credential skipped");
+		else
 			return -1;
+	}
+
+	if (ok == 0) {
+		wpa_printf(MSG_DEBUG, "WPS: No valid Credential attribute "
+			   "received");
+		return -1;
 	}
 
 	return 0;

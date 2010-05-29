@@ -770,6 +770,46 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 #endif /* CONFIG_WPS_STRICT */
 	}
 
+	if (!(cred.encr_type & (WPS_ENCR_NONE | WPS_ENCR_TKIP | WPS_ENCR_AES)))
+	{
+		if (cred.encr_type & WPS_ENCR_WEP) {
+			wpa_printf(MSG_INFO, "WPS: Reject new AP settings "
+				   "due to WEP configuration");
+			return -1;
+		}
+
+		wpa_printf(MSG_INFO, "WPS: Reject new AP settings due to "
+			   "invalid encr_type 0x%x", cred.encr_type);
+		return -1;
+	}
+
+#ifdef CONFIG_WPS_STRICT
+	if (wps2) {
+		if ((cred.encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) ==
+		    WPS_ENCR_TKIP ||
+		    (cred.auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) ==
+		    WPS_AUTH_WPAPSK) {
+			wpa_printf(MSG_INFO, "WPS-STRICT: Invalid WSC 2.0 "
+				   "AP Settings: WPA-Personal/TKIP only");
+			return -1;
+		}
+	}
+#endif /* CONFIG_WPS_STRICT */
+
+	if ((cred.encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) == WPS_ENCR_TKIP)
+	{
+		wpa_printf(MSG_DEBUG, "WPS: Upgrade encr_type TKIP -> "
+			   "TKIP+AES");
+		cred.encr_type |= WPS_ENCR_AES;
+	}
+
+	if ((cred.auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) ==
+	    WPS_AUTH_WPAPSK) {
+		wpa_printf(MSG_DEBUG, "WPS: Upgrade auth_type WPAPSK -> "
+			   "WPAPSK+WPA2PSK");
+		cred.auth_type |= WPS_AUTH_WPA2PSK;
+	}
+
 	if (wps->wps->cred_cb) {
 		cred.cred_attr = wpabuf_head(attrs);
 		cred.cred_attr_len = wpabuf_len(attrs);

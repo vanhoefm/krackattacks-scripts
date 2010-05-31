@@ -26,6 +26,7 @@ struct wpa_driver_wext_data {
 	int ifindex;
 	int ifindex2;
 	int if_removed;
+	int if_disabled;
 	struct rfkill_data *rfkill;
 	u8 *assoc_req_ies;
 	size_t assoc_req_ies_len;

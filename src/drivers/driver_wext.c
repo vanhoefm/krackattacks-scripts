@@ -635,6 +635,19 @@ static void wpa_driver_wext_event_rtm_newlink(void *ctx, struct ifinfomsg *ifi,
 		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
+
+	if (!drv->if_disabled && !(ifi->ifi_flags & IFF_UP)) {
+		wpa_printf(MSG_DEBUG, "WEXT: Interface down");
+		drv->if_disabled = 1;
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED, NULL);
+	}
+
+	if (drv->if_disabled && (ifi->ifi_flags & IFF_UP)) {
+		wpa_printf(MSG_DEBUG, "WEXT: Interface up");
+		drv->if_disabled = 0;
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED, NULL);
+	}
+
 	/*
 	 * Some drivers send the association event before the operup event--in
 	 * this case, lifting operstate in wpa_driver_wext_set_operstate()
@@ -690,9 +703,11 @@ static void wpa_driver_wext_event_rtm_dellink(void *ctx, struct ifinfomsg *ifi,
 
 static void wpa_driver_wext_rfkill_blocked(void *ctx)
 {
-	struct wpa_driver_wext_data *drv = ctx;
 	wpa_printf(MSG_DEBUG, "WEXT: RFKILL blocked");
-	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED, NULL);
+	/*
+	 * This may be for any interface; use ifdown event to disable
+	 * interface.
+	 */
 }
 
 
@@ -705,7 +720,7 @@ static void wpa_driver_wext_rfkill_unblocked(void *ctx)
 			   "after rfkill unblock");
 		return;
 	}
-	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED, NULL);
+	/* rtnetlink ifup handler will report interface as enabled */
 }
 
 
@@ -802,6 +817,7 @@ static int wpa_driver_wext_finish_drv_init(struct wpa_driver_wext_data *drv)
 			wpa_printf(MSG_DEBUG, "WEXT: Could not yet enable "
 				   "interface '%s' due to rfkill",
 				   drv->ifname);
+			drv->if_disabled = 1;
 			send_rfkill_event = 1;
 		} else {
 			wpa_printf(MSG_ERROR, "WEXT: Could not set "

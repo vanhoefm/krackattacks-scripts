@@ -73,6 +73,7 @@ struct wpa_driver_nl80211_data {
 	char brname[IFNAMSIZ];
 	int ifindex;
 	int if_removed;
+	int if_disabled;
 	struct rfkill_data *rfkill;
 	struct wpa_driver_capa capa;
 	int has_capability;
@@ -413,6 +414,19 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		   (ifi->ifi_flags & IFF_RUNNING) ? "[RUNNING]" : "",
 		   (ifi->ifi_flags & IFF_LOWER_UP) ? "[LOWER_UP]" : "",
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
+
+	if (!drv->if_disabled && !(ifi->ifi_flags & IFF_UP)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Interface down");
+		drv->if_disabled = 1;
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED, NULL);
+	}
+
+	if (drv->if_disabled && (ifi->ifi_flags & IFF_UP)) {
+		wpa_printf(MSG_DEBUG, "nl80211: Interface up");
+		drv->if_disabled = 0;
+		wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED, NULL);
+	}
+
 	/*
 	 * Some drivers send the association event before the operup event--in
 	 * this case, lifting operstate in wpa_driver_nl80211_set_operstate()
@@ -1351,9 +1365,11 @@ err1:
 
 static void wpa_driver_nl80211_rfkill_blocked(void *ctx)
 {
-	struct wpa_driver_nl80211_data *drv = ctx;
 	wpa_printf(MSG_DEBUG, "nl80211: RFKILL blocked");
-	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_DISABLED, NULL);
+	/*
+	 * This may be for any interface; use ifdown event to disable
+	 * interface.
+	 */
 }
 
 
@@ -1366,7 +1382,7 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
 			   "after rfkill unblock");
 		return;
 	}
-	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_ENABLED, NULL);
+	/* rtnetlink ifup handler will report interface as enabled */
 }
 
 
@@ -1524,6 +1540,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			wpa_printf(MSG_DEBUG, "nl80211: Could not yet enable "
 				   "interface '%s' due to rfkill",
 				   bss->ifname);
+			drv->if_disabled = 1;
 			send_rfkill_event = 1;
 		} else {
 			wpa_printf(MSG_ERROR, "nl80211: Could not set "

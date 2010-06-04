@@ -737,7 +737,7 @@ static int
 madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 {
 	struct madwifi_driver_data *drv = priv;
-	u8 buf[256];
+	u8 buf[500];
 	struct ieee80211req_getset_appiebuf *beac_ie;
 
 	wpa_printf(MSG_DEBUG, "%s buflen = %lu", __func__,

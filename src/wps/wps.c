@@ -237,6 +237,36 @@ int wps_is_selected_pin_registrar(const struct wpabuf *msg)
 
 
 /**
+ * wps_ap_priority_compar - Prioritize WPS IE from two APs
+ * @wps_a: WPS IE contents from Beacon or Probe Response frame
+ * @wps_b: WPS IE contents from Beacon or Probe Response frame
+ * Returns: 1 if wps_b is considered more likely selection for WPS
+ * provisioning, -1 if wps_a is considered more like, or 0 if no preference
+ */
+int wps_ap_priority_compar(const struct wpabuf *wps_a,
+			   const struct wpabuf *wps_b)
+{
+	struct wps_parse_attr attr_a, attr_b;
+	int sel_a, sel_b;
+
+	if (wps_a == NULL || wps_parse_msg(wps_a, &attr_a) < 0)
+		return 1;
+	if (wps_b == NULL || wps_parse_msg(wps_b, &attr_b) < 0)
+		return -1;
+
+	sel_a = attr_a.selected_registrar && *attr_a.selected_registrar != 0;
+	sel_b = attr_b.selected_registrar && *attr_b.selected_registrar != 0;
+
+	if (sel_a && !sel_b)
+		return -1;
+	if (!sel_a && sel_b)
+		return 1;
+
+	return 0;
+}
+
+
+/**
  * wps_get_uuid_e - Get UUID-E from WPS IE
  * @msg: WPS IE contents from Beacon or Probe Response frame
  * Returns: Pointer to UUID-E or %NULL if not included

@@ -1264,3 +1264,16 @@ int wpas_wps_terminate_pending(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_WPS_ER */
 	return 0;
 }
+
+
+int wpas_wps_in_progress(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (!ssid->disabled && ssid->key_mgmt == WPA_KEY_MGMT_WPS)
+			return 1;
+	}
+
+	return 0;
+}

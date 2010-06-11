@@ -641,6 +641,54 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 }
 
 
+#ifdef CONFIG_WPS
+/* Compare function for sorting scan results when searching a WPS AP for
+ * provisioning. Return >0 if @b is considered better. */
+static int wpa_scan_result_wps_compar(const void *a, const void *b)
+{
+	struct wpa_scan_res **_wa = (void *) a;
+	struct wpa_scan_res **_wb = (void *) b;
+	struct wpa_scan_res *wa = *_wa;
+	struct wpa_scan_res *wb = *_wb;
+	int uses_wps_a, uses_wps_b;
+	struct wpabuf *wps_a, *wps_b;
+	int res;
+
+	/* Optimization - check WPS IE existence before allocated memory and
+	 * doing full reassembly. */
+	uses_wps_a = wpa_scan_get_vendor_ie(wa, WPS_IE_VENDOR_TYPE) != NULL;
+	uses_wps_b = wpa_scan_get_vendor_ie(wb, WPS_IE_VENDOR_TYPE) != NULL;
+	if (uses_wps_a && !uses_wps_b)
+		return -1;
+	if (!uses_wps_a && uses_wps_b)
+		return 1;
+
+	if (uses_wps_a && uses_wps_b) {
+		wps_a = wpa_scan_get_vendor_ie_multi(wa, WPS_IE_VENDOR_TYPE);
+		wps_b = wpa_scan_get_vendor_ie_multi(wb, WPS_IE_VENDOR_TYPE);
+		res = wps_ap_priority_compar(wps_a, wps_b);
+		wpabuf_free(wps_a);
+		wpabuf_free(wps_b);
+		if (res)
+			return res;
+	}
+
+	/*
+	 * Do not use current AP security policy as a sorting criteria during
+	 * WPS provisioning step since the AP may get reconfigured at the
+	 * completion of provisioning.
+	 */
+
+	/* all things being equal, use signal level; if signal levels are
+	 * identical, use quality values since some drivers may only report
+	 * that value and leave the signal level zero */
+	if (wb->level == wa->level)
+		return wb->qual - wa->qual;
+	return wb->level - wa->level;
+}
+#endif /* CONFIG_WPS */
+
+
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
@@ -658,6 +706,7 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_scan_results *scan_res;
 	size_t i;
+	int (*compar)(const void *, const void *) = wpa_scan_result_compar;
 
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		scan_res = ieee80211_sta_get_scan_results(wpa_s);
@@ -668,8 +717,16 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 		return NULL;
 	}
 
+#ifdef CONFIG_WPS
+	if (wpas_wps_in_progress(wpa_s)) {
+		wpa_printf(MSG_DEBUG, "WPS: Order scan results with WPS "
+			   "provisioning rules");
+		compar = wpa_scan_result_wps_compar;
+	}
+#endif /* CONFIG_WPS */
+
 	qsort(scan_res->res, scan_res->num, sizeof(struct wpa_scan_res *),
-	      wpa_scan_result_compar);
+	      compar);
 
 	wpa_bss_update_start(wpa_s);
 	for (i = 0; i < scan_res->num; i++)

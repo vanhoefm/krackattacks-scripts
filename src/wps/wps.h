@@ -195,6 +195,8 @@ struct wpabuf * wps_get_msg(struct wps_data *wps, enum wsc_op_code *op_code);
 
 int wps_is_selected_pbc_registrar(const struct wpabuf *msg);
 int wps_is_selected_pin_registrar(const struct wpabuf *msg);
+int wps_ap_priority_compar(const struct wpabuf *wps_a,
+			   const struct wpabuf *wps_b);
 const u8 * wps_get_uuid_e(const struct wpabuf *msg);
 
 struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type);

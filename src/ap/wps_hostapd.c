@@ -782,9 +782,22 @@ static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 {
 	struct hostapd_data *hapd = ctx;
 	struct wpabuf *wps_ie;
+	struct ieee802_11_elems elems;
 
 	if (hapd->wps == NULL)
 		return 0;
+
+	if (ieee802_11_parse_elems(ie, ie_len, &elems, 0) == ParseFailed) {
+		wpa_printf(MSG_DEBUG, "WPS: Could not parse ProbeReq from "
+			   MACSTR, MAC2STR(addr));
+		return 0;
+	}
+
+	if (elems.ssid && elems.ssid_len > 0 &&
+	    (elems.ssid_len != hapd->conf->ssid.ssid_len ||
+	     os_memcmp(elems.ssid, hapd->conf->ssid.ssid, elems.ssid_len) !=
+	     0))
+		return 0; /* Not for us */
 
 	wps_ie = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
 	if (wps_ie == NULL)

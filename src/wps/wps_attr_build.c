@@ -178,6 +178,13 @@ int wps_build_version2(struct wpabuf *msg)
 	wpabuf_put_be16(msg, ATTR_VERSION2);
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, WPS_VERSION);
+#ifdef CONFIG_WPS_EXTENSIBILITY_TESTING
+	wpa_printf(MSG_DEBUG, "WPS:  * Extensibility Testing - extra "
+		   "attribute";
+	wpabuf_put_be16(msg, ATTR_EXTENSIBILITY_TEST);
+	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, 42);
+#endif /* CONFIG_WPS_EXTENSIBILITY_TESTING */
 	return 0;
 }
 

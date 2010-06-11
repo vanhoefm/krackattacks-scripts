@@ -15,7 +15,11 @@
 #ifndef WPS_DEFS_H
 #define WPS_DEFS_H
 
+#ifdef CONFIG_WPS_EXTENSIBILITY_TESTING
+#define WPS_VERSION 0x57
+#else /* CONFIG_WPS_EXTENSIBILITY_TESTING */
 #define WPS_VERSION 0x20
+#endif /* CONFIG_WPS_EXTENSIBILITY_TESTING */
 
 /* Diffie-Hellman 1536-bit MODP Group; RFC 3526, Group 5 */
 #define WPS_DH_GROUP 5
@@ -130,7 +134,8 @@ enum wps_attribute {
 	ATTR_VERSION2 = 0x1067,
 	ATTR_REQUEST_TO_ENROLL = 0x1068,
 	ATTR_AUTHORIZED_MACS = 0x1069,
-	ATTR_REQUESTED_DEV_TYPE = 0x106a
+	ATTR_REQUESTED_DEV_TYPE = 0x106a,
+	ATTR_EXTENSIBILITY_TEST = 0x10fa /* _NOT_ defined in the spec */
 };
 
 /* Device Password ID */

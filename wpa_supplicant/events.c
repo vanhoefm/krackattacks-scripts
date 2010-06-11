@@ -440,10 +440,12 @@ wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
 		rsn_ie_len = ie ? ie[1] : 0;
 
 		wpa_printf(MSG_DEBUG, "%d: " MACSTR " ssid='%s' "
-			   "wpa_ie_len=%u rsn_ie_len=%u caps=0x%x",
+			   "wpa_ie_len=%u rsn_ie_len=%u caps=0x%x level=%d%s",
 			   (int) i, MAC2STR(bss->bssid),
 			   wpa_ssid_txt(ssid_, ssid_len),
-			   wpa_ie_len, rsn_ie_len, bss->caps);
+			   wpa_ie_len, rsn_ie_len, bss->caps, bss->level,
+			   wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE) ?
+			   " wps" : "");
 
 		e = wpa_blacklist_get(wpa_s, bss->bssid);
 		if (e && e->count > 1) {

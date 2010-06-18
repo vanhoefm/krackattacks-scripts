@@ -174,6 +174,7 @@ int wps_build_version(struct wpabuf *msg)
 
 int wps_build_version2(struct wpabuf *msg)
 {
+#ifdef CONFIG_WPS2
 	wpa_printf(MSG_DEBUG, "WPS:  * Version2 (0x%x)", WPS_VERSION);
 	wpabuf_put_be16(msg, ATTR_VERSION2);
 	wpabuf_put_be16(msg, 1);
@@ -185,6 +186,7 @@ int wps_build_version2(struct wpabuf *msg)
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, 42);
 #endif /* CONFIG_WPS_EXTENSIBILITY_TESTING */
+#endif /* CONFIG_WPS2 */
 	return 0;
 }
 
@@ -349,10 +351,12 @@ int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 
 int wps_build_req_to_enroll(struct wpabuf *msg)
 {
+#ifdef CONFIG_WPS2
 	wpa_printf(MSG_DEBUG, "WPS:  * Request to Enroll (1)");
 	wpabuf_put_be16(msg, ATTR_REQUEST_TO_ENROLL);
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, 1);
+#endif /* CONFIG_WPS2 */
 	return 0;
 }
 

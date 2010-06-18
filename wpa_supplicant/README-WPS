@@ -62,6 +62,7 @@ configuration that includes WPS support and Linux wireless extensions
 
 CONFIG_DRIVER_WEXT=y
 CONFIG_WPS=y
+CONFIG_WPS2=y
 
 
 WPS needs the Universally Unique IDentifier (UUID; see RFC 4122) for

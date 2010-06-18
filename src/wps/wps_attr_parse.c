@@ -34,6 +34,7 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->version = pos;
 		break;
+#ifdef CONFIG_WPS2
 	case ATTR_VERSION2:
 		if (len != 1) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Version2 length "
@@ -42,6 +43,7 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->version2 = pos;
 		break;
+#endif /* CONFIG_WPS2 */
 	case ATTR_MSG_TYPE:
 		if (len != 1) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Message Type "
@@ -409,6 +411,7 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->ap_setup_locked = pos;
 		break;
+#ifdef CONFIG_WPS2
 	case ATTR_SETTINGS_DELAY_TIME:
 		if (len != 1) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Settings Delay "
@@ -452,6 +455,7 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->req_dev_type[attr->num_req_dev_type] = pos;
 		attr->num_req_dev_type++;
 		break;
+#endif /* CONFIG_WPS2 */
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported attribute type 0x%x "
 			   "len=%u", type, len);

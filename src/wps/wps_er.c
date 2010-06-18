@@ -1351,9 +1351,11 @@ static int wps_er_build_sel_reg_config_methods(struct wpabuf *msg,
 
 static int wps_er_build_uuid_r(struct wpabuf *msg, const u8 *uuid_r)
 {
+#ifdef CONFIG_WPS2
 	wpabuf_put_be16(msg, ATTR_UUID_R);
 	wpabuf_put_be16(msg, WPS_UUID_LEN);
 	wpabuf_put_data(msg, uuid_r, WPS_UUID_LEN);
+#endif /* CONFIG_WPS2 */
 	return 0;
 }
 

@@ -698,6 +698,7 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 #endif /* CONFIG_WPS_STRICT */
 	}
 
+#ifdef CONFIG_WPS2
 	if (!(wps->cred.encr_type &
 	      (WPS_ENCR_NONE | WPS_ENCR_TKIP | WPS_ENCR_AES))) {
 		if (wps->cred.encr_type & WPS_ENCR_WEP) {
@@ -710,6 +711,7 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 			   "invalid encr_type 0x%x", wps->cred.encr_type);
 		return -1;
 	}
+#endif /* CONFIG_WPS2 */
 
 	if (wps->wps->cred_cb) {
 		wps->cred.cred_attr = cred - 4;
@@ -796,6 +798,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 #endif /* CONFIG_WPS_STRICT */
 	}
 
+#ifdef CONFIG_WPS2
 	if (!(cred.encr_type & (WPS_ENCR_NONE | WPS_ENCR_TKIP | WPS_ENCR_AES)))
 	{
 		if (cred.encr_type & WPS_ENCR_WEP) {
@@ -808,6 +811,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 			   "invalid encr_type 0x%x", cred.encr_type);
 		return -1;
 	}
+#endif /* CONFIG_WPS2 */
 
 #ifdef CONFIG_WPS_STRICT
 	if (wps2) {
@@ -822,6 +826,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 	}
 #endif /* CONFIG_WPS_STRICT */
 
+#ifdef CONFIG_WPS2
 	if ((cred.encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) == WPS_ENCR_TKIP)
 	{
 		wpa_printf(MSG_DEBUG, "WPS: Upgrade encr_type TKIP -> "
@@ -835,6 +840,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 			   "WPAPSK+WPA2PSK");
 		cred.auth_type |= WPS_AUTH_WPA2PSK;
 	}
+#endif /* CONFIG_WPS2 */
 
 	if (wps->wps->cred_cb) {
 		cred.cred_attr = wpabuf_head(attrs);

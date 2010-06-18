@@ -609,7 +609,9 @@ u16 wps_config_methods_str2bin(const char *str)
 	if (str == NULL) {
 		/* Default to enabling methods based on build configuration */
 		methods |= WPS_CONFIG_DISPLAY | WPS_CONFIG_KEYPAD;
+#ifdef CONFIG_WPS2
 		methods |= WPS_CONFIG_VIRT_DISPLAY;
+#endif /* CONFIG_WPS2 */
 #ifdef CONFIG_WPS_UFD
 		methods |= WPS_CONFIG_USBA;
 #endif /* CONFIG_WPS_UFD */
@@ -635,6 +637,7 @@ u16 wps_config_methods_str2bin(const char *str)
 			methods |= WPS_CONFIG_PUSHBUTTON;
 		if (os_strstr(str, "keypad"))
 			methods |= WPS_CONFIG_KEYPAD;
+#ifdef CONFIG_WPS2
 		if (os_strstr(str, "virtual_display"))
 			methods |= WPS_CONFIG_VIRT_DISPLAY;
 		if (os_strstr(str, "physical_display"))
@@ -643,6 +646,7 @@ u16 wps_config_methods_str2bin(const char *str)
 			methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
 		if (os_strstr(str, "physical_push_button"))
 			methods |= WPS_CONFIG_PHY_PUSHBUTTON;
+#endif /* CONFIG_WPS2 */
 	}
 
 	return methods;

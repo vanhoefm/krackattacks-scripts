@@ -437,12 +437,14 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 
 	if (pbc) {
 		methods = WPS_CONFIG_PUSHBUTTON;
+#ifdef CONFIG_WPS2
 		/*
 		 * TODO: At least in theory, should figure out whether this
 		 * Probe Request was triggered with physical or virtual
 		 * pushbutton.
 		 */
 		methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
+#endif /* CONFIG_WPS2 */
 	} else {
 		/*
 		 * TODO: At least in theory, should figure out whether this
@@ -450,7 +452,9 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 		 * display.
 		 */
 		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
+#ifdef CONFIG_WPS2
 			WPS_CONFIG_VIRT_DISPLAY |
+#endif /* CONFIG_WPS2 */
 			WPS_CONFIG_KEYPAD;
 #ifdef CONFIG_WPS_UFD
 		methods |= WPS_CONFIG_USBA;
@@ -470,13 +474,18 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_config_error(ie, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
 				      DEV_PW_DEFAULT) ||
+#ifdef CONFIG_WPS2
 	    wps_build_version2(ie) ||
 	    wps_build_manufacturer(dev, ie) ||
 	    wps_build_model_name(dev, ie) ||
 	    wps_build_model_number(dev, ie) ||
 	    wps_build_dev_name(dev, ie) ||
 	    (req_type == WPS_REQ_ENROLLEE &&
-	     wps_build_req_to_enroll(ie))) {
+	     wps_build_req_to_enroll(ie))
+#else /* CONFIG_WPS2 */
+	    0
+#endif /* CONFIG_WPS2 */
+		) {
 		wpabuf_free(ie);
 		return NULL;
 	}

@@ -497,7 +497,7 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 	 * driver uses a separate interface for that purpose. However, some
 	 * Action frames are actually sent within a P2P Group and when that is
 	 * the case, we need to follow power saving (e.g., GO buffering the
-	 * frame for a client in PS mode or a client following the adverised
+	 * frame for a client in PS mode or a client following the advertised
 	 * NoA from its GO). To make that easier for the driver, select the
 	 * correct group interface here.
 	 */
@@ -512,6 +512,7 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 			if (os_memcmp(wpa_s->pending_action_src,
 				      iface->own_addr, ETH_ALEN) == 0)
 				break;
+			iface = iface->next;
 		}
 		if (iface) {
 			wpa_printf(MSG_DEBUG, "P2P: Use group interface %s "

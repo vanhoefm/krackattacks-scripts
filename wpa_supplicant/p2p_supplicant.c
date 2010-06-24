@@ -487,7 +487,9 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 					   "driver to remain on channel (%u "
 					   "MHz) for Action Frame TX",
 					   wpa_s->pending_action_freq);
-			}
+			} else
+				wpa_s->roc_waiting_drv_freq =
+					wpa_s->pending_action_freq;
 		}
 		return;
 	}
@@ -622,6 +624,13 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	}
 	wpa_s->pending_action_without_roc = 0;
 
+	if (wpa_s->roc_waiting_drv_freq == freq) {
+		wpa_printf(MSG_DEBUG, "P2P: Already waiting for driver to get "
+			   "to frequency %u MHz; continue waiting to send the "
+			   "Action frame", freq);
+		return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "P2P: Schedule Action frame to be transmitted "
 		   "once the driver gets to the requested channel");
 	if (wait_time > wpa_s->max_remain_on_chan)
@@ -632,6 +641,7 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 			   "Frame TX", freq);
 		return -1;
 	}
+	wpa_s->roc_waiting_drv_freq = freq;
 
 	return 0;
 }
@@ -646,6 +656,7 @@ static void wpas_send_action_done(void *ctx)
 	if (wpa_s->off_channel_freq) {
 		wpa_drv_cancel_remain_on_channel(wpa_s);
 		wpa_s->off_channel_freq = 0;
+		wpa_s->roc_waiting_drv_freq = 0;
 	}
 }
 
@@ -897,6 +908,7 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 	if (wpa_s->off_channel_freq) {
 		wpa_drv_cancel_remain_on_channel(wpa_s);
 		wpa_s->off_channel_freq = 0;
+		wpa_s->roc_waiting_drv_freq = 0;
 	}
 
 	if (res->status) {
@@ -994,6 +1006,7 @@ static int wpas_start_listen(void *ctx, unsigned int freq,
 		wpa_s->pending_listen_freq = 0;
 		return -1;
 	}
+	wpa_s->roc_waiting_drv_freq = freq;
 
 	return 0;
 }
@@ -1005,6 +1018,7 @@ static void wpas_stop_listen(void *ctx)
 	if (wpa_s->off_channel_freq) {
 		wpa_drv_cancel_remain_on_channel(wpa_s);
 		wpa_s->off_channel_freq = 0;
+		wpa_s->roc_waiting_drv_freq = 0;
 	}
 	wpa_drv_probe_req_report(wpa_s, 0);
 }
@@ -2436,6 +2450,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 void wpas_p2p_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 				   unsigned int freq, unsigned int duration)
 {
+	wpa_s->roc_waiting_drv_freq = 0;
 	wpa_s->off_channel_freq = freq;
 	wpas_send_action_cb(wpa_s, NULL);
 	if (wpa_s->off_channel_freq == wpa_s->pending_listen_freq) {

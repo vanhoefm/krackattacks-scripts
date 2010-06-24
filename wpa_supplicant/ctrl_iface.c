@@ -2434,6 +2434,15 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 		return wpa_drv_set_noa(wpa_s, count, start, duration);
 	}
 
+	if (os_strcmp(cmd, "ps") == 0)
+		return wpa_drv_set_p2p_powersave(wpa_s, atoi(param), -1, -1);
+
+	if (os_strcmp(cmd, "oppps") == 0)
+		return wpa_drv_set_p2p_powersave(wpa_s, -1, atoi(param), -1);
+
+	if (os_strcmp(cmd, "ctwindow") == 0)
+		return wpa_drv_set_p2p_powersave(wpa_s, -1, -1, atoi(param));
+
 	if (os_strcmp(cmd, "disabled") == 0) {
 		wpa_s->global->p2p_disabled = atoi(param);
 		wpa_printf(MSG_DEBUG, "P2P functionality %s",

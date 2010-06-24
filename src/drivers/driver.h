@@ -1860,6 +1860,17 @@ struct wpa_driver_ops {
 	 * 0.
 	 */
 	int (*set_noa)(void *priv, u8 count, int start, int duration);
+
+	/**
+	 * set_p2p_powersave - Set P2P power save options
+	 * @priv: Private driver interface data
+	 * @legacy_ps: 0 = disable, 1 = enable, 2 = maximum PS, -1 = no change
+	 * @opp_ps: 0 = disable, 1 = enable, -1 = no change
+	 * @ctwindow: 0.. = change (msec), -1 = no change
+	 * Returns: 0 on success or -1 on failure
+	 */
+	int (*set_p2p_powersave)(void *priv, int legacy_ps, int opp_ps,
+				 int ctwindow);
 };
 
 

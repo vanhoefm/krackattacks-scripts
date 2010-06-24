@@ -32,7 +32,16 @@ static void p2p_process_presence_resp(struct p2p_data *p2p, const u8 *da,
 				      const u8 *sa, const u8 *data,
 				      size_t len);
 static void p2p_ext_listen_timeout(void *eloop_ctx, void *timeout_ctx);
+static void p2p_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 
+
+/*
+ * p2p_scan recovery timeout
+ *
+ * Many drivers are using 30 second timeout on scan results. Allow a bit larger
+ * timeout for this to avoid hitting P2P timeout unnecessarily.
+ */
+#define P2P_SCAN_TIMEOUT 35
 
 /**
  * P2P_PEER_EXPIRATION_AGE - Number of seconds after which inactive peer
@@ -647,6 +656,12 @@ static void p2p_search(struct p2p_data *p2p)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Scan request failed");
 		p2p_continue_find(p2p);
+	} else {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Running p2p_scan");
+		p2p->p2p_scan_running = 1;
+		eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
+		eloop_register_timeout(P2P_SCAN_TIMEOUT, 0, p2p_scan_timeout,
+				       p2p, NULL);
 	}
 }
 
@@ -692,14 +707,6 @@ static int p2p_run_after_scan(struct p2p_data *p2p)
 	return 0;
 }
 
-
-/*
- * p2p_scan recovery timeout
- *
- * Many drivers are using 30 second timeout on scan results. Allow a bit larger
- * timeout for this to avoid hitting P2P timeout unnecessarily.
- */
-#define P2P_SCAN_TIMEOUT 35
 
 static void p2p_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {

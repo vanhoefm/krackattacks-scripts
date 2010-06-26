@@ -40,6 +40,7 @@ static struct wpa_supplicant *
 wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 			 int go);
 static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s);
+static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
 
 
@@ -2141,6 +2142,7 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 	wpa_s->pending_action_tx = NULL;
 	eloop_cancel_timeout(wpas_send_action_cb, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s, NULL);
+	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 	wpa_s->p2p_long_listen = 0;
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 	wpas_p2p_remove_pending_group_interface(wpa_s);
@@ -2230,33 +2232,33 @@ static int wpas_p2p_auth_go_neg(struct wpa_supplicant *wpa_s,
 }
 
 
-static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
-			 const u8 *dev_addr, enum p2p_wps_method wps_method)
+static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
+				   struct wpa_scan_results *scan_res)
 {
 	struct wpa_bss *bss;
 
-	wpa_printf(MSG_DEBUG, "P2P: Request to join existing group (iface "
-		   MACSTR " dev " MACSTR ")",
-		   MAC2STR(iface_addr), MAC2STR(dev_addr));
+	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 
-	os_memcpy(wpa_s->pending_join_iface_addr, iface_addr, ETH_ALEN);
-	os_memcpy(wpa_s->pending_join_dev_addr, dev_addr, ETH_ALEN);
-	wpa_s->pending_join_wps_method = wps_method;
+	if (wpa_s->global->p2p_disabled)
+		return;
 
-	/* Make sure we are not running find during connection establishment */
-	wpas_p2p_stop_find(wpa_s);
+	wpa_printf(MSG_DEBUG, "P2P: Scan results received (%d BSS) for join",
+		   scan_res ? (int) scan_res->num : -1);
 
-	bss = wpa_bss_get_bssid(wpa_s, iface_addr);
+	if (scan_res)
+		wpas_p2p_scan_res_handler(wpa_s, scan_res);
+
+	bss = wpa_bss_get_bssid(wpa_s, wpa_s->pending_join_iface_addr);
 	if (bss) {
 		u16 method;
 
 		wpa_printf(MSG_DEBUG, "P2P: Send Provision Discovery Request "
 			   "prior to joining an existing group (GO " MACSTR
 			   " freq=%u MHz)",
-			   MAC2STR(dev_addr), bss->freq);
+			   MAC2STR(wpa_s->pending_join_dev_addr), bss->freq);
 		wpa_s->pending_pd_before_join = 1;
 
-		switch (wps_method) {
+		switch (wpa_s->pending_join_wps_method) {
 		case WPS_PIN_LABEL:
 		case WPS_PIN_DISPLAY:
 			method = WPS_CONFIG_KEYPAD;
@@ -2272,7 +2274,8 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			break;
 		}
 
-		if (p2p_prov_disc_req(wpa_s->global->p2p, dev_addr, method, 1)
+		if (p2p_prov_disc_req(wpa_s->global->p2p,
+				      wpa_s->pending_join_dev_addr, method, 1)
 		    < 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Failed to send Provision "
 				   "Discovery Request before joining an "
@@ -2285,7 +2288,7 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 		 * Actual join operation will be started from the Action frame
 		 * TX status callback.
 		 */
-		return 0;
+		return;
 	}
 
 	wpa_printf(MSG_DEBUG, "P2P: Target BSS/GO not yet in BSS table - "
@@ -2293,7 +2296,83 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 
 start:
 	/* Start join operation immediately */
-	return wpas_p2p_join_start(wpa_s);
+	wpas_p2p_join_start(wpa_s);
+}
+
+
+static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	int ret;
+	struct wpa_driver_scan_params params;
+	struct wpabuf *wps_ie, *ies;
+
+	os_memset(&params, 0, sizeof(params));
+
+	/* P2P Wildcard SSID */
+	params.num_ssids = 1;
+	params.ssids[0].ssid = (u8 *) P2P_WILDCARD_SSID;
+	params.ssids[0].ssid_len = P2P_WILDCARD_SSID_LEN;
+
+	wpa_s->wps->dev.p2p = 1;
+	wps_ie = wps_build_probe_req_ie(0, &wpa_s->wps->dev, wpa_s->wps->uuid,
+					WPS_REQ_ENROLLEE);
+	if (wps_ie == NULL) {
+		wpas_p2p_scan_res_join(wpa_s, NULL);
+		return;
+	}
+
+	ies = wpabuf_alloc(wpabuf_len(wps_ie) + 100);
+	if (ies == NULL) {
+		wpabuf_free(wps_ie);
+		wpas_p2p_scan_res_join(wpa_s, NULL);
+		return;
+	}
+	wpabuf_put_buf(ies, wps_ie);
+	wpabuf_free(wps_ie);
+
+	p2p_scan_ie(wpa_s->global->p2p, ies);
+
+	params.extra_ies = wpabuf_head(ies);
+	params.extra_ies_len = wpabuf_len(ies);
+
+	/*
+	 * Run a scan to update BSS table and start Provision Discovery once
+	 * the new scan results become available.
+	 */
+	wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
+		ret = ieee80211_sta_req_scan(wpa_s, &params);
+	else
+		ret = wpa_drv_scan(wpa_s, &params);
+
+	wpabuf_free(ies);
+
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "P2P: Failed to start scan for join - "
+			   "try again later");
+		eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
+		eloop_register_timeout(1, 0, wpas_p2p_join_scan, wpa_s, NULL);
+	}
+}
+
+
+static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
+			 const u8 *dev_addr, enum p2p_wps_method wps_method)
+{
+	wpa_printf(MSG_DEBUG, "P2P: Request to join existing group (iface "
+		   MACSTR " dev " MACSTR ")",
+		   MAC2STR(iface_addr), MAC2STR(dev_addr));
+
+	os_memcpy(wpa_s->pending_join_iface_addr, iface_addr, ETH_ALEN);
+	os_memcpy(wpa_s->pending_join_dev_addr, dev_addr, ETH_ALEN);
+	wpa_s->pending_join_wps_method = wps_method;
+
+	/* Make sure we are not running find during connection establishment */
+	wpas_p2p_stop_find(wpa_s);
+
+	wpas_p2p_join_scan(wpa_s, NULL);
+	return 0;
 }
 
 
@@ -2818,6 +2897,7 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 void wpas_p2p_stop_find(struct wpa_supplicant *wpa_s)
 {
 	wpa_s->p2p_long_listen = 0;
+	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 
 	p2p_stop_find(wpa_s->global->p2p);
 

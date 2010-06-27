@@ -48,7 +48,7 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 		return -1;
 	}
 	wpa_hexdump_buf_key(MSG_DEBUG, "WPS: DH Private Key", wps->dh_privkey);
-	wpa_hexdump_buf(MSG_DEBUG, "WPS: DH Public Key", pubkey);
+	wpa_hexdump_buf(MSG_DEBUG, "WPS: DH own Public Key", pubkey);
 
 	wpabuf_put_be16(msg, ATTR_PUBLIC_KEY);
 	wpabuf_put_be16(msg, wpabuf_len(pubkey));

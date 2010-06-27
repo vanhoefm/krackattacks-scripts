@@ -1850,7 +1850,7 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	int freq = 0;
 
 	/* <addr> <"pbc" | "pin" | PIN> [label|display|keypad] [persistent]
-	 * [join|auth] [go_intent=<0..15>] [freq=<in MHz>] */
+	 * [join] [auth] [go_intent=<0..15>] [freq=<in MHz>] */
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2451,6 +2451,7 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 			   "disabled" : "enabled");
 		if (wpa_s->global->p2p_disabled) {
 			wpas_p2p_stop_find(wpa_s);
+			os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 			p2p_flush(wpa_s->global->p2p);
 		}
 		return 0;
@@ -2716,6 +2717,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (p2p_ctrl_set(wpa_s, buf + 8) < 0)
 			reply_len = -1;
 	} else if (os_strcmp(buf, "P2P_FLUSH") == 0) {
+		os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 		p2p_flush(wpa_s->global->p2p);
 	} else if (os_strncmp(buf, "P2P_PRESENCE_REQ ", 17) == 0) {
 		if (p2p_ctrl_presence_req(wpa_s, buf + 17) < 0)

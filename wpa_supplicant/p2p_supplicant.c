@@ -41,6 +41,8 @@ wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
 			 int go);
 static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s);
 static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
+static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
+			 const u8 *dev_addr, enum p2p_wps_method wps_method);
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
 
 
@@ -1685,6 +1687,13 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 	if (!persistent_group) {
 		wpa_printf(MSG_DEBUG, "P2P: Invitation from " MACSTR
 			   " to join an active group", MAC2STR(sa));
+		if (!is_zero_ether_addr(wpa_s->p2p_auth_invite) &&
+		    os_memcmp(go_dev_addr, wpa_s->p2p_auth_invite, ETH_ALEN) ==
+		    0) {
+			wpa_printf(MSG_DEBUG, "P2P: Accept previously "
+				   "authorized invitation");
+			goto accept_inv;
+		}
 		/*
 		 * Do not accept the invitation automatically; notify user and
 		 * request approval.
@@ -1731,6 +1740,7 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 			  ETH_ALEN);
 	}
 
+accept_inv:
 	if (wpa_s->current_ssid && wpa_drv_get_bssid(wpa_s, cur_bssid) == 0 &&
 	    wpa_s->assoc_freq) {
 		wpa_printf(MSG_DEBUG, "P2P: Trying to force channel to match "
@@ -1772,6 +1782,9 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 		if (s) {
 			wpas_p2p_group_add_persistent(
 				wpa_s, s, s->mode == WPAS_MODE_P2P_GO, 0);
+		} else {
+			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
+				      wpa_s->p2p_wps_method);
 		}
 		return;
 	}
@@ -2453,6 +2466,13 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	if (join) {
 		u8 iface_addr[ETH_ALEN];
+		if (auth) {
+			wpa_printf(MSG_DEBUG, "P2P: Authorize invitation to "
+				   "connect a running group from " MACSTR,
+				   MAC2STR(peer_addr));
+			os_memcpy(wpa_s->p2p_auth_invite, peer_addr, ETH_ALEN);
+			return ret;
+		}
 		if (p2p_get_interface_addr(wpa_s->global->p2p, peer_addr,
 					   iface_addr) < 0)
 			os_memcpy(iface_addr, peer_addr, ETH_ALEN);

@@ -474,6 +474,7 @@ struct wpa_supplicant {
 	int p2p_long_listen;
 	char p2p_pin[10];
 	int p2p_wps_method;
+	u8 p2p_auth_invite[ETH_ALEN];
 	int p2p_sd_over_ctrl_iface;
 	int p2p_in_provisioning;
 	int pending_invite_ssid_id;

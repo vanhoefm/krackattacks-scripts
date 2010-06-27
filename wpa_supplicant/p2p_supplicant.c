@@ -3099,7 +3099,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 		role = P2P_INVITE_ROLE_ACTIVE_GO;
 		bssid = wpa_s->own_addr;
 		if (go_dev_addr == NULL)
-			go_dev_addr = wpa_s->own_addr;
+			go_dev_addr = wpa_s->parent->own_addr;
 	} else {
 		role = P2P_INVITE_ROLE_CLIENT;
 		if (wpa_s->wpa_state < WPA_ASSOCIATED) {

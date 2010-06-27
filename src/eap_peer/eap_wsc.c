@@ -203,6 +203,10 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		return NULL;
 	}
 
+	pos = os_strstr(phase1, "dev_pw_id=");
+	if (pos && cfg.pin)
+		cfg.dev_pw_id = atoi(pos + 10);
+
 	res = eap_wsc_new_ap_settings(&new_ap_settings, phase1);
 	if (res < 0) {
 		os_free(data);

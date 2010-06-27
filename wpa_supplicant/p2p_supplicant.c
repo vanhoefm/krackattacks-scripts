@@ -683,9 +683,13 @@ static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 	if (res->wps_method == WPS_PBC)
 		wpas_wps_start_pbc(wpa_s, NULL /* res->peer_interface_addr */,
 				   1);
-	else
+	else {
+		u16 dev_pw_id = DEV_PW_DEFAULT;
+		if (wpa_s->p2p_wps_method == WPS_PIN_KEYPAD)
+			dev_pw_id = DEV_PW_REGISTRAR_SPECIFIED;
 		wpas_wps_start_pin(wpa_s, res->peer_interface_addr,
-				   wpa_s->p2p_pin, 1);
+				   wpa_s->p2p_pin, 1, dev_pw_id);
+	}
 }
 
 
@@ -928,9 +932,11 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 			wpas_p2p_remove_pending_group_interface(wpa_s);
 			return;
 		}
-		if (group_wpa_s != wpa_s)
+		if (group_wpa_s != wpa_s) {
 			os_memcpy(group_wpa_s->p2p_pin, wpa_s->p2p_pin,
 				  sizeof(group_wpa_s->p2p_pin));
+			group_wpa_s->p2p_wps_method = wpa_s->p2p_wps_method;
+		}
 		os_memset(wpa_s->pending_interface_addr, 0, ETH_ALEN);
 		wpa_s->pending_interface_name[0] = '\0';
 		group_wpa_s->p2p_in_provisioning = 1;
@@ -2384,9 +2390,11 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	group = wpas_p2p_get_group_iface(wpa_s, 0, 0);
 	if (group == NULL)
 		return -1;
-	if (group != wpa_s)
+	if (group != wpa_s) {
 		os_memcpy(group->p2p_pin, wpa_s->p2p_pin,
 			  sizeof(group->p2p_pin));
+		group->p2p_wps_method = wpa_s->p2p_wps_method;
+	}
 
 	group->p2p_in_provisioning = 1;
 
@@ -2429,6 +2437,8 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	if (!auth)
 		wpa_s->p2p_long_listen = 0;
+
+	wpa_s->p2p_wps_method = wps_method;
 
 	if (pin)
 		os_strlcpy(wpa_s->p2p_pin, pin, sizeof(wpa_s->p2p_pin));

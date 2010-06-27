@@ -216,7 +216,8 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_AP */
 
 	if (pin) {
-		ret = wpas_wps_start_pin(wpa_s, _bssid, pin, 0);
+		ret = wpas_wps_start_pin(wpa_s, _bssid, pin, 0,
+					 DEV_PW_DEFAULT);
 		if (ret < 0)
 			return -1;
 		ret = os_snprintf(buf, buflen, "%s", pin);
@@ -225,7 +226,7 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 		return ret;
 	}
 
-	ret = wpas_wps_start_pin(wpa_s, _bssid, NULL, 0);
+	ret = wpas_wps_start_pin(wpa_s, _bssid, NULL, 0, DEV_PW_DEFAULT);
 	if (ret < 0)
 		return -1;
 

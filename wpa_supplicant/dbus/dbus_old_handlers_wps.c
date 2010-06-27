@@ -94,9 +94,11 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 	}
 
 	if (os_strlen(pin) > 0)
-		ret = wpas_wps_start_pin(wpa_s, _bssid, pin, 0);
+		ret = wpas_wps_start_pin(wpa_s, _bssid, pin, 0,
+					 DEV_PW_DEFAULT);
 	else
-		ret = wpas_wps_start_pin(wpa_s, _bssid, NULL, 0);
+		ret = wpas_wps_start_pin(wpa_s, _bssid, NULL, 0,
+					 DEV_PW_DEFAULT);
 
 	if (ret < 0) {
 		return dbus_message_new_error(message,

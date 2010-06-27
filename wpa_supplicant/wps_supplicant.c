@@ -702,7 +702,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 
 
 int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
-		       const char *pin, int p2p_group)
+		       const char *pin, int p2p_group, u16 dev_pw_id)
 {
 	struct wpa_ssid *ssid;
 	char val[128];
@@ -715,10 +715,12 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
 	if (pin)
-		os_snprintf(val, sizeof(val), "\"pin=%s\"", pin);
+		os_snprintf(val, sizeof(val), "\"pin=%s dev_pw_id=%u\"",
+			    pin, dev_pw_id);
 	else {
 		rpin = wps_generate_pin();
-		os_snprintf(val, sizeof(val), "\"pin=%08d\"", rpin);
+		os_snprintf(val, sizeof(val), "\"pin=%08d dev_pw_id=%u\"",
+			    rpin, dev_pw_id);
 	}
 	wpa_config_set(ssid, "phase1", val, 0);
 	if (wpa_s->wps_fragment_size)

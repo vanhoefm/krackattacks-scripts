@@ -159,6 +159,11 @@ struct wps_config {
 	 * struct wpa_context::psk.
 	 */
 	int use_psk_key;
+
+	/**
+	 * dev_pw_id - Device Password ID for Enrollee when PIN is used
+	 */
+	u16 dev_pw_id;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);

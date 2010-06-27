@@ -434,7 +434,7 @@ void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
 	if (DH_generate_key(dh) != 1)
 		goto err;
 
-	publen = BN_num_bytes(dh->p);
+	publen = BN_num_bytes(dh->pub_key);
 	pubkey = wpabuf_alloc(publen);
 	if (pubkey == NULL)
 		goto err;

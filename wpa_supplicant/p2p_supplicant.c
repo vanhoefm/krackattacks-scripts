@@ -1166,7 +1166,7 @@ static void wpas_sd_req_bonjour(struct wpa_supplicant *wpa_s,
 			   "available");
 
 		/* Status Code */
-		wpabuf_put_u8(resp, P2P_SD_QUERY_DATA_NOT_AVAILABLE);
+		wpabuf_put_u8(resp, P2P_SD_REQUESTED_INFO_NOT_AVAILABLE);
 		/* Response Data: empty */
 		WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(resp, 0) - len_pos -
 			     2);
@@ -1296,7 +1296,7 @@ static void wpas_sd_req_upnp(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Requested UPnP service not "
 			   "available");
 		/* Status Code */
-		wpabuf_put_u8(resp, P2P_SD_QUERY_DATA_NOT_AVAILABLE);
+		wpabuf_put_u8(resp, P2P_SD_REQUESTED_INFO_NOT_AVAILABLE);
 		/* Response Data: empty */
 	}
 

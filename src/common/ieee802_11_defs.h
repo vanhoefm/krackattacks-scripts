@@ -736,7 +736,7 @@ enum p2p_service_protocol_type {
 enum p2p_sd_status {
 	P2P_SD_SUCCESS = 0,
 	P2P_SD_PROTO_NOT_AVAILABLE = 1,
-	P2P_SD_QUERY_DATA_NOT_AVAILABLE = 2,
+	P2P_SD_REQUESTED_INFO_NOT_AVAILABLE = 2,
 	P2P_SD_BAD_REQUEST = 3
 };
 

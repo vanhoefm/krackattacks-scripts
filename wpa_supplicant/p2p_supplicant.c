@@ -1830,6 +1830,9 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid)
 			"status=%d ", status);
 	}
 
+	if (wpa_s->pending_invite_ssid_id == -1)
+		return; /* Invitation to active group */
+
 	if (status != P2P_SC_SUCCESS) {
 		wpas_p2p_remove_pending_group_interface(wpa_s);
 		return;

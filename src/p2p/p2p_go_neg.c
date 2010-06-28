@@ -54,9 +54,9 @@ int p2p_peer_channels_check(struct p2p_data *p2p, struct p2p_channels *own,
 		return -1;
 	os_memcpy(dev->country, pos, 3);
 	wpa_hexdump_ascii(MSG_DEBUG, "P2P: Peer country", pos, 3);
-	if (pos[3] != 0x04 && os_memcmp(pos, p2p->cfg->country, 2) != 0) {
+	if (pos[2] != 0x04 && os_memcmp(pos, p2p->cfg->country, 2) != 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_INFO,
-			"P2P: Mismatching country (ours=%c%c peer's=%c%c",
+			"P2P: Mismatching country (ours=%c%c peer's=%c%c)",
 			p2p->cfg->country[0], p2p->cfg->country[1],
 			pos[0], pos[1]);
 		return -1;

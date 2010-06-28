@@ -1590,6 +1590,12 @@ static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 	/* GAS Initial Response */
 	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0b", 2) < 0)
 		return -1;
+	/* GAS Comeback Request */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0c", 2) < 0)
+		return -1;
+	/* GAS Comeback Response */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0d", 2) < 0)
+		return -1;
 	/* P2P Public Action */
 	if (nl80211_register_action_frame(drv,
 					  (u8 *) "\x04\x09\x50\x6f\x9a\x09",

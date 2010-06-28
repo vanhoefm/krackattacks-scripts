@@ -1413,14 +1413,23 @@ void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 
 	wpa_hexdump(MSG_MSGDUMP, "P2P: Service Discovery Response TLVs",
 		    tlvs, tlvs_len);
-	buf_len = 2 * tlvs_len + 1;
-	buf = os_malloc(buf_len);
-	if (buf) {
-		wpa_snprintf_hex(buf, buf_len, tlvs, tlvs_len);
-		wpa_msg_ctrl(wpa_s, MSG_INFO, P2P_EVENT_SERV_DISC_RESP MACSTR
-			     " %u %s",
-			     MAC2STR(sa), update_indic, buf);
-		os_free(buf);
+	if (tlvs_len > 1500) {
+		/* TODO: better way for handling this */
+		wpa_msg_ctrl(wpa_s, MSG_INFO,
+			     P2P_EVENT_SERV_DISC_RESP MACSTR
+			     " %u <long response: %u bytes>",
+			     MAC2STR(sa), update_indic,
+			     (unsigned int) tlvs_len);
+	} else {
+		buf_len = 2 * tlvs_len + 1;
+		buf = os_malloc(buf_len);
+		if (buf) {
+			wpa_snprintf_hex(buf, buf_len, tlvs, tlvs_len);
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     P2P_EVENT_SERV_DISC_RESP MACSTR " %u %s",
+				     MAC2STR(sa), update_indic, buf);
+			os_free(buf);
+		}
 	}
 
 	while (pos < end) {

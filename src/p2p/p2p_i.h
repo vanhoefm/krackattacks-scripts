@@ -314,6 +314,14 @@ struct p2p_data {
 	 */
 	u16 srv_update_indic;
 
+	struct wpabuf *sd_resp; /* Fragmented SD response */
+	u8 sd_resp_addr[ETH_ALEN];
+	u8 sd_resp_dialog_token;
+	size_t sd_resp_pos; /* Offset in sd_resp */
+	u8 sd_frag_id;
+
+	struct wpabuf *sd_rx_resp; /* Reassembled SD response */
+
 	/* P2P Invitation data */
 	enum p2p_invite_role inv_role;
 	u8 inv_bssid[ETH_ALEN];
@@ -509,7 +517,11 @@ void p2p_free_sd_queries(struct p2p_data *p2p);
 void p2p_rx_gas_initial_req(struct p2p_data *p2p, const u8 *sa,
 			    const u8 *data, size_t len, int rx_freq);
 void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
-			     const u8 *data, size_t len);
+			     const u8 *data, size_t len, int rx_freq);
+void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
+			     const u8 *data, size_t len, int rx_freq);
+void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
+			      const u8 *data, size_t len, int rx_freq);
 int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev);
 
 /* p2p_go_neg.c */

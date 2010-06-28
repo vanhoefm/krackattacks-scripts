@@ -1180,7 +1180,13 @@ void p2p_rx_action_public(struct p2p_data *p2p, const u8 *da, const u8 *sa,
 		p2p_rx_gas_initial_req(p2p, sa, data + 1, len - 1, freq);
 		break;
 	case WLAN_PA_GAS_INITIAL_RESP:
-		p2p_rx_gas_initial_resp(p2p, sa, data + 1, len - 1);
+		p2p_rx_gas_initial_resp(p2p, sa, data + 1, len - 1, freq);
+		break;
+	case WLAN_PA_GAS_COMEBACK_REQ:
+		p2p_rx_gas_comeback_req(p2p, sa, data + 1, len - 1, freq);
+		break;
+	case WLAN_PA_GAS_COMEBACK_RESP:
+		p2p_rx_gas_comeback_resp(p2p, sa, data + 1, len - 1, freq);
 		break;
 	}
 }
@@ -1772,6 +1778,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	p2p_flush(p2p);
 	os_free(p2p->cfg->dev_name);
 	os_free(p2p->groups);
+	wpabuf_free(p2p->sd_resp);
 	os_free(p2p);
 }
 

@@ -1213,4 +1213,6 @@ int p2p_set_ssid_postfix(struct p2p_data *p2p, const u8 *postfix, size_t len);
 int p2p_get_interface_addr(struct p2p_data *p2p, const u8 *dev_addr,
 			   u8 *iface_addr);
 
+void p2p_set_peer_filter(struct p2p_data *p2p, const u8 *addr);
+
 #endif /* P2P_H */

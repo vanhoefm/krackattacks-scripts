@@ -448,6 +448,14 @@ static int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 		return -1;
 	}
 
+	if (!is_zero_ether_addr(p2p->peer_filter) &&
+	    os_memcmp(p2p_dev_addr, p2p->peer_filter, ETH_ALEN) != 0) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Do not add peer "
+			"filter for " MACSTR " due to peer filter",
+			MAC2STR(p2p_dev_addr));
+		return 0;
+	}
+
 	dev = p2p_create_device(p2p, p2p_dev_addr);
 	if (dev == NULL) {
 		p2p_parse_free(&msg);
@@ -2911,4 +2919,16 @@ int p2p_get_interface_addr(struct p2p_data *p2p, const u8 *dev_addr,
 		return -1;
 	os_memcpy(iface_addr, dev->interface_addr, ETH_ALEN);
 	return 0;
+}
+
+
+void p2p_set_peer_filter(struct p2p_data *p2p, const u8 *addr)
+{
+	os_memcpy(p2p->peer_filter, addr, ETH_ALEN);
+	if (is_zero_ether_addr(p2p->peer_filter))
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Disable peer "
+			"filter");
+	else
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Enable peer "
+			"filter for " MACSTR, MAC2STR(p2p->peer_filter));
 }

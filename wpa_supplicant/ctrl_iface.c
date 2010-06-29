@@ -2462,6 +2462,14 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 		return 0;
 	}
 
+	if (os_strcmp(cmd, "peer_filter") == 0) {
+		u8 addr[ETH_ALEN];
+		if (hwaddr_aton(param, addr))
+			return -1;
+		p2p_set_peer_filter(wpa_s->global->p2p, addr);
+		return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",
 		   cmd);
 

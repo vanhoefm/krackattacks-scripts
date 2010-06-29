@@ -485,6 +485,7 @@ struct wpa_supplicant {
 	u8 pending_join_dev_addr[ETH_ALEN];
 	int pending_join_wps_method;
 	unsigned int roc_waiting_drv_freq;
+	int force_long_sd;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

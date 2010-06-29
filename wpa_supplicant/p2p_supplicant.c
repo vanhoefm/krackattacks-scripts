@@ -1359,6 +1359,15 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 		wpa_hexdump(MSG_MSGDUMP, "P2P: Query Data",
 			    pos, tlv_end - pos);
 
+
+		if (wpa_s->force_long_sd) {
+			wpa_printf(MSG_DEBUG, "P2P: SD test - force long "
+				   "response");
+			wpas_sd_all_bonjour(wpa_s, resp, srv_trans_id);
+			wpas_sd_all_upnp(wpa_s, resp, srv_trans_id);
+			goto done;
+		}
+
 		switch (srv_proto) {
 		case P2P_SERV_ALL_SERVICES:
 			wpa_printf(MSG_DEBUG, "P2P: Service Discovery Request "
@@ -1394,6 +1403,7 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 		pos = tlv_end;
 	}
 
+done:
 	wpas_p2p_sd_response(wpa_s, freq, sa, dialog_token, resp);
 
 	wpabuf_free(resp);

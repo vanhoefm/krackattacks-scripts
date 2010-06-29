@@ -43,6 +43,8 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 		p2p_buf_add_config_timeout(buf, 0, 0);
 	else
 		p2p_buf_add_config_timeout(buf, 100, 20);
+	p2p_buf_add_invitation_flags(buf, p2p->inv_persistent ?
+				     P2P_INVITATION_FLAGS_TYPE : 0);
 	p2p_buf_add_operating_channel(buf, p2p->cfg->country,
 				      p2p->op_reg_class, p2p->op_channel);
 	if (p2p->inv_bssid_set)
@@ -55,8 +57,7 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 	else
 		dev_addr = p2p->cfg->dev_addr;
 	p2p_buf_add_group_id(buf, dev_addr, p2p->inv_ssid, p2p->inv_ssid_len);
-	p2p_buf_add_invitation_flags(buf, p2p->inv_persistent ?
-				     P2P_INVITATION_FLAGS_TYPE : 0);
+	p2p_buf_add_device_info(buf, p2p, peer);
 	p2p_buf_update_ie_hdr(buf, len);
 
 	return buf;

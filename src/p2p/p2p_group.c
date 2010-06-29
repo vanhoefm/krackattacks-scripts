@@ -198,16 +198,14 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 	/* P2P Device Info */
 	p2p_buf_add_device_info(ie, group->p2p, NULL);
 
-	if (group->members) {
-		/* P2P Group Info */
-		group_info = wpabuf_put(ie, 0);
-		wpabuf_put_u8(ie, P2P_ATTR_GROUP_INFO);
-		wpabuf_put_le16(ie, 0); /* Length to be filled */
-		for (m = group->members; m; m = m->next)
-			p2p_client_info(ie, m);
-		WPA_PUT_LE16(group_info + 1,
-			     (u8 *) wpabuf_put(ie, 0) - group_info - 3);
-	}
+	/* P2P Group Info */
+	group_info = wpabuf_put(ie, 0);
+	wpabuf_put_u8(ie, P2P_ATTR_GROUP_INFO);
+	wpabuf_put_le16(ie, 0); /* Length to be filled */
+	for (m = group->members; m; m = m->next)
+		p2p_client_info(ie, m);
+	WPA_PUT_LE16(group_info + 1,
+		     (u8 *) wpabuf_put(ie, 0) - group_info - 3);
 
 	p2p_buf_update_ie_hdr(ie, len);
 	return ie;

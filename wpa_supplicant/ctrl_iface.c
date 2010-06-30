@@ -606,6 +606,12 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 			return pos - buf;
 		pos += ret;
 	}
+
+	ret = os_snprintf(pos, end - pos, "address=" MACSTR "\n",
+			  MAC2STR(wpa_s->own_addr));
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
 #endif /* CONFIG_P2P */
 
 	if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||

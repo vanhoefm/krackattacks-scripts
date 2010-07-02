@@ -401,11 +401,18 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting "
 				"GO Negotiation with previously authorized "
 				"peer");
-			/* TODO: check if force_freq is needed */
-			p2p->op_reg_class = p2p->cfg->op_reg_class;
-			p2p->op_channel = p2p->cfg->op_channel;
-			os_memcpy(&p2p->channels, &p2p->cfg->channels,
-				  sizeof(struct p2p_channels));
+			if (!(dev->flags & P2P_DEV_FORCE_FREQ)) {
+				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+					"P2P: Use default channel settings");
+				p2p->op_reg_class = p2p->cfg->op_reg_class;
+				p2p->op_channel = p2p->cfg->op_channel;
+				os_memcpy(&p2p->channels, &p2p->cfg->channels,
+					  sizeof(struct p2p_channels));
+			} else {
+				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+					"P2P: Use previously configured "
+					"forced channel settings");
+			}
 		}
 
 		dev->flags &= ~P2P_DEV_NOT_YET_READY;

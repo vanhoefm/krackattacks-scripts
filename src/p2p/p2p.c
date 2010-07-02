@@ -881,6 +881,12 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 
 	dev->wps_method = wps_method;
 	dev->status = P2P_SC_SUCCESS;
+
+	if (force_freq)
+		dev->flags |= P2P_DEV_FORCE_FREQ;
+	else
+		dev->flags &= ~P2P_DEV_FORCE_FREQ;
+
 	if (p2p->p2p_scan_running) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: p2p_scan running - delay connect send");
@@ -954,6 +960,11 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 
 	dev->wps_method = wps_method;
 	dev->status = P2P_SC_SUCCESS;
+
+	if (force_freq)
+		dev->flags |= P2P_DEV_FORCE_FREQ;
+	else
+		dev->flags &= ~P2P_DEV_FORCE_FREQ;
 
 	return 0;
 }
@@ -2457,7 +2468,7 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  "country=%c%c\n"
 			  "oper_freq=%d\n"
 			  "req_config_methods=0x%x\n"
-			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
+			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			  "status=%d\n"
 			  "wait_count=%u\n"
 			  "invitation_reqs=%u\n",
@@ -2506,6 +2517,8 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  "[WAIT_GO_NEG_CONFIRM]" : "",
 			  dev->flags & P2P_DEV_GROUP_CLIENT_ONLY ?
 			  "[GROUP_CLIENT_ONLY]" : "",
+			  dev->flags & P2P_DEV_FORCE_FREQ ?
+			  "[FORCE_FREQ" : "",
 			  dev->status,
 			  dev->wait_count,
 			  dev->invitation_reqs);

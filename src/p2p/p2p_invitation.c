@@ -39,7 +39,7 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 				      peer->dialog_token);
 
 	len = p2p_buf_add_ie_hdr(buf);
-	if (p2p->inv_role == P2P_INVITE_ROLE_ACTIVE_GO)
+	if (p2p->inv_role == P2P_INVITE_ROLE_ACTIVE_GO || !p2p->inv_persistent)
 		p2p_buf_add_config_timeout(buf, 0, 0);
 	else
 		p2p_buf_add_config_timeout(buf, 100, 20);

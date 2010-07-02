@@ -1707,8 +1707,9 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 		wpa_printf(MSG_DEBUG, "P2P: Invitation from " MACSTR
 			   " to join an active group", MAC2STR(sa));
 		if (!is_zero_ether_addr(wpa_s->p2p_auth_invite) &&
-		    os_memcmp(go_dev_addr, wpa_s->p2p_auth_invite, ETH_ALEN) ==
-		    0) {
+		    (os_memcmp(go_dev_addr, wpa_s->p2p_auth_invite, ETH_ALEN)
+		     == 0 ||
+		     os_memcmp(sa, wpa_s->p2p_auth_invite, ETH_ALEN) == 0)) {
 			wpa_printf(MSG_DEBUG, "P2P: Accept previously "
 				   "authorized invitation");
 			goto accept_inv;

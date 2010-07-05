@@ -17,6 +17,8 @@
 #include "common.h"
 #include "wps_i.h"
 
+#define WPS_WORKAROUNDS
+
 
 static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 			const u8 *pos, u16 len)
@@ -434,6 +436,25 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 			wpa_printf(MSG_DEBUG, "WPS: Attribute overflow");
 			return -1;
 		}
+
+#ifdef WPS_WORKAROUNDS
+		if (type == 0 && len == 0) {
+			/*
+			 * Mac OS X 10.6 seems to be adding 0x00 padding to the
+			 * end of M1. Skip those to avoid interop issues.
+			 */
+			int i;
+			for (i = 0; i < end - pos; i++) {
+				if (pos[i])
+					break;
+			}
+			if (i == end - pos) {
+				wpa_printf(MSG_DEBUG, "WPS: Workaround - skip "
+					   "unexpected message padding");
+				break;
+			}
+		}
+#endif /* WPS_WORKAROUNDS */
 
 		if (wps_set_attr(attr, type, pos, len) < 0)
 			return -1;

@@ -256,8 +256,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 			ieee802_11_print_ssid(ssid_txt, elems.ssid,
 					      elems.ssid_len);
 			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
-				   " for foreign SSID '%s'",
-				   MAC2STR(mgmt->sa), ssid_txt);
+				   " for foreign SSID '%s' (DA " MACSTR ")",
+				   MAC2STR(mgmt->sa), ssid_txt,
+				   MAC2STR(mgmt->da));
 		}
 		return;
 	}
@@ -332,7 +333,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 	os_free(resp);
 
-	wpa_printf(MSG_MSGDUMP, "STA " MACSTR " sent probe request for %s "
+	wpa_printf(MSG_EXCESSIVE, "STA " MACSTR " sent probe request for %s "
 		   "SSID", MAC2STR(mgmt->sa),
 		   elems.ssid_len == 0 ? "broadcast" : "our");
 }

@@ -1689,7 +1689,7 @@ void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		handle_assoc_cb(hapd, mgmt, len, 1, ok);
 		break;
 	case WLAN_FC_STYPE_PROBE_RESP:
-		wpa_printf(MSG_DEBUG, "mgmt::proberesp cb");
+		wpa_printf(MSG_EXCESSIVE, "mgmt::proberesp cb");
 		break;
 	case WLAN_FC_STYPE_DEAUTH:
 		/* ignore */

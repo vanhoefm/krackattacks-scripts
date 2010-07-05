@@ -75,7 +75,7 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 				elems->wmm_tspec_len = elen;
 				break;
 			default:
-				wpa_printf(MSG_MSGDUMP, "unknown WMM "
+				wpa_printf(MSG_EXCESSIVE, "unknown WMM "
 					   "information element ignored "
 					   "(subtype=%d len=%lu)",
 					   pos[4], (unsigned long) elen);
@@ -88,9 +88,9 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			elems->wps_ie_len = elen;
 			break;
 		default:
-			wpa_printf(MSG_MSGDUMP, "Unknown Microsoft "
+			wpa_printf(MSG_EXCESSIVE, "Unknown Microsoft "
 				   "information element ignored "
-				   "(type=%d len=%lu)\n",
+				   "(type=%d len=%lu)",
 				   pos[3], (unsigned long) elen);
 			return -1;
 		}
@@ -103,18 +103,18 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			elems->vendor_ht_cap_len = elen;
 			break;
 		default:
-			wpa_printf(MSG_MSGDUMP, "Unknown Broadcom "
+			wpa_printf(MSG_EXCESSIVE, "Unknown Broadcom "
 				   "information element ignored "
-				   "(type=%d len=%lu)\n",
+				   "(type=%d len=%lu)",
 				   pos[3], (unsigned long) elen);
 			return -1;
 		}
 		break;
 
 	default:
-		wpa_printf(MSG_MSGDUMP, "unknown vendor specific information "
-			   "element ignored (vendor OUI %02x:%02x:%02x "
-			   "len=%lu)",
+		wpa_printf(MSG_EXCESSIVE, "unknown vendor specific "
+			   "information element ignored (vendor OUI "
+			   "%02x:%02x:%02x len=%lu)",
 			   pos[0], pos[1], pos[2], (unsigned long) elen);
 		return -1;
 	}

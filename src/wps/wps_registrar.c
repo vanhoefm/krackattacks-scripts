@@ -2115,6 +2115,23 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 		wps->pbc = 1;
 	}
 
+#ifdef WPS_WORKAROUNDS
+	/*
+	 * It looks like Mac OS X 10.6.3 and 10.6.4 do not like Network Key in
+	 * passphrase format. To avoid interop issues, force PSK format to be
+	 * used.
+	 */
+	if (!wps->use_psk_key &&
+	    wps->peer_dev.manufacturer &&
+	    os_strncmp(wps->peer_dev.manufacturer, "Apple ", 6) == 0 &&
+	    wps->peer_dev.model_name &&
+	    os_strcmp(wps->peer_dev.model_name, "AirPort") == 0) {
+		wpa_printf(MSG_DEBUG, "WPS: Workaround - Force Network Key in "
+			   "PSK format");
+		wps->use_psk_key = 1;
+	}
+#endif /* WPS_WORKAROUNDS */
+
 	wps->state = SEND_M2;
 	return WPS_CONTINUE;
 }

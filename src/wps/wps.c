@@ -488,10 +488,12 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 		return NULL;
 	}
 
+#ifndef CONFIG_WPS2
 	if (dev->p2p && wps_build_dev_name(dev, ie)) {
 		wpabuf_free(ie);
 		return NULL;
 	}
+#endif /* CONFIG_WPS2 */
 
 	return wps_ie_encapsulate(ie);
 }

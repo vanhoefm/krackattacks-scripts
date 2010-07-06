@@ -1386,4 +1386,13 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 		} else
 			os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_NAME) {
+		/* Update pointers to make sure they refer current values */
+		wps->dev.device_name = wpa_s->conf->device_name;
+		wps->dev.manufacturer = wpa_s->conf->manufacturer;
+		wps->dev.model_name = wpa_s->conf->model_name;
+		wps->dev.model_number = wpa_s->conf->model_number;
+		wps->dev.serial_number = wpa_s->conf->serial_number;
+	}
 }

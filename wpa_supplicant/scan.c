@@ -387,7 +387,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	wpa_s->wps->dev.p2p = 1;
 	if (!wps) {
 		wps = 1;
-		req_type = WPS_REQ_ENROLLEE;
+		req_type = WPS_REQ_ENROLLEE_INFO;
 	}
 
 	if (params.freqs == NULL && wpa_s->p2p_in_provisioning &&

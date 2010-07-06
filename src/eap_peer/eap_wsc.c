@@ -226,6 +226,10 @@ static void * eap_wsc_init(struct eap_sm *sm)
 				      cfg.pin, cfg.pin_len, 0);
 	}
 
+	/* Use reduced client timeout for WPS to avoid long wait */
+	if (sm->ClientTimeout > 30)
+		sm->ClientTimeout = 30;
+
 	return data;
 }
 
@@ -381,6 +385,7 @@ static struct wpabuf * eap_wsc_process(struct eap_sm *sm, void *priv,
 	u16 message_length = 0;
 	enum wps_process_res res;
 	struct wpabuf tmpbuf;
+	struct wpabuf *r;
 
 	pos = eap_hdr_validate(EAP_VENDOR_WFA, EAP_VENDOR_TYPE_WSC, reqData,
 			       &len);
@@ -506,7 +511,13 @@ send_msg:
 	}
 
 	eap_wsc_state(data, MESG);
-	return eap_wsc_build_msg(data, ret, id);
+	r = eap_wsc_build_msg(data, ret, id);
+	if (data->state == FAIL && ret->methodState == METHOD_DONE) {
+		/* Use reduced client timeout for WPS to avoid long wait */
+		if (sm->ClientTimeout > 2)
+			sm->ClientTimeout = 2;
+	}
+	return r;
 }
 
 

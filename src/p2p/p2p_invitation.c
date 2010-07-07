@@ -405,8 +405,9 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	struct p2p_device *dev;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Request to invite peer " MACSTR " role=%d",
-		MAC2STR(peer), role);
+		"P2P: Request to invite peer " MACSTR " role=%d persistent=%d "
+		"force_freq=%u",
+		MAC2STR(peer), role, persistent_group, force_freq);
 	if (bssid)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Invitation for BSSID " MACSTR, MAC2STR(bssid));

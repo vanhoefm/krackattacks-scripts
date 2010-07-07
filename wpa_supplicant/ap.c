@@ -372,6 +372,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 	wpa_s->current_ssid = ssid;
 	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
+	wpa_s->assoc_freq = ssid->frequency;
 	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
 
 	if (wpa_s->ap_configured_cb)

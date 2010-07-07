@@ -3140,7 +3140,8 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 	wpa_s->pending_invite_ssid_id = -1;
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
-			  ssid->ssid, ssid->ssid_len, 0, go_dev_addr, 0);
+			  ssid->ssid, ssid->ssid_len, wpa_s->assoc_freq,
+			  go_dev_addr, 0);
 }
 
 

@@ -705,15 +705,7 @@ wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 					int timeout_sec, int timeout_usec)
 {
-	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1) {
-		/*
-		 * Quick recovery if the initial scan results were not
-		 * complete when fetched before the first scan request.
-		 */
-		wpa_s->scan_res_tried++;
-		timeout_sec = 0;
-		timeout_usec = 0;
-	} else if (!wpa_supplicant_enabled_networks(wpa_s->conf)) {
+	if (!wpa_supplicant_enabled_networks(wpa_s->conf)) {
 		/*
 		 * No networks are enabled; short-circuit request so
 		 * we don't wait timeout seconds before transitioning
@@ -923,19 +915,9 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	/*
-	 * Don't post the results if this was the initial cached
-	 * and there were no results.
-	 */
-	if (wpa_s->scan_res_tried == 1 && wpa_s->conf->ap_scan == 1 &&
-	    scan_res->num == 0) {
-		wpa_msg(wpa_s, MSG_DEBUG, "Cached scan results are "
-			"empty - not posting");
-	} else {
-		wpa_printf(MSG_DEBUG, "New scan results available");
-		wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
-		wpas_notify_scan_results(wpa_s);
-	}
+	wpa_printf(MSG_DEBUG, "New scan results available");
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
+	wpas_notify_scan_results(wpa_s);
 
 	wpas_notify_scan_done(wpa_s, 1);
 

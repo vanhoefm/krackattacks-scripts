@@ -294,19 +294,6 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	wps = wpas_wps_in_use(wpa_s->conf, &req_type);
 #endif /* CONFIG_WPS */
 
-	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
-	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
-	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) &&
-	    wps != 2 && !wpa_s->conf->filter_ssids &&
-	    !wpa_s->connect_without_scan) {
-		wpa_s->scan_res_tried++;
-		wpa_printf(MSG_DEBUG, "Trying to get current scan results "
-			   "first without requesting a new scan to speed up "
-			   "initial association");
-		wpa_supplicant_event(wpa_s, EVENT_SCAN_RESULTS, NULL);
-		return;
-	}
-
 	scan_req = wpa_s->scan_req;
 	wpa_s->scan_req = 0;
 

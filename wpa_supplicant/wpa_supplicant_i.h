@@ -382,10 +382,6 @@ struct wpa_supplicant {
 
 	int scan_req; /* manual scan request; this forces a scan even if there
 		       * are no enabled networks in the configuration */
-	int scan_res_tried; /* whether ap_scan=1 mode has tried to fetch scan
-			     * results without a new scan request; this is used
-			     * to speed up the first association if the driver
-			     * has already available scan results. */
 	int scan_runs; /* number of scan runs since WPS was started */
 
 	struct wpa_client_mlme mlme;

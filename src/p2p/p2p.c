@@ -1670,6 +1670,9 @@ int p2p_assoc_req_ie(struct p2p_data *p2p, const u8 *bssid, u8 *buf,
 
 	lpos = p2p_buf_add_ie_hdr(tmp);
 	p2p_buf_add_capability(tmp, p2p->dev_capab, 0);
+	if (p2p->ext_listen_interval)
+		p2p_buf_add_ext_listen_timing(tmp, p2p->ext_listen_period,
+					      p2p->ext_listen_interval);
 	p2p_buf_add_device_info(tmp, p2p, peer);
 	p2p_buf_update_ie_hdr(tmp, lpos);
 

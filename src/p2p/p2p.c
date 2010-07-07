@@ -1606,20 +1606,21 @@ int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *ie,
 
 
 static int p2p_assoc_req_ie_wlan_ap(struct p2p_data *p2p, const u8 *bssid,
-				    u8 *buf, size_t len)
+				    u8 *buf, size_t len, struct wpabuf *p2p_ie)
 {
 	struct wpabuf *tmp;
 	u8 *lpos;
 	size_t tmplen;
 	int res;
 
-	if (!(p2p->dev_capab & P2P_DEV_CAPAB_INFRA_MANAGED))
-		return 0;
+	if (p2p_ie == NULL)
+		return 0; /* WLAN AP is not a P2P manager */
 
 	/*
 	 * (Re)Association Request - P2P IE
 	 * P2P Capability attribute (shall be present)
-	 * P2P Interface attribute (present if concurrent device)
+	 * P2P Interface attribute (present if concurrent device and
+	 *	P2P Management is enabled)
 	 */
 	tmp = wpabuf_alloc(200);
 	if (tmp == NULL)
@@ -1627,7 +1628,8 @@ static int p2p_assoc_req_ie_wlan_ap(struct p2p_data *p2p, const u8 *bssid,
 
 	lpos = p2p_buf_add_ie_hdr(tmp);
 	p2p_buf_add_capability(tmp, p2p->dev_capab, 0);
-	if (p2p->dev_capab & P2P_DEV_CAPAB_CONCURRENT_OPER)
+	if ((p2p->dev_capab & P2P_DEV_CAPAB_CONCURRENT_OPER) &&
+	    (p2p->dev_capab & P2P_DEV_CAPAB_INFRA_MANAGED))
 		p2p_buf_add_p2p_interface(tmp, p2p);
 	p2p_buf_update_ie_hdr(tmp, lpos);
 
@@ -1645,7 +1647,7 @@ static int p2p_assoc_req_ie_wlan_ap(struct p2p_data *p2p, const u8 *bssid,
 
 
 int p2p_assoc_req_ie(struct p2p_data *p2p, const u8 *bssid, u8 *buf,
-		     size_t len, int p2p_group)
+		     size_t len, int p2p_group, struct wpabuf *p2p_ie)
 {
 	struct wpabuf *tmp;
 	u8 *lpos;
@@ -1654,7 +1656,7 @@ int p2p_assoc_req_ie(struct p2p_data *p2p, const u8 *bssid, u8 *buf,
 	int res;
 
 	if (!p2p_group)
-		return p2p_assoc_req_ie_wlan_ap(p2p, bssid, buf, len);
+		return p2p_assoc_req_ie_wlan_ap(p2p, bssid, buf, len, p2p_ie);
 
 	/*
 	 * (Re)Association Request - P2P IE

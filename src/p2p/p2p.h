@@ -1142,10 +1142,11 @@ int p2p_scan_result_text(const u8 *ies, size_t ies_len, char *buf, char *end);
  * @buf: Buffer for writing the P2P IE
  * @len: Maximum buf length in octets
  * @p2p_group: Whether this is for association with a P2P GO
+ * @p2p_ie: Reassembled P2P IE data from scan results or %NULL if none
  * Returns: Number of octets written into buf or -1 on failure
  */
 int p2p_assoc_req_ie(struct p2p_data *p2p, const u8 *bssid, u8 *buf,
-		     size_t len, int p2p_group);
+		     size_t len, int p2p_group, struct wpabuf *p2p_ie);
 
 /**
  * p2p_scan_ie - Build P2P IE for Probe Request

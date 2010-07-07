@@ -220,8 +220,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
 		len = sizeof(wpa_s->sme.assoc_req_ie) -
 			wpa_s->sme.assoc_req_ie_len;
-		res = wpas_p2p_assoc_req_ie(wpa_s, bss->bssid, pos, len,
-					    p2p_group);
+		res = wpas_p2p_assoc_req_ie(wpa_s, bss, pos, len, p2p_group);
 		if (res >= 0)
 			wpa_s->sme.assoc_req_ie_len += res;
 	}

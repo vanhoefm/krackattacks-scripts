@@ -2994,16 +2994,23 @@ int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout)
 }
 
 
-int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, const u8 *bssid,
+int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			  u8 *buf, size_t len, int p2p_group)
 {
+	struct wpabuf *p2p_ie;
+	int ret;
+
 	if (wpa_s->global->p2p_disabled)
 		return -1;
 	if (wpa_s->global->p2p == NULL)
 		return -1;
 
-	return p2p_assoc_req_ie(wpa_s->global->p2p, bssid, buf, len,
-				p2p_group);
+	p2p_ie = wpa_bss_get_vendor_ie_multi(bss, P2P_IE_VENDOR_TYPE);
+	ret = p2p_assoc_req_ie(wpa_s->global->p2p, bss->bssid, buf, len,
+			       p2p_group, p2p_ie);
+	wpabuf_free(p2p_ie);
+
+	return ret;
 }
 
 

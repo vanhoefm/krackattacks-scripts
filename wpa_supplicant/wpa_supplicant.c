@@ -682,8 +682,10 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	wpa_supplicant_update_config(wpa_s);
 
 	wpa_supplicant_clear_status(wpa_s);
-	wpa_s->reassociate = 1;
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	if (wpa_supplicant_enabled_networks(wpa_s->conf)) {
+		wpa_s->reassociate = 1;
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+	}
 	wpa_msg(wpa_s, MSG_DEBUG, "Reconfiguration completed");
 	return 0;
 }

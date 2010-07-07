@@ -2284,6 +2284,16 @@ static void p2p_timeout_invite(struct p2p_data *p2p)
 {
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
 	p2p_set_state(p2p, P2P_INVITE_LISTEN);
+	if (p2p->inv_role == P2P_INVITE_ROLE_ACTIVE_GO) {
+		/*
+		 * Better remain on operating channel instead of listen channel
+		 * when running a group.
+		 */
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Inviting in "
+			"active GO role - wait on operating channel");
+		p2p_set_timeout(p2p, 0, 100000);
+		return;
+	}
 	p2p_listen_in_find(p2p);
 }
 

@@ -31,6 +31,7 @@
 #include "beacon.h"
 #include "ap_mlme.h"
 #include "vlan_init.h"
+#include "p2p_hostapd.h"
 #include "sta_info.h"
 
 static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
@@ -173,6 +174,15 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		sta->ht_20mhz_set = 0;
 		hapd->iface->num_sta_ht_20mhz--;
 	}
+
+#ifdef CONFIG_P2P
+	if (sta->no_p2p_set) {
+		sta->no_p2p_set = 0;
+		hapd->num_sta_no_p2p--;
+		if (hapd->num_sta_no_p2p == 0)
+			hostapd_p2p_non_p2p_sta_disconnected(hapd);
+	}
+#endif /* CONFIG_P2P */
 
 #if defined(NEED_AP_MLME) && defined(CONFIG_IEEE80211N)
 	if (hostapd_ht_operation_update(hapd->iface) > 0)

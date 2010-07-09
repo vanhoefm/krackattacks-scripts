@@ -22,6 +22,7 @@
 #include "wps/wps_i.h"
 #include "p2p/p2p.h"
 #include "ap/hostapd.h"
+#include "ap/p2p_hostapd.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "ap.h"
@@ -3295,4 +3296,14 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 				     os_strlen(wpa_s->conf->p2p_ssid_postfix) :
 				     0);
 	}
+}
+
+
+int wpas_p2p_set_noa(struct wpa_supplicant *wpa_s, u8 count, int start,
+		     int duration)
+{
+	if (!wpa_s->ap_iface)
+		return -1;
+	return hostapd_p2p_set_noa(wpa_s->ap_iface->bss[0], count, start,
+				   duration);
 }

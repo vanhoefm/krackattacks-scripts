@@ -63,5 +63,7 @@ int hostapd_driver_scan(struct hostapd_data *hapd,
 			struct wpa_driver_scan_params *params);
 struct wpa_scan_results * hostapd_driver_get_scan_results(
 	struct hostapd_data *hapd);
+int hostapd_driver_set_noa(struct hostapd_data *hapd, u8 count, int start,
+			   int duration);
 
 #endif /* AP_DRV_OPS */

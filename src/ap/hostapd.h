@@ -190,6 +190,14 @@ struct hostapd_data {
 	struct p2p_group *p2p_group;
 	struct wpabuf *p2p_beacon_ie;
 	struct wpabuf *p2p_probe_resp_ie;
+
+	/* Number of non-P2P association stations */
+	int num_sta_no_p2p;
+
+	/* Periodic NoA (used only when no non-P2P clients in the group) */
+	int noa_enabled;
+	int noa_start;
+	int noa_duration;
 #endif /* CONFIG_P2P */
 };
 

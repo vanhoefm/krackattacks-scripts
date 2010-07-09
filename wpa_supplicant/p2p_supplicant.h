@@ -106,5 +106,7 @@ void wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
 void wpas_p2p_disassoc_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			     u16 reason_code, const u8 *ie, size_t ie_len);
 void wpas_p2p_update_config(struct wpa_supplicant *wpa_s);
+int wpas_p2p_set_noa(struct wpa_supplicant *wpa_s, u8 count, int start,
+		     int duration);
 
 #endif /* P2P_SUPPLICANT_H */

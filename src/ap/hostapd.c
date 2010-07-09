@@ -35,6 +35,7 @@
 #include "wpa_auth_glue.h"
 #include "ap_drv_ops.h"
 #include "ap_config.h"
+#include "p2p_hostapd.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);
@@ -876,6 +877,15 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	/* IEEE 802.11F (IAPP) */
 	if (hapd->conf->ieee802_11f)
 		iapp_new_station(hapd->iapp, sta);
+
+#ifdef CONFIG_P2P
+	if (sta->p2p_ie == NULL && !sta->no_p2p_set) {
+		sta->no_p2p_set = 1;
+		hapd->num_sta_no_p2p++;
+		if (hapd->num_sta_no_p2p == 1)
+			hostapd_p2p_non_p2p_sta_connected(hapd);
+	}
+#endif /* CONFIG_P2P */
 
 	/* Start accounting here, if IEEE 802.1X and WPA are not used.
 	 * IEEE 802.1X/WPA code will start accounting after the station has

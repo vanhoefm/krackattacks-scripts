@@ -659,3 +659,13 @@ struct wpa_scan_results * hostapd_driver_get_scan_results(
 		return hapd->driver->get_scan_results2(hapd->drv_priv);
 	return NULL;
 }
+
+
+int hostapd_driver_set_noa(struct hostapd_data *hapd, u8 count, int start,
+			   int duration)
+{
+	if (hapd->driver && hapd->driver->set_noa)
+		return hapd->driver->set_noa(hapd->drv_priv, count, start,
+					     duration);
+	return -1;
+}

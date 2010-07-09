@@ -2438,7 +2438,7 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 			return -1;
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: P2P_SET GO NoA: count=%d "
 			   "start=%d duration=%d", count, start, duration);
-		return wpa_drv_set_noa(wpa_s, count, start, duration);
+		return wpas_p2p_set_noa(wpa_s, count, start, duration);
 	}
 
 	if (os_strcmp(cmd, "ps") == 0)

@@ -514,14 +514,6 @@ static inline int wpa_drv_get_noa(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->get_noa(wpa_s->drv_priv, buf, buf_len);
 }
 
-static inline int wpa_drv_set_noa(struct wpa_supplicant *wpa_s, u8 count,
-				  int start, int duration)
-{
-	if (!wpa_s->driver->set_noa)
-		return -1;
-	return wpa_s->driver->set_noa(wpa_s->drv_priv, count, start, duration);
-}
-
 static inline int wpa_drv_set_p2p_powersave(struct wpa_supplicant *wpa_s,
 					    int legacy_ps, int opp_ps,
 					    int ctwindow)

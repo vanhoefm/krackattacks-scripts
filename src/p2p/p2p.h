@@ -1171,6 +1171,13 @@ int p2p_go_params(struct p2p_data *p2p, struct p2p_go_neg_results *params);
 u8 p2p_get_group_capab(const struct wpabuf *p2p_ie);
 
 /**
+ * p2p_get_cross_connect_disallowed - Does WLAN AP disallows cross connection
+ * @p2p_ie: P2P IE(s) contents
+ * Returns: 0 if cross connection is allow, 1 if not
+ */
+int p2p_get_cross_connect_disallowed(const struct wpabuf *p2p_ie);
+
+/**
  * p2p_get_go_dev_addr - Get P2P Device Address from P2P IE data
  * @p2p_ie: P2P IE(s) contents
  * Returns: Pointer to P2P Device Address or %NULL if not included
@@ -1215,5 +1222,12 @@ int p2p_get_interface_addr(struct p2p_data *p2p, const u8 *dev_addr,
 			   u8 *iface_addr);
 
 void p2p_set_peer_filter(struct p2p_data *p2p, const u8 *addr);
+
+/**
+ * p2p_set_cross_connect - Set cross connection capability
+ * @p2p: P2P module context from p2p_init()
+ * @enabled: Whether cross connection will be enabled
+ */
+void p2p_set_cross_connect(struct p2p_data *p2p, int enabled);
 
 #endif /* P2P_H */

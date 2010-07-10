@@ -365,6 +365,8 @@ struct p2p_data {
 	unsigned int ext_listen_interval_usec;
 
 	u8 peer_filter[ETH_ALEN];
+
+	int cross_connect;
 };
 
 /**

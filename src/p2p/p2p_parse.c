@@ -650,6 +650,21 @@ int p2p_attr_text(struct wpabuf *data, char *buf, char *end)
 }
 
 
+int p2p_get_cross_connect_disallowed(const struct wpabuf *p2p_ie)
+{
+	struct p2p_message msg;
+
+	os_memset(&msg, 0, sizeof(msg));
+	if (p2p_parse_p2p_ie(p2p_ie, &msg))
+		return 0;
+
+	if (!msg.manageability)
+		return 0;
+
+	return !(msg.capability[0] & P2P_MAN_CROSS_CONNECTIION_PERMITTED);
+}
+
+
 u8 p2p_get_group_capab(const struct wpabuf *p2p_ie)
 {
 	struct p2p_message msg;

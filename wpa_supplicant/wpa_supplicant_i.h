@@ -214,6 +214,7 @@ struct wpa_global {
 	struct dl_list p2p_srv_bonjour; /* struct p2p_srv_bonjour */
 	struct dl_list p2p_srv_upnp; /* struct p2p_srv_upnp */
 	int p2p_disabled;
+	int cross_connection;
 };
 
 
@@ -486,6 +487,27 @@ struct wpa_supplicant {
 	int pending_join_wps_method;
 	unsigned int roc_waiting_drv_freq;
 	int force_long_sd;
+
+	/*
+	 * Whether cross connection is disallowed by the AP to which this
+	 * interface is associated (only valid if there is an association).
+	 */
+	int cross_connect_disallowed;
+
+	/*
+	 * Whether this P2P group is configured to use cross connection (only
+	 * valid if this is P2P GO interface). The actual cross connect packet
+	 * forwarding may not be configured depending on the uplink status.
+	 */
+	int cross_connect_enabled;
+
+	/* Whether cross connection forwarding is in use at the moment. */
+	int cross_connect_in_use;
+
+	/*
+	 * Uplink interface name for cross connection
+	 */
+	char cross_connect_uplink[100];
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

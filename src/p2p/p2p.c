@@ -1612,6 +1612,7 @@ static int p2p_assoc_req_ie_wlan_ap(struct p2p_data *p2p, const u8 *bssid,
 	u8 *lpos;
 	size_t tmplen;
 	int res;
+	u8 group_capab;
 
 	if (p2p_ie == NULL)
 		return 0; /* WLAN AP is not a P2P manager */
@@ -1627,7 +1628,15 @@ static int p2p_assoc_req_ie_wlan_ap(struct p2p_data *p2p, const u8 *bssid,
 		return -1;
 
 	lpos = p2p_buf_add_ie_hdr(tmp);
-	p2p_buf_add_capability(tmp, p2p->dev_capab, 0);
+	group_capab = 0;
+	if (p2p->num_groups > 0) {
+		group_capab |= P2P_GROUP_CAPAB_GROUP_OWNER;
+		if ((p2p->dev_capab & P2P_DEV_CAPAB_CONCURRENT_OPER) &&
+		    (p2p->dev_capab & P2P_DEV_CAPAB_INFRA_MANAGED) &&
+		    p2p->cross_connect)
+			group_capab |= P2P_GROUP_CAPAB_CROSS_CONN;
+	}
+	p2p_buf_add_capability(tmp, p2p->dev_capab, group_capab);
 	if ((p2p->dev_capab & P2P_DEV_CAPAB_CONCURRENT_OPER) &&
 	    (p2p->dev_capab & P2P_DEV_CAPAB_INFRA_MANAGED))
 		p2p_buf_add_p2p_interface(tmp, p2p);
@@ -2959,4 +2968,15 @@ void p2p_set_peer_filter(struct p2p_data *p2p, const u8 *addr)
 	else
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Enable peer "
 			"filter for " MACSTR, MAC2STR(p2p->peer_filter));
+}
+
+
+void p2p_set_cross_connect(struct p2p_data *p2p, int enabled)
+{
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Cross connection %s",
+		enabled ? "enabled" : "disabled");
+	if (p2p->cross_connect == enabled)
+		return;
+	p2p->cross_connect = enabled;
+	/* TODO: may need to tear down any action group where we are GO(?) */
 }

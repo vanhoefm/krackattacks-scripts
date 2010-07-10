@@ -36,6 +36,7 @@
 #include "common/wpa_ctrl.h"
 #include "mlme.h"
 #include "common/ieee802_11_defs.h"
+#include "p2p/p2p.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
@@ -1168,6 +1169,21 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		res = wpas_p2p_assoc_req_ie(wpa_s, bss, pos, len, p2p_group);
 		if (res >= 0)
 			wpa_ie_len += res;
+	}
+
+	wpa_s->cross_connect_disallowed = 0;
+	if (bss) {
+		struct wpabuf *p2p;
+		p2p = wpa_bss_get_vendor_ie_multi(bss, P2P_IE_VENDOR_TYPE);
+		if (p2p) {
+			wpa_s->cross_connect_disallowed =
+				p2p_get_cross_connect_disallowed(p2p);
+			wpabuf_free(p2p);
+			wpa_printf(MSG_DEBUG, "P2P: WLAN AP %s cross "
+				   "connection",
+				   wpa_s->cross_connect_disallowed ?
+				   "disallows" : "allows");
+		}
 	}
 #endif /* CONFIG_P2P */
 

@@ -45,6 +45,7 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx);
 static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 			 const u8 *dev_addr, enum p2p_wps_method wps_method);
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s);
+static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s);
 
 
 static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
@@ -201,6 +202,12 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 		gtype = "client";
 	} else
 		gtype = "GO";
+	if (wpa_s->cross_connect_in_use) {
+		wpa_s->cross_connect_in_use = 0;
+		wpa_msg(wpa_s->parent, MSG_INFO,
+			P2P_EVENT_CROSS_CONNECT_DISABLE "%s %s",
+			wpa_s->ifname, wpa_s->cross_connect_uplink);
+	}
 	wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_REMOVED "%s %s",
 		wpa_s->ifname, gtype);
 	if (wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE) {
@@ -441,6 +448,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 			"%s GO ssid=\"%s\" psk=%s go_dev_addr=" MACSTR "%s",
 			wpa_s->ifname, ssid_txt, psk, MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");
+		wpas_p2p_cross_connect_setup(wpa_s);
 	} else {
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
 			"%s GO ssid=\"%s\" passphrase=\"%s\" go_dev_addr="
@@ -449,6 +457,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 			ssid && ssid->passphrase ? ssid->passphrase : "",
 			MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");
+		wpas_p2p_cross_connect_setup(wpa_s);
 	}
 
 	if (persistent)
@@ -717,6 +726,7 @@ static void p2p_go_configured(void *ctx, void *data)
 			wpas_p2p_store_persistent_group(
 				wpa_s->parent, ssid,
 				wpa_s->parent->own_addr);
+		wpas_p2p_cross_connect_setup(wpa_s);
 		return;
 	}
 
@@ -3306,4 +3316,136 @@ int wpas_p2p_set_noa(struct wpa_supplicant *wpa_s, u8 count, int start,
 		return -1;
 	return hostapd_p2p_set_noa(wpa_s->ap_iface->bss[0], count, start,
 				   duration);
+}
+
+
+int wpas_p2p_set_cross_connect(struct wpa_supplicant *wpa_s, int enabled)
+{
+	if (wpa_s->global->p2p_disabled)
+		return -1;
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
+		return -1;
+
+	wpa_s->global->cross_connection = enabled;
+	p2p_set_cross_connect(wpa_s->global->p2p, enabled);
+
+	if (!enabled) {
+		struct wpa_supplicant *iface;
+
+		for (iface = wpa_s->global->ifaces; iface; iface = iface->next)
+		{
+			if (iface->cross_connect_enabled == 0)
+				continue;
+
+			iface->cross_connect_enabled = 0;
+			iface->cross_connect_in_use = 0;
+			wpa_msg(iface->parent, MSG_INFO,
+				P2P_EVENT_CROSS_CONNECT_DISABLE "%s %s",
+				iface->ifname, iface->cross_connect_uplink);
+		}
+	}
+
+	return 0;
+}
+
+
+static void wpas_p2p_enable_cross_connect(struct wpa_supplicant *uplink)
+{
+	struct wpa_supplicant *iface;
+
+	if (!uplink->global->cross_connection)
+		return;
+
+	for (iface = uplink->global->ifaces; iface; iface = iface->next) {
+		if (!iface->cross_connect_enabled)
+			continue;
+		if (os_strcmp(uplink->ifname, iface->cross_connect_uplink) !=
+		    0)
+			continue;
+		if (iface->ap_iface == NULL)
+			continue;
+		if (iface->cross_connect_in_use)
+			continue;
+
+		iface->cross_connect_in_use = 1;
+		wpa_msg(iface->parent, MSG_INFO,
+			P2P_EVENT_CROSS_CONNECT_ENABLE "%s %s",
+			iface->ifname, iface->cross_connect_uplink);
+	}
+}
+
+
+static void wpas_p2p_disable_cross_connect(struct wpa_supplicant *uplink)
+{
+	struct wpa_supplicant *iface;
+
+	for (iface = uplink->global->ifaces; iface; iface = iface->next) {
+		if (!iface->cross_connect_enabled)
+			continue;
+		if (os_strcmp(uplink->ifname, iface->cross_connect_uplink) !=
+		    0)
+			continue;
+		if (!iface->cross_connect_in_use)
+			continue;
+
+		wpa_msg(iface->parent, MSG_INFO,
+			P2P_EVENT_CROSS_CONNECT_DISABLE "%s %s",
+			iface->ifname, iface->cross_connect_uplink);
+		iface->cross_connect_in_use = 0;
+	}
+}
+
+
+void wpas_p2p_notif_connected(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->ap_iface || wpa_s->current_ssid == NULL ||
+	    wpa_s->current_ssid->mode != WPAS_MODE_INFRA ||
+	    wpa_s->cross_connect_disallowed)
+		wpas_p2p_disable_cross_connect(wpa_s);
+	else
+		wpas_p2p_enable_cross_connect(wpa_s);
+}
+
+
+void wpas_p2p_notif_disconnected(struct wpa_supplicant *wpa_s)
+{
+	wpas_p2p_disable_cross_connect(wpa_s);
+}
+
+
+static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_supplicant *iface;
+
+	if (!wpa_s->global->cross_connection)
+		return;
+
+	for (iface = wpa_s->global->ifaces; iface; iface = iface->next) {
+		if (iface == wpa_s)
+			continue;
+		if (iface->drv_flags &
+		    WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)
+			continue;
+		if (iface->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE)
+			continue;
+
+		wpa_s->cross_connect_enabled = 1;
+		os_strlcpy(wpa_s->cross_connect_uplink, iface->ifname,
+			   sizeof(wpa_s->cross_connect_uplink));
+		wpa_printf(MSG_DEBUG, "P2P: Enable cross connection from "
+			   "%s to %s whenever uplink is available",
+			   wpa_s->ifname, wpa_s->cross_connect_uplink);
+
+		if (iface->ap_iface || iface->current_ssid == NULL ||
+		    iface->current_ssid->mode != WPAS_MODE_INFRA ||
+		    iface->cross_connect_disallowed ||
+		    iface->wpa_state != WPA_COMPLETED)
+			break;
+
+		wpa_s->cross_connect_in_use = 1;
+		wpa_msg(wpa_s->parent, MSG_INFO,
+			P2P_EVENT_CROSS_CONNECT_ENABLE "%s %s",
+			wpa_s->ifname, wpa_s->cross_connect_uplink);
+		break;
+	}
 }

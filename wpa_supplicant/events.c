@@ -1314,6 +1314,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	}
 	wpa_supplicant_mark_disassoc(wpa_s);
 	bgscan_deinit(wpa_s);
+	wpa_s->bgscan_ssid = NULL;
 #ifdef CONFIG_SME
 	if (authenticating &&
 	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)) {

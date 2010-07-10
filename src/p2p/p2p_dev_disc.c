@@ -293,6 +293,15 @@ void p2p_process_dev_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		 */
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Client discoverability request succeeded");
+		if (p2p->state == P2P_CONNECT) {
+			/*
+			 * Change state to force the timeout to start in
+			 * P2P_CONNECT again without going through the short
+			 * Listen state.
+			 */
+			p2p_set_state(p2p, P2P_CONNECT_LISTEN);
+			p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+		}
 		p2p_set_timeout(p2p, 0, 0);
 	} else {
 		/*

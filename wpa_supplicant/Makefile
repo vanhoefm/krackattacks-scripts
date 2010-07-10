@@ -1184,6 +1184,12 @@ OBJS += bgscan_simple.o
 NEED_BGSCAN=y
 endif
 
+ifdef CONFIG_BGSCAN_LEARN
+CFLAGS += -DCONFIG_BGSCAN_LEARN
+OBJS += bgscan_learn.o
+NEED_BGSCAN=y
+endif
+
 ifdef NEED_BGSCAN
 CFLAGS += -DCONFIG_BGSCAN
 OBJS += bgscan.o

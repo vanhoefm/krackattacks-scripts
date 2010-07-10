@@ -22,11 +22,17 @@
 #ifdef CONFIG_BGSCAN_SIMPLE
 extern const struct bgscan_ops bgscan_simple_ops;
 #endif /* CONFIG_BGSCAN_SIMPLE */
+#ifdef CONFIG_BGSCAN_LEARN
+extern const struct bgscan_ops bgscan_learn_ops;
+#endif /* CONFIG_BGSCAN_LEARN */
 
 static const struct bgscan_ops * bgscan_modules[] = {
 #ifdef CONFIG_BGSCAN_SIMPLE
 	&bgscan_simple_ops,
 #endif /* CONFIG_BGSCAN_SIMPLE */
+#ifdef CONFIG_BGSCAN_LEARN
+	&bgscan_learn_ops,
+#endif /* CONFIG_BGSCAN_LEARN */
 	NULL
 };
 

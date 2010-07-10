@@ -938,7 +938,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	if (bgscan_notify_scan(wpa_s) == 1) {
+	if (bgscan_notify_scan(wpa_s, scan_res) == 1) {
 		wpa_scan_results_free(scan_res);
 		return;
 	}

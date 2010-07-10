@@ -138,7 +138,8 @@ static void bgscan_simple_deinit(void *priv)
 }
 
 
-static int bgscan_simple_notify_scan(void *priv)
+static int bgscan_simple_notify_scan(void *priv,
+				     struct wpa_scan_results *scan_res)
 {
 	struct bgscan_simple_data *data = priv;
 

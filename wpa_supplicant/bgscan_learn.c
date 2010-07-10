@@ -31,7 +31,55 @@ struct bgscan_learn_data {
 	int short_interval; /* use if signal < threshold */
 	int long_interval; /* use if signal > threshold */
 	struct os_time last_bgscan;
+	char *fname;
 };
+
+
+static int bgscan_learn_load(struct bgscan_learn_data *data)
+{
+	FILE *f;
+	char buf[128];
+
+	if (data->fname == NULL)
+		return 0;
+
+	f = fopen(data->fname, "r");
+	if (f == NULL)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "bgscan learn: Loading data from %s",
+		   data->fname);
+
+	if (fgets(buf, sizeof(buf), f) == NULL ||
+	    os_strncmp(buf, "wpa_supplicant-bgscan-learn\n", 28) != 0) {
+		wpa_printf(MSG_INFO, "bgscan learn: Invalid data file %s",
+			   data->fname);
+		fclose(f);
+		return -1;
+	}
+
+	fclose(f);
+	return 0;
+}
+
+
+static void bgscan_learn_save(struct bgscan_learn_data *data)
+{
+	FILE *f;
+
+	if (data->fname == NULL)
+		return;
+
+	wpa_printf(MSG_DEBUG, "bgscan learn: Saving data to %s",
+		   data->fname);
+
+	f = fopen(data->fname, "w");
+	if (f == NULL)
+		return;
+	fprintf(f, "wpa_supplicant-bgscan-learn\n");
+
+	fclose(f);
+}
 
 
 static void bgscan_learn_timeout(void *eloop_ctx, void *timeout_ctx)
@@ -85,6 +133,11 @@ static int bgscan_learn_get_params(struct bgscan_learn_data *data,
 	}
 	pos++;
 	data->long_interval = atoi(pos);
+	pos = os_strchr(pos, ':');
+	if (pos) {
+		pos++;
+		data->fname = os_strdup(pos);
+	}
 
 	return 0;
 }
@@ -102,6 +155,7 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 	data->wpa_s = wpa_s;
 	data->ssid = ssid;
 	if (bgscan_learn_get_params(data, params) < 0) {
+		os_free(data->fname);
 		os_free(data);
 		return NULL;
 	}
@@ -109,6 +163,12 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 		data->short_interval = 30;
 	if (data->long_interval <= 0)
 		data->long_interval = 30;
+
+	if (bgscan_learn_load(data) < 0) {
+		os_free(data->fname);
+		os_free(data);
+		return NULL;
+	}
 
 	wpa_printf(MSG_DEBUG, "bgscan learn: Signal strength threshold %d  "
 		   "Short bgscan interval %d  Long bgscan interval %d",
@@ -131,9 +191,11 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 static void bgscan_learn_deinit(void *priv)
 {
 	struct bgscan_learn_data *data = priv;
+	bgscan_learn_save(data);
 	eloop_cancel_timeout(bgscan_learn_timeout, data, NULL);
 	if (data->signal_threshold)
 		wpa_drv_signal_monitor(data->wpa_s, 0, 0);
+	os_free(data->fname);
 	os_free(data);
 }
 

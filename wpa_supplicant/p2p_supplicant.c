@@ -2501,7 +2501,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		wpa_s->p2p_pin[0] = '\0';
 
 	if (join) {
-		u8 iface_addr[ETH_ALEN];
+		u8 iface_addr[ETH_ALEN], dev_addr[ETH_ALEN];
 		if (auth) {
 			wpa_printf(MSG_DEBUG, "P2P: Authorize invitation to "
 				   "connect a running group from " MACSTR,
@@ -2509,10 +2509,14 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 			os_memcpy(wpa_s->p2p_auth_invite, peer_addr, ETH_ALEN);
 			return ret;
 		}
+		os_memcpy(dev_addr, peer_addr, ETH_ALEN);
 		if (p2p_get_interface_addr(wpa_s->global->p2p, peer_addr,
-					   iface_addr) < 0)
+					   iface_addr) < 0) {
 			os_memcpy(iface_addr, peer_addr, ETH_ALEN);
-		if (wpas_p2p_join(wpa_s, iface_addr, peer_addr, wps_method) <
+			p2p_get_dev_addr(wpa_s->global->p2p, peer_addr,
+					 dev_addr);
+		}
+		if (wpas_p2p_join(wpa_s, iface_addr, dev_addr, wps_method) <
 		    0)
 			return -1;
 		return ret;

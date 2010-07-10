@@ -2959,6 +2959,17 @@ int p2p_get_interface_addr(struct p2p_data *p2p, const u8 *dev_addr,
 }
 
 
+int p2p_get_dev_addr(struct p2p_data *p2p, const u8 *iface_addr,
+			   u8 *dev_addr)
+{
+	struct p2p_device *dev = p2p_get_device_interface(p2p, iface_addr);
+	if (dev == NULL)
+		return -1;
+	os_memcpy(dev_addr, dev->p2p_device_addr, ETH_ALEN);
+	return 0;
+}
+
+
 void p2p_set_peer_filter(struct p2p_data *p2p, const u8 *addr)
 {
 	os_memcpy(p2p->peer_filter, addr, ETH_ALEN);

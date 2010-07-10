@@ -686,6 +686,11 @@ enum p2p_attr_id {
 /* Invitation Flags */
 #define P2P_INVITATION_FLAGS_TYPE BIT(0)
 
+/* P2P Manageability */
+#define P2P_MAN_DEVICE_MANAGEMENT BIT(0)
+#define P2P_MAN_CROSS_CONNECTIION_PERMITTED BIT(1)
+#define P2P_MAN_COEXISTENCE_OPTIONAL BIT(2)
+
 enum p2p_status_code {
 	P2P_SC_SUCCESS = 0,
 	P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE = 1,

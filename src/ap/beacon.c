@@ -208,9 +208,10 @@ u8 * hostapd_eid_p2p_manage(struct hostapd_data *hapd, u8 *eid)
 	*eid++ = P2P_ATTR_MANAGEABILITY;
 	WPA_PUT_LE16(eid, 1);
 	eid += 2;
-	bitmap = BIT(0); /* P2P Device Management */
+	bitmap = P2P_MAN_DEVICE_MANAGEMENT;
 	if (hapd->conf->p2p & P2P_ALLOW_CROSS_CONNECTION)
-		bitmap |= BIT(1); /* Cross Connection Permitted */
+		bitmap |= P2P_MAN_CROSS_CONNECTION_PERMITTED;
+	bitmap |= P2P_MAN_COEXISTENCE_OPTIONAL;
 	*eid++ = bitmap;
 
 	return eid;

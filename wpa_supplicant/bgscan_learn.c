@@ -88,7 +88,6 @@ static void bgscan_learn_add_neighbor(struct bgscan_learn_bss *bss,
 	os_memcpy(n + bss->num_neigh * ETH_ALEN, bssid, ETH_ALEN);
 	bss->neigh = n;
 	bss->num_neigh++;
-	printf("JKM: add neighbor %p\n", bss);
 }
 
 

@@ -16,12 +16,20 @@
 
 #include "common.h"
 #include "eloop.h"
+#include "list.h"
+#include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
 #include "config_ssid.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "scan.h"
 #include "bgscan.h"
+
+struct bgscan_learn_bss {
+	struct dl_list list;
+	u8 bssid[ETH_ALEN];
+	int freq;
+};
 
 struct bgscan_learn_data {
 	struct wpa_supplicant *wpa_s;
@@ -32,7 +40,21 @@ struct bgscan_learn_data {
 	int long_interval; /* use if signal > threshold */
 	struct os_time last_bgscan;
 	char *fname;
+	struct dl_list bss;
 };
+
+
+static struct bgscan_learn_bss * bgscan_learn_get_bss(
+	struct bgscan_learn_data *data, const u8 *bssid)
+{
+	struct bgscan_learn_bss *bss;
+
+	dl_list_for_each(bss, &data->bss, struct bgscan_learn_bss, list) {
+		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
+			return bss;
+	}
+	return NULL;
+}
 
 
 static int bgscan_learn_load(struct bgscan_learn_data *data)
@@ -58,6 +80,24 @@ static int bgscan_learn_load(struct bgscan_learn_data *data)
 		return -1;
 	}
 
+	while (fgets(buf, sizeof(buf), f)) {
+		if (os_strncmp(buf, "BSS ", 4) == 0) {
+			struct bgscan_learn_bss *bss;
+			bss = os_zalloc(sizeof(*bss));
+			if (!bss)
+				continue;
+			if (hwaddr_aton(buf + 4, bss->bssid) < 0) {
+				os_free(bss);
+				continue;
+			}
+			bss->freq = atoi(buf + 4 + 18);
+			dl_list_add(&data->bss, &bss->list);
+			wpa_printf(MSG_DEBUG, "bgscan learn: Loaded BSS "
+				   "entry: " MACSTR " freq=%d",
+				   MAC2STR(bss->bssid), bss->freq);
+		}
+	}
+
 	fclose(f);
 	return 0;
 }
@@ -66,6 +106,7 @@ static int bgscan_learn_load(struct bgscan_learn_data *data)
 static void bgscan_learn_save(struct bgscan_learn_data *data)
 {
 	FILE *f;
+	struct bgscan_learn_bss *bss;
 
 	if (data->fname == NULL)
 		return;
@@ -78,7 +119,52 @@ static void bgscan_learn_save(struct bgscan_learn_data *data)
 		return;
 	fprintf(f, "wpa_supplicant-bgscan-learn\n");
 
+	dl_list_for_each(bss, &data->bss, struct bgscan_learn_bss, list) {
+		fprintf(f, "BSS " MACSTR " %d\n",
+			MAC2STR(bss->bssid), bss->freq);
+	}
+
 	fclose(f);
+}
+
+
+static int in_array(int *array, int val)
+{
+	int i;
+
+	if (array == NULL)
+		return 0;
+
+	for (i = 0; array[i]; i++) {
+		if (array[i] == val)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static int * bgscan_learn_get_freqs(struct bgscan_learn_data *data,
+				    size_t *count)
+{
+	struct bgscan_learn_bss *bss;
+	int *freqs = NULL, *n;
+
+	*count = 0;
+
+	dl_list_for_each(bss, &data->bss, struct bgscan_learn_bss, list) {
+		if (in_array(freqs, bss->freq))
+			continue;
+		n = os_realloc(freqs, (*count + 2) * sizeof(int));
+		if (n == NULL)
+			return freqs;
+		freqs = n;
+		freqs[*count] = bss->freq;
+		(*count)++;
+		freqs[*count] = 0;
+	}
+
+	return freqs;
 }
 
 
@@ -87,18 +173,25 @@ static void bgscan_learn_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct bgscan_learn_data *data = eloop_ctx;
 	struct wpa_supplicant *wpa_s = data->wpa_s;
 	struct wpa_driver_scan_params params;
+	int *freqs = NULL;
+	size_t count;
 
 	os_memset(&params, 0, sizeof(params));
 	params.num_ssids = 1;
 	params.ssids[0].ssid = data->ssid->ssid;
 	params.ssids[0].ssid_len = data->ssid->ssid_len;
-	params.freqs = data->ssid->scan_freq;
-
-	/*
-	 * A more advanced bgscan module would learn about most like channels
-	 * over time and request scans only for some channels (probing others
-	 * every now and then) to reduce effect on the data connection.
-	 */
+	if (data->ssid->scan_freq)
+		params.freqs = data->ssid->scan_freq;
+	else {
+		freqs = bgscan_learn_get_freqs(data, &count);
+		wpa_printf(MSG_DEBUG, "bgscan learn: BSSes in this ESS have "
+			   "been seen on %u channels", (unsigned int) count);
+		/*
+		 * TODO: add other frequencies (rotate through one or couple at
+		 * a time, etc., to find APs from new channels)
+		 */
+		params.freqs = freqs;
+	}
 
 	wpa_printf(MSG_DEBUG, "bgscan learn: Request a background scan");
 	if (wpa_supplicant_trigger_scan(wpa_s, &params)) {
@@ -107,6 +200,7 @@ static void bgscan_learn_timeout(void *eloop_ctx, void *timeout_ctx)
 				       bgscan_learn_timeout, data, NULL);
 	} else
 		os_get_time(&data->last_bgscan);
+	os_free(freqs);
 }
 
 
@@ -152,6 +246,7 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
+	dl_list_init(&data->bss);
 	data->wpa_s = wpa_s;
 	data->ssid = ssid;
 	if (bgscan_learn_get_params(data, params) < 0) {
@@ -191,12 +286,36 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 static void bgscan_learn_deinit(void *priv)
 {
 	struct bgscan_learn_data *data = priv;
+	struct bgscan_learn_bss *bss, *n;
+
 	bgscan_learn_save(data);
 	eloop_cancel_timeout(bgscan_learn_timeout, data, NULL);
 	if (data->signal_threshold)
 		wpa_drv_signal_monitor(data->wpa_s, 0, 0);
 	os_free(data->fname);
+	dl_list_for_each_safe(bss, n, &data->bss, struct bgscan_learn_bss,
+			      list) {
+		dl_list_del(&bss->list);
+		os_free(bss);
+	}
 	os_free(data);
+}
+
+
+static int bgscan_learn_bss_match(struct bgscan_learn_data *data,
+				  struct wpa_scan_res *bss)
+{
+	const u8 *ie;
+
+	ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
+	if (ie == NULL)
+		return 0;
+
+	if (data->ssid->ssid_len != ie[1] ||
+	    os_memcmp(data->ssid->ssid, ie + 2, ie[1]) != 0)
+		return 0; /* SSID mismatch */
+
+	return 1;
 }
 
 
@@ -204,12 +323,37 @@ static int bgscan_learn_notify_scan(void *priv,
 				    struct wpa_scan_results *scan_res)
 {
 	struct bgscan_learn_data *data = priv;
+	size_t i;
 
 	wpa_printf(MSG_DEBUG, "bgscan learn: scan result notification");
 
 	eloop_cancel_timeout(bgscan_learn_timeout, data, NULL);
 	eloop_register_timeout(data->scan_interval, 0, bgscan_learn_timeout,
 			       data, NULL);
+
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *res = scan_res->res[i];
+		struct bgscan_learn_bss *bss;
+
+		if (!bgscan_learn_bss_match(data, res))
+			continue;
+		bss = bgscan_learn_get_bss(data, res->bssid);
+		if (bss && bss->freq != res->freq) {
+			wpa_printf(MSG_DEBUG, "bgscan learn: Update BSS "
+			   MACSTR " freq %d -> %d",
+				   MAC2STR(res->bssid), bss->freq, res->freq);
+			bss->freq = res->freq;
+		} else if (!bss) {
+			wpa_printf(MSG_DEBUG, "bgscan learn: Add BSS " MACSTR
+				   " freq=%d", MAC2STR(res->bssid), res->freq);
+			bss = os_zalloc(sizeof(*bss));
+			if (!bss)
+				continue;
+			os_memcpy(bss->bssid, res->bssid, ETH_ALEN);
+			bss->freq = res->freq;
+			dl_list_add(&data->bss, &bss->list);
+		}
+	}
 
 	/*
 	 * A more advanced bgscan could process scan results internally, select

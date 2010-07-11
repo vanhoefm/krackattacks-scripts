@@ -29,6 +29,8 @@ struct bgscan_learn_bss {
 	struct dl_list list;
 	u8 bssid[ETH_ALEN];
 	int freq;
+	u8 *neigh; /* num_neigh * ETH_ALEN buffer */
+	size_t num_neigh;
 };
 
 struct bgscan_learn_data {
@@ -44,6 +46,50 @@ struct bgscan_learn_data {
 	int *supp_freqs;
 	int probe_idx;
 };
+
+
+static void bss_free(struct bgscan_learn_bss *bss)
+{
+	os_free(bss->neigh);
+	os_free(bss);
+}
+
+
+static int bssid_in_array(u8 *array, size_t array_len, const u8 *bssid)
+{
+	size_t i;
+
+	if (array == NULL || array_len == 0)
+		return 0;
+
+	for (i = 0; i < array_len; i++) {
+		if (os_memcmp(array + i * ETH_ALEN, bssid, ETH_ALEN) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static void bgscan_learn_add_neighbor(struct bgscan_learn_bss *bss,
+				      const u8 *bssid)
+{
+	u8 *n;
+
+	if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
+		return;
+	if (bssid_in_array(bss->neigh, bss->num_neigh, bssid))
+		return;
+
+	n = os_realloc(bss->neigh, (bss->num_neigh + 1) * ETH_ALEN);
+	if (n == NULL)
+		return;
+
+	os_memcpy(n + bss->num_neigh * ETH_ALEN, bssid, ETH_ALEN);
+	bss->neigh = n;
+	bss->num_neigh++;
+	printf("JKM: add neighbor %p\n", bss);
+}
 
 
 static struct bgscan_learn_bss * bgscan_learn_get_bss(
@@ -63,6 +109,7 @@ static int bgscan_learn_load(struct bgscan_learn_data *data)
 {
 	FILE *f;
 	char buf[128];
+	struct bgscan_learn_bss *bss;
 
 	if (data->fname == NULL)
 		return 0;
@@ -84,12 +131,11 @@ static int bgscan_learn_load(struct bgscan_learn_data *data)
 
 	while (fgets(buf, sizeof(buf), f)) {
 		if (os_strncmp(buf, "BSS ", 4) == 0) {
-			struct bgscan_learn_bss *bss;
 			bss = os_zalloc(sizeof(*bss));
 			if (!bss)
 				continue;
 			if (hwaddr_aton(buf + 4, bss->bssid) < 0) {
-				os_free(bss);
+				bss_free(bss);
 				continue;
 			}
 			bss->freq = atoi(buf + 4 + 18);
@@ -97,6 +143,20 @@ static int bgscan_learn_load(struct bgscan_learn_data *data)
 			wpa_printf(MSG_DEBUG, "bgscan learn: Loaded BSS "
 				   "entry: " MACSTR " freq=%d",
 				   MAC2STR(bss->bssid), bss->freq);
+		}
+
+		if (os_strncmp(buf, "NEIGHBOR ", 9) == 0) {
+			u8 addr[ETH_ALEN];
+
+			if (hwaddr_aton(buf + 9, addr) < 0)
+				continue;
+			bss = bgscan_learn_get_bss(data, addr);
+			if (bss == NULL)
+				continue;
+			if (hwaddr_aton(buf + 9 + 18, addr) < 0)
+				continue;
+
+			bgscan_learn_add_neighbor(bss, addr);
 		}
 	}
 
@@ -124,6 +184,15 @@ static void bgscan_learn_save(struct bgscan_learn_data *data)
 	dl_list_for_each(bss, &data->bss, struct bgscan_learn_bss, list) {
 		fprintf(f, "BSS " MACSTR " %d\n",
 			MAC2STR(bss->bssid), bss->freq);
+	}
+
+	dl_list_for_each(bss, &data->bss, struct bgscan_learn_bss, list) {
+		size_t i;
+		for (i = 0; i < bss->num_neigh; i++) {
+			fprintf(f, "NEIGHBOR " MACSTR " " MACSTR "\n",
+				MAC2STR(bss->bssid),
+				MAC2STR(bss->neigh + i * ETH_ALEN));
+		}
 	}
 
 	fclose(f);
@@ -377,7 +446,7 @@ static void bgscan_learn_deinit(void *priv)
 	dl_list_for_each_safe(bss, n, &data->bss, struct bgscan_learn_bss,
 			      list) {
 		dl_list_del(&bss->list);
-		os_free(bss);
+		bss_free(bss);
 	}
 	os_free(data->supp_freqs);
 	os_free(data);
@@ -405,7 +474,10 @@ static int bgscan_learn_notify_scan(void *priv,
 				    struct wpa_scan_results *scan_res)
 {
 	struct bgscan_learn_data *data = priv;
-	size_t i;
+	size_t i, j;
+#define MAX_BSS 50
+	u8 bssid[MAX_BSS * ETH_ALEN];
+	size_t num_bssid = 0;
 
 	wpa_printf(MSG_DEBUG, "bgscan learn: scan result notification");
 
@@ -415,10 +487,25 @@ static int bgscan_learn_notify_scan(void *priv,
 
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *res = scan_res->res[i];
+		if (!bgscan_learn_bss_match(data, res))
+			continue;
+
+		if (num_bssid < MAX_BSS) {
+			os_memcpy(bssid + num_bssid * ETH_ALEN, res->bssid,
+				  ETH_ALEN);
+			num_bssid++;
+		}
+	}
+	wpa_printf(MSG_DEBUG, "bgscan learn: %u matching BSSes in scan "
+		   "results", (unsigned int) num_bssid);
+
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *res = scan_res->res[i];
 		struct bgscan_learn_bss *bss;
 
 		if (!bgscan_learn_bss_match(data, res))
 			continue;
+
 		bss = bgscan_learn_get_bss(data, res->bssid);
 		if (bss && bss->freq != res->freq) {
 			wpa_printf(MSG_DEBUG, "bgscan learn: Update BSS "
@@ -434,6 +521,11 @@ static int bgscan_learn_notify_scan(void *priv,
 			os_memcpy(bss->bssid, res->bssid, ETH_ALEN);
 			bss->freq = res->freq;
 			dl_list_add(&data->bss, &bss->list);
+		}
+
+		for (j = 0; j < num_bssid; j++) {
+			u8 *addr = bssid + j * ETH_ALEN;
+			bgscan_learn_add_neighbor(bss, addr);
 		}
 	}
 

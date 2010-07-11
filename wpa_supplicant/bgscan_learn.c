@@ -41,6 +41,8 @@ struct bgscan_learn_data {
 	struct os_time last_bgscan;
 	char *fname;
 	struct dl_list bss;
+	int *supp_freqs;
+	int probe_idx;
 };
 
 
@@ -168,13 +170,47 @@ static int * bgscan_learn_get_freqs(struct bgscan_learn_data *data,
 }
 
 
+static int * bgscan_learn_get_probe_freq(struct bgscan_learn_data *data,
+					 int *freqs, size_t count)
+{
+	int idx, *n;
+
+	if (data->supp_freqs == NULL)
+		return freqs;
+
+	idx = data->probe_idx + 1;
+	while (idx != data->probe_idx) {
+		if (data->supp_freqs[idx] == 0)
+			idx = 0;
+		if (!in_array(freqs, data->supp_freqs[idx])) {
+			wpa_printf(MSG_DEBUG, "bgscan learn: Probe new freq "
+				   "%u", data->supp_freqs[idx]);
+			data->probe_idx = idx;
+			n = os_realloc(freqs, (count + 2) * sizeof(int));
+			if (n == NULL)
+				return freqs;
+			freqs = n;
+			freqs[count] = data->supp_freqs[idx];
+			count++;
+			freqs[count] = 0;
+			break;
+		}
+
+		idx++;
+	}
+
+	return freqs;
+}
+
+
 static void bgscan_learn_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct bgscan_learn_data *data = eloop_ctx;
 	struct wpa_supplicant *wpa_s = data->wpa_s;
 	struct wpa_driver_scan_params params;
 	int *freqs = NULL;
-	size_t count;
+	size_t count, i;
+	char msg[100], *pos;
 
 	os_memset(&params, 0, sizeof(params));
 	params.num_ssids = 1;
@@ -186,10 +222,21 @@ static void bgscan_learn_timeout(void *eloop_ctx, void *timeout_ctx)
 		freqs = bgscan_learn_get_freqs(data, &count);
 		wpa_printf(MSG_DEBUG, "bgscan learn: BSSes in this ESS have "
 			   "been seen on %u channels", (unsigned int) count);
-		/*
-		 * TODO: add other frequencies (rotate through one or couple at
-		 * a time, etc., to find APs from new channels)
-		 */
+		freqs = bgscan_learn_get_probe_freq(data, freqs, count);
+
+		msg[0] = '\0';
+		pos = msg;
+		for (i = 0; freqs && freqs[i]; i++) {
+			int ret;
+			ret = os_snprintf(pos, msg + sizeof(msg) - pos, " %d",
+					  freqs[i]);
+			if (ret < 0 || ret >= msg + sizeof(msg) - pos)
+				break;
+			pos += ret;
+		}
+		pos[0] = '\0';
+		wpa_printf(MSG_DEBUG, "bgscan learn: Scanning frequencies:%s",
+			   msg);
 		params.freqs = freqs;
 	}
 
@@ -237,6 +284,39 @@ static int bgscan_learn_get_params(struct bgscan_learn_data *data,
 }
 
 
+static int * bgscan_learn_get_supp_freqs(struct wpa_supplicant *wpa_s)
+{
+	struct hostapd_hw_modes *modes;
+	u16 num_modes, flags;
+	int i, j, *freqs = NULL, *n;
+	size_t count = 0;
+
+	modes = wpa_drv_get_hw_feature_data(wpa_s, &num_modes, &flags);
+	if (!modes)
+		return NULL;
+
+	for (i = 0; i < num_modes; i++) {
+		for (j = 0; j < modes[i].num_channels; j++) {
+			if (modes[i].channels[j].flag & HOSTAPD_CHAN_DISABLED)
+				continue;
+			n = os_realloc(freqs, (count + 2) * sizeof(int));
+			if (!n)
+				continue;
+
+			freqs = n;
+			freqs[count] = modes[i].channels[j].freq;
+			count++;
+			freqs[count] = 0;
+		}
+		os_free(modes[i].channels);
+		os_free(modes[i].rates);
+	}
+	os_free(modes);
+
+	return freqs;
+}
+
+
 static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 				const char *params,
 				const struct wpa_ssid *ssid)
@@ -276,6 +356,7 @@ static void * bgscan_learn_init(struct wpa_supplicant *wpa_s,
 			   "signal strength monitoring");
 	}
 
+	data->supp_freqs = bgscan_learn_get_supp_freqs(wpa_s);
 	data->scan_interval = data->short_interval;
 	eloop_register_timeout(data->scan_interval, 0, bgscan_learn_timeout,
 			       data, NULL);
@@ -298,6 +379,7 @@ static void bgscan_learn_deinit(void *priv)
 		dl_list_del(&bss->list);
 		os_free(bss);
 	}
+	os_free(data->supp_freqs);
 	os_free(data);
 }
 

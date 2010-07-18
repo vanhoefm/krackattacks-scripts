@@ -747,9 +747,19 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 	if (type == EVENT_DISASSOC) {
 		event.disassoc_info.addr = bssid;
 		event.disassoc_info.reason_code = reason_code;
+		if (frame + len > mgmt->u.disassoc.variable) {
+			event.disassoc_info.ie = mgmt->u.disassoc.variable;
+			event.disassoc_info.ie_len = frame + len -
+				mgmt->u.disassoc.variable;
+		}
 	} else {
 		event.deauth_info.addr = bssid;
 		event.deauth_info.reason_code = reason_code;
+		if (frame + len > mgmt->u.deauth.variable) {
+			event.deauth_info.ie = mgmt->u.deauth.variable;
+			event.deauth_info.ie_len = frame + len -
+				mgmt->u.deauth.variable;
+		}
 	}
 
 	wpa_supplicant_event(drv->ctx, type, &event);
@@ -1312,6 +1322,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	}
 
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
+	drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
 	drv->capa.max_remain_on_chan = 5000;
 
 	return 0;
@@ -1572,6 +1583,25 @@ nla_put_failure:
 
 static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 {
+#ifdef CONFIG_P2P
+	/* GAS Initial Request */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0a", 2) < 0)
+		return -1;
+	/* GAS Initial Response */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0b", 2) < 0)
+		return -1;
+	/* P2P Public Action */
+	if (nl80211_register_action_frame(drv,
+					  (u8 *) "\x04\x09\x50\x6f\x9a\x09",
+					  6) < 0)
+		return -1;
+	/* P2P Action */
+	if (nl80211_register_action_frame(drv,
+					  (u8 *) "\x7f\x50\x6f\x9a\x09",
+					  5) < 0)
+		return -1;
+#endif /* CONFIG_P2P */
+
 	/* FT Action frames */
 	if (nl80211_register_action_frame(drv, (u8 *) "\x06", 1) < 0)
 		return -1;
@@ -3752,6 +3782,9 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 				 struct wpa_driver_associate_params *params)
 {
+	if (params->p2p)
+		wpa_printf(MSG_DEBUG, "nl80211: Setup AP operations for P2P "
+			   "group (GO)");
 	if (wpa_driver_nl80211_set_mode(&drv->first_bss, params->mode) ||
 	    wpa_driver_nl80211_set_freq(drv, params->freq, 0, 0)) {
 		nl80211_remove_monitor_interface(drv);
@@ -4085,6 +4118,9 @@ static int wpa_driver_nl80211_associate(
 		NLA_PUT(msg, NL80211_ATTR_PREV_BSSID, ETH_ALEN,
 			params->prev_bssid);
 	}
+
+	if (params->p2p)
+		wpa_printf(MSG_DEBUG, "  * P2P group");
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	msg = NULL;

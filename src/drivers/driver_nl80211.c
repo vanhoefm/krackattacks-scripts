@@ -4069,6 +4069,7 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1;
 	int nlmode;
+	int i;
 
 	switch (mode) {
 	case 0:
@@ -4101,11 +4102,23 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 	 * take the device down, try to set the mode again, and bring the
 	 * device back up.
 	 */
-	if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 0) == 0) {
-		/* Try to set the mode again while the interface is down */
-		ret = nl80211_set_mode(drv, drv->ifindex, nlmode);
-		if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 1))
-			ret = -1;
+	wpa_printf(MSG_DEBUG, "nl80211: Try mode change after setting "
+		   "interface down");
+	for (i = 0; i < 10; i++) {
+		if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 0) ==
+		    0) {
+			/* Try to set the mode again while the interface is
+			 * down */
+			ret = nl80211_set_mode(drv, drv->ifindex, nlmode);
+			if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname,
+						  1))
+				ret = -1;
+			if (!ret)
+				break;
+		} else
+			wpa_printf(MSG_DEBUG, "nl80211: Failed to set "
+				   "interface down");
+		os_sleep(0, 100000);
 	}
 
 	if (!ret) {

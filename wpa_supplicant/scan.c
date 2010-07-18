@@ -22,6 +22,8 @@
 #include "driver_i.h"
 #include "mlme.h"
 #include "wps_supplicant.h"
+#include "p2p_supplicant.h"
+#include "p2p/p2p.h"
 #include "notify.h"
 #include "bss.h"
 #include "scan.h"
@@ -404,6 +406,16 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_P2P
+	if (wps_ie) {
+		if (wpabuf_resize(&wps_ie, 100) == 0) {
+			wpas_p2p_scan_ie(wpa_s, wps_ie);
+			params.extra_ies = wpabuf_head(wps_ie);
+			params.extra_ies_len = wpabuf_len(wps_ie);
+		}
+	}
+#endif /* CONFIG_P2P */
 
 	params.filter_ssids = wpa_supplicant_build_filter_ssids(
 		wpa_s->conf, &params.num_filter_ssids);

@@ -295,6 +295,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 #endif /* CONFIG_WPS */
 
 	if (wpa_s->scan_res_tried == 0 && wpa_s->conf->ap_scan == 1 &&
+	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&
 	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) &&
 	    wps != 2 && !wpa_s->conf->filter_ssids &&
 	    !wpa_s->connect_without_scan) {

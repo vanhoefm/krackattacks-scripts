@@ -1002,7 +1002,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
-	u8 wpa_ie[80];
+	u8 wpa_ie[200];
 	size_t wpa_ie_len;
 	int use_crypt, ret, i, bssid_changed;
 	int algs = WPA_AUTH_ALG_OPEN;
@@ -1153,6 +1153,22 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 		wpa_ie_len = 0;
 	}
+
+#ifdef CONFIG_P2P
+	if (wpa_s->global->p2p) {
+		u8 *pos;
+		size_t len;
+		int res;
+		int p2p_group;
+		p2p_group = wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE;
+		pos = wpa_ie + wpa_ie_len;
+		len = sizeof(wpa_ie) - wpa_ie_len;
+		res = wpas_p2p_assoc_req_ie(wpa_s, bss->bssid, pos, len,
+					    p2p_group);
+		if (res >= 0)
+			wpa_ie_len += res;
+	}
+#endif /* CONFIG_P2P */
 
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;

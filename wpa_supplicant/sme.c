@@ -26,6 +26,7 @@
 #include "driver_i.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
+#include "p2p_supplicant.h"
 #include "notify.h"
 #include "blacklist.h"
 #include "bss.h"
@@ -208,6 +209,23 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		}
 	}
 #endif /* CONFIG_IEEE80211W */
+
+#ifdef CONFIG_P2P
+	if (wpa_s->global->p2p) {
+		u8 *pos;
+		size_t len;
+		int res;
+		int p2p_group;
+		p2p_group = wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE;
+		pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
+		len = sizeof(wpa_s->sme.assoc_req_ie) -
+			wpa_s->sme.assoc_req_ie_len;
+		res = wpas_p2p_assoc_req_ie(wpa_s, bss->bssid, pos, len,
+					    p2p_group);
+		if (res >= 0)
+			wpa_s->sme.assoc_req_ie_len += res;
+	}
+#endif /* CONFIG_P2P */
 
 	wpa_supplicant_cancel_scan(wpa_s);
 

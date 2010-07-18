@@ -1387,8 +1387,11 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 	int was_disabled;
 
 	if (ssid == NULL) {
-		other_ssid = wpa_s->conf->ssid;
-		while (other_ssid) {
+		for (other_ssid = wpa_s->conf->ssid; other_ssid;
+		     other_ssid = other_ssid->next) {
+			if (other_ssid->disabled == 2)
+				continue; /* do not change persistent P2P group
+					   * data */
 			if (other_ssid == wpa_s->current_ssid &&
 			    other_ssid->disabled)
 				wpa_s->reassociate = 1;
@@ -1400,12 +1403,10 @@ void wpa_supplicant_enable_network(struct wpa_supplicant *wpa_s,
 			if (was_disabled != other_ssid->disabled)
 				wpas_notify_network_enabled_changed(
 					wpa_s, other_ssid);
-
-			other_ssid = other_ssid->next;
 		}
 		if (wpa_s->reassociate)
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
-	} else if (ssid->disabled) {
+	} else if (ssid->disabled && ssid->disabled != 2) {
 		if (wpa_s->current_ssid == NULL) {
 			/*
 			 * Try to reassociate since there is no current
@@ -1439,22 +1440,23 @@ void wpa_supplicant_disable_network(struct wpa_supplicant *wpa_s,
 	int was_disabled;
 
 	if (ssid == NULL) {
-		other_ssid = wpa_s->conf->ssid;
-		while (other_ssid) {
+		for (other_ssid = wpa_s->conf->ssid; other_ssid;
+		     other_ssid = other_ssid->next) {
 			was_disabled = other_ssid->disabled;
+			if (was_disabled == 2)
+				continue; /* do not change persistent P2P group
+					   * data */
 
 			other_ssid->disabled = 1;
 
 			if (was_disabled != other_ssid->disabled)
 				wpas_notify_network_enabled_changed(
 					wpa_s, other_ssid);
-
-			other_ssid = other_ssid->next;
 		}
 		if (wpa_s->current_ssid)
 			wpa_supplicant_disassociate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
-	} else {
+	} else if (ssid->disabled != 2) {
 		if (ssid == wpa_s->current_ssid)
 			wpa_supplicant_disassociate(
 				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
@@ -1488,16 +1490,16 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	 * Mark all other networks disabled or mark all networks enabled if no
 	 * network specified.
 	 */
-	other_ssid = wpa_s->conf->ssid;
-	while (other_ssid) {
+	for (other_ssid = wpa_s->conf->ssid; other_ssid;
+	     other_ssid = other_ssid->next) {
 		int was_disabled = other_ssid->disabled;
+		if (was_disabled == 2)
+			continue; /* do not change persistent P2P group data */
 
 		other_ssid->disabled = ssid ? (ssid->id != other_ssid->id) : 0;
 
 		if (was_disabled != other_ssid->disabled)
 			wpas_notify_network_enabled_changed(wpa_s, other_ssid);
-
-		other_ssid = other_ssid->next;
 	}
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;

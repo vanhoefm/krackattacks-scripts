@@ -677,10 +677,12 @@ static int wpa_supplicant_ctrl_iface_list_networks(
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-		ret = os_snprintf(pos, end - pos, "\t%s%s",
+		ret = os_snprintf(pos, end - pos, "\t%s%s%s",
 				  ssid == wpa_s->current_ssid ?
 				  "[CURRENT]" : "",
-				  ssid->disabled ? "[DISABLED]" : "");
+				  ssid->disabled ? "[DISABLED]" : "",
+				  ssid->disabled == 2 ? "[P2P-PERSISTENT]" :
+				  "");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
@@ -988,6 +990,11 @@ static int wpa_supplicant_ctrl_iface_select_network(
 				   "network id=%d", id);
 			return -1;
 		}
+		if (ssid->disabled == 2) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Cannot use "
+				   "SELECT_NETWORK with persistent P2P group");
+			return -1;
+		}
 	}
 
 	wpa_supplicant_select_network(wpa_s, ssid);
@@ -1016,6 +1023,11 @@ static int wpa_supplicant_ctrl_iface_enable_network(
 				   "network id=%d", id);
 			return -1;
 		}
+		if (ssid->disabled == 2) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Cannot use "
+				   "ENABLE_NETWORK with persistent P2P group");
+			return -1;
+		}
 	}
 	wpa_supplicant_enable_network(wpa_s, ssid);
 
@@ -1041,6 +1053,12 @@ static int wpa_supplicant_ctrl_iface_disable_network(
 		if (ssid == NULL) {
 			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
 				   "network id=%d", id);
+			return -1;
+		}
+		if (ssid->disabled == 2) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Cannot use "
+				   "DISABLE_NETWORK with persistent P2P "
+				   "group");
 			return -1;
 		}
 	}

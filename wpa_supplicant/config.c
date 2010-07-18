@@ -1495,7 +1495,7 @@ static const struct parse_data ssid_fields[] = {
 #endif /* IEEE8021X_EAPOL */
 	{ INT_RANGE(mode, 0, 4) },
 	{ INT_RANGE(proactive_key_caching, 0, 1) },
-	{ INT_RANGE(disabled, 0, 1) },
+	{ INT_RANGE(disabled, 0, 2) },
 	{ STR(id_str) },
 #ifdef CONFIG_IEEE80211W
 	{ INT_RANGE(ieee80211w, 0, 2) },

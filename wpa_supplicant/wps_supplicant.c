@@ -607,12 +607,20 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 	}
 
 	if (bssid) {
+#ifndef CONFIG_P2P
 		struct wpa_bss *bss;
 		int count = 0;
+#endif /* CONFIG_P2P */
 
 		os_memcpy(ssid->bssid, bssid, ETH_ALEN);
 		ssid->bssid_set = 1;
 
+		/*
+		 * Note: With P2P, the SSID may change at the time the WPS
+		 * provisioning is started, so better not filter the AP based
+		 * on the current SSID in the scan results.
+		 */
+#ifndef CONFIG_P2P
 		dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 			if (os_memcmp(bssid, bss->bssid, ETH_ALEN) != 0)
 				continue;
@@ -636,6 +644,7 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 			ssid->ssid = NULL;
 			ssid->ssid_len = 0;
 		}
+#endif /* CONFIG_P2P */
 	}
 
 	return ssid;

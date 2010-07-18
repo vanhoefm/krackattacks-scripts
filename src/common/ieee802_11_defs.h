@@ -391,6 +391,16 @@ struct ieee80211_mgmt {
 					u8 action; /* */
 					u8 trans_id[WLAN_SA_QUERY_TR_ID_LEN];
 				} STRUCT_PACKED sa_query_resp;
+				struct {
+					u8 action;
+					u8 variable[0];
+				} STRUCT_PACKED public_action;
+				struct {
+					u8 action; /* 9 */
+					u8 oui[3];
+					/* Vendor-specific content */
+					u8 variable[0];
+				} STRUCT_PACKED vs_public_action;
 			} u;
 		} STRUCT_PACKED action;
 	} u;

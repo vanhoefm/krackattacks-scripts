@@ -127,6 +127,42 @@ static void usage(void)
 }
 
 
+static void readline_redraw()
+{
+#ifdef CONFIG_READLINE
+	rl_on_new_line();
+	rl_redisplay();
+#endif /* CONFIG_READLINE */
+}
+
+
+static int str_starts(const char *src, const char *match)
+{
+	return os_strncmp(src, match, os_strlen(match)) == 0;
+}
+
+
+static int wpa_cli_show_event(const char *event)
+{
+	const char *start;
+
+	start = os_strchr(event, '>');
+	if (start == NULL)
+		return 1;
+
+	start++;
+	/*
+	 * Skip BSS added/removed events since they can be relatively frequent
+	 * and are likely of not much use for an interactive user.
+	 */
+	if (str_starts(start, WPA_EVENT_BSS_ADDED) ||
+	    str_starts(start, WPA_EVENT_BSS_REMOVED))
+		return 0;
+
+	return 1;
+}
+
+
 #ifdef CONFIG_WPA_CLI_FORK
 static int in_query = 0;
 
@@ -138,16 +174,19 @@ static void wpa_cli_monitor_sig(int sig)
 		in_query = 0;
 }
 
+
 static void wpa_cli_monitor(void)
 {
 	char buf[256];
 	size_t len = sizeof(buf) - 1;
 	struct timeval tv;
 	fd_set rfds;
+	int ppid;
 
 	signal(SIGUSR1, wpa_cli_monitor_sig);
 	signal(SIGUSR2, wpa_cli_monitor_sig);
 
+	ppid = getppid();
 	while (mon_conn) {
 		int s = wpa_ctrl_get_fd(mon_conn);
 		tv.tv_sec = 5;
@@ -170,10 +209,12 @@ static void wpa_cli_monitor(void)
 				break;
 			}
 			buf[len] = '\0';
-			if (in_query)
-				printf("\r");
-			printf("%s\n", buf);
-			kill(getppid(), SIGUSR1);
+			if (wpa_cli_show_event(buf)) {
+				if (in_query)
+					printf("\r");
+				printf("%s\n", buf);
+				kill(ppid, SIGUSR1);
+			}
 		}
 	}
 }
@@ -1951,14 +1992,13 @@ static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 			if (action_monitor)
 				wpa_cli_action_process(buf);
 			else {
-				if (in_read && first)
-					printf("\r");
-				first = 0;
-				printf("%s\n", buf);
-#ifdef CONFIG_READLINE
-				rl_on_new_line();
-				rl_redisplay();
-#endif /* CONFIG_READLINE */
+				if (wpa_cli_show_event(buf)) {
+					if (in_read && first)
+						printf("\r");
+					first = 0;
+					printf("%s\n", buf);
+					readline_redraw();
+				}
 			}
 		} else {
 			printf("Could not read pending message.\n");
@@ -2005,8 +2045,7 @@ static char * wpa_cli_dummy_gen(const char *text, int state)
 		if (os_strncasecmp(rl_line_buffer, cmd, len) == 0 &&
 		    rl_line_buffer[len] == ' ') {
 			printf("\n%s\n", wpa_cli_commands[i].usage);
-			rl_on_new_line();
-			rl_redisplay();
+			readline_redraw();
 			break;
 		}
 	}
@@ -2246,10 +2285,7 @@ static void wpa_cli_terminate(int sig)
 #ifdef CONFIG_WPA_CLI_FORK
 static void wpa_cli_usr1(int sig)
 {
-#ifdef CONFIG_READLINE
-	rl_on_new_line();
-	rl_redisplay();
-#endif /* CONFIG_READLINE */
+	readline_redraw();
 }
 #endif /* CONFIG_WPA_CLI_FORK */
 

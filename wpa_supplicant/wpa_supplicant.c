@@ -1810,13 +1810,18 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 		const u8 *addr = wpa_drv_get_mac_addr(wpa_s);
 		if (addr)
 			os_memcpy(wpa_s->own_addr, addr, ETH_ALEN);
-	} else {
+	} else if (!(wpa_s->drv_flags &
+		     WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)) {
 		wpa_s->l2 = l2_packet_init(wpa_s->ifname,
 					   wpa_drv_get_mac_addr(wpa_s),
 					   ETH_P_EAPOL,
 					   wpa_supplicant_rx_eapol, wpa_s, 0);
 		if (wpa_s->l2 == NULL)
 			return -1;
+	} else {
+		const u8 *addr = wpa_drv_get_mac_addr(wpa_s);
+		if (addr)
+			os_memcpy(wpa_s->own_addr, addr, ETH_ALEN);
 	}
 
 	if (wpa_s->l2 && l2_packet_get_own_addr(wpa_s->l2, wpa_s->own_addr)) {

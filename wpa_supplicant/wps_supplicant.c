@@ -1322,3 +1322,44 @@ int wpas_wps_in_progress(struct wpa_supplicant *wpa_s)
 
 	return 0;
 }
+
+
+void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
+{
+	struct wps_context *wps = wpa_s->wps;
+
+	if (wps == NULL)
+		return;
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_CONFIG_METHODS) {
+		wps->config_methods = wps_config_methods_str2bin(
+			wpa_s->conf->config_methods);
+		if ((wps->config_methods &
+		     (WPS_CONFIG_DISPLAY | WPS_CONFIG_LABEL)) ==
+		    (WPS_CONFIG_DISPLAY | WPS_CONFIG_LABEL)) {
+			wpa_printf(MSG_ERROR, "WPS: Both Label and Display "
+				   "config methods are not allowed at the "
+				   "same time");
+			wps->config_methods &= ~WPS_CONFIG_LABEL;
+		}
+	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE) {
+		if (wpa_s->conf->device_type &&
+		    wps_dev_type_str2bin(wpa_s->conf->device_type,
+					 wps->dev.pri_dev_type) < 0)
+			wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
+	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_OS_VERSION)
+		wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_UUID) {
+		if (is_nil_uuid(wpa_s->conf->uuid)) {
+			uuid_gen_mac_addr(wpa_s->own_addr, wps->uuid);
+			wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC "
+				    "address", wps->uuid, WPS_UUID_LEN);
+		} else
+			os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
+	}
+}

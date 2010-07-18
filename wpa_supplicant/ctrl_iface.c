@@ -82,8 +82,12 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			ret = -1;
 	} else if (os_strcasecmp(cmd, "wps_fragment_size") == 0) {
 		wpa_s->wps_fragment_size = atoi(value);
-	} else
-		ret = -1;
+	} else {
+		value[-1] = '=';
+		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);
+		if (ret == 0)
+			wpa_supplicant_update_config(wpa_s);
+	}
 
 	return ret;
 }

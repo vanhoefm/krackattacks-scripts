@@ -628,6 +628,7 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 			"file '%s' - exiting", wpa_s->confname);
 		return -1;
 	}
+	conf->changed_parameters = (unsigned int) -1;
 
 	reconf_ctrl = !!conf->ctrl_interface != !!wpa_s->conf->ctrl_interface
 		|| (conf->ctrl_interface && wpa_s->conf->ctrl_interface &&
@@ -669,6 +670,8 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 
 	if (reconf_ctrl)
 		wpa_s->ctrl_iface = wpa_supplicant_ctrl_iface_init(wpa_s);
+
+	wpa_supplicant_update_config(wpa_s);
 
 	wpa_supplicant_clear_status(wpa_s);
 	wpa_s->reassociate = 1;
@@ -2414,4 +2417,14 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	os_free(global);
 	wpa_debug_close_syslog();
 	wpa_debug_close_file();
+}
+
+
+void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_WPS
+	wpas_wps_update_config(wpa_s);
+#endif /* CONFIG_WPS */
+
+	wpa_s->conf->changed_parameters = 0;
 }

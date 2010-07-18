@@ -40,6 +40,7 @@ struct ieee802_11_elems {
 	const u8 *ht_capabilities;
 	const u8 *ht_operation;
 	const u8 *vendor_ht_cap;
+	const u8 *p2p;
 
 	u8 ssid_len;
 	u8 supp_rates_len;
@@ -64,6 +65,7 @@ struct ieee802_11_elems {
 	u8 ht_capabilities_len;
 	u8 ht_operation_len;
 	u8 vendor_ht_cap_len;
+	u8 p2p_len;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;

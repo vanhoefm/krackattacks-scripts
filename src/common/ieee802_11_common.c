@@ -96,6 +96,22 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 		}
 		break;
 
+	case OUI_WFA:
+		switch (pos[3]) {
+		case P2P_OUI_TYPE:
+			/* Wi-Fi Alliance - P2P IE */
+			elems->p2p = pos;
+			elems->p2p_len = elen;
+			break;
+		default:
+			wpa_printf(MSG_MSGDUMP, "Unknown WFA "
+				   "information element ignored "
+				   "(type=%d len=%lu)\n",
+				   pos[3], (unsigned long) elen);
+			return -1;
+		}
+		break;
+
 	case OUI_BROADCOM:
 		switch (pos[3]) {
 		case VENDOR_HT_CAPAB_OUI_TYPE:

@@ -861,6 +861,13 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->dev.serial_number = wpa_s->conf->serial_number;
 	wps->config_methods =
 		wps_config_methods_str2bin(wpa_s->conf->config_methods);
+	if ((wps->config_methods & (WPS_CONFIG_DISPLAY | WPS_CONFIG_LABEL)) ==
+	    (WPS_CONFIG_DISPLAY | WPS_CONFIG_LABEL)) {
+		wpa_printf(MSG_ERROR, "WPS: Both Label and Display config "
+			   "methods are not allowed at the same time");
+		os_free(wps);
+		return -1;
+	}
 	if (wpa_s->conf->device_type &&
 	    wps_dev_type_str2bin(wpa_s->conf->device_type,
 				 wps->dev.pri_dev_type) < 0) {

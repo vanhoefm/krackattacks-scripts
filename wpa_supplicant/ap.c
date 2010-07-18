@@ -67,6 +67,34 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	/* TODO: enable HT if driver supports it;
 	 * drop to 11b if driver does not support 11g */
 
+#ifdef CONFIG_P2P
+	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G) {
+		/* Remove 802.11b rates from supported and basic rate sets */
+		int *list = os_malloc(4 * sizeof(int));
+		if (list) {
+			list[0] = 60;
+			list[1] = 120;
+			list[2] = 240;
+			list[3] = -1;
+		}
+		conf->basic_rates = list;
+
+		list = os_malloc(9 * sizeof(int));
+		if (list) {
+			list[0] = 60;
+			list[1] = 90;
+			list[2] = 120;
+			list[3] = 180;
+			list[4] = 240;
+			list[5] = 360;
+			list[6] = 480;
+			list[7] = 540;
+			list[8] = -1;
+		}
+		conf->supported_rates = list;
+	}
+#endif /* CONFIG_P2P */
+
 	if (ssid->ssid_len == 0) {
 		wpa_printf(MSG_ERROR, "No SSID configured for AP mode");
 		return -1;

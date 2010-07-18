@@ -497,7 +497,6 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->ap_setup_locked = pos;
 		break;
-#ifdef CONFIG_WPS2
 	case ATTR_REQUESTED_DEV_TYPE:
 		if (len != WPS_DEV_TYPE_LEN) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Requested Device "
@@ -513,7 +512,6 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->req_dev_type[attr->num_req_dev_type] = pos;
 		attr->num_req_dev_type++;
 		break;
-#endif /* CONFIG_WPS2 */
 	case ATTR_VENDOR_EXT:
 		if (wps_parse_vendor_ext(attr, pos, len) < 0)
 			return -1;

@@ -708,8 +708,8 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 	wpa_config_write_global(f, config);
 
 	for (ssid = config->ssid; ssid; ssid = ssid->next) {
-		if (ssid->key_mgmt == WPA_KEY_MGMT_WPS)
-			continue; /* do not save temporary WPS networks */
+		if (ssid->key_mgmt == WPA_KEY_MGMT_WPS || ssid->temporary)
+			continue; /* do not save temporary networks */
 		fprintf(f, "\nnetwork={\n");
 		wpa_config_write_network(f, ssid);
 		fprintf(f, "}\n");

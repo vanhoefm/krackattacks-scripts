@@ -240,6 +240,8 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		ssid->eap.phase1 = NULL;
 		os_free(ssid->eap.eap_methods);
 		ssid->eap.eap_methods = NULL;
+		if (!ssid->p2p_group)
+			ssid->temporary = 0;
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS: Create a new network based on the "
 			   "received credential");
@@ -596,6 +598,7 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 		return NULL;
 	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
+	ssid->temporary = 1;
 	if (wpa_config_set(ssid, "key_mgmt", "WPS", 0) < 0 ||
 	    wpa_config_set(ssid, "eap", "WSC", 0) < 0 ||
 	    wpa_config_set(ssid, "identity", registrar ?
@@ -787,6 +790,7 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	ssid = wpas_wps_add_network(wpa_s, 1, bssid);
 	if (ssid == NULL)
 		return -1;
+	ssid->temporary = 1;
 	pos = val;
 	end = pos + sizeof(val);
 	res = os_snprintf(pos, end - pos, "\"pin=%s", pin);

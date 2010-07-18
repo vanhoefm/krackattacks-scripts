@@ -1988,6 +1988,19 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			os_free(bss->upc);
 			bss->upc = os_strdup(pos);
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P_MANAGER
+		} else if (os_strcmp(buf, "manage_p2p") == 0) {
+			int manage = atoi(pos);
+			if (manage)
+				bss->p2p |= P2P_MANAGE;
+			else
+				bss->p2p &= ~P2P_MANAGE;
+		} else if (os_strcmp(buf, "allow_cross_connection") == 0) {
+			if (atoi(pos))
+				bss->p2p |= P2P_ALLOW_CROSS_CONNECTION;
+			else
+				bss->p2p &= ~P2P_ALLOW_CROSS_CONNECTION;
+#endif /* CONFIG_P2P_MANAGER */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

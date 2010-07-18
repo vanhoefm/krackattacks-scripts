@@ -195,6 +195,29 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len,
 }
 
 
+#ifdef CONFIG_P2P_MANAGER
+u8 * hostapd_eid_p2p_manage(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 bitmap;
+	*eid++ = WLAN_EID_VENDOR_SPECIFIC;
+	*eid++ = 4 + 3 + 1;
+	WPA_PUT_BE24(eid, OUI_WFA);
+	eid += 3;
+	*eid++ = P2P_OUI_TYPE;
+
+	*eid++ = P2P_ATTR_MANAGEABILITY;
+	WPA_PUT_LE16(eid, 1);
+	eid += 2;
+	bitmap = BIT(0); /* P2P Device Management */
+	if (hapd->conf->p2p & P2P_ALLOW_CROSS_CONNECTION)
+		bitmap |= BIT(1); /* Cross Connection Permitted */
+	*eid++ = bitmap;
+
+	return eid;
+}
+#endif /* CONFIG_P2P_MANAGER */
+
+
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len)
 {
@@ -368,6 +391,11 @@ void handle_probe_req(struct hostapd_data *hapd,
 		pos += wpabuf_len(hapd->p2p_probe_resp_ie);
 	}
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_P2P_MANAGER
+	if ((hapd->conf->p2p & (P2P_MANAGE | P2P_ENABLED | P2P_GROUP_OWNER)) ==
+	    P2P_MANAGE)
+		pos = hostapd_eid_p2p_manage(hapd, pos);
+#endif /* CONFIG_P2P_MANAGER */
 
 	if (hapd->drv.send_mgmt_frame(hapd, resp, pos - (u8 *) resp) < 0)
 		perror("handle_probe_req: send");
@@ -487,6 +515,11 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 		tailpos += wpabuf_len(hapd->p2p_beacon_ie);
 	}
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_P2P_MANAGER
+	if ((hapd->conf->p2p & (P2P_MANAGE | P2P_ENABLED | P2P_GROUP_OWNER)) ==
+	    P2P_MANAGE)
+		tailpos = hostapd_eid_p2p_manage(hapd, tailpos);
+#endif /* CONFIG_P2P_MANAGER */
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 

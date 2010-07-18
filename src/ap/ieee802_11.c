@@ -905,6 +905,11 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_P2P_MANAGER
+	if (hapd->conf->p2p & P2P_MANAGE)
+		p = hostapd_eid_p2p_manage(hapd, p);
+#endif /* CONFIG_P2P_MANAGER */
+
 	send_len += p - reply->u.assoc_resp.variable;
 
 	if (hapd->drv.send_mgmt_frame(hapd, reply, send_len) < 0)

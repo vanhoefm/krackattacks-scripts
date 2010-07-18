@@ -1578,6 +1578,509 @@ static int wpa_cli_cmd_roam(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+#ifdef CONFIG_P2P
+
+static int wpa_cli_cmd_p2p_find(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc == 0)
+		return wpa_ctrl_command(ctrl, "P2P_FIND");
+
+	if (argc > 1)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_stop_find(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "P2P_STOP_FIND");
+}
+
+
+static int wpa_cli_cmd_p2p_connect(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc < 2) {
+		printf("Invalid P2P_CONNECT command: needs at least two "
+		       "arguments (address and pbc/PIN)\n");
+		return -1;
+	}
+
+	if (argc > 4)
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_CONNECT %s %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3],
+				  argv[4]);
+	else if (argc > 3)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3]);
+	else if (argc > 2)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s",
+				  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_listen(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc == 0)
+		return wpa_ctrl_command(ctrl, "P2P_LISTEN");
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_LISTEN %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_group_remove(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid P2P_GROUP_REMOVE command: needs one argument "
+		       "(interface name)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_REMOVE %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_group_add(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc == 0)
+		return wpa_ctrl_command(ctrl, "P2P_GROUP_ADD");
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_prov_disc(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid P2P_PROV_DISC command: needs two arguments "
+		       "(address and config method\n"
+		       "(display, keypad, or pbc)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_get_passphrase(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "P2P_GET_PASSPHRASE");
+}
+
+
+static int wpa_cli_cmd_p2p_serv_disc_req(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	char cmd[4096];
+	int res;
+
+	if (argc != 2 && argc != 4) {
+		printf("Invalid P2P_SERV_DISC_REQ command: needs two "
+		       "arguments (address and TLVs) or four arguments "
+		       "(address, \"upnp\", version, search target "
+		       "(SSDP ST:)\n");
+		return -1;
+	}
+
+	if (argc == 4)
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_SERV_DISC_REQ %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_REQ %s %s",
+				  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_serv_disc_cancel_req(struct wpa_ctrl *ctrl,
+						int argc, char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid P2P_SERV_DISC_CANCEL_REQ command: needs one "
+		       "argument (pending request identifier)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_CANCEL_REQ %s",
+			  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_serv_disc_resp(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	char cmd[4096];
+	int res;
+
+	if (argc != 4) {
+		printf("Invalid P2P_SERV_DISC_RESP command: needs four "
+		       "arguments (freq, address, dialog token, and TLVs)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_RESP %s %s %s %s",
+			  argv[0], argv[1], argv[2], argv[3]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_service_update(struct wpa_ctrl *ctrl, int argc,
+					  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "P2P_SERVICE_UPDATE");
+}
+
+
+static int wpa_cli_cmd_p2p_serv_disc_external(struct wpa_ctrl *ctrl,
+					      int argc, char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid P2P_SERV_DISC_EXTERNAL command: needs one "
+		       "argument (external processing: 0/1)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_SERV_DISC_EXTERNAL %s",
+			  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_service_flush(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "P2P_SERVICE_FLUSH");
+}
+
+
+static int wpa_cli_cmd_p2p_service_add(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	char cmd[4096];
+	int res;
+
+	if (argc != 3 && argc != 4) {
+		printf("Invalid P2P_SERVICE_ADD command: needs three or four "
+		       "arguments\n");
+		return -1;
+	}
+
+	if (argc == 4)
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_SERVICE_ADD %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_SERVICE_ADD %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_service_del(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	char cmd[4096];
+	int res;
+
+	if (argc != 2 && argc != 3) {
+		printf("Invalid P2P_SERVICE_DEL command: needs two or three "
+		       "arguments\n");
+		return -1;
+	}
+
+	if (argc == 3)
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_SERVICE_DEL %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_SERVICE_DEL %s %s",
+				  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_reject(struct wpa_ctrl *ctrl,
+				  int argc, char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid P2P_REJECT command: needs one argument "
+		       "(peer address)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_REJECT %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_invite(struct wpa_ctrl *ctrl,
+				  int argc, char *argv[])
+{
+	char cmd[128];
+	int res;
+
+	if (argc < 1) {
+		printf("Invalid P2P_INVITE command: needs at least one "
+		       "argument\n");
+		return -1;
+	}
+
+	if (argc > 2)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_INVITE %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else if (argc > 1)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_INVITE %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_INVITE %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_peer(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char buf[64];
+	if (argc != 1) {
+		printf("Invalid 'p2p_peer' command - exactly one argument, "
+		       "P2P peer device address, is required.\n");
+		return -1;
+	}
+	os_snprintf(buf, sizeof(buf), "P2P_PEER %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static int wpa_ctrl_command_p2p_peer(struct wpa_ctrl *ctrl, char *cmd,
+				     char *addr, size_t addr_len,
+				     int discovered)
+{
+	char buf[4096], *pos;
+	size_t len;
+	int ret;
+
+	if (ctrl_conn == NULL)
+		return -1;
+	len = sizeof(buf) - 1;
+	ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
+			       wpa_cli_msg_cb);
+	if (ret == -2) {
+		printf("'%s' command timed out.\n", cmd);
+		return -2;
+	} else if (ret < 0) {
+		printf("'%s' command failed.\n", cmd);
+		return -1;
+	}
+
+	buf[len] = '\0';
+	if (memcmp(buf, "FAIL", 4) == 0)
+		return -1;
+
+	pos = buf;
+	while (*pos != '\0' && *pos != '\n')
+		pos++;
+	*pos++ = '\0';
+	os_strlcpy(addr, buf, addr_len);
+	if (!discovered || os_strstr(pos, "[PROBE_REQ_ONLY]") == NULL)
+		printf("%s\n", addr);
+	return 0;
+}
+
+
+static int wpa_cli_cmd_p2p_peers(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char addr[32], cmd[64];
+	int discovered;
+
+	discovered = argc > 0 && os_strcmp(argv[0], "discovered") == 0;
+
+	if (wpa_ctrl_command_p2p_peer(ctrl, "P2P_PEER FIRST",
+				      addr, sizeof(addr), discovered))
+		return 0;
+	do {
+		os_snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s", addr);
+	} while (wpa_ctrl_command_p2p_peer(ctrl, cmd, addr, sizeof(addr),
+			 discovered) == 0);
+
+	return -1;
+}
+
+
+static int wpa_cli_cmd_p2p_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid P2P_SET command: needs two arguments (field, "
+		       "value)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_SET %s %s", argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "P2P_FLUSH");
+}
+
+
+static int wpa_cli_cmd_p2p_presence_req(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 0 && argc != 2 && argc != 4) {
+		printf("Invalid P2P_PRESENCE_REQ command: needs two arguments "
+		       "(preferred duration, interval; in microsecods).\n"
+		       "Optional second pair can be used to provide "
+		       "acceptable values.\n");
+		return -1;
+	}
+
+	if (argc == 4)
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "P2P_PRESENCE_REQ %s %s %s %s",
+				  argv[0], argv[1], argv[2], argv[3]);
+	else if (argc == 2)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_PRESENCE_REQ %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_PRESENCE_REQ");
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 0 && argc != 2) {
+		printf("Invalid P2P_EXT_LISTEN command: needs two arguments "
+		       "(availability period, availability interval; in "
+		       "millisecods).\n"
+		       "Extended Listen Timing can be cancelled with this "
+		       "command when used without parameters.\n");
+		return -1;
+	}
+
+	if (argc == 2)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_EXT_LISTEN %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_EXT_LISTEN");
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+#endif /* CONFIG_P2P */
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -1787,6 +2290,71 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "roam", wpa_cli_cmd_roam,
 	  cli_cmd_flag_none,
 	  "<addr> = roam to the specified BSS" },
+#ifdef CONFIG_P2P
+	{ "p2p_find", wpa_cli_cmd_p2p_find, cli_cmd_flag_none,
+	  "[timeout] [type=*] = find P2P Devices for up-to timeout seconds" },
+	{ "p2p_stop_find", wpa_cli_cmd_p2p_stop_find, cli_cmd_flag_none,
+	  "= stop P2P Devices search" },
+	{ "p2p_connect", wpa_cli_cmd_p2p_connect, cli_cmd_flag_none,
+	  "<addr> <\"pbc\"|PIN> = connect to a P2P Devices" },
+	{ "p2p_listen", wpa_cli_cmd_p2p_listen, cli_cmd_flag_none,
+	  "[timeout] = listen for P2P Devices for up-to timeout seconds" },
+	{ "p2p_group_remove", wpa_cli_cmd_p2p_group_remove, cli_cmd_flag_none,
+	  "<ifname> = remote P2P group interface (terminate group if GO)" },
+	{ "p2p_group_add", wpa_cli_cmd_p2p_group_add, cli_cmd_flag_none,
+	  "= add a new P2P group (local end as GO)" },
+	{ "p2p_prov_disc", wpa_cli_cmd_p2p_prov_disc, cli_cmd_flag_none,
+	  "<addr> <method> = request provisioning discovery" },
+	{ "p2p_get_passphrase", wpa_cli_cmd_p2p_get_passphrase,
+	  cli_cmd_flag_none,
+	  "= get the passphrase for a group (GO only)" },
+	{ "p2p_serv_disc_req", wpa_cli_cmd_p2p_serv_disc_req,
+	  cli_cmd_flag_none,
+	  "<addr> <TLVs> = schedule service discovery request" },
+	{ "p2p_serv_disc_cancel_req", wpa_cli_cmd_p2p_serv_disc_cancel_req,
+	  cli_cmd_flag_none,
+	  "<id> = cancel pending service discovery request" },
+	{ "p2p_serv_disc_resp", wpa_cli_cmd_p2p_serv_disc_resp,
+	  cli_cmd_flag_none,
+	  "<freq> <addr> <dialog token> <TLVs> = service discovery response" },
+	{ "p2p_service_update", wpa_cli_cmd_p2p_service_update,
+	  cli_cmd_flag_none,
+	  "= indicate change in local services" },
+	{ "p2p_serv_disc_external", wpa_cli_cmd_p2p_serv_disc_external,
+	  cli_cmd_flag_none,
+	  "<external> = set external processing of service discovery" },
+	{ "p2p_service_flush", wpa_cli_cmd_p2p_service_flush,
+	  cli_cmd_flag_none,
+	  "= remove all stored service entries" },
+	{ "p2p_service_add", wpa_cli_cmd_p2p_service_add,
+	  cli_cmd_flag_none,
+	  "<bonjour|upnp> <query|version> <response|service> = add a local "
+	  "service" },
+	{ "p2p_service_del", wpa_cli_cmd_p2p_service_del,
+	  cli_cmd_flag_none,
+	  "<bonjour|upnp> <query|version> [|service] = remove a local "
+	  "service" },
+	{ "p2p_reject", wpa_cli_cmd_p2p_reject,
+	  cli_cmd_flag_none,
+	  "<addr> = reject connection attempts from a specific peer" },
+	{ "p2p_invite", wpa_cli_cmd_p2p_invite,
+	  cli_cmd_flag_none,
+	  "<cmd> [peer=addr] = invite peer" },
+	{ "p2p_peers", wpa_cli_cmd_p2p_peers, cli_cmd_flag_none,
+	  "[discovered] = list known (optionally, only fully discovered) P2P "
+	  "peers" },
+	{ "p2p_peer", wpa_cli_cmd_p2p_peer, cli_cmd_flag_none,
+	  "<address> = show information about known P2P peer" },
+	{ "p2p_set", wpa_cli_cmd_p2p_set, cli_cmd_flag_none,
+	  "<field> <value> = set a P2P parameter" },
+	{ "p2p_flush", wpa_cli_cmd_p2p_flush, cli_cmd_flag_none,
+	  "= flush P2P state" },
+	{ "p2p_presence_req", wpa_cli_cmd_p2p_presence_req, cli_cmd_flag_none,
+	  "[<duration> <interval>] [<duration> <interval>] = request GO "
+	  "presence" },
+	{ "p2p_ext_listen", wpa_cli_cmd_p2p_ext_listen, cli_cmd_flag_none,
+	  "[<period> <interval>] = set extended listen timing" },
+#endif /* CONFIG_P2P */
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

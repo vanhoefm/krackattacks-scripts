@@ -1547,8 +1547,18 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_AP */
-		if (data)
-			reason_code = data->deauth_info.reason_code;
+		if (data) {
+			reason_code = data->disassoc_info.reason_code;
+			wpa_hexdump(MSG_DEBUG, "Disassociation frame IE(s)",
+				    data->disassoc_info.ie,
+				    data->disassoc_info.ie_len);
+#ifdef CONFIG_P2P
+			wpas_p2p_disassoc_notif(
+				wpa_s, data->disassoc_info.addr, reason_code,
+				data->disassoc_info.ie,
+				data->disassoc_info.ie_len);
+#endif /* CONFIG_P2P */
+		}
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_disassoc(wpa_s, data);
 		/* fall through */
@@ -1565,6 +1575,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 						   MAC2STR(data->deauth_info.
 							   addr));
 				}
+				wpa_hexdump(MSG_DEBUG,
+					    "Deauthentication frame IE(s)",
+					    data->deauth_info.ie,
+					    data->deauth_info.ie_len);
+#ifdef CONFIG_P2P
+				wpas_p2p_deauth_notif(
+					wpa_s, data->deauth_info.addr,
+					reason_code,
+					data->deauth_info.ie,
+					data->deauth_info.ie_len);
+#endif /* CONFIG_P2P */
 			}
 		}
 #ifdef CONFIG_AP

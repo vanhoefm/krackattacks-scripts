@@ -20,6 +20,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "p2p/p2p.h"
 #include "wps/wps.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
@@ -180,6 +181,13 @@ skip_wpa_check:
 	hostapd_new_assoc_sta(hapd, sta, !new_assoc);
 
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
+
+#ifdef CONFIG_P2P
+	if (elems.p2p) {
+		p2p_group_notif_assoc(hapd->p2p_group, sta->addr,
+				      all_ies, all_ies_len);
+	}
+#endif /* CONFIG_P2P */
 
 	return 0;
 }

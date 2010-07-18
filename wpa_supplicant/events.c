@@ -1178,7 +1178,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_scard_init(wpa_s, wpa_s->current_ssid);
 	}
 	wpa_sm_notify_assoc(wpa_s->wpa, bssid);
-	l2_packet_notify_auth_start(wpa_s->l2);
+	if (wpa_s->l2)
+		l2_packet_notify_auth_start(wpa_s->l2);
 
 	/*
 	 * Set portEnabled first to FALSE in order to get EAP state machine out

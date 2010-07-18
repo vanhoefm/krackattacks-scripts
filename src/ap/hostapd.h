@@ -180,6 +180,11 @@ struct hostapd_data {
 	void (*wps_reg_success_cb)(void *ctx, const u8 *mac_addr,
 				   const u8 *uuid_e);
 	void *wps_reg_success_cb_ctx;
+
+#ifdef CONFIG_P2P
+	struct wpabuf *p2p_beacon_ie;
+	struct wpabuf *p2p_probe_resp_ie;
+#endif /* CONFIG_P2P */
 };
 
 

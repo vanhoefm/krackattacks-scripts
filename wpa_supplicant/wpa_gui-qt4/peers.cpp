@@ -1,6 +1,6 @@
 /*
  * wpa_gui - Peers class
- * Copyright (c) 2009, Atheros Communications
+ * Copyright (c) 2009-2010, Atheros Communications
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -27,11 +27,22 @@ enum {
 	peer_role_type,
 	peer_role_uuid,
 	peer_role_details,
+	peer_role_ifname,
 	peer_role_pri_dev_type,
 	peer_role_ssid,
 	peer_role_config_methods,
 	peer_role_dev_passwd_id,
-	peer_role_bss_id
+	peer_role_bss_id,
+	peer_role_selected_method,
+	peer_role_selected_pin,
+	peer_role_requested_method,
+	peer_role_network_id
+};
+
+enum selected_method {
+	SEL_METHOD_NONE,
+	SEL_METHOD_PIN_PEER_DISPLAY,
+	SEL_METHOD_PIN_LOCAL_DISPLAY
 };
 
 /*
@@ -44,6 +55,12 @@ enum peer_type {
 	PEER_TYPE_AP,
 	PEER_TYPE_AP_WPS,
 	PEER_TYPE_WPS_PIN_NEEDED,
+	PEER_TYPE_P2P,
+	PEER_TYPE_P2P_CLIENT,
+	PEER_TYPE_P2P_GROUP,
+	PEER_TYPE_P2P_PERSISTENT_GROUP_GO,
+	PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT,
+	PEER_TYPE_P2P_INVITATION,
 	PEER_TYPE_WPS_ER_AP,
 	PEER_TYPE_WPS_ER_AP_UNCONFIGURED,
 	PEER_TYPE_WPS_ER_ENROLLEE,
@@ -61,20 +78,27 @@ Peers::Peers(QWidget *parent, const char *, bool, Qt::WFlags)
 		default_icon = new QIcon(":/icons/wpa_gui.svg");
 		ap_icon = new QIcon(":/icons/ap.svg");
 		laptop_icon = new QIcon(":/icons/laptop.svg");
+		group_icon = new QIcon(":/icons/group.svg");
+		invitation_icon = new QIcon(":/icons/invitation.svg");
 	} else {
 		default_icon = new QIcon(":/icons/wpa_gui.png");
 		ap_icon = new QIcon(":/icons/ap.png");
 		laptop_icon = new QIcon(":/icons/laptop.png");
+		group_icon = new QIcon(":/icons/group.png");
+		invitation_icon = new QIcon(":/icons/invitation.png");
 	}
 
 	peers->setModel(&model);
 	peers->setResizeMode(QListView::Adjust);
+	peers->setDragEnabled(false);
+	peers->setSelectionMode(QAbstractItemView::NoSelection);
 
 	peers->setContextMenuPolicy(Qt::CustomContextMenu);
 	connect(peers, SIGNAL(customContextMenuRequested(const QPoint &)),
 		this, SLOT(context_menu(const QPoint &)));
 
 	wpagui = NULL;
+	hide_ap = false;
 }
 
 
@@ -90,6 +114,8 @@ Peers::~Peers()
 	delete default_icon;
 	delete ap_icon;
 	delete laptop_icon;
+	delete group_icon;
+	delete invitation_icon;
 }
 
 
@@ -114,6 +140,24 @@ QString Peers::ItemType(int type)
 		break;
 	case PEER_TYPE_WPS_PIN_NEEDED:
 		title = tr("WPS PIN needed");
+		break;
+	case PEER_TYPE_P2P:
+		title = tr("P2P Device");
+		break;
+	case PEER_TYPE_P2P_CLIENT:
+		title = tr("P2P Device (group client)");
+		break;
+	case PEER_TYPE_P2P_GROUP:
+		title = tr("P2P Group");
+		break;
+	case PEER_TYPE_P2P_PERSISTENT_GROUP_GO:
+		title = tr("P2P Persistent Group (GO)");
+		break;
+	case PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT:
+		title = tr("P2P Persistent Group (client)");
+		break;
+	case PEER_TYPE_P2P_INVITATION:
+		title = tr("P2P Invitation");
 		break;
 	case PEER_TYPE_WPS_ER_AP:
 		title = tr("ER: WPS AP");
@@ -150,6 +194,11 @@ void Peers::context_menu(const QPoint &pos)
 		if (var.isValid())
 			config_methods = var.toInt();
 
+		enum selected_method method = SEL_METHOD_NONE;
+		var = ctx_item->data(peer_role_selected_method);
+		if (var.isValid())
+			method = (enum selected_method) var.toInt();
+
 		if ((type == PEER_TYPE_ASSOCIATED_STATION ||
 		     type == PEER_TYPE_AP_WPS ||
 		     type == PEER_TYPE_WPS_PIN_NEEDED ||
@@ -158,6 +207,60 @@ void Peers::context_menu(const QPoint &pos)
 		    (config_methods == -1 || (config_methods & 0x010c))) {
 			menu->addAction(tr("Enter WPS PIN"), this,
 					SLOT(enter_pin()));
+		}
+
+		if (type == PEER_TYPE_P2P || type == PEER_TYPE_P2P_CLIENT) {
+			menu->addAction(tr("P2P Connect"), this,
+					SLOT(ctx_p2p_connect()));
+			if (method == SEL_METHOD_NONE &&
+			    config_methods > -1 &&
+			    config_methods & 0x0080 /* PBC */ &&
+			    config_methods != 0x0080)
+				menu->addAction(tr("P2P Connect (PBC)"), this,
+						SLOT(connect_pbc()));
+			if (method == SEL_METHOD_NONE) {
+				menu->addAction(tr("P2P Request PIN"), this,
+						SLOT(ctx_p2p_req_pin()));
+				menu->addAction(tr("P2P Show PIN"), this,
+						SLOT(ctx_p2p_show_pin()));
+			}
+
+			if (config_methods > -1 && (config_methods & 0x0100)) {
+				/* Peer has Keypad */
+				menu->addAction(tr("P2P Display PIN"), this,
+						SLOT(ctx_p2p_display_pin()));
+			}
+
+			if (config_methods > -1 && (config_methods & 0x000c)) {
+				/* Peer has Label or Display */
+				menu->addAction(tr("P2P Enter PIN"), this,
+						SLOT(ctx_p2p_enter_pin()));
+			}
+		}
+
+		if (type == PEER_TYPE_P2P_GROUP) {
+			menu->addAction(tr("Show passphrase"), this,
+					SLOT(ctx_p2p_show_passphrase()));
+			menu->addAction(tr("Remove P2P Group"), this,
+					SLOT(ctx_p2p_remove_group()));
+		}
+
+		if (type == PEER_TYPE_P2P_PERSISTENT_GROUP_GO ||
+		    type == PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT ||
+		    type == PEER_TYPE_P2P_INVITATION) {
+			menu->addAction(tr("Start group"), this,
+					SLOT(ctx_p2p_start_persistent()));
+		}
+
+		if (type == PEER_TYPE_P2P_PERSISTENT_GROUP_GO ||
+		    type == PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT) {
+			menu->addAction(tr("Invite"), this,
+					SLOT(ctx_p2p_invite()));
+		}
+
+		if (type == PEER_TYPE_P2P_INVITATION) {
+			menu->addAction(tr("Ignore"), this,
+					SLOT(ctx_p2p_delete()));
 		}
 
 		if (type == PEER_TYPE_AP_WPS) {
@@ -183,6 +286,20 @@ void Peers::context_menu(const QPoint &pos)
 		ctx_item = NULL;
 		menu->addAction(QString(tr("Refresh")), this,
 				SLOT(ctx_refresh()));
+		menu->addAction(tr("Start P2P discovery"), this,
+				SLOT(ctx_p2p_start()));
+		menu->addAction(tr("Stop P2P discovery"), this,
+				SLOT(ctx_p2p_stop()));
+		menu->addAction(tr("P2P listen only"), this,
+				SLOT(ctx_p2p_listen()));
+		menu->addAction(tr("Start P2P group"), this,
+				SLOT(ctx_p2p_start_group()));
+		if (hide_ap)
+			menu->addAction(tr("Show AP entries"), this,
+					SLOT(ctx_show_ap()));
+		else
+			menu->addAction(tr("Hide AP entries"), this,
+					SLOT(ctx_hide_ap()));
 	}
 
 	menu->exec(peers->mapToGlobal(pos));
@@ -236,6 +353,60 @@ void Peers::ctx_refresh()
 }
 
 
+void Peers::ctx_p2p_start()
+{
+	char reply[20];
+	size_t reply_len;
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest("P2P_FIND", reply, &reply_len) < 0 ||
+	    memcmp(reply, "FAIL", 4) == 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to start P2P discovery.");
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_stop()
+{
+	char reply[20];
+	size_t reply_len;
+	reply_len = sizeof(reply) - 1;
+	wpagui->ctrlRequest("P2P_STOP_FIND", reply, &reply_len);
+}
+
+
+void Peers::ctx_p2p_listen()
+{
+	char reply[20];
+	size_t reply_len;
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest("P2P_LISTEN 3600", reply, &reply_len) < 0 ||
+	    memcmp(reply, "FAIL", 4) == 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to start P2P listen.");
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_start_group()
+{
+	char reply[20];
+	size_t reply_len;
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest("P2P_GROUP_ADD", reply, &reply_len) < 0 ||
+	    memcmp(reply, "FAIL", 4) == 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to start P2P group.");
+		msg.exec();
+	}
+}
+
+
 void Peers::add_station(QString info)
 {
 	QStringList lines = info.split(QRegExp("\\n"));
@@ -249,6 +420,8 @@ void Peers::add_station(QString info)
 
 		if ((*it).startsWith("wpsDeviceName="))
 			name = (*it).mid(pos);
+		else if ((*it).startsWith("p2p_device_name="))
+			name = (*it).mid(pos);
 	}
 
 	if (name.isEmpty())
@@ -256,6 +429,24 @@ void Peers::add_station(QString info)
 
 	QStandardItem *item = new QStandardItem(*laptop_icon, name);
 	if (item) {
+		/* Remove WPS enrollee entry if one is still pending */
+		if (model.rowCount() > 0) {
+			QModelIndexList lst = model.match(model.index(0, 0),
+							  peer_role_address,
+							  lines[0]);
+			for (int i = 0; i < lst.size(); i++) {
+				QStandardItem *item;
+				item = model.itemFromIndex(lst[i]);
+				if (item == NULL)
+					continue;
+				int type = item->data(peer_role_type).toInt();
+				if (type == PEER_TYPE_WPS_ENROLLEE) {
+					model.removeRow(lst[i].row());
+					break;
+				}
+			}
+		}
+
 		item->setData(lines[0], peer_role_address);
 		item->setData(PEER_TYPE_ASSOCIATED_STATION,
 			      peer_role_type);
@@ -322,6 +513,55 @@ void Peers::add_single_station(const char *addr)
 }
 
 
+void Peers::add_p2p_group_client(QStandardItem * /*parent*/, QString params)
+{
+	/*
+	 * dev=02:b5:64:63:30:63 iface=02:b5:64:63:30:63 dev_capab=0x0
+	 * dev_type=1-0050f204-1 dev_name='Wireless Client'
+	 * config_methods=0x8c
+	 */
+
+	QStringList items =
+		params.split(QRegExp(" (?=[^']*('[^']*'[^']*)*$)"));
+	QString addr = "";
+	QString name = "";
+	int config_methods = 0;
+	QString dev_type;
+
+	for (int i = 0; i < items.size(); i++) {
+		QString str = items.at(i);
+		int pos = str.indexOf('=') + 1;
+		if (str.startsWith("dev_name='"))
+			name = str.section('\'', 1, -2);
+		else if (str.startsWith("config_methods="))
+			config_methods =
+				str.section('=', 1).toInt(0, 0);
+		else if (str.startsWith("dev="))
+			addr = str.mid(pos);
+		else if (str.startsWith("dev_type=") && dev_type.isEmpty())
+			dev_type = str.mid(pos);
+	}
+
+	QStandardItem *item = find_addr(addr);
+	if (item)
+		return;
+
+	item = new QStandardItem(*default_icon, name);
+	if (item) {
+		/* TODO: indicate somehow the relationship to the group owner
+		 * (parent) */
+		item->setData(addr, peer_role_address);
+		item->setData(config_methods, peer_role_config_methods);
+		item->setData(PEER_TYPE_P2P_CLIENT, peer_role_type);
+		if (!dev_type.isEmpty())
+			item->setData(dev_type, peer_role_pri_dev_type);
+		item->setData(items.join(QString("\n")), peer_role_details);
+		item->setToolTip(ItemType(PEER_TYPE_P2P_CLIENT));
+		model.appendRow(item);
+	}
+}
+
+
 void Peers::remove_bss(int id)
 {
 	if (model.rowCount() == 0)
@@ -339,6 +579,9 @@ bool Peers::add_bss(const char *cmd)
 {
 	char reply[2048];
 	size_t reply_len;
+
+	if (hide_ap)
+		return false;
 
 	reply_len = sizeof(reply) - 1;
 	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
@@ -403,6 +646,14 @@ bool Peers::add_bss(const char *cmd)
 		if (!ssid.isEmpty())
 			item->setData(ssid, peer_role_ssid);
 		model.appendRow(item);
+
+		lines = bss.split(QRegExp("\\n"));
+		for (QStringList::Iterator it = lines.begin();
+		     it != lines.end(); it++) {
+			if ((*it).startsWith("p2p_group_client:"))
+				add_p2p_group_client(item,
+						     (*it).mid(18));
+		}
 	}
 
 	return true;
@@ -426,6 +677,95 @@ void Peers::add_scan_results()
 }
 
 
+void Peers::add_persistent(int id, const char *ssid, const char *bssid)
+{
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	int mode;
+
+	snprintf(cmd, sizeof(cmd), "GET_NETWORK %d mode", id);
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
+		return;
+	reply[reply_len] = '\0';
+	mode = atoi(reply);
+
+	QString name = ssid;
+	name = '[' + name + ']';
+
+	QStandardItem *item = new QStandardItem(*group_icon, name);
+	if (!item)
+		return;
+
+	int type;
+	if (mode == 3)
+		type = PEER_TYPE_P2P_PERSISTENT_GROUP_GO;
+	else
+		type = PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT;
+	item->setData(type, peer_role_type);
+	item->setToolTip(ItemType(type));
+	item->setData(ssid, peer_role_ssid);
+	if (bssid && strcmp(bssid, "any") == 0)
+		bssid = NULL;
+	if (bssid)
+		item->setData(bssid, peer_role_address);
+	item->setData(id, peer_role_network_id);
+	item->setBackground(Qt::BDiagPattern);
+
+	model.appendRow(item);
+}
+
+
+void Peers::add_persistent_groups()
+{
+	char buf[2048], *start, *end, *id, *ssid, *bssid, *flags;
+	size_t len;
+
+	len = sizeof(buf) - 1;
+	if (wpagui->ctrlRequest("LIST_NETWORKS", buf, &len) < 0)
+		return;
+
+	buf[len] = '\0';
+	start = strchr(buf, '\n');
+	if (start == NULL)
+		return;
+	start++;
+
+	while (*start) {
+		bool last = false;
+		end = strchr(start, '\n');
+		if (end == NULL) {
+			last = true;
+			end = start;
+			while (end[0] && end[1])
+				end++;
+		}
+		*end = '\0';
+
+		id = start;
+		ssid = strchr(id, '\t');
+		if (ssid == NULL)
+			break;
+		*ssid++ = '\0';
+		bssid = strchr(ssid, '\t');
+		if (bssid == NULL)
+			break;
+		*bssid++ = '\0';
+		flags = strchr(bssid, '\t');
+		if (flags == NULL)
+			break;
+		*flags++ = '\0';
+
+		if (strstr(flags, "[DISABLED][P2P-PERSISTENT]"))
+			add_persistent(atoi(id), ssid, bssid);
+
+		if (last)
+			break;
+		start = end + 1;
+	}
+}
+
+
 void Peers::update_peers()
 {
 	model.clear();
@@ -438,6 +778,7 @@ void Peers::update_peers()
 
 	add_stations();
 	add_scan_results();
+	add_persistent_groups();
 }
 
 
@@ -451,6 +792,22 @@ QStandardItem * Peers::find_addr(QString addr)
 	if (lst.size() == 0)
 		return NULL;
 	return model.itemFromIndex(lst[0]);
+}
+
+
+QStandardItem * Peers::find_addr_type(QString addr, int type)
+{
+	if (model.rowCount() == 0)
+		return NULL;
+
+	QModelIndexList lst = model.match(model.index(0, 0), peer_role_address,
+					  addr);
+	for (int i = 0; i < lst.size(); i++) {
+		QStandardItem *item = model.itemFromIndex(lst[i]);
+		if (item->data(peer_role_type).toInt() == type)
+			return item;
+	}
+	return NULL;
 }
 
 
@@ -530,13 +887,222 @@ void Peers::event_notify(WpaMsg msg)
 			return;
 
 		QModelIndexList lst = model.match(model.index(0, 0),
-						  peer_role_address, addr);
+						  peer_role_address, addr, -1);
 		for (int i = 0; i < lst.size(); i++) {
 			QStandardItem *item = model.itemFromIndex(lst[i]);
 			if (item && item->data(peer_role_type).toInt() ==
-			    PEER_TYPE_ASSOCIATED_STATION)
+			    PEER_TYPE_ASSOCIATED_STATION) {
 				model.removeRow(lst[i].row());
+				break;
+			}
 		}
+		return;
+	}
+
+	if (text.startsWith(P2P_EVENT_DEVICE_FOUND)) {
+		/*
+		 * P2P-DEVICE-FOUND 02:b5:64:63:30:63
+		 * p2p_dev_addr=02:b5:64:63:30:63 pri_dev_type=1-0050f204-1
+		 * name='Wireless Client' config_methods=0x84 dev_capab=0x21
+		 * group_capab=0x0
+		 */
+		QStringList items =
+			text.split(QRegExp(" (?=[^']*('[^']*'[^']*)*$)"));
+		QString addr = items[1];
+		QString name = "";
+		QString pri_dev_type;
+		int config_methods = 0;
+		for (int i = 0; i < items.size(); i++) {
+			QString str = items.at(i);
+			if (str.startsWith("name='"))
+				name = str.section('\'', 1, -2);
+			else if (str.startsWith("config_methods="))
+				config_methods =
+					str.section('=', 1).toInt(0, 0);
+			else if (str.startsWith("pri_dev_type="))
+				pri_dev_type = str.section('=', 1);
+		}
+
+		QStandardItem *item = find_addr(addr);
+		if (item) {
+			int type = item->data(peer_role_type).toInt();
+			if (type == PEER_TYPE_P2P)
+				return;
+		}
+
+		item = new QStandardItem(*default_icon, name);
+		if (item) {
+			item->setData(addr, peer_role_address);
+			item->setData(config_methods,
+				      peer_role_config_methods);
+			item->setData(PEER_TYPE_P2P, peer_role_type);
+			if (!pri_dev_type.isEmpty())
+				item->setData(pri_dev_type,
+					      peer_role_pri_dev_type);
+			item->setData(items.join(QString("\n")),
+				      peer_role_details);
+			item->setToolTip(ItemType(PEER_TYPE_P2P));
+			model.appendRow(item);
+		}
+
+		item = find_addr_type(addr,
+				      PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT);
+		if (item)
+			item->setBackground(Qt::NoBrush);
+	}
+
+	if (text.startsWith(P2P_EVENT_GROUP_STARTED)) {
+		/* P2P-GROUP-STARTED wlan0-p2p-0 GO ssid="DIRECT-3F"
+		 * passphrase="YOyTkxID" go_dev_addr=02:40:61:c2:f3:b7
+		 * [PERSISTENT] */
+		QStringList items = text.split(' ');
+		if (items.size() < 4)
+			return;
+
+		int pos = text.indexOf(" ssid=\"");
+		if (pos < 0)
+			return;
+		QString ssid = text.mid(pos + 7);
+		pos = ssid.indexOf(" passphrase=\"");
+		if (pos < 0)
+			pos = ssid.indexOf(" psk=");
+		if (pos >= 0)
+			ssid.truncate(pos);
+		pos = ssid.lastIndexOf('"');
+		if (pos >= 0)
+			ssid.truncate(pos);
+
+		QStandardItem *item = new QStandardItem(*group_icon, ssid);
+		if (item) {
+			item->setData(PEER_TYPE_P2P_GROUP, peer_role_type);
+			item->setData(items[1], peer_role_ifname);
+			QString details;
+			if (items[2] == "GO") {
+				details = tr("P2P GO for interface ") +
+					items[1];
+			} else {
+				details = tr("P2P client for interface ") +
+					items[1];
+			}
+			if (text.contains(" [PERSISTENT]"))
+				details += "\nPersistent group";
+			item->setData(details, peer_role_details);
+			item->setToolTip(ItemType(PEER_TYPE_P2P_GROUP));
+			model.appendRow(item);
+		}
+	}
+
+	if (text.startsWith(P2P_EVENT_GROUP_REMOVED)) {
+		/* P2P-GROUP-REMOVED wlan0-p2p-0 GO */
+		QStringList items = text.split(' ');
+		if (items.size() < 2)
+			return;
+
+		if (model.rowCount() == 0)
+			return;
+
+		QModelIndexList lst = model.match(model.index(0, 0),
+						  peer_role_ifname, items[1]);
+		for (int i = 0; i < lst.size(); i++)
+			model.removeRow(lst[i].row());
+		return;
+	}
+
+	if (text.startsWith(P2P_EVENT_PROV_DISC_SHOW_PIN)) {
+		/* P2P-PROV-DISC-SHOW-PIN 02:40:61:c2:f3:b7 12345670 */
+		QStringList items = text.split(' ');
+		if (items.size() < 3)
+			return;
+		QString addr = items[1];
+		QString pin = items[2];
+
+		QStandardItem *item = find_addr_type(addr, PEER_TYPE_P2P);
+		if (item == NULL)
+			return;
+		item->setData(SEL_METHOD_PIN_LOCAL_DISPLAY,
+			      peer_role_selected_method);
+		item->setData(pin, peer_role_selected_pin);
+		QVariant var = item->data(peer_role_requested_method);
+		if (var.isValid() &&
+		    var.toInt() == SEL_METHOD_PIN_LOCAL_DISPLAY) {
+			ctx_item = item;
+			ctx_p2p_display_pin_pd();
+		}
+		return;
+	}
+
+	if (text.startsWith(P2P_EVENT_PROV_DISC_ENTER_PIN)) {
+		/* P2P-PROV-DISC-ENTER-PIN 02:40:61:c2:f3:b7 */
+		QStringList items = text.split(' ');
+		if (items.size() < 2)
+			return;
+		QString addr = items[1];
+
+		QStandardItem *item = find_addr_type(addr, PEER_TYPE_P2P);
+		if (item == NULL)
+			return;
+		item->setData(SEL_METHOD_PIN_PEER_DISPLAY,
+			      peer_role_selected_method);
+		QVariant var = item->data(peer_role_requested_method);
+		if (var.isValid() &&
+		    var.toInt() == SEL_METHOD_PIN_PEER_DISPLAY) {
+			ctx_item = item;
+			ctx_p2p_connect();
+		}
+		return;
+	}
+
+	if (text.startsWith(P2P_EVENT_INVITATION_RECEIVED)) {
+		/* P2P-INVITATION-RECEIVED sa=02:f0:bc:44:87:62 persistent=4 */
+		QStringList items = text.split(' ');
+		if (items.size() < 3)
+			return;
+		if (!items[1].startsWith("sa=") ||
+		    !items[2].startsWith("persistent="))
+			return;
+		QString addr = items[1].mid(3);
+		int id = items[2].mid(11).toInt();
+
+		char cmd[100];
+		char reply[100];
+		size_t reply_len;
+
+		snprintf(cmd, sizeof(cmd), "GET_NETWORK %d ssid", id);
+		reply_len = sizeof(reply) - 1;
+		if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0)
+			return;
+		reply[reply_len] = '\0';
+		QString name;
+		char *pos = strrchr(reply, '"');
+		if (pos && reply[0] == '"') {
+			*pos = '\0';
+			name = reply + 1;
+		} else
+			name = reply;
+
+		QStandardItem *item;
+		item = find_addr_type(addr, PEER_TYPE_P2P_INVITATION);
+		if (item)
+			model.removeRow(item->row());
+
+		item = new QStandardItem(*invitation_icon, name);
+		if (!item)
+			return;
+		item->setData(PEER_TYPE_P2P_INVITATION, peer_role_type);
+		item->setToolTip(ItemType(PEER_TYPE_P2P_INVITATION));
+		item->setData(addr, peer_role_address);
+		item->setData(id, peer_role_network_id);
+
+		model.appendRow(item);
+
+		enable_persistent(id);
+
+		return;
+	}
+
+	if (text.startsWith(P2P_EVENT_INVITATION_RESULT)) {
+		/* P2P-INVITATION-RESULT status=1 */
+		/* TODO */
 		return;
 	}
 
@@ -700,6 +1266,13 @@ void Peers::event_notify(WpaMsg msg)
 		int dev_passwd_id = items[5].toInt();
 		QString name;
 
+		QStandardItem *item = find_addr(addr);
+		if (item) {
+			int type = item->data(peer_role_type).toInt();
+			if (type == PEER_TYPE_ASSOCIATED_STATION)
+				return; /* already associated */
+		}
+
 		int pos = text.indexOf('[');
 		if (pos >= 0) {
 			int pos2 = text.lastIndexOf(']');
@@ -712,8 +1285,6 @@ void Peers::event_notify(WpaMsg msg)
 		}
 		if (name.isEmpty())
 			name = addr;
-
-		QStandardItem *item;
 
 		item = find_uuid(uuid);
 		if (item) {
@@ -763,6 +1334,221 @@ void Peers::event_notify(WpaMsg msg)
 			return;
 		remove_bss(items[1].toInt());
 		return;
+	}
+}
+
+
+void Peers::ctx_p2p_connect()
+{
+	if (ctx_item == NULL)
+		return;
+	QString addr = ctx_item->data(peer_role_address).toString();
+	QString arg;
+	int config_methods =
+		ctx_item->data(peer_role_config_methods).toInt();
+	enum selected_method method = SEL_METHOD_NONE;
+	QVariant var = ctx_item->data(peer_role_selected_method);
+	if (var.isValid())
+		method = (enum selected_method) var.toInt();
+	if (method == SEL_METHOD_PIN_LOCAL_DISPLAY) {
+		arg = ctx_item->data(peer_role_selected_pin).toString();
+		char cmd[100];
+		char reply[100];
+		size_t reply_len;
+		snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s display",
+			 addr.toAscii().constData(),
+			 arg.toAscii().constData());
+		reply_len = sizeof(reply) - 1;
+		if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+			QMessageBox msg;
+			msg.setIcon(QMessageBox::Warning);
+			msg.setText("Failed to initiate P2P connect.");
+			msg.exec();
+			return;
+		}
+		QMessageBox::information(this,
+					 tr("PIN for ") + ctx_item->text(),
+					 tr("Enter the following PIN on the\n"
+					    "peer device: ") + arg);
+	} else if (method == SEL_METHOD_PIN_PEER_DISPLAY) {
+		StringQuery input(tr("PIN from peer display:"));
+		input.setWindowTitle(tr("PIN for ") + ctx_item->text());
+		if (input.exec() != QDialog::Accepted)
+			return;
+		arg = input.get_string();
+	} else if (config_methods == 0x0080 /* PBC */) {
+		arg = "pbc";
+	} else {
+		StringQuery input(tr("PIN:"));
+		input.setWindowTitle(tr("PIN for ") + ctx_item->text());
+		if (input.exec() != QDialog::Accepted)
+			return;
+		arg = input.get_string();
+	}
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s",
+		 addr.toAscii().constData(),
+		 arg.toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to initiate P2P connect.");
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_req_pin()
+{
+	if (ctx_item == NULL)
+		return;
+	QString addr = ctx_item->data(peer_role_address).toString();
+	ctx_item->setData(SEL_METHOD_PIN_PEER_DISPLAY,
+			  peer_role_requested_method);
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s display",
+		 addr.toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText(tr("Failed to request PIN from peer."));
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_show_pin()
+{
+	if (ctx_item == NULL)
+		return;
+	QString addr = ctx_item->data(peer_role_address).toString();
+	ctx_item->setData(SEL_METHOD_PIN_LOCAL_DISPLAY,
+			  peer_role_requested_method);
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s keypad",
+		 addr.toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText(tr("Failed to request peer to enter PIN."));
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_display_pin()
+{
+	if (ctx_item == NULL)
+		return;
+	QString addr = ctx_item->data(peer_role_address).toString();
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s pin",
+		 addr.toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to initiate P2P connect.");
+		msg.exec();
+		return;
+	}
+	reply[reply_len] = '\0';
+	QMessageBox::information(this,
+				 tr("PIN for ") + ctx_item->text(),
+				 tr("Enter the following PIN on the\n"
+				    "peer device: ") + reply);
+}
+
+
+void Peers::ctx_p2p_display_pin_pd()
+{
+	if (ctx_item == NULL)
+		return;
+	QString addr = ctx_item->data(peer_role_address).toString();
+	QString arg = ctx_item->data(peer_role_selected_pin).toString();
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s display",
+		 addr.toAscii().constData(),
+		 arg.toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to initiate P2P connect.");
+		msg.exec();
+		return;
+	}
+	reply[reply_len] = '\0';
+	QMessageBox::information(this,
+				 tr("PIN for ") + ctx_item->text(),
+				 tr("Enter the following PIN on the\n"
+				    "peer device: ") + arg);
+}
+
+
+void Peers::ctx_p2p_enter_pin()
+{
+	if (ctx_item == NULL)
+		return;
+	QString addr = ctx_item->data(peer_role_address).toString();
+	QString arg;
+
+	StringQuery input(tr("PIN from peer:"));
+	input.setWindowTitle(tr("PIN for ") + ctx_item->text());
+	if (input.exec() != QDialog::Accepted)
+		return;
+	arg = input.get_string();
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s %s keypad",
+		 addr.toAscii().constData(),
+		 arg.toAscii().constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to initiate P2P connect.");
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_remove_group()
+{
+	if (ctx_item == NULL)
+		return;
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+	snprintf(cmd, sizeof(cmd), "P2P_GROUP_REMOVE %s",
+		 ctx_item->data(peer_role_ifname).toString().toAscii().
+		 constData());
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to remove P2P Group.");
+		msg.exec();
 	}
 }
 
@@ -864,6 +1650,27 @@ void Peers::properties()
 		info += "\n";
 	}
 
+	var = ctx_item->data(peer_role_selected_method);
+	if (var.isValid()) {
+		enum selected_method method =
+			(enum selected_method) var.toInt();
+		switch (method) {
+		case SEL_METHOD_NONE:
+			break;
+		case SEL_METHOD_PIN_PEER_DISPLAY:
+			info += tr("Selected Method: PIN on peer display\n");
+			break;
+		case SEL_METHOD_PIN_LOCAL_DISPLAY:
+			info += tr("Selected Method: PIN on local display\n");
+			break;
+		}
+	}
+
+	var = ctx_item->data(peer_role_selected_pin);
+	if (var.isValid()) {
+		info += tr("PIN to enter on peer: ") + var.toString() + "\n";
+	}
+
 	var = ctx_item->data(peer_role_dev_passwd_id);
 	if (var.isValid()) {
 		info += tr("Device Password ID: ") + var.toString();
@@ -914,6 +1721,11 @@ void Peers::connect_pbc()
 		snprintf(cmd, sizeof(cmd), "WPS_ER_PBC %s",
 			 ctx_item->data(peer_role_uuid).toString().toAscii().
 			 constData());
+	} else if (peer_type == PEER_TYPE_P2P ||
+		   peer_type == PEER_TYPE_P2P_CLIENT) {
+		snprintf(cmd, sizeof(cmd), "P2P_CONNECT %s pbc",
+			 ctx_item->data(peer_role_address).toString().
+			 toAscii().constData());
 	} else {
 		snprintf(cmd, sizeof(cmd), "WPS_PBC");
 	}
@@ -952,5 +1764,126 @@ void Peers::learn_ap_config()
 		msg.setIcon(QMessageBox::Warning);
 		msg.setText(tr("Failed to start learning AP configuration."));
 		msg.exec();
+	}
+}
+
+
+void Peers::ctx_hide_ap()
+{
+	hide_ap = true;
+
+	if (model.rowCount() == 0)
+		return;
+
+	do {
+		QModelIndexList lst;
+		lst = model.match(model.index(0, 0),
+				  peer_role_type, PEER_TYPE_AP);
+		if (lst.size() == 0) {
+			lst = model.match(model.index(0, 0),
+					  peer_role_type, PEER_TYPE_AP_WPS);
+			if (lst.size() == 0)
+				break;
+		}
+
+		model.removeRow(lst[0].row());
+	} while (1);
+}
+
+
+void Peers::ctx_show_ap()
+{
+	hide_ap = false;
+	add_scan_results();
+}
+
+
+void Peers::ctx_p2p_show_passphrase()
+{
+	char reply[64];
+	size_t reply_len;
+
+	reply_len = sizeof(reply) - 1;
+	if (wpagui->ctrlRequest("P2P_GET_PASSPHRASE", reply, &reply_len) < 0 ||
+	    memcmp(reply, "FAIL", 4) == 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText("Failed to get P2P group passphrase.");
+		msg.exec();
+	} else {
+		reply[reply_len] = '\0';
+		QMessageBox::information(this, tr("Passphrase"),
+					 tr("P2P group passphrase:\n") +
+					 reply);
+	}
+}
+
+
+void Peers::ctx_p2p_start_persistent()
+{
+	if (ctx_item == NULL)
+		return;
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+
+	snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD persistent=%d",
+		 ctx_item->data(peer_role_network_id).toInt());
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0 ||
+	    memcmp(reply, "FAIL", 4) == 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText(tr("Failed to start persistent P2P Group."));
+		msg.exec();
+	} else if (ctx_item->data(peer_role_type).toInt() ==
+		   PEER_TYPE_P2P_INVITATION)
+		model.removeRow(ctx_item->row());
+}
+
+
+void Peers::ctx_p2p_invite()
+{
+	if (ctx_item == NULL)
+		return;
+
+	char cmd[100];
+	char reply[100];
+	size_t reply_len;
+
+	snprintf(cmd, sizeof(cmd), "P2P_INVITE persistent=%d",
+		 ctx_item->data(peer_role_network_id).toInt());
+	if (wpagui->ctrlRequest(cmd, reply, &reply_len) < 0 ||
+	    memcmp(reply, "FAIL", 4) == 0) {
+		QMessageBox msg;
+		msg.setIcon(QMessageBox::Warning);
+		msg.setText(tr("Failed to invite peer to start persistent "
+			       "P2P Group."));
+		msg.exec();
+	}
+}
+
+
+void Peers::ctx_p2p_delete()
+{
+	if (ctx_item == NULL)
+		return;
+	model.removeRow(ctx_item->row());
+}
+
+
+void Peers::enable_persistent(int id)
+{
+	if (model.rowCount() == 0)
+		return;
+
+	QModelIndexList lst = model.match(model.index(0, 0),
+					  peer_role_network_id, id);
+	for (int i = 0; i < lst.size(); i++) {
+		QStandardItem *item = model.itemFromIndex(lst[i]);
+		int type = item->data(peer_role_type).toInt();
+		if (type == PEER_TYPE_P2P_PERSISTENT_GROUP_GO ||
+		    type == PEER_TYPE_P2P_PERSISTENT_GROUP_CLIENT)
+			item->setBackground(Qt::NoBrush);
 	}
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/make -f
 
-NAMES := wpa_gui ap laptop
+NAMES := wpa_gui ap laptop group invitation
 SIZES := 16x16 22x22 32x32 48x48 64x64 128x128
 ICONS := $(addsuffix .png, $(foreach name, $(NAMES), $(foreach size, $(SIZES), $(size)/$(name))))
 ICONS += $(addsuffix .xpm, $(NAMES))

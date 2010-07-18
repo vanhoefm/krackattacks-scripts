@@ -659,6 +659,13 @@ void WpaGui::updateNetworks()
 			break;
 		*flags++ = '\0';
 
+		if (strstr(flags, "[DISABLED][P2P-PERSISTENT]")) {
+			if (last)
+				break;
+			start = end + 1;
+			continue;
+		}
+
 		QString network(id);
 		network.append(": ");
 		network.append(ssid);

@@ -1610,6 +1610,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		return;
 	}
 
+	wpa_printf(MSG_DEBUG, "Event %d received on interface %s",
+		   event, wpa_s->ifname);
+
 	switch (event) {
 	case EVENT_AUTH:
 		sme_event_auth(wpa_s, data);

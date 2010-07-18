@@ -380,6 +380,187 @@ Get network variables. Network id can be received from the
 Save the current configuration.
 
 
+\subsection ctrl_iface_P2P_FIND P2P_FIND
+
+Start P2P device discovery. Optional parameter can be used to specify
+the duration for the discovery in seconds (e.g., "P2P_FIND 5"). If the
+duration is not specified, discovery will be started for indefinite
+time, i.e., until it is terminated by P2P_STOP_FIND or P2P_CONNECT (to
+start group formation with a discovered peer).
+
+The default search type is to first run a full scan of all channels
+and then continue scanning only social channels (1, 6, 11). This
+behavior can be changed by specifying a different search type: social
+(e.g., "P2P_FIND 5 type=social") will skip the initial full scan and
+only search social channels; progressive (e.g., "P2P_FIND
+type=progressive") starts with a full scan and then searches
+progressively through all channels one channel at the time with the
+social channel scans. Progressive device discovery can be used to find
+new groups (and groups that were not found during the initial scan,
+e.g., due to the GO being asleep) over time without adding
+considerable extra delay for every Search state round.
+
+
+\subsection ctrl_iface_P2P_STOP_FIND P2P_STOP_FIND
+
+Stop ongoing P2P device discovery or other operation (connect, listen
+mode).
+
+
+\subsection ctrl_iface_P2P_CONNECT P2P_CONNECT
+
+Start P2P group formation with a discovered P2P peer. This includes
+group owner negotiation, group interface setup, provisioning, and
+establishing data connection.
+
+P2P_CONNECT <peer device address> <pbc|pin|PIN#>
+[label|display|keypad] [persistent] [join|auth] [go_intent=<0..15>]
+
+Start P2P group formation with a discovered P2P peer. This includes
+optional group owner negotiation, group interface setup, provisioning,
+and establishing data connection.
+
+The <pbc|pin|PIN#> parameter specifies the WPS provisioning
+method. "pbc" string starts pushbutton method, "pin" string start PIN
+method using an automatically generated PIN (which will be returned as
+the command return code), PIN# means that a pre-selected PIN can be
+used (e.g., 12345670). [label|display|keypad] is used with PIN method
+to specify which PIN is used (label=PIN from local label,
+display=dynamically generated random PIN from local display,
+keypad=PIN entered from peer device label or display). "persistent"
+parameter can be used to request a persistent group to be formed.
+
+"join" indicates that this is a command to join an existing group as a
+client. It skips the GO Negotiation part.
+
+"auth" indicates that the WPS parameters are authorized for the peer
+device without actually starting GO Negotiation (i.e., the peer is
+expected to initiate GO Negotiation). This is mainly for testing
+purposes.
+
+The optional "go_intent" parameter can be used to override the default
+GO Intent value.
+
+
+\subsection ctrl_iface_P2P_LISTEN P2P_LISTEN
+
+Start Listen-only state. Optional parameter can be used to specify the
+duration for the Listen operation in seconds. This command may not
+be of that much use during normal operations and is mainly designed
+for testing. It can also be used to keep the device discoverable
+without having to maintain a group.
+
+
+\subsection ctrl_iface_P2P_GROUP_REMOVE P2P_GROUP_REMOVE
+
+Terminate a P2P group. If a new virtual network interface was used for
+the group, it will also be removed. The network interface name of the
+group interface is used as a parameter for this command.
+
+
+\subsection ctrl_iface_P2P_GROUP_ADD P2P_GROUP_ADD
+
+Set up a P2P group owner manually (i.e., without group owner
+negotiation with a specific peer). This is also known as autonomous
+GO. Optional persistent=<network id> can be used to specify restart of
+a persistent group.
+
+
+\subsection ctrl_iface_P2P_PROV_DISC P2P_PROV_DISC
+
+Send P2P provision discovery request to the specified peer. The
+parameters for this command are the P2P device address of the peer and
+the desired configuration method. For example, "P2P_PROV_DISC
+02:01:02:03:04:05 display" would request the peer to display a PIN for
+us and "P2P_PROV_DISC 02:01:02:03:04:05 keypad" would request the peer
+to enter a PIN that we display.
+
+
+\subsection ctrl_iface_P2P_GET_PASSPHRASE P2P_GET_PASSPHRASE
+
+Get the passphrase for a group (only available when acting as a GO).
+
+
+\subsection ctrl_iface_P2P_SERV_DISC_REQ P2P_SERV_DISC_REQ
+
+Schedule a P2P service discovery request. The parameters for this
+command are the device address of the peer device (or 00:00:00:00:00:00
+for wildcard query that is sent to every discovered P2P peer that
+supports service discovery) and P2P Service Query TLV(s) as hexdump.
+For example, "P2P_SERV_DISC_REQ 00:00:00:00:00:00 02000001" schedules
+a request for listing all supported service discovery protocols and
+requests this to be sent to all discovered peers. The pending requests
+are sent during device discovery (see \ref ctrl_iface_P2P_FIND).
+
+This command returns an identifier for the pending query (e.g.,
+"1f77628") that can be used to cancel the request. Directed requests
+will be automatically removed when the specified peer has replied to
+it.
+
+
+\subsection ctrl_iface_P2P_SERV_DISC_CANCEL_REQ P2P_SERV_DISC_CANCEL_REQ
+
+Cancel a pending P2P service discovery request. This command takes a
+single parameter: identifier for the pending query (the value returned
+by \ref ctrl_iface_P2P_SERV_DISC_REQ), e.g.,
+"P2P_SERV_DISC_CANCEL_REQ 1f77628".
+
+
+\subsection ctrl_iface_P2P_SERV_DISC_RESP P2P_SERV_DISC_RESP
+
+Reply to a service discovery query. This command takes following
+parameters: frequency in MHz, destination address, dialog token,
+response TLV(s). The first three parameters are copied from the
+request event. For example,
+"P2P_SERV_DISC_RESP 2437 02:40:61:c2:f3:b7 1 0300000101".
+
+
+\subsection ctrl_iface_P2P_SERVICE_UPDATE P2P_SERVICE_UPDATE
+
+Indicate that local services have changed. This is used to increment
+the P2P service indicator value so that peers know when previously
+cached information may have changed.
+
+
+\subsection ctrl_iface_P2P_SERV_DISC_EXTERNAL P2P_SERV_DISC_EXTERNAL
+
+Configure external processing of P2P service requests: 0 (default) =
+no external processing of requests (i.e., internal code will reject
+each request), 1 = external processing of requests (external program
+is responsible for replying to service discovery requests with
+\ref ctrl_iface_P2P_SERV_DISC_RESP).
+
+
+\subsection ctrl_iface_P2P_REJECT P2P_REJECT
+
+Reject connection attempt from a peer (specified with a device
+address). This is a mechanism to reject a pending GO Negotiation with
+a peer and request to automatically block any further connection or
+discovery of the peer.
+
+
+\subsection ctrl_iface_P2P_INVITE P2P_INVITE
+
+Invite a peer to join a group or to (re)start a persistent group.
+
+
+\subsection ctrl_iface_P2P_PEER P2P_PEER
+
+Fetch information about a discovered peer. This command takes in an
+argument specifying which peer to select: P2P Device Address of the
+peer, "FIRST" to indicate the first peer in the list, or "NEXT-<P2P
+Device Address>" to indicate the entry following the specified peer
+(to allow for iterating through the list).
+
+
+\subsection ctrl_iface_P2P_EXT_LISTEN P2P_EXT_LISTEN
+
+Enable/disable extended listen timing. Without parameters, this
+command disables extended listen timing. When enabling the feature,
+two parameters are used: availibility period and availability interval
+(both in milliseconds and with range of 1-65535).
+
+
 \section ctrl_iface_interactive Interactive requests
 
 If %wpa_supplicant needs additional information during authentication
@@ -713,6 +894,160 @@ AP_STA_DISCONNECTED: A station disassociated (AP mode event)
 
 \verbatim
 AP-STA-DISCONNECTED 02:2a:c4:18:5b:f3
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_DEVICE_FOUND P2P-DEVICE-FOUND
+
+P2P_EVENT_DEVICE_FOUND: Indication of a discovered P2P device with
+information about that device.
+
+\verbatim
+P2P-DEVICE-FOUND 02:b5:64:63:30:63 p2p_dev_addr=02:b5:64:63:30:63
+pri_dev_type=1-0050f204-1 name='Wireless Client' config_methods=0x84
+dev_capab=0x21 group_capab=0x0
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_GO_NEG_REQUEST P2P-GO-NEG-REQUEST
+
+P2P_EVENT_GO_NEG_REQUEST: A P2P device requested GO negotiation, but we
+were not ready to start the negotiation.
+
+\verbatim
+P2P-GO-NEG-REQUEST 02:40:61:c2:f3:b7
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_GO_NEG_SUCCESS P2P-GO-NEG-SUCCESS
+
+P2P_EVENT_GO_NEG_SUCCESS: Indication of successfully complete group
+owner negotiation.
+
+\subsection ctrl_iface_event_P2P_EVENT_GO_NEG_FAILURE P2P-GO-NEG-FAILURE
+
+P2P_EVENT_GO_NEG_FAILURE: Indication of failed group owner negotiation.
+
+\subsection ctrl_iface_event_P2P_EVENT_GROUP_FORMATION_SUCCESS P2P-GROUP-FORMATION-SUCCESS
+
+P2P_EVENT_GROUP_FORMATION_SUCCESS: Indication that P2P group formation
+has been completed successfully.
+
+\subsection ctrl_iface_event_P2P_EVENT_GROUP_FORMATION_FAILURE P2P-GROUP-FORMATION-FAILURE
+
+P2P_EVENT_GROUP_FORMATION_FAILURE: Indication that P2P group formation
+failed (e.g., due to provisioning failure or timeout).
+
+\subsection ctrl_iface_event_P2P_EVENT_GROUP_STARTED P2P-GROUP-STARTED
+
+P2P_EVENT_GROUP_STARTED: Indication of a new P2P group having been
+started. Additional parameters: network interface name for the group,
+role (GO/client), SSID. The passphrase used in the group is also
+indicated here if known (on GO) or PSK (on client). If the group is a
+persistent one, a flag indicating that is included.
+
+\verbatim
+P2P-GROUP-STARTED wlan0-p2p-0 GO ssid="DIRECT-3F Testing"
+passphrase="12345678" go_dev_addr=02:40:61:c2:f3:b7 [PERSISTENT]
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_GROUP_REMOVED P2P-GROUP-REMOVED
+
+P2P_EVENT_GROUP_REMOVED: Indication of a P2P group having been removed.
+Additional parameters: network interface name for the group, role
+(GO/client).
+
+\verbatim
+P2P-GROUP-REMOVED wlan0-p2p-0 GO
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_PROV_DISC_SHOW_PIN P2P-PROV-DISC-SHOW-PIN
+
+P2P_EVENT_PROV_DISC_SHOW_PIN: Request from the peer for us to display
+a PIN that will be entered on the peer. The following parameters are
+included after the event prefix: peer_address PIN. The PIN is a
+random PIN generated for this connection. P2P_CONNECT command can be
+used to accept the request with the same PIN configured for the
+connection.
+
+\verbatim
+P2P-PROV-DISC-SHOW-PIN 02:40:61:c2:f3:b7 12345670
+p2p_dev_addr=02:40:61:c2:f3:b7 pri_dev_type=1-0050F204-1 name='Test'
+config_methods=0x188 dev_capab=0x21 group_capab=0x0
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_PROV_DISC_ENTER_PIN P2P-PROV-DISC-ENTER-PIN
+
+P2P_EVENT_PROV_DISC_ENTER_PIN: Request from the peer for us to enter a
+PIN displayed on the peer. The following parameter is included after
+the event prefix: peer address.
+
+\verbatim
+P2P-PROV-DISC-ENTER-PIN 02:40:61:c2:f3:b7 p2p_dev_addr=02:40:61:c2:f3:b7
+pri_dev_type=1-0050F204-1 name='Test' config_methods=0x188
+dev_capab=0x21 group_capab=0x0
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_PROV_DISC_PBC_REQ P2P-PROV-DISC-PBC-REQ
+
+P2P_EVENT_PROV_DISC_PBC_REQ: Request from the peer for us to connect
+using PBC. The following parameters are included after the event prefix:
+peer_address. P2P_CONNECT command can be used to accept the request.
+
+\verbatim
+P2P-PROV-DISC-PBC-REQ 02:40:61:c2:f3:b7 p2p_dev_addr=02:40:61:c2:f3:b7
+pri_dev_type=1-0050F204-1 name='Test' config_methods=0x188
+dev_capab=0x21 group_capab=0x0
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_PROV_DISC_PBC_RESP P2P-PROV-DISC-PBC-RESP
+
+P2P_EVENT_PROV_DISC_PBC_RESP: The peer accepted our provision discovery
+request to connect using PBC. The following parameters are included
+after the event prefix: peer_address. P2P_CONNECT command can be used to
+start GO Negotiation after this.
+
+\verbatim
+P2P-PROV-DISC-PBC-RESP 02:40:61:c2:f3:b7
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_SERV_DISC_REQ P2P-SERV-DISC-REQ
+
+P2P-SERV-DISC-REQ: Indicate reception of a P2P service discovery
+request. The following parameters are included after the event prefix:
+frequency in MHz, source address, dialog token, Service Query TLV(s) as
+hexdump.
+
+\verbatim
+P2P-SERV-DISC-REQ 2412 02:40:61:c2:f3:b7 0 0 02000001
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_SERV_DISC_RESP P2P-SERV-DISC-RESP
+
+P2P-SERV-DISC-RESP: Indicate reception of a P2P service discovery
+response. The following parameters are included after the event prefix:
+source address, dialog token, Service Responce TLV(s) as hexdump.
+
+\verbatim
+P2P-SERV-DISC-RESP 02:40:61:c2:f3:b7 0 0300000101
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_INVITATION_RECEIVED P2P-INVITATION-RECEIVED
+
+P2P-INVITATION-RECEIVED: Indicate reception of a P2P Invitation
+Request. For persistent groups, the parameter after the event prefix
+indicates which network block includes the persistent group data.
+
+\verbatim
+P2P-INVITATION-RECEIVED sa=02:40:61:c2:f3:b7 persistent=0
+\endverbatim
+
+\subsection ctrl_iface_event_P2P_EVENT_INVITATION_RESULT P2P-INVITATION-RESULT
+
+P2P-INVITATION-RESULT: Indicate result of a P2P invitation that was
+requested with \ref ctrl_iface_P2P_INVITE. The parameter
+status=<value> shows the status code returned by the peer (or -1 on
+local failure or timeout).
+
+\verbatim
+P2P-INVITATION-RESULT status=1
 \endverbatim
 
 */

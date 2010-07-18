@@ -1005,7 +1005,8 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
 
-	if (ssid->mode == WPAS_MODE_AP) {
+	if (ssid->mode == WPAS_MODE_AP || ssid->mode == WPAS_MODE_P2P_GO ||
+	    ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION) {
 #ifdef CONFIG_AP
 		if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_AP)) {
 			wpa_printf(MSG_INFO, "Driver does not support AP "

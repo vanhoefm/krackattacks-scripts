@@ -109,6 +109,9 @@ struct wpa_ssid {
 	 *
 	 * If set, this network block is used only when associating with the AP
 	 * using the configured BSSID
+	 *
+	 * If this is a persistent P2P group (disabled == 2), this is the GO
+	 * Device Address.
 	 */
 	u8 bssid[ETH_ALEN];
 
@@ -273,6 +276,11 @@ struct wpa_ssid {
 	 *
 	 * 2 = AP (access point)
 	 *
+	 * 3 = P2P Group Owner (can be set in the configuration file)
+	 *
+	 * 4 = P2P Group Formation (used internally; not in configuration
+	 * files)
+	 *
 	 * Note: IBSS can only be used with key_mgmt NONE (plaintext and
 	 * static WEP) and key_mgmt=WPA-NONE (fixed group key TKIP/CCMP). In
 	 * addition, ap_scan has to be set to 2 for IBSS. WPA-None requires
@@ -284,6 +292,8 @@ struct wpa_ssid {
 		WPAS_MODE_INFRA = 0,
 		WPAS_MODE_IBSS = 1,
 		WPAS_MODE_AP = 2,
+		WPAS_MODE_P2P_GO = 3,
+		WPAS_MODE_P2P_GROUP_FORMATION = 4,
 	} mode;
 
 	/**
@@ -292,6 +302,8 @@ struct wpa_ssid {
 	 * 0 = this network can be used (default).
 	 * 1 = this network block is disabled (can be enabled through
 	 * ctrl_iface, e.g., with wpa_cli or wpa_gui).
+	 * 2 = this network block includes parameters for a persistent P2P
+	 * group (can be used with P2P ctrl_iface commands)
 	 */
 	int disabled;
 
@@ -373,6 +385,21 @@ struct wpa_ssid {
 	 * considered when selecting a BSS.
 	 */
 	int *freq_list;
+
+	/**
+	 * p2p_group - Network generated as a P2P group (used internally)
+	 */
+	int p2p_group;
+
+	/**
+	 * p2p_persistent_group - Whether this is a persistent group
+	 */
+	int p2p_persistent_group;
+
+	/**
+	 * temporary - Whether this network is temporary and not to be saved
+	 */
+	int temporary;
 };
 
 #endif /* CONFIG_SSID_H */

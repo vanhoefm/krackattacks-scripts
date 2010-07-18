@@ -182,6 +182,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		params.mode = IEEE80211_MODE_IBSS;
 		break;
 	case WPAS_MODE_AP:
+	case WPAS_MODE_P2P_GO:
+	case WPAS_MODE_P2P_GROUP_FORMATION:
 		params.mode = IEEE80211_MODE_AP;
 		break;
 	}

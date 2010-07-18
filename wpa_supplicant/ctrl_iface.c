@@ -554,6 +554,15 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 				ret = os_snprintf(pos, end - pos,
 						  "mode=AP\n");
 				break;
+			case WPAS_MODE_P2P_GO:
+				ret = os_snprintf(pos, end - pos,
+						  "mode=P2P GO\n");
+				break;
+			case WPAS_MODE_P2P_GROUP_FORMATION:
+				ret = os_snprintf(pos, end - pos,
+						  "mode=P2P GO - group "
+						  "formation\n");
+				break;
 			default:
 				ret = 0;
 				break;

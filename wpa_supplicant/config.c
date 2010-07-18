@@ -1493,7 +1493,7 @@ static const struct parse_data ssid_fields[] = {
 	{ STRe(pac_file) },
 	{ INTe(fragment_size) },
 #endif /* IEEE8021X_EAPOL */
-	{ INT_RANGE(mode, 0, 2) },
+	{ INT_RANGE(mode, 0, 4) },
 	{ INT_RANGE(proactive_key_caching, 0, 1) },
 	{ INT_RANGE(disabled, 0, 1) },
 	{ STR(id_str) },

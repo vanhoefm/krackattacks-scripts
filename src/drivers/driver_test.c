@@ -1033,7 +1033,8 @@ static int test_driver_if_add(void *priv, enum wpa_driver_if_type type,
 			 sizeof(drv->alloc_iface_idx),
 			 if_addr + 1, ETH_ALEN - 1);
 	}
-	if (type == WPA_IF_AP_BSS)
+	if (type == WPA_IF_AP_BSS || type == WPA_IF_P2P_GO ||
+	    type == WPA_IF_P2P_CLIENT || type == WPA_IF_P2P_GROUP)
 		return test_driver_bss_add(priv, ifname, if_addr, bss_ctx,
 					   drv_priv);
 	return 0;
@@ -1044,7 +1045,8 @@ static int test_driver_if_remove(void *priv, enum wpa_driver_if_type type,
 				 const char *ifname)
 {
 	wpa_printf(MSG_DEBUG, "%s(type=%d ifname=%s)", __func__, type, ifname);
-	if (type == WPA_IF_AP_BSS)
+	if (type == WPA_IF_AP_BSS || type == WPA_IF_P2P_GO ||
+	    type == WPA_IF_P2P_CLIENT || type == WPA_IF_P2P_GROUP)
 		return test_driver_bss_remove(priv, ifname);
 	return 0;
 }
@@ -1487,6 +1489,7 @@ static int wpa_driver_test_associate(
 		   __func__, priv, params->freq, params->pairwise_suite,
 		   params->group_suite, params->key_mgmt_suite,
 		   params->auth_alg, params->mode);
+	wpa_driver_update_mode(drv, params->mode == IEEE80211_MODE_AP);
 	if (params->bssid) {
 		wpa_printf(MSG_DEBUG, "   bssid=" MACSTR,
 			   MAC2STR(params->bssid));
@@ -2385,6 +2388,9 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 	if (drv->use_mlme)
 		capa->flags |= WPA_DRIVER_FLAGS_USER_SPACE_MLME;
 	capa->flags |= WPA_DRIVER_FLAGS_AP;
+	capa->flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
+	capa->flags |= WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE;
+	capa->flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
 	capa->max_scan_ssids = 2;
 	capa->max_remain_on_chan = 60000;
 

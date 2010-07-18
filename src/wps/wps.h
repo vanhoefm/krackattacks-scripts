@@ -75,6 +75,7 @@ struct wps_credential {
  * @pri_dev_type: Primary Device Type
  * @os_version: OS Version
  * @rf_bands: RF bands (WPS_RF_24GHZ, WPS_RF_50GHZ flags)
+ * @p2p: Whether the device is a P2P device
  */
 struct wps_device_data {
 	u8 mac_addr[ETH_ALEN];
@@ -86,6 +87,8 @@ struct wps_device_data {
 	u8 pri_dev_type[WPS_DEV_TYPE_LEN];
 	u32 os_version;
 	u8 rf_bands;
+
+	int p2p;
 };
 
 struct oob_conf_data {

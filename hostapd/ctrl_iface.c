@@ -227,7 +227,7 @@ static int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 		os_memcpy(mgmt.da, addr, ETH_ALEN);
 		os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
 		os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-		mgmt.u.deauth.reason_code =
+		mgmt.u.disassoc.reason_code =
 			host_to_le16(WLAN_REASON_PREV_AUTH_NOT_VALID);
 		if (hapd->driver->send_frame(hapd->drv_priv, (u8 *) &mgmt,
 					     IEEE80211_HDRLEN +

@@ -5132,7 +5132,8 @@ static int wpa_driver_nl80211_remain_on_channel(void *priv, unsigned int freq,
 		return 0;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Failed to request remain-on-channel "
-		   "(freq=%d): %d (%s)", freq, ret, strerror(-ret));
+		   "(freq=%d duration=%u): %d (%s)",
+		   freq, duration, ret, strerror(-ret));
 nla_put_failure:
 	return -1;
 }

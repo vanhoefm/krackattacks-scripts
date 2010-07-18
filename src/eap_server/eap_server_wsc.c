@@ -135,8 +135,11 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	}
 	cfg.assoc_wps_ie = sm->assoc_wps_ie;
 	cfg.peer_addr = sm->peer_addr;
-	if (0 /* TODO: could provide option for forcing PSK format */)
-		 cfg.use_psk_key = 1;
+	if (sm->assoc_p2p_ie) {
+		wpa_printf(MSG_DEBUG, "EAP-WSC: Prefer PSK format for P2P "
+			   "client");
+		cfg.use_psk_key = 1;
+	}
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);

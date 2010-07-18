@@ -183,6 +183,7 @@ struct eap_sm {
 	int tnc;
 	struct wps_context *wps;
 	struct wpabuf *assoc_wps_ie;
+	struct wpabuf *assoc_p2p_ie;
 
 	Boolean start_reauth;
 

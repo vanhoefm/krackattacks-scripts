@@ -762,7 +762,8 @@ SM_STEP(CTRL_DIR)
 
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
-		 int flags, const struct wpabuf *assoc_wps_ie, void *sta_ctx)
+		 int flags, const struct wpabuf *assoc_wps_ie,
+		 const struct wpabuf *assoc_p2p_ie, void *sta_ctx)
 {
 	struct eapol_state_machine *sm;
 	struct eap_config eap_conf;
@@ -829,6 +830,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.tnc = eapol->conf.tnc;
 	eap_conf.wps = eapol->conf.wps;
 	eap_conf.assoc_wps_ie = assoc_wps_ie;
+	eap_conf.assoc_p2p_ie = assoc_p2p_ie;
 	eap_conf.peer_addr = addr;
 	eap_conf.fragment_size = eapol->conf.fragment_size;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);

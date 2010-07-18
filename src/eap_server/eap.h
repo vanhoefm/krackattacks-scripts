@@ -106,6 +106,7 @@ struct eap_config {
 	int tnc;
 	struct wps_context *wps;
 	const struct wpabuf *assoc_wps_ie;
+	const struct wpabuf *assoc_p2p_ie;
 	const u8 *peer_addr;
 	int fragment_size;
 };

@@ -1255,6 +1255,8 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 	sm->wps = conf->wps;
 	if (conf->assoc_wps_ie)
 		sm->assoc_wps_ie = wpabuf_dup(conf->assoc_wps_ie);
+	if (conf->assoc_p2p_ie)
+		sm->assoc_p2p_ie = wpabuf_dup(conf->assoc_p2p_ie);
 	if (conf->peer_addr)
 		os_memcpy(sm->peer_addr, conf->peer_addr, ETH_ALEN);
 	sm->fragment_size = conf->fragment_size;
@@ -1292,6 +1294,7 @@ void eap_server_sm_deinit(struct eap_sm *sm)
 	os_free(sm->eap_if.aaaEapKeyData);
 	eap_user_free(sm->user);
 	wpabuf_free(sm->assoc_wps_ie);
+	wpabuf_free(sm->assoc_p2p_ie);
 	os_free(sm);
 }
 

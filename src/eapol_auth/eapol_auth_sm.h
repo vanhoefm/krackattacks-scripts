@@ -80,7 +80,8 @@ struct eapol_authenticator * eapol_auth_init(struct eapol_auth_config *conf,
 void eapol_auth_deinit(struct eapol_authenticator *eapol);
 struct eapol_state_machine *
 eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
-		 int flags, const struct wpabuf *assoc_wps_ie, void *sta_ctx);
+		 int flags, const struct wpabuf *assoc_wps_ie,
+		 const struct wpabuf *assoc_p2p_ie, void *sta_ctx);
 void eapol_auth_free(struct eapol_state_machine *sm);
 void eapol_auth_step(struct eapol_state_machine *sm);
 void eapol_auth_dump_state(FILE *f, const char *prefix,

@@ -231,11 +231,11 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 		ret = wpas_wps_start_reg(wpa_s, params.bssid, params.pin,
 					 NULL);
 	else if (params.type == 1) {
-		ret = wpas_wps_start_pin(wpa_s, params.bssid, params.pin);
+		ret = wpas_wps_start_pin(wpa_s, params.bssid, params.pin, 0);
 		if (ret > 0)
 			os_snprintf(npin, sizeof(npin), "%08d", ret);
 	} else
-		ret = wpas_wps_start_pbc(wpa_s, params.bssid);
+		ret = wpas_wps_start_pbc(wpa_s, params.bssid, 0);
 
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "dbus: WPS.Start wpas_wps_failed in "

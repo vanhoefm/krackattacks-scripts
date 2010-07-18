@@ -35,9 +35,10 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s);
 void wpas_wps_deinit(struct wpa_supplicant *wpa_s);
 int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s);
 enum wps_request_type wpas_wps_get_req_type(struct wpa_ssid *ssid);
-int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid);
+int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       int p2p_group);
 int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
-		       const char *pin);
+		       const char *pin, int p2p_group);
 int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 		       char *path, char *method, char *name);
 int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,

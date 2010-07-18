@@ -665,13 +665,16 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 }
 
 
-int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
+int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
+		       int p2p_group)
 {
 	struct wpa_ssid *ssid;
 	wpas_clear_wps(wpa_s);
 	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
 	if (ssid == NULL)
 		return -1;
+	ssid->temporary = 1;
+	ssid->p2p_group = p2p_group;
 	wpa_config_set(ssid, "phase1", "\"pbc=1\"", 0);
 	if (wpa_s->wps_fragment_size)
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
@@ -683,7 +686,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 
 
 int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
-		       const char *pin)
+		       const char *pin, int p2p_group)
 {
 	struct wpa_ssid *ssid;
 	char val[128];
@@ -693,6 +696,8 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	ssid = wpas_wps_add_network(wpa_s, 0, bssid);
 	if (ssid == NULL)
 		return -1;
+	ssid->temporary = 1;
+	ssid->p2p_group = p2p_group;
 	if (pin)
 		os_snprintf(val, sizeof(val), "\"pin=%s\"", pin);
 	else {
@@ -751,7 +756,7 @@ int wpas_wps_start_oob(struct wpa_supplicant *wpa_s, char *device_type,
 	if ((wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_E ||
 	     wps->oob_conf.oob_method == OOB_METHOD_DEV_PWD_R) &&
 	    wpas_wps_start_pin(wpa_s, NULL,
-			       wpabuf_head(wps->oob_conf.dev_password)) < 0)
+			       wpabuf_head(wps->oob_conf.dev_password), 0) < 0)
 			return -1;
 
 	return 0;

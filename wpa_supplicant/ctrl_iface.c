@@ -183,7 +183,7 @@ static int wpa_supplicant_ctrl_iface_wps_pbc(struct wpa_supplicant *wpa_s,
 		return wpa_supplicant_ap_wps_pbc(wpa_s, _bssid);
 #endif /* CONFIG_AP */
 
-	return wpas_wps_start_pbc(wpa_s, _bssid);
+	return wpas_wps_start_pbc(wpa_s, _bssid, 0);
 }
 
 
@@ -214,7 +214,7 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_AP */
 
 	if (pin) {
-		ret = wpas_wps_start_pin(wpa_s, _bssid, pin);
+		ret = wpas_wps_start_pin(wpa_s, _bssid, pin, 0);
 		if (ret < 0)
 			return -1;
 		ret = os_snprintf(buf, buflen, "%s", pin);
@@ -223,7 +223,7 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 		return ret;
 	}
 
-	ret = wpas_wps_start_pin(wpa_s, _bssid, NULL);
+	ret = wpas_wps_start_pin(wpa_s, _bssid, NULL, 0);
 	if (ret < 0)
 		return -1;
 

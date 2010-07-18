@@ -904,7 +904,13 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 {
 	char *pos, *end;
 	int ret;
-	const u8 *ie, *ie2;
+	const u8 *ie, *ie2, *p2p;
+
+	p2p = wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE);
+	if (p2p && bss->ssid_len == P2P_WILDCARD_SSID_LEN &&
+	    os_memcmp(bss->ssid, P2P_WILDCARD_SSID, P2P_WILDCARD_SSID_LEN) ==
+	    0)
+		return 0; /* Do not show P2P listen discovery results here */
 
 	pos = buf;
 	end = buf + buflen;
@@ -935,6 +941,12 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 	}
 	if (bss->caps & IEEE80211_CAP_ESS) {
 		ret = os_snprintf(pos, end - pos, "[ESS]");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+	if (p2p) {
+		ret = os_snprintf(pos, end - pos, "[P2P]");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
@@ -1658,6 +1670,12 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 			return pos - buf;
 		pos += ret;
 	}
+	if (wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE)) {
+		ret = os_snprintf(pos, end - pos, "[P2P]");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
 
 	ret = os_snprintf(pos, end - pos, "\n");
 	if (ret < 0 || ret >= end - pos)
@@ -1713,6 +1731,14 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		return pos - buf;
 	pos += ret;
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_P2P
+	ie = (const u8 *) (bss + 1);
+	ret = wpas_p2p_scan_result_text(ie, bss->ie_len, pos, end);
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+#endif /* CONFIG_P2P */
 
 	return pos - buf;
 }

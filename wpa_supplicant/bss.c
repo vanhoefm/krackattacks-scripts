@@ -325,7 +325,7 @@ void wpa_bss_update_start(struct wpa_supplicant *wpa_s)
 void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			     struct wpa_scan_res *res)
 {
-	const u8 *ssid;
+	const u8 *ssid, *p2p;
 	struct wpa_bss *bss;
 
 	ssid = wpa_scan_get_ie(res, WLAN_EID_SSID);
@@ -339,6 +339,11 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 			   MACSTR, MAC2STR(res->bssid));
 		return;
 	}
+
+	p2p = wpa_scan_get_vendor_ie(res, P2P_IE_VENDOR_TYPE);
+	if (p2p && ssid[1] == P2P_WILDCARD_SSID_LEN &&
+	    os_memcmp(ssid + 2, P2P_WILDCARD_SSID, P2P_WILDCARD_SSID_LEN) == 0)
+		return; /* Skip P2P listen discovery results here */
 
 	/* TODO: add option for ignoring BSSes we are not interested in
 	 * (to save memory) */

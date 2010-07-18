@@ -25,6 +25,7 @@
 #include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
+#include "p2p/p2p.h"
 #include "wps/wps.h"
 #include "hostapd.h"
 #include "beacon.h"
@@ -1361,6 +1362,14 @@ static void handle_action(struct hostapd_data *hapd,
 					       (u8 *) mgmt, len,
 					       hapd->iface->freq);
 			return;
+		}
+		break;
+	case WLAN_ACTION_VENDOR_SPECIFIC:
+		if (hapd->vendor_action_cb) {
+			if (hapd->vendor_action_cb(hapd->vendor_action_cb_ctx,
+						   (u8 *) mgmt, len,
+						   hapd->iface->freq) == 0)
+				return;
 		}
 		break;
 	}

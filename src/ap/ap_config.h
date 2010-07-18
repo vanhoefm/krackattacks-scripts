@@ -313,6 +313,11 @@ struct hostapd_bss_config {
 	char *model_url;
 	char *upc;
 #endif /* CONFIG_WPS */
+
+#define P2P_ENABLED BIT(0)
+#define P2P_GROUP_OWNER BIT(1)
+#define P2P_GROUP_FORMATION BIT(2)
+	int p2p;
 };
 
 

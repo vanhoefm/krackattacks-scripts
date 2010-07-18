@@ -21,6 +21,7 @@
 #include "ieee802_11.h"
 #include "sta_info.h"
 #include "wps_hostapd.h"
+#include "p2p_hostapd.h"
 #include "ctrl_iface_ap.h"
 
 
@@ -55,6 +56,9 @@ static int hostapd_ctrl_iface_sta_mib(struct hostapd_data *hapd,
 		len += res;
 	res = hostapd_wps_get_mib_sta(hapd, sta->addr, buf + len,
 				      buflen - len);
+	if (res >= 0)
+		len += res;
+	res = hostapd_p2p_get_mib_sta(hapd, sta, buf + len, buflen - len);
 	if (res >= 0)
 		len += res;
 

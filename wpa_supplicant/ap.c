@@ -30,10 +30,12 @@
 #include "eap_server/eap_methods.h"
 #include "eap_common/eap_wsc_common.h"
 #include "wps/wps.h"
+#include "common/ieee802_11_defs.h"
 #include "config_ssid.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
+#include "p2p_supplicant.h"
 #include "ap.h"
 
 
@@ -160,25 +162,75 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		bss->device_type = os_strdup(wpa_s->conf->device_type);
 #endif /* CONFIG_WPS */
 
+#ifdef CONFIG_P2P
+	if (wpa_s->conf->device_name) {
+		bss->device_name = os_strdup(wpa_s->conf->device_name);
+		bss->friendly_name = os_strdup(wpa_s->conf->device_name);
+	}
+#endif /* CONFIG_P2P */
+
 	return 0;
 }
 
 
 static void ap_public_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 {
+#ifdef CONFIG_P2P
+	struct wpa_supplicant *wpa_s = ctx;
+	const struct ieee80211_mgmt *mgmt;
+	size_t hdr_len;
+
+	mgmt = (const struct ieee80211_mgmt *) buf;
+	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
+	if (hdr_len > len)
+		return;
+	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
+			   mgmt->u.action.category,
+			   &mgmt->u.action.u.vs_public_action.action,
+			   len - hdr_len, freq);
+#endif /* CONFIG_P2P */
+}
+
+
+static int ap_vendor_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
+{
+#ifdef CONFIG_P2P
+	struct wpa_supplicant *wpa_s = ctx;
+	const struct ieee80211_mgmt *mgmt;
+	size_t hdr_len;
+
+	mgmt = (const struct ieee80211_mgmt *) buf;
+	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
+	if (hdr_len > len)
+		return -1;
+	wpas_p2p_rx_action(wpa_s, mgmt->da, mgmt->sa, mgmt->bssid,
+			   mgmt->u.action.category,
+			   &mgmt->u.action.u.vs_public_action.action,
+			   len - hdr_len, freq);
+#endif /* CONFIG_P2P */
+	return 0;
 }
 
 
 static int ap_probe_req_rx(void *ctx, const u8 *addr, const u8 *ie,
 			   size_t ie_len)
 {
+#ifdef CONFIG_P2P
+	struct wpa_supplicant *wpa_s = ctx;
+	return wpas_p2p_probe_req_rx(wpa_s, addr, ie, ie_len);
+#else /* CONFIG_P2P */
 	return 0;
+#endif /* CONFIG_P2P */
 }
 
 
 static void ap_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 				  const u8 *uuid_e)
 {
+#ifdef CONFIG_P2P
+	struct wpa_supplicant *wpa_s = ctx;
+	wpas_p2p_wps_success(wpa_s, mac_addr, 1);
+#endif /* CONFIG_P2P */
 }
 
 
@@ -260,6 +312,14 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
+#ifdef CONFIG_P2P
+	if (ssid->mode == WPAS_MODE_P2P_GO)
+		conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER;
+	else if (ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
+		conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER |
+			P2P_GROUP_FORMATION;
+#endif /* CONFIG_P2P */
+
 	hapd_iface->num_bss = conf->num_bss;
 	hapd_iface->bss = os_zalloc(conf->num_bss *
 				    sizeof(struct hostapd_data *));
@@ -280,10 +340,18 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		hapd_iface->bss[i]->msg_ctx = wpa_s;
 		hapd_iface->bss[i]->public_action_cb = ap_public_action_rx;
 		hapd_iface->bss[i]->public_action_cb_ctx = wpa_s;
+		hapd_iface->bss[i]->vendor_action_cb = ap_vendor_action_rx;
+		hapd_iface->bss[i]->vendor_action_cb_ctx = wpa_s;
 		hostapd_register_probereq_cb(hapd_iface->bss[i],
 					     ap_probe_req_rx, wpa_s);
 		hapd_iface->bss[i]->wps_reg_success_cb = ap_wps_reg_success_cb;
 		hapd_iface->bss[i]->wps_reg_success_cb_ctx = wpa_s;
+#ifdef CONFIG_P2P
+		hapd_iface->bss[i]->p2p = wpa_s->global->p2p;
+		hapd_iface->bss[i]->p2p_group = wpas_p2p_group_init(
+			wpa_s, ssid->p2p_persistent_group,
+			ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION);
+#endif /* CONFIG_P2P */
 	}
 
 	os_memcpy(hapd_iface->bss[0]->own_addr, wpa_s->own_addr, ETH_ALEN);
@@ -314,6 +382,10 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 		return;
 
 	wpa_s->current_ssid = NULL;
+#ifdef CONFIG_P2P
+	wpa_s->ap_iface->bss[0]->p2p_group = NULL;
+	wpas_p2p_group_deinit(wpa_s);
+#endif /* CONFIG_P2P */
 	hostapd_interface_deinit(wpa_s->ap_iface);
 	hostapd_interface_free(wpa_s->ap_iface);
 	wpa_s->ap_iface = NULL;
@@ -480,6 +552,14 @@ int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
 
 	if (ssid == NULL || wpa_s->ap_iface == NULL)
 		return -1;
+
+#ifdef CONFIG_P2P
+	if (ssid->mode == WPAS_MODE_P2P_GO)
+		iface->conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER;
+	else if (ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
+		iface->conf->bss[0].p2p = P2P_ENABLED | P2P_GROUP_OWNER |
+			P2P_GROUP_FORMATION;
+#endif /* CONFIG_P2P */
 
 	ieee802_11_set_beacons(iface);
 	hapd = iface->bss[0];

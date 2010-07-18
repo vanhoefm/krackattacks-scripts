@@ -22,6 +22,8 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "drivers/driver.h"
+#include "wps/wps_defs.h"
+#include "p2p/p2p.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "wpa_auth.h"
@@ -233,6 +235,21 @@ void handle_probe_req(struct hostapd_data *hapd,
 		return;
 	}
 
+#ifdef CONFIG_P2P
+	if (hapd->p2p && elems.wps_ie) {
+		struct wpabuf *wps;
+		wps = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
+		if (wps && !p2p_group_match_dev_type(hapd->p2p_group, wps)) {
+			wpa_printf(MSG_MSGDUMP, "P2P: Ignore Probe Request "
+				   "due to mismatch with Requested Device "
+				   "Type");
+			wpabuf_free(wps);
+			return;
+		}
+		wpabuf_free(wps);
+	}
+#endif /* CONFIG_P2P */
+
 	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0) {
 		wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR " for "
 			   "broadcast SSID ignored", MAC2STR(mgmt->sa));
@@ -240,6 +257,16 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 
 	sta = ap_get_sta(hapd, mgmt->sa);
+
+#ifdef CONFIG_P2P
+	if ((hapd->conf->p2p & P2P_GROUP_OWNER) &&
+	    elems.ssid_len == P2P_WILDCARD_SSID_LEN &&
+	    os_memcmp(elems.ssid, P2P_WILDCARD_SSID,
+		      P2P_WILDCARD_SSID_LEN) == 0) {
+		/* Process P2P Wildcard SSID like Wildcard SSID */
+		elems.ssid_len = 0;
+	}
+#endif /* CONFIG_P2P */
 
 	if (elems.ssid_len == 0 ||
 	    (elems.ssid_len == hapd->conf->ssid.ssid_len &&
@@ -272,6 +299,10 @@ void handle_probe_req(struct hostapd_data *hapd,
 	if (hapd->wps_probe_resp_ie)
 		buflen += wpabuf_len(hapd->wps_probe_resp_ie);
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	if (hapd->p2p_probe_resp_ie)
+		buflen += wpabuf_len(hapd->p2p_probe_resp_ie);
+#endif /* CONFIG_P2P */
 	resp = os_zalloc(buflen);
 	if (resp == NULL)
 		return;
@@ -329,6 +360,15 @@ void handle_probe_req(struct hostapd_data *hapd,
 	}
 #endif /* CONFIG_WPS */
 
+#ifdef CONFIG_P2P
+	if ((hapd->conf->p2p & P2P_ENABLED) && elems.p2p &&
+	    hapd->p2p_probe_resp_ie) {
+		os_memcpy(pos, wpabuf_head(hapd->p2p_probe_resp_ie),
+			  wpabuf_len(hapd->p2p_probe_resp_ie));
+		pos += wpabuf_len(hapd->p2p_probe_resp_ie);
+	}
+#endif /* CONFIG_P2P */
+
 	if (hapd->drv.send_mgmt_frame(hapd, resp, pos - (u8 *) resp) < 0)
 		perror("handle_probe_req: send");
 
@@ -347,6 +387,11 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	u16 capab_info;
 	size_t head_len, tail_len;
 
+#ifdef CONFIG_P2P
+	if ((hapd->conf->p2p & (P2P_ENABLED | P2P_GROUP_OWNER)) == P2P_ENABLED)
+		goto no_beacon;
+#endif /* CONFIG_P2P */
+
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512
 	head = os_zalloc(BEACON_HEAD_BUF_SIZE);
@@ -355,6 +400,10 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	if (hapd->conf->wps_state && hapd->wps_beacon_ie)
 		tail_len += wpabuf_len(hapd->wps_beacon_ie);
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	if (hapd->p2p_beacon_ie)
+		tail_len += wpabuf_len(hapd->p2p_beacon_ie);
+#endif /* CONFIG_P2P */
 	tailpos = tail = os_malloc(tail_len);
 	if (head == NULL || tail == NULL) {
 		wpa_printf(MSG_ERROR, "Failed to set beacon data");
@@ -431,6 +480,14 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	}
 #endif /* CONFIG_WPS */
 
+#ifdef CONFIG_P2P
+	if ((hapd->conf->p2p & P2P_ENABLED) && hapd->p2p_beacon_ie) {
+		os_memcpy(tailpos, wpabuf_head(hapd->p2p_beacon_ie),
+			  wpabuf_len(hapd->p2p_beacon_ie));
+		tailpos += wpabuf_len(hapd->p2p_beacon_ie);
+	}
+#endif /* CONFIG_P2P */
+
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
 	if (hapd->drv.set_beacon(hapd, (u8 *) head, head_len,
@@ -442,6 +499,9 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	os_free(tail);
 	os_free(head);
 
+#ifdef CONFIG_P2P
+no_beacon:
+#endif /* CONFIG_P2P */
 	hapd->drv.set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
 					  ERP_INFO_USE_PROTECTION));
 }

@@ -177,11 +177,17 @@ struct hostapd_data {
 				 int freq);
 	void *public_action_cb_ctx;
 
+	int (*vendor_action_cb)(void *ctx, const u8 *buf, size_t len,
+				int freq);
+	void *vendor_action_cb_ctx;
+
 	void (*wps_reg_success_cb)(void *ctx, const u8 *mac_addr,
 				   const u8 *uuid_e);
 	void *wps_reg_success_cb_ctx;
 
 #ifdef CONFIG_P2P
+	struct p2p_data *p2p;
+	struct p2p_group *p2p_group;
 	struct wpabuf *p2p_beacon_ie;
 	struct wpabuf *p2p_probe_resp_ie;
 #endif /* CONFIG_P2P */

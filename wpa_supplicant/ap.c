@@ -290,6 +290,12 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	params.pairwise_suite = cipher_suite2driver(wpa_s->pairwise_cipher);
 	params.group_suite = params.pairwise_suite;
 
+#ifdef CONFIG_P2P
+	if (ssid->mode == WPAS_MODE_P2P_GO ||
+	    ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
+		params.p2p = 1;
+#endif /* CONFIG_P2P */
+
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
 		return -1;

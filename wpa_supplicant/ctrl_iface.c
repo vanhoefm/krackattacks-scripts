@@ -31,6 +31,8 @@
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "ap.h"
+#include "p2p_supplicant.h"
+#include "p2p/p2p.h"
 #include "notify.h"
 #include "bss.h"
 #include "scan.h"
@@ -1779,11 +1781,699 @@ static int wpa_supplicant_ctrl_iface_roam(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_P2P
+static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	unsigned int timeout = atoi(cmd);
+	enum p2p_discovery_type type = P2P_FIND_START_WITH_FULL;
+
+	if (os_strstr(cmd, "type=social"))
+		type = P2P_FIND_ONLY_SOCIAL;
+	else if (os_strstr(cmd, "type=progressive"))
+		type = P2P_FIND_PROGRESSIVE;
+
+	wpas_p2p_find(wpa_s, timeout, type);
+	return 0;
+}
+
+
+static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
+			    char *buf, size_t buflen)
+{
+	u8 addr[ETH_ALEN];
+	char *pos, *pos2;
+	char *pin = NULL;
+	enum p2p_wps_method wps_method;
+	int new_pin;
+	int ret;
+	int persistent_group;
+	int join;
+	int auth;
+	int go_intent = -1;
+	int freq = 0;
+
+	/* <addr> <"pbc" | "pin" | PIN> [label|display|keypad] [persistent]
+	 * [join|auth] [go_intent=<0..15>] [freq=<in MHz>] */
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	pos = cmd + 17;
+	if (*pos != ' ')
+		return -1;
+	pos++;
+
+	persistent_group = os_strstr(pos, " persistent") != NULL;
+	join = os_strstr(pos, " join") != NULL;
+	auth = os_strstr(pos, " auth") != NULL;
+
+	pos2 = os_strstr(pos, " go_intent=");
+	if (pos2) {
+		pos2 += 11;
+		go_intent = atoi(pos2);
+		if (go_intent < 0 || go_intent > 15)
+			return -1;
+	}
+
+	pos2 = os_strstr(pos, " freq=");
+	if (pos2) {
+		pos2 += 6;
+		freq = atoi(pos2);
+		if (freq <= 0)
+			return -1;
+	}
+
+	if (os_strncmp(pos, "pin", 3) == 0) {
+		/* Request random PIN (to be displayed) and enable the PIN */
+		wps_method = WPS_PIN_DISPLAY;
+	} else if (os_strncmp(pos, "pbc", 3) == 0) {
+		wps_method = WPS_PBC;
+	} else {
+		pin = pos;
+		pos = os_strchr(pin, ' ');
+		wps_method = WPS_PIN_KEYPAD;
+		if (pos) {
+			*pos++ = '\0';
+			if (os_strncmp(pos, "label", 5) == 0)
+				wps_method = WPS_PIN_LABEL;
+			else if (os_strncmp(pos, "display", 7) == 0)
+				wps_method = WPS_PIN_DISPLAY;
+		}
+	}
+
+	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,
+				   persistent_group, join, auth, go_intent,
+				   freq);
+	if (new_pin < 0)
+		return -1;
+	if (wps_method == WPS_PIN_DISPLAY && pin == NULL) {
+		ret = os_snprintf(buf, buflen, "%08d", new_pin);
+		if (ret < 0 || (size_t) ret >= buflen)
+			return -1;
+		return ret;
+	}
+
+	os_memcpy(buf, "OK\n", 3);
+	return 3;
+}
+
+
+static int p2p_ctrl_listen(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	unsigned int timeout = atoi(cmd);
+	return wpas_p2p_listen(wpa_s, timeout);
+}
+
+
+static int p2p_ctrl_prov_disc(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	char *pos;
+
+	/* <addr> <config method> */
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	pos = cmd + 17;
+	if (*pos != ' ')
+		return -1;
+	pos++;
+
+	return wpas_p2p_prov_disc(wpa_s, addr, pos);
+}
+
+
+static int p2p_get_passphrase(struct wpa_supplicant *wpa_s, char *buf,
+			      size_t buflen)
+{
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	if (ssid == NULL || ssid->mode != WPAS_MODE_P2P_GO ||
+	    ssid->passphrase == NULL)
+		return -1;
+
+	os_strlcpy(buf, ssid->passphrase, buflen);
+	return os_strlen(buf);
+}
+
+
+static int p2p_ctrl_serv_disc_req(struct wpa_supplicant *wpa_s, char *cmd,
+				  char *buf, size_t buflen)
+{
+	u64 ref;
+	int res;
+	u8 dst_buf[ETH_ALEN], *dst;
+	struct wpabuf *tlvs;
+	char *pos;
+	size_t len;
+
+	if (hwaddr_aton(cmd, dst_buf))
+		return -1;
+	dst = dst_buf;
+	if (dst[0] == 0 && dst[1] == 0 && dst[2] == 0 &&
+	    dst[3] == 0 && dst[4] == 0 && dst[5] == 0)
+		dst = NULL;
+	pos = cmd + 17;
+	if (*pos != ' ')
+		return -1;
+	pos++;
+
+	if (os_strncmp(pos, "upnp ", 5) == 0) {
+		u8 version;
+		pos += 5;
+		if (hexstr2bin(pos, &version, 1) < 0)
+			return -1;
+		pos += 2;
+		if (*pos != ' ')
+			return -1;
+		pos++;
+		ref = (u64) wpas_p2p_sd_request_upnp(wpa_s, dst, version, pos);
+	} else {
+		len = os_strlen(pos);
+		if (len & 1)
+			return -1;
+		len /= 2;
+		tlvs = wpabuf_alloc(len);
+		if (tlvs == NULL)
+			return -1;
+		if (hexstr2bin(pos, wpabuf_put(tlvs, len), len) < 0) {
+			wpabuf_free(tlvs);
+			return -1;
+		}
+
+		ref = (u64) wpas_p2p_sd_request(wpa_s, dst, tlvs);
+		wpabuf_free(tlvs);
+	}
+	res = os_snprintf(buf, buflen, "%llx", (long long unsigned) ref);
+	if (res < 0 || (unsigned) res >= buflen)
+		return -1;
+	return res;
+}
+
+
+static int p2p_ctrl_serv_disc_cancel_req(struct wpa_supplicant *wpa_s,
+					 char *cmd)
+{
+	long long unsigned val;
+	u64 req;
+	if (sscanf(cmd, "%llx", &val) != 1)
+		return -1;
+	req = val;
+	return wpas_p2p_sd_cancel_request(wpa_s, (void *) req);
+}
+
+
+static int p2p_ctrl_serv_disc_resp(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int freq;
+	u8 dst_buf[ETH_ALEN], *dst;
+	u8 dialog_token;
+	struct wpabuf *resp_tlvs;
+	char *pos, *pos2;
+	size_t len;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+	freq = atoi(cmd);
+	if (freq == 0)
+		return -1;
+
+	if (hwaddr_aton(pos, dst_buf))
+		return -1;
+	dst = dst_buf;
+	if (dst[0] == 0 && dst[1] == 0 && dst[2] == 0 &&
+	    dst[3] == 0 && dst[4] == 0 && dst[5] == 0)
+		dst = NULL;
+	pos += 17;
+	if (*pos != ' ')
+		return -1;
+	pos++;
+
+	pos2 = os_strchr(pos, ' ');
+	if (pos2 == NULL)
+		return -1;
+	*pos2++ = '\0';
+	dialog_token = atoi(pos);
+
+	len = os_strlen(pos2);
+	if (len & 1)
+		return -1;
+	len /= 2;
+	resp_tlvs = wpabuf_alloc(len);
+	if (resp_tlvs == NULL)
+		return -1;
+	if (hexstr2bin(pos2, wpabuf_put(resp_tlvs, len), len) < 0) {
+		wpabuf_free(resp_tlvs);
+		return -1;
+	}
+
+	wpas_p2p_sd_response(wpa_s, freq, dst, dialog_token, resp_tlvs);
+	wpabuf_free(resp_tlvs);
+	return 0;
+}
+
+
+static int p2p_ctrl_serv_disc_external(struct wpa_supplicant *wpa_s,
+				       char *cmd)
+{
+	wpa_s->p2p_sd_over_ctrl_iface = atoi(cmd);
+	return 0;
+}
+
+
+static int p2p_ctrl_service_add_bonjour(struct wpa_supplicant *wpa_s,
+					char *cmd)
+{
+	char *pos;
+	size_t len;
+	struct wpabuf *query, *resp;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	len = os_strlen(cmd);
+	if (len & 1)
+		return -1;
+	len /= 2;
+	query = wpabuf_alloc(len);
+	if (query == NULL)
+		return -1;
+	if (hexstr2bin(cmd, wpabuf_put(query, len), len) < 0) {
+		wpabuf_free(query);
+		return -1;
+	}
+
+	len = os_strlen(pos);
+	if (len & 1) {
+		wpabuf_free(query);
+		return -1;
+	}
+	len /= 2;
+	resp = wpabuf_alloc(len);
+	if (resp == NULL) {
+		wpabuf_free(query);
+		return -1;
+	}
+	if (hexstr2bin(pos, wpabuf_put(resp, len), len) < 0) {
+		wpabuf_free(query);
+		wpabuf_free(resp);
+		return -1;
+	}
+
+	if (wpas_p2p_service_add_bonjour(wpa_s, query, resp) < 0) {
+		wpabuf_free(query);
+		wpabuf_free(resp);
+		return -1;
+	}
+	return 0;
+}
+
+
+static int p2p_ctrl_service_add_upnp(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+	u8 version;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (hexstr2bin(cmd, &version, 1) < 0)
+		return -1;
+
+	return wpas_p2p_service_add_upnp(wpa_s, version, pos);
+}
+
+
+static int p2p_ctrl_service_add(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (os_strcmp(cmd, "bonjour") == 0)
+		return p2p_ctrl_service_add_bonjour(wpa_s, pos);
+	if (os_strcmp(cmd, "upnp") == 0)
+		return p2p_ctrl_service_add_upnp(wpa_s, pos);
+	wpa_printf(MSG_DEBUG, "Unknown service '%s'", cmd);
+	return -1;
+}
+
+
+static int p2p_ctrl_service_del_bonjour(struct wpa_supplicant *wpa_s,
+					char *cmd)
+{
+	size_t len;
+	struct wpabuf *query;
+	int ret;
+
+	len = os_strlen(cmd);
+	if (len & 1)
+		return -1;
+	len /= 2;
+	query = wpabuf_alloc(len);
+	if (query == NULL)
+		return -1;
+	if (hexstr2bin(cmd, wpabuf_put(query, len), len) < 0) {
+		wpabuf_free(query);
+		return -1;
+	}
+
+	ret = wpas_p2p_service_del_bonjour(wpa_s, query);
+	wpabuf_free(query);
+	return ret;
+}
+
+
+static int p2p_ctrl_service_del_upnp(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+	u8 version;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (hexstr2bin(cmd, &version, 1) < 0)
+		return -1;
+
+	return wpas_p2p_service_del_upnp(wpa_s, version, pos);
+}
+
+
+static int p2p_ctrl_service_del(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos == NULL)
+		return -1;
+	*pos++ = '\0';
+
+	if (os_strcmp(cmd, "bonjour") == 0)
+		return p2p_ctrl_service_del_bonjour(wpa_s, pos);
+	if (os_strcmp(cmd, "upnp") == 0)
+		return p2p_ctrl_service_del_upnp(wpa_s, pos);
+	wpa_printf(MSG_DEBUG, "Unknown service '%s'", cmd);
+	return -1;
+}
+
+
+static int p2p_ctrl_reject(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	u8 addr[ETH_ALEN];
+
+	/* <addr> */
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+
+	return wpas_p2p_reject(wpa_s, addr);
+}
+
+
+static int p2p_ctrl_invite_persistent(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+	int id;
+	struct wpa_ssid *ssid;
+	u8 peer[ETH_ALEN];
+
+	id = atoi(cmd);
+	pos = os_strstr(cmd, " peer=");
+	if (pos) {
+		pos += 6;
+		if (hwaddr_aton(pos, peer))
+			return -1;
+	}
+	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (ssid == NULL || ssid->disabled != 2) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find SSID id=%d "
+			   "for persistent P2P group",
+			   id);
+		return -1;
+	}
+
+	return wpas_p2p_invite(wpa_s, pos ? peer : NULL, ssid, NULL);
+}
+
+
+static int p2p_ctrl_invite_group(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+	u8 peer[ETH_ALEN], go_dev_addr[ETH_ALEN], *go_dev = NULL;
+
+	pos = os_strstr(cmd, " peer=");
+	if (!pos)
+		return -1;
+
+	*pos = '\0';
+	pos += 6;
+	if (hwaddr_aton(pos, peer)) {
+		wpa_printf(MSG_DEBUG, "P2P: Invalid MAC address '%s'", pos);
+		return -1;
+	}
+
+	pos = os_strstr(pos, " go_dev_addr=");
+	if (pos) {
+		pos += 13;
+		if (hwaddr_aton(pos, go_dev_addr)) {
+			wpa_printf(MSG_DEBUG, "P2P: Invalid MAC address '%s'",
+				   pos);
+			return -1;
+		}
+		go_dev = go_dev_addr;
+	}
+
+	return wpas_p2p_invite_group(wpa_s, cmd, peer, go_dev);
+}
+
+
+static int p2p_ctrl_invite(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	if (os_strncmp(cmd, "persistent=", 11) == 0)
+		return p2p_ctrl_invite_persistent(wpa_s, cmd + 11);
+	if (os_strncmp(cmd, "group=", 6) == 0)
+		return p2p_ctrl_invite_group(wpa_s, cmd + 6);
+
+	return -1;
+}
+
+
+static int p2p_ctrl_group_add_persistent(struct wpa_supplicant *wpa_s,
+					 char *cmd, int freq)
+{
+	int id;
+	struct wpa_ssid *ssid;
+
+	id = atoi(cmd);
+	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (ssid == NULL || ssid->disabled != 2) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find SSID id=%d "
+			   "for persistent P2P group",
+			   id);
+		return -1;
+	}
+
+	return wpas_p2p_group_add_persistent(wpa_s, ssid, 0, freq);
+}
+
+
+static int p2p_ctrl_group_add(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int freq = 0;
+	char *pos;
+
+	pos = os_strstr(cmd, "freq=");
+	if (pos)
+		freq = atoi(pos + 5);
+
+	if (os_strncmp(cmd, "persistent=", 11) == 0)
+		return p2p_ctrl_group_add_persistent(wpa_s, cmd + 11, freq);
+	if (os_strcmp(cmd, "persistent") == 0 ||
+	    os_strncmp(cmd, "persistent ", 11) == 0)
+		return wpas_p2p_group_add(wpa_s, 1, freq);
+	if (os_strncmp(cmd, "freq=", 5) == 0)
+		return wpas_p2p_group_add(wpa_s, 0, freq);
+
+	wpa_printf(MSG_DEBUG, "CTRL: Invalid P2P_GROUP_ADD parameters '%s'",
+		   cmd);
+	return -1;
+}
+
+
+static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
+			 char *buf, size_t buflen)
+{
+	u8 addr[ETH_ALEN], *addr_ptr;
+	int next;
+
+	if (!wpa_s->global->p2p)
+		return -1;
+
+	if (os_strcmp(cmd, "FIRST") == 0) {
+		addr_ptr = NULL;
+		next = 0;
+	} else if (os_strncmp(cmd, "NEXT-", 5) == 0) {
+		if (hwaddr_aton(cmd + 5, addr) < 0)
+			return -1;
+		addr_ptr = addr;
+		next = 1;
+	} else {
+		if (hwaddr_aton(cmd, addr) < 0)
+			return -1;
+		addr_ptr = addr;
+		next = 0;
+	}
+
+	return p2p_get_peer_info(wpa_s->global->p2p, addr_ptr, next,
+				 buf, buflen);
+}
+
+
+static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *param;
+
+	if (wpa_s->global->p2p == NULL)
+		return -1;
+
+	param = os_strchr(cmd, ' ');
+	if (param == NULL)
+		return -1;
+	*param++ = '\0';
+
+	if (os_strcmp(cmd, "discoverability") == 0) {
+		p2p_set_client_discoverability(wpa_s->global->p2p,
+					       atoi(param));
+		return 0;
+	}
+
+	if (os_strcmp(cmd, "managed") == 0) {
+		p2p_set_managed_oper(wpa_s->global->p2p, atoi(param));
+		return 0;
+	}
+
+	if (os_strcmp(cmd, "listen_channel") == 0) {
+		return p2p_set_listen_channel(wpa_s->global->p2p, 81,
+					      atoi(param));
+	}
+
+	if (os_strcmp(cmd, "ssid_postfix") == 0) {
+		return p2p_set_ssid_postfix(wpa_s->global->p2p, (u8 *) param,
+					    os_strlen(param));
+	}
+
+	if (os_strcmp(cmd, "noa") == 0) {
+		char *pos;
+		int count, start, duration;
+		/* GO NoA parameters: count,start_offset(ms),duration(ms) */
+		count = atoi(param);
+		pos = os_strchr(param, ',');
+		if (pos == NULL)
+			return -1;
+		pos++;
+		start = atoi(pos);
+		pos = os_strchr(pos, ',');
+		if (pos == NULL)
+			return -1;
+		pos++;
+		duration = atoi(pos);
+		if (count < 0 || count > 255 || start < 0 || duration < 0)
+			return -1;
+		if (count == 0 && duration > 0)
+			return -1;
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: P2P_SET GO NoA: count=%d "
+			   "start=%d duration=%d", count, start, duration);
+		return wpa_drv_set_noa(wpa_s, count, start, duration);
+	}
+
+	if (os_strcmp(cmd, "disabled") == 0) {
+		wpa_s->global->p2p_disabled = atoi(param);
+		wpa_printf(MSG_DEBUG, "P2P functionality %s",
+			   wpa_s->global->p2p_disabled ?
+			   "disabled" : "enabled");
+		if (wpa_s->global->p2p_disabled) {
+			wpas_p2p_stop_find(wpa_s);
+			p2p_flush(wpa_s->global->p2p);
+		}
+		return 0;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",
+		   cmd);
+
+	return -1;
+}
+
+
+static int p2p_ctrl_presence_req(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos, *pos2;
+	unsigned int dur1 = 0, int1 = 0, dur2 = 0, int2 = 0;
+
+	if (cmd[0]) {
+		pos = os_strchr(cmd, ' ');
+		if (pos == NULL)
+			return -1;
+		*pos++ = '\0';
+		dur1 = atoi(cmd);
+
+		pos2 = os_strchr(pos, ' ');
+		if (pos2)
+			*pos2++ = '\0';
+		int1 = atoi(pos);
+	} else
+		pos2 = NULL;
+
+	if (pos2) {
+		pos = os_strchr(pos2, ' ');
+		if (pos == NULL)
+			return -1;
+		*pos++ = '\0';
+		dur2 = atoi(pos2);
+		int2 = atoi(pos);
+	}
+
+	return wpas_p2p_presence_req(wpa_s, dur1, int1, dur2, int2);
+}
+
+
+static int p2p_ctrl_ext_listen(struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *pos;
+	unsigned int period = 0, interval = 0;
+
+	if (cmd[0]) {
+		pos = os_strchr(cmd, ' ');
+		if (pos == NULL)
+			return -1;
+		*pos++ = '\0';
+		period = atoi(cmd);
+		interval = atoi(pos);
+	}
+
+	return wpas_p2p_ext_listen(wpa_s, period, interval);
+}
+
+#endif /* CONFIG_P2P */
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
 	char *reply;
-	const int reply_size = 2048;
+	const int reply_size = 4096;
 	int ctrl_rsp = 0;
 	int reply_len;
 
@@ -1913,6 +2603,87 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_ibss_rsn(wpa_s, buf + 9))
 			reply_len = -1;
 #endif /* CONFIG_IBSS_RSN */
+#ifdef CONFIG_P2P
+	} else if (os_strncmp(buf, "P2P_FIND ", 9) == 0) {
+		if (p2p_ctrl_find(wpa_s, buf + 9))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_FIND") == 0) {
+		if (p2p_ctrl_find(wpa_s, ""))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_STOP_FIND") == 0) {
+		wpas_p2p_stop_find(wpa_s);
+	} else if (os_strncmp(buf, "P2P_CONNECT ", 12) == 0) {
+		reply_len = p2p_ctrl_connect(wpa_s, buf + 12, reply,
+					     reply_size);
+	} else if (os_strncmp(buf, "P2P_LISTEN ", 11) == 0) {
+		if (p2p_ctrl_listen(wpa_s, buf + 11))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_LISTEN") == 0) {
+		if (p2p_ctrl_listen(wpa_s, ""))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_GROUP_REMOVE ", 17) == 0) {
+		if (wpas_p2p_group_remove(wpa_s, buf + 17))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_GROUP_ADD") == 0) {
+		if (wpas_p2p_group_add(wpa_s, 0, 0))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_GROUP_ADD ", 14) == 0) {
+		if (p2p_ctrl_group_add(wpa_s, buf + 14))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_PROV_DISC ", 14) == 0) {
+		if (p2p_ctrl_prov_disc(wpa_s, buf + 14))
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_GET_PASSPHRASE") == 0) {
+		reply_len = p2p_get_passphrase(wpa_s, reply, reply_size);
+	} else if (os_strncmp(buf, "P2P_SERV_DISC_REQ ", 18) == 0) {
+		reply_len = p2p_ctrl_serv_disc_req(wpa_s, buf + 18, reply,
+						   reply_size);
+	} else if (os_strncmp(buf, "P2P_SERV_DISC_CANCEL_REQ ", 25) == 0) {
+		if (p2p_ctrl_serv_disc_cancel_req(wpa_s, buf + 25) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_SERV_DISC_RESP ", 19) == 0) {
+		if (p2p_ctrl_serv_disc_resp(wpa_s, buf + 19) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_SERVICE_UPDATE") == 0) {
+		wpas_p2p_sd_service_update(wpa_s);
+	} else if (os_strncmp(buf, "P2P_SERV_DISC_EXTERNAL ", 23) == 0) {
+		if (p2p_ctrl_serv_disc_external(wpa_s, buf + 23) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_SERVICE_FLUSH") == 0) {
+		wpas_p2p_service_flush(wpa_s);
+	} else if (os_strncmp(buf, "P2P_SERVICE_ADD ", 16) == 0) {
+		if (p2p_ctrl_service_add(wpa_s, buf + 16) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_SERVICE_DEL ", 16) == 0) {
+		if (p2p_ctrl_service_del(wpa_s, buf + 16) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_REJECT ", 11) == 0) {
+		if (p2p_ctrl_reject(wpa_s, buf + 11) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_INVITE ", 11) == 0) {
+		if (p2p_ctrl_invite(wpa_s, buf + 11) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_PEER ", 9) == 0) {
+		reply_len = p2p_ctrl_peer(wpa_s, buf + 9, reply,
+					      reply_size);
+	} else if (os_strncmp(buf, "P2P_SET ", 8) == 0) {
+		if (p2p_ctrl_set(wpa_s, buf + 8) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_FLUSH") == 0) {
+		p2p_flush(wpa_s->global->p2p);
+	} else if (os_strncmp(buf, "P2P_PRESENCE_REQ ", 17) == 0) {
+		if (p2p_ctrl_presence_req(wpa_s, buf + 17) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_PRESENCE_REQ") == 0) {
+		if (p2p_ctrl_presence_req(wpa_s, "") < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "P2P_EXT_LISTEN ", 15) == 0) {
+		if (p2p_ctrl_ext_listen(wpa_s, buf + 15) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "P2P_EXT_LISTEN") == 0) {
+		if (p2p_ctrl_ext_listen(wpa_s, "") < 0)
+			reply_len = -1;
+#endif /* CONFIG_P2P */
 	} else if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0)
 	{
 		if (wpa_supplicant_ctrl_iface_ctrl_rsp(

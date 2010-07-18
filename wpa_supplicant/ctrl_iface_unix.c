@@ -132,7 +132,7 @@ static void wpa_supplicant_ctrl_iface_receive(int sock, void *eloop_ctx,
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct ctrl_iface_priv *priv = sock_ctx;
-	char buf[256];
+	char buf[4096];
 	int res;
 	struct sockaddr_un from;
 	socklen_t fromlen = sizeof(from);

@@ -1431,7 +1431,7 @@ static int wpa_ft_rrb_rx_pull(struct wpa_authenticator *wpa_auth,
 	wpa_hexdump_key(MSG_DEBUG, "FT: PMK-R1", r.pmk_r1, PMK_LEN);
 	wpa_hexdump(MSG_DEBUG, "FT: PMKR1Name", r.pmk_r1_name,
 		    WPA_PMK_NAME_LEN);
-	r.pairwise = pairwise;
+	r.pairwise = host_to_le16(pairwise);
 
 	if (aes_wrap(r1kh->key, (FT_R0KH_R1KH_RESP_DATA_LEN + 7) / 8,
 		     r.nonce, resp.nonce) < 0) {
@@ -1734,7 +1734,7 @@ static void wpa_ft_generate_pmk_r1(struct wpa_authenticator *wpa_auth,
 		    WPA_PMK_NAME_LEN);
 	os_get_time(&now);
 	WPA_PUT_LE32(f.timestamp, now.sec);
-	f.pairwise = pairwise;
+	f.pairwise = host_to_le16(pairwise);
 	if (aes_wrap(r1kh->key, (FT_R0KH_R1KH_PUSH_DATA_LEN + 7) / 8,
 		     f.timestamp, frame.timestamp) < 0)
 		return;

@@ -384,6 +384,10 @@ void wpa_config_debug_dump_networks(struct wpa_config *config);
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
 
+/* Prototypes for common functions from config.c */
+int wpa_config_process_global(struct wpa_config *config, char *pos, int line);
+
+
 /* Prototypes for backend specific functions from the selected config_*.c */
 
 /**

@@ -773,6 +773,17 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	} else
 		wpa_auth_sta_no_wpa(sta->wpa_sm);
 
+#ifdef CONFIG_P2P
+	if (elems.p2p) {
+		wpabuf_free(sta->p2p_ie);
+		sta->p2p_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
+							  P2P_IE_VENDOR_TYPE);
+	} else {
+		wpabuf_free(sta->p2p_ie);
+		sta->p2p_ie = NULL;
+	}
+#endif /* CONFIG_P2P */
+
 	return WLAN_STATUS_SUCCESS;
 }
 

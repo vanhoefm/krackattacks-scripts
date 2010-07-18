@@ -104,6 +104,7 @@ struct sta_info {
 #endif /* CONFIG_IEEE80211W */
 
 	struct wpabuf *wps_ie; /* WPS IE from (Re)Association Request */
+	struct wpabuf *p2p_ie; /* P2P IE from (Re)Association Request */
 };
 
 

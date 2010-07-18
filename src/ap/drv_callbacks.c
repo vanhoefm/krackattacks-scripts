@@ -40,6 +40,10 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	struct sta_info *sta;
 	int new_assoc, res;
 	struct ieee802_11_elems elems;
+#ifdef CONFIG_P2P
+	const u8 *all_ies = ie;
+	size_t all_ies_len = ielen;
+#endif /* CONFIG_P2P */
 
 	if (addr == NULL) {
 		/*
@@ -86,6 +90,14 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			return -1;
 	}
 	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS);
+
+#ifdef CONFIG_P2P
+	if (elems.p2p) {
+		wpabuf_free(sta->p2p_ie);
+		sta->p2p_ie = ieee802_11_vendor_ie_concat(all_ies, all_ies_len,
+							  P2P_IE_VENDOR_TYPE);
+	}
+#endif /* CONFIG_P2P */
 
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {

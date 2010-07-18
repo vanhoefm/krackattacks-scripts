@@ -519,6 +519,14 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
+#ifdef CONFIG_P2P
+		/*
+		 * TODO: skip the AP if its P2P IE has Group Formation
+		 * bit set in the P2P Group Capability Bitmap and we
+		 * are not in Group Formation with that device.
+		 */
+#endif /* CONFIG_P2P */
+
 		/* Matching configuration found */
 		return ssid;
 	}

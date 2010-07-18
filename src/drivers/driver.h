@@ -476,6 +476,11 @@ struct wpa_driver_associate_params {
 	 * is being requested. Most drivers should not need ot use this.
 	 */
 	enum wps_mode wps;
+
+	/**
+	 * p2p - Whether this connection is a P2P group
+	 */
+	int p2p;
 };
 
 /**
@@ -518,6 +523,17 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_AP		0x00000040
 /* Driver needs static WEP key setup after association has been completed */
 #define WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE	0x00000080
+/* Driver takes care of P2P management operations */
+#define WPA_DRIVER_FLAGS_P2P_MGMT	0x00000100
+/* Driver supports concurrent P2P operations */
+#define WPA_DRIVER_FLAGS_P2P_CONCURRENT	0x00000200
+/*
+ * Driver uses the initial interface as a dedicated management interface, i.e.,
+ * it cannot be used for P2P group operations.
+ */
+#define WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE	0x00000400
+/* This interface is P2P capable (P2P Device, GO, or P2P Client */
+#define WPA_DRIVER_FLAGS_P2P_CAPABLE	0x00000800
 	unsigned int flags;
 
 	int max_scan_ssids;
@@ -583,6 +599,22 @@ enum wpa_driver_if_type {
 	 * This interface has its own address and Beacon frame.
 	 */
 	WPA_IF_AP_BSS,
+
+	/**
+	 * WPA_IF_P2P_GO - P2P Group Owner
+	 */
+	WPA_IF_P2P_GO,
+
+	/**
+	 * WPA_IF_P2P_CLIENT - P2P Client
+	 */
+	WPA_IF_P2P_CLIENT,
+
+	/**
+	 * WPA_IF_P2P_GROUP - P2P Group interface (will become either
+	 * WPA_IF_P2P_GO or WPA_IF_P2P_CLIENT, but the role is not yet known)
+	 */
+	WPA_IF_P2P_GROUP
 };
 
 struct wpa_init_params {
@@ -1618,6 +1650,14 @@ struct wpa_driver_ops {
 	 * Beacon and Probe Response frames. This can be left undefined (set
 	 * to %NULL) if the driver uses the Beacon template from set_beacon()
 	 * and does not process Probe Request frames.
+	 *
+	 * This will also be used to add P2P IE(s) into Beacon/Probe Response
+	 * frames when operating as a GO. The driver is responsible for adding
+	 * timing related attributes (e.g., NoA) in addition to the IEs
+	 * included here by appending them after these buffers. This call is
+	 * also used to provide Probe Response IEs for P2P Listen state
+	 * operations for drivers that generate the Probe Response frames
+	 * internally.
 	 */
 	int (*set_ap_wps_ie)(void *priv, const struct wpabuf *beacon,
 			     const struct wpabuf *proberesp);
@@ -1781,6 +1821,45 @@ struct wpa_driver_ops {
 	 */
 	int (*send_frame)(void *priv, const u8 *data, size_t data_len,
 			  int encrypt);
+
+	/**
+	 * shared_freq - Get operating frequency of shared interface(s)
+	 * @priv: Private driver interface data
+	 * Returns: Operating frequency in MHz, 0 if no shared operation in
+	 * use, or -1 on failure
+	 *
+	 * This command can be used to request the current operating frequency
+	 * of any virtual interface that shares the same radio to provide
+	 * information for channel selection for other virtual interfaces.
+	 */
+	int (*shared_freq)(void *priv);
+
+	/**
+	 * get_noa - Get current Notice of Absence attribute payload
+	 * @priv: Private driver interface data
+	 * @buf: Buffer for returning NoA
+	 * @buf_len: Buffer length in octets
+	 * Returns: Number of octets used in buf, 0 to indicate no NoA is being
+	 * advertized, or -1 on failure
+	 *
+	 * This function is used to fetch the current Notice of Absence
+	 * attribute value from GO.
+	 */
+	int (*get_noa)(void *priv, u8 *buf, size_t buf_len);
+
+	/**
+	 * set_noa - Set Notice of Absence parameters for GO (testing)
+	 * @priv: Private driver interface data
+	 * @count: Count
+	 * @start: Start time in ms from next TBTT
+	 * @duration: Duration in ms
+	 * Returns: 0 on success or -1 on failure
+	 *
+	 * This function is used to set Notice of Absence parameters for GO. It
+	 * is used only for testing. To disable NoA, all parameters are set to
+	 * 0.
+	 */
+	int (*set_noa)(void *priv, u8 count, int start, int duration);
 };
 
 
@@ -2178,6 +2257,16 @@ union wpa_event_data {
 		 *	Deauthentication frame
 		 */
 		u16 reason_code;
+
+		/**
+		 * ie - Optional IE(s) in Disassociation frame
+		 */
+		const u8 *ie;
+
+		/**
+		 * ie_len - Length of ie buffer in octets
+		 */
+		size_t ie_len;
 	} disassoc_info;
 
 	/**
@@ -2194,6 +2283,16 @@ union wpa_event_data {
 		 *	Deauthentication frame
 		 */
 		u16 reason_code;
+
+		/**
+		 * ie - Optional IE(s) in Deauthentication frame
+		 */
+		const u8 *ie;
+
+		/**
+		 * ie_len - Length of ie buffer in octets
+		 */
+		size_t ie_len;
 	} deauth_info;
 
 	/**

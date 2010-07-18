@@ -309,6 +309,7 @@ struct ieee80211_mgmt {
 		} STRUCT_PACKED auth;
 		struct {
 			le16 reason_code;
+			u8 variable[0];
 		} STRUCT_PACKED deauth;
 		struct {
 			le16 capab_info;
@@ -332,6 +333,7 @@ struct ieee80211_mgmt {
 		} STRUCT_PACKED reassoc_req;
 		struct {
 			le16 reason_code;
+			u8 variable[0];
 		} STRUCT_PACKED disassoc;
 		struct {
 			u8 timestamp[8];

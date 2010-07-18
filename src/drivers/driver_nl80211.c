@@ -4985,10 +4985,13 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 {
 	switch (type) {
 	case WPA_IF_STATION:
+	case WPA_IF_P2P_CLIENT:
+	case WPA_IF_P2P_GROUP:
 		return NL80211_IFTYPE_STATION;
 	case WPA_IF_AP_VLAN:
 		return NL80211_IFTYPE_AP_VLAN;
 	case WPA_IF_AP_BSS:
+	case WPA_IF_P2P_GO:
 		return NL80211_IFTYPE_AP;
 	}
 	return -1;

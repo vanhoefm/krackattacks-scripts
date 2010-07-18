@@ -36,6 +36,7 @@
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "sme.h"
+#include "p2p_supplicant.h"
 #include "bgscan.h"
 #include "ap.h"
 #include "bss.h"
@@ -1618,8 +1619,40 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #ifdef CONFIG_AP
 	case EVENT_TX_STATUS:
-		if (wpa_s->ap_iface == NULL)
+		wpa_printf(MSG_DEBUG, "EVENT_TX_STATUS on %s dst=" MACSTR
+			   " type=%d stype=%d pending_dst=" MACSTR,
+			   wpa_s->ifname, MAC2STR(data->tx_status.dst),
+			   data->tx_status.type, data->tx_status.stype,
+			   MAC2STR(wpa_s->parent->pending_action_dst));
+		if (wpa_s->ap_iface == NULL) {
+#ifdef CONFIG_P2P
+			if (data->tx_status.type == WLAN_FC_TYPE_MGMT &&
+			    data->tx_status.stype == WLAN_FC_STYPE_ACTION)
+				wpas_send_action_tx_status(
+					wpa_s, data->tx_status.dst,
+					data->tx_status.data,
+					data->tx_status.data_len,
+					data->tx_status.ack);
+#endif /* CONFIG_P2P */
 			break;
+		}
+#ifdef CONFIG_P2P
+		/*
+		 * Catch TX status events for Action frames we sent via group
+		 * interface in GO mode.
+		 */
+		if (data->tx_status.type == WLAN_FC_TYPE_MGMT &&
+		    data->tx_status.stype == WLAN_FC_STYPE_ACTION &&
+		    os_memcmp(wpa_s->parent->pending_action_dst,
+			      data->tx_status.dst, ETH_ALEN) == 0) {
+			wpas_send_action_tx_status(
+				wpa_s->parent, data->tx_status.dst,
+				data->tx_status.data,
+				data->tx_status.data_len,
+				data->tx_status.ack);
+			break;
+		}
+#endif /* CONFIG_P2P */
 		switch (data->tx_status.type) {
 		case WLAN_FC_TYPE_MGMT:
 			ap_mgmt_tx_cb(wpa_s, data->tx_status.data,
@@ -1642,8 +1675,29 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				       data->rx_from_unknown.len);
 		break;
 	case EVENT_RX_MGMT:
-		if (wpa_s->ap_iface == NULL)
+		if (wpa_s->ap_iface == NULL) {
+#ifdef CONFIG_P2P
+			u16 fc, stype;
+			const struct ieee80211_mgmt *mgmt;
+			mgmt = (const struct ieee80211_mgmt *)
+				data->rx_mgmt.frame;
+			fc = le_to_host16(mgmt->frame_control);
+			stype = WLAN_FC_GET_STYPE(fc);
+			if (stype == WLAN_FC_STYPE_PROBE_REQ &&
+			    data->rx_mgmt.frame_len > 24) {
+				const u8 *src = mgmt->sa;
+				const u8 *ie = mgmt->u.probe_req.variable;
+				size_t ie_len = data->rx_mgmt.frame_len -
+					(mgmt->u.probe_req.variable -
+					 data->rx_mgmt.frame);
+				wpas_p2p_probe_req_rx(wpa_s, src, ie, ie_len);
+				break;
+			}
+#endif /* CONFIG_P2P */
+			wpa_printf(MSG_DEBUG, "AP: ignore received management "
+				   "frame in non-AP mode");
 			break;
+		}
 		ap_mgmt_rx(wpa_s, &data->rx_mgmt);
 		break;
 #endif /* CONFIG_AP */
@@ -1660,7 +1714,31 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_P2P
+		wpas_p2p_rx_action(wpa_s, data->rx_action.da,
+				   data->rx_action.sa,
+				   data->rx_action.bssid,
+				   data->rx_action.category,
+				   data->rx_action.data,
+				   data->rx_action.len, data->rx_action.freq);
+#endif /* CONFIG_P2P */
 		break;
+#ifdef CONFIG_P2P
+	case EVENT_REMAIN_ON_CHANNEL:
+		wpas_p2p_remain_on_channel_cb(
+			wpa_s, data->remain_on_channel.freq,
+			data->remain_on_channel.duration);
+		break;
+	case EVENT_CANCEL_REMAIN_ON_CHANNEL:
+		wpas_p2p_cancel_remain_on_channel_cb(
+			wpa_s, data->remain_on_channel.freq);
+		break;
+	case EVENT_RX_PROBE_REQ:
+		wpas_p2p_probe_req_rx(wpa_s, data->rx_probe_req.sa,
+				      data->rx_probe_req.ie,
+				      data->rx_probe_req.ie_len);
+		break;
+#endif /* CONFIG_P2P */
 #ifdef CONFIG_CLIENT_MLME
 	case EVENT_MLME_RX: {
 		struct ieee80211_rx_status rx_status;

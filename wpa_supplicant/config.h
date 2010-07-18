@@ -27,6 +27,13 @@
 #include "config_ssid.h"
 
 
+#define CFG_CHANGED_DEVICE_NAME BIT(0)
+#define CFG_CHANGED_CONFIG_METHODS BIT(1)
+#define CFG_CHANGED_DEVICE_TYPE BIT(2)
+#define CFG_CHANGED_OS_VERSION BIT(3)
+#define CFG_CHANGED_UUID BIT(4)
+#define CFG_CHANGED_COUNTRY BIT(5)
+
 /**
  * struct wpa_config - wpa_supplicant configuration data
  *
@@ -348,6 +355,11 @@ struct wpa_config {
 	 *   1 = only include configured SSIDs in scan results/BSS table
 	 */
 	int filter_ssids;
+
+	/**
+	 * changed_parameters - Bitmap of changed parameters since last update
+	 */
+	unsigned int changed_parameters;
 };
 
 

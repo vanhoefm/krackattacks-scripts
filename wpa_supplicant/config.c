@@ -2173,6 +2173,7 @@ struct global_parse_data {
 	int (*parser)(const struct global_parse_data *data,
 		      struct wpa_config *config, int line, const char *value);
 	void *param1, *param2, *param3;
+	unsigned int changed_flag;
 };
 
 
@@ -2326,38 +2327,38 @@ static int wpa_config_process_os_version(const struct global_parse_data *data,
 
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE
-	{ STR(ctrl_interface) },
-	{ STR(ctrl_interface_group) } /* deprecated */,
+	{ STR(ctrl_interface), 0 },
+	{ STR(ctrl_interface_group), 0 } /* deprecated */,
 #endif /* CONFIG_CTRL_IFACE */
-	{ INT_RANGE(eapol_version, 1, 2) },
-	{ INT(ap_scan) },
-	{ INT(fast_reauth) },
-	{ STR(opensc_engine_path) },
-	{ STR(pkcs11_engine_path) },
-	{ STR(pkcs11_module_path) },
-	{ STR(driver_param) },
-	{ INT(dot11RSNAConfigPMKLifetime) },
-	{ INT(dot11RSNAConfigPMKReauthThreshold) },
-	{ INT(dot11RSNAConfigSATimeout) },
+	{ INT_RANGE(eapol_version, 1, 2), 0 },
+	{ INT(ap_scan), 0 },
+	{ INT(fast_reauth), 0 },
+	{ STR(opensc_engine_path), 0 },
+	{ STR(pkcs11_engine_path), 0 },
+	{ STR(pkcs11_module_path), 0 },
+	{ STR(driver_param), 0 },
+	{ INT(dot11RSNAConfigPMKLifetime), 0 },
+	{ INT(dot11RSNAConfigPMKReauthThreshold), 0 },
+	{ INT(dot11RSNAConfigSATimeout), 0 },
 #ifndef CONFIG_NO_CONFIG_WRITE
-	{ INT(update_config) },
+	{ INT(update_config), 0 },
 #endif /* CONFIG_NO_CONFIG_WRITE */
-	{ FUNC_NO_VAR(load_dynamic_eap) },
+	{ FUNC_NO_VAR(load_dynamic_eap), 0 },
 #ifdef CONFIG_WPS
-	{ FUNC(uuid) },
-	{ STR_RANGE(device_name, 0, 32) },
-	{ STR_RANGE(manufacturer, 0, 64) },
-	{ STR_RANGE(model_name, 0, 32) },
-	{ STR_RANGE(model_number, 0, 32) },
-	{ STR_RANGE(serial_number, 0, 32) },
-	{ STR(device_type) },
-	{ FUNC(os_version) },
-	{ STR(config_methods) },
-	{ INT_RANGE(wps_cred_processing, 0, 2) },
+	{ FUNC(uuid), CFG_CHANGED_UUID },
+	{ STR_RANGE(device_name, 0, 32), CFG_CHANGED_DEVICE_NAME },
+	{ STR_RANGE(manufacturer, 0, 64), 0 },
+	{ STR_RANGE(model_name, 0, 32), 0 },
+	{ STR_RANGE(model_number, 0, 32), 0 },
+	{ STR_RANGE(serial_number, 0, 32), 0 },
+	{ STR(device_type), CFG_CHANGED_DEVICE_TYPE },
+	{ FUNC(os_version), CFG_CHANGED_OS_VERSION },
+	{ STR(config_methods), CFG_CHANGED_CONFIG_METHODS },
+	{ INT_RANGE(wps_cred_processing, 0, 2), 0 },
 #endif /* CONFIG_WPS */
-	{ FUNC(country) },
-	{ INT(bss_max_count) },
-	{ INT_RANGE(filter_ssids, 0, 1) }
+	{ FUNC(country), CFG_CHANGED_COUNTRY },
+	{ INT(bss_max_count), 0 },
+	{ INT_RANGE(filter_ssids, 0, 1), 0 }
 };
 
 #undef FUNC
@@ -2387,9 +2388,12 @@ int wpa_config_process_global(struct wpa_config *config, char *pos, int line)
 				   "parse '%s'.", line, pos);
 			ret = -1;
 		}
+		config->changed_parameters |= field->changed_flag;
 		break;
 	}
 	if (i == NUM_GLOBAL_FIELDS) {
+		if (line < 0)
+			return -1;
 		wpa_printf(MSG_ERROR, "Line %d: unknown global field '%s'.",
 			   line, pos);
 		ret = -1;

@@ -560,6 +560,14 @@ static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
 static void wpa_supplicant_port_cb(void *ctx, int authorized)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		wpa_printf(MSG_DEBUG, "AP mode active - skip EAPOL Supplicant "
+			   "port status: %s",
+			   authorized ? "Authorized" : "Unauthorized");
+		return;
+	}
+#endif /* CONFIG_AP */
 	wpa_printf(MSG_DEBUG, "EAPOL: Supplicant port status: %s",
 		   authorized ? "Authorized" : "Unauthorized");
 	wpa_drv_set_supp_port(wpa_s, authorized);

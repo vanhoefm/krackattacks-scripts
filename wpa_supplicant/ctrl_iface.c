@@ -597,6 +597,16 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		pos += ret;
 	}
 
+#ifdef CONFIG_P2P
+	if (wpa_s->global->p2p) {
+		ret = os_snprintf(pos, end - pos, "p2p_device_address=" MACSTR
+				  "\n", MAC2STR(wpa_s->global->p2p_dev_addr));
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_P2P */
+
 	if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		res = eapol_sm_get_status(wpa_s->eapol, pos, end - pos,

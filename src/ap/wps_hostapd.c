@@ -826,13 +826,22 @@ static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 	}
 
 	if (wpabuf_len(wps_ie) > 0) {
-		wps_registrar_probe_req_rx(hapd->wps->registrar, addr, wps_ie);
+		int p2p_wildcard = 0;
+#ifdef CONFIG_P2P
+		if (elems.ssid && elems.ssid_len == P2P_WILDCARD_SSID_LEN &&
+		    os_memcmp(elems.ssid, P2P_WILDCARD_SSID,
+			      P2P_WILDCARD_SSID_LEN) == 0)
+			p2p_wildcard = 1;
+#endif /* CONFIG_P2P */
+		wps_registrar_probe_req_rx(hapd->wps->registrar, addr, wps_ie,
+					   p2p_wildcard);
 #ifdef CONFIG_WPS_UPNP
 		/* FIX: what exactly should be included in the WLANEvent?
 		 * WPS attributes? Full ProbeReq frame? */
-		upnp_wps_device_send_wlan_event(hapd->wps_upnp, addr,
-						UPNP_WPS_WLANEVENT_TYPE_PROBE,
-						wps_ie);
+		if (!p2p_wildcard)
+			upnp_wps_device_send_wlan_event(
+				hapd->wps_upnp, addr,
+				UPNP_WPS_WLANEVENT_TYPE_PROBE, wps_ie);
 #endif /* CONFIG_WPS_UPNP */
 	}
 

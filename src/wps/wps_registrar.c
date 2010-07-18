@@ -876,7 +876,8 @@ static void wps_registrar_pin_completed(struct wps_registrar *reg)
  * situation with other WPS APs.
  */
 void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
-				const struct wpabuf *wps_data)
+				const struct wpabuf *wps_data,
+				int p2p_wildcard)
 {
 	struct wps_parse_attr attr;
 
@@ -900,7 +901,7 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 	}
 
 	if (reg->enrollee_seen_cb && attr.uuid_e &&
-	    attr.primary_dev_type && attr.request_type) {
+	    attr.primary_dev_type && attr.request_type && !p2p_wildcard) {
 		char *dev_name = NULL;
 		if (attr.dev_name) {
 			dev_name = os_zalloc(attr.dev_name_len + 1);

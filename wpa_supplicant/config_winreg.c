@@ -256,6 +256,10 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 	wpa_config_read_reg_dword(hk, TEXT("wps_cred_processing"),
 				  &config->wps_cred_processing);
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	config->p2p_ssid_postfix = wpa_config_read_reg_string(
+		hk, TEXT("p2p_ssid_postfix"));
+#endif /* CONFIG_P2P */
 
 	wpa_config_read_reg_dword(hk, TEXT("bss_max_count"),
 				  (int *) &config->bss_max_count);
@@ -587,6 +591,10 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 	wpa_config_write_reg_dword(hk, TEXT("wps_cred_processing"),
 				   config->wps_cred_processing, 0);
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	wpa_config_write_reg_string(hk, "p2p_ssid_postfix",
+				    config->p2p_ssid_postfix);
+#endif /* CONFIG_P2P */
 
 	wpa_config_write_reg_dword(hk, TEXT("bss_max_count"),
 				   config->bss_max_count,

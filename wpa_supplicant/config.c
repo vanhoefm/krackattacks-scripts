@@ -1688,6 +1688,8 @@ void wpa_config_free(struct wpa_config *config)
 	struct wpa_config_blob *blob, *prevblob;
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 	struct wpa_ssid *ssid, *prev = NULL;
+	int i;
+
 	ssid = config->ssid;
 	while (ssid) {
 		prev = ssid;
@@ -1717,7 +1719,10 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->model_number);
 	os_free(config->serial_number);
 	os_free(config->device_type);
+	for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++)
+		os_free(config->sec_device_type[i]);
 	os_free(config->config_methods);
+	os_free(config->p2p_ssid_postfix);
 	os_free(config->pssid);
 	os_free(config);
 }
@@ -2132,6 +2137,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->eapol_version = DEFAULT_EAPOL_VERSION;
 	config->ap_scan = DEFAULT_AP_SCAN;
 	config->fast_reauth = DEFAULT_FAST_REAUTH;
+	config->p2p_go_intent = DEFAULT_P2P_GO_INTENT;
 	config->bss_max_count = DEFAULT_BSS_MAX_COUNT;
 
 	if (ctrl_interface)
@@ -2309,6 +2315,29 @@ static int wpa_config_process_os_version(const struct global_parse_data *data,
 
 #endif /* CONFIG_WPS */
 
+#ifdef CONFIG_P2P
+static int wpa_config_process_sec_device_type(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	int idx;
+
+	for (idx = 0; idx < MAX_SEC_DEVICE_TYPES; idx++)
+		if (config->sec_device_type[idx] == NULL)
+			break;
+	if (idx == MAX_SEC_DEVICE_TYPES) {
+		wpa_printf(MSG_ERROR, "Line %d: too many sec_device_type "
+			   "items", line);
+		return -1;
+	}
+
+	config->sec_device_type[idx] = os_strdup(pos);
+	if (config->sec_device_type[idx] == NULL)
+		return -1;
+	return 0;
+}
+#endif /* CONFIG_P2P */
+
 
 #ifdef OFFSET
 #undef OFFSET
@@ -2356,6 +2385,16 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(config_methods), CFG_CHANGED_CONFIG_METHODS },
 	{ INT_RANGE(wps_cred_processing, 0, 2), 0 },
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	{ FUNC(sec_device_type), CFG_CHANGED_SEC_DEVICE_TYPE },
+	{ INT(p2p_listen_reg_class), 0 },
+	{ INT(p2p_listen_channel), 0 },
+	{ INT(p2p_oper_reg_class), 0 },
+	{ INT(p2p_oper_channel), 0 },
+	{ INT_RANGE(p2p_go_intent, 0, 15), 0 },
+	{ STR(p2p_ssid_postfix), CFG_CHANGED_P2P_SSID_POSTFIX },
+	{ INT_RANGE(persistent_reconnect, 0, 1), 0 },
+#endif /* CONFIG_P2P */
 	{ FUNC(country), CFG_CHANGED_COUNTRY },
 	{ INT(bss_max_count), 0 },
 	{ INT_RANGE(filter_ssids, 0, 1), 0 }

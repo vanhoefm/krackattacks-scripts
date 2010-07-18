@@ -22,6 +22,7 @@
 #define DEFAULT_AP_SCAN 1
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 #define DEFAULT_FAST_REAUTH 1
+#define DEFAULT_P2P_GO_INTENT 7
 #define DEFAULT_BSS_MAX_COUNT 200
 
 #include "config_ssid.h"
@@ -33,6 +34,8 @@
 #define CFG_CHANGED_OS_VERSION BIT(3)
 #define CFG_CHANGED_UUID BIT(4)
 #define CFG_CHANGED_COUNTRY BIT(5)
+#define CFG_CHANGED_SEC_DEVICE_TYPE BIT(6)
+#define CFG_CHANGED_P2P_SSID_POSTFIX BIT(7)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data
@@ -342,6 +345,21 @@ struct wpa_config {
 	 *	ctrl_iface to external program(s)
 	 */
 	int wps_cred_processing;
+
+#define MAX_SEC_DEVICE_TYPES 5
+	/**
+	 * sec_device_type - Secondary Device Types (P2P)
+	 * See device_type for the format used with these.
+	 */
+	char *sec_device_type[MAX_SEC_DEVICE_TYPES];
+
+	int p2p_listen_reg_class;
+	int p2p_listen_channel;
+	int p2p_oper_reg_class;
+	int p2p_oper_channel;
+	int p2p_go_intent;
+	char *p2p_ssid_postfix;
+	int persistent_reconnect;
 
 	/**
 	 * bss_max_count - Maximum number of BSS entries to keep in memory

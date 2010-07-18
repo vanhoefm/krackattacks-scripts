@@ -654,6 +654,26 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "wps_cred_processing=%d\n",
 			config->wps_cred_processing);
 #endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	if (config->p2p_listen_reg_class)
+		fprintf(f, "p2p_listen_reg_class=%u\n",
+			config->p2p_listen_reg_class);
+	if (config->p2p_listen_channel)
+		fprintf(f, "p2p_listen_channel=%u\n",
+			config->p2p_listen_channel);
+	if (config->p2p_oper_reg_class)
+		fprintf(f, "p2p_oper_reg_class=%u\n",
+			config->p2p_oper_reg_class);
+	if (config->p2p_oper_channel)
+		fprintf(f, "p2p_oper_channel=%u\n", config->p2p_oper_channel);
+	if (config->p2p_go_intent != DEFAULT_P2P_GO_INTENT)
+		fprintf(f, "p2p_go_intent=%u\n", config->p2p_go_intent);
+	if (config->p2p_ssid_postfix)
+		fprintf(f, "p2p_ssid_postfix=%s\n", config->p2p_ssid_postfix);
+	if (config->persistent_reconnect)
+		fprintf(f, "persistent_reconnect=%u\n",
+			config->persistent_reconnect);
+#endif /* CONFIG_P2P */
 	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",
 			config->country[0], config->country[1]);

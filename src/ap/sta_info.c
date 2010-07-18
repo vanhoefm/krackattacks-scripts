@@ -20,6 +20,7 @@
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "drivers/driver.h"
+#include "p2p/p2p.h"
 #include "hostapd.h"
 #include "accounting.h"
 #include "ieee802_1x.h"
@@ -198,6 +199,10 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	os_free(sta->sa_query_trans_id);
 	eloop_cancel_timeout(ap_sa_query_timer, hapd, sta);
 #endif /* CONFIG_IEEE80211W */
+
+#ifdef CONFIG_P2P
+	p2p_group_notif_disassoc(hapd->p2p_group, sta->addr);
+#endif /* CONFIG_P2P */
 
 	wpabuf_free(sta->wps_ie);
 	wpabuf_free(sta->p2p_ie);

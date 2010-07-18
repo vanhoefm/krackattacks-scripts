@@ -779,6 +779,10 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		wpabuf_free(sta->p2p_ie);
 		sta->p2p_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
 							  P2P_IE_VENDOR_TYPE);
+
+		if (p2p_group_notif_assoc(hapd->p2p_group, sta->addr,
+					  ies, ies_len) < 0)
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
 	} else {
 		wpabuf_free(sta->p2p_ie);
 		sta->p2p_ie = NULL;
@@ -875,6 +879,31 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		}
 	}
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_P2P
+	if (sta->p2p_ie) {
+		struct wpabuf *p2p_resp_ie;
+		enum p2p_status_code status;
+		switch (status_code) {
+		case WLAN_STATUS_SUCCESS:
+			status = P2P_SC_SUCCESS;
+			break;
+		case WLAN_STATUS_AP_UNABLE_TO_HANDLE_NEW_STA:
+			status = P2P_SC_FAIL_LIMIT_REACHED;
+			break;
+		default:
+			status = P2P_SC_FAIL_INVALID_PARAMS;
+			break;
+		}
+		p2p_resp_ie = p2p_group_assoc_resp_ie(hapd->p2p_group, status);
+		if (p2p_resp_ie) {
+			os_memcpy(p, wpabuf_head(p2p_resp_ie),
+				  wpabuf_len(p2p_resp_ie));
+			p += wpabuf_len(p2p_resp_ie);
+			wpabuf_free(p2p_resp_ie);
+		}
+	}
+#endif /* CONFIG_P2P */
 
 	send_len += p - reply->u.assoc_resp.variable;
 

@@ -856,6 +856,16 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		} else {
 			int timeout_sec = 5;
 			int timeout_usec = 0;
+#ifdef CONFIG_P2P
+			if (wpa_s->p2p_in_provisioning) {
+				/*
+				 * Use shorter wait during P2P Provisioning
+				 * state to speed up group formation.
+				 */
+				timeout_sec = 0;
+				timeout_usec = 250000;
+			}
+#endif /* CONFIG_P2P */
 			wpa_supplicant_req_new_scan(wpa_s, timeout_sec,
 						    timeout_usec);
 		}

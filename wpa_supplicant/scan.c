@@ -383,6 +383,36 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_printf(MSG_DEBUG, "Starting AP scan for wildcard SSID");
 	}
 
+#ifdef CONFIG_P2P
+	wpa_s->wps->dev.p2p = 1;
+	if (!wps) {
+		wps = 1;
+		req_type = WPS_REQ_ENROLLEE;
+	}
+
+	if (params.freqs == NULL && wpa_s->p2p_in_provisioning &&
+	    wpa_s->go_params) {
+		/* Optimize provisioning state scan based on GO information */
+		if (wpa_s->p2p_in_provisioning < 5 &&
+		    wpa_s->go_params->freq > 0) {
+			wpa_printf(MSG_DEBUG, "P2P: Scan only GO preferred "
+				   "frequency %d MHz",
+				   wpa_s->go_params->freq);
+			params.freqs = os_zalloc(2 * sizeof(int));
+			if (params.freqs)
+				params.freqs[0] = wpa_s->go_params->freq;
+		} else if (wpa_s->go_params->freq_list[0]) {
+			wpa_printf(MSG_DEBUG, "P2P: Scan only common "
+				   "channels");
+			int_array_concat(&params.freqs,
+					 wpa_s->go_params->freq_list);
+			if (params.freqs)
+				int_array_sort_unique(params.freqs);
+		}
+		wpa_s->p2p_in_provisioning++;
+	}
+#endif /* CONFIG_P2P */
+
 #ifdef CONFIG_WPS
 	if (params.freqs == NULL && wpa_s->after_wps && wpa_s->wps_freq) {
 		/*

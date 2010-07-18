@@ -37,6 +37,7 @@ void ap_tx_status(void *ctx, const u8 *addr,
 void ap_rx_from_unknown_sta(void *ctx, const u8 *frame, size_t len);
 void ap_mgmt_rx(void *ctx, struct rx_mgmt *rx_mgmt);
 void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok);
+int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_ap_mac_addr_filter(struct wpa_supplicant *wpa_s,
 				      const u8 *addr);
 

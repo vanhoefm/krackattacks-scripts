@@ -182,6 +182,18 @@ struct wpa_params {
 	char *override_ctrl_interface;
 };
 
+struct p2p_srv_bonjour {
+	struct dl_list list;
+	struct wpabuf *query;
+	struct wpabuf *resp;
+};
+
+struct p2p_srv_upnp {
+	struct dl_list list;
+	u8 version;
+	char *service;
+};
+
 /**
  * struct wpa_global - Internal, global data for all %wpa_supplicant interfaces
  *
@@ -196,6 +208,12 @@ struct wpa_global {
 	void **drv_priv;
 	size_t drv_count;
 	struct os_time suspend_time;
+	struct p2p_data *p2p;
+	struct wpa_supplicant *p2p_group_formation;
+	u8 p2p_dev_addr[ETH_ALEN];
+	struct dl_list p2p_srv_bonjour; /* struct p2p_srv_bonjour */
+	struct dl_list p2p_srv_upnp; /* struct p2p_srv_upnp */
+	int p2p_disabled;
 };
 
 
@@ -303,6 +321,7 @@ struct wpa_client_mlme {
  */
 struct wpa_supplicant {
 	struct wpa_global *global;
+	struct wpa_supplicant *parent;
 	struct wpa_supplicant *next;
 	struct l2_packet_data *l2;
 	struct l2_packet_data *l2_br;
@@ -409,7 +428,7 @@ struct wpa_supplicant {
 		u8 ssid[32];
 		size_t ssid_len;
 		int freq;
-		u8 assoc_req_ie[80];
+		u8 assoc_req_ie[200];
 		size_t assoc_req_ie_len;
 		int mfp;
 		int ft_used;
@@ -428,6 +447,42 @@ struct wpa_supplicant {
 	void *ap_configured_cb_ctx;
 	void *ap_configured_cb_data;
 #endif /* CONFIG_AP */
+
+#ifdef CONFIG_P2P
+	struct p2p_go_neg_results *go_params;
+	int create_p2p_iface;
+	u8 pending_interface_addr[ETH_ALEN];
+	char pending_interface_name[IFNAMSIZ];
+	int pending_interface_type;
+	int p2p_group_idx;
+	unsigned int off_channel_freq;
+	struct wpabuf *pending_action_tx;
+	u8 pending_action_src[ETH_ALEN];
+	u8 pending_action_dst[ETH_ALEN];
+	u8 pending_action_bssid[ETH_ALEN];
+	unsigned int pending_action_freq;
+	int pending_action_without_roc;
+	unsigned int pending_listen_freq;
+	unsigned int pending_listen_duration;
+	enum {
+		NOT_P2P_GROUP_INTERFACE,
+		P2P_GROUP_INTERFACE_PENDING,
+		P2P_GROUP_INTERFACE_GO,
+		P2P_GROUP_INTERFACE_CLIENT
+	} p2p_group_interface;
+	struct p2p_group *p2p_group;
+	int p2p_long_listen;
+	char p2p_pin[10];
+	int p2p_sd_over_ctrl_iface;
+	int p2p_in_provisioning;
+	int pending_invite_ssid_id;
+	int show_group_started;
+	u8 go_dev_addr[ETH_ALEN];
+	int pending_pd_before_join;
+	u8 pending_join_iface_addr[ETH_ALEN];
+	u8 pending_join_dev_addr[ETH_ALEN];
+	int pending_join_wps_method;
+#endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;
 	const struct bgscan_ops *bgscan;
@@ -501,6 +556,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 enum wpa_key_mgmt key_mgmt2driver(int key_mgmt);
 enum wpa_cipher cipher_suite2driver(int cipher);
 void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s);
+void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
 
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);

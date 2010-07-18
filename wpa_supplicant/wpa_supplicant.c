@@ -42,6 +42,7 @@
 #include "ibss_rsn.h"
 #include "sme.h"
 #include "ap.h"
+#include "p2p_supplicant.h"
 #include "notify.h"
 #include "bgscan.h"
 #include "bss.h"
@@ -427,6 +428,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_AP
 	wpa_supplicant_ap_deinit(wpa_s);
 #endif /* CONFIG_AP */
+
+#ifdef CONFIG_P2P
+	wpas_p2p_deinit(wpa_s);
+#endif /* CONFIG_P2P */
 }
 
 
@@ -545,6 +550,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_s->reassociated_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 1);
 		wpa_s->after_wps = 0;
+#ifdef CONFIG_P2P
+		wpas_p2p_completed(wpa_s);
+#endif /* CONFIG_P2P */
 	} else if (state == WPA_DISCONNECTED || state == WPA_ASSOCIATING ||
 		   state == WPA_ASSOCIATED) {
 		wpa_s->new_connection = 1;
@@ -586,7 +594,7 @@ static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 }
 
 
-static void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
+void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 {
 	enum wpa_states old_state = wpa_s->wpa_state;
 
@@ -1884,6 +1892,7 @@ static struct wpa_supplicant * wpa_supplicant_alloc(void)
 		return NULL;
 	wpa_s->scan_req = 1;
 	wpa_s->new_connection = 1;
+	wpa_s->parent = wpa_s;
 
 	return wpa_s;
 }
@@ -2092,6 +2101,13 @@ next_driver:
 	}
 #endif /* CONFIG_IBSS_RSN */
 
+#ifdef CONFIG_P2P
+	if (wpas_p2p_init(wpa_s->global, wpa_s) < 0) {
+		wpa_printf(MSG_ERROR, "Failed to init P2P");
+		return -1;
+	}
+#endif /* CONFIG_P2P */
+
 	if (wpa_bss_init(wpa_s) < 0)
 		return -1;
 
@@ -2220,6 +2236,8 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 	wpa_printf(MSG_DEBUG, "Removing interface %s", wpa_s->ifname);
 
+	if (global->p2p_group_formation == wpa_s)
+		global->p2p_group_formation = NULL;
 	wpa_supplicant_deinit_iface(wpa_s, 1);
 	os_free(wpa_s);
 
@@ -2279,6 +2297,8 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	global = os_zalloc(sizeof(*global));
 	if (global == NULL)
 		return NULL;
+	dl_list_init(&global->p2p_srv_bonjour);
+	dl_list_init(&global->p2p_srv_upnp);
 	global->params.daemonize = params->daemonize;
 	global->params.wait_for_monitor = params->wait_for_monitor;
 	global->params.dbus_ctrl_interface = params->dbus_ctrl_interface;
@@ -2392,6 +2412,10 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	if (global == NULL)
 		return;
 
+#ifdef CONFIG_P2P
+	wpas_p2p_deinit_global(global);
+#endif /* CONFIG_P2P */
+
 	while (global->ifaces)
 		wpa_supplicant_remove_iface(global, global->ifaces);
 
@@ -2433,6 +2457,10 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_WPS
 	wpas_wps_update_config(wpa_s);
 #endif /* CONFIG_WPS */
+
+#ifdef CONFIG_P2P
+	wpas_p2p_update_config(wpa_s);
+#endif /* CONFIG_P2P */
 
 	wpa_s->conf->changed_parameters = 0;
 }

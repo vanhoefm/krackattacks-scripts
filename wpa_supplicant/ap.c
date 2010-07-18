@@ -22,6 +22,7 @@
 #ifdef NEED_AP_MLME
 #include "ap/ieee802_11.h"
 #endif /* NEED_AP_MLME */
+#include "ap/beacon.h"
 #include "ap/ieee802_1x.h"
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
@@ -469,6 +470,23 @@ int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
 }
 
 #endif /* CONFIG_CTRL_IFACE */
+
+
+int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
+{
+	struct hostapd_iface *iface = wpa_s->ap_iface;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	struct hostapd_data *hapd;
+
+	if (ssid == NULL || wpa_s->ap_iface == NULL)
+		return -1;
+
+	ieee802_11_set_beacons(iface);
+	hapd = iface->bss[0];
+	hapd->drv.set_ap_wps_ie(hapd);
+
+	return 0;
+}
 
 
 int wpa_supplicant_ap_mac_addr_filter(struct wpa_supplicant *wpa_s,

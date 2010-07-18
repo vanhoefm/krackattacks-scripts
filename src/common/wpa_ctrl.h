@@ -90,6 +90,32 @@ extern "C" {
 #define WPS_EVENT_ER_ENROLLEE_REMOVE "WPS-ER-ENROLLEE-REMOVE "
 #define WPS_EVENT_ER_AP_SETTINGS "WPS-ER-AP-SETTINGS "
 
+/** P2P device found */
+#define P2P_EVENT_DEVICE_FOUND "P2P-DEVICE-FOUND "
+/** A P2P device requested GO negotiation, but we were not ready to start the
+ * negotiation */
+#define P2P_EVENT_GO_NEG_REQUEST "P2P-GO-NEG-REQUEST "
+#define P2P_EVENT_GO_NEG_SUCCESS "P2P-GO-NEG-SUCCESS "
+#define P2P_EVENT_GO_NEG_FAILURE "P2P-GO-NEG-FAILURE "
+#define P2P_EVENT_GROUP_FORMATION_SUCCESS "P2P-GROUP-FORMATION-SUCCESS "
+#define P2P_EVENT_GROUP_FORMATION_FAILURE "P2P-GROUP-FORMATION-FAILURE "
+#define P2P_EVENT_GROUP_STARTED "P2P-GROUP-STARTED "
+#define P2P_EVENT_GROUP_REMOVED "P2P-GROUP-REMOVED "
+/* parameters: <peer address> <PIN> */
+#define P2P_EVENT_PROV_DISC_SHOW_PIN "P2P-PROV-DISC-SHOW-PIN "
+/* parameters: <peer address> */
+#define P2P_EVENT_PROV_DISC_ENTER_PIN "P2P-PROV-DISC-ENTER-PIN "
+/* parameters: <peer address> */
+#define P2P_EVENT_PROV_DISC_PBC_REQ "P2P-PROV-DISC-PBC-REQ "
+/* parameters: <peer address> */
+#define P2P_EVENT_PROV_DISC_PBC_RESP "P2P-PROV-DISC-PBC-RESP "
+/* parameters: <freq> <src addr> <dialog token> <update indicator> <TLVs> */
+#define P2P_EVENT_SERV_DISC_REQ "P2P-SERV-DISC-REQ "
+/* parameters: <src addr> <update indicator> <TLVs> */
+#define P2P_EVENT_SERV_DISC_RESP "P2P-SERV-DISC-RESP "
+#define P2P_EVENT_INVITATION_RECEIVED "P2P-INVITATION-RECEIVED "
+#define P2P_EVENT_INVITATION_RESULT "P2P-INVITATION-RESULT "
+
 /* hostapd control interface - fixed message prefixes */
 #define WPS_EVENT_PIN_NEEDED "WPS-PIN-NEEDED "
 #define WPS_EVENT_NEW_AP_SETTINGS "WPS-NEW-AP-SETTINGS "

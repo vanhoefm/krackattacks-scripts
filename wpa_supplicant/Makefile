@@ -166,6 +166,26 @@ CFLAGS += -DCONFIG_IBSS_RSN
 OBJS += ibss_rsn.o
 endif
 
+ifdef CONFIG_P2P
+OBJS += p2p_supplicant.o
+OBJS += ../src/p2p/p2p.o
+OBJS += ../src/p2p/p2p_utils.o
+OBJS += ../src/p2p/p2p_parse.o
+OBJS += ../src/p2p/p2p_build.o
+OBJS += ../src/p2p/p2p_go_neg.o
+OBJS += ../src/p2p/p2p_sd.o
+OBJS += ../src/p2p/p2p_pd.o
+OBJS += ../src/p2p/p2p_invitation.o
+OBJS += ../src/p2p/p2p_dev_disc.o
+OBJS += ../src/p2p/p2p_group.o
+OBJS += ../src/ap/p2p_hostapd.o
+CFLAGS += -DCONFIG_P2P
+NEED_80211_COMMON=y
+ifdef CONFIG_P2P_STRICT
+CFLAGS += -DCONFIG_P2P_STRICT
+endif
+endif
+
 ifdef CONFIG_NO_WPA2
 CFLAGS += -DCONFIG_NO_WPA2
 endif

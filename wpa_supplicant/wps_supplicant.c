@@ -32,6 +32,7 @@
 #include "blacklist.h"
 #include "bss.h"
 #include "scan.h"
+#include "p2p_supplicant.h"
 #include "wps_supplicant.h"
 
 
@@ -399,6 +400,9 @@ static void wpa_supplicant_wps_event_success(struct wpa_supplicant *wpa_s)
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_SUCCESS);
 	wpa_s->wps_success = 1;
 	wpas_notify_wps_event_success(wpa_s);
+#ifdef CONFIG_P2P
+	wpas_p2p_wps_success(wpa_s, wpa_s->bssid, 0);
+#endif /* CONFIG_P2P */
 }
 
 

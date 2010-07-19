@@ -837,6 +837,9 @@ static void wpas_wps_set_sel_reg_cb(void *ctx, int sel_reg, u16 dev_passwd_id,
 
 	if (wpa_s->wps_er == NULL)
 		return;
+	wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar - sel_reg=%d "
+		   "dev_password_id=%u sel_reg_config_methods=0x%x",
+		   sel_reg, dev_passwd_id, sel_reg_config_methods);
 	wps_er_set_sel_reg(wpa_s->wps_er, sel_reg, dev_passwd_id,
 			   sel_reg_config_methods);
 #endif /* CONFIG_WPS_ER */

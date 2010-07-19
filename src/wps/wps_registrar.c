@@ -416,6 +416,29 @@ static int wps_build_sel_reg_dev_password_id(struct wps_registrar *reg,
 }
 
 
+static void wps_set_pushbutton(u16 *methods, u16 conf_methods)
+{
+	*methods |= WPS_CONFIG_PUSHBUTTON;
+#ifdef CONFIG_WPS2
+	if (conf_methods & WPS_CONFIG_VIRT_PUSHBUTTON)
+		*methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
+	if (conf_methods & WPS_CONFIG_PHY_PUSHBUTTON)
+		*methods |= WPS_CONFIG_PHY_PUSHBUTTON;
+	if ((*methods & WPS_CONFIG_VIRT_PUSHBUTTON) !=
+	    WPS_CONFIG_VIRT_PUSHBUTTON ||
+	    (*methods & WPS_CONFIG_PHY_PUSHBUTTON) !=
+	    WPS_CONFIG_PHY_PUSHBUTTON) {
+		/*
+		 * Required to include virtual/physical flag, but we were not
+		 * configured with push button type, so have to default to one
+		 * of them.
+		 */
+		*methods |= WPS_CONFIG_PHY_PUSHBUTTON;
+	}
+#endif /* CONFIG_WPS2 */
+}
+
+
 static int wps_build_sel_reg_config_methods(struct wps_registrar *reg,
 					    struct wpabuf *msg)
 {
@@ -428,15 +451,8 @@ static int wps_build_sel_reg_config_methods(struct wps_registrar *reg,
 	methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 		     WPS_CONFIG_PHY_PUSHBUTTON);
 #endif /* CONFIG_WPS2 */
-	if (reg->pbc) {
-		methods |= WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
-		if (reg->wps->config_methods & WPS_CONFIG_VIRT_PUSHBUTTON)
-			methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
-		if (reg->wps->config_methods & WPS_CONFIG_PHY_PUSHBUTTON)
-			methods |= WPS_CONFIG_PHY_PUSHBUTTON;
-#endif /* CONFIG_WPS2 */
-	}
+	if (reg->pbc)
+		wps_set_pushbutton(&methods, reg->wps->config_methods);
 	if (reg->sel_reg_config_methods_override >= 0)
 		methods = reg->sel_reg_config_methods_override;
 	wpa_printf(MSG_DEBUG, "WPS:  * Selected Registrar Config Methods (%x)",
@@ -478,15 +494,8 @@ static int wps_build_config_methods_r(struct wps_registrar *reg,
 	methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 		     WPS_CONFIG_PHY_PUSHBUTTON);
 #endif /* CONFIG_WPS2 */
-	if (reg->pbc) {
-		methods |= WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
-		if (reg->wps->config_methods & WPS_CONFIG_VIRT_PUSHBUTTON)
-			methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
-		if (reg->wps->config_methods & WPS_CONFIG_PHY_PUSHBUTTON)
-			methods |= WPS_CONFIG_PHY_PUSHBUTTON;
-#endif /* CONFIG_WPS2 */
-	}
+	if (reg->pbc)
+		wps_set_pushbutton(&methods, reg->wps->config_methods);
 	return wps_build_config_methods(msg, methods);
 }
 
@@ -971,18 +980,14 @@ static void wps_cb_set_sel_reg(struct wps_registrar *reg)
 		methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
 			     WPS_CONFIG_PHY_PUSHBUTTON);
 #endif /* CONFIG_WPS2 */
-		if (reg->pbc) {
-			methods |= WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
-			if (reg->wps->config_methods &
-			    WPS_CONFIG_VIRT_PUSHBUTTON)
-				methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
-			if (reg->wps->config_methods &
-			    WPS_CONFIG_PHY_PUSHBUTTON)
-				methods |= WPS_CONFIG_PHY_PUSHBUTTON;
-#endif /* CONFIG_WPS2 */
-		}
+		if (reg->pbc)
+			wps_set_pushbutton(&methods, reg->wps->config_methods);
 	}
+
+	wpa_printf(MSG_DEBUG, "WPS: wps_cb_set_sel_reg: sel_reg=%d "
+		   "config_methods=0x%x pbc=%d methods=0x%x",
+		   reg->selected_registrar, reg->wps->config_methods,
+		   reg->pbc, methods);
 
 	reg->set_sel_reg_cb(reg->cb_ctx, reg->selected_registrar,
 			    reg->pbc ? DEV_PW_PUSHBUTTON : DEV_PW_DEFAULT,
@@ -2994,31 +2999,21 @@ void wps_registrar_selected_registrar_changed(struct wps_registrar *reg)
 	os_memcpy(reg->authorized_macs_union, reg->authorized_macs,
 		  WPS_MAX_AUTHORIZED_MACS * ETH_ALEN);
 	if (reg->selected_registrar) {
-		reg->sel_reg_config_methods_override =
-			reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
+		u16 methods;
+
+		methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
 #ifdef CONFIG_WPS2
-		reg->sel_reg_config_methods_override &=
-			~(WPS_CONFIG_VIRT_PUSHBUTTON |
-			  WPS_CONFIG_PHY_PUSHBUTTON);
+		methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
+			     WPS_CONFIG_PHY_PUSHBUTTON);
 #endif /* CONFIG_WPS2 */
 		if (reg->pbc) {
 			reg->sel_reg_dev_password_id_override =
 				DEV_PW_PUSHBUTTON;
-			reg->sel_reg_config_methods_override |=
-				WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
-			if (reg->wps->config_methods &
-			    WPS_CONFIG_VIRT_PUSHBUTTON)
-				reg->sel_reg_config_methods_override |=
-					WPS_CONFIG_VIRT_PUSHBUTTON;
-			if (reg->wps->config_methods &
-			    WPS_CONFIG_PHY_PUSHBUTTON)
-				reg->sel_reg_config_methods_override |=
-					WPS_CONFIG_PHY_PUSHBUTTON;
-#endif /* CONFIG_WPS2 */
+			wps_set_pushbutton(&methods, reg->wps->config_methods);
 		}
 		wpa_printf(MSG_DEBUG, "WPS: Internal Registrar selected "
 			   "(pbc=%d)", reg->pbc);
+		reg->sel_reg_config_methods_override = methods;
 	} else
 		wpa_printf(MSG_DEBUG, "WPS: Internal Registrar not selected");
 

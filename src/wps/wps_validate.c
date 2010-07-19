@@ -1850,3 +1850,40 @@ int wps_validate_wsc_done(const struct wpabuf *tlvs)
 
 	return 0;
 }
+
+
+int wps_validate_upnp_set_selected_registrar(const struct wpabuf *tlvs)
+{
+	struct wps_parse_attr attr;
+	int wps2;
+	int sel_reg;
+
+	if (tlvs == NULL) {
+		wpa_printf(MSG_INFO, "WPS-STRICT: No TLVs in "
+			   "SetSelectedRegistrar");
+		return -1;
+	}
+	if (wps_parse_msg(tlvs, &attr) < 0) {
+		wpa_printf(MSG_INFO, "WPS-STRICT: Failed to parse attributes "
+			   "in SetSelectedRegistrar");
+		return -1;
+	}
+
+	wps2 = attr.version2 != NULL;
+	sel_reg = attr.selected_registrar != NULL &&
+		*attr.selected_registrar != 0;
+	if (wps_validate_version(attr.version, 1) ||
+	    wps_validate_dev_password_id(attr.dev_password_id, sel_reg) ||
+	    wps_validate_sel_reg_config_methods(attr.sel_reg_config_methods,
+						wps2, sel_reg) ||
+	    wps_validate_version2(attr.version2, wps2) ||
+	    wps_validate_authorized_macs(attr.authorized_macs,
+					 attr.authorized_macs_len, wps2) ||
+	    wps_validate_uuid_r(attr.uuid_r, wps2)) {
+		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid "
+			   "SetSelectedRegistrar");
+		return -1;
+	}
+
+	return 0;
+}

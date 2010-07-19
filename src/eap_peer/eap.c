@@ -1923,6 +1923,15 @@ const char * eap_get_config_phase2(struct eap_sm *sm)
 }
 
 
+int eap_get_config_fragment_size(struct eap_sm *sm)
+{
+	struct eap_peer_config *config = eap_get_config(sm);
+	if (config == NULL)
+		return -1;
+	return config->fragment_size;
+}
+
+
 /**
  * eap_key_available - Get key availability (eapKeyAvailable variable)
  * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()

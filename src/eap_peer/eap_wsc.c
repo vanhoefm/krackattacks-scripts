@@ -219,7 +219,11 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		os_free(data);
 		return NULL;
 	}
-	data->fragment_size = WSC_FRAGMENT_SIZE;
+	res = eap_get_config_fragment_size(sm);
+	if (res > 0)
+		data->fragment_size = res;
+	else
+		data->fragment_size = WSC_FRAGMENT_SIZE;
 
 	if (registrar && cfg.pin) {
 		wps_registrar_add_pin(data->wps_ctx->registrar, NULL,

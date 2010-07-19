@@ -345,6 +345,7 @@ const u8 * eap_get_config_otp(struct eap_sm *sm, size_t *len);
 void eap_clear_config_otp(struct eap_sm *sm);
 const char * eap_get_config_phase1(struct eap_sm *sm);
 const char * eap_get_config_phase2(struct eap_sm *sm);
+int eap_get_config_fragment_size(struct eap_sm *sm);
 struct eap_peer_config * eap_get_config(struct eap_sm *sm);
 void eap_set_config_blob(struct eap_sm *sm, struct wpa_config_blob *blob);
 const struct wpa_config_blob *

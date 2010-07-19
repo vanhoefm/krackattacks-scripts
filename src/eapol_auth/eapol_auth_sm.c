@@ -830,6 +830,7 @@ eapol_auth_alloc(struct eapol_authenticator *eapol, const u8 *addr,
 	eap_conf.wps = eapol->conf.wps;
 	eap_conf.assoc_wps_ie = assoc_wps_ie;
 	eap_conf.peer_addr = addr;
+	eap_conf.fragment_size = eapol->conf.fragment_size;
 	sm->eap = eap_server_sm_init(sm, &eapol_cb, &eap_conf);
 	if (sm->eap == NULL) {
 		eapol_auth_free(sm);
@@ -1077,6 +1078,7 @@ static int eapol_auth_conf_clone(struct eapol_auth_config *dst,
 	dst->eap_sim_aka_result_ind = src->eap_sim_aka_result_ind;
 	dst->tnc = src->tnc;
 	dst->wps = src->wps;
+	dst->fragment_size = src->fragment_size;
 	return 0;
 }
 

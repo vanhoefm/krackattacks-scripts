@@ -1313,6 +1313,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "dh_file") == 0) {
 			os_free(bss->dh_file);
 			bss->dh_file = os_strdup(pos);
+		} else if (os_strcmp(buf, "fragment_size") == 0) {
+			bss->fragment_size = atoi(pos);
 #ifdef EAP_SERVER_FAST
 		} else if (os_strcmp(buf, "pac_opaque_encr_key") == 0) {
 			os_free(bss->pac_opaque_encr_key);

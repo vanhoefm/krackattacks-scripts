@@ -91,7 +91,8 @@ static void * eap_tnc_init(struct eap_sm *sm)
 		return NULL;
 	}
 
-	data->fragment_size = 1300;
+	data->fragment_size = sm->fragment_size > 100 ?
+		sm->fragment_size - 98 : 1300;
 
 	return data;
 }

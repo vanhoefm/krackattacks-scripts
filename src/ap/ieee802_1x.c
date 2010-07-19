@@ -1651,6 +1651,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 	conf.eap_sim_aka_result_ind = hapd->conf->eap_sim_aka_result_ind;
 	conf.tnc = hapd->conf->tnc;
 	conf.wps = hapd->wps;
+	conf.fragment_size = hapd->conf->fragment_size;
 
 	os_memset(&cb, 0, sizeof(cb));
 	cb.eapol_send = ieee802_1x_eapol_send;

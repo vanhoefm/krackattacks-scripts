@@ -187,6 +187,9 @@ struct eap_sm {
 	Boolean start_reauth;
 
 	u8 peer_addr[ETH_ALEN];
+
+	/* Fragmentation size for EAP method init() handler */
+	int fragment_size;
 };
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,

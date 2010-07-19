@@ -40,6 +40,7 @@ struct eapol_auth_config {
 	int eap_sim_aka_result_ind;
 	int tnc;
 	struct wps_context *wps;
+	int fragment_size;
 
 	/* Opaque context pointer to owner data for callback functions */
 	void *ctx;

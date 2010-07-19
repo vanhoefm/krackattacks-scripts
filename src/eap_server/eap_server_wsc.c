@@ -136,7 +136,8 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		os_free(data);
 		return NULL;
 	}
-	data->fragment_size = WSC_FRAGMENT_SIZE;
+	data->fragment_size = sm->fragment_size > 0 ? sm->fragment_size :
+		WSC_FRAGMENT_SIZE;
 
 	return data;
 }

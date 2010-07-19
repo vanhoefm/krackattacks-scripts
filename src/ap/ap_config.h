@@ -254,6 +254,7 @@ struct hostapd_bss_config {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	int fragment_size;
 
 	char *radius_server_clients;
 	int radius_server_auth_port;

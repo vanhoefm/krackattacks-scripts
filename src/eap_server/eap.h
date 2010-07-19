@@ -107,6 +107,7 @@ struct eap_config {
 	struct wps_context *wps;
 	const struct wpabuf *assoc_wps_ie;
 	const u8 *peer_addr;
+	int fragment_size;
 };
 
 

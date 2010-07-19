@@ -1257,6 +1257,7 @@ struct eap_sm * eap_server_sm_init(void *eapol_ctx,
 		sm->assoc_wps_ie = wpabuf_dup(conf->assoc_wps_ie);
 	if (conf->peer_addr)
 		os_memcpy(sm->peer_addr, conf->peer_addr, ETH_ALEN);
+	sm->fragment_size = conf->fragment_size;
 
 	wpa_printf(MSG_DEBUG, "EAP: Server state machine created");
 

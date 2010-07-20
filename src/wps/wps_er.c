@@ -1172,6 +1172,8 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}
+	/* Limit event_id to < 32 bits to avoid issues with atoi() */
+	er->event_id &= 0x0fffffff;
 
 	if (filter) {
 		if (inet_aton(filter, &er->filter_addr) == 0) {

@@ -19,6 +19,11 @@
 #include "wps.h"
 
 
+#ifndef WPS_STRICT_ALL
+#define WPS_STRICT_WPS2
+#endif /* WPS_STRICT_ALL */
+
+
 static int wps_validate_version(const u8 *version, int mandatory)
 {
 	if (version == NULL) {
@@ -1318,7 +1323,12 @@ int wps_validate_m1(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_request_to_enroll(attr.request_to_enroll, 0)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M1");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1368,7 +1378,12 @@ int wps_validate_m2(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M2");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1415,7 +1430,12 @@ int wps_validate_m2d(const struct wpabuf *tlvs)
 	    wps_validate_os_version(attr.os_version, 1) ||
 	    wps_validate_version2(attr.version2, wps2)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M2D");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1446,7 +1466,12 @@ int wps_validate_m3(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M3");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1479,7 +1504,12 @@ int wps_validate_m4(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M4");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1507,7 +1537,12 @@ int wps_validate_m4_encr(const struct wpabuf *tlvs)
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M4 encrypted "
 			   "settings");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1538,7 +1573,12 @@ int wps_validate_m5(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M5");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1566,7 +1606,12 @@ int wps_validate_m5_encr(const struct wpabuf *tlvs)
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M5 encrypted "
 			   "settings");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1597,7 +1642,12 @@ int wps_validate_m6(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M6");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1625,7 +1675,12 @@ int wps_validate_m6_encr(const struct wpabuf *tlvs)
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M6 encrypted "
 			   "settings");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1657,7 +1712,12 @@ int wps_validate_m7(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M7");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1692,7 +1752,12 @@ int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap)
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M7 encrypted "
 			   "settings");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1723,7 +1788,12 @@ int wps_validate_m8(const struct wpabuf *tlvs)
 	    wps_validate_version2(attr.version2, wps2) ||
 	    wps_validate_authenticator(attr.authenticator, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M8");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1757,7 +1827,12 @@ int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap)
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M8 encrypted "
 			   "settings");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1786,7 +1861,12 @@ int wps_validate_wsc_ack(const struct wpabuf *tlvs)
 	    wps_validate_registrar_nonce(attr.registrar_nonce, 1) ||
 	    wps_validate_version2(attr.version2, wps2)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid WSC_ACK");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1816,7 +1896,12 @@ int wps_validate_wsc_nack(const struct wpabuf *tlvs)
 	    wps_validate_config_error(attr.config_error, 1) ||
 	    wps_validate_version2(attr.version2, wps2)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid WSC_NACK");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1845,7 +1930,12 @@ int wps_validate_wsc_done(const struct wpabuf *tlvs)
 	    wps_validate_registrar_nonce(attr.registrar_nonce, 1) ||
 	    wps_validate_version2(attr.version2, wps2)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid WSC_Done");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;
@@ -1882,7 +1972,12 @@ int wps_validate_upnp_set_selected_registrar(const struct wpabuf *tlvs)
 	    wps_validate_uuid_r(attr.uuid_r, wps2)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid "
 			   "SetSelectedRegistrar");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;

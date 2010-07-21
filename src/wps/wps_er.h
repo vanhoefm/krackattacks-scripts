@@ -91,6 +91,7 @@ struct wps_er {
 	void (*deinit_done_cb)(void *ctx);
 	void *deinit_done_ctx;
 	struct in_addr filter_addr;
+	int skip_set_sel_reg;
 };
 
 

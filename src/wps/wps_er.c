@@ -1366,6 +1366,11 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	struct wpabuf *msg;
 	struct wps_er_ap *ap;
 
+	if (er->skip_set_sel_reg) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Skip SetSelectedRegistrar");
+		return;
+	}
+
 	msg = wpabuf_alloc(500);
 	if (msg == NULL)
 		return;
@@ -1702,8 +1707,9 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 	if (wps_er_send_get_device_info(ap, wps_er_ap_learn_m1) < 0)
 		return -1;
 
-	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */
+	er->skip_set_sel_reg = 1;
 	wps_registrar_add_pin(er->wps->registrar, NULL, uuid, pin, pin_len, 0);
+	er->skip_set_sel_reg = 0;
 
 	return 0;
 }
@@ -1763,8 +1769,9 @@ int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
 	if (wps_er_send_get_device_info(ap, wps_er_ap_config_m1) < 0)
 		return -1;
 
-	/* TODO: add PIN without SetSelectedRegistrar trigger to all APs */
+	er->skip_set_sel_reg = 1;
 	wps_registrar_add_pin(er->wps->registrar, NULL, uuid, pin, pin_len, 0);
+	er->skip_set_sel_reg = 0;
 
 	return 0;
 }

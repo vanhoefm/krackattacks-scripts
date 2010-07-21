@@ -524,9 +524,14 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Invalid NewWLANEventMAC in "
 			   "PutWLANResponse: '%s'", val);
 #ifdef CONFIG_WPS_STRICT
-		wpabuf_free(msg);
-		os_free(val);
-		return UPNP_ARG_VALUE_INVALID;
+		{
+			struct wps_parse_attr attr;
+			if (wps_parse_msg(msg, &attr) < 0 || attr.version2) {
+				wpabuf_free(msg);
+				os_free(val);
+				return UPNP_ARG_VALUE_INVALID;
+			}
+		}
 #else /* CONFIG_WPS_STRICT */
 		if (hwaddr_aton2(val, macaddr) > 0) {
 			/*

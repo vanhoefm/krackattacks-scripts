@@ -1037,7 +1037,7 @@ static int wps_validate_cred(const u8 *cred, size_t len)
 		return -1;
 	}
 
-	if (wps_validate_network_idx(attr.network_idx, 0) ||
+	if (wps_validate_network_idx(attr.network_idx, 1) ||
 	    wps_validate_ssid(attr.ssid, attr.ssid_len, 1) ||
 	    wps_validate_auth_type(attr.auth_type, 1) ||
 	    wps_validate_encr_type(attr.encr_type, 1) ||

@@ -500,11 +500,6 @@ OBJS += ../src/wps/wps_nfc_pn531.o
 LIBS += ${PN531_PATH}/lib/wpsnfc.dll
 LIBS += ${PN531_PATH}/lib/libnfc_mapping_pn53x.dll
 endif
-
-ifdef CONFIG_WPS_STRICT
-CFLAGS += -DCONFIG_WPS_STRICT
-OBJS += ../src/wps/wps_validate.o
-endif
 endif
 
 ifdef NEED_WPS_OOB
@@ -529,6 +524,11 @@ OBJS += ../src/wps/upnp_xml.o
 OBJS += ../src/wps/httpread.o
 OBJS += ../src/wps/http_client.o
 OBJS += ../src/wps/http_server.o
+endif
+
+ifdef CONFIG_WPS_STRICT
+CFLAGS += -DCONFIG_WPS_STRICT
+OBJS += ../src/wps/wps_validate.o
 endif
 
 endif

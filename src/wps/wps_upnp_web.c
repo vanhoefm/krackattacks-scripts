@@ -532,7 +532,7 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 				return UPNP_ARG_VALUE_INVALID;
 			}
 		}
-#else /* CONFIG_WPS_STRICT */
+#endif /* CONFIG_WPS_STRICT */
 		if (hwaddr_aton2(val, macaddr) > 0) {
 			/*
 			 * At least some versions of Intel PROset seem to be
@@ -540,13 +540,13 @@ web_process_put_wlan_response(struct upnp_wps_device_sm *sm, char *data,
 			 */
 			wpa_printf(MSG_DEBUG, "WPS UPnP: Workaround - allow "
 				   "incorrect MAC address format in "
-				   "NewWLANEventMAC");
+				   "NewWLANEventMAC: %s -> " MACSTR,
+				   val, MAC2STR(macaddr));
 		} else {
 			wpabuf_free(msg);
 			os_free(val);
 			return UPNP_ARG_VALUE_INVALID;
 		}
-#endif /* CONFIG_WPS_STRICT */
 	}
 	os_free(val);
 	if (ev_type == UPNP_WPS_WLANEVENT_TYPE_EAP) {

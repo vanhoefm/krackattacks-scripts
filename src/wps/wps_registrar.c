@@ -146,13 +146,20 @@ static void wps_registrar_add_authorized_mac(struct wps_registrar *reg,
 					     const u8 *addr)
 {
 	int i;
+	wpa_printf(MSG_DEBUG, "WPS: Add authorized MAC " MACSTR,
+		   MAC2STR(addr));
 	for (i = 0; i < WPS_MAX_AUTHORIZED_MACS; i++)
-		if (os_memcmp(reg->authorized_macs[i], addr, ETH_ALEN) == 0)
+		if (os_memcmp(reg->authorized_macs[i], addr, ETH_ALEN) == 0) {
+			wpa_printf(MSG_DEBUG, "WPS: Authorized MAC was "
+				   "already in the list");
 			return; /* already in list */
+		}
 	for (i = WPS_MAX_AUTHORIZED_MACS - 1; i > 0; i--)
 		os_memcpy(reg->authorized_macs[i], reg->authorized_macs[i - 1],
 			  ETH_ALEN);
 	os_memcpy(reg->authorized_macs[0], addr, ETH_ALEN);
+	wpa_hexdump(MSG_DEBUG, "WPS: Authorized MACs",
+		    (u8 *) reg->authorized_macs, sizeof(reg->authorized_macs));
 }
 
 
@@ -160,17 +167,24 @@ static void wps_registrar_remove_authorized_mac(struct wps_registrar *reg,
 						const u8 *addr)
 {
 	int i;
+	wpa_printf(MSG_DEBUG, "WPS: Remove authorized MAC " MACSTR,
+		   MAC2STR(addr));
 	for (i = 0; i < WPS_MAX_AUTHORIZED_MACS; i++) {
 		if (os_memcmp(reg->authorized_macs, addr, ETH_ALEN) == 0)
 			break;
 	}
-	if (i == WPS_MAX_AUTHORIZED_MACS)
+	if (i == WPS_MAX_AUTHORIZED_MACS) {
+		wpa_printf(MSG_DEBUG, "WPS: Authorized MAC was not in the "
+			   "list");
 		return; /* not in the list */
+	}
 	for (; i + 1 < WPS_MAX_AUTHORIZED_MACS; i++)
 		os_memcpy(reg->authorized_macs[i], reg->authorized_macs[i + 1],
 			  ETH_ALEN);
 	os_memset(reg->authorized_macs[WPS_MAX_AUTHORIZED_MACS - 1], 0,
 		  ETH_ALEN);
+	wpa_hexdump(MSG_DEBUG, "WPS: Authorized MACs",
+		    (u8 *) reg->authorized_macs, sizeof(reg->authorized_macs));
 }
 
 
@@ -503,7 +517,7 @@ static int wps_build_config_methods_r(struct wps_registrar *reg,
 int wps_build_authorized_macs(struct wps_registrar *reg, struct wpabuf *msg)
 {
 #ifdef CONFIG_WPS2
-	int count = 0;
+	int count = 0, i;
 
 	while (count < WPS_MAX_AUTHORIZED_MACS) {
 		if (is_zero_ether_addr(reg->authorized_macs_union[count]))
@@ -518,6 +532,9 @@ int wps_build_authorized_macs(struct wps_registrar *reg, struct wpabuf *msg)
 	wpabuf_put_be16(msg, ATTR_AUTHORIZED_MACS);
 	wpabuf_put_be16(msg, count * ETH_ALEN);
 	wpabuf_put_data(msg, reg->authorized_macs_union, count * ETH_ALEN);
+	for (i = 0; i < count; i++)
+		wpa_printf(MSG_DEBUG, "WPS:    AuthorizedMAC: " MACSTR,
+			   MAC2STR(reg->authorized_macs_union[i]));
 #endif /* CONFIG_WPS2 */
 
 	return 0;
@@ -2947,10 +2964,15 @@ static void wps_registrar_sel_reg_add(struct wps_registrar *reg,
 	     j++) {
 		if (is_zero_ether_addr(s->authorized_macs[j]))
 			break;
+		wpa_printf(MSG_DEBUG, "WPS: Add authorized MAC into union: "
+			   MACSTR, MAC2STR(s->authorized_macs[j]));
 		os_memcpy(reg->authorized_macs_union[i],
 			  s->authorized_macs[j], ETH_ALEN);
 		i++;
 	}
+	wpa_hexdump(MSG_DEBUG, "WPS: Authorized MACs union",
+		    (u8 *) reg->authorized_macs_union,
+		    sizeof(reg->authorized_macs_union));
 }
 #endif /* CONFIG_WPS_UPNP */
 
@@ -2998,6 +3020,9 @@ void wps_registrar_selected_registrar_changed(struct wps_registrar *reg)
 	reg->sel_reg_config_methods_override = -1;
 	os_memcpy(reg->authorized_macs_union, reg->authorized_macs,
 		  WPS_MAX_AUTHORIZED_MACS * ETH_ALEN);
+	wpa_hexdump(MSG_DEBUG, "WPS: Authorized MACs union (start with own)",
+		    (u8 *) reg->authorized_macs_union,
+		    sizeof(reg->authorized_macs_union));
 	if (reg->selected_registrar) {
 		u16 methods;
 

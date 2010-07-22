@@ -673,6 +673,8 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	if (ssid == NULL)
 		return -1;
 	wpa_config_set(ssid, "phase1", "\"pbc=1\"", 0);
+	if (wpa_s->wps_fragment_size)
+		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
 	wpas_wps_reassoc(wpa_s, ssid);
@@ -698,6 +700,8 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		os_snprintf(val, sizeof(val), "\"pin=%08d\"", rpin);
 	}
 	wpa_config_set(ssid, "phase1", val, 0);
+	if (wpa_s->wps_fragment_size)
+		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
 	wpas_wps_reassoc(wpa_s, ssid);
@@ -788,6 +792,8 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	if (res < 0 || res >= end - pos)
 		return -1;
 	wpa_config_set(ssid, "phase1", val, 0);
+	if (wpa_s->wps_fragment_size)
+		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
 	wpas_wps_reassoc(wpa_s, ssid);

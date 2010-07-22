@@ -437,6 +437,7 @@ struct wpa_supplicant {
 
 	int after_wps;
 	unsigned int wps_freq;
+	int wps_fragment_size;
 };
 
 

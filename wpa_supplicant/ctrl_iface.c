@@ -80,6 +80,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcasecmp(cmd, "dot11RSNAConfigSATimeout") == 0) {
 		if (wpa_sm_set_param(wpa_s->wpa, RSNA_SA_TIMEOUT, atoi(value)))
 			ret = -1;
+	} else if (os_strcasecmp(cmd, "wps_fragment_size") == 0) {
+		wpa_s->wps_fragment_size = atoi(value);
 	} else
 		ret = -1;
 

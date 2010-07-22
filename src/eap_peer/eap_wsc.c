@@ -224,6 +224,8 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		data->fragment_size = res;
 	else
 		data->fragment_size = WSC_FRAGMENT_SIZE;
+	wpa_printf(MSG_DEBUG, "EAP-WSC: Fragment size limit %u",
+		   (unsigned int) data->fragment_size);
 
 	if (registrar && cfg.pin) {
 		wps_registrar_add_pin(data->wps_ctx->registrar, NULL, NULL,

@@ -278,6 +278,8 @@ int wps_device_store(struct wps_registrar *reg,
 		     struct wps_device_data *dev, const u8 *uuid);
 void wps_registrar_selected_registrar_changed(struct wps_registrar *reg);
 int wps_build_authorized_macs(struct wps_registrar *reg, struct wpabuf *msg);
+int wps_registrar_pbc_overlap(struct wps_registrar *reg,
+			      const u8 *addr, const u8 *uuid_e);
 
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);

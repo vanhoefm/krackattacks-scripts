@@ -763,6 +763,7 @@ static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
 	}
 
 	wps_er_add_sta_data(ap, addr, &attr, 1);
+	wps_registrar_probe_req_rx(ap->er->wps->registrar, addr, msg);
 }
 
 
@@ -1397,6 +1398,12 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 {
 	if (er == NULL || er->wps == NULL)
 		return -1;
+
+	if (wps_registrar_pbc_overlap(er->wps->registrar, NULL, NULL)) {
+		wpa_printf(MSG_DEBUG, "WPS ER: PBC overlap - do not start PBC "
+			   "mode");
+		return -1;
+	}
 
 	/*
 	 * TODO: Should enable PBC mode only in a single AP based on which AP

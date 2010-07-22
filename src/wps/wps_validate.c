@@ -1167,7 +1167,12 @@ int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe)
 					 attr.authorized_macs_len, 0)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid %sProbe Response "
 			   "frame", probe ? "" : "Beacon/");
+#ifdef WPS_STRICT_WPS2
+		if (wps2)
+			return -1;
+#else /* WPS_STRICT_WPS2 */
 		return -1;
+#endif /* WPS_STRICT_WPS2 */
 	}
 
 	return 0;

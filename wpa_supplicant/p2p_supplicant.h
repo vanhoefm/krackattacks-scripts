@@ -63,7 +63,7 @@ void wpas_dev_found(void *ctx, const u8 *addr, const u8 *dev_addr,
 		    const u8 *pri_dev_type, const char *dev_name,
 		    u16 config_methods, u8 dev_capab, u8 group_capab);
 void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res);
-void wpas_go_neg_req_rx(void *ctx, const u8 *src);
+void wpas_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id);
 void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 			const u8 *dev_addr, const u8 *pri_dev_type,
 			const char *dev_name, u16 supp_config_methods,

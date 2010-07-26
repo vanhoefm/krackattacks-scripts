@@ -913,7 +913,7 @@ P2P_EVENT_GO_NEG_REQUEST: A P2P device requested GO negotiation, but we
 were not ready to start the negotiation.
 
 \verbatim
-P2P-GO-NEG-REQUEST 02:40:61:c2:f3:b7
+P2P-GO-NEG-REQUEST 02:40:61:c2:f3:b7 dev_passwd_id=4
 \endverbatim
 
 \subsection ctrl_iface_event_P2P_EVENT_GO_NEG_SUCCESS P2P-GO-NEG-SUCCESS

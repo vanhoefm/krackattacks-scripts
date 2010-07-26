@@ -398,6 +398,7 @@ struct p2p_config {
 	 * go_neg_req_rx - Notification of a receive GO Negotiation Request
 	 * @ctx: Callback context from cb_ctx
 	 * @src: Source address of the message triggering this notification
+	 * @dev_passwd_id: WPS Device Password ID
 	 *
 	 * This callback is used to notify that a P2P Device is requesting
 	 * group owner negotiation with us, but we do not have all the
@@ -406,7 +407,7 @@ struct p2p_config {
 	 * PIN or PBC button press. This information can be provided with a
 	 * call to p2p_connect().
 	 */
-	void (*go_neg_req_rx)(void *ctx, const u8 *src);
+	void (*go_neg_req_rx)(void *ctx, const u8 *src, u16 dev_passwd_id);
 
 	/**
 	 * go_neg_completed - Notification of GO Negotiation results

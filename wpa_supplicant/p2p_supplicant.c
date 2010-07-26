@@ -978,11 +978,11 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 }
 
 
-void wpas_go_neg_req_rx(void *ctx, const u8 *src)
+void wpas_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_REQUEST MACSTR,
-		MAC2STR(src));
+	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_REQUEST MACSTR
+		" dev_passwd_id=%u", MAC2STR(src), dev_passwd_id);
 }
 
 

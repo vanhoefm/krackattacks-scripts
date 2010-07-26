@@ -55,6 +55,7 @@ static int wpa_ft_rrb_send(struct wpa_authenticator *wpa_auth, const u8 *dst,
 {
 	if (wpa_auth->cb.send_ether == NULL)
 		return -1;
+	wpa_printf(MSG_DEBUG, "FT: RRB send to " MACSTR, MAC2STR(dst));
 	return wpa_auth->cb.send_ether(wpa_auth->cb.ctx, dst, ETH_P_RRB,
 				       data, data_len);
 }

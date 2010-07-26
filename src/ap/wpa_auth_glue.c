@@ -31,6 +31,12 @@
 #include "wpa_auth.h"
 
 
+#ifdef CONFIG_IEEE80211R
+static void hostapd_rrb_receive(void *ctx, const u8 *src_addr, const u8 *buf,
+				size_t len);
+#endif /* CONFIG_IEEE80211R */
+
+
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 				  struct wpa_auth_config *wconf)
 {
@@ -294,10 +300,65 @@ static int hostapd_wpa_auth_for_each_auth(
 }
 
 
+#ifdef CONFIG_IEEE80211R
+
+struct wpa_auth_ft_iface_iter_data {
+	struct hostapd_data *src_hapd;
+	const u8 *dst;
+	const u8 *data;
+	size_t data_len;
+};
+
+
+static int hostapd_wpa_auth_ft_iter(struct hostapd_iface *iface, void *ctx)
+{
+	struct wpa_auth_ft_iface_iter_data *idata = ctx;
+	struct hostapd_data *hapd;
+	size_t j;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		hapd = iface->bss[j];
+		if (hapd == idata->src_hapd)
+			continue;
+		if (os_memcmp(hapd->own_addr, idata->dst, ETH_ALEN) == 0) {
+			wpa_printf(MSG_DEBUG, "FT: Send RRB data directly to "
+				   "locally managed BSS " MACSTR "@%s -> "
+				   MACSTR "@%s",
+				   MAC2STR(idata->src_hapd->own_addr),
+				   idata->src_hapd->conf->iface,
+				   MAC2STR(hapd->own_addr), hapd->conf->iface);
+			hostapd_rrb_receive(hapd, idata->src_hapd->own_addr,
+					    idata->data, idata->data_len);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+#endif /* CONFIG_IEEE80211R */
+
+
 static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 				       const u8 *data, size_t data_len)
 {
 	struct hostapd_data *hapd = ctx;
+
+#ifdef CONFIG_IEEE80211R
+	if (proto == ETH_P_RRB && hapd->iface->for_each_interface) {
+		int res;
+		struct wpa_auth_ft_iface_iter_data idata;
+		idata.src_hapd = hapd;
+		idata.dst = dst;
+		idata.data = data;
+		idata.data_len = data_len;
+		res = hapd->iface->for_each_interface(hapd->iface->interfaces,
+						      hostapd_wpa_auth_ft_iter,
+						      &idata);
+		if (res == 1)
+			return data_len;
+	}
+#endif /* CONFIG_IEEE80211R */
 
 	if (hapd->driver && hapd->driver->send_ether)
 		return hapd->driver->send_ether(hapd->drv_priv, dst,

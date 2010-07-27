@@ -412,6 +412,9 @@ web_process_get_device_info(struct upnp_wps_device_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "WPS UPnP: GetDeviceInfo");
 
+	if (sm->ctx->ap_pin == NULL)
+		return HTTP_INTERNAL_SERVER_ERROR;
+
 	/*
 	 * Request for DeviceInfo, i.e., M1 TLVs. This is a start of WPS
 	 * registration over UPnP with the AP acting as an Enrollee. It should

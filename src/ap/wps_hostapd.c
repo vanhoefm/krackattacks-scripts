@@ -426,7 +426,7 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 {
 	FILE *f;
 
-	if (!data->enrollee)
+	if (!data->enrollee || hapd->conf->ap_pin == NULL)
 		return;
 
 	/*

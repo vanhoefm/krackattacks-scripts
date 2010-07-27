@@ -322,6 +322,7 @@ struct p2p_data {
 	u8 sd_frag_id;
 
 	struct wpabuf *sd_rx_resp; /* Reassembled SD response */
+	u16 sd_rx_update_indic;
 
 	/* P2P Invitation data */
 	enum p2p_invite_role inv_role;

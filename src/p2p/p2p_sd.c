@@ -210,10 +210,11 @@ static struct wpabuf * p2p_build_gas_comeback_resp(u8 dialog_token,
 						   u16 status_code,
 						   u16 update_indic,
 						   const u8 *data, size_t len,
-						   u8 frag_id, u8 more)
+						   u8 frag_id, u8 more,
+						   u16 total_len)
 {
 	struct wpabuf *buf;
-	u8 *len_pos, *len_pos2;
+	u8 *len_pos;
 
 	buf = wpabuf_alloc(1000 + len);
 	if (buf == NULL)
@@ -235,17 +236,18 @@ static struct wpabuf * p2p_build_gas_comeback_resp(u8 dialog_token,
 	/* Query Response */
 	len_pos = wpabuf_put(buf, 2); /* Length (to be filled) */
 
-	/* NQP Query Response Frame */
-	wpabuf_put_le16(buf, NQP_VENDOR_SPECIFIC); /* Info ID */
-	len_pos2 = wpabuf_put(buf, 2); /* Length (to be filled) */
-	wpabuf_put_be24(buf, OUI_WFA);
-	wpabuf_put_u8(buf, P2P_OUI_TYPE);
-	/* Service Update Indicator */
-	wpabuf_put_le16(buf, update_indic);
+	if (frag_id == 0) {
+		/* NQP Query Response Frame */
+		wpabuf_put_le16(buf, NQP_VENDOR_SPECIFIC); /* Info ID */
+		wpabuf_put_le16(buf, 3 + 1 + 2 + total_len);
+		wpabuf_put_be24(buf, OUI_WFA);
+		wpabuf_put_u8(buf, P2P_OUI_TYPE);
+		/* Service Update Indicator */
+		wpabuf_put_le16(buf, update_indic);
+	}
 
 	wpabuf_put_data(buf, data, len);
 
-	WPA_PUT_LE16(len_pos2, (u8 *) wpabuf_put(buf, 0) - len_pos2 - 2);
 	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(buf, 0) - len_pos - 2);
 
 	return buf;
@@ -667,7 +669,8 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 					   p2p->srv_update_indic,
 					   wpabuf_head_u8(p2p->sd_resp) +
 					   p2p->sd_resp_pos, frag_len,
-					   p2p->sd_frag_id, more);
+					   p2p->sd_frag_id, more,
+					   wpabuf_len(p2p->sd_resp));
 	if (resp == NULL)
 		return;
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send GAS Comeback "
@@ -711,7 +714,6 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	u8 more_frags;
 	u16 comeback_delay;
 	u16 slen;
-	u16 update_indic;
 
 	wpa_hexdump(MSG_DEBUG, "P2P: RX GAS Comeback Response", data, len);
 
@@ -804,6 +806,14 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 	end = pos + slen;
 
+	if (p2p->sd_rx_resp) {
+		 /*
+		  * NQP header is only included in the first fragment; rest of
+		  * the fragments start with continue TLVs.
+		  */
+		goto skip_nqp_header;
+	}
+
 	/* NQP Query Response */
 	if (pos + 4 > end)
 		return;
@@ -816,11 +826,15 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 
 	slen = WPA_GET_LE16(pos);
 	pos += 2;
-	if (pos + slen > end || slen < 3 + 1) {
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: NQP Query Response "
+		"length: %u", slen);
+	if (slen < 3 + 1) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Invalid NQP Query Response length");
 		return;
 	}
+	if (pos + 4 > end)
+		return;
 
 	if (WPA_GET_BE24(pos) != OUI_WFA) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
@@ -838,11 +852,12 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (pos + 2 > end)
 		return;
-	update_indic = WPA_GET_LE16(pos);
+	p2p->sd_rx_update_indic = WPA_GET_LE16(pos);
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Service Update Indicator: %u", update_indic);
+		"P2P: Service Update Indicator: %u", p2p->sd_rx_update_indic);
 	pos += 2;
 
+skip_nqp_header:
 	if (wpabuf_resize(&p2p->sd_rx_resp, end - pos) < 0)
 		return;
 	wpabuf_put_data(p2p->sd_rx_resp, pos, end - pos);
@@ -883,7 +898,8 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (p2p->cfg->sd_response)
-		p2p->cfg->sd_response(p2p->cfg->cb_ctx, sa, update_indic,
+		p2p->cfg->sd_response(p2p->cfg->cb_ctx, sa,
+				      p2p->sd_rx_update_indic,
 				      wpabuf_head(p2p->sd_rx_resp),
 				      wpabuf_len(p2p->sd_rx_resp));
 	wpabuf_free(p2p->sd_rx_resp);

@@ -424,6 +424,11 @@ struct wpa_supplicant {
 
 	struct ibss_rsn *ibss_rsn;
 
+	int set_sta_uapsd;
+	int sta_uapsd;
+	int set_ap_uapsd;
+	int ap_uapsd;
+
 #ifdef CONFIG_SME
 	struct {
 		u8 ssid[32];

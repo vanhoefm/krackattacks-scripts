@@ -386,6 +386,11 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
 		params.p2p = 1;
 
+	if (wpa_s->parent->set_sta_uapsd)
+		params.uapsd = wpa_s->parent->sta_uapsd;
+	else
+		params.uapsd = -1;
+
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
 			"failed");

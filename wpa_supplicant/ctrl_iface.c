@@ -2479,6 +2479,55 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 	if (os_strcmp(cmd, "cross_connect") == 0)
 		return wpas_p2p_set_cross_connect(wpa_s, atoi(param));
 
+	if (os_strcmp(cmd, "go_apsd") == 0) {
+		if (os_strcmp(param, "disable") == 0)
+			wpa_s->set_ap_uapsd = 0;
+		else {
+			wpa_s->set_ap_uapsd = 1;
+			wpa_s->ap_uapsd = atoi(param);
+		}
+		return 0;
+	}
+
+	if (os_strcmp(cmd, "client_apsd") == 0) {
+		if (os_strcmp(param, "disable") == 0)
+			wpa_s->set_sta_uapsd = 0;
+		else {
+			int be, bk, vi, vo;
+			char *pos;
+			/* format: BE,BK,VI,VO;max SP Length */
+			be = atoi(param);
+			pos = os_strchr(param, ',');
+			if (pos == NULL)
+				return -1;
+			pos++;
+			bk = atoi(pos);
+			pos = os_strchr(pos, ',');
+			if (pos == NULL)
+				return -1;
+			pos++;
+			vi = atoi(pos);
+			pos = os_strchr(pos, ',');
+			if (pos == NULL)
+				return -1;
+			pos++;
+			vo = atoi(pos);
+			/* ignore max SP Length for now */
+
+			wpa_s->set_sta_uapsd = 1;
+			wpa_s->sta_uapsd = 0;
+			if (be)
+				wpa_s->sta_uapsd |= BIT(0);
+			if (bk)
+				wpa_s->sta_uapsd |= BIT(1);
+			if (vi)
+				wpa_s->sta_uapsd |= BIT(2);
+			if (vo)
+				wpa_s->sta_uapsd |= BIT(3);
+		}
+		return 0;
+	}
+
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown P2P_SET field value '%s'",
 		   cmd);
 

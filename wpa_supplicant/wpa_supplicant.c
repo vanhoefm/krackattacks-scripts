@@ -1283,6 +1283,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		params.p2p = 1;
 #endif /* CONFIG_P2P */
 
+	if (wpa_s->parent->set_sta_uapsd)
+		params.uapsd = wpa_s->parent->sta_uapsd;
+	else
+		params.uapsd = -1;
+
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
 		ret = ieee80211_sta_associate(wpa_s, &params);
 	else

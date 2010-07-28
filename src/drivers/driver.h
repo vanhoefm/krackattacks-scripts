@@ -481,6 +481,14 @@ struct wpa_driver_associate_params {
 	 * p2p - Whether this connection is a P2P group
 	 */
 	int p2p;
+
+	/**
+	 * uapsd - UAPSD parameters for the network
+	 * -1 = do not change defaults
+	 * AP mode: 1 = enabled, 0 = disabled
+	 * STA mode: bits 0..3 UAPSD enabled for VO,VI,BK,BE
+	 */
+	int uapsd;
 };
 
 /**

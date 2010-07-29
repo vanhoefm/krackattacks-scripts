@@ -578,7 +578,7 @@ static struct wpabuf * build_fake_wsc_ack(void)
 	wpabuf_put_be16(msg, ATTR_REGISTRAR_NONCE);
 	wpabuf_put_be16(msg, WPS_NONCE_LEN);
 	wpabuf_put(msg, WPS_NONCE_LEN);
-	wps_build_version2(msg);
+	wps_build_wfa_ext(msg, 0, NULL, 0);
 	return msg;
 }
 

@@ -514,30 +514,19 @@ static int wps_build_config_methods_r(struct wps_registrar *reg,
 }
 
 
-int wps_build_authorized_macs(struct wps_registrar *reg, struct wpabuf *msg)
+const u8 * wps_authorized_macs(struct wps_registrar *reg, size_t *count)
 {
+	*count = 0;
+
 #ifdef CONFIG_WPS2
-	int count = 0, i;
-
-	while (count < WPS_MAX_AUTHORIZED_MACS) {
-		if (is_zero_ether_addr(reg->authorized_macs_union[count]))
+	while (*count < WPS_MAX_AUTHORIZED_MACS) {
+		if (is_zero_ether_addr(reg->authorized_macs_union[*count]))
 			break;
-		count++;
+		(*count)++;
 	}
-
-	if (count == 0)
-		return 0;
-
-	wpa_printf(MSG_DEBUG, "WPS:  * AuthorizedMACs (count=%d)", count);
-	wpabuf_put_be16(msg, ATTR_AUTHORIZED_MACS);
-	wpabuf_put_be16(msg, count * ETH_ALEN);
-	wpabuf_put_data(msg, reg->authorized_macs_union, count * ETH_ALEN);
-	for (i = 0; i < count; i++)
-		wpa_printf(MSG_DEBUG, "WPS:    AuthorizedMAC: " MACSTR,
-			   MAC2STR(reg->authorized_macs_union[i]));
 #endif /* CONFIG_WPS2 */
 
-	return 0;
+	return (const u8 *) reg->authorized_macs_union;
 }
 
 
@@ -1016,6 +1005,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 {
 	struct wpabuf *beacon;
 	struct wpabuf *probe;
+	const u8 *auth_macs;
+	size_t count;
 
 	if (reg->set_ie_cb == NULL)
 		return 0;
@@ -1029,6 +1020,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 		return -1;
 	}
 
+	auth_macs = wps_authorized_macs(reg, &count);
+
 	wpa_printf(MSG_DEBUG, "WPS: Build Beacon IEs");
 
 	if (wps_build_version(beacon) ||
@@ -1037,8 +1030,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_selected_registrar(reg, beacon) ||
 	    wps_build_sel_reg_dev_password_id(reg, beacon) ||
 	    wps_build_sel_reg_config_methods(reg, beacon) ||
-	    wps_build_version2(beacon) ||
-	    wps_build_authorized_macs(reg, beacon)) {
+	    wps_build_wfa_ext(beacon, 0, auth_macs, count)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
@@ -1058,8 +1050,7 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
 	    wps_build_rf_bands(&reg->wps->dev, probe) ||
-	    wps_build_version2(probe) ||
-	    wps_build_authorized_macs(reg, probe)) {
+	    wps_build_wfa_ext(probe, 0, auth_macs, count)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
@@ -1499,7 +1490,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);
 		return NULL;
@@ -1539,7 +1530,7 @@ static struct wpabuf * wps_build_m2d(struct wps_data *wps)
 	    wps_build_assoc_state(wps, msg) ||
 	    wps_build_config_error(msg, err) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1574,7 +1565,7 @@ static struct wpabuf * wps_build_m4(struct wps_data *wps)
 	    wps_build_r_snonce1(wps, plain) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -1609,7 +1600,7 @@ static struct wpabuf * wps_build_m6(struct wps_data *wps)
 	    wps_build_r_snonce2(wps, plain) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -1646,7 +1637,7 @@ static struct wpabuf * wps_build_m8(struct wps_data *wps)
 	    (!wps->wps->ap && !wps->er && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -1673,7 +1664,7 @@ static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_WSC_ACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -1697,7 +1688,7 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
 	    wps_build_config_error(msg, wps->config_error) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}

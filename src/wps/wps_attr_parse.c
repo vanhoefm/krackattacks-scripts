@@ -22,6 +22,102 @@
 #endif /* CONFIG_WPS_STRICT */
 
 
+static int wps_set_vendor_ext_wfa_subelem(struct wps_parse_attr *attr,
+					  u8 id, u8 len, const u8 *pos)
+{
+	wpa_printf(MSG_MSGDUMP, "WPS: WFA subelement id=%u len=%u",
+		   id, len);
+	switch (id) {
+	case WFA_ELEM_VERSION2:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Version2 length "
+				   "%u", len);
+			return -1;
+		}
+		attr->version2 = pos;
+		break;
+	case WFA_ELEM_AUTHORIZEDMACS:
+		attr->authorized_macs = pos;
+		attr->authorized_macs_len = len;
+		break;
+	case WFA_ELEM_NETWORK_KEY_SHAREABLE:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Network Key "
+				   "Shareable length %u", len);
+			return -1;
+		}
+		attr->network_key_shareable = pos;
+		break;
+	case WFA_ELEM_REQUEST_TO_ENROLL:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Request to Enroll "
+				   "length %u", len);
+			return -1;
+		}
+		attr->request_to_enroll = pos;
+		break;
+	case WFA_ELEM_SETTINGS_DELAY_TIME:
+		if (len != 1) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid Settings Delay "
+				   "Time length %u", len);
+			return -1;
+		}
+		attr->settings_delay_time = pos;
+		break;
+	default:
+		wpa_printf(MSG_MSGDUMP, "WPS: Skipped unknown WFA Vendor "
+			   "Extension subelement %u", id);
+		break;
+	}
+
+	return 0;
+}
+
+
+static int wps_parse_vendor_ext_wfa(struct wps_parse_attr *attr, const u8 *pos,
+				    u16 len)
+{
+	const u8 *end = pos + len;
+	u8 id, elen;
+
+	while (pos + 2 < end) {
+		id = *pos++;
+		elen = *pos++;
+		if (pos + elen > end)
+			break;
+		if (wps_set_vendor_ext_wfa_subelem(attr, id, elen, pos) < 0)
+			return -1;
+		pos += elen;
+	}
+
+	return 0;
+}
+
+
+static int wps_parse_vendor_ext(struct wps_parse_attr *attr, const u8 *pos,
+				u16 len)
+{
+	u32 vendor_id;
+
+	if (len < 3) {
+		wpa_printf(MSG_DEBUG, "WPS: Skip invalid Vendor Extension");
+		return 0;
+	}
+
+	vendor_id = WPA_GET_BE24(pos);
+	switch (vendor_id) {
+	case WPS_VENDOR_ID_WFA:
+		return wps_parse_vendor_ext_wfa(attr, pos + 3, len - 3);
+	default:
+		wpa_printf(MSG_MSGDUMP, "WPS: Skip unknown Vendor Extension "
+			   "(Vendor ID %u)", vendor_id);
+		break;
+	}
+
+	return 0;
+}
+
+
 static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 			const u8 *pos, u16 len)
 {
@@ -34,16 +130,6 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		}
 		attr->version = pos;
 		break;
-#ifdef CONFIG_WPS2
-	case ATTR_VERSION2:
-		if (len != 1) {
-			wpa_printf(MSG_DEBUG, "WPS: Invalid Version2 length "
-				   "%u", len);
-			return -1;
-		}
-		attr->version2 = pos;
-		break;
-#endif /* CONFIG_WPS2 */
 	case ATTR_MSG_TYPE:
 		if (len != 1) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Message Type "
@@ -412,34 +498,6 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->ap_setup_locked = pos;
 		break;
 #ifdef CONFIG_WPS2
-	case ATTR_SETTINGS_DELAY_TIME:
-		if (len != 1) {
-			wpa_printf(MSG_DEBUG, "WPS: Invalid Settings Delay "
-				   "Time length %u", len);
-			return -1;
-		}
-		attr->settings_delay_time = pos;
-		break;
-	case ATTR_NETWORK_KEY_SHAREABLE:
-		if (len != 1) {
-			wpa_printf(MSG_DEBUG, "WPS: Invalid Network Key "
-				   "Shareable length %u", len);
-			return -1;
-		}
-		attr->network_key_shareable = pos;
-		break;
-	case ATTR_REQUEST_TO_ENROLL:
-		if (len != 1) {
-			wpa_printf(MSG_DEBUG, "WPS: Invalid Request to Enroll "
-				   "length %u", len);
-			return -1;
-		}
-		attr->request_to_enroll = pos;
-		break;
-	case ATTR_AUTHORIZED_MACS:
-		attr->authorized_macs = pos;
-		attr->authorized_macs_len = len;
-		break;
 	case ATTR_REQUESTED_DEV_TYPE:
 		if (len != WPS_DEV_TYPE_LEN) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid Requested Device "
@@ -456,6 +514,10 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->num_req_dev_type++;
 		break;
 #endif /* CONFIG_WPS2 */
+	case ATTR_VENDOR_EXT:
+		if (wps_parse_vendor_ext(attr, pos, len) < 0)
+			return -1;
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported attribute type 0x%x "
 			   "len=%u", type, len);
@@ -491,6 +553,7 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 			   type, len);
 		if (len > end - pos) {
 			wpa_printf(MSG_DEBUG, "WPS: Attribute overflow");
+			wpa_hexdump_buf(MSG_MSGDUMP, "WPS: Message data", msg);
 			return -1;
 		}
 

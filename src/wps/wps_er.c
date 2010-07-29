@@ -1366,6 +1366,9 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 {
 	struct wpabuf *msg;
 	struct wps_er_ap *ap;
+	struct wps_registrar *reg = er->wps->registrar;
+	const u8 *auth_macs;
+	size_t count;
 
 	if (er->skip_set_sel_reg) {
 		wpa_printf(MSG_DEBUG, "WPS ER: Skip SetSelectedRegistrar");
@@ -1376,12 +1379,13 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	if (msg == NULL)
 		return;
 
+	auth_macs = wps_authorized_macs(reg, &count);
+
 	if (wps_build_version(msg) ||
 	    wps_er_build_selected_registrar(msg, sel_reg) ||
 	    wps_er_build_dev_password_id(msg, dev_passwd_id) ||
 	    wps_er_build_sel_reg_config_methods(msg, sel_reg_config_methods) ||
-	    wps_build_version2(msg) ||
-	    wps_build_authorized_macs(er->wps->registrar, msg) ||
+	    wps_build_wfa_ext(msg, 0, auth_macs, count) ||
 	    wps_er_build_uuid_r(msg, er->wps->uuid)) {
 		wpabuf_free(msg);
 		return;

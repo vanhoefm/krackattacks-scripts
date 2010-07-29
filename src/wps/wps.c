@@ -367,7 +367,7 @@ struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type)
 
 	if (wps_build_version(ie) ||
 	    wps_build_req_type(ie, req_type) ||
-	    wps_build_version2(ie)) {
+	    wps_build_wfa_ext(ie, 0, NULL, 0)) {
 		wpabuf_free(ie);
 		return NULL;
 	}
@@ -401,7 +401,7 @@ struct wpabuf * wps_build_assoc_resp_ie(void)
 
 	if (wps_build_version(ie) ||
 	    wps_build_resp_type(ie, WPS_RESP_AP) ||
-	    wps_build_version2(ie)) {
+	    wps_build_wfa_ext(ie, 0, NULL, 0)) {
 		wpabuf_free(ie);
 		return NULL;
 	}
@@ -475,13 +475,11 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_dev_password_id(ie, pbc ? DEV_PW_PUSHBUTTON :
 				      DEV_PW_DEFAULT) ||
 #ifdef CONFIG_WPS2
-	    wps_build_version2(ie) ||
 	    wps_build_manufacturer(dev, ie) ||
 	    wps_build_model_name(dev, ie) ||
 	    wps_build_model_number(dev, ie) ||
 	    wps_build_dev_name(dev, ie) ||
-	    (req_type == WPS_REQ_ENROLLEE &&
-	     wps_build_req_to_enroll(ie))
+	    wps_build_wfa_ext(ie, req_type == WPS_REQ_ENROLLEE, NULL, 0)
 #else /* CONFIG_WPS2 */
 	    0
 #endif /* CONFIG_WPS2 */

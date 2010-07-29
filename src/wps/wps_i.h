@@ -238,7 +238,8 @@ int wps_build_key_wrap_auth(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 			    struct wpabuf *plain);
 int wps_build_version(struct wpabuf *msg);
-int wps_build_version2(struct wpabuf *msg);
+int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
+		      const u8 *auth_macs, size_t auth_macs_count);
 int wps_build_msg_type(struct wpabuf *msg, enum wps_msg_type msg_type);
 int wps_build_enrollee_nonce(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_registrar_nonce(struct wps_data *wps, struct wpabuf *msg);
@@ -247,7 +248,6 @@ int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_conn_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_assoc_state(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps);
-int wps_build_req_to_enroll(struct wpabuf *msg);
 struct wpabuf * wps_ie_encapsulate(struct wpabuf *data);
 
 /* wps_attr_process.c */
@@ -277,7 +277,7 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg);
 int wps_device_store(struct wps_registrar *reg,
 		     struct wps_device_data *dev, const u8 *uuid);
 void wps_registrar_selected_registrar_changed(struct wps_registrar *reg);
-int wps_build_authorized_macs(struct wps_registrar *reg, struct wpabuf *msg);
+const u8 * wps_authorized_macs(struct wps_registrar *reg, size_t *count);
 int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 			      const u8 *addr, const u8 *uuid_e);
 

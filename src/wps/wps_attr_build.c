@@ -172,13 +172,43 @@ int wps_build_version(struct wpabuf *msg)
 }
 
 
-int wps_build_version2(struct wpabuf *msg)
+int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
+		      const u8 *auth_macs, size_t auth_macs_count)
 {
 #ifdef CONFIG_WPS2
+	u8 *len;
+
+	wpabuf_put_be16(msg, ATTR_VENDOR_EXT);
+	len = wpabuf_put(msg, 2); /* to be filled */
+	wpabuf_put_be24(msg, WPS_VENDOR_ID_WFA);
+
 	wpa_printf(MSG_DEBUG, "WPS:  * Version2 (0x%x)", WPS_VERSION);
-	wpabuf_put_be16(msg, ATTR_VERSION2);
-	wpabuf_put_be16(msg, 1);
+	wpabuf_put_u8(msg, WFA_ELEM_VERSION2);
+	wpabuf_put_u8(msg, 1);
 	wpabuf_put_u8(msg, WPS_VERSION);
+
+	if (req_to_enroll) {
+		wpa_printf(MSG_DEBUG, "WPS:  * Request to Enroll (1)");
+		wpabuf_put_u8(msg, WFA_ELEM_REQUEST_TO_ENROLL);
+		wpabuf_put_u8(msg, 1);
+		wpabuf_put_u8(msg, 1);
+	}
+
+	if (auth_macs && auth_macs_count) {
+		size_t i;
+		wpa_printf(MSG_DEBUG, "WPS:  * AuthorizedMACs (count=%d)",
+			   (int) auth_macs_count);
+		wpabuf_put_u8(msg, WFA_ELEM_AUTHORIZEDMACS);
+		wpabuf_put_u8(msg, auth_macs_count * ETH_ALEN);
+		wpabuf_put_data(msg, auth_macs, auth_macs_count * ETH_ALEN);
+		for (i = 0; i < auth_macs_count; i++)
+			wpa_printf(MSG_DEBUG, "WPS:    AuthorizedMAC: " MACSTR,
+				   MAC2STR(&auth_macs[i * ETH_ALEN]));
+	}
+
+	WPA_PUT_BE16(len, (u8 *) wpabuf_put(msg, 0) - len - 2);
+#endif /* CONFIG_WPS2 */
+
 #ifdef CONFIG_WPS_EXTENSIBILITY_TESTING
 	wpa_printf(MSG_DEBUG, "WPS:  * Extensibility Testing - extra "
 		   "attribute";
@@ -186,7 +216,6 @@ int wps_build_version2(struct wpabuf *msg)
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, 42);
 #endif /* CONFIG_WPS_EXTENSIBILITY_TESTING */
-#endif /* CONFIG_WPS2 */
 	return 0;
 }
 
@@ -347,18 +376,6 @@ int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 	return 0;
 }
 #endif /* CONFIG_WPS_OOB */
-
-
-int wps_build_req_to_enroll(struct wpabuf *msg)
-{
-#ifdef CONFIG_WPS2
-	wpa_printf(MSG_DEBUG, "WPS:  * Request to Enroll (1)");
-	wpabuf_put_be16(msg, ATTR_REQUEST_TO_ENROLL);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, 1);
-#endif /* CONFIG_WPS2 */
-	return 0;
-}
 
 
 /* Encapsulate WPS IE data with one (or more, if needed) IE headers */

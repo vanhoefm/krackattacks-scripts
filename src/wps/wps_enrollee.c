@@ -147,7 +147,7 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_dev_password_id(msg, wps->dev_pw_id) ||
 	    wps_build_config_error(msg, WPS_CFG_NO_ERROR) ||
 	    wps_build_os_version(&wps->wps->dev, msg) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -177,7 +177,7 @@ static struct wpabuf * wps_build_m3(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_M3) ||
 	    wps_build_registrar_nonce(wps, msg) ||
 	    wps_build_e_hash(wps, msg) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(msg);
 		return NULL;
@@ -210,7 +210,7 @@ static struct wpabuf * wps_build_m5(struct wps_data *wps)
 	    wps_build_e_snonce1(wps, plain) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -313,7 +313,7 @@ static struct wpabuf * wps_build_m7(struct wps_data *wps)
 	    (wps->wps->ap && wps_build_ap_settings(wps, plain)) ||
 	    wps_build_key_wrap_auth(wps, plain) ||
 	    wps_build_encr_settings(wps, msg, plain) ||
-	    wps_build_version2(msg) ||
+	    wps_build_wfa_ext(msg, 0, NULL, 0) ||
 	    wps_build_authenticator(wps, msg)) {
 		wpabuf_free(plain);
 		wpabuf_free(msg);
@@ -350,7 +350,7 @@ static struct wpabuf * wps_build_wsc_done(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_WSC_DONE) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -379,7 +379,7 @@ static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
 	    wps_build_msg_type(msg, WPS_WSC_ACK) ||
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}
@@ -403,7 +403,7 @@ static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 	    wps_build_enrollee_nonce(wps, msg) ||
 	    wps_build_registrar_nonce(wps, msg) ||
 	    wps_build_config_error(msg, wps->config_error) ||
-	    wps_build_version2(msg)) {
+	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
 		wpabuf_free(msg);
 		return NULL;
 	}

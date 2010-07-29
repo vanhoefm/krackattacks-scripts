@@ -763,7 +763,7 @@ static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
 	}
 
 	wps_er_add_sta_data(ap, addr, &attr, 1);
-	wps_registrar_probe_req_rx(ap->er->wps->registrar, addr, msg);
+	wps_registrar_probe_req_rx(ap->er->wps->registrar, addr, msg, 0);
 }
 
 

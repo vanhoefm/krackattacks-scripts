@@ -100,10 +100,12 @@ static void p2p_group_free_members(struct p2p_group *group)
 void p2p_group_deinit(struct p2p_group *group)
 {
 	size_t g;
-	struct p2p_data *p2p = group->p2p;
+	struct p2p_data *p2p;
 
 	if (group == NULL)
 		return;
+
+	p2p = group->p2p;
 
 	for (g = 0; g < p2p->num_groups; g++) {
 		if (p2p->groups[g] == group) {

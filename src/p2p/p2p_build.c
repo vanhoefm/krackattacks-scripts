@@ -383,7 +383,7 @@ void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
 		wpabuf_put_be16(buf, 0); /* FIX: ? */
 	}
 
-	wps_build_version2(buf);
+	wps_build_wfa_ext(buf, 0, NULL, 0);
 
 	p2p_buf_update_ie_hdr(buf, len);
 }

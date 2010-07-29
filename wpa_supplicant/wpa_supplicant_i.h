@@ -408,6 +408,7 @@ struct wpa_supplicant {
 	unsigned int drv_flags;
 	int max_scan_ssids;
 	unsigned int max_remain_on_chan;
+	unsigned int max_stations;
 
 	int pending_mic_error_report;
 	int pending_mic_error_pairwise;

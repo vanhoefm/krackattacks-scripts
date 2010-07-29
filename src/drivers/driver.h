@@ -550,6 +550,12 @@ struct wpa_driver_capa {
 	 * max_remain_on_chan - Maximum remain-on-channel duration in msec
 	 */
 	unsigned int max_remain_on_chan;
+
+	/**
+	 * max_stations - Maximum number of associated stations the driver
+	 * supports in AP mode
+	 */
+	unsigned int max_stations;
 };
 
 

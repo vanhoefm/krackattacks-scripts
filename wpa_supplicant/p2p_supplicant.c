@@ -3019,6 +3019,8 @@ int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		return -1;
 	if (wpa_s->global->p2p == NULL)
 		return -1;
+	if (bss == NULL)
+		return -1;
 
 	p2p_ie = wpa_bss_get_vendor_ie_multi(bss, P2P_IE_VENDOR_TYPE);
 	ret = p2p_assoc_req_ie(wpa_s->global->p2p, bss->bssid, buf, len,

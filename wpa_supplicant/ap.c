@@ -395,7 +395,8 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 
 	wpa_s->current_ssid = NULL;
 #ifdef CONFIG_P2P
-	wpa_s->ap_iface->bss[0]->p2p_group = NULL;
+	if (wpa_s->ap_iface->bss)
+		wpa_s->ap_iface->bss[0]->p2p_group = NULL;
 	wpas_p2p_group_deinit(wpa_s);
 #endif /* CONFIG_P2P */
 	hostapd_interface_deinit(wpa_s->ap_iface);

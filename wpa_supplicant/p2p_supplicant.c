@@ -1927,16 +1927,24 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 
 		/* Operating class 81 - 2.4 GHz band channels 1..13 */
 		p2p->channels.reg_class[cla].reg_class = 81;
+#if 0
 		p2p->channels.reg_class[cla].channels = 13;
 		for (i = 0; i < 13; i++)
 			p2p->channels.reg_class[cla].channel[i] = i + 1;
+#else
+		p2p->channels.reg_class[cla].channels = 11;
+		for (i = 0; i < 11; i++)
+			p2p->channels.reg_class[cla].channel[i] = i + 1;
+#endif
 		cla++;
 
+#if 0
 		/* Operating class 82 - 2.4 GHz band channel 14 */
 		p2p->channels.reg_class[cla].reg_class = 82;
 		p2p->channels.reg_class[cla].channels = 1;
 		p2p->channels.reg_class[cla].channel[0] = 14;
 		cla++;
+#endif
 
 #if 0
 		/* Operating class 83 - 2.4 GHz band channels 1..9; 40 MHz */

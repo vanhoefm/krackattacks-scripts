@@ -160,14 +160,21 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		bss->config_methods = os_strdup(wpa_s->conf->config_methods);
 	if (wpa_s->conf->device_type)
 		bss->device_type = os_strdup(wpa_s->conf->device_type);
-#endif /* CONFIG_WPS */
-
-#ifdef CONFIG_P2P
 	if (wpa_s->conf->device_name) {
 		bss->device_name = os_strdup(wpa_s->conf->device_name);
 		bss->friendly_name = os_strdup(wpa_s->conf->device_name);
 	}
-#endif /* CONFIG_P2P */
+	if (wpa_s->conf->manufacturer)
+		bss->manufacturer = os_strdup(wpa_s->conf->manufacturer);
+	if (wpa_s->conf->model_name)
+		bss->model_name = os_strdup(wpa_s->conf->model_name);
+	if (wpa_s->conf->model_number)
+		bss->model_number = os_strdup(wpa_s->conf->model_number);
+	if (wpa_s->conf->serial_number)
+		bss->serial_number = os_strdup(wpa_s->conf->serial_number);
+	os_memcpy(bss->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
+	os_memcpy(bss->os_version, wpa_s->conf->os_version, 4);
+#endif /* CONFIG_WPS */
 
 	return 0;
 }

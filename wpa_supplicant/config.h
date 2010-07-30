@@ -36,6 +36,7 @@
 #define CFG_CHANGED_COUNTRY BIT(5)
 #define CFG_CHANGED_SEC_DEVICE_TYPE BIT(6)
 #define CFG_CHANGED_P2P_SSID_POSTFIX BIT(7)
+#define CFG_CHANGED_WPS_STRING BIT(8)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data

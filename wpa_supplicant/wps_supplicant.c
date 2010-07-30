@@ -1387,7 +1387,8 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 			os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 	}
 
-	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_NAME) {
+	if (wpa_s->conf->changed_parameters &
+	    (CFG_CHANGED_DEVICE_NAME | CFG_CHANGED_WPS_STRING)) {
 		/* Update pointers to make sure they refer current values */
 		wps->dev.device_name = wpa_s->conf->device_name;
 		wps->dev.manufacturer = wpa_s->conf->manufacturer;

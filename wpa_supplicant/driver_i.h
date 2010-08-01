@@ -524,4 +524,11 @@ static inline int wpa_drv_set_p2p_powersave(struct wpa_supplicant *wpa_s,
 						opp_ps, ctwindow);
 }
 
+static inline int wpa_drv_ampdu(struct wpa_supplicant *wpa_s, int ampdu)
+{
+	if (!wpa_s->driver->ampdu)
+		return -1;
+	return wpa_s->driver->ampdu(wpa_s->drv_priv, ampdu);
+}
+
 #endif /* DRIVER_I_H */

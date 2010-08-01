@@ -1885,6 +1885,14 @@ struct wpa_driver_ops {
 	 */
 	int (*set_p2p_powersave)(void *priv, int legacy_ps, int opp_ps,
 				 int ctwindow);
+
+	/**
+	 * ampdu - Enable/disable aggregation
+	 * @priv: Private driver interface data
+	 * @ampdu: 1/0 = enable/disable A-MPDU aggregation
+	 * Returns: 0 on success or -1 on failure
+	 */
+	int (*ampdu)(void *priv, int ampdu);
 };
 
 

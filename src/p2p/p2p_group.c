@@ -323,8 +323,18 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 	m->client_info = p2p_build_client_info(addr, m->p2p_ie, &m->dev_capab,
 					       m->dev_addr);
 	if (m->client_info == NULL) {
+		/*
+		 * This can happen, e.g., when a P2P client connects to a P2P
+		 * group using the infrastructure WLAN interface instead of
+		 * P2P group interface. In that case, the P2P client may behave
+		 * as if the GO would be a P2P Manager WLAN AP.
+		 */
+		wpa_msg(group->p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Could not build Client Info from P2P IE - "
+			"assume " MACSTR " is not a P2P client",
+			MAC2STR(addr));
 		p2p_group_free_member(m);
-		return -1;
+		return 0;
 	}
 
 	m->next = group->members;

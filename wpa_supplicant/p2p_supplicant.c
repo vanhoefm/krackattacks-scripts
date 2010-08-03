@@ -475,6 +475,9 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 
 	without_roc = wpa_s->pending_action_without_roc;
 	wpa_s->pending_action_without_roc = 0;
+	wpa_printf(MSG_DEBUG, "P2P: Send Action callback (without_roc=%d "
+		   "pending_action_tx=%p)",
+		   without_roc, wpa_s->pending_action_tx);
 
 	if (wpa_s->pending_action_tx == NULL)
 		return;
@@ -609,8 +612,9 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	struct wpa_supplicant *wpa_s = ctx;
 
 	wpa_printf(MSG_DEBUG, "P2P: Send action frame: freq=%d dst=" MACSTR
-		   " src=" MACSTR " bssid=" MACSTR,
-		   freq, MAC2STR(dst), MAC2STR(src), MAC2STR(bssid));
+		   " src=" MACSTR " bssid=" MACSTR " len=%d",
+		   freq, MAC2STR(dst), MAC2STR(src), MAC2STR(bssid),
+		   (int) len);
 
 	if (wpa_s->pending_action_tx) {
 		wpa_printf(MSG_DEBUG, "P2P: Dropped pending Action frame TX "
@@ -618,8 +622,11 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 		wpabuf_free(wpa_s->pending_action_tx);
 	}
 	wpa_s->pending_action_tx = wpabuf_alloc(len);
-	if (wpa_s->pending_action_tx == NULL)
+	if (wpa_s->pending_action_tx == NULL) {
+		wpa_printf(MSG_DEBUG, "P2P: Failed to allocate Action frame "
+			   "TX buffer (len=%llu)", (unsigned long long) len);
 		return -1;
+	}
 	wpabuf_put_data(wpa_s->pending_action_tx, buf, len);
 	os_memcpy(wpa_s->pending_action_src, src, ETH_ALEN);
 	os_memcpy(wpa_s->pending_action_dst, dst, ETH_ALEN);
@@ -627,7 +634,8 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	wpa_s->pending_action_freq = freq;
 
 	if (wpa_s->off_channel_freq == freq || freq == 0) {
-		/* Already on requested channel; send immediately */
+		wpa_printf(MSG_DEBUG, "P2P: Already on requested channel; "
+			   "send Action frame immediately");
 		/* TODO: Would there ever be need to extend the current
 		 * duration on the channel? */
 		wpa_s->pending_action_without_roc = 1;

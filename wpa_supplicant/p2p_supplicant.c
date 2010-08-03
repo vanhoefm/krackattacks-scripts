@@ -2641,6 +2641,9 @@ static int wpas_p2p_listen_start(struct wpa_supplicant *wpa_s,
 void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 					  unsigned int freq)
 {
+	wpa_printf(MSG_DEBUG, "P2P: Cancel remain-on-channel callback "
+		   "(p2p_long_listen=%d pending_action_tx=%p)",
+		   wpa_s->p2p_long_listen, wpa_s->pending_action_tx);
 	wpa_s->off_channel_freq = 0;
 	if (p2p_listen_end(wpa_s->global->p2p, freq) > 0)
 		return; /* P2P module started a new operation */
@@ -2963,9 +2966,22 @@ int wpas_p2p_scan_result_text(const u8 *ies, size_t ies_len, char *buf,
 }
 
 
+static void wpas_p2p_clear_pending_action_tx(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->pending_action_tx)
+		return;
+
+	wpa_printf(MSG_DEBUG, "P2P: Drop pending Action TX due to new "
+		   "operation request");
+	wpabuf_free(wpa_s->pending_action_tx);
+	wpa_s->pending_action_tx = NULL;
+}
+
+
 int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 		  enum p2p_discovery_type type)
 {
+	wpas_p2p_clear_pending_action_tx(wpa_s);
 	wpa_s->p2p_long_listen = 0;
 
 	return p2p_find(wpa_s->global->p2p, timeout, type);
@@ -2974,6 +2990,7 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 
 void wpas_p2p_stop_find(struct wpa_supplicant *wpa_s)
 {
+	wpas_p2p_clear_pending_action_tx(wpa_s);
 	wpa_s->p2p_long_listen = 0;
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 
@@ -2993,6 +3010,8 @@ static void wpas_p2p_long_listen_timeout(void *eloop_ctx, void *timeout_ctx)
 int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout)
 {
 	int res;
+
+	wpas_p2p_clear_pending_action_tx(wpa_s);
 
 	if (timeout == 0) {
 		/*

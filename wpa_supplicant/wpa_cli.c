@@ -371,6 +371,19 @@ static int wpa_cli_cmd_ping(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_note(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int ret;
+	if (argc == 0)
+		return -1;
+	ret = os_snprintf(cmd, sizeof(cmd), "NOTE %s", argv[0]);
+	if (ret < 0 || (size_t) ret >= sizeof(cmd))
+		return -1;
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_mib(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "MIB");
@@ -1578,6 +1591,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "ping", wpa_cli_cmd_ping,
 	  cli_cmd_flag_none,
 	  "= pings wpa_supplicant" },
+	{ "note", wpa_cli_cmd_note,
+	  cli_cmd_flag_none,
+	  "<text> = add a note to wpa_supplicant debug log" },
 	{ "mib", wpa_cli_cmd_mib,
 	  cli_cmd_flag_none,
 	  "= get MIB variables (dot1x, dot11)" },

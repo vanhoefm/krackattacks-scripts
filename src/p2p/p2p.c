@@ -2805,6 +2805,20 @@ static void p2p_ext_listen_timeout(void *eloop_ctx, void *timeout_ctx)
 				       p2p_ext_listen_timeout, p2p, NULL);
 	}
 
+	if (p2p->state == P2P_LISTEN_ONLY && p2p->ext_listen_only) {
+		/*
+		 * This should not really happen, but it looks like the Listen
+		 * command may fail is something else (e.g., a scan) was
+		 * running at an inconvenient time. As a workaround, allow new
+		 * Extended Listen operation to be started.
+		 */
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Previous "
+			"Extended Listen operation had not been completed - "
+			"try again");
+		p2p->ext_listen_only = 0;
+		p2p_set_state(p2p, P2P_IDLE);
+	}
+
 	if (p2p->state != P2P_IDLE) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Skip Extended "
 			"Listen timeout in active state (%s)",

@@ -1709,6 +1709,15 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 	else if (config_methods & WPS_CONFIG_PUSHBUTTON)
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_RESP MACSTR,
 			MAC2STR(peer));
+
+	if (wpa_s->pending_pd_before_join &&
+	    (os_memcmp(peer, wpa_s->pending_join_dev_addr, ETH_ALEN) == 0 ||
+	     os_memcmp(peer, wpa_s->pending_join_iface_addr, ETH_ALEN) == 0)) {
+		wpa_s->pending_pd_before_join = 0;
+		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
+			   "join-existing-group operation");
+		wpas_p2p_join_start(wpa_s);
+	}
 }
 
 

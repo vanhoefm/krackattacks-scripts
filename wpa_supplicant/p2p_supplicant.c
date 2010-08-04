@@ -2316,6 +2316,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 				   struct wpa_scan_results *scan_res)
 {
 	struct wpa_bss *bss;
+	int freq;
 
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 
@@ -2328,14 +2329,25 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 	if (scan_res)
 		wpas_p2p_scan_res_handler(wpa_s, scan_res);
 
+	freq = p2p_get_oper_freq(wpa_s->global->p2p,
+				 wpa_s->pending_join_iface_addr);
+	if (freq >= 0) {
+		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
+			   "from P2P peer table: %d MHz", freq);
+	}
 	bss = wpa_bss_get_bssid(wpa_s, wpa_s->pending_join_iface_addr);
 	if (bss) {
+		freq = bss->freq;
+		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
+			   "from BSS table: %d MHz", freq);
+	}
+	if (freq > 0) {
 		u16 method;
 
 		wpa_printf(MSG_DEBUG, "P2P: Send Provision Discovery Request "
 			   "prior to joining an existing group (GO " MACSTR
 			   " freq=%u MHz)",
-			   MAC2STR(wpa_s->pending_join_dev_addr), bss->freq);
+			   MAC2STR(wpa_s->pending_join_dev_addr), freq);
 		wpa_s->pending_pd_before_join = 1;
 
 		switch (wpa_s->pending_join_wps_method) {

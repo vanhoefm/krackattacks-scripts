@@ -1233,4 +1233,6 @@ void p2p_set_peer_filter(struct p2p_data *p2p, const u8 *addr);
  */
 void p2p_set_cross_connect(struct p2p_data *p2p, int enabled);
 
+int p2p_get_oper_freq(struct p2p_data *p2p, const u8 *iface_addr);
+
 #endif /* P2P_H */

@@ -498,6 +498,8 @@ static int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
 			msg.ds_params ? *msg.ds_params : -1);
 	}
 	dev->listen_freq = freq;
+	if (msg.group_info)
+		dev->oper_freq = freq;
 	dev->level = level;
 
 	if (msg.pri_dev_type)
@@ -3004,4 +3006,15 @@ void p2p_set_cross_connect(struct p2p_data *p2p, int enabled)
 		return;
 	p2p->cross_connect = enabled;
 	/* TODO: may need to tear down any action group where we are GO(?) */
+}
+
+
+int p2p_get_oper_freq(struct p2p_data *p2p, const u8 *iface_addr)
+{
+	struct p2p_device *dev = p2p_get_device_interface(p2p, iface_addr);
+	if (dev == NULL)
+		return -1;
+	if (dev->oper_freq <= 0)
+		return -1;
+	return dev->oper_freq;
 }

@@ -32,6 +32,7 @@
 #include "blacklist.h"
 #include "bss.h"
 #include "scan.h"
+#include "p2p/p2p.h"
 #include "p2p_supplicant.h"
 #include "wps_supplicant.h"
 
@@ -691,6 +692,16 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
+		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
+		if (ssid->ssid) {
+			ssid->ssid_len = wpa_s->go_params->ssid_len;
+			os_memcpy(ssid->ssid, wpa_s->go_params->ssid,
+				  ssid->ssid_len);
+			wpa_hexdump_ascii(MSG_DEBUG, "WPS: Use specific AP "
+					  "SSID", ssid->ssid, ssid->ssid_len);
+		}
+	}
 	wpa_config_set(ssid, "phase1", "\"pbc=1\"", 0);
 	if (wpa_s->wps_fragment_size)
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
@@ -714,6 +725,16 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
+		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
+		if (ssid->ssid) {
+			ssid->ssid_len = wpa_s->go_params->ssid_len;
+			os_memcpy(ssid->ssid, wpa_s->go_params->ssid,
+				  ssid->ssid_len);
+			wpa_hexdump_ascii(MSG_DEBUG, "WPS: Use specific AP "
+					  "SSID", ssid->ssid, ssid->ssid_len);
+		}
+	}
 	if (pin)
 		os_snprintf(val, sizeof(val), "\"pin=%s dev_pw_id=%u\"",
 			    pin, dev_pw_id);

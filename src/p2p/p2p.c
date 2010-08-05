@@ -1092,8 +1092,13 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 		os_memcpy(res.ssid, p2p->ssid, p2p->ssid_len);
 		res.ssid_len = p2p->ssid_len;
 		p2p_random(res.passphrase, 8);
-	} else
+	} else {
 		res.freq = peer->oper_freq;
+		if (p2p->ssid_len) {
+			os_memcpy(res.ssid, p2p->ssid, p2p->ssid_len);
+			res.ssid_len = p2p->ssid_len;
+		}
+	}
 
 	p2p_channels_intersect(&p2p->channels, &peer->channels,
 			       &intersection);

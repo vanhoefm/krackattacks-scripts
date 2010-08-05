@@ -786,11 +786,14 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (!go && msg.group_id) {
-		/* TODO: Store SSID for Provisioning step */
+		/* Store SSID for Provisioning step */
+		p2p->ssid_len = msg.group_id_len - ETH_ALEN;
+		os_memcpy(p2p->ssid, msg.group_id + ETH_ALEN, p2p->ssid_len);
 	} else if (!go) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Mandatory P2P Group ID attribute missing from "
 			"GO Negotiation Response");
+		p2p->ssid_len = 0;
 #ifdef CONFIG_P2P_STRICT
 		status = P2P_SC_FAIL_INVALID_PARAMS;
 		goto fail;
@@ -1034,11 +1037,14 @@ void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	if (dev->go_state == REMOTE_GO && msg.group_id) {
-		/* TODO: Store SSID for Provisioning step */
+		/* Store SSID for Provisioning step */
+		p2p->ssid_len = msg.group_id_len - ETH_ALEN;
+		os_memcpy(p2p->ssid, msg.group_id + ETH_ALEN, p2p->ssid_len);
 	} else if (dev->go_state == REMOTE_GO) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Mandatory P2P Group ID attribute missing from "
 			"GO Negotiation Confirmation");
+		p2p->ssid_len = 0;
 #ifdef CONFIG_P2P_STRICT
 		p2p_parse_free(&msg);
 		return;

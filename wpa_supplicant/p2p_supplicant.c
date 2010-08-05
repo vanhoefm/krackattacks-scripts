@@ -2268,6 +2268,15 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 		os_free(ifname);
 	}
 
+	/*
+	 * Deinit GO data on any possibly remaining interface (if main
+	 * interface is used as GO).
+	 */
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (wpa_s->ap_iface)
+			wpas_p2p_group_deinit(wpa_s);
+	}
+
 	p2p_deinit(global->p2p);
 	global->p2p = NULL;
 }

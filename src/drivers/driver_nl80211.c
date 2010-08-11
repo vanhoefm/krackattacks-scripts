@@ -1249,8 +1249,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 #endif /* HOSTAPD */
 
 
-static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv,
-				      void *ctx)
+static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 {
 	int ret;
 
@@ -1344,7 +1343,7 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv,
 	}
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle_event),
-				 wpa_driver_nl80211_event_receive, drv, ctx);
+				 wpa_driver_nl80211_event_receive, drv, NULL);
 
 	return 0;
 
@@ -1411,7 +1410,7 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 	drv->monitor_sock = -1;
 	drv->ioctl_sock = -1;
 
-	if (wpa_driver_nl80211_init_nl(drv, ctx)) {
+	if (wpa_driver_nl80211_init_nl(drv)) {
 		os_free(drv);
 		return NULL;
 	}

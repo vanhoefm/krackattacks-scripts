@@ -104,7 +104,6 @@ struct wpa_driver_nl80211_data {
 	int disable_11b_rates;
 
 	unsigned int pending_remain_on_chan:1;
-	unsigned int pending_send_action:1;
 	unsigned int added_bridge:1;
 	unsigned int added_if_into_bridge:1;
 
@@ -5092,7 +5091,6 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	wpa_printf(MSG_DEBUG, "nl80211: Action TX command accepted; "
 		   "cookie 0x%llx", (long long unsigned int) cookie);
 	drv->send_action_cookie = cookie;
-	drv->pending_send_action = 1;
 	ret = 0;
 
 nla_put_failure:

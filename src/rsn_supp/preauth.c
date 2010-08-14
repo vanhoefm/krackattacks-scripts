@@ -49,8 +49,10 @@ void pmksa_candidate_free(struct wpa_sm *sm)
 		return;
 
 	dl_list_for_each_safe(entry, n, &sm->pmksa_candidates,
-			      struct rsn_pmksa_candidate, list)
+			      struct rsn_pmksa_candidate, list) {
+		dl_list_del(&entry->list);
 		os_free(entry);
+	}
 }
 
 
@@ -378,6 +380,7 @@ void pmksa_candidate_add(struct wpa_sm *sm, const u8 *bssid,
 	}
 
 	if (cand) {
+		dl_list_del(&cand->list);
 		if (prio < PMKID_CANDIDATE_PRIO_SCAN)
 			cand->priority = prio;
 	} else {

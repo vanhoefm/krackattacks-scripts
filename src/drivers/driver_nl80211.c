@@ -718,12 +718,28 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 	const u8 *bssid = NULL;
 	u16 reason_code = 0;
 
+	mgmt = (const struct ieee80211_mgmt *) frame;
+	if (len >= 24) {
+		bssid = mgmt->bssid;
+
+		if (drv->associated != 0 &&
+		    os_memcmp(bssid, drv->bssid, ETH_ALEN) != 0 &&
+		    os_memcmp(bssid, drv->auth_bssid, ETH_ALEN) != 0) {
+			/*
+			 * We have presumably received this deauth as a
+			 * response to a clear_state_mismatch() outgoing
+			 * deauth.  Don't let it take us offline!
+			 */
+			wpa_printf(MSG_DEBUG, "nl80211: Deauth received "
+				   "from Unknown BSSID " MACSTR " -- ignoring",
+				   MAC2STR(bssid));
+			return;
+		}
+	}
+
 	drv->associated = 0;
 	os_memset(&event, 0, sizeof(event));
 
-	mgmt = (const struct ieee80211_mgmt *) frame;
-	if (len >= 24)
-		bssid = mgmt->bssid;
 	/* Note: Same offset for Reason Code in both frame subtypes */
 	if (len >= 24 + sizeof(mgmt->u.deauth))
 		reason_code = le_to_host16(mgmt->u.deauth.reason_code);

@@ -2513,10 +2513,6 @@ retry:
 	wpa_hexdump(MSG_DEBUG, "  * IEs", params->ie, params->ie_len);
 	if (params->ie)
 		NLA_PUT(msg, NL80211_ATTR_IE, params->ie_len, params->ie);
-	/*
-	 * TODO: if multiple auth_alg options enabled, try them one by one if
-	 * the AP rejects authentication due to unknown auth alg
-	 */
 	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
 	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)

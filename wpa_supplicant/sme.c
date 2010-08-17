@@ -274,7 +274,33 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 	if (data->auth.status_code != WLAN_STATUS_SUCCESS) {
 		wpa_printf(MSG_DEBUG, "SME: Authentication failed (status "
 			   "code %d)", data->auth.status_code);
-		return;
+
+		if (data->auth.status_code !=
+		    WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG ||
+		    wpa_s->sme.auth_alg == data->auth.auth_type ||
+		    wpa_s->current_ssid->auth_alg == WPA_AUTH_ALG_LEAP)
+			return;
+
+		switch (data->auth.auth_type) {
+		case WLAN_AUTH_OPEN:
+			wpa_s->current_ssid->auth_alg = WPA_AUTH_ALG_SHARED;
+
+			wpa_printf(MSG_DEBUG, "SME: Trying SHARED auth");
+			wpa_supplicant_associate(wpa_s, wpa_s->current_bss,
+						 wpa_s->current_ssid);
+			return;
+
+		case WLAN_AUTH_SHARED_KEY:
+			wpa_s->current_ssid->auth_alg = WPA_AUTH_ALG_LEAP;
+
+			wpa_printf(MSG_DEBUG, "SME: Trying LEAP auth");
+			wpa_supplicant_associate(wpa_s, wpa_s->current_bss,
+						 wpa_s->current_ssid);
+			return;
+
+		default:
+			return;
+		}
 	}
 
 #ifdef CONFIG_IEEE80211R

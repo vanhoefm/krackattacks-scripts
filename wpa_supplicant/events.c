@@ -1604,6 +1604,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 	case EVENT_DISASSOC:
 		wpa_printf(MSG_DEBUG, "Disassociation notification");
+		if (data) {
+			wpa_printf(MSG_DEBUG, " * reason %u",
+				   data->disassoc_info.reason_code);
+			if (data->disassoc_info.addr)
+				wpa_printf(MSG_DEBUG, " * address " MACSTR,
+					   MAC2STR(data->disassoc_info.addr));
+		}
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface && data) {
 			hostapd_notif_disassoc(wpa_s->ap_iface->bss[0],
@@ -1619,8 +1626,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_DEAUTH:
 		if (event == EVENT_DEAUTH) {
 			wpa_printf(MSG_DEBUG, "Deauthentication notification");
-			if (data)
+			if (data) {
 				reason_code = data->deauth_info.reason_code;
+				wpa_printf(MSG_DEBUG, " * reason %u",
+					   data->deauth_info.reason_code);
+				if (data->deauth_info.addr) {
+					wpa_printf(MSG_DEBUG, " * address "
+						   MACSTR,
+						   MAC2STR(data->deauth_info.
+							   addr));
+				}
+			}
 		}
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface && data) {

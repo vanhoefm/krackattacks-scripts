@@ -2412,7 +2412,8 @@ nla_put_failure:
 static int wpa_driver_nl80211_disconnect(struct wpa_driver_nl80211_data *drv,
 					 const u8 *addr, int reason_code)
 {
-	wpa_printf(MSG_DEBUG, "%s", __func__);
+	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
+		   __func__, MAC2STR(addr), reason_code);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DISCONNECT,
 				       reason_code, 0);
@@ -2426,7 +2427,8 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_SME))
 		return wpa_driver_nl80211_disconnect(drv, addr, reason_code);
-	wpa_printf(MSG_DEBUG, "%s", __func__);
+	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
+		   __func__, MAC2STR(addr), reason_code);
 	drv->associated = 0;
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
 				       reason_code, 0);

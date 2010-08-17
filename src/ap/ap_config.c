@@ -354,6 +354,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 
 	os_free(conf->ssid.wpa_passphrase);
 	os_free(conf->ssid.wpa_psk_file);
+	hostapd_config_free_wep(&conf->ssid.wep);
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	os_free(conf->ssid.vlan_tagged_interface);
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */

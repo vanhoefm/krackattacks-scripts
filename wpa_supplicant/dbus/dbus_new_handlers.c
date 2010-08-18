@@ -1300,7 +1300,8 @@ DBusMessage * wpas_dbus_handler_disconnect(DBusMessage *message,
 {
 	if (wpa_s->current_ssid != NULL) {
 		wpa_s->disconnected = 1;
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
 
 		return NULL;
 	}
@@ -1433,7 +1434,8 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 	}
 
 	if (ssid == wpa_s->current_ssid)
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
 
 out:
 	os_free(iface);

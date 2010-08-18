@@ -872,7 +872,8 @@ DBusMessage * wpas_dbus_iface_remove_network(DBusMessage *message,
 	}
 
 	if (ssid == wpa_s->current_ssid)
-		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
 	reply = wpas_dbus_new_success_reply(message);
 
 out:
@@ -1141,7 +1142,7 @@ DBusMessage * wpas_dbus_iface_disconnect(DBusMessage *message,
 					 struct wpa_supplicant *wpa_s)
 {
 	wpa_s->disconnected = 1;
-	wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+	wpa_supplicant_deauthenticate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 
 	return wpas_dbus_new_success_reply(message);
 }

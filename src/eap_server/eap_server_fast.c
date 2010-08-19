@@ -791,6 +791,11 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	
 	/* Note: headers may be misaligned after A-ID */
 
+	if (sm->identity) {
+		eap_fast_put_tlv(buf, PAC_TYPE_I_ID, sm->identity,
+				 sm->identity_len);
+	}
+
 	/* A-ID-Info (inside PAC-Info) */
 	eap_fast_put_tlv(buf, PAC_TYPE_A_ID_INFO, data->srv_id_info,
 			 srv_id_info_len);

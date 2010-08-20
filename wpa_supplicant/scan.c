@@ -243,8 +243,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_ssid *ssid;
 	int scan_req = 0, ret;
 	struct wpabuf *wps_ie = NULL;
-	int wps = 0;
 #ifdef CONFIG_WPS
+	int wps = 0;
 	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
 #endif /* CONFIG_WPS */
 	struct wpa_driver_scan_params params;

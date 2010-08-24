@@ -1074,3 +1074,20 @@ int upnp_wps_subscribers(struct upnp_wps_device_sm *sm)
 {
 	return !dl_list_empty(&sm->subscriptions);
 }
+
+
+int upnp_wps_set_ap_pin(struct upnp_wps_device_sm *sm, const char *ap_pin)
+{
+	if (sm == NULL)
+		return 0;
+
+	os_free(sm->ctx->ap_pin);
+	if (ap_pin) {
+		sm->ctx->ap_pin = os_strdup(ap_pin);
+		if (sm->ctx->ap_pin == NULL)
+			return -1;
+	} else
+		sm->ctx->ap_pin = NULL;
+
+	return 0;
+}

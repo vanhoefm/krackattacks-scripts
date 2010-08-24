@@ -313,6 +313,59 @@ static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
 	return hostapd_wps_start_oob(hapd, txt, path, method, name);
 }
 #endif /* CONFIG_WPS_OOB */
+
+
+static int hostapd_ctrl_iface_wps_ap_pin(struct hostapd_data *hapd, char *txt,
+					 char *buf, size_t buflen)
+{
+	int timeout = 300;
+	char *pos;
+	const char *pin_txt;
+
+	pos = os_strchr(txt, ' ');
+	if (pos)
+		*pos++ = '\0';
+
+	if (os_strcmp(txt, "disable") == 0) {
+		hostapd_wps_ap_pin_disable(hapd);
+		return os_snprintf(buf, buflen, "OK\n");
+	}
+
+	if (os_strcmp(txt, "random") == 0) {
+		if (pos)
+			timeout = atoi(pos);
+		pin_txt = hostapd_wps_ap_pin_random(hapd, timeout);
+		if (pin_txt == NULL)
+			return -1;
+		return os_snprintf(buf, buflen, "%s", pin_txt);
+	}
+
+	if (os_strcmp(txt, "get") == 0) {
+		pin_txt = hostapd_wps_ap_pin_get(hapd);
+		if (pin_txt == NULL)
+			return -1;
+		return os_snprintf(buf, buflen, "%s", pin_txt);
+	}
+
+	if (os_strcmp(txt, "set") == 0) {
+		char *pin;
+		if (pos == NULL)
+			return -1;
+		pin = pos;
+		pos = os_strchr(pos, ' ');
+		if (pos) {
+			*pos++ = '\0';
+			timeout = atoi(pos);
+		}
+		if (os_strlen(pin) > buflen)
+			return -1;
+		if (hostapd_wps_ap_pin_set(hapd, pin, timeout) < 0)
+			return -1;
+		return os_snprintf(buf, buflen, "%s", pin);
+	}
+
+	return -1;
+}
 #endif /* CONFIG_WPS */
 
 
@@ -426,6 +479,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		if (hostapd_ctrl_iface_wps_oob(hapd, buf + 8))
 			reply_len = -1;
 #endif /* CONFIG_WPS_OOB */
+	} else if (os_strncmp(buf, "WPS_AP_PIN ", 11) == 0) {
+		reply_len = hostapd_ctrl_iface_wps_ap_pin(hapd, buf + 11,
+							  reply, reply_size);
 #endif /* CONFIG_WPS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

@@ -46,5 +46,6 @@ int upnp_wps_device_send_wlan_event(struct upnp_wps_device_sm *sm,
 				    enum upnp_wps_wlanevent_type ev_type,
 				    const struct wpabuf *msg);
 int upnp_wps_subscribers(struct upnp_wps_device_sm *sm);
+int upnp_wps_set_ap_pin(struct upnp_wps_device_sm *sm, const char *ap_pin);
 
 #endif /* WPS_UPNP_H */

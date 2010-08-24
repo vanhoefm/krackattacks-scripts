@@ -1,6 +1,6 @@
 /*
  * hostapd / WPS integration
- * Copyright (c) 2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -28,6 +28,11 @@ int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 			  char *path, char *method, char *name);
 int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
 			    char *buf, size_t buflen);
+void hostapd_wps_ap_pin_disable(struct hostapd_data *hapd);
+const char * hostapd_wps_ap_pin_random(struct hostapd_data *hapd, int timeout);
+const char * hostapd_wps_ap_pin_get(struct hostapd_data *hapd);
+int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
+			   int timeout);
 
 #else /* CONFIG_WPS */
 

@@ -94,6 +94,7 @@ static const char *commands_help =
 #ifdef CONFIG_WPS_OOB
 "   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
 #endif /* CONFIG_WPS_OOB */
+"   wps_ap_pin <cmd> [params..]  enable/disable AP PIN\n"
 #endif /* CONFIG_WPS */
 "   help                 show this usage help\n"
 "   interface [ifname]   show interfaces/select interface\n"
@@ -405,6 +406,27 @@ static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
 	return wpa_ctrl_command(ctrl, cmd);
 }
 #endif /* CONFIG_WPS_OOB */
+
+
+static int hostapd_cli_cmd_wps_ap_pin(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	char buf[64];
+	if (argc < 1) {
+		printf("Invalid 'wps_ap_pin' command - at least one argument "
+		       "is required.\n");
+		return -1;
+	}
+	if (argc > 2)
+		snprintf(buf, sizeof(buf), "WPS_AP_PIN %s %s %s",
+			 argv[0], argv[1], argv[2]);
+	else if (argc > 1)
+		snprintf(buf, sizeof(buf), "WPS_AP_PIN %s %s",
+			 argv[0], argv[1]);
+	else
+		snprintf(buf, sizeof(buf), "WPS_AP_PIN %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
 #endif /* CONFIG_WPS */
 
 
@@ -567,6 +589,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #ifdef CONFIG_WPS_OOB
 	{ "wps_oob", hostapd_cli_cmd_wps_oob },
 #endif /* CONFIG_WPS_OOB */
+	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin },
 #endif /* CONFIG_WPS */
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },

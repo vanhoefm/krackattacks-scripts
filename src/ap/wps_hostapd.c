@@ -1,6 +1,6 @@
 /*
  * hostapd / WPS integration
- * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -42,6 +42,7 @@ static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd);
 
 static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 				    const u8 *ie, size_t ie_len);
+static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 
 
 static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
@@ -432,7 +433,6 @@ static void hostapd_wps_reenable_ap_pin(void *eloop_data, void *user_ctx)
 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);
 	hapd->wps->ap_setup_locked = 0;
 	wps_registrar_update_ie(hapd->wps->registrar);
-
 }
 
 
@@ -683,6 +683,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
 	eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
+	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
 	if (hapd->wps == NULL)
 		return;
 #ifdef CONFIG_WPS_UPNP
@@ -941,4 +942,73 @@ int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
 	if (hapd->wps == NULL)
 		return 0;
 	return wps_registrar_get_info(hapd->wps->registrar, addr, buf, buflen);
+}
+
+
+static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx)
+{
+	struct hostapd_data *hapd = eloop_data;
+	wpa_printf(MSG_DEBUG, "WPS: AP PIN timed out");
+	hostapd_wps_ap_pin_disable(hapd);
+}
+
+
+static void hostapd_wps_ap_pin_enable(struct hostapd_data *hapd, int timeout)
+{
+	wpa_printf(MSG_DEBUG, "WPS: Enabling AP PIN (timeout=%d)", timeout);
+	hapd->ap_pin_failures = 0;
+	hapd->conf->ap_setup_locked = 0;
+	if (hapd->wps->ap_setup_locked) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);
+		hapd->wps->ap_setup_locked = 0;
+		wps_registrar_update_ie(hapd->wps->registrar);
+	}
+	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
+	if (timeout > 0)
+		eloop_register_timeout(timeout, 0,
+				       hostapd_wps_ap_pin_timeout, hapd, NULL);
+}
+
+
+void hostapd_wps_ap_pin_disable(struct hostapd_data *hapd)
+{
+	wpa_printf(MSG_DEBUG, "WPS: Disabling AP PIN");
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = NULL;
+	upnp_wps_set_ap_pin(hapd->wps_upnp, NULL);
+	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
+}
+
+
+const char * hostapd_wps_ap_pin_random(struct hostapd_data *hapd, int timeout)
+{
+	unsigned int pin;
+	char pin_txt[9];
+
+	pin = wps_generate_pin();
+	os_snprintf(pin_txt, sizeof(pin_txt), "%u", pin);
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = os_strdup(pin_txt);
+	upnp_wps_set_ap_pin(hapd->wps_upnp, pin_txt);
+	hostapd_wps_ap_pin_enable(hapd, timeout);
+	return hapd->conf->ap_pin;
+}
+
+
+const char * hostapd_wps_ap_pin_get(struct hostapd_data *hapd)
+{
+	return hapd->conf->ap_pin;
+}
+
+
+int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
+			   int timeout)
+{
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = os_strdup(pin);
+	if (hapd->conf->ap_pin == NULL)
+		return -1;
+	upnp_wps_set_ap_pin(hapd->wps_upnp, hapd->conf->ap_pin);
+	hostapd_wps_ap_pin_enable(hapd, timeout);
+	return 0;
 }

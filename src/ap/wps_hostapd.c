@@ -421,20 +421,36 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 }
 
 
+static void hostapd_wps_reenable_ap_pin(void *eloop_data, void *user_ctx)
+{
+	struct hostapd_data *hapd = eloop_data;
+
+	if (hapd->conf->ap_setup_locked)
+		return;
+
+	wpa_printf(MSG_DEBUG, "WPS: Re-enable AP PIN");
+	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);
+	hapd->wps->ap_setup_locked = 0;
+	wps_registrar_update_ie(hapd->wps->registrar);
+
+}
+
+
 static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 				  struct wps_event_pwd_auth_fail *data)
 {
-	FILE *f;
-
 	if (!data->enrollee || hapd->conf->ap_pin == NULL)
 		return;
 
 	/*
 	 * Registrar failed to prove its knowledge of the AP PIN. Lock AP setup
-	 * if this happens multiple times.
+	 * for some time if this happens multiple times to slow down brute
+	 * force attacks.
 	 */
 	hapd->ap_pin_failures++;
-	if (hapd->ap_pin_failures < 4)
+	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u",
+		   hapd->ap_pin_failures);
+	if (hapd->ap_pin_failures < 3)
 		return;
 
 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_LOCKED);
@@ -442,23 +458,22 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 
 	wps_registrar_update_ie(hapd->wps->registrar);
 
-	if (hapd->conf->wps_cred_processing == 1)
-		return;
+	if (!hapd->conf->ap_setup_locked) {
+		if (hapd->ap_pin_lockout_time == 0)
+			hapd->ap_pin_lockout_time = 60;
+		else if (hapd->ap_pin_lockout_time < 365 * 24 * 60 * 60 &&
+			 (hapd->ap_pin_failures % 3) == 0)
+			hapd->ap_pin_lockout_time *= 2;
 
-	f = fopen(hapd->iface->config_fname, "a");
-	if (f == NULL) {
-		wpa_printf(MSG_WARNING, "WPS: Could not append to the current "
-			   "configuration file");
-		return;
+		wpa_printf(MSG_DEBUG, "WPS: Disable AP PIN for %u seconds",
+			   hapd->ap_pin_lockout_time);
+		eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
+		eloop_register_timeout(hapd->ap_pin_lockout_time, 0,
+				       hostapd_wps_reenable_ap_pin, hapd,
+				       NULL);
 	}
 
-	fprintf(f, "# WPS AP Setup Locked based on possible attack\n");
-	fprintf(f, "ap_setup_locked=1\n");
-	fclose(f);
-
-	/* TODO: dualband AP may need to update multiple configuration files */
-
-	wpa_printf(MSG_DEBUG, "WPS: AP configuration updated");
+	/* TODO: dualband AP may need to update other interfaces */
 }
 
 
@@ -667,6 +682,7 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 
 void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
+	eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
 	if (hapd->wps == NULL)
 		return;
 #ifdef CONFIG_WPS_UPNP

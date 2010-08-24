@@ -167,6 +167,7 @@ struct hostapd_data {
 #ifdef CONFIG_WPS
 	unsigned int ap_pin_failures;
 	struct upnp_wps_device_sm *wps_upnp;
+	unsigned int ap_pin_lockout_time;
 #endif /* CONFIG_WPS */
 
 	struct hostapd_probereq_cb *probereq_cb;

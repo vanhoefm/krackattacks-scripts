@@ -774,10 +774,7 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 
 	if (wps_process_registrar_nonce(wps, attr->registrar_nonce) ||
 	    wps_process_enrollee_nonce(wps, attr->enrollee_nonce) ||
-	    wps_process_uuid_r(wps, attr->uuid_r) ||
-	    wps_process_pubkey(wps, attr->public_key, attr->public_key_len) ||
-	    wps_process_authenticator(wps, attr->authenticator, msg) ||
-	    wps_process_device_attrs(&wps->peer_dev, attr)) {
+	    wps_process_uuid_r(wps, attr->uuid_r)) {
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
 	}
@@ -787,6 +784,13 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 		wpa_printf(MSG_DEBUG, "WPS: AP Setup is locked - refuse "
 			   "registration of a new Registrar");
 		wps->config_error = WPS_CFG_SETUP_LOCKED;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
+	if (wps_process_pubkey(wps, attr->public_key, attr->public_key_len) ||
+	    wps_process_authenticator(wps, attr->authenticator, msg) ||
+	    wps_process_device_attrs(&wps->peer_dev, attr)) {
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
 	}

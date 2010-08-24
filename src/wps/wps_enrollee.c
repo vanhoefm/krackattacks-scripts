@@ -782,7 +782,8 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps->wps->ap && wps->wps->ap_setup_locked) {
+	if (wps->wps->ap &&
+	    (wps->wps->ap_setup_locked || wps->dev_password == NULL)) {
 		wpa_printf(MSG_DEBUG, "WPS: AP Setup is locked - refuse "
 			   "registration of a new Registrar");
 		wps->config_error = WPS_CFG_SETUP_LOCKED;

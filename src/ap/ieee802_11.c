@@ -191,33 +191,6 @@ void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len)
 }
 
 
-/**
- * ieee802_11_send_deauth - Send Deauthentication frame
- * @hapd: hostapd BSS data
- * @addr: Address of the destination STA
- * @reason: Reason code for Deauthentication
- */
-void ieee802_11_send_deauth(struct hostapd_data *hapd, const u8 *addr,
-			    u16 reason)
-{
-	struct ieee80211_mgmt mgmt;
-
-	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
-		       HOSTAPD_LEVEL_DEBUG,
-		       "deauthenticate - reason %d", reason);
-	os_memset(&mgmt, 0, sizeof(mgmt));
-	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_DEAUTH);
-	os_memcpy(mgmt.da, addr, ETH_ALEN);
-	os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-	mgmt.u.deauth.reason_code = host_to_le16(reason);
-	if (hapd->drv.send_mgmt_frame(hapd, &mgmt, IEEE80211_HDRLEN +
-				       sizeof(mgmt.u.deauth)) < 0)
-		perror("ieee802_11_send_deauth: send");
-}
-
-
 static u16 auth_shared_key(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 auth_transaction, const u8 *challenge,
 			   int iswep)

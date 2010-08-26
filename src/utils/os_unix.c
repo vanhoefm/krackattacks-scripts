@@ -370,7 +370,7 @@ void * os_realloc(void *ptr, size_t size)
 	if (ptr == NULL)
 		return os_malloc(size);
 
-	a = ptr - sizeof(*a);
+	a = (struct os_alloc_trace *) ptr - 1;
 	if (a->magic != ALLOC_MAGIC) {
 		wpa_printf(MSG_INFO, "REALLOC[%p]: invalid magic 0x%x%s",
 			   a, a->magic,
@@ -396,7 +396,7 @@ void os_free(void *ptr)
 
 	if (ptr == NULL)
 		return;
-	a = ptr - sizeof(*a);
+	a = (struct os_alloc_trace *) ptr - 1;
 	if (a->magic != ALLOC_MAGIC) {
 		wpa_printf(MSG_INFO, "FREE[%p]: invalid magic 0x%x%s",
 			   a, a->magic,

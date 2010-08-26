@@ -1296,27 +1296,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 }
 
 
-/**
- * wpa_supplicant_disassociate - Disassociate the current connection
- * @wpa_s: Pointer to wpa_supplicant data
- * @reason_code: IEEE 802.11 reason code for the disassociate frame
- *
- * This function is used to request %wpa_supplicant to disassociate with the
- * current AP.
- */
-void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
-				 int reason_code)
+static void wpa_supplicant_clear_connection(struct wpa_supplicant *wpa_s,
+					    const u8 *addr)
 {
 	struct wpa_ssid *old_ssid;
-	u8 *addr = NULL;
 
-	if (!is_zero_ether_addr(wpa_s->bssid)) {
-		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-			ieee80211_sta_disassociate(wpa_s, reason_code);
-		else
-			wpa_drv_disassociate(wpa_s, wpa_s->bssid, reason_code);
-		addr = wpa_s->bssid;
-	}
 	wpa_clear_keys(wpa_s, addr);
 	wpa_supplicant_mark_disassoc(wpa_s);
 	old_ssid = wpa_s->current_ssid;
@@ -1331,6 +1315,31 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 
 
 /**
+ * wpa_supplicant_disassociate - Disassociate the current connection
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @reason_code: IEEE 802.11 reason code for the disassociate frame
+ *
+ * This function is used to request %wpa_supplicant to disassociate with the
+ * current AP.
+ */
+void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
+				 int reason_code)
+{
+	u8 *addr = NULL;
+
+	if (!is_zero_ether_addr(wpa_s->bssid)) {
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
+			ieee80211_sta_disassociate(wpa_s, reason_code);
+		else
+			wpa_drv_disassociate(wpa_s, wpa_s->bssid, reason_code);
+		addr = wpa_s->bssid;
+	}
+
+	wpa_supplicant_clear_connection(wpa_s, addr);
+}
+
+
+/**
  * wpa_supplicant_deauthenticate - Deauthenticate the current connection
  * @wpa_s: Pointer to wpa_supplicant data
  * @reason_code: IEEE 802.11 reason code for the deauthenticate frame
@@ -1341,7 +1350,6 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 				   int reason_code)
 {
-	struct wpa_ssid *old_ssid;
 	u8 *addr = NULL;
 
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
@@ -1352,16 +1360,8 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 					       reason_code);
 		addr = wpa_s->bssid;
 	}
-	wpa_clear_keys(wpa_s, addr);
-	wpa_supplicant_mark_disassoc(wpa_s);
-	old_ssid = wpa_s->current_ssid;
-	wpa_s->current_ssid = NULL;
-	wpa_s->current_bss = NULL;
-	wpa_sm_set_config(wpa_s->wpa, NULL);
-	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
-	if (old_ssid != wpa_s->current_ssid)
-		wpas_notify_network_changed(wpa_s);
-	eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s, NULL);
+
+	wpa_supplicant_clear_connection(wpa_s, addr);
 }
 
 

@@ -124,6 +124,15 @@ static void * bgscan_simple_init(struct wpa_supplicant *wpa_s,
 	data->scan_interval = data->short_interval;
 	eloop_register_timeout(data->scan_interval, 0, bgscan_simple_timeout,
 			       data, NULL);
+
+	/*
+	 * This function is called immediately after an association, so it is
+	 * reasonable to assume that a scan was completed recently. This makes
+	 * us skip an immediate new scan in cases where the current signal
+	 * level is below the bgscan threshold.
+	 */
+	os_get_time(&data->last_bgscan);
+
 	return data;
 }
 
@@ -171,6 +180,8 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 					       int current_signal)
 {
 	struct bgscan_simple_data *data = priv;
+	int scan = 0;
+	struct os_time now;
 
 	if (data->short_interval == data->long_interval ||
 	    data->signal_threshold == 0)
@@ -179,12 +190,12 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 	wpa_printf(MSG_DEBUG, "bgscan simple: signal level changed "
 		   "(above=%d current_signal=%d)", above, current_signal);
 	if (data->scan_interval == data->long_interval && !above) {
-		wpa_printf(MSG_DEBUG, "bgscan simple: Trigger immediate scan "
-			   "and start using short bgscan interval");
+		wpa_printf(MSG_DEBUG, "bgscan simple: Start using short "
+			   "bgscan interval");
 		data->scan_interval = data->short_interval;
-		eloop_cancel_timeout(bgscan_simple_timeout, data, NULL);
-		eloop_register_timeout(0, 0, bgscan_simple_timeout, data,
-				       NULL);
+		os_get_time(&now);
+		if (now.sec > data->last_bgscan.sec + 1)
+			scan = 1;
 	} else if (data->scan_interval == data->short_interval && above) {
 		wpa_printf(MSG_DEBUG, "bgscan simple: Start using long bgscan "
 			   "interval");
@@ -193,20 +204,20 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 		eloop_register_timeout(data->scan_interval, 0,
 				       bgscan_simple_timeout, data, NULL);
 	} else if (!above) {
-		struct os_time now;
 		/*
 		 * Signal dropped further 4 dB. Request a new scan if we have
 		 * not yet scanned in a while.
 		 */
 		os_get_time(&now);
-		if (now.sec > data->last_bgscan.sec + 10) {
-			wpa_printf(MSG_DEBUG, "bgscan simple: Trigger "
-				   "immediate scan");
-			eloop_cancel_timeout(bgscan_simple_timeout, data,
-					     NULL);
-			eloop_register_timeout(0, 0, bgscan_simple_timeout,
-					       data, NULL);
-		}
+		if (now.sec > data->last_bgscan.sec + 10)
+			scan = 1;
+	}
+
+	if (scan) {
+		wpa_printf(MSG_DEBUG, "bgscan simple: Trigger immediate scan");
+		eloop_cancel_timeout(bgscan_simple_timeout, data, NULL);
+		eloop_register_timeout(0, 0, bgscan_simple_timeout, data,
+				       NULL);
 	}
 }
 

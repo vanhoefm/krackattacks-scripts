@@ -2452,6 +2452,7 @@ union wpa_event_data {
 	 */
 	struct signal_change {
 		int above_threshold;
+		int current_signal;
 	} signal_change;
 };
 

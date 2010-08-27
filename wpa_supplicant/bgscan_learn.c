@@ -546,7 +546,8 @@ static void bgscan_learn_notify_beacon_loss(void *priv)
 }
 
 
-static void bgscan_learn_notify_signal_change(void *priv, int above)
+static void bgscan_learn_notify_signal_change(void *priv, int above,
+					      int current_signal)
 {
 	struct bgscan_learn_data *data = priv;
 
@@ -555,7 +556,7 @@ static void bgscan_learn_notify_signal_change(void *priv, int above)
 		return;
 
 	wpa_printf(MSG_DEBUG, "bgscan learn: signal level changed "
-		   "(above=%d)", above);
+		   "(above=%d current_signal=%d)", above, current_signal);
 	if (data->scan_interval == data->long_interval && !above) {
 		wpa_printf(MSG_DEBUG, "bgscan learn: Trigger immediate scan "
 			   "and start using short bgscan interval");

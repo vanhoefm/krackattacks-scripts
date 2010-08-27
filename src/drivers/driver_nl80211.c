@@ -946,6 +946,53 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 }
 
 
+static int get_link_signal(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *sinfo[NL80211_STA_INFO_MAX + 1];
+	static struct nla_policy policy[NL80211_STA_INFO_MAX + 1] = {
+		[NL80211_STA_INFO_SIGNAL] = { .type = NLA_U8 },
+	};
+	int *sig = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb[NL80211_ATTR_STA_INFO] ||
+	    nla_parse_nested(sinfo, NL80211_STA_INFO_MAX,
+			     tb[NL80211_ATTR_STA_INFO], policy))
+		return NL_SKIP;
+	if (!sinfo[NL80211_STA_INFO_SIGNAL])
+		return NL_SKIP;
+
+	*sig = (s8) nla_get_u8(sinfo[NL80211_STA_INFO_SIGNAL]);
+	return NL_SKIP;
+}
+
+
+static int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
+				   int *sig)
+{
+	struct nl_msg *msg;
+
+	*sig = -9999;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_GET_STATION, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, drv->bssid);
+
+	return send_and_recv_msgs(drv, msg, get_link_signal, sig);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 			      struct nlattr *tb[])
 {
@@ -957,6 +1004,7 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
 	enum nl80211_cqm_rssi_threshold_event event;
 	union wpa_event_data ed;
+	int sig, res;
 
 	if (tb[NL80211_ATTR_CQM] == NULL ||
 	    nla_parse_nested(cqm, NL80211_ATTR_CQM_MAX, tb[NL80211_ATTR_CQM],
@@ -981,6 +1029,12 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 		ed.signal_change.above_threshold = 0;
 	} else
 		return;
+
+	res = nl80211_get_link_signal(drv, &sig);
+	if (res == 0) {
+		ed.signal_change.current_signal = sig;
+		wpa_printf(MSG_DEBUG, "nl80211: Signal: %d dBm", sig);
+	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_SIGNAL_CHANGE, &ed);
 }

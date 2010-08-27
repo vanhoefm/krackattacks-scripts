@@ -111,8 +111,10 @@ void bgscan_notify_beacon_loss(struct wpa_supplicant *wpa_s)
 }
 
 
-void bgscan_notify_signal_change(struct wpa_supplicant *wpa_s, int above)
+void bgscan_notify_signal_change(struct wpa_supplicant *wpa_s, int above,
+				 int current_signal)
 {
 	if (wpa_s->bgscan && wpa_s->bgscan_priv)
-		wpa_s->bgscan->notify_signal_change(wpa_s->bgscan_priv, above);
+		wpa_s->bgscan->notify_signal_change(wpa_s->bgscan_priv, above,
+						    current_signal);
 }

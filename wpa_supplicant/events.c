@@ -1752,7 +1752,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 	case EVENT_SIGNAL_CHANGE:
 		bgscan_notify_signal_change(
-			wpa_s, data->signal_change.above_threshold);
+			wpa_s, data->signal_change.above_threshold,
+			data->signal_change.current_signal);
 		break;
 	case EVENT_INTERFACE_ENABLED:
 		wpa_printf(MSG_DEBUG, "Interface was enabled");

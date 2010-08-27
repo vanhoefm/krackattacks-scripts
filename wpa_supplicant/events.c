@@ -411,240 +411,119 @@ static int freq_allowed(int *freqs, int freq)
 }
 
 
-static struct wpa_bss *
-wpa_supplicant_select_bss_wpa(struct wpa_supplicant *wpa_s,
-			      struct wpa_scan_results *scan_res,
-			      struct wpa_ssid *group,
-			      struct wpa_ssid **selected_ssid)
+static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
+					    int i, struct wpa_scan_res *bss,
+					    struct wpa_ssid *group)
 {
-	struct wpa_ssid *ssid;
-	struct wpa_scan_res *bss;
-	size_t i;
+	const u8 *ssid_;
+	u8 wpa_ie_len, rsn_ie_len, ssid_len;
+	int wpa;
 	struct wpa_blacklist *e;
 	const u8 *ie;
+	struct wpa_ssid *ssid;
 
-	wpa_printf(MSG_DEBUG, "Try to find WPA-enabled AP");
-	for (i = 0; i < scan_res->num; i++) {
-		const u8 *ssid_;
-		u8 wpa_ie_len, rsn_ie_len, ssid_len;
-		bss = scan_res->res[i];
+	ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
+	ssid_ = ie ? ie + 2 : (u8 *) "";
+	ssid_len = ie ? ie[1] : 0;
 
-		ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
-		ssid_ = ie ? ie + 2 : (u8 *) "";
-		ssid_len = ie ? ie[1] : 0;
+	ie = wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
+	wpa_ie_len = ie ? ie[1] : 0;
 
-		ie = wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
-		wpa_ie_len = ie ? ie[1] : 0;
+	ie = wpa_scan_get_ie(bss, WLAN_EID_RSN);
+	rsn_ie_len = ie ? ie[1] : 0;
 
-		ie = wpa_scan_get_ie(bss, WLAN_EID_RSN);
-		rsn_ie_len = ie ? ie[1] : 0;
+	wpa_printf(MSG_DEBUG, "%d: " MACSTR " ssid='%s' "
+		   "wpa_ie_len=%u rsn_ie_len=%u caps=0x%x level=%d%s",
+		   i, MAC2STR(bss->bssid), wpa_ssid_txt(ssid_, ssid_len),
+		   wpa_ie_len, rsn_ie_len, bss->caps, bss->level,
+		   wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE) ?
+		   " wps" : "");
 
-		wpa_printf(MSG_DEBUG, "%d: " MACSTR " ssid='%s' "
-			   "wpa_ie_len=%u rsn_ie_len=%u caps=0x%x level=%d%s",
-			   (int) i, MAC2STR(bss->bssid),
-			   wpa_ssid_txt(ssid_, ssid_len),
-			   wpa_ie_len, rsn_ie_len, bss->caps, bss->level,
-			   wpa_scan_get_vendor_ie(bss, WPS_IE_VENDOR_TYPE) ?
-			   " wps" : "");
+	e = wpa_blacklist_get(wpa_s, bss->bssid);
+	if (e && e->count > 1) {
+		wpa_printf(MSG_DEBUG, "   skip - blacklisted");
+		return 0;
+	}
 
-		e = wpa_blacklist_get(wpa_s, bss->bssid);
-		if (e && e->count > 1) {
-			wpa_printf(MSG_DEBUG, "   skip - blacklisted");
-			continue;
+	if (ssid_len == 0) {
+		wpa_printf(MSG_DEBUG, "   skip - SSID not known");
+		return 0;
+	}
+
+	wpa = wpa_ie_len > 0 || rsn_ie_len > 0;
+
+	for (ssid = group; ssid; ssid = ssid->pnext) {
+		int check_ssid = wpa ? 1 : (ssid->ssid_len != 0);
+
+		if (ssid->disabled) {
+			wpa_printf(MSG_DEBUG, "   skip - disabled");
+			return 0;
 		}
-
-		if (ssid_len == 0) {
-			wpa_printf(MSG_DEBUG, "   skip - SSID not known");
-			continue;
-		}
-
-		if (wpa_ie_len == 0 && rsn_ie_len == 0) {
-			wpa_printf(MSG_DEBUG, "   skip - no WPA/RSN IE");
-			continue;
-		}
-
-		for (ssid = group; ssid; ssid = ssid->pnext) {
-			int check_ssid = 1;
-
-			if (ssid->disabled) {
-				wpa_printf(MSG_DEBUG, "   skip - disabled");
-				continue;
-			}
 
 #ifdef CONFIG_WPS
+		if (wpa && ssid->ssid_len == 0 &&
+		    wpas_wps_ssid_wildcard_ok(wpa_s, ssid, bss))
+			check_ssid = 0;
+
+		if (!wpa && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
+			/* Only allow wildcard SSID match if an AP
+			 * advertises active WPS operation that matches
+			 * with our mode. */
+			check_ssid = 1;
 			if (ssid->ssid_len == 0 &&
 			    wpas_wps_ssid_wildcard_ok(wpa_s, ssid, bss))
 				check_ssid = 0;
+		}
 #endif /* CONFIG_WPS */
 
-			if (check_ssid &&
-			    (ssid_len != ssid->ssid_len ||
-			     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "SSID mismatch");
-				continue;
-			}
-
-			if (ssid->bssid_set &&
-			    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) != 0)
-			{
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "BSSID mismatch");
-				continue;
-			}
-
-			if (!wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
-				continue;
-
-			if (!freq_allowed(ssid->freq_list, bss->freq)) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "frequency not allowed");
-				continue;
-			}
-
-			wpa_printf(MSG_DEBUG, "   selected WPA AP "
-				   MACSTR " ssid='%s'",
-				   MAC2STR(bss->bssid),
-				   wpa_ssid_txt(ssid_, ssid_len));
-			*selected_ssid = ssid;
-			return wpa_bss_get(wpa_s, bss->bssid, ssid_, ssid_len);
+		if (check_ssid &&
+		    (ssid_len != ssid->ssid_len ||
+		     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
+			wpa_printf(MSG_DEBUG, "   skip - SSID mismatch");
+			return 0;
 		}
+
+		if (ssid->bssid_set &&
+		    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) != 0) {
+			wpa_printf(MSG_DEBUG, "   skip - BSSID mismatch");
+			return 0;
+		}
+
+		if (wpa && !wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
+			return 0;
+
+		if (!wpa &&
+		    !(ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
+		    !(ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
+		    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) {
+			wpa_printf(MSG_DEBUG, "   skip - non-WPA network not "
+				   "allowed");
+			return 0;
+		}
+
+		if (!wpa && !wpa_supplicant_match_privacy(bss, ssid)) {
+			wpa_printf(MSG_DEBUG, "   skip - privacy mismatch");
+			return 0;
+		}
+
+		if (!wpa && (bss->caps & IEEE80211_CAP_IBSS)) {
+			wpa_printf(MSG_DEBUG, "   skip - IBSS (adhoc) "
+				   "network");
+			return 0;
+		}
+
+		if (!freq_allowed(ssid->freq_list, bss->freq)) {
+			wpa_printf(MSG_DEBUG, "   skip - frequency not "
+				   "allowed");
+			return 0;
+		}
+
+		/* Matching configuration found */
+		return ssid;
 	}
 
-	return NULL;
-}
-
-
-static struct wpa_bss *
-wpa_supplicant_select_bss_non_wpa(struct wpa_supplicant *wpa_s,
-				  struct wpa_scan_results *scan_res,
-				  struct wpa_ssid *group,
-				  struct wpa_ssid **selected_ssid)
-{
-	struct wpa_ssid *ssid;
-	struct wpa_scan_res *bss;
-	size_t i;
-	struct wpa_blacklist *e;
-	const u8 *ie;
-
-	wpa_printf(MSG_DEBUG, "Try to find non-WPA AP");
-	for (i = 0; i < scan_res->num; i++) {
-		const u8 *ssid_;
-		u8 wpa_ie_len, rsn_ie_len, ssid_len;
-		bss = scan_res->res[i];
-
-		ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
-		ssid_ = ie ? ie + 2 : (u8 *) "";
-		ssid_len = ie ? ie[1] : 0;
-
-		ie = wpa_scan_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
-		wpa_ie_len = ie ? ie[1] : 0;
-
-		ie = wpa_scan_get_ie(bss, WLAN_EID_RSN);
-		rsn_ie_len = ie ? ie[1] : 0;
-
-		wpa_printf(MSG_DEBUG, "%d: " MACSTR " ssid='%s' "
-			   "wpa_ie_len=%u rsn_ie_len=%u caps=0x%x",
-			   (int) i, MAC2STR(bss->bssid),
-			   wpa_ssid_txt(ssid_, ssid_len),
-			   wpa_ie_len, rsn_ie_len, bss->caps);
-
-		e = wpa_blacklist_get(wpa_s, bss->bssid);
-		if (e && e->count > 1) {
-			wpa_printf(MSG_DEBUG, "   skip - blacklisted");
-			continue;
-		}
-
-		if (ssid_len == 0) {
-			wpa_printf(MSG_DEBUG, "   skip - SSID not known");
-			continue;
-		}
-
-		for (ssid = group; ssid; ssid = ssid->pnext) {
-			int check_ssid = ssid->ssid_len != 0;
-
-			if (ssid->disabled) {
-				wpa_printf(MSG_DEBUG, "   skip - disabled");
-				continue;
-			}
-
-#ifdef CONFIG_WPS
-			if (ssid->key_mgmt & WPA_KEY_MGMT_WPS) {
-				/* Only allow wildcard SSID match if an AP
-				 * advertises active WPS operation that matches
-				 * with our mode. */
-				check_ssid = 1;
-				if (ssid->ssid_len == 0 &&
-				    wpas_wps_ssid_wildcard_ok(wpa_s, ssid,
-							      bss))
-					check_ssid = 0;
-			}
-#endif /* CONFIG_WPS */
-
-			if (check_ssid &&
-			    (ssid_len != ssid->ssid_len ||
-			     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "SSID mismatch");
-				continue;
-			}
-
-			if (ssid->bssid_set &&
-			    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) != 0)
-			{
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "BSSID mismatch");
-				continue;
-			}
-
-			if (!(ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
-			    !(ssid->key_mgmt & WPA_KEY_MGMT_WPS) &&
-			    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA))
-			{
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "non-WPA network not allowed");
-				continue;
-			}
-
-			if ((ssid->key_mgmt &
-			     (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
-			      WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_FT_PSK |
-			      WPA_KEY_MGMT_IEEE8021X_SHA256 |
-			      WPA_KEY_MGMT_PSK_SHA256)) &&
-			    (wpa_ie_len != 0 || rsn_ie_len != 0)) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "WPA network");
-				continue;
-			}
-
-			if (!wpa_supplicant_match_privacy(bss, ssid)) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "privacy mismatch");
-				continue;
-			}
-
-			if (bss->caps & IEEE80211_CAP_IBSS) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "IBSS (adhoc) network");
-				continue;
-			}
-
-			if (!freq_allowed(ssid->freq_list, bss->freq)) {
-				wpa_printf(MSG_DEBUG, "   skip - "
-					   "frequency not allowed");
-				continue;
-			}
-
-			wpa_printf(MSG_DEBUG, "   selected non-WPA AP "
-				   MACSTR " ssid='%s'",
-				   MAC2STR(bss->bssid),
-				   wpa_ssid_txt(ssid_, ssid_len));
-			*selected_ssid = ssid;
-			return wpa_bss_get(wpa_s, bss->bssid, ssid_, ssid_len);
-		}
-	}
-
-	return NULL;
+	/* No matching configuration found */
+	return 0;
 }
 
 
@@ -654,21 +533,30 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s,
 			  struct wpa_ssid *group,
 			  struct wpa_ssid **selected_ssid)
 {
-	struct wpa_bss *selected;
+	size_t i;
 
 	wpa_printf(MSG_DEBUG, "Selecting BSS from priority group %d",
 		   group->priority);
 
-	/* First, try to find WPA-enabled AP */
-	selected = wpa_supplicant_select_bss_wpa(wpa_s, scan_res, group,
-						 selected_ssid);
-	if (selected)
-		return selected;
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *bss = scan_res->res[i];
+		const u8 *ie, *ssid;
+		u8 ssid_len;
 
-	/* If no WPA-enabled AP found, try to find non-WPA AP, if configuration
-	 * allows this. */
-	return wpa_supplicant_select_bss_non_wpa(wpa_s, scan_res, group,
-						 selected_ssid);
+		*selected_ssid = wpa_scan_res_match(wpa_s, i, bss, group);
+		if (!*selected_ssid)
+			continue;
+
+		ie = wpa_scan_get_ie(bss, WLAN_EID_SSID);
+		ssid = ie ? ie + 2 : (u8 *) "";
+		ssid_len = ie ? ie[1] : 0;
+
+		wpa_printf(MSG_DEBUG, "   selected BSS " MACSTR " ssid='%s'",
+			   MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
+		return wpa_bss_get(wpa_s, bss->bssid, ssid, ssid_len);
+	}
+
+	return NULL;
 }
 
 

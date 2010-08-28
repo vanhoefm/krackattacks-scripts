@@ -24,6 +24,9 @@
 #if defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 #include <net/if_dl.h>
 #endif /* defined(__FreeBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__) */
+#ifdef __sun__
+#include <sys/sockio.h>
+#endif /* __sun__ */
 
 #include "common.h"
 #include "eloop.h"
@@ -461,6 +464,10 @@ static int wpa_driver_wired_multi(const char *ifname, const u8 *addr, int add)
 {
 	struct ifreq ifr;
 	int s;
+
+#ifdef __sun__
+	return -1;
+#endif /* __sun__ */
 
 	s = socket(PF_INET, SOCK_DGRAM, 0);
 	if (s < 0) {

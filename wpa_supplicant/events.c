@@ -457,7 +457,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 
 		if (ssid->disabled) {
 			wpa_printf(MSG_DEBUG, "   skip - disabled");
-			return 0;
+			continue;
 		}
 
 #ifdef CONFIG_WPS
@@ -480,17 +480,17 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		    (ssid_len != ssid->ssid_len ||
 		     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {
 			wpa_printf(MSG_DEBUG, "   skip - SSID mismatch");
-			return 0;
+			continue;
 		}
 
 		if (ssid->bssid_set &&
 		    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) != 0) {
 			wpa_printf(MSG_DEBUG, "   skip - BSSID mismatch");
-			return 0;
+			continue;
 		}
 
 		if (wpa && !wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
-			return 0;
+			continue;
 
 		if (!wpa &&
 		    !(ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
@@ -498,24 +498,24 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		    !(ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA)) {
 			wpa_printf(MSG_DEBUG, "   skip - non-WPA network not "
 				   "allowed");
-			return 0;
+			continue;
 		}
 
 		if (!wpa && !wpa_supplicant_match_privacy(bss, ssid)) {
 			wpa_printf(MSG_DEBUG, "   skip - privacy mismatch");
-			return 0;
+			continue;
 		}
 
 		if (!wpa && (bss->caps & IEEE80211_CAP_IBSS)) {
 			wpa_printf(MSG_DEBUG, "   skip - IBSS (adhoc) "
 				   "network");
-			return 0;
+			continue;
 		}
 
 		if (!freq_allowed(ssid->freq_list, bss->freq)) {
 			wpa_printf(MSG_DEBUG, "   skip - frequency not "
 				   "allowed");
-			return 0;
+			continue;
 		}
 
 		/* Matching configuration found */

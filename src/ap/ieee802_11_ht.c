@@ -256,7 +256,15 @@ void hostapd_get_ht_capab(struct hostapd_data *hapd,
 	cap &= hapd->iconf->ht_capab;
 	cap |= (hapd->iconf->ht_capab & HT_CAP_INFO_SMPS_DISABLED);
 
-	/* FIXME: Rx STBC needs to be handled specially */
-	cap |= (hapd->iconf->ht_capab & HT_CAP_INFO_RX_STBC_MASK);
+	/*
+	 * STBC needs to be handled specially
+	 * if we don't support RX STBC, mask out TX STBC in the STA's HT caps
+	 * if we don't support TX STBC, mask out RX STBC in the STA's HT caps
+	 */
+	if (!(hapd->iconf->ht_capab & HT_CAP_INFO_RX_STBC_MASK))
+		cap &= ~HT_CAP_INFO_TX_STBC;
+	if (!(hapd->iconf->ht_capab & HT_CAP_INFO_TX_STBC))
+		cap &= ~HT_CAP_INFO_RX_STBC_MASK;
+
 	neg_ht_cap->ht_capabilities_info = host_to_le16(cap);
 }

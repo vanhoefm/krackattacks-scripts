@@ -258,7 +258,7 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 #endif /* CONFIG_WPS */
 
 	wpa_config_read_reg_dword(hk, TEXT("bss_max_count"),
-				  &config->bss_max_count);
+				  (int *) &config->bss_max_count);
 	wpa_config_read_reg_dword(hk, TEXT("filter_ssids"),
 				  &config->filter_ssids);
 

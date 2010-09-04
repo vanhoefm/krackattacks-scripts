@@ -37,6 +37,7 @@ section
 	File wpasvc.exe
 
 	File /opt/Qt-Win/files/mingwm10.dll
+	File /opt/Qt-Win/files/libgcc_s_dw2-1.dll
 	File /opt/Qt-Win/files/QtCore4.dll
 	File /opt/Qt-Win/files/QtGui4.dll
 
@@ -96,6 +97,7 @@ section "uninstall"
 	delete "$INSTDIR\wpasvc.exe"
 
 	delete "$INSTDIR\mingwm10.dll"
+	delete "$INSTDIR\libgcc_s_dw2-1.dll"
 	delete "$INSTDIR\QtCore4.dll"
 	delete "$INSTDIR\QtGui4.dll"
 

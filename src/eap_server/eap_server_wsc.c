@@ -128,9 +128,10 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			wpa_printf(MSG_DEBUG, "EAP-WSC: No AP PIN (password) "
 				   "configured for Enrollee functionality - "
 				   "allow for probing capabilities (M1)");
+		} else {
+			cfg.pin = sm->user->password;
+			cfg.pin_len = sm->user->password_len;
 		}
-		cfg.pin = sm->user->password;
-		cfg.pin_len = sm->user->password_len;
 	}
 	cfg.assoc_wps_ie = sm->assoc_wps_ie;
 	cfg.peer_addr = sm->peer_addr;

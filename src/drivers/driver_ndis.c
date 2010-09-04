@@ -1066,6 +1066,7 @@ wpa_driver_ndis_associate(void *priv,
 {
 	struct wpa_driver_ndis_data *drv = priv;
 	u32 auth_mode, encr, priv_mode, mode;
+	u8 bcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 	drv->mode = params->mode;
 
@@ -1091,7 +1092,6 @@ wpa_driver_ndis_associate(void *priv,
 	if (params->key_mgmt_suite == KEY_MGMT_NONE ||
 	    params->key_mgmt_suite == KEY_MGMT_802_1X_NO_WPA) {
 		/* Re-set WEP keys if static WEP configuration is used. */
-		u8 bcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 		int i;
 		for (i = 0; i < 4; i++) {
 			if (!params->wep_key[i])
@@ -1125,6 +1125,22 @@ wpa_driver_ndis_associate(void *priv,
 	} else if (params->key_mgmt_suite == KEY_MGMT_WPS) {
 		auth_mode = Ndis802_11AuthModeOpen;
 		priv_mode = Ndis802_11PrivFilterAcceptAll;
+		if (params->wps == WPS_MODE_PRIVACY) {
+			u8 dummy_key[5] = { 0x11, 0x22, 0x33, 0x44, 0x55 };
+			/*
+			 * Some NDIS drivers refuse to associate in open mode
+			 * configuration due to Privacy field mismatch, so use
+			 * a workaround to make the configuration look like
+			 * matching one for WPS provisioning.
+			 */
+			wpa_printf(MSG_DEBUG, "NDIS: Set dummy WEP key as a "
+				   "workaround to allow driver to associate "
+				   "for WPS");
+			wpa_driver_ndis_set_key(drv->ifname, drv, WPA_ALG_WEP,
+						bcast, 0, 1,
+						NULL, 0, dummy_key,
+						sizeof(dummy_key));
+		}
 #endif /* CONFIG_WPS */
 	} else {
 		priv_mode = Ndis802_11PrivFilter8021xWEP;
@@ -1148,6 +1164,12 @@ wpa_driver_ndis_associate(void *priv,
 		encr = Ndis802_11Encryption1Enabled;
 		break;
 	case CIPHER_NONE:
+#ifdef CONFIG_WPS
+		if (params->wps == WPS_MODE_PRIVACY) {
+			encr = Ndis802_11Encryption1Enabled;
+			break;
+		}
+#endif /* CONFIG_WPS */
 		if (params->group_suite == CIPHER_CCMP)
 			encr = Ndis802_11Encryption3Enabled;
 		else if (params->group_suite == CIPHER_TKIP)
@@ -1156,7 +1178,14 @@ wpa_driver_ndis_associate(void *priv,
 			encr = Ndis802_11EncryptionDisabled;
 		break;
 	default:
+#ifdef CONFIG_WPS
+		if (params->wps == WPS_MODE_PRIVACY) {
+			encr = Ndis802_11Encryption1Enabled;
+			break;
+		}
+#endif /* CONFIG_WPS */
 		encr = Ndis802_11EncryptionDisabled;
+		break;
 	};
 
 	if (ndis_set_oid(drv, OID_802_11_PRIVACY_FILTER,

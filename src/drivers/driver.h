@@ -281,6 +281,13 @@ struct wpa_driver_auth_params {
 	int local_state_change;
 };
 
+enum wps_mode {
+	WPS_MODE_NONE /* no WPS provisioning being used */,
+	WPS_MODE_OPEN /* WPS provisioning with AP that is in open mode */,
+	WPS_MODE_PRIVACY /* WPS provisioning with AP that is using protection
+			  */
+};
+
 /**
  * struct wpa_driver_associate_params - Association parameters
  * Data for struct wpa_driver_ops::associate().
@@ -460,6 +467,15 @@ struct wpa_driver_associate_params {
 	 * association.
 	 */
 	const u8 *prev_bssid;
+
+	/**
+	 * wps - WPS mode
+	 *
+	 * If the driver needs to do special configuration for WPS association,
+	 * this variable provides more information on what type of association
+	 * is being requested. Most drivers should not need ot use this.
+	 */
+	enum wps_mode wps;
 };
 
 /**

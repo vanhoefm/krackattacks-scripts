@@ -1024,6 +1024,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+	os_memset(&params, 0, sizeof(params));
 	wpa_s->reassociate = 0;
 	if (bss) {
 #ifdef CONFIG_IEEE80211R
@@ -1131,6 +1132,10 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			wpa_ie_len = 0;
 		wpabuf_free(wps_ie);
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
+		if (!bss || (bss->caps & IEEE80211_CAP_PRIVACY))
+			params.wps = WPS_MODE_PRIVACY;
+		else
+			params.wps = WPS_MODE_OPEN;
 #endif /* CONFIG_WPS */
 	} else {
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
@@ -1175,7 +1180,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
-	os_memset(&params, 0, sizeof(params));
 	if (bss) {
 		params.bssid = bss->bssid;
 		params.ssid = bss->ssid;

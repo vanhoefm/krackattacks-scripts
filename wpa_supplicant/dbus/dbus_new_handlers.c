@@ -2726,8 +2726,11 @@ DBusMessage * wpas_dbus_getter_bss_wpa(DBusMessage *message,
 
 	os_memset(&wpa_data, 0, sizeof(wpa_data));
 	ie = wpa_bss_get_vendor_ie(res, WPA_IE_VENDOR_TYPE);
-	if (ie)
-		wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data);
+	if (ie) {
+		if (wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data) < 0)
+			return wpas_dbus_error_unknown_error(message,
+							     "invalid WPA IE");
+	}
 
 	return wpas_dbus_get_bss_security_prop(message, &wpa_data);
 }
@@ -2756,8 +2759,11 @@ DBusMessage * wpas_dbus_getter_bss_rsn(DBusMessage *message,
 
 	os_memset(&wpa_data, 0, sizeof(wpa_data));
 	ie = wpa_bss_get_ie(res, WLAN_EID_RSN);
-	if (ie)
-		wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data);
+	if (ie) {
+		if (wpa_parse_wpa_ie(ie, 2 + ie[1], &wpa_data) < 0)
+			return wpas_dbus_error_unknown_error(message,
+							     "invalid RSN IE");
+	}
 
 	return wpas_dbus_get_bss_security_prop(message, &wpa_data);
 }

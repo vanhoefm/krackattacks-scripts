@@ -13,8 +13,8 @@ Page InstFiles
 section -Prerequisites
 	SetOutPath $INSTDIR\Prerequisites
 	MessageBox MB_YESNO "Install WinPcap?" /SD IDYES IDNO endWinPcap
-		File "/opt/Qt-Win/files/WinPcap_4_0_2.exe"
-		ExecWait "$INSTDIR\Prerequisites\WinPcap_4_0_2.exe"
+		File "/opt/Qt-Win/files/WinPcap_4_1_2.exe"
+		ExecWait "$INSTDIR\Prerequisites\WinPcap_4_1_2.exe"
 		Goto endWinPcap
 	endWinPcap:
 sectionEnd
@@ -101,7 +101,7 @@ section "uninstall"
 	delete "$INSTDIR\QtCore4.dll"
 	delete "$INSTDIR\QtGui4.dll"
 
-	delete "$INSTDIR\Prerequisites\WinPcap_4_0_2.exe"
+	delete "$INSTDIR\Prerequisites\WinPcap_4_1_2.exe"
 	rmdir "$INSTDIR\Prerequisites"
 
 	rmdir "$INSTDIR"

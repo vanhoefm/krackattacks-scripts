@@ -57,7 +57,8 @@ static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
 		}
 		break;
 	}
-	if (hapd->iface->num_sta_no_short_preamble > 0)
+	if (hapd->iface->num_sta_no_short_preamble > 0 ||
+	    hapd->iconf->preamble == LONG_PREAMBLE)
 		erp |= ERP_INFO_BARKER_PREAMBLE_MODE;
 
 	return erp;

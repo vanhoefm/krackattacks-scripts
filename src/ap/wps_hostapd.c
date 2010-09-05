@@ -975,7 +975,9 @@ void hostapd_wps_ap_pin_disable(struct hostapd_data *hapd)
 	wpa_printf(MSG_DEBUG, "WPS: Disabling AP PIN");
 	os_free(hapd->conf->ap_pin);
 	hapd->conf->ap_pin = NULL;
+#ifdef CONFIG_WPS_UPNP
 	upnp_wps_set_ap_pin(hapd->wps_upnp, NULL);
+#endif /* CONFIG_WPS_UPNP */
 	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
 }
 
@@ -989,7 +991,9 @@ const char * hostapd_wps_ap_pin_random(struct hostapd_data *hapd, int timeout)
 	os_snprintf(pin_txt, sizeof(pin_txt), "%u", pin);
 	os_free(hapd->conf->ap_pin);
 	hapd->conf->ap_pin = os_strdup(pin_txt);
+#ifdef CONFIG_WPS_UPNP
 	upnp_wps_set_ap_pin(hapd->wps_upnp, pin_txt);
+#endif /* CONFIG_WPS_UPNP */
 	hostapd_wps_ap_pin_enable(hapd, timeout);
 	return hapd->conf->ap_pin;
 }
@@ -1008,7 +1012,9 @@ int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 	hapd->conf->ap_pin = os_strdup(pin);
 	if (hapd->conf->ap_pin == NULL)
 		return -1;
+#ifdef CONFIG_WPS_UPNP
 	upnp_wps_set_ap_pin(hapd->wps_upnp, hapd->conf->ap_pin);
+#endif /* CONFIG_WPS_UPNP */
 	hostapd_wps_ap_pin_enable(hapd, timeout);
 	return 0;
 }

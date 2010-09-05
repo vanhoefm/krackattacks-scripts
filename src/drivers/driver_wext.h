@@ -47,6 +47,8 @@ struct wpa_driver_wext_data {
 	int scan_complete_events;
 
 	int cfg80211; /* whether driver is using cfg80211 */
+
+	u8 max_level;
 };
 
 int wpa_driver_wext_get_bssid(void *priv, u8 *bssid);

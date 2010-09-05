@@ -1117,7 +1117,8 @@ static void wext_get_scan_freq(struct iw_event *iwe,
 }
 
 
-static void wext_get_scan_qual(struct iw_event *iwe,
+static void wext_get_scan_qual(struct wpa_driver_wext_data *drv,
+			       struct iw_event *iwe,
 			       struct wext_scan_data *res)
 {
 	res->res.qual = iwe->u.qual.qual;
@@ -1131,6 +1132,14 @@ static void wext_get_scan_qual(struct iw_event *iwe,
 		res->res.flags |= WPA_SCAN_NOISE_INVALID;
 	if (iwe->u.qual.updated & IW_QUAL_DBM)
 		res->res.flags |= WPA_SCAN_LEVEL_DBM;
+	if ((iwe->u.qual.updated & IW_QUAL_DBM) ||
+	    ((iwe->u.qual.level != 0) &&
+	     (iwe->u.qual.level > drv->max_level))) {
+		if (iwe->u.qual.level >= 64)
+			res->res.level -= 0x100;
+		if (iwe->u.qual.noise >= 64)
+			res->res.noise -= 0x100;
+	}
 }
 
 
@@ -1406,7 +1415,7 @@ struct wpa_scan_results * wpa_driver_wext_get_scan_results(void *priv)
 			wext_get_scan_freq(iwe, &data);
 			break;
 		case IWEVQUAL:
-			wext_get_scan_qual(iwe, &data);
+			wext_get_scan_qual(drv, iwe, &data);
 			break;
 		case SIOCGIWENCODE:
 			wext_get_scan_encode(iwe, &data);
@@ -1503,6 +1512,8 @@ static int wpa_driver_wext_get_range(void *priv)
 		wpa_printf(MSG_DEBUG, "SIOCGIWRANGE: too old (short) data - "
 			   "assuming WPA is not supported");
 	}
+
+	drv->max_level = range->max_qual.level;
 
 	os_free(range);
 	return 0;

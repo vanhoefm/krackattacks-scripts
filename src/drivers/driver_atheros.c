@@ -1277,7 +1277,7 @@ madwifi_commit(void *priv)
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
 	.hapd_init		= madwifi_init,
-	.deinit			= madwifi_deinit,
+	.hapd_deinit		= madwifi_deinit,
 	.set_ieee8021x		= madwifi_set_ieee8021x,
 	.set_privacy		= madwifi_set_privacy,
 	.set_key		= madwifi_set_key,

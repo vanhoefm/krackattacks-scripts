@@ -1188,6 +1188,8 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	return drv;
 bad:
+	if (drv->sock_recv != NULL && drv->sock_recv != drv->sock_xmit)
+		l2_packet_deinit(drv->sock_recv);
 	if (drv->sock_xmit != NULL)
 		l2_packet_deinit(drv->sock_xmit);
 	if (drv->ioctl_sock >= 0)

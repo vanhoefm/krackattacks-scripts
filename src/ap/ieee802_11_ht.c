@@ -30,7 +30,7 @@ u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid)
 	struct ieee80211_ht_capabilities *cap;
 	u8 *pos = eid;
 
-	if (!hapd->iconf->ieee80211n)
+	if (!hapd->iconf->ieee80211n || !hapd->iface->current_mode)
 		return eid;
 
 	*pos++ = WLAN_EID_HT_CAP;

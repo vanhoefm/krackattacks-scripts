@@ -580,6 +580,8 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 	}
 
 fail:
+	if (dev)
+		dev->status = status;
 	resp = p2p_build_go_neg_resp(p2p, dev, msg.dialog_token, status,
 				     !tie_breaker);
 	p2p_parse_free(&msg);

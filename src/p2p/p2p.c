@@ -419,10 +419,12 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
  * Returns: 0 on success, -1 on failure
  *
  * If the scan result is for a GO, the clients in the group will also be added
- * to the peer table.
+ * to the peer table. This function can also be used with some other frames
+ * like Provision Discovery Request that contains P2P Capability and P2P Device
+ * Info attributes.
  */
-static int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq,
-			  int level, const u8 *ies, size_t ies_len)
+int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
+		   const u8 *ies, size_t ies_len)
 {
 	struct p2p_device *dev;
 	struct p2p_message msg;

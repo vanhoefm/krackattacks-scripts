@@ -615,6 +615,13 @@ static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "WPS_CANCEL");
+}
+
+
 #ifdef CONFIG_WPS_OOB
 static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
@@ -2244,6 +2251,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
 	  "hardcoded)" },
+	{ "wps_cancel", wpa_cli_cmd_wps_cancel, cli_cmd_flag_none,
+	  "Cancels the pending WPS operation" },
 #ifdef CONFIG_WPS_OOB
 	{ "wps_oob", wpa_cli_cmd_wps_oob,
 	  cli_cmd_flag_sensitive,

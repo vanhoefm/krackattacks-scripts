@@ -32,6 +32,7 @@
 #include "blacklist.h"
 #include "bss.h"
 #include "scan.h"
+#include "ap.h"
 #include "p2p/p2p.h"
 #include "p2p_supplicant.h"
 #include "wps_supplicant.h"
@@ -754,6 +755,32 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			       wpa_s, NULL);
 	wpas_wps_reassoc(wpa_s, ssid);
 	return rpin;
+}
+
+
+/* Cancel the wps pbc/pin requests */
+int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_AP
+	if (wpa_s->ap_iface) {
+		wpa_printf(MSG_DEBUG, "WPS: Cancelling in AP mode");
+		return wpa_supplicant_ap_wps_cancel(wpa_s);
+	}
+#endif /* CONFIG_AP */
+
+	if (wpa_s->wpa_state == WPA_SCANNING) {
+		wpa_printf(MSG_DEBUG, "WPS: Cancel operation - cancel scan");
+		wpa_supplicant_cancel_scan(wpa_s);
+		wpas_clear_wps(wpa_s);
+	} else if (wpa_s->wpa_state >= WPA_ASSOCIATED) {
+		wpa_printf(MSG_DEBUG, "WPS: Cancel operation - "
+			   "deauthenticate");
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+		wpas_clear_wps(wpa_s);
+	}
+
+	return 0;
 }
 
 

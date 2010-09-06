@@ -662,6 +662,22 @@ int wps_registrar_add_pin(struct wps_registrar *reg, const u8 *addr,
 }
 
 
+static void wps_registrar_remove_pin(struct wps_registrar *reg,
+				     struct wps_uuid_pin *pin)
+{
+	u8 *addr;
+	u8 bcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+	if (is_zero_ether_addr(pin->enrollee_addr))
+		addr = bcast;
+	else
+		addr = pin->enrollee_addr;
+	wps_registrar_remove_authorized_mac(reg, addr);
+	wps_remove_pin(pin);
+	wps_registrar_selected_registrar_changed(reg);
+}
+
+
 static void wps_registrar_expire_pins(struct wps_registrar *reg)
 {
 	struct wps_uuid_pin *pin, *prev;
@@ -672,20 +688,34 @@ static void wps_registrar_expire_pins(struct wps_registrar *reg)
 	{
 		if ((pin->flags & PIN_EXPIRES) &&
 		    os_time_before(&pin->expiration, &now)) {
-			u8 *addr;
-			u8 bcast[ETH_ALEN] =
-				{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 			wpa_hexdump(MSG_DEBUG, "WPS: Expired PIN for UUID",
 				    pin->uuid, WPS_UUID_LEN);
-			if (is_zero_ether_addr(pin->enrollee_addr))
-				addr = bcast;
-			else
-				addr = pin->enrollee_addr;
-			wps_registrar_remove_authorized_mac(reg, addr);
-			wps_remove_pin(pin);
-			wps_registrar_selected_registrar_changed(reg);
+			wps_registrar_remove_pin(reg, pin);
 		}
 	}
+}
+
+
+/**
+ * wps_registrar_invalidate_wildcard_pin - Invalidate a wildcard PIN
+ * @reg: Registrar data from wps_registrar_init()
+ * Returns: 0 on success, -1 if not wildcard PIN is enabled
+ */
+static int wps_registrar_invalidate_wildcard_pin(struct wps_registrar *reg)
+{
+	struct wps_uuid_pin *pin, *prev;
+
+	dl_list_for_each_safe(pin, prev, &reg->pins, struct wps_uuid_pin, list)
+	{
+		if (pin->wildcard_uuid) {
+			wpa_hexdump(MSG_DEBUG, "WPS: Invalidated PIN for UUID",
+				    pin->uuid, WPS_UUID_LEN);
+			wps_registrar_remove_pin(reg, pin);
+			return 0;
+		}
+	}
+
+	return -1;
 }
 
 
@@ -702,18 +732,9 @@ int wps_registrar_invalidate_pin(struct wps_registrar *reg, const u8 *uuid)
 	dl_list_for_each_safe(pin, prev, &reg->pins, struct wps_uuid_pin, list)
 	{
 		if (os_memcmp(pin->uuid, uuid, WPS_UUID_LEN) == 0) {
-			u8 *addr;
-			u8 bcast[ETH_ALEN] =
-				{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 			wpa_hexdump(MSG_DEBUG, "WPS: Invalidated PIN for UUID",
 				    pin->uuid, WPS_UUID_LEN);
-			if (is_zero_ether_addr(pin->enrollee_addr))
-				addr = bcast;
-			else
-				addr = pin->enrollee_addr;
-			wps_registrar_remove_authorized_mac(reg, addr);
-			wps_remove_pin(pin);
-			wps_registrar_selected_registrar_changed(reg);
+			wps_registrar_remove_pin(reg, pin);
 			return 0;
 		}
 	}
@@ -862,6 +883,23 @@ static void wps_registrar_pin_completed(struct wps_registrar *reg)
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	reg->selected_registrar = 0;
 	wps_registrar_selected_registrar_changed(reg);
+}
+
+
+int wps_registrar_wps_cancel(struct wps_registrar *reg)
+{
+	if (reg->pbc) {
+		wpa_printf(MSG_DEBUG, "WPS: PBC is set - cancelling it");
+		wps_registrar_pbc_timeout(reg, NULL);
+		return 1;
+	} else if (reg->selected_registrar) {
+		/* PIN Method */
+		wpa_printf(MSG_DEBUG, "WPS: PIN is set - cancelling it");
+		wps_registrar_pin_completed(reg);
+		wps_registrar_invalidate_wildcard_pin(reg);
+		return 1;
+	}
+	return 0;
 }
 
 

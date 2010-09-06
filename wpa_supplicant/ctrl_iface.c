@@ -2687,6 +2687,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_wps_pin(wpa_s, buf + 8,
 							      reply,
 							      reply_size);
+	} else if (os_strcmp(buf, "WPS_CANCEL") == 0) {
+		if (wpas_wps_cancel(wpa_s))
+			reply_len = -1;
 #ifdef CONFIG_WPS_OOB
 	} else if (os_strncmp(buf, "WPS_OOB ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_oob(wpa_s, buf + 8))

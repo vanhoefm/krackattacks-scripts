@@ -24,6 +24,7 @@ void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,
 int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			      const char *pin, char *buf, size_t buflen);
+int wpa_supplicant_ap_wps_cancel(struct wpa_supplicant *wpa_s);
 int ap_ctrl_iface_sta_first(struct wpa_supplicant *wpa_s,
 			    char *buf, size_t buflen);
 int ap_ctrl_iface_sta(struct wpa_supplicant *wpa_s, const char *txtaddr,

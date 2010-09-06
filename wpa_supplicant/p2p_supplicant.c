@@ -445,15 +445,17 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		char psk[65];
 		wpa_snprintf_hex(psk, sizeof(psk), ssid->psk, 32);
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			"%s GO ssid=\"%s\" psk=%s go_dev_addr=" MACSTR "%s",
-			wpa_s->ifname, ssid_txt, psk, MAC2STR(go_dev_addr),
+			"%s GO ssid=\"%s\" freq=%d psk=%s go_dev_addr=" MACSTR
+			"%s",
+			wpa_s->ifname, ssid_txt, ssid->frequency, psk,
+			MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");
 		wpas_p2p_cross_connect_setup(wpa_s);
 	} else {
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			"%s GO ssid=\"%s\" passphrase=\"%s\" go_dev_addr="
-			MACSTR "%s",
-			wpa_s->ifname, ssid_txt,
+			"%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
+			"go_dev_addr=" MACSTR "%s",
+			wpa_s->ifname, ssid_txt, ssid->frequency,
 			ssid && ssid->passphrase ? ssid->passphrase : "",
 			MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");
@@ -725,10 +727,11 @@ static void p2p_go_configured(void *ctx, void *data)
 	if (ssid && ssid->mode == WPAS_MODE_P2P_GO) {
 		wpa_printf(MSG_DEBUG, "P2P: Group setup without provisioning");
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			"%s GO ssid=\"%s\" passphrase=\"%s\" go_dev_addr="
-			MACSTR "%s",
+			"%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
+			"go_dev_addr=" MACSTR "%s",
 			wpa_s->ifname,
 			wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
+			ssid->frequency,
 			params->passphrase ? params->passphrase : "",
 			MAC2STR(wpa_s->parent->own_addr),
 			params->persistent_group ? " [PERSISTENT]" : "");
@@ -3260,15 +3263,16 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 		char psk[65];
 		wpa_snprintf_hex(psk, sizeof(psk), ssid->psk, 32);
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			"%s client ssid=\"%s\" psk=%s go_dev_addr=" MACSTR
-			"%s",
-			wpa_s->ifname, ssid_txt, psk, MAC2STR(go_dev_addr),
+			"%s client ssid=\"%s\" freq=%d psk=%s go_dev_addr="
+			MACSTR "%s",
+			wpa_s->ifname, ssid_txt, ssid->frequency, psk,
+			MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");
 	} else {
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
-			"%s client ssid=\"%s\" passphrase=\"%s\" go_dev_addr="
-			MACSTR "%s",
-			wpa_s->ifname, ssid_txt,
+			"%s client ssid=\"%s\" freq=%d passphrase=\"%s\" "
+			"go_dev_addr=" MACSTR "%s",
+			wpa_s->ifname, ssid_txt, ssid->frequency,
 			ssid->passphrase ? ssid->passphrase : "",
 			MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");

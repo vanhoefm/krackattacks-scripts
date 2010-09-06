@@ -587,8 +587,8 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 static void wpas_wps_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
-	wpa_printf(MSG_INFO, WPS_EVENT_TIMEOUT "Requested operation timed "
-		   "out");
+	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_TIMEOUT "Requested operation timed "
+		"out");
 	wpas_clear_wps(wpa_s);
 }
 

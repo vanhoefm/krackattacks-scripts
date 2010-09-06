@@ -1121,6 +1121,8 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 		}
 	}
 
+	res.peer_config_timeout = go ? peer->client_timeout : peer->go_timeout;
+
 	p2p_clear_timeout(p2p);
 	peer->go_neg_req_sent = 0;
 	peer->wps_method = WPS_NOT_READY;

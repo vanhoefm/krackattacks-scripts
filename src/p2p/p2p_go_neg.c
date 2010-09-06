@@ -567,6 +567,11 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer operating "
 			"channel preference: %d MHz", dev->oper_freq);
 
+		if (msg.config_timeout) {
+			dev->go_timeout = msg.config_timeout[0];
+			dev->client_timeout = msg.config_timeout[1];
+		}
+
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: GO Negotiation with " MACSTR, MAC2STR(sa));
 		if (p2p->state != P2P_IDLE)
@@ -810,6 +815,9 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 		status = P2P_SC_FAIL_INVALID_PARAMS;
 		goto fail;
 #endif /* CONFIG_P2P_STRICT */
+	} else {
+		dev->go_timeout = msg.config_timeout[0];
+		dev->client_timeout = msg.config_timeout[1];
 	}
 
 	if (!msg.operating_channel && !go) {

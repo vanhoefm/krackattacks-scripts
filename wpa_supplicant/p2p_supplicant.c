@@ -985,9 +985,9 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s, NULL);
-	/* TODO: add peer Config Timeout */
-	eloop_register_timeout(15, 0, wpas_p2p_group_formation_timeout, wpa_s,
-			       NULL);
+	eloop_register_timeout(15 + res->peer_config_timeout / 100,
+			       (res->peer_config_timeout % 100) * 10000,
+			       wpas_p2p_group_formation_timeout, wpa_s, NULL);
 }
 
 

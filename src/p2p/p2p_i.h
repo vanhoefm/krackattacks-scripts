@@ -101,6 +101,9 @@ struct p2p_device {
 
 	u16 ext_listen_period;
 	u16 ext_listen_interval;
+
+	u8 go_timeout;
+	u8 client_timeout;
 };
 
 struct p2p_sd_query {

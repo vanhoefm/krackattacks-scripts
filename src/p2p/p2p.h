@@ -122,6 +122,11 @@ struct p2p_go_neg_results {
 	 * persistent_group - Whether the group should be made persistent
 	 */
 	int persistent_group;
+
+	/**
+	 * peer_config_timeout - Peer configuration timeout (in 10 msec units)
+	 */
+	unsigned int peer_config_timeout;
 };
 
 struct p2p_data;

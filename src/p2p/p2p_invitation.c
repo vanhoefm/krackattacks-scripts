@@ -122,12 +122,27 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 		return;
 
 	dev = p2p_get_device(p2p, sa);
-	if (dev == NULL) {
+	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Reject Invitation Request from unknown peer "
+			"P2P: Invitation Request from unknown peer "
 			MACSTR, MAC2STR(sa));
-		status = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
-		goto fail;
+
+		if (p2p_add_device(p2p, sa, rx_freq, 0, data + 1, len - 1)) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Invitation Request add device failed "
+				MACSTR, MAC2STR(sa));
+			status = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
+			goto fail;
+		}
+
+		dev = p2p_get_device(p2p, sa);
+		if (dev == NULL) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Reject Invitation Request from unknown "
+				"peer " MACSTR, MAC2STR(sa));
+			status = P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
+			goto fail;
+		}
 	}
 
 	if (!msg.group_id || !msg.channel_list) {

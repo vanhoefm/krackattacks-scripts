@@ -2552,6 +2552,10 @@ static void wpa_cli_action_process(const char *msg)
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
 	} else if (str_match(pos, P2P_EVENT_CROSS_CONNECT_DISABLE)) {
 		wpa_cli_exec(action_file, ctrl_ifname, pos);
+	} else if (str_match(pos, WPS_EVENT_SUCCESS)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
+	} else if (str_match(pos, WPS_EVENT_FAIL)) {
+		wpa_cli_exec(action_file, ctrl_ifname, pos);
 	} else if (str_match(pos, WPA_EVENT_TERMINATING)) {
 		printf("wpa_supplicant is terminating - stop monitoring\n");
 		wpa_cli_quit = 1;

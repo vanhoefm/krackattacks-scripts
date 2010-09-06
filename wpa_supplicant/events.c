@@ -1225,8 +1225,19 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s, MSG_INFO, "WPA: 4-Way Handshake failed - "
 			"pre-shared key may be incorrect");
 	}
-	if (wpa_s->wpa_state >= WPA_ASSOCIATED)
-		wpa_supplicant_req_scan(wpa_s, 0, 100000);
+	if (!wpa_s->auto_reconnect_disabled ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
+		wpa_printf(MSG_DEBUG, "WPA: Auto connect enabled: try to "
+			   "reconnect (wps=%d)",
+			   wpa_s->key_mgmt == WPA_KEY_MGMT_WPS);
+		if (wpa_s->wpa_state >= WPA_ASSOCIATED)
+			wpa_supplicant_req_scan(wpa_s, 0, 100000);
+	} else {
+		wpa_printf(MSG_DEBUG, "WPA: Auto connect disabled: do not try "
+			   "to re-connect");
+		wpa_s->reassociate = 0;
+		wpa_s->disconnected = 1;
+	}
 	bssid = wpa_s->bssid;
 	if (is_zero_ether_addr(bssid))
 		bssid = wpa_s->pending_bssid;

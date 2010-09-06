@@ -2088,6 +2088,26 @@ static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
 #endif /* CONFIG_P2P */
 
 
+static int wpa_cli_cmd_sta_autoconnect(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid STA_AUTOCONNECT command: needs one argument "
+		       "(0/1 = disable/enable automatic reconnection)\n");
+		return -1;
+	}
+	res = os_snprintf(cmd, sizeof(cmd), "STA_AUTOCONNECT %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long STA_AUTOCONNECT command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -2364,6 +2384,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_ext_listen", wpa_cli_cmd_p2p_ext_listen, cli_cmd_flag_none,
 	  "[<period> <interval>] = set extended listen timing" },
 #endif /* CONFIG_P2P */
+	{ "sta_autoconnect", wpa_cli_cmd_sta_autoconnect, cli_cmd_flag_none,
+	  "<0/1> = disable/enable automatic reconnection" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

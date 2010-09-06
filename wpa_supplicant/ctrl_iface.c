@@ -2590,6 +2590,14 @@ static int p2p_ctrl_ext_listen(struct wpa_supplicant *wpa_s, char *cmd)
 #endif /* CONFIG_P2P */
 
 
+static int wpa_supplicant_ctrl_iface_sta_autoconnect(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	wpa_s->auto_reconnect_disabled = atoi(cmd) == 0 ? 1 : 0;
+	return 0;
+}
+
+
 char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 					 char *buf, size_t *resp_len)
 {
@@ -2902,6 +2910,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_ctrl_iface_drop_sa(wpa_s);
 	} else if (os_strncmp(buf, "ROAM ", 5) == 0) {
 		if (wpa_supplicant_ctrl_iface_roam(wpa_s, buf + 5))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "STA_AUTOCONNECT ", 16) == 0) {
+		if (wpa_supplicant_ctrl_iface_sta_autoconnect(wpa_s, buf + 16))
 			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);

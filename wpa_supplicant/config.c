@@ -284,6 +284,12 @@ static int wpa_config_parse_bssid(const struct parse_data *data,
 				  struct wpa_ssid *ssid, int line,
 				  const char *value)
 {
+	if (value[0] == '\0' || os_strcmp(value, "\"\"") == 0 ||
+	    os_strcmp(value, "any") == 0) {
+		ssid->bssid_set = 0;
+		wpa_printf(MSG_MSGDUMP, "BSSID any");
+		return 0;
+	}
 	if (hwaddr_aton(value, ssid->bssid)) {
 		wpa_printf(MSG_ERROR, "Line %d: Invalid BSSID '%s'.",
 			   line, value);

@@ -3535,3 +3535,16 @@ static void wpas_p2p_cross_connect_setup(struct wpa_supplicant *wpa_s)
 		break;
 	}
 }
+
+
+int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->p2p_group_interface != P2P_GROUP_INTERFACE_CLIENT &&
+	    !wpa_s->p2p_in_provisioning)
+		return 0; /* not P2P client operation */
+
+	wpa_printf(MSG_DEBUG, "P2P: Terminate connection due to WPS PBC "
+		   "session overlap");
+	wpas_group_formation_completed(wpa_s, 0);
+	return 1;
+}

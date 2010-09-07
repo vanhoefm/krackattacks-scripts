@@ -623,6 +623,10 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
 		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
 			"PBC session overlap");
+#ifdef CONFIG_P2P
+		if (wpas_p2p_notif_pbc_overlap(wpa_s) == 1)
+			return;
+#endif /* CONFIG_P2P */
 		wpa_supplicant_req_new_scan(wpa_s, 10, 0);
 		return;
 	}

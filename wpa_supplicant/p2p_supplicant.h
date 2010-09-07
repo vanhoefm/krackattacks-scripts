@@ -112,5 +112,6 @@ int wpas_p2p_set_noa(struct wpa_supplicant *wpa_s, u8 count, int start,
 int wpas_p2p_set_cross_connect(struct wpa_supplicant *wpa_s, int enabled);
 void wpas_p2p_notif_connected(struct wpa_supplicant *wpa_s);
 void wpas_p2p_notif_disconnected(struct wpa_supplicant *wpa_s);
+int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s);
 
 #endif /* P2P_SUPPLICANT_H */

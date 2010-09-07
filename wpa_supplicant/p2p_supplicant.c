@@ -1835,7 +1835,7 @@ static void wpas_invitation_received(void *ctx, const u8 *sa, const u8 *bssid,
 		if (s) {
 			wpas_p2p_group_add_persistent(
 				wpa_s, s, s->mode == WPAS_MODE_P2P_GO, 0);
-		} else {
+		} else if (bssid) {
 			wpas_p2p_join(wpa_s, bssid, go_dev_addr,
 				      wpa_s->p2p_wps_method);
 		}

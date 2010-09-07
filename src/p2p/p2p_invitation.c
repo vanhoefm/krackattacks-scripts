@@ -403,7 +403,7 @@ void p2p_invitation_resp_cb(struct p2p_data *p2p, int success)
 	if (success && p2p->cfg->invitation_received) {
 		p2p->cfg->invitation_received(p2p->cfg->cb_ctx,
 					      p2p->inv_sa,
-					      p2p->inv_group_bssid,
+					      p2p->inv_group_bssid_ptr,
 					      p2p->inv_ssid, p2p->inv_ssid_len,
 					      p2p->inv_go_dev_addr,
 					      p2p->inv_status,

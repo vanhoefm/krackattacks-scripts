@@ -162,6 +162,7 @@ static int p2p_parse_attribute(u8 id, const u8 *data, u16 len,
 			return -1;
 		}
 		os_memcpy(msg->device_name, pos, nlen);
+		msg->device_name[nlen] = '\0';
 		for (i = 0; i < nlen; i++) {
 			if (msg->device_name[i] == '\0')
 				break;

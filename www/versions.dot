@@ -75,6 +75,7 @@ digraph versions {
 	v068 [label="0.6.8  hw\n2009-02-15"]
 	v069 [label="0.6.9  hw\n2009-03-23"]
 	v0610 [label="0.6.10  hw\n2010-01-12"]
+	v073 [label="0.7.3  hw\n2010-09-07"]
 
 # development releases
 
@@ -84,14 +85,14 @@ digraph versions {
 	v037 -> v040 -> v041 -> v042 -> v043 -> v044 -> v045 -> v046 -> v047
 	v047 -> v050 -> v051 -> v052 -> v053 -> v054 -> v055 -> v056 -> v057
 	v057 -> v060 -> v061 -> v062 -> v063 -> v064 -> v065 -> v066 -> v067 -> v068
-	v068 -> v070 -> v071 -> v072
+	v068 -> v070 -> v071 -> v072 -> v073
 
 	{rank=same; v001 v024}
 	{rank=same; v030 v037}
 	{rank=same; v040 v047}
 	{rank=same; v050 v057}
 	{rank=same; v060 v068}
-#	{rank=same; v070 v073}
+	{rank=same; v070 v073}
 
 # stable releases
 
@@ -100,12 +101,14 @@ digraph versions {
 	v047 -> v048 -> v049 -> v0410 -> v0411
 	v057 -> v058 -> v059 -> v0510 -> v0511
 	v068 -> v069 -> v0610
+	v073
 
 	{rank=same; v024 v025 v026 v027 v028}
 	{rank=same; v037 v038 v039 v0310 v0311}
 	{rank=same; v047 v048 v049 v0410 v0411}
 	{rank=same; v057 v058 v059 v0510 v0511}
 	{rank=same; v068 v069 v0610}
+	{rank=same; v073}
 
 #	edge [style=dashed,color=red]
 #	v030 -> v036

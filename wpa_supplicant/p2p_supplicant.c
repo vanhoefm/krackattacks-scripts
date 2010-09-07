@@ -3341,6 +3341,9 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 	if (p2p == NULL)
 		return;
 
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
+		return;
+
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_NAME)
 		p2p_set_dev_name(p2p, wpa_s->conf->device_name);
 

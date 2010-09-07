@@ -2504,6 +2504,15 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	res.wps_method = wpa_s->pending_join_wps_method;
 	wpas_start_wps_enrollee(group, &res);
 
+	/*
+	 * Allow a longer timeout for join-a-running-group than normal 15
+	 * second group formation timeout since the GO may not have authorized
+	 * our connection yet.
+	 */
+	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s, NULL);
+	eloop_register_timeout(60, 0, wpas_p2p_group_formation_timeout,
+			       wpa_s, NULL);
+
 	return 0;
 }
 

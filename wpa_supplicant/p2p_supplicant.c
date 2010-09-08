@@ -2201,6 +2201,8 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 			  p2p.ssid_postfix_len);
 	}
 
+	p2p.p2p_intra_bss = wpa_s->conf->p2p_intra_bss;
+
 	global->p2p = p2p_init(&p2p);
 	if (global->p2p == NULL)
 		return -1;
@@ -3395,6 +3397,9 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 				     os_strlen(wpa_s->conf->p2p_ssid_postfix) :
 				     0);
 	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_P2P_INTRA_BSS)
+		p2p_set_intra_bss_dist(p2p, wpa_s->conf->p2p_intra_bss);
 }
 
 

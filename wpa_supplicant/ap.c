@@ -302,6 +302,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	if (ssid->mode == WPAS_MODE_P2P_GO ||
 	    ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION)
 		params.p2p = 1;
+	wpa_drv_set_intra_bss(wpa_s, wpa_s->conf->p2p_intra_bss);
 #endif /* CONFIG_P2P */
 
 	if (wpa_s->parent->set_ap_uapsd)

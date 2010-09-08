@@ -223,6 +223,11 @@ struct p2p_config {
 	size_t max_peers;
 
 	/**
+	 * p2p_intra_bss - Intra BSS communication is supported
+	 */
+	int p2p_intra_bss;
+
+	/**
 	 * ssid_postfix - Postfix data to add to the SSID
 	 *
 	 * This data will be added to the end of the SSID after the
@@ -1242,5 +1247,12 @@ int p2p_get_oper_freq(struct p2p_data *p2p, const u8 *iface_addr);
 
 int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 		   const u8 *ies, size_t ies_len);
+
+/**
+ * p2p_set_intra_bss_dist - Set intra BSS distribution
+ * @p2p: P2P module context from p2p_init()
+ * @enabled: Whether intra BSS distribution will be enabled
+ */
+void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled);
 
 #endif /* P2P_H */

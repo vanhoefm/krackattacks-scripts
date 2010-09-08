@@ -1893,6 +1893,11 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success or -1 on failure
 	 */
 	int (*ampdu)(void *priv, int ampdu);
+
+	/**
+	 * set_intra_bss - Enables/Disables intra BSS bridging
+	 */
+	int (*set_intra_bss)(void *priv, int enabled);
 };
 
 

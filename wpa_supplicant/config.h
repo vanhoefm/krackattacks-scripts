@@ -23,6 +23,7 @@
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 #define DEFAULT_FAST_REAUTH 1
 #define DEFAULT_P2P_GO_INTENT 7
+#define DEFAULT_P2P_INTRA_BSS 1
 #define DEFAULT_BSS_MAX_COUNT 200
 
 #include "config_ssid.h"
@@ -37,6 +38,7 @@
 #define CFG_CHANGED_SEC_DEVICE_TYPE BIT(6)
 #define CFG_CHANGED_P2P_SSID_POSTFIX BIT(7)
 #define CFG_CHANGED_WPS_STRING BIT(8)
+#define CFG_CHANGED_P2P_INTRA_BSS BIT(9)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data
@@ -361,6 +363,7 @@ struct wpa_config {
 	int p2p_go_intent;
 	char *p2p_ssid_postfix;
 	int persistent_reconnect;
+	int p2p_intra_bss;
 
 	/**
 	 * bss_max_count - Maximum number of BSS entries to keep in memory

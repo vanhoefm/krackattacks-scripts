@@ -3031,3 +3031,11 @@ int p2p_get_oper_freq(struct p2p_data *p2p, const u8 *iface_addr)
 		return -1;
 	return dev->oper_freq;
 }
+
+
+void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled)
+{
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Intra BSS distribution %s",
+		enabled ? "enabled" : "disabled");
+	p2p->cfg->p2p_intra_bss = enabled;
+}

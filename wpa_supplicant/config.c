@@ -2144,6 +2144,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->ap_scan = DEFAULT_AP_SCAN;
 	config->fast_reauth = DEFAULT_FAST_REAUTH;
 	config->p2p_go_intent = DEFAULT_P2P_GO_INTENT;
+	config->p2p_intra_bss = DEFAULT_P2P_INTRA_BSS;
 	config->bss_max_count = DEFAULT_BSS_MAX_COUNT;
 
 	if (ctrl_interface)
@@ -2400,6 +2401,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(p2p_go_intent, 0, 15), 0 },
 	{ STR(p2p_ssid_postfix), CFG_CHANGED_P2P_SSID_POSTFIX },
 	{ INT_RANGE(persistent_reconnect, 0, 1), 0 },
+	{ INT_RANGE(p2p_intra_bss, 0, 1), CFG_CHANGED_P2P_INTRA_BSS },
 #endif /* CONFIG_P2P */
 	{ FUNC(country), CFG_CHANGED_COUNTRY },
 	{ INT(bss_max_count), 0 },

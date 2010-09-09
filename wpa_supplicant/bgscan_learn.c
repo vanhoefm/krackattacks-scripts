@@ -559,6 +559,7 @@ static void bgscan_learn_notify_signal_change(void *priv, int above,
 					      int current_signal)
 {
 	struct bgscan_learn_data *data = priv;
+	int scan = 0;
 	struct os_time now;
 
 	if (data->short_interval == data->long_interval ||

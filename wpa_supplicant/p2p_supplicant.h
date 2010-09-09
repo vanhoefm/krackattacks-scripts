@@ -16,6 +16,7 @@
 #define P2P_SUPPLICANT_H
 
 enum p2p_wps_method;
+struct p2p_go_neg_results;
 
 int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s);
 void wpas_p2p_deinit(struct wpa_supplicant *wpa_s);

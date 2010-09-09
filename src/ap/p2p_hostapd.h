@@ -27,8 +27,9 @@ void hostapd_p2p_non_p2p_sta_disconnected(struct hostapd_data *hapd);
 
 #else /* CONFIG_P2P */
 
-int hostapd_p2p_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
-			    char *buf, size_t buflen)
+static inline int hostapd_p2p_get_mib_sta(struct hostapd_data *hapd,
+					  struct sta_info *sta,
+					  char *buf, size_t buflen)
 {
 	return 0;
 }

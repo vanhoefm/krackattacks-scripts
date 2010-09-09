@@ -692,6 +692,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+#ifdef CONFIG_P2P
 	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
 		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
 		if (ssid->ssid) {
@@ -702,6 +703,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 					  "SSID", ssid->ssid, ssid->ssid_len);
 		}
 	}
+#endif /* CONFIG_P2P */
 	wpa_config_set(ssid, "phase1", "\"pbc=1\"", 0);
 	if (wpa_s->wps_fragment_size)
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
@@ -725,6 +727,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		return -1;
 	ssid->temporary = 1;
 	ssid->p2p_group = p2p_group;
+#ifdef CONFIG_P2P
 	if (p2p_group && wpa_s->go_params && wpa_s->go_params->ssid_len) {
 		ssid->ssid = os_zalloc(wpa_s->go_params->ssid_len + 1);
 		if (ssid->ssid) {
@@ -735,6 +738,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 					  "SSID", ssid->ssid, ssid->ssid_len);
 		}
 	}
+#endif /* CONFIG_P2P */
 	if (pin)
 		os_snprintf(val, sizeof(val), "\"pin=%s dev_pw_id=%u\"",
 			    pin, dev_pw_id);

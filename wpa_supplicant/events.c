@@ -1230,7 +1230,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "WPA: Auto connect enabled: try to "
 			   "reconnect (wps=%d)",
 			   wpa_s->key_mgmt == WPA_KEY_MGMT_WPS);
-		if (wpa_s->wpa_state >= WPA_ASSOCIATED)
+		if (wpa_s->wpa_state >= WPA_ASSOCIATING)
 			wpa_supplicant_req_scan(wpa_s, 0, 100000);
 	} else {
 		wpa_printf(MSG_DEBUG, "WPA: Auto connect disabled: do not try "

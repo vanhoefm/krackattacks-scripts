@@ -142,8 +142,15 @@ static void eap_pwd_deinit(struct eap_sm *sm, void *priv)
 	EC_POINT_free(data->my_element);
 	EC_POINT_free(data->server_element);
 	os_free(data->id_peer);
+	os_free(data->id_server);
 	os_free(data->password);
-	os_free(data->grp);
+	if (data->grp) {
+		EC_GROUP_free(data->grp->group);
+		EC_POINT_free(data->grp->pwe);
+		BN_free(data->grp->order);
+		BN_free(data->grp->prime);
+		os_free(data->grp);
+	}
 	os_free(data);
 }
 

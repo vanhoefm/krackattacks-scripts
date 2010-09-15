@@ -245,10 +245,11 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 	grp->group_num = num;
 	if (0) {
  fail:
+		EC_GROUP_free(grp->group);
 		EC_POINT_free(grp->pwe);
 		BN_free(grp->order);
 		BN_free(grp->prime);
-		free(grp);
+		os_free(grp);
 		grp = NULL;
 		ret = 1;
 	}

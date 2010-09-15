@@ -100,7 +100,7 @@ static void * eap_pwd_init(struct eap_sm *sm)
 
 	data->password = os_malloc(sm->user->password_len);
 	if (data->password == NULL) {
-		wpa_printf(MSG_INFO, "EAP-PWD: Mmemory allocation password "
+		wpa_printf(MSG_INFO, "EAP-PWD: Memory allocation password "
 			   "fail");
 		os_free(data->id_server);
 		os_free(data);
@@ -135,7 +135,14 @@ static void eap_pwd_reset(struct eap_sm *sm, void *priv)
 	EC_POINT_free(data->peer_element);
 	os_free(data->id_peer);
 	os_free(data->id_server);
-	os_free(data->grp);
+	os_free(data->password);
+	if (data->grp) {
+		EC_GROUP_free(data->grp->group);
+		EC_POINT_free(data->grp->pwe);
+		BN_free(data->grp->order);
+		BN_free(data->grp->prime);
+		os_free(data->grp);
+	}
 	os_free(data);
 }
 

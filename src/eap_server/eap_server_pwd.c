@@ -42,9 +42,9 @@ struct eap_pwd_data {
 
 	u8 msk[EAP_MSK_LEN];
 	u8 emsk[EAP_EMSK_LEN];
-};
 
-static BN_CTX *bnctx;
+	BN_CTX *bnctx;
+};
 
 
 static const char * eap_pwd_state_txt(int state)
@@ -96,20 +96,25 @@ static void * eap_pwd_init(struct eap_sm *sm)
 
 	data->id_server = (u8 *) os_strdup("server");
 	if (data->id_server)
-		data->id_server_len = os_strlen((char *)data->id_server);
+		data->id_server_len = os_strlen((char *) data->id_server);
 
 	data->password = os_malloc(sm->user->password_len);
 	if (data->password == NULL) {
 		wpa_printf(MSG_INFO, "EAP-PWD: Mmemory allocation password "
 			   "fail");
+		os_free(data->id_server);
+		os_free(data);
 		return NULL;
 	}
 	data->password_len = sm->user->password_len;
 	os_memcpy(data->password, sm->user->password, data->password_len);
 
-	bnctx = BN_CTX_new();
-	if (bnctx == NULL) {
+	data->bnctx = BN_CTX_new();
+	if (data->bnctx == NULL) {
 		wpa_printf(MSG_INFO, "EAP-PWD: bn context allocation fail");
+		os_free(data->password);
+		os_free(data->id_server);
+		os_free(data);
 		return NULL;
 	}
 
@@ -125,7 +130,7 @@ static void eap_pwd_reset(struct eap_sm *sm, void *priv)
 	BN_free(data->peer_scalar);
 	BN_free(data->my_scalar);
 	BN_free(data->k);
-	BN_CTX_free(bnctx);
+	BN_CTX_free(data->bnctx);
 	EC_POINT_free(data->my_element);
 	EC_POINT_free(data->peer_element);
 	os_free(data->id_peer);
@@ -186,17 +191,19 @@ eap_pwd_build_commit_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	BN_rand_range(data->private_value, data->grp->order);
 	BN_rand_range(mask, data->grp->order);
 	BN_add(data->my_scalar, data->private_value, mask);
-	BN_mod(data->my_scalar, data->my_scalar, data->grp->order, bnctx);
+	BN_mod(data->my_scalar, data->my_scalar, data->grp->order,
+	       data->bnctx);
 
 	if (!EC_POINT_mul(data->grp->group, data->my_element, NULL,
-			  data->grp->pwe, mask, bnctx)) {
+			  data->grp->pwe, mask, data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): element allocation "
 			   "fail");
 		eap_pwd_state(data, FAILURE);
 		goto fin;
 	}
 
-	if (!EC_POINT_invert(data->grp->group, data->my_element, bnctx)) {
+	if (!EC_POINT_invert(data->grp->group, data->my_element, data->bnctx))
+	{
 		wpa_printf(MSG_INFO, "EAP-PWD (server): element inversion "
 			   "fail");
 		goto fin;
@@ -211,7 +218,7 @@ eap_pwd_build_commit_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	}
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
 						 data->my_element, x, y,
-						 bnctx)) {
+						 data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): point assignment "
 			   "fail");
 		goto fin;
@@ -302,7 +309,7 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	/* server element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
 						 data->my_element, x, y,
-						 bnctx)) {
+						 data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): confirm point "
 			   "assignment fail");
 		goto fin;
@@ -323,7 +330,7 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	/* peer element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
 						 data->peer_element, x, y,
-						 bnctx)) {
+						 data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): confirm point "
 			   "assignment fail");
 		goto fin;
@@ -520,7 +527,7 @@ eap_pwd_process_commit_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	BN_bin2bn(ptr, BN_num_bytes(data->grp->order), data->peer_scalar);
 	if (!EC_POINT_set_affine_coordinates_GFp(data->grp->group,
 						 data->peer_element, x, y,
-						 bnctx)) {
+						 data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): setting peer element "
 			   "fail");
 		goto fin;
@@ -543,11 +550,11 @@ eap_pwd_process_commit_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 
 	/* compute the shared key, k */
 	if ((!EC_POINT_mul(data->grp->group, K, NULL, data->grp->pwe,
-			   data->peer_scalar, bnctx)) ||
+			   data->peer_scalar, data->bnctx)) ||
 	    (!EC_POINT_add(data->grp->group, K, K, data->peer_element,
-			   bnctx)) ||
+			   data->bnctx)) ||
 	    (!EC_POINT_mul(data->grp->group, K, NULL, K, data->private_value,
-			   bnctx))) {
+			   data->bnctx))) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): computing shared key "
 			   "fail");
 		goto fin;
@@ -575,7 +582,7 @@ eap_pwd_process_commit_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 		goto fin;
 	}
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group, K, data->k,
-						 NULL, bnctx)) {
+						 NULL, data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): unable to extract "
 			   "shared secret from secret point");
 		goto fin;
@@ -634,7 +641,7 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	/* peer element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
 						 data->peer_element, x, y,
-						 bnctx)) {
+						 data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): confirm point "
 			   "assignment fail");
 		goto fin;
@@ -654,7 +661,7 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	/* server element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
 						 data->my_element, x, y,
-						 bnctx)) {
+						 data->bnctx)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (server): confirm point "
 			   "assignment fail");
 		goto fin;
@@ -687,7 +694,7 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	}
 
 	wpa_printf(MSG_DEBUG, "EAP-pwd (server): confirm verified");
-	if (compute_keys(data->grp, bnctx, data->k, data->my_element,
+	if (compute_keys(data->grp, data->bnctx, data->k, data->my_element,
 			 data->peer_element, data->my_scalar,
 			 data->peer_scalar, &cs, data->msk, data->emsk) < 0)
 		eap_pwd_state(data, FAILURE);

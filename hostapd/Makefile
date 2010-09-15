@@ -274,6 +274,12 @@ NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
 
+ifdef CONFIG_EAP_PWD
+CFLAGS += -DEAP_SERVER_PWD
+OBJS += ../src/eap_server/eap_server_pwd.o ../src/eap_common/eap_pwd_common.o
+NEED_SHA256=y
+endif
+
 ifdef CONFIG_EAP_VENDOR_TEST
 CFLAGS += -DEAP_SERVER_VENDOR_TEST
 OBJS += ../src/eap_server/eap_server_vendor_test.o

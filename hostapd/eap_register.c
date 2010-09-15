@@ -130,5 +130,10 @@ int eap_server_register_methods(void)
 		ret = eap_server_tnc_register();
 #endif /* EAP_SERVER_TNC */
 
+#ifdef EAP_SERVER_PWD
+	if (ret == 0)
+		ret = eap_server_pwd_register();
+#endif /* EAP_SERVER_PWD */
+
 	return ret;
 }

@@ -143,6 +143,13 @@ struct radius_server_conf {
 	int tnc;
 
 	/**
+	 * pwd_group - EAP-pwd D-H group
+	 *
+	 * This is used to select which D-H group to use with EAP-pwd.
+	 */
+	u16 pwd_group;
+
+	/**
 	 * wps - Wi-Fi Protected Setup context
 	 *
 	 * If WPS is used with an external RADIUS server (which is quite

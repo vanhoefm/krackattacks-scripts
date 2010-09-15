@@ -1369,6 +1369,10 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "tnc") == 0) {
 			bss->tnc = atoi(pos);
 #endif /* EAP_SERVER_TNC */
+#ifdef EAP_SERVER_PWD
+		} else if (os_strcmp(buf, "pwd_group") == 0) {
+			bss->pwd_group = atoi(pos);
+#endif /* EAP_SERVER_PWD */
 #endif /* EAP_SERVER */
 		} else if (os_strcmp(buf, "eap_message") == 0) {
 			char *term;

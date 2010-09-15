@@ -181,6 +181,7 @@ struct eap_sm {
 	int pac_key_refresh_time;
 	int eap_sim_aka_result_ind;
 	int tnc;
+	u16 pwd_group;
 	struct wps_context *wps;
 	struct wpabuf *assoc_wps_ie;
 	struct wpabuf *assoc_p2p_ie;

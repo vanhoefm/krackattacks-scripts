@@ -68,6 +68,7 @@ typedef enum {
 	EAP_TYPE_IKEV2 = 49 /* RFC 5106 */,
 	EAP_TYPE_AKA_PRIME = 50 /* draft-arkko-eap-aka-kdf-10.txt */,
 	EAP_TYPE_GPSK = 51 /* RFC 5433 */,
+	EAP_TYPE_PWD = 52 /* RFC 5931 */,
 	EAP_TYPE_EXPANDED = 254 /* RFC 3748 */
 } EapType;
 

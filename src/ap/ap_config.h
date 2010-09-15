@@ -255,6 +255,7 @@ struct hostapd_bss_config {
 	int eap_sim_aka_result_ind;
 	int tnc;
 	int fragment_size;
+	u16 pwd_group;
 
 	char *radius_server_clients;
 	int radius_server_auth_port;

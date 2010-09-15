@@ -474,6 +474,14 @@ NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
 
+ifdef CONFIG_EAP_PWD
+CFLAGS += -DEAP_PWD
+OBJS += ../src/eap_peer/eap_pwd.o ../src/eap_common/eap_pwd_common.o
+OBJS_h += ../src/eap_server/eap_pwd.o
+CONFIG_IEEE8021X_EAPOL=y
+NEED_SHA256=y
+endif
+
 ifdef CONFIG_WPS
 ifdef CONFIG_WPS2
 CFLAGS += -DCONFIG_WPS2

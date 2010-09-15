@@ -95,6 +95,7 @@ struct eap_config {
 	void *eap_sim_db_priv;
 	Boolean backend_auth;
 	int eap_server;
+	u16 pwd_group;
 	u8 *pac_opaque_encr_key;
 	u8 *eap_fast_a_id;
 	size_t eap_fast_a_id_len;

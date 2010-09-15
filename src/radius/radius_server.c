@@ -222,6 +222,13 @@ struct radius_server_data {
 	int tnc;
 
 	/**
+	 * pwd_group - The D-H group assigned for EAP-pwd
+	 *
+	 * If EAP-pwd is not used it can be set to zero.
+	 */
+	u16 pwd_group;
+
+	/**
 	 * wps - Wi-Fi Protected Setup context
 	 *
 	 * If WPS is used with an external RADIUS server (which is quite
@@ -505,6 +512,7 @@ radius_server_get_new_session(struct radius_server_data *data,
 	eap_conf.eap_sim_aka_result_ind = data->eap_sim_aka_result_ind;
 	eap_conf.tnc = data->tnc;
 	eap_conf.wps = data->wps;
+	eap_conf.pwd_group = data->pwd_group;
 	sess->eap = eap_server_sm_init(sess, &radius_server_eapol_cb,
 				       &eap_conf);
 	if (sess->eap == NULL) {
@@ -1259,6 +1267,7 @@ radius_server_init(struct radius_server_conf *conf)
 	data->eap_sim_aka_result_ind = conf->eap_sim_aka_result_ind;
 	data->tnc = conf->tnc;
 	data->wps = conf->wps;
+	data->pwd_group = conf->pwd_group;
 	if (conf->eap_req_id_text) {
 		data->eap_req_id_text = os_malloc(conf->eap_req_id_text_len);
 		if (data->eap_req_id_text) {

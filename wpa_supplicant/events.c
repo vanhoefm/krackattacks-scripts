@@ -627,7 +627,7 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 		if (wpas_p2p_notif_pbc_overlap(wpa_s) == 1)
 			return;
 #endif /* CONFIG_P2P */
-		wpa_supplicant_req_new_scan(wpa_s, 10, 0);
+		wpas_wps_cancel(wpa_s);
 		return;
 	}
 

@@ -1153,12 +1153,21 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 	if (!eap_is_wps_pbc_enrollee(&ssid->eap))
 		return 0;
 
+	wpa_printf(MSG_DEBUG, "WPS: Check whether PBC session overlap is "
+		   "present in scan results; selected BSSID " MACSTR,
+		   MAC2STR(selected->bssid));
+
 	/* Make sure that only one AP is in active PBC mode */
 	wps_ie = wpa_bss_get_vendor_ie_multi(selected, WPS_IE_VENDOR_TYPE);
-	if (wps_ie)
+	if (wps_ie) {
 		sel_uuid = wps_get_uuid_e(wps_ie);
-	else
+		wpa_hexdump(MSG_DEBUG, "WPS: UUID of the selected BSS",
+			    sel_uuid, UUID_LEN);
+	} else {
+		wpa_printf(MSG_DEBUG, "WPS: Selected BSS does not include "
+			   "WPS IE?!");
 		sel_uuid = NULL;
+	}
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		struct wpabuf *ie;
@@ -1171,10 +1180,18 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 			wpabuf_free(ie);
 			continue;
 		}
+		wpa_printf(MSG_DEBUG, "WPS: Another BSS in active PBC mode: "
+			   MACSTR, MAC2STR(bss->bssid));
 		uuid = wps_get_uuid_e(ie);
+		wpa_hexdump(MSG_DEBUG, "WPS: UUID of the other BSS",
+			    uuid, UUID_LEN);
 		if (sel_uuid == NULL || uuid == NULL ||
-		    os_memcmp(sel_uuid, uuid, 16) != 0) {
+		    os_memcmp(sel_uuid, uuid, UUID_LEN) != 0) {
 			ret = 1; /* PBC overlap */
+			wpa_msg(wpa_s, MSG_INFO, "WPS: PBC overlap detected: "
+				MACSTR " and " MACSTR,
+				MAC2STR(selected->bssid),
+				MAC2STR(bss->bssid));
 			wpabuf_free(ie);
 			break;
 		}

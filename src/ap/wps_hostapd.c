@@ -529,6 +529,23 @@ static const u8 * get_own_uuid(struct hostapd_iface *iface)
 }
 
 
+static int count_interface_cb(struct hostapd_iface *iface, void *ctx)
+{
+	int *count= ctx;
+	(*count)++;
+	return 0;
+}
+
+
+static int interface_count(struct hostapd_iface *iface)
+{
+	int count = 0;
+	iface->for_each_interface(iface->interfaces, count_interface_cb,
+				  &count);
+	return count;
+}
+
+
 int hostapd_init_wps(struct hostapd_data *hapd,
 		     struct hostapd_bss_config *conf)
 {
@@ -688,10 +705,13 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		conf->skip_cred_build;
 	if (conf->ssid.security_policy == SECURITY_STATIC_WEP)
 		cfg.static_wep_only = 1;
+	cfg.dualband = interface_count(hapd->iface) > 1;
+	if (cfg.dualband)
+		wpa_printf(MSG_DEBUG, "WPS: Dualband AP");
 
 	wps->registrar = wps_registrar_init(wps, &cfg);
 	if (wps->registrar == NULL) {
-		printf("Failed to initialize WPS Registrar\n");
+		wpa_printf(MSG_ERROR, "Failed to initialize WPS Registrar");
 		os_free(wps->network_key);
 		os_free(wps);
 		return -1;

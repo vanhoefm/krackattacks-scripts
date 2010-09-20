@@ -126,6 +126,7 @@ struct wps_registrar {
 	int sel_reg_dev_password_id_override;
 	int sel_reg_config_methods_override;
 	int static_wep_only;
+	int dualband;
 
 	struct wps_registrar_device *devices;
 
@@ -430,6 +431,20 @@ static int wps_build_sel_reg_dev_password_id(struct wps_registrar *reg,
 }
 
 
+static int wps_build_sel_pbc_reg_uuid_e(struct wps_registrar *reg,
+					struct wpabuf *msg)
+{
+	u16 id = reg->pbc ? DEV_PW_PUSHBUTTON : DEV_PW_DEFAULT;
+	if (!reg->sel_reg_union)
+		return 0;
+	if (reg->sel_reg_dev_password_id_override >= 0)
+		id = reg->sel_reg_dev_password_id_override;
+	if (id != DEV_PW_PUSHBUTTON || !reg->dualband)
+		return 0;
+	return wps_build_uuid_e(msg, reg->wps->uuid);
+}
+
+
 static void wps_set_pushbutton(u16 *methods, u16 conf_methods)
 {
 	*methods |= WPS_CONFIG_PUSHBUTTON;
@@ -572,6 +587,7 @@ wps_registrar_init(struct wps_context *wps,
 	reg->sel_reg_dev_password_id_override = -1;
 	reg->sel_reg_config_methods_override = -1;
 	reg->static_wep_only = cfg->static_wep_only;
+	reg->dualband = cfg->dualband;
 
 	if (wps_set_ie(reg)) {
 		wps_registrar_deinit(reg);
@@ -1069,6 +1085,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_selected_registrar(reg, beacon) ||
 	    wps_build_sel_reg_dev_password_id(reg, beacon) ||
 	    wps_build_sel_reg_config_methods(reg, beacon) ||
+	    wps_build_sel_pbc_reg_uuid_e(reg, beacon) ||
+	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, beacon)) ||
 	    wps_build_wfa_ext(beacon, 0, auth_macs, count)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);

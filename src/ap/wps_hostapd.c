@@ -499,6 +499,36 @@ static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 }
 
 
+static int get_uuid_cb(struct hostapd_iface *iface, void *ctx)
+{
+	const u8 **uuid = ctx;
+	size_t j;
+
+	if (iface == NULL)
+		return 0;
+	for (j = 0; j < iface->num_bss; j++) {
+		struct hostapd_data *hapd = iface->bss[j];
+		if (hapd->wps && !is_nil_uuid(hapd->wps->uuid)) {
+			*uuid = hapd->wps->uuid;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+
+static const u8 * get_own_uuid(struct hostapd_iface *iface)
+{
+	const u8 *uuid;
+	if (iface->for_each_interface == NULL)
+		return NULL;
+	uuid = NULL;
+	iface->for_each_interface(iface->interfaces, get_uuid_cb, &uuid);
+	return uuid;
+}
+
+
 int hostapd_init_wps(struct hostapd_data *hapd,
 		     struct hostapd_bss_config *conf)
 {
@@ -522,11 +552,22 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	wps->wps_state = hapd->conf->wps_state;
 	wps->ap_setup_locked = hapd->conf->ap_setup_locked;
 	if (is_nil_uuid(hapd->conf->uuid)) {
-		uuid_gen_mac_addr(hapd->own_addr, wps->uuid);
-		wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC address",
-			    wps->uuid, UUID_LEN);
-	} else
+		const u8 *uuid;
+		uuid = get_own_uuid(hapd->iface);
+		if (uuid) {
+			os_memcpy(wps->uuid, uuid, UUID_LEN);
+			wpa_hexdump(MSG_DEBUG, "WPS: Clone UUID from another "
+				    "interface", wps->uuid, UUID_LEN);
+		} else {
+			uuid_gen_mac_addr(hapd->own_addr, wps->uuid);
+			wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC "
+				    "address", wps->uuid, UUID_LEN);
+		}
+	} else {
 		os_memcpy(wps->uuid, hapd->conf->uuid, UUID_LEN);
+		wpa_hexdump(MSG_DEBUG, "WPS: Use configured UUID",
+			    wps->uuid, UUID_LEN);
+	}
 	wps->ssid_len = hapd->conf->ssid.ssid_len;
 	os_memcpy(wps->ssid, hapd->conf->ssid.ssid, wps->ssid_len);
 	wps->ap = 1;

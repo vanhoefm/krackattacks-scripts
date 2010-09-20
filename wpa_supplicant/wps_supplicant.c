@@ -1117,7 +1117,7 @@ int wpas_wps_ssid_wildcard_ok(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_WPS_STRICT
 	if (wps_ie) {
 		if (wps_validate_beacon_probe_resp(wps_ie, bss->beacon_ie_len >
-						   0) < 0)
+						   0, bss->bssid) < 0)
 			ret = 0;
 		if (bss->beacon_ie_len) {
 			struct wpabuf *bcn_wps;

@@ -763,7 +763,8 @@ u16 wps_config_methods_str2bin(const char *str);
 
 #ifdef CONFIG_WPS_STRICT
 int wps_validate_beacon(const struct wpabuf *wps_ie);
-int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe);
+int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe,
+				   const u8 *addr);
 int wps_validate_probe_req(const struct wpabuf *wps_ie);
 int wps_validate_assoc_req(const struct wpabuf *wps_ie);
 int wps_validate_assoc_resp(const struct wpabuf *wps_ie);
@@ -791,7 +792,7 @@ static inline int wps_validate_beacon(const struct wpabuf *wps_ie){
 }
 
 static inline int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie,
-						 int probe)
+						 int probe, const u8 *addr)
 {
 	return 0;
 }

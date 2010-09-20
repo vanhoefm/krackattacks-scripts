@@ -1122,7 +1122,8 @@ int wps_validate_beacon(const struct wpabuf *wps_ie)
 }
 
 
-int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe)
+int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe,
+				   const u8 *addr)
 {
 	struct wps_parse_attr attr;
 	int wps2, sel_reg;
@@ -1166,7 +1167,8 @@ int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe)
 	    wps_validate_authorized_macs(attr.authorized_macs,
 					 attr.authorized_macs_len, 0)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid %sProbe Response "
-			   "frame", probe ? "" : "Beacon/");
+			   "frame from " MACSTR, probe ? "" : "Beacon/",
+			   MAC2STR(addr));
 #ifdef WPS_STRICT_WPS2
 		if (wps2)
 			return -1;

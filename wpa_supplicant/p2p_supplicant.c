@@ -1021,7 +1021,7 @@ static int wpas_start_listen(void *ctx, unsigned int freq,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 
-	wpa_drv_set_ap_wps_ie(wpa_s, NULL, probe_resp_ie);
+	wpa_drv_set_ap_wps_ie(wpa_s, NULL, probe_resp_ie, NULL);
 
 	if (wpa_drv_probe_req_report(wpa_s, 1) < 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Failed to request the driver to "

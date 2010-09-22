@@ -17,6 +17,7 @@
 #include "utils/common.h"
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
+#include "wps/wps.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -41,7 +42,7 @@ static int hostapd_sta_flags_to_drv(int flags)
 
 static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 {
-	struct wpabuf *beacon, *proberesp;
+	struct wpabuf *beacon, *proberesp, *assocresp = NULL;
 	int ret;
 
 	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
@@ -85,12 +86,19 @@ static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 	}
 #endif /* CONFIG_P2P */
 
-	ret = hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp);
+#ifdef CONFIG_WPS2
+	if (hapd->conf->wps_state)
+		assocresp = wps_build_assoc_resp_ie();
+#endif /* CONFIG_WPS2 */
+
+	ret = hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp,
+					  assocresp);
 
 #ifdef CONFIG_P2P
 	wpabuf_free(beacon);
 	wpabuf_free(proberesp);
 #endif /* CONFIG_P2P */
+	wpabuf_free(assocresp);
 
 	return ret;
 }

@@ -841,7 +841,8 @@ static int test_driver_set_generic_elem(void *priv,
 
 
 static int test_driver_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
-				     const struct wpabuf *proberesp)
+				     const struct wpabuf *proberesp,
+				     const struct wpabuf *assocresp)
 {
 	struct test_driver_bss *bss = priv;
 

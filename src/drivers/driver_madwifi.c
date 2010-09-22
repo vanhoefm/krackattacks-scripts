@@ -787,7 +787,8 @@ madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 
 static int
 madwifi_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
-		      const struct wpabuf *proberesp)
+		      const struct wpabuf *proberesp,
+		      const struct wpabuf *assocresp)
 {
 	if (madwifi_set_wps_ie(priv, beacon ? wpabuf_head(beacon) : NULL,
 			       beacon ? wpabuf_len(beacon) : 0,

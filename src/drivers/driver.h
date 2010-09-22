@@ -1658,12 +1658,17 @@ struct wpa_driver_ops {
 	 * @beacon: WPS IE(s) for Beacon frames or %NULL to remove extra IE(s)
 	 * @proberesp: WPS IE(s) for Probe Response frames or %NULL to remove
 	 *	extra IE(s)
+	 * @assocresp: WPS IE(s) for (Re)Association Response frames or %NULL
+	 *	to remove extra IE(s)
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This is an optional function to add WPS IE in the kernel driver for
 	 * Beacon and Probe Response frames. This can be left undefined (set
 	 * to %NULL) if the driver uses the Beacon template from set_beacon()
-	 * and does not process Probe Request frames.
+	 * and does not process Probe Request frames. If the driver takes care
+	 * of (Re)Association frame processing, the assocresp buffer includes
+	 * WPS IE(s) that need to be added to (Re)Association Response frames
+	 * whenever a (Re)Association Request frame indicated use of WPS.
 	 *
 	 * This will also be used to add P2P IE(s) into Beacon/Probe Response
 	 * frames when operating as a GO. The driver is responsible for adding
@@ -1674,7 +1679,8 @@ struct wpa_driver_ops {
 	 * internally.
 	 */
 	int (*set_ap_wps_ie)(void *priv, const struct wpabuf *beacon,
-			     const struct wpabuf *proberesp);
+			     const struct wpabuf *proberesp,
+			     const struct wpabuf *assocresp);
 
 	/**
 	 * set_supp_port - Set IEEE 802.1X Supplicant Port status

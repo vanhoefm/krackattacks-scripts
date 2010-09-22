@@ -763,7 +763,8 @@ static int hostap_set_generic_elem(void *priv,
 
 
 static int hostap_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
-				const struct wpabuf *proberesp)
+				const struct wpabuf *proberesp,
+				const struct wpabuf *assocresp)
 {
 	struct hostap_driver_data *drv = priv;
 

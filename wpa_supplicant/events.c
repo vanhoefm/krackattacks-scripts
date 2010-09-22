@@ -463,6 +463,11 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		}
 
 #ifdef CONFIG_WPS
+		if ((ssid->key_mgmt & WPA_KEY_MGMT_WPS) && e && e->count > 0) {
+			wpa_printf(MSG_DEBUG, "   skip - blacklisted (WPS)");
+			continue;
+		}
+
 		if (wpa && ssid->ssid_len == 0 &&
 		    wpas_wps_ssid_wildcard_ok(wpa_s, ssid, bss))
 			check_ssid = 0;

@@ -1181,7 +1181,7 @@ int wps_validate_beacon_probe_resp(const struct wpabuf *wps_ie, int probe,
 }
 
 
-int wps_validate_probe_req(const struct wpabuf *wps_ie)
+int wps_validate_probe_req(const struct wpabuf *wps_ie, const u8 *addr)
 {
 	struct wps_parse_attr attr;
 	int wps2;
@@ -1220,7 +1220,7 @@ int wps_validate_probe_req(const struct wpabuf *wps_ie)
 	    wps_validate_req_dev_type(attr.req_dev_type, attr.num_req_dev_type,
 				      0)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid Probe Request "
-			   "frame");
+			   "frame from " MACSTR, MAC2STR(addr));
 		return -1;
 	}
 

@@ -1275,7 +1275,7 @@ int wps_validate_assoc_resp(const struct wpabuf *wps_ie)
 
 	wps2 = attr.version2 != NULL;
 	if (wps_validate_version(attr.version, 1) ||
-	    wps_validate_request_type(attr.request_type, 1) ||
+	    wps_validate_response_type(attr.response_type, 1) ||
 	    wps_validate_version2(attr.version2, wps2)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid (Re)Association "
 			   "Response frame");

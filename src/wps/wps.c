@@ -269,6 +269,7 @@ int wps_is_addr_authorized(const struct wpabuf *msg, const u8 *addr,
 	struct wps_parse_attr attr;
 	unsigned int i;
 	const u8 *pos;
+	const u8 bcast[ETH_ALEN] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
 	if (wps_parse_msg(msg, &attr) < 0)
 		return 0;
@@ -286,7 +287,8 @@ int wps_is_addr_authorized(const struct wpabuf *msg, const u8 *addr,
 
 	pos = attr.authorized_macs;
 	for (i = 0; i < attr.authorized_macs_len / ETH_ALEN; i++) {
-		if (os_memcmp(pos, addr, ETH_ALEN) == 0)
+		if (os_memcmp(pos, addr, ETH_ALEN) == 0 ||
+		    os_memcmp(pos, bcast, ETH_ALEN) == 0)
 			return 1;
 		pos += ETH_ALEN;
 	}

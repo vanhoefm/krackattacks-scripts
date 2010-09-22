@@ -84,6 +84,26 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			ret = -1;
 	} else if (os_strcasecmp(cmd, "wps_fragment_size") == 0) {
 		wpa_s->wps_fragment_size = atoi(value);
+#ifdef CONFIG_WPS_TESTING
+	} else if (os_strcasecmp(cmd, "wps_version_number") == 0) {
+		long int val;
+		val = strtol(value, NULL, 0);
+		if (val < 0 || val > 0xff) {
+			ret = -1;
+			wpa_printf(MSG_DEBUG, "WPS: Invalid "
+				   "wps_version_number %ld", val);
+		} else {
+			wps_version_number = val;
+			wpa_printf(MSG_DEBUG, "WPS: Testing - force WPS "
+				   "version %u.%u",
+				   (wps_version_number & 0xf0) >> 4,
+				   wps_version_number & 0x0f);
+		}
+	} else if (os_strcasecmp(cmd, "wps_testing_dummy_cred") == 0) {
+		wps_testing_dummy_cred = atoi(value);
+		wpa_printf(MSG_DEBUG, "WPS: Testing - dummy_cred=%d",
+			   wps_testing_dummy_cred);
+#endif /* CONFIG_WPS_TESTING */
 	} else if (os_strcasecmp(cmd, "ampdu") == 0) {
 		if (wpa_drv_ampdu(wpa_s, atoi(value)) < 0)
 			ret = -1;

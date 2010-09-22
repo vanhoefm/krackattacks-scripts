@@ -21,6 +21,12 @@
 #include "wps_dev_attr.h"
 
 
+#ifdef CONFIG_WPS_TESTING
+int wps_version_number = 0x20;
+int wps_testing_dummy_cred = 0;
+#endif /* CONFIG_WPS_TESTING */
+
+
 /**
  * wps_init - Initialize WPS Registration protocol data
  * @cfg: WPS configuration

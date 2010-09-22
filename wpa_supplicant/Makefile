@@ -559,6 +559,10 @@ CFLAGS += -DCONFIG_WPS_STRICT
 OBJS += ../src/wps/wps_validate.o
 endif
 
+ifdef CONFIG_WPS_TESTING
+CFLAGS += -DCONFIG_WPS_TESTING
+endif
+
 endif
 
 ifdef CONFIG_EAP_IKEV2

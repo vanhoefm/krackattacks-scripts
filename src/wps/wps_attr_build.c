@@ -209,13 +209,15 @@ int wps_build_wfa_ext(struct wpabuf *msg, int req_to_enroll,
 	WPA_PUT_BE16(len, (u8 *) wpabuf_put(msg, 0) - len - 2);
 #endif /* CONFIG_WPS2 */
 
-#ifdef CONFIG_WPS_EXTENSIBILITY_TESTING
-	wpa_printf(MSG_DEBUG, "WPS:  * Extensibility Testing - extra "
-		   "attribute";
-	wpabuf_put_be16(msg, ATTR_EXTENSIBILITY_TEST);
-	wpabuf_put_be16(msg, 1);
-	wpabuf_put_u8(msg, 42);
-#endif /* CONFIG_WPS_EXTENSIBILITY_TESTING */
+#ifdef CONFIG_WPS_TESTING
+	if (WPS_VERSION > 0x20) {
+		wpa_printf(MSG_DEBUG, "WPS:  * Extensibility Testing - extra "
+			   "attribute");
+		wpabuf_put_be16(msg, ATTR_EXTENSIBILITY_TEST);
+		wpabuf_put_be16(msg, 1);
+		wpabuf_put_u8(msg, 42);
+	}
+#endif /* CONFIG_WPS_TESTING */
 	return 0;
 }
 

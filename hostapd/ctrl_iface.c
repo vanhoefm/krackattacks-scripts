@@ -34,6 +34,7 @@
 #include "ap/accounting.h"
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
+#include "wps/wps_defs.h"
 #include "ctrl_iface.h"
 
 
@@ -446,6 +447,46 @@ static int hostapd_ctrl_iface_wps_ap_pin(struct hostapd_data *hapd, char *txt,
 #endif /* CONFIG_WPS */
 
 
+static int hostapd_ctrl_iface_set(struct hostapd_data *wpa_s, char *cmd)
+{
+	char *value;
+	int ret = 0;
+
+	value = os_strchr(cmd, ' ');
+	if (value == NULL)
+		return -1;
+	*value++ = '\0';
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE SET '%s'='%s'", cmd, value);
+	if (0) {
+#ifdef CONFIG_WPS_TESTING
+	} else if (os_strcasecmp(cmd, "wps_version_number") == 0) {
+		long int val;
+		val = strtol(value, NULL, 0);
+		if (val < 0 || val > 0xff) {
+			ret = -1;
+			wpa_printf(MSG_DEBUG, "WPS: Invalid "
+				   "wps_version_number %ld", val);
+		} else {
+			wps_version_number = val;
+			wpa_printf(MSG_DEBUG, "WPS: Testing - force WPS "
+				   "version %u.%u",
+				   (wps_version_number & 0xf0) >> 4,
+				   wps_version_number & 0x0f);
+		}
+	} else if (os_strcasecmp(cmd, "wps_testing_dummy_cred") == 0) {
+		wps_testing_dummy_cred = atoi(value);
+		wpa_printf(MSG_DEBUG, "WPS: Testing - dummy_cred=%d",
+			   wps_testing_dummy_cred);
+#endif /* CONFIG_WPS_TESTING */
+	} else {
+		ret = -1;
+	}
+
+	return ret;
+}
+
+
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -560,6 +601,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		reply_len = hostapd_ctrl_iface_wps_ap_pin(hapd, buf + 11,
 							  reply, reply_size);
 #endif /* CONFIG_WPS */
+	} else if (os_strncmp(buf, "SET ", 4) == 0) {
+		if (hostapd_ctrl_iface_set(hapd, buf + 4))
+			reply_len = -1;
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

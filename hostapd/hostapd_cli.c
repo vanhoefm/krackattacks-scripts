@@ -570,6 +570,26 @@ static int hostapd_cli_cmd_interface(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid SET command: needs two arguments (variable "
+		       "name and value)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "SET %s %s", argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long SET command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -599,6 +619,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "level", hostapd_cli_cmd_level },
 	{ "license", hostapd_cli_cmd_license },
 	{ "quit", hostapd_cli_cmd_quit },
+	{ "set", hostapd_cli_cmd_set },
 	{ NULL, NULL }
 };
 

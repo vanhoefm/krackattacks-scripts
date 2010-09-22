@@ -15,15 +15,21 @@
 #ifndef WPS_DEFS_H
 #define WPS_DEFS_H
 
+#ifdef CONFIG_WPS_TESTING
+
+extern int wps_version_number;
+extern int wps_testing_dummy_cred;
+#define WPS_VERSION wps_version_number
+
+#else /* CONFIG_WPS_TESTING */
+
 #ifdef CONFIG_WPS2
-#ifdef CONFIG_WPS_EXTENSIBILITY_TESTING
-#define WPS_VERSION 0x57
-#else /* CONFIG_WPS_EXTENSIBILITY_TESTING */
 #define WPS_VERSION 0x20
-#endif /* CONFIG_WPS_EXTENSIBILITY_TESTING */
 #else /* CONFIG_WPS2 */
 #define WPS_VERSION 0x10
 #endif /* CONFIG_WPS2 */
+
+#endif /* CONFIG_WPS_TESTING */
 
 /* Diffie-Hellman 1536-bit MODP Group; RFC 3526, Group 5 */
 #define WPS_DH_GROUP 5

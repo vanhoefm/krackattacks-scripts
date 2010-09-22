@@ -1465,8 +1465,11 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	}
 
 use_provided:
-#ifdef CONFIG_WPS_TESTING_EXTRA_CRED
-	cred = wpabuf_alloc(200);
+#ifdef CONFIG_WPS_TESTING
+	if (wps_testing_dummy_cred)
+		cred = wpabuf_alloc(200);
+	else
+		cred = NULL;
 	if (cred) {
 		struct wps_credential dummy;
 		wpa_printf(MSG_DEBUG, "WPS: Add dummy credential");
@@ -1487,7 +1490,7 @@ use_provided:
 
 		wpabuf_free(cred);
 	}
-#endif /* CONFIG_WPS_TESTING_EXTRA_CRED */
+#endif /* CONFIG_WPS_TESTING */
 
 	cred = wpabuf_alloc(200);
 	if (cred == NULL)

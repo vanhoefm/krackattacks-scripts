@@ -784,6 +784,15 @@ void hostapd_update_wps(struct hostapd_data *hapd)
 {
 	if (hapd->wps == NULL)
 		return;
+
+#ifdef CONFIG_WPS_UPNP
+	hapd->wps->friendly_name = hapd->conf->friendly_name;
+	hapd->wps->manufacturer_url = hapd->conf->manufacturer_url;
+	hapd->wps->model_description = hapd->conf->model_description;
+	hapd->wps->model_url = hapd->conf->model_url;
+	hapd->wps->upc = hapd->conf->upc;
+#endif /* CONFIG_WPS_UPNP */
+
 	if (hapd->conf->wps_state)
 		wps_registrar_update_ie(hapd->wps->registrar);
 	else

@@ -1563,6 +1563,10 @@ static void wps_er_ap_process(struct wps_er_ap *ap, struct wpabuf *msg)
 			wps_deinit(ap->wps);
 			ap->wps = NULL;
 		}
+	} else if (res == WPS_DONE) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Protocol run done");
+		wps_deinit(ap->wps);
+		ap->wps = NULL;
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS ER: Failed to process message from "
 			   "AP (res=%d)", res);

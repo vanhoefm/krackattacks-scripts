@@ -97,6 +97,7 @@ static const char *commands_help =
 #endif /* CONFIG_WPS_OOB */
 "   wps_ap_pin <cmd> [params..]  enable/disable AP PIN\n"
 #endif /* CONFIG_WPS */
+"   get_config           show current configuration\n"
 "   help                 show this usage help\n"
 "   interface [ifname]   show interfaces/select interface\n"
 "   level <debug level>  change debug level\n"
@@ -460,6 +461,13 @@ static int hostapd_cli_cmd_wps_ap_pin(struct wpa_ctrl *ctrl, int argc,
 #endif /* CONFIG_WPS */
 
 
+static int hostapd_cli_cmd_get_config(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "GET_CONFIG");
+}
+
+
 static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
 				char *addr, size_t addr_len)
 {
@@ -642,6 +650,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #endif /* CONFIG_WPS_OOB */
 	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin },
 #endif /* CONFIG_WPS */
+	{ "get_config", hostapd_cli_cmd_get_config },
 	{ "help", hostapd_cli_cmd_help },
 	{ "interface", hostapd_cli_cmd_interface },
 	{ "level", hostapd_cli_cmd_level },

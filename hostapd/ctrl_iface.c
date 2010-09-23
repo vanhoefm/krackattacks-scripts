@@ -493,6 +493,172 @@ static int hostapd_ctrl_iface_wps_ap_pin(struct hostapd_data *hapd, char *txt,
 #endif /* CONFIG_WPS */
 
 
+static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
+					 char *buf, size_t buflen)
+{
+	int ret;
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + buflen;
+
+	ret = os_snprintf(pos, end - pos, "bssid=" MACSTR "\n"
+			  "ssid=%s\n",
+			  MAC2STR(hapd->own_addr),
+			  hapd->conf->ssid.ssid);
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+
+#ifdef CONFIG_WPS
+	ret = os_snprintf(pos, end - pos, "wps_state=%s\n",
+			  hapd->conf->wps_state == 0 ? "disabled" :
+			  (hapd->conf->wps_state == 1 ? "not configured" :
+			   "configured"));
+	if (ret < 0 || ret >= end - pos)
+		return pos - buf;
+	pos += ret;
+
+	if (hapd->conf->wps_state &&
+	    hapd->conf->ssid.wpa_passphrase) {
+		ret = os_snprintf(pos, end - pos, "passphrase=%s\n",
+				  hapd->conf->ssid.wpa_passphrase);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (hapd->conf->wps_state && hapd->conf->ssid.wpa_psk &&
+	    hapd->conf->ssid.wpa_psk->group) {
+		char hex[PMK_LEN * 2 + 1];
+		wpa_snprintf_hex(hex, sizeof(hex),
+				 hapd->conf->ssid.wpa_psk->psk, PMK_LEN);
+		ret = os_snprintf(pos, end - pos, "psk=%s\n", hex);
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_WPS */
+
+	if (hapd->conf->wpa && hapd->conf->wpa_key_mgmt) {
+		ret = os_snprintf(pos, end - pos, "key_mgmt=");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK) {
+			ret = os_snprintf(pos, end - pos, "WPA-PSK ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X) {
+			ret = os_snprintf(pos, end - pos, "WPA-EAP ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+#ifdef CONFIG_IEEE80211R
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_PSK) {
+			ret = os_snprintf(pos, end - pos, "FT-PSK ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X) {
+			ret = os_snprintf(pos, end - pos, "FT-EAP ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+#endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_PSK_SHA256) {
+			ret = os_snprintf(pos, end - pos, "WPA-PSK-SHA256 ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+		if (hapd->conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256) {
+			ret = os_snprintf(pos, end - pos, "WPA-EAP-SHA256 ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+#endif /* CONFIG_IEEE80211W */
+
+		ret = os_snprintf(pos, end - pos, "\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if (hapd->conf->wpa_group == WPA_CIPHER_CCMP) {
+		ret = os_snprintf(pos, end - pos, "group_cipher=CCMP\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	} else if (hapd->conf->wpa_group == WPA_CIPHER_TKIP) {
+		ret = os_snprintf(pos, end - pos, "group_cipher=TKIP\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if ((hapd->conf->wpa & WPA_PROTO_RSN) && hapd->conf->rsn_pairwise) {
+		ret = os_snprintf(pos, end - pos, "rsn_pairwise_cipher=");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+
+		if (hapd->conf->rsn_pairwise & WPA_CIPHER_CCMP) {
+			ret = os_snprintf(pos, end - pos, "CCMP ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+		if (hapd->conf->rsn_pairwise & WPA_CIPHER_TKIP) {
+			ret = os_snprintf(pos, end - pos, "TKIP ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+
+		ret = os_snprintf(pos, end - pos, "\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	if ((hapd->conf->wpa & WPA_PROTO_WPA) && hapd->conf->wpa_pairwise) {
+		ret = os_snprintf(pos, end - pos, "wpa_pairwise_cipher=");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+
+		if (hapd->conf->wpa_pairwise & WPA_CIPHER_CCMP) {
+			ret = os_snprintf(pos, end - pos, "CCMP ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+		if (hapd->conf->wpa_pairwise & WPA_CIPHER_TKIP) {
+			ret = os_snprintf(pos, end - pos, "TKIP ");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+
+		ret = os_snprintf(pos, end - pos, "\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+
+	return pos - buf;
+}
+
+
 static int hostapd_ctrl_iface_set(struct hostapd_data *wpa_s, char *cmd)
 {
 	char *value;
@@ -650,6 +816,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		reply_len = hostapd_ctrl_iface_wps_ap_pin(hapd, buf + 11,
 							  reply, reply_size);
 #endif /* CONFIG_WPS */
+	} else if (os_strcmp(buf, "GET_CONFIG") == 0) {
+		reply_len = hostapd_ctrl_iface_get_config(hapd, reply,
+							  reply_size);
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (hostapd_ctrl_iface_set(hapd, buf + 4))
 			reply_len = -1;

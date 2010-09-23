@@ -236,6 +236,9 @@ hostapd_cli wps_ap_pin set <PIN> [timeout]
 - if the optional timeout parameter is given, the AP PIN will be enabled
   for the specified number of seconds
 
+hostapd_cli get_config
+- display the current configuration
+
 
 Credential generation and configuration changes
 -----------------------------------------------

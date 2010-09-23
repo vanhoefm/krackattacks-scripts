@@ -601,6 +601,22 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		os_strdup(hapd->conf->serial_number) : NULL;
 	wps->config_methods =
 		wps_config_methods_str2bin(hapd->conf->config_methods);
+#ifdef CONFIG_WPS2
+	if ((wps->config_methods &
+	     (WPS_CONFIG_DISPLAY | WPS_CONFIG_VIRT_DISPLAY |
+	      WPS_CONFIG_PHY_DISPLAY)) == WPS_CONFIG_DISPLAY) {
+		wpa_printf(MSG_INFO, "WPS: Converting display to "
+			   "virtual_display for WPS 2.0 compliance");
+		wps->config_methods |= WPS_CONFIG_VIRT_DISPLAY;
+	}
+	if ((wps->config_methods &
+	     (WPS_CONFIG_PUSHBUTTON | WPS_CONFIG_VIRT_PUSHBUTTON |
+	      WPS_CONFIG_PHY_PUSHBUTTON)) == WPS_CONFIG_PUSHBUTTON) {
+		wpa_printf(MSG_INFO, "WPS: Converting push_button to "
+			   "virtual_push_button for WPS 2.0 compliance");
+		wps->config_methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
+	}
+#endif /* CONFIG_WPS2 */
 	if (hapd->conf->device_type &&
 	    wps_dev_type_str2bin(hapd->conf->device_type,
 				 wps->dev.pri_dev_type) < 0) {

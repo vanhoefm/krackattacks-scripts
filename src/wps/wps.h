@@ -778,15 +778,15 @@ int wps_validate_m2(const struct wpabuf *tlvs);
 int wps_validate_m2d(const struct wpabuf *tlvs);
 int wps_validate_m3(const struct wpabuf *tlvs);
 int wps_validate_m4(const struct wpabuf *tlvs);
-int wps_validate_m4_encr(const struct wpabuf *tlvs);
+int wps_validate_m4_encr(const struct wpabuf *tlvs, int wps2);
 int wps_validate_m5(const struct wpabuf *tlvs);
-int wps_validate_m5_encr(const struct wpabuf *tlvs);
+int wps_validate_m5_encr(const struct wpabuf *tlvs, int wps2);
 int wps_validate_m6(const struct wpabuf *tlvs);
-int wps_validate_m6_encr(const struct wpabuf *tlvs);
+int wps_validate_m6_encr(const struct wpabuf *tlvs, int wps2);
 int wps_validate_m7(const struct wpabuf *tlvs);
-int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap);
+int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap, int wps2);
 int wps_validate_m8(const struct wpabuf *tlvs);
-int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap);
+int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap, int wps2);
 int wps_validate_wsc_ack(const struct wpabuf *tlvs);
 int wps_validate_wsc_nack(const struct wpabuf *tlvs);
 int wps_validate_wsc_done(const struct wpabuf *tlvs);
@@ -843,7 +843,7 @@ static inline int wps_validate_m4(const struct wpabuf *tlvs)
 	return 0;
 }
 
-static inline int wps_validate_m4_encr(const struct wpabuf *tlvs)
+static inline int wps_validate_m4_encr(const struct wpabuf *tlvs, int wps2)
 {
 	return 0;
 }
@@ -853,7 +853,7 @@ static inline int wps_validate_m5(const struct wpabuf *tlvs)
 	return 0;
 }
 
-static inline int wps_validate_m5_encr(const struct wpabuf *tlvs)
+static inline int wps_validate_m5_encr(const struct wpabuf *tlvs, int wps2)
 {
 	return 0;
 }
@@ -863,7 +863,7 @@ static inline int wps_validate_m6(const struct wpabuf *tlvs)
 	return 0;
 }
 
-static inline int wps_validate_m6_encr(const struct wpabuf *tlvs)
+static inline int wps_validate_m6_encr(const struct wpabuf *tlvs, int wps2)
 {
 	return 0;
 }
@@ -873,7 +873,8 @@ static inline int wps_validate_m7(const struct wpabuf *tlvs)
 	return 0;
 }
 
-static inline int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap)
+static inline int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap,
+				       int wps2)
 {
 	return 0;
 }
@@ -883,7 +884,8 @@ static inline int wps_validate_m8(const struct wpabuf *tlvs)
 	return 0;
 }
 
-static inline int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap)
+static inline int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap,
+				       int wps2)
 {
 	return 0;
 }

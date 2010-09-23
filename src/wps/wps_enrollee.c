@@ -981,7 +981,7 @@ static enum wps_process_res wps_process_m4(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps_validate_m4_encr(decrypted) < 0) {
+	if (wps_validate_m4_encr(decrypted, attr->version2 != 0) < 0) {
 		wpabuf_free(decrypted);
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
@@ -1034,7 +1034,7 @@ static enum wps_process_res wps_process_m6(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps_validate_m6_encr(decrypted) < 0) {
+	if (wps_validate_m6_encr(decrypted, attr->version2 != 0) < 0) {
 		wpabuf_free(decrypted);
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
@@ -1087,7 +1087,8 @@ static enum wps_process_res wps_process_m8(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps_validate_m8_encr(decrypted, wps->wps->ap) < 0) {
+	if (wps_validate_m8_encr(decrypted, wps->wps->ap, attr->version2 != 0)
+	    < 0) {
 		wpabuf_free(decrypted);
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;

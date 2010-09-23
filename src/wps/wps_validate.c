@@ -1523,10 +1523,9 @@ int wps_validate_m4(const struct wpabuf *tlvs)
 }
 
 
-int wps_validate_m4_encr(const struct wpabuf *tlvs)
+int wps_validate_m4_encr(const struct wpabuf *tlvs, int wps2)
 {
 	struct wps_parse_attr attr;
-	int wps2;
 
 	if (tlvs == NULL) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: No TLVs in M4 encrypted "
@@ -1539,7 +1538,6 @@ int wps_validate_m4_encr(const struct wpabuf *tlvs)
 		return -1;
 	}
 
-	wps2 = attr.version2 != NULL;
 	if (wps_validate_r_snonce1(attr.r_snonce1, 1) ||
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M4 encrypted "
@@ -1592,10 +1590,9 @@ int wps_validate_m5(const struct wpabuf *tlvs)
 }
 
 
-int wps_validate_m5_encr(const struct wpabuf *tlvs)
+int wps_validate_m5_encr(const struct wpabuf *tlvs, int wps2)
 {
 	struct wps_parse_attr attr;
-	int wps2;
 
 	if (tlvs == NULL) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: No TLVs in M5 encrypted "
@@ -1608,7 +1605,6 @@ int wps_validate_m5_encr(const struct wpabuf *tlvs)
 		return -1;
 	}
 
-	wps2 = attr.version2 != NULL;
 	if (wps_validate_e_snonce1(attr.e_snonce1, 1) ||
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M5 encrypted "
@@ -1661,10 +1657,9 @@ int wps_validate_m6(const struct wpabuf *tlvs)
 }
 
 
-int wps_validate_m6_encr(const struct wpabuf *tlvs)
+int wps_validate_m6_encr(const struct wpabuf *tlvs, int wps2)
 {
 	struct wps_parse_attr attr;
-	int wps2;
 
 	if (tlvs == NULL) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: No TLVs in M6 encrypted "
@@ -1677,7 +1672,6 @@ int wps_validate_m6_encr(const struct wpabuf *tlvs)
 		return -1;
 	}
 
-	wps2 = attr.version2 != NULL;
 	if (wps_validate_r_snonce2(attr.r_snonce2, 1) ||
 	    wps_validate_key_wrap_auth(attr.key_wrap_auth, 1)) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: Invalid M6 encrypted "
@@ -1731,10 +1725,9 @@ int wps_validate_m7(const struct wpabuf *tlvs)
 }
 
 
-int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap)
+int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap, int wps2)
 {
 	struct wps_parse_attr attr;
-	int wps2;
 
 	if (tlvs == NULL) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: No TLVs in M7 encrypted "
@@ -1747,7 +1740,6 @@ int wps_validate_m7_encr(const struct wpabuf *tlvs, int ap)
 		return -1;
 	}
 
-	wps2 = attr.version2 != NULL;
 	if (wps_validate_e_snonce2(attr.e_snonce2, 1) ||
 	    wps_validate_ssid(attr.ssid, attr.ssid_len, !ap) ||
 	    wps_validate_mac_addr(attr.mac_addr, !ap) ||
@@ -1807,10 +1799,9 @@ int wps_validate_m8(const struct wpabuf *tlvs)
 }
 
 
-int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap)
+int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap, int wps2)
 {
 	struct wps_parse_attr attr;
-	int wps2;
 
 	if (tlvs == NULL) {
 		wpa_printf(MSG_INFO, "WPS-STRICT: No TLVs in M8 encrypted "
@@ -1823,7 +1814,6 @@ int wps_validate_m8_encr(const struct wpabuf *tlvs, int ap)
 		return -1;
 	}
 
-	wps2 = attr.version2 != NULL;
 	if (wps_validate_ssid(attr.ssid, attr.ssid_len, ap) ||
 	    wps_validate_auth_type(attr.auth_type, ap) ||
 	    wps_validate_encr_type(attr.encr_type, ap) ||

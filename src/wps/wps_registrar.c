@@ -1273,7 +1273,7 @@ static int wps_build_r_snonce2(struct wps_data *wps, struct wpabuf *msg)
 static int wps_build_cred_network_idx(struct wpabuf *msg,
 				      const struct wps_credential *cred)
 {
-	wpa_printf(MSG_DEBUG, "WPS:  * Network Index");
+	wpa_printf(MSG_DEBUG, "WPS:  * Network Index (1)");
 	wpabuf_put_be16(msg, ATTR_NETWORK_INDEX);
 	wpabuf_put_be16(msg, 1);
 	wpabuf_put_u8(msg, 1);
@@ -1285,6 +1285,8 @@ static int wps_build_cred_ssid(struct wpabuf *msg,
 			       const struct wps_credential *cred)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * SSID");
+	wpa_hexdump_ascii(MSG_DEBUG, "WPS: SSID for Credential",
+			  cred->ssid, cred->ssid_len);
 	wpabuf_put_be16(msg, ATTR_SSID);
 	wpabuf_put_be16(msg, cred->ssid_len);
 	wpabuf_put_data(msg, cred->ssid, cred->ssid_len);
@@ -1321,6 +1323,8 @@ static int wps_build_cred_network_key(struct wpabuf *msg,
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * Network Key (len=%d)",
 		   (int) cred->key_len);
+	wpa_hexdump_key(MSG_DEBUG, "WPS: Network Key",
+			cred->key, cred->key_len);
 	wpabuf_put_be16(msg, ATTR_NETWORK_KEY);
 	wpabuf_put_be16(msg, cred->key_len);
 	wpabuf_put_data(msg, cred->key, cred->key_len);

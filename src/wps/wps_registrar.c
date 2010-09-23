@@ -878,6 +878,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 	reg->pbc = 1;
 	wps_registrar_selected_registrar_changed(reg);
 
+	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);
 	eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wps_registrar_pbc_timeout,
 			       reg, NULL);
@@ -2509,6 +2510,13 @@ static int wps_process_ap_settings_r(struct wps_data *wps,
 		 * Use the AP PIN only to receive the current AP settings, not
 		 * to reconfigure the AP.
 		 */
+
+		/*
+		 * Clear selected registrar here since we do not get to
+		 * WSC_Done in this protocol run.
+		 */
+		wps_registrar_pin_completed(wps->wps->registrar);
+
 		if (wps->ap_settings_cb) {
 			wps->ap_settings_cb(wps->ap_settings_cb_ctx,
 					    &wps->cred);

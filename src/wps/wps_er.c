@@ -1301,6 +1301,12 @@ static void wps_er_send_set_sel_reg(struct wps_er_ap *ap, struct wpabuf *msg)
 		return;
 	}
 
+	if (ap->wps) {
+		wpa_printf(MSG_DEBUG, "WPS ER: Pending WPS operation for AP - "
+			   "skip SetSelectedRegistrar");
+		return;
+	}
+
 	url = http_client_url_parse(ap->control_url, &dst, &path);
 	if (url == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse controlURL");

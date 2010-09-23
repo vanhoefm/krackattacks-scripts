@@ -90,6 +90,7 @@ static const char *commands_help =
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 "   wps_pin <uuid> <pin> [timeout] [addr]  add WPS Enrollee PIN\n"
+"   wps_check_pin <PIN>  verify PIN checksum\n"
 "   wps_pbc              indicate button pushed to initiate PBC\n"
 #ifdef CONFIG_WPS_OOB
 "   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
@@ -370,6 +371,32 @@ static int hostapd_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_wps_check_pin(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1 && argc != 2) {
+		printf("Invalid WPS_CHECK_PIN command: needs one argument:\n"
+		       "- PIN to be verified\n");
+		return -1;
+	}
+
+	if (argc == 2)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s",
+				  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_CHECK_PIN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int hostapd_cli_cmd_wps_pbc(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
 {
@@ -608,6 +635,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_WPS
 	{ "wps_pin", hostapd_cli_cmd_wps_pin },
+	{ "wps_check_pin", hostapd_cli_cmd_wps_check_pin },
 	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },
 #ifdef CONFIG_WPS_OOB
 	{ "wps_oob", hostapd_cli_cmd_wps_oob },

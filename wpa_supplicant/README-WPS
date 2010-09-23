@@ -94,6 +94,13 @@ pushbutton event (for PBC) to allow a new WPS Enrollee to join the
 network. wpa_supplicant uses the control interface as an input channel
 for these events.
 
+The PIN value used in the commands must be processed by an UI to
+remove non-digit characters and potentially, to verify the checksum
+digit. "wpa_cli wps_check_pin <PIN>" can be used to do such processing.
+It returns FAIL if the PIN is invalid, or FAIL-CHECKSUM if the checksum
+digit is incorrect, or the processed PIN (non-digit characters removed)
+if the PIN is valid.
+
 If the client device has a display, a random PIN has to be generated
 for each WPS registration session. wpa_supplicant can do this with a
 control interface request, e.g., by calling wpa_cli:

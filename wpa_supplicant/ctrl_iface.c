@@ -261,6 +261,51 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpa_supplicant_ctrl_iface_wps_check_pin(
+	struct wpa_supplicant *wpa_s, char *cmd, char *buf, size_t buflen)
+{
+	char pin[9];
+	size_t len;
+	char *pos;
+	int ret;
+
+	wpa_hexdump_ascii_key(MSG_DEBUG, "WPS_CHECK_PIN",
+			      (u8 *) cmd, os_strlen(cmd));
+	for (pos = cmd, len = 0; *pos != '\0'; pos++) {
+		if (*pos < '0' || *pos > '9')
+			continue;
+		pin[len++] = *pos;
+		if (len == 9) {
+			wpa_printf(MSG_DEBUG, "WPS: Too long PIN");
+			return -1;
+		}
+	}
+	if (len != 4 && len != 8) {
+		wpa_printf(MSG_DEBUG, "WPS: Invalid PIN length %d", (int) len);
+		return -1;
+	}
+	pin[len] = '\0';
+
+	if (len == 8) {
+		unsigned int pin_val;
+		pin_val = atoi(pin);
+		if (!wps_pin_valid(pin_val)) {
+			wpa_printf(MSG_DEBUG, "WPS: Invalid checksum digit");
+			ret = os_snprintf(buf, buflen, "FAIL-CHECKSUM\n");
+			if (ret < 0 || (size_t) ret >= buflen)
+				return -1;
+			return ret;
+		}
+	}
+
+	ret = os_snprintf(buf, buflen, "%s", pin);
+	if (ret < 0 || (size_t) ret >= buflen)
+		return -1;
+
+	return ret;
+}
+
+
 #ifdef CONFIG_WPS_OOB
 static int wpa_supplicant_ctrl_iface_wps_oob(struct wpa_supplicant *wpa_s,
 					     char *cmd)
@@ -2715,6 +2760,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		reply_len = wpa_supplicant_ctrl_iface_wps_pin(wpa_s, buf + 8,
 							      reply,
 							      reply_size);
+	} else if (os_strncmp(buf, "WPS_CHECK_PIN ", 14) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_wps_check_pin(
+			wpa_s, buf + 14, reply, reply_size);
 	} else if (os_strcmp(buf, "WPS_CANCEL") == 0) {
 		if (wpas_wps_cancel(wpa_s))
 			reply_len = -1;

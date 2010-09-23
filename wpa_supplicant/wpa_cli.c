@@ -615,6 +615,32 @@ static int wpa_cli_cmd_wps_pin(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_wps_check_pin(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1 && argc != 2) {
+		printf("Invalid WPS_CHECK_PIN command: needs one argument:\n"
+		       "- PIN to be verified\n");
+		return -1;
+	}
+
+	if (argc == 2)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_CHECK_PIN %s",
+				  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_CHECK_PIN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
@@ -2271,6 +2297,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> [PIN] = start WPS PIN method (returns PIN, if not "
 	  "hardcoded)" },
+	{ "wps_check_pin", wpa_cli_cmd_wps_check_pin,
+	  cli_cmd_flag_sensitive,
+	  "<PIN> = verify PIN checksum" },
 	{ "wps_cancel", wpa_cli_cmd_wps_cancel, cli_cmd_flag_none,
 	  "Cancels the pending WPS operation" },
 #ifdef CONFIG_WPS_OOB

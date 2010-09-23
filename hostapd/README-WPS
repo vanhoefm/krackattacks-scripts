@@ -120,6 +120,13 @@ pushbutton event (for PBC) to allow a new WPS Enrollee to join the
 network. hostapd uses the control interface as an input channel for
 these events.
 
+The PIN value used in the commands must be processed by an UI to
+remove non-digit characters and potentially, to verify the checksum
+digit. "hostapd_cli wps_check_pin <PIN>" can be used to do such
+processing. It returns FAIL if the PIN is invalid, or FAIL-CHECKSUM if
+the checksum digit is incorrect, or the processed PIN (non-digit
+characters removed) if the PIN is valid.
+
 When a client device (WPS Enrollee) connects to hostapd (WPS
 Registrar) in order to start PIN mode negotiation for WPS, an
 identifier (Enrollee UUID) is sent. hostapd will need to be configured

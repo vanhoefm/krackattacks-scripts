@@ -256,8 +256,11 @@ wps_er_config <UUID> <AP PIN> <new SSID> <auth> <encr> <new key>
 wps_er_pbc <Enrollee UUID>
 - accept an Enrollee PBC using External Registrar
 
-wps_er_pin <Enrollee UUID> <PIN>
+wps_er_pin <Enrollee UUID> <PIN> [Enrollee MAC address]
 - add an Enrollee PIN to External Registrar
+- if Enrollee UUID is not known, "any" can be used to add a wildcard PIN
+- if the MAC address of the enrollee is known, it should be configured
+  to allow the AP to advertise list of authorized enrollees
 
 
 WPS ER events:

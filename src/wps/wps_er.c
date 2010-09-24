@@ -1195,6 +1195,7 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 	}
 
 	if (wps_er_ssdp_init(er) < 0) {
+		wpa_printf(MSG_INFO, "WPS UPnP: SSDP initialization failed");
 		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}
@@ -1202,6 +1203,7 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 	addr.s_addr = er->ip_addr;
 	er->http_srv = http_server_init(&addr, -1, wps_er_http_req, er);
 	if (er->http_srv == NULL) {
+		wpa_printf(MSG_INFO, "WPS UPnP: HTTP initialization failed");
 		wps_er_deinit(er, NULL, NULL);
 		return NULL;
 	}

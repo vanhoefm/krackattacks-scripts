@@ -165,16 +165,25 @@ void wps_er_send_ssdp_msearch(struct wps_er *er)
 
 int wps_er_ssdp_init(struct wps_er *er)
 {
-	if (add_ssdp_network(er->ifname))
+	if (add_ssdp_network(er->ifname)) {
+		wpa_printf(MSG_INFO, "WPS ER: Failed to add routing entry for "
+			   "SSDP");
 		return -1;
+	}
 
 	er->multicast_sd = ssdp_open_multicast_sock(er->ip_addr);
-	if (er->multicast_sd < 0)
+	if (er->multicast_sd < 0) {
+		wpa_printf(MSG_INFO, "WPS ER: Failed to open multicast socket "
+			   "for SSDP");
 		return -1;
+	}
 
 	er->ssdp_sd = ssdp_listener_open();
-	if (er->ssdp_sd < 0)
+	if (er->ssdp_sd < 0) {
+		wpa_printf(MSG_INFO, "WPS ER: Failed to open SSDP listener "
+			   "socket");
 		return -1;
+	}
 
 	if (eloop_register_sock(er->multicast_sd, EVENT_TYPE_READ,
 				wps_er_ssdp_rx, er, NULL) ||

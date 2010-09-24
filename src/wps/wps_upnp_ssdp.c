@@ -875,11 +875,17 @@ int ssdp_open_multicast_sock(u32 ip_addr)
 #endif
 
 	if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_IF,
-		       &ip_addr, sizeof(ip_addr)))
+		       &ip_addr, sizeof(ip_addr))) {
+		wpa_printf(MSG_DEBUG, "WPS: setsockopt(IP_MULTICAST_IF) %x: "
+			   "%d (%s)", ip_addr, errno, strerror(errno));
 		return -1;
+	}
 	if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL,
-		       &ttl, sizeof(ttl)))
+		       &ttl, sizeof(ttl))) {
+		wpa_printf(MSG_DEBUG, "WPS: setsockopt(IP_MULTICAST_TTL): "
+			   "%d (%s)", errno, strerror(errno));
 		return -1;
+	}
 
 #if 0   /* not needed, because we don't receive using multicast_sd */
 	{

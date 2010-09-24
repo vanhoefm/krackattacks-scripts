@@ -710,6 +710,7 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	char *reply;
 	const int reply_size = 4096;
 	int reply_len;
+	int level = MSG_DEBUG;
 
 	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
 		       (struct sockaddr *) &from, &fromlen);
@@ -718,7 +719,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		return;
 	}
 	buf[res] = '\0';
-	wpa_hexdump_ascii(MSG_DEBUG, "RX ctrl_iface", (u8 *) buf, res);
+	if (os_strcmp(buf, "PING") == 0)
+		level = MSG_EXCESSIVE;
+	wpa_hexdump_ascii(level, "RX ctrl_iface", (u8 *) buf, res);
 
 	reply = os_malloc(reply_size);
 	if (reply == NULL) {

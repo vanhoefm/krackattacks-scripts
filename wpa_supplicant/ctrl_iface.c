@@ -2676,7 +2676,10 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		wpa_hexdump_ascii_key(MSG_DEBUG, "RX ctrl_iface",
 				      (const u8 *) buf, os_strlen(buf));
 	} else {
-		wpa_hexdump_ascii(MSG_DEBUG, "RX ctrl_iface",
+		int level = MSG_DEBUG;
+		if (os_strcmp(buf, "PING") == 0)
+			level = MSG_EXCESSIVE;
+		wpa_hexdump_ascii(level, "RX ctrl_iface",
 				  (const u8 *) buf, os_strlen(buf));
 	}
 

@@ -1098,6 +1098,20 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 #endif /* CONFIG_IEEE80211N */
 
+#ifdef CONFIG_WPS2
+	if (bss->wps_state && bss->ignore_broadcast_ssid) {
+		wpa_printf(MSG_INFO, "WPS: ignore_broadcast_ssid "
+			   "configuration forced WPS to be disabled");
+		bss->wps_state = 0;
+	}
+
+	if (bss->wps_state && bss->ssid.wep.keys_set && bss->wpa == 0) {
+		wpa_printf(MSG_INFO, "WPS: WEP configuration forced WPS to be "
+			   "disabled");
+		bss->wps_state = 0;
+	}
+#endif /* CONFIG_WPS2 */
+
 	return 0;
 }
 

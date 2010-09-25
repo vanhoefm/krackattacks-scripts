@@ -799,6 +799,10 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 		    ie.wpa_ie, IEEE80211_MAX_OPT_IE);
 	wpa_hexdump(MSG_MSGDUMP, "madwifi req RSN IE",
 		    ie.rsn_ie, IEEE80211_MAX_OPT_IE);
+#ifdef ATH_WPS_IE
+	wpa_hexdump(MSG_MSGDUMP, "madwifi req WPS IE",
+		    ie.wps_ie, IEEE80211_MAX_OPT_IE);
+#endif /* ATH_WPS_IE */
 	iebuf = ie.wpa_ie;
 	/* madwifi seems to return some random data if WPA/RSN IE is not set.
 	 * Assume the IE was not included if the IE type is unknown. */
@@ -813,6 +817,16 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 	}
 
 	ielen = iebuf[1];
+
+#ifdef ATH_WPS_IE
+	/* if WPS IE is present, preference is given to WPS */
+	if (ie.wps_ie &&
+	    (ie.wps_ie[1] > 0 && (ie.wps_ie[0] == WLAN_EID_VENDOR_SPECIFIC))) {
+		iebuf = ie.wps_ie;
+		ielen = ie.wps_ie[1];
+	}
+#endif /* ATH_WPS_IE */
+
 	if (ielen == 0)
 		iebuf = NULL;
 	else

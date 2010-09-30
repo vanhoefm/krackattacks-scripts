@@ -16,6 +16,7 @@
 #define NETLINK_H
 
 struct netlink_data;
+struct ifinfomsg;
 
 struct netlink_config {
 	void *ctx;

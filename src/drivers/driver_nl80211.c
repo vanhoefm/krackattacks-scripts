@@ -22,6 +22,7 @@
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
 #include <netlink/genl/ctrl.h>
+#include <linux/rtnetlink.h>
 #include <netpacket/packet.h>
 #include <linux/filter.h>
 #include "nl80211_copy.h"

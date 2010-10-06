@@ -1805,9 +1805,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_INTERFACE_ENABLED:
 		wpa_printf(MSG_DEBUG, "Interface was enabled");
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
-			wpa_supplicant_set_state(wpa_s,
-						 WPA_DISCONNECTED);
-			wpa_supplicant_req_scan(wpa_s, 0, 0);
+			if (!wpa_s->ap_iface) {
+				wpa_supplicant_set_state(wpa_s,
+							 WPA_DISCONNECTED);
+				wpa_supplicant_req_scan(wpa_s, 0, 0);
+			} else
+				wpa_supplicant_set_state(wpa_s,
+							 WPA_COMPLETED);
 		}
 		break;
 	case EVENT_INTERFACE_DISABLED:

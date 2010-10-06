@@ -540,6 +540,8 @@ static int count_interface_cb(struct hostapd_iface *iface, void *ctx)
 static int interface_count(struct hostapd_iface *iface)
 {
 	int count = 0;
+	if (iface->for_each_interface == NULL)
+		return 0;
 	iface->for_each_interface(iface->interfaces, count_interface_cb,
 				  &count);
 	return count;

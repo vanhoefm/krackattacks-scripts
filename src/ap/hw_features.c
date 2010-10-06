@@ -265,11 +265,11 @@ static void ieee80211n_get_pri_sec_chan(struct wpa_scan_res *bss,
 		oper = (struct ieee80211_ht_operation *) elems.ht_operation;
 		*pri_chan = oper->control_chan;
 		if (oper->ht_param & HT_INFO_HT_PARAM_REC_TRANS_CHNL_WIDTH) {
-			if (oper->ht_param &
-			    HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE)
+			int sec = oper->ht_param &
+				HT_INFO_HT_PARAM_SECONDARY_CHNL_OFF_MASK;
+			if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_ABOVE)
 				*sec_chan = *pri_chan + 4;
-			else if (oper->ht_param &
-				 HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW)
+			else if (sec == HT_INFO_HT_PARAM_SECONDARY_CHNL_BELOW)
 				*sec_chan = *pri_chan - 4;
 		}
 	}

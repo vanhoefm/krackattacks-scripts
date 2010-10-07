@@ -2153,6 +2153,69 @@ static int wpa_cli_cmd_sta_autoconnect(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_tdls_discover(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid TDLS_DISCOVER command: needs one argument "
+		       "(Peer STA MAC address)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "TDLS_DISCOVER %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long TDLS_DISCOVER command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_tdls_setup(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid TDLS_SETUP command: needs one argument "
+		       "(Peer STA MAC address)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "TDLS_SETUP %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long TDLS_SETUP command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_tdls_teardown(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid TDLS_TEARDOWN command: needs one argument "
+		       "(Peer STA MAC address)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "TDLS_TEARDOWN %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long TDLS_TEARDOWN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -2450,6 +2513,15 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 #endif /* CONFIG_P2P */
 	{ "sta_autoconnect", wpa_cli_cmd_sta_autoconnect, cli_cmd_flag_none,
 	  "<0/1> = disable/enable automatic reconnection" },
+	{ "tdls_discover", wpa_cli_cmd_tdls_discover,
+	  cli_cmd_flag_none,
+	  "<addr> = request TDLS discovery with <addr>" },
+	{ "tdls_setup", wpa_cli_cmd_tdls_setup,
+	  cli_cmd_flag_none,
+	  "<addr> = request TDLS setup with <addr>" },
+	{ "tdls_teardown", wpa_cli_cmd_tdls_teardown,
+	  cli_cmd_flag_none,
+	  "<addr> = tear down TDLS with <addr>" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

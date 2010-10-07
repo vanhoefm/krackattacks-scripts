@@ -535,6 +535,28 @@ static int wpa_supplicant_mark_authenticated(void *ctx, const u8 *target_ap)
 #endif /* CONFIG_NO_WPA */
 
 
+#ifdef CONFIG_TDLS
+
+static int wpa_supplicant_send_tdls_mgmt(void *ctx, const u8 *dst,
+					 u8 action_code, u8 dialog_token,
+					 u16 status_code, const u8 *buf,
+					 size_t len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	return wpa_drv_send_tdls_mgmt(wpa_s, dst, action_code, dialog_token,
+				      status_code, buf, len);
+}
+
+
+static int wpa_supplicant_tdls_oper(void *ctx, int oper, const u8 *peer)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	return wpa_drv_tdls_oper(wpa_s, oper, peer);
+}
+
+#endif /* CONFIG_TDLS */
+
+
 #ifdef IEEE8021X_EAPOL
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
 static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
@@ -668,6 +690,10 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->send_ft_action = wpa_supplicant_send_ft_action;
 	ctx->mark_authenticated = wpa_supplicant_mark_authenticated;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_TDLS
+	ctx->send_tdls_mgmt = wpa_supplicant_send_tdls_mgmt;
+	ctx->tdls_oper = wpa_supplicant_tdls_oper;
+#endif /* CONFIG_TDLS */
 
 	wpa_s->wpa = wpa_sm_init(ctx);
 	if (wpa_s->wpa == NULL) {

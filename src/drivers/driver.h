@@ -694,6 +694,14 @@ struct p2p_params {
 	size_t num_sec_dev_types;
 };
 
+enum tdls_oper {
+	TDLS_DISCOVERY_REQ,
+	TDLS_SETUP,
+	TDLS_TEARDOWN,
+	TDLS_ENABLE_LINK,
+	TDLS_DISABLE_LINK
+};
+
 /**
  * struct wpa_driver_ops - Driver interface API definition
  *
@@ -2187,6 +2195,26 @@ struct wpa_driver_ops {
 	int (*p2p_invite)(void *priv, const u8 *peer, int role,
 			  const u8 *bssid, const u8 *ssid, size_t ssid_len,
 			  const u8 *go_dev_addr, int persistent_group);
+
+	/**
+	 * send_tdls_mgmt - for sending TDLS management packets
+	 * @priv: private driver interface data
+	 * @dst: Destination (peer) MAC address
+	 * @action_code: TDLS action code for the mssage
+	 * @dialog_token: Dialog Token to use in the message (if needed)
+	 * @status_code: Status Code or Reason Code to use (if needed)
+	 * @buf: TDLS IEs to add to the message
+	 * @len: Length of buf in octets
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This optional function can be used to send packet to driver which is
+	 * responsible for receiving and sending all TDLS packets.
+	 */
+	int (*send_tdls_mgmt)(void *priv, const u8 *dst, u8 action_code,
+			      u8 dialog_token, u16 status_code,
+			      const u8 *buf, size_t len);
+
+	int (*tdls_oper)(void *priv, enum tdls_oper oper, const u8 *peer);
 };
 
 
@@ -2307,6 +2335,13 @@ enum wpa_event_type {
 	 * event.
 	 */
 	EVENT_STKSTART,
+
+	/**
+	 * EVENT_TDLS - Request TDLS operation
+	 *
+	 * This event can be used to request a TDLS operation to be performed.
+	 */
+	EVENT_TDLS,
 
 	/**
 	 * EVENT_FT_RESPONSE - Report FT (IEEE 802.11r) response IEs
@@ -2756,6 +2791,18 @@ union wpa_event_data {
 	struct stkstart {
 		u8 peer[ETH_ALEN];
 	} stkstart;
+
+	/**
+	 * struct tdls - Data for EVENT_TDLS
+	 */
+	struct tdls {
+		u8 peer[ETH_ALEN];
+		enum {
+			TDLS_REQUEST_SETUP,
+			TDLS_REQUEST_TEARDOWN
+		} oper;
+		u16 reason_code; /* for teardown */
+	} tdls;
 
 	/**
 	 * struct ft_ies - FT information elements (EVENT_FT_RESPONSE)

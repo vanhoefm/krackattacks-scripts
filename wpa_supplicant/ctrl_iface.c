@@ -181,6 +181,64 @@ static int wpa_supplicant_ctrl_iface_stkstart(
 #endif /* CONFIG_PEERKEY */
 
 
+#ifdef CONFIG_TDLS
+
+static int wpa_supplicant_ctrl_iface_tdls_discover(
+	struct wpa_supplicant *wpa_s, char *addr)
+{
+	u8 peer[ETH_ALEN];
+
+	if (hwaddr_aton(addr, peer)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_DISCOVER: invalid "
+			   "address '%s'", addr);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_DISCOVER " MACSTR,
+		   MAC2STR(peer));
+
+	return wpa_drv_tdls_oper(wpa_s, TDLS_DISCOVERY_REQ, peer);
+}
+
+
+static int wpa_supplicant_ctrl_iface_tdls_setup(
+	struct wpa_supplicant *wpa_s, char *addr)
+{
+	u8 peer[ETH_ALEN];
+
+	if (hwaddr_aton(addr, peer)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_SETUP: invalid "
+			   "address '%s'", addr);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_SETUP " MACSTR,
+		   MAC2STR(peer));
+
+	return wpa_drv_tdls_oper(wpa_s, TDLS_SETUP, peer);
+}
+
+
+static int wpa_supplicant_ctrl_iface_tdls_teardown(
+	struct wpa_supplicant *wpa_s, char *addr)
+{
+	u8 peer[ETH_ALEN];
+
+	if (hwaddr_aton(addr, peer)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN: invalid "
+			   "address '%s'", addr);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_TEARDOWN " MACSTR,
+		   MAC2STR(peer));
+
+	return wpa_drv_tdls_oper(wpa_s, TDLS_TEARDOWN, peer);
+}
+
+#endif /* CONFIG_TDLS */
+
+
 #ifdef CONFIG_IEEE80211R
 static int wpa_supplicant_ctrl_iface_ft_ds(
 	struct wpa_supplicant *wpa_s, char *addr)
@@ -3118,6 +3176,17 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "STA_AUTOCONNECT ", 16) == 0) {
 		if (wpa_supplicant_ctrl_iface_sta_autoconnect(wpa_s, buf + 16))
 			reply_len = -1;
+#ifdef CONFIG_TDLS
+	} else if (os_strncmp(buf, "TDLS_DISCOVER ", 14) == 0) {
+		if (wpa_supplicant_ctrl_iface_tdls_discover(wpa_s, buf + 14))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "TDLS_SETUP ", 11) == 0) {
+		if (wpa_supplicant_ctrl_iface_tdls_setup(wpa_s, buf + 11))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "TDLS_TEARDOWN ", 14) == 0) {
+		if (wpa_supplicant_ctrl_iface_tdls_teardown(wpa_s, buf + 14))
+			reply_len = -1;
+#endif /* CONFIG_TDLS */
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

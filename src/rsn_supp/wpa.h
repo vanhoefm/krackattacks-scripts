@@ -55,6 +55,12 @@ struct wpa_sm_ctx {
 	int (*send_ft_action)(void *ctx, u8 action, const u8 *target_ap,
 			      const u8 *ies, size_t ies_len);
 	int (*mark_authenticated)(void *ctx, const u8 *target_ap);
+#ifdef CONFIG_TDLS
+	int (*send_tdls_mgmt)(void *ctx, const u8 *dst,
+			      u8 action_code, u8 dialog_token,
+			      u16 status_code, const u8 *buf, size_t len);
+	int (*tdls_oper)(void *ctx, int oper, const u8 *peer);
+#endif /* CONFIG_TDLS */
 };
 
 
@@ -329,5 +335,13 @@ wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 }
 
 #endif /* CONFIG_IEEE80211R */
+
+
+/* tdls.c */
+int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr);
+int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
+				  u16 reason_code);
+int wpa_tdls_init(struct wpa_sm *sm);
+void wpa_tdls_deinit(struct wpa_sm *sm);
 
 #endif /* WPA_H */

@@ -320,6 +320,9 @@ static inline unsigned int wpa_swap_32(unsigned int v)
 #ifndef ETH_P_ALL
 #define ETH_P_ALL 0x0003
 #endif
+#ifndef ETH_P_80211_ENCAP
+#define ETH_P_80211_ENCAP 0x890d /* TDLS comes under this category */
+#endif
 #ifndef ETH_P_PAE
 #define ETH_P_PAE 0x888E /* Port Access Entity (IEEE 802.1X) */
 #endif /* ETH_P_PAE */

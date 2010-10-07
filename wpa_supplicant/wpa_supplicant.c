@@ -402,6 +402,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	rsn_preauth_deinit(wpa_s->wpa);
 
+#ifdef CONFIG_TDLS
+	wpa_tdls_deinit(wpa_s->wpa);
+#endif /* CONFIG_TDLS */
+
 	pmksa_candidate_free(wpa_s->wpa);
 	wpa_sm_deinit(wpa_s->wpa);
 	wpa_s->wpa = NULL;
@@ -2135,6 +2139,11 @@ next_driver:
 
 	if (wpa_supplicant_driver_init(wpa_s) < 0)
 		return -1;
+
+#ifdef CONFIG_TDLS
+	if (wpa_tdls_init(wpa_s->wpa))
+		return -1;
+#endif /* CONFIG_TDLS */
 
 	if (wpa_s->conf->country[0] && wpa_s->conf->country[1] &&
 	    wpa_drv_set_country(wpa_s, wpa_s->conf->country)) {

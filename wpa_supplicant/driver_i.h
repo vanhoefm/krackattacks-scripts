@@ -675,5 +675,25 @@ static inline int wpa_drv_p2p_invite(struct wpa_supplicant *wpa_s,
 					 persistent_group);
 }
 
+static inline int wpa_drv_send_tdls_mgmt(struct wpa_supplicant *wpa_s,
+					 const u8 *dst, u8 action_code,
+					 u8 dialog_token, u16 status_code,
+					 const u8 *buf, size_t len)
+{
+	if (wpa_s->driver->send_tdls_mgmt) {
+		return wpa_s->driver->send_tdls_mgmt(wpa_s->drv_priv, dst,
+						     action_code, dialog_token,
+						     status_code, buf, len);
+	}
+	return -1;
+}
+
+static inline int wpa_drv_tdls_oper(struct wpa_supplicant *wpa_s,
+				    enum tdls_oper oper, const u8 *peer)
+{
+	if (!wpa_s->driver->tdls_oper)
+		return -1;
+	return wpa_s->driver->tdls_oper(wpa_s->drv_priv, oper, peer);
+}
 
 #endif /* DRIVER_I_H */

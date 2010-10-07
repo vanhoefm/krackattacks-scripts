@@ -1587,6 +1587,26 @@ wpa_supplicant_event_stkstart(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_PEERKEY */
 
 
+#ifdef CONFIG_TDLS
+static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
+				      union wpa_event_data *data)
+{
+	if (data == NULL)
+		return;
+	switch (data->tdls.oper) {
+	case TDLS_REQUEST_SETUP:
+		wpa_tdls_start(wpa_s->wpa, data->tdls.peer);
+		break;
+	case TDLS_REQUEST_TEARDOWN:
+		/* request from driver to add FTIE */
+		wpa_tdls_recv_teardown_notify(wpa_s->wpa, data->tdls.peer,
+					      data->tdls.reason_code);
+		break;
+	}
+}
+#endif /* CONFIG_TDLS */
+
+
 #ifdef CONFIG_IEEE80211R
 static void
 wpa_supplicant_event_ft_response(struct wpa_supplicant *wpa_s,
@@ -1818,6 +1838,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_stkstart(wpa_s, data);
 		break;
 #endif /* CONFIG_PEERKEY */
+#ifdef CONFIG_TDLS
+	case EVENT_TDLS:
+		wpa_supplicant_event_tdls(wpa_s, data);
+		break;
+#endif /* CONFIG_TDLS */
 #ifdef CONFIG_IEEE80211R
 	case EVENT_FT_RESPONSE:
 		wpa_supplicant_event_ft_response(wpa_s, data);

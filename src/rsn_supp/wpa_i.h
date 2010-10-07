@@ -18,6 +18,7 @@
 #include "utils/list.h"
 
 struct wpa_peerkey;
+struct wpa_tdls_peer;
 struct wpa_eapol_key;
 
 /**
@@ -43,6 +44,7 @@ struct wpa_sm {
 
 	struct l2_packet_data *l2_preauth;
 	struct l2_packet_data *l2_preauth_br;
+	struct l2_packet_data *l2_tdls;
 	u8 preauth_bssid[ETH_ALEN]; /* current RSN pre-auth peer or
 				     * 00:00:00:00:00:00 if no pre-auth is
 				     * in progress */
@@ -92,6 +94,9 @@ struct wpa_sm {
 #ifdef CONFIG_PEERKEY
 	struct wpa_peerkey *peerkey;
 #endif /* CONFIG_PEERKEY */
+#ifdef CONFIG_TDLS
+	struct wpa_tdls_peer *tdls;
+#endif /* CONFIG_TDLS */
 
 #ifdef CONFIG_IEEE80211R
 	u8 xxkey[PMK_LEN]; /* PSK or the second 256 bits of MSK */
@@ -237,6 +242,27 @@ static inline int wpa_sm_mark_authenticated(struct wpa_sm *sm,
 	return -1;
 }
 
+#ifdef CONFIG_TDLS
+static inline int wpa_sm_send_tdls_mgmt(struct wpa_sm *sm, const u8 *dst,
+					u8 action_code, u8 dialog_token,
+					u16 status_code, const u8 *buf,
+					size_t len)
+{
+	if (sm->ctx->send_tdls_mgmt)
+		return sm->ctx->send_tdls_mgmt(sm->ctx->ctx, dst, action_code,
+					       dialog_token, status_code,
+					       buf, len);
+	return -1;
+}
+
+static inline int wpa_sm_tdls_oper(struct wpa_sm *sm, int oper,
+				   const u8 *peer)
+{
+	if (sm->ctx->tdls_oper)
+		return sm->ctx->tdls_oper(sm->ctx->ctx, oper, peer);
+	return -1;
+}
+#endif /* CONFIG_TDLS */
 
 void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
 			int ver, const u8 *dest, u16 proto,

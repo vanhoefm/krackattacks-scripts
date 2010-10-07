@@ -1,3 +1,17 @@
 *.o
 *.d
 *~
+wpa_supplicant/eapol_test
+wpa_supplicant/preauth_test
+wpa_supplicant/wpa_cli
+wpa_supplicant/wpa_passphrase
+wpa_supplicant/wpa_supplicant
+wpa_supplicant/wpa_priv
+wpa_supplicant/wpa_gui/Makefile
+wpa_supplicant/wpa_gui/wpa_gui
+wpa_supplicant/wpa_gui-qt4/Makefile
+wpa_supplicant/wpa_gui-qt4/wpa_gui
+hostapd/hostapd
+hostapd/hostapd_cli
+hostapd/hlr_auc_gw
+hostapd/nt_password_hash

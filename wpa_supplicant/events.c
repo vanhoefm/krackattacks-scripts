@@ -632,7 +632,10 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 		if (wpas_p2p_notif_pbc_overlap(wpa_s) == 1)
 			return;
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_WPS
 		wpas_wps_cancel(wpa_s);
+#endif /* CONFIG_WPS */
 		return;
 	}
 
@@ -1805,6 +1808,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_INTERFACE_ENABLED:
 		wpa_printf(MSG_DEBUG, "Interface was enabled");
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED) {
+#ifdef CONFIG_AP
 			if (!wpa_s->ap_iface) {
 				wpa_supplicant_set_state(wpa_s,
 							 WPA_DISCONNECTED);
@@ -1812,6 +1816,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			} else
 				wpa_supplicant_set_state(wpa_s,
 							 WPA_COMPLETED);
+#else /* CONFIG_AP */
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
+#endif /* CONFIG_AP */
 		}
 		break;
 	case EVENT_INTERFACE_DISABLED:

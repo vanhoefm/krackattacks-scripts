@@ -475,11 +475,12 @@ static void hostapd_wps_reenable_ap_pin(void *eloop_data, void *user_ctx)
 }
 
 
-static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
-				  struct wps_event_pwd_auth_fail *data)
+static int wps_pwd_auth_fail(struct hostapd_data *hapd, void *ctx)
 {
-	if (!data->enrollee || hapd->conf->ap_pin == NULL)
-		return;
+	struct wps_event_pwd_auth_fail *data = ctx;
+
+	if (!data->enrollee || hapd->conf->ap_pin == NULL || hapd->wps == NULL)
+		return 0;
 
 	/*
 	 * Registrar failed to prove its knowledge of the AP PIN. Lock AP setup
@@ -490,7 +491,7 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u",
 		   hapd->ap_pin_failures);
 	if (hapd->ap_pin_failures < 3)
-		return;
+		return 0;
 
 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_LOCKED);
 	hapd->wps->ap_setup_locked = 1;
@@ -512,7 +513,14 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 				       NULL);
 	}
 
-	/* TODO: dualband AP may need to update other interfaces */
+	return 0;
+}
+
+
+static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
+				  struct wps_event_pwd_auth_fail *data)
+{
+	hostapd_wps_for_each(hapd, wps_pwd_auth_fail, data);
 }
 
 

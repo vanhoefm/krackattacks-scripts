@@ -22,6 +22,7 @@
 #include "ieee802_11.h"
 #include "sta_info.h"
 #include "ap_config.h"
+#include "p2p_hostapd.h"
 #include "ap_drv_ops.h"
 
 
@@ -86,18 +87,70 @@ static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 	}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_P2P_MANAGER
+	if (hapd->conf->p2p & P2P_MANAGE) {
+		struct wpabuf *a;
+
+		a = wpabuf_alloc(100 + (beacon ? wpabuf_len(beacon) : 0));
+		if (a) {
+			u8 *start, *p;
+			if (beacon)
+				wpabuf_put_buf(a, beacon);
+			if (beacon != hapd->wps_beacon_ie)
+				wpabuf_free(beacon);
+			start = wpabuf_put(a, 0);
+			p = hostapd_eid_p2p_manage(hapd, start);
+			wpabuf_put(a, p - start);
+			beacon = a;
+		}
+
+		a = wpabuf_alloc(100 + (proberesp ? wpabuf_len(proberesp) :
+					0));
+		if (a) {
+			u8 *start, *p;
+			if (proberesp)
+				wpabuf_put_buf(a, proberesp);
+			if (proberesp != hapd->wps_probe_resp_ie)
+				wpabuf_free(proberesp);
+			start = wpabuf_put(a, 0);
+			p = hostapd_eid_p2p_manage(hapd, start);
+			wpabuf_put(a, p - start);
+			proberesp = a;
+		}
+	}
+#endif /* CONFIG_P2P_MANAGER */
+
 #ifdef CONFIG_WPS2
 	if (hapd->conf->wps_state)
 		assocresp = wps_build_assoc_resp_ie();
 #endif /* CONFIG_WPS2 */
 
+#ifdef CONFIG_P2P_MANAGER
+	if (hapd->conf->p2p & P2P_MANAGE) {
+		struct wpabuf *a;
+		a = wpabuf_alloc(100 + (assocresp ? wpabuf_len(assocresp) :
+					0));
+		if (a) {
+			u8 *start, *p;
+			start = wpabuf_put(a, 0);
+			p = hostapd_eid_p2p_manage(hapd, start);
+			wpabuf_put(a, p - start);
+			if (assocresp) {
+				wpabuf_put_buf(a, assocresp);
+				wpabuf_free(assocresp);
+			}
+			assocresp = a;
+		}
+	}
+#endif /* CONFIG_P2P_MANAGER */
+
 	ret = hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp,
 					  assocresp);
 
-#ifdef CONFIG_P2P
-	wpabuf_free(beacon);
-	wpabuf_free(proberesp);
-#endif /* CONFIG_P2P */
+	if (beacon != hapd->wps_beacon_ie)
+		wpabuf_free(beacon);
+	if (proberesp != hapd->wps_probe_resp_ie)
+		wpabuf_free(proberesp);
 	wpabuf_free(assocresp);
 
 	return ret;

@@ -38,6 +38,7 @@
 #include "accounting.h"
 #include "ap_config.h"
 #include "ap_mlme.h"
+#include "p2p_hostapd.h"
 #include "ieee802_11.h"
 
 

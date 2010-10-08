@@ -30,6 +30,7 @@
 #include "wmm.h"
 #include "ap_config.h"
 #include "sta_info.h"
+#include "p2p_hostapd.h"
 #include "beacon.h"
 
 
@@ -193,30 +194,6 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len,
 	os_memcpy(eid, ie, ielen);
 	return eid + ielen;
 }
-
-
-#ifdef CONFIG_P2P_MANAGER
-u8 * hostapd_eid_p2p_manage(struct hostapd_data *hapd, u8 *eid)
-{
-	u8 bitmap;
-	*eid++ = WLAN_EID_VENDOR_SPECIFIC;
-	*eid++ = 4 + 3 + 1;
-	WPA_PUT_BE24(eid, OUI_WFA);
-	eid += 3;
-	*eid++ = P2P_OUI_TYPE;
-
-	*eid++ = P2P_ATTR_MANAGEABILITY;
-	WPA_PUT_LE16(eid, 1);
-	eid += 2;
-	bitmap = P2P_MAN_DEVICE_MANAGEMENT;
-	if (hapd->conf->p2p & P2P_ALLOW_CROSS_CONNECTION)
-		bitmap |= P2P_MAN_CROSS_CONNECTION_PERMITTED;
-	bitmap |= P2P_MAN_COEXISTENCE_OPTIONAL;
-	*eid++ = bitmap;
-
-	return eid;
-}
-#endif /* CONFIG_P2P_MANAGER */
 
 
 void handle_probe_req(struct hostapd_data *hapd,

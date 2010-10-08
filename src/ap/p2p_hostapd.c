@@ -15,12 +15,16 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_defs.h"
 #include "p2p/p2p.h"
 #include "hostapd.h"
+#include "ap_config.h"
 #include "ap_drv_ops.h"
 #include "sta_info.h"
 #include "p2p_hostapd.h"
 
+
+#ifdef CONFIG_P2P
 
 int hostapd_p2p_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			    char *buf, size_t buflen)
@@ -88,3 +92,29 @@ void hostapd_p2p_non_p2p_sta_disconnected(struct hostapd_data *hapd)
 				       hapd->noa_duration);
 	}
 }
+
+#endif /* CONFIG_P2P */
+
+
+#ifdef CONFIG_P2P_MANAGER
+u8 * hostapd_eid_p2p_manage(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 bitmap;
+	*eid++ = WLAN_EID_VENDOR_SPECIFIC;
+	*eid++ = 4 + 3 + 1;
+	WPA_PUT_BE24(eid, OUI_WFA);
+	eid += 3;
+	*eid++ = P2P_OUI_TYPE;
+
+	*eid++ = P2P_ATTR_MANAGEABILITY;
+	WPA_PUT_LE16(eid, 1);
+	eid += 2;
+	bitmap = P2P_MAN_DEVICE_MANAGEMENT;
+	if (hapd->conf->p2p & P2P_ALLOW_CROSS_CONNECTION)
+		bitmap |= P2P_MAN_CROSS_CONNECTION_PERMITTED;
+	bitmap |= P2P_MAN_COEXISTENCE_OPTIONAL;
+	*eid++ = bitmap;
+
+	return eid;
+}
+#endif /* CONFIG_P2P_MANAGER */

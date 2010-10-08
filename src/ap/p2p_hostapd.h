@@ -36,4 +36,6 @@ static inline int hostapd_p2p_get_mib_sta(struct hostapd_data *hapd,
 
 #endif /* CONFIG_P2P */
 
+u8 * hostapd_eid_p2p_manage(struct hostapd_data *hapd, u8 *eid);
+
 #endif /* P2P_HOSTAPD_H */

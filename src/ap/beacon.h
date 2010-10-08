@@ -20,7 +20,6 @@ struct ieee80211_mgmt;
 
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len);
-u8 * hostapd_eid_p2p_manage(struct hostapd_data *hapd, u8 *eid);
 #ifdef NEED_AP_MLME
 void ieee802_11_set_beacon(struct hostapd_data *hapd);
 void ieee802_11_set_beacons(struct hostapd_iface *iface);

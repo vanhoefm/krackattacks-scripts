@@ -239,15 +239,18 @@ static void wps_reload_config(void *eloop_data, void *user_ctx)
 }
 
 
-static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
+static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 {
-	struct hostapd_data *hapd = ctx;
+	const struct wps_credential *cred = ctx;
 	FILE *oconf, *nconf;
 	size_t len, i;
 	char *tmp_fname;
 	char buf[1024];
 	int multi_bss;
 	int wpa;
+
+	if (hapd->wps == NULL)
+		return 0;
 
 	wpa_hexdump_key(MSG_DEBUG, "WPS: Received Credential attribute",
 			cred->cred_attr, cred->cred_attr_len);
@@ -453,11 +456,16 @@ static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
 	eloop_register_timeout(0, 100000, wps_reload_config, hapd->iface,
 			       NULL);
 
-	/* TODO: dualband AP may need to update multiple configuration files */
-
 	wpa_printf(MSG_DEBUG, "WPS: AP configuration updated");
 
 	return 0;
+}
+
+
+static int hostapd_wps_cred_cb(void *ctx, const struct wps_credential *cred)
+{
+	struct hostapd_data *hapd = ctx;
+	return hostapd_wps_for_each(hapd, hapd_wps_cred_cb, (void *) cred);
 }
 
 

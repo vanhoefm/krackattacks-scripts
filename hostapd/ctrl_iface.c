@@ -519,7 +519,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		return pos - buf;
 	pos += ret;
 
-	if (hapd->conf->wps_state &&
+	if (hapd->conf->wps_state && hapd->conf->wpa &&
 	    hapd->conf->ssid.wpa_passphrase) {
 		ret = os_snprintf(pos, end - pos, "passphrase=%s\n",
 				  hapd->conf->ssid.wpa_passphrase);
@@ -528,7 +528,8 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 	}
 
-	if (hapd->conf->wps_state && hapd->conf->ssid.wpa_psk &&
+	if (hapd->conf->wps_state && hapd->conf->wpa &&
+	    hapd->conf->ssid.wpa_psk &&
 	    hapd->conf->ssid.wpa_psk->group) {
 		char hex[PMK_LEN * 2 + 1];
 		wpa_snprintf_hex(hex, sizeof(hex),
@@ -593,12 +594,13 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 		pos += ret;
 	}
 
-	if (hapd->conf->wpa_group == WPA_CIPHER_CCMP) {
+	if (hapd->conf->wpa && hapd->conf->wpa_group == WPA_CIPHER_CCMP) {
 		ret = os_snprintf(pos, end - pos, "group_cipher=CCMP\n");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;
-	} else if (hapd->conf->wpa_group == WPA_CIPHER_TKIP) {
+	} else if (hapd->conf->wpa &&
+		   hapd->conf->wpa_group == WPA_CIPHER_TKIP) {
 		ret = os_snprintf(pos, end - pos, "group_cipher=TKIP\n");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;

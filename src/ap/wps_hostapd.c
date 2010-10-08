@@ -45,6 +45,45 @@ static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
 static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 
 
+struct wps_for_each_data {
+	int (*func)(struct hostapd_data *h, void *ctx);
+	void *ctx;
+};
+
+
+static int wps_for_each(struct hostapd_iface *iface, void *ctx)
+{
+	struct wps_for_each_data *data = ctx;
+	size_t j;
+
+	if (iface == NULL)
+		return 0;
+	for (j = 0; j < iface->num_bss; j++) {
+		struct hostapd_data *hapd = iface->bss[j];
+		int ret = data->func(hapd, data->ctx);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+
+static int hostapd_wps_for_each(struct hostapd_data *hapd,
+				int (*func)(struct hostapd_data *h, void *ctx),
+				void *ctx)
+{
+	struct hostapd_iface *iface = hapd->iface;
+	struct wps_for_each_data data;
+	if (iface->for_each_interface == NULL)
+		return -1;
+	data.func = func;
+	data.ctx = ctx;
+	return iface->for_each_interface(iface->interfaces, wps_for_each,
+					 &data);
+}
+
+
 static int hostapd_wps_new_psk_cb(void *ctx, const u8 *mac_addr, const u8 *psk,
 				  size_t psk_len)
 {
@@ -802,30 +841,69 @@ void hostapd_update_wps(struct hostapd_data *hapd)
 }
 
 
+struct wps_add_pin_data {
+	const u8 *addr;
+	const u8 *uuid;
+	const u8 *pin;
+	size_t pin_len;
+	int timeout;
+	int added;
+};
+
+
+static int wps_add_pin(struct hostapd_data *hapd, void *ctx)
+{
+	struct wps_add_pin_data *data = ctx;
+	int ret;
+
+	if (hapd->wps == NULL)
+		return 0;
+	ret = wps_registrar_add_pin(hapd->wps->registrar, data->addr,
+				    data->uuid, data->pin, data->pin_len,
+				    data->timeout);
+	if (ret == 0)
+		data->added++;
+	return ret;
+}
+
+
 int hostapd_wps_add_pin(struct hostapd_data *hapd, const u8 *addr,
 			const char *uuid, const char *pin, int timeout)
 {
 	u8 u[UUID_LEN];
-	int any = 0;
+	struct wps_add_pin_data data;
 
-	if (hapd->wps == NULL)
-		return -1;
+	data.addr = addr;
+	data.uuid = u;
+	data.pin = (const u8 *) pin;
+	data.pin_len = os_strlen(pin);
+	data.timeout = timeout;
+	data.added = 0;
+
 	if (os_strcmp(uuid, "any") == 0)
-		any = 1;
-	else if (uuid_str2bin(uuid, u))
+		data.uuid = NULL;
+	else {
+		if (uuid_str2bin(uuid, u))
+			return -1;
+		data.uuid = u;
+	}
+	if (hostapd_wps_for_each(hapd, wps_add_pin, &data) < 0)
 		return -1;
-	return wps_registrar_add_pin(hapd->wps->registrar, addr,
-				     any ? NULL : u,
-				     (const u8 *) pin, os_strlen(pin),
-				     timeout);
+	return data.added ? 0 : -1;
+}
+
+
+static int wps_button_pushed(struct hostapd_data *hapd, void *ctx)
+{
+	if (hapd->wps == NULL)
+		return 0;
+	return wps_registrar_button_pushed(hapd->wps->registrar);
 }
 
 
 int hostapd_wps_button_pushed(struct hostapd_data *hapd)
 {
-	if (hapd->wps == NULL)
-		return -1;
-	return wps_registrar_button_pushed(hapd->wps->registrar);
+	return hostapd_wps_for_each(hapd, wps_button_pushed, NULL);
 }
 
 
@@ -1074,31 +1152,53 @@ static void hostapd_wps_ap_pin_enable(struct hostapd_data *hapd, int timeout)
 }
 
 
-void hostapd_wps_ap_pin_disable(struct hostapd_data *hapd)
+static int wps_ap_pin_disable(struct hostapd_data *hapd, void *ctx)
 {
-	wpa_printf(MSG_DEBUG, "WPS: Disabling AP PIN");
 	os_free(hapd->conf->ap_pin);
 	hapd->conf->ap_pin = NULL;
 #ifdef CONFIG_WPS_UPNP
 	upnp_wps_set_ap_pin(hapd->wps_upnp, NULL);
 #endif /* CONFIG_WPS_UPNP */
 	eloop_cancel_timeout(hostapd_wps_ap_pin_timeout, hapd, NULL);
+	return 0;
+}
+
+
+void hostapd_wps_ap_pin_disable(struct hostapd_data *hapd)
+{
+	wpa_printf(MSG_DEBUG, "WPS: Disabling AP PIN");
+	hostapd_wps_for_each(hapd, wps_ap_pin_disable, NULL);
+}
+
+
+struct wps_ap_pin_data {
+	char pin_txt[9];
+	int timeout;
+};
+
+
+static int wps_ap_pin_set(struct hostapd_data *hapd, void *ctx)
+{
+	struct wps_ap_pin_data *data = ctx;
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = os_strdup(data->pin_txt);
+#ifdef CONFIG_WPS_UPNP
+	upnp_wps_set_ap_pin(hapd->wps_upnp, data->pin_txt);
+#endif /* CONFIG_WPS_UPNP */
+	hostapd_wps_ap_pin_enable(hapd, data->timeout);
+	return 0;
 }
 
 
 const char * hostapd_wps_ap_pin_random(struct hostapd_data *hapd, int timeout)
 {
 	unsigned int pin;
-	char pin_txt[9];
+	struct wps_ap_pin_data data;
 
 	pin = wps_generate_pin();
-	os_snprintf(pin_txt, sizeof(pin_txt), "%u", pin);
-	os_free(hapd->conf->ap_pin);
-	hapd->conf->ap_pin = os_strdup(pin_txt);
-#ifdef CONFIG_WPS_UPNP
-	upnp_wps_set_ap_pin(hapd->wps_upnp, pin_txt);
-#endif /* CONFIG_WPS_UPNP */
-	hostapd_wps_ap_pin_enable(hapd, timeout);
+	os_snprintf(data.pin_txt, sizeof(data.pin_txt), "%u", pin);
+	data.timeout = timeout;
+	hostapd_wps_for_each(hapd, wps_ap_pin_set, &data);
 	return hapd->conf->ap_pin;
 }
 
@@ -1112,13 +1212,12 @@ const char * hostapd_wps_ap_pin_get(struct hostapd_data *hapd)
 int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 			   int timeout)
 {
-	os_free(hapd->conf->ap_pin);
-	hapd->conf->ap_pin = os_strdup(pin);
-	if (hapd->conf->ap_pin == NULL)
+	struct wps_ap_pin_data data;
+	int ret;
+
+	ret = os_snprintf(data.pin_txt, sizeof(data.pin_txt), "%s", pin);
+	if (ret < 0 || ret >= (int) sizeof(data.pin_txt))
 		return -1;
-#ifdef CONFIG_WPS_UPNP
-	upnp_wps_set_ap_pin(hapd->wps_upnp, hapd->conf->ap_pin);
-#endif /* CONFIG_WPS_UPNP */
-	hostapd_wps_ap_pin_enable(hapd, timeout);
-	return 0;
+	data.timeout = timeout;
+	return hostapd_wps_for_each(hapd, wps_ap_pin_set, &data);
 }

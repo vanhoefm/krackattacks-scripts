@@ -147,6 +147,13 @@ SM_STATE(EAP, INITIALIZE)
 	sm->eap_if.eapRestart = FALSE;
 
 	/*
+	 * Start reauthentication with identity request even if we know the
+	 * previously used identity. This is needed to get reauthentication
+	 * started properly.
+	 */
+	sm->start_reauth = TRUE;
+
+	/*
 	 * This is not defined in RFC 4137, but method state needs to be
 	 * reseted here so that it does not remain in success state when
 	 * re-authentication starts.

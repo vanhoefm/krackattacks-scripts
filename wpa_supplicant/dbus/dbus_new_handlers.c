@@ -1260,14 +1260,16 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 				"passive scan");
 			goto out;
 		} else if (params.freqs && params.freqs[0]) {
-			/* wildcard ssid */
-			params.num_ssids++;
 			wpa_supplicant_trigger_scan(wpa_s, &params);
 		} else {
 			wpa_s->scan_req = 2;
 			wpa_supplicant_req_scan(wpa_s, 0, 0);
 		}
 	} else if (!os_strcmp(type, "active")) {
+		if (!params.num_ssids) {
+			/* Add wildcard ssid */
+			params.num_ssids++;
+		}
 		wpa_supplicant_trigger_scan(wpa_s, &params);
 	} else {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "

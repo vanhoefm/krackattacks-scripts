@@ -117,6 +117,20 @@ static char * wpas_dbus_new_decompose_object_path(const char *path,
 DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,
 					    const char *arg)
 {
+	/*
+	 * This function can be called as a result of a failure
+	 * within internal getter calls, which will call this function
+	 * with a NULL message parameter.  However, dbus_message_new_error
+	 * looks very unkindly (i.e, abort()) on a NULL message, so
+	 * in this case, we should not call it.
+	 */
+	if (message == NULL) {
+		wpa_printf(MSG_INFO, "dbus: wpas_dbus_error_unknown_error "
+			   "called with NULL message (arg=%s)",
+			   arg ? arg : "N/A");
+		return NULL;
+	}
+
 	return dbus_message_new_error(message, WPAS_DBUS_ERROR_UNKNOWN_ERROR,
 				      arg);
 }

@@ -987,21 +987,24 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 		dbus_message_iter_recurse(&array_iter, &sub_array_iter);
 
 		dbus_message_iter_get_fixed_array(&sub_array_iter, &val, &len);
-		if (len == 0) {
-			dbus_message_iter_next(&array_iter);
-			continue;
+
+		if (len != 0) {
+			ssid = os_malloc(len);
+			if (ssid == NULL) {
+				wpa_printf(MSG_DEBUG,
+					   "wpas_dbus_handler_scan[dbus]: "
+					   "out of memory. Cannot allocate "
+					   "memory for SSID");
+				*reply = dbus_message_new_error(
+					message, DBUS_ERROR_NO_MEMORY, NULL);
+				return -1;
+			}
+			os_memcpy(ssid, val, len);
+		} else {
+			/* Allow zero-length SSIDs */
+			ssid = NULL;
 		}
 
-		ssid = os_malloc(len);
-		if (ssid == NULL) {
-			wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "
-				   "out of memory. Cannot allocate memory for "
-				   "SSID");
-			*reply = dbus_message_new_error(
-				message, DBUS_ERROR_NO_MEMORY, NULL);
-			return -1;
-		}
-		os_memcpy(ssid, val, len);
 		ssids[ssids_num].ssid = ssid;
 		ssids[ssids_num].ssid_len = len;
 

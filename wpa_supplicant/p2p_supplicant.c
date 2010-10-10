@@ -1048,7 +1048,7 @@ static int wpas_start_listen(void *ctx, unsigned int freq,
 static void wpas_stop_listen(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	if (wpa_s->off_channel_freq) {
+	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
 		wpa_drv_cancel_remain_on_channel(wpa_s);
 		wpa_s->off_channel_freq = 0;
 		wpa_s->roc_waiting_drv_freq = 0;

@@ -40,8 +40,48 @@
 #ifdef CONFIG_LIBNL20
 /* libnl 2.0 compatibility code */
 #define nl_handle nl_sock
-#define nl_handle_alloc_cb nl_socket_alloc_cb
-#define nl_handle_destroy nl_socket_free
+#define nl80211_handle_alloc nl_socket_alloc_cb
+#define nl80211_handle_destroy nl_socket_free
+#else
+/*
+ * libnl 1.1 has a bug, it tries to allocate socket numbers densely
+ * but when you free a socket again it will mess up its bitmap and
+ * and use the wrong number the next time it needs a socket ID.
+ * Therefore, we wrap the handle alloc/destroy and add our own pid
+ * accounting.
+ */
+static uint32_t port_bitmap[32] = { 0 };
+
+static struct nl_handle *nl80211_handle_alloc(void *cb)
+{
+	struct nl_handle *handle;
+	uint32_t pid = getpid() & 0x3FFFFF;
+	int i;
+
+	handle = nl_handle_alloc_cb(cb);
+
+	for (i = 0; i < 1024; i++) {
+		if (port_bitmap[i / 32] & (1 << (i % 32)))
+			continue;
+		port_bitmap[i / 32] |= 1 << (i % 32);
+		pid += i << 22;
+		break;
+	}
+
+	nl_socket_set_local_port(handle, pid);
+
+	return handle;
+}
+
+static void nl80211_handle_destroy(struct nl_handle *handle)
+{
+	uint32_t port = nl_socket_get_local_port(handle);
+
+	port >>= 22;
+	port_bitmap[port / 32] &= ~(1 << (port % 32));
+
+	nl_handle_destroy(handle);
+}
 #endif /* CONFIG_LIBNL20 */
 
 
@@ -1344,14 +1384,14 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 		goto err1;
 	}
 
-	drv->nl_handle = nl_handle_alloc_cb(drv->nl_cb);
+	drv->nl_handle = nl80211_handle_alloc(drv->nl_cb);
 	if (drv->nl_handle == NULL) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate netlink "
 			   "callbacks");
 		goto err2;
 	}
 
-	drv->nl_handle_event = nl_handle_alloc_cb(drv->nl_cb);
+	drv->nl_handle_event = nl80211_handle_alloc(drv->nl_cb);
 	if (drv->nl_handle_event == NULL) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate netlink "
 			   "callbacks (event)");
@@ -1434,9 +1474,9 @@ err4:
 err3b:
 	nl_cache_free(drv->nl_cache);
 err3:
-	nl_handle_destroy(drv->nl_handle_event);
+	nl80211_handle_destroy(drv->nl_handle_event);
 err2b:
-	nl_handle_destroy(drv->nl_handle);
+	nl80211_handle_destroy(drv->nl_handle);
 err2:
 	nl_cb_put(drv->nl_cb);
 err1:
@@ -1541,7 +1581,7 @@ failed:
 
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
-	nl_handle_destroy(drv->nl_handle);
+	nl80211_handle_destroy(drv->nl_handle);
 	nl_cb_put(drv->nl_cb);
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle_event));
 
@@ -1767,8 +1807,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
 	nl_cache_free(drv->nl_cache_event);
-	nl_handle_destroy(drv->nl_handle);
-	nl_handle_destroy(drv->nl_handle_event);
+	nl80211_handle_destroy(drv->nl_handle);
+	nl80211_handle_destroy(drv->nl_handle_event);
 	nl_cb_put(drv->nl_cb);
 
 	eloop_cancel_timeout(wpa_driver_nl80211_probe_req_report_timeout,
@@ -5007,7 +5047,7 @@ failed:
 
 	genl_family_put(drv->nl80211);
 	nl_cache_free(drv->nl_cache);
-	nl_handle_destroy(drv->nl_handle);
+	nl80211_handle_destroy(drv->nl_handle);
 	nl_cb_put(drv->nl_cb);
 
 	os_free(drv);

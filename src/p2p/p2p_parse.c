@@ -662,7 +662,7 @@ int p2p_get_cross_connect_disallowed(const struct wpabuf *p2p_ie)
 	if (!msg.manageability)
 		return 0;
 
-	return !(msg.manageability[0] & P2P_MAN_CROSS_CONNECTIION_PERMITTED);
+	return !(msg.manageability[0] & P2P_MAN_CROSS_CONNECTION_PERMITTED);
 }
 
 

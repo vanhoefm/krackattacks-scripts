@@ -125,8 +125,10 @@ struct wpa_driver_nl80211_data {
 
 	struct nl_handle *nl_handle;
 	struct nl_handle *nl_handle_event;
+	struct nl_handle *nl_handle_preq;
 	struct nl_cache *nl_cache;
 	struct nl_cache *nl_cache_event;
+	struct nl_cache *nl_cache_preq;
 	struct nl_cb *nl_cb;
 	struct genl_family *nl80211;
 
@@ -141,7 +143,6 @@ struct wpa_driver_nl80211_data {
 
 	int monitor_sock;
 	int monitor_ifidx;
-	int probe_req_report;
 	int disable_11b_rates;
 
 	unsigned int pending_remain_on_chan:1;
@@ -150,6 +151,8 @@ struct wpa_driver_nl80211_data {
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
+
+	unsigned int last_mgmt_freq;
 
 	struct wpa_driver_scan_filter *filter_ssids;
 	size_t num_filter_ssids;
@@ -179,6 +182,10 @@ static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 				   int local_state_change);
 static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv);
+static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
+				  unsigned int freq, const u8 *buf,
+				  size_t buf_len, u64 *cookie);
+static int wpa_driver_nl80211_probe_req_report(void *priv, int report);
 
 #ifdef HOSTAPD
 static void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx);
@@ -195,8 +202,6 @@ static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 #endif /* HOSTAPD */
 
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
-static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
-							void *timeout_ctx);
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
@@ -686,8 +691,8 @@ static void mlme_timeout_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static void mlme_event_action(struct wpa_driver_nl80211_data *drv,
-			      struct nlattr *freq, const u8 *frame, size_t len)
+static void mlme_event_mgmt(struct wpa_driver_nl80211_data *drv,
+			    struct nlattr *freq, const u8 *frame, size_t len)
 {
 	const struct ieee80211_mgmt *mgmt;
 	union wpa_event_data event;
@@ -703,15 +708,23 @@ static void mlme_event_action(struct wpa_driver_nl80211_data *drv,
 	stype = WLAN_FC_GET_STYPE(fc);
 
 	os_memset(&event, 0, sizeof(event));
-	event.rx_action.da = mgmt->da;
-	event.rx_action.sa = mgmt->sa;
-	event.rx_action.bssid = mgmt->bssid;
-	event.rx_action.category = mgmt->u.action.category;
-	event.rx_action.data = &mgmt->u.action.category + 1;
-	event.rx_action.len = frame + len - event.rx_action.data;
-	if (freq)
+	if (freq) {
 		event.rx_action.freq = nla_get_u32(freq);
-	wpa_supplicant_event(drv->ctx, EVENT_RX_ACTION, &event);
+		drv->last_mgmt_freq = event.rx_action.freq;
+	}
+	if (stype == WLAN_FC_STYPE_ACTION) {
+		event.rx_action.da = mgmt->da;
+		event.rx_action.sa = mgmt->sa;
+		event.rx_action.bssid = mgmt->bssid;
+		event.rx_action.category = mgmt->u.action.category;
+		event.rx_action.data = &mgmt->u.action.category + 1;
+		event.rx_action.len = frame + len - event.rx_action.data;
+		wpa_supplicant_event(drv->ctx, EVENT_RX_ACTION, &event);
+	} else {
+		event.rx_mgmt.frame = frame;
+		event.rx_mgmt.frame_len = len;
+		wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
+	}
 }
 
 
@@ -844,7 +857,7 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 					   nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_FRAME:
-		mlme_event_action(drv, freq, nla_data(frame), nla_len(frame));
+		mlme_event_mgmt(drv, freq, nla_data(frame), nla_len(frame));
 		break;
 	case NL80211_CMD_FRAME_TX_STATUS:
 		mlme_event_action_tx_status(drv, cookie, nla_data(frame),
@@ -1202,7 +1215,7 @@ static int process_event(struct nl_msg *msg, void *arg)
 
 
 static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
-					     void *sock_ctx)
+					     void *handle)
 {
 	struct nl_cb *cb;
 	struct wpa_driver_nl80211_data *drv = eloop_ctx;
@@ -1214,7 +1227,7 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 		return;
 	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
 	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, process_event, drv);
-	nl_recvmsgs(drv->nl_handle_event, cb);
+	nl_recvmsgs(handle, cb);
 	nl_cb_put(cb);
 }
 
@@ -1465,7 +1478,8 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 	}
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle_event),
-				 wpa_driver_nl80211_event_receive, drv, NULL);
+				 wpa_driver_nl80211_event_receive, drv,
+				 drv->nl_handle_event);
 
 	return 0;
 
@@ -1591,6 +1605,7 @@ failed:
 
 
 static int nl80211_register_frame(struct wpa_driver_nl80211_data *drv,
+				  struct nl_handle *nl_handle,
 				  u16 type, const u8 *match, size_t match_len)
 {
 	struct nl_msg *msg;
@@ -1607,12 +1622,13 @@ static int nl80211_register_frame(struct wpa_driver_nl80211_data *drv,
 	NLA_PUT_U16(msg, NL80211_ATTR_FRAME_TYPE, type);
 	NLA_PUT(msg, NL80211_ATTR_FRAME_MATCH, match_len, match);
 
-	ret = send_and_recv(drv, drv->nl_handle_event, msg, NULL, NULL);
+	ret = send_and_recv(drv, nl_handle, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
-		wpa_printf(MSG_DEBUG, "nl80211: Register Action command "
-			   "failed: ret=%d (%s)", ret, strerror(-ret));
-		wpa_hexdump(MSG_DEBUG, "nl80211: Register Action match",
+		wpa_printf(MSG_DEBUG, "nl80211: Register frame command "
+			   "failed (type=%u): ret=%d (%s)",
+			   type, ret, strerror(-ret));
+		wpa_hexdump(MSG_DEBUG, "nl80211: Register frame match",
 			    match, match_len);
 		goto nla_put_failure;
 	}
@@ -1627,7 +1643,8 @@ static int nl80211_register_action_frame(struct wpa_driver_nl80211_data *drv,
 					 const u8 *match, size_t match_len)
 {
 	u16 type = (WLAN_FC_TYPE_MGMT << 2) | (WLAN_FC_STYPE_ACTION << 4);
-	return nl80211_register_frame(drv, type, match, match_len);
+	return nl80211_register_frame(drv, drv->nl_handle_event,
+				      type, match, match_len);
 }
 
 
@@ -1760,6 +1777,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
+	if (drv->nl_handle_preq)
+		wpa_driver_nl80211_probe_req_report(bss, 0);
 	if (drv->added_if_into_bridge) {
 		if (linux_br_del_if(drv->ioctl_sock, drv->brname, bss->ifname)
 		    < 0)
@@ -1819,9 +1838,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	nl80211_handle_destroy(drv->nl_handle);
 	nl80211_handle_destroy(drv->nl_handle_event);
 	nl_cb_put(drv->nl_cb);
-
-	eloop_cancel_timeout(wpa_driver_nl80211_probe_req_report_timeout,
-			     drv, NULL);
 
 	os_free(drv->filter_ssids);
 
@@ -3037,6 +3053,18 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 	mgmt = (struct ieee80211_mgmt *) data;
 	fc = le_to_host16(mgmt->frame_control);
 
+	if (drv->nlmode == NL80211_IFTYPE_STATION &&
+	    WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_PROBE_RESP) {
+		/*
+		 * The use of last_mgmt_freq is a bit of a hack,
+		 * but it works due to the single-threaded nature
+		 * of wpa_supplicant.
+		 */
+		return nl80211_send_frame_cmd(drv, drv->last_mgmt_freq,
+					      data, data_len, NULL);
+	}
+
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
 	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_AUTH) {
 		/*
@@ -3406,12 +3434,6 @@ static void handle_monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 	len = recv(sock, buf, sizeof(buf), 0);
 	if (len < 0) {
 		perror("recv");
-		return;
-	}
-
-	if (drv->nlmode == NL80211_IFTYPE_STATION && !drv->probe_req_report) {
-		wpa_printf(MSG_DEBUG, "nl80211: Ignore monitor interface "
-			   "frame since Probe Request reporting is disabled");
 		return;
 	}
 
@@ -5343,25 +5365,6 @@ nla_put_failure:
 }
 
 
-static void wpa_driver_nl80211_probe_req_report_timeout(void *eloop_ctx,
-							void *timeout_ctx)
-{
-	struct wpa_driver_nl80211_data *drv = eloop_ctx;
-	if (drv->monitor_ifidx < 0)
-		return; /* monitor interface already removed */
-
-	if (drv->nlmode != NL80211_IFTYPE_STATION)
-		return; /* not in station mode anymore */
-
-	if (drv->probe_req_report)
-		return; /* reporting enabled */
-
-	wpa_printf(MSG_DEBUG, "nl80211: Remove monitor interface due to no "
-		   "Probe Request reporting needed anymore");
-	nl80211_remove_monitor_interface(drv);
-}
-
-
 static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 {
 	struct i802_bss *bss = priv;
@@ -5373,30 +5376,74 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 			   drv->nlmode);
 		return -1;
 	}
-	drv->probe_req_report = report;
 
-	if (report) {
-		eloop_cancel_timeout(
-			wpa_driver_nl80211_probe_req_report_timeout,
-			drv, NULL);
-		if (drv->monitor_ifidx < 0 &&
-		    nl80211_create_monitor_interface(drv))
-			return -1;
-	} else {
-		/*
-		 * It takes a while to remove the monitor interface, so try to
-		 * avoid doing this if it is needed again shortly. Instead,
-		 * schedule the interface to be removed later if no need for it
-		 * is seen.
-		 */
-		wpa_printf(MSG_DEBUG, "nl80211: Scheduling monitor interface "
-			   "to be removed after 10 seconds of no use");
-		eloop_register_timeout(
-			10, 0, wpa_driver_nl80211_probe_req_report_timeout,
-			drv, NULL);
+	if (!report) {
+		if (drv->nl_handle_preq) {
+			eloop_unregister_read_sock(
+				nl_socket_get_fd(drv->nl_handle_preq));
+			nl_cache_free(drv->nl_cache_preq);
+			nl80211_handle_destroy(drv->nl_handle_preq);
+			drv->nl_handle_preq = NULL;
+		}
+		return 0;
 	}
 
+	if (drv->nl_handle_preq) {
+		wpa_printf(MSG_DEBUG, "nl80211: Probe Request reporting "
+			   "already on!");
+		return 0;
+	}
+
+	drv->nl_handle_preq = nl80211_handle_alloc(drv->nl_cb);
+	if (drv->nl_handle_preq == NULL) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate "
+			   "netlink callbacks (preq)");
+		goto out_err1;
+	}
+
+	if (genl_connect(drv->nl_handle_preq)) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to connect to "
+			   "generic netlink (preq)");
+		goto out_err2;
+		return -1;
+	}
+
+#ifdef CONFIG_LIBNL20
+	if (genl_ctrl_alloc_cache(drv->nl_handle_preq,
+				  &drv->nl_cache_preq) < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
+			   "netlink cache (preq)");
+		goto out_err2;
+	}
+#else /* CONFIG_LIBNL20 */
+	drv->nl_cache_preq = genl_ctrl_alloc_cache(drv->nl_handle_preq);
+	if (drv->nl_cache_preq == NULL) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
+			   "netlink cache (preq)");
+		goto out_err2;
+	}
+#endif /* CONFIG_LIBNL20 */
+
+	if (nl80211_register_frame(drv, drv->nl_handle_preq,
+				   (WLAN_FC_TYPE_MGMT << 2) |
+				   (WLAN_FC_STYPE_PROBE_REQ << 4),
+				   NULL, 0) < 0) {
+		goto out_err3;
+	}
+
+	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle_preq),
+				 wpa_driver_nl80211_event_receive, drv,
+				 drv->nl_handle_preq);
+
 	return 0;
+
+ out_err3:
+	nl_cache_free(drv->nl_cache_preq);
+ out_err2:
+	nl80211_handle_destroy(drv->nl_handle_preq);
+	drv->nl_handle_preq = NULL;
+ out_err1:
+	return -1;
 }
 
 

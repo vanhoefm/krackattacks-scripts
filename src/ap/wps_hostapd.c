@@ -75,10 +75,10 @@ static int hostapd_wps_for_each(struct hostapd_data *hapd,
 {
 	struct hostapd_iface *iface = hapd->iface;
 	struct wps_for_each_data data;
-	if (iface->for_each_interface == NULL)
-		return -1;
 	data.func = func;
 	data.ctx = ctx;
+	if (iface->for_each_interface == NULL)
+		return wps_for_each(iface, &data);
 	return iface->for_each_interface(iface->interfaces, wps_for_each,
 					 &data);
 }

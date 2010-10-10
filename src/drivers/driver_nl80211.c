@@ -843,10 +843,10 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		mlme_event_deauth_disassoc(drv, EVENT_DISASSOC,
 					   nla_data(frame), nla_len(frame));
 		break;
-	case NL80211_CMD_ACTION:
+	case NL80211_CMD_FRAME:
 		mlme_event_action(drv, freq, nla_data(frame), nla_len(frame));
 		break;
-	case NL80211_CMD_ACTION_TX_STATUS:
+	case NL80211_CMD_FRAME_TX_STATUS:
 		mlme_event_action_tx_status(drv, cookie, nla_data(frame),
 					    nla_len(frame), ack);
 		break;
@@ -1144,8 +1144,8 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_ASSOCIATE:
 	case NL80211_CMD_DEAUTHENTICATE:
 	case NL80211_CMD_DISASSOCIATE:
-	case NL80211_CMD_ACTION:
-	case NL80211_CMD_ACTION_TX_STATUS:
+	case NL80211_CMD_FRAME:
+	case NL80211_CMD_FRAME_TX_STATUS:
 		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME],
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
@@ -1590,8 +1590,8 @@ failed:
 }
 
 
-static int nl80211_register_action_frame(struct wpa_driver_nl80211_data *drv,
-					 const u8 *match, size_t match_len)
+static int nl80211_register_frame(struct wpa_driver_nl80211_data *drv,
+				  u16 type, const u8 *match, size_t match_len)
 {
 	struct nl_msg *msg;
 	int ret = -1;
@@ -1604,6 +1604,7 @@ static int nl80211_register_action_frame(struct wpa_driver_nl80211_data *drv,
 		    NL80211_CMD_REGISTER_ACTION, 0);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U16(msg, NL80211_ATTR_FRAME_TYPE, type);
 	NLA_PUT(msg, NL80211_ATTR_FRAME_MATCH, match_len, match);
 
 	ret = send_and_recv(drv, drv->nl_handle_event, msg, NULL, NULL);
@@ -1619,6 +1620,14 @@ static int nl80211_register_action_frame(struct wpa_driver_nl80211_data *drv,
 nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
+}
+
+
+static int nl80211_register_action_frame(struct wpa_driver_nl80211_data *drv,
+					 const u8 *match, size_t match_len)
+{
+	u16 type = (WLAN_FC_TYPE_MGMT << 2) | (WLAN_FC_STYPE_ACTION << 4);
+	return nl80211_register_frame(drv, type, match, match_len);
 }
 
 
@@ -5225,7 +5234,7 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	}
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_ACTION, 0);
+		    NL80211_CMD_FRAME, 0);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);

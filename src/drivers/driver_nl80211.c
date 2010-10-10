@@ -5560,6 +5560,28 @@ static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 }
 
 
+static int nl80211_set_intra_bss(void *priv, int enabled)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_BSS, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
+	NLA_PUT_U8(msg, NL80211_ATTR_AP_ISOLATE, !enabled);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -5619,4 +5641,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.send_ft_action = nl80211_send_ft_action,
 	.signal_monitor = nl80211_signal_monitor,
 	.send_frame = nl80211_send_frame,
+	.set_intra_bss = nl80211_set_intra_bss,
 };

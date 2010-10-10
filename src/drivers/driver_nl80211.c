@@ -5194,6 +5194,45 @@ static int cookie_handler(struct nl_msg *msg, void *arg)
 }
 
 
+static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
+				  unsigned int freq, const u8 *buf,
+				  size_t buf_len, u64 *cookie_out)
+{
+	struct nl_msg *msg;
+	u64 cookie;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_FRAME, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
+	NLA_PUT(msg, NL80211_ATTR_FRAME, buf_len, buf);
+
+	cookie = 0;
+	ret = send_and_recv_msgs(drv, msg, cookie_handler, &cookie);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Frame command failed: ret=%d "
+			   "(%s)", ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+	wpa_printf(MSG_DEBUG, "nl80211: Frame TX command accepted; "
+		   "cookie 0x%llx", (long long unsigned int) cookie);
+
+	if (cookie_out)
+		*cookie_out = cookie;
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 					  const u8 *dst, const u8 *src,
 					  const u8 *bssid,
@@ -5202,10 +5241,8 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1;
-	struct nl_msg *msg;
 	u8 *buf;
 	struct ieee80211_hdr *hdr;
-	u64 cookie;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Send Action frame (ifindex=%d)",
 		   drv->ifindex);
@@ -5221,43 +5258,13 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	os_memcpy(hdr->addr2, src, ETH_ALEN);
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
-	if (drv->nlmode == NL80211_IFTYPE_AP) {
+	if (drv->nlmode == NL80211_IFTYPE_AP)
 		ret = wpa_driver_nl80211_send_mlme(priv, buf, 24 + data_len);
-		os_free(buf);
-		return ret;
-	}
+	else
+		ret = nl80211_send_frame_cmd(drv, freq, buf, 24 + data_len,
+					     &drv->send_action_cookie);
 
-	msg = nlmsg_alloc();
-	if (!msg) {
-		os_free(buf);
-		return -1;
-	}
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_FRAME, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
-	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
-	NLA_PUT(msg, NL80211_ATTR_FRAME, 24 + data_len, buf);
 	os_free(buf);
-	buf = NULL;
-
-	cookie = 0;
-	ret = send_and_recv_msgs(drv, msg, cookie_handler, &cookie);
-	msg = NULL;
-	if (ret) {
-		wpa_printf(MSG_DEBUG, "nl80211: Action command failed: ret=%d "
-			   "(%s)", ret, strerror(-ret));
-		goto nla_put_failure;
-	}
-	wpa_printf(MSG_DEBUG, "nl80211: Action TX command accepted; "
-		   "cookie 0x%llx", (long long unsigned int) cookie);
-	drv->send_action_cookie = cookie;
-	ret = 0;
-
-nla_put_failure:
-	os_free(buf);
-	nlmsg_free(msg);
 	return ret;
 }
 

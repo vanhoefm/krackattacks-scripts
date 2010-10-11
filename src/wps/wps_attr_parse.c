@@ -530,6 +530,7 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 {
 	const u8 *pos, *end;
 	u16 type, len;
+	u16 prev_type = 0;
 
 	os_memset(attr, 0, sizeof(*attr));
 	pos = wpabuf_head(msg);
@@ -552,6 +553,23 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 		if (len > end - pos) {
 			wpa_printf(MSG_DEBUG, "WPS: Attribute overflow");
 			wpa_hexdump_buf(MSG_MSGDUMP, "WPS: Message data", msg);
+#ifdef WPS_WORKAROUNDS
+			/*
+			 * Some deployed APs seem to have a bug in encoding of
+			 * Network Key attribute in the Credential attribute
+			 * where they add an extra octet after the Network Key
+			 * attribute at least when open network is being
+			 * provisioned.
+			 */
+			if ((type & 0xff00) != 0x1000 &&
+			    prev_type == ATTR_NETWORK_KEY) {
+				wpa_printf(MSG_DEBUG, "WPS: Workaround - try "
+					   "to skip unexpected octet after "
+					   "Network Key");
+				pos -= 3;
+				continue;
+			}
+#endif /* WPS_WORKAROUNDS */
 			return -1;
 		}
 
@@ -577,6 +595,7 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 		if (wps_set_attr(attr, type, pos, len) < 0)
 			return -1;
 
+		prev_type = type;
 		pos += len;
 	}
 

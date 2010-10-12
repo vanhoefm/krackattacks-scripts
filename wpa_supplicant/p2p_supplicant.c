@@ -700,13 +700,14 @@ static int wpas_copy_go_neg_results(struct wpa_supplicant *wpa_s,
 static void wpas_start_wps_enrollee(struct wpa_supplicant *wpa_s,
 				    struct p2p_go_neg_results *res)
 {
+	wpa_printf(MSG_DEBUG, "P2P: Start WPS Enrollee for peer " MACSTR,
+		   MAC2STR(res->peer_interface_addr));
 	wpa_hexdump_ascii(MSG_DEBUG, "P2P: Start WPS Enrollee for SSID",
 			  res->ssid, res->ssid_len);
 	wpa_supplicant_ap_deinit(wpa_s);
 	wpas_copy_go_neg_results(wpa_s, res);
 	if (res->wps_method == WPS_PBC)
-		wpas_wps_start_pbc(wpa_s, NULL /* res->peer_interface_addr */,
-				   1);
+		wpas_wps_start_pbc(wpa_s, res->peer_interface_addr, 1);
 	else {
 		u16 dev_pw_id = DEV_PW_DEFAULT;
 		if (wpa_s->p2p_wps_method == WPS_PIN_KEYPAD)

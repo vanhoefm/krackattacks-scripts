@@ -1018,7 +1018,14 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 	static struct nla_policy policy[NL80211_STA_INFO_MAX + 1] = {
 		[NL80211_STA_INFO_SIGNAL] = { .type = NLA_U8 },
 	};
-	int *sig = arg;
+	struct nlattr *rinfo[NL80211_RATE_INFO_MAX + 1];
+	static struct nla_policy rate_policy[NL80211_RATE_INFO_MAX + 1] = {
+		[NL80211_RATE_INFO_BITRATE] = { .type = NLA_U16 },
+		[NL80211_RATE_INFO_MCS] = { .type = NLA_U8 },
+		[NL80211_RATE_INFO_40_MHZ_WIDTH] = { .type = NLA_FLAG },
+		[NL80211_RATE_INFO_SHORT_GI] = { .type = NLA_FLAG },
+	};
+	struct signal_change *sig_change = arg;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -1029,17 +1036,34 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 	if (!sinfo[NL80211_STA_INFO_SIGNAL])
 		return NL_SKIP;
 
-	*sig = (s8) nla_get_u8(sinfo[NL80211_STA_INFO_SIGNAL]);
+	sig_change->current_signal =
+		(s8) nla_get_u8(sinfo[NL80211_STA_INFO_SIGNAL]);
+
+	if (sinfo[NL80211_STA_INFO_TX_BITRATE]) {
+		if (nla_parse_nested(rinfo, NL80211_RATE_INFO_MAX,
+				     sinfo[NL80211_STA_INFO_TX_BITRATE],
+				     rate_policy)) {
+			sig_change->current_txrate = 0;
+		} else {
+			if (rinfo[NL80211_RATE_INFO_BITRATE]) {
+				sig_change->current_txrate =
+					nla_get_u16(rinfo[
+					     NL80211_RATE_INFO_BITRATE]) * 100;
+			}
+		}
+	}
+
 	return NL_SKIP;
 }
 
 
 static int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
-				   int *sig)
+				   struct signal_change *sig)
 {
 	struct nl_msg *msg;
 
-	*sig = -9999;
+	sig->current_signal = -9999;
+	sig->current_txrate = 0;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -1057,6 +1081,73 @@ static int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int get_link_noise(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *sinfo[NL80211_SURVEY_INFO_MAX + 1];
+	static struct nla_policy survey_policy[NL80211_SURVEY_INFO_MAX + 1] = {
+		[NL80211_SURVEY_INFO_FREQUENCY] = { .type = NLA_U32 },
+		[NL80211_SURVEY_INFO_NOISE] = { .type = NLA_U8 },
+	};
+	struct signal_change *sig_change = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (!tb[NL80211_ATTR_SURVEY_INFO]) {
+		wpa_printf(MSG_DEBUG, "nl80211: survey data missing!");
+		return NL_SKIP;
+	}
+
+	if (nla_parse_nested(sinfo, NL80211_SURVEY_INFO_MAX,
+			     tb[NL80211_ATTR_SURVEY_INFO],
+			     survey_policy)) {
+		wpa_printf(MSG_DEBUG, "nl80211: failed to parse nested "
+			   "attributes!");
+		return NL_SKIP;
+	}
+
+	if (!sinfo[NL80211_SURVEY_INFO_FREQUENCY])
+		return NL_SKIP;
+
+	if (nla_get_u32(sinfo[NL80211_SURVEY_INFO_FREQUENCY]) !=
+	    sig_change->frequency)
+		return NL_SKIP;
+
+	if (!sinfo[NL80211_SURVEY_INFO_NOISE])
+		return NL_SKIP;
+
+	sig_change->current_noise =
+		(s8) nla_get_u8(sinfo[NL80211_SURVEY_INFO_NOISE]);
+
+	return NL_SKIP;
+}
+
+
+static int nl80211_get_link_noise(struct wpa_driver_nl80211_data *drv,
+				  struct signal_change *sig_change)
+{
+	struct nl_msg *msg;
+
+	sig_change->current_noise = 9999;
+	sig_change->frequency = drv->assoc_freq;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    NLM_F_DUMP, NL80211_CMD_GET_SURVEY, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	return send_and_recv_msgs(drv, msg, get_link_noise, sig_change);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 			      struct nlattr *tb[])
 {
@@ -1068,7 +1159,8 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
 	enum nl80211_cqm_rssi_threshold_event event;
 	union wpa_event_data ed;
-	int sig, res;
+	struct signal_change sig;
+	int res;
 
 	if (tb[NL80211_ATTR_CQM] == NULL ||
 	    nla_parse_nested(cqm, NL80211_ATTR_CQM_MAX, tb[NL80211_ATTR_CQM],
@@ -1096,8 +1188,17 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 
 	res = nl80211_get_link_signal(drv, &sig);
 	if (res == 0) {
-		ed.signal_change.current_signal = sig;
-		wpa_printf(MSG_DEBUG, "nl80211: Signal: %d dBm", sig);
+		ed.signal_change.current_signal = sig.current_signal;
+		ed.signal_change.current_txrate = sig.current_txrate;
+		wpa_printf(MSG_DEBUG, "nl80211: Signal: %d dBm  txrate: %d",
+			   sig.current_signal, sig.current_txrate);
+	}
+
+	res = nl80211_get_link_noise(drv, &sig);
+	if (res == 0) {
+		ed.signal_change.current_noise = sig.current_noise;
+		wpa_printf(MSG_DEBUG, "nl80211: Noise: %d dBm",
+			   sig.current_noise);
 	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_SIGNAL_CHANGE, &ed);

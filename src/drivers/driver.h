@@ -2610,8 +2610,11 @@ union wpa_event_data {
 	 * struct signal_change - Data for EVENT_SIGNAL_CHANGE events
 	 */
 	struct signal_change {
+		u32 frequency;
 		int above_threshold;
 		int current_signal;
+		int current_noise;
+		int current_txrate;
 	} signal_change;
 };
 

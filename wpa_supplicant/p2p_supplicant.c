@@ -2532,14 +2532,16 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
  *	initiating Group Owner negotiation
  * @go_intent: GO Intent or -1 to use default
  * @freq: Frequency for the group or 0 for auto-selection
- * Returns: 0 or new PIN (if pin was %NULL) on success, -1 on failure
+ * Returns: 0 or new PIN (if pin was %NULL) on success, -1 on unspecified
+ *	failure, -2 on failure due to channel not currently available,
+ *	-3 if forced channel is not supported
  */
 int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		     const char *pin, enum p2p_wps_method wps_method,
 		     int persistent_group, int join, int auth, int go_intent,
 		     int freq)
 {
-	int force_freq = 0;
+	int force_freq = 0, oper_freq = 0;
 	u8 bssid[ETH_ALEN];
 	int ret = 0;
 	enum wpa_driver_if_type iftype;
@@ -2585,21 +2587,52 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		return ret;
 	}
 
-	if (freq > 0)
-		force_freq = freq;
-	else if (wpa_s->current_ssid && wpa_drv_get_bssid(wpa_s, bssid) == 0 &&
-		 wpa_s->assoc_freq)
-		force_freq = wpa_s->assoc_freq;
+	if (wpa_s->current_ssid && wpa_drv_get_bssid(wpa_s, bssid) == 0 &&
+	    wpa_s->assoc_freq)
+		oper_freq = wpa_s->assoc_freq;
 	else {
-		force_freq = wpa_drv_shared_freq(wpa_s);
-		if (force_freq < 0)
-			force_freq = 0;
+		oper_freq = wpa_drv_shared_freq(wpa_s);
+		if (oper_freq < 0)
+			oper_freq = 0;
 	}
 
-	if (force_freq > 0) {
+	if (freq > 0) {
+		if (!p2p_supported_freq(wpa_s->global->p2p, freq)) {
+			wpa_printf(MSG_DEBUG, "P2P: The forced channel "
+				   "(%u MHz) is not supported for P2P uses",
+				   freq);
+			return -3;
+		}
+
+		if (oper_freq > 0 && freq != oper_freq &&
+		    !(wpa_s->drv_flags &
+		      WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT)) {
+			wpa_printf(MSG_DEBUG, "P2P: Cannot start P2P group "
+				   "on %u MHz while connected on another "
+				   "channel (%u MHz)", freq, oper_freq);
+			return -2;
+		}
+		wpa_printf(MSG_DEBUG, "P2P: Trying to force us to use the "
+			   "requested channel (%u MHz)", freq);
+		force_freq = freq;
+	} else if (oper_freq > 0 &&
+		   !p2p_supported_freq(wpa_s->global->p2p, oper_freq)) {
+		if (!(wpa_s->drv_flags &
+		      WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT)) {
+			wpa_printf(MSG_DEBUG, "P2P: Cannot start P2P group "
+				   "while connected on non-P2P supported "
+				   "channel (%u MHz)", oper_freq);
+			return -2;
+		}
+		wpa_printf(MSG_DEBUG, "P2P: Current operating channel "
+			   "(%u MHz) not available for P2P - try to use "
+			   "another channel", oper_freq);
+		force_freq = 0;
+	} else if (oper_freq > 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Trying to force us to use the "
 			   "channel we are already using (%u MHz) on another "
-			   "interface", force_freq);
+			   "interface", oper_freq);
+		force_freq = oper_freq;
 	}
 
 	wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);

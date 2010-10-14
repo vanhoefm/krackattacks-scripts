@@ -258,3 +258,14 @@ int p2p_channels_includes(const struct p2p_channels *channels, u8 reg_class,
 	}
 	return 0;
 }
+
+
+int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq)
+{
+	u8 op_reg_class, op_channel;
+	if (p2p_freq_to_channel(p2p->cfg->country, freq,
+				&op_reg_class, &op_channel) < 0)
+		return 0;
+	return p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
+				     op_channel);
+}

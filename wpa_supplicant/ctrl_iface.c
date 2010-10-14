@@ -1975,6 +1975,14 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,
 				   persistent_group, join, auth, go_intent,
 				   freq);
+	if (new_pin == -2) {
+		os_memcpy(buf, "FAIL-CHANNEL-UNAVAILABLE\n", 25);
+		return 25;
+	}
+	if (new_pin == -3) {
+		os_memcpy(buf, "FAIL-CHANNEL-UNSUPPORTED\n", 25);
+		return 25;
+	}
 	if (new_pin < 0)
 		return -1;
 	if (wps_method == WPS_PIN_DISPLAY && pin == NULL) {

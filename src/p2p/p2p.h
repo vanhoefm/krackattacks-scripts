@@ -1255,4 +1255,12 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
  */
 void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled);
 
+/**
+ * p2p_supported_freq - Check whether channel is supported for P2P
+ * @p2p: P2P module context from p2p_init()
+ * @freq: Channel frequency in MHz
+ * Returns: 0 if channel not usable for P2P, 1 if usable for P2P
+ */
+int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq);
+
 #endif /* P2P_H */

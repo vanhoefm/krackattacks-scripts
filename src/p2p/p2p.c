@@ -797,20 +797,8 @@ void p2p_stop_find(struct p2p_data *p2p)
 }
 
 
-int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
-		enum p2p_wps_method wps_method,
-		int go_intent, const u8 *own_interface_addr,
-		unsigned int force_freq, int persistent_group)
+static int p2p_prepare_channel(struct p2p_data *p2p, unsigned int force_freq)
 {
-	struct p2p_device *dev;
-
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Request to start group negotiation - peer=" MACSTR
-		"  GO Intent=%d  Intended Interface Address=" MACSTR
-		" wps_method=%d persistent_group=%d",
-		MAC2STR(peer_addr), go_intent, MAC2STR(own_interface_addr),
-		wps_method, persistent_group);
-
 	if (force_freq) {
 		u8 op_reg_class, op_channel;
 		if (p2p_freq_to_channel(p2p->cfg->country, force_freq,
@@ -845,6 +833,27 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		"Regulatory Class %u Channel %u%s",
 		p2p->op_reg_class, p2p->op_channel,
 		force_freq ? " (forced)" : "");
+
+	return 0;
+}
+
+
+int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
+		enum p2p_wps_method wps_method,
+		int go_intent, const u8 *own_interface_addr,
+		unsigned int force_freq, int persistent_group)
+{
+	struct p2p_device *dev;
+
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+		"P2P: Request to start group negotiation - peer=" MACSTR
+		"  GO Intent=%d  Intended Interface Address=" MACSTR
+		" wps_method=%d persistent_group=%d",
+		MAC2STR(peer_addr), go_intent, MAC2STR(own_interface_addr),
+		wps_method, persistent_group);
+
+	if (p2p_prepare_channel(p2p, force_freq) < 0)
+		return -1;
 
 	dev = p2p_get_device(p2p, peer_addr);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
@@ -928,40 +937,8 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 		MAC2STR(peer_addr), go_intent, MAC2STR(own_interface_addr),
 		wps_method, persistent_group);
 
-	if (force_freq) {
-		u8 op_reg_class, op_channel;
-		if (p2p_freq_to_channel(p2p->cfg->country, force_freq,
-					&op_reg_class, &op_channel) < 0) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Unsupported frequency %u MHz",
-				force_freq);
-			return -1;
-		}
-		if (!p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
-					   op_channel)) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Frequency %u MHz (oper_class %u "
-				"channel %u) not allowed for P2P",
-				force_freq, op_reg_class, op_channel);
-			return -1;
-		}
-		p2p->op_reg_class = op_reg_class;
-		p2p->op_channel = op_channel;
-		p2p->channels.reg_classes = 1;
-		p2p->channels.reg_class[0].channels = 1;
-		p2p->channels.reg_class[0].reg_class = p2p->op_reg_class;
-		p2p->channels.reg_class[0].channel[0] = p2p->op_channel;
-	} else {
-		p2p->op_reg_class = p2p->cfg->op_reg_class;
-		p2p->op_channel = p2p->cfg->op_channel;
-		os_memcpy(&p2p->channels, &p2p->cfg->channels,
-			  sizeof(struct p2p_channels));
-	}
-	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Own preference for operation channel: "
-		"Regulatory Class %u Channel %u%s",
-		p2p->op_reg_class, p2p->op_channel,
-		force_freq ? " (forced)" : "");
+	if (p2p_prepare_channel(p2p, force_freq) < 0)
+		return -1;
 
 	dev = p2p_get_device(p2p, peer_addr);
 	if (dev == NULL) {

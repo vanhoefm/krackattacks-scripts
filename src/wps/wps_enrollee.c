@@ -1151,21 +1151,21 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 			return WPS_FAILURE;
 		ret = wps_process_m4(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M4);
+			wps_fail_event(wps->wps, WPS_M4, wps->config_error);
 		break;
 	case WPS_M6:
 		if (wps_validate_m6(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m6(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M6);
+			wps_fail_event(wps->wps, WPS_M6, wps->config_error);
 		break;
 	case WPS_M8:
 		if (wps_validate_m8(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m8(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M8);
+			wps_fail_event(wps->wps, WPS_M8, wps->config_error);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -1241,6 +1241,7 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 						 const struct wpabuf *msg)
 {
 	struct wps_parse_attr attr;
+	u16 config_error;
 
 	wpa_printf(MSG_DEBUG, "WPS: Received WSC_NACK");
 
@@ -1285,18 +1286,19 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 		return WPS_FAILURE;
 	}
 
+	config_error = WPA_GET_BE16(attr.config_error);
 	wpa_printf(MSG_DEBUG, "WPS: Registrar terminated negotiation with "
-		   "Configuration Error %d", WPA_GET_BE16(attr.config_error));
+		   "Configuration Error %d", config_error);
 
 	switch (wps->state) {
 	case RECV_M4:
-		wps_fail_event(wps->wps, WPS_M3);
+		wps_fail_event(wps->wps, WPS_M3, config_error);
 		break;
 	case RECV_M6:
-		wps_fail_event(wps->wps, WPS_M5);
+		wps_fail_event(wps->wps, WPS_M5, config_error);
 		break;
 	case RECV_M8:
-		wps_fail_event(wps->wps, WPS_M7);
+		wps_fail_event(wps->wps, WPS_M7, config_error);
 		break;
 	default:
 		break;

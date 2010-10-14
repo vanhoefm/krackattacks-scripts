@@ -255,7 +255,8 @@ unsigned int wps_generate_pin(void)
 }
 
 
-void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg)
+void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg,
+		    u16 config_error)
 {
 	union wps_event_data data;
 
@@ -264,6 +265,7 @@ void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg)
 
 	os_memset(&data, 0, sizeof(data));
 	data.fail.msg = msg;
+	data.fail.config_error = config_error;
 	wps->event_cb(wps->cb_ctx, WPS_EV_FAIL, &data);
 }
 

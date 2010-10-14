@@ -2638,21 +2638,21 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 			return WPS_FAILURE;
 		ret = wps_process_m3(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M3);
+			wps_fail_event(wps->wps, WPS_M3, wps->config_error);
 		break;
 	case WPS_M5:
 		if (wps_validate_m5(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m5(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M5);
+			wps_fail_event(wps->wps, WPS_M5, wps->config_error);
 		break;
 	case WPS_M7:
 		if (wps_validate_m7(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m7(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M7);
+			wps_fail_event(wps->wps, WPS_M7, wps->config_error);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -2743,6 +2743,7 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 {
 	struct wps_parse_attr attr;
 	int old_state;
+	u16 config_error;
 
 	wpa_printf(MSG_DEBUG, "WPS: Received WSC_NACK");
 
@@ -2790,21 +2791,22 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 		return WPS_FAILURE;
 	}
 
+	config_error = WPA_GET_BE16(attr.config_error);
 	wpa_printf(MSG_DEBUG, "WPS: Enrollee terminated negotiation with "
-		   "Configuration Error %d", WPA_GET_BE16(attr.config_error));
+		   "Configuration Error %d", config_error);
 
 	switch (old_state) {
 	case RECV_M3:
-		wps_fail_event(wps->wps, WPS_M2);
+		wps_fail_event(wps->wps, WPS_M2, config_error);
 		break;
 	case RECV_M5:
-		wps_fail_event(wps->wps, WPS_M4);
+		wps_fail_event(wps->wps, WPS_M4, config_error);
 		break;
 	case RECV_M7:
-		wps_fail_event(wps->wps, WPS_M6);
+		wps_fail_event(wps->wps, WPS_M6, config_error);
 		break;
 	case RECV_DONE:
-		wps_fail_event(wps->wps, WPS_M8);
+		wps_fail_event(wps->wps, WPS_M8, config_error);
 		break;
 	default:
 		break;
@@ -2987,7 +2989,8 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 		ret = wps_process_wsc_done(wps, msg);
 		if (ret == WPS_FAILURE) {
 			wps->state = SEND_WSC_NACK;
-			wps_fail_event(wps->wps, WPS_WSC_DONE);
+			wps_fail_event(wps->wps, WPS_WSC_DONE,
+				       wps->config_error);
 		}
 		return ret;
 	default:

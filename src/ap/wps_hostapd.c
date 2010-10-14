@@ -532,13 +532,46 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 }
 
 
+static void hostapd_wps_event_fail(struct hostapd_data *hapd,
+				   struct wps_event_fail *fail)
+{
+	wpa_msg(hapd->msg_ctx, MSG_INFO,
+		WPS_EVENT_FAIL "msg=%d config_error=%d",
+		fail->msg, fail->config_error);
+}
+
+
 static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 				 union wps_event_data *data)
 {
 	struct hostapd_data *hapd = ctx;
 
-	if (event == WPS_EV_PWD_AUTH_FAIL)
+	switch (event) {
+	case WPS_EV_M2D:
+		break;
+	case WPS_EV_FAIL:
+		hostapd_wps_event_fail(hapd, &data->fail);
+		break;
+	case WPS_EV_SUCCESS:
+		break;
+	case WPS_EV_PWD_AUTH_FAIL:
 		hostapd_pwd_auth_fail(hapd, &data->pwd_auth_fail);
+		break;
+	case WPS_EV_PBC_OVERLAP:
+		break;
+	case WPS_EV_PBC_TIMEOUT:
+		break;
+	case WPS_EV_ER_AP_ADD:
+		break;
+	case WPS_EV_ER_AP_REMOVE:
+		break;
+	case WPS_EV_ER_ENROLLEE_ADD:
+		break;
+	case WPS_EV_ER_ENROLLEE_REMOVE:
+		break;
+	case WPS_EV_ER_AP_SETTINGS:
+		break;
+	}
 }
 
 

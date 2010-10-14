@@ -812,14 +812,24 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		wps_method, persistent_group);
 
 	if (force_freq) {
+		u8 op_reg_class, op_channel;
 		if (p2p_freq_to_channel(p2p->cfg->country, force_freq,
-					&p2p->op_reg_class, &p2p->op_channel) <
-		    0) {
+					&op_reg_class, &op_channel) < 0) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Unsupported frequency %u MHz",
 				force_freq);
 			return -1;
 		}
+		if (!p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
+					   op_channel)) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Frequency %u MHz (oper_class %u "
+				"channel %u) not allowed for P2P",
+				force_freq, op_reg_class, op_channel);
+			return -1;
+		}
+		p2p->op_reg_class = op_reg_class;
+		p2p->op_channel = op_channel;
 		p2p->channels.reg_classes = 1;
 		p2p->channels.reg_class[0].channels = 1;
 		p2p->channels.reg_class[0].reg_class = p2p->op_reg_class;
@@ -919,14 +929,24 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 		wps_method, persistent_group);
 
 	if (force_freq) {
+		u8 op_reg_class, op_channel;
 		if (p2p_freq_to_channel(p2p->cfg->country, force_freq,
-					&p2p->op_reg_class, &p2p->op_channel) <
-		    0) {
+					&op_reg_class, &op_channel) < 0) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Unsupported frequency %u MHz",
 				force_freq);
 			return -1;
 		}
+		if (!p2p_channels_includes(&p2p->cfg->channels, op_reg_class,
+					   op_channel)) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Frequency %u MHz (oper_class %u "
+				"channel %u) not allowed for P2P",
+				force_freq, op_reg_class, op_channel);
+			return -1;
+		}
+		p2p->op_reg_class = op_reg_class;
+		p2p->op_channel = op_channel;
 		p2p->channels.reg_classes = 1;
 		p2p->channels.reg_class[0].channels = 1;
 		p2p->channels.reg_class[0].reg_class = p2p->op_reg_class;

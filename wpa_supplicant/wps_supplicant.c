@@ -393,6 +393,10 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 {
 	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_FAIL "msg=%d config_error=%d",
 		fail->msg, fail->config_error);
+	if (wpa_s->parent && wpa_s->parent != wpa_s)
+		wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+			"msg=%d config_error=%d",
+			fail->msg, fail->config_error);
 	wpas_clear_wps(wpa_s);
 	wpas_notify_wps_event_fail(wpa_s, fail);
 }

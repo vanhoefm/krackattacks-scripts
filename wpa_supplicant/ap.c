@@ -17,6 +17,7 @@
 
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
 #ifdef NEED_AP_MLME
@@ -200,6 +201,26 @@ static void ap_public_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 }
 
 
+static void ap_wps_event_cb(void *ctx, enum wps_event event,
+			    union wps_event_data *data)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	if (event == WPS_EV_FAIL && wpa_s->parent && wpa_s->parent != wpa_s) {
+		struct wps_event_fail *fail = &data->fail;
+
+		/*
+		 * src/ap/wps_hostapd.c has already sent this on the main
+		 * interface, so only send on the parent interface here if
+		 * needed.
+		 */
+		wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+			"msg=%d config_error=%d",
+			fail->msg, fail->config_error);
+	}
+}
+
+
 static int ap_vendor_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 {
 #ifdef CONFIG_P2P
@@ -366,6 +387,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 					     ap_probe_req_rx, wpa_s);
 		hapd_iface->bss[i]->wps_reg_success_cb = ap_wps_reg_success_cb;
 		hapd_iface->bss[i]->wps_reg_success_cb_ctx = wpa_s;
+		hapd_iface->bss[i]->wps_event_cb = ap_wps_event_cb;
+		hapd_iface->bss[i]->wps_event_cb_ctx = wpa_s;
 #ifdef CONFIG_P2P
 		hapd_iface->bss[i]->p2p = wpa_s->global->p2p;
 		hapd_iface->bss[i]->p2p_group = wpas_p2p_group_init(

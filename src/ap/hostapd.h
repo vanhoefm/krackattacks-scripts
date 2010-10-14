@@ -27,6 +27,8 @@ struct sta_info;
 struct hostap_sta_driver_data;
 struct ieee80211_ht_capabilities;
 struct full_dynamic_vlan;
+enum wps_event;
+union wps_event_data;
 
 struct hostapd_probereq_cb {
 	int (*cb)(void *ctx, const u8 *sa, const u8 *ie, size_t ie_len);
@@ -184,6 +186,10 @@ struct hostapd_data {
 	void (*wps_reg_success_cb)(void *ctx, const u8 *mac_addr,
 				   const u8 *uuid_e);
 	void *wps_reg_success_cb_ctx;
+
+	void (*wps_event_cb)(void *ctx, enum wps_event event,
+			     union wps_event_data *data);
+	void *wps_event_cb_ctx;
 
 #ifdef CONFIG_P2P
 	struct p2p_data *p2p;

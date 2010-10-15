@@ -154,6 +154,7 @@ endif
 ifdef CONFIG_WIRELESS_EXTENSION
 DRV_WPA_CFLAGS += -DCONFIG_WIRELESS_EXTENSION
 DRV_WPA_OBJS += ../src/drivers/driver_wext.o
+NEED_RFKILL=y
 endif
 
 ifdef NEED_NETLINK

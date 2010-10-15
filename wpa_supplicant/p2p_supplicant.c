@@ -1905,151 +1905,153 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid)
 }
 
 
-static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
-				   struct p2p_config *p2p)
+static int wpas_p2p_default_channels(struct wpa_supplicant *wpa_s,
+				     struct p2p_channels *chan)
 {
-	struct hostapd_hw_modes *modes;
-	u16 num_modes, flags;
-	int i, cla;
-	int band24 = 0, band5_low = 0, band5_high = 0;
+	int i, cla = 0;
 
-	/* TODO: more detailed selection of channels within reg_class based on
-	 * driver capabilities */
+	wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for 2.4 GHz "
+		   "band");
+
+	/* Operating class 81 - 2.4 GHz band channels 1..13 */
+	chan->reg_class[cla].reg_class = 81;
+	chan->reg_class[cla].channels = 11;
+	for (i = 0; i < 11; i++)
+		chan->reg_class[cla].channel[i] = i + 1;
+	cla++;
+
+	wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for lower 5 GHz "
+		   "band");
+
+	/* Operating class 115 - 5 GHz, channels 36-48 */
+	chan->reg_class[cla].reg_class = 115;
+	chan->reg_class[cla].channels = 4;
+	chan->reg_class[cla].channel[0] = 36;
+	chan->reg_class[cla].channel[1] = 40;
+	chan->reg_class[cla].channel[2] = 44;
+	chan->reg_class[cla].channel[3] = 48;
+	cla++;
+
+	wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for higher 5 GHz "
+		   "band");
+
+	/* Operating class 124 - 5 GHz, channels 149,153,157,161 */
+	chan->reg_class[cla].reg_class = 124;
+	chan->reg_class[cla].channels = 4;
+	chan->reg_class[cla].channel[0] = 149;
+	chan->reg_class[cla].channel[1] = 153;
+	chan->reg_class[cla].channel[2] = 157;
+	chan->reg_class[cla].channel[3] = 161;
+	cla++;
+
+	chan->reg_classes = cla;
+	return 0;
+}
+
+
+static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
+					  u16 num_modes,
+					  enum hostapd_hw_mode mode)
+{
+	u16 i;
+
+	for (i = 0; i < num_modes; i++) {
+		if (modes[i].mode == mode)
+			return &modes[i];
+	}
+
+	return NULL;
+}
+
+
+static int has_channel(struct hostapd_hw_modes *mode, u8 chan)
+{
+	int i;
+
+	for (i = 0; i < mode->num_channels; i++) {
+		if (mode->channels[i].chan == chan) {
+			return !(mode->channels[i].flag &
+				 (HOSTAPD_CHAN_DISABLED |
+				  HOSTAPD_CHAN_PASSIVE_SCAN |
+				  HOSTAPD_CHAN_NO_IBSS |
+				  HOSTAPD_CHAN_RADAR));
+		}
+	}
+
+	return 0;
+}
+
+
+struct p2p_oper_class_map {
+	enum hostapd_hw_mode mode;
+	u8 op_class;
+	u8 min_chan;
+	u8 max_chan;
+	u8 inc;
+};
+
+static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
+				   struct p2p_channels *chan)
+{
+	struct hostapd_hw_modes *modes, *mode;
+	u16 num_modes, flags;
+	int cla, op;
+	struct p2p_oper_class_map op_class[] = {
+		{ HOSTAPD_MODE_IEEE80211G, 81, 1, 13, 1 },
+		{ HOSTAPD_MODE_IEEE80211G, 82, 14, 14, 1 },
+		{ HOSTAPD_MODE_IEEE80211A, 115, 36, 48, 4 },
+		{ HOSTAPD_MODE_IEEE80211A, 124, 149, 161, 4 },
+#if 0 /* TODO: 40 MHz channels */
+		{ HOSTAPD_MODE_IEEE80211G, 83, 1, 9, 1 },
+		{ HOSTAPD_MODE_IEEE80211G, 84, 5, 13, 1 },
+		{ HOSTAPD_MODE_IEEE80211A, 116, 36, 44, 8 },
+		{ HOSTAPD_MODE_IEEE80211A, 117, 40, 48, 8 },
+		{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8 },
+		{ HOSTAPD_MODE_IEEE80211A, 127, 153, 161, 8 },
+#endif
+		{ -1, 0, 0, 0, 0 }
+	};
 
 	modes = wpa_drv_get_hw_feature_data(wpa_s, &num_modes, &flags);
 	if (modes == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: Driver did not support fetching "
 			   "of all supported channels; assume dualband "
 			   "support");
-		band24 = band5_low = band5_high = 1;
-	} else {
-		for (i = 0; i < num_modes; i++) {
-			struct hostapd_hw_modes *mode;
-			mode = &modes[i];
-			if (mode->mode == HOSTAPD_MODE_IEEE80211G) {
-				band24 = 1;
-			} else if (mode->mode == HOSTAPD_MODE_IEEE80211A) {
-				int j;
-				for (j = 0; j < mode->num_channels; j++) {
-					struct hostapd_channel_data *ch;
-					ch = &mode->channels[j];
-					if (ch->chan == 36)
-						band5_low = 1;
-					else if (ch->chan == 157)
-						band5_high = 1;
-				}
-			}
-		}
+		return wpas_p2p_default_channels(wpa_s, chan);
 	}
 
 	cla = 0;
 
-	if (band24) {
-		wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for "
-			   "2.4 GHz band");
+	for (op = 0; op_class[op].op_class; op++) {
+		struct p2p_oper_class_map *o = &op_class[op];
+		u8 ch;
+		struct p2p_reg_class *reg = NULL;
 
-		/* Operating class 81 - 2.4 GHz band channels 1..13 */
-		p2p->channels.reg_class[cla].reg_class = 81;
-#if 0
-		p2p->channels.reg_class[cla].channels = 13;
-		for (i = 0; i < 13; i++)
-			p2p->channels.reg_class[cla].channel[i] = i + 1;
-#else
-		p2p->channels.reg_class[cla].channels = 11;
-		for (i = 0; i < 11; i++)
-			p2p->channels.reg_class[cla].channel[i] = i + 1;
-#endif
-		cla++;
-
-#if 0
-		/* Operating class 82 - 2.4 GHz band channel 14 */
-		p2p->channels.reg_class[cla].reg_class = 82;
-		p2p->channels.reg_class[cla].channels = 1;
-		p2p->channels.reg_class[cla].channel[0] = 14;
-		cla++;
-#endif
-
-#if 0
-		/* Operating class 83 - 2.4 GHz band channels 1..9; 40 MHz */
-		p2p->channels.reg_class[cla].reg_class = 83;
-		p2p->channels.reg_class[cla].channels = 9;
-		for (i = 0; i < 9; i++)
-			p2p->channels.reg_class[cla].channel[i] = i + 1;
-		cla++;
-
-		/* Operating class 84 - 2.4 GHz band channels 5..13; 40 MHz */
-		p2p->channels.reg_class[cla].reg_class = 84;
-		p2p->channels.reg_class[cla].channels = 9;
-		for (i = 0; i < 9; i++)
-			p2p->channels.reg_class[cla].channel[i] = i + 5;
-		cla++;
-#endif
+		mode = get_mode(modes, num_modes, o->mode);
+		if (mode == NULL)
+			continue;
+		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
+			if (!has_channel(mode, ch))
+				continue;
+			if (reg == NULL) {
+				wpa_printf(MSG_DEBUG, "P2P: Add operating "
+					   "class %u", o->op_class);
+				reg = &chan->reg_class[cla];
+				cla++;
+				reg->reg_class = o->op_class;
+			}
+			reg->channel[reg->channels] = ch;
+			reg->channels++;
+		}
+		if (reg) {
+			wpa_hexdump(MSG_DEBUG, "P2P: Channels",
+				    reg->channel, reg->channels);
+		}
 	}
 
-	if (band5_low) {
-		wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for "
-			   "lower 5 GHz band");
+	chan->reg_classes = cla;
 
-		/* Operating class 115 - 5 GHz, channels 36-48 */
-		p2p->channels.reg_class[cla].reg_class = 115;
-		p2p->channels.reg_class[cla].channels = 4;
-		p2p->channels.reg_class[cla].channel[0] = 36;
-		p2p->channels.reg_class[cla].channel[1] = 40;
-		p2p->channels.reg_class[cla].channel[2] = 44;
-		p2p->channels.reg_class[cla].channel[3] = 48;
-		cla++;
-
-#if 0
-		/* Operating class 116 - 5 GHz, channels 36,44; 40 MHz */
-		p2p->channels.reg_class[cla].reg_class = 116;
-		p2p->channels.reg_class[cla].channels = 2;
-		p2p->channels.reg_class[cla].channel[0] = 36;
-		p2p->channels.reg_class[cla].channel[1] = 44;
-		cla++;
-
-		/* Operating class 117 - 5 GHz, channels 40,48; 40 MHz */
-		p2p->channels.reg_class[cla].reg_class = 117;
-		p2p->channels.reg_class[cla].channels = 2;
-		p2p->channels.reg_class[cla].channel[0] = 40;
-		p2p->channels.reg_class[cla].channel[1] = 48;
-		cla++;
-#endif
-	}
-
-	if (band5_high) {
-		wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for "
-			   "higher 5 GHz band");
-
-		/* Operating class 124 - 5 GHz, channels 149,153,157,161 */
-		p2p->channels.reg_class[cla].reg_class = 124;
-		p2p->channels.reg_class[cla].channels = 4;
-		p2p->channels.reg_class[cla].channel[0] = 149;
-		p2p->channels.reg_class[cla].channel[1] = 153;
-		p2p->channels.reg_class[cla].channel[2] = 157;
-		p2p->channels.reg_class[cla].channel[3] = 161;
-		cla++;
-
-#if 0
-		/* Operating class 126 - 5 GHz, channels 149,157; 40 MHz */
-		p2p->channels.reg_class[cla].reg_class = 126;
-		p2p->channels.reg_class[cla].channels = 2;
-		p2p->channels.reg_class[cla].channel[0] = 149;
-		p2p->channels.reg_class[cla].channel[1] = 157;
-		cla++;
-
-		/* Operating class 127 - 5 GHz, channels 153,161; 40 MHz */
-		p2p->channels.reg_class[cla].reg_class = 127;
-		p2p->channels.reg_class[cla].channels = 2;
-		p2p->channels.reg_class[cla].channel[0] = 153;
-		p2p->channels.reg_class[cla].channel[1] = 161;
-		cla++;
-#endif
-	}
-
-	p2p->channels.reg_classes = cla;
-
-	if (modes)
-		ieee80211_sta_free_hw_features(modes, num_modes);
+	ieee80211_sta_free_hw_features(modes, num_modes);
 
 	return 0;
 }
@@ -2161,7 +2163,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	} else
 		os_memcpy(p2p.country, "US\x04", 3);
 
-	if (wpas_p2p_setup_channels(wpa_s, &p2p)) {
+	if (wpas_p2p_setup_channels(wpa_s, &p2p.channels)) {
 		wpa_printf(MSG_ERROR, "P2P: Failed to configure supported "
 			   "channel list");
 		return -1;

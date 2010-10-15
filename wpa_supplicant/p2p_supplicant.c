@@ -2860,6 +2860,13 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 {
 	struct p2p_go_neg_results params;
 
+	if (freq > 0 && !p2p_supported_freq(wpa_s->global->p2p, freq)) {
+		wpa_printf(MSG_DEBUG, "P2P: The forced channel for GO "
+			   "(%u MHz) is not supported for P2P uses",
+			   freq);
+		return -1;
+	}
+
 	wpas_p2p_init_go_params(wpa_s, &params, freq);
 	p2p_go_params(wpa_s->global->p2p, &params);
 	params.persistent_group = persistent_group;

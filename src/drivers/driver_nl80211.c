@@ -1305,6 +1305,16 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_NOTIFY_CQM:
 		nl80211_cqm_event(drv, tb);
 		break;
+	case NL80211_CMD_REG_CHANGE:
+		wpa_printf(MSG_DEBUG, "nl80211: Regulatory domain change");
+		wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED,
+				     NULL);
+		break;
+	case NL80211_CMD_REG_BEACON_HINT:
+		wpa_printf(MSG_DEBUG, "nl80211: Regulatory beacon hint");
+		wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED,
+				     NULL);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
 			   "(cmd=%d)", gnlh->cmd);
@@ -1576,6 +1586,16 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 			   "membership for mlme events: %d (%s)",
 			   ret, strerror(-ret));
 		goto err4;
+	}
+
+	ret = nl_get_multicast_id(drv, "nl80211", "regulatory");
+	if (ret >= 0)
+		ret = nl_socket_add_membership(drv->nl_handle_event, ret);
+	if (ret < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
+			   "membership for regulatory events: %d (%s)",
+			   ret, strerror(-ret));
+		/* Continue without regulatory events */
 	}
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_handle_event),

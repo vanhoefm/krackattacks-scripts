@@ -2203,7 +2203,16 @@ enum wpa_event_type {
 	 * This event is used to indicate that the interface was disabled,
 	 * e.g., due to rfkill.
 	 */
-	EVENT_INTERFACE_DISABLED
+	EVENT_INTERFACE_DISABLED,
+
+	/**
+	 * EVENT_CHANNEL_LIST_CHANGED - Channel list changed
+	 *
+	 * This event is used to indicate that the channel list has changed,
+	 * e.g., because of a regulatory domain change triggered by scan
+	 * results including an AP advertising a country code.
+	 */
+	EVENT_CHANNEL_LIST_CHANGED
 };
 
 

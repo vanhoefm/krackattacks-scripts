@@ -3599,3 +3599,21 @@ int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s)
 	wpas_group_formation_completed(wpa_s, 0);
 	return 1;
 }
+
+
+void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s)
+{
+	struct p2p_channels chan;
+
+	if (wpa_s->global == NULL || wpa_s->global->p2p == NULL)
+		return;
+
+	os_memset(&chan, 0, sizeof(chan));
+	if (wpas_p2p_setup_channels(wpa_s, &chan)) {
+		wpa_printf(MSG_ERROR, "P2P: Failed to update supported "
+			   "channel list");
+		return;
+	}
+
+	p2p_update_channel_list(wpa_s->global->p2p, &chan);
+}

@@ -1263,4 +1263,6 @@ void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled);
  */
 int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq);
 
+void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan);
+
 #endif /* P2P_H */

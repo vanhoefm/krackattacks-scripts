@@ -3036,3 +3036,10 @@ void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled)
 		enabled ? "enabled" : "disabled");
 	p2p->cfg->p2p_intra_bss = enabled;
 }
+
+
+void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan)
+{
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Update channel list");
+	os_memcpy(&p2p->cfg->channels, chan, sizeof(struct p2p_channels));
+}

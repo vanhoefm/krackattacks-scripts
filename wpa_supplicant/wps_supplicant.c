@@ -934,6 +934,29 @@ static void wpas_wps_set_sel_reg_cb(void *ctx, int sel_reg, u16 dev_passwd_id,
 }
 
 
+static u16 wps_fix_config_methods(u16 config_methods)
+{
+#ifdef CONFIG_WPS2
+	if ((config_methods &
+	     (WPS_CONFIG_DISPLAY | WPS_CONFIG_VIRT_DISPLAY |
+	      WPS_CONFIG_PHY_DISPLAY)) == WPS_CONFIG_DISPLAY) {
+		wpa_printf(MSG_INFO, "WPS: Converting display to "
+			   "virtual_display for WPS 2.0 compliance");
+		config_methods |= WPS_CONFIG_VIRT_DISPLAY;
+	}
+	if ((config_methods &
+	     (WPS_CONFIG_PUSHBUTTON | WPS_CONFIG_VIRT_PUSHBUTTON |
+	      WPS_CONFIG_PHY_PUSHBUTTON)) == WPS_CONFIG_PUSHBUTTON) {
+		wpa_printf(MSG_INFO, "WPS: Converting push_button to "
+			   "virtual_push_button for WPS 2.0 compliance");
+		config_methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
+	}
+#endif /* CONFIG_WPS2 */
+
+	return config_methods;
+}
+
+
 int wpas_wps_init(struct wpa_supplicant *wpa_s)
 {
 	struct wps_context *wps;
@@ -961,6 +984,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 		os_free(wps);
 		return -1;
 	}
+	wps->config_methods = wps_fix_config_methods(wps->config_methods);
 	if (wpa_s->conf->device_type &&
 	    wps_dev_type_str2bin(wpa_s->conf->device_type,
 				 wps->dev.pri_dev_type) < 0) {
@@ -1442,6 +1466,7 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 			wps->config_methods &= ~WPS_CONFIG_LABEL;
 		}
 	}
+	wps->config_methods = wps_fix_config_methods(wps->config_methods);
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE) {
 		if (wpa_s->conf->device_type &&

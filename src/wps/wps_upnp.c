@@ -527,13 +527,8 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 
 	dl_list_for_each_safe(s, tmp, &sm->subscriptions, struct subscription,
 			      list) {
-		if (event_add(s, buf, sm->wlanevent_type ==
-			      UPNP_WPS_WLANEVENT_TYPE_PROBE) == 1) {
-			wpa_printf(MSG_INFO, "WPS UPnP: Dropping "
-				   "subscriber %p due to event backlog", s);
-			dl_list_del(&s->list);
-			subscription_destroy(s);
-		}
+		event_add(s, buf,
+			  sm->wlanevent_type == UPNP_WPS_WLANEVENT_TYPE_PROBE);
 	}
 
 	wpabuf_free(buf);

@@ -132,6 +132,8 @@ static void event_retry(struct wps_event_ *e, int do_next_address)
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Giving up on sending event "
 			   "for %s", e->addr->domain_and_port);
 		event_delete(e);
+		if (!dl_list_empty(&s->event_queue))
+			event_send_all_later(s->sm);
 		return;
 	}
 	dl_list_add(&s->event_queue, &e->list);

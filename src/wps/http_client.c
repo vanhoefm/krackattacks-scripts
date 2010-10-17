@@ -21,7 +21,7 @@
 #include "http_client.h"
 
 
-#define HTTP_CLIENT_TIMEOUT 30
+#define HTTP_CLIENT_TIMEOUT_SEC 30
 
 
 struct http_client {
@@ -122,7 +122,7 @@ static void http_client_tx_ready(int sock, void *eloop_ctx, void *sock_ctx)
 	c->req = NULL;
 
 	c->hread = httpread_create(c->sd, http_client_got_response, c,
-				   c->max_response, HTTP_CLIENT_TIMEOUT);
+				   c->max_response, HTTP_CLIENT_TIMEOUT_SEC);
 	if (c->hread == NULL) {
 		c->cb(c->cb_ctx, c, HTTP_CLIENT_FAILED);
 		return;
@@ -181,8 +181,8 @@ struct http_client * http_client_addr(struct sockaddr_in *dst,
 		return NULL;
 	}
 
-	if (eloop_register_timeout(HTTP_CLIENT_TIMEOUT, 0, http_client_timeout,
-				   c, NULL)) {
+	if (eloop_register_timeout(HTTP_CLIENT_TIMEOUT_SEC, 0,
+				   http_client_timeout, c, NULL)) {
 		http_client_free(c);
 		return NULL;
 	}

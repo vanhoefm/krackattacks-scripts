@@ -31,7 +31,6 @@
  */
 
 #define MAX_EVENTS_QUEUED 20   /* How far behind queued events */
-#define EVENT_TIMEOUT_SEC 30   /* Drop sending event after timeout */
 
 /* How long to wait before sending event */
 #define EVENT_DELAY_SECONDS 0

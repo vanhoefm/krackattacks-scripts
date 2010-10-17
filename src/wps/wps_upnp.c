@@ -692,6 +692,13 @@ struct subscription * subscription_start(struct upnp_wps_device_sm *sm,
 	s->timeout_time = expire;
 	uuid_make(s->uuid);
 	subscr_addr_list_create(s, callback_urls);
+	if (dl_list_empty(&s->addr_list)) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: No valid callback URLs in "
+			   "'%s' - drop subscription", callback_urls);
+		subscription_destroy(s);
+		return NULL;
+	}
+
 	/* Add to end of list, since it has the highest expiration time */
 	dl_list_add_tail(&sm->subscriptions, &s->list);
 	/* Queue up immediate event message (our last event)

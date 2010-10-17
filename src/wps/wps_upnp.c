@@ -499,7 +499,7 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 
 	dl_list_for_each_safe(s, tmp, &sm->subscriptions, struct subscription,
 			      list) {
-		if (event_add(s, buf)) {
+		if (event_add(s, buf) == 1) {
 			wpa_printf(MSG_INFO, "WPS UPnP: Dropping "
 				   "subscriber %p due to event backlog", s);
 			dl_list_del(&s->list);
@@ -608,6 +608,7 @@ static int subscription_first_event(struct subscription *s)
 		"<e:propertyset xmlns:e=\"urn:schemas-upnp-org:event-1-0\">\n";
 	const char *tail = "</e:propertyset>\n";
 	char txt[10];
+	int ret;
 
 	if (s->sm->wlanevent == NULL) {
 		/*
@@ -639,7 +640,7 @@ static int subscription_first_event(struct subscription *s)
 	}
 	buf = wpabuf_alloc(500 + os_strlen(wlan_event));
 	if (buf == NULL)
-		return 1;
+		return -1;
 
 	wpabuf_put_str(buf, head);
 	wpabuf_put_property(buf, "STAStatus", "1");
@@ -649,9 +650,10 @@ static int subscription_first_event(struct subscription *s)
 		wpabuf_put_property(buf, "WLANEvent", wlan_event);
 	wpabuf_put_str(buf, tail);
 
-	if (event_add(s, buf)) {
+	ret = event_add(s, buf);
+	if (ret) {
 		wpabuf_free(buf);
-		return 1;
+		return ret;
 	}
 	wpabuf_free(buf);
 

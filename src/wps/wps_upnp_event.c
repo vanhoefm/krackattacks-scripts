@@ -365,7 +365,7 @@ void event_send_stop_all(struct upnp_wps_device_sm *sm)
  * event_add - Add a new event to a queue
  * @s: Subscription
  * @data: Event data (is copied; caller retains ownership)
- * Returns: 0 on success, 1 on error
+ * Returns: 0 on success, -1 on error, 1 on max event queue limit reached
  */
 int event_add(struct subscription *s, const struct wpabuf *data)
 {
@@ -381,13 +381,13 @@ int event_add(struct subscription *s, const struct wpabuf *data)
 
 	e = os_zalloc(sizeof(*e));
 	if (e == NULL)
-		return 1;
+		return -1;
 	dl_list_init(&e->list);
 	e->s = s;
 	e->data = wpabuf_dup(data);
 	if (e->data == NULL) {
 		os_free(e);
-		return 1;
+		return -1;
 	}
 	e->subscriber_sequence = s->next_subscriber_sequence++;
 	if (s->next_subscriber_sequence == 0)

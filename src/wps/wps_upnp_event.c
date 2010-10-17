@@ -381,7 +381,14 @@ int event_add(struct subscription *s, const struct wpabuf *data, int probereq)
 	if (len >= MAX_EVENTS_QUEUED) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Too many events queued for "
 			   "subscriber %p", s);
-		return 1;
+		if (probereq)
+			return 1;
+
+		/* Drop oldest entry to allow EAP event to be stored. */
+		e = event_dequeue(s);
+		if (!e)
+			return 1;
+		event_delete(e);
 	}
 
 	if (s->last_event_failed && probereq && len > 0) {

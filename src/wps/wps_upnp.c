@@ -307,7 +307,6 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 	struct addrinfo *result = NULL;
 	struct addrinfo *rp;
 	int rerr;
-	struct subscr_addr *a = NULL;
 
 	/* url MUST begin with http: */
 	if (os_strncasecmp(url, "http://", 7))
@@ -367,6 +366,8 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 		goto fail;
 	}
 	for (rp = result; rp; rp = rp->ai_next) {
+		struct subscr_addr *a;
+
 		/* Limit no. of address to avoid denial of service attack */
 		if (dl_list_len(&s->addr_list) >= MAX_ADDR_PER_SUBSCRIPTION) {
 			wpa_printf(MSG_INFO, "WPS UPnP: subscr_addr_add_url: "
@@ -390,14 +391,12 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 		a->saddr.sin_port = htons(port);
 
 		dl_list_add(&s->addr_list, &a->list);
-		a = NULL;       /* don't free it below */
 	}
 
 fail:
 	if (result)
 		freeaddrinfo(result);
 	os_free(scratch_mem);
-	os_free(a);
 }
 
 

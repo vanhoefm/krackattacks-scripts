@@ -132,6 +132,7 @@ static void event_retry(struct wps_event_ *e, int do_next_address)
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Giving up on sending event "
 			   "for %s", e->addr->domain_and_port);
 		event_delete(e);
+		s->last_event_failed = 1;
 		if (!dl_list_empty(&s->event_queue))
 			event_send_all_later(s->sm);
 		return;
@@ -222,6 +223,7 @@ static void event_http_cb(void *ctx, struct http_client *c,
 			   "WPS UPnP: Got event %p reply OK from %s",
 			   e, e->addr->domain_and_port);
 		e->addr->num_failures = 0;
+		s->last_event_failed = 0;
 		event_delete(e);
 
 		/* Schedule sending more if there is more to send */
@@ -367,9 +369,10 @@ void event_send_stop_all(struct upnp_wps_device_sm *sm)
  * event_add - Add a new event to a queue
  * @s: Subscription
  * @data: Event data (is copied; caller retains ownership)
+ * @probereq: Whether this is a Probe Request event
  * Returns: 0 on success, -1 on error, 1 on max event queue limit reached
  */
-int event_add(struct subscription *s, const struct wpabuf *data)
+int event_add(struct subscription *s, const struct wpabuf *data, int probereq)
 {
 	struct wps_event_ *e;
 	unsigned int len;
@@ -379,6 +382,17 @@ int event_add(struct subscription *s, const struct wpabuf *data)
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Too many events queued for "
 			   "subscriber %p", s);
 		return 1;
+	}
+
+	if (s->last_event_failed && probereq && len > 0) {
+		/*
+		 * Avoid queuing frames for subscribers that may have left
+		 * without unsubscribing.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Do not queue more Probe "
+			   "Request frames for subscription %p since last "
+			   "delivery failed", s);
+		return -1;
 	}
 
 	e = os_zalloc(sizeof(*e));

@@ -499,7 +499,8 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 
 	dl_list_for_each_safe(s, tmp, &sm->subscriptions, struct subscription,
 			      list) {
-		if (event_add(s, buf) == 1) {
+		if (event_add(s, buf, sm->wlanevent_type ==
+			      UPNP_WPS_WLANEVENT_TYPE_PROBE) == 1) {
 			wpa_printf(MSG_INFO, "WPS UPnP: Dropping "
 				   "subscriber %p due to event backlog", s);
 			dl_list_del(&s->list);
@@ -650,7 +651,7 @@ static int subscription_first_event(struct subscription *s)
 		wpabuf_put_property(buf, "WLANEvent", wlan_event);
 	wpabuf_put_str(buf, tail);
 
-	ret = event_add(s, buf);
+	ret = event_add(s, buf, 0);
 	if (ret) {
 		wpabuf_free(buf);
 		return ret;
@@ -798,6 +799,7 @@ int upnp_wps_device_send_wlan_event(struct upnp_wps_device_sm *sm,
 
 	os_free(sm->wlanevent);
 	sm->wlanevent = val;
+	sm->wlanevent_type = ev_type;
 	upnp_wps_device_send_event(sm);
 
 	ret = 0;

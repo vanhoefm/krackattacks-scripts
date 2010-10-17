@@ -92,6 +92,7 @@ struct subscription {
 	struct dl_list event_queue; /* Queued event messages. */
 	struct wps_event_ *current_event; /* non-NULL if being sent (not in q)
 					   */
+	int last_event_failed; /* Whether delivery of last event failed */
 
 	/* Information from SetSelectedRegistrar action */
 	u8 selected_registrar;
@@ -132,6 +133,7 @@ struct upnp_wps_device_sm {
 				    */
 
 	char *wlanevent; /* the last WLANEvent data */
+	enum upnp_wps_wlanevent_type wlanevent_type;
 
 	/* FIX: maintain separate structures for each UPnP peer */
 	struct upnp_wps_peer peer;
@@ -168,7 +170,7 @@ int web_listener_start(struct upnp_wps_device_sm *sm);
 void web_listener_stop(struct upnp_wps_device_sm *sm);
 
 /* wps_upnp_event.c */
-int event_add(struct subscription *s, const struct wpabuf *data);
+int event_add(struct subscription *s, const struct wpabuf *data, int probereq);
 void event_delete_all(struct subscription *s);
 void event_send_all_later(struct upnp_wps_device_sm *sm);
 void event_send_stop_all(struct upnp_wps_device_sm *sm);

@@ -134,6 +134,8 @@ struct upnp_wps_device_sm {
 
 	char *wlanevent; /* the last WLANEvent data */
 	enum upnp_wps_wlanevent_type wlanevent_type;
+	os_time_t last_event_sec;
+	unsigned int num_events_in_sec;
 
 	/* FIX: maintain separate structures for each UPnP peer */
 	struct upnp_wps_peer peer;

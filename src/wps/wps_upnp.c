@@ -209,6 +209,8 @@
 #define MAX_SUBSCRIPTIONS 4    /* how many subscribing clients we handle */
 #define MAX_ADDR_PER_SUBSCRIPTION 8
 
+/* Maximum number of Probe Request events per second */
+#define MAX_EVENTS_PER_SEC 5
 
 /* Write the current date/time per RFC */
 void format_date(struct wpabuf *buf)
@@ -474,10 +476,36 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 		"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
 		"<e:propertyset xmlns:e=\"urn:schemas-upnp-org:event-1-0\">\n";
 	const char *format_tail = "</e:propertyset>\n";
+	struct os_time now;
 
 	if (dl_list_empty(&sm->subscriptions)) {
 		/* optimize */
 		return;
+	}
+
+	if (os_get_time(&now) == 0) {
+		if (now.sec != sm->last_event_sec) {
+			sm->last_event_sec = now.sec;
+			sm->num_events_in_sec = 1;
+		} else {
+			sm->num_events_in_sec++;
+			/*
+			 * In theory, this should apply to all WLANEvent
+			 * notifications, but EAP messages are of much higher
+			 * priority and Probe Request notifications should not
+			 * be allowed to drop EAP messages, so only throttle
+			 * Probe Request notifications.
+			 */
+			if (sm->num_events_in_sec > MAX_EVENTS_PER_SEC &&
+			    sm->wlanevent_type ==
+			    UPNP_WPS_WLANEVENT_TYPE_PROBE) {
+				wpa_printf(MSG_DEBUG, "WPS UPnP: Throttle "
+					   "event notifications (%u seen "
+					   "during one second)",
+					   sm->num_events_in_sec);
+				return;
+			}
+		}
 	}
 
 	/* Determine buffer size needed first */

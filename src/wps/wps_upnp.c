@@ -270,7 +270,7 @@ static void uuid_make(u8 uuid[UUID_LEN])
 /* subscr_addr_delete -- delete single unlinked subscriber address
  * (be sure to unlink first if need be)
  */
-static void subscr_addr_delete(struct subscr_addr *a)
+void subscr_addr_delete(struct subscr_addr *a)
 {
 	/*
 	 * Note: do NOT free domain_and_port or path because they point to

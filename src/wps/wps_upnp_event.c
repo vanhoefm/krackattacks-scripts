@@ -31,6 +31,7 @@
  */
 
 #define MAX_EVENTS_QUEUED 20   /* How far behind queued events */
+#define MAX_FAILURES 10 /* Drop subscription after this many failures */
 
 /* How long to wait before sending event */
 #define EVENT_DELAY_SECONDS 0
@@ -166,6 +167,45 @@ static struct wpabuf * event_build_message(struct wps_event_ *e)
 }
 
 
+static void event_addr_failure(struct wps_event_ *e)
+{
+	struct subscription *s = e->s;
+
+	e->addr->num_failures++;
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Failed to send event %p to %s "
+		   "(num_failures=%u)",
+		   e, e->addr->domain_and_port, e->addr->num_failures);
+
+	if (e->addr->num_failures < MAX_FAILURES) {
+		/* Try other addresses, if available */
+		event_retry(e, 1);
+		return;
+	}
+
+	/*
+	 * If other side doesn't like what we say, forget about them.
+	 * (There is no way to tell other side that we are dropping them...).
+	 */
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Deleting subscription %p "
+		   "address %s due to errors", s, e->addr->domain_and_port);
+	dl_list_del(&e->addr->list);
+	subscr_addr_delete(e->addr);
+	e->addr = NULL;
+
+	if (dl_list_empty(&s->addr_list)) {
+		/* if we've given up on all addresses */
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Removing subscription %p "
+			   "with no addresses", s);
+		dl_list_del(&s->list);
+		subscription_destroy(s);
+		return;
+	}
+
+	/* Try other addresses, if available */
+	event_retry(e, 0);
+}
+
+
 static void event_http_cb(void *ctx, struct http_client *c,
 			  enum http_client_event event)
 {
@@ -179,6 +219,7 @@ static void event_http_cb(void *ctx, struct http_client *c,
 		wpa_printf(MSG_DEBUG,
 			   "WPS UPnP: Got event %p reply OK from %s",
 			   e, e->addr->domain_and_port);
+		e->addr->num_failures = 0;
 		event_delete(e);
 
 		/* Schedule sending more if there is more to send */
@@ -186,24 +227,17 @@ static void event_http_cb(void *ctx, struct http_client *c,
 			event_send_all_later(s->sm);
 		break;
 	case HTTP_CLIENT_FAILED:
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Event send failure");
+		event_addr_failure(e);
+		break;
 	case HTTP_CLIENT_INVALID_REPLY:
-		wpa_printf(MSG_DEBUG, "WPS UPnP: Failed to send event to %s",
-			   e->addr->domain_and_port);
-
-		/*
-		 * If other side doesn't like what we say, forget about them.
-		 * (There is no way to tell other side that we are dropping
-		 * them...).
-		 * Alternately, we could just do event_delete(e)
-		 */
-		wpa_printf(MSG_DEBUG, "WPS UPnP: Deleting subscription due to "
-			   "errors");
-		dl_list_del(&s->list);
-		subscription_destroy(s);
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Invalid reply");
+		event_addr_failure(e);
 		break;
 	case HTTP_CLIENT_TIMEOUT:
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Event send timeout");
-		event_retry(e, 1);
+		event_addr_failure(e);
+		break;
 	}
 }
 
@@ -283,18 +317,10 @@ static void event_send_all_later_handler(void *eloop_data, void *user_ctx)
 	sm->event_send_all_queued = 0;
 	dl_list_for_each_safe(s, tmp, &sm->subscriptions, struct subscription,
 			      list) {
-		if (dl_list_empty(&s->addr_list)) {
-			/* if we've given up on all addresses */
-			wpa_printf(MSG_DEBUG, "WPS UPnP: Removing "
-				   "subscription with no addresses");
-			dl_list_del(&s->list);
-			subscription_destroy(s);
-		} else {
-			if (s->current_event == NULL /* not busy */ &&
-			    !dl_list_empty(&s->event_queue) /* more to do */) {
-				if (event_send_start(s))
-					nerrors++;
-			}
+		if (s->current_event == NULL /* not busy */ &&
+		    !dl_list_empty(&s->event_queue) /* more to do */) {
+			if (event_send_start(s))
+				nerrors++;
 		}
 	}
 

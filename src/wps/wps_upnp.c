@@ -3,7 +3,7 @@
  * Copyright (c) 2000-2003 Intel Corporation
  * Copyright (c) 2006-2007 Sony Corporation
  * Copyright (c) 2008-2009 Atheros Communications
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * See below for more details on licensing and code history.
  */
@@ -293,7 +293,8 @@ static void subscr_addr_free_all(struct subscription *s)
 
 
 /* subscr_addr_add_url -- add address(es) for one url to subscription */
-static void subscr_addr_add_url(struct subscription *s, const char *url)
+static void subscr_addr_add_url(struct subscription *s, const char *url,
+				size_t url_len)
 {
 	int alloc_len;
 	char *scratch_mem = NULL;
@@ -309,17 +310,19 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 	int rerr;
 
 	/* url MUST begin with http: */
-	if (os_strncasecmp(url, "http://", 7))
+	if (url_len < 7 || os_strncasecmp(url, "http://", 7))
 		goto fail;
 	url += 7;
+	url_len -= 7;
 
 	/* allocate memory for the extra stuff we need */
-	alloc_len = (2 * (os_strlen(url) + 1));
+	alloc_len = 2 * (url_len + 1);
 	scratch_mem = os_zalloc(alloc_len);
 	if (scratch_mem == NULL)
 		goto fail;
 	mem = scratch_mem;
-	strcpy(mem, url);
+	os_strncpy(mem, url, url_len);
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Adding URL '%s'", mem);
 	domain_and_port = mem;
 	mem += 1 + os_strlen(mem);
 	delim = os_strchr(domain_and_port, '/');
@@ -331,7 +334,7 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 	}
 	domain = mem;
 	strcpy(domain, domain_and_port);
-	delim = strchr(domain, ':');
+	delim = os_strchr(domain, ':');
 	if (delim) {
 		*delim++ = 0;   /* null terminate domain */
 		if (isdigit(*delim))
@@ -386,7 +389,7 @@ static void subscr_addr_add_url(struct subscription *s, const char *url)
 		if (path[0] != '/')
 			*mem++ = '/';
 		strcpy(mem, path);
-		mem += 1 + strlen(mem);
+		mem += 1 + os_strlen(mem);
 		os_memcpy(&a->saddr, rp->ai_addr, sizeof(a->saddr));
 		a->saddr.sin_port = htons(port);
 
@@ -406,7 +409,8 @@ fail:
 static void subscr_addr_list_create(struct subscription *s,
 				    const char *url_list)
 {
-	char *end;
+	const char *end;
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Parsing URL list '%s'", url_list);
 	for (;;) {
 		while (*url_list == ' ' || *url_list == '\t')
 			url_list++;
@@ -416,9 +420,8 @@ static void subscr_addr_list_create(struct subscription *s,
 		end = os_strchr(url_list, '>');
 		if (end == NULL)
 			break;
-		*end++ = 0;
-		subscr_addr_add_url(s, url_list);
-		url_list = end;
+		subscr_addr_add_url(s, url_list, end - url_list);
+		url_list = end + 1;
 	}
 }
 

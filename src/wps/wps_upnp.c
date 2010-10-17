@@ -501,7 +501,7 @@ static void upnp_wps_device_send_event(struct upnp_wps_device_sm *sm)
 			      list) {
 		if (event_add(s, buf)) {
 			wpa_printf(MSG_INFO, "WPS UPnP: Dropping "
-				   "subscriber due to event backlog");
+				   "subscriber %p due to event backlog", s);
 			dl_list_del(&s->list);
 			subscription_destroy(s);
 		}

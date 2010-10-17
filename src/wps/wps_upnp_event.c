@@ -3,7 +3,7 @@
  * Copyright (c) 2000-2003 Intel Corporation
  * Copyright (c) 2006-2007 Sony Corporation
  * Copyright (c) 2008-2009 Atheros Communications
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2010, Jouni Malinen <j@w1.fi>
  *
  * See wps_upnp.c for more details on licensing and code history.
  */
@@ -72,6 +72,7 @@ static void event_clean(struct wps_event_ *e)
  */
 static void event_delete(struct wps_event_ *e)
 {
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Delete event %p", e);
 	event_clean(e);
 	wpabuf_free(e->data);
 	os_free(e);
@@ -85,8 +86,11 @@ static struct wps_event_ *event_dequeue(struct subscription *s)
 {
 	struct wps_event_ *e;
 	e = dl_list_first(&s->event_queue, struct wps_event_, list);
-	if (e)
+	if (e) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Dequeue event %p for "
+			   "subscription %p", e, s);
 		dl_list_del(&e->list);
+	}
 	return e;
 }
 
@@ -114,11 +118,15 @@ static void event_retry(struct wps_event_ *e, int do_next_address)
 	struct subscription *s = e->s;
 	struct upnp_wps_device_sm *sm = s->sm;
 
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Retry event %p for subscription %p",
+		   e, s);
 	event_clean(e);
 	/* will set: s->current_event = NULL; */
 
-	if (do_next_address)
+	if (do_next_address) {
 		e->retry++;
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Try address %d", e->retry);
+	}
 	if (e->retry >= dl_list_len(&s->addr_list)) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Giving up on sending event "
 			   "for %s", e->addr->domain_and_port);
@@ -163,11 +171,13 @@ static void event_http_cb(void *ctx, struct http_client *c,
 	struct wps_event_ *e = ctx;
 	struct subscription *s = e->s;
 
+	wpa_printf(MSG_DEBUG, "WPS UPnP: HTTP client callback: e=%p c=%p "
+		   "event=%d", e, c, event);
 	switch (event) {
 	case HTTP_CLIENT_OK:
 		wpa_printf(MSG_DEBUG,
-			   "WPS UPnP: Got event reply OK from "
-			   "%s", e->addr->domain_and_port);
+			   "WPS UPnP: Got event %p reply OK from %s",
+			   e, e->addr->domain_and_port);
 		event_delete(e);
 
 		/* Schedule sending more if there is more to send */
@@ -330,10 +340,12 @@ void event_send_stop_all(struct upnp_wps_device_sm *sm)
 int event_add(struct subscription *s, const struct wpabuf *data)
 {
 	struct wps_event_ *e;
+	unsigned int len;
 
-	if (dl_list_len(&s->event_queue) >= MAX_EVENTS_QUEUED) {
+	len = dl_list_len(&s->event_queue);
+	if (len >= MAX_EVENTS_QUEUED) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Too many events queued for "
-			   "subscriber");
+			   "subscriber %p", s);
 		return 1;
 	}
 
@@ -350,6 +362,8 @@ int event_add(struct subscription *s, const struct wpabuf *data)
 	e->subscriber_sequence = s->next_subscriber_sequence++;
 	if (s->next_subscriber_sequence == 0)
 		s->next_subscriber_sequence++;
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Queue event %p for subscriber %p "
+		   "(queue len %u)", e, s, len + 1);
 	dl_list_add_tail(&s->event_queue, &e->list);
 	event_send_all_later(s->sm);
 	return 0;

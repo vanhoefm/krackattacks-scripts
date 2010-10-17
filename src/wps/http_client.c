@@ -42,7 +42,7 @@ struct http_client {
 static void http_client_timeout(void *eloop_data, void *user_ctx)
 {
 	struct http_client *c = eloop_data;
-	wpa_printf(MSG_DEBUG, "HTTP: Timeout");
+	wpa_printf(MSG_DEBUG, "HTTP: Timeout (c=%p)", c);
 	c->cb(c->cb_ctx, c, HTTP_CLIENT_TIMEOUT);
 }
 
@@ -51,6 +51,9 @@ static void http_client_got_response(struct httpread *handle, void *cookie,
 				     enum httpread_event e)
 {
 	struct http_client *c = cookie;
+
+	wpa_printf(MSG_DEBUG, "HTTP: httpread callback: handle=%p cookie=%p "
+		   "e=%d", handle, cookie, e);
 
 	eloop_cancel_timeout(http_client_timeout, c, NULL);
 	switch (e) {

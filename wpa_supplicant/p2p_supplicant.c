@@ -896,7 +896,16 @@ wpas_p2p_init_group_interface(struct wpa_supplicant *wpa_s, int go)
 
 	if (!wpa_s->pending_interface_name[0]) {
 		wpa_printf(MSG_ERROR, "P2P: No pending group interface");
-		return NULL;
+		if (!wpas_p2p_create_iface(wpa_s))
+			return NULL;
+		/*
+		 * Something has forced us to remove the pending interface; try
+		 * to create a new one and hope for the best that we will get
+		 * the same local address.
+		 */
+		if (wpas_p2p_add_group_interface(wpa_s, go ? WPA_IF_P2P_GO :
+						 WPA_IF_P2P_CLIENT) < 0)
+			return NULL;
 	}
 
 	os_memset(&iface, 0, sizeof(iface));

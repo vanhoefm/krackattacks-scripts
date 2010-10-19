@@ -901,6 +901,9 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 		return;
 	}
 
+	wpa_hexdump_ascii(MSG_DEBUG, "WPS UPnP: HTTP SUBSCRIBE",
+			  (u8 *) hdr, os_strlen(hdr));
+
 	/* Parse/validate headers */
 	h = hdr;
 	/* First line: SUBSCRIBE /wps_event HTTP/1.1
@@ -1000,16 +1003,22 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 
 	if (got_uuid) {
 		/* renewal */
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Subscription renewal");
 		if (callback_urls) {
 			ret = HTTP_BAD_REQUEST;
 			goto error;
 		}
 		s = subscription_renew(sm, uuid);
 		if (s == NULL) {
+			char str[80];
+			uuid_bin2str(uuid, str, sizeof(str));
+			wpa_printf(MSG_DEBUG, "WPS UPnP: Could not find "
+				   "SID %s", str);
 			ret = HTTP_PRECONDITION_FAILED;
 			goto error;
 		}
 	} else if (callback_urls) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: New subscription");
 		if (!got_nt) {
 			ret = HTTP_PRECONDITION_FAILED;
 			goto error;
@@ -1033,6 +1042,7 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 	/* subscription id */
 	b = wpabuf_put(buf, 0);
 	uuid_bin2str(s->uuid, b, 80);
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Assigned SID %s", b);
 	wpabuf_put(buf, os_strlen(b));
 	wpabuf_put_str(buf, "\r\n");
 	wpabuf_printf(buf, "Timeout: Second-%d\r\n", UPNP_SUBSCRIBE_SEC);
@@ -1066,6 +1076,7 @@ error:
 	*     HTTP 500-series error code.
 	*   599 Too many subscriptions (not a standard HTTP error)
 	*/
+	wpa_printf(MSG_DEBUG, "WPS UPnP: SUBSCRIBE failed - return %d", ret);
 	http_put_empty(buf, ret);
 	http_request_send_and_deinit(req, buf);
 	os_free(callback_urls);

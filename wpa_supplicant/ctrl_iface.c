@@ -2884,6 +2884,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 		wpa_s->force_long_sd = 0;
 		p2p_flush(wpa_s->global->p2p);
+	} else if (os_strcmp(buf, "P2P_CANCEL") == 0) {
+		if (wpas_p2p_cancel(wpa_s))
+			reply_len = -1;
 	} else if (os_strncmp(buf, "P2P_PRESENCE_REQ ", 17) == 0) {
 		if (p2p_ctrl_presence_req(wpa_s, buf + 17) < 0)
 			reply_len = -1;

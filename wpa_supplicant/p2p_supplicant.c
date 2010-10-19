@@ -3628,3 +3628,37 @@ void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s)
 
 	p2p_update_channel_list(wpa_s->global->p2p, &chan);
 }
+
+
+int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_global *global = wpa_s->global;
+	int found = 0;
+
+	wpa_printf(MSG_DEBUG, "P2P: Request to cancel group formation");
+
+	if (wpa_s->pending_interface_name[0] &&
+	    !is_zero_ether_addr(wpa_s->pending_interface_addr))
+		found = 1;
+
+	wpas_p2p_stop_find(wpa_s);
+
+	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		if (wpa_s == global->p2p_group_formation &&
+		    wpa_s->p2p_in_provisioning) {
+			wpa_printf(MSG_DEBUG, "P2P: Interface %s in group "
+				   "formation found - cancelling",
+				   wpa_s->ifname);
+			found = 1;
+			wpas_p2p_group_delete(wpa_s);
+			break;
+		}
+	}
+
+	if (!found) {
+		wpa_printf(MSG_DEBUG, "P2P: No ongoing group formation found");
+		return -1;
+	}
+
+	return 0;
+}

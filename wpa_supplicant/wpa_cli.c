@@ -2055,6 +2055,13 @@ static int wpa_cli_cmd_p2p_flush(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_p2p_cancel(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "P2P_CANCEL");
+}
+
+
 static int wpa_cli_cmd_p2p_presence_req(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -2407,6 +2414,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "<field> <value> = set a P2P parameter" },
 	{ "p2p_flush", wpa_cli_cmd_p2p_flush, cli_cmd_flag_none,
 	  "= flush P2P state" },
+	{ "p2p_cancel", wpa_cli_cmd_p2p_cancel, cli_cmd_flag_none,
+	  "= cancel P2P group formation" },
 	{ "p2p_presence_req", wpa_cli_cmd_p2p_presence_req, cli_cmd_flag_none,
 	  "[<duration> <interval>] [<duration> <interval>] = request GO "
 	  "presence" },

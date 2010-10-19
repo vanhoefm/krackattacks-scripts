@@ -401,7 +401,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 			params.freqs = os_zalloc(2 * sizeof(int));
 			if (params.freqs)
 				params.freqs[0] = wpa_s->go_params->freq;
-		} else if (wpa_s->go_params->freq_list[0]) {
+		} else if (wpa_s->p2p_in_provisioning < 8 &&
+			   wpa_s->go_params->freq_list[0]) {
 			wpa_printf(MSG_DEBUG, "P2P: Scan only common "
 				   "channels");
 			int_array_concat(&params.freqs,

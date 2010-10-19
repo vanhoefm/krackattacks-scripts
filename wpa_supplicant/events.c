@@ -28,6 +28,7 @@
 #include "common/wpa_ctrl.h"
 #include "eap_peer/eap.h"
 #include "ap/hostapd.h"
+#include "p2p/p2p.h"
 #include "notify.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
@@ -1676,7 +1677,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					wpa_s, data->tx_status.dst,
 					data->tx_status.data,
 					data->tx_status.data_len,
-					data->tx_status.ack);
+					data->tx_status.ack ?
+					P2P_SEND_ACTION_SUCCESS :
+					P2P_SEND_ACTION_NO_ACK);
 #endif /* CONFIG_P2P */
 			break;
 		}

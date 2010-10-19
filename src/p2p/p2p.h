@@ -941,6 +941,12 @@ int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
  */
 void p2p_scan_res_handled(struct p2p_data *p2p);
 
+enum p2p_send_action_result {
+	P2P_SEND_ACTION_SUCCESS /* Frame was send and acknowledged */,
+	P2P_SEND_ACTION_NO_ACK /* Frame was sent, but not acknowledged */,
+	P2P_SEND_ACTION_FAILED /* Frame was not sent due to a failure */
+};
+
 /**
  * p2p_send_action_cb - Notify TX status of an Action frame
  * @p2p: P2P module context from p2p_init()
@@ -948,13 +954,14 @@ void p2p_scan_res_handled(struct p2p_data *p2p);
  * @dst: Destination MAC address (Address 1)
  * @src: Source MAC address (Address 2)
  * @bssid: BSSID (Address 3)
- * @success: Whether the transmission succeeded
+ * @result: Result of the transmission attempt
  *
  * This function is used to indicate the result of an Action frame transmission
  * that was requested with struct p2p_config::send_action() callback.
  */
 void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
-			const u8 *src, const u8 *bssid, int success);
+			const u8 *src, const u8 *bssid,
+			enum p2p_send_action_result result);
 
 /**
  * p2p_listen_cb - Indicate the start of a requested Listen state

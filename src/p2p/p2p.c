@@ -2076,15 +2076,20 @@ static void p2p_go_neg_resp_failure_cb(struct p2p_data *p2p, int success)
 }
 
 
-static void p2p_go_neg_conf_cb(struct p2p_data *p2p, int success)
+static void p2p_go_neg_conf_cb(struct p2p_data *p2p,
+			       enum p2p_send_action_result result)
 {
 	struct p2p_device *dev;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: GO Negotiation Confirm TX callback: success=%d",
-		success);
+		"P2P: GO Negotiation Confirm TX callback: result=%d",
+		result);
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
-	if (!success) {
+	if (result == P2P_SEND_ACTION_FAILED) {
+		p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+		return;
+	}
+	if (result == P2P_SEND_ACTION_NO_ACK) {
 		/*
 		 * It looks like the TX status for GO Negotiation Confirm is
 		 * often showing failure even when the peer has actually
@@ -2110,15 +2115,18 @@ static void p2p_go_neg_conf_cb(struct p2p_data *p2p, int success)
 
 
 void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
-			const u8 *src, const u8 *bssid, int success)
+			const u8 *src, const u8 *bssid,
+			enum p2p_send_action_result result)
 {
 	enum p2p_pending_action_state state;
+	int success;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Action frame TX callback (state=%d freq=%u dst=" MACSTR
-		" src=" MACSTR " bssid=" MACSTR " success=%d",
+		" src=" MACSTR " bssid=" MACSTR " result=%d",
 		p2p->pending_action_state, freq, MAC2STR(dst), MAC2STR(src),
-		MAC2STR(bssid), success);
+		MAC2STR(bssid), result);
+	success = result == P2P_SEND_ACTION_SUCCESS;
 	state = p2p->pending_action_state;
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 	switch (state) {
@@ -2134,7 +2142,7 @@ void p2p_send_action_cb(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 		p2p_go_neg_resp_failure_cb(p2p, success);
 		break;
 	case P2P_PENDING_GO_NEG_CONFIRM:
-		p2p_go_neg_conf_cb(p2p, success);
+		p2p_go_neg_conf_cb(p2p, result);
 		break;
 	case P2P_PENDING_SD:
 		p2p_sd_cb(p2p, success);

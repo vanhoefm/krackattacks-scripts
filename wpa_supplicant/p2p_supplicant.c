@@ -562,13 +562,15 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 		wpas_send_action_tx_status(
 			wpa_s, wpa_s->pending_action_dst,
 			wpabuf_head(wpa_s->pending_action_tx),
-			wpabuf_len(wpa_s->pending_action_tx), 0);
+			wpabuf_len(wpa_s->pending_action_tx),
+			P2P_SEND_ACTION_FAILED);
 	}
 }
 
 
 void wpas_send_action_tx_status(struct wpa_supplicant *wpa_s, const u8 *dst,
-				const u8 *data, size_t data_len, int ack)
+				const u8 *data, size_t data_len,
+				enum p2p_send_action_result result)
 {
 	if (wpa_s->global->p2p_disabled)
 		return;
@@ -592,7 +594,7 @@ void wpas_send_action_tx_status(struct wpa_supplicant *wpa_s, const u8 *dst,
 			   wpa_s->pending_action_dst,
 			   wpa_s->pending_action_src,
 			   wpa_s->pending_action_bssid,
-			   ack);
+			   result);
 
 	if (wpa_s->pending_pd_before_join &&
 	    (os_memcmp(wpa_s->pending_action_dst, wpa_s->pending_join_dev_addr,

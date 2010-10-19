@@ -178,7 +178,11 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	os_memcpy(bss->os_version, wpa_s->conf->os_version, 4);
 #endif /* CONFIG_WPS */
 
-	bss->max_num_sta = wpa_s->conf->max_num_sta;
+	if (wpa_s->max_stations &&
+	    wpa_s->max_stations < wpa_s->conf->max_num_sta)
+		bss->max_num_sta = wpa_s->max_stations;
+	else
+		bss->max_num_sta = wpa_s->conf->max_num_sta;
 
 	return 0;
 }

@@ -1015,6 +1015,11 @@ struct p2p_group_config {
 	u8 interface_addr[ETH_ALEN];
 
 	/**
+	 * max_clients - Maximum number of clients in the group
+	 */
+	unsigned int max_clients;
+
+	/**
 	 * cb_ctx - Context to use with callback functions
 	 */
 	void *cb_ctx;

@@ -781,17 +781,12 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		sta->p2p_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
 							  P2P_IE_VENDOR_TYPE);
 
-		if (p2p_group_notif_assoc(hapd->p2p_group, sta->addr,
-					  ies, ies_len) < 0) {
-			wpa_printf(MSG_DEBUG, "P2P: Invalid P2P IE in "
-				   "(Re)Association Request frame from "
-				   MACSTR, MAC2STR(sta->addr));
-			return WLAN_STATUS_UNSPECIFIED_FAILURE;
-		}
 	} else {
 		wpabuf_free(sta->p2p_ie);
 		sta->p2p_ie = NULL;
 	}
+
+	p2p_group_notif_assoc(hapd->p2p_group, sta->addr, ies, ies_len);
 #endif /* CONFIG_P2P */
 
 	return WLAN_STATUS_SUCCESS;

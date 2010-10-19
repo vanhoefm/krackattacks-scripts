@@ -3014,6 +3014,11 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 
 	cfg->persistent_group = persistent_group;
 	os_memcpy(cfg->interface_addr, wpa_s->own_addr, ETH_ALEN);
+	if (wpa_s->max_stations &&
+	    wpa_s->max_stations < wpa_s->conf->max_num_sta)
+		cfg->max_clients = wpa_s->max_stations;
+	else
+		cfg->max_clients = wpa_s->conf->max_num_sta;
 	cfg->cb_ctx = wpa_s;
 	cfg->ie_update = wpas_p2p_ie_update;
 

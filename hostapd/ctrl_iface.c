@@ -661,7 +661,7 @@ static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_ctrl_iface_set(struct hostapd_data *wpa_s, char *cmd)
+static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 {
 	char *value;
 	int ret = 0;
@@ -687,6 +687,7 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *wpa_s, char *cmd)
 				   "version %u.%u",
 				   (wps_version_number & 0xf0) >> 4,
 				   wps_version_number & 0x0f);
+			hostapd_wps_update_ie(hapd);
 		}
 	} else if (os_strcasecmp(cmd, "wps_testing_dummy_cred") == 0) {
 		wps_testing_dummy_cred = atoi(value);

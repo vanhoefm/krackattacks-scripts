@@ -33,6 +33,7 @@ const char * hostapd_wps_ap_pin_random(struct hostapd_data *hapd, int timeout);
 const char * hostapd_wps_ap_pin_get(struct hostapd_data *hapd);
 int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 			   int timeout);
+void hostapd_wps_update_ie(struct hostapd_data *hapd);
 
 #else /* CONFIG_WPS */
 

@@ -1272,3 +1272,17 @@ int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 	data.timeout = timeout;
 	return hostapd_wps_for_each(hapd, wps_ap_pin_set, &data);
 }
+
+
+static int wps_update_ie(struct hostapd_data *hapd, void *ctx)
+{
+	if (hapd->wps)
+		wps_registrar_update_ie(hapd->wps->registrar);
+	return 0;
+}
+
+
+void hostapd_wps_update_ie(struct hostapd_data *hapd)
+{
+	return hostapd_wps_for_each(hapd, wps_update_ie, NULL);
+}

@@ -25,6 +25,7 @@
 #define DEFAULT_P2P_GO_INTENT 7
 #define DEFAULT_P2P_INTRA_BSS 1
 #define DEFAULT_BSS_MAX_COUNT 200
+#define DEFAULT_MAX_NUM_STA 128
 
 #include "config_ssid.h"
 
@@ -377,6 +378,11 @@ struct wpa_config {
 	 *   1 = only include configured SSIDs in scan results/BSS table
 	 */
 	int filter_ssids;
+
+	/**
+	 * max_num_sta - Maximum number of STAs in an AP/P2P GO
+	 */
+	unsigned int max_num_sta;
 
 	/**
 	 * changed_parameters - Bitmap of changed parameters since last update

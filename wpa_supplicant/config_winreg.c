@@ -265,6 +265,8 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 				  (int *) &config->bss_max_count);
 	wpa_config_read_reg_dword(hk, TEXT("filter_ssids"),
 				  &config->filter_ssids);
+	wpa_config_read_reg_dword(hk, TEXT("max_num_sta"),
+				  (int *) &config->max_num_sta);
 
 	return errors ? -1 : 0;
 }
@@ -601,6 +603,8 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 				   DEFAULT_BSS_MAX_COUNT);
 	wpa_config_write_reg_dword(hk, TEXT("filter_ssids"),
 				   config->filter_ssids, 0);
+	wpa_config_write_reg_dword(hk, TEXT("max_num_sta"),
+				   config->max_num_sta, DEFAULT_MAX_NUM_STA);
 
 	return 0;
 }

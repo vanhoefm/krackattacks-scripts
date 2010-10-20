@@ -1284,5 +1284,5 @@ static int wps_update_ie(struct hostapd_data *hapd, void *ctx)
 
 void hostapd_wps_update_ie(struct hostapd_data *hapd)
 {
-	return hostapd_wps_for_each(hapd, wps_update_ie, NULL);
+	hostapd_wps_for_each(hapd, wps_update_ie, NULL);
 }

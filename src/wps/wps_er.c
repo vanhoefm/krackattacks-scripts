@@ -1738,6 +1738,34 @@ int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 }
 
 
+int wps_er_set_config(struct wps_er *er, const u8 *uuid,
+		      const struct wps_credential *cred)
+{
+	struct wps_er_ap *ap;
+
+	if (er == NULL)
+		return -1;
+
+	ap = wps_er_ap_get(er, NULL, uuid);
+	if (ap == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: AP not found for set config "
+			   "request");
+		return -1;
+	}
+
+	os_free(ap->ap_settings);
+	ap->ap_settings = os_malloc(sizeof(*cred));
+	if (ap->ap_settings == NULL)
+		return -1;
+	os_memcpy(ap->ap_settings, cred, sizeof(*cred));
+	ap->ap_settings->cred_attr = NULL;
+	wpa_printf(MSG_DEBUG, "WPS ER: Updated local AP settings based set "
+		   "config request");
+
+	return 0;
+}
+
+
 static void wps_er_ap_config_m1(struct wps_er_ap *ap, struct wpabuf *m1)
 {
 	struct wps_config cfg;

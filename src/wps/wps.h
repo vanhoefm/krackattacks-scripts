@@ -758,6 +758,8 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 int wps_er_pbc(struct wps_er *er, const u8 *uuid);
 int wps_er_learn(struct wps_er *er, const u8 *uuid, const u8 *pin,
 		 size_t pin_len);
+int wps_er_set_config(struct wps_er *er, const u8 *uuid,
+		      const struct wps_credential *cred);
 int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
 		  size_t pin_len, const struct wps_credential *cred);
 

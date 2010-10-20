@@ -416,6 +416,18 @@ static int wpa_supplicant_ctrl_iface_wps_er_learn(struct wpa_supplicant *wpa_s,
 }
 
 
+static int wpa_supplicant_ctrl_iface_wps_er_set_config(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	char *uuid = cmd, *id;
+	id = os_strchr(uuid, ' ');
+	if (id == NULL)
+		return -1;
+	*id++ = '\0';
+	return wpas_wps_er_set_config(wpa_s, uuid, atoi(id));
+}
+
+
 static int wpa_supplicant_ctrl_iface_wps_er_config(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
@@ -2803,6 +2815,10 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_ER_LEARN ", 13) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_learn(wpa_s, buf + 13))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WPS_ER_SET_CONFIG ", 18) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_er_set_config(wpa_s,
+								buf + 18))
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_ER_CONFIG ", 14) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_config(wpa_s, buf + 14))

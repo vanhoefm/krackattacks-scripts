@@ -832,6 +832,30 @@ static int wpa_cli_cmd_wps_er_learn(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_wps_er_set_config(struct wpa_ctrl *ctrl, int argc,
+					 char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid WPS_ER_SET_CONFIG command: need two "
+		       "arguments:\n"
+		       "- UUID: specify which AP to use\n"
+		       "- Network configuration id\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_SET_CONFIG %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_ER_SET_CONFIG command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_wps_er_config(struct wpa_ctrl *ctrl, int argc,
 				     char *argv[])
 {
@@ -2332,6 +2356,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_er_learn", wpa_cli_cmd_wps_er_learn,
 	  cli_cmd_flag_sensitive,
 	  "<UUID> <PIN> = learn AP configuration" },
+	{ "wps_er_set_config", wpa_cli_cmd_wps_er_set_config,
+	  cli_cmd_flag_none,
+	  "<UUID> <network id> = set AP configuration for enrolling" },
 	{ "wps_er_config", wpa_cli_cmd_wps_er_config,
 	  cli_cmd_flag_sensitive,
 	  "<UUID> <PIN> <SSID> <auth> <encr> <key> = configure AP" },

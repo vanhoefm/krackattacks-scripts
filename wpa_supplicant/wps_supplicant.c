@@ -1362,6 +1362,49 @@ int wpas_wps_er_learn(struct wpa_supplicant *wpa_s, const char *uuid,
 }
 
 
+int wpas_wps_er_set_config(struct wpa_supplicant *wpa_s, const char *uuid,
+			   int id)
+{
+	u8 u[UUID_LEN];
+	struct wpa_ssid *ssid;
+	struct wps_credential cred;
+
+	if (uuid_str2bin(uuid, u))
+		return -1;
+	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (ssid == NULL || ssid->ssid == NULL)
+		return -1;
+
+	os_memset(&cred, 0, sizeof(cred));
+	if (ssid->ssid_len > 32)
+		return -1;
+	os_memcpy(cred.ssid, ssid->ssid, ssid->ssid_len);
+	cred.ssid_len = ssid->ssid_len;
+	if (ssid->key_mgmt & WPA_KEY_MGMT_PSK) {
+		cred.auth_type = (ssid->proto & WPA_PROTO_RSN) ?
+			WPS_AUTH_WPA2PSK : WPS_AUTH_WPAPSK;
+		if (ssid->pairwise_cipher & WPA_CIPHER_CCMP)
+			cred.encr_type = WPS_ENCR_AES;
+		else
+			cred.encr_type = WPS_ENCR_TKIP;
+		if (ssid->passphrase) {
+			cred.key_len = os_strlen(ssid->passphrase);
+			if (cred.key_len >= 64)
+				return -1;
+			os_memcpy(cred.key, ssid->passphrase, cred.key_len);
+		} else if (ssid->psk_set) {
+			cred.key_len = 32;
+			os_memcpy(cred.key, ssid->psk, 32);
+		} else
+			return -1;
+	} else {
+		cred.auth_type = WPS_AUTH_OPEN;
+		cred.encr_type = WPS_ENCR_NONE;
+	}
+	return wps_er_set_config(wpa_s->wps_er, u, &cred);
+}
+
+
 int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 		       const char *pin, struct wps_new_ap_settings *settings)
 {

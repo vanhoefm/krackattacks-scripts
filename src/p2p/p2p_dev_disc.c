@@ -99,11 +99,9 @@ int p2p_send_dev_disc_req(struct p2p_data *p2p, struct p2p_device *dev)
 	os_memcpy(p2p->pending_client_disc_addr, dev->p2p_device_addr,
 		  ETH_ALEN);
 	p2p->pending_action_state = P2P_PENDING_DEV_DISC_REQUEST;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, dev->oper_freq,
-				  go->p2p_device_addr, p2p->cfg->dev_addr,
-				  go->p2p_device_addr,
-				  wpabuf_head(req), wpabuf_len(req), 1000) < 0)
-	{
+	if (p2p_send_action(p2p, dev->oper_freq, go->p2p_device_addr,
+			    p2p->cfg->dev_addr, go->p2p_device_addr,
+			    wpabuf_head(req), wpabuf_len(req), 1000) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		wpabuf_free(req);
@@ -160,10 +158,9 @@ static void p2p_send_dev_disc_resp(struct p2p_data *p2p, u8 dialog_token,
 		MAC2STR(addr), status, freq);
 
 	p2p->pending_action_state = P2P_PENDING_DEV_DISC_RESPONSE;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq, addr,
-				  p2p->cfg->dev_addr, p2p->cfg->dev_addr,
-				  wpabuf_head(resp), wpabuf_len(resp), 200) <
-	    0) {
+	if (p2p_send_action(p2p, freq, addr, p2p->cfg->dev_addr,
+			    p2p->cfg->dev_addr,
+			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 	}

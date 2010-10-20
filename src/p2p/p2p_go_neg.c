@@ -209,11 +209,9 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 	p2p->pending_action_state = P2P_PENDING_GO_NEG_REQUEST;
 	p2p->go_neg_peer = dev;
 	dev->flags |= P2P_DEV_WAIT_GO_NEG_RESPONSE;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq,
-				  dev->p2p_device_addr, p2p->cfg->dev_addr,
-				  dev->p2p_device_addr,
-				  wpabuf_head(req), wpabuf_len(req), 200) < 0)
-	{
+	if (p2p_send_action(p2p, freq, dev->p2p_device_addr,
+			    p2p->cfg->dev_addr, dev->p2p_device_addr,
+			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		/* Use P2P find to recover and retry */
@@ -616,10 +614,9 @@ fail:
 	} else
 		p2p->pending_action_state =
 			P2P_PENDING_GO_NEG_RESPONSE_FAILURE;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq, sa,
-				  p2p->cfg->dev_addr, p2p->cfg->dev_addr,
-				  wpabuf_head(resp), wpabuf_len(resp), 200) <
-	    0) {
+	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr,
+			    p2p->cfg->dev_addr,
+			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 	}
@@ -982,10 +979,8 @@ fail:
 		freq = rx_freq;
 	else
 		freq = dev->listen_freq;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq, sa,
-				  p2p->cfg->dev_addr, sa,
-				  wpabuf_head(conf), wpabuf_len(conf), 200) <
-	    0) {
+	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr, sa,
+			    wpabuf_head(conf), wpabuf_len(conf), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		p2p_go_neg_failed(p2p, dev, -1);

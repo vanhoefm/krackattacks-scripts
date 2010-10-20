@@ -149,9 +149,8 @@ static void p2p_send_gas_comeback_req(struct p2p_data *p2p, const u8 *dst,
 		return;
 
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq,
-				  dst, p2p->cfg->dev_addr, dst,
-				  wpabuf_head(req), wpabuf_len(req), 200) < 0)
+	if (p2p_send_action(p2p, freq, dst, p2p->cfg->dev_addr, dst,
+			    wpabuf_head(req), wpabuf_len(req), 200) < 0)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 
@@ -286,11 +285,9 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 	p2p->sd_query = query;
 	p2p->pending_action_state = P2P_PENDING_SD;
 
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq,
-				  dev->p2p_device_addr, p2p->cfg->dev_addr,
-				  dev->p2p_device_addr,
-				  wpabuf_head(req), wpabuf_len(req), 5000) < 0)
-	{
+	if (p2p_send_action(p2p->cfg->cb_ctx, freq, dev->p2p_device_addr,
+			    p2p->cfg->dev_addr, dev->p2p_device_addr,
+			    wpabuf_head(req), wpabuf_len(req), 5000) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		ret = -1;
@@ -452,10 +449,9 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 		return;
 
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq,
-				  dst, p2p->cfg->dev_addr, p2p->cfg->dev_addr,
-				  wpabuf_head(resp), wpabuf_len(resp), 200) <
-	    0)
+	if (p2p_send_action(p2p->cfg->cb_ctx, freq, dst, p2p->cfg->dev_addr,
+			    p2p->cfg->dev_addr,
+			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 
@@ -691,10 +687,9 @@ void p2p_rx_gas_comeback_req(struct p2p_data *p2p, const u8 *sa,
 	}
 
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, rx_freq,
-				  sa, p2p->cfg->dev_addr, p2p->cfg->dev_addr,
-				  wpabuf_head(resp), wpabuf_len(resp), 200) <
-	    0)
+	if (p2p_send_action(p2p, rx_freq, sa, p2p->cfg->dev_addr,
+			    p2p->cfg->dev_addr,
+			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 

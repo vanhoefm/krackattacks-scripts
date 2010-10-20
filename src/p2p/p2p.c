@@ -691,6 +691,25 @@ static int p2p_run_after_scan(struct p2p_data *p2p)
 	struct p2p_device *dev;
 	enum p2p_after_scan op;
 
+	if (p2p->after_scan_tx) {
+		int ret;
+		/* TODO: schedule p2p_run_after_scan to be called from TX
+		 * status callback(?) */
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send pending "
+			"Action frame at p2p_scan completion");
+		ret = p2p->cfg->send_action(p2p->cfg->cb_ctx,
+					    p2p->after_scan_tx->freq,
+					    p2p->after_scan_tx->dst,
+					    p2p->after_scan_tx->src,
+					    p2p->after_scan_tx->bssid,
+					    (u8 *) (p2p->after_scan_tx + 1),
+					    p2p->after_scan_tx->len,
+					    p2p->after_scan_tx->wait_time);
+		os_free(p2p->after_scan_tx);
+		p2p->after_scan_tx = NULL;
+		return 1;
+	}
+
 	op = p2p->start_after_scan;
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
 	switch (op) {
@@ -1831,6 +1850,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	os_free(p2p->cfg->dev_name);
 	os_free(p2p->groups);
 	wpabuf_free(p2p->sd_resp);
+	os_free(p2p->after_scan_tx);
 	os_free(p2p);
 }
 
@@ -2675,11 +2695,9 @@ int p2p_presence_req(struct p2p_data *p2p, const u8 *go_interface_addr,
 		return -1;
 
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, freq, go_interface_addr,
-				  own_interface_addr,
-				  go_interface_addr,
-				  wpabuf_head(req), wpabuf_len(req), 200) < 0)
-	{
+	if (p2p_send_action(p2p, freq, go_interface_addr, own_interface_addr,
+			    go_interface_addr,
+			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 	}
@@ -2776,9 +2794,8 @@ fail:
 		return;
 
 	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
-	if (p2p->cfg->send_action(p2p->cfg->cb_ctx, rx_freq, sa, da, da,
-				  wpabuf_head(resp), wpabuf_len(resp), 200) <
-	    0) {
+	if (p2p_send_action(p2p, rx_freq, sa, da, da,
+			    wpabuf_head(resp), wpabuf_len(resp), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 	}
@@ -3061,4 +3078,35 @@ void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan)
 {
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Update channel list");
 	os_memcpy(&p2p->cfg->channels, chan, sizeof(struct p2p_channels));
+}
+
+
+int p2p_send_action(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
+		    const u8 *src, const u8 *bssid, const u8 *buf,
+		    size_t len, unsigned int wait_time)
+{
+	if (p2p->p2p_scan_running) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Delay Action "
+			"frame TX until p2p_scan completes");
+		if (p2p->after_scan_tx) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Dropped "
+				"previous pending Action frame TX");
+			os_free(p2p->after_scan_tx);
+		}
+		p2p->after_scan_tx = os_malloc(sizeof(*p2p->after_scan_tx) +
+					       len);
+		if (p2p->after_scan_tx == NULL)
+			return -1;
+		p2p->after_scan_tx->freq = freq;
+		os_memcpy(p2p->after_scan_tx->dst, dst, ETH_ALEN);
+		os_memcpy(p2p->after_scan_tx->src, src, ETH_ALEN);
+		os_memcpy(p2p->after_scan_tx->bssid, bssid, ETH_ALEN);
+		p2p->after_scan_tx->len = len;
+		p2p->after_scan_tx->wait_time = wait_time;
+		os_memcpy(p2p->after_scan_tx + 1, buf, len);
+		return 0;
+	}
+
+	return p2p->cfg->send_action(p2p->cfg->cb_ctx, freq, dst, src, bssid,
+				     buf, len, wait_time);
 }

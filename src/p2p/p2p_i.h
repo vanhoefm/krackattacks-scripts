@@ -113,6 +113,16 @@ struct p2p_sd_query {
 	struct wpabuf *tlvs;
 };
 
+struct p2p_pending_action_tx {
+	unsigned int freq;
+	u8 dst[ETH_ALEN];
+	u8 src[ETH_ALEN];
+	u8 bssid[ETH_ALEN];
+	size_t len;
+	unsigned int wait_time;
+	/* Followed by len octets of the frame */
+};
+
 /**
  * struct p2p_data - P2P module data (internal to P2P module)
  */
@@ -351,6 +361,7 @@ struct p2p_data {
 		P2P_AFTER_SCAN_CONNECT
 	} start_after_scan;
 	u8 after_scan_peer[ETH_ALEN];
+	struct p2p_pending_action_tx *after_scan_tx;
 
 	struct p2p_group **groups;
 	size_t num_groups;
@@ -597,5 +608,8 @@ int dev_type_list_match(const u8 *dev_type, const u8 *req_dev_type[],
 			size_t num_req_dev_type);
 struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p);
 void p2p_build_ssid(struct p2p_data *p2p, u8 *ssid, size_t *ssid_len);
+int p2p_send_action(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
+		    const u8 *src, const u8 *bssid, const u8 *buf,
+		    size_t len, unsigned int wait_time);
 
 #endif /* P2P_I_H */

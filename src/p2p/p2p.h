@@ -670,6 +670,16 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 void p2p_stop_find(struct p2p_data *p2p);
 
 /**
+ * p2p_stop_find_for_freq - Stop P2P Find for next oper on specific freq
+ * @p2p: P2P module context from p2p_init()
+ * @freq: Frequency in MHz for next operation
+ *
+ * This is like p2p_stop_find(), but Listen state is not stopped if we are
+ * already on the same frequency.
+ */
+void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq);
+
+/**
  * p2p_listen - Start P2P Listen state for specified duration
  * @p2p: P2P module context from p2p_init()
  * @timeout: Listen state duration in milliseconds

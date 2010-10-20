@@ -783,7 +783,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 }
 
 
-void p2p_stop_find(struct p2p_data *p2p)
+void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 {
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Stopping find");
 	eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
@@ -793,7 +793,18 @@ void p2p_stop_find(struct p2p_data *p2p)
 	p2p->go_neg_peer = NULL;
 	p2p->sd_peer = NULL;
 	p2p->invite_peer = NULL;
+	if (freq > 0 && p2p->drv_in_listen == freq && p2p->in_listen) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Skip stop_listen "
+			"since we are on correct channel for response");
+		return;
+	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
+}
+
+
+void p2p_stop_find(struct p2p_data *p2p)
+{
+	p2p_stop_find_for_freq(p2p, 0);
 }
 
 
@@ -2193,7 +2204,7 @@ void p2p_listen_cb(struct p2p_data *p2p, unsigned int freq,
 		p2p->pending_listen_sec, p2p->pending_listen_usec,
 		p2p->pending_listen_freq);
 	p2p->in_listen = 1;
-	p2p->drv_in_listen = 1;
+	p2p->drv_in_listen = freq;
 	if (p2p->pending_listen_sec || p2p->pending_listen_usec) {
 		/*
 		 * Add 20 msec extra wait to avoid race condition with driver

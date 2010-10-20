@@ -579,7 +579,7 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: GO Negotiation with " MACSTR, MAC2STR(sa));
 		if (p2p->state != P2P_IDLE)
-			p2p_stop_find(p2p);
+			p2p_stop_find_for_freq(p2p, rx_freq);
 		p2p_set_state(p2p, P2P_GO_NEG);
 		p2p_clear_timeout(p2p);
 		dev->dialog_token = msg.dialog_token;

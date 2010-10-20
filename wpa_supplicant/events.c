@@ -1833,6 +1833,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_set_state(wpa_s, WPA_INTERFACE_DISABLED);
 		break;
 	case EVENT_CHANNEL_LIST_CHANGED:
+		if (wpa_s->drv_priv == NULL)
+			break; /* Ignore event during drv initialization */
 #ifdef CONFIG_P2P
 		wpas_p2p_update_channel_list(wpa_s);
 #endif /* CONFIG_P2P */

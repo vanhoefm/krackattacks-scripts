@@ -96,6 +96,7 @@ static const char *commands_help =
 "   wps_oob <type> <path> <method>  use WPS with out-of-band (UFD)\n"
 #endif /* CONFIG_WPS_OOB */
 "   wps_ap_pin <cmd> [params..]  enable/disable AP PIN\n"
+"   wps_config <SSID> <auth> <encr> <key>  configure AP\n"
 #endif /* CONFIG_WPS */
 "   get_config           show current configuration\n"
 "   help                 show this usage help\n"
@@ -458,6 +459,50 @@ static int hostapd_cli_cmd_wps_ap_pin(struct wpa_ctrl *ctrl, int argc,
 		snprintf(buf, sizeof(buf), "WPS_AP_PIN %s", argv[0]);
 	return wpa_ctrl_command(ctrl, buf);
 }
+
+
+static int hostapd_cli_cmd_wps_config(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	char buf[256];
+	char ssid_hex[2 * 32 + 1];
+	char key_hex[2 * 64 + 1];
+	int i;
+
+	if (argc < 1) {
+		printf("Invalid 'wps_config' command - at least two arguments "
+		       "are required.\n");
+		return -1;
+	}
+
+	ssid_hex[0] = '\0';
+	for (i = 0; i < 32; i++) {
+		if (argv[0][i] == '\0')
+			break;
+		os_snprintf(&ssid_hex[i * 2], 3, "%02x", argv[0][i]);
+	}
+
+	key_hex[0] = '\0';
+	if (argc > 3) {
+		for (i = 0; i < 64; i++) {
+			if (argv[3][i] == '\0')
+				break;
+			os_snprintf(&key_hex[i * 2], 3, "%02x",
+				    argv[3][i]);
+		}
+	}
+
+	if (argc > 3)
+		snprintf(buf, sizeof(buf), "WPS_CONFIG %s %s %s %s",
+			 ssid_hex, argv[1], argv[2], key_hex);
+	else if (argc > 2)
+		snprintf(buf, sizeof(buf), "WPS_CONFIG %s %s %s",
+			 ssid_hex, argv[1], argv[2]);
+	else
+		snprintf(buf, sizeof(buf), "WPS_CONFIG %s %s",
+			 ssid_hex, argv[1]);
+	return wpa_ctrl_command(ctrl, buf);
+}
 #endif /* CONFIG_WPS */
 
 
@@ -649,6 +694,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "wps_oob", hostapd_cli_cmd_wps_oob },
 #endif /* CONFIG_WPS_OOB */
 	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin },
+	{ "wps_config", hostapd_cli_cmd_wps_config },
 #endif /* CONFIG_WPS */
 	{ "get_config", hostapd_cli_cmd_get_config },
 	{ "help", hostapd_cli_cmd_help },

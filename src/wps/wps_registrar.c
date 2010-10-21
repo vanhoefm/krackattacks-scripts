@@ -3161,3 +3161,43 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 
 	return len;
 }
+
+
+int wps_registrar_config_ap(struct wps_registrar *reg,
+			    struct wps_credential *cred)
+{
+#ifdef CONFIG_WPS2
+	printf("encr_type=0x%x\n", cred->encr_type);
+	if (!(cred->encr_type & (WPS_ENCR_NONE | WPS_ENCR_TKIP |
+				 WPS_ENCR_AES))) {
+		if (cred->encr_type & WPS_ENCR_WEP) {
+			wpa_printf(MSG_INFO, "WPS: Reject new AP settings "
+				   "due to WEP configuration");
+			return -1;
+		}
+
+		wpa_printf(MSG_INFO, "WPS: Reject new AP settings due to "
+			   "invalid encr_type 0x%x", cred->encr_type);
+		return -1;
+	}
+
+	if ((cred->encr_type & (WPS_ENCR_TKIP | WPS_ENCR_AES)) ==
+	    WPS_ENCR_TKIP) {
+		wpa_printf(MSG_DEBUG, "WPS: Upgrade encr_type TKIP -> "
+			   "TKIP+AES");
+		cred->encr_type |= WPS_ENCR_AES;
+	}
+
+	if ((cred->auth_type & (WPS_AUTH_WPAPSK | WPS_AUTH_WPA2PSK)) ==
+	    WPS_AUTH_WPAPSK) {
+		wpa_printf(MSG_DEBUG, "WPS: Upgrade auth_type WPAPSK -> "
+			   "WPAPSK+WPA2PSK");
+		cred->auth_type |= WPS_AUTH_WPA2PSK;
+	}
+#endif /* CONFIG_WPS2 */
+
+	if (reg->wps->cred_cb)
+		return reg->wps->cred_cb(reg->wps->cb_ctx, cred);
+
+	return -1;
+}

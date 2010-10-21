@@ -490,6 +490,33 @@ static int hostapd_ctrl_iface_wps_ap_pin(struct hostapd_data *hapd, char *txt,
 
 	return -1;
 }
+
+
+static int hostapd_ctrl_iface_wps_config(struct hostapd_data *hapd, char *txt)
+{
+	char *pos;
+	char *ssid, *auth, *encr = NULL, *key = NULL;
+
+	ssid = txt;
+	pos = os_strchr(txt, ' ');
+	if (!pos)
+		return -1;
+	*pos++ = '\0';
+
+	auth = pos;
+	pos = os_strchr(pos, ' ');
+	if (pos) {
+		*pos++ = '\0';
+		encr = pos;
+		pos = os_strchr(pos, ' ');
+		if (pos) {
+			*pos++ = '\0';
+			key = pos;
+		}
+	}
+
+	return hostapd_wps_config_ap(hapd, ssid, auth, encr, key);
+}
 #endif /* CONFIG_WPS */
 
 
@@ -821,6 +848,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "WPS_AP_PIN ", 11) == 0) {
 		reply_len = hostapd_ctrl_iface_wps_ap_pin(hapd, buf + 11,
 							  reply, reply_size);
+	} else if (os_strncmp(buf, "WPS_CONFIG ", 11) == 0) {
+		if (hostapd_ctrl_iface_wps_config(hapd, buf + 11) < 0)
+			reply_len = -1;
 #endif /* CONFIG_WPS */
 	} else if (os_strcmp(buf, "GET_CONFIG") == 0) {
 		reply_len = hostapd_ctrl_iface_get_config(hapd, reply,

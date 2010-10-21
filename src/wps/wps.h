@@ -736,6 +736,8 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 int wps_registrar_update_ie(struct wps_registrar *reg);
 int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 			   char *buf, size_t buflen);
+int wps_registrar_config_ap(struct wps_registrar *reg,
+			    struct wps_credential *cred);
 
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);

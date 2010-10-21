@@ -34,6 +34,8 @@ const char * hostapd_wps_ap_pin_get(struct hostapd_data *hapd);
 int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 			   int timeout);
 void hostapd_wps_update_ie(struct hostapd_data *hapd);
+int hostapd_wps_config_ap(struct hostapd_data *hapd, const char *ssid,
+			  const char *auth, const char *encr, const char *key);
 
 #else /* CONFIG_WPS */
 

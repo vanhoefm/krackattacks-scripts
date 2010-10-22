@@ -2365,6 +2365,8 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	wpa_debug_timestamp = global->params.wpa_debug_timestamp =
 		params->wpa_debug_timestamp;
 
+	wpa_printf(MSG_DEBUG, "wpa_supplicant v" VERSION_STR);
+
 	if (eloop_init()) {
 		wpa_printf(MSG_ERROR, "Failed to initialize event loop");
 		wpa_supplicant_deinit(global);

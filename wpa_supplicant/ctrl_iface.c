@@ -334,7 +334,7 @@ static int wpa_supplicant_ctrl_iface_wps_oob(struct wpa_supplicant *wpa_s,
 static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 					     char *cmd)
 {
-	u8 bssid[ETH_ALEN], *_bssid = bssid;
+	u8 bssid[ETH_ALEN];
 	char *pin;
 	char *new_ssid;
 	char *new_auth;
@@ -347,9 +347,7 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 		return -1;
 	*pin++ = '\0';
 
-	if (os_strcmp(cmd, "any") == 0)
-		_bssid = NULL;
-	else if (hwaddr_aton(cmd, bssid)) {
+	if (hwaddr_aton(cmd, bssid)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_REG: invalid BSSID '%s'",
 			   cmd);
 		return -1;
@@ -357,7 +355,7 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 
 	new_ssid = os_strchr(pin, ' ');
 	if (new_ssid == NULL)
-		return wpas_wps_start_reg(wpa_s, _bssid, pin, NULL);
+		return wpas_wps_start_reg(wpa_s, bssid, pin, NULL);
 	*new_ssid++ = '\0';
 
 	new_auth = os_strchr(new_ssid, ' ');
@@ -380,7 +378,7 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 	ap.auth = new_auth;
 	ap.encr = new_encr;
 	ap.key_hex = new_key;
-	return wpas_wps_start_reg(wpa_s, _bssid, pin, &ap);
+	return wpas_wps_start_reg(wpa_s, bssid, pin, &ap);
 }
 
 

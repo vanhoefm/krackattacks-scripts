@@ -717,11 +717,11 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 				  key_hex);
 	} else {
 		printf("Invalid WPS_REG command: need two arguments:\n"
-		       "- BSSID: use 'any' to select any\n"
+		       "- BSSID of the target AP\n"
 		       "- AP PIN\n");
 		printf("Alternatively, six arguments can be used to "
 		       "reconfigure the AP:\n"
-		       "- BSSID: use 'any' to select any\n"
+		       "- BSSID of the target AP\n"
 		       "- AP PIN\n"
 		       "- new SSID\n"
 		       "- new auth (OPEN, WPAPSK, WPA2PSK)\n"

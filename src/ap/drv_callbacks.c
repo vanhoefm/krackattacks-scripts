@@ -38,7 +38,7 @@
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
-			const u8 *ie, size_t ielen)
+			const u8 *ie, size_t ielen, int reassoc)
 {
 	struct sta_info *sta;
 	int new_assoc, res;
@@ -506,7 +506,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_ASSOC:
 		hostapd_notif_assoc(hapd, data->assoc_info.addr,
 				    data->assoc_info.req_ies,
-				    data->assoc_info.req_ies_len);
+				    data->assoc_info.req_ies_len,
+				    data->assoc_info.reassoc);
 		break;
 	case EVENT_DISASSOC:
 		if (data)

@@ -2595,6 +2595,11 @@ union wpa_event_data {
 	 */
 	struct assoc_info {
 		/**
+		 * reassoc - Flag to indicate association or reassociation
+		 */
+		int reassoc;
+
+		/**
 		 * req_ies - (Re)Association Request IEs
 		 *
 		 * If the driver generates WPA/RSN IE, this event data must be
@@ -3113,10 +3118,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
  */
 
 static inline void drv_event_assoc(void *ctx, const u8 *addr, const u8 *ie,
-				   size_t ielen)
+				   size_t ielen, int reassoc)
 {
 	union wpa_event_data event;
 	os_memset(&event, 0, sizeof(event));
+	event.assoc_info.reassoc = reassoc;
 	event.assoc_info.req_ies = ie;
 	event.assoc_info.req_ies_len = ielen;
 	event.assoc_info.addr = addr;

@@ -825,7 +825,7 @@ atheros_new_sta(struct atheros_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 		ielen += 2;
 
 no_ie:
-	drv_event_assoc(hapd, addr, iebuf, ielen);
+	drv_event_assoc(hapd, addr, iebuf, ielen, 0);
 
 	if (memcmp(addr, drv->acct_mac, ETH_ALEN) == 0) {
 		/* Cached accounting data is not valid anymore. */

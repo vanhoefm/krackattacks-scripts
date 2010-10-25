@@ -672,7 +672,7 @@ static void test_driver_assoc(struct wpa_driver_test_data *drv,
 	sendto(drv->test_socket, cmd, strlen(cmd), 0,
 	       (struct sockaddr *) from, fromlen);
 
-	drv_event_assoc(bss->bss_ctx, cli->addr, ie, ielen);
+	drv_event_assoc(bss->bss_ctx, cli->addr, ie, ielen, 0);
 }
 
 

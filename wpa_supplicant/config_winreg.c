@@ -259,6 +259,8 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 #ifdef CONFIG_P2P
 	config->p2p_ssid_postfix = wpa_config_read_reg_string(
 		hk, TEXT("p2p_ssid_postfix"));
+	wpa_config_read_reg_dword(hk, TEXT("p2p_group_idle"),
+				  (int *) &config->p2p_group_idle);
 #endif /* CONFIG_P2P */
 
 	wpa_config_read_reg_dword(hk, TEXT("bss_max_count"),
@@ -596,6 +598,8 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 #ifdef CONFIG_P2P
 	wpa_config_write_reg_string(hk, "p2p_ssid_postfix",
 				    config->p2p_ssid_postfix);
+	wpa_config_write_reg_dword(hk, TEXT("p2p_group_idle"),
+				   config->p2p_group_idle, 0);
 #endif /* CONFIG_P2P */
 
 	wpa_config_write_reg_dword(hk, TEXT("bss_max_count"),

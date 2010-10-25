@@ -675,7 +675,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 			config->persistent_reconnect);
 	if (config->p2p_intra_bss != DEFAULT_P2P_INTRA_BSS)
 		fprintf(f, "p2p_intra_bss=%u\n", config->p2p_intra_bss);
-
+	if (config->p2p_group_idle)
+		fprintf(f, "p2p_group_idle=%u\n", config->p2p_group_idle);
 #endif /* CONFIG_P2P */
 	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",

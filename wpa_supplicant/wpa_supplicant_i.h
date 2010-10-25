@@ -514,6 +514,12 @@ struct wpa_supplicant {
 	 * Uplink interface name for cross connection
 	 */
 	char cross_connect_uplink[100];
+
+	enum {
+		P2P_GROUP_REMOVAL_UNKNOWN,
+		P2P_GROUP_REMOVAL_REQUESTED,
+		P2P_GROUP_REMOVAL_IDLE_TIMEOUT
+	} removal_reason;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

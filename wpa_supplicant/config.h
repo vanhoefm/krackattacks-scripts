@@ -367,6 +367,18 @@ struct wpa_config {
 	int p2p_intra_bss;
 
 	/**
+	 * p2p_group_idle - Maximum idle time in seconds for P2P group
+	 *
+	 * This value controls how long a P2P group is maintained after there
+	 * is no other members in the group. As a GO, this means no associated
+	 * stations in the group. As a P2P client, this means no GO seen in
+	 * scan results. The maximum idle time is specified in seconds with 0
+	 * indicating no time limit, i.e., the P2P group remains in active
+	 * state indefinitely until explicitly removed.
+	 */
+	unsigned int p2p_group_idle;
+
+	/**
 	 * bss_max_count - Maximum number of BSS entries to keep in memory
 	 */
 	unsigned int bss_max_count;

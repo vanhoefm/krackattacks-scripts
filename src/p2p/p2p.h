@@ -1049,6 +1049,13 @@ struct p2p_group_config {
 	 */
 	void (*ie_update)(void *ctx, struct wpabuf *beacon_ies,
 			  struct wpabuf *proberesp_ies);
+
+	/**
+	 * idle_update - Notification of changes in group idle state
+	 * @ctx: Callback context from cb_ctx
+	 * @idle: Whether the group is idle (no associated stations)
+	 */
+	void (*idle_update)(void *ctx, int idle);
 };
 
 /**

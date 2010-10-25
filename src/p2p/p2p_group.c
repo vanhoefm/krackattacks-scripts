@@ -72,6 +72,7 @@ struct p2p_group * p2p_group_init(struct p2p_data *p2p,
 	group->group_formation = 1;
 	group->beacon_update = 1;
 	p2p_group_update_ies(group);
+	group->cfg->idle_update(group->cfg->cb_ctx, 1);
 
 	return group;
 }
@@ -338,6 +339,8 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 	if (group->num_members == group->cfg->max_clients)
 		group->beacon_update = 1;
 	p2p_group_update_ies(group);
+	if (group->num_members == 1)
+		group->cfg->idle_update(group->cfg->cb_ctx, 0);
 
 	return 0;
 }
@@ -396,6 +399,8 @@ void p2p_group_notif_disassoc(struct p2p_group *group, const u8 *addr)
 		if (group->num_members == group->cfg->max_clients - 1)
 			group->beacon_update = 1;
 		p2p_group_update_ies(group);
+		if (group->num_members == 0)
+			group->cfg->idle_update(group->cfg->cb_ctx, 1);
 	}
 }
 

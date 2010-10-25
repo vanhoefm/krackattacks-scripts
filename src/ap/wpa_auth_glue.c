@@ -71,6 +71,7 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->r0kh_list = conf->r0kh_list;
 	wconf->r1kh_list = conf->r1kh_list;
 	wconf->pmk_r1_push = conf->pmk_r1_push;
+	wconf->ft_over_ds = conf->ft_over_ds;
 #endif /* CONFIG_IEEE80211R */
 }
 

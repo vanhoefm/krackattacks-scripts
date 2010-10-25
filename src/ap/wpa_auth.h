@@ -160,6 +160,7 @@ struct wpa_auth_config {
 	struct ft_remote_r0kh *r0kh_list;
 	struct ft_remote_r1kh *r1kh_list;
 	int pmk_r1_push;
+	int ft_over_ds;
 #endif /* CONFIG_IEEE80211R */
 };
 

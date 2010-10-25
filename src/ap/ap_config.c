@@ -89,6 +89,10 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 
 	/* Set to -1 as defaults depends on HT in setup */
 	bss->wmm_enabled = -1;
+
+#ifdef CONFIG_IEEE80211R
+	bss->ft_over_ds = 1;
+#endif /* CONFIG_IEEE80211R */
 }
 
 

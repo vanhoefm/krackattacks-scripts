@@ -92,7 +92,9 @@ int wpa_write_mdie(struct wpa_auth_config *conf, u8 *buf, size_t len)
 	*pos++ = MOBILITY_DOMAIN_ID_LEN + 1;
 	os_memcpy(pos, conf->mobility_domain, MOBILITY_DOMAIN_ID_LEN);
 	pos += MOBILITY_DOMAIN_ID_LEN;
-	capab = RSN_FT_CAPAB_FT_OVER_DS;
+	capab = 0;
+	if (conf->ft_over_ds)
+		capab |= RSN_FT_CAPAB_FT_OVER_DS;
 	*pos++ = capab;
 
 	return pos - buf;

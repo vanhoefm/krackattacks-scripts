@@ -2212,7 +2212,21 @@ enum wpa_event_type {
 	 * e.g., because of a regulatory domain change triggered by scan
 	 * results including an AP advertising a country code.
 	 */
-	EVENT_CHANNEL_LIST_CHANGED
+	EVENT_CHANNEL_LIST_CHANGED,
+
+	/**
+	 * EVENT_INTERFACE_UNAVAILABLE - Notify that interface is unavailable
+	 *
+	 * This event is used to indicate that the driver cannot maintain this
+	 * interface in its operation mode anymore. The most likely use for
+	 * this is to indicate that AP mode operation is not available due to
+	 * operating channel would need to be changed to a DFS channel when
+	 * the driver does not support radar detection and another virtual
+	 * interfaces caused the operating channel to change. Other similar
+	 * resource conflicts could also trigger this for station mode
+	 * interfaces.
+	 */
+	EVENT_INTERFACE_UNAVAILABLE
 };
 
 

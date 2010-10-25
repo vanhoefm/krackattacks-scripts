@@ -1839,6 +1839,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpas_p2p_update_channel_list(wpa_s);
 #endif /* CONFIG_P2P */
 		break;
+	case EVENT_INTERFACE_UNAVAILABLE:
+#ifdef CONFIG_P2P
+		wpas_p2p_interface_unavailable(wpa_s);
+#endif /* CONFIG_P2P */
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

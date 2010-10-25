@@ -117,5 +117,6 @@ void wpas_p2p_notif_disconnected(struct wpa_supplicant *wpa_s);
 int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s);
 void wpas_p2p_update_channel_list(struct wpa_supplicant *wpa_s);
 int wpas_p2p_cancel(struct wpa_supplicant *wpa_s);
+void wpas_p2p_interface_unavailable(struct wpa_supplicant *wpa_s);
 
 #endif /* P2P_SUPPLICANT_H */

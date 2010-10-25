@@ -220,6 +220,9 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 	case P2P_GROUP_REMOVAL_IDLE_TIMEOUT:
 		reason = " reason=IDLE";
 		break;
+	case P2P_GROUP_REMOVAL_UNAVAILABLE:
+		reason = " reason=UNAVAILABLE";
+		break;
 	default:
 		reason = "";
 		break;
@@ -3741,4 +3744,16 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 	}
 
 	return 0;
+}
+
+
+void wpas_p2p_interface_unavailable(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->current_ssid == NULL || !wpa_s->current_ssid->p2p_group)
+		return;
+
+	wpa_printf(MSG_DEBUG, "P2P: Remove group due to driver resource not "
+		   "being available anymore");
+	wpa_s->removal_reason = P2P_GROUP_REMOVAL_UNAVAILABLE;
+	wpas_p2p_group_delete(wpa_s);
 }

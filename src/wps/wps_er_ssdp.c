@@ -113,6 +113,7 @@ static void wps_er_ssdp_rx(int sd, void *eloop_ctx, void *sock_ctx)
 		return; /* Not WPS advertisement/reply */
 
 	if (byebye) {
+		wps_er_ap_cache_settings(er, &addr.sin_addr);
 		wps_er_ap_remove(er, &addr.sin_addr);
 		return;
 	}

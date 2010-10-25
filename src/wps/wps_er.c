@@ -279,6 +279,64 @@ fail:
 	wps_er_ap_unsubscribed(ap->er, ap);
 }
 
+
+static struct wps_er_ap_settings * wps_er_ap_get_settings(struct wps_er *er,
+							  const u8 *uuid)
+{
+	struct wps_er_ap_settings *s;
+	dl_list_for_each(s, &er->ap_settings, struct wps_er_ap_settings, list)
+		if (os_memcmp(uuid, s->uuid, WPS_UUID_LEN) == 0)
+			return s;
+	return NULL;
+}
+
+
+int wps_er_ap_cache_settings(struct wps_er *er, struct in_addr *addr)
+{
+	struct wps_er_ap *ap;
+	struct wps_er_ap_settings *settings;
+
+	ap = wps_er_ap_get(er, addr, NULL);
+	if (ap == NULL || ap->ap_settings == NULL)
+		return -1;
+
+	settings = wps_er_ap_get_settings(er, ap->uuid);
+	if (!settings) {
+		settings = os_zalloc(sizeof(*settings));
+		if (settings == NULL)
+			return -1;
+		os_memcpy(settings->uuid, ap->uuid, WPS_UUID_LEN);
+		dl_list_add(&er->ap_settings, &settings->list);
+	}
+	os_memcpy(&settings->ap_settings, ap->ap_settings,
+		  sizeof(struct wps_credential));
+
+	return 0;
+}
+
+
+static int wps_er_ap_use_cached_settings(struct wps_er *er,
+					 struct wps_er_ap *ap)
+{
+	struct wps_er_ap_settings *s;
+
+	if (ap->ap_settings)
+		return 0;
+
+	s = wps_er_ap_get_settings(ap->er, ap->uuid);
+	if (!s)
+		return -1;
+
+	ap->ap_settings = os_malloc(sizeof(*ap->ap_settings));
+	if (ap->ap_settings == NULL)
+		return -1;
+
+	os_memcpy(ap->ap_settings, &s->ap_settings, sizeof(*ap->ap_settings));
+	wpa_printf(MSG_DEBUG, "WPS ER: Use cached AP settings");
+	return 0;
+}
+
+
 static void wps_er_ap_remove_entry(struct wps_er *er, struct wps_er_ap *ap)
 {
 	wpa_printf(MSG_DEBUG, "WPS ER: Removing AP entry for %s (%s)",
@@ -356,6 +414,7 @@ static void wps_er_http_subscribe_cb(void *ctx, struct http_client *c,
 		wpa_printf(MSG_DEBUG, "WPS ER: Subscribed to events");
 		ap->subscribed = 1;
 		wps_er_get_sid(ap, http_client_get_hdr_line(c, "SID"));
+		wps_er_ap_use_cached_settings(ap->er, ap);
 		wps_er_ap_event(ap->er->wps, ap, WPS_EV_ER_AP_ADD);
 		break;
 	case HTTP_CLIENT_FAILED:
@@ -587,8 +646,12 @@ void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr)
 static void wps_er_ap_remove_all(struct wps_er *er)
 {
 	struct wps_er_ap *prev, *ap;
+	struct wps_er_ap_settings *prev_s, *s;
 	dl_list_for_each_safe(ap, prev, &er->ap, struct wps_er_ap, list)
 		wps_er_ap_remove_entry(er, ap);
+	dl_list_for_each_safe(s, prev_s, &er->ap_settings,
+			      struct wps_er_ap_settings, list)
+		os_free(s);
 }
 
 
@@ -1166,6 +1229,7 @@ wps_er_init(struct wps_context *wps, const char *ifname, const char *filter)
 		return NULL;
 	dl_list_init(&er->ap);
 	dl_list_init(&er->ap_unsubscribing);
+	dl_list_init(&er->ap_settings);
 
 	er->multicast_sd = -1;
 	er->ssdp_sd = -1;

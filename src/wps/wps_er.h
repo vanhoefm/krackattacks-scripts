@@ -73,6 +73,12 @@ struct wps_er_ap {
 	void (*m1_handler)(struct wps_er_ap *ap, struct wpabuf *m1);
 };
 
+struct wps_er_ap_settings {
+	struct dl_list list;
+	u8 uuid[WPS_UUID_LEN];
+	struct wps_credential ap_settings;
+};
+
 struct wps_er {
 	struct wps_context *wps;
 	char ifname[17];
@@ -83,6 +89,7 @@ struct wps_er {
 	int ssdp_sd;
 	struct dl_list ap;
 	struct dl_list ap_unsubscribing;
+	struct dl_list ap_settings;
 	struct http_server *http_srv;
 	int http_port;
 	unsigned int next_ap_id;
@@ -100,6 +107,7 @@ struct wps_er {
 void wps_er_ap_add(struct wps_er *er, const u8 *uuid, struct in_addr *addr,
 		   const char *location, int max_age);
 void wps_er_ap_remove(struct wps_er *er, struct in_addr *addr);
+int wps_er_ap_cache_settings(struct wps_er *er, struct in_addr *addr);
 
 /* wps_er_ssdp.c */
 int wps_er_ssdp_init(struct wps_er *er);

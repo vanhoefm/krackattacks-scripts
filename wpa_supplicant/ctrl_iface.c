@@ -2809,7 +2809,17 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_ctrl_iface_wps_er_pin(wpa_s, buf + 11))
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_ER_PBC ", 11) == 0) {
-		if (wpas_wps_er_pbc(wpa_s, buf + 11))
+		int ret = wpas_wps_er_pbc(wpa_s, buf + 11);
+		if (ret == -2) {
+			os_memcpy(reply, "FAIL-PBC-OVERLAP\n", 17);
+			reply_len = 17;
+		} else if (ret == -3) {
+			os_memcpy(reply, "FAIL-UNKNOWN-UUID\n", 18);
+			reply_len = 18;
+		} else if (ret == -4) {
+			os_memcpy(reply, "FAIL-NO-AP-SETTINGS\n", 20);
+			reply_len = 20;
+		} else if (ret)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_ER_LEARN ", 13) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_learn(wpa_s, buf + 13))

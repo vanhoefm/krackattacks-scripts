@@ -1455,7 +1455,7 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 	if (wps_registrar_pbc_overlap(er->wps->registrar, NULL, NULL)) {
 		wpa_printf(MSG_DEBUG, "WPS ER: PBC overlap - do not start PBC "
 			   "mode");
-		return -1;
+		return -2;
 	}
 
 	ap = wps_er_ap_get(er, NULL, uuid);
@@ -1469,7 +1469,12 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 			}
 		}
 		if (sta == NULL)
-			return -1; /* Unknown UUID */
+			return -3; /* Unknown UUID */
+	}
+
+	if (ap->ap_settings == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: AP settings not known");
+		return -4;
 	}
 
 	er->set_sel_reg_uuid_filter = uuid;

@@ -417,7 +417,12 @@ enum wps_event {
 	/**
 	 * WPS_EV_ER_AP_SETTINGS - ER: AP Settings learned
 	 */
-	WPS_EV_ER_AP_SETTINGS
+	WPS_EV_ER_AP_SETTINGS,
+
+	/**
+	 * WPS_EV_ER_SET_SELECTED_REGISTRAR - ER: SetSelectedRegistrar event
+	 */
+	WPS_EV_ER_SET_SELECTED_REGISTRAR
 };
 
 /**
@@ -492,6 +497,18 @@ union wps_event_data {
 		const u8 *uuid;
 		const struct wps_credential *cred;
 	} ap_settings;
+
+	struct wps_event_er_set_selected_registrar {
+		const u8 *uuid;
+		int sel_reg;
+		u16 dev_passwd_id;
+		u16 sel_reg_config_methods;
+		enum {
+			WPS_ER_SET_SEL_REG_START,
+			WPS_ER_SET_SEL_REG_DONE,
+			WPS_ER_SET_SEL_REG_FAILED
+		} state;
+	} set_sel_reg;
 };
 
 /**

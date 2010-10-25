@@ -509,6 +509,33 @@ static void wpa_supplicant_wps_event_er_ap_settings(
 }
 
 
+static void wpa_supplicant_wps_event_er_set_sel_reg(
+	struct wpa_supplicant *wpa_s,
+	struct wps_event_er_set_selected_registrar *ev)
+{
+	char uuid_str[100];
+
+	uuid_bin2str(ev->uuid, uuid_str, sizeof(uuid_str));
+	switch (ev->state) {
+	case WPS_ER_SET_SEL_REG_START:
+		wpa_msg(wpa_s, MSG_DEBUG, WPS_EVENT_ER_SET_SEL_REG
+			"uuid=%s state=START sel_reg=%d dev_passwd_id=%u "
+			"sel_reg_config_methods=0x%x",
+			uuid_str, ev->sel_reg, ev->dev_passwd_id,
+			ev->sel_reg_config_methods);
+		break;
+	case WPS_ER_SET_SEL_REG_DONE:
+		wpa_msg(wpa_s, MSG_DEBUG, WPS_EVENT_ER_SET_SEL_REG
+			"uuid=%s state=DONE", uuid_str);
+		break;
+	case WPS_ER_SET_SEL_REG_FAILED:
+		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_ER_SET_SEL_REG
+			"uuid=%s state=FAILED", uuid_str);
+		break;
+	}
+}
+
+
 static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 				     union wps_event_data *data)
 {
@@ -546,6 +573,10 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 	case WPS_EV_ER_AP_SETTINGS:
 		wpa_supplicant_wps_event_er_ap_settings(wpa_s,
 							&data->ap_settings);
+		break;
+	case WPS_EV_ER_SET_SELECTED_REGISTRAR:
+		wpa_supplicant_wps_event_er_set_sel_reg(wpa_s,
+							&data->set_sel_reg);
 		break;
 	}
 }

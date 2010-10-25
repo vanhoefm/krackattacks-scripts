@@ -1269,19 +1269,30 @@ static void wps_er_http_set_sel_reg_cb(void *ctx, struct http_client *c,
 				       enum http_client_event event)
 {
 	struct wps_er_ap *ap = ctx;
+	union wps_event_data data;
+
+	os_memset(&data, 0, sizeof(data));
 
 	switch (event) {
 	case HTTP_CLIENT_OK:
 		wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar OK");
+		data.set_sel_reg.state = WPS_ER_SET_SEL_REG_DONE;
+		data.set_sel_reg.uuid = ap->uuid;
 		break;
 	case HTTP_CLIENT_FAILED:
 	case HTTP_CLIENT_INVALID_REPLY:
 	case HTTP_CLIENT_TIMEOUT:
 		wpa_printf(MSG_DEBUG, "WPS ER: SetSelectedRegistrar failed");
+		data.set_sel_reg.state = WPS_ER_SET_SEL_REG_FAILED;
+		data.set_sel_reg.uuid = ap->uuid;
 		break;
 	}
 	http_client_free(ap->http);
 	ap->http = NULL;
+
+	if (data.set_sel_reg.uuid)
+		ap->er->wps->event_cb(ap->er->wps->cb_ctx,
+				      WPS_EV_ER_SET_SELECTED_REGISTRAR, &data);
 }
 
 
@@ -1377,6 +1388,7 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	struct wps_registrar *reg = er->wps->registrar;
 	const u8 *auth_macs;
 	size_t count;
+	union wps_event_data data;
 
 	if (er->skip_set_sel_reg) {
 		wpa_printf(MSG_DEBUG, "WPS ER: Skip SetSelectedRegistrar");
@@ -1399,8 +1411,18 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 		return;
 	}
 
-	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list)
+	os_memset(&data, 0, sizeof(data));
+	data.set_sel_reg.sel_reg = sel_reg;
+	data.set_sel_reg.dev_passwd_id = dev_passwd_id;
+	data.set_sel_reg.sel_reg_config_methods = sel_reg_config_methods;
+	data.set_sel_reg.state = WPS_ER_SET_SEL_REG_START;
+
+	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
+		data.set_sel_reg.uuid = ap->uuid;
+		er->wps->event_cb(er->wps->cb_ctx,
+				  WPS_EV_ER_SET_SELECTED_REGISTRAR, &data);
 		wps_er_send_set_sel_reg(ap, msg);
+	}
 
 	wpabuf_free(msg);
 }

@@ -571,6 +571,8 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 		break;
 	case WPS_EV_ER_AP_SETTINGS:
 		break;
+	case WPS_EV_ER_SET_SELECTED_REGISTRAR:
+		break;
 	}
 	if (hapd->wps_event_cb)
 		hapd->wps_event_cb(hapd->wps_event_cb_ctx, event, data);

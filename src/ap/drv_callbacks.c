@@ -205,7 +205,7 @@ void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr)
 		 */
 		wpa_printf(MSG_DEBUG, "hostapd_notif_disassoc: Skip event "
 			   "with no address");
-		return -1;
+		return;
 	}
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,

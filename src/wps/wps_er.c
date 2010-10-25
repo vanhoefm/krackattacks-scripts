@@ -1391,6 +1391,7 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	struct wps_er_ap *ap;
 	struct wps_registrar *reg = er->wps->registrar;
 	const u8 *auth_macs;
+	u8 bcast[ETH_ALEN];
 	size_t count;
 	union wps_event_data data;
 
@@ -1404,6 +1405,13 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 		return;
 
 	auth_macs = wps_authorized_macs(reg, &count);
+#ifdef CONFIG_WPS2
+	if (count == 0) {
+		os_memset(bcast, 0xff, ETH_ALEN);
+		auth_macs = bcast;
+		count = 1;
+	}
+#endif /* CONFIG_WPS2 */
 
 	if (wps_build_version(msg) ||
 	    wps_er_build_selected_registrar(msg, sel_reg) ||

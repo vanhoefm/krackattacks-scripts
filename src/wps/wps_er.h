@@ -92,6 +92,7 @@ struct wps_er {
 	void *deinit_done_ctx;
 	struct in_addr filter_addr;
 	int skip_set_sel_reg;
+	const u8 *set_sel_reg_uuid_filter;
 };
 
 

@@ -62,11 +62,15 @@ static void wps_er_sta_event(struct wps_context *wps, struct wps_er_sta *sta,
 }
 
 
-static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr)
+static struct wps_er_sta * wps_er_sta_get(struct wps_er_ap *ap, const u8 *addr,
+					  const u8 *uuid)
 {
 	struct wps_er_sta *sta;
 	dl_list_for_each(sta, &ap->sta, struct wps_er_sta, list) {
-		if (os_memcmp(sta->addr, addr, ETH_ALEN) == 0)
+		if ((addr == NULL ||
+		     os_memcmp(sta->addr, addr, ETH_ALEN) == 0) &&
+		    (uuid == NULL ||
+		     os_memcmp(uuid, sta->uuid, WPS_UUID_LEN) == 0))
 			return sta;
 	}
 	return NULL;
@@ -649,7 +653,7 @@ static struct wps_er_sta * wps_er_add_sta_data(struct wps_er_ap *ap,
 					       struct wps_parse_attr *attr,
 					       int probe_req)
 {
-	struct wps_er_sta *sta = wps_er_sta_get(ap, addr);
+	struct wps_er_sta *sta = wps_er_sta_get(ap, addr, NULL);
 	int new_sta = 0;
 	int m1;
 
@@ -1418,6 +1422,10 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	data.set_sel_reg.state = WPS_ER_SET_SEL_REG_START;
 
 	dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
+		if (er->set_sel_reg_uuid_filter &&
+		    os_memcmp(ap->uuid, er->set_sel_reg_uuid_filter,
+			      WPS_UUID_LEN) != 0)
+			continue;
 		data.set_sel_reg.uuid = ap->uuid;
 		er->wps->event_cb(er->wps->cb_ctx,
 				  WPS_EV_ER_SET_SELECTED_REGISTRAR, &data);
@@ -1430,6 +1438,9 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 
 int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 {
+	int res;
+	struct wps_er_ap *ap;
+
 	if (er == NULL || er->wps == NULL)
 		return -1;
 
@@ -1439,13 +1450,24 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 		return -1;
 	}
 
-	/*
-	 * TODO: Should enable PBC mode only in a single AP based on which AP
-	 * the Enrollee (uuid) is using. Now, we may end up enabling multiple
-	 * APs in PBC mode which could result in session overlap at the
-	 * Enrollee.
-	 */
-	if (wps_registrar_button_pushed(er->wps->registrar))
+	ap = wps_er_ap_get(er, NULL, uuid);
+	if (ap == NULL) {
+		struct wps_er_sta *sta = NULL;
+		dl_list_for_each(ap, &er->ap, struct wps_er_ap, list) {
+			sta = wps_er_sta_get(ap, NULL, uuid);
+			if (sta) {
+				uuid = ap->uuid;
+				break;
+			}
+		}
+		if (sta == NULL)
+			return -1; /* Unknown UUID */
+	}
+
+	er->set_sel_reg_uuid_filter = uuid;
+	res = wps_registrar_button_pushed(er->wps->registrar);
+	er->set_sel_reg_uuid_filter = NULL;
+	if (res)
 		return -1;
 
 	return 0;

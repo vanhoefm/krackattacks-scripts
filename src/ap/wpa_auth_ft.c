@@ -52,6 +52,19 @@ wpa_ft_add_sta(struct wpa_authenticator *wpa_auth, const u8 *sta_addr)
 }
 
 
+static int wpa_ft_add_tspec(struct wpa_authenticator *wpa_auth,
+			    const u8 *sta_addr,
+			    u8 *tspec_ie, size_t tspec_ielen)
+{
+	if (wpa_auth->cb.add_tspec == NULL) {
+	        wpa_printf(MSG_DEBUG, "FT: add_tspec is not initialized");
+		return -1;
+	}
+	return wpa_auth->cb.add_tspec(wpa_auth->cb.ctx, sta_addr, tspec_ie,
+				      tspec_ielen);
+}
+
+
 int wpa_write_mdie(struct wpa_auth_config *conf, u8 *buf, size_t len)
 {
 	u8 *pos = buf;
@@ -471,7 +484,8 @@ static u8 * wpa_ft_igtk_subelem(struct wpa_state_machine *sm, size_t *len)
 #endif /* CONFIG_IEEE80211W */
 
 
-static u8 * wpa_ft_process_rdie(u8 *pos, u8 *end, u8 id, u8 descr_count,
+static u8 * wpa_ft_process_rdie(struct wpa_state_machine *sm,
+				u8 *pos, u8 *end, u8 id, u8 descr_count,
 				const u8 *ies, size_t ies_len)
 {
 	struct ieee802_11_elems parse;
@@ -504,7 +518,7 @@ static u8 * wpa_ft_process_rdie(u8 *pos, u8 *end, u8 id, u8 descr_count,
 	}
 
 #ifdef NEED_AP_MLME
-	if (parse.wmm_tspec) {
+	if (parse.wmm_tspec && sm->wpa_auth->conf.ap_mlme) {
 		struct wmm_tspec_element *tspec;
 		int res;
 
@@ -541,13 +555,35 @@ static u8 * wpa_ft_process_rdie(u8 *pos, u8 *end, u8 id, u8 descr_count,
 	}
 #endif /* NEED_AP_MLME */
 
+	if (parse.wmm_tspec && !sm->wpa_auth->conf.ap_mlme) {
+		struct wmm_tspec_element *tspec;
+		int res;
+
+		tspec = (struct wmm_tspec_element *) pos;
+		os_memcpy(tspec, parse.wmm_tspec - 2, sizeof(*tspec));
+		res = wpa_ft_add_tspec(sm->wpa_auth, sm->addr, pos,
+				       sizeof(*tspec));
+		if (res >= 0) {
+			if (res)
+				rdie->status_code = host_to_le16(res);
+			else {
+				/* TSPEC accepted; include updated TSPEC in
+				 * response */
+		                rdie->descr_count = 1;
+	                        pos += sizeof(*tspec);
+			}
+			return pos;
+		}
+	}
+
 	wpa_printf(MSG_DEBUG, "FT: No supported resource requested");
 	rdie->status_code = host_to_le16(WLAN_STATUS_UNSPECIFIED_FAILURE);
 	return pos;
 }
 
 
-static u8 * wpa_ft_process_ric(u8 *pos, u8 *end, const u8 *ric, size_t ric_len)
+static u8 * wpa_ft_process_ric(struct wpa_state_machine *sm, u8 *pos, u8 *end,
+			       const u8 *ric, size_t ric_len)
 {
 	const u8 *rpos, *start;
 	const struct rsn_rdie *rdie;
@@ -569,7 +605,7 @@ static u8 * wpa_ft_process_ric(u8 *pos, u8 *end, const u8 *ric, size_t ric_len)
 				break;
 			rpos += 2 + rpos[1];
 		}
-		pos = wpa_ft_process_rdie(pos, end, rdie->id,
+		pos = wpa_ft_process_rdie(sm, pos, end, rdie->id,
 					  rdie->descr_count,
 					  start, rpos - start);
 	}
@@ -678,7 +714,8 @@ u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,
 
 	ric_start = pos;
 	if (wpa_ft_parse_ies(req_ies, req_ies_len, &parse) == 0 && parse.ric) {
-		pos = wpa_ft_process_ric(pos, end, parse.ric, parse.ric_len);
+		pos = wpa_ft_process_ric(sm, pos, end, parse.ric,
+					 parse.ric_len);
 		if (auth_alg == WLAN_AUTH_FT)
 			_ftie->mic_control[1] +=
 				ieee802_11_ie_count(ric_start,
@@ -1061,8 +1098,16 @@ u16 wpa_ft_validate_reassoc(struct wpa_state_machine *sm, const u8 *ies,
 
 	if (os_memcmp(mic, ftie->mic, 16) != 0) {
 		wpa_printf(MSG_DEBUG, "FT: Invalid MIC in FTIE");
+		wpa_printf(MSG_DEBUG, "FT: addr=" MACSTR " auth_addr=" MACSTR,
+			   MAC2STR(sm->addr), MAC2STR(sm->wpa_auth->addr));
 		wpa_hexdump(MSG_MSGDUMP, "FT: Received MIC", ftie->mic, 16);
 		wpa_hexdump(MSG_MSGDUMP, "FT: Calculated MIC", mic, 16);
+		wpa_hexdump(MSG_MSGDUMP, "FT: MDIE",
+			    parse.mdie - 2, parse.mdie_len + 2);
+		wpa_hexdump(MSG_MSGDUMP, "FT: FTIE",
+			    parse.ftie - 2, parse.ftie_len + 2);
+		wpa_hexdump(MSG_MSGDUMP, "FT: RSN",
+			    parse.rsn - 2, parse.rsn_len + 2);
 		return WLAN_STATUS_INVALID_FTIE;
 	}
 

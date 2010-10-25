@@ -428,6 +428,9 @@ hostapd_wpa_auth_add_sta(void *ctx, const u8 *sta_addr)
 	struct hostapd_data *hapd = ctx;
 	struct sta_info *sta;
 
+	if (hostapd_add_sta_node(hapd, sta_addr, WLAN_AUTH_FT) < 0)
+		return NULL;
+
 	sta = ap_sta_add(hapd, sta_addr);
 	if (sta == NULL)
 		return NULL;
@@ -461,6 +464,14 @@ static void hostapd_rrb_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 		      len - sizeof(*ethhdr));
 }
 
+
+static int hostapd_wpa_auth_add_tspec(void *ctx, const u8 *sta_addr,
+				      u8 *tspec_ie, size_t tspec_ielen)
+{
+	struct hostapd_data *hapd = ctx;
+	return hostapd_add_tspec(hapd, sta_addr, tspec_ie, tspec_ielen);
+}
+
 #endif /* CONFIG_IEEE80211R */
 
 
@@ -474,6 +485,8 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 	hostapd_wpa_auth_conf(hapd->conf, &_conf);
 	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_EAPOL_TX_STATUS)
 		_conf.tx_status = 1;
+	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_MLME)
+		_conf.ap_mlme = 1;
 	os_memset(&cb, 0, sizeof(cb));
 	cb.ctx = hapd;
 	cb.logger = hostapd_wpa_auth_logger;
@@ -492,6 +505,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 #ifdef CONFIG_IEEE80211R
 	cb.send_ft_action = hostapd_wpa_auth_send_ft_action;
 	cb.add_sta = hostapd_wpa_auth_add_sta;
+	cb.add_tspec = hostapd_wpa_auth_add_tspec;
 #endif /* CONFIG_IEEE80211R */
 	hapd->wpa_auth = wpa_init(hapd->own_addr, &_conf, &cb);
 	if (hapd->wpa_auth == NULL) {

@@ -619,6 +619,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 
 	ieee802_11_set_beacon(hapd);
 
+	if (hapd->driver && hapd->driver->set_operstate)
+		hapd->driver->set_operstate(hapd->drv_priv, 1);
+
 	return 0;
 }
 

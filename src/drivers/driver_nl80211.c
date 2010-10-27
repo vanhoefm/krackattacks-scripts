@@ -592,6 +592,7 @@ static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 	status = le_to_host16(mgmt->u.assoc_resp.status_code);
 	if (status != WLAN_STATUS_SUCCESS) {
 		os_memset(&event, 0, sizeof(event));
+		event.assoc_reject.bssid = mgmt->bssid;
 		if (len > 24 + sizeof(mgmt->u.assoc_resp)) {
 			event.assoc_reject.resp_ies =
 				(u8 *) mgmt->u.assoc_resp.variable;

@@ -2071,7 +2071,7 @@ enum wpa_event_type {
 	 * EVENT_ASSOC_REJECT - Association rejected
 	 *
 	 * This event should be called when (re)association attempt has been
-	 * rejected by the AP. Information about authentication result is
+	 * rejected by the AP. Information about the association response is
 	 * included in union wpa_event_data::assoc_reject.
 	 */
 	EVENT_ASSOC_REJECT,
@@ -2444,6 +2444,11 @@ union wpa_event_data {
 	 */
 	struct assoc_reject {
 		/**
+		 * bssid - BSSID of the AP that rejected association
+		 */
+		const u8 *bssid;
+
+		/**
 		 * resp_ies - (Re)Association Response IEs
 		 *
 		 * Optional association data from the driver. This data is not
@@ -2454,7 +2459,7 @@ union wpa_event_data {
 		 * This should start with the first IE (fixed fields before IEs
 		 * are not included).
 		 */
-		u8 *resp_ies;
+		const u8 *resp_ies;
 
 		/**
 		 * resp_ies_len - Length of resp_ies in bytes

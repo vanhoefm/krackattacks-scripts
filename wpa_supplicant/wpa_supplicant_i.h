@@ -34,6 +34,7 @@ struct ibss_rsn;
 struct scan_info;
 struct wpa_bss;
 struct wpa_scan_results;
+struct hostapd_hw_modes;
 
 /*
  * Forward declarations of private structures used within the ctrl_iface

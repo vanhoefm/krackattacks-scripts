@@ -93,6 +93,7 @@ struct p2p_device {
 #define P2P_DEV_WAIT_GO_NEG_CONFIRM BIT(11)
 #define P2P_DEV_GROUP_CLIENT_ONLY BIT(12)
 #define P2P_DEV_FORCE_FREQ BIT(13)
+#define P2P_DEV_PD_FOR_JOIN BIT(14)
 	unsigned int flags;
 
 	int status; /* enum p2p_status_code */

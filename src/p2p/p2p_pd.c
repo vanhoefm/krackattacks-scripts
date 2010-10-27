@@ -327,6 +327,10 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 		return -1;
 
 	dev->req_config_methods = config_methods;
+	if (join)
+		dev->flags |= P2P_DEV_PD_FOR_JOIN;
+	else
+		dev->flags &= ~P2P_DEV_PD_FOR_JOIN;
 
 	if (p2p->go_neg_peer ||
 	    (p2p->state != P2P_IDLE && p2p->state != P2P_SEARCH &&

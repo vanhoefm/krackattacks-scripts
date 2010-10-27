@@ -1920,7 +1920,13 @@ void p2p_continue_find(struct p2p_data *p2p)
 				return;
 			else
 				break;
-		} else if (dev->req_config_methods) {
+		} else if (dev->req_config_methods &&
+			   !(dev->flags & P2P_DEV_PD_FOR_JOIN)) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send "
+				"pending Provisioning Discovery Request to "
+				MACSTR " (config methods 0x%x)",
+				MAC2STR(dev->p2p_device_addr),
+				dev->req_config_methods);
 			if (p2p_send_prov_disc_req(p2p, dev, 0) == 0)
 				return;
 		}
@@ -2543,7 +2549,7 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  "country=%c%c\n"
 			  "oper_freq=%d\n"
 			  "req_config_methods=0x%x\n"
-			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
+			  "flags=%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n"
 			  "status=%d\n"
 			  "wait_count=%u\n"
 			  "invitation_reqs=%u\n",
@@ -2593,7 +2599,9 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  dev->flags & P2P_DEV_GROUP_CLIENT_ONLY ?
 			  "[GROUP_CLIENT_ONLY]" : "",
 			  dev->flags & P2P_DEV_FORCE_FREQ ?
-			  "[FORCE_FREQ" : "",
+			  "[FORCE_FREQ]" : "",
+			  dev->flags & P2P_DEV_PD_FOR_JOIN ?
+			  "[PD_FOR_JOIN]" : "",
 			  dev->status,
 			  dev->wait_count,
 			  dev->invitation_reqs);

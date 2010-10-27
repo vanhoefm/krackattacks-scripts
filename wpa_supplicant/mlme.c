@@ -3030,23 +3030,6 @@ void ieee80211_sta_rx(struct wpa_supplicant *wpa_s, const u8 *buf, size_t len,
 }
 
 
-void ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
-				    size_t num_hw_features)
-{
-	size_t i;
-
-	if (hw_features == NULL)
-		return;
-
-	for (i = 0; i < num_hw_features; i++) {
-		os_free(hw_features[i].channels);
-		os_free(hw_features[i].rates);
-	}
-
-	os_free(hw_features);
-}
-
-
 int ieee80211_sta_init(struct wpa_supplicant *wpa_s)
 {
 	u16 num_modes, flags;

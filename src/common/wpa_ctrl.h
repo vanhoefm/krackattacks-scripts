@@ -32,6 +32,8 @@ extern "C" {
 #define WPA_EVENT_CONNECTED "CTRL-EVENT-CONNECTED "
 /** Disconnected, data connection is not available */
 #define WPA_EVENT_DISCONNECTED "CTRL-EVENT-DISCONNECTED "
+/** Association rejected during connection attempt */
+#define WPA_EVENT_ASSOC_REJECT "CTRL-EVENT-ASSOC-REJECT "
 /** wpa_supplicant is exiting */
 #define WPA_EVENT_TERMINATING "CTRL-EVENT-TERMINATING "
 /** Password change was completed successfully */

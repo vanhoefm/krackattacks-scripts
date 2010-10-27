@@ -2807,7 +2807,7 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 		while (wpa_s) {
 			prev = wpa_s;
 			wpa_s = wpa_s->next;
-			wpa_s->removal_reason = P2P_GROUP_REMOVAL_REQUESTED;
+			prev->removal_reason = P2P_GROUP_REMOVAL_REQUESTED;
 			wpas_p2p_group_delete(prev);
 		}
 		return 0;

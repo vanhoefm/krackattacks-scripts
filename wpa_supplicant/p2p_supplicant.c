@@ -475,7 +475,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
 			"%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
 			"go_dev_addr=" MACSTR "%s",
-			wpa_s->ifname, ssid_txt, ssid->frequency,
+			wpa_s->ifname, ssid_txt, ssid ? ssid->frequency : 0,
 			ssid && ssid->passphrase ? ssid->passphrase : "",
 			MAC2STR(go_dev_addr),
 			persistent ? " [PERSISTENT]" : "");

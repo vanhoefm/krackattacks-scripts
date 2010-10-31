@@ -2116,7 +2116,7 @@ static int p2p_ctrl_serv_disc_cancel_req(struct wpa_supplicant *wpa_s,
 static int p2p_ctrl_serv_disc_resp(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	int freq;
-	u8 dst_buf[ETH_ALEN], *dst;
+	u8 dst[ETH_ALEN];
 	u8 dialog_token;
 	struct wpabuf *resp_tlvs;
 	char *pos, *pos2;
@@ -2130,12 +2130,8 @@ static int p2p_ctrl_serv_disc_resp(struct wpa_supplicant *wpa_s, char *cmd)
 	if (freq == 0)
 		return -1;
 
-	if (hwaddr_aton(pos, dst_buf))
+	if (hwaddr_aton(pos, dst))
 		return -1;
-	dst = dst_buf;
-	if (dst[0] == 0 && dst[1] == 0 && dst[2] == 0 &&
-	    dst[3] == 0 && dst[4] == 0 && dst[5] == 0)
-		dst = NULL;
 	pos += 17;
 	if (*pos != ' ')
 		return -1;

@@ -823,6 +823,12 @@ static void wps_er_process_wlanevent_probe_req(struct wps_er_ap *ap,
 	wpa_hexdump_buf(MSG_MSGDUMP, "WPS ER: WLANEvent - Enrollee's message "
 			"(TLVs from Probe Request)", msg);
 
+	if (wps_validate_probe_req(msg, addr) < 0) {
+		wpa_printf(MSG_INFO, "WPS-STRICT: ER: Ignore invalid proxied "
+			   "Probe Request frame from " MACSTR, MAC2STR(addr));
+		return;
+	}
+
 	if (wps_parse_msg(msg, &attr) < 0) {
 		wpa_printf(MSG_DEBUG, "WPS ER: Failed to parse TLVs in "
 			   "WLANEvent message");

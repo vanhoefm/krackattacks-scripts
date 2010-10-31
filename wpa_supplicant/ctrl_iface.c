@@ -16,6 +16,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "eap_peer/eap.h"
@@ -115,6 +116,24 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	}
 
 	return ret;
+}
+
+
+static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
+					 char *cmd, char *buf, size_t buflen)
+{
+	int res;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE GET '%s'", cmd);
+
+	if (os_strcmp(cmd, "version") == 0) {
+		res = os_snprintf(buf, buflen, "%s", VERSION_STR);
+		if (res < 0 || (unsigned int) res >= buflen)
+			return -1;
+		return res;
+	}
+
+	return -1;
 }
 
 
@@ -2731,6 +2750,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (wpa_supplicant_ctrl_iface_set(wpa_s, buf + 4))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "GET ", 4) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_get(wpa_s, buf + 4,
+							  reply, reply_size);
 	} else if (os_strcmp(buf, "LOGON") == 0) {
 		eapol_sm_notify_logoff(wpa_s->eapol, FALSE);
 	} else if (os_strcmp(buf, "LOGOFF") == 0) {

@@ -1,6 +1,6 @@
 /*
  * hostapd / UNIX domain socket -based control interface
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -22,6 +22,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "drivers/driver.h"
 #include "radius/radius_client.h"
@@ -729,6 +730,24 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 }
 
 
+static int hostapd_ctrl_iface_get(struct hostapd_data *hapd, char *cmd,
+				  char *buf, size_t buflen)
+{
+	int res;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE GET '%s'", cmd);
+
+	if (os_strcmp(cmd, "version") == 0) {
+		res = os_snprintf(buf, buflen, "%s", VERSION_STR);
+		if (res < 0 || (unsigned int) res >= buflen)
+			return -1;
+		return res;
+	}
+
+	return -1;
+}
+
+
 static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 				       void *sock_ctx)
 {
@@ -858,6 +877,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "SET ", 4) == 0) {
 		if (hostapd_ctrl_iface_set(hapd, buf + 4))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "GET ", 4) == 0) {
+		reply_len = hostapd_ctrl_iface_get(hapd, buf + 4, reply,
+						   reply_size);
 	} else {
 		os_memcpy(reply, "UNKNOWN COMMAND\n", 16);
 		reply_len = 16;

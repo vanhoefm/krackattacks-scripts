@@ -462,6 +462,26 @@ static int wpa_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid GET command: need one argument (variable "
+		       "name)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "GET %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long GET command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_logoff(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	return wpa_ctrl_command(ctrl, "LOGOFF");
@@ -2209,6 +2229,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "= set variables (shows list of variables when run without "
 	  "arguments)" },
+	{ "get", wpa_cli_cmd_get,
+	  cli_cmd_flag_none,
+	  "<name> = get information" },
 	{ "logon", wpa_cli_cmd_logon,
 	  cli_cmd_flag_none,
 	  "= IEEE 802.1X EAPOL state machine logon" },

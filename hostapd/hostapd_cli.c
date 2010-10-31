@@ -670,6 +670,26 @@ static int hostapd_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int hostapd_cli_cmd_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid GET command: needs one argument (variable "
+		       "name)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "GET %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long GET command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 struct hostapd_cli_cmd {
 	const char *cmd;
 	int (*handler)(struct wpa_ctrl *ctrl, int argc, char *argv[]);
@@ -703,6 +723,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "license", hostapd_cli_cmd_license },
 	{ "quit", hostapd_cli_cmd_quit },
 	{ "set", hostapd_cli_cmd_set },
+	{ "get", hostapd_cli_cmd_get },
 	{ NULL, NULL }
 };
 
@@ -717,6 +738,11 @@ static void wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	while (cmd->cmd) {
 		if (strncasecmp(cmd->cmd, argv[0], strlen(argv[0])) == 0) {
 			match = cmd;
+			if (os_strcasecmp(cmd->cmd, argv[0]) == 0) {
+				/* we have an exact match */
+				count = 1;
+				break;
+			}
 			count++;
 		}
 		cmd++;

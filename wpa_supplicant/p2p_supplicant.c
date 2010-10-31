@@ -1309,13 +1309,6 @@ static void wpas_sd_req_upnp(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	version = query[0];
-	str = os_malloc(query_len);
-	if (str == NULL)
-		return;
-	os_memcpy(str, query + 1, query_len - 1);
-	str[query_len - 1] = '\0';
-
 	if (wpabuf_tailroom(resp) < 5)
 		return;
 
@@ -1323,6 +1316,13 @@ static void wpas_sd_req_upnp(struct wpa_supplicant *wpa_s,
 	len_pos = wpabuf_put(resp, 2);
 	wpabuf_put_u8(resp, P2P_SERV_UPNP);
 	wpabuf_put_u8(resp, srv_trans_id);
+
+	version = query[0];
+	str = os_malloc(query_len);
+	if (str == NULL)
+		return;
+	os_memcpy(str, query + 1, query_len - 1);
+	str[query_len - 1] = '\0';
 
 	dl_list_for_each(usrv, &wpa_s->global->p2p_srv_upnp,
 			 struct p2p_srv_upnp, list) {

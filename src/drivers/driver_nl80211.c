@@ -3652,8 +3652,15 @@ static struct sock_filter msock_filter_insns[] = {
 	 * add a filter here that filters on our DA and that flag
 	 * to allow us to deauth frames to that bad station.
 	 *
-	 * Not a regression -- we didn't do it before either.
+	 * For now allow all To DS data frames through.
 	 */
+	/* load the IEEE 802.11 frame control field */
+	BPF_STMT(BPF_LD  | BPF_H | BPF_IND, 0),
+	/* mask off frame type, version and DS status */
+	BPF_STMT(BPF_ALU | BPF_AND | BPF_K, 0x0F03),
+	/* accept frame if version 0, type 2 and To DS, fall through otherwise
+	 */
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 0x0801, PASS, 0),
 
 #if 0
 	/*

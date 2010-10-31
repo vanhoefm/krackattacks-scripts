@@ -2187,6 +2187,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		 * For initial tests, pick the operation channel randomly.
 		 * TODO: Use scan results (etc.) to select the best channel.
 		 */
+		os_get_random((u8 *) &r, sizeof(r));
 		p2p.op_channel = 1 + r % 11;
 	}
 	wpa_printf(MSG_DEBUG, "P2P: Own listen channel: %d  "

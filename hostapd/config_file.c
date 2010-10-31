@@ -2071,12 +2071,14 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 	if (hostapd_config_check(conf))
 		errors++;
 
+#ifndef WPA_IGNORE_CONFIG_ERRORS
 	if (errors) {
 		wpa_printf(MSG_ERROR, "%d errors found in configuration file "
 			   "'%s'", errors, fname);
 		hostapd_config_free(conf);
 		conf = NULL;
 	}
+#endif /* WPA_IGNORE_CONFIG_ERRORS */
 
 	return conf;
 }

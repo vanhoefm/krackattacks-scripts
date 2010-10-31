@@ -331,11 +331,13 @@ struct wpa_config * wpa_config_read(const char *name)
 	config->ssid = head;
 	wpa_config_debug_dump_networks(config);
 
+#ifndef WPA_IGNORE_CONFIG_ERRORS
 	if (errors) {
 		wpa_config_free(config);
 		config = NULL;
 		head = NULL;
 	}
+#endif /* WPA_IGNORE_CONFIG_ERRORS */
 
 	return config;
 }

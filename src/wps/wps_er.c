@@ -1617,6 +1617,8 @@ static void wps_er_http_put_message_cb(void *ctx, struct http_client *c,
 		if (buf == NULL) {
 			wpa_printf(MSG_DEBUG, "WPS ER: Could not extract "
 				   "NewOutMessage from PutMessage response");
+			wps_deinit(ap->wps);
+			ap->wps = NULL;
 			return;
 		}
 		wps_er_ap_process(ap, buf);

@@ -489,6 +489,35 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 }
 
 
+static struct wpa_supplicant *
+wpas_get_tx_interface(struct wpa_supplicant *wpa_s, const u8 *src)
+{
+	struct wpa_supplicant *iface;
+
+	if (os_memcmp(src, wpa_s->own_addr, ETH_ALEN) == 0)
+		return wpa_s;
+
+	/*
+	 * Try to find a group interface that matches with the source address.
+	 */
+	iface = wpa_s->global->ifaces;
+	while (iface) {
+		if (os_memcmp(wpa_s->pending_action_src,
+			      iface->own_addr, ETH_ALEN) == 0)
+			break;
+		iface = iface->next;
+	}
+	if (iface) {
+		wpa_printf(MSG_DEBUG, "P2P: Use group interface %s "
+			   "instead of interface %s for Action TX",
+			   iface->ifname, wpa_s->ifname);
+		return iface;
+	}
+
+	return wpa_s;
+}
+
+
 static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -505,12 +534,26 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 	if (wpa_s->pending_action_tx == NULL)
 		return;
 
+	/*
+	 * This call is likely going to be on the P2P device instance if the
+	 * driver uses a separate interface for that purpose. However, some
+	 * Action frames are actually sent within a P2P Group and when that is
+	 * the case, we need to follow power saving (e.g., GO buffering the
+	 * frame for a client in PS mode or a client following the advertised
+	 * NoA from its GO). To make that easier for the driver, select the
+	 * correct group interface here.
+	 */
+	iface = wpas_get_tx_interface(wpa_s, wpa_s->pending_action_src);
+
 	if (wpa_s->off_channel_freq != wpa_s->pending_action_freq &&
-	    wpa_s->pending_action_freq != 0) {
+	    wpa_s->pending_action_freq != 0 &&
+	    wpa_s->pending_action_freq != iface->assoc_freq) {
 		wpa_printf(MSG_DEBUG, "P2P: Pending Action frame TX "
-			   "waiting for another freq=%u (off_channel_freq=%u)",
+			   "waiting for another freq=%u (off_channel_freq=%u "
+			   "assoc_freq=%u)",
 			   wpa_s->pending_action_freq,
-			   wpa_s->off_channel_freq);
+			   wpa_s->off_channel_freq,
+			   iface->assoc_freq);
 		if (without_roc && wpa_s->off_channel_freq == 0) {
 			/*
 			 * We may get here if wpas_send_action() found us to be
@@ -532,37 +575,6 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 		}
 		return;
 	}
-
-	/*
-	 * This call is likely going to be on the P2P device instance if the
-	 * driver uses a separate interface for that purpose. However, some
-	 * Action frames are actually sent within a P2P Group and when that is
-	 * the case, we need to follow power saving (e.g., GO buffering the
-	 * frame for a client in PS mode or a client following the advertised
-	 * NoA from its GO). To make that easier for the driver, select the
-	 * correct group interface here.
-	 */
-	if (os_memcmp(wpa_s->pending_action_src, wpa_s->own_addr, ETH_ALEN) !=
-	    0) {
-		/*
-		 * Try to find a group interface that matches with the source
-		 * address.
-		 */
-		iface = wpa_s->global->ifaces;
-		while (iface) {
-			if (os_memcmp(wpa_s->pending_action_src,
-				      iface->own_addr, ETH_ALEN) == 0)
-				break;
-			iface = iface->next;
-		}
-		if (iface) {
-			wpa_printf(MSG_DEBUG, "P2P: Use group interface %s "
-				   "instead of interface %s for Action TX",
-				   iface->ifname, wpa_s->ifname);
-		} else
-			iface = wpa_s;
-	} else
-		iface = wpa_s;
 
 	wpa_printf(MSG_DEBUG, "P2P: Sending pending Action frame to "
 		   MACSTR " using interface %s",
@@ -657,6 +669,16 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	os_memcpy(wpa_s->pending_action_dst, dst, ETH_ALEN);
 	os_memcpy(wpa_s->pending_action_bssid, bssid, ETH_ALEN);
 	wpa_s->pending_action_freq = freq;
+
+	if (freq) {
+		struct wpa_supplicant *tx_iface;
+		tx_iface = wpas_get_tx_interface(wpa_s, src);
+		if (tx_iface->assoc_freq == freq) {
+			wpa_printf(MSG_DEBUG, "P2P: Already on requested "
+				   "channel (TX interface operating channel)");
+			freq = 0;
+		}
+	}
 
 	if (wpa_s->off_channel_freq == freq || freq == 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Already on requested channel; "

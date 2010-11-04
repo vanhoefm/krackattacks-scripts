@@ -1724,53 +1724,6 @@ static struct wpabuf * wps_build_m8(struct wps_data *wps)
 }
 
 
-static struct wpabuf * wps_build_wsc_ack(struct wps_data *wps)
-{
-	struct wpabuf *msg;
-
-	wpa_printf(MSG_DEBUG, "WPS: Building Message WSC_ACK");
-
-	msg = wpabuf_alloc(1000);
-	if (msg == NULL)
-		return NULL;
-
-	if (wps_build_version(msg) ||
-	    wps_build_msg_type(msg, WPS_WSC_ACK) ||
-	    wps_build_enrollee_nonce(wps, msg) ||
-	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
-		wpabuf_free(msg);
-		return NULL;
-	}
-
-	return msg;
-}
-
-
-static struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
-{
-	struct wpabuf *msg;
-
-	wpa_printf(MSG_DEBUG, "WPS: Building Message WSC_NACK");
-
-	msg = wpabuf_alloc(1000);
-	if (msg == NULL)
-		return NULL;
-
-	if (wps_build_version(msg) ||
-	    wps_build_msg_type(msg, WPS_WSC_NACK) ||
-	    wps_build_enrollee_nonce(wps, msg) ||
-	    wps_build_registrar_nonce(wps, msg) ||
-	    wps_build_config_error(msg, wps->config_error) ||
-	    wps_build_wfa_ext(msg, 0, NULL, 0)) {
-		wpabuf_free(msg);
-		return NULL;
-	}
-
-	return msg;
-}
-
-
 struct wpabuf * wps_registrar_get_msg(struct wps_data *wps,
 				      enum wsc_op_code *op_code)
 {

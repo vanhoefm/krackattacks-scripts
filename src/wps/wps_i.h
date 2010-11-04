@@ -223,6 +223,9 @@ extern struct oob_device_data oob_ufd_device_data;
 extern struct oob_device_data oob_nfc_device_data;
 extern struct oob_nfc_device_data oob_nfc_pn531_device_data;
 
+struct wpabuf * wps_build_wsc_ack(struct wps_data *wps);
+struct wpabuf * wps_build_wsc_nack(struct wps_data *wps);
+
 /* wps_attr_parse.c */
 int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr);
 

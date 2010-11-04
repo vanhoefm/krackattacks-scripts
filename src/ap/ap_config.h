@@ -123,7 +123,7 @@ struct hostapd_eap_user {
 };
 
 
-#define NUM_TX_QUEUES 8
+#define NUM_TX_QUEUES 4
 
 struct hostapd_tx_queue_params {
 	int aifs;

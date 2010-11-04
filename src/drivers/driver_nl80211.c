@@ -4866,7 +4866,20 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 	if (!params)
 		goto nla_put_failure;
 
-	NLA_PUT_U8(msg, NL80211_TXQ_ATTR_QUEUE, queue);
+	switch (queue) {
+	case 0:
+		NLA_PUT_U8(msg, NL80211_TXQ_ATTR_QUEUE, NL80211_TXQ_Q_VO);
+		break;
+	case 1:
+		NLA_PUT_U8(msg, NL80211_TXQ_ATTR_QUEUE, NL80211_TXQ_Q_VI);
+		break;
+	case 2:
+		NLA_PUT_U8(msg, NL80211_TXQ_ATTR_QUEUE, NL80211_TXQ_Q_BE);
+		break;
+	case 3:
+		NLA_PUT_U8(msg, NL80211_TXQ_ATTR_QUEUE, NL80211_TXQ_Q_BK);
+		break;
+	}
 	/* Burst time is configured in units of 0.1 msec and TXOP parameter in
 	 * 32 usec, so need to convert the value here. */
 	NLA_PUT_U16(msg, NL80211_TXQ_ATTR_TXOP, (burst_time * 100 + 16) / 32);

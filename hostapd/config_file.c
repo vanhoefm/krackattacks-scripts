@@ -752,10 +752,7 @@ enum {
 	IEEE80211_TX_QUEUE_DATA0 = 0, /* used for EDCA AC_VO data */
 	IEEE80211_TX_QUEUE_DATA1 = 1, /* used for EDCA AC_VI data */
 	IEEE80211_TX_QUEUE_DATA2 = 2, /* used for EDCA AC_BE data */
-	IEEE80211_TX_QUEUE_DATA3 = 3, /* used for EDCA AC_BK data */
-	IEEE80211_TX_QUEUE_DATA4 = 4,
-	IEEE80211_TX_QUEUE_AFTER_BEACON = 6,
-	IEEE80211_TX_QUEUE_BEACON = 7
+	IEEE80211_TX_QUEUE_DATA3 = 3 /* used for EDCA AC_BK data */
 };
 
 static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
@@ -771,15 +768,19 @@ static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
 	    pos[4] >= '0' && pos[4] <= '9' && pos[5] == '_') {
 		num = pos[4] - '0';
 		pos += 6;
-	} else if (os_strncmp(pos, "after_beacon_", 13) == 0) {
-		num = IEEE80211_TX_QUEUE_AFTER_BEACON;
-		pos += 13;
-	} else if (os_strncmp(pos, "beacon_", 7) == 0) {
-		num = IEEE80211_TX_QUEUE_BEACON;
-		pos += 7;
+	} else if (os_strncmp(pos, "after_beacon_", 13) == 0 ||
+		   os_strncmp(pos, "beacon_", 7) == 0) {
+		wpa_printf(MSG_INFO, "DEPRECATED: '%s' not used", name);
+		return 0;
 	} else {
 		wpa_printf(MSG_ERROR, "Unknown tx_queue name '%s'", pos);
 		return -1;
+	}
+
+	if (num >= NUM_TX_QUEUES) {
+		/* for backwards compatibility, do not tricker failure */
+		wpa_printf(MSG_INFO, "DEPRECATED: '%s' not used", name);
+		return 0;
 	}
 
 	queue = &conf->tx_queue[num];

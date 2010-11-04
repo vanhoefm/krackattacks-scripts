@@ -1529,7 +1529,7 @@ struct wpa_driver_ops {
 	/**
 	 * set_tx_queue_params - Set TX queue parameters
 	 * @priv: Private driver interface data
-	 * @queue: Queue number
+	 * @queue: Queue number (0 = VO, 1 = VI, 2 = BE, 3 = BK)
 	 * @aifs: AIFS
 	 * @cw_min: cwMin
 	 * @cw_max: cwMax

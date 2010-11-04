@@ -254,20 +254,28 @@ int wps_build_registrar_nonce(struct wps_data *wps, struct wpabuf *msg)
 
 int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg)
 {
+	u16 auth_types = WPS_AUTH_TYPES;
+#ifdef CONFIG_WPS2
+	auth_types &= ~WPS_AUTH_SHARED;
+#endif /* CONFIG_WPS2 */
 	wpa_printf(MSG_DEBUG, "WPS:  * Authentication Type Flags");
 	wpabuf_put_be16(msg, ATTR_AUTH_TYPE_FLAGS);
 	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, WPS_AUTH_TYPES);
+	wpabuf_put_be16(msg, auth_types);
 	return 0;
 }
 
 
 int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg)
 {
+	u16 encr_types = WPS_ENCR_TYPES;
+#ifdef CONFIG_WPS2
+	encr_types &= ~WPS_ENCR_WEP;
+#endif /* CONFIG_WPS2 */
 	wpa_printf(MSG_DEBUG, "WPS:  * Encryption Type Flags");
 	wpabuf_put_be16(msg, ATTR_ENCR_TYPE_FLAGS);
 	wpabuf_put_be16(msg, 2);
-	wpabuf_put_be16(msg, WPS_ENCR_TYPES);
+	wpabuf_put_be16(msg, encr_types);
 	return 0;
 }
 

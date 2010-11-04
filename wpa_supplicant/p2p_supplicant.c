@@ -3393,6 +3393,9 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 					       ssid->ssid_len);
 	os_memcpy(wpa_s->go_dev_addr, go_dev_addr, ETH_ALEN);
 
+	if (wpa_s->global->p2p_group_formation == wpa_s)
+		wpa_s->global->p2p_group_formation = NULL;
+
 	if (ssid->passphrase == NULL && ssid->psk_set) {
 		char psk[65];
 		wpa_snprintf_hex(psk, sizeof(psk), ssid->psk, 32);
@@ -3751,7 +3754,9 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		if (wpa_s == global->p2p_group_formation &&
-		    wpa_s->p2p_in_provisioning) {
+		    (wpa_s->p2p_in_provisioning ||
+		     wpa_s->parent->pending_interface_type ==
+		     WPA_IF_P2P_CLIENT)) {
 			wpa_printf(MSG_DEBUG, "P2P: Interface %s in group "
 				   "formation found - cancelling",
 				   wpa_s->ifname);

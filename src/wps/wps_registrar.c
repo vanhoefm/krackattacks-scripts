@@ -2558,7 +2558,8 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 
 	if (attr.msg_type == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: No Message Type attribute");
-		return WPS_FAILURE;
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
 	}
 
 	if (*attr.msg_type != WPS_M1 &&

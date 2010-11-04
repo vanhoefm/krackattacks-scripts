@@ -868,6 +868,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 #undef C
 
 	d->p2p_group_idle = s->p2p_group_idle;
+	d->p2p_intra_bss = s->p2p_intra_bss;
 }
 
 

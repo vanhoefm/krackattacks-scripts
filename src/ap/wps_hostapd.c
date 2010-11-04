@@ -426,6 +426,8 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 		if (!multi_bss &&
 		    (str_starts(buf, "ssid=") ||
 		     str_starts(buf, "auth_algs=") ||
+		     str_starts(buf, "wep_default_key=") ||
+		     str_starts(buf, "wep_key") ||
 		     str_starts(buf, "wps_state=") ||
 		     str_starts(buf, "wpa=") ||
 		     str_starts(buf, "wpa_psk=") ||

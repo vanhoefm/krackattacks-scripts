@@ -119,6 +119,7 @@ static int wps_build_e_snonce2(struct wps_data *wps, struct wpabuf *msg)
 static struct wpabuf * wps_build_m1(struct wps_data *wps)
 {
 	struct wpabuf *msg;
+	u16 config_methods;
 
 	if (os_get_random(wps->nonce_e, WPS_NONCE_LEN) < 0)
 		return NULL;
@@ -130,6 +131,19 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	if (msg == NULL)
 		return NULL;
 
+	config_methods = wps->wps->config_methods;
+	if (wps->wps->ap) {
+		/*
+		 * These are the methods that the AP supports as an Enrollee
+		 * for adding external Registrars, so remove PushButton.
+		 */
+		config_methods &= ~WPS_CONFIG_PUSHBUTTON;
+#ifdef CONFIG_WPS2
+		config_methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
+				    WPS_CONFIG_PHY_PUSHBUTTON);
+#endif /* CONFIG_WPS2 */
+	}
+
 	if (wps_build_version(msg) ||
 	    wps_build_msg_type(msg, WPS_M1) ||
 	    wps_build_uuid_e(msg, wps->uuid_e) ||
@@ -139,7 +153,7 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	    wps_build_auth_type_flags(wps, msg) ||
 	    wps_build_encr_type_flags(wps, msg) ||
 	    wps_build_conn_type_flags(wps, msg) ||
-	    wps_build_config_methods(msg, wps->wps->config_methods) ||
+	    wps_build_config_methods(msg, config_methods) ||
 	    wps_build_wps_state(wps, msg) ||
 	    wps_build_device_attrs(&wps->wps->dev, msg) ||
 	    wps_build_rf_bands(&wps->wps->dev, msg) ||

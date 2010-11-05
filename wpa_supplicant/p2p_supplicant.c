@@ -67,7 +67,7 @@ static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 					 bss->freq, bss->level,
 					 (const u8 *) (bss + 1),
 					 bss->ie_len) > 0)
-			return;
+			break;
 	}
 
 	p2p_scan_res_handled(wpa_s->global->p2p);

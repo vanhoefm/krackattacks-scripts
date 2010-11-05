@@ -569,9 +569,11 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 					   "driver to remain on channel (%u "
 					   "MHz) for Action Frame TX",
 					   wpa_s->pending_action_freq);
-			} else
+			} else {
+				wpa_s->off_channel_freq = 0;
 				wpa_s->roc_waiting_drv_freq =
 					wpa_s->pending_action_freq;
+			}
 		}
 		return;
 	}
@@ -709,6 +711,7 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 			   "Frame TX", freq);
 		return -1;
 	}
+	wpa_s->off_channel_freq = 0;
 	wpa_s->roc_waiting_drv_freq = freq;
 
 	return 0;
@@ -1098,6 +1101,7 @@ static int wpas_start_listen(void *ctx, unsigned int freq,
 		wpa_s->pending_listen_freq = 0;
 		return -1;
 	}
+	wpa_s->off_channel_freq = 0;
 	wpa_s->roc_waiting_drv_freq = freq;
 
 	return 0;

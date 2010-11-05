@@ -932,6 +932,19 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	if (p2p->state != P2P_IDLE)
 		p2p_stop_find(p2p);
 
+	if (p2p->after_scan_tx) {
+		/*
+		 * We need to drop the pending frame to avoid issues with the
+		 * new GO Negotiation, e.g., when the pending frame was from a
+		 * previous attempt at starting a GO Negotiation.
+		 */
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Dropped "
+			"previous pending Action frame TX that was waiting "
+			"for p2p_scan completion");
+		os_free(p2p->after_scan_tx);
+		p2p->after_scan_tx = NULL;
+	}
+
 	dev->wps_method = wps_method;
 	dev->status = P2P_SC_SUCCESS;
 
@@ -1869,6 +1882,8 @@ void p2p_flush(struct p2p_data *p2p)
 		p2p_device_free(p2p, dev);
 	}
 	p2p_free_sd_queries(p2p);
+	os_free(p2p->after_scan_tx);
+	p2p->after_scan_tx = NULL;
 }
 
 

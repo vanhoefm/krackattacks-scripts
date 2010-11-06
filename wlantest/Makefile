@@ -40,6 +40,7 @@ OBJS_lib += ../src/utils/libutils.a
 OBJS_lib += ../src/crypto/libcrypto.a
 
 OBJS += ../src/common/ieee802_11_common.o
+OBJS += ../src/common/wpa_common.o
 
 OBJS += wlantest.o
 OBJS += readpcap.o

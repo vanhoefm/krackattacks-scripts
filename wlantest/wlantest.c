@@ -20,6 +20,7 @@
 
 
 extern int wpa_debug_level;
+extern int wpa_debug_show_keys;
 
 
 static void wlantest_terminate(int sig, void *signal_ctx)
@@ -30,7 +31,15 @@ static void wlantest_terminate(int sig, void *signal_ctx)
 
 static void usage(void)
 {
-	printf("wlantest [-ddhqq] [-i<ifname>] [-r<pcap file>]\n");
+	printf("wlantest [-ddhqq] [-i<ifname>] [-r<pcap file>] "
+	       "[-p<passphrase>]\n");
+}
+
+
+static void passphrase_deinit(struct wlantest_passphrase *p)
+{
+	dl_list_del(&p->list);
+	os_free(p);
 }
 
 
@@ -38,6 +47,7 @@ static void wlantest_init(struct wlantest *wt)
 {
 	os_memset(wt, 0, sizeof(*wt));
 	wt->monitor_sock = -1;
+	dl_list_init(&wt->passphrase);
 	dl_list_init(&wt->bss);
 }
 
@@ -45,10 +55,29 @@ static void wlantest_init(struct wlantest *wt)
 static void wlantest_deinit(struct wlantest *wt)
 {
 	struct wlantest_bss *bss, *n;
+	struct wlantest_passphrase *p, *pn;
 	if (wt->monitor_sock >= 0)
 		monitor_deinit(wt);
 	dl_list_for_each_safe(bss, n, &wt->bss, struct wlantest_bss, list)
 		bss_deinit(bss);
+	dl_list_for_each_safe(p, pn, &wt->passphrase,
+			      struct wlantest_passphrase, list)
+		passphrase_deinit(p);
+}
+
+
+static void add_passphrase(struct wlantest *wt, const char *passphrase)
+{
+	struct wlantest_passphrase *p;
+	size_t len = os_strlen(passphrase);
+
+	if (len < 8 || len > 63)
+		return;
+	p = os_zalloc(sizeof(*p));
+	if (p == NULL)
+		return;
+	os_memcpy(p->passphrase, passphrase, len);
+	dl_list_add(&wt->passphrase, &p->list);
 }
 
 
@@ -60,6 +89,7 @@ int main(int argc, char *argv[])
 	struct wlantest wt;
 
 	wpa_debug_level = MSG_INFO;
+	wpa_debug_show_keys = 1;
 
 	if (os_program_init())
 		return -1;
@@ -67,7 +97,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "dhi:r:q");
+		c = getopt(argc, argv, "dhi:p:qr:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -80,6 +110,9 @@ int main(int argc, char *argv[])
 			return 0;
 		case 'i':
 			ifname = optarg;
+			break;
+		case 'p':
+			add_passphrase(&wt, optarg);
 			break;
 		case 'q':
 			wpa_debug_level++;

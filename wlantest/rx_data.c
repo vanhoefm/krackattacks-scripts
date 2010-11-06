@@ -59,35 +59,193 @@ static const char * data_stype(u16 stype)
 }
 
 
+static int check_mic(const u8 *kck, int ver, const u8 *data, size_t len)
+{
+	u8 *buf;
+	int ret = -1;
+	struct ieee802_1x_hdr *hdr;
+	struct wpa_eapol_key *key;
+	u8 rx_mic[16];
+
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+	os_memcpy(buf, data, len);
+	hdr = (struct ieee802_1x_hdr *) buf;
+	key = (struct wpa_eapol_key *) (hdr + 1);
+
+	os_memcpy(rx_mic, key->key_mic, 16);
+	os_memset(key->key_mic, 0, 16);
+
+	if (wpa_eapol_key_mic(kck, ver, buf, len, key->key_mic) == 0 &&
+	    os_memcmp(rx_mic, key->key_mic, 16) == 0)
+		ret = 0;
+
+	os_free(buf);
+
+	return ret;
+}
+
+
 static void rx_data_eapol_key_1_of_4(struct wlantest *wt, const u8 *dst,
 				     const u8 *src, const u8 *data, size_t len)
 {
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	const struct ieee802_1x_hdr *eapol;
+	const struct wpa_eapol_key *hdr;
+
 	wpa_printf(MSG_DEBUG, "EAPOL-Key 1/4 " MACSTR " -> " MACSTR,
 		   MAC2STR(src), MAC2STR(dst));
+	bss = bss_get(wt, src);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, dst);
+	if (sta == NULL)
+		return;
+
+	eapol = (const struct ieee802_1x_hdr *) data;
+	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	os_memcpy(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN);
+}
+
+
+static void derive_ptk(struct wlantest_bss *bss, struct wlantest_sta *sta,
+		       u16 ver, const u8 *data, size_t len)
+{
+	struct wlantest_pmk *pmk;
+
+	dl_list_for_each(pmk, &bss->pmk, struct wlantest_pmk, list) {
+		struct wpa_ptk ptk;
+		size_t ptk_len = 48; /* FIX: 64 for TKIP */
+		wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
+			       "Pairwise key expansion",
+			       bss->bssid, sta->addr, sta->anonce, sta->snonce,
+			       (u8 *) &ptk, ptk_len,
+			       0 /* FIX: SHA256 based on AKM */);
+		if (check_mic(ptk.kck, ver,
+			      data, len) < 0)
+			continue;
+
+		wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID "
+			   MACSTR ")",
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
+		sta->ptk_set = 1;
+		break;
+	}
 }
 
 
 static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 				     const u8 *src, const u8 *data, size_t len)
 {
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	const struct ieee802_1x_hdr *eapol;
+	const struct wpa_eapol_key *hdr;
+	u16 key_info;
+
 	wpa_printf(MSG_DEBUG, "EAPOL-Key 2/4 " MACSTR " -> " MACSTR,
 		   MAC2STR(src), MAC2STR(dst));
+	bss = bss_get(wt, dst);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, src);
+	if (sta == NULL)
+		return;
+
+	eapol = (const struct ieee802_1x_hdr *) data;
+	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	os_memcpy(sta->snonce, hdr->key_nonce, WPA_NONCE_LEN);
+	key_info = WPA_GET_BE16(hdr->key_info);
+	derive_ptk(bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK, data, len);
 }
 
 
 static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 				     const u8 *src, const u8 *data, size_t len)
 {
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	const struct ieee802_1x_hdr *eapol;
+	const struct wpa_eapol_key *hdr;
+	int recalc = 0;
+	u16 key_info;
+
 	wpa_printf(MSG_DEBUG, "EAPOL-Key 3/4 " MACSTR " -> " MACSTR,
 		   MAC2STR(src), MAC2STR(dst));
+	bss = bss_get(wt, src);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, dst);
+	if (sta == NULL)
+		return;
+
+	eapol = (const struct ieee802_1x_hdr *) data;
+	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	key_info = WPA_GET_BE16(hdr->key_info);
+	if (os_memcmp(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN) != 0) {
+		wpa_printf(MSG_INFO, "EAPOL-Key ANonce mismatch between 1/4 "
+			   "and 3/4");
+		recalc = 1;
+	}
+	os_memcpy(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN);
+	if (recalc) {
+		derive_ptk(bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK,
+			   data, len);
+	}
+
+	if (!sta->ptk_set) {
+		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 3/4");
+		return;
+	}
+
+	if (check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
+		      data, len) < 0) {
+		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 3/4 MIC");
+		return;
+	}
+	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 3/4");
+
+	/* TODO: decrypt Key Data and store GTK, IGTK */
 }
 
 
 static void rx_data_eapol_key_4_of_4(struct wlantest *wt, const u8 *dst,
 				     const u8 *src, const u8 *data, size_t len)
 {
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	const struct ieee802_1x_hdr *eapol;
+	const struct wpa_eapol_key *hdr;
+	u16 key_info;
+
 	wpa_printf(MSG_DEBUG, "EAPOL-Key 4/4 " MACSTR " -> " MACSTR,
 		   MAC2STR(src), MAC2STR(dst));
+	bss = bss_get(wt, dst);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, src);
+	if (sta == NULL)
+		return;
+
+	eapol = (const struct ieee802_1x_hdr *) data;
+	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	key_info = WPA_GET_BE16(hdr->key_info);
+
+	if (!sta->ptk_set) {
+		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 4/4");
+		return;
+	}
+
+	if (sta->ptk_set &&
+	    check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
+		      data, len) < 0) {
+		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 4/4 MIC");
+		return;
+	}
+	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 4/4");
 }
 
 
@@ -111,16 +269,20 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 			      const u8 *src, const u8 *data, size_t len,
 			      int prot)
 {
+	const struct ieee802_1x_hdr *eapol;
 	const struct wpa_eapol_key *hdr;
 	u16 key_info, key_length, ver, key_data_length;
 
-	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key", data, len);
+	eapol = (const struct ieee802_1x_hdr *) data;
+	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+
+	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key",
+		    (const u8 *) hdr, len - sizeof(*eapol));
 	if (len < sizeof(*hdr)) {
 		wpa_printf(MSG_INFO, "Too short EAPOL-Key frame from " MACSTR,
 			   MAC2STR(src));
 		return;
 	}
-	hdr = (const struct wpa_eapol_key *) data;
 
 	if (hdr->type == EAPOL_KEY_TYPE_RC4) {
 		/* TODO: EAPOL-Key RC4 for WEP */
@@ -264,7 +426,8 @@ static void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
 		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Logoff", p, length);
 		break;
 	case IEEE802_1X_TYPE_EAPOL_KEY:
-		rx_data_eapol_key(wt, dst, src, p, length, prot);
+		rx_data_eapol_key(wt, dst, src, data, sizeof(*hdr) + length,
+				  prot);
 		break;
 	case IEEE802_1X_TYPE_EAPOL_ENCAPSULATED_ASF_ALERT:
 		wpa_hexdump(MSG_MSGDUMP, "EAPOL - Encapsulated ASF alert",

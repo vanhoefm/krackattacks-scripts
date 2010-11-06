@@ -76,7 +76,7 @@ static void rx_mgmt_beacon(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	}
 
-	bss_update(bss, &elems);
+	bss_update(wt, bss, &elems);
 }
 
 
@@ -103,7 +103,7 @@ static void rx_mgmt_probe_resp(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	}
 
-	bss_update(bss, &elems);
+	bss_update(wt, bss, &elems);
 }
 
 

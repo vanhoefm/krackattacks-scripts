@@ -167,6 +167,7 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
+	u16 alg, trans, status;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -185,12 +186,268 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	}
 
+	alg = le_to_host16(mgmt->u.auth.auth_alg);
+	trans = le_to_host16(mgmt->u.auth.auth_transaction);
+	status = le_to_host16(mgmt->u.auth.status_code);
+
 	wpa_printf(MSG_DEBUG, "AUTH " MACSTR " -> " MACSTR
 		   " (alg=%u trans=%u status=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), alg, trans, status);
+
+	if (alg == 0 && trans == 2 && status == 0) {
+		if (sta->state == STATE1) {
+			wpa_printf(MSG_DEBUG, "STA " MACSTR
+				   " moved to State 2 with " MACSTR,
+				   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+			sta->state = STATE2;
+		}
+	}
+}
+
+
+static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->da);
+	else
+		sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 2) {
+		wpa_printf(MSG_INFO, "Too short Deauthentication frame from "
+			   MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "DEAUTH " MACSTR " -> " MACSTR
+		   " (reason=%u)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-		   le_to_host16(mgmt->u.auth.auth_alg),
-		   le_to_host16(mgmt->u.auth.auth_transaction),
-		   le_to_host16(mgmt->u.auth.status_code));
+		   le_to_host16(mgmt->u.deauth.reason_code));
+
+	if (sta->state != STATE1) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR
+			   " moved to State 1 with " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		sta->state = STATE1;
+	}
+}
+
+
+static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 4) {
+		wpa_printf(MSG_INFO, "Too short Association Request frame "
+			   "from " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "ASSOCREQ " MACSTR " -> " MACSTR
+		   " (capab=0x%x listen_int=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+		   le_to_host16(mgmt->u.assoc_req.capab_info),
+		   le_to_host16(mgmt->u.assoc_req.listen_interval));
+}
+
+
+static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	u16 capab, status, aid;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, mgmt->da);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 6) {
+		wpa_printf(MSG_INFO, "Too short Association Response frame "
+			   "from " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	capab = le_to_host16(mgmt->u.assoc_resp.capab_info);
+	status = le_to_host16(mgmt->u.assoc_resp.status_code);
+	aid = le_to_host16(mgmt->u.assoc_resp.aid);
+
+	wpa_printf(MSG_DEBUG, "ASSOCRESP " MACSTR " -> " MACSTR
+		   " (capab=0x%x status=%u aid=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), capab, status,
+		   aid & 0x3fff);
+
+	if (status)
+		return;
+
+	if ((aid & 0xc000) != 0xc000) {
+		wpa_printf(MSG_DEBUG, "Two MSBs of the AID were not set to 1 "
+			   "in Association Response from " MACSTR,
+			   MAC2STR(mgmt->sa));
+	}
+	sta->aid = aid & 0xc000;
+
+	if (sta->state < STATE2) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " was not in State 2 when "
+			   "getting associated", MAC2STR(sta->addr));
+	}
+
+	if (sta->state < STATE3) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR
+			   " moved to State 3 with " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		sta->state = STATE3;
+	}
+}
+
+
+static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
+				size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 4 + ETH_ALEN) {
+		wpa_printf(MSG_INFO, "Too short Reassociation Request frame "
+			   "from " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "REASSOCREQ " MACSTR " -> " MACSTR
+		   " (capab=0x%x listen_int=%u current_ap=" MACSTR ")",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+		   le_to_host16(mgmt->u.reassoc_req.capab_info),
+		   le_to_host16(mgmt->u.reassoc_req.listen_interval),
+		   MAC2STR(mgmt->u.reassoc_req.current_ap));
+}
+
+
+static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
+				 size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	u16 capab, status, aid;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	sta = sta_get(bss, mgmt->da);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 6) {
+		wpa_printf(MSG_INFO, "Too short Reassociation Response frame "
+			   "from " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	capab = le_to_host16(mgmt->u.reassoc_resp.capab_info);
+	status = le_to_host16(mgmt->u.reassoc_resp.status_code);
+	aid = le_to_host16(mgmt->u.reassoc_resp.aid);
+
+	wpa_printf(MSG_DEBUG, "REASSOCRESP " MACSTR " -> " MACSTR
+		   " (capab=0x%x status=%u aid=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), capab, status,
+		   aid & 0x3fff);
+
+	if (status)
+		return;
+
+	if ((aid & 0xc000) != 0xc000) {
+		wpa_printf(MSG_DEBUG, "Two MSBs of the AID were not set to 1 "
+			   "in Reassociation Response from " MACSTR,
+			   MAC2STR(mgmt->sa));
+	}
+	sta->aid = aid & 0xc000;
+
+	if (sta->state < STATE2) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " was not in State 2 when "
+			   "getting associated", MAC2STR(sta->addr));
+	}
+
+	if (sta->state < STATE3) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR
+			   " moved to State 3 with " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		sta->state = STATE3;
+	}
+}
+
+
+static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->da);
+	else
+		sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 2) {
+		wpa_printf(MSG_INFO, "Too short Disassociation frame from "
+			   MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "DISASSOC " MACSTR " -> " MACSTR
+		   " (reason=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+		   le_to_host16(mgmt->u.disassoc.reason_code));
+
+	if (sta->state < STATE2) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " was not in State 2 or 3 "
+			   "when getting disassociated", MAC2STR(sta->addr));
+	}
+
+	if (sta->state > STATE2) {
+		wpa_printf(MSG_DEBUG, "STA " MACSTR
+			   " moved to State 2 with " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		sta->state = STATE2;
+	}
 }
 
 
@@ -227,6 +484,24 @@ static void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		break;
 	case WLAN_FC_STYPE_AUTH:
 		rx_mgmt_auth(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_DEAUTH:
+		rx_mgmt_deauth(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_ASSOC_REQ:
+		rx_mgmt_assoc_req(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_ASSOC_RESP:
+		rx_mgmt_assoc_resp(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_REASSOC_REQ:
+		rx_mgmt_reassoc_req(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_REASSOC_RESP:
+		rx_mgmt_reassoc_resp(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_DISASSOC:
+		rx_mgmt_disassoc(wt, data, len);
 		break;
 	}
 }

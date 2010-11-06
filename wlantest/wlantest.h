@@ -21,6 +21,12 @@
 struct wlantest_sta {
 	struct dl_list list;
 	u8 addr[ETH_ALEN];
+	enum {
+		STATE1 /* not authenticated */,
+		STATE2 /* authenticated */,
+		STATE3 /* associated */
+	} state;
+	u16 aid;
 };
 
 struct wlantest_bss {

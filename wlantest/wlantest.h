@@ -29,6 +29,7 @@ struct wlantest_sta {
 		STATE3 /* associated */
 	} state;
 	u16 aid;
+	u8 rsnie[257]; /* WPA/RSN IE */
 };
 
 struct wlantest_bss {
@@ -69,5 +70,7 @@ void bss_update(struct wlantest_bss *bss, struct ieee802_11_elems *elems);
 
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);
 void sta_deinit(struct wlantest_sta *sta);
+void sta_update_assoc(struct wlantest_sta *sta,
+		      struct ieee802_11_elems *elems);
 
 #endif /* WLANTEST_H */

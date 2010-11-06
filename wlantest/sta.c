@@ -15,6 +15,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_common.h"
 #include "wlantest.h"
 
 
@@ -45,4 +46,27 @@ void sta_deinit(struct wlantest_sta *sta)
 {
 	dl_list_del(&sta->list);
 	os_free(sta);
+}
+
+
+void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
+{
+	if (elems->wpa_ie && elems->rsn_ie) {
+		wpa_printf(MSG_INFO, "Both WPA IE and RSN IE included in "
+			   "Association Request frame from " MACSTR,
+			   MAC2STR(sta->addr));
+	}
+
+	if (elems->rsn_ie) {
+		wpa_hexdump(MSG_DEBUG, "RSN IE", elems->rsn_ie - 2,
+			    elems->rsn_ie_len + 2);
+		os_memcpy(sta->rsnie, elems->rsn_ie - 2,
+			  elems->rsn_ie_len + 2);
+	} else if (elems->wpa_ie) {
+		wpa_hexdump(MSG_DEBUG, "WPA IE", elems->wpa_ie - 2,
+			    elems->wpa_ie_len + 2);
+		os_memcpy(sta->rsnie, elems->wpa_ie - 2,
+			  elems->wpa_ie_len + 2);
+	} else
+		sta->rsnie[0] = 0;
 }

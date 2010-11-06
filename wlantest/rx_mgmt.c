@@ -192,6 +192,7 @@ static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
+	struct ieee802_11_elems elems;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -212,6 +213,16 @@ static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
 		   le_to_host16(mgmt->u.assoc_req.capab_info),
 		   le_to_host16(mgmt->u.assoc_req.listen_interval));
+
+	if (ieee802_11_parse_elems(mgmt->u.assoc_req.variable,
+				   len - (mgmt->u.assoc_req.variable - data),
+				   &elems, 0) == ParseFailed) {
+		wpa_printf(MSG_INFO, "Invalid IEs in Association Request "
+			   "frame from " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	sta_update_assoc(sta, &elems);
 }
 
 
@@ -275,6 +286,7 @@ static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
+	struct ieee802_11_elems elems;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -296,6 +308,16 @@ static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
 		   le_to_host16(mgmt->u.reassoc_req.capab_info),
 		   le_to_host16(mgmt->u.reassoc_req.listen_interval),
 		   MAC2STR(mgmt->u.reassoc_req.current_ap));
+
+	if (ieee802_11_parse_elems(mgmt->u.reassoc_req.variable,
+				   len - (mgmt->u.reassoc_req.variable - data),
+				   &elems, 0) == ParseFailed) {
+		wpa_printf(MSG_INFO, "Invalid IEs in Reassociation Request "
+			   "frame from " MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	sta_update_assoc(sta, &elems);
 }
 
 

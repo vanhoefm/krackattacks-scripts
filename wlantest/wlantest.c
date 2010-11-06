@@ -34,6 +34,24 @@ static void usage(void)
 }
 
 
+static void wlantest_init(struct wlantest *wt)
+{
+	os_memset(wt, 0, sizeof(*wt));
+	wt->monitor_sock = -1;
+	dl_list_init(&wt->bss);
+}
+
+
+static void wlantest_deinit(struct wlantest *wt)
+{
+	struct wlantest_bss *bss, *n;
+	if (wt->monitor_sock >= 0)
+		monitor_deinit(wt);
+	dl_list_for_each_safe(bss, n, &wt->bss, struct wlantest_bss, list)
+		bss_deinit(bss);
+}
+
+
 int main(int argc, char *argv[])
 {
 	int c;
@@ -46,8 +64,7 @@ int main(int argc, char *argv[])
 	if (os_program_init())
 		return -1;
 
-	os_memset(&wt, 0, sizeof(wt));
-	wt.monitor_sock = -1;
+	wlantest_init(&wt);
 
 	for (;;) {
 		c = getopt(argc, argv, "dhi:r:q");
@@ -98,8 +115,7 @@ int main(int argc, char *argv[])
 		   "fcs_error=%u",
 		   wt.rx_mgmt, wt.rx_ctrl, wt.rx_data, wt.fcs_error);
 
-	if (ifname)
-		monitor_deinit(&wt);
+	wlantest_deinit(&wt);
 
 	eloop_destroy();
 	os_program_deinit();

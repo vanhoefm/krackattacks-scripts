@@ -15,8 +15,25 @@
 #ifndef WLANTEST_H
 #define WLANTEST_H
 
+#include "utils/list.h"
+
+
+struct wlantest_bss {
+	struct dl_list list;
+	u8 bssid[ETH_ALEN];
+	u16 capab_info;
+	u8 ssid[32];
+	size_t ssid_len;
+	int proberesp_seen;
+	int parse_error_reported;
+	u8 wpaie[257];
+	u8 rsnie[257];
+};
+
 struct wlantest {
 	int monitor_sock;
+
+	struct dl_list bss; /* struct wlantest_bss */
 
 	unsigned int rx_mgmt;
 	unsigned int rx_ctrl;
@@ -29,5 +46,8 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len);
 u32 crc32(const u8 *frame, size_t frame_len);
 int monitor_init(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);
+
+struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
+void bss_deinit(struct wlantest_bss *bss);
 
 #endif /* WLANTEST_H */

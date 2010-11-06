@@ -18,6 +18,7 @@
 #include "utils/radiotap.h"
 #include "utils/radiotap_iter.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "wlantest.h"
 
 
@@ -53,6 +54,114 @@ static const char * mgmt_stype(u16 stype)
 }
 
 
+static void bss_update(struct wlantest_bss *bss,
+		       struct ieee802_11_elems *elems)
+{
+	if (elems->ssid == NULL || elems->ssid_len > 32) {
+		wpa_printf(MSG_INFO, "Invalid or missing SSID in a Beacon "
+			   "frame for " MACSTR, MAC2STR(bss->bssid));
+		bss->parse_error_reported = 1;
+		return;
+	}
+
+	os_memcpy(bss->ssid, elems->ssid, elems->ssid_len);
+	bss->ssid_len = elems->ssid_len;
+
+	if (elems->rsn_ie == NULL) {
+		if (bss->rsnie[0]) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - RSN IE removed",
+				   MAC2STR(bss->bssid));
+			bss->rsnie[0] = 0;
+		}
+	} else {
+		if (bss->rsnie[0] == 0 ||
+		    os_memcmp(bss->rsnie, elems->rsn_ie - 2,
+			      elems->rsn_ie_len + 2) != 0) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - RSN IE "
+				   "stored", MAC2STR(bss->bssid));
+			wpa_hexdump(MSG_DEBUG, "RSN IE", elems->rsn_ie - 2,
+				    elems->rsn_ie_len + 2);
+		}
+		os_memcpy(bss->rsnie, elems->rsn_ie - 2,
+			  elems->rsn_ie_len + 2);
+	}
+
+	if (elems->wpa_ie == NULL) {
+		if (bss->wpaie[0]) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - WPA IE removed",
+				   MAC2STR(bss->bssid));
+			bss->wpaie[0] = 0;
+		}
+	} else {
+		if (bss->wpaie[0] == 0 ||
+		    os_memcmp(bss->wpaie, elems->wpa_ie - 2,
+			      elems->wpa_ie_len + 2) != 0) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - WPA IE "
+				   "stored", MAC2STR(bss->bssid));
+			wpa_hexdump(MSG_DEBUG, "WPA IE", elems->wpa_ie - 2,
+				    elems->wpa_ie_len + 2);
+		}
+		os_memcpy(bss->wpaie, elems->wpa_ie - 2,
+			  elems->wpa_ie_len + 2);
+	}
+}
+
+
+static void rx_mgmt_beacon(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct ieee802_11_elems elems;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (bss->proberesp_seen)
+		return; /* do not override with Beacon data */
+	bss->capab_info = le_to_host16(mgmt->u.beacon.capab_info);
+	if (ieee802_11_parse_elems(mgmt->u.beacon.variable,
+				   len - (mgmt->u.beacon.variable - data),
+				   &elems, 0) == ParseFailed) {
+		if (bss->parse_error_reported)
+			return;
+		wpa_printf(MSG_INFO, "Invalid IEs in a Beacon frame from "
+			   MACSTR, MAC2STR(mgmt->sa));
+		bss->parse_error_reported = 1;
+		return;
+	}
+
+	bss_update(bss, &elems);
+}
+
+
+static void rx_mgmt_probe_resp(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct ieee802_11_elems elems;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+
+	bss->capab_info = le_to_host16(mgmt->u.probe_resp.capab_info);
+	if (ieee802_11_parse_elems(mgmt->u.probe_resp.variable,
+				   len - (mgmt->u.probe_resp.variable - data),
+				   &elems, 0) == ParseFailed) {
+		if (bss->parse_error_reported)
+			return;
+		wpa_printf(MSG_INFO, "Invalid IEs in a Probe Response frame "
+			   "from " MACSTR, MAC2STR(mgmt->sa));
+		bss->parse_error_reported = 1;
+		return;
+	}
+
+	bss_update(bss, &elems);
+}
+
+
 static void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
@@ -76,6 +185,15 @@ static void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		   fc & WLAN_FC_ISWEP ? " Prot" : "",
 		   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 		   MAC2STR(hdr->addr3));
+
+	switch (stype) {
+	case WLAN_FC_STYPE_BEACON:
+		rx_mgmt_beacon(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_PROBE_RESP:
+		rx_mgmt_probe_resp(wt, data, len);
+		break;
+	}
 }
 
 

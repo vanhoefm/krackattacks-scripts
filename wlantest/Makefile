@@ -39,10 +39,13 @@ endif
 OBJS_lib += ../src/utils/libutils.a
 OBJS_lib += ../src/crypto/libcrypto.a
 
+OBJS += ../src/common/ieee802_11_common.o
+
 OBJS += wlantest.o
 OBJS += readpcap.o
 OBJS += monitor.o
 OBJS += process.o
+OBJS += bss.o
 OBJS += crc32.o
 
 LIBS += -lpcap

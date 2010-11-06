@@ -60,6 +60,8 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len);
 u32 crc32(const u8 *frame, size_t frame_len);
 int monitor_init(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);
+void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
+void rx_data(struct wlantest *wt, const u8 *data, size_t len);
 
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
 void bss_deinit(struct wlantest_bss *bss);

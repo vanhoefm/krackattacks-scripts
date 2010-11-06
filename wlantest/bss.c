@@ -15,6 +15,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/ieee802_11_common.h"
 #include "wlantest.h"
 
 
@@ -49,4 +50,56 @@ void bss_deinit(struct wlantest_bss *bss)
 		sta_deinit(sta);
 	dl_list_del(&bss->list);
 	os_free(bss);
+}
+
+
+void bss_update(struct wlantest_bss *bss, struct ieee802_11_elems *elems)
+{
+	if (elems->ssid == NULL || elems->ssid_len > 32) {
+		wpa_printf(MSG_INFO, "Invalid or missing SSID in a Beacon "
+			   "frame for " MACSTR, MAC2STR(bss->bssid));
+		bss->parse_error_reported = 1;
+		return;
+	}
+
+	os_memcpy(bss->ssid, elems->ssid, elems->ssid_len);
+	bss->ssid_len = elems->ssid_len;
+
+	if (elems->rsn_ie == NULL) {
+		if (bss->rsnie[0]) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - RSN IE removed",
+				   MAC2STR(bss->bssid));
+			bss->rsnie[0] = 0;
+		}
+	} else {
+		if (bss->rsnie[0] == 0 ||
+		    os_memcmp(bss->rsnie, elems->rsn_ie - 2,
+			      elems->rsn_ie_len + 2) != 0) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - RSN IE "
+				   "stored", MAC2STR(bss->bssid));
+			wpa_hexdump(MSG_DEBUG, "RSN IE", elems->rsn_ie - 2,
+				    elems->rsn_ie_len + 2);
+		}
+		os_memcpy(bss->rsnie, elems->rsn_ie - 2,
+			  elems->rsn_ie_len + 2);
+	}
+
+	if (elems->wpa_ie == NULL) {
+		if (bss->wpaie[0]) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - WPA IE removed",
+				   MAC2STR(bss->bssid));
+			bss->wpaie[0] = 0;
+		}
+	} else {
+		if (bss->wpaie[0] == 0 ||
+		    os_memcmp(bss->wpaie, elems->wpa_ie - 2,
+			      elems->wpa_ie_len + 2) != 0) {
+			wpa_printf(MSG_INFO, "BSS " MACSTR " - WPA IE "
+				   "stored", MAC2STR(bss->bssid));
+			wpa_hexdump(MSG_DEBUG, "WPA IE", elems->wpa_ie - 2,
+				    elems->wpa_ie_len + 2);
+		}
+		os_memcpy(bss->wpaie, elems->wpa_ie - 2,
+			  elems->wpa_ie_len + 2);
+	}
 }

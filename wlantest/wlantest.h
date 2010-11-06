@@ -17,6 +17,8 @@
 
 #include "utils/list.h"
 
+struct ieee802_11_elems;
+
 
 struct wlantest_sta {
 	struct dl_list list;
@@ -61,6 +63,7 @@ void monitor_deinit(struct wlantest *wt);
 
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
 void bss_deinit(struct wlantest_bss *bss);
+void bss_update(struct wlantest_bss *bss, struct ieee802_11_elems *elems);
 
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);
 void sta_deinit(struct wlantest_sta *sta);

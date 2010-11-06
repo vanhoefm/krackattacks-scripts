@@ -46,6 +46,7 @@ OBJS += readpcap.o
 OBJS += monitor.o
 OBJS += process.o
 OBJS += bss.o
+OBJS += sta.o
 OBJS += crc32.o
 
 LIBS += -lpcap

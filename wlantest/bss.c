@@ -33,6 +33,7 @@ struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid)
 	bss = os_zalloc(sizeof(*bss));
 	if (bss == NULL)
 		return NULL;
+	dl_list_init(&bss->sta);
 	os_memcpy(bss->bssid, bssid, ETH_ALEN);
 	dl_list_add(&wt->bss, &bss->list);
 	wpa_printf(MSG_DEBUG, "Discovered new BSS - " MACSTR,
@@ -43,6 +44,9 @@ struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid)
 
 void bss_deinit(struct wlantest_bss *bss)
 {
+	struct wlantest_sta *sta, *n;
+	dl_list_for_each_safe(sta, n, &bss->sta, struct wlantest_sta, list)
+		sta_deinit(sta);
 	dl_list_del(&bss->list);
 	os_free(bss);
 }

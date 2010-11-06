@@ -18,6 +18,11 @@
 #include "utils/list.h"
 
 
+struct wlantest_sta {
+	struct dl_list list;
+	u8 addr[ETH_ALEN];
+};
+
 struct wlantest_bss {
 	struct dl_list list;
 	u8 bssid[ETH_ALEN];
@@ -28,6 +33,7 @@ struct wlantest_bss {
 	int parse_error_reported;
 	u8 wpaie[257];
 	u8 rsnie[257];
+	struct dl_list sta; /* struct wlantest_sta */
 };
 
 struct wlantest {
@@ -49,5 +55,8 @@ void monitor_deinit(struct wlantest *wt);
 
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
 void bss_deinit(struct wlantest_bss *bss);
+
+struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);
+void sta_deinit(struct wlantest_sta *sta);
 
 #endif /* WLANTEST_H */

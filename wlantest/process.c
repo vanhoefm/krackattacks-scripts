@@ -162,6 +162,38 @@ static void rx_mgmt_probe_resp(struct wlantest *wt, const u8 *data, size_t len)
 }
 
 
+static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->da);
+	else
+		sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 6) {
+		wpa_printf(MSG_INFO, "Too short Authentication frame from "
+			   MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "AUTH " MACSTR " -> " MACSTR
+		   " (alg=%u trans=%u status=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+		   le_to_host16(mgmt->u.auth.auth_alg),
+		   le_to_host16(mgmt->u.auth.auth_transaction),
+		   le_to_host16(mgmt->u.auth.status_code));
+}
+
+
 static void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
@@ -192,6 +224,9 @@ static void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		break;
 	case WLAN_FC_STYPE_PROBE_RESP:
 		rx_mgmt_probe_resp(wt, data, len);
+		break;
+	case WLAN_FC_STYPE_AUTH:
+		rx_mgmt_auth(wt, data, len);
 		break;
 	}
 }

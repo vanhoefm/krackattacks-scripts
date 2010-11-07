@@ -45,7 +45,7 @@ struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid)
 }
 
 
-static void pmk_deinit(struct wlantest_pmk *pmk)
+void pmk_deinit(struct wlantest_pmk *pmk)
 {
 	dl_list_del(&pmk->list);
 	os_free(pmk);

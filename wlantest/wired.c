@@ -22,6 +22,28 @@
 #include "wlantest.h"
 
 
+static struct wlantest_radius * radius_get(struct wlantest *wt, u32 srv,
+					   u32 cli)
+{
+	struct wlantest_radius *r;
+
+	dl_list_for_each(r, &wt->radius, struct wlantest_radius, list) {
+		if (r->srv == srv && r->cli == cli)
+			return r;
+	}
+
+	r = os_zalloc(sizeof(*r));
+	if (r == NULL)
+		return NULL;
+
+	r->srv = srv;
+	r->cli = cli;
+	dl_list_add(&wt->radius, &r->list);
+
+	return r;
+}
+
+
 static const char * radius_code_string(u8 code)
 {
 	switch (code) {
@@ -53,6 +75,7 @@ static void process_radius_access_request(struct wlantest *wt, u32 dst,
 					  u32 src, const u8 *data, size_t len)
 {
 	struct radius_msg *msg;
+	struct wlantest_radius *r;
 
 	msg = radius_msg_parse(data, len);
 	if (msg == NULL) {
@@ -60,7 +83,26 @@ static void process_radius_access_request(struct wlantest *wt, u32 dst,
 		return;
 	}
 
+	r = radius_get(wt, dst, src);
+	if (r) {
+		radius_msg_free(r->last_req);
+		r->last_req = msg;
+		return;
+	}
 	radius_msg_free(msg);
+}
+
+
+static void wlantest_add_pmk(struct wlantest *wt, const u8 *pmk)
+{
+	struct wlantest_pmk *p;
+
+	p = os_zalloc(sizeof(*p));
+	if (p == NULL)
+		return;
+	os_memcpy(p->pmk, pmk, 32);
+	dl_list_add(&wt->pmk, &p->list);
+	wpa_hexdump(MSG_INFO, "Add PMK", pmk, 32);
 }
 
 
@@ -68,11 +110,54 @@ static void process_radius_access_accept(struct wlantest *wt, u32 dst, u32 src,
 					 const u8 *data, size_t len)
 {
 	struct radius_msg *msg;
+	struct wlantest_radius *r;
+	struct radius_ms_mppe_keys *keys;
+	struct wlantest_radius_secret *s;
+
+	r = radius_get(wt, src, dst);
+	if (r == NULL || r->last_req == NULL) {
+		wpa_printf(MSG_DEBUG, "No RADIUS Access-Challenge found for "
+			   "decrypting Access-Accept keys");
+		return;
+	}
 
 	msg = radius_msg_parse(data, len);
 	if (msg == NULL) {
 		wpa_printf(MSG_DEBUG, "Failed to parse RADIUS Access-Accept");
 		return;
+	}
+
+	dl_list_for_each(s, &wt->secret, struct wlantest_radius_secret, list) {
+		int found = 0;
+		keys = radius_msg_get_ms_keys(msg, r->last_req,
+					      (u8 *) s->secret,
+					      os_strlen(s->secret));
+		if (keys && keys->send && keys->recv) {
+			u8 pmk[32];
+			wpa_hexdump_key(MSG_DEBUG, "MS-MPPE-Send-Key",
+					keys->send, keys->send_len);
+			wpa_hexdump_key(MSG_DEBUG, "MS-MPPE-Recv-Key",
+					keys->recv, keys->recv_len);
+			os_memcpy(pmk, keys->recv,
+				  keys->recv_len > 32 ? 32 : keys->recv_len);
+			if (keys->recv_len < 32) {
+				os_memcpy(pmk + keys->recv_len,
+					  keys->send,
+					  keys->recv_len + keys->send_len > 32
+					  ? 32 : 32 - keys->recv_len);
+			}
+			wlantest_add_pmk(wt, pmk);
+			found = 1;
+		}
+
+		if (keys) {
+			os_free(keys->send);
+			os_free(keys->recv);
+			os_free(keys);
+		}
+
+		if (found)
+			break;
 	}
 
 	radius_msg_free(msg);

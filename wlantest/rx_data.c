@@ -110,29 +110,43 @@ static void rx_data_eapol_key_1_of_4(struct wlantest *wt, const u8 *dst,
 }
 
 
-static void derive_ptk(struct wlantest_bss *bss, struct wlantest_sta *sta,
-		       u16 ver, const u8 *data, size_t len)
+static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
+		   u16 ver, const u8 *data, size_t len,
+		   struct wlantest_pmk *pmk)
+{
+	struct wpa_ptk ptk;
+	size_t ptk_len = 48; /* FIX: 64 for TKIP */
+	wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
+		       "Pairwise key expansion",
+		       bss->bssid, sta->addr, sta->anonce, sta->snonce,
+		       (u8 *) &ptk, ptk_len,
+		       0 /* FIX: SHA256 based on AKM */);
+	if (check_mic(ptk.kck, ver,
+		      data, len) < 0)
+		return -1;
+
+	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR
+		   ")", MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
+	sta->ptk_set = 1;
+	return 0;
+}
+
+
+static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
+		       struct wlantest_sta *sta, u16 ver,
+		       const u8 *data, size_t len)
 {
 	struct wlantest_pmk *pmk;
 
 	dl_list_for_each(pmk, &bss->pmk, struct wlantest_pmk, list) {
-		struct wpa_ptk ptk;
-		size_t ptk_len = 48; /* FIX: 64 for TKIP */
-		wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
-			       "Pairwise key expansion",
-			       bss->bssid, sta->addr, sta->anonce, sta->snonce,
-			       (u8 *) &ptk, ptk_len,
-			       0 /* FIX: SHA256 based on AKM */);
-		if (check_mic(ptk.kck, ver,
-			      data, len) < 0)
-			continue;
+		if (try_pmk(bss, sta, ver, data, len, pmk) == 0)
+			return;
+	}
 
-		wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID "
-			   MACSTR ")",
-			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
-		os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
-		sta->ptk_set = 1;
-		break;
+	dl_list_for_each(pmk, &wt->pmk, struct wlantest_pmk, list) {
+		if (try_pmk(bss, sta, ver, data, len, pmk) == 0)
+			return;
 	}
 }
 
@@ -159,7 +173,7 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
 	os_memcpy(sta->snonce, hdr->key_nonce, WPA_NONCE_LEN);
 	key_info = WPA_GET_BE16(hdr->key_info);
-	derive_ptk(bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK, data, len);
+	derive_ptk(wt, bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK, data, len);
 }
 
 
@@ -192,7 +206,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	}
 	os_memcpy(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN);
 	if (recalc) {
-		derive_ptk(bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK,
+		derive_ptk(wt, bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK,
 			   data, len);
 	}
 

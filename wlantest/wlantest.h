@@ -19,7 +19,14 @@
 #include "common/wpa_common.h"
 
 struct ieee802_11_elems;
+struct radius_msg;
 
+#define MAX_RADIUS_SECRET_LEN 128
+
+struct wlantest_radius_secret {
+	struct dl_list list;
+	char secret[MAX_RADIUS_SECRET_LEN];
+};
 
 struct wlantest_passphrase {
 	struct dl_list list;
@@ -64,12 +71,22 @@ struct wlantest_bss {
 	struct dl_list pmk; /* struct wlantest_pmk */
 };
 
+struct wlantest_radius {
+	struct dl_list list;
+	u32 srv;
+	u32 cli;
+	struct radius_msg *last_req;
+};
+
 struct wlantest {
 	int monitor_sock;
 	int monitor_wired;
 
 	struct dl_list passphrase; /* struct wlantest_passphrase */
 	struct dl_list bss; /* struct wlantest_bss */
+	struct dl_list secret; /* struct wlantest_radius_secret */
+	struct dl_list radius; /* struct wlantest_radius */
+	struct dl_list pmk; /* struct wlantest_pmk */
 
 	unsigned int rx_mgmt;
 	unsigned int rx_ctrl;
@@ -92,6 +109,7 @@ struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
 void bss_deinit(struct wlantest_bss *bss);
 void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		struct ieee802_11_elems *elems);
+void pmk_deinit(struct wlantest_pmk *pmk);
 
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);
 void sta_deinit(struct wlantest_sta *sta);

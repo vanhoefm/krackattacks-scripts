@@ -147,13 +147,6 @@ SM_STATE(EAP, INITIALIZE)
 	sm->eap_if.eapRestart = FALSE;
 
 	/*
-	 * Start reauthentication with identity request even if we know the
-	 * previously used identity. This is needed to get reauthentication
-	 * started properly.
-	 */
-	sm->start_reauth = TRUE;
-
-	/*
 	 * This is not defined in RFC 4137, but method state needs to be
 	 * reseted here so that it does not remain in success state when
 	 * re-authentication starts.
@@ -1373,4 +1366,19 @@ const u8 * eap_get_identity(struct eap_sm *sm, size_t *len)
 struct eap_eapol_interface * eap_get_interface(struct eap_sm *sm)
 {
 	return &sm->eap_if;
+}
+
+
+/**
+ * eap_server_clear_identity - Clear EAP identity information
+ * @sm: Pointer to EAP state machine allocated with eap_server_sm_init()
+ *
+ * This function can be used to clear the EAP identity information in the EAP
+ * server context. This allows the EAP/Identity method to be used again after
+ * EAPOL-Start or EAPOL-Logoff.
+ */
+void eap_server_clear_identity(struct eap_sm *sm)
+{
+	os_free(sm->identity);
+	sm->identity = NULL;
 }

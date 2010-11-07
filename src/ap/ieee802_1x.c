@@ -776,6 +776,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		}
 		sta->eapol_sm->eapolStart = TRUE;
 		sta->eapol_sm->dot1xAuthEapolStartFramesRx++;
+		eap_server_clear_identity(sta->eapol_sm->eap);
 		wpa_auth_sm_event(sta->wpa_sm, WPA_REAUTH_EAPOL);
 		break;
 
@@ -788,6 +789,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 		accounting_sta_stop(hapd, sta);
 		sta->eapol_sm->eapolLogoff = TRUE;
 		sta->eapol_sm->dot1xAuthEapolLogoffFramesRx++;
+		eap_server_clear_identity(sta->eapol_sm->eap);
 		break;
 
 	case IEEE802_1X_TYPE_EAPOL_KEY:

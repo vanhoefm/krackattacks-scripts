@@ -22,6 +22,7 @@
 #include "config.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
+#include "eap_server/eap_methods.h"
 #include "eloop.h"
 #include "rsn_supp/wpa.h"
 #include "eap_peer/eap_i.h"
@@ -1191,6 +1192,9 @@ int main(int argc, char *argv[])
 	test_eapol_clean(&eapol_test, &wpa_s);
 
 	eap_peer_unregister_methods();
+#ifdef CONFIG_AP
+	eap_server_unregister_methods();
+#endif /* CONFIG_AP */
 
 	eloop_destroy();
 

@@ -66,6 +66,7 @@ struct wlantest_bss {
 
 struct wlantest {
 	int monitor_sock;
+	int monitor_wired;
 
 	struct dl_list passphrase; /* struct wlantest_passphrase */
 	struct dl_list bss; /* struct wlantest_bss */
@@ -77,9 +78,12 @@ struct wlantest {
 };
 
 int read_cap_file(struct wlantest *wt, const char *fname);
+int read_wired_cap_file(struct wlantest *wt, const char *fname);
 void wlantest_process(struct wlantest *wt, const u8 *data, size_t len);
+void wlantest_process_wired(struct wlantest *wt, const u8 *data, size_t len);
 u32 crc32(const u8 *frame, size_t frame_len);
 int monitor_init(struct wlantest *wt, const char *ifname);
+int monitor_init_wired(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data(struct wlantest *wt, const u8 *data, size_t len);

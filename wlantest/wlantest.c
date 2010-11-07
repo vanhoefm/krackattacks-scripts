@@ -32,7 +32,8 @@ static void wlantest_terminate(int sig, void *signal_ctx)
 static void usage(void)
 {
 	printf("wlantest [-ddhqq] [-i<ifname>] [-r<pcap file>] "
-	       "[-p<passphrase>]\n");
+	       "[-p<passphrase>]\n"
+		"         [-I<wired ifname>] [-R<wired pcap file>]\n");
 }
 
 
@@ -85,7 +86,9 @@ int main(int argc, char *argv[])
 {
 	int c;
 	const char *read_file = NULL;
+	const char *read_wired_file = NULL;
 	const char *ifname = NULL;
+	const char *ifname_wired = NULL;
 	struct wlantest wt;
 
 	wpa_debug_level = MSG_INFO;
@@ -97,7 +100,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "dhi:p:qr:");
+		c = getopt(argc, argv, "dhi:I:p:qr:R:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -111,6 +114,9 @@ int main(int argc, char *argv[])
 		case 'i':
 			ifname = optarg;
 			break;
+		case 'I':
+			ifname_wired = optarg;
+			break;
 		case 'p':
 			add_passphrase(&wt, optarg);
 			break;
@@ -120,13 +126,17 @@ int main(int argc, char *argv[])
 		case 'r':
 			read_file = optarg;
 			break;
+		case 'R':
+			read_wired_file = optarg;
+			break;
 		default:
 			usage();
 			return -1;
 		}
 	}
 
-	if (ifname == NULL && read_file == NULL) {
+	if (ifname == NULL && ifname_wired == NULL &&
+	    read_file == NULL && read_wired_file == NULL) {
 		usage();
 		return 0;
 	}
@@ -134,10 +144,16 @@ int main(int argc, char *argv[])
 	if (eloop_init())
 		return -1;
 
+	if (read_wired_file && read_wired_cap_file(&wt, read_wired_file) < 0)
+		return -1;
+
 	if (read_file && read_cap_file(&wt, read_file) < 0)
 		return -1;
 
 	if (ifname && monitor_init(&wt, ifname) < 0)
+		return -1;
+
+	if (ifname_wired && monitor_init_wired(&wt, ifname_wired) < 0)
 		return -1;
 
 	eloop_register_signal_terminate(wlantest_terminate, &wt);

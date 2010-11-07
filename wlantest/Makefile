@@ -41,11 +41,13 @@ OBJS_lib += ../src/crypto/libcrypto.a
 
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
+OBJS += ../src/radius/radius.o
 
 OBJS += wlantest.o
 OBJS += readpcap.o
 OBJS += monitor.o
 OBJS += process.o
+OBJS += wired.o
 OBJS += rx_mgmt.o
 OBJS += rx_data.o
 OBJS += bss.o

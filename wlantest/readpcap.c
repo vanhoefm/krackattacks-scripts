@@ -71,3 +71,57 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 
 	return 0;
 }
+
+
+int read_wired_cap_file(struct wlantest *wt, const char *fname)
+{
+	char errbuf[PCAP_ERRBUF_SIZE];
+	pcap_t *pcap;
+	unsigned int count = 0;
+	struct pcap_pkthdr *hdr;
+	const u_char *data;
+	int res;
+
+	pcap = pcap_open_offline(fname, errbuf);
+	if (pcap == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to read pcap file '%s': %s",
+			   fname, errbuf);
+		return -1;
+	}
+
+	for (;;) {
+		res = pcap_next_ex(pcap, &hdr, &data);
+		if (res == -2)
+			break; /* No more packets */
+		if (res == -1) {
+			wpa_printf(MSG_INFO, "pcap_next_ex failure: %s",
+				   pcap_geterr(pcap));
+			break;
+		}
+		if (res != 1) {
+			wpa_printf(MSG_INFO, "Unexpected pcap_next_ex return "
+				   "value %d", res);
+			break;
+		}
+
+		/* Packet was read without problems */
+		wpa_printf(MSG_EXCESSIVE, "pcap hdr: ts=%d.%06d "
+			   "len=%u/%u",
+			   (int) hdr->ts.tv_sec, (int) hdr->ts.tv_usec,
+			   hdr->caplen, hdr->len);
+		if (hdr->caplen < hdr->len) {
+			wpa_printf(MSG_DEBUG, "pcap: Dropped incomplete frame "
+				   "(%u/%u captured)",
+				   hdr->caplen, hdr->len);
+			continue;
+		}
+		count++;
+		wlantest_process_wired(wt, data, hdr->caplen);
+	}
+
+	pcap_close(pcap);
+
+	wpa_printf(MSG_DEBUG, "Read %s: %u packets", fname, count);
+
+	return 0;
+}

@@ -451,13 +451,16 @@ static void rx_data_eth(struct wlantest *wt, const u8 *dst, const u8 *src,
 static void rx_data_process(struct wlantest *wt, const u8 *dst, const u8 *src,
 			    const u8 *data, size_t len, int prot)
 {
+	if (len == 0)
+		return;
+
 	if (len >= 8 && os_memcmp(data, "\xaa\xaa\x03\x00\x00\x00", 6) == 0) {
 		rx_data_eth(wt, dst, src, WPA_GET_BE16(data + 6),
 			    data + 8, len - 8, prot);
 		return;
 	}
 
-	wpa_hexdump(MSG_DEBUG, "Unrecognized LLC", data, len > 8 ? len : 7);
+	wpa_hexdump(MSG_DEBUG, "Unrecognized LLC", data, len > 8 ? 8 : len);
 }
 
 

@@ -70,6 +70,12 @@ static inline int wpa_key_mgmt_sha256(int akm)
 		akm == WPA_KEY_MGMT_IEEE8021X_SHA256;
 }
 
+static inline int wpa_key_mgmt_wpa(int akm)
+{
+	return wpa_key_mgmt_wpa_ieee8021x(akm) ||
+		wpa_key_mgmt_wpa_psk(akm);
+}
+
 
 #define WPA_PROTO_WPA BIT(0)
 #define WPA_PROTO_RSN BIT(1)

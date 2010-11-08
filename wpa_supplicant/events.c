@@ -307,10 +307,17 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 	int proto_match = 0;
 	const u8 *rsn_ie, *wpa_ie;
 	int ret;
+	int wep_ok;
 
 	ret = wpas_wps_ssid_bss_match(wpa_s, ssid, bss);
 	if (ret >= 0)
 		return ret;
+
+	/* Allow TSN if local configuration accepts WEP use without WPA/WPA2 */
+	wep_ok = !wpa_key_mgmt_wpa(ssid->key_mgmt) &&
+		(((ssid->key_mgmt & WPA_KEY_MGMT_NONE) &&
+		  ssid->wep_key_len[ssid->wep_tx_keyidx] > 0) ||
+		 (ssid->key_mgmt & WPA_KEY_MGMT_IEEE8021X_NO_WPA));
 
 	rsn_ie = wpa_scan_get_ie(bss, WLAN_EID_RSN);
 	while ((ssid->proto & WPA_PROTO_RSN) && rsn_ie) {
@@ -320,6 +327,15 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 			wpa_printf(MSG_DEBUG, "   skip RSN IE - parse failed");
 			break;
 		}
+
+		if (wep_ok &&
+		    (ie.group_cipher & (WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104)))
+		{
+			wpa_printf(MSG_DEBUG, "   selected based on TSN in "
+				   "RSN IE");
+			return 1;
+		}
+
 		if (!(ie.proto & ssid->proto)) {
 			wpa_printf(MSG_DEBUG, "   skip RSN IE - proto "
 				   "mismatch");
@@ -365,6 +381,15 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 			wpa_printf(MSG_DEBUG, "   skip WPA IE - parse failed");
 			break;
 		}
+
+		if (wep_ok &&
+		    (ie.group_cipher & (WPA_CIPHER_WEP40 | WPA_CIPHER_WEP104)))
+		{
+			wpa_printf(MSG_DEBUG, "   selected based on TSN in "
+				   "WPA IE");
+			return 1;
+		}
+
 		if (!(ie.proto & ssid->proto)) {
 			wpa_printf(MSG_DEBUG, "   skip WPA IE - proto "
 				   "mismatch");

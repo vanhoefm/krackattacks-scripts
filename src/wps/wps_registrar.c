@@ -841,6 +841,8 @@ static void wps_registrar_stop_pbc(struct wps_registrar *reg)
 {
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
+	wps_registrar_remove_authorized_mac(reg,
+					    (u8 *) "\xff\xff\xff\xff\xff\xff");
 	wps_registrar_selected_registrar_changed(reg);
 }
 
@@ -876,6 +878,8 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 	reg->force_pbc_overlap = 0;
 	reg->selected_registrar = 1;
 	reg->pbc = 1;
+	wps_registrar_add_authorized_mac(reg,
+					 (u8 *) "\xff\xff\xff\xff\xff\xff");
 	wps_registrar_selected_registrar_changed(reg);
 
 	eloop_cancel_timeout(wps_registrar_set_selected_timeout, reg, NULL);

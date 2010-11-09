@@ -728,6 +728,17 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		}
 	}
 
+	if (iface->current_mode) {
+		if (hostapd_prepare_rates(hapd, iface->current_mode)) {
+			wpa_printf(MSG_ERROR, "Failed to prepare rates "
+				   "table.");
+			hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_WARNING,
+				       "Failed to prepare rates table.");
+			return -1;
+		}
+	}
+
 	if (hapd->iconf->rts_threshold > -1 &&
 	    hostapd_set_rts(hapd, hapd->iconf->rts_threshold)) {
 		wpa_printf(MSG_ERROR, "Could not set RTS threshold for "

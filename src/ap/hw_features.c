@@ -101,8 +101,8 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 }
 
 
-static int hostapd_prepare_rates(struct hostapd_data *hapd,
-				 struct hostapd_hw_modes *mode)
+int hostapd_prepare_rates(struct hostapd_data *hapd,
+			  struct hostapd_hw_modes *mode)
 {
 	int i, num_basic_rates = 0;
 	int basic_rates_a[] = { 60, 120, 240, -1 };
@@ -665,14 +665,6 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_WARNING,
 			       "Hardware does not support configured channel");
-		return -1;
-	}
-
-	if (hostapd_prepare_rates(iface->bss[0], iface->current_mode)) {
-		wpa_printf(MSG_ERROR, "Failed to prepare rates table.");
-		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
-					   HOSTAPD_LEVEL_WARNING,
-					   "Failed to prepare rates table.");
 		return -1;
 	}
 

@@ -153,6 +153,10 @@ CONFIG_IPV6=y
 # Remove support for VLANs
 #CONFIG_NO_VLAN=y
 
+# Enable support fur fully dynamic VLANs. This enables hostapd to
+# automatically create bridge and VLAN interfaces if necessary.
+#CONFIG_FULL_DYNAMIC_VLAN=y
+
 # Remove support for dumping state into a file on SIGUSR1 signal
 # This can be used to reduce binary size at the cost of disabling a debugging
 # option.

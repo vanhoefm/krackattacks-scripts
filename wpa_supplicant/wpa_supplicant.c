@@ -1702,7 +1702,7 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 {
 	int i;
 	size_t len;
-	const char *pos;
+	const char *pos, *driver = name;
 
 	if (wpa_s == NULL)
 		return -1;
@@ -1720,20 +1720,26 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	pos = os_strchr(name, ',');
-	if (pos)
-		len = pos - name;
-	else
-		len = os_strlen(name);
-	for (i = 0; wpa_drivers[i]; i++) {
-		if (os_strlen(wpa_drivers[i]->name) == len &&
-		    os_strncmp(name, wpa_drivers[i]->name, len) ==
-		    0) {
-			wpa_s->driver = wpa_drivers[i];
-			wpa_s->global_drv_priv = wpa_s->global->drv_priv[i];
-			return 0;
+	do {
+		pos = os_strchr(driver, ',');
+		if (pos)
+			len = pos - driver;
+		else
+			len = os_strlen(driver);
+
+		for (i = 0; wpa_drivers[i]; i++) {
+			if (os_strlen(wpa_drivers[i]->name) == len &&
+			    os_strncmp(driver, wpa_drivers[i]->name, len) ==
+			    0) {
+				wpa_s->driver = wpa_drivers[i];
+				wpa_s->global_drv_priv =
+					wpa_s->global->drv_priv[i];
+				return 0;
+			}
 		}
-	}
+
+		driver = pos + 1;
+	} while (pos);
 
 	wpa_printf(MSG_ERROR, "Unsupported driver '%s'.", name);
 	return -1;

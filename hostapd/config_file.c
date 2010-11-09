@@ -1208,6 +1208,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				   sizeof(conf->bss[0].iface));
 		} else if (os_strcmp(buf, "bridge") == 0) {
 			os_strlcpy(bss->bridge, pos, sizeof(bss->bridge));
+		} else if (os_strcmp(buf, "wds_bridge") == 0) {
+			os_strlcpy(bss->wds_bridge, pos,
+				   sizeof(bss->wds_bridge));
 		} else if (os_strcmp(buf, "driver") == 0) {
 			int j;
 			/* clear to get error below if setting is invalid */

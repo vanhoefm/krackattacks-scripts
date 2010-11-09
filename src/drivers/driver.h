@@ -1698,9 +1698,12 @@ struct wpa_driver_ops {
 	 * @addr: MAC address of the associated station
 	 * @aid: Association ID
 	 * @val: 1 = bind to 4-address WDS; 0 = unbind
+	 * @bridge_ifname: Bridge interface to use for the WDS station or %NULL
+	 *	to indicate that bridge is not to be used
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val);
+	int (*set_wds_sta)(void *priv, const u8 *addr, int aid, int val,
+	                   const char *bridge_ifname);
 
 	/**
 	 * send_action - Transmit an Action frame

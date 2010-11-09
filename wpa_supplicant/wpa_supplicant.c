@@ -550,6 +550,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		wpa_s->new_connection = 0;
 		wpa_s->reassociated_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 1);
+#ifndef IEEE8021X_EAPOL
+		wpa_drv_set_supp_port(wpa_s, 1);
+#endif /* IEEE8021X_EAPOL */
 		wpa_s->after_wps = 0;
 #ifdef CONFIG_P2P
 		wpas_p2p_completed(wpa_s);
@@ -558,6 +561,9 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 		   state == WPA_ASSOCIATED) {
 		wpa_s->new_connection = 1;
 		wpa_drv_set_operstate(wpa_s, 0);
+#ifndef IEEE8021X_EAPOL
+		wpa_drv_set_supp_port(wpa_s, 0);
+#endif /* IEEE8021X_EAPOL */
 	}
 	wpa_s->wpa_state = state;
 

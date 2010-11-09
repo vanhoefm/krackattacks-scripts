@@ -69,6 +69,7 @@
 #define MADWIFI_NG
 #endif /* IEEE80211_IOCTL_SETWMMPARAMS */
 
+#define WPA_KEY_RSC_LEN 8
 
 #ifdef HOSTAPD
 
@@ -1510,7 +1511,6 @@ wpa_driver_madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	wk.ik_keyix = key_idx;
 	wk.ik_keylen = key_len;
 #ifdef WORDS_BIGENDIAN
-#define WPA_KEY_RSC_LEN 8
 	{
 		size_t i;
 		u8 tmp[WPA_KEY_RSC_LEN];

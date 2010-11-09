@@ -39,9 +39,14 @@ endif
 OBJS_lib += ../src/utils/libutils.a
 OBJS_lib += ../src/crypto/libcrypto.a
 
+CFLAGS += -DCONFIG_PEERKEY
+CFLAGS += -DCONFIG_IEEE80211W
+CFLAGS += -DCONFIG_IEEE80211R
+
 OBJS += ../src/common/ieee802_11_common.o
 OBJS += ../src/common/wpa_common.o
 OBJS += ../src/radius/radius.o
+OBJS += ../src/rsn_supp/wpa_ie.o
 
 OBJS += wlantest.o
 OBJS += readpcap.o

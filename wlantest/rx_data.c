@@ -20,6 +20,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
+#include "rsn_supp/wpa_ie.h"
 #include "wlantest.h"
 
 
@@ -250,6 +251,71 @@ static u8 * decrypt_eapol_key_data(const u8 *kek, u16 ver,
 }
 
 
+static void learn_kde_keys(struct wlantest_bss *bss, u8 *buf, size_t len)
+{
+	struct wpa_eapol_ie_parse ie;
+
+	if (wpa_supplicant_parse_ies(buf, len, &ie) < 0) {
+		wpa_printf(MSG_INFO, "Failed to parse EAPOL-Key Key Data");
+		return;
+	}
+
+	if (ie.wpa_ie) {
+		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - WPA IE",
+			    ie.wpa_ie, ie.wpa_ie_len);
+	}
+
+	if (ie.rsn_ie) {
+		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - RSN IE",
+			    ie.rsn_ie, ie.rsn_ie_len);
+	}
+
+	if (ie.gtk) {
+		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - GTK KDE",
+			    ie.gtk, ie.gtk_len);
+		if (ie.gtk_len >= 2 && ie.gtk_len <= 2 + 32) {
+			int id;
+			id = ie.gtk[0] & 0x03;
+			wpa_printf(MSG_INFO, "GTK KeyID=%u tx=%u",
+				   id, !!(ie.gtk[0] & 0x04));
+			if ((ie.gtk[0] & 0xf8) || ie.gtk[1])
+				wpa_printf(MSG_INFO, "GTK KDE: Reserved field "
+					   "set: %02x %02x",
+					   ie.gtk[0], ie.gtk[1]);
+			wpa_hexdump(MSG_DEBUG, "GTK", ie.gtk + 2,
+				    ie.gtk_len - 2);
+			bss->gtk_len[id] = ie.gtk_len - 2;
+			os_memcpy(bss->gtk[id], ie.gtk + 2, ie.gtk_len - 2);
+		} else {
+			wpa_printf(MSG_INFO, "Invalid GTK KDE length %u",
+				   (unsigned) ie.gtk_len);
+		}
+	}
+
+	if (ie.igtk) {
+		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - IGTK KDE",
+			    ie.igtk, ie.igtk_len);
+		if (ie.igtk_len == 24) {
+			u16 id;
+			id = WPA_GET_LE16(ie.igtk);
+			if (id > 5) {
+				wpa_printf(MSG_INFO, "Unexpected IGTK KeyID "
+					   "%u", id);
+			} else {
+				wpa_printf(MSG_INFO, "IGTK KeyID %u", id);
+				wpa_hexdump(MSG_INFO, "IPN", ie.igtk + 2, 6);
+				wpa_hexdump(MSG_INFO, "IGTK", ie.igtk + 8, 16);
+				os_memcpy(bss->igtk[id], ie.igtk + 8, 16);
+				bss->igtk_set[id] = 1;
+			}
+		} else {
+			wpa_printf(MSG_INFO, "Invalid IGTK KDE length %u",
+				   (unsigned) ie.igtk_len);
+		}
+	}
+}
+
+
 static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 				     const u8 *src, const u8 *data, size_t len)
 {
@@ -315,7 +381,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	}
 	wpa_hexdump(MSG_DEBUG, "Decrypted EAPOL-Key Key Data",
 		    decrypted, decrypted_len);
-	/* TODO: parse KDEs and store GTK, IGTK */
+	learn_kde_keys(bss, decrypted, decrypted_len);
 	os_free(decrypted);
 }
 

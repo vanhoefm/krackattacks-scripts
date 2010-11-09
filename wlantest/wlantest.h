@@ -69,6 +69,10 @@ struct wlantest_bss {
 	u8 rsnie[257];
 	struct dl_list sta; /* struct wlantest_sta */
 	struct dl_list pmk; /* struct wlantest_pmk */
+	u8 gtk[4][32];
+	size_t gtk_len[4];
+	u8 igtk[6][16];
+	int igtk_set[6];
 };
 
 struct wlantest_radius {

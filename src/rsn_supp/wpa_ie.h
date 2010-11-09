@@ -15,6 +15,8 @@
 #ifndef WPA_IE_H
 #define WPA_IE_H
 
+struct wpa_sm;
+
 struct wpa_eapol_ie_parse {
 	const u8 *wpa_ie;
 	size_t wpa_ie_len;

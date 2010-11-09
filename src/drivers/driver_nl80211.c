@@ -4987,7 +4987,8 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val)
 	wpa_printf(MSG_DEBUG, "nl80211: Set WDS STA addr=" MACSTR
 		   " aid=%d val=%d name=%s", MAC2STR(addr), aid, val, name);
 	if (val) {
-		if (nl80211_create_iface(drv, name, NL80211_IFTYPE_AP_VLAN,
+		if (!if_nametoindex(name) &&
+		    nl80211_create_iface(drv, name, NL80211_IFTYPE_AP_VLAN,
 					 NULL, 1) < 0)
 			return -1;
 		linux_set_iface_flags(drv->ioctl_sock, name, 1);

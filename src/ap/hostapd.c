@@ -44,36 +44,8 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
 extern int wpa_debug_level;
 
 
-int hostapd_reload_config(struct hostapd_iface *iface)
+static void hostapd_reload_bss(struct hostapd_data *hapd)
 {
-	struct hostapd_data *hapd = iface->bss[0];
-	struct hostapd_config *newconf, *oldconf;
-	size_t j;
-
-	if (iface->config_read_cb == NULL)
-		return -1;
-	newconf = iface->config_read_cb(iface->config_fname);
-	if (newconf == NULL)
-		return -1;
-
-	/*
-	 * Deauthenticate all stations since the new configuration may not
-	 * allow them to use the BSS anymore.
-	 */
-	for (j = 0; j < iface->num_bss; j++)
-		hostapd_flush_old_stations(iface->bss[j]);
-
-#ifndef CONFIG_NO_RADIUS
-	/* TODO: update dynamic data based on changed configuration
-	 * items (e.g., open/close sockets, etc.) */
-	radius_client_flush(hapd->radius, 0);
-#endif /* CONFIG_NO_RADIUS */
-
-	oldconf = hapd->iconf;
-	hapd->iconf = newconf;
-	hapd->conf = &newconf->bss[0];
-	iface->conf = newconf;
-
 	if (hostapd_setup_wpa_psk(hapd->conf)) {
 		wpa_printf(MSG_ERROR, "Failed to re-configure WPA PSK "
 			   "after reloading configuration");
@@ -111,10 +83,47 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 		wpa_printf(MSG_ERROR, "Could not set SSID for kernel driver");
 		/* try to continue */
 	}
+	wpa_printf(MSG_DEBUG, "Reconfigured interface %s", hapd->conf->iface);
+}
+
+
+int hostapd_reload_config(struct hostapd_iface *iface)
+{
+	struct hostapd_data *hapd = iface->bss[0];
+	struct hostapd_config *newconf, *oldconf;
+	size_t j;
+
+	if (iface->config_read_cb == NULL)
+		return -1;
+	newconf = iface->config_read_cb(iface->config_fname);
+	if (newconf == NULL)
+		return -1;
+
+	/*
+	 * Deauthenticate all stations since the new configuration may not
+	 * allow them to use the BSS anymore.
+	 */
+	for (j = 0; j < iface->num_bss; j++)
+		hostapd_flush_old_stations(iface->bss[j]);
+
+#ifndef CONFIG_NO_RADIUS
+	/* TODO: update dynamic data based on changed configuration
+	 * items (e.g., open/close sockets, etc.) */
+	radius_client_flush(hapd->radius, 0);
+#endif /* CONFIG_NO_RADIUS */
+
+	oldconf = hapd->iconf;
+	iface->conf = newconf;
+
+	for (j = 0; j < iface->num_bss; j++) {
+		hapd = iface->bss[j];
+		hapd->iconf = newconf;
+		hapd->conf = &newconf->bss[j];
+		hostapd_reload_bss(hapd);
+	}
 
 	hostapd_config_free(oldconf);
 
-	wpa_printf(MSG_DEBUG, "Reconfigured interface %s", hapd->conf->iface);
 
 	return 0;
 }

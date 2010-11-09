@@ -199,6 +199,7 @@ struct hostapd_bss_config {
 	struct mac_acl_entry *deny_mac;
 	int num_deny_mac;
 	int wds_sta;
+	int isolate;
 
 	int auth_algs; /* bitfield of allowed IEEE 802.11 authentication
 			* algorithms, WPA_AUTH_ALG_{OPEN,SHARED,LEAP} */

@@ -1090,6 +1090,13 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211N
+	if (conf->ieee80211n &&
+	    bss->ssid.security_policy == SECURITY_STATIC_WEP) {
+		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) with WEP is not "
+			   "allowed");
+		return -1;
+	}
+
 	if (conf->ieee80211n && bss->wpa &&
 	    !(bss->wpa_pairwise & WPA_CIPHER_CCMP) &&
 	    !(bss->rsn_pairwise & WPA_CIPHER_CCMP)) {

@@ -14,10 +14,10 @@
 
 #include "includes.h"
 #include <sys/ioctl.h>
-#include <linux/if.h>
 #include <linux/sockios.h>
 #include <linux/if_ether.h>
 #include <linux/mii.h>
+#include <net/if.h>
 
 #include "common.h"
 #include "driver.h"

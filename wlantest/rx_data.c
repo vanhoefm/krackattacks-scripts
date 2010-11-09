@@ -124,13 +124,17 @@ static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
 		       bss->bssid, sta->addr, sta->anonce, sta->snonce,
 		       (u8 *) &ptk, ptk_len,
 		       0 /* FIX: SHA256 based on AKM */);
-	if (check_mic(ptk.kck, ver,
-		      data, len) < 0)
+	if (check_mic(ptk.kck, ver, data, len) < 0)
 		return -1;
 
-	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR
-		   ")", MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR,
+		   MAC2STR(sta->addr), MAC2STR(bss->bssid));
 	os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
+	wpa_hexdump(MSG_DEBUG, "PTK:KCK", sta->ptk.kck, 16);
+	wpa_hexdump(MSG_DEBUG, "PTK:KEK", sta->ptk.kek, 16);
+	wpa_hexdump(MSG_DEBUG, "PTK:TK1", sta->ptk.tk1, 16);
+	if (ptk_len > 48)
+		wpa_hexdump(MSG_DEBUG, "PTK:TK2", sta->ptk.u.tk2, 16);
 	sta->ptk_set = 1;
 	return 0;
 }
@@ -276,7 +280,7 @@ static void learn_kde_keys(struct wlantest_bss *bss, u8 *buf, size_t len)
 		if (ie.gtk_len >= 2 && ie.gtk_len <= 2 + 32) {
 			int id;
 			id = ie.gtk[0] & 0x03;
-			wpa_printf(MSG_INFO, "GTK KeyID=%u tx=%u",
+			wpa_printf(MSG_DEBUG, "GTK KeyID=%u tx=%u",
 				   id, !!(ie.gtk[0] & 0x04));
 			if ((ie.gtk[0] & 0xf8) || ie.gtk[1])
 				wpa_printf(MSG_INFO, "GTK KDE: Reserved field "
@@ -302,9 +306,10 @@ static void learn_kde_keys(struct wlantest_bss *bss, u8 *buf, size_t len)
 				wpa_printf(MSG_INFO, "Unexpected IGTK KeyID "
 					   "%u", id);
 			} else {
-				wpa_printf(MSG_INFO, "IGTK KeyID %u", id);
-				wpa_hexdump(MSG_INFO, "IPN", ie.igtk + 2, 6);
-				wpa_hexdump(MSG_INFO, "IGTK", ie.igtk + 8, 16);
+				wpa_printf(MSG_DEBUG, "IGTK KeyID %u", id);
+				wpa_hexdump(MSG_DEBUG, "IPN", ie.igtk + 2, 6);
+				wpa_hexdump(MSG_DEBUG, "IGTK", ie.igtk + 8,
+					    16);
 				os_memcpy(bss->igtk[id], ie.igtk + 8, 16);
 				bss->igtk_set[id] = 1;
 			}

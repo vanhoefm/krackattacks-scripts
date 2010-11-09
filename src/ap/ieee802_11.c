@@ -1659,6 +1659,9 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 			       "Could not add STA to kernel driver");
 	}
 
+	if (sta->flags & WLAN_STA_WDS)
+		hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 1);
+
 	if (sta->eapol_sm == NULL) {
 		/*
 		 * This STA does not use RADIUS server for EAP authentication,

@@ -165,7 +165,9 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 	struct wlantest_sta *sta;
 	const struct ieee802_1x_hdr *eapol;
 	const struct wpa_eapol_key *hdr;
-	u16 key_info;
+	const u8 *key_data;
+	u16 key_info, key_data_len;
+	struct wpa_eapol_ie_parse ie;
 
 	wpa_printf(MSG_DEBUG, "EAPOL-Key 2/4 " MACSTR " -> " MACSTR,
 		   MAC2STR(src), MAC2STR(dst));
@@ -180,7 +182,37 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
 	os_memcpy(sta->snonce, hdr->key_nonce, WPA_NONCE_LEN);
 	key_info = WPA_GET_BE16(hdr->key_info);
+	key_data_len = WPA_GET_BE16(hdr->key_data_length);
 	derive_ptk(wt, bss, sta, key_info & WPA_KEY_INFO_TYPE_MASK, data, len);
+
+	if (!sta->ptk_set) {
+		wpa_printf(MSG_DEBUG, "No PTK known to process EAPOL-Key 2/4");
+		return;
+	}
+
+	if (check_mic(sta->ptk.kck, key_info & WPA_KEY_INFO_TYPE_MASK,
+		      data, len) < 0) {
+		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 2/4 MIC");
+		return;
+	}
+	wpa_printf(MSG_DEBUG, "Valid MIC found in EAPOL-Key 2/4");
+
+	key_data = (const u8 *) (hdr + 1);
+
+	if (wpa_supplicant_parse_ies(key_data, key_data_len, &ie) < 0) {
+		wpa_printf(MSG_INFO, "Failed to parse EAPOL-Key Key Data");
+		return;
+	}
+
+	if (ie.wpa_ie) {
+		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - WPA IE",
+			    ie.wpa_ie, ie.wpa_ie_len);
+	}
+
+	if (ie.rsn_ie) {
+		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - RSN IE",
+			    ie.rsn_ie, ie.rsn_ie_len);
+	}
 }
 
 

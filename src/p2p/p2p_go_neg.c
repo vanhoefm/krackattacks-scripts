@@ -292,6 +292,57 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 }
 
 
+static void p2p_reselect_channel(struct p2p_data *p2p,
+				 struct p2p_channels *intersection)
+{
+	struct p2p_reg_class *cl;
+	int freq;
+	u8 op_reg_class, op_channel;
+
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Selected operating "
+		"channel (reg_class %u channel %u) not acceptable to the "
+		"peer", p2p->op_reg_class, p2p->op_channel);
+
+	/* First, try to pick the best channel from another band */
+	freq = p2p_channel_to_freq(p2p->cfg->country, p2p->op_reg_class,
+				   p2p->op_channel);
+	if (freq >= 2400 && freq < 2500 && p2p->best_freq_5 > 0 &&
+	    p2p_freq_to_channel(p2p->cfg->country, p2p->best_freq_5,
+				&op_reg_class, &op_channel) == 0 &&
+	    p2p_channels_includes(intersection, op_reg_class, op_channel)) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Pick best 5 GHz "
+			"channel (reg_class %u channel %u) from intersection",
+			op_reg_class, op_channel);
+		p2p->op_reg_class = op_reg_class;
+		p2p->op_channel = op_channel;
+		return;
+	}
+
+	if (freq >= 4900 && freq < 6000 && p2p->best_freq_24 > 0 &&
+	    p2p_freq_to_channel(p2p->cfg->country, p2p->best_freq_24,
+				&op_reg_class, &op_channel) == 0 &&
+	    p2p_channels_includes(intersection, op_reg_class, op_channel)) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Pick best 2.4 GHz "
+			"channel (reg_class %u channel %u) from intersection",
+			op_reg_class, op_channel);
+		p2p->op_reg_class = op_reg_class;
+		p2p->op_channel = op_channel;
+		return;
+	}
+
+	/*
+	 * Fall back to whatever is included in the channel intersection since
+	 * no better options seems to be available.
+	 */
+	cl = &intersection->reg_class[0];
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Pick another channel "
+		"(reg_class %u channel %u) from intersection",
+		cl->reg_class, cl->channel[0]);
+	p2p->op_reg_class = cl->reg_class;
+	p2p->op_channel = cl->channel[0];
+}
+
+
 void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			    const u8 *data, size_t len, int rx_freq)
 {
@@ -543,20 +594,8 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 			}
 			if (!p2p_channels_includes(&intersection,
 						   p2p->op_reg_class,
-						   p2p->op_channel)) {
-				struct p2p_reg_class *cl;
-				cl = &intersection.reg_class[0];
-				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-					"P2P: Selected operating channel "
-					"(reg_class %u channel %u) not "
-					"acceptable to the peer - pick "
-					"another channel (reg_class %u "
-					"channel %u)",
-					p2p->op_reg_class, p2p->op_channel,
-					cl->reg_class, cl->channel[0]);
-				p2p->op_reg_class = cl->reg_class;
-				p2p->op_channel = cl->channel[0];
-			}
+						   p2p->op_channel))
+				p2p_reselect_channel(p2p, &intersection);
 
 			p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
 		}
@@ -937,20 +976,8 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 				    c->channel, c->channels);
 		}
 		if (!p2p_channels_includes(&intersection, p2p->op_reg_class,
-					   p2p->op_channel)) {
-			struct p2p_reg_class *cl;
-			cl = &intersection.reg_class[0];
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: Selected operating channel "
-				"(reg_class %u channel %u) not "
-				"acceptable to the peer - pick "
-				"another channel (reg_class %u "
-				"channel %u)",
-				p2p->op_reg_class, p2p->op_channel,
-				cl->reg_class, cl->channel[0]);
-			p2p->op_reg_class = cl->reg_class;
-			p2p->op_channel = cl->channel[0];
-		}
+					   p2p->op_channel))
+			p2p_reselect_channel(p2p, &intersection);
 
 		p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
 	}

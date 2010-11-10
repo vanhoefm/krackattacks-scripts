@@ -260,6 +260,8 @@ static int hostapd_ctrl_iface_deauthenticate(struct hostapd_data *hapd,
 	if (sta)
 		ap_sta_deauthenticate(hapd, sta,
 				      WLAN_REASON_PREV_AUTH_NOT_VALID);
+	else if (addr[0] == 0xff)
+		hostapd_free_stas(hapd);
 
 	return 0;
 }
@@ -314,6 +316,8 @@ static int hostapd_ctrl_iface_disassociate(struct hostapd_data *hapd,
 	if (sta)
 		ap_sta_disassociate(hapd, sta,
 				    WLAN_REASON_PREV_AUTH_NOT_VALID);
+	else if (addr[0] == 0xff)
+		hostapd_free_stas(hapd);
 
 	return 0;
 }

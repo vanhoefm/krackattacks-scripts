@@ -73,6 +73,7 @@ struct wlantest_bss {
 	size_t gtk_len[4];
 	u8 igtk[6][16];
 	int igtk_set[6];
+	u8 ipn[6][6];
 };
 
 struct wlantest_radius {

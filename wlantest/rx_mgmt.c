@@ -17,6 +17,7 @@
 #include "utils/common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "crypto/aes_wrap.h"
 #include "wlantest.h"
 
 
@@ -418,6 +419,116 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len)
 }
 
 
+static int check_mmie_mic(const u8 *igtk, const u8 *data, size_t len)
+{
+	u8 *buf;
+	u8 mic[16];
+	u16 fc;
+	const struct ieee80211_hdr *hdr;
+
+	buf = os_malloc(len + 20 - 24);
+	if (buf == NULL)
+		return -1;
+
+	/* BIP AAD: FC(masked) A1 A2 A3 */
+	hdr = (const struct ieee80211_hdr *) data;
+	fc = le_to_host16(hdr->frame_control);
+	fc &= ~(WLAN_FC_RETRY | WLAN_FC_PWRMGT | WLAN_FC_MOREDATA);
+	WPA_PUT_LE16(buf, fc);
+	os_memcpy(buf + 2, hdr->addr1, 3 * ETH_ALEN);
+
+	/* Frame body with MMIE MIC masked to zero */
+	os_memcpy(buf + 20, data + 24, len - 24 - 8);
+	os_memset(buf + 20 + len - 24 - 8, 0, 8);
+
+	wpa_hexdump(MSG_MSGDUMP, "BIP: AAD|Body(masked)", buf, len + 20 - 24);
+	/* MIC = L(AES-128-CMAC(AAD || Frame Body(masked)), 0, 64) */
+	if (omac1_aes_128(igtk, buf, len + 20 - 24, mic) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	os_free(buf);
+
+	if (os_memcmp(data + len - 8, mic, 8) != 0)
+		return -1;
+
+	return 0;
+}
+
+
+static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	u16 fc, stype;
+	const u8 *mmie;
+	int keyid;
+	struct wlantest_bss *bss;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	fc = le_to_host16(mgmt->frame_control);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	if (stype == WLAN_FC_STYPE_ACTION) {
+		if (len < 24 + 1)
+			return 0;
+		if (mgmt->u.action.category == WLAN_ACTION_PUBLIC)
+			return 0; /* Not a robust management frame */
+	}
+
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return 0; /* No key known yet */
+
+	if (len < 24 + 18 || data[len - 18] != WLAN_EID_MMIE ||
+	    data[len - 17] != 16) {
+		/* No MMIE */
+		/* TODO: use MFPC flag in RSN IE instead of IGTK flags */
+		if (bss->igtk_set[4] || bss->igtk_set[5]) {
+			wpa_printf(MSG_INFO, "Robust group-addressed "
+				   "management frame sent without BIP by "
+				   MACSTR, MAC2STR(mgmt->sa));
+			return -1;
+		}
+		return 0;
+	}
+
+	mmie = data + len - 16;
+	keyid = WPA_GET_LE16(mmie);
+	if (keyid < 4 || keyid > 5) {
+		wpa_printf(MSG_INFO, "Unexpected MMIE KeyID %u from " MACSTR,
+			   keyid, MAC2STR(mgmt->sa));
+		return 0;
+	}
+	wpa_printf(MSG_DEBUG, "MMIE KeyID %u", keyid);
+	wpa_hexdump(MSG_MSGDUMP, "MMIE IPN", mmie + 2, 6);
+	wpa_hexdump(MSG_MSGDUMP, "MMIE MIC", mmie + 8, 8);
+
+	if (!bss->igtk_set[keyid]) {
+		wpa_printf(MSG_DEBUG, "No IGTK known to validate BIP frame");
+		return 0;
+	}
+
+	if (os_memcmp(mmie + 2, bss->ipn[keyid], 6) >= 0) {
+		wpa_printf(MSG_INFO, "BIP replay detected: SA=" MACSTR,
+			   MAC2STR(mgmt->sa));
+		wpa_hexdump(MSG_INFO, "RX IPN", mmie + 2, 6);
+		wpa_hexdump(MSG_INFO, "Last RX IPN", bss->ipn[keyid], 6);
+	}
+
+	if (check_mmie_mic(bss->igtk[keyid], data, len) < 0) {
+		wpa_printf(MSG_INFO, "Invalid MMIE MIC in a frame from "
+			   MACSTR, MAC2STR(mgmt->sa));
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "Valid MMIE MIC");
+	os_memcpy(bss->ipn[keyid], mmie + 2, 6);
+
+	return 0;
+}
+
+
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
@@ -430,6 +541,12 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 	fc = le_to_host16(hdr->frame_control);
 	wt->rx_mgmt++;
 	stype = WLAN_FC_GET_STYPE(fc);
+
+	if ((hdr->addr1[0] & 0x01) &&
+	    (stype == WLAN_FC_STYPE_DEAUTH ||
+	     stype == WLAN_FC_STYPE_DISASSOC ||
+	     stype == WLAN_FC_STYPE_ACTION))
+		check_bip(wt, data, len);
 
 	wpa_printf((stype == WLAN_FC_STYPE_BEACON ||
 		    stype == WLAN_FC_STYPE_PROBE_RESP ||

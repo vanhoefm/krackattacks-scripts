@@ -1876,6 +1876,19 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpas_p2p_interface_unavailable(wpa_s);
 #endif /* CONFIG_P2P */
 		break;
+	case EVENT_BEST_CHANNEL:
+		wpa_printf(MSG_DEBUG, "Best channel event received (%d %d %d)",
+			   data->best_chan.freq_24, data->best_chan.freq_5,
+			   data->best_chan.freq_overall);
+		wpa_s->best_24_freq = data->best_chan.freq_24;
+		wpa_s->best_5_freq = data->best_chan.freq_5;
+		wpa_s->best_overall_freq = data->best_chan.freq_overall;
+#ifdef CONFIG_P2P
+		wpas_p2p_update_best_channels(wpa_s, data->best_chan.freq_24,
+					      data->best_chan.freq_5,
+					      data->best_chan.freq_overall);
+#endif /* CONFIG_P2P */
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

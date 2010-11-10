@@ -171,6 +171,11 @@ struct p2p_config {
 	u8 op_channel;
 
 	/**
+	 * cfg_op_channel - Whether op_channel is hardcoded in configuration
+	 */
+	u8 cfg_op_channel;
+
+	/**
 	 * channels - Own supported regulatory classes and channels
 	 *
 	 * List of supposerted channels per regulatory class. The regulatory
@@ -1293,5 +1298,15 @@ void p2p_set_intra_bss_dist(struct p2p_data *p2p, int enabled);
 int p2p_supported_freq(struct p2p_data *p2p, unsigned int freq);
 
 void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan);
+
+/**
+ * p2p_set_best_channels - Update best channel information
+ * @p2p: P2P module context from p2p_init()
+ * @freq_24: Frequency (MHz) of best channel in 2.4 GHz band
+ * @freq_5: Frequency (MHz) of best channel in 5 GHz band
+ * @freq_overall: Frequency (MHz) of best channel overall
+ */
+void p2p_set_best_channels(struct p2p_data *p2p, int freq_24, int freq_5,
+			   int freq_overall);
 
 #endif /* P2P_H */

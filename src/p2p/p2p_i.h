@@ -383,6 +383,10 @@ struct p2p_data {
 	u8 peer_filter[ETH_ALEN];
 
 	int cross_connect;
+
+	int best_freq_24;
+	int best_freq_5;
+	int best_freq_overall;
 };
 
 /**

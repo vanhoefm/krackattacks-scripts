@@ -2203,23 +2203,28 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		os_get_random((u8 *) &r, sizeof(r));
 		p2p.channel = 1 + (r % 3) * 5;
 	}
+	wpa_printf(MSG_DEBUG, "P2P: Own listen channel: %d", p2p.channel);
 
 	if (wpa_s->conf->p2p_oper_reg_class &&
 	    wpa_s->conf->p2p_oper_channel) {
 		p2p.op_reg_class = wpa_s->conf->p2p_oper_reg_class;
 		p2p.op_channel = wpa_s->conf->p2p_oper_channel;
+		p2p.cfg_op_channel = 1;
+		wpa_printf(MSG_DEBUG, "P2P: Configured operating channel: "
+			   "%d:%d", p2p.op_reg_class, p2p.op_channel);
+
 	} else {
 		p2p.op_reg_class = 81;
 		/*
-		 * For initial tests, pick the operation channel randomly.
-		 * TODO: Use scan results (etc.) to select the best channel.
+		 * Use random operation channel from (1, 6, 11) if no other
+		 * preference is indicated.
 		 */
 		os_get_random((u8 *) &r, sizeof(r));
-		p2p.op_channel = 1 + r % 11;
+		p2p.op_channel = 1 + (r % 3) * 5;
+		p2p.cfg_op_channel = 0;
+		wpa_printf(MSG_DEBUG, "P2P: Random operating channel: "
+			   "%d:%d", p2p.op_reg_class, p2p.op_channel);
 	}
-	wpa_printf(MSG_DEBUG, "P2P: Own listen channel: %d  "
-		   "Own preferred operation channel: %d",
-		   p2p.channel, p2p.op_channel);
 	if (wpa_s->conf->country[0] && wpa_s->conf->country[1]) {
 		os_memcpy(p2p.country, wpa_s->conf->country, 2);
 		p2p.country[2] = 0x04;
@@ -2865,16 +2870,48 @@ static void wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 
 	os_memset(params, 0, sizeof(*params));
 	params->role_go = 1;
-	params->freq = 2412;
-	if (freq)
+	if (freq) {
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on forced "
+			   "frequency %d MHz", freq);
 		params->freq = freq;
-	else if (wpa_s->conf->p2p_oper_reg_class == 81 &&
-		 wpa_s->conf->p2p_oper_channel >= 1 &&
-		 wpa_s->conf->p2p_oper_channel <= 11)
+	} else if (wpa_s->conf->p2p_oper_reg_class == 81 &&
+		   wpa_s->conf->p2p_oper_channel >= 1 &&
+		   wpa_s->conf->p2p_oper_channel <= 11) {
 		params->freq = 2407 + 5 * wpa_s->conf->p2p_oper_channel;
-	else if (wpa_s->conf->p2p_oper_reg_class == 115 ||
-		 wpa_s->conf->p2p_oper_reg_class == 118)
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on configured "
+			   "frequency %d MHz", params->freq);
+	} else if (wpa_s->conf->p2p_oper_reg_class == 115 ||
+		   wpa_s->conf->p2p_oper_reg_class == 118) {
 		params->freq = 5000 + 5 * wpa_s->conf->p2p_oper_channel;
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on configured "
+			   "frequency %d MHz", params->freq);
+	} else if (wpa_s->conf->p2p_oper_channel == 0 &&
+		   wpa_s->best_overall_freq > 0 &&
+		   p2p_supported_freq(wpa_s->global->p2p,
+				      wpa_s->best_overall_freq)) {
+		params->freq = wpa_s->best_overall_freq;
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best overall "
+			   "channel %d MHz", params->freq);
+	} else if (wpa_s->conf->p2p_oper_channel == 0 &&
+		   wpa_s->best_24_freq > 0 &&
+		   p2p_supported_freq(wpa_s->global->p2p,
+				      wpa_s->best_24_freq)) {
+		params->freq = wpa_s->best_24_freq;
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best 2.4 GHz "
+			   "channel %d MHz", params->freq);
+	} else if (wpa_s->conf->p2p_oper_channel == 0 &&
+		   wpa_s->best_5_freq > 0 &&
+		   p2p_supported_freq(wpa_s->global->p2p,
+				      wpa_s->best_5_freq)) {
+		params->freq = wpa_s->best_5_freq;
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best 5 GHz "
+			   "channel %d MHz", params->freq);
+	} else {
+		params->freq = 2412;
+		wpa_printf(MSG_DEBUG, "P2P: Set GO freq %d MHz (no preference "
+			   "known)", params->freq);
+	}
+
 	if (wpa_s->current_ssid && wpa_drv_get_bssid(wpa_s, bssid) == 0 &&
 	    wpa_s->assoc_freq && !freq) {
 		wpa_printf(MSG_DEBUG, "P2P: Force GO on the channel we are "
@@ -2927,6 +2964,46 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 		       int freq)
 {
 	struct p2p_go_neg_results params;
+	unsigned int r;
+
+	if (freq == 2) {
+		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 2.4 GHz "
+			   "band");
+		if (wpa_s->best_24_freq > 0 &&
+		    p2p_supported_freq(wpa_s->global->p2p,
+				       wpa_s->best_24_freq)) {
+			freq = wpa_s->best_24_freq;
+			wpa_printf(MSG_DEBUG, "P2P: Use best 2.4 GHz band "
+				   "channel: %d MHz", freq);
+		} else {
+			os_get_random((u8 *) &r, sizeof(r));
+			freq = 2412 + (r % 3) * 25;
+			wpa_printf(MSG_DEBUG, "P2P: Use random 2.4 GHz band "
+				   "channel: %d MHz", freq);
+		}
+	}
+
+	if (freq == 5) {
+		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 5 GHz "
+			   "band");
+		if (wpa_s->best_5_freq > 0 &&
+		    p2p_supported_freq(wpa_s->global->p2p,
+				       wpa_s->best_5_freq)) {
+			freq = wpa_s->best_5_freq;
+			wpa_printf(MSG_DEBUG, "P2P: Use best 5 GHz band "
+				   "channel: %d MHz", freq);
+		} else {
+			os_get_random((u8 *) &r, sizeof(r));
+			freq = 5180 + (r % 4) * 20;
+			if (!p2p_supported_freq(wpa_s->global->p2p, freq)) {
+				wpa_printf(MSG_DEBUG, "P2P: Could not select "
+					   "5 GHz channel for P2P group");
+				return -1;
+			}
+			wpa_printf(MSG_DEBUG, "P2P: Use random 5 GHz band "
+				   "channel: %d MHz", freq);
+		}
+	}
 
 	if (freq > 0 && !p2p_supported_freq(wpa_s->global->p2p, freq)) {
 		wpa_printf(MSG_DEBUG, "P2P: The forced channel for GO "
@@ -3789,4 +3866,14 @@ void wpas_p2p_interface_unavailable(struct wpa_supplicant *wpa_s)
 		   "being available anymore");
 	wpa_s->removal_reason = P2P_GROUP_REMOVAL_UNAVAILABLE;
 	wpas_p2p_group_delete(wpa_s);
+}
+
+
+void wpas_p2p_update_best_channels(struct wpa_supplicant *wpa_s,
+				   int freq_24, int freq_5, int freq_overall)
+{
+	struct p2p_data *p2p = wpa_s->global->p2p;
+	if (p2p == NULL || (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT))
+		return;
+	p2p_set_best_channels(p2p, freq_24, freq_5, freq_overall);
 }

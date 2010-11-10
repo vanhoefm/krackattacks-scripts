@@ -2229,7 +2229,16 @@ enum wpa_event_type {
 	 * resource conflicts could also trigger this for station mode
 	 * interfaces.
 	 */
-	EVENT_INTERFACE_UNAVAILABLE
+	EVENT_INTERFACE_UNAVAILABLE,
+
+	/**
+	 * EVENT_BEST_CHANNEL
+	 *
+	 * Driver generates this event whenever it detects a better channel
+	 * (e.g., based on RSSI or channel use). This information can be used
+	 * to improve channel selection for a new AP/P2P group.
+	 */
+	EVENT_BEST_CHANNEL
 };
 
 
@@ -2649,6 +2658,20 @@ union wpa_event_data {
 		int current_noise;
 		int current_txrate;
 	} signal_change;
+
+	/**
+	 * struct best_channel - Data for EVENT_BEST_CHANNEL events
+	 * @freq_24: Best 2.4 GHz band channel frequency in MHz
+	 * @freq_5: Best 5 GHz band channel frequency in MHz
+	 * @freq_overall: Best channel frequency in MHz
+	 *
+	 * 0 can be used to indicate no preference in either band.
+	 */
+	struct best_channel {
+		int freq_24;
+		int freq_5;
+		int freq_overall;
+	} best_chan;
 };
 
 /**

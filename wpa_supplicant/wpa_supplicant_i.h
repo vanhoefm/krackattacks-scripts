@@ -534,6 +534,11 @@ struct wpa_supplicant {
 	unsigned int wps_freq;
 	int wps_fragment_size;
 	int auto_reconnect_disabled;
+
+	 /* Channel preferences for AP/P2P GO use */
+	int best_24_freq;
+	int best_5_freq;
+	int best_overall_freq;
 };
 
 

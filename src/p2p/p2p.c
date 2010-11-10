@@ -853,14 +853,52 @@ static int p2p_prepare_channel(struct p2p_data *p2p, unsigned int force_freq)
 		p2p->channels.reg_class[0].reg_class = p2p->op_reg_class;
 		p2p->channels.reg_class[0].channel[0] = p2p->op_channel;
 	} else {
-		p2p->op_reg_class = p2p->cfg->op_reg_class;
-		p2p->op_channel = p2p->cfg->op_channel;
+		u8 op_reg_class, op_channel;
+
+		if (!p2p->cfg->cfg_op_channel && p2p->best_freq_overall > 0 &&
+		    p2p_supported_freq(p2p, p2p->best_freq_overall) &&
+		    p2p_freq_to_channel(p2p->cfg->country,
+					p2p->best_freq_overall,
+					&op_reg_class, &op_channel) == 0) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Select best overall channel as "
+				"operating channel preference");
+			p2p->op_reg_class = op_reg_class;
+			p2p->op_channel = op_channel;
+		} else if (!p2p->cfg->cfg_op_channel && p2p->best_freq_5 > 0 &&
+			   p2p_supported_freq(p2p, p2p->best_freq_5) &&
+			   p2p_freq_to_channel(p2p->cfg->country,
+					       p2p->best_freq_5,
+					       &op_reg_class, &op_channel) ==
+			   0) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Select best 5 GHz channel as "
+				"operating channel preference");
+			p2p->op_reg_class = op_reg_class;
+			p2p->op_channel = op_channel;
+		} else if (!p2p->cfg->cfg_op_channel &&
+			   p2p->best_freq_24 > 0 &&
+			   p2p_supported_freq(p2p, p2p->best_freq_24) &&
+			   p2p_freq_to_channel(p2p->cfg->country,
+					       p2p->best_freq_24,
+					       &op_reg_class, &op_channel) ==
+			   0) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Select best 2.4 GHz channel as "
+				"operating channel preference");
+			p2p->op_reg_class = op_reg_class;
+			p2p->op_channel = op_channel;
+		} else {
+			p2p->op_reg_class = p2p->cfg->op_reg_class;
+			p2p->op_channel = p2p->cfg->op_channel;
+		}
+
 		os_memcpy(&p2p->channels, &p2p->cfg->channels,
 			  sizeof(struct p2p_channels));
 	}
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Own preference for operation channel: "
-		"Regulatory Class %u Channel %u%s",
+		"Operating Class %u Channel %u%s",
 		p2p->op_reg_class, p2p->op_channel,
 		force_freq ? " (forced)" : "");
 
@@ -3132,4 +3170,15 @@ int p2p_send_action(struct p2p_data *p2p, unsigned int freq, const u8 *dst,
 
 	return p2p->cfg->send_action(p2p->cfg->cb_ctx, freq, dst, src, bssid,
 				     buf, len, wait_time);
+}
+
+
+void p2p_set_best_channels(struct p2p_data *p2p, int freq_24, int freq_5,
+			   int freq_overall)
+{
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Best channel: 2.4 GHz: %d,"
+		"  5 GHz: %d,  overall: %d", freq_24, freq_5, freq_overall);
+	p2p->best_freq_24 = freq_24;
+	p2p->best_freq_5 = freq_5;
+	p2p->best_freq_overall = freq_overall;
 }

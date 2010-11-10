@@ -2229,7 +2229,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		os_memcpy(p2p.country, wpa_s->conf->country, 2);
 		p2p.country[2] = 0x04;
 	} else
-		os_memcpy(p2p.country, "US\x04", 3);
+		os_memcpy(p2p.country, "XX\x04", 3);
 
 	if (wpas_p2p_setup_channels(wpa_s, &p2p.channels)) {
 		wpa_printf(MSG_ERROR, "P2P: Failed to configure supported "

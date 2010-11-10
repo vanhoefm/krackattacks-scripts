@@ -509,7 +509,7 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 		return 0;
 	}
 
-	if (os_memcmp(mmie + 2, bss->ipn[keyid], 6) >= 0) {
+	if (os_memcmp(mmie + 2, bss->ipn[keyid], 6) <= 0) {
 		wpa_printf(MSG_INFO, "BIP replay detected: SA=" MACSTR,
 			   MAC2STR(mgmt->sa));
 		wpa_hexdump(MSG_INFO, "RX IPN", mmie + 2, 6);

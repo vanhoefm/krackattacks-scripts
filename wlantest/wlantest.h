@@ -20,6 +20,7 @@
 
 struct ieee802_11_elems;
 struct radius_msg;
+struct ieee80211_hdr;
 
 #define MAX_RADIUS_SECRET_LEN 128
 
@@ -120,5 +121,8 @@ struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);
 void sta_deinit(struct wlantest_sta *sta);
 void sta_update_assoc(struct wlantest_sta *sta,
 		      struct ieee802_11_elems *elems);
+
+u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
+		  const u8 *data, size_t data_len, size_t *decrypted_len);
 
 #endif /* WLANTEST_H */

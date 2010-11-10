@@ -58,6 +58,7 @@ OBJS += rx_data.o
 OBJS += bss.o
 OBJS += sta.o
 OBJS += crc32.o
+OBJS += ccmp.o
 
 LIBS += -lpcap
 

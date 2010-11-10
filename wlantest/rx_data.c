@@ -691,13 +691,86 @@ static void rx_data_process(struct wlantest *wt, const u8 *dst, const u8 *src,
 }
 
 
+static void rx_data_bss_prot_group(struct wlantest *wt,
+				   const struct ieee80211_hdr *hdr,
+				   const u8 *qos, const u8 *dst, const u8 *src,
+				   const u8 *data, size_t len)
+{
+	struct wlantest_bss *bss;
+	int keyid;
+
+	bss = bss_get(wt, hdr->addr2);
+	if (bss == NULL)
+		return;
+	if (len < 4) {
+		wpa_printf(MSG_INFO, "Too short group addressed data frame");
+		return;
+	}
+
+	keyid = data[3] >> 6;
+	if (bss->gtk_len[keyid] == 0) {
+		wpa_printf(MSG_MSGDUMP, "No GTK known to decrypt the frame "
+			   "(A2=" MACSTR " KeyID=%d)",
+			   MAC2STR(hdr->addr2), keyid);
+		return;
+	}
+
+	/* TODO: try to decrypt */
+}
+
+
 static void rx_data_bss_prot(struct wlantest *wt,
 			     const struct ieee80211_hdr *hdr, const u8 *qos,
 			     const u8 *dst, const u8 *src, const u8 *data,
 			     size_t len)
 {
-	/* TODO: Try to decrypt and if success, call rx_data_process() with
-	 * prot = 1 */
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	int keyid;
+	u16 fc = le_to_host16(hdr->frame_control);
+	u8 *decrypted;
+	size_t dlen;
+
+	if (hdr->addr1[0] & 0x01) {
+		rx_data_bss_prot_group(wt, hdr, qos, dst, src, data, len);
+		return;
+	}
+
+	if (fc & WLAN_FC_TODS) {
+		bss = bss_get(wt, hdr->addr1);
+		if (bss == NULL)
+			return;
+		sta = sta_get(bss, hdr->addr2);
+	} else {
+		bss = bss_get(wt, hdr->addr2);
+		if (bss == NULL)
+			return;
+		sta = sta_get(bss, hdr->addr1);
+	}
+	if (sta == NULL || !sta->ptk_set) {
+		wpa_printf(MSG_MSGDUMP, "No PTK known to decrypt the frame");
+		return;
+	}
+
+	if (len < 4) {
+		wpa_printf(MSG_INFO, "Too short encrypted data frame");
+		return;
+	}
+
+	keyid = data[3] >> 6;
+	if (keyid != 0) {
+		wpa_printf(MSG_INFO, "Unexpected non-zero KeyID %d in "
+			   "individually addressed Data frame from " MACSTR,
+			   keyid, MAC2STR(hdr->addr2));
+	}
+
+	/* TODO: check PN for replay */
+	/* TODO: TKIP */
+
+	decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
+	if (decrypted)
+		rx_data_process(wt, dst, src, decrypted, dlen, 1);
+	os_free(decrypted);
 }
 
 

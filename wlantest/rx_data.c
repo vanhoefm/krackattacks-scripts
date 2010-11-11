@@ -698,6 +698,8 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 {
 	struct wlantest_bss *bss;
 	int keyid;
+	u8 *decrypted;
+	size_t dlen;
 
 	bss = bss_get(wt, hdr->addr2);
 	if (bss == NULL)
@@ -715,7 +717,13 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		return;
 	}
 
-	/* TODO: try to decrypt */
+	/* TODO: check PN for replay */
+	/* TODO: TKIP */
+
+	decrypted = ccmp_decrypt(bss->gtk[keyid], hdr, data, len, &dlen);
+	if (decrypted)
+		rx_data_process(wt, dst, src, decrypted, dlen, 1);
+	os_free(decrypted);
 }
 
 

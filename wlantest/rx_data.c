@@ -560,6 +560,44 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	}
 	wpa_hexdump(MSG_DEBUG, "Decrypted EAPOL-Key Key Data",
 		    decrypted, decrypted_len);
+	if (wt->write_pcap_dumper) {
+		/* Fill in a dummy Data frame header */
+		u8 buf[24 + 8 + sizeof(*eapol) + sizeof(*hdr)];
+		struct ieee80211_hdr *h;
+		struct wpa_eapol_key *k;
+		u8 *pos;
+		size_t plain_len;
+
+		plain_len = decrypted_len;
+		pos = decrypted;
+		while (pos + 1 < decrypted + decrypted_len) {
+			if (pos[0] == 0xdd && pos[1] == 0x00) {
+				/* Remove padding */
+				plain_len = pos - decrypted;
+				break;
+			}
+			pos += 2 + pos[1];
+		}
+
+		os_memset(buf, 0, sizeof(buf));
+		h = (struct ieee80211_hdr *) buf;
+		h->frame_control = host_to_le16(0x0208);
+		os_memcpy(h->addr1, dst, ETH_ALEN);
+		os_memcpy(h->addr2, src, ETH_ALEN);
+		os_memcpy(h->addr3, src, ETH_ALEN);
+		pos = (u8 *) (h + 1);
+		os_memcpy(pos, "\xaa\xaa\x03\x00\x00\x00\x88\x8e", 8);
+		pos += 8;
+		os_memcpy(pos, eapol, sizeof(*eapol));
+		pos += sizeof(*eapol);
+		os_memcpy(pos, hdr, sizeof(*hdr));
+		k = (struct wpa_eapol_key *) pos;
+		WPA_PUT_BE16(k->key_info,
+			     key_info & ~WPA_KEY_INFO_ENCR_KEY_DATA);
+		WPA_PUT_BE16(k->key_data_length, plain_len);
+		write_pcap_decrypted(wt, buf, sizeof(buf),
+				     decrypted, plain_len);
+	}
 	learn_kde_keys(bss, decrypted, decrypted_len, hdr->key_rsc);
 	os_free(decrypted);
 }

@@ -955,10 +955,13 @@ static void upnp_wps_free_msearchreply(struct dl_list *head)
 }
 
 
-static void upnp_wps_free_subscriptions(struct dl_list *head)
+static void upnp_wps_free_subscriptions(struct dl_list *head,
+					struct wps_registrar *reg)
 {
 	struct subscription *s, *tmp;
 	dl_list_for_each_safe(s, tmp, head, struct subscription, list) {
+		if (reg && s->reg != reg)
+			continue;
 		dl_list_del(&s->list);
 		subscription_destroy(s);
 	}
@@ -977,7 +980,7 @@ static void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 	wpa_printf(MSG_DEBUG, "WPS UPnP: Stop device");
 	web_listener_stop(sm);
 	upnp_wps_free_msearchreply(&sm->msearch_replies);
-	upnp_wps_free_subscriptions(&sm->subscriptions);
+	upnp_wps_free_subscriptions(&sm->subscriptions, NULL);
 
 	advertisement_state_machine_stop(sm, 1);
 
@@ -1092,13 +1095,16 @@ void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm, void *priv)
 		wpa_printf(MSG_DEBUG, "WPS UPnP: Deinitializing last instance "
 			   "- free global device instance");
 		upnp_wps_device_stop(sm);
-	}
+	} else
+		upnp_wps_free_subscriptions(&sm->subscriptions,
+					    iface->wps->registrar);
 	dl_list_del(&iface->list);
 
 	if (iface->peer.wps)
 		wps_deinit(iface->peer.wps);
 	os_free(iface->ctx->ap_pin);
 	os_free(iface->ctx);
+	os_free(iface);
 
 	if (dl_list_empty(&sm->interfaces)) {
 		os_free(sm->root_dir);

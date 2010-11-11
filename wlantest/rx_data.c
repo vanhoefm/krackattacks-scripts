@@ -136,6 +136,8 @@ static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
 	if (ptk_len > 48)
 		wpa_hexdump(MSG_DEBUG, "PTK:TK2", sta->ptk.u.tk2, 16);
 	sta->ptk_set = 1;
+	os_memset(sta->rsc_tods, 0, sizeof(sta->rsc_tods));
+	os_memset(sta->rsc_fromds, 0, sizeof(sta->rsc_fromds));
 	return 0;
 }
 
@@ -287,7 +289,8 @@ static u8 * decrypt_eapol_key_data(const u8 *kek, u16 ver,
 }
 
 
-static void learn_kde_keys(struct wlantest_bss *bss, u8 *buf, size_t len)
+static void learn_kde_keys(struct wlantest_bss *bss, u8 *buf, size_t len,
+			   const u8 *rsc)
 {
 	struct wpa_eapol_ie_parse ie;
 
@@ -322,6 +325,13 @@ static void learn_kde_keys(struct wlantest_bss *bss, u8 *buf, size_t len)
 				    ie.gtk_len - 2);
 			bss->gtk_len[id] = ie.gtk_len - 2;
 			os_memcpy(bss->gtk[id], ie.gtk + 2, ie.gtk_len - 2);
+			bss->rsc[id][0] = rsc[5];
+			bss->rsc[id][1] = rsc[4];
+			bss->rsc[id][2] = rsc[3];
+			bss->rsc[id][3] = rsc[2];
+			bss->rsc[id][4] = rsc[1];
+			bss->rsc[id][5] = rsc[0];
+			wpa_hexdump(MSG_DEBUG, "RSC", bss->rsc[id], 6);
 		} else {
 			wpa_printf(MSG_INFO, "Invalid GTK KDE length %u",
 				   (unsigned) ie.gtk_len);
@@ -418,7 +428,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	}
 	wpa_hexdump(MSG_DEBUG, "Decrypted EAPOL-Key Key Data",
 		    decrypted, decrypted_len);
-	learn_kde_keys(bss, decrypted, decrypted_len);
+	learn_kde_keys(bss, decrypted, decrypted_len, hdr->key_rsc);
 	os_free(decrypted);
 }
 
@@ -555,7 +565,7 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key IV",
 		    hdr->key_iv, 16);
 	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key RSC",
-		    hdr->key_nonce, WPA_KEY_RSC_LEN);
+		    hdr->key_rsc, WPA_KEY_RSC_LEN);
 	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key MIC",
 		    hdr->key_mic, 16);
 	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data",
@@ -700,6 +710,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 	int keyid;
 	u8 *decrypted;
 	size_t dlen;
+	u8 pn[6];
 
 	bss = bss_get(wt, hdr->addr2);
 	if (bss == NULL)
@@ -717,12 +728,21 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		return;
 	}
 
-	/* TODO: check PN for replay */
+	ccmp_get_pn(pn, data);
+	if (os_memcmp(pn, bss->rsc[keyid], 6) <= 0) {
+		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
+			   MAC2STR(hdr->addr2));
+		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
+		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
+	}
+
 	/* TODO: TKIP */
 
 	decrypted = ccmp_decrypt(bss->gtk[keyid], hdr, data, len, &dlen);
-	if (decrypted)
+	if (decrypted) {
 		rx_data_process(wt, dst, src, decrypted, dlen, 1);
+		os_memcpy(bss->rsc[keyid], pn, 6);
+	}
 	os_free(decrypted);
 }
 
@@ -738,6 +758,8 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	u16 fc = le_to_host16(hdr->frame_control);
 	u8 *decrypted;
 	size_t dlen;
+	int tid;
+	u8 pn[6], *rsc;
 
 	if (hdr->addr1[0] & 0x01) {
 		rx_data_bss_prot_group(wt, hdr, qos, dst, src, data, len);
@@ -772,12 +794,31 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			   keyid, MAC2STR(hdr->addr2));
 	}
 
-	/* TODO: check PN for replay */
+	if (qos)
+		tid = qos[0] & 0x0f;
+	else
+		tid = 0;
+	if (fc & WLAN_FC_TODS)
+		rsc = sta->rsc_tods[tid];
+	else
+		rsc = sta->rsc_fromds[tid];
+
+
+	ccmp_get_pn(pn, data);
+	if (os_memcmp(pn, rsc, 6) <= 0) {
+		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
+			   MAC2STR(hdr->addr2));
+		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
+		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
+	}
+
 	/* TODO: TKIP */
 
 	decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
-	if (decrypted)
+	if (decrypted) {
 		rx_data_process(wt, dst, src, decrypted, dlen, 1);
+		os_memcpy(rsc, pn, 6);
+	}
 	os_free(decrypted);
 }
 

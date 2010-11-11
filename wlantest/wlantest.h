@@ -56,6 +56,8 @@ struct wlantest_sta {
 	u8 snonce[32]; /* SNonce from the previous EAPOL-Key msg 2/4 */
 	struct wpa_ptk ptk; /* Derived PTK */
 	int ptk_set;
+	u8 rsc_tods[16][6];
+	u8 rsc_fromds[16][6];
 };
 
 struct wlantest_bss {
@@ -72,6 +74,7 @@ struct wlantest_bss {
 	struct dl_list pmk; /* struct wlantest_pmk */
 	u8 gtk[4][32];
 	size_t gtk_len[4];
+	u8 rsc[4][6];
 	u8 igtk[6][16];
 	int igtk_set[6];
 	u8 ipn[6][6];
@@ -124,5 +127,6 @@ void sta_update_assoc(struct wlantest_sta *sta,
 
 u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len);
+void ccmp_get_pn(u8 *pn, const u8 *data);
 
 #endif /* WLANTEST_H */

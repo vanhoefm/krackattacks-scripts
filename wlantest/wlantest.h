@@ -58,6 +58,8 @@ struct wlantest_sta {
 	int ptk_set;
 	u8 rsc_tods[16 + 1][6];
 	u8 rsc_fromds[16 + 1][6];
+	u8 ap_sa_query_tr[2];
+	u8 sta_sa_query_tr[2];
 };
 
 struct wlantest_bss {

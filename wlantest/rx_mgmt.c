@@ -437,6 +437,110 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 }
 
 
+static void rx_mgmt_action_sa_query(struct wlantest *wt,
+				    struct wlantest_sta *sta,
+				    const struct ieee80211_mgmt *mgmt,
+				    size_t len)
+{
+	const u8 *rx_id;
+	u8 *id;
+
+	if (len < 24 + 2 + WLAN_SA_QUERY_TR_ID_LEN) {
+		wpa_printf(MSG_INFO, "Too short SA Query frame from " MACSTR,
+			   MAC2STR(mgmt->sa));
+		return;
+	}
+
+	if (len > 24 + 2 + WLAN_SA_QUERY_TR_ID_LEN) {
+		size_t elen = len - (24 + 2 + WLAN_SA_QUERY_TR_ID_LEN);
+		wpa_printf(MSG_INFO, "Unexpected %u octets of extra data at "
+			   "the end of SA Query frame from " MACSTR,
+			   (unsigned) elen, MAC2STR(mgmt->sa));
+		wpa_hexdump(MSG_INFO, "SA Query extra data",
+			    ((const u8 *) mgmt) + len - elen, elen);
+	}
+
+	switch (mgmt->u.action.u.sa_query_req.action) {
+	case WLAN_SA_QUERY_REQUEST:
+		rx_id = (const u8 *) mgmt->u.action.u.sa_query_req.trans_id;
+		if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+			id = sta->ap_sa_query_tr;
+		else
+			id = sta->sta_sa_query_tr;
+		wpa_printf(MSG_INFO, "SA Query Request " MACSTR " -> " MACSTR
+			   " (trans_id=%02x%02x)",
+			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+			   rx_id[0], rx_id[1]);
+		os_memcpy(id, mgmt->u.action.u.sa_query_req.trans_id, 2);
+		break;
+	case WLAN_SA_QUERY_RESPONSE:
+		rx_id = (const u8 *) mgmt->u.action.u.sa_query_resp.trans_id;
+		if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+			id = sta->sta_sa_query_tr;
+		else
+			id = sta->ap_sa_query_tr;
+		wpa_printf(MSG_INFO, "SA Query Response " MACSTR " -> " MACSTR
+			   " (trans_id=%02x%02x; %s)",
+			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+			   rx_id[0], rx_id[1],
+			   os_memcmp(rx_id, id, 2) == 0 ?
+			   "match" : "mismatch");
+		break;
+	default:
+		wpa_printf(MSG_INFO, "Unexpected SA Query action value %u "
+			   "from " MACSTR,
+			   mgmt->u.action.u.sa_query_req.action,
+			   MAC2STR(mgmt->sa));
+	}
+}
+
+
+static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	if (mgmt->da[0] & 0x01)
+		return; /* Ignore group addressed Action frames for now */
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->da);
+	else
+		sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	if (len < 24 + 1) {
+		wpa_printf(MSG_INFO, "Too short Action frame from "
+			   MACSTR, MAC2STR(mgmt->sa));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "ACTION " MACSTR " -> " MACSTR
+		   " (category=%u)",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
+		   mgmt->u.action.category);
+	wpa_hexdump(MSG_MSGDUMP, "ACTION payload", data + 24, len - 24);
+
+	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
+	    sta->state < STATE3) {
+		wpa_printf(MSG_INFO, "Action frame sent when STA is not in "
+			   "State 3 (SA=" MACSTR " DATA=" MACSTR ")",
+			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da));
+	}
+
+	switch (mgmt->u.action.category) {
+	case WLAN_ACTION_SA_QUERY:
+		rx_mgmt_action_sa_query(wt, sta, mgmt, len);
+		break;
+	}
+}
+
+
 static int check_mmie_mic(const u8 *igtk, const u8 *data, size_t len)
 {
 	u8 *buf;
@@ -653,6 +757,8 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 			valid = 0;
 	}
 
+	/* TODO: verify that robust management frames are protected if MFP was
+	 * negotiated */
 
 	switch (stype) {
 	case WLAN_FC_STYPE_BEACON:
@@ -681,6 +787,10 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		break;
 	case WLAN_FC_STYPE_DISASSOC:
 		rx_mgmt_disassoc(wt, data, len, valid);
+		break;
+	case WLAN_FC_STYPE_ACTION:
+		if (valid)
+			rx_mgmt_action(wt, data, len);
 		break;
 	}
 

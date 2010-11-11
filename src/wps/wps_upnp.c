@@ -212,6 +212,10 @@
 /* Maximum number of Probe Request events per second */
 #define MAX_EVENTS_PER_SEC 5
 
+
+static struct upnp_wps_device_sm *shared_upnp_device = NULL;
+
+
 /* Write the current date/time per RFC */
 void format_date(struct wpabuf *buf)
 {
@@ -965,7 +969,7 @@ static void upnp_wps_free_subscriptions(struct dl_list *head)
  * upnp_wps_device_stop - Stop WPS UPnP operations on an interface
  * @sm: WPS UPnP state machine from upnp_wps_device_init()
  */
-void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
+static void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
 {
 	if (!sm || !sm->started)
 		return;
@@ -997,7 +1001,7 @@ void upnp_wps_device_stop(struct upnp_wps_device_sm *sm)
  * @net_if: Selected network interface name
  * Returns: 0 on success, -1 on failure
  */
-int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if)
+static int upnp_wps_device_start(struct upnp_wps_device_sm *sm, char *net_if)
 {
 	if (!sm || !net_if)
 		return -1;
@@ -1052,24 +1056,56 @@ fail:
 }
 
 
+static struct upnp_wps_device_interface *
+upnp_wps_get_iface(struct upnp_wps_device_sm *sm, void *priv)
+{
+	struct upnp_wps_device_interface *iface;
+	dl_list_for_each(iface, &sm->interfaces,
+			 struct upnp_wps_device_interface, list) {
+		if (iface->priv == priv)
+			return iface;
+	}
+	return NULL;
+}
+
+
 /**
  * upnp_wps_device_deinit - Deinitialize WPS UPnP
  * @sm: WPS UPnP state machine from upnp_wps_device_init()
+ * @priv: External context data that was used in upnp_wps_device_init() call
  */
-void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm)
+void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm, void *priv)
 {
+	struct upnp_wps_device_interface *iface;
+
 	if (!sm)
 		return;
 
-	upnp_wps_device_stop(sm);
+	iface = upnp_wps_get_iface(sm, priv);
+	if (iface == NULL) {
+		wpa_printf(MSG_ERROR, "WPS UPnP: Could not find the interface "
+			   "instance to deinit");
+		return;
+	}
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Deinit interface instance %p", iface);
+	if (dl_list_len(&sm->interfaces) == 1) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Deinitializing last instance "
+			   "- free global device instance");
+		upnp_wps_device_stop(sm);
+	}
+	dl_list_del(&iface->list);
 
-	if (sm->peer.wps)
-		wps_deinit(sm->peer.wps);
-	os_free(sm->root_dir);
-	os_free(sm->desc_url);
-	os_free(sm->ctx->ap_pin);
-	os_free(sm->ctx);
-	os_free(sm);
+	if (iface->peer.wps)
+		wps_deinit(iface->peer.wps);
+	os_free(iface->ctx->ap_pin);
+	os_free(iface->ctx);
+
+	if (dl_list_empty(&sm->interfaces)) {
+		os_free(sm->root_dir);
+		os_free(sm->desc_url);
+		os_free(sm);
+		shared_upnp_device = NULL;
+	}
 }
 
 
@@ -1078,25 +1114,59 @@ void upnp_wps_device_deinit(struct upnp_wps_device_sm *sm)
  * @ctx: callback table; we must eventually free it
  * @wps: Pointer to longterm WPS context
  * @priv: External context data that will be used in callbacks
+ * @net_if: Selected network interface name
  * Returns: WPS UPnP state or %NULL on failure
  */
 struct upnp_wps_device_sm *
 upnp_wps_device_init(struct upnp_wps_device_ctx *ctx, struct wps_context *wps,
-		     void *priv)
+		     void *priv, char *net_if)
 {
 	struct upnp_wps_device_sm *sm;
+	struct upnp_wps_device_interface *iface;
+	int start = 0;
 
-	sm = os_zalloc(sizeof(*sm));
-	if (!sm) {
-		wpa_printf(MSG_ERROR, "WPS UPnP: upnp_wps_device_init failed");
+	iface = os_zalloc(sizeof(*iface));
+	if (iface == NULL) {
+		os_free(ctx->ap_pin);
+		os_free(ctx);
+		return NULL;
+	}
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Init interface instance %p", iface);
+
+	iface->ctx = ctx;
+	iface->wps = wps;
+	iface->priv = priv;
+
+	if (shared_upnp_device) {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Share existing device "
+			   "context");
+		sm = shared_upnp_device;
+	} else {
+		wpa_printf(MSG_DEBUG, "WPS UPnP: Initialize device context");
+		sm = os_zalloc(sizeof(*sm));
+		if (!sm) {
+			wpa_printf(MSG_ERROR, "WPS UPnP: upnp_wps_device_init "
+				   "failed");
+			os_free(iface);
+			os_free(ctx->ap_pin);
+			os_free(ctx);
+			return NULL;
+		}
+		shared_upnp_device = sm;
+
+		dl_list_init(&sm->msearch_replies);
+		dl_list_init(&sm->subscriptions);
+		dl_list_init(&sm->interfaces);
+		start = 1;
+	}
+
+	dl_list_add(&sm->interfaces, &iface->list);
+
+	if (start && upnp_wps_device_start(sm, net_if)) {
+		upnp_wps_device_deinit(sm, priv);
 		return NULL;
 	}
 
-	sm->ctx = ctx;
-	sm->wps = wps;
-	sm->priv = priv;
-	dl_list_init(&sm->msearch_replies);
-	dl_list_init(&sm->subscriptions);
 
 	return sm;
 }
@@ -1115,16 +1185,20 @@ int upnp_wps_subscribers(struct upnp_wps_device_sm *sm)
 
 int upnp_wps_set_ap_pin(struct upnp_wps_device_sm *sm, const char *ap_pin)
 {
+	struct upnp_wps_device_interface *iface;
 	if (sm == NULL)
 		return 0;
 
-	os_free(sm->ctx->ap_pin);
-	if (ap_pin) {
-		sm->ctx->ap_pin = os_strdup(ap_pin);
-		if (sm->ctx->ap_pin == NULL)
-			return -1;
-	} else
-		sm->ctx->ap_pin = NULL;
+	dl_list_for_each(iface, &sm->interfaces,
+			 struct upnp_wps_device_interface, list) {
+		os_free(iface->ctx->ap_pin);
+		if (ap_pin) {
+			iface->ctx->ap_pin = os_strdup(ap_pin);
+			if (iface->ctx->ap_pin == NULL)
+				return -1;
+		} else
+			iface->ctx->ap_pin = NULL;
+	}
 
 	return 0;
 }

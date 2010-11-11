@@ -103,16 +103,26 @@ struct subscription {
 };
 
 
+struct upnp_wps_device_interface {
+	struct dl_list list;
+	struct upnp_wps_device_ctx *ctx; /* callback table */
+	struct wps_context *wps;
+	void *priv;
+
+	/* FIX: maintain separate structures for each UPnP peer */
+	struct upnp_wps_peer peer;
+};
+
 /*
- * Our instance data corresponding to one WiFi network interface
- * (multiple might share the same wired network interface!).
+ * Our instance data corresponding to the AP device. Note that there may be
+ * multiple wireless interfaces sharing the same UPnP device instance. Each
+ * such interface is stored in the list of struct upnp_wps_device_interface
+ * instances.
  *
  * This is known as an opaque struct declaration to users of the WPS UPnP code.
  */
 struct upnp_wps_device_sm {
-	struct upnp_wps_device_ctx *ctx; /* callback table */
-	struct wps_context *wps;
-	void *priv;
+	struct dl_list interfaces; /* struct upnp_wps_device_interface */
 	char *root_dir;
 	char *desc_url;
 	int started; /* nonzero if we are active */
@@ -136,9 +146,6 @@ struct upnp_wps_device_sm {
 	enum upnp_wps_wlanevent_type wlanevent_type;
 	os_time_t last_event_sec;
 	unsigned int num_events_in_sec;
-
-	/* FIX: maintain separate structures for each UPnP peer */
-	struct upnp_wps_peer peer;
 };
 
 /* wps_upnp.c */

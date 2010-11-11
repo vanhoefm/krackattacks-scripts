@@ -1148,18 +1148,11 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 	if (hapd->conf->ap_pin)
 		ctx->ap_pin = os_strdup(hapd->conf->ap_pin);
 
-	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd);
-	if (hapd->wps_upnp == NULL) {
-		os_free(ctx);
+	hapd->wps_upnp = upnp_wps_device_init(ctx, wps, hapd,
+					      hapd->conf->upnp_iface);
+	if (hapd->wps_upnp == NULL)
 		return -1;
-	}
 	wps->wps_upnp = hapd->wps_upnp;
-
-	if (upnp_wps_device_start(hapd->wps_upnp, hapd->conf->upnp_iface)) {
-		upnp_wps_device_deinit(hapd->wps_upnp);
-		hapd->wps_upnp = NULL;
-		return -1;
-	}
 
 	return 0;
 }
@@ -1167,7 +1160,7 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 
 static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd)
 {
-	upnp_wps_device_deinit(hapd->wps_upnp);
+	upnp_wps_device_deinit(hapd->wps_upnp, hapd);
 }
 
 #endif /* CONFIG_WPS_UPNP */

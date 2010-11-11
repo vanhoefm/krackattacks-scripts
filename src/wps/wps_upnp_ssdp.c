@@ -136,9 +136,12 @@ next_advertisement(struct upnp_wps_device_sm *sm,
 	struct wpabuf *msg;
 	char *NTString = "";
 	char uuid_string[80];
+	struct upnp_wps_device_interface *iface;
 
 	*islast = 0;
-	uuid_bin2str(sm->wps->uuid, uuid_string, sizeof(uuid_string));
+	iface = dl_list_first(&sm->interfaces,
+			      struct upnp_wps_device_interface, list);
+	uuid_bin2str(iface->wps->uuid, uuid_string, sizeof(uuid_string));
 	msg = wpabuf_alloc(800); /* more than big enough */
 	if (msg == NULL)
 		goto fail;
@@ -588,8 +591,13 @@ static void ssdp_parse_msearch(struct upnp_wps_device_sm *sm,
 			}
 			if (str_starts(data, "uuid:")) {
 				char uuid_string[80];
+				struct upnp_wps_device_interface *iface;
+				iface = dl_list_first(
+					&sm->interfaces,
+					struct upnp_wps_device_interface,
+					list);
 				data += os_strlen("uuid:");
-				uuid_bin2str(sm->wps->uuid, uuid_string,
+				uuid_bin2str(iface->wps->uuid, uuid_string,
 					     sizeof(uuid_string));
 				if (str_starts(data, uuid_string))
 					st_match = 1;

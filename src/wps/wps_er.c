@@ -1461,7 +1461,9 @@ void wps_er_set_sel_reg(struct wps_er *er, int sel_reg, u16 dev_passwd_id,
 	struct wps_er_ap *ap;
 	struct wps_registrar *reg = er->wps->registrar;
 	const u8 *auth_macs;
+#ifdef CONFIG_WPS2
 	u8 bcast[ETH_ALEN];
+#endif /* CONFIG_WPS2 */
 	size_t count;
 	union wps_event_data data;
 

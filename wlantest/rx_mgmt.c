@@ -751,6 +751,7 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 	     stype == WLAN_FC_STYPE_ACTION)) {
 		decrypted = mgmt_ccmp_decrypt(wt, data, len, &dlen);
 		if (decrypted) {
+			write_pcap_decrypted(wt, decrypted, dlen, NULL, 0);
 			data = decrypted;
 			len = dlen;
 		} else

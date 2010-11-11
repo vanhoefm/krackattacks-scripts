@@ -55,6 +55,10 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 			   "len=%u/%u",
 			   (int) hdr->ts.tv_sec, (int) hdr->ts.tv_usec,
 			   hdr->caplen, hdr->len);
+		if (wt->write_pcap_dumper) {
+			wt->write_pcap_time = hdr->ts;
+			pcap_dump(wt->write_pcap_dumper, hdr, data);
+		}
 		if (hdr->caplen < hdr->len) {
 			wpa_printf(MSG_DEBUG, "pcap: Dropped incomplete frame "
 				   "(%u/%u captured)",

@@ -34,7 +34,8 @@ static void usage(void)
 	printf("wlantest [-ddhqq] [-i<ifname>] [-r<pcap file>] "
 	       "[-p<passphrase>]\n"
 		"         [-I<wired ifname>] [-R<wired pcap file>] "
-	       "[-P<RADIUS shared secret>]\n");
+	       "[-P<RADIUS shared secret>]\n"
+		"         [-w<write pcap file>]\n");
 }
 
 
@@ -93,6 +94,7 @@ static void wlantest_deinit(struct wlantest *wt)
 		radius_deinit(r);
 	dl_list_for_each_safe(pmk, np, &wt->pmk, struct wlantest_pmk, list)
 		pmk_deinit(pmk);
+	write_pcap_deinit(wt);
 }
 
 
@@ -131,6 +133,7 @@ int main(int argc, char *argv[])
 	int c;
 	const char *read_file = NULL;
 	const char *read_wired_file = NULL;
+	const char *write_file = NULL;
 	const char *ifname = NULL;
 	const char *ifname_wired = NULL;
 	struct wlantest wt;
@@ -144,7 +147,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "dhi:I:p:P:qr:R:");
+		c = getopt(argc, argv, "dhi:I:p:P:qr:R:w:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -176,6 +179,9 @@ int main(int argc, char *argv[])
 		case 'R':
 			read_wired_file = optarg;
 			break;
+		case 'w':
+			write_file = optarg;
+			break;
 		default:
 			usage();
 			return -1;
@@ -189,6 +195,9 @@ int main(int argc, char *argv[])
 	}
 
 	if (eloop_init())
+		return -1;
+
+	if (write_file && write_pcap_init(&wt, write_file) < 0)
 		return -1;
 
 	if (read_wired_file && read_wired_cap_file(&wt, read_wired_file) < 0)

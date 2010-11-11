@@ -50,6 +50,7 @@ OBJS += ../src/rsn_supp/wpa_ie.o
 
 OBJS += wlantest.o
 OBJS += readpcap.o
+OBJS += writepcap.o
 OBJS += monitor.o
 OBJS += process.o
 OBJS += wired.o

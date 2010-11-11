@@ -33,6 +33,7 @@ static void monitor_read(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 
+	write_pcap_captured(wt, buf, len);
 	wlantest_process(wt, buf, len);
 }
 

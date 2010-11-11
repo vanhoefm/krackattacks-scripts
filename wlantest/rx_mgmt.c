@@ -151,7 +151,8 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 }
 
 
-static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len)
+static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
+			   int valid)
 {
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
@@ -178,6 +179,14 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len)
 		   " (reason=%u)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
 		   le_to_host16(mgmt->u.deauth.reason_code));
+	wpa_hexdump(MSG_MSGDUMP, "DEAUTH payload", data + 24, len - 24);
+
+	if (!valid) {
+		wpa_printf(MSG_INFO, "Do not change STA " MACSTR " State "
+			   "since Disassociation frame was not protected "
+			   "correctly", MAC2STR(sta->addr));
+		return;
+	}
 
 	if (sta->state != STATE1) {
 		wpa_printf(MSG_DEBUG, "STA " MACSTR
@@ -377,7 +386,8 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 }
 
 
-static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len)
+static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
+			     int valid)
 {
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
@@ -404,6 +414,14 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len)
 		   " (reason=%u)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
 		   le_to_host16(mgmt->u.disassoc.reason_code));
+	wpa_hexdump(MSG_MSGDUMP, "DISASSOC payload", data + 24, len - 24);
+
+	if (!valid) {
+		wpa_printf(MSG_INFO, "Do not change STA " MACSTR " State "
+			   "since Disassociation frame was not protected "
+			   "correctly", MAC2STR(sta->addr));
+		return;
+	}
 
 	if (sta->state < STATE2) {
 		wpa_printf(MSG_DEBUG, "STA " MACSTR " was not in State 2 or 3 "
@@ -529,10 +547,73 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 }
 
 
+static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
+			      size_t *dlen)
+{
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	const struct ieee80211_hdr *hdr;
+	int keyid;
+	u8 *decrypted, *frame;
+	u8 pn[6], *rsc;
+
+	hdr = (const struct ieee80211_hdr *) data;
+	bss = bss_get(wt, hdr->addr3);
+	if (bss == NULL)
+		return NULL;
+	if (os_memcmp(hdr->addr1, hdr->addr3, ETH_ALEN) == 0)
+		sta = sta_get(bss, hdr->addr2);
+	else
+		sta = sta_get(bss, hdr->addr1);
+	if (sta == NULL || !sta->ptk_set) {
+		wpa_printf(MSG_MSGDUMP, "No PTK known to decrypt the frame");
+		return NULL;
+	}
+
+	keyid = data[3] >> 6;
+	if (keyid != 0) {
+		wpa_printf(MSG_INFO, "Unexpected non-zero KeyID %d in "
+			   "individually addressed Management frame from "
+			   MACSTR, keyid, MAC2STR(hdr->addr2));
+	}
+
+	if (os_memcmp(hdr->addr1, hdr->addr3, ETH_ALEN) == 0)
+		rsc = sta->rsc_tods[16];
+	else
+		rsc = sta->rsc_fromds[16];
+
+	ccmp_get_pn(pn, data);
+	if (os_memcmp(pn, rsc, 6) <= 0) {
+		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
+			   MAC2STR(hdr->addr2));
+		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
+		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
+	}
+
+	decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data + 24, len - 24, dlen);
+	if (decrypted)
+		os_memcpy(rsc, pn, 6);
+
+	frame = os_malloc(24 + *dlen);
+	if (frame) {
+		os_memcpy(frame, data, 24);
+		os_memcpy(frame + 24, decrypted, *dlen);
+		*dlen += 24;
+	}
+
+	os_free(decrypted);
+
+	return frame;
+}
+
+
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
 	u16 fc, stype;
+	int valid = 1;
+	u8 *decrypted = NULL;
+	size_t dlen;
 
 	if (len < 24)
 		return;
@@ -559,6 +640,20 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 		   MAC2STR(hdr->addr3));
 
+	if ((fc & WLAN_FC_ISWEP) &&
+	    !(hdr->addr1[0] & 0x01) &&
+	    (stype == WLAN_FC_STYPE_DEAUTH ||
+	     stype == WLAN_FC_STYPE_DISASSOC ||
+	     stype == WLAN_FC_STYPE_ACTION)) {
+		decrypted = mgmt_ccmp_decrypt(wt, data, len, &dlen);
+		if (decrypted) {
+			data = decrypted;
+			len = dlen;
+		} else
+			valid = 0;
+	}
+
+
 	switch (stype) {
 	case WLAN_FC_STYPE_BEACON:
 		rx_mgmt_beacon(wt, data, len);
@@ -570,7 +665,7 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		rx_mgmt_auth(wt, data, len);
 		break;
 	case WLAN_FC_STYPE_DEAUTH:
-		rx_mgmt_deauth(wt, data, len);
+		rx_mgmt_deauth(wt, data, len, valid);
 		break;
 	case WLAN_FC_STYPE_ASSOC_REQ:
 		rx_mgmt_assoc_req(wt, data, len);
@@ -585,7 +680,9 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		rx_mgmt_reassoc_resp(wt, data, len);
 		break;
 	case WLAN_FC_STYPE_DISASSOC:
-		rx_mgmt_disassoc(wt, data, len);
+		rx_mgmt_disassoc(wt, data, len, valid);
 		break;
 	}
+
+	os_free(decrypted);
 }

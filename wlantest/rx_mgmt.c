@@ -686,7 +686,7 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 	else
 		rsc = sta->rsc_fromds[16];
 
-	ccmp_get_pn(pn, data);
+	ccmp_get_pn(pn, data + 24);
 	if (os_memcmp(pn, rsc, 6) <= 0) {
 		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
 			   MAC2STR(hdr->addr2));

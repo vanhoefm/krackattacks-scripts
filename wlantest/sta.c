@@ -108,6 +108,12 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 			   MAC2STR(sta->addr), data.group_cipher,
 			   MAC2STR(bss->bssid), bss->group_cipher);
 	}
+	if ((bss->rsn_capab & WPA_CAPABILITY_MFPR) &&
+	    !(sta->rsn_capab & WPA_CAPABILITY_MFPC)) {
+		wpa_printf(MSG_INFO, "STA " MACSTR " tries to associate "
+			   "without MFP to BSS " MACSTR " that advertises "
+			   "MFPR", MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	}
 
 	wpa_printf(MSG_INFO, "STA " MACSTR
 		   " proto=%s%s%s"

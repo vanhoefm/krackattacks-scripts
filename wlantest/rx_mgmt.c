@@ -660,7 +660,7 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 	struct wlantest_sta *sta;
 	const struct ieee80211_hdr *hdr;
 	int keyid;
-	u8 *decrypted, *frame;
+	u8 *decrypted, *frame = NULL;
 	u8 pn[6], *rsc;
 
 	hdr = (const struct ieee80211_hdr *) data;
@@ -697,14 +697,14 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 	}
 
 	decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data + 24, len - 24, dlen);
-	if (decrypted)
+	if (decrypted) {
 		os_memcpy(rsc, pn, 6);
-
-	frame = os_malloc(24 + *dlen);
-	if (frame) {
-		os_memcpy(frame, data, 24);
-		os_memcpy(frame + 24, decrypted, *dlen);
-		*dlen += 24;
+		frame = os_malloc(24 + *dlen);
+		if (frame) {
+			os_memcpy(frame, data, 24);
+			os_memcpy(frame + 24, decrypted, *dlen);
+			*dlen += 24;
+		}
 	}
 
 	os_free(decrypted);

@@ -209,11 +209,33 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 	if (ie.wpa_ie) {
 		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - WPA IE",
 			    ie.wpa_ie, ie.wpa_ie_len);
+		if (os_memcmp(ie.wpa_ie, sta->rsnie, ie.wpa_ie_len) != 0) {
+			wpa_printf(MSG_INFO, "Mismatch in WPA IE between "
+				   "EAPOL-Key 2/4 and (Re)Association "
+				   "Request from " MACSTR, MAC2STR(sta->addr));
+			wpa_hexdump(MSG_INFO, "WPA IE in EAPOL-Key",
+				    ie.wpa_ie, ie.wpa_ie_len);
+			wpa_hexdump(MSG_INFO, "WPA IE in (Re)Association "
+				    "Request",
+				    sta->rsnie,
+				    sta->rsnie[0] ? 2 + sta->rsnie[1] : 0);
+		}
 	}
 
 	if (ie.rsn_ie) {
 		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - RSN IE",
 			    ie.rsn_ie, ie.rsn_ie_len);
+		if (os_memcmp(ie.rsn_ie, sta->rsnie, ie.rsn_ie_len) != 0) {
+			wpa_printf(MSG_INFO, "Mismatch in WPA IE between "
+				   "EAPOL-Key 2/4 and (Re)Association "
+				   "Request from " MACSTR, MAC2STR(sta->addr));
+			wpa_hexdump(MSG_INFO, "WPA IE in EAPOL-Key",
+				    ie.rsn_ie, ie.rsn_ie_len);
+			wpa_hexdump(MSG_INFO, "WPA IE in (Re)Association "
+				    "Request",
+				    sta->rsnie,
+				    sta->rsnie[0] ? 2 + sta->rsnie[1] : 0);
+		}
 	}
 }
 
@@ -375,6 +397,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	u16 key_info, ver;
 	u8 *decrypted;
 	size_t decrypted_len = 0;
+	struct wpa_eapol_ie_parse ie;
 
 	wpa_printf(MSG_DEBUG, "EAPOL-Key 3/4 " MACSTR " -> " MACSTR,
 		   MAC2STR(src), MAC2STR(dst));
@@ -465,6 +488,41 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 		write_pcap_decrypted(wt, buf, sizeof(buf),
 				     decrypted, plain_len);
 	}
+
+	if (wpa_supplicant_parse_ies(decrypted, decrypted_len, &ie) < 0) {
+		wpa_printf(MSG_INFO, "Failed to parse EAPOL-Key Key Data");
+		os_free(decrypted);
+		return;
+	}
+
+	if ((ie.wpa_ie &&
+	     os_memcmp(ie.wpa_ie, bss->wpaie, ie.wpa_ie_len) != 0) ||
+	    (ie.wpa_ie == NULL && bss->wpaie[0])) {
+		wpa_printf(MSG_INFO, "Mismatch in WPA IE between "
+			   "EAPOL-Key 3/4 and Beacon/Probe Response "
+			   "from " MACSTR, MAC2STR(bss->bssid));
+		wpa_hexdump(MSG_INFO, "WPA IE in EAPOL-Key",
+			    ie.wpa_ie, ie.wpa_ie_len);
+		wpa_hexdump(MSG_INFO, "WPA IE in Beacon/Probe "
+			    "Response",
+			    bss->wpaie,
+			    bss->wpaie[0] ? 2 + bss->wpaie[1] : 0);
+	}
+
+	if ((ie.rsn_ie &&
+	     os_memcmp(ie.rsn_ie, bss->rsnie, ie.rsn_ie_len) != 0) ||
+	    (ie.rsn_ie == NULL && bss->rsnie[0])) {
+		wpa_printf(MSG_INFO, "Mismatch in RSN IE between "
+			   "EAPOL-Key 3/4 and Beacon/Probe Response "
+			   "from " MACSTR, MAC2STR(bss->bssid));
+		wpa_hexdump(MSG_INFO, "RSN IE in EAPOL-Key",
+			    ie.rsn_ie, ie.rsn_ie_len);
+		wpa_hexdump(MSG_INFO, "RSN IE in (Re)Association "
+			    "Request",
+			    bss->rsnie,
+			    bss->rsnie[0] ? 2 + bss->rsnie[1] : 0);
+	}
+
 	learn_kde_keys(bss, decrypted, decrypted_len, hdr->key_rsc);
 	os_free(decrypted);
 }

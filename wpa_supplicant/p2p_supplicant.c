@@ -823,6 +823,7 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	if (ssid == NULL)
 		return;
 
+	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->p2p_group = 1;

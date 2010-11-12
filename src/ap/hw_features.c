@@ -642,6 +642,32 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 			break;
 		}
 	}
+	if (ok && iface->conf->secondary_channel) {
+		int sec_ok = 0;
+		int sec_chan = iface->conf->channel +
+			iface->conf->secondary_channel * 4;
+		for (j = 0; j < iface->current_mode->num_channels; j++) {
+			struct hostapd_channel_data *chan =
+				&iface->current_mode->channels[j];
+			if (!(chan->flag & HOSTAPD_CHAN_DISABLED) &&
+			    (chan->chan == sec_chan)) {
+				sec_ok = 1;
+				break;
+			}
+		}
+		if (!sec_ok) {
+			hostapd_logger(iface->bss[0], NULL,
+				       HOSTAPD_MODULE_IEEE80211,
+				       HOSTAPD_LEVEL_WARNING,
+				       "Configured HT40 secondary channel "
+				       "(%d) not found from the channel list "
+				       "of current mode (%d) %s",
+				       sec_chan, iface->current_mode->mode,
+				       hostapd_hw_mode_txt(
+					       iface->current_mode->mode));
+			ok = 0;
+		}
+	}
 	if (iface->conf->channel == 0) {
 		/* TODO: could request a scan of neighboring BSSes and select
 		 * the channel automatically */

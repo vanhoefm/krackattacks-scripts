@@ -2026,12 +2026,14 @@ static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
 }
 
 
-static int has_channel(struct hostapd_hw_modes *mode, u8 chan)
+static int has_channel(struct hostapd_hw_modes *mode, u8 chan, int *flags)
 {
 	int i;
 
 	for (i = 0; i < mode->num_channels; i++) {
 		if (mode->channels[i].chan == chan) {
+			if (flags)
+				*flags = mode->channels[i].flag;
 			return !(mode->channels[i].flag &
 				 (HOSTAPD_CHAN_DISABLED |
 				  HOSTAPD_CHAN_PASSIVE_SCAN |
@@ -2050,6 +2052,7 @@ struct p2p_oper_class_map {
 	u8 min_chan;
 	u8 max_chan;
 	u8 inc;
+	enum { BW20, BW40PLUS, BW40MINUS } bw;
 };
 
 static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
@@ -2059,19 +2062,19 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 	u16 num_modes, flags;
 	int cla, op;
 	struct p2p_oper_class_map op_class[] = {
-		{ HOSTAPD_MODE_IEEE80211G, 81, 1, 13, 1 },
-		{ HOSTAPD_MODE_IEEE80211G, 82, 14, 14, 1 },
-		{ HOSTAPD_MODE_IEEE80211A, 115, 36, 48, 4 },
-		{ HOSTAPD_MODE_IEEE80211A, 124, 149, 161, 4 },
-#if 0 /* TODO: 40 MHz channels */
-		{ HOSTAPD_MODE_IEEE80211G, 83, 1, 9, 1 },
-		{ HOSTAPD_MODE_IEEE80211G, 84, 5, 13, 1 },
-		{ HOSTAPD_MODE_IEEE80211A, 116, 36, 44, 8 },
-		{ HOSTAPD_MODE_IEEE80211A, 117, 40, 48, 8 },
-		{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8 },
-		{ HOSTAPD_MODE_IEEE80211A, 127, 153, 161, 8 },
+		{ HOSTAPD_MODE_IEEE80211G, 81, 1, 13, 1, BW20 },
+		{ HOSTAPD_MODE_IEEE80211G, 82, 14, 14, 1, BW20 },
+#if 0 /* Do not enable HT40 on 2 GHz for now */
+		{ HOSTAPD_MODE_IEEE80211G, 83, 1, 9, 1, BW40PLUS },
+		{ HOSTAPD_MODE_IEEE80211G, 84, 5, 13, 1, BW40MINUS },
 #endif
-		{ -1, 0, 0, 0, 0 }
+		{ HOSTAPD_MODE_IEEE80211A, 115, 36, 48, 4, BW20 },
+		{ HOSTAPD_MODE_IEEE80211A, 124, 149, 161, 4, BW20 },
+		{ HOSTAPD_MODE_IEEE80211A, 116, 36, 44, 8, BW40PLUS },
+		{ HOSTAPD_MODE_IEEE80211A, 117, 40, 48, 8, BW40MINUS },
+		{ HOSTAPD_MODE_IEEE80211A, 126, 149, 157, 8, BW40PLUS },
+		{ HOSTAPD_MODE_IEEE80211A, 127, 153, 161, 8, BW40MINUS },
+		{ -1, 0, 0, 0, 0, BW20 }
 	};
 
 	modes = wpa_drv_get_hw_feature_data(wpa_s, &num_modes, &flags);
@@ -2093,7 +2096,16 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 		if (mode == NULL)
 			continue;
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
-			if (!has_channel(mode, ch))
+			int flag;
+			if (!has_channel(mode, ch, &flag))
+				continue;
+			if (o->bw == BW40MINUS &&
+			    (!(flag & HOSTAPD_CHAN_HT40MINUS) ||
+			     !has_channel(mode, ch - o->inc, NULL)))
+				continue;
+			if (o->bw == BW40PLUS &&
+			    (!(flag & HOSTAPD_CHAN_HT40PLUS) ||
+			     !has_channel(mode, ch + o->inc, NULL)))
 				continue;
 			if (reg == NULL) {
 				wpa_printf(MSG_DEBUG, "P2P: Add operating "

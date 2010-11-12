@@ -3093,6 +3093,154 @@ wpa_driver_nl80211_add_11b(struct hostapd_hw_modes *modes, u16 *num_modes)
 }
 
 
+static void nl80211_set_ht40_mode(struct hostapd_hw_modes *mode, int start,
+				  int end)
+{
+	int c;
+
+	for (c = 0; c < mode->num_channels; c++) {
+		struct hostapd_channel_data *chan = &mode->channels[c];
+		if (chan->freq - 10 >= start && chan->freq + 10 <= end)
+			chan->flag |= HOSTAPD_CHAN_HT40;
+	}
+}
+
+
+static void nl80211_set_ht40_mode_sec(struct hostapd_hw_modes *mode, int start,
+				      int end)
+{
+	int c;
+
+	for (c = 0; c < mode->num_channels; c++) {
+		struct hostapd_channel_data *chan = &mode->channels[c];
+		if (!(chan->flag & HOSTAPD_CHAN_HT40))
+			continue;
+		if (chan->freq - 30 >= start && chan->freq - 10 <= end)
+			chan->flag |= HOSTAPD_CHAN_HT40MINUS;
+		if (chan->freq + 10 >= start && chan->freq + 30 <= end)
+			chan->flag |= HOSTAPD_CHAN_HT40PLUS;
+	}
+}
+
+
+static void nl80211_reg_rule_ht40(struct nlattr *tb[],
+				  struct phy_info_arg *results)
+{
+	u32 start, end, max_bw;
+	u16 m;
+
+	if (tb[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_END] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_MAX_BW] == NULL)
+		return;
+
+	start = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
+	end = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
+	max_bw = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_MAX_BW]) / 1000;
+
+	wpa_printf(MSG_DEBUG, "nl80211: %u-%u @ %u MHz",
+		   start, end, max_bw);
+	if (max_bw < 40)
+		return;
+
+	for (m = 0; m < *results->num_modes; m++) {
+		if (!(results->modes[m].ht_capab &
+		      HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+			continue;
+		nl80211_set_ht40_mode(&results->modes[m], start, end);
+	}
+}
+
+
+static void nl80211_reg_rule_sec(struct nlattr *tb[],
+				 struct phy_info_arg *results)
+{
+	u32 start, end, max_bw;
+	u16 m;
+
+	if (tb[NL80211_ATTR_FREQ_RANGE_START] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_END] == NULL ||
+	    tb[NL80211_ATTR_FREQ_RANGE_MAX_BW] == NULL)
+		return;
+
+	start = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_START]) / 1000;
+	end = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_END]) / 1000;
+	max_bw = nla_get_u32(tb[NL80211_ATTR_FREQ_RANGE_MAX_BW]) / 1000;
+
+	if (max_bw < 20)
+		return;
+
+	for (m = 0; m < *results->num_modes; m++) {
+		if (!(results->modes[m].ht_capab &
+		      HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+			continue;
+		nl80211_set_ht40_mode_sec(&results->modes[m], start, end);
+	}
+}
+
+
+static int nl80211_get_reg(struct nl_msg *msg, void *arg)
+{
+	struct phy_info_arg *results = arg;
+	struct nlattr *tb_msg[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *nl_rule;
+	struct nlattr *tb_rule[NL80211_FREQUENCY_ATTR_MAX + 1];
+	int rem_rule;
+	static struct nla_policy reg_policy[NL80211_FREQUENCY_ATTR_MAX + 1] = {
+		[NL80211_ATTR_REG_RULE_FLAGS] = { .type = NLA_U32 },
+		[NL80211_ATTR_FREQ_RANGE_START] = { .type = NLA_U32 },
+		[NL80211_ATTR_FREQ_RANGE_END] = { .type = NLA_U32 },
+		[NL80211_ATTR_FREQ_RANGE_MAX_BW] = { .type = NLA_U32 },
+		[NL80211_ATTR_POWER_RULE_MAX_ANT_GAIN] = { .type = NLA_U32 },
+		[NL80211_ATTR_POWER_RULE_MAX_EIRP] = { .type = NLA_U32 },
+	};
+
+	nla_parse(tb_msg, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+	if (!tb_msg[NL80211_ATTR_REG_ALPHA2] ||
+	    !tb_msg[NL80211_ATTR_REG_RULES]) {
+		wpa_printf(MSG_DEBUG, "nl80211: No regulatory information "
+			   "available");
+		return NL_SKIP;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Regulatory information - country=%s",
+		   (char *) nla_data(tb_msg[NL80211_ATTR_REG_ALPHA2]));
+
+	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)
+	{
+		nla_parse(tb_rule, NL80211_FREQUENCY_ATTR_MAX,
+			  nla_data(nl_rule), nla_len(nl_rule), reg_policy);
+		nl80211_reg_rule_ht40(tb_rule, results);
+	}
+
+	nla_for_each_nested(nl_rule, tb_msg[NL80211_ATTR_REG_RULES], rem_rule)
+	{
+		nla_parse(tb_rule, NL80211_FREQUENCY_ATTR_MAX,
+			  nla_data(nl_rule), nla_len(nl_rule), reg_policy);
+		nl80211_reg_rule_sec(tb_rule, results);
+	}
+
+	return NL_SKIP;
+}
+
+
+static int nl80211_set_ht40_flags(struct wpa_driver_nl80211_data *drv,
+				  struct phy_info_arg *results)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
+		    0, NL80211_CMD_GET_REG, 0);
+	return send_and_recv_msgs(drv, msg, nl80211_get_reg, results);
+}
+
+
 static struct hostapd_hw_modes *
 wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 {
@@ -3116,8 +3264,10 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
-	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0)
+	if (send_and_recv_msgs(drv, msg, phy_info_handler, &result) == 0) {
+		nl80211_set_ht40_flags(drv, &result);
 		return wpa_driver_nl80211_add_11b(result.modes, num_modes);
+	}
  nla_put_failure:
 	return NULL;
 }

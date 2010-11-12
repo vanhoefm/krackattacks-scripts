@@ -2101,11 +2101,11 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 				continue;
 			if (o->bw == BW40MINUS &&
 			    (!(flag & HOSTAPD_CHAN_HT40MINUS) ||
-			     !has_channel(mode, ch - o->inc, NULL)))
+			     !has_channel(mode, ch - 4, NULL)))
 				continue;
 			if (o->bw == BW40PLUS &&
 			    (!(flag & HOSTAPD_CHAN_HT40PLUS) ||
-			     !has_channel(mode, ch + o->inc, NULL)))
+			     !has_channel(mode, ch + 4, NULL)))
 				continue;
 			if (reg == NULL) {
 				wpa_printf(MSG_DEBUG, "P2P: Add operating "

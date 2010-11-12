@@ -605,8 +605,7 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 	if (len < 24 + 18 || data[len - 18] != WLAN_EID_MMIE ||
 	    data[len - 17] != 16) {
 		/* No MMIE */
-		/* TODO: use MFPC flag in RSN IE instead of IGTK flags */
-		if (bss->igtk_set[4] || bss->igtk_set[5]) {
+		if (bss->rsn_capab & WPA_CAPABILITY_MFPC) {
 			wpa_printf(MSG_INFO, "Robust group-addressed "
 				   "management frame sent without BIP by "
 				   MACSTR, MAC2STR(mgmt->sa));

@@ -17,6 +17,7 @@
 #include "utils/common.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
+#include "common/defs.h"
 #include "common/ieee802_11_defs.h"
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
@@ -118,12 +119,12 @@ static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
 		   struct wlantest_pmk *pmk)
 {
 	struct wpa_ptk ptk;
-	size_t ptk_len = 48; /* FIX: 64 for TKIP */
+	size_t ptk_len = sta->pairwise_cipher == WPA_CIPHER_TKIP ? 64 : 48;
 	wpa_pmk_to_ptk(pmk->pmk, sizeof(pmk->pmk),
 		       "Pairwise key expansion",
 		       bss->bssid, sta->addr, sta->anonce, sta->snonce,
 		       (u8 *) &ptk, ptk_len,
-		       0 /* FIX: SHA256 based on AKM */);
+		       wpa_key_mgmt_sha256(sta->key_mgmt));
 	if (check_mic(ptk.kck, ver, data, len) < 0)
 		return -1;
 

@@ -21,6 +21,7 @@
 struct ieee802_11_elems;
 struct radius_msg;
 struct ieee80211_hdr;
+struct wlantest_bss;
 
 #define MAX_RADIUS_SECRET_LEN 128
 
@@ -44,6 +45,7 @@ struct wlantest_pmk {
 
 struct wlantest_sta {
 	struct dl_list list;
+	struct wlantest_bss *bss;
 	u8 addr[ETH_ALEN];
 	enum {
 		STATE1 /* not authenticated */,
@@ -52,6 +54,11 @@ struct wlantest_sta {
 	} state;
 	u16 aid;
 	u8 rsnie[257]; /* WPA/RSN IE */
+	int proto;
+	int pairwise_cipher;
+	int group_cipher;
+	int key_mgmt;
+	int rsn_capab;
 	u8 anonce[32]; /* ANonce from the previous EAPOL-Key msg 1/4 or 3/4 */
 	u8 snonce[32]; /* SNonce from the previous EAPOL-Key msg 2/4 */
 	struct wpa_ptk ptk; /* Derived PTK */
@@ -72,6 +79,12 @@ struct wlantest_bss {
 	int parse_error_reported;
 	u8 wpaie[257];
 	u8 rsnie[257];
+	int proto;
+	int pairwise_cipher;
+	int group_cipher;
+	int mgmt_group_cipher;
+	int key_mgmt;
+	int rsn_capab;
 	struct dl_list sta; /* struct wlantest_sta */
 	struct dl_list pmk; /* struct wlantest_pmk */
 	u8 gtk[4][32];

@@ -15,6 +15,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "common/defs.h"
 #include "common/ieee802_11_common.h"
 #include "crypto/sha1.h"
 #include "wlantest.h"
@@ -103,6 +104,9 @@ static void bss_add_pmk(struct wlantest *wt, struct wlantest_bss *bss)
 void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		struct ieee802_11_elems *elems)
 {
+	struct wpa_ie_data data;
+	int update = 0;
+
 	if (elems->ssid == NULL || elems->ssid_len > 32) {
 		wpa_printf(MSG_INFO, "Invalid or missing SSID in a Beacon "
 			   "frame for " MACSTR, MAC2STR(bss->bssid));
@@ -126,6 +130,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 			wpa_printf(MSG_INFO, "BSS " MACSTR " - RSN IE removed",
 				   MAC2STR(bss->bssid));
 			bss->rsnie[0] = 0;
+			update = 1;
 		}
 	} else {
 		if (bss->rsnie[0] == 0 ||
@@ -135,6 +140,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 				   "stored", MAC2STR(bss->bssid));
 			wpa_hexdump(MSG_DEBUG, "RSN IE", elems->rsn_ie - 2,
 				    elems->rsn_ie_len + 2);
+			update = 1;
 		}
 		os_memcpy(bss->rsnie, elems->rsn_ie - 2,
 			  elems->rsn_ie_len + 2);
@@ -145,6 +151,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 			wpa_printf(MSG_INFO, "BSS " MACSTR " - WPA IE removed",
 				   MAC2STR(bss->bssid));
 			bss->wpaie[0] = 0;
+			update = 1;
 		}
 	} else {
 		if (bss->wpaie[0] == 0 ||
@@ -154,8 +161,94 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 				   "stored", MAC2STR(bss->bssid));
 			wpa_hexdump(MSG_DEBUG, "WPA IE", elems->wpa_ie - 2,
 				    elems->wpa_ie_len + 2);
+			update = 1;
 		}
 		os_memcpy(bss->wpaie, elems->wpa_ie - 2,
 			  elems->wpa_ie_len + 2);
 	}
+
+	if (!update)
+		return;
+
+	bss->proto = 0;
+	bss->pairwise_cipher = 0;
+	bss->group_cipher = 0;
+	bss->key_mgmt = 0;
+	bss->rsn_capab = 0;
+	bss->mgmt_group_cipher = 0;
+
+	if (bss->wpaie[0]) {
+		if (wpa_parse_wpa_ie_wpa(bss->wpaie, 2 + bss->wpaie[1], &data)
+		    < 0) {
+			wpa_printf(MSG_INFO, "Failed to parse WPA IE from "
+				   MACSTR, MAC2STR(bss->bssid));
+		} else {
+			bss->proto |= data.proto;
+			bss->pairwise_cipher |= data.pairwise_cipher;
+			bss->group_cipher |= data.group_cipher;
+			bss->key_mgmt |= data.key_mgmt;
+			bss->rsn_capab = data.capabilities;
+			bss->mgmt_group_cipher |= data.mgmt_group_cipher;
+		}
+	}
+
+	if (bss->rsnie[0]) {
+		if (wpa_parse_wpa_ie_rsn(bss->rsnie, 2 + bss->rsnie[1], &data)
+		    < 0) {
+			wpa_printf(MSG_INFO, "Failed to parse RSN IE from "
+				   MACSTR, MAC2STR(bss->bssid));
+		} else {
+			bss->proto |= data.proto;
+			bss->pairwise_cipher |= data.pairwise_cipher;
+			bss->group_cipher |= data.group_cipher;
+			bss->key_mgmt |= data.key_mgmt;
+			bss->rsn_capab = data.capabilities;
+			bss->mgmt_group_cipher |= data.mgmt_group_cipher;
+		}
+	}
+
+	if (!(bss->proto & WPA_PROTO_RSN) ||
+	    !(bss->rsn_capab & WPA_CAPABILITY_MFPC))
+		bss->mgmt_group_cipher = 0;
+
+	wpa_printf(MSG_INFO, "BSS " MACSTR
+		   " proto=%s%s%s"
+		   "pairwise=%s%s%s%s"
+		   "group=%s%s%s%s%s%s"
+		   "mgmt_group_cipher=%s"
+		   "key_mgmt=%s%s%s%s%s%s%s%s"
+		   "rsn_capab=%s%s%s%s%s",
+		   MAC2STR(bss->bssid),
+		   bss->proto == 0 ? "OPEN " : "",
+		   bss->proto & WPA_PROTO_WPA ? "WPA " : "",
+		   bss->proto & WPA_PROTO_RSN ? "WPA2 " : "",
+		   bss->pairwise_cipher == 0 ? "N/A " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_NONE ? "NONE " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_TKIP ? "TKIP " : "",
+		   bss->pairwise_cipher & WPA_CIPHER_CCMP ? "CCMP " : "",
+		   bss->group_cipher == 0 ? "N/A " : "",
+		   bss->group_cipher & WPA_CIPHER_NONE ? "NONE " : "",
+		   bss->group_cipher & WPA_CIPHER_WEP40 ? "WEP40 " : "",
+		   bss->group_cipher & WPA_CIPHER_WEP104 ? "WEP104 " : "",
+		   bss->group_cipher & WPA_CIPHER_TKIP ? "TKIP " : "",
+		   bss->group_cipher & WPA_CIPHER_CCMP ? "CCMP " : "",
+		   bss->mgmt_group_cipher & WPA_CIPHER_AES_128_CMAC ? "BIP " :
+		   "N/A ",
+		   bss->key_mgmt == 0 ? "N/A " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_IEEE8021X ? "EAP " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_PSK ? "PSK " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_WPA_NONE ? "WPA-NONE " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X ? "FT-EAP " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_FT_PSK ? "FT-PSK " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256 ?
+		   "EAP-SHA256 " : "",
+		   bss->key_mgmt & WPA_KEY_MGMT_PSK_SHA256 ?
+		   "PSK-SHA256 " : "",
+		   bss->rsn_capab & WPA_CAPABILITY_PREAUTH ? "PREAUTH " : "",
+		   bss->rsn_capab & WPA_CAPABILITY_NO_PAIRWISE ?
+		   "NO_PAIRWISE " : "",
+		   bss->rsn_capab & WPA_CAPABILITY_MFPR ? "MFPR " : "",
+		   bss->rsn_capab & WPA_CAPABILITY_MFPC ? "MFPC " : "",
+		   bss->rsn_capab & WPA_CAPABILITY_PEERKEY_ENABLED ?
+		   "PEERKEY " : "");
 }

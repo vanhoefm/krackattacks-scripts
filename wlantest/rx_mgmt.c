@@ -440,7 +440,7 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 static void rx_mgmt_action_sa_query(struct wlantest *wt,
 				    struct wlantest_sta *sta,
 				    const struct ieee80211_mgmt *mgmt,
-				    size_t len)
+				    size_t len, int valid)
 {
 	const u8 *rx_id;
 	u8 *id;
@@ -468,9 +468,10 @@ static void rx_mgmt_action_sa_query(struct wlantest *wt,
 		else
 			id = sta->sta_sa_query_tr;
 		wpa_printf(MSG_INFO, "SA Query Request " MACSTR " -> " MACSTR
-			   " (trans_id=%02x%02x)",
+			   " (trans_id=%02x%02x)%s",
 			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-			   rx_id[0], rx_id[1]);
+			   rx_id[0], rx_id[1],
+			   valid ? "" : " (invalid protection)");
 		os_memcpy(id, mgmt->u.action.u.sa_query_req.trans_id, 2);
 		break;
 	case WLAN_SA_QUERY_RESPONSE:
@@ -480,11 +481,12 @@ static void rx_mgmt_action_sa_query(struct wlantest *wt,
 		else
 			id = sta->ap_sa_query_tr;
 		wpa_printf(MSG_INFO, "SA Query Response " MACSTR " -> " MACSTR
-			   " (trans_id=%02x%02x; %s)",
+			   " (trans_id=%02x%02x; %s)%s",
 			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
 			   rx_id[0], rx_id[1],
 			   os_memcmp(rx_id, id, 2) == 0 ?
-			   "match" : "mismatch");
+			   "match" : "mismatch",
+			   valid ? "" : " (invalid protection)");
 		break;
 	default:
 		wpa_printf(MSG_INFO, "Unexpected SA Query action value %u "
@@ -495,7 +497,8 @@ static void rx_mgmt_action_sa_query(struct wlantest *wt,
 }
 
 
-static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len)
+static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len,
+			   int valid)
 {
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
@@ -521,9 +524,9 @@ static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len)
 	}
 
 	wpa_printf(MSG_DEBUG, "ACTION " MACSTR " -> " MACSTR
-		   " (category=%u)",
+		   " (category=%u) (valid=%d)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-		   mgmt->u.action.category);
+		   mgmt->u.action.category, valid);
 	wpa_hexdump(MSG_MSGDUMP, "ACTION payload", data + 24, len - 24);
 
 	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC &&
@@ -535,7 +538,7 @@ static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len)
 
 	switch (mgmt->u.action.category) {
 	case WLAN_ACTION_SA_QUERY:
-		rx_mgmt_action_sa_query(wt, sta, mgmt, len);
+		rx_mgmt_action_sa_query(wt, sta, mgmt, len, valid);
 		break;
 	}
 }
@@ -710,6 +713,43 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 }
 
 
+static int check_mgmt_ccmp(struct wlantest *wt, const u8 *data, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	u16 fc;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) data;
+	fc = le_to_host16(mgmt->frame_control);
+
+	if (WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_ACTION) {
+		if (len > 24 &&
+		    mgmt->u.action.category == WLAN_ACTION_PUBLIC)
+			return 0; /* Not a robust management frame */
+	}
+
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return 0;
+	if (os_memcmp(mgmt->da, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->sa);
+	else
+		sta = sta_get(bss, mgmt->da);
+	if (sta == NULL)
+		return 0;
+
+	if (sta->rsn_capab & WPA_CAPABILITY_MFPC) {
+		wpa_printf(MSG_INFO, "Robust individually-addressed "
+			   "management frame sent without CCMP by "
+			   MACSTR, MAC2STR(mgmt->sa));
+		return -1;
+	}
+
+	return 0;
+}
+
+
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
@@ -729,8 +769,10 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 	if ((hdr->addr1[0] & 0x01) &&
 	    (stype == WLAN_FC_STYPE_DEAUTH ||
 	     stype == WLAN_FC_STYPE_DISASSOC ||
-	     stype == WLAN_FC_STYPE_ACTION))
-		check_bip(wt, data, len);
+	     stype == WLAN_FC_STYPE_ACTION)) {
+		if (check_bip(wt, data, len) < 0)
+			valid = 0;
+	}
 
 	wpa_printf((stype == WLAN_FC_STYPE_BEACON ||
 		    stype == WLAN_FC_STYPE_PROBE_RESP ||
@@ -757,8 +799,14 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 			valid = 0;
 	}
 
-	/* TODO: verify that robust management frames are protected if MFP was
-	 * negotiated */
+	if (!(fc & WLAN_FC_ISWEP) &&
+	    !(hdr->addr1[0] & 0x01) &&
+	    (stype == WLAN_FC_STYPE_DEAUTH ||
+	     stype == WLAN_FC_STYPE_DISASSOC ||
+	     stype == WLAN_FC_STYPE_ACTION)) {
+		if (check_mgmt_ccmp(wt, data, len) < 0)
+			valid = 0;
+	}
 
 	switch (stype) {
 	case WLAN_FC_STYPE_BEACON:
@@ -789,8 +837,7 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 		rx_mgmt_disassoc(wt, data, len, valid);
 		break;
 	case WLAN_FC_STYPE_ACTION:
-		if (valid)
-			rx_mgmt_action(wt, data, len);
+		rx_mgmt_action(wt, data, len, valid);
 		break;
 	}
 

@@ -3798,6 +3798,8 @@ int wpas_p2p_notif_pbc_overlap(struct wpa_supplicant *wpa_s)
 
 	wpa_printf(MSG_DEBUG, "P2P: Terminate connection due to WPS PBC "
 		   "session overlap");
+	if (wpa_s != wpa_s->parent)
+		wpa_msg_ctrl(wpa_s->parent, MSG_INFO, WPS_EVENT_OVERLAP);
 	wpas_group_formation_completed(wpa_s, 0);
 	return 1;
 }

@@ -505,8 +505,14 @@ static void rx_mgmt_action(struct wlantest *wt, const u8 *data, size_t len,
 	struct wlantest_sta *sta;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
-	if (mgmt->da[0] & 0x01)
+	if (mgmt->da[0] & 0x01) {
+		wpa_printf(MSG_DEBUG, "Group addressed Action frame: DA="
+			   MACSTR " SA=" MACSTR " BSSID=" MACSTR
+			   " category=%u",
+			   MAC2STR(mgmt->da), MAC2STR(mgmt->sa),
+			   MAC2STR(mgmt->bssid), mgmt->u.action.category);
 		return; /* Ignore group addressed Action frames for now */
+	}
 	bss = bss_get(wt, mgmt->bssid);
 	if (bss == NULL)
 		return;

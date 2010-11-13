@@ -25,6 +25,17 @@
 #include "wlantest.h"
 
 
+static int is_zero(const u8 *buf, size_t len)
+{
+	size_t i;
+	for (i = 0; i < len; i++) {
+		if (buf[i])
+			return 0;
+	}
+	return 1;
+}
+
+
 static const char * data_stype(u16 stype)
 {
 	switch (stype) {
@@ -110,6 +121,14 @@ static void rx_data_eapol_key_1_of_4(struct wlantest *wt, const u8 *dst,
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	if (is_zero(hdr->key_nonce, WPA_NONCE_LEN)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key 1/4 from " MACSTR " used "
+			   "zero nonce", MAC2STR(src));
+	}
+	if (!is_zero(hdr->key_rsc, 8)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key 1/4 from " MACSTR " used "
+			   "non-zero Key RSC", MAC2STR(src));
+	}
 	os_memcpy(sta->anonce, hdr->key_nonce, WPA_NONCE_LEN);
 }
 
@@ -183,6 +202,14 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	if (is_zero(hdr->key_nonce, WPA_NONCE_LEN)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key 2/4 from " MACSTR " used "
+			   "zero nonce", MAC2STR(src));
+	}
+	if (!is_zero(hdr->key_rsc, 8)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key 2/4 from " MACSTR " used "
+			   "non-zero Key RSC", MAC2STR(src));
+	}
 	os_memcpy(sta->snonce, hdr->key_nonce, WPA_NONCE_LEN);
 	key_info = WPA_GET_BE16(hdr->key_info);
 	key_data_len = WPA_GET_BE16(hdr->key_data_length);
@@ -556,6 +583,10 @@ static void rx_data_eapol_key_4_of_4(struct wlantest *wt, const u8 *dst,
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	if (!is_zero(hdr->key_rsc, 8)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key 4/4 from " MACSTR " used "
+			   "non-zero Key RSC", MAC2STR(src));
+	}
 	key_info = WPA_GET_BE16(hdr->key_info);
 
 	if (!sta->ptk_set) {
@@ -715,6 +746,10 @@ static void rx_data_eapol_key_2_of_2(struct wlantest *wt, const u8 *dst,
 
 	eapol = (const struct ieee802_1x_hdr *) data;
 	hdr = (const struct wpa_eapol_key *) (eapol + 1);
+	if (!is_zero(hdr->key_rsc, 8)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key 2/2 from " MACSTR " used "
+			   "non-zero Key RSC", MAC2STR(src));
+	}
 	key_info = WPA_GET_BE16(hdr->key_info);
 
 	if (!sta->ptk_set) {
@@ -754,13 +789,15 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 
 	if (hdr->type == EAPOL_KEY_TYPE_RC4) {
 		/* TODO: EAPOL-Key RC4 for WEP */
+		wpa_printf(MSG_INFO, "EAPOL-Key Descriptor Type RC4 from "
+			   MACSTR, MAC2STR(src));
 		return;
 	}
 
 	if (hdr->type != EAPOL_KEY_TYPE_RSN &&
 	    hdr->type != EAPOL_KEY_TYPE_WPA) {
-		wpa_printf(MSG_DEBUG, "Unsupported EAPOL-Key type %u",
-			   hdr->type);
+		wpa_printf(MSG_INFO, "Unsupported EAPOL-Key Descriptor Type "
+			   "%u from " MACSTR, hdr->type, MAC2STR(src));
 		return;
 	}
 
@@ -799,8 +836,8 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 	if (ver != WPA_KEY_INFO_TYPE_HMAC_MD5_RC4 &&
 	    ver != WPA_KEY_INFO_TYPE_HMAC_SHA1_AES &&
 	    ver != WPA_KEY_INFO_TYPE_AES_128_CMAC) {
-		wpa_printf(MSG_DEBUG, "Unsupported EAPOL-Key Key Descriptor "
-			   "Version %u", ver);
+		wpa_printf(MSG_INFO, "Unsupported EAPOL-Key Key Descriptor "
+			   "Version %u from " MACSTR, ver, MAC2STR(src));
 		return;
 	}
 
@@ -816,6 +853,48 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 		    hdr->key_mic, 16);
 	wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data",
 		    key_data, key_data_length);
+
+	if (hdr->type == EAPOL_KEY_TYPE_RSN &&
+	    (key_info & (WPA_KEY_INFO_KEY_INDEX_MASK | BIT(14) | BIT(15))) !=
+	    0) {
+		wpa_printf(MSG_INFO, "RSN EAPOL-Key with non-zero reserved "
+			   "Key Info bits 0x%x from " MACSTR,
+			   key_info, MAC2STR(src));
+	}
+
+	if (hdr->type == EAPOL_KEY_TYPE_WPA &&
+	    (key_info & (WPA_KEY_INFO_ENCR_KEY_DATA |
+			 WPA_KEY_INFO_SMK_MESSAGE |BIT(14) | BIT(15))) != 0) {
+		wpa_printf(MSG_INFO, "WPA EAPOL-Key with non-zero reserved "
+			   "Key Info bits 0x%x from " MACSTR,
+			   key_info, MAC2STR(src));
+	}
+
+	if (key_length > 32) {
+		wpa_printf(MSG_INFO, "EAPOL-Key with invalid Key Length %d "
+			   "from " MACSTR, key_length, MAC2STR(src));
+	}
+
+	if (ver != WPA_KEY_INFO_TYPE_HMAC_MD5_RC4 &&
+	    !is_zero(hdr->key_iv, 16)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key with non-zero Key IV "
+			   "(reserved with ver=%d) field from " MACSTR,
+			   ver, MAC2STR(src));
+		wpa_hexdump(MSG_INFO, "EAPOL-Key Key IV (reserved)",
+			    hdr->key_iv, 16);
+	}
+
+	if (!is_zero(hdr->key_id, 8)) {
+		wpa_printf(MSG_INFO, "EAPOL-Key with non-zero Key ID "
+			   "(reserved) field from " MACSTR, MAC2STR(src));
+		wpa_hexdump(MSG_INFO, "EAPOL-Key Key ID (reserved)",
+			    hdr->key_id, 8);
+	}
+
+	if (hdr->key_rsc[6] || hdr->key_rsc[7]) {
+		wpa_printf(MSG_INFO, "EAPOL-Key with non-zero Key RSC octets "
+			   "(last two are unused)" MACSTR, MAC2STR(src));
+	}
 
 	if (key_info & (WPA_KEY_INFO_ERROR | WPA_KEY_INFO_REQUEST))
 		return;
@@ -833,7 +912,12 @@ static void rx_data_eapol_key(struct wlantest *wt, const u8 *dst,
 			rx_data_eapol_key_1_of_4(wt, dst, src, data, len);
 			break;
 		case WPA_KEY_INFO_MIC:
-			rx_data_eapol_key_2_of_4(wt, dst, src, data, len);
+			if (key_data_length == 0)
+				rx_data_eapol_key_4_of_4(wt, dst, src, data,
+							 len);
+			else
+				rx_data_eapol_key_2_of_4(wt, dst, src, data,
+							 len);
 			break;
 		case WPA_KEY_INFO_MIC | WPA_KEY_INFO_ACK |
 			WPA_KEY_INFO_INSTALL:
@@ -891,6 +975,10 @@ static void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
 		   "type=%u len=%u",
 		   MAC2STR(src), MAC2STR(dst), prot ? " Prot" : "",
 		   hdr->version, hdr->type, length);
+	if (hdr->version < 1 || hdr->version > 3) {
+		wpa_printf(MSG_INFO, "Unexpected EAPOL version %u from "
+			   MACSTR, hdr->version, MAC2STR(src));
+	}
 	if (sizeof(*hdr) + length > len) {
 		wpa_printf(MSG_INFO, "Truncated EAPOL frame from " MACSTR,
 			   MAC2STR(src));

@@ -153,4 +153,7 @@ u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len);
 void ccmp_get_pn(u8 *pn, const u8 *data);
 
+u8 * tkip_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
+		  const u8 *data, size_t data_len, size_t *decrypted_len);
+
 #endif /* WLANTEST_H */

@@ -60,6 +60,7 @@ OBJS += bss.o
 OBJS += sta.o
 OBJS += crc32.o
 OBJS += ccmp.o
+OBJS += tkip.o
 
 LIBS += -lpcap
 

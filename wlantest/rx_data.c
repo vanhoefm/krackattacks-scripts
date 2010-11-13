@@ -941,6 +941,7 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		return;
 	}
 
+	/* TODO: different replay protection for TKIP */
 	ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, bss->rsc[keyid], 6) <= 0) {
 		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
@@ -949,9 +950,12 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
 	}
 
-	/* TODO: TKIP */
-
-	decrypted = ccmp_decrypt(bss->gtk[keyid], hdr, data, len, &dlen);
+	if (bss->group_cipher == WPA_CIPHER_TKIP)
+		decrypted = tkip_decrypt(bss->gtk[keyid], hdr, data, len,
+					 &dlen);
+	else
+		decrypted = ccmp_decrypt(bss->gtk[keyid], hdr, data, len,
+					 &dlen);
 	if (decrypted) {
 		rx_data_process(wt, dst, src, decrypted, dlen, 1);
 		os_memcpy(bss->rsc[keyid], pn, 6);
@@ -1027,9 +1031,10 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}
 
-	/* TODO: TKIP */
-
-	decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
+	if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
+		decrypted = tkip_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
+	else
+		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
 	if (decrypted) {
 		rx_data_process(wt, dst, src, decrypted, dlen, 1);
 		os_memcpy(rsc, pn, 6);

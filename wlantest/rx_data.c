@@ -979,6 +979,27 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		    return;
 	}
 
+	if (bss->group_cipher == WPA_CIPHER_TKIP) {
+		if (data[3] & 0x1f) {
+			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
+				   "non-zero reserved bit",
+				   MAC2STR(bss->bssid));
+		}
+		if (data[1] != ((data[0] | 0x20) & 0x7f)) {
+			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
+				   "incorrect WEPSeed[1] (was 0x%x, expected "
+				   "0x%x)",
+				   MAC2STR(bss->bssid), data[1],
+				   (data[0] | 0x20) & 0x7f);
+		}
+	} else if (bss->group_cipher == WPA_CIPHER_CCMP) {
+		if (data[2] != 0 || (data[3] & 0x1f) != 0) {
+			wpa_printf(MSG_INFO, "CCMP frame from " MACSTR " used "
+				   "non-zero reserved bit",
+				   MAC2STR(bss->bssid));
+		}
+	}
+
 	keyid = data[3] >> 6;
 	if (bss->gtk_len[keyid] == 0) {
 		wpa_printf(MSG_MSGDUMP, "No GTK known to decrypt the frame "
@@ -1060,6 +1081,27 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			       MACSTR " did not have ExtIV bit set to 1",
 			       MAC2STR(src));
 		    return;
+	}
+
+	if (sta->pairwise_cipher == WPA_CIPHER_TKIP) {
+		if (data[3] & 0x1f) {
+			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
+				   "non-zero reserved bit",
+				   MAC2STR(hdr->addr2));
+		}
+		if (data[1] != ((data[0] | 0x20) & 0x7f)) {
+			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
+				   "incorrect WEPSeed[1] (was 0x%x, expected "
+				   "0x%x)",
+				   MAC2STR(hdr->addr2), data[1],
+				   (data[0] | 0x20) & 0x7f);
+		}
+	} else if (sta->pairwise_cipher == WPA_CIPHER_CCMP) {
+		if (data[2] != 0 || (data[3] & 0x1f) != 0) {
+			wpa_printf(MSG_INFO, "CCMP frame from " MACSTR " used "
+				   "non-zero reserved bit",
+				   MAC2STR(hdr->addr2));
+		}
 	}
 
 	keyid = data[3] >> 6;

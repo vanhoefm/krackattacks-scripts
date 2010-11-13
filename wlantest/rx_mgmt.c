@@ -686,6 +686,11 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 		return NULL;
 	}
 
+	if (data[24 + 2] != 0 || (data[24 + 3] & 0x1f) != 0) {
+		wpa_printf(MSG_INFO, "CCMP mgmt frame from " MACSTR " used "
+			   "non-zero reserved bit", MAC2STR(hdr->addr2));
+	}
+
 	keyid = data[24 + 3] >> 6;
 	if (keyid != 0) {
 		wpa_printf(MSG_INFO, "Unexpected non-zero KeyID %d in "

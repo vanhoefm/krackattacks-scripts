@@ -979,8 +979,10 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		return;
 	}
 
-	/* TODO: different replay protection for TKIP */
-	ccmp_get_pn(pn, data);
+	if (bss->group_cipher == WPA_CIPHER_TKIP)
+		tkip_get_pn(pn, data);
+	else
+		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, bss->rsc[keyid], 6) <= 0) {
 		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
 			   MAC2STR(hdr->addr2));
@@ -1061,7 +1063,10 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		rsc = sta->rsc_fromds[tid];
 
 
-	ccmp_get_pn(pn, data);
+	if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
+		tkip_get_pn(pn, data);
+	else
+		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, rsc, 6) <= 0) {
 		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
 			   MAC2STR(hdr->addr2));

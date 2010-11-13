@@ -587,7 +587,7 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 	const struct ieee80211_mgmt *mgmt;
 	u16 fc, stype;
 	const u8 *mmie;
-	int keyid;
+	u16 keyid;
 	struct wlantest_bss *bss;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
@@ -619,6 +619,11 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 
 	mmie = data + len - 16;
 	keyid = WPA_GET_LE16(mmie);
+	if (keyid & 0xf000) {
+		wpa_printf(MSG_INFO, "MMIE KeyID reserved bits not zero "
+			   "(%04x) from " MACSTR, keyid, MAC2STR(mgmt->sa));
+		keyid &= 0x0fff;
+	}
 	if (keyid < 4 || keyid > 5) {
 		wpa_printf(MSG_INFO, "Unexpected MMIE KeyID %u from " MACSTR,
 			   keyid, MAC2STR(mgmt->sa));

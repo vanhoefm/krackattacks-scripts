@@ -1,4 +1,4 @@
-ALL=wlantest
+ALL=wlantest wlantest_cli
 
 all: $(ALL)
 
@@ -61,6 +61,7 @@ OBJS += sta.o
 OBJS += crc32.o
 OBJS += ccmp.o
 OBJS += tkip.o
+OBJS += ctrl.o
 
 LIBS += -lpcap
 
@@ -88,8 +89,15 @@ libwlantest.so: $(OBJS_lib)
 
 endif
 
+
+OBJS_cli = wlantest_cli.o
+
+
 wlantest: $(OBJS) $(LIBWLANTEST)
 	$(LDO) $(LDFLAGS) -o wlantest $(OBJS) -L. -lwlantest $(LIBS)
+
+wlantest_cli: $(OBJS_cli)
+	$(LDO) $(LDFLAGS) -o wlantest_cli $(OBJS_cli) -L. -lwlantest
 
 clean:
 	$(MAKE) -C ../src clean

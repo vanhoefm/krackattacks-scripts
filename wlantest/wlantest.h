@@ -102,9 +102,15 @@ struct wlantest_radius {
 	struct radius_msg *last_req;
 };
 
+
+#define MAX_CTRL_CONNECTIONS 10
+
 struct wlantest {
 	int monitor_sock;
 	int monitor_wired;
+
+	int ctrl_sock;
+	int ctrl_socks[MAX_CTRL_CONNECTIONS];
 
 	struct dl_list passphrase; /* struct wlantest_passphrase */
 	struct dl_list bss; /* struct wlantest_bss */
@@ -156,5 +162,8 @@ void ccmp_get_pn(u8 *pn, const u8 *data);
 u8 * tkip_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 		  const u8 *data, size_t data_len, size_t *decrypted_len);
 void tkip_get_pn(u8 *pn, const u8 *data);
+
+int ctrl_init(struct wlantest *wt);
+void ctrl_deinit(struct wlantest *wt);
 
 #endif /* WLANTEST_H */

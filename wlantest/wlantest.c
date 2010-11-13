@@ -31,7 +31,7 @@ static void wlantest_terminate(int sig, void *signal_ctx)
 
 static void usage(void)
 {
-	printf("wlantest [-ddhqq] [-i<ifname>] [-r<pcap file>] "
+	printf("wlantest [-cddhqq] [-i<ifname>] [-r<pcap file>] "
 	       "[-p<passphrase>]\n"
 		"         [-I<wired ifname>] [-R<wired pcap file>] "
 	       "[-P<RADIUS shared secret>]\n"
@@ -55,8 +55,12 @@ static void secret_deinit(struct wlantest_radius_secret *r)
 
 static void wlantest_init(struct wlantest *wt)
 {
+	int i;
 	os_memset(wt, 0, sizeof(*wt));
 	wt->monitor_sock = -1;
+	wt->ctrl_sock = -1;
+	for (i = 0; i < MAX_CTRL_CONNECTIONS; i++)
+		wt->ctrl_socks[i] = -1;
 	dl_list_init(&wt->passphrase);
 	dl_list_init(&wt->bss);
 	dl_list_init(&wt->secret);
@@ -80,6 +84,8 @@ static void wlantest_deinit(struct wlantest *wt)
 	struct wlantest_radius *r, *rn;
 	struct wlantest_pmk *pmk, *np;
 
+	if (wt->ctrl_sock >= 0)
+		ctrl_deinit(wt);
 	if (wt->monitor_sock >= 0)
 		monitor_deinit(wt);
 	dl_list_for_each_safe(bss, n, &wt->bss, struct wlantest_bss, list)
@@ -137,6 +143,7 @@ int main(int argc, char *argv[])
 	const char *ifname = NULL;
 	const char *ifname_wired = NULL;
 	struct wlantest wt;
+	int ctrl_iface = 0;
 
 	wpa_debug_level = MSG_INFO;
 	wpa_debug_show_keys = 1;
@@ -147,10 +154,13 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "dhi:I:p:P:qr:R:w:");
+		c = getopt(argc, argv, "cdhi:I:p:P:qr:R:w:");
 		if (c < 0)
 			break;
 		switch (c) {
+		case 'c':
+			ctrl_iface = 1;
+			break;
 		case 'd':
 			if (wpa_debug_level > 0)
 				wpa_debug_level--;
@@ -210,6 +220,9 @@ int main(int argc, char *argv[])
 		return -1;
 
 	if (ifname_wired && monitor_init_wired(&wt, ifname_wired) < 0)
+		return -1;
+
+	if (ctrl_iface && ctrl_init(&wt) < 0)
 		return -1;
 
 	eloop_register_signal_terminate(wlantest_terminate, &wt);

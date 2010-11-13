@@ -676,7 +676,17 @@ static u8 * mgmt_ccmp_decrypt(struct wlantest *wt, const u8 *data, size_t len,
 		return NULL;
 	}
 
-	keyid = data[3] >> 6;
+	if (len < 24 + 4)
+		return NULL;
+
+	if (!(data[24 + 3] & 0x20)) {
+		wpa_printf(MSG_INFO, "Expected CCMP frame from " MACSTR
+			   " did not have ExtIV bit set to 1",
+			   MAC2STR(hdr->addr2));
+		return NULL;
+	}
+
+	keyid = data[24 + 3] >> 6;
 	if (keyid != 0) {
 		wpa_printf(MSG_INFO, "Unexpected non-zero KeyID %d in "
 			   "individually addressed Management frame from "

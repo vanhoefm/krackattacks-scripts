@@ -971,6 +971,14 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		return;
 	}
 
+	if (bss->group_cipher & (WPA_CIPHER_TKIP | WPA_CIPHER_CCMP) &&
+	    !(data[3] & 0x20)) {
+		    wpa_printf(MSG_INFO, "Expected TKIP/CCMP frame from "
+			       MACSTR " did not have ExtIV bit set to 1",
+			       MAC2STR(bss->bssid));
+		    return;
+	}
+
 	keyid = data[3] >> 6;
 	if (bss->gtk_len[keyid] == 0) {
 		wpa_printf(MSG_MSGDUMP, "No GTK known to decrypt the frame "
@@ -1044,6 +1052,14 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	if (len < 4) {
 		wpa_printf(MSG_INFO, "Too short encrypted data frame");
 		return;
+	}
+
+	if (sta->pairwise_cipher & (WPA_CIPHER_TKIP | WPA_CIPHER_CCMP) &&
+	    !(data[3] & 0x20)) {
+		    wpa_printf(MSG_INFO, "Expected TKIP/CCMP frame from "
+			       MACSTR " did not have ExtIV bit set to 1",
+			       MAC2STR(src));
+		    return;
 	}
 
 	keyid = data[3] >> 6;

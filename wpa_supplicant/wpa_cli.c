@@ -2734,8 +2734,53 @@ static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 	}
 }
 
+#define max_args 10
+
+static int tokenize_cmd(char *cmd, char *argv[])
+{
+	char *pos;
+	int argc = 0;
+
+	pos = cmd;
+	for (;;) {
+		while (*pos == ' ')
+			pos++;
+		if (*pos == '\0')
+			break;
+		argv[argc] = pos;
+		argc++;
+		if (argc == max_args)
+			break;
+		if (*pos == '"') {
+			char *pos2 = os_strrchr(pos, '"');
+			if (pos2)
+				pos = pos2 + 1;
+		}
+		while (*pos != '\0' && *pos != ' ')
+			pos++;
+		if (*pos == ' ')
+			*pos++ = '\0';
+	}
+
+	return argc;
+}
+
+
+static void trunc_nl(char *str)
+{
+	char *pos = str;
+	while (*pos != '\0') {
+		if (*pos == '\n') {
+			*pos = '\0';
+			break;
+		}
+		pos++;
+	}
+}
+
 
 #ifdef CONFIG_READLINE
+
 static char * wpa_cli_cmd_gen(const char *text, int state)
 {
 	static int i, len;
@@ -2812,21 +2857,16 @@ static char ** wpa_cli_completion(const char *text, int start, int end)
 		func = wpa_cli_dummy_gen;
 	return rl_completion_matches(text, func);
 }
-#endif /* CONFIG_READLINE */
 
 
 static void wpa_cli_interactive(void)
 {
-#define max_args 10
-	char cmdbuf[256], *cmd, *argv[max_args], *pos;
+	char cmdbuf[256], *cmd, *argv[max_args];
 	int argc;
-#ifdef CONFIG_READLINE
 	char *home, *hfile = NULL;
-#endif /* CONFIG_READLINE */
 
 	printf("\nInteractive mode\n\n");
 
-#ifdef CONFIG_READLINE
 	rl_attempted_completion_function = wpa_cli_completion;
 	home = getenv("HOME");
 	if (home) {
@@ -2844,7 +2884,6 @@ static void wpa_cli_interactive(void)
 			}
 		}
 	}
-#endif /* CONFIG_READLINE */
 
 	do {
 		wpa_cli_recv_pending(mon_conn, 0, 0);
@@ -2855,7 +2894,6 @@ static void wpa_cli_interactive(void)
 		if (mon_pid)
 			kill(mon_pid, SIGUSR1);
 #endif /* CONFIG_WPA_CLI_FORK */
-#ifdef CONFIG_READLINE
 		cmd = readline("> ");
 		if (cmd && *cmd) {
 			HIST_ENTRY *h;
@@ -2866,45 +2904,14 @@ static void wpa_cli_interactive(void)
 				add_history(cmd);
 			next_history();
 		}
-#else /* CONFIG_READLINE */
-		printf("> ");
-		cmd = fgets(cmdbuf, sizeof(cmdbuf), stdin);
-#endif /* CONFIG_READLINE */
 #ifndef CONFIG_NATIVE_WINDOWS
 		alarm(0);
 #endif /* CONFIG_NATIVE_WINDOWS */
 		if (cmd == NULL)
 			break;
 		wpa_cli_recv_pending(mon_conn, 0, 0);
-		pos = cmd;
-		while (*pos != '\0') {
-			if (*pos == '\n') {
-				*pos = '\0';
-				break;
-			}
-			pos++;
-		}
-		argc = 0;
-		pos = cmd;
-		for (;;) {
-			while (*pos == ' ')
-				pos++;
-			if (*pos == '\0')
-				break;
-			argv[argc] = pos;
-			argc++;
-			if (argc == max_args)
-				break;
-			if (*pos == '"') {
-				char *pos2 = os_strrchr(pos, '"');
-				if (pos2)
-					pos = pos2 + 1;
-			}
-			while (*pos != '\0' && *pos != ' ')
-				pos++;
-			if (*pos == ' ')
-				*pos++ = '\0';
-		}
+		trunc_nl(cmd);
+		argc = tokenize_cmd(cmd, argv);
 		if (argc)
 			wpa_request(ctrl_conn, argc, argv);
 
@@ -2916,7 +2923,6 @@ static void wpa_cli_interactive(void)
 #endif /* CONFIG_WPA_CLI_FORK */
 	} while (!wpa_cli_quit);
 
-#ifdef CONFIG_READLINE
 	if (hfile) {
 		/* Save command history, excluding lines that may contain
 		 * passwords. */
@@ -2940,8 +2946,49 @@ static void wpa_cli_interactive(void)
 		write_history(hfile);
 		os_free(hfile);
 	}
-#endif /* CONFIG_READLINE */
 }
+
+#else /* CONFIG_READLINE */
+
+static void wpa_cli_interactive(void)
+{
+	char cmdbuf[256], *cmd, *argv[max_args];
+	int argc;
+
+	printf("\nInteractive mode\n\n");
+
+	do {
+		wpa_cli_recv_pending(mon_conn, 0, 0);
+#ifndef CONFIG_NATIVE_WINDOWS
+		alarm(ping_interval);
+#endif /* CONFIG_NATIVE_WINDOWS */
+#ifdef CONFIG_WPA_CLI_FORK
+		if (mon_pid)
+			kill(mon_pid, SIGUSR1);
+#endif /* CONFIG_WPA_CLI_FORK */
+		printf("> ");
+		cmd = fgets(cmdbuf, sizeof(cmdbuf), stdin);
+#ifndef CONFIG_NATIVE_WINDOWS
+		alarm(0);
+#endif /* CONFIG_NATIVE_WINDOWS */
+		if (cmd == NULL)
+			break;
+		wpa_cli_recv_pending(mon_conn, 0, 0);
+		trunc_nl(cmd);
+		argc = tokenize_cmd(cmd, argv);
+		if (argc)
+			wpa_request(ctrl_conn, argc, argv);
+
+		if (cmd != cmdbuf)
+			free(cmd);
+#ifdef CONFIG_WPA_CLI_FORK
+		if (mon_pid)
+			kill(mon_pid, SIGUSR2);
+#endif /* CONFIG_WPA_CLI_FORK */
+	} while (!wpa_cli_quit);
+}
+
+#endif /* CONFIG_READLINE */
 
 
 static void wpa_cli_action(struct wpa_ctrl *ctrl)

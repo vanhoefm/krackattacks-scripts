@@ -1148,10 +1148,12 @@ LIBS += $(DBUS_LIBS)
 ifdef CONFIG_READLINE
 CFLAGS += -DCONFIG_READLINE
 LIBS_c += -lncurses -lreadline
-endif
-
+else
 ifdef CONFIG_WPA_CLI_EDIT
-CFLAGS += -DCONFIG_WPA_CLI_EDIT
+OBJS_c += ../src/utils/edit.o
+else
+OBJS_c += ../src/utils/edit_simple.o
+endif
 endif
 
 ifdef CONFIG_NATIVE_WINDOWS

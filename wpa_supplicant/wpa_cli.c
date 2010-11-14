@@ -13,6 +13,9 @@
  */
 
 #include "includes.h"
+#ifdef CONFIG_WPA_CLI_EDIT
+#include <termios.h>
+#endif /* CONFIG_WPA_CLI_EDIT */
 
 #ifdef CONFIG_CTRL_IFACE
 
@@ -100,9 +103,17 @@ static const char *action_file = NULL;
 static int ping_interval = 5;
 static int interactive = 0;
 #ifndef CONFIG_READLINE
-static char cmdbuf[256];
+#define CMD_BUF_LEN 256
+static char cmdbuf[CMD_BUF_LEN];
 static int cmdbuf_pos = 0;
+static int cmdbuf_len = 0;
 #endif /* CONFIG_READLINE */
+#ifdef CONFIG_WPA_CLI_EDIT
+#define CMD_HISTORY_LEN 20
+static char history_buf[CMD_HISTORY_LEN][CMD_BUF_LEN];
+static int history_pos = 0;
+static int history_current = 0;
+#endif /* CONFIG_WPA_CLI_EDIT */
 
 
 static void print_help(void);
@@ -133,8 +144,15 @@ static void readline_redraw()
 	rl_on_new_line();
 	rl_redisplay();
 #else /* CONFIG_READLINE */
-	cmdbuf[cmdbuf_pos] = '\0';
+	char tmp;
+	cmdbuf[cmdbuf_len] = '\0';
 	printf("\r> %s", cmdbuf);
+	if (cmdbuf_pos != cmdbuf_len) {
+		tmp = cmdbuf[cmdbuf_pos];
+		cmdbuf[cmdbuf_pos] = '\0';
+		printf("\r> %s", cmdbuf);
+		cmdbuf[cmdbuf_pos] = tmp;
+	}
 	fflush(stdout);
 #endif /* CONFIG_READLINE */
 }
@@ -2904,12 +2922,472 @@ static void wpa_cli_interactive(void)
 
 #else /* CONFIG_READLINE */
 
+#ifdef CONFIG_WPA_CLI_EDIT
+
+static void wpa_cli_clear_line(void)
+{
+	int i;
+	putchar('\r');
+	for (i = 0; i < cmdbuf_len + 2; i++)
+		putchar(' ');
+}
+
+
+static void move_start(void)
+{
+	cmdbuf_pos = 0;
+	readline_redraw();
+}
+
+
+static void move_end(void)
+{
+	cmdbuf_pos = cmdbuf_len;
+	readline_redraw();
+}
+
+
+static void move_left(void)
+{
+	if (cmdbuf_pos > 0) {
+		cmdbuf_pos--;
+		readline_redraw();
+	}
+}
+
+
+static void move_right(void)
+{
+	if (cmdbuf_pos < cmdbuf_len) {
+		cmdbuf_pos++;
+		readline_redraw();
+	}
+}
+
+
+static void move_word_left(void)
+{
+	while (cmdbuf_pos > 0 && cmdbuf[cmdbuf_pos - 1] == ' ')
+		cmdbuf_pos--;
+	while (cmdbuf_pos > 0 && cmdbuf[cmdbuf_pos - 1] != ' ')
+		cmdbuf_pos--;
+	readline_redraw();
+}
+
+
+static void move_word_right(void)
+{
+	while (cmdbuf_pos < cmdbuf_len && cmdbuf[cmdbuf_pos] == ' ')
+		cmdbuf_pos++;
+	while (cmdbuf_pos < cmdbuf_len && cmdbuf[cmdbuf_pos] != ' ')
+		cmdbuf_pos++;
+	readline_redraw();
+}
+
+
+static void delete_left(void)
+{
+	if (cmdbuf_pos == 0)
+		return;
+
+	wpa_cli_clear_line();
+	os_memmove(cmdbuf + cmdbuf_pos - 1, cmdbuf + cmdbuf_pos,
+		   cmdbuf_len - cmdbuf_pos);
+	cmdbuf_pos--;
+	cmdbuf_len--;
+	readline_redraw();
+}
+
+
+static void delete_current(void)
+{
+	if (cmdbuf_pos == cmdbuf_len)
+		return;
+
+	wpa_cli_clear_line();
+	os_memmove(cmdbuf + cmdbuf_pos, cmdbuf + cmdbuf_pos + 1,
+		   cmdbuf_len - cmdbuf_pos);
+	cmdbuf_len--;
+	readline_redraw();
+}
+
+
+static void delete_word(void)
+{
+	wpa_cli_clear_line();
+	while (cmdbuf_len > 0 && cmdbuf[cmdbuf_len - 1] == ' ')
+		cmdbuf_len--;
+	while (cmdbuf_len > 0 && cmdbuf[cmdbuf_len - 1] != ' ')
+		cmdbuf_len--;
+	readline_redraw();
+}
+
+
+static void clear_left(void)
+{
+	if (cmdbuf_pos == 0)
+		return;
+
+	wpa_cli_clear_line();
+	os_memmove(cmdbuf, cmdbuf + cmdbuf_pos, cmdbuf_len - cmdbuf_pos);
+	cmdbuf_len -= cmdbuf_pos;
+	cmdbuf_pos = 0;
+	readline_redraw();
+}
+
+
+static void clear_right(void)
+{
+	if (cmdbuf_pos == cmdbuf_len)
+		return;
+
+	wpa_cli_clear_line();
+	cmdbuf_len = cmdbuf_pos;
+	readline_redraw();
+}
+
+
+static void history_add(const char *str)
+{
+	int prev;
+
+	if (str[0] == '\0')
+		return;
+
+	if (history_pos == 0)
+		prev = CMD_HISTORY_LEN - 1;
+	else
+		prev = history_pos - 1;
+	if (os_strcmp(history_buf[prev], str) == 0)
+		return;
+
+	os_strlcpy(history_buf[history_pos], str, CMD_BUF_LEN);
+	history_pos++;
+	if (history_pos == CMD_HISTORY_LEN)
+		history_pos = 0;
+	history_current = history_pos;
+}
+
+
+static void history_prev(void)
+{
+	int pos;
+
+	if (history_current == (history_pos + 1) % CMD_HISTORY_LEN)
+		return;
+
+	pos = history_current;
+
+	if (history_current == history_pos && cmdbuf_len) {
+		cmdbuf[cmdbuf_len] = '\0';
+		history_add(cmdbuf);
+	}
+
+	if (pos > 0)
+		pos--;
+	else
+		pos = CMD_HISTORY_LEN - 1;
+	if (history_buf[pos][0] == '\0')
+		return;
+	history_current = pos;
+
+	wpa_cli_clear_line();
+	cmdbuf_len = cmdbuf_pos = os_strlen(history_buf[history_current]);
+	os_memcpy(cmdbuf, history_buf[history_current], cmdbuf_len);
+	readline_redraw();
+}
+
+
+static void history_next(void)
+{
+	if (history_current == history_pos)
+		return;
+
+	history_current++;
+	if (history_current == CMD_HISTORY_LEN)
+	    history_current = 0;
+
+	wpa_cli_clear_line();
+	cmdbuf_len = cmdbuf_pos = os_strlen(history_buf[history_current]);
+	os_memcpy(cmdbuf, history_buf[history_current], cmdbuf_len);
+	readline_redraw();
+}
+
+
+static void history_debug_dump(void)
+{
+	int p;
+	wpa_cli_clear_line();
+	printf("\r");
+	p = (history_pos + 1) % CMD_HISTORY_LEN;
+	for (;;) {
+		printf("[%d%s%s] %s\n",
+		       p, p == history_current ? "C" : "",
+		       p == history_pos ? "P" : "", history_buf[p]);
+		if (p == history_pos)
+			break;
+		p++;
+		if (p == CMD_HISTORY_LEN)
+			p = 0;
+	}
+	readline_redraw();
+}
+
+
+static void insert_char(int c)
+{
+	if (c < 32 && c > 255) {
+		printf("[%d]\n", c);
+		readline_redraw();
+	}
+
+	if (cmdbuf_len >= (int) sizeof(cmdbuf) - 1)
+		return;
+	if (cmdbuf_len == cmdbuf_pos) {
+		cmdbuf[cmdbuf_pos++] = c;
+		cmdbuf_len++;
+		putchar(c);
+		fflush(stdout);
+	} else {
+		os_memmove(cmdbuf + cmdbuf_pos + 1, cmdbuf + cmdbuf_pos,
+			   cmdbuf_len - cmdbuf_pos);
+		cmdbuf[cmdbuf_pos++] = c;
+		cmdbuf_len++;
+		readline_redraw();
+	}
+}
+
+
+static void process_cmd(void)
+{
+	char *argv[max_args];
+	int argc;
+
+	if (cmdbuf_len == 0) {
+		printf("\n> ");
+		fflush(stdout);
+		return;
+	}
+	printf("\n");
+	cmdbuf[cmdbuf_len] = '\0';
+	history_add(cmdbuf);
+	cmdbuf_pos = 0;
+	cmdbuf_len = 0;
+	trunc_nl(cmdbuf);
+	argc = tokenize_cmd(cmdbuf, argv);
+	if (argc)
+		wpa_request(ctrl_conn, argc, argv);
+	printf("> ");
+	fflush(stdout);
+}
+
+
+static void wpa_cli_read_char(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	int c;
+	unsigned char buf[1];
+	int res;
+	static int esc = -1;
+	static char esc_buf[6];
+
+	res = read(sock, buf, 1);
+	if (res < 0)
+		perror("read");
+	if (res <= 0) {
+		eloop_terminate();
+		return;
+	}
+	c = buf[0];
+
+	if (esc >= 0) {
+		if (esc == 5) {
+			printf("{ESC%s}[0]\n", esc_buf);
+			readline_redraw();
+			esc = -1;
+		} else {
+			esc_buf[esc++] = c;
+			esc_buf[esc] = '\0';
+			if (esc == 1)
+				return;
+		}
+	}
+
+	if (esc == 2 && esc_buf[0] == '[' && c >= 'A' && c <= 'Z') {
+		switch (c) {
+		case 'A': /* up */
+			history_prev();
+			break;
+		case 'B': /* down */
+			history_next();
+			break;
+		case 'C': /* right */
+			move_right();
+			break;
+		case 'D': /* left */
+			move_left();
+			break;
+		case 'F': /* end */
+			move_end();
+			break;
+		case 'H': /* home */
+			move_start();
+			break;
+		default:
+			printf("{ESC%s}[1]\n", esc_buf);
+			readline_redraw();
+			break;
+		}
+		esc = -1;
+		return;
+	}
+
+	if (esc > 1 && esc_buf[0] == '[') {
+		if ((c >= '0' && c <= '9') || c == ';')
+			return;
+
+		if (esc_buf[1] == '1' && esc_buf[2] == ';' &&
+		    esc_buf[3] == '5') {
+			switch (esc_buf[4]) {
+			case 'A': /* Ctrl-Up */
+			case 'B': /* Ctrl-Down */
+				break;
+			case 'C': /* Ctrl-Right */
+				move_word_right();
+				break;
+			case 'D': /* Ctrl-Left */
+				move_word_left();
+				break;
+			default:
+				printf("{ESC%s}[2]\n", esc_buf);
+				readline_redraw();
+				break;
+			}
+			esc = -1;
+			return;
+		}
+
+		switch (c) {
+		case '~':
+			switch (atoi(&esc_buf[1])) {
+			case 2: /* Insert */
+				break;
+			case 3: /* Delete */
+				delete_current();
+				break;
+			case 5: /* Page Up */
+			case 6: /* Page Down */
+			case 15: /* F5 */
+			case 17: /* F6 */
+			case 18: /* F7 */
+			case 19: /* F8 */
+			case 20: /* F9 */
+			case 21: /* F10 */
+			case 23: /* F11 */
+			case 24: /* F12 */
+				break;
+			default:
+				printf("{ESC%s}[3]\n", esc_buf);
+				readline_redraw();
+				break;
+			}
+			break;
+		default:
+			printf("{ESC%s}[4]\n", esc_buf);
+			readline_redraw();
+			break;
+		}
+
+		esc = -1;
+		return;
+	}
+
+	if (esc > 1 && esc_buf[0] == 'O') {
+		switch (esc_buf[1]) {
+		case 'P': /* F1 */
+			history_debug_dump();
+			break;
+		case 'Q': /* F2 */
+		case 'R': /* F3 */
+		case 'S': /* F4 */
+			break;
+		default:
+			printf("{ESC%s}[5]\n", esc_buf);
+			readline_redraw();
+			break;
+		}
+		esc = -1;
+		return;
+	}
+
+	if (esc > 1) {
+		printf("{ESC%s}[6]\n", esc_buf);
+		readline_redraw();
+		esc = -1;
+		return;
+	}
+
+	switch (c) {
+	case 1: /* ^A */
+		move_start();
+		break;
+	case 4: /* ^D */
+		if (cmdbuf_len > 0) {
+			delete_current();
+			return;
+		}
+		printf("\n");
+		eloop_terminate();
+		break;
+	case 5: /* ^E */
+		move_end();
+		break;
+	case 8: /* ^H = BS */
+		delete_left();
+		break;
+	case 9: /* ^I = TAB */
+		break;
+	case 10: /* NL */
+	case 13: /* CR */
+		process_cmd();
+		break;
+	case 11: /* ^K */
+		clear_right();
+		break;
+	case 14: /* ^N */
+		history_next();
+		break;
+	case 16: /* ^P */
+		history_prev();
+		break;
+	case 18: /* ^R */
+		/* TODO: search history */
+		break;
+	case 21: /* ^U */
+		clear_left();
+		break;
+	case 23: /* ^W */
+		delete_word();
+		break;
+	case 27: /* ESC */
+		esc = 0;
+		break;
+	case 127: /* DEL */
+		delete_left();
+		break;
+	default:
+		insert_char(c);
+		break;
+	}
+}
+
+#else /* CONFIG_WPA_CLI_EDIT */
+
 static void wpa_cli_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	char *argv[max_args];
 	int argc;
 	int c;
-	char buf[1];
+	unsigned char buf[1];
 	int res;
 
 	res = read(sock, buf, 1);
@@ -2940,15 +3418,31 @@ static void wpa_cli_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 }
 
+#endif /* CONFIG_WPA_CLI_EDIT */
+
 
 static void wpa_cli_interactive(void)
 {
+#ifdef CONFIG_WPA_CLI_EDIT
+	struct termios prevt, newt;
+#endif /* CONFIG_WPA_CLI_EDIT */
+
 	printf("\nInteractive mode\n\n");
 	cmdbuf_pos = 0;
+	cmdbuf_len = 0;
 
 	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
 	eloop_register_read_sock(STDIN_FILENO, wpa_cli_read_char, NULL, NULL);
 	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
+
+#ifdef CONFIG_WPA_CLI_EDIT
+	os_memset(history_buf, 0, sizeof(history_buf));
+
+	tcgetattr(STDIN_FILENO, &prevt);
+	newt = prevt;
+	newt.c_lflag &= ~(ICANON | ECHO);
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+#endif /* CONFIG_WPA_CLI_EDIT */
 
 	printf("> ");
 	fflush(stdout);
@@ -2958,6 +3452,10 @@ static void wpa_cli_interactive(void)
 	eloop_unregister_read_sock(STDIN_FILENO);
 	eloop_cancel_timeout(wpa_cli_ping, NULL, NULL);
 	wpa_cli_close_connection();
+
+#ifdef CONFIG_WPA_CLI_EDIT
+	tcsetattr(STDIN_FILENO, TCSANOW, &prevt);
+#endif /* CONFIG_WPA_CLI_EDIT */
 }
 
 #endif /* CONFIG_READLINE */

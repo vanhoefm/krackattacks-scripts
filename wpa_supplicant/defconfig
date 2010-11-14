@@ -230,6 +230,10 @@ CONFIG_CTRL_IFACE=y
 # the resulting binary.
 #CONFIG_READLINE=y
 
+# Include internal line edit mode in wpa_cli. This can be used as a replacement
+# for GNU Readline to provide limited command line editing and history support.
+#CONFIG_WPA_CLI_EDIT=y
+
 # Remove debugging code that is printing out debug message to stdout.
 # This can be used to reduce the size of the wpa_supplicant considerably
 # if debugging code is not needed. The size reduction can be around 35%

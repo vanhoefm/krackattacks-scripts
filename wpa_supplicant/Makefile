@@ -50,6 +50,7 @@ OBJS_p += ../src/utils/common.o
 OBJS_p += ../src/utils/wpa_debug.o
 OBJS_p += ../src/utils/wpabuf.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
+OBJS_c += ../src/utils/wpa_debug.o
 
 -include .config
 
@@ -74,7 +75,6 @@ CFLAGS += -DWPA_TRACE
 OBJS += ../src/utils/trace.o
 OBJS_p += ../src/utils/trace.o
 OBJS_c += ../src/utils/trace.o
-OBJS_c += ../src/utils/wpa_debug.o
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
@@ -1148,6 +1148,10 @@ LIBS += $(DBUS_LIBS)
 ifdef CONFIG_READLINE
 CFLAGS += -DCONFIG_READLINE
 LIBS_c += -lncurses -lreadline
+endif
+
+ifdef CONFIG_WPA_CLI_EDIT
+CFLAGS += -DCONFIG_WPA_CLI_EDIT
 endif
 
 ifdef CONFIG_NATIVE_WINDOWS

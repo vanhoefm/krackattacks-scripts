@@ -68,6 +68,10 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	edit_cmd_cb = cmd_cb;
 	edit_eof_cb = eof_cb;
 	eloop_register_read_sock(STDIN_FILENO, edit_read_char, NULL, NULL);
+
+	printf("> ");
+	fflush(stdout);
+
 	return 0;
 }
 

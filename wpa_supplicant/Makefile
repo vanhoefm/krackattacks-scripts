@@ -1146,7 +1146,7 @@ CFLAGS += $(DBUS_CFLAGS)
 LIBS += $(DBUS_LIBS)
 
 ifdef CONFIG_READLINE
-CFLAGS += -DCONFIG_READLINE
+OBJS_c += ../src/utils/edit_readline.o
 LIBS_c += -lncurses -lreadline
 else
 ifdef CONFIG_WPA_CLI_EDIT

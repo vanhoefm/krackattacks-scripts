@@ -92,3 +92,13 @@ void edit_redraw(void)
 	cmdbuf[cmdbuf_pos] = '\0';
 	printf("\r> %s", cmdbuf);
 }
+
+
+void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd))
+{
+}
+
+
+void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd, int pos))
+{
+}

@@ -19,10 +19,6 @@
 #ifdef CONFIG_CTRL_IFACE_UNIX
 #include <dirent.h>
 #endif /* CONFIG_CTRL_IFACE_UNIX */
-#ifdef CONFIG_READLINE
-#include <readline/readline.h>
-#include <readline/history.h>
-#endif /* CONFIG_READLINE */
 
 #include "common/wpa_ctrl.h"
 #include "utils/common.h"
@@ -2418,8 +2414,7 @@ static void print_help(void)
 }
 
 
-#ifdef CONFIG_READLINE
-static int cmd_has_sensitive_data(const char *cmd)
+static int wpa_cli_edit_filter_history_cb(void *ctx, const char *cmd)
 {
 	const char *c, *delim;
 	int n;
@@ -2438,7 +2433,65 @@ static int cmd_has_sensitive_data(const char *cmd)
 	}
 	return 0;
 }
-#endif /* CONFIG_READLINE */
+
+
+static char ** wpa_list_cmd_list(void)
+{
+	char **res;
+	int i, count;
+
+	count = sizeof(wpa_cli_commands) / sizeof(wpa_cli_commands[0]);
+	res = os_zalloc(count * sizeof(char *));
+	if (res == NULL)
+		return NULL;
+
+	for (i = 0; wpa_cli_commands[i].cmd; i++) {
+		res[i] = os_strdup(wpa_cli_commands[i].cmd);
+		if (res[i] == NULL)
+			break;
+	}
+
+	return res;
+}
+
+
+static char ** wpa_cli_cmd_completion(const char *cmd, const char *str,
+				      int pos)
+{
+	int i;
+
+	for (i = 0; wpa_cli_commands[i].cmd; i++) {
+		if (os_strcasecmp(wpa_cli_commands[i].cmd, cmd) == 0) {
+			edit_clear_line();
+			printf("\r%s\n", wpa_cli_commands[i].usage);
+			edit_redraw();
+			break;
+		}
+	}
+
+	return NULL;
+}
+
+
+static char ** wpa_cli_edit_completion_cb(void *ctx, const char *str, int pos)
+{
+	char **res;
+	const char *end;
+	char *cmd;
+
+	end = os_strchr(str, ' ');
+	if (end == NULL || str + pos < end)
+		return wpa_list_cmd_list();
+
+	cmd = os_malloc(pos + 1);
+	if (cmd == NULL)
+		return NULL;
+	os_memcpy(cmd, str, pos);
+	cmd[end - str] = '\0';
+	res = wpa_cli_cmd_completion(cmd, str, pos);
+	os_free(cmd);
+	return res;
+}
 
 
 static int wpa_request(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -2700,215 +2753,6 @@ static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx)
 }
 
 
-#ifdef CONFIG_READLINE
-
-static void *edit_cb_ctx;
-static void (*edit_cmd_cb)(void *ctx, char *cmd);
-static void (*edit_eof_cb)(void *ctx);
-
-
-static char * wpa_cli_cmd_gen(const char *text, int state)
-{
-	static int i, len;
-	const char *cmd;
-
-	if (state == 0) {
-		i = 0;
-		len = os_strlen(text);
-	}
-
-	while ((cmd = wpa_cli_commands[i].cmd)) {
-		i++;
-		if (os_strncasecmp(cmd, text, len) == 0)
-			return strdup(cmd);
-	}
-
-	return NULL;
-}
-
-
-static char * wpa_cli_dummy_gen(const char *text, int state)
-{
-	int i;
-
-	for (i = 0; wpa_cli_commands[i].cmd; i++) {
-		const char *cmd = wpa_cli_commands[i].cmd;
-		size_t len = os_strlen(cmd);
-		if (os_strncasecmp(rl_line_buffer, cmd, len) == 0 &&
-		    rl_line_buffer[len] == ' ') {
-			printf("\n%s\n", wpa_cli_commands[i].usage);
-			edit_redraw();
-			break;
-		}
-	}
-
-	rl_attempted_completion_over = 1;
-	return NULL;
-}
-
-
-static char * wpa_cli_status_gen(const char *text, int state)
-{
-	static int i, len;
-	char *options[] = {
-		"verbose", NULL
-	};
-	char *t;
-
-	if (state == 0) {
-		i = 0;
-		len = os_strlen(text);
-	}
-
-	while ((t = options[i])) {
-		i++;
-		if (os_strncasecmp(t, text, len) == 0)
-			return strdup(t);
-	}
-
-	rl_attempted_completion_over = 1;
-	return NULL;
-}
-
-
-static char ** wpa_cli_completion(const char *text, int start, int end)
-{
-	char * (*func)(const char *text, int state);
-
-	if (start == 0)
-		func = wpa_cli_cmd_gen;
-	else if (os_strncasecmp(rl_line_buffer, "status ", 7) == 0)
-		func = wpa_cli_status_gen;
-	else
-		func = wpa_cli_dummy_gen;
-	return rl_completion_matches(text, func);
-}
-
-
-static void wpa_cli_read_char(int sock, void *eloop_ctx, void *sock_ctx)
-{
-	rl_callback_read_char();
-}
-
-
-static void trunc_nl(char *str)
-{
-	char *pos = str;
-	while (*pos != '\0') {
-		if (*pos == '\n') {
-			*pos = '\0';
-			break;
-		}
-		pos++;
-	}
-}
-
-
-static void readline_cmd_handler(char *cmd)
-{
-	if (cmd && *cmd) {
-		HIST_ENTRY *h;
-		while (next_history())
-			;
-		h = previous_history();
-		if (h == NULL || os_strcmp(cmd, h->line) != 0)
-			add_history(cmd);
-		next_history();
-	}
-	if (cmd == NULL) {
-		edit_eof_cb(edit_cb_ctx);
-		return;
-	}
-	trunc_nl(cmd);
-	edit_cmd_cb(edit_cb_ctx, cmd);
-}
-
-
-static char *readline_hfile = NULL;
-
-int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
-	      void (*eof_cb)(void *ctx),
-	      void *ctx)
-{
-	char *home;
-
-	edit_cb_ctx = ctx;
-	edit_cmd_cb = cmd_cb;
-	edit_eof_cb = eof_cb;
-
-	rl_attempted_completion_function = wpa_cli_completion;
-	home = getenv("HOME");
-	if (home) {
-		const char *fname = ".wpa_cli_history";
-		int hfile_len = os_strlen(home) + 1 + os_strlen(fname) + 1;
-		readline_hfile = os_malloc(hfile_len);
-		if (readline_hfile) {
-			int res;
-			res = os_snprintf(readline_hfile, hfile_len, "%s/%s",
-					  home, fname);
-			if (res >= 0 && res < hfile_len) {
-				readline_hfile[hfile_len - 1] = '\0';
-				read_history(readline_hfile);
-				stifle_history(100);
-			}
-		}
-	}
-
-	eloop_register_read_sock(STDIN_FILENO, wpa_cli_read_char, NULL, NULL);
-
-	rl_callback_handler_install("> ", readline_cmd_handler);
-
-	return 0;
-}
-
-
-void edit_deinit(void)
-{
-	rl_callback_handler_remove();
-
-	eloop_unregister_read_sock(STDIN_FILENO);
-
-	if (readline_hfile) {
-		/* Save command history, excluding lines that may contain
-		 * passwords. */
-		HIST_ENTRY *h;
-		history_set_pos(0);
-		while ((h = current_history())) {
-			char *p = h->line;
-			while (*p == ' ' || *p == '\t')
-				p++;
-			if (cmd_has_sensitive_data(p)) {
-				h = remove_history(where_history());
-				if (h) {
-					os_free(h->line);
-					free(h->data);
-					os_free(h);
-				} else
-					next_history();
-			} else
-				next_history();
-		}
-		write_history(readline_hfile);
-		os_free(readline_hfile);
-		readline_hfile = NULL;
-	}
-}
-
-
-void edit_clear_line(void)
-{
-}
-
-
-void edit_redraw(void)
-{
-	rl_on_new_line();
-	rl_redisplay();
-}
-
-#endif /* CONFIG_READLINE */
-
-
 static void wpa_cli_edit_cmd_cb(void *ctx, char *cmd)
 {
 	char *argv[max_args];
@@ -2932,6 +2776,8 @@ static void wpa_cli_interactive(void)
 
 	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
 	edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb, NULL);
+	edit_set_filter_history_cb(wpa_cli_edit_filter_history_cb);
+	edit_set_completion_cb(wpa_cli_edit_completion_cb);
 	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
 
 	eloop_run();

@@ -21,5 +21,8 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 void edit_deinit(void);
 void edit_clear_line(void);
 void edit_redraw(void);
+void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd));
+void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd,
+					  int pos));
 
 #endif /* EDIT_H */

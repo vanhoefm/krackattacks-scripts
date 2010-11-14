@@ -250,6 +250,7 @@ static void insert_char(int c)
 	if (c < 32 && c > 255) {
 		printf("[%d]\n", c);
 		edit_redraw();
+		return;
 	}
 
 	if (cmdbuf_len >= (int) sizeof(cmdbuf) - 1)
@@ -458,6 +459,10 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case 11: /* ^K */
 		clear_right();
+		break;
+	case 12: /* ^L */
+		edit_clear_line();
+		edit_redraw();
 		break;
 	case 14: /* ^N */
 		history_next();

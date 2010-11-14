@@ -23,12 +23,10 @@
 #include <readline/readline.h>
 #include <readline/history.h>
 #endif /* CONFIG_READLINE */
-#ifdef CONFIG_WPA_CLI_FORK
-#include <sys/wait.h>
-#endif /* CONFIG_WPA_CLI_FORK */
 
 #include "common/wpa_ctrl.h"
-#include "common.h"
+#include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/version.h"
 
 
@@ -91,9 +89,6 @@ static const char *wpa_cli_full_license =
 
 static struct wpa_ctrl *ctrl_conn;
 static struct wpa_ctrl *mon_conn;
-#ifdef CONFIG_WPA_CLI_FORK
-static pid_t mon_pid = 0;
-#endif /* CONFIG_WPA_CLI_FORK */
 static int wpa_cli_quit = 0;
 static int wpa_cli_attached = 0;
 static int wpa_cli_connected = 0;
@@ -104,9 +99,14 @@ static const char *pid_file = NULL;
 static const char *action_file = NULL;
 static int ping_interval = 5;
 static int interactive = 0;
+#ifndef CONFIG_READLINE
+static char cmdbuf[256];
+static int cmdbuf_pos = 0;
+#endif /* CONFIG_READLINE */
 
 
-static void print_help();
+static void print_help(void);
+static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx);
 
 
 static void usage(void)
@@ -132,6 +132,10 @@ static void readline_redraw()
 #ifdef CONFIG_READLINE
 	rl_on_new_line();
 	rl_redisplay();
+#else /* CONFIG_READLINE */
+	cmdbuf[cmdbuf_pos] = '\0';
+	printf("\r> %s", cmdbuf);
+	fflush(stdout);
 #endif /* CONFIG_READLINE */
 }
 
@@ -161,64 +165,6 @@ static int wpa_cli_show_event(const char *event)
 
 	return 1;
 }
-
-
-#ifdef CONFIG_WPA_CLI_FORK
-static int in_query = 0;
-
-static void wpa_cli_monitor_sig(int sig)
-{
-	if (sig == SIGUSR1)
-		in_query = 1;
-	else if (sig == SIGUSR2)
-		in_query = 0;
-}
-
-
-static void wpa_cli_monitor(void)
-{
-	char buf[256];
-	size_t len = sizeof(buf) - 1;
-	struct timeval tv;
-	fd_set rfds;
-	int ppid;
-
-	signal(SIGUSR1, wpa_cli_monitor_sig);
-	signal(SIGUSR2, wpa_cli_monitor_sig);
-
-	ppid = getppid();
-	while (mon_conn) {
-		int s = wpa_ctrl_get_fd(mon_conn);
-		tv.tv_sec = 5;
-		tv.tv_usec = 0;
-		FD_ZERO(&rfds);
-		FD_SET(s, &rfds);
-		if (select(s + 1, &rfds, NULL, NULL, &tv) < 0) {
-			if (errno == EINTR)
-				continue;
-			perror("select");
-			break;
-		}
-		if (mon_conn == NULL)
-			break;
-		if (FD_ISSET(s, &rfds)) {
-			len = sizeof(buf) - 1;
-			int res = wpa_ctrl_recv(mon_conn, buf, &len);
-			if (res < 0) {
-				perror("wpa_ctrl_recv");
-				break;
-			}
-			buf[len] = '\0';
-			if (wpa_cli_show_event(buf)) {
-				if (in_query)
-					printf("\r");
-				printf("%s\n", buf);
-				kill(ppid, SIGUSR1);
-			}
-		}
-	}
-}
-#endif /* CONFIG_WPA_CLI_FORK */
 
 
 static int wpa_cli_open_connection(const char *ifname, int attach)
@@ -265,26 +211,15 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 	if (mon_conn) {
 		if (wpa_ctrl_attach(mon_conn) == 0) {
 			wpa_cli_attached = 1;
+			if (interactive)
+				eloop_register_read_sock(
+					wpa_ctrl_get_fd(mon_conn),
+					wpa_cli_mon_receive, NULL, NULL);
 		} else {
 			printf("Warning: Failed to attach to "
 			       "wpa_supplicant.\n");
 			return -1;
 		}
-
-#ifdef CONFIG_WPA_CLI_FORK
-		{
-			pid_t p = fork();
-			if (p < 0) {
-				perror("fork");
-				return -1;
-			}
-			if (p == 0) {
-				wpa_cli_monitor();
-				exit(0);
-			} else
-				mon_pid = p;
-		}
-#endif /* CONFIG_WPA_CLI_FORK */
 	}
 
 	return 0;
@@ -296,15 +231,6 @@ static void wpa_cli_close_connection(void)
 	if (ctrl_conn == NULL)
 		return;
 
-#ifdef CONFIG_WPA_CLI_FORK
-	if (mon_pid) {
-		int status;
-		kill(mon_pid, SIGPIPE);
-		wait(&status);
-		mon_pid = 0;
-	}
-#endif /* CONFIG_WPA_CLI_FORK */
-
 	if (wpa_cli_attached) {
 		wpa_ctrl_detach(interactive ? mon_conn : ctrl_conn);
 		wpa_cli_attached = 0;
@@ -312,6 +238,7 @@ static void wpa_cli_close_connection(void)
 	wpa_ctrl_close(ctrl_conn);
 	ctrl_conn = NULL;
 	if (mon_conn) {
+		eloop_unregister_read_sock(wpa_ctrl_get_fd(mon_conn));
 		wpa_ctrl_close(mon_conn);
 		mon_conn = NULL;
 	}
@@ -413,6 +340,8 @@ static int wpa_cli_cmd_license(struct wpa_ctrl *ctrl, int argc, char *argv[])
 static int wpa_cli_cmd_quit(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	wpa_cli_quit = 1;
+	if (interactive)
+		eloop_terminate();
 	return 0;
 }
 
@@ -2697,10 +2626,8 @@ static void wpa_cli_reconnect(void)
 }
 
 
-static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
-				 int action_monitor)
+static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int action_monitor)
 {
-	int first = 1;
 	if (ctrl_conn == NULL) {
 		wpa_cli_reconnect();
 		return;
@@ -2714,10 +2641,7 @@ static void wpa_cli_recv_pending(struct wpa_ctrl *ctrl, int in_read,
 				wpa_cli_action_process(buf);
 			else {
 				if (wpa_cli_show_event(buf)) {
-					if (in_read && first)
-						printf("\r");
-					first = 0;
-					printf("%s\n", buf);
+					printf("\r%s\n", buf);
 					readline_redraw();
 				}
 			}
@@ -2776,6 +2700,31 @@ static void trunc_nl(char *str)
 		}
 		pos++;
 	}
+}
+
+
+static void wpa_cli_ping(void *eloop_ctx, void *timeout_ctx)
+{
+	if (ctrl_conn && _wpa_ctrl_command(ctrl_conn, "PING", 0)) {
+		printf("Connection to wpa_supplicant lost - trying to "
+		       "reconnect\n");
+		wpa_cli_close_connection();
+	}
+	if (!ctrl_conn)
+		wpa_cli_reconnect();
+	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
+}
+
+
+static void wpa_cli_eloop_terminate(int sig, void *signal_ctx)
+{
+	eloop_terminate();
+}
+
+
+static void wpa_cli_mon_receive(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	wpa_cli_recv_pending(mon_conn, 0);
 }
 
 
@@ -2859,10 +2808,39 @@ static char ** wpa_cli_completion(const char *text, int start, int end)
 }
 
 
+static void wpa_cli_read_char(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	rl_callback_read_char();
+}
+
+
+static void readline_cmd_handler(char *cmd)
+{
+	int argc;
+	char *argv[max_args];
+
+	if (cmd && *cmd) {
+		HIST_ENTRY *h;
+		while (next_history())
+			;
+		h = previous_history();
+		if (h == NULL || os_strcmp(cmd, h->line) != 0)
+			add_history(cmd);
+		next_history();
+	}
+	if (cmd == NULL) {
+		eloop_terminate();
+		return;
+	}
+	trunc_nl(cmd);
+	argc = tokenize_cmd(cmd, argv);
+	if (argc)
+		wpa_request(ctrl_conn, argc, argv);
+}
+
+
 static void wpa_cli_interactive(void)
 {
-	char cmdbuf[256], *cmd, *argv[max_args];
-	int argc;
 	char *home, *hfile = NULL;
 
 	printf("\nInteractive mode\n\n");
@@ -2885,43 +2863,19 @@ static void wpa_cli_interactive(void)
 		}
 	}
 
-	do {
-		wpa_cli_recv_pending(mon_conn, 0, 0);
-#ifndef CONFIG_NATIVE_WINDOWS
-		alarm(ping_interval);
-#endif /* CONFIG_NATIVE_WINDOWS */
-#ifdef CONFIG_WPA_CLI_FORK
-		if (mon_pid)
-			kill(mon_pid, SIGUSR1);
-#endif /* CONFIG_WPA_CLI_FORK */
-		cmd = readline("> ");
-		if (cmd && *cmd) {
-			HIST_ENTRY *h;
-			while (next_history())
-				;
-			h = previous_history();
-			if (h == NULL || os_strcmp(cmd, h->line) != 0)
-				add_history(cmd);
-			next_history();
-		}
-#ifndef CONFIG_NATIVE_WINDOWS
-		alarm(0);
-#endif /* CONFIG_NATIVE_WINDOWS */
-		if (cmd == NULL)
-			break;
-		wpa_cli_recv_pending(mon_conn, 0, 0);
-		trunc_nl(cmd);
-		argc = tokenize_cmd(cmd, argv);
-		if (argc)
-			wpa_request(ctrl_conn, argc, argv);
+	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
+	eloop_register_read_sock(STDIN_FILENO, wpa_cli_read_char, NULL, NULL);
+	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
 
-		if (cmd != cmdbuf)
-			free(cmd);
-#ifdef CONFIG_WPA_CLI_FORK
-		if (mon_pid)
-			kill(mon_pid, SIGUSR2);
-#endif /* CONFIG_WPA_CLI_FORK */
-	} while (!wpa_cli_quit);
+	rl_callback_handler_install("> ", readline_cmd_handler);
+
+	eloop_run();
+
+	rl_callback_handler_remove();
+
+	eloop_unregister_read_sock(STDIN_FILENO);
+	eloop_cancel_timeout(wpa_cli_ping, NULL, NULL);
+	wpa_cli_close_connection();
 
 	if (hfile) {
 		/* Save command history, excluding lines that may contain
@@ -2936,7 +2890,7 @@ static void wpa_cli_interactive(void)
 				h = remove_history(where_history());
 				if (h) {
 					os_free(h->line);
-					os_free(h->data);
+					free(h->data);
 					os_free(h);
 				} else
 					next_history();
@@ -2950,42 +2904,60 @@ static void wpa_cli_interactive(void)
 
 #else /* CONFIG_READLINE */
 
-static void wpa_cli_interactive(void)
+static void wpa_cli_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 {
-	char cmdbuf[256], *cmd, *argv[max_args];
+	char *argv[max_args];
 	int argc;
+	int c;
+	char buf[1];
+	int res;
 
-	printf("\nInteractive mode\n\n");
+	res = read(sock, buf, 1);
+	if (res < 0)
+		perror("read");
+	if (res <= 0) {
+		eloop_terminate();
+		return;
+	}
+	c = buf[0];
 
-	do {
-		wpa_cli_recv_pending(mon_conn, 0, 0);
-#ifndef CONFIG_NATIVE_WINDOWS
-		alarm(ping_interval);
-#endif /* CONFIG_NATIVE_WINDOWS */
-#ifdef CONFIG_WPA_CLI_FORK
-		if (mon_pid)
-			kill(mon_pid, SIGUSR1);
-#endif /* CONFIG_WPA_CLI_FORK */
-		printf("> ");
-		cmd = fgets(cmdbuf, sizeof(cmdbuf), stdin);
-#ifndef CONFIG_NATIVE_WINDOWS
-		alarm(0);
-#endif /* CONFIG_NATIVE_WINDOWS */
-		if (cmd == NULL)
-			break;
-		wpa_cli_recv_pending(mon_conn, 0, 0);
-		trunc_nl(cmd);
-		argc = tokenize_cmd(cmd, argv);
+	if (c == '\r' || c == '\n') {
+		cmdbuf[cmdbuf_pos] = '\0';
+		cmdbuf_pos = 0;
+		trunc_nl(cmdbuf);
+		argc = tokenize_cmd(cmdbuf, argv);
 		if (argc)
 			wpa_request(ctrl_conn, argc, argv);
+		printf("> ");
+		fflush(stdout);
+		return;
+	}
 
-		if (cmd != cmdbuf)
-			free(cmd);
-#ifdef CONFIG_WPA_CLI_FORK
-		if (mon_pid)
-			kill(mon_pid, SIGUSR2);
-#endif /* CONFIG_WPA_CLI_FORK */
-	} while (!wpa_cli_quit);
+	if (c >= 32 && c <= 255) {
+		if (cmdbuf_pos < (int) sizeof(cmdbuf) - 1) {
+			cmdbuf[cmdbuf_pos++] = c;
+		}
+	}
+}
+
+
+static void wpa_cli_interactive(void)
+{
+	printf("\nInteractive mode\n\n");
+	cmdbuf_pos = 0;
+
+	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
+	eloop_register_read_sock(STDIN_FILENO, wpa_cli_read_char, NULL, NULL);
+	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
+
+	printf("> ");
+	fflush(stdout);
+
+	eloop_run();
+
+	eloop_unregister_read_sock(STDIN_FILENO);
+	eloop_cancel_timeout(wpa_cli_ping, NULL, NULL);
+	wpa_cli_close_connection();
 }
 
 #endif /* CONFIG_READLINE */
@@ -3017,7 +2989,7 @@ static void wpa_cli_action(struct wpa_ctrl *ctrl)
 		}
 
 		if (FD_ISSET(fd, &rfds))
-			wpa_cli_recv_pending(ctrl, 0, 1);
+			wpa_cli_recv_pending(ctrl, 1);
 		else {
 			/* verify that connection is still working */
 			len = sizeof(buf) - 1;
@@ -3048,31 +3020,6 @@ static void wpa_cli_terminate(int sig)
 	wpa_cli_cleanup();
 	exit(0);
 }
-
-
-#ifdef CONFIG_WPA_CLI_FORK
-static void wpa_cli_usr1(int sig)
-{
-	readline_redraw();
-}
-#endif /* CONFIG_WPA_CLI_FORK */
-
-
-#ifndef CONFIG_NATIVE_WINDOWS
-static void wpa_cli_alarm(int sig)
-{
-	if (ctrl_conn && _wpa_ctrl_command(ctrl_conn, "PING", 0)) {
-		printf("Connection to wpa_supplicant lost - trying to "
-		       "reconnect\n");
-		wpa_cli_close_connection();
-	}
-	if (!ctrl_conn)
-		wpa_cli_reconnect();
-	if (mon_conn)
-		wpa_cli_recv_pending(mon_conn, 1, 0);
-	alarm(ping_interval);
-}
-#endif /* CONFIG_NATIVE_WINDOWS */
 
 
 static char * wpa_cli_get_default_ifname(void)
@@ -3185,6 +3132,9 @@ int main(int argc, char *argv[])
 	if (interactive)
 		printf("%s\n\n%s\n\n", wpa_cli_version, wpa_cli_license);
 
+	if (eloop_init())
+		return -1;
+
 	if (global) {
 #ifdef CONFIG_CTRL_IFACE_NAMED_PIPE
 		ctrl_conn = wpa_ctrl_open(NULL);
@@ -3202,12 +3152,6 @@ int main(int argc, char *argv[])
 	signal(SIGINT, wpa_cli_terminate);
 	signal(SIGTERM, wpa_cli_terminate);
 #endif /* _WIN32_WCE */
-#ifndef CONFIG_NATIVE_WINDOWS
-	signal(SIGALRM, wpa_cli_alarm);
-#endif /* CONFIG_NATIVE_WINDOWS */
-#ifdef CONFIG_WPA_CLI_FORK
-	signal(SIGUSR1, wpa_cli_usr1);
-#endif /* CONFIG_WPA_CLI_FORK */
 
 	if (ctrl_ifname == NULL)
 		ctrl_ifname = wpa_cli_get_default_ifname();
@@ -3258,6 +3202,7 @@ int main(int argc, char *argv[])
 		ret = wpa_request(ctrl_conn, argc - optind, &argv[optind]);
 
 	os_free(ctrl_ifname);
+	eloop_destroy();
 	wpa_cli_cleanup();
 
 	return ret;

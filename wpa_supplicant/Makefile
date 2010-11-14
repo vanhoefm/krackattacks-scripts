@@ -89,6 +89,7 @@ ifndef CONFIG_ELOOP
 CONFIG_ELOOP=eloop
 endif
 OBJS += ../src/utils/$(CONFIG_ELOOP).o
+OBJS_c += ../src/utils/$(CONFIG_ELOOP).o
 
 
 ifdef CONFIG_EAPOL_TEST

@@ -2441,6 +2441,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_bss *bss;
 	int freq;
+	u8 iface_addr[ETH_ALEN];
 
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 
@@ -2455,6 +2456,23 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 
 	freq = p2p_get_oper_freq(wpa_s->global->p2p,
 				 wpa_s->pending_join_iface_addr);
+	if (freq < 0 &&
+	    p2p_get_interface_addr(wpa_s->global->p2p,
+				   wpa_s->pending_join_dev_addr,
+				   iface_addr) == 0 &&
+	    os_memcmp(iface_addr, wpa_s->pending_join_dev_addr, ETH_ALEN) != 0)
+	{
+		wpa_printf(MSG_DEBUG, "P2P: Overwrite pending interface "
+			   "address for join from " MACSTR " to " MACSTR
+			   " based on newly discovered P2P peer entry",
+			   MAC2STR(wpa_s->pending_join_iface_addr),
+			   MAC2STR(iface_addr));
+		os_memcpy(wpa_s->pending_join_iface_addr, iface_addr,
+			  ETH_ALEN);
+
+		freq = p2p_get_oper_freq(wpa_s->global->p2p,
+					 wpa_s->pending_join_iface_addr);
+	}
 	if (freq >= 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Target GO operating frequency "
 			   "from P2P peer table: %d MHz", freq);

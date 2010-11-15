@@ -36,6 +36,13 @@
 #include "p2p_supplicant.h"
 
 
+/*
+ * How many times to try to scan to find the GO before giving up on join
+ * request.
+ */
+#define P2P_MAX_JOIN_SCAN_ATTEMPTS 10
+
+
 static void wpas_p2p_long_listen_timeout(void *eloop_ctx, void *timeout_ctx);
 static struct wpa_supplicant *
 wpas_p2p_get_group_iface(struct wpa_supplicant *wpa_s, int addr_allocated,
@@ -2413,6 +2420,22 @@ static int wpas_p2p_auth_go_neg(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_p2p_check_join_scan_limit(struct wpa_supplicant *wpa_s)
+{
+	wpa_s->p2p_join_scan_count++;
+	wpa_printf(MSG_DEBUG, "P2P: Join scan attempt %d",
+		   wpa_s->p2p_join_scan_count);
+	if (wpa_s->p2p_join_scan_count > P2P_MAX_JOIN_SCAN_ATTEMPTS) {
+		wpa_printf(MSG_DEBUG, "P2P: Failed to find GO " MACSTR
+			   " for join operationg - stop join attempt",
+			   MAC2STR(wpa_s->pending_join_iface_addr));
+		eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
+		wpa_msg(wpa_s->parent, MSG_INFO,
+			P2P_EVENT_GROUP_FORMATION_FAILURE);
+	}
+}
+
+
 static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 				   struct wpa_scan_results *scan_res)
 {
@@ -2484,8 +2507,11 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "P2P: Target BSS/GO not yet in BSS table - "
-		   "cannot send Provision Discovery Request");
+	wpa_printf(MSG_DEBUG, "P2P: Failed to find BSS/GO - try again later");
+	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
+	eloop_register_timeout(1, 0, wpas_p2p_join_scan, wpa_s, NULL);
+	wpas_p2p_check_join_scan_limit(wpa_s);
+	return;
 
 start:
 	/* Start join operation immediately */
@@ -2546,6 +2572,7 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 			   "try again later");
 		eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 		eloop_register_timeout(1, 0, wpas_p2p_join_scan, wpa_s, NULL);
+		wpas_p2p_check_join_scan_limit(wpa_s);
 	}
 }
 
@@ -2564,6 +2591,7 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 	/* Make sure we are not running find during connection establishment */
 	wpas_p2p_stop_find(wpa_s);
 
+	wpa_s->p2p_join_scan_count = 0;
 	wpas_p2p_join_scan(wpa_s, NULL);
 	return 0;
 }

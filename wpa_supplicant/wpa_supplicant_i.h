@@ -492,6 +492,7 @@ struct wpa_supplicant {
 	u8 pending_join_iface_addr[ETH_ALEN];
 	u8 pending_join_dev_addr[ETH_ALEN];
 	int pending_join_wps_method;
+	int p2p_join_scan_count;
 	unsigned int roc_waiting_drv_freq;
 	int force_long_sd;
 

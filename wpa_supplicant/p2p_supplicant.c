@@ -3506,7 +3506,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 		    !is_zero_ether_addr(wpa_s->go_dev_addr))
 			go_dev_addr = wpa_s->go_dev_addr;
 	}
-	wpa_s->pending_invite_ssid_id = -1;
+	wpa_s->parent->pending_invite_ssid_id = -1;
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, wpa_s->assoc_freq,

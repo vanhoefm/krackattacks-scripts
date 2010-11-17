@@ -839,8 +839,15 @@ static enum wps_process_res wps_process_m2(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
+	/*
+	 * Stop here on an AP as an Enrollee if AP Setup is locked unless the
+	 * special locked mode is used to allow protocol run up to M7 in order
+	 * to support external Registrars that only learn the current AP
+	 * configuration without changing it.
+	 */
 	if (wps->wps->ap &&
-	    (wps->wps->ap_setup_locked || wps->dev_password == NULL)) {
+	    ((wps->wps->ap_setup_locked && wps->wps->ap_setup_locked != 2) ||
+	     wps->dev_password == NULL)) {
 		wpa_printf(MSG_DEBUG, "WPS: AP Setup is locked - refuse "
 			   "registration of a new Registrar");
 		wps->config_error = WPS_CFG_SETUP_LOCKED;
@@ -1041,6 +1048,19 @@ static enum wps_process_res wps_process_m8(struct wps_data *wps,
 
 	if (wps_process_enrollee_nonce(wps, attr->enrollee_nonce) ||
 	    wps_process_authenticator(wps, attr->authenticator, msg)) {
+		wps->state = SEND_WSC_NACK;
+		return WPS_CONTINUE;
+	}
+
+	if (wps->wps->ap && wps->wps->ap_setup_locked) {
+		/*
+		 * Stop here if special ap_setup_locked == 2 mode allowed the
+		 * protocol to continue beyond M2. This allows ER to learn the
+		 * current AP settings without changing them.
+		 */
+		wpa_printf(MSG_DEBUG, "WPS: AP Setup is locked - refuse "
+			   "registration of a new Registrar");
+		wps->config_error = WPS_CFG_SETUP_LOCKED;
 		wps->state = SEND_WSC_NACK;
 		return WPS_CONTINUE;
 	}

@@ -161,7 +161,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	 */
 	bss->eap_server = 1;
 	bss->wps_state = 2;
-	bss->ap_setup_locked = 1;
+	bss->ap_setup_locked = 2;
 	if (wpa_s->conf->config_methods)
 		bss->config_methods = os_strdup(wpa_s->conf->config_methods);
 	if (wpa_s->conf->device_type)

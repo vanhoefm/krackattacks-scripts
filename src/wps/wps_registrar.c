@@ -392,7 +392,7 @@ static void wps_registrar_free_pending_m2(struct wps_context *wps)
 static int wps_build_ap_setup_locked(struct wps_context *wps,
 				     struct wpabuf *msg)
 {
-	if (wps->ap_setup_locked) {
+	if (wps->ap_setup_locked && wps->ap_setup_locked != 2) {
 		wpa_printf(MSG_DEBUG, "WPS:  * AP Setup Locked");
 		wpabuf_put_be16(msg, ATTR_AP_SETUP_LOCKED);
 		wpabuf_put_be16(msg, 1);

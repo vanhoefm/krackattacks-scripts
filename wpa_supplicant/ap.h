@@ -25,6 +25,11 @@ int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			      const char *pin, char *buf, size_t buflen);
 int wpa_supplicant_ap_wps_cancel(struct wpa_supplicant *wpa_s);
+void wpas_wps_ap_pin_disable(struct wpa_supplicant *wpa_s);
+const char * wpas_wps_ap_pin_random(struct wpa_supplicant *wpa_s, int timeout);
+const char * wpas_wps_ap_pin_get(struct wpa_supplicant *wpa_s);
+int wpas_wps_ap_pin_set(struct wpa_supplicant *wpa_s, const char *pin,
+			int timeout);
 int ap_ctrl_iface_sta_first(struct wpa_supplicant *wpa_s,
 			    char *buf, size_t buflen);
 int ap_ctrl_iface_sta(struct wpa_supplicant *wpa_s, const char *txtaddr,
@@ -41,5 +46,6 @@ void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok);
 int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_ap_mac_addr_filter(struct wpa_supplicant *wpa_s,
 				      const u8 *addr);
+void wpa_supplicant_ap_pwd_auth_fail(struct wpa_supplicant *wpa_s);
 
 #endif /* AP_H */

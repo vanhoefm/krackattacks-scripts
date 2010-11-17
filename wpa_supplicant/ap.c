@@ -16,6 +16,7 @@
 #include "utils/includes.h"
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "ap/hostapd.h"
@@ -39,6 +40,9 @@
 #include "p2p_supplicant.h"
 #include "ap.h"
 #include "ap/sta_info.h"
+
+
+static void wpas_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 
 
 static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
@@ -428,6 +432,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 {
+	eloop_cancel_timeout(wpas_wps_ap_pin_timeout, wpa_s, NULL);
+
 	if (wpa_s->ap_iface == NULL)
 		return;
 
@@ -573,6 +579,123 @@ int wpa_supplicant_ap_wps_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 	if (ret)
 		return -1;
 	return ret_len;
+}
+
+
+static void wpas_wps_ap_pin_timeout(void *eloop_data, void *user_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_data;
+	wpa_printf(MSG_DEBUG, "WPS: AP PIN timed out");
+	wpas_wps_ap_pin_disable(wpa_s);
+}
+
+
+static void wpas_wps_ap_pin_enable(struct wpa_supplicant *wpa_s, int timeout)
+{
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface == NULL)
+		return;
+	hapd = wpa_s->ap_iface->bss[0];
+	wpa_printf(MSG_DEBUG, "WPS: Enabling AP PIN (timeout=%d)", timeout);
+	hapd->ap_pin_failures = 0;
+	eloop_cancel_timeout(wpas_wps_ap_pin_timeout, wpa_s, NULL);
+	if (timeout > 0)
+		eloop_register_timeout(timeout, 0,
+				       wpas_wps_ap_pin_timeout, wpa_s, NULL);
+}
+
+
+void wpas_wps_ap_pin_disable(struct wpa_supplicant *wpa_s)
+{
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface == NULL)
+		return;
+	wpa_printf(MSG_DEBUG, "WPS: Disabling AP PIN");
+	hapd = wpa_s->ap_iface->bss[0];
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = NULL;
+	eloop_cancel_timeout(wpas_wps_ap_pin_timeout, wpa_s, NULL);
+}
+
+
+const char * wpas_wps_ap_pin_random(struct wpa_supplicant *wpa_s, int timeout)
+{
+	struct hostapd_data *hapd;
+	unsigned int pin;
+	char pin_txt[9];
+
+	if (wpa_s->ap_iface == NULL)
+		return NULL;
+	hapd = wpa_s->ap_iface->bss[0];
+	pin = wps_generate_pin();
+	os_snprintf(pin_txt, sizeof(pin_txt), "%u", pin);
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = os_strdup(pin_txt);
+	if (hapd->conf->ap_pin == NULL)
+		return NULL;
+	wpas_wps_ap_pin_enable(wpa_s, timeout);
+
+	return hapd->conf->ap_pin;
+}
+
+
+const char * wpas_wps_ap_pin_get(struct wpa_supplicant *wpa_s)
+{
+	struct hostapd_data *hapd;
+	if (wpa_s->ap_iface == NULL)
+		return NULL;
+	hapd = wpa_s->ap_iface->bss[0];
+	return hapd->conf->ap_pin;
+}
+
+
+int wpas_wps_ap_pin_set(struct wpa_supplicant *wpa_s, const char *pin,
+			int timeout)
+{
+	struct hostapd_data *hapd;
+	char pin_txt[9];
+	int ret;
+
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	hapd = wpa_s->ap_iface->bss[0];
+	ret = os_snprintf(pin_txt, sizeof(pin_txt), "%s", pin);
+	if (ret < 0 || ret >= (int) sizeof(pin_txt))
+		return -1;
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = os_strdup(pin_txt);
+	if (hapd->conf->ap_pin == NULL)
+		return -1;
+	wpas_wps_ap_pin_enable(wpa_s, timeout);
+
+	return 0;
+}
+
+
+void wpa_supplicant_ap_pwd_auth_fail(struct wpa_supplicant *wpa_s)
+{
+	struct hostapd_data *hapd;
+
+	if (wpa_s->ap_iface == NULL)
+		return;
+	hapd = wpa_s->ap_iface->bss[0];
+
+	/*
+	 * Registrar failed to prove its knowledge of the AP PIN. Disable AP
+	 * PIN if this happens multiple times to slow down brute force attacks.
+	 */
+	hapd->ap_pin_failures++;
+	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u",
+		   hapd->ap_pin_failures);
+	if (hapd->ap_pin_failures < 3)
+		return;
+
+	wpa_printf(MSG_DEBUG, "WPS: Disable AP PIN");
+	hapd->ap_pin_failures = 0;
+	os_free(hapd->conf->ap_pin);
+	hapd->conf->ap_pin = NULL;
 }
 
 #endif /* CONFIG_WPS */

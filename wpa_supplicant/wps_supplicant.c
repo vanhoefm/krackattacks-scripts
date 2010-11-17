@@ -551,6 +551,10 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 		wpa_supplicant_wps_event_success(wpa_s);
 		break;
 	case WPS_EV_PWD_AUTH_FAIL:
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface && data->pwd_auth_fail.enrollee)
+			wpa_supplicant_ap_pwd_auth_fail(wpa_s);
+#endif /* CONFIG_AP */
 		break;
 	case WPS_EV_PBC_OVERLAP:
 		break;

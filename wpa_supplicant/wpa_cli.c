@@ -667,6 +667,35 @@ static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_wps_ap_pin(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc < 1) {
+		printf("Invalid WPS_AP_PIN command: needs at least one "
+		       "argument\n");
+		return -1;
+	}
+
+	if (argc > 2)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_AP_PIN %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else if (argc > 1)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_AP_PIN %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_AP_PIN %s",
+				  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_AP_PIN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_wps_er_start(struct wpa_ctrl *ctrl, int argc,
 				    char *argv[])
 {
@@ -2273,6 +2302,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },
+	{ "wps_ap_pin", wpa_cli_cmd_wps_ap_pin,
+	  cli_cmd_flag_sensitive,
+	  "[params..] = enable/disable AP PIN" },
 	{ "wps_er_start", wpa_cli_cmd_wps_er_start,
 	  cli_cmd_flag_none,
 	  "[IP address] = start Wi-Fi Protected Setup External Registrar" },

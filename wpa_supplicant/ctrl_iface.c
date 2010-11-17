@@ -401,6 +401,65 @@ static int wpa_supplicant_ctrl_iface_wps_reg(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_AP
+static int wpa_supplicant_ctrl_iface_wps_ap_pin(struct wpa_supplicant *wpa_s,
+						char *cmd, char *buf,
+						size_t buflen)
+{
+	int timeout = 300;
+	char *pos;
+	const char *pin_txt;
+
+	if (!wpa_s->ap_iface)
+		return -1;
+
+	pos = os_strchr(cmd, ' ');
+	if (pos)
+		*pos++ = '\0';
+
+	if (os_strcmp(cmd, "disable") == 0) {
+		wpas_wps_ap_pin_disable(wpa_s);
+		return os_snprintf(buf, buflen, "OK\n");
+	}
+
+	if (os_strcmp(cmd, "random") == 0) {
+		if (pos)
+			timeout = atoi(pos);
+		pin_txt = wpas_wps_ap_pin_random(wpa_s, timeout);
+		if (pin_txt == NULL)
+			return -1;
+		return os_snprintf(buf, buflen, "%s", pin_txt);
+	}
+
+	if (os_strcmp(cmd, "get") == 0) {
+		pin_txt = wpas_wps_ap_pin_get(wpa_s);
+		if (pin_txt == NULL)
+			return -1;
+		return os_snprintf(buf, buflen, "%s", pin_txt);
+	}
+
+	if (os_strcmp(cmd, "set") == 0) {
+		char *pin;
+		if (pos == NULL)
+			return -1;
+		pin = pos;
+		pos = os_strchr(pos, ' ');
+		if (pos) {
+			*pos++ = '\0';
+			timeout = atoi(pos);
+		}
+		if (os_strlen(pin) > buflen)
+			return -1;
+		if (wpas_wps_ap_pin_set(wpa_s, pin, timeout) < 0)
+			return -1;
+		return os_snprintf(buf, buflen, "%s", pin);
+	}
+
+	return -1;
+}
+#endif /* CONFIG_AP */
+
+
 #ifdef CONFIG_WPS_ER
 static int wpa_supplicant_ctrl_iface_wps_er_pin(struct wpa_supplicant *wpa_s,
 						char *cmd)
@@ -2813,6 +2872,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_REG ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_reg(wpa_s, buf + 8))
 			reply_len = -1;
+#ifdef CONFIG_AP
+	} else if (os_strncmp(buf, "WPS_AP_PIN ", 11) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_wps_ap_pin(
+			wpa_s, buf + 11, reply, reply_size);
+#endif /* CONFIG_AP */
 #ifdef CONFIG_WPS_ER
 	} else if (os_strcmp(buf, "WPS_ER_START") == 0) {
 		if (wpas_wps_er_start(wpa_s, NULL))

@@ -422,6 +422,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	 */
 	if (wpa_s->global->p2p_group_formation)
 		wpa_s = wpa_s->global->p2p_group_formation;
+	wpa_s->global->p2p_group_formation = NULL;
 	wpa_s->p2p_in_provisioning = 0;
 
 	if (!success) {
@@ -782,6 +783,8 @@ static void p2p_go_configured(void *ctx, void *data)
 	ssid = wpa_s->current_ssid;
 	if (ssid && ssid->mode == WPAS_MODE_P2P_GO) {
 		wpa_printf(MSG_DEBUG, "P2P: Group setup without provisioning");
+		if (wpa_s->global->p2p_group_formation == wpa_s)
+			wpa_s->global->p2p_group_formation = NULL;
 		wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_STARTED
 			"%s GO ssid=\"%s\" freq=%d passphrase=\"%s\" "
 			"go_dev_addr=" MACSTR "%s",

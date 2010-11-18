@@ -148,6 +148,11 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 			sta->state = STATE2;
 		}
 	}
+
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta->counters[WLANTEST_STA_COUNTER_AUTH_RX]++;
+	else
+		sta->counters[WLANTEST_STA_COUNTER_AUTH_TX]++;
 }
 
 
@@ -180,6 +185,13 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
 		   le_to_host16(mgmt->u.deauth.reason_code));
 	wpa_hexdump(MSG_MSGDUMP, "DEAUTH payload", data + 24, len - 24);
+
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_RX :
+			      WLANTEST_STA_COUNTER_INVALID_DEAUTH_RX]++;
+	else
+		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_TX :
+			      WLANTEST_STA_COUNTER_INVALID_DEAUTH_TX]++;
 
 	if (!valid) {
 		wpa_printf(MSG_INFO, "Do not change STA " MACSTR " State "
@@ -223,6 +235,8 @@ static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
 		   le_to_host16(mgmt->u.assoc_req.capab_info),
 		   le_to_host16(mgmt->u.assoc_req.listen_interval));
+
+	sta->counters[WLANTEST_STA_COUNTER_ASSOCREQ_TX]++;
 
 	if (ieee802_11_parse_elems(mgmt->u.assoc_req.variable,
 				   len - (mgmt->u.assoc_req.variable - data),
@@ -318,6 +332,8 @@ static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
 		   le_to_host16(mgmt->u.reassoc_req.capab_info),
 		   le_to_host16(mgmt->u.reassoc_req.listen_interval),
 		   MAC2STR(mgmt->u.reassoc_req.current_ap));
+
+	sta->counters[WLANTEST_STA_COUNTER_REASSOCREQ_TX]++;
 
 	if (ieee802_11_parse_elems(mgmt->u.reassoc_req.variable,
 				   len - (mgmt->u.reassoc_req.variable - data),
@@ -416,6 +432,13 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 		   le_to_host16(mgmt->u.disassoc.reason_code));
 	wpa_hexdump(MSG_MSGDUMP, "DISASSOC payload", data + 24, len - 24);
 
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_RX :
+			      WLANTEST_STA_COUNTER_INVALID_DISASSOC_RX]++;
+	else
+		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_TX :
+			      WLANTEST_STA_COUNTER_INVALID_DISASSOC_TX]++;
+
 	if (!valid) {
 		wpa_printf(MSG_INFO, "Do not change STA " MACSTR " State "
 			   "since Disassociation frame was not protected "
@@ -437,14 +460,71 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 }
 
 
+static void rx_mgmt_action_sa_query_req(struct wlantest *wt,
+					struct wlantest_sta *sta,
+					const struct ieee80211_mgmt *mgmt,
+					size_t len, int valid)
+{
+	const u8 *rx_id;
+	u8 *id;
+
+	rx_id = (const u8 *) mgmt->u.action.u.sa_query_req.trans_id;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		id = sta->ap_sa_query_tr;
+	else
+		id = sta->sta_sa_query_tr;
+	wpa_printf(MSG_INFO, "SA Query Request " MACSTR " -> " MACSTR
+		   " (trans_id=%02x%02x)%s",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), rx_id[0], rx_id[1],
+		   valid ? "" : " (invalid protection)");
+	os_memcpy(id, mgmt->u.action.u.sa_query_req.trans_id, 2);
+	if (os_memcmp(mgmt->sa, sta->addr, ETH_ALEN) == 0)
+		sta->counters[valid ?
+			      WLANTEST_STA_COUNTER_VALID_SAQUERYREQ_TX :
+			      WLANTEST_STA_COUNTER_INVALID_SAQUERYREQ_TX]++;
+	else
+		sta->counters[valid ?
+			      WLANTEST_STA_COUNTER_VALID_SAQUERYREQ_RX :
+			      WLANTEST_STA_COUNTER_INVALID_SAQUERYREQ_RX]++;
+}
+
+
+static void rx_mgmt_action_sa_query_resp(struct wlantest *wt,
+					 struct wlantest_sta *sta,
+					 const struct ieee80211_mgmt *mgmt,
+					 size_t len, int valid)
+{
+	const u8 *rx_id;
+	u8 *id;
+	int match;
+
+	rx_id = (const u8 *) mgmt->u.action.u.sa_query_resp.trans_id;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		id = sta->sta_sa_query_tr;
+	else
+		id = sta->ap_sa_query_tr;
+	match = os_memcmp(rx_id, id, 2) == 0;
+	wpa_printf(MSG_INFO, "SA Query Response " MACSTR " -> " MACSTR
+		   " (trans_id=%02x%02x; %s)%s",
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), rx_id[0], rx_id[1],
+		   match ? "match" : "mismatch",
+		   valid ? "" : " (invalid protection)");
+	if (os_memcmp(mgmt->sa, sta->addr, ETH_ALEN) == 0)
+		sta->counters[(valid && match) ?
+			      WLANTEST_STA_COUNTER_VALID_SAQUERYRESP_TX :
+			      WLANTEST_STA_COUNTER_INVALID_SAQUERYRESP_TX]++;
+	else
+		sta->counters[(valid && match) ?
+			      WLANTEST_STA_COUNTER_VALID_SAQUERYRESP_RX :
+			      WLANTEST_STA_COUNTER_INVALID_SAQUERYRESP_RX]++;
+}
+
+
 static void rx_mgmt_action_sa_query(struct wlantest *wt,
 				    struct wlantest_sta *sta,
 				    const struct ieee80211_mgmt *mgmt,
 				    size_t len, int valid)
 {
-	const u8 *rx_id;
-	u8 *id;
-
 	if (len < 24 + 2 + WLAN_SA_QUERY_TR_ID_LEN) {
 		wpa_printf(MSG_INFO, "Too short SA Query frame from " MACSTR,
 			   MAC2STR(mgmt->sa));
@@ -462,31 +542,10 @@ static void rx_mgmt_action_sa_query(struct wlantest *wt,
 
 	switch (mgmt->u.action.u.sa_query_req.action) {
 	case WLAN_SA_QUERY_REQUEST:
-		rx_id = (const u8 *) mgmt->u.action.u.sa_query_req.trans_id;
-		if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
-			id = sta->ap_sa_query_tr;
-		else
-			id = sta->sta_sa_query_tr;
-		wpa_printf(MSG_INFO, "SA Query Request " MACSTR " -> " MACSTR
-			   " (trans_id=%02x%02x)%s",
-			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-			   rx_id[0], rx_id[1],
-			   valid ? "" : " (invalid protection)");
-		os_memcpy(id, mgmt->u.action.u.sa_query_req.trans_id, 2);
+		rx_mgmt_action_sa_query_req(wt, sta, mgmt, len, valid);
 		break;
 	case WLAN_SA_QUERY_RESPONSE:
-		rx_id = (const u8 *) mgmt->u.action.u.sa_query_resp.trans_id;
-		if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
-			id = sta->sta_sa_query_tr;
-		else
-			id = sta->ap_sa_query_tr;
-		wpa_printf(MSG_INFO, "SA Query Response " MACSTR " -> " MACSTR
-			   " (trans_id=%02x%02x; %s)%s",
-			   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-			   rx_id[0], rx_id[1],
-			   os_memcmp(rx_id, id, 2) == 0 ?
-			   "match" : "mismatch",
-			   valid ? "" : " (invalid protection)");
+		rx_mgmt_action_sa_query_resp(wt, sta, mgmt, len, valid);
 		break;
 	default:
 		wpa_printf(MSG_INFO, "Unexpected SA Query action value %u "
@@ -618,6 +677,7 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 			wpa_printf(MSG_INFO, "Robust group-addressed "
 				   "management frame sent without BIP by "
 				   MACSTR, MAC2STR(mgmt->sa));
+			bss->counters[WLANTEST_BSS_COUNTER_MISSING_BIP_MMIE]++;
 			return -1;
 		}
 		return 0;
@@ -633,6 +693,7 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 	if (keyid < 4 || keyid > 5) {
 		wpa_printf(MSG_INFO, "Unexpected MMIE KeyID %u from " MACSTR,
 			   keyid, MAC2STR(mgmt->sa));
+		bss->counters[WLANTEST_BSS_COUNTER_INVALID_BIP_MMIE]++;
 		return 0;
 	}
 	wpa_printf(MSG_DEBUG, "MMIE KeyID %u", keyid);
@@ -654,11 +715,13 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 	if (check_mmie_mic(bss->igtk[keyid], data, len) < 0) {
 		wpa_printf(MSG_INFO, "Invalid MMIE MIC in a frame from "
 			   MACSTR, MAC2STR(mgmt->sa));
+		bss->counters[WLANTEST_BSS_COUNTER_INVALID_BIP_MMIE]++;
 		return -1;
 	}
 
 	wpa_printf(MSG_DEBUG, "Valid MMIE MIC");
 	os_memcpy(bss->ipn[keyid], mmie + 2, 6);
+	bss->counters[WLANTEST_BSS_COUNTER_VALID_BIP_MMIE]++;
 
 	return 0;
 }

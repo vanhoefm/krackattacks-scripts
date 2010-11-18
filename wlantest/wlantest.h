@@ -17,6 +17,7 @@
 
 #include "utils/list.h"
 #include "common/wpa_common.h"
+#include "wlantest_ctrl.h"
 
 struct ieee802_11_elems;
 struct radius_msg;
@@ -67,6 +68,7 @@ struct wlantest_sta {
 	u8 rsc_fromds[16 + 1][6];
 	u8 ap_sa_query_tr[2];
 	u8 sta_sa_query_tr[2];
+	u32 counters[NUM_WLANTEST_STA_COUNTER];
 };
 
 struct wlantest_bss {
@@ -93,6 +95,7 @@ struct wlantest_bss {
 	u8 igtk[6][16];
 	int igtk_set[6];
 	u8 ipn[6][6];
+	u32 counters[NUM_WLANTEST_BSS_COUNTER];
 };
 
 struct wlantest_radius {

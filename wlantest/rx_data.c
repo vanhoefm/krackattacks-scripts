@@ -149,6 +149,7 @@ static int try_pmk(struct wlantest_bss *bss, struct wlantest_sta *sta,
 
 	wpa_printf(MSG_INFO, "Derived PTK for STA " MACSTR " BSSID " MACSTR,
 		   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	sta->counters[WLANTEST_STA_COUNTER_PTK_LEARNED]++;
 	os_memcpy(&sta->ptk, &ptk, sizeof(ptk));
 	wpa_hexdump(MSG_DEBUG, "PTK:KCK", sta->ptk.kck, 16);
 	wpa_hexdump(MSG_DEBUG, "PTK:KEK", sta->ptk.kek, 16);

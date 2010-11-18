@@ -49,6 +49,21 @@ static u8 * attr_get(u8 *buf, size_t buflen, enum wlantest_ctrl_attr attr,
 }
 
 
+static u8 * attr_add_be32(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
+			  u32 val)
+{
+	if (pos == NULL || end - pos < 12)
+		return NULL;
+	WPA_PUT_BE32(pos, attr);
+	pos += 4;
+	WPA_PUT_BE32(pos, 4);
+	pos += 4;
+	WPA_PUT_BE32(pos, val);
+	pos += 4;
+	return pos;
+}
+
+
 static void ctrl_disconnect(struct wlantest *wt, int sock)
 {
 	int i;
@@ -157,6 +172,164 @@ static void ctrl_flush(struct wlantest *wt, int sock)
 }
 
 
+static void ctrl_clear_sta_counters(struct wlantest *wt, int sock, u8 *cmd,
+				    size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_get(wt, addr);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	sta = sta_get(bss, addr);
+	if (sta == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	os_memset(sta->counters, 0, sizeof(sta->counters));
+	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
+}
+
+
+static void ctrl_clear_bss_counters(struct wlantest *wt, int sock, u8 *cmd,
+				    size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_get(wt, addr);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	os_memset(bss->counters, 0, sizeof(bss->counters));
+	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
+}
+
+
+static void ctrl_get_sta_counter(struct wlantest *wt, int sock, u8 *cmd,
+				 size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	u32 counter;
+	u8 buf[4 + 12], *end, *pos;
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_get(wt, addr);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	sta = sta_get(bss, addr);
+	if (sta == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_COUNTER, &addr_len);
+	if (addr == NULL || addr_len != 4) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+	counter = WPA_GET_BE32(addr);
+	if (counter >= NUM_WLANTEST_STA_COUNTER) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
+	pos += 4;
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_COUNTER,
+			    sta->counters[counter]);
+	ctrl_send(wt, sock, buf, pos - buf);
+}
+
+
+static void ctrl_get_bss_counter(struct wlantest *wt, int sock, u8 *cmd,
+				 size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+	u32 counter;
+	u8 buf[4 + 12], *end, *pos;
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_get(wt, addr);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSS_COUNTER, &addr_len);
+	if (addr == NULL || addr_len != 4) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+	counter = WPA_GET_BE32(addr);
+	if (counter >= NUM_WLANTEST_BSS_COUNTER) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
+	pos += 4;
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_COUNTER,
+			    bss->counters[counter]);
+	ctrl_send(wt, sock, buf, pos - buf);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -203,6 +376,18 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_FLUSH:
 		ctrl_flush(wt, sock);
+		break;
+	case WLANTEST_CTRL_CLEAR_STA_COUNTERS:
+		ctrl_clear_sta_counters(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_CLEAR_BSS_COUNTERS:
+		ctrl_clear_bss_counters(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_GET_STA_COUNTER:
+		ctrl_get_sta_counter(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_GET_BSS_COUNTER:
+		ctrl_get_bss_counter(wt, sock, buf + 4, len - 4);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

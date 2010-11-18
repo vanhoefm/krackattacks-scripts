@@ -46,6 +46,34 @@ static u8 * attr_get(u8 *buf, size_t buflen, enum wlantest_ctrl_attr attr,
 }
 
 
+static u8 * attr_hdr_add(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
+			 size_t len)
+{
+	if (pos == NULL || end - pos < 8 + len)
+		return NULL;
+	WPA_PUT_BE32(pos, attr);
+	pos += 4;
+	WPA_PUT_BE32(pos, len);
+	pos += 4;
+	return pos;
+}
+
+
+static u8 * attr_add_be32(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
+			  u32 val)
+{
+	if (pos == NULL || end - pos < 12)
+		return NULL;
+	WPA_PUT_BE32(pos, attr);
+	pos += 4;
+	WPA_PUT_BE32(pos, 4);
+	pos += 4;
+	WPA_PUT_BE32(pos, val);
+	pos += 4;
+	return pos;
+}
+
+
 static int cmd_send_and_recv(int s, const u8 *cmd, size_t cmd_len,
 			     u8 *resp, size_t max_resp_len)
 {
@@ -169,6 +197,238 @@ static int cmd_flush(int s, int argc, char *argv[])
 }
 
 
+static int cmd_clear_sta_counters(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *pos;
+	int rlen;
+
+	if (argc < 2) {
+		printf("clear_sta_counters needs two arguments: BSSID and "
+		       "STA address\n");
+		return -1;
+	}
+
+	pos = buf;
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_CLEAR_STA_COUNTERS);
+	pos += 4;
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_BSSID);
+	pos += 4;
+	WPA_PUT_BE32(pos, ETH_ALEN);
+	pos += 4;
+	if (hwaddr_aton(argv[0], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[0]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_STA_ADDR);
+	pos += 4;
+	WPA_PUT_BE32(pos, ETH_ALEN);
+	pos += 4;
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid STA address '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	printf("OK\n");
+	return 0;
+}
+
+
+static int cmd_clear_bss_counters(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *pos;
+	int rlen;
+
+	if (argc < 1) {
+		printf("clear_bss_counters needs one argument: BSSID\n");
+		return -1;
+	}
+
+	pos = buf;
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_CLEAR_BSS_COUNTERS);
+	pos += 4;
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_BSSID);
+	pos += 4;
+	WPA_PUT_BE32(pos, ETH_ALEN);
+	pos += 4;
+	if (hwaddr_aton(argv[0], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[0]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	printf("OK\n");
+	return 0;
+}
+
+
+struct sta_counters {
+	const char *name;
+	enum wlantest_sta_counter num;
+};
+
+static const struct sta_counters sta_counters[] = {
+	{ "auth_tx", WLANTEST_STA_COUNTER_AUTH_TX },
+	{ "auth_rx", WLANTEST_STA_COUNTER_AUTH_RX },
+	{ "assocreq_tx", WLANTEST_STA_COUNTER_ASSOCREQ_TX },
+	{ "reassocreq_tx", WLANTEST_STA_COUNTER_REASSOCREQ_TX },
+	{ "ptk_learned", WLANTEST_STA_COUNTER_PTK_LEARNED },
+	{ "valid_deauth_tx", WLANTEST_STA_COUNTER_VALID_DEAUTH_TX },
+	{ "valid_deauth_rx", WLANTEST_STA_COUNTER_VALID_DEAUTH_RX },
+	{ "invalid_deauth_tx", WLANTEST_STA_COUNTER_INVALID_DEAUTH_TX },
+	{ "invalid_deauth_rx", WLANTEST_STA_COUNTER_INVALID_DEAUTH_RX },
+	{ "valid_disassoc_tx", WLANTEST_STA_COUNTER_VALID_DISASSOC_TX },
+	{ "valid_disassoc_rx", WLANTEST_STA_COUNTER_VALID_DISASSOC_RX },
+	{ "invalid_disassoc_tx", WLANTEST_STA_COUNTER_INVALID_DISASSOC_TX },
+	{ "invalid_disassoc_rx", WLANTEST_STA_COUNTER_INVALID_DISASSOC_RX },
+	{ "valid_saqueryreq_tx", WLANTEST_STA_COUNTER_VALID_SAQUERYREQ_TX },
+	{ "valid_saqueryreq_rx", WLANTEST_STA_COUNTER_VALID_SAQUERYREQ_RX },
+	{ "invalid_saqueryreq_tx",
+	  WLANTEST_STA_COUNTER_INVALID_SAQUERYREQ_TX },
+	{ "invalid_saqueryreq_rx",
+	  WLANTEST_STA_COUNTER_INVALID_SAQUERYREQ_RX },
+	{ "valid_saqueryresp_tx", WLANTEST_STA_COUNTER_VALID_SAQUERYRESP_TX },
+	{ "valid_saqueryresp_rx", WLANTEST_STA_COUNTER_VALID_SAQUERYRESP_RX },
+	{ "invalid_saqueryresp_tx",
+	  WLANTEST_STA_COUNTER_INVALID_SAQUERYRESP_TX },
+	{ "invalid_saqueryresp_rx",
+	  WLANTEST_STA_COUNTER_INVALID_SAQUERYRESP_RX },
+	{ NULL, 0 }
+};
+
+static int cmd_get_sta_counter(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen, i;
+	size_t len;
+
+	if (argc != 3) {
+		printf("get_sta_counter needs at three arguments: "
+		       "counter name, BSSID, and STA address\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_GET_STA_COUNTER);
+	pos += 4;
+
+	for (i = 0; sta_counters[i].name; i++) {
+		if (os_strcasecmp(sta_counters[i].name, argv[0]) == 0)
+			break;
+	}
+	if (sta_counters[i].name == NULL) {
+		printf("Unknown STA counter '%s'\n", argv[0]);
+		printf("Counters:");
+		for (i = 0; sta_counters[i].name; i++)
+			printf(" %s", sta_counters[i].name);
+		printf("\n");
+		return -1;
+	}
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_STA_COUNTER,
+			    sta_counters[i].num);
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[2], pos) < 0) {
+		printf("Invalid STA address '%s'\n", argv[2]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_COUNTER, &len);
+	if (pos == NULL || len != 4)
+		return -1;
+	printf("%u\n", WPA_GET_BE32(pos));
+	return 0;
+}
+
+
+struct bss_counters {
+	const char *name;
+	enum wlantest_bss_counter num;
+};
+
+static const struct bss_counters bss_counters[] = {
+	{ "valid_bip_mmie", WLANTEST_BSS_COUNTER_VALID_BIP_MMIE },
+	{ "invalid_bip_mmie", WLANTEST_BSS_COUNTER_INVALID_BIP_MMIE },
+	{ "missing_bip_mmie", WLANTEST_BSS_COUNTER_MISSING_BIP_MMIE },
+	{ NULL, 0 }
+};
+
+static int cmd_get_bss_counter(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen, i;
+	size_t len;
+
+	if (argc != 2) {
+		printf("get_bss_counter needs at three arguments: "
+		       "counter name and BSSID\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_GET_BSS_COUNTER);
+	pos += 4;
+
+	for (i = 0; bss_counters[i].name; i++) {
+		if (os_strcasecmp(bss_counters[i].name, argv[0]) == 0)
+			break;
+	}
+	if (bss_counters[i].name == NULL) {
+		printf("Unknown BSS counter '%s'\n", argv[0]);
+		printf("Counters:");
+		for (i = 0; bss_counters[i].name; i++)
+			printf(" %s", bss_counters[i].name);
+		printf("\n");
+		return -1;
+	}
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_BSS_COUNTER,
+			    bss_counters[i].num);
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_COUNTER, &len);
+	if (pos == NULL || len != 4)
+		return -1;
+	printf("%u\n", WPA_GET_BE32(pos));
+	return 0;
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -181,6 +441,14 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "list_bss", cmd_list_bss, "= get BSS list" },
 	{ "list_sta", cmd_list_sta, "<BSSID> = get STA list" },
 	{ "flush", cmd_flush, "= drop all collected BSS data" },
+	{ "clear_sta_counters", cmd_clear_sta_counters,
+	  "<BSSID> <STA> = clear STA counters" },
+	{ "clear_bss_counters", cmd_clear_bss_counters,
+	  "<BSSID> = clear BSS counters" },
+	{ "get_sta_counter", cmd_get_sta_counter,
+	  "<counter> <BSSID> <STA> = get STA counter value" },
+	{ "get_bss_counter", cmd_get_bss_counter,
+	  "<counter> <BSSID> = get BSS counter value" },
 	{ NULL, NULL, NULL }
 };
 

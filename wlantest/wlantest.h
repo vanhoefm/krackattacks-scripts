@@ -170,4 +170,8 @@ void tkip_get_pn(u8 *pn, const u8 *data);
 int ctrl_init(struct wlantest *wt);
 void ctrl_deinit(struct wlantest *wt);
 
+int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
+		    struct wlantest_sta *sta, u8 *frame, size_t len,
+		    enum wlantest_inject_protection prot);
+
 #endif /* WLANTEST_H */

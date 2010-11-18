@@ -459,6 +459,11 @@ static inline int is_zero_ether_addr(const u8 *a)
 	return !(a[0] | a[1] | a[2] | a[3] | a[4] | a[5]);
 }
 
+static inline int is_broadcast_ether_addr(const u8 *a)
+{
+	return (a[0] & a[1] & a[2] & a[3] & a[4] & a[5]) == 0xff;
+}
+
 #include "wpa_debug.h"
 
 

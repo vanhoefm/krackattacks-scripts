@@ -62,6 +62,7 @@ OBJS += crc32.o
 OBJS += ccmp.o
 OBJS += tkip.o
 OBJS += ctrl.o
+OBJS += inject.o
 
 LIBS += -lpcap
 

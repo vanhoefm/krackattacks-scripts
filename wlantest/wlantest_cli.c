@@ -429,6 +429,107 @@ static int cmd_get_bss_counter(int s, int argc, char *argv[])
 }
 
 
+struct inject_frames {
+	const char *name;
+	enum wlantest_inject_frame frame;
+};
+
+static const struct inject_frames inject_frames[] = {
+	{ "auth", WLANTEST_FRAME_AUTH },
+	{ "assocreq", WLANTEST_FRAME_ASSOCREQ },
+	{ "reassocreq", WLANTEST_FRAME_REASSOCREQ },
+	{ "deauth", WLANTEST_FRAME_DEAUTH },
+	{ "disassoc", WLANTEST_FRAME_DISASSOC },
+	{ "saqueryreq", WLANTEST_FRAME_SAQUERYREQ },
+	{ NULL, 0 }
+};
+
+static int cmd_inject(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen, i;
+	enum wlantest_inject_protection prot;
+
+	/* <frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff> */
+
+	if (argc < 5) {
+		printf("inject needs five arguments: frame, protection, "
+		       "sender, BSSID, STA/ff:ff:ff:ff:ff:ff\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_INJECT);
+	pos += 4;
+
+	for (i = 0; inject_frames[i].name; i++) {
+		if (os_strcasecmp(inject_frames[i].name, argv[0]) == 0)
+			break;
+	}
+	if (inject_frames[i].name == NULL) {
+		printf("Unknown inject frame '%s'\n", argv[0]);
+		printf("Frames:");
+		for (i = 0; inject_frames[i].name; i++)
+			printf(" %s", inject_frames[i].name);
+		printf("\n");
+		return -1;
+	}
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_INJECT_FRAME,
+			    inject_frames[i].frame);
+
+	if (os_strcasecmp(argv[1], "normal") == 0)
+		prot = WLANTEST_INJECT_NORMAL;
+	else if (os_strcasecmp(argv[1], "protected") == 0)
+		prot = WLANTEST_INJECT_PROTECTED;
+	else if (os_strcasecmp(argv[1], "unprotected") == 0)
+		prot = WLANTEST_INJECT_UNPROTECTED;
+	else if (os_strcasecmp(argv[1], "incorrect") == 0)
+		prot = WLANTEST_INJECT_INCORRECT_KEY;
+	else {
+		printf("Unknown protection type '%s'\n", argv[1]);
+		printf("Protection types: normal protected unprotected "
+		       "incorrect\n");
+		return -1;
+	}
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_INJECT_PROTECTION, prot);
+
+	if (os_strcasecmp(argv[2], "ap") == 0) {
+		pos = attr_add_be32(pos, end, WLANTEST_ATTR_INJECT_SENDER_AP,
+				    1);
+	} else if (os_strcasecmp(argv[2], "sta") == 0) {
+		pos = attr_add_be32(pos, end, WLANTEST_ATTR_INJECT_SENDER_AP,
+				    0);
+	} else {
+		printf("Unknown sender '%s'\n", argv[2]);
+		printf("Sender types: ap sta\n");
+		return -1;
+	}
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[3], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[3]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[4], pos) < 0) {
+		printf("Invalid STA '%s'\n", argv[4]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	printf("OK\n");
+	return 0;
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -449,6 +550,8 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	  "<counter> <BSSID> <STA> = get STA counter value" },
 	{ "get_bss_counter", cmd_get_bss_counter,
 	  "<counter> <BSSID> = get BSS counter value" },
+	{ "inject", cmd_inject,
+	  "<frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff>" },
 	{ NULL, NULL, NULL }
 };
 

@@ -17,6 +17,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/ieee802_11_defs.h"
 #include "wlantest.h"
 #include "wlantest_ctrl.h"
 
@@ -46,6 +47,29 @@ static u8 * attr_get(u8 *buf, size_t buflen, enum wlantest_ctrl_attr attr,
 	}
 
 	return NULL;
+}
+
+
+static u8 * attr_get_macaddr(u8 *buf, size_t buflen,
+			     enum wlantest_ctrl_attr attr)
+{
+	u8 *addr;
+	size_t addr_len;
+	addr = attr_get(buf, buflen, attr, &addr_len);
+	if (addr && addr_len != ETH_ALEN)
+		addr = NULL;
+	return addr;
+}
+
+
+static int attr_get_int(u8 *buf, size_t buflen, enum wlantest_ctrl_attr attr)
+{
+	u8 *pos;
+	size_t len;
+	pos = attr_get(buf, buflen, attr, &len);
+	if (pos == NULL || len != 4)
+		return -1;
+	return WPA_GET_BE32(pos);
 }
 
 
@@ -330,6 +354,149 @@ static void ctrl_get_bss_counter(struct wlantest *wt, int sock, u8 *cmd,
 }
 
 
+static void build_mgmt_hdr(struct ieee80211_mgmt *mgmt,
+			   struct wlantest_bss *bss, struct wlantest_sta *sta,
+			   int sender_ap, int stype)
+{
+	os_memset(mgmt, 0, 24);
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT, stype);
+	if (sender_ap) {
+		if (sta)
+			os_memcpy(mgmt->da, sta->addr, ETH_ALEN);
+		else
+			os_memset(mgmt->da, 0xff, ETH_ALEN);
+		os_memcpy(mgmt->sa, bss->bssid, ETH_ALEN);
+	} else {
+		os_memcpy(mgmt->da, bss->bssid, ETH_ALEN);
+		os_memcpy(mgmt->sa, sta->addr, ETH_ALEN);
+	}
+	os_memcpy(mgmt->bssid, bss->bssid, ETH_ALEN);
+}
+
+
+static int ctrl_inject_auth(struct wlantest *wt, struct wlantest_bss *bss,
+			    struct wlantest_sta *sta, int sender_ap,
+			    enum wlantest_inject_protection prot)
+{
+	struct ieee80211_mgmt mgmt;
+
+	if (prot != WLANTEST_INJECT_NORMAL &&
+	    prot != WLANTEST_INJECT_UNPROTECTED)
+		return -1; /* Authentication frame is never protected */
+	if (sta == NULL)
+		return -1; /* No broadcast Authentication frames */
+
+	if (sender_ap)
+		wpa_printf(MSG_INFO, "INJECT: Auth " MACSTR " -> " MACSTR,
+			   MAC2STR(bss->bssid), MAC2STR(sta->addr));
+	else
+		wpa_printf(MSG_INFO, "INJECT: Auth " MACSTR " -> " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	build_mgmt_hdr(&mgmt, bss, sta, sender_ap, WLAN_FC_STYPE_AUTH);
+
+	mgmt.u.auth.auth_alg = host_to_le16(WLAN_AUTH_OPEN);
+	mgmt.u.auth.auth_transaction = host_to_le16(1);
+	mgmt.u.auth.status_code = host_to_le16(WLAN_STATUS_SUCCESS);
+
+	return wlantest_inject(wt, bss, sta, (u8 *) &mgmt, 24 + 6,
+			       WLANTEST_INJECT_UNPROTECTED);
+}
+
+
+static int ctrl_inject_saqueryreq(struct wlantest *wt,
+				  struct wlantest_bss *bss,
+				  struct wlantest_sta *sta, int sender_ap,
+				  enum wlantest_inject_protection prot)
+{
+	struct ieee80211_mgmt mgmt;
+
+	if (sta == NULL)
+		return -1; /* No broadcast SA Query frames */
+
+	if (sender_ap)
+		wpa_printf(MSG_INFO, "INJECT: SA Query Request " MACSTR " -> "
+			   MACSTR, MAC2STR(bss->bssid), MAC2STR(sta->addr));
+	else
+		wpa_printf(MSG_INFO, "INJECT: SA Query Request " MACSTR " -> "
+			   MACSTR, MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	build_mgmt_hdr(&mgmt, bss, sta, sender_ap, WLAN_FC_STYPE_ACTION);
+
+	mgmt.u.action.category = WLAN_ACTION_SA_QUERY;
+	mgmt.u.action.u.sa_query_req.action = WLAN_SA_QUERY_REQUEST;
+	mgmt.u.action.u.sa_query_req.trans_id[0] = 0x12;
+	mgmt.u.action.u.sa_query_req.trans_id[1] = 0x34;
+	return wlantest_inject(wt, bss, sta, (u8 *) &mgmt, 24 + 4, prot);
+}
+
+
+static void ctrl_inject(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
+{
+	u8 *bssid, *sta_addr;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	int frame, sender_ap, prot;
+	int ret = 0;
+
+	bssid = attr_get_macaddr(cmd, clen, WLANTEST_ATTR_BSSID);
+	sta_addr = attr_get_macaddr(cmd, clen, WLANTEST_ATTR_STA_ADDR);
+	frame = attr_get_int(cmd, clen, WLANTEST_ATTR_INJECT_FRAME);
+	sender_ap = attr_get_int(cmd, clen, WLANTEST_ATTR_INJECT_SENDER_AP);
+	if (sender_ap < 0)
+		sender_ap = 0;
+	prot = attr_get_int(cmd, clen, WLANTEST_ATTR_INJECT_PROTECTION);
+	if (bssid == NULL || sta_addr == NULL || frame < 0 || prot < 0) {
+		wpa_printf(MSG_INFO, "Invalid inject command parameters");
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_get(wt, bssid);
+	if (bss == NULL) {
+		wpa_printf(MSG_INFO, "BSS not found for inject command");
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	if (is_broadcast_ether_addr(sta_addr)) {
+		if (!sender_ap) {
+			wpa_printf(MSG_INFO, "Invalid broadcast inject "
+				   "command without sender_ap set");
+			ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+			return;
+		} sta = NULL;
+	} else {
+		sta = sta_get(bss, sta_addr);
+		if (sta == NULL) {
+			wpa_printf(MSG_INFO, "Station not found for inject "
+				   "command");
+			ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+			return;
+		}
+	}
+
+	switch (frame) {
+	case WLANTEST_FRAME_AUTH:
+		ret = ctrl_inject_auth(wt, bss, sta, sender_ap, prot);
+		break;
+	case WLANTEST_FRAME_SAQUERYREQ:
+		ret = ctrl_inject_saqueryreq(wt, bss, sta, sender_ap, prot);
+		break;
+	default:
+		wpa_printf(MSG_INFO, "Unsupported inject command frame %d",
+			   frame);
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	if (ret)
+		wpa_printf(MSG_INFO, "Failed to inject frame");
+	else
+		wpa_printf(MSG_INFO, "Frame injected successfully");
+	ctrl_send_simple(wt, sock, ret == 0 ? WLANTEST_CTRL_SUCCESS :
+			 WLANTEST_CTRL_FAILURE);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -388,6 +555,9 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_GET_BSS_COUNTER:
 		ctrl_get_bss_counter(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_INJECT:
+		ctrl_inject(wt, sock, buf + 4, len - 4);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

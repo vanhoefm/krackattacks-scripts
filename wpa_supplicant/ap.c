@@ -214,9 +214,11 @@ static void ap_public_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 static void ap_wps_event_cb(void *ctx, enum wps_event event,
 			    union wps_event_data *data)
 {
+#ifdef CONFIG_P2P
 	struct wpa_supplicant *wpa_s = ctx;
 
-	if (event == WPS_EV_FAIL && wpa_s->parent && wpa_s->parent != wpa_s) {
+	if (event == WPS_EV_FAIL && wpa_s->parent && wpa_s->parent != wpa_s &&
+	    wpa_s == wpa_s->global->p2p_group_formation) {
 		struct wps_event_fail *fail = &data->fail;
 
 		/*
@@ -228,6 +230,7 @@ static void ap_wps_event_cb(void *ctx, enum wps_event event,
 			"msg=%d config_error=%d",
 			fail->msg, fail->config_error);
 	}
+#endif /* CONFIG_P2P */
 }
 
 

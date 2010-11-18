@@ -96,7 +96,7 @@ OBJS_cli = wlantest_cli.o
 wlantest: $(OBJS) $(LIBWLANTEST)
 	$(LDO) $(LDFLAGS) -o wlantest $(OBJS) -L. -lwlantest $(LIBS)
 
-wlantest_cli: $(OBJS_cli)
+wlantest_cli: $(OBJS_cli) $(LIBWLANTEST)
 	$(LDO) $(LDFLAGS) -o wlantest_cli $(OBJS_cli) -L. -lwlantest
 
 clean:

@@ -252,3 +252,11 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		   bss->rsn_capab & WPA_CAPABILITY_PEERKEY_ENABLED ?
 		   "PEERKEY " : "");
 }
+
+
+void bss_flush(struct wlantest *wt)
+{
+	struct wlantest_bss *bss, *n;
+	dl_list_for_each_safe(bss, n, &wt->bss, struct wlantest_bss, list)
+		bss_deinit(bss);
+}

@@ -163,6 +163,12 @@ static int cmd_list_sta(int s, int argc, char *argv[])
 }
 
 
+static int cmd_flush(int s, int argc, char *argv[])
+{
+	return cmd_simple(s, WLANTEST_CTRL_FLUSH);
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -174,6 +180,7 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "terminate", cmd_terminate, "= terminate wlantest" },
 	{ "list_bss", cmd_list_bss, "= get BSS list" },
 	{ "list_sta", cmd_list_sta, "<BSSID> = get STA list" },
+	{ "flush", cmd_flush, "= drop all collected BSS data" },
 	{ NULL, NULL, NULL }
 };
 

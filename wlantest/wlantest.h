@@ -148,6 +148,7 @@ struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
 void bss_deinit(struct wlantest_bss *bss);
 void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		struct ieee802_11_elems *elems);
+void bss_flush(struct wlantest *wt);
 void pmk_deinit(struct wlantest_pmk *pmk);
 
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);

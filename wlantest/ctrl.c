@@ -149,6 +149,14 @@ static void ctrl_list_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 }
 
 
+static void ctrl_flush(struct wlantest *wt, int sock)
+{
+	wpa_printf(MSG_DEBUG, "Drop all collected BSS data");
+	bss_flush(wt);
+	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -192,6 +200,9 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_LIST_STA:
 		ctrl_list_sta(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_FLUSH:
+		ctrl_flush(wt, sock);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

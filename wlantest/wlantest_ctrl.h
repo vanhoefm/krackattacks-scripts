@@ -28,6 +28,7 @@ enum wlantest_ctrl_cmd {
 	WLANTEST_CTRL_TERMINATE,
 	WLANTEST_CTRL_LIST_BSS,
 	WLANTEST_CTRL_LIST_STA,
+	WLANTEST_CTRL_FLUSH,
 };
 
 enum wlantest_ctrl_attr {

@@ -78,7 +78,6 @@ void radius_deinit(struct wlantest_radius *r)
 
 static void wlantest_deinit(struct wlantest *wt)
 {
-	struct wlantest_bss *bss, *n;
 	struct wlantest_passphrase *p, *pn;
 	struct wlantest_radius_secret *s, *sn;
 	struct wlantest_radius *r, *rn;
@@ -88,8 +87,7 @@ static void wlantest_deinit(struct wlantest *wt)
 		ctrl_deinit(wt);
 	if (wt->monitor_sock >= 0)
 		monitor_deinit(wt);
-	dl_list_for_each_safe(bss, n, &wt->bss, struct wlantest_bss, list)
-		bss_deinit(bss);
+	bss_flush(wt);
 	dl_list_for_each_safe(p, pn, &wt->passphrase,
 			      struct wlantest_passphrase, list)
 		passphrase_deinit(p);

@@ -1834,6 +1834,7 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 	struct wpa_ssid *s;
 	u8 cur_bssid[ETH_ALEN];
 	int res;
+	struct wpa_supplicant *grp;
 
 	if (!persistent_group) {
 		wpa_printf(MSG_DEBUG, "P2P: Invitation from " MACSTR
@@ -1851,6 +1852,15 @@ static u8 wpas_invitation_process(void *ctx, const u8 *sa, const u8 *bssid,
 		 * request approval.
 		 */
 		return P2P_SC_FAIL_INFO_CURRENTLY_UNAVAILABLE;
+	}
+
+	grp = wpas_get_p2p_group(wpa_s, ssid, ssid_len, go);
+	if (grp) {
+		wpa_printf(MSG_DEBUG, "P2P: Accept invitation to already "
+			   "running persistent group");
+		if (*go)
+			os_memcpy(group_bssid, grp->own_addr, ETH_ALEN);
+		goto accept_inv;
 	}
 
 	if (!wpa_s->conf->persistent_reconnect)

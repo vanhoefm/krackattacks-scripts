@@ -3174,8 +3174,8 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	wpa_s->p2p_long_listen = 0;
-	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
+	/* Make sure we are not running find during connection establishment */
+	wpas_p2p_stop_find(wpa_s);
 
 	if (ssid->mode == WPAS_MODE_INFRA)
 		return wpas_start_p2p_client(wpa_s, ssid, addr_allocated);
@@ -3346,6 +3346,7 @@ void wpas_p2p_stop_find(struct wpa_supplicant *wpa_s)
 {
 	wpas_p2p_clear_pending_action_tx(wpa_s);
 	wpa_s->p2p_long_listen = 0;
+	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 	eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
 
 	p2p_stop_find(wpa_s->global->p2p);

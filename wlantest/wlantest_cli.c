@@ -530,6 +530,32 @@ static int cmd_inject(int s, int argc, char *argv[])
 }
 
 
+static int cmd_version(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[4];
+	char *version;
+	size_t len;
+	int rlen, i;
+
+	WPA_PUT_BE32(buf, WLANTEST_CTRL_VERSION);
+	rlen = cmd_send_and_recv(s, buf, sizeof(buf), resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	version = (char *) attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_VERSION,
+				    &len);
+	if (version == NULL)
+		return -1;
+
+	for (i = 0; i < len; i++)
+		putchar(version[i]);
+	printf("\n");
+
+	return 0;
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -552,6 +578,7 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	  "<counter> <BSSID> = get BSS counter value" },
 	{ "inject", cmd_inject,
 	  "<frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff>" },
+	{ "version", cmd_version, "= get wlantest version" },
 	{ NULL, NULL, NULL }
 };
 

@@ -17,6 +17,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "wlantest.h"
 #include "wlantest_ctrl.h"
@@ -70,6 +71,23 @@ static int attr_get_int(u8 *buf, size_t buflen, enum wlantest_ctrl_attr attr)
 	if (pos == NULL || len != 4)
 		return -1;
 	return WPA_GET_BE32(pos);
+}
+
+
+static u8 * attr_add_str(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
+			 const char *str)
+{
+	size_t len = os_strlen(str);
+
+	if (pos == NULL || end - pos < 8 + len)
+		return NULL;
+	WPA_PUT_BE32(pos, attr);
+	pos += 4;
+	WPA_PUT_BE32(pos, len);
+	pos += 4;
+	os_memcpy(pos, str, len);
+	pos += len;
+	return pos;
 }
 
 
@@ -655,6 +673,19 @@ static void ctrl_inject(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 }
 
 
+static void ctrl_version(struct wlantest *wt, int sock)
+{
+	u8 buf[WLANTEST_CTRL_MAX_RESP_LEN], *pos;
+
+	pos = buf;
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
+	pos += 4;
+	pos = attr_add_str(pos, buf + sizeof(buf), WLANTEST_ATTR_VERSION,
+			   VERSION_STR);
+	ctrl_send(wt, sock, buf, pos - buf);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -716,6 +747,9 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_INJECT:
 		ctrl_inject(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_VERSION:
+		ctrl_version(wt, sock);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

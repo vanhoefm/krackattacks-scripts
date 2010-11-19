@@ -222,3 +222,127 @@ void ccmp_get_pn(u8 *pn, const u8 *data)
 	pn[4] = data[1]; /* PN1 */
 	pn[5] = data[0]; /* PN0 */
 }
+
+
+u8 * ccmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
+		  u8 *pn, int keyid, size_t *encrypted_len)
+{
+	u8 aad[2 + 30], nonce[13];
+	size_t aad_len;
+	u8 b[AES_BLOCK_SIZE], x[AES_BLOCK_SIZE], a[AES_BLOCK_SIZE];
+	void *aes;
+	u8 *crypt, *pos, *ppos, *mpos;
+	size_t plen, last;
+	struct ieee80211_hdr *hdr;
+	int i;
+
+	if (len < hdrlen || hdrlen < 24)
+		return NULL;
+	plen = len - hdrlen;
+	last = plen % AES_BLOCK_SIZE;
+
+	crypt = os_malloc(hdrlen + 8 + plen + 8);
+	if (crypt == NULL)
+		return NULL;
+
+	os_memcpy(crypt, frame, hdrlen);
+	hdr = (struct ieee80211_hdr *) crypt;
+	hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
+	pos = crypt + hdrlen;
+	*pos++ = pn[5]; /* PN0 */
+	*pos++ = pn[4]; /* PN1 */
+	*pos++ = 0x20 | (keyid << 6);
+	*pos++ = pn[3]; /* PN2 */
+	*pos++ = pn[2]; /* PN3 */
+	*pos++ = pn[1]; /* PN4 */
+	*pos++ = pn[0]; /* PN5 */
+
+	aes = aes_encrypt_init(tk, 16);
+	if (aes == NULL) {
+		os_free(crypt);
+		return NULL;
+	}
+
+	os_memset(aad, 0, sizeof(aad));
+	ccmp_aad_nonce(hdr, crypt + hdrlen, &aad[2], &aad_len, nonce);
+	WPA_PUT_BE16(aad, aad_len);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP AAD", &aad[2], aad_len);
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP nonce", nonce, 13);
+
+	/* Authentication */
+	/* B_0: Flags | Nonce N | l(m) */
+	b[0] = 0x40 /* Adata */ | (3 /* M' */ << 3) | 1 /* L' */;
+	os_memcpy(&b[1], nonce, 13);
+	WPA_PUT_BE16(&b[14], plen);
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP B_0", b, AES_BLOCK_SIZE);
+	aes_encrypt(aes, b, x); /* X_1 = E(K, B_0) */
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP B_1", aad, AES_BLOCK_SIZE);
+	xor_aes_block(aad, x);
+	aes_encrypt(aes, aad, x); /* X_2 = E(K, X_1 XOR B_1) */
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP B_2", &aad[AES_BLOCK_SIZE],
+		    AES_BLOCK_SIZE);
+	xor_aes_block(&aad[AES_BLOCK_SIZE], x);
+	aes_encrypt(aes, &aad[AES_BLOCK_SIZE], x); /* X_3 = E(K, X_2 XOR B_2)
+						    */
+
+	ppos = frame + hdrlen;
+	for (i = 0; i < plen / AES_BLOCK_SIZE; i++) {
+		/* X_i+1 = E(K, X_i XOR B_i) */
+		xor_aes_block(x, ppos);
+		ppos += AES_BLOCK_SIZE;
+		aes_encrypt(aes, x, x);
+	}
+	if (last) {
+		/* XOR zero-padded last block */
+		for (i = 0; i < last; i++)
+			x[i] ^= *ppos++;
+		aes_encrypt(aes, x, x);
+	}
+
+	/* Encryption */
+
+	/* CCM: M=8 L=2, Adata=1, M' = (M-2)/2 = 3, L' = L-1 = 1 */
+
+	/* A_i = Flags | Nonce N | Counter i */
+	a[0] = 0x01; /* Flags = L' */
+	os_memcpy(&a[1], nonce, 13);
+
+	ppos = crypt + hdrlen + 8;
+
+	/* crypt = msg XOR (S_1 | S_2 | ... | S_n) */
+	mpos = frame + hdrlen;
+	for (i = 1; i <= plen / AES_BLOCK_SIZE; i++) {
+		WPA_PUT_BE16(&a[14], i);
+		/* S_i = E(K, A_i) */
+		aes_encrypt(aes, a, ppos);
+		xor_aes_block(ppos, mpos);
+		ppos += AES_BLOCK_SIZE;
+		mpos += AES_BLOCK_SIZE;
+	}
+	if (last) {
+		WPA_PUT_BE16(&a[14], i);
+		aes_encrypt(aes, a, ppos);
+		/* XOR zero-padded last block */
+		for (i = 0; i < last; i++)
+			*ppos++ ^= *mpos++;
+	}
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP T", x, 8);
+	/* U = T XOR S_0; S_0 = E(K, A_0) */
+	WPA_PUT_BE16(&a[14], 0);
+	aes_encrypt(aes, a, b);
+	for (i = 0; i < 8; i++)
+		ppos[i] = x[i] ^ b[i];
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP U", ppos, 8);
+
+	wpa_hexdump(MSG_EXCESSIVE, "CCMP encrypted", crypt + hdrlen + 8, plen);
+
+	aes_encrypt_deinit(aes);
+
+	*encrypted_len = hdrlen + 8 + plen + 8;
+
+	return crypt;
+}

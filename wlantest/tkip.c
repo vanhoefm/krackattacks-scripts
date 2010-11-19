@@ -403,3 +403,11 @@ void tkip_get_pn(u8 *pn, const u8 *data)
 	pn[4] = data[0]; /* PN1 */
 	pn[5] = data[2]; /* PN0 */
 }
+
+
+u8 * tkip_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
+		  u8 *pn, int keyid, size_t *encrypted_len)
+{
+	/* TODO */
+	return NULL;
+}

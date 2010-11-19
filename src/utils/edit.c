@@ -31,6 +31,8 @@ static int history_current = 0;
 static void *edit_cb_ctx;
 static void (*edit_cmd_cb)(void *ctx, char *cmd);
 static void (*edit_eof_cb)(void *ctx);
+static char ** (*edit_completion_cb)(void *ctx, const char *cmd, int pos) =
+	NULL;
 
 static struct termios prevt, newt;
 
@@ -289,6 +291,124 @@ static void process_cmd(void)
 }
 
 
+static void free_completions(char **c)
+{
+	int i;
+	if (c == NULL)
+		return;
+	for (i = 0; c[i]; i++)
+		os_free(c[i]);
+	os_free(c);
+}
+
+
+static int filter_strings(char **c, char *str, size_t len)
+{
+	int i, j;
+
+	for (i = 0, j = 0; c[j]; j++) {
+		if (os_strncasecmp(c[j], str, len) == 0) {
+			if (i != j) {
+				c[i] = c[j];
+				c[j] = NULL;
+			}
+			i++;
+		} else {
+			os_free(c[j]);
+			c[j] = NULL;
+		}
+	}
+	c[i] = NULL;
+	return i;
+}
+
+
+static int common_len(const char *a, const char *b)
+{
+	int len = 0;
+	while (a[len] && a[len] == b[len])
+		len++;
+	return len;
+}
+
+
+static int max_common_length(char **c)
+{
+	int len, i;
+
+	len = os_strlen(c[0]);
+	for (i = 1; c[i]; i++) {
+		int same = common_len(c[0], c[i]);
+		if (same < len)
+			len = same;
+	}
+
+	return len;
+}
+
+
+static void complete(int list)
+{
+	char **c;
+	int i, len, count;
+	int start, end;
+	int room, plen, add_space;
+
+	if (edit_completion_cb == NULL)
+		return;
+
+	cmdbuf[cmdbuf_len] = '\0';
+	c = edit_completion_cb(edit_cb_ctx, cmdbuf, cmdbuf_pos);
+	if (c == NULL)
+		return;
+
+	end = cmdbuf_pos;
+	start = end;
+	while (start > 0 && cmdbuf[start] != ' ')
+		start--;
+	plen = end - start;
+
+	count = filter_strings(c, &cmdbuf[start], plen);
+	if (count == 0) {
+		free_completions(c);
+		return;
+	}
+
+	len = max_common_length(c);
+	if (len <= plen) {
+		if (list) {
+			edit_clear_line();
+			printf("\r");
+			for (i = 0; c[i]; i++)
+				printf("%s%s", i > 0 ? " " : "", c[i]);
+			printf("\n");
+			edit_redraw();
+		}
+		free_completions(c);
+		return;
+	}
+	len -= plen;
+
+	room = sizeof(cmdbuf) - 1 - cmdbuf_len;
+	if (room < len)
+		len = room;
+	add_space = count == 1 && len < room;
+
+	os_memmove(cmdbuf + cmdbuf_pos + len, cmdbuf + cmdbuf_pos,
+		   cmdbuf_len - cmdbuf_pos + add_space);
+	os_memcpy(&cmdbuf[cmdbuf_pos - plen], c[0], plen + len);
+	if (add_space)
+		cmdbuf[cmdbuf_pos + len] = ' ';
+
+	cmdbuf_pos += len + add_space;
+	cmdbuf_len += len + add_space;
+
+	edit_redraw();
+
+	free_completions(c);
+}
+
+
 static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	int c;
@@ -296,6 +416,7 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 	int res;
 	static int esc = -1;
 	static char esc_buf[6];
+	static int last_tab = 0;
 
 	res = read(sock, buf, 1);
 	if (res < 0)
@@ -305,6 +426,8 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 		return;
 	}
 	c = buf[0];
+	if (c != 9)
+		last_tab = 0;
 
 	if (esc >= 0) {
 		if (esc == 5) {
@@ -452,6 +575,8 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 		delete_left();
 		break;
 	case 9: /* ^I = TAB */
+		complete(last_tab);
+		last_tab = 1;
 		break;
 	case 10: /* NL */
 	case 13: /* CR */
@@ -545,4 +670,5 @@ void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd))
 
 void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd, int pos))
 {
+	edit_completion_cb = cb;
 }

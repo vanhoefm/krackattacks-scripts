@@ -91,9 +91,11 @@ struct wlantest_bss {
 	struct dl_list pmk; /* struct wlantest_pmk */
 	u8 gtk[4][32];
 	size_t gtk_len[4];
+	int gtk_idx;
 	u8 rsc[4][6];
 	u8 igtk[6][16];
 	int igtk_set[6];
+	int igtk_idx;
 	u8 ipn[6][6];
 	u32 counters[NUM_WLANTEST_BSS_COUNTER];
 };

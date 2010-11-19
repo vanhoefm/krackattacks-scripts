@@ -382,6 +382,7 @@ static void learn_kde_keys(struct wlantest_bss *bss, const u8 *buf, size_t len,
 			bss->rsc[id][3] = rsc[2];
 			bss->rsc[id][4] = rsc[1];
 			bss->rsc[id][5] = rsc[0];
+			bss->gtk_idx = id;
 			wpa_hexdump(MSG_DEBUG, "RSC", bss->rsc[id], 6);
 		} else {
 			wpa_printf(MSG_INFO, "Invalid GTK KDE length %u",
@@ -399,12 +400,21 @@ static void learn_kde_keys(struct wlantest_bss *bss, const u8 *buf, size_t len,
 				wpa_printf(MSG_INFO, "Unexpected IGTK KeyID "
 					   "%u", id);
 			} else {
+				const u8 *ipn;
 				wpa_printf(MSG_DEBUG, "IGTK KeyID %u", id);
 				wpa_hexdump(MSG_DEBUG, "IPN", ie.igtk + 2, 6);
 				wpa_hexdump(MSG_DEBUG, "IGTK", ie.igtk + 8,
 					    16);
 				os_memcpy(bss->igtk[id], ie.igtk + 8, 16);
 				bss->igtk_set[id] = 1;
+				ipn = ie.igtk + 2;
+				bss->ipn[id][0] = ipn[5];
+				bss->ipn[id][1] = ipn[4];
+				bss->ipn[id][2] = ipn[3];
+				bss->ipn[id][3] = ipn[2];
+				bss->ipn[id][4] = ipn[1];
+				bss->ipn[id][5] = ipn[0];
+				bss->igtk_idx = id;
 			}
 		} else {
 			wpa_printf(MSG_INFO, "Invalid IGTK KDE length %u",

@@ -180,6 +180,31 @@ static enum wpa_driver_if_type wpas_p2p_if_type(int p2p_group_interface)
 }
 
 
+static struct wpa_supplicant * wpas_get_p2p_group(struct wpa_supplicant *wpa_s,
+						  const u8 *ssid,
+						  size_t ssid_len, int *go)
+{
+	struct wpa_ssid *s;
+
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		for (s = wpa_s->conf->ssid; s; s = s->next) {
+			if (s->disabled != 0 || !s->p2p_group ||
+			    s->ssid_len != ssid_len ||
+			    os_memcmp(ssid, s->ssid, ssid_len) != 0)
+				continue;
+			if (s->mode == WPAS_MODE_P2P_GO &&
+			    s != wpa_s->current_ssid)
+				continue;
+			if (go)
+				*go = s->mode == WPAS_MODE_P2P_GO;
+			return wpa_s;
+		}
+	}
+
+	return NULL;
+}
+
+
 static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_ssid *ssid;
@@ -3137,9 +3162,17 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 				  int freq)
 {
 	struct p2p_go_neg_results params;
+	int go = 0;
 
 	if (ssid->disabled != 2 || ssid->ssid == NULL)
 		return -1;
+
+	if (wpas_get_p2p_group(wpa_s, ssid->ssid, ssid->ssid_len, &go) &&
+	    go == (ssid->mode == WPAS_MODE_P2P_GO)) {
+		wpa_printf(MSG_DEBUG, "P2P: Requested persistent group is "
+			   "already running");
+		return 0;
+	}
 
 	wpa_s->p2p_long_listen = 0;
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);

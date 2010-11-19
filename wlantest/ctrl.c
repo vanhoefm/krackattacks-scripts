@@ -403,6 +403,56 @@ static int ctrl_inject_auth(struct wlantest *wt, struct wlantest_bss *bss,
 }
 
 
+static int ctrl_inject_deauth(struct wlantest *wt, struct wlantest_bss *bss,
+			      struct wlantest_sta *sta, int sender_ap,
+			      enum wlantest_inject_protection prot)
+{
+	struct ieee80211_mgmt mgmt;
+
+	if (sender_ap) {
+		if (sta)
+			wpa_printf(MSG_INFO, "INJECT: Deauth " MACSTR " -> "
+				   MACSTR,
+				   MAC2STR(bss->bssid), MAC2STR(sta->addr));
+		else
+			wpa_printf(MSG_INFO, "INJECT: Deauth " MACSTR
+				   " -> broadcast", MAC2STR(bss->bssid));
+	} else
+		wpa_printf(MSG_INFO, "INJECT: Deauth " MACSTR " -> " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	build_mgmt_hdr(&mgmt, bss, sta, sender_ap, WLAN_FC_STYPE_DEAUTH);
+
+	mgmt.u.deauth.reason_code = host_to_le16(WLAN_REASON_UNSPECIFIED);
+
+	return wlantest_inject(wt, bss, sta, (u8 *) &mgmt, 24 + 2, prot);
+}
+
+
+static int ctrl_inject_disassoc(struct wlantest *wt, struct wlantest_bss *bss,
+				struct wlantest_sta *sta, int sender_ap,
+				enum wlantest_inject_protection prot)
+{
+	struct ieee80211_mgmt mgmt;
+
+	if (sender_ap) {
+		if (sta)
+			wpa_printf(MSG_INFO, "INJECT: Disassoc " MACSTR " -> "
+				   MACSTR,
+				   MAC2STR(bss->bssid), MAC2STR(sta->addr));
+		else
+			wpa_printf(MSG_INFO, "INJECT: Disassoc " MACSTR
+				   " -> broadcast", MAC2STR(bss->bssid));
+	} else
+		wpa_printf(MSG_INFO, "INJECT: Disassoc " MACSTR " -> " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	build_mgmt_hdr(&mgmt, bss, sta, sender_ap, WLAN_FC_STYPE_DISASSOC);
+
+	mgmt.u.disassoc.reason_code = host_to_le16(WLAN_REASON_UNSPECIFIED);
+
+	return wlantest_inject(wt, bss, sta, (u8 *) &mgmt, 24 + 2, prot);
+}
+
+
 static int ctrl_inject_saqueryreq(struct wlantest *wt,
 				  struct wlantest_bss *bss,
 				  struct wlantest_sta *sta, int sender_ap,
@@ -480,6 +530,12 @@ static void ctrl_inject(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 	switch (frame) {
 	case WLANTEST_FRAME_AUTH:
 		ret = ctrl_inject_auth(wt, bss, sta, sender_ap, prot);
+		break;
+	case WLANTEST_FRAME_DEAUTH:
+		ret = ctrl_inject_deauth(wt, bss, sta, sender_ap, prot);
+		break;
+	case WLANTEST_FRAME_DISASSOC:
+		ret = ctrl_inject_disassoc(wt, bss, sta, sender_ap, prot);
 		break;
 	case WLANTEST_FRAME_SAQUERYREQ:
 		ret = ctrl_inject_saqueryreq(wt, bss, sta, sender_ap, prot);

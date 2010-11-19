@@ -59,6 +59,23 @@ static u8 * attr_hdr_add(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
 }
 
 
+static u8 * attr_add_str(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
+			 const char *str)
+{
+	size_t len = os_strlen(str);
+
+	if (pos == NULL || end - pos < 8 + len)
+		return NULL;
+	WPA_PUT_BE32(pos, attr);
+	pos += 4;
+	WPA_PUT_BE32(pos, len);
+	pos += 4;
+	os_memcpy(pos, str, len);
+	pos += len;
+	return pos;
+}
+
+
 static u8 * attr_add_be32(u8 *pos, u8 *end, enum wlantest_ctrl_attr attr,
 			  u32 val)
 {
@@ -556,6 +573,45 @@ static int cmd_version(int s, int argc, char *argv[])
 }
 
 
+static int cmd_add_passphrase(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *pos, *end;
+	size_t len;
+	int rlen;
+
+	if (argc < 1) {
+		printf("add_passphrase needs one argument: passphrase\n");
+		return -1;
+	}
+
+	len = os_strlen(argv[0]);
+	if (len < 8 || len > 63) {
+		printf("Invalid passphrase '%s'\n", argv[0]);
+		return -1;
+	}
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_ADD_PASSPHRASE);
+	pos += 4;
+	pos = attr_add_str(pos, end, WLANTEST_ATTR_PASSPHRASE,
+			   argv[0]);
+	if (argc > 1) {
+		pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+		if (hwaddr_aton(argv[1], pos) < 0) {
+			printf("Invalid BSSID '%s'\n", argv[3]);
+			return -1;
+		}
+		pos += ETH_ALEN;
+	}
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	return 0;
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -579,6 +635,8 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "inject", cmd_inject,
 	  "<frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff>" },
 	{ "version", cmd_version, "= get wlantest version" },
+	{ "add_passphrase", cmd_add_passphrase,
+	  "<passphrase> = add a known passphrase" },
 	{ NULL, NULL, NULL }
 };
 

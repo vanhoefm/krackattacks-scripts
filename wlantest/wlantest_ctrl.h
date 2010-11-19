@@ -35,6 +35,7 @@ enum wlantest_ctrl_cmd {
 	WLANTEST_CTRL_GET_BSS_COUNTER,
 	WLANTEST_CTRL_INJECT,
 	WLANTEST_CTRL_VERSION,
+	WLANTEST_CTRL_ADD_PASSPHRASE,
 };
 
 enum wlantest_ctrl_attr {
@@ -47,6 +48,7 @@ enum wlantest_ctrl_attr {
 	WLANTEST_ATTR_INJECT_SENDER_AP,
 	WLANTEST_ATTR_INJECT_PROTECTION,
 	WLANTEST_ATTR_VERSION,
+	WLANTEST_ATTR_PASSPHRASE,
 };
 
 enum wlantest_bss_counter {

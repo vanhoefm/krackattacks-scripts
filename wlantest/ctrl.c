@@ -686,6 +686,53 @@ static void ctrl_version(struct wlantest *wt, int sock)
 }
 
 
+static void ctrl_add_passphrase(struct wlantest *wt, int sock, u8 *cmd,
+				size_t clen)
+{
+	u8 *passphrase;
+	size_t len;
+	struct wlantest_passphrase *p, *pa;
+	u8 *bssid;
+
+	passphrase = attr_get(cmd, clen, WLANTEST_ATTR_PASSPHRASE, &len);
+	if (passphrase == NULL || len < 8 || len > 63) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	p = os_zalloc(sizeof(*p));
+	if (p == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+	os_memcpy(p->passphrase, passphrase, len);
+	wpa_printf(MSG_INFO, "Add passphrase '%s'", p->passphrase);
+
+	bssid = attr_get_macaddr(cmd, clen, WLANTEST_ATTR_BSSID);
+	if (bssid) {
+		os_memcpy(p->bssid, bssid, ETH_ALEN);
+		wpa_printf(MSG_INFO, "Limit passphrase for BSSID " MACSTR,
+			   MAC2STR(p->bssid));
+	}
+
+	dl_list_for_each(pa, &wt->passphrase, struct wlantest_passphrase, list)
+	{
+		if (os_strcmp(p->passphrase, pa->passphrase) == 0 &&
+		    os_memcmp(p->bssid, pa->bssid, ETH_ALEN) == 0) {
+			wpa_printf(MSG_INFO, "Passphrase was already known");
+			os_free(p);
+			p = NULL;
+			break;
+		}
+	}
+
+	if (p)
+		dl_list_add(&wt->passphrase, &p->list);
+
+	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -750,6 +797,9 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_VERSION:
 		ctrl_version(wt, sock);
+		break;
+	case WLANTEST_CTRL_ADD_PASSPHRASE:
+		ctrl_add_passphrase(wt, sock, buf + 4, len - 4);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

@@ -20,6 +20,19 @@
 #include "wlantest.h"
 
 
+struct wlantest_sta * sta_find(struct wlantest_bss *bss, const u8 *addr)
+{
+	struct wlantest_sta *sta;
+
+	dl_list_for_each(sta, &bss->sta, struct wlantest_sta, list) {
+		if (os_memcmp(sta->addr, addr, ETH_ALEN) == 0)
+			return sta;
+	}
+
+	return NULL;
+}
+
+
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr)
 {
 	struct wlantest_sta *sta;
@@ -27,10 +40,9 @@ struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr)
 	if (addr[0] & 0x01)
 		return NULL; /* Skip group addressed frames */
 
-	dl_list_for_each(sta, &bss->sta, struct wlantest_sta, list) {
-		if (os_memcmp(sta->addr, addr, ETH_ALEN) == 0)
-			return sta;
-	}
+	sta = sta_find(bss, addr);
+	if (sta)
+		return sta;
 
 	sta = os_zalloc(sizeof(*sta));
 	if (sta == NULL)

@@ -180,7 +180,7 @@ static void ctrl_list_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 		return;
 	}
 
-	bss = bss_get(wt, bssid);
+	bss = bss_find(wt, bssid);
 	if (bss == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -228,7 +228,7 @@ static void ctrl_clear_sta_counters(struct wlantest *wt, int sock, u8 *cmd,
 		return;
 	}
 
-	bss = bss_get(wt, addr);
+	bss = bss_find(wt, addr);
 	if (bss == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -240,7 +240,7 @@ static void ctrl_clear_sta_counters(struct wlantest *wt, int sock, u8 *cmd,
 		return;
 	}
 
-	sta = sta_get(bss, addr);
+	sta = sta_find(bss, addr);
 	if (sta == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -264,7 +264,7 @@ static void ctrl_clear_bss_counters(struct wlantest *wt, int sock, u8 *cmd,
 		return;
 	}
 
-	bss = bss_get(wt, addr);
+	bss = bss_find(wt, addr);
 	if (bss == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -291,7 +291,7 @@ static void ctrl_get_sta_counter(struct wlantest *wt, int sock, u8 *cmd,
 		return;
 	}
 
-	bss = bss_get(wt, addr);
+	bss = bss_find(wt, addr);
 	if (bss == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -303,7 +303,7 @@ static void ctrl_get_sta_counter(struct wlantest *wt, int sock, u8 *cmd,
 		return;
 	}
 
-	sta = sta_get(bss, addr);
+	sta = sta_find(bss, addr);
 	if (sta == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -345,7 +345,7 @@ static void ctrl_get_bss_counter(struct wlantest *wt, int sock, u8 *cmd,
 		return;
 	}
 
-	bss = bss_get(wt, addr);
+	bss = bss_find(wt, addr);
 	if (bss == NULL) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
@@ -614,7 +614,7 @@ static void ctrl_inject(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 		return;
 	}
 
-	bss = bss_get(wt, bssid);
+	bss = bss_find(wt, bssid);
 	if (bss == NULL) {
 		wpa_printf(MSG_INFO, "BSS not found for inject command");
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
@@ -629,7 +629,7 @@ static void ctrl_inject(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 			return;
 		} sta = NULL;
 	} else {
-		sta = sta_get(bss, sta_addr);
+		sta = sta_find(bss, sta_addr);
 		if (sta == NULL) {
 			wpa_printf(MSG_INFO, "Station not found for inject "
 				   "command");

@@ -153,6 +153,7 @@ void monitor_deinit(struct wlantest *wt);
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data(struct wlantest *wt, const u8 *data, size_t len);
 
+struct wlantest_bss * bss_find(struct wlantest *wt, const u8 *bssid);
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);
 void bss_deinit(struct wlantest_bss *bss);
 void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
@@ -160,6 +161,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 void bss_flush(struct wlantest *wt);
 void pmk_deinit(struct wlantest_pmk *pmk);
 
+struct wlantest_sta * sta_find(struct wlantest_bss *bss, const u8 *addr);
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);
 void sta_deinit(struct wlantest_sta *sta);
 void sta_update_assoc(struct wlantest_sta *sta,

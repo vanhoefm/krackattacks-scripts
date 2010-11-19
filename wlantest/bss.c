@@ -21,6 +21,19 @@
 #include "wlantest.h"
 
 
+struct wlantest_bss * bss_find(struct wlantest *wt, const u8 *bssid)
+{
+	struct wlantest_bss *bss;
+
+	dl_list_for_each(bss, &wt->bss, struct wlantest_bss, list) {
+		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
+			return bss;
+	}
+
+	return NULL;
+}
+
+
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid)
 {
 	struct wlantest_bss *bss;
@@ -28,10 +41,9 @@ struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid)
 	if (bssid[0] & 0x01)
 		return NULL; /* Skip group addressed frames */
 
-	dl_list_for_each(bss, &wt->bss, struct wlantest_bss, list) {
-		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
-			return bss;
-	}
+	bss = bss_find(wt, bssid);
+	if (bss)
+		return bss;
 
 	bss = os_zalloc(sizeof(*bss));
 	if (bss == NULL)

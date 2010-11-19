@@ -47,6 +47,7 @@ struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr)
 void sta_deinit(struct wlantest_sta *sta)
 {
 	dl_list_del(&sta->list);
+	os_free(sta->assocreq_ies);
 	os_free(sta);
 }
 

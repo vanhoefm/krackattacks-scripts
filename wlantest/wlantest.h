@@ -69,6 +69,10 @@ struct wlantest_sta {
 	u8 ap_sa_query_tr[2];
 	u8 sta_sa_query_tr[2];
 	u32 counters[NUM_WLANTEST_STA_COUNTER];
+	u16 assocreq_capab_info;
+	u16 assocreq_listen_int;
+	u8 *assocreq_ies;
+	size_t assocreq_ies_len;
 };
 
 struct wlantest_bss {

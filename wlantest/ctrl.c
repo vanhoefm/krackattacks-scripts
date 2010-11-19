@@ -403,6 +403,99 @@ static int ctrl_inject_auth(struct wlantest *wt, struct wlantest_bss *bss,
 }
 
 
+static int ctrl_inject_assocreq(struct wlantest *wt, struct wlantest_bss *bss,
+				struct wlantest_sta *sta, int sender_ap,
+				enum wlantest_inject_protection prot)
+{
+	u8 *buf;
+	struct ieee80211_mgmt *mgmt;
+	int ret;
+
+	if (prot != WLANTEST_INJECT_NORMAL &&
+	    prot != WLANTEST_INJECT_UNPROTECTED)
+		return -1; /* Association Request frame is never protected */
+	if (sta == NULL)
+		return -1; /* No broadcast Association Request frames */
+	if (sender_ap)
+		return -1; /* No Association Request frame sent by AP */
+	if (sta->assocreq_ies == NULL) {
+		wpa_printf(MSG_INFO, "INJECT: No previous (Re)Association "
+			   "Request available for " MACSTR,
+			   MAC2STR(sta->addr));
+		return -1;
+	}
+
+	wpa_printf(MSG_INFO, "INJECT: AssocReq " MACSTR " -> " MACSTR,
+		   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	buf = os_malloc(sizeof(*mgmt) + sta->assocreq_ies_len);
+	if (buf == NULL)
+		return -1;
+	mgmt = (struct ieee80211_mgmt *) buf;
+
+	build_mgmt_hdr(mgmt, bss, sta, sender_ap, WLAN_FC_STYPE_ASSOC_REQ);
+
+	mgmt->u.assoc_req.capab_info = host_to_le16(sta->assocreq_capab_info);
+	mgmt->u.assoc_req.listen_interval =
+		host_to_le16(sta->assocreq_listen_int);
+	os_memcpy(mgmt->u.assoc_req.variable, sta->assocreq_ies,
+		  sta->assocreq_ies_len);
+
+	ret = wlantest_inject(wt, bss, sta, buf,
+			      24 + 4 + sta->assocreq_ies_len,
+			      WLANTEST_INJECT_UNPROTECTED);
+	os_free(buf);
+	return ret;
+}
+
+
+static int ctrl_inject_reassocreq(struct wlantest *wt,
+				  struct wlantest_bss *bss,
+				  struct wlantest_sta *sta, int sender_ap,
+				  enum wlantest_inject_protection prot)
+{
+	u8 *buf;
+	struct ieee80211_mgmt *mgmt;
+	int ret;
+
+	if (prot != WLANTEST_INJECT_NORMAL &&
+	    prot != WLANTEST_INJECT_UNPROTECTED)
+		return -1; /* Reassociation Request frame is never protected */
+	if (sta == NULL)
+		return -1; /* No broadcast Reassociation Request frames */
+	if (sender_ap)
+		return -1; /* No Reassociation Request frame sent by AP */
+	if (sta->assocreq_ies == NULL) {
+		wpa_printf(MSG_INFO, "INJECT: No previous (Re)Association "
+			   "Request available for " MACSTR,
+			   MAC2STR(sta->addr));
+		return -1;
+	}
+
+	wpa_printf(MSG_INFO, "INJECT: ReassocReq " MACSTR " -> " MACSTR,
+		   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+	buf = os_malloc(sizeof(*mgmt) + sta->assocreq_ies_len);
+	if (buf == NULL)
+		return -1;
+	mgmt = (struct ieee80211_mgmt *) buf;
+
+	build_mgmt_hdr(mgmt, bss, sta, sender_ap, WLAN_FC_STYPE_REASSOC_REQ);
+
+	mgmt->u.reassoc_req.capab_info =
+		host_to_le16(sta->assocreq_capab_info);
+	mgmt->u.reassoc_req.listen_interval =
+		host_to_le16(sta->assocreq_listen_int);
+	os_memcpy(mgmt->u.reassoc_req.current_ap, bss->bssid, ETH_ALEN);
+	os_memcpy(mgmt->u.reassoc_req.variable, sta->assocreq_ies,
+		  sta->assocreq_ies_len);
+
+	ret = wlantest_inject(wt, bss, sta, buf,
+			      24 + 10 + sta->assocreq_ies_len,
+			      WLANTEST_INJECT_UNPROTECTED);
+	os_free(buf);
+	return ret;
+}
+
+
 static int ctrl_inject_deauth(struct wlantest *wt, struct wlantest_bss *bss,
 			      struct wlantest_sta *sta, int sender_ap,
 			      enum wlantest_inject_protection prot)
@@ -530,6 +623,12 @@ static void ctrl_inject(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 	switch (frame) {
 	case WLANTEST_FRAME_AUTH:
 		ret = ctrl_inject_auth(wt, bss, sta, sender_ap, prot);
+		break;
+	case WLANTEST_FRAME_ASSOCREQ:
+		ret = ctrl_inject_assocreq(wt, bss, sta, sender_ap, prot);
+		break;
+	case WLANTEST_FRAME_REASSOCREQ:
+		ret = ctrl_inject_reassocreq(wt, bss, sta, sender_ap, prot);
 		break;
 	case WLANTEST_FRAME_DEAUTH:
 		ret = ctrl_inject_deauth(wt, bss, sta, sender_ap, prot);

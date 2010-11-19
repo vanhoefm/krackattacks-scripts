@@ -246,6 +246,16 @@ static void rx_mgmt_assoc_req(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	}
 
+	sta->assocreq_capab_info = le_to_host16(mgmt->u.assoc_req.capab_info);
+	sta->assocreq_listen_int =
+		le_to_host16(mgmt->u.assoc_req.listen_interval);
+	os_free(sta->assocreq_ies);
+	sta->assocreq_ies_len = len - (mgmt->u.assoc_req.variable - data);
+	sta->assocreq_ies = os_malloc(sta->assocreq_ies_len);
+	if (sta->assocreq_ies)
+		os_memcpy(sta->assocreq_ies, mgmt->u.assoc_req.variable,
+			  sta->assocreq_ies_len);
+
 	sta_update_assoc(sta, &elems);
 }
 
@@ -342,6 +352,17 @@ static void rx_mgmt_reassoc_req(struct wlantest *wt, const u8 *data,
 			   "frame from " MACSTR, MAC2STR(mgmt->sa));
 		return;
 	}
+
+	sta->assocreq_capab_info =
+		le_to_host16(mgmt->u.reassoc_req.capab_info);
+	sta->assocreq_listen_int =
+		le_to_host16(mgmt->u.reassoc_req.listen_interval);
+	os_free(sta->assocreq_ies);
+	sta->assocreq_ies_len = len - (mgmt->u.reassoc_req.variable - data);
+	sta->assocreq_ies = os_malloc(sta->assocreq_ies_len);
+	if (sta->assocreq_ies)
+		os_memcpy(sta->assocreq_ies, mgmt->u.reassoc_req.variable,
+			  sta->assocreq_ies_len);
 
 	sta_update_assoc(sta, &elems);
 }

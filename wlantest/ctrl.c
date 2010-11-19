@@ -425,6 +425,9 @@ static int ctrl_inject_saqueryreq(struct wlantest *wt,
 	mgmt.u.action.u.sa_query_req.action = WLAN_SA_QUERY_REQUEST;
 	mgmt.u.action.u.sa_query_req.trans_id[0] = 0x12;
 	mgmt.u.action.u.sa_query_req.trans_id[1] = 0x34;
+	os_memcpy(sender_ap ? sta->ap_sa_query_tr : sta->sta_sa_query_tr,
+		  mgmt.u.action.u.sa_query_req.trans_id,
+		  WLAN_SA_QUERY_TR_ID_LEN);
 	return wlantest_inject(wt, bss, sta, (u8 *) &mgmt, 24 + 4, prot);
 }
 

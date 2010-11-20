@@ -206,7 +206,7 @@ static char ** get_sta_list(int s, const u8 *bssid, int add_bcast)
 	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
 	os_memcpy(pos, bssid, ETH_ALEN);
 	pos += ETH_ALEN;
-	rlen = cmd_send_and_recv(s, buf, sizeof(buf), resp, sizeof(resp));
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
 	if (rlen < 0)
 		return NULL;
 

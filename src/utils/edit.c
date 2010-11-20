@@ -132,6 +132,8 @@ static void delete_word(void)
 		cmdbuf_len--;
 	while (cmdbuf_len > 0 && cmdbuf[cmdbuf_len - 1] != ' ')
 		cmdbuf_len--;
+	if (cmdbuf_pos > cmdbuf_len)
+		cmdbuf_pos = cmdbuf_len;
 	edit_redraw();
 }
 

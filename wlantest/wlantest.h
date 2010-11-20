@@ -73,6 +73,12 @@ struct wlantest_sta {
 	u16 assocreq_listen_int;
 	u8 *assocreq_ies;
 	size_t assocreq_ies_len;
+
+	/* Last ICMP Echo request information */
+	u32 icmp_echo_req_src;
+	u32 icmp_echo_req_dst;
+	u16 icmp_echo_req_id;
+	u16 icmp_echo_req_seq;
 };
 
 struct wlantest_bss {
@@ -154,6 +160,8 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
 		   const u8 *data, size_t len, int prot);
+void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
+		const u8 *dst, const u8 *src, const u8 *data, size_t len);
 
 struct wlantest_bss * bss_find(struct wlantest *wt, const u8 *bssid);
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);

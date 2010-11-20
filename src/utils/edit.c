@@ -464,6 +464,14 @@ enum edit_key_code {
 	EDIT_KEY_ALT_DOWN,
 	EDIT_KEY_ALT_RIGHT,
 	EDIT_KEY_ALT_LEFT,
+	EDIT_KEY_SHIFT_UP,
+	EDIT_KEY_SHIFT_DOWN,
+	EDIT_KEY_SHIFT_RIGHT,
+	EDIT_KEY_SHIFT_LEFT,
+	EDIT_KEY_ALT_SHIFT_UP,
+	EDIT_KEY_ALT_SHIFT_DOWN,
+	EDIT_KEY_ALT_SHIFT_RIGHT,
+	EDIT_KEY_ALT_SHIFT_LEFT,
 	EDIT_KEY_EOF
 };
 
@@ -475,13 +483,209 @@ static void show_esc_buf(const char *esc_buf, char c, int i)
 }
 
 
+static enum edit_key_code esc_seq_to_key1_no(char last)
+{
+	switch (last) {
+	case 'A':
+		return EDIT_KEY_UP;
+	case 'B':
+		return EDIT_KEY_DOWN;
+	case 'C':
+		return EDIT_KEY_RIGHT;
+	case 'D':
+		return EDIT_KEY_LEFT;
+	default:
+		return EDIT_KEY_NONE;
+	}
+}
+
+
+static enum edit_key_code esc_seq_to_key1_shift(char last)
+{
+	switch (last) {
+	case 'A':
+		return EDIT_KEY_SHIFT_UP;
+	case 'B':
+		return EDIT_KEY_SHIFT_DOWN;
+	case 'C':
+		return EDIT_KEY_SHIFT_RIGHT;
+	case 'D':
+		return EDIT_KEY_SHIFT_LEFT;
+	default:
+		return EDIT_KEY_NONE;
+	}
+}
+
+
+static enum edit_key_code esc_seq_to_key1_alt(char last)
+{
+	switch (last) {
+	case 'A':
+		return EDIT_KEY_ALT_UP;
+	case 'B':
+		return EDIT_KEY_ALT_DOWN;
+	case 'C':
+		return EDIT_KEY_ALT_RIGHT;
+	case 'D':
+		return EDIT_KEY_ALT_LEFT;
+	default:
+		return EDIT_KEY_NONE;
+	}
+}
+
+
+static enum edit_key_code esc_seq_to_key1_alt_shift(char last)
+{
+	switch (last) {
+	case 'A':
+		return EDIT_KEY_ALT_SHIFT_UP;
+	case 'B':
+		return EDIT_KEY_ALT_SHIFT_DOWN;
+	case 'C':
+		return EDIT_KEY_ALT_SHIFT_RIGHT;
+	case 'D':
+		return EDIT_KEY_ALT_SHIFT_LEFT;
+	default:
+		return EDIT_KEY_NONE;
+	}
+}
+
+
+static enum edit_key_code esc_seq_to_key1_ctrl(char last)
+{
+	switch (last) {
+	case 'A':
+		return EDIT_KEY_CTRL_UP;
+	case 'B':
+		return EDIT_KEY_CTRL_DOWN;
+	case 'C':
+		return EDIT_KEY_CTRL_RIGHT;
+	case 'D':
+		return EDIT_KEY_CTRL_LEFT;
+	default:
+		return EDIT_KEY_NONE;
+	}
+}
+
+
+static enum edit_key_code esc_seq_to_key1(int param1, int param2, char last)
+{
+	/* ESC-[<param1>;<param2><last> */
+
+	if (param1 < 0 && param2 < 0)
+		return esc_seq_to_key1_no(last);
+
+	if (param1 == 1 && param2 == 2)
+		return esc_seq_to_key1_shift(last);
+
+	if (param1 == 1 && param2 == 3)
+		return esc_seq_to_key1_alt(last);
+
+	if (param1 == 1 && param2 == 4)
+		return esc_seq_to_key1_alt_shift(last);
+
+	if (param1 == 1 && param2 == 5)
+		return esc_seq_to_key1_ctrl(last);
+
+	if (param2 < 0) {
+		if (last != '~')
+			return EDIT_KEY_NONE;
+		switch (param1) {
+		case 2:
+			return EDIT_KEY_INSERT;
+		case 3:
+			return EDIT_KEY_DELETE;
+		case 5:
+			return EDIT_KEY_PAGE_UP;
+		case 6:
+			return EDIT_KEY_PAGE_DOWN;
+		case 15:
+			return EDIT_KEY_F5;
+		case 17:
+			return EDIT_KEY_F6;
+		case 18:
+			return EDIT_KEY_F7;
+		case 19:
+			return EDIT_KEY_F8;
+		case 20:
+			return EDIT_KEY_F9;
+		case 21:
+			return EDIT_KEY_F10;
+		case 23:
+			return EDIT_KEY_F11;
+		case 24:
+			return EDIT_KEY_F12;
+		}
+	}
+
+	return EDIT_KEY_NONE;
+}
+
+
+static enum edit_key_code esc_seq_to_key2(int param1, int param2, char last)
+{
+	/* ESC-O<param1>;<param2><last> */
+
+	if (param1 >= 0 || param2 >= 0)
+		return EDIT_KEY_NONE;
+
+	switch (last) {
+	case 'F':
+		return EDIT_KEY_END;
+	case 'H':
+		return EDIT_KEY_HOME;
+	case 'P':
+		return EDIT_KEY_F1;
+	case 'Q':
+		return EDIT_KEY_F2;
+	case 'R':
+		return EDIT_KEY_F3;
+	case 'S':
+		return EDIT_KEY_F4;
+	default:
+		return EDIT_KEY_NONE;
+	}
+}
+
+
+static enum edit_key_code esc_seq_to_key(char *seq)
+{
+	char last, *pos;
+	int param1 = -1, param2 = -1;
+	enum edit_key_code ret = EDIT_KEY_NONE;
+
+	for (pos = seq; *pos; pos++)
+		last = *pos;
+
+	if (seq[1] >= '0' && seq[1] <= '9') {
+		param1 = atoi(&seq[1]);
+		pos = os_strchr(seq, ';');
+		if (pos)
+			param2 = atoi(pos + 1);
+	}
+
+	if (seq[0] == '[')
+		ret = esc_seq_to_key1(param1, param2, last);
+	else if (seq[0] == 'O')
+		ret = esc_seq_to_key2(param1, param2, last);
+
+	if (ret != EDIT_KEY_NONE)
+		return ret;
+
+	edit_clear_line();
+	printf("\rUnknown escape sequence '%s'\n", seq);
+	edit_redraw();
+	return EDIT_KEY_NONE;
+}
+
+
 static enum edit_key_code edit_read_key(int sock)
 {
 	int c;
 	unsigned char buf[1];
 	int res;
 	static int esc = -1;
-	static char esc_buf[6];
+	static char esc_buf[7];
 
 	res = read(sock, buf, 1);
 	if (res < 0)
@@ -492,136 +696,40 @@ static enum edit_key_code edit_read_key(int sock)
 	c = buf[0];
 
 	if (esc >= 0) {
-		if (esc == 5) {
+		if (c == 27 /* ESC */) {
+			esc = 0;
+			return EDIT_KEY_NONE;
+		}
+
+		if (esc == 6) {
 			show_esc_buf(esc_buf, c, 0);
 			esc = -1;
 		} else {
 			esc_buf[esc++] = c;
 			esc_buf[esc] = '\0';
-			if (esc == 1)
-				return EDIT_KEY_NONE;
 		}
 	}
 
-	if (esc == 2 && esc_buf[0] == '[' && c >= 'A' && c <= 'Z') {
-		esc = -1;
-		switch (c) {
-		case 'A':
-			return EDIT_KEY_UP;
-		case 'B':
-			return EDIT_KEY_DOWN;
-		case 'C':
-			return EDIT_KEY_RIGHT;
-		case 'D':
-			return EDIT_KEY_LEFT;
-		default:
+	if (esc == 1) {
+		if (esc_buf[0] != '[' && esc_buf[0] != 'O') {
 			show_esc_buf(esc_buf, c, 1);
+			esc = -1;
 			return EDIT_KEY_NONE;
-		}
-	}
-
-	if (esc > 1 && esc_buf[0] == '[') {
-		if ((c >= '0' && c <= '9') || c == ';')
-			return EDIT_KEY_NONE;
-
-		esc = -1;
-
-		if (esc_buf[1] == '1' && esc_buf[2] == ';' &&
-		    esc_buf[3] == '5') {
-			switch (esc_buf[4]) {
-			case 'A':
-				return EDIT_KEY_CTRL_UP;
-			case 'B':
-				return EDIT_KEY_CTRL_DOWN;
-			case 'C':
-				return EDIT_KEY_CTRL_RIGHT;
-			case 'D':
-				return EDIT_KEY_CTRL_LEFT;
-			default:
-				show_esc_buf(esc_buf, c, 2);
-				return EDIT_KEY_NONE;
-			}
-		}
-
-		if (esc_buf[1] == '1' && esc_buf[2] == ';' &&
-		    esc_buf[3] == '3') {
-			switch (esc_buf[4]) {
-			case 'A':
-				return EDIT_KEY_ALT_UP;
-			case 'B':
-				return EDIT_KEY_ALT_DOWN;
-			case 'C':
-				return EDIT_KEY_ALT_RIGHT;
-			case 'D':
-				return EDIT_KEY_ALT_LEFT;
-			default:
-				show_esc_buf(esc_buf, c, 7);
-				return EDIT_KEY_NONE;
-			}
-		}
-
-		switch (c) {
-		case '~':
-			switch (atoi(&esc_buf[1])) {
-			case 2:
-				return EDIT_KEY_INSERT;
-			case 3:
-				return EDIT_KEY_DELETE;
-			case 5:
-				return EDIT_KEY_PAGE_UP;
-			case 6:
-				return EDIT_KEY_PAGE_DOWN;
-			case 15:
-				return EDIT_KEY_F5;
-			case 17:
-				return EDIT_KEY_F6;
-			case 18:
-				return EDIT_KEY_F7;
-			case 19:
-				return EDIT_KEY_F8;
-			case 20:
-				return EDIT_KEY_F9;
-			case 21:
-				return EDIT_KEY_F10;
-			case 23:
-				return EDIT_KEY_F11;
-			case 24:
-				return EDIT_KEY_F12;
-			default:
-				show_esc_buf(esc_buf, c, 3);
-				return EDIT_KEY_NONE;
-			}
-			break;
-		default:
-			show_esc_buf(esc_buf, c, 4);
-			return EDIT_KEY_NONE;
-		}
-	}
-
-	if (esc > 1 && esc_buf[0] == 'O') {
-		esc = -1;
-		switch (esc_buf[1]) {
-		case 'F':
-			return EDIT_KEY_END;
-		case 'H':
-			return EDIT_KEY_HOME;
-		case 'P':
-			return EDIT_KEY_F1;
-		case 'Q':
-			return EDIT_KEY_F2;
-		case 'R':
-			return EDIT_KEY_F3;
-		case 'S':
-			return EDIT_KEY_F4;
-		default:
-			show_esc_buf(esc_buf, c, 5);
-			return EDIT_KEY_NONE;
-		}
+		} else
+			return EDIT_KEY_NONE; /* Escape sequence continues */
 	}
 
 	if (esc > 1) {
+		if ((c >= '0' && c <= '9') || c == ';')
+			return EDIT_KEY_NONE; /* Escape sequence continues */
+
+		if (c == '~' || (c >= 'A' && c <= 'Z')) {
+			esc = -1;
+			return esc_seq_to_key(esc_buf);
+		}
+
+		show_esc_buf(esc_buf, c, 2);
 		esc = -1;
-		show_esc_buf(esc_buf, c, 6);
 		return EDIT_KEY_NONE;
 	}
 

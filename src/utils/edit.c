@@ -456,12 +456,6 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 		case 'D': /* left */
 			move_left();
 			break;
-		case 'F': /* end */
-			move_end();
-			break;
-		case 'H': /* home */
-			move_start();
-			break;
 		default:
 			printf("{ESC%s}[1]\n", esc_buf);
 			edit_redraw();
@@ -533,6 +527,12 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 
 	if (esc > 1 && esc_buf[0] == 'O') {
 		switch (esc_buf[1]) {
+		case 'F': /* end */
+			move_end();
+			break;
+		case 'H': /* home */
+			move_start();
+			break;
 		case 'P': /* F1 */
 			history_debug_dump();
 			break;

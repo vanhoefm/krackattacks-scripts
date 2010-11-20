@@ -15,3 +15,6 @@ hostapd/hostapd
 hostapd/hostapd_cli
 hostapd/hlr_auc_gw
 hostapd/nt_password_hash
+wlantest/libwlantest.a
+wlantest/wlantest
+wlantest/wlantest_cli

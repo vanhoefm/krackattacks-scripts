@@ -130,13 +130,17 @@ static void delete_current(void)
 
 static void delete_word(void)
 {
+	int pos;
+
 	edit_clear_line();
-	while (cmdbuf_len > 0 && cmdbuf[cmdbuf_len - 1] == ' ')
-		cmdbuf_len--;
-	while (cmdbuf_len > 0 && cmdbuf[cmdbuf_len - 1] != ' ')
-		cmdbuf_len--;
-	if (cmdbuf_pos > cmdbuf_len)
-		cmdbuf_pos = cmdbuf_len;
+	pos = cmdbuf_pos;
+	while (pos > 0 && cmdbuf[pos - 1] == ' ')
+		pos--;
+	while (pos > 0 && cmdbuf[pos - 1] != ' ')
+		pos--;
+	os_memmove(cmdbuf + pos, cmdbuf + cmdbuf_pos, cmdbuf_len - cmdbuf_pos);
+	cmdbuf_len -= cmdbuf_pos - pos;
+	cmdbuf_pos = pos;
 	edit_redraw();
 }
 

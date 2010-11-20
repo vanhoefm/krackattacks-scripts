@@ -152,6 +152,8 @@ int monitor_init_wired(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data(struct wlantest *wt, const u8 *data, size_t len);
+void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
+		   const u8 *data, size_t len, int prot);
 
 struct wlantest_bss * bss_find(struct wlantest *wt, const u8 *bssid);
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);

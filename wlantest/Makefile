@@ -56,6 +56,7 @@ OBJS += process.o
 OBJS += wired.o
 OBJS += rx_mgmt.o
 OBJS += rx_data.o
+OBJS += rx_eapol.o
 OBJS += bss.o
 OBJS += sta.o
 OBJS += crc32.o

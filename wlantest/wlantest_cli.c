@@ -21,6 +21,36 @@
 #include "wlantest_ctrl.h"
 
 
+static int get_cmd_arg_num(const char *str, int pos)
+{
+	int arg = 0, i;
+
+	for (i = 0; i <= pos; i++) {
+		if (str[i] != ' ') {
+			arg++;
+			while (i <= pos && str[i] != ' ')
+				i++;
+		}
+	}
+
+	if (arg > 0)
+		arg--;
+	return arg;
+}
+
+
+static int get_prev_arg_pos(const char *str, int pos)
+{
+	while (pos > 0 && str[pos - 1] != ' ')
+		pos--;
+	while (pos > 0 && str[pos - 1] == ' ')
+		pos--;
+	while (pos > 0 && str[pos - 1] != ' ')
+		pos--;
+	return pos;
+}
+
+
 static u8 * attr_get(u8 *buf, size_t buflen, enum wlantest_ctrl_attr attr,
 		     size_t *len)
 {
@@ -128,6 +158,78 @@ static int cmd_simple(int s, enum wlantest_ctrl_cmd cmd)
 }
 
 
+static char ** get_bssid_list(int s)
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[4];
+	u8 *bssid;
+	size_t len;
+	int rlen, i;
+	char **res;
+
+	WPA_PUT_BE32(buf, WLANTEST_CTRL_LIST_BSS);
+	rlen = cmd_send_and_recv(s, buf, sizeof(buf), resp, sizeof(resp));
+	if (rlen < 0)
+		return NULL;
+
+	bssid = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_BSSID, &len);
+	if (bssid == NULL)
+		return NULL;
+
+	res = os_zalloc((len / ETH_ALEN + 1) * sizeof(char *));
+	if (res == NULL)
+		return NULL;
+	for (i = 0; i < len / ETH_ALEN; i++) {
+		res[i] = os_zalloc(18);
+		if (res[i] == NULL)
+			break;
+		os_snprintf(res[i], 18, MACSTR, MAC2STR(bssid + ETH_ALEN * i));
+	}
+
+	return res;
+}
+
+
+static char ** get_sta_list(int s, const u8 *bssid, int add_bcast)
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *pos, *end;
+	u8 *addr;
+	size_t len;
+	int rlen, i;
+	char **res;
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_LIST_STA);
+	pos += 4;
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	os_memcpy(pos, bssid, ETH_ALEN);
+	pos += ETH_ALEN;
+	rlen = cmd_send_and_recv(s, buf, sizeof(buf), resp, sizeof(resp));
+	if (rlen < 0)
+		return NULL;
+
+	addr = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_STA_ADDR, &len);
+	if (addr == NULL)
+		return NULL;
+
+	res = os_zalloc((len / ETH_ALEN + 1 + add_bcast) * sizeof(char *));
+	if (res == NULL)
+		return NULL;
+	for (i = 0; i < len / ETH_ALEN; i++) {
+		res[i] = os_zalloc(18);
+		if (res[i] == NULL)
+			break;
+		os_snprintf(res[i], 18, MACSTR, MAC2STR(addr + ETH_ALEN * i));
+	}
+	if (add_bcast)
+		res[i] = os_strdup("ff:ff:ff:ff:ff:ff");
+
+	return res;
+}
+
+
 static int cmd_ping(int s, int argc, char *argv[])
 {
 	int res = cmd_simple(s, WLANTEST_CTRL_PING);
@@ -210,6 +312,14 @@ static int cmd_list_sta(int s, int argc, char *argv[])
 }
 
 
+static char ** complete_list_sta(int s, const char *str, int pos)
+{
+	if (get_cmd_arg_num(str, pos) == 1)
+		return get_bssid_list(s);
+	return NULL;
+}
+
+
 static int cmd_flush(int s, int argc, char *argv[])
 {
 	return cmd_simple(s, WLANTEST_CTRL_FLUSH);
@@ -259,6 +369,27 @@ static int cmd_clear_sta_counters(int s, int argc, char *argv[])
 }
 
 
+static char ** complete_clear_sta_counters(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		res = get_bssid_list(s);
+		break;
+	case 2:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 0);
+		break;
+	}
+
+	return res;
+}
+
+
 static int cmd_clear_bss_counters(int s, int argc, char *argv[])
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
@@ -288,6 +419,14 @@ static int cmd_clear_bss_counters(int s, int argc, char *argv[])
 		return -1;
 	printf("OK\n");
 	return 0;
+}
+
+
+static char ** complete_clear_bss_counters(int s, const char *str, int pos)
+{
+	if (get_cmd_arg_num(str, pos) == 1)
+		return get_bssid_list(s);
+	return NULL;
 }
 
 
@@ -384,6 +523,40 @@ static int cmd_get_sta_counter(int s, int argc, char *argv[])
 }
 
 
+static char ** complete_get_sta_counter(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	int i, count;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		/* counter list */
+		count = sizeof(sta_counters) / sizeof(sta_counters[0]);
+		res = os_zalloc(count * sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; sta_counters[i].name; i++) {
+			res[i] = os_strdup(sta_counters[i].name);
+			if (res[i] == NULL)
+				break;
+		}
+		break;
+	case 2:
+		res = get_bssid_list(s);
+		break;
+	case 3:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 0);
+		break;
+	}
+
+	return res;
+}
+
+
 struct bss_counters {
 	const char *name;
 	enum wlantest_bss_counter num;
@@ -445,6 +618,34 @@ static int cmd_get_bss_counter(int s, int argc, char *argv[])
 		return -1;
 	printf("%u\n", WPA_GET_BE32(pos));
 	return 0;
+}
+
+
+static char ** complete_get_bss_counter(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	int i, count;
+
+	switch (arg) {
+	case 1:
+		/* counter list */
+		count = sizeof(bss_counters) / sizeof(bss_counters[0]);
+		res = os_zalloc(count * sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; bss_counters[i].name; i++) {
+			res[i] = os_strdup(bss_counters[i].name);
+			if (res[i] == NULL)
+				break;
+		}
+		break;
+	case 2:
+		res = get_bssid_list(s);
+		break;
+	}
+
+	return res;
 }
 
 
@@ -549,6 +750,68 @@ static int cmd_inject(int s, int argc, char *argv[])
 }
 
 
+static char ** complete_inject(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	int i, count;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		/* frame list */
+		count = sizeof(inject_frames) / sizeof(inject_frames[0]);
+		res = os_zalloc(count * sizeof(char *));
+		if (res == NULL)
+			break;
+		for (i = 0; inject_frames[i].name; i++) {
+			res[i] = os_strdup(inject_frames[i].name);
+			if (res[i] == NULL)
+				break;
+		}
+		break;
+	case 2:
+		res = os_zalloc(5 * sizeof(char *));
+		if (res == NULL)
+			break;
+		res[0] = os_strdup("normal");
+		if (res[0] == NULL)
+			break;
+		res[1] = os_strdup("protected");
+		if (res[1] == NULL)
+			break;
+		res[2] = os_strdup("unprotected");
+		if (res[2] == NULL)
+			break;
+		res[3] = os_strdup("incorrect");
+		if (res[3] == NULL)
+			break;
+		break;
+	case 3:
+		res = os_zalloc(3 * sizeof(char *));
+		if (res == NULL)
+			break;
+		res[0] = os_strdup("ap");
+		if (res[0] == NULL)
+			break;
+		res[1] = os_strdup("sta");
+		if (res[1] == NULL)
+			break;
+		break;
+	case 4:
+		res = get_bssid_list(s);
+		break;
+	case 5:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 1);
+		break;
+	}
+
+	return res;
+}
+
+
 static int cmd_version(int s, int argc, char *argv[])
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
@@ -618,28 +881,33 @@ struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
 	const char *usage;
+	char ** (*complete)(int s, const char *str, int pos);
 };
 
 static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
-	{ "ping", cmd_ping, "= test connection to wlantest" },
-	{ "terminate", cmd_terminate, "= terminate wlantest" },
-	{ "list_bss", cmd_list_bss, "= get BSS list" },
-	{ "list_sta", cmd_list_sta, "<BSSID> = get STA list" },
-	{ "flush", cmd_flush, "= drop all collected BSS data" },
+	{ "ping", cmd_ping, "= test connection to wlantest", NULL },
+	{ "terminate", cmd_terminate, "= terminate wlantest", NULL },
+	{ "list_bss", cmd_list_bss, "= get BSS list", NULL },
+	{ "list_sta", cmd_list_sta, "<BSSID> = get STA list",
+	  complete_list_sta },
+	{ "flush", cmd_flush, "= drop all collected BSS data", NULL },
 	{ "clear_sta_counters", cmd_clear_sta_counters,
-	  "<BSSID> <STA> = clear STA counters" },
+	  "<BSSID> <STA> = clear STA counters", complete_clear_sta_counters },
 	{ "clear_bss_counters", cmd_clear_bss_counters,
-	  "<BSSID> = clear BSS counters" },
+	  "<BSSID> = clear BSS counters", complete_clear_bss_counters },
 	{ "get_sta_counter", cmd_get_sta_counter,
-	  "<counter> <BSSID> <STA> = get STA counter value" },
+	  "<counter> <BSSID> <STA> = get STA counter value",
+	  complete_get_sta_counter},
 	{ "get_bss_counter", cmd_get_bss_counter,
-	  "<counter> <BSSID> = get BSS counter value" },
+	  "<counter> <BSSID> = get BSS counter value",
+	  complete_get_bss_counter },
 	{ "inject", cmd_inject,
-	  "<frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff>" },
-	{ "version", cmd_version, "= get wlantest version" },
+	  "<frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff>",
+	  complete_inject },
+	{ "version", cmd_version, "= get wlantest version", NULL },
 	{ "add_passphrase", cmd_add_passphrase,
-	  "<passphrase> = add a known passphrase" },
-	{ NULL, NULL, NULL }
+	  "<passphrase> = add a known passphrase", NULL },
+	{ NULL, NULL, NULL, NULL }
 };
 
 
@@ -767,16 +1035,20 @@ static char ** wlantest_cli_cmd_list(void)
 }
 
 
-static char ** wlantest_cli_cmd_completion(const char *cmd, const char *str,
+static char ** wlantest_cli_cmd_completion(struct wlantest_cli *cli,
+					   const char *cmd, const char *str,
 					   int pos)
 {
 	int i;
 
 	for (i = 0; wlantest_cli_commands[i].cmd; i++) {
-		if (os_strcasecmp(wlantest_cli_commands[i].cmd, cmd) == 0) {
+		const struct wlantest_cli_cmd *c = &wlantest_cli_commands[i];
+		if (os_strcasecmp(c->cmd, cmd) == 0) {
 			edit_clear_line();
-			printf("\r%s\n", wlantest_cli_commands[i].usage);
+			printf("\r%s\n", c->usage);
 			edit_redraw();
+			if (c->complete)
+				return c->complete(cli->s, str, pos);
 			break;
 		}
 	}
@@ -788,6 +1060,7 @@ static char ** wlantest_cli_cmd_completion(const char *cmd, const char *str,
 static char ** wlantest_cli_edit_completion_cb(void *ctx, const char *str,
 					       int pos)
 {
+	struct wlantest_cli *cli = ctx;
 	char **res;
 	const char *end;
 	char *cmd;
@@ -801,7 +1074,7 @@ static char ** wlantest_cli_edit_completion_cb(void *ctx, const char *str,
 		return NULL;
 	os_memcpy(cmd, str, pos);
 	cmd[end - str] = '\0';
-	res = wlantest_cli_cmd_completion(cmd, str, pos);
+	res = wlantest_cli_cmd_completion(cli, cmd, str, pos);
 	os_free(cmd);
 	return res;
 }

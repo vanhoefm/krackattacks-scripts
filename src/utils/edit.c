@@ -37,6 +37,9 @@ static char ** (*edit_completion_cb)(void *ctx, const char *cmd, int pos) =
 static struct termios prevt, newt;
 
 
+#define CLEAR_END_LINE "\e[K"
+
+
 void edit_clear_line(void)
 {
 	int i;
@@ -785,12 +788,168 @@ static enum edit_key_code edit_read_key(int sock)
 }
 
 
+static char search_buf[21];
+static int search_skip;
+
+static char * search_find(void)
+{
+	int pos = history_pos;
+	size_t len = os_strlen(search_buf);
+	int skip = search_skip;
+
+	if (len == 0)
+		return NULL;
+
+	for (;;) {
+		if (pos == 0)
+			pos = CMD_HISTORY_LEN - 1;
+		else
+			pos--;
+		if (pos == history_pos) {
+			search_skip = 0;
+			return NULL;
+		}
+
+		if (os_strstr(history_buf[pos], search_buf)) {
+			if (skip == 0)
+				return history_buf[pos];
+			skip--;
+		}
+	}
+}
+
+
+static void search_redraw(void)
+{
+	char *match = search_find();
+	printf("\rsearch '%s': %s" CLEAR_END_LINE,
+	       search_buf, match ? match : "");
+	printf("\rsearch '%s", search_buf);
+	fflush(stdout);
+}
+
+
+static void search_start(void)
+{
+	edit_clear_line();
+	search_buf[0] = '\0';
+	search_skip = 0;
+	search_redraw();
+}
+
+
+static void search_clear(void)
+{
+	search_redraw();
+	printf("\r" CLEAR_END_LINE);
+}
+
+
+static void search_stop(void)
+{
+	char *match = search_find();
+	search_buf[0] = '\0';
+	search_clear();
+	if (match) {
+		os_strlcpy(cmdbuf, match, CMD_BUF_LEN);
+		cmdbuf_len = os_strlen(cmdbuf);
+		cmdbuf_pos = cmdbuf_len;
+	}
+	edit_redraw();
+}
+
+
+static void search_cancel(void)
+{
+	search_buf[0] = '\0';
+	search_clear();
+	edit_redraw();
+}
+
+
+static void search_backspace(void)
+{
+	size_t len;
+	len = os_strlen(search_buf);
+	if (len == 0)
+		return;
+	search_buf[len - 1] = '\0';
+	search_skip = 0;
+	search_redraw();
+}
+
+
+static void search_next(void)
+{
+	search_skip++;
+	search_find();
+	search_redraw();
+}
+
+
+static void search_char(char c)
+{
+	size_t len;
+	len = os_strlen(search_buf);
+	if (len == sizeof(search_buf) - 1)
+		return;
+	search_buf[len] = c;
+	search_buf[len + 1] = '\0';
+	search_skip = 0;
+	search_redraw();
+}
+
+
+static enum edit_key_code search_key(enum edit_key_code c)
+{
+	switch (c) {
+	case EDIT_KEY_ENTER:
+	case EDIT_KEY_CTRL_J:
+	case EDIT_KEY_LEFT:
+	case EDIT_KEY_RIGHT:
+	case EDIT_KEY_HOME:
+	case EDIT_KEY_END:
+	case EDIT_KEY_CTRL_A:
+	case EDIT_KEY_CTRL_E:
+		search_stop();
+		return c;
+	case EDIT_KEY_DOWN:
+	case EDIT_KEY_UP:
+		search_cancel();
+		return EDIT_KEY_EOF;
+	case EDIT_KEY_CTRL_H:
+	case EDIT_KEY_BACKSPACE:
+		search_backspace();
+		break;
+	case EDIT_KEY_CTRL_R:
+		search_next();
+		break;
+	default:
+		if (c >= 32 && c <= 255)
+			search_char(c);
+		break;
+	}
+
+	return EDIT_KEY_NONE;
+}
+
+
 static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	static int last_tab = 0;
+	static int search = 0;
 	enum edit_key_code c;
 
 	c = edit_read_key(sock);
+
+	if (search) {
+		c = search_key(c);
+		if (c == EDIT_KEY_NONE)
+			return;
+		search = 0;
+		if (c == EDIT_KEY_EOF)
+			return;
+	}
 
 	if (c != EDIT_KEY_TAB && c != EDIT_KEY_NONE)
 		last_tab = 0;
@@ -867,7 +1026,8 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 		edit_redraw();
 		break;
 	case EDIT_KEY_CTRL_R:
-		/* TODO: search history */
+		search = 1;
+		search_start();
 		break;
 	case EDIT_KEY_CTRL_U:
 		clear_left();

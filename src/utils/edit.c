@@ -349,6 +349,11 @@ static int max_common_length(char **c)
 }
 
 
+static int cmp_str(const void *a, const void *b)
+{
+	return os_strcmp(* (const char **) a, * (const char **) b);
+}
+
 static void complete(int list)
 {
 	char **c;
@@ -379,6 +384,7 @@ static void complete(int list)
 	len = max_common_length(c);
 	if (len <= plen && count > 1) {
 		if (list) {
+			qsort(c, count, sizeof(char *), cmp_str);
 			edit_clear_line();
 			printf("\r");
 			for (i = 0; c[i]; i++)

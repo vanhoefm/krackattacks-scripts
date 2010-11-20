@@ -377,7 +377,7 @@ static void complete(int list)
 	}
 
 	len = max_common_length(c);
-	if (len <= plen) {
+	if (len < plen) {
 		if (list) {
 			edit_clear_line();
 			printf("\r");
@@ -396,8 +396,8 @@ static void complete(int list)
 		len = room;
 	add_space = count == 1 && len < room;
 
-	os_memmove(cmdbuf + cmdbuf_pos + len, cmdbuf + cmdbuf_pos,
-		   cmdbuf_len - cmdbuf_pos + add_space);
+	os_memmove(cmdbuf + cmdbuf_pos + len + add_space, cmdbuf + cmdbuf_pos,
+		   cmdbuf_len - cmdbuf_pos);
 	os_memcpy(&cmdbuf[cmdbuf_pos - plen], c[0], plen + len);
 	if (add_space)
 		cmdbuf[cmdbuf_pos + len] = ' ';

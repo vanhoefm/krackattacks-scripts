@@ -16,6 +16,8 @@
 #include <sys/un.h>
 
 #include "utils/common.h"
+#include "utils/eloop.h"
+#include "utils/edit.h"
 #include "wlantest_ctrl.h"
 
 
@@ -681,11 +683,157 @@ static int ctrl_command(int s, int argc, char *argv[])
 }
 
 
+struct wlantest_cli {
+	int s;
+};
+
+
+#define max_args 10
+
+static int tokenize_cmd(char *cmd, char *argv[])
+{
+	char *pos;
+	int argc = 0;
+
+	pos = cmd;
+	for (;;) {
+		while (*pos == ' ')
+			pos++;
+		if (*pos == '\0')
+			break;
+		argv[argc] = pos;
+		argc++;
+		if (argc == max_args)
+			break;
+		if (*pos == '"') {
+			char *pos2 = os_strrchr(pos, '"');
+			if (pos2)
+				pos = pos2 + 1;
+		}
+		while (*pos != '\0' && *pos != ' ')
+			pos++;
+		if (*pos == ' ')
+			*pos++ = '\0';
+	}
+
+	return argc;
+}
+
+
+static void wlantest_cli_edit_cmd_cb(void *ctx, char *cmd)
+{
+	struct wlantest_cli *cli = ctx;
+	char *argv[max_args];
+	int argc;
+	argc = tokenize_cmd(cmd, argv);
+	if (argc) {
+		int ret = ctrl_command(cli->s, argc, argv);
+		if (ret < 0)
+			printf("FAIL\n");
+	}
+}
+
+
+static void wlantest_cli_eloop_terminate(int sig, void *signal_ctx)
+{
+	eloop_terminate();
+}
+
+
+static void wlantest_cli_edit_eof_cb(void *ctx)
+{
+	eloop_terminate();
+}
+
+
+static char ** wlantest_cli_cmd_list(void)
+{
+	char **res;
+	int i, count;
+
+	count = sizeof(wlantest_cli_commands) /
+		sizeof(wlantest_cli_commands[0]);
+	res = os_zalloc(count * sizeof(char *));
+	if (res == NULL)
+		return NULL;
+
+	for (i = 0; wlantest_cli_commands[i].cmd; i++) {
+		res[i] = os_strdup(wlantest_cli_commands[i].cmd);
+		if (res[i] == NULL)
+			break;
+	}
+
+	return res;
+}
+
+
+static char ** wlantest_cli_cmd_completion(const char *cmd, const char *str,
+					   int pos)
+{
+	int i;
+
+	for (i = 0; wlantest_cli_commands[i].cmd; i++) {
+		if (os_strcasecmp(wlantest_cli_commands[i].cmd, cmd) == 0) {
+			edit_clear_line();
+			printf("\r%s\n", wlantest_cli_commands[i].usage);
+			edit_redraw();
+			break;
+		}
+	}
+
+	return NULL;
+}
+
+
+static char ** wlantest_cli_edit_completion_cb(void *ctx, const char *str,
+					       int pos)
+{
+	char **res;
+	const char *end;
+	char *cmd;
+
+	end = os_strchr(str, ' ');
+	if (end == NULL || str + pos < end)
+		return wlantest_cli_cmd_list();
+
+	cmd = os_malloc(pos + 1);
+	if (cmd == NULL)
+		return NULL;
+	os_memcpy(cmd, str, pos);
+	cmd[end - str] = '\0';
+	res = wlantest_cli_cmd_completion(cmd, str, pos);
+	os_free(cmd);
+	return res;
+}
+
+
+static void wlantest_cli_interactive(int s)
+{
+	struct wlantest_cli cli;
+
+	if (eloop_init())
+		return;
+
+	cli.s = s;
+	eloop_register_signal_terminate(wlantest_cli_eloop_terminate, &cli);
+	edit_init(wlantest_cli_edit_cmd_cb, wlantest_cli_edit_eof_cb, &cli);
+	edit_set_completion_cb(wlantest_cli_edit_completion_cb);
+
+	eloop_run();
+
+	edit_deinit();
+	eloop_destroy();
+}
+
+
 int main(int argc, char *argv[])
 {
 	int s;
 	struct sockaddr_un addr;
 	int ret = 0;
+
+	if (os_program_init())
+		return -1;
 
 	s = socket(AF_UNIX, SOCK_SEQPACKET, 0);
 	if (s < 0) {
@@ -708,9 +856,12 @@ int main(int argc, char *argv[])
 		if (ret < 0)
 			printf("FAIL\n");
 	} else {
-		/* TODO: interactive */
+		wlantest_cli_interactive(s);
 	}
 
 	close(s);
+
+	os_program_deinit();
+
 	return ret;
 }

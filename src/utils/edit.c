@@ -251,12 +251,6 @@ static void history_debug_dump(void)
 
 static void insert_char(int c)
 {
-	if (c < 32 && c > 255) {
-		printf("[%d]\n", c);
-		edit_redraw();
-		return;
-	}
-
 	if (cmdbuf_len >= (int) sizeof(cmdbuf) - 1)
 		return;
 	if (cmdbuf_len == cmdbuf_pos) {
@@ -417,158 +411,328 @@ static void complete(int list)
 }
 
 
-static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
+enum edit_key_code {
+	EDIT_KEY_NONE = 256,
+	EDIT_KEY_TAB,
+	EDIT_KEY_UP,
+	EDIT_KEY_DOWN,
+	EDIT_KEY_RIGHT,
+	EDIT_KEY_LEFT,
+	EDIT_KEY_ENTER,
+	EDIT_KEY_BACKSPACE,
+	EDIT_KEY_INSERT,
+	EDIT_KEY_DELETE,
+	EDIT_KEY_HOME,
+	EDIT_KEY_END,
+	EDIT_KEY_PAGE_UP,
+	EDIT_KEY_PAGE_DOWN,
+	EDIT_KEY_F1,
+	EDIT_KEY_F2,
+	EDIT_KEY_F3,
+	EDIT_KEY_F4,
+	EDIT_KEY_F5,
+	EDIT_KEY_F6,
+	EDIT_KEY_F7,
+	EDIT_KEY_F8,
+	EDIT_KEY_F9,
+	EDIT_KEY_F10,
+	EDIT_KEY_F11,
+	EDIT_KEY_F12,
+	EDIT_KEY_CTRL_UP,
+	EDIT_KEY_CTRL_DOWN,
+	EDIT_KEY_CTRL_RIGHT,
+	EDIT_KEY_CTRL_LEFT,
+	EDIT_KEY_CTRL_A,
+	EDIT_KEY_CTRL_B,
+	EDIT_KEY_CTRL_D,
+	EDIT_KEY_CTRL_E,
+	EDIT_KEY_CTRL_F,
+	EDIT_KEY_CTRL_G,
+	EDIT_KEY_CTRL_H,
+	EDIT_KEY_CTRL_J,
+	EDIT_KEY_CTRL_K,
+	EDIT_KEY_CTRL_L,
+	EDIT_KEY_CTRL_N,
+	EDIT_KEY_CTRL_O,
+	EDIT_KEY_CTRL_P,
+	EDIT_KEY_CTRL_R,
+	EDIT_KEY_CTRL_T,
+	EDIT_KEY_CTRL_U,
+	EDIT_KEY_CTRL_V,
+	EDIT_KEY_CTRL_W,
+	EDIT_KEY_ALT_UP,
+	EDIT_KEY_ALT_DOWN,
+	EDIT_KEY_ALT_RIGHT,
+	EDIT_KEY_ALT_LEFT,
+	EDIT_KEY_EOF
+};
+
+static void show_esc_buf(const char *esc_buf, char c, int i)
+{
+	edit_clear_line();
+	printf("\rESC buffer '%s' c='%c' [%d]\n", esc_buf, c, i);
+	edit_redraw();
+}
+
+
+static enum edit_key_code edit_read_key(int sock)
 {
 	int c;
 	unsigned char buf[1];
 	int res;
 	static int esc = -1;
 	static char esc_buf[6];
-	static int last_tab = 0;
 
 	res = read(sock, buf, 1);
 	if (res < 0)
 		perror("read");
-	if (res <= 0) {
-		edit_eof_cb(edit_cb_ctx);
-		return;
-	}
+	if (res <= 0)
+		return EDIT_KEY_EOF;
+
 	c = buf[0];
-	if (c != 9)
-		last_tab = 0;
 
 	if (esc >= 0) {
 		if (esc == 5) {
-			printf("{ESC%s}[0]\n", esc_buf);
-			edit_redraw();
+			show_esc_buf(esc_buf, c, 0);
 			esc = -1;
 		} else {
 			esc_buf[esc++] = c;
 			esc_buf[esc] = '\0';
 			if (esc == 1)
-				return;
+				return EDIT_KEY_NONE;
 		}
 	}
 
 	if (esc == 2 && esc_buf[0] == '[' && c >= 'A' && c <= 'Z') {
-		switch (c) {
-		case 'A': /* up */
-			history_prev();
-			break;
-		case 'B': /* down */
-			history_next();
-			break;
-		case 'C': /* right */
-			move_right();
-			break;
-		case 'D': /* left */
-			move_left();
-			break;
-		default:
-			printf("{ESC%s}[1]\n", esc_buf);
-			edit_redraw();
-			break;
-		}
 		esc = -1;
-		return;
+		switch (c) {
+		case 'A':
+			return EDIT_KEY_UP;
+		case 'B':
+			return EDIT_KEY_DOWN;
+		case 'C':
+			return EDIT_KEY_RIGHT;
+		case 'D':
+			return EDIT_KEY_LEFT;
+		default:
+			show_esc_buf(esc_buf, c, 1);
+			return EDIT_KEY_NONE;
+		}
 	}
 
 	if (esc > 1 && esc_buf[0] == '[') {
 		if ((c >= '0' && c <= '9') || c == ';')
-			return;
+			return EDIT_KEY_NONE;
+
+		esc = -1;
 
 		if (esc_buf[1] == '1' && esc_buf[2] == ';' &&
 		    esc_buf[3] == '5') {
 			switch (esc_buf[4]) {
-			case 'A': /* Ctrl-Up */
-			case 'B': /* Ctrl-Down */
-				break;
-			case 'C': /* Ctrl-Right */
-				move_word_right();
-				break;
-			case 'D': /* Ctrl-Left */
-				move_word_left();
-				break;
+			case 'A':
+				return EDIT_KEY_CTRL_UP;
+			case 'B':
+				return EDIT_KEY_CTRL_DOWN;
+			case 'C':
+				return EDIT_KEY_CTRL_RIGHT;
+			case 'D':
+				return EDIT_KEY_CTRL_LEFT;
 			default:
-				printf("{ESC%s}[2]\n", esc_buf);
-				edit_redraw();
-				break;
+				show_esc_buf(esc_buf, c, 2);
+				return EDIT_KEY_NONE;
 			}
-			esc = -1;
-			return;
+		}
+
+		if (esc_buf[1] == '1' && esc_buf[2] == ';' &&
+		    esc_buf[3] == '3') {
+			switch (esc_buf[4]) {
+			case 'A':
+				return EDIT_KEY_ALT_UP;
+			case 'B':
+				return EDIT_KEY_ALT_DOWN;
+			case 'C':
+				return EDIT_KEY_ALT_RIGHT;
+			case 'D':
+				return EDIT_KEY_ALT_LEFT;
+			default:
+				show_esc_buf(esc_buf, c, 7);
+				return EDIT_KEY_NONE;
+			}
 		}
 
 		switch (c) {
 		case '~':
 			switch (atoi(&esc_buf[1])) {
-			case 2: /* Insert */
-				break;
-			case 3: /* Delete */
-				delete_current();
-				break;
-			case 5: /* Page Up */
-			case 6: /* Page Down */
-			case 15: /* F5 */
-			case 17: /* F6 */
-			case 18: /* F7 */
-			case 19: /* F8 */
-			case 20: /* F9 */
-			case 21: /* F10 */
-			case 23: /* F11 */
-			case 24: /* F12 */
-				break;
+			case 2:
+				return EDIT_KEY_INSERT;
+			case 3:
+				return EDIT_KEY_DELETE;
+			case 5:
+				return EDIT_KEY_PAGE_UP;
+			case 6:
+				return EDIT_KEY_PAGE_DOWN;
+			case 15:
+				return EDIT_KEY_F5;
+			case 17:
+				return EDIT_KEY_F6;
+			case 18:
+				return EDIT_KEY_F7;
+			case 19:
+				return EDIT_KEY_F8;
+			case 20:
+				return EDIT_KEY_F9;
+			case 21:
+				return EDIT_KEY_F10;
+			case 23:
+				return EDIT_KEY_F11;
+			case 24:
+				return EDIT_KEY_F12;
 			default:
-				printf("{ESC%s}[3]\n", esc_buf);
-				edit_redraw();
-				break;
+				show_esc_buf(esc_buf, c, 3);
+				return EDIT_KEY_NONE;
 			}
 			break;
 		default:
-			printf("{ESC%s}[4]\n", esc_buf);
-			edit_redraw();
-			break;
+			show_esc_buf(esc_buf, c, 4);
+			return EDIT_KEY_NONE;
 		}
-
-		esc = -1;
-		return;
 	}
 
 	if (esc > 1 && esc_buf[0] == 'O') {
-		switch (esc_buf[1]) {
-		case 'F': /* end */
-			move_end();
-			break;
-		case 'H': /* home */
-			move_start();
-			break;
-		case 'P': /* F1 */
-			history_debug_dump();
-			break;
-		case 'Q': /* F2 */
-		case 'R': /* F3 */
-		case 'S': /* F4 */
-			break;
-		default:
-			printf("{ESC%s}[5]\n", esc_buf);
-			edit_redraw();
-			break;
-		}
 		esc = -1;
-		return;
+		switch (esc_buf[1]) {
+		case 'F':
+			return EDIT_KEY_END;
+		case 'H':
+			return EDIT_KEY_HOME;
+		case 'P':
+			return EDIT_KEY_F1;
+		case 'Q':
+			return EDIT_KEY_F2;
+		case 'R':
+			return EDIT_KEY_F3;
+		case 'S':
+			return EDIT_KEY_F4;
+		default:
+			show_esc_buf(esc_buf, c, 5);
+			return EDIT_KEY_NONE;
+		}
 	}
 
 	if (esc > 1) {
-		printf("{ESC%s}[6]\n", esc_buf);
-		edit_redraw();
 		esc = -1;
-		return;
+		show_esc_buf(esc_buf, c, 6);
+		return EDIT_KEY_NONE;
 	}
 
 	switch (c) {
-	case 1: /* ^A */
+	case 1:
+		return EDIT_KEY_CTRL_A;
+	case 2:
+		return EDIT_KEY_CTRL_B;
+	case 4:
+		return EDIT_KEY_CTRL_D;
+	case 5:
+		return EDIT_KEY_CTRL_E;
+	case 6:
+		return EDIT_KEY_CTRL_F;
+	case 7:
+		return EDIT_KEY_CTRL_G;
+	case 8:
+		return EDIT_KEY_CTRL_H;
+	case 9:
+		return EDIT_KEY_TAB;
+	case 10:
+		return EDIT_KEY_CTRL_J;
+	case 13: /* CR */
+		return EDIT_KEY_ENTER;
+	case 11:
+		return EDIT_KEY_CTRL_K;
+	case 12:
+		return EDIT_KEY_CTRL_L;
+	case 14:
+		return EDIT_KEY_CTRL_N;
+	case 15:
+		return EDIT_KEY_CTRL_O;
+	case 16:
+		return EDIT_KEY_CTRL_P;
+	case 18:
+		return EDIT_KEY_CTRL_R;
+	case 20:
+		return EDIT_KEY_CTRL_T;
+	case 21:
+		return EDIT_KEY_CTRL_U;
+	case 22:
+		return EDIT_KEY_CTRL_V;
+	case 23:
+		return EDIT_KEY_CTRL_W;
+	case 27: /* ESC */
+		esc = 0;
+		return EDIT_KEY_NONE;
+	case 127:
+		return EDIT_KEY_BACKSPACE;
+	default:
+		return c;
+	}
+}
+
+
+static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	static int last_tab = 0;
+	enum edit_key_code c;
+
+	c = edit_read_key(sock);
+
+	if (c != EDIT_KEY_TAB && c != EDIT_KEY_NONE)
+		last_tab = 0;
+
+	switch (c) {
+	case EDIT_KEY_NONE:
+		break;
+	case EDIT_KEY_EOF:
+		edit_eof_cb(edit_cb_ctx);
+		break;
+	case EDIT_KEY_TAB:
+		complete(last_tab);
+		last_tab = 1;
+		break;
+	case EDIT_KEY_UP:
+	case EDIT_KEY_CTRL_P:
+		history_prev();
+		break;
+	case EDIT_KEY_DOWN:
+	case EDIT_KEY_CTRL_N:
+		history_next();
+		break;
+	case EDIT_KEY_RIGHT:
+	case EDIT_KEY_CTRL_F:
+		move_right();
+		break;
+	case EDIT_KEY_LEFT:
+	case EDIT_KEY_CTRL_B:
+		move_left();
+		break;
+	case EDIT_KEY_CTRL_RIGHT:
+		move_word_right();
+		break;
+	case EDIT_KEY_CTRL_LEFT:
+		move_word_left();
+		break;
+	case EDIT_KEY_DELETE:
+		delete_current();
+		break;
+	case EDIT_KEY_END:
+		move_end();
+		break;
+	case EDIT_KEY_HOME:
+	case EDIT_KEY_CTRL_A:
 		move_start();
 		break;
-	case 4: /* ^D */
+	case EDIT_KEY_F2:
+		history_debug_dump();
+		break;
+	case EDIT_KEY_CTRL_D:
 		if (cmdbuf_len > 0) {
 			delete_current();
 			return;
@@ -576,50 +740,36 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 		printf("\n");
 		edit_eof_cb(edit_cb_ctx);
 		break;
-	case 5: /* ^E */
+	case EDIT_KEY_CTRL_E:
 		move_end();
 		break;
-	case 8: /* ^H = BS */
+	case EDIT_KEY_CTRL_H:
+	case EDIT_KEY_BACKSPACE:
 		delete_left();
 		break;
-	case 9: /* ^I = TAB */
-		complete(last_tab);
-		last_tab = 1;
-		break;
-	case 10: /* NL */
-	case 13: /* CR */
+	case EDIT_KEY_ENTER:
+	case EDIT_KEY_CTRL_J:
 		process_cmd();
 		break;
-	case 11: /* ^K */
+	case EDIT_KEY_CTRL_K:
 		clear_right();
 		break;
-	case 12: /* ^L */
+	case EDIT_KEY_CTRL_L:
 		edit_clear_line();
 		edit_redraw();
 		break;
-	case 14: /* ^N */
-		history_next();
-		break;
-	case 16: /* ^P */
-		history_prev();
-		break;
-	case 18: /* ^R */
+	case EDIT_KEY_CTRL_R:
 		/* TODO: search history */
 		break;
-	case 21: /* ^U */
+	case EDIT_KEY_CTRL_U:
 		clear_left();
 		break;
-	case 23: /* ^W */
+	case EDIT_KEY_CTRL_W:
 		delete_word();
 		break;
-	case 27: /* ESC */
-		esc = 0;
-		break;
-	case 127: /* DEL */
-		delete_left();
-		break;
 	default:
-		insert_char(c);
+		if (c >= 32 && c <= 255)
+			insert_char(c);
 		break;
 	}
 }

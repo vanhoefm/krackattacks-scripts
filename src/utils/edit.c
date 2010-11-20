@@ -377,7 +377,7 @@ static void complete(int list)
 	}
 
 	len = max_common_length(c);
-	if (len < plen) {
+	if (len <= plen && count > 1) {
 		if (list) {
 			edit_clear_line();
 			printf("\r");

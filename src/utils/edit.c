@@ -364,7 +364,7 @@ static void complete(int list)
 
 	end = cmdbuf_pos;
 	start = end;
-	while (start > 0 && cmdbuf[start] != ' ')
+	while (start > 0 && cmdbuf[start - 1] != ' ')
 		start--;
 	plen = end - start;
 

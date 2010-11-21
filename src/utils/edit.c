@@ -1137,6 +1137,9 @@ void edit_deinit(const char *history_file,
 		dl_list_del(&h->list);
 		os_free(h);
 	}
+	edit_clear_line();
+	putchar('\r');
+	fflush(stdout);
 	eloop_unregister_read_sock(STDIN_FILENO);
 	tcsetattr(STDIN_FILENO, TCSANOW, &prevt);
 }

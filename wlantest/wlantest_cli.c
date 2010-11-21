@@ -1084,18 +1084,29 @@ static char ** wlantest_cli_edit_completion_cb(void *ctx, const char *str,
 static void wlantest_cli_interactive(int s)
 {
 	struct wlantest_cli cli;
+	char *home, *hfile = NULL;
 
 	if (eloop_init())
 		return;
 
+	home = getenv("HOME");
+	if (home) {
+		const char *fname = ".wlantest_cli_history";
+		int hfile_len = os_strlen(home) + 1 + os_strlen(fname) + 1;
+		hfile = os_malloc(hfile_len);
+		if (hfile)
+			os_snprintf(hfile, hfile_len, "%s/%s", home, fname);
+	}
+
 	cli.s = s;
 	eloop_register_signal_terminate(wlantest_cli_eloop_terminate, &cli);
 	edit_init(wlantest_cli_edit_cmd_cb, wlantest_cli_edit_eof_cb,
-		  wlantest_cli_edit_completion_cb, &cli, NULL);
+		  wlantest_cli_edit_completion_cb, &cli, hfile);
 
 	eloop_run();
 
-	edit_deinit(NULL, NULL);
+	edit_deinit(hfile, NULL);
+	os_free(hfile);
 	eloop_destroy();
 }
 

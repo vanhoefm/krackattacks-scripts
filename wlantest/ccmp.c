@@ -251,6 +251,7 @@ u8 * ccmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 	pos = crypt + hdrlen;
 	*pos++ = pn[5]; /* PN0 */
 	*pos++ = pn[4]; /* PN1 */
+	*pos++ = 0x00; /* Rsvd */
 	*pos++ = 0x20 | (keyid << 6);
 	*pos++ = pn[3]; /* PN2 */
 	*pos++ = pn[2]; /* PN3 */

@@ -250,6 +250,49 @@ static void history_next(void)
 }
 
 
+static void history_read(const char *fname)
+{
+	FILE *f;
+	char buf[CMD_BUF_LEN], *pos;
+
+	f = fopen(fname, "r");
+	if (f == NULL)
+		return;
+
+	while (fgets(buf, CMD_BUF_LEN, f)) {
+		for (pos = buf; *pos; pos++) {
+			if (*pos == '\r' || *pos == '\n') {
+				*pos = '\0';
+				break;
+			}
+		}
+		history_add(buf);
+	}
+
+	fclose(f);
+}
+
+
+static void history_write(const char *fname,
+			  int (*filter_cb)(void *ctx, const char *cmd))
+{
+	FILE *f;
+	struct edit_history *h;
+
+	f = fopen(fname, "w");
+	if (f == NULL)
+		return;
+
+	dl_list_for_each_reverse(h, &history_list, struct edit_history, list) {
+		if (filter_cb && filter_cb(edit_cb_ctx, h->str))
+			continue;
+		fprintf(f, "%s\n", h->str);
+	}
+
+	fclose(f);
+}
+
+
 static void history_debug_dump(void)
 {
 	struct edit_history *h;
@@ -1053,6 +1096,8 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 {
 	dl_list_init(&history_list);
 	history_curr = NULL;
+	if (history_file)
+		history_read(history_file);
 
 	edit_cb_ctx = ctx;
 	edit_cmd_cb = cmd_cb;
@@ -1077,6 +1122,8 @@ void edit_deinit(const char *history_file,
 		 int (*filter_cb)(void *ctx, const char *cmd))
 {
 	struct edit_history *h;
+	if (history_file)
+		history_write(history_file, filter_cb);
 	while ((h = dl_list_first(&history_list, struct edit_history, list))) {
 		dl_list_del(&h->list);
 		os_free(h);

@@ -142,6 +142,56 @@ static void ctrl_send_simple(struct wlantest *wt, int sock,
 }
 
 
+static struct wlantest_bss * ctrl_get_bss(struct wlantest *wt, int sock,
+					  u8 *cmd, size_t clen)
+{
+	struct wlantest_bss *bss;
+	u8 *pos;
+	size_t len;
+
+	pos = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &len);
+	if (pos == NULL || len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return NULL;
+	}
+
+	bss = bss_find(wt, pos);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return NULL;
+	}
+
+	return bss;
+}
+
+
+static struct wlantest_sta * ctrl_get_sta(struct wlantest *wt, int sock,
+					  u8 *cmd, size_t clen,
+					  struct wlantest_bss *bss)
+{
+	struct wlantest_sta *sta;
+	u8 *pos;
+	size_t len;
+
+	if (bss == NULL)
+		return NULL;
+
+	pos = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &len);
+	if (pos == NULL || len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return NULL;
+	}
+
+	sta = sta_find(bss, pos);
+	if (sta == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return NULL;
+	}
+
+	return sta;
+}
+
+
 static void ctrl_list_bss(struct wlantest *wt, int sock)
 {
 	u8 buf[WLANTEST_CTRL_MAX_RESP_LEN], *pos, *len;
@@ -170,22 +220,12 @@ static void ctrl_list_bss(struct wlantest *wt, int sock)
 static void ctrl_list_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 {
 	u8 buf[WLANTEST_CTRL_MAX_RESP_LEN], *pos, *len;
-	u8 *bssid;
-	size_t bssid_len;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
 
-	bssid = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &bssid_len);
-	if (bssid == NULL || bssid_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	if (bss == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, bssid);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	pos = buf;
 	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
@@ -218,34 +258,13 @@ static void ctrl_flush(struct wlantest *wt, int sock)
 static void ctrl_clear_sta_counters(struct wlantest *wt, int sock, u8 *cmd,
 				    size_t clen)
 {
-	u8 *addr;
-	size_t addr_len;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
 
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	sta = ctrl_get_sta(wt, sock, cmd, clen, bss);
+	if (sta == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, addr);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
-
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
-		return;
-	}
-
-	sta = sta_find(bss, addr);
-	if (sta == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	os_memset(sta->counters, 0, sizeof(sta->counters));
 	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
@@ -255,21 +274,11 @@ static void ctrl_clear_sta_counters(struct wlantest *wt, int sock, u8 *cmd,
 static void ctrl_clear_bss_counters(struct wlantest *wt, int sock, u8 *cmd,
 				    size_t clen)
 {
-	u8 *addr;
-	size_t addr_len;
 	struct wlantest_bss *bss;
 
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	if (bss == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, addr);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	os_memset(bss->counters, 0, sizeof(bss->counters));
 	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
@@ -286,29 +295,10 @@ static void ctrl_get_sta_counter(struct wlantest *wt, int sock, u8 *cmd,
 	u32 counter;
 	u8 buf[4 + 12], *end, *pos;
 
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	sta = ctrl_get_sta(wt, sock, cmd, clen, bss);
+	if (sta == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, addr);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
-
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
-		return;
-	}
-
-	sta = sta_find(bss, addr);
-	if (sta == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_COUNTER, &addr_len);
 	if (addr == NULL || addr_len != 4) {
@@ -340,17 +330,9 @@ static void ctrl_get_bss_counter(struct wlantest *wt, int sock, u8 *cmd,
 	u32 counter;
 	u8 buf[4 + 12], *end, *pos;
 
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	if (bss == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, addr);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSS_COUNTER, &addr_len);
 	if (addr == NULL || addr_len != 4) {
@@ -883,29 +865,10 @@ static void ctrl_info_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 	u8 buf[4 + 108], *end, *pos;
 	char resp[100];
 
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	sta = ctrl_get_sta(wt, sock, cmd, clen, bss);
+	if (sta == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, addr);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
-
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
-		return;
-	}
-
-	sta = sta_find(bss, addr);
-	if (sta == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_INFO, &addr_len);
 	if (addr == NULL || addr_len != 4) {
@@ -954,17 +917,9 @@ static void ctrl_info_bss(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 	u8 buf[4 + 108], *end, *pos;
 	char resp[100];
 
-	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
-	if (addr == NULL || addr_len != ETH_ALEN) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	if (bss == NULL)
 		return;
-	}
-
-	bss = bss_find(wt, addr);
-	if (bss == NULL) {
-		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
-		return;
-	}
 
 	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSS_INFO, &addr_len);
 	if (addr == NULL || addr_len != 4) {

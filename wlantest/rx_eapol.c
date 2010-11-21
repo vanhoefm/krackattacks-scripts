@@ -131,15 +131,20 @@ static void derive_ptk(struct wlantest *wt, struct wlantest_bss *bss,
 {
 	struct wlantest_pmk *pmk;
 
+	wpa_printf(MSG_DEBUG, "Trying to derive PTK for " MACSTR,
+		   MAC2STR(sta->addr));
 	dl_list_for_each(pmk, &bss->pmk, struct wlantest_pmk, list) {
+		wpa_printf(MSG_DEBUG, "Try per-BSS PMK");
 		if (try_pmk(bss, sta, ver, data, len, pmk) == 0)
 			return;
 	}
 
 	dl_list_for_each(pmk, &wt->pmk, struct wlantest_pmk, list) {
+		wpa_printf(MSG_DEBUG, "Try global PMK");
 		if (try_pmk(bss, sta, ver, data, len, pmk) == 0)
 			return;
 	}
+	wpa_printf(MSG_DEBUG, "No matching PMK found to derive PTK");
 }
 
 

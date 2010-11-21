@@ -578,7 +578,7 @@ static int cmd_get_bss_counter(int s, int argc, char *argv[])
 	size_t len;
 
 	if (argc != 2) {
-		printf("get_bss_counter needs at three arguments: "
+		printf("get_bss_counter needs at two arguments: "
 		       "counter name and BSSID\n");
 		return -1;
 	}
@@ -878,6 +878,218 @@ static int cmd_add_passphrase(int s, int argc, char *argv[])
 }
 
 
+struct sta_infos {
+	const char *name;
+	enum wlantest_sta_info num;
+};
+
+static const struct sta_infos sta_infos[] = {
+	{ "proto", WLANTEST_STA_INFO_PROTO },
+	{ "pairwise", WLANTEST_STA_INFO_PAIRWISE },
+	{ "key_mgmt", WLANTEST_STA_INFO_KEY_MGMT },
+	{ "rsn_capab", WLANTEST_STA_INFO_RSN_CAPAB },
+	{ "state", WLANTEST_STA_INFO_STATE },
+	{ NULL, 0 }
+};
+
+static int cmd_info_sta(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen, i;
+	size_t len;
+	char info[100];
+
+	if (argc != 3) {
+		printf("sta_info needs at three arguments: "
+		       "counter name, BSSID, and STA address\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_INFO_STA);
+	pos += 4;
+
+	for (i = 0; sta_infos[i].name; i++) {
+		if (os_strcasecmp(sta_infos[i].name, argv[0]) == 0)
+			break;
+	}
+	if (sta_infos[i].name == NULL) {
+		printf("Unknown STA info '%s'\n", argv[0]);
+		printf("Info fields:");
+		for (i = 0; sta_infos[i].name; i++)
+			printf(" %s", sta_infos[i].name);
+		printf("\n");
+		return -1;
+	}
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_STA_INFO,
+			    sta_infos[i].num);
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[2], pos) < 0) {
+		printf("Invalid STA address '%s'\n", argv[2]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_INFO, &len);
+	if (pos == NULL)
+		return -1;
+	if (len >= sizeof(info))
+		len = sizeof(info) - 1;
+	os_memcpy(info, pos, len);
+	info[len] = '\0';
+	printf("%s\n", info);
+	return 0;
+}
+
+
+static char ** complete_info_sta(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	int i, count;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		/* counter list */
+		count = sizeof(sta_infos) / sizeof(sta_infos[0]);
+		res = os_zalloc(count * sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; sta_infos[i].name; i++) {
+			res[i] = os_strdup(sta_infos[i].name);
+			if (res[i] == NULL)
+				break;
+		}
+		break;
+	case 2:
+		res = get_bssid_list(s);
+		break;
+	case 3:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 0);
+		break;
+	}
+
+	return res;
+}
+
+
+struct bss_infos {
+	const char *name;
+	enum wlantest_bss_info num;
+};
+
+static const struct bss_infos bss_infos[] = {
+	{ "proto", WLANTEST_BSS_INFO_PROTO },
+	{ "pairwise", WLANTEST_BSS_INFO_PAIRWISE },
+	{ "group", WLANTEST_BSS_INFO_GROUP },
+	{ "group_mgmt", WLANTEST_BSS_INFO_GROUP_MGMT },
+	{ "key_mgmt", WLANTEST_BSS_INFO_KEY_MGMT },
+	{ "rsn_capab", WLANTEST_BSS_INFO_RSN_CAPAB },
+	{ NULL, 0 }
+};
+
+static int cmd_info_bss(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen, i;
+	size_t len;
+	char info[100];
+
+	if (argc != 2) {
+		printf("bss_info needs at two arguments: "
+		       "field name and BSSID\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_INFO_BSS);
+	pos += 4;
+
+	for (i = 0; bss_infos[i].name; i++) {
+		if (os_strcasecmp(bss_infos[i].name, argv[0]) == 0)
+			break;
+	}
+	if (bss_infos[i].name == NULL) {
+		printf("Unknown BSS info '%s'\n", argv[0]);
+		printf("Info fields:");
+		for (i = 0; bss_infos[i].name; i++)
+			printf(" %s", bss_infos[i].name);
+		printf("\n");
+		return -1;
+	}
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_BSS_INFO,
+			    bss_infos[i].num);
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_INFO, &len);
+	if (pos == NULL)
+		return -1;
+	if (len >= sizeof(info))
+		len = sizeof(info) - 1;
+	os_memcpy(info, pos, len);
+	info[len] = '\0';
+	printf("%s\n", info);
+	return 0;
+}
+
+
+static char ** complete_info_bss(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	int i, count;
+
+	switch (arg) {
+	case 1:
+		/* counter list */
+		count = sizeof(bss_infos) / sizeof(bss_infos[0]);
+		res = os_zalloc(count * sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; bss_infos[i].name; i++) {
+			res[i] = os_strdup(bss_infos[i].name);
+			if (res[i] == NULL)
+				break;
+		}
+		break;
+	case 2:
+		res = get_bssid_list(s);
+		break;
+	}
+
+	return res;
+}
+
+
 struct wlantest_cli_cmd {
 	const char *cmd;
 	int (*handler)(int s, int argc, char *argv[]);
@@ -898,7 +1110,7 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	  "<BSSID> = clear BSS counters", complete_clear_bss_counters },
 	{ "get_sta_counter", cmd_get_sta_counter,
 	  "<counter> <BSSID> <STA> = get STA counter value",
-	  complete_get_sta_counter},
+	  complete_get_sta_counter },
 	{ "get_bss_counter", cmd_get_bss_counter,
 	  "<counter> <BSSID> = get BSS counter value",
 	  complete_get_bss_counter },
@@ -908,6 +1120,12 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "version", cmd_version, "= get wlantest version", NULL },
 	{ "add_passphrase", cmd_add_passphrase,
 	  "<passphrase> = add a known passphrase", NULL },
+	{ "info_sta", cmd_info_sta,
+	  "<field> <BSSID> <STA> = get STA information",
+	  complete_info_sta },
+	{ "info_bss", cmd_info_bss,
+	  "<field> <BSSID> = get BSS information",
+	  complete_info_bss },
 	{ NULL, NULL, NULL, NULL }
 };
 

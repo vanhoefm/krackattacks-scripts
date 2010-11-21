@@ -17,6 +17,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "common/defs.h"
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
 #include "wlantest.h"
@@ -741,6 +742,271 @@ static void ctrl_add_passphrase(struct wlantest *wt, int sock, u8 *cmd,
 }
 
 
+static void info_print_proto(char *buf, size_t len, int proto)
+{
+	char *pos, *end;
+
+	if (proto == 0) {
+		os_snprintf(buf, len, "OPEN");
+		return;
+	}
+
+	pos = buf;
+	end = buf + len;
+
+	if (proto & WPA_PROTO_WPA)
+		pos += os_snprintf(pos, end - pos, "%sWPA",
+				   pos == buf ? "" : " ");
+	if (proto & WPA_PROTO_RSN)
+		pos += os_snprintf(pos, end - pos, "%sWPA2",
+				   pos == buf ? "" : " ");
+}
+
+
+static void info_print_cipher(char *buf, size_t len, int cipher)
+{
+	char *pos, *end;
+
+	if (cipher == 0) {
+		os_snprintf(buf, len, "N/A");
+		return;
+	}
+
+	pos = buf;
+	end = buf + len;
+
+	if (cipher & WPA_CIPHER_NONE)
+		pos += os_snprintf(pos, end - pos, "%sNONE",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_WEP40)
+		pos += os_snprintf(pos, end - pos, "%sWEP40",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_WEP104)
+		pos += os_snprintf(pos, end - pos, "%sWEP104",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_TKIP)
+		pos += os_snprintf(pos, end - pos, "%sTKIP",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_CCMP)
+		pos += os_snprintf(pos, end - pos, "%sCCMP",
+				   pos == buf ? "" : " ");
+	if (cipher & WPA_CIPHER_AES_128_CMAC)
+		pos += os_snprintf(pos, end - pos, "%sBIP",
+				   pos == buf ? "" : " ");
+}
+
+
+static void info_print_key_mgmt(char *buf, size_t len, int key_mgmt)
+{
+	char *pos, *end;
+
+	if (key_mgmt == 0) {
+		os_snprintf(buf, len, "N/A");
+		return;
+	}
+
+	pos = buf;
+	end = buf + len;
+
+	if (key_mgmt & WPA_KEY_MGMT_IEEE8021X)
+		pos += os_snprintf(pos, end - pos, "%sEAP",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_PSK)
+		pos += os_snprintf(pos, end - pos, "%sPSK",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_WPA_NONE)
+		pos += os_snprintf(pos, end - pos, "%sWPA-NONE",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_FT_IEEE8021X)
+		pos += os_snprintf(pos, end - pos, "%sFT-EAP",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_FT_PSK)
+		pos += os_snprintf(pos, end - pos, "%sFT-PSK",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_IEEE8021X_SHA256)
+		pos += os_snprintf(pos, end - pos, "%sEAP-SHA256",
+				   pos == buf ? "" : " ");
+	if (key_mgmt & WPA_KEY_MGMT_PSK_SHA256)
+		pos += os_snprintf(pos, end - pos, "%sPSK-SHA256",
+				   pos == buf ? "" : " ");
+}
+
+
+static void info_print_rsn_capab(char *buf, size_t len, int capab)
+{
+	char *pos, *end;
+
+	pos = buf;
+	end = buf + len;
+
+	if (capab & WPA_CAPABILITY_PREAUTH)
+		pos += os_snprintf(pos, end - pos, "%sPREAUTH",
+				   pos == buf ? "" : " ");
+	if (capab & WPA_CAPABILITY_NO_PAIRWISE)
+		pos += os_snprintf(pos, end - pos, "%sNO_PAIRWISE",
+				   pos == buf ? "" : " ");
+	if (capab & WPA_CAPABILITY_MFPR)
+		pos += os_snprintf(pos, end - pos, "%sMFPR",
+				   pos == buf ? "" : " ");
+	if (capab & WPA_CAPABILITY_MFPC)
+		pos += os_snprintf(pos, end - pos, "%sMFPC",
+				   pos == buf ? "" : " ");
+	if (capab & WPA_CAPABILITY_PEERKEY_ENABLED)
+		pos += os_snprintf(pos, end - pos, "%sPEERKEY",
+				   pos == buf ? "" : " ");
+}
+
+
+static void info_print_state(char *buf, size_t len, int state)
+{
+	switch (state) {
+	case STATE1:
+		os_strlcpy(buf, "NOT-AUTH", len);
+		break;
+	case STATE2:
+		os_strlcpy(buf, "AUTH", len);
+		break;
+	case STATE3:
+		os_strlcpy(buf, "AUTH+ASSOC", len);
+		break;
+	}
+}
+
+
+static void ctrl_info_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	enum wlantest_sta_info info;
+	u8 buf[4 + 108], *end, *pos;
+	char resp[100];
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_find(wt, addr);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_ADDR, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	sta = sta_find(bss, addr);
+	if (sta == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_STA_INFO, &addr_len);
+	if (addr == NULL || addr_len != 4) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+	info = WPA_GET_BE32(addr);
+
+	resp[0] = '\0';
+	switch (info) {
+	case WLANTEST_STA_INFO_PROTO:
+		info_print_proto(resp, sizeof(resp), sta->proto);
+		break;
+	case WLANTEST_STA_INFO_PAIRWISE:
+		info_print_cipher(resp, sizeof(resp), sta->pairwise_cipher);
+		break;
+	case WLANTEST_STA_INFO_KEY_MGMT:
+		info_print_key_mgmt(resp, sizeof(resp), sta->key_mgmt);
+		break;
+	case WLANTEST_STA_INFO_RSN_CAPAB:
+		info_print_rsn_capab(resp, sizeof(resp), sta->rsn_capab);
+		break;
+	case WLANTEST_STA_INFO_STATE:
+		info_print_state(resp, sizeof(resp), sta->state);
+		break;
+	default:
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
+	pos += 4;
+	pos = attr_add_str(pos, end, WLANTEST_ATTR_INFO, resp);
+	ctrl_send(wt, sock, buf, pos - buf);
+}
+
+
+static void ctrl_info_bss(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+	enum wlantest_bss_info info;
+	u8 buf[4 + 108], *end, *pos;
+	char resp[100];
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSSID, &addr_len);
+	if (addr == NULL || addr_len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	bss = bss_find(wt, addr);
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_BSS_INFO, &addr_len);
+	if (addr == NULL || addr_len != 4) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+	info = WPA_GET_BE32(addr);
+
+	resp[0] = '\0';
+	switch (info) {
+	case WLANTEST_BSS_INFO_PROTO:
+		info_print_proto(resp, sizeof(resp), bss->proto);
+		break;
+	case WLANTEST_BSS_INFO_PAIRWISE:
+		info_print_cipher(resp, sizeof(resp), bss->pairwise_cipher);
+		break;
+	case WLANTEST_BSS_INFO_GROUP:
+		info_print_cipher(resp, sizeof(resp), bss->group_cipher);
+		break;
+	case WLANTEST_BSS_INFO_GROUP_MGMT:
+		info_print_cipher(resp, sizeof(resp), bss->mgmt_group_cipher);
+		break;
+	case WLANTEST_BSS_INFO_KEY_MGMT:
+		info_print_key_mgmt(resp, sizeof(resp), bss->key_mgmt);
+		break;
+	case WLANTEST_BSS_INFO_RSN_CAPAB:
+		info_print_rsn_capab(resp, sizeof(resp), bss->rsn_capab);
+		break;
+	default:
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
+	pos += 4;
+	pos = attr_add_str(pos, end, WLANTEST_ATTR_INFO, resp);
+	ctrl_send(wt, sock, buf, pos - buf);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -808,6 +1074,12 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_ADD_PASSPHRASE:
 		ctrl_add_passphrase(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_INFO_STA:
+		ctrl_info_sta(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_INFO_BSS:
+		ctrl_info_bss(wt, sock, buf + 4, len - 4);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

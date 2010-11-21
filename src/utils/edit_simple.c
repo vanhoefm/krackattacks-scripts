@@ -62,7 +62,8 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 
 int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
-	      void *ctx)
+	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
+	      void *ctx, const char *history_file)
 {
 	edit_cb_ctx = ctx;
 	edit_cmd_cb = cmd_cb;
@@ -76,7 +77,8 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 }
 
 
-void edit_deinit(void)
+void edit_deinit(const char *history_file,
+		 int (*filter_cb)(void *ctx, const char *cmd))
 {
 	eloop_unregister_read_sock(STDIN_FILENO);
 }
@@ -91,14 +93,4 @@ void edit_redraw(void)
 {
 	cmdbuf[cmdbuf_pos] = '\0';
 	printf("\r> %s", cmdbuf);
-}
-
-
-void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd))
-{
-}
-
-
-void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd, int pos))
-{
 }

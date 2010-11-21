@@ -2803,18 +2803,28 @@ static void wpa_cli_edit_eof_cb(void *ctx)
 
 static void wpa_cli_interactive(void)
 {
+	char *home, *hfile = NULL;
 
 	printf("\nInteractive mode\n\n");
 
+	home = getenv("HOME");
+	if (home) {
+		const char *fname = ".wpa_cli_history";
+		int hfile_len = os_strlen(home) + 1 + os_strlen(fname) + 1;
+		hfile = os_malloc(hfile_len);
+		if (hfile)
+			os_snprintf(hfile, hfile_len, "%s/%s", home, fname);
+	}
+
 	eloop_register_signal_terminate(wpa_cli_eloop_terminate, NULL);
-	edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb, NULL);
-	edit_set_filter_history_cb(wpa_cli_edit_filter_history_cb);
-	edit_set_completion_cb(wpa_cli_edit_completion_cb);
+	edit_init(wpa_cli_edit_cmd_cb, wpa_cli_edit_eof_cb,
+		  wpa_cli_edit_completion_cb, NULL, hfile);
 	eloop_register_timeout(ping_interval, 0, wpa_cli_ping, NULL, NULL);
 
 	eloop_run();
 
-	edit_deinit();
+	edit_deinit(hfile, wpa_cli_edit_filter_history_cb);
+	os_free(hfile);
 	eloop_cancel_timeout(wpa_cli_ping, NULL, NULL);
 	wpa_cli_close_connection();
 }

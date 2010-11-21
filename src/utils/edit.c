@@ -1045,7 +1045,8 @@ static void edit_read_char(int sock, void *eloop_ctx, void *sock_ctx)
 
 int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
-	      void *ctx)
+	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
+	      void *ctx, const char *history_file)
 {
 	dl_list_init(&history_list);
 	history_curr = NULL;
@@ -1053,6 +1054,7 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	edit_cb_ctx = ctx;
 	edit_cmd_cb = cmd_cb;
 	edit_eof_cb = eof_cb;
+	edit_completion_cb = completion_cb;
 
 	tcgetattr(STDIN_FILENO, &prevt);
 	newt = prevt;
@@ -1068,7 +1070,8 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 }
 
 
-void edit_deinit(void)
+void edit_deinit(const char *history_file,
+		 int (*filter_cb)(void *ctx, const char *cmd))
 {
 	struct edit_history *h;
 	while ((h = dl_list_first(&history_list, struct edit_history, list))) {
@@ -1092,15 +1095,4 @@ void edit_redraw(void)
 		cmdbuf[cmdbuf_pos] = tmp;
 	}
 	fflush(stdout);
-}
-
-
-void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd))
-{
-}
-
-
-void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd, int pos))
-{
-	edit_completion_cb = cb;
 }

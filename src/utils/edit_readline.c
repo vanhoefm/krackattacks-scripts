@@ -24,7 +24,6 @@
 static void *edit_cb_ctx;
 static void (*edit_cmd_cb)(void *ctx, char *cmd);
 static void (*edit_eof_cb)(void *ctx);
-static int (*edit_filter_history_cb)(void *ctx, const char *cmd) = NULL;
 static char ** (*edit_completion_cb)(void *ctx, const char *cmd, int pos) =
 	NULL;
 
@@ -116,34 +115,20 @@ static void readline_cmd_handler(char *cmd)
 }
 
 
-static char *readline_hfile = NULL;
-
 int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
-	      void *ctx)
+	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
+	      void *ctx, const char *history_file)
 {
-	char *home;
-
 	edit_cb_ctx = ctx;
 	edit_cmd_cb = cmd_cb;
 	edit_eof_cb = eof_cb;
+	edit_completion_cb = completion_cb;
 
 	rl_attempted_completion_function = readline_completion;
-	home = getenv("HOME");
-	if (home) {
-		const char *fname = ".wpa_cli_history";
-		int hfile_len = os_strlen(home) + 1 + os_strlen(fname) + 1;
-		readline_hfile = os_malloc(hfile_len);
-		if (readline_hfile) {
-			int res;
-			res = os_snprintf(readline_hfile, hfile_len, "%s/%s",
-					  home, fname);
-			if (res >= 0 && res < hfile_len) {
-				readline_hfile[hfile_len - 1] = '\0';
-				read_history(readline_hfile);
-				stifle_history(100);
-			}
-		}
+	if (history_file) {
+		read_history(history_file);
+		stifle_history(100);
 	}
 
 	eloop_register_read_sock(STDIN_FILENO, edit_read_char, NULL, NULL);
@@ -154,14 +139,15 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 }
 
 
-void edit_deinit(void)
+void edit_deinit(const char *history_file,
+		 int (*filter_cb)(void *ctx, const char *cmd))
 {
 	rl_callback_handler_remove();
 	readline_free_completions();
 
 	eloop_unregister_read_sock(STDIN_FILENO);
 
-	if (readline_hfile) {
+	if (history_file) {
 		/* Save command history, excluding lines that may contain
 		 * passwords. */
 		HIST_ENTRY *h;
@@ -170,8 +156,7 @@ void edit_deinit(void)
 			char *p = h->line;
 			while (*p == ' ' || *p == '\t')
 				p++;
-			if (edit_filter_history_cb &&
-			    edit_filter_history_cb(edit_cb_ctx, p)) {
+			if (filter_cb && filter_cb(edit_cb_ctx, p)) {
 				h = remove_history(where_history());
 				if (h) {
 					os_free(h->line);
@@ -182,9 +167,7 @@ void edit_deinit(void)
 			} else
 				next_history();
 		}
-		write_history(readline_hfile);
-		os_free(readline_hfile);
-		readline_hfile = NULL;
+		write_history(history_file);
 	}
 }
 
@@ -198,16 +181,4 @@ void edit_redraw(void)
 {
 	rl_on_new_line();
 	rl_redisplay();
-}
-
-
-void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd))
-{
-	edit_filter_history_cb = cb;
-}
-
-
-void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd, int pos))
-{
-	edit_completion_cb = cb;
 }

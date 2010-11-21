@@ -17,12 +17,11 @@
 
 int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
-	      void *ctx);
-void edit_deinit(void);
+	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
+	      void *ctx, const char *history_file);
+void edit_deinit(const char *history_file,
+		 int (*filter_cb)(void *ctx, const char *cmd));
 void edit_clear_line(void);
 void edit_redraw(void);
-void edit_set_filter_history_cb(int (*cb)(void *ctx, const char *cmd));
-void edit_set_completion_cb(char ** (*cb)(void *ctx, const char *cmd,
-					  int pos));
 
 #endif /* EDIT_H */

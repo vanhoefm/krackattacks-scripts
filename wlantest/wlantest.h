@@ -169,6 +169,8 @@ void bss_deinit(struct wlantest_bss *bss);
 void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 		struct ieee802_11_elems *elems);
 void bss_flush(struct wlantest *wt);
+int bss_add_pmk_from_passphrase(struct wlantest_bss *bss,
+				const char *passphrase);
 void pmk_deinit(struct wlantest_pmk *pmk);
 
 struct wlantest_sta * sta_find(struct wlantest_bss *bss, const u8 *addr);

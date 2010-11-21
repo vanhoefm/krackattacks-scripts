@@ -726,8 +726,16 @@ static void ctrl_add_passphrase(struct wlantest *wt, int sock, u8 *cmd,
 		}
 	}
 
-	if (p)
+	if (p) {
+		struct wlantest_bss *bss;
 		dl_list_add(&wt->passphrase, &p->list);
+		dl_list_for_each(bss, &wt->bss, struct wlantest_bss, list) {
+			if (bssid &&
+			    os_memcmp(p->bssid, bss->bssid, ETH_ALEN) != 0)
+				continue;
+			bss_add_pmk_from_passphrase(bss, p->passphrase);
+		}
+	}
 
 	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
 }

@@ -78,10 +78,33 @@ void bss_deinit(struct wlantest_bss *bss)
 }
 
 
+int bss_add_pmk_from_passphrase(struct wlantest_bss *bss,
+				const char *passphrase)
+{
+	struct wlantest_pmk *pmk;
+
+	pmk = os_zalloc(sizeof(*pmk));
+	if (pmk == NULL)
+		return -1;
+	if (pbkdf2_sha1(passphrase, (char *) bss->ssid, bss->ssid_len, 4096,
+			pmk->pmk, sizeof(pmk->pmk)) < 0) {
+		os_free(pmk);
+		return -1;
+	}
+
+	wpa_printf(MSG_INFO, "Add possible PMK for BSSID " MACSTR
+		   " based on passphrase '%s'",
+		   MAC2STR(bss->bssid), passphrase);
+	wpa_hexdump(MSG_DEBUG, "Possible PMK", pmk->pmk, sizeof(pmk->pmk));
+	dl_list_add(&bss->pmk, &pmk->list);
+
+	return 0;
+}
+
+
 static void bss_add_pmk(struct wlantest *wt, struct wlantest_bss *bss)
 {
 	struct wlantest_passphrase *p;
-	struct wlantest_pmk *pmk;
 
 	dl_list_for_each(p, &wt->passphrase, struct wlantest_passphrase, list)
 	{
@@ -93,22 +116,8 @@ static void bss_add_pmk(struct wlantest *wt, struct wlantest_bss *bss)
 		     os_memcmp(p->ssid, bss->ssid, p->ssid_len) != 0))
 			continue;
 
-		pmk = os_zalloc(sizeof(*pmk));
-		if (pmk == NULL)
+		if (bss_add_pmk_from_passphrase(bss, p->passphrase) < 0)
 			break;
-		if (pbkdf2_sha1(p->passphrase, (char *) bss->ssid,
-				bss->ssid_len, 4096,
-				pmk->pmk, sizeof(pmk->pmk)) < 0) {
-			os_free(pmk);
-			continue;
-		}
-
-		wpa_printf(MSG_INFO, "Add possible PMK for BSSID " MACSTR
-			   " based on passphrase '%s'",
-			   MAC2STR(bss->bssid), p->passphrase);
-		wpa_hexdump(MSG_DEBUG, "Possible PMK",
-			    pmk->pmk, sizeof(pmk->pmk));
-		dl_list_add(&bss->pmk, &pmk->list);
 	}
 }
 

@@ -462,6 +462,8 @@ static const struct sta_counters sta_counters[] = {
 	{ "invalid_saqueryresp_rx",
 	  WLANTEST_STA_COUNTER_INVALID_SAQUERYRESP_RX },
 	{ "ping_ok", WLANTEST_STA_COUNTER_PING_OK },
+	{ "assocresp_comeback", WLANTEST_STA_COUNTER_ASSOCRESP_COMEBACK },
+	{ "reassocresp_comeback", WLANTEST_STA_COUNTER_REASSOCRESP_COMEBACK },
 	{ NULL, 0 }
 };
 

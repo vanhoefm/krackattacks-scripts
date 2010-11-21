@@ -290,6 +290,26 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), capab, status,
 		   aid & 0x3fff);
 
+	if (status == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY) {
+		struct ieee802_11_elems elems;
+		const u8 *ies = mgmt->u.assoc_resp.variable;
+		size_t ies_len = len - (mgmt->u.assoc_resp.variable - data);
+		if (ieee802_11_parse_elems(ies, ies_len, &elems, 0) ==
+		    ParseFailed) {
+			wpa_printf(MSG_INFO, "Failed to parse IEs in "
+				   "AssocResp from " MACSTR,
+				   MAC2STR(mgmt->sa));
+		} else if (elems.timeout_int == 0 ||
+			   elems.timeout_int_len != 5) {
+			wpa_printf(MSG_INFO, "No valid Timeout Interval IE in "
+				   "AssocResp (status=30) from " MACSTR,
+				   MAC2STR(mgmt->sa));
+		} else {
+			sta->counters[
+				WLANTEST_STA_COUNTER_ASSOCRESP_COMEBACK]++;
+		}
+	}
+
 	if (status)
 		return;
 
@@ -398,6 +418,26 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 		   " (capab=0x%x status=%u aid=%u)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da), capab, status,
 		   aid & 0x3fff);
+
+	if (status == WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY) {
+		struct ieee802_11_elems elems;
+		const u8 *ies = mgmt->u.reassoc_resp.variable;
+		size_t ies_len = len - (mgmt->u.reassoc_resp.variable - data);
+		if (ieee802_11_parse_elems(ies, ies_len, &elems, 0) ==
+		    ParseFailed) {
+			wpa_printf(MSG_INFO, "Failed to parse IEs in "
+				   "ReassocResp from " MACSTR,
+				   MAC2STR(mgmt->sa));
+		} else if (elems.timeout_int == 0 ||
+			   elems.timeout_int_len != 5) {
+			wpa_printf(MSG_INFO, "No valid Timeout Interval IE in "
+				   "ReassocResp (status=30) from " MACSTR,
+				   MAC2STR(mgmt->sa));
+		} else {
+			sta->counters[
+				WLANTEST_STA_COUNTER_REASSOCRESP_COMEBACK]++;
+		}
+	}
 
 	if (status)
 		return;

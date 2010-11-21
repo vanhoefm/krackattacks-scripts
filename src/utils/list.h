@@ -75,6 +75,10 @@ static inline unsigned int dl_list_len(struct dl_list *list)
 	(dl_list_empty((list)) ? NULL : \
 	 dl_list_entry((list)->next, type, member))
 
+#define dl_list_last(list, type, member) \
+	(dl_list_empty((list)) ? NULL : \
+	 dl_list_entry((list)->prev, type, member))
+
 #define dl_list_for_each(item, list, type, member) \
 	for (item = dl_list_entry((list)->next, type, member); \
 	     &item->member != (list); \
@@ -85,5 +89,10 @@ static inline unsigned int dl_list_len(struct dl_list *list)
 		     n = dl_list_entry(item->member.next, type, member); \
 	     &item->member != (list); \
 	     item = n, n = dl_list_entry(n->member.next, type, member))
+
+#define dl_list_for_each_reverse(item, list, type, member) \
+	for (item = dl_list_entry((list)->prev, type, member); \
+	     &item->member != (list); \
+	     item = dl_list_entry(item->member.prev, type, member))
 
 #endif /* LIST_H */

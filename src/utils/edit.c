@@ -17,16 +17,21 @@
 
 #include "common.h"
 #include "eloop.h"
+#include "list.h"
 #include "edit.h"
 
 #define CMD_BUF_LEN 256
 static char cmdbuf[CMD_BUF_LEN];
 static int cmdbuf_pos = 0;
 static int cmdbuf_len = 0;
-#define CMD_HISTORY_LEN 20
-static char history_buf[CMD_HISTORY_LEN][CMD_BUF_LEN];
-static int history_pos = 0;
-static int history_current = 0;
+
+struct edit_history {
+	struct dl_list list;
+	char str[1];
+};
+
+static struct dl_list history_list;
+static struct edit_history *history_curr;
 
 static void *edit_cb_ctx;
 static void (*edit_cmd_cb)(void *ctx, char *cmd);
@@ -171,87 +176,84 @@ static void clear_right(void)
 
 static void history_add(const char *str)
 {
-	int prev;
+	struct edit_history *h, *match = NULL;
+	size_t len;
 
 	if (str[0] == '\0')
 		return;
 
-	if (history_pos == 0)
-		prev = CMD_HISTORY_LEN - 1;
-	else
-		prev = history_pos - 1;
-	if (os_strcmp(history_buf[prev], str) == 0)
-		return;
+	dl_list_for_each(h, &history_list, struct edit_history, list) {
+		if (os_strcmp(str, h->str) == 0) {
+			match = h;
+			break;
+		}
+	}
 
-	os_strlcpy(history_buf[history_pos], str, CMD_BUF_LEN);
-	history_pos++;
-	if (history_pos == CMD_HISTORY_LEN)
-		history_pos = 0;
-	history_current = history_pos;
+	if (match) {
+		dl_list_del(&h->list);
+		dl_list_add(&history_list, &h->list);
+		history_curr = h;
+		return;
+	}
+
+	len = os_strlen(str);
+	h = os_zalloc(sizeof(*h) + len);
+	if (h == NULL)
+		return;
+	dl_list_add(&history_list, &h->list);
+	os_strlcpy(h->str, str, len + 1);
+	history_curr = h;
+}
+
+
+static void history_use(void)
+{
+	edit_clear_line();
+	cmdbuf_len = cmdbuf_pos = os_strlen(history_curr->str);
+	os_memcpy(cmdbuf, history_curr->str, cmdbuf_len);
+	edit_redraw();
 }
 
 
 static void history_prev(void)
 {
-	int pos;
-
-	if (history_current == (history_pos + 1) % CMD_HISTORY_LEN)
+	if (history_curr == NULL ||
+	    history_curr ==
+	    dl_list_last(&history_list, struct edit_history, list))
 		return;
 
-	pos = history_current;
-
-	if (history_current == history_pos && cmdbuf_len) {
+	if (history_curr ==
+	    dl_list_first(&history_list, struct edit_history, list)) {
 		cmdbuf[cmdbuf_len] = '\0';
 		history_add(cmdbuf);
 	}
 
-	if (pos > 0)
-		pos--;
-	else
-		pos = CMD_HISTORY_LEN - 1;
-	if (history_buf[pos][0] == '\0')
-		return;
-	history_current = pos;
-
-	edit_clear_line();
-	cmdbuf_len = cmdbuf_pos = os_strlen(history_buf[history_current]);
-	os_memcpy(cmdbuf, history_buf[history_current], cmdbuf_len);
-	edit_redraw();
+	history_curr = dl_list_entry(history_curr->list.next,
+				     struct edit_history, list);
+	history_use();
 }
 
 
 static void history_next(void)
 {
-	if (history_current == history_pos)
+	if (history_curr == NULL ||
+	    history_curr ==
+	    dl_list_first(&history_list, struct edit_history, list))
 		return;
 
-	history_current++;
-	if (history_current == CMD_HISTORY_LEN)
-	    history_current = 0;
-
-	edit_clear_line();
-	cmdbuf_len = cmdbuf_pos = os_strlen(history_buf[history_current]);
-	os_memcpy(cmdbuf, history_buf[history_current], cmdbuf_len);
-	edit_redraw();
+	history_curr = dl_list_entry(history_curr->list.prev,
+				     struct edit_history, list);
+	history_use();
 }
 
 
 static void history_debug_dump(void)
 {
-	int p;
+	struct edit_history *h;
 	edit_clear_line();
 	printf("\r");
-	p = (history_pos + 1) % CMD_HISTORY_LEN;
-	for (;;) {
-		printf("[%d%s%s] %s\n",
-		       p, p == history_current ? "C" : "",
-		       p == history_pos ? "P" : "", history_buf[p]);
-		if (p == history_pos)
-			break;
-		p++;
-		if (p == CMD_HISTORY_LEN)
-			p = 0;
-	}
+	dl_list_for_each_reverse(h, &history_list, struct edit_history, list)
+		printf("%s%s\n", h == history_curr ? "[C]" : "", h->str);
 	edit_redraw();
 }
 
@@ -797,29 +799,23 @@ static int search_skip;
 
 static char * search_find(void)
 {
-	int pos = history_pos;
+	struct edit_history *h;
 	size_t len = os_strlen(search_buf);
 	int skip = search_skip;
 
 	if (len == 0)
 		return NULL;
 
-	for (;;) {
-		if (pos == 0)
-			pos = CMD_HISTORY_LEN - 1;
-		else
-			pos--;
-		if (pos == history_pos) {
-			search_skip = 0;
-			return NULL;
-		}
-
-		if (os_strstr(history_buf[pos], search_buf)) {
+	dl_list_for_each(h, &history_list, struct edit_history, list) {
+		if (os_strstr(h->str, search_buf)) {
 			if (skip == 0)
-				return history_buf[pos];
+				return h->str;
 			skip--;
 		}
 	}
+
+	search_skip = 0;
+	return NULL;
 }
 
 
@@ -1051,7 +1047,8 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      void (*eof_cb)(void *ctx),
 	      void *ctx)
 {
-	os_memset(history_buf, 0, sizeof(history_buf));
+	dl_list_init(&history_list);
+	history_curr = NULL;
 
 	edit_cb_ctx = ctx;
 	edit_cmd_cb = cmd_cb;
@@ -1073,6 +1070,11 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 
 void edit_deinit(void)
 {
+	struct edit_history *h;
+	while ((h = dl_list_first(&history_list, struct edit_history, list))) {
+		dl_list_del(&h->list);
+		os_free(h);
+	}
 	eloop_unregister_read_sock(STDIN_FILENO);
 	tcsetattr(STDIN_FILENO, TCSANOW, &prevt);
 }

@@ -217,9 +217,7 @@ static void history_use(void)
 
 static void history_prev(void)
 {
-	if (history_curr == NULL ||
-	    history_curr ==
-	    dl_list_last(&history_list, struct edit_history, list))
+	if (history_curr == NULL)
 		return;
 
 	if (history_curr ==
@@ -228,9 +226,14 @@ static void history_prev(void)
 		history_add(cmdbuf);
 	}
 
+	history_use();
+
+	if (history_curr ==
+	    dl_list_last(&history_list, struct edit_history, list))
+		return;
+
 	history_curr = dl_list_entry(history_curr->list.next,
 				     struct edit_history, list);
-	history_use();
 }
 
 

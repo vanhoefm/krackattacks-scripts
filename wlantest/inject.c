@@ -256,6 +256,7 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 	if (crypt == NULL)
 		return -1;
 
+	wpa_hexdump(MSG_DEBUG, "Inject frame (encrypted)", crypt, crypt_len);
 	ret = inject_frame(wt->monitor_sock, crypt, crypt_len);
 	os_free(crypt);
 

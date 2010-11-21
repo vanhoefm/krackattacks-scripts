@@ -569,6 +569,8 @@ static const struct bss_counters bss_counters[] = {
 	{ "valid_bip_mmie", WLANTEST_BSS_COUNTER_VALID_BIP_MMIE },
 	{ "invalid_bip_mmie", WLANTEST_BSS_COUNTER_INVALID_BIP_MMIE },
 	{ "missing_bip_mmie", WLANTEST_BSS_COUNTER_MISSING_BIP_MMIE },
+	{ "bip_deauth", WLANTEST_BSS_COUNTER_BIP_DEAUTH },
+	{ "bip_disassoc", WLANTEST_BSS_COUNTER_BIP_DISASSOC },
 	{ NULL, 0 }
 };
 

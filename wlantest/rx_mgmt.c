@@ -784,6 +784,11 @@ static int check_bip(struct wlantest *wt, const u8 *data, size_t len)
 	os_memcpy(bss->ipn[keyid], mmie + 2, 6);
 	bss->counters[WLANTEST_BSS_COUNTER_VALID_BIP_MMIE]++;
 
+	if (stype == WLAN_FC_STYPE_DEAUTH)
+		bss->counters[WLANTEST_BSS_COUNTER_BIP_DEAUTH]++;
+	else if (stype == WLAN_FC_STYPE_DISASSOC)
+		bss->counters[WLANTEST_BSS_COUNTER_BIP_DISASSOC]++;
+
 	return 0;
 }
 

@@ -25,6 +25,8 @@ static char cmdbuf[CMD_BUF_LEN];
 static int cmdbuf_pos = 0;
 static int cmdbuf_len = 0;
 
+#define HISTORY_MAX 100
+
 struct edit_history {
 	struct dl_list list;
 	char str[1];
@@ -176,8 +178,8 @@ static void clear_right(void)
 
 static void history_add(const char *str)
 {
-	struct edit_history *h, *match = NULL;
-	size_t len;
+	struct edit_history *h, *match = NULL, *last = NULL;
+	size_t len, count = 0;
 
 	if (str[0] == '\0')
 		return;
@@ -187,6 +189,8 @@ static void history_add(const char *str)
 			match = h;
 			break;
 		}
+		last = h;
+		count++;
 	}
 
 	if (match) {
@@ -194,6 +198,11 @@ static void history_add(const char *str)
 		dl_list_add(&history_list, &h->list);
 		history_curr = h;
 		return;
+	}
+
+	if (count >= HISTORY_MAX && last) {
+		dl_list_del(&last->list);
+		os_free(last);
 	}
 
 	len = os_strlen(str);

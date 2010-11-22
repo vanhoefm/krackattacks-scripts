@@ -1000,11 +1000,12 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 }
 
 
-static void wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
-			   const u8 *gnonce, u8 *gtk, size_t gtk_len)
+static int wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
+			  const u8 *gnonce, u8 *gtk, size_t gtk_len)
 {
 	u8 data[ETH_ALEN + WPA_NONCE_LEN + 8 + 16];
 	u8 *pos;
+	int ret = 0;
 
 	/* GTK = PRF-X(GMK, "Group key expansion",
 	 *	AA || GNonce || Time || random data)
@@ -1018,13 +1019,18 @@ static void wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
 	pos = data + ETH_ALEN + WPA_NONCE_LEN;
 	wpa_get_ntp_timestamp(pos);
 	pos += 8;
-	os_get_random(pos, 16);
+	if (os_get_random(pos, 16) < 0)
+		ret = -1;
 
 #ifdef CONFIG_IEEE80211W
 	sha256_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len);
 #else /* CONFIG_IEEE80211W */
-	sha1_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len);
+	if (sha1_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len)
+	    < 0)
+		ret = -1;
 #endif /* CONFIG_IEEE80211W */
+
+	return ret;
 }
 
 
@@ -2107,9 +2113,10 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 
 	os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
 	inc_byte_array(group->Counter, WPA_NONCE_LEN);
-	wpa_gmk_to_gtk(group->GMK, "Group key expansion",
-		       wpa_auth->addr, group->GNonce,
-		       group->GTK[group->GN - 1], group->GTK_len);
+	if (wpa_gmk_to_gtk(group->GMK, "Group key expansion",
+			   wpa_auth->addr, group->GNonce,
+			   group->GTK[group->GN - 1], group->GTK_len) < 0)
+		ret = -1;
 	wpa_hexdump_key(MSG_DEBUG, "GTK",
 			group->GTK[group->GN - 1], group->GTK_len);
 
@@ -2117,10 +2124,11 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION) {
 		os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
 		inc_byte_array(group->Counter, WPA_NONCE_LEN);
-		wpa_gmk_to_gtk(group->GMK, "IGTK key expansion",
-			       wpa_auth->addr, group->GNonce,
-			       group->IGTK[group->GN_igtk - 4],
-			       WPA_IGTK_LEN);
+		if (wpa_gmk_to_gtk(group->GMK, "IGTK key expansion",
+				   wpa_auth->addr, group->GNonce,
+				   group->IGTK[group->GN_igtk - 4],
+				   WPA_IGTK_LEN) < 0)
+			ret = -1;
 		wpa_hexdump_key(MSG_DEBUG, "IGTK",
 				group->IGTK[group->GN_igtk - 4], WPA_IGTK_LEN);
 	}
@@ -2204,26 +2212,31 @@ static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,
 }
 
 
-static void wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
-				  struct wpa_group *group)
+static int wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
+				 struct wpa_group *group)
 {
+	int ret = 0;
+
 	wpa_printf(MSG_DEBUG, "WPA: group state machine entering state "
 		   "SETKEYSDONE (VLAN-ID %d)", group->vlan_id);
 	group->changed = TRUE;
 	group->wpa_group_state = WPA_GROUP_SETKEYSDONE;
-	wpa_auth_set_key(wpa_auth, group->vlan_id,
-			 wpa_alg_enum(wpa_auth->conf.wpa_group),
-			 NULL, group->GN, group->GTK[group->GN - 1],
-			 group->GTK_len);
+	if (wpa_auth_set_key(wpa_auth, group->vlan_id,
+			     wpa_alg_enum(wpa_auth->conf.wpa_group),
+			     NULL, group->GN, group->GTK[group->GN - 1],
+			     group->GTK_len) < 0)
+		ret = -1;
 
 #ifdef CONFIG_IEEE80211W
-	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION) {
-		wpa_auth_set_key(wpa_auth, group->vlan_id, WPA_ALG_IGTK,
-				 NULL, group->GN_igtk,
-				 group->IGTK[group->GN_igtk - 4],
-				 WPA_IGTK_LEN);
-	}
+	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION &&
+	    wpa_auth_set_key(wpa_auth, group->vlan_id, WPA_ALG_IGTK,
+			     NULL, group->GN_igtk,
+			     group->IGTK[group->GN_igtk - 4],
+			     WPA_IGTK_LEN) < 0)
+		ret = -1;
 #endif /* CONFIG_IEEE80211W */
+
+	return ret;
 }
 
 

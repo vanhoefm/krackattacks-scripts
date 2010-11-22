@@ -220,6 +220,8 @@ static void wpa_rekey_gmk(void *eloop_ctx, void *timeout_ctx)
 			   "initialization.");
 	} else {
 		wpa_auth_logger(wpa_auth, NULL, LOGGER_DEBUG, "GMK rekeyd");
+		wpa_hexdump_key(MSG_DEBUG, "GMK",
+				wpa_auth->group->GMK, WPA_GMK_LEN);
 	}
 
 	if (wpa_auth->conf.wpa_gmk_rekey) {
@@ -325,9 +327,12 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
 		os_free(group);
 		return NULL;
 	}
+	wpa_hexdump_key(MSG_DEBUG, "GMK", group->GMK, WPA_GMK_LEN);
 
 	sha1_prf(rkey, sizeof(rkey), "Init Counter", buf, sizeof(buf),
 		 group->Counter, WPA_NONCE_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "Key Counter",
+			group->Counter, WPA_NONCE_LEN);
 
 	group->GInit = TRUE;
 	wpa_group_sm_step(wpa_auth, group);
@@ -995,25 +1000,31 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 }
 
 
-static void wpa_gmk_to_gtk(const u8 *gmk, const u8 *addr, const u8 *gnonce,
-			   u8 *gtk, size_t gtk_len)
+static void wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
+			   const u8 *gnonce, u8 *gtk, size_t gtk_len)
 {
-	u8 data[ETH_ALEN + WPA_NONCE_LEN];
+	u8 data[ETH_ALEN + WPA_NONCE_LEN + 8 + 16];
+	u8 *pos;
 
-	/* GTK = PRF-X(GMK, "Group key expansion", AA || GNonce) */
+	/* GTK = PRF-X(GMK, "Group key expansion",
+	 *	AA || GNonce || Time || random data)
+	 * The example described in the IEEE 802.11 standard uses only AA and
+	 * GNonce as inputs here. Add some more entropy since this derivation
+	 * is done only at the Authenticator and as such, does not need to be
+	 * exactly same.
+	 */
 	os_memcpy(data, addr, ETH_ALEN);
 	os_memcpy(data + ETH_ALEN, gnonce, WPA_NONCE_LEN);
+	pos = data + ETH_ALEN + WPA_NONCE_LEN;
+	wpa_get_ntp_timestamp(pos);
+	pos += 8;
+	os_get_random(pos, 16);
 
 #ifdef CONFIG_IEEE80211W
-	sha256_prf(gmk, WPA_GMK_LEN, "Group key expansion",
-		   data, sizeof(data), gtk, gtk_len);
+	sha256_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len);
 #else /* CONFIG_IEEE80211W */
-	sha1_prf(gmk, WPA_GMK_LEN, "Group key expansion",
-		 data, sizeof(data), gtk, gtk_len);
+	sha1_prf(gmk, WPA_GMK_LEN, label, data, sizeof(data), gtk, gtk_len);
 #endif /* CONFIG_IEEE80211W */
-
-	wpa_hexdump_key(MSG_DEBUG, "GMK", gmk, WPA_GMK_LEN);
-	wpa_hexdump_key(MSG_DEBUG, "GTK", gtk, gtk_len);
 }
 
 
@@ -2094,20 +2105,22 @@ static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 {
 	int ret = 0;
 
-	/* FIX: is this the correct way of getting GNonce? */
 	os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
 	inc_byte_array(group->Counter, WPA_NONCE_LEN);
-	wpa_gmk_to_gtk(group->GMK, wpa_auth->addr, group->GNonce,
+	wpa_gmk_to_gtk(group->GMK, "Group key expansion",
+		       wpa_auth->addr, group->GNonce,
 		       group->GTK[group->GN - 1], group->GTK_len);
+	wpa_hexdump_key(MSG_DEBUG, "GTK",
+			group->GTK[group->GN - 1], group->GTK_len);
 
 #ifdef CONFIG_IEEE80211W
 	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION) {
-		if (os_get_random(group->IGTK[group->GN_igtk - 4],
-				  WPA_IGTK_LEN) < 0) {
-			wpa_printf(MSG_INFO, "RSN: Failed to get new random "
-				   "IGTK");
-			ret = -1;
-		}
+		os_memcpy(group->GNonce, group->Counter, WPA_NONCE_LEN);
+		inc_byte_array(group->Counter, WPA_NONCE_LEN);
+		wpa_gmk_to_gtk(group->GMK, "IGTK key expansion",
+			       wpa_auth->addr, group->GNonce,
+			       group->IGTK[group->GN_igtk - 4],
+			       WPA_IGTK_LEN);
 		wpa_hexdump_key(MSG_DEBUG, "IGTK",
 				group->IGTK[group->GN_igtk - 4], WPA_IGTK_LEN);
 	}

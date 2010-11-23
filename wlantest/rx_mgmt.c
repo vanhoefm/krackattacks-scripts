@@ -156,6 +156,20 @@ static void rx_mgmt_auth(struct wlantest *wt, const u8 *data, size_t len)
 }
 
 
+static void deauth_all_stas(struct wlantest_bss *bss)
+{
+	struct wlantest_sta *sta;
+	dl_list_for_each(sta, &bss->sta, struct wlantest_sta, list) {
+		if (sta->state == STATE1)
+			continue;
+		wpa_printf(MSG_DEBUG, "STA " MACSTR
+			   " moved to State 1 with " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		sta->state = STATE1;
+	}
+}
+
+
 static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 			   int valid)
 {
@@ -184,8 +198,11 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 		   le_to_host16(mgmt->u.deauth.reason_code), valid);
 	wpa_hexdump(MSG_MSGDUMP, "DEAUTH payload", data + 24, len - 24);
 
-	if (sta == NULL)
+	if (sta == NULL) {
+		if (valid && mgmt->da[0] == 0xff)
+			deauth_all_stas(bss);
 		return;
+	}
 
 	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_RX :
@@ -464,6 +481,20 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 }
 
 
+static void disassoc_all_stas(struct wlantest_bss *bss)
+{
+	struct wlantest_sta *sta;
+	dl_list_for_each(sta, &bss->sta, struct wlantest_sta, list) {
+		if (sta->state <= STATE2)
+			continue;
+		wpa_printf(MSG_DEBUG, "STA " MACSTR
+			   " moved to State 2 with " MACSTR,
+			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
+		sta->state = STATE2;
+	}
+}
+
+
 static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 			     int valid)
 {
@@ -492,8 +523,11 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 		   le_to_host16(mgmt->u.disassoc.reason_code), valid);
 	wpa_hexdump(MSG_MSGDUMP, "DISASSOC payload", data + 24, len - 24);
 
-	if (sta == NULL)
+	if (sta == NULL) {
+		if (valid && mgmt->da[0] == 0xff)
+			disassoc_all_stas(bss);
 		return;
+	}
 
 	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_RX :

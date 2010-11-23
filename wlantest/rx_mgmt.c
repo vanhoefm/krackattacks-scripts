@@ -171,8 +171,6 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 		sta = sta_get(bss, mgmt->da);
 	else
 		sta = sta_get(bss, mgmt->sa);
-	if (sta == NULL)
-		return;
 
 	if (len < 24 + 2) {
 		wpa_printf(MSG_INFO, "Too short Deauthentication frame from "
@@ -181,10 +179,13 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 	}
 
 	wpa_printf(MSG_DEBUG, "DEAUTH " MACSTR " -> " MACSTR
-		   " (reason=%u)",
+		   " (reason=%u) (valid=%d)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-		   le_to_host16(mgmt->u.deauth.reason_code));
+		   le_to_host16(mgmt->u.deauth.reason_code), valid);
 	wpa_hexdump(MSG_MSGDUMP, "DEAUTH payload", data + 24, len - 24);
+
+	if (sta == NULL)
+		return;
 
 	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_RX :
@@ -478,8 +479,6 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 		sta = sta_get(bss, mgmt->da);
 	else
 		sta = sta_get(bss, mgmt->sa);
-	if (sta == NULL)
-		return;
 
 	if (len < 24 + 2) {
 		wpa_printf(MSG_INFO, "Too short Disassociation frame from "
@@ -488,10 +487,13 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 	}
 
 	wpa_printf(MSG_DEBUG, "DISASSOC " MACSTR " -> " MACSTR
-		   " (reason=%u)",
+		   " (reason=%u) (valid=%d)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-		   le_to_host16(mgmt->u.disassoc.reason_code));
+		   le_to_host16(mgmt->u.disassoc.reason_code), valid);
 	wpa_hexdump(MSG_MSGDUMP, "DISASSOC payload", data + 24, len - 24);
+
+	if (sta == NULL)
+		return;
 
 	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_RX :

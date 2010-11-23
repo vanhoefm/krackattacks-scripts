@@ -1065,6 +1065,12 @@ OBJS += ../src/crypto/dh_group5.o
 endif
 endif
 
+ifdef CONFIG_NO_RANDOM_POOL
+CFLAGS += -DCONFIG_NO_RANDOM_POOL
+else
+OBJS += ../src/crypto/random.o
+endif
+
 ifdef CONFIG_CTRL_IFACE
 ifeq ($(CONFIG_CTRL_IFACE), y)
 ifdef CONFIG_NATIVE_WINDOWS

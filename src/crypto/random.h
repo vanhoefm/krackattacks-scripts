@@ -15,6 +15,12 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
+#ifdef CONFIG_NO_RANDOM_POOL
+#define random_add_randomness(b, l) do { } while (0)
 #define random_get_bytes(b, l) os_get_random((b), (l))
+#else /* CONFIG_NO_RANDOM_POOL */
+void random_add_randomness(const void *buf, size_t len);
+int random_get_bytes(void *buf, size_t len);
+#endif /* CONFIG_NO_RANDOM_POOL */
 
 #endif /* RANDOM_H */

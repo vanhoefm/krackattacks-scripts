@@ -824,6 +824,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 					 sm->wpa_ptk_state);
 			return;
 		}
+		random_add_randomness(key->key_nonce, WPA_NONCE_LEN);
 		if (wpa_parse_kde_ies((u8 *) (key + 1), key_data_length,
 				      &kde) < 0) {
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,

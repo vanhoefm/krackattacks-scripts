@@ -20,6 +20,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
+#include "crypto/random.h"
 #include "p2p/p2p.h"
 #include "wps/wps.h"
 #include "hostapd.h"
@@ -58,6 +59,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			   "no address");
 		return -1;
 	}
+	random_add_randomness(addr, ETH_ALEN);
 
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "associated");
@@ -348,6 +350,8 @@ static void hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 					rx_mgmt->frame_len, &fi);
 	} else
 		ieee802_11_mgmt(hapd, rx_mgmt->frame, rx_mgmt->frame_len, &fi);
+
+	random_add_randomness(&fi, sizeof(fi));
 }
 
 
@@ -371,6 +375,8 @@ static int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 	size_t i;
 	int ret = 0;
 
+	if (sa)
+		random_add_randomness(sa, ETH_ALEN);
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
 					    sa, ie, ie_len) > 0) {

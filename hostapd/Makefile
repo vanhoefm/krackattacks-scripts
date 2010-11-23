@@ -646,6 +646,7 @@ endif
 ifdef NEED_MD5
 ifdef CONFIG_INTERNAL_MD5
 OBJS += ../src/crypto/md5-internal.o
+HOBJS += ../src/crypto/md5-internal.o
 endif
 endif
 
@@ -684,6 +685,15 @@ ifdef CONFIG_INTERNAL_DH_GROUP5
 ifdef NEED_DH_GROUPS
 OBJS += ../src/crypto/dh_group5.o
 endif
+endif
+
+ifdef CONFIG_NO_RANDOM_POOL
+CFLAGS += -DCONFIG_NO_RANDOM_POOL
+else
+OBJS += ../src/crypto/random.o
+HOBJS += ../src/crypto/random.o
+HOBJS += $(SHA1OBJS)
+HOBJS += ../src/crypto/md5.o
 endif
 
 ifdef CONFIG_RADIUS_SERVER

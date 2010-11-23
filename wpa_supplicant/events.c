@@ -32,6 +32,7 @@
 #include "notify.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
+#include "crypto/random.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
 #include "wps_supplicant.h"
@@ -838,6 +839,23 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
+#ifndef CONFIG_NO_RANDOM_POOL
+	size_t i, num;
+	num = scan_res->num;
+	if (num > 10)
+		num = 10;
+	for (i = 0; i < num; i++) {
+		u8 buf[5];
+		struct wpa_scan_res *res = scan_res->res[i];
+		buf[0] = res->bssid[5];
+		buf[1] = res->qual & 0xff;
+		buf[2] = res->noise & 0xff;
+		buf[3] = res->level & 0xff;
+		buf[4] = res->tsf & 0xff;
+		random_add_randomness(buf, sizeof(buf));
+	}
+#endif /* CONFIG_NO_RANDOM_POOL */
+
 	if (wpa_s->scan_res_handler) {
 		wpa_s->scan_res_handler(wpa_s, scan_res);
 		wpa_s->scan_res_handler = NULL;
@@ -1098,6 +1116,7 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	     os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0)) {
 		wpa_msg(wpa_s, MSG_DEBUG, "Associated to a new BSS: BSSID="
 			MACSTR, MAC2STR(bssid));
+		random_add_randomness(bssid, ETH_ALEN);
 		bssid_changed = os_memcmp(wpa_s->bssid, bssid, ETH_ALEN);
 		os_memcpy(wpa_s->bssid, bssid, ETH_ALEN);
 		os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);

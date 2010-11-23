@@ -145,6 +145,7 @@ struct wpa_group {
 	u8 GTK[2][WPA_GTK_MAX_LEN];
 	u8 GNonce[WPA_NONCE_LEN];
 	Boolean changed;
+	Boolean first_sta_seen;
 #ifdef CONFIG_IEEE80211W
 	u8 IGTK[2][WPA_IGTK_LEN];
 	int GN_igtk, GM_igtk;

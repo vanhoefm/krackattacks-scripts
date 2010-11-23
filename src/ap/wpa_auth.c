@@ -44,6 +44,8 @@ static void wpa_group_sm_step(struct wpa_authenticator *wpa_auth,
 static void wpa_request_new_ptk(struct wpa_state_machine *sm);
 static int wpa_gtk_update(struct wpa_authenticator *wpa_auth,
 			  struct wpa_group *group);
+static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
+				       struct wpa_group *group);
 
 static const u32 dot11RSNAConfigGroupUpdateCount = 4;
 static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
@@ -298,12 +300,40 @@ static void wpa_group_set_key_len(struct wpa_group *group, int cipher)
 }
 
 
+static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
+					  struct wpa_group *group)
+{
+	u8 buf[ETH_ALEN + 8 + sizeof(group)];
+	u8 rkey[32];
+
+	if (os_get_random(group->GMK, WPA_GMK_LEN) < 0)
+		return -1;
+	wpa_hexdump_key(MSG_DEBUG, "GMK", group->GMK, WPA_GMK_LEN);
+
+	/*
+	 * Counter = PRF-256(Random number, "Init Counter",
+	 *                   Local MAC Address || Time)
+	 */
+	os_memcpy(buf, wpa_auth->addr, ETH_ALEN);
+	wpa_get_ntp_timestamp(buf + ETH_ALEN);
+	os_memcpy(buf + ETH_ALEN + 8, &group, sizeof(group));
+	if (os_get_random(rkey, sizeof(rkey)) < 0)
+		return -1;
+
+	if (sha1_prf(rkey, sizeof(rkey), "Init Counter", buf, sizeof(buf),
+		     group->Counter, WPA_NONCE_LEN) < 0)
+		return -1;
+	wpa_hexdump_key(MSG_DEBUG, "Key Counter",
+			group->Counter, WPA_NONCE_LEN);
+
+	return 0;
+}
+
+
 static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
 					 int vlan_id)
 {
 	struct wpa_group *group;
-	u8 buf[ETH_ALEN + 8 + sizeof(group)];
-	u8 rkey[32];
 
 	group = os_zalloc(sizeof(struct wpa_group));
 	if (group == NULL)
@@ -314,25 +344,18 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
 
 	wpa_group_set_key_len(group, wpa_auth->conf.wpa_group);
 
-	/* Counter = PRF-256(Random number, "Init Counter",
-	 *                   Local MAC Address || Time)
+	/*
+	 * Set initial GMK/Counter value here. The actual values that will be
+	 * used in negotiations will be set once the first station tries to
+	 * connect. This allows more time for collecting additional randomness
+	 * on embedded devices.
 	 */
-	os_memcpy(buf, wpa_auth->addr, ETH_ALEN);
-	wpa_get_ntp_timestamp(buf + ETH_ALEN);
-	os_memcpy(buf + ETH_ALEN + 8, &group, sizeof(group));
-	if (os_get_random(rkey, sizeof(rkey)) ||
-	    os_get_random(group->GMK, WPA_GMK_LEN)) {
+	if (wpa_group_init_gmk_and_counter(wpa_auth, group) < 0) {
 		wpa_printf(MSG_ERROR, "Failed to get random data for WPA "
 			   "initialization.");
 		os_free(group);
 		return NULL;
 	}
-	wpa_hexdump_key(MSG_DEBUG, "GMK", group->GMK, WPA_GMK_LEN);
-
-	sha1_prf(rkey, sizeof(rkey), "Init Counter", buf, sizeof(buf),
-		 group->Counter, WPA_NONCE_LEN);
-	wpa_hexdump_key(MSG_DEBUG, "Key Counter",
-			group->Counter, WPA_NONCE_LEN);
 
 	group->GInit = TRUE;
 	wpa_group_sm_step(wpa_auth, group);
@@ -1428,9 +1451,33 @@ SM_STATE(WPA_PTK, AUTHENTICATION)
 }
 
 
+static void wpa_group_first_station(struct wpa_authenticator *wpa_auth,
+				    struct wpa_group *group)
+{
+	/*
+	 * System has run bit further than at the time hostapd was started
+	 * potentially very early during boot up. This provides better chances
+	 * of collecting more randomness on embedded systems. Re-initialize the
+	 * GMK and Counter here to improve their strength if there was not
+	 * enough entropy available immediately after system startup.
+	 */
+	wpa_printf(MSG_DEBUG, "WPA: Re-initialize GMK/Counter on first "
+		   "station");
+	wpa_group_init_gmk_and_counter(wpa_auth, group);
+	wpa_gtk_update(wpa_auth, group);
+	wpa_group_config_group_keys(wpa_auth, group);
+}
+
+
 SM_STATE(WPA_PTK, AUTHENTICATION2)
 {
 	SM_ENTRY_MA(WPA_PTK, AUTHENTICATION2, wpa_ptk);
+
+	if (!sm->group->first_sta_seen) {
+		wpa_group_first_station(sm->wpa_auth, sm->group);
+		sm->group->first_sta_seen = TRUE;
+	}
+
 	os_memcpy(sm->ANonce, sm->group->Counter, WPA_NONCE_LEN);
 	inc_byte_array(sm->group->Counter, WPA_NONCE_LEN);
 	sm->ReAuthenticationRequest = FALSE;
@@ -2212,15 +2259,11 @@ static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,
 }
 
 
-static int wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
-				 struct wpa_group *group)
+static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
+				       struct wpa_group *group)
 {
 	int ret = 0;
 
-	wpa_printf(MSG_DEBUG, "WPA: group state machine entering state "
-		   "SETKEYSDONE (VLAN-ID %d)", group->vlan_id);
-	group->changed = TRUE;
-	group->wpa_group_state = WPA_GROUP_SETKEYSDONE;
 	if (wpa_auth_set_key(wpa_auth, group->vlan_id,
 			     wpa_alg_enum(wpa_auth->conf.wpa_group),
 			     NULL, group->GN, group->GTK[group->GN - 1],
@@ -2237,6 +2280,21 @@ static int wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_IEEE80211W */
 
 	return ret;
+}
+
+
+static int wpa_group_setkeysdone(struct wpa_authenticator *wpa_auth,
+				 struct wpa_group *group)
+{
+	wpa_printf(MSG_DEBUG, "WPA: group state machine entering state "
+		   "SETKEYSDONE (VLAN-ID %d)", group->vlan_id);
+	group->changed = TRUE;
+	group->wpa_group_state = WPA_GROUP_SETKEYSDONE;
+
+	if (wpa_group_config_group_keys(wpa_auth, group) < 0)
+		return -1;
+
+	return 0;
 }
 
 

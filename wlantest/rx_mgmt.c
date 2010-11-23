@@ -894,7 +894,9 @@ static int check_mgmt_ccmp(struct wlantest *wt, const u8 *data, size_t len)
 	if (sta == NULL)
 		return 0;
 
-	if (sta->rsn_capab & WPA_CAPABILITY_MFPC) {
+	if ((sta->rsn_capab & WPA_CAPABILITY_MFPC) &&
+	    (sta->state == STATE3 ||
+	     WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_ACTION)) {
 		wpa_printf(MSG_INFO, "Robust individually-addressed "
 			   "management frame sent without CCMP by "
 			   MACSTR, MAC2STR(mgmt->sa));

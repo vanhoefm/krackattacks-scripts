@@ -79,6 +79,9 @@ struct wlantest_sta {
 	u32 icmp_echo_req_dst;
 	u16 icmp_echo_req_id;
 	u16 icmp_echo_req_seq;
+
+	le16 seq_ctrl_to_sta[17];
+	le16 seq_ctrl_to_ap[17];
 };
 
 struct wlantest_bss {

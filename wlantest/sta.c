@@ -47,6 +47,8 @@ struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr)
 	sta = os_zalloc(sizeof(*sta));
 	if (sta == NULL)
 		return NULL;
+	os_memset(sta->seq_ctrl_to_sta, 0xff, sizeof(sta->seq_ctrl_to_sta));
+	os_memset(sta->seq_ctrl_to_ap, 0xff, sizeof(sta->seq_ctrl_to_ap));
 	sta->bss = bss;
 	os_memcpy(sta->addr, addr, ETH_ALEN);
 	dl_list_add(&bss->sta, &sta->list);

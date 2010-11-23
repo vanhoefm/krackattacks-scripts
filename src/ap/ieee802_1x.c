@@ -551,7 +551,9 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		}
 	}
 
-	radius_client_send(hapd->radius, msg, RADIUS_AUTH, sta->addr);
+	if (radius_client_send(hapd->radius, msg, RADIUS_AUTH, sta->addr) < 0)
+		goto fail;
+
 	return;
 
  fail:

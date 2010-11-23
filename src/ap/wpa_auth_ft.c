@@ -18,6 +18,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "crypto/aes_wrap.h"
+#include "crypto/random.h"
 #include "ap_config.h"
 #include "ieee802_11.h"
 #include "wmm.h"
@@ -334,7 +335,7 @@ static int wpa_ft_pull_pmk_r1(struct wpa_authenticator *wpa_auth,
 
 	/* aes_wrap() does not support inplace encryption, so use a temporary
 	 * buffer for the data. */
-	if (os_get_random(f.nonce, sizeof(f.nonce))) {
+	if (random_get_bytes(f.nonce, sizeof(f.nonce))) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to get random data for "
 			   "nonce");
 		return -1;
@@ -997,7 +998,7 @@ static u16 wpa_ft_process_auth_req(struct wpa_state_machine *sm,
 	sm->pmk_r1_name_valid = 1;
 	os_memcpy(sm->pmk_r1_name, pmk_r1_name, WPA_PMK_NAME_LEN);
 
-	if (os_get_random(sm->ANonce, WPA_NONCE_LEN)) {
+	if (random_get_bytes(sm->ANonce, WPA_NONCE_LEN)) {
 		wpa_printf(MSG_DEBUG, "FT: Failed to get random data for "
 			   "ANonce");
 		return WLAN_STATUS_UNSPECIFIED_FAILURE;

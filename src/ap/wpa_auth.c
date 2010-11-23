@@ -22,6 +22,7 @@
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "ap_config.h"
 #include "ieee802_11.h"
@@ -217,7 +218,7 @@ static void wpa_rekey_gmk(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_authenticator *wpa_auth = eloop_ctx;
 
-	if (os_get_random(wpa_auth->group->GMK, WPA_GMK_LEN)) {
+	if (random_get_bytes(wpa_auth->group->GMK, WPA_GMK_LEN)) {
 		wpa_printf(MSG_ERROR, "Failed to get random data for WPA "
 			   "initialization.");
 	} else {
@@ -306,7 +307,7 @@ static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
 	u8 buf[ETH_ALEN + 8 + sizeof(group)];
 	u8 rkey[32];
 
-	if (os_get_random(group->GMK, WPA_GMK_LEN) < 0)
+	if (random_get_bytes(group->GMK, WPA_GMK_LEN) < 0)
 		return -1;
 	wpa_hexdump_key(MSG_DEBUG, "GMK", group->GMK, WPA_GMK_LEN);
 
@@ -317,7 +318,7 @@ static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
 	os_memcpy(buf, wpa_auth->addr, ETH_ALEN);
 	wpa_get_ntp_timestamp(buf + ETH_ALEN);
 	os_memcpy(buf + ETH_ALEN + 8, &group, sizeof(group));
-	if (os_get_random(rkey, sizeof(rkey)) < 0)
+	if (random_get_bytes(rkey, sizeof(rkey)) < 0)
 		return -1;
 
 	if (sha1_prf(rkey, sizeof(rkey), "Init Counter", buf, sizeof(buf),
@@ -1042,7 +1043,7 @@ static int wpa_gmk_to_gtk(const u8 *gmk, const char *label, const u8 *addr,
 	pos = data + ETH_ALEN + WPA_NONCE_LEN;
 	wpa_get_ntp_timestamp(pos);
 	pos += 8;
-	if (os_get_random(pos, 16) < 0)
+	if (random_get_bytes(pos, 16) < 0)
 		ret = -1;
 
 #ifdef CONFIG_IEEE80211W

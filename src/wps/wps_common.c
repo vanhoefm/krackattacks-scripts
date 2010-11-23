@@ -20,6 +20,7 @@
 #include "crypto/dh_group5.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 
@@ -243,7 +244,7 @@ unsigned int wps_generate_pin(void)
 	unsigned int val;
 
 	/* Generate seven random digits for the PIN */
-	if (os_get_random((unsigned char *) &val, sizeof(val)) < 0) {
+	if (random_get_bytes((unsigned char *) &val, sizeof(val)) < 0) {
 		struct os_time now;
 		os_get_time(&now);
 		val = os_random() ^ now.sec ^ now.usec;

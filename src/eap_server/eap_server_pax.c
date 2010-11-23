@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/random.h"
 #include "eap_server/eap_i.h"
 #include "eap_common/eap_pax_common.h"
 
@@ -82,7 +83,7 @@ static struct wpabuf * eap_pax_build_std_1(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-PAX: PAX_STD-1 (sending)");
 
-	if (os_get_random(data->rand.r.x, EAP_PAX_RAND_LEN)) {
+	if (random_get_bytes(data->rand.r.x, EAP_PAX_RAND_LEN)) {
 		wpa_printf(MSG_ERROR, "EAP-PAX: Failed to get random data");
 		data->state = FAILURE;
 		return NULL;

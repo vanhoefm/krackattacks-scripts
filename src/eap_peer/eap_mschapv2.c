@@ -23,6 +23,7 @@
 
 #include "common.h"
 #include "crypto/ms_funcs.h"
+#include "crypto/random.h"
 #include "common/wpa_ctrl.h"
 #include "mschapv2.h"
 #include "eap_i.h"
@@ -199,7 +200,7 @@ static struct wpabuf * eap_mschapv2_challenge_reply(
 			   "in Phase 1");
 		peer_challenge = data->peer_challenge;
 		os_memset(r->peer_challenge, 0, MSCHAPV2_CHAL_LEN);
-	} else if (os_get_random(peer_challenge, MSCHAPV2_CHAL_LEN)) {
+	} else if (random_get_bytes(peer_challenge, MSCHAPV2_CHAL_LEN)) {
 		wpabuf_free(resp);
 		return NULL;
 	}
@@ -564,7 +565,7 @@ static struct wpabuf * eap_mschapv2_change_password(
 	}
 
 	/* Peer-Challenge */
-	if (os_get_random(cp->peer_challenge, MSCHAPV2_CHAL_LEN))
+	if (random_get_bytes(cp->peer_challenge, MSCHAPV2_CHAL_LEN))
 		goto fail;
 
 	/* Reserved, must be zero */

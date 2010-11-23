@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/random.h"
 #include "eap_i.h"
 #include "eap_common/chap.h"
 
@@ -52,7 +53,7 @@ static struct wpabuf * eap_md5_buildReq(struct eap_sm *sm, void *priv, u8 id)
 	struct eap_md5_data *data = priv;
 	struct wpabuf *req;
 
-	if (os_get_random(data->challenge, CHALLENGE_LEN)) {
+	if (random_get_bytes(data->challenge, CHALLENGE_LEN)) {
 		wpa_printf(MSG_ERROR, "EAP-MD5: Failed to get random data");
 		data->state = FAILURE;
 		return NULL;

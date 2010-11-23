@@ -21,6 +21,7 @@
 #include "utils/list.h"
 #include "crypto/crypto.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "common/ieee802_11_defs.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
@@ -1212,7 +1213,7 @@ static int wps_build_r_hash(struct wps_data *wps, struct wpabuf *msg)
 	const u8 *addr[4];
 	size_t len[4];
 
-	if (os_get_random(wps->snonce, 2 * WPS_SECRET_NONCE_LEN) < 0)
+	if (random_get_bytes(wps->snonce, 2 * WPS_SECRET_NONCE_LEN) < 0)
 		return -1;
 	wpa_hexdump(MSG_DEBUG, "WPS: R-S1", wps->snonce, WPS_SECRET_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "WPS: R-S2",
@@ -1428,7 +1429,7 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 	    !wps->wps->registrar->disable_auto_conf) {
 		u8 r[16];
 		/* Generate a random passphrase */
-		if (os_get_random(r, sizeof(r)) < 0)
+		if (random_get_bytes(r, sizeof(r)) < 0)
 			return -1;
 		os_free(wps->new_psk);
 		wps->new_psk = base64_encode(r, sizeof(r), &wps->new_psk_len);
@@ -1460,7 +1461,7 @@ int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 		wps->new_psk = os_malloc(wps->new_psk_len);
 		if (wps->new_psk == NULL)
 			return -1;
-		if (os_get_random(wps->new_psk, wps->new_psk_len) < 0) {
+		if (random_get_bytes(wps->new_psk, wps->new_psk_len) < 0) {
 			os_free(wps->new_psk);
 			wps->new_psk = NULL;
 			return -1;
@@ -1540,7 +1541,7 @@ static struct wpabuf * wps_build_m2(struct wps_data *wps)
 {
 	struct wpabuf *msg;
 
-	if (os_get_random(wps->nonce_r, WPS_NONCE_LEN) < 0)
+	if (random_get_bytes(wps->nonce_r, WPS_NONCE_LEN) < 0)
 		return NULL;
 	wpa_hexdump(MSG_DEBUG, "WPS: Registrar Nonce",
 		    wps->nonce_r, WPS_NONCE_LEN);

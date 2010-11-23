@@ -19,6 +19,7 @@
 
 #include "common.h"
 #include "crypto/aes_wrap.h"
+#include "crypto/random.h"
 #include "eap_common/eap_psk_common.h"
 #include "eap_server/eap_i.h"
 
@@ -66,7 +67,7 @@ static struct wpabuf * eap_psk_build_1(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-PSK: PSK-1 (sending)");
 
-	if (os_get_random(data->rand_s, EAP_PSK_RAND_LEN)) {
+	if (random_get_bytes(data->rand_s, EAP_PSK_RAND_LEN)) {
 		wpa_printf(MSG_ERROR, "EAP-PSK: Failed to get random data");
 		data->state = FAILURE;
 		return NULL;

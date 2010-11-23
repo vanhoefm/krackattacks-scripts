@@ -18,6 +18,7 @@
 #include "crypto/aes_wrap.h"
 #include "crypto/sha1.h"
 #include "crypto/tls.h"
+#include "crypto/random.h"
 #include "eap_common/eap_tlv_common.h"
 #include "eap_common/eap_fast_common.h"
 #include "eap_i.h"
@@ -642,7 +643,7 @@ static struct wpabuf * eap_fast_build_crypto_binding(
 	binding->version = EAP_FAST_VERSION;
 	binding->received_version = data->peer_version;
 	binding->subtype = EAP_TLV_CRYPTO_BINDING_SUBTYPE_REQUEST;
-	if (os_get_random(binding->nonce, sizeof(binding->nonce)) < 0) {
+	if (random_get_bytes(binding->nonce, sizeof(binding->nonce)) < 0) {
 		wpabuf_free(buf);
 		return NULL;
 	}
@@ -692,7 +693,7 @@ static struct wpabuf * eap_fast_build_pac(struct eap_sm *sm,
 	struct eap_tlv_result_tlv *result;
 	struct os_time now;
 
-	if (os_get_random(pac_key, EAP_FAST_PAC_KEY_LEN) < 0 ||
+	if (random_get_bytes(pac_key, EAP_FAST_PAC_KEY_LEN) < 0 ||
 	    os_get_time(&now) < 0)
 		return NULL;
 	wpa_hexdump_key(MSG_DEBUG, "EAP-FAST: Generated PAC-Key",

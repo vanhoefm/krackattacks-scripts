@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "crypto/dh_groups.h"
+#include "crypto/random.h"
 #include "ikev2.h"
 
 
@@ -1133,7 +1134,7 @@ static struct wpabuf * ikev2_build_sa_init(struct ikev2_responder_data *data)
 		    data->r_spi, IKEV2_SPI_LEN);
 
 	data->r_nonce_len = IKEV2_NONCE_MIN_LEN;
-	if (os_get_random(data->r_nonce, data->r_nonce_len))
+	if (random_get_bytes(data->r_nonce, data->r_nonce_len))
 		return NULL;
 #ifdef CCNS_PL
 	/* Zeros are removed incorrectly from the beginning of the nonces in

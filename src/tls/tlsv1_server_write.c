@@ -18,6 +18,7 @@
 #include "crypto/md5.h"
 #include "crypto/sha1.h"
 #include "crypto/tls.h"
+#include "crypto/random.h"
 #include "x509v3.h"
 #include "tlsv1_common.h"
 #include "tlsv1_record.h"
@@ -58,7 +59,7 @@ static int tls_write_server_hello(struct tlsv1_server *conn,
 
 	os_get_time(&now);
 	WPA_PUT_BE32(conn->server_random, now.sec);
-	if (os_get_random(conn->server_random + 4, TLS_RANDOM_LEN - 4)) {
+	if (random_get_bytes(conn->server_random + 4, TLS_RANDOM_LEN - 4)) {
 		wpa_printf(MSG_ERROR, "TLSv1: Could not generate "
 			   "server_random");
 		return -1;
@@ -67,7 +68,7 @@ static int tls_write_server_hello(struct tlsv1_server *conn,
 		    conn->server_random, TLS_RANDOM_LEN);
 
 	conn->session_id_len = TLS_SESSION_ID_MAX_LEN;
-	if (os_get_random(conn->session_id, conn->session_id_len)) {
+	if (random_get_bytes(conn->session_id, conn->session_id_len)) {
 		wpa_printf(MSG_ERROR, "TLSv1: Could not generate "
 			   "session_id");
 		return -1;
@@ -287,7 +288,7 @@ static int tls_write_server_key_exchange(struct tlsv1_server *conn,
 				   TLS_ALERT_INTERNAL_ERROR);
 		return -1;
 	}
-	if (os_get_random(conn->dh_secret, conn->dh_secret_len)) {
+	if (random_get_bytes(conn->dh_secret, conn->dh_secret_len)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to get random "
 			   "data for Diffie-Hellman");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,

@@ -17,6 +17,7 @@
 #include "common.h"
 #include "crypto/aes_wrap.h"
 #include "crypto/crypto.h"
+#include "crypto/random.h"
 #include "common/ieee802_11_defs.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "wpa.h"
@@ -400,7 +401,7 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 		goto failed;
 
 	if (sm->renew_snonce) {
-		if (os_get_random(sm->snonce, WPA_NONCE_LEN)) {
+		if (random_get_bytes(sm->snonce, WPA_NONCE_LEN)) {
 			wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 				"WPA: Failed to get random data for SNonce");
 			goto failed;

@@ -17,6 +17,7 @@
 #include "common.h"
 #include "pcsc_funcs.h"
 #include "crypto/milenage.h"
+#include "crypto/random.h"
 #include "eap_peer/eap_i.h"
 #include "eap_config.h"
 #include "eap_common/eap_sim_common.h"
@@ -93,7 +94,7 @@ static void * eap_sim_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 
-	if (os_get_random(data->nonce_mt, EAP_SIM_NONCE_MT_LEN)) {
+	if (random_get_bytes(data->nonce_mt, EAP_SIM_NONCE_MT_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Failed to get random data "
 			   "for NONCE_MT");
 		os_free(data);
@@ -995,7 +996,7 @@ static void eap_sim_deinit_for_reauth(struct eap_sm *sm, void *priv)
 static void * eap_sim_init_for_reauth(struct eap_sm *sm, void *priv)
 {
 	struct eap_sim_data *data = priv;
-	if (os_get_random(data->nonce_mt, EAP_SIM_NONCE_MT_LEN)) {
+	if (random_get_bytes(data->nonce_mt, EAP_SIM_NONCE_MT_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-SIM: Failed to get random data "
 			   "for NONCE_MT");
 		os_free(data);

@@ -18,6 +18,7 @@
 #include "utils/eloop.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "wpa_auth.h"
 #include "wpa_auth_i.h"
 #include "wpa_auth_ie.h"
@@ -294,7 +295,7 @@ void wpa_smk_m3(struct wpa_authenticator *wpa_auth,
 		return;
 	}
 
-	if (os_get_random(smk, PMK_LEN)) {
+	if (random_get_bytes(smk, PMK_LEN)) {
 		wpa_printf(MSG_DEBUG, "RSN: Failed to generate SMK");
 		return;
 	}

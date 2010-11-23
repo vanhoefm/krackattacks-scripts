@@ -17,6 +17,7 @@
 #include "common.h"
 #include "crypto/sha1.h"
 #include "crypto/tls.h"
+#include "crypto/random.h"
 #include "eap_i.h"
 #include "eap_tls_common.h"
 #include "eap_common/eap_tlv_common.h"
@@ -414,7 +415,7 @@ static struct wpabuf * eap_peap_build_phase2_tlv(struct eap_sm *sm,
 #endif /* EAP_SERVER_TNC */
 
 		if (eap_peap_derive_cmk(sm, data) < 0 ||
-		    os_get_random(data->binding_nonce, 32)) {
+		    random_get_bytes(data->binding_nonce, 32)) {
 			wpabuf_free(buf);
 			return NULL;
 		}

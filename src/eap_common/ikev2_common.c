@@ -18,6 +18,7 @@
 #include "crypto/crypto.h"
 #include "crypto/md5.h"
 #include "crypto/sha1.h"
+#include "crypto/random.h"
 #include "ikev2_common.h"
 
 
@@ -639,7 +640,7 @@ int ikev2_build_encrypted(int encr_id, int integ_id, struct ikev2_keys *keys,
 	phdr->flags = 0;
 
 	iv = wpabuf_put(msg, iv_len);
-	if (os_get_random(iv, iv_len)) {
+	if (random_get_bytes(iv, iv_len)) {
 		wpa_printf(MSG_INFO, "IKEV2: Could not generate IV");
 		return -1;
 	}

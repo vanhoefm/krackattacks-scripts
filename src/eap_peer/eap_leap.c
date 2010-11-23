@@ -17,6 +17,7 @@
 #include "common.h"
 #include "crypto/ms_funcs.h"
 #include "crypto/crypto.h"
+#include "crypto/random.h"
 #include "eap_i.h"
 
 #define LEAP_VERSION 1
@@ -167,7 +168,7 @@ static struct wpabuf * eap_leap_process_success(struct eap_sm *sm, void *priv,
 	wpabuf_put_u8(resp, 0); /* unused */
 	wpabuf_put_u8(resp, LEAP_CHALLENGE_LEN);
 	pos = wpabuf_put(resp, LEAP_CHALLENGE_LEN);
-	if (os_get_random(pos, LEAP_CHALLENGE_LEN)) {
+	if (random_get_bytes(pos, LEAP_CHALLENGE_LEN)) {
 		wpa_printf(MSG_WARNING, "EAP-LEAP: Failed to read random data "
 			   "for challenge");
 		wpabuf_free(resp);

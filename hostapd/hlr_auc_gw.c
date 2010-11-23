@@ -48,6 +48,7 @@
 
 #include "common.h"
 #include "crypto/milenage.h"
+#include "crypto/random.h"
 
 static const char *default_socket_path = "/tmp/hlr_auc_gw.sock";
 static const char *socket_path;
@@ -418,7 +419,7 @@ static void sim_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 	if (m) {
 		u8 _rand[16], sres[4], kc[8];
 		for (count = 0; count < max_chal; count++) {
-			if (os_get_random(_rand, 16) < 0)
+			if (random_get_bytes(_rand, 16) < 0)
 				return;
 			gsm_milenage(m->opc, m->ki, _rand, sres, kc);
 			*rpos++ = ' ';
@@ -481,7 +482,7 @@ static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 
 	m = get_milenage(imsi);
 	if (m) {
-		if (os_get_random(_rand, EAP_AKA_RAND_LEN) < 0)
+		if (random_get_bytes(_rand, EAP_AKA_RAND_LEN) < 0)
 			return;
 		res_len = EAP_AKA_RES_MAX_LEN;
 		inc_byte_array(m->sqn, 6);

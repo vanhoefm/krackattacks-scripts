@@ -18,6 +18,7 @@
 #include "utils/eloop.h"
 #include "crypto/md5.h"
 #include "crypto/crypto.h"
+#include "crypto/random.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "radius/radius.h"
@@ -140,7 +141,7 @@ static void ieee802_1x_tx_key_one(struct hostapd_data *hapd,
 	key->key_length = htons(key_len);
 	wpa_get_ntp_timestamp(key->replay_counter);
 
-	if (os_get_random(key->key_iv, sizeof(key->key_iv))) {
+	if (random_get_bytes(key->key_iv, sizeof(key->key_iv))) {
 		wpa_printf(MSG_ERROR, "Could not get random numbers");
 		os_free(buf);
 		return;
@@ -215,7 +216,7 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 	if (!key->key[key->idx])
 		key->key[key->idx] = os_malloc(key->default_len);
 	if (key->key[key->idx] == NULL ||
-	    os_get_random(key->key[key->idx], key->default_len)) {
+	    random_get_bytes(key->key[key->idx], key->default_len)) {
 		printf("Could not generate random WEP key (dynamic VLAN).\n");
 		os_free(key->key[key->idx]);
 		key->key[key->idx] = NULL;
@@ -330,7 +331,8 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 		u8 *ikey;
 		ikey = os_malloc(hapd->conf->individual_wep_key_len);
 		if (ikey == NULL ||
-		    os_get_random(ikey, hapd->conf->individual_wep_key_len)) {
+		    random_get_bytes(ikey, hapd->conf->individual_wep_key_len))
+		{
 			wpa_printf(MSG_ERROR, "Could not generate random "
 				   "individual WEP key.");
 			os_free(ikey);
@@ -1382,8 +1384,8 @@ static int ieee802_1x_rekey_broadcast(struct hostapd_data *hapd)
 	os_free(eapol->default_wep_key);
 	eapol->default_wep_key = os_malloc(hapd->conf->default_wep_key_len);
 	if (eapol->default_wep_key == NULL ||
-	    os_get_random(eapol->default_wep_key,
-			  hapd->conf->default_wep_key_len)) {
+	    random_get_bytes(eapol->default_wep_key,
+			     hapd->conf->default_wep_key_len)) {
 		printf("Could not generate random WEP key.\n");
 		os_free(eapol->default_wep_key);
 		eapol->default_wep_key = NULL;

@@ -20,6 +20,7 @@
 #include "crypto/crypto.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "eap_common/eap_defs.h"
 #include "eap_common/eap_sim_common.h"
 
@@ -1121,8 +1122,8 @@ int eap_sim_msg_add_encr_start(struct eap_sim_msg *msg, u8 attr_iv,
 	if (pos == NULL)
 		return -1;
 	msg->iv = (pos - wpabuf_head_u8(msg->buf)) + 4;
-	if (os_get_random(wpabuf_mhead_u8(msg->buf) + msg->iv,
-			  EAP_SIM_IV_LEN)) {
+	if (random_get_bytes(wpabuf_mhead_u8(msg->buf) + msg->iv,
+			     EAP_SIM_IV_LEN)) {
 		msg->iv = 0;
 		return -1;
 	}

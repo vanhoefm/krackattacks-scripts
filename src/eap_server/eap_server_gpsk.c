@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/random.h"
 #include "eap_server/eap_i.h"
 #include "eap_common/eap_gpsk_common.h"
 
@@ -120,7 +121,7 @@ static struct wpabuf * eap_gpsk_build_gpsk_1(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-GPSK: Request/GPSK-1");
 
-	if (os_get_random(data->rand_server, EAP_GPSK_RAND_LEN)) {
+	if (random_get_bytes(data->rand_server, EAP_GPSK_RAND_LEN)) {
 		wpa_printf(MSG_ERROR, "EAP-GPSK: Failed to get random data");
 		eap_gpsk_state(data, FAILURE);
 		return NULL;

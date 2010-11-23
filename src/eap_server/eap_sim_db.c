@@ -25,6 +25,7 @@
 #include <sys/un.h>
 
 #include "common.h"
+#include "crypto/random.h"
 #include "eap_common/eap_sim_common.h"
 #include "eap_server/eap_sim_db.h"
 #include "eloop.h"
@@ -830,7 +831,7 @@ static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
 	char *id, *pos, *end;
 	u8 buf[10];
 
-	if (os_get_random(buf, sizeof(buf)))
+	if (random_get_bytes(buf, sizeof(buf)))
 		return NULL;
 	id = os_malloc(sizeof(buf) * 2 + 2);
 	if (id == NULL)

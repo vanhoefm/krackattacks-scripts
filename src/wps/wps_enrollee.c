@@ -17,6 +17,7 @@
 #include "common.h"
 #include "crypto/crypto.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "wps_i.h"
 #include "wps_dev_attr.h"
 
@@ -53,7 +54,7 @@ static int wps_build_e_hash(struct wps_data *wps, struct wpabuf *msg)
 	const u8 *addr[4];
 	size_t len[4];
 
-	if (os_get_random(wps->snonce, 2 * WPS_SECRET_NONCE_LEN) < 0)
+	if (random_get_bytes(wps->snonce, 2 * WPS_SECRET_NONCE_LEN) < 0)
 		return -1;
 	wpa_hexdump(MSG_DEBUG, "WPS: E-S1", wps->snonce, WPS_SECRET_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "WPS: E-S2",
@@ -121,7 +122,7 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 	struct wpabuf *msg;
 	u16 config_methods;
 
-	if (os_get_random(wps->nonce_e, WPS_NONCE_LEN) < 0)
+	if (random_get_bytes(wps->nonce_e, WPS_NONCE_LEN) < 0)
 		return NULL;
 	wpa_hexdump(MSG_DEBUG, "WPS: Enrollee Nonce",
 		    wps->nonce_e, WPS_NONCE_LEN);

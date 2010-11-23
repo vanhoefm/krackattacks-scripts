@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "crypto/aes_wrap.h"
+#include "crypto/random.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "wpa.h"
@@ -540,7 +541,7 @@ int wpa_ft_prepare_auth_request(struct wpa_sm *sm, const u8 *mdie)
 	size_t ft_ies_len;
 
 	/* Generate a new SNonce */
-	if (os_get_random(sm->snonce, WPA_NONCE_LEN)) {
+	if (random_get_bytes(sm->snonce, WPA_NONCE_LEN)) {
 		wpa_printf(MSG_INFO, "FT: Failed to generate a new SNonce");
 		return -1;
 	}
@@ -1020,7 +1021,7 @@ int wpa_ft_start_over_ds(struct wpa_sm *sm, const u8 *target_ap,
 		   MAC2STR(target_ap));
 
 	/* Generate a new SNonce */
-	if (os_get_random(sm->snonce, WPA_NONCE_LEN)) {
+	if (random_get_bytes(sm->snonce, WPA_NONCE_LEN)) {
 		wpa_printf(MSG_INFO, "FT: Failed to generate a new SNonce");
 		return -1;
 	}

@@ -17,6 +17,7 @@
 #include "common.h"
 #include "crypto/sha256.h"
 #include "crypto/crypto.h"
+#include "crypto/random.h"
 #include "eap_common/eap_sim_common.h"
 #include "eap_server/eap_i.h"
 #include "eap_server/eap_sim_db.h"
@@ -440,7 +441,7 @@ static struct wpabuf * eap_aka_build_reauth(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-AKA: Generating Re-authentication");
 
-	if (os_get_random(data->nonce_s, EAP_SIM_NONCE_S_LEN))
+	if (random_get_bytes(data->nonce_s, EAP_SIM_NONCE_S_LEN))
 		return NULL;
 	wpa_hexdump_key(MSG_MSGDUMP, "EAP-AKA: NONCE_S",
 			data->nonce_s, EAP_SIM_NONCE_S_LEN);

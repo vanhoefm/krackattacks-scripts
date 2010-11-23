@@ -19,6 +19,7 @@
 #include "crypto/crypto.h"
 #include "crypto/dh_group5.h"
 #include "crypto/sha256.h"
+#include "crypto/random.h"
 #include "common/ieee802_11_defs.h"
 #include "wps_i.h"
 
@@ -332,7 +333,7 @@ int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 	wpabuf_put_be16(msg, block_size + wpabuf_len(plain));
 
 	iv = wpabuf_put(msg, block_size);
-	if (os_get_random(iv, block_size) < 0)
+	if (random_get_bytes(iv, block_size) < 0)
 		return -1;
 
 	data = wpabuf_put(msg, 0);
@@ -365,7 +366,8 @@ int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 	}
 	wps->oob_dev_pw_id |= 0x0010;
 
-	if (os_get_random(dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN) < 0) {
+	if (random_get_bytes(dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN) <
+	    0) {
 		wpa_printf(MSG_ERROR, "WPS: OOB device password "
 			   "generation error");
 		return -1;

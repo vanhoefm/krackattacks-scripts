@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "crypto/ms_funcs.h"
+#include "crypto/random.h"
 #include "eap_i.h"
 
 
@@ -109,7 +110,7 @@ static struct wpabuf * eap_mschapv2_build_challenge(
 	size_t ms_len;
 
 	if (!data->auth_challenge_from_tls &&
-	    os_get_random(data->auth_challenge, CHALLENGE_LEN)) {
+	    random_get_bytes(data->auth_challenge, CHALLENGE_LEN)) {
 		wpa_printf(MSG_ERROR, "EAP-MSCHAPV2: Failed to get random "
 			   "data");
 		data->state = FAILURE;

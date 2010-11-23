@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/random.h"
 #include "eap_server/eap_i.h"
 #include "eap_common/eap_sake_common.h"
 
@@ -166,7 +167,7 @@ static struct wpabuf * eap_sake_build_challenge(struct eap_sm *sm,
 
 	wpa_printf(MSG_DEBUG, "EAP-SAKE: Request/Challenge");
 
-	if (os_get_random(data->rand_s, EAP_SAKE_RAND_LEN)) {
+	if (random_get_bytes(data->rand_s, EAP_SAKE_RAND_LEN)) {
 		wpa_printf(MSG_ERROR, "EAP-SAKE: Failed to get random data");
 		data->state = FAILURE;
 		return NULL;

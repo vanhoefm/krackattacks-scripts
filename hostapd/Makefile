@@ -63,12 +63,14 @@ CFLAGS += -DHOSTAPD
 ifdef CONFIG_WPA_TRACE
 CFLAGS += -DWPA_TRACE
 OBJS += ../src/utils/trace.o
+HOBJS += ../src/utils/trace.o
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD
 CFLAGS += -DWPA_TRACE_BFD
 LIBS += -lbfd
 LIBS_c += -lbfd
+LIBS_h += -lbfd
 endif
 endif
 

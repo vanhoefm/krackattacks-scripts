@@ -757,7 +757,7 @@ static int vlan_dynamic_add(struct hostapd_data *hapd,
 {
 	while (vlan) {
 		if (vlan->vlan_id != VLAN_ID_WILDCARD) {
-			if (hapd->drv.vlan_if_add(hapd, vlan->ifname)) {
+			if (hostapd_vlan_if_add(hapd, vlan->ifname)) {
 				if (errno != EEXIST) {
 					wpa_printf(MSG_ERROR, "VLAN: Could "
 						   "not add VLAN %s: %s",
@@ -787,7 +787,7 @@ static void vlan_dynamic_remove(struct hostapd_data *hapd,
 		next = vlan->next;
 
 		if (vlan->vlan_id != VLAN_ID_WILDCARD &&
-		    hapd->drv.vlan_if_remove(hapd, vlan->ifname)) {
+		    hostapd_vlan_if_remove(hapd, vlan->ifname)) {
 			wpa_printf(MSG_ERROR, "VLAN: Could not remove VLAN "
 				   "iface: %s: %s",
 				   vlan->ifname, strerror(errno));
@@ -861,7 +861,7 @@ struct hostapd_vlan * vlan_add_dynamic(struct hostapd_data *hapd,
 		    pos);
 	os_free(ifname);
 
-	if (hapd->drv.vlan_if_add(hapd, n->ifname)) {
+	if (hostapd_vlan_if_add(hapd, n->ifname)) {
 		os_free(n);
 		return NULL;
 	}
@@ -899,7 +899,7 @@ int vlan_remove_dynamic(struct hostapd_data *hapd, int vlan_id)
 		return 1;
 
 	if (vlan->dynamic_vlan == 0)
-		hapd->drv.vlan_if_remove(hapd, vlan->ifname);
+		hostapd_vlan_if_remove(hapd, vlan->ifname);
 
 	return 0;
 }

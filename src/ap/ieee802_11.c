@@ -1651,17 +1651,17 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		hostapd_get_ht_capab(hapd, sta->ht_capabilities, &ht_cap);
 #endif /* CONFIG_IEEE80211N */
 
-	if (hapd->drv.sta_add(hapd, sta->addr, sta->aid, sta->capability,
-			      sta->supported_rates, sta->supported_rates_len,
-			      sta->listen_interval,
-			      sta->flags & WLAN_STA_HT ? &ht_cap : NULL)) {
+	if (hostapd_sta_add(hapd, sta->addr, sta->aid, sta->capability,
+			    sta->supported_rates, sta->supported_rates_len,
+			    sta->listen_interval,
+			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
 			       "Could not add STA to kernel driver");
 	}
 
 	if (sta->flags & WLAN_STA_WDS)
-		hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 1);
+		hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 1);
 
 	if (sta->eapol_sm == NULL) {
 		/*
@@ -1677,7 +1677,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 			goto fail;
 	}
 
-	hapd->drv.set_sta_flags(hapd, sta);
+	hostapd_set_sta_flags(hapd, sta);
 
 	if (sta->auth_alg == WLAN_AUTH_FT)
 		wpa_auth_sm_event(sta->wpa_sm, WPA_ASSOC_FT);
@@ -1797,7 +1797,7 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 				   "STA " MACSTR " (aid %u)",
 				   MAC2STR(sta->addr), sta->aid);
 			sta->flags |= WLAN_STA_WDS;
-			hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 1);
+			hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 1);
 		}
 		return;
 	}

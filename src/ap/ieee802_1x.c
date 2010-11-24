@@ -93,7 +93,7 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 			wpa_msg(hapd->msg_ctx, MSG_INFO,
 				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 		sta->flags |= WLAN_STA_AUTHORIZED;
-		res = hapd->drv.set_authorized(hapd, sta, 1);
+		res = hostapd_set_authorized(hapd, sta, 1);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "authorizing port");
 	} else {
@@ -103,7 +103,7 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 				AP_STA_DISCONNECTED MACSTR,
 				MAC2STR(sta->addr));
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
-		res = hapd->drv.set_authorized(hapd, sta, 0);
+		res = hostapd_set_authorized(hapd, sta, 0);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "unauthorizing port");
 	}
@@ -237,7 +237,7 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 				key->len[key->idx]))
 		printf("Could not set dynamic VLAN WEP encryption key.\n");
 
-	hapd->drv.set_drv_ieee8021x(hapd, ifname, 1);
+	hostapd_set_drv_ieee8021x(hapd, ifname, 1);
 
 	return key;
 }
@@ -1680,7 +1680,7 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 		return -1;
 
 	if ((hapd->conf->ieee802_1x || hapd->conf->wpa) &&
-	    hapd->drv.set_drv_ieee8021x(hapd, hapd->conf->iface, 1))
+	    hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 1))
 		return -1;
 
 #ifndef CONFIG_NO_RADIUS
@@ -1711,7 +1711,7 @@ void ieee802_1x_deinit(struct hostapd_data *hapd)
 
 	if (hapd->driver != NULL &&
 	    (hapd->conf->ieee802_1x || hapd->conf->wpa))
-		hapd->drv.set_drv_ieee8021x(hapd, hapd->conf->iface, 0);
+		hostapd_set_drv_ieee8021x(hapd, hapd->conf->iface, 0);
 
 	eapol_auth_deinit(hapd->eapol_auth);
 	hapd->eapol_auth = NULL;

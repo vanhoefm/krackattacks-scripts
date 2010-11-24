@@ -514,8 +514,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 #ifdef CONFIG_P2P
 no_beacon:
 #endif /* CONFIG_P2P */
-	hapd->drv.set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
-					  ERP_INFO_USE_PROTECTION));
+	hostapd_set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
+					ERP_INFO_USE_PROTECTION));
 }
 
 

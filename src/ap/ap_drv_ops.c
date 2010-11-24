@@ -41,7 +41,7 @@ static int hostapd_sta_flags_to_drv(int flags)
 }
 
 
-static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
+int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 {
 	struct wpabuf *beacon, *proberesp, *assocresp = NULL;
 	int ret;
@@ -157,8 +157,8 @@ static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 }
 
 
-static int hostapd_set_authorized(struct hostapd_data *hapd,
-				  struct sta_info *sta, int authorized)
+int hostapd_set_authorized(struct hostapd_data *hapd,
+			   struct sta_info *sta, int authorized)
 {
 	if (authorized) {
 		return hostapd_sta_set_flags(hapd, sta->addr,
@@ -173,8 +173,7 @@ static int hostapd_set_authorized(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_set_sta_flags(struct hostapd_data *hapd,
-				 struct sta_info *sta)
+int hostapd_set_sta_flags(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	int set_flags, total_flags, flags_and, flags_or;
 	total_flags = hostapd_sta_flags_to_drv(sta->flags);
@@ -190,8 +189,8 @@ static int hostapd_set_sta_flags(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd,
-				     const char *ifname, int enabled)
+int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
+			      int enabled)
 {
 	struct wpa_bss_params params;
 	os_memset(&params, 0, sizeof(params));
@@ -217,8 +216,7 @@ static int hostapd_set_ap_isolate(struct hostapd_data *hapd, int value)
 }
 
 
-static int hostapd_set_bss_params(struct hostapd_data *hapd,
-				  int use_protection)
+int hostapd_set_bss_params(struct hostapd_data *hapd, int use_protection)
 {
 	int ret = 0;
 	int preamble;
@@ -278,7 +276,7 @@ static int hostapd_set_bss_params(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
+int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
 {
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];
@@ -286,15 +284,15 @@ static int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
 			      force_ifname, if_addr);
 }
 
-static int hostapd_vlan_if_remove(struct hostapd_data *hapd,
-				  const char *ifname)
+
+int hostapd_vlan_if_remove(struct hostapd_data *hapd, const char *ifname)
 {
 	return hostapd_if_remove(hapd, WPA_IF_AP_VLAN, ifname);
 }
 
 
-static int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr,
-			       int aid, int val)
+int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr, int aid,
+			int val)
 {
 	const char *bridge = NULL;
 
@@ -304,15 +302,16 @@ static int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr,
 		bridge = hapd->conf->wds_bridge;
 	else if (hapd->conf->bridge[0])
 		bridge = hapd->conf->bridge;
-	return hapd->driver->set_wds_sta(hapd->drv_priv, addr, aid, val, bridge);
+	return hapd->driver->set_wds_sta(hapd->drv_priv, addr, aid, val,
+					 bridge);
 }
 
 
-static int hostapd_sta_add(struct hostapd_data *hapd,
-			   const u8 *addr, u16 aid, u16 capability,
-			   const u8 *supp_rates, size_t supp_rates_len,
-			   u16 listen_interval,
-			   const struct ieee80211_ht_capabilities *ht_capab)
+int hostapd_sta_add(struct hostapd_data *hapd,
+		    const u8 *addr, u16 aid, u16 capability,
+		    const u8 *supp_rates, size_t supp_rates_len,
+		    u16 listen_interval,
+		    const struct ieee80211_ht_capabilities *ht_capab)
 {
 	struct hostapd_sta_add_params params;
 
@@ -330,20 +329,6 @@ static int hostapd_sta_add(struct hostapd_data *hapd,
 	params.listen_interval = listen_interval;
 	params.ht_capabilities = ht_capab;
 	return hapd->driver->sta_add(hapd->drv_priv, &params);
-}
-
-
-void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
-{
-	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
-	ops->set_authorized = hostapd_set_authorized;
-	ops->set_sta_flags = hostapd_set_sta_flags;
-	ops->set_drv_ieee8021x = hostapd_set_drv_ieee8021x;
-	ops->set_bss_params = hostapd_set_bss_params;
-	ops->vlan_if_add = hostapd_vlan_if_add;
-	ops->vlan_if_remove = hostapd_vlan_if_remove;
-	ops->set_wds_sta = hostapd_set_wds_sta;
-	ops->sta_add = hostapd_sta_add;
 }
 
 

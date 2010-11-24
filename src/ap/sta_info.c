@@ -125,7 +125,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	accounting_sta_stop(hapd, sta);
 
 	if (sta->flags & WLAN_STA_WDS)
-		hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 0);
+		hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 0);
 
 	if (!(sta->flags & WLAN_STA_PREAUTH))
 		hostapd_drv_sta_remove(hapd, sta->addr);

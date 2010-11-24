@@ -28,6 +28,7 @@
 #include "wps/wps_dev_attr.h"
 #include "hostapd.h"
 #include "ap_config.h"
+#include "ap_drv_ops.h"
 #include "beacon.h"
 #include "sta_info.h"
 #include "wps_hostapd.h"
@@ -140,7 +141,7 @@ static int hostapd_wps_set_ie_cb(void *ctx, struct wpabuf *beacon_ie,
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = probe_resp_ie;
 	ieee802_11_set_beacon(hapd);
-	return hapd->drv.set_ap_wps_ie(hapd);
+	return hostapd_set_ap_wps_ie(hapd);
 }
 
 
@@ -589,7 +590,7 @@ static void hostapd_wps_clear_ies(struct hostapd_data *hapd)
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = NULL;
 
-	hapd->drv.set_ap_wps_ie(hapd);
+	hostapd_set_ap_wps_ie(hapd);
 }
 
 

@@ -49,25 +49,6 @@ struct hostapd_frame_info {
 };
 
 
-struct hostapd_driver_ops {
-	int (*set_ap_wps_ie)(struct hostapd_data *hapd);
-	int (*set_authorized)(struct hostapd_data *hapd, struct sta_info *sta,
-			      int authorized);
-	int (*set_sta_flags)(struct hostapd_data *hapd, struct sta_info *sta);
-	int (*set_drv_ieee8021x)(struct hostapd_data *hapd, const char *ifname,
-				 int enabled);
-	int (*set_bss_params)(struct hostapd_data *hapd, int use_protection);
-	int (*vlan_if_add)(struct hostapd_data *hapd, const char *ifname);
-	int (*vlan_if_remove)(struct hostapd_data *hapd, const char *ifname);
-	int (*set_wds_sta)(struct hostapd_data *hapd, const u8 *addr, int aid,
-			   int val);
-	int (*sta_add)(struct hostapd_data *hapd,
-		       const u8 *addr, u16 aid, u16 capability,
-		       const u8 *supp_rates, size_t supp_rates_len,
-		       u16 listen_interval,
-		       const struct ieee80211_ht_capabilities *ht_capab);
-};
-
 /**
  * struct hostapd_data - hostapd per-BSS data structure
  */
@@ -95,7 +76,6 @@ struct hostapd_data {
 
 	const struct wpa_driver_ops *driver;
 	void *drv_priv;
-	struct hostapd_driver_ops drv;
 
 	void (*new_assoc_sta_cb)(struct hostapd_data *hapd,
 				 struct sta_info *sta, int reassoc);

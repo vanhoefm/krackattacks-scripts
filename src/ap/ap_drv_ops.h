@@ -18,8 +18,24 @@
 enum wpa_driver_if_type;
 struct wpa_bss_params;
 struct wpa_driver_scan_params;
+struct ieee80211_ht_capabilities;
 
-void hostapd_set_driver_ops(struct hostapd_driver_ops *ops);
+int hostapd_set_ap_wps_ie(struct hostapd_data *hapd);
+int hostapd_set_authorized(struct hostapd_data *hapd,
+			   struct sta_info *sta, int authorized);
+int hostapd_set_sta_flags(struct hostapd_data *hapd, struct sta_info *sta);
+int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd, const char *ifname,
+			      int enabled);
+int hostapd_set_bss_params(struct hostapd_data *hapd, int use_protection);
+int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname);
+int hostapd_vlan_if_remove(struct hostapd_data *hapd, const char *ifname);
+int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr, int aid,
+			int val);
+int hostapd_sta_add(struct hostapd_data *hapd,
+		    const u8 *addr, u16 aid, u16 capability,
+		    const u8 *supp_rates, size_t supp_rates_len,
+		    u16 listen_interval,
+		    const struct ieee80211_ht_capabilities *ht_capab);
 int hostapd_set_privacy(struct hostapd_data *hapd, int enabled);
 int hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
 			     size_t elem_len);

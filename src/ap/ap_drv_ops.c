@@ -582,3 +582,46 @@ int hostapd_driver_set_noa(struct hostapd_data *hapd, u8 count, int start,
 					     duration);
 	return -1;
 }
+
+
+int hostapd_drv_set_key(const char *ifname, struct hostapd_data *hapd,
+			enum wpa_alg alg, const u8 *addr,
+			int key_idx, int set_tx,
+			const u8 *seq, size_t seq_len,
+			const u8 *key, size_t key_len)
+{
+	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
+		return 0;
+	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
+				     key_idx, set_tx, seq, seq_len, key,
+				     key_len);
+}
+
+
+int hostapd_drv_send_mlme(struct hostapd_data *hapd,
+			  const void *msg, size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
+		return 0;
+	return hapd->driver->send_mlme(hapd->drv_priv, msg, len);
+}
+
+
+int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
+			   const u8 *addr, int reason)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
+		return 0;
+	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
+					reason);
+}
+
+
+int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
+			     const u8 *addr, int reason)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
+		return 0;
+	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
+					  reason);
+}

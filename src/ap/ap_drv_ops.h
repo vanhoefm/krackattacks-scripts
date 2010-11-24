@@ -81,17 +81,21 @@ struct wpa_scan_results * hostapd_driver_get_scan_results(
 	struct hostapd_data *hapd);
 int hostapd_driver_set_noa(struct hostapd_data *hapd, u8 count, int start,
 			   int duration);
+int hostapd_drv_set_key(const char *ifname,
+			struct hostapd_data *hapd,
+			enum wpa_alg alg, const u8 *addr,
+			int key_idx, int set_tx,
+			const u8 *seq, size_t seq_len,
+			const u8 *key, size_t key_len);
+int hostapd_drv_send_mlme(struct hostapd_data *hapd,
+			  const void *msg, size_t len);
+int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
+			   const u8 *addr, int reason);
+int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
+			     const u8 *addr, int reason);
 
 
 #include "drivers/driver.h"
-
-static inline int hostapd_drv_send_mlme(struct hostapd_data *hapd,
-					const void *msg, size_t len)
-{
-	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
-		return 0;
-	return hapd->driver->send_mlme(hapd->drv_priv, msg, len);
-}
 
 static inline int hostapd_drv_set_countermeasures(struct hostapd_data *hapd,
 						  int enabled)
@@ -120,24 +124,6 @@ static inline int hostapd_drv_get_inact_sec(struct hostapd_data *hapd,
 	return hapd->driver->get_inact_sec(hapd->drv_priv, addr);
 }
 
-static inline int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
-					 const u8 *addr, int reason)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
-		return 0;
-	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
-					reason);
-}
-
-static inline int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
-					   const u8 *addr, int reason)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
-		return 0;
-	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
-					  reason);
-}
-
 static inline int hostapd_drv_sta_remove(struct hostapd_data *hapd,
 					 const u8 *addr)
 {
@@ -155,20 +141,6 @@ static inline int hostapd_drv_hapd_send_eapol(struct hostapd_data *hapd,
 	return hapd->driver->hapd_send_eapol(hapd->drv_priv, addr, data,
 					     data_len, encrypt,
 					     hapd->own_addr);
-}
-
-static inline int hostapd_drv_set_key(const char *ifname,
-				      struct hostapd_data *hapd,
-				      enum wpa_alg alg, const u8 *addr,
-				      int key_idx, int set_tx,
-				      const u8 *seq, size_t seq_len,
-				      const u8 *key, size_t key_len)
-{
-	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
-		return 0;
-	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
-				     key_idx, set_tx, seq, seq_len, key,
-				     key_len);
 }
 
 static inline int hostapd_drv_read_sta_data(

@@ -86,4 +86,48 @@ static inline int hostapd_drv_set_countermeasures(struct hostapd_data *hapd,
 	return hapd->driver->hapd_set_countermeasures(hapd->drv_priv, enabled);
 }
 
+static inline int hostapd_drv_set_sta_vlan(const char *ifname,
+					   struct hostapd_data *hapd,
+					   const u8 *addr, int vlan_id)
+{
+	if (hapd->driver == NULL || hapd->driver->set_sta_vlan == NULL)
+		return 0;
+	return hapd->driver->set_sta_vlan(hapd->drv_priv, addr, ifname,
+					  vlan_id);
+}
+
+static inline int hostapd_drv_get_inact_sec(struct hostapd_data *hapd,
+					    const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->get_inact_sec == NULL)
+		return 0;
+	return hapd->driver->get_inact_sec(hapd->drv_priv, addr);
+}
+
+static inline int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
+					 const u8 *addr, int reason)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_deauth == NULL)
+		return 0;
+	return hapd->driver->sta_deauth(hapd->drv_priv, hapd->own_addr, addr,
+					reason);
+}
+
+static inline int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
+					   const u8 *addr, int reason)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_disassoc == NULL)
+		return 0;
+	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
+					  reason);
+}
+
+static inline int hostapd_drv_sta_remove(struct hostapd_data *hapd,
+					 const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_remove == NULL)
+		return 0;
+	return hapd->driver->sta_remove(hapd->drv_priv, addr);
+}
+
 #endif /* AP_DRV_OPS */

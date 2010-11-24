@@ -341,8 +341,8 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 	if (hapd->driver && os_strcmp(hapd->driver->name, "hostap") != 0) {
 		u8 addr[ETH_ALEN];
 		os_memset(addr, 0xff, ETH_ALEN);
-		hapd->drv.sta_deauth(hapd, addr,
-				     WLAN_REASON_PREV_AUTH_NOT_VALID);
+		hostapd_drv_sta_deauth(hapd, addr,
+				       WLAN_REASON_PREV_AUTH_NOT_VALID);
 	}
 
 	return ret;
@@ -890,8 +890,8 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc)
 {
 	if (hapd->tkip_countermeasures) {
-		hapd->drv.sta_deauth(hapd, sta->addr,
-				     WLAN_REASON_MICHAEL_MIC_FAILURE);
+		hostapd_drv_sta_deauth(hapd, sta->addr,
+				       WLAN_REASON_MICHAEL_MIC_FAILURE);
 		return;
 	}
 

@@ -51,11 +51,11 @@ static void ieee80211_tkip_countermeasures_start(struct hostapd_data *hapd)
 	eloop_register_timeout(60, 0, ieee80211_tkip_countermeasures_stop,
 			       hapd, NULL);
 	for (sta = hapd->sta_list; sta != NULL; sta = sta->next) {
-		hapd->drv.sta_deauth(hapd, sta->addr,
-				     WLAN_REASON_MICHAEL_MIC_FAILURE);
+		hostapd_drv_sta_deauth(hapd, sta->addr,
+				       WLAN_REASON_MICHAEL_MIC_FAILURE);
 		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
 				WLAN_STA_AUTHORIZED);
-		hapd->drv.sta_remove(hapd, sta->addr);
+		hostapd_drv_sta_remove(hapd, sta->addr);
 	}
 }
 

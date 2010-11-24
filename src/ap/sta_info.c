@@ -128,7 +128,7 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 		hapd->drv.set_wds_sta(hapd, sta->addr, sta->aid, 0);
 
 	if (!(sta->flags & WLAN_STA_PREAUTH))
-		hapd->drv.sta_remove(hapd, sta->addr);
+		hostapd_drv_sta_remove(hapd, sta->addr);
 
 	ap_sta_hash_del(hapd, sta);
 	ap_sta_list_del(hapd, sta);
@@ -272,7 +272,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		int inactive_sec;
 		wpa_printf(MSG_DEBUG, "Checking STA " MACSTR " inactivity:",
 			   MAC2STR(sta->addr));
-		inactive_sec = hapd->drv.get_inact_sec(hapd, sta->addr);
+		inactive_sec = hostapd_drv_get_inact_sec(hapd, sta->addr);
 		if (inactive_sec == -1) {
 			wpa_printf(MSG_DEBUG, "Could not get station info "
 				   "from kernel driver for " MACSTR ".",
@@ -347,10 +347,11 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			   MAC2STR(sta->addr));
 
 		if (deauth) {
-			hapd->drv.sta_deauth(hapd, sta->addr,
-					     WLAN_REASON_PREV_AUTH_NOT_VALID);
+			hostapd_drv_sta_deauth(
+				hapd, sta->addr,
+				WLAN_REASON_PREV_AUTH_NOT_VALID);
 		} else {
-			hapd->drv.sta_disassoc(
+			hostapd_drv_sta_disassoc(
 				hapd, sta->addr,
 				WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY);
 		}
@@ -414,7 +415,7 @@ static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx)
 		RADIUS_ACCT_TERMINATE_CAUSE_SESSION_TIMEOUT;
 	os_memcpy(addr, sta->addr, ETH_ALEN);
 	ap_free_sta(hapd, sta);
-	hapd->drv.sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
+	hostapd_drv_sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
 }
 
 
@@ -480,7 +481,7 @@ static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta)
 
 	wpa_printf(MSG_DEBUG, "Removing STA " MACSTR " from kernel driver",
 		   MAC2STR(sta->addr));
-	if (hapd->drv.sta_remove(hapd, sta->addr) &&
+	if (hostapd_drv_sta_remove(hapd, sta->addr) &&
 	    sta->flags & WLAN_STA_ASSOC) {
 		wpa_printf(MSG_DEBUG, "Could not remove station " MACSTR
 			   " from kernel driver.", MAC2STR(sta->addr));
@@ -653,7 +654,7 @@ int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 	if (wpa_auth_sta_set_vlan(sta->wpa_sm, sta->vlan_id) < 0)
 		wpa_printf(MSG_INFO, "Failed to update VLAN-ID for WPA");
 
-	ret = hapd->drv.set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
+	ret = hostapd_drv_set_sta_vlan(iface, hapd, sta->addr, sta->vlan_id);
 	if (ret < 0) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_DEBUG, "could not bind the STA "
@@ -757,7 +758,7 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 		sta = ap_get_sta(hapd, addr);
 
 	if (addr)
-		hapd->drv.sta_deauth(hapd, addr, reason);
+		hostapd_drv_sta_deauth(hapd, addr, reason);
 
 	if (sta == NULL)
 		return;

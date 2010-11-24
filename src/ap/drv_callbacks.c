@@ -33,6 +33,7 @@
 #include "wpa_auth.h"
 #include "wmm.h"
 #include "wps_hostapd.h"
+#include "ap_drv_ops.h"
 #include "ap_config.h"
 
 
@@ -150,7 +151,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 #endif /* CONFIG_IEEE80211W */
 			else
 				resp = WLAN_REASON_INVALID_IE;
-			hapd->drv.sta_disassoc(hapd, sta->addr, resp);
+			hostapd_drv_sta_disassoc(hapd, sta->addr, resp);
 			ap_free_sta(hapd, sta);
 			return -1;
 		}
@@ -160,8 +161,8 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		wps = ieee802_11_vendor_ie_concat(ie, ielen,
 						  WPS_IE_VENDOR_TYPE);
 		if (wps && wps_validate_assoc_req(wps) < 0) {
-			hapd->drv.sta_disassoc(hapd, sta->addr,
-					       WLAN_REASON_INVALID_IE);
+			hostapd_drv_sta_disassoc(hapd, sta->addr,
+						 WLAN_REASON_INVALID_IE);
 			ap_free_sta(hapd, sta);
 			wpabuf_free(wps);
 			return -1;

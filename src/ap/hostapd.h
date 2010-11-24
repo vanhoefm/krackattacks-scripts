@@ -80,19 +80,11 @@ struct hostapd_driver_ops {
 	int (*vlan_if_remove)(struct hostapd_data *hapd, const char *ifname);
 	int (*set_wds_sta)(struct hostapd_data *hapd, const u8 *addr, int aid,
 			   int val);
-	int (*set_sta_vlan)(const char *ifname, struct hostapd_data *hapd,
-			    const u8 *addr, int vlan_id);
-	int (*get_inact_sec)(struct hostapd_data *hapd, const u8 *addr);
-	int (*sta_deauth)(struct hostapd_data *hapd, const u8 *addr,
-			  int reason);
-	int (*sta_disassoc)(struct hostapd_data *hapd, const u8 *addr,
-			    int reason);
 	int (*sta_add)(struct hostapd_data *hapd,
 		       const u8 *addr, u16 aid, u16 capability,
 		       const u8 *supp_rates, size_t supp_rates_len,
 		       u16 listen_interval,
 		       const struct ieee80211_ht_capabilities *ht_capab);
-	int (*sta_remove)(struct hostapd_data *hapd, const u8 *addr);
 };
 
 /**

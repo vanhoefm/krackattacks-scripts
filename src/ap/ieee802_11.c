@@ -1125,7 +1125,7 @@ static void handle_disassoc(struct hostapd_data *hapd,
 	 * authenticated. */
 	accounting_sta_stop(hapd, sta);
 	ieee802_1x_free_station(sta);
-	hapd->drv.sta_remove(hapd, sta->addr);
+	hostapd_drv_sta_remove(hapd, sta->addr);
 
 	if (sta->timeout_next == STA_NULLFUNC ||
 	    sta->timeout_next == STA_DISASSOC) {
@@ -1644,7 +1644,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	 * cleared and configuration gets updated in case of reassociation back
 	 * to the same AP.
 	 */
-	hapd->drv.sta_remove(hapd, sta->addr);
+	hostapd_drv_sta_remove(hapd, sta->addr);
 
 #ifdef CONFIG_IEEE80211N
 	if (sta->flags & WLAN_STA_HT)
@@ -1805,11 +1805,11 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 	wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated STA "
 		   MACSTR, MAC2STR(src));
 	if (sta && (sta->flags & WLAN_STA_AUTH))
-		hapd->drv.sta_disassoc(
+		hostapd_drv_sta_disassoc(
 			hapd, src,
 			WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
 	else
-		hapd->drv.sta_deauth(
+		hostapd_drv_sta_deauth(
 			hapd, src,
 			WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA);
 }

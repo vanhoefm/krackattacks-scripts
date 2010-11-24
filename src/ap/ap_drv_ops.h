@@ -77,4 +77,13 @@ static inline int hostapd_drv_send_mlme(struct hostapd_data *hapd,
 	return hapd->driver->send_mlme(hapd->drv_priv, msg, len);
 }
 
+static inline int hostapd_drv_set_countermeasures(struct hostapd_data *hapd,
+						  int enabled)
+{
+	if (hapd->driver == NULL ||
+	    hapd->driver->hapd_set_countermeasures == NULL)
+		return 0;
+	return hapd->driver->hapd_set_countermeasures(hapd->drv_priv, enabled);
+}
+
 #endif /* AP_DRV_OPS */

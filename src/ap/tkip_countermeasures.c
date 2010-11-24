@@ -21,6 +21,7 @@
 #include "sta_info.h"
 #include "ap_mlme.h"
 #include "wpa_auth.h"
+#include "ap_drv_ops.h"
 #include "tkip_countermeasures.h"
 
 
@@ -29,7 +30,7 @@ static void ieee80211_tkip_countermeasures_stop(void *eloop_ctx,
 {
 	struct hostapd_data *hapd = eloop_ctx;
 	hapd->tkip_countermeasures = 0;
-	hapd->drv.set_countermeasures(hapd, 0);
+	hostapd_drv_set_countermeasures(hapd, 0);
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "TKIP countermeasures ended");
 }
@@ -44,7 +45,7 @@ static void ieee80211_tkip_countermeasures_start(struct hostapd_data *hapd)
 
 	wpa_auth_countermeasures_start(hapd->wpa_auth);
 	hapd->tkip_countermeasures = 1;
-	hapd->drv.set_countermeasures(hapd, 1);
+	hostapd_drv_set_countermeasures(hapd, 1);
 	wpa_gtk_rekey(hapd->wpa_auth);
 	eloop_cancel_timeout(ieee80211_tkip_countermeasures_stop, hapd, NULL);
 	eloop_register_timeout(60, 0, ieee80211_tkip_countermeasures_stop,

@@ -1716,10 +1716,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #ifdef CONFIG_AP
 	case EVENT_TX_STATUS:
 		wpa_printf(MSG_DEBUG, "EVENT_TX_STATUS on %s dst=" MACSTR
-			   " type=%d stype=%d pending_dst=" MACSTR,
+			   " type=%d stype=%d",
 			   wpa_s->ifname, MAC2STR(data->tx_status.dst),
-			   data->tx_status.type, data->tx_status.stype,
-			   MAC2STR(wpa_s->parent->pending_action_dst));
+			   data->tx_status.type, data->tx_status.stype);
 		if (wpa_s->ap_iface == NULL) {
 #ifdef CONFIG_P2P
 			if (data->tx_status.type == WLAN_FC_TYPE_MGMT &&
@@ -1735,6 +1734,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #ifdef CONFIG_P2P
+		wpa_printf(MSG_DEBUG, "EVENT_TX_STATUS pending_dst=" MACSTR,
+			   MAC2STR(wpa_s->parent->pending_action_dst));
 		/*
 		 * Catch TX status events for Action frames we sent via group
 		 * interface in GO mode.

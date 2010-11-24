@@ -3305,11 +3305,17 @@ static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 		.msg_controllen = 0,
 		.msg_flags = 0,
 	};
+	int res;
 
 	if (encrypt)
 		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
 
-	return sendmsg(drv->monitor_sock, &msg, 0);
+	res = sendmsg(drv->monitor_sock, &msg, 0);
+	if (res < 0) {
+		wpa_printf(MSG_INFO, "nl80211: sendmsg: %s", strerror(errno));
+		return -1;
+	}
+	return 0;
 }
 
 

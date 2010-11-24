@@ -51,31 +51,12 @@ struct hostapd_frame_info {
 
 struct hostapd_driver_ops {
 	int (*set_ap_wps_ie)(struct hostapd_data *hapd);
-	int (*send_eapol)(struct hostapd_data *hapd, const u8 *addr,
-			  const u8 *data, size_t data_len, int encrypt);
 	int (*set_authorized)(struct hostapd_data *hapd, struct sta_info *sta,
 			      int authorized);
-	int (*set_key)(const char *ifname, struct hostapd_data *hapd,
-		       enum wpa_alg alg, const u8 *addr, int key_idx,
-		       int set_tx, const u8 *seq, size_t seq_len,
-		       const u8 *key, size_t key_len);
-	int (*read_sta_data)(struct hostapd_data *hapd,
-			     struct hostap_sta_driver_data *data,
-			     const u8 *addr);
-	int (*sta_clear_stats)(struct hostapd_data *hapd, const u8 *addr);
 	int (*set_sta_flags)(struct hostapd_data *hapd, struct sta_info *sta);
 	int (*set_drv_ieee8021x)(struct hostapd_data *hapd, const char *ifname,
 				 int enabled);
-	int (*set_radius_acl_auth)(struct hostapd_data *hapd,
-				   const u8 *mac, int accepted,
-				   u32 session_timeout);
-	int (*set_radius_acl_expire)(struct hostapd_data *hapd,
-				     const u8 *mac);
 	int (*set_bss_params)(struct hostapd_data *hapd, int use_protection);
-	int (*set_beacon)(struct hostapd_data *hapd,
-			  const u8 *head, size_t head_len,
-			  const u8 *tail, size_t tail_len, int dtim_period,
-			  int beacon_int);
 	int (*vlan_if_add)(struct hostapd_data *hapd, const char *ifname);
 	int (*vlan_if_remove)(struct hostapd_data *hapd, const char *ifname);
 	int (*set_wds_sta)(struct hostapd_data *hapd, const u8 *addr, int aid,

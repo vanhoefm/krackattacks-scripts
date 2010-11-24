@@ -23,6 +23,7 @@
 #include "ieee802_1x.h"
 #include "ap_config.h"
 #include "sta_info.h"
+#include "ap_drv_ops.h"
 #include "accounting.h"
 
 
@@ -186,7 +187,7 @@ static int accounting_sta_update_stats(struct hostapd_data *hapd,
 				       struct sta_info *sta,
 				       struct hostap_sta_driver_data *data)
 {
-	if (hapd->drv.read_sta_data(hapd, data, sta->addr))
+	if (hostapd_drv_read_sta_data(hapd, data, sta->addr))
 		return -1;
 
 	if (sta->last_rx_bytes > data->rx_bytes)
@@ -249,7 +250,7 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 	time(&sta->acct_session_start);
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
 	sta->acct_input_gigawords = sta->acct_output_gigawords = 0;
-	hapd->drv.sta_clear_stats(hapd, sta->addr);
+	hostapd_drv_sta_clear_stats(hapd, sta->addr);
 
 	if (!hapd->conf->radius->acct_server)
 		return;

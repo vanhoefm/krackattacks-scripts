@@ -502,9 +502,9 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
-	if (hapd->drv.set_beacon(hapd, (u8 *) head, head_len,
-				 tail, tail_len, hapd->conf->dtim_period,
-				 hapd->iconf->beacon_int))
+	if (hostapd_drv_set_beacon(hapd, (u8 *) head, head_len,
+				   tail, tail_len, hapd->conf->dtim_period,
+				   hapd->iconf->beacon_int))
 		wpa_printf(MSG_ERROR, "Failed to set beacon head/tail or DTIM "
 			   "period");
 

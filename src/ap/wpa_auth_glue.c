@@ -230,8 +230,8 @@ static int hostapd_wpa_auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 			return -1;
 	}
 
-	return hapd->drv.set_key(ifname, hapd, alg, addr, idx, 1, NULL, 0,
-				 key, key_len);
+	return hostapd_drv_set_key(ifname, hapd, alg, addr, idx, 1, NULL, 0,
+				   key, key_len);
 }
 
 
@@ -248,7 +248,8 @@ static int hostapd_wpa_auth_send_eapol(void *ctx, const u8 *addr,
 				       int encrypt)
 {
 	struct hostapd_data *hapd = ctx;
-	return hapd->drv.send_eapol(hapd, addr, data, data_len, encrypt);
+	return hostapd_drv_hapd_send_eapol(hapd, addr, data, data_len,
+					   encrypt);
 }
 
 

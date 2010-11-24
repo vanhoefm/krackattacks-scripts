@@ -130,4 +130,77 @@ static inline int hostapd_drv_sta_remove(struct hostapd_data *hapd,
 	return hapd->driver->sta_remove(hapd->drv_priv, addr);
 }
 
+static inline int hostapd_drv_hapd_send_eapol(struct hostapd_data *hapd,
+					      const u8 *addr, const u8 *data,
+					      size_t data_len, int encrypt)
+{
+	if (hapd->driver == NULL || hapd->driver->hapd_send_eapol == NULL)
+		return 0;
+	return hapd->driver->hapd_send_eapol(hapd->drv_priv, addr, data,
+					     data_len, encrypt,
+					     hapd->own_addr);
+}
+
+static inline int hostapd_drv_set_key(const char *ifname,
+				      struct hostapd_data *hapd,
+				      enum wpa_alg alg, const u8 *addr,
+				      int key_idx, int set_tx,
+				      const u8 *seq, size_t seq_len,
+				      const u8 *key, size_t key_len)
+{
+	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
+		return 0;
+	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
+				     key_idx, set_tx, seq, seq_len, key,
+				     key_len);
+}
+
+static inline int hostapd_drv_read_sta_data(
+	struct hostapd_data *hapd, struct hostap_sta_driver_data *data,
+	const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->read_sta_data == NULL)
+		return -1;
+	return hapd->driver->read_sta_data(hapd->drv_priv, data, addr);
+}
+
+static inline int hostapd_drv_sta_clear_stats(struct hostapd_data *hapd,
+					      const u8 *addr)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_clear_stats == NULL)
+		return 0;
+	return hapd->driver->sta_clear_stats(hapd->drv_priv, addr);
+}
+
+static inline int hostapd_drv_set_beacon(struct hostapd_data *hapd,
+					 const u8 *head, size_t head_len,
+					 const u8 *tail, size_t tail_len,
+					 int dtim_period, int beacon_int)
+{
+	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
+		return 0;
+	return hapd->driver->set_beacon(hapd->drv_priv,
+					head, head_len, tail, tail_len,
+					dtim_period, beacon_int);
+}
+
+static inline int hostapd_drv_set_radius_acl_auth(struct hostapd_data *hapd,
+						  const u8 *mac, int accepted,
+						  u32 session_timeout)
+{
+	if (hapd->driver == NULL || hapd->driver->set_radius_acl_auth == NULL)
+		return 0;
+	return hapd->driver->set_radius_acl_auth(hapd->drv_priv, mac, accepted,
+						 session_timeout);
+}
+
+static inline int hostapd_drv_set_radius_acl_expire(struct hostapd_data *hapd,
+						    const u8 *mac)
+{
+	if (hapd->driver == NULL ||
+	    hapd->driver->set_radius_acl_expire == NULL)
+		return 0;
+	return hapd->driver->set_radius_acl_expire(hapd->drv_priv, mac);
+}
+
 #endif /* AP_DRV_OPS */

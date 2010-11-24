@@ -135,8 +135,8 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 	int i;
 
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
-		if (hapd->drv.set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,
-				      i == 0 ? 1 : 0, NULL, 0, NULL, 0)) {
+		if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,
+					i == 0 ? 1 : 0, NULL, 0, NULL, 0)) {
 			wpa_printf(MSG_DEBUG, "Failed to clear default "
 				   "encryption keys (ifname=%s keyidx=%d)",
 				   ifname, i);
@@ -145,9 +145,9 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 #ifdef CONFIG_IEEE80211W
 	if (hapd->conf->ieee80211w) {
 		for (i = NUM_WEP_KEYS; i < NUM_WEP_KEYS + 2; i++) {
-			if (hapd->drv.set_key(ifname, hapd, WPA_ALG_NONE, NULL,
-					      i, i == 0 ? 1 : 0, NULL, 0,
-					      NULL, 0)) {
+			if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_NONE,
+						NULL, i, i == 0 ? 1 : 0, NULL,
+						0, NULL, 0)) {
 				wpa_printf(MSG_DEBUG, "Failed to clear "
 					   "default mgmt encryption keys "
 					   "(ifname=%s keyidx=%d)", ifname, i);
@@ -172,11 +172,11 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 
 	idx = ssid->wep.idx;
 	if (ssid->wep.default_len &&
-	    hapd->drv.set_key(hapd->conf->iface,
-			      hapd, WPA_ALG_WEP, NULL, idx,
-			      idx == ssid->wep.idx,
-			      NULL, 0, ssid->wep.key[idx],
-			      ssid->wep.len[idx])) {
+	    hostapd_drv_set_key(hapd->conf->iface,
+				hapd, WPA_ALG_WEP, NULL, idx,
+				idx == ssid->wep.idx,
+				NULL, 0, ssid->wep.key[idx],
+				ssid->wep.len[idx])) {
 		wpa_printf(MSG_WARNING, "Could not set WEP encryption.");
 		errors++;
 	}
@@ -194,9 +194,10 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 				continue;
 
 			idx = key->idx;
-			if (hapd->drv.set_key(ifname, hapd, WPA_ALG_WEP, NULL,
-					      idx, idx == key->idx, NULL, 0,
-					      key->key[idx], key->len[idx])) {
+			if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_WEP,
+						NULL, idx, idx == key->idx,
+						NULL, 0, key->key[idx],
+						key->len[idx])) {
 				wpa_printf(MSG_WARNING, "Could not set "
 					   "dynamic VLAN WEP encryption.");
 				errors++;
@@ -303,10 +304,10 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 
 	for (i = 0; i < 4; i++) {
 		if (hapd->conf->ssid.wep.key[i] &&
-		    hapd->drv.set_key(iface, hapd, WPA_ALG_WEP, NULL, i,
-				      i == hapd->conf->ssid.wep.idx, NULL, 0,
-				      hapd->conf->ssid.wep.key[i],
-				      hapd->conf->ssid.wep.len[i])) {
+		    hostapd_drv_set_key(iface, hapd, WPA_ALG_WEP, NULL, i,
+					i == hapd->conf->ssid.wep.idx, NULL, 0,
+					hapd->conf->ssid.wep.key[i],
+					hapd->conf->ssid.wep.len[i])) {
 			wpa_printf(MSG_WARNING, "Could not set WEP "
 				   "encryption.");
 			return -1;

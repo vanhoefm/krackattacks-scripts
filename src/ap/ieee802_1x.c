@@ -34,6 +34,7 @@
 #include "preauth_auth.h"
 #include "pmksa_cache_auth.h"
 #include "ap_config.h"
+#include "ap_drv_ops.h"
 #include "ieee802_1x.h"
 
 
@@ -71,7 +72,8 @@ static void ieee802_1x_send(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta->flags & WLAN_STA_PREAUTH) {
 		rsn_preauth_send(hapd, sta, buf, len);
 	} else {
-		hapd->drv.send_eapol(hapd, sta->addr, buf, len, encrypt);
+		hostapd_drv_hapd_send_eapol(hapd, sta->addr, buf, len,
+					    encrypt);
 	}
 
 	os_free(buf);
@@ -230,8 +232,9 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 	wpa_hexdump_key(MSG_DEBUG, "Default WEP key (dynamic VLAN)",
 			key->key[key->idx], key->len[key->idx]);
 
-	if (hapd->drv.set_key(ifname, hapd, WPA_ALG_WEP, NULL, key->idx, 1,
-			      NULL, 0, key->key[key->idx], key->len[key->idx]))
+	if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_WEP, NULL, key->idx, 1,
+				NULL, 0, key->key[key->idx],
+				key->len[key->idx]))
 		printf("Could not set dynamic VLAN WEP encryption key.\n");
 
 	hapd->drv.set_drv_ieee8021x(hapd, ifname, 1);
@@ -347,9 +350,9 @@ void ieee802_1x_tx_key(struct hostapd_data *hapd, struct sta_info *sta)
 
 		/* TODO: set encryption in TX callback, i.e., only after STA
 		 * has ACKed EAPOL-Key frame */
-		if (hapd->drv.set_key(hapd->conf->iface, hapd, WPA_ALG_WEP,
-				      sta->addr, 0, 1, NULL, 0, ikey,
-				      hapd->conf->individual_wep_key_len)) {
+		if (hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP,
+					sta->addr, 0, 1, NULL, 0, ikey,
+					hapd->conf->individual_wep_key_len)) {
 			wpa_printf(MSG_ERROR, "Could not set individual WEP "
 				   "encryption.");
 		}
@@ -1438,10 +1441,10 @@ static void ieee802_1x_rekey(void *eloop_ctx, void *timeout_ctx)
 
 	/* TODO: Could setup key for RX here, but change default TX keyid only
 	 * after new broadcast key has been sent to all stations. */
-	if (hapd->drv.set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
-			      eapol->default_wep_key_idx, 1, NULL, 0,
-			      eapol->default_wep_key,
-			      hapd->conf->default_wep_key_len)) {
+	if (hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
+				eapol->default_wep_key_idx, 1, NULL, 0,
+				eapol->default_wep_key,
+				hapd->conf->default_wep_key_len)) {
 		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_WARNING, "failed to configure a "
 			       "new broadcast key");
@@ -1688,9 +1691,9 @@ int ieee802_1x_init(struct hostapd_data *hapd)
 
 	if (hapd->conf->default_wep_key_len) {
 		for (i = 0; i < 4; i++)
-			hapd->drv.set_key(hapd->conf->iface, hapd,
-					  WPA_ALG_NONE, NULL, i, 0, NULL, 0,
-					  NULL, 0);
+			hostapd_drv_set_key(hapd->conf->iface, hapd,
+					    WPA_ALG_NONE, NULL, i, 0, NULL, 0,
+					    NULL, 0);
 
 		ieee802_1x_rekey(hapd, NULL);
 

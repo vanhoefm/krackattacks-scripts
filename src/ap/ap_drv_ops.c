@@ -157,17 +157,6 @@ static int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 }
 
 
-static int hostapd_send_eapol(struct hostapd_data *hapd, const u8 *addr,
-			      const u8 *data, size_t data_len, int encrypt)
-{
-	if (hapd->driver == NULL || hapd->driver->hapd_send_eapol == NULL)
-		return 0;
-	return hapd->driver->hapd_send_eapol(hapd->drv_priv, addr, data,
-					     data_len, encrypt,
-					     hapd->own_addr);
-}
-
-
 static int hostapd_set_authorized(struct hostapd_data *hapd,
 				  struct sta_info *sta, int authorized)
 {
@@ -181,37 +170,6 @@ static int hostapd_set_authorized(struct hostapd_data *hapd,
 	return hostapd_sta_set_flags(hapd, sta->addr,
 				     hostapd_sta_flags_to_drv(sta->flags),
 				     0, ~WPA_STA_AUTHORIZED);
-}
-
-
-static int hostapd_set_key(const char *ifname, struct hostapd_data *hapd,
-			   enum wpa_alg alg, const u8 *addr, int key_idx,
-			   int set_tx, const u8 *seq, size_t seq_len,
-			   const u8 *key, size_t key_len)
-{
-	if (hapd->driver == NULL || hapd->driver->set_key == NULL)
-		return 0;
-	return hapd->driver->set_key(ifname, hapd->drv_priv, alg, addr,
-				     key_idx, set_tx, seq, seq_len, key,
-				     key_len);
-}
-
-
-static int hostapd_read_sta_data(struct hostapd_data *hapd,
-				 struct hostap_sta_driver_data *data,
-				 const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->read_sta_data == NULL)
-		return -1;
-	return hapd->driver->read_sta_data(hapd->drv_priv, data, addr);
-}
-
-
-static int hostapd_sta_clear_stats(struct hostapd_data *hapd, const u8 *addr)
-{
-	if (hapd->driver == NULL || hapd->driver->sta_clear_stats == NULL)
-		return 0;
-	return hapd->driver->sta_clear_stats(hapd->drv_priv, addr);
 }
 
 
@@ -248,27 +206,6 @@ static int hostapd_set_drv_ieee8021x(struct hostapd_data *hapd,
 		params.rsn_preauth = hapd->conf->rsn_preauth;
 	}
 	return hostapd_set_ieee8021x(hapd, &params);
-}
-
-
-static int hostapd_set_radius_acl_auth(struct hostapd_data *hapd,
-				       const u8 *mac, int accepted,
-				       u32 session_timeout)
-{
-	if (hapd->driver == NULL || hapd->driver->set_radius_acl_auth == NULL)
-		return 0;
-	return hapd->driver->set_radius_acl_auth(hapd->drv_priv, mac, accepted,
-						 session_timeout);
-}
-
-
-static int hostapd_set_radius_acl_expire(struct hostapd_data *hapd,
-					 const u8 *mac)
-{
-	if (hapd->driver == NULL ||
-	    hapd->driver->set_radius_acl_expire == NULL)
-		return 0;
-	return hapd->driver->set_radius_acl_expire(hapd->drv_priv, mac);
 }
 
 
@@ -341,19 +278,6 @@ static int hostapd_set_bss_params(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_set_beacon(struct hostapd_data *hapd,
-			      const u8 *head, size_t head_len,
-			      const u8 *tail, size_t tail_len, int dtim_period,
-			      int beacon_int)
-{
-	if (hapd->driver == NULL || hapd->driver->set_beacon == NULL)
-		return 0;
-	return hapd->driver->set_beacon(hapd->drv_priv,
-					head, head_len, tail, tail_len,
-					dtim_period, beacon_int);
-}
-
-
 static int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
 {
 	char force_ifname[IFNAMSIZ];
@@ -412,17 +336,10 @@ static int hostapd_sta_add(struct hostapd_data *hapd,
 void hostapd_set_driver_ops(struct hostapd_driver_ops *ops)
 {
 	ops->set_ap_wps_ie = hostapd_set_ap_wps_ie;
-	ops->send_eapol = hostapd_send_eapol;
 	ops->set_authorized = hostapd_set_authorized;
-	ops->set_key = hostapd_set_key;
-	ops->read_sta_data = hostapd_read_sta_data;
-	ops->sta_clear_stats = hostapd_sta_clear_stats;
 	ops->set_sta_flags = hostapd_set_sta_flags;
 	ops->set_drv_ieee8021x = hostapd_set_drv_ieee8021x;
-	ops->set_radius_acl_auth = hostapd_set_radius_acl_auth;
-	ops->set_radius_acl_expire = hostapd_set_radius_acl_expire;
 	ops->set_bss_params = hostapd_set_bss_params;
-	ops->set_beacon = hostapd_set_beacon;
 	ops->vlan_if_add = hostapd_vlan_if_add;
 	ops->vlan_if_remove = hostapd_vlan_if_remove;
 	ops->set_wds_sta = hostapd_set_wds_sta;

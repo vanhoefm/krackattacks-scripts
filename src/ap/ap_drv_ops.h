@@ -66,4 +66,15 @@ struct wpa_scan_results * hostapd_driver_get_scan_results(
 int hostapd_driver_set_noa(struct hostapd_data *hapd, u8 count, int start,
 			   int duration);
 
+
+#include "drivers/driver.h"
+
+static inline int hostapd_drv_send_mlme(struct hostapd_data *hapd,
+					const void *msg, size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
+		return 0;
+	return hapd->driver->send_mlme(hapd->drv_priv, msg, len);
+}
+
 #endif /* AP_DRV_OPS */

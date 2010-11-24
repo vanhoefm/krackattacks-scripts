@@ -51,8 +51,6 @@ struct hostapd_frame_info {
 
 struct hostapd_driver_ops {
 	int (*set_ap_wps_ie)(struct hostapd_data *hapd);
-	int (*send_mgmt_frame)(struct hostapd_data *hapd, const void *msg,
-			       size_t len);
 	int (*send_eapol)(struct hostapd_data *hapd, const u8 *addr,
 			  const u8 *data, size_t data_len, int encrypt);
 	int (*set_authorized)(struct hostapd_data *hapd, struct sta_info *sta,

@@ -39,6 +39,7 @@
 #include "ap_config.h"
 #include "ap_mlme.h"
 #include "p2p_hostapd.h"
+#include "ap_drv_ops.h"
 #include "ieee802_11.h"
 
 
@@ -284,7 +285,7 @@ static void send_auth_reply(struct hostapd_data *hapd,
 		   " auth_alg=%d auth_transaction=%d resp=%d (IE len=%lu)",
 		   MAC2STR(dst), auth_alg, auth_transaction,
 		   resp, (unsigned long) ies_len);
-	if (hapd->drv.send_mgmt_frame(hapd, reply, rlen) < 0)
+	if (hostapd_drv_send_mlme(hapd, reply, rlen) < 0)
 		perror("send_auth_reply: send");
 
 	os_free(buf);
@@ -809,7 +810,7 @@ static void send_deauth(struct hostapd_data *hapd, const u8 *addr,
 	send_len = IEEE80211_HDRLEN + sizeof(reply.u.deauth);
 	reply.u.deauth.reason_code = host_to_le16(reason_code);
 
-	if (hapd->drv.send_mgmt_frame(hapd, &reply, send_len) < 0)
+	if (hostapd_drv_send_mlme(hapd, &reply, send_len) < 0)
 		wpa_printf(MSG_INFO, "Failed to send deauth: %s",
 			   strerror(errno));
 }
@@ -912,7 +913,7 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	send_len += p - reply->u.assoc_resp.variable;
 
-	if (hapd->drv.send_mgmt_frame(hapd, reply, send_len) < 0)
+	if (hostapd_drv_send_mlme(hapd, reply, send_len) < 0)
 		wpa_printf(MSG_INFO, "Failed to send assoc resp: %s",
 			   strerror(errno));
 }
@@ -1222,7 +1223,7 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 	os_memcpy(mgmt.u.action.u.sa_query_req.trans_id, trans_id,
 		  WLAN_SA_QUERY_TR_ID_LEN);
 	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hapd->drv.send_mgmt_frame(hapd, &mgmt, end - (u8 *) &mgmt) < 0)
+	if (hostapd_drv_send_mlme(hapd, &mgmt, end - (u8 *) &mgmt) < 0)
 		perror("ieee802_11_send_sa_query_req: send");
 }
 
@@ -1262,7 +1263,7 @@ static void hostapd_sa_query_request(struct hostapd_data *hapd,
 		  mgmt->u.action.u.sa_query_req.trans_id,
 		  WLAN_SA_QUERY_TR_ID_LEN);
 	end = resp.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hapd->drv.send_mgmt_frame(hapd, &resp, end - (u8 *) &resp) < 0)
+	if (hostapd_drv_send_mlme(hapd, &resp, end - (u8 *) &resp) < 0)
 		perror("hostapd_sa_query_request: send");
 }
 
@@ -1433,7 +1434,7 @@ static void handle_action(struct hostapd_data *hapd,
 		os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);
 		resp->u.action.category |= 0x80;
 
-		hapd->drv.send_mgmt_frame(hapd, resp, len);
+		hostapd_drv_send_mlme(hapd, resp, len);
 		os_free(resp);
 	}
 }

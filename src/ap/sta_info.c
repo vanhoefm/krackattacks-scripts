@@ -32,6 +32,7 @@
 #include "ap_mlme.h"
 #include "vlan_init.h"
 #include "p2p_hostapd.h"
+#include "ap_drv_ops.h"
 #include "sta_info.h"
 
 static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
@@ -335,7 +336,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			  ETH_ALEN);
 		os_memcpy(hdr.IEEE80211_SA_FROMDS, hapd->own_addr, ETH_ALEN);
 
-		if (hapd->drv.send_mgmt_frame(hapd, &hdr, sizeof(hdr)) < 0)
+		if (hostapd_drv_send_mlme(hapd, &hdr, sizeof(hdr)) < 0)
 			perror("ap_handle_timer: send");
 #endif /* CONFIG_NATIVE_WINDOWS */
 	} else if (sta->timeout_next != STA_REMOVE) {

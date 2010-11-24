@@ -21,6 +21,7 @@
 #include "common/wpa_ctrl.h"
 #include "ap/hostapd.h"
 #include "ap/ap_config.h"
+#include "ap/ap_drv_ops.h"
 #ifdef NEED_AP_MLME
 #include "ap/ieee802_11.h"
 #endif /* NEED_AP_MLME */
@@ -786,7 +787,7 @@ int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
 
 	ieee802_11_set_beacons(iface);
 	hapd = iface->bss[0];
-	hapd->drv.set_ap_wps_ie(hapd);
+	hostapd_set_ap_wps_ie(hapd);
 
 	return 0;
 }

@@ -29,6 +29,9 @@
  */
 
 #include "utils/includes.h"
+#ifdef __linux__
+#include <fcntl.h>
+#endif /* __linux__ */
 
 #include "utils/common.h"
 #include "sha1.h"
@@ -42,14 +45,18 @@
 #define POOL_TAP4 7
 #define POOL_TAP5 1
 #define EXTRACT_LEN 16
+#define MIN_READY_MARK 2
 
 static u32 pool[POOL_WORDS];
 static unsigned int input_rotate = 0;
 static unsigned int pool_pos = 0;
-static const u8 dummy_key[20];
+static u8 dummy_key[20];
+static size_t dummy_key_avail = 0;
+static unsigned int own_pool_ready = 0;
 
 #define MIN_COLLECT_ENTROPY 1000
 static unsigned int entropy = 0;
+static unsigned int total_collected = 0;
 
 
 static u32 __ROL32(u32 x, u32 y)
@@ -135,6 +142,7 @@ void random_add_randomness(const void *buf, size_t len)
 	wpa_hexdump_key(MSG_EXCESSIVE, "random pool",
 			(const u8 *) pool, sizeof(pool));
 	entropy++;
+	total_collected++;
 }
 
 
@@ -173,4 +181,78 @@ int random_get_bytes(void *buf, size_t len)
 		entropy -= len;
 
 	return ret;
+}
+
+
+int random_pool_ready(void)
+{
+#ifdef __linux__
+	int fd;
+	ssize_t res;
+
+	/*
+	 * Make sure that there is reasonable entropy available before allowing
+	 * some key derivation operations to proceed.
+	 */
+
+	if (dummy_key_avail == sizeof(dummy_key))
+		return 1; /* Already initialized - good to continue */
+
+	/*
+	 * Try to fetch some more data from the kernel high quality
+	 * /dev/random. There may not be enough data available at this point,
+	 * so use non-blocking read to avoid blocking the application
+	 * completely.
+	 */
+	fd = open("/dev/random", O_RDONLY | O_NONBLOCK);
+	if (fd < 0) {
+		int error = errno;
+		perror("open(/dev/random)");
+		wpa_printf(MSG_ERROR, "random: Cannot open /dev/random: %s",
+			   strerror(error));
+		return -1;
+	}
+
+	res = read(fd, dummy_key + dummy_key_avail,
+		   sizeof(dummy_key) - dummy_key_avail);
+	if (res < 0) {
+		wpa_printf(MSG_ERROR, "random: Cannot read from /dev/random: "
+			   "%s", strerror(errno));
+		res = 0;
+	}
+	wpa_printf(MSG_DEBUG, "random: Got %u/%u bytes from "
+		   "/dev/random", (unsigned) res,
+		   (unsigned) (sizeof(dummy_key) - dummy_key_avail));
+	dummy_key_avail += res;
+	close(fd);
+
+	if (dummy_key_avail == sizeof(dummy_key))
+		return 1;
+
+	wpa_printf(MSG_INFO, "random: Only %u/%u bytes of strong "
+		   "random data available from /dev/random",
+		   (unsigned) dummy_key_avail, (unsigned) sizeof(dummy_key));
+
+	if (own_pool_ready >= MIN_READY_MARK ||
+	    total_collected + 10 * own_pool_ready > MIN_COLLECT_ENTROPY) {
+		wpa_printf(MSG_INFO, "random: Allow operation to proceed "
+			   "based on internal entropy");
+		return 1;
+	}
+
+	wpa_printf(MSG_INFO, "random: Not enough entropy pool available for "
+		   "secure operations");
+	return 0;
+#else /* __linux__ */
+	/* TODO: could do similar checks on non-Linux platforms */
+	return 1;
+#endif /* __linux__ */
+}
+
+
+void random_mark_pool_ready(void)
+{
+	own_pool_ready++;
+	wpa_printf(MSG_DEBUG, "random: Mark internal entropy pool to be "
+		   "ready (count=%u/%u)", own_pool_ready, MIN_READY_MARK);
 }

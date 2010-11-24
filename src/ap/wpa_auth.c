@@ -345,6 +345,12 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
 
 	wpa_group_set_key_len(group, wpa_auth->conf.wpa_group);
 
+	if (random_pool_ready() != 1) {
+		wpa_printf(MSG_INFO, "WPA: Not enough entropy in random pool "
+			   "for secure operations - update keys later when "
+			   "the first station connects");
+	}
+
 	/*
 	 * Set initial GMK/Counter value here. The actual values that will be
 	 * used in negotiations will be set once the first station tries to
@@ -825,6 +831,25 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			return;
 		}
 		random_add_randomness(key->key_nonce, WPA_NONCE_LEN);
+		if (sm->group->reject_4way_hs_for_entropy) {
+			/*
+			 * The system did not have enough entropy to generate
+			 * strong random numbers. Reject the first 4-way
+			 * handshake(s) and collect some entropy based on the
+			 * information from it. Once enough entropy is
+			 * available, the next atempt will trigger GMK/Key
+			 * Counter update and the station will be allowed to
+			 * continue.
+			 */
+			wpa_printf(MSG_DEBUG, "WPA: Reject 4-way handshake to "
+				   "collect more entropy for random number "
+				   "generation");
+			sm->group->reject_4way_hs_for_entropy = FALSE;
+			random_mark_pool_ready();
+			sm->group->first_sta_seen = FALSE;
+			wpa_sta_disconnect(wpa_auth, sm->addr);
+			return;
+		}
 		if (wpa_parse_kde_ies((u8 *) (key + 1), key_data_length,
 				      &kde) < 0) {
 			wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
@@ -1465,6 +1490,11 @@ static void wpa_group_first_station(struct wpa_authenticator *wpa_auth,
 	 */
 	wpa_printf(MSG_DEBUG, "WPA: Re-initialize GMK/Counter on first "
 		   "station");
+	if (random_pool_ready() != 1) {
+		wpa_printf(MSG_INFO, "WPA: Not enough entropy in random pool "
+			   "to proceed - reject first 4-way handshake");
+		group->reject_4way_hs_for_entropy = TRUE;
+	}
 	wpa_group_init_gmk_and_counter(wpa_auth, group);
 	wpa_gtk_update(wpa_auth, group);
 	wpa_group_config_group_keys(wpa_auth, group);

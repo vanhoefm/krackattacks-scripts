@@ -1747,7 +1747,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				wpa_s->parent, data->tx_status.dst,
 				data->tx_status.data,
 				data->tx_status.data_len,
-				data->tx_status.ack);
+				data->tx_status.ack ?
+				P2P_SEND_ACTION_SUCCESS :
+				P2P_SEND_ACTION_NO_ACK);
 			break;
 		}
 #endif /* CONFIG_P2P */

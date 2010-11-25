@@ -206,10 +206,12 @@ int random_pool_ready(void)
 	 */
 	fd = open("/dev/random", O_RDONLY | O_NONBLOCK);
 	if (fd < 0) {
+#ifndef CONFIG_NO_STDOUT_DEBUG
 		int error = errno;
 		perror("open(/dev/random)");
 		wpa_printf(MSG_ERROR, "random: Cannot open /dev/random: %s",
 			   strerror(error));
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 		return -1;
 	}
 

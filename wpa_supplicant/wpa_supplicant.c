@@ -433,6 +433,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_P2P
 	wpas_p2p_deinit(wpa_s);
 #endif /* CONFIG_P2P */
+
+	os_free(wpa_s->next_scan_freqs);
+	wpa_s->next_scan_freqs = NULL;
 }
 
 

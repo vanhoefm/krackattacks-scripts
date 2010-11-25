@@ -33,9 +33,30 @@
 #include "scan.h"
 #include "sme.h"
 
-static int sme_another_bss_in_ess(struct wpa_supplicant *wpa_s)
+static void add_freq(int *freqs, int *num_freqs, int freq)
+{
+	int i;
+
+	for (i = 0; i < *num_freqs; i++) {
+		if (freqs[i] == freq)
+			return;
+	}
+
+	freqs[*num_freqs] = freq;
+	(*num_freqs)++;
+}
+
+
+static int * sme_another_bss_in_ess(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *cbss;
+	const int max_freqs = 10;
+	int *freqs;
+	int num_freqs = 0;
+
+	freqs = os_zalloc(sizeof(int) * (max_freqs + 1));
+	if (freqs == NULL)
+		return NULL;
 
 	cbss = wpa_s->current_bss;
 
@@ -44,11 +65,19 @@ static int sme_another_bss_in_ess(struct wpa_supplicant *wpa_s)
 			continue;
 		if (bss->ssid_len == cbss->ssid_len &&
 		    os_memcmp(bss->ssid, cbss->ssid, bss->ssid_len) == 0 &&
-		    wpa_blacklist_get(wpa_s, bss->bssid) == NULL)
-			return 1;
+		    wpa_blacklist_get(wpa_s, bss->bssid) == NULL) {
+			add_freq(freqs, &num_freqs, bss->freq);
+			if (num_freqs == max_freqs)
+				break;
+		}
 	}
 
-	return 0;
+	if (num_freqs == 0) {
+		os_free(freqs);
+		freqs = NULL;
+	}
+
+	return freqs;
 }
 
 
@@ -57,6 +86,7 @@ static void sme_connection_failed(struct wpa_supplicant *wpa_s,
 {
 	int timeout;
 	int count;
+	int *freqs = NULL;
 
 	/*
 	 * Add the failed BSSID into the blacklist and speed up next scan
@@ -74,10 +104,18 @@ static void sme_connection_failed(struct wpa_supplicant *wpa_s,
 		 * next. Otherwise, we may as well try this one once more
 		 * before allowing other, likely worse, ESSes to be considered.
 		 */
-		if (sme_another_bss_in_ess(wpa_s)) {
+		freqs = sme_another_bss_in_ess(wpa_s);
+		if (freqs) {
 			wpa_printf(MSG_DEBUG, "SME: Another BSS in this ESS "
 				   "has been seen; try it next");
 			wpa_blacklist_add(wpa_s, bssid);
+			/*
+			 * On the next scan, go through only the known channels
+			 * used in this ESS based on previous scans to speed up
+			 * common load balancing use case.
+			 */
+			os_free(wpa_s->next_scan_freqs);
+			wpa_s->next_scan_freqs = freqs;
 		}
 	}
 

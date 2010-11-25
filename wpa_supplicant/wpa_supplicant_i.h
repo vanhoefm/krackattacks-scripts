@@ -404,6 +404,7 @@ struct wpa_supplicant {
 	int scan_req; /* manual scan request; this forces a scan even if there
 		       * are no enabled networks in the configuration */
 	int scan_runs; /* number of scan runs since WPS was started */
+	int *next_scan_freqs;
 
 	struct wpa_client_mlme mlme;
 	unsigned int drv_flags;

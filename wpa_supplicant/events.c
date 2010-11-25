@@ -121,6 +121,7 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 	wpa_s->current_bss = NULL;
+	wpa_s->assoc_freq = 0;
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);
 

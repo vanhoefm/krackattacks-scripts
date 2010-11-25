@@ -648,6 +648,9 @@ OBJS += ../src/eapol_auth/eapol_auth_sm.o
 OBJS += ../src/ap/ieee802_11_auth.o
 OBJS += ../src/ap/drv_callbacks.o
 OBJS += ../src/ap/ap_drv_ops.o
+ifdef CONFIG_IEEE80211N
+OBJS += ../src/ap/ieee802_11_ht.o
+endif
 ifdef CONFIG_CTRL_IFACE
 OBJS += ../src/ap/ctrl_iface_ap.o
 endif
@@ -667,9 +670,6 @@ OBJS += ../src/ap/wmm.o
 OBJS += ../src/ap/ap_list.o
 OBJS += ../src/ap/ieee802_11.o
 OBJS += ../src/ap/hw_features.o
-ifdef CONFIG_IEEE80211N
-OBJS += ../src/ap/ieee802_11_ht.o
-endif
 CFLAGS += -DNEED_AP_MLME
 endif
 ifdef CONFIG_WPS

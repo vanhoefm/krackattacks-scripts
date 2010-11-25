@@ -43,7 +43,9 @@
 #include "ap/sta_info.h"
 
 
+#ifdef CONFIG_WPS
 static void wpas_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
+#endif /* CONFIG_WPS */
 
 
 static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
@@ -436,7 +438,9 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 
 void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 {
+#ifdef CONFIG_WPS
 	eloop_cancel_timeout(wpas_wps_ap_pin_timeout, wpa_s, NULL);
+#endif /* CONFIG_WPS */
 
 	if (wpa_s->ap_iface == NULL)
 		return;

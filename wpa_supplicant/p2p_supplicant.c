@@ -3985,3 +3985,18 @@ void wpas_p2p_update_best_channels(struct wpa_supplicant *wpa_s,
 		return;
 	p2p_set_best_channels(p2p, freq_24, freq_5, freq_overall);
 }
+
+
+int wpas_p2p_unauthorize(struct wpa_supplicant *wpa_s, const char *addr)
+{
+	u8 peer[ETH_ALEN];
+	struct p2p_data *p2p = wpa_s->global->p2p;
+
+	if (p2p == NULL || (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT))
+		return -1;
+
+	if (hwaddr_aton(addr, peer))
+		return -1;
+
+	return p2p_unauthorize(p2p, peer);
+}

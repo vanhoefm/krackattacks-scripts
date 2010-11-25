@@ -120,5 +120,6 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s);
 void wpas_p2p_interface_unavailable(struct wpa_supplicant *wpa_s);
 void wpas_p2p_update_best_channels(struct wpa_supplicant *wpa_s,
 				   int freq_24, int freq_5, int freq_overall);
+int wpas_p2p_unauthorize(struct wpa_supplicant *wpa_s, const char *addr);
 
 #endif /* P2P_SUPPLICANT_H */

@@ -1925,6 +1925,35 @@ void p2p_flush(struct p2p_data *p2p)
 }
 
 
+int p2p_unauthorize(struct p2p_data *p2p, const u8 *addr)
+{
+	struct p2p_device *dev;
+
+	dev = p2p_get_device(p2p, addr);
+	if (dev == NULL)
+		return -1;
+
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Unauthorizing " MACSTR,
+		MAC2STR(addr));
+
+	if (p2p->go_neg_peer == dev)
+		p2p->go_neg_peer = NULL;
+
+	dev->wps_method = WPS_NOT_READY;
+	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_RESPONSE;
+	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_CONFIRM;
+
+	/* Check if after_scan_tx is for this peer. If so free it */
+	if (p2p->after_scan_tx &&
+	    os_memcmp(addr, p2p->after_scan_tx->dst, ETH_ALEN) == 0) {
+		os_free(p2p->after_scan_tx);
+		p2p->after_scan_tx = NULL;
+	}
+
+	return 0;
+}
+
+
 int p2p_set_dev_name(struct p2p_data *p2p, const char *dev_name)
 {
 	os_free(p2p->cfg->dev_name);

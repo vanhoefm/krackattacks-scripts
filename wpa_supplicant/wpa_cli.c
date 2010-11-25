@@ -2044,6 +2044,28 @@ static int wpa_cli_cmd_p2p_cancel(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_p2p_unauthorize(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid P2P_UNAUTHORIZE command: needs one argument "
+		       "(peer address)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "P2P_UNAUTHORIZE %s", argv[0]);
+
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_p2p_presence_req(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -2407,6 +2429,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "= flush P2P state" },
 	{ "p2p_cancel", wpa_cli_cmd_p2p_cancel, cli_cmd_flag_none,
 	  "= cancel P2P group formation" },
+	{ "p2p_unauthorize", wpa_cli_cmd_p2p_unauthorize, cli_cmd_flag_none,
+	  "<address> = unauthorize a peer" },
 	{ "p2p_presence_req", wpa_cli_cmd_p2p_presence_req, cli_cmd_flag_none,
 	  "[<duration> <interval>] [<duration> <interval>] = request GO "
 	  "presence" },

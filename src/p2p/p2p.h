@@ -617,6 +617,19 @@ void p2p_deinit(struct p2p_data *p2p);
 void p2p_flush(struct p2p_data *p2p);
 
 /**
+ * p2p_unauthorize - Unauthorize the specified peer device
+ * @p2p: P2P module context from p2p_init()
+ * @addr: P2P peer entry to be unauthorized
+ * Returns: 0 on success, -1 on failure
+ *
+ * This command removes any connection authorization from the specified P2P
+ * peer device address. This can be used, e.g., to cancel effect of a previous
+ * p2p_authorize() or p2p_connect() call that has not yet resulted in completed
+ * GO Negotiation.
+ */
+int p2p_unauthorize(struct p2p_data *p2p, const u8 *addr);
+
+/**
  * p2p_set_dev_name - Set device name
  * @p2p: P2P module context from p2p_init()
  * Returns: 0 on success, -1 on failure

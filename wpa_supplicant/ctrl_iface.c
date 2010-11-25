@@ -2990,6 +2990,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 		wpa_s->force_long_sd = 0;
 		p2p_flush(wpa_s->global->p2p);
+	} else if (os_strncmp(buf, "P2P_UNAUTHORIZE ", 16) == 0) {
+		if (wpas_p2p_unauthorize(wpa_s, buf + 16) < 0)
+			reply_len = -1;
 	} else if (os_strcmp(buf, "P2P_CANCEL") == 0) {
 		if (wpas_p2p_cancel(wpa_s))
 			reply_len = -1;

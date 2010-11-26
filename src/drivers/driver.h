@@ -1924,6 +1924,19 @@ struct wpa_driver_ops {
 	 * set_intra_bss - Enables/Disables intra BSS bridging
 	 */
 	int (*set_intra_bss)(void *priv, int enabled);
+
+	/**
+	 * get_radio_name - Get physical radio name for the device
+	 * @priv: Private driver interface data
+	 * Returns: Radio name or %NULL if not known
+	 *
+	 * The returned data must not be modified by the caller. It is assumed
+	 * that any interface that has the same radio name as another is
+	 * sharing the same physical radio. This information can be used to
+	 * share scan results etc. information between the virtual interfaces
+	 * to speed up various operations.
+	 */
+	const char * (*get_radio_name)(void *priv);
 };
 
 

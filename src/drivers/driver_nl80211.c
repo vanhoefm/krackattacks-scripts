@@ -18,6 +18,9 @@
 
 #include "includes.h"
 #include <sys/ioctl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <net/if.h>
 #include <netlink/genl/genl.h>
 #include <netlink/genl/family.h>
@@ -116,6 +119,7 @@ struct wpa_driver_nl80211_data {
 	struct nl80211_global *global;
 	struct dl_list list;
 	u8 addr[ETH_ALEN];
+	char phyname[32];
 	void *ctx;
 	struct netlink_data *netlink;
 	int ioctl_sock; /* socket for ioctl() use */
@@ -1654,6 +1658,39 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
 }
 
 
+static void nl80211_get_phy_name(struct wpa_driver_nl80211_data *drv)
+{
+	/* Find phy (radio) to which this interface belongs */
+	char buf[90], *pos;
+	int f, rv;
+
+	drv->phyname[0] = '\0';
+	snprintf(buf, sizeof(buf) - 1, "/sys/class/net/%s/phy80211/name",
+		 drv->first_bss.ifname);
+	f = open(buf, O_RDONLY);
+	if (f < 0) {
+		wpa_printf(MSG_DEBUG, "Could not open file %s: %s",
+			   buf, strerror(errno));
+		return;
+	}
+
+	rv = read(f, drv->phyname, sizeof(drv->phyname) - 1);
+	close(f);
+	if (rv < 0) {
+		wpa_printf(MSG_DEBUG, "Could not read file %s: %s",
+			   buf, strerror(errno));
+		return;
+	}
+
+	drv->phyname[rv] = '\0';
+	pos = os_strchr(drv->phyname, '\n');
+	if (pos)
+		*pos = '\0';
+	wpa_printf(MSG_DEBUG, "nl80211: interface %s in phy %s",
+		   drv->first_bss.ifname, drv->phyname);
+}
+
+
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -1688,6 +1725,8 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 		os_free(drv);
 		return NULL;
 	}
+
+	nl80211_get_phy_name(drv);
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
 	if (drv->ioctl_sock < 0) {
@@ -6095,6 +6134,14 @@ static void nl80211_global_deinit(void *priv)
 }
 
 
+static const char * nl80211_get_radio_name(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	return drv->phyname;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -6158,4 +6205,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.send_frame = nl80211_send_frame,
 	.set_intra_bss = nl80211_set_intra_bss,
 	.set_param = nl80211_set_param,
+	.get_radio_name = nl80211_get_radio_name,
 };

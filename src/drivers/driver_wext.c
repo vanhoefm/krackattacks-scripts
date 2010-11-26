@@ -20,7 +20,9 @@
 
 #include "includes.h"
 #include <sys/ioctl.h>
+#include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <net/if_arp.h>
 
 #include "wireless_copy.h"
@@ -724,6 +726,39 @@ static void wpa_driver_wext_rfkill_unblocked(void *ctx)
 }
 
 
+static void wext_get_phy_name(struct wpa_driver_wext_data *drv)
+{
+	/* Find phy (radio) to which this interface belongs */
+	char buf[90], *pos;
+	int f, rv;
+
+	drv->phyname[0] = '\0';
+	snprintf(buf, sizeof(buf) - 1, "/sys/class/net/%s/phy80211/name",
+		 drv->ifname);
+	f = open(buf, O_RDONLY);
+	if (f < 0) {
+		wpa_printf(MSG_DEBUG, "Could not open file %s: %s",
+			   buf, strerror(errno));
+		return;
+	}
+
+	rv = read(f, drv->phyname, sizeof(drv->phyname) - 1);
+	close(f);
+	if (rv < 0) {
+		wpa_printf(MSG_DEBUG, "Could not read file %s: %s",
+			   buf, strerror(errno));
+		return;
+	}
+
+	drv->phyname[rv] = '\0';
+	pos = os_strchr(drv->phyname, '\n');
+	if (pos)
+		*pos = '\0';
+	wpa_printf(MSG_DEBUG, "wext: interface %s phy: %s",
+		   drv->ifname, drv->phyname);
+}
+
+
 /**
  * wpa_driver_wext_init - Initialize WE driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -749,6 +784,7 @@ void * wpa_driver_wext_init(void *ctx, const char *ifname)
 	if (stat(path, &buf) == 0) {
 		wpa_printf(MSG_DEBUG, "WEXT: cfg80211-based driver detected");
 		drv->cfg80211 = 1;
+		wext_get_phy_name(drv);
 	}
 
 	drv->ioctl_sock = socket(PF_INET, SOCK_DGRAM, 0);
@@ -2255,6 +2291,13 @@ int wpa_driver_wext_get_version(struct wpa_driver_wext_data *drv)
 }
 
 
+static const char * wext_get_radio_name(void *priv)
+{
+	struct wpa_driver_wext_data *drv = priv;
+	return drv->phyname;
+}
+
+
 const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.name = "wext",
 	.desc = "Linux wireless extensions (generic)",
@@ -2274,4 +2317,5 @@ const struct wpa_driver_ops wpa_driver_wext_ops = {
 	.flush_pmkid = wpa_driver_wext_flush_pmkid,
 	.get_capa = wpa_driver_wext_get_capa,
 	.set_operstate = wpa_driver_wext_set_operstate,
+	.get_radio_name = wext_get_radio_name,
 };

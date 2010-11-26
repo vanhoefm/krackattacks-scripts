@@ -23,6 +23,7 @@ struct wpa_driver_wext_data {
 	int ioctl_sock;
 	int mlme_sock;
 	char ifname[IFNAMSIZ + 1];
+	char phyname[32];
 	int ifindex;
 	int ifindex2;
 	int if_removed;

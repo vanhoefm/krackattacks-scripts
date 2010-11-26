@@ -3309,5 +3309,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* set_noa */,
 	NULL /* set_p2p_powersave */,
 	NULL /* ampdu */,
-	NULL /* set_intra_bss */
+	NULL /* set_intra_bss */,
+	NULL /* get_radio_name */
 };

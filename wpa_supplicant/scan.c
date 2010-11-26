@@ -79,12 +79,13 @@ static int wpas_wps_in_use(struct wpa_config *conf,
 int wpa_supplicant_enabled_networks(struct wpa_config *conf)
 {
 	struct wpa_ssid *ssid = conf->ssid;
+	int count = 0;
 	while (ssid) {
 		if (!ssid->disabled)
-			return 1;
+			count++;
 		ssid = ssid->next;
 	}
-	return 0;
+	return count;
 }
 
 

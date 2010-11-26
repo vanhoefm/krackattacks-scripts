@@ -461,7 +461,7 @@ struct wpa_supplicant {
 	struct p2p_go_neg_results *go_params;
 	int create_p2p_iface;
 	u8 pending_interface_addr[ETH_ALEN];
-	char pending_interface_name[IFNAMSIZ];
+	char pending_interface_name[100];
 	int pending_interface_type;
 	int p2p_group_idx;
 	unsigned int off_channel_freq;

@@ -1714,10 +1714,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #endif /* CONFIG_IBSS_RSN */
 	case EVENT_ASSOC_REJECT:
-		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT "bssid=" MACSTR
-			" status_code=%u",
-			MAC2STR(data->assoc_reject.bssid),
-			data->assoc_reject.status_code);
+		if (data->assoc_reject.bssid)
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
+				"bssid=" MACSTR	" status_code=%u",
+				MAC2STR(data->assoc_reject.bssid),
+				data->assoc_reject.status_code);
+		else
+			wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_ASSOC_REJECT
+				"status_code=%u",
+				data->assoc_reject.status_code);
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_assoc_reject(wpa_s, data);
 		break;

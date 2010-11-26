@@ -540,13 +540,19 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_P2P_CONCURRENT	0x00000200
 /*
  * Driver uses the initial interface as a dedicated management interface, i.e.,
- * it cannot be used for P2P group operations.
+ * it cannot be used for P2P group operations or non-P2P purposes.
  */
 #define WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE	0x00000400
 /* This interface is P2P capable (P2P Device, GO, or P2P Client */
 #define WPA_DRIVER_FLAGS_P2P_CAPABLE	0x00000800
 /* Driver supports concurrent operations on multiple channels */
 #define WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT	0x00001000
+/*
+ * Driver uses the initial interface for P2P management interface and non-P2P
+ * purposes (e.g., connect to infra AP), but this interface cannot be used for
+ * P2P group operations.
+ */
+#define WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P		0x00002000
 	unsigned int flags;
 
 	int max_scan_ssids;

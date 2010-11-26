@@ -2427,7 +2427,9 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 
 static int wpas_p2p_create_iface(struct wpa_supplicant *wpa_s)
 {
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)
+	if (wpa_s->drv_flags &
+	    (WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE |
+	     WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P))
 		return 1; /* P2P group requires a new interface in every case
 			   */
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CONCURRENT))

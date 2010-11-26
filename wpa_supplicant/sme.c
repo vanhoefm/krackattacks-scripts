@@ -396,7 +396,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
 			"failed");
-		wpa_supplicant_req_scan(wpa_s, 5, 0);
+		wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+		os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 		return;
 	}
 

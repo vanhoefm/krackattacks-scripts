@@ -928,8 +928,14 @@ static int wpas_p2p_add_group_interface(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	os_snprintf(ifname, sizeof(ifname), "%s-p2p-%d", wpa_s->ifname,
+	os_snprintf(ifname, sizeof(ifname), "p2p-%s-%d", wpa_s->ifname,
 		    wpa_s->p2p_group_idx);
+	if (os_strlen(ifname) >= IFNAMSIZ &&
+	    os_strlen(wpa_s->ifname) < IFNAMSIZ) {
+		/* Try to avoid going over the IFNAMSIZ length limit */
+		os_snprintf(ifname, sizeof(ifname), "p2p-%d",
+			    wpa_s->p2p_group_idx);
+	}
 	force_ifname[0] = '\0';
 
 	wpa_printf(MSG_DEBUG, "P2P: Create a new interface %s for the group",

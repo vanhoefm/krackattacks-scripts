@@ -5449,8 +5449,44 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	}
 
 	if (!addr &&
-	    linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, if_addr) < 0)
+	    linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, if_addr) < 0) {
+		nl80211_remove_iface(drv, ifidx);
 		return -1;
+	}
+
+#ifdef CONFIG_P2P
+	if (!addr &&
+	    (type == WPA_IF_P2P_CLIENT || type == WPA_IF_P2P_GROUP ||
+	     type == WPA_IF_P2P_GO)) {
+		/* Enforce unique P2P Interface Address */
+		u8 new_addr[ETH_ALEN], own_addr[ETH_ALEN];
+
+		if (linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, own_addr)
+		    < 0 ||
+		    linux_get_ifhwaddr(drv->ioctl_sock, ifname, new_addr) < 0)
+		{
+			nl80211_remove_iface(drv, ifidx);
+			return -1;
+		}
+		if (os_memcmp(own_addr, new_addr, ETH_ALEN) == 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: Allocate new address "
+				   "for P2P group interface");
+			/* TODO: more complete implementation to handle
+			 * multiple groups etc.. */
+			if (own_addr[0] & 0x02) {
+				nl80211_remove_iface(drv, ifidx);
+				return -1;
+			}
+			new_addr[0] |= 0x02;
+			if (linux_set_ifhwaddr(drv->ioctl_sock, ifname,
+					       new_addr) < 0) {
+				nl80211_remove_iface(drv, ifidx);
+				return -1;
+			}
+			os_memcpy(if_addr, new_addr, ETH_ALEN);
+		}
+	}
+#endif /* CONFIG_P2P */
 
 #ifdef HOSTAPD
 	if (type == WPA_IF_AP_BSS) {
@@ -5951,6 +5987,28 @@ static int nl80211_set_intra_bss(void *priv, int enabled)
 }
 
 
+static int nl80211_set_param(void *priv, const char *param)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	wpa_printf(MSG_DEBUG, "nl80211: driver param='%s'", param);
+	if (param == NULL)
+		return 0;
+
+#ifdef CONFIG_P2P
+	if (os_strstr(param, "use_p2p_group_interface=1")) {
+		wpa_printf(MSG_DEBUG, "nl80211: Use separate P2P group "
+			   "interface");
+		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
+		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
+	}
+#endif /* CONFIG_P2P */
+
+	return 0;
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -6011,4 +6069,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.signal_monitor = nl80211_signal_monitor,
 	.send_frame = nl80211_send_frame,
 	.set_intra_bss = nl80211_set_intra_bss,
+	.set_param = nl80211_set_param,
 };

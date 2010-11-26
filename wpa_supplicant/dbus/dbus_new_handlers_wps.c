@@ -107,7 +107,7 @@ static int wpas_dbus_handler_wps_bssid(DBusMessage *message,
 	dbus_message_iter_recurse(entry_iter, &variant_iter);
 	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_ARRAY ||
 	    dbus_message_iter_get_element_type(&variant_iter) !=
-	    DBUS_TYPE_ARRAY) {
+	    DBUS_TYPE_BYTE) {
 		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong Bssid type, "
 			   "byte array required");
 		*reply = wpas_dbus_error_invalid_args(

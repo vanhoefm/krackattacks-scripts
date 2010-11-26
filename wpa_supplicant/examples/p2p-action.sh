@@ -27,9 +27,15 @@ if [ "$CMD" = "P2P-GROUP-STARTED" ]; then
 	rm /var/run/dhclient.leases-$GIFNAME
 	kill_daemon dnsmasq /var/run/dnsmasq.pid-$GIFNAME
 	ifconfig $GIFNAME 192.168.42.1 up
-	dnsmasq -x /var/run/dnsmasq.pid-$GIFNAME \
+	if ! dnsmasq -x /var/run/dnsmasq.pid-$GIFNAME \
 	    -i $GIFNAME \
-	    -F192.168.42.11,192.168.42.99
+	    -F192.168.42.11,192.168.42.99; then
+	    # another dnsmasq instance may be running and blocking us; try to
+	    # start with -z to avoid that
+	    dnsmasq -x /var/run/dnsmasq.pid-$GIFNAME \
+		-i $GIFNAME \
+		-F192.168.42.11,192.168.42.99 --listen-address 192.168.42.1 -z
+	fi
     fi
     if [ "$4" = "client" ]; then
 	kill_daemon dhclient /var/run/dhclient-$GIFNAME.pid

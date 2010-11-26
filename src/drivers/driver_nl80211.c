@@ -641,6 +641,8 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 	os_memset(&event, 0, sizeof(event));
 	if (cmd == NL80211_CMD_CONNECT &&
 	    nla_get_u16(status) != WLAN_STATUS_SUCCESS) {
+		if (addr)
+			event.assoc_reject.bssid = nla_data(addr);
 		if (resp_ie) {
 			event.assoc_reject.resp_ies = nla_data(resp_ie);
 			event.assoc_reject.resp_ies_len = nla_len(resp_ie);

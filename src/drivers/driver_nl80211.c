@@ -1489,6 +1489,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		return -1;
 	}
 
+	drv->capa.flags |= WPA_DRIVER_FLAGS_SANE_ERROR_CODES;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
 	drv->capa.max_remain_on_chan = 5000;

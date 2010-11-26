@@ -1304,6 +1304,16 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	if (ret < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
 			"failed");
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SANE_ERROR_CODES) {
+			/*
+			 * The driver is known to mean what is saying, so we
+			 * can stop right here; the association will not
+			 * succeed.
+			 */
+			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
+			return;
+		}
 		/* try to continue anyway; new association will be tried again
 		 * after timeout */
 		assoc_failed = 1;

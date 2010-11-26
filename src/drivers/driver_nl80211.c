@@ -2611,6 +2611,12 @@ static int nl80211_set_conn_keys(struct wpa_driver_associate_params *params,
 		privacy = 1;
 		break;
 	}
+	if (params->wps == WPS_MODE_PRIVACY)
+		privacy = 1;
+	if (params->pairwise_suite &&
+	    params->pairwise_suite != WPA_CIPHER_NONE)
+		privacy = 1;
+
 	if (!privacy)
 		return 0;
 

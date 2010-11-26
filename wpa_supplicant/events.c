@@ -885,7 +885,7 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "New scan results available");
+	wpa_printf(MSG_DEBUG, "%s: New scan results available", wpa_s->ifname);
 	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_SCAN_RESULTS);
 	wpas_notify_scan_results(wpa_s);
 

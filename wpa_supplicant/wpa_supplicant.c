@@ -533,8 +533,8 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 {
 	enum wpa_states old_state = wpa_s->wpa_state;
 
-	wpa_printf(MSG_DEBUG, "State: %s -> %s",
-		   wpa_supplicant_state_txt(wpa_s->wpa_state),
+	wpa_printf(MSG_DEBUG, "%s: State: %s -> %s",
+		   wpa_s->ifname, wpa_supplicant_state_txt(wpa_s->wpa_state),
 		   wpa_supplicant_state_txt(state));
 
 	if (state != WPA_SCANNING)

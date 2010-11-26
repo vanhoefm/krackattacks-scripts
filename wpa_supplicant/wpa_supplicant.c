@@ -2543,3 +2543,111 @@ void ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
 
 	os_free(hw_features);
 }
+
+
+static void add_freq(int *freqs, int *num_freqs, int freq)
+{
+	int i;
+
+	for (i = 0; i < *num_freqs; i++) {
+		if (freqs[i] == freq)
+			return;
+	}
+
+	freqs[*num_freqs] = freq;
+	(*num_freqs)++;
+}
+
+
+static int * get_bss_freqs_in_ess(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss, *cbss;
+	const int max_freqs = 10;
+	int *freqs;
+	int num_freqs = 0;
+
+	freqs = os_zalloc(sizeof(int) * (max_freqs + 1));
+	if (freqs == NULL)
+		return NULL;
+
+	cbss = wpa_s->current_bss;
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (bss == cbss)
+			continue;
+		if (bss->ssid_len == cbss->ssid_len &&
+		    os_memcmp(bss->ssid, cbss->ssid, bss->ssid_len) == 0 &&
+		    wpa_blacklist_get(wpa_s, bss->bssid) == NULL) {
+			add_freq(freqs, &num_freqs, bss->freq);
+			if (num_freqs == max_freqs)
+				break;
+		}
+	}
+
+	if (num_freqs == 0) {
+		os_free(freqs);
+		freqs = NULL;
+	}
+
+	return freqs;
+}
+
+
+void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
+{
+	int timeout;
+	int count;
+	int *freqs = NULL;
+
+	/*
+	 * Add the failed BSSID into the blacklist and speed up next scan
+	 * attempt if there could be other APs that could accept association.
+	 * The current blacklist count indicates how many times we have tried
+	 * connecting to this AP and multiple attempts mean that other APs are
+	 * either not available or has already been tried, so that we can start
+	 * increasing the delay here to avoid constant scanning.
+	 */
+	count = wpa_blacklist_add(wpa_s, bssid);
+	if (count == 1 && wpa_s->current_bss) {
+		/*
+		 * This BSS was not in the blacklist before. If there is
+		 * another BSS available for the same ESS, we should try that
+		 * next. Otherwise, we may as well try this one once more
+		 * before allowing other, likely worse, ESSes to be considered.
+		 */
+		freqs = get_bss_freqs_in_ess(wpa_s);
+		if (freqs) {
+			wpa_printf(MSG_DEBUG, "Another BSS in this ESS has "
+				   "been seen; try it next");
+			wpa_blacklist_add(wpa_s, bssid);
+			/*
+			 * On the next scan, go through only the known channels
+			 * used in this ESS based on previous scans to speed up
+			 * common load balancing use case.
+			 */
+			os_free(wpa_s->next_scan_freqs);
+			wpa_s->next_scan_freqs = freqs;
+		}
+	}
+
+	switch (count) {
+	case 1:
+		timeout = 100;
+		break;
+	case 2:
+		timeout = 500;
+		break;
+	case 3:
+		timeout = 1000;
+		break;
+	default:
+		timeout = 5000;
+	}
+
+	/*
+	 * TODO: if more than one possible AP is available in scan results,
+	 * could try the other ones before requesting a new scan.
+	 */
+	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
+				1000 * (timeout % 1000));
+}

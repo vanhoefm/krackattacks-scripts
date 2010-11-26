@@ -33,115 +33,6 @@
 #include "scan.h"
 #include "sme.h"
 
-static void add_freq(int *freqs, int *num_freqs, int freq)
-{
-	int i;
-
-	for (i = 0; i < *num_freqs; i++) {
-		if (freqs[i] == freq)
-			return;
-	}
-
-	freqs[*num_freqs] = freq;
-	(*num_freqs)++;
-}
-
-
-static int * sme_another_bss_in_ess(struct wpa_supplicant *wpa_s)
-{
-	struct wpa_bss *bss, *cbss;
-	const int max_freqs = 10;
-	int *freqs;
-	int num_freqs = 0;
-
-	freqs = os_zalloc(sizeof(int) * (max_freqs + 1));
-	if (freqs == NULL)
-		return NULL;
-
-	cbss = wpa_s->current_bss;
-
-	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
-		if (bss == cbss)
-			continue;
-		if (bss->ssid_len == cbss->ssid_len &&
-		    os_memcmp(bss->ssid, cbss->ssid, bss->ssid_len) == 0 &&
-		    wpa_blacklist_get(wpa_s, bss->bssid) == NULL) {
-			add_freq(freqs, &num_freqs, bss->freq);
-			if (num_freqs == max_freqs)
-				break;
-		}
-	}
-
-	if (num_freqs == 0) {
-		os_free(freqs);
-		freqs = NULL;
-	}
-
-	return freqs;
-}
-
-
-static void sme_connection_failed(struct wpa_supplicant *wpa_s,
-				  const u8 *bssid)
-{
-	int timeout;
-	int count;
-	int *freqs = NULL;
-
-	/*
-	 * Add the failed BSSID into the blacklist and speed up next scan
-	 * attempt if there could be other APs that could accept association.
-	 * The current blacklist count indicates how many times we have tried
-	 * connecting to this AP and multiple attempts mean that other APs are
-	 * either not available or has already been tried, so that we can start
-	 * increasing the delay here to avoid constant scanning.
-	 */
-	count = wpa_blacklist_add(wpa_s, bssid);
-	if (count == 1 && wpa_s->current_bss) {
-		/*
-		 * This BSS was not in the blacklist before. If there is
-		 * another BSS available for the same ESS, we should try that
-		 * next. Otherwise, we may as well try this one once more
-		 * before allowing other, likely worse, ESSes to be considered.
-		 */
-		freqs = sme_another_bss_in_ess(wpa_s);
-		if (freqs) {
-			wpa_printf(MSG_DEBUG, "SME: Another BSS in this ESS "
-				   "has been seen; try it next");
-			wpa_blacklist_add(wpa_s, bssid);
-			/*
-			 * On the next scan, go through only the known channels
-			 * used in this ESS based on previous scans to speed up
-			 * common load balancing use case.
-			 */
-			os_free(wpa_s->next_scan_freqs);
-			wpa_s->next_scan_freqs = freqs;
-		}
-	}
-
-	switch (count) {
-	case 1:
-		timeout = 100;
-		break;
-	case 2:
-		timeout = 500;
-		break;
-	case 3:
-		timeout = 1000;
-		break;
-	default:
-		timeout = 5000;
-	}
-
-	/*
-	 * TODO: if more than one possible AP is available in scan results,
-	 * could try the other ones before requesting a new scan.
-	 */
-	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
-				1000 * (timeout % 1000));
-}
-
-
 void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
@@ -405,7 +296,7 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		    WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG ||
 		    wpa_s->sme.auth_alg == data->auth.auth_type ||
 		    wpa_s->current_ssid->auth_alg == WPA_AUTH_ALG_LEAP) {
-			sme_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 			return;
 		}
 
@@ -562,7 +453,7 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 	}
 	wpa_s->sme.prev_bssid_set = 0;
 
-	sme_connection_failed(wpa_s, wpa_s->pending_bssid);
+	wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	os_memset(wpa_s->bssid, 0, ETH_ALEN);
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
@@ -575,7 +466,7 @@ void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 			      union wpa_event_data *data)
 {
 	wpa_printf(MSG_DEBUG, "SME: Authentication timed out");
-	sme_connection_failed(wpa_s, wpa_s->pending_bssid);
+	wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 }
 
 
@@ -583,7 +474,7 @@ void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 			       union wpa_event_data *data)
 {
 	wpa_printf(MSG_DEBUG, "SME: Association timed out");
-	sme_connection_failed(wpa_s, wpa_s->pending_bssid);
+	wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 	wpa_supplicant_mark_disassoc(wpa_s);
 }
 

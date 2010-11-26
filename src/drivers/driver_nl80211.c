@@ -29,6 +29,7 @@
 
 #include "common.h"
 #include "eloop.h"
+#include "utils/list.h"
 #include "common/ieee802_11_defs.h"
 #include "netlink.h"
 #include "linux_ioctl.h"
@@ -99,6 +100,10 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 #define IF_OPER_UP 6
 #endif
 
+struct nl80211_global {
+	struct dl_list interfaces;
+};
+
 struct i802_bss {
 	struct wpa_driver_nl80211_data *drv;
 	struct i802_bss *next;
@@ -108,6 +113,9 @@ struct i802_bss {
 };
 
 struct wpa_driver_nl80211_data {
+	struct nl80211_global *global;
+	struct dl_list list;
+	u8 addr[ETH_ALEN];
 	void *ctx;
 	struct netlink_data *netlink;
 	int ioctl_sock; /* socket for ioctl() use */
@@ -1651,9 +1659,11 @@ static void wpa_driver_nl80211_rfkill_unblocked(void *ctx)
  * @ctx: context to be used when calling wpa_supplicant functions,
  * e.g., wpa_supplicant_event()
  * @ifname: interface name, e.g., wlan0
+ * @global_priv: private driver global data from global_init()
  * Returns: Pointer to private data, %NULL on failure
  */
-static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
+static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
+				      void *global_priv)
 {
 	struct wpa_driver_nl80211_data *drv;
 	struct netlink_config *cfg;
@@ -1663,6 +1673,9 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname)
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
+	drv->global = global_priv;
+	if (drv->global)
+		dl_list_add(&drv->global->interfaces, &drv->list);
 	drv->ctx = ctx;
 	bss = &drv->first_bss;
 	bss->drv = drv;
@@ -1853,6 +1866,8 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			       1, IF_OPER_DORMANT);
 #endif /* HOSTAPD */
 
+	linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, drv->addr);
+
 	if (nl80211_register_action_frames(drv) < 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Failed to register Action "
 			   "frame processing - ignore for now");
@@ -1965,6 +1980,9 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	nl_cb_put(drv->nl_cb);
 
 	os_free(drv->filter_ssids);
+
+	if (drv->global)
+		dl_list_del(&drv->list);
 
 	os_free(drv);
 }
@@ -5315,7 +5333,7 @@ static void *i802_init(struct hostapd_data *hapd,
 	int ifindex, br_ifindex;
 	int br_added = 0;
 
-	bss = wpa_driver_nl80211_init(hapd, params->ifname);
+	bss = wpa_driver_nl80211_init(hapd, params->ifname, NULL);
 	if (bss == NULL)
 		return NULL;
 
@@ -5427,6 +5445,43 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 }
 
 
+static int nl80211_addr_in_use(struct nl80211_global *global, const u8 *addr)
+{
+	struct wpa_driver_nl80211_data *drv;
+	dl_list_for_each(drv, &global->interfaces,
+			 struct wpa_driver_nl80211_data, list) {
+		if (os_memcmp(addr, drv->addr, ETH_ALEN) == 0)
+			return 1;
+	}
+	return 0;
+}
+
+
+static int nl80211_p2p_interface_addr(struct wpa_driver_nl80211_data *drv,
+				      u8 *new_addr)
+{
+	unsigned int idx;
+
+	if (!drv->global)
+		return -1;
+
+	os_memcpy(new_addr, drv->addr, ETH_ALEN);
+	for (idx = 0; idx < 64; idx++) {
+		new_addr[0] = drv->addr[0] | 0x02;
+		new_addr[0] ^= idx << 2;
+		if (!nl80211_addr_in_use(drv->global, new_addr))
+			break;
+	}
+	if (idx == 64)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Assigned new P2P Interface Address "
+		   MACSTR, MAC2STR(new_addr));
+
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				     const char *ifname, const u8 *addr,
 				     void *bss_ctx, void **drv_priv,
@@ -5480,13 +5535,10 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		if (os_memcmp(own_addr, new_addr, ETH_ALEN) == 0) {
 			wpa_printf(MSG_DEBUG, "nl80211: Allocate new address "
 				   "for P2P group interface");
-			/* TODO: more complete implementation to handle
-			 * multiple groups etc.. */
-			if (own_addr[0] & 0x02) {
+			if (nl80211_p2p_interface_addr(drv, new_addr) < 0) {
 				nl80211_remove_iface(drv, ifidx);
 				return -1;
 			}
-			new_addr[0] |= 0x02;
 			if (linux_set_ifhwaddr(drv->ioctl_sock, ifname,
 					       new_addr) < 0) {
 				nl80211_remove_iface(drv, ifidx);
@@ -6018,6 +6070,31 @@ static int nl80211_set_param(void *priv, const char *param)
 }
 
 
+static void * nl80211_global_init(void)
+{
+	struct nl80211_global *global;
+	global = os_zalloc(sizeof(*global));
+	if (global == NULL)
+		return NULL;
+	dl_list_init(&global->interfaces);
+	return global;
+}
+
+
+static void nl80211_global_deinit(void *priv)
+{
+	struct nl80211_global *global = priv;
+	if (global == NULL)
+		return;
+	if (!dl_list_empty(&global->interfaces)) {
+		wpa_printf(MSG_ERROR, "nl80211: %u interface(s) remain at "
+			   "nl80211_global_deinit",
+			   dl_list_len(&global->interfaces));
+	}
+	os_free(global);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -6030,7 +6107,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.disassociate = wpa_driver_nl80211_disassociate,
 	.authenticate = wpa_driver_nl80211_authenticate,
 	.associate = wpa_driver_nl80211_associate,
-	.init = wpa_driver_nl80211_init,
+	.global_init = nl80211_global_init,
+	.global_deinit = nl80211_global_deinit,
+	.init2 = wpa_driver_nl80211_init,
 	.deinit = wpa_driver_nl80211_deinit,
 	.get_capa = wpa_driver_nl80211_get_capa,
 	.set_operstate = wpa_driver_nl80211_set_operstate,

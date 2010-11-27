@@ -5484,6 +5484,8 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 }
 
 
+#ifdef CONFIG_P2P
+
 static int nl80211_addr_in_use(struct nl80211_global *global, const u8 *addr)
 {
 	struct wpa_driver_nl80211_data *drv;
@@ -5519,6 +5521,8 @@ static int nl80211_p2p_interface_addr(struct wpa_driver_nl80211_data *drv,
 
 	return 0;
 }
+
+#endif /* CONFIG_P2P */
 
 
 static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
@@ -6089,15 +6093,15 @@ static int nl80211_set_intra_bss(void *priv, int enabled)
 
 static int nl80211_set_param(void *priv, const char *param)
 {
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-
 	wpa_printf(MSG_DEBUG, "nl80211: driver param='%s'", param);
 	if (param == NULL)
 		return 0;
 
 #ifdef CONFIG_P2P
 	if (os_strstr(param, "use_p2p_group_interface=1")) {
+		struct i802_bss *bss = priv;
+		struct wpa_driver_nl80211_data *drv = bss->drv;
+
 		wpa_printf(MSG_DEBUG, "nl80211: Use separate P2P group "
 			   "interface");
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;

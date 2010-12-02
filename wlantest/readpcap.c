@@ -27,6 +27,7 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 	struct pcap_pkthdr *hdr;
 	const u_char *data;
 	int res;
+	int dlt;
 
 	pcap = pcap_open_offline(fname, errbuf);
 	if (pcap == NULL) {
@@ -34,6 +35,14 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 			   fname, errbuf);
 		return -1;
 	}
+	dlt = pcap_datalink(pcap);
+	if (dlt != DLT_IEEE802_11_RADIO && dlt != DLT_PRISM_HEADER) {
+		wpa_printf(MSG_ERROR, "Unsupported pcap datalink type: %d",
+			   dlt);
+		pcap_close(pcap);
+		return -1;
+	}
+	wpa_printf(MSG_DEBUG, "pcap datalink type: %d", dlt);
 
 	for (;;) {
 		res = pcap_next_ex(pcap, &hdr, &data);
@@ -66,7 +75,14 @@ int read_cap_file(struct wlantest *wt, const char *fname)
 			continue;
 		}
 		count++;
-		wlantest_process(wt, data, hdr->caplen);
+		switch (dlt) {
+		case DLT_IEEE802_11_RADIO:
+			wlantest_process(wt, data, hdr->caplen);
+			break;
+		case DLT_PRISM_HEADER:
+			wlantest_process_prism(wt, data, hdr->caplen);
+			break;
+		}
 	}
 
 	pcap_close(pcap);

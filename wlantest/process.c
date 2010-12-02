@@ -224,3 +224,41 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 	else
 		tx_status(wt, frame, frame_len, !failed);
 }
+
+
+void wlantest_process_prism(struct wlantest *wt, const u8 *data, size_t len)
+{
+	int fcs = 0;
+	const u8 *frame, *fcspos;
+	size_t frame_len;
+	u32 hdrlen;
+
+	wpa_hexdump(MSG_EXCESSIVE, "Process data", data, len);
+
+	if (len < 8)
+		return;
+	hdrlen = WPA_GET_LE32(data + 4);
+
+	if (len < hdrlen) {
+		wpa_printf(MSG_INFO, "Too short frame to include prism "
+			   "header");
+		return;
+	}
+
+	frame = data + hdrlen;
+	frame_len = len - hdrlen;
+	fcs = 1;
+
+	if (fcs && frame_len >= 4) {
+		frame_len -= 4;
+		fcspos = frame + frame_len;
+		if (check_fcs(frame, frame_len, fcspos) < 0) {
+			wpa_printf(MSG_EXCESSIVE, "Drop RX frame with invalid "
+				   "FCS");
+			wt->fcs_error++;
+			return;
+		}
+	}
+
+	rx_frame(wt, frame, frame_len);
+}

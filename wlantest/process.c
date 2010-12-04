@@ -262,3 +262,10 @@ void wlantest_process_prism(struct wlantest *wt, const u8 *data, size_t len)
 
 	rx_frame(wt, frame, frame_len);
 }
+
+
+void wlantest_process_80211(struct wlantest *wt, const u8 *data, size_t len)
+{
+	wpa_hexdump(MSG_EXCESSIVE, "Process data", data, len);
+	rx_frame(wt, data, len);
+}

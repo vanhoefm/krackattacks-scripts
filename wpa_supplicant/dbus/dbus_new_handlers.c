@@ -803,7 +803,6 @@ DBusMessage * wpas_dbus_setter_debug_level(DBusMessage *message,
 	if (val < 0 ||
 	    wpa_supplicant_set_debug_params(global, val, wpa_debug_timestamp,
 					    wpa_debug_show_keys)) {
-		dbus_message_unref(reply);
 		return wpas_dbus_error_invalid_args(
 			message, "Wrong debug level value");
 	}

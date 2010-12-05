@@ -1568,8 +1568,15 @@ wpa_supplicant_event_ft_response(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_event_ibss_rsn_start(struct wpa_supplicant *wpa_s,
 						union wpa_event_data *data)
 {
+	struct wpa_ssid *ssid;
 	if (data == NULL)
 		return;
+	ssid = wpa_s->current_ssid;
+	if (ssid == NULL)
+		return;
+	if (ssid->mode != WPAS_MODE_IBSS || !wpa_key_mgmt_wpa(ssid->key_mgmt))
+		return;
+
 	ibss_rsn_start(wpa_s->ibss_rsn, data->ibss_rsn_start.peer);
 }
 #endif /* CONFIG_IBSS_RSN */

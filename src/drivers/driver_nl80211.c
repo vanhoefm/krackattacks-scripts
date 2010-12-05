@@ -1220,6 +1220,25 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_new_station_event(struct wpa_driver_nl80211_data *drv,
+				      struct nlattr **tb)
+{
+	u8 *addr;
+	union wpa_event_data data;
+
+	if (tb[NL80211_ATTR_MAC] == NULL)
+		return;
+	addr = nla_data(tb[NL80211_ATTR_MAC]);
+	wpa_printf(MSG_DEBUG, "nl80211: New station " MACSTR, MAC2STR(addr));
+	if (drv->nlmode != NL80211_IFTYPE_ADHOC)
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	os_memcpy(data.ibss_rsn_start.peer, addr, ETH_ALEN);
+	wpa_supplicant_event(drv->ctx, EVENT_IBSS_RSN_START, &data);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -1329,6 +1348,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 		wpa_printf(MSG_DEBUG, "nl80211: Regulatory beacon hint");
 		wpa_supplicant_event(drv->ctx, EVENT_CHANNEL_LIST_CHANGED,
 				     NULL);
+		break;
+	case NL80211_CMD_NEW_STATION:
+		nl80211_new_station_event(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

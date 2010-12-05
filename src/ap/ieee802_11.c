@@ -1804,6 +1804,11 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 
 	wpa_printf(MSG_DEBUG, "Data/PS-poll frame from not associated STA "
 		   MACSTR, MAC2STR(src));
+	if (src[0] & 0x01) {
+		/* Broadcast bit set in SA?! Ignore the frame silently. */
+		return;
+	}
+
 	if (sta && (sta->flags & WLAN_STA_AUTH))
 		hostapd_drv_sta_disassoc(
 			hapd, src,

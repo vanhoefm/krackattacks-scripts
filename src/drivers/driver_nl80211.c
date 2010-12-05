@@ -2576,6 +2576,12 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 	{
 		wpa_printf(MSG_DEBUG, "   addr=" MACSTR, MAC2STR(addr));
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+
+		if (alg != WPA_ALG_WEP && key_idx && !set_tx) {
+			wpa_printf(MSG_DEBUG, "   RSN IBSS RX GTK");
+			NLA_PUT_U32(msg, NL80211_ATTR_KEY_TYPE,
+				    NL80211_KEYTYPE_GROUP);
+		}
 	}
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_idx);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);

@@ -125,6 +125,8 @@ static int supp_set_key(void *ctx, enum wpa_alg alg,
 		}
 	}
 
+	if (is_broadcast_ether_addr(addr) && peer->addr)
+		addr = peer->addr;
 	return wpa_drv_set_key(peer->ibss_rsn->wpa_s, alg, addr, key_idx,
 			       set_tx, seq, seq_len, key, key_len);
 }
@@ -153,6 +155,12 @@ static void supp_cancel_auth_timeout(void *ctx)
 }
 
 
+static void supp_deauthenticate(void * ctx, int reason_code)
+{
+	wpa_printf(MSG_DEBUG, "SUPP: %s (TODO)", __func__);
+}
+
+
 int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 		       const u8 *psk)
 {
@@ -170,6 +178,7 @@ int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 	ctx->get_network_ctx = supp_get_network_ctx;
 	ctx->mlme_setprotection = supp_mlme_setprotection;
 	ctx->cancel_auth_timeout = supp_cancel_auth_timeout;
+	ctx->deauthenticate = supp_deauthenticate;
 	peer->supp = wpa_sm_init(ctx);
 	if (peer->supp == NULL) {
 		wpa_printf(MSG_DEBUG, "SUPP: wpa_sm_init() failed");

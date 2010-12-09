@@ -20,6 +20,7 @@
 #include "driver.h"
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_common.h"
 
 #include <net/if.h>
 #include <net/if_media.h>

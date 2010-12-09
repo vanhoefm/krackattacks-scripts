@@ -693,7 +693,7 @@ static void
 bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = ctx;
-	char buf[2048];
+	char buf[2048] __attribute__ ((aligned (4)));
 	struct if_announcemsghdr *ifan;
 	struct rt_msghdr *rtm;
 	struct ieee80211_michael_event *mic;
@@ -1117,7 +1117,7 @@ static void
 wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = sock_ctx;
-	char buf[2048];
+	char buf[2048] __attribute__ ((aligned (4)));
 	struct if_announcemsghdr *ifan;
 	struct if_msghdr *ifm;
 	struct rt_msghdr *rtm;

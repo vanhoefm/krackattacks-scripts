@@ -41,6 +41,7 @@ struct ieee802_11_elems {
 	const u8 *ht_operation;
 	const u8 *vendor_ht_cap;
 	const u8 *p2p;
+	const u8 *link_id;
 
 	u8 ssid_len;
 	u8 supp_rates_len;

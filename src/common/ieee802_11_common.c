@@ -254,6 +254,11 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 			elems->ht_operation = pos;
 			elems->ht_operation_len = elen;
 			break;
+		case WLAN_EID_LINK_ID:
+			if (elen < 18)
+				break;
+			elems->link_id = pos;
+			break;
 		default:
 			unknown++;
 			if (!show_errors)

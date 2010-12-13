@@ -84,6 +84,19 @@ struct wlantest_sta {
 	le16 seq_ctrl_to_ap[17];
 };
 
+struct wlantest_tdls {
+	struct dl_list list;
+	struct wlantest_sta *init;
+	struct wlantest_sta *resp;
+	struct tpk {
+		u8 kck[16];
+		u8 tk[16];
+	} tpk;
+	int link_up;
+	u8 rsc_init[16 + 1][6];
+	u8 rsc_resp[16 + 1][6];
+};
+
 struct wlantest_bss {
 	struct dl_list list;
 	u8 bssid[ETH_ALEN];
@@ -111,6 +124,7 @@ struct wlantest_bss {
 	int igtk_idx;
 	u8 ipn[6][6];
 	u32 counters[NUM_WLANTEST_BSS_COUNTER];
+	struct dl_list tdls; /* struct wlantest_tdls */
 };
 
 struct wlantest_radius {
@@ -167,6 +181,9 @@ void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
 		   const u8 *data, size_t len, int prot);
 void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
 		const u8 *dst, const u8 *src, const u8 *data, size_t len);
+void rx_data_80211_encap(struct wlantest *wt, const u8 *bssid,
+			 const u8 *sta_addr, const u8 *dst, const u8 *src,
+			 const u8 *data, size_t len);
 
 struct wlantest_bss * bss_find(struct wlantest *wt, const u8 *bssid);
 struct wlantest_bss * bss_get(struct wlantest *wt, const u8 *bssid);

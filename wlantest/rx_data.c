@@ -70,6 +70,9 @@ static void rx_data_eth(struct wlantest *wt, const u8 *bssid,
 	case ETH_P_IP:
 		rx_data_ip(wt, bssid, sta_addr, dst, src, data, len);
 		break;
+	case 0x890d:
+		rx_data_80211_encap(wt, bssid, sta_addr, dst, src, data, len);
+		break;
 	}
 }
 
@@ -182,13 +185,15 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			     size_t len)
 {
 	struct wlantest_bss *bss;
-	struct wlantest_sta *sta;
+	struct wlantest_sta *sta, *sta2;
 	int keyid;
 	u16 fc = le_to_host16(hdr->frame_control);
 	u8 *decrypted;
 	size_t dlen;
 	int tid;
 	u8 pn[6], *rsc;
+	struct wlantest_tdls *tdls = NULL;
+	const u8 *tk = NULL;
 
 	if (hdr->addr1[0] & 0x01) {
 		rx_data_bss_prot_group(wt, hdr, qos, dst, src, data, len);
@@ -200,13 +205,32 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		if (bss == NULL)
 			return;
 		sta = sta_get(bss, hdr->addr2);
-	} else {
+	} else if (fc & WLAN_FC_FROMDS) {
 		bss = bss_get(wt, hdr->addr2);
 		if (bss == NULL)
 			return;
 		sta = sta_get(bss, hdr->addr1);
+	} else {
+		bss = bss_get(wt, hdr->addr3);
+		if (bss == NULL)
+			return;
+		sta = sta_find(bss, hdr->addr2);
+		sta2 = sta_find(bss, hdr->addr1);
+		if (sta == NULL || sta2 == NULL)
+			return;
+		dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list)
+		{
+			if ((tdls->init == sta && tdls->resp == sta2) ||
+			    (tdls->init == sta2 && tdls->resp == sta)) {
+				if (!tdls->link_up)
+					wpa_printf(MSG_DEBUG, "TDLS: Link not "
+						   "up, but Data frame seen");
+				tk = tdls->tpk.tk;
+				break;
+			}
+		}
 	}
-	if (sta == NULL || !sta->ptk_set) {
+	if ((sta == NULL || !sta->ptk_set) && tk == NULL) {
 		wpa_printf(MSG_MSGDUMP, "No PTK known to decrypt the frame");
 		return;
 	}
@@ -224,7 +248,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		    return;
 	}
 
-	if (sta->pairwise_cipher == WPA_CIPHER_TKIP) {
+	if (tk == NULL && sta->pairwise_cipher == WPA_CIPHER_TKIP) {
 		if (data[3] & 0x1f) {
 			wpa_printf(MSG_INFO, "TKIP frame from " MACSTR " used "
 				   "non-zero reserved bit",
@@ -237,7 +261,7 @@ static void rx_data_bss_prot(struct wlantest *wt,
 				   MAC2STR(hdr->addr2), data[1],
 				   (data[0] | 0x20) & 0x7f);
 		}
-	} else if (sta->pairwise_cipher == WPA_CIPHER_CCMP) {
+	} else if (tk || sta->pairwise_cipher == WPA_CIPHER_CCMP) {
 		if (data[2] != 0 || (data[3] & 0x1f) != 0) {
 			wpa_printf(MSG_INFO, "CCMP frame from " MACSTR " used "
 				   "non-zero reserved bit",
@@ -256,13 +280,18 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		tid = qos[0] & 0x0f;
 	else
 		tid = 0;
-	if (fc & WLAN_FC_TODS)
+	if (tk) {
+		if (os_memcmp(hdr->addr2, tdls->init->addr, ETH_ALEN) == 0)
+			rsc = tdls->rsc_init[tid];
+		else
+			rsc = tdls->rsc_resp[tid];
+	} else if (fc & WLAN_FC_TODS)
 		rsc = sta->rsc_tods[tid];
 	else
 		rsc = sta->rsc_fromds[tid];
 
 
-	if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
+	if (tk == NULL && sta->pairwise_cipher == WPA_CIPHER_TKIP)
 		tkip_get_pn(pn, data);
 	else
 		ccmp_get_pn(pn, data);
@@ -273,7 +302,9 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}
 
-	if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
+	if (tk)
+		decrypted = ccmp_decrypt(tk, hdr, data, len, &dlen);
+	else if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
 		decrypted = tkip_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
 	else
 		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
@@ -362,6 +393,8 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   fc & WLAN_FC_ISWEP ? " Prot" : "",
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
+		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr2,
+			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_FROMDS:
 		wpa_printf(MSG_EXCESSIVE, "DATA %s%s%s FromDS DA=" MACSTR

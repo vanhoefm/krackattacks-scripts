@@ -58,6 +58,7 @@ OBJS += rx_mgmt.o
 OBJS += rx_data.o
 OBJS += rx_eapol.o
 OBJS += rx_ip.o
+OBJS += rx_tdls.o
 OBJS += bss.o
 OBJS += sta.o
 OBJS += crc32.o

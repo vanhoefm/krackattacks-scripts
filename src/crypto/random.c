@@ -51,7 +51,9 @@ static u32 pool[POOL_WORDS];
 static unsigned int input_rotate = 0;
 static unsigned int pool_pos = 0;
 static u8 dummy_key[20];
+#ifdef __linux__
 static size_t dummy_key_avail = 0;
+#endif /* __linux__ */
 static unsigned int own_pool_ready = 0;
 
 #define MIN_COLLECT_ENTROPY 1000

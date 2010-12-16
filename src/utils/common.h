@@ -437,6 +437,7 @@ typedef u64 __bitwise le64;
 
 int hwaddr_aton(const char *txt, u8 *addr);
 int hwaddr_aton2(const char *txt, u8 *addr);
+int hex2byte(const char *hex);
 int hexstr2bin(const char *hex, u8 *buf, size_t len);
 void inc_byte_array(u8 *counter, size_t len);
 void wpa_get_ntp_timestamp(u8 *buf);

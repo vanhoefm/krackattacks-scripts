@@ -209,12 +209,37 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 	int tid = 0;
 	u8 *qos = NULL;
 	int hdrlen;
+	struct wlantest_tdls *tdls = NULL;
+	const u8 *tk = NULL;
 
 	hdr = (struct ieee80211_hdr *) frame;
 	hdrlen = 24;
 	fc = le_to_host16(hdr->frame_control);
 
-	if (sta == NULL) {
+	if ((fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) == 0) {
+		struct wlantest_sta *sta2;
+		bss = bss_get(wt, hdr->addr3);
+		if (bss == NULL)
+			return -1;
+		sta = sta_find(bss, hdr->addr2);
+		sta2 = sta_find(bss, hdr->addr1);
+		if (sta == NULL || sta2 == NULL)
+			return -1;
+		dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list)
+		{
+			if ((tdls->init == sta && tdls->resp == sta2) ||
+			    (tdls->init == sta2 && tdls->resp == sta)) {
+				if (!tdls->link_up)
+					wpa_printf(MSG_DEBUG, "TDLS: Link not "
+						   "up, but injecting Data "
+						   "frame on direct link");
+				tk = tdls->tpk.tk;
+				break;
+			}
+		}
+	}
+
+	if (tk == NULL && sta == NULL) {
 		if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT)
 			return wlantest_inject_bip(wt, bss, frame, len,
 						   incorrect_key);
@@ -222,7 +247,7 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 					       incorrect_key);
 	}
 
-	if (!sta->ptk_set)
+	if (tk == NULL && !sta->ptk_set)
 		return -1;
 
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT)
@@ -237,14 +262,23 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 			tid = qos[0] & 0x0f;
 		}
 	}
-	if (os_memcmp(hdr->addr2, bss->bssid, ETH_ALEN) == 0)
+	if (tk) {
+		if (os_memcmp(hdr->addr2, tdls->init->addr, ETH_ALEN) == 0)
+			pn = tdls->rsc_init[tid];
+		else
+			pn = tdls->rsc_resp[tid];
+	} else if (os_memcmp(hdr->addr2, bss->bssid, ETH_ALEN) == 0)
 		pn = sta->rsc_fromds[tid];
 	else
 		pn = sta->rsc_tods[tid];
 	inc_byte_array(pn, 6);
 
 	os_memset(dummy, 0x11, sizeof(dummy));
-	if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
+	if (tk) 
+		crypt = ccmp_encrypt(incorrect_key ? dummy : tk,
+				     frame, len, hdrlen, qos, pn, 0,
+				     &crypt_len);
+	else if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
 		crypt = tkip_encrypt(incorrect_key ? dummy : sta->ptk.tk1,
 				     frame, len, hdrlen, qos, pn, 0,
 				     &crypt_len);

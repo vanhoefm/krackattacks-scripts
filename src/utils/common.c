@@ -29,7 +29,7 @@ static int hex2num(char c)
 }
 
 
-static int hex2byte(const char *hex)
+int hex2byte(const char *hex)
 {
 	int a, b;
 	a = hex2num(*hex++);

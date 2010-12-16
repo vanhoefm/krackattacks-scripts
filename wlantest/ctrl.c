@@ -962,6 +962,87 @@ static void ctrl_info_bss(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 }
 
 
+static void ctrl_send_(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
+{
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	u8 *bssid, *sta_addr;
+	int prot;
+	u8 *frame;
+	size_t frame_len;
+	int ret = 0;
+	struct ieee80211_hdr *hdr;
+	u16 fc;
+
+	frame = attr_get(cmd, clen, WLANTEST_ATTR_FRAME, &frame_len);
+	prot = attr_get_int(cmd, clen, WLANTEST_ATTR_INJECT_PROTECTION);
+	if (frame == NULL || frame_len < 24 || prot < 0) {
+		wpa_printf(MSG_INFO, "Invalid send command parameters");
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	hdr = (struct ieee80211_hdr *) frame;
+	fc = le_to_host16(hdr->frame_control);
+	switch (WLAN_FC_GET_TYPE(fc)) {
+	case WLAN_FC_TYPE_MGMT:
+		bssid = hdr->addr3;
+		if (os_memcmp(hdr->addr2, hdr->addr3, ETH_ALEN) == 0)
+			sta_addr = hdr->addr1;
+		else
+			sta_addr = hdr->addr2;
+		break;
+	case WLAN_FC_TYPE_DATA:
+		switch (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) {
+		case 0:
+			bssid = hdr->addr3;
+			sta_addr = hdr->addr2;
+			break;
+		case WLAN_FC_TODS:
+			bssid = hdr->addr1;
+			sta_addr = hdr->addr2;
+			break;
+		case WLAN_FC_FROMDS:
+			bssid = hdr->addr2;
+			sta_addr = hdr->addr1;
+			break;
+		default:
+			wpa_printf(MSG_INFO, "Unsupported inject frame");
+			ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+			return;
+		}
+		break;
+	default:
+		wpa_printf(MSG_INFO, "Unsupported inject frame");
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	bss = bss_find(wt, bssid);
+	if (bss == NULL) {
+		wpa_printf(MSG_INFO, "Unknown BSSID");
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	sta = sta_find(bss, sta_addr);
+	if (sta == NULL) {
+		wpa_printf(MSG_INFO, "Unknown STA address");
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	ret = wlantest_inject(wt, bss, sta, frame, frame_len, prot);
+
+	if (ret)
+		wpa_printf(MSG_INFO, "Failed to inject frame");
+	else
+		wpa_printf(MSG_INFO, "Frame injected successfully");
+	ctrl_send_simple(wt, sock, ret == 0 ? WLANTEST_CTRL_SUCCESS :
+			 WLANTEST_CTRL_FAILURE);
+}
+
+
 static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct wlantest *wt = eloop_ctx;
@@ -1035,6 +1116,9 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 		break;
 	case WLANTEST_CTRL_INFO_BSS:
 		ctrl_info_bss(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_SEND:
+		ctrl_send_(wt, sock, buf + 4, len - 4);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_UNKNOWN_CMD);

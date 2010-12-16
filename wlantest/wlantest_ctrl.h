@@ -38,6 +38,7 @@ enum wlantest_ctrl_cmd {
 	WLANTEST_CTRL_ADD_PASSPHRASE,
 	WLANTEST_CTRL_INFO_STA,
 	WLANTEST_CTRL_INFO_BSS,
+	WLANTEST_CTRL_SEND,
 };
 
 enum wlantest_ctrl_attr {
@@ -54,6 +55,7 @@ enum wlantest_ctrl_attr {
 	WLANTEST_ATTR_STA_INFO,
 	WLANTEST_ATTR_BSS_INFO,
 	WLANTEST_ATTR_INFO,
+	WLANTEST_ATTR_FRAME,
 };
 
 enum wlantest_bss_counter {

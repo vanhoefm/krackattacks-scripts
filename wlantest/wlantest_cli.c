@@ -817,6 +817,127 @@ static char ** complete_inject(int s, const char *str, int pos)
 }
 
 
+static u8 * add_hex(u8 *pos, u8 *end, const char *str)
+{
+	const char *s;
+	int val;
+
+	s = str;
+	while (*s) {
+		while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n' ||
+		       *s == ':')
+			s++;
+		if (*s == '\0')
+			break;
+		if (*s == '#') {
+			while (*s != '\0' && *s != '\r' && *s != '\n')
+				s++;
+			continue;
+		}
+
+		val = hex2byte(s);
+		if (val < 0) {
+			printf("Invalid hex encoding '%s'\n", s);
+			return NULL;
+		}
+		if (pos == end) {
+			printf("Too long frame\n");
+			return NULL;
+		}
+		*pos++ = val;
+		s += 2;
+	}
+
+	return pos;
+}
+
+
+static int cmd_send(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[WLANTEST_CTRL_MAX_CMD_LEN], *end, *pos, *len_pos;
+	int rlen;
+	enum wlantest_inject_protection prot;
+	int arg;
+
+	/* <prot> <raw frame as hex dump> */
+
+	if (argc < 2) {
+		printf("send needs two arguments: protected/unprotected, "
+		       "raw frame as hex dump\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SEND);
+	pos += 4;
+
+	if (os_strcasecmp(argv[0], "normal") == 0)
+		prot = WLANTEST_INJECT_NORMAL;
+	else if (os_strcasecmp(argv[0], "protected") == 0)
+		prot = WLANTEST_INJECT_PROTECTED;
+	else if (os_strcasecmp(argv[0], "unprotected") == 0)
+		prot = WLANTEST_INJECT_UNPROTECTED;
+	else if (os_strcasecmp(argv[0], "incorrect") == 0)
+		prot = WLANTEST_INJECT_INCORRECT_KEY;
+	else {
+		printf("Unknown protection type '%s'\n", argv[1]);
+		printf("Protection types: normal protected unprotected "
+		       "incorrect\n");
+		return -1;
+	}
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_INJECT_PROTECTION, prot);
+
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_FRAME);
+	pos += 4;
+	len_pos = pos;
+	pos += 4;
+
+	for (arg = 1; pos && arg < argc; arg++)
+		pos = add_hex(pos, end, argv[arg]);
+	if (pos == NULL)
+		return -1;
+
+	WPA_PUT_BE32(len_pos, pos - len_pos - 4);
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	printf("OK\n");
+	return 0;
+}
+
+
+static char ** complete_send(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = os_zalloc(5 * sizeof(char *));
+		if (res == NULL)
+			break;
+		res[0] = os_strdup("normal");
+		if (res[0] == NULL)
+			break;
+		res[1] = os_strdup("protected");
+		if (res[1] == NULL)
+			break;
+		res[2] = os_strdup("unprotected");
+		if (res[2] == NULL)
+			break;
+		res[3] = os_strdup("incorrect");
+		if (res[3] == NULL)
+			break;
+		break;
+	}
+
+	return res;
+}
+
+
 static int cmd_version(int s, int argc, char *argv[])
 {
 	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
@@ -1121,6 +1242,9 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "inject", cmd_inject,
 	  "<frame> <prot> <sender> <BSSID> <STA/ff:ff:ff:ff:ff:ff>",
 	  complete_inject },
+	{ "send", cmd_send,
+	  "<prot> <raw frame as hex dump>",
+	  complete_send },
 	{ "version", cmd_version, "= get wlantest version", NULL },
 	{ "add_passphrase", cmd_add_passphrase,
 	  "<passphrase> = add a known passphrase", NULL },

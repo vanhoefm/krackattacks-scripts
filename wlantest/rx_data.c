@@ -359,6 +359,66 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 }
 
 
+static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *bssid,
+				       const u8 *sta1_addr,
+				       const u8 *sta2_addr)
+{
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta1, *sta2;
+	struct wlantest_tdls *tdls;
+
+	bss = bss_find(wt, bssid);
+	if (bss == NULL)
+		return NULL;
+	sta1 = sta_find(bss, sta1_addr);
+	if (sta1 == NULL)
+		return NULL;
+	sta2 = sta_find(bss, sta2_addr);
+	if (sta2 == NULL)
+		return NULL;
+
+	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
+		if ((tdls->init == sta1 && tdls->resp == sta2) ||
+		    (tdls->init == sta2 && tdls->resp == sta1))
+			return tdls;
+	}
+
+	return NULL;
+}
+
+
+static void add_direct_link(struct wlantest *wt, const u8 *bssid,
+			    const u8 *sta1_addr, const u8 *sta2_addr)
+{
+	struct wlantest_tdls *tdls;
+
+	tdls = get_tdls(wt, bssid, sta1_addr, sta2_addr);
+	if (tdls == NULL)
+		return;
+
+	if (tdls->link_up)
+		tdls->counters[WLANTEST_TDLS_COUNTER_VALID_DIRECT_LINK]++;
+	else
+		tdls->counters[WLANTEST_TDLS_COUNTER_INVALID_DIRECT_LINK]++;
+}
+
+
+static void add_ap_path(struct wlantest *wt, const u8 *bssid,
+			const u8 *sta1_addr, const u8 *sta2_addr)
+{
+	struct wlantest_tdls *tdls;
+
+	tdls = get_tdls(wt, bssid, sta1_addr, sta2_addr);
+	if (tdls == NULL)
+		return;
+
+	if (tdls->link_up)
+		tdls->counters[WLANTEST_TDLS_COUNTER_INVALID_AP_PATH]++;
+	else
+		tdls->counters[WLANTEST_TDLS_COUNTER_VALID_AP_PATH]++;
+}
+
+
 void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
@@ -393,6 +453,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   fc & WLAN_FC_ISWEP ? " Prot" : "",
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
+		add_direct_link(wt, hdr->addr3, hdr->addr1, hdr->addr2);
 		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;
@@ -404,6 +465,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   fc & WLAN_FC_ISWEP ? " Prot" : "",
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
+		add_ap_path(wt, hdr->addr2, hdr->addr1, hdr->addr3);
 		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;
@@ -415,6 +477,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   fc & WLAN_FC_ISWEP ? " Prot" : "",
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
+		add_ap_path(wt, hdr->addr1, hdr->addr3, hdr->addr2);
 		rx_data_bss(wt, hdr, qos, hdr->addr3, hdr->addr2,
 			    data + hdrlen, len - hdrlen);
 		break;

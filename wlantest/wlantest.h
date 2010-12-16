@@ -96,6 +96,7 @@ struct wlantest_tdls {
 	u8 dialog_token;
 	u8 rsc_init[16 + 1][6];
 	u8 rsc_resp[16 + 1][6];
+	u32 counters[NUM_WLANTEST_TDLS_COUNTER];
 };
 
 struct wlantest_bss {

@@ -192,6 +192,33 @@ static struct wlantest_sta * ctrl_get_sta(struct wlantest *wt, int sock,
 }
 
 
+static struct wlantest_sta * ctrl_get_sta2(struct wlantest *wt, int sock,
+					   u8 *cmd, size_t clen,
+					   struct wlantest_bss *bss)
+{
+	struct wlantest_sta *sta;
+	u8 *pos;
+	size_t len;
+
+	if (bss == NULL)
+		return NULL;
+
+	pos = attr_get(cmd, clen, WLANTEST_ATTR_STA2_ADDR, &len);
+	if (pos == NULL || len != ETH_ALEN) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return NULL;
+	}
+
+	sta = sta_find(bss, pos);
+	if (sta == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return NULL;
+	}
+
+	return sta;
+}
+
+
 static void ctrl_list_bss(struct wlantest *wt, int sock)
 {
 	u8 buf[WLANTEST_CTRL_MAX_RESP_LEN], *pos, *len;
@@ -263,8 +290,10 @@ static void ctrl_clear_sta_counters(struct wlantest *wt, int sock, u8 *cmd,
 
 	bss = ctrl_get_bss(wt, sock, cmd, clen);
 	sta = ctrl_get_sta(wt, sock, cmd, clen, bss);
-	if (sta == NULL)
+	if (sta == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
+	}
 
 	os_memset(sta->counters, 0, sizeof(sta->counters));
 	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
@@ -277,10 +306,37 @@ static void ctrl_clear_bss_counters(struct wlantest *wt, int sock, u8 *cmd,
 	struct wlantest_bss *bss;
 
 	bss = ctrl_get_bss(wt, sock, cmd, clen);
-	if (bss == NULL)
+	if (bss == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
+	}
 
 	os_memset(bss->counters, 0, sizeof(bss->counters));
+	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
+}
+
+
+static void ctrl_clear_tdls_counters(struct wlantest *wt, int sock, u8 *cmd,
+				     size_t clen)
+{
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	struct wlantest_sta *sta2;
+	struct wlantest_tdls *tdls;
+
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	sta = ctrl_get_sta(wt, sock, cmd, clen, bss);
+	sta2 = ctrl_get_sta2(wt, sock, cmd, clen, bss);
+	if (sta == NULL || sta2 == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
+		if ((tdls->init == sta && tdls->resp == sta2) ||
+		    (tdls->init == sta2 && tdls->resp == sta))
+			os_memset(tdls->counters, 0, sizeof(tdls->counters));
+	}
 	ctrl_send_simple(wt, sock, WLANTEST_CTRL_SUCCESS);
 }
 
@@ -351,6 +407,61 @@ static void ctrl_get_bss_counter(struct wlantest *wt, int sock, u8 *cmd,
 	pos += 4;
 	pos = attr_add_be32(pos, end, WLANTEST_ATTR_COUNTER,
 			    bss->counters[counter]);
+	ctrl_send(wt, sock, buf, pos - buf);
+}
+
+
+static void ctrl_get_tdls_counter(struct wlantest *wt, int sock, u8 *cmd,
+				  size_t clen)
+{
+	u8 *addr;
+	size_t addr_len;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+	struct wlantest_sta *sta2;
+	struct wlantest_tdls *tdls;
+	u32 counter;
+	u8 buf[4 + 12], *end, *pos;
+	int found = 0;
+
+	bss = ctrl_get_bss(wt, sock, cmd, clen);
+	sta = ctrl_get_sta(wt, sock, cmd, clen, bss);
+	sta2 = ctrl_get_sta2(wt, sock, cmd, clen, bss);
+	if (sta == NULL || sta2 == NULL) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	addr = attr_get(cmd, clen, WLANTEST_ATTR_TDLS_COUNTER, &addr_len);
+	if (addr == NULL || addr_len != 4) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+	counter = WPA_GET_BE32(addr);
+	if (counter >= NUM_WLANTEST_TDLS_COUNTER) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+		return;
+	}
+
+	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
+		if ((tdls->init == sta && tdls->resp == sta2) ||
+		    (tdls->init == sta2 && tdls->resp == sta)) {
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found) {
+		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+		return;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_SUCCESS);
+	pos += 4;
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_COUNTER,
+			    tdls->counters[counter]);
 	ctrl_send(wt, sock, buf, pos - buf);
 }
 
@@ -1096,11 +1207,17 @@ static void ctrl_read(int sock, void *eloop_ctx, void *sock_ctx)
 	case WLANTEST_CTRL_CLEAR_BSS_COUNTERS:
 		ctrl_clear_bss_counters(wt, sock, buf + 4, len - 4);
 		break;
+	case WLANTEST_CTRL_CLEAR_TDLS_COUNTERS:
+		ctrl_clear_tdls_counters(wt, sock, buf + 4, len - 4);
+		break;
 	case WLANTEST_CTRL_GET_STA_COUNTER:
 		ctrl_get_sta_counter(wt, sock, buf + 4, len - 4);
 		break;
 	case WLANTEST_CTRL_GET_BSS_COUNTER:
 		ctrl_get_bss_counter(wt, sock, buf + 4, len - 4);
+		break;
+	case WLANTEST_CTRL_GET_TDLS_COUNTER:
+		ctrl_get_tdls_counter(wt, sock, buf + 4, len - 4);
 		break;
 	case WLANTEST_CTRL_INJECT:
 		ctrl_inject(wt, sock, buf + 4, len - 4);

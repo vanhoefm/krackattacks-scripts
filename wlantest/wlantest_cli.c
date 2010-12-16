@@ -430,6 +430,81 @@ static char ** complete_clear_bss_counters(int s, const char *str, int pos)
 }
 
 
+static int cmd_clear_tdls_counters(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *pos;
+	int rlen;
+
+	if (argc < 3) {
+		printf("clear_tdls_counters needs three arguments: BSSID, "
+		       "STA1 address, STA2 address\n");
+		return -1;
+	}
+
+	pos = buf;
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_CLEAR_TDLS_COUNTERS);
+	pos += 4;
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_BSSID);
+	pos += 4;
+	WPA_PUT_BE32(pos, ETH_ALEN);
+	pos += 4;
+	if (hwaddr_aton(argv[0], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[0]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_STA_ADDR);
+	pos += 4;
+	WPA_PUT_BE32(pos, ETH_ALEN);
+	pos += 4;
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid STA1 address '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	WPA_PUT_BE32(pos, WLANTEST_ATTR_STA2_ADDR);
+	pos += 4;
+	WPA_PUT_BE32(pos, ETH_ALEN);
+	pos += 4;
+	if (hwaddr_aton(argv[2], pos) < 0) {
+		printf("Invalid STA2 address '%s'\n", argv[2]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+	printf("OK\n");
+	return 0;
+}
+
+
+static char ** complete_clear_tdls_counters(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		res = get_bssid_list(s);
+		break;
+	case 2:
+	case 3:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 0);
+		break;
+	}
+
+	return res;
+}
+
+
 struct sta_counters {
 	const char *name;
 	enum wlantest_sta_counter num;
@@ -647,6 +722,120 @@ static char ** complete_get_bss_counter(int s, const char *str, int pos)
 		break;
 	case 2:
 		res = get_bssid_list(s);
+		break;
+	}
+
+	return res;
+}
+
+
+struct tdls_counters {
+	const char *name;
+	enum wlantest_tdls_counter num;
+};
+
+static const struct tdls_counters tdls_counters[] = {
+	{ "valid_direct_link", WLANTEST_TDLS_COUNTER_VALID_DIRECT_LINK },
+	{ "invalid_direct_link", WLANTEST_TDLS_COUNTER_INVALID_DIRECT_LINK },
+	{ "valid_ap_path", WLANTEST_TDLS_COUNTER_VALID_AP_PATH },
+	{ "invalid_ap_path", WLANTEST_TDLS_COUNTER_INVALID_AP_PATH },
+	{ NULL, 0 }
+};
+
+static int cmd_get_tdls_counter(int s, int argc, char *argv[])
+{
+	u8 resp[WLANTEST_CTRL_MAX_RESP_LEN];
+	u8 buf[100], *end, *pos;
+	int rlen, i;
+	size_t len;
+
+	if (argc != 4) {
+		printf("get_tdls_counter needs four arguments: "
+		       "counter name, BSSID, STA1 address, STA2 address\n");
+		return -1;
+	}
+
+	pos = buf;
+	end = buf + sizeof(buf);
+	WPA_PUT_BE32(pos, WLANTEST_CTRL_GET_TDLS_COUNTER);
+	pos += 4;
+
+	for (i = 0; tdls_counters[i].name; i++) {
+		if (os_strcasecmp(tdls_counters[i].name, argv[0]) == 0)
+			break;
+	}
+	if (tdls_counters[i].name == NULL) {
+		printf("Unknown TDLS counter '%s'\n", argv[0]);
+		printf("Counters:");
+		for (i = 0; tdls_counters[i].name; i++)
+			printf(" %s", tdls_counters[i].name);
+		printf("\n");
+		return -1;
+	}
+
+	pos = attr_add_be32(pos, end, WLANTEST_ATTR_TDLS_COUNTER,
+			    tdls_counters[i].num);
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_BSSID, ETH_ALEN);
+	if (hwaddr_aton(argv[1], pos) < 0) {
+		printf("Invalid BSSID '%s'\n", argv[1]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[2], pos) < 0) {
+		printf("Invalid STA1 address '%s'\n", argv[2]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	pos = attr_hdr_add(pos, end, WLANTEST_ATTR_STA2_ADDR, ETH_ALEN);
+	if (hwaddr_aton(argv[3], pos) < 0) {
+		printf("Invalid STA2 address '%s'\n", argv[3]);
+		return -1;
+	}
+	pos += ETH_ALEN;
+
+	rlen = cmd_send_and_recv(s, buf, pos - buf, resp, sizeof(resp));
+	if (rlen < 0)
+		return -1;
+
+	pos = attr_get(resp + 4, rlen - 4, WLANTEST_ATTR_COUNTER, &len);
+	if (pos == NULL || len != 4)
+		return -1;
+	printf("%u\n", WPA_GET_BE32(pos));
+	return 0;
+}
+
+
+static char ** complete_get_tdls_counter(int s, const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+	int i, count;
+	u8 addr[ETH_ALEN];
+
+	switch (arg) {
+	case 1:
+		/* counter list */
+		count = sizeof(tdls_counters) / sizeof(tdls_counters[0]);
+		res = os_zalloc(count * sizeof(char *));
+		if (res == NULL)
+			return NULL;
+		for (i = 0; tdls_counters[i].name; i++) {
+			res[i] = os_strdup(tdls_counters[i].name);
+			if (res[i] == NULL)
+				break;
+		}
+		break;
+	case 2:
+		res = get_bssid_list(s);
+		break;
+	case 3:
+	case 4:
+		if (hwaddr_aton(&str[get_prev_arg_pos(str, pos)], addr) < 0)
+			break;
+		res = get_sta_list(s, addr, 0);
 		break;
 	}
 
@@ -1254,6 +1443,15 @@ static const struct wlantest_cli_cmd wlantest_cli_commands[] = {
 	{ "info_bss", cmd_info_bss,
 	  "<field> <BSSID> = get BSS information",
 	  complete_info_bss },
+	{ "clear_tdls_counters", cmd_clear_tdls_counters,
+	  "<BSSID> <STA1> <STA2> = clear TDLS counters",
+	  complete_clear_tdls_counters },
+	{ "get_tdls_counter", cmd_get_tdls_counter,
+	  "<counter> <BSSID> <STA1> <STA2> = get TDLS counter value",
+	  complete_get_tdls_counter },
+	{ "get_bss_counter", cmd_get_bss_counter,
+	  "<counter> <BSSID> = get BSS counter value",
+	  complete_get_bss_counter },
 	{ NULL, NULL, NULL, NULL }
 };
 

@@ -93,6 +93,7 @@ struct wlantest_tdls {
 		u8 tk[16];
 	} tpk;
 	int link_up;
+	u8 dialog_token;
 	u8 rsc_init[16 + 1][6];
 	u8 rsc_resp[16 + 1][6];
 };

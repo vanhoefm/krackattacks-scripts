@@ -235,7 +235,11 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 		return;
 	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1)
 		return;
-	tdls_verify_mic(tdls, 2, &elems);
+	if (tdls_verify_mic(tdls, 2, &elems) == 0) {
+		tdls->dialog_token = data[2];
+		wpa_printf(MSG_DEBUG, "TDLS: Dialog Token for the link: %u",
+			   tdls->dialog_token);
+	}
 }
 
 
@@ -270,7 +274,67 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 		tdls->link_up = 1;
 	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1)
 		return;
-	tdls_verify_mic(tdls, 3, &elems);
+	if (tdls_verify_mic(tdls, 3, &elems) == 0) {
+		tdls->dialog_token = data[2];
+		wpa_printf(MSG_DEBUG, "TDLS: Dialog Token for the link: %u",
+			   tdls->dialog_token);
+	}
+}
+
+
+static int tdls_verify_mic_teardown(struct wlantest_tdls *tdls, u8 trans_seq,
+				    const u8 *reason_code,
+				    struct ieee802_11_elems *elems)
+{
+	u8 *buf, *pos;
+	int len;
+	u8 mic[16];
+	int ret;
+	const struct rsn_ftie *rx_ftie;
+	struct rsn_ftie *tmp_ftie;
+
+	if (elems->link_id == NULL || elems->ftie == NULL)
+		return -1;
+
+	len = 2 + 18 + 2 + 1 + 1 + 2 + elems->ftie_len;
+
+	buf = os_zalloc(len);
+	if (buf == NULL)
+		return -1;
+
+	pos = buf;
+	/* 1) Link Identifier IE */
+	os_memcpy(pos, elems->link_id - 2, 2 + 18);
+	pos += 2 + 18;
+	/* 2) Reason Code */
+	os_memcpy(pos, reason_code, 2);
+	pos += 2;
+	/* 3) Dialog token */
+	*pos++ = tdls->dialog_token;
+	/* 4) Transaction Sequence number */
+	*pos++ = trans_seq;
+	/* 5) FTIE, with the MIC field of the FTIE set to 0 */
+	os_memcpy(pos, elems->ftie - 2, 2 + elems->ftie_len);
+	pos += 2;
+	tmp_ftie = (struct rsn_ftie *) pos;
+	os_memset(tmp_ftie->mic, 0, 16);
+	pos += elems->ftie_len;
+
+	wpa_hexdump(MSG_DEBUG, "TDLS: Data for FTIE MIC", buf, pos - buf);
+	wpa_hexdump_key(MSG_DEBUG, "TDLS: KCK", tdls->tpk.kck, 16);
+	ret = omac1_aes_128(tdls->tpk.kck, buf, pos - buf, mic);
+	os_free(buf);
+	if (ret)
+		return -1;
+	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE MIC", mic, 16);
+	rx_ftie = (const struct rsn_ftie *) elems->ftie;
+
+	if (os_memcmp(mic, rx_ftie->mic, 16) == 0) {
+		wpa_printf(MSG_DEBUG, "TDLS: Valid MIC");
+		return 0;
+	}
+	wpa_printf(MSG_DEBUG, "TDLS: Invalid MIC");
+	return -1;
 }
 
 
@@ -301,6 +365,7 @@ static void rx_data_tdls_teardown(struct wlantest *wt, const u8 *bssid,
 	tdls = get_tdls(wt, elems.link_id);
 	if (tdls)
 		tdls->link_up = 0;
+	tdls_verify_mic_teardown(tdls, 4, data, &elems);
 }
 
 

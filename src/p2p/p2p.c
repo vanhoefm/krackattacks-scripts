@@ -3211,3 +3211,11 @@ void p2p_set_best_channels(struct p2p_data *p2p, int freq_24, int freq_5,
 	p2p->best_freq_5 = freq_5;
 	p2p->best_freq_overall = freq_overall;
 }
+
+
+const u8 * p2p_get_go_neg_peer(struct p2p_data *p2p)
+{
+	if (p2p == NULL || p2p->go_neg_peer == NULL)
+		return NULL;
+	return p2p->go_neg_peer->p2p_device_addr;
+}

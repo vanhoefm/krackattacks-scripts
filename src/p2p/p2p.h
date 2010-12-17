@@ -1322,4 +1322,6 @@ void p2p_update_channel_list(struct p2p_data *p2p, struct p2p_channels *chan);
 void p2p_set_best_channels(struct p2p_data *p2p, int freq_24, int freq_5,
 			   int freq_overall);
 
+const u8 * p2p_get_go_neg_peer(struct p2p_data *p2p);
+
 #endif /* P2P_H */

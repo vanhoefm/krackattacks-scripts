@@ -3948,12 +3948,20 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_global *global = wpa_s->global;
 	int found = 0;
+	const u8 *peer;
 
 	wpa_printf(MSG_DEBUG, "P2P: Request to cancel group formation");
 
 	if (wpa_s->pending_interface_name[0] &&
 	    !is_zero_ether_addr(wpa_s->pending_interface_addr))
 		found = 1;
+
+	peer = p2p_get_go_neg_peer(global->p2p);
+	if (peer) {
+		wpa_printf(MSG_DEBUG, "P2P: Unauthorize pending GO Neg peer "
+			   MACSTR, MAC2STR(peer));
+		p2p_unauthorize(global->p2p, peer);
+	}
 
 	wpas_p2p_stop_find(wpa_s);
 

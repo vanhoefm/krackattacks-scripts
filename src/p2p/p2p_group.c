@@ -647,3 +647,27 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 
 	return P2P_SC_SUCCESS;
 }
+
+
+unsigned int p2p_get_group_num_members(struct p2p_group *group)
+{
+	return group->num_members;
+}
+
+
+const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next)
+{
+	struct p2p_group_member *iter = *next;
+
+	if (!iter)
+		iter = group->members;
+	else
+		iter = iter->next;
+
+	*next = iter;
+
+	if (!iter)
+		return NULL;
+
+	return iter->addr;
+}

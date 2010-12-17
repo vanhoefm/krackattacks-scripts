@@ -1927,7 +1927,8 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 			       1, IF_OPER_DORMANT);
 #endif /* HOSTAPD */
 
-	linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, drv->addr);
+	if (linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, drv->addr))
+		return -1;
 
 	if (nl80211_register_action_frames(drv) < 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Failed to register Action "

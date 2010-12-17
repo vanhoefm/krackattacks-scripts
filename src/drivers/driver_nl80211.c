@@ -5517,6 +5517,8 @@ static void *i802_init(struct hostapd_data *hapd,
 
 failed:
 	nl80211_remove_monitor_interface(drv);
+	rfkill_deinit(drv->rfkill);
+	netlink_deinit(drv->netlink);
 	if (drv->ioctl_sock >= 0)
 		close(drv->ioctl_sock);
 
@@ -5524,6 +5526,7 @@ failed:
 	nl_cache_free(drv->nl_cache);
 	nl80211_handle_destroy(drv->nl_handle);
 	nl_cb_put(drv->nl_cb);
+	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle_event));
 
 	os_free(drv);
 	return NULL;

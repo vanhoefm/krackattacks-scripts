@@ -30,6 +30,7 @@ enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_STATE,
 	WPAS_DBUS_PROP_CURRENT_BSS,
 	WPAS_DBUS_PROP_CURRENT_NETWORK,
+	WPAS_DBUS_PROP_BSSS,
 };
 
 enum wpas_dbus_bss_prop {

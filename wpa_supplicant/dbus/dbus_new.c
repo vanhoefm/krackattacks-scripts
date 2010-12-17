@@ -691,6 +691,10 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 			wpas_dbus_getter_current_network;
 		prop = "CurrentNetwork";
 		break;
+	case WPAS_DBUS_PROP_BSSS:
+		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_bsss;
+		prop = "BSSs";
+		break;
 	default:
 		wpa_printf(MSG_ERROR, "dbus: %s: Unknown Property value %d",
 			   __func__, property);
@@ -1199,6 +1203,7 @@ int wpas_dbus_unregister_bss(struct wpa_supplicant *wpa_s,
 	}
 
 	wpas_dbus_signal_bss_removed(wpa_s, bss_obj_path);
+	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_BSSS);
 
 	return 0;
 }
@@ -1263,6 +1268,7 @@ int wpas_dbus_register_bss(struct wpa_supplicant *wpa_s,
 	}
 
 	wpas_dbus_signal_bss_added(wpa_s, bss_obj_path);
+	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_BSSS);
 
 	return 0;
 

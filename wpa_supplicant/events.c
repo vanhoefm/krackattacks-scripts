@@ -873,8 +873,13 @@ static void _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_NO_RANDOM_POOL */
 
 	if (wpa_s->scan_res_handler) {
-		wpa_s->scan_res_handler(wpa_s, scan_res);
+		void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
+					 struct wpa_scan_results *scan_res);
+
+		scan_res_handler = wpa_s->scan_res_handler;
 		wpa_s->scan_res_handler = NULL;
+		scan_res_handler(wpa_s, scan_res);
+
 		wpa_scan_results_free(scan_res);
 		return;
 	}

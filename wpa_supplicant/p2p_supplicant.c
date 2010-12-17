@@ -3974,6 +3974,8 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 				   "formation found - cancelling",
 				   wpa_s->ifname);
 			found = 1;
+			eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+					     wpa_s->parent, NULL);
 			wpas_p2p_group_delete(wpa_s);
 			break;
 		}

@@ -2378,7 +2378,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_listen", wpa_cli_cmd_p2p_listen, cli_cmd_flag_none,
 	  "[timeout] = listen for P2P Devices for up-to timeout seconds" },
 	{ "p2p_group_remove", wpa_cli_cmd_p2p_group_remove, cli_cmd_flag_none,
-	  "<ifname> = remote P2P group interface (terminate group if GO)" },
+	  "<ifname> = remove P2P group interface (terminate group if GO)" },
 	{ "p2p_group_add", wpa_cli_cmd_p2p_group_add, cli_cmd_flag_none,
 	  "= add a new P2P group (local end as GO)" },
 	{ "p2p_prov_disc", wpa_cli_cmd_p2p_prov_disc, cli_cmd_flag_none,

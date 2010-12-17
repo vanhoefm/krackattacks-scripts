@@ -109,7 +109,7 @@ u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 	if (data_len < 8 + 8)
 		return NULL;
 
-	plain = os_malloc(data_len);
+	plain = os_malloc(data_len + AES_BLOCK_SIZE);
 	if (plain == NULL)
 		return NULL;
 
@@ -241,7 +241,7 @@ u8 * ccmp_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 	plen = len - hdrlen;
 	last = plen % AES_BLOCK_SIZE;
 
-	crypt = os_malloc(hdrlen + 8 + plen + 8);
+	crypt = os_malloc(hdrlen + 8 + plen + 8 + AES_BLOCK_SIZE);
 	if (crypt == NULL)
 		return NULL;
 

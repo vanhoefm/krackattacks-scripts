@@ -13,7 +13,7 @@
  */
 
 #include "utils/includes.h"
-#include <pcap/pcap.h>
+#include <pcap.h>
 
 #include "utils/common.h"
 #include "wlantest.h"

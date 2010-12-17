@@ -2155,7 +2155,8 @@ static int p2p_ctrl_serv_disc_req(struct wpa_supplicant *wpa_s, char *cmd,
 		if (*pos != ' ')
 			return -1;
 		pos++;
-		ref = (u64) wpas_p2p_sd_request_upnp(wpa_s, dst, version, pos);
+		ref = (unsigned long) wpas_p2p_sd_request_upnp(wpa_s, dst,
+							       version, pos);
 	} else {
 		len = os_strlen(pos);
 		if (len & 1)
@@ -2169,7 +2170,7 @@ static int p2p_ctrl_serv_disc_req(struct wpa_supplicant *wpa_s, char *cmd,
 			return -1;
 		}
 
-		ref = (u64) wpas_p2p_sd_request(wpa_s, dst, tlvs);
+		ref = (unsigned long) wpas_p2p_sd_request(wpa_s, dst, tlvs);
 		wpabuf_free(tlvs);
 	}
 	res = os_snprintf(buf, buflen, "%llx", (long long unsigned) ref);
@@ -2187,7 +2188,7 @@ static int p2p_ctrl_serv_disc_cancel_req(struct wpa_supplicant *wpa_s,
 	if (sscanf(cmd, "%llx", &val) != 1)
 		return -1;
 	req = val;
-	return wpas_p2p_sd_cancel_request(wpa_s, (void *) req);
+	return wpas_p2p_sd_cancel_request(wpa_s, (void *) (unsigned long) req);
 }
 
 

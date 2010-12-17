@@ -351,12 +351,6 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 		}
 	}
 
-	if ((prot == WLANTEST_INJECT_PROTECTED ||
-	     prot == WLANTEST_INJECT_INCORRECT_KEY) && !protect) {
-		wpa_printf(MSG_INFO, "Cannot protect injected frame");
-		return -1;
-	}
-
 	if (protect)
 		return wlantest_inject_prot(
 			wt, bss, sta, frame, len,

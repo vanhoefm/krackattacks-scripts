@@ -676,8 +676,8 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 	if (sta->proto & WPA_PROTO_RSN)
 		learn_kde_keys(bss, decrypted, decrypted_len, hdr->key_rsc);
 	else {
-		int len = bss->group_cipher == WPA_CIPHER_TKIP ? 32 : 16;
-		if (decrypted_len == len) {
+		int klen = bss->group_cipher == WPA_CIPHER_TKIP ? 32 : 16;
+		if (decrypted_len == klen) {
 			const u8 *rsc = hdr->key_rsc;
 			int id;
 			id = (key_info & WPA_KEY_INFO_KEY_INDEX_MASK) >>

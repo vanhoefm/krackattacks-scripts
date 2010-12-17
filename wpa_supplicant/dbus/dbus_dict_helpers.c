@@ -478,7 +478,7 @@ dbus_bool_t wpa_dbus_dict_begin_string_array(DBusMessageIter *iter_dict,
 		return FALSE;
 
 	if (!dbus_message_iter_open_container(iter_dict_val, DBUS_TYPE_ARRAY,
-					      DBUS_TYPE_BYTE_AS_STRING,
+					      DBUS_TYPE_STRING_AS_STRING,
 					      iter_array))
 		return FALSE;
 

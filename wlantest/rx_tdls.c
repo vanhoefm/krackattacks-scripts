@@ -270,8 +270,10 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
 
 	tdls = get_tdls(wt, elems.link_id);
-	if (tdls)
-		tdls->link_up = 1;
+	if (tdls == NULL)
+		return;
+
+	tdls->link_up = 1;
 	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1)
 		return;
 	if (tdls_verify_mic(tdls, 3, &elems) == 0) {
@@ -363,9 +365,10 @@ static void rx_data_tdls_teardown(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
 
 	tdls = get_tdls(wt, elems.link_id);
-	if (tdls)
+	if (tdls) {
 		tdls->link_up = 0;
-	tdls_verify_mic_teardown(tdls, 4, data, &elems);
+		tdls_verify_mic_teardown(tdls, 4, data, &elems);
+	}
 }
 
 

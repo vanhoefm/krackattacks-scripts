@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "eapol_supp/eapol_supp_sm.h"
@@ -500,3 +501,160 @@ void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 				       WLAN_REASON_DEAUTH_LEAVING);
 	}
 }
+
+
+#ifdef CONFIG_IEEE80211W
+
+static const unsigned int sa_query_max_timeout = 1000;
+static const unsigned int sa_query_retry_timeout = 201;
+
+static int sme_check_sa_query_timeout(struct wpa_supplicant *wpa_s)
+{
+	u32 tu;
+	struct os_time now, passed;
+	os_get_time(&now);
+	os_time_sub(&now, &wpa_s->sme.sa_query_start, &passed);
+	tu = (passed.sec * 1000000 + passed.usec) / 1024;
+	if (sa_query_max_timeout < tu) {
+		wpa_printf(MSG_DEBUG, "SME: SA Query timed out");
+		sme_stop_sa_query(wpa_s);
+		wpa_supplicant_deauthenticate(
+			wpa_s, WLAN_REASON_PREV_AUTH_NOT_VALID);
+		return 1;
+	}
+
+	return 0;
+}
+
+
+static void sme_send_sa_query_req(struct wpa_supplicant *wpa_s,
+				  const u8 *trans_id)
+{
+	u8 req[2 + WLAN_SA_QUERY_TR_ID_LEN];
+	wpa_printf(MSG_DEBUG, "SME: Sending SA Query Request to "
+		   MACSTR, MAC2STR(wpa_s->bssid));
+	wpa_hexdump(MSG_DEBUG, "SME: SA Query Transaction ID",
+		    trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+	req[0] = WLAN_ACTION_SA_QUERY;
+	req[1] = WLAN_SA_QUERY_REQUEST;
+	os_memcpy(req + 2, trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, wpa_s->bssid,
+				wpa_s->own_addr, wpa_s->bssid,
+				req, sizeof(req)) < 0)
+		wpa_printf(MSG_INFO, "SME: Failed to send SA Query Request");
+}
+
+
+static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	unsigned int timeout, sec, usec;
+	u8 *trans_id, *nbuf;
+
+	if (wpa_s->sme.sa_query_count > 0 &&
+	    sme_check_sa_query_timeout(wpa_s))
+		return;
+
+	nbuf = os_realloc(wpa_s->sme.sa_query_trans_id,
+			  (wpa_s->sme.sa_query_count + 1) *
+			  WLAN_SA_QUERY_TR_ID_LEN);
+	if (nbuf == NULL)
+		return;
+	if (wpa_s->sme.sa_query_count == 0) {
+		/* Starting a new SA Query procedure */
+		os_get_time(&wpa_s->sme.sa_query_start);
+	}
+	trans_id = nbuf + wpa_s->sme.sa_query_count * WLAN_SA_QUERY_TR_ID_LEN;
+	wpa_s->sme.sa_query_trans_id = nbuf;
+	wpa_s->sme.sa_query_count++;
+
+	os_get_random(trans_id, WLAN_SA_QUERY_TR_ID_LEN);
+
+	timeout = sa_query_retry_timeout;
+	sec = ((timeout / 1000) * 1024) / 1000;
+	usec = (timeout % 1000) * 1024;
+	eloop_register_timeout(sec, usec, sme_sa_query_timer, wpa_s, NULL);
+
+	wpa_printf(MSG_DEBUG, "SME: Association SA Query attempt %d",
+		   wpa_s->sme.sa_query_count);
+
+	sme_send_sa_query_req(wpa_s, trans_id);
+}
+
+
+static void sme_start_sa_query(struct wpa_supplicant *wpa_s)
+{
+	sme_sa_query_timer(wpa_s, NULL);
+}
+
+
+void sme_stop_sa_query(struct wpa_supplicant *wpa_s)
+{
+	eloop_cancel_timeout(sme_sa_query_timer, wpa_s, NULL);
+	os_free(wpa_s->sme.sa_query_trans_id);
+	wpa_s->sme.sa_query_trans_id = NULL;
+	wpa_s->sme.sa_query_count = 0;
+}
+
+
+void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
+				 const u8 *da, u16 reason_code)
+{
+	struct wpa_ssid *ssid;
+
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
+		return;
+	if (wpa_s->wpa_state != WPA_COMPLETED)
+		return;
+	ssid = wpa_s->current_ssid;
+	if (ssid == NULL || ssid->ieee80211w == 0)
+		return;
+	if (os_memcmp(sa, wpa_s->bssid, ETH_ALEN) != 0)
+		return;
+	if (reason_code != WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA &&
+	    reason_code != WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA)
+		return;
+	if (wpa_s->sme.sa_query_count > 0)
+		return;
+
+	wpa_printf(MSG_DEBUG, "SME: Unprotected disconnect dropped - possible "
+		   "AP/STA state mismatch - trigger SA Query");
+	sme_start_sa_query(wpa_s);
+}
+
+
+void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
+		     const u8 *data, size_t len)
+{
+	int i;
+
+	if (wpa_s->sme.sa_query_trans_id == NULL ||
+	    len < 1 + WLAN_SA_QUERY_TR_ID_LEN ||
+	    data[0] != WLAN_SA_QUERY_RESPONSE)
+		return;
+	wpa_printf(MSG_DEBUG, "SME: Received SA Query response from " MACSTR
+		   " (trans_id %02x%02x)",
+		   MAC2STR(sa), data[1], data[2]);
+
+	if (os_memcmp(sa, wpa_s->bssid, ETH_ALEN) != 0)
+		return;
+
+	for (i = 0; i < wpa_s->sme.sa_query_count; i++) {
+		if (os_memcmp(wpa_s->sme.sa_query_trans_id +
+			      i * WLAN_SA_QUERY_TR_ID_LEN,
+			      data + 1, WLAN_SA_QUERY_TR_ID_LEN) == 0)
+			break;
+	}
+
+	if (i >= wpa_s->sme.sa_query_count) {
+		wpa_printf(MSG_DEBUG, "SME: No matching SA Query "
+			   "transaction identifier found");
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "SME: Reply to pending SA Query received from "
+		   MACSTR, MAC2STR(sa));
+	sme_stop_sa_query(wpa_s);
+}
+
+#endif /* CONFIG_IEEE80211W */

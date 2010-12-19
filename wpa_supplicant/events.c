@@ -1641,6 +1641,32 @@ static void ft_rx_action(struct wpa_supplicant *wpa_s, const u8 *data,
 #endif /* CONFIG_IEEE80211R */
 
 
+static void wpa_supplicant_event_unprot_deauth(struct wpa_supplicant *wpa_s,
+					       struct unprot_deauth *e)
+{
+#ifdef CONFIG_IEEE80211W
+	wpa_printf(MSG_DEBUG, "Unprotected Deauthentication frame "
+		   "dropped: " MACSTR " -> " MACSTR
+		   " (reason code %u)",
+		   MAC2STR(e->sa), MAC2STR(e->da), e->reason_code);
+	sme_event_unprot_disconnect(wpa_s, e->sa, e->da, e->reason_code);
+#endif /* CONFIG_IEEE80211W */
+}
+
+
+static void wpa_supplicant_event_unprot_disassoc(struct wpa_supplicant *wpa_s,
+						 struct unprot_disassoc *e)
+{
+#ifdef CONFIG_IEEE80211W
+	wpa_printf(MSG_DEBUG, "Unprotected Disassociation frame "
+		   "dropped: " MACSTR " -> " MACSTR
+		   " (reason code %u)",
+		   MAC2STR(e->sa), MAC2STR(e->da), e->reason_code);
+	sme_event_unprot_disconnect(wpa_s, e->sa, e->da, e->reason_code);
+#endif /* CONFIG_IEEE80211W */
+}
+
+
 void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
@@ -1886,6 +1912,16 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+#ifdef CONFIG_SME
+		if (data->rx_action.category == WLAN_ACTION_SA_QUERY) {
+			sme_sa_query_rx(wpa_s, data->rx_action.sa,
+					data->rx_action.data,
+					data->rx_action.len);
+			break;
+		}
+#endif /* CONFIG_SME */
+#endif /* CONFIG_IEEE80211W */
 #ifdef CONFIG_P2P
 		wpas_p2p_rx_action(wpa_s, data->rx_action.da,
 				   data->rx_action.sa,
@@ -1981,6 +2017,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					      data->best_chan.freq_5,
 					      data->best_chan.freq_overall);
 #endif /* CONFIG_P2P */
+		break;
+	case EVENT_UNPROT_DEAUTH:
+		wpa_supplicant_event_unprot_deauth(wpa_s,
+						   &data->unprot_deauth);
+		break;
+	case EVENT_UNPROT_DISASSOC:
+		wpa_supplicant_event_unprot_disassoc(wpa_s,
+						     &data->unprot_disassoc);
 		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);

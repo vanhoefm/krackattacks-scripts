@@ -2266,7 +2266,27 @@ enum wpa_event_type {
 	 * (e.g., based on RSSI or channel use). This information can be used
 	 * to improve channel selection for a new AP/P2P group.
 	 */
-	EVENT_BEST_CHANNEL
+	EVENT_BEST_CHANNEL,
+
+	/**
+	 * EVENT_UNPROT_DEAUTH - Unprotected Deauthentication frame received
+	 *
+	 * This event should be called when a Deauthentication frame is dropped
+	 * due to it not being protected (MFP/IEEE 802.11w).
+	 * union wpa_event_data::unprot_deauth is required to provide more
+	 * details of the frame.
+	 */
+	EVENT_UNPROT_DEAUTH,
+
+	/**
+	 * EVENT_UNPROT_DISASSOC - Unprotected Disassociation frame received
+	 *
+	 * This event should be called when a Disassociation frame is dropped
+	 * due to it not being protected (MFP/IEEE 802.11w).
+	 * union wpa_event_data::unprot_disassoc is required to provide more
+	 * details of the frame.
+	 */
+	EVENT_UNPROT_DISASSOC,
 };
 
 
@@ -2700,6 +2720,18 @@ union wpa_event_data {
 		int freq_5;
 		int freq_overall;
 	} best_chan;
+
+	struct unprot_deauth {
+		const u8 *sa;
+		const u8 *da;
+		u16 reason_code;
+	} unprot_deauth;
+
+	struct unprot_disassoc {
+		const u8 *sa;
+		const u8 *da;
+		u16 reason_code;
+	} unprot_disassoc;
 };
 
 /**

@@ -447,6 +447,14 @@ struct wpa_supplicant {
 		u8 prev_bssid[ETH_ALEN];
 		int prev_bssid_set;
 		int auth_alg;
+
+		int sa_query_count; /* number of pending SA Query requests;
+				     * 0 = no SA Query in progress */
+		int sa_query_timed_out;
+		u8 *sa_query_trans_id; /* buffer of WLAN_SA_QUERY_TR_ID_LEN *
+					* sa_query_count octets of pending
+					* SA Query transaction identifiers */
+		struct os_time sa_query_start;
 	} sme;
 #endif /* CONFIG_SME */
 

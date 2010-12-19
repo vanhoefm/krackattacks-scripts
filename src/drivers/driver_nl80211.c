@@ -835,6 +835,38 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void mlme_event_unprot_disconnect(struct wpa_driver_nl80211_data *drv,
+					 enum wpa_event_type type,
+					 const u8 *frame, size_t len)
+{
+	const struct ieee80211_mgmt *mgmt;
+	union wpa_event_data event;
+	u16 reason_code = 0;
+
+	if (len < 24)
+		return;
+
+	mgmt = (const struct ieee80211_mgmt *) frame;
+
+	os_memset(&event, 0, sizeof(event));
+	/* Note: Same offset for Reason Code in both frame subtypes */
+	if (len >= 24 + sizeof(mgmt->u.deauth))
+		reason_code = le_to_host16(mgmt->u.deauth.reason_code);
+
+	if (type == EVENT_UNPROT_DISASSOC) {
+		event.unprot_disassoc.sa = mgmt->sa;
+		event.unprot_disassoc.da = mgmt->da;
+		event.unprot_disassoc.reason_code = reason_code;
+	} else {
+		event.unprot_deauth.sa = mgmt->sa;
+		event.unprot_deauth.da = mgmt->da;
+		event.unprot_deauth.reason_code = reason_code;
+	}
+
+	wpa_supplicant_event(drv->ctx, type, &event);
+}
+
+
 static void mlme_event(struct wpa_driver_nl80211_data *drv,
 		       enum nl80211_commands cmd, struct nlattr *frame,
 		       struct nlattr *addr, struct nlattr *timed_out,
@@ -877,6 +909,14 @@ static void mlme_event(struct wpa_driver_nl80211_data *drv,
 	case NL80211_CMD_FRAME_TX_STATUS:
 		mlme_event_action_tx_status(drv, cookie, nla_data(frame),
 					    nla_len(frame), ack);
+		break;
+	case NL80211_CMD_UNPROT_DEAUTHENTICATE:
+		mlme_event_unprot_disconnect(drv, EVENT_UNPROT_DEAUTH,
+					     nla_data(frame), nla_len(frame));
+		break;
+	case NL80211_CMD_UNPROT_DISASSOCIATE:
+		mlme_event_unprot_disconnect(drv, EVENT_UNPROT_DISASSOC,
+					     nla_data(frame), nla_len(frame));
 		break;
 	default:
 		break;
@@ -1294,6 +1334,8 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_DISASSOCIATE:
 	case NL80211_CMD_FRAME:
 	case NL80211_CMD_FRAME_TX_STATUS:
+	case NL80211_CMD_UNPROT_DEAUTHENTICATE:
+	case NL80211_CMD_UNPROT_DISASSOCIATE:
 		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME],
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
@@ -1873,6 +1915,11 @@ static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 					  5) < 0)
 		return -1;
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_IEEE80211W
+	/* SA Query Response */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x08\x01", 2) < 0)
+		return -1;
+#endif /* CONFIG_IEEE80211W */
 
 	/* FT Action frames */
 	if (nl80211_register_action_frame(drv, (u8 *) "\x06", 1) < 0)

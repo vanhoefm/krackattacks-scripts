@@ -424,6 +424,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	os_free(wpa_s->sme.ft_ies);
 	wpa_s->sme.ft_ies = NULL;
 	wpa_s->sme.ft_ies_len = 0;
+	sme_stop_sa_query(wpa_s);
 #endif /* CONFIG_SME */
 
 #ifdef CONFIG_AP

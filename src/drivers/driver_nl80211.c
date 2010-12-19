@@ -4628,7 +4628,7 @@ static int wpa_driver_nl80211_associate(
 			cipher = WLAN_CIPHER_SUITE_TKIP;
 			break;
 		}
-		wpa_printf(MSG_DEBUG, "  * pairwise=0x%x\n", cipher);
+		wpa_printf(MSG_DEBUG, "  * pairwise=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE, cipher);
 	}
 
@@ -4650,7 +4650,7 @@ static int wpa_driver_nl80211_associate(
 			cipher = WLAN_CIPHER_SUITE_TKIP;
 			break;
 		}
-		wpa_printf(MSG_DEBUG, "  * group=0x%x\n", cipher);
+		wpa_printf(MSG_DEBUG, "  * group=0x%x", cipher);
 		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP, cipher);
 	}
 

@@ -56,7 +56,7 @@
 #include "linux_ioctl.h"
 
 
-struct madwifi_driver_data {
+struct atheros_driver_data {
 	struct hostapd_data *hapd;		/* back pointer */
 
 	char	iface[IFNAMSIZ + 1];
@@ -72,9 +72,9 @@ struct madwifi_driver_data {
 	struct l2_packet_data *sock_raw; /* raw 802.11 management frames */
 };
 
-static int madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+static int atheros_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 			      int reason_code);
-static int madwifi_set_privacy(void *priv, int enabled);
+static int atheros_set_privacy(void *priv, int enabled);
 
 static const char * athr_get_ioctl_name(int op)
 {
@@ -171,7 +171,7 @@ static const char * athr_get_param_name(int op)
 
 
 static int
-set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
+set80211priv(struct atheros_driver_data *drv, int op, void *data, int len)
 {
 	struct iwreq iwr;
 	int do_inline = len < IFNAMSIZ;
@@ -210,7 +210,7 @@ set80211priv(struct madwifi_driver_data *drv, int op, void *data, int len)
 }
 
 static int
-set80211param(struct madwifi_driver_data *drv, int op, int arg)
+set80211param(struct atheros_driver_data *drv, int op, int arg)
 {
 	struct iwreq iwr;
 
@@ -247,7 +247,7 @@ ether_sprintf(const u8 *addr)
  * Configure WPA parameters.
  */
 static int
-madwifi_configure_wpa(struct madwifi_driver_data *drv,
+atheros_configure_wpa(struct atheros_driver_data *drv,
 		      struct wpa_bss_params *params)
 {
 	int v;
@@ -328,9 +328,9 @@ madwifi_configure_wpa(struct madwifi_driver_data *drv,
 }
 
 static int
-madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
+atheros_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 
 	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, params->enabled);
 
@@ -340,14 +340,14 @@ madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 				  IEEE80211_AUTH_AUTO) < 0)
 			return -1;
 		/* IEEE80211_AUTH_AUTO ends up enabling Privacy; clear that */
-		return madwifi_set_privacy(drv, 0);
+		return atheros_set_privacy(drv, 0);
 	}
 	if (!params->wpa && !params->ieee802_1x) {
 		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
 			HOSTAPD_LEVEL_WARNING, "No 802.1X or WPA enabled!");
 		return -1;
 	}
-	if (params->wpa && madwifi_configure_wpa(drv, params) != 0) {
+	if (params->wpa && atheros_configure_wpa(drv, params) != 0) {
 		hostapd_logger(drv->hapd, NULL, HOSTAPD_MODULE_DRIVER,
 			HOSTAPD_LEVEL_WARNING, "Error configuring WPA state!");
 		return -1;
@@ -363,9 +363,9 @@ madwifi_set_ieee8021x(void *priv, struct wpa_bss_params *params)
 }
 
 static int
-madwifi_set_privacy(void *priv, int enabled)
+atheros_set_privacy(void *priv, int enabled)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 
 	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __func__, enabled);
 
@@ -373,9 +373,9 @@ madwifi_set_privacy(void *priv, int enabled)
 }
 
 static int
-madwifi_set_sta_authorized(void *priv, const u8 *addr, int authorized)
+atheros_set_sta_authorized(void *priv, const u8 *addr, int authorized)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	int ret;
 
@@ -398,21 +398,21 @@ madwifi_set_sta_authorized(void *priv, const u8 *addr, int authorized)
 }
 
 static int
-madwifi_sta_set_flags(void *priv, const u8 *addr,
+atheros_sta_set_flags(void *priv, const u8 *addr,
 		      int total_flags, int flags_or, int flags_and)
 {
 	/* For now, only support setting Authorized flag */
 	if (flags_or & WPA_STA_AUTHORIZED)
-		return madwifi_set_sta_authorized(priv, addr, 1);
+		return atheros_set_sta_authorized(priv, addr, 1);
 	if (!(flags_and & WPA_STA_AUTHORIZED))
-		return madwifi_set_sta_authorized(priv, addr, 0);
+		return atheros_set_sta_authorized(priv, addr, 0);
 	return 0;
 }
 
 static int
-madwifi_del_key(void *priv, const u8 *addr, int key_idx)
+atheros_del_key(void *priv, const u8 *addr, int key_idx)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_del_key wk;
 	int ret;
 
@@ -438,17 +438,17 @@ madwifi_del_key(void *priv, const u8 *addr, int key_idx)
 }
 
 static int
-madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
+atheros_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 		const u8 *addr, int key_idx, int set_tx, const u8 *seq,
 		size_t seq_len, const u8 *key, size_t key_len)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_key wk;
 	u_int8_t cipher;
 	int ret;
 
 	if (alg == WPA_ALG_NONE)
-		return madwifi_del_key(drv, addr, key_idx);
+		return atheros_del_key(drv, addr, key_idx);
 
 	wpa_printf(MSG_DEBUG, "%s: alg=%d addr=%s key_idx=%d",
 		   __func__, alg, ether_sprintf(addr), key_idx);
@@ -502,10 +502,10 @@ madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 
 
 static int
-madwifi_get_seqnum(const char *ifname, void *priv, const u8 *addr, int idx,
+atheros_get_seqnum(const char *ifname, void *priv, const u8 *addr, int idx,
 		   u8 *seq)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_key wk;
 
 	wpa_printf(MSG_DEBUG, "%s: addr=%s idx=%d",
@@ -549,20 +549,20 @@ madwifi_get_seqnum(const char *ifname, void *priv, const u8 *addr, int idx,
 
 
 static int
-madwifi_flush(void *priv)
+atheros_flush(void *priv)
 {
 	u8 allsta[IEEE80211_ADDR_LEN];
 	memset(allsta, 0xff, IEEE80211_ADDR_LEN);
-	return madwifi_sta_deauth(priv, NULL, allsta,
+	return atheros_sta_deauth(priv, NULL, allsta,
 				  IEEE80211_REASON_AUTH_LEAVE);
 }
 
 
 static int
-madwifi_read_sta_driver_data(void *priv, struct hostap_sta_driver_data *data,
+atheros_read_sta_driver_data(void *priv, struct hostap_sta_driver_data *data,
 			     const u8 *addr)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_sta_stats stats;
 
 	memset(data, 0, sizeof(*data));
@@ -594,9 +594,9 @@ madwifi_read_sta_driver_data(void *priv, struct hostap_sta_driver_data *data,
 
 
 static int
-madwifi_sta_clear_stats(void *priv, const u8 *addr)
+atheros_sta_clear_stats(void *priv, const u8 *addr)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	int ret;
 
@@ -616,7 +616,7 @@ madwifi_sta_clear_stats(void *priv, const u8 *addr)
 
 
 static int
-madwifi_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
+atheros_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 {
 	/*
 	 * Do nothing; we setup parameters at startup that define the
@@ -626,10 +626,10 @@ madwifi_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 }
 
 static int
-madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
+atheros_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 		   int reason_code)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	int ret;
 
@@ -650,10 +650,10 @@ madwifi_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 static int
-madwifi_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
+atheros_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 		     int reason_code)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct ieee80211req_mlme mlme;
 	int ret;
 
@@ -674,10 +674,10 @@ madwifi_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 #ifdef CONFIG_WPS
-static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
+static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 				size_t len)
 {
-	struct madwifi_driver_data *drv = ctx;
+	struct atheros_driver_data *drv = ctx;
 	const struct ieee80211_mgmt *mgmt;
 	u16 fc;
 	union wpa_event_data event;
@@ -702,7 +702,7 @@ static void madwifi_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 }
 #endif /* CONFIG_WPS */
 
-static int madwifi_receive_probe_req(struct madwifi_driver_data *drv)
+static int atheros_receive_probe_req(struct atheros_driver_data *drv)
 {
 	int ret = 0;
 #ifdef CONFIG_WPS
@@ -717,7 +717,7 @@ static int madwifi_receive_probe_req(struct madwifi_driver_data *drv)
 		return ret;
 
 	drv->sock_raw = l2_packet_init(drv->iface, NULL, ETH_P_80211_RAW,
-				       madwifi_raw_receive, drv, 1);
+				       atheros_raw_receive, drv, 1);
 	if (drv->sock_raw == NULL)
 		return -1;
 #endif /* CONFIG_WPS */
@@ -726,9 +726,9 @@ static int madwifi_receive_probe_req(struct madwifi_driver_data *drv)
 
 #ifdef CONFIG_WPS
 static int
-madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
+atheros_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	u8 buf[500];
 	struct ieee80211req_getset_appiebuf *beac_ie;
 
@@ -745,28 +745,28 @@ madwifi_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 }
 
 static int
-madwifi_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
+atheros_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
 		      const struct wpabuf *proberesp,
 		      const struct wpabuf *assocresp)
 {
-	madwifi_set_wps_ie(priv, assocresp ? wpabuf_head(assocresp) : NULL,
+	atheros_set_wps_ie(priv, assocresp ? wpabuf_head(assocresp) : NULL,
 			   assocresp ? wpabuf_len(assocresp) : 0,
 			   IEEE80211_APPIE_FRAME_ASSOC_RESP);
-	if (madwifi_set_wps_ie(priv, beacon ? wpabuf_head(beacon) : NULL,
+	if (atheros_set_wps_ie(priv, beacon ? wpabuf_head(beacon) : NULL,
 			       beacon ? wpabuf_len(beacon) : 0,
 			       IEEE80211_APPIE_FRAME_BEACON))
 		return -1;
-	return madwifi_set_wps_ie(priv,
+	return atheros_set_wps_ie(priv,
 				  proberesp ? wpabuf_head(proberesp) : NULL,
 				  proberesp ? wpabuf_len(proberesp): 0,
 				  IEEE80211_APPIE_FRAME_PROBE_RESP);
 }
 #else /* CONFIG_WPS */
-#define madwifi_set_ap_wps_ie NULL
+#define atheros_set_ap_wps_ie NULL
 #endif /* CONFIG_WPS */
 
 static void
-madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
+atheros_new_sta(struct atheros_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
 	struct hostapd_data *hapd = drv->hapd;
 	struct ieee80211req_wpaie ie;
@@ -787,21 +787,21 @@ madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 			   __func__, strerror(errno));
 		goto no_ie;
 	}
-	wpa_hexdump(MSG_MSGDUMP, "madwifi req WPA IE",
+	wpa_hexdump(MSG_MSGDUMP, "atheros req WPA IE",
 		    ie.wpa_ie, IEEE80211_MAX_OPT_IE);
-	wpa_hexdump(MSG_MSGDUMP, "madwifi req RSN IE",
+	wpa_hexdump(MSG_MSGDUMP, "atheros req RSN IE",
 		    ie.rsn_ie, IEEE80211_MAX_OPT_IE);
 #ifdef ATH_WPS_IE
-	wpa_hexdump(MSG_MSGDUMP, "madwifi req WPS IE",
+	wpa_hexdump(MSG_MSGDUMP, "atheros req WPS IE",
 		    ie.wps_ie, IEEE80211_MAX_OPT_IE);
 #endif /* ATH_WPS_IE */
 	iebuf = ie.wpa_ie;
-	/* madwifi seems to return some random data if WPA/RSN IE is not set.
+	/* atheros seems to return some random data if WPA/RSN IE is not set.
 	 * Assume the IE was not included if the IE type is unknown. */
 	if (iebuf[0] != WLAN_EID_VENDOR_SPECIFIC)
 		iebuf[1] = 0;
 	if (iebuf[1] == 0 && ie.rsn_ie[1] > 0) {
-		/* madwifi-ng svn #1453 added rsn_ie. Use it, if wpa_ie was not
+		/* atheros-ng svn #1453 added rsn_ie. Use it, if wpa_ie was not
 		 * set. This is needed for WPA2. */
 		iebuf = ie.rsn_ie;
 		if (iebuf[0] != WLAN_EID_RSN)
@@ -835,7 +835,7 @@ no_ie:
 }
 
 static void
-madwifi_wireless_event_wireless_custom(struct madwifi_driver_data *drv,
+atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 				       char *custom, char *end)
 {
 	wpa_printf(MSG_DEBUG, "Custom wireless event: '%s'", custom);
@@ -907,14 +907,14 @@ madwifi_wireless_event_wireless_custom(struct madwifi_driver_data *drv,
 				   "length %d", len);
 			return;
 		}
-		madwifi_raw_receive(drv, NULL,
+		atheros_raw_receive(drv, NULL,
 				    (u8 *) custom + WPS_FRAM_TAG_SIZE, len);
 #endif /* CONFIG_WPS */
 	}
 }
 
 static void
-madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
+atheros_wireless_event_wireless(struct atheros_driver_data *drv,
 				char *data, int len)
 {
 	struct iw_event iwe_buf, *iwe = &iwe_buf;
@@ -953,7 +953,7 @@ madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
 					   (u8 *) iwe->u.addr.sa_data);
 			break;
 		case IWEVREGISTERED:
-			madwifi_new_sta(drv, (u8 *) iwe->u.addr.sa_data);
+			atheros_new_sta(drv, (u8 *) iwe->u.addr.sa_data);
 			break;
 		case IWEVASSOCREQIE:
 			/* Driver hack.. Use IWEVASSOCREQIE to bypass
@@ -968,7 +968,7 @@ madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
 				return;		/* XXX */
 			memcpy(buf, custom, iwe->u.data.length);
 			buf[iwe->u.data.length] = '\0';
-			madwifi_wireless_event_wireless_custom(
+			atheros_wireless_event_wireless_custom(
 				drv, buf, buf + iwe->u.data.length);
 			free(buf);
 			break;
@@ -980,10 +980,10 @@ madwifi_wireless_event_wireless(struct madwifi_driver_data *drv,
 
 
 static void
-madwifi_wireless_event_rtm_newlink(void *ctx,
+atheros_wireless_event_rtm_newlink(void *ctx,
 				   struct ifinfomsg *ifi, u8 *buf, size_t len)
 {
-	struct madwifi_driver_data *drv = ctx;
+	struct atheros_driver_data *drv = ctx;
 	int attrlen, rta_len;
 	struct rtattr *attr;
 
@@ -996,7 +996,7 @@ madwifi_wireless_event_rtm_newlink(void *ctx,
 	rta_len = RTA_ALIGN(sizeof(struct rtattr));
 	while (RTA_OK(attr, attrlen)) {
 		if (attr->rta_type == IFLA_WIRELESS) {
-			madwifi_wireless_event_wireless(
+			atheros_wireless_event_wireless(
 				drv, ((char *) attr) + rta_len,
 				attr->rta_len - rta_len);
 		}
@@ -1006,7 +1006,7 @@ madwifi_wireless_event_rtm_newlink(void *ctx,
 
 
 static int
-madwifi_get_we_version(struct madwifi_driver_data *drv)
+atheros_get_we_version(struct atheros_driver_data *drv)
 {
 	struct iw_range *range;
 	struct iwreq iwr;
@@ -1052,17 +1052,17 @@ madwifi_get_we_version(struct madwifi_driver_data *drv)
 
 
 static int
-madwifi_wireless_event_init(struct madwifi_driver_data *drv)
+atheros_wireless_event_init(struct atheros_driver_data *drv)
 {
 	struct netlink_config *cfg;
 
-	madwifi_get_we_version(drv);
+	atheros_get_we_version(drv);
 
 	cfg = os_zalloc(sizeof(*cfg));
 	if (cfg == NULL)
 		return -1;
 	cfg->ctx = drv;
-	cfg->newlink_cb = madwifi_wireless_event_rtm_newlink;
+	cfg->newlink_cb = atheros_wireless_event_rtm_newlink;
 	drv->netlink = netlink_init(cfg);
 	if (drv->netlink == NULL) {
 		os_free(cfg);
@@ -1074,10 +1074,10 @@ madwifi_wireless_event_init(struct madwifi_driver_data *drv)
 
 
 static int
-madwifi_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
+atheros_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
 		   int encrypt, const u8 *own_addr)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	unsigned char buf[3000];
 	unsigned char *bp = buf;
 	struct l2_ethhdr *eth;
@@ -1117,22 +1117,22 @@ madwifi_send_eapol(void *priv, const u8 *addr, const u8 *data, size_t data_len,
 static void
 handle_read(void *ctx, const u8 *src_addr, const u8 *buf, size_t len)
 {
-	struct madwifi_driver_data *drv = ctx;
+	struct atheros_driver_data *drv = ctx;
 	drv_event_eapol_rx(drv->hapd, src_addr, buf + sizeof(struct l2_ethhdr),
 			   len - sizeof(struct l2_ethhdr));
 }
 
 static void *
-madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
+atheros_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 {
-	struct madwifi_driver_data *drv;
+	struct atheros_driver_data *drv;
 	struct ifreq ifr;
 	struct iwreq iwr;
 	char brname[IFNAMSIZ];
 
-	drv = os_zalloc(sizeof(struct madwifi_driver_data));
+	drv = os_zalloc(sizeof(struct atheros_driver_data));
 	if (drv == NULL) {
-		printf("Could not allocate memory for madwifi driver data\n");
+		printf("Could not allocate memory for atheros driver data\n");
 		return NULL;
 	}
 
@@ -1189,11 +1189,11 @@ madwifi_init(struct hostapd_data *hapd, struct wpa_init_params *params)
 
 	/* mark down during setup */
 	linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
-	madwifi_set_privacy(drv, 0); /* default to no privacy */
+	atheros_set_privacy(drv, 0); /* default to no privacy */
 
-	madwifi_receive_probe_req(drv);
+	atheros_receive_probe_req(drv);
 
-	if (madwifi_wireless_event_init(drv))
+	if (atheros_wireless_event_init(drv))
 		goto bad;
 
 	return drv;
@@ -1211,9 +1211,9 @@ bad:
 
 
 static void
-madwifi_deinit(void *priv)
+atheros_deinit(void *priv)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 
 	netlink_deinit(drv->netlink);
 	(void) linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
@@ -1229,9 +1229,9 @@ madwifi_deinit(void *priv)
 }
 
 static int
-madwifi_set_ssid(void *priv, const u8 *buf, int len)
+atheros_set_ssid(void *priv, const u8 *buf, int len)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct iwreq iwr;
 
 	memset(&iwr, 0, sizeof(iwr));
@@ -1249,9 +1249,9 @@ madwifi_set_ssid(void *priv, const u8 *buf, int len)
 }
 
 static int
-madwifi_get_ssid(void *priv, u8 *buf, int len)
+atheros_get_ssid(void *priv, u8 *buf, int len)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	struct iwreq iwr;
 	int ret = 0;
 
@@ -1270,39 +1270,39 @@ madwifi_get_ssid(void *priv, u8 *buf, int len)
 }
 
 static int
-madwifi_set_countermeasures(void *priv, int enabled)
+atheros_set_countermeasures(void *priv, int enabled)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	wpa_printf(MSG_DEBUG, "%s: enabled=%d", __FUNCTION__, enabled);
 	return set80211param(drv, IEEE80211_PARAM_COUNTERMEASURES, enabled);
 }
 
 static int
-madwifi_commit(void *priv)
+atheros_commit(void *priv)
 {
-	struct madwifi_driver_data *drv = priv;
+	struct atheros_driver_data *drv = priv;
 	return linux_set_iface_flags(drv->ioctl_sock, drv->iface, 1);
 }
 
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
-	.hapd_init		= madwifi_init,
-	.hapd_deinit		= madwifi_deinit,
-	.set_ieee8021x		= madwifi_set_ieee8021x,
-	.set_privacy		= madwifi_set_privacy,
-	.set_key		= madwifi_set_key,
-	.get_seqnum		= madwifi_get_seqnum,
-	.flush			= madwifi_flush,
-	.set_generic_elem	= madwifi_set_opt_ie,
-	.sta_set_flags		= madwifi_sta_set_flags,
-	.read_sta_data		= madwifi_read_sta_driver_data,
-	.hapd_send_eapol	= madwifi_send_eapol,
-	.sta_disassoc		= madwifi_sta_disassoc,
-	.sta_deauth		= madwifi_sta_deauth,
-	.hapd_set_ssid		= madwifi_set_ssid,
-	.hapd_get_ssid		= madwifi_get_ssid,
-	.set_countermeasures	= madwifi_set_countermeasures,
-	.sta_clear_stats	= madwifi_sta_clear_stats,
-	.commit			= madwifi_commit,
-	.set_ap_wps_ie		= madwifi_set_ap_wps_ie,
+	.hapd_init		= atheros_init,
+	.hapd_deinit		= atheros_deinit,
+	.set_ieee8021x		= atheros_set_ieee8021x,
+	.set_privacy		= atheros_set_privacy,
+	.set_key		= atheros_set_key,
+	.get_seqnum		= atheros_get_seqnum,
+	.flush			= atheros_flush,
+	.set_generic_elem	= atheros_set_opt_ie,
+	.sta_set_flags		= atheros_sta_set_flags,
+	.read_sta_data		= atheros_read_sta_driver_data,
+	.hapd_send_eapol	= atheros_send_eapol,
+	.sta_disassoc		= atheros_sta_disassoc,
+	.sta_deauth		= atheros_sta_deauth,
+	.hapd_set_ssid		= atheros_set_ssid,
+	.hapd_get_ssid		= atheros_get_ssid,
+	.set_countermeasures	= atheros_set_countermeasures,
+	.sta_clear_stats	= atheros_sta_clear_stats,
+	.commit			= atheros_commit,
+	.set_ap_wps_ie		= atheros_set_ap_wps_ie,
 };

@@ -435,7 +435,7 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 				       enum wps_request_type req_type)
 {
 	struct wpabuf *ie;
-	u16 methods;
+	u16 methods = 0;
 
 	wpa_printf(MSG_DEBUG, "WPS: Building WPS IE for Probe Request");
 
@@ -443,34 +443,31 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	if (ie == NULL)
 		return NULL;
 
-	if (pbc) {
-		methods = WPS_CONFIG_PUSHBUTTON;
+	methods |= WPS_CONFIG_PUSHBUTTON;
 #ifdef CONFIG_WPS2
-		/*
-		 * TODO: At least in theory, should figure out whether this
-		 * Probe Request was triggered with physical or virtual
-		 * pushbutton.
-		 */
-		methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
+	/*
+	 * TODO: Should figure out whether this device has a physical or
+	 * virtual pushbutton.
+	 */
+	methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
 #endif /* CONFIG_WPS2 */
-	} else {
-		/*
-		 * TODO: At least in theory, should figure out whether this
-		 * Probe Request was triggered using physical or virtual
-		 * display.
-		 */
-		methods = WPS_CONFIG_LABEL | WPS_CONFIG_DISPLAY |
+
+	/*
+	 * TODO: Should figure out whether this Probe Request was triggered
+	 * using physical or virtual display. Also, if the device has a PIN on
+	 * a label, that should be indicated here.
+	 */
+	methods |= WPS_CONFIG_DISPLAY |
 #ifdef CONFIG_WPS2
-			WPS_CONFIG_VIRT_DISPLAY |
+		WPS_CONFIG_VIRT_DISPLAY |
 #endif /* CONFIG_WPS2 */
-			WPS_CONFIG_KEYPAD;
+		WPS_CONFIG_KEYPAD;
 #ifdef CONFIG_WPS_UFD
-		methods |= WPS_CONFIG_USBA;
+	methods |= WPS_CONFIG_USBA;
 #endif /* CONFIG_WPS_UFD */
 #ifdef CONFIG_WPS_NFC
-		methods |= WPS_CONFIG_NFC_INTERFACE;
+	methods |= WPS_CONFIG_NFC_INTERFACE;
 #endif /* CONFIG_WPS_NFC */
-	}
 
 	if (wps_build_version(ie) ||
 	    wps_build_req_type(ie, req_type) ||

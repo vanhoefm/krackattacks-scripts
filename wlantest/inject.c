@@ -220,12 +220,18 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 	    (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) == 0) {
 		struct wlantest_sta *sta2;
 		bss = bss_get(wt, hdr->addr3);
-		if (bss == NULL)
+		if (bss == NULL) {
+			wpa_printf(MSG_DEBUG, "No BSS found for TDLS "
+				   "injection");
 			return -1;
+		}
 		sta = sta_find(bss, hdr->addr2);
 		sta2 = sta_find(bss, hdr->addr1);
-		if (sta == NULL || sta2 == NULL)
+		if (sta == NULL || sta2 == NULL) {
+			wpa_printf(MSG_DEBUG, "No stations found for TDLS "
+				   "injection");
 			return -1;
+		}
 		dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list)
 		{
 			if ((tdls->init == sta && tdls->resp == sta2) ||
@@ -248,8 +254,10 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 					       incorrect_key);
 	}
 
-	if (tk == NULL && !sta->ptk_set)
+	if (tk == NULL && !sta->ptk_set) {
+		wpa_printf(MSG_DEBUG, "No key known for injection");
 		return -1;
+	}
 
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT)
 		tid = 16;
@@ -288,12 +296,15 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 				     frame, len, hdrlen, qos, pn, 0,
 				     &crypt_len);
 
-	if (crypt == NULL)
+	if (crypt == NULL) {
+		wpa_printf(MSG_DEBUG, "Frame encryption failed");
 		return -1;
+	}
 
 	wpa_hexdump(MSG_DEBUG, "Inject frame (encrypted)", crypt, crypt_len);
 	ret = inject_frame(wt->monitor_sock, crypt, crypt_len);
 	os_free(crypt);
+	wpa_printf(MSG_DEBUG, "inject_frame for protected frame: %d", ret);
 
 	return (ret < 0) ? -1 : 0;
 }
@@ -358,5 +369,6 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 			prot == WLANTEST_INJECT_INCORRECT_KEY);
 
 	ret = inject_frame(wt->monitor_sock, frame, len);
+	wpa_printf(MSG_DEBUG, "inject_frame for unprotected frame: %d", ret);
 	return (ret < 0) ? -1 : 0;
 }

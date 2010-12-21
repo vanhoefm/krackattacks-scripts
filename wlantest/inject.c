@@ -216,7 +216,8 @@ static int wlantest_inject_prot(struct wlantest *wt, struct wlantest_bss *bss,
 	hdrlen = 24;
 	fc = le_to_host16(hdr->frame_control);
 
-	if ((fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) == 0) {
+	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_DATA &&
+	    (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) == 0) {
 		struct wlantest_sta *sta2;
 		bss = bss_get(wt, hdr->addr3);
 		if (bss == NULL)

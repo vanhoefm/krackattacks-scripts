@@ -73,10 +73,16 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && wpa_s->current_ssid &&
 	    !(wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
+		int disabled = wpa_s->current_ssid->disabled;
 		wpa_printf(MSG_DEBUG, "WPS: Network configuration replaced - "
 			   "try to associate with the received credential");
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
+		if (disabled) {
+			wpa_printf(MSG_DEBUG, "WPS: Current network is "
+				   "disabled - wait for user to enable");
+			return 1;
+		}
 		wpa_s->after_wps = 5;
 		wpa_s->wps_freq = wpa_s->assoc_freq;
 		wpa_s->reassociate = 1;
@@ -183,6 +189,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	u8 key_idx = 0;
 	u16 auth_type;
+	int registrar = 0;
 
 	if ((wpa_s->conf->wps_cred_processing == 1 ||
 	     wpa_s->conf->wps_cred_processing == 2) && cred->cred_attr) {
@@ -236,6 +243,11 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS: Replace WPS network block based "
 			   "on the received credential");
+		if (ssid->eap.identity &&
+		    ssid->eap.identity_len == WSC_ID_REGISTRAR_LEN &&
+		    os_memcmp(ssid->eap.identity, WSC_ID_REGISTRAR,
+			      WSC_ID_REGISTRAR_LEN) == 0)
+			registrar = 1;
 		os_free(ssid->eap.identity);
 		ssid->eap.identity = NULL;
 		ssid->eap.identity_len = 0;
@@ -311,6 +323,16 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		ssid->auth_alg = WPA_AUTH_ALG_OPEN;
 		ssid->key_mgmt = WPA_KEY_MGMT_NONE;
 		ssid->proto = 0;
+#ifdef CONFIG_WPS_REG_DISABLE_OPEN
+		if (registrar) {
+			wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OPEN_NETWORK
+				"id=%d - Credentials for an open "
+				"network disabled by default - use "
+				"'select_network %d' to enable",
+				ssid->id, ssid->id);
+			ssid->disabled = 1;
+		}
+#endif /* CONFIG_WPS_REG_DISABLE_OPEN */
 		break;
 	case WPS_AUTH_SHARED:
 		ssid->auth_alg = WPA_AUTH_ALG_SHARED;

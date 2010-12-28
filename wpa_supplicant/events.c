@@ -420,10 +420,14 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 		return 1;
 	}
 
-	if (proto_match == 0)
+	if ((ssid->proto & (WPA_PROTO_WPA | WPA_PROTO_RSN)) &&
+	    proto_match == 0) {
 		wpa_printf(MSG_DEBUG, "   skip - no WPA/RSN proto match");
+		return 0;
+	}
 
-	return 0;
+	/* Allow in non-WPA configuration */
+	return 1;
 }
 
 
@@ -539,7 +543,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
-		if (wpa && !wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
+		if (!wpa_supplicant_ssid_bss_match(wpa_s, ssid, bss))
 			continue;
 
 		if (!wpa &&

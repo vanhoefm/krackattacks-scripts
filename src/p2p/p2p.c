@@ -958,6 +958,7 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	dev->flags &= ~P2P_DEV_USER_REJECTED;
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_RESPONSE;
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_CONFIRM;
+	dev->connect_reqs = 0;
 	dev->go_neg_req_sent = 0;
 	dev->go_state = UNKNOWN_GO;
 	if (persistent_group)
@@ -2365,6 +2366,15 @@ static void p2p_timeout_connect_listen(struct p2p_data *p2p)
 				"complete");
 			return;
 		}
+
+		if (p2p->go_neg_peer->connect_reqs >= 120) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Timeout on sending GO Negotiation "
+				"Request without getting response");
+			p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+			return;
+		}
+
 		p2p_set_state(p2p, P2P_CONNECT);
 		p2p_connect_send(p2p, p2p->go_neg_peer);
 	} else

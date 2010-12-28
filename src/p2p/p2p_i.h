@@ -98,6 +98,7 @@ struct p2p_device {
 
 	int status; /* enum p2p_status_code */
 	unsigned int wait_count;
+	unsigned int connect_reqs;
 	unsigned int invitation_reqs;
 
 	u16 ext_listen_period;

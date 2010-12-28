@@ -209,6 +209,7 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 	p2p->pending_action_state = P2P_PENDING_GO_NEG_REQUEST;
 	p2p->go_neg_peer = dev;
 	dev->flags |= P2P_DEV_WAIT_GO_NEG_RESPONSE;
+	dev->connect_reqs++;
 	if (p2p_send_action(p2p, freq, dev->p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {

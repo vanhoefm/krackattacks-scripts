@@ -37,6 +37,7 @@
 #define STATE_MACHINE_DEBUG_PREFIX "EAP"
 
 #define EAP_MAX_AUTH_ROUNDS 50
+#define EAP_CLIENT_TIMEOUT_DEFAULT 60
 
 
 static Boolean eap_sm_allowMethod(struct eap_sm *sm, int vendor,
@@ -267,6 +268,8 @@ SM_STATE(EAP, GET_METHOD)
 			   sm->reqVendor, method);
 		goto nak;
 	}
+
+	sm->ClientTimeout = EAP_CLIENT_TIMEOUT_DEFAULT;
 
 	wpa_printf(MSG_DEBUG, "EAP: Initialize selected EAP method: "
 		   "vendor %u method %u (%s)",
@@ -1241,7 +1244,7 @@ struct eap_sm * eap_peer_sm_init(void *eapol_ctx,
 	sm->eapol_ctx = eapol_ctx;
 	sm->eapol_cb = eapol_cb;
 	sm->msg_ctx = msg_ctx;
-	sm->ClientTimeout = 60;
+	sm->ClientTimeout = EAP_CLIENT_TIMEOUT_DEFAULT;
 	sm->wps = conf->wps;
 
 	os_memset(&tlsconf, 0, sizeof(tlsconf));

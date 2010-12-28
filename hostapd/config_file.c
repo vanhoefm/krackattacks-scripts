@@ -2032,6 +2032,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			else
 				bss->p2p &= ~P2P_ALLOW_CROSS_CONNECTION;
 #endif /* CONFIG_P2P_MANAGER */
+		} else if (os_strcmp(buf, "disassoc_low_ack") == 0) {
+			bss->disassoc_low_ack = atoi(pos);
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

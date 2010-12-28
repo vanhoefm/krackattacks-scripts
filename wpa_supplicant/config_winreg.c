@@ -269,6 +269,8 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 				  &config->filter_ssids);
 	wpa_config_read_reg_dword(hk, TEXT("max_num_sta"),
 				  (int *) &config->max_num_sta);
+	wpa_config_read_reg_dword(hk, TEXT("disassoc_low_ack"),
+				  (int *) &config->disassoc_low_ack);
 
 	return errors ? -1 : 0;
 }
@@ -609,6 +611,8 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 				   config->filter_ssids, 0);
 	wpa_config_write_reg_dword(hk, TEXT("max_num_sta"),
 				   config->max_num_sta, DEFAULT_MAX_NUM_STA);
+	wpa_config_write_reg_dword(hk, TEXT("disassoc_low_ack"),
+				   config->disassoc_low_ack, 0);
 
 	return 0;
 }

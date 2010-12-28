@@ -231,6 +231,22 @@ void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+
+	if (!sta || !hapd->conf->disassoc_low_ack)
+		return;
+
+	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
+		       HOSTAPD_LEVEL_INFO, "disconnected due to excessive "
+		       "missing ACKs");
+	hostapd_drv_sta_disassoc(hapd, addr, WLAN_REASON_DISASSOC_LOW_ACK);
+	if (sta)
+		ap_sta_disassociate(hapd, sta, WLAN_REASON_DISASSOC_LOW_ACK);
+}
+
+
 #ifdef HOSTAPD
 
 #ifdef NEED_AP_MLME
@@ -499,6 +515,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_DEAUTH:
 		if (data)
 			hostapd_notif_disassoc(hapd, data->deauth_info.addr);
+		break;
+	case EVENT_STATION_LOW_ACK:
+		if (!data)
+			break;
+		hostapd_event_sta_low_ack(hapd, data->low_ack.addr);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);

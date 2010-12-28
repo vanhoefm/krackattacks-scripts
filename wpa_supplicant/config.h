@@ -400,6 +400,11 @@ struct wpa_config {
 	 * changed_parameters - Bitmap of changed parameters since last update
 	 */
 	unsigned int changed_parameters;
+
+	/**
+	 * disassoc_low_ack - disassocenticate stations with massive packet loss
+	 */
+	int disassoc_low_ack;
 };
 
 

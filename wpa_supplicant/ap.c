@@ -191,6 +191,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	else
 		bss->max_num_sta = wpa_s->conf->max_num_sta;
 
+	bss->disassoc_low_ack = wpa_s->conf->disassoc_low_ack;
+
 	return 0;
 }
 

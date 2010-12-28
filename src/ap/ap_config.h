@@ -323,6 +323,8 @@ struct hostapd_bss_config {
 #define P2P_MANAGE BIT(3)
 #define P2P_ALLOW_CROSS_CONNECTION BIT(4)
 	int p2p;
+
+	int disassoc_low_ack;
 };
 
 

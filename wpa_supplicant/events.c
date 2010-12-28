@@ -2030,6 +2030,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_unprot_disassoc(wpa_s,
 						     &data->unprot_disassoc);
 		break;
+	case EVENT_STATION_LOW_ACK:
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface && data)
+			hostapd_event_sta_low_ack(wpa_s->ap_iface->bss[0],
+						  data->low_ack.addr);
+#endif /* CONFIG_AP */
+		break;
 	default:
 		wpa_printf(MSG_INFO, "Unknown event %d", event);
 		break;

@@ -1210,6 +1210,7 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 		[NL80211_ATTR_CQM_RSSI_THOLD] = { .type = NLA_U32 },
 		[NL80211_ATTR_CQM_RSSI_HYST] = { .type = NLA_U8 },
 		[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] = { .type = NLA_U32 },
+		[NL80211_ATTR_CQM_PKT_LOSS_EVENT] = { .type = NLA_U32 },
 	};
 	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
 	enum nl80211_cqm_rssi_threshold_event event;
@@ -1224,11 +1225,20 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 		return;
 	}
 
+	os_memset(&ed, 0, sizeof(ed));
+
+	if (cqm[NL80211_ATTR_CQM_PKT_LOSS_EVENT]) {
+		if (!tb[NL80211_ATTR_MAC])
+			return;
+		os_memcpy(ed.low_ack.addr, nla_data(tb[NL80211_ATTR_MAC]),
+			  ETH_ALEN);
+		wpa_supplicant_event(drv->ctx, EVENT_STATION_LOW_ACK, &ed);
+		return;
+	}
+
 	if (cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT] == NULL)
 		return;
 	event = nla_get_u32(cqm[NL80211_ATTR_CQM_RSSI_THRESHOLD_EVENT]);
-
-	os_memset(&ed, 0, sizeof(ed));
 
 	if (event == NL80211_CQM_RSSI_THRESHOLD_EVENT_HIGH) {
 		wpa_printf(MSG_DEBUG, "nl80211: Connection quality monitor "

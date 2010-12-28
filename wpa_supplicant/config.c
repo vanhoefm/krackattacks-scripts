@@ -2408,7 +2408,8 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(country), CFG_CHANGED_COUNTRY },
 	{ INT(bss_max_count), 0 },
 	{ INT_RANGE(filter_ssids, 0, 1), 0 },
-	{ INT(max_num_sta), 0 }
+	{ INT(max_num_sta), 0 },
+	{ INT_RANGE(disassoc_low_ack, 0, 1), 0 }
 };
 
 #undef FUNC

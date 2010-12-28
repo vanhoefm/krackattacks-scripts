@@ -2287,6 +2287,15 @@ enum wpa_event_type {
 	 * details of the frame.
 	 */
 	EVENT_UNPROT_DISASSOC,
+
+	/**
+	 * EVENT_STATION_LOW_ACK
+	 *
+	 * Driver generates this event whenever it detected that a particular
+	 * station was lost. Detection can be through massive transmission
+	 * failures for example.
+	 */
+	EVENT_STATION_LOW_ACK
 };
 
 
@@ -2732,6 +2741,14 @@ union wpa_event_data {
 		const u8 *da;
 		u16 reason_code;
 	} unprot_disassoc;
+
+	/**
+	 * struct low_ack - Data for EVENT_STATION_LOW_ACK events
+	 * @addr: station address
+	 */
+	struct low_ack {
+		u8 addr[ETH_ALEN];
+	} low_ack;
 };
 
 /**

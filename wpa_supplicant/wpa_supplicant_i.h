@@ -503,6 +503,7 @@ struct wpa_supplicant {
 	int pending_join_wps_method;
 	int p2p_join_scan_count;
 	unsigned int roc_waiting_drv_freq;
+	int action_tx_wait_time;
 	int force_long_sd;
 
 	/*

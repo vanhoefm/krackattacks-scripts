@@ -614,7 +614,7 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 	wpa_printf(MSG_DEBUG, "P2P: Sending pending Action frame to "
 		   MACSTR " using interface %s",
 		   MAC2STR(wpa_s->pending_action_dst), iface->ifname);
-	res = wpa_drv_send_action(iface, wpa_s->pending_action_freq,
+	res = wpa_drv_send_action(iface, wpa_s->pending_action_freq, 0,
 				  wpa_s->pending_action_dst,
 				  wpa_s->pending_action_src,
 				  wpa_s->pending_action_bssid,
@@ -705,6 +705,20 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	os_memcpy(wpa_s->pending_action_bssid, bssid, ETH_ALEN);
 	wpa_s->pending_action_freq = freq;
 
+	if (freq != 0 && wpa_s->drv_flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) {
+		struct wpa_supplicant *iface;
+
+		iface = wpas_get_tx_interface(wpa_s, wpa_s->pending_action_src);
+		wpa_s->action_tx_wait_time = wait_time;
+
+		return wpa_drv_send_action(iface, wpa_s->pending_action_freq,
+					wait_time, wpa_s->pending_action_dst,
+					wpa_s->pending_action_src,
+					wpa_s->pending_action_bssid,
+					wpabuf_head(wpa_s->pending_action_tx),
+					wpabuf_len(wpa_s->pending_action_tx));
+	}
+
 	if (freq) {
 		struct wpa_supplicant *tx_iface;
 		tx_iface = wpas_get_tx_interface(wpa_s, src);
@@ -757,7 +771,11 @@ static void wpas_send_action_done(void *ctx)
 	wpa_printf(MSG_DEBUG, "P2P: Action frame sequence done notification");
 	wpabuf_free(wpa_s->pending_action_tx);
 	wpa_s->pending_action_tx = NULL;
-	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) {
+		if (wpa_s->action_tx_wait_time)
+			wpa_drv_send_action_cancel_wait(wpa_s);
+		wpa_s->off_channel_freq = 0;
+	} else if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
 		wpa_drv_cancel_remain_on_channel(wpa_s);
 		wpa_s->off_channel_freq = 0;
 		wpa_s->roc_waiting_drv_freq = 0;

@@ -2598,6 +2598,7 @@ static int wpa_driver_test_set_freq(void *priv,
 
 
 static int wpa_driver_test_send_action(void *priv, unsigned int freq,
+				       unsigned int wait,
 				       const u8 *dst, const u8 *src,
 				       const u8 *bssid,
 				       const u8 *data, size_t data_len)

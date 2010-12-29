@@ -559,6 +559,8 @@ struct wpa_driver_capa {
  * operation does not end up getting completed successfully later.
  */
 #define WPA_DRIVER_FLAGS_SANE_ERROR_CODES		0x00004000
+/* Driver supports off-channel TX */
+#define WPA_DRIVER_FLAGS_OFFCHANNEL_TX			0x00008000
 	unsigned int flags;
 
 	int max_scan_ssids;
@@ -1724,6 +1726,7 @@ struct wpa_driver_ops {
 	 * send_action - Transmit an Action frame
 	 * @priv: Private driver interface data
 	 * @freq: Frequency (in MHz) of the channel
+	 * @wait: Time to wait off-channel for a response (in ms), or zero
 	 * @dst: Destination MAC address (Address 1)
 	 * @src: Source MAC address (Address 2)
 	 * @bssid: BSSID (Address 3)
@@ -1732,15 +1735,31 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This command can be used to request the driver to transmit an action
-	 * frame to the specified destination. If a remain-on-channel duration
-	 * is in progress, the frame is transmitted on that channel. Otherwise,
-	 * the frame is transmitted on the current operational channel if in
-	 * associated state in station mode or if operating as an AP. If none
-	 * of these conditions is in effect, send_action() cannot be used.
+	 * frame to the specified destination.
+	 *
+	 * If the %WPA_DRIVER_FLAGS_OFFCHANNEL_TX flag is set, the frame will
+	 * be transmitted on the given channel and the device will wait for a
+	 * response on that channel for the given wait time.
+	 *
+	 * If the flag is not set, the wait time will be ignored. In this case,
+	 * if a remain-on-channel duration is in progress, the frame must be
+	 * transmitted on that channel; alternatively the frame may be sent on
+	 * the current operational channel (if in associated state in station
+	 * mode or while operating as an AP.)
 	 */
-	int (*send_action)(void *priv, unsigned int freq,
+	int (*send_action)(void *priv, unsigned int freq, unsigned int wait,
 			   const u8 *dst, const u8 *src, const u8 *bssid,
 			   const u8 *data, size_t data_len);
+
+	/**
+	 * send_action_cancel_wait - Cancel action frame TX wait
+	 * @priv: Private driver interface data
+	 *
+	 * This command cancels the wait time associated with sending an action
+	 * frame. It is only available when %WPA_DRIVER_FLAGS_OFFCHANNEL_TX is
+	 * set in the driver flags.
+	 */
+	void (*send_action_cancel_wait)(void *priv);
 
 	/**
 	 * remain_on_channel - Remain awake on a channel

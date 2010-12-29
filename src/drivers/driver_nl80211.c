@@ -5835,6 +5835,7 @@ nla_put_failure:
 
 
 static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
+					  unsigned int wait_time,
 					  const u8 *dst, const u8 *src,
 					  const u8 *bssid,
 					  const u8 *data, size_t data_len)
@@ -6146,8 +6147,8 @@ static int nl80211_send_ft_action(void *priv, u8 action, const u8 *target_ap,
 	pos += ETH_ALEN;
 	os_memcpy(pos, ies, ies_len);
 
-	ret = wpa_driver_nl80211_send_action(bss, drv->assoc_freq, drv->bssid,
-					     own_addr, drv->bssid,
+	ret = wpa_driver_nl80211_send_action(bss, drv->assoc_freq, 0,
+					     drv->bssid, own_addr, drv->bssid,
 					     data, data_len);
 	os_free(data);
 

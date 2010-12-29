@@ -195,8 +195,8 @@ static int wpa_driver_nl80211_mlme(struct wpa_driver_nl80211_data *drv,
 static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv);
 static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
-				  unsigned int freq, const u8 *buf,
-				  size_t buf_len, u64 *cookie);
+				  unsigned int freq, unsigned int wait,
+				  const u8 *buf, size_t buf_len, u64 *cookie);
 static int wpa_driver_nl80211_probe_req_report(void *priv, int report);
 
 #ifdef HOSTAPD
@@ -1474,6 +1474,7 @@ struct wiphy_info_data {
 	int ap_supported;
 	int auth_supported;
 	int connect_supported;
+	int offchan_tx_supported;
 };
 
 
@@ -1515,6 +1516,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				info->connect_supported = 1;
 		}
 	}
+
+	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK])
+		info->offchan_tx_supported = 1;
 
 	return NL_SKIP;
 }
@@ -1573,6 +1577,12 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		wpa_printf(MSG_INFO, "nl80211: Driver does not support "
 			   "authentication/association or connect commands");
 		return -1;
+	}
+
+	if (info.offchan_tx_supported) {
+		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based "
+			   "off-channel TX");
+		drv->capa.flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_TX;
 	}
 
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SANE_ERROR_CODES;
@@ -3491,7 +3501,7 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 		 * but it works due to the single-threaded nature
 		 * of wpa_supplicant.
 		 */
-		return nl80211_send_frame_cmd(drv, drv->last_mgmt_freq,
+		return nl80211_send_frame_cmd(drv, drv->last_mgmt_freq, 0,
 					      data, data_len, NULL);
 	}
 
@@ -5796,8 +5806,9 @@ static int cookie_handler(struct nl_msg *msg, void *arg)
 
 
 static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
-				  unsigned int freq, const u8 *buf,
-				  size_t buf_len, u64 *cookie_out)
+				  unsigned int freq, unsigned int wait,
+				  const u8 *buf, size_t buf_len,
+				  u64 *cookie_out)
 {
 	struct nl_msg *msg;
 	u64 cookie;
@@ -5812,6 +5823,8 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
+	NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
+	NLA_PUT_FLAG(msg, NL80211_ATTR_OFFCHANNEL_TX_OK);
 	NLA_PUT(msg, NL80211_ATTR_FRAME, buf_len, buf);
 
 	cookie = 0;
@@ -5846,8 +5859,8 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	u8 *buf;
 	struct ieee80211_hdr *hdr;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Send Action frame (ifindex=%d)",
-		   drv->ifindex);
+	wpa_printf(MSG_DEBUG, "nl80211: Send Action frame (ifindex=%d, "
+		   "wait=%d ms)", drv->ifindex, wait_time);
 
 	buf = os_zalloc(24 + data_len);
 	if (buf == NULL)
@@ -5863,11 +5876,40 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	if (drv->nlmode == NL80211_IFTYPE_AP)
 		ret = wpa_driver_nl80211_send_mlme(priv, buf, 24 + data_len);
 	else
-		ret = nl80211_send_frame_cmd(drv, freq, buf, 24 + data_len,
+		ret = nl80211_send_frame_cmd(drv, freq, wait_time, buf,
+					     24 + data_len,
 					     &drv->send_action_cookie);
 
 	os_free(buf);
 	return ret;
+}
+
+
+static void wpa_driver_nl80211_send_action_cancel_wait(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_FRAME_WAIT_CANCEL, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT_U64(msg, NL80211_ATTR_COOKIE, drv->send_action_cookie);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret)
+		wpa_printf(MSG_DEBUG, "nl80211: wait cancel failed: ret=%d "
+			   "(%s)", ret, strerror(-ret));
+
+ nla_put_failure:
+	nlmsg_free(msg);
 }
 
 
@@ -6331,6 +6373,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #endif /* HOSTAPD */
 	.set_freq = i802_set_freq,
 	.send_action = wpa_driver_nl80211_send_action,
+	.send_action_cancel_wait = wpa_driver_nl80211_send_action_cancel_wait,
 	.remain_on_channel = wpa_driver_nl80211_remain_on_channel,
 	.cancel_remain_on_channel =
 	wpa_driver_nl80211_cancel_remain_on_channel,

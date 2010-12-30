@@ -1950,6 +1950,50 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				      data->rx_probe_req.ie,
 				      data->rx_probe_req.ie_len);
 		break;
+	case EVENT_P2P_DEV_FOUND:
+		wpas_dev_found(wpa_s, data->p2p_dev_found.addr,
+			       data->p2p_dev_found.dev_addr,
+			       data->p2p_dev_found.pri_dev_type,
+			       data->p2p_dev_found.dev_name,
+			       data->p2p_dev_found.config_methods,
+			       data->p2p_dev_found.dev_capab,
+			       data->p2p_dev_found.group_capab);
+		break;
+	case EVENT_P2P_GO_NEG_REQ_RX:
+		wpas_go_neg_req_rx(wpa_s, data->p2p_go_neg_req_rx.src,
+				   data->p2p_go_neg_req_rx.dev_passwd_id);
+		break;
+	case EVENT_P2P_GO_NEG_COMPLETED:
+		wpas_go_neg_completed(wpa_s, data->p2p_go_neg_completed.res);
+		break;
+	case EVENT_P2P_PROV_DISC_REQUEST:
+		wpas_prov_disc_req(wpa_s, data->p2p_prov_disc_req.peer,
+				   data->p2p_prov_disc_req.config_methods,
+				   data->p2p_prov_disc_req.dev_addr,
+				   data->p2p_prov_disc_req.pri_dev_type,
+				   data->p2p_prov_disc_req.dev_name,
+				   data->p2p_prov_disc_req.supp_config_methods,
+				   data->p2p_prov_disc_req.dev_capab,
+				   data->p2p_prov_disc_req.group_capab);
+		break;
+	case EVENT_P2P_PROV_DISC_RESPONSE:
+		wpas_prov_disc_resp(wpa_s, data->p2p_prov_disc_resp.peer,
+				    data->p2p_prov_disc_resp.config_methods);
+		break;
+	case EVENT_P2P_SD_REQUEST:
+		wpas_sd_request(wpa_s, data->p2p_sd_req.freq,
+				data->p2p_sd_req.sa,
+				data->p2p_sd_req.dialog_token,
+				data->p2p_sd_req.update_indic,
+				data->p2p_sd_req.tlvs,
+				data->p2p_sd_req.tlvs_len);
+		break;
+	case EVENT_P2P_SD_RESPONSE:
+		wpas_sd_response(wpa_s, data->p2p_sd_resp.sa,
+				 data->p2p_sd_resp.update_indic,
+				 data->p2p_sd_resp.tlvs,
+				 data->p2p_sd_resp.tlvs_len);
+		break;
 #endif /* CONFIG_P2P */
 #ifdef CONFIG_CLIENT_MLME
 	case EVENT_MLME_RX: {

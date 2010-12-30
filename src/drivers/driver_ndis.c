@@ -3311,5 +3311,19 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* set_p2p_powersave */,
 	NULL /* ampdu */,
 	NULL /* set_intra_bss */,
-	NULL /* get_radio_name */
+	NULL /* get_radio_name */,
+	NULL /* p2p_find */,
+	NULL /* p2p_stop_find */,
+	NULL /* p2p_listen */,
+	NULL /* p2p_connect */,
+	NULL /* wps_success_cb */,
+	NULL /* p2p_group_formation_failed */,
+	NULL /* p2p_set_params */,
+	NULL /* p2p_prov_disc_req */,
+	NULL /* p2p_sd_request */,
+	NULL /* p2p_sd_cancel_request */,
+	NULL /* p2p_sd_response */,
+	NULL /* p2p_service_update */,
+	NULL /* p2p_reject */,
+	NULL /* p2p_invite */
 };

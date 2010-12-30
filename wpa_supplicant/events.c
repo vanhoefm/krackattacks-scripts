@@ -421,7 +421,7 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 	}
 
 	if ((ssid->proto & (WPA_PROTO_WPA | WPA_PROTO_RSN)) &&
-	    proto_match == 0) {
+	    wpa_key_mgmt_wpa(ssid->key_mgmt) && proto_match == 0) {
 		wpa_printf(MSG_DEBUG, "   skip - no WPA/RSN proto match");
 		return 0;
 	}

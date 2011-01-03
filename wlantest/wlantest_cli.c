@@ -539,6 +539,7 @@ static const struct sta_counters sta_counters[] = {
 	{ "ping_ok", WLANTEST_STA_COUNTER_PING_OK },
 	{ "assocresp_comeback", WLANTEST_STA_COUNTER_ASSOCRESP_COMEBACK },
 	{ "reassocresp_comeback", WLANTEST_STA_COUNTER_REASSOCRESP_COMEBACK },
+	{ "ping_ok_first_assoc", WLANTEST_STA_COUNTER_PING_OK_FIRST_ASSOC },
 	{ NULL, 0 }
 };
 

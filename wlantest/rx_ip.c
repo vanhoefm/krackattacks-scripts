@@ -82,6 +82,10 @@ static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 	    sta->icmp_echo_req_id == id &&
 	    sta->icmp_echo_req_seq == seq) {
 		sta->counters[WLANTEST_STA_COUNTER_PING_OK]++;
+		if (sta->counters[WLANTEST_STA_COUNTER_ASSOCREQ_TX] == 0 &&
+		    sta->counters[WLANTEST_STA_COUNTER_REASSOCREQ_TX] == 0)
+			sta->counters[
+				WLANTEST_STA_COUNTER_PING_OK_FIRST_ASSOC]++;
 		wpa_printf(MSG_DEBUG, "ICMP echo (ping) match for STA " MACSTR,
 			   MAC2STR(sta->addr));
 	}

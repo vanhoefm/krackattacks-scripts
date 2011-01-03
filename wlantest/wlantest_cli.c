@@ -540,6 +540,13 @@ static const struct sta_counters sta_counters[] = {
 	{ "assocresp_comeback", WLANTEST_STA_COUNTER_ASSOCRESP_COMEBACK },
 	{ "reassocresp_comeback", WLANTEST_STA_COUNTER_REASSOCRESP_COMEBACK },
 	{ "ping_ok_first_assoc", WLANTEST_STA_COUNTER_PING_OK_FIRST_ASSOC },
+	{ "valid_deauth_rx_ack", WLANTEST_STA_COUNTER_VALID_DEAUTH_RX_ACK },
+	{ "valid_disassoc_rx_ack",
+	  WLANTEST_STA_COUNTER_VALID_DISASSOC_RX_ACK },
+	{ "invalid_deauth_rx_ack",
+	  WLANTEST_STA_COUNTER_INVALID_DEAUTH_RX_ACK },
+	{ "invalid_disassoc_rx_ack",
+	  WLANTEST_STA_COUNTER_INVALID_DISASSOC_RX_ACK },
 	{ NULL, 0 }
 };
 

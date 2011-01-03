@@ -160,6 +160,10 @@ struct wlantest {
 	void *write_pcap; /* pcap_t* */
 	void *write_pcap_dumper; /* pcpa_dumper_t */
 	struct timeval write_pcap_time;
+
+	u8 last_hdr[30];
+	size_t last_len;
+	int last_mgmt_valid;
 };
 
 int read_cap_file(struct wlantest *wt, const char *fname);
@@ -178,6 +182,7 @@ int monitor_init(struct wlantest *wt, const char *ifname);
 int monitor_init_wired(struct wlantest *wt, const char *ifname);
 void monitor_deinit(struct wlantest *wt);
 void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len);
+void rx_mgmt_ack(struct wlantest *wt, const struct ieee80211_hdr *hdr);
 void rx_data(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
 		   const u8 *data, size_t len, int prot);

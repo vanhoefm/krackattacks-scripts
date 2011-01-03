@@ -100,6 +100,25 @@ static int rx_duplicate(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 }
 
 
+static void rx_ack(struct wlantest *wt, const struct ieee80211_hdr *hdr)
+{
+	struct ieee80211_hdr *last = (struct ieee80211_hdr *) wt->last_hdr;
+	u16 fc;
+
+	if (wt->last_len < 24 || (last->addr1[0] & 0x01) ||
+	    os_memcmp(hdr->addr1, last->addr2, ETH_ALEN) != 0) {
+		wpa_printf(MSG_MSGDUMP, "Unknown Ack frame (previous frame "
+			   "not seen)");
+		return;
+	}
+
+	/* Ack to the previous frame */
+	fc = le_to_host16(last->frame_control);
+	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT)
+		rx_mgmt_ack(wt, last);
+}
+
+
 static void rx_frame(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
@@ -129,6 +148,8 @@ static void rx_frame(struct wlantest *wt, const u8 *data, size_t len)
 		if (len < 10)
 			break;
 		wt->rx_ctrl++;
+		if (WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_ACK)
+			rx_ack(wt, hdr);
 		break;
 	case WLAN_FC_TYPE_DATA:
 		if (len < 24)
@@ -142,6 +163,10 @@ static void rx_frame(struct wlantest *wt, const u8 *data, size_t len)
 			   WLAN_FC_GET_TYPE(fc));
 		break;
 	}
+
+	os_memcpy(wt->last_hdr, data, len > sizeof(wt->last_hdr) ?
+		  sizeof(wt->last_hdr) : len);
+	wt->last_len = len;
 }
 
 

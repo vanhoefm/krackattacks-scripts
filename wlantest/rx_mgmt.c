@@ -1035,4 +1035,88 @@ void rx_mgmt(struct wlantest *wt, const u8 *data, size_t len)
 	}
 
 	os_free(decrypted);
+
+	wt->last_mgmt_valid = valid;
+}
+
+
+static void rx_mgmt_deauth_ack(struct wlantest *wt,
+			       const struct ieee80211_hdr *hdr)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) hdr;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->da);
+	else
+		sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	wpa_printf(MSG_DEBUG, "DEAUTH from " MACSTR " acknowledged by " MACSTR,
+		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da));
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0) {
+		int c;
+		c = wt->last_mgmt_valid ?
+			WLANTEST_STA_COUNTER_VALID_DEAUTH_RX_ACK :
+			WLANTEST_STA_COUNTER_INVALID_DEAUTH_RX_ACK;
+		sta->counters[c]++;
+	}
+}
+
+
+static void rx_mgmt_disassoc_ack(struct wlantest *wt,
+				 const struct ieee80211_hdr *hdr)
+{
+	const struct ieee80211_mgmt *mgmt;
+	struct wlantest_bss *bss;
+	struct wlantest_sta *sta;
+
+	mgmt = (const struct ieee80211_mgmt *) hdr;
+	bss = bss_get(wt, mgmt->bssid);
+	if (bss == NULL)
+		return;
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+		sta = sta_get(bss, mgmt->da);
+	else
+		sta = sta_get(bss, mgmt->sa);
+	if (sta == NULL)
+		return;
+
+	wpa_printf(MSG_DEBUG, "DISASSOC from " MACSTR " acknowledged by "
+		   MACSTR, MAC2STR(mgmt->sa), MAC2STR(mgmt->da));
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0) {
+		int c;
+		c = wt->last_mgmt_valid ?
+			WLANTEST_STA_COUNTER_VALID_DISASSOC_RX_ACK :
+			WLANTEST_STA_COUNTER_INVALID_DISASSOC_RX_ACK;
+		sta->counters[c]++;
+	}
+}
+
+
+void rx_mgmt_ack(struct wlantest *wt, const struct ieee80211_hdr *hdr)
+{
+	u16 fc, stype;
+	fc = le_to_host16(hdr->frame_control);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	wpa_printf(MSG_MSGDUMP, "MGMT ACK: stype=%u a1=" MACSTR " a2=" MACSTR
+		   " a3=" MACSTR,
+		   stype, MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+		   MAC2STR(hdr->addr3));
+
+	switch (stype) {
+	case WLAN_FC_STYPE_DEAUTH:
+		rx_mgmt_deauth_ack(wt, hdr);
+		break;
+	case WLAN_FC_STYPE_DISASSOC:
+		rx_mgmt_disassoc_ack(wt, hdr);
+		break;
+	}
 }

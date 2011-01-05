@@ -1297,6 +1297,7 @@ int wpas_wps_scan_pbc_overlap(struct wpa_supplicant *wpa_s,
 void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss;
+	unsigned int pbc = 0, auth = 0, pin = 0, wps = 0;
 
 	if (wpa_s->disconnected || wpa_s->wpa_state >= WPA_ASSOCIATED)
 		return;
@@ -1307,20 +1308,24 @@ void wpas_wps_notify_scan_results(struct wpa_supplicant *wpa_s)
 		if (!ie)
 			continue;
 		if (wps_is_selected_pbc_registrar(ie))
-			wpa_msg_ctrl(wpa_s, MSG_INFO,
-				     WPS_EVENT_AP_AVAILABLE_PBC);
+			pbc++;
 		else if (wps_is_addr_authorized(ie, wpa_s->own_addr, 0))
-			wpa_msg_ctrl(wpa_s, MSG_INFO,
-				     WPS_EVENT_AP_AVAILABLE_AUTH);
+			auth++;
 		else if (wps_is_selected_pin_registrar(ie))
-			wpa_msg_ctrl(wpa_s, MSG_INFO,
-				     WPS_EVENT_AP_AVAILABLE_PIN);
+			pin++;
 		else
-			wpa_msg_ctrl(wpa_s, MSG_INFO,
-				     WPS_EVENT_AP_AVAILABLE);
+			wps++;
 		wpabuf_free(ie);
-		break;
 	}
+
+	if (pbc)
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_PBC);
+	else if (auth)
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_AUTH);
+	else if (pin)
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE_PIN);
+	else if (wps)
+		wpa_msg_ctrl(wpa_s, MSG_INFO, WPS_EVENT_AP_AVAILABLE);
 }
 
 

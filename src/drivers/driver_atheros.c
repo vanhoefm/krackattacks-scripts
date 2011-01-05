@@ -70,6 +70,9 @@ struct atheros_driver_data {
 	struct hostap_sta_driver_data acct_data;
 
 	struct l2_packet_data *sock_raw; /* raw 802.11 management frames */
+	struct wpabuf *wpa_ie;
+	struct wpabuf *wps_beacon_ie;
+	struct wpabuf *wps_probe_resp_ie;
 };
 
 static int atheros_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
@@ -618,10 +621,46 @@ atheros_sta_clear_stats(void *priv, const u8 *addr)
 static int
 atheros_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 {
-	/*
-	 * Do nothing; we setup parameters at startup that define the
-	 * contents of the beacon information element.
-	 */
+	struct atheros_driver_data *drv = priv;
+	u8 buf[512];
+	struct ieee80211req_getset_appiebuf *app_ie;
+
+	wpa_printf(MSG_DEBUG, "%s buflen = %lu", __func__,
+		   (unsigned long) ie_len);
+
+	wpabuf_free(drv->wpa_ie);
+	drv->wpa_ie = wpabuf_alloc_copy(ie, ie_len);
+
+	app_ie = (struct ieee80211req_getset_appiebuf *) buf;
+	os_memcpy(&(app_ie->app_buf[0]), ie, ie_len);
+	app_ie->app_buflen = ie_len;
+
+	app_ie->app_frmtype = IEEE80211_APPIE_FRAME_BEACON;
+
+	/* append WPS IE for Beacon */
+	if (drv->wps_beacon_ie != NULL) {
+		os_memcpy(&(app_ie->app_buf[ie_len]),
+			  wpabuf_head(drv->wps_beacon_ie),
+			  wpabuf_len(drv->wps_beacon_ie));
+		app_ie->app_buflen = ie_len + wpabuf_len(drv->wps_beacon_ie);
+	}
+	set80211priv(drv, IEEE80211_IOCTL_SET_APPIEBUF, app_ie,
+		     sizeof(struct ieee80211req_getset_appiebuf) +
+		     app_ie->app_buflen);
+
+	/* append WPS IE for Probe Response */
+	app_ie->app_frmtype = IEEE80211_APPIE_FRAME_PROBE_RESP;
+	if (drv->wps_probe_resp_ie != NULL) {
+		os_memcpy(&(app_ie->app_buf[ie_len]),
+			  wpabuf_head(drv->wps_probe_resp_ie),
+			  wpabuf_len(drv->wps_probe_resp_ie));
+		app_ie->app_buflen = ie_len +
+			wpabuf_len(drv->wps_probe_resp_ie);
+	} else
+		app_ie->app_buflen = ie_len;
+	set80211priv(drv, IEEE80211_IOCTL_SET_APPIEBUF, app_ie,
+		     sizeof(struct ieee80211req_getset_appiebuf) +
+		     app_ie->app_buflen);
 	return 0;
 }
 
@@ -729,7 +768,7 @@ static int
 atheros_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 {
 	struct atheros_driver_data *drv = priv;
-	u8 buf[500];
+	u8 buf[512];
 	struct ieee80211req_getset_appiebuf *beac_ie;
 
 	wpa_printf(MSG_DEBUG, "%s buflen = %lu", __func__,
@@ -738,10 +777,20 @@ atheros_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
 	beac_ie = (struct ieee80211req_getset_appiebuf *) buf;
 	beac_ie->app_frmtype = frametype;
 	beac_ie->app_buflen = len;
-	memcpy(&(beac_ie->app_buf[0]), ie, len);
+	os_memcpy(&(beac_ie->app_buf[0]), ie, len);
+
+	/* append the WPA/RSN IE if it is set already */
+	if (((frametype == IEEE80211_APPIE_FRAME_BEACON) ||
+	     (frametype == IEEE80211_APPIE_FRAME_PROBE_RESP)) &&
+	    (drv->wpa_ie != NULL)) {
+		os_memcpy(&(beac_ie->app_buf[len]), wpabuf_head(drv->wpa_ie),
+			  wpabuf_len(drv->wpa_ie));
+		beac_ie->app_buflen += wpabuf_len(drv->wpa_ie);
+	}
 
 	return set80211priv(drv, IEEE80211_IOCTL_SET_APPIEBUF, beac_ie,
-			    sizeof(struct ieee80211req_getset_appiebuf) + len);
+			    sizeof(struct ieee80211req_getset_appiebuf) +
+			    beac_ie->app_buflen);
 }
 
 static int
@@ -749,6 +798,13 @@ atheros_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
 		      const struct wpabuf *proberesp,
 		      const struct wpabuf *assocresp)
 {
+	struct atheros_driver_data *drv = priv;
+
+	wpabuf_free(drv->wps_beacon_ie);
+	drv->wps_beacon_ie = beacon ? wpabuf_dup(beacon) : NULL;
+	wpabuf_free(drv->wps_probe_resp_ie);
+	drv->wps_probe_resp_ie = proberesp ? wpabuf_dup(proberesp) : NULL;
+
 	atheros_set_wps_ie(priv, assocresp ? wpabuf_head(assocresp) : NULL,
 			   assocresp ? wpabuf_len(assocresp) : 0,
 			   IEEE80211_APPIE_FRAME_ASSOC_RESP);
@@ -1225,6 +1281,9 @@ atheros_deinit(void *priv)
 		l2_packet_deinit(drv->sock_xmit);
 	if (drv->sock_raw)
 		l2_packet_deinit(drv->sock_raw);
+	wpabuf_free(drv->wpa_ie);
+	wpabuf_free(drv->wps_beacon_ie);
+	wpabuf_free(drv->wps_probe_resp_ie);
 	free(drv);
 }
 

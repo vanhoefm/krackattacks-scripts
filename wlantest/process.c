@@ -228,6 +228,10 @@ void wlantest_process(struct wlantest *wt, const u8 *data, size_t len)
 		}
 	}
 
+	if (iter.max_length == 8) {
+		wpa_printf(MSG_DEBUG, "Skip frame inserted by wlantest");
+		return;
+	}
 	frame = data + iter.max_length;
 	frame_len = len - iter.max_length;
 

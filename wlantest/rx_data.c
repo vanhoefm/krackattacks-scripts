@@ -156,8 +156,13 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 	else
 		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, bss->rsc[keyid], 6) <= 0) {
-		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
-			   MAC2STR(hdr->addr2));
+		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
+		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
+			   " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+			   MAC2STR(hdr->addr3),
+			   WLAN_GET_SEQ_SEQ(seq_ctrl),
+			   WLAN_GET_SEQ_FRAG(seq_ctrl));
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
 	}
@@ -296,8 +301,13 @@ static void rx_data_bss_prot(struct wlantest *wt,
 	else
 		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, rsc, 6) <= 0) {
-		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: SA=" MACSTR,
-			   MAC2STR(hdr->addr2));
+		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
+		wpa_printf(MSG_INFO, "CCMP/TKIP replay detected: A1=" MACSTR
+			   " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+			   MAC2STR(hdr->addr3),
+			   WLAN_GET_SEQ_SEQ(seq_ctrl),
+			   WLAN_GET_SEQ_FRAG(seq_ctrl));
 		wpa_hexdump(MSG_INFO, "RX PN", pn, 6);
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}

@@ -210,6 +210,8 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		if (bss == NULL)
 			return;
 		sta = sta_get(bss, hdr->addr2);
+		if (sta)
+			sta->counters[WLANTEST_STA_COUNTER_PROT_DATA_TX]++;
 	} else if (fc & WLAN_FC_FROMDS) {
 		bss = bss_get(wt, hdr->addr2);
 		if (bss == NULL)

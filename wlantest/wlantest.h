@@ -82,6 +82,9 @@ struct wlantest_sta {
 
 	le16 seq_ctrl_to_sta[17];
 	le16 seq_ctrl_to_ap[17];
+
+	int pwrmgt;
+	int pspoll;
 };
 
 struct wlantest_tdls {

@@ -21,64 +21,142 @@
 #include "wlantest.h"
 
 
-static int rx_duplicate(struct wlantest *wt, const struct ieee80211_hdr *hdr,
-			size_t len)
+static struct wlantest_sta * rx_get_sta(struct wlantest *wt,
+					const struct ieee80211_hdr *hdr,
+					size_t len, int *to_ap)
 {
 	u16 fc;
-	int tid = 16;
 	const u8 *sta_addr, *bssid;
 	struct wlantest_bss *bss;
-	struct wlantest_sta *sta;
-	int to_ap;
-	le16 *seq_ctrl;
 
+	*to_ap = 0;
 	if (hdr->addr1[0] & 0x01)
-		return 0; /* Ignore group addressed frames */
+		return NULL; /* Ignore group addressed frames */
 
 	fc = le_to_host16(hdr->frame_control);
-	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT) {
+	switch (WLAN_FC_GET_TYPE(fc)) {
+	case WLAN_FC_TYPE_MGMT:
+		if (len < 24)
+			return NULL;
 		bssid = hdr->addr3;
 		if (os_memcmp(bssid, hdr->addr2, ETH_ALEN) == 0) {
 			sta_addr = hdr->addr1;
-			to_ap = 0;
+			*to_ap = 0;
 		} else {
 			if (os_memcmp(bssid, hdr->addr1, ETH_ALEN) != 0)
-				return 0; /* Unsupported STA-to-STA frame */
+				return NULL; /* Unsupported STA-to-STA frame */
 			sta_addr = hdr->addr2;
-			to_ap = 1;
+			*to_ap = 1;
 		}
-	} else {
+		break;
+	case WLAN_FC_TYPE_DATA:
+		if (len < 24)
+			return NULL;
 		switch (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) {
 		case 0:
-			return 0; /* IBSS not supported */
+			return NULL; /* IBSS not supported */
 		case WLAN_FC_FROMDS:
 			sta_addr = hdr->addr1;
 			bssid = hdr->addr2;
-			to_ap = 0;
+			*to_ap = 0;
 			break;
 		case WLAN_FC_TODS:
 			sta_addr = hdr->addr2;
 			bssid = hdr->addr1;
-			to_ap = 1;
+			*to_ap = 1;
 			break;
 		case WLAN_FC_TODS | WLAN_FC_FROMDS:
-			return 0; /* WDS not supported */
+			return NULL; /* WDS not supported */
 		default:
-			return 0;
+			return NULL;
 		}
-
-		if ((WLAN_FC_GET_STYPE(fc) & 0x08) && len >= 26) {
-			const u8 *qos = ((const u8 *) hdr) + 24;
-			tid = qos[0] & 0x0f;
-		}
+		break;
+	case WLAN_FC_TYPE_CTRL:
+		if (WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_PSPOLL &&
+		    len >= 16) {
+			sta_addr = hdr->addr2;
+			bssid = hdr->addr1;
+			*to_ap = 1;
+		} else
+			return NULL;
+		break;
 	}
 
 	bss = bss_find(wt, bssid);
 	if (bss == NULL)
 		return 0;
-	sta = sta_find(bss, sta_addr);
+	return sta_find(bss, sta_addr);
+}
+
+
+static void rx_update_ps(struct wlantest *wt, const struct ieee80211_hdr *hdr,
+			 size_t len, struct wlantest_sta *sta, int to_ap)
+{
+	u16 fc, type, stype;
+
+	if (sta == NULL)
+		return;
+
+	fc = le_to_host16(hdr->frame_control);
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	if (!to_ap) {
+		if (sta->pwrmgt && !sta->pspoll) {
+			u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
+			wpa_printf(MSG_DEBUG, "AP " MACSTR " sent a frame "
+				   "(%u:%u) to a sleeping STA " MACSTR
+				   " (seq=%u)",
+				   MAC2STR(sta->bss->bssid),
+				   type, stype, MAC2STR(sta->addr),
+				   WLAN_GET_SEQ_SEQ(seq_ctrl));
+		} else
+			sta->pspoll = 0;
+		return;
+	}
+
+	sta->pspoll = 0;
+
+	if (type == WLAN_FC_TYPE_DATA || type == WLAN_FC_TYPE_MGMT ||
+	    (type == WLAN_FC_TYPE_CTRL && stype == WLAN_FC_STYPE_PSPOLL)) {
+		/*
+		 * In theory, the PS state changes only at the end of the frame
+		 * exchange that is ACKed by the AP. However, most cases are
+		 * handled with this simpler implementation that does not
+		 * maintain state through the frame exchange.
+		 */
+		if (sta->pwrmgt && !(fc & WLAN_FC_PWRMGT)) {
+			wpa_printf(MSG_DEBUG, "STA " MACSTR " woke up from "
+				   "sleep", MAC2STR(sta->addr));
+			sta->pwrmgt = 0;
+		} else if (!sta->pwrmgt && (fc & WLAN_FC_PWRMGT)) {
+			wpa_printf(MSG_DEBUG, "STA " MACSTR " went to sleep",
+				   MAC2STR(sta->addr));
+			sta->pwrmgt = 1;
+		}
+	}
+
+	if (type == WLAN_FC_TYPE_CTRL && stype == WLAN_FC_STYPE_PSPOLL)
+		sta->pspoll = 1;
+}
+
+
+static int rx_duplicate(struct wlantest *wt, const struct ieee80211_hdr *hdr,
+			size_t len, struct wlantest_sta *sta, int to_ap)
+{
+	u16 fc;
+	int tid = 16;
+	le16 *seq_ctrl;
+
 	if (sta == NULL)
 		return 0;
+
+	fc = le_to_host16(hdr->frame_control);
+	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_DATA &&
+	    (WLAN_FC_GET_STYPE(fc) & 0x08) && len >= 26) {
+		const u8 *qos = ((const u8 *) hdr) + 24;
+		tid = qos[0] & 0x0f;
+	}
 
 	if (to_ap)
 		seq_ctrl = &sta->seq_ctrl_to_ap[tid];
@@ -123,6 +201,8 @@ static void rx_frame(struct wlantest *wt, const u8 *data, size_t len)
 {
 	const struct ieee80211_hdr *hdr;
 	u16 fc;
+	struct wlantest_sta *sta;
+	int to_ap;
 
 	wpa_hexdump(MSG_EXCESSIVE, "RX frame", data, len);
 	if (len < 2)
@@ -136,26 +216,31 @@ static void rx_frame(struct wlantest *wt, const u8 *data, size_t len)
 		return;
 	}
 
+	sta = rx_get_sta(wt, hdr, len, &to_ap);
+
 	switch (WLAN_FC_GET_TYPE(fc)) {
 	case WLAN_FC_TYPE_MGMT:
 		if (len < 24)
 			break;
-		if (rx_duplicate(wt, hdr, len))
+		if (rx_duplicate(wt, hdr, len, sta, to_ap))
 			break;
+		rx_update_ps(wt, hdr, len, sta, to_ap);
 		rx_mgmt(wt, data, len);
 		break;
 	case WLAN_FC_TYPE_CTRL:
 		if (len < 10)
 			break;
 		wt->rx_ctrl++;
+		rx_update_ps(wt, hdr, len, sta, to_ap);
 		if (WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_ACK)
 			rx_ack(wt, hdr);
 		break;
 	case WLAN_FC_TYPE_DATA:
 		if (len < 24)
 			break;
-		if (rx_duplicate(wt, hdr, len))
+		if (rx_duplicate(wt, hdr, len, sta, to_ap))
 			break;
+		rx_update_ps(wt, hdr, len, sta, to_ap);
 		rx_data(wt, data, len);
 		break;
 	default:

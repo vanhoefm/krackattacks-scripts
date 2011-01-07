@@ -204,10 +204,14 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 		return;
 	}
 
-	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0) {
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_RX :
 			      WLANTEST_STA_COUNTER_INVALID_DEAUTH_RX]++;
-	else
+		if (sta->pwrmgt && !sta->pspoll)
+			sta->counters[WLANTEST_STA_COUNTER_DEAUTH_RX_ASLEEP]++;
+		else
+			sta->counters[WLANTEST_STA_COUNTER_DEAUTH_RX_AWAKE]++;
+	} else
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_TX :
 			      WLANTEST_STA_COUNTER_INVALID_DEAUTH_TX]++;
 
@@ -529,10 +533,16 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 		return;
 	}
 
-	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0)
+	if (os_memcmp(mgmt->sa, mgmt->bssid, ETH_ALEN) == 0) {
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_RX :
 			      WLANTEST_STA_COUNTER_INVALID_DISASSOC_RX]++;
-	else
+		if (sta->pwrmgt && !sta->pspoll)
+			sta->counters[
+				WLANTEST_STA_COUNTER_DISASSOC_RX_ASLEEP]++;
+		else
+			sta->counters[
+				WLANTEST_STA_COUNTER_DISASSOC_RX_AWAKE]++;
+	} else
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_TX :
 			      WLANTEST_STA_COUNTER_INVALID_DISASSOC_TX]++;
 

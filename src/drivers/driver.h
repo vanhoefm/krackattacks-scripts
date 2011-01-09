@@ -744,8 +744,12 @@ struct wpa_driver_ops {
 	 * @alg: encryption algorithm (%WPA_ALG_NONE, %WPA_ALG_WEP,
 	 *	%WPA_ALG_TKIP, %WPA_ALG_CCMP, %WPA_ALG_IGTK, %WPA_ALG_PMK);
 	 *	%WPA_ALG_NONE clears the key.
-	 * @addr: address of the peer STA or ff:ff:ff:ff:ff:ff for
-	 *	broadcast/default keys
+	 * @addr: Address of the peer STA (BSSID of the current AP when setting
+	 *	pairwise key in station mode), ff:ff:ff:ff:ff:ff for
+	 *	broadcast keys, %NULL for default keys that are used both for
+	 *	broadcast and unicast; when clearing keys, %NULL is used to
+	 *	indicate that both the broadcast-only and default key of the
+	 *	specified key index is to be cleared
 	 * @key_idx: key index (0..3), usually 0 for unicast keys; 0..4095 for
 	 *	IGTK
 	 * @set_tx: configure this key as the default Tx key (only used when

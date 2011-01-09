@@ -1001,8 +1001,7 @@ static int wpa_driver_ndis_set_key(const char *ifname, void *priv,
 	int res, pairwise;
 	u8 bssid[ETH_ALEN];
 
-	if (addr == NULL || os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
-				      ETH_ALEN) == 0) {
+	if (addr == NULL || is_broadcast_ether_addr(addr)) {
 		/* Group Key */
 		pairwise = 0;
 		if (wpa_driver_ndis_get_bssid(drv, bssid) < 0)

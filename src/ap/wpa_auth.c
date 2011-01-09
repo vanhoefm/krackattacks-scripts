@@ -2297,14 +2297,14 @@ static int wpa_group_config_group_keys(struct wpa_authenticator *wpa_auth,
 
 	if (wpa_auth_set_key(wpa_auth, group->vlan_id,
 			     wpa_alg_enum(wpa_auth->conf.wpa_group),
-			     NULL, group->GN, group->GTK[group->GN - 1],
-			     group->GTK_len) < 0)
+			     broadcast_ether_addr, group->GN,
+			     group->GTK[group->GN - 1], group->GTK_len) < 0)
 		ret = -1;
 
 #ifdef CONFIG_IEEE80211W
 	if (wpa_auth->conf.ieee80211w != NO_MGMT_FRAME_PROTECTION &&
 	    wpa_auth_set_key(wpa_auth, group->vlan_id, WPA_ALG_IGTK,
-			     NULL, group->GN_igtk,
+			     broadcast_ether_addr, group->GN_igtk,
 			     group->IGTK[group->GN_igtk - 4],
 			     WPA_IGTK_LEN) < 0)
 		ret = -1;

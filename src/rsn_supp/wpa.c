@@ -632,16 +632,14 @@ static int wpa_supplicant_install_gtk(struct wpa_sm *sm,
 		_gtk = gtk_buf;
 	}
 	if (sm->pairwise_cipher == WPA_CIPHER_NONE) {
-		if (wpa_sm_set_key(sm, gd->alg,
-				   (u8 *) "\xff\xff\xff\xff\xff\xff",
+		if (wpa_sm_set_key(sm, gd->alg, NULL,
 				   gd->keyidx, 1, key_rsc, gd->key_rsc_len,
 				   _gtk, gd->gtk_len) < 0) {
 			wpa_printf(MSG_WARNING, "WPA: Failed to set "
 				   "GTK to the driver (Group only).");
 			return -1;
 		}
-	} else if (wpa_sm_set_key(sm, gd->alg,
-				  (u8 *) "\xff\xff\xff\xff\xff\xff",
+	} else if (wpa_sm_set_key(sm, gd->alg, broadcast_ether_addr,
 				  gd->keyidx, gd->tx, key_rsc, gd->key_rsc_len,
 				  _gtk, gd->gtk_len) < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to "
@@ -744,8 +742,7 @@ static int ieee80211w_set_keys(struct wpa_sm *sm,
 				   keyidx);
 			return -1;
 		}
-		if (wpa_sm_set_key(sm, WPA_ALG_IGTK,
-				   (u8 *) "\xff\xff\xff\xff\xff\xff",
+		if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr,
 				   keyidx, 0, igtk->pn, sizeof(igtk->pn),
 				   igtk->igtk, WPA_IGTK_LEN) < 0) {
 			wpa_printf(MSG_WARNING, "WPA: Failed to configure IGTK"

@@ -132,8 +132,7 @@ int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 			continue;
 
 		set = 1;
-		wpa_drv_set_key(wpa_s, WPA_ALG_WEP,
-				(u8 *) "\xff\xff\xff\xff\xff\xff",
+		wpa_drv_set_key(wpa_s, WPA_ALG_WEP, NULL,
 				i, i == ssid->wep_tx_keyidx, NULL, 0,
 				ssid->wep_key[i], ssid->wep_key_len[i]);
 	}
@@ -186,8 +185,7 @@ static int wpa_supplicant_set_wpa_none_key(struct wpa_supplicant *wpa_s,
 	/* TODO: should actually remember the previously used seq#, both for TX
 	 * and RX from each STA.. */
 
-	return wpa_drv_set_key(wpa_s, alg, (u8 *) "\xff\xff\xff\xff\xff\xff",
-			       0, 1, seq, 6, key, keylen);
+	return wpa_drv_set_key(wpa_s, alg, NULL, 0, 1, seq, 6, key, keylen);
 }
 
 
@@ -452,8 +450,6 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
  */
 void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr)
 {
-	u8 *bcast = (u8 *) "\xff\xff\xff\xff\xff\xff";
-
 	if (wpa_s->keys_cleared) {
 		/* Some drivers (e.g., ndiswrapper & NDIS drivers) seem to have
 		 * timing issues with keys being cleared just before new keys
@@ -468,13 +464,13 @@ void wpa_clear_keys(struct wpa_supplicant *wpa_s, const u8 *addr)
 	}
 
 	/* MLME-DELETEKEYS.request */
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 0, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 1, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 2, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 3, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 0, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 1, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 2, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 3, 0, NULL, 0, NULL, 0);
 #ifdef CONFIG_IEEE80211W
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 4, 0, NULL, 0, NULL, 0);
-	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, bcast, 5, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 4, 0, NULL, 0, NULL, 0);
+	wpa_drv_set_key(wpa_s, WPA_ALG_NONE, NULL, 5, 0, NULL, 0, NULL, 0);
 #endif /* CONFIG_IEEE80211W */
 	if (addr) {
 		wpa_drv_set_key(wpa_s, WPA_ALG_NONE, addr, 0, 0, NULL, 0, NULL,

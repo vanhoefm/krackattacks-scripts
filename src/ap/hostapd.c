@@ -173,9 +173,8 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 	idx = ssid->wep.idx;
 	if (ssid->wep.default_len &&
 	    hostapd_drv_set_key(hapd->conf->iface,
-				hapd, WPA_ALG_WEP, NULL, idx,
-				idx == ssid->wep.idx,
-				NULL, 0, ssid->wep.key[idx],
+				hapd, WPA_ALG_WEP, broadcast_ether_addr, idx,
+				1, NULL, 0, ssid->wep.key[idx],
 				ssid->wep.len[idx])) {
 		wpa_printf(MSG_WARNING, "Could not set WEP encryption.");
 		errors++;
@@ -195,7 +194,7 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 
 			idx = key->idx;
 			if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_WEP,
-						NULL, idx, idx == key->idx,
+						broadcast_ether_addr, idx, 1,
 						NULL, 0, key->key[idx],
 						key->len[idx])) {
 				wpa_printf(MSG_WARNING, "Could not set "

@@ -2640,8 +2640,7 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 	if (seq && seq_len)
 		NLA_PUT(msg, NL80211_ATTR_KEY_SEQ, seq_len, seq);
 
-	if (addr && os_memcmp(addr, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) != 0)
-	{
+	if (addr && !is_broadcast_ether_addr(addr)) {
 		wpa_printf(MSG_DEBUG, "   addr=" MACSTR, MAC2STR(addr));
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
 
@@ -2667,13 +2666,9 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 	 */
 	if (ret || !set_tx || alg == WPA_ALG_NONE)
 		return ret;
-#ifdef HOSTAPD
-	if (addr)
+	if (drv->nlmode == NL80211_IFTYPE_AP && addr &&
+	    !is_broadcast_ether_addr(addr))
 		return ret;
-#else /* HOSTAPD */
-	if (drv->nlmode == NL80211_IFTYPE_AP && addr)
-		return ret;
-#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -5517,6 +5512,7 @@ static void *i802_init(struct hostapd_data *hapd,
 		return NULL;
 
 	drv = bss->drv;
+	drv->nlmode = NL80211_IFTYPE_AP;
 	if (linux_br_get(brname, params->ifname) == 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Interface %s is in bridge %s",
 			   params->ifname, brname);

@@ -296,9 +296,7 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 
 	if (alg == WPA_ALG_NONE) {
 #ifndef HOSTAPD
-		if (addr == NULL ||
-		    os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
-			      IEEE80211_ADDR_LEN) == 0)
+		if (addr == NULL || is_broadcast_ether_addr(addr))
 			return bsd_del_key(priv, NULL, key_idx);
 		else
 #endif /* HOSTAPD */
@@ -335,8 +333,7 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 		 * the address (yech).  Note also that we can only mark global
 		 * keys default; doing this for a unicast key is an error.
 		 */
-		if (os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
-			      IEEE80211_ADDR_LEN) == 0) {
+		if (is_broadcast_ether_addr(addr)) {
 			wk.ik_flags |= IEEE80211_KEY_GROUP;
 			wk.ik_keyix = key_idx;
 		} else {

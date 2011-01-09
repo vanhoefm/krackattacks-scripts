@@ -232,7 +232,8 @@ ieee802_1x_group_alloc(struct hostapd_data *hapd, const char *ifname)
 	wpa_hexdump_key(MSG_DEBUG, "Default WEP key (dynamic VLAN)",
 			key->key[key->idx], key->len[key->idx]);
 
-	if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_WEP, NULL, key->idx, 1,
+	if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_WEP,
+				broadcast_ether_addr, key->idx, 1,
 				NULL, 0, key->key[key->idx],
 				key->len[key->idx]))
 		printf("Could not set dynamic VLAN WEP encryption key.\n");
@@ -1441,7 +1442,8 @@ static void ieee802_1x_rekey(void *eloop_ctx, void *timeout_ctx)
 
 	/* TODO: Could setup key for RX here, but change default TX keyid only
 	 * after new broadcast key has been sent to all stations. */
-	if (hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP, NULL,
+	if (hostapd_drv_set_key(hapd->conf->iface, hapd, WPA_ALG_WEP,
+				broadcast_ether_addr,
 				eapol->default_wep_key_idx, 1, NULL, 0,
 				eapol->default_wep_key,
 				hapd->conf->default_wep_key_len)) {

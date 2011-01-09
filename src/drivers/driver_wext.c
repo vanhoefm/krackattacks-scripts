@@ -1622,8 +1622,7 @@ static int wpa_driver_wext_set_key_ext(void *priv, enum wpa_alg alg,
 	iwr.u.encoding.pointer = (caddr_t) ext;
 	iwr.u.encoding.length = sizeof(*ext) + key_len;
 
-	if (addr == NULL ||
-	    os_memcmp(addr, "\xff\xff\xff\xff\xff\xff", ETH_ALEN) == 0)
+	if (addr == NULL || is_broadcast_ether_addr(addr))
 		ext->ext_flags |= IW_ENCODE_EXT_GROUP_KEY;
 	if (set_tx)
 		ext->ext_flags |= IW_ENCODE_EXT_SET_TX_KEY;

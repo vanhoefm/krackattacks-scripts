@@ -462,7 +462,7 @@ wpa_driver_madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	memset(&wk, 0, sizeof(wk));
 	wk.ik_type = cipher;
 	wk.ik_flags = IEEE80211_KEY_RECV | IEEE80211_KEY_XMIT;
-	if (addr == NULL) {
+	if (addr == NULL || is_broadcast_ether_addr(addr)) {
 		memset(wk.ik_macaddr, 0xff, IEEE80211_ADDR_LEN);
 		wk.ik_keyix = key_idx;
 		wk.ik_flags |= IEEE80211_KEY_DEFAULT;

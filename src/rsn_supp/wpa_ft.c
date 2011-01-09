@@ -796,9 +796,8 @@ static int wpa_ft_process_gtk_subelem(struct wpa_sm *sm, const u8 *gtk_elem,
 	}
 
 	wpa_hexdump_key(MSG_DEBUG, "FT: GTK from Reassoc Resp", gtk, keylen);
-	if (wpa_sm_set_key(sm, alg, (u8 *) "\xff\xff\xff\xff\xff\xff",
-			   keyidx, 0, gtk_elem + 3, rsc_len, gtk, keylen) <
-	    0) {
+	if (wpa_sm_set_key(sm, alg, broadcast_ether_addr, keyidx, 0,
+			   gtk_elem + 3, rsc_len, gtk, keylen) < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set GTK to the "
 			   "driver.");
 		return -1;
@@ -849,9 +848,8 @@ static int wpa_ft_process_igtk_subelem(struct wpa_sm *sm, const u8 *igtk_elem,
 
 	wpa_hexdump_key(MSG_DEBUG, "FT: IGTK from Reassoc Resp", igtk,
 			WPA_IGTK_LEN);
-	if (wpa_sm_set_key(sm, WPA_ALG_IGTK, (u8 *) "\xff\xff\xff\xff\xff\xff",
-			   keyidx, 0, igtk_elem + 2, 6, igtk, WPA_IGTK_LEN) <
-	    0) {
+	if (wpa_sm_set_key(sm, WPA_ALG_IGTK, broadcast_ether_addr, keyidx, 0,
+			   igtk_elem + 2, 6, igtk, WPA_IGTK_LEN) < 0) {
 		wpa_printf(MSG_WARNING, "WPA: Failed to set IGTK to the "
 			   "driver.");
 		return -1;

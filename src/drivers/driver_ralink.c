@@ -1178,8 +1178,7 @@ static int wpa_driver_ralink_set_key(const char *ifname, void *priv,
 
 	drv->bAddWepKey = FALSE;
 
-	if (addr == NULL || os_memcmp(addr, "\xff\xff\xff\xff\xff\xff",
-				      ETH_ALEN) == 0) {
+	if (addr == NULL || is_broadcast_ether_addr(addr)) {
 		/* Group Key */
 		pairwise = 0;
 		wpa_driver_ralink_get_bssid(drv, bssid);

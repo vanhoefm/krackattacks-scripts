@@ -465,6 +465,8 @@ static inline int is_broadcast_ether_addr(const u8 *a)
 	return (a[0] & a[1] & a[2] & a[3] & a[4] & a[5]) == 0xff;
 }
 
+#define broadcast_ether_addr (const u8 *) "\xff\xff\xff\xff\xff\xff"
+
 #include "wpa_debug.h"
 
 

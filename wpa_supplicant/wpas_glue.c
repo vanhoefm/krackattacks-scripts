@@ -210,8 +210,7 @@ static int wpa_eapol_set_wep_key(void *ctx, int unicast, int keyidx,
 			wpa_s->group_cipher = cipher;
 	}
 	return wpa_drv_set_key(wpa_s, WPA_ALG_WEP,
-			       unicast ? wpa_s->bssid :
-			       (u8 *) "\xff\xff\xff\xff\xff\xff",
+			       unicast ? wpa_s->bssid : NULL,
 			       keyidx, unicast, NULL, 0, key, keylen);
 }
 

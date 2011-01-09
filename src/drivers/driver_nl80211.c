@@ -2649,6 +2649,19 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 			NLA_PUT_U32(msg, NL80211_ATTR_KEY_TYPE,
 				    NL80211_KEYTYPE_GROUP);
 		}
+	} else if (addr && is_broadcast_ether_addr(addr)) {
+		struct nl_msg *types;
+		int err;
+		wpa_printf(MSG_DEBUG, "   broadcast key");
+		types = nlmsg_alloc();
+		if (!types)
+			goto nla_put_failure;
+		NLA_PUT_FLAG(types, NL80211_KEY_DEFAULT_TYPE_MULTICAST);
+		err = nla_put_nested(msg, NL80211_ATTR_KEY_DEFAULT_TYPES,
+				     types);
+		nlmsg_free(types);
+		if (err)
+			goto nla_put_failure;
 	}
 	NLA_PUT_U8(msg, NL80211_ATTR_KEY_IDX, key_idx);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
@@ -2682,6 +2695,31 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT_MGMT);
 	else
 		NLA_PUT_FLAG(msg, NL80211_ATTR_KEY_DEFAULT);
+	if (addr && is_broadcast_ether_addr(addr)) {
+		struct nl_msg *types;
+		int err;
+		types = nlmsg_alloc();
+		if (!types)
+			goto nla_put_failure;
+		NLA_PUT_FLAG(types, NL80211_KEY_DEFAULT_TYPE_MULTICAST);
+		err = nla_put_nested(msg, NL80211_ATTR_KEY_DEFAULT_TYPES,
+				     types);
+		nlmsg_free(types);
+		if (err)
+			goto nla_put_failure;
+	} else if (addr) {
+		struct nl_msg *types;
+		int err;
+		types = nlmsg_alloc();
+		if (!types)
+			goto nla_put_failure;
+		NLA_PUT_FLAG(types, NL80211_KEY_DEFAULT_TYPE_UNICAST);
+		err = nla_put_nested(msg, NL80211_ATTR_KEY_DEFAULT_TYPES,
+				     types);
+		nlmsg_free(types);
+		if (err)
+			goto nla_put_failure;
+	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret == -ENOENT)

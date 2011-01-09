@@ -5775,16 +5775,19 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 		return 0;
 
 	if (bss != &drv->first_bss) {
-		struct i802_bss *tbss = &drv->first_bss;
+		struct i802_bss *tbss;
 
-		while (tbss) {
-			if (tbss->next != bss)
-				continue;
-
-			tbss->next = bss->next;
-			os_free(bss);
-			break;
+		for (tbss = &drv->first_bss; tbss; tbss = tbss->next) {
+			if (tbss->next == bss) {
+				tbss->next = bss->next;
+				os_free(bss);
+				bss = NULL;
+				break;
+			}
 		}
+		if (bss)
+			wpa_printf(MSG_INFO, "nl80211: %s - could not find "
+				   "BSS %p in the list", __func__, bss);
 	}
 #endif /* HOSTAPD */
 

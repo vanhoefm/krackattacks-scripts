@@ -1035,6 +1035,16 @@ static int hostap_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 	struct hostap_driver_data *drv = priv;
 	struct ieee80211_mgmt mgmt;
 
+	if (is_broadcast_ether_addr(addr)) {
+		/*
+		 * New Prism2.5/3 STA firmware versions seem to have issues
+		 * with this broadcast deauth frame. This gets the firmware in
+		 * odd state where nothing works correctly, so let's skip
+		 * sending this for the hostap driver.
+		 */
+		return 0;
+	}
+
 	memset(&mgmt, 0, sizeof(mgmt));
 	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
 					  WLAN_FC_STYPE_DEAUTH);

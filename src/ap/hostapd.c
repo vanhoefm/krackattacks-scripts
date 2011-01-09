@@ -324,6 +324,7 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 {
 	int ret = 0;
+	u8 addr[ETH_ALEN];
 
 	if (hostapd_drv_none(hapd) || hapd->drv_priv == NULL)
 		return 0;
@@ -334,17 +335,8 @@ static int hostapd_flush_old_stations(struct hostapd_data *hapd)
 		ret = -1;
 	}
 	wpa_printf(MSG_DEBUG, "Deauthenticate all stations");
-
-	/* New Prism2.5/3 STA firmware versions seem to have issues with this
-	 * broadcast deauth frame. This gets the firmware in odd state where
-	 * nothing works correctly, so let's skip sending this for the hostap
-	 * driver. */
-	if (hapd->driver && os_strcmp(hapd->driver->name, "hostap") != 0) {
-		u8 addr[ETH_ALEN];
-		os_memset(addr, 0xff, ETH_ALEN);
-		hostapd_drv_sta_deauth(hapd, addr,
-				       WLAN_REASON_PREV_AUTH_NOT_VALID);
-	}
+	os_memset(addr, 0xff, ETH_ALEN);
+	hostapd_drv_sta_deauth(hapd, addr, WLAN_REASON_PREV_AUTH_NOT_VALID);
 
 	return ret;
 }

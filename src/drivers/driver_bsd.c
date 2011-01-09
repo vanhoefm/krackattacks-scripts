@@ -347,7 +347,8 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	if (wk.ik_keyix != IEEE80211_KEYIX_NONE && set_tx)
 		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
 	wk.ik_keylen = key_len;
-	os_memcpy(&wk.ik_keyrsc, seq, seq_len);
+	if (seq)
+		os_memcpy(&wk.ik_keyrsc, seq, seq_len);
 	os_memcpy(wk.ik_keydata, key, key_len);
 
 	return set80211var(priv, IEEE80211_IOC_WPAKEY, &wk, sizeof(wk));

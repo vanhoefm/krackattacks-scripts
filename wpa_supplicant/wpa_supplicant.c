@@ -134,7 +134,7 @@ int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 		set = 1;
 		wpa_drv_set_key(wpa_s, WPA_ALG_WEP,
 				(u8 *) "\xff\xff\xff\xff\xff\xff",
-				i, i == ssid->wep_tx_keyidx, (u8 *) "", 0,
+				i, i == ssid->wep_tx_keyidx, NULL, 0,
 				ssid->wep_key[i], ssid->wep_key_len[i]);
 	}
 

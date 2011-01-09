@@ -128,7 +128,7 @@ static int wpa_ndiswrapper_set_key(const char *ifname, void *priv,
 	wpa_key.addr = addr;
 	wpa_key.key_index = key_idx;
 	wpa_key.set_tx = set_tx;
-	wpa_key.seq = seq;
+	wpa_key.seq = seq ? seq : (u8 *) "";
 	wpa_key.seq_len = seq_len;
 	wpa_key.key = key;
 	wpa_key.key_len = key_len;

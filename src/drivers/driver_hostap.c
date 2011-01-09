@@ -1307,7 +1307,8 @@ static int wpa_driver_hostap_set_key(const char *ifname, void *priv,
 		   HOSTAP_CRYPT_ALG_NAME_LEN);
 	param->u.crypt.flags = set_tx ? HOSTAP_CRYPT_FLAG_SET_TX_KEY : 0;
 	param->u.crypt.idx = key_idx;
-	os_memcpy(param->u.crypt.seq, seq, seq_len);
+	if (seq)
+		os_memcpy(param->u.crypt.seq, seq, seq_len);
 	param->u.crypt.key_len = key_len;
 	os_memcpy((u8 *) (param + 1), key, key_len);
 

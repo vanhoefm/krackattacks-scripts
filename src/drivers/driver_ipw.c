@@ -264,7 +264,8 @@ static int wpa_driver_ipw_set_key(const char *ifname, void *priv,
 		   IPW_CRYPT_ALG_NAME_LEN);
 	param->u.crypt.set_tx = set_tx ? 1 : 0;
 	param->u.crypt.idx = key_idx;
-	os_memcpy(param->u.crypt.seq, seq, seq_len);
+	if (seq)
+		os_memcpy(param->u.crypt.seq, seq, seq_len);
 	param->u.crypt.key_len = key_len;
 	os_memcpy((u8 *) (param + 1), key, key_len);
 

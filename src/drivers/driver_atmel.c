@@ -248,7 +248,8 @@ static int wpa_driver_atmel_set_key(const char *ifname, void *priv,
         param->alg = alg_type;
         param->key_idx = key_idx;
         param->set_tx = set_tx;
-        os_memcpy(param->seq, seq, seq_len);
+	if (seq)
+		os_memcpy(param->seq, seq, seq_len);
         param->seq_len = seq_len;
         param->key_len = key_len;
 	os_memcpy((u8 *)param->key, key, key_len);

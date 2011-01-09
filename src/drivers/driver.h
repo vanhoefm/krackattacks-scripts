@@ -753,7 +753,7 @@ struct wpa_driver_ops {
 	 * @seq: sequence number/packet number, seq_len octets, the next
 	 *	packet number to be used for in replay protection; configured
 	 *	for Rx keys (in most cases, this is only used with broadcast
-	 *	keys and set to zero for unicast keys)
+	 *	keys and set to zero for unicast keys); %NULL if not set
 	 * @seq_len: length of the seq, depends on the algorithm:
 	 *	TKIP: 6 octets, CCMP: 6 octets, IGTK: 6 octets
 	 * @key: key buffer; TKIP: 16-byte temporal key, 8-byte Tx Mic key,

@@ -1511,7 +1511,7 @@ wpa_driver_madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	wk.ik_keyix = key_idx;
 	wk.ik_keylen = key_len;
 #ifdef WORDS_BIGENDIAN
-	{
+	if (seq) {
 		size_t i;
 		u8 tmp[WPA_KEY_RSC_LEN];
 		os_memset(tmp, 0, sizeof(tmp));
@@ -1520,7 +1520,8 @@ wpa_driver_madwifi_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 		os_memcpy(&wk.ik_keyrsc, tmp, WPA_KEY_RSC_LEN);
 	}
 #else /* WORDS_BIGENDIAN */
-	os_memcpy(&wk.ik_keyrsc, seq, seq_len);
+	if (seq)
+		os_memcpy(&wk.ik_keyrsc, seq, seq_len);
 #endif /* WORDS_BIGENDIAN */
 	os_memcpy(wk.ik_keydata, key, key_len);
 

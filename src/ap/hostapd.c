@@ -136,7 +136,7 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
 		if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_NONE, NULL, i,
-					i == 0 ? 1 : 0, NULL, 0, NULL, 0)) {
+					0, NULL, 0, NULL, 0)) {
 			wpa_printf(MSG_DEBUG, "Failed to clear default "
 				   "encryption keys (ifname=%s keyidx=%d)",
 				   ifname, i);
@@ -146,7 +146,7 @@ static void hostapd_broadcast_key_clear_iface(struct hostapd_data *hapd,
 	if (hapd->conf->ieee80211w) {
 		for (i = NUM_WEP_KEYS; i < NUM_WEP_KEYS + 2; i++) {
 			if (hostapd_drv_set_key(ifname, hapd, WPA_ALG_NONE,
-						NULL, i, i == 0 ? 1 : 0, NULL,
+						NULL, i, 0, NULL,
 						0, NULL, 0)) {
 				wpa_printf(MSG_DEBUG, "Failed to clear "
 					   "default mgmt encryption keys "

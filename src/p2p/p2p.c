@@ -2337,6 +2337,14 @@ int p2p_listen_end(struct p2p_data *p2p, unsigned int freq)
 		return 0; /* Internal timeout will trigger the next step */
 
 	if (p2p->state == P2P_CONNECT_LISTEN && p2p->go_neg_peer) {
+		if (p2p->go_neg_peer->connect_reqs >= 120) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+				"P2P: Timeout on sending GO Negotiation "
+				"Request without getting response");
+			p2p_go_neg_failed(p2p, p2p->go_neg_peer, -1);
+			return 0;
+		}
+
 		p2p_set_state(p2p, P2P_CONNECT);
 		p2p_connect_send(p2p, p2p->go_neg_peer);
 		return 1;

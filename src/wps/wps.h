@@ -456,6 +456,7 @@ union wps_event_data {
 	struct wps_event_fail {
 		int msg;
 		u16 config_error;
+		u16 error_indication;
 	} fail;
 
 	struct wps_event_pwd_auth_fail {

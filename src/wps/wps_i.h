@@ -102,6 +102,7 @@ struct wps_data {
 	 * config_error - Configuration Error value to be used in NACK
 	 */
 	u16 config_error;
+	u16 error_indication;
 
 	int ext_reg;
 	int int_reg;
@@ -213,7 +214,7 @@ void wps_derive_psk(struct wps_data *wps, const u8 *dev_passwd,
 struct wpabuf * wps_decrypt_encr_settings(struct wps_data *wps, const u8 *encr,
 					  size_t encr_len);
 void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg,
-		    u16 config_error);
+		    u16 config_error, u16 error_indication);
 void wps_success_event(struct wps_context *wps);
 void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part);
 void wps_pbc_overlap_event(struct wps_context *wps);

@@ -410,15 +410,36 @@ static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 }
 
 
+static const char * wps_event_fail_reason[NUM_WPS_EI_VALUES] = {
+	"No Error", /* WPS_EI_NO_ERROR */
+	"TKIP Only Prohibited", /* WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED */
+	"WEP Prohibited" /* WPS_EI_SECURITY_WEP_PROHIBITED */
+};
+
 static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 					  struct wps_event_fail *fail)
 {
-	wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_FAIL "msg=%d config_error=%d",
-		fail->msg, fail->config_error);
-	if (wpa_s->parent && wpa_s->parent != wpa_s)
-		wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
-			"msg=%d config_error=%d",
+	if (fail->error_indication > 0 &&
+	    fail->error_indication < NUM_WPS_EI_VALUES) {
+		wpa_msg(wpa_s, MSG_INFO,
+			WPS_EVENT_FAIL "msg=%d config_error=%d reason=%d (%s)",
+			fail->msg, fail->config_error, fail->error_indication,
+			wps_event_fail_reason[fail->error_indication]);
+		if (wpa_s->parent && wpa_s->parent != wpa_s)
+			wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+				"msg=%d config_error=%d reason=%d (%s)",
+				fail->msg, fail->config_error,
+				fail->error_indication,
+				wps_event_fail_reason[fail->error_indication]);
+	} else {
+		wpa_msg(wpa_s, MSG_INFO,
+			WPS_EVENT_FAIL "msg=%d config_error=%d",
 			fail->msg, fail->config_error);
+		if (wpa_s->parent && wpa_s->parent != wpa_s)
+			wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+				"msg=%d config_error=%d",
+				fail->msg, fail->config_error);
+	}
 	wpas_clear_wps(wpa_s);
 	wpas_notify_wps_event_fail(wpa_s, fail);
 }

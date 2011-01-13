@@ -2597,21 +2597,24 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 			return WPS_FAILURE;
 		ret = wps_process_m3(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M3, wps->config_error);
+			wps_fail_event(wps->wps, WPS_M3, wps->config_error,
+				       wps->error_indication);
 		break;
 	case WPS_M5:
 		if (wps_validate_m5(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m5(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M5, wps->config_error);
+			wps_fail_event(wps->wps, WPS_M5, wps->config_error,
+				       wps->error_indication);
 		break;
 	case WPS_M7:
 		if (wps_validate_m7(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m7(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M7, wps->config_error);
+			wps_fail_event(wps->wps, WPS_M7, wps->config_error,
+				       wps->error_indication);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -2756,16 +2759,20 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 
 	switch (old_state) {
 	case RECV_M3:
-		wps_fail_event(wps->wps, WPS_M2, config_error);
+		wps_fail_event(wps->wps, WPS_M2, config_error,
+			       wps->error_indication);
 		break;
 	case RECV_M5:
-		wps_fail_event(wps->wps, WPS_M4, config_error);
+		wps_fail_event(wps->wps, WPS_M4, config_error,
+			       wps->error_indication);
 		break;
 	case RECV_M7:
-		wps_fail_event(wps->wps, WPS_M6, config_error);
+		wps_fail_event(wps->wps, WPS_M6, config_error,
+			       wps->error_indication);
 		break;
 	case RECV_DONE:
-		wps_fail_event(wps->wps, WPS_M8, config_error);
+		wps_fail_event(wps->wps, WPS_M8, config_error,
+			       wps->error_indication);
 		break;
 	default:
 		break;
@@ -2949,7 +2956,8 @@ enum wps_process_res wps_registrar_process_msg(struct wps_data *wps,
 		if (ret == WPS_FAILURE) {
 			wps->state = SEND_WSC_NACK;
 			wps_fail_event(wps->wps, WPS_WSC_DONE,
-				       wps->config_error);
+				       wps->config_error,
+				       wps->error_indication);
 		}
 		return ret;
 	default:

@@ -224,6 +224,14 @@ enum wps_config_error {
 	WPS_CFG_DEV_PASSWORD_AUTH_FAILURE = 18
 };
 
+/* Vendor specific Error Indication for WPS event messages */
+enum wps_error_indication {
+	WPS_EI_NO_ERROR,
+	WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED,
+	WPS_EI_SECURITY_WEP_PROHIBITED,
+	NUM_WPS_EI_VALUES
+};
+
 /* RF Bands */
 #define WPS_RF_24GHZ 0x01
 #define WPS_RF_50GHZ 0x02

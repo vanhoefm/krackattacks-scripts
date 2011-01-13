@@ -535,12 +535,26 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 }
 
 
+static const char * wps_event_fail_reason[NUM_WPS_EI_VALUES] = {
+	"No Error", /* WPS_EI_NO_ERROR */
+	"TKIP Only Prohibited", /* WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED */
+	"WEP Prohibited" /* WPS_EI_SECURITY_WEP_PROHIBITED */
+};
+
 static void hostapd_wps_event_fail(struct hostapd_data *hapd,
 				   struct wps_event_fail *fail)
 {
-	wpa_msg(hapd->msg_ctx, MSG_INFO,
-		WPS_EVENT_FAIL "msg=%d config_error=%d",
-		fail->msg, fail->config_error);
+	if (fail->error_indication > 0 &&
+	    fail->error_indication < NUM_WPS_EI_VALUES) {
+		wpa_msg(hapd->msg_ctx, MSG_INFO,
+			WPS_EVENT_FAIL "msg=%d config_error=%d reason=%d (%s)",
+			fail->msg, fail->config_error, fail->error_indication,
+			wps_event_fail_reason[fail->error_indication]);
+	} else {
+		wpa_msg(hapd->msg_ctx, MSG_INFO,
+			WPS_EVENT_FAIL "msg=%d config_error=%d",
+			fail->msg, fail->config_error);
+	}
 }
 
 

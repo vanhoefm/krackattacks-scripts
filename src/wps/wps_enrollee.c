@@ -672,6 +672,7 @@ static int wps_process_cred_e(struct wps_data *wps, const u8 *cred,
 		if (wps->cred.encr_type & WPS_ENCR_WEP) {
 			wpa_printf(MSG_INFO, "WPS: Reject Credential "
 				   "due to WEP configuration");
+			wps->error_indication = WPS_EI_SECURITY_WEP_PROHIBITED;
 			return -2;
 		}
 
@@ -772,6 +773,7 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 		if (cred.encr_type & WPS_ENCR_WEP) {
 			wpa_printf(MSG_INFO, "WPS: Reject new AP settings "
 				   "due to WEP configuration");
+			wps->error_indication = WPS_EI_SECURITY_WEP_PROHIBITED;
 			return -1;
 		}
 
@@ -789,6 +791,8 @@ static int wps_process_ap_settings_e(struct wps_data *wps,
 		    WPS_AUTH_WPAPSK) {
 			wpa_printf(MSG_INFO, "WPS-STRICT: Invalid WSC 2.0 "
 				   "AP Settings: WPA-Personal/TKIP only");
+			wps->error_indication =
+				WPS_EI_SECURITY_TKIP_ONLY_PROHIBITED;
 			return -1;
 		}
 	}
@@ -1140,21 +1144,24 @@ static enum wps_process_res wps_process_wsc_msg(struct wps_data *wps,
 			return WPS_FAILURE;
 		ret = wps_process_m4(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M4, wps->config_error);
+			wps_fail_event(wps->wps, WPS_M4, wps->config_error,
+				       wps->error_indication);
 		break;
 	case WPS_M6:
 		if (wps_validate_m6(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m6(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M6, wps->config_error);
+			wps_fail_event(wps->wps, WPS_M6, wps->config_error,
+				       wps->error_indication);
 		break;
 	case WPS_M8:
 		if (wps_validate_m8(msg) < 0)
 			return WPS_FAILURE;
 		ret = wps_process_m8(wps, msg, &attr);
 		if (ret == WPS_FAILURE || wps->state == SEND_WSC_NACK)
-			wps_fail_event(wps->wps, WPS_M8, wps->config_error);
+			wps_fail_event(wps->wps, WPS_M8, wps->config_error,
+				       wps->error_indication);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "WPS: Unsupported Message Type %d",
@@ -1281,13 +1288,16 @@ static enum wps_process_res wps_process_wsc_nack(struct wps_data *wps,
 
 	switch (wps->state) {
 	case RECV_M4:
-		wps_fail_event(wps->wps, WPS_M3, config_error);
+		wps_fail_event(wps->wps, WPS_M3, config_error,
+			       wps->error_indication);
 		break;
 	case RECV_M6:
-		wps_fail_event(wps->wps, WPS_M5, config_error);
+		wps_fail_event(wps->wps, WPS_M5, config_error,
+			       wps->error_indication);
 		break;
 	case RECV_M8:
-		wps_fail_event(wps->wps, WPS_M7, config_error);
+		wps_fail_event(wps->wps, WPS_M7, config_error,
+			       wps->error_indication);
 		break;
 	default:
 		break;

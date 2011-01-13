@@ -70,6 +70,8 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 	}
 
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
+	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && !wpa_s->wps_success)
+		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_FAIL);
 
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPS && wpa_s->current_ssid &&
 	    !(wpa_s->current_ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {

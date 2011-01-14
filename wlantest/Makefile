@@ -66,6 +66,7 @@ OBJS += ccmp.o
 OBJS += tkip.o
 OBJS += ctrl.o
 OBJS += inject.o
+OBJS += wep.o
 
 LIBS += -lpcap
 

@@ -16,6 +16,7 @@
 
 #include "utils/common.h"
 #include "common/defs.h"
+#include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "wlantest.h"
 
@@ -97,8 +98,16 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 			wpa_printf(MSG_INFO, "Failed to parse WPA IE from "
 				   MACSTR, MAC2STR(sta->addr));
 		}
-	} else
+	} else {
 		sta->rsnie[0] = 0;
+		sta->proto = 0;
+		sta->pairwise_cipher = 0;
+		sta->key_mgmt = 0;
+		sta->rsn_capab = 0;
+		if (sta->assocreq_capab_info & WLAN_CAPABILITY_PRIVACY)
+			sta->pairwise_cipher = WPA_CIPHER_WEP40;
+		goto skip_rsn_wpa;
+	}
 
 	sta->proto = data.proto;
 	sta->pairwise_cipher = data.pairwise_cipher;
@@ -130,6 +139,7 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 			   "MFPR", MAC2STR(sta->addr), MAC2STR(bss->bssid));
 	}
 
+skip_rsn_wpa:
 	wpa_printf(MSG_INFO, "STA " MACSTR
 		   " proto=%s%s%s"
 		   "pairwise=%s%s%s%s"

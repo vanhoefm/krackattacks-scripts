@@ -144,7 +144,8 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 	}
 
 	keyid = data[3] >> 6;
-	if (bss->gtk_len[keyid] == 0) {
+	if (bss->gtk_len[keyid] == 0 && bss->group_cipher != WPA_CIPHER_WEP40)
+	{
 		wpa_printf(MSG_MSGDUMP, "No GTK known to decrypt the frame "
 			   "(A2=" MACSTR " KeyID=%d)",
 			   MAC2STR(hdr->addr2), keyid);
@@ -153,6 +154,8 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 
 	if (bss->group_cipher == WPA_CIPHER_TKIP)
 		tkip_get_pn(pn, data);
+	else if (bss->group_cipher == WPA_CIPHER_WEP40)
+		goto skip_replay_det;
 	else
 		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, bss->rsc[keyid], 6) <= 0) {
@@ -167,9 +170,12 @@ static void rx_data_bss_prot_group(struct wlantest *wt,
 		wpa_hexdump(MSG_INFO, "RSC", bss->rsc[keyid], 6);
 	}
 
+skip_replay_det:
 	if (bss->group_cipher == WPA_CIPHER_TKIP)
 		decrypted = tkip_decrypt(bss->gtk[keyid], hdr, data, len,
 					 &dlen);
+	else if (bss->group_cipher == WPA_CIPHER_WEP40)
+		decrypted = wep_decrypt(wt, hdr, data, len, &dlen);
 	else
 		decrypted = ccmp_decrypt(bss->gtk[keyid], hdr, data, len,
 					 &dlen);
@@ -237,7 +243,9 @@ static void rx_data_bss_prot(struct wlantest *wt,
 			}
 		}
 	}
-	if ((sta == NULL || !sta->ptk_set) && tk == NULL) {
+	if ((sta == NULL ||
+	     (!sta->ptk_set && sta->pairwise_cipher != WPA_CIPHER_WEP40)) &&
+	    tk == NULL) {
 		wpa_printf(MSG_MSGDUMP, "No PTK known to decrypt the frame");
 		return;
 	}
@@ -300,6 +308,8 @@ static void rx_data_bss_prot(struct wlantest *wt,
 
 	if (tk == NULL && sta->pairwise_cipher == WPA_CIPHER_TKIP)
 		tkip_get_pn(pn, data);
+	else if (sta->pairwise_cipher == WPA_CIPHER_WEP40)
+		goto skip_replay_det;
 	else
 		ccmp_get_pn(pn, data);
 	if (os_memcmp(pn, rsc, 6) <= 0) {
@@ -314,10 +324,13 @@ static void rx_data_bss_prot(struct wlantest *wt,
 		wpa_hexdump(MSG_INFO, "RSC", rsc, 6);
 	}
 
+skip_replay_det:
 	if (tk)
 		decrypted = ccmp_decrypt(tk, hdr, data, len, &dlen);
 	else if (sta->pairwise_cipher == WPA_CIPHER_TKIP)
 		decrypted = tkip_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
+	else if (sta->pairwise_cipher == WPA_CIPHER_WEP40)
+		decrypted = wep_decrypt(wt, hdr, data, len, &dlen);
 	else
 		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
 	if (decrypted) {

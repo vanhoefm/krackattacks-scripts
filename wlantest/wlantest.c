@@ -66,6 +66,7 @@ static void wlantest_init(struct wlantest *wt)
 	dl_list_init(&wt->secret);
 	dl_list_init(&wt->radius);
 	dl_list_init(&wt->pmk);
+	dl_list_init(&wt->wep);
 }
 
 
@@ -82,6 +83,7 @@ static void wlantest_deinit(struct wlantest *wt)
 	struct wlantest_radius_secret *s, *sn;
 	struct wlantest_radius *r, *rn;
 	struct wlantest_pmk *pmk, *np;
+	struct wlantest_wep *wep, *nw;
 
 	if (wt->ctrl_sock >= 0)
 		ctrl_deinit(wt);
@@ -98,6 +100,8 @@ static void wlantest_deinit(struct wlantest *wt)
 		radius_deinit(r);
 	dl_list_for_each_safe(pmk, np, &wt->pmk, struct wlantest_pmk, list)
 		pmk_deinit(pmk);
+	dl_list_for_each_safe(wep, nw, &wt->wep, struct wlantest_wep, list)
+		os_free(wep);
 	write_pcap_deinit(wt);
 }
 
@@ -132,6 +136,28 @@ static void add_secret(struct wlantest *wt, const char *secret)
 }
 
 
+static void add_wep(struct wlantest *wt, const char *key)
+{
+	struct wlantest_wep *w;
+	size_t len = os_strlen(key);
+
+	if (len != 2 * 5 && len != 2 * 13) {
+		wpa_printf(MSG_INFO, "Invalid WEP key '%s'", key);
+		return;
+	}
+	w = os_zalloc(sizeof(*w));
+	if (w == NULL)
+		return;
+	if (hexstr2bin(key, w->key, len / 2) < 0) {
+		os_free(w);
+		wpa_printf(MSG_INFO, "Invalid WEP key '%s'", key);
+		return;
+	}
+	w->key_len = len / 2;
+	dl_list_add(&wt->wep, &w->list);
+}
+
+
 int main(int argc, char *argv[])
 {
 	int c;
@@ -152,7 +178,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "cdhi:I:p:P:qr:R:w:");
+		c = getopt(argc, argv, "cdhi:I:p:P:qr:R:w:W:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -189,6 +215,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'w':
 			write_file = optarg;
+			break;
+		case 'W':
+			add_wep(&wt, optarg);
 			break;
 		default:
 			usage();

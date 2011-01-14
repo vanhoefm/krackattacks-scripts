@@ -19,6 +19,9 @@
 #include "wlantest.h"
 
 
+void wep_crypt(u8 *key, u8 *buf, size_t plen);
+
+
 static inline u16 RotR1(u16 val)
 {
 	return (val >> 1) | (val << 15);
@@ -169,35 +172,6 @@ static void tkip_mixing_phase2(u8 *WEPSeed, const u8 *TK, const u16 *TTAK,
 	WPA_PUT_LE16(&WEPSeed[10], PPK[3]);
 	WPA_PUT_LE16(&WEPSeed[12], PPK[4]);
 	WPA_PUT_LE16(&WEPSeed[14], PPK[5]);
-}
-
-
-static void wep_crypt(u8 *key, u8 *buf, size_t plen)
-{
-	u32 i, j, k;
-	u8 S[256];
-#define S_SWAP(a,b) do { u8 t = S[a]; S[a] = S[b]; S[b] = t; } while(0)
-	u8 *pos;
-
-	/* Setup RC4 state */
-	for (i = 0; i < 256; i++)
-		S[i] = i;
-	j = 0;
-	for (i = 0; i < 256; i++) {
-		j = (j + S[i] + key[i & 0x0f]) & 0xff;
-		S_SWAP(i, j);
-	}
-
-	/* Apply RC4 to data */
-	pos = buf;
-	i = j = 0;
-	for (k = 0; k < plen; k++) {
-		i = (i + 1) & 0xff;
-		j = (j + S[i]) & 0xff;
-		S_SWAP(i, j);
-		*pos ^= S[(S[i] + S[j]) & 0xff];
-		pos++;
-	}
 }
 
 

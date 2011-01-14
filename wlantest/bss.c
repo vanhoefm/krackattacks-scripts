@@ -16,6 +16,7 @@
 
 #include "utils/common.h"
 #include "common/defs.h"
+#include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
 #include "crypto/sha1.h"
 #include "wlantest.h"
@@ -132,6 +133,9 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 	struct wpa_ie_data data;
 	int update = 0;
 
+	if (bss->capab_info != bss->prev_capab_info)
+		update = 1;
+
 	if (elems->ssid == NULL || elems->ssid_len > 32) {
 		wpa_printf(MSG_INFO, "Invalid or missing SSID in a Beacon "
 			   "frame for " MACSTR, MAC2STR(bss->bssid));
@@ -195,6 +199,7 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 	if (!update)
 		return;
 
+	bss->prev_capab_info = bss->capab_info;
 	bss->proto = 0;
 	bss->pairwise_cipher = 0;
 	bss->group_cipher = 0;
@@ -235,6 +240,10 @@ void bss_update(struct wlantest *wt, struct wlantest_bss *bss,
 	if (!(bss->proto & WPA_PROTO_RSN) ||
 	    !(bss->rsn_capab & WPA_CAPABILITY_MFPC))
 		bss->mgmt_group_cipher = 0;
+
+	if (!bss->wpaie[0] && !bss->rsnie[0] &&
+	    (bss->capab_info & WLAN_CAPABILITY_PRIVACY))
+		bss->group_cipher = WPA_CIPHER_WEP40;
 
 	wpa_printf(MSG_INFO, "BSS " MACSTR
 		   " proto=%s%s%s"

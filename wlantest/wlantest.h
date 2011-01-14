@@ -44,6 +44,12 @@ struct wlantest_pmk {
 	u8 pmk[32];
 };
 
+struct wlantest_wep {
+	struct dl_list list;
+	size_t key_len;
+	u8 key[13];
+};
+
 struct wlantest_sta {
 	struct dl_list list;
 	struct wlantest_bss *bss;
@@ -106,6 +112,7 @@ struct wlantest_bss {
 	struct dl_list list;
 	u8 bssid[ETH_ALEN];
 	u16 capab_info;
+	u16 prev_capab_info;
 	u8 ssid[32];
 	size_t ssid_len;
 	int proberesp_seen;
@@ -154,6 +161,7 @@ struct wlantest {
 	struct dl_list secret; /* struct wlantest_radius_secret */
 	struct dl_list radius; /* struct wlantest_radius */
 	struct dl_list pmk; /* struct wlantest_pmk */
+	struct dl_list wep; /* struct wlantest_wep */
 
 	unsigned int rx_mgmt;
 	unsigned int rx_ctrl;
@@ -222,6 +230,9 @@ u8 * tkip_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 u8 * tkip_encrypt(const u8 *tk, u8 *frame, size_t len, size_t hdrlen, u8 *qos,
 		  u8 *pn, int keyid, size_t *encrypted_len);
 void tkip_get_pn(u8 *pn, const u8 *data);
+
+u8 * wep_decrypt(struct wlantest *wt, const struct ieee80211_hdr *hdr,
+		 const u8 *data, size_t data_len, size_t *decrypted_len);
 
 int ctrl_init(struct wlantest *wt);
 void ctrl_deinit(struct wlantest *wt);

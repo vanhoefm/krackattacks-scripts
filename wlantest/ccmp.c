@@ -63,9 +63,9 @@ static void ccmp_aad_nonce(const struct ieee80211_hdr *hdr, const u8 *data,
 	os_memcpy(pos, hdr + 1, addr4 * ETH_ALEN + qos * 2);
 	pos += addr4 * ETH_ALEN;
 	if (qos) {
-		pos[0] &= 0x70;
+		pos[0] &= ~0x70;
 		if (1 /* FIX: either device has SPP A-MSDU Capab = 0 */)
-			pos[0] &= 0x80;
+			pos[0] &= ~0x80;
 		pos++;
 		*pos++ = 0x00;
 	}

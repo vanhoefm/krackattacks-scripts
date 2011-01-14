@@ -27,6 +27,13 @@
 #include "drivers/driver.h"
 #include "l2_packet/l2_packet.h"
 
+#ifdef CONFIG_TDLS_TESTING
+#define TDLS_TESTING_LONG_FRAME BIT(0)
+#define TDLS_TESTING_ALT_RSN_IE BIT(1)
+#define TDLS_TESTING_DIFF_BSSID BIT(2)
+unsigned int tdls_testing = 0;
+#endif /* CONFIG_TDLS_TESTING */
+
 #define SMK_RETRY_COUNT 	3
 #define SMK_TIMEOUT         5000 /* in milliseconds */
 
@@ -638,6 +645,10 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 
 	/* To add FTIE for Teardown request and compute MIC */
 	ielen = sizeof(*ftie);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+		ielen += 170;
+#endif /* CONFIG_TDLS_TESTING */
 
 	rbuf = os_zalloc(ielen);
 	if (rbuf == NULL)
@@ -649,6 +660,16 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 	os_memcpy(ftie->Anonce, peer->pnonce, WPA_NONCE_LEN);
 	os_memcpy(ftie->Snonce, peer->inonce, WPA_NONCE_LEN);
 	ftie->ie_len = sizeof(struct wpa_tdls_ftie) - 2;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
+		u8 *pos = (u8 *) (ftie + 1);
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
+			   "FTIE");
+		ftie->ie_len += 170;
+		*pos++ = 255; /* FTIE subelem */
+		*pos++ = 168; /* FTIE subelem length */
+	}
+#endif /* CONFIG_TDLS_TESTING */
 	wpa_hexdump(MSG_DEBUG, "WPA: FTIE for TDLS Teardown handshake",
 		    (u8 *) ftie, sizeof(*ftie));
 
@@ -787,6 +808,10 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 	/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
 	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
 		sizeof(struct wpa_tdls_timeoutie);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+		kde_len += 170;
+#endif /* CONFIG_TDLS_TESTING */
 
 	rbuf = os_zalloc(kde_len);
 	if (rbuf == NULL)
@@ -806,6 +831,17 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 		    (u8 *) ftie, sizeof(*ftie));
 
 	pos = (u8 *) (ftie + 1);
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
+			   "FTIE");
+		ftie->ie_len += 170;
+		*pos++ = 255; /* FTIE subelem */
+		*pos++ = 168; /* FTIE subelem length */
+		pos += 168;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	/* Lifetime */
 	lifetime = peer->lifetime;
@@ -842,6 +878,10 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 	/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
 	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
 		sizeof(struct wpa_tdls_timeoutie);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+		kde_len += 170;
+#endif /* CONFIG_TDLS_TESTING */
 
 	rbuf = os_zalloc(kde_len);
 	if (rbuf == NULL)
@@ -859,6 +899,17 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 	ftie->ie_len = sizeof(struct wpa_tdls_ftie) - 2;
 
 	pos = (u8 *) (ftie + 1);
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
+			   "FTIE");
+		ftie->ie_len += 170;
+		*pos++ = 255; /* FTIE subelem */
+		*pos++ = 168; /* FTIE subelem length */
+		pos += 168;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	/* Lifetime */
 	lifetime = peer->lifetime;
@@ -1520,8 +1571,22 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
 	rsn_capab |= RSN_NUM_REPLAY_COUNTERS_16 << 2;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_ALT_RSN_IE) {
+		wpa_printf(MSG_DEBUG, "TDLS: Use alternative RSN IE for "
+			   "testing");
+		rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 	WPA_PUT_LE16(pos, rsn_capab);
 	pos += 2;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_ALT_RSN_IE) {
+		/* Number of PMKIDs */
+		*pos++ = 0x00;
+		*pos++ = 0x00;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	hdr->len = (pos - peer->rsnie_i) - 2;
 	peer->rsnie_i_len = pos - peer->rsnie_i;
@@ -1530,6 +1595,12 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
 		sizeof(struct wpa_tdls_timeoutie);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+		kde_len += 170;
+	if (tdls_testing & TDLS_TESTING_DIFF_BSSID)
+		kde_len += sizeof(struct wpa_tdls_lnkid);
+#endif /* CONFIG_TDLS_TESTING */
 	rbuf = os_zalloc(kde_len);
 	if (rbuf == NULL) {
 		wpa_supplicant_peer_free(sm, peer);
@@ -1559,6 +1630,30 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 		    (u8 *) ftie, sizeof(struct wpa_tdls_ftie));
 
 	pos = (u8 *) (ftie + 1);
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
+			   "FTIE");
+		ftie->ie_len += 170;
+		*pos++ = 255; /* FTIE subelem */
+		*pos++ = 168; /* FTIE subelem length */
+		pos += 168;
+	}
+
+	if (tdls_testing & TDLS_TESTING_DIFF_BSSID) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
+			   "Link Identifier");
+		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
+		l->ie_type = WLAN_EID_LINK_ID;
+		l->ie_len = 3 * ETH_ALEN;
+		os_memcpy(l->bssid, sm->bssid, ETH_ALEN);
+		l->bssid[5] ^= 0x01;
+		os_memcpy(l->init_sta, sm->own_addr, ETH_ALEN);
+		os_memcpy(l->resp_sta, addr, ETH_ALEN);
+		pos += sizeof(*l);
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	/* Lifetime */
 	lifetime = 43200; /* 12 hrs */

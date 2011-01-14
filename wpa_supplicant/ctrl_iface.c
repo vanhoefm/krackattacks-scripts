@@ -108,6 +108,12 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 	} else if (os_strcasecmp(cmd, "ampdu") == 0) {
 		if (wpa_drv_ampdu(wpa_s, atoi(value)) < 0)
 			ret = -1;
+#ifdef CONFIG_TDLS_TESTING
+	} else if (os_strcasecmp(cmd, "tdls_testing") == 0) {
+		extern unsigned int tdls_testing;
+		tdls_testing = strtol(value, NULL, 0);
+		wpa_printf(MSG_DEBUG, "TDLS: tdls_testing=0x%x", tdls_testing);
+#endif /* CONFIG_TDLS_TESTING */
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

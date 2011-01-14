@@ -202,8 +202,14 @@ u8 * ccmp_decrypt(const u8 *tk, const struct ieee80211_hdr *hdr,
 	aes_encrypt_deinit(aes);
 
 	if (os_memcmp(x, t, 8) != 0) {
-		wpa_printf(MSG_INFO, "Invalid CCMP MIC in frame from " MACSTR,
-			   MAC2STR(hdr->addr2));
+		u16 seq_ctrl = le_to_host16(hdr->seq_ctrl);
+		wpa_printf(MSG_INFO, "Invalid CCMP MIC in frame: A1=" MACSTR
+			   " A2=" MACSTR " A3=" MACSTR " seq=%u frag=%u",
+			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
+			   MAC2STR(hdr->addr3),
+			   WLAN_GET_SEQ_SEQ(seq_ctrl),
+			   WLAN_GET_SEQ_FRAG(seq_ctrl));
+		wpa_hexdump(MSG_DEBUG, "CCMP decrypted", plain, mlen);
 		os_free(plain);
 		return NULL;
 	}

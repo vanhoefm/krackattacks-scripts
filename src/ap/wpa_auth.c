@@ -736,6 +736,11 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		}
 	}
 
+	wpa_hexdump(MSG_DEBUG, "WPA: Received Key Nonce", key->key_nonce,
+		    WPA_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "WPA: Received Replay Counter",
+		    key->replay_counter, WPA_REPLAY_COUNTER_LEN);
+
 	/* FIX: verify that the EAPOL-Key frame was encrypted if pairwise keys
 	 * are set */
 
@@ -1510,6 +1515,8 @@ SM_STATE(WPA_PTK, AUTHENTICATION2)
 	}
 
 	os_memcpy(sm->ANonce, sm->group->Counter, WPA_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "WPA: Assign ANonce", sm->ANonce,
+		    WPA_NONCE_LEN);
 	inc_byte_array(sm->group->Counter, WPA_NONCE_LEN);
 	sm->ReAuthenticationRequest = FALSE;
 	/* IEEE 802.11i does not clear TimeoutCtr here, but this is more

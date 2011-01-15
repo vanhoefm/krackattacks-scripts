@@ -65,6 +65,8 @@ void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,
 			   "version %d MIC", ver);
 		goto out;
 	}
+	wpa_hexdump_key(MSG_DEBUG, "WPA: KCK", kck, 16);
+	wpa_hexdump(MSG_DEBUG, "WPA: Derived Key MIC", key_mic, 16);
 	wpa_hexdump(MSG_MSGDUMP, "WPA: TX EAPOL-Key", msg, msg_len);
 	wpa_sm_ether_send(sm, dest, proto, msg, msg_len);
 	eapol_sm_notify_tx_eapol_key(sm->eapol);
@@ -322,6 +324,8 @@ int wpa_supplicant_send_2_of_4(struct wpa_sm *sm, const unsigned char *dst,
 		os_memcpy(reply->key_length, key->key_length, 2);
 	os_memcpy(reply->replay_counter, key->replay_counter,
 		  WPA_REPLAY_COUNTER_LEN);
+	wpa_hexdump(MSG_DEBUG, "WPA: Replay Counter", reply->replay_counter,
+		    WPA_REPLAY_COUNTER_LEN);
 
 	WPA_PUT_BE16(reply->key_data_length, wpa_ie_len);
 	os_memcpy(reply + 1, wpa_ie, wpa_ie_len);

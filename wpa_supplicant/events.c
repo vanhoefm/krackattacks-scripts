@@ -1310,6 +1310,14 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		/* Set static WEP keys again */
 		wpa_set_wep_keys(wpa_s, wpa_s->current_ssid);
 	}
+
+#ifdef CONFIG_IBSS_RSN
+	if (wpa_s->current_ssid &&
+	    wpa_s->current_ssid->mode == WPAS_MODE_IBSS &&
+	    wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
+	    wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE)
+		ibss_rsn_connected(wpa_s->ibss_rsn);
+#endif /* CONFIG_IBSS_RSN */
 }
 
 

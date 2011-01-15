@@ -361,6 +361,15 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 {
 	struct ibss_rsn_peer *peer;
 
+	for (peer = ibss_rsn->peers; peer; peer = peer->next) {
+		if (os_memcmp(addr, peer->addr, ETH_ALEN) == 0) {
+			wpa_printf(MSG_DEBUG, "RSN: IBSS Authenticator and "
+				   "Supplicant for peer " MACSTR " already "
+				   "running", MAC2STR(addr));
+			return 0;
+		}
+	}
+
 	wpa_printf(MSG_DEBUG, "RSN: Starting IBSS Authenticator and "
 		   "Supplicant for peer " MACSTR, MAC2STR(addr));
 

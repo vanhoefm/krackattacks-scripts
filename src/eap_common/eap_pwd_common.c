@@ -184,8 +184,8 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 		BN_bin2bn(pwe_digest, SHA256_DIGEST_LENGTH, rnd);
 
 		eap_pwd_kdf(pwe_digest, SHA256_DIGEST_LENGTH,
-			    (unsigned char *) "EAP-pwd Hunting and Pecking",
-			    os_strlen("EAP-pwd Hunting and Pecking"),
+			    (unsigned char *) "EAP-pwd Hunting And Pecking",
+			    os_strlen("EAP-pwd Hunting And Pecking"),
 			    prfbuf, primebitlen);
 
 		BN_bin2bn(prfbuf, primebytelen, x_candidate);
@@ -264,22 +264,16 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 
 
 int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
-		 EC_POINT *server_element, EC_POINT *peer_element,
-		 BIGNUM *server_scalar, BIGNUM *peer_scalar, u32 *ciphersuite,
-		 u8 *msk, u8 *emsk)
+		 BIGNUM *peer_scalar, BIGNUM *server_scalar,
+		 u8 *commit_peer, u8 *commit_server,
+		 u32 *ciphersuite, u8 *msk, u8 *emsk)
 {
-	BIGNUM *scalar_sum, *x;
-	EC_POINT *element_sum;
 	HMAC_CTX ctx;
 	u8 mk[SHA256_DIGEST_LENGTH], *cruft;
 	u8 session_id[SHA256_DIGEST_LENGTH + 1];
 	u8 msk_emsk[EAP_MSK_LEN + EAP_EMSK_LEN];
-	int ret = -1;
 
-	if (((cruft = os_malloc(BN_num_bytes(grp->prime))) == NULL) ||
-	    ((x = BN_new()) == NULL) ||
-	    ((scalar_sum = BN_new()) == NULL) ||
-	    ((element_sum = EC_POINT_new(grp->group)) == NULL))
+	if ((cruft = os_malloc(BN_num_bytes(grp->prime))) == NULL)
 		return -1;
 
 	/*
@@ -295,34 +289,13 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
 	H_Final(&ctx, &session_id[1]);
 
-	/*
-	 * then compute MK = H(k | F(elem_p + elem_s) |
-	 *		       (scal_p + scal_s) mod r)
-	 */
+	/* then compute MK = H(k | commit-peer | commit-server) */
 	H_Init(&ctx);
-
-	/* k */
 	os_memset(cruft, 0, BN_num_bytes(grp->prime));
 	BN_bn2bin(k, cruft);
 	H_Update(&ctx, cruft, BN_num_bytes(grp->prime));
-
-	/* x = F(elem_p + elem_s) */
-	if ((!EC_POINT_add(grp->group, element_sum, server_element,
-			   peer_element, bnctx)) ||
-	    (!EC_POINT_get_affine_coordinates_GFp(grp->group, element_sum, x,
-						  NULL, bnctx)))
-		goto fail;
-
-	os_memset(cruft, 0, BN_num_bytes(grp->prime));
-	BN_bn2bin(x, cruft);
-	H_Update(&ctx, cruft, BN_num_bytes(grp->prime));
-
-	/* (scal_p + scal_s) mod r */
-	BN_add(scalar_sum, server_scalar, peer_scalar);
-	BN_mod(scalar_sum, scalar_sum, grp->order, bnctx);
-	os_memset(cruft, 0, BN_num_bytes(grp->prime));
-	BN_bn2bin(scalar_sum, cruft);
-	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
+	H_Update(&ctx, commit_peer, SHA256_DIGEST_LENGTH);
+	H_Update(&ctx, commit_server, SHA256_DIGEST_LENGTH);
 	H_Final(&ctx, mk);
 
 	/* stretch the mk with the session-id to get MSK | EMSK */
@@ -333,13 +306,7 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 	os_memcpy(msk, msk_emsk, EAP_MSK_LEN);
 	os_memcpy(emsk, msk_emsk + EAP_MSK_LEN, EAP_EMSK_LEN);
 
-	ret = 1;
-
-fail:
-	BN_free(x);
-	BN_free(scalar_sum);
-	EC_POINT_free(element_sum);
 	os_free(cruft);
 
-	return ret;
+	return 1;
 }

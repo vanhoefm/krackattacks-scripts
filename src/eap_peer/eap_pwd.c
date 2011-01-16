@@ -463,14 +463,16 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	BIGNUM *x = NULL, *y = NULL;
 	HMAC_CTX ctx;
 	u32 cs;
+	u16 grp;
 	u8 conf[SHA256_DIGEST_LENGTH], *cruft = NULL, *ptr;
 
 	/*
 	 * first build up the ciphersuite which is group | random_function |
 	 *	prf
 	 */
+	grp = htons(data->group_num);
 	ptr = (u8 *) &cs;
-	os_memcpy(ptr, &data->group_num, sizeof(u16));
+	os_memcpy(ptr, &grp, sizeof(u16));
 	ptr += sizeof(u16);
 	*ptr = EAP_PWD_DEFAULT_RAND_FUNC;
 	ptr += sizeof(u8);
@@ -620,9 +622,9 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	wpabuf_put_u8(resp, EAP_PWD_OPCODE_CONFIRM_EXCH);
 	wpabuf_put_data(resp, conf, SHA256_DIGEST_LENGTH);
 
-	if (compute_keys(data->grp, data->bnctx, data->k, data->server_element,
-			 data->my_element, data->server_scalar,
-			 data->my_scalar, &cs, data->msk, data->emsk) < 0) {
+	if (compute_keys(data->grp, data->bnctx, data->k,
+			 data->my_scalar, data->server_scalar, conf, ptr,
+			 &cs, data->msk, data->emsk) < 0) {
 		wpa_printf(MSG_INFO, "EAP-PWD (peer): unable to compute MSK | "
 			   "EMSK");
 		goto fin;

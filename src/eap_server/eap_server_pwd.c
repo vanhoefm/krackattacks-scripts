@@ -40,6 +40,8 @@ struct eap_pwd_data {
 	EC_POINT *my_element;
 	EC_POINT *peer_element;
 
+	u8 my_confirm[SHA256_DIGEST_LENGTH];
+
 	u8 msk[EAP_MSK_LEN];
 	u8 emsk[EAP_EMSK_LEN];
 
@@ -286,6 +288,7 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	BIGNUM *x = NULL, *y = NULL;
 	HMAC_CTX ctx;
 	u8 conf[SHA256_DIGEST_LENGTH], *cruft = NULL, *ptr;
+	u16 grp;
 
 	wpa_printf(MSG_DEBUG, "EAP-pwd: Confirm/Request");
 
@@ -356,9 +359,10 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
 
 	/* ciphersuite */
+	grp = htons(data->group_num);
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	ptr = cruft;
-	os_memcpy(ptr, &data->group_num, sizeof(u16));
+	os_memcpy(ptr, &grp, sizeof(u16));
 	ptr += sizeof(u16);
 	*ptr = EAP_PWD_DEFAULT_RAND_FUNC;
 	ptr += sizeof(u8);
@@ -368,6 +372,7 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 
 	/* all done with the random function */
 	H_Final(&ctx, conf);
+	os_memcpy(data->my_confirm, conf, SHA256_DIGEST_LENGTH);
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PWD,
 			    sizeof(struct eap_pwd_hdr) + SHA256_DIGEST_LENGTH,
@@ -617,11 +622,13 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	BIGNUM *x = NULL, *y = NULL;
 	HMAC_CTX ctx;
 	u32 cs;
+	u16 grp;
 	u8 conf[SHA256_DIGEST_LENGTH], *cruft = NULL, *ptr;
 
 	/* build up the ciphersuite: group | random_function | prf */
+	grp = htons(data->group_num);
 	ptr = (u8 *) &cs;
-	os_memcpy(ptr, &data->group_num, sizeof(u16));
+	os_memcpy(ptr, &grp, sizeof(u16));
 	ptr += sizeof(u16);
 	*ptr = EAP_PWD_DEFAULT_RAND_FUNC;
 	ptr += sizeof(u8);
@@ -701,9 +708,9 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	}
 
 	wpa_printf(MSG_DEBUG, "EAP-pwd (server): confirm verified");
-	if (compute_keys(data->grp, data->bnctx, data->k, data->my_element,
-			 data->peer_element, data->my_scalar,
-			 data->peer_scalar, &cs, data->msk, data->emsk) < 0)
+	if (compute_keys(data->grp, data->bnctx, data->k,
+			 data->peer_scalar, data->my_scalar, conf,
+			 data->my_confirm, &cs, data->msk, data->emsk) < 0)
 		eap_pwd_state(data, FAILURE);
 	else
 		eap_pwd_state(data, SUCCESS);

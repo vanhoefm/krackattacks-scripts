@@ -70,8 +70,8 @@ struct eap_pwd_id {
 /* common routines */
 int compute_password_element(EAP_PWD_group *, u16, u8 *, int, u8 *, int, u8 *,
 			     int, u8 *);
-int compute_keys(EAP_PWD_group *, BN_CTX *, BIGNUM *, EC_POINT *, EC_POINT *,
-                 BIGNUM *, BIGNUM *, u32 *, u8 *, u8 *);
+int compute_keys(EAP_PWD_group *, BN_CTX *, BIGNUM *, BIGNUM *, BIGNUM *,
+		 u8 *, u8 *, u32 *, u8 *, u8 *);
 void H_Init(HMAC_CTX *);
 void H_Update(HMAC_CTX *, const u8 *, int);
 void H_Final(HMAC_CTX *, u8 *);

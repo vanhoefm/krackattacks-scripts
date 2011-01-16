@@ -257,7 +257,7 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 	BN_free(cofactor);
 	BN_free(x_candidate);
 	BN_free(rnd);
-	free(prfbuf);
+	os_free(prfbuf);
 
 	return ret;
 }

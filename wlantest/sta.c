@@ -72,6 +72,22 @@ void sta_update_assoc(struct wlantest_sta *sta, struct ieee802_11_elems *elems)
 	struct wpa_ie_data data;
 	struct wlantest_bss *bss = sta->bss;
 
+	if (elems->wpa_ie && !bss->wpaie[0]) {
+		wpa_printf(MSG_INFO, "WPA IE included in Association Request "
+			   "frame from " MACSTR " even though BSS does not "
+			   "use WPA - ignore IE",
+			   MAC2STR(sta->addr));
+		elems->wpa_ie = NULL;
+	}
+
+	if (elems->rsn_ie && !bss->rsnie[0]) {
+		wpa_printf(MSG_INFO, "RSN IE included in Association Request "
+			   "frame from " MACSTR " even though BSS does not "
+			   "use RSN - ignore IE",
+			   MAC2STR(sta->addr));
+		elems->rsn_ie = NULL;
+	}
+
 	if (elems->wpa_ie && elems->rsn_ie) {
 		wpa_printf(MSG_INFO, "Both WPA IE and RSN IE included in "
 			   "Association Request frame from " MACSTR,

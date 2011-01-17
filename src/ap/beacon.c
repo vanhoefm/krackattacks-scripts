@@ -211,6 +211,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 	size_t i;
 
 	ie = mgmt->u.probe_req.variable;
+	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
+		return;
 	ie_len = len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));
 
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)

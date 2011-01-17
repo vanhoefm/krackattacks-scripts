@@ -1460,6 +1460,9 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 	int broadcast;
 	u16 fc, stype;
 
+	if (len < 24)
+		return;
+
 	mgmt = (struct ieee80211_mgmt *) buf;
 	fc = le_to_host16(mgmt->frame_control);
 	stype = WLAN_FC_GET_STYPE(fc);

@@ -201,6 +201,7 @@ static void rx_data_tdls_setup_request(struct wlantest *wt, const u8 *bssid,
 		   " initiator STA " MACSTR " responder STA " MACSTR,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
+	get_tdls(wt, elems.link_id);
 }
 
 

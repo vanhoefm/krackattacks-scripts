@@ -282,4 +282,7 @@ int wpa_derive_ptk_ft(struct wpa_sm *sm, const unsigned char *src_addr,
 		      const struct wpa_eapol_key *key,
 		      struct wpa_ptk *ptk, size_t ptk_len);
 
+void wpa_tdls_assoc(struct wpa_sm *sm);
+void wpa_tdls_disassoc(struct wpa_sm *sm);
+
 #endif /* WPA_I_H */

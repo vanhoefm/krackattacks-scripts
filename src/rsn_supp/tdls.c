@@ -1765,6 +1765,26 @@ int wpa_tdls_init(struct wpa_sm *sm)
 }
 
 
+static void wpa_tdls_remove_peers(struct wpa_sm *sm)
+{
+	struct wpa_tdls_peer *peer, *tmp;
+
+	peer = sm->tdls;
+	sm->tdls = NULL;
+
+	while (peer) {
+		int res;
+		tmp = peer->next;
+		res = wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
+		wpa_printf(MSG_DEBUG, "TDLS: Remove peer " MACSTR " (res=%d)",
+			   MAC2STR(peer->addr), res);
+		wpa_supplicant_peer_free(sm, peer);
+		os_free(peer);
+		peer = tmp;
+	}
+}
+
+
 /**
  * wpa_tdls_deinit - Deinitialize driver interface parameters for TDLS
  *
@@ -1773,8 +1793,6 @@ int wpa_tdls_init(struct wpa_sm *sm)
  */
 void wpa_tdls_deinit(struct wpa_sm *sm)
 {
-	struct wpa_tdls_peer *peer;
-
 	if (sm == NULL)
 		return;
 
@@ -1782,14 +1800,19 @@ void wpa_tdls_deinit(struct wpa_sm *sm)
 		l2_packet_deinit(sm->l2_tdls);
 	sm->l2_tdls = NULL;
 
-	peer = sm->tdls;
-	while (peer) {
-		struct wpa_tdls_peer *tmp;
-		tmp = peer->next;
-		/* clear tdls sm */
-		wpa_supplicant_peer_free(sm, peer);
-		os_free(peer);
-		peer = tmp;
-	}
-	sm->tdls = NULL;
+	wpa_tdls_remove_peers(sm);
+}
+
+
+void wpa_tdls_assoc(struct wpa_sm *sm)
+{
+	wpa_printf(MSG_DEBUG, "TDLS: Remove peers on association");
+	wpa_tdls_remove_peers(sm);
+}
+
+
+void wpa_tdls_disassoc(struct wpa_sm *sm)
+{
+	wpa_printf(MSG_DEBUG, "TDLS: Remove peers on disassociation");
+	wpa_tdls_remove_peers(sm);
 }

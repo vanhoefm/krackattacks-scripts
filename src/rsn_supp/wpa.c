@@ -2128,6 +2128,10 @@ void wpa_sm_notify_assoc(struct wpa_sm *sm, const u8 *bssid)
 		sm->ptk_set = 0;
 		sm->tptk_set = 0;
 	}
+
+#ifdef CONFIG_TDLS
+	wpa_tdls_assoc(sm);
+#endif /* CONFIG_TDLS */
 }
 
 
@@ -2143,6 +2147,9 @@ void wpa_sm_notify_disassoc(struct wpa_sm *sm)
 	rsn_preauth_deinit(sm);
 	if (wpa_sm_get_state(sm) == WPA_4WAY_HANDSHAKE)
 		sm->dot11RSNA4WayHandshakeFailures++;
+#ifdef CONFIG_TDLS
+	wpa_tdls_disassoc(sm);
+#endif /* CONFIG_TDLS */
 }
 
 

@@ -170,6 +170,20 @@ static void deauth_all_stas(struct wlantest_bss *bss)
 }
 
 
+static void tdls_link_down(struct wlantest_bss *bss, struct wlantest_sta *sta)
+{
+	struct wlantest_tdls *tdls;
+	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
+		if ((tdls->init == sta || tdls->resp == sta) && tdls->link_up)
+		{
+			wpa_printf(MSG_DEBUG, "TDLS: Set link down based on "
+				   "STA deauth/disassoc");
+			tdls->link_up = 0;
+		}
+	}
+}
+
+
 static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 			   int valid)
 {
@@ -228,6 +242,7 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
 		sta->state = STATE1;
 	}
+	tdls_link_down(bss, sta);
 }
 
 
@@ -564,6 +579,7 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 			   MAC2STR(sta->addr), MAC2STR(bss->bssid));
 		sta->state = STATE2;
 	}
+	tdls_link_down(bss, sta);
 }
 
 

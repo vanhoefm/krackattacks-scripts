@@ -31,6 +31,9 @@
 #define TDLS_TESTING_LONG_FRAME BIT(0)
 #define TDLS_TESTING_ALT_RSN_IE BIT(1)
 #define TDLS_TESTING_DIFF_BSSID BIT(2)
+#define TDLS_TESTING_SHORT_LIFETIME BIT(3)
+#define TDLS_TESTING_WRONG_LIFETIME_RESP BIT(4)
+#define TDLS_TESTING_WRONG_LIFETIME_CONF BIT(5)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -845,6 +848,13 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 
 	/* Lifetime */
 	lifetime = peer->lifetime;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_WRONG_LIFETIME_RESP) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use wrong TPK "
+			   "lifetime in response");
+		lifetime++;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
 				     sizeof(timeoutie), lifetime);
 	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds from Responder",
@@ -913,6 +923,13 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 
 	/* Lifetime */
 	lifetime = peer->lifetime;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_WRONG_LIFETIME_CONF) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use wrong TPK "
+			   "lifetime in confirm");
+		lifetime++;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
 				     sizeof(timeoutie), lifetime);
 	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds from Responder",
@@ -1657,6 +1674,13 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	/* Lifetime */
 	lifetime = 43200; /* 12 hrs */
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_SHORT_LIFETIME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use short TPK "
+			   "lifetime");
+		lifetime = 301;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
 				     sizeof(timeoutie), lifetime);
 	wpa_hexdump(MSG_WARNING, "WPA: TimeoutIE for TPK Handshake M1",

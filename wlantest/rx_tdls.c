@@ -188,6 +188,7 @@ static void rx_data_tdls_setup_request(struct wlantest *wt, const u8 *bssid,
 				       const u8 *data, size_t len)
 {
 	struct ieee802_11_elems elems;
+	struct wlantest_tdls *tdls;
 
 	if (len < 3)
 		return;
@@ -201,7 +202,9 @@ static void rx_data_tdls_setup_request(struct wlantest *wt, const u8 *bssid,
 		   " initiator STA " MACSTR " responder STA " MACSTR,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
-	get_tdls(wt, elems.link_id);
+	tdls = get_tdls(wt, elems.link_id);
+	if (tdls)
+		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_REQ]++;
 }
 
 
@@ -234,6 +237,10 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 	tdls = get_tdls(wt, elems.link_id);
 	if (!tdls)
 		return;
+	if (status)
+		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_RESP_FAIL]++;
+	else
+		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_RESP_OK]++;
 	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1)
 		return;
 	if (tdls_verify_mic(tdls, 2, &elems) == 0) {
@@ -259,8 +266,6 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 	wpa_printf(MSG_DEBUG, "TDLS Setup Confirm " MACSTR " -> "
 		   MACSTR " (status %d)",
 		   MAC2STR(src), MAC2STR(dst), status);
-	if (status != WLAN_STATUS_SUCCESS)
-		return;
 
 	if (ieee802_11_parse_elems(data + 3, len - 3, &elems, 1) ==
 	    ParseFailed || elems.link_id == NULL)
@@ -272,6 +277,13 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 
 	tdls = get_tdls(wt, elems.link_id);
 	if (tdls == NULL)
+		return;
+	if (status)
+		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_CONF_FAIL]++;
+	else
+		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_CONF_OK]++;
+
+	if (status != WLAN_STATUS_SUCCESS)
 		return;
 
 	tdls->link_up = 1;

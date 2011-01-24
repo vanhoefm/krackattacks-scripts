@@ -752,6 +752,11 @@ static const struct tdls_counters tdls_counters[] = {
 	{ "invalid_direct_link", WLANTEST_TDLS_COUNTER_INVALID_DIRECT_LINK },
 	{ "valid_ap_path", WLANTEST_TDLS_COUNTER_VALID_AP_PATH },
 	{ "invalid_ap_path", WLANTEST_TDLS_COUNTER_INVALID_AP_PATH },
+	{ "setup_req", WLANTEST_TDLS_COUNTER_SETUP_REQ },
+	{ "setup_resp_ok", WLANTEST_TDLS_COUNTER_SETUP_RESP_OK },
+	{ "setup_resp_fail", WLANTEST_TDLS_COUNTER_SETUP_RESP_FAIL },
+	{ "setup_conf_ok", WLANTEST_TDLS_COUNTER_SETUP_CONF_OK },
+	{ "setup_conf_fail", WLANTEST_TDLS_COUNTER_SETUP_CONF_FAIL },
 	{ NULL, 0 }
 };
 

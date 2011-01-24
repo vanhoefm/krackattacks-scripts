@@ -339,7 +339,7 @@ skip_replay_det:
 		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
 	if (decrypted) {
 		u16 fc = le_to_host16(hdr->frame_control);
-		u8 *peer_addr = NULL;
+		const u8 *peer_addr = NULL;
 		if (!(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)))
 			peer_addr = hdr->addr1;
 		rx_data_process(wt, bss->bssid, sta->addr, dst, src, decrypted,
@@ -380,7 +380,6 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 		rx_data_bss_prot(wt, hdr, qos, dst, src, data, len);
 	else {
 		const u8 *bssid, *sta_addr, *peer_addr;
-		int direct_link = !(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS));
 		if (fc & WLAN_FC_TODS) {
 			bssid = hdr->addr1;
 			sta_addr = hdr->addr2;

@@ -284,13 +284,14 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 	wpa_printf(MSG_DEBUG, "TDLS Setup Response " MACSTR " -> "
 		   MACSTR " (status %d)",
 		   MAC2STR(src), MAC2STR(dst), status);
-	if (len < 5) {
+	if (len < 5 && status == 0) {
 		wpa_printf(MSG_INFO, "Too short TDLS Setup Response " MACSTR
 			   " -> " MACSTR, MAC2STR(src), MAC2STR(dst));
 		return;
 	}
 
-	if (ieee802_11_parse_elems(data + 5, len - 5, &elems, 1) ==
+	if (len < 5 ||
+	    ieee802_11_parse_elems(data + 5, len - 5, &elems, 1) ==
 	    ParseFailed || elems.link_id == NULL) {
 		/* Need to match TDLS link based on Dialog Token */
 		rx_data_tdls_setup_response_failure(wt, bssid, sta_addr,

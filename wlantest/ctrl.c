@@ -444,8 +444,7 @@ static void ctrl_get_tdls_counter(struct wlantest *wt, int sock, u8 *cmd,
 	}
 
 	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
-		if ((tdls->init == sta && tdls->resp == sta2) ||
-		    (tdls->init == sta2 && tdls->resp == sta)) {
+		if (tdls->init == sta && tdls->resp == sta2) {
 			found = 1;
 			break;
 		}

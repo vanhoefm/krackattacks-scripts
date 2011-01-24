@@ -212,6 +212,7 @@ void bss_flush(struct wlantest *wt);
 int bss_add_pmk_from_passphrase(struct wlantest_bss *bss,
 				const char *passphrase);
 void pmk_deinit(struct wlantest_pmk *pmk);
+void tdls_deinit(struct wlantest_tdls *tdls);
 
 struct wlantest_sta * sta_find(struct wlantest_bss *bss, const u8 *addr);
 struct wlantest_sta * sta_get(struct wlantest_bss *bss, const u8 *addr);

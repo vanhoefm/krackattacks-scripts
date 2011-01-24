@@ -67,6 +67,13 @@ void pmk_deinit(struct wlantest_pmk *pmk)
 }
 
 
+void tdls_deinit(struct wlantest_tdls *tdls)
+{
+	dl_list_del(&tdls->list);
+	os_free(tdls);
+}
+
+
 void bss_deinit(struct wlantest_bss *bss)
 {
 	struct wlantest_sta *sta, *n;
@@ -77,7 +84,7 @@ void bss_deinit(struct wlantest_bss *bss)
 	dl_list_for_each_safe(pmk, np, &bss->pmk, struct wlantest_pmk, list)
 		pmk_deinit(pmk);
 	dl_list_for_each_safe(tdls, nt, &bss->tdls, struct wlantest_tdls, list)
-		os_free(tdls);
+		tdls_deinit(tdls);
 	dl_list_del(&bss->list);
 	os_free(bss);
 }

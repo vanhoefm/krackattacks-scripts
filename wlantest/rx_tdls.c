@@ -23,7 +23,8 @@
 #include "wlantest.h"
 
 
-static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *linkid)
+static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *linkid,
+				       int create_new)
 {
 	struct wlantest_bss *bss;
 	struct wlantest_sta *init, *resp;
@@ -45,6 +46,9 @@ static struct wlantest_tdls * get_tdls(struct wlantest *wt, const u8 *linkid)
 		if (tdls->init == init && tdls->resp == resp)
 			return tdls;
 	}
+
+	if (!create_new)
+		return NULL;
 
 	tdls = os_zalloc(sizeof(*tdls));
 	if (tdls == NULL)
@@ -202,7 +206,7 @@ static void rx_data_tdls_setup_request(struct wlantest *wt, const u8 *bssid,
 		   " initiator STA " MACSTR " responder STA " MACSTR,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
-	tdls = get_tdls(wt, elems.link_id);
+	tdls = get_tdls(wt, elems.link_id, 1);
 	if (tdls)
 		tdls->counters[WLANTEST_TDLS_COUNTER_SETUP_REQ]++;
 }
@@ -234,7 +238,7 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
 
-	tdls = get_tdls(wt, elems.link_id);
+	tdls = get_tdls(wt, elems.link_id, 1);
 	if (!tdls)
 		return;
 	if (status)
@@ -259,6 +263,7 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 	u16 status;
 	struct ieee802_11_elems elems;
 	struct wlantest_tdls *tdls;
+	u8 link_id[3 * ETH_ALEN];
 
 	if (len < 3)
 		return;
@@ -275,7 +280,7 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
 
-	tdls = get_tdls(wt, elems.link_id);
+	tdls = get_tdls(wt, elems.link_id, 1);
 	if (tdls == NULL)
 		return;
 	if (status)
@@ -287,12 +292,31 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 		return;
 
 	tdls->link_up = 1;
-	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1)
+	if (tdls_derive_tpk(tdls, bssid, elems.ftie, elems.ftie_len) < 1) {
+		if (elems.ftie == NULL)
+			goto remove_reverse;
 		return;
+	}
 	if (tdls_verify_mic(tdls, 3, &elems) == 0) {
 		tdls->dialog_token = data[2];
 		wpa_printf(MSG_DEBUG, "TDLS: Dialog Token for the link: %u",
 			   tdls->dialog_token);
+	}
+
+remove_reverse:
+	/*
+	 * The TDLS link itself is bidirectional, but there is explicit
+	 * initiator/responder roles. Remove the other direction of the link
+	 * (if it exists) to make sure that the link counters are stored for
+	 * the current TDLS entery.
+	 */
+	os_memcpy(link_id, elems.link_id, ETH_ALEN);
+	os_memcpy(link_id + ETH_ALEN, elems.link_id + 2 * ETH_ALEN, ETH_ALEN);
+	os_memcpy(link_id + 2 * ETH_ALEN, elems.link_id + ETH_ALEN, ETH_ALEN);
+	tdls = get_tdls(wt, link_id, 0);
+	if (tdls) {
+		wpa_printf(MSG_DEBUG, "TDLS: Remove reverse link entry");
+		tdls_deinit(tdls);
 	}
 }
 
@@ -377,7 +401,7 @@ static void rx_data_tdls_teardown(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),
 		   MAC2STR(elems.link_id + 2 * ETH_ALEN));
 
-	tdls = get_tdls(wt, elems.link_id);
+	tdls = get_tdls(wt, elems.link_id, 1);
 	if (tdls) {
 		tdls->link_up = 0;
 		tdls_verify_mic_teardown(tdls, 4, data, &elems);

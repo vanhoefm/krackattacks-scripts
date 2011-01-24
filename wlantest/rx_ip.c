@@ -20,9 +20,35 @@
 #include "wlantest.h"
 
 
+static void ping_update(struct wlantest_sta *sta, int req, u32 src, u32 dst,
+			u16 id, u16 seq)
+{
+	if (req) {
+		sta->icmp_echo_req_src = src;
+		sta->icmp_echo_req_dst = dst;
+		sta->icmp_echo_req_id = id;
+		sta->icmp_echo_req_seq = seq;
+		return;
+	}
+
+	if (sta->icmp_echo_req_src == dst &&
+	    sta->icmp_echo_req_dst == src &&
+	    sta->icmp_echo_req_id == id &&
+	    sta->icmp_echo_req_seq == seq) {
+		sta->counters[WLANTEST_STA_COUNTER_PING_OK]++;
+		if (sta->counters[WLANTEST_STA_COUNTER_ASSOCREQ_TX] == 0 &&
+		    sta->counters[WLANTEST_STA_COUNTER_REASSOCREQ_TX] == 0)
+			sta->counters[
+				WLANTEST_STA_COUNTER_PING_OK_FIRST_ASSOC]++;
+		wpa_printf(MSG_DEBUG, "ICMP echo (ping) match for STA " MACSTR,
+			   MAC2STR(sta->addr));
+	}
+}
+
+
 static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 			 const u8 *sta_addr, u32 dst, u32 src,
-			 const u8 *data, size_t len)
+			 const u8 *data, size_t len, const u8 *peer_addr)
 {
 	struct in_addr addr;
 	char buf[20];
@@ -48,9 +74,10 @@ static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 	addr.s_addr = dst;
 	snprintf(buf, sizeof(buf), "%s", inet_ntoa(addr));
 	addr.s_addr = src;
-	wpa_printf(MSG_DEBUG, "ICMP echo %s %s -> %s id=%04x seq=%u len=%u",
+	wpa_printf(MSG_DEBUG, "ICMP echo %s %s -> %s id=%04x seq=%u len=%u%s",
 		   hdr->type == ICMP_ECHO ? "request" : "response",
-		   inet_ntoa(addr), buf, id, seq, (unsigned) len - 8);
+		   inet_ntoa(addr), buf, id, seq, (unsigned) len - 8,
+		   peer_addr ? " [DL]" : "");
 
 	bss = bss_find(wt, bssid);
 	if (bss == NULL) {
@@ -69,31 +96,15 @@ static void rx_data_icmp(struct wlantest *wt, const u8 *bssid,
 		return;
 	}
 
-	if (hdr->type == ICMP_ECHO) {
-		sta->icmp_echo_req_src = src;
-		sta->icmp_echo_req_dst = dst;
-		sta->icmp_echo_req_id = id;
-		sta->icmp_echo_req_seq = seq;
-		return;
-	}
-
-	if (sta->icmp_echo_req_src == dst &&
-	    sta->icmp_echo_req_dst == src &&
-	    sta->icmp_echo_req_id == id &&
-	    sta->icmp_echo_req_seq == seq) {
-		sta->counters[WLANTEST_STA_COUNTER_PING_OK]++;
-		if (sta->counters[WLANTEST_STA_COUNTER_ASSOCREQ_TX] == 0 &&
-		    sta->counters[WLANTEST_STA_COUNTER_REASSOCREQ_TX] == 0)
-			sta->counters[
-				WLANTEST_STA_COUNTER_PING_OK_FIRST_ASSOC]++;
-		wpa_printf(MSG_DEBUG, "ICMP echo (ping) match for STA " MACSTR,
-			   MAC2STR(sta->addr));
-	}
+	ping_update(sta, hdr->type == ICMP_ECHO, src, dst, id, seq);
+	if (peer_addr && (sta = sta_find(bss, peer_addr)))
+		ping_update(sta, hdr->type == ICMP_ECHO, src, dst, id, seq);
 }
 
 
 void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
-		const u8 *dst, const u8 *src, const u8 *data, size_t len)
+		const u8 *dst, const u8 *src, const u8 *data, size_t len,
+		const u8 *peer_addr)
 {
 	const struct iphdr *ip;
 	const u8 *payload;
@@ -146,7 +157,7 @@ void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
 	switch (ip->protocol) {
 	case IPPROTO_ICMP:
 		rx_data_icmp(wt, bssid, sta_addr, ip->daddr, ip->saddr,
-			     payload, plen);
+			     payload, plen, peer_addr);
 		break;
 	}
 }

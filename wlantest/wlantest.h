@@ -198,7 +198,8 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len);
 void rx_data_eapol(struct wlantest *wt, const u8 *dst, const u8 *src,
 		   const u8 *data, size_t len, int prot);
 void rx_data_ip(struct wlantest *wt, const u8 *bssid, const u8 *sta_addr,
-		const u8 *dst, const u8 *src, const u8 *data, size_t len);
+		const u8 *dst, const u8 *src, const u8 *data, size_t len,
+		const u8 *peer_addr);
 void rx_data_80211_encap(struct wlantest *wt, const u8 *bssid,
 			 const u8 *sta_addr, const u8 *dst, const u8 *src,
 			 const u8 *data, size_t len);

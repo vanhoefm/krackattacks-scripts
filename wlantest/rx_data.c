@@ -61,14 +61,16 @@ static const char * data_stype(u16 stype)
 
 static void rx_data_eth(struct wlantest *wt, const u8 *bssid,
 			const u8 *sta_addr, const u8 *dst, const u8 *src,
-			u16 ethertype, const u8 *data, size_t len, int prot)
+			u16 ethertype, const u8 *data, size_t len, int prot,
+			const u8 *peer_addr)
 {
 	switch (ethertype) {
 	case ETH_P_PAE:
 		rx_data_eapol(wt, dst, src, data, len, prot);
 		break;
 	case ETH_P_IP:
-		rx_data_ip(wt, bssid, sta_addr, dst, src, data, len);
+		rx_data_ip(wt, bssid, sta_addr, dst, src, data, len,
+			   peer_addr);
 		break;
 	case 0x890d:
 		rx_data_80211_encap(wt, bssid, sta_addr, dst, src, data, len);
@@ -80,14 +82,16 @@ static void rx_data_eth(struct wlantest *wt, const u8 *bssid,
 static void rx_data_process(struct wlantest *wt, const u8 *bssid,
 			    const u8 *sta_addr,
 			    const u8 *dst, const u8 *src,
-			    const u8 *data, size_t len, int prot)
+			    const u8 *data, size_t len, int prot,
+			    const u8 *peer_addr)
 {
 	if (len == 0)
 		return;
 
 	if (len >= 8 && os_memcmp(data, "\xaa\xaa\x03\x00\x00\x00", 6) == 0) {
 		rx_data_eth(wt, bssid, sta_addr, dst, src,
-			    WPA_GET_BE16(data + 6), data + 8, len - 8, prot);
+			    WPA_GET_BE16(data + 6), data + 8, len - 8, prot,
+			    peer_addr);
 		return;
 	}
 
@@ -181,7 +185,7 @@ skip_replay_det:
 					 &dlen);
 	if (decrypted) {
 		rx_data_process(wt, bss->bssid, NULL, dst, src, decrypted,
-				dlen, 1);
+				dlen, 1, NULL);
 		os_memcpy(bss->rsc[keyid], pn, 6);
 		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
 				     decrypted, dlen);
@@ -334,8 +338,12 @@ skip_replay_det:
 	else
 		decrypted = ccmp_decrypt(sta->ptk.tk1, hdr, data, len, &dlen);
 	if (decrypted) {
+		u16 fc = le_to_host16(hdr->frame_control);
+		u8 *peer_addr = NULL;
+		if (!(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)))
+			peer_addr = hdr->addr1;
 		rx_data_process(wt, bss->bssid, sta->addr, dst, src, decrypted,
-				dlen, 1);
+				dlen, 1, peer_addr);
 		os_memcpy(rsc, pn, 6);
 		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
 				     decrypted, dlen);
@@ -371,15 +379,23 @@ static void rx_data_bss(struct wlantest *wt, const struct ieee80211_hdr *hdr,
 	if (prot)
 		rx_data_bss_prot(wt, hdr, qos, dst, src, data, len);
 	else {
-		const u8 *bssid, *sta_addr;
+		const u8 *bssid, *sta_addr, *peer_addr;
+		int direct_link = !(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS));
 		if (fc & WLAN_FC_TODS) {
 			bssid = hdr->addr1;
 			sta_addr = hdr->addr2;
-		} else {
+			peer_addr = NULL;
+		} else if (fc & WLAN_FC_FROMDS) {
 			bssid = hdr->addr2;
 			sta_addr = hdr->addr1;
+			peer_addr = NULL;
+		} else {
+			bssid = hdr->addr3;
+			sta_addr = hdr->addr2;
+			peer_addr = hdr->addr1;
 		}
-		rx_data_process(wt, bssid, sta_addr, dst, src, data, len, 0);
+		rx_data_process(wt, bssid, sta_addr, dst, src, data, len, 0,
+				peer_addr);
 	}
 }
 

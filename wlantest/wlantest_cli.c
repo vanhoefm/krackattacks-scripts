@@ -757,6 +757,7 @@ static const struct tdls_counters tdls_counters[] = {
 	{ "setup_resp_fail", WLANTEST_TDLS_COUNTER_SETUP_RESP_FAIL },
 	{ "setup_conf_ok", WLANTEST_TDLS_COUNTER_SETUP_CONF_OK },
 	{ "setup_conf_fail", WLANTEST_TDLS_COUNTER_SETUP_CONF_FAIL },
+	{ "teardown", WLANTEST_TDLS_COUNTER_TEARDOWN },
 	{ NULL, 0 }
 };
 

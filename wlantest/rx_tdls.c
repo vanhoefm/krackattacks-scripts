@@ -475,6 +475,7 @@ static void rx_data_tdls_teardown(struct wlantest *wt, const u8 *bssid,
 	tdls = get_tdls(wt, elems.link_id, 1, bssid);
 	if (tdls) {
 		tdls->link_up = 0;
+		tdls->counters[WLANTEST_TDLS_COUNTER_TEARDOWN]++;
 		tdls_verify_mic_teardown(tdls, 4, data, &elems);
 	}
 }

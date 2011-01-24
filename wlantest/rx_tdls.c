@@ -324,6 +324,46 @@ static void rx_data_tdls_setup_response(struct wlantest *wt, const u8 *bssid,
 }
 
 
+static void rx_data_tdls_setup_confirm_failure(struct wlantest *wt,
+					       const u8 *bssid,
+					       const u8 *sta_addr,
+					       u8 dialog_token, u16 status)
+{
+	struct wlantest_bss *bss;
+	struct wlantest_tdls *tdls;
+	struct wlantest_sta *sta;
+
+	if (status == WLAN_STATUS_SUCCESS) {
+		wpa_printf(MSG_INFO, "TDLS: Invalid TDLS Setup Confirm from "
+			   MACSTR, MAC2STR(sta_addr));
+		return;
+	}
+
+	bss = bss_find(wt, bssid);
+	if (!bss)
+		return;
+	sta = sta_find(bss, sta_addr);
+	if (!sta)
+		return;
+
+	dl_list_for_each(tdls, &bss->tdls, struct wlantest_tdls, list) {
+		if (tdls->init == sta) {
+			if (dialog_token != tdls->dialog_token) {
+				wpa_printf(MSG_DEBUG, "TDLS: Dialog token "
+					   "mismatch in TDLS Setup Confirm "
+					   "(failure)");
+				break;
+			}
+			wpa_printf(MSG_DEBUG, "TDLS: Found matching TDLS "
+				   "setup session based on dialog token");
+			tdls->counters[
+				WLANTEST_TDLS_COUNTER_SETUP_CONF_FAIL]++;
+			break;
+		}
+	}
+}
+
+
 static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 				       const u8 *sta_addr, const u8 *dst,
 				       const u8 *src,
@@ -345,8 +385,12 @@ static void rx_data_tdls_setup_confirm(struct wlantest *wt, const u8 *bssid,
 		   MAC2STR(src), MAC2STR(dst), status);
 
 	if (ieee802_11_parse_elems(data + 3, len - 3, &elems, 1) ==
-	    ParseFailed || elems.link_id == NULL)
+	    ParseFailed || elems.link_id == NULL) {
+		/* Need to match TDLS link based on Dialog Token */
+		rx_data_tdls_setup_confirm_failure(wt, bssid, sta_addr,
+						   data[2], status);
 		return;
+	}
 	wpa_printf(MSG_DEBUG, "TDLS Link Identifier: BSSID " MACSTR
 		   " initiator STA " MACSTR " responder STA " MACSTR,
 		   MAC2STR(elems.link_id), MAC2STR(elems.link_id + ETH_ALEN),

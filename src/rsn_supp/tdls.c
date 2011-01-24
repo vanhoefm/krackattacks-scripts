@@ -37,6 +37,7 @@
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
+#define TPK_LIFETIME 43200 /* 12 hours */
 #define SMK_RETRY_COUNT 	3
 #define SMK_TIMEOUT         5000 /* in milliseconds */
 
@@ -80,6 +81,7 @@ struct wpa_tdls_frame {
 
 static u8 * wpa_add_tdls_timeoutie(u8 *pos, u8 *ie, size_t ie_len, u32 tsecs);
 static void wpa_tdls_smkretry_timeout(void *eloop_ctx, void *timeout_ctx);
+static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer);
 
 
 #define TDLS_MAX_IE_LEN 80
@@ -94,7 +96,6 @@ struct wpa_tdls_peer {
 	u8 rsnie_p[TDLS_MAX_IE_LEN]; /* Peer RSN IE */
 	size_t rsnie_p_len;
 	u32 lifetime;
-	os_time_t expiration;
 	int cipher; /* Selected cipher (WPA_CIPHER_*) */
 
 #define TDLS_LNKID_LEN   20 /* T+L+V(18-octet) */
@@ -261,33 +262,6 @@ static void tdls_clear_peer(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 }
 
 
-static void wpa_supplicant_smk_timeout(void *eloop_ctx, void *timeout_ctx)
-{
-	struct wpa_sm *sm = eloop_ctx;
-	struct wpa_tdls_peer *peer = timeout_ctx;
-	/* On SMK timer expiry initiate SMK followed by STK */
-	if (peer->initiator)
-		wpa_tdls_start(sm, peer->addr);
-	else {
-		/*TODO::: to send Request for new SMK/STK handshake */
-		;
-	}
-}
-
-
-static void wpa_supplicant_peer_free(struct wpa_sm *sm,
-				     struct wpa_tdls_peer *peer)
-{
-	if (peer->lifetime) {
-		eloop_cancel_timeout(wpa_supplicant_smk_timeout, sm, peer);
-		peer->lifetime = 0;
-	}
-	/* need to clear Peerkey SM */
-	tdls_clear_peer(sm, peer);
-	//os_free(peer);
-}
-
-
 static void wpa_tdls_smkretry_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 
@@ -334,7 +308,7 @@ static void wpa_tdls_smkretry_timeout(void *eloop_ctx, void *timeout_ctx)
 		eloop_cancel_timeout(wpa_tdls_smkretry_timeout, sm, peer);
 
 		/* clear the Peerkey statemachine */
-		wpa_supplicant_peer_free(sm, peer);
+		wpa_tdls_peer_free(sm, peer);
 	}
 }
 
@@ -591,25 +565,34 @@ static int wpa_supplicant_verify_tdls_mic_teardown(
 }
 
 
-static void wpa_tdls_smk_timeout(void *eloop_ctx, void *timeout_ctx)
+static void wpa_tdls_tpk_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_sm *sm = eloop_ctx;
 	struct wpa_tdls_peer *peer = timeout_ctx;
-	/* On SMK timer expiry initiate SMK followed by STK */
-	if (peer->initiator)
+
+	/*
+	 * On TPK lifetime expiration, we have an option of either tearing down
+	 * the direct link or trying to re-initiate it. The selection of what
+	 * to do is not strictly speaking controlled by our role in the expired
+	 * link, but for now, use that to select whether to renew or tear down
+	 * the link.
+	 */
+
+	if (peer->initiator) {
+		wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime expired for " MACSTR
+			   " - try to renew", MAC2STR(peer->addr));
 		wpa_tdls_start(sm, peer->addr);
-	else {
-		/*TODO::: to send Request for new SMK/STK handshake */
-		;
+	} else {
+		wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime expired for " MACSTR
+			   " - tear down", MAC2STR(peer->addr));
+		wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
 	}
 }
 
+
 static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 {
-	if (peer->lifetime) {
-		eloop_cancel_timeout(wpa_tdls_smk_timeout, sm, peer);
-		peer->lifetime = 0;
-	}
+	eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
 
 	/* need to clear Peerkey SM */
 	tdls_clear_peer(sm, peer);
@@ -690,7 +673,7 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 	os_free(rbuf);
 
 	/* clear the Peerkey statemachine */
-	wpa_supplicant_peer_free(sm, peer);
+	wpa_tdls_peer_free(sm, peer);
 
 	return 0;
 }
@@ -857,10 +840,8 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 #endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
 				     sizeof(timeoutie), lifetime);
-	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds from Responder",
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds from initiator",
 		   lifetime);
-	wpa_hexdump(MSG_WARNING, "WPA: TimeoutIE for SMK M2",
-		    (u8 *) &timeoutie, sizeof(timeoutie));
 
 	/* compute MIC before sending */
 	wpa_tdls_ftie_mic(peer->tpk.kck, 2, (u8 *) lnkid, peer->rsnie_p,
@@ -883,7 +864,7 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 	u16 kde_len;
 	struct wpa_tdls_ftie *ftie;
 	struct wpa_tdls_timeoutie timeoutie;
-	u32 lifetime = 0;
+	u32 lifetime;
 
 	/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
 	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
@@ -932,11 +913,8 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 #endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
 				     sizeof(timeoutie), lifetime);
-	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds from Responder",
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds",
 		   lifetime);
-
-	wpa_hexdump(MSG_WARNING, "WPA: TimeoutIE for PTK Handshake M3",
-		    (u8 *) &timeoutie, sizeof(timeoutie));
 
 	/* compute MIC before sending */
 	wpa_tdls_ftie_mic(peer->tpk.kck, 3, (u8 *) lnkid, peer->rsnie_p,
@@ -962,7 +940,6 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	struct wpa_tdls_timeoutie *timeoutie;
 	struct wpa_tdls_lnkid *lnkid;
 	u32 lifetime = 0;
-	struct os_time now;
 #if 0
 	struct rsn_ie_hdr *hdr;
 	u8 *pos;
@@ -1003,17 +980,12 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		wpa_printf(MSG_INFO, "RSN: No RSN IE in TDLS_M1");
 		return -1;
 	}
-	if (kde.key_lifetime == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No Lifetime IE in TDLS_M1");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "RSN: No Link Identifier IE in TDLS_M1");
 		return -1;
 	}
 
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
-	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
@@ -1090,7 +1062,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 					   "Request from peer " MACSTR,
 					   MAC2STR(src_addr));
 				/* clear sm info and preserve the list */
-				wpa_supplicant_peer_free(sm, peer);
+				wpa_tdls_peer_free(sm, peer);
 			}
 		}
 	}
@@ -1156,17 +1128,16 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		    peer->rsnie_p, peer->rsnie_p_len);
 
 	/* Lifetime */
+	if (kde.key_lifetime == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M1");
+		return -1;
+	}
+	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	lifetime = WPA_GET_LE32(timeoutie->value);
-	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds", lifetime);
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", lifetime);
 	if (lifetime < 300)
 		lifetime = 300; /* minimum seconds */
 	peer->lifetime = lifetime;
-
-	/* SMK Lifetime Expiry */
-	os_get_time(&now);
-	peer->expiration = now.sec + peer->lifetime;
-	/*eloop_register_timeout(lifetime, 0, wpa_tdls_smk_timeout,
-			       sm, peer);*/
 
 	/* generate SMK using Nonce */
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
@@ -1178,6 +1149,15 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 }
 
 
+static void wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
+{
+	eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
+	eloop_register_timeout(peer->lifetime, 0, wpa_tdls_tpk_timeout,
+			       sm, peer);
+	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, peer->addr);
+}
+
+
 static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 				   const u8 *buf, u16 len)
 {
@@ -1185,15 +1165,27 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	struct wpa_eapol_ie_parse kde;
 	struct wpa_ie_data ie;
 	int cipher;
-	struct os_time now;
 	struct wpa_tdls_ftie *ftie;
 	struct wpa_tdls_timeoutie *timeoutie;
 	struct wpa_tdls_lnkid *lnkid;
-	u32 lifetime = 0;
-	u8 dtoken = 0;
+	u32 lifetime;
+	u8 dtoken;
 	int ielen;
 	u16 status;
 	const u8 *pos;
+
+	wpa_printf(MSG_DEBUG, "TDLS: Received TPK M2 (Peer " MACSTR ")",
+		   MAC2STR(src_addr));
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
+			break;
+	}
+	if (peer == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No matching peer found for "
+			   "TPK M2: " MACSTR, MAC2STR(src_addr));
+		return -1;
+	}
+	wpa_tdls_smkretry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
 
 	if (buf == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No message delivered for "
@@ -1207,14 +1199,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	pos += 2 /* status code */;
 
 	if (status != 0) {
-		wpa_printf(MSG_INFO, "TDLS: status in TPK M2 %d", status);
-		/* TODO: Respond appropriately to status_code.
-		 * (e.g.)
-		 *	if (status_code == 44)
-		 * 		then rectify RSNIE in M1 and resend
-		 * 	else if (status_code == XXX)
-		 * 		then do XXX
-		 */
+		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M2: %u",
+			   status);
 		return -1;
 	}
 
@@ -1240,26 +1226,18 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		wpa_printf(MSG_INFO, "RSN: No RSN IE KDE in TDLS_M2");
 		return -1;
 	}
-	if (kde.key_lifetime == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No Lifetime IE in TDLS_M2");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "RSN: No Link Identifier IE in TDLS_M2");
 		return -1;
 	}
 
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
-	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: TPK M2 from diff BSS");
 		return -1;
 	}
-
-	wpa_printf(MSG_DEBUG, "RSN: SMK M2 - SMK Peer " MACSTR,
-		   MAC2STR(src_addr));
 
 	if (kde.rsn_ie_len > TDLS_MAX_IE_LEN) {
 		wpa_printf(MSG_INFO, "RSN: Too long Initiator RSN IE in TDLS_"
@@ -1282,21 +1260,6 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 					dtoken,
 					WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID);
 		return -1;
-	}
-
-	for (peer = sm->tdls; peer; peer = peer->next) {
-		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
-			/* && os_memcmp(peer->inonce, kde.nonce,
-			   WPA_NONCE_LEN) == 0) */
-			break;
-	}
-	if (peer == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No matching peer found for PTK "
-			   "Handshake Message 3: " MACSTR, MAC2STR(src_addr));
-		return -1;
-	} else {
-		wpa_tdls_smkretry_timeout_cancel(sm, peer,
-						 WLAN_TDLS_SETUP_REQUEST);
 	}
 
 	if (!os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) == 0) {
@@ -1322,8 +1285,6 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_hexdump(MSG_DEBUG, "RSN: FTIE Received from SMK M2",
 		    (u8 *) ftie, sizeof(*ftie));
-	wpa_hexdump(MSG_DEBUG, "RSN: Timeout IE Received from SMK M2",
-		    (u8 *) timeoutie, sizeof(*timeoutie));
 	wpa_hexdump(MSG_DEBUG, "RSN: RSNIE Received from SMK M2",
 		    kde.rsn_ie, kde.rsn_ie_len);
 	wpa_hexdump(MSG_DEBUG, "RSN: Link ID Received from SMK M2",
@@ -1338,15 +1299,22 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	peer->cipher = cipher;
 
 	/* Lifetime */
+	if (kde.key_lifetime == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M2");
+		return -1;
+	}
+	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	lifetime = WPA_GET_LE32(timeoutie->value);
-	wpa_printf(MSG_DEBUG, "RSN: SMK lifetime %u seconds", lifetime);
-	if (lifetime < 300)
-		lifetime = 300; /* minimum seconds */
-	peer->lifetime = lifetime;
-	os_get_time(&now);
-	peer->expiration = now.sec + lifetime;
-	/*eloop_register_timeout(lifetime, 0, wpa_tdls_smk_timeout,
-			       sm, peer);*/
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds in TPK M2",
+		   lifetime);
+	if (lifetime != peer->lifetime) {
+		wpa_printf(MSG_INFO, "TDLS: Unexpected TPK lifetime %u in "
+			   "TPK M2 (expected %u)", lifetime, peer->lifetime);
+		wpa_tdls_send_smk_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
+					dtoken,
+					WLAN_STATUS_UNACCEPTABLE_LIFETIME);
+		return -1;
+	}
 
 	/* generate SMK using Nonce */
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
@@ -1364,7 +1332,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TPK Handshake Message 3");
 	wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer);
 
-	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, src_addr);
+	wpa_tdls_enable_link(sm, peer);
 
 	return 0;
 }
@@ -1381,6 +1349,20 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	int ielen;
 	u16 status;
 	const u8 *pos;
+	u32 lifetime;
+
+	wpa_printf(MSG_DEBUG, "RSN: Received TDLS_M3 (Peer " MACSTR ")",
+		   MAC2STR(src_addr));
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
+			break;
+	}
+	if (peer == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No matching peer found for "
+			   "TPK M3: " MACSTR, MAC2STR(src_addr));
+		return -1;
+	}
+	wpa_tdls_smkretry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_RESPONSE);
 
 	if (buf == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No message delivered for "
@@ -1394,14 +1376,8 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	status = WPA_GET_LE16(pos);
 
 	if (status != 0) {
-		wpa_printf(MSG_INFO, "TDLS: status in TPK M3 %d", status);
-		/* TODO: Respond appropriately to status_code
-		 * (e.g.)
-		 *	if (status_code == 44)
-		 * 		then rectify RSNIE in M1 and resend M1
-		 * 	else if (status_code == XXX)
-		 * 		then do XXX
-		 */
+		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M3: %u",
+			   status);
 		return -1;
 	}
 	pos += 2 /* status code */ + 1 /* dialogue token */;
@@ -1421,17 +1397,12 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 		wpa_printf(MSG_INFO, "RSN: No RSN IE KDE in TDLS_M3");
 		return -1;
 	}
-	if (kde.key_lifetime == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No Lifetime IE in TDLS_M3");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "RSN: No Link Identifier IE in TDLS_M3");
 		return -1;
 	}
 
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
-	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
@@ -1439,30 +1410,12 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "RSN: Received TDLS_M3 (Peer "
-			   MACSTR ")", MAC2STR(src_addr));
-
 	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE Received from TPK M3",
 		    (u8 *) ftie, sizeof(*ftie));
-	wpa_hexdump(MSG_DEBUG, "TDLS: Timeout IE Received from TPK M3",
-		    (u8 *) timeoutie, sizeof(*timeoutie));
 	wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Received from TPK M3",
 		    kde.rsn_ie, kde.rsn_ie_len);
 	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M3",
 		    (u8 *) lnkid, sizeof(*lnkid));
-
-	for (peer = sm->tdls; peer; peer = peer->next) {
-		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
-			break;
-	}
-	if (peer == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No matching TDLS peer found "
-			   "for TPK Handshake Message 3: " MACSTR,
-			   MAC2STR(src_addr));
-		return -1;
-	} else
-		wpa_tdls_smkretry_timeout_cancel(sm, peer,
-						 WLAN_TDLS_SETUP_RESPONSE);
 
 	if (!os_memcmp(peer->pnonce, ftie->Anonce, WPA_NONCE_LEN) == 0) {
 		wpa_printf(MSG_INFO, "RSN: PNonce in TDLS_M3 does "
@@ -1476,6 +1429,22 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 
+	if (kde.key_lifetime == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M3");
+		return -1;
+	}
+	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
+	wpa_hexdump(MSG_DEBUG, "TDLS: Timeout IE Received from TPK M3",
+		    (u8 *) timeoutie, sizeof(*timeoutie));
+	lifetime = WPA_GET_LE32(timeoutie->value);
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds in TPK M3",
+		   lifetime);
+	if (lifetime != peer->lifetime) {
+		wpa_printf(MSG_INFO, "TDLS: Unexpected TPK lifetime %u in "
+			   "TPK M3 (expected %u)", lifetime, peer->lifetime);
+		return -1;
+	}
+
 	if (wpa_supplicant_verify_tdls_mic(3, peer, (u8 *) lnkid,
 					   (u8 *) timeoutie, ftie) < 0) {
 		wpa_tdls_del_key(sm, peer);
@@ -1486,7 +1455,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (wpa_tdls_set_key(sm, peer) < 0)
 		return -1;
 
-	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, src_addr);
+	wpa_tdls_enable_link(sm, peer);
 
 	return 0;
 }
@@ -1524,7 +1493,6 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	struct rsn_ie_hdr *hdr;
 	struct wpa_tdls_peer *peer;
 	struct wpa_tdls_timeoutie timeoutie;
-	u32 lifetime = 0;
 	u16 rsn_capab;
 
 	/* Find existing entry and if found, use that instead of adding
@@ -1620,7 +1588,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 #endif /* CONFIG_TDLS_TESTING */
 	rbuf = os_zalloc(kde_len);
 	if (rbuf == NULL) {
-		wpa_supplicant_peer_free(sm, peer);
+		wpa_tdls_peer_free(sm, peer);
 		return -1;
 	}
 	pos = rbuf;
@@ -1636,7 +1604,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: Failed to get random data for INonce");
 		os_free(rbuf);
-		wpa_supplicant_peer_free(sm, peer);
+		wpa_tdls_peer_free(sm, peer);
 		return -1;
 	}
 	os_memcpy(ftie->Snonce, peer->inonce, WPA_NONCE_LEN);
@@ -1673,20 +1641,17 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 #endif /* CONFIG_TDLS_TESTING */
 
 	/* Lifetime */
-	lifetime = 43200; /* 12 hrs */
+	peer->lifetime = TPK_LIFETIME;
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_SHORT_LIFETIME) {
 		wpa_printf(MSG_DEBUG, "TDLS: Testing - use short TPK "
 			   "lifetime");
-		lifetime = 301;
+		peer->lifetime = 301;
 	}
 #endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
-				     sizeof(timeoutie), lifetime);
-	wpa_hexdump(MSG_WARNING, "WPA: TimeoutIE for TPK Handshake M1",
-		    (u8 *) &timeoutie, sizeof(timeoutie));
-	peer->lifetime = lifetime;
-	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", lifetime);
+				     sizeof(timeoutie), peer->lifetime);
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", peer->lifetime);
 
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TPK Handshake Message 1 (peer "
 		   MACSTR ")", MAC2STR(addr));
@@ -1802,7 +1767,7 @@ static void wpa_tdls_remove_peers(struct wpa_sm *sm)
 		res = wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
 		wpa_printf(MSG_DEBUG, "TDLS: Remove peer " MACSTR " (res=%d)",
 			   MAC2STR(peer->addr), res);
-		wpa_supplicant_peer_free(sm, peer);
+		wpa_tdls_peer_free(sm, peer);
 		os_free(peer);
 		peer = tmp;
 	}

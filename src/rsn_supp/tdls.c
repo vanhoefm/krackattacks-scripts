@@ -95,9 +95,6 @@ struct wpa_tdls_peer {
 	size_t rsnie_p_len;
 	u32 lifetime;
 	int cipher; /* Selected cipher (WPA_CIPHER_*) */
-
-#define TDLS_LNKID_LEN   20 /* T+L+V(18-octet) */
-	u8 lnkid[TDLS_LNKID_LEN];
 	u8 dtoken;
 
 	struct tpk {
@@ -609,12 +606,28 @@ static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 }
 
 
+static void wpa_tdls_linkid(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
+			    struct wpa_tdls_lnkid *lnkid)
+{
+	lnkid->ie_type = WLAN_EID_LINK_ID;
+	lnkid->ie_len = 3 * ETH_ALEN;
+	os_memcpy(lnkid->bssid, sm->bssid, ETH_ALEN);
+	if (peer->initiator) {
+		os_memcpy(lnkid->init_sta, sm->own_addr, ETH_ALEN);
+		os_memcpy(lnkid->resp_sta, peer->addr, ETH_ALEN);
+	} else {
+		os_memcpy(lnkid->init_sta, peer->addr, ETH_ALEN);
+		os_memcpy(lnkid->resp_sta, sm->own_addr, ETH_ALEN);
+	}
+}
+
+
 int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 				  u16 reason_code)
 {
 	struct wpa_tdls_peer *peer;
 	struct wpa_tdls_ftie *ftie;
-	struct wpa_tdls_lnkid *lnkid;
+	struct wpa_tdls_lnkid lnkid;
 	u8 dialog_token;
 	u8 *rbuf, *pos;
 	int ielen;
@@ -632,8 +645,6 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 	}
 
 	dialog_token = peer->dtoken;
-
-	lnkid = (struct wpa_tdls_lnkid *) &peer->lnkid;
 
 	wpa_printf(MSG_DEBUG, "TDLS: TDLS Teardown for " MACSTR,
 		   MAC2STR(addr));
@@ -676,8 +687,9 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 		    (u8 *) ftie, sizeof(*ftie));
 
 	/* compute MIC before sending */
+	wpa_tdls_linkid(sm, peer, &lnkid);
 	wpa_tdls_key_mic_teardown(peer->tpk.kck, 4, reason_code,
-				  dialog_token, (u8 *) lnkid, (u8 *) ftie,
+				  dialog_token, (u8 *) &lnkid, (u8 *) ftie,
 				  ftie->mic);
 
 skip_ies:
@@ -953,12 +965,8 @@ skip_ies:
 		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
 			   "Link Identifier");
 		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
-		l->ie_type = WLAN_EID_LINK_ID;
-		l->ie_len = 3 * ETH_ALEN;
-		os_memcpy(l->bssid, sm->bssid, ETH_ALEN);
+		wpa_tdls_linkid(sm, peer, l);
 		l->bssid[5] ^= 0x01;
-		os_memcpy(l->init_sta, sm->own_addr, ETH_ALEN);
-		os_memcpy(l->resp_sta, addr, ETH_ALEN);
 		pos += sizeof(*l);
 	}
 #endif /* CONFIG_TDLS_TESTING */
@@ -1278,7 +1286,6 @@ skip_rsn:
 
 	peer->initiator = 0; /* Need to check */
 	peer->dtoken = dtoken;
-	os_memcpy(peer->lnkid, (u8 *) lnkid, sizeof(struct wpa_tdls_lnkid));
 
 	if (!wpa_tdls_get_privacy(sm)) {
 		peer->rsnie_i_len = 0;
@@ -1511,7 +1518,6 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 	/* Responder Nonce and RSN IE */
-	os_memcpy(peer->lnkid, (u8 *) lnkid, sizeof(struct wpa_tdls_lnkid));
 	os_memcpy(peer->rnonce, ftie->Anonce, WPA_NONCE_LEN);
 	os_memcpy(peer->rsnie_p, kde.rsn_ie, kde.rsn_ie_len);
 	peer->rsnie_p_len = kde.rsn_ie_len;

@@ -80,11 +80,13 @@ static struct wlantest_sta * rx_get_sta(struct wlantest *wt,
 		} else
 			return NULL;
 		break;
+	default:
+		return NULL;
 	}
 
 	bss = bss_find(wt, bssid);
 	if (bss == NULL)
-		return 0;
+		return NULL;
 	return sta_find(bss, sta_addr);
 }
 

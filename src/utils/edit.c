@@ -718,6 +718,7 @@ static enum edit_key_code esc_seq_to_key(char *seq)
 	int param1 = -1, param2 = -1;
 	enum edit_key_code ret = EDIT_KEY_NONE;
 
+	last = '\0';
 	for (pos = seq; *pos; pos++)
 		last = *pos;
 

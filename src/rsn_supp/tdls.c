@@ -800,6 +800,183 @@ static int wpa_tdls_send_smk_error(struct wpa_sm *sm, const u8 *dst,
 }
 
 
+static int wpa_tdls_send_tpk_m1(struct wpa_sm *sm,
+				struct wpa_tdls_peer *peer)
+{
+	size_t buf_len;
+	struct wpa_tdls_timeoutie timeoutie;
+	u16 rsn_capab;
+	struct wpa_tdls_ftie *ftie;
+	u8 *rbuf, *pos, *count_pos;
+	u16 count;
+	struct rsn_ie_hdr *hdr;
+
+	if (!wpa_tdls_get_privacy(sm)) {
+		wpa_printf(MSG_DEBUG, "TDLS: No security used on the link");
+		peer->rsnie_i_len = 0;
+		goto skip_rsnie;
+	}
+
+	/*
+	 * TPK Handshake Message 1:
+	 * FTIE: ANonce=0, SNonce=nonce MIC=0, DataKDs=(RSNIE_I,
+	 * Timeout Interval IE))
+	 */
+
+	/* Filling RSN IE */
+	hdr = (struct rsn_ie_hdr *) peer->rsnie_i;
+	hdr->elem_id = WLAN_EID_RSN;
+	WPA_PUT_LE16(hdr->version, RSN_VERSION);
+
+	pos = (u8 *) (hdr + 1);
+	RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED);
+	pos += RSN_SELECTOR_LEN;
+	count_pos = pos;
+	pos += 2;
+
+	count = 0;
+
+	/*
+	 * AES-CCMP is the default Encryption preferred for TDLS, so
+	 * RSN IE is filled only with CCMP CIPHER
+	 * Note: TKIP is not used to encrypt TDLS link.
+	 *
+	 * Regardless of the cipher used on the AP connection, select CCMP
+	 * here.
+	 */
+	RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
+	pos += RSN_SELECTOR_LEN;
+	count++;
+
+	WPA_PUT_LE16(count_pos, count);
+
+	WPA_PUT_LE16(pos, 1);
+	pos += 2;
+	RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_TPK_HANDSHAKE);
+	pos += RSN_SELECTOR_LEN;
+
+	rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
+	rsn_capab |= RSN_NUM_REPLAY_COUNTERS_16 << 2;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_ALT_RSN_IE) {
+		wpa_printf(MSG_DEBUG, "TDLS: Use alternative RSN IE for "
+			   "testing");
+		rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
+	}
+#endif /* CONFIG_TDLS_TESTING */
+	WPA_PUT_LE16(pos, rsn_capab);
+	pos += 2;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_ALT_RSN_IE) {
+		/* Number of PMKIDs */
+		*pos++ = 0x00;
+		*pos++ = 0x00;
+	}
+#endif /* CONFIG_TDLS_TESTING */
+
+	hdr->len = (pos - peer->rsnie_i) - 2;
+	peer->rsnie_i_len = pos - peer->rsnie_i;
+	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE for TPK handshake",
+		    peer->rsnie_i, peer->rsnie_i_len);
+
+skip_rsnie:
+	buf_len = 0;
+	if (wpa_tdls_get_privacy(sm))
+		buf_len += peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
+			sizeof(struct wpa_tdls_timeoutie);
+#ifdef CONFIG_TDLS_TESTING
+	if (wpa_tdls_get_privacy(sm) &&
+	    (tdls_testing & TDLS_TESTING_LONG_FRAME))
+		buf_len += 170;
+	if (tdls_testing & TDLS_TESTING_DIFF_BSSID)
+		buf_len += sizeof(struct wpa_tdls_lnkid);
+#endif /* CONFIG_TDLS_TESTING */
+	rbuf = os_zalloc(buf_len + 1);
+	if (rbuf == NULL) {
+		wpa_tdls_peer_free(sm, peer);
+		return -1;
+	}
+	pos = rbuf;
+
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_ies;
+
+	/* Initiator RSN IE */
+	pos = wpa_add_ie(pos, peer->rsnie_i, peer->rsnie_i_len);
+
+	ftie = (struct wpa_tdls_ftie *) pos;
+	ftie->ie_type = WLAN_EID_FAST_BSS_TRANSITION;
+	ftie->ie_len = sizeof(struct wpa_tdls_ftie) - 2;
+
+	if (os_get_random(peer->inonce, WPA_NONCE_LEN)) {
+		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
+			"WPA: Failed to get random data for INonce");
+		os_free(rbuf);
+		wpa_tdls_peer_free(sm, peer);
+		return -1;
+	}
+	os_memcpy(ftie->Snonce, peer->inonce, WPA_NONCE_LEN);
+	wpa_hexdump(MSG_DEBUG, "TDLS: INonce for TPK handshake",
+		    ftie->Snonce, WPA_NONCE_LEN);
+
+	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE for TPK Handshake M1",
+		    (u8 *) ftie, sizeof(struct wpa_tdls_ftie));
+
+	pos = (u8 *) (ftie + 1);
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
+			   "FTIE");
+		ftie->ie_len += 170;
+		*pos++ = 255; /* FTIE subelem */
+		*pos++ = 168; /* FTIE subelem length */
+		pos += 168;
+	}
+#endif /* CONFIG_TDLS_TESTING */
+
+	/* Lifetime */
+	peer->lifetime = TPK_LIFETIME;
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_SHORT_LIFETIME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use short TPK "
+			   "lifetime");
+		peer->lifetime = 301;
+	}
+#endif /* CONFIG_TDLS_TESTING */
+	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
+				     sizeof(timeoutie), peer->lifetime);
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", peer->lifetime);
+
+skip_ies:
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_DIFF_BSSID) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
+			   "Link Identifier");
+		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
+		l->ie_type = WLAN_EID_LINK_ID;
+		l->ie_len = 3 * ETH_ALEN;
+		os_memcpy(l->bssid, sm->bssid, ETH_ALEN);
+		l->bssid[5] ^= 0x01;
+		os_memcpy(l->init_sta, sm->own_addr, ETH_ALEN);
+		os_memcpy(l->resp_sta, addr, ETH_ALEN);
+		pos += sizeof(*l);
+	}
+#endif /* CONFIG_TDLS_TESTING */
+
+	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Request / TPK "
+		   "Handshake Message 1 (peer " MACSTR ")",
+		   MAC2STR(peer->addr));
+
+	wpa_tdls_smk_send(sm, peer->addr, WLAN_TDLS_SETUP_REQUEST, 0, 0,
+			  rbuf, pos - rbuf);
+	os_free(rbuf);
+
+	return 0;
+}
+
+
 static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 				const unsigned char *src_addr, u8 dtoken,
 				struct wpa_tdls_lnkid *lnkid,
@@ -1532,14 +1709,7 @@ static u8 * wpa_add_tdls_timeoutie(u8 *pos, u8 *ie, size_t ie_len, u32 tsecs)
  */
 int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 {
-	u16 buf_len;
-	struct wpa_tdls_ftie *ftie;
-	u8 *rbuf, *pos, *count_pos;
-	u16 count;
-	struct rsn_ie_hdr *hdr;
 	struct wpa_tdls_peer *peer;
-	struct wpa_tdls_timeoutie timeoutie;
-	u16 rsn_capab;
 
 	/* Find existing entry and if found, use that instead of adding
 	 * a new one */
@@ -1562,168 +1732,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	peer->initiator = 1;
 
-	if (!wpa_tdls_get_privacy(sm)) {
-		wpa_printf(MSG_DEBUG, "TDLS: No security used on the link");
-		peer->rsnie_i_len = 0;
-		goto skip_rsnie;
-	}
-
-	/*
-	 * TPK Handshake Message 1:
-	 * FTIE: ANonce=0, SNonce=nonce MIC=0, DataKDs=(RSNIE_I,
-	 * Timeout Interval IE))
-	 */
-
-	/* Filling RSN IE */
-	hdr = (struct rsn_ie_hdr *) peer->rsnie_i;
-	hdr->elem_id = WLAN_EID_RSN;
-	WPA_PUT_LE16(hdr->version, RSN_VERSION);
-
-	pos = (u8 *) (hdr + 1);
-	RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_NO_GROUP_ADDRESSED);
-	pos += RSN_SELECTOR_LEN;
-	count_pos = pos;
-	pos += 2;
-
-	count = 0;
-
-	/*
-	 * AES-CCMP is the default Encryption preferred for TDLS, so
-	 * RSN IE is filled only with CCMP CIPHER
-	 * Note: TKIP is not used to encrypt TDLS link.
-	 *
-	 * Regardless of the cipher used on the AP connection, select CCMP
-	 * here.
-	 */
-	RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
-	pos += RSN_SELECTOR_LEN;
-	count++;
-
-	WPA_PUT_LE16(count_pos, count);
-
-	WPA_PUT_LE16(pos, 1);
-	pos += 2;
-	RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_TPK_HANDSHAKE);
-	pos += RSN_SELECTOR_LEN;
-
-	rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
-	rsn_capab |= RSN_NUM_REPLAY_COUNTERS_16 << 2;
-#ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_ALT_RSN_IE) {
-		wpa_printf(MSG_DEBUG, "TDLS: Use alternative RSN IE for "
-			   "testing");
-		rsn_capab = WPA_CAPABILITY_PEERKEY_ENABLED;
-	}
-#endif /* CONFIG_TDLS_TESTING */
-	WPA_PUT_LE16(pos, rsn_capab);
-	pos += 2;
-#ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_ALT_RSN_IE) {
-		/* Number of PMKIDs */
-		*pos++ = 0x00;
-		*pos++ = 0x00;
-	}
-#endif /* CONFIG_TDLS_TESTING */
-
-	hdr->len = (pos - peer->rsnie_i) - 2;
-	peer->rsnie_i_len = pos - peer->rsnie_i;
-	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE for TPK handshake",
-		    peer->rsnie_i, peer->rsnie_i_len);
-
-skip_rsnie:
-	buf_len = 0;
-	if (wpa_tdls_get_privacy(sm))
-		buf_len += peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
-			sizeof(struct wpa_tdls_timeoutie);
-#ifdef CONFIG_TDLS_TESTING
-	if (wpa_tdls_get_privacy(sm) &&
-	    (tdls_testing & TDLS_TESTING_LONG_FRAME))
-		buf_len += 170;
-	if (tdls_testing & TDLS_TESTING_DIFF_BSSID)
-		buf_len += sizeof(struct wpa_tdls_lnkid);
-#endif /* CONFIG_TDLS_TESTING */
-	rbuf = os_zalloc(buf_len + 1);
-	if (rbuf == NULL) {
-		wpa_tdls_peer_free(sm, peer);
-		return -1;
-	}
-	pos = rbuf;
-
-	if (!wpa_tdls_get_privacy(sm))
-		goto skip_ies;
-
-	/* Initiator RSN IE */
-	pos = wpa_add_ie(pos, peer->rsnie_i, peer->rsnie_i_len);
-
-	ftie = (struct wpa_tdls_ftie *) pos;
-	ftie->ie_type = WLAN_EID_FAST_BSS_TRANSITION;
-	ftie->ie_len = sizeof(struct wpa_tdls_ftie) - 2;
-
-	if (os_get_random(peer->inonce, WPA_NONCE_LEN)) {
-		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
-			"WPA: Failed to get random data for INonce");
-		os_free(rbuf);
-		wpa_tdls_peer_free(sm, peer);
-		return -1;
-	}
-	os_memcpy(ftie->Snonce, peer->inonce, WPA_NONCE_LEN);
-	wpa_hexdump(MSG_DEBUG, "TDLS: INonce for TPK handshake",
-		    ftie->Snonce, WPA_NONCE_LEN);
-
-	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE for TPK Handshake M1",
-		    (u8 *) ftie, sizeof(struct wpa_tdls_ftie));
-
-	pos = (u8 *) (ftie + 1);
-
-#ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
-		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
-			   "FTIE");
-		ftie->ie_len += 170;
-		*pos++ = 255; /* FTIE subelem */
-		*pos++ = 168; /* FTIE subelem length */
-		pos += 168;
-	}
-#endif /* CONFIG_TDLS_TESTING */
-
-	/* Lifetime */
-	peer->lifetime = TPK_LIFETIME;
-#ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_SHORT_LIFETIME) {
-		wpa_printf(MSG_DEBUG, "TDLS: Testing - use short TPK "
-			   "lifetime");
-		peer->lifetime = 301;
-	}
-#endif /* CONFIG_TDLS_TESTING */
-	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,
-				     sizeof(timeoutie), peer->lifetime);
-	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", peer->lifetime);
-
-skip_ies:
-
-#ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_DIFF_BSSID) {
-		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
-			   "Link Identifier");
-		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
-		l->ie_type = WLAN_EID_LINK_ID;
-		l->ie_len = 3 * ETH_ALEN;
-		os_memcpy(l->bssid, sm->bssid, ETH_ALEN);
-		l->bssid[5] ^= 0x01;
-		os_memcpy(l->init_sta, sm->own_addr, ETH_ALEN);
-		os_memcpy(l->resp_sta, addr, ETH_ALEN);
-		pos += sizeof(*l);
-	}
-#endif /* CONFIG_TDLS_TESTING */
-
-	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Request / TPK "
-		   "Handshake Message 1 (peer " MACSTR ")", MAC2STR(addr));
-
-	wpa_tdls_smk_send(sm, addr, WLAN_TDLS_SETUP_REQUEST, 0, 0,
-			  rbuf, pos - rbuf);
-	os_free(rbuf);
-
-	return 0;
+	return wpa_tdls_send_tpk_m1(sm, peer);
 }
 
 

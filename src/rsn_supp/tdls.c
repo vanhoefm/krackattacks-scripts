@@ -139,7 +139,7 @@ static int wpa_tdls_del_key(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 {
 	if (wpa_sm_set_key(sm, WPA_ALG_NONE, peer->addr,
 			   0, 0, NULL, 0, NULL, 0) < 0) {
-		wpa_printf(MSG_WARNING, "TDLS: Failed to delete PTK-TK from "
+		wpa_printf(MSG_WARNING, "TDLS: Failed to delete TPK-TK from "
 			   "the driver");
 		return -1;
 	}
@@ -793,6 +793,9 @@ skip_ftie:
 static int wpa_tdls_send_error(struct wpa_sm *sm, const u8 *dst,
 			       u8 tdls_action, u8 dialog_token, u16 status)
 {
+	wpa_printf(MSG_DEBUG, "TDLS: Sending error to " MACSTR
+		   " (action=%u status=%u)",
+		   MAC2STR(dst), tdls_action, status);
 	return wpa_tdls_tpk_send(sm, dst, tdls_action, dialog_token, status,
 				 NULL, 0);
 }
@@ -1155,6 +1158,10 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 #endif
 	u8 dtoken;
 	u16 ielen;
+	u16 status = WLAN_STATUS_UNSPECIFIED_FAILURE;
+
+	if (len < 3 + 3)
+		return -1;
 
 	cpos = buf;
 	cpos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
@@ -1168,47 +1175,54 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	ielen = len - (cpos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies(cpos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "TDLS: Failed to parse KDEs in TPK M1");
-		return -1;
+		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in TPK M1");
+		goto error;
 	}
 
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
-		wpa_printf(MSG_INFO, "TDLS: No Link Identifier IE in TPK M1");
-		return -1;
+		wpa_printf(MSG_INFO, "TDLS: No valid Link Identifier IE in "
+			   "TPK M1");
+		goto error;
 	}
+	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M1",
+		    kde.lnkid, kde.lnkid_len);
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: TPK M1 from diff BSS");
-		wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
-				    dtoken, WLAN_STATUS_NOT_IN_SAME_BSS);
-		return -1;
+		status = WLAN_STATUS_NOT_IN_SAME_BSS;
+		goto error;
 	}
 
 	wpa_printf(MSG_DEBUG, "TDLS: TPK M1 - TPK initiator " MACSTR,
 		   MAC2STR(src_addr));
 
-	if (!wpa_tdls_get_privacy(sm))
+	if (!wpa_tdls_get_privacy(sm)) {
+		if (kde.rsn_ie) {
+			wpa_printf(MSG_INFO, "TDLS: RSN IE in TPK M1 while "
+				   "security is disabled");
+			status = WLAN_STATUS_SECURITY_DISABLED;
+			goto error;
+		}
 		goto skip_rsn;
-
-	if (kde.ftie == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M1");
-		return -1;
 	}
-	ftie = (struct wpa_tdls_ftie *) kde.ftie;
-	if (kde.rsn_ie == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No RSN IE in TPK M1");
-		return -1;
+
+	if (kde.ftie == NULL || kde.rsn_ie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No FTIE or RSN IE in TPK M1");
+		status = WLAN_STATUS_INVALID_PARAMETERS;
+		goto error;
 	}
 
 	if (kde.rsn_ie_len > TDLS_MAX_IE_LEN) {
 		wpa_printf(MSG_INFO, "TDLS: Too long Initiator RSN IE in "
 			   "TPK M1");
-		return -1;
+		status = WLAN_STATUS_INVALID_RSNIE;
+		goto error;
 	}
 
 	if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len, &ie) < 0) {
 		wpa_printf(MSG_INFO, "TDLS: Failed to parse RSN IE in TPK M1");
-		return -1;
+		status = WLAN_STATUS_INVALID_RSNIE;
+		goto error;
 	}
 
 	cipher = ie.pairwise_cipher;
@@ -1217,10 +1231,32 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		cipher = WPA_CIPHER_CCMP;
 	} else {
 		wpa_printf(MSG_INFO, "TDLS: No acceptable cipher in TPK M1");
-		wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
-				    dtoken,
-				    WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID);
-		return -1;
+		status = WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID;
+		goto error;
+	}
+
+	if ((ie.capabilities &
+	     (WPA_CAPABILITY_NO_PAIRWISE | WPA_CAPABILITY_PEERKEY_ENABLED)) !=
+	    WPA_CAPABILITY_PEERKEY_ENABLED) {
+		wpa_printf(MSG_INFO, "TDLS: Invalid RSN Capabilities in "
+			   "TPK M1");
+		status = WLAN_STATUS_INVALID_RSN_IE_CAPAB;
+		goto error;
+	}
+
+	/* Lifetime */
+	if (kde.key_lifetime == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M1");
+		status = WLAN_STATUS_UNACCEPTABLE_LIFETIME;
+		goto error;
+	}
+	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
+	lifetime = WPA_GET_LE32(timeoutie->value);
+	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", lifetime);
+	if (lifetime < 300) {
+		wpa_printf(MSG_INFO, "TDLS: Too short TPK lifetime");
+		status = WLAN_STATUS_UNACCEPTABLE_LIFETIME;
+		goto error;
 	}
 
 skip_rsn:
@@ -1238,7 +1274,7 @@ skip_rsn:
 			   MAC2STR(src_addr));
 		peer = os_malloc(sizeof(*peer));
 		if (peer == NULL)
-			return -1;
+			goto error;
 		os_memset(peer, 0, sizeof(*peer));
 		os_memcpy(peer->addr, src_addr, ETH_ALEN);
 		peer->next = sm->tdls;
@@ -1282,6 +1318,7 @@ skip_rsn:
 		goto skip_rsn_check;
 	}
 
+	ftie = (struct wpa_tdls_ftie *) kde.ftie;
 	os_memcpy(peer->inonce, ftie->Snonce, WPA_NONCE_LEN);
 	os_memcpy(peer->rsnie_i, kde.rsn_ie, kde.rsn_ie_len);
 	peer->rsnie_i_len = kde.rsn_ie_len;
@@ -1291,7 +1328,7 @@ skip_rsn:
 		wpa_msg(sm->ctx->ctx, MSG_WARNING,
 			"TDLS: Failed to get random data for responder nonce");
 		wpa_tdls_peer_free(sm, peer);
-		return -1;
+		goto error;
 	}
 
 #if 0
@@ -1336,19 +1373,9 @@ skip_rsn:
 	os_memcpy(peer->rsnie_p, peer->rsnie_i, peer->rsnie_i_len);
 	peer->rsnie_p_len = peer->rsnie_i_len;
 
-	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE for PTK handshake",
+	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE for TPK handshake",
 		    peer->rsnie_p, peer->rsnie_p_len);
 
-	/* Lifetime */
-	if (kde.key_lifetime == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M1");
-		return -1;
-	}
-	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
-	lifetime = WPA_GET_LE32(timeoutie->value);
-	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", lifetime);
-	if (lifetime < 300)
-		lifetime = 300; /* minimum seconds */
 	peer->lifetime = lifetime;
 
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
@@ -1358,6 +1385,11 @@ skip_rsn_check:
 	wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer);
 
 	return 0;
+
+error:
+	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken,
+			    status);
+	return -1;
 }
 
 
@@ -1409,11 +1441,13 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	status = WPA_GET_LE16(pos);
 	pos += 2 /* status code */;
 
-	if (status != 0) {
+	if (status != WLAN_STATUS_SUCCESS) {
 		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M2: %u",
 			   status);
 		return -1;
 	}
+
+	status = WLAN_STATUS_UNSPECIFIED_FAILURE;
 
 	/* TODO: need to verify dialog token matches here or in kernel */
 	dtoken = *pos++; /* dialog token */
@@ -1427,13 +1461,13 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	ielen = len - (pos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies(pos, ielen, &kde) < 0) {
 		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in TPK M2");
-		return -1;
+		goto error;
 	}
 
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "TDLS: No valid Link Identifier IE in "
 			   "TPK M2");
-		return -1;
+		goto error;
 	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M2",
 		    kde.lnkid, kde.lnkid_len);
@@ -1441,9 +1475,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: TPK M2 from different BSS");
-		wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
-				    dtoken, WLAN_STATUS_NOT_IN_SAME_BSS);
-		return -1;
+		status = WLAN_STATUS_NOT_IN_SAME_BSS;
+		goto error;
 	}
 
 	if (!wpa_tdls_get_privacy(sm)) {
@@ -1452,13 +1485,20 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		goto skip_rsn;
 	}
 
-	if (kde.rsn_ie == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No RSN IE in TPK M2");
-		return -1;
+	if (kde.ftie == NULL || kde.rsn_ie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No FTIE or RSN IE in TPK M2");
+		status = WLAN_STATUS_INVALID_PARAMETERS;
+		goto error;
 	}
-	wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Received from TPK M2",
+	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Received from TPK M2",
 		    kde.rsn_ie, kde.rsn_ie_len);
 
+	/*
+	 * FIX: bitwise comparison of RSN IE is not the correct way of
+	 * validation this. It can be different, but certain fields must
+	 * match. Since we list only a single pairwise cipher in TPK M1, the
+	 * memcmp is likely to work in most cases, though.
+	 */
 	if (kde.rsn_ie_len != peer->rsnie_i_len ||
 	    os_memcmp(peer->rsnie_i, kde.rsn_ie, peer->rsnie_i_len) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: RSN IE in TPK M2 does "
@@ -1467,34 +1507,26 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 			    peer->rsnie_i, peer->rsnie_i_len);
 		wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Received from TPK M2",
 			    kde.rsn_ie, kde.rsn_ie_len);
-		wpa_tdls_send_error(sm, src_addr,
-				    WLAN_TDLS_SETUP_CONFIRM, dtoken,
-				    WLAN_STATUS_UNSUPPORTED_RSN_IE_VERSION);
-
-		return -1;
+		status = WLAN_STATUS_INVALID_RSNIE;
+		goto error;
 	}
 
 	if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len, &ie) < 0) {
 		wpa_printf(MSG_INFO, "TDLS: Failed to parse RSN IE in TPK M2");
-		return -1;
+		status = WLAN_STATUS_INVALID_RSNIE;
+		goto error;
 	}
 
 	cipher = ie.pairwise_cipher;
-	if (cipher & WPA_CIPHER_CCMP) {
+	if (cipher == WPA_CIPHER_CCMP) {
 		wpa_printf(MSG_DEBUG, "TDLS: Using CCMP for direct link");
 		cipher = WPA_CIPHER_CCMP;
 	} else {
 		wpa_printf(MSG_INFO, "TDLS: No acceptable cipher in TPK M2");
-		wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
-				    dtoken,
-				    WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID);
-		return -1;
+		status = WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID;
+		goto error;
 	}
 
-	if (kde.ftie == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M2");
-		return -1;
-	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE Received from TPK M2",
 		    kde.ftie, sizeof(*ftie));
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
@@ -1502,6 +1534,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	if (!os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) == 0) {
 		wpa_printf(MSG_INFO, "TDLS: FTIE SNonce in TPK M2 does "
 			   "not match with FTIE SNonce used in TPK M1");
+		/* Silently discard the frame */
 		return -1;
 	}
 
@@ -1514,7 +1547,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	/* Lifetime */
 	if (kde.key_lifetime == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No Key Lifetime IE in TPK M2");
-		return -1;
+		status = WLAN_STATUS_UNACCEPTABLE_LIFETIME;
+		goto error;
 	}
 	timeoutie = (struct wpa_tdls_timeoutie *) kde.key_lifetime;
 	lifetime = WPA_GET_LE32(timeoutie->value);
@@ -1523,9 +1557,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	if (lifetime != peer->lifetime) {
 		wpa_printf(MSG_INFO, "TDLS: Unexpected TPK lifetime %u in "
 			   "TPK M2 (expected %u)", lifetime, peer->lifetime);
-		wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
-				    dtoken, WLAN_STATUS_UNACCEPTABLE_LIFETIME);
-		return -1;
+		status = WLAN_STATUS_UNACCEPTABLE_LIFETIME;
+		goto error;
 	}
 
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
@@ -1533,6 +1566,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	/* Process MIC check to see if TPK M2 is right */
 	if (wpa_supplicant_verify_tdls_mic(2, peer, (u8 *) lnkid,
 					   (u8 *) timeoutie, ftie) < 0) {
+		/* Discard the frame */
 		wpa_tdls_del_key(sm, peer);
 		wpa_tdls_peer_free(sm, peer);
 		return -1;
@@ -1550,6 +1584,11 @@ skip_rsn:
 	wpa_tdls_enable_link(sm, peer);
 
 	return 0;
+
+error:
+	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken,
+			    status);
+	return -1;
 }
 
 
@@ -1579,6 +1618,8 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	}
 	wpa_tdls_tpk_retry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_RESPONSE);
 
+	if (len < 3 + 3)
+		return -1;
 	pos = buf;
 	pos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
 
@@ -1622,11 +1663,17 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
 
 	if (kde.rsn_ie == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No RSN IE KDE in TPK M3");
+		wpa_printf(MSG_INFO, "TDLS: No RSN IE in TPK M3");
 		return -1;
 	}
-	wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Received from TPK M3",
+	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Received from TPK M3",
 		    kde.rsn_ie, kde.rsn_ie_len);
+	if (kde.rsn_ie_len != peer->rsnie_p_len ||
+	    os_memcmp(kde.rsn_ie, peer->rsnie_p, peer->rsnie_p_len) != 0) {
+		wpa_printf(MSG_INFO, "TDLS: RSN IE in TPK M3 does not match "
+			   "with the one sent in TPK M2");
+		return -1;
+	}
 
 	if (!os_memcmp(peer->rnonce, ftie->Anonce, WPA_NONCE_LEN) == 0) {
 		wpa_printf(MSG_INFO, "TDLS: FTIE ANonce in TPK M3 does "

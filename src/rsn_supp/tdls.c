@@ -77,8 +77,6 @@ struct wpa_tdls_frame {
 	u8 action; /* Action (enum tdls_frame_type) */
 } STRUCT_PACKED;
 
-#define TDLS_FRAME_TYPE(tf) (((struct wpa_tdls_frame *) tf)->action)
-
 static u8 * wpa_add_tdls_timeoutie(u8 *pos, u8 *ie, size_t ie_len, u32 tsecs);
 static void wpa_tdls_smkretry_timeout(void *eloop_ctx, void *timeout_ctx);
 static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer);
@@ -107,6 +105,7 @@ struct wpa_tdls_peer {
 		u8 tk[16]; /* TPK-TK; assuming only CCMP will be used */
 	} tpk;
 	int tpk_set;
+	int tpk_success;
 
 	struct smk_timer {
 		u8 dest[ETH_ALEN];
@@ -120,6 +119,17 @@ struct wpa_tdls_peer {
 		u8 *buf;        /* buffer for SMK message */
 	} sm_tmr;
 };
+
+
+static int wpa_tdls_get_privacy(struct wpa_sm *sm)
+{
+	/*
+	 * Get info needed from supplicant to check if the current BSS supports
+	 * security. Other than OPEN mode, rest are considered secured
+	 * WEP/WPA/WPA2 hence TDLS frames are processed for TPK handshake.
+	 */
+	return sm->pairwise_cipher != WPA_CIPHER_NONE;
+}
 
 
 static u8 * wpa_add_ie(u8 *pos, const u8 *ie, size_t ie_len)
@@ -609,6 +619,7 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 	u8 dialogue_token = 0;
 	u8 *rbuf;
 	int ielen;
+	u8 *pos;
 
 	/* Find the node and free from the list */
 	for (peer = sm->tdls; peer; peer = peer->next) {
@@ -629,26 +640,33 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 	wpa_printf(MSG_DEBUG, "RSN: TDLS Teardown for " MACSTR,
 		   MAC2STR(addr));
 
-	/* To add FTIE for Teardown request and compute MIC */
-	ielen = sizeof(*ftie);
+	ielen = 0;
+	if (wpa_tdls_get_privacy(sm) && peer->tpk_set && peer->tpk_success) {
+		/* To add FTIE for Teardown request and compute MIC */
+		ielen += sizeof(*ftie);
 #ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
-		ielen += 170;
+		if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+			ielen += 170;
 #endif /* CONFIG_TDLS_TESTING */
+	}
 
-	rbuf = os_zalloc(ielen);
+	rbuf = os_zalloc(ielen + 1);
 	if (rbuf == NULL)
 		return -1;
+	pos = rbuf;
 
-	ftie = (struct wpa_tdls_ftie *) rbuf;
+	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success)
+		goto skip_ies;
+
+	ftie = (struct wpa_tdls_ftie *) pos;
 	ftie->ie_type = WLAN_EID_FAST_BSS_TRANSITION;
 	/* Using the recent nonce which should be for CONFIRM frame */
 	os_memcpy(ftie->Anonce, peer->pnonce, WPA_NONCE_LEN);
 	os_memcpy(ftie->Snonce, peer->inonce, WPA_NONCE_LEN);
 	ftie->ie_len = sizeof(struct wpa_tdls_ftie) - 2;
+	pos = (u8 *) (ftie + 1);
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_LONG_FRAME) {
-		u8 *pos = (u8 *) (ftie + 1);
 		wpa_printf(MSG_DEBUG, "TDLS: Testing - add extra subelem to "
 			   "FTIE");
 		ftie->ie_len += 170;
@@ -664,12 +682,14 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 				  dialogue_token, (u8 *) lnkid, (u8 *) ftie,
 				  ftie->mic);
 
+skip_ies:
 	/* TODO: register for a Timeout handler, if Teardown is not received at
 	 * the other end, then try again another time */
 
 	/* request driver to send Teardown using this FTIE */
 	wpa_tdls_smk_send(sm, addr, WLAN_TDLS_TEARDOWN, 0,
-			  WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED, rbuf, ielen);
+			  WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED, rbuf,
+			  pos - rbuf);
 	os_free(rbuf);
 
 	/* clear the Peerkey statemachine */
@@ -680,14 +700,13 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 
 
 static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
-				  const u8 *buf, u16 len)
+				  const u8 *buf, size_t len)
 {
 	struct wpa_tdls_peer *peer = NULL;
 	struct wpa_tdls_ftie *ftie;
 	struct wpa_tdls_lnkid *lnkid;
 	struct wpa_eapol_ie_parse kde;
-	u16 reason_code = 0;
-	u8 dialogue_token = 0;
+	u16 reason_code;
 	const u8 *pos;
 	int ielen;
 
@@ -703,20 +722,14 @@ static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 		return 0;
 	}
 
-	if (buf == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No message delivered for "
-			   "wpa_tdls_recv_teardown?!");
-		return -1;
-	}
-
 	pos = buf;
 	pos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
 
 	reason_code = WPA_GET_LE16(pos);
 	pos += 2;
 
-	wpa_printf(MSG_INFO, "TDLS: Reason code in Teardown rcode %d",
-		   reason_code);
+	wpa_printf(MSG_DEBUG, "TDLS: TDLS Teardown Request from " MACSTR
+		   " (reason code %u)", MAC2STR(src_addr), reason_code);
 
 	ielen = len - (pos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies((const u8 *) pos, ielen, &kde) < 0) {
@@ -724,33 +737,40 @@ static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 
-	if (kde.ftie == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No FTIE in TDLS Teardown");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "TDLS: No Link Identifier IE in TDLS "
 			   "Teardown");
 		return -1;
 	}
+	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
+
+	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success)
+		goto skip_ftie;
+
+	if (kde.ftie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No FTIE in TDLS Teardown");
+		return -1;
+	}
 
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
-	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
-	dialogue_token = peer->dtoken; /* used for TDLS handshake */
-
-	wpa_printf(MSG_DEBUG, "RSN: TDLS Teardown Request from " MACSTR,
-		   MAC2STR(src_addr));
 
 	/* Process MIC check to see if TDLS Teardown is right */
 	if (wpa_supplicant_verify_tdls_mic_teardown(4, reason_code,
-						    dialogue_token, peer,
+						    peer->dtoken, peer,
 						    (u8 *) lnkid, ftie) < 0) {
-		wpa_printf(MSG_DEBUG, "RSN: MIC failure for TDLS "
-			   "Teardown Request from " MACSTR,
-			   MAC2STR(src_addr));
-		//return -1;
+		wpa_printf(MSG_DEBUG, "TDLS: MIC failure for TDLS "
+			   "Teardown Request from " MACSTR, MAC2STR(src_addr));
+#if 0
+		return -1;
+#else
+		/* TODO: figure out whether this workaround could be disabled
+		 */
+		wpa_printf(MSG_DEBUG, "TDLS: Workaround - ignore Teardown MIC "
+			   "failure");
+#endif
 	}
 
+skip_ftie:
 	/*
 	 * Request the driver to disable the direct link and clear associated
 	 * keys.
@@ -786,23 +806,29 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 				const struct wpa_tdls_peer *peer)
 {
 	u8 *rbuf, *pos;
-	u16 kde_len;
-	u32 lifetime = 0;
+	size_t buf_len;
+	u32 lifetime;
 	struct wpa_tdls_timeoutie timeoutie;
 	struct wpa_tdls_ftie *ftie;
 
-	/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
-	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
-		sizeof(struct wpa_tdls_timeoutie);
+	buf_len = 0;
+	if (wpa_tdls_get_privacy(sm)) {
+		/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
+		buf_len += peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
+			sizeof(struct wpa_tdls_timeoutie);
 #ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
-		kde_len += 170;
+		if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+			buf_len += 170;
 #endif /* CONFIG_TDLS_TESTING */
+	}
 
-	rbuf = os_zalloc(kde_len);
+	rbuf = os_zalloc(buf_len + 1);
 	if (rbuf == NULL)
 		return -1;
 	pos = rbuf;
+
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_ies;
 
 	/* Peer RSN IE */
 	pos = wpa_add_ie(pos, peer->rsnie_p, peer->rsnie_p_len);
@@ -847,8 +873,9 @@ static int wpa_tdls_send_tpk_m2(struct wpa_sm *sm,
 	wpa_tdls_ftie_mic(peer->tpk.kck, 2, (u8 *) lnkid, peer->rsnie_p,
 			  (u8 *) &timeoutie, (u8 *) ftie, ftie->mic);
 
+skip_ies:
 	wpa_tdls_smk_send(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE, dtoken, 0,
-			  rbuf, kde_len);
+			  rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return 0;
@@ -861,23 +888,29 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 				const struct wpa_tdls_peer *peer)
 {
 	u8 *rbuf, *pos;
-	u16 kde_len;
+	size_t buf_len;
 	struct wpa_tdls_ftie *ftie;
 	struct wpa_tdls_timeoutie timeoutie;
 	u32 lifetime;
 
-	/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
-	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
-		sizeof(struct wpa_tdls_timeoutie);
+	buf_len = 0;
+	if (wpa_tdls_get_privacy(sm)) {
+		/* Peer RSN IE, FTIE(Initiator Nonce, Peer nonce), Lifetime */
+		buf_len += peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
+			sizeof(struct wpa_tdls_timeoutie);
 #ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
-		kde_len += 170;
+		if (tdls_testing & TDLS_TESTING_LONG_FRAME)
+			buf_len += 170;
 #endif /* CONFIG_TDLS_TESTING */
+	}
 
-	rbuf = os_zalloc(kde_len);
+	rbuf = os_zalloc(buf_len + 1);
 	if (rbuf == NULL)
 		return -1;
 	pos = rbuf;
+
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_ies;
 
 	/* Peer RSN IE */
 	pos = wpa_add_ie(pos, peer->rsnie_p, peer->rsnie_p_len);
@@ -920,8 +953,9 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 	wpa_tdls_ftie_mic(peer->tpk.kck, 3, (u8 *) lnkid, peer->rsnie_p,
 			  (u8 *) &timeoutie, (u8 *) ftie, ftie->mic);
 
+skip_ies:
 	wpa_tdls_smk_send(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken, 0,
-			  rbuf, kde_len);
+			  rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return 0;
@@ -929,14 +963,14 @@ static int wpa_tdls_send_tpk_m3(struct wpa_sm *sm,
 
 
 static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
-				   const u8 *buf, u16 len)
+				   const u8 *buf, size_t len)
 {
 	struct wpa_tdls_peer *peer;
 	struct wpa_eapol_ie_parse kde;
 	struct wpa_ie_data ie;
 	int cipher;
 	const u8 *cpos;
-	struct wpa_tdls_ftie *ftie;
+	struct wpa_tdls_ftie *ftie = NULL;
 	struct wpa_tdls_timeoutie *timeoutie;
 	struct wpa_tdls_lnkid *lnkid;
 	u32 lifetime = 0;
@@ -948,12 +982,6 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 #endif
 	u8 dtoken;
 	u16 ielen;
-
-	if (buf == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No message delivered for "
-			   "wpa_tdls_process_tpk_m1?!");
-		return -1;
-	}
 
 	cpos = buf;
 	cpos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
@@ -968,57 +996,62 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	ielen = len - (cpos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies(cpos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "RSN: Failed to parse KDEs in TDLS_M1");
+		wpa_printf(MSG_INFO, "TDLS: Failed to parse KDEs in TPK M1");
 		return -1;
 	}
 
-	if (kde.ftie == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No FTIE in TDLS_M1");
-		return -1;
-	}
-	if (kde.rsn_ie == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No RSN IE in TDLS_M1");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
-		wpa_printf(MSG_INFO, "RSN: No Link Identifier IE in TDLS_M1");
+		wpa_printf(MSG_INFO, "TDLS: No Link Identifier IE in TPK M1");
 		return -1;
 	}
-
-	ftie = (struct wpa_tdls_ftie *) kde.ftie;
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
-
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
 		wpa_printf(MSG_INFO, "TDLS: TPK M1 from diff BSS");
+		wpa_tdls_send_smk_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
+					dtoken, WLAN_STATUS_NOT_IN_SAME_BSS);
 		return -1;
 	}
 
-	wpa_printf(MSG_DEBUG, "RSN: TDLS_M1 - SMK initiator " MACSTR,
+	wpa_printf(MSG_DEBUG, "TDLS: TPK M1 - TPK initiator " MACSTR,
 		   MAC2STR(src_addr));
 
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_rsn;
+
+	if (kde.ftie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M1");
+		return -1;
+	}
+	ftie = (struct wpa_tdls_ftie *) kde.ftie;
+	if (kde.rsn_ie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No RSN IE in TPK M1");
+		return -1;
+	}
+
 	if (kde.rsn_ie_len > TDLS_MAX_IE_LEN) {
-		wpa_printf(MSG_INFO, "RSN: Too long Initiator RSN IE in "
-			   "TDLS_M1");
+		wpa_printf(MSG_INFO, "TDLS: Too long Initiator RSN IE in "
+			   "TPK M1");
 		return -1;
 	}
 
 	if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len, &ie) < 0) {
-		wpa_printf(MSG_INFO, "RSN: Failed to parse RSN IE in TDLS_M1");
+		wpa_printf(MSG_INFO, "TDLS: Failed to parse RSN IE in TPK M1");
 		return -1;
 	}
 
 	cipher = ie.pairwise_cipher;
 	if (cipher & WPA_CIPHER_CCMP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using CCMP for direct link");
+		wpa_printf(MSG_DEBUG, "TDLS: Using CCMP for direct link");
 		cipher = WPA_CIPHER_CCMP;
 	} else {
-		wpa_printf(MSG_INFO, "RSN: No acceptable cipher in TDLS_M1");
+		wpa_printf(MSG_INFO, "TDLS: No acceptable cipher in TPK M1");
 		wpa_tdls_send_smk_error(sm, src_addr, WLAN_TDLS_SETUP_RESPONSE,
 					dtoken,
 					WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID);
 		return -1;
 	}
 
+skip_rsn:
 	/* Find existing entry and if found, use that instead of adding
 	 * a new one; how to handle the case where both ends initiate at the
 	 * same time? */
@@ -1028,8 +1061,8 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 	if (peer == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No matching entry found for "
-			   "Initiator, creating one. " MACSTR,
+		wpa_printf(MSG_INFO, "TDLS: No matching entry found for "
+			   "peer, creating one for " MACSTR,
 			   MAC2STR(src_addr));
 		peer = os_malloc(sizeof(*peer));
 		if (peer == NULL)
@@ -1070,6 +1103,14 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	peer->initiator = 0; /* Need to check */
 	peer->dtoken = dtoken;
 	os_memcpy(peer->lnkid, (u8 *) lnkid, sizeof(struct wpa_tdls_lnkid));
+
+	if (!wpa_tdls_get_privacy(sm)) {
+		peer->rsnie_i_len = 0;
+		peer->rsnie_p_len = 0;
+		peer->cipher = WPA_CIPHER_NONE;
+		goto skip_rsn_check;
+	}
+
 	os_memcpy(peer->inonce, ftie->Snonce, WPA_NONCE_LEN);
 	os_memcpy(peer->rsnie_i, kde.rsn_ie, kde.rsn_ie_len);
 	peer->rsnie_i_len = kde.rsn_ie_len;
@@ -1077,7 +1118,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	if (os_get_random(peer->pnonce, WPA_NONCE_LEN)) {
 		wpa_msg(sm->ctx->ctx, MSG_WARNING,
-			"WPA: Failed to get random data for PNonce");
+			"TDLS: Failed to get random data for PNonce");
 		wpa_tdls_peer_free(sm, peer);
 		return -1;
 	}
@@ -1142,7 +1183,8 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	/* generate SMK using Nonce */
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
 
-	wpa_printf(MSG_DEBUG, "TDLS: Sending TPK Handshake Message 2");
+skip_rsn_check:
+	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
 	wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer);
 
 	return 0;
@@ -1151,15 +1193,18 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 static void wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 {
+	peer->tpk_success = 1;
 	eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
-	eloop_register_timeout(peer->lifetime, 0, wpa_tdls_tpk_timeout,
-			       sm, peer);
+	if (wpa_tdls_get_privacy(sm)) {
+		eloop_register_timeout(peer->lifetime, 0, wpa_tdls_tpk_timeout,
+				       sm, peer);
+	}
 	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, peer->addr);
 }
 
 
 static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
-				   const u8 *buf, u16 len)
+				   const u8 *buf, size_t len)
 {
 	struct wpa_tdls_peer *peer;
 	struct wpa_eapol_ie_parse kde;
@@ -1174,8 +1219,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	u16 status;
 	const u8 *pos;
 
-	wpa_printf(MSG_DEBUG, "TDLS: Received TPK M2 (Peer " MACSTR ")",
-		   MAC2STR(src_addr));
+	wpa_printf(MSG_DEBUG, "TDLS: Received TDLS Setup Response / TPK M2 "
+		   "(Peer " MACSTR ")", MAC2STR(src_addr));
 	for (peer = sm->tdls; peer; peer = peer->next) {
 		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
 			break;
@@ -1187,12 +1232,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	}
 	wpa_tdls_smkretry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_REQUEST);
 
-	if (buf == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No message delivered for "
-			   "wpa_tdls_process_tpk_m2?!");
+	if (len < 3 + 2 + 1)
 		return -1;
-	}
-
 	pos = buf;
 	pos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
 	status = WPA_GET_LE16(pos);
@@ -1204,76 +1245,57 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 
-	/* driver had already verified the frame format */
+	/* TODO: need to verify dialog token matches here or in kernel */
 	dtoken = *pos++; /* dialogue token */
 
-	wpa_printf(MSG_INFO, "TDLS: Dialogue Token in TPK M2 %d",
-		   dtoken);
+	wpa_printf(MSG_DEBUG, "TDLS: Dialogue Token in TPK M2 %d", dtoken);
 
+	if (len < 3 + 2 + 1 + 2)
+		return -1;
 	pos += 2; /* capability information */
 
 	ielen = len - (pos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies(pos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "RSN: Failed to parse KDEs in TDLS_M2");
+		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in TPK M2");
 		return -1;
 	}
 
-	if (kde.ftie == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No FTIE in TDLS_M2");
-		return -1;
-	}
-	if (kde.rsn_ie == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No RSN IE KDE in TDLS_M2");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
-		wpa_printf(MSG_INFO, "RSN: No Link Identifier IE in TDLS_M2");
+		wpa_printf(MSG_INFO, "TDLS: No valid Link Identifier IE in "
+			   "TPK M2");
 		return -1;
 	}
-
-	ftie = (struct wpa_tdls_ftie *) kde.ftie;
+	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M2",
+		    kde.lnkid, kde.lnkid_len);
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
-		wpa_printf(MSG_INFO, "TDLS: TPK M2 from diff BSS");
-		return -1;
-	}
-
-	if (kde.rsn_ie_len > TDLS_MAX_IE_LEN) {
-		wpa_printf(MSG_INFO, "RSN: Too long Initiator RSN IE in TDLS_"
-			   "M2");
-		return -1;
-	}
-
-	if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len, &ie) < 0) {
-		wpa_printf(MSG_INFO, "RSN: Failed to parse RSN IE in SMK M2");
-		return -1;
-	}
-
-	cipher = ie.pairwise_cipher;
-	if (cipher & WPA_CIPHER_CCMP) {
-		wpa_printf(MSG_DEBUG, "RSN: Using CCMP for direct link");
-		cipher = WPA_CIPHER_CCMP;
-	} else {
-		wpa_printf(MSG_INFO, "RSN: No acceptable cipher in TDLS_M2");
+		wpa_printf(MSG_INFO, "TDLS: TPK M2 from different BSS");
 		wpa_tdls_send_smk_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
-					dtoken,
-					WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID);
+					dtoken, WLAN_STATUS_NOT_IN_SAME_BSS);
 		return -1;
 	}
 
-	if (!os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) == 0) {
-		wpa_printf(MSG_INFO, "RSN: Key Nonce in TDLS_M2 does "
-				   "not match with INonce used in TDLS_M1");
-		return -1;
+	if (!wpa_tdls_get_privacy(sm)) {
+		peer->rsnie_p_len = 0;
+		peer->cipher = WPA_CIPHER_NONE;
+		goto skip_rsn;
 	}
 
-	if (!os_memcmp(peer->rsnie_i, kde.rsn_ie, peer->rsnie_i_len) == 0) {
-		wpa_printf(MSG_INFO, "TDLS: RSNIE in TPK M2 does "
-			   "not match with RSNIE used in TPK M1");
-		wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Sent in TPK M1",
+	if (kde.rsn_ie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No RSN IE in TPK M2");
+		return -1;
+	}
+	wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Received from TPK M2",
+		    kde.rsn_ie, kde.rsn_ie_len);
+
+	if (kde.rsn_ie_len != peer->rsnie_i_len ||
+	    os_memcmp(peer->rsnie_i, kde.rsn_ie, peer->rsnie_i_len) != 0) {
+		wpa_printf(MSG_INFO, "TDLS: RSN IE in TPK M2 does "
+			   "not match with RSN IE used in TPK M1");
+		wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Sent in TPK M1",
 			    peer->rsnie_i, peer->rsnie_i_len);
-		wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Received from TPK M2",
+		wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE Received from TPK M2",
 			    kde.rsn_ie, kde.rsn_ie_len);
 		wpa_tdls_send_smk_error(
 			sm, src_addr,
@@ -1283,15 +1305,38 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 
-	wpa_hexdump(MSG_DEBUG, "RSN: FTIE Received from SMK M2",
-		    (u8 *) ftie, sizeof(*ftie));
-	wpa_hexdump(MSG_DEBUG, "RSN: RSNIE Received from SMK M2",
-		    kde.rsn_ie, kde.rsn_ie_len);
-	wpa_hexdump(MSG_DEBUG, "RSN: Link ID Received from SMK M2",
-		    (u8 *) lnkid, kde.lnkid_len);
+	if (wpa_parse_wpa_ie_rsn(kde.rsn_ie, kde.rsn_ie_len, &ie) < 0) {
+		wpa_printf(MSG_INFO, "TDLS: Failed to parse RSN IE in TPK M2");
+		return -1;
+	}
+
+	cipher = ie.pairwise_cipher;
+	if (cipher & WPA_CIPHER_CCMP) {
+		wpa_printf(MSG_DEBUG, "TDLS: Using CCMP for direct link");
+		cipher = WPA_CIPHER_CCMP;
+	} else {
+		wpa_printf(MSG_INFO, "TDLS: No acceptable cipher in TPK M2");
+		wpa_tdls_send_smk_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM,
+					dtoken,
+					WLAN_STATUS_PAIRWISE_CIPHER_NOT_VALID);
+		return -1;
+	}
+
+	if (kde.ftie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M2");
+		return -1;
+	}
+	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE Received from TPK M2",
+		    kde.ftie, sizeof(*ftie));
+	ftie = (struct wpa_tdls_ftie *) kde.ftie;
+
+	if (!os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) == 0) {
+		wpa_printf(MSG_INFO, "TDLS: Key Nonce in TPK M2 does "
+			   "not match with INonce used in TPK M1");
+		return -1;
+	}
 
 	/* P-Nonce and RSN_IE */
-	peer->dtoken = dtoken;
 	os_memcpy(peer->lnkid, (u8 *) lnkid, sizeof(struct wpa_tdls_lnkid));
 	os_memcpy(peer->pnonce, ftie->Anonce, WPA_NONCE_LEN);
 	os_memcpy(peer->rsnie_p, kde.rsn_ie, kde.rsn_ie_len);
@@ -1319,7 +1364,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	/* generate SMK using Nonce */
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
 
-	/* Process MIC check to see if TDLS_M2 is right */
+	/* Process MIC check to see if TPK M2 is right */
 	if (wpa_supplicant_verify_tdls_mic(2, peer, (u8 *) lnkid,
 					   (u8 *) timeoutie, ftie) < 0) {
 		wpa_tdls_del_key(sm, peer);
@@ -1329,7 +1374,11 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_tdls_set_key(sm, peer);
 
-	wpa_printf(MSG_DEBUG, "TDLS: Sending TPK Handshake Message 3");
+skip_rsn:
+	peer->dtoken = dtoken;
+
+	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Confirm / "
+		   "TPK Handshake Message 3");
 	wpa_tdls_send_tpk_m3(sm, src_addr, dtoken, lnkid, peer);
 
 	wpa_tdls_enable_link(sm, peer);
@@ -1339,7 +1388,7 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 
 
 static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
-				   const u8 *buf, u16 len)
+				   const u8 *buf, size_t len)
 {
 	struct wpa_tdls_peer *peer;
 	struct wpa_eapol_ie_parse kde;
@@ -1351,7 +1400,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	const u8 *pos;
 	u32 lifetime;
 
-	wpa_printf(MSG_DEBUG, "RSN: Received TDLS_M3 (Peer " MACSTR ")",
+	wpa_printf(MSG_DEBUG, "RSN: Received TPK M3 (Peer " MACSTR ")",
 		   MAC2STR(src_addr));
 	for (peer = sm->tdls; peer; peer = peer->next) {
 		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
@@ -1363,12 +1412,6 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 	wpa_tdls_smkretry_timeout_cancel(sm, peer, WLAN_TDLS_SETUP_RESPONSE);
-
-	if (buf == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No message delivered for "
-			   "wpa_tdls_process_tpk_m3?!");
-		return -1;
-	}
 
 	pos = buf;
 	pos += 1 /* pkt_type */ + 1 /* Category */ + 1 /* Action */;
@@ -1384,25 +1427,16 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 
 	ielen = len - (pos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies((const u8 *) pos, ielen, &kde) < 0) {
-		wpa_printf(MSG_INFO, "TDLS: Failed to parse KDEs in TPK "
-			   "Handshake Message 3");
+		wpa_printf(MSG_INFO, "TDLS: Failed to parse KDEs in TPK M3");
 		return -1;
 	}
 
-	if (kde.ftie == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No FTIE in TDLS_M3");
-		return -1;
-	}
-	if (kde.rsn_ie == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No RSN IE KDE in TDLS_M3");
-		return -1;
-	}
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
-		wpa_printf(MSG_INFO, "RSN: No Link Identifier IE in TDLS_M3");
+		wpa_printf(MSG_INFO, "TDLS: No Link Identifier IE in TPK M3");
 		return -1;
 	}
-
-	ftie = (struct wpa_tdls_ftie *) kde.ftie;
+	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M3",
+		    (u8 *) kde.lnkid, kde.lnkid_len);
 	lnkid = (struct wpa_tdls_lnkid *) kde.lnkid;
 
 	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
@@ -1410,22 +1444,33 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 		return -1;
 	}
 
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_rsn;
+
+	if (kde.ftie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M3");
+		return -1;
+	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE Received from TPK M3",
 		    (u8 *) ftie, sizeof(*ftie));
+	ftie = (struct wpa_tdls_ftie *) kde.ftie;
+
+	if (kde.rsn_ie == NULL) {
+		wpa_printf(MSG_INFO, "TDLS: No RSN IE KDE in TPK M3");
+		return -1;
+	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: RSNIE Received from TPK M3",
 		    kde.rsn_ie, kde.rsn_ie_len);
-	wpa_hexdump(MSG_DEBUG, "TDLS: Link ID Received from TPK M3",
-		    (u8 *) lnkid, sizeof(*lnkid));
 
 	if (!os_memcmp(peer->pnonce, ftie->Anonce, WPA_NONCE_LEN) == 0) {
-		wpa_printf(MSG_INFO, "RSN: PNonce in TDLS_M3 does "
-				   "not match with PNonce used in TDLS_M2");
+		wpa_printf(MSG_INFO, "TDLS: PNonce in TPK M3 does "
+			   "not match with PNonce used in TPK M2");
 		return -1;
 	}
 
 	if (!os_memcmp(peer->inonce, ftie->Snonce, WPA_NONCE_LEN) == 0) {
-		wpa_printf(MSG_INFO, "RSN: INonce in TDLS_M3 did not "
-			   "match with the one received in TDLS_M1");
+		wpa_printf(MSG_INFO, "TDLS: INonce in TPK M3 did not "
+			   "match with the one received in TPK M1");
 		return -1;
 	}
 
@@ -1455,6 +1500,7 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (wpa_tdls_set_key(sm, peer) < 0)
 		return -1;
 
+skip_rsn:
 	wpa_tdls_enable_link(sm, peer);
 
 	return 0;
@@ -1486,7 +1532,7 @@ static u8 * wpa_add_tdls_timeoutie(u8 *pos, u8 *ie, size_t ie_len, u32 tsecs)
  */
 int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 {
-	u16 kde_len; /* TDLS TPK Messages are around 400 bytes */
+	u16 buf_len;
 	struct wpa_tdls_ftie *ftie;
 	u8 *rbuf, *pos, *count_pos;
 	u16 count;
@@ -1503,8 +1549,8 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	}
 
 	if (peer == NULL) {
-		wpa_printf(MSG_INFO, "RSN: No matching entry found for "
-			   "peer, creating one. " MACSTR, MAC2STR(addr));
+		wpa_printf(MSG_INFO, "TDLS: No matching entry found for "
+			   "peer, creating one for " MACSTR, MAC2STR(addr));
 		peer = os_malloc(sizeof(*peer));
 		if (peer == NULL)
 			return -1;
@@ -1515,6 +1561,12 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	}
 
 	peer->initiator = 1;
+
+	if (!wpa_tdls_get_privacy(sm)) {
+		wpa_printf(MSG_DEBUG, "TDLS: No security used on the link");
+		peer->rsnie_i_len = 0;
+		goto skip_rsnie;
+	}
 
 	/*
 	 * TPK Handshake Message 1:
@@ -1578,20 +1630,27 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	wpa_hexdump(MSG_DEBUG, "TDLS: RSN IE for TPK handshake",
 		    peer->rsnie_i, peer->rsnie_i_len);
 
-	kde_len = peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
-		sizeof(struct wpa_tdls_timeoutie);
+skip_rsnie:
+	buf_len = 0;
+	if (wpa_tdls_get_privacy(sm))
+		buf_len += peer->rsnie_i_len + sizeof(struct wpa_tdls_ftie) +
+			sizeof(struct wpa_tdls_timeoutie);
 #ifdef CONFIG_TDLS_TESTING
-	if (tdls_testing & TDLS_TESTING_LONG_FRAME)
-		kde_len += 170;
+	if (wpa_tdls_get_privacy(sm) &&
+	    (tdls_testing & TDLS_TESTING_LONG_FRAME))
+		buf_len += 170;
 	if (tdls_testing & TDLS_TESTING_DIFF_BSSID)
-		kde_len += sizeof(struct wpa_tdls_lnkid);
+		buf_len += sizeof(struct wpa_tdls_lnkid);
 #endif /* CONFIG_TDLS_TESTING */
-	rbuf = os_zalloc(kde_len);
+	rbuf = os_zalloc(buf_len + 1);
 	if (rbuf == NULL) {
 		wpa_tdls_peer_free(sm, peer);
 		return -1;
 	}
 	pos = rbuf;
+
+	if (!wpa_tdls_get_privacy(sm))
+		goto skip_ies;
 
 	/* Initiator RSN IE */
 	pos = wpa_add_ie(pos, peer->rsnie_i, peer->rsnie_i_len);
@@ -1625,19 +1684,6 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 		*pos++ = 168; /* FTIE subelem length */
 		pos += 168;
 	}
-
-	if (tdls_testing & TDLS_TESTING_DIFF_BSSID) {
-		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
-			   "Link Identifier");
-		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
-		l->ie_type = WLAN_EID_LINK_ID;
-		l->ie_len = 3 * ETH_ALEN;
-		os_memcpy(l->bssid, sm->bssid, ETH_ALEN);
-		l->bssid[5] ^= 0x01;
-		os_memcpy(l->init_sta, sm->own_addr, ETH_ALEN);
-		os_memcpy(l->resp_sta, addr, ETH_ALEN);
-		pos += sizeof(*l);
-	}
 #endif /* CONFIG_TDLS_TESTING */
 
 	/* Lifetime */
@@ -1653,25 +1699,31 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 				     sizeof(timeoutie), peer->lifetime);
 	wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime %u seconds", peer->lifetime);
 
-	wpa_printf(MSG_DEBUG, "TDLS: Sending TPK Handshake Message 1 (peer "
-		   MACSTR ")", MAC2STR(addr));
+skip_ies:
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_DIFF_BSSID) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use incorrect BSSID in "
+			   "Link Identifier");
+		struct wpa_tdls_lnkid *l = (struct wpa_tdls_lnkid *) pos;
+		l->ie_type = WLAN_EID_LINK_ID;
+		l->ie_len = 3 * ETH_ALEN;
+		os_memcpy(l->bssid, sm->bssid, ETH_ALEN);
+		l->bssid[5] ^= 0x01;
+		os_memcpy(l->init_sta, sm->own_addr, ETH_ALEN);
+		os_memcpy(l->resp_sta, addr, ETH_ALEN);
+		pos += sizeof(*l);
+	}
+#endif /* CONFIG_TDLS_TESTING */
+
+	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Request / TPK "
+		   "Handshake Message 1 (peer " MACSTR ")", MAC2STR(addr));
 
 	wpa_tdls_smk_send(sm, addr, WLAN_TDLS_SETUP_REQUEST, 0, 0,
-			  rbuf, kde_len);
+			  rbuf, pos - rbuf);
 	os_free(rbuf);
 
 	return 0;
-}
-
-
-static int wpa_tdls_get_privacy(struct wpa_sm *sm)
-{
-	/*
-	 * Get info needed from supplicant to check if the current BSS supports
-	 * security. Other than OPEN mode, rest are considered secured
-	 * WEP/WPA/WPA2 hence TDLS frames are processed for TPK handshake.
-	 */
-	return sm->pairwise_cipher != WPA_CIPHER_NONE;
 }
 
 
@@ -1686,44 +1738,48 @@ static void wpa_supplicant_rx_tdls(void *ctx, const u8 *src_addr,
 	struct wpa_sm *sm = ctx;
 	struct wpa_tdls_frame *tf;
 
-	wpa_printf(MSG_DEBUG, "Received TDLS Packet");
-
-	if (!wpa_tdls_get_privacy(sm)) {
-		wpa_printf(MSG_INFO, "TDLS: %s: In open mode, so discard",
-			   __func__);
-		return;
-	}
+	wpa_hexdump(MSG_DEBUG, "TDLS: Received Data frame encapsulation",
+		    buf, len);
 
 	if (os_memcmp(src_addr, sm->own_addr, ETH_ALEN) == 0) {
 		wpa_printf(MSG_DEBUG, "TDLS: Discard copy of own message");
 		return;
 	}
 
+	if (len < sizeof(*tf)) {
+		wpa_printf(MSG_INFO, "TDLS: Drop too short frame");
+		return;
+	}
+
+	/* Check to make sure its a valid encapsulated TDLS frame */
 	tf = (struct wpa_tdls_frame *) buf;
-
-	/* Check to make sure its a valid setup request */
-	if (tf->payloadtype != 2 /* TDLS_RFTYPE */) {
-		wpa_printf(MSG_INFO, "TDLS: Invalid payloadtype: %x, "
-			   "action:%x", tf->payloadtype, TDLS_FRAME_TYPE(tf));
+	if (tf->payloadtype != 2 /* TDLS_RFTYPE */ ||
+	    tf->category != WLAN_ACTION_TDLS) {
+		wpa_printf(MSG_INFO, "TDLS: Invalid frame - payloadtype=%u "
+			   "category=%u action=%u",
+			   tf->payloadtype, tf->category, tf->action);
 		return;
 	}
 
-	if (!len) {
-		wpa_printf(MSG_INFO, "%s cannot process a frame of 0 len",
-			   __func__);
-		return;
-	}
-
-	wpa_hexdump(MSG_DEBUG, "TDLS: l2_packet Received frame", buf, len);
-
-	if (TDLS_FRAME_TYPE(tf) == WLAN_TDLS_SETUP_REQUEST)
+	switch (tf->action) {
+	case WLAN_TDLS_SETUP_REQUEST:
 		wpa_tdls_process_tpk_m1(sm, src_addr, buf, len);
-	else if (TDLS_FRAME_TYPE(tf) == WLAN_TDLS_SETUP_RESPONSE)
+		break;
+	case WLAN_TDLS_SETUP_RESPONSE:
 		wpa_tdls_process_tpk_m2(sm, src_addr, buf, len);
-	else if (TDLS_FRAME_TYPE(tf) == WLAN_TDLS_SETUP_CONFIRM)
+		break;
+	case WLAN_TDLS_SETUP_CONFIRM:
 		wpa_tdls_process_tpk_m3(sm, src_addr, buf, len);
-	else if (TDLS_FRAME_TYPE(tf) == WLAN_TDLS_TEARDOWN)
+		break;
+	case WLAN_TDLS_TEARDOWN:
 		wpa_tdls_recv_teardown(sm, src_addr, buf, len);
+		break;
+	default:
+		/* Kernel code will process remaining frames */
+		wpa_printf(MSG_DEBUG, "TDLS: Ignore TDLS frame action code %u",
+			   tf->action);
+		break;
+	}
 }
 
 

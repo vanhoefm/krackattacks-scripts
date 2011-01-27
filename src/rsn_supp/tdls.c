@@ -1302,28 +1302,23 @@ skip_rsn:
 		}
 
 		/*
-		 * An entry is already present, so check if a TPK M1 Request
-		 * had been sent.
-		 * If so compare MAC address and let
-		 *  - greater MAC continue to be initiator
-		 *  - other MAC be Peer and process the Req.
+		 * An entry is already present, so check if we already sent a
+		 * TDLS Setup Request. If so, compare MAC addresses and let the
+		 * STA with the lower MAC address continue as the initiator.
+		 * The other negotiation is terminated.
 		 */
 		if (peer->initiator) {
-			if (os_memcmp(sm->own_addr, src_addr, ETH_ALEN) > 0) {
-				wpa_printf(MSG_DEBUG, "TDLS: Dropping Request "
-					   "from peer with smaller address "
+			if (os_memcmp(sm->own_addr, src_addr, ETH_ALEN) < 0) {
+				wpa_printf(MSG_DEBUG, "TDLS: Discard request "
+					   "from peer with higher address "
 					   MACSTR, MAC2STR(src_addr));
 				return -1;
 			} else {
-				/*
-				 * If smaller node then accept the packet,
-				 * clear values and get ready to process this
-				 * Req.
-				 */
-				wpa_printf(MSG_DEBUG, "TDLS: Accepting "
-					   "Request from peer " MACSTR,
+				wpa_printf(MSG_DEBUG, "TDLS: Accept request "
+					   "from peer with lower address "
+					   MACSTR " (terminate previously "
+					   "initiated negotiation",
 					   MAC2STR(src_addr));
-				/* clear sm info and preserve the list */
 				wpa_tdls_peer_free(sm, peer);
 			}
 		}

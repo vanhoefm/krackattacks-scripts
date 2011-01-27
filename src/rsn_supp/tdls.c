@@ -34,6 +34,7 @@
 #define TDLS_TESTING_SHORT_LIFETIME BIT(3)
 #define TDLS_TESTING_WRONG_LIFETIME_RESP BIT(4)
 #define TDLS_TESTING_WRONG_LIFETIME_CONF BIT(5)
+#define TDLS_TESTING_LONG_LIFETIME BIT(6)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -943,6 +944,11 @@ skip_rsnie:
 		wpa_printf(MSG_DEBUG, "TDLS: Testing - use short TPK "
 			   "lifetime");
 		peer->lifetime = 301;
+	}
+	if (tdls_testing & TDLS_TESTING_LONG_LIFETIME) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - use long TPK "
+			   "lifetime");
+		peer->lifetime = 0xffffffff;
 	}
 #endif /* CONFIG_TDLS_TESTING */
 	pos = wpa_add_tdls_timeoutie(pos, (u8 *) &timeoutie,

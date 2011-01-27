@@ -489,4 +489,11 @@ static inline int is_broadcast_ether_addr(const u8 *a)
 void * __hide_aliasing_typecast(void *foo);
 #define aliasing_hide_typecast(a,t) (t *) __hide_aliasing_typecast((a))
 
+#ifdef CONFIG_VALGRIND
+#include <valgrind/memcheck.h>
+#define WPA_MEM_DEFINED(ptr, len) VALGRIND_MAKE_MEM_DEFINED((ptr), (len))
+#else /* CONFIG_VALGRIND */
+#define WPA_MEM_DEFINED(ptr, len) do { } while (0)
+#endif /* CONFIG_VALGRIND */
+
 #endif /* COMMON_H */

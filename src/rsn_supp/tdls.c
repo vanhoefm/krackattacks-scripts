@@ -36,6 +36,7 @@
 #define TDLS_TESTING_WRONG_LIFETIME_CONF BIT(5)
 #define TDLS_TESTING_LONG_LIFETIME BIT(6)
 #define TDLS_TESTING_CONCURRENT_INIT BIT(7)
+#define TDLS_TESTING_NO_TPK_EXPIRATION BIT(8)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -1445,6 +1446,13 @@ static void wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 			lifetime -= 3;
 		eloop_register_timeout(lifetime, 0, wpa_tdls_tpk_timeout,
 				       sm, peer);
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_NO_TPK_EXPIRATION) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - disable TPK "
+			   "expiration");
+		eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
+	}
+#endif /* CONFIG_TDLS_TESTING */
 	}
 	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, peer->addr);
 }

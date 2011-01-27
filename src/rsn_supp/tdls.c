@@ -248,26 +248,6 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 }
 
 
-static void tdls_clear_peer(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
-{
-	u8 mac[ETH_ALEN];
-	struct wpa_tdls_peer *tmp;
-
-	os_memcpy(mac, peer->addr, ETH_ALEN);
-	tmp = peer->next;
-	peer->initiator = 0;
-	eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);
-	os_free(peer->sm_tmr.buf);
-
-	/* reset all */
-	os_memset(peer, 0, sizeof(*peer));
-
-	/* restore things */
-	os_memcpy(peer->addr, mac, ETH_ALEN);
-	peer->next = tmp;
-}
-
-
 static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 
@@ -598,11 +578,19 @@ static void wpa_tdls_tpk_timeout(void *eloop_ctx, void *timeout_ctx)
 
 static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 {
+	wpa_printf(MSG_DEBUG, "TDLS: Clear state for peer " MACSTR,
+		   MAC2STR(peer->addr));
 	eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
-
-	/* need to clear Peerkey SM */
-	tdls_clear_peer(sm, peer);
-	//os_free(peer);
+	eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);
+	peer->initiator = 0;
+	os_free(peer->sm_tmr.buf);
+	peer->sm_tmr.buf = NULL;
+	peer->rsnie_i_len = peer->rsnie_p_len = 0;
+	peer->cipher = 0;
+	peer->tpk_set = peer->tpk_success = 0;
+	os_memset(&peer->tpk, 0, sizeof(peer->tpk));
+	os_memset(peer->inonce, 0, WPA_NONCE_LEN);
+	os_memset(peer->rnonce, 0, WPA_NONCE_LEN);
 }
 
 

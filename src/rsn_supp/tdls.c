@@ -1286,8 +1286,23 @@ skip_rsn:
 		peer->next = sm->tdls;
 		sm->tdls = peer;
 	} else {
+		if (peer->tpk_success) {
+			wpa_printf(MSG_DEBUG, "TDLS: TDLS Setup Request while "
+				   "direct link is enabled - tear down the "
+				   "old link first");
+#if 0
+			/* TODO: Disabling the link would be more proper
+			 * operation here, but it seems to trigger a race with
+			 * some drivers handling the new request frame. */
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
+#else
+			wpa_tdls_del_key(sm, peer);
+#endif
+			wpa_tdls_peer_free(sm, peer);
+		}
+
 		/*
-		 * An entry is already present, so check if a TPK_M1 Request
+		 * An entry is already present, so check if a TPK M1 Request
 		 * had been sent.
 		 * If so compare MAC address and let
 		 *  - greater MAC continue to be initiator
@@ -1404,7 +1419,14 @@ static void wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	peer->tpk_success = 1;
 	eloop_cancel_timeout(wpa_tdls_tpk_timeout, sm, peer);
 	if (wpa_tdls_get_privacy(sm)) {
-		eloop_register_timeout(peer->lifetime, 0, wpa_tdls_tpk_timeout,
+		u32 lifetime = peer->lifetime;
+		/*
+		 * Start the initiator process a bit earlier to avoid race
+		 * condition with the responder sending teardown request.
+		 */
+		if (lifetime > 3 && peer->initiator)
+			lifetime -= 3;
+		eloop_register_timeout(lifetime, 0, wpa_tdls_tpk_timeout,
 				       sm, peer);
 	}
 	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, peer->addr);

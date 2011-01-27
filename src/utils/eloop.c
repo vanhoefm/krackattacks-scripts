@@ -300,6 +300,7 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 			   void *eloop_data, void *user_data)
 {
 	struct eloop_timeout *timeout, *tmp;
+	os_time_t now_sec;
 
 	timeout = os_zalloc(sizeof(*timeout));
 	if (timeout == NULL)
@@ -308,7 +309,18 @@ int eloop_register_timeout(unsigned int secs, unsigned int usecs,
 		os_free(timeout);
 		return -1;
 	}
+	now_sec = timeout->time.sec;
 	timeout->time.sec += secs;
+	if (timeout->time.sec < now_sec) {
+		/*
+		 * Integer overflow - assume long enough timeout to be assumed
+		 * to be infinite, i.e., the timeout would never happen.
+		 */
+		wpa_printf(MSG_DEBUG, "ELOOP: Too long timeout (secs=%u) to "
+			   "ever happen - ignore it", secs);
+		os_free(timeout);
+		return 0;
+	}
 	timeout->time.usec += usecs;
 	while (timeout->time.usec >= 1000000) {
 		timeout->time.sec++;

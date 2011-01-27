@@ -339,6 +339,7 @@ wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies, size_t ies_len,
 
 /* tdls.c */
 int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr);
+int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr);
 int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 				  u16 reason_code);
 int wpa_tdls_init(struct wpa_sm *sm);

@@ -1825,6 +1825,22 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 }
 
 
+int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr)
+{
+	struct wpa_tdls_peer *peer;
+
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (peer == NULL || !peer->tpk_success)
+		return -1;
+
+	return wpa_tdls_start(sm, addr);
+}
+
+
 /**
  * wpa_supplicant_rx_tdls - Receive TDLS data frame
  *

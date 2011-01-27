@@ -211,6 +211,7 @@ static int wpa_supplicant_ctrl_iface_tdls_setup(
 	struct wpa_supplicant *wpa_s, char *addr)
 {
 	u8 peer[ETH_ALEN];
+	int ret;
 
 	if (hwaddr_aton(addr, peer)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_SETUP: invalid "
@@ -221,7 +222,10 @@ static int wpa_supplicant_ctrl_iface_tdls_setup(
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE TDLS_SETUP " MACSTR,
 		   MAC2STR(peer));
 
-	return wpa_drv_tdls_oper(wpa_s, TDLS_SETUP, peer);
+	ret = wpa_tdls_reneg(wpa_s->wpa, peer);
+	if (ret)
+		ret = wpa_drv_tdls_oper(wpa_s, TDLS_SETUP, peer);
+	return ret;
 }
 
 

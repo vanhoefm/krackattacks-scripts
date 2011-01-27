@@ -35,6 +35,7 @@
 #define TDLS_TESTING_WRONG_LIFETIME_RESP BIT(4)
 #define TDLS_TESTING_WRONG_LIFETIME_CONF BIT(5)
 #define TDLS_TESTING_LONG_LIFETIME BIT(6)
+#define TDLS_TESTING_CONCURRENT_INIT BIT(7)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -1201,6 +1202,27 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_printf(MSG_DEBUG, "TDLS: TPK M1 - TPK initiator " MACSTR,
 		   MAC2STR(src_addr));
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_CONCURRENT_INIT) {
+		for (peer = sm->tdls; peer; peer = peer->next) {
+			if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
+				break;
+		}
+		if (peer == NULL) {
+			peer = os_zalloc(sizeof(*peer));
+			if (peer == NULL)
+				goto error;
+			os_memcpy(peer->addr, src_addr, ETH_ALEN);
+			peer->next = sm->tdls;
+			sm->tdls = peer;
+		}
+		wpa_printf(MSG_DEBUG, "TDLS: Testing concurrent initiation of "
+			   "TDLS setup - send own request");
+		peer->initiator = 1;
+		wpa_tdls_send_tpk_m1(sm, peer);
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	if (!wpa_tdls_get_privacy(sm)) {
 		if (kde.rsn_ie) {

@@ -60,6 +60,7 @@ enum wlantest_ctrl_attr {
 	WLANTEST_ATTR_FRAME,
 	WLANTEST_ATTR_TDLS_COUNTER,
 	WLANTEST_ATTR_STA2_ADDR,
+	WLANTEST_ATTR_WEPKEY,
 };
 
 enum wlantest_bss_counter {

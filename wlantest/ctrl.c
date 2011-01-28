@@ -788,7 +788,32 @@ static void ctrl_add_passphrase(struct wlantest *wt, int sock, u8 *cmd,
 	u8 *bssid;
 
 	passphrase = attr_get(cmd, clen, WLANTEST_ATTR_PASSPHRASE, &len);
-	if (passphrase == NULL || len < 8 || len > 63) {
+	if (passphrase == NULL) {
+		u8 *wepkey;
+		char *key;
+		enum wlantest_ctrl_cmd res;
+
+		wepkey = attr_get(cmd, clen, WLANTEST_ATTR_WEPKEY, &len);
+		if (wepkey == NULL) {
+			ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
+			return;
+		}
+		key = os_zalloc(len + 1);
+		if (key == NULL) {
+			ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
+			return;
+		}
+		os_memcpy(key, wepkey, len);
+		if (add_wep(wt, key) < 0)
+			res = WLANTEST_CTRL_FAILURE;
+		else
+			res = WLANTEST_CTRL_SUCCESS;
+		os_free(key);
+		ctrl_send_simple(wt, sock, res);
+		return;
+	}
+
+	if (len < 8 || len > 63) {
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);
 		return;
 	}

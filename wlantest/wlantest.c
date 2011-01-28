@@ -136,25 +136,26 @@ static void add_secret(struct wlantest *wt, const char *secret)
 }
 
 
-static void add_wep(struct wlantest *wt, const char *key)
+int add_wep(struct wlantest *wt, const char *key)
 {
 	struct wlantest_wep *w;
 	size_t len = os_strlen(key);
 
 	if (len != 2 * 5 && len != 2 * 13) {
 		wpa_printf(MSG_INFO, "Invalid WEP key '%s'", key);
-		return;
+		return -1;
 	}
 	w = os_zalloc(sizeof(*w));
 	if (w == NULL)
-		return;
+		return -1;
 	if (hexstr2bin(key, w->key, len / 2) < 0) {
 		os_free(w);
 		wpa_printf(MSG_INFO, "Invalid WEP key '%s'", key);
-		return;
+		return -1;
 	}
 	w->key_len = len / 2;
 	dl_list_add(&wt->wep, &w->list);
+	return 0;
 }
 
 
@@ -217,7 +218,8 @@ int main(int argc, char *argv[])
 			write_file = optarg;
 			break;
 		case 'W':
-			add_wep(&wt, optarg);
+			if (add_wep(&wt, optarg) < 0)
+				return -1;
 			break;
 		default:
 			usage();

@@ -177,6 +177,7 @@ struct wlantest {
 	int last_mgmt_valid;
 };
 
+int add_wep(struct wlantest *wt, const char *key);
 int read_cap_file(struct wlantest *wt, const char *fname);
 int read_wired_cap_file(struct wlantest *wt, const char *fname);
 int write_pcap_init(struct wlantest *wt, const char *fname);

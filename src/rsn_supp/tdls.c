@@ -37,6 +37,7 @@
 #define TDLS_TESTING_LONG_LIFETIME BIT(6)
 #define TDLS_TESTING_CONCURRENT_INIT BIT(7)
 #define TDLS_TESTING_NO_TPK_EXPIRATION BIT(8)
+#define TDLS_TESTING_DECLINE_RESP BIT(9)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -1516,6 +1517,14 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		wpa_printf(MSG_INFO, "TDLS: Failed to parse IEs in TPK M2");
 		goto error;
 	}
+
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_DECLINE_RESP) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - decline response");
+		status = WLAN_STATUS_REQUEST_DECLINED;
+		goto error;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	if (kde.lnkid == NULL || kde.lnkid_len < 3 * ETH_ALEN) {
 		wpa_printf(MSG_INFO, "TDLS: No valid Link Identifier IE in "

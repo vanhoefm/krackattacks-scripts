@@ -325,6 +325,10 @@ struct hostapd_bss_config {
 	int p2p;
 
 	int disassoc_low_ack;
+
+#define TDLS_PROHIBIT BIT(0)
+#define TDLS_PROHIBIT_CHAN_SWITCH BIT(1)
+	int tdls;
 };
 
 

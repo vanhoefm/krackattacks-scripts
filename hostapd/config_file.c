@@ -2034,6 +2034,18 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #endif /* CONFIG_P2P_MANAGER */
 		} else if (os_strcmp(buf, "disassoc_low_ack") == 0) {
 			bss->disassoc_low_ack = atoi(pos);
+		} else if (os_strcmp(buf, "tdls_prohibit") == 0) {
+			int val = atoi(pos);
+			if (val)
+				bss->tdls |= TDLS_PROHIBIT;
+			else
+				bss->tdls &= ~TDLS_PROHIBIT;
+		} else if (os_strcmp(buf, "tdls_prohibit_chan_switch") == 0) {
+			int val = atoi(pos);
+			if (val)
+				bss->tdls |= TDLS_PROHIBIT_CHAN_SWITCH;
+			else
+				bss->tdls &= ~TDLS_PROHIBIT_CHAN_SWITCH;
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

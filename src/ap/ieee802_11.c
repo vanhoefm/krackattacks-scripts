@@ -151,6 +151,31 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+
+	if ((hapd->conf->tdls & (TDLS_PROHIBIT | TDLS_PROHIBIT_CHAN_SWITCH)) ==
+	    0)
+		return eid;
+
+	*pos++ = WLAN_EID_EXT_CAPAB;
+	*pos++ = 5;
+	*pos++ = 0x00;
+	*pos++ = 0x00;
+	*pos++ = 0x00;
+	*pos++ = 0x00;
+	*pos = 0x00;
+	if (hapd->conf->tdls & TDLS_PROHIBIT)
+		*pos |= 0x40; /* Bit 38 - TDLS Prohibited */
+	if (hapd->conf->tdls & TDLS_PROHIBIT_CHAN_SWITCH)
+		*pos |= 0x80; /* Bit 39 - TDLS Channel Switching Prohibited */
+	pos++;
+
+	return pos;
+}
+
+
 #ifdef CONFIG_IEEE80211W
 static u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 					    struct sta_info *sta, u8 *eid)
@@ -866,6 +891,8 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 	p = hostapd_eid_ht_capabilities(hapd, p);
 	p = hostapd_eid_ht_operation(hapd, p);
 #endif /* CONFIG_IEEE80211N */
+
+	p = hostapd_eid_ext_capab(hapd, p);
 
 	if (sta->flags & WLAN_STA_WMM)
 		p = hostapd_eid_wmm(hapd, p);

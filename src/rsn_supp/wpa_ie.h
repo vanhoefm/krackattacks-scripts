@@ -49,6 +49,8 @@ struct wpa_eapol_ie_parse {
 	const u8 *key_lifetime;
 	const u8 *lnkid;
 	size_t lnkid_len;
+	const u8 *ext_capab;
+	size_t ext_capab_len;
 };
 
 int wpa_supplicant_parse_ies(const u8 *buf, size_t len,

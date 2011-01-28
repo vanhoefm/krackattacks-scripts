@@ -1168,6 +1168,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	u8 dtoken;
 	u16 ielen;
 	u16 status = WLAN_STATUS_UNSPECIFIED_FAILURE;
+	int tdls_prohibited = sm->tdls_prohibited;
 
 	if (len < 3 + 3)
 		return -1;
@@ -1225,6 +1226,12 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		wpa_tdls_send_tpk_m1(sm, peer);
 	}
 #endif /* CONFIG_TDLS_TESTING */
+
+	if (tdls_prohibited) {
+		wpa_printf(MSG_INFO, "TDLS: TDLS prohibited in this BSS");
+		status = WLAN_STATUS_REQUEST_DECLINED;
+		goto error;
+	}
 
 	if (!wpa_tdls_get_privacy(sm)) {
 		if (kde.rsn_ie) {
@@ -1808,6 +1815,13 @@ static u8 * wpa_add_tdls_timeoutie(u8 *pos, u8 *ie, size_t ie_len, u32 tsecs)
 int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 {
 	struct wpa_tdls_peer *peer;
+	int tdls_prohibited = sm->tdls_prohibited;
+
+	if (tdls_prohibited) {
+		wpa_printf(MSG_DEBUG, "TDLS: TDLS is prohibited in this BSS - "
+			   "reject request to start setup");
+		return -1;
+	}
 
 	/* Find existing entry and if found, use that instead of adding
 	 * a new one */
@@ -1983,4 +1997,40 @@ void wpa_tdls_disassoc(struct wpa_sm *sm)
 {
 	wpa_printf(MSG_DEBUG, "TDLS: Remove peers on disassociation");
 	wpa_tdls_remove_peers(sm);
+}
+
+
+static int wpa_tdls_prohibited(const u8 *ies, size_t len)
+{
+	struct wpa_eapol_ie_parse elems;
+
+	if (ies == NULL)
+		return 0;
+
+	if (wpa_supplicant_parse_ies(ies, len, &elems) < 0)
+		return 0;
+
+	if (elems.ext_capab == NULL || elems.ext_capab_len < 2 + 5)
+		return 0;
+
+	 /* bit 38 - TDLS Prohibited */
+	return !!(elems.ext_capab[2 + 4] & 0x40);
+}
+
+
+void wpa_tdls_ap_ies(struct wpa_sm *sm, const u8 *ies, size_t len)
+{
+	sm->tdls_prohibited = wpa_tdls_prohibited(ies, len);
+	wpa_printf(MSG_DEBUG, "TDLS: TDLS is %s in the target BSS",
+		   sm->tdls_prohibited ? "prohibited" : "allowed");
+}
+
+
+void wpa_tdls_assoc_resp_ies(struct wpa_sm *sm, const u8 *ies, size_t len)
+{
+	if (!sm->tdls_prohibited && wpa_tdls_prohibited(ies, len)) {
+		wpa_printf(MSG_DEBUG, "TDLS: TDLS prohibited based on "
+			   "(Re)Association Response IEs");
+		sm->tdls_prohibited = 1;
+	}
 }

@@ -1024,9 +1024,14 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	if (data->assoc_info.req_ies)
 		wpa_hexdump(MSG_DEBUG, "req_ies", data->assoc_info.req_ies,
 			    data->assoc_info.req_ies_len);
-	if (data->assoc_info.resp_ies)
+	if (data->assoc_info.resp_ies) {
 		wpa_hexdump(MSG_DEBUG, "resp_ies", data->assoc_info.resp_ies,
 			    data->assoc_info.resp_ies_len);
+#ifdef CONFIG_TDLS
+		wpa_tdls_assoc_resp_ies(wpa_s->wpa, data->assoc_info.resp_ies,
+					data->assoc_info.resp_ies_len);
+#endif /* CONFIG_TDLS */
+	}
 	if (data->assoc_info.beacon_ies)
 		wpa_hexdump(MSG_DEBUG, "beacon_ies",
 			    data->assoc_info.beacon_ies,

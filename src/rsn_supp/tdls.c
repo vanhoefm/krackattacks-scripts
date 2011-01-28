@@ -38,6 +38,7 @@
 #define TDLS_TESTING_CONCURRENT_INIT BIT(7)
 #define TDLS_TESTING_NO_TPK_EXPIRATION BIT(8)
 #define TDLS_TESTING_DECLINE_RESP BIT(9)
+#define TDLS_TESTING_IGNORE_AP_PROHIBIT BIT(10)
 unsigned int tdls_testing = 0;
 #endif /* CONFIG_TDLS_TESTING */
 
@@ -1225,6 +1226,13 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		peer->initiator = 1;
 		wpa_tdls_send_tpk_m1(sm, peer);
 	}
+
+	if ((tdls_testing & TDLS_TESTING_IGNORE_AP_PROHIBIT) &&
+	    tdls_prohibited) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - ignore AP prohibition "
+			   "on TDLS");
+		tdls_prohibited = 0;
+	}
 #endif /* CONFIG_TDLS_TESTING */
 
 	if (tdls_prohibited) {
@@ -1816,6 +1824,15 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 {
 	struct wpa_tdls_peer *peer;
 	int tdls_prohibited = sm->tdls_prohibited;
+
+#ifdef CONFIG_TDLS_TESTING
+	if ((tdls_testing & TDLS_TESTING_IGNORE_AP_PROHIBIT) &&
+	    tdls_prohibited) {
+		wpa_printf(MSG_DEBUG, "TDLS: Testing - ignore AP prohibition "
+			   "on TDLS");
+		tdls_prohibited = 0;
+	}
+#endif /* CONFIG_TDLS_TESTING */
 
 	if (tdls_prohibited) {
 		wpa_printf(MSG_DEBUG, "TDLS: TDLS is prohibited in this BSS - "

@@ -268,13 +268,6 @@
       </varlistentry>
 
       <varlistentry>
-	<term>atmel</term>
-	<listitem>
-	  <para>ATMEL AT76C5XXx (USB, PCMCIA).</para>
-	</listitem>
-      </varlistentry>
-
-      <varlistentry>
 	<term>wext</term>
 	<listitem>
 	  <para>Linux wireless extensions (generic).</para>
@@ -282,23 +275,9 @@
       </varlistentry>
 
       <varlistentry>
-	<term>ndiswrapper</term>
-	<listitem>
-	  <para>Linux ndiswrapper.</para>
-	</listitem>
-      </varlistentry>
-
-      <varlistentry>
 	<term>broadcom</term>
 	<listitem>
 	  <para>Broadcom wl.o driver.</para>
-	</listitem>
-      </varlistentry>
-
-      <varlistentry>
-	<term>ipw</term>
-	<listitem>
-	  <para>Intel ipw2100/2200 driver.</para>
 	</listitem>
       </varlistentry>
 
@@ -595,13 +574,6 @@ wpa_supplicant \
 	file to use the correct path for the madwifi driver root
 	directory (CFLAGS += -I../madwifi/wpa line in example
 	defconfig).</para>
-	</listitem>
-      </varlistentry>
-
-      <varlistentry>
-	<term>ATMEL AT76C5XXx driver for USB and PCMCIA cards</term>
-	<listitem>
-	  <para> (http://atmelwlandriver.sourceforge.net/).</para>
 	</listitem>
       </varlistentry>
 

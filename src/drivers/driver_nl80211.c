@@ -5293,7 +5293,8 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 }
 
 
-static int i802_set_bss(void *priv, int cts, int preamble, int slot)
+static int i802_set_bss(void *priv, int cts, int preamble, int slot,
+			int ht_opmode)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -5312,7 +5313,8 @@ static int i802_set_bss(void *priv, int cts, int preamble, int slot)
 		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_PREAMBLE, preamble);
 	if (slot >= 0)
 		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_SLOT_TIME, slot);
-
+	if (ht_opmode >= 0)
+		NLA_PUT_U16(msg, NL80211_ATTR_BSS_HT_OPMODE, ht_opmode);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -5323,19 +5325,19 @@ static int i802_set_bss(void *priv, int cts, int preamble, int slot)
 
 static int i802_set_cts_protect(void *priv, int value)
 {
-	return i802_set_bss(priv, value, -1, -1);
+	return i802_set_bss(priv, value, -1, -1, -1);
 }
 
 
 static int i802_set_preamble(void *priv, int value)
 {
-	return i802_set_bss(priv, -1, value, -1);
+	return i802_set_bss(priv, -1, value, -1, -1);
 }
 
 
 static int i802_set_short_slot_time(void *priv, int value)
 {
-	return i802_set_bss(priv, -1, -1, value);
+	return i802_set_bss(priv, -1, -1, value, -1);
 }
 
 
@@ -5400,6 +5402,19 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 		return wpa_driver_nl80211_if_remove(priv, WPA_IF_AP_VLAN,
 						    name);
 	}
+}
+
+
+static int i802_set_ht_params(void *priv, const u8 *ht_capab,
+			      size_t ht_capab_len, const u8 *ht_oper,
+			      size_t ht_oper_len)
+{
+	if (ht_oper_len >= 6) {
+		/* ht opmode uses 16bit in octet 5 & 6 */
+		u16 ht_opmode = le_to_host16(((u16 *) ht_oper)[2]);
+		return i802_set_bss(priv, -1, -1, -1, ht_opmode);
+	} else
+		return -1;
 }
 
 
@@ -6407,6 +6422,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_tx_queue_params = i802_set_tx_queue_params,
 	.set_sta_vlan = i802_set_sta_vlan,
 	.set_wds_sta = i802_set_wds_sta,
+	.set_ht_params = i802_set_ht_params,
 #endif /* HOSTAPD */
 	.set_freq = i802_set_freq,
 	.send_action = wpa_driver_nl80211_send_action,

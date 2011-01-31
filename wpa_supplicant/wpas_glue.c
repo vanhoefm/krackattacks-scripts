@@ -254,14 +254,29 @@ static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol, int success,
 		   "handshake");
 
 	pmk_len = PMK_LEN;
-	res = eapol_sm_get_key(eapol, pmk, PMK_LEN);
-	if (res) {
-		/*
-		 * EAP-LEAP is an exception from other EAP methods: it
-		 * uses only 16-byte PMK.
-		 */
-		res = eapol_sm_get_key(eapol, pmk, 16);
-		pmk_len = 16;
+	if (wpa_key_mgmt_ft(wpa_s->key_mgmt)) {
+#ifdef CONFIG_IEEE80211R
+		u8 buf[2 * PMK_LEN];
+		wpa_printf(MSG_DEBUG, "RSN: Use FT XXKey as PMK for "
+			   "driver-based 4-way hs and FT");
+		res = eapol_sm_get_key(eapol, buf, 2 * PMK_LEN);
+		if (res == 0) {
+			os_memcpy(pmk, buf + PMK_LEN, PMK_LEN);
+			os_memset(buf, 0, sizeof(buf));
+		}
+#else /* CONFIG_IEEE80211R */
+		res = -1;
+#endif /* CONFIG_IEEE80211R */
+	} else {
+		res = eapol_sm_get_key(eapol, pmk, PMK_LEN);
+		if (res) {
+			/*
+			 * EAP-LEAP is an exception from other EAP methods: it
+			 * uses only 16-byte PMK.
+			 */
+			res = eapol_sm_get_key(eapol, pmk, 16);
+			pmk_len = 16;
+		}
 	}
 
 	if (res) {
@@ -269,6 +284,9 @@ static void wpa_supplicant_eapol_cb(struct eapol_sm *eapol, int success,
 			   "machines");
 		return;
 	}
+
+	wpa_hexdump_key(MSG_DEBUG, "RSN: Configure PMK for driver-based 4-way "
+			"handshake", pmk, pmk_len);
 
 	if (wpa_drv_set_key(wpa_s, WPA_ALG_PMK, NULL, 0, 0, NULL, 0, pmk,
 			    pmk_len)) {

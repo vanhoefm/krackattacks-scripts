@@ -1472,6 +1472,7 @@ nla_put_failure:
 struct wiphy_info_data {
 	int max_scan_ssids;
 	int ap_supported;
+	int p2p_supported;
 	int auth_supported;
 	int connect_supported;
 	int offchan_tx_supported;
@@ -1483,6 +1484,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct wiphy_info_data *info = arg;
+	int p2p_go_supported = 0, p2p_client_supported = 0;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -1496,12 +1498,21 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		int i;
 		nla_for_each_nested(nl_mode,
 				    tb[NL80211_ATTR_SUPPORTED_IFTYPES], i) {
-			if (nl_mode->nla_type == NL80211_IFTYPE_AP) {
+			switch (nl_mode->nla_type) {
+			case NL80211_IFTYPE_AP:
 				info->ap_supported = 1;
+				break;
+			case NL80211_IFTYPE_P2P_GO:
+				p2p_go_supported = 1;
+				break;
+			case NL80211_IFTYPE_P2P_CLIENT:
+				p2p_client_supported = 1;
 				break;
 			}
 		}
 	}
+
+	info->p2p_supported = p2p_go_supported && p2p_client_supported;
 
 	if (tb[NL80211_ATTR_SUPPORTED_COMMANDS]) {
 		struct nlattr *nl_cmd;
@@ -1587,7 +1598,8 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SANE_ERROR_CODES;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
-	drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
+	if (info.p2p_supported)
+		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
 	drv->capa.max_remain_on_chan = 5000;
 
 	return 0;
@@ -5663,14 +5675,16 @@ static enum nl80211_iftype wpa_driver_nl80211_if_type(
 {
 	switch (type) {
 	case WPA_IF_STATION:
+		return NL80211_IFTYPE_STATION;
 	case WPA_IF_P2P_CLIENT:
 	case WPA_IF_P2P_GROUP:
-		return NL80211_IFTYPE_STATION;
+		return NL80211_IFTYPE_P2P_CLIENT;
 	case WPA_IF_AP_VLAN:
 		return NL80211_IFTYPE_AP_VLAN;
 	case WPA_IF_AP_BSS:
-	case WPA_IF_P2P_GO:
 		return NL80211_IFTYPE_AP;
+	case WPA_IF_P2P_GO:
+		return NL80211_IFTYPE_P2P_GO;
 	}
 	return -1;
 }

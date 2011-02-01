@@ -424,6 +424,7 @@ static void ieee80211n_check_scan(struct hostapd_iface *iface)
 {
 	struct wpa_scan_results *scan_res;
 	int oper40;
+	int res;
 
 	/* Check list of neighboring BSSes (from scan) to see whether 40 MHz is
 	 * allowed per IEEE 802.11n/D7.0, 11.14.3.2 */
@@ -452,7 +453,8 @@ static void ieee80211n_check_scan(struct hostapd_iface *iface)
 		iface->conf->ht_capab &= ~HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET;
 	}
 
-	hostapd_setup_interface_complete(iface, 0);
+	res = ieee80211n_allowed_ht40_channel_pair(iface);
+	hostapd_setup_interface_complete(iface, !res);
 }
 
 

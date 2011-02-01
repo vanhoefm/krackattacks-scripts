@@ -2947,10 +2947,8 @@ static int wpa_driver_nl80211_authenticate(
 	drv->associated = 0;
 	os_memset(drv->auth_bssid, 0, ETH_ALEN);
 	/* FIX: IBSS mode */
-	if (drv->nlmode != NL80211_IFTYPE_STATION)
-		wpa_driver_nl80211_set_mode(priv, IEEE80211_MODE_INFRA);
-
-	if (wpa_driver_nl80211_set_mode(priv, IEEE80211_MODE_INFRA) < 0)
+	if (drv->nlmode != NL80211_IFTYPE_STATION &&
+	    wpa_driver_nl80211_set_mode(priv, IEEE80211_MODE_INFRA) < 0)
 		return -1;
 
 retry:

@@ -778,7 +778,7 @@ static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
 	}
 
 	if (num >= NUM_TX_QUEUES) {
-		/* for backwards compatibility, do not tricker failure */
+		/* for backwards compatibility, do not trigger failure */
 		wpa_printf(MSG_INFO, "DEPRECATED: '%s' not used", name);
 		return 0;
 	}
@@ -812,8 +812,6 @@ static int hostapd_config_tx_queue(struct hostapd_config *conf, char *name,
 		wpa_printf(MSG_ERROR, "Unknown tx_queue field '%s'", pos);
 		return -1;
 	}
-
-	queue->configured = 1;
 
 	return 0;
 }

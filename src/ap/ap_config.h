@@ -130,7 +130,6 @@ struct hostapd_tx_queue_params {
 	int cwmin;
 	int cwmax;
 	int burst; /* maximum burst time in 0.1 ms, i.e., 10 = 1 ms */
-	int configured;
 };
 
 struct hostapd_wmm_ac_params {

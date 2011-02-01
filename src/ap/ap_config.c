@@ -86,14 +86,18 @@ void hostapd_config_defaults_bss(struct hostapd_bss_config *bss)
 	bss->pac_key_lifetime = 7 * 24 * 60 * 60;
 	bss->pac_key_refresh_time = 1 * 24 * 60 * 60;
 #endif /* EAP_SERVER_FAST */
+
+	/* Set to -1 as defaults depends on HT in setup */
+	bss->wmm_enabled = -1;
 }
 
 
 struct hostapd_config * hostapd_config_defaults(void)
 {
+#define ecw2cw(ecw) ((1 << (ecw)) - 1)
+
 	struct hostapd_config *conf;
 	struct hostapd_bss_config *bss;
-	int i;
 	const int aCWmin = 4, aCWmax = 10;
 	const struct hostapd_wmm_ac_params ac_bk =
 		{ aCWmin, aCWmax, 7, 0, 0 }; /* background traffic */
@@ -103,6 +107,17 @@ struct hostapd_config * hostapd_config_defaults(void)
 		{ aCWmin - 1, aCWmin, 2, 3000 / 32, 1 };
 	const struct hostapd_wmm_ac_params ac_vo = /* voice traffic */
 		{ aCWmin - 2, aCWmin - 1, 2, 1500 / 32, 1 };
+	const struct hostapd_tx_queue_params txq_bk =
+		{ 7, ecw2cw(aCWmin), ecw2cw(aCWmax), 0 };
+	const struct hostapd_tx_queue_params txq_be =
+		{ 3, ecw2cw(aCWmin), 4 * (ecw2cw(aCWmin) + 1) - 1, 0};
+	const struct hostapd_tx_queue_params txq_vi =
+		{ 1, (ecw2cw(aCWmin) + 1) / 2 - 1, ecw2cw(aCWmin), 30};
+	const struct hostapd_tx_queue_params txq_vo =
+		{ 1, (ecw2cw(aCWmin) + 1) / 4 - 1,
+		  (ecw2cw(aCWmin) + 1) / 2 - 1, 15};
+
+#undef ecw2cw
 
 	conf = os_zalloc(sizeof(*conf));
 	bss = os_zalloc(sizeof(*bss));
@@ -131,13 +146,15 @@ struct hostapd_config * hostapd_config_defaults(void)
 	conf->fragm_threshold = -1; /* user driver default: 2346 */
 	conf->send_probe_response = 1;
 
-	for (i = 0; i < NUM_TX_QUEUES; i++)
-		conf->tx_queue[i].aifs = -1; /* use hw default */
-
 	conf->wmm_ac_params[0] = ac_be;
 	conf->wmm_ac_params[1] = ac_bk;
 	conf->wmm_ac_params[2] = ac_vi;
 	conf->wmm_ac_params[3] = ac_vo;
+
+	conf->tx_queue[0] = txq_vo;
+	conf->tx_queue[1] = txq_vi;
+	conf->tx_queue[2] = txq_be;
+	conf->tx_queue[3] = txq_bk;
 
 	conf->ht_capab = HT_CAP_INFO_SMPS_DISABLED;
 

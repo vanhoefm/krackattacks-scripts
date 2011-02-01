@@ -511,6 +511,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		}
 	}
 
+	if (conf->wmm_enabled < 0)
+		conf->wmm_enabled = hapd->iconf->ieee80211n;
+
 	hostapd_flush_old_stations(hapd);
 	hostapd_set_privacy(hapd, 0);
 
@@ -635,9 +638,6 @@ static void hostapd_tx_queue_params(struct hostapd_iface *iface)
 
 	for (i = 0; i < NUM_TX_QUEUES; i++) {
 		p = &iface->conf->tx_queue[i];
-
-		if (!p->configured)
-			continue;
 
 		if (hostapd_set_tx_queue_params(hapd, i, p->aifs, p->cwmin,
 						p->cwmax, p->burst)) {

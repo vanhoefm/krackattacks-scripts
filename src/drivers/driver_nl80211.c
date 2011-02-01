@@ -1476,6 +1476,7 @@ struct wiphy_info_data {
 	int auth_supported;
 	int connect_supported;
 	int offchan_tx_supported;
+	int max_remain_on_chan;
 };
 
 
@@ -1531,6 +1532,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK])
 		info->offchan_tx_supported = 1;
 
+	if (tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION])
+		info->max_remain_on_chan =
+			nla_get_u32(tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION]);
+
 	return NL_SKIP;
 }
 
@@ -1541,6 +1546,10 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg;
 
 	os_memset(info, 0, sizeof(*info));
+
+	/* default to 5000 since early versions of mac80211 don't set it */
+	info->max_remain_on_chan = 5000;
+
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -1;
@@ -1600,7 +1609,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	if (info.p2p_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
-	drv->capa.max_remain_on_chan = 5000;
+	drv->capa.max_remain_on_chan = info.max_remain_on_chan;
 
 	return 0;
 }

@@ -1180,6 +1180,7 @@ static void wpas_stop_listen(void *ctx)
 		wpa_s->off_channel_freq = 0;
 		wpa_s->roc_waiting_drv_freq = 0;
 	}
+	wpa_drv_set_ap_wps_ie(wpa_s, NULL, NULL, NULL);
 	wpa_drv_probe_req_report(wpa_s, 0);
 }
 

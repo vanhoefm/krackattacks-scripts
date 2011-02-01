@@ -488,7 +488,7 @@ struct wpa_supplicant {
 		P2P_GROUP_INTERFACE_CLIENT
 	} p2p_group_interface;
 	struct p2p_group *p2p_group;
-	int p2p_long_listen;
+	int p2p_long_listen; /* remaining time in long Listen state in ms */
 	char p2p_pin[10];
 	int p2p_wps_method;
 	u8 p2p_auth_invite[ETH_ALEN];

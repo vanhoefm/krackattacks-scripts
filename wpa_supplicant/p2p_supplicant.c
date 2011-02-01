@@ -2986,7 +2986,7 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 					  unsigned int freq)
 {
 	wpa_printf(MSG_DEBUG, "P2P: Cancel remain-on-channel callback "
-		   "(p2p_long_listen=%d pending_action_tx=%p)",
+		   "(p2p_long_listen=%d ms pending_action_tx=%p)",
 		   wpa_s->p2p_long_listen, wpa_s->pending_action_tx);
 	wpa_s->off_channel_freq = 0;
 	if (p2p_listen_end(wpa_s->global->p2p, freq) > 0)
@@ -2994,10 +2994,10 @@ void wpas_p2p_cancel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 	if (wpa_s->pending_action_tx)
 		return;
 	if (wpa_s->p2p_long_listen > 0)
-		wpa_s->p2p_long_listen -= 5;
+		wpa_s->p2p_long_listen -= wpa_s->max_remain_on_chan;
 	if (wpa_s->p2p_long_listen > 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Continuing long Listen state");
-		wpas_p2p_listen_start(wpa_s, wpa_s->p2p_long_listen * 1000);
+		wpas_p2p_listen_start(wpa_s, wpa_s->p2p_long_listen);
 	}
 }
 
@@ -3497,7 +3497,7 @@ int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout)
 
 	res = wpas_p2p_listen_start(wpa_s, timeout * 1000);
 	if (res == 0 && timeout * 1000 > wpa_s->max_remain_on_chan) {
-		wpa_s->p2p_long_listen = timeout;
+		wpa_s->p2p_long_listen = timeout * 1000;
 		eloop_register_timeout(timeout, 0,
 				       wpas_p2p_long_listen_timeout,
 				       wpa_s, NULL);

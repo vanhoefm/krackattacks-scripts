@@ -1798,10 +1798,11 @@ int wpas_p2p_service_del_upnp(struct wpa_supplicant *wpa_s, u8 version,
 
 
 static void wpas_prov_disc_local_display(struct wpa_supplicant *wpa_s,
-					 const u8 *peer, const char *params)
+					 const u8 *peer, const char *params,
+					 unsigned int generated_pin)
 {
 	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_SHOW_PIN MACSTR " %08d%s",
-		MAC2STR(peer), wps_generate_pin(), params);
+		MAC2STR(peer), generated_pin, params);
 }
 
 
@@ -1822,6 +1823,7 @@ void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
 	char params[200];
 	u8 empty_dev_type[8];
+	unsigned int generated_pin = 0;
 
 	if (pri_dev_type == NULL) {
 		os_memset(empty_dev_type, 0, sizeof(empty_dev_type));
@@ -1836,9 +1838,11 @@ void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 		    dev_name, supp_config_methods, dev_capab, group_capab);
 	params[sizeof(params) - 1] = '\0';
 
-	if (config_methods & WPS_CONFIG_DISPLAY)
-		wpas_prov_disc_local_display(wpa_s, peer, params);
-	else if (config_methods & WPS_CONFIG_KEYPAD)
+	if (config_methods & WPS_CONFIG_DISPLAY) {
+		generated_pin = wps_generate_pin();
+		wpas_prov_disc_local_display(wpa_s, peer, params,
+					     generated_pin);
+	} else if (config_methods & WPS_CONFIG_KEYPAD)
 		wpas_prov_disc_local_keypad(wpa_s, peer, params);
 	else if (config_methods & WPS_CONFIG_PUSHBUTTON)
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_REQ MACSTR
@@ -1849,11 +1853,14 @@ void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 {
 	struct wpa_supplicant *wpa_s = ctx;
+	unsigned int generated_pin = 0;
+
 	if (config_methods & WPS_CONFIG_DISPLAY)
 		wpas_prov_disc_local_keypad(wpa_s, peer, "");
-	else if (config_methods & WPS_CONFIG_KEYPAD)
-		wpas_prov_disc_local_display(wpa_s, peer, "");
-	else if (config_methods & WPS_CONFIG_PUSHBUTTON)
+	else if (config_methods & WPS_CONFIG_KEYPAD) {
+		generated_pin = wps_generate_pin();
+		wpas_prov_disc_local_display(wpa_s, peer, "", generated_pin);
+	} else if (config_methods & WPS_CONFIG_PUSHBUTTON)
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_RESP MACSTR,
 			MAC2STR(peer));
 

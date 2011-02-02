@@ -552,6 +552,7 @@ int wpa_dbus_register_object_per_iface(
 	struct wpa_dbus_object_desc *obj_desc)
 {
 	DBusConnection *con;
+	DBusError error;
 
 	DBusObjectPathVTable vtable = {
 		&free_dbus_object_desc_cb, &message_handler,
@@ -566,14 +567,24 @@ int wpa_dbus_register_object_per_iface(
 	obj_desc->connection = con;
 	obj_desc->path = os_strdup(path);
 
+	dbus_error_init(&error);
 	/* Register the message handler for the interface functions */
-	if (!dbus_connection_register_object_path(con, path, &vtable,
-						  obj_desc)) {
-		wpa_printf(MSG_ERROR, "dbus: Could not set up message "
-			   "handler for interface %s object %s", ifname, path);
+	if (!dbus_connection_try_register_object_path(con, path, &vtable,
+						      obj_desc, &error)) {
+		if (!os_strcmp(error.name, DBUS_ERROR_OBJECT_PATH_IN_USE)) {
+			wpa_printf(MSG_DEBUG, "dbus: %s", error.message);
+		} else {
+			wpa_printf(MSG_ERROR, "dbus: Could not set up message "
+				   "handler for interface %s object %s",
+				   ifname, path);
+			wpa_printf(MSG_ERROR, "dbus error: %s", error.name);
+			wpa_printf(MSG_ERROR, "dbus: %s", error.message);
+		}
+		dbus_error_free(&error);
 		return -1;
 	}
 
+	dbus_error_free(&error);
 	return 0;
 }
 

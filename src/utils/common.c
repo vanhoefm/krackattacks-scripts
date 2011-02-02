@@ -69,6 +69,30 @@ int hwaddr_aton(const char *txt, u8 *addr)
 	return 0;
 }
 
+/**
+ * hwaddr_compact_aton - Convert ASCII string to MAC address (no colon delimitors format)
+ * @txt: MAC address as a string (e.g., "001122334455")
+ * @addr: Buffer for the MAC address (ETH_ALEN = 6 bytes)
+ * Returns: 0 on success, -1 on failure (e.g., string not a MAC address)
+ */
+int hwaddr_compact_aton(const char *txt, u8 *addr)
+{
+	int i;
+
+	for (i = 0; i < 6; i++) {
+		int a, b;
+
+		a = hex2num(*txt++);
+		if (a < 0)
+			return -1;
+		b = hex2num(*txt++);
+		if (b < 0)
+			return -1;
+		*addr++ = (a << 4) | b;
+	}
+
+	return 0;
+}
 
 /**
  * hwaddr_aton2 - Convert ASCII string to MAC address (in any known format)

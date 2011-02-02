@@ -3034,8 +3034,7 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 		while (wpa_s) {
 			prev = wpa_s;
 			wpa_s = wpa_s->next;
-			prev->removal_reason = P2P_GROUP_REMOVAL_REQUESTED;
-			wpas_p2p_group_delete(prev);
+			wpas_p2p_disconnect(prev);
 		}
 		return 0;
 	}
@@ -3045,13 +3044,7 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 			break;
 	}
 
-	if (wpa_s == NULL)
-		return -1;
-
-	wpa_s->removal_reason = P2P_GROUP_REMOVAL_REQUESTED;
-	wpas_p2p_group_delete(wpa_s);
-
-	return 0;
+	return wpas_p2p_disconnect(wpa_s);
 }
 
 
@@ -4155,4 +4148,28 @@ int wpas_p2p_unauthorize(struct wpa_supplicant *wpa_s, const char *addr)
 		return -1;
 
 	return p2p_unauthorize(p2p, peer);
+}
+
+
+/**
+ * wpas_p2p_disconnect - Disconnect from a P2P Group
+ * @wpa_s: Pointer to wpa_supplicant data
+ * Returns: 0 on success, -1 on failure
+ *
+ * This can be used to disconnect from a group in which the local end is a P2P
+ * Client or to end a P2P Group in case the local end is the Group Owner. If a
+ * virtual network interface was created for this group, that interface will be
+ * removed. Otherwise, only the configured P2P group network will be removed
+ * from the interface.
+ */
+int wpas_p2p_disconnect(struct wpa_supplicant *wpa_s)
+{
+
+	if (wpa_s == NULL)
+		return -1;
+
+	wpa_s->removal_reason = P2P_GROUP_REMOVAL_REQUESTED;
+	wpas_p2p_group_delete(wpa_s);
+
+	return 0;
 }

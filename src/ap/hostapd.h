@@ -141,6 +141,10 @@ struct hostapd_data {
 			     union wps_event_data *data);
 	void *wps_event_cb_ctx;
 
+	void (*sta_authorized_cb)(void *ctx, const u8 *mac_addr,
+				  int authorized);
+	void *sta_authorized_cb_ctx;
+
 #ifdef CONFIG_P2P
 	struct p2p_data *p2p;
 	struct p2p_group *p2p_group;

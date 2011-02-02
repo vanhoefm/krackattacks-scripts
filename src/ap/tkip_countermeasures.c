@@ -53,8 +53,8 @@ static void ieee80211_tkip_countermeasures_start(struct hostapd_data *hapd)
 	for (sta = hapd->sta_list; sta != NULL; sta = sta->next) {
 		hostapd_drv_sta_deauth(hapd, sta->addr,
 				       WLAN_REASON_MICHAEL_MIC_FAILURE);
-		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
-				WLAN_STA_AUTHORIZED);
+		ap_sta_set_authorized(hapd, sta, 0);
+		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 		hostapd_drv_sta_remove(hapd, sta->addr);
 	}
 }

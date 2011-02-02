@@ -115,8 +115,7 @@ static void hostapd_dump_state(struct hostapd_data *hapd)
 			(sta->flags & WLAN_STA_PS ? "[PS]" : ""),
 			(sta->flags & WLAN_STA_TIM ? "[TIM]" : ""),
 			(sta->flags & WLAN_STA_PERM ? "[PERM]" : ""),
-			(sta->flags & WLAN_STA_AUTHORIZED ? "[AUTHORIZED]" :
-			 ""),
+			(ap_sta_is_authorized(sta) ? "[AUTHORIZED]" : ""),
 			(sta->flags & WLAN_STA_PENDING_POLL ? "[PENDING_POLL" :
 			 ""),
 			(sta->flags & WLAN_STA_SHORT_PREAMBLE ?

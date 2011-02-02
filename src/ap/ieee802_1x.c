@@ -89,20 +89,19 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 		return;
 
 	if (authorized) {
-		if (!(sta->flags & WLAN_STA_AUTHORIZED))
+		if (!ap_sta_is_authorized(sta))
 			wpa_msg(hapd->msg_ctx, MSG_INFO,
 				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
-		sta->flags |= WLAN_STA_AUTHORIZED;
+		ap_sta_set_authorized(hapd, sta, 1);
 		res = hostapd_set_authorized(hapd, sta, 1);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "authorizing port");
 	} else {
-		if ((sta->flags & (WLAN_STA_AUTHORIZED | WLAN_STA_ASSOC)) ==
-		    (WLAN_STA_AUTHORIZED | WLAN_STA_ASSOC))
+		if (ap_sta_is_authorized(sta) && (sta->flags & WLAN_STA_ASSOC))
 			wpa_msg(hapd->msg_ctx, MSG_INFO,
 				AP_STA_DISCONNECTED MACSTR,
 				MAC2STR(sta->addr));
-		sta->flags &= ~WLAN_STA_AUTHORIZED;
+		ap_sta_set_authorized(hapd, sta, 0);
 		res = hostapd_set_authorized(hapd, sta, 0);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "unauthorizing port");
@@ -802,7 +801,7 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 
 	case IEEE802_1X_TYPE_EAPOL_KEY:
 		wpa_printf(MSG_DEBUG, "   EAPOL-Key");
-		if (!(sta->flags & WLAN_STA_AUTHORIZED)) {
+		if (!ap_sta_is_authorized(sta)) {
 			wpa_printf(MSG_DEBUG, "   Dropped key data from "
 				   "unauthorized Supplicant");
 			break;

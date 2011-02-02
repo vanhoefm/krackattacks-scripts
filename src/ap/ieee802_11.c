@@ -1655,7 +1655,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		 * Open, static WEP, or FT protocol; no separate authorization
 		 * step.
 		 */
-		sta->flags |= WLAN_STA_AUTHORIZED;
+		ap_sta_set_authorized(hapd, sta, 1);
 		wpa_msg(hapd->msg_ctx, MSG_INFO,
 			AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 	}

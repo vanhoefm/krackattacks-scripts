@@ -124,6 +124,9 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	accounting_sta_stop(hapd, sta);
 
+	/* just in case */
+	ap_sta_set_authorized(hapd, sta, 0);
+
 	if (sta->flags & WLAN_STA_WDS)
 		hostapd_set_wds_sta(hapd, sta->addr, sta->aid, 0);
 
@@ -750,6 +753,19 @@ void ap_sta_stop_sa_query(struct hostapd_data *hapd, struct sta_info *sta)
 #endif /* CONFIG_IEEE80211W */
 
 
+void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
+			   int authorized)
+{
+	if (!!authorized == !!(sta->flags & WLAN_STA_AUTHORIZED))
+		return;
+
+	if (authorized)
+		sta->flags |= WLAN_STA_AUTHORIZED;
+	else
+		sta->flags &= ~WLAN_STA_AUTHORIZED;
+}
+
+
 void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 		       const u8 *addr, u16 reason)
 {
@@ -762,7 +778,8 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 
 	if (sta == NULL)
 		return;
-	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC | WLAN_STA_AUTHORIZED);
+	ap_sta_set_authorized(hapd, sta, 0);
+	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(0, 0, ap_handle_timer, hapd, sta);
 	sta->timeout_next = STA_REMOVE;

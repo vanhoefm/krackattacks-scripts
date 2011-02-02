@@ -1892,6 +1892,7 @@ int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
  * wpa_config_get_all - Get all options from network configuration
  * @ssid: Pointer to network configuration data
  * @get_keys: Determines if keys/passwords will be included in returned list
+ *	(if they may be exported)
  * Returns: %NULL terminated list of all set keys and their values in the form
  * of [key1, val1, key2, val2, ... , NULL]
  *
@@ -1906,6 +1907,8 @@ char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys)
 	size_t i;
 	char **props;
 	int fields_num;
+
+	get_keys = get_keys && ssid->export_keys;
 
 	props = os_zalloc(sizeof(char *) * ((2 * NUM_SSID_FIELDS) + 1));
 	if (!props)

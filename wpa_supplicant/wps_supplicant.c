@@ -372,6 +372,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 				return -1;
 			}
 			ssid->psk_set = 1;
+			ssid->export_keys = 1;
 		} else if (cred->key_len >= 8 && cred->key_len < 2 * PMK_LEN) {
 			os_free(ssid->passphrase);
 			ssid->passphrase = os_malloc(cred->key_len + 1);
@@ -380,6 +381,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 			os_memcpy(ssid->passphrase, cred->key, cred->key_len);
 			ssid->passphrase[cred->key_len] = '\0';
 			wpa_config_update_psk(ssid);
+			ssid->export_keys = 1;
 		} else {
 			wpa_printf(MSG_ERROR, "WPS: Invalid Network Key "
 				   "length %lu",

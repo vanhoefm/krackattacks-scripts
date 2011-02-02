@@ -400,6 +400,14 @@ struct wpa_ssid {
 	 * temporary - Whether this network is temporary and not to be saved
 	 */
 	int temporary;
+
+	/**
+	 * export_keys - Whether keys may be exported
+	 *
+	 * This attribute will be set when keys are determined through
+	 * WPS or similar so that they may be exported.
+	 */
+	int export_keys;
 };
 
 #endif /* CONFIG_SSID_H */

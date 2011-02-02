@@ -403,6 +403,7 @@ static void wpas_p2p_store_persistent_group(struct wpa_supplicant *wpa_s,
 	s->key_mgmt = WPA_KEY_MGMT_PSK;
 	s->proto = WPA_PROTO_RSN;
 	s->pairwise_cipher = WPA_CIPHER_CCMP;
+	s->export_keys = 1;
 	if (ssid->passphrase) {
 		os_free(s->passphrase);
 		s->passphrase = os_strdup(ssid->passphrase);
@@ -3241,6 +3242,7 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	os_memcpy(ssid->ssid, params->ssid, params->ssid_len);
 	ssid->ssid_len = params->ssid_len;
 	ssid->p2p_group = 1;
+	ssid->export_keys = 1;
 	if (params->psk_set) {
 		os_memcpy(ssid->psk, params->psk, 32);
 		ssid->psk_set = 1;

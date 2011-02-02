@@ -2882,7 +2882,7 @@ DBusMessage * wpas_dbus_getter_network_properties(
 	DBusMessage *reply = NULL;
 	DBusMessageIter	iter, variant_iter, dict_iter;
 	char **iterator;
-	char **props = wpa_config_get_all(net->ssid, 0);
+	char **props = wpa_config_get_all(net->ssid, 1);
 	if (!props)
 		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
 					      NULL);

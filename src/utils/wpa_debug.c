@@ -273,11 +273,43 @@ void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
 }
 
 
+#ifdef CONFIG_DEBUG_FILE
+static char *last_path = NULL;
+#endif /* CONFIG_DEBUG_FILE */
+
+int wpa_debug_reopen_file(void)
+{
+#ifdef CONFIG_DEBUG_FILE
+	int rv;
+	if (last_path) {
+		char *tmp = os_strdup(last_path);
+		wpa_debug_close_file();
+		rv = wpa_debug_open_file(tmp);
+		os_free(tmp);
+	} else {
+		wpa_printf(MSG_ERROR, "Last-path was not set, cannot "
+			   "re-open log file.");
+		rv = -1;
+	}
+	return rv;
+#else /* CONFIG_DEBUG_FILE */
+	return 0;
+#endif /* CONFIG_DEBUG_FILE */
+}
+
+
 int wpa_debug_open_file(const char *path)
 {
 #ifdef CONFIG_DEBUG_FILE
 	if (!path)
 		return 0;
+
+	if (last_path == NULL || os_strcmp(last_path, path) != 0) {
+		/* Save our path to enable re-open */
+		os_free(last_path);
+		last_path = os_strdup(path);
+	}
+
 	out_file = fopen(path, "a");
 	if (out_file == NULL) {
 		wpa_printf(MSG_ERROR, "wpa_debug_open_file: Failed to open "
@@ -299,6 +331,8 @@ void wpa_debug_close_file(void)
 		return;
 	fclose(out_file);
 	out_file = NULL;
+	os_free(last_path);
+	last_path = NULL;
 #endif /* CONFIG_DEBUG_FILE */
 }
 

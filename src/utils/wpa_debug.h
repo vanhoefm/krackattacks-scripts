@@ -40,6 +40,7 @@ enum {
 #else /* CONFIG_NO_STDOUT_DEBUG */
 
 int wpa_debug_open_file(const char *path);
+int wpa_debug_reopen_file(void);
 void wpa_debug_close_file(void);
 
 /**

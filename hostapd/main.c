@@ -467,6 +467,9 @@ static void usage(void)
 		"   -B   run daemon in the background\n"
 		"   -P   PID file\n"
 		"   -K   include key data in debug messages\n"
+#ifdef CONFIG_DEBUG_FILE
+		"   -f   log output to debug file instead of stdout\n"
+#endif /* CONFIG_DEBUG_FILE */
 		"   -t   include timestamps in some debug messages\n"
 		"   -v   show hostapd version\n");
 
@@ -481,12 +484,13 @@ int main(int argc, char *argv[])
 	size_t i;
 	int c, debug = 0, daemonize = 0;
 	char *pid_file = NULL;
+	const char *log_file = NULL;
 
 	if (os_program_init())
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "BdhKP:tv");
+		c = getopt(argc, argv, "Bdf:hKP:tv");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -500,6 +504,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'B':
 			daemonize++;
+			break;
+		case 'f':
+			log_file = optarg;
 			break;
 		case 'K':
 			wpa_debug_show_keys++;
@@ -524,6 +531,9 @@ int main(int argc, char *argv[])
 
 	if (optind == argc)
 		usage();
+
+	if (log_file)
+		wpa_debug_open_file(log_file);
 
 	interfaces.count = argc - optind;
 	interfaces.iface = os_malloc(interfaces.count *
@@ -558,6 +568,9 @@ int main(int argc, char *argv[])
 
 	hostapd_global_deinit(pid_file);
 	os_free(pid_file);
+
+	if (log_file)
+		wpa_debug_close_file();
 
 	os_program_deinit();
 

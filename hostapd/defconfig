@@ -144,6 +144,10 @@ CONFIG_IPV6=y
 # code is not needed.
 #CONFIG_NO_STDOUT_DEBUG=y
 
+# Add support for writing debug log to a file: -f /tmp/hostapd.log
+# Disabled by default.
+#CONFIG_DEBUG_FILE=y
+
 # Remove support for RADIUS accounting
 #CONFIG_NO_ACCOUNTING=y
 

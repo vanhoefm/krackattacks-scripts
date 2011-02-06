@@ -740,6 +740,10 @@ ifdef CONFIG_NO_STDOUT_DEBUG
 CFLAGS += -DCONFIG_NO_STDOUT_DEBUG
 endif
 
+ifdef CONFIG_DEBUG_FILE
+CFLAGS += -DCONFIG_DEBUG_FILE
+endif
+
 ALL=hostapd hostapd_cli
 
 all: verify_config $(ALL)

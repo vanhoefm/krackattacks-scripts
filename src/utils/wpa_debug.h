@@ -188,8 +188,11 @@ typedef void (*wpa_msg_cb_func)(void *ctx, int level, const char *txt,
  * @func: Callback function (%NULL to unregister)
  */
 void wpa_msg_register_cb(wpa_msg_cb_func func);
-#endif /* CONFIG_NO_WPA_MSG */
 
+typedef const char * (*wpa_msg_get_ifname_func)(void *ctx);
+void wpa_msg_register_ifname_cb(wpa_msg_get_ifname_func func);
+
+#endif /* CONFIG_NO_WPA_MSG */
 
 #ifdef CONFIG_NO_HOSTAPD_LOGGER
 #define hostapd_logger(args...) do { } while (0)

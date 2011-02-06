@@ -477,6 +477,15 @@ static void usage(void)
 }
 
 
+static const char * hostapd_msg_ifname_cb(void *ctx)
+{
+	struct hostapd_data *hapd = ctx;
+	if (hapd && hapd->iconf && hapd->iconf->bss)
+		return hapd->iconf->bss->iface;
+	return NULL;
+}
+
+
 int main(int argc, char *argv[])
 {
 	struct hapd_interfaces interfaces;
@@ -531,6 +540,8 @@ int main(int argc, char *argv[])
 
 	if (optind == argc)
 		usage();
+
+	wpa_msg_register_ifname_cb(hostapd_msg_ifname_cb);
 
 	if (log_file)
 		wpa_debug_open_file(log_file);

@@ -1550,7 +1550,7 @@ int wps_er_pbc(struct wps_er *er, const u8 *uuid)
 	}
 
 	er->set_sel_reg_uuid_filter = uuid;
-	res = wps_registrar_button_pushed(er->wps->registrar);
+	res = wps_registrar_button_pushed(er->wps->registrar, NULL);
 	er->set_sel_reg_uuid_filter = NULL;
 	if (res)
 		return -1;

@@ -517,11 +517,13 @@ void wpa_supplicant_ap_rx_eapol(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_WPS
 
-int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid)
+int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
+			      const u8 *p2p_dev_addr)
 {
 	if (!wpa_s->ap_iface)
 		return -1;
-	return hostapd_wps_button_pushed(wpa_s->ap_iface->bss[0]);
+	return hostapd_wps_button_pushed(wpa_s->ap_iface->bss[0],
+					 p2p_dev_addr);
 }
 
 

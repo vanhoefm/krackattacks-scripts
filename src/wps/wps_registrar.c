@@ -135,6 +135,8 @@ struct wps_registrar {
 
 	u8 authorized_macs[WPS_MAX_AUTHORIZED_MACS][ETH_ALEN];
 	u8 authorized_macs_union[WPS_MAX_AUTHORIZED_MACS][ETH_ALEN];
+
+	u8 p2p_dev_addr[ETH_ALEN];
 };
 
 
@@ -842,6 +844,7 @@ static void wps_registrar_stop_pbc(struct wps_registrar *reg)
 {
 	reg->selected_registrar = 0;
 	reg->pbc = 0;
+	os_memset(reg->p2p_dev_addr, 0, ETH_ALEN);
 	wps_registrar_remove_authorized_mac(reg,
 					    (u8 *) "\xff\xff\xff\xff\xff\xff");
 	wps_registrar_selected_registrar_changed(reg);
@@ -861,13 +864,16 @@ static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
 /**
  * wps_registrar_button_pushed - Notify Registrar that AP button was pushed
  * @reg: Registrar data from wps_registrar_init()
+ * @p2p_dev_addr: Limit allowed PBC devices to the specified P2P device, %NULL
+ *	indicates no such filtering
  * Returns: 0 on success, -1 on failure
  *
  * This function is called on an AP when a push button is pushed to activate
  * PBC mode. The PBC mode will be stopped after walk time (2 minutes) timeout
  * or when a PBC registration is completed.
  */
-int wps_registrar_button_pushed(struct wps_registrar *reg)
+int wps_registrar_button_pushed(struct wps_registrar *reg,
+				const u8 *p2p_dev_addr)
 {
 	if (wps_registrar_pbc_overlap(reg, NULL, NULL)) {
 		wpa_printf(MSG_DEBUG, "WPS: PBC overlap - do not start PBC "
@@ -879,6 +885,10 @@ int wps_registrar_button_pushed(struct wps_registrar *reg)
 	reg->force_pbc_overlap = 0;
 	reg->selected_registrar = 1;
 	reg->pbc = 1;
+	if (p2p_dev_addr)
+		os_memcpy(reg->p2p_dev_addr, p2p_dev_addr, ETH_ALEN);
+	else
+		os_memset(reg->p2p_dev_addr, 0, ETH_ALEN);
 	wps_registrar_add_authorized_mac(reg,
 					 (u8 *) "\xff\xff\xff\xff\xff\xff");
 	wps_registrar_selected_registrar_changed(reg);
@@ -2226,6 +2236,27 @@ static int wps_process_config_error(struct wps_data *wps, const u8 *err)
 }
 
 
+static int wps_registrar_p2p_dev_addr_match(struct wps_data *wps)
+{
+#ifdef CONFIG_P2P
+	struct wps_registrar *reg = wps->wps->registrar;
+
+	if (is_zero_ether_addr(reg->p2p_dev_addr))
+		return 1; /* no filtering in use */
+
+	if (os_memcmp(reg->p2p_dev_addr, wps->p2p_dev_addr, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "WPS: No match on P2P Device Address "
+			   "filtering for PBC: expected " MACSTR " was "
+			   MACSTR " - indicate PBC session overlap",
+			   MAC2STR(reg->p2p_dev_addr),
+			   MAC2STR(wps->p2p_dev_addr));
+		return 0;
+	}
+#endif /* CONFIG_P2P */
+	return 1;
+}
+
+
 static enum wps_process_res wps_process_m1(struct wps_data *wps,
 					   struct wps_parse_attr *attr)
 {
@@ -2280,12 +2311,16 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON) {
 		if (wps->wps->registrar->force_pbc_overlap ||
 		    wps_registrar_pbc_overlap(wps->wps->registrar,
-					      wps->mac_addr_e, wps->uuid_e)) {
+					      wps->mac_addr_e, wps->uuid_e) ||
+		    !wps_registrar_p2p_dev_addr_match(wps)) {
 			wpa_printf(MSG_DEBUG, "WPS: PBC overlap - deny PBC "
 				   "negotiation");
 			wps->state = SEND_M2D;
 			wps->config_error = WPS_CFG_MULTIPLE_PBC_DETECTED;
 			wps_pbc_overlap_event(wps->wps);
+			wps_fail_event(wps->wps, WPS_M1,
+				       WPS_CFG_MULTIPLE_PBC_DETECTED,
+				       WPS_EI_NO_ERROR);
 			wps->wps->registrar->force_pbc_overlap = 1;
 			return WPS_CONTINUE;
 		}

@@ -463,7 +463,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #endif /* CONFIG_IEEE80211R */
 	case EVENT_WPS_BUTTON_PUSHED:
-		hostapd_wps_button_pushed(hapd);
+		hostapd_wps_button_pushed(hapd, NULL);
 		break;
 #ifdef NEED_AP_MLME
 	case EVENT_TX_STATUS:

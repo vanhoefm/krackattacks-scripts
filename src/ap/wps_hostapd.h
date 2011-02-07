@@ -23,7 +23,8 @@ void hostapd_deinit_wps(struct hostapd_data *hapd);
 void hostapd_update_wps(struct hostapd_data *hapd);
 int hostapd_wps_add_pin(struct hostapd_data *hapd, const u8 *addr,
 			const char *uuid, const char *pin, int timeout);
-int hostapd_wps_button_pushed(struct hostapd_data *hapd);
+int hostapd_wps_button_pushed(struct hostapd_data *hapd,
+			      const u8 *p2p_dev_addr);
 int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 			  char *path, char *method, char *name);
 int hostapd_wps_get_mib_sta(struct hostapd_data *hapd, const u8 *addr,
@@ -60,7 +61,8 @@ static inline int hostapd_wps_get_mib_sta(struct hostapd_data *hapd,
 	return 0;
 }
 
-static inline int hostapd_wps_button_pushed(struct hostapd_data *hapd)
+static inline int hostapd_wps_button_pushed(struct hostapd_data *hapd,
+					    const u8 *p2p_dev_addr)
 {
 	return 0;
 }

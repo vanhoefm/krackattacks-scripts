@@ -117,6 +117,8 @@ struct wps_data {
 	struct wps_credential *use_cred;
 
 	int use_psk_key;
+	u8 p2p_dev_addr[ETH_ALEN]; /* P2P Device Address of the client or
+				    * 00:00:00:00:00:00 if not a P2p client */
 };
 
 

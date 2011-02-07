@@ -213,10 +213,21 @@ static int wpa_supplicant_ctrl_iface_wps_pbc(struct wpa_supplicant *wpa_s,
 					     char *cmd)
 {
 	u8 bssid[ETH_ALEN], *_bssid = bssid;
+	u8 p2p_dev_addr[ETH_ALEN], *_p2p_dev_addr = NULL;
 
-	if (cmd == NULL || os_strcmp(cmd, "any") == 0)
+	if (cmd == NULL || os_strcmp(cmd, "any") == 0) {
 		_bssid = NULL;
-	else if (hwaddr_aton(cmd, bssid)) {
+#ifdef CONFIG_P2P
+	} else if (os_strncmp(cmd, "p2p_dev_addr=", 13) == 0) {
+		if (hwaddr_aton(cmd + 13, p2p_dev_addr)) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_PBC: invalid "
+				   "P2P Device Address '%s'",
+				   cmd + 13);
+			return -1;
+		}
+		_p2p_dev_addr = p2p_dev_addr;
+#endif /* CONFIG_P2P */
+	} else if (hwaddr_aton(cmd, bssid)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_PBC: invalid BSSID '%s'",
 			   cmd);
 		return -1;
@@ -224,7 +235,7 @@ static int wpa_supplicant_ctrl_iface_wps_pbc(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_AP
 	if (wpa_s->ap_iface)
-		return wpa_supplicant_ap_wps_pbc(wpa_s, _bssid);
+		return wpa_supplicant_ap_wps_pbc(wpa_s, _bssid, _p2p_dev_addr);
 #endif /* CONFIG_AP */
 
 	return wpas_wps_start_pbc(wpa_s, _bssid, 0);

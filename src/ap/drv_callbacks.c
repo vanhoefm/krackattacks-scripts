@@ -247,6 +247,25 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
+int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
+			 const u8 *ie, size_t ie_len)
+{
+	size_t i;
+	int ret = 0;
+
+	if (sa)
+		random_add_randomness(sa, ETH_ALEN);
+	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
+		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
+					    sa, ie, ie_len) > 0) {
+			ret = 1;
+			break;
+		}
+	}
+	return ret;
+}
+
+
 #ifdef HOSTAPD
 
 #ifdef NEED_AP_MLME
@@ -384,25 +403,6 @@ static void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, const u8 *buf,
 }
 
 #endif /* NEED_AP_MLME */
-
-
-static int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
-				const u8 *ie, size_t ie_len)
-{
-	size_t i;
-	int ret = 0;
-
-	if (sa)
-		random_add_randomness(sa, ETH_ALEN);
-	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
-		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
-					    sa, ie, ie_len) > 0) {
-			ret = 1;
-			break;
-		}
-	}
-	return ret;
-}
 
 
 static int hostapd_event_new_sta(struct hostapd_data *hapd, const u8 *addr)

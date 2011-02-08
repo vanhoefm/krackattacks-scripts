@@ -252,5 +252,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			const u8 *ie, size_t ielen);
 void hostapd_notif_disassoc(struct hostapd_data *hapd, const u8 *addr);
 void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr);
+int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
+			 const u8 *ie, size_t ie_len);
 
 #endif /* HOSTAPD_H */

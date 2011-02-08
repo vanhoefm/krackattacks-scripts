@@ -1951,6 +1951,22 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				   data->rx_action.len, data->rx_action.freq);
 #endif /* CONFIG_P2P */
 		break;
+	case EVENT_RX_PROBE_REQ:
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface) {
+			hostapd_probe_req_rx(wpa_s->ap_iface->bss[0],
+					     data->rx_probe_req.sa,
+					     data->rx_probe_req.ie,
+					     data->rx_probe_req.ie_len);
+			break;
+		}
+#endif /* CONFIG_AP */
+#ifdef CONFIG_P2P
+		wpas_p2p_probe_req_rx(wpa_s, data->rx_probe_req.sa,
+				      data->rx_probe_req.ie,
+				      data->rx_probe_req.ie_len);
+#endif /* CONFIG_P2P */
+		break;
 #ifdef CONFIG_P2P
 	case EVENT_REMAIN_ON_CHANNEL:
 		wpas_p2p_remain_on_channel_cb(
@@ -1960,11 +1976,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_CANCEL_REMAIN_ON_CHANNEL:
 		wpas_p2p_cancel_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq);
-		break;
-	case EVENT_RX_PROBE_REQ:
-		wpas_p2p_probe_req_rx(wpa_s, data->rx_probe_req.sa,
-				      data->rx_probe_req.ie,
-				      data->rx_probe_req.ie_len);
 		break;
 	case EVENT_P2P_DEV_FOUND:
 		wpas_dev_found(wpa_s, data->p2p_dev_found.addr,

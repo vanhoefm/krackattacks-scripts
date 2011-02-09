@@ -53,6 +53,8 @@ u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
 
 	*pos++ = WLAN_EID_SUPP_RATES;
 	num = hapd->iface->num_rates;
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht)
+		num++;
 	if (num > 8) {
 		/* rest of the rates are encoded in Extended supported
 		 * rates element */
@@ -70,6 +72,10 @@ u8 * hostapd_eid_supp_rates(struct hostapd_data *hapd, u8 *eid)
 		pos++;
 	}
 
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht &&
+	    hapd->iface->num_rates < 8)
+		*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_HT_PHY;
+
 	return pos;
 }
 
@@ -83,6 +89,8 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 		return eid;
 
 	num = hapd->iface->num_rates;
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht)
+		num++;
 	if (num <= 8)
 		return eid;
 	num -= 8;
@@ -100,6 +108,10 @@ u8 * hostapd_eid_ext_supp_rates(struct hostapd_data *hapd, u8 *eid)
 			*pos |= 0x80;
 		pos++;
 	}
+
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht &&
+	    hapd->iface->num_rates >= 8)
+		*pos++ = 0x80 | BSS_MEMBERSHIP_SELECTOR_HT_PHY;
 
 	return pos;
 }
@@ -667,6 +679,13 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 				 elems.ht_capabilities_len);
 	if (resp != WLAN_STATUS_SUCCESS)
 		return resp;
+	if (hapd->iconf->ieee80211n && hapd->iconf->require_ht &&
+	    !(sta->flags & WLAN_STA_HT)) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_INFO, "Station does not support "
+			       "mandatory HT PHY - reject association");
+		return WLAN_STATUS_ASSOC_DENIED_NO_HT;
+	}
 #endif /* CONFIG_IEEE80211N */
 
 	if ((hapd->conf->wpa & WPA_PROTO_RSN) && elems.rsn_ie) {

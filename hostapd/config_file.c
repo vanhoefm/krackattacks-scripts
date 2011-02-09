@@ -1896,6 +1896,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   "ht_capab", line);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "require_ht") == 0) {
+			conf->require_ht = atoi(pos);
 #endif /* CONFIG_IEEE80211N */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);

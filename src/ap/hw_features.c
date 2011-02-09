@@ -162,7 +162,8 @@ int hostapd_prepare_rates(struct hostapd_data *hapd,
 		hapd->iface->num_rates++;
 	}
 
-	if (hapd->iface->num_rates == 0 || num_basic_rates == 0) {
+	if ((hapd->iface->num_rates == 0 || num_basic_rates == 0) &&
+	    (!hapd->iconf->ieee80211n || !hapd->iconf->require_ht)) {
 		wpa_printf(MSG_ERROR, "No rates remaining in supported/basic "
 			   "rate sets (%d,%d).",
 			   hapd->iface->num_rates, num_basic_rates);

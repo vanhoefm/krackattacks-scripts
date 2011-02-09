@@ -387,6 +387,7 @@ struct hostapd_config {
 	u16 ht_capab;
 	int ieee80211n;
 	int secondary_channel;
+	int require_ht;
 };
 
 

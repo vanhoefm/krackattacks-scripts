@@ -2338,6 +2338,7 @@ struct wpa_supplicant * wpa_supplicant_get_iface(struct wpa_global *global,
 }
 
 
+#ifndef CONFIG_NO_WPA_MSG
 static const char * wpa_supplicant_msg_ifname_cb(void *ctx)
 {
 	struct wpa_supplicant *wpa_s = ctx;
@@ -2345,6 +2346,7 @@ static const char * wpa_supplicant_msg_ifname_cb(void *ctx)
 		return NULL;
 	return wpa_s->ifname;
 }
+#endif /* CONFIG_NO_WPA_MSG */
 
 
 /**
@@ -2364,7 +2366,9 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	if (params == NULL)
 		return NULL;
 
+#ifndef CONFIG_NO_WPA_MSG
 	wpa_msg_register_ifname_cb(wpa_supplicant_msg_ifname_cb);
+#endif /* CONFIG_NO_WPA_MSG */
 
 	wpa_debug_open_file(params->wpa_debug_file_path);
 	if (params->wpa_debug_syslog)

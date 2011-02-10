@@ -23,15 +23,17 @@ static int wpa_debug_syslog = 0;
 #endif /* CONFIG_DEBUG_SYSLOG */
 
 
-#ifdef CONFIG_DEBUG_FILE
-static FILE *out_file = NULL;
-#endif /* CONFIG_DEBUG_FILE */
 int wpa_debug_level = MSG_INFO;
 int wpa_debug_show_keys = 0;
 int wpa_debug_timestamp = 0;
 
 
 #ifndef CONFIG_NO_STDOUT_DEBUG
+
+#ifdef CONFIG_DEBUG_FILE
+static FILE *out_file = NULL;
+#endif /* CONFIG_DEBUG_FILE */
+
 
 void wpa_debug_print_timestamp(void)
 {

@@ -38,6 +38,11 @@ enum {
 #define wpa_debug_close_file() do { } while (0)
 #define wpa_dbg(args...) do { } while (0)
 
+static inline int wpa_debug_reopen_file(void)
+{
+	return 0;
+}
+
 #else /* CONFIG_NO_STDOUT_DEBUG */
 
 int wpa_debug_open_file(const char *path);
@@ -157,6 +162,7 @@ void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
 #define wpa_msg(args...) do { } while (0)
 #define wpa_msg_ctrl(args...) do { } while (0)
 #define wpa_msg_register_cb(f) do { } while (0)
+#define wpa_msg_register_ifname_cb(f) do { } while (0)
 #else /* CONFIG_NO_WPA_MSG */
 /**
  * wpa_msg - Conditional printf for default target and ctrl_iface monitors

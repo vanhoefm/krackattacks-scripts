@@ -48,8 +48,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	int i, bssid_changed;
 
 	if (bss == NULL) {
-		wpa_printf(MSG_ERROR, "SME: No scan result available for the "
-			   "network");
+		wpa_msg(wpa_s, MSG_ERROR, "SME: No scan result available for "
+			"the network");
 		return;
 	}
 
@@ -82,12 +82,12 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		}
 	}
 #endif /* IEEE8021X_EAPOL */
-	wpa_printf(MSG_DEBUG, "Automatic auth_alg selection: 0x%x",
-		   params.auth_alg);
+	wpa_dbg(wpa_s, MSG_DEBUG, "Automatic auth_alg selection: 0x%x",
+		params.auth_alg);
 	if (ssid->auth_alg) {
 		params.auth_alg = ssid->auth_alg;
-		wpa_printf(MSG_DEBUG, "Overriding auth_alg selection: 0x%x",
-			   params.auth_alg);
+		wpa_dbg(wpa_s, MSG_DEBUG, "Overriding auth_alg selection: "
+			"0x%x", params.auth_alg);
 	}
 
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
@@ -121,8 +121,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_set_suites(wpa_s, bss, ssid,
 					      wpa_s->sme.assoc_req_ie,
 					      &wpa_s->sme.assoc_req_ie_len)) {
-			wpa_printf(MSG_WARNING, "SME: Failed to set WPA key "
-				   "management and encryption suites");
+			wpa_msg(wpa_s, MSG_WARNING, "SME: Failed to set WPA "
+				"key management and encryption suites");
 			return;
 		}
 	} else if (ssid->key_mgmt &
@@ -134,9 +134,9 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		if (wpa_supplicant_set_suites(wpa_s, NULL, ssid,
 					      wpa_s->sme.assoc_req_ie,
 					      &wpa_s->sme.assoc_req_ie_len)) {
-			wpa_printf(MSG_WARNING, "SME: Failed to set WPA key "
-				   "management and encryption suites (no scan "
-				   "results)");
+			wpa_msg(wpa_s, MSG_WARNING, "SME: Failed to set WPA "
+				"key management and encryption suites (no "
+				"scan results)");
 			return;
 		}
 #ifdef CONFIG_WPS
@@ -187,8 +187,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		if (wpa_s->sme.ft_used &&
 		    os_memcmp(md, wpa_s->sme.mobility_domain, 2) == 0 &&
 		    wpa_sm_has_ptk(wpa_s->wpa)) {
-			wpa_printf(MSG_DEBUG, "SME: Trying to use FT "
-				   "over-the-air");
+			wpa_dbg(wpa_s, MSG_DEBUG, "SME: Trying to use FT "
+				"over-the-air");
 			params.auth_alg = WPA_AUTH_ALG_FT;
 			params.ie = wpa_s->sme.ft_ies;
 			params.ie_len = wpa_s->sme.ft_ies_len;
@@ -204,8 +204,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		if (rsn && wpa_parse_wpa_ie(rsn, 2 + rsn[1], &_ie) == 0 &&
 		    _ie.capabilities &
 		    (WPA_CAPABILITY_MFPC | WPA_CAPABILITY_MFPR)) {
-			wpa_printf(MSG_DEBUG, "WPA: Selected AP supports MFP: "
-				   "require MFP");
+			wpa_dbg(wpa_s, MSG_DEBUG, "SME: Selected AP supports "
+				"MFP: require MFP");
 			wpa_s->sme.mfp = MGMT_FRAME_PROTECTION_REQUIRED;
 		}
 	}
@@ -229,7 +229,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_cancel_scan(wpa_s);
 
-	wpa_msg(wpa_s, MSG_INFO, "Trying to authenticate with " MACSTR
+	wpa_msg(wpa_s, MSG_INFO, "SME: Trying to authenticate with " MACSTR
 		" (SSID='%s' freq=%d MHz)", MAC2STR(params.bssid),
 		wpa_ssid_txt(params.ssid, params.ssid_len), params.freq);
 
@@ -244,7 +244,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 	wpa_s->sme.auth_alg = params.auth_alg;
 	if (wpa_drv_authenticate(wpa_s, &params) < 0) {
-		wpa_msg(wpa_s, MSG_INFO, "Authentication request to the "
+		wpa_msg(wpa_s, MSG_INFO, "SME: Authentication request to the "
 			"driver failed");
 		wpa_supplicant_req_scan(wpa_s, 1, 0);
 		return;
@@ -264,34 +264,34 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 
 	if (ssid == NULL) {
-		wpa_printf(MSG_DEBUG, "SME: Ignore authentication event when "
-			   "network is not selected");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Ignore authentication event "
+			"when network is not selected");
 		return;
 	}
 
 	if (wpa_s->wpa_state != WPA_AUTHENTICATING) {
-		wpa_printf(MSG_DEBUG, "SME: Ignore authentication event when "
-			   "not in authenticating state");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Ignore authentication event "
+			"when not in authenticating state");
 		return;
 	}
 
 	if (os_memcmp(wpa_s->pending_bssid, data->auth.peer, ETH_ALEN) != 0) {
-		wpa_printf(MSG_DEBUG, "SME: Ignore authentication with "
-			   "unexpected peer " MACSTR,
-			   MAC2STR(data->auth.peer));
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Ignore authentication with "
+			"unexpected peer " MACSTR,
+			MAC2STR(data->auth.peer));
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "SME: Authentication response: peer=" MACSTR
-		   " auth_type=%d status_code=%d",
-		   MAC2STR(data->auth.peer), data->auth.auth_type,
-		   data->auth.status_code);
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Authentication response: peer=" MACSTR
+		" auth_type=%d status_code=%d",
+		MAC2STR(data->auth.peer), data->auth.auth_type,
+		data->auth.status_code);
 	wpa_hexdump(MSG_MSGDUMP, "SME: Authentication response IEs",
 		    data->auth.ies, data->auth.ies_len);
 
 	if (data->auth.status_code != WLAN_STATUS_SUCCESS) {
-		wpa_printf(MSG_DEBUG, "SME: Authentication failed (status "
-			   "code %d)", data->auth.status_code);
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Authentication failed (status "
+			"code %d)", data->auth.status_code);
 
 		if (data->auth.status_code !=
 		    WLAN_STATUS_NOT_SUPPORTED_AUTH_ALG ||
@@ -305,7 +305,7 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		case WLAN_AUTH_OPEN:
 			wpa_s->current_ssid->auth_alg = WPA_AUTH_ALG_SHARED;
 
-			wpa_printf(MSG_DEBUG, "SME: Trying SHARED auth");
+			wpa_dbg(wpa_s, MSG_DEBUG, "SME: Trying SHARED auth");
 			wpa_supplicant_associate(wpa_s, wpa_s->current_bss,
 						 wpa_s->current_ssid);
 			return;
@@ -313,7 +313,7 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		case WLAN_AUTH_SHARED_KEY:
 			wpa_s->current_ssid->auth_alg = WPA_AUTH_ALG_LEAP;
 
-			wpa_printf(MSG_DEBUG, "SME: Trying LEAP auth");
+			wpa_dbg(wpa_s, MSG_DEBUG, "SME: Trying LEAP auth");
 			wpa_supplicant_associate(wpa_s, wpa_s->current_bss,
 						 wpa_s->current_ssid);
 			return;
@@ -376,7 +376,7 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	if (params.wpa_ie == NULL ||
 	    ieee802_11_parse_elems(params.wpa_ie, params.wpa_ie_len, &elems, 0)
 	    < 0) {
-		wpa_printf(MSG_DEBUG, "SME: Could not parse own IEs?!");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Could not parse own IEs?!");
 		os_memset(&elems, 0, sizeof(elems));
 	}
 	if (elems.rsn_ie)
@@ -397,8 +397,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		params.uapsd = -1;
 
 	if (wpa_drv_associate(wpa_s, &params) < 0) {
-		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
-			"failed");
+		wpa_msg(wpa_s, MSG_INFO, "SME: Association request to the "
+			"driver failed");
 		wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 		os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 		return;
@@ -412,7 +412,7 @@ int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 		      const u8 *ies, size_t ies_len)
 {
 	if (md == NULL || ies == NULL) {
-		wpa_printf(MSG_DEBUG, "SME: Remove mobility domain");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Remove mobility domain");
 		os_free(wpa_s->sme.ft_ies);
 		wpa_s->sme.ft_ies = NULL;
 		wpa_s->sme.ft_ies_len = 0;
@@ -437,9 +437,9 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 {
 	int bssid_changed;
 
-	wpa_printf(MSG_DEBUG, "SME: Association with " MACSTR " failed: "
-		   "status code %d", MAC2STR(wpa_s->pending_bssid),
-		   data->assoc_reject.status_code);
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Association with " MACSTR " failed: "
+		"status code %d", MAC2STR(wpa_s->pending_bssid),
+		data->assoc_reject.status_code);
 
 	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 
@@ -452,8 +452,8 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 	 */
 	if (wpa_drv_deauthenticate(wpa_s, wpa_s->pending_bssid,
 				   WLAN_REASON_DEAUTH_LEAVING) < 0) {
-		wpa_msg(wpa_s, MSG_INFO,
-			"Deauth request to the driver failed");
+		wpa_msg(wpa_s, MSG_INFO, "SME: Deauth request to the driver "
+			"failed");
 	}
 	wpa_s->sme.prev_bssid_set = 0;
 
@@ -469,7 +469,7 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 			      union wpa_event_data *data)
 {
-	wpa_printf(MSG_DEBUG, "SME: Authentication timed out");
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Authentication timed out");
 	wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 }
 
@@ -477,7 +477,7 @@ void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 			       union wpa_event_data *data)
 {
-	wpa_printf(MSG_DEBUG, "SME: Association timed out");
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Association timed out");
 	wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 	wpa_supplicant_mark_disassoc(wpa_s);
 }
@@ -486,7 +486,7 @@ void sme_event_assoc_timed_out(struct wpa_supplicant *wpa_s,
 void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 			union wpa_event_data *data)
 {
-	wpa_printf(MSG_DEBUG, "SME: Disassociation event received");
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Disassociation event received");
 	if (wpa_s->sme.prev_bssid_set &&
 	    !(wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)) {
 		/*
@@ -495,8 +495,8 @@ void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 		 * state. For now, force the state to be cleared to avoid
 		 * confusing errors if we try to associate with the AP again.
 		 */
-		wpa_printf(MSG_DEBUG, "SME: Deauthenticate to clear driver "
-			   "state");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Deauthenticate to clear "
+			"driver state");
 		wpa_drv_deauthenticate(wpa_s, wpa_s->sme.prev_bssid,
 				       WLAN_REASON_DEAUTH_LEAVING);
 	}
@@ -516,7 +516,7 @@ static int sme_check_sa_query_timeout(struct wpa_supplicant *wpa_s)
 	os_time_sub(&now, &wpa_s->sme.sa_query_start, &passed);
 	tu = (passed.sec * 1000000 + passed.usec) / 1024;
 	if (sa_query_max_timeout < tu) {
-		wpa_printf(MSG_DEBUG, "SME: SA Query timed out");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: SA Query timed out");
 		sme_stop_sa_query(wpa_s);
 		wpa_supplicant_deauthenticate(
 			wpa_s, WLAN_REASON_PREV_AUTH_NOT_VALID);
@@ -531,8 +531,8 @@ static void sme_send_sa_query_req(struct wpa_supplicant *wpa_s,
 				  const u8 *trans_id)
 {
 	u8 req[2 + WLAN_SA_QUERY_TR_ID_LEN];
-	wpa_printf(MSG_DEBUG, "SME: Sending SA Query Request to "
-		   MACSTR, MAC2STR(wpa_s->bssid));
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Sending SA Query Request to "
+		MACSTR, MAC2STR(wpa_s->bssid));
 	wpa_hexdump(MSG_DEBUG, "SME: SA Query Transaction ID",
 		    trans_id, WLAN_SA_QUERY_TR_ID_LEN);
 	req[0] = WLAN_ACTION_SA_QUERY;
@@ -541,7 +541,8 @@ static void sme_send_sa_query_req(struct wpa_supplicant *wpa_s,
 	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
 				wpa_s->own_addr, wpa_s->bssid,
 				req, sizeof(req)) < 0)
-		wpa_printf(MSG_INFO, "SME: Failed to send SA Query Request");
+		wpa_msg(wpa_s, MSG_INFO, "SME: Failed to send SA Query "
+			"Request");
 }
 
 
@@ -575,8 +576,8 @@ static void sme_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 	usec = (timeout % 1000) * 1024;
 	eloop_register_timeout(sec, usec, sme_sa_query_timer, wpa_s, NULL);
 
-	wpa_printf(MSG_DEBUG, "SME: Association SA Query attempt %d",
-		   wpa_s->sme.sa_query_count);
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Association SA Query attempt %d",
+		wpa_s->sme.sa_query_count);
 
 	sme_send_sa_query_req(wpa_s, trans_id);
 }
@@ -617,8 +618,8 @@ void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 	if (wpa_s->sme.sa_query_count > 0)
 		return;
 
-	wpa_printf(MSG_DEBUG, "SME: Unprotected disconnect dropped - possible "
-		   "AP/STA state mismatch - trigger SA Query");
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Unprotected disconnect dropped - "
+		"possible AP/STA state mismatch - trigger SA Query");
 	sme_start_sa_query(wpa_s);
 }
 
@@ -632,9 +633,8 @@ void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
 	    len < 1 + WLAN_SA_QUERY_TR_ID_LEN ||
 	    data[0] != WLAN_SA_QUERY_RESPONSE)
 		return;
-	wpa_printf(MSG_DEBUG, "SME: Received SA Query response from " MACSTR
-		   " (trans_id %02x%02x)",
-		   MAC2STR(sa), data[1], data[2]);
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Received SA Query response from "
+		MACSTR " (trans_id %02x%02x)", MAC2STR(sa), data[1], data[2]);
 
 	if (os_memcmp(sa, wpa_s->bssid, ETH_ALEN) != 0)
 		return;
@@ -647,13 +647,13 @@ void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
 	}
 
 	if (i >= wpa_s->sme.sa_query_count) {
-		wpa_printf(MSG_DEBUG, "SME: No matching SA Query "
-			   "transaction identifier found");
+		wpa_dbg(wpa_s, MSG_DEBUG, "SME: No matching SA Query "
+			"transaction identifier found");
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "SME: Reply to pending SA Query received from "
-		   MACSTR, MAC2STR(sa));
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Reply to pending SA Query received "
+		"from " MACSTR, MAC2STR(sa));
 	sme_stop_sa_query(wpa_s);
 }
 

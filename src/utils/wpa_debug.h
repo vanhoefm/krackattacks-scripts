@@ -36,6 +36,7 @@ enum {
 #define wpa_hexdump_ascii_key(l,t,b,le) do { } while (0)
 #define wpa_debug_open_file(p) do { } while (0)
 #define wpa_debug_close_file() do { } while (0)
+#define wpa_dbg(args...) do { } while (0)
 
 #else /* CONFIG_NO_STDOUT_DEBUG */
 
@@ -140,6 +141,14 @@ void wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
  */
 void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
 			   size_t len);
+
+/*
+ * wpa_dbg() behaves like wpa_msg(), but it can be removed from build to reduce
+ * binary size. As such, it should be used with debugging messages that are not
+ * needed in the control interface while wpa_msg() has to be used for anything
+ * that needs to shown to control interface monitors.
+ */
+#define wpa_dbg(args...) wpa_msg(args)
 
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 

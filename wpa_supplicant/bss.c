@@ -65,9 +65,9 @@ static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	dl_list_del(&bss->list);
 	dl_list_del(&bss->list_id);
 	wpa_s->num_bss--;
-	wpa_printf(MSG_DEBUG, "BSS: Remove id %u BSSID " MACSTR " SSID '%s'",
-		   bss->id, MAC2STR(bss->bssid),
-		   wpa_ssid_txt(bss->ssid, bss->ssid_len));
+	wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Remove id %u BSSID " MACSTR
+		" SSID '%s'", bss->id, MAC2STR(bss->bssid),
+		wpa_ssid_txt(bss->ssid, bss->ssid_len));
 	wpas_notify_bss_removed(wpa_s, bss->bssid, bss->id);
 	os_free(bss);
 }
@@ -133,8 +133,9 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 	dl_list_add_tail(&wpa_s->bss, &bss->list);
 	dl_list_add_tail(&wpa_s->bss_id, &bss->list_id);
 	wpa_s->num_bss++;
-	wpa_printf(MSG_DEBUG, "BSS: Add new id %u BSSID " MACSTR " SSID '%s'",
-		   bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
+	wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Add new id %u BSSID " MACSTR
+		" SSID '%s'",
+		bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
 	wpas_notify_bss_added(wpa_s, bss->bssid, bss->id);
 	if (wpa_s->num_bss > wpa_s->conf->bss_max_count) {
 		/* Remove the oldest entry */
@@ -317,8 +318,8 @@ static int wpa_bss_in_use(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 void wpa_bss_update_start(struct wpa_supplicant *wpa_s)
 {
 	wpa_s->bss_update_idx++;
-	wpa_printf(MSG_DEBUG, "BSS: Start scan result update %u",
-		   wpa_s->bss_update_idx);
+	wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Start scan result update %u",
+		wpa_s->bss_update_idx);
 }
 
 
@@ -330,13 +331,13 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 
 	ssid = wpa_scan_get_ie(res, WLAN_EID_SSID);
 	if (ssid == NULL) {
-		wpa_printf(MSG_DEBUG, "BSS: No SSID IE included for " MACSTR,
-			   MAC2STR(res->bssid));
+		wpa_dbg(wpa_s, MSG_DEBUG, "BSS: No SSID IE included for "
+			MACSTR, MAC2STR(res->bssid));
 		return;
 	}
 	if (ssid[1] > 32) {
-		wpa_printf(MSG_DEBUG, "BSS: Too long SSID IE included for "
-			   MACSTR, MAC2STR(res->bssid));
+		wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Too long SSID IE included for "
+			MACSTR, MAC2STR(res->bssid));
 		return;
 	}
 
@@ -412,8 +413,8 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 		if (bss->last_update_idx < wpa_s->bss_update_idx)
 			bss->scan_miss_count++;
 		if (bss->scan_miss_count >= WPA_BSS_EXPIRATION_SCAN_COUNT) {
-			wpa_printf(MSG_DEBUG, "BSS: Expire BSS %u due to no "
-				   "match in scan", bss->id);
+			wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Expire BSS %u due to "
+				"no match in scan", bss->id);
 			wpa_bss_remove(wpa_s, bss);
 		}
 	}
@@ -437,8 +438,8 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 			continue;
 
 		if (os_time_before(&bss->last_update, &t)) {
-			wpa_printf(MSG_DEBUG, "BSS: Expire BSS %u due to age",
-				   bss->id);
+			wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Expire BSS %u due to "
+				"age", bss->id);
 			wpa_bss_remove(wpa_s, bss);
 		} else
 			break;

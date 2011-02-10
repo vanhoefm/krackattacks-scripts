@@ -1489,3 +1489,11 @@ int radius_client_get_mib(struct radius_client_data *radius, char *buf,
 
 	return count;
 }
+
+
+void radius_client_reconfig(struct radius_client_data *radius,
+			    struct hostapd_radius_servers *conf)
+{
+	if (radius)
+		radius->conf = conf;
+}

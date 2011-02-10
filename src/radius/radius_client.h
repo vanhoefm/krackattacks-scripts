@@ -259,5 +259,7 @@ void radius_client_flush_auth(struct radius_client_data *radius,
 			      const u8 *addr);
 int radius_client_get_mib(struct radius_client_data *radius, char *buf,
 			  size_t buflen);
+void radius_client_reconfig(struct radius_client_data *radius,
+			    struct hostapd_radius_servers *conf);
 
 #endif /* RADIUS_CLIENT_H */

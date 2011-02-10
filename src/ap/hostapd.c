@@ -46,6 +46,10 @@ extern int wpa_debug_level;
 
 static void hostapd_reload_bss(struct hostapd_data *hapd)
 {
+#ifndef CONFIG_NO_RADIUS
+	radius_client_reconfig(hapd->radius, hapd->conf->radius);
+#endif /* CONFIG_NO_RADIUS */
+
 	if (hostapd_setup_wpa_psk(hapd->conf)) {
 		wpa_printf(MSG_ERROR, "Failed to re-configure WPA PSK "
 			   "after reloading configuration");
@@ -103,14 +107,15 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	 * Deauthenticate all stations since the new configuration may not
 	 * allow them to use the BSS anymore.
 	 */
-	for (j = 0; j < iface->num_bss; j++)
+	for (j = 0; j < iface->num_bss; j++) {
 		hostapd_flush_old_stations(iface->bss[j]);
 
 #ifndef CONFIG_NO_RADIUS
-	/* TODO: update dynamic data based on changed configuration
-	 * items (e.g., open/close sockets, etc.) */
-	radius_client_flush(hapd->radius, 0);
+		/* TODO: update dynamic data based on changed configuration
+		 * items (e.g., open/close sockets, etc.) */
+		radius_client_flush(iface->bss[j]->radius, 0);
 #endif /* CONFIG_NO_RADIUS */
+	}
 
 	oldconf = hapd->iconf;
 	iface->conf = newconf;

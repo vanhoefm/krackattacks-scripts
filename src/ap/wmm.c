@@ -75,6 +75,8 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 	if (hapd->conf->wmm_uapsd)
 		wmm->qos_info |= 0x80;
 
+	wmm->reserved = 0;
+
 	/* fill in a parameter set record for each AC */
 	for (e = 0; e < 4; e++) {
 		struct wmm_ac_parameter *ac = &wmm->ac[e];

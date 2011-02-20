@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.1X-2004 Authenticator
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -879,6 +879,25 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 #endif /* CONFIG_WPS */
 
 	sta->eapol_sm->eap_if->portEnabled = TRUE;
+
+#ifdef CONFIG_IEEE80211R
+	if (sta->auth_alg == WLAN_AUTH_FT) {
+		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
+			       HOSTAPD_LEVEL_DEBUG,
+			       "PMK from FT - skip IEEE 802.1X/EAP");
+		/* Setup EAPOL state machines to already authenticated state
+		 * because of existing FT information from R0KH. */
+		sta->eapol_sm->keyRun = TRUE;
+		sta->eapol_sm->eap_if->eapKeyAvailable = TRUE;
+		sta->eapol_sm->auth_pae_state = AUTH_PAE_AUTHENTICATING;
+		sta->eapol_sm->be_auth_state = BE_AUTH_SUCCESS;
+		sta->eapol_sm->authSuccess = TRUE;
+		if (sta->eapol_sm->eap)
+			eap_sm_notify_cached(sta->eapol_sm->eap);
+		/* TODO: get vlan_id from R0KH using RRB message */
+		return;
+	}
+#endif /* CONFIG_IEEE80211R */
 
 	pmksa = wpa_auth_sta_get_pmksa(sta->wpa_sm);
 	if (pmksa) {

@@ -1,6 +1,6 @@
 /*
  * hostapd / WPA authenticator glue code
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,12 +29,6 @@
 #include "ap_drv_ops.h"
 #include "ap_config.h"
 #include "wpa_auth.h"
-
-
-#ifdef CONFIG_IEEE80211R
-static void hostapd_rrb_receive(void *ctx, const u8 *src_addr, const u8 *buf,
-				size_t len);
-#endif /* CONFIG_IEEE80211R */
 
 
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
@@ -328,8 +322,9 @@ static int hostapd_wpa_auth_ft_iter(struct hostapd_iface *iface, void *ctx)
 				   MAC2STR(idata->src_hapd->own_addr),
 				   idata->src_hapd->conf->iface,
 				   MAC2STR(hapd->own_addr), hapd->conf->iface);
-			hostapd_rrb_receive(hapd, idata->src_hapd->own_addr,
-					    idata->data, idata->data_len);
+			wpa_ft_rrb_rx(hapd->wpa_auth,
+				      idata->src_hapd->own_addr,
+				      idata->data, idata->data_len);
 			return 1;
 		}
 	}
@@ -344,6 +339,8 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 				       const u8 *data, size_t data_len)
 {
 	struct hostapd_data *hapd = ctx;
+	struct l2_ethhdr *buf;
+	int ret;
 
 #ifdef CONFIG_IEEE80211R
 	if (proto == ETH_P_RRB && hapd->iface->for_each_interface) {
@@ -367,7 +364,18 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 						data, data_len);
 	if (hapd->l2 == NULL)
 		return -1;
-	return l2_packet_send(hapd->l2, dst, proto, data, data_len);
+
+	buf = os_malloc(sizeof(*buf) + data_len);
+	if (buf == NULL)
+		return -1;
+	os_memcpy(buf->h_dest, dst, ETH_ALEN);
+	os_memcpy(buf->h_source, hapd->own_addr, ETH_ALEN);
+	buf->h_proto = host_to_be16(proto);
+	os_memcpy(buf + 1, data, data_len);
+	ret = l2_packet_send(hapd->l2, dst, proto, (u8 *) buf,
+			     sizeof(*buf) + data_len);
+	os_free(buf);
+	return -1;
 }
 
 
@@ -432,7 +440,14 @@ static void hostapd_rrb_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 				size_t len)
 {
 	struct hostapd_data *hapd = ctx;
-	wpa_ft_rrb_rx(hapd->wpa_auth, src_addr, buf, len);
+	struct l2_ethhdr *ethhdr;
+	if (len < sizeof(*ethhdr))
+		return;
+	ethhdr = (struct l2_ethhdr *) buf;
+	wpa_printf(MSG_DEBUG, "FT: RRB received packet " MACSTR " -> "
+		   MACSTR, MAC2STR(ethhdr->h_source), MAC2STR(ethhdr->h_dest));
+	wpa_ft_rrb_rx(hapd->wpa_auth, ethhdr->h_source, buf + sizeof(*ethhdr),
+		      len - sizeof(*ethhdr));
 }
 
 #endif /* CONFIG_IEEE80211R */
@@ -495,7 +510,7 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 		hapd->l2 = l2_packet_init(hapd->conf->bridge[0] ?
 					  hapd->conf->bridge :
 					  hapd->conf->iface, NULL, ETH_P_RRB,
-					  hostapd_rrb_receive, hapd, 0);
+					  hostapd_rrb_receive, hapd, 1);
 		if (hapd->l2 == NULL &&
 		    (hapd->driver == NULL ||
 		     hapd->driver->send_ether == NULL)) {

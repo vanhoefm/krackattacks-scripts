@@ -669,7 +669,7 @@ static u8 * tls_send_client_key_exchange(struct tlsv1_client *conn,
 
 	*out_len = 0;
 
-	msglen = 1000;
+	msglen = 2000;
 	if (conn->certificate_requested)
 		msglen += tls_client_cert_chain_der_len(conn);
 

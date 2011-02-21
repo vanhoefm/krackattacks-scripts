@@ -254,6 +254,8 @@ static int _wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd, int print)
 	if (print) {
 		buf[len] = '\0';
 		printf("%s", buf);
+		if (interactive && len > 0 && buf[len - 1] != '\n')
+			printf("\n");
 	}
 	return 0;
 }

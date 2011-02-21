@@ -57,8 +57,8 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 void hostapd_get_ht_capab(struct hostapd_data *hapd,
 			  struct ieee80211_ht_capabilities *ht_cap,
 			  struct ieee80211_ht_capabilities *neg_ht_cap);
-u16 copy_sta_ht_capab(struct sta_info *sta, const u8 *ht_capab,
-		      size_t ht_capab_len);
+u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
+		      const u8 *ht_capab, size_t ht_capab_len);
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);

@@ -30,7 +30,8 @@ u8 * hostapd_eid_ht_capabilities(struct hostapd_data *hapd, u8 *eid)
 	struct ieee80211_ht_capabilities *cap;
 	u8 *pos = eid;
 
-	if (!hapd->iconf->ieee80211n || !hapd->iface->current_mode)
+	if (!hapd->iconf->ieee80211n || !hapd->iface->current_mode ||
+	    hapd->conf->disable_11n)
 		return eid;
 
 	*pos++ = WLAN_EID_HT_CAP;
@@ -58,7 +59,7 @@ u8 * hostapd_eid_ht_operation(struct hostapd_data *hapd, u8 *eid)
 	struct ieee80211_ht_operation *oper;
 	u8 *pos = eid;
 
-	if (!hapd->iconf->ieee80211n)
+	if (!hapd->iconf->ieee80211n || hapd->conf->disable_11n)
 		return eid;
 
 	*pos++ = WLAN_EID_HT_OPERATION;
@@ -160,11 +161,13 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 }
 
 
-u16 copy_sta_ht_capab(struct sta_info *sta, const u8 *ht_capab,
-		      size_t ht_capab_len)
+u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
+		      const u8 *ht_capab, size_t ht_capab_len)
 {
+	/* Disable HT caps for STAs associated to no-HT BSSes. */
 	if (!ht_capab ||
-	    ht_capab_len < sizeof(struct ieee80211_ht_capabilities)) {
+	    ht_capab_len < sizeof(struct ieee80211_ht_capabilities) ||
+	    hapd->conf->disable_11n) {
 		sta->flags &= ~WLAN_STA_HT;
 		os_free(sta->ht_capabilities);
 		sta->ht_capabilities = NULL;

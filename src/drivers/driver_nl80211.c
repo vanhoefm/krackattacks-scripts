@@ -1499,7 +1499,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		int i;
 		nla_for_each_nested(nl_mode,
 				    tb[NL80211_ATTR_SUPPORTED_IFTYPES], i) {
-			switch (nl_mode->nla_type) {
+			switch (nla_type(nl_mode)) {
 			case NL80211_IFTYPE_AP:
 				info->ap_supported = 1;
 				break;

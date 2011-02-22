@@ -404,6 +404,15 @@ static int wpa_supplicant_wps_cred(void *ctx,
 }
 
 
+#ifdef CONFIG_P2P
+static void wpas_wps_pbc_overlap_cb(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	wpas_p2p_notif_pbc_overlap(wpa_s);
+}
+#endif /* CONFIG_P2P */
+
+
 static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 					 struct wps_event_m2d *m2d)
 {
@@ -411,6 +420,21 @@ static void wpa_supplicant_wps_event_m2d(struct wpa_supplicant *wpa_s,
 		"dev_password_id=%d config_error=%d",
 		m2d->dev_password_id, m2d->config_error);
 	wpas_notify_wps_event_m2d(wpa_s, m2d);
+#ifdef CONFIG_P2P
+	if (wpa_s->parent && wpa_s->parent != wpa_s) {
+		wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_M2D
+			"dev_password_id=%d config_error=%d",
+			m2d->dev_password_id, m2d->config_error);
+	}
+	if (m2d->config_error == WPS_CFG_MULTIPLE_PBC_DETECTED) {
+		/*
+		 * Notify P2P from eloop timeout to avoid issues with the
+		 * interface getting removed while processing a message.
+		 */
+		eloop_register_timeout(0, 0, wpas_wps_pbc_overlap_cb, wpa_s,
+				       NULL);
+	}
+#endif /* CONFIG_P2P */
 }
 
 

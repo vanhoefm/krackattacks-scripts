@@ -1556,20 +1556,18 @@ static int tls_connection_client_cert(struct tls_connection *conn,
 		wpa_printf(MSG_DEBUG, "OpenSSL: SSL_use_certificate_file (DER)"
 			   " --> OK");
 		return 0;
-	} else {
-		tls_show_errors(MSG_DEBUG, __func__,
-				"SSL_use_certificate_file (DER) failed");
 	}
 
 	if (SSL_use_certificate_file(conn->ssl, client_cert,
 				     SSL_FILETYPE_PEM) == 1) {
+		ERR_clear_error();
 		wpa_printf(MSG_DEBUG, "OpenSSL: SSL_use_certificate_file (PEM)"
 			   " --> OK");
 		return 0;
-	} else {
-		tls_show_errors(MSG_DEBUG, __func__,
-				"SSL_use_certificate_file (PEM) failed");
 	}
+
+	tls_show_errors(MSG_DEBUG, __func__,
+			"SSL_use_certificate_file failed");
 #else /* OPENSSL_NO_STDIO */
 	wpa_printf(MSG_DEBUG, "OpenSSL: %s - OPENSSL_NO_STDIO", __func__);
 #endif /* OPENSSL_NO_STDIO */
@@ -1900,10 +1898,6 @@ static int tls_connection_private_key(void *_ssl_ctx,
 				   "ASN1(EVP_PKEY_RSA) --> OK");
 			ok = 1;
 			break;
-		} else {
-			tls_show_errors(MSG_DEBUG, __func__,
-					"SSL_use_PrivateKey_ASN1(EVP_PKEY_RSA)"
-					" failed");
 		}
 
 		if (SSL_use_PrivateKey_ASN1(EVP_PKEY_DSA, conn->ssl,
@@ -1913,10 +1907,6 @@ static int tls_connection_private_key(void *_ssl_ctx,
 				   "ASN1(EVP_PKEY_DSA) --> OK");
 			ok = 1;
 			break;
-		} else {
-			tls_show_errors(MSG_DEBUG, __func__,
-					"SSL_use_PrivateKey_ASN1(EVP_PKEY_DSA)"
-					" failed");
 		}
 
 		if (SSL_use_RSAPrivateKey_ASN1(conn->ssl,
@@ -1926,9 +1916,6 @@ static int tls_connection_private_key(void *_ssl_ctx,
 				   "SSL_use_RSAPrivateKey_ASN1 --> OK");
 			ok = 1;
 			break;
-		} else {
-			tls_show_errors(MSG_DEBUG, __func__,
-					"SSL_use_RSAPrivateKey_ASN1 failed");
 		}
 
 		if (tls_read_pkcs12_blob(ssl_ctx, conn->ssl, private_key_blob,
@@ -1950,10 +1937,6 @@ static int tls_connection_private_key(void *_ssl_ctx,
 				   "SSL_use_PrivateKey_File (DER) --> OK");
 			ok = 1;
 			break;
-		} else {
-			tls_show_errors(MSG_DEBUG, __func__,
-					"SSL_use_PrivateKey_File (DER) "
-					"failed");
 		}
 
 		if (SSL_use_PrivateKey_file(conn->ssl, private_key,
@@ -1962,10 +1945,6 @@ static int tls_connection_private_key(void *_ssl_ctx,
 				   "SSL_use_PrivateKey_File (PEM) --> OK");
 			ok = 1;
 			break;
-		} else {
-			tls_show_errors(MSG_DEBUG, __func__,
-					"SSL_use_PrivateKey_File (PEM) "
-					"failed");
 		}
 #else /* OPENSSL_NO_STDIO */
 		wpa_printf(MSG_DEBUG, "OpenSSL: %s - OPENSSL_NO_STDIO",
@@ -1991,9 +1970,9 @@ static int tls_connection_private_key(void *_ssl_ctx,
 	}
 
 	if (!ok) {
-		wpa_printf(MSG_INFO, "OpenSSL: Failed to load private key");
+		tls_show_errors(MSG_INFO, __func__,
+				"Failed to load private key");
 		os_free(passwd);
-		ERR_clear_error();
 		return -1;
 	}
 	ERR_clear_error();

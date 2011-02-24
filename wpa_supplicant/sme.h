@@ -34,9 +34,12 @@ void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 			union wpa_event_data *data);
 void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s, const u8 *sa,
 				 const u8 *da, u16 reason_code);
-void sme_stop_sa_query(struct wpa_supplicant *wpa_s);
 void sme_sa_query_rx(struct wpa_supplicant *wpa_s, const u8 *sa,
 		     const u8 *data, size_t len);
+void sme_state_changed(struct wpa_supplicant *wpa_s);
+void sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
+				       const u8 *prev_pending_bssid);
+void sme_deinit(struct wpa_supplicant *wpa_s);
 
 #else /* CONFIG_SME */
 
@@ -81,6 +84,20 @@ static inline void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 static inline void sme_event_unprot_disconnect(struct wpa_supplicant *wpa_s,
 					       const u8 *sa, const u8 *da,
 					       u16 reason_code)
+{
+}
+
+static inline void sme_state_changed(struct wpa_supplicant *wpa_s)
+{
+}
+
+static inline void
+sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
+				  const u8 *prev_pending_bssid)
+{
+}
+
+static inline void sme_deinit(struct wpa_supplicant *wpa_s)
 {
 }
 

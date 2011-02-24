@@ -25,6 +25,7 @@
 #include "driver_i.h"
 #include "scan.h"
 #include "p2p_supplicant.h"
+#include "sme.h"
 #include "notify.h"
 
 int wpas_notify_supplicant_initialized(struct wpa_global *global)
@@ -89,6 +90,8 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 	else if (new_state < WPA_ASSOCIATED)
 		wpas_p2p_notif_disconnected(wpa_s);
 #endif /* CONFIG_P2P */
+
+	sme_state_changed(wpa_s);
 }
 
 

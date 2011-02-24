@@ -419,14 +419,7 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->ibss_rsn = NULL;
 #endif /* CONFIG_IBSS_RSN */
 
-#ifdef CONFIG_SME
-	os_free(wpa_s->sme.ft_ies);
-	wpa_s->sme.ft_ies = NULL;
-	wpa_s->sme.ft_ies_len = 0;
-#ifdef CONFIG_IEEE80211W
-	sme_stop_sa_query(wpa_s);
-#endif /* CONFIG_IEEE80211W */
-#endif /* CONFIG_SME */
+	sme_deinit(wpa_s);
 
 #ifdef CONFIG_AP
 	wpa_supplicant_ap_deinit(wpa_s);

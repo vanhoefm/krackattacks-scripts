@@ -34,6 +34,16 @@
 #include "scan.h"
 #include "sme.h"
 
+#define SME_AUTH_TIMEOUT 5
+#define SME_ASSOC_TIMEOUT 5
+
+static void sme_auth_timer(void *eloop_ctx, void *timeout_ctx);
+static void sme_assoc_timer(void *eloop_ctx, void *timeout_ctx);
+#ifdef CONFIG_IEEE80211W
+static void sme_stop_sa_query(struct wpa_supplicant *wpa_s);
+#endif /* CONFIG_IEEE80211W */
+
+
 void sme_authenticate(struct wpa_supplicant *wpa_s,
 		      struct wpa_bss *bss, struct wpa_ssid *ssid)
 {
@@ -250,7 +260,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		return;
 	}
 
-	/* TODO: add timeout on authentication */
+	eloop_register_timeout(SME_AUTH_TIMEOUT, 0, sme_auth_timer, wpa_s,
+			       NULL);
 
 	/*
 	 * Association will be started based on the authentication event from
@@ -288,6 +299,8 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		data->auth.status_code);
 	wpa_hexdump(MSG_MSGDUMP, "SME: Authentication response IEs",
 		    data->auth.ies, data->auth.ies_len);
+
+	eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);
 
 	if (data->auth.status_code != WLAN_STATUS_SUCCESS) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Authentication failed (status "
@@ -404,7 +417,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		return;
 	}
 
-	/* TODO: add timeout on association */
+	eloop_register_timeout(SME_ASSOC_TIMEOUT, 0, sme_assoc_timer, wpa_s,
+			       NULL);
 }
 
 
@@ -432,24 +446,12 @@ int sme_update_ft_ies(struct wpa_supplicant *wpa_s, const u8 *md,
 }
 
 
-void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
-			    union wpa_event_data *data)
+static void sme_deauth(struct wpa_supplicant *wpa_s)
 {
 	int bssid_changed;
 
-	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Association with " MACSTR " failed: "
-		"status code %d", MAC2STR(wpa_s->pending_bssid),
-		data->assoc_reject.status_code);
-
 	bssid_changed = !is_zero_ether_addr(wpa_s->bssid);
 
-	/*
-	 * For now, unconditionally terminate the previous authentication. In
-	 * theory, this should not be needed, but mac80211 gets quite confused
-	 * if the authentication is left pending.. Some roaming cases might
-	 * benefit from using the previous authentication, so this could be
-	 * optimized in the future.
-	 */
 	if (wpa_drv_deauthenticate(wpa_s, wpa_s->pending_bssid,
 				   WLAN_REASON_DEAUTH_LEAVING) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "SME: Deauth request to the driver "
@@ -463,6 +465,26 @@ void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);
+}
+
+
+void sme_event_assoc_reject(struct wpa_supplicant *wpa_s,
+			    union wpa_event_data *data)
+{
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Association with " MACSTR " failed: "
+		"status code %d", MAC2STR(wpa_s->pending_bssid),
+		data->assoc_reject.status_code);
+
+	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
+
+	/*
+	 * For now, unconditionally terminate the previous authentication. In
+	 * theory, this should not be needed, but mac80211 gets quite confused
+	 * if the authentication is left pending.. Some roaming cases might
+	 * benefit from using the previous authentication, so this could be
+	 * optimized in the future.
+	 */
+	sme_deauth(wpa_s);
 }
 
 
@@ -500,6 +522,72 @@ void sme_event_disassoc(struct wpa_supplicant *wpa_s,
 		wpa_drv_deauthenticate(wpa_s, wpa_s->sme.prev_bssid,
 				       WLAN_REASON_DEAUTH_LEAVING);
 	}
+}
+
+
+static void sme_auth_timer(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	if (wpa_s->wpa_state == WPA_AUTHENTICATING) {
+		wpa_msg(wpa_s, MSG_DEBUG, "SME: Authentication timeout");
+		sme_deauth(wpa_s);
+	}
+}
+
+
+static void sme_assoc_timer(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	if (wpa_s->wpa_state == WPA_ASSOCIATING) {
+		wpa_msg(wpa_s, MSG_DEBUG, "SME: Association timeout");
+		sme_deauth(wpa_s);
+	}
+}
+
+
+void sme_state_changed(struct wpa_supplicant *wpa_s)
+{
+	/* Make sure timers are cleaned up appropriately. */
+	if (wpa_s->wpa_state != WPA_ASSOCIATING)
+		eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
+	if (wpa_s->wpa_state != WPA_AUTHENTICATING)
+		eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);
+}
+
+
+void sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
+				       const u8 *prev_pending_bssid)
+{
+	/*
+	 * mac80211-workaround to force deauth on failed auth cmd,
+	 * requires us to remain in authenticating state to allow the
+	 * second authentication attempt to be continued properly.
+	 */
+	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Allow pending authentication "
+		"to proceed after disconnection event");
+	wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
+	os_memcpy(wpa_s->pending_bssid, prev_pending_bssid, ETH_ALEN);
+
+	/*
+	 * Re-arm authentication timer in case auth fails for whatever reason.
+	 */
+	eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);
+	eloop_register_timeout(SME_AUTH_TIMEOUT, 0, sme_auth_timer, wpa_s,
+			       NULL);
+}
+
+
+void sme_deinit(struct wpa_supplicant *wpa_s)
+{
+	os_free(wpa_s->sme.ft_ies);
+	wpa_s->sme.ft_ies = NULL;
+	wpa_s->sme.ft_ies_len = 0;
+#ifdef CONFIG_IEEE80211W
+	sme_stop_sa_query(wpa_s);
+#endif /* CONFIG_IEEE80211W */
+
+	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
+	eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);
 }
 
 

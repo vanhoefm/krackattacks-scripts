@@ -699,13 +699,20 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	 */
 	if (wpa_s->reassociate ||
 	    (os_memcmp(selected->bssid, wpa_s->bssid, ETH_ALEN) != 0 &&
-	     (wpa_s->wpa_state != WPA_ASSOCIATING ||
+	     ((wpa_s->wpa_state != WPA_ASSOCIATING &&
+	       wpa_s->wpa_state != WPA_AUTHENTICATING) ||
 	      os_memcmp(selected->bssid, wpa_s->pending_bssid, ETH_ALEN) !=
 	      0))) {
 		if (wpa_supplicant_scard_init(wpa_s, ssid)) {
 			wpa_supplicant_req_new_scan(wpa_s, 10, 0);
 			return;
 		}
+		wpa_msg(wpa_s, MSG_DEBUG, "Request association: "
+			"reassociate: %d  selected: "MACSTR "  bssid: " MACSTR
+			"  pending: " MACSTR "  wpa_state: %s",
+			wpa_s->reassociate, MAC2STR(selected->bssid),
+			MAC2STR(wpa_s->bssid), MAC2STR(wpa_s->pending_bssid),
+			wpa_supplicant_state_txt(wpa_s->wpa_state));
 		wpa_supplicant_associate(wpa_s, selected, ssid);
 	} else {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Already associated with the "
@@ -1356,13 +1363,11 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 					  u16 reason_code)
 {
 	const u8 *bssid;
-#ifdef CONFIG_SME
 	int authenticating;
 	u8 prev_pending_bssid[ETH_ALEN];
 
 	authenticating = wpa_s->wpa_state == WPA_AUTHENTICATING;
 	os_memcpy(prev_pending_bssid, wpa_s->pending_bssid, ETH_ALEN);
-#endif /* CONFIG_SME */
 
 	if (wpa_s->key_mgmt == WPA_KEY_MGMT_WPA_NONE) {
 		/*
@@ -1409,20 +1414,9 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_mark_disassoc(wpa_s);
 	bgscan_deinit(wpa_s);
 	wpa_s->bgscan_ssid = NULL;
-#ifdef CONFIG_SME
-	if (authenticating &&
-	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)) {
-		/*
-		 * mac80211-workaround to force deauth on failed auth cmd,
-		 * requires us to remain in authenticating state to allow the
-		 * second authentication attempt to be continued properly.
-		 */
-		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Allow pending authentication "
-			"to proceed after disconnection event");
-		wpa_supplicant_set_state(wpa_s, WPA_AUTHENTICATING);
-		os_memcpy(wpa_s->pending_bssid, prev_pending_bssid, ETH_ALEN);
-	}
-#endif /* CONFIG_SME */
+
+	if (authenticating && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
+		sme_disassoc_while_authenticating(wpa_s, prev_pending_bssid);
 }
 
 

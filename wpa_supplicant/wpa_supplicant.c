@@ -202,7 +202,12 @@ static void wpa_supplicant_timeout(void *eloop_ctx, void *timeout_ctx)
 	wpa_sm_notify_disassoc(wpa_s->wpa);
 	wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 	wpa_s->reassociate = 1;
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	/*
+	 * If we timed out, the AP or the local radio may be busy.
+	 * So, wait a second until scanning again.
+	 */
+	wpa_supplicant_req_scan(wpa_s, 1, 0);
 }
 
 

@@ -1978,8 +1978,11 @@ SM_STEP(WPA_PTK)
 	if (sm->Init)
 		SM_ENTER(WPA_PTK, INITIALIZE);
 	else if (sm->Disconnect
-		 /* || FIX: dot11RSNAConfigSALifetime timeout */)
+		 /* || FIX: dot11RSNAConfigSALifetime timeout */) {
+		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG,
+				"WPA_PTK: sm->Disconnect");
 		SM_ENTER(WPA_PTK, DISCONNECT);
+	}
 	else if (sm->DeauthenticationRequest)
 		SM_ENTER(WPA_PTK, DISCONNECTED);
 	else if (sm->AuthenticationRequest)
@@ -2015,6 +2018,8 @@ SM_STEP(WPA_PTK)
 			SM_ENTER(WPA_PTK, PTKSTART);
 		else {
 			wpa_auth->dot11RSNA4WayHandshakeFailures++;
+			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_INFO,
+					"INITPMK - keyAvailable = false");
 			SM_ENTER(WPA_PTK, DISCONNECT);
 		}
 		break;
@@ -2035,6 +2040,9 @@ SM_STEP(WPA_PTK)
 		else if (sm->TimeoutCtr >
 			 (int) dot11RSNAConfigPairwiseUpdateCount) {
 			wpa_auth->dot11RSNA4WayHandshakeFailures++;
+			wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+					 "PTKSTART: Retry limit %d reached",
+					 dot11RSNAConfigPairwiseUpdateCount);
 			SM_ENTER(WPA_PTK, DISCONNECT);
 		} else if (sm->TimeoutEvt)
 			SM_ENTER(WPA_PTK, PTKSTART);
@@ -2058,6 +2066,10 @@ SM_STEP(WPA_PTK)
 		else if (sm->TimeoutCtr >
 			 (int) dot11RSNAConfigPairwiseUpdateCount) {
 			wpa_auth->dot11RSNA4WayHandshakeFailures++;
+			wpa_auth_vlogger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+					 "PTKINITNEGOTIATING: Retry limit %d "
+					 "reached",
+					 dot11RSNAConfigPairwiseUpdateCount);
 			SM_ENTER(WPA_PTK, DISCONNECT);
 		} else if (sm->TimeoutEvt)
 			SM_ENTER(WPA_PTK, PTKINITNEGOTIATING);

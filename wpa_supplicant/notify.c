@@ -376,4 +376,9 @@ void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 {
 }
 
+
+void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s, int status)
+{
+}
+
 #endif /* CONFIG_P2P */

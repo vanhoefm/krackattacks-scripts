@@ -280,8 +280,8 @@ int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
 {
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];
-	return hostapd_if_add(hapd, WPA_IF_AP_VLAN, ifname, NULL, NULL, NULL,
-			      force_ifname, if_addr);
+	return hostapd_if_add(hapd, WPA_IF_AP_VLAN, ifname, hapd->own_addr,
+			      NULL, NULL, force_ifname, if_addr);
 }
 
 

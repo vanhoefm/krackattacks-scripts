@@ -1651,6 +1651,8 @@ void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 
 		pos = tlv_end;
 	}
+
+	wpas_notify_p2p_sd_response(wpa_s, sa, update_indic, tlvs, tlvs_len);
 }
 
 

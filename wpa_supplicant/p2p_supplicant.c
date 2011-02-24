@@ -1131,6 +1131,8 @@ void wpas_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id)
 	struct wpa_supplicant *wpa_s = ctx;
 	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_REQUEST MACSTR
 		" dev_passwd_id=%u", MAC2STR(src), dev_passwd_id);
+
+	wpas_notify_p2p_go_neg_req(wpa_s, src, dev_passwd_id);
 }
 
 

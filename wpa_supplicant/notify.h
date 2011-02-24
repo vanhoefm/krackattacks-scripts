@@ -85,5 +85,7 @@ void wpas_notify_p2p_device_lost(struct wpa_supplicant *wpa_s,
 void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
 				   const struct wpa_ssid *ssid,
 				   const char *role);
+void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
+				const u8 *src, u16 dev_passwd_id);
 
 #endif /* NOTIFY_H */

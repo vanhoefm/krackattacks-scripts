@@ -370,4 +370,10 @@ void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
 {
 }
 
+
+void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
+				const u8 *src, u16 dev_passwd_id)
+{
+}
+
 #endif /* CONFIG_P2P */

@@ -1192,20 +1192,20 @@ static void handle_deauth(struct hostapd_data *hapd,
 	struct sta_info *sta;
 
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.deauth)) {
-		printf("handle_deauth - too short payload (len=%lu)\n",
-		       (unsigned long) len);
+		wpa_msg(hapd, MSG_DEBUG, "handle_deauth - too short payload "
+			"(len=%lu)", (unsigned long) len);
 		return;
 	}
 
-	wpa_printf(MSG_DEBUG, "deauthentication: STA=" MACSTR
-		   " reason_code=%d",
-		   MAC2STR(mgmt->sa),
-		   le_to_host16(mgmt->u.deauth.reason_code));
+	wpa_msg(hapd, MSG_DEBUG, "deauthentication: STA=" MACSTR
+		" reason_code=%d",
+		MAC2STR(mgmt->sa), le_to_host16(mgmt->u.deauth.reason_code));
 
 	sta = ap_get_sta(hapd, mgmt->sa);
 	if (sta == NULL) {
-		printf("Station " MACSTR " trying to deauthenticate, but it "
-		       "is not authenticated.\n", MAC2STR(mgmt->sa));
+		wpa_msg(hapd, MSG_DEBUG, "Station " MACSTR " trying to "
+			"deauthenticate, but it is not authenticated",
+			MAC2STR(mgmt->sa));
 		return;
 	}
 
@@ -1561,7 +1561,7 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		handle_disassoc(hapd, mgmt, len);
 		break;
 	case WLAN_FC_STYPE_DEAUTH:
-		wpa_printf(MSG_DEBUG, "mgmt::deauth");
+		wpa_msg(hapd, MSG_DEBUG, "mgmt::deauth");
 		handle_deauth(hapd, mgmt, len);
 		break;
 	case WLAN_FC_STYPE_ACTION:

@@ -442,6 +442,15 @@ struct p2p_config {
 			  int new_device);
 
 	/**
+	 * dev_lost - Notification of a lost P2P Device
+	 * @ctx: Callback context from cb_ctx
+	 * @dev_addr: P2P Device Address of the lost P2P Device
+	 *
+	 * This callback is used to notify that a P2P Device has been deleted.
+	 */
+	void (*dev_lost)(void *ctx, const u8 *dev_addr);
+
+	/**
 	 * go_neg_req_rx - Notification of a receive GO Negotiation Request
 	 * @ctx: Callback context from cb_ctx
 	 * @src: Source address of the message triggering this notification

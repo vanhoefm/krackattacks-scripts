@@ -80,5 +80,7 @@ void wpas_notify_resume(struct wpa_global *global);
 
 void wpas_notify_p2p_device_found(struct wpa_supplicant *wpa_s,
 				  const u8 *dev_addr, int new_device);
+void wpas_notify_p2p_device_lost(struct wpa_supplicant *wpa_s,
+				 const u8 *dev_addr);
 
 #endif /* NOTIFY_H */

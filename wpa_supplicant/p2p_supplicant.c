@@ -264,6 +264,10 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 	}
 	wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_REMOVED "%s %s%s",
 		wpa_s->ifname, gtype, reason);
+
+	if (ssid)
+		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);
+
 	if (wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE) {
 		struct wpa_global *global;
 		char *ifname;

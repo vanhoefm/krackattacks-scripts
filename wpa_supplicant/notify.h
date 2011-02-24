@@ -82,5 +82,8 @@ void wpas_notify_p2p_device_found(struct wpa_supplicant *wpa_s,
 				  const u8 *dev_addr, int new_device);
 void wpas_notify_p2p_device_lost(struct wpa_supplicant *wpa_s,
 				 const u8 *dev_addr);
+void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
+				   const struct wpa_ssid *ssid,
+				   const char *role);
 
 #endif /* NOTIFY_H */

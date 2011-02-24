@@ -363,4 +363,11 @@ void wpas_notify_p2p_device_lost(struct wpa_supplicant *wpa_s,
 {
 }
 
+
+void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
+				   const struct wpa_ssid *ssid,
+				   const char *role)
+{
+}
+
 #endif /* CONFIG_P2P */

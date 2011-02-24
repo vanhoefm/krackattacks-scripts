@@ -1582,6 +1582,9 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 	}
 
 done:
+	wpas_notify_p2p_sd_request(wpa_s, freq, sa, dialog_token,
+				   update_indic, tlvs, tlvs_len);
+
 	wpas_p2p_sd_response(wpa_s, freq, sa, dialog_token, resp);
 
 	wpabuf_free(resp);

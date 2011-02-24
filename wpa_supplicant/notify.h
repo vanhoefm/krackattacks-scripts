@@ -91,5 +91,9 @@ void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s,
 				      int status);
 void wpas_notify_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 				       int status, const u8 *bssid);
+void wpas_notify_p2p_sd_request(struct wpa_supplicant *wpa_s,
+				int freq, const u8 *sa, u8 dialog_token,
+				u16 update_indic, const u8 *tlvs,
+				size_t tlvs_len);
 
 #endif /* NOTIFY_H */

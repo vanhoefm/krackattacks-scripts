@@ -387,4 +387,12 @@ void wpas_notify_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 {
 }
 
+
+void wpas_notify_p2p_sd_request(struct wpa_supplicant *wpa_s,
+				int freq, const u8 *sa, u8 dialog_token,
+				u16 update_indic, const u8 *tlvs,
+				size_t tlvs_len)
+{
+}
+
 #endif /* CONFIG_P2P */

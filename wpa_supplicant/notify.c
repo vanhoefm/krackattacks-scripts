@@ -381,4 +381,10 @@ void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s, int status)
 {
 }
 
+
+void wpas_notify_p2p_invitation_result(struct wpa_supplicant *wpa_s,
+				       int status, const u8 *bssid)
+{
+}
+
 #endif /* CONFIG_P2P */

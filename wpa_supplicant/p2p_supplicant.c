@@ -2073,6 +2073,7 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid)
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_INVITATION_RESULT
 			"status=%d ", status);
 	}
+	wpas_notify_p2p_invitation_result(wpa_s, status, bssid);
 
 	if (wpa_s->pending_invite_ssid_id == -1)
 		return; /* Invitation to active group */

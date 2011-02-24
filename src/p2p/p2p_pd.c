@@ -56,8 +56,8 @@ static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
 	p2p_buf_add_capability(buf, p2p->dev_capab, 0);
 	p2p_buf_add_device_info(buf, p2p, NULL);
 	if (go) {
-		p2p_buf_add_group_id(buf, go->p2p_device_addr, go->oper_ssid,
-				     go->oper_ssid_len);
+		p2p_buf_add_group_id(buf, go->info.p2p_device_addr,
+				     go->oper_ssid, go->oper_ssid_len);
 	}
 	p2p_buf_update_ie_hdr(buf, len);
 
@@ -266,16 +266,17 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: No Listen/Operating frequency known for the "
 			"peer " MACSTR " to send Provision Discovery Request",
-			MAC2STR(dev->p2p_device_addr));
+			MAC2STR(dev->info.p2p_device_addr));
 		return -1;
 	}
 
 	if (dev->flags & P2P_DEV_GROUP_CLIENT_ONLY) {
-		if (!(dev->dev_capab & P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
+		if (!(dev->info.dev_capab &
+		      P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Cannot use PD with P2P Device " MACSTR
 				" that is in a group and is not discoverable",
-				MAC2STR(dev->p2p_device_addr));
+				MAC2STR(dev->info.p2p_device_addr));
 			return -1;
 		}
 		/* TODO: use device discoverability request through GO */
@@ -291,8 +292,8 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 		return -1;
 
 	p2p->pending_action_state = P2P_PENDING_PD;
-	if (p2p_send_action(p2p, freq, dev->p2p_device_addr,
-			    p2p->cfg->dev_addr, dev->p2p_device_addr,
+	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
+			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");

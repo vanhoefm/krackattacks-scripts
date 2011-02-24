@@ -196,7 +196,7 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: No Listen/Operating frequency known for the "
 			"peer " MACSTR " to send GO Negotiation Request",
-			MAC2STR(dev->p2p_device_addr));
+			MAC2STR(dev->info.p2p_device_addr));
 		return -1;
 	}
 
@@ -210,8 +210,8 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 	p2p->go_neg_peer = dev;
 	dev->flags |= P2P_DEV_WAIT_GO_NEG_RESPONSE;
 	dev->connect_reqs++;
-	if (p2p_send_action(p2p, freq, dev->p2p_device_addr,
-			    p2p->cfg->dev_addr, dev->p2p_device_addr,
+	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
+			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");

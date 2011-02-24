@@ -1995,15 +1995,28 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpas_p2p_cancel_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq);
 		break;
-	case EVENT_P2P_DEV_FOUND:
-		wpas_dev_found(wpa_s, data->p2p_dev_found.addr,
-			       data->p2p_dev_found.dev_addr,
-			       data->p2p_dev_found.pri_dev_type,
-			       data->p2p_dev_found.dev_name,
-			       data->p2p_dev_found.config_methods,
-			       data->p2p_dev_found.dev_capab,
-			       data->p2p_dev_found.group_capab);
+	case EVENT_P2P_DEV_FOUND: {
+		struct p2p_peer_info peer_info;
+
+		os_memset(&peer_info, 0, sizeof(peer_info));
+		if (data->p2p_dev_found.dev_addr)
+			os_memcpy(peer_info.p2p_device_addr,
+				  data->p2p_dev_found.dev_addr, ETH_ALEN);
+		if (data->p2p_dev_found.pri_dev_type)
+			os_memcpy(peer_info.pri_dev_type,
+				  data->p2p_dev_found.pri_dev_type,
+				  sizeof(peer_info.pri_dev_type));
+		if (data->p2p_dev_found.dev_name)
+			os_strlcpy(peer_info.device_name,
+				   data->p2p_dev_found.dev_name,
+				   sizeof(peer_info.device_name));
+		peer_info.config_methods = data->p2p_dev_found.config_methods;
+		peer_info.dev_capab = data->p2p_dev_found.dev_capab;
+		peer_info.group_capab = data->p2p_dev_found.group_capab;
+
+		wpas_dev_found(wpa_s, data->p2p_dev_found.addr, &peer_info);
 		break;
+		}
 	case EVENT_P2P_GO_NEG_REQ_RX:
 		wpas_go_neg_req_rx(wpa_s, data->p2p_go_neg_req_rx.src,
 				   data->p2p_go_neg_req_rx.dev_passwd_id);

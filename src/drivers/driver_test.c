@@ -3117,9 +3117,8 @@ static void test_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id)
 }
 
 
-static void test_dev_found(void *ctx, const u8 *addr, const u8 *dev_addr,
-			   const u8 *pri_dev_type, const char *dev_name,
-			   u16 config_methods, u8 dev_capab, u8 group_capab)
+static void test_dev_found(void *ctx, const u8 *addr,
+			   const struct p2p_peer_info *info)
 {
 	struct wpa_driver_test_data *drv = ctx;
 	union wpa_event_data event;
@@ -3127,19 +3126,20 @@ static void test_dev_found(void *ctx, const u8 *addr, const u8 *dev_addr,
 	wpa_printf(MSG_DEBUG, "%s(" MACSTR " p2p_dev_addr=" MACSTR
 		   " pri_dev_type=%s name='%s' config_methods=0x%x "
 		   "dev_capab=0x%x group_capab=0x%x)",
-		   __func__, MAC2STR(addr), MAC2STR(dev_addr),
-		   wps_dev_type_bin2str(pri_dev_type, devtype,
+		   __func__, MAC2STR(addr), MAC2STR(info->p2p_device_addr),
+		   wps_dev_type_bin2str(info->pri_dev_type, devtype,
 					sizeof(devtype)),
-		   dev_name, config_methods, dev_capab, group_capab);
+		   info->device_name, info->config_methods, info->dev_capab,
+		   info->group_capab);
 
 	os_memset(&event, 0, sizeof(event));
 	event.p2p_dev_found.addr = addr;
-	event.p2p_dev_found.dev_addr = dev_addr;
-	event.p2p_dev_found.pri_dev_type = pri_dev_type;
-	event.p2p_dev_found.dev_name = dev_name;
-	event.p2p_dev_found.config_methods = config_methods;
-	event.p2p_dev_found.dev_capab = dev_capab;
-	event.p2p_dev_found.group_capab = group_capab;
+	event.p2p_dev_found.dev_addr = info->p2p_device_addr;
+	event.p2p_dev_found.pri_dev_type = info->pri_dev_type;
+	event.p2p_dev_found.dev_name = info->device_name;
+	event.p2p_dev_found.config_methods = info->config_methods;
+	event.p2p_dev_found.dev_capab = info->dev_capab;
+	event.p2p_dev_found.group_capab = info->group_capab;
 	wpa_supplicant_event(drv->ctx, EVENT_P2P_DEV_FOUND, &event);
 }
 

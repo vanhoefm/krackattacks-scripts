@@ -1130,19 +1130,21 @@ void wpas_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id)
 }
 
 
-void wpas_dev_found(void *ctx, const u8 *addr, const u8 *dev_addr,
-		    const u8 *pri_dev_type, const char *dev_name,
-		    u16 config_methods, u8 dev_capab, u8 group_capab)
+void wpas_dev_found(void *ctx, const u8 *addr,
+		    const struct p2p_peer_info *info)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
+
 	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_DEVICE_FOUND MACSTR
 		" p2p_dev_addr=" MACSTR
 		" pri_dev_type=%s name='%s' config_methods=0x%x "
 		"dev_capab=0x%x group_capab=0x%x",
-		MAC2STR(addr), MAC2STR(dev_addr),
-		wps_dev_type_bin2str(pri_dev_type, devtype, sizeof(devtype)),
-		dev_name, config_methods, dev_capab, group_capab);
+		MAC2STR(addr), MAC2STR(info->p2p_device_addr),
+		wps_dev_type_bin2str(info->pri_dev_type, devtype,
+				     sizeof(devtype)),
+		info->device_name, info->config_methods,
+		info->dev_capab, info->group_capab);
 }
 
 

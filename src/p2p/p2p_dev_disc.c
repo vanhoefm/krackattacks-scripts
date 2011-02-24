@@ -38,7 +38,7 @@ static struct wpabuf * p2p_build_dev_disc_req(struct p2p_data *p2p,
 
 	len = p2p_buf_add_ie_hdr(buf);
 	p2p_buf_add_device_id(buf, dev_id);
-	p2p_buf_add_group_id(buf, go->p2p_device_addr, go->oper_ssid,
+	p2p_buf_add_group_id(buf, go->info.p2p_device_addr, go->oper_ssid,
 			     go->oper_ssid_len);
 	p2p_buf_update_ie_hdr(buf, len);
 
@@ -86,21 +86,22 @@ int p2p_send_dev_disc_req(struct p2p_data *p2p, struct p2p_device *dev)
 		return -1;
 	}
 
-	req = p2p_build_dev_disc_req(p2p, go, dev->p2p_device_addr);
+	req = p2p_build_dev_disc_req(p2p, go, dev->info.p2p_device_addr);
 	if (req == NULL)
 		return -1;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Sending Device Discoverability Request to GO " MACSTR
 		" for client " MACSTR,
-		MAC2STR(go->p2p_device_addr), MAC2STR(dev->p2p_device_addr));
+		MAC2STR(go->info.p2p_device_addr),
+		MAC2STR(dev->info.p2p_device_addr));
 
 	p2p->pending_client_disc_go = go;
-	os_memcpy(p2p->pending_client_disc_addr, dev->p2p_device_addr,
+	os_memcpy(p2p->pending_client_disc_addr, dev->info.p2p_device_addr,
 		  ETH_ALEN);
 	p2p->pending_action_state = P2P_PENDING_DEV_DISC_REQUEST;
-	if (p2p_send_action(p2p, dev->oper_freq, go->p2p_device_addr,
-			    p2p->cfg->dev_addr, go->p2p_device_addr,
+	if (p2p_send_action(p2p, dev->oper_freq, go->info.p2p_device_addr,
+			    p2p->cfg->dev_addr, go->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 1000) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
@@ -243,7 +244,8 @@ void p2p_process_dev_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		MAC2STR(sa));
 
 	go = p2p->pending_client_disc_go;
-	if (go == NULL || os_memcmp(sa, go->p2p_device_addr, ETH_ALEN) != 0) {
+	if (go == NULL ||
+	    os_memcmp(sa, go->info.p2p_device_addr, ETH_ALEN) != 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Ignore unexpected "
 			"Device Discoverability Response");
 		return;
@@ -274,9 +276,9 @@ void p2p_process_dev_disc_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (p2p->go_neg_peer == NULL ||
 	    os_memcmp(p2p->pending_client_disc_addr,
-		      p2p->go_neg_peer->p2p_device_addr, ETH_ALEN) != 0 ||
-	    os_memcmp(p2p->go_neg_peer->member_in_go_dev, go->p2p_device_addr,
-		      ETH_ALEN) != 0) {
+		      p2p->go_neg_peer->info.p2p_device_addr, ETH_ALEN) != 0 ||
+	    os_memcmp(p2p->go_neg_peer->member_in_go_dev,
+		      go->info.p2p_device_addr, ETH_ALEN) != 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: No pending "
 			"operation with the client discoverability peer "
 			"anymore");

@@ -36,12 +36,7 @@ struct p2p_device {
 	int level;
 	enum p2p_wps_method wps_method;
 
-	u8 p2p_device_addr[ETH_ALEN]; /* P2P Device Address of the peer */
-	u8 pri_dev_type[8];
-	char device_name[33];
-	u16 config_methods;
-	u8 dev_capab;
-	u8 group_capab;
+	struct p2p_peer_info info;
 
 	/*
 	 * If the peer was discovered based on an interface address (e.g., GO

@@ -53,7 +53,7 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 	if (go_dev_addr)
 		dev_addr = go_dev_addr;
 	else if (p2p->inv_role == P2P_INVITE_ROLE_CLIENT)
-		dev_addr = peer->p2p_device_addr;
+		dev_addr = peer->info.p2p_device_addr;
 	else
 		dev_addr = p2p->cfg->dev_addr;
 	p2p_buf_add_group_id(buf, dev_addr, p2p->inv_ssid, p2p->inv_ssid_len);
@@ -343,7 +343,7 @@ int p2p_invite_send(struct p2p_data *p2p, struct p2p_device *dev,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: No Listen/Operating frequency known for the "
 			"peer " MACSTR " to send Invitation Request",
-			MAC2STR(dev->p2p_device_addr));
+			MAC2STR(dev->info.p2p_device_addr));
 		return -1;
 	}
 
@@ -356,8 +356,8 @@ int p2p_invite_send(struct p2p_data *p2p, struct p2p_device *dev,
 	p2p->pending_action_state = P2P_PENDING_INVITATION_REQUEST;
 	p2p->invite_peer = dev;
 	dev->invitation_reqs++;
-	if (p2p_send_action(p2p, freq, dev->p2p_device_addr,
-			    p2p->cfg->dev_addr, dev->p2p_device_addr,
+	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
+			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
@@ -443,7 +443,8 @@ int p2p_invite(struct p2p_data *p2p, const u8 *peer, enum p2p_invite_role role,
 	}
 
 	if (dev->flags & P2P_DEV_GROUP_CLIENT_ONLY) {
-		if (!(dev->dev_capab & P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
+		if (!(dev->info.dev_capab &
+		      P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY)) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Cannot invite a P2P Device " MACSTR
 				" that is in a group and is not discoverable",

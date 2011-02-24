@@ -25,14 +25,15 @@ struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,
 {
 	struct p2p_sd_query *q;
 
-	if (!(dev->dev_capab & P2P_DEV_CAPAB_SERVICE_DISCOVERY))
+	if (!(dev->info.dev_capab & P2P_DEV_CAPAB_SERVICE_DISCOVERY))
 		return 0; /* peer does not support SD */
 
 	for (q = p2p->sd_queries; q; q = q->next) {
 		if (q->for_all_peers && !(dev->flags & P2P_DEV_SD_INFO))
 			return q;
 		if (!q->for_all_peers &&
-		    os_memcmp(q->peer, dev->p2p_device_addr, ETH_ALEN) == 0)
+		    os_memcmp(q->peer, dev->info.p2p_device_addr, ETH_ALEN) ==
+		    0)
 			return q;
 	}
 
@@ -265,7 +266,7 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: No Listen/Operating frequency known for the "
 			"peer " MACSTR " to send SD Request",
-			MAC2STR(dev->p2p_device_addr));
+			MAC2STR(dev->info.p2p_device_addr));
 		return -1;
 	}
 
@@ -275,7 +276,7 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Start Service Discovery with " MACSTR,
-		MAC2STR(dev->p2p_device_addr));
+		MAC2STR(dev->info.p2p_device_addr));
 
 	req = p2p_build_sd_query(p2p->srv_update_indic, query->tlvs);
 	if (req == NULL)
@@ -285,8 +286,8 @@ int p2p_start_sd(struct p2p_data *p2p, struct p2p_device *dev)
 	p2p->sd_query = query;
 	p2p->pending_action_state = P2P_PENDING_SD;
 
-	if (p2p_send_action(p2p, freq, dev->p2p_device_addr,
-			    p2p->cfg->dev_addr, dev->p2p_device_addr,
+	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
+			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 5000) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
@@ -472,7 +473,7 @@ void p2p_rx_gas_initial_resp(struct p2p_data *p2p, const u8 *sa,
 	u16 update_indic;
 
 	if (p2p->state != P2P_SD_DURING_FIND || p2p->sd_peer == NULL ||
-	    os_memcmp(sa, p2p->sd_peer->p2p_device_addr, ETH_ALEN) != 0) {
+	    os_memcmp(sa, p2p->sd_peer->info.p2p_device_addr, ETH_ALEN) != 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Ignore unexpected GAS Initial Response from "
 			MACSTR, MAC2STR(sa));
@@ -713,7 +714,7 @@ void p2p_rx_gas_comeback_resp(struct p2p_data *p2p, const u8 *sa,
 	wpa_hexdump(MSG_DEBUG, "P2P: RX GAS Comeback Response", data, len);
 
 	if (p2p->state != P2P_SD_DURING_FIND || p2p->sd_peer == NULL ||
-	    os_memcmp(sa, p2p->sd_peer->p2p_device_addr, ETH_ALEN) != 0) {
+	    os_memcmp(sa, p2p->sd_peer->info.p2p_device_addr, ETH_ALEN) != 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Ignore unexpected GAS Comeback Response from "
 			MACSTR, MAC2STR(sa));

@@ -139,6 +139,42 @@ enum p2p_scan_type {
 };
 
 /**
+ * struct p2p_peer_info - P2P peer information
+
+ */
+struct p2p_peer_info {
+	/**
+	 * p2p_device_addr - P2P Device Address of the peer
+	 */
+	u8 p2p_device_addr[ETH_ALEN];
+
+	/**
+	 * pri_dev_type - Primary Device Type
+	 */
+	u8 pri_dev_type[8];
+
+	/**
+	 * device_name - Device Name
+	 */
+	char device_name[33];
+
+	/**
+	 * config_methods - WPS Configuration Methods
+	 */
+	u16 config_methods;
+
+	/**
+	 * dev_capab - Device Capabilities
+	 */
+	u8 dev_capab;
+
+	/**
+	 * group_capab - Group Capabilities
+	 */
+	u8 group_capab;
+};
+
+/**
  * struct p2p_config - P2P configuration
  *
  * This configuration is provided to the P2P module during initialization with
@@ -393,21 +429,15 @@ struct p2p_config {
 	 * dev_found - Notification of a found P2P Device
 	 * @ctx: Callback context from cb_ctx
 	 * @addr: Source address of the message triggering this notification
-	 * @dev_addr: P2P Device Address of the found P2P Device
-	 * @pri_dev_type: Primary Device Type
-	 * @dev_name: Device Name
-	 * @config_methods: Configuration Methods
-	 * @dev_capab: Device Capabilities
-	 * @group_capab: Group Capabilities
+	 * @info: P2P peer information
 	 *
 	 * This callback is used to notify that a new P2P Device has been
 	 * found. This may happen, e.g., during Search state based on scan
 	 * results or during Listen state based on receive Probe Request and
 	 * Group Owner Negotiation Request.
 	 */
-	void (*dev_found)(void *ctx, const u8 *addr, const u8 *dev_addr,
-			  const u8 *pri_dev_type, const char *dev_name,
-			  u16 config_methods, u8 dev_capab, u8 group_capab);
+	void (*dev_found)(void *ctx, const u8 *addr,
+			  const struct p2p_peer_info *info);
 
 	/**
 	 * go_neg_req_rx - Notification of a receive GO Negotiation Request

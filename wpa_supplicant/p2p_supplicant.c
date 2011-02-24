@@ -1146,6 +1146,8 @@ void wpas_dev_found(void *ctx, const u8 *addr,
 				     sizeof(devtype)),
 		info->device_name, info->config_methods,
 		info->dev_capab, info->group_capab);
+
+	wpas_notify_p2p_device_found(ctx, info->p2p_device_addr, new_device);
 }
 
 

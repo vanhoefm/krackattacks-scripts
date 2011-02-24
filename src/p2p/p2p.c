@@ -3239,3 +3239,44 @@ const u8 * p2p_get_go_neg_peer(struct p2p_data *p2p)
 		return NULL;
 	return p2p->go_neg_peer->info.p2p_device_addr;
 }
+
+
+const struct p2p_peer_info *
+p2p_get_peer_found(struct p2p_data *p2p, const u8 *addr, int next)
+{
+	struct p2p_device *dev;
+
+	if (addr) {
+		dev = p2p_get_device(p2p, addr);
+		if (!dev)
+			return NULL;
+
+		if (!next) {
+			if (dev->flags & P2P_DEV_PROBE_REQ_ONLY)
+				return NULL;
+
+			return &dev->info;
+		} else {
+			do {
+				dev = dl_list_first(&dev->list,
+						    struct p2p_device,
+						    list);
+				if (&dev->list == &p2p->devices)
+					return NULL;
+			} while (dev->flags & P2P_DEV_PROBE_REQ_ONLY);
+		}
+	} else {
+		dev = dl_list_first(&p2p->devices, struct p2p_device, list);
+		if (!dev)
+			return NULL;
+		while (dev->flags & P2P_DEV_PROBE_REQ_ONLY) {
+			dev = dl_list_first(&dev->list,
+					    struct p2p_device,
+					    list);
+			if (&dev->list == &p2p->devices)
+				return NULL;
+		}
+	}
+
+	return &dev->info;
+}

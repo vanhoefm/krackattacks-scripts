@@ -1372,4 +1372,14 @@ unsigned int p2p_get_group_num_members(struct p2p_group *group);
  */
 const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next);
 
+/**
+ * p2p_get_peer_found - Get P2P peer info structure of a found peer
+ * @p2p: P2P module context from p2p_init()
+ * @addr: P2P Device Address of the peer or %NULL to indicate the first peer
+ * @next: Whether to select the peer entry following the one indicated by addr
+ * Returns: The first P2P peer info available or %NULL if no such peer exists
+ */
+const struct p2p_peer_info *
+p2p_get_peer_found(struct p2p_data *p2p, const u8 *addr, int next);
+
 #endif /* P2P_H */

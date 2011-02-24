@@ -2014,7 +2014,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		peer_info.dev_capab = data->p2p_dev_found.dev_capab;
 		peer_info.group_capab = data->p2p_dev_found.group_capab;
 
-		wpas_dev_found(wpa_s, data->p2p_dev_found.addr, &peer_info);
+		/*
+		 * FIX: new_device=1 is not necessarily correct. We should
+		 * maintain a P2P peer database in wpa_supplicant and update
+		 * this information based on whether the peer is truly new.
+		 */
+		wpas_dev_found(wpa_s, data->p2p_dev_found.addr, &peer_info, 1);
 		break;
 		}
 	case EVENT_P2P_GO_NEG_REQ_RX:

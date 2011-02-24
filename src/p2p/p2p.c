@@ -390,7 +390,8 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 			dev->oper_freq = freq;
 			p2p->cfg->dev_found(p2p->cfg->cb_ctx,
 					    dev->info.p2p_device_addr,
-					    &dev->info);
+					    &dev->info, 1);
+			dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 		}
 
 		os_memcpy(dev->interface_addr, cli->p2p_interface_addr,
@@ -539,8 +540,10 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 			"P2P: Do not report rejected device");
 		return 0;
 	}
-	p2p->cfg->dev_found(p2p->cfg->cb_ctx, addr, &dev->info);
-	dev->flags |= P2P_DEV_REPORTED;
+
+	p2p->cfg->dev_found(p2p->cfg->cb_ctx, addr, &dev->info,
+			    !(dev->flags & P2P_DEV_REPORTED_ONCE));
+	dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 
 	return 0;
 }
@@ -1118,7 +1121,9 @@ void p2p_add_dev_info(struct p2p_data *p2p, const u8 *addr,
 		return;
 	}
 
-	p2p->cfg->dev_found(p2p->cfg->cb_ctx, addr, &dev->info);
+	p2p->cfg->dev_found(p2p->cfg->cb_ctx, addr, &dev->info,
+			    !(dev->flags & P2P_DEV_REPORTED_ONCE));
+	dev->flags |= P2P_DEV_REPORTED | P2P_DEV_REPORTED_ONCE;
 }
 
 

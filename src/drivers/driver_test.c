@@ -3118,7 +3118,7 @@ static void test_go_neg_req_rx(void *ctx, const u8 *src, u16 dev_passwd_id)
 
 
 static void test_dev_found(void *ctx, const u8 *addr,
-			   const struct p2p_peer_info *info)
+			   const struct p2p_peer_info *info, int new_device)
 {
 	struct wpa_driver_test_data *drv = ctx;
 	union wpa_event_data event;

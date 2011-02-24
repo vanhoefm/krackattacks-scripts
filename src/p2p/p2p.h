@@ -430,6 +430,7 @@ struct p2p_config {
 	 * @ctx: Callback context from cb_ctx
 	 * @addr: Source address of the message triggering this notification
 	 * @info: P2P peer information
+	 * @new_device: Inform if the peer is newly found
 	 *
 	 * This callback is used to notify that a new P2P Device has been
 	 * found. This may happen, e.g., during Search state based on scan
@@ -437,7 +438,8 @@ struct p2p_config {
 	 * Group Owner Negotiation Request.
 	 */
 	void (*dev_found)(void *ctx, const u8 *addr,
-			  const struct p2p_peer_info *info);
+			  const struct p2p_peer_info *info,
+			  int new_device);
 
 	/**
 	 * go_neg_req_rx - Notification of a receive GO Negotiation Request

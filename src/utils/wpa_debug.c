@@ -28,6 +28,30 @@ int wpa_debug_show_keys = 0;
 int wpa_debug_timestamp = 0;
 
 
+#ifdef CONFIG_ANDROID_LOG
+
+#include <android/log.h>
+
+void android_printf(int level, char *format, ...)
+{
+	if (level >= wpa_debug_level) {
+		va_list ap;
+		if (level == MSG_ERROR)
+			level = ANDROID_LOG_ERROR;
+		else if (level == MSG_WARNING)
+			level = ANDROID_LOG_WARN;
+		else if (level == MSG_INFO)
+			level = ANDROID_LOG_INFO;
+		else
+			level = ANDROID_LOG_DEBUG;
+		va_start(ap, format);
+		__android_log_vprint(level, "wpa_supplicant", format, ap);
+		va_end(ap);
+	}
+}
+
+#else /* CONFIG_ANDROID_LOG */
+
 #ifndef CONFIG_NO_STDOUT_DEBUG
 
 #ifdef CONFIG_DEBUG_FILE
@@ -340,6 +364,7 @@ void wpa_debug_close_file(void)
 
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 
+#endif /* CONFIG_ANDROID_LOG */
 
 #ifndef CONFIG_NO_WPA_MSG
 static wpa_msg_cb_func wpa_msg_cb = NULL;

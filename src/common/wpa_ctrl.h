@@ -56,6 +56,8 @@ extern "C" {
 #define WPA_EVENT_EAP_FAILURE "CTRL-EVENT-EAP-FAILURE "
 /** New scan results available */
 #define WPA_EVENT_SCAN_RESULTS "CTRL-EVENT-SCAN-RESULTS "
+/** wpa_supplicant state change */
+#define WPA_EVENT_STATE_CHANGE "CTRL-EVENT-STATE-CHANGE "
 /** A new BSS entry was added (followed by BSS entry id and BSSID) */
 #define WPA_EVENT_BSS_ADDED "CTRL-EVENT-BSS-ADDED "
 /** A BSS entry was removed (followed by BSS entry id and BSSID) */

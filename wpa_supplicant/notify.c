@@ -92,6 +92,13 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_P2P */
 
 	sme_state_changed(wpa_s);
+
+#ifdef ANDROID
+	wpa_msg_ctrl(wpa_s, MSG_INFO, WPA_EVENT_STATE_CHANGE
+		     "id=%d state=%d BSSID=" MACSTR,
+		     wpa_s->current_ssid ? wpa_s->current_ssid->id : -1,
+		     new_state, MAC2STR(wpa_s->pending_bssid));
+#endif /* ANDROID */
 }
 
 

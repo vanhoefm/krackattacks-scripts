@@ -1092,7 +1092,7 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 	ret = os_snprintf(pos, end - pos, MACSTR "\t%d\t%d\t",
 			  MAC2STR(bss->bssid), bss->freq, bss->level);
 	if (ret < 0 || ret >= end - pos)
-		return pos - buf;
+		return -1;
 	pos += ret;
 	ie = wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE);
 	if (ie)
@@ -1104,37 +1104,37 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 	if (!ie && !ie2 && bss->caps & IEEE80211_CAP_PRIVACY) {
 		ret = os_snprintf(pos, end - pos, "[WEP]");
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return -1;
 		pos += ret;
 	}
 	if (bss->caps & IEEE80211_CAP_IBSS) {
 		ret = os_snprintf(pos, end - pos, "[IBSS]");
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return -1;
 		pos += ret;
 	}
 	if (bss->caps & IEEE80211_CAP_ESS) {
 		ret = os_snprintf(pos, end - pos, "[ESS]");
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return -1;
 		pos += ret;
 	}
 	if (p2p) {
 		ret = os_snprintf(pos, end - pos, "[P2P]");
 		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
+			return -1;
 		pos += ret;
 	}
 
 	ret = os_snprintf(pos, end - pos, "\t%s",
 			  wpa_ssid_txt(bss->ssid, bss->ssid_len));
 	if (ret < 0 || ret >= end - pos)
-		return pos - buf;
+		return -1;
 	pos += ret;
 
 	ret = os_snprintf(pos, end - pos, "\n");
 	if (ret < 0 || ret >= end - pos)
-		return pos - buf;
+		return -1;
 	pos += ret;
 
 	return pos - buf;

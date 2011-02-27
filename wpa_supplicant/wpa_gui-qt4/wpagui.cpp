@@ -1,6 +1,6 @@
 /*
  * wpa_gui - WpaGui class
- * Copyright (c) 2005-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -719,7 +719,7 @@ void WpaGui::helpContents()
 void WpaGui::helpAbout()
 {
 	QMessageBox::about(this, "wpa_gui for wpa_supplicant",
-			   "Copyright (c) 2003-2010,\n"
+			   "Copyright (c) 2003-2011,\n"
 			   "Jouni Malinen <j@w1.fi>\n"
 			   "and contributors.\n"
 			   "\n"

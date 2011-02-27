@@ -63,6 +63,14 @@ struct wpa_ctrl {
 
 #ifdef CONFIG_CTRL_IFACE_UNIX
 
+#ifndef CONFIG_CTRL_IFACE_CLIENT_DIR
+#define CONFIG_CTRL_IFACE_CLIENT_DIR "/tmp"
+#endif /* CONFIG_CTRL_IFACE_CLIENT_DIR */
+#ifndef CONFIG_CTRL_IFACE_CLIENT_PREFIX
+#define CONFIG_CTRL_IFACE_CLIENT_PREFIX "wpa_ctrl_"
+#endif /* CONFIG_CTRL_IFACE_CLIENT_PREFIX */
+
+
 struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 {
 	struct wpa_ctrl *ctrl;
@@ -86,7 +94,9 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	counter++;
 try_again:
 	ret = os_snprintf(ctrl->local.sun_path, sizeof(ctrl->local.sun_path),
-			  "/tmp/wpa_ctrl_%d-%d", (int) getpid(), counter);
+			  CONFIG_CTRL_IFACE_CLIENT_DIR "/"
+			  CONFIG_CTRL_IFACE_CLIENT_PREFIX "%d-%d",
+			  (int) getpid(), counter);
 	if (ret < 0 || (size_t) ret >= sizeof(ctrl->local.sun_path)) {
 		close(ctrl->s);
 		os_free(ctrl);

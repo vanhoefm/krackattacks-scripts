@@ -15,6 +15,7 @@
 
 #include "includes.h"
 #include <sys/ioctl.h>
+#include <sys/sysctl.h>
 
 #include "common.h"
 #include "driver.h"
@@ -569,6 +570,21 @@ bsd_set_opt_ie(void *priv, const u8 *ie, size_t ie_len)
 	return 0;
 }
 
+static int
+rtbuf_len(void)
+{
+	size_t len;
+
+	int mib[6] = {CTL_NET, AF_ROUTE, 0, AF_INET6, NET_RT_DUMP, 0};
+
+	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
+		wpa_printf(MSG_ERROR, "%s failed: %s\n", __func__,
+			   strerror(errno));
+		return -1;
+	}
+
+	return len;
+}
 
 #ifdef HOSTAPD
 
@@ -691,26 +707,39 @@ static void
 bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = ctx;
-	char buf[2048] __attribute__ ((aligned (4)));
+	char *buf;
 	struct if_announcemsghdr *ifan;
 	struct rt_msghdr *rtm;
 	struct ieee80211_michael_event *mic;
 	struct ieee80211_join_event *join;
 	struct ieee80211_leave_event *leave;
-	int n;
+	int n, len;
 	union wpa_event_data data;
 
-	n = read(sock, buf, sizeof(buf));
+	len = rtbuf_len();
+	if (len < 0)
+		return;
+
+	buf = os_malloc(len);
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR, "%s os_malloc() failed\n", __func__);
+		return;
+	}
+
+	n = read(sock, buf, len);
 	if (n < 0) {
 		if (errno != EINTR && errno != EAGAIN)
-			perror("read(PF_ROUTE)");
+			wpa_printf(MSG_ERROR, "%s read() failed: %s\n",
+				   __func__, strerror(errno));
+		os_free(buf);
 		return;
 	}
 
 	rtm = (struct rt_msghdr *) buf;
 	if (rtm->rtm_version != RTM_VERSION) {
-		wpa_printf(MSG_DEBUG, "Routing message version %d not "
-			"understood\n", rtm->rtm_version);
+		wpa_printf(MSG_DEBUG, "Invalid routing message version=%d",
+			   rtm->rtm_version);
+		os_free(buf);
 		return;
 	}
 	ifan = (struct if_announcemsghdr *) rtm;
@@ -751,6 +780,7 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 		}
 		break;
 	}
+	os_free(buf);
 }
 
 static void
@@ -1115,7 +1145,7 @@ static void
 wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 {
 	struct bsd_driver_data *drv = sock_ctx;
-	char buf[2048] __attribute__ ((aligned (4)));
+	char *buf;
 	struct if_announcemsghdr *ifan;
 	struct if_msghdr *ifm;
 	struct rt_msghdr *rtm;
@@ -1123,19 +1153,32 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 	struct ieee80211_michael_event *mic;
 	struct ieee80211_leave_event *leave;
 	struct ieee80211_join_event *join;
-	int n;
+	int n, len;
 
-	n = read(sock, buf, sizeof(buf));
+	len = rtbuf_len();
+	if (len < 0)
+		return;
+
+	buf = os_malloc(len);
+	if (buf == NULL) {
+		wpa_printf(MSG_ERROR, "%s os_malloc() failed\n", __func__);
+		return;
+	}
+
+	n = read(sock, buf, len);
 	if (n < 0) {
 		if (errno != EINTR && errno != EAGAIN)
-			perror("read(PF_ROUTE)");
+			wpa_printf(MSG_ERROR, "%s read() failed: %s\n",
+				   __func__, strerror(errno));
+		os_free(buf);
 		return;
 	}
 
 	rtm = (struct rt_msghdr *) buf;
 	if (rtm->rtm_version != RTM_VERSION) {
-		wpa_printf(MSG_DEBUG, "Routing message version %d not "
-			"understood\n", rtm->rtm_version);
+		wpa_printf(MSG_DEBUG, "Invalid routing message version=%d",
+			   rtm->rtm_version);
+		os_free(buf);
 		return;
 	}
 	os_memset(&event, 0, sizeof(event));
@@ -1150,6 +1193,7 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		case IFAN_DEPARTURE:
 			event.interface_status.ievent = EVENT_INTERFACE_REMOVED;
 		default:
+			os_free(buf);
 			return;
 		}
 		wpa_printf(MSG_DEBUG, "RTM_IFANNOUNCE: Interface '%s' %s",
@@ -1222,6 +1266,7 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 		}
 		break;
 	}
+	os_free(buf);
 }
 
 static void

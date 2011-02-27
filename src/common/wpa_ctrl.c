@@ -20,6 +20,11 @@
 #include <sys/un.h>
 #endif /* CONFIG_CTRL_IFACE_UNIX */
 
+#ifdef ANDROID
+#include <cutils/sockets.h>
+#include "private/android_filesystem_config.h"
+#endif /* ANDROID */
+
 #include "wpa_ctrl.h"
 #include "common.h"
 
@@ -104,6 +109,31 @@ try_again:
 		os_free(ctrl);
 		return NULL;
 	}
+
+#ifdef ANDROID
+	chmod(ctrl->local.sun_path, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+	chown(ctrl->local.sun_path, AID_SYSTEM, AID_WIFI);
+	/*
+	 * If the ctrl_path isn't an absolute pathname, assume that
+	 * it's the name of a socket in the Android reserved namespace.
+	 * Otherwise, it's a normal UNIX domain socket appearing in the
+	 * filesystem.
+	 */
+	if (ctrl_path != NULL && *ctrl_path != '/') {
+		char buf[21];
+		os_snprintf(buf, sizeof(buf), "wpa_%s", ctrl_path);
+		if (socket_local_client_connect(
+			    ctrl->s, buf,
+			    ANDROID_SOCKET_NAMESPACE_RESERVED,
+			    SOCK_DGRAM) < 0) {
+			close(ctrl->s);
+			unlink(ctrl->local.sun_path);
+			os_free(ctrl);
+			return NULL;
+		}
+		return ctrl;
+	}
+#endif /* ANDROID */
 
 	ctrl->dest.sun_family = AF_UNIX;
 	res = os_strlcpy(ctrl->dest.sun_path, ctrl_path,

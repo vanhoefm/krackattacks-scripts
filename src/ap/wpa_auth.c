@@ -2479,19 +2479,21 @@ int wpa_get_mib(struct wpa_authenticator *wpa_auth, char *buf, size_t buflen)
 {
 	int len = 0, ret;
 	char pmkid_txt[PMKID_LEN * 2 + 1];
+#ifdef CONFIG_RSN_PREAUTH
+	const int preauth = 1;
+#else /* CONFIG_RSN_PREAUTH */
+	const int preauth = 0;
+#endif /* CONFIG_RSN_PREAUTH */
 
 	if (wpa_auth == NULL)
 		return len;
 
 	ret = os_snprintf(buf + len, buflen - len,
 			  "dot11RSNAOptionImplemented=TRUE\n"
-#ifdef CONFIG_RSN_PREAUTH
-			  "dot11RSNAPreauthenticationImplemented=TRUE\n"
-#else /* CONFIG_RSN_PREAUTH */
-			  "dot11RSNAPreauthenticationImplemented=FALSE\n"
-#endif /* CONFIG_RSN_PREAUTH */
+			  "dot11RSNAPreauthenticationImplemented=%s\n"
 			  "dot11RSNAEnabled=%s\n"
 			  "dot11RSNAPreauthenticationEnabled=%s\n",
+			  wpa_bool_txt(preauth),
 			  wpa_bool_txt(wpa_auth->conf.wpa & WPA_PROTO_RSN),
 			  wpa_bool_txt(wpa_auth->conf.rsn_preauth));
 	if (ret < 0 || (size_t) ret >= buflen - len)

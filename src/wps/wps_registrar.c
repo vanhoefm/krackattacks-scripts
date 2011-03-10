@@ -336,6 +336,7 @@ int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 {
 	int count = 0;
 	struct wps_pbc_session *pbc;
+	struct wps_pbc_session *first = NULL;
 	struct os_time now;
 
 	os_get_time(&now);
@@ -343,13 +344,19 @@ int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 	for (pbc = reg->pbc_sessions; pbc; pbc = pbc->next) {
 		if (now.sec > pbc->timestamp.sec + WPS_PBC_WALK_TIME)
 			break;
-		if (addr == NULL || os_memcmp(addr, pbc->addr, ETH_ALEN) ||
-		    uuid_e == NULL ||
+		if (first &&
+		    os_memcmp(pbc->uuid_e, first->uuid_e, WPS_UUID_LEN) == 0)
+			continue; /* same Enrollee */
+		if (uuid_e == NULL ||
 		    os_memcmp(uuid_e, pbc->uuid_e, WPS_UUID_LEN))
 			count++;
+		if (first == NULL)
+			first = pbc;
 	}
 
-	if (addr || uuid_e)
+	if (uuid_e &&
+	    (first == NULL ||
+	     os_memcmp(uuid_e, first->uuid_e, WPS_UUID_LEN) != 0))
 		count++;
 
 	return count > 1 ? 1 : 0;

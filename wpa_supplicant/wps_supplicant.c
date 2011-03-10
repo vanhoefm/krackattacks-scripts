@@ -1101,12 +1101,23 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
 	wps->dev.rf_bands = WPS_RF_24GHZ | WPS_RF_50GHZ; /* TODO: config */
 	os_memcpy(wps->dev.mac_addr, wpa_s->own_addr, ETH_ALEN);
+	wpa_printf(MSG_DEBUG, "WPS: Set UUID for interface %s", wpa_s->ifname);
 	if (is_nil_uuid(wpa_s->conf->uuid)) {
-		uuid_gen_mac_addr(wpa_s->own_addr, wps->uuid);
-		wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC address",
-			    wps->uuid, WPS_UUID_LEN);
-	} else
+		if (wpa_s->global->ifaces && wpa_s->global->ifaces != wpa_s) {
+			os_memcpy(wps->uuid, wpa_s->global->ifaces->wps->uuid,
+				  WPS_UUID_LEN);
+			wpa_hexdump(MSG_DEBUG, "WPS: UUID from the first "
+				    "interface", wps->uuid, WPS_UUID_LEN);
+		} else {
+			uuid_gen_mac_addr(wpa_s->own_addr, wps->uuid);
+			wpa_hexdump(MSG_DEBUG, "WPS: UUID based on MAC "
+				    "address", wps->uuid, WPS_UUID_LEN);
+		}
+	} else {
 		os_memcpy(wps->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
+		wpa_hexdump(MSG_DEBUG, "WPS: UUID based on configuration",
+			    wps->uuid, WPS_UUID_LEN);
+	}
 
 	wps->auth_types = WPS_AUTH_WPA2PSK | WPS_AUTH_WPAPSK;
 	wps->encr_types = WPS_ENCR_AES | WPS_ENCR_TKIP;

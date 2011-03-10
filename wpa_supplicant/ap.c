@@ -17,6 +17,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "utils/uuid.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
 #include "ap/hostapd.h"
@@ -181,7 +182,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		bss->model_number = os_strdup(wpa_s->conf->model_number);
 	if (wpa_s->conf->serial_number)
 		bss->serial_number = os_strdup(wpa_s->conf->serial_number);
-	os_memcpy(bss->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
+	if (is_nil_uuid(wpa_s->conf->uuid))
+		os_memcpy(bss->uuid, wpa_s->wps->uuid, WPS_UUID_LEN);
+	else
+		os_memcpy(bss->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 	os_memcpy(bss->os_version, wpa_s->conf->os_version, 4);
 #endif /* CONFIG_WPS */
 

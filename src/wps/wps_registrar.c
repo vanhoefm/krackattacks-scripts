@@ -873,11 +873,14 @@ static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
  * @reg: Registrar data from wps_registrar_init()
  * @p2p_dev_addr: Limit allowed PBC devices to the specified P2P device, %NULL
  *	indicates no such filtering
- * Returns: 0 on success, -1 on failure
+ * Returns: 0 on success, -1 on failure, -2 on session overlap
  *
  * This function is called on an AP when a push button is pushed to activate
  * PBC mode. The PBC mode will be stopped after walk time (2 minutes) timeout
- * or when a PBC registration is completed.
+ * or when a PBC registration is completed. If more than one Enrollee in active
+ * PBC mode has been detected during the monitor time (previous 2 minutes), the
+ * PBC mode is not actived and -2 is returned to indicate session overlap. This
+ * is skipped if a specific Enrollee is selected.
  */
 int wps_registrar_button_pushed(struct wps_registrar *reg,
 				const u8 *p2p_dev_addr)
@@ -887,7 +890,7 @@ int wps_registrar_button_pushed(struct wps_registrar *reg,
 		wpa_printf(MSG_DEBUG, "WPS: PBC overlap - do not start PBC "
 			   "mode");
 		wps_pbc_overlap_event(reg->wps);
-		return -1;
+		return -2;
 	}
 	wpa_printf(MSG_DEBUG, "WPS: Button pushed - PBC mode started");
 	reg->force_pbc_overlap = 0;

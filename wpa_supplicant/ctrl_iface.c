@@ -2929,10 +2929,18 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_WPS
 	} else if (os_strcmp(buf, "WPS_PBC") == 0) {
-		if (wpa_supplicant_ctrl_iface_wps_pbc(wpa_s, NULL))
+		int res = wpa_supplicant_ctrl_iface_wps_pbc(wpa_s, NULL);
+		if (res == -2) {
+			os_memcpy(reply, "FAIL-PBC-OVERLAP\n", 17);
+			reply_len = 17;
+		} else if (res)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_PBC ", 8) == 0) {
-		if (wpa_supplicant_ctrl_iface_wps_pbc(wpa_s, buf + 8))
+		int res = wpa_supplicant_ctrl_iface_wps_pbc(wpa_s, buf + 8);
+		if (res == -2) {
+			os_memcpy(reply, "FAIL-PBC-OVERLAP\n", 17);
+			reply_len = 17;
+		} else if (res)
 			reply_len = -1;
 	} else if (os_strncmp(buf, "WPS_PIN ", 8) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_wps_pin(wpa_s, buf + 8,

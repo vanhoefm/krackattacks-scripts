@@ -1005,6 +1005,8 @@ void wps_registrar_probe_req_rx(struct wps_registrar *reg, const u8 *addr,
 			   "UUID-E included");
 		return;
 	}
+	wpa_hexdump(MSG_DEBUG, "WPS: UUID-E from Probe Request", attr.uuid_e,
+		    WPS_UUID_LEN);
 
 	wps_registrar_add_pbc_session(reg, addr, attr.uuid_e);
 	if (wps_registrar_pbc_overlap(reg, addr, attr.uuid_e)) {

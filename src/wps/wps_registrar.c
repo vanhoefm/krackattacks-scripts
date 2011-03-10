@@ -882,7 +882,8 @@ static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
 int wps_registrar_button_pushed(struct wps_registrar *reg,
 				const u8 *p2p_dev_addr)
 {
-	if (wps_registrar_pbc_overlap(reg, NULL, NULL)) {
+	if (p2p_dev_addr == NULL &&
+	    wps_registrar_pbc_overlap(reg, NULL, NULL)) {
 		wpa_printf(MSG_DEBUG, "WPS: PBC overlap - do not start PBC "
 			   "mode");
 		wps_pbc_overlap_event(reg->wps);
@@ -2266,6 +2267,24 @@ static int wps_registrar_p2p_dev_addr_match(struct wps_data *wps)
 }
 
 
+static int wps_registrar_skip_overlap(struct wps_data *wps)
+{
+#ifdef CONFIG_P2P
+	struct wps_registrar *reg = wps->wps->registrar;
+
+	if (is_zero_ether_addr(reg->p2p_dev_addr))
+		return 0; /* no specific Enrollee selected */
+
+	if (os_memcmp(reg->p2p_dev_addr, wps->p2p_dev_addr, ETH_ALEN) == 0) {
+		wpa_printf(MSG_DEBUG, "WPS: Skip PBC overlap due to selected "
+			   "Enrollee match");
+		return 1;
+	}
+#endif /* CONFIG_P2P */
+	return 0;
+}
+
+
 static enum wps_process_res wps_process_m1(struct wps_data *wps,
 					   struct wps_parse_attr *attr)
 {
@@ -2318,10 +2337,11 @@ static enum wps_process_res wps_process_m1(struct wps_data *wps,
 #endif /* CONFIG_WPS_OOB */
 
 	if (wps->dev_pw_id == DEV_PW_PUSHBUTTON) {
-		if (wps->wps->registrar->force_pbc_overlap ||
-		    wps_registrar_pbc_overlap(wps->wps->registrar,
-					      wps->mac_addr_e, wps->uuid_e) ||
-		    !wps_registrar_p2p_dev_addr_match(wps)) {
+		if ((wps->wps->registrar->force_pbc_overlap ||
+		     wps_registrar_pbc_overlap(wps->wps->registrar,
+					       wps->mac_addr_e, wps->uuid_e) ||
+		     !wps_registrar_p2p_dev_addr_match(wps)) &&
+		    !wps_registrar_skip_overlap(wps)) {
 			wpa_printf(MSG_DEBUG, "WPS: PBC overlap - deny PBC "
 				   "negotiation");
 			wps->state = SEND_M2D;
@@ -2373,7 +2393,8 @@ static enum wps_process_res wps_process_m3(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps->pbc && wps->wps->registrar->force_pbc_overlap) {
+	if (wps->pbc && wps->wps->registrar->force_pbc_overlap &&
+	    !wps_registrar_skip_overlap(wps)) {
 		wpa_printf(MSG_DEBUG, "WPS: Reject negotiation due to PBC "
 			   "session overlap");
 		wps->state = SEND_WSC_NACK;
@@ -2410,7 +2431,8 @@ static enum wps_process_res wps_process_m5(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps->pbc && wps->wps->registrar->force_pbc_overlap) {
+	if (wps->pbc && wps->wps->registrar->force_pbc_overlap &&
+	    !wps_registrar_skip_overlap(wps)) {
 		wpa_printf(MSG_DEBUG, "WPS: Reject negotiation due to PBC "
 			   "session overlap");
 		wps->state = SEND_WSC_NACK;
@@ -2546,7 +2568,8 @@ static enum wps_process_res wps_process_m7(struct wps_data *wps,
 		return WPS_CONTINUE;
 	}
 
-	if (wps->pbc && wps->wps->registrar->force_pbc_overlap) {
+	if (wps->pbc && wps->wps->registrar->force_pbc_overlap &&
+	    !wps_registrar_skip_overlap(wps)) {
 		wpa_printf(MSG_DEBUG, "WPS: Reject negotiation due to PBC "
 			   "session overlap");
 		wps->state = SEND_WSC_NACK;

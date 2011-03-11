@@ -788,7 +788,7 @@ struct wpa_driver_ops {
 	 * Please note that TKIP keys include separate TX and RX MIC keys and
 	 * some drivers may expect them in different order than wpa_supplicant
 	 * is using. If the TX/RX keys are swapped, all TKIP encrypted packets
-	 * will tricker Michael MIC errors. This can be fixed by changing the
+	 * will trigger Michael MIC errors. This can be fixed by changing the
 	 * order of MIC keys by swapping te bytes 16..23 and 24..31 of the key
 	 * in driver_*.c set_key() implementation, see driver_ndis.c for an
 	 * example on how this can be done.

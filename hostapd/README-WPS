@@ -277,7 +277,7 @@ WPS-REG-SUCCESS <Enrollee MAC address <UUID-E>
 For example:
 <2>WPS-REG-SUCCESS 02:66:a0:ee:17:27 2b7093f1-d6fb-5108-adbb-bea66bb87333
 
-This can be used to tricker change from unconfigured to configured
+This can be used to trigger change from unconfigured to configured
 state (random configuration based on the first successful WPS
 registration). In addition, this can be used to update AP UI about the
 status of WPS registration progress.

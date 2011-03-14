@@ -506,7 +506,7 @@ void rx_data(struct wlantest *wt, const u8 *data, size_t len)
 			   MAC2STR(hdr->addr1), MAC2STR(hdr->addr2),
 			   MAC2STR(hdr->addr3));
 		add_ap_path(wt, hdr->addr2, hdr->addr1, hdr->addr3);
-		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr2,
+		rx_data_bss(wt, hdr, qos, hdr->addr1, hdr->addr3,
 			    data + hdrlen, len - hdrlen);
 		break;
 	case WLAN_FC_TODS:

@@ -695,6 +695,11 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 		getter = (WPADBusPropertyAccessor) wpas_dbus_getter_bsss;
 		prop = "BSSs";
 		break;
+	case WPAS_DBUS_PROP_CURRENT_AUTH_MODE:
+		getter = (WPADBusPropertyAccessor)
+			wpas_dbus_getter_current_auth_mode;
+		prop = "CurrentAuthMode";
+		break;
 	default:
 		wpa_printf(MSG_ERROR, "dbus: %s: Unknown Property value %d",
 			   __func__, property);

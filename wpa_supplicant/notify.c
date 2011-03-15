@@ -120,6 +120,12 @@ void wpas_notify_bssid_changed(struct wpa_supplicant *wpa_s)
 }
 
 
+void wpas_notify_auth_changed(struct wpa_supplicant *wpa_s)
+{
+	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_CURRENT_AUTH_MODE);
+}
+
+
 void wpas_notify_network_enabled_changed(struct wpa_supplicant *wpa_s,
 					 struct wpa_ssid *ssid)
 {

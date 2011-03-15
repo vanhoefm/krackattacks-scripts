@@ -572,8 +572,13 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 	}
 	wpa_s->wpa_state = state;
 
-	if (wpa_s->wpa_state != old_state)
+	if (wpa_s->wpa_state != old_state) {
 		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
+
+		if (wpa_s->wpa_state == WPA_COMPLETED ||
+		    old_state == WPA_COMPLETED)
+			wpas_notify_auth_changed(wpa_s);
+	}
 }
 
 

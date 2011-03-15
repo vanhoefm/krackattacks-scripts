@@ -93,7 +93,10 @@ static int wpa_cli_quit = 0;
 static int wpa_cli_attached = 0;
 static int wpa_cli_connected = 0;
 static int wpa_cli_last_id = 0;
-static const char *ctrl_iface_dir = "/var/run/wpa_supplicant";
+#ifndef CONFIG_CTRL_IFACE_DIR
+#define CONFIG_CTRL_IFACE_DIR "/var/run/wpa_supplicant"
+#endif /* CONFIG_CTRL_IFACE_DIR */
+static const char *ctrl_iface_dir = CONFIG_CTRL_IFACE_DIR;
 static char *ctrl_ifname = NULL;
 static const char *pid_file = NULL;
 static const char *action_file = NULL;
@@ -117,7 +120,7 @@ static void usage(void)
 	       "events from\n"
 	       "       wpa_supplicant\n"
 	       "  -B = run a daemon in the background\n"
-	       "  default path: /var/run/wpa_supplicant\n"
+	       "  default path: " CONFIG_CTRL_IFACE_DIR "\n"
 	       "  default interface: first interface found in socket path\n");
 	print_help();
 }

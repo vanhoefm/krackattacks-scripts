@@ -261,6 +261,7 @@ int eap_peer_sm_step(struct eap_sm *sm);
 void eap_sm_abort(struct eap_sm *sm);
 int eap_sm_get_status(struct eap_sm *sm, char *buf, size_t buflen,
 		      int verbose);
+const char * eap_sm_get_method_name(struct eap_sm *sm);
 struct wpabuf * eap_sm_buildIdentity(struct eap_sm *sm, int id, int encrypted);
 void eap_sm_request_identity(struct eap_sm *sm);
 void eap_sm_request_password(struct eap_sm *sm);

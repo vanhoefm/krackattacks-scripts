@@ -1554,6 +1554,13 @@ static void eap_sm_request(struct eap_sm *sm, eap_ctrl_req_type type,
 #define eap_sm_request(sm, type, msg, msglen) do { } while (0)
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 
+const char * eap_sm_get_method_name(struct eap_sm *sm)
+{
+	if (sm->m == NULL)
+		return "UNKNOWN";
+	return sm->m->name;
+}
+
 
 /**
  * eap_sm_request_identity - Request identity from user (ctrl_iface)

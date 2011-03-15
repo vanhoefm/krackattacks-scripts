@@ -282,6 +282,8 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 		FD_ZERO(&rfds);
 		FD_SET(ctrl->s, &rfds);
 		res = select(ctrl->s + 1, &rfds, NULL, NULL, &tv);
+		if (res < 0)
+			return res;
 		if (FD_ISSET(ctrl->s, &rfds)) {
 			res = recv(ctrl->s, reply, *reply_len, 0);
 			if (res < 0)

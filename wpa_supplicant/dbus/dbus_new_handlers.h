@@ -125,6 +125,9 @@ DBusMessage * wpas_dbus_getter_current_bss(DBusMessage *message,
 DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 					       struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_getter_current_auth_mode(DBusMessage *message,
+						 struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_getter_bsss(DBusMessage *message,
 				    struct wpa_supplicant *wpa_s);
 

@@ -1388,6 +1388,10 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_current_network,
 	  NULL, R
 	},
+	{ "CurrentAuthMode", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_current_auth_mode,
+	  NULL, R
+	},
 	{ "Blobs", WPAS_DBUS_NEW_IFACE_INTERFACE, "a{say}",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_blobs,
 	  NULL, R

@@ -104,6 +104,7 @@ struct wpa_dbus_property_desc {
 #define WPAS_DBUS_OBJECT_PATH_MAX 150
 #define WPAS_DBUS_INTERFACE_MAX 150
 #define WPAS_DBUS_METHOD_SIGNAL_PROP_MAX 50
+#define WPAS_DBUS_AUTH_MODE_MAX 64
 
 #define WPA_DBUS_INTROSPECTION_INTERFACE "org.freedesktop.DBus.Introspectable"
 #define WPA_DBUS_INTROSPECTION_METHOD "Introspect"

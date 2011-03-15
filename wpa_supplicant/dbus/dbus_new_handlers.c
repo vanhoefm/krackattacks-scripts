@@ -2192,6 +2192,45 @@ DBusMessage * wpas_dbus_getter_current_network(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_getter_current_auth_mode - Get current authentication type
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A dbus message containing a string indicating the current
+ * authentication type.
+ *
+ * Getter for "CurrentAuthMode" property.
+ */
+DBusMessage * wpas_dbus_getter_current_auth_mode(DBusMessage *message,
+						 struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply;
+	const char *eap_mode;
+	const char *auth_mode;
+	char eap_mode_buf[WPAS_DBUS_AUTH_MODE_MAX];
+
+	if (wpa_s->wpa_state != WPA_COMPLETED) {
+		auth_mode = "INACTIVE";
+	} else if (wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X ||
+	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
+		eap_mode = wpa_supplicant_get_eap_mode(wpa_s);
+		os_snprintf(eap_mode_buf, WPAS_DBUS_AUTH_MODE_MAX,
+			    "EAP-%s", eap_mode);
+		auth_mode = eap_mode_buf;
+
+	} else {
+		auth_mode = wpa_key_mgmt_txt(wpa_s->key_mgmt,
+					     wpa_s->current_ssid->proto);
+	}
+
+	reply = wpas_dbus_simple_property_getter(message,
+						 DBUS_TYPE_STRING,
+						 &auth_mode);
+
+	return reply;
+}
+
+
+/**
  * wpas_dbus_getter_bridge_ifname - Get interface name
  * @message: Pointer to incoming dbus message
  * @wpa_s: wpa_supplicant structure for a network interface

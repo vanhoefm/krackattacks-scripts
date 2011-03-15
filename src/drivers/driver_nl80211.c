@@ -112,7 +112,10 @@ struct i802_bss {
 	struct i802_bss *next;
 	int ifindex;
 	char ifname[IFNAMSIZ + 1];
+	char brname[IFNAMSIZ];
 	unsigned int beacon_set:1;
+	unsigned int added_if_into_bridge:1;
+	unsigned int added_bridge:1;
 };
 
 struct wpa_driver_nl80211_data {
@@ -123,7 +126,6 @@ struct wpa_driver_nl80211_data {
 	void *ctx;
 	struct netlink_data *netlink;
 	int ioctl_sock; /* socket for ioctl() use */
-	char brname[IFNAMSIZ];
 	int ifindex;
 	int if_removed;
 	int if_disabled;
@@ -158,8 +160,6 @@ struct wpa_driver_nl80211_data {
 	int disable_11b_rates;
 
 	unsigned int pending_remain_on_chan:1;
-	unsigned int added_bridge:1;
-	unsigned int added_if_into_bridge:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -2069,18 +2069,18 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	if (drv->nl_handle_preq)
 		wpa_driver_nl80211_probe_req_report(bss, 0);
-	if (drv->added_if_into_bridge) {
-		if (linux_br_del_if(drv->ioctl_sock, drv->brname, bss->ifname)
+	if (bss->added_if_into_bridge) {
+		if (linux_br_del_if(drv->ioctl_sock, bss->brname, bss->ifname)
 		    < 0)
 			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
 				   "interface %s from bridge %s: %s",
-				   bss->ifname, drv->brname, strerror(errno));
+				   bss->ifname, bss->brname, strerror(errno));
 	}
-	if (drv->added_bridge) {
-		if (linux_br_del(drv->ioctl_sock, drv->brname) < 0)
+	if (bss->added_bridge) {
+		if (linux_br_del(drv->ioctl_sock, bss->brname) < 0)
 			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
 				   "bridge %s: %s",
-				   drv->brname, strerror(errno));
+				   bss->brname, strerror(errno));
 	}
 
 	nl80211_remove_monitor_interface(drv);
@@ -5518,12 +5518,13 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 
 
 static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
+			     struct i802_bss *bss,
 			     const char *brname, const char *ifname)
 {
 	int ifindex;
 	char in_br[IFNAMSIZ];
 
-	os_strlcpy(drv->brname, brname, IFNAMSIZ);
+	os_strlcpy(bss->brname, brname, IFNAMSIZ);
 	ifindex = if_nametoindex(brname);
 	if (ifindex == 0) {
 		/*
@@ -5536,7 +5537,7 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 				   brname, strerror(errno));
 			return -1;
 		}
-		drv->added_bridge = 1;
+		bss->added_bridge = 1;
 		add_ifidx(drv, if_nametoindex(brname));
 	}
 
@@ -5563,7 +5564,7 @@ static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 			   ifname, brname, strerror(errno));
 		return -1;
 	}
-	drv->added_if_into_bridge = 1;
+	bss->added_if_into_bridge = 1;
 
 	return 0;
 }
@@ -5628,7 +5629,7 @@ static void *i802_init(struct hostapd_data *hapd,
 	}
 
 	if (params->num_bridge && params->bridge[0] &&
-	    i802_check_bridge(drv, params->bridge[0], params->ifname) < 0)
+	    i802_check_bridge(drv, bss, params->bridge[0], params->ifname) < 0)
 		goto failed;
 
 	if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 1))
@@ -5741,7 +5742,8 @@ static int nl80211_p2p_interface_addr(struct wpa_driver_nl80211_data *drv,
 static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				     const char *ifname, const u8 *addr,
 				     void *bss_ctx, void **drv_priv,
-				     char *force_ifname, u8 *if_addr)
+				     char *force_ifname, u8 *if_addr,
+				     const char *bridge)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -5806,6 +5808,15 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 #endif /* CONFIG_P2P */
 
 #ifdef HOSTAPD
+	if (bridge &&
+	    i802_check_bridge(drv, new_bss, bridge, ifname) < 0) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to add the new "
+			   "interface %s to a bridge %s", ifname, bridge);
+		nl80211_remove_iface(drv, ifidx);
+		os_free(new_bss);
+		return -1;
+	}
+
 	if (type == WPA_IF_AP_BSS) {
 		if (linux_set_iface_flags(drv->ioctl_sock, ifname, 1)) {
 			nl80211_remove_iface(drv, ifidx);
@@ -5838,6 +5849,23 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 		   __func__, type, ifname, ifindex);
 	if (ifindex <= 0)
 		return -1;
+
+#ifdef HOSTAPD
+	if (bss->added_if_into_bridge) {
+		if (linux_br_del_if(drv->ioctl_sock, bss->brname, bss->ifname)
+		    < 0)
+			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
+				   "interface %s from bridge %s: %s",
+				   bss->ifname, bss->brname, strerror(errno));
+	}
+	if (bss->added_bridge) {
+		if (linux_br_del(drv->ioctl_sock, bss->brname) < 0)
+			wpa_printf(MSG_INFO, "nl80211: Failed to remove "
+				   "bridge %s: %s",
+				   bss->brname, strerror(errno));
+	}
+#endif /* HOSTAPD */
+
 	nl80211_remove_iface(drv, ifindex);
 
 #ifdef HOSTAPD

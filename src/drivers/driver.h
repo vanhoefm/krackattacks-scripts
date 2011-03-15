@@ -1604,11 +1604,13 @@ struct wpa_driver_ops {
 	 * @if_addr: Buffer for returning the allocated interface address
 	 *	(this may differ from the requested addr if the driver cannot
 	 *	change interface address)
+	 * @bridge: Bridge interface to use or %NULL if no bridge configured
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*if_add)(void *priv, enum wpa_driver_if_type type,
 		      const char *ifname, const u8 *addr, void *bss_ctx,
-		      void **drv_priv, char *force_ifname, u8 *if_addr);
+		      void **drv_priv, char *force_ifname, u8 *if_addr,
+		      const char *bridge);
 
 	/**
 	 * if_remove - Remove a virtual interface

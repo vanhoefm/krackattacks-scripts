@@ -281,7 +281,7 @@ int hostapd_vlan_if_add(struct hostapd_data *hapd, const char *ifname)
 	char force_ifname[IFNAMSIZ];
 	u8 if_addr[ETH_ALEN];
 	return hostapd_if_add(hapd, WPA_IF_AP_VLAN, ifname, hapd->own_addr,
-			      NULL, NULL, force_ifname, if_addr);
+			      NULL, NULL, force_ifname, if_addr, NULL);
 }
 
 
@@ -367,12 +367,14 @@ int hostapd_set_ssid(struct hostapd_data *hapd, const u8 *buf, size_t len)
 
 int hostapd_if_add(struct hostapd_data *hapd, enum wpa_driver_if_type type,
 		   const char *ifname, const u8 *addr, void *bss_ctx,
-		   void **drv_priv, char *force_ifname, u8 *if_addr)
+		   void **drv_priv, char *force_ifname, u8 *if_addr,
+		   const char *bridge)
 {
 	if (hapd->driver == NULL || hapd->driver->if_add == NULL)
 		return -1;
 	return hapd->driver->if_add(hapd->drv_priv, type, ifname, addr,
-				    bss_ctx, drv_priv, force_ifname, if_addr);
+				    bss_ctx, drv_priv, force_ifname, if_addr,
+				    bridge);
 }
 
 

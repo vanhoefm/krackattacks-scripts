@@ -1029,6 +1029,21 @@ void eapol_sm_configure(struct eapol_sm *sm, int heldPeriod, int authPeriod,
 }
 
 
+/**
+ * eapol_sm_get_method_name - Get EAPOL method name
+ * @sm: Pointer to EAPOL state machine allocated with eapol_sm_init()
+ * Returns: Static string containing name of current eap method or NULL
+ */
+const char * eapol_sm_get_method_name(struct eapol_sm *sm)
+{
+	if (sm->SUPP_PAE_state != SUPP_PAE_AUTHENTICATED ||
+	    sm->suppPortStatus != Authorized)
+		return NULL;
+
+	return eap_sm_get_method_name(sm->eap);
+}
+
+
 #ifdef CONFIG_CTRL_IFACE
 /**
  * eapol_sm_get_status - Get EAPOL state machine status

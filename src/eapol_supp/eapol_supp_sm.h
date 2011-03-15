@@ -255,6 +255,7 @@ void eapol_sm_notify_ctrl_response(struct eapol_sm *sm);
 void eapol_sm_request_reauth(struct eapol_sm *sm);
 void eapol_sm_notify_lower_layer_success(struct eapol_sm *sm, int in_eapol_sm);
 void eapol_sm_invalidate_cached_session(struct eapol_sm *sm);
+const char * eapol_sm_get_method_name(struct eapol_sm *sm);
 #else /* IEEE8021X_EAPOL */
 static inline struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 {

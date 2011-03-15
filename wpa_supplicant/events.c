@@ -2278,6 +2278,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (wpa_s->sched_scan_timed_out)
 			wpa_supplicant_req_sched_scan(wpa_s);
 		break;
+	case EVENT_WPS_BUTTON_PUSHED:
+#ifdef CONFIG_WPS
+		wpas_wps_start_pbc(wpa_s, NULL, 0);
+#endif /* CONFIG_WPS */
+		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);
 		break;

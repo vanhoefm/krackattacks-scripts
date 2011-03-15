@@ -343,6 +343,10 @@ static inline void eapol_sm_notify_lower_layer_success(struct eapol_sm *sm,
 static inline void eapol_sm_invalidate_cached_session(struct eapol_sm *sm)
 {
 }
+static inline const char * eapol_sm_get_method_name(struct eapol_sm *sm)
+{
+	return NULL;
+}
 #endif /* IEEE8021X_EAPOL */
 
 #endif /* EAPOL_SUPP_SM_H */

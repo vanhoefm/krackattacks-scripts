@@ -25,6 +25,9 @@
 #include "utils/eloop.h"
 #include "utils/edit.h"
 #include "common/version.h"
+#ifdef ANDROID
+#include <cutils/properties.h>
+#endif /* ANDROID */
 
 
 static const char *wpa_cli_version =
@@ -159,20 +162,31 @@ static int wpa_cli_open_connection(const char *ifname, int attach)
 	else
 		mon_conn = NULL;
 #else /* CONFIG_CTRL_IFACE_UDP || CONFIG_CTRL_IFACE_NAMED_PIPE */
-	char *cfile;
+	char *cfile = NULL;
 	int flen, res;
 
 	if (ifname == NULL)
 		return -1;
 
-	flen = os_strlen(ctrl_iface_dir) + os_strlen(ifname) + 2;
-	cfile = os_malloc(flen);
-	if (cfile == NULL)
-		return -1L;
-	res = os_snprintf(cfile, flen, "%s/%s", ctrl_iface_dir, ifname);
-	if (res < 0 || res >= flen) {
-		os_free(cfile);
-		return -1;
+#ifdef ANDROID
+	if (access(ctrl_iface_dir, F_OK) < 0) {
+		cfile = os_strdup(ifname);
+		if (cfile == NULL)
+			return -1;
+	}
+#endif /* ANDROID */
+
+	if (cfile == NULL) {
+		flen = os_strlen(ctrl_iface_dir) + os_strlen(ifname) + 2;
+		cfile = os_malloc(flen);
+		if (cfile == NULL)
+			return -1;
+		res = os_snprintf(cfile, flen, "%s/%s", ctrl_iface_dir,
+				  ifname);
+		if (res < 0 || res >= flen) {
+			os_free(cfile);
+			return -1;
+		}
 	}
 
 	ctrl_conn = wpa_ctrl_open(cfile);
@@ -3003,8 +3017,17 @@ static char * wpa_cli_get_default_ifname(void)
 #ifdef CONFIG_CTRL_IFACE_UNIX
 	struct dirent *dent;
 	DIR *dir = opendir(ctrl_iface_dir);
-	if (!dir)
+	if (!dir) {
+#ifdef ANDROID
+		char ifprop[PROPERTY_VALUE_MAX];
+		if (property_get("wifi.interface", ifprop, NULL) != 0) {
+			ifname = os_strdup(ifprop);
+			printf("Using interface '%s'\n", ifname);
+			return ifname;
+		}
+#endif /* ANDROID */
 		return NULL;
+	}
 	while ((dent = readdir(dir))) {
 #ifdef _DIRENT_HAVE_D_TYPE
 		/*

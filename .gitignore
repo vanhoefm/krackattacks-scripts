@@ -1,6 +1,7 @@
 *.o
 *.d
 *~
+.config
 wpa_supplicant/eapol_test
 wpa_supplicant/preauth_test
 wpa_supplicant/wpa_cli

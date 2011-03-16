@@ -486,9 +486,6 @@ static int ieee80211n_supported_ht_capab(struct hostapd_iface *iface)
 	u16 hw = iface->current_mode->ht_capab;
 	u16 conf = iface->conf->ht_capab;
 
-	if (!iface->conf->ieee80211n)
-		return 1;
-
 	if ((conf & HT_CAP_INFO_LDPC_CODING_CAP) &&
 	    !(hw & HT_CAP_INFO_LDPC_CODING_CAP)) {
 		wpa_printf(MSG_ERROR, "Driver does not support configured "
@@ -588,6 +585,8 @@ int hostapd_check_ht_capab(struct hostapd_iface *iface)
 {
 #ifdef CONFIG_IEEE80211N
 	int ret;
+	if (!iface->conf->ieee80211n)
+		return 0;
 	if (!ieee80211n_supported_ht_capab(iface))
 		return -1;
 	ret = ieee80211n_check_40mhz(iface);

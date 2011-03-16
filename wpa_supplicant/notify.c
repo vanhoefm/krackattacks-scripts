@@ -416,3 +416,25 @@ void wpas_notify_p2p_sd_response(struct wpa_supplicant *wpa_s,
 }
 
 #endif /* CONFIG_P2P */
+
+
+static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
+					  const u8 *sta)
+{
+}
+
+
+static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
+					    const u8 *sta)
+{
+}
+
+
+void wpas_notify_sta_authorized(struct wpa_supplicant *wpa_s,
+				const u8 *mac_addr, int authorized)
+{
+	if (authorized)
+		wpas_notify_ap_sta_authorized(wpa_s, mac_addr);
+	else
+		wpas_notify_ap_sta_deauthorized(wpa_s, mac_addr);
+}

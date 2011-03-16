@@ -42,6 +42,7 @@
 #include "p2p_supplicant.h"
 #include "ap.h"
 #include "ap/sta_info.h"
+#include "notify.h"
 
 
 #ifdef CONFIG_WPS
@@ -243,6 +244,13 @@ static void ap_wps_event_cb(void *ctx, enum wps_event event,
 }
 
 
+static void ap_sta_authorized_cb(void *ctx, const u8 *mac_addr,
+				 int authorized)
+{
+	wpas_notify_sta_authorized(ctx, mac_addr, authorized);
+}
+
+
 static int ap_vendor_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 {
 #ifdef CONFIG_P2P
@@ -411,6 +419,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		hapd_iface->bss[i]->wps_reg_success_cb_ctx = wpa_s;
 		hapd_iface->bss[i]->wps_event_cb = ap_wps_event_cb;
 		hapd_iface->bss[i]->wps_event_cb_ctx = wpa_s;
+		hapd_iface->bss[i]->sta_authorized_cb = ap_sta_authorized_cb;
+		hapd_iface->bss[i]->sta_authorized_cb_ctx = wpa_s;
 #ifdef CONFIG_P2P
 		hapd_iface->bss[i]->p2p = wpa_s->global->p2p;
 		hapd_iface->bss[i]->p2p_group = wpas_p2p_group_init(

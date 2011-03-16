@@ -79,6 +79,8 @@ void wpas_notify_debug_show_keys_changed(struct wpa_global *global);
 void wpas_notify_suspend(struct wpa_global *global);
 void wpas_notify_resume(struct wpa_global *global);
 
+void wpas_notify_sta_authorized(struct wpa_supplicant *wpa_s,
+				const u8 *mac_addr, int authorized);
 void wpas_notify_p2p_device_found(struct wpa_supplicant *wpa_s,
 				  const u8 *dev_addr, int new_device);
 void wpas_notify_p2p_device_lost(struct wpa_supplicant *wpa_s,

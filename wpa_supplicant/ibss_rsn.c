@@ -332,6 +332,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	conf.rsn_pairwise = WPA_CIPHER_CCMP;
 	conf.wpa_group = WPA_CIPHER_CCMP;
 	conf.eapol_version = 2;
+	conf.wpa_group_rekey = 600;
 
 	os_memset(&cb, 0, sizeof(cb));
 	cb.ctx = ibss_rsn;

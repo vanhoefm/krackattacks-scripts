@@ -299,6 +299,24 @@ static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 }
 
 
+static int auth_for_each_sta(void *ctx, int (*cb)(struct wpa_state_machine *sm,
+						  void *ctx),
+			     void *cb_ctx)
+{
+	struct ibss_rsn *ibss_rsn = ctx;
+	struct ibss_rsn_peer *peer;
+
+	wpa_printf(MSG_DEBUG, "AUTH: for_each_sta");
+
+	for (peer = ibss_rsn->peers; peer; peer = peer->next) {
+		if (peer->auth && cb(peer->auth, cb_ctx))
+			return 1;
+	}
+
+	return 0;
+}
+
+
 static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 				    const u8 *own_addr)
 {
@@ -321,6 +339,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	cb.send_eapol = auth_send_eapol;
 	cb.get_psk = auth_get_psk;
 	cb.set_key = auth_set_key;
+	cb.for_each_sta = auth_for_each_sta;
 
 	ibss_rsn->init_in_progress = 1;
 	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb);

@@ -93,7 +93,6 @@ Set to 1 (HT non-member protection) if there may be non-HT STAs
 Set to 2 if only HT STAs are associated in BSS,
 	however and at least one 20 MHz HT STA is associated
 Set to 3 (HT mixed mode) when one or more non-HT STAs are associated
-	(currently non-GF HT station is considered as non-HT STA also)
 */
 int hostapd_ht_operation_update(struct hostapd_iface *iface)
 {
@@ -131,13 +130,8 @@ int hostapd_ht_operation_update(struct hostapd_iface *iface)
 		op_mode_changes++;
 	}
 
-	/* Note: currently we switch to the MIXED op mode if HT non-greenfield
-	 * station is associated. Probably it's a theoretical case, since
-	 * it looks like all known HT STAs support greenfield.
-	 */
 	new_op_mode = 0;
-	if (iface->num_sta_no_ht ||
-	    (iface->ht_op_mode & HT_INFO_OPERATION_MODE_NON_GF_DEVS_PRESENT))
+	if (iface->num_sta_no_ht)
 		new_op_mode = OP_MODE_MIXED;
 	else if ((iface->conf->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET)
 		 && iface->num_sta_ht_20mhz)

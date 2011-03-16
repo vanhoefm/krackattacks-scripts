@@ -893,7 +893,7 @@ DBusMessage * wpas_dbus_getter_interfaces(DBusMessage *message,
 	}
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next)
-		paths[i] = wpa_s->dbus_new_path;
+		paths[i++] = wpa_s->dbus_new_path;
 
 	reply = wpas_dbus_simple_array_property_getter(message,
 						       DBUS_TYPE_OBJECT_PATH,

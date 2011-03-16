@@ -39,6 +39,13 @@ static void supp_set_state(void *ctx, enum wpa_states state)
 }
 
 
+static enum wpa_states supp_get_state(void *ctx)
+{
+	struct ibss_rsn_peer *peer = ctx;
+	return peer->supp_state;
+}
+
+
 static int supp_ether_send(void *ctx, const u8 *dest, u16 proto, const u8 *buf,
 			   size_t len)
 {
@@ -171,6 +178,7 @@ int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
 	ctx->ctx = peer;
 	ctx->msg_ctx = peer->ibss_rsn->wpa_s;
 	ctx->set_state = supp_set_state;
+	ctx->get_state = supp_get_state;
 	ctx->ether_send = supp_ether_send;
 	ctx->get_beacon_ie = supp_get_beacon_ie;
 	ctx->alloc_eapol = supp_alloc_eapol;

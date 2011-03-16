@@ -5478,6 +5478,9 @@ static int i802_sta_clear_stats(void *priv, const u8 *addr)
 	return 0;
 }
 
+#endif /* HOSTAPD */
+
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 			   int reason)
@@ -5516,6 +5519,9 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 					    sizeof(mgmt.u.disassoc));
 }
 
+#endif /* HOSTAPD || CONFIG_AP */
+
+#ifdef HOSTAPD
 
 static int i802_check_bridge(struct wpa_driver_nl80211_data *drv,
 			     struct i802_bss *bss,
@@ -6458,8 +6464,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.read_sta_data = i802_read_sta_data,
-	.sta_deauth = i802_sta_deauth,
-	.sta_disassoc = i802_sta_disassoc,
 	.get_inact_sec = i802_get_inact_sec,
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_rts = i802_set_rts,
@@ -6473,6 +6477,10 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_wds_sta = i802_set_wds_sta,
 	.set_ht_params = i802_set_ht_params,
 #endif /* HOSTAPD */
+#if defined(HOSTAPD) || defined(CONFIG_AP)
+	.sta_deauth = i802_sta_deauth,
+	.sta_disassoc = i802_sta_disassoc,
+#endif /* HOSTAPD || CONFIG_AP */
 	.set_freq = i802_set_freq,
 	.send_action = wpa_driver_nl80211_send_action,
 	.send_action_cancel_wait = wpa_driver_nl80211_send_action_cancel_wait,

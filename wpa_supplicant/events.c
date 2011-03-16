@@ -1637,6 +1637,8 @@ static void wpa_supplicant_event_ibss_rsn_start(struct wpa_supplicant *wpa_s,
 						union wpa_event_data *data)
 {
 	struct wpa_ssid *ssid;
+	if (wpa_s->wpa_state < WPA_ASSOCIATED)
+		return;
 	if (data == NULL)
 		return;
 	ssid = wpa_s->current_ssid;

@@ -346,23 +346,40 @@ int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 
 	os_get_time(&now);
 
+	wpa_printf(MSG_DEBUG, "WPS: Checking active PBC sessions for overlap");
+
+	if (uuid_e) {
+		wpa_printf(MSG_DEBUG, "WPS: Add one for the requested UUID");
+		wpa_hexdump(MSG_DEBUG, "WPS: Requested UUID",
+			    uuid_e, WPS_UUID_LEN);
+		count++;
+	}
+
 	for (pbc = reg->pbc_sessions; pbc; pbc = pbc->next) {
-		if (now.sec > pbc->timestamp.sec + WPS_PBC_WALK_TIME)
+		wpa_printf(MSG_DEBUG, "WPS: Consider PBC session with " MACSTR,
+			   MAC2STR(pbc->addr));
+		wpa_hexdump(MSG_DEBUG, "WPS: UUID-E",
+			    pbc->uuid_e, WPS_UUID_LEN);
+		if (now.sec > pbc->timestamp.sec + WPS_PBC_WALK_TIME) {
+			wpa_printf(MSG_DEBUG, "WPS: PBC walk time has "
+				   "expired");
 			break;
+		}
 		if (first &&
-		    os_memcmp(pbc->uuid_e, first->uuid_e, WPS_UUID_LEN) == 0)
+		    os_memcmp(pbc->uuid_e, first->uuid_e, WPS_UUID_LEN) == 0) {
+			wpa_printf(MSG_DEBUG, "WPS: Same Enrollee");
 			continue; /* same Enrollee */
+		}
 		if (uuid_e == NULL ||
-		    os_memcmp(uuid_e, pbc->uuid_e, WPS_UUID_LEN))
+		    os_memcmp(uuid_e, pbc->uuid_e, WPS_UUID_LEN)) {
+			wpa_printf(MSG_DEBUG, "WPS: New Enrollee");
 			count++;
+		}
 		if (first == NULL)
 			first = pbc;
 	}
 
-	if (uuid_e &&
-	    (first == NULL ||
-	     os_memcmp(uuid_e, first->uuid_e, WPS_UUID_LEN) != 0))
-		count++;
+	wpa_printf(MSG_DEBUG, "WPS: %u active PBC session(s) found", count);
 
 	return count > 1 ? 1 : 0;
 }

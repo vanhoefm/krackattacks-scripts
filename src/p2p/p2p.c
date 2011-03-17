@@ -338,6 +338,9 @@ static void p2p_copy_client_info(struct p2p_device *dev,
 	dev->info.dev_capab = cli->dev_capab;
 	dev->info.config_methods = cli->config_methods;
 	os_memcpy(dev->info.pri_dev_type, cli->pri_dev_type, 8);
+	dev->info.wps_sec_dev_type_list_len = 8 * cli->num_sec_dev_types;
+	os_memcpy(dev->info.wps_sec_dev_type_list, cli->sec_dev_types,
+		  dev->info.wps_sec_dev_type_list_len);
 }
 
 
@@ -510,6 +513,14 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 		  sizeof(dev->info.device_name));
 	dev->info.config_methods = msg.config_methods ? msg.config_methods :
 		msg.wps_config_methods;
+
+	if (msg.wps_sec_dev_type_list) {
+		os_memcpy(dev->info.wps_sec_dev_type_list,
+			  msg.wps_sec_dev_type_list,
+			  msg.wps_sec_dev_type_list_len);
+		dev->info.wps_sec_dev_type_list_len =
+			msg.wps_sec_dev_type_list_len;
+	}
 
 	if (msg.capability) {
 		dev->info.dev_capab = msg.capability[0];
@@ -1068,6 +1079,15 @@ void p2p_add_dev_info(struct p2p_data *p2p, const u8 *addr,
 		  sizeof(dev->info.device_name));
 	dev->info.config_methods = msg->config_methods ? msg->config_methods :
 		msg->wps_config_methods;
+
+	if (msg->wps_sec_dev_type_list) {
+		os_memcpy(dev->info.wps_sec_dev_type_list,
+			  msg->wps_sec_dev_type_list,
+			  msg->wps_sec_dev_type_list_len);
+		dev->info.wps_sec_dev_type_list_len =
+			msg->wps_sec_dev_type_list_len;
+	}
+
 	if (msg->capability) {
 		dev->info.dev_capab = msg->capability[0];
 		dev->info.group_capab = msg->capability[1];
@@ -1440,6 +1460,14 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 	if (msg.wps_pri_dev_type)
 		os_memcpy(dev->info.pri_dev_type, msg.wps_pri_dev_type,
 			  sizeof(dev->info.pri_dev_type));
+
+	if (msg.wps_sec_dev_type_list) {
+		os_memcpy(dev->info.wps_sec_dev_type_list,
+			  msg.wps_sec_dev_type_list,
+			  msg.wps_sec_dev_type_list_len);
+		dev->info.wps_sec_dev_type_list_len =
+			msg.wps_sec_dev_type_list_len;
+	}
 
 	p2p_parse_free(&msg);
 

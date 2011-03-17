@@ -195,6 +195,8 @@ struct wps_parse_attr {
 	size_t eap_identity_len;
 	const u8 *authorized_macs; /* <= 30 octets */
 	size_t authorized_macs_len;
+	const u8 *sec_dev_type_list; /* <= 128 octets */
+	size_t sec_dev_type_list_len;
 
 	/* attributes that can occur multiple times */
 #define MAX_CRED_COUNT 10

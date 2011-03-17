@@ -172,6 +172,20 @@ struct p2p_peer_info {
 	 * group_capab - Group Capabilities
 	 */
 	u8 group_capab;
+
+	/**
+	 * wps_sec_dev_type_list - WPS secondary device type list
+	 *
+	 * This list includes from 0 to 16 Secondary Device Types as indicated
+	 * by wps_sec_dev_type_list_len (8 * number of types).
+	 */
+	u8 wps_sec_dev_type_list[128];
+
+	/**
+	 * wps_sec_dev_type_list_len - Length of secondary device type list
+	 */
+	size_t wps_sec_dev_type_list_len;
+
 };
 
 /**

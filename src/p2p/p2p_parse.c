@@ -353,6 +353,10 @@ static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 			   wps_dev_type_bin2str(msg->wps_pri_dev_type, devtype,
 						sizeof(devtype)));
 	}
+	if (attr.sec_dev_type_list) {
+		msg->wps_sec_dev_type_list = attr.sec_dev_type_list;
+		msg->wps_sec_dev_type_list_len = attr.sec_dev_type_list_len;
+	}
 
 	return 0;
 }

@@ -63,6 +63,7 @@ struct wps_credential {
 
 #define WPS_DEV_TYPE_LEN 8
 #define WPS_DEV_TYPE_BUFSIZE 21
+#define WPS_SEC_DEV_TYPE_MAX_LEN 128
 
 /**
  * struct wps_device_data - WPS Device Data

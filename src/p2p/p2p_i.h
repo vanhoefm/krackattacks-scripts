@@ -437,6 +437,8 @@ struct p2p_message {
 	u16 dev_password_id;
 	u16 wps_config_methods;
 	const u8 *wps_pri_dev_type;
+	const u8 *wps_sec_dev_type_list;
+	size_t wps_sec_dev_type_list_len;
 
 	/* DS Parameter Set IE */
 	const u8 *ds_params;

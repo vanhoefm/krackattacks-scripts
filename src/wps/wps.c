@@ -486,10 +486,9 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_model_name(dev, ie) ||
 	    wps_build_model_number(dev, ie) ||
 	    wps_build_dev_name(dev, ie) ||
-	    wps_build_wfa_ext(ie, req_type == WPS_REQ_ENROLLEE, NULL, 0)
-#else /* CONFIG_WPS2 */
-	    0
+	    wps_build_wfa_ext(ie, req_type == WPS_REQ_ENROLLEE, NULL, 0) ||
 #endif /* CONFIG_WPS2 */
+	    wps_build_secondary_dev_type(dev, ie)
 		) {
 		wpabuf_free(ie);
 		return NULL;

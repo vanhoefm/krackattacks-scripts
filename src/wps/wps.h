@@ -73,6 +73,8 @@ struct wps_credential {
  * @model_number: Model Number (0..32 octets encoded in UTF-8)
  * @serial_number: Serial Number (0..32 octets encoded in UTF-8)
  * @pri_dev_type: Primary Device Type
+ * @sec_dev_type: Array of secondary device types
+ * @num_sec_dev_type: Number of secondary device types
  * @os_version: OS Version
  * @rf_bands: RF bands (WPS_RF_24GHZ, WPS_RF_50GHZ flags)
  * @p2p: Whether the device is a P2P device
@@ -85,6 +87,9 @@ struct wps_device_data {
 	char *model_number;
 	char *serial_number;
 	u8 pri_dev_type[WPS_DEV_TYPE_LEN];
+#define WPS_SEC_DEVICE_TYPES 5
+	u8 sec_dev_type[WPS_SEC_DEVICE_TYPES][WPS_DEV_TYPE_LEN];
+	u8 num_sec_dev_types;
 	u32 os_version;
 	u8 rf_bands;
 

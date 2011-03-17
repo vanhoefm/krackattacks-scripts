@@ -126,6 +126,22 @@ int wps_build_primary_dev_type(struct wps_device_data *dev, struct wpabuf *msg)
 }
 
 
+int wps_build_secondary_dev_type(struct wps_device_data *dev,
+				  struct wpabuf *msg)
+{
+	if (!dev->num_sec_dev_types)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "WPS:  * Secondary Device Type");
+	wpabuf_put_be16(msg, ATTR_SECONDARY_DEV_TYPE_LIST);
+	wpabuf_put_be16(msg, WPS_DEV_TYPE_LEN * dev->num_sec_dev_types);
+	wpabuf_put_data(msg, dev->sec_dev_type,
+			WPS_DEV_TYPE_LEN * dev->num_sec_dev_types);
+
+	return 0;
+}
+
+
 int wps_build_dev_name(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;

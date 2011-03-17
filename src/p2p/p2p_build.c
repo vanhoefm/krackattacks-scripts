@@ -385,5 +385,14 @@ void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
 
 	wps_build_wfa_ext(buf, 0, NULL, 0);
 
+	if (all_attr && p2p->cfg->num_sec_dev_types) {
+		wpabuf_put_be16(buf, ATTR_SECONDARY_DEV_TYPE_LIST);
+		wpabuf_put_be16(buf, WPS_DEV_TYPE_LEN *
+				p2p->cfg->num_sec_dev_types);
+		wpabuf_put_data(buf, p2p->cfg->sec_dev_type,
+				WPS_DEV_TYPE_LEN *
+				p2p->cfg->num_sec_dev_types);
+	}
+
 	p2p_buf_update_ie_hdr(buf, len);
 }

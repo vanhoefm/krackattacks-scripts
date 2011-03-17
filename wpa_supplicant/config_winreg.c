@@ -247,8 +247,13 @@ static int wpa_config_read_global(struct wpa_config *config, HKEY hk)
 		hk, TEXT("model_name"));
 	config->serial_number = wpa_config_read_reg_string(
 		hk, TEXT("serial_number"));
-	config->device_type = wpa_config_read_reg_string(
-		hk, TEXT("device_type"));
+	{
+		char *t = wpa_config_read_reg_string(
+			hk, TEXT("device_type"));
+		if (t && wps_dev_type_str2bin(t, config->device_type))
+			errors++;
+		os_free(t);
+	}
 	config->config_methods = wpa_config_read_reg_string(
 		hk, TEXT("config_methods"));
 	if (wpa_config_read_global_os_version(config, hk))
@@ -585,7 +590,12 @@ static int wpa_config_write_global(struct wpa_config *config, HKEY hk)
 	wpa_config_write_reg_string(hk, "model_number", config->model_number);
 	wpa_config_write_reg_string(hk, "serial_number",
 				    config->serial_number);
-	wpa_config_write_reg_string(hk, "device_type", config->device_type);
+	{
+		char _buf[WPS_DEV_TYPE_BUFSIZE], *buf;
+		buf = wps_dev_type_bin2str(config->device_type,
+					   _buf, sizeof(_buf));
+		wpa_config_write_reg_string(hk, "device_type", buf);
+	}
 	wpa_config_write_reg_string(hk, "config_methods",
 				    config->config_methods);
 	if (WPA_GET_BE32(config->os_version)) {

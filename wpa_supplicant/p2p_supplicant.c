@@ -931,9 +931,13 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	C(model_name);
 	C(model_number);
 	C(serial_number);
-	C(device_type);
 	C(config_methods);
 #undef C
+
+	os_memcpy(d->device_type, s->device_type, WPS_DEV_TYPE_LEN);
+	os_memcpy(d->sec_device_type, s->sec_device_type,
+		  sizeof(d->sec_device_type));
+	d->num_sec_device_types = s->num_sec_device_types;
 
 	d->p2p_group_idle = s->p2p_group_idle;
 	d->p2p_intra_bss = s->p2p_intra_bss;
@@ -2291,7 +2295,6 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 {
 	struct p2p_config p2p;
 	unsigned int r;
-	int i;
 
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
 		return 0;
@@ -2317,27 +2320,13 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "P2P: Use driver-based P2P management");
 		os_memset(&params, 0, sizeof(params));
 		params.dev_name = wpa_s->conf->device_name;
-		if (wpa_s->conf->device_type &&
-		    wps_dev_type_str2bin(wpa_s->conf->device_type,
-					 params.pri_dev_type) < 0) {
-			wpa_printf(MSG_ERROR, "P2P: Invalid device_type");
-			return -1;
-		}
-		for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++) {
-			if (wpa_s->conf->sec_device_type[i] == NULL)
-				continue;
-			if (wps_dev_type_str2bin(
-				    wpa_s->conf->sec_device_type[i],
-				    params.sec_dev_type[
-					    params.num_sec_dev_types]) < 0) {
-				wpa_printf(MSG_ERROR, "P2P: Invalid "
-					   "sec_device_type");
-				return -1;
-			}
-			params.num_sec_dev_types++;
-			if (params.num_sec_dev_types == DRV_MAX_SEC_DEV_TYPES)
-				break;
-		}
+		os_memcpy(params.pri_dev_type, wpa_s->conf->device_type,
+			  WPS_DEV_TYPE_LEN);
+		params.num_sec_dev_types = wpa_s->conf->num_sec_device_types;
+		os_memcpy(params.sec_dev_type,
+			  wpa_s->conf->sec_device_type,
+			  params.num_sec_dev_types * WPS_DEV_TYPE_LEN);
+
 		if (wpa_drv_p2p_set_params(wpa_s, &params) < 0)
 			return -1;
 
@@ -2417,26 +2406,12 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 
-	if (wpa_s->conf->device_type &&
-	    wps_dev_type_str2bin(wpa_s->conf->device_type, p2p.pri_dev_type) <
-	    0) {
-		wpa_printf(MSG_ERROR, "P2P: Invalid device_type");
-		return -1;
-	}
+	os_memcpy(p2p.pri_dev_type, wpa_s->conf->device_type,
+		  WPS_DEV_TYPE_LEN);
 
-	for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++) {
-		if (wpa_s->conf->sec_device_type[i] == NULL)
-			continue;
-		if (wps_dev_type_str2bin(
-			    wpa_s->conf->sec_device_type[i],
-			    p2p.sec_dev_type[p2p.num_sec_dev_types]) < 0) {
-			wpa_printf(MSG_ERROR, "P2P: Invalid sec_device_type");
-			return -1;
-		}
-		p2p.num_sec_dev_types++;
-		if (p2p.num_sec_dev_types == P2P_SEC_DEVICE_TYPES)
-			break;
-	}
+	p2p.num_sec_dev_types = wpa_s->conf->num_sec_device_types;
+	os_memcpy(p2p.sec_dev_type, wpa_s->conf->sec_device_type,
+		  p2p.num_sec_dev_types * WPS_DEV_TYPE_LEN);
 
 	p2p.concurrent_operations = !!(wpa_s->drv_flags &
 				       WPA_DRIVER_FLAGS_P2P_CONCURRENT);
@@ -3900,38 +3875,13 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_NAME)
 		p2p_set_dev_name(p2p, wpa_s->conf->device_name);
 
-	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE) {
-		u8 pri_dev_type[8];
-		if (wpa_s->conf->device_type) {
-			if (wps_dev_type_str2bin(wpa_s->conf->device_type,
-						 pri_dev_type) < 0) {
-				wpa_printf(MSG_ERROR, "P2P: Invalid "
-					   "device_type");
-			} else
-				p2p_set_pri_dev_type(p2p, pri_dev_type);
-		}
-	}
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE)
+		p2p_set_pri_dev_type(p2p, wpa_s->conf->device_type);
 
-	if (wpa_s->conf->changed_parameters & CFG_CHANGED_SEC_DEVICE_TYPE) {
-		u8 sec_dev_type[P2P_SEC_DEVICE_TYPES][8];
-		size_t num = 0;
-		int i;
-		for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++) {
-			if (wpa_s->conf->sec_device_type[i] == NULL)
-				continue;
-			if (wps_dev_type_str2bin(
-				    wpa_s->conf->sec_device_type[i],
-				    sec_dev_type[num]) < 0) {
-				wpa_printf(MSG_ERROR, "P2P: Invalid "
-					   "sec_device_type");
-				continue;
-			}
-			num++;
-			if (num == P2P_SEC_DEVICE_TYPES)
-				break;
-		}
-		p2p_set_sec_dev_types(p2p, (void *) sec_dev_type, num);
-	}
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_SEC_DEVICE_TYPE)
+		p2p_set_sec_dev_types(p2p,
+				      (void *) wpa_s->conf->sec_device_type,
+				      wpa_s->conf->num_sec_device_types);
 
 	if ((wpa_s->conf->changed_parameters & CFG_CHANGED_COUNTRY) &&
 	    wpa_s->conf->country[0] && wpa_s->conf->country[1]) {

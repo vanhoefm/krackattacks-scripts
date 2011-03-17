@@ -28,6 +28,7 @@
 #define DEFAULT_MAX_NUM_STA 128
 
 #include "config_ssid.h"
+#include "wps/wps.h"
 
 
 #define CFG_CHANGED_DEVICE_NAME BIT(0)
@@ -299,18 +300,8 @@ struct wpa_config {
 
 	/**
 	 * device_type - Primary Device Type (WPS)
-	 * Used format: categ-OUI-subcateg
-	 * categ = Category as an integer value
-	 * OUI = OUI and type octet as a 4-octet hex-encoded value;
-	 *	0050F204 for default WPS OUI
-	 * subcateg = OUI-specific Sub Category as an integer value
-	 * Examples:
-	 *   1-0050F204-1 (Computer / PC)
-	 *   1-0050F204-2 (Computer / Server)
-	 *   5-0050F204-1 (Storage / NAS)
-	 *   6-0050F204-1 (Network Infrastructure / AP)
 	 */
-	char *device_type;
+	u8 device_type[WPS_DEV_TYPE_LEN];
 
 	/**
 	 * config_methods - Config Methods
@@ -352,10 +343,10 @@ struct wpa_config {
 
 #define MAX_SEC_DEVICE_TYPES 5
 	/**
-	 * sec_device_type - Secondary Device Types (P2P)
-	 * See device_type for the format used with these.
+	 * sec_device_types - Secondary Device Types (P2P)
 	 */
-	char *sec_device_type[MAX_SEC_DEVICE_TYPES];
+	u8 sec_device_type[MAX_SEC_DEVICE_TYPES][WPS_DEV_TYPE_LEN];
+	int num_sec_device_types;
 
 	int p2p_listen_reg_class;
 	int p2p_listen_channel;

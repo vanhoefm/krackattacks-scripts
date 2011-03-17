@@ -18,6 +18,7 @@
 #include "common/defs.h"
 #include "ip_addr.h"
 #include "common/wpa_common.h"
+#include "wps/wps.h"
 
 #define MAX_STA_COUNT 2007
 #define MAX_VLAN_ID 4094
@@ -299,7 +300,7 @@ struct hostapd_bss_config {
 	char *model_name;
 	char *model_number;
 	char *serial_number;
-	char *device_type;
+	u8 device_type[WPS_DEV_TYPE_LEN];
 	char *config_methods;
 	u8 os_version[4];
 	char *ap_pin;

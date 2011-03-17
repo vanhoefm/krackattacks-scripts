@@ -728,13 +728,9 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 		wps->config_methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
 	}
 #endif /* CONFIG_WPS2 */
-	if (hapd->conf->device_type &&
-	    wps_dev_type_str2bin(hapd->conf->device_type,
-				 wps->dev.pri_dev_type) < 0) {
-		wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
-		os_free(wps);
-		return -1;
-	}
+	os_memcpy(wps->dev.pri_dev_type, hapd->conf->device_type,
+		  WPS_DEV_TYPE_LEN);
+
 	wps->dev.os_version = WPA_GET_BE32(hapd->conf->os_version);
 	wps->dev.rf_bands = hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?
 		WPS_RF_50GHZ : WPS_RF_24GHZ; /* FIX: dualband AP */

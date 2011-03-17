@@ -169,8 +169,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->ap_setup_locked = 2;
 	if (wpa_s->conf->config_methods)
 		bss->config_methods = os_strdup(wpa_s->conf->config_methods);
-	if (wpa_s->conf->device_type)
-		bss->device_type = os_strdup(wpa_s->conf->device_type);
+	os_memcpy(bss->device_type, wpa_s->conf->device_type,
+		  WPS_DEV_TYPE_LEN);
 	if (wpa_s->conf->device_name) {
 		bss->device_name = os_strdup(wpa_s->conf->device_name);
 		bss->friendly_name = os_strdup(wpa_s->conf->device_name);

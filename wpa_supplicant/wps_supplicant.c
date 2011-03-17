@@ -1094,7 +1094,6 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 {
 	struct wps_context *wps;
 	struct wps_registrar_config rcfg;
-	int i;
 
 	wps = os_zalloc(sizeof(*wps));
 	if (wps == NULL)
@@ -1119,28 +1118,12 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 	wps->config_methods = wps_fix_config_methods(wps->config_methods);
-	if (wpa_s->conf->device_type &&
-	    wps_dev_type_str2bin(wpa_s->conf->device_type,
-				 wps->dev.pri_dev_type) < 0) {
-		wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
-		os_free(wps);
-		return -1;
-	}
+	os_memcpy(wps->dev.pri_dev_type, wpa_s->conf->device_type,
+		  WPS_DEV_TYPE_LEN);
 
-	for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++) {
-		if (wpa_s->conf->sec_device_type[i] == NULL)
-			continue;
-		if (wps_dev_type_str2bin(
-			    wpa_s->conf->sec_device_type[i],
-			    wps->dev.sec_dev_type[wps->dev.num_sec_dev_types])
-		    < 0) {
-			wpa_printf(MSG_ERROR, "WPS: Invalid sec_device_type");
-			return -1;
-		}
-		wps->dev.num_sec_dev_types++;
-		if (wps->dev.num_sec_dev_types == WPS_SEC_DEVICE_TYPES)
-			break;
-	}
+	wps->dev.num_sec_dev_types = wpa_s->conf->num_sec_device_types;
+	os_memcpy(wps->dev.sec_dev_type, wpa_s->conf->sec_device_type,
+		  WPS_DEV_TYPE_LEN * wps->dev.num_sec_dev_types);
 
 	wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
 	wps->dev.rf_bands = WPS_RF_24GHZ | WPS_RF_50GHZ; /* TODO: config */
@@ -1665,33 +1648,14 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 	}
 	wps->config_methods = wps_fix_config_methods(wps->config_methods);
 
-	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE) {
-		if (wpa_s->conf->device_type &&
-		    wps_dev_type_str2bin(wpa_s->conf->device_type,
-					 wps->dev.pri_dev_type) < 0)
-			wpa_printf(MSG_ERROR, "WPS: Invalid device_type");
-	}
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE)
+		os_memcpy(wps->dev.pri_dev_type, wpa_s->conf->device_type,
+			  WPS_DEV_TYPE_LEN);
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_SEC_DEVICE_TYPE) {
-		int i;
-
-		wps->dev.num_sec_dev_types = 0;
-
-		for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++) {
-			if (wpa_s->conf->sec_device_type[i] == NULL)
-				continue;
-			if (wps_dev_type_str2bin(
-				    wpa_s->conf->sec_device_type[i],
-				    wps->dev.sec_dev_type[
-					    wps->dev.num_sec_dev_types]) < 0) {
-				wpa_printf(MSG_ERROR,
-					   "WPS: Invalid sec_device_type");
-				continue;
-			}
-			wps->dev.num_sec_dev_types++;
-			if (wps->dev.num_sec_dev_types == WPS_SEC_DEVICE_TYPES)
-				break;
-		}
+		wps->dev.num_sec_dev_types = wpa_s->conf->num_sec_device_types;
+		os_memcpy(wps->dev.sec_dev_type, wpa_s->conf->sec_device_type,
+			  wps->dev.num_sec_dev_types * WPS_DEV_TYPE_LEN);
 	}
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_OS_VERSION)

@@ -1966,8 +1966,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			os_free(bss->serial_number);
 			bss->serial_number = os_strdup(pos);
 		} else if (os_strcmp(buf, "device_type") == 0) {
-			os_free(bss->device_type);
-			bss->device_type = os_strdup(pos);
+			if (wps_dev_type_str2bin(pos, bss->device_type))
+				errors++;
 		} else if (os_strcmp(buf, "config_methods") == 0) {
 			os_free(bss->config_methods);
 			bss->config_methods = os_strdup(pos);

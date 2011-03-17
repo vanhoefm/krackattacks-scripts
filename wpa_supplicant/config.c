@@ -1694,7 +1694,6 @@ void wpa_config_free(struct wpa_config *config)
 	struct wpa_config_blob *blob, *prevblob;
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 	struct wpa_ssid *ssid, *prev = NULL;
-	int i;
 
 	ssid = config->ssid;
 	while (ssid) {
@@ -1724,9 +1723,6 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->model_name);
 	os_free(config->model_number);
 	os_free(config->serial_number);
-	os_free(config->device_type);
-	for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++)
-		os_free(config->sec_device_type[i]);
 	os_free(config->config_methods);
 	os_free(config->p2p_ssid_postfix);
 	os_free(config->pssid);
@@ -2311,6 +2307,14 @@ static int wpa_config_process_uuid(const struct global_parse_data *data,
 }
 
 
+static int wpa_config_process_device_type(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	return wps_dev_type_str2bin(pos, config->device_type);
+}
+
+
 static int wpa_config_process_os_version(const struct global_parse_data *data,
 					 struct wpa_config *config, int line,
 					 const char *pos)
@@ -2333,18 +2337,18 @@ static int wpa_config_process_sec_device_type(
 {
 	int idx;
 
-	for (idx = 0; idx < MAX_SEC_DEVICE_TYPES; idx++)
-		if (config->sec_device_type[idx] == NULL)
-			break;
-	if (idx == MAX_SEC_DEVICE_TYPES) {
+	if (config->num_sec_device_types >= MAX_SEC_DEVICE_TYPES) {
 		wpa_printf(MSG_ERROR, "Line %d: too many sec_device_type "
 			   "items", line);
 		return -1;
 	}
 
-	config->sec_device_type[idx] = os_strdup(pos);
-	if (config->sec_device_type[idx] == NULL)
+	idx = config->num_sec_device_types;
+
+	if (wps_dev_type_str2bin(pos, config->sec_device_type[idx]))
 		return -1;
+
+	config->num_sec_device_types++;
 	return 0;
 }
 #endif /* CONFIG_P2P */
@@ -2391,7 +2395,7 @@ static const struct global_parse_data global_fields[] = {
 	{ STR_RANGE(model_name, 0, 32), CFG_CHANGED_WPS_STRING },
 	{ STR_RANGE(model_number, 0, 32), CFG_CHANGED_WPS_STRING },
 	{ STR_RANGE(serial_number, 0, 32), CFG_CHANGED_WPS_STRING },
-	{ STR(device_type), CFG_CHANGED_DEVICE_TYPE },
+	{ FUNC(device_type), CFG_CHANGED_DEVICE_TYPE },
 	{ FUNC(os_version), CFG_CHANGED_OS_VERSION },
 	{ STR(config_methods), CFG_CHANGED_CONFIG_METHODS },
 	{ INT_RANGE(wps_cred_processing, 0, 2), 0 },

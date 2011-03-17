@@ -310,20 +310,25 @@ static void wps_registrar_add_pbc_session(struct wps_registrar *reg,
 
 
 static void wps_registrar_remove_pbc_session(struct wps_registrar *reg,
-					     const u8 *addr, const u8 *uuid_e)
+					     const u8 *uuid_e)
 {
-	struct wps_pbc_session *pbc, *prev = NULL;
+	struct wps_pbc_session *pbc, *prev = NULL, *tmp;
 
 	pbc = reg->pbc_sessions;
 	while (pbc) {
-		if (os_memcmp(pbc->addr, addr, ETH_ALEN) == 0 &&
-		    os_memcmp(pbc->uuid_e, uuid_e, WPS_UUID_LEN) == 0) {
+		if (os_memcmp(pbc->uuid_e, uuid_e, WPS_UUID_LEN) == 0) {
 			if (prev)
 				prev->next = pbc->next;
 			else
 				reg->pbc_sessions = pbc->next;
-			os_free(pbc);
-			break;
+			tmp = pbc;
+			pbc = pbc->next;
+			wpa_printf(MSG_DEBUG, "WPS: Removing PBC session for "
+				   "addr=" MACSTR, MAC2STR(tmp->addr));
+			wpa_hexdump(MSG_DEBUG, "WPS: Removed UUID-E",
+				    tmp->uuid_e, WPS_UUID_LEN);
+			os_free(tmp);
+			continue;
 		}
 		prev = pbc;
 		pbc = pbc->next;
@@ -2950,7 +2955,7 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 
 	if (wps->pbc) {
 		wps_registrar_remove_pbc_session(wps->wps->registrar,
-						 wps->mac_addr_e, wps->uuid_e);
+						 wps->uuid_e);
 		wps_registrar_pbc_completed(wps->wps->registrar);
 	} else {
 		wps_registrar_pin_completed(wps->wps->registrar);

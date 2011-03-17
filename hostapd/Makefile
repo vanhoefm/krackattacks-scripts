@@ -781,7 +781,8 @@ install: all
 BCHECK=../src/drivers/build.hostapd
 
 hostapd: $(BCHECK) $(OBJS)
-	$(CC) $(LDFLAGS) -o hostapd $(OBJS) $(LIBS)
+	$(Q)$(CC) $(LDFLAGS) -o hostapd $(OBJS) $(LIBS)
+	@$(E) "  LD " $@
 
 OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
 ifdef CONFIG_WPA_TRACE
@@ -789,7 +790,8 @@ OBJS_c += ../src/utils/trace.o
 OBJS_c += ../src/utils/wpa_debug.o
 endif
 hostapd_cli: $(OBJS_c)
-	$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c) $(LIBS_c)
+	$(Q)$(CC) $(LDFLAGS) -o hostapd_cli $(OBJS_c) $(LIBS_c)
+	@$(E) "  LD " $@
 
 NOBJS = nt_password_hash.o ../src/crypto/ms_funcs.o $(SHA1OBJS) ../src/crypto/md5.o
 ifdef NEED_RC4
@@ -819,10 +821,12 @@ HOBJS += ../src/crypto/aes-internal-enc.o
 endif
 
 nt_password_hash: $(NOBJS)
-	$(CC) $(LDFLAGS) -o nt_password_hash $(NOBJS) $(LIBS_n)
+	$(Q)$(CC) $(LDFLAGS) -o nt_password_hash $(NOBJS) $(LIBS_n)
+	@$(E) "  LD " $@
 
 hlr_auc_gw: $(HOBJS)
-	$(CC) $(LDFLAGS) -o hlr_auc_gw $(HOBJS) $(LIBS_h)
+	$(Q)$(CC) $(LDFLAGS) -o hlr_auc_gw $(HOBJS) $(LIBS_h)
+	@$(E) "  LD " $@
 
 clean:
 	$(MAKE) -C ../src clean

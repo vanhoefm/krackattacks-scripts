@@ -426,6 +426,46 @@ int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 }
 
 
+void ibss_rsn_stop(struct ibss_rsn *ibss_rsn, const u8 *peermac)
+{
+	struct ibss_rsn_peer *peer, *prev;
+
+	if (ibss_rsn == NULL)
+		return;
+
+	if (peermac == NULL) {
+		/* remove all peers */
+		wpa_printf(MSG_DEBUG, "%s: Remove all peers", __func__);
+		peer = ibss_rsn->peers;
+		while (peer) {
+			prev = peer;
+			peer = peer->next;
+			ibss_rsn_free(prev);
+			ibss_rsn->peers = peer;
+		}
+	} else {
+		/* remove specific peer */
+		wpa_printf(MSG_DEBUG, "%s: Remove specific peer " MACSTR,
+			   __func__, MAC2STR(peermac));
+
+		for (prev = NULL, peer = ibss_rsn->peers; peer != NULL;
+		     prev = peer, peer = peer->next) {
+			if (os_memcmp(peermac, peer->addr, ETH_ALEN) == 0) {
+				if (prev == NULL)
+					ibss_rsn->peers = peer->next;
+				else
+					prev->next = peer->next;
+				ibss_rsn_free(peer);
+				wpa_printf(MSG_DEBUG, "%s: Successfully "
+					   "removed a specific peer",
+					   __func__);
+				break;
+			}
+		}
+	}
+}
+
+
 struct ibss_rsn * ibss_rsn_init(struct wpa_supplicant *wpa_s)
 {
 	struct ibss_rsn *ibss_rsn;

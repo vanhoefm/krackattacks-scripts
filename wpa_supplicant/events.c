@@ -1570,6 +1570,9 @@ wpa_supplicant_event_interface_status(struct wpa_supplicant *wpa_s,
 		wpa_supplicant_mark_disassoc(wpa_s);
 		l2_packet_deinit(wpa_s->l2);
 		wpa_s->l2 = NULL;
+#ifdef CONFIG_IBSS_RSN
+		ibss_rsn_stop(wpa_s->ibss_rsn, NULL);
+#endif /* CONFIG_IBSS_RSN */
 #ifdef CONFIG_TERMINATE_ONLASTIF
 		/* check if last interface */
 		if (!any_interfaces(wpa_s->global->ifaces))
@@ -2177,6 +2180,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			hostapd_event_sta_low_ack(wpa_s->ap_iface->bss[0],
 						  data->low_ack.addr);
 #endif /* CONFIG_AP */
+		break;
+	case EVENT_IBSS_PEER_LOST:
+#ifdef CONFIG_IBSS_RSN
+		ibss_rsn_stop(wpa_s->ibss_rsn, data->ibss_peer_lost.peer);
+#endif /* CONFIG_IBSS_RSN */
 		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);

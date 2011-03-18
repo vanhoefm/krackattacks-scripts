@@ -2614,7 +2614,12 @@ enum wpa_event_type {
 	EVENT_P2P_PROV_DISC_REQUEST,
 	EVENT_P2P_PROV_DISC_RESPONSE,
 	EVENT_P2P_SD_REQUEST,
-	EVENT_P2P_SD_RESPONSE
+	EVENT_P2P_SD_RESPONSE,
+
+	/**
+	 * EVENT_IBSS_PEER_LOST - IBSS peer not reachable anymore
+	 */
+	EVENT_IBSS_PEER_LOST
 };
 
 
@@ -3145,6 +3150,13 @@ union wpa_event_data {
 		const u8 *tlvs;
 		size_t tlvs_len;
 	} p2p_sd_resp;
+
+	/**
+	 * struct ibss_peer_lost - Data for EVENT_IBSS_PEER_LOST
+	 */
+	struct ibss_peer_lost {
+		u8 peer[ETH_ALEN];
+	} ibss_peer_lost;
 };
 
 /**

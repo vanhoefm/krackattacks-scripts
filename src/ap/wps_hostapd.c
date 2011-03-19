@@ -657,6 +657,31 @@ static int interface_count(struct hostapd_iface *iface)
 }
 
 
+static int hostapd_wps_set_vendor_ext(struct hostapd_data *hapd,
+				      struct wps_context *wps)
+{
+	int i;
+
+	for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
+		wpabuf_free(wps->dev.vendor_ext[i]);
+		wps->dev.vendor_ext[i] = NULL;
+
+		if (hapd->conf->wps_vendor_ext[i] == NULL)
+			continue;
+
+		wps->dev.vendor_ext[i] =
+			wpabuf_dup(hapd->conf->wps_vendor_ext[i]);
+		if (wps->dev.vendor_ext[i] == NULL) {
+			while (--i >= 0)
+				wpabuf_free(wps->dev.vendor_ext[i]);
+			return -1;
+		}
+	}
+
+	return 0;
+}
+
+
 int hostapd_init_wps(struct hostapd_data *hapd,
 		     struct hostapd_bss_config *conf)
 {
@@ -730,6 +755,11 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 #endif /* CONFIG_WPS2 */
 	os_memcpy(wps->dev.pri_dev_type, hapd->conf->device_type,
 		  WPS_DEV_TYPE_LEN);
+
+	if (hostapd_wps_set_vendor_ext(hapd, wps) < 0) {
+		os_free(wps);
+		return -1;
+	}
 
 	wps->dev.os_version = WPA_GET_BE32(hapd->conf->os_version);
 	wps->dev.rf_bands = hapd->iconf->hw_mode == HOSTAPD_MODE_IEEE80211A ?
@@ -899,6 +929,8 @@ void hostapd_update_wps(struct hostapd_data *hapd)
 	hapd->wps->model_url = hapd->conf->model_url;
 	hapd->wps->upc = hapd->conf->upc;
 #endif /* CONFIG_WPS_UPNP */
+
+	hostapd_wps_set_vendor_ext(hapd, hapd->wps);
 
 	if (hapd->conf->wps_state)
 		wps_registrar_update_ie(hapd->wps->registrar);

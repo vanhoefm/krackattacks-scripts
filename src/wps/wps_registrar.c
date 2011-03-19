@@ -1113,14 +1113,23 @@ static int wps_set_ie(struct wps_registrar *reg)
 	struct wpabuf *probe;
 	const u8 *auth_macs;
 	size_t count;
+	size_t vendor_len = 0;
+	int i;
 
 	if (reg->set_ie_cb == NULL)
 		return 0;
 
-	beacon = wpabuf_alloc(400);
+	for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
+		if (reg->wps->dev.vendor_ext[i]) {
+			vendor_len += 2 + 2;
+			vendor_len += wpabuf_len(reg->wps->dev.vendor_ext[i]);
+		}
+	}
+
+	beacon = wpabuf_alloc(400 + vendor_len);
 	if (beacon == NULL)
 		return -1;
-	probe = wpabuf_alloc(500);
+	probe = wpabuf_alloc(500 + vendor_len);
 	if (probe == NULL) {
 		wpabuf_free(beacon);
 		return -1;
@@ -1138,7 +1147,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_sel_reg_config_methods(reg, beacon) ||
 	    wps_build_sel_pbc_reg_uuid_e(reg, beacon) ||
 	    (reg->dualband && wps_build_rf_bands(&reg->wps->dev, beacon)) ||
-	    wps_build_wfa_ext(beacon, 0, auth_macs, count)) {
+	    wps_build_wfa_ext(beacon, 0, auth_macs, count) ||
+	    wps_build_vendor_ext(&reg->wps->dev, beacon)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;
@@ -1167,7 +1177,8 @@ static int wps_set_ie(struct wps_registrar *reg)
 	    wps_build_device_attrs(&reg->wps->dev, probe) ||
 	    wps_build_probe_config_methods(reg, probe) ||
 	    wps_build_rf_bands(&reg->wps->dev, probe) ||
-	    wps_build_wfa_ext(probe, 0, auth_macs, count)) {
+	    wps_build_wfa_ext(probe, 0, auth_macs, count) ||
+	    wps_build_vendor_ext(&reg->wps->dev, probe)) {
 		wpabuf_free(beacon);
 		wpabuf_free(probe);
 		return -1;

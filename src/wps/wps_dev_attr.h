@@ -36,5 +36,6 @@ int wps_process_rf_bands(struct wps_device_data *dev, const u8 *bands);
 void wps_device_data_dup(struct wps_device_data *dst,
 			 const struct wps_device_data *src);
 void wps_device_data_free(struct wps_device_data *dev);
+int wps_build_vendor_ext(struct wps_device_data *dev, struct wpabuf *msg);
 
 #endif /* WPS_DEV_ATTR_H */

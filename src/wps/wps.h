@@ -64,6 +64,8 @@ struct wps_credential {
 #define WPS_DEV_TYPE_LEN 8
 #define WPS_DEV_TYPE_BUFSIZE 21
 #define WPS_SEC_DEV_TYPE_MAX_LEN 128
+/* maximum number of advertised WPS vendor extension attributes */
+#define MAX_WPS_VENDOR_EXTENSIONS 10
 
 /**
  * struct wps_device_data - WPS Device Data
@@ -93,6 +95,7 @@ struct wps_device_data {
 	u8 num_sec_dev_types;
 	u32 os_version;
 	u8 rf_bands;
+	struct wpabuf *vendor_ext[MAX_WPS_VENDOR_EXTENSIONS];
 
 	int p2p;
 };

@@ -523,12 +523,12 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 			msg.wps_sec_dev_type_list_len;
 	}
 
-	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		wpabuf_free(dev->info.wps_vendor_ext[i]);
 		dev->info.wps_vendor_ext[i] = NULL;
 	}
 
-	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		if (msg.wps_vendor_ext[i] == NULL)
 			break;
 		dev->info.wps_vendor_ext[i] = wpabuf_alloc_copy(
@@ -590,7 +590,7 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 
 	p2p->cfg->dev_lost(p2p->cfg->cb_ctx, dev->info.p2p_device_addr);
 
-	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		wpabuf_free(dev->info.wps_vendor_ext[i]);
 		dev->info.wps_vendor_ext[i] = NULL;
 	}
@@ -2046,7 +2046,7 @@ void p2p_remove_wps_vendor_extensions(struct p2p_data *p2p)
 {
 	int i;
 
-	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXTENSIONS; i++) {
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		wpabuf_free(p2p->wps_vendor_ext[i]);
 		p2p->wps_vendor_ext[i] = NULL;
 	}
@@ -2061,11 +2061,11 @@ int p2p_add_wps_vendor_extension(struct p2p_data *p2p,
 	if (vendor_ext == NULL)
 		return -1;
 
-	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXTENSIONS; i++) {
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		if (p2p->wps_vendor_ext[i] == NULL)
 			break;
 	}
-	if (i >= P2P_MAX_WPS_VENDOR_EXTENSIONS)
+	if (i >= P2P_MAX_WPS_VENDOR_EXT)
 		return -1;
 
 	p2p->wps_vendor_ext[i] = wpabuf_dup(vendor_ext);

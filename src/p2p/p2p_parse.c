@@ -359,9 +359,7 @@ static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 		msg->wps_sec_dev_type_list_len = attr.sec_dev_type_list_len;
 	}
 
-	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
-		if (i >= P2P_MAX_WPS_VENDOR_EXTENSIONS)
-			break;
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		msg->wps_vendor_ext[i] = attr.vendor_ext[i];
 		msg->wps_vendor_ext_len[i] = attr.vendor_ext_len[i];
 	}

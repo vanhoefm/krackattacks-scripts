@@ -397,7 +397,7 @@ void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
 	}
 
 	/* Add the WPS vendor extensions */
-	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXTENSIONS; i++) {
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		if (p2p->wps_vendor_ext[i] == NULL)
 			break;
 		if (wpabuf_tailroom(buf) <

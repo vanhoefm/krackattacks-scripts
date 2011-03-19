@@ -2068,7 +2068,7 @@ static int p2p_ctrl_find(struct wpa_supplicant *wpa_s, char *cmd)
 	else if (os_strstr(cmd, "type=progressive"))
 		type = P2P_FIND_PROGRESSIVE;
 
-	return wpas_p2p_find(wpa_s, timeout, type);
+	return wpas_p2p_find(wpa_s, timeout, type, 0, NULL);
 }
 
 

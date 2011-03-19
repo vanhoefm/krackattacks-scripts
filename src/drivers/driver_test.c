@@ -2885,7 +2885,7 @@ static int wpa_driver_test_p2p_find(void *priv, unsigned int timeout, int type)
 	wpa_printf(MSG_DEBUG, "%s(timeout=%u)", __func__, timeout);
 	if (!drv->p2p)
 		return -1;
-	return p2p_find(drv->p2p, timeout, type);
+	return p2p_find(drv->p2p, timeout, type, 0, NULL);
 }
 
 
@@ -2969,7 +2969,9 @@ static int wpa_driver_test_p2p_set_params(void *priv,
 }
 
 
-static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq)
+static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
+			 unsigned int num_req_dev_types,
+			 const u8 *req_dev_types)
 {
 	struct wpa_driver_test_data *drv = ctx;
 	struct wpa_driver_scan_params params;

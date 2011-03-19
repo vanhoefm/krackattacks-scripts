@@ -37,5 +37,8 @@ void wps_device_data_dup(struct wps_device_data *dst,
 			 const struct wps_device_data *src);
 void wps_device_data_free(struct wps_device_data *dev);
 int wps_build_vendor_ext(struct wps_device_data *dev, struct wpabuf *msg);
+int wps_build_req_dev_type(struct wps_device_data *dev, struct wpabuf *msg,
+			   unsigned int num_req_dev_types,
+			   const u8 *req_dev_types);
 
 #endif /* WPS_DEV_ATTR_H */

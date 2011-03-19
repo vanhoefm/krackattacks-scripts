@@ -315,6 +315,8 @@ struct p2p_config {
 	 * @ctx: Callback context from cb_ctx
 	 * @type: Scan type
 	 * @freq: Specific frequency (MHz) to scan or 0 for no restriction
+	 * @num_req_dev_types: Number of requested device types
+	 * @req_dev_types: Array containing requested device types
 	 * Returns: 0 on success, -1 on failure
 	 *
 	 * This callback function is used to request a P2P scan or search
@@ -336,7 +338,9 @@ struct p2p_config {
 	 * then calling p2p_scan_res_handled() to indicate that all scan
 	 * results have been indicated.
 	 */
-	int (*p2p_scan)(void *ctx, enum p2p_scan_type type, int freq);
+	int (*p2p_scan)(void *ctx, enum p2p_scan_type type, int freq,
+			unsigned int num_req_dev_types,
+			const u8 *req_dev_types);
 
 	/**
 	 * send_probe_resp - Transmit a Probe Response frame
@@ -733,10 +737,15 @@ enum p2p_discovery_type {
  * @p2p: P2P module context from p2p_init()
  * @timeout: Timeout for find operation in seconds or 0 for no timeout
  * @type: Device Discovery type
+ * @num_req_dev_types: Number of requested device types
+ * @req_dev_types: Requested device types array, must be an array
+ *	containing num_req_dev_types * WPS_DEV_TYPE_LEN bytes; %NULL if no
+ *	requested device types.
  * Returns: 0 on success, -1 on failure
  */
 int p2p_find(struct p2p_data *p2p, unsigned int timeout,
-	     enum p2p_discovery_type type);
+	     enum p2p_discovery_type type,
+	     unsigned int num_req_dev_types, const u8 *req_dev_types);
 
 /**
  * p2p_stop_find - Stop P2P Find (Device Discovery)

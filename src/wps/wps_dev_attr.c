@@ -142,6 +142,26 @@ int wps_build_secondary_dev_type(struct wps_device_data *dev,
 }
 
 
+int wps_build_req_dev_type(struct wps_device_data *dev, struct wpabuf *msg,
+			   unsigned int num_req_dev_types,
+			   const u8 *req_dev_types)
+{
+	unsigned int i;
+
+	for (i = 0; i < num_req_dev_types; i++) {
+		wpa_hexdump(MSG_DEBUG, "WPS: * Requested Device Type",
+			    req_dev_types + i * WPS_DEV_TYPE_LEN,
+			    WPS_DEV_TYPE_LEN);
+		wpabuf_put_be16(msg, ATTR_REQUESTED_DEV_TYPE);
+		wpabuf_put_be16(msg, WPS_DEV_TYPE_LEN);
+		wpabuf_put_data(msg, req_dev_types + i * WPS_DEV_TYPE_LEN,
+				WPS_DEV_TYPE_LEN);
+	}
+
+	return 0;
+}
+
+
 int wps_build_dev_name(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	size_t len;

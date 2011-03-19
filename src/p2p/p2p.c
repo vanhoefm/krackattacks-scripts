@@ -699,7 +699,9 @@ static void p2p_search(struct p2p_data *p2p)
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting search");
 	}
 
-	if (p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, type, freq) < 0) {
+	if (p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, type, freq,
+			       p2p->num_req_dev_types, p2p->req_dev_types) < 0)
+	{
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Scan request failed");
 		p2p_continue_find(p2p);
@@ -789,8 +791,17 @@ static void p2p_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+static void p2p_free_req_dev_types(struct p2p_data *p2p)
+{
+	p2p->num_req_dev_types = 0;
+	os_free(p2p->req_dev_types);
+	p2p->req_dev_types = NULL;
+}
+
+
 int p2p_find(struct p2p_data *p2p, unsigned int timeout,
-	     enum p2p_discovery_type type)
+	     enum p2p_discovery_type type,
+	     unsigned int num_req_dev_types, const u8 *req_dev_types)
 {
 	int res;
 
@@ -800,6 +811,18 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: p2p_scan is "
 			"already running");
 	}
+
+	p2p_free_req_dev_types(p2p);
+	if (req_dev_types && num_req_dev_types) {
+		p2p->req_dev_types = os_malloc(num_req_dev_types *
+					       WPS_DEV_TYPE_LEN);
+		if (p2p->req_dev_types == NULL)
+			return -1;
+		os_memcpy(p2p->req_dev_types, req_dev_types,
+			  num_req_dev_types * WPS_DEV_TYPE_LEN);
+		p2p->num_req_dev_types = num_req_dev_types;
+	}
+
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
 	p2p_clear_timeout(p2p);
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
@@ -813,10 +836,14 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	switch (type) {
 	case P2P_FIND_START_WITH_FULL:
 	case P2P_FIND_PROGRESSIVE:
-		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_FULL, 0);
+		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_FULL, 0,
+					 p2p->num_req_dev_types,
+					 p2p->req_dev_types);
 		break;
 	case P2P_FIND_ONLY_SOCIAL:
-		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_SOCIAL, 0);
+		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_SOCIAL, 0,
+					 p2p->num_req_dev_types,
+					 p2p->req_dev_types);
 		break;
 	default:
 		return -1;
@@ -843,6 +870,7 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
 	p2p_clear_timeout(p2p);
 	p2p_set_state(p2p, P2P_IDLE);
+	p2p_free_req_dev_types(p2p);
 	p2p->start_after_scan = P2P_AFTER_SCAN_NOTHING;
 	p2p->go_neg_peer = NULL;
 	p2p->sd_peer = NULL;
@@ -1954,6 +1982,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	eloop_cancel_timeout(p2p_ext_listen_timeout, p2p, NULL);
 	eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
 	p2p_flush(p2p);
+	p2p_free_req_dev_types(p2p);
 	os_free(p2p->cfg->dev_name);
 	os_free(p2p->groups);
 	wpabuf_free(p2p->sd_resp);

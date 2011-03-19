@@ -428,13 +428,18 @@ struct wpabuf * wps_build_assoc_resp_ie(void)
  * @dev: Device attributes
  * @uuid: Own UUID
  * @req_type: Value for Request Type attribute
+ * @num_req_dev_types: Number of requested device types
+ * @req_dev_types: Requested device types (8 * num_req_dev_types octets) or
+ *	%NULL if none
  * Returns: WPS IE or %NULL on failure
  *
  * The caller is responsible for freeing the buffer.
  */
 struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 				       const u8 *uuid,
-				       enum wps_request_type req_type)
+				       enum wps_request_type req_type,
+				       unsigned int num_req_dev_types,
+				       const u8 *req_dev_types)
 {
 	struct wpabuf *ie;
 	u16 methods = 0;
@@ -488,6 +493,8 @@ struct wpabuf * wps_build_probe_req_ie(int pbc, struct wps_device_data *dev,
 	    wps_build_dev_name(dev, ie) ||
 	    wps_build_wfa_ext(ie, req_type == WPS_REQ_ENROLLEE, NULL, 0) ||
 #endif /* CONFIG_WPS2 */
+	    wps_build_req_dev_type(dev, ie, num_req_dev_types, req_dev_types)
+	    ||
 	    wps_build_secondary_dev_type(dev, ie)
 		) {
 		wpabuf_free(ie);

@@ -334,6 +334,8 @@ void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
 		      int all_attr)
 {
 	u8 *len;
+	int i;
+
 	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
 	len = wpabuf_put(buf, 1);
 	wpabuf_put_be32(buf, WPS_DEV_OUI_WFA);
@@ -392,6 +394,18 @@ void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
 		wpabuf_put_data(buf, p2p->cfg->sec_dev_type,
 				WPS_DEV_TYPE_LEN *
 				p2p->cfg->num_sec_dev_types);
+	}
+
+	/* Add the WPS vendor extensions */
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXTENSIONS; i++) {
+		if (p2p->wps_vendor_ext[i] == NULL)
+			break;
+		if (wpabuf_tailroom(buf) <
+		    4 + wpabuf_len(p2p->wps_vendor_ext[i]))
+			continue;
+		wpabuf_put_be16(buf, ATTR_VENDOR_EXT);
+		wpabuf_put_be16(buf, wpabuf_len(p2p->wps_vendor_ext[i]));
+		wpabuf_put_buf(buf, p2p->wps_vendor_ext[i]);
 	}
 
 	p2p_buf_update_ie_hdr(buf, len);

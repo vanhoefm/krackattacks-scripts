@@ -1405,4 +1405,22 @@ const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next);
 const struct p2p_peer_info *
 p2p_get_peer_found(struct p2p_data *p2p, const u8 *addr, int next);
 
+/**
+ * p2p_remove_wps_vendor_extensions - Remove WPS vendor extensions
+ * @p2p: P2P module context from p2p_init()
+ */
+void p2p_remove_wps_vendor_extensions(struct p2p_data *p2p);
+
+/**
+ * p2p_add_wps_vendor_extension - Add a WPS vendor extension
+ * @p2p: P2P module context from p2p_init()
+ * @vendor_ext: The vendor extensions to add
+ * Returns: 0 on success, -1 on failure
+ *
+ * The wpabuf structures in the array are owned by the P2P
+ * module after this call.
+ */
+int p2p_add_wps_vendor_extension(struct p2p_data *p2p,
+				 const struct wpabuf *vendor_ext);
+
 #endif /* P2P_H */

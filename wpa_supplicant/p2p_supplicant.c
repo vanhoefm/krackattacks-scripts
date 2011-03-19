@@ -2295,6 +2295,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 {
 	struct p2p_config p2p;
 	unsigned int r;
+	int i;
 
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
 		return 0;
@@ -2432,6 +2433,13 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	global->p2p = p2p_init(&p2p);
 	if (global->p2p == NULL)
 		return -1;
+
+	for (i = 0; i < MAX_WPS_VENDOR_EXT; i++) {
+		if (wpa_s->conf->wps_vendor_ext[i] == NULL)
+			continue;
+		p2p_add_wps_vendor_extension(
+			global->p2p, wpa_s->conf->wps_vendor_ext[i]);
+	}
 
 	return 0;
 }
@@ -3882,6 +3890,17 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 		p2p_set_sec_dev_types(p2p,
 				      (void *) wpa_s->conf->sec_device_type,
 				      wpa_s->conf->num_sec_device_types);
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_VENDOR_EXTENSION) {
+		int i;
+		p2p_remove_wps_vendor_extensions(p2p);
+		for (i = 0; i < MAX_WPS_VENDOR_EXT; i++) {
+			if (wpa_s->conf->wps_vendor_ext[i] == NULL)
+				continue;
+			p2p_add_wps_vendor_extension(
+				p2p, wpa_s->conf->wps_vendor_ext[i]);
+		}
+	}
 
 	if ((wpa_s->conf->changed_parameters & CFG_CHANGED_COUNTRY) &&
 	    wpa_s->conf->country[0] && wpa_s->conf->country[1]) {

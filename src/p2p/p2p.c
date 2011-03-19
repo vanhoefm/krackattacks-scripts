@@ -1936,6 +1936,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	os_free(p2p->groups);
 	wpabuf_free(p2p->sd_resp);
 	os_free(p2p->after_scan_tx);
+	p2p_remove_wps_vendor_extensions(p2p);
 	os_free(p2p);
 }
 
@@ -2015,6 +2016,40 @@ int p2p_set_sec_dev_types(struct p2p_data *p2p, const u8 dev_types[][8],
 		num_dev_types = P2P_SEC_DEVICE_TYPES;
 	p2p->cfg->num_sec_dev_types = num_dev_types;
 	os_memcpy(p2p->cfg->sec_dev_type, dev_types, num_dev_types * 8);
+	return 0;
+}
+
+
+void p2p_remove_wps_vendor_extensions(struct p2p_data *p2p)
+{
+	int i;
+
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXTENSIONS; i++) {
+		wpabuf_free(p2p->wps_vendor_ext[i]);
+		p2p->wps_vendor_ext[i] = NULL;
+	}
+}
+
+
+int p2p_add_wps_vendor_extension(struct p2p_data *p2p,
+				 const struct wpabuf *vendor_ext)
+{
+	int i;
+
+	if (vendor_ext == NULL)
+		return -1;
+
+	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXTENSIONS; i++) {
+		if (p2p->wps_vendor_ext[i] == NULL)
+			break;
+	}
+	if (i >= P2P_MAX_WPS_VENDOR_EXTENSIONS)
+		return -1;
+
+	p2p->wps_vendor_ext[i] = wpabuf_dup(vendor_ext);
+	if (p2p->wps_vendor_ext[i] == NULL)
+		return -1;
+
 	return 0;
 }
 

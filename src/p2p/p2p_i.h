@@ -384,6 +384,12 @@ struct p2p_data {
 	int best_freq_24;
 	int best_freq_5;
 	int best_freq_overall;
+
+#define P2P_MAX_WPS_VENDOR_EXTENSIONS 10
+	/**
+	 * wps_vendor_ext - WPS Vendor Extensions to add
+	 */
+	struct wpabuf *wps_vendor_ext[P2P_MAX_WPS_VENDOR_EXTENSIONS];
 };
 
 /**

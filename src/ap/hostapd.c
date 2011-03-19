@@ -784,6 +784,9 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		return -1;
 	}
 
+	if (hapd->setup_complete_cb)
+		hapd->setup_complete_cb(hapd->setup_complete_cb_ctx);
+
 	wpa_printf(MSG_DEBUG, "%s: Setup of interface done.",
 		   iface->bss[0]->conf->iface);
 

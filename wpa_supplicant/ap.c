@@ -293,6 +293,18 @@ static void ap_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 }
 
 
+static void wpas_ap_configured_cb(void *ctx)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
+
+	if (wpa_s->ap_configured_cb)
+		wpa_s->ap_configured_cb(wpa_s->ap_configured_cb_ctx,
+					wpa_s->ap_configured_cb_data);
+}
+
+
 int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {
@@ -427,6 +439,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 			wpa_s, ssid->p2p_persistent_group,
 			ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION);
 #endif /* CONFIG_P2P */
+		hapd_iface->bss[i]->setup_complete_cb = wpas_ap_configured_cb;
+		hapd_iface->bss[i]->setup_complete_cb_ctx = wpa_s;
 	}
 
 	os_memcpy(hapd_iface->bss[0]->own_addr, wpa_s->own_addr, ETH_ALEN);
@@ -442,11 +456,6 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	wpa_s->current_ssid = ssid;
 	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
 	wpa_s->assoc_freq = ssid->frequency;
-	wpa_supplicant_set_state(wpa_s, WPA_COMPLETED);
-
-	if (wpa_s->ap_configured_cb)
-		wpa_s->ap_configured_cb(wpa_s->ap_configured_cb_ctx,
-					wpa_s->ap_configured_cb_data);
 
 	return 0;
 }

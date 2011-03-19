@@ -145,6 +145,9 @@ struct hostapd_data {
 				  int authorized);
 	void *sta_authorized_cb_ctx;
 
+	void (*setup_complete_cb)(void *ctx);
+	void *setup_complete_cb_ctx;
+
 #ifdef CONFIG_P2P
 	struct p2p_data *p2p;
 	struct p2p_group *p2p_group;

@@ -186,6 +186,8 @@ struct p2p_peer_info {
 	 */
 	size_t wps_sec_dev_type_list_len;
 
+#define P2P_MAX_PEER_WPS_VENDOR_EXT 10
+	struct wpabuf *wps_vendor_ext[P2P_MAX_PEER_WPS_VENDOR_EXT];
 };
 
 /**

@@ -445,6 +445,8 @@ struct p2p_message {
 	const u8 *wps_pri_dev_type;
 	const u8 *wps_sec_dev_type_list;
 	size_t wps_sec_dev_type_list_len;
+	const u8 *wps_vendor_ext[P2P_MAX_WPS_VENDOR_EXTENSIONS];
+	size_t wps_vendor_ext_len[P2P_MAX_WPS_VENDOR_EXTENSIONS];
 
 	/* DS Parameter Set IE */
 	const u8 *ds_params;

@@ -431,6 +431,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 	struct p2p_device *dev;
 	struct p2p_message msg;
 	const u8 *p2p_dev_addr;
+	int i;
 
 	os_memset(&msg, 0, sizeof(msg));
 	if (p2p_parse_ies(ies, ies_len, &msg)) {
@@ -522,6 +523,20 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 			msg.wps_sec_dev_type_list_len;
 	}
 
+	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+		wpabuf_free(dev->info.wps_vendor_ext[i]);
+		dev->info.wps_vendor_ext[i] = NULL;
+	}
+
+	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+		if (msg.wps_vendor_ext[i] == NULL)
+			break;
+		dev->info.wps_vendor_ext[i] = wpabuf_alloc_copy(
+			msg.wps_vendor_ext[i], msg.wps_vendor_ext_len[i]);
+		if (dev->info.wps_vendor_ext[i] == NULL)
+			break;
+	}
+
 	if (msg.capability) {
 		dev->info.dev_capab = msg.capability[0];
 		dev->info.group_capab = msg.capability[1];
@@ -562,6 +577,8 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 
 static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 {
+	int i;
+
 	if (p2p->go_neg_peer == dev)
 		p2p->go_neg_peer = NULL;
 	if (p2p->invite_peer == dev)
@@ -572,6 +589,11 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 		p2p->pending_client_disc_go = NULL;
 
 	p2p->cfg->dev_lost(p2p->cfg->cb_ctx, dev->info.p2p_device_addr);
+
+	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+		wpabuf_free(dev->info.wps_vendor_ext[i]);
+		dev->info.wps_vendor_ext[i] = NULL;
+	}
 
 	os_free(dev);
 }

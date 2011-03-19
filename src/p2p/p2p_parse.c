@@ -328,6 +328,7 @@ int p2p_parse_p2p_ie(const struct wpabuf *buf, struct p2p_message *msg)
 static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 {
 	struct wps_parse_attr attr;
+	int i;
 
 	wpa_printf(MSG_DEBUG, "P2P: Parsing WPS IE");
 	if (wps_parse_msg(buf, &attr))
@@ -356,6 +357,13 @@ static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 	if (attr.sec_dev_type_list) {
 		msg->wps_sec_dev_type_list = attr.sec_dev_type_list;
 		msg->wps_sec_dev_type_list_len = attr.sec_dev_type_list_len;
+	}
+
+	for (i = 0; i < P2P_MAX_PEER_WPS_VENDOR_EXT; i++) {
+		if (i >= P2P_MAX_WPS_VENDOR_EXTENSIONS)
+			break;
+		msg->wps_vendor_ext[i] = attr.vendor_ext[i];
+		msg->wps_vendor_ext_len[i] = attr.vendor_ext_len[i];
 	}
 
 	return 0;

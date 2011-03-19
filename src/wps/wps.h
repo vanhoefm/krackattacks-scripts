@@ -66,6 +66,10 @@ struct wps_credential {
 #define WPS_SEC_DEV_TYPE_MAX_LEN 128
 /* maximum number of advertised WPS vendor extension attributes */
 #define MAX_WPS_VENDOR_EXTENSIONS 10
+/* maximum size of WPS Vendor extension attribute */
+#define WPS_MAX_VENDOR_EXT_LEN 1024
+/* maximum number of parsed WPS vendor extension attributes */
+#define MAX_WPS_PARSE_VENDOR_EXT 10
 
 /**
  * struct wps_device_data - WPS Device Data

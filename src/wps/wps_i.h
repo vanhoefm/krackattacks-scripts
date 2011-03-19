@@ -207,6 +207,10 @@ struct wps_parse_attr {
 #define MAX_REQ_DEV_TYPE_COUNT 10
 	const u8 *req_dev_type[MAX_REQ_DEV_TYPE_COUNT];
 	size_t num_req_dev_type;
+
+	const u8 *vendor_ext[MAX_WPS_PARSE_VENDOR_EXT];
+	size_t vendor_ext_len[MAX_WPS_PARSE_VENDOR_EXT];
+	size_t num_vendor_ext;
 };
 
 /* wps_common.c */

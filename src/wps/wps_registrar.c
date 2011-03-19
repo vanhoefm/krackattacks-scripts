@@ -1144,6 +1144,15 @@ static int wps_set_ie(struct wps_registrar *reg)
 		return -1;
 	}
 
+#ifdef CONFIG_P2P
+	if (wps_build_dev_name(&reg->wps->dev, beacon) ||
+	    wps_build_primary_dev_type(&reg->wps->dev, beacon)) {
+		wpabuf_free(beacon);
+		wpabuf_free(probe);
+		return -1;
+	}
+#endif /* CONFIG_P2P */
+
 	wpa_printf(MSG_DEBUG, "WPS: Build Probe Response IEs");
 
 	if (wps_build_version(probe) ||
@@ -1163,15 +1172,6 @@ static int wps_set_ie(struct wps_registrar *reg)
 		wpabuf_free(probe);
 		return -1;
 	}
-
-#ifdef CONFIG_P2P
-	if (wps_build_dev_name(&reg->wps->dev, beacon) ||
-	    wps_build_primary_dev_type(&reg->wps->dev, beacon)) {
-		wpabuf_free(beacon);
-		wpabuf_free(probe);
-		return -1;
-	}
-#endif /* CONFIG_P2P */
 
 	beacon = wps_ie_encapsulate(beacon);
 	probe = wps_ie_encapsulate(probe);

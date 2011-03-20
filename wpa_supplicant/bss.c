@@ -492,7 +492,7 @@ struct wpa_bss * wpa_bss_get_bssid(struct wpa_supplicant *wpa_s,
 				   const u8 *bssid)
 {
 	struct wpa_bss *bss;
-	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+	dl_list_for_each_reverse(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
 			return bss;
 	}

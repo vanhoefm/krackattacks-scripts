@@ -78,9 +78,13 @@ void wpa_debug_print_timestamp(void)
 
 
 #ifdef CONFIG_DEBUG_SYSLOG
+#ifndef LOG_HOSTAPD
+#define LOG_HOSTAPD LOG_DAEMON
+#endif /* LOG_HOSTAPD */
+
 void wpa_debug_open_syslog(void)
 {
-	openlog("wpa_supplicant", LOG_PID | LOG_NDELAY, LOG_DAEMON);
+	openlog("wpa_supplicant", LOG_PID | LOG_NDELAY, LOG_HOSTAPD);
 	wpa_debug_syslog++;
 }
 

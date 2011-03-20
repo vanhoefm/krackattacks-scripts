@@ -287,6 +287,8 @@ static DBusHandlerResult wpas_iface_message_handler(DBusConnection *connection,
 		else if (!os_strcmp(method, "wpsReg"))
 			reply = wpas_dbus_iface_wps_reg(message, wpa_s);
 #endif /* CONFIG_WPS */
+		else if (!os_strcmp(method, "flush"))
+			reply = wpas_dbus_iface_flush(message, wpa_s);
 	}
 
 	/* If the message was handled, send back the reply */

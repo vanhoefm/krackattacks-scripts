@@ -78,6 +78,8 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 			int new_scan);
 int wpa_bss_init(struct wpa_supplicant *wpa_s);
 void wpa_bss_deinit(struct wpa_supplicant *wpa_s);
+void wpa_bss_flush(struct wpa_supplicant *wpa_s);
+void wpa_bss_flush_by_age(struct wpa_supplicant *wpa_s, int age);
 struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			     const u8 *ssid, size_t ssid_len);
 struct wpa_bss * wpa_bss_get_bssid(struct wpa_supplicant *wpa_s,

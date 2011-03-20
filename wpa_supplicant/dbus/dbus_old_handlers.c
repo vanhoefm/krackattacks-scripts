@@ -1434,3 +1434,35 @@ DBusMessage * wpas_dbus_iface_remove_blobs(DBusMessage *message,
 
 	return wpas_dbus_new_success_reply(message);
 }
+
+
+/**
+ * wpas_dbus_iface_flush - Clear BSS of old or all inactive entries
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: %wpa_supplicant data structure
+ * Returns: a dbus message containing a UINT32 indicating success (1) or
+ *          failure (0), or returns a dbus error message with more information
+ *
+ * Handler function for "flush" method call. Handles requests for an
+ * interface with an optional "age" parameter that specifies the minimum
+ * age of a BSS to be flushed.
+ */
+DBusMessage * wpas_dbus_iface_flush(DBusMessage *message,
+				    struct wpa_supplicant *wpa_s)
+{
+	int flush_age = 0;
+
+	if (os_strlen(dbus_message_get_signature(message)) != 0 &&
+	    !dbus_message_get_args(message, NULL,
+				   DBUS_TYPE_INT32, &flush_age,
+				   DBUS_TYPE_INVALID)) {
+		return wpas_dbus_new_invalid_opts_error(message, NULL);
+	}
+
+	if (flush_age == 0)
+		wpa_bss_flush(wpa_s);
+	else
+		wpa_bss_flush_by_age(wpa_s, flush_age);
+
+	return wpas_dbus_new_success_reply(message);
+}

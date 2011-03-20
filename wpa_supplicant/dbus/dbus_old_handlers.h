@@ -96,6 +96,9 @@ DBusMessage * wpas_dbus_iface_wps_pin(DBusMessage *message,
 DBusMessage * wpas_dbus_iface_wps_reg(DBusMessage *message,
 				      struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_iface_flush(DBusMessage *message,
+				    struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_new_success_reply(DBusMessage *message);
 DBusMessage * wpas_dbus_new_invalid_opts_error(DBusMessage *message,
 					       const char *arg);

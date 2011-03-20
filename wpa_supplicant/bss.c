@@ -421,9 +421,8 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 }
 
 
-static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
+void wpa_bss_flush_by_age(struct wpa_supplicant *wpa_s, int age)
 {
-	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_bss *bss, *n;
 	struct os_time t;
 
@@ -431,7 +430,7 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 		return;
 
 	os_get_time(&t);
-	t.sec -= WPA_BSS_EXPIRATION_AGE;
+	t.sec -= age;
 
 	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
 		if (wpa_bss_in_use(wpa_s, bss))
@@ -444,6 +443,14 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 		} else
 			break;
 	}
+}
+
+
+static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	wpa_bss_flush_by_age(wpa_s, WPA_BSS_EXPIRATION_AGE);
 	eloop_register_timeout(WPA_BSS_EXPIRATION_PERIOD, 0,
 			       wpa_bss_timeout, wpa_s, NULL);
 }
@@ -459,14 +466,25 @@ int wpa_bss_init(struct wpa_supplicant *wpa_s)
 }
 
 
-void wpa_bss_deinit(struct wpa_supplicant *wpa_s)
+void wpa_bss_flush(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *n;
-	eloop_cancel_timeout(wpa_bss_timeout, wpa_s, NULL);
+
 	if (wpa_s->bss.next == NULL)
 		return; /* BSS table not yet initialized */
-	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list)
+
+	dl_list_for_each_safe(bss, n, &wpa_s->bss, struct wpa_bss, list) {
+		if (wpa_bss_in_use(wpa_s, bss))
+			continue;
 		wpa_bss_remove(wpa_s, bss);
+	}
+}
+
+
+void wpa_bss_deinit(struct wpa_supplicant *wpa_s)
+{
+	eloop_cancel_timeout(wpa_bss_timeout, wpa_s, NULL);
+	wpa_bss_flush(wpa_s);
 }
 
 

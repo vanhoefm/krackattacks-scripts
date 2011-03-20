@@ -1312,6 +1312,12 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "RemoveAllNetworks", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_remove_all_networks,
+	  {
+		  END_ARGS
+	  }
+	},
 	{ "SelectNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_select_network,
 	  {

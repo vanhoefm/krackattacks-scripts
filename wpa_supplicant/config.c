@@ -1731,6 +1731,31 @@ void wpa_config_free(struct wpa_config *config)
 
 
 /**
+ * wpa_config_foreach_network - Iterate over each configured network
+ * @config: Configuration data from wpa_config_read()
+ * @func: Callback function to process each network
+ * @arg: Opaque argument to pass to callback function
+ *
+ * Iterate over the set of configured networks calling the specified
+ * function for each item. We guard against callbacks removing the
+ * supplied network.
+ */
+void wpa_config_foreach_network(struct wpa_config *config,
+				void (*func)(void *, struct wpa_ssid *),
+				void *arg)
+{
+	struct wpa_ssid *ssid, *next;
+
+	ssid = config->ssid;
+	while (ssid) {
+		next = ssid->next;
+		func(arg, ssid);
+		ssid = next;
+	}
+}
+
+
+/**
  * wpa_config_get_network - Get configured network based on id
  * @config: Configuration data from wpa_config_read()
  * @id: Unique network id to search for

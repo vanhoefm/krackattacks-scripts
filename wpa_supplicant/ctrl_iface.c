@@ -1994,6 +1994,22 @@ static int wpa_supplicant_ctrl_iface_ap_scan(
 }
 
 
+static int wpa_supplicant_ctrl_iface_bss_expire_age(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int expire_age = atoi(cmd);
+	return wpa_supplicant_set_bss_expiration_age(wpa_s, expire_age);
+}
+
+
+static int wpa_supplicant_ctrl_iface_bss_expire_count(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int expire_count = atoi(cmd);
+	return wpa_supplicant_set_bss_expiration_count(wpa_s, expire_count);
+}
+
+
 static void wpa_supplicant_ctrl_iface_drop_sa(struct wpa_supplicant *wpa_s)
 {
 	wpa_printf(MSG_DEBUG, "Dropping SA without deauthentication");
@@ -3193,6 +3209,13 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strncmp(buf, "STA_AUTOCONNECT ", 16) == 0) {
 		if (wpa_supplicant_ctrl_iface_sta_autoconnect(wpa_s, buf + 16))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "BSS_EXPIRE_AGE ", 15) == 0) {
+		if (wpa_supplicant_ctrl_iface_bss_expire_age(wpa_s, buf + 15))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "BSS_EXPIRE_COUNT ", 17) == 0) {
+		if (wpa_supplicant_ctrl_iface_bss_expire_count(wpa_s,
+							       buf + 17))
 			reply_len = -1;
 #ifdef CONFIG_TDLS
 	} else if (os_strncmp(buf, "TDLS_DISCOVER ", 14) == 0) {

@@ -690,6 +690,13 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	}
 	if (config->bss_max_count != DEFAULT_BSS_MAX_COUNT)
 		fprintf(f, "bss_max_count=%u\n", config->bss_max_count);
+	if (config->bss_expiration_age != DEFAULT_BSS_EXPIRATION_AGE)
+		fprintf(f, "bss_expiration_age=%u\n",
+			config->bss_expiration_age);
+	if (config->bss_expiration_scan_count !=
+	    DEFAULT_BSS_EXPIRATION_SCAN_COUNT)
+		fprintf(f, "bss_expiration_scan_count=%u\n",
+			config->bss_expiration_scan_count);
 	if (config->filter_ssids)
 		fprintf(f, "filter_ssids=%d\n", config->filter_ssids);
 	if (config->max_num_sta != DEFAULT_MAX_NUM_STA)

@@ -2156,6 +2156,94 @@ DBusMessage * wpas_dbus_setter_ap_scan(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_getter_bss_expire_age - Get BSS entry expiration age
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A message containing value of bss_expiration_age variable
+ *
+ * Getter function for "BSSExpireAge" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_expire_age(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s)
+{
+	dbus_uint32_t expire_age = wpa_s->conf->bss_expiration_age;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_UINT32,
+						&expire_age);
+}
+
+
+/**
+ * wpas_dbus_setter_bss_expire_age - Control BSS entry expiration age
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL
+ *
+ * Setter function for "BSSExpireAge" property.
+ */
+DBusMessage * wpas_dbus_setter_bss_expire_age(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	dbus_uint32_t expire_age;
+
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_UINT32,
+						 &expire_age);
+	if (reply)
+		return reply;
+
+	if (wpa_supplicant_set_bss_expiration_age(wpa_s, expire_age)) {
+		return wpas_dbus_error_invalid_args(
+			message, "BSSExpireAge must be >=10");
+	}
+	return NULL;
+}
+
+
+/**
+ * wpas_dbus_getter_bss_expire_count - Get BSS entry expiration scan count
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A message containing value of bss_expire_count variable
+ *
+ * Getter function for "BSSExpireCount" property.
+ */
+DBusMessage * wpas_dbus_getter_bss_expire_count(DBusMessage *message,
+						struct wpa_supplicant *wpa_s)
+{
+	dbus_uint32_t expire_count = wpa_s->conf->bss_expiration_age;
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_UINT32,
+						&expire_count);
+}
+
+
+/**
+ * wpas_dbus_setter_bss_expire_count - Control BSS entry expiration scan count
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL
+ *
+ * Setter function for "BSSExpireCount" property.
+ */
+DBusMessage * wpas_dbus_setter_bss_expire_count(DBusMessage *message,
+						struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	dbus_uint32_t expire_count;
+
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_UINT32,
+						 &expire_count);
+	if (reply)
+		return reply;
+
+	if (wpa_supplicant_set_bss_expiration_count(wpa_s, expire_count)) {
+		return wpas_dbus_error_invalid_args(
+			message, "BSSExpireCount must be >0");
+	}
+	return NULL;
+}
+
+
+/**
  * wpas_dbus_getter_ifname - Get interface name
  * @message: Pointer to incoming dbus message
  * @wpa_s: wpa_supplicant structure for a network interface

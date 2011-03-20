@@ -475,6 +475,46 @@ static int wpa_cli_cmd_ap_scan(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_bss_expire_age(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid BSS_EXPIRE_AGE command: needs one argument "
+		       "(bss_expire_age value)\n");
+		return -1;
+	}
+	res = os_snprintf(cmd, sizeof(cmd), "BSS_EXPIRE_AGE %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long BSS_EXPIRE_AGE command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_bss_expire_count(struct wpa_ctrl *ctrl, int argc,
+				        char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid BSS_EXPIRE_COUNT command: needs one argument "
+		       "(bss_expire_count value)\n");
+		return -1;
+	}
+	res = os_snprintf(cmd, sizeof(cmd), "BSS_EXPIRE_COUNT %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long BSS_EXPIRE_COUNT command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_stkstart(struct wpa_ctrl *ctrl, int argc,
 				char *argv[])
 {
@@ -2389,6 +2429,12 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "ap_scan", wpa_cli_cmd_ap_scan,
 	  cli_cmd_flag_none,
 	  "<value> = set ap_scan parameter" },
+	{ "bss_expire_age", wpa_cli_cmd_bss_expire_age,
+	  cli_cmd_flag_none,
+	  "<value> = set BSS expiration age parameter" },
+	{ "bss_expire_count", wpa_cli_cmd_bss_expire_count,
+	  cli_cmd_flag_none,
+	  "<value> = set BSS expiration scan count parameter" },
 	{ "stkstart", wpa_cli_cmd_stkstart,
 	  cli_cmd_flag_none,
 	  "<addr> = request STK negotiation with <addr>" },

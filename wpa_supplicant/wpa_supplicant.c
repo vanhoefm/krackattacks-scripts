@@ -1662,6 +1662,52 @@ int wpa_supplicant_set_ap_scan(struct wpa_supplicant *wpa_s, int ap_scan)
 
 
 /**
+ * wpa_supplicant_set_bss_expiration_age - Set BSS entry expiration age
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @expire_age: Expiration age in seconds
+ * Returns: 0 if succeed or -1 if expire_age has an invalid value
+ *
+ */
+int wpa_supplicant_set_bss_expiration_age(struct wpa_supplicant *wpa_s,
+					  unsigned int bss_expire_age)
+{
+	if (bss_expire_age < 10) {
+		wpa_msg(wpa_s, MSG_ERROR, "Invalid bss expiration age %u",
+			bss_expire_age);
+		return -1;
+	}
+	wpa_msg(wpa_s, MSG_DEBUG, "Setting bss expiration age: %d sec",
+		bss_expire_age);
+	wpa_s->conf->bss_expiration_age = bss_expire_age;
+
+	return 0;
+}
+
+
+/**
+ * wpa_supplicant_set_bss_expiration_count - Set BSS entry expiration scan count
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @expire_count: number of scans after which an unseen BSS is reclaimed
+ * Returns: 0 if succeed or -1 if expire_count has an invalid value
+ *
+ */
+int wpa_supplicant_set_bss_expiration_count(struct wpa_supplicant *wpa_s,
+					    unsigned int bss_expire_count)
+{
+	if (bss_expire_count < 1) {
+		wpa_msg(wpa_s, MSG_ERROR, "Invalid bss expiration count %u",
+			bss_expire_count);
+		return -1;
+	}
+	wpa_msg(wpa_s, MSG_DEBUG, "Setting bss expiration scan count: %u",
+		bss_expire_count);
+	wpa_s->conf->bss_expiration_scan_count = bss_expire_count;
+
+	return 0;
+}
+
+
+/**
  * wpa_supplicant_set_debug_params - Set global debug params
  * @global: wpa_global structure
  * @debug_level: debug level

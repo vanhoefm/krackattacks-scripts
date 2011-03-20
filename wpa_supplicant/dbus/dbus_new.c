@@ -1386,6 +1386,16 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  (WPADBusPropertyAccessor) wpas_dbus_setter_ap_scan,
 	  RW
 	},
+	{ "BSSExpireAge", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_expire_age,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_bss_expire_age,
+	  RW
+	},
+	{ "BSSExpireCount", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_bss_expire_count,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_bss_expire_count,
+	  RW
+	},
 	{ "Ifname", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_ifname,
 	  NULL, R

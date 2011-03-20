@@ -30,25 +30,6 @@
  */
 #define WPA_BSS_EXPIRATION_PERIOD 10
 
-/**
- * WPA_BSS_EXPIRATION_AGE - BSS entry age after which it can be expired
- *
- * This value control the time in seconds after which a BSS entry gets removed
- * if it has not been updated or is not in use.
- */
-#define WPA_BSS_EXPIRATION_AGE 180
-
-/**
- * WPA_BSS_EXPIRATION_SCAN_COUNT - Expire BSS after number of scans
- *
- * If the BSS entry has not been seen in this many scans, it will be removed.
- * Value 1 means that the entry is removed after the first scan without the
- * BSSID being seen. Larger values can be used to avoid BSS entries
- * disappearing if they are not visible in every scan (e.g., low signal quality
- * or interference).
- */
-#define WPA_BSS_EXPIRATION_SCAN_COUNT 2
-
 #define WPA_BSS_FREQ_CHANGED_FLAG	BIT(0)
 #define WPA_BSS_SIGNAL_CHANGED_FLAG	BIT(1)
 #define WPA_BSS_PRIVACY_CHANGED_FLAG	BIT(2)
@@ -412,7 +393,8 @@ void wpa_bss_update_end(struct wpa_supplicant *wpa_s, struct scan_info *info,
 			continue; /* expire only BSSes that were scanned */
 		if (bss->last_update_idx < wpa_s->bss_update_idx)
 			bss->scan_miss_count++;
-		if (bss->scan_miss_count >= WPA_BSS_EXPIRATION_SCAN_COUNT) {
+		if (bss->scan_miss_count >=
+		    wpa_s->conf->bss_expiration_scan_count) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "BSS: Expire BSS %u due to "
 				"no match in scan", bss->id);
 			wpa_bss_remove(wpa_s, bss);
@@ -450,7 +432,7 @@ static void wpa_bss_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 
-	wpa_bss_flush_by_age(wpa_s, WPA_BSS_EXPIRATION_AGE);
+	wpa_bss_flush_by_age(wpa_s, wpa_s->conf->bss_expiration_age);
 	eloop_register_timeout(WPA_BSS_EXPIRATION_PERIOD, 0,
 			       wpa_bss_timeout, wpa_s, NULL);
 }

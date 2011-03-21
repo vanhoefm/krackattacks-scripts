@@ -25,6 +25,11 @@
 #include "wpa_auth_i.h"
 
 
+#ifdef CONFIG_RSN_TESTING
+int rsn_testing = 0;
+#endif /* CONFIG_RSN_TESTING */
+
+
 static int wpa_write_wpa_ie(struct wpa_auth_config *conf, u8 *buf, size_t len)
 {
 	struct wpa_ie_hdr *hdr;
@@ -141,6 +146,14 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	count = pos;
 	pos += 2;
 
+#ifdef CONFIG_RSN_TESTING
+	if (rsn_testing) {
+		RSN_SELECTOR_PUT(pos, RSN_SELECTOR(0x12, 0x34, 0x56, 1));
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_RSN_TESTING */
+
 	if (conf->rsn_pairwise & WPA_CIPHER_CCMP) {
 		RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_CCMP);
 		pos += RSN_SELECTOR_LEN;
@@ -157,6 +170,14 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		num_suites++;
 	}
 
+#ifdef CONFIG_RSN_TESTING
+	if (rsn_testing) {
+		RSN_SELECTOR_PUT(pos, RSN_SELECTOR(0x12, 0x34, 0x56, 2));
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_RSN_TESTING */
+
 	if (num_suites == 0) {
 		wpa_printf(MSG_DEBUG, "Invalid pairwise cipher (%d).",
 			   conf->rsn_pairwise);
@@ -167,6 +188,14 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	num_suites = 0;
 	count = pos;
 	pos += 2;
+
+#ifdef CONFIG_RSN_TESTING
+	if (rsn_testing) {
+		RSN_SELECTOR_PUT(pos, RSN_SELECTOR(0x12, 0x34, 0x56, 1));
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_RSN_TESTING */
 
 	if (conf->wpa_key_mgmt & WPA_KEY_MGMT_IEEE8021X) {
 		RSN_SELECTOR_PUT(pos, RSN_AUTH_KEY_MGMT_UNSPEC_802_1X);
@@ -203,6 +232,14 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 	}
 #endif /* CONFIG_IEEE80211W */
 
+#ifdef CONFIG_RSN_TESTING
+	if (rsn_testing) {
+		RSN_SELECTOR_PUT(pos, RSN_SELECTOR(0x12, 0x34, 0x56, 2));
+		pos += RSN_SELECTOR_LEN;
+		num_suites++;
+	}
+#endif /* CONFIG_RSN_TESTING */
+
 	if (num_suites == 0) {
 		wpa_printf(MSG_DEBUG, "Invalid key management type (%d).",
 			   conf->wpa_key_mgmt);
@@ -227,6 +264,10 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 			capab |= WPA_CAPABILITY_MFPR;
 	}
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_RSN_TESTING
+	if (rsn_testing)
+		capab |= BIT(8) | BIT(14) | BIT(15);
+#endif /* CONFIG_RSN_TESTING */
 	WPA_PUT_LE16(pos, capab);
 	pos += 2;
 
@@ -255,6 +296,29 @@ int wpa_write_rsn_ie(struct wpa_auth_config *conf, u8 *buf, size_t len,
 		pos += RSN_SELECTOR_LEN;
 	}
 #endif /* CONFIG_IEEE80211W */
+
+#ifdef CONFIG_RSN_TESTING
+	if (rsn_testing) {
+		/*
+		 * Fill in any defined fields and add extra data to the end of
+		 * the element.
+		 */
+		int pmkid_count_set = pmkid != NULL;
+		if (conf->ieee80211w != NO_MGMT_FRAME_PROTECTION)
+			pmkid_count_set = 1;
+		/* PMKID Count */
+		WPA_PUT_LE16(pos, 0);
+		pos += 2;
+		if (conf->ieee80211w == NO_MGMT_FRAME_PROTECTION) {
+			/* Management Group Cipher Suite */
+			RSN_SELECTOR_PUT(pos, RSN_CIPHER_SUITE_AES_128_CMAC);
+			pos += RSN_SELECTOR_LEN;
+		}
+
+		os_memset(pos, 0x12, 17);
+		pos += 17;
+	}
+#endif /* CONFIG_RSN_TESTING */
 
 	hdr->len = (pos - buf) - 2;
 

@@ -2049,6 +2049,11 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				bss->tdls |= TDLS_PROHIBIT_CHAN_SWITCH;
 			else
 				bss->tdls &= ~TDLS_PROHIBIT_CHAN_SWITCH;
+#ifdef CONFIG_RSN_TESTING
+		} else if (os_strcmp(buf, "rsn_testing") == 0) {
+			extern int rsn_testing;
+			rsn_testing = atoi(pos);
+#endif /* CONFIG_RSN_TESTING */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

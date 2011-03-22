@@ -1,6 +1,6 @@
 /*
  * Random number generator
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -34,6 +34,7 @@
 #endif /* __linux__ */
 
 #include "utils/common.h"
+#include "utils/eloop.h"
 #include "sha1.h"
 #include "random.h"
 
@@ -53,6 +54,7 @@ static unsigned int pool_pos = 0;
 static u8 dummy_key[20];
 #ifdef __linux__
 static size_t dummy_key_avail = 0;
+static int random_fd = -1;
 #endif /* __linux__ */
 static unsigned int own_pool_ready = 0;
 
@@ -259,4 +261,77 @@ void random_mark_pool_ready(void)
 	own_pool_ready++;
 	wpa_printf(MSG_DEBUG, "random: Mark internal entropy pool to be "
 		   "ready (count=%u/%u)", own_pool_ready, MIN_READY_MARK);
+}
+
+
+#ifdef __linux__
+
+static void random_close_fd(void)
+{
+	if (random_fd >= 0) {
+		eloop_unregister_read_sock(random_fd);
+		close(random_fd);
+		random_fd = -1;
+	}
+}
+
+
+static void random_read_fd(int sock, void *eloop_ctx, void *sock_ctx)
+{
+	ssize_t res;
+
+	if (dummy_key_avail == sizeof(dummy_key)) {
+		random_close_fd();
+		return;
+	}
+
+	res = read(sock, dummy_key + dummy_key_avail,
+		   sizeof(dummy_key) - dummy_key_avail);
+	if (res < 0) {
+		wpa_printf(MSG_ERROR, "random: Cannot read from /dev/random: "
+			   "%s", strerror(errno));
+		return;
+	}
+
+	wpa_printf(MSG_DEBUG, "random: Got %u/%u bytes from /dev/random",
+		   (unsigned) res,
+		   (unsigned) (sizeof(dummy_key) - dummy_key_avail));
+	dummy_key_avail += res;
+
+	if (dummy_key_avail == sizeof(dummy_key))
+		random_close_fd();
+}
+
+#endif /* __linux__ */
+
+
+void random_init(void)
+{
+#ifdef __linux__
+	if (random_fd >= 0)
+		return;
+
+	random_fd = open("/dev/random", O_RDONLY | O_NONBLOCK);
+	if (random_fd < 0) {
+#ifndef CONFIG_NO_STDOUT_DEBUG
+		int error = errno;
+		perror("open(/dev/random)");
+		wpa_printf(MSG_ERROR, "random: Cannot open /dev/random: %s",
+			   strerror(error));
+#endif /* CONFIG_NO_STDOUT_DEBUG */
+		return;
+	}
+	wpa_printf(MSG_DEBUG, "random: Trying to read entropy from "
+		   "/dev/random");
+
+	eloop_register_read_sock(random_fd, random_read_fd, NULL, NULL);
+#endif /* __linux__ */
+}
+
+
+void random_deinit(void)
+{
+#ifdef __linux__
+	random_close_fd();
+#endif /* __linux__ */
 }

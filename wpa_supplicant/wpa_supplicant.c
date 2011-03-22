@@ -19,6 +19,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/random.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
 #include "eap_server/eap_methods.h"
@@ -2543,6 +2544,8 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		return NULL;
 	}
 
+	random_init();
+
 	global->ctrl_iface = wpa_supplicant_global_ctrl_iface_init(global);
 	if (global->ctrl_iface == NULL) {
 		wpa_supplicant_deinit(global);
@@ -2652,6 +2655,8 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 		wpa_drivers[i]->global_deinit(global->drv_priv[i]);
 	}
 	os_free(global->drv_priv);
+
+	random_deinit();
 
 	eloop_destroy();
 

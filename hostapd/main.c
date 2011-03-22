@@ -19,6 +19,7 @@
 
 #include "utils/common.h"
 #include "utils/eloop.h"
+#include "crypto/random.h"
 #include "crypto/tls.h"
 #include "common/version.h"
 #include "drivers/driver.h"
@@ -377,6 +378,8 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces)
 		return -1;
 	}
 
+	random_init();
+
 #ifndef CONFIG_NATIVE_WINDOWS
 	eloop_register_signal(SIGHUP, handle_reload, interfaces);
 	eloop_register_signal(SIGUSR1, handle_dump_state, interfaces);
@@ -396,6 +399,8 @@ static void hostapd_global_deinit(const char *pid_file)
 #ifdef EAP_SERVER_TNC
 	tncs_global_deinit();
 #endif /* EAP_SERVER_TNC */
+
+	random_deinit();
 
 	eloop_destroy();
 

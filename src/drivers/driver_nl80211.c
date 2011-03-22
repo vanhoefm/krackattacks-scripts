@@ -1816,8 +1816,6 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 	if (drv == NULL)
 		return NULL;
 	drv->global = global_priv;
-	if (drv->global)
-		dl_list_add(&drv->global->interfaces, &drv->list);
 	drv->ctx = ctx;
 	bss = &drv->first_bss;
 	bss->drv = drv;
@@ -1866,6 +1864,9 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 
 	if (wpa_driver_nl80211_finish_drv_init(drv))
 		goto failed;
+
+	if (drv->global)
+		dl_list_add(&drv->global->interfaces, &drv->list);
 
 	return bss;
 

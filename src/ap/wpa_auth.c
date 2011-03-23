@@ -2265,20 +2265,23 @@ static int wpa_group_update_sta(struct wpa_state_machine *sm, void *ctx)
 	if (sm->wpa_ptk_state != WPA_PTK_PTKINITDONE) {
 		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 				"Not in PTKINITDONE; skip Group Key update");
+		sm->GUpdateStationKeys = FALSE;
 		return 0;
 	}
 	if (sm->GUpdateStationKeys) {
 		/*
-		 * This should not really happen, but just in case, make sure
-		 * we do not count the same STA twice in GKeyDoneStations.
+		 * This should not really happen, so add a debug log entry.
+		 * Since we clear the GKeyDoneStations before the loop, the
+		 * station needs to be counted here anyway.
 		 */
 		wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
-				"GUpdateStationKeys already set - do not "
-				"increment GKeyDoneStations");
-	} else {
-		sm->group->GKeyDoneStations++;
-		sm->GUpdateStationKeys = TRUE;
+				"GUpdateStationKeys was already set when "
+				"marking station for GTK rekeying");
 	}
+
+	sm->group->GKeyDoneStations++;
+	sm->GUpdateStationKeys = TRUE;
+
 	wpa_sm_step(sm);
 	return 0;
 }
@@ -2307,6 +2310,12 @@ static void wpa_group_setkeys(struct wpa_authenticator *wpa_auth,
 	 * including all STAs that could be in not-yet-completed state. */
 	wpa_gtk_update(wpa_auth, group);
 
+	if (group->GKeyDoneStations) {
+		wpa_printf(MSG_DEBUG, "wpa_group_setkeys: Unexpected "
+			   "GKeyDoneStations=%d when starting new GTK rekey",
+			   group->GKeyDoneStations);
+		group->GKeyDoneStations = 0;
+	}
 	wpa_auth_for_each_sta(wpa_auth, wpa_group_update_sta, NULL);
 	wpa_printf(MSG_DEBUG, "wpa_group_setkeys: GKeyDoneStations=%d",
 		   group->GKeyDoneStations);

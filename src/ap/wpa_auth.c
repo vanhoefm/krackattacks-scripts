@@ -574,6 +574,10 @@ void wpa_auth_sta_no_wpa(struct wpa_state_machine *sm)
 
 static void wpa_free_sta_sm(struct wpa_state_machine *sm)
 {
+	if (sm->GUpdateStationKeys) {
+		sm->group->GKeyDoneStations--;
+		sm->GUpdateStationKeys = FALSE;
+	}
 #ifdef CONFIG_IEEE80211R
 	os_free(sm->assoc_resp_ftie);
 #endif /* CONFIG_IEEE80211R */

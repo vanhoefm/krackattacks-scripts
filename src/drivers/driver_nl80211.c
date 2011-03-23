@@ -217,6 +217,8 @@ static int i802_set_freq(void *priv, struct hostapd_freq_params *freq);
 static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
+static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
+
 
 /* nl80211 code */
 static int ack_handler(struct nl_msg *msg, void *arg)
@@ -2948,6 +2950,8 @@ static int wpa_driver_nl80211_deauthenticate(void *priv, const u8 *addr,
 	wpa_printf(MSG_DEBUG, "%s(addr=" MACSTR " reason_code=%d)",
 		   __func__, MAC2STR(addr), reason_code);
 	drv->associated = 0;
+	if (drv->nlmode == NL80211_IFTYPE_ADHOC)
+		return nl80211_leave_ibss(drv);
 	return wpa_driver_nl80211_mlme(drv, addr, NL80211_CMD_DEAUTHENTICATE,
 				       reason_code, 0);
 }

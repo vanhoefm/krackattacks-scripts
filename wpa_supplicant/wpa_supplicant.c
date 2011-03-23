@@ -1077,6 +1077,11 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	int assoc_failed = 0;
 	struct wpa_ssid *old_ssid;
 
+#ifdef CONFIG_IBSS_RSN
+	ibss_rsn_deinit(wpa_s->ibss_rsn);
+	wpa_s->ibss_rsn = NULL;
+#endif /* CONFIG_IBSS_RSN */
+
 	if (ssid->mode == WPAS_MODE_AP || ssid->mode == WPAS_MODE_P2P_GO ||
 	    ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION) {
 #ifdef CONFIG_AP
@@ -1387,7 +1392,6 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	} else if (ssid->mode == WPAS_MODE_IBSS &&
 		   wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
 		   wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE) {
-		ibss_rsn_set_psk(wpa_s->ibss_rsn, ssid->psk);
 		/*
 		 * RSN IBSS authentication is per-STA and we can disable the
 		 * per-BSSID authentication.
@@ -2271,14 +2275,6 @@ next_driver:
 			   wpa_s->conf->ctrl_interface);
 		return -1;
 	}
-
-#ifdef CONFIG_IBSS_RSN
-	wpa_s->ibss_rsn = ibss_rsn_init(wpa_s);
-	if (!wpa_s->ibss_rsn) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to init IBSS RSN");
-		return -1;
-	}
-#endif /* CONFIG_IBSS_RSN */
 
 #ifdef CONFIG_P2P
 	if (wpas_p2p_init(wpa_s->global, wpa_s) < 0) {

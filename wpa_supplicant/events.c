@@ -113,6 +113,11 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 {
 	int bssid_changed;
 
+#ifdef CONFIG_IBSS_RSN
+	ibss_rsn_deinit(wpa_s->ibss_rsn);
+	wpa_s->ibss_rsn = NULL;
+#endif /* CONFIG_IBSS_RSN */
+
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 		return;
 
@@ -1344,8 +1349,18 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 	if (wpa_s->current_ssid &&
 	    wpa_s->current_ssid->mode == WPAS_MODE_IBSS &&
 	    wpa_s->key_mgmt != WPA_KEY_MGMT_NONE &&
-	    wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE)
-		ibss_rsn_connected(wpa_s->ibss_rsn);
+	    wpa_s->key_mgmt != WPA_KEY_MGMT_WPA_NONE &&
+	    wpa_s->ibss_rsn == NULL) {
+		wpa_s->ibss_rsn = ibss_rsn_init(wpa_s);
+		if (!wpa_s->ibss_rsn) {
+			wpa_msg(wpa_s, MSG_INFO, "Failed to init IBSS RSN");
+			wpa_supplicant_deauthenticate(
+				wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+			return;
+		}
+
+		ibss_rsn_set_psk(wpa_s->ibss_rsn, wpa_s->current_ssid->psk);
+	}
 #endif /* CONFIG_IBSS_RSN */
 }
 
@@ -1554,7 +1569,8 @@ wpa_supplicant_event_interface_status(struct wpa_supplicant *wpa_s,
 		l2_packet_deinit(wpa_s->l2);
 		wpa_s->l2 = NULL;
 #ifdef CONFIG_IBSS_RSN
-		ibss_rsn_stop(wpa_s->ibss_rsn, NULL);
+		ibss_rsn_deinit(wpa_s->ibss_rsn);
+		wpa_s->ibss_rsn = NULL;
 #endif /* CONFIG_IBSS_RSN */
 #ifdef CONFIG_TERMINATE_ONLASTIF
 		/* check if last interface */

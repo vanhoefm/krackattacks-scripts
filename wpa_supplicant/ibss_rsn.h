@@ -36,10 +36,6 @@ struct ibss_rsn {
 	struct wpa_authenticator *auth_group;
 	struct ibss_rsn_peer *peers;
 	u8 psk[PMK_LEN];
-
-	int init_in_progress;
-	int init_gtk_idx;
-	u8 init_gtk[16];
 };
 
 
@@ -50,6 +46,5 @@ void ibss_rsn_stop(struct ibss_rsn *ibss_rsn, const u8 *peermac);
 int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
 		      const u8 *buf, size_t len);
 void ibss_rsn_set_psk(struct ibss_rsn *ibss_rsn, const u8 *psk);
-void ibss_rsn_connected(struct ibss_rsn *ibss_rsn);
 
 #endif /* IBSS_RSN_H */

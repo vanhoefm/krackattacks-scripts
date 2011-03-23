@@ -285,15 +285,6 @@ static int auth_set_key(void *ctx, int vlan_id, enum wpa_alg alg,
 		}
 	}
 
-	if (ibss_rsn->init_in_progress && key_len <=
-	    sizeof(ibss_rsn->init_gtk)) {
-		wpa_printf(MSG_DEBUG, "AUTH: Delay setting of initial TX GTK "
-			   "until RSN IBSS is connected");
-		ibss_rsn->init_gtk_idx = idx;
-		os_memcpy(ibss_rsn->init_gtk, key, key_len);
-		return 0;
-	}
-
 	return wpa_drv_set_key(ibss_rsn->wpa_s, alg, addr, idx,
 			       1, seq, 6, key, key_len);
 }
@@ -342,9 +333,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	cb.set_key = auth_set_key;
 	cb.for_each_sta = auth_for_each_sta;
 
-	ibss_rsn->init_in_progress = 1;
 	ibss_rsn->auth_group = wpa_init(own_addr, &conf, &cb);
-	ibss_rsn->init_in_progress = 0;
 	if (ibss_rsn->auth_group == NULL) {
 		wpa_printf(MSG_DEBUG, "AUTH: wpa_init() failed");
 		return -1;
@@ -388,6 +377,9 @@ static int ibss_rsn_auth_init(struct ibss_rsn *ibss_rsn,
 int ibss_rsn_start(struct ibss_rsn *ibss_rsn, const u8 *addr)
 {
 	struct ibss_rsn_peer *peer;
+
+	if (ibss_rsn == NULL)
+		return -1;
 
 	for (peer = ibss_rsn->peers; peer; peer = peer->next) {
 		if (os_memcmp(addr, peer->addr, ETH_ALEN) == 0) {
@@ -580,6 +572,9 @@ int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
 {
 	struct ibss_rsn_peer *peer;
 
+	if (ibss_rsn == NULL)
+		return -1;
+
 	for (peer = ibss_rsn->peers; peer; peer = peer->next) {
 		if (os_memcmp(src_addr, peer->addr, ETH_ALEN) == 0)
 			return ibss_rsn_process_rx_eapol(ibss_rsn, peer,
@@ -603,24 +598,7 @@ int ibss_rsn_rx_eapol(struct ibss_rsn *ibss_rsn, const u8 *src_addr,
 
 void ibss_rsn_set_psk(struct ibss_rsn *ibss_rsn, const u8 *psk)
 {
+	if (ibss_rsn == NULL)
+		return;
 	os_memcpy(ibss_rsn->psk, psk, PMK_LEN);
-}
-
-
-void ibss_rsn_connected(struct ibss_rsn *ibss_rsn)
-{
-	u8 seq[6];
-	wpa_printf(MSG_DEBUG, "RSN: IBSS connected notification");
-	if (ibss_rsn->init_gtk_idx) {
-		wpa_printf(MSG_DEBUG, "RSN: Set initial IBSS TX GTK");
-		os_memset(seq, 0, sizeof(seq));
-		if (wpa_drv_set_key(ibss_rsn->wpa_s, WPA_ALG_CCMP,
-				    broadcast_ether_addr,
-				    ibss_rsn->init_gtk_idx,
-				    1, seq, sizeof(seq), ibss_rsn->init_gtk,
-				    16) < 0)
-			wpa_printf(MSG_INFO, "RSN: Failed to set IBSS TX GTK");
-		ibss_rsn->init_gtk_idx = 0;
-		os_memset(ibss_rsn->init_gtk, 0, sizeof(ibss_rsn->init_gtk));
-	}
 }

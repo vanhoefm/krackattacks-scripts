@@ -97,6 +97,7 @@ struct wpa_sm {
 #ifdef CONFIG_TDLS
 	struct wpa_tdls_peer *tdls;
 	int tdls_prohibited;
+	int tdls_disabled;
 #endif /* CONFIG_TDLS */
 
 #ifdef CONFIG_IEEE80211R

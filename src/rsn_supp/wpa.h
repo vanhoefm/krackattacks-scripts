@@ -346,5 +346,6 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 				  u16 reason_code);
 int wpa_tdls_init(struct wpa_sm *sm);
 void wpa_tdls_deinit(struct wpa_sm *sm);
+void wpa_tdls_enable(struct wpa_sm *sm, int enabled);
 
 #endif /* WPA_H */

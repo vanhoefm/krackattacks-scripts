@@ -114,6 +114,17 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		tdls_testing = strtol(value, NULL, 0);
 		wpa_printf(MSG_DEBUG, "TDLS: tdls_testing=0x%x", tdls_testing);
 #endif /* CONFIG_TDLS_TESTING */
+#ifdef CONFIG_TDLS
+	} else if (os_strcasecmp(cmd, "tdls_disabled") == 0) {
+		int disabled = atoi(value);
+		wpa_printf(MSG_DEBUG, "TDLS: tdls_disabled=%d", disabled);
+		if (disabled) {
+			if (wpa_drv_tdls_oper(wpa_s, TDLS_DISABLE, NULL) < 0)
+				ret = -1;
+		} else if (wpa_drv_tdls_oper(wpa_s, TDLS_ENABLE, NULL) < 0)
+			ret = -1;
+		wpa_tdls_enable(wpa_s->wpa, !disabled);
+#endif /* CONFIG_TDLS */
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

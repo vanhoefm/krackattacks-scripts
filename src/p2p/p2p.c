@@ -409,6 +409,77 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 }
 
 
+static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
+			      const struct p2p_message *msg)
+{
+	os_memcpy(dev->info.device_name, msg->device_name,
+		  sizeof(dev->info.device_name));
+
+	if (msg->manufacturer &&
+	    msg->manufacturer_len < sizeof(dev->info.manufacturer)) {
+		os_memset(dev->info.manufacturer, 0,
+			  sizeof(dev->info.manufacturer));
+		os_memcpy(dev->info.manufacturer, msg->manufacturer,
+			  msg->manufacturer_len);
+	}
+
+	if (msg->model_name &&
+	    msg->model_name_len < sizeof(dev->info.model_name)) {
+		os_memset(dev->info.model_name, 0,
+			  sizeof(dev->info.model_name));
+		os_memcpy(dev->info.model_name, msg->model_name,
+			  msg->model_name_len);
+	}
+
+	if (msg->model_number &&
+	    msg->model_number_len < sizeof(dev->info.model_number)) {
+		os_memset(dev->info.model_number, 0,
+			  sizeof(dev->info.model_number));
+		os_memcpy(dev->info.model_number, msg->model_number,
+			  msg->model_number_len);
+	}
+
+	if (msg->serial_number &&
+	    msg->serial_number_len < sizeof(dev->info.serial_number)) {
+		os_memset(dev->info.serial_number, 0,
+			  sizeof(dev->info.serial_number));
+		os_memcpy(dev->info.serial_number, msg->serial_number,
+			  msg->serial_number_len);
+	}
+
+	if (msg->pri_dev_type)
+		os_memcpy(dev->info.pri_dev_type, msg->pri_dev_type,
+			  sizeof(dev->info.pri_dev_type));
+	else if (msg->wps_pri_dev_type)
+		os_memcpy(dev->info.pri_dev_type, msg->wps_pri_dev_type,
+			  sizeof(dev->info.pri_dev_type));
+
+	if (msg->wps_sec_dev_type_list) {
+		os_memcpy(dev->info.wps_sec_dev_type_list,
+			  msg->wps_sec_dev_type_list,
+			  msg->wps_sec_dev_type_list_len);
+		dev->info.wps_sec_dev_type_list_len =
+			msg->wps_sec_dev_type_list_len;
+	}
+
+	if (msg->capability) {
+		dev->info.dev_capab = msg->capability[0];
+		dev->info.group_capab = msg->capability[1];
+	}
+
+	if (msg->ext_listen_timing) {
+		dev->ext_listen_period = WPA_GET_LE16(msg->ext_listen_timing);
+		dev->ext_listen_interval =
+			WPA_GET_LE16(msg->ext_listen_timing + 2);
+	}
+
+	if (!probe_req) {
+		dev->info.config_methods = msg->config_methods ?
+			msg->config_methods : msg->wps_config_methods;
+	}
+}
+
+
 /**
  * p2p_add_device - Add peer entries based on scan results
  * @p2p: P2P module context from p2p_init()
@@ -507,21 +578,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 		dev->oper_freq = freq;
 	dev->level = level;
 
-	if (msg.pri_dev_type)
-		os_memcpy(dev->info.pri_dev_type, msg.pri_dev_type,
-			  sizeof(dev->info.pri_dev_type));
-	os_memcpy(dev->info.device_name, msg.device_name,
-		  sizeof(dev->info.device_name));
-	dev->info.config_methods = msg.config_methods ? msg.config_methods :
-		msg.wps_config_methods;
-
-	if (msg.wps_sec_dev_type_list) {
-		os_memcpy(dev->info.wps_sec_dev_type_list,
-			  msg.wps_sec_dev_type_list,
-			  msg.wps_sec_dev_type_list_len);
-		dev->info.wps_sec_dev_type_list_len =
-			msg.wps_sec_dev_type_list_len;
-	}
+	p2p_copy_wps_info(dev, 0, &msg);
 
 	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		wpabuf_free(dev->info.wps_vendor_ext[i]);
@@ -535,17 +592,6 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 			msg.wps_vendor_ext[i], msg.wps_vendor_ext_len[i]);
 		if (dev->info.wps_vendor_ext[i] == NULL)
 			break;
-	}
-
-	if (msg.capability) {
-		dev->info.dev_capab = msg.capability[0];
-		dev->info.group_capab = msg.capability[1];
-	}
-
-	if (msg.ext_listen_timing) {
-		dev->ext_listen_period = WPA_GET_LE16(msg.ext_listen_timing);
-		dev->ext_listen_interval =
-			WPA_GET_LE16(msg.ext_listen_timing + 2);
 	}
 
 	p2p_add_group_clients(p2p, p2p_dev_addr, addr, freq, msg.group_info,
@@ -1122,26 +1168,8 @@ void p2p_add_dev_info(struct p2p_data *p2p, const u8 *addr,
 {
 	os_get_time(&dev->last_seen);
 
-	if (msg->pri_dev_type)
-		os_memcpy(dev->info.pri_dev_type, msg->pri_dev_type,
-			  sizeof(dev->info.pri_dev_type));
-	os_memcpy(dev->info.device_name, msg->device_name,
-		  sizeof(dev->info.device_name));
-	dev->info.config_methods = msg->config_methods ? msg->config_methods :
-		msg->wps_config_methods;
+	p2p_copy_wps_info(dev, 0, msg);
 
-	if (msg->wps_sec_dev_type_list) {
-		os_memcpy(dev->info.wps_sec_dev_type_list,
-			  msg->wps_sec_dev_type_list,
-			  msg->wps_sec_dev_type_list_len);
-		dev->info.wps_sec_dev_type_list_len =
-			msg->wps_sec_dev_type_list_len;
-	}
-
-	if (msg->capability) {
-		dev->info.dev_capab = msg->capability[0];
-		dev->info.group_capab = msg->capability[1];
-	}
 	if (msg->listen_channel) {
 		int freq;
 		freq = p2p_channel_to_freq((char *) msg->listen_channel,
@@ -1163,11 +1191,6 @@ void p2p_add_dev_info(struct p2p_data *p2p, const u8 *addr,
 				dev->listen_freq, freq);
 			dev->listen_freq = freq;
 		}
-	}
-	if (msg->ext_listen_timing) {
-		dev->ext_listen_period = WPA_GET_LE16(msg->ext_listen_timing);
-		dev->ext_listen_interval =
-			WPA_GET_LE16(msg->ext_listen_timing + 2);
 	}
 
 	if (dev->flags & P2P_DEV_PROBE_REQ_ONLY) {
@@ -1492,11 +1515,6 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 	os_get_time(&dev->last_seen);
 	dev->flags |= P2P_DEV_PROBE_REQ_ONLY;
 
-	if (msg.capability) {
-		dev->info.dev_capab = msg.capability[0];
-		dev->info.group_capab = msg.capability[1];
-	}
-
 	if (msg.listen_channel) {
 		os_memcpy(dev->country, msg.listen_channel, 3);
 		dev->listen_freq = p2p_channel_to_freq(dev->country,
@@ -1504,20 +1522,7 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 						       msg.listen_channel[4]);
 	}
 
-	os_memcpy(dev->info.device_name, msg.device_name,
-		  sizeof(dev->info.device_name));
-
-	if (msg.wps_pri_dev_type)
-		os_memcpy(dev->info.pri_dev_type, msg.wps_pri_dev_type,
-			  sizeof(dev->info.pri_dev_type));
-
-	if (msg.wps_sec_dev_type_list) {
-		os_memcpy(dev->info.wps_sec_dev_type_list,
-			  msg.wps_sec_dev_type_list,
-			  msg.wps_sec_dev_type_list_len);
-		dev->info.wps_sec_dev_type_list_len =
-			msg.wps_sec_dev_type_list_len;
-	}
+	p2p_copy_wps_info(dev, 1, &msg);
 
 	p2p_parse_free(&msg);
 
@@ -2836,6 +2841,10 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  "member_in_go_iface=" MACSTR "\n"
 			  "pri_dev_type=%s\n"
 			  "device_name=%s\n"
+			  "manufacturer=%s\n"
+			  "model_name=%s\n"
+			  "model_number=%s\n"
+			  "serial_number=%s\n"
 			  "config_methods=0x%x\n"
 			  "dev_capab=0x%x\n"
 			  "group_capab=0x%x\n"
@@ -2860,6 +2869,10 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  wps_dev_type_bin2str(dev->info.pri_dev_type,
 					       devtype, sizeof(devtype)),
 			  dev->info.device_name,
+			  dev->info.manufacturer,
+			  dev->info.model_name,
+			  dev->info.model_number,
+			  dev->info.serial_number,
 			  dev->info.config_methods,
 			  dev->info.dev_capab,
 			  dev->info.group_capab,

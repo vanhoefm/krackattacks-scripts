@@ -364,6 +364,15 @@ static int p2p_parse_wps_ie(const struct wpabuf *buf, struct p2p_message *msg)
 		msg->wps_vendor_ext_len[i] = attr.vendor_ext_len[i];
 	}
 
+	msg->manufacturer = attr.manufacturer;
+	msg->manufacturer_len = attr.manufacturer_len;
+	msg->model_name = attr.model_name;
+	msg->model_name_len = attr.model_name_len;
+	msg->model_number = attr.model_number;
+	msg->model_number_len = attr.model_number_len;
+	msg->serial_number = attr.serial_number;
+	msg->serial_number_len = attr.serial_number_len;
+
 	return 0;
 }
 

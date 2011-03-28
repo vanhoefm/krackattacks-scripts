@@ -450,6 +450,14 @@ struct p2p_message {
 	size_t wps_sec_dev_type_list_len;
 	const u8 *wps_vendor_ext[P2P_MAX_WPS_VENDOR_EXT];
 	size_t wps_vendor_ext_len[P2P_MAX_WPS_VENDOR_EXT];
+	const u8 *manufacturer;
+	size_t manufacturer_len;
+	const u8 *model_name;
+	size_t model_name_len;
+	const u8 *model_number;
+	size_t model_number_len;
+	const u8 *serial_number;
+	size_t serial_number_len;
 
 	/* DS Parameter Set IE */
 	const u8 *ds_params;

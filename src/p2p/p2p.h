@@ -155,9 +155,29 @@ struct p2p_peer_info {
 	u8 pri_dev_type[8];
 
 	/**
-	 * device_name - Device Name
+	 * device_name - Device Name (0..32 octets encoded in UTF-8)
 	 */
 	char device_name[33];
+
+	/**
+	 * manufacturer - Manufacturer (0..64 octets encoded in UTF-8)
+	 */
+	char manufacturer[65];
+
+	/**
+	 * model_name - Model Name (0..32 octets encoded in UTF-8)
+	 */
+	char model_name[33];
+
+	/**
+	 * model_number - Model Number (0..32 octets encoded in UTF-8)
+	 */
+	char model_number[33];
+
+	/**
+	 * serial_number - Serial Number (0..32 octets encoded in UTF-8)
+	 */
+	char serial_number[33];
 
 	/**
 	 * config_methods - WPS Configuration Methods

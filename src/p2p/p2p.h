@@ -252,6 +252,11 @@ struct p2p_config {
 	u8 sec_dev_type[P2P_SEC_DEVICE_TYPES][8];
 
 	/**
+	 * num_sec_dev_types - Number of sec_dev_type entries
+	 */
+	size_t num_sec_dev_types;
+
+	/**
 	 * dev_addr - P2P Device Address
 	 */
 	u8 dev_addr[ETH_ALEN];
@@ -261,10 +266,13 @@ struct p2p_config {
 	 */
 	char *dev_name;
 
-	/**
-	 * num_sec_dev_types - Number of sec_dev_type entries
-	 */
-	size_t num_sec_dev_types;
+	char *manufacturer;
+	char *model_name;
+	char *model_number;
+	char *serial_number;
+
+	u8 uuid[16];
+	u16 config_methods;
 
 	/**
 	 * concurrent_operations - Whether concurrent operations are supported
@@ -699,6 +707,14 @@ int p2p_unauthorize(struct p2p_data *p2p, const u8 *addr);
  * information that was not available at the time of the p2p_init() call.
  */
 int p2p_set_dev_name(struct p2p_data *p2p, const char *dev_name);
+
+int p2p_set_manufacturer(struct p2p_data *p2p, const char *manufacturer);
+int p2p_set_model_name(struct p2p_data *p2p, const char *model_name);
+int p2p_set_model_number(struct p2p_data *p2p, const char *model_number);
+int p2p_set_serial_number(struct p2p_data *p2p, const char *serial_number);
+
+void p2p_set_config_methods(struct p2p_data *p2p, u16 config_methods);
+void p2p_set_uuid(struct p2p_data *p2p, const u8 *uuid);
 
 /**
  * p2p_set_pri_dev_type - Set primary device type

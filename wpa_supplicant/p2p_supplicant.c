@@ -2362,6 +2362,14 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->own_addr, ETH_ALEN);
 	p2p.dev_name = wpa_s->conf->device_name;
+	p2p.manufacturer = wpa_s->conf->manufacturer;
+	p2p.model_name = wpa_s->conf->model_name;
+	p2p.model_number = wpa_s->conf->model_number;
+	p2p.serial_number = wpa_s->conf->serial_number;
+	if (wpa_s->wps) {
+		os_memcpy(p2p.uuid, wpa_s->wps->uuid, 16);
+		p2p.config_methods = wpa_s->wps->config_methods;
+	}
 
 	if (wpa_s->conf->p2p_listen_reg_class &&
 	    wpa_s->conf->p2p_listen_channel) {
@@ -3890,6 +3898,20 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE)
 		p2p_set_pri_dev_type(p2p, wpa_s->conf->device_type);
+
+	if (wpa_s->wps &&
+	    (wpa_s->conf->changed_parameters & CFG_CHANGED_CONFIG_METHODS))
+		p2p_set_config_methods(p2p, wpa_s->wps->config_methods);
+
+	if (wpa_s->wps && (wpa_s->conf->changed_parameters & CFG_CHANGED_UUID))
+		p2p_set_uuid(p2p, wpa_s->wps->uuid);
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_WPS_STRING) {
+		p2p_set_manufacturer(p2p, wpa_s->conf->manufacturer);
+		p2p_set_model_name(p2p, wpa_s->conf->model_name);
+		p2p_set_model_number(p2p, wpa_s->conf->model_number);
+		p2p_set_serial_number(p2p, wpa_s->conf->serial_number);
+	}
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_SEC_DEVICE_TYPE)
 		p2p_set_sec_dev_types(p2p,

@@ -1621,7 +1621,6 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 	if (buf == NULL)
 		return NULL;
 
-	/* TODO: add more info into WPS IE; maybe get from WPS module? */
 	p2p_build_wps_ie(p2p, buf, DEV_PW_DEFAULT, 1);
 
 	/* P2P IE */
@@ -1954,6 +1953,14 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 	os_memcpy(p2p->cfg, cfg, sizeof(*cfg));
 	if (cfg->dev_name)
 		p2p->cfg->dev_name = os_strdup(cfg->dev_name);
+	if (cfg->manufacturer)
+		p2p->cfg->manufacturer = os_strdup(cfg->manufacturer);
+	if (cfg->model_name)
+		p2p->cfg->model_name = os_strdup(cfg->model_name);
+	if (cfg->model_number)
+		p2p->cfg->model_number = os_strdup(cfg->model_number);
+	if (cfg->serial_number)
+		p2p->cfg->serial_number = os_strdup(cfg->serial_number);
 
 	p2p->min_disc_int = 1;
 	p2p->max_disc_int = 3;
@@ -1984,6 +1991,10 @@ void p2p_deinit(struct p2p_data *p2p)
 	p2p_flush(p2p);
 	p2p_free_req_dev_types(p2p);
 	os_free(p2p->cfg->dev_name);
+	os_free(p2p->cfg->manufacturer);
+	os_free(p2p->cfg->model_name);
+	os_free(p2p->cfg->model_number);
+	os_free(p2p->cfg->serial_number);
 	os_free(p2p->groups);
 	wpabuf_free(p2p->sd_resp);
 	os_free(p2p->after_scan_tx);
@@ -2050,6 +2061,74 @@ int p2p_set_dev_name(struct p2p_data *p2p, const char *dev_name)
 	} else
 		p2p->cfg->dev_name = NULL;
 	return 0;
+}
+
+
+int p2p_set_manufacturer(struct p2p_data *p2p, const char *manufacturer)
+{
+	os_free(p2p->cfg->manufacturer);
+	p2p->cfg->manufacturer = NULL;
+	if (manufacturer) {
+		p2p->cfg->manufacturer = os_strdup(manufacturer);
+		if (p2p->cfg->manufacturer == NULL)
+			return -1;
+	}
+
+	return 0;
+}
+
+
+int p2p_set_model_name(struct p2p_data *p2p, const char *model_name)
+{
+	os_free(p2p->cfg->model_name);
+	p2p->cfg->model_name = NULL;
+	if (model_name) {
+		p2p->cfg->model_name = os_strdup(model_name);
+		if (p2p->cfg->model_name == NULL)
+			return -1;
+	}
+
+	return 0;
+}
+
+
+int p2p_set_model_number(struct p2p_data *p2p, const char *model_number)
+{
+	os_free(p2p->cfg->model_number);
+	p2p->cfg->model_number = NULL;
+	if (model_number) {
+		p2p->cfg->model_number = os_strdup(model_number);
+		if (p2p->cfg->model_number == NULL)
+			return -1;
+	}
+
+	return 0;
+}
+
+
+int p2p_set_serial_number(struct p2p_data *p2p, const char *serial_number)
+{
+	os_free(p2p->cfg->serial_number);
+	p2p->cfg->serial_number = NULL;
+	if (serial_number) {
+		p2p->cfg->serial_number = os_strdup(serial_number);
+		if (p2p->cfg->serial_number == NULL)
+			return -1;
+	}
+
+	return 0;
+}
+
+
+void p2p_set_config_methods(struct p2p_data *p2p, u16 config_methods)
+{
+	p2p->cfg->config_methods = config_methods;
+}
+
+
+void p2p_set_uuid(struct p2p_data *p2p, const u8 *uuid)
+{
+	os_memcpy(p2p->cfg->uuid, uuid, 16);
 }
 
 

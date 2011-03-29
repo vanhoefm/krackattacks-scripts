@@ -120,6 +120,8 @@ struct wpa_state_machine {
 					       * message 2/4 */
 	u8 *assoc_resp_ftie;
 #endif /* CONFIG_IEEE80211R */
+
+	int pending_1_of_4_timeout;
 };
 
 

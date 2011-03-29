@@ -462,6 +462,8 @@ int hostapd_setup_wpa(struct hostapd_data *hapd)
 	size_t wpa_ie_len;
 
 	hostapd_wpa_auth_conf(hapd->conf, &_conf);
+	if (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_EAPOL_TX_STATUS)
+		_conf.tx_status = 1;
 	os_memset(&cb, 0, sizeof(cb));
 	cb.ctx = hapd;
 	cb.logger = hostapd_wpa_auth_logger;

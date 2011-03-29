@@ -602,6 +602,7 @@ void wpa_auth_sta_deinit(struct wpa_state_machine *sm)
 	}
 
 	eloop_cancel_timeout(wpa_send_eapol_timeout, sm->wpa_auth, sm);
+	sm->pending_1_of_4_timeout = 0;
 	eloop_cancel_timeout(wpa_sm_call_step, sm, NULL);
 	eloop_cancel_timeout(wpa_rekey_ptk, sm->wpa_auth, sm);
 	if (sm->in_step_loop) {
@@ -969,6 +970,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 		}
 		sm->MICVerified = TRUE;
 		eloop_cancel_timeout(wpa_send_eapol_timeout, wpa_auth, sm);
+		sm->pending_1_of_4_timeout = 0;
 	}
 
 	if (key_info & WPA_KEY_INFO_REQUEST) {
@@ -1098,6 +1100,7 @@ static void wpa_send_eapol_timeout(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_authenticator *wpa_auth = eloop_ctx;
 	struct wpa_state_machine *sm = timeout_ctx;
 
+	sm->pending_1_of_4_timeout = 0;
 	wpa_auth_logger(wpa_auth, sm->addr, LOGGER_DEBUG, "EAPOL-Key timeout");
 	sm->TimeoutEvt = TRUE;
 	wpa_sm_step(sm);
@@ -1285,10 +1288,14 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 			 keyidx, encr, 0);
 
 	ctr = pairwise ? sm->TimeoutCtr : sm->GTimeoutCtr;
-	if (ctr == 1)
+	if (ctr == 1 && wpa_auth->conf.tx_status)
 		timeout_ms = eapol_key_timeout_first;
 	else
 		timeout_ms = eapol_key_timeout_subseq;
+	if (pairwise && ctr == 1 && !(key_info & WPA_KEY_INFO_MIC))
+		sm->pending_1_of_4_timeout = 1;
+	wpa_printf(MSG_DEBUG, "WPA: Use EAPOL-Key timeout of %u ms (retry "
+		   "counter %d)", timeout_ms, ctr);
 	eloop_register_timeout(timeout_ms / 1000, (timeout_ms % 1000) * 1000,
 			       wpa_send_eapol_timeout, wpa_auth, sm);
 }
@@ -1711,6 +1718,7 @@ SM_STATE(WPA_PTK, PTKCALCNEGOTIATING)
 	}
 #endif /* CONFIG_IEEE80211R */
 
+	sm->pending_1_of_4_timeout = 0;
 	eloop_cancel_timeout(wpa_send_eapol_timeout, sm->wpa_auth, sm);
 
 	if (wpa_key_mgmt_wpa_psk(sm->wpa_key_mgmt)) {
@@ -2797,4 +2805,34 @@ int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id)
 
 	sm->group = group;
 	return 0;
+}
+
+
+void wpa_auth_eapol_key_tx_status(struct wpa_authenticator *wpa_auth,
+				  struct wpa_state_machine *sm, int ack)
+{
+	if (wpa_auth == NULL || sm == NULL)
+		return;
+	wpa_printf(MSG_DEBUG, "WPA: EAPOL-Key TX status for STA " MACSTR
+		   " ack=%d", MAC2STR(sm->addr), ack);
+	if (sm->pending_1_of_4_timeout && ack) {
+		/*
+		 * Some deployed supplicant implementations update their SNonce
+		 * for each EAPOL-Key 2/4 message even within the same 4-way
+		 * handshake and then fail to use the first SNonce when
+		 * deriving the PTK. This results in unsuccessful 4-way
+		 * handshake whenever the relatively short initial timeout is
+		 * reached and EAPOL-Key 1/4 is retransmitted. Try to work
+		 * around this by increasing the timeout now that we know that
+		 * the station has received the frame.
+		 */
+		int timeout_ms = eapol_key_timeout_subseq;
+		wpa_printf(MSG_DEBUG, "WPA: Increase initial EAPOL-Key 1/4 "
+			   "timeout by %u ms because of acknowledged frame",
+			   timeout_ms);
+		eloop_cancel_timeout(wpa_send_eapol_timeout, wpa_auth, sm);
+		eloop_register_timeout(timeout_ms / 1000,
+				       (timeout_ms % 1000) * 1000,
+				       wpa_send_eapol_timeout, wpa_auth, sm);
+	}
 }

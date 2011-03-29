@@ -1770,6 +1770,16 @@ int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 		   MAC2STR(sta->addr), xhdr->version, xhdr->type,
 		   be_to_host16(xhdr->length), ack);
 
+	if (xhdr->type == IEEE802_1X_TYPE_EAPOL_KEY &&
+	    pos + sizeof(struct wpa_eapol_key) <= buf + len) {
+		const struct wpa_eapol_key *wpa;
+		wpa = (const struct wpa_eapol_key *) pos;
+		if (wpa->type == EAPOL_KEY_TYPE_RSN ||
+		    wpa->type == EAPOL_KEY_TYPE_WPA)
+			wpa_auth_eapol_key_tx_status(hapd->wpa_auth,
+						     sta->wpa_sm, ack);
+	}
+
 	/* EAPOL EAP-Packet packets are eventually re-sent by either Supplicant
 	 * or Authenticator state machines, but EAPOL-Key packets are not
 	 * retransmitted in case of failure. Try to re-sent failed EAPOL-Key

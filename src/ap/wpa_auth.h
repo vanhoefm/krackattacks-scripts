@@ -144,6 +144,7 @@ struct wpa_auth_config {
 	int wmm_enabled;
 	int wmm_uapsd;
 	int okc;
+	int tx_status;
 #ifdef CONFIG_IEEE80211W
 	enum mfp_options ieee80211w;
 #endif /* CONFIG_IEEE80211W */
@@ -260,6 +261,8 @@ int wpa_auth_pmksa_add_preauth(struct wpa_authenticator *wpa_auth,
 			       int session_timeout,
 			       struct eapol_state_machine *eapol);
 int wpa_auth_sta_set_vlan(struct wpa_state_machine *sm, int vlan_id);
+void wpa_auth_eapol_key_tx_status(struct wpa_authenticator *wpa_auth,
+				  struct wpa_state_machine *sm, int ack);
 
 #ifdef CONFIG_IEEE80211R
 u8 * wpa_sm_write_assoc_resp_ies(struct wpa_state_machine *sm, u8 *pos,

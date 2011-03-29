@@ -234,6 +234,7 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 	struct hostapd_data *hapd = iface->bss[0];
 	struct hostapd_bss_config *conf = hapd->conf;
 	u8 *b = conf->bssid;
+	struct wpa_driver_capa capa;
 
 	if (hapd->driver == NULL || hapd->driver->hapd_init == NULL) {
 		wpa_printf(MSG_ERROR, "No hostapd driver wrapper available");
@@ -272,6 +273,10 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 		hapd->driver = NULL;
 		return -1;
 	}
+
+	if (hapd->driver->get_capa &&
+	    hapd->driver->get_capa(hapd->drv_priv, &capa) == 0)
+		iface->drv_flags = capa.flags;
 
 	return 0;
 }

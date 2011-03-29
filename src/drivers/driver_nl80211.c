@@ -1493,7 +1493,6 @@ nla_put_failure:
 }
 
 
-#ifndef HOSTAPD
 struct wiphy_info_data {
 	int max_scan_ssids;
 	int ap_supported;
@@ -1634,11 +1633,11 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	if (info.p2p_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
+	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 	drv->capa.max_remain_on_chan = info.max_remain_on_chan;
 
 	return 0;
 }
-#endif /* HOSTAPD */
 
 
 static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
@@ -2034,12 +2033,12 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		}
 	}
 
-	if (wpa_driver_nl80211_capa(drv))
-		return -1;
-
 	netlink_send_oper_ifla(drv->netlink, drv->ifindex,
 			       1, IF_OPER_DORMANT);
 #endif /* HOSTAPD */
+
+	if (wpa_driver_nl80211_capa(drv))
+		return -1;
 
 	if (linux_get_ifhwaddr(drv->ioctl_sock, bss->ifname, drv->addr))
 		return -1;

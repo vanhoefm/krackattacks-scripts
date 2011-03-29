@@ -184,6 +184,7 @@ struct hostapd_iface {
 	struct ap_info *ap_hash[STA_HASH_SIZE];
 	struct ap_info *ap_iter_list;
 
+	unsigned int drv_flags;
 	struct hostapd_hw_modes *hw_features;
 	int num_hw_features;
 	struct hostapd_hw_modes *current_mode;

@@ -561,6 +561,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_SANE_ERROR_CODES		0x00004000
 /* Driver supports off-channel TX */
 #define WPA_DRIVER_FLAGS_OFFCHANNEL_TX			0x00008000
+/* Driver indicates TX status events for EAPOL Data frames */
+#define WPA_DRIVER_FLAGS_EAPOL_TX_STATUS		0x00010000
 	unsigned int flags;
 
 	int max_scan_ssids;

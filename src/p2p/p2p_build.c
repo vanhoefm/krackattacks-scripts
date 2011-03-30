@@ -346,6 +346,7 @@ static void p2p_add_wps_string(struct wpabuf *buf, enum wps_attribute attr,
 		 */
 		wpabuf_put_be16(buf, 1);
 		wpabuf_put_u8(buf, ' ');
+		return;
 	}
 #endif /* CONFIG_WPS_STRICT */
 	wpabuf_put_be16(buf, len);

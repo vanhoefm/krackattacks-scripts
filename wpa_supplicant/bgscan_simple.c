@@ -226,6 +226,18 @@ static void bgscan_simple_notify_signal_change(void *priv, int above,
 		os_get_time(&now);
 		if (now.sec > data->last_bgscan.sec + 1)
 			scan = 1;
+		else if (data->last_bgscan.sec + data->long_interval >
+			 now.sec + data->scan_interval) {
+			/*
+			 * Restart scan interval timer if currently scheduled
+			 * scan is too far in the future.
+			 */
+			eloop_cancel_timeout(bgscan_simple_timeout, data,
+					     NULL);
+			eloop_register_timeout(data->scan_interval, 0,
+					       bgscan_simple_timeout, data,
+					       NULL);
+		}
 	} else if (data->scan_interval == data->short_interval && above) {
 		wpa_printf(MSG_DEBUG, "bgscan simple: Start using long bgscan "
 			   "interval");

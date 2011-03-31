@@ -38,7 +38,7 @@ extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
 
 static const char *debug_strings[] = {
-	"msgdump", "debug", "info", "warning", "error", NULL
+	"excessive", "msgdump", "debug", "info", "warning", "error", NULL
 };
 
 
@@ -741,8 +741,8 @@ DBusMessage * wpas_dbus_getter_debug_level(DBusMessage *message,
 	int idx = wpa_debug_level;
 	if (idx < 0)
 		idx = 0;
-	if (idx > 4)
-		idx = 4;
+	if (idx > 5)
+		idx = 5;
 	str = debug_strings[idx];
 	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_STRING,
 						&str);

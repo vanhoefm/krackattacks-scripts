@@ -1727,7 +1727,8 @@ int wpa_supplicant_set_debug_params(struct wpa_global *global, int debug_level,
 	int old_level, old_timestamp, old_show_keys;
 
 	/* check for allowed debuglevels */
-	if (debug_level != MSG_MSGDUMP &&
+	if (debug_level != MSG_EXCESSIVE &&
+	    debug_level != MSG_MSGDUMP &&
 	    debug_level != MSG_DEBUG &&
 	    debug_level != MSG_INFO &&
 	    debug_level != MSG_WARNING &&

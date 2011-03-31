@@ -1082,7 +1082,7 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 		[NL80211_RATE_INFO_40_MHZ_WIDTH] = { .type = NLA_FLAG },
 		[NL80211_RATE_INFO_SHORT_GI] = { .type = NLA_FLAG },
 	};
-	struct signal_change *sig_change = arg;
+	struct wpa_signal_info *sig_change = arg;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -1115,7 +1115,7 @@ static int get_link_signal(struct nl_msg *msg, void *arg)
 
 
 static int nl80211_get_link_signal(struct wpa_driver_nl80211_data *drv,
-				   struct signal_change *sig)
+				   struct wpa_signal_info *sig)
 {
 	struct nl_msg *msg;
 
@@ -1147,7 +1147,7 @@ static int get_link_noise(struct nl_msg *msg, void *arg)
 		[NL80211_SURVEY_INFO_FREQUENCY] = { .type = NLA_U32 },
 		[NL80211_SURVEY_INFO_NOISE] = { .type = NLA_U8 },
 	};
-	struct signal_change *sig_change = arg;
+	struct wpa_signal_info *sig_change = arg;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -1183,7 +1183,7 @@ static int get_link_noise(struct nl_msg *msg, void *arg)
 
 
 static int nl80211_get_link_noise(struct wpa_driver_nl80211_data *drv,
-				  struct signal_change *sig_change)
+				  struct wpa_signal_info *sig_change)
 {
 	struct nl_msg *msg;
 
@@ -1217,7 +1217,7 @@ static void nl80211_cqm_event(struct wpa_driver_nl80211_data *drv,
 	struct nlattr *cqm[NL80211_ATTR_CQM_MAX + 1];
 	enum nl80211_cqm_rssi_threshold_event event;
 	union wpa_event_data ed;
-	struct signal_change sig;
+	struct wpa_signal_info sig;
 	int res;
 
 	if (tb[NL80211_ATTR_CQM] == NULL ||
@@ -6370,6 +6370,21 @@ nla_put_failure:
 }
 
 
+static int nl80211_signal_poll(void *priv, struct wpa_signal_info *si)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int res;
+
+	os_memset(si, 0, sizeof(*si));
+	res = nl80211_get_link_signal(drv, si);
+	if (res != 0)
+		return res;
+
+	return nl80211_get_link_noise(drv, si);
+}
+
+
 static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 			      int encrypt)
 {
@@ -6520,6 +6535,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.resume = wpa_driver_nl80211_resume,
 	.send_ft_action = nl80211_send_ft_action,
 	.signal_monitor = nl80211_signal_monitor,
+	.signal_poll = nl80211_signal_poll,
 	.send_frame = nl80211_send_frame,
 	.set_intra_bss = nl80211_set_intra_bss,
 	.set_param = nl80211_set_param,

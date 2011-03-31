@@ -3326,5 +3326,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* p2p_reject */,
 	NULL /* p2p_invite */,
 	NULL /* send_tdls_mgmt */,
-	NULL /* tdls_oper */
+	NULL /* tdls_oper */,
+	NULL /* signal_poll */
 };

@@ -707,6 +707,17 @@ enum tdls_oper {
 };
 
 /**
+ * struct wpa_signal_info - Information about channel signal quality
+ */
+struct wpa_signal_info {
+	u32 frequency;
+	int above_threshold;
+	int current_signal;
+	int current_noise;
+	int current_txrate;
+};
+
+/**
  * struct wpa_driver_ops - Driver interface API definition
  *
  * This structure defines the API that each driver interface needs to implement
@@ -2221,6 +2232,13 @@ struct wpa_driver_ops {
 			      const u8 *buf, size_t len);
 
 	int (*tdls_oper)(void *priv, enum tdls_oper oper, const u8 *peer);
+
+	/**
+	 * signal_poll - Get current connection information
+	 * @priv: Private driver interface data
+	 * @signal_info: Connection info structure
+         */
+	int (*signal_poll)(void *priv, struct wpa_signal_info *signal_info);
 };
 
 
@@ -3051,15 +3069,9 @@ union wpa_event_data {
 	} eapol_rx;
 
 	/**
-	 * struct signal_change - Data for EVENT_SIGNAL_CHANGE events
+	 * signal_change - Data for EVENT_SIGNAL_CHANGE events
 	 */
-	struct signal_change {
-		u32 frequency;
-		int above_threshold;
-		int current_signal;
-		int current_noise;
-		int current_txrate;
-	} signal_change;
+	struct wpa_signal_info signal_change;
 
 	/**
 	 * struct best_channel - Data for EVENT_BEST_CHANNEL events

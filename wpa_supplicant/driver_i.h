@@ -351,12 +351,12 @@ static inline int wpa_drv_sta_remove(struct wpa_supplicant *wpa_s,
 static inline int wpa_drv_hapd_send_eapol(struct wpa_supplicant *wpa_s,
 					  const u8 *addr, const u8 *data,
 					  size_t data_len, int encrypt,
-					  const u8 *own_addr)
+					  const u8 *own_addr, u32 flags)
 {
 	if (wpa_s->driver->hapd_send_eapol)
 		return wpa_s->driver->hapd_send_eapol(wpa_s->drv_priv, addr,
 						      data, data_len, encrypt,
-						      own_addr);
+						      own_addr, flags);
 	return -1;
 }
 

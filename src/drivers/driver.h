@@ -1406,12 +1406,13 @@ struct wpa_driver_ops {
 	 * @data_len: Length of the EAPOL packet in octets
 	 * @encrypt: Whether the frame should be encrypted
 	 * @own_addr: Source MAC address
+	 * @flags: WPA_STA_* flags for the destination station
 	 *
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*hapd_send_eapol)(void *priv, const u8 *addr, const u8 *data,
 			       size_t data_len, int encrypt,
-			       const u8 *own_addr);
+			       const u8 *own_addr, u32 flags);
 
 	/**
 	 * sta_deauth - Deauthenticate a station (AP only)

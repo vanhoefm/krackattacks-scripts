@@ -73,7 +73,7 @@ static void ieee802_1x_send(struct hostapd_data *hapd, struct sta_info *sta,
 		rsn_preauth_send(hapd, sta, buf, len);
 	} else {
 		hostapd_drv_hapd_send_eapol(hapd, sta->addr, buf, len,
-					    encrypt);
+					    encrypt, sta->flags);
 	}
 
 	os_free(buf);

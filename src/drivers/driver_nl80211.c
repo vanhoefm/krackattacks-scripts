@@ -4240,7 +4240,7 @@ static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
 static int wpa_driver_nl80211_hapd_send_eapol(
 	void *priv, const u8 *addr, const u8 *data,
-	size_t data_len, int encrypt, const u8 *own_addr)
+	size_t data_len, int encrypt, const u8 *own_addr, u32 flags)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -4248,11 +4248,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	size_t len;
 	u8 *pos;
 	int res;
-#if 0 /* FIX */
-	int qos = sta->flags & WPA_STA_WMM;
-#else
-	int qos = 0;
-#endif
+	int qos = flags & WPA_STA_WMM;
 
 	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +
 		data_len;
@@ -4268,26 +4264,22 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	hdr->frame_control |= host_to_le16(WLAN_FC_FROMDS);
 	if (encrypt)
 		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
-#if 0 /* To be enabled if qos determination is added above */
 	if (qos) {
 		hdr->frame_control |=
 			host_to_le16(WLAN_FC_STYPE_QOS_DATA << 4);
 	}
-#endif
 
 	memcpy(hdr->IEEE80211_DA_FROMDS, addr, ETH_ALEN);
 	memcpy(hdr->IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
 	memcpy(hdr->IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
 	pos = (u8 *) (hdr + 1);
 
-#if 0 /* To be enabled if qos determination is added above */
 	if (qos) {
 		/* add an empty QoS header if needed */
 		pos[0] = 0;
 		pos[1] = 0;
 		pos += 2;
 	}
-#endif
 
 	memcpy(pos, rfc1042_header, sizeof(rfc1042_header));
 	pos += sizeof(rfc1042_header);

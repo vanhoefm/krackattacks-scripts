@@ -243,8 +243,15 @@ static int hostapd_wpa_auth_send_eapol(void *ctx, const u8 *addr,
 				       int encrypt)
 {
 	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta;
+	u32 flags = 0;
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta)
+		flags = hostapd_sta_flags_to_drv(sta->flags);
+
 	return hostapd_drv_hapd_send_eapol(hapd, addr, data, data_len,
-					   encrypt);
+					   encrypt, flags);
 }
 
 

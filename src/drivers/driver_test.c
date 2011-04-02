@@ -175,7 +175,7 @@ test_driver_get_cli(struct wpa_driver_test_data *drv, struct sockaddr_un *from,
 
 static int test_driver_send_eapol(void *priv, const u8 *addr, const u8 *data,
 				  size_t data_len, int encrypt,
-				  const u8 *own_addr)
+				  const u8 *own_addr, u32 flags)
 {
 	struct test_driver_bss *dbss = priv;
 	struct wpa_driver_test_data *drv = dbss->drv;

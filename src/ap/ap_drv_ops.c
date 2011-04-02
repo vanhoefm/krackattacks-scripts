@@ -26,7 +26,7 @@
 #include "ap_drv_ops.h"
 
 
-static int hostapd_sta_flags_to_drv(int flags)
+u32 hostapd_sta_flags_to_drv(u32 flags)
 {
 	int res = 0;
 	if (flags & WLAN_STA_AUTHORIZED)

@@ -447,15 +447,15 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	hapd_iface->bss[0]->driver = wpa_s->driver;
 	hapd_iface->bss[0]->drv_priv = wpa_s->drv_priv;
 
+	wpa_s->current_ssid = ssid;
+	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
+	wpa_s->assoc_freq = ssid->frequency;
+
 	if (hostapd_setup_interface(wpa_s->ap_iface)) {
 		wpa_printf(MSG_ERROR, "Failed to initialize AP interface");
 		wpa_supplicant_ap_deinit(wpa_s);
 		return -1;
 	}
-
-	wpa_s->current_ssid = ssid;
-	os_memcpy(wpa_s->bssid, wpa_s->own_addr, ETH_ALEN);
-	wpa_s->assoc_freq = ssid->frequency;
 
 	return 0;
 }

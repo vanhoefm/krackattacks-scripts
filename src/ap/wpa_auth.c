@@ -2630,7 +2630,7 @@ int wpa_get_mib_sta(struct wpa_state_machine *sm, char *buf, size_t buflen)
 		"dot11RSNAStatsSelectedPairwiseCipher=" RSN_SUITE "\n"
 		/* TODO: dot11RSNAStatsTKIPICVErrors */
 		"dot11RSNAStatsTKIPLocalMICFailures=%u\n"
-		"dot11RSNAStatsTKIPRemoveMICFailures=%u\n"
+		"dot11RSNAStatsTKIPRemoteMICFailures=%u\n"
 		/* TODO: dot11RSNAStatsCCMPReplays */
 		/* TODO: dot11RSNAStatsCCMPDecryptErrors */
 		/* TODO: dot11RSNAStatsTKIPReplays */,

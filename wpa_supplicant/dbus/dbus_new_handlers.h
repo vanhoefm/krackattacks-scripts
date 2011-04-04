@@ -128,6 +128,12 @@ DBusMessage * wpas_dbus_getter_bss_expire_count(DBusMessage *message,
 DBusMessage * wpas_dbus_setter_bss_expire_count(DBusMessage *message,
 						struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_getter_country(DBusMessage *message,
+				       struct wpa_supplicant *wpa_s);
+
+DBusMessage * wpas_dbus_setter_country(DBusMessage *message,
+				       struct wpa_supplicant *wpa_s);
+
 DBusMessage * wpas_dbus_getter_ifname(DBusMessage *message,
 				      struct wpa_supplicant *wpa_s);
 

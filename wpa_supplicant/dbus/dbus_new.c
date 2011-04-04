@@ -1396,6 +1396,11 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  (WPADBusPropertyAccessor) wpas_dbus_setter_bss_expire_count,
 	  RW
 	},
+	{ "Country", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_country,
+	  (WPADBusPropertyAccessor) wpas_dbus_setter_country,
+	  RW
+	},
 	{ "Ifname", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_ifname,
 	  NULL, R

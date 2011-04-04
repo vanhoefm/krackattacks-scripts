@@ -2244,6 +2244,64 @@ DBusMessage * wpas_dbus_setter_bss_expire_count(DBusMessage *message,
 
 
 /**
+ * wpas_dbus_getter_country - Control country code
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A message containong value of country variable
+ *
+ * Getter function for "Country" property.
+ */
+DBusMessage * wpas_dbus_getter_country(DBusMessage *message,
+				       struct wpa_supplicant *wpa_s)
+{
+	char country[3];
+	char *str = country;
+
+	country[0] = wpa_s->conf->country[0];
+	country[1] = wpa_s->conf->country[1];
+	country[2] = '\0';
+
+	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_STRING,
+						&str);
+}
+
+
+/**
+ * wpas_dbus_setter_country - Control country code
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL
+ *
+ * Setter function for "Country" property.
+ */
+DBusMessage * wpas_dbus_setter_country(DBusMessage *message,
+				       struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	const char *country;
+
+	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_STRING,
+						 &country);
+	if (reply)
+		return reply;
+
+	if (!country[0] || !country[1])
+		return wpas_dbus_error_invalid_args(message,
+						    "invalid country code");
+
+	if (wpa_s->drv_priv != NULL && wpa_drv_set_country(wpa_s, country)) {
+		wpa_printf(MSG_DEBUG, "Failed to set country");
+		return wpas_dbus_error_invalid_args(
+			message, "failed to set country code");
+	}
+
+	wpa_s->conf->country[0] = country[0];
+	wpa_s->conf->country[1] = country[1];
+	return NULL;
+}
+
+
+/**
  * wpas_dbus_getter_ifname - Get interface name
  * @message: Pointer to incoming dbus message
  * @wpa_s: wpa_supplicant structure for a network interface

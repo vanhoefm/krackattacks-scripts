@@ -4504,6 +4504,7 @@ static int wpa_driver_nl80211_connect(
 	struct nl_msg *msg;
 	enum nl80211_auth_type type;
 	int ret = 0;
+	int algs;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -4538,6 +4539,19 @@ static int wpa_driver_nl80211_connect(
 		NLA_PUT(msg, NL80211_ATTR_IE, params->wpa_ie_len,
 			params->wpa_ie);
 
+	algs = 0;
+	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
+		algs++;
+	if (params->auth_alg & WPA_AUTH_ALG_SHARED)
+		algs++;
+	if (params->auth_alg & WPA_AUTH_ALG_LEAP)
+		algs++;
+	if (algs > 1) {
+		wpa_printf(MSG_DEBUG, "  * Leave out Auth Type for automatic "
+			   "selection");
+		goto skip_auth_type;
+	}
+
 	if (params->auth_alg & WPA_AUTH_ALG_OPEN)
 		type = NL80211_AUTHTYPE_OPEN_SYSTEM;
 	else if (params->auth_alg & WPA_AUTH_ALG_SHARED)
@@ -4552,6 +4566,7 @@ static int wpa_driver_nl80211_connect(
 	wpa_printf(MSG_DEBUG, "  * Auth Type %d", type);
 	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
 
+skip_auth_type:
 	if (params->wpa_ie && params->wpa_ie_len) {
 		enum nl80211_wpa_versions ver;
 

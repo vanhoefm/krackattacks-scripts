@@ -766,14 +766,7 @@ static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 						    (u8 *) lnkid, ftie) < 0) {
 		wpa_printf(MSG_DEBUG, "TDLS: MIC failure for TDLS "
 			   "Teardown Request from " MACSTR, MAC2STR(src_addr));
-#if 0
 		return -1;
-#else
-		/* TODO: figure out whether this workaround could be disabled
-		 */
-		wpa_printf(MSG_DEBUG, "TDLS: Workaround - ignore Teardown MIC "
-			   "failure");
-#endif
 	}
 
 skip_ftie:

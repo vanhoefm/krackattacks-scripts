@@ -505,13 +505,13 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		if (e->count > limit) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - blacklisted "
 				"(count=%d limit=%d)", e->count, limit);
-			return 0;
+			return NULL;
 		}
 	}
 
 	if (ssid_len == 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "   skip - SSID not known");
-		return 0;
+		return NULL;
 	}
 
 	wpa = wpa_ie_len > 0 || rsn_ie_len > 0;
@@ -602,7 +602,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	}
 
 	/* No matching configuration found */
-	return 0;
+	return NULL;
 }
 
 

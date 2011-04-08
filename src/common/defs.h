@@ -46,28 +46,28 @@ typedef enum { FALSE = 0, TRUE = 1 } Boolean;
 
 static inline int wpa_key_mgmt_wpa_ieee8021x(int akm)
 {
-	return akm == WPA_KEY_MGMT_IEEE8021X ||
-		akm == WPA_KEY_MGMT_FT_IEEE8021X ||
-		akm == WPA_KEY_MGMT_IEEE8021X_SHA256;
+	return !!(akm & (WPA_KEY_MGMT_IEEE8021X |
+			 WPA_KEY_MGMT_FT_IEEE8021X |
+			 WPA_KEY_MGMT_IEEE8021X_SHA256));
 }
 
 static inline int wpa_key_mgmt_wpa_psk(int akm)
 {
-	return akm == WPA_KEY_MGMT_PSK ||
-		akm == WPA_KEY_MGMT_FT_PSK ||
-		akm == WPA_KEY_MGMT_PSK_SHA256;
+	return !!(akm & (WPA_KEY_MGMT_PSK |
+			 WPA_KEY_MGMT_FT_PSK |
+			 WPA_KEY_MGMT_PSK_SHA256));
 }
 
 static inline int wpa_key_mgmt_ft(int akm)
 {
-	return akm == WPA_KEY_MGMT_FT_PSK ||
-		akm == WPA_KEY_MGMT_FT_IEEE8021X;
+	return !!(akm & (WPA_KEY_MGMT_FT_PSK |
+			 WPA_KEY_MGMT_FT_IEEE8021X));
 }
 
 static inline int wpa_key_mgmt_sha256(int akm)
 {
-	return akm == WPA_KEY_MGMT_PSK_SHA256 ||
-		akm == WPA_KEY_MGMT_IEEE8021X_SHA256;
+	return !!(akm & (WPA_KEY_MGMT_PSK_SHA256 |
+			 WPA_KEY_MGMT_IEEE8021X_SHA256));
 }
 
 static inline int wpa_key_mgmt_wpa(int akm)

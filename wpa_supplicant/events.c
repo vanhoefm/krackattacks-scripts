@@ -435,8 +435,15 @@ static int wpa_supplicant_ssid_bss_match(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	/* Allow in non-WPA configuration */
-	return 1;
+	if (!wpa_key_mgmt_wpa(ssid->key_mgmt)) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "   allow in non-WPA/WPA2");
+		return 1;
+	}
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "   reject due to mismatch with "
+		"WPA/WPA2");
+
+	return 0;
 }
 
 

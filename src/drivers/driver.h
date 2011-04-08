@@ -678,6 +678,7 @@ struct wpa_bss_params {
 	int wpa_pairwise;
 	int wpa_key_mgmt;
 	int rsn_preauth;
+	enum mfp_options ieee80211w;
 };
 
 #define WPA_STA_AUTHORIZED BIT(0)

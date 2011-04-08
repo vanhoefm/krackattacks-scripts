@@ -315,6 +315,14 @@ atheros_configure_wpa(struct atheros_driver_data *drv,
 	v = 0;
 	if (params->rsn_preauth)
 		v |= BIT(0);
+#ifdef CONFIG_IEEE80211W
+	if (params->ieee80211w != NO_MGMT_FRAME_PROTECTION) {
+		v |= BIT(7);
+		if (params->ieee80211w == MGMT_FRAME_PROTECTION_REQUIRED)
+			v |= BIT(6);
+	}
+#endif /* CONFIG_IEEE80211W */
+
 	wpa_printf(MSG_DEBUG, "%s: rsn capabilities=0x%x",
 		   __func__, params->rsn_preauth);
 	if (set80211param(drv, IEEE80211_PARAM_RSNCAPS, v)) {
@@ -466,6 +474,11 @@ atheros_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	case WPA_ALG_CCMP:
 		cipher = IEEE80211_CIPHER_AES_CCM;
 		break;
+#ifdef CONFIG_IEEE80211W
+	case WPA_ALG_IGTK:
+		cipher = IEEE80211_CIPHER_AES_CMAC;
+		break;
+#endif /* CONFIG_IEEE80211W */
 	default:
 		printf("%s: unknown/unsupported algorithm %d\n",
 			__func__, alg);

@@ -45,7 +45,7 @@ struct ap_info {
 	int ht_support;
 
 	unsigned int num_beacons; /* number of beacon frames received */
-	time_t last_beacon;
+	os_time_t last_beacon;
 
 	int already_seen; /* whether API call AP-NEW has already fetched
 			   * information about this AP */

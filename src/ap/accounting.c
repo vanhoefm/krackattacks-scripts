@@ -276,6 +276,7 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 	struct radius_msg *msg;
 	int cause = sta->acct_terminate_cause;
 	struct hostap_sta_driver_data data;
+	struct os_time now;
 	u32 gigawords;
 
 	if (!hapd->conf->radius->acct_server)
@@ -289,8 +290,9 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 		return;
 	}
 
+	os_get_time(&now);
 	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_ACCT_SESSION_TIME,
-				       time(NULL) - sta->acct_session_start)) {
+				       now.sec - sta->acct_session_start)) {
 		printf("Could not add Acct-Session-Time\n");
 		goto fail;
 	}
@@ -345,7 +347,7 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 	}
 
 	if (!radius_msg_add_attr_int32(msg, RADIUS_ATTR_EVENT_TIMESTAMP,
-				       time(NULL))) {
+				       now.sec)) {
 		printf("Could not add Event-Timestamp\n");
 		goto fail;
 	}
@@ -476,9 +478,12 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
  */
 int accounting_init(struct hostapd_data *hapd)
 {
+	struct os_time now;
+
 	/* Acct-Session-Id should be unique over reboots. If reliable clock is
 	 * not available, this could be replaced with reboot counter, etc. */
-	hapd->acct_session_id_hi = time(NULL);
+	os_get_time(&now);
+	hapd->acct_session_id_hi = now.sec;
 
 	if (radius_client_register(hapd->radius, RADIUS_ACCT,
 				   accounting_receive, hapd))

@@ -965,7 +965,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 			wpa_dbg(wpa_s, MSG_DEBUG, "Setup a new network");
 			wpa_supplicant_associate(wpa_s, NULL, ssid);
 		} else {
-			int timeout_sec = 5;
+			int timeout_sec = wpa_s->scan_interval;
 			int timeout_usec = 0;
 #ifdef CONFIG_P2P
 			if (wpa_s->p2p_in_provisioning) {

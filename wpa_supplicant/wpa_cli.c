@@ -475,6 +475,26 @@ static int wpa_cli_cmd_ap_scan(struct wpa_ctrl *ctrl, int argc, char *argv[])
 }
 
 
+static int wpa_cli_cmd_scan_interval(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid SCAN_INTERVAL command: needs one argument "
+		       "scan_interval value)\n");
+		return -1;
+	}
+	res = os_snprintf(cmd, sizeof(cmd), "SCAN_INTERVAL %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long SCAN_INTERVAL command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_bss_expire_age(struct wpa_ctrl *ctrl, int argc,
 				      char *argv[])
 {
@@ -2429,6 +2449,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "ap_scan", wpa_cli_cmd_ap_scan,
 	  cli_cmd_flag_none,
 	  "<value> = set ap_scan parameter" },
+	{ "scan_interval", wpa_cli_cmd_scan_interval,
+	  cli_cmd_flag_none,
+	  "<value> = set scan_interval parameter (in seconds)" },
 	{ "bss_expire_age", wpa_cli_cmd_bss_expire_age,
 	  cli_cmd_flag_none,
 	  "<value> = set BSS expiration age parameter" },

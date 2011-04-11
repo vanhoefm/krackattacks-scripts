@@ -2005,6 +2005,17 @@ static int wpa_supplicant_ctrl_iface_ap_scan(
 }
 
 
+static int wpa_supplicant_ctrl_iface_scan_interval(
+	struct wpa_supplicant *wpa_s, char *cmd)
+{
+	int scan_int = atoi(cmd);
+	if (scan_int < 0)
+		return -1;
+	wpa_s->scan_interval = scan_int;
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_bss_expire_age(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
@@ -3189,6 +3200,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			wpa_s, buf + 15, reply, reply_size);
 	} else if (os_strncmp(buf, "AP_SCAN ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_ap_scan(wpa_s, buf + 8))
+			reply_len = -1;
+	} else if (os_strncmp(buf, "SCAN_INTERVAL ", 14) == 0) {
+		if (wpa_supplicant_ctrl_iface_scan_interval(wpa_s, buf + 14))
 			reply_len = -1;
 	} else if (os_strcmp(buf, "INTERFACE_LIST") == 0) {
 		reply_len = wpa_supplicant_global_iface_list(

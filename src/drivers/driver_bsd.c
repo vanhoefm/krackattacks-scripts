@@ -575,12 +575,12 @@ rtbuf_len(void)
 {
 	size_t len;
 
-	int mib[6] = {CTL_NET, AF_ROUTE, 0, AF_INET6, NET_RT_DUMP, 0};
+	int mib[6] = {CTL_NET, AF_ROUTE, 0, AF_INET, NET_RT_DUMP, 0};
 
 	if (sysctl(mib, 6, NULL, &len, NULL, 0) < 0) {
-		wpa_printf(MSG_ERROR, "%s failed: %s\n", __func__,
+		wpa_printf(MSG_WARNING, "%s failed: %s\n", __func__,
 			   strerror(errno));
-		return -1;
+		len = 2048;
 	}
 
 	return len;
@@ -717,8 +717,6 @@ bsd_wireless_event_receive(int sock, void *ctx, void *sock_ctx)
 	union wpa_event_data data;
 
 	len = rtbuf_len();
-	if (len < 0)
-		return;
 
 	buf = os_malloc(len);
 	if (buf == NULL) {
@@ -1156,8 +1154,6 @@ wpa_driver_bsd_event_receive(int sock, void *ctx, void *sock_ctx)
 	int n, len;
 
 	len = rtbuf_len();
-	if (len < 0)
-		return;
 
 	buf = os_malloc(len);
 	if (buf == NULL) {

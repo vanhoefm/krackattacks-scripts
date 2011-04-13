@@ -1183,8 +1183,10 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	X509_NAME_oneline(X509_get_subject_name(err_cert), buf, sizeof(buf));
 
 	conn = SSL_get_app_data(ssl);
-	match = conn ? conn->subject_match : NULL;
-	altmatch = conn ? conn->altsubject_match : NULL;
+	if (conn == NULL)
+		return 0;
+	match = conn->subject_match;
+	altmatch = conn->altsubject_match;
 
 	if (!preverify_ok && !conn->ca_cert_verify)
 		preverify_ok = 1;

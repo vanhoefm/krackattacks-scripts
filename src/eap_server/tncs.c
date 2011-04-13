@@ -234,11 +234,11 @@ TNC_Result TNC_TNCS_ReportMessageTypes(
 		return TNC_RESULT_INVALID_PARAMETER;
 	os_free(imv->supported_types);
 	imv->supported_types =
-		os_malloc(typeCount * sizeof(TNC_MessageTypeList));
+		os_malloc(typeCount * sizeof(TNC_MessageType));
 	if (imv->supported_types == NULL)
 		return TNC_RESULT_FATAL;
 	os_memcpy(imv->supported_types, supportedTypes,
-		  typeCount * sizeof(TNC_MessageTypeList));
+		  typeCount * sizeof(TNC_MessageType));
 	imv->num_supported_types = typeCount;
 
 	return TNC_RESULT_SUCCESS;

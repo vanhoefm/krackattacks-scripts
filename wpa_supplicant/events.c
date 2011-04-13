@@ -1103,7 +1103,7 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	l = data->assoc_info.resp_ies_len;
 
 #ifdef CONFIG_WPS_STRICT
-	if (wpa_s->current_ssid &&
+	if (p && wpa_s->current_ssid &&
 	    wpa_s->current_ssid->key_mgmt == WPA_KEY_MGMT_WPS) {
 		struct wpabuf *wps;
 		wps = ieee802_11_vendor_ie_concat(p, l, WPS_IE_VENDOR_TYPE);

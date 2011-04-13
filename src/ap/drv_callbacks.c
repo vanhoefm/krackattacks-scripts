@@ -253,8 +253,10 @@ int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 	size_t i;
 	int ret = 0;
 
-	if (sa)
-		random_add_randomness(sa, ETH_ALEN);
+	if (sa == NULL || ie == NULL)
+		return -1;
+
+	random_add_randomness(sa, ETH_ALEN);
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
 					    sa, ie, ie_len) > 0) {
@@ -491,6 +493,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		break;
 #endif /* NEED_AP_MLME */
 	case EVENT_RX_PROBE_REQ:
+		if (data->rx_probe_req.sa == NULL ||
+		    data->rx_probe_req.ie == NULL)
+			break;
 		hostapd_probe_req_rx(hapd, data->rx_probe_req.sa,
 				     data->rx_probe_req.ie,
 				     data->rx_probe_req.ie_len);

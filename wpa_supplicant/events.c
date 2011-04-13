@@ -2012,6 +2012,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_P2P */
 		break;
 	case EVENT_RX_PROBE_REQ:
+		if (data->rx_probe_req.sa == NULL ||
+		    data->rx_probe_req.ie == NULL)
+			break;
 #ifdef CONFIG_AP
 		if (wpa_s->ap_iface) {
 			hostapd_probe_req_rx(wpa_s->ap_iface->bss[0],

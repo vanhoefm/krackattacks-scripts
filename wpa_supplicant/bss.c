@@ -169,8 +169,11 @@ static int are_ies_equal(const struct wpa_bss *old,
 		new_ie_len = new_ie ? new_ie[1] + 2 : 0;
 	}
 
-	ret = (old_ie_len == new_ie_len &&
-	       os_memcmp(old_ie, new_ie, old_ie_len) == 0);
+	if (!old_ie || !new_ie)
+		ret = !old_ie && !new_ie;
+	else
+		ret = (old_ie_len == new_ie_len &&
+		       os_memcmp(old_ie, new_ie, old_ie_len) == 0);
 
 	wpabuf_free(old_ie_buff);
 	wpabuf_free(new_ie_buff);

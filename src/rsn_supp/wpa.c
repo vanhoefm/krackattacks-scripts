@@ -2601,7 +2601,10 @@ int wpa_sm_set_ap_rsn_ie(struct wpa_sm *sm, const u8 *ie, size_t len)
  */
 int wpa_sm_parse_own_wpa_ie(struct wpa_sm *sm, struct wpa_ie_data *data)
 {
-	if (sm == NULL || sm->assoc_wpa_ie == NULL) {
+	if (sm == NULL)
+		return -1;
+
+	if (sm->assoc_wpa_ie == NULL) {
 		wpa_dbg(sm->ctx->msg_ctx, MSG_DEBUG,
 			"WPA: No WPA/RSN IE available from association info");
 		return -1;

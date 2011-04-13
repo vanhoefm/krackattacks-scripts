@@ -753,7 +753,7 @@ static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 	if (!wpa_tdls_get_privacy(sm) || !peer->tpk_set || !peer->tpk_success)
 		goto skip_ftie;
 
-	if (kde.ftie == NULL) {
+	if (kde.ftie == NULL || kde.ftie_len < sizeof(*ftie)) {
 		wpa_printf(MSG_INFO, "TDLS: No FTIE in TDLS Teardown");
 		return -1;
 	}
@@ -1247,7 +1247,8 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 		goto skip_rsn;
 	}
 
-	if (kde.ftie == NULL || kde.rsn_ie == NULL) {
+	if (kde.ftie == NULL || kde.ftie_len < sizeof(*ftie) ||
+	    kde.rsn_ie == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No FTIE or RSN IE in TPK M1");
 		status = WLAN_STATUS_INVALID_PARAMETERS;
 		goto error;
@@ -1558,7 +1559,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		goto skip_rsn;
 	}
 
-	if (kde.ftie == NULL || kde.rsn_ie == NULL) {
+	if (kde.ftie == NULL || kde.ftie_len < sizeof(*ftie) ||
+	    kde.rsn_ie == NULL) {
 		wpa_printf(MSG_INFO, "TDLS: No FTIE or RSN IE in TPK M2");
 		status = WLAN_STATUS_INVALID_PARAMETERS;
 		goto error;
@@ -1727,12 +1729,12 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (!wpa_tdls_get_privacy(sm))
 		goto skip_rsn;
 
-	if (kde.ftie == NULL) {
+	if (kde.ftie == NULL || kde.ftie_len < sizeof(*ftie)) {
 		wpa_printf(MSG_INFO, "TDLS: No FTIE in TPK M3");
 		return -1;
 	}
 	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE Received from TPK M3",
-		    (u8 *) ftie, sizeof(*ftie));
+		    kde.ftie, sizeof(*ftie));
 	ftie = (struct wpa_tdls_ftie *) kde.ftie;
 
 	if (kde.rsn_ie == NULL) {

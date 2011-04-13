@@ -361,7 +361,8 @@ static int eap_peer_tls_reassemble_fragment(struct eap_ssl_data *data,
 		eap_peer_tls_reset_input(data);
 		return -1;
 	}
-	wpabuf_put_buf(data->tls_in, in_data);
+	if (in_data)
+		wpabuf_put_buf(data->tls_in, in_data);
 	data->tls_in_left -= in_len;
 
 	if (data->tls_in_left > 0) {

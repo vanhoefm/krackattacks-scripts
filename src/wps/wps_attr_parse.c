@@ -121,7 +121,7 @@ static int wps_parse_vendor_ext(struct wps_parse_attr *attr, const u8 *pos,
 		return -1;
 	}
 
-	if (attr->num_vendor_ext > MAX_WPS_PARSE_VENDOR_EXT) {
+	if (attr->num_vendor_ext >= MAX_WPS_PARSE_VENDOR_EXT) {
 		wpa_printf(MSG_DEBUG, "WPS: Skipped Vendor Extension "
 			   "attribute (max %d vendor extensions)",
 			   MAX_WPS_PARSE_VENDOR_EXT);

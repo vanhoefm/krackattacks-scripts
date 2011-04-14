@@ -132,7 +132,7 @@ static int supp_set_key(void *ctx, enum wpa_alg alg,
 		}
 	}
 
-	if (is_broadcast_ether_addr(addr) && peer->addr)
+	if (is_broadcast_ether_addr(addr))
 		addr = peer->addr;
 	return wpa_drv_set_key(peer->ibss_rsn->wpa_s, alg, addr, key_idx,
 			       set_tx, seq, seq_len, key, key_len);

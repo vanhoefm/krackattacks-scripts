@@ -1114,9 +1114,11 @@ static int test_driver_set_ssid(void *priv, const u8 *buf, int len)
 	struct test_driver_bss *bss = priv;
 
 	wpa_printf(MSG_DEBUG, "%s(ifname=%s)", __func__, bss->ifname);
+	if (len < 0)
+		return -1;
 	wpa_hexdump_ascii(MSG_DEBUG, "test_driver_set_ssid: SSID", buf, len);
 
-	if (len < 0 || (size_t) len > sizeof(bss->ssid))
+	if ((size_t) len > sizeof(bss->ssid))
 		return -1;
 
 	os_memcpy(bss->ssid, buf, len);

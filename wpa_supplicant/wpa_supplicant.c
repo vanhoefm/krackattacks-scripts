@@ -1100,7 +1100,9 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_TDLS
-	wpa_tdls_ap_ies(wpa_s->wpa, (const u8 *) (bss + 1), bss->ie_len);
+	if (bss)
+		wpa_tdls_ap_ies(wpa_s->wpa, (const u8 *) (bss + 1),
+				bss->ie_len);
 #endif /* CONFIG_TDLS */
 
 	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) &&

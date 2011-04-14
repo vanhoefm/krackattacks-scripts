@@ -536,12 +536,21 @@ bsd_set_freq(void *priv, struct hostapd_freq_params *freq)
 	u32 mode;
 	int channel = freq->channel;
 
-	if (channel < 14)
-		mode = IFM_IEEE80211_11G;
-	else if (channel == 14)
+	if (channel < 14) {
+		mode =
+#ifdef CONFIG_IEEE80211N
+			freq->ht_enabled ? IFM_IEEE80211_11NG :
+#endif /* CONFIG_IEEE80211N */
+		        IFM_IEEE80211_11G;
+	} else if (channel == 14) {
 		mode = IFM_IEEE80211_11B;
-	else
-		mode = IFM_IEEE80211_11A;
+	} else {
+		mode =
+#ifdef CONFIG_IEEE80211N
+			freq->ht_enabled ? IFM_IEEE80211_11NA :
+#endif /* CONFIG_IEEE80211N */
+			IFM_IEEE80211_11A;
+	}
 	if (bsd_set_mediaopt(drv, IFM_MMASK, mode) < 0) {
 		wpa_printf(MSG_ERROR, "%s: failed to set modulation mode",
 			   __func__);

@@ -1103,6 +1103,7 @@ static void handle_assoc(struct hostapd_data *hapd,
 		       "association OK (aid %d)", sta->aid);
 	/* Station will be marked associated, after it acknowledges AssocResp
 	 */
+	sta->flags |= WLAN_STA_ASSOC_REQ_OK;
 
 #ifdef CONFIG_IEEE80211W
 	if ((sta->flags & WLAN_STA_MFP) && sta->sa_query_timed_out) {
@@ -1159,7 +1160,7 @@ static void handle_disassoc(struct hostapd_data *hapd,
 		return;
 	}
 
-	sta->flags &= ~WLAN_STA_ASSOC;
+	sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_ASSOC_REQ_OK);
 	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
 		MAC2STR(sta->addr));
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
@@ -1209,7 +1210,8 @@ static void handle_deauth(struct hostapd_data *hapd,
 		return;
 	}
 
-	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
+	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
+			WLAN_STA_ASSOC_REQ_OK);
 	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
 		MAC2STR(sta->addr));
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
@@ -1855,6 +1857,14 @@ void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 		   MACSTR, MAC2STR(src));
 	if (src[0] & 0x01) {
 		/* Broadcast bit set in SA?! Ignore the frame silently. */
+		return;
+	}
+
+	if (sta && (sta->flags & WLAN_STA_ASSOC_REQ_OK)) {
+		wpa_printf(MSG_DEBUG, "Association Response to the STA has "
+			   "already been sent, but no TX status yet known - "
+			   "ignore Class 3 frame issue with " MACSTR,
+			   MAC2STR(src));
 		return;
 	}
 

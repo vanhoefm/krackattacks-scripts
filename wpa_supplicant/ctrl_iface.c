@@ -3163,8 +3163,17 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else {
-			wpa_s->scan_req = 2;
-			wpa_supplicant_req_scan(wpa_s, 0, 0);
+			if (!wpa_s->scanning &&
+			    ((wpa_s->wpa_state <= WPA_SCANNING) ||
+			     (wpa_s->wpa_state == WPA_COMPLETED))) {
+				wpa_s->scan_req = 2;
+				wpa_supplicant_req_scan(wpa_s, 0, 0);
+			} else {
+				wpa_printf(MSG_DEBUG, "Ongoing scan action - "
+					   "reject new request");
+				reply_len = os_snprintf(reply, reply_size,
+							"FAIL-BUSY\n");
+			}
 		}
 	} else if (os_strcmp(buf, "SCAN_RESULTS") == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_scan_results(

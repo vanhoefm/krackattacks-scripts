@@ -2676,6 +2676,18 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 
 void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 {
+	if ((wpa_s->conf->changed_parameters & CFG_CHANGED_COUNTRY) &&
+	    wpa_s->conf->country[0] && wpa_s->conf->country[1]) {
+		char country[3];
+		country[0] = wpa_s->conf->country[0];
+		country[1] = wpa_s->conf->country[1];
+		country[2] = '\0';
+		if (wpa_drv_set_country(wpa_s, country) < 0) {
+			wpa_printf(MSG_ERROR, "Failed to set country code "
+				   "'%s'", country);
+		}
+	}
+
 #ifdef CONFIG_WPS
 	wpas_wps_update_config(wpa_s);
 #endif /* CONFIG_WPS */

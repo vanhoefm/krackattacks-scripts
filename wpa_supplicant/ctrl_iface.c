@@ -142,18 +142,22 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 					 char *cmd, char *buf, size_t buflen)
 {
-	int res;
+	int res = -1;
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE GET '%s'", cmd);
 
 	if (os_strcmp(cmd, "version") == 0) {
 		res = os_snprintf(buf, buflen, "%s", VERSION_STR);
-		if (res < 0 || (unsigned int) res >= buflen)
-			return -1;
-		return res;
+	} else if (os_strcasecmp(cmd, "country") == 0) {
+		if (wpa_s->conf->country[0] && wpa_s->conf->country[1])
+			res = os_snprintf(buf, buflen, "%c%c",
+					  wpa_s->conf->country[0],
+					  wpa_s->conf->country[1]);
 	}
 
-	return -1;
+	if (res < 0 || (unsigned int) res >= buflen)
+		return -1;
+	return res;
 }
 
 

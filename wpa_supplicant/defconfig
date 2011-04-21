@@ -78,10 +78,15 @@ CONFIG_DRIVER_ATMEL=y
 #CONFIG_DRIVER_RALINK=y
 
 # Driver interface for generic Linux wireless extensions
+# Note: WEXT is deprecated in the current Linux kernel version and no new
+# functionality is added to it. nl80211-based interface is the new
+# replacement for WEXT and its use allows wpa_supplicant to properly control
+# the driver to improve existing functionality like roaming and to support new
+# functionality.
 CONFIG_DRIVER_WEXT=y
 
 # Driver interface for Linux drivers using the nl80211 kernel interface
-#CONFIG_DRIVER_NL80211=y
+CONFIG_DRIVER_NL80211=y
 
 # Driver interface for FreeBSD net80211 layer (e.g., Atheros driver)
 #CONFIG_DRIVER_BSD=y

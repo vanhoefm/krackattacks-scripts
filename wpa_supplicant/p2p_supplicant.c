@@ -92,6 +92,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	int ret;
 	struct wpabuf *wps_ie, *ies;
 	int social_channels[] = { 2412, 2437, 2462, 0, 0 };
+	size_t ielen;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
@@ -110,7 +111,8 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	if (wps_ie == NULL)
 		return -1;
 
-	ies = wpabuf_alloc(wpabuf_len(wps_ie) + 100);
+	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
+	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
 	if (ies == NULL) {
 		wpabuf_free(wps_ie);
 		return -1;
@@ -2766,6 +2768,7 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 	int ret;
 	struct wpa_driver_scan_params params;
 	struct wpabuf *wps_ie, *ies;
+	size_t ielen;
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -2782,7 +2785,8 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	ies = wpabuf_alloc(wpabuf_len(wps_ie) + 100);
+	ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
+	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
 	if (ies == NULL) {
 		wpabuf_free(wps_ie);
 		wpas_p2p_scan_res_join(wpa_s, NULL);

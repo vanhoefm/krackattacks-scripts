@@ -471,7 +471,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 #ifdef CONFIG_P2P
 	if (wps_ie) {
-		if (wpabuf_resize(&wps_ie, 100) == 0) {
+		size_t ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
+		if (wpabuf_resize(&wps_ie, ielen) == 0) {
 			wpas_p2p_scan_ie(wpa_s, wps_ie);
 			params.extra_ies = wpabuf_head(wps_ie);
 			params.extra_ies_len = wpabuf_len(wps_ie);

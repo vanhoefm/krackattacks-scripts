@@ -2983,6 +2983,7 @@ static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	int ret;
 	struct wpabuf *wps_ie, *ies;
 	int social_channels[] = { 2412, 2437, 2462, 0, 0 };
+	size_t ielen;
 
 	wpa_printf(MSG_DEBUG, "%s(type=%d freq=%d)",
 		   __func__, type, freq);
@@ -3004,7 +3005,8 @@ static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	if (wps_ie == NULL)
 		return -1;
 
-	ies = wpabuf_alloc(wpabuf_len(wps_ie) + 100);
+	ielen = p2p_scan_ie_buf_len(drv->p2p);
+	ies = wpabuf_alloc(wpabuf_len(wps_ie) + ielen);
 	if (ies == NULL) {
 		wpabuf_free(wps_ie);
 		return -1;

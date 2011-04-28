@@ -2462,6 +2462,12 @@ void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies)
 }
 
 
+size_t p2p_scan_ie_buf_len(struct p2p_data *p2p)
+{
+	return 100;
+}
+
+
 int p2p_ie_text(struct wpabuf *p2p_ie, char *buf, char *end)
 {
 	return p2p_attr_text(p2p_ie, buf, end);

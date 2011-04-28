@@ -1344,6 +1344,13 @@ int p2p_assoc_req_ie(struct p2p_data *p2p, const u8 *bssid, u8 *buf,
 void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies);
 
 /**
+ * p2p_scan_ie_buf_len - Get maximum buffer length needed for p2p_scan_ie
+ * @p2p: P2P module context from p2p_init()
+ * Returns: Number of octets that p2p_scan_ie() may add to the buffer
+ */
+size_t p2p_scan_ie_buf_len(struct p2p_data *p2p);
+
+/**
  * p2p_go_params - Generate random P2P group parameters
  * @p2p: P2P module context from p2p_init()
  * @params: Buffer for parameters

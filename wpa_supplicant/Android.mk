@@ -171,6 +171,13 @@ NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
 
+ifdef CONFIG_TDLS
+L_CFLAGS += -DCONFIG_TDLS
+OBJS += src/rsn_supp/tdls.o
+NEED_SHA256=y
+NEED_AES_OMAC1=y
+endif
+
 ifdef CONFIG_PEERKEY
 L_CFLAGS += -DCONFIG_PEERKEY
 endif

@@ -2415,6 +2415,7 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 	const u8 *ie, *beacon_ie;
 	size_t ie_len, beacon_ie_len;
 	u8 *pos;
+	size_t i;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -2504,6 +2505,38 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		default:
 			break;
 		}
+	}
+
+	/*
+	 * cfg80211 maintains separate BSS table entries for APs if the same
+	 * BSSID,SSID pair is seen on multiple channels. wpa_supplicant does
+	 * not use frequency as a separate key in the BSS table, so filter out
+	 * duplicated entries. Prefer associated BSS entry in such a case in
+	 * order to get the correct frequency into the BSS table.
+	 */
+	for (i = 0; i < res->num; i++) {
+		const u8 *s1, *s2;
+		if (os_memcmp(res->res[i]->bssid, r->bssid, ETH_ALEN) != 0)
+			continue;
+
+		s1 = nl80211_get_ie((u8 *) (res->res[i] + 1),
+				    res->res[i]->ie_len, WLAN_EID_SSID);
+		s2 = nl80211_get_ie((u8 *) (r + 1), r->ie_len, WLAN_EID_SSID);
+		if (s1 == NULL || s2 == NULL || s1[1] != s2[1] ||
+		    os_memcmp(s1, s2, 2 + s1[1]) != 0)
+			continue;
+
+		/* Same BSSID,SSID was already included in scan results */
+		wpa_printf(MSG_DEBUG, "nl80211: Remove duplicated scan result "
+			   "for " MACSTR, MAC2STR(r->bssid));
+
+		if ((r->flags & WPA_SCAN_ASSOCIATED) &&
+		    !(res->res[i]->flags & WPA_SCAN_ASSOCIATED)) {
+			os_free(res->res[i]);
+			res->res[i] = r;
+		} else
+			os_free(r);
+		return NL_SKIP;
 	}
 
 	tmp = os_realloc(res->res,

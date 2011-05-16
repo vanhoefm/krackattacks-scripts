@@ -41,7 +41,7 @@ static inline int hostapd_get_hw_features(struct hostapd_iface *iface)
 
 static inline int hostapd_select_hw_mode(struct hostapd_iface *iface)
 {
-	return -1;
+	return -100;
 }
 
 static inline const char * hostapd_hw_mode_txt(int mode)

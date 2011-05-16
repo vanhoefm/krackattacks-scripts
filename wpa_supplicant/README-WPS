@@ -47,9 +47,7 @@ wpa_supplicant implementation
 
 wpa_supplicant includes an optional WPS component that can be used as
 an Enrollee to enroll new network credential or as a Registrar to
-configure an AP. The current version of wpa_supplicant does not
-support operation as an external WLAN Management Registrar for adding
-new client devices or configuring the AP over UPnP.
+configure an AP.
 
 
 wpa_supplicant configuration

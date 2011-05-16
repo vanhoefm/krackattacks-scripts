@@ -220,6 +220,15 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
 
 
+struct nl80211_bss_info_arg {
+	struct wpa_driver_nl80211_data *drv;
+	struct wpa_scan_results *res;
+	unsigned int assoc_freq;
+};
+
+static int bss_info_handler(struct nl_msg *msg, void *arg);
+
+
 /* nl80211 code */
 static int ack_handler(struct nl_msg *msg, void *arg)
 {
@@ -589,6 +598,38 @@ static void mlme_event_auth(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static unsigned int nl80211_get_assoc_freq(struct wpa_driver_nl80211_data *drv)
+{
+	struct nl_msg *msg;
+	int ret;
+	struct nl80211_bss_info_arg arg;
+
+	os_memset(&arg, 0, sizeof(arg));
+	msg = nlmsg_alloc();
+	if (!msg)
+		goto nla_put_failure;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, NLM_F_DUMP,
+		    NL80211_CMD_GET_SCAN, 0);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	arg.drv = drv;
+	ret = send_and_recv_msgs(drv, msg, bss_info_handler, &arg);
+	msg = NULL;
+	if (ret == 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Operating frequency for the "
+			   "associated BSS from scan results: %u MHz",
+			   arg.assoc_freq);
+		return arg.assoc_freq ? arg.assoc_freq : drv->assoc_freq;
+	}
+	wpa_printf(MSG_DEBUG, "nl80211: Scan result fetch failed: ret=%d "
+		   "(%s)", ret, strerror(-ret));
+nla_put_failure:
+	nlmsg_free(msg);
+	return drv->assoc_freq;
+}
+
+
 static void mlme_event_assoc(struct wpa_driver_nl80211_data *drv,
 			    const u8 *frame, size_t len)
 {
@@ -678,6 +719,8 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 		event.assoc_info.resp_ies = nla_data(resp_ie);
 		event.assoc_info.resp_ies_len = nla_len(resp_ie);
 	}
+
+	event.assoc_info.freq = nl80211_get_assoc_freq(drv);
 
 	wpa_supplicant_event(drv->ctx, EVENT_ASSOC, &event);
 }
@@ -2347,11 +2390,6 @@ static int nl80211_scan_filtered(struct wpa_driver_nl80211_data *drv,
 }
 
 
-struct nl80211_bss_info_arg {
-	struct wpa_driver_nl80211_data *drv;
-	struct wpa_scan_results *res;
-};
-
 static int bss_info_handler(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -2384,6 +2422,19 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		return NL_SKIP;
 	if (nla_parse_nested(bss, NL80211_BSS_MAX, tb[NL80211_ATTR_BSS],
 			     bss_policy))
+		return NL_SKIP;
+	if (bss[NL80211_BSS_STATUS]) {
+		enum nl80211_bss_status status;
+		status = nla_get_u32(bss[NL80211_BSS_STATUS]);
+		if (status == NL80211_BSS_STATUS_ASSOCIATED &&
+		    bss[NL80211_BSS_FREQUENCY]) {
+			_arg->assoc_freq =
+				nla_get_u32(bss[NL80211_BSS_FREQUENCY]);
+			wpa_printf(MSG_DEBUG, "nl80211: Associated on %u MHz",
+				   _arg->assoc_freq);
+		}
+	}
+	if (!res)
 		return NL_SKIP;
 	if (bss[NL80211_BSS_INFORMATION_ELEMENTS]) {
 		ie = nla_data(bss[NL80211_BSS_INFORMATION_ELEMENTS]);

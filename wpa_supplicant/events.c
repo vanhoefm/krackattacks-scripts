@@ -1185,6 +1185,14 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 	if (wpa_found || rsn_found)
 		wpa_s->ap_ies_from_associnfo = 1;
 
+	if (wpa_s->assoc_freq && data->assoc_info.freq &&
+	    wpa_s->assoc_freq != data->assoc_info.freq) {
+		wpa_printf(MSG_DEBUG, "Operating frequency changed from "
+			   "%u to %u MHz",
+			   wpa_s->assoc_freq, data->assoc_info.freq);
+		wpa_supplicant_update_scan_results(wpa_s);
+	}
+
 	wpa_s->assoc_freq = data->assoc_info.freq;
 
 	return 0;

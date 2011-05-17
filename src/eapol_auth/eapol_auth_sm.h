@@ -42,6 +42,7 @@ struct eapol_auth_config {
 	struct wps_context *wps;
 	int fragment_size;
 	u16 pwd_group;
+	int pbc_in_m1;
 
 	/* Opaque context pointer to owner data for callback functions */
 	void *ctx;

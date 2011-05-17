@@ -144,6 +144,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 		cfg.p2p_dev_addr = p2p_get_go_dev_addr(sm->assoc_p2p_ie);
 	}
 #endif /* CONFIG_P2P */
+	cfg.pbc_in_m1 = sm->pbc_in_m1;
 	data->wps = wps_init(&cfg);
 	if (data->wps == NULL) {
 		os_free(data);

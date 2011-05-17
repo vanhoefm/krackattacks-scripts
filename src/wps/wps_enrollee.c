@@ -133,10 +133,17 @@ static struct wpabuf * wps_build_m1(struct wps_data *wps)
 		return NULL;
 
 	config_methods = wps->wps->config_methods;
-	if (wps->wps->ap) {
+	if (wps->wps->ap && !wps->pbc_in_m1 &&
+	    (wps->dev_password_len != 0 ||
+	     (config_methods & WPS_CONFIG_DISPLAY))) {
 		/*
 		 * These are the methods that the AP supports as an Enrollee
 		 * for adding external Registrars, so remove PushButton.
+		 *
+		 * As a workaround for Windows 7 mechanism for probing WPS
+		 * capabilities from M1, leave PushButton option if no PIN
+		 * method is available or if WPS configuration enables PBC
+		 * workaround.
 		 */
 		config_methods &= ~WPS_CONFIG_PUSHBUTTON;
 #ifdef CONFIG_WPS2

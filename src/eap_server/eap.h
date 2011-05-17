@@ -110,6 +110,8 @@ struct eap_config {
 	const struct wpabuf *assoc_p2p_ie;
 	const u8 *peer_addr;
 	int fragment_size;
+
+	int pbc_in_m1;
 };
 
 

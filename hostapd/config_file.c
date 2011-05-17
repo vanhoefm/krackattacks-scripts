@@ -2021,6 +2021,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 		} else if (os_strcmp(buf, "upc") == 0) {
 			os_free(bss->upc);
 			bss->upc = os_strdup(pos);
+		} else if (os_strcmp(buf, "pbc_in_m1") == 0) {
+			bss->pbc_in_m1 = atoi(pos);
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P_MANAGER
 		} else if (os_strcmp(buf, "manage_p2p") == 0) {

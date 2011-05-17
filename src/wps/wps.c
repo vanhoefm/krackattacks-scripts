@@ -113,6 +113,7 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		os_memcpy(data->p2p_dev_addr, cfg->p2p_dev_addr, ETH_ALEN);
 
 	data->use_psk_key = cfg->use_psk_key;
+	data->pbc_in_m1 = cfg->pbc_in_m1;
 
 	return data;
 }

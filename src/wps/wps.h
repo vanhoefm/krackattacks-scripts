@@ -187,6 +187,14 @@ struct wps_config {
 	 * to %NULL to indicate the station does not have a P2P Device Address.
 	 */
 	const u8 *p2p_dev_addr;
+
+	/**
+	 * pbc_in_m1 - Do not remove PushButton config method in M1 (AP)
+	 *
+	 * This can be used to enable a workaround to allow Windows 7 to use
+	 * PBC with the AP.
+	 */
+	int pbc_in_m1;
 };
 
 struct wps_data * wps_init(const struct wps_config *cfg);

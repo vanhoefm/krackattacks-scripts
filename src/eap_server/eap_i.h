@@ -192,6 +192,8 @@ struct eap_sm {
 
 	/* Fragmentation size for EAP method init() handler */
 	int fragment_size;
+
+	int pbc_in_m1;
 };
 
 int eap_user_get(struct eap_sm *sm, const u8 *identity, size_t identity_len,

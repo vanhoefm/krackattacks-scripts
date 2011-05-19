@@ -784,6 +784,17 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 		return -1;
 	}
 
+	/*
+	 * WPS UPnP module can be initialized only when the "upnp_iface" is up.
+	 * If "interface" and "upnp_iface" are the same (e.g., non-bridge
+	 * mode), the interface is up only after driver_commit, so initialize
+	 * WPS after driver_commit.
+	 */
+	for (j = 0; j < iface->num_bss; j++) {
+		if (hostapd_init_wps_complete(iface->bss[j]))
+			return -1;
+	}
+
 	if (hapd->setup_complete_cb)
 		hapd->setup_complete_cb(hapd->setup_complete_cb_ctx);
 

@@ -876,19 +876,33 @@ int hostapd_init_wps(struct hostapd_data *hapd,
 	wps->model_description = hapd->conf->model_description;
 	wps->model_url = hapd->conf->model_url;
 	wps->upc = hapd->conf->upc;
-
-	if (hostapd_wps_upnp_init(hapd, wps) < 0) {
-		wpa_printf(MSG_ERROR, "Failed to initialize WPS UPnP");
-		wps_registrar_deinit(wps->registrar);
-		os_free(wps->network_key);
-		os_free(wps);
-		return -1;
-	}
 #endif /* CONFIG_WPS_UPNP */
 
 	hostapd_register_probereq_cb(hapd, hostapd_wps_probe_req_rx, hapd);
 
 	hapd->wps = wps;
+
+	return 0;
+}
+
+
+int hostapd_init_wps_complete(struct hostapd_data *hapd)
+{
+	struct wps_context *wps = hapd->wps;
+
+	if (hapd->wps == NULL)
+		return 0;
+
+#ifdef CONFIG_WPS_UPNP
+	if (hostapd_wps_upnp_init(hapd, wps) < 0) {
+		wpa_printf(MSG_ERROR, "Failed to initialize WPS UPnP");
+		wps_registrar_deinit(wps->registrar);
+		os_free(wps->network_key);
+		os_free(wps);
+		hapd->wps = NULL;
+		return -1;
+	}
+#endif /* CONFIG_WPS_UPNP */
 
 	return 0;
 }

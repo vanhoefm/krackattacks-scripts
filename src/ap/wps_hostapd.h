@@ -19,6 +19,7 @@
 
 int hostapd_init_wps(struct hostapd_data *hapd,
 		     struct hostapd_bss_config *conf);
+int hostapd_init_wps_complete(struct hostapd_data *hapd);
 void hostapd_deinit_wps(struct hostapd_data *hapd);
 void hostapd_update_wps(struct hostapd_data *hapd);
 int hostapd_wps_add_pin(struct hostapd_data *hapd, const u8 *addr,
@@ -48,6 +49,11 @@ static inline int hostapd_init_wps(struct hostapd_data *hapd,
 
 static inline void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
+}
+
+static inline int hostapd_init_wps_complete(struct hostapd_data *hapd)
+{
+    return 0;
 }
 
 static inline void hostapd_update_wps(struct hostapd_data *hapd)

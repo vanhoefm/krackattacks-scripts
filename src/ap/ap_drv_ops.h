@@ -194,4 +194,12 @@ static inline int hostapd_drv_set_radius_acl_expire(struct hostapd_data *hapd,
 	return hapd->driver->set_radius_acl_expire(hapd->drv_priv, mac);
 }
 
+static inline int hostapd_drv_set_authmode(struct hostapd_data *hapd,
+					   int auth_algs)
+{
+	if (hapd->driver == NULL || hapd->driver->set_authmode == NULL)
+		return 0;
+	return hapd->driver->set_authmode(hapd->drv_priv, auth_algs);
+}
+
 #endif /* AP_DRV_OPS */

@@ -306,6 +306,12 @@ static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 		return 0;
 	}
 
+	/*
+	 * When IEEE 802.1X is not enabled, the driver may need to know how to
+	 * set authentication algorithms for static WEP.
+	 */
+	hostapd_drv_set_authmode(hapd, hapd->conf->auth_algs);
+
 	for (i = 0; i < 4; i++) {
 		if (hapd->conf->ssid.wep.key[i] &&
 		    hostapd_drv_set_key(iface, hapd, WPA_ALG_WEP, NULL, i,

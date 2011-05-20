@@ -1357,6 +1357,23 @@ atheros_commit(void *priv)
 	return linux_set_iface_flags(drv->ioctl_sock, drv->iface, 1);
 }
 
+static int atheros_set_authmode(void *priv, int auth_algs)
+{
+	int authmode;
+
+	if ((auth_algs & WPA_AUTH_ALG_OPEN) &&
+	    (auth_algs & WPA_AUTH_ALG_SHARED))
+		authmode = IEEE80211_AUTH_AUTO;
+	else if (auth_algs & WPA_AUTH_ALG_OPEN)
+		authmode = IEEE80211_AUTH_OPEN;
+	else if (auth_algs & WPA_AUTH_ALG_SHARED)
+		authmode = IEEE80211_AUTH_SHARED;
+	else
+		return -1;
+
+	return set80211param(priv, IEEE80211_PARAM_AUTHMODE, authmode);
+}
+
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
 	.hapd_init		= atheros_init,
@@ -1378,4 +1395,5 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.sta_clear_stats	= atheros_sta_clear_stats,
 	.commit			= atheros_commit,
 	.set_ap_wps_ie		= atheros_set_ap_wps_ie,
+	.set_authmode		= atheros_set_authmode,
 };

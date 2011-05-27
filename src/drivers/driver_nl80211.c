@@ -5107,6 +5107,9 @@ static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 	return 0;
 }
 
+#endif /* HOSTAPD */
+
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static inline int min_int(int a, int b)
 {
@@ -5163,9 +5166,6 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 	return -ENOBUFS;
 }
 
-#endif /* HOSTAPD */
-
-#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 			      int mode)
@@ -5209,7 +5209,7 @@ static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 }
 
 
-#ifdef HOSTAPD
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_set_rts(void *priv, int rts)
 {
@@ -5513,6 +5513,9 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 	return ret;
 }
 
+#endif /* HOSTAPD || CONFIG_AP */
+
+#ifdef HOSTAPD
 
 static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
                             const char *bridge_ifname)
@@ -5544,6 +5547,9 @@ static int i802_set_wds_sta(void *priv, const u8 *addr, int aid, int val,
 	}
 }
 
+#endif /* HOSTAPD */
+
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_set_ht_params(void *priv, const u8 *ht_capab,
 			      size_t ht_capab_len, const u8 *ht_oper,
@@ -5557,6 +5563,9 @@ static int i802_set_ht_params(void *priv, const u8 *ht_capab,
 		return -1;
 }
 
+#endif /* HOSTAPD || CONFIG_AP */
+
+#ifdef HOSTAPD
 
 static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 {
@@ -5577,6 +5586,9 @@ static void handle_eapol(int sock, void *eloop_ctx, void *sock_ctx)
 		drv_event_eapol_rx(drv->ctx, lladdr.sll_addr, buf, len);
 }
 
+#endif /* HOSTAPD */
+
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_get_inact_sec(void *priv, const u8 *addr)
 {
@@ -5599,9 +5611,6 @@ static int i802_sta_clear_stats(void *priv, const u8 *addr)
 	return 0;
 }
 
-#endif /* HOSTAPD */
-
-#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 			   int reason)
@@ -6597,6 +6606,9 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 #ifdef HOSTAPD
 	.hapd_init = i802_init,
 	.hapd_deinit = i802_deinit,
+	.set_wds_sta = i802_set_wds_sta,
+#endif /* HOSTAPD */
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 	.get_seqnum = i802_get_seqnum,
 	.flush = i802_flush,
 	.read_sta_data = i802_read_sta_data,
@@ -6609,10 +6621,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_short_slot_time = i802_set_short_slot_time,
 	.set_tx_queue_params = i802_set_tx_queue_params,
 	.set_sta_vlan = i802_set_sta_vlan,
-	.set_wds_sta = i802_set_wds_sta,
 	.set_ht_params = i802_set_ht_params,
-#endif /* HOSTAPD */
-#if defined(HOSTAPD) || defined(CONFIG_AP)
 	.set_rate_sets = i802_set_rate_sets,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,

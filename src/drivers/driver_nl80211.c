@@ -5163,6 +5163,9 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 	return -ENOBUFS;
 }
 
+#endif /* HOSTAPD */
+
+#if defined(HOSTAPD) || defined(CONFIG_AP)
 
 static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 			      int mode)
@@ -5193,7 +5196,7 @@ static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
 	return -ENOBUFS;
 }
 
-#endif /* HOSTAPD */
+#endif /* HOSTAPD || CONFIG_AP */
 
 
 /* Set kernel driver on given frequency (MHz) */
@@ -6601,7 +6604,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_rts = i802_set_rts,
 	.set_frag = i802_set_frag,
-	.set_rate_sets = i802_set_rate_sets,
 	.set_cts_protect = i802_set_cts_protect,
 	.set_preamble = i802_set_preamble,
 	.set_short_slot_time = i802_set_short_slot_time,
@@ -6611,6 +6613,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_ht_params = i802_set_ht_params,
 #endif /* HOSTAPD */
 #if defined(HOSTAPD) || defined(CONFIG_AP)
+	.set_rate_sets = i802_set_rate_sets,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
 #endif /* HOSTAPD || CONFIG_AP */

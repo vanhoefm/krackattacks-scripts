@@ -181,6 +181,14 @@ struct wpa_params {
 	 * created.
 	 */
 	char *override_ctrl_interface;
+
+	/**
+	 * entropy_file - Optional entropy file
+	 *
+	 * This parameter can be used to configure wpa_supplicant to maintain
+	 * its internal entropy store over restarts.
+	 */
+	char *entropy_file;
 };
 
 struct p2p_srv_bonjour {

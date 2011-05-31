@@ -369,7 +369,8 @@ static void handle_dump_state(int sig, void *signal_ctx)
 #endif /* CONFIG_NATIVE_WINDOWS */
 
 
-static int hostapd_global_init(struct hapd_interfaces *interfaces)
+static int hostapd_global_init(struct hapd_interfaces *interfaces,
+			       const char *entropy_file)
 {
 	hostapd_logger_register_cb(hostapd_logger_cb);
 
@@ -383,7 +384,7 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces)
 		return -1;
 	}
 
-	random_init();
+	random_init(entropy_file);
 
 #ifndef CONFIG_NATIVE_WINDOWS
 	eloop_register_signal(SIGHUP, handle_reload, interfaces);
@@ -468,13 +469,14 @@ static void usage(void)
 	show_version();
 	fprintf(stderr,
 		"\n"
-		"usage: hostapd [-hdBKtv] [-P <PID file>] "
+		"usage: hostapd [-hdBKtv] [-P <PID file>] [-e <entropy file>] "
 		"<configuration file(s)>\n"
 		"\n"
 		"options:\n"
 		"   -h   show this usage\n"
 		"   -d   show more debug messages (-dd for even more)\n"
 		"   -B   run daemon in the background\n"
+		"   -e   entropy file\n"
 		"   -P   PID file\n"
 		"   -K   include key data in debug messages\n"
 #ifdef CONFIG_DEBUG_FILE
@@ -504,12 +506,13 @@ int main(int argc, char *argv[])
 	int c, debug = 0, daemonize = 0;
 	char *pid_file = NULL;
 	const char *log_file = NULL;
+	const char *entropy_file = NULL;
 
 	if (os_program_init())
 		return -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "Bdf:hKP:tv");
+		c = getopt(argc, argv, "Bde:f:hKP:tv");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -523,6 +526,9 @@ int main(int argc, char *argv[])
 			break;
 		case 'B':
 			daemonize++;
+			break;
+		case 'e':
+			entropy_file = optarg;
 			break;
 		case 'f':
 			log_file = optarg;
@@ -564,7 +570,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (hostapd_global_init(&interfaces))
+	if (hostapd_global_init(&interfaces, entropy_file))
 		return -1;
 
 	/* Initialize interfaces */

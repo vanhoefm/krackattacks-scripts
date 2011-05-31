@@ -437,10 +437,16 @@ CONFIG_PEERKEY=y
 # from the OS. This by itself is not considered to be very strong, but it may
 # help in cases where the system pool is not initialized properly. However, it
 # is very strongly recommended that the system pool is initialized with enough
-# entropy either by using hardware assisted random number generatior or by
+# entropy either by using hardware assisted random number generator or by
 # storing state over device reboots.
 #
-# If the os_get_random() is known to provide strong ramdom data (e.g., on
+# wpa_supplicant can be configured to maintain its own entropy store over
+# restarts to enhance random number generation. This is not perfect, but it is
+# much more secure than using the same sequence of random numbers after every
+# reboot. This can be enabled with -e<entropy file> command line option. The
+# specified file needs to be readable and writable by wpa_supplicant.
+#
+# If the os_get_random() is known to provide strong random data (e.g., on
 # Linux/BSD, the board in question is known to have reliable source of random
 # data from /dev/urandom), the internal wpa_supplicant random pool can be
 # disabled. This will save some in binary size and CPU use. However, this

@@ -33,7 +33,8 @@ static void usage(void)
 	       "[-g<global ctrl>] \\\n"
 	       "        -i<ifname> -c<config file> [-C<ctrl>] [-D<driver>] "
 	       "[-p<driver_param>] \\\n"
-	       "        [-b<br_ifname>] [-f<debug file>] \\\n"
+	       "        [-b<br_ifname>] [-f<debug file>] [-e<entropy file>] "
+	       "\\\n"
 	       "        [-o<override driver>] [-O<override ctrl>] \\\n"
 	       "        [-N -i<ifname> -c<conf> [-C<ctrl>] "
 	       "[-D<driver>] \\\n"
@@ -56,7 +57,8 @@ static void usage(void)
 	       "  -C = ctrl_interface parameter (only used if -c is not)\n"
 	       "  -i = interface name\n"
 	       "  -d = increase debugging verbosity (-dd even more)\n"
-	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n");
+	       "  -D = driver name (can be multiple drivers: nl80211,wext)\n"
+	       "  -e = entropy file\n");
 #ifdef CONFIG_DEBUG_FILE
 	printf("  -f = log output to debug file instead of stdout\n");
 #endif /* CONFIG_DEBUG_FILE */
@@ -143,7 +145,7 @@ int main(int argc, char *argv[])
 	wpa_supplicant_fd_workaround();
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bc:C:D:df:g:hi:KLNo:O:p:P:qstuvW");
+		c = getopt(argc, argv, "b:Bc:C:D:de:f:g:hi:KLNo:O:p:P:qstuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -172,6 +174,9 @@ int main(int argc, char *argv[])
 			params.wpa_debug_level--;
 			break;
 #endif /* CONFIG_NO_STDOUT_DEBUG */
+		case 'e':
+			params.entropy_file = optarg;
+			break;
 #ifdef CONFIG_DEBUG_FILE
 		case 'f':
 			params.wpa_debug_file_path = optarg;

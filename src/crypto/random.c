@@ -57,10 +57,16 @@ static size_t dummy_key_avail = 0;
 static int random_fd = -1;
 #endif /* __linux__ */
 static unsigned int own_pool_ready = 0;
+#define RANDOM_ENTROPY_SIZE 20
+static char *random_entropy_file = NULL;
+static int random_entropy_file_read = 0;
 
 #define MIN_COLLECT_ENTROPY 1000
 static unsigned int entropy = 0;
 static unsigned int total_collected = 0;
+
+
+static void random_write_entropy(void);
 
 
 static u32 __ROL32(u32 x, u32 y)
@@ -232,8 +238,12 @@ int random_pool_ready(void)
 	dummy_key_avail += res;
 	close(fd);
 
-	if (dummy_key_avail == sizeof(dummy_key))
+	if (dummy_key_avail == sizeof(dummy_key)) {
+		if (own_pool_ready < MIN_READY_MARK)
+			own_pool_ready = MIN_READY_MARK;
+		random_write_entropy();
 		return 1;
+	}
 
 	wpa_printf(MSG_INFO, "random: Only %u/%u bytes of strong "
 		   "random data available from /dev/random",
@@ -261,6 +271,7 @@ void random_mark_pool_ready(void)
 	own_pool_ready++;
 	wpa_printf(MSG_DEBUG, "random: Mark internal entropy pool to be "
 		   "ready (count=%u/%u)", own_pool_ready, MIN_READY_MARK);
+	random_write_entropy();
 }
 
 
@@ -298,15 +309,84 @@ static void random_read_fd(int sock, void *eloop_ctx, void *sock_ctx)
 		   (unsigned) (sizeof(dummy_key) - dummy_key_avail));
 	dummy_key_avail += res;
 
-	if (dummy_key_avail == sizeof(dummy_key))
+	if (dummy_key_avail == sizeof(dummy_key)) {
 		random_close_fd();
+		if (own_pool_ready < MIN_READY_MARK)
+			own_pool_ready = MIN_READY_MARK;
+		random_write_entropy();
+	}
 }
 
 #endif /* __linux__ */
 
 
-void random_init(void)
+static void random_read_entropy(void)
 {
+	char *buf;
+	size_t len;
+
+	if (!random_entropy_file)
+		return;
+
+	buf = os_readfile(random_entropy_file, &len);
+	if (buf == NULL)
+		return; /* entropy file not yet available */
+
+	if (len != 1 + RANDOM_ENTROPY_SIZE) {
+		wpa_printf(MSG_DEBUG, "random: Invalid entropy file %s",
+			   random_entropy_file);
+		os_free(buf);
+		return;
+	}
+
+	own_pool_ready = (u8) buf[0];
+	random_add_randomness(buf + 1, RANDOM_ENTROPY_SIZE);
+	random_entropy_file_read = 1;
+	os_free(buf);
+	wpa_printf(MSG_DEBUG, "random: Added entropy from %s "
+		   "(own_pool_ready=%u)",
+		   random_entropy_file, own_pool_ready);
+}
+
+
+static void random_write_entropy(void)
+{
+	char buf[RANDOM_ENTROPY_SIZE];
+	FILE *f;
+	u8 opr;
+
+	if (!random_entropy_file)
+		return;
+
+	random_get_bytes(buf, RANDOM_ENTROPY_SIZE);
+
+	f = fopen(random_entropy_file, "wb");
+	if (f == NULL) {
+		wpa_printf(MSG_ERROR, "random: Could not write %s",
+			   random_entropy_file);
+		return;
+	}
+
+	opr = own_pool_ready > 0xff ? 0xff : own_pool_ready;
+	fwrite(&opr, 1, 1, f);
+	fwrite(buf, RANDOM_ENTROPY_SIZE, 1, f);
+	fclose(f);
+
+	wpa_printf(MSG_DEBUG, "random: Updated entropy file %s "
+		   "(own_pool_ready=%u)",
+		   random_entropy_file, own_pool_ready);
+}
+
+
+void random_init(const char *entropy_file)
+{
+	os_free(random_entropy_file);
+	if (entropy_file)
+		random_entropy_file = os_strdup(entropy_file);
+	else
+		random_entropy_file = NULL;
+	random_read_entropy();
+
 #ifdef __linux__
 	if (random_fd >= 0)
 		return;
@@ -326,6 +406,8 @@ void random_init(void)
 
 	eloop_register_read_sock(random_fd, random_read_fd, NULL, NULL);
 #endif /* __linux__ */
+
+	random_write_entropy();
 }
 
 
@@ -334,4 +416,7 @@ void random_deinit(void)
 #ifdef __linux__
 	random_close_fd();
 #endif /* __linux__ */
+	random_write_entropy();
+	os_free(random_entropy_file);
+	random_entropy_file = NULL;
 }

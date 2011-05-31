@@ -890,7 +890,7 @@ int hostapd_init_wps_complete(struct hostapd_data *hapd)
 {
 	struct wps_context *wps = hapd->wps;
 
-	if (hapd->wps == NULL)
+	if (wps == NULL)
 		return 0;
 
 #ifdef CONFIG_WPS_UPNP

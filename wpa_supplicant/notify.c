@@ -436,6 +436,13 @@ void wpas_notify_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 					 unsigned int generated_pin)
 {
 }
+
+
+void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
+				   struct wpa_ssid *ssid, int network_id,
+				   int client)
+{
+}
 #endif /* CONFIG_P2P */
 
 

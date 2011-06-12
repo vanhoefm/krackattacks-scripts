@@ -1140,6 +1140,9 @@ DBUS_OBJS += dbus/dbus_new.o dbus/dbus_new_handlers.o
 ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_new_handlers_wps.o
 endif
+ifdef CONFIG_P2P
+DBUS_OBJS += dbus/dbus_new_handlers_p2p.o
+endif
 ifndef DBUS_LIBS
 DBUS_LIBS := $(shell pkg-config --libs dbus-1)
 endif

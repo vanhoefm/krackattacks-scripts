@@ -368,12 +368,23 @@ void wpas_notify_resume(struct wpa_global *global)
 void wpas_notify_p2p_device_found(struct wpa_supplicant *wpa_s,
 				  const u8 *dev_addr, int new_device)
 {
+	if (new_device) {
+		/* Create the new peer object */
+		wpas_dbus_register_peer(wpa_s, dev_addr);
+	}
+
+	/* Notify a new peer has been detected*/
+	wpas_dbus_signal_peer_device_found(wpa_s, dev_addr);
 }
 
 
 void wpas_notify_p2p_device_lost(struct wpa_supplicant *wpa_s,
 				 const u8 *dev_addr)
 {
+	wpas_dbus_unregister_peer(wpa_s, dev_addr);
+
+	/* Create signal on interface object*/
+	wpas_dbus_signal_peer_device_lost(wpa_s, dev_addr);
 }
 
 
@@ -381,23 +392,29 @@ void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
 				   const struct wpa_ssid *ssid,
 				   const char *role)
 {
+	wpas_dbus_unregister_p2p_group(wpa_s, ssid);
+
+	wpas_dbus_signal_p2p_group_removed(wpa_s, role);
 }
 
 
 void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 				const u8 *src, u16 dev_passwd_id)
 {
+	wpas_dbus_signal_p2p_go_neg_req(wpa_s, src, dev_passwd_id);
 }
 
 
 void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s, int status)
 {
+	wpas_dbus_signal_p2p_go_neg_resp(wpa_s, status);
 }
 
 
 void wpas_notify_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 				       int status, const u8 *bssid)
 {
+	wpas_dbus_signal_p2p_invitation_result(wpa_s, status, bssid);
 }
 
 
@@ -406,6 +423,8 @@ void wpas_notify_p2p_sd_request(struct wpa_supplicant *wpa_s,
 				u16 update_indic, const u8 *tlvs,
 				size_t tlvs_len)
 {
+	wpas_dbus_signal_p2p_sd_request(wpa_s, freq, sa, dialog_token,
+					update_indic, tlvs, tlvs_len);
 }
 
 
@@ -413,6 +432,8 @@ void wpas_notify_p2p_sd_response(struct wpa_supplicant *wpa_s,
 				 const u8 *sa, u16 update_indic,
 				 const u8 *tlvs, size_t tlvs_len)
 {
+	wpas_dbus_signal_p2p_sd_response(wpa_s, sa, update_indic,
+					 tlvs, tlvs_len);
 }
 
 
@@ -435,6 +456,9 @@ void wpas_notify_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 					 u16 config_methods,
 					 unsigned int generated_pin)
 {
+	wpas_dbus_signal_p2p_provision_discovery(wpa_s, dev_addr, request,
+						 status, config_methods,
+						 generated_pin);
 }
 
 
@@ -442,6 +466,10 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 				   struct wpa_ssid *ssid, int network_id,
 				   int client)
 {
+	/* Notify a group has been started */
+	wpas_dbus_register_p2p_group(wpa_s, ssid);
+
+	wpas_dbus_signal_p2p_group_started(wpa_s, ssid, client, network_id);
 }
 #endif /* CONFIG_P2P */
 
@@ -449,12 +477,35 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 					  const u8 *sta)
 {
+	/*
+	 * Register a group member object corresponding to this peer and
+	 * emit a PeerJoined signal. This will check if it really is a
+	 * P2P group.
+	 */
+	wpas_dbus_register_p2p_groupmember(wpa_s, sta);
+
+	/*
+	 * Create 'peer-joined' signal on group object -- will also
+	 * check P2P itself.
+	 */
+	wpas_dbus_signal_p2p_peer_joined(wpa_s, sta);
 }
 
 
 static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
 					    const u8 *sta)
 {
+	/*
+	 * Unregister a group member object corresponding to this peer
+	 * if this is a P2P group.
+	 */
+	wpas_dbus_unregister_p2p_groupmember(wpa_s, sta);
+
+	/*
+	 * Create 'peer-disconnected' signal on group object if this
+	 * is a P2P group.
+	 */
+	wpas_dbus_signal_p2p_peer_disconnected(wpa_s, sta);
 }
 
 

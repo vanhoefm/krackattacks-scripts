@@ -15,6 +15,8 @@
 #ifndef NOTIFY_H
 #define NOTIFY_H
 
+#include "p2p/p2p.h"
+
 struct wps_credential;
 struct wps_event_m2d;
 struct wps_event_fail;
@@ -101,5 +103,10 @@ void wpas_notify_p2p_sd_request(struct wpa_supplicant *wpa_s,
 void wpas_notify_p2p_sd_response(struct wpa_supplicant *wpa_s,
 				 const u8 *sa, u16 update_indic,
 				 const u8 *tlvs, size_t tlvs_len);
+void wpas_notify_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
+					 const u8 *dev_addr, int request,
+					 enum p2p_prov_disc_status status,
+					 u16 config_methods,
+					 unsigned int generated_pin);
 
 #endif /* NOTIFY_H */

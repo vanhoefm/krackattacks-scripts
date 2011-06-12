@@ -1893,6 +1893,10 @@ void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 	else if (config_methods & WPS_CONFIG_PUSHBUTTON)
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_REQ MACSTR
 			"%s", MAC2STR(peer), params);
+
+	wpas_notify_p2p_provision_discovery(wpa_s, peer, 1 /* request */,
+					    P2P_PROV_DISC_SUCCESS,
+					    config_methods, generated_pin);
 }
 
 
@@ -1910,6 +1914,10 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_RESP MACSTR,
 			MAC2STR(peer));
 
+	wpas_notify_p2p_provision_discovery(wpa_s, peer, 0 /* response */,
+					    P2P_PROV_DISC_SUCCESS,
+					    config_methods, generated_pin);
+
 	if (wpa_s->pending_pd_before_join &&
 	    (os_memcmp(peer, wpa_s->pending_join_dev_addr, ETH_ALEN) == 0 ||
 	     os_memcmp(peer, wpa_s->pending_join_iface_addr, ETH_ALEN) == 0)) {
@@ -1918,6 +1926,16 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 			   "join-existing-group operation");
 		wpas_p2p_join_start(wpa_s);
 	}
+}
+
+
+void wpas_prov_disc_fail(void *ctx, const u8 *peer,
+			 enum p2p_prov_disc_status status)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpas_notify_p2p_provision_discovery(wpa_s, peer, 0 /* response */,
+					    status, 0, 0);
 }
 
 
@@ -2356,6 +2374,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.sd_response = wpas_sd_response;
 	p2p.prov_disc_req = wpas_prov_disc_req;
 	p2p.prov_disc_resp = wpas_prov_disc_resp;
+	p2p.prov_disc_fail = wpas_prov_disc_fail;
 	p2p.invitation_process = wpas_invitation_process;
 	p2p.invitation_received = wpas_invitation_received;
 	p2p.invitation_result = wpas_invitation_result;

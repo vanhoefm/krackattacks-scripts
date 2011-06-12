@@ -415,6 +415,27 @@ void wpas_notify_p2p_sd_response(struct wpa_supplicant *wpa_s,
 {
 }
 
+
+/**
+ * wpas_notify_p2p_provision_discovery - Notification of provision discovery
+ * @dev_addr: Who sent the request or responded to our request.
+ * @request: Will be 1 if request, 0 for response.
+ * @status: Valid only in case of response (0 in case of success)
+ * @config_methods: WPS config methods
+ * @generated_pin: PIN to be displayed in case of WPS_CONFIG_DISPLAY method
+ *
+ * This can be used to notify:
+ * - Requests or responses
+ * - Various config methods
+ * - Failure condition in case of response
+ */
+void wpas_notify_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
+					 const u8 *dev_addr, int request,
+					 enum p2p_prov_disc_status status,
+					 u16 config_methods,
+					 unsigned int generated_pin)
+{
+}
 #endif /* CONFIG_P2P */
 
 

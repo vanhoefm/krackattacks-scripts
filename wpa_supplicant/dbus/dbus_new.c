@@ -1289,7 +1289,7 @@ error:
  * @wpa_s: %wpa_supplicant network interface data
  * @property: indicates which property has changed
  *
- * Sends ProertyChanged signals with path, interface and arguments
+ * Sends PropertyChanged signals with path, interface and arguments
  * depending on which property has changed.
  */
 void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
@@ -1405,7 +1405,7 @@ void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
  * wpas_dbus_signal_debug_level_changed - Signals change of debug param
  * @global: wpa_global structure
  *
- * Sends ProertyChanged signals informing that debug level has changed.
+ * Sends PropertyChanged signals informing that debug level has changed.
  */
 void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
 {
@@ -1419,7 +1419,7 @@ void wpas_dbus_signal_debug_level_changed(struct wpa_global *global)
  * wpas_dbus_signal_debug_timestamp_changed - Signals change of debug param
  * @global: wpa_global structure
  *
- * Sends ProertyChanged signals informing that debug timestamp has changed.
+ * Sends PropertyChanged signals informing that debug timestamp has changed.
  */
 void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
 {
@@ -1433,7 +1433,7 @@ void wpas_dbus_signal_debug_timestamp_changed(struct wpa_global *global)
  * wpas_dbus_signal_debug_show_keys_changed - Signals change of debug param
  * @global: wpa_global structure
  *
- * Sends ProertyChanged signals informing that debug show_keys has changed.
+ * Sends PropertyChanged signals informing that debug show_keys has changed.
  */
 void wpas_dbus_signal_debug_show_keys_changed(struct wpa_global *global)
 {

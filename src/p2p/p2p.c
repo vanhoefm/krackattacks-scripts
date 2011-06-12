@@ -2250,18 +2250,80 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
 	p2p_set_timeout(p2p, 0, 200000);
 }
 
+
+/**
+ * p2p_retry_pd - Retry any pending provision disc requests in IDLE state
+ * @p2p: P2P module context from p2p_init()
+ */
+void p2p_retry_pd(struct p2p_data *p2p)
+{
+	struct p2p_device *dev;
+
+	if (p2p->state != P2P_IDLE)
+		return;
+
+	/*
+	 * Retry the prov disc req attempt only for the peer that the user had
+	 * requested for and provided a join has not been initiated on it
+	 * in the meantime.
+	 */
+
+	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+		if (os_memcmp(p2p->pending_pd_devaddr,
+			      dev->info.p2p_device_addr, ETH_ALEN) != 0)
+			continue;
+		if (!dev->req_config_methods)
+			continue;
+		if (dev->flags & P2P_DEV_PD_FOR_JOIN)
+			continue;
+
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send "
+			"pending Provisioning Discovery Request to "
+			MACSTR " (config methods 0x%x)",
+			MAC2STR(dev->info.p2p_device_addr),
+			dev->req_config_methods);
+		p2p_send_prov_disc_req(p2p, dev, 0);
+		return;
+	}
+}
+
+
 static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 {
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Provision Discovery Request TX callback: success=%d",
 		success);
-	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+
+	/*
+	 * Postpone resetting the pending action state till after we actually
+	 * time out. This allows us to take some action like notifying any
+	 * interested parties about no response to the request.
+	 *
+	 * When the timer (below) goes off we check in IDLE, SEARCH, or
+	 * LISTEN_ONLY state, which are the only allowed states to issue a PD
+	 * requests in, if this was still pending and then raise notification.
+	 */
 
 	if (!success) {
+		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+
 		if (p2p->state != P2P_IDLE)
 			p2p_continue_find(p2p);
+		else if (p2p->user_initiated_pd) {
+			p2p->pending_action_state = P2P_PENDING_PD;
+			p2p_set_timeout(p2p, 0, 300000);
+		}
 		return;
 	}
+
+	/*
+	 * This postponing, of resetting pending_action_state, needs to be
+	 * done only for user initiated PD requests and not internal ones.
+	 */
+	if (p2p->user_initiated_pd)
+		p2p->pending_action_state = P2P_PENDING_PD;
+	else
+		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 
 	/* Wait for response from the peer */
 	if (p2p->state == P2P_SEARCH)
@@ -2653,6 +2715,30 @@ static void p2p_timeout_prov_disc_during_find(struct p2p_data *p2p)
 }
 
 
+static void p2p_timeout_prov_disc_req(struct p2p_data *p2p)
+{
+	p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+
+	/*
+	 * For user initiated PD requests that we have not gotten any responses
+	 * for while in IDLE state, we retry them a couple of times before
+	 * giving up.
+	 */
+	if (!p2p->user_initiated_pd)
+		return;
+
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+		"P2P: User initiated Provision Discovery Request timeout");
+
+	if (p2p->pd_retries) {
+		p2p->pd_retries--;
+		p2p_retry_pd(p2p);
+	} else {
+		p2p_reset_pending_pd(p2p);
+	}
+}
+
+
 static void p2p_timeout_invite(struct p2p_data *p2p)
 {
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
@@ -2701,8 +2787,14 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 
 	switch (p2p->state) {
 	case P2P_IDLE:
+		/* Check if we timed out waiting for PD req */
+		if (p2p->pending_action_state == P2P_PENDING_PD)
+			p2p_timeout_prov_disc_req(p2p);
 		break;
 	case P2P_SEARCH:
+		/* Check if we timed out waiting for PD req */
+		if (p2p->pending_action_state == P2P_PENDING_PD)
+			p2p_timeout_prov_disc_req(p2p);
 		p2p_search(p2p);
 		break;
 	case P2P_CONNECT:
@@ -2714,6 +2806,10 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 	case P2P_GO_NEG:
 		break;
 	case P2P_LISTEN_ONLY:
+		/* Check if we timed out waiting for PD req */
+		if (p2p->pending_action_state == P2P_PENDING_PD)
+			p2p_timeout_prov_disc_req(p2p);
+
 		if (p2p->ext_listen_only) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Extended Listen Timing - Listen State "

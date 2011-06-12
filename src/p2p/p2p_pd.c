@@ -21,6 +21,13 @@
 #include "p2p.h"
 
 
+/*
+ * Number of retries to attempt for provision discovery requests during IDLE
+ * state in case the peer is not listening.
+ */
+#define MAX_PROV_DISC_REQ_RETRIES 10
+
+
 static void p2p_build_wps_ie_config_methods(struct wpabuf *buf,
 					    u16 config_methods)
 {
@@ -215,6 +222,11 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 	}
 
+	if (p2p->pending_action_state == P2P_PENDING_PD) {
+		os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
+		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
+	}
+
 	if (dev->dialog_token != msg.dialog_token) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Ignore Provisioning Discovery Response with "
@@ -223,6 +235,14 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		p2p_parse_free(&msg);
 		return;
 	}
+
+	/*
+	 * If the response is from the peer to whom a user initiated request
+	 * was sent earlier, we reset that state info here.
+	 */
+	if (p2p->user_initiated_pd &&
+	    os_memcmp(p2p->pending_pd_devaddr, sa, ETH_ALEN) == 0)
+		p2p_reset_pending_pd(p2p);
 
 	if (msg.wps_config_methods != dev->req_config_methods) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer rejected "
@@ -301,6 +321,8 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 		return -1;
 	}
 
+	os_memcpy(p2p->pending_pd_devaddr, dev->info.p2p_device_addr, ETH_ALEN);
+
 	wpabuf_free(req);
 	return 0;
 }
@@ -343,5 +365,23 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 		return 0;
 	}
 
+	/*
+	 * We use the join param as a cue to differentiate between user
+	 * initiated PD request and one issued during finds (internal).
+	 */
+	p2p->user_initiated_pd = !join;
+
+	/* Also set some retries to attempt in case of IDLE state */
+	if (p2p->user_initiated_pd && p2p->state == P2P_IDLE)
+		p2p->pd_retries = MAX_PROV_DISC_REQ_RETRIES;
+
 	return p2p_send_prov_disc_req(p2p, dev, join);
+}
+
+
+void p2p_reset_pending_pd(struct p2p_data *p2p)
+{
+	p2p->user_initiated_pd = 0;
+	os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
+	p2p->pd_retries = 0;
 }

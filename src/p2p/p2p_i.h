@@ -393,6 +393,23 @@ struct p2p_data {
 	 * wps_vendor_ext - WPS Vendor Extensions to add
 	 */
 	struct wpabuf *wps_vendor_ext[P2P_MAX_WPS_VENDOR_EXT];
+
+	/*
+	 * user_initiated_pd - Whether a PD request is user initiated or not.
+	 */
+	u8 user_initiated_pd;
+
+	/*
+	 * Keep track of which peer a given PD request was sent to.
+	 * Used to raise a timeout alert in case there is no response.
+	 */
+	u8 pending_pd_devaddr[ETH_ALEN];
+
+	/*
+	 * Retry counter for provision discovery requests when issued
+	 * in IDLE state.
+	 */
+	int pd_retries;
 };
 
 /**
@@ -586,6 +603,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 				const u8 *data, size_t len);
 int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 			   int join);
+void p2p_reset_pending_pd(struct p2p_data *p2p);
 
 /* p2p_invitation.c */
 void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,

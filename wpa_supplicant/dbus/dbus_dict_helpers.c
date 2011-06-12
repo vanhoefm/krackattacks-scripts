@@ -16,6 +16,7 @@
 #include <dbus/dbus.h>
 
 #include "common.h"
+#include "wpabuf.h"
 #include "dbus_dict_helpers.h"
 
 
@@ -443,11 +444,12 @@ dbus_bool_t wpa_dbus_dict_append_byte_array(DBusMessageIter *iter_dict,
 
 
 /**
- * Begin a string array entry in the dict
+ * Begin an array entry in the dict
  *
  * @param iter_dict A valid DBusMessageIter returned from
  *                  wpa_dbus_dict_open_write()
  * @param key The key of the dict item
+ * @param type The type of the contained data
  * @param iter_dict_entry A private DBusMessageIter provided by the caller to
  *                        be passed to wpa_dbus_dict_end_string_array()
  * @param iter_dict_val A private DBusMessageIter provided by the caller to
@@ -457,12 +459,21 @@ dbus_bool_t wpa_dbus_dict_append_byte_array(DBusMessageIter *iter_dict,
  * @return TRUE on success, FALSE on failure
  *
  */
-dbus_bool_t wpa_dbus_dict_begin_string_array(DBusMessageIter *iter_dict,
-					     const char *key,
-					     DBusMessageIter *iter_dict_entry,
-					     DBusMessageIter *iter_dict_val,
-					     DBusMessageIter *iter_array)
+dbus_bool_t wpa_dbus_dict_begin_array(DBusMessageIter *iter_dict,
+				      const char *key, const char *type,
+				      DBusMessageIter *iter_dict_entry,
+				      DBusMessageIter *iter_dict_val,
+				      DBusMessageIter *iter_array)
 {
+	char array_type[10];
+	int err;
+
+	err = os_snprintf(array_type, sizeof(array_type),
+			  DBUS_TYPE_ARRAY_AS_STRING "%s",
+			  type);
+	if (err < 0 || err > (int) sizeof(array_type))
+		return FALSE;
+
 	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array)
 		return FALSE;
 
@@ -472,17 +483,28 @@ dbus_bool_t wpa_dbus_dict_begin_string_array(DBusMessageIter *iter_dict,
 
 	if (!dbus_message_iter_open_container(iter_dict_entry,
 					      DBUS_TYPE_VARIANT,
-					      DBUS_TYPE_ARRAY_AS_STRING
-					      DBUS_TYPE_STRING_AS_STRING,
+					      array_type,
 					      iter_dict_val))
 		return FALSE;
 
 	if (!dbus_message_iter_open_container(iter_dict_val, DBUS_TYPE_ARRAY,
-					      DBUS_TYPE_STRING_AS_STRING,
-					      iter_array))
+					      type, iter_array))
 		return FALSE;
 
 	return TRUE;
+}
+
+
+dbus_bool_t wpa_dbus_dict_begin_string_array(DBusMessageIter *iter_dict,
+					     const char *key,
+					     DBusMessageIter *iter_dict_entry,
+					     DBusMessageIter *iter_dict_val,
+					     DBusMessageIter *iter_array)
+{
+	return wpa_dbus_dict_begin_array(
+		iter_dict, key,
+		DBUS_TYPE_STRING_AS_STRING,
+		iter_dict_entry, iter_dict_val, iter_array);
 }
 
 
@@ -508,23 +530,67 @@ dbus_bool_t wpa_dbus_dict_string_array_add_element(DBusMessageIter *iter_array,
 
 
 /**
- * End a string array dict entry
+ * Add a single byte array element to a string array dict entry
+ *
+ * @param iter_array A valid DBusMessageIter returned from
+ *                   wpa_dbus_dict_begin_array()'s iter_array
+ *                   parameter -- note that wpa_dbus_dict_begin_array()
+ *                   must have been called with "ay" as the type
+ * @param value The data to be added to the dict entry's array
+ * @param value_len The length of the data
+ * @return TRUE on success, FALSE on failure
+ *
+ */
+dbus_bool_t wpa_dbus_dict_bin_array_add_element(DBusMessageIter *iter_array,
+						const u8 *value,
+						size_t value_len)
+{
+	DBusMessageIter iter_bytes;
+	size_t i;
+
+	if (!iter_array || !value)
+		return FALSE;
+
+	if (!dbus_message_iter_open_container(iter_array, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &iter_bytes))
+		return FALSE;
+
+	for (i = 0; i < value_len; i++) {
+		if (!dbus_message_iter_append_basic(&iter_bytes,
+						    DBUS_TYPE_BYTE,
+						    &(value[i])))
+			return FALSE;
+	}
+
+	if (!dbus_message_iter_close_container(iter_array, &iter_bytes))
+		return FALSE;
+
+	return TRUE;
+}
+
+
+/**
+ * End an array dict entry
  *
  * @param iter_dict A valid DBusMessageIter returned from
  *                  wpa_dbus_dict_open_write()
  * @param iter_dict_entry A private DBusMessageIter returned from
- *                        wpa_dbus_dict_end_string_array()
+ *                        wpa_dbus_dict_begin_string_array() or
+ *			  wpa_dbus_dict_begin_array()
  * @param iter_dict_val A private DBusMessageIter returned from
- *                      wpa_dbus_dict_end_string_array()
+ *                      wpa_dbus_dict_begin_string_array() or
+ *			wpa_dbus_dict_begin_array()
  * @param iter_array A DBusMessageIter returned from
- *                   wpa_dbus_dict_end_string_array()
+ *                   wpa_dbus_dict_begin_string_array() or
+ *		     wpa_dbus_dict_begin_array()
  * @return TRUE on success, FALSE on failure
  *
  */
-dbus_bool_t wpa_dbus_dict_end_string_array(DBusMessageIter *iter_dict,
-					   DBusMessageIter *iter_dict_entry,
-					   DBusMessageIter *iter_dict_val,
-					   DBusMessageIter *iter_array)
+dbus_bool_t wpa_dbus_dict_end_array(DBusMessageIter *iter_dict,
+				    DBusMessageIter *iter_dict_entry,
+				    DBusMessageIter *iter_dict_val,
+				    DBusMessageIter *iter_array)
 {
 	if (!iter_dict || !iter_dict_entry || !iter_dict_val || !iter_array)
 		return FALSE;
@@ -583,6 +649,52 @@ dbus_bool_t wpa_dbus_dict_append_string_array(DBusMessageIter *iter_dict,
 }
 
 
+/**
+ * Convenience function to add an wpabuf binary array to the dict.
+ *
+ * @param iter_dict A valid DBusMessageIter returned from
+ *                  wpa_dbus_dict_open_write()
+ * @param key The key of the dict item
+ * @param items The array of wpabuf structures
+ * @param num_items The number of strings in the array
+ * @return TRUE on success, FALSE on failure
+ *
+ */
+dbus_bool_t wpa_dbus_dict_append_wpabuf_array(DBusMessageIter *iter_dict,
+					      const char *key,
+					      const struct wpabuf **items,
+					      const dbus_uint32_t num_items)
+{
+	DBusMessageIter iter_dict_entry, iter_dict_val, iter_array;
+	dbus_uint32_t i;
+
+	if (!key)
+		return FALSE;
+	if (!items && (num_items != 0))
+		return FALSE;
+
+	if (!wpa_dbus_dict_begin_array(iter_dict, key,
+				       DBUS_TYPE_ARRAY_AS_STRING
+				       DBUS_TYPE_BYTE_AS_STRING,
+				       &iter_dict_entry, &iter_dict_val,
+				       &iter_array))
+		return FALSE;
+
+	for (i = 0; i < num_items; i++) {
+		if (!wpa_dbus_dict_bin_array_add_element(&iter_array,
+							 wpabuf_head(items[i]),
+							 wpabuf_len(items[i])))
+			return FALSE;
+	}
+
+	if (!wpa_dbus_dict_end_array(iter_dict, &iter_dict_entry,
+				     &iter_dict_val, &iter_array))
+		return FALSE;
+
+	return TRUE;
+}
+
+
 /*****************************************************/
 /* Stuff for reading dicts                           */
 /*****************************************************/
@@ -615,8 +727,7 @@ dbus_bool_t wpa_dbus_dict_open_read(DBusMessageIter *iter,
 #define BYTE_ARRAY_ITEM_SIZE (sizeof(char))
 
 static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
-	DBusMessageIter *iter, int array_type,
-	struct wpa_dbus_dict_entry *entry)
+	DBusMessageIter *iter, struct wpa_dbus_dict_entry *entry)
 {
 	dbus_uint32_t count = 0;
 	dbus_bool_t success = FALSE;
@@ -733,6 +844,66 @@ done:
 }
 
 
+#define BIN_ARRAY_CHUNK_SIZE 10
+#define BIN_ARRAY_ITEM_SIZE (sizeof(struct wpabuf *))
+
+static dbus_bool_t _wpa_dbus_dict_entry_get_binarray(
+	DBusMessageIter *iter, struct wpa_dbus_dict_entry *entry)
+{
+	struct wpa_dbus_dict_entry tmpentry;
+	size_t buflen = 0;
+	int i;
+
+	if (dbus_message_iter_get_element_type(iter) != DBUS_TYPE_BYTE)
+		return FALSE;
+
+	entry->array_type = WPAS_DBUS_TYPE_BINARRAY;
+	entry->array_len = 0;
+	entry->binarray_value = NULL;
+
+	while (dbus_message_iter_get_arg_type(iter) == DBUS_TYPE_ARRAY) {
+		DBusMessageIter iter_array;
+
+		if (entry->array_len == buflen) {
+			struct wpabuf **newbuf;
+
+			buflen += BIN_ARRAY_CHUNK_SIZE;
+
+			newbuf = os_realloc(entry->binarray_value,
+					    buflen * BIN_ARRAY_ITEM_SIZE);
+			if (!newbuf)
+				goto cleanup;
+			entry->binarray_value = newbuf;
+		}
+
+		dbus_message_iter_recurse(iter, &iter_array);
+		if (_wpa_dbus_dict_entry_get_byte_array(&iter_array, &tmpentry)
+					== FALSE)
+			goto cleanup;
+
+		entry->binarray_value[entry->array_len] =
+			wpabuf_alloc_ext_data((u8 *) tmpentry.bytearray_value,
+					      tmpentry.array_len);
+		if (entry->binarray_value[entry->array_len] == NULL) {
+			wpa_dbus_dict_entry_clear(&tmpentry);
+			goto cleanup;
+		}
+		entry->array_len++;
+		dbus_message_iter_next(iter);
+	}
+
+	return TRUE;
+
+ cleanup:
+	for (i = 0; i < (int) entry->array_len; i++)
+		wpabuf_free(entry->binarray_value[i]);
+	os_free(entry->binarray_value);
+	entry->array_len = 0;
+	entry->binarray_value = NULL;
+	return FALSE;
+}
+
+
 static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 	DBusMessageIter *iter_dict_val, struct wpa_dbus_dict_entry *entry)
 {
@@ -748,7 +919,6 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
  	switch (array_type) {
 	case DBUS_TYPE_BYTE:
 		success = _wpa_dbus_dict_entry_get_byte_array(&iter_array,
-							      array_type,
 							      entry);
 		break;
 	case DBUS_TYPE_STRING:
@@ -756,6 +926,8 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_array(
 								array_type,
 								entry);
 		break;
+	case DBUS_TYPE_ARRAY:
+		success = _wpa_dbus_dict_entry_get_binarray(&iter_array, entry);
 	default:
 		break;
 	}
@@ -916,6 +1088,11 @@ void wpa_dbus_dict_entry_clear(struct wpa_dbus_dict_entry *entry)
 			os_free(entry->strarray_value);
 			break;
 		}
+		break;
+	case WPAS_DBUS_TYPE_BINARRAY:
+		for (i = 0; i < entry->array_len; i++)
+			wpabuf_free(entry->binarray_value[i]);
+		os_free(entry->binarray_value);
 		break;
 	}
 

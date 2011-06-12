@@ -884,3 +884,66 @@ void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
 	fill_dict_with_properties(dict_iter, obj_desc->properties,
 				  interface, obj_desc->user_data);
 }
+
+/**
+ * wpas_dbus_new_decompose_object_path - Decompose an interface object path into parts
+ * @path: The dbus object path
+ * @network: (out) the configured network this object path refers to, if any
+ * @bssid: (out) the scanned bssid this object path refers to, if any
+ * Returns: The object path of the network interface this path refers to
+ *
+ * For a given object path, decomposes the object path into object id, network,
+ * and BSSID parts, if those parts exist.
+ */
+char *wpas_dbus_new_decompose_object_path(const char *path,
+					   char **network,
+					   char **bssid)
+{
+	const unsigned int dev_path_prefix_len =
+		os_strlen(WPAS_DBUS_NEW_PATH_INTERFACES "/");
+	char *obj_path_only;
+	char *next_sep;
+
+	/* Be a bit paranoid about path */
+	if (!path || os_strncmp(path, WPAS_DBUS_NEW_PATH_INTERFACES "/",
+				dev_path_prefix_len))
+		return NULL;
+
+	/* Ensure there's something at the end of the path */
+	if ((path + dev_path_prefix_len)[0] == '\0')
+		return NULL;
+
+	obj_path_only = os_strdup(path);
+	if (obj_path_only == NULL)
+		return NULL;
+
+	next_sep = os_strchr(obj_path_only + dev_path_prefix_len, '/');
+	if (next_sep != NULL) {
+		const char *net_part = os_strstr(
+			next_sep, WPAS_DBUS_NEW_NETWORKS_PART "/");
+		const char *bssid_part = os_strstr(
+			next_sep, WPAS_DBUS_NEW_BSSIDS_PART "/");
+
+		if (network && net_part) {
+			/* Deal with a request for a configured network */
+			const char *net_name = net_part +
+				os_strlen(WPAS_DBUS_NEW_NETWORKS_PART "/");
+			*network = NULL;
+			if (os_strlen(net_name))
+				*network = os_strdup(net_name);
+		} else if (bssid && bssid_part) {
+			/* Deal with a request for a scanned BSSID */
+			const char *bssid_name = bssid_part +
+				os_strlen(WPAS_DBUS_NEW_BSSIDS_PART "/");
+			if (os_strlen(bssid_name))
+				*bssid = os_strdup(bssid_name);
+			else
+				*bssid = NULL;
+		}
+
+		/* Cut off interface object path before "/" */
+		*next_sep = '\0';
+	}
+
+	return obj_path_only;
+}

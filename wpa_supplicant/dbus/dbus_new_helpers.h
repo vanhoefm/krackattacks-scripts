@@ -145,4 +145,8 @@ void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
 DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 				  struct wpa_dbus_object_desc *obj_dsc);
 
+char *wpas_dbus_new_decompose_object_path(const char *path,
+					   char **network,
+					   char **bssid);
+
 #endif /* WPA_DBUS_CTRL_H */

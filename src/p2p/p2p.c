@@ -2734,6 +2734,10 @@ static void p2p_timeout_prov_disc_req(struct p2p_data *p2p)
 		p2p->pd_retries--;
 		p2p_retry_pd(p2p);
 	} else {
+		if (p2p->cfg->prov_disc_fail)
+			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx,
+						 p2p->pending_pd_devaddr,
+						 P2P_PROV_DISC_TIMEOUT);
 		p2p_reset_pending_pd(p2p);
 	}
 }

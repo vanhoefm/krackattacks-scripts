@@ -247,6 +247,9 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	if (msg.wps_config_methods != dev->req_config_methods) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer rejected "
 			"our Provisioning Discovery Request");
+		if (p2p->cfg->prov_disc_fail)
+			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
+						 P2P_PROV_DISC_REJECTED);
 		p2p_parse_free(&msg);
 		goto out;
 	}

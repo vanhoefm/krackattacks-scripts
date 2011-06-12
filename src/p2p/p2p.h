@@ -210,6 +210,12 @@ struct p2p_peer_info {
 	struct wpabuf *wps_vendor_ext[P2P_MAX_WPS_VENDOR_EXT];
 };
 
+enum p2p_prov_disc_status {
+	P2P_PROV_DISC_SUCCESS,
+	P2P_PROV_DISC_TIMEOUT,
+	P2P_PROV_DISC_REJECTED,
+};
+
 /**
  * struct p2p_config - P2P configuration
  *
@@ -601,6 +607,21 @@ struct p2p_config {
 	 * provision discovery is not used.
 	 */
 	void (*prov_disc_resp)(void *ctx, const u8 *peer, u16 config_methods);
+
+	/**
+	 * prov_disc_fail - Callback on Provision Discovery failure
+	 * @ctx: Callback context from cb_ctx
+	 * @peer: Source address of the response
+	 * @status: Cause of failure, will not be %P2P_PROV_DISC_SUCCESS
+	 *
+	 * This callback is used to indicate either a failure or no response
+	 * to an earlier provision discovery request.
+	 *
+	 * This callback handler can be set to %NULL if provision discovery
+	 * is not used or failures do not need to be indicated.
+	 */
+	void (*prov_disc_fail)(void *ctx, const u8 *peer,
+			       enum p2p_prov_disc_status status);
 
 	/**
 	 * invitation_process - Optional callback for processing Invitations

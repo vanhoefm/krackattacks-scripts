@@ -293,8 +293,11 @@ static int wpa_supplicant_ctrl_iface_wps_pbc(struct wpa_supplicant *wpa_s,
 {
 	u8 bssid[ETH_ALEN], *_bssid = bssid;
 #ifdef CONFIG_P2P
-	u8 p2p_dev_addr[ETH_ALEN], *_p2p_dev_addr = NULL;
+	u8 p2p_dev_addr[ETH_ALEN];
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_AP
+	u8 *_p2p_dev_addr = NULL;
+#endif /* CONFIG_AP */
 
 	if (cmd == NULL || os_strcmp(cmd, "any") == 0) {
 		_bssid = NULL;

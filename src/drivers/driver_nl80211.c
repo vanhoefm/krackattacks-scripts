@@ -6555,6 +6555,55 @@ static const char * nl80211_get_radio_name(void *priv)
 }
 
 
+static int nl80211_pmkid(struct i802_bss *bss, int cmd, const u8 *bssid,
+			 const u8 *pmkid)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(bss->drv->nl80211), 0, 0,
+		    cmd, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
+	if (pmkid)
+		NLA_PUT(msg, NL80211_ATTR_PMKID, 16, pmkid);
+	if (bssid)
+		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, bssid);
+
+	return send_and_recv_msgs(bss->drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
+static int nl80211_add_pmkid(void *priv, const u8 *bssid, const u8 *pmkid)
+{
+	struct i802_bss *bss = priv;
+	wpa_printf(MSG_DEBUG, "nl80211: Add PMKID for " MACSTR, MAC2STR(bssid));
+	return nl80211_pmkid(bss, NL80211_CMD_SET_PMKSA, bssid, pmkid);
+}
+
+
+static int nl80211_remove_pmkid(void *priv, const u8 *bssid, const u8 *pmkid)
+{
+	struct i802_bss *bss = priv;
+	wpa_printf(MSG_DEBUG, "nl80211: Delete PMKID for " MACSTR,
+		   MAC2STR(bssid));
+	return nl80211_pmkid(bss, NL80211_CMD_DEL_PMKSA, bssid, pmkid);
+}
+
+
+static int nl80211_flush_pmkid(void *priv)
+{
+	struct i802_bss *bss = priv;
+	wpa_printf(MSG_DEBUG, "nl80211: Flush PMKIDs");
+	return nl80211_pmkid(bss, NL80211_CMD_FLUSH_PMKSA, NULL, NULL);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -6624,4 +6673,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_intra_bss = nl80211_set_intra_bss,
 	.set_param = nl80211_set_param,
 	.get_radio_name = nl80211_get_radio_name,
+	.add_pmkid = nl80211_add_pmkid,
+	.remove_pmkid = nl80211_remove_pmkid,
+	.flush_pmkid = nl80211_flush_pmkid,
 };

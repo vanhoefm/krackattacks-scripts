@@ -477,6 +477,7 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 					  const u8 *sta)
 {
+#ifdef CONFIG_P2P
 	/*
 	 * Register a group member object corresponding to this peer and
 	 * emit a PeerJoined signal. This will check if it really is a
@@ -489,12 +490,14 @@ static void wpas_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 	 * check P2P itself.
 	 */
 	wpas_dbus_signal_p2p_peer_joined(wpa_s, sta);
+#endif /* CONFIG_P2P */
 }
 
 
 static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
 					    const u8 *sta)
 {
+#ifdef CONFIG_P2P
 	/*
 	 * Unregister a group member object corresponding to this peer
 	 * if this is a P2P group.
@@ -506,6 +509,7 @@ static void wpas_notify_ap_sta_deauthorized(struct wpa_supplicant *wpa_s,
 	 * is a P2P group.
 	 */
 	wpas_dbus_signal_p2p_peer_disconnected(wpa_s, sta);
+#endif /* CONFIG_P2P */
 }
 
 

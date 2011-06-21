@@ -307,6 +307,20 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
 
+	if (scan_req != 2 && wpa_s->connect_without_scan) {
+		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+			if (ssid == wpa_s->connect_without_scan)
+				break;
+		}
+		wpa_s->connect_without_scan = NULL;
+		if (ssid) {
+			wpa_printf(MSG_DEBUG, "Start a pre-selected network "
+				   "without scan step");
+			wpa_supplicant_associate(wpa_s, NULL, ssid);
+			return;
+		}
+	}
+
 	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;
 	if (wpa_s->prev_scan_ssid != WILDCARD_SSID_SCAN) {
@@ -319,9 +333,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 
-	if (scan_req != 2 && (wpa_s->conf->ap_scan == 2 ||
-			      wpa_s->connect_without_scan)) {
-		wpa_s->connect_without_scan = 0;
+	if (scan_req != 2 && wpa_s->conf->ap_scan == 2) {
+		wpa_s->connect_without_scan = NULL;
 		wpa_supplicant_assoc_try(wpa_s, ssid);
 		return;
 	} else if (wpa_s->conf->ap_scan == 2) {

@@ -549,7 +549,7 @@ struct wpa_supplicant {
 	const struct bgscan_ops *bgscan;
 	void *bgscan_priv;
 
-	int connect_without_scan;
+	struct wpa_ssid *connect_without_scan;
 
 	int after_wps;
 	unsigned int wps_freq;

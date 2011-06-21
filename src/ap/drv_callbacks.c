@@ -396,6 +396,46 @@ static void hostapd_mgmt_rx(struct hostapd_data *hapd, struct rx_mgmt *rx_mgmt)
 }
 
 
+static void hostapd_rx_action(struct hostapd_data *hapd,
+			      struct rx_action *rx_action)
+{
+	struct rx_mgmt rx_mgmt;
+	u8 *buf;
+	struct ieee80211_hdr *hdr;
+
+	wpa_printf(MSG_DEBUG, "EVENT_RX_ACTION DA=" MACSTR " SA=" MACSTR
+		   " BSSID=" MACSTR " category=%u",
+		   MAC2STR(rx_action->da), MAC2STR(rx_action->sa),
+		   MAC2STR(rx_action->bssid), rx_action->category);
+	wpa_hexdump(MSG_MSGDUMP, "Received action frame contents",
+		    rx_action->data, rx_action->len);
+
+	buf = os_zalloc(24 + 1 + rx_action->len);
+	if (buf == NULL)
+		return;
+	hdr = (struct ieee80211_hdr *) buf;
+	hdr->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					  WLAN_FC_STYPE_ACTION);
+	if (rx_action->category == WLAN_ACTION_SA_QUERY) {
+		/*
+		 * Assume frame was protected; it would have been dropped if
+		 * not.
+		 */
+		hdr->frame_control |= host_to_le16(WLAN_FC_ISWEP);
+	}
+	os_memcpy(hdr->addr1, rx_action->da, ETH_ALEN);
+	os_memcpy(hdr->addr2, rx_action->sa, ETH_ALEN);
+	os_memcpy(hdr->addr3, rx_action->bssid, ETH_ALEN);
+	buf[24] = rx_action->category;
+	os_memcpy(buf + 24 + 1, rx_action->data, rx_action->len);
+	os_memset(&rx_mgmt, 0, sizeof(rx_mgmt));
+	rx_mgmt.frame = buf;
+	rx_mgmt.frame_len = 24 + 1 + rx_action->len;
+	hostapd_mgmt_rx(hapd, &rx_mgmt);
+	os_free(buf);
+}
+
+
 static void hostapd_mgmt_tx_cb(struct hostapd_data *hapd, const u8 *buf,
 			       size_t len, u16 stype, int ok)
 {
@@ -529,6 +569,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (!data)
 			break;
 		hostapd_event_sta_low_ack(hapd, data->low_ack.addr);
+		break;
+	case EVENT_RX_ACTION:
+		if (data->rx_action.da == NULL || data->rx_action.sa == NULL ||
+		    data->rx_action.bssid == NULL)
+			break;
+		hostapd_rx_action(hapd, &data->rx_action);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);

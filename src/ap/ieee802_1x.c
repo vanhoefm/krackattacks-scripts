@@ -1852,6 +1852,7 @@ u8 * ieee802_1x_get_radius_class(struct eapol_state_machine *sm, size_t *len,
 
 const u8 * ieee802_1x_get_key(struct eapol_state_machine *sm, size_t *len)
 {
+	*len = 0;
 	if (sm == NULL)
 		return NULL;
 

@@ -570,12 +570,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		hostapd_event_sta_low_ack(hapd, data->low_ack.addr);
 		break;
+#ifdef NEED_AP_MLME
 	case EVENT_RX_ACTION:
 		if (data->rx_action.da == NULL || data->rx_action.sa == NULL ||
 		    data->rx_action.bssid == NULL)
 			break;
 		hostapd_rx_action(hapd, &data->rx_action);
 		break;
+#endif /* NEED_AP_MLME */
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

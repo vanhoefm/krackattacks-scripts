@@ -345,8 +345,20 @@ bsd_set_key(const char *ifname, void *priv, enum wpa_alg alg,
 	if (wk.ik_keyix != IEEE80211_KEYIX_NONE && set_tx)
 		wk.ik_flags |= IEEE80211_KEY_DEFAULT;
 	wk.ik_keylen = key_len;
-	if (seq)
+	if (seq) {
+#ifdef WORDS_BIGENDIAN
+		/*
+		 * wk.ik_keyrsc is in host byte order (big endian), need to
+		 * swap it to match with the byte order used in WPA.
+		 */
+		int i;
+		u8 *keyrsc = (u8 *) &wk.ik_keyrsc;
+		for (i = 0; i < seq_len; i++)
+			keyrsc[WPA_KEY_RSC_LEN - i - 1] = seq[i];
+#else /* WORDS_BIGENDIAN */
 		os_memcpy(&wk.ik_keyrsc, seq, seq_len);
+#endif /* WORDS_BIGENDIAN */
+	}
 	os_memcpy(wk.ik_keydata, key, key_len);
 
 	return set80211var(priv, IEEE80211_IOC_WPAKEY, &wk, sizeof(wk));

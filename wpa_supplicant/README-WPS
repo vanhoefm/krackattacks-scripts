@@ -62,6 +62,11 @@ CONFIG_DRIVER_NL80211=y
 CONFIG_WPS=y
 CONFIG_WPS2=y
 
+If you want to enable WPS external registrar (ER) functionality, you
+will also need to add following line:
+
+CONFIG_WPS_ER=y
+
 
 WPS needs the Universally Unique IDentifier (UUID; see RFC 4122) for
 the device. This is configured in the runtime configuration for

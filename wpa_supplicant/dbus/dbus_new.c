@@ -1281,6 +1281,102 @@ error:
 	dbus_message_unref(msg);
 }
 
+/**
+ * wpas_dbus_signal_persistent_group - Send a persistent group related
+ *	event signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @id: new persistent group id
+ * @sig_name: signal name - PersistentGroupAdded, PersistentGroupRemoved
+ * @properties: determines if add second argument with object properties
+ *
+ * Notify listeners about an event related to persistent groups.
+ */
+static void wpas_dbus_signal_persistent_group(struct wpa_supplicant *wpa_s,
+					      int id, const char *sig_name,
+					      int properties)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter, iter_dict;
+	char pgrp_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	os_snprintf(pgrp_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%u",
+		    wpa_s->dbus_new_path, id);
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+				      sig_name);
+	if (msg == NULL)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+	path = pgrp_obj_path;
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+					    &path))
+		goto err;
+
+	if (properties) {
+		if (!wpa_dbus_dict_open_write(&iter, &iter_dict))
+			goto err;
+
+		wpa_dbus_get_object_properties(
+			iface, pgrp_obj_path,
+			WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP,
+			&iter_dict);
+
+		if (!wpa_dbus_dict_close_write(&iter, &iter_dict))
+			goto err;
+	}
+
+	dbus_connection_send(iface->con, msg, NULL);
+
+	dbus_message_unref(msg);
+	return;
+
+err:
+	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
+}
+
+
+/**
+ * wpas_dbus_signal_persistent_group_added - Send a persistent_group
+ *	added signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @id: new persistent group id
+ *
+ * Notify listeners about addition of a new persistent group.
+ */
+static void wpas_dbus_signal_persistent_group_added(
+	struct wpa_supplicant *wpa_s, int id)
+{
+	wpas_dbus_signal_persistent_group(wpa_s, id, "PersistentGroupAdded",
+					  TRUE);
+}
+
+
+/**
+ * wpas_dbus_signal_persistent_group_removed - Send a persistent_group
+ *	removed signal
+ * @wpa_s: %wpa_supplicant network interface data
+ * @id: persistent group id
+ *
+ * Notify listeners about removal of a persistent group.
+ */
+static void wpas_dbus_signal_persistent_group_removed(
+	struct wpa_supplicant *wpa_s, int id)
+{
+	wpas_dbus_signal_persistent_group(wpa_s, id, "PersistentGroupRemoved",
+					  TRUE);
+}
+
 #endif /*CONFIG_P2P*/
 
 
@@ -1654,6 +1750,14 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	struct network_handler_args *arg;
 	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
 
+	/*
+	 * If it is a persistent group register it as such.
+	 * This is to handle cases where an interface is being initialized
+	 * with a list of networks read from config.
+	 */
+	if (network_is_persistent_group(ssid))
+		return wpas_dbus_register_persistent_group(wpa_s, ssid);
+
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
 		return 0;
@@ -1716,6 +1820,13 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 	struct wpas_dbus_priv *ctrl_iface;
 	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
 	int ret;
+	struct wpa_ssid *ssid;
+
+	ssid = wpa_config_get_network(wpa_s->conf, nid);
+
+	/* If it is a persistent group unregister it as such */
+	if (ssid && network_is_persistent_group(ssid))
+		return wpas_dbus_unregister_persistent_group(wpa_s, nid);
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL ||
@@ -2245,6 +2356,10 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_p2p_peergo,
 	  NULL, R
 	},
+	{ "PersistentGroups", WPAS_DBUS_NEW_IFACE_INTERFACE, "ao",
+	  (WPADBusPropertyAccessor) wpas_dbus_getter_persistent_groups,
+	  NULL, R
+	},
 #endif /* CONFIG_P2P */
 	{ NULL, NULL, NULL, NULL, NULL, 0 }
 };
@@ -2438,6 +2553,13 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "ServiceDiscoveryResponse", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "sd_response", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "PersistentGroupAdded", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  { "properties", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},
@@ -2954,4 +3076,142 @@ void wpas_dbus_unregister_p2p_groupmember(struct wpa_supplicant *wpa_s,
 
 	wpa_dbus_unregister_object_per_iface(ctrl_iface, groupmember_obj_path);
 }
+
+
+static const struct wpa_dbus_property_desc
+	wpas_dbus_persistent_group_properties[] = {
+	{ "Properties", WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP, "a{sv}",
+	  (WPADBusPropertyAccessor)
+	  wpas_dbus_getter_persistent_group_properties,
+	  NULL,
+	  R
+	},
+	{ NULL, NULL, NULL, NULL, NULL, 0 }
+};
+
+/* No signals intended for persistent group objects */
+
+/**
+ * wpas_dbus_register_persistent_group - Register a configured(saved)
+ *	persistent group with dbus
+ * @wpa_s: wpa_supplicant interface structure
+ * @ssid: persistent group (still represented as a network within wpa)
+ *	  configuration data
+ * Returns: 0 on success, -1 on failure
+ *
+ * Registers a persistent group representing object with dbus.
+ */
+int wpas_dbus_register_persistent_group(struct wpa_supplicant *wpa_s,
+					struct wpa_ssid *ssid)
+{
+	struct wpas_dbus_priv *ctrl_iface;
+	struct wpa_dbus_object_desc *obj_desc;
+	struct network_handler_args *arg;
+	char pgrp_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
+
+	/* Do nothing if the control interface is not turned on */
+	if (wpa_s == NULL || wpa_s->global == NULL)
+		return 0;
+
+	/* Make sure ssid is a persistent group */
+	if (ssid->disabled != 2 && !ssid->p2p_persistent_group)
+		return -1; /* should we return w/o complaining? */
+
+	ctrl_iface = wpa_s->global->dbus;
+	if (ctrl_iface == NULL)
+		return 0;
+
+	/*
+	 * Intentionally not coming up with different numbering scheme
+	 * for persistent groups.
+	 */
+	os_snprintf(pgrp_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%u",
+		    wpa_s->dbus_new_path, ssid->id);
+
+	wpa_printf(MSG_DEBUG, "dbus: Register persistent group object '%s'",
+		   pgrp_obj_path);
+	obj_desc = os_zalloc(sizeof(struct wpa_dbus_object_desc));
+	if (!obj_desc) {
+		wpa_printf(MSG_ERROR, "dbus: Not enough memory to create "
+			   "object description");
+		goto err;
+	}
+
+	/*
+	 * Reusing the same context structure as that for networks
+	 * since these are represented using same data structure.
+	 */
+	/* allocate memory for handlers arguments */
+	arg = os_zalloc(sizeof(struct network_handler_args));
+	if (!arg) {
+		wpa_printf(MSG_ERROR, "dbus: Not enough memory to create "
+			   "arguments for method");
+		goto err;
+	}
+
+	arg->wpa_s = wpa_s;
+	arg->ssid = ssid;
+
+	wpas_dbus_register(obj_desc, arg, wpa_dbus_free, NULL,
+			   wpas_dbus_persistent_group_properties,
+			   NULL);
+
+	if (wpa_dbus_register_object_per_iface(ctrl_iface, pgrp_obj_path,
+					       wpa_s->ifname, obj_desc))
+		goto err;
+
+	wpas_dbus_signal_persistent_group_added(wpa_s, ssid->id);
+
+	return 0;
+
+err:
+	free_dbus_object_desc(obj_desc);
+	return -1;
+}
+
+
+/**
+ * wpas_dbus_unregister_persistent_group - Unregister a persistent_group
+ *	from dbus
+ * @wpa_s: wpa_supplicant interface structure
+ * @nid: network id
+ * Returns: 0 on success, -1 on failure
+ *
+ * Unregisters persistent group representing object from dbus
+ *
+ * NOTE: There is a slight issue with the semantics here. While the
+ * implementation simply means the persistent group is unloaded from memory,
+ * it should not get interpreted as the group is actually being erased/removed
+ * from persistent storage as well.
+ */
+int wpas_dbus_unregister_persistent_group(struct wpa_supplicant *wpa_s,
+					  int nid)
+{
+	struct wpas_dbus_priv *ctrl_iface;
+	char pgrp_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
+	int ret;
+
+	/* Do nothing if the control interface is not turned on */
+	if (wpa_s == NULL || wpa_s->global == NULL ||
+	    wpa_s->dbus_new_path == NULL)
+		return 0;
+	ctrl_iface = wpa_s->global->dbus;
+	if (ctrl_iface == NULL)
+		return 0;
+
+	os_snprintf(pgrp_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%u",
+		    wpa_s->dbus_new_path, nid);
+
+	wpa_printf(MSG_DEBUG, "dbus: Unregister persistent group object '%s'",
+		   pgrp_obj_path);
+	ret = wpa_dbus_unregister_object_per_iface(ctrl_iface, pgrp_obj_path);
+
+	if (!ret)
+		wpas_dbus_signal_persistent_group_removed(wpa_s, nid);
+
+	return ret;
+}
+
 #endif /* CONFIG_P2P */

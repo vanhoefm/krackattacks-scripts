@@ -1207,6 +1207,90 @@ DBusMessage *wpas_dbus_getter_p2p_peer_ies(DBusMessage * message,
 }
 
 
+/**
+ * wpas_dbus_getter_persistent_groups - Get array of peristent group objects
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: a dbus message containing an array of all persistent group
+ * dbus object paths.
+ *
+ * Getter for "Networks" property.
+ */
+DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
+						 struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	struct wpa_ssid *ssid;
+	char **paths;
+	unsigned int i = 0, num = 0;
+
+	if (wpa_s->conf == NULL) {
+		wpa_printf(MSG_ERROR, "dbus: "
+			   "wpas_dbus_getter_persistent_groups: "
+			   "An error occurred getting persistent groups list");
+		return wpas_dbus_error_unknown_error(message, NULL);
+	}
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
+		if (network_is_persistent_group(ssid))
+			num++;
+
+	paths = os_zalloc(num * sizeof(char *));
+	if (!paths) {
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      NULL);
+	}
+
+	/* Loop through configured networks and append object path of each */
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (!network_is_persistent_group(ssid))
+			continue;
+		paths[i] = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
+		if (paths[i] == NULL) {
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
+			goto out;
+		}
+		/* Construct the object path for this network. */
+		os_snprintf(paths[i++], WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%d",
+			    wpa_s->dbus_new_path, ssid->id);
+	}
+
+	reply = wpas_dbus_simple_array_property_getter(message,
+						       DBUS_TYPE_OBJECT_PATH,
+						       paths, num);
+
+out:
+	while (i)
+		os_free(paths[--i]);
+	os_free(paths);
+	return reply;
+}
+
+
+/**
+ * wpas_dbus_getter_persistent_group_properties - Get options for a persistent
+ *	group
+ * @message: Pointer to incoming dbus message
+ * @net: wpa_supplicant structure for a network interface and
+ * wpa_ssid structure for a configured persistent group (internally network)
+ * Returns: DBus message with network properties or DBus error on failure
+ *
+ * Getter for "Properties" property of a persistent group.
+ */
+DBusMessage * wpas_dbus_getter_persistent_group_properties(
+	DBusMessage *message, struct network_handler_args *net)
+{
+	/*
+	 * Leveraging the fact that persistent group object is still
+	 * represented in same manner as network within.
+	 */
+	return wpas_dbus_getter_network_properties(message, net);
+}
+
+
 /*
  * Group object properties accessor methods
  */

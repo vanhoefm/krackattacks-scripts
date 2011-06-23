@@ -111,5 +111,7 @@ void wpas_notify_p2p_provision_discovery(struct wpa_supplicant *wpa_s,
 void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 				   struct wpa_ssid *ssid, int network_id,
 				   int client);
+void wpas_notify_persistent_group_added(struct wpa_supplicant *wpa_s,
+					struct wpa_ssid *ssid);
 
 #endif /* NOTIFY_H */

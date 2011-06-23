@@ -295,7 +295,15 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 		int id = ssid->id;
 		if (ssid == wpa_s->current_ssid)
 			wpa_s->current_ssid = NULL;
-		wpas_notify_network_removed(wpa_s, ssid);
+		/*
+		 * Networks objects created during any P2P activities are not
+		 * exposed out as they might/will confuse certain non-P2P aware
+		 * applications since these network objects won't behave like
+		 * regular ones.
+		 *
+		 * Likewise, we don't send out network removed signals for such
+		 * network objects.
+		 */
 		wpa_config_remove_network(wpa_s->conf, id);
 		wpa_supplicant_clear_status(wpa_s);
 	} else {
@@ -400,7 +408,16 @@ static int wpas_p2p_store_persistent_group(struct wpa_supplicant *wpa_s,
 		s = wpa_config_add_network(wpa_s->conf);
 		if (s == NULL)
 			return -1;
-		wpas_notify_network_added(wpa_s, s);
+
+		/*
+		 * Instead of network_added we emit persistent_group_added
+		 * notification. Also to keep the defense checks in
+		 * persistent_group obj registration method, we set the
+		 * relevant flags in s to designate it as a persistent group.
+		 */
+		s->p2p_group = 1;
+		s->p2p_persistent_group = 1;
+		wpas_notify_persistent_group_added(wpa_s, s);
 		wpa_config_set_network_defaults(s);
 	}
 
@@ -904,7 +921,6 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	if (ssid == NULL)
 		return;
 
-	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->p2p_group = 1;
@@ -3303,7 +3319,6 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	ssid = wpa_config_add_network(wpa_s->conf);
 	if (ssid == NULL)
 		return -1;
-	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->proto = WPA_PROTO_RSN;
@@ -3312,7 +3327,6 @@ static int wpas_start_p2p_client(struct wpa_supplicant *wpa_s,
 	ssid->key_mgmt = WPA_KEY_MGMT_PSK;
 	ssid->ssid = os_malloc(params->ssid_len);
 	if (ssid->ssid == NULL) {
-		wpas_notify_network_removed(wpa_s, ssid);
 		wpa_config_remove_network(wpa_s->conf, ssid->id);
 		return -1;
 	}

@@ -2508,7 +2508,8 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 	}
 
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
-		num++;
+		if (!network_is_persistent_group(ssid))
+			num++;
 
 	paths = os_zalloc(num * sizeof(char *));
 	if (!paths) {
@@ -2518,6 +2519,8 @@ DBusMessage * wpas_dbus_getter_networks(DBusMessage *message,
 
 	/* Loop through configured networks and append object path of each */
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (network_is_persistent_group(ssid))
+			continue;
 		paths[i] = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 		if (paths[i] == NULL) {
 			reply = dbus_message_new_error(message,

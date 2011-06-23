@@ -17,6 +17,7 @@
 
 #include "utils/list.h"
 #include "common/defs.h"
+#include "config_ssid.h"
 
 extern const char *wpa_supplicant_version;
 extern const char *wpa_supplicant_license;
@@ -641,5 +642,15 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 
 /* eap_register.c */
 int eap_register_methods(void);
+
+/**
+ * Utility method to tell if a given network is a persistent group
+ * @ssid: Network object
+ * Returns: 1 if network is a persistent group, 0 otherwise
+ */
+static inline int network_is_persistent_group(struct wpa_ssid *ssid)
+{
+	return ((ssid->disabled == 2) || ssid->p2p_persistent_group);
+}
 
 #endif /* WPA_SUPPLICANT_I_H */

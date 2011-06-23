@@ -206,14 +206,29 @@ void wpas_notify_wps_event_success(struct wpa_supplicant *wpa_s)
 void wpas_notify_network_added(struct wpa_supplicant *wpa_s,
 			       struct wpa_ssid *ssid)
 {
-	wpas_dbus_register_network(wpa_s, ssid);
+	/*
+	 * Networks objects created during any P2P activities should not be
+	 * exposed out. They might/will confuse certain non-P2P aware
+	 * applications since these network objects won't behave like
+	 * regular ones.
+	 */
+	if (wpa_s->global->p2p_group_formation != wpa_s)
+		wpas_dbus_register_network(wpa_s, ssid);
+}
+
+
+void wpas_notify_persistent_group_added(struct wpa_supplicant *wpa_s,
+					struct wpa_ssid *ssid)
+{
+	wpas_dbus_register_persistent_group(wpa_s, ssid);
 }
 
 
 void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *ssid)
 {
-	wpas_dbus_unregister_network(wpa_s, ssid->id);
+	if (wpa_s->global->p2p_group_formation != wpa_s)
+		wpas_dbus_unregister_network(wpa_s, ssid->id);
 }
 
 

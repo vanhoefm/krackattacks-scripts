@@ -139,4 +139,13 @@ DBusMessage *wpas_dbus_setter_p2p_group_properties(
 		DBusMessage *message,
 		struct wpa_supplicant *wpa_s);
 
+/*
+ * P2P Persistent Group properties
+ */
+
+DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
+						 struct wpa_supplicant *wpa_s);
+DBusMessage * wpas_dbus_getter_persistent_group_properties(
+	DBusMessage *message, struct network_handler_args *net);
+
 #endif /* DBUS_NEW_HANDLERS_P2P_H */

@@ -72,6 +72,14 @@ enum wpas_dbus_bss_prop {
 #define WPAS_DBUS_NEW_P2P_GROUPS_PART	"Groups"
 #define	WPAS_DBUS_NEW_IFACE_P2P_GROUP WPAS_DBUS_NEW_INTERFACE ".Group"
 
+/*
+ * Different dbus object for persistent groups so they do not get confused
+ * with regular (configured) network objects.
+ */
+#define WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "PersistentGroups"
+#define WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP \
+	WPAS_DBUS_NEW_INTERFACE ".PersistentGroup"
+
 #define WPAS_DBUS_NEW_P2P_PEERS_PART	"Peers"
 #define	WPAS_DBUS_NEW_IFACE_P2P_PEER WPAS_DBUS_NEW_INTERFACE ".Peer"
 
@@ -170,6 +178,10 @@ void wpas_dbus_register_p2p_group(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s, int status);
 void wpas_dbus_unregister_p2p_group(struct wpa_supplicant *wpa_s,
 				    const struct wpa_ssid *ssid);
+int wpas_dbus_register_persistent_group(struct wpa_supplicant *wpa_s,
+					struct wpa_ssid *ssid);
+int wpas_dbus_unregister_persistent_group(struct wpa_supplicant *wpa_s,
+					  int nid);
 void wpas_dbus_signal_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 					    int status, const u8 *bssid);
 void wpas_dbus_register_p2p_groupmember(struct wpa_supplicant *wpa_s,
@@ -342,6 +354,18 @@ static inline void
 wpas_dbus_register_p2p_group(struct wpa_supplicant *wpa_s,
 			     struct wpa_ssid *ssid)
 {
+}
+
+static inline int wpas_dbus_register_persistent_group(
+	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
+{
+	return 0;
+}
+
+static inline int wpas_dbus_unregister_persistent_group(
+	struct wpa_supplicant *wpa_s, int nid)
+{
+	return 0;
 }
 
 static inline void

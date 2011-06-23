@@ -780,9 +780,18 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		int was_disabled = ssid->disabled;
-		ssid->disabled = ssid != selected;
-		if (was_disabled != ssid->disabled)
-			wpas_notify_network_enabled_changed(wpa_s, ssid);
+		/*
+		 * In case the network object corresponds to a persistent group
+		 * then do not send out network disabled signal. In addition,
+		 * do not change disabled status of persistent network objects
+		 * from 2 to 1 should we connect to another network.
+		 */
+		if (was_disabled != 2) {
+			ssid->disabled = ssid != selected;
+			if (was_disabled != ssid->disabled)
+				wpas_notify_network_enabled_changed(wpa_s,
+								    ssid);
+		}
 		ssid = ssid->next;
 	}
 	wpa_s->disconnected = 0;

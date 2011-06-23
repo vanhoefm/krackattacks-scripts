@@ -1112,6 +1112,9 @@ DBusMessage *wpas_dbus_getter_p2p_peer_properties(DBusMessage * message,
 	if (!wpa_dbus_dict_append_uint16(&dict_iter, "config_method",
 					 info->config_methods))
 		goto err_no_mem;
+	if (!wpa_dbus_dict_append_uint16(&dict_iter, "level",
+					 info->level))
+		goto err_no_mem;
 	if (!wpa_dbus_dict_append_byte(&dict_iter, "devicecapability",
 				       info->dev_capab))
 		goto err_no_mem;

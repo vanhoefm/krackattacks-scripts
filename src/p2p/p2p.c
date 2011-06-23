@@ -576,7 +576,7 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 	dev->listen_freq = freq;
 	if (msg.group_info)
 		dev->oper_freq = freq;
-	dev->level = level;
+	dev->info.level = level;
 
 	p2p_copy_wps_info(dev, 0, &msg);
 
@@ -2961,7 +2961,7 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  "invitation_reqs=%u\n",
 			  (int) (now.sec - dev->last_seen.sec),
 			  dev->listen_freq,
-			  dev->level,
+			  dev->info.level,
 			  p2p_wps_method_text(dev->wps_method),
 			  MAC2STR(dev->interface_addr),
 			  MAC2STR(dev->member_in_go_dev),

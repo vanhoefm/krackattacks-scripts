@@ -180,6 +180,11 @@ struct p2p_peer_info {
 	char serial_number[33];
 
 	/**
+	 * level - Signal level
+	 */
+	int level;
+
+	/**
 	 * config_methods - WPS Configuration Methods
 	 */
 	u16 config_methods;

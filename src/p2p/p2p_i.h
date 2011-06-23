@@ -33,7 +33,6 @@ struct p2p_device {
 	struct dl_list list;
 	struct os_time last_seen;
 	int listen_freq;
-	int level;
 	enum p2p_wps_method wps_method;
 
 	struct p2p_peer_info info;

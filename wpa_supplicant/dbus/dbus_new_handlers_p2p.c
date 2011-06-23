@@ -748,6 +748,11 @@ DBusMessage *wpas_dbus_getter_p2p_device_properties(DBusMessage * message,
 					 wpa_s->conf->p2p_group_idle))
 		goto err_no_mem;
 
+	/* Dissasociation low ack */
+	if (!wpa_dbus_dict_append_uint32(&dict_iter, "disassoc_low_ack",
+					 wpa_s->conf->disassoc_low_ack))
+		goto err_no_mem;
+
 	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
 	    !dbus_message_iter_close_container(&iter, &variant_iter))
 		goto err_no_mem;
@@ -890,6 +895,9 @@ DBusMessage *wpas_dbus_setter_p2p_device_properties(DBusMessage * message,
 		} else if ((os_strcmp(entry.key, "GroupIdle") == 0) &&
 			   (entry.type == DBUS_TYPE_UINT32))
 			wpa_s->conf->p2p_group_idle = entry.uint32_value;
+		else if (os_strcmp(entry.key, "disassoc_low_ack") == 0 &&
+			 entry.type == DBUS_TYPE_UINT32)
+			wpa_s->conf->disassoc_low_ack = entry.uint32_value;
 		else
 			goto error_clear;
 

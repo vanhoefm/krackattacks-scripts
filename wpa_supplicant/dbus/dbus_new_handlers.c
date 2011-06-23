@@ -1699,8 +1699,6 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 	DBusMessageIter iter_dict_entry, iter_dict_val, iter_array,
 		variant_iter;
 	const char *scans[] = { "active", "passive", "ssid" };
-	const char *modes[] = { "infrastructure", "ad-hoc", "ap" };
-	int n = sizeof(modes) / sizeof(char *);
 
 	if (message == NULL)
 		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
@@ -1971,10 +1969,40 @@ DBusMessage * wpas_dbus_getter_capabilities(DBusMessage *message,
 		goto nomem;
 
 	/***** Modes */
-	if (res < 0 || !(capa.flags & WPA_DRIVER_FLAGS_AP))
-		n--; /* exclude ap mode if it is not supported by the driver */
-	if (!wpa_dbus_dict_append_string_array(&iter_dict, "Modes", modes, n))
+	if (!wpa_dbus_dict_begin_string_array(&iter_dict, "Modes",
+					      &iter_dict_entry,
+					      &iter_dict_val,
+					      &iter_array))
 		goto nomem;
+
+	if (!wpa_dbus_dict_string_array_add_element(
+			    &iter_array, "infrastructure"))
+		goto nomem;
+
+	if (!wpa_dbus_dict_string_array_add_element(
+			    &iter_array, "ad-hoc"))
+		goto nomem;
+
+	if (res >= 0) {
+		if (capa.flags & (WPA_DRIVER_FLAGS_AP)) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "ap"))
+				goto nomem;
+		}
+
+		if (capa.flags & (WPA_DRIVER_FLAGS_P2P_CAPABLE)) {
+			if (!wpa_dbus_dict_string_array_add_element(
+				    &iter_array, "p2p"))
+				goto nomem;
+		}
+	}
+
+	if (!wpa_dbus_dict_end_string_array(&iter_dict,
+					    &iter_dict_entry,
+					    &iter_dict_val,
+					    &iter_array))
+		goto nomem;
+	/***** Modes end */
 
 	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
 		goto nomem;

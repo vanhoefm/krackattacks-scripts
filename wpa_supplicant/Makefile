@@ -12,7 +12,13 @@ export BINDIR ?= /usr/local/sbin/
 CFLAGS += -I../src
 CFLAGS += -I../src/utils
 
-ALL=wpa_supplicant wpa_passphrase wpa_cli
+-include .config
+
+ALL=wpa_supplicant wpa_cli
+
+ifndef CONFIG_NO_WPA_PASSPHRASE
+ALL += wpa_passphrase
+endif
 
 all: verify_config $(ALL) dynamic_eap_methods
 
@@ -51,8 +57,6 @@ OBJS_p += ../src/utils/wpa_debug.o
 OBJS_p += ../src/utils/wpabuf.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 OBJS_c += ../src/utils/wpa_debug.o
-
--include .config
 
 ifndef CONFIG_OS
 ifdef CONFIG_NATIVE_WINDOWS
@@ -1012,7 +1016,9 @@ ifdef NEED_FIPS186_2_PRF
 SHA1OBJS += ../src/crypto/fips_prf_internal.o
 endif
 endif
-ifndef CONFIG_NO_WPA_PASSPHRASE
+ifdef CONFIG_NO_WPA_PASSPHRASE
+CFLAGS += -DCONFIG_NO_PBKDF2
+else
 SHA1OBJS += ../src/crypto/sha1-pbkdf2.o
 endif
 ifdef NEED_T_PRF

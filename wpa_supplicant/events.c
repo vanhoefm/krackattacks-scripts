@@ -302,6 +302,9 @@ static int wpa_supplicant_match_privacy(struct wpa_scan_res *bss,
 		privacy = 1;
 #endif /* IEEE8021X_EAPOL */
 
+	if (wpa_key_mgmt_wpa(ssid->key_mgmt))
+		privacy = 1;
+
 	if (bss->caps & IEEE80211_CAP_PRIVACY)
 		return privacy;
 	return !privacy;
@@ -571,13 +574,13 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 			continue;
 		}
 
-		if (!wpa && !wpa_supplicant_match_privacy(bss, ssid)) {
+		if (!wpa_supplicant_match_privacy(bss, ssid)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - privacy "
 				"mismatch");
 			continue;
 		}
 
-		if (!wpa && (bss->caps & IEEE80211_CAP_IBSS)) {
+		if (bss->caps & IEEE80211_CAP_IBSS) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - IBSS (adhoc) "
 				"network");
 			continue;

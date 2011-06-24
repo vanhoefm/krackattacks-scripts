@@ -77,6 +77,11 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_disconnect(DBusMessage *message,
 					   struct wpa_supplicant *wpa_s);
 
+DBusMessage * set_network_properties(DBusMessage *message,
+				     struct wpa_supplicant *wpa_s,
+				     struct wpa_ssid *ssid,
+				     DBusMessageIter *iter);
+
 DBusMessage * wpas_dbus_handler_add_network(DBusMessage *message,
 					    struct wpa_supplicant *wpa_s);
 

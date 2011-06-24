@@ -113,5 +113,7 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 				   int client);
 void wpas_notify_persistent_group_added(struct wpa_supplicant *wpa_s,
 					struct wpa_ssid *ssid);
+void wpas_notify_persistent_group_removed(struct wpa_supplicant *wpa_s,
+					  struct wpa_ssid *ssid);
 
 #endif /* NOTIFY_H */

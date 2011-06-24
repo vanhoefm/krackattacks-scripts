@@ -18,6 +18,7 @@
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../wps_supplicant.h"
+#include "../notify.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
@@ -50,6 +51,24 @@ static int parse_peer_object_path(char *peer_path, u8 addr[ETH_ALEN])
 	p++;
 	return hwaddr_compact_aton(p, addr);
 }
+
+
+/**
+ * wpas_dbus_error_persistent_group_unknown - Return a new PersistentGroupUnknown
+ * error message
+ * @message: Pointer to incoming dbus message this error refers to
+ * Returns: a dbus error message
+ *
+ * Convenience function to create and return an invalid persistent group error.
+ */
+static DBusMessage * wpas_dbus_error_persistent_group_unknown(
+	DBusMessage *message)
+{
+	return dbus_message_new_error(message, WPAS_DBUS_ERROR_NETWORK_UNKNOWN,
+				      "There is no such persistent group in "
+				      "this P2P device.");
+}
+
 
 DBusMessage *wpas_dbus_handler_p2p_find(DBusMessage * message,
 					struct wpa_supplicant * wpa_s)
@@ -254,7 +273,7 @@ DBusMessage *wpas_dbus_handler_p2p_group_add(DBusMessage * message,
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter;
 	struct wpa_dbus_dict_entry entry;
-	char *network_object_path = NULL;
+	char *pg_object_path = NULL;
 	int persistent_group = 0;
 	int freq = 0;
 	char *iface = NULL;
@@ -279,35 +298,35 @@ DBusMessage *wpas_dbus_handler_p2p_group_add(DBusMessage * message,
 			freq = entry.int32_value;
 			if (freq <= 0)
 				goto inv_args_clear;
-		} else if (!strcmp(entry.key, "network_object") &&
+		} else if (!strcmp(entry.key, "persistent_group_object") &&
 			   entry.type == DBUS_TYPE_OBJECT_PATH)
-			network_object_path = os_strdup(entry.str_value);
+			pg_object_path = os_strdup(entry.str_value);
 		else
 			goto inv_args_clear;
 
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (network_object_path != NULL) {
+	if (pg_object_path != NULL) {
 		/*
-		 * A Network Object Path is defined meaning we want to re-invoke
-		 * a persisatnt group.
+		 * A persistent group Object Path is defined meaning we want
+		 * to re-invoke a persistent group.
 		 */
 
-		iface = wpas_dbus_new_decompose_object_path(network_object_path,
+		iface = wpas_dbus_new_decompose_object_path(pg_object_path, 1,
 							    &net_id_str, NULL);
 		if (iface == NULL ||
 		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 			reply =
 			    wpas_dbus_error_invalid_args(message,
-							 network_object_path);
+							 pg_object_path);
 			goto out;
 		}
 
 		group_id = strtoul(net_id_str, NULL, 10);
 		if (errno == EINVAL) {
 			reply = wpas_dbus_error_invalid_args(
-						message, network_object_path);
+						message, pg_object_path);
 			goto out;
 		}
 
@@ -325,7 +344,7 @@ DBusMessage *wpas_dbus_handler_p2p_group_add(DBusMessage * message,
 		goto inv_args;
 
 out:
-	os_free(network_object_path);
+	os_free(pg_object_path);
 	os_free(net_id_str);
 	os_free(iface);
 	return reply;
@@ -500,7 +519,7 @@ DBusMessage *wpas_dbus_handler_p2p_invite(DBusMessage * message,
 	DBusMessageIter iter;
 	struct wpa_dbus_dict_entry entry;
 	char *peer_object_path = NULL;
-	char *network_object_path = NULL;
+	char *pg_object_path = NULL;
 	char *iface = NULL;
 	char *net_id_str = NULL;
 	u8 peer_addr[ETH_ALEN];
@@ -521,9 +540,9 @@ DBusMessage *wpas_dbus_handler_p2p_invite(DBusMessage * message,
 		    (entry.type == DBUS_TYPE_OBJECT_PATH)) {
 			peer_object_path = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
-		} else if (!strcmp(entry.key, "network_object") &&
+		} else if (!strcmp(entry.key, "persistent_group_object") &&
 			   (entry.type == DBUS_TYPE_OBJECT_PATH)) {
-			network_object_path = os_strdup(entry.str_value);
+			pg_object_path = os_strdup(entry.str_value);
 			persistent = 1;
 			wpa_dbus_dict_entry_clear(&entry);
 		} else {
@@ -545,20 +564,20 @@ DBusMessage *wpas_dbus_handler_p2p_invite(DBusMessage * message,
 		 * persisatnt group
 		 */
 
-		iface = wpas_dbus_new_decompose_object_path(network_object_path,
+		iface = wpas_dbus_new_decompose_object_path(pg_object_path, 1,
 							    &net_id_str, NULL);
 		if (iface == NULL ||
 		    os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 			reply =
 			    wpas_dbus_error_invalid_args(message,
-							 network_object_path);
+							 pg_object_path);
 			goto out;
 		}
 
 		group_id = strtoul(net_id_str, NULL, 10);
 		if (errno == EINVAL) {
 			reply = wpas_dbus_error_invalid_args(
-						message, network_object_path);
+						message, pg_object_path);
 			goto out;
 		}
 
@@ -587,7 +606,7 @@ DBusMessage *wpas_dbus_handler_p2p_invite(DBusMessage * message,
 	}
 
 out:
-	os_free(network_object_path);
+	os_free(pg_object_path);
 	os_free(peer_object_path);
 	return reply;
 
@@ -1236,9 +1255,9 @@ DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
 	unsigned int i = 0, num = 0;
 
 	if (wpa_s->conf == NULL) {
-		wpa_printf(MSG_ERROR, "dbus: "
-			   "wpas_dbus_getter_persistent_groups: "
-			   "An error occurred getting persistent groups list");
+		wpa_printf(MSG_ERROR, "dbus: %s: "
+			   "An error occurred getting persistent groups list",
+			   __func__);
 		return wpas_dbus_error_unknown_error(message, NULL);
 	}
 
@@ -1299,6 +1318,229 @@ DBusMessage * wpas_dbus_getter_persistent_group_properties(
 	 * represented in same manner as network within.
 	 */
 	return wpas_dbus_getter_network_properties(message, net);
+}
+
+
+/**
+ * wpas_dbus_setter_persistent_group_properties - Get options for a persistent
+ *	group
+ * @message: Pointer to incoming dbus message
+ * @net: wpa_supplicant structure for a network interface and
+ * wpa_ssid structure for a configured persistent group (internally network)
+ * Returns: DBus message with network properties or DBus error on failure
+ *
+ * Setter for "Properties" property of a persistent group.
+ */
+DBusMessage * wpas_dbus_setter_persistent_group_properties(
+	DBusMessage *message, struct network_handler_args *net)
+{
+	struct wpa_ssid *ssid = net->ssid;
+	DBusMessage *reply = NULL;
+	DBusMessageIter	iter, variant_iter;
+
+	dbus_message_iter_init(message, &iter);
+
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_next(&iter);
+
+	dbus_message_iter_recurse(&iter, &variant_iter);
+
+	/*
+	 * Leveraging the fact that persistent group object is still
+	 * represented in same manner as network within.
+	 */
+	reply = set_network_properties(message, net->wpa_s, ssid,
+				       &variant_iter);
+	if (reply)
+		wpa_printf(MSG_DEBUG, "dbus control interface couldn't set "
+			   "persistent group properties");
+
+	return reply;
+}
+
+
+/**
+ * wpas_dbus_new_iface_add_persistent_group - Add a new configured
+ *	persistent_group
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: A dbus message containing the object path of the new
+ * persistent group
+ *
+ * Handler function for "AddPersistentGroup" method call of a P2P Device
+ * interface.
+ */
+DBusMessage * wpas_dbus_handler_add_persistent_group(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	DBusMessageIter	iter;
+	struct wpa_ssid *ssid = NULL;
+	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *path = path_buf;
+
+	dbus_message_iter_init(message, &iter);
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (ssid == NULL) {
+		wpa_printf(MSG_ERROR, "dbus: %s: "
+			   "Cannot add new persistent group", __func__);
+		reply = wpas_dbus_error_unknown_error(
+			message,
+			"wpa_supplicant could not add "
+			"a persistent group on this interface.");
+		goto err;
+	}
+
+	/* Mark the ssid as being a persistent group before the notification */
+	ssid->disabled = 2;
+	ssid->p2p_persistent_group = 1;
+	wpas_notify_persistent_group_added(wpa_s, ssid);
+
+	wpa_config_set_network_defaults(ssid);
+
+	reply = set_network_properties(message, wpa_s, ssid, &iter);
+	if (reply) {
+		wpa_printf(MSG_DEBUG, "dbus: %s: "
+			   "Control interface could not set persistent group "
+			   "properties", __func__);
+		goto err;
+	}
+
+	/* Construct the object path for this network. */
+	os_snprintf(path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/%d",
+		    wpa_s->dbus_new_path, ssid->id);
+
+	reply = dbus_message_new_method_return(message);
+	if (reply == NULL) {
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
+		goto err;
+	}
+	if (!dbus_message_append_args(reply, DBUS_TYPE_OBJECT_PATH, &path,
+				      DBUS_TYPE_INVALID)) {
+		dbus_message_unref(reply);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       NULL);
+		goto err;
+	}
+
+	return reply;
+
+err:
+	if (ssid) {
+		wpas_notify_persistent_group_removed(wpa_s, ssid);
+		wpa_config_remove_network(wpa_s->conf, ssid->id);
+	}
+	return reply;
+}
+
+
+/**
+ * wpas_dbus_handler_remove_persistent_group - Remove a configured persistent
+ *	group
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL on success or dbus error on failure
+ *
+ * Handler function for "RemovePersistentGroup" method call of a P2P Device
+ * interface.
+ */
+DBusMessage * wpas_dbus_handler_remove_persistent_group(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	const char *op;
+	char *iface = NULL, *persistent_group_id = NULL;
+	int id;
+	struct wpa_ssid *ssid;
+
+	dbus_message_get_args(message, NULL, DBUS_TYPE_OBJECT_PATH, &op,
+			      DBUS_TYPE_INVALID);
+
+	/*
+	 * Extract the network ID and ensure the network is actually a child of
+	 * this interface.
+	 */
+	iface = wpas_dbus_new_decompose_object_path(op, 1,
+						    &persistent_group_id,
+						    NULL);
+	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+		reply = wpas_dbus_error_invalid_args(message, op);
+		goto out;
+	}
+
+	id = strtoul(persistent_group_id, NULL, 10);
+	if (errno == EINVAL) {
+		reply = wpas_dbus_error_invalid_args(message, op);
+		goto out;
+	}
+
+	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (ssid == NULL) {
+		reply = wpas_dbus_error_persistent_group_unknown(message);
+		goto out;
+	}
+
+	wpas_notify_persistent_group_removed(wpa_s, ssid);
+
+	if (wpa_config_remove_network(wpa_s->conf, id) < 0) {
+		wpa_printf(MSG_ERROR, "dbus: %s: "
+			   "error occurred when removing persistent group %d",
+			   __func__, id);
+		reply = wpas_dbus_error_unknown_error(
+			message,
+			"error removing the specified persistent group on "
+			"this interface.");
+		goto out;
+	}
+
+out:
+	os_free(iface);
+	os_free(persistent_group_id);
+	return reply;
+}
+
+
+static void remove_persistent_group(struct wpa_supplicant *wpa_s,
+				    struct wpa_ssid *ssid)
+{
+	wpas_notify_persistent_group_removed(wpa_s, ssid);
+
+	if (wpa_config_remove_network(wpa_s->conf, ssid->id) < 0) {
+		wpa_printf(MSG_ERROR, "dbus: %s: "
+			   "error occurred when removing persistent group %d",
+			   __func__, ssid->id);
+		return;
+	}
+}
+
+
+/**
+ * wpas_dbus_handler_remove_all_persistent_groups - Remove all configured
+ * persistent groups
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL on success or dbus error on failure
+ *
+ * Handler function for "RemoveAllPersistentGroups" method call of a
+ * P2P Device interface.
+ */
+DBusMessage * wpas_dbus_handler_remove_all_persistent_groups(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	struct wpa_ssid *ssid, *next;
+	struct wpa_config *config;
+
+	config = wpa_s->conf;
+	ssid = config->ssid;
+	while (ssid) {
+		next = ssid->next;
+		if (network_is_persistent_group(ssid))
+			remove_persistent_group(wpa_s, ssid);
+		ssid = next;
+	}
+	return NULL;
 }
 
 

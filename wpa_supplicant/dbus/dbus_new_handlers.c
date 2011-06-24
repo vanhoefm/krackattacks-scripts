@@ -172,10 +172,10 @@ static struct wpa_supplicant * get_iface_by_dbus_path(
  *
  * Sets network configuration with parameters given id DBus dictionary
  */
-static DBusMessage * set_network_properties(DBusMessage *message,
-					    struct wpa_supplicant *wpa_s,
-					    struct wpa_ssid *ssid,
-					    DBusMessageIter *iter)
+DBusMessage * set_network_properties(DBusMessage *message,
+				     struct wpa_supplicant *wpa_s,
+				     struct wpa_ssid *ssid,
+				     DBusMessageIter *iter)
 {
 
 	struct wpa_dbus_dict_entry entry = { .type = DBUS_TYPE_STRING };
@@ -1365,7 +1365,7 @@ DBusMessage * wpas_dbus_handler_remove_network(DBusMessage *message,
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
-	iface = wpas_dbus_new_decompose_object_path(op, &net_id, NULL);
+	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
 	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;
@@ -1464,7 +1464,7 @@ DBusMessage * wpas_dbus_handler_select_network(DBusMessage *message,
 
 	/* Extract the network ID and ensure the network */
 	/* is actually a child of this interface */
-	iface = wpas_dbus_new_decompose_object_path(op, &net_id, NULL);
+	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
 	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
 		reply = wpas_dbus_error_invalid_args(message, op);
 		goto out;

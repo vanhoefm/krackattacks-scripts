@@ -888,6 +888,8 @@ void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
 /**
  * wpas_dbus_new_decompose_object_path - Decompose an interface object path into parts
  * @path: The dbus object path
+ * @p2p_persistent_group: indicates whether to parse the path as a P2P
+ *                        persistent group object
  * @network: (out) the configured network this object path refers to, if any
  * @bssid: (out) the scanned bssid this object path refers to, if any
  * Returns: The object path of the network interface this path refers to
@@ -896,6 +898,7 @@ void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
  * and BSSID parts, if those parts exist.
  */
 char *wpas_dbus_new_decompose_object_path(const char *path,
+					   int p2p_persistent_group,
 					   char **network,
 					   char **bssid)
 {
@@ -920,14 +923,19 @@ char *wpas_dbus_new_decompose_object_path(const char *path,
 	next_sep = os_strchr(obj_path_only + dev_path_prefix_len, '/');
 	if (next_sep != NULL) {
 		const char *net_part = os_strstr(
-			next_sep, WPAS_DBUS_NEW_NETWORKS_PART "/");
+			next_sep, p2p_persistent_group ?
+			WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART "/" :
+			WPAS_DBUS_NEW_NETWORKS_PART "/");
 		const char *bssid_part = os_strstr(
 			next_sep, WPAS_DBUS_NEW_BSSIDS_PART "/");
 
 		if (network && net_part) {
 			/* Deal with a request for a configured network */
 			const char *net_name = net_part +
-				os_strlen(WPAS_DBUS_NEW_NETWORKS_PART "/");
+				os_strlen(p2p_persistent_group ?
+					  WPAS_DBUS_NEW_PERSISTENT_GROUPS_PART
+					  "/" :
+					  WPAS_DBUS_NEW_NETWORKS_PART "/");
 			*network = NULL;
 			if (os_strlen(net_name))
 				*network = os_strdup(net_name);

@@ -1374,7 +1374,7 @@ static void wpas_dbus_signal_persistent_group_removed(
 	struct wpa_supplicant *wpa_s, int id)
 {
 	wpas_dbus_signal_persistent_group(wpa_s, id, "PersistentGroupRemoved",
-					  TRUE);
+					  FALSE);
 }
 
 #endif /*CONFIG_P2P*/
@@ -2247,6 +2247,28 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "AddPersistentGroup", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_add_persistent_group,
+	  {
+		  { "args", "a{sv}", ARG_IN },
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "RemovePersistentGroup", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_remove_persistent_group,
+	  {
+		  { "path", "o", ARG_IN },
+		  END_ARGS
+	  }
+	},
+	{ "RemoveAllPersistentGroups", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  (WPADBusMethodHandler)
+	  wpas_dbus_handler_remove_all_persistent_groups,
+	  {
+		  END_ARGS
+	  }
+	},
 #endif /* CONFIG_P2P */
 	{ "FlushBSS", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_flush_bss,
@@ -2356,7 +2378,7 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_p2p_peergo,
 	  NULL, R
 	},
-	{ "PersistentGroups", WPAS_DBUS_NEW_IFACE_INTERFACE, "ao",
+	{ "PersistentGroups", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "ao",
 	  (WPADBusPropertyAccessor) wpas_dbus_getter_persistent_groups,
 	  NULL, R
 	},
@@ -3083,8 +3105,9 @@ static const struct wpa_dbus_property_desc
 	{ "Properties", WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP, "a{sv}",
 	  (WPADBusPropertyAccessor)
 	  wpas_dbus_getter_persistent_group_properties,
-	  NULL,
-	  R
+	  (WPADBusPropertyAccessor)
+	  wpas_dbus_setter_persistent_group_properties,
+	  RW
 	},
 	{ NULL, NULL, NULL, NULL, NULL, 0 }
 };

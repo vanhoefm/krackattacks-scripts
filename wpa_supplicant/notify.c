@@ -224,6 +224,13 @@ void wpas_notify_persistent_group_added(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_persistent_group_removed(struct wpa_supplicant *wpa_s,
+					  struct wpa_ssid *ssid)
+{
+	wpas_dbus_unregister_persistent_group(wpa_s, ssid->id);
+}
+
+
 void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 				 struct wpa_ssid *ssid)
 {

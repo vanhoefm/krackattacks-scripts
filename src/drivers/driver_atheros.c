@@ -1116,7 +1116,7 @@ atheros_get_we_version(struct atheros_driver_data *drv)
 		drv->we_version = range->we_version_compiled;
 	}
 
-	free(range);
+	os_free(range);
 	return 0;
 }
 

@@ -493,6 +493,14 @@ void wpas_notify_p2p_group_started(struct wpa_supplicant *wpa_s,
 
 	wpas_dbus_signal_p2p_group_started(wpa_s, ssid, client, network_id);
 }
+
+
+void wpas_notify_p2p_wps_failed(struct wpa_supplicant *wpa_s,
+				struct wps_event_fail *fail)
+{
+	wpas_dbus_signal_p2p_wps_failed(wpa_s, fail);
+}
+
 #endif /* CONFIG_P2P */
 
 

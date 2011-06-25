@@ -470,6 +470,9 @@ static void wpa_supplicant_wps_event_fail(struct wpa_supplicant *wpa_s,
 	}
 	wpas_clear_wps(wpa_s);
 	wpas_notify_wps_event_fail(wpa_s, fail);
+#ifdef CONFIG_P2P
+	wpas_p2p_wps_failed(wpa_s, fail);
+#endif /* CONFIG_P2P */
 }
 
 

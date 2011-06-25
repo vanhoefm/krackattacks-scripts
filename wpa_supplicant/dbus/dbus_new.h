@@ -199,6 +199,8 @@ void wpas_dbus_signal_p2p_sd_response(struct wpa_supplicant *wpa_s,
 				      const u8 *tlvs, size_t tlvs_len);
 void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 				const u8 *member);
+void wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
+				     struct wps_event_fail *fail);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -434,6 +436,13 @@ wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 				       const u8 *member)
 {
 }
+
+static inline void
+wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
+				struct wps_event_fail *fail)
+{
+}
+
 #endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
 #endif /* CTRL_IFACE_DBUS_H_NEW */

@@ -1377,6 +1377,50 @@ static void wpas_dbus_signal_persistent_group_removed(
 					  FALSE);
 }
 
+
+/**
+ * wpas_dbus_signal_p2p_wps_failed - Signals WpsFailed event
+ * @wpa_s: %wpa_supplicant network interface data
+ *
+ * Sends Event dbus signal with name "fail" and dictionary containing
+ * "msg" field with fail message number (int32) as arguments
+ */
+void wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
+				     struct wps_event_fail *fail)
+{
+
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+	struct wpas_dbus_priv *iface;
+	char *key = "fail";
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+				      "WpsFailed");
+	if (msg == NULL)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &key) ||
+	    !wpa_dbus_dict_open_write(&iter, &dict_iter) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "msg", fail->msg) ||
+	    !wpa_dbus_dict_append_int16(&dict_iter, "config_error",
+					fail->config_error) ||
+	    !wpa_dbus_dict_close_write(&iter, &dict_iter))
+		wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	else
+		dbus_connection_send(iface->con, msg, NULL);
+
+	dbus_message_unref(msg);
+}
+
 #endif /*CONFIG_P2P*/
 
 
@@ -2582,6 +2626,13 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	  {
 		  { "path", "o", ARG_OUT },
 		  { "properties", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "WpsFailed", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  {
+		  { "name", "s", ARG_OUT },
+		  { "args", "a{sv}", ARG_OUT },
 		  END_ARGS
 	  }
 	},

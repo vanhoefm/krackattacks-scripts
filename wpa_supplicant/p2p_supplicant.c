@@ -3489,6 +3489,18 @@ void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 }
 
 
+void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
+			 struct wps_event_fail *fail)
+{
+	if (!wpa_s->p2p_in_provisioning) {
+		wpa_printf(MSG_DEBUG, "P2P: Ignore WPS fail event - P2P "
+			   "provisioning not in progress");
+		return;
+	}
+	wpas_notify_p2p_wps_failed(wpa_s, fail);
+}
+
+
 int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		       const char *config_method)
 {

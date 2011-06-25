@@ -876,22 +876,26 @@ DBusMessage *wpas_dbus_setter_p2p_device_properties(DBusMessage * message,
 			wpa_s->conf->persistent_reconnect = entry.bool_value;
 
 		else if ((os_strcmp(entry.key, "ListenRegClass") == 0) &&
-			 (entry.type == DBUS_TYPE_UINT32))
+			 (entry.type == DBUS_TYPE_UINT32)) {
 			wpa_s->conf->p2p_listen_reg_class = entry.uint32_value;
-
-		else if ((os_strcmp(entry.key, "ListenChannel") == 0) &&
-			 (entry.type == DBUS_TYPE_UINT32))
+			wpa_s->conf->changed_parameters |=
+				CFG_CHANGED_P2P_LISTEN_CHANNEL;
+		} else if ((os_strcmp(entry.key, "ListenChannel") == 0) &&
+			   (entry.type == DBUS_TYPE_UINT32)) {
 			wpa_s->conf->p2p_listen_channel = entry.uint32_value;
-
-		else if ((os_strcmp(entry.key, "OperRegClass") == 0) &&
-			 (entry.type == DBUS_TYPE_UINT32))
+			wpa_s->conf->changed_parameters |=
+				CFG_CHANGED_P2P_LISTEN_CHANNEL;
+		} else if ((os_strcmp(entry.key, "OperRegClass") == 0) &&
+			   (entry.type == DBUS_TYPE_UINT32)) {
 			wpa_s->conf->p2p_oper_reg_class = entry.uint32_value;
-
-		else if ((os_strcmp(entry.key, "OperChannel") == 0) &&
-			 (entry.type == DBUS_TYPE_UINT32))
+			wpa_s->conf->changed_parameters |=
+				CFG_CHANGED_P2P_OPER_CHANNEL;
+		} else if ((os_strcmp(entry.key, "OperChannel") == 0) &&
+			   (entry.type == DBUS_TYPE_UINT32)) {
 			wpa_s->conf->p2p_oper_channel = entry.uint32_value;
-
-		else if (os_strcmp(entry.key, "SsidPostfix") == 0) {
+			wpa_s->conf->changed_parameters |=
+				CFG_CHANGED_P2P_OPER_CHANNEL;
+		} else if (os_strcmp(entry.key, "SsidPostfix") == 0) {
 			char *postfix;
 
 			if (entry.type != DBUS_TYPE_STRING)

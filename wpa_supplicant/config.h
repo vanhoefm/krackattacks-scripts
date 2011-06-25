@@ -44,6 +44,8 @@
 #define CFG_CHANGED_WPS_STRING BIT(8)
 #define CFG_CHANGED_P2P_INTRA_BSS BIT(9)
 #define CFG_CHANGED_VENDOR_EXTENSION BIT(10)
+#define CFG_CHANGED_P2P_LISTEN_CHANNEL BIT(11)
+#define CFG_CHANGED_P2P_OPER_CHANNEL BIT(12)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data

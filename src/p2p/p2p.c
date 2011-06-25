@@ -3428,6 +3428,22 @@ int p2p_set_ssid_postfix(struct p2p_data *p2p, const u8 *postfix, size_t len)
 }
 
 
+int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
+			 int cfg_op_channel)
+{
+	if (p2p_channel_to_freq(p2p->cfg->country, op_reg_class, op_channel)
+	    < 0)
+		return -1;
+
+	wpa_msg(p2p->cfg->msg_ctx, MSG_INFO, "P2P: Set Operating channel: "
+		"reg_class %u channel %u", op_reg_class, op_channel);
+	p2p->cfg->op_reg_class = op_reg_class;
+	p2p->cfg->op_channel = op_channel;
+	p2p->cfg->cfg_op_channel = cfg_op_channel;
+	return 0;
+}
+
+
 int p2p_get_interface_addr(struct p2p_data *p2p, const u8 *dev_addr,
 			   u8 *iface_addr)
 {

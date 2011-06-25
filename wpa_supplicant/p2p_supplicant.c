@@ -4011,6 +4011,54 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_P2P_INTRA_BSS)
 		p2p_set_intra_bss_dist(p2p, wpa_s->conf->p2p_intra_bss);
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_P2P_LISTEN_CHANNEL) {
+		u8 reg_class, channel;
+		int ret;
+		unsigned int r;
+		if (wpa_s->conf->p2p_listen_reg_class &&
+		    wpa_s->conf->p2p_listen_channel) {
+			reg_class = wpa_s->conf->p2p_listen_reg_class;
+			channel = wpa_s->conf->p2p_listen_channel;
+		} else {
+			reg_class = 81;
+			/*
+			 * Pick one of the social channels randomly as the
+			 * listen channel.
+			 */
+			os_get_random((u8 *) &r, sizeof(r));
+			channel = 1 + (r % 3) * 5;
+		}
+		ret = p2p_set_listen_channel(p2p, reg_class, channel);
+		if (ret)
+			wpa_printf(MSG_ERROR, "P2P: Own listen channel update "
+				   "failed: %d", ret);
+	}
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_P2P_OPER_CHANNEL) {
+		u8 op_reg_class, op_channel, cfg_op_channel;
+		int ret = 0;
+		unsigned int r;
+		if (wpa_s->conf->p2p_oper_reg_class &&
+		    wpa_s->conf->p2p_oper_channel) {
+			op_reg_class = wpa_s->conf->p2p_oper_reg_class;
+			op_channel = wpa_s->conf->p2p_oper_channel;
+			cfg_op_channel = 1;
+		} else {
+			op_reg_class = 81;
+			/*
+			 * Use random operation channel from (1, 6, 11)
+			 *if no other preference is indicated.
+			 */
+			os_get_random((u8 *) &r, sizeof(r));
+			op_channel = 1 + (r % 3) * 5;
+			cfg_op_channel = 0;
+		}
+		ret = p2p_set_oper_channel(p2p, op_reg_class, op_channel,
+					   cfg_op_channel);
+		if (ret)
+			wpa_printf(MSG_ERROR, "P2P: Own oper channel update "
+				   "failed: %d", ret);
+	}
 }
 
 

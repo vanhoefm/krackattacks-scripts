@@ -1496,4 +1496,15 @@ void p2p_remove_wps_vendor_extensions(struct p2p_data *p2p);
 int p2p_add_wps_vendor_extension(struct p2p_data *p2p,
 				 const struct wpabuf *vendor_ext);
 
+/**
+ * p2p_set_oper_channel - Set the P2P operating channel
+ * @p2p: P2P module context from p2p_init()
+ * @op_reg_class: Operating regulatory class to set
+ * @op_channel: operating channel to set
+ * @cfg_op_channel : Whether op_channel is hardcoded in configuration
+ * Returns: 0 on success, -1 on failure
+ */
+int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
+			 int cfg_op_channel);
+
 #endif /* P2P_H */

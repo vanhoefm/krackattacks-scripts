@@ -226,21 +226,23 @@ static void ap_wps_event_cb(void *ctx, enum wps_event event,
 {
 #ifdef CONFIG_P2P
 	struct wpa_supplicant *wpa_s = ctx;
-	struct wps_event_fail *fail = &data->fail;
 
-	if (event == WPS_EV_FAIL && wpa_s->parent && wpa_s->parent != wpa_s &&
-	    wpa_s == wpa_s->global->p2p_group_formation) {
+	if (event == WPS_EV_FAIL) {
+		struct wps_event_fail *fail = &data->fail;
 
-		/*
-		 * src/ap/wps_hostapd.c has already sent this on the main
-		 * interface, so only send on the parent interface here if
-		 * needed.
-		 */
-		wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
-			"msg=%d config_error=%d",
-			fail->msg, fail->config_error);
+		if (wpa_s->parent && wpa_s->parent != wpa_s &&
+		    wpa_s == wpa_s->global->p2p_group_formation) {
+			/*
+			 * src/ap/wps_hostapd.c has already sent this on the
+			 * main interface, so only send on the parent interface
+			 * here if needed.
+			 */
+			wpa_msg(wpa_s->parent, MSG_INFO, WPS_EVENT_FAIL
+				"msg=%d config_error=%d",
+				fail->msg, fail->config_error);
+		}
+		wpas_p2p_wps_failed(wpa_s, fail);
 	}
-	wpas_p2p_wps_failed(wpa_s, fail);
 #endif /* CONFIG_P2P */
 }
 

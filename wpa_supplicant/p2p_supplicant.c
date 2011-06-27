@@ -23,6 +23,8 @@
 #include "p2p/p2p.h"
 #include "ap/hostapd.h"
 #include "ap/p2p_hostapd.h"
+#include "eapol_supp/eapol_supp_sm.h"
+#include "rsn_supp/wpa.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "ap.h"
@@ -293,8 +295,11 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 		     ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION ||
 		     (ssid->key_mgmt & WPA_KEY_MGMT_WPS))) {
 		int id = ssid->id;
-		if (ssid == wpa_s->current_ssid)
+		if (ssid == wpa_s->current_ssid) {
+			wpa_sm_set_config(wpa_s->wpa, NULL);
+			eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 			wpa_s->current_ssid = NULL;
+		}
 		/*
 		 * Networks objects created during any P2P activities are not
 		 * exposed out as they might/will confuse certain non-P2P aware

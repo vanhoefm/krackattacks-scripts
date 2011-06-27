@@ -24,6 +24,7 @@
 #include "common/wpa_ctrl.h"
 #include "eap_common/eap_wsc_common.h"
 #include "eap_peer/eap.h"
+#include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
@@ -673,7 +674,9 @@ enum wps_request_type wpas_wps_get_req_type(struct wpa_ssid *ssid)
 static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 {
 	int id;
-	struct wpa_ssid *ssid, *remove_ssid = NULL;
+	struct wpa_ssid *ssid, *remove_ssid = NULL, *prev_current;
+
+	prev_current = wpa_s->current_ssid;
 
 	eloop_cancel_timeout(wpas_wps_timeout, wpa_s, NULL);
 
@@ -692,6 +695,11 @@ static void wpas_clear_wps(struct wpa_supplicant *wpa_s)
 			id = -1;
 		ssid = ssid->next;
 		if (id >= 0) {
+			if (prev_current == remove_ssid) {
+				wpa_sm_set_config(wpa_s->wpa, NULL);
+				eapol_sm_notify_config(wpa_s->eapol, NULL,
+						       NULL);
+			}
 			wpas_notify_network_removed(wpa_s, remove_ssid);
 			wpa_config_remove_network(wpa_s->conf, id);
 		}

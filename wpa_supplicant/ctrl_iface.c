@@ -1393,6 +1393,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		}
 		if (wpa_s->current_ssid) {
 			eapol_sm_invalidate_cached_session(wpa_s->eapol);
+			wpa_sm_set_config(wpa_s->wpa, NULL);
+			eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 			wpa_supplicant_disassociate(wpa_s,
 				                    WLAN_REASON_DEAUTH_LEAVING);
 		}
@@ -1416,6 +1418,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		 * removed.
 		 */
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
+		wpa_sm_set_config(wpa_s->wpa, NULL);
+		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 
 		wpa_supplicant_disassociate(wpa_s, WLAN_REASON_DEAUTH_LEAVING);
 	}

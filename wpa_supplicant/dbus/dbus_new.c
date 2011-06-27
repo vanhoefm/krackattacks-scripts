@@ -1794,6 +1794,7 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	struct network_handler_args *arg;
 	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
 
+#ifdef CONFIG_P2P
 	/*
 	 * If it is a persistent group register it as such.
 	 * This is to handle cases where an interface is being initialized
@@ -1801,6 +1802,7 @@ int wpas_dbus_register_network(struct wpa_supplicant *wpa_s,
 	 */
 	if (network_is_persistent_group(ssid))
 		return wpas_dbus_register_persistent_group(wpa_s, ssid);
+#endif /* CONFIG_P2P */
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL)
@@ -1868,9 +1870,11 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 
 	ssid = wpa_config_get_network(wpa_s->conf, nid);
 
+#ifdef CONFIG_P2P
 	/* If it is a persistent group unregister it as such */
 	if (ssid && network_is_persistent_group(ssid))
 		return wpas_dbus_unregister_persistent_group(wpa_s, nid);
+#endif /* CONFIG_P2P */
 
 	/* Do nothing if the control interface is not turned on */
 	if (wpa_s == NULL || wpa_s->global == NULL ||

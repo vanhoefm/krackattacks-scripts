@@ -157,6 +157,7 @@ struct wpa_driver_nl80211_data {
 
 	int monitor_sock;
 	int monitor_ifidx;
+	int no_monitor_iface_capab;
 	int disable_11b_rates;
 
 	unsigned int pending_remain_on_chan:1;
@@ -3635,6 +3636,12 @@ static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 	if (encrypt)
 		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
 
+	if (drv->monitor_sock < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: No monitor socket available "
+			   "for %s", __func__);
+		return -1;
+	}
+
 	res = sendmsg(drv->monitor_sock, &msg, 0);
 	if (res < 0) {
 		wpa_printf(MSG_INFO, "nl80211: sendmsg: %s", strerror(errno));
@@ -4272,6 +4279,12 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	drv->monitor_ifidx =
 		nl80211_create_iface(drv, buf, NL80211_IFTYPE_MONITOR, NULL,
 				     0);
+
+	if (drv->monitor_ifidx == -EOPNOTSUPP) {
+		wpa_printf(MSG_DEBUG, "nl80211: Driver does not support "
+			   "monitor interface type - try to run without it");
+		drv->no_monitor_iface_capab = 1;
+	}
 
 	if (drv->monitor_ifidx < 0)
 		return -1;
@@ -4971,8 +4984,9 @@ static int wpa_driver_nl80211_set_mode(void *priv, int mode)
 done:
 	if (!ret && nlmode == NL80211_IFTYPE_AP) {
 		/* Setup additional AP mode functionality if needed */
-		if (drv->monitor_ifidx < 0 &&
-		    nl80211_create_monitor_interface(drv))
+		if (!drv->no_monitor_iface_capab && drv->monitor_ifidx < 0 &&
+		    nl80211_create_monitor_interface(drv) &&
+		    !drv->no_monitor_iface_capab)
 			return -1;
 	} else if (!ret && nlmode != NL80211_IFTYPE_AP) {
 		/* Remove additional AP mode functionality */

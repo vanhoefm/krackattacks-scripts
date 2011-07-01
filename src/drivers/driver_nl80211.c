@@ -1326,6 +1326,20 @@ static void nl80211_new_station_event(struct wpa_driver_nl80211_data *drv,
 		return;
 	addr = nla_data(tb[NL80211_ATTR_MAC]);
 	wpa_printf(MSG_DEBUG, "nl80211: New station " MACSTR, MAC2STR(addr));
+
+	if (drv->nlmode == NL80211_IFTYPE_AP &&
+	    drv->no_monitor_iface_capab) {
+		u8 *ies = NULL;
+		size_t ies_len = 0;
+		if (tb[NL80211_ATTR_IE]) {
+			ies = nla_data(tb[NL80211_ATTR_IE]);
+			ies_len = nla_len(tb[NL80211_ATTR_IE]);
+		}
+		wpa_hexdump(MSG_DEBUG, "nl80211: Assoc Req IEs", ies, ies_len);
+		drv_event_assoc(drv->ctx, addr, ies, ies_len, 0);
+		return;
+	}
+
 	if (drv->nlmode != NL80211_IFTYPE_ADHOC)
 		return;
 
@@ -1346,6 +1360,13 @@ static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
 	addr = nla_data(tb[NL80211_ATTR_MAC]);
 	wpa_printf(MSG_DEBUG, "nl80211: Delete station " MACSTR,
 		   MAC2STR(addr));
+
+	if (drv->nlmode == NL80211_IFTYPE_AP &&
+	    drv->no_monitor_iface_capab) {
+		drv_event_disassoc(drv->ctx, addr);
+		return;
+	}
+
 	if (drv->nlmode != NL80211_IFTYPE_ADHOC)
 		return;
 

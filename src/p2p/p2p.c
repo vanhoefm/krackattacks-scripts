@@ -634,7 +634,10 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 	if (p2p->pending_client_disc_go == dev)
 		p2p->pending_client_disc_go = NULL;
 
-	p2p->cfg->dev_lost(p2p->cfg->cb_ctx, dev->info.p2p_device_addr);
+	/* dev_lost() device, but only if it was previously dev_found() */
+	if (dev->flags & P2P_DEV_REPORTED_ONCE)
+		p2p->cfg->dev_lost(p2p->cfg->cb_ctx,
+				   dev->info.p2p_device_addr);
 
 	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {
 		wpabuf_free(dev->info.wps_vendor_ext[i]);

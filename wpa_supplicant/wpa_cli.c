@@ -1786,7 +1786,12 @@ static int wpa_cli_cmd_p2p_group_add(struct wpa_ctrl *ctrl, int argc,
 	if (argc == 0)
 		return wpa_ctrl_command(ctrl, "P2P_GROUP_ADD");
 
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD %s", argv[0]);
+	if (argc > 1)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_GROUP_ADD %s",
+				  argv[0]);
 	if (res < 0 || (size_t) res >= sizeof(cmd))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';

@@ -16,6 +16,7 @@
 #
 
 LOCAL_PATH := $(call my-dir)
+PKG_CONFIG ?= pkg-config
 
 WPA_BUILD_SUPPLICANT := false
 ifneq ($(TARGET_SIMULATOR),true)
@@ -1143,12 +1144,12 @@ DBUS_OBJS += dbus/dbus_old_handlers_wps.c
 endif
 DBUS_OBJS += dbus/dbus_dict_helpers.c
 ifndef DBUS_LIBS
-DBUS_LIBS := $(shell pkg-config --libs dbus-1)
+DBUS_LIBS := $(shell $(PKG_CONFIG) --libs dbus-1)
 endif
 ifndef DBUS_INCLUDE
-DBUS_INCLUDE := $(shell pkg-config --cflags dbus-1)
+DBUS_INCLUDE := $(shell $(PKG_CONFIG) --cflags dbus-1)
 endif
-dbus_version=$(subst ., ,$(shell pkg-config --modversion dbus-1))
+dbus_version=$(subst ., ,$(shell $(PKG_CONFIG) --modversion dbus-1))
 DBUS_VERSION_MAJOR=$(word 1,$(dbus_version))
 DBUS_VERSION_MINOR=$(word 2,$(dbus_version))
 ifeq ($(DBUS_VERSION_MAJOR),)
@@ -1172,10 +1173,10 @@ ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_new_handlers_wps.c
 endif
 ifndef DBUS_LIBS
-DBUS_LIBS := $(shell pkg-config --libs dbus-1)
+DBUS_LIBS := $(shell $(PKG_CONFIG) --libs dbus-1)
 endif
 ifndef DBUS_INCLUDE
-DBUS_INCLUDE := $(shell pkg-config --cflags dbus-1)
+DBUS_INCLUDE := $(shell $(PKG_CONFIG) --cflags dbus-1)
 endif
 ifdef CONFIG_CTRL_IFACE_DBUS_INTRO
 DBUS_OBJS += dbus/dbus_new_introspect.c

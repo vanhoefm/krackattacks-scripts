@@ -660,8 +660,9 @@ DBusMessage *wpas_dbus_getter_p2p_device_properties(DBusMessage * message,
 {
 	DBusMessage *reply = NULL;
 	DBusMessageIter iter, variant_iter, dict_iter;
+	DBusMessageIter iter_secdev_dict_entry, iter_secdev_dict_val,
+		iter_secdev_dict_array;
 	const char *dev_name;
-	int num_sec_dev_types = 0;
 	int num_vendor_extensions = 0;
 	int i;
 	const struct wpabuf *vendor_ext[P2P_MAX_WPS_VENDOR_EXT];
@@ -694,17 +695,28 @@ DBusMessage *wpas_dbus_getter_p2p_device_properties(DBusMessage * message,
 		goto err_no_mem;
 
 	/* Secondary device types */
-	for (i = 0; i < MAX_SEC_DEVICE_TYPES; i++) {
-		if (wpa_s->conf->sec_device_type[i] == NULL)
-			break;
-		num_sec_dev_types++;
-	}
+	if (wpa_s->conf->num_sec_device_types) {
+		if (!wpa_dbus_dict_begin_array(&dict_iter,
+					       "SecondaryDeviceTypes",
+					       DBUS_TYPE_ARRAY_AS_STRING
+					       DBUS_TYPE_BYTE_AS_STRING,
+					       &iter_secdev_dict_entry,
+					       &iter_secdev_dict_val,
+					       &iter_secdev_dict_array))
+			goto err_no_mem;
 
-	if (!wpa_dbus_dict_append_string_array(
-			&dict_iter, "SecondaryDeviceTypes",
-			(const char **)wpa_s->conf->sec_device_type,
-			num_sec_dev_types))
-		goto err_no_mem;
+		for (i = 0; i < wpa_s->conf->num_sec_device_types; i++)
+			wpa_dbus_dict_bin_array_add_element(
+				&iter_secdev_dict_array,
+				wpa_s->conf->sec_device_type[i],
+				WPS_DEV_TYPE_LEN);
+
+		if (!wpa_dbus_dict_end_array(&dict_iter,
+					     &iter_secdev_dict_entry,
+					     &iter_secdev_dict_val,
+					     &iter_secdev_dict_array))
+			goto err_no_mem;
+	}
 
 	/* Vendor Extensions */
 	for (i = 0; i < P2P_MAX_WPS_VENDOR_EXT; i++) {

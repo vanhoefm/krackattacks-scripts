@@ -2633,6 +2633,12 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 		  END_ARGS
 	  }
 	},
+	{ "PersistentGroupRemoved", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
 	{ "WpsFailed", WPAS_DBUS_NEW_IFACE_P2PDEVICE,
 	  {
 		  { "name", "s", ARG_OUT },

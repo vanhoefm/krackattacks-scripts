@@ -131,6 +131,13 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 	wpa_s->current_bss = NULL;
 	wpa_s->assoc_freq = 0;
+#ifdef CONFIG_IEEE80211R
+#ifdef CONFIG_SME
+	if (wpa_s->sme.ft_ies)
+		sme_update_ft_ies(wpa_s, NULL, NULL, 0);
+#endif /* CONFIG_SME */
+#endif /* CONFIG_IEEE80211R */
+
 	if (bssid_changed)
 		wpas_notify_bssid_changed(wpa_s);
 

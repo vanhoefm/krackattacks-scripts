@@ -56,6 +56,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 {
 	struct hostapd_bss_config *bss = &conf->bss[0];
 	int pairwise;
+#ifdef CONFIG_IEEE80211N
+	struct hostapd_hw_modes *modes;
+	u16 num_modes, flags;
+#endif /* CONFIG_IEEE80211N */
 
 	conf->driver = wpa_s->driver;
 
@@ -78,8 +82,31 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
-	/* TODO: enable HT if driver supports it;
+	/* TODO: enable HT40 if driver supports it;
 	 * drop to 11b if driver does not support 11g */
+
+#ifdef CONFIG_IEEE80211N
+	/*
+	 * Enable HT20 if the driver supports it, by setting conf->ieee80211n.
+	 * Using default config settings for: conf->ht_op_mode_fixed,
+	 * conf->ht_capab, conf->secondary_channel, conf->require_ht
+	 */
+	modes = wpa_drv_get_hw_feature_data(wpa_s, &num_modes, &flags);
+	if (modes) {
+		struct hostapd_hw_modes *mode = NULL;
+		int i;
+		for (i = 0; i < num_modes; i++) {
+			if (modes[i].mode == conf->hw_mode) {
+				mode = &modes[i];
+				break;
+			}
+		}
+		if (mode && mode->ht_capab)
+			conf->ieee80211n = 1;
+		ieee80211_sta_free_hw_features(modes, num_modes);
+		modes = NULL;
+	}
+#endif /* CONFIG_IEEE80211N */
 
 #ifdef CONFIG_P2P
 	if (conf->hw_mode == HOSTAPD_MODE_IEEE80211G) {

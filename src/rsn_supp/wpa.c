@@ -198,7 +198,8 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 			wpa_hexdump_key(MSG_DEBUG, "WPA: PMK from EAPOL state "
 					"machines", sm->pmk, pmk_len);
 			sm->pmk_len = pmk_len;
-			if (sm->proto == WPA_PROTO_RSN) {
+			if (sm->proto == WPA_PROTO_RSN &&
+			    !wpa_key_mgmt_ft(sm->key_mgmt)) {
 				pmksa_cache_add(sm->pmksa, sm->pmk, pmk_len,
 						src_addr, sm->own_addr,
 						sm->network_ctx, sm->key_mgmt);
@@ -227,7 +228,8 @@ static int wpa_supplicant_get_pmk(struct wpa_sm *sm,
 		}
 	}
 
-	if (abort_cached && wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt)) {
+	if (abort_cached && wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt) &&
+	    !wpa_key_mgmt_ft(sm->key_mgmt)) {
 		/* Send EAPOL-Start to trigger full EAP authentication. */
 		u8 *buf;
 		size_t buflen;

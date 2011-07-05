@@ -40,6 +40,7 @@
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);
 static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd);
+static int hostapd_broadcast_wep_clear(struct hostapd_data *hapd);
 
 extern int wpa_debug_level;
 
@@ -109,6 +110,7 @@ int hostapd_reload_config(struct hostapd_iface *iface)
 	 */
 	for (j = 0; j < iface->num_bss; j++) {
 		hostapd_flush_old_stations(iface->bss[j]);
+		hostapd_broadcast_wep_clear(iface->bss[j]);
 
 #ifndef CONFIG_NO_RADIUS
 		/* TODO: update dynamic data based on changed configuration

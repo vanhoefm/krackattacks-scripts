@@ -1,6 +1,6 @@
 /*
  * X.509v3 certificate parsing and processing
- * Copyright (c) 2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -120,7 +120,7 @@ int x509_certificate_check_signature(struct x509_certificate *issuer,
 				     struct x509_certificate *cert);
 int x509_certificate_chain_validate(struct x509_certificate *trusted,
 				    struct x509_certificate *chain,
-				    int *reason);
+				    int *reason, int disable_time_checks);
 struct x509_certificate *
 x509_certificate_get_subject(struct x509_certificate *chain,
 			     struct x509_name *name);

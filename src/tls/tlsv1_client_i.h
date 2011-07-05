@@ -1,6 +1,6 @@
 /*
  * TLSv1 client - internal structures
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -39,6 +39,7 @@ struct tlsv1_client {
 	unsigned int session_resumed:1;
 	unsigned int session_ticket_included:1;
 	unsigned int use_session_ticket:1;
+	unsigned int disable_time_checks:1;
 
 	struct crypto_public_key *server_rsa_key;
 

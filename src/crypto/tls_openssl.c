@@ -1,6 +1,6 @@
 /*
  * SSL/TLS interface functions for OpenSSL
- * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -86,6 +86,8 @@ struct tls_connection {
 	unsigned int server_cert_only:1;
 
 	u8 srv_cert_hash[32];
+
+	unsigned int flags;
 };
 
 
@@ -1192,6 +1194,13 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 		preverify_ok = 1;
 	if (!preverify_ok && depth > 0 && conn->server_cert_only)
 		preverify_ok = 1;
+	if (!preverify_ok && (conn->flags & TLS_CONN_DISABLE_TIME_CHECKS) &&
+	    (err == X509_V_ERR_CERT_HAS_EXPIRED ||
+	     err == X509_V_ERR_CERT_NOT_YET_VALID)) {
+		wpa_printf(MSG_DEBUG, "OpenSSL: Ignore certificate validity "
+			   "time mismatch");
+		preverify_ok = 1;
+	}
 
 	err_str = X509_verify_cert_error_string(err);
 
@@ -2729,6 +2738,8 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 			   params->dh_file);
 		return -1;
 	}
+
+	conn->flags = params->flags;
 
 	tls_get_errors(tls_ctx);
 

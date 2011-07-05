@@ -1,6 +1,6 @@
 /*
  * TLS interface functions and an internal TLS implementation
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -210,6 +210,9 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 		tlsv1_cred_free(cred);
 		return -1;
 	}
+
+	tlsv1_client_set_time_checks(
+		conn->client, !(params->flags & TLS_CONN_DISABLE_TIME_CHECKS));
 
 	return 0;
 #else /* CONFIG_TLS_INTERNAL_CLIENT */

@@ -365,7 +365,8 @@ static int tls_process_certificate(struct tlsv1_client *conn, u8 ct,
 
 	if (conn->cred &&
 	    x509_certificate_chain_validate(conn->cred->trusted_certs, chain,
-					    &reason) < 0) {
+					    &reason, conn->disable_time_checks)
+	    < 0) {
 		int tls_reason;
 		wpa_printf(MSG_DEBUG, "TLSv1: Server certificate chain "
 			   "validation failed (reason=%d)", reason);

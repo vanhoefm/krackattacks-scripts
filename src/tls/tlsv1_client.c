@@ -1,6 +1,6 @@
 /*
  * TLSv1 client (RFC 2246)
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -653,6 +653,12 @@ int tlsv1_client_set_cred(struct tlsv1_client *conn,
 	tlsv1_cred_free(conn->cred);
 	conn->cred = cred;
 	return 0;
+}
+
+
+void tlsv1_client_set_time_checks(struct tlsv1_client *conn, int enabled)
+{
+	conn->disable_time_checks = !enabled;
 }
 
 

@@ -1,6 +1,6 @@
 /*
  * TLSv1 client (RFC 2246)
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -47,6 +47,7 @@ int tlsv1_client_get_keyblock_size(struct tlsv1_client *conn);
 int tlsv1_client_set_cipher_list(struct tlsv1_client *conn, u8 *ciphers);
 int tlsv1_client_set_cred(struct tlsv1_client *conn,
 			  struct tlsv1_credentials *cred);
+void tlsv1_client_set_time_checks(struct tlsv1_client *conn, int enabled);
 
 typedef int (*tlsv1_client_session_ticket_cb)
 (void *ctx, const u8 *ticket, size_t len, const u8 *client_random,

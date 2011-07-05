@@ -143,6 +143,7 @@ struct wpa_auth_config {
 	int peerkey;
 	int wmm_enabled;
 	int wmm_uapsd;
+	int disable_pmksa_caching;
 	int okc;
 	int tx_status;
 #ifdef CONFIG_IEEE80211W

@@ -2727,7 +2727,8 @@ const u8 * wpa_auth_get_wpa_ie(struct wpa_authenticator *wpa_auth, size_t *len)
 int wpa_auth_pmksa_add(struct wpa_state_machine *sm, const u8 *pmk,
 		       int session_timeout, struct eapol_state_machine *eapol)
 {
-	if (sm == NULL || sm->wpa != WPA_VERSION_WPA2)
+	if (sm == NULL || sm->wpa != WPA_VERSION_WPA2 ||
+	    sm->wpa_auth->conf.disable_pmksa_caching)
 		return -1;
 
 	if (pmksa_cache_auth_add(sm->wpa_auth->pmksa, pmk, PMK_LEN,

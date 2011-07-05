@@ -1904,6 +1904,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 #endif /* CONFIG_IEEE80211N */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);
+		} else if (os_strcmp(buf, "disable_pmksa_caching") == 0) {
+			bss->disable_pmksa_caching = atoi(pos);
 		} else if (os_strcmp(buf, "okc") == 0) {
 			bss->okc = atoi(pos);
 #ifdef CONFIG_WPS

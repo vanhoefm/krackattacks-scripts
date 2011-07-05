@@ -288,6 +288,7 @@ struct hostapd_bss_config {
 	 */
 	u16 max_listen_interval;
 
+	int disable_pmksa_caching;
 	int okc; /* Opportunistic Key Caching */
 
 	int wps_state;

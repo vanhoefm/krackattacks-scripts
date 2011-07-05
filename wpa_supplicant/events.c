@@ -118,6 +118,10 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 	wpa_s->ibss_rsn = NULL;
 #endif /* CONFIG_IBSS_RSN */
 
+#ifdef CONFIG_AP
+	wpa_supplicant_ap_deinit(wpa_s);
+#endif /* CONFIG_AP */
+
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 		return;
 

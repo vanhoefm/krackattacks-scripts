@@ -475,6 +475,7 @@ void wpa_supplicant_ap_deinit(struct wpa_supplicant *wpa_s)
 
 	wpa_s->current_ssid = NULL;
 	wpa_s->assoc_freq = 0;
+	wpa_s->reassociated_connection = 0;
 #ifdef CONFIG_P2P
 	if (wpa_s->ap_iface->bss)
 		wpa_s->ap_iface->bss[0]->p2p_group = NULL;

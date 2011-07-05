@@ -220,6 +220,17 @@ struct eapol_ctx {
 	 * @authorized: Whether the supplicant port is now in authorized state
 	 */
 	void (*port_cb)(void *ctx, int authorized);
+
+	/**
+	 * cert_cb - Notification of a peer certificate
+	 * @ctx: Callback context (ctx)
+	 * @depth: Depth in certificate chain (0 = server)
+	 * @subject: Subject of the peer certificate
+	 * @cert_hash: SHA-256 hash of the certificate
+	 * @cert: Peer certificate
+	 */
+	void (*cert_cb)(void *ctx, int depth, const char *subject,
+			const char *cert_hash, const struct wpabuf *cert);
 };
 
 

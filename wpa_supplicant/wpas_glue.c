@@ -32,6 +32,7 @@
 #include "wps_supplicant.h"
 #include "bss.h"
 #include "scan.h"
+#include "notify.h"
 
 
 #ifndef CONFIG_NO_CONFIG_BLOBS
@@ -611,6 +612,16 @@ static void wpa_supplicant_port_cb(void *ctx, int authorized)
 		   authorized ? "Authorized" : "Unauthorized");
 	wpa_drv_set_supp_port(wpa_s, authorized);
 }
+
+
+static void wpa_supplicant_cert_cb(void *ctx, int depth, const char *subject,
+				   const char *cert_hash,
+				   const struct wpabuf *cert)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpas_notify_certification(wpa_s, depth, subject, cert_hash, cert);
+}
 #endif /* IEEE8021X_EAPOL */
 
 
@@ -641,6 +652,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->eap_param_needed = wpa_supplicant_eap_param_needed;
 	ctx->port_cb = wpa_supplicant_port_cb;
 	ctx->cb = wpa_supplicant_eapol_cb;
+	ctx->cert_cb = wpa_supplicant_cert_cb;
 	ctx->cb_ctx = wpa_s;
 	wpa_s->eapol = eapol_sm_init(ctx);
 	if (wpa_s->eapol == NULL) {

@@ -82,6 +82,10 @@ void wpa_supplicant_dbus_notify_state_change(struct wpa_supplicant *wpa_s,
 					     enum wpa_states old_state);
 void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 					 const struct wps_credential *cred);
+void wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
+					      int depth, const char *subject,
+					      const char *cert_hash,
+					      const struct wpabuf *cert);
 
 char * wpas_dbus_decompose_object_path(const char *path, char **network,
                                        char **bssid);
@@ -111,6 +115,14 @@ wpa_supplicant_dbus_notify_scanning(struct wpa_supplicant *wpa_s)
 static inline void
 wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 				    const struct wps_credential *cred)
+{
+}
+
+static inline void
+void wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
+					      int depth, const char *subject,
+					      const char *cert_hash,
+					      const struct wpabuf *cert)
 {
 }
 

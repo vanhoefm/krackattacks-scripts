@@ -201,6 +201,10 @@ void wpas_dbus_signal_p2p_peer_joined(struct wpa_supplicant *wpa_s,
 				const u8 *member);
 void wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 				     struct wps_event_fail *fail);
+void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
+				    int depth, const char *subject,
+				    const char *cert_hash,
+				    const struct wpabuf *cert);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -440,6 +444,14 @@ wpas_dbus_signal_p2p_peer_disconnected(struct wpa_supplicant *wpa_s,
 static inline void
 wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 				struct wps_event_fail *fail)
+{
+}
+
+static inline void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
+						  int depth,
+						  const char *subject,
+						  const char *cert_hash,
+						  const struct wpabuf *cert)
 {
 }
 

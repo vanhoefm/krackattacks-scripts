@@ -1825,6 +1825,15 @@ static void eapol_sm_eap_param_needed(void *ctx, const char *field,
 #define eapol_sm_eap_param_needed NULL
 #endif /* CONFIG_CTRL_IFACE || !CONFIG_NO_STDOUT_DEBUG */
 
+static void eapol_sm_notify_cert(void *ctx, int depth, const char *subject,
+				 const char *cert_hash,
+				 const struct wpabuf *cert)
+{
+	struct eapol_sm *sm = ctx;
+	if (sm->ctx->cert_cb)
+		sm->ctx->cert_cb(sm->ctx->ctx, depth, subject,
+				 cert_hash, cert);
+}
 
 static struct eapol_callbacks eapol_cb =
 {
@@ -1837,7 +1846,8 @@ static struct eapol_callbacks eapol_cb =
 	eapol_sm_set_config_blob,
 	eapol_sm_get_config_blob,
 	eapol_sm_notify_pending,
-	eapol_sm_eap_param_needed
+	eapol_sm_eap_param_needed,
+	eapol_sm_notify_cert
 };
 
 

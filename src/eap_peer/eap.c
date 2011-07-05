@@ -1209,6 +1209,13 @@ static void eap_peer_sm_tls_event(void *ctx, enum tls_event ev,
 				     data->peer_cert.subject,
 				     cert_hex);
 		}
+		if (sm->eapol_cb->notify_cert) {
+			sm->eapol_cb->notify_cert(sm->eapol_ctx,
+						  data->peer_cert.depth,
+						  data->peer_cert.subject,
+						  hash_hex,
+						  data->peer_cert.cert);
+		}
 		break;
 	}
 

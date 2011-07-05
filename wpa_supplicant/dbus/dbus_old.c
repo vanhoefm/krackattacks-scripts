@@ -549,6 +549,59 @@ void wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 }
 #endif /* CONFIG_WPS */
 
+void wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
+					      int depth, const char *subject,
+					      const char *cert_hash,
+					      const struct wpabuf *cert)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *_signal = NULL;
+	const char *hash;
+	const char *cert_hex;
+	int cert_hex_len;
+
+	/* Do nothing if the control interface is not turned on */
+	if (wpa_s->global == NULL)
+		return;
+	iface = wpa_s->global->dbus;
+	if (iface == NULL)
+		return;
+
+	_signal = dbus_message_new_signal(wpa_s->dbus_path,
+					  WPAS_DBUS_IFACE_INTERFACE,
+					  "Certification");
+	if (_signal == NULL) {
+		wpa_printf(MSG_ERROR,
+		           "dbus: wpa_supplicant_dbus_notify_certification: "
+		           "Could not create dbus signal; likely out of "
+		           "memory");
+		return;
+	}
+
+	hash = cert_hash ? cert_hash : "";
+	cert_hex = cert ? wpabuf_head(cert) : "";
+	cert_hex_len = cert ? wpabuf_len(cert) : 0;
+
+	if (!dbus_message_append_args(_signal,
+				      DBUS_TYPE_INT32,&depth,
+				      DBUS_TYPE_STRING, &subject,
+	                              DBUS_TYPE_STRING, &hash,
+	                              DBUS_TYPE_ARRAY, DBUS_TYPE_BYTE,
+				      &cert_hex, cert_hex_len,
+	                              DBUS_TYPE_INVALID)) {
+		wpa_printf(MSG_ERROR,
+		           "dbus: wpa_supplicant_dbus_notify_certification: "
+		           "Not enough memory to construct signal");
+		goto out;
+	}
+
+	dbus_connection_send(iface->con, _signal, NULL);
+
+out:
+	dbus_message_unref(_signal);
+
+}
+
 
 /**
  * wpa_supplicant_dbus_ctrl_iface_init - Initialize dbus control interface

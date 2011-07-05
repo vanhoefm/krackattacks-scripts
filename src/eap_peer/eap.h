@@ -221,6 +221,17 @@ struct eapol_callbacks {
 	 */
 	void (*eap_param_needed)(void *ctx, const char *field,
 				 const char *txt);
+
+	/**
+	 * notify_cert - Notification of a peer certificate
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * @depth: Depth in certificate chain (0 = server)
+	 * @subject: Subject of the peer certificate
+	 * @cert_hash: SHA-256 hash of the certificate
+	 * @cert: Peer certificate
+	 */
+	void (*notify_cert)(void *ctx, int depth, const char *subject,
+			    const char *cert_hash, const struct wpabuf *cert);
 };
 
 /**

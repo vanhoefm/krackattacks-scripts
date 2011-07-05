@@ -555,3 +555,15 @@ void wpas_notify_sta_authorized(struct wpa_supplicant *wpa_s,
 	else
 		wpas_notify_ap_sta_deauthorized(wpa_s, mac_addr);
 }
+
+
+void wpas_notify_certification(struct wpa_supplicant *wpa_s, int depth,
+			       const char *subject, const char *cert_hash,
+			       const struct wpabuf *cert)
+{
+	/* notify the old DBus API */
+	wpa_supplicant_dbus_notify_certification(wpa_s, depth, subject,
+						 cert_hash, cert);
+	/* notify the new DBus API */
+	wpas_dbus_signal_certification(wpa_s, depth, subject, cert_hash, cert);
+}

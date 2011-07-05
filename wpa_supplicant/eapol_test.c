@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - test code
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,6 +29,7 @@
 #include "wpa_supplicant_i.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
+#include "common/wpa_ctrl.h"
 #include "ctrl_iface.h"
 #include "pcsc_funcs.h"
 
@@ -383,6 +384,35 @@ static void eapol_sm_cb(struct eapol_sm *eapol, int success, void *ctx)
 }
 
 
+static void eapol_test_cert_cb(void *ctx, int depth, const char *subject,
+			       const char *cert_hash,
+			       const struct wpabuf *cert)
+{
+	struct eapol_test_data *e = ctx;
+
+	wpa_msg(e->wpa_s, MSG_INFO, WPA_EVENT_EAP_PEER_CERT
+		"depth=%d subject='%s'%s%s",
+		depth, subject,
+		cert_hash ? " hash=" : "",
+		cert_hash ? cert_hash : "");
+
+	if (cert) {
+		char *cert_hex;
+		size_t len = wpabuf_len(cert) * 2 + 1;
+		cert_hex = os_malloc(len);
+		if (cert_hex) {
+			wpa_snprintf_hex(cert_hex, len, wpabuf_head(cert),
+					 wpabuf_len(cert));
+			wpa_msg_ctrl(e->wpa_s, MSG_INFO,
+				     WPA_EVENT_EAP_PEER_CERT
+				     "depth=%d subject='%s' cert=%s",
+				     depth, subject, cert_hex);
+			os_free(cert_hex);
+		}
+	}
+}
+
+
 static int test_eapol(struct eapol_test_data *e, struct wpa_supplicant *wpa_s,
 		      struct wpa_ssid *ssid)
 {
@@ -408,6 +438,7 @@ static int test_eapol(struct eapol_test_data *e, struct wpa_supplicant *wpa_s,
 	ctx->opensc_engine_path = wpa_s->conf->opensc_engine_path;
 	ctx->pkcs11_engine_path = wpa_s->conf->pkcs11_engine_path;
 	ctx->pkcs11_module_path = wpa_s->conf->pkcs11_module_path;
+	ctx->cert_cb = eapol_test_cert_cb;
 
 	wpa_s->eapol = eapol_sm_init(ctx);
 	if (wpa_s->eapol == NULL) {

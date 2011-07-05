@@ -561,6 +561,27 @@ void wpas_notify_certification(struct wpa_supplicant *wpa_s, int depth,
 			       const char *subject, const char *cert_hash,
 			       const struct wpabuf *cert)
 {
+	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_EAP_PEER_CERT
+		"depth=%d subject='%s'%s%s",
+		depth, subject,
+		cert_hash ? " hash=" : "",
+		cert_hash ? cert_hash : "");
+
+	if (cert) {
+		char *cert_hex;
+		size_t len = wpabuf_len(cert) * 2 + 1;
+		cert_hex = os_malloc(len);
+		if (cert_hex) {
+			wpa_snprintf_hex(cert_hex, len, wpabuf_head(cert),
+					 wpabuf_len(cert));
+			wpa_msg_ctrl(wpa_s, MSG_INFO,
+				     WPA_EVENT_EAP_PEER_CERT
+				     "depth=%d subject='%s' cert=%s",
+				     depth, subject, cert_hex);
+			os_free(cert_hex);
+		}
+	}
+
 	/* notify the old DBus API */
 	wpa_supplicant_dbus_notify_certification(wpa_s, depth, subject,
 						 cert_hash, cert);

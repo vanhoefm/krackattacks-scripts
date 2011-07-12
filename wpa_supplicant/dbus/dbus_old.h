@@ -119,7 +119,7 @@ wpa_supplicant_dbus_notify_wps_cred(struct wpa_supplicant *wpa_s,
 }
 
 static inline void
-void wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
+wpa_supplicant_dbus_notify_certification(struct wpa_supplicant *wpa_s,
 					      int depth, const char *subject,
 					      const char *cert_hash,
 					      const struct wpabuf *cert)

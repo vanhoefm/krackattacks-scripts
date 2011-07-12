@@ -244,6 +244,14 @@ static inline int wpa_sm_mark_authenticated(struct wpa_sm *sm,
 	return -1;
 }
 
+static inline void wpa_sm_set_rekey_offload(struct wpa_sm *sm)
+{
+	if (!sm->ctx->set_rekey_offload)
+		return;
+	sm->ctx->set_rekey_offload(sm->ctx->ctx, sm->ptk.kek,
+				   sm->ptk.kck, sm->rx_replay_counter);
+}
+
 #ifdef CONFIG_TDLS
 static inline int wpa_sm_send_tdls_mgmt(struct wpa_sm *sm, const u8 *dst,
 					u8 action_code, u8 dialog_token,

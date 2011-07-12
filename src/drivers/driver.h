@@ -2254,6 +2254,20 @@ struct wpa_driver_ops {
 	 * implementation, there is no need to implement this function.
 	 */
 	int (*set_authmode)(void *priv, int authmode);
+
+	/**
+	 * set_rekey_info - Set rekey information
+	 * @priv: Private driver interface data
+	 * @kek: Current KEK
+	 * @kck: Current KCK
+	 * @replay_ctr: Current EAPOL-Key Replay Counter
+	 *
+	 * This optional function can be used to provide information for the
+	 * driver/firmware to process EAPOL-Key frames in Group Key Handshake
+	 * while the host (including wpa_supplicant) is sleeping.
+	 */
+	void (*set_rekey_info)(void *priv, const u8 *kek, const u8 *kck,
+			       const u8 *replay_ctr);
 };
 
 
@@ -2656,7 +2670,17 @@ enum wpa_event_type {
 	/**
 	 * EVENT_IBSS_PEER_LOST - IBSS peer not reachable anymore
 	 */
-	EVENT_IBSS_PEER_LOST
+	EVENT_IBSS_PEER_LOST,
+
+	/**
+	 * EVENT_DRIVER_GTK_REKEY - Device/driver did GTK rekey
+	 *
+	 * This event carries the new replay counter to notify wpa_supplicant
+	 * of the current EAPOL-Key Replay Counter in case the driver/firmware
+	 * completed Group Key Handshake while the host (including
+	 * wpa_supplicant was sleeping).
+	 */
+	EVENT_DRIVER_GTK_REKEY
 };
 
 
@@ -3188,6 +3212,14 @@ union wpa_event_data {
 	struct ibss_peer_lost {
 		u8 peer[ETH_ALEN];
 	} ibss_peer_lost;
+
+	/**
+	 * struct driver_gtk_rekey - Data for EVENT_DRIVER_GTK_REKEY
+	 */
+	struct driver_gtk_rekey {
+		const u8 *bssid;
+		const u8 *replay_ctr;
+	} driver_gtk_rekey;
 };
 
 /**

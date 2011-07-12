@@ -667,6 +667,16 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 }
 
 
+static void wpa_supplicant_set_rekey_offload(void *ctx, const u8 *kek,
+					     const u8 *kck,
+					     const u8 *replay_ctr)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpa_drv_set_rekey_info(wpa_s, kek, kck, replay_ctr);
+}
+
+
 int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 {
 #ifndef CONFIG_NO_WPA
@@ -706,6 +716,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->send_tdls_mgmt = wpa_supplicant_send_tdls_mgmt;
 	ctx->tdls_oper = wpa_supplicant_tdls_oper;
 #endif /* CONFIG_TDLS */
+	ctx->set_rekey_offload = wpa_supplicant_set_rekey_offload;
 
 	wpa_s->wpa = wpa_sm_init(ctx);
 	if (wpa_s->wpa == NULL) {

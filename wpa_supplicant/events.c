@@ -2214,6 +2214,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		ibss_rsn_stop(wpa_s->ibss_rsn, data->ibss_peer_lost.peer);
 #endif /* CONFIG_IBSS_RSN */
 		break;
+	case EVENT_DRIVER_GTK_REKEY:
+		if (os_memcmp(data->driver_gtk_rekey.bssid,
+			      wpa_s->bssid, ETH_ALEN))
+			break;
+		if (!wpa_s->wpa)
+			break;
+		wpa_sm_update_replay_ctr(wpa_s->wpa,
+					 data->driver_gtk_rekey.replay_ctr);
+		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);
 		break;

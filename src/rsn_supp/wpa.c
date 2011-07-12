@@ -1174,6 +1174,8 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 		goto failed;
 	}
 
+	wpa_sm_set_rekey_offload(sm);
+
 	return;
 
 failed:
@@ -1392,6 +1394,8 @@ static void wpa_supplicant_process_1_of_2(struct wpa_sm *sm,
 			MAC2STR(sm->bssid), wpa_cipher_txt(sm->group_cipher));
 		wpa_sm_cancel_auth_timeout(sm);
 		wpa_sm_set_state(sm, WPA_COMPLETED);
+
+		wpa_sm_set_rekey_offload(sm);
 	} else {
 		wpa_supplicant_key_neg_complete(sm, sm->bssid,
 						key_info &
@@ -2643,4 +2647,10 @@ int wpa_sm_has_ptk(struct wpa_sm *sm)
 	if (sm == NULL)
 		return 0;
 	return sm->ptk_set;
+}
+
+
+void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr)
+{
+	os_memcpy(sm->rx_replay_counter, replay_ctr, WPA_REPLAY_COUNTER_LEN);
 }

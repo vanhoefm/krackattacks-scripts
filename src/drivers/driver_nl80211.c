@@ -1376,6 +1376,48 @@ static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_rekey_offload_event(struct wpa_driver_nl80211_data *drv,
+					struct nlattr **tb)
+{
+	struct nlattr *rekey_info[NUM_NL80211_REKEY_DATA];
+	static struct nla_policy rekey_policy[NUM_NL80211_REKEY_DATA] = {
+		[NL80211_REKEY_DATA_KEK] = {
+			.minlen = NL80211_KEK_LEN,
+			.maxlen = NL80211_KEK_LEN,
+		},
+		[NL80211_REKEY_DATA_KCK] = {
+			.minlen = NL80211_KCK_LEN,
+			.maxlen = NL80211_KCK_LEN,
+		},
+		[NL80211_REKEY_DATA_REPLAY_CTR] = {
+			.minlen = NL80211_REPLAY_CTR_LEN,
+			.maxlen = NL80211_REPLAY_CTR_LEN,
+		},
+	};
+	union wpa_event_data data;
+
+	if (!tb[NL80211_ATTR_MAC])
+		return;
+	if (!tb[NL80211_ATTR_REKEY_DATA])
+		return;
+	if (nla_parse_nested(rekey_info, MAX_NL80211_REKEY_DATA,
+			     tb[NL80211_ATTR_REKEY_DATA], rekey_policy))
+		return;
+	if (!rekey_info[NL80211_REKEY_DATA_REPLAY_CTR])
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	data.driver_gtk_rekey.bssid = nla_data(tb[NL80211_ATTR_MAC]);
+	wpa_printf(MSG_DEBUG, "nl80211: Rekey offload event for BSSID " MACSTR,
+		   MAC2STR(data.driver_gtk_rekey.bssid));
+	data.driver_gtk_rekey.replay_ctr =
+		nla_data(rekey_info[NL80211_REKEY_DATA_REPLAY_CTR]);
+	wpa_hexdump(MSG_DEBUG, "nl80211: Rekey offload - Replay Counter",
+		    data.driver_gtk_rekey.replay_ctr, NL80211_REPLAY_CTR_LEN);
+	wpa_supplicant_event(drv->ctx, EVENT_DRIVER_GTK_REKEY, &data);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -1493,6 +1535,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 		break;
 	case NL80211_CMD_DEL_STATION:
 		nl80211_del_station_event(drv, tb);
+		break;
+	case NL80211_CMD_SET_REKEY_OFFLOAD:
+		nl80211_rekey_offload_event(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
@@ -6645,6 +6690,41 @@ static int nl80211_flush_pmkid(void *priv)
 }
 
 
+static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
+				   const u8 *replay_ctr)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nlattr *replay_nested;
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_REKEY_OFFLOAD, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+
+	replay_nested = nla_nest_start(msg, NL80211_ATTR_REKEY_DATA);
+	if (!replay_nested)
+		goto nla_put_failure;
+
+	NLA_PUT(msg, NL80211_REKEY_DATA_KEK, NL80211_KEK_LEN, kek);
+	NLA_PUT(msg, NL80211_REKEY_DATA_KCK, NL80211_KCK_LEN, kck);
+	NLA_PUT(msg, NL80211_REKEY_DATA_REPLAY_CTR, NL80211_REPLAY_CTR_LEN,
+		replay_ctr);
+
+	nla_nest_end(msg, replay_nested);
+
+	send_and_recv_msgs(drv, msg, NULL, NULL);
+	return;
+ nla_put_failure:
+	nlmsg_free(msg);
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -6717,4 +6797,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.add_pmkid = nl80211_add_pmkid,
 	.remove_pmkid = nl80211_remove_pmkid,
 	.flush_pmkid = nl80211_flush_pmkid,
+	.set_rekey_info = nl80211_set_rekey_info,
 };

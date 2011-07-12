@@ -704,4 +704,13 @@ static inline int wpa_drv_tdls_oper(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->tdls_oper(wpa_s->drv_priv, oper, peer);
 }
 
+static inline void wpa_drv_set_rekey_info(struct wpa_supplicant *wpa_s,
+					  const u8 *kek, const u8 *kck,
+					  const u8 *replay_ctr)
+{
+	if (!wpa_s->driver->set_rekey_info)
+		return;
+	wpa_s->driver->set_rekey_info(wpa_s->drv_priv, kek, kck, replay_ctr);
+}
+
 #endif /* DRIVER_I_H */

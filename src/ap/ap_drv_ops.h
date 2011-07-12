@@ -36,7 +36,8 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 		    const u8 *addr, u16 aid, u16 capability,
 		    const u8 *supp_rates, size_t supp_rates_len,
 		    u16 listen_interval,
-		    const struct ieee80211_ht_capabilities *ht_capab);
+		    const struct ieee80211_ht_capabilities *ht_capab,
+		    u32 flags);
 int hostapd_set_privacy(struct hostapd_data *hapd, int enabled);
 int hostapd_set_generic_elem(struct hostapd_data *hapd, const u8 *elem,
 			     size_t elem_len);

@@ -1705,7 +1705,8 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 	if (hostapd_sta_add(hapd, sta->addr, sta->aid, sta->capability,
 			    sta->supported_rates, sta->supported_rates_len,
 			    sta->listen_interval,
-			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL)) {
+			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
+			    sta->flags)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
 			       "Could not add STA to kernel driver");

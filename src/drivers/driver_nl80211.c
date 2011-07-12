@@ -3802,12 +3802,30 @@ nla_put_failure:
 }
 
 
+static u32 sta_flags_nl80211(int flags)
+{
+	u32 f = 0;
+
+	if (flags & WPA_STA_AUTHORIZED)
+		f |= BIT(NL80211_STA_FLAG_AUTHORIZED);
+	if (flags & WPA_STA_WMM)
+		f |= BIT(NL80211_STA_FLAG_WME);
+	if (flags & WPA_STA_SHORT_PREAMBLE)
+		f |= BIT(NL80211_STA_FLAG_SHORT_PREAMBLE);
+	if (flags & WPA_STA_MFP)
+		f |= BIT(NL80211_STA_FLAG_MFP);
+
+	return f;
+}
+
+
 static int wpa_driver_nl80211_sta_add(void *priv,
 				      struct hostapd_sta_add_params *params)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
+	struct nl80211_sta_flag_update upd;
 	int ret = -ENOBUFS;
 
 	msg = nlmsg_alloc();
@@ -3829,6 +3847,11 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			sizeof(*params->ht_capabilities),
 			params->ht_capabilities);
 	}
+
+	os_memset(&upd, 0, sizeof(upd));
+	upd.mask = sta_flags_nl80211(params->flags);
+	upd.set = upd.mask;
+	NLA_PUT(msg, NL80211_ATTR_STA_FLAGS2, sizeof(upd), &upd);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret)
@@ -4414,23 +4437,6 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	os_free(hdr);
 
 	return res;
-}
-
-
-static u32 sta_flags_nl80211(int flags)
-{
-	u32 f = 0;
-
-	if (flags & WPA_STA_AUTHORIZED)
-		f |= BIT(NL80211_STA_FLAG_AUTHORIZED);
-	if (flags & WPA_STA_WMM)
-		f |= BIT(NL80211_STA_FLAG_WME);
-	if (flags & WPA_STA_SHORT_PREAMBLE)
-		f |= BIT(NL80211_STA_FLAG_SHORT_PREAMBLE);
-	if (flags & WPA_STA_MFP)
-		f |= BIT(NL80211_STA_FLAG_MFP);
-
-	return f;
 }
 
 

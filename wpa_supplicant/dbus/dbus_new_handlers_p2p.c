@@ -126,12 +126,13 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 	}
 
 	wpas_p2p_find(wpa_s, timeout, type, num_req_dev_types, req_dev_types);
+	os_free(req_dev_types);
 	return reply;
 
 error_clear:
-	os_free(req_dev_types);
 	wpa_dbus_dict_entry_clear(&entry);
 error:
+	os_free(req_dev_types);
 	reply = wpas_dbus_error_invalid_args(message, entry.key);
 	return reply;
 }

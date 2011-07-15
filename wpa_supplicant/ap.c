@@ -134,6 +134,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		}
 		conf->supported_rates = list;
 	}
+
+	bss->isolate = !wpa_s->conf->p2p_intra_bss;
 #endif /* CONFIG_P2P */
 
 	if (ssid->ssid_len == 0) {

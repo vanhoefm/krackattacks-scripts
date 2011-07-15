@@ -3008,9 +3008,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	/* Prepare to add a new interface for the group */
 	iftype = WPA_IF_P2P_GROUP;
-	if (join)
-		iftype = WPA_IF_P2P_CLIENT;
-	else if (go_intent == 15)
+	if (go_intent == 15)
 		iftype = WPA_IF_P2P_GO;
 	if (wpas_p2p_add_group_interface(wpa_s, iftype) < 0) {
 		wpa_printf(MSG_ERROR, "P2P: Failed to allocate a new "

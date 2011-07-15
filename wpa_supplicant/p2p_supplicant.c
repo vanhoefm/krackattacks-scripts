@@ -557,7 +557,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 	if (persistent)
 		network_id = wpas_p2p_store_persistent_group(wpa_s->parent,
 							     ssid, go_dev_addr);
-	if (network_id < 0)
+	if (network_id < 0 && ssid)
 		network_id = ssid->id;
 	if (!client)
 		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);

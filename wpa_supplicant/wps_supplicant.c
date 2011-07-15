@@ -127,6 +127,8 @@ static void wpas_wps_security_workaround(struct wpa_supplicant *wpa_s,
 	if (wpa_drv_get_capa(wpa_s, &capa))
 		return; /* Unknown what driver supports */
 
+	if (ssid->ssid == NULL)
+		return;
 	bss = wpa_bss_get(wpa_s, cred->mac_addr, ssid->ssid, ssid->ssid_len);
 	if (bss == NULL) {
 		wpa_printf(MSG_DEBUG, "WPS: The AP was not found from BSS "

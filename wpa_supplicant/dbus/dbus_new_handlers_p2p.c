@@ -1577,14 +1577,14 @@ DBusMessage *wpas_dbus_getter_p2p_group_members(DBusMessage * message,
 
 	/* Ensure we are a GO */
 	if (wpa_s->wpa_state != WPA_COMPLETED)
-		goto out;
+		return NULL;
 
 	ssid = wpa_s->conf->ssid;
 	/* At present WPAS P2P_GO mode only applicable for p2p_go */
 	if (ssid->mode != WPAS_MODE_P2P_GO &&
 	    ssid->mode != WPAS_MODE_AP &&
 	    ssid->mode != WPAS_MODE_P2P_GROUP_FORMATION)
-		goto out;
+		return NULL;
 
 	num_members = p2p_get_group_num_members(wpa_s->p2p_group);
 
@@ -1608,15 +1608,19 @@ DBusMessage *wpas_dbus_getter_p2p_group_members(DBusMessage * message,
 						       DBUS_TYPE_OBJECT_PATH,
 						       paths, num_members);
 
-out_free:
 	for (i = 0; i < num_members; i++)
 		os_free(paths[i]);
 	os_free(paths);
-out:
 	return reply;
+
 out_of_memory:
 	reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
-	goto out_free;
+	if (paths) {
+		for (i = 0; i < num_members; i++)
+			os_free(paths[i]);
+		os_free(paths);
+	}
+	return reply;
 }
 
 

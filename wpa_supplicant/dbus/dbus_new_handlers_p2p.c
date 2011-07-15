@@ -484,25 +484,24 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	} else {
 		switch (new_pin) {
 		case -2:
-			err_msg = "connect failed due to"
-					" channel unavailability.";
+			err_msg = "connect failed due to channel "
+				"unavailability.";
 			iface = WPAS_DBUS_ERROR_CONNECT_CHANNEL_UNAVAILABLE;
 			break;
 
 		case -3:
-			err_msg = "connect failed due to"
-					" unsupported channel.";
+			err_msg = "connect failed due to unsupported channel.";
 			iface = WPAS_DBUS_ERROR_CONNECT_CHANNEL_UNSUPPORTED;
 			break;
 
 		default:
-			err_msg = "connect failed due to"
-					" unspecified error.";
+			err_msg = "connect failed due to unspecified error.";
 			iface = WPAS_DBUS_ERROR_CONNECT_UNSPECIFIED_ERROR;
 			break;
 		}
+
 		/*
-		 * TODO::
+		 * TODO:
 		 * Do we need specialized errors corresponding to above
 		 * error conditions as against just returning a different
 		 * error message?

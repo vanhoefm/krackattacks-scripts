@@ -85,6 +85,7 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 	u8 *req_dev_types = NULL;
 
 	dbus_message_iter_init(message, &iter);
+	entry.key = NULL;
 
 	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
 		goto error;
@@ -192,6 +193,7 @@ DBusMessage * wpas_dbus_handler_p2p_extendedlisten(
 	DBusMessageIter iter_dict;
 
 	dbus_message_iter_init(message, &iter);
+	entry.key = NULL;
 
 	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
 		goto error;
@@ -233,6 +235,7 @@ DBusMessage * wpas_dbus_handler_p2p_presence_request(
 	DBusMessageIter iter_dict;
 
 	dbus_message_iter_init(message, &iter);
+	entry.key = NULL;
 
 	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
 		goto error;

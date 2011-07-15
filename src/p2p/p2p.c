@@ -1651,7 +1651,7 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
 	struct ieee802_11_elems elems;
 	struct wpabuf *buf;
 	struct ieee80211_mgmt *resp;
-	struct wpabuf *wps;
+	struct p2p_message msg;
 	struct wpabuf *ies;
 
 	if (!p2p->in_listen || !p2p->drv_in_listen) {
@@ -1689,14 +1689,27 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
 		return;
 	}
 
-	/* Check Requested Device Type match */
-	wps = ieee802_11_vendor_ie_concat(ie, ie_len, WPS_DEV_OUI_WFA);
-	if (wps && !p2p_match_dev_type(p2p, wps)) {
-		wpabuf_free(wps);
-		/* No match with Requested Device Type */
+	os_memset(&msg, 0, sizeof(msg));
+	if (p2p_parse_ies(ie, ie_len, &msg) < 0) {
+		/* Could not parse P2P attributes */
 		return;
 	}
-	wpabuf_free(wps);
+
+	if (msg.device_id &&
+	    os_memcmp(msg.device_id, p2p->cfg->dev_addr, ETH_ALEN != 0)) {
+		/* Device ID did not match */
+		p2p_parse_free(&msg);
+		return;
+	}
+
+	/* Check Requested Device Type match */
+	if (msg.wps_attributes &&
+	    !p2p_match_dev_type(p2p, msg.wps_attributes)) {
+		/* No match with Requested Device Type */
+		p2p_parse_free(&msg);
+		return;
+	}
+	p2p_parse_free(&msg);
 
 	if (!p2p->cfg->send_probe_resp)
 		return; /* Response generated elsewhere */

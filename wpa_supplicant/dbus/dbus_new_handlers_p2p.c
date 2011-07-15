@@ -463,10 +463,8 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 
 	if (!peer_object_path || (wps_method == WPS_NOT_READY) ||
 	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
-	    (p2p_get_peer_info(wpa_s->global->p2p, addr, 0, NULL, 0) < 0)) {
-		reply = wpas_dbus_error_invalid_args(message, NULL);
+	    (p2p_get_peer_info(wpa_s->global->p2p, addr, 0, NULL, 0) < 0))
 		goto inv_args;
-	}
 
 	/*
 	 * Validate the wps_method specified and the pin value.

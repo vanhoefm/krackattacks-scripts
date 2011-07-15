@@ -78,7 +78,6 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 	DBusMessageIter iter;
 	DBusMessageIter iter_dict;
 	unsigned int timeout = 0;
-	unsigned int searchonly = 0;
 	enum p2p_discovery_type type = P2P_FIND_ONLY_SOCIAL;
 	int num_req_dev_types = 0;
 	unsigned int i;
@@ -97,9 +96,6 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 		if (!os_strcmp(entry.key, "Timeout") &&
 		    (entry.type == DBUS_TYPE_INT32)) {
 			timeout = entry.uint32_value;
-		} else if (!os_strcmp(entry.key, "SearchOnly") &&
-			   (entry.type == DBUS_TYPE_BOOLEAN)) {
-			searchonly = (entry.bool_value == TRUE) ? 1 : 0;
 		} else if (os_strcmp(entry.key, "RequestedDeviceTypes") == 0) {
 			if ((entry.type != DBUS_TYPE_ARRAY) ||
 			    (entry.array_type != WPAS_DBUS_TYPE_BINARRAY))

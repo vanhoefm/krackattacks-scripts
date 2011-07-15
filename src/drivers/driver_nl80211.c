@@ -6005,8 +6005,8 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 				nl80211_remove_iface(drv, ifidx);
 				return -1;
 			}
-			os_memcpy(if_addr, new_addr, ETH_ALEN);
 		}
+		os_memcpy(if_addr, new_addr, ETH_ALEN);
 	}
 #endif /* CONFIG_P2P */
 

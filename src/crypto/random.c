@@ -358,7 +358,8 @@ static void random_write_entropy(void)
 	if (!random_entropy_file)
 		return;
 
-	random_get_bytes(buf, RANDOM_ENTROPY_SIZE);
+	if (random_get_bytes(buf, RANDOM_ENTROPY_SIZE) < 0)
+		return;
 
 	f = fopen(random_entropy_file, "wb");
 	if (f == NULL) {

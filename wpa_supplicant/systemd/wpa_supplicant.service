@@ -1,0 +1,11 @@
+[Unit]
+Description=WPA supplicant
+
+[Service]
+Type=dbus
+BusName=fi.epitest.hostap.WPASupplicant
+ExecStart=/sbin/wpa_supplicant -u
+
+[Install]
+WantedBy=network.target
+Alias=dbus-fi.epitest.hostap.WPASupplicant.service

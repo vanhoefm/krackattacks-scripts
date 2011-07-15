@@ -41,7 +41,8 @@ static int hostapd_wps_upnp_init(struct hostapd_data *hapd,
 static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd);
 #endif /* CONFIG_WPS_UPNP */
 
-static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
+static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr, const u8 *da,
+				    const u8 *bssid,
 				    const u8 *ie, size_t ie_len);
 static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 
@@ -1076,7 +1077,8 @@ error:
 #endif /* CONFIG_WPS_OOB */
 
 
-static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr,
+static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr, const u8 *da,
+				    const u8 *bssid,
 				    const u8 *ie, size_t ie_len)
 {
 	struct hostapd_data *hapd = ctx;

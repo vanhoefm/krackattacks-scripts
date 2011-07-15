@@ -3650,6 +3650,7 @@ int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 
 
 int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
+			  const u8 *dst, const u8 *bssid,
 			  const u8 *ie, size_t ie_len)
 {
 	if (wpa_s->global->p2p_disabled)
@@ -3657,7 +3658,8 @@ int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
 	if (wpa_s->global->p2p == NULL)
 		return 0;
 
-	return p2p_probe_req_rx(wpa_s->global->p2p, addr, ie, ie_len);
+	return p2p_probe_req_rx(wpa_s->global->p2p, addr, dst, bssid,
+				ie, ie_len);
 }
 
 

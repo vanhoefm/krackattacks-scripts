@@ -217,7 +217,8 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
-					    mgmt->sa, ie, ie_len) > 0)
+					    mgmt->sa, mgmt->da, mgmt->bssid,
+					    ie, ie_len) > 0)
 			return;
 
 	if (!hapd->iconf->send_probe_response)

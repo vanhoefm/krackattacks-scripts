@@ -561,7 +561,7 @@ static void test_driver_scan(struct wpa_driver_test_data *drv,
 		wpa_supplicant_event(drv->ctx, EVENT_RX_PROBE_REQ, &event);
 #ifdef CONFIG_P2P
 		if (drv->p2p)
-			p2p_probe_req_rx(drv->p2p, sa, ie, ielen);
+			p2p_probe_req_rx(drv->p2p, sa, NULL, NULL, ie, ielen);
 #endif /* CONFIG_P2P */
 	}
 
@@ -1966,6 +1966,8 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_PROBE_REQ) {
 			os_memset(&event, 0, sizeof(event));
 			event.rx_probe_req.sa = mgmt->sa;
+			event.rx_probe_req.da = mgmt->da;
+			event.rx_probe_req.bssid = mgmt->bssid;
 			event.rx_probe_req.ie = mgmt->u.probe_req.variable;
 			event.rx_probe_req.ie_len =
 				data_len - (mgmt->u.probe_req.variable - data);
@@ -1974,6 +1976,7 @@ static void wpa_driver_test_mlme(struct wpa_driver_test_data *drv,
 #ifdef CONFIG_P2P
 			if (drv->p2p)
 				p2p_probe_req_rx(drv->p2p, mgmt->sa,
+						 mgmt->da, mgmt->bssid,
 						 event.rx_probe_req.ie,
 						 event.rx_probe_req.ie_len);
 #endif /* CONFIG_P2P */
@@ -2028,7 +2031,7 @@ static void wpa_driver_test_scan_cmd(struct wpa_driver_test_data *drv,
 			ielen = 0;
 		drv->probe_from = from;
 		drv->probe_from_len = fromlen;
-		p2p_probe_req_rx(drv->p2p, sa, ie, ielen);
+		p2p_probe_req_rx(drv->p2p, sa, NULL, NULL, ie, ielen);
 		drv->probe_from = NULL;
 	}
 #endif /* CONFIG_P2P */

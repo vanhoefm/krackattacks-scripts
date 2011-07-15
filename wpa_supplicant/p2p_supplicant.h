@@ -58,6 +58,7 @@ int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout);
 int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 			  u8 *buf, size_t len, int p2p_group);
 int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
+			  const u8 *dst, const u8 *bssid,
 			  const u8 *ie, size_t ie_len);
 void wpas_p2p_rx_action(struct wpa_supplicant *wpa_s, const u8 *da,
 			const u8 *sa, const u8 *bssid,

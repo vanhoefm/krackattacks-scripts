@@ -1644,7 +1644,8 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 }
 
 
-static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *ie,
+static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
+			    const u8 *dst, const u8 *bssid, const u8 *ie,
 			    size_t ie_len)
 {
 	struct ieee802_11_elems elems;
@@ -1666,6 +1667,18 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *ie,
 
 	if (elems.p2p == NULL) {
 		/* not a P2P probe - ignore it */
+		return;
+	}
+
+	if (dst && !is_broadcast_ether_addr(dst) &&
+	    os_memcmp(dst, p2p->cfg->dev_addr, ETH_ALEN) != 0) {
+		/* Not sent to the broadcast address or our P2P Device Address
+		 */
+		return;
+	}
+
+	if (bssid && !is_broadcast_ether_addr(bssid)) {
+		/* Not sent to the Wildcard BSSID */
 		return;
 	}
 
@@ -1750,12 +1763,12 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *ie,
 }
 
 
-int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *ie,
-		     size_t ie_len)
+int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
+		     const u8 *bssid, const u8 *ie, size_t ie_len)
 {
 	p2p_add_dev_from_probe_req(p2p, addr, ie, ie_len);
 
-	p2p_reply_probe(p2p, addr, ie, ie_len);
+	p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len);
 
 	if ((p2p->state == P2P_CONNECT || p2p->state == P2P_CONNECT_LISTEN) &&
 	    p2p->go_neg_peer &&

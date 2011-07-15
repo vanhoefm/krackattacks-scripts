@@ -303,12 +303,12 @@ static int ap_vendor_action_rx(void *ctx, const u8 *buf, size_t len, int freq)
 }
 
 
-static int ap_probe_req_rx(void *ctx, const u8 *addr, const u8 *ie,
-			   size_t ie_len)
+static int ap_probe_req_rx(void *ctx, const u8 *sa, const u8 *da,
+			   const u8 *bssid, const u8 *ie, size_t ie_len)
 {
 #ifdef CONFIG_P2P
 	struct wpa_supplicant *wpa_s = ctx;
-	return wpas_p2p_probe_req_rx(wpa_s, addr, ie, ie_len);
+	return wpas_p2p_probe_req_rx(wpa_s, sa, da, bssid, ie, ie_len);
 #else /* CONFIG_P2P */
 	return 0;
 #endif /* CONFIG_P2P */

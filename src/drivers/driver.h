@@ -3081,6 +3081,18 @@ union wpa_event_data {
 		const u8 *sa;
 
 		/**
+		 * da - Destination address of the received Probe Request frame
+		 *	or %NULL if not available
+		 */
+		const u8 *da;
+
+		/**
+		 * bssid - BSSID of the received Probe Request frame or %NULL
+		 *	if not available
+		 */
+		const u8 *bssid;
+
+		/**
 		 * ie - IEs from the Probe Request body
 		 */
 		const u8 *ie;

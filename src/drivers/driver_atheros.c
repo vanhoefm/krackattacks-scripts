@@ -748,6 +748,8 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 
 	os_memset(&event, 0, sizeof(event));
 	event.rx_probe_req.sa = mgmt->sa;
+	event.rx_probe_req.da = mgmt->da;
+	event.rx_probe_req.bssid = mgmt->bssid;
 	event.rx_probe_req.ie = mgmt->u.probe_req.variable;
 	event.rx_probe_req.ie_len =
 		len - (IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req));

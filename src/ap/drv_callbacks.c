@@ -250,8 +250,8 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 }
 
 
-int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
-			 const u8 *ie, size_t ie_len)
+int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa, const u8 *da,
+			 const u8 *bssid, const u8 *ie, size_t ie_len)
 {
 	size_t i;
 	int ret = 0;
@@ -262,7 +262,7 @@ int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa,
 	random_add_randomness(sa, ETH_ALEN);
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++) {
 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
-					    sa, ie, ie_len) > 0) {
+					    sa, da, bssid, ie, ie_len) > 0) {
 			ret = 1;
 			break;
 		}
@@ -540,6 +540,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		    data->rx_probe_req.ie == NULL)
 			break;
 		hostapd_probe_req_rx(hapd, data->rx_probe_req.sa,
+				     data->rx_probe_req.da,
+				     data->rx_probe_req.bssid,
 				     data->rx_probe_req.ie,
 				     data->rx_probe_req.ie_len);
 		break;

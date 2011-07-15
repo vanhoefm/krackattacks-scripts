@@ -7,7 +7,7 @@ After=sys-subsystem-net-devices-%i.device
 
 [Service]
 Type=simple
-ExecStart=/sbin/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-wired-%I.conf -Dwired -i%I
+ExecStart=@BINDIR@/wpa_supplicant -c/etc/wpa_supplicant/wpa_supplicant-wired-%I.conf -Dwired -i%I
 
 [Install]
 Alias=network.target.wants/wpa_supplicant-wired@wlan0.service

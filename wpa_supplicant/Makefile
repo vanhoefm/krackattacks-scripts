@@ -21,6 +21,14 @@ ifndef CONFIG_NO_WPA_PASSPHRASE
 ALL += wpa_passphrase
 endif
 
+ALL += systemd/wpa_supplicant.service
+ALL += systemd/wpa_supplicant@.service
+ALL += systemd/wpa_supplicant-nl80211@.service
+ALL += systemd/wpa_supplicant-wired@.service
+ALL += dbus/fi.epitest.hostap.WPASupplicant.service
+ALL += dbus/fi.w1.wpa_supplicant1.service
+
+
 all: verify_config $(ALL) dynamic_eap_methods
 
 verify_config:
@@ -1421,6 +1429,9 @@ eap_ikev2.so: ../src/eap_peer/eap_ikev2.c ../src/eap_peer/ikev2.c ../src/eap_com
 %.o: %.c
 	$(Q)$(CC) -c -o $@ $(CFLAGS) $<
 	@$(E) "  CC " $<
+
+%.service: %.service.in
+	sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
 
 wpa_supplicant.exe: wpa_supplicant
 	mv -f $< $@

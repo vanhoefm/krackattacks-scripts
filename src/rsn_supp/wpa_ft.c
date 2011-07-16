@@ -950,8 +950,8 @@ int wpa_ft_validate_reassoc_resp(struct wpa_sm *sm, const u8 *ies,
 	}
 
 	count = 3;
-	if (parse.tie)
-		count++;
+	if (parse.ric)
+		count += ieee802_11_ie_count(parse.ric, parse.ric_len);
 	if (ftie->mic_control[1] != count) {
 		wpa_printf(MSG_DEBUG, "FT: Unexpected IE count in MIC "
 			   "Control: received %u expected %u",

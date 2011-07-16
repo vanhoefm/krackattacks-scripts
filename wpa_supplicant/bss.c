@@ -93,6 +93,55 @@ static void wpa_bss_copy_res(struct wpa_bss *dst, struct wpa_scan_res *src)
 }
 
 
+static int wpa_bss_known(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	struct wpa_ssid *ssid;
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (ssid->ssid == NULL || ssid->ssid_len == 0)
+			continue;
+		if (ssid->ssid_len == bss->ssid_len &&
+		    os_memcmp(ssid->ssid, bss->ssid, ssid->ssid_len) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static int wpa_bss_remove_oldest_unknown(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss;
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (!wpa_bss_known(wpa_s, bss)) {
+			wpa_bss_remove(wpa_s, bss);
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+
+static void wpa_bss_remove_oldest(struct wpa_supplicant *wpa_s)
+{
+	/*
+	 * Remove the oldest entry that does not match with any configured
+	 * network.
+	 */
+	if (wpa_bss_remove_oldest_unknown(wpa_s) == 0)
+		return;
+
+	/*
+	 * Remove the oldest entry since no better candidate for removal was
+	 * found.
+	 */
+	wpa_bss_remove(wpa_s, dl_list_first(&wpa_s->bss,
+					    struct wpa_bss, list));
+}
+
+
 static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 			const u8 *ssid, size_t ssid_len,
 			struct wpa_scan_res *res)
@@ -118,11 +167,8 @@ static void wpa_bss_add(struct wpa_supplicant *wpa_s,
 		" SSID '%s'",
 		bss->id, MAC2STR(bss->bssid), wpa_ssid_txt(ssid, ssid_len));
 	wpas_notify_bss_added(wpa_s, bss->bssid, bss->id);
-	if (wpa_s->num_bss > wpa_s->conf->bss_max_count) {
-		/* Remove the oldest entry */
-		wpa_bss_remove(wpa_s, dl_list_first(&wpa_s->bss,
-						    struct wpa_bss, list));
-	}
+	if (wpa_s->num_bss > wpa_s->conf->bss_max_count)
+		wpa_bss_remove_oldest(wpa_s);
 }
 
 

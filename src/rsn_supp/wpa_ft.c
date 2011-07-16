@@ -464,8 +464,6 @@ static int wpa_ft_parse_ies(const u8 *ies, size_t ies_len,
 		prot_ie_count--;
 	if (parse->ftie)
 		prot_ie_count--;
-	if (parse->tie)
-		prot_ie_count--;
 	if (prot_ie_count < 0) {
 		wpa_printf(MSG_DEBUG, "FT: Some required IEs not included in "
 			   "the protected IE count");

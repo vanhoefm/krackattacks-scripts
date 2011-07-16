@@ -358,4 +358,27 @@ int wpa_compare_rsn_ie(int ft_initial_assoc,
 		       const u8 *ie2, size_t ie2len);
 int wpa_insert_pmkid(u8 *ies, size_t ies_len, const u8 *pmkid);
 
+struct wpa_ft_ies {
+	const u8 *mdie;
+	size_t mdie_len;
+	const u8 *ftie;
+	size_t ftie_len;
+	const u8 *r1kh_id;
+	const u8 *gtk;
+	size_t gtk_len;
+	const u8 *r0kh_id;
+	size_t r0kh_id_len;
+	const u8 *rsn;
+	size_t rsn_len;
+	const u8 *rsn_pmkid;
+	const u8 *tie;
+	size_t tie_len;
+	const u8 *igtk;
+	size_t igtk_len;
+	const u8 *ric;
+	size_t ric_len;
+};
+
+int wpa_ft_parse_ies(const u8 *ies, size_t ies_len, struct wpa_ft_ies *parse);
+
 #endif /* WPA_COMMON_H */

@@ -684,7 +684,6 @@ void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_config *conf;
-	struct wpa_ssid *old_ssid;
 	int reconf_ctrl;
 	int old_ap_scan;
 
@@ -709,10 +708,10 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	}
 
 	eapol_sm_invalidate_cached_session(wpa_s->eapol);
-	old_ssid = wpa_s->current_ssid;
-	wpa_s->current_ssid = NULL;
-	if (old_ssid != wpa_s->current_ssid)
-		wpas_notify_network_changed(wpa_s);
+	if (wpa_s->current_ssid) {
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+	}
 
 	/*
 	 * TODO: should notify EAPOL SM about changes in opensc_engine_path,

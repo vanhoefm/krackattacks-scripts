@@ -227,12 +227,11 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		u8 *pos;
 		size_t len;
 		int res;
-		int p2p_group;
-		p2p_group = wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE;
 		pos = wpa_s->sme.assoc_req_ie + wpa_s->sme.assoc_req_ie_len;
 		len = sizeof(wpa_s->sme.assoc_req_ie) -
 			wpa_s->sme.assoc_req_ie_len;
-		res = wpas_p2p_assoc_req_ie(wpa_s, bss, pos, len, p2p_group);
+		res = wpas_p2p_assoc_req_ie(wpa_s, bss, pos, len,
+					    ssid->p2p_group);
 		if (res >= 0)
 			wpa_s->sme.assoc_req_ie_len += res;
 	}
@@ -401,8 +400,7 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 					elems.wpa_ie_len + 2);
 	else
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
-	if (elems.p2p &&
-	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
+	if (wpa_s->current_ssid && wpa_s->current_ssid->p2p_group)
 		params.p2p = 1;
 
 	if (wpa_s->parent->set_sta_uapsd)

@@ -1348,11 +1348,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_IEEE80211W */
 
-#ifdef CONFIG_P2P
-	if (wpa_s->global->p2p &&
-	    (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
-		params.p2p = 1;
-#endif /* CONFIG_P2P */
+	params.p2p = ssid->p2p_group;
 
 	if (wpa_s->parent->set_sta_uapsd)
 		params.uapsd = wpa_s->parent->sta_uapsd;

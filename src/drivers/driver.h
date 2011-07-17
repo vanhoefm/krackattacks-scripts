@@ -282,6 +282,12 @@ struct wpa_driver_auth_params {
 	size_t wep_key_len[4];
 	int wep_tx_keyidx;
 	int local_state_change;
+
+	/**
+	 * p2p - Whether this connection is a P2P group
+	 */
+	int p2p;
+
 };
 
 enum wps_mode {

@@ -3160,13 +3160,16 @@ static int wpa_driver_nl80211_authenticate(
 	int ret = -1, i;
 	struct nl_msg *msg;
 	enum nl80211_auth_type type;
+	enum nl80211_iftype nlmode;
 	int count = 0;
 
 	drv->associated = 0;
 	os_memset(drv->auth_bssid, 0, ETH_ALEN);
 	/* FIX: IBSS mode */
-	if (drv->nlmode != NL80211_IFTYPE_STATION &&
-	    wpa_driver_nl80211_set_mode(priv, NL80211_IFTYPE_STATION) < 0)
+	nlmode = params->p2p ?
+		NL80211_IFTYPE_P2P_CLIENT : NL80211_IFTYPE_STATION;
+	if (drv->nlmode != nlmode &&
+	    wpa_driver_nl80211_set_mode(priv, nlmode) < 0)
 		return -1;
 
 retry:

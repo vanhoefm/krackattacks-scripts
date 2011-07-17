@@ -72,6 +72,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	params.bssid = bss->bssid;
 	params.ssid = bss->ssid;
 	params.ssid_len = bss->ssid_len;
+	params.p2p = ssid->p2p_group;
 
 	if (wpa_s->sme.ssid_len != params.ssid_len ||
 	    os_memcmp(wpa_s->sme.ssid, params.ssid, params.ssid_len) != 0)

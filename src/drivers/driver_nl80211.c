@@ -105,6 +105,7 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 
 struct nl80211_global {
 	struct dl_list interfaces;
+	int if_add_ifindex;
 };
 
 struct i802_bss {
@@ -2132,7 +2133,14 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	drv->first_bss.ifindex = drv->ifindex;
 
 #ifndef HOSTAPD
-	if (wpa_driver_nl80211_set_mode(bss, IEEE80211_MODE_INFRA) < 0) {
+	/*
+	 * Make sure the interface starts up in station mode unless this is a
+	 * dynamically added interface (e.g., P2P) that was already configured
+	 * with proper iftype.
+	 */
+	if ((drv->global == NULL ||
+	     drv->ifindex != drv->global->if_add_ifindex) &&
+	    wpa_driver_nl80211_set_mode(bss, IEEE80211_MODE_INFRA) < 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Could not configure driver to "
 			   "use managed mode");
 	}
@@ -6072,6 +6080,9 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 	}
 #endif /* HOSTAPD */
 
+	if (drv->global)
+		drv->global->if_add_ifindex = ifidx;
+
 	return 0;
 }
 
@@ -6651,6 +6662,7 @@ static void * nl80211_global_init(void)
 	if (global == NULL)
 		return NULL;
 	dl_list_init(&global->interfaces);
+	global->if_add_ifindex = -1;
 	return global;
 }
 

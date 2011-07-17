@@ -3971,6 +3971,27 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static const char * nl80211_iftype_str(enum nl80211_iftype mode)
+{
+	switch (mode) {
+	case NL80211_IFTYPE_ADHOC:
+		return "ADHOC";
+	case NL80211_IFTYPE_STATION:
+		return "STATION";
+	case NL80211_IFTYPE_AP:
+		return "AP";
+	case NL80211_IFTYPE_MONITOR:
+		return "MONITOR";
+	case NL80211_IFTYPE_P2P_CLIENT:
+		return "P2P_CLIENT";
+	case NL80211_IFTYPE_P2P_GO:
+		return "P2P_GO";
+	default:
+		return "unknown";
+	}
+}
+
+
 static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 				     const char *ifname,
 				     enum nl80211_iftype iftype,
@@ -3979,6 +4000,9 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg, *flags = NULL;
 	int ifidx;
 	int ret = -ENOBUFS;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Create interface iftype %d (%s)",
+		   iftype, nl80211_iftype_str(iftype));
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -4973,10 +4997,13 @@ nla_put_failure:
 
 
 static int nl80211_set_mode(struct wpa_driver_nl80211_data *drv,
-			    int ifindex, int mode)
+			    int ifindex, enum nl80211_iftype mode)
 {
 	struct nl_msg *msg;
 	int ret = -ENOBUFS;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Set mode ifindex %d iftype %d (%s)",
+		   ifindex, mode, nl80211_iftype_str(mode));
 
 	msg = nlmsg_alloc();
 	if (!msg)

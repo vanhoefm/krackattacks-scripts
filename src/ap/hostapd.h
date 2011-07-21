@@ -82,6 +82,7 @@ struct hostapd_data {
 				 struct sta_info *sta, int reassoc);
 
 	void *msg_ctx; /* ctx for wpa_msg() calls */
+	void *msg_ctx_parent; /* parent interface ctx for wpa_msg() calls */
 
 	struct radius_client_data *radius;
 	u32 acct_session_id_hi, acct_session_id_lo;

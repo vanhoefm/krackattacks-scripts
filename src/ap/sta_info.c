@@ -786,11 +786,25 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 		else
 			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED
 				MACSTR, MAC2STR(sta->addr));
+		if (hapd->msg_ctx_parent &&
+		    hapd->msg_ctx_parent != hapd->msg_ctx && dev_addr)
+			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
+				AP_STA_CONNECTED MACSTR " dev_addr=" MACSTR,
+				MAC2STR(sta->addr), MAC2STR(dev_addr));
+		else if (hapd->msg_ctx_parent &&
+			 hapd->msg_ctx_parent != hapd->msg_ctx)
+			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
+				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 
 		sta->flags |= WLAN_STA_AUTHORIZED;
 	} else {
 		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
 			MAC2STR(sta->addr));
+		if (hapd->msg_ctx_parent &&
+		    hapd->msg_ctx_parent != hapd->msg_ctx)
+			wpa_msg(hapd->msg_ctx_parent, MSG_INFO,
+				AP_STA_DISCONNECTED MACSTR,
+				MAC2STR(sta->addr));
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
 	}
 

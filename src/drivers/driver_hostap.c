@@ -1058,6 +1058,25 @@ static int hostap_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 
+static int hostap_set_freq(void *priv, struct hostapd_freq_params *freq)
+{
+	struct hostap_driver_data *drv = priv;
+	struct iwreq iwr;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
+	iwr.u.freq.m = freq->channel;
+	iwr.u.freq.e = 0;
+
+	if (ioctl(drv->ioctl_sock, SIOCSIWFREQ, &iwr) < 0) {
+		perror("ioctl[SIOCSIWFREQ]");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static int hostap_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 			       int reason)
 {
@@ -1632,6 +1651,7 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.sta_clear_stats = hostap_sta_clear_stats,
 	.get_hw_feature_data = hostap_get_hw_feature_data,
 	.set_ap_wps_ie = hostap_set_ap_wps_ie,
+	.set_freq = hostap_set_freq,
 #else /* HOSTAPD */
 	.get_bssid = wpa_driver_hostap_get_bssid,
 	.get_ssid = wpa_driver_hostap_get_ssid,

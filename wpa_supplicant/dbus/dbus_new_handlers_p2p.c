@@ -373,9 +373,35 @@ DBusMessage * wpas_dbus_handler_p2p_disconnect(DBusMessage *message,
 }
 
 
+static dbus_bool_t wpa_dbus_p2p_check_enabled(struct wpa_supplicant *wpa_s,
+					      DBusMessage *message,
+					      DBusMessage **out_reply,
+					      DBusError *error)
+{
+	/* Return an error message or an error if P2P isn't available */
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL) {
+		if (out_reply) {
+			*out_reply = dbus_message_new_error(
+				message, DBUS_ERROR_FAILED,
+				"P2P is not available for this interface");
+		}
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "P2P is not available for this "
+				     "interface");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
 DBusMessage * wpas_dbus_handler_p2p_flush(DBusMessage *message,
 					  struct wpa_supplicant *wpa_s)
 {
+	DBusMessage *reply = NULL;
+
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, message, &reply, NULL))
+		return reply;
+
 	os_memset(wpa_s->p2p_auth_invite, 0, ETH_ALEN);
 	wpa_s->force_long_sd = 0;
 	p2p_flush(wpa_s->global->p2p);
@@ -403,6 +429,9 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	int new_pin;
 	char *err_msg = NULL;
 	char *iface = NULL;
+
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, message, &reply, NULL))
+		return reply;
 
 	dbus_message_iter_init(message, &iter);
 
@@ -533,6 +562,9 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 	unsigned int group_id = 0;
 	int persistent = 0;
 	struct wpa_ssid *ssid;
+
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, message, &reply, NULL))
+		return reply;
 
 	dbus_message_iter_init(message, &iter);
 
@@ -674,6 +706,9 @@ dbus_bool_t wpas_dbus_getter_p2p_device_properties(DBusMessageIter *iter,
 	int i;
 	const struct wpabuf *vendor_ext[P2P_MAX_WPS_VENDOR_EXT];
 
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error))
+		return FALSE;
+
 	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
 					      "a{sv}", &variant_iter) ||
 	    !wpa_dbus_dict_open_write(&variant_iter, &dict_iter))
@@ -801,6 +836,9 @@ dbus_bool_t wpas_dbus_setter_p2p_device_properties(DBusMessageIter *iter,
 	DBusMessageIter variant_iter, iter_dict;
 	struct wpa_dbus_dict_entry entry = {.type = DBUS_TYPE_STRING };
 	unsigned int i;
+
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error))
+		return FALSE;
 
 	dbus_message_iter_recurse(iter, &variant_iter);
 	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict, error))
@@ -972,6 +1010,9 @@ dbus_bool_t wpas_dbus_getter_p2p_peers(DBusMessageIter *iter, DBusError *error,
 
 	char **peer_obj_paths = NULL;
 
+	if (!wpa_dbus_p2p_check_enabled(wpa_s, NULL, NULL, error))
+		return FALSE;
+
 	dl_list_init(&peer_objpath_list);
 
 	/* Get the first peer info */
@@ -1128,6 +1169,9 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_properties(DBusMessageIter *iter,
 	const struct p2p_peer_info *info = NULL;
 	const struct wpabuf *vendor_extension[P2P_MAX_WPS_VENDOR_EXT];
 	int i, num;
+
+	if (!wpa_dbus_p2p_check_enabled(peer_args->wpa_s, NULL, NULL, error))
+		return FALSE;
 
 	/* get the peer info */
 	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,

@@ -806,6 +806,24 @@ madwifi_set_ap_wps_ie(void *priv, const struct wpabuf *beacon,
 #define madwifi_set_ap_wps_ie NULL
 #endif /* CONFIG_WPS */
 
+static int madwifi_set_freq(void *priv, struct hostapd_freq_params *freq)
+{
+	struct madwifi_driver_data *drv = priv;
+	struct iwreq iwr;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
+	iwr.u.freq.m = freq->channel;
+	iwr.u.freq.e = 0;
+
+	if (ioctl(drv->ioctl_sock, SIOCSIWFREQ, &iwr) < 0) {
+		perror("ioctl[SIOCSIWFREQ]");
+		return -1;
+	}
+
+	return 0;
+}
+
 static void
 madwifi_new_sta(struct madwifi_driver_data *drv, u8 addr[IEEE80211_ADDR_LEN])
 {
@@ -1842,6 +1860,7 @@ const struct wpa_driver_ops wpa_driver_madwifi_ops = {
 	.sta_clear_stats        = madwifi_sta_clear_stats,
 	.commit			= madwifi_commit,
 	.set_ap_wps_ie		= madwifi_set_ap_wps_ie,
+	.set_freq		= madwifi_set_freq,
 #else /* HOSTAPD */
 	.get_bssid		= wpa_driver_madwifi_get_bssid,
 	.get_ssid		= wpa_driver_madwifi_get_ssid,

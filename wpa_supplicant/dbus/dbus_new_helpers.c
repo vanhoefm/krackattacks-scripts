@@ -21,112 +21,50 @@
 #include "dbus_common_i.h"
 #include "dbus_new.h"
 #include "dbus_new_helpers.h"
+#include "dbus_dict_helpers.h"
 
 
-/**
- * recursive_iter_copy - Reads arguments from one iterator and
- * writes to another recursively
- * @from: iterator to read from
- * @to: iterator to write to
- *
- * Copies one iterator's elements to another. If any element in
- * iterator is of container type, its content is copied recursively
- */
-static void recursive_iter_copy(DBusMessageIter *from, DBusMessageIter *to)
+static dbus_bool_t fill_dict_with_properties(
+	DBusMessageIter *dict_iter,
+	const struct wpa_dbus_property_desc *props,
+	const char *interface, void *user_data, DBusError *error)
 {
-
-	char *subtype = NULL;
-	int type;
-
-	/* iterate over iterator to copy */
-	while ((type = dbus_message_iter_get_arg_type(from)) !=
-	       DBUS_TYPE_INVALID) {
-
-		/* simply copy basic type entries */
-		if (dbus_type_is_basic(type)) {
-			if (dbus_type_is_fixed(type)) {
-				/*
-				 * According to DBus documentation all
-				 * fixed-length types are guaranteed to fit
-				 * 8 bytes
-				 */
-				dbus_uint64_t v;
-				dbus_message_iter_get_basic(from, &v);
-				dbus_message_iter_append_basic(to, type, &v);
-			} else {
-				char *v;
-				dbus_message_iter_get_basic(from, &v);
-				dbus_message_iter_append_basic(to, type, &v);
-			}
-		} else {
-			/* recursively copy container type entries */
-			DBusMessageIter write_subiter, read_subiter;
-
-			dbus_message_iter_recurse(from, &read_subiter);
-
-			if (type == DBUS_TYPE_VARIANT ||
-			    type == DBUS_TYPE_ARRAY) {
-				subtype = dbus_message_iter_get_signature(
-					&read_subiter);
-			}
-
-			dbus_message_iter_open_container(to, type, subtype,
-							 &write_subiter);
-
-			recursive_iter_copy(&read_subiter, &write_subiter);
-
-			dbus_message_iter_close_container(to, &write_subiter);
-			if (subtype)
-				dbus_free(subtype);
-		}
-
-		dbus_message_iter_next(from);
-	}
-}
-
-
-static unsigned int fill_dict_with_properties(
-	DBusMessageIter *dict_iter, const struct wpa_dbus_property_desc *props,
-	const char *interface, const void *user_data)
-{
-	DBusMessage *reply;
-	DBusMessageIter entry_iter, ret_iter;
-	unsigned int counter = 0;
+	DBusMessageIter entry_iter;
 	const struct wpa_dbus_property_desc *dsc;
 
 	for (dsc = props; dsc && dsc->dbus_property; dsc++) {
-		if (!os_strncmp(dsc->dbus_interface, interface,
-				WPAS_DBUS_INTERFACE_MAX) &&
-		    dsc->access != W && dsc->getter) {
-			reply = dsc->getter(NULL, user_data);
-			if (!reply)
-				continue;
+		/* Only return properties for the requested D-Bus interface */
+		if (os_strncmp(dsc->dbus_interface, interface,
+			       WPAS_DBUS_INTERFACE_MAX) != 0)
+			continue;
 
-			if (dbus_message_get_type(reply) ==
-			    DBUS_MESSAGE_TYPE_ERROR) {
-				dbus_message_unref(reply);
-				continue;
-			}
+		/* Handle access permissions or missing getter */
+		if (dsc->getter == NULL || dsc->access == W)
+			continue;
 
-			dbus_message_iter_init(reply, &ret_iter);
-
-			dbus_message_iter_open_container(dict_iter,
-							 DBUS_TYPE_DICT_ENTRY,
-							 NULL, &entry_iter);
-			dbus_message_iter_append_basic(
-				&entry_iter, DBUS_TYPE_STRING,
-				&dsc->dbus_property);
-
-			recursive_iter_copy(&ret_iter, &entry_iter);
-
-			dbus_message_iter_close_container(dict_iter,
-							  &entry_iter);
-			dbus_message_unref(reply);
-			counter++;
+		if (!dbus_message_iter_open_container(dict_iter,
+						      DBUS_TYPE_DICT_ENTRY,
+						      NULL, &entry_iter)) {
+			dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY,
+			                     "no memory");
+			return FALSE;
 		}
+		if (!dbus_message_iter_append_basic(&entry_iter,
+						    DBUS_TYPE_STRING,
+						    &dsc->dbus_property)) {
+			dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY,
+			                     "no memory");
+			return FALSE;
+		}
+
+		/* An error getting a property fails the request entirely */
+		if (!dsc->getter(&entry_iter, error, user_data))
+			return FALSE;
+
+		dbus_message_iter_close_container(dict_iter, &entry_iter);
 	}
 
-	return counter;
+	return TRUE;
 }
 
 
@@ -142,37 +80,44 @@ static unsigned int fill_dict_with_properties(
  * specified as argument. Returned message contains one dict argument
  * with properties names as keys and theirs values as values.
  */
-static DBusMessage * get_all_properties(
-	DBusMessage *message, char *interface,
-	struct wpa_dbus_object_desc *obj_dsc)
+static DBusMessage * get_all_properties(DBusMessage *message, char *interface,
+				        struct wpa_dbus_object_desc *obj_dsc)
 {
-	/* Create and initialize the return message */
-	DBusMessage *reply = dbus_message_new_method_return(message);
+	DBusMessage *reply;
 	DBusMessageIter iter, dict_iter;
-	int props_num;
+	DBusError error;
 
-	dbus_message_iter_init_append(reply, &iter);
-
-	dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
-					 DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING
-					 DBUS_TYPE_STRING_AS_STRING
-					 DBUS_TYPE_VARIANT_AS_STRING
-					 DBUS_DICT_ENTRY_END_CHAR_AS_STRING,
-					 &dict_iter);
-
-	props_num = fill_dict_with_properties(&dict_iter, obj_dsc->properties,
-					      interface, obj_dsc->user_data);
-
-	dbus_message_iter_close_container(&iter, &dict_iter);
-
-	if (props_num == 0) {
-		dbus_message_unref(reply);
-		reply = dbus_message_new_error(message,
-					       DBUS_ERROR_INVALID_ARGS,
-					       "No readable properties in "
-					       "this interface");
+	reply = dbus_message_new_method_return(message);
+	if (reply == NULL) {
+		wpa_printf(MSG_ERROR, "%s: out of memory creating dbus reply",
+			   __func__);
+		return NULL;
 	}
 
+	dbus_message_iter_init_append(reply, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter)) {
+		wpa_printf(MSG_ERROR, "%s: out of memory creating reply",
+			   __func__);
+		dbus_message_unref(reply);
+		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					       "out of memory");
+		return reply;
+	}
+
+	dbus_error_init(&error);
+	if (!fill_dict_with_properties(&dict_iter, obj_dsc->properties,
+				       interface, obj_dsc->user_data, &error))
+	{
+		dbus_message_unref(reply);
+		reply = wpas_dbus_reply_new_from_error(message, &error,
+						       DBUS_ERROR_INVALID_ARGS,
+						       "No readable properties"
+						       " in this interface");
+		dbus_error_free(&error);
+		return reply;
+	}
+
+	wpa_dbus_dict_close_write(&iter, &dict_iter);
 	return reply;
 }
 
@@ -219,15 +164,33 @@ static DBusMessage * properties_get(DBusMessage *message,
 				    const struct wpa_dbus_property_desc *dsc,
 				    void *user_data)
 {
-	if (os_strcmp(dbus_message_get_signature(message), "ss"))
+	DBusMessage *reply;
+	DBusMessageIter iter;
+	DBusError error;
+
+	if (os_strcmp(dbus_message_get_signature(message), "ss")) {
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      NULL);
+	}
 
-	if (dsc->access != W && dsc->getter)
-		return dsc->getter(message, user_data);
+	if (dsc->access == W || dsc->getter == NULL) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Property is write-only");
+	}
 
-	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
-				      "Property is write-only");
+	reply = dbus_message_new_method_return(message);
+	dbus_message_iter_init_append(reply, &iter);
+
+	dbus_error_init(&error);
+	if (dsc->getter(&iter, &error, user_data) == FALSE) {
+		dbus_message_unref(reply);
+		reply = wpas_dbus_reply_new_from_error(
+			message, &error, DBUS_ERROR_FAILED,
+			"Failed to read property");
+		dbus_error_free(&error);
+	}
+
+	return reply;
 }
 
 
@@ -235,15 +198,38 @@ static DBusMessage * properties_set(DBusMessage *message,
 				    const struct wpa_dbus_property_desc *dsc,
 				    void *user_data)
 {
-	if (os_strcmp(dbus_message_get_signature(message), "ssv"))
+	DBusMessage *reply;
+	DBusMessageIter iter;
+	DBusError error;
+
+	if (os_strcmp(dbus_message_get_signature(message), "ssv")) {
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      NULL);
+	}
 
-	if (dsc->access != R && dsc->setter)
-		return dsc->setter(message, user_data);
+	if (dsc->access == R || dsc->setter == NULL) {
+		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
+					      "Property is read-only");
+	}
 
-	return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
-				      "Property is read-only");
+	dbus_message_iter_init(message, &iter);
+	/* Skip the interface name and the property name */
+	dbus_message_iter_next(&iter);
+	dbus_message_iter_next(&iter);
+
+	/* Iter will now point to the property's new value */
+	dbus_error_init(&error);
+	if (dsc->setter(&iter, &error, user_data) == TRUE) {
+		/* Success */
+		reply = dbus_message_new_method_return(message);
+	} else {
+		reply = wpas_dbus_reply_new_from_error(
+			message, &error, DBUS_ERROR_FAILED,
+			"Failed to set property");
+		dbus_error_free(&error);
+	}
+
+	return reply;
 }
 
 
@@ -622,14 +608,14 @@ int wpa_dbus_unregister_object_per_iface(
 }
 
 
-static void put_changed_properties(const struct wpa_dbus_object_desc *obj_dsc,
-				   const char *interface,
-				   DBusMessageIter *dict_iter)
+static dbus_bool_t put_changed_properties(
+	const struct wpa_dbus_object_desc *obj_dsc, const char *interface,
+	DBusMessageIter *dict_iter)
 {
-	DBusMessage *getter_reply;
-	DBusMessageIter prop_iter, entry_iter;
+	DBusMessageIter entry_iter;
 	const struct wpa_dbus_property_desc *dsc;
 	int i;
+	DBusError error;
 
 	for (dsc = obj_dsc->properties, i = 0; dsc && dsc->dbus_property;
 	     dsc++, i++) {
@@ -640,37 +626,37 @@ static void put_changed_properties(const struct wpa_dbus_object_desc *obj_dsc,
 			continue;
 		obj_dsc->prop_changed_flags[i] = 0;
 
-		getter_reply = dsc->getter(NULL, obj_dsc->user_data);
-		if (!getter_reply ||
-		    dbus_message_get_type(getter_reply) ==
-		    DBUS_MESSAGE_TYPE_ERROR) {
-			wpa_printf(MSG_ERROR, "dbus: %s: Cannot get new value "
-				   "of property %s", __func__,
-				   dsc->dbus_property);
-			continue;
-		}
-
-		if (!dbus_message_iter_init(getter_reply, &prop_iter) ||
-		    !dbus_message_iter_open_container(dict_iter,
+		if (!dbus_message_iter_open_container(dict_iter,
 						      DBUS_TYPE_DICT_ENTRY,
-						      NULL, &entry_iter) ||
-		    !dbus_message_iter_append_basic(&entry_iter,
+						      NULL, &entry_iter))
+			return FALSE;
+
+		if (!dbus_message_iter_append_basic(&entry_iter,
 						    DBUS_TYPE_STRING,
 						    &dsc->dbus_property))
-			goto err;
+			return FALSE;
 
-		recursive_iter_copy(&prop_iter, &entry_iter);
+		dbus_error_init(&error);
+		if (!dsc->getter(&entry_iter, &error, obj_dsc->user_data)) {
+			if (dbus_error_is_set (&error)) {
+				wpa_printf(MSG_ERROR, "dbus: %s: Cannot get "
+					   "new value of property %s: (%s) %s",
+				           __func__, dsc->dbus_property,
+				           error.name, error.message);
+			} else {
+				wpa_printf(MSG_ERROR, "dbus: %s: Cannot get "
+					   "new value of property %s",
+					   __func__, dsc->dbus_property);
+			}
+			dbus_error_free(&error);
+			return FALSE;
+		}
 
 		if (!dbus_message_iter_close_container(dict_iter, &entry_iter))
-			goto err;
-
-		dbus_message_unref(getter_reply);
+			return FALSE;
 	}
 
-	return;
-
-err:
-	wpa_printf(MSG_ERROR, "dbus: %s: Cannot construct signal", __func__);
+	return TRUE;
 }
 
 
@@ -691,7 +677,8 @@ static void send_prop_changed_signal(
 					      "{sv}", &dict_iter))
 		goto err;
 
-	put_changed_properties(obj_dsc, interface, &dict_iter);
+	if (!put_changed_properties(obj_dsc, interface, &dict_iter))
+		goto err;
 
 	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
 		goto err;
@@ -860,29 +847,49 @@ void wpa_dbus_mark_property_changed(struct wpas_dbus_priv *iface,
  * @iface: dbus priv struct
  * @path: path to DBus object which properties will be obtained
  * @interface: interface name which properties will be obtained
- * @dict_iter: correct, open DBus dictionary iterator.
+ * @iter: DBus message iter at which to append property dictionary.
  *
  * Iterates over all properties registered with object and execute getters
  * of those, which are readable and which interface matches interface
  * specified as argument. Obtained properties values are stored in
  * dict_iter dictionary.
  */
-void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
-				    const char *path, const char *interface,
-				    DBusMessageIter *dict_iter)
+dbus_bool_t wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
+					   const char *path,
+					   const char *interface,
+					   DBusMessageIter *iter)
 {
 	struct wpa_dbus_object_desc *obj_desc = NULL;
+	DBusMessageIter dict_iter;
+	DBusError error;
 
 	dbus_connection_get_object_path_data(iface->con, path,
 					     (void **) &obj_desc);
 	if (!obj_desc) {
-		wpa_printf(MSG_ERROR, "dbus: wpa_dbus_get_object_properties: "
-			   "could not obtain object's private data: %s", path);
-		return;
+		wpa_printf(MSG_ERROR, "dbus: %s: could not obtain object's "
+		           "private data: %s", __func__, path);
+		return FALSE;
 	}
 
-	fill_dict_with_properties(dict_iter, obj_desc->properties,
-				  interface, obj_desc->user_data);
+	if (!wpa_dbus_dict_open_write(iter, &dict_iter)) {
+		wpa_printf(MSG_ERROR, "dbus: %s: failed to open message dict",
+			   __func__);
+		return FALSE;
+	}
+
+	dbus_error_init(&error);
+	if (!fill_dict_with_properties(&dict_iter, obj_desc->properties,
+				       interface, obj_desc->user_data,
+				       &error)) {
+		wpa_printf(MSG_ERROR, "dbus: %s: failed to get object"
+		           " properties: (%s) %s", __func__,
+		           dbus_error_is_set(&error) ? error.name : "none",
+		           dbus_error_is_set(&error) ? error.message : "none");
+		dbus_error_free(&error);
+		return FALSE;
+	}
+
+	return wpa_dbus_dict_close_write(iter, &dict_iter);
 }
 
 /**
@@ -954,4 +961,33 @@ char *wpas_dbus_new_decompose_object_path(const char *path,
 	}
 
 	return obj_path_only;
+}
+
+
+/**
+ * wpas_dbus_reply_new_from_error - Create a new D-Bus error message from a
+ *   dbus error structure
+ * @message: The original request message for which the error is a reply
+ * @error: The error containing a name and a descriptive error cause
+ * @fallback_name: A generic error name if @error was not set
+ * @fallback_string: A generic error string if @error was not set
+ * Returns: A new D-Bus error message
+ *
+ * Given a DBusMessage structure, creates a new D-Bus error message using
+ * the error name and string contained in that structure.
+ */
+DBusMessage * wpas_dbus_reply_new_from_error(DBusMessage *message,
+					     DBusError *error,
+					     const char *fallback_name,
+					     const char *fallback_string)
+{
+	if (error && error->name && error->message) {
+		return dbus_message_new_error(message, error->name,
+					      error->message);
+	}
+	if (fallback_name && fallback_string) {
+		return dbus_message_new_error(message, fallback_name,
+					      fallback_string);
+	}
+	return NULL;
 }

@@ -284,40 +284,43 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
  * wpas_dbus_getter_process_credentials - Check if credentials are processed
  * @message: Pointer to incoming dbus message
  * @wpa_s: %wpa_supplicant data structure
- * Returns: DBus message with a boolean on success or DBus error on failure
+ * Returns: TRUE on success, FALSE on failure
  *
  * Getter for "ProcessCredentials" property. Returns returned boolean will be
  * true if wps_cred_processing configuration field is not equal to 1 or false
  * if otherwise.
  */
-DBusMessage * wpas_dbus_getter_process_credentials(
-	DBusMessage *message, struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_process_credentials(DBusMessageIter *iter,
+						 DBusError *error,
+						 void *user_data)
 {
+	struct wpa_supplicant *wpa_s = user_data;
 	dbus_bool_t process = (wpa_s->conf->wps_cred_processing != 1);
-	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_BOOLEAN,
-						&process);
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_BOOLEAN,
+						&process, error);
 }
 
 
 /**
  * wpas_dbus_setter_process_credentials - Set credentials_processed conf param
- * @message: Pointer to incoming dbus message
- * @wpa_s: %wpa_supplicant data structure
- * Returns: NULL on success or DBus error on failure
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
  *
  * Setter for "ProcessCredentials" property. Sets credentials_processed on 2
  * if boolean argument is true or on 1 if otherwise.
  */
-DBusMessage * wpas_dbus_setter_process_credentials(
-	DBusMessage *message, struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_setter_process_credentials(DBusMessageIter *iter,
+						 DBusError *error,
+						 void *user_data)
 {
-	DBusMessage *reply = NULL;
+	struct wpa_supplicant *wpa_s = user_data;
 	dbus_bool_t process_credentials, old_pc;
 
-	reply = wpas_dbus_simple_property_setter(message, DBUS_TYPE_BOOLEAN,
-						 &process_credentials);
-	if (reply)
-		return reply;
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_BOOLEAN,
+					      &process_credentials))
+		return FALSE;
 
 	old_pc = (wpa_s->conf->wps_cred_processing != 1);
 	wpa_s->conf->wps_cred_processing = (process_credentials ? 2 : 1);
@@ -328,5 +331,5 @@ DBusMessage * wpas_dbus_setter_process_credentials(
 					       WPAS_DBUS_NEW_IFACE_WPS,
 					       "ProcessCredentials");
 
-	return NULL;
+	return TRUE;
 }

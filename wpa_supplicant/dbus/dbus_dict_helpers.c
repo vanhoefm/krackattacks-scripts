@@ -705,18 +705,26 @@ dbus_bool_t wpa_dbus_dict_append_wpabuf_array(DBusMessageIter *iter_dict,
  * @param iter A valid DBusMessageIter pointing to the start of the dict
  * @param iter_dict (out) A DBusMessageIter to be passed to
  *    wpa_dbus_dict_read_next_entry()
+ * @error on failure a descriptive error
  * @return TRUE on success, FALSE on failure
  *
  */
 dbus_bool_t wpa_dbus_dict_open_read(DBusMessageIter *iter,
-				    DBusMessageIter *iter_dict)
+				    DBusMessageIter *iter_dict,
+				    DBusError *error)
 {
-	if (!iter || !iter_dict)
+	if (!iter || !iter_dict) {
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+		                     "[internal] missing message iterators");
 		return FALSE;
+	}
 
 	if (dbus_message_iter_get_arg_type(iter) != DBUS_TYPE_ARRAY ||
-	    dbus_message_iter_get_element_type(iter) != DBUS_TYPE_DICT_ENTRY)
+	    dbus_message_iter_get_element_type(iter) != DBUS_TYPE_DICT_ENTRY) {
+		dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
+		                     "unexpected message argument types");
 		return FALSE;
+	}
 
 	dbus_message_iter_recurse(iter, iter_dict);
 	return TRUE;

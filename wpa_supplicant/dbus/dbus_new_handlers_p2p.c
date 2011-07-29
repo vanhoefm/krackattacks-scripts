@@ -86,7 +86,7 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 	dbus_message_iter_init(message, &iter);
 	entry.key = NULL;
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -192,7 +192,7 @@ DBusMessage * wpas_dbus_handler_p2p_extendedlisten(
 	dbus_message_iter_init(message, &iter);
 	entry.key = NULL;
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -234,7 +234,7 @@ DBusMessage * wpas_dbus_handler_p2p_presence_request(
 	dbus_message_iter_init(message, &iter);
 	entry.key = NULL;
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -288,7 +288,7 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto inv_args;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -406,7 +406,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto inv_args;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -536,7 +536,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto err;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -661,11 +661,12 @@ DBusMessage * wpas_dbus_handler_p2p_prov_disc_req(DBusMessage *message,
  * P2P Device property accessor methods.
  */
 
-DBusMessage * wpas_dbus_getter_p2p_device_properties(
-	DBusMessage *message, struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_device_properties(DBusMessageIter *iter,
+						   DBusError *error,
+						   void *user_data)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter, dict_iter;
+	struct wpa_supplicant *wpa_s = user_data;
+	DBusMessageIter variant_iter, dict_iter;
 	DBusMessageIter iter_secdev_dict_entry, iter_secdev_dict_val,
 		iter_secdev_dict_array;
 	const char *dev_name;
@@ -673,17 +674,7 @@ DBusMessage * wpas_dbus_getter_p2p_device_properties(
 	int i;
 	const struct wpabuf *vendor_ext[P2P_MAX_WPS_VENDOR_EXT];
 
-	if (message == NULL)
-		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
-	else
-		reply = dbus_message_new_method_return(message);
-
-	if (!reply)
-		goto err_no_mem;
-
-	dbus_message_iter_init_append(reply, &iter);
-
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
 					      "a{sv}", &variant_iter) ||
 	    !wpa_dbus_dict_open_write(&variant_iter, &dict_iter))
 		goto err_no_mem;
@@ -791,44 +782,42 @@ DBusMessage * wpas_dbus_getter_p2p_device_properties(
 		goto err_no_mem;
 
 	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
-	    !dbus_message_iter_close_container(&iter, &variant_iter))
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
 
-	return reply;
+	return TRUE;
+
 err_no_mem:
-	dbus_message_unref(reply);
-	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+	return FALSE;
 }
 
 
-DBusMessage * wpas_dbus_setter_p2p_device_properties(
-	DBusMessage *message, struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_setter_p2p_device_properties(DBusMessageIter *iter,
+						   DBusError *error,
+						   void *user_data)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter;
+	struct wpa_supplicant *wpa_s = user_data;
+	DBusMessageIter variant_iter, iter_dict;
 	struct wpa_dbus_dict_entry entry = {.type = DBUS_TYPE_STRING };
-	DBusMessageIter iter_dict;
 	unsigned int i;
 
-	dbus_message_iter_init(message, &iter);
-
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_next(&iter);
-
-	dbus_message_iter_recurse(&iter, &variant_iter);
-
-	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict))
-		return wpas_dbus_error_invalid_args(message, NULL);
+	dbus_message_iter_recurse(iter, &variant_iter);
+	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict, error))
+		return FALSE;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
-		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
-			return wpas_dbus_error_invalid_args(message, NULL);
+		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry)) {
+			dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
+					     "invalid message format");
+			return FALSE;
+		}
 
 		if (os_strcmp(entry.key, "DeviceName") == 0) {
 			char *devname;
 
 			if (entry.type != DBUS_TYPE_STRING)
-				goto error_clear;
+				goto error;
 
 			devname = os_strdup(entry.str_value);
 			if (devname == NULL)
@@ -843,7 +832,7 @@ DBusMessage * wpas_dbus_setter_p2p_device_properties(
 			if (entry.type != DBUS_TYPE_ARRAY ||
 			    entry.array_type != DBUS_TYPE_BYTE ||
 			    entry.array_len != WPS_DEV_TYPE_LEN)
-				goto error_clear;
+				goto error;
 
 			os_memcpy(wpa_s->conf->device_type,
 				  entry.bytearray_value,
@@ -871,7 +860,7 @@ DBusMessage * wpas_dbus_setter_p2p_device_properties(
 			if ((entry.type != DBUS_TYPE_ARRAY) ||
 			    (entry.array_type != WPAS_DBUS_TYPE_BINARRAY) ||
 			    (entry.array_len > P2P_MAX_WPS_VENDOR_EXT))
-				goto error_clear;
+				goto error;
 
 			wpa_s->conf->changed_parameters |=
 				CFG_CHANGED_VENDOR_EXTENSION;
@@ -916,7 +905,7 @@ DBusMessage * wpas_dbus_setter_p2p_device_properties(
 			char *postfix;
 
 			if (entry.type != DBUS_TYPE_STRING)
-				goto error_clear;
+				goto error;
 
 			postfix = os_strdup(entry.str_value);
 			if (!postfix)
@@ -939,7 +928,7 @@ DBusMessage * wpas_dbus_setter_p2p_device_properties(
 			 entry.type == DBUS_TYPE_UINT32)
 			wpa_s->conf->disassoc_low_ack = entry.uint32_value;
 		else
-			goto error_clear;
+			goto error;
 
 		wpa_dbus_dict_entry_clear(&entry);
 	}
@@ -949,30 +938,31 @@ DBusMessage * wpas_dbus_setter_p2p_device_properties(
 		wpa_supplicant_update_config(wpa_s);
 	}
 
-	return reply;
+	return TRUE;
 
- error_clear:
-	wpa_dbus_dict_entry_clear(&entry);
  error:
-	reply = wpas_dbus_error_invalid_args(message, entry.key);
+	dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
+			     "invalid message format");
 	wpa_dbus_dict_entry_clear(&entry);
+	return FALSE;
 
-	return reply;
  err_no_mem_clear:
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
 	wpa_dbus_dict_entry_clear(&entry);
-	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+	return FALSE;
 }
 
 
-DBusMessage * wpas_dbus_getter_p2p_peers(DBusMessage *message,
-					 struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_peers(DBusMessageIter *iter, DBusError *error,
+				       void *user_data)
 {
-	DBusMessage *reply = NULL;
+	struct wpa_supplicant *wpa_s = user_data;
 	struct p2p_data *p2p = wpa_s->global->p2p;
 	int next = 0, i = 0;
 	int num = 0, out_of_mem = 0;
 	const u8 *addr;
 	const struct p2p_peer_info *peer_info = NULL;
+	dbus_bool_t success = FALSE;
 
 	struct dl_list peer_objpath_list;
 	struct peer_objpath_node {
@@ -1022,9 +1012,10 @@ DBusMessage * wpas_dbus_getter_p2p_peers(DBusMessage *message,
 			      struct peer_objpath_node, list)
 		peer_obj_paths[i++] = node->path;
 
-	reply = wpas_dbus_simple_array_property_getter(message,
-						       DBUS_TYPE_OBJECT_PATH,
-						       peer_obj_paths, num);
+	success = wpas_dbus_simple_array_property_getter(iter,
+							 DBUS_TYPE_OBJECT_PATH,
+							 peer_obj_paths, num,
+							 error);
 
 error:
 	if (peer_obj_paths)
@@ -1036,10 +1027,9 @@ error:
 		os_free(node);
 	}
 	if (out_of_mem)
-		reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					       NULL);
+		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
 
-	return reply;
+	return success;
 }
 
 
@@ -1072,9 +1062,10 @@ static enum wpas_p2p_role wpas_get_p2p_role(struct wpa_supplicant *wpa_s)
 }
 
 
-DBusMessage * wpas_dbus_getter_p2p_role(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_role(DBusMessageIter *iter, DBusError *error,
+				      void *user_data)
 {
+	struct wpa_supplicant *wpa_s = user_data;
 	char *str;
 
 	switch (wpas_get_p2p_role(wpa_s)) {
@@ -1088,37 +1079,40 @@ DBusMessage * wpas_dbus_getter_p2p_role(DBusMessage *message,
 		str = "device";
 	}
 
-	return wpas_dbus_simple_property_getter(message, DBUS_TYPE_STRING,
-						&str);
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING, &str,
+						error);
 }
 
 
-DBusMessage * wpas_dbus_getter_p2p_group(DBusMessage *message,
-					struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_group(DBusMessageIter *iter, DBusError *error,
+				       void *user_data)
 {
+	struct wpa_supplicant *wpa_s = user_data;
+
 	if (wpa_s->dbus_groupobj_path == NULL)
-		return NULL;
+		return FALSE;
 
-	return wpas_dbus_simple_property_getter(message,
-						DBUS_TYPE_OBJECT_PATH,
-						&wpa_s->dbus_groupobj_path);
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_OBJECT_PATH,
+						&wpa_s->dbus_groupobj_path,
+						error);
 }
 
 
-DBusMessage * wpas_dbus_getter_p2p_peergo(DBusMessage *message,
-					  struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_peergo(DBusMessageIter *iter,
+					DBusError *error, void *user_data)
 {
+	struct wpa_supplicant *wpa_s = user_data;
 	char go_peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
 
 	if (wpas_get_p2p_role(wpa_s) != WPAS_P2P_ROLE_CLIENT)
-		return NULL;
+		return FALSE;
 
 	os_snprintf(go_peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
 		    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/" COMPACT_MACSTR,
 		    wpa_s->dbus_new_path, MAC2STR(wpa_s->go_dev_addr));
 	path = go_peer_obj_path;
-	return wpas_dbus_simple_property_getter(message,
-						DBUS_TYPE_OBJECT_PATH, &path);
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_OBJECT_PATH,
+						&path, error);
 }
 
 
@@ -1126,11 +1120,11 @@ DBusMessage * wpas_dbus_getter_p2p_peergo(DBusMessage *message,
  * Peer object properties accessor methods
  */
 
-DBusMessage * wpas_dbus_getter_p2p_peer_properties(
-	DBusMessage *message, struct peer_handler_args *peer_args)
+dbus_bool_t wpas_dbus_getter_p2p_peer_properties(DBusMessageIter *iter,
+	DBusError *error, void *user_data)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter, dict_iter;
+	struct peer_handler_args *peer_args = user_data;
+	DBusMessageIter variant_iter, dict_iter;
 	const struct p2p_peer_info *info = NULL;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
 	const struct wpabuf *vendor_extension[P2P_MAX_WPS_VENDOR_EXT];
@@ -1139,19 +1133,12 @@ DBusMessage * wpas_dbus_getter_p2p_peer_properties(
 	/* get the peer info */
 	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
 				  peer_args->p2p_device_addr, 0);
-	if (info == NULL)
-		return NULL;
+	if (info == NULL) {
+		dbus_set_error(error, DBUS_ERROR_FAILED, "failed to find peer");
+		return FALSE;
+	}
 
-	if (message == NULL)
-		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
-	else
-		reply = dbus_message_new_method_return(message);
-
-	if (!reply)
-		goto err_no_mem;
-
-	dbus_message_iter_init_append(reply, &iter);
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
 					      "a{sv}", &variant_iter) ||
 	    !wpa_dbus_dict_open_write(&variant_iter, &dict_iter))
 		goto err_no_mem;
@@ -1241,45 +1228,53 @@ DBusMessage * wpas_dbus_getter_p2p_peer_properties(
 		goto err_no_mem;
 
 	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
-	    !dbus_message_iter_close_container(&iter, &variant_iter))
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
 
-	return reply;
+	return TRUE;
+
 err_no_mem:
-	dbus_message_unref(reply);
-	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+	return FALSE;
 }
 
 
-DBusMessage * wpas_dbus_getter_p2p_peer_ies(
-	DBusMessage *message, struct peer_handler_args *peer_args)
+dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
+					  DBusError *error, void *user_data)
 {
-	return NULL;
+	/* struct peer_handler_args *peer_args = user_data; */
+
+	dbus_set_error_const(error, DBUS_ERROR_FAILED, "not implemented");
+	return FALSE;
 }
 
 
 /**
  * wpas_dbus_getter_persistent_groups - Get array of peristent group objects
- * @message: Pointer to incoming dbus message
- * @wpa_s: wpa_supplicant structure for a network interface
- * Returns: a dbus message containing an array of all persistent group
- * dbus object paths.
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
  *
- * Getter for "Networks" property.
+ * Getter for "PersistentGroups" property.
  */
-DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
-						 struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_persistent_groups(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data)
 {
-	DBusMessage *reply = NULL;
+	struct wpa_supplicant *wpa_s = user_data;
 	struct wpa_ssid *ssid;
 	char **paths;
 	unsigned int i = 0, num = 0;
+	dbus_bool_t success = FALSE;
 
 	if (wpa_s->conf == NULL) {
 		wpa_printf(MSG_ERROR, "dbus: %s: "
 			   "An error occurred getting persistent groups list",
 			   __func__);
-		return wpas_dbus_error_unknown_error(message, NULL);
+		dbus_set_error_const(error, DBUS_ERROR_FAILED, "an error "
+				     "occurred getting persistent groups list");
+		return FALSE;
 	}
 
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
@@ -1288,8 +1283,8 @@ DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
 
 	paths = os_zalloc(num * sizeof(char *));
 	if (!paths) {
-		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
-					      NULL);
+		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+		return FALSE;
 	}
 
 	/* Loop through configured networks and append object path of each */
@@ -1298,9 +1293,8 @@ DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
 			continue;
 		paths[i] = os_zalloc(WPAS_DBUS_OBJECT_PATH_MAX);
 		if (paths[i] == NULL) {
-			reply = dbus_message_new_error(message,
-						       DBUS_ERROR_NO_MEMORY,
-						       NULL);
+			dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY,
+					     "no memory");
 			goto out;
 		}
 		/* Construct the object path for this network. */
@@ -1309,74 +1303,65 @@ DBusMessage * wpas_dbus_getter_persistent_groups(DBusMessage *message,
 			    wpa_s->dbus_new_path, ssid->id);
 	}
 
-	reply = wpas_dbus_simple_array_property_getter(message,
-						       DBUS_TYPE_OBJECT_PATH,
-						       paths, num);
+	success = wpas_dbus_simple_array_property_getter(iter,
+							 DBUS_TYPE_OBJECT_PATH,
+							 paths, num, error);
 
 out:
 	while (i)
 		os_free(paths[--i]);
 	os_free(paths);
-	return reply;
+	return success;
 }
 
 
 /**
  * wpas_dbus_getter_persistent_group_properties - Get options for a persistent
  *	group
- * @message: Pointer to incoming dbus message
- * @net: wpa_supplicant structure for a network interface and
- * wpa_ssid structure for a configured persistent group (internally network)
- * Returns: DBus message with network properties or DBus error on failure
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
  *
  * Getter for "Properties" property of a persistent group.
  */
-DBusMessage * wpas_dbus_getter_persistent_group_properties(
-	DBusMessage *message, struct network_handler_args *net)
+dbus_bool_t wpas_dbus_getter_persistent_group_properties(DBusMessageIter *iter,
+							 DBusError *error,
+							 void *user_data)
 {
-	/*
-	 * Leveraging the fact that persistent group object is still
+	struct network_handler_args *net = user_data;
+
+	/* Leveraging the fact that persistent group object is still
 	 * represented in same manner as network within.
 	 */
-	return wpas_dbus_getter_network_properties(message, net);
+	return wpas_dbus_getter_network_properties(iter, error, net);
 }
 
 
 /**
  * wpas_dbus_setter_persistent_group_properties - Get options for a persistent
  *	group
- * @message: Pointer to incoming dbus message
- * @net: wpa_supplicant structure for a network interface and
- * wpa_ssid structure for a configured persistent group (internally network)
- * Returns: DBus message with network properties or DBus error on failure
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
  *
  * Setter for "Properties" property of a persistent group.
  */
-DBusMessage * wpas_dbus_setter_persistent_group_properties(
-	DBusMessage *message, struct network_handler_args *net)
+dbus_bool_t wpas_dbus_setter_persistent_group_properties(DBusMessageIter *iter,
+							 DBusError *error,
+							 void *user_data)
 {
+	struct network_handler_args *net = user_data;
 	struct wpa_ssid *ssid = net->ssid;
-	DBusMessage *reply = NULL;
-	DBusMessageIter	iter, variant_iter;
-
-	dbus_message_iter_init(message, &iter);
-
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_next(&iter);
-
-	dbus_message_iter_recurse(&iter, &variant_iter);
+	DBusMessageIter	variant_iter;
 
 	/*
 	 * Leveraging the fact that persistent group object is still
 	 * represented in same manner as network within.
 	 */
-	reply = set_network_properties(message, net->wpa_s, ssid,
-				       &variant_iter);
-	if (reply)
-		wpa_printf(MSG_DEBUG, "dbus control interface couldn't set "
-			   "persistent group properties");
-
-	return reply;
+	dbus_message_iter_recurse(iter, &variant_iter);
+	return set_network_properties(net->wpa_s, ssid, &variant_iter, error);
 }
 
 
@@ -1398,6 +1383,7 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 	DBusMessageIter	iter;
 	struct wpa_ssid *ssid = NULL;
 	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX], *path = path_buf;
+	DBusError error;
 
 	dbus_message_iter_init(message, &iter);
 
@@ -1419,11 +1405,16 @@ DBusMessage * wpas_dbus_handler_add_persistent_group(
 
 	wpa_config_set_network_defaults(ssid);
 
-	reply = set_network_properties(message, wpa_s, ssid, &iter);
-	if (reply) {
+	dbus_error_init(&error);
+	if (!set_network_properties(wpa_s, ssid, &iter, &error)) {
 		wpa_printf(MSG_DEBUG, "dbus: %s: "
 			   "Control interface could not set persistent group "
 			   "properties", __func__);
+		reply = wpas_dbus_reply_new_from_error(message, &error,
+						       DBUS_ERROR_INVALID_ARGS,
+						       "Failed to set network "
+						       "properties");
+		dbus_error_free(&error);
 		goto err;
 	}
 
@@ -1569,27 +1560,29 @@ DBusMessage * wpas_dbus_handler_remove_all_persistent_groups(
  * Group object properties accessor methods
  */
 
-DBusMessage * wpas_dbus_getter_p2p_group_members(DBusMessage *message,
-						struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data)
 {
-	DBusMessage *reply = NULL;
+	struct wpa_supplicant *wpa_s = user_data;
 	struct wpa_ssid *ssid;
 	unsigned int num_members;
 	char **paths;
 	unsigned int i;
 	void *next = NULL;
 	const u8 *addr;
+	dbus_bool_t success = FALSE;
 
 	/* Ensure we are a GO */
 	if (wpa_s->wpa_state != WPA_COMPLETED)
-		return NULL;
+		return FALSE;
 
 	ssid = wpa_s->conf->ssid;
 	/* At present WPAS P2P_GO mode only applicable for p2p_go */
 	if (ssid->mode != WPAS_MODE_P2P_GO &&
 	    ssid->mode != WPAS_MODE_AP &&
 	    ssid->mode != WPAS_MODE_P2P_GROUP_FORMATION)
-		return NULL;
+		return FALSE;
 
 	num_members = p2p_get_group_num_members(wpa_s->p2p_group);
 
@@ -1609,53 +1602,45 @@ DBusMessage * wpas_dbus_getter_p2p_group_members(DBusMessage *message,
 		i++;
 	}
 
-	reply = wpas_dbus_simple_array_property_getter(message,
-						       DBUS_TYPE_OBJECT_PATH,
-						       paths, num_members);
+	success = wpas_dbus_simple_array_property_getter(iter,
+							 DBUS_TYPE_OBJECT_PATH,
+							 paths, num_members,
+							 error);
 
 	for (i = 0; i < num_members; i++)
 		os_free(paths[i]);
 	os_free(paths);
-	return reply;
+	return success;
 
 out_of_memory:
-	reply = dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
 	if (paths) {
 		for (i = 0; i < num_members; i++)
 			os_free(paths[i]);
 		os_free(paths);
 	}
-	return reply;
+	return FALSE;
 }
 
 
-DBusMessage * wpas_dbus_getter_p2p_group_properties(
-	DBusMessage *message, struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_getter_p2p_group_properties(DBusMessageIter *iter,
+						  DBusError *error,
+						  void *user_data)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter, dict_iter;
+	struct wpa_supplicant *wpa_s = user_data;
+	DBusMessageIter variant_iter, dict_iter;
 	struct hostapd_data *hapd = wpa_s->ap_iface->bss[0];
 	const struct wpabuf *vendor_ext[MAX_WPS_VENDOR_EXTENSIONS];
 	int num_vendor_ext = 0;
 	int i;
 
 	if (!hapd) {
-		reply = dbus_message_new_error(message, DBUS_ERROR_FAILED,
-					       NULL);
-		return reply;
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "internal error");
+		return FALSE;
 	}
 
-	if (message == NULL)
-		reply = dbus_message_new(DBUS_MESSAGE_TYPE_SIGNAL);
-	else
-		reply = dbus_message_new_method_return(message);
-
-	if (!reply)
-		goto err_no_mem;
-
-	dbus_message_iter_init_append(reply, &iter);
-
-	if (!dbus_message_iter_open_container(&iter, DBUS_TYPE_VARIANT,
+	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
 					      "a{sv}", &variant_iter) ||
 	    !wpa_dbus_dict_open_write(&variant_iter, &dict_iter))
 		goto err_no_mem;
@@ -1673,44 +1658,42 @@ DBusMessage * wpas_dbus_getter_p2p_group_properties(
 		goto err_no_mem;
 
 	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
-	    !dbus_message_iter_close_container(&iter, &variant_iter))
+	    !dbus_message_iter_close_container(iter, &variant_iter))
 		goto err_no_mem;
 
-	return reply;
+	return TRUE;
 
 err_no_mem:
-	dbus_message_unref(reply);
-	return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY, NULL);
+	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+	return FALSE;
 }
 
 
-DBusMessage * wpas_dbus_setter_p2p_group_properties(
-	DBusMessage *message, struct wpa_supplicant *wpa_s)
+dbus_bool_t wpas_dbus_setter_p2p_group_properties(DBusMessageIter *iter,
+						  DBusError *error,
+						  void *user_data)
 {
-	DBusMessage *reply = NULL;
-	DBusMessageIter iter, variant_iter;
+	struct wpa_supplicant *wpa_s = user_data;
+	DBusMessageIter variant_iter, iter_dict;
 	struct wpa_dbus_dict_entry entry = { .type = DBUS_TYPE_STRING };
-	DBusMessageIter iter_dict;
 	unsigned int i;
 	struct hostapd_data *hapd = wpa_s->ap_iface->bss[0];
 
-	if (!hapd)
-		goto error;
+	if (!hapd) {
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "internal error");
+		return FALSE;
+	}
 
-	dbus_message_iter_init(message, &iter);
-
-	dbus_message_iter_next(&iter);
-	dbus_message_iter_next(&iter);
-
-	dbus_message_iter_recurse(&iter, &variant_iter);
-
-	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict))
-		return wpas_dbus_error_invalid_args(message, NULL);
+	dbus_message_iter_recurse(iter, &variant_iter);
+	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict, error))
+		return FALSE;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry)) {
-			reply = wpas_dbus_error_invalid_args(message, NULL);
-			break;
+			dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
+					     "invalid message format");
+			return FALSE;
 		}
 
 		if (os_strcmp(entry.key, "WPSVendorExtensions") == 0) {
@@ -1735,13 +1718,13 @@ DBusMessage * wpas_dbus_setter_p2p_group_properties(
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	return reply;
+	return TRUE;
 
 error:
-	reply = wpas_dbus_error_invalid_args(message, entry.key);
 	wpa_dbus_dict_entry_clear(&entry);
-
-	return reply;
+	dbus_set_error_const(error, DBUS_ERROR_INVALID_ARGS,
+			     "invalid message format");
+	return FALSE;
 }
 
 
@@ -1761,7 +1744,7 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	if (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -1858,7 +1841,7 @@ DBusMessage * wpas_dbus_handler_p2p_delete_service(
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	if (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -1960,7 +1943,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_req(
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
@@ -2049,7 +2032,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_res(
 
 	dbus_message_iter_init(message, &iter);
 
-	if (!wpa_dbus_dict_open_read(&iter, &iter_dict))
+	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {

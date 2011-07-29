@@ -22,8 +22,9 @@ typedef DBusMessage * (* WPADBusMethodHandler)(DBusMessage *message,
 					       void *user_data);
 typedef void (* WPADBusArgumentFreeFunction)(void *handler_arg);
 
-typedef DBusMessage * (* WPADBusPropertyAccessor)(DBusMessage *message,
-						  const void *user_data);
+typedef dbus_bool_t (* WPADBusPropertyAccessor)(DBusMessageIter *iter,
+                                                DBusError *error,
+						void *user_data);
 
 struct wpa_dbus_object_desc {
 	DBusConnection *connection;
@@ -128,9 +129,10 @@ int wpa_dbus_unregister_object_per_iface(
 	struct wpas_dbus_priv *ctrl_iface,
 	const char *path);
 
-void wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
-				    const char *path, const char *interface,
-				    DBusMessageIter *dict_iter);
+dbus_bool_t wpa_dbus_get_object_properties(struct wpas_dbus_priv *iface,
+					   const char *path,
+					   const char *interface,
+					   DBusMessageIter *iter);
 
 
 void wpa_dbus_flush_all_changed_properties(DBusConnection *con);
@@ -149,5 +151,10 @@ char *wpas_dbus_new_decompose_object_path(const char *path,
 					   int p2p_persistent_group,
 					   char **network,
 					   char **bssid);
+
+DBusMessage *wpas_dbus_reply_new_from_error(DBusMessage *message,
+					    DBusError *error,
+					    const char *fallback_name,
+					    const char *fallback_string);
 
 #endif /* WPA_DBUS_CTRL_H */

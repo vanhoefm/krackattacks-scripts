@@ -148,7 +148,6 @@ static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 {
 	struct ieee80211_hdr *hdr;
 	u16 fc, extra_len, type, stype;
-	unsigned char *extra = NULL;
 	size_t data_len = len;
 	int ver;
 	union wpa_event_data event;
@@ -185,7 +184,6 @@ static void handle_frame(struct hostap_driver_data *drv, u8 *buf, size_t len)
 			return;
 		}
 		len -= extra_len + 2;
-		extra = buf + len;
 	} else if (ver == 1 || ver == 2) {
 		handle_tx_callback(drv, buf, data_len, ver == 2 ? 1 : 0);
 		return;

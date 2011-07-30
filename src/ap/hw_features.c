@@ -630,7 +630,8 @@ int hostapd_select_hw_mode(struct hostapd_iface *iface)
 		hostapd_logger(iface->bss[0], NULL, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_WARNING,
 			       "Hardware does not support configured mode "
-			       "(%d)", (int) iface->conf->hw_mode);
+			       "(%d) (hw_mode in hostapd.conf)",
+			       (int) iface->conf->hw_mode);
 		return -2;
 	}
 

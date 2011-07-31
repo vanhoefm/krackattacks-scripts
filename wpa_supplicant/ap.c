@@ -421,6 +421,11 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		return -1;
 	}
 
+	if (params.uapsd > 0) {
+		conf->bss->wmm_enabled = 1;
+		conf->bss->wmm_uapsd = 1;
+	}
+
 	if (wpa_supplicant_conf_ap(wpa_s, ssid, conf)) {
 		wpa_printf(MSG_ERROR, "Failed to create AP configuration");
 		wpa_supplicant_ap_deinit(wpa_s);

@@ -1665,6 +1665,14 @@ static int supp_rates_11b_only(struct ieee802_11_elems *elems)
 			num_others++;
 	}
 
+	for (i = 0; elems->ext_supp_rates && i < elems->ext_supp_rates_len;
+	     i++) {
+		if (is_11b(elems->ext_supp_rates[i]))
+			num_11b++;
+		else
+			num_others++;
+	}
+
 	return num_11b > 0 && num_others == 0;
 }
 

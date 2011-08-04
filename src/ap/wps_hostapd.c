@@ -566,30 +566,40 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 
 	switch (event) {
 	case WPS_EV_M2D:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_M2D);
 		break;
 	case WPS_EV_FAIL:
 		hostapd_wps_event_fail(hapd, &data->fail);
 		break;
 	case WPS_EV_SUCCESS:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_SUCCESS);
 		break;
 	case WPS_EV_PWD_AUTH_FAIL:
 		hostapd_pwd_auth_fail(hapd, &data->pwd_auth_fail);
 		break;
 	case WPS_EV_PBC_OVERLAP:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_OVERLAP);
 		break;
 	case WPS_EV_PBC_TIMEOUT:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_TIMEOUT);
 		break;
 	case WPS_EV_ER_AP_ADD:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_AP_ADD);
 		break;
 	case WPS_EV_ER_AP_REMOVE:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_AP_REMOVE);
 		break;
 	case WPS_EV_ER_ENROLLEE_ADD:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_ENROLLEE_ADD);
 		break;
 	case WPS_EV_ER_ENROLLEE_REMOVE:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_ENROLLEE_REMOVE);
 		break;
 	case WPS_EV_ER_AP_SETTINGS:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_AP_SETTINGS);
 		break;
 	case WPS_EV_ER_SET_SELECTED_REGISTRAR:
+		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_SET_SEL_REG);
 		break;
 	}
 	if (hapd->wps_event_cb)
@@ -1242,6 +1252,7 @@ static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx)
 	struct hostapd_data *hapd = eloop_data;
 	wpa_printf(MSG_DEBUG, "WPS: AP PIN timed out");
 	hostapd_wps_ap_pin_disable(hapd);
+	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_PIN_DISABLED);
 }
 
 

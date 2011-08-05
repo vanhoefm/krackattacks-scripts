@@ -985,15 +985,28 @@ struct wpabuf * wpa_scan_get_vendor_ie_multi_beacon(
 }
 
 
+/*
+ * Channels with a great SNR can operate at full rate. What is a great SNR?
+ * This doc https://supportforums.cisco.com/docs/DOC-12954 says, "the general
+ * rule of thumb is that any SNR above 20 is good." This one
+ * http://www.cisco.com/en/US/tech/tk722/tk809/technologies_q_and_a_item09186a00805e9a96.shtml#qa23
+ * recommends 25 as a minimum SNR for 54 Mbps data rate. 30 is chosen here as a
+ * conservative value.
+ */
+#define GREAT_SNR 30
+
 /* Compare function for sorting scan results. Return >0 if @b is considered
  * better. */
 static int wpa_scan_result_compar(const void *a, const void *b)
 {
+#define IS_5GHZ(n) (n > 4000)
+#define MIN(a,b) a < b ? a : b
 	struct wpa_scan_res **_wa = (void *) a;
 	struct wpa_scan_res **_wb = (void *) b;
 	struct wpa_scan_res *wa = *_wa;
 	struct wpa_scan_res *wb = *_wb;
 	int wpa_a, wpa_b, maxrate_a, maxrate_b;
+	int snr_a, snr_b;
 
 	/* WPA/WPA2 support preferred */
 	wpa_a = wpa_scan_get_vendor_ie(wa, WPA_IE_VENDOR_TYPE) != NULL ||
@@ -1014,23 +1027,46 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 	    (wb->caps & IEEE80211_CAP_PRIVACY) == 0)
 		return -1;
 
-	/* best/max rate preferred if signal level close enough XXX */
-	if ((wa->level && wb->level && abs(wb->level - wa->level) < 5) ||
+	if ((wa->flags & wb->flags & WPA_SCAN_LEVEL_DBM) &&
+	    !((wa->flags | wb->flags) & WPA_SCAN_NOISE_INVALID)) {
+		snr_a = MIN(wa->level - wa->noise, GREAT_SNR);
+		snr_b = MIN(wb->level - wb->noise, GREAT_SNR);
+	} else {
+		/* Not suitable information to calculate SNR, so use level */
+		snr_a = wa->level;
+		snr_b = wb->level;
+	}
+
+	wpa_printf(MSG_EXCESSIVE, "BSS(a) " MACSTR " freq:%d level:%d "
+		   "noise:%d snr:%d flags:0x%x",
+		   MAC2STR(wa->bssid), wa->freq, wa->level, wa->noise, snr_a,
+		   wa->flags);
+	wpa_printf(MSG_EXCESSIVE, "BSS(b) " MACSTR " freq:%d level:%d "
+		   "noise:%d snr:%d flags:0x%x",
+		   MAC2STR(wb->bssid), wb->freq, wb->level, wb->noise, snr_b,
+		   wb->flags);
+
+	/* best/max rate preferred if SNR close enough */
+        if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
 	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
 		maxrate_a = wpa_scan_get_max_rate(wa);
 		maxrate_b = wpa_scan_get_max_rate(wb);
 		if (maxrate_a != maxrate_b)
 			return maxrate_b - maxrate_a;
+		if (IS_5GHZ(wa->freq) ^ IS_5GHZ(wb->freq))
+			return IS_5GHZ(wa->freq) ? -1 : 1;
 	}
 
 	/* use freq for channel preference */
 
-	/* all things being equal, use signal level; if signal levels are
+	/* all things being equal, use SNR; if SNRs are
 	 * identical, use quality values since some drivers may only report
 	 * that value and leave the signal level zero */
-	if (wb->level == wa->level)
+	if (snr_b == snr_a)
 		return wb->qual - wa->qual;
-	return wb->level - wa->level;
+	return snr_b - snr_a;
+#undef MIN
+#undef IS_5GHZ
 }
 
 

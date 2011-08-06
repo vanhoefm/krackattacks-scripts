@@ -1126,7 +1126,6 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_properties(DBusMessageIter *iter,
 	struct peer_handler_args *peer_args = user_data;
 	DBusMessageIter variant_iter, dict_iter;
 	const struct p2p_peer_info *info = NULL;
-	char devtype[WPS_DEV_TYPE_BUFSIZE];
 	const struct wpabuf *vendor_extension[P2P_MAX_WPS_VENDOR_EXT];
 	int i, num;
 
@@ -1144,12 +1143,12 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_properties(DBusMessageIter *iter,
 		goto err_no_mem;
 
 	/* Fill out the dictionary */
-	wps_dev_type_bin2str(info->pri_dev_type, devtype, sizeof(devtype));
 	if (!wpa_dbus_dict_append_string(&dict_iter, "DeviceName",
 					 info->device_name))
 		goto err_no_mem;
-	if (!wpa_dbus_dict_append_string(&dict_iter, "PrimaryDeviceType",
-					 devtype))
+	if (!wpa_dbus_dict_append_byte_array(&dict_iter, "PrimaryDeviceType",
+					     (char *)info->pri_dev_type,
+					     WPS_DEV_TYPE_LEN))
 		goto err_no_mem;
 	if (!wpa_dbus_dict_append_uint16(&dict_iter, "config_method",
 					 info->config_methods))
@@ -1165,53 +1164,34 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_properties(DBusMessageIter *iter,
 		goto err_no_mem;
 
 	if (info->wps_sec_dev_type_list_len) {
-		char *sec_dev_types[MAX_SEC_DEVICE_TYPES];
-		u8 *sec_dev_type_list = NULL;
-		char secdevtype[WPS_DEV_TYPE_BUFSIZE];
-		int num_sec_dev_types = 0;
-
-		sec_dev_type_list = os_zalloc(info->wps_sec_dev_type_list_len);
-
-		if (sec_dev_type_list == NULL)
-			goto err_no_mem;
-
-		os_memcpy(sec_dev_type_list, info->wps_sec_dev_type_list,
-			  info->wps_sec_dev_type_list_len);
-
-		for (i = 0; i < MAX_SEC_DEVICE_TYPES &&
-		       i < (int) (info->wps_sec_dev_type_list_len /
-				  WPS_DEV_TYPE_LEN);
-		     i++) {
-			sec_dev_types[i] = os_zalloc(sizeof(secdevtype));
-
-			if (!sec_dev_types[i] ||
-			    wps_dev_type_bin2str(
-				    &sec_dev_type_list[i * WPS_DEV_TYPE_LEN],
-				    sec_dev_types[i],
-				    sizeof(secdevtype)) == NULL) {
-				while (--i >= 0)
-					os_free(sec_dev_types[i]);
-				os_free(sec_dev_type_list);
-				goto err_no_mem;
-			}
-
-			num_sec_dev_types++;
-		}
-
-		os_free(sec_dev_type_list);
+		const u8 *sec_dev_type_list = info->wps_sec_dev_type_list;
+		int num_sec_dev_types =
+			info->wps_sec_dev_type_list_len / WPS_DEV_TYPE_LEN;
+		DBusMessageIter iter_secdev_dict_entry, iter_secdev_dict_val,
+				iter_secdev_dict_array;
 
 		if (num_sec_dev_types) {
-			if (!wpa_dbus_dict_append_string_array(&dict_iter,
+			if (!wpa_dbus_dict_begin_array(&dict_iter,
 						"SecondaryDeviceTypes",
-						(const char **)sec_dev_types,
-						num_sec_dev_types)) {
-				for (i = 0; i < num_sec_dev_types; i++)
-					os_free(sec_dev_types[i]);
+						DBUS_TYPE_ARRAY_AS_STRING
+						DBUS_TYPE_BYTE_AS_STRING,
+						&iter_secdev_dict_entry,
+						&iter_secdev_dict_val,
+						&iter_secdev_dict_array))
 				goto err_no_mem;
+			for (i = 0; i < num_sec_dev_types; i++) {
+				wpa_dbus_dict_bin_array_add_element(
+						&iter_secdev_dict_array,
+						sec_dev_type_list,
+						WPS_DEV_TYPE_LEN);
+				sec_dev_type_list += WPS_DEV_TYPE_LEN;
 			}
 
-			for (i = 0; i < num_sec_dev_types; i++)
-				os_free(sec_dev_types[i]);
+			if (!wpa_dbus_dict_end_array(&dict_iter,
+						&iter_secdev_dict_entry,
+						&iter_secdev_dict_val,
+						&iter_secdev_dict_array))
+				goto err_no_mem;
 		}
 	}
 

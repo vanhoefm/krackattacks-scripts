@@ -354,6 +354,7 @@ static void random_write_entropy(void)
 	char buf[RANDOM_ENTROPY_SIZE];
 	FILE *f;
 	u8 opr;
+	int fail = 0;
 
 	if (!random_entropy_file)
 		return;
@@ -369,9 +370,15 @@ static void random_write_entropy(void)
 	}
 
 	opr = own_pool_ready > 0xff ? 0xff : own_pool_ready;
-	fwrite(&opr, 1, 1, f);
-	fwrite(buf, RANDOM_ENTROPY_SIZE, 1, f);
+	if (fwrite(&opr, 1, 1, f) != 1 ||
+	    fwrite(buf, RANDOM_ENTROPY_SIZE, 1, f) != 1)
+		fail = 1;
 	fclose(f);
+	if (fail) {
+		wpa_printf(MSG_ERROR, "random: Could not entropy data to %s",
+			   random_entropy_file);
+		return;
+	}
 
 	wpa_printf(MSG_DEBUG, "random: Updated entropy file %s "
 		   "(own_pool_ready=%u)",

@@ -89,10 +89,11 @@ static void add_entry(struct wpabuf *xml, const char *type, const char *name,
 static void add_property(struct wpabuf *xml,
 			 const struct wpa_dbus_property_desc *dsc)
 {
-	wpabuf_printf(xml, "<property name=\"%s\" type=\"%s\" access=\"%s\"/>",
+	wpabuf_printf(xml, "<property name=\"%s\" type=\"%s\" "
+		      "access=\"%s%s\"/>",
 		      dsc->dbus_property, dsc->type,
-		      (dsc->access == R ? "read" :
-		       (dsc->access == W ? "write" : "readwrite")));
+		      dsc->getter ? "read" : "",
+		      dsc->setter ? "write" : "");
 }
 
 

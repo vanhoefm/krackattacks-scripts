@@ -38,8 +38,8 @@ static dbus_bool_t fill_dict_with_properties(
 			       WPAS_DBUS_INTERFACE_MAX) != 0)
 			continue;
 
-		/* Handle access permissions or missing getter */
-		if (dsc->getter == NULL || dsc->access == W)
+		/* Skip write-only properties */
+		if (dsc->getter == NULL)
 			continue;
 
 		if (!dbus_message_iter_open_container(dict_iter,
@@ -173,7 +173,7 @@ static DBusMessage * properties_get(DBusMessage *message,
 					      NULL);
 	}
 
-	if (dsc->access == W || dsc->getter == NULL) {
+	if (dsc->getter == NULL) {
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      "Property is write-only");
 	}
@@ -207,7 +207,7 @@ static DBusMessage * properties_set(DBusMessage *message,
 					      NULL);
 	}
 
-	if (dsc->access == R || dsc->setter == NULL) {
+	if (dsc->setter == NULL) {
 		return dbus_message_new_error(message, DBUS_ERROR_INVALID_ARGS,
 					      "Property is read-only");
 	}

@@ -1662,30 +1662,25 @@ static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 static const struct wpa_dbus_property_desc wpas_dbus_global_properties[] = {
 	{ "DebugLevel", WPAS_DBUS_NEW_INTERFACE, "s",
 	  wpas_dbus_getter_debug_level,
-	  wpas_dbus_setter_debug_level,
-	  RW
+	  wpas_dbus_setter_debug_level
 	},
 	{ "DebugTimestamp", WPAS_DBUS_NEW_INTERFACE, "b",
 	  wpas_dbus_getter_debug_timestamp,
-	  wpas_dbus_setter_debug_timestamp,
-	  RW
+	  wpas_dbus_setter_debug_timestamp
 	},
 	{ "DebugShowKeys", WPAS_DBUS_NEW_INTERFACE, "b",
 	  wpas_dbus_getter_debug_show_keys,
-	  wpas_dbus_setter_debug_show_keys,
-	  RW
+	  wpas_dbus_setter_debug_show_keys
 	},
 	{ "Interfaces", WPAS_DBUS_NEW_INTERFACE, "ao",
 	  wpas_dbus_getter_interfaces,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "EapMethods", WPAS_DBUS_NEW_INTERFACE, "as",
 	  wpas_dbus_getter_eap_methods,
-	  NULL,
-	  R
+	  NULL
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 static const struct wpa_dbus_signal_desc wpas_dbus_global_signals[] = {
@@ -1779,15 +1774,13 @@ static void wpa_dbus_free(void *ptr)
 static const struct wpa_dbus_property_desc wpas_dbus_network_properties[] = {
 	{ "Properties", WPAS_DBUS_NEW_IFACE_NETWORK, "a{sv}",
 	  wpas_dbus_getter_network_properties,
-	  wpas_dbus_setter_network_properties,
-	  RW
+	  wpas_dbus_setter_network_properties
 	},
 	{ "Enabled", WPAS_DBUS_NEW_IFACE_NETWORK, "b",
 	  wpas_dbus_getter_enabled,
-	  wpas_dbus_setter_enabled,
-	  RW
+	  wpas_dbus_setter_enabled
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 
@@ -1926,55 +1919,45 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 	{ "SSID", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  wpas_dbus_getter_bss_ssid,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "BSSID", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  wpas_dbus_getter_bss_bssid,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "Privacy", WPAS_DBUS_NEW_IFACE_BSS, "b",
 	  wpas_dbus_getter_bss_privacy,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "Mode", WPAS_DBUS_NEW_IFACE_BSS, "s",
 	  wpas_dbus_getter_bss_mode,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "Signal", WPAS_DBUS_NEW_IFACE_BSS, "n",
 	  wpas_dbus_getter_bss_signal,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "Frequency", WPAS_DBUS_NEW_IFACE_BSS, "q",
 	  wpas_dbus_getter_bss_frequency,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "Rates", WPAS_DBUS_NEW_IFACE_BSS, "au",
 	  wpas_dbus_getter_bss_rates,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "WPA", WPAS_DBUS_NEW_IFACE_BSS, "a{sv}",
 	  wpas_dbus_getter_bss_wpa,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "RSN", WPAS_DBUS_NEW_IFACE_BSS, "a{sv}",
 	  wpas_dbus_getter_bss_rsn,
-	  NULL,
-	  R
+	  NULL
 	},
 	{ "IEs", WPAS_DBUS_NEW_IFACE_BSS, "ay",
 	  wpas_dbus_getter_bss_ies,
-	  NULL,
-	  R
+	  NULL
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 
@@ -2355,107 +2338,101 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	{ "Capabilities", WPAS_DBUS_NEW_IFACE_INTERFACE, "a{sv}",
 	  wpas_dbus_getter_capabilities,
-	  NULL, R
+	  NULL
 	},
 	{ "State", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  wpas_dbus_getter_state,
-	  NULL, R
+	  NULL
 	},
 	{ "Scanning", WPAS_DBUS_NEW_IFACE_INTERFACE, "b",
 	  wpas_dbus_getter_scanning,
-	  NULL, R
+	  NULL
 	},
 	{ "ApScan", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
 	  wpas_dbus_getter_ap_scan,
-	  wpas_dbus_setter_ap_scan,
-	  RW
+	  wpas_dbus_setter_ap_scan
 	},
 	{ "BSSExpireAge", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
 	  wpas_dbus_getter_bss_expire_age,
-	  wpas_dbus_setter_bss_expire_age,
-	  RW
+	  wpas_dbus_setter_bss_expire_age
 	},
 	{ "BSSExpireCount", WPAS_DBUS_NEW_IFACE_INTERFACE, "u",
 	  wpas_dbus_getter_bss_expire_count,
-	  wpas_dbus_setter_bss_expire_count,
-	  RW
+	  wpas_dbus_setter_bss_expire_count
 	},
 	{ "Country", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  wpas_dbus_getter_country,
-	  wpas_dbus_setter_country,
-	  RW
+	  wpas_dbus_setter_country
 	},
 	{ "Ifname", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  wpas_dbus_getter_ifname,
-	  NULL, R
+	  NULL
 	},
 	{ "Driver", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  wpas_dbus_getter_driver,
-	  NULL, R
+	  NULL
 	},
 	{ "BridgeIfname", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  wpas_dbus_getter_bridge_ifname,
-	  NULL, R
+	  NULL
 	},
 	{ "CurrentBSS", WPAS_DBUS_NEW_IFACE_INTERFACE, "o",
 	  wpas_dbus_getter_current_bss,
-	  NULL, R
+	  NULL
 	},
 	{ "CurrentNetwork", WPAS_DBUS_NEW_IFACE_INTERFACE, "o",
 	  wpas_dbus_getter_current_network,
-	  NULL, R
+	  NULL
 	},
 	{ "CurrentAuthMode", WPAS_DBUS_NEW_IFACE_INTERFACE, "s",
 	  wpas_dbus_getter_current_auth_mode,
-	  NULL, R
+	  NULL
 	},
 	{ "Blobs", WPAS_DBUS_NEW_IFACE_INTERFACE, "a{say}",
 	  wpas_dbus_getter_blobs,
-	  NULL, R
+	  NULL
 	},
 	{ "BSSs", WPAS_DBUS_NEW_IFACE_INTERFACE, "ao",
 	  wpas_dbus_getter_bsss,
-	  NULL, R
+	  NULL
 	},
 	{ "Networks", WPAS_DBUS_NEW_IFACE_INTERFACE, "ao",
 	  wpas_dbus_getter_networks,
-	  NULL, R
+	  NULL
 	},
 #ifdef CONFIG_WPS
 	{ "ProcessCredentials", WPAS_DBUS_NEW_IFACE_WPS, "b",
 	  wpas_dbus_getter_process_credentials,
-	  wpas_dbus_setter_process_credentials,
-	  RW
+	  wpas_dbus_setter_process_credentials
 	},
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	{ "P2PDeviceProperties", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "a{sv}",
 	  wpas_dbus_getter_p2p_device_properties,
-	  wpas_dbus_setter_p2p_device_properties,
-	  RW
+	  wpas_dbus_setter_p2p_device_properties
 	},
 	{ "Peers", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "ao",
 	  wpas_dbus_getter_p2p_peers,
-	  NULL, R
+	  NULL
 	},
 	{ "Role", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "s",
 	  wpas_dbus_getter_p2p_role,
-	  NULL, R
+	  NULL
 	},
 	{ "Group", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "o",
 	  wpas_dbus_getter_p2p_group,
-	  NULL, R
+	  NULL
 	},
 	{ "PeerGO", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "o",
 	  wpas_dbus_getter_p2p_peergo,
-	  NULL, R
+	  NULL
 	},
 	{ "PersistentGroups", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "ao",
 	  wpas_dbus_getter_persistent_groups,
-	  NULL, R
+	  NULL
 	},
 #endif /* CONFIG_P2P */
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
@@ -2761,13 +2738,13 @@ int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 static const struct wpa_dbus_property_desc wpas_dbus_p2p_peer_properties[] = {
 	{ "Properties", WPAS_DBUS_NEW_IFACE_P2P_PEER, "a{sv}",
 	  wpas_dbus_getter_p2p_peer_properties,
-	  NULL, R
+	  NULL
 	},
 	{ "IEs", WPAS_DBUS_NEW_IFACE_P2P_PEER, "ay",
 	  wpas_dbus_getter_p2p_peer_ies,
-	  NULL, R
+	  NULL
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 static const struct wpa_dbus_signal_desc wpas_dbus_p2p_peer_signals[] = {
@@ -2958,15 +2935,14 @@ int wpas_dbus_unregister_peer(struct wpa_supplicant *wpa_s,
 static const struct wpa_dbus_property_desc wpas_dbus_p2p_group_properties[] = {
 	{ "Members", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "ao",
 	  wpas_dbus_getter_p2p_group_members,
-	  NULL, R
+	  NULL
 	},
 	{ "Properties",
 	  WPAS_DBUS_NEW_IFACE_P2P_GROUP, "a{sv}",
 	  wpas_dbus_getter_p2p_group_properties,
-	  wpas_dbus_setter_p2p_group_properties,
-	  RW
+	  wpas_dbus_setter_p2p_group_properties
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 static const struct wpa_dbus_signal_desc wpas_dbus_p2p_group_signals[] = {
@@ -3088,9 +3064,9 @@ static const struct wpa_dbus_property_desc
 wpas_dbus_p2p_groupmember_properties[] = {
 	{ "Properties", WPAS_DBUS_NEW_IFACE_P2P_GROUPMEMBER, "a{sv}",
 	  wpas_dbus_getter_p2p_group_properties,
-	  NULL, R
+	  NULL
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 /**
@@ -3195,10 +3171,9 @@ static const struct wpa_dbus_property_desc
 	wpas_dbus_persistent_group_properties[] = {
 	{ "Properties", WPAS_DBUS_NEW_IFACE_PERSISTENT_GROUP, "a{sv}",
 	  wpas_dbus_getter_persistent_group_properties,
-	  wpas_dbus_setter_persistent_group_properties,
-	  RW
+	  wpas_dbus_setter_persistent_group_properties
 	},
-	{ NULL, NULL, NULL, NULL, NULL, 0 }
+	{ NULL, NULL, NULL, NULL, NULL }
 };
 
 /* No signals intended for persistent group objects */

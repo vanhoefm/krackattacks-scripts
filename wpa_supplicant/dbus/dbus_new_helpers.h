@@ -45,8 +45,6 @@ struct wpa_dbus_object_desc {
 	WPADBusArgumentFreeFunction user_data_free_func;
 };
 
-enum dbus_prop_access { R, W, RW };
-
 enum dbus_arg_direction { ARG_IN, ARG_OUT };
 
 struct wpa_dbus_argument {
@@ -97,8 +95,6 @@ struct wpa_dbus_property_desc {
 	WPADBusPropertyAccessor getter;
 	/* property setter function */
 	WPADBusPropertyAccessor setter;
-	/* property access permissions */
-	enum dbus_prop_access access;
 };
 
 

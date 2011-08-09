@@ -141,7 +141,8 @@ static int hostapd_wps_set_ie_cb(void *ctx, struct wpabuf *beacon_ie,
 	hapd->wps_beacon_ie = beacon_ie;
 	wpabuf_free(hapd->wps_probe_resp_ie);
 	hapd->wps_probe_resp_ie = probe_resp_ie;
-	ieee802_11_set_beacon(hapd);
+	if (hapd->beacon_set_done)
+		ieee802_11_set_beacon(hapd);
 	return hostapd_set_ap_wps_ie(hapd);
 }
 

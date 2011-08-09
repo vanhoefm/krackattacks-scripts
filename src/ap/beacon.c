@@ -403,6 +403,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	if ((hapd->conf->p2p & (P2P_ENABLED | P2P_GROUP_OWNER)) == P2P_ENABLED)
 		goto no_beacon;
 #endif /* CONFIG_P2P */
+	hapd->beacon_set_done = 1;
 
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512

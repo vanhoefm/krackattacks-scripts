@@ -34,6 +34,7 @@
 #include "eloop.h"
 #include "utils/list.h"
 #include "common/ieee802_11_defs.h"
+#include "l2_packet/l2_packet.h"
 #include "netlink.h"
 #include "linux_ioctl.h"
 #include "radiotap.h"
@@ -173,6 +174,10 @@ struct wpa_driver_nl80211_data {
 	size_t num_filter_ssids;
 
 	struct i802_bss first_bss;
+
+#ifdef CONFIG_AP
+	struct l2_packet_data *l2;
+#endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
 	int eapol_sock; /* socket for EAPOL frames */
@@ -1954,6 +1959,16 @@ static void nl80211_get_phy_name(struct wpa_driver_nl80211_data *drv)
 }
 
 
+#ifdef CONFIG_AP
+static void nl80211_l2_read(void *ctx, const u8 *src_addr, const u8 *buf,
+			    size_t len)
+{
+	wpa_printf(MSG_DEBUG, "nl80211: l2_packet read %u",
+		   (unsigned int) len);
+}
+#endif /* CONFIG_AP */
+
+
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -2023,6 +2038,11 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 
 	if (wpa_driver_nl80211_finish_drv_init(drv))
 		goto failed;
+
+#ifdef CONFIG_AP
+	drv->l2 = l2_packet_init(ifname, NULL, ETH_P_EAPOL,
+				 nl80211_l2_read, drv, 0);
+#endif /* CONFIG_AP */
 
 	if (drv->global)
 		dl_list_add(&drv->global->interfaces, &drv->list);
@@ -2233,6 +2253,11 @@ static void wpa_driver_nl80211_deinit(void *priv)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+#ifdef CONFIG_AP
+	if (drv->l2)
+		l2_packet_deinit(drv->l2);
+#endif /* CONFIG_AP */
 
 	if (drv->nl_handle_preq)
 		wpa_driver_nl80211_probe_req_report(bss, 0);
@@ -4480,6 +4505,21 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 }
 
 
+static int nl80211_send_eapol_data(struct i802_bss *bss,
+				   const u8 *addr, const u8 *data,
+				   size_t data_len, const u8 *own_addr)
+{
+	if (bss->drv->l2 == NULL) {
+		wpa_printf(MSG_DEBUG, "nl80211: No l2_packet to send EAPOL");
+		return -1;
+	}
+
+	if (l2_packet_send(bss->drv->l2, addr, ETH_P_EAPOL, data, data_len) <
+	    0)
+		return -1;
+	return 0;
+}
+
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
 static int wpa_driver_nl80211_hapd_send_eapol(
@@ -4493,6 +4533,10 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	u8 *pos;
 	int res;
 	int qos = flags & WPA_STA_WMM;
+
+	if (drv->no_monitor_iface_capab)
+		return nl80211_send_eapol_data(bss, addr, data, data_len,
+					       own_addr);
 
 	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +
 		data_len;

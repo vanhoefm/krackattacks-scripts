@@ -6196,7 +6196,8 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 	msg = NULL;
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Frame command failed: ret=%d "
-			   "(%s)", ret, strerror(-ret));
+			   "(%s) (freq=%u wait=%u)", ret, strerror(-ret),
+			   freq, wait);
 		goto nla_put_failure;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Frame TX command accepted; "

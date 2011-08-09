@@ -6188,7 +6188,8 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, freq);
-	NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
+	if (wait)
+		NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
 	NLA_PUT_FLAG(msg, NL80211_ATTR_OFFCHANNEL_TX_OK);
 	NLA_PUT(msg, NL80211_ATTR_FRAME, buf_len, buf);
 

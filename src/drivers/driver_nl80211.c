@@ -4505,6 +4505,7 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 }
 
 
+#ifdef CONFIG_AP
 static int nl80211_send_eapol_data(struct i802_bss *bss,
 				   const u8 *addr, const u8 *data,
 				   size_t data_len, const u8 *own_addr)
@@ -4519,6 +4520,8 @@ static int nl80211_send_eapol_data(struct i802_bss *bss,
 		return -1;
 	return 0;
 }
+#endif /* CONFIG_AP */
+
 
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
@@ -4534,9 +4537,11 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	int res;
 	int qos = flags & WPA_STA_WMM;
 
+#ifdef CONFIG_AP
 	if (drv->no_monitor_iface_capab)
 		return nl80211_send_eapol_data(bss, addr, data, data_len,
 					       own_addr);
+#endif /* CONFIG_AP */
 
 	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +
 		data_len;

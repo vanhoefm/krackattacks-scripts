@@ -4801,7 +4801,8 @@ static int wpa_driver_nl80211_connect(
 	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
 
 skip_auth_type:
-	if (params->wpa_ie && params->wpa_ie_len) {
+	if (params->wpa_ie && params->wpa_ie_len &&
+	    params->key_mgmt_suite != KEY_MGMT_WPS) {
 		enum nl80211_wpa_versions ver;
 
 		if (params->wpa_ie[0] == WLAN_EID_RSN)

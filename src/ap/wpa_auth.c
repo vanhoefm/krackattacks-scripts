@@ -332,7 +332,7 @@ static int wpa_group_init_gmk_and_counter(struct wpa_authenticator *wpa_auth,
 
 
 static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
-					 int vlan_id)
+					 int vlan_id, int delay_init)
 {
 	struct wpa_group *group;
 
@@ -365,9 +365,15 @@ static struct wpa_group * wpa_group_init(struct wpa_authenticator *wpa_auth,
 	}
 
 	group->GInit = TRUE;
-	wpa_group_sm_step(wpa_auth, group);
-	group->GInit = FALSE;
-	wpa_group_sm_step(wpa_auth, group);
+	if (delay_init) {
+		wpa_printf(MSG_DEBUG, "WPA: Delay group state machine start "
+			   "until Beacon frames have been configured");
+		/* Initialization is completed in wpa_init_keys(). */
+	} else {
+		wpa_group_sm_step(wpa_auth, group);
+		group->GInit = FALSE;
+		wpa_group_sm_step(wpa_auth, group);
+	}
 
 	return group;
 }
@@ -399,7 +405,7 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 		return NULL;
 	}
 
-	wpa_auth->group = wpa_group_init(wpa_auth, 0);
+	wpa_auth->group = wpa_group_init(wpa_auth, 0, 1);
 	if (wpa_auth->group == NULL) {
 		os_free(wpa_auth->wpa_ie);
 		os_free(wpa_auth);
@@ -437,6 +443,19 @@ struct wpa_authenticator * wpa_init(const u8 *addr,
 	}
 
 	return wpa_auth;
+}
+
+
+int wpa_init_keys(struct wpa_authenticator *wpa_auth)
+{
+	struct wpa_group *group = wpa_auth->group;
+
+	wpa_printf(MSG_DEBUG, "WPA: Start group state machine to set initial "
+		   "keys");
+	wpa_group_sm_step(wpa_auth, group);
+	group->GInit = FALSE;
+	wpa_group_sm_step(wpa_auth, group);
+	return 0;
 }
 
 
@@ -2767,7 +2786,7 @@ wpa_auth_add_group(struct wpa_authenticator *wpa_auth, int vlan_id)
 
 	wpa_printf(MSG_DEBUG, "WPA: Add group state machine for VLAN-ID %d",
 		   vlan_id);
-	group = wpa_group_init(wpa_auth, vlan_id);
+	group = wpa_group_init(wpa_auth, vlan_id, 0);
 	if (group == NULL)
 		return NULL;
 

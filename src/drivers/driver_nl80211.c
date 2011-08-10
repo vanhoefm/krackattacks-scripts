@@ -3847,6 +3847,8 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
 	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, params->beacon_int);
 	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period);
+	NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
+		params->ssid);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {

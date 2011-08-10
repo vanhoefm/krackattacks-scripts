@@ -530,6 +530,16 @@ struct wpa_driver_ap_params {
 	 * beacon_int - Beacon interval
 	 */
 	int beacon_int;
+
+	/**
+	 * ssid - The SSID to use in Beacon/Probe Response frames
+	 */
+	const u8 *ssid;
+
+	/**
+	 * ssid_len - Length of the SSID (1..32)
+	 */
+	size_t ssid_len;
 };
 
 /**

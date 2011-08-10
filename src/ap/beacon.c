@@ -398,6 +398,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	u8 *pos, *tail, *tailpos;
 	u16 capab_info;
 	size_t head_len, tail_len;
+	struct wpa_driver_ap_params params;
 
 #ifdef CONFIG_P2P
 	if ((hapd->conf->p2p & (P2P_ENABLED | P2P_GROUP_OWNER)) == P2P_ENABLED)
@@ -510,11 +511,15 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
-	if (hostapd_drv_set_beacon(hapd, (u8 *) head, head_len,
-				   tail, tail_len, hapd->conf->dtim_period,
-				   hapd->iconf->beacon_int))
-		wpa_printf(MSG_ERROR, "Failed to set beacon head/tail or DTIM "
-			   "period");
+	os_memset(&params, 0, sizeof(params));
+	params.head = (u8 *) head;
+	params.head_len = head_len;
+	params.tail = tail;
+	params.tail_len = tail_len;
+	params.dtim_period = hapd->conf->dtim_period;
+	params.beacon_int = hapd->iconf->beacon_int;
+	if (hostapd_drv_set_ap(hapd, &params))
+		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 
 	os_free(tail);
 	os_free(head);

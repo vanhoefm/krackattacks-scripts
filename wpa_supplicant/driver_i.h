@@ -320,15 +320,11 @@ static inline int wpa_drv_send_ft_action(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
-static inline int wpa_drv_set_beacon(struct wpa_supplicant *wpa_s,
-				     const u8 *head, size_t head_len,
-				     const u8 *tail, size_t tail_len,
-				     int dtim_period, int beacon_int)
+static inline int wpa_drv_set_ap(struct wpa_supplicant *wpa_s,
+				 struct wpa_driver_ap_params *params)
 {
-	if (wpa_s->driver->set_beacon)
-		return wpa_s->driver->set_beacon(wpa_s->drv_priv, head,
-						 head_len, tail, tail_len,
-						 dtim_period, beacon_int);
+	if (wpa_s->driver->set_ap)
+		return wpa_s->driver->set_ap(wpa_s->drv_priv, params);
 	return -1;
 }
 

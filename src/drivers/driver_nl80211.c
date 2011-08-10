@@ -3818,10 +3818,8 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 }
 
 
-static int wpa_driver_nl80211_set_beacon(void *priv,
-					 const u8 *head, size_t head_len,
-					 const u8 *tail, size_t tail_len,
-					 int dtim_period, int beacon_int)
+static int wpa_driver_nl80211_set_ap(void *priv,
+				     struct wpa_driver_ap_params *params)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -3844,11 +3842,11 @@ static int wpa_driver_nl80211_set_beacon(void *priv,
 
 	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
 		    0, cmd, 0);
-	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, head_len, head);
-	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, tail_len, tail);
+	NLA_PUT(msg, NL80211_ATTR_BEACON_HEAD, params->head_len, params->head);
+	NLA_PUT(msg, NL80211_ATTR_BEACON_TAIL, params->tail_len, params->tail);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, ifindex);
-	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, beacon_int);
-	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, dtim_period);
+	NLA_PUT_U32(msg, NL80211_ATTR_BEACON_INTERVAL, params->beacon_int);
+	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period);
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {
@@ -6858,7 +6856,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_operstate = wpa_driver_nl80211_set_operstate,
 	.set_supp_port = wpa_driver_nl80211_set_supp_port,
 	.set_country = wpa_driver_nl80211_set_country,
-	.set_beacon = wpa_driver_nl80211_set_beacon,
+	.set_ap = wpa_driver_nl80211_set_ap,
 	.if_add = wpa_driver_nl80211_if_add,
 	.if_remove = wpa_driver_nl80211_if_remove,
 	.send_mlme = wpa_driver_nl80211_send_mlme,

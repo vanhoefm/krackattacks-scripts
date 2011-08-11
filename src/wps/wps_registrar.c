@@ -485,10 +485,8 @@ static void wps_set_pushbutton(u16 *methods, u16 conf_methods)
 		*methods |= WPS_CONFIG_VIRT_PUSHBUTTON;
 	if (conf_methods & WPS_CONFIG_PHY_PUSHBUTTON)
 		*methods |= WPS_CONFIG_PHY_PUSHBUTTON;
-	if ((*methods & WPS_CONFIG_VIRT_PUSHBUTTON) !=
-	    WPS_CONFIG_VIRT_PUSHBUTTON ||
-	    (*methods & WPS_CONFIG_PHY_PUSHBUTTON) !=
-	    WPS_CONFIG_PHY_PUSHBUTTON) {
+	if (!(*methods & (WPS_CONFIG_VIRT_PUSHBUTTON |
+			  WPS_CONFIG_PHY_PUSHBUTTON))) {
 		/*
 		 * Required to include virtual/physical flag, but we were not
 		 * configured with push button type, so have to default to one

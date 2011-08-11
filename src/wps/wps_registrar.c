@@ -547,15 +547,7 @@ static int wps_build_probe_config_methods(struct wps_registrar *reg,
 static int wps_build_config_methods_r(struct wps_registrar *reg,
 				      struct wpabuf *msg)
 {
-	u16 methods;
-	methods = reg->wps->config_methods & ~WPS_CONFIG_PUSHBUTTON;
-#ifdef CONFIG_WPS2
-	methods &= ~(WPS_CONFIG_VIRT_PUSHBUTTON |
-		     WPS_CONFIG_PHY_PUSHBUTTON);
-#endif /* CONFIG_WPS2 */
-	if (reg->pbc)
-		wps_set_pushbutton(&methods, reg->wps->config_methods);
-	return wps_build_config_methods(msg, methods);
+	return wps_build_config_methods(msg, reg->wps->config_methods);
 }
 
 

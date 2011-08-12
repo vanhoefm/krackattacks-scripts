@@ -1188,7 +1188,7 @@ static int hostapd_rx_req_put_wlan_response(
 	}
 #endif /* CONFIG_WPS_STRICT */
 
-	if (!sta) {
+	if (!sta || !(sta->flags & WLAN_STA_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS UPnP: No matching STA found");
 		return 0;
 	}

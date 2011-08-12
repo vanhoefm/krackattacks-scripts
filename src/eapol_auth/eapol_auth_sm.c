@@ -1017,7 +1017,7 @@ static struct eapol_callbacks eapol_cb =
 
 int eapol_auth_eap_pending_cb(struct eapol_state_machine *sm, void *ctx)
 {
-	if (sm == NULL || ctx != sm->eap)
+	if (sm == NULL || ctx == NULL || ctx != sm->eap)
 		return -1;
 
 	eap_sm_pending_cb(sm->eap);

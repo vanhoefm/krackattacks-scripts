@@ -182,6 +182,39 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			}
 			goto fail;
 		}
+#ifdef CONFIG_IEEE80211W
+		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out &&
+		    sta->sa_query_count > 0)
+			ap_check_sa_query_timeout(hapd, sta);
+		if ((sta->flags & WLAN_STA_MFP) && !sta->sa_query_timed_out &&
+		    (sta->auth_alg != WLAN_AUTH_FT)) {
+			/*
+			 * STA has already been associated with MFP and SA
+			 * Query timeout has not been reached. Reject the
+			 * association attempt temporarily and start SA Query,
+			 * if one is not pending.
+			 */
+
+			if (sta->sa_query_count == 0)
+				ap_sta_start_sa_query(hapd, sta);
+
+#ifdef CONFIG_IEEE80211R
+			status = WLAN_STATUS_ASSOC_REJECTED_TEMPORARILY;
+
+			p = hostapd_eid_assoc_comeback_time(hapd, sta, p);
+
+			hostapd_sta_assoc(hapd, addr, reassoc, status, buf,
+					  p - buf);
+#endif /* CONFIG_IEEE80211R */
+			return 0;
+		}
+
+		if (wpa_auth_uses_mfp(sta->wpa_sm))
+			sta->flags |= WLAN_STA_MFP;
+		else
+			sta->flags &= ~WLAN_STA_MFP;
+#endif /* CONFIG_IEEE80211W */
+
 #ifdef CONFIG_IEEE80211R
 		if (sta->auth_alg == WLAN_AUTH_FT) {
 			status = wpa_ft_validate_reassoc(sta->wpa_sm, req_ies,
@@ -445,6 +478,9 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 {
 	struct sta_info *sta;
 
+        wpa_printf(MSG_DEBUG, "RX_ACTION cat %d action plen %d",
+		   action->category, (int) action->len);
+
 	sta = ap_get_sta(hapd, action->sa);
 	if (sta == NULL) {
 		wpa_printf(MSG_DEBUG, "%s: station not found", __func__);
@@ -457,6 +493,15 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 		wpa_ft_action_rx(sta->wpa_sm, action->data, action->len);
 	}
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211W
+	if (action->category == WLAN_ACTION_SA_QUERY && action->len >= 4) {
+		wpa_printf(MSG_DEBUG, "%s: SA_QUERY_ACTION length %d",
+			   __func__, (int) action->len);
+		ieee802_11_sa_query_action(hapd, action->sa,
+					   *(action->data + 1),
+					   action->data + 2);
+	}
+#endif /* CONFIG_IEEE80211W */
 }
 
 

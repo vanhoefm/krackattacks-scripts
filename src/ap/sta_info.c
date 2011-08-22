@@ -818,9 +818,7 @@ static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx)
 		       HOSTAPD_LEVEL_DEBUG,
 		       "association SA Query attempt %d", sta->sa_query_count);
 
-#ifdef NEED_AP_MLME
 	ieee802_11_send_sa_query_req(hapd, sta->addr, trans_id);
-#endif /* NEED_AP_MLME */
 }
 
 

@@ -862,7 +862,8 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_IEEE80211R
 	filt.app_filterype |= (IEEE80211_FILTER_TYPE_ASSOC_REQ |
-			       IEEE80211_FILTER_TYPE_AUTH);
+			       IEEE80211_FILTER_TYPE_AUTH |
+			       IEEE80211_FILTER_TYPE_ACTION);
 #endif
 	if (filt.app_filterype) {
 		ret = set80211priv(drv, IEEE80211_IOCTL_FILTERFRAME, &filt,

@@ -399,6 +399,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	u16 capab_info;
 	size_t head_len, tail_len;
 	struct wpa_driver_ap_params params;
+	struct wpabuf *beacon, *proberesp, *assocresp;
 
 #ifdef CONFIG_P2P
 	if ((hapd->conf->p2p & (P2P_ENABLED | P2P_GROUP_OWNER)) == P2P_ENABLED)
@@ -541,8 +542,13 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 		params.hide_ssid = HIDDEN_SSID_ZERO_CONTENTS;
 		break;
 	}
+	hostapd_build_ap_extra_ies(hapd, &beacon, &proberesp, &assocresp);
+	params.beacon_ies = beacon;
+	params.proberesp_ies = proberesp;
+	params.assocresp_ies = assocresp;
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
+	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);
 
 	os_free(tail);
 	os_free(head);

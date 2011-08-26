@@ -41,49 +41,47 @@ u32 hostapd_sta_flags_to_drv(u32 flags)
 }
 
 
-int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
+int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
+			       struct wpabuf **beacon,
+			       struct wpabuf **proberesp,
+			       struct wpabuf **assocresp)
 {
-	struct wpabuf *beacon, *proberesp, *assocresp = NULL;
-	int ret;
-
-	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
-		return 0;
-
-	beacon = hapd->wps_beacon_ie;
-	proberesp = hapd->wps_probe_resp_ie;
+	*beacon = hapd->wps_beacon_ie;
+	*proberesp = hapd->wps_probe_resp_ie;
+	*assocresp = NULL;
 
 #ifdef CONFIG_P2P
 	if (hapd->wps_beacon_ie == NULL && hapd->p2p_beacon_ie == NULL)
-		beacon = NULL;
+		*beacon = NULL;
 	else {
-		beacon = wpabuf_alloc((hapd->wps_beacon_ie ?
-				       wpabuf_len(hapd->wps_beacon_ie) : 0) +
-				      (hapd->p2p_beacon_ie ?
-				       wpabuf_len(hapd->p2p_beacon_ie) : 0));
-		if (beacon == NULL)
+		*beacon = wpabuf_alloc((hapd->wps_beacon_ie ?
+					wpabuf_len(hapd->wps_beacon_ie) : 0) +
+				       (hapd->p2p_beacon_ie ?
+					wpabuf_len(hapd->p2p_beacon_ie) : 0));
+		if (*beacon == NULL)
 			return -1;
 		if (hapd->wps_beacon_ie)
-			wpabuf_put_buf(beacon, hapd->wps_beacon_ie);
+			wpabuf_put_buf(*beacon, hapd->wps_beacon_ie);
 		if (hapd->p2p_beacon_ie)
-			wpabuf_put_buf(beacon, hapd->p2p_beacon_ie);
+			wpabuf_put_buf(*beacon, hapd->p2p_beacon_ie);
 	}
 
 	if (hapd->wps_probe_resp_ie == NULL && hapd->p2p_probe_resp_ie == NULL)
-		proberesp = NULL;
+		*proberesp = NULL;
 	else {
-		proberesp = wpabuf_alloc(
+		*proberesp = wpabuf_alloc(
 			(hapd->wps_probe_resp_ie ?
 			 wpabuf_len(hapd->wps_probe_resp_ie) : 0) +
 			(hapd->p2p_probe_resp_ie ?
 			 wpabuf_len(hapd->p2p_probe_resp_ie) : 0));
-		if (proberesp == NULL) {
-			wpabuf_free(beacon);
+		if (*proberesp == NULL) {
+			wpabuf_free(*beacon);
 			return -1;
 		}
 		if (hapd->wps_probe_resp_ie)
-			wpabuf_put_buf(proberesp, hapd->wps_probe_resp_ie);
+			wpabuf_put_buf(*proberesp, hapd->wps_probe_resp_ie);
 		if (hapd->p2p_probe_resp_ie)
-			wpabuf_put_buf(proberesp, hapd->p2p_probe_resp_ie);
+			wpabuf_put_buf(*proberesp, hapd->p2p_probe_resp_ie);
 	}
 #endif /* CONFIG_P2P */
 
@@ -91,67 +89,91 @@ int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
 	if (hapd->conf->p2p & P2P_MANAGE) {
 		struct wpabuf *a;
 
-		a = wpabuf_alloc(100 + (beacon ? wpabuf_len(beacon) : 0));
+		a = wpabuf_alloc(100 + (*beacon ? wpabuf_len(*beacon) : 0));
 		if (a) {
 			u8 *start, *p;
-			if (beacon)
-				wpabuf_put_buf(a, beacon);
-			if (beacon != hapd->wps_beacon_ie)
-				wpabuf_free(beacon);
+			if (*beacon)
+				wpabuf_put_buf(a, *beacon);
+			if (*beacon != hapd->wps_beacon_ie)
+				wpabuf_free(*beacon);
 			start = wpabuf_put(a, 0);
 			p = hostapd_eid_p2p_manage(hapd, start);
 			wpabuf_put(a, p - start);
-			beacon = a;
+			*beacon = a;
 		}
 
-		a = wpabuf_alloc(100 + (proberesp ? wpabuf_len(proberesp) :
+		a = wpabuf_alloc(100 + (*proberesp ? wpabuf_len(*proberesp) :
 					0));
 		if (a) {
 			u8 *start, *p;
-			if (proberesp)
-				wpabuf_put_buf(a, proberesp);
-			if (proberesp != hapd->wps_probe_resp_ie)
-				wpabuf_free(proberesp);
+			if (*proberesp)
+				wpabuf_put_buf(a, *proberesp);
+			if (*proberesp != hapd->wps_probe_resp_ie)
+				wpabuf_free(*proberesp);
 			start = wpabuf_put(a, 0);
 			p = hostapd_eid_p2p_manage(hapd, start);
 			wpabuf_put(a, p - start);
-			proberesp = a;
+			*proberesp = a;
 		}
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
 #ifdef CONFIG_WPS2
 	if (hapd->conf->wps_state)
-		assocresp = wps_build_assoc_resp_ie();
+		*assocresp = wps_build_assoc_resp_ie();
 #endif /* CONFIG_WPS2 */
 
 #ifdef CONFIG_P2P_MANAGER
 	if (hapd->conf->p2p & P2P_MANAGE) {
 		struct wpabuf *a;
-		a = wpabuf_alloc(100 + (assocresp ? wpabuf_len(assocresp) :
+		a = wpabuf_alloc(100 + (*assocresp ? wpabuf_len(*assocresp) :
 					0));
 		if (a) {
 			u8 *start, *p;
 			start = wpabuf_put(a, 0);
 			p = hostapd_eid_p2p_manage(hapd, start);
 			wpabuf_put(a, p - start);
-			if (assocresp) {
-				wpabuf_put_buf(a, assocresp);
-				wpabuf_free(assocresp);
+			if (*assocresp) {
+				wpabuf_put_buf(a, *assocresp);
+				wpabuf_free(*assocresp);
 			}
-			assocresp = a;
+			*assocresp = a;
 		}
 	}
 #endif /* CONFIG_P2P_MANAGER */
 
-	ret = hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp,
-					  assocresp);
+	return 0;
+}
 
+
+void hostapd_free_ap_extra_ies(struct hostapd_data *hapd, struct wpabuf *beacon,
+			       struct wpabuf *proberesp,
+			       struct wpabuf *assocresp)
+{
 	if (beacon != hapd->wps_beacon_ie)
 		wpabuf_free(beacon);
 	if (proberesp != hapd->wps_probe_resp_ie)
 		wpabuf_free(proberesp);
 	wpabuf_free(assocresp);
+}
+
+
+int hostapd_set_ap_wps_ie(struct hostapd_data *hapd)
+{
+	struct wpabuf *beacon, *proberesp, *assocresp;
+	int ret;
+
+	if (hapd->driver == NULL || hapd->driver->set_ap_wps_ie == NULL)
+		return 0;
+
+	if (hostapd_build_ap_extra_ies(hapd, &beacon, &proberesp, &assocresp) <
+	    0)
+		return -1;
+
+	ret = hapd->driver->set_ap_wps_ie(hapd->drv_priv, beacon, proberesp,
+					  assocresp);
+
+	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);
 
 	return ret;
 }

@@ -3929,6 +3929,21 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		break;
 	}
 
+	if (params->beacon_ies) {
+		NLA_PUT(msg, NL80211_ATTR_IE, wpabuf_len(params->beacon_ies),
+			wpabuf_head(params->beacon_ies));
+	}
+	if (params->proberesp_ies) {
+		NLA_PUT(msg, NL80211_ATTR_IE_PROBE_RESP,
+			wpabuf_len(params->proberesp_ies),
+			wpabuf_head(params->proberesp_ies));
+	}
+	if (params->assocresp_ies) {
+		NLA_PUT(msg, NL80211_ATTR_IE_ASSOC_RESP,
+			wpabuf_len(params->assocresp_ies),
+			wpabuf_head(params->assocresp_ies));
+	}
+
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Beacon set failed: %d (%s)",

@@ -581,6 +581,27 @@ struct wpa_driver_ap_params {
 	 * privacy - Whether privacy is used in the BSS
 	 */
 	int privacy;
+
+	/**
+	 * beacon_ies - WPS/P2P IE(s) for Beacon frames
+	 *
+	 * This is used to add IEs like WPS IE and P2P IE by drivers that do not
+	 * use the full Beacon template.
+	 */
+	const struct wpabuf *beacon_ies;
+
+	/**
+	 * proberesp_ies - P2P/WPS IE(s) for Probe Response frames
+	 *
+	 * This is used to add IEs like WPS IE and P2P IE by drivers that
+	 * reply to Probe Request frames internally.
+	 */
+	const struct wpabuf *proberesp_ies;
+
+	/**
+	 * assocresp_ies - WPS IE(s) for (Re)Association Response frames
+	 */
+	const struct wpabuf *assocresp_ies;
 };
 
 /**

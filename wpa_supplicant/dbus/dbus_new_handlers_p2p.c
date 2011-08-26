@@ -114,8 +114,17 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 					  wpabuf_head(entry.binarray_value[i]),
 					  WPS_DEV_TYPE_LEN);
 			}
-
 			num_req_dev_types = entry.array_len;
+		} else if (!os_strcmp(entry.key, "DiscoveryType") &&
+			   (entry.type == DBUS_TYPE_STRING)) {
+			if (!os_strcmp(entry.str_value, "start_with_full"))
+				type = P2P_FIND_START_WITH_FULL;
+			else if (!os_strcmp(entry.str_value, "social"))
+				type = P2P_FIND_ONLY_SOCIAL;
+			else if (!os_strcmp(entry.str_value, "progressive"))
+				type = P2P_FIND_PROGRESSIVE;
+			else
+				goto error_clear;
 		} else
 			goto error_clear;
 		wpa_dbus_dict_entry_clear(&entry);

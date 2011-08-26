@@ -3828,6 +3828,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	int ret;
 	int beacon_set;
 	int ifindex = if_nametoindex(bss->ifname);
+	int num_suites;
+	u32 suites[10];
+	u32 ver;
 
 	beacon_set = bss->beacon_set;
 
@@ -3849,6 +3852,68 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period);
 	NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
 		params->ssid);
+	if (params->privacy)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_PRIVACY);
+	if ((params->auth_algs & (WPA_AUTH_ALG_OPEN | WPA_AUTH_ALG_SHARED)) ==
+	    (WPA_AUTH_ALG_OPEN | WPA_AUTH_ALG_SHARED)) {
+		/* Leave out the attribute */
+	} else if (params->auth_algs & WPA_AUTH_ALG_SHARED)
+		NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE,
+			    NL80211_AUTHTYPE_SHARED_KEY);
+	else
+		NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE,
+			    NL80211_AUTHTYPE_OPEN_SYSTEM);
+
+	ver = 0;
+	if (params->wpa_version & WPA_PROTO_WPA)
+		ver |= NL80211_WPA_VERSION_1;
+	if (params->wpa_version & WPA_PROTO_RSN)
+		ver |= NL80211_WPA_VERSION_2;
+	if (ver)
+		NLA_PUT_U32(msg, NL80211_ATTR_WPA_VERSIONS, ver);
+
+	num_suites = 0;
+	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X)
+		suites[num_suites++] = WLAN_AKM_SUITE_8021X;
+	if (params->key_mgmt_suites & WPA_KEY_MGMT_PSK)
+		suites[num_suites++] = WLAN_AKM_SUITE_PSK;
+	if (num_suites) {
+		NLA_PUT(msg, NL80211_ATTR_AKM_SUITES,
+			num_suites * sizeof(u32), suites);
+	}
+
+	num_suites = 0;
+	if (params->pairwise_ciphers & WPA_CIPHER_CCMP)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;
+	if (params->pairwise_ciphers & WPA_CIPHER_TKIP)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_TKIP;
+	if (params->pairwise_ciphers & WPA_CIPHER_WEP104)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP104;
+	if (params->pairwise_ciphers & WPA_CIPHER_WEP40)
+		suites[num_suites++] = WLAN_CIPHER_SUITE_WEP40;
+	if (num_suites) {
+		NLA_PUT(msg, NL80211_ATTR_CIPHER_SUITES_PAIRWISE,
+			num_suites * sizeof(u32), suites);
+	}
+
+	switch (params->group_cipher) {
+	case WPA_CIPHER_CCMP:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_CCMP);
+		break;
+	case WPA_CIPHER_TKIP:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_TKIP);
+		break;
+	case WPA_CIPHER_WEP104:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_WEP104);
+		break;
+	case WPA_CIPHER_WEP40:
+		NLA_PUT_U32(msg, NL80211_ATTR_CIPHER_SUITE_GROUP,
+			    WLAN_CIPHER_SUITE_WEP40);
+		break;
+	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret) {

@@ -540,6 +540,36 @@ struct wpa_driver_ap_params {
 	 * ssid_len - Length of the SSID (1..32)
 	 */
 	size_t ssid_len;
+
+	/**
+	 * pairwise_ciphers - WPA_CIPHER_* bitfield
+	 */
+	unsigned int pairwise_ciphers;
+
+	/**
+	 * group_cipher - WPA_CIPHER_*
+	 */
+	unsigned int group_cipher;
+
+	/**
+	 * key_mgmt_suites - WPA_KEY_MGMT_* bitfield
+	 */
+	unsigned int key_mgmt_suites;
+
+	/**
+	 * auth_algs - WPA_AUTH_ALG_* bitfield
+	 */
+	unsigned int auth_algs;
+
+	/**
+	 * wpa_version - WPA_PROTO_* bitfield
+	 */
+	unsigned int wpa_version;
+
+	/**
+	 * privacy - Whether privacy is used in the BSS
+	 */
+	int privacy;
 };
 
 /**

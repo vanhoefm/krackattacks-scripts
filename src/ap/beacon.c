@@ -520,6 +520,16 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.beacon_int = hapd->iconf->beacon_int;
 	params.ssid = (u8 *) hapd->conf->ssid.ssid;
 	params.ssid_len = hapd->conf->ssid.ssid_len;
+	params.pairwise_ciphers = hapd->conf->rsn_pairwise ?
+		hapd->conf->rsn_pairwise : hapd->conf->wpa_pairwise;
+	params.group_cipher = hapd->conf->wpa_group;
+	params.key_mgmt_suites = hapd->conf->wpa_key_mgmt;
+	params.auth_algs = hapd->conf->auth_algs;
+	params.wpa_version = hapd->conf->wpa;
+	params.privacy = hapd->conf->ssid.wep.keys_set || hapd->conf->wpa ||
+		(hapd->conf->ieee802_1x &&
+		 (hapd->conf->default_wep_key_len ||
+		  hapd->conf->individual_wep_key_len));
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 

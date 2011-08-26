@@ -500,6 +500,12 @@ struct wpa_driver_associate_params {
 	int uapsd;
 };
 
+enum hide_ssid {
+	NO_SSID_HIDING,
+	HIDDEN_SSID_ZERO_LEN,
+	HIDDEN_SSID_ZERO_CONTENTS
+};
+
 struct wpa_driver_ap_params {
 	/**
 	 * head - Beacon head from IEEE 802.11 header to IEs before TIM IE
@@ -540,6 +546,11 @@ struct wpa_driver_ap_params {
 	 * ssid_len - Length of the SSID (1..32)
 	 */
 	size_t ssid_len;
+
+	/**
+	 * hide_ssid - Whether to hide the SSID
+	 */
+	enum hide_ssid hide_ssid;
 
 	/**
 	 * pairwise_ciphers - WPA_CIPHER_* bitfield

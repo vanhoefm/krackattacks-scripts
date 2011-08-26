@@ -3852,6 +3852,20 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period);
 	NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
 		params->ssid);
+	switch (params->hide_ssid) {
+	case NO_SSID_HIDING:
+		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
+			    NL80211_HIDDEN_SSID_NOT_IN_USE);
+		break;
+	case HIDDEN_SSID_ZERO_LEN:
+		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
+			    NL80211_HIDDEN_SSID_ZERO_LEN);
+		break;
+	case HIDDEN_SSID_ZERO_CONTENTS:
+		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,
+			    NL80211_HIDDEN_SSID_ZERO_CONTENTS);
+		break;
+	}
 	if (params->privacy)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_PRIVACY);
 	if ((params->auth_algs & (WPA_AUTH_ALG_OPEN | WPA_AUTH_ALG_SHARED)) ==

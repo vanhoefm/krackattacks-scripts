@@ -530,6 +530,17 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 		(hapd->conf->ieee802_1x &&
 		 (hapd->conf->default_wep_key_len ||
 		  hapd->conf->individual_wep_key_len));
+	switch (hapd->conf->ignore_broadcast_ssid) {
+	case 0:
+		params.hide_ssid = NO_SSID_HIDING;
+		break;
+	case 1:
+		params.hide_ssid = HIDDEN_SSID_ZERO_LEN;
+		break;
+	case 2:
+		params.hide_ssid = HIDDEN_SSID_ZERO_CONTENTS;
+		break;
+	}
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 

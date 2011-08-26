@@ -1095,12 +1095,12 @@ void wpa_dbus_dict_entry_clear(struct wpa_dbus_dict_entry *entry)
 				os_free(entry->strarray_value[i]);
 			os_free(entry->strarray_value);
 			break;
+		case WPAS_DBUS_TYPE_BINARRAY:
+			for (i = 0; i < entry->array_len; i++)
+				wpabuf_free(entry->binarray_value[i]);
+			os_free(entry->binarray_value);
+			break;
 		}
-		break;
-	case WPAS_DBUS_TYPE_BINARRAY:
-		for (i = 0; i < entry->array_len; i++)
-			wpabuf_free(entry->binarray_value[i]);
-		os_free(entry->binarray_value);
 		break;
 	}
 

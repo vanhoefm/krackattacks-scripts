@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -65,6 +65,9 @@ struct sta_info {
 	enum {
 		STA_NULLFUNC = 0, STA_DISASSOC, STA_DEAUTH, STA_REMOVE
 	} timeout_next;
+
+	u16 deauth_reason;
+	u16 disassoc_reason;
 
 	/* IEEE 802.1X related data */
 	struct eapol_state_machine *eapol_sm;
@@ -162,5 +165,8 @@ static inline int ap_sta_is_authorized(struct sta_info *sta)
 {
 	return sta->flags & WLAN_STA_AUTHORIZED;
 }
+
+void ap_sta_deauth_cb(struct hostapd_data *hapd, struct sta_info *sta);
+void ap_sta_disassoc_cb(struct hostapd_data *hapd, struct sta_info *sta);
 
 #endif /* STA_INFO_H */

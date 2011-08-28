@@ -1773,6 +1773,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	if (info.p2p_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
+	drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
 	drv->capa.max_remain_on_chan = info.max_remain_on_chan;
 
 	return 0;

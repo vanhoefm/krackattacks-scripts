@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1752,6 +1752,54 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 }
 
 
+static void handle_deauth_cb(struct hostapd_data *hapd,
+			     const struct ieee80211_mgmt *mgmt,
+			     size_t len, int ok)
+{
+	struct sta_info *sta;
+	if (mgmt->da[0] & 0x01)
+		return;
+	sta = ap_get_sta(hapd, mgmt->da);
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "handle_deauth_cb: STA " MACSTR
+			   " not found", MAC2STR(mgmt->da));
+		return;
+	}
+	if (ok)
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " acknowledged deauth",
+			   MAC2STR(sta->addr));
+	else
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " did not acknowledge "
+			   "deauth", MAC2STR(sta->addr));
+
+	ap_sta_deauth_cb(hapd, sta);
+}
+
+
+static void handle_disassoc_cb(struct hostapd_data *hapd,
+			       const struct ieee80211_mgmt *mgmt,
+			       size_t len, int ok)
+{
+	struct sta_info *sta;
+	if (mgmt->da[0] & 0x01)
+		return;
+	sta = ap_get_sta(hapd, mgmt->da);
+	if (!sta) {
+		wpa_printf(MSG_DEBUG, "handle_disassoc_cb: STA " MACSTR
+			   " not found", MAC2STR(mgmt->da));
+		return;
+	}
+	if (ok)
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " acknowledged disassoc",
+			   MAC2STR(sta->addr));
+	else
+		wpa_printf(MSG_DEBUG, "STA " MACSTR " did not acknowledge "
+			   "disassoc", MAC2STR(sta->addr));
+
+	ap_sta_disassoc_cb(hapd, sta);
+}
+
+
 /**
  * ieee802_11_mgmt_cb - Process management frame TX status callback
  * @hapd: hostapd BSS data structure (the BSS from which the management frame
@@ -1784,7 +1832,12 @@ void ieee802_11_mgmt_cb(struct hostapd_data *hapd, const u8 *buf, size_t len,
 		wpa_printf(MSG_EXCESSIVE, "mgmt::proberesp cb");
 		break;
 	case WLAN_FC_STYPE_DEAUTH:
-		/* ignore */
+		wpa_printf(MSG_DEBUG, "mgmt::deauth cb");
+		handle_deauth_cb(hapd, mgmt, len, ok);
+		break;
+	case WLAN_FC_STYPE_DISASSOC:
+		wpa_printf(MSG_DEBUG, "mgmt::disassoc cb");
+		handle_disassoc_cb(hapd, mgmt, len, ok);
 		break;
 	case WLAN_FC_STYPE_ACTION:
 		wpa_printf(MSG_DEBUG, "mgmt::action cb");

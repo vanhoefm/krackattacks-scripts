@@ -1,6 +1,6 @@
 /*
  * hostapd / Station table
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -38,9 +38,12 @@
 static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
 				       struct sta_info *sta);
 static void ap_handle_session_timer(void *eloop_ctx, void *timeout_ctx);
+static void ap_sta_deauth_cb_timeout(void *eloop_ctx, void *timeout_ctx);
+static void ap_sta_disassoc_cb_timeout(void *eloop_ctx, void *timeout_ctx);
 #ifdef CONFIG_IEEE80211W
 static void ap_sa_query_timer(void *eloop_ctx, void *timeout_ctx);
 #endif /* CONFIG_IEEE80211W */
+static int ap_sta_remove(struct hostapd_data *hapd, struct sta_info *sta);
 
 int ap_for_each_sta(struct hostapd_data *hapd,
 		    int (*cb)(struct hostapd_data *hapd, struct sta_info *sta,
@@ -198,6 +201,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_cancel_timeout(ap_handle_session_timer, hapd, sta);
+	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
+	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
 
 	ieee802_1x_free_station(sta);
 	wpa_auth_sta_deinit(sta->wpa_sm);
@@ -525,13 +530,23 @@ static void ap_sta_remove_in_other_bss(struct hostapd_data *hapd,
 }
 
 
+static void ap_sta_disassoc_cb_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct sta_info *sta = timeout_ctx;
+
+	ap_sta_remove(hapd, sta);
+	mlme_disassociate_indication(hapd, sta, sta->disassoc_reason);
+}
+
+
 void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 			 u16 reason)
 {
 	wpa_printf(MSG_DEBUG, "%s: disassociate STA " MACSTR,
 		   hapd->conf->iface, MAC2STR(sta->addr));
 	sta->flags &= ~WLAN_STA_ASSOC;
-	ap_sta_remove(hapd, sta);
+	ap_sta_set_authorized(hapd, sta, 0);
 	sta->timeout_next = STA_DEAUTH;
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DISASSOC, 0,
@@ -539,7 +554,21 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 	accounting_sta_stop(hapd, sta);
 	ieee802_1x_free_station(sta);
 
-	mlme_disassociate_indication(hapd, sta, reason);
+	sta->disassoc_reason = reason;
+	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
+	eloop_register_timeout(hapd->iface->drv_flags &
+			       WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS ? 2 : 0, 0,
+			       ap_sta_disassoc_cb_timeout, hapd, sta);
+}
+
+
+static void ap_sta_deauth_cb_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct hostapd_data *hapd = eloop_ctx;
+	struct sta_info *sta = timeout_ctx;
+
+	ap_sta_remove(hapd, sta);
+	mlme_deauthenticate_indication(hapd, sta, sta->deauth_reason);
 }
 
 
@@ -549,7 +578,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 	wpa_printf(MSG_DEBUG, "%s: deauthenticate STA " MACSTR,
 		   hapd->conf->iface, MAC2STR(sta->addr));
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
-	ap_sta_remove(hapd, sta);
+	ap_sta_set_authorized(hapd, sta, 0);
 	sta->timeout_next = STA_REMOVE;
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,
@@ -557,7 +586,11 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 	accounting_sta_stop(hapd, sta);
 	ieee802_1x_free_station(sta);
 
-	mlme_deauthenticate_indication(hapd, sta, reason);
+	sta->deauth_reason = reason;
+	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
+	eloop_register_timeout(hapd->iface->drv_flags &
+			       WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS ? 2 : 0, 0,
+			       ap_sta_deauth_cb_timeout, hapd, sta);
 }
 
 
@@ -791,6 +824,25 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 	ap_sta_set_authorized(hapd, sta, 0);
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
-	eloop_register_timeout(0, 0, ap_handle_timer, hapd, sta);
+	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,
+			       ap_handle_timer, hapd, sta);
 	sta->timeout_next = STA_REMOVE;
+
+	sta->deauth_reason = reason;
+	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
+	eloop_register_timeout(hapd->iface->drv_flags &
+			       WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS ? 2 : 0, 0,
+			       ap_sta_deauth_cb_timeout, hapd, sta);
+}
+
+
+void ap_sta_deauth_cb(struct hostapd_data *hapd, struct sta_info *sta)
+{
+	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
+	ap_sta_deauth_cb_timeout(hapd, sta);
+}
+
+
+void ap_sta_disassoc_cb(struct hostapd_data *hapd, struct sta_info *sta)
+{
 }

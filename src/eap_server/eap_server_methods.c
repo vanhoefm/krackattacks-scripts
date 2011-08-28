@@ -167,6 +167,8 @@ void eap_server_unregister_methods(void)
 const char * eap_server_get_name(int vendor, EapType type)
 {
 	struct eap_method *m;
+	if (vendor == EAP_VENDOR_IETF && type == EAP_TYPE_EXPANDED)
+		return "expanded";
 	for (m = eap_methods; m; m = m->next) {
 		if (m->vendor == vendor && m->method == type)
 			return m->name;

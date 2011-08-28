@@ -239,6 +239,7 @@ int wps_ap_priority_compar(const struct wpabuf *wps_a,
 int wps_is_addr_authorized(const struct wpabuf *msg, const u8 *addr,
 			   int ver1_compat);
 const u8 * wps_get_uuid_e(const struct wpabuf *msg);
+int wps_is_20(const struct wpabuf *msg);
 
 struct wpabuf * wps_build_assoc_req_ie(enum wps_request_type req_type);
 struct wpabuf * wps_build_assoc_resp_ie(void);

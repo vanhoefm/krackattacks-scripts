@@ -701,7 +701,7 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 	}
 
 #ifdef CONFIG_WPS
-	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS);
+	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS | WLAN_STA_WPS2);
 	if (hapd->conf->wps_state && elems.wps_ie) {
 		wpa_printf(MSG_DEBUG, "STA included WPS IE in (Re)Association "
 			   "Request - assume WPS is used");
@@ -709,6 +709,10 @@ static u16 check_assoc_ies(struct hostapd_data *hapd, struct sta_info *sta,
 		wpabuf_free(sta->wps_ie);
 		sta->wps_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
 							  WPS_IE_VENDOR_TYPE);
+		if (sta->wps_ie && wps_is_20(sta->wps_ie)) {
+			wpa_printf(MSG_DEBUG, "WPS: STA supports WPS 2.0");
+			sta->flags |= WLAN_STA_WPS2;
+		}
 		wpa_ie = NULL;
 		wpa_ie_len = 0;
 		if (sta->wps_ie && wps_validate_assoc_req(sta->wps_ie) < 0) {

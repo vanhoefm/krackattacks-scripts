@@ -93,7 +93,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		if (sta == NULL)
 			return -1;
 	}
-	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS);
+	sta->flags &= ~(WLAN_STA_WPS | WLAN_STA_MAYBE_WPS | WLAN_STA_WPS2);
 
 #ifdef CONFIG_P2P
 	if (elems.p2p) {
@@ -118,7 +118,18 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		}
 		if (hapd->conf->wps_state && ie[0] == 0xdd && ie[1] >= 4 &&
 		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
+			struct wpabuf *wps;
 			sta->flags |= WLAN_STA_WPS;
+			wps = ieee802_11_vendor_ie_concat(ie, ielen,
+							  WPS_IE_VENDOR_TYPE);
+			if (wps) {
+				if (wps_is_20(wps)) {
+					wpa_printf(MSG_DEBUG, "WPS: STA "
+						   "supports WPS 2.0");
+					sta->flags |= WLAN_STA_WPS2;
+				}
+				wpabuf_free(wps);
+			}
 			goto skip_wpa_check;
 		}
 
@@ -156,11 +167,11 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			return -1;
 		}
 	} else if (hapd->conf->wps_state) {
+		struct wpabuf *wps;
+		wps = ieee802_11_vendor_ie_concat(ie, ielen,
+						  WPS_IE_VENDOR_TYPE);
 #ifdef CONFIG_WPS_STRICT
 		if (ie) {
-			struct wpabuf *wps;
-			wps = ieee802_11_vendor_ie_concat(ie, ielen,
-							  WPS_IE_VENDOR_TYPE);
 			if (wps && wps_validate_assoc_req(wps) < 0) {
 				hostapd_drv_sta_disassoc(
 					hapd, sta->addr,
@@ -175,8 +186,14 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		if (ie && ielen > 4 && ie[0] == 0xdd && ie[1] >= 4 &&
 		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
 			sta->flags |= WLAN_STA_WPS;
+			if (wps && wps_is_20(wps)) {
+				wpa_printf(MSG_DEBUG, "WPS: STA supports "
+					   "WPS 2.0");
+				sta->flags |= WLAN_STA_WPS2;
+			}
 		} else
 			sta->flags |= WLAN_STA_MAYBE_WPS;
+		wpabuf_free(wps);
 	}
 skip_wpa_check:
 

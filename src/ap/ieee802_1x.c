@@ -752,14 +752,24 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 			return;
 
 #ifdef CONFIG_WPS
-		if (!hapd->conf->ieee802_1x &&
-		    ((sta->flags & (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS)) ==
-		     WLAN_STA_MAYBE_WPS)) {
-			/*
-			 * Delay EAPOL frame transmission until a possible WPS
-			 * STA initiates the handshake with EAPOL-Start.
-			 */
-			sta->eapol_sm->flags |= EAPOL_SM_WAIT_START;
+		if (!hapd->conf->ieee802_1x) {
+			u32 wflags = sta->flags & (WLAN_STA_WPS |
+						   WLAN_STA_WPS2 |
+						   WLAN_STA_MAYBE_WPS);
+			if (wflags == WLAN_STA_MAYBE_WPS ||
+			    wflags == (WLAN_STA_WPS | WLAN_STA_MAYBE_WPS)) {
+				/*
+				 * Delay EAPOL frame transmission until a
+				 * possible WPS STA initiates the handshake
+				 * with EAPOL-Start. Only allow the wait to be
+				 * skipped if the STA is known to support WPS
+				 * 2.0.
+				 */
+				wpa_printf(MSG_DEBUG, "WPS: Do not start "
+					   "EAPOL until EAPOL-Start is "
+					   "received");
+				sta->eapol_sm->flags |= EAPOL_SM_WAIT_START;
+			}
 		}
 #endif /* CONFIG_WPS */
 
@@ -888,11 +898,14 @@ void ieee802_1x_new_station(struct hostapd_data *hapd, struct sta_info *sta)
 
 #ifdef CONFIG_WPS
 	sta->eapol_sm->flags &= ~EAPOL_SM_WAIT_START;
-	if (!hapd->conf->ieee802_1x && !(sta->flags & WLAN_STA_WPS)) {
+	if (!hapd->conf->ieee802_1x && !(sta->flags & WLAN_STA_WPS2)) {
 		/*
-		 * Delay EAPOL frame transmission until a possible WPS
-		 * initiates the handshake with EAPOL-Start.
+		 * Delay EAPOL frame transmission until a possible WPS STA
+		 * initiates the handshake with EAPOL-Start. Only allow the
+		 * wait to be skipped if the STA is known to support WPS 2.0.
 		 */
+		wpa_printf(MSG_DEBUG, "WPS: Do not start EAPOL until "
+			   "EAPOL-Start is received");
 		sta->eapol_sm->flags |= EAPOL_SM_WAIT_START;
 	}
 #endif /* CONFIG_WPS */

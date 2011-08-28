@@ -355,6 +355,19 @@ const u8 * wps_get_uuid_e(const struct wpabuf *msg)
 
 
 /**
+ * wps_is_20 - Check whether WPS attributes claim support for WPS 2.0
+ */
+int wps_is_20(const struct wpabuf *msg)
+{
+	struct wps_parse_attr attr;
+
+	if (msg == NULL || wps_parse_msg(msg, &attr) < 0)
+		return 0;
+	return attr.version2 != NULL;
+}
+
+
+/**
  * wps_build_assoc_req_ie - Build WPS IE for (Re)Association Request
  * @req_type: Value for Request Type attribute
  * Returns: WPS IE or %NULL on failure

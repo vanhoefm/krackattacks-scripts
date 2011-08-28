@@ -326,13 +326,20 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 		return -1;
 	}
 
+	if (prot != WLANTEST_INJECT_UNPROTECTED &&
+	    (bss == NULL || sta == NULL)) {
+		wpa_printf(MSG_INFO, "No BSS/STA information to inject "
+			   "protected frames");
+		return -1;
+	}
+
 	hdr = (struct ieee80211_hdr *) frame;
 	fc = le_to_host16(hdr->frame_control);
 	protectable = WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_DATA ||
 		is_robust_mgmt(frame, len);
 
-	if (prot == WLANTEST_INJECT_PROTECTED ||
-	    prot == WLANTEST_INJECT_INCORRECT_KEY) {
+	if ((prot == WLANTEST_INJECT_PROTECTED ||
+	     prot == WLANTEST_INJECT_INCORRECT_KEY) && bss) {
 		if (!sta &&
 		    ((WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
 		      !bss->igtk_set[bss->igtk_idx]) ||
@@ -350,7 +357,7 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 			return -1;
 		}
 		protect = 1;
-	} else if (protectable && prot != WLANTEST_INJECT_UNPROTECTED) {
+	} else if (protectable && prot != WLANTEST_INJECT_UNPROTECTED && bss) {
 		if (sta && sta->ptk_set)
 			protect = 1;
 		else if (!sta) {
@@ -363,7 +370,7 @@ int wlantest_inject(struct wlantest *wt, struct wlantest_bss *bss,
 		}
 	}
 
-	if (protect)
+	if (protect && bss)
 		return wlantest_inject_prot(
 			wt, bss, sta, frame, len,
 			prot == WLANTEST_INJECT_INCORRECT_KEY);

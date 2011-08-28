@@ -1154,14 +1154,17 @@ static void ctrl_send_(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 	}
 
 	bss = bss_find(wt, bssid);
-	if (bss == NULL) {
+	if (bss == NULL && prot != WLANTEST_INJECT_UNPROTECTED) {
 		wpa_printf(MSG_INFO, "Unknown BSSID");
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;
 	}
 
-	sta = sta_find(bss, sta_addr);
-	if (sta == NULL) {
+	if (bss)
+		sta = sta_find(bss, sta_addr);
+	else
+		sta = NULL;
+	if (sta == NULL && prot != WLANTEST_INJECT_UNPROTECTED) {
 		wpa_printf(MSG_INFO, "Unknown STA address");
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_FAILURE);
 		return;

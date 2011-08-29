@@ -169,6 +169,7 @@ struct wpa_driver_nl80211_data {
 	u64 send_action_cookie;
 
 	unsigned int last_mgmt_freq;
+	unsigned int ap_oper_freq;
 
 	struct wpa_driver_scan_filter *filter_ssids;
 	size_t num_filter_ssids;
@@ -1356,8 +1357,7 @@ static void nl80211_new_station_event(struct wpa_driver_nl80211_data *drv,
 	addr = nla_data(tb[NL80211_ATTR_MAC]);
 	wpa_printf(MSG_DEBUG, "nl80211: New station " MACSTR, MAC2STR(addr));
 
-	if (drv->nlmode == NL80211_IFTYPE_AP &&
-	    drv->no_monitor_iface_capab) {
+	if (is_ap_interface(drv->nlmode) && drv->no_monitor_iface_capab) {
 		u8 *ies = NULL;
 		size_t ies_len = 0;
 		if (tb[NL80211_ATTR_IE]) {
@@ -1390,8 +1390,7 @@ static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
 	wpa_printf(MSG_DEBUG, "nl80211: Delete station " MACSTR,
 		   MAC2STR(addr));
 
-	if (drv->nlmode == NL80211_IFTYPE_AP &&
-	    drv->no_monitor_iface_capab) {
+	if (is_ap_interface(drv->nlmode) && drv->no_monitor_iface_capab) {
 		drv_event_disassoc(drv->ctx, addr);
 		return;
 	}
@@ -3801,6 +3800,11 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 					      data, data_len, NULL);
 	}
 
+	if (drv->no_monitor_iface_capab && is_ap_interface(drv->nlmode)) {
+		return nl80211_send_frame_cmd(drv, drv->ap_oper_freq, 0,
+					      data, data_len, NULL);
+	}
+
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
 	    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_AUTH) {
 		/*
@@ -4764,8 +4768,16 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		return -1;
 	}
 
-	/* TODO: setup monitor interface (and add code somewhere to remove this
-	 * when AP mode is stopped; associate with mode != 2 or drv_deinit) */
+	if (drv->no_monitor_iface_capab) {
+		if (wpa_driver_nl80211_probe_req_report(&drv->first_bss, 1) < 0)
+		{
+			wpa_printf(MSG_DEBUG, "nl80211: Failed to enable "
+				   "Probe Request frame reporting in AP mode");
+			/* Try to survive without this */
+		}
+	}
+
+	drv->ap_oper_freq = params->freq;
 
 	return 0;
 }
@@ -5211,6 +5223,7 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = -1;
 	int i;
+	int was_ap = is_ap_interface(drv->nlmode);
 
 	if (nl80211_set_mode(drv, drv->ifindex, nlmode) == 0) {
 		drv->nlmode = nlmode;
@@ -5264,6 +5277,8 @@ done:
 			return -1;
 	} else if (!ret && !is_ap_interface(nlmode)) {
 		/* Remove additional AP mode functionality */
+		if (was_ap && drv->no_monitor_iface_capab)
+			wpa_driver_nl80211_probe_req_report(bss, 0);
 		nl80211_remove_monitor_interface(drv);
 		bss->beacon_set = 0;
 	}
@@ -6502,13 +6517,6 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-
-	if (!is_sta_interface(drv->nlmode)) {
-		wpa_printf(MSG_DEBUG, "nl80211: probe_req_report control only "
-			   "allowed in station mode (iftype=%d)",
-			   drv->nlmode);
-		return -1;
-	}
 
 	if (!report) {
 		if (drv->nl_handle_preq) {

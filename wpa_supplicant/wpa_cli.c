@@ -3473,7 +3473,7 @@ static char * wpa_cli_get_default_ifname(void)
 #endif /* CONFIG_CTRL_IFACE_UNIX */
 
 #ifdef CONFIG_CTRL_IFACE_NAMED_PIPE
-	char buf[2048], *pos;
+	char buf[4096], *pos;
 	size_t len;
 	struct wpa_ctrl *ctrl;
 	int ret;

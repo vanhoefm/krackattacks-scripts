@@ -502,15 +502,60 @@ static void wps_er_get_device_info(struct wps_er_ap *ap)
 }
 
 
+static const char * wps_er_find_wfadevice(const char *data)
+{
+	const char *tag, *tagname, *end;
+	char *val;
+	int found = 0;
+
+	while (!found) {
+		/* Find next <device> */
+		for (;;) {
+			if (xml_next_tag(data, &tag, &tagname, &end))
+				return NULL;
+			data = end;
+			if (!os_strncasecmp(tagname, "device", 6) &&
+			    *tag != '/' &&
+			    (tagname[6] == '>' || !isgraph(tagname[6]))) {
+				break;
+			}
+		}
+
+		/* Check whether deviceType is WFADevice */
+		val = xml_get_first_item(data, "deviceType");
+		if (val == NULL)
+			return NULL;
+		wpa_printf(MSG_DEBUG, "WPS ER: Found deviceType '%s'", val);
+		found = os_strcasecmp(val, "urn:schemas-wifialliance-org:"
+				      "device:WFADevice:1") == 0;
+		os_free(val);
+	}
+
+	return data;
+}
+
+
 static void wps_er_parse_device_description(struct wps_er_ap *ap,
 					    struct wpabuf *reply)
 {
 	/* Note: reply includes null termination after the buffer data */
-	const char *data = wpabuf_head(reply);
+	const char *tmp, *data = wpabuf_head(reply);
 	char *pos;
 
 	wpa_hexdump_ascii(MSG_MSGDUMP, "WPS ER: Device info",
 			  wpabuf_head(reply), wpabuf_len(reply));
+
+	/*
+	 * The root device description may include multiple devices, so first
+	 * find the beginning of the WFADevice description to allow the
+	 * simplistic parser to pick the correct entries.
+	 */
+	tmp = wps_er_find_wfadevice(data);
+	if (tmp == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: WFADevice:1 device not found - "
+			   "trying to parse invalid data");
+	} else
+		data = tmp;
 
 	ap->friendly_name = xml_get_first_item(data, "friendlyName");
 	wpa_printf(MSG_DEBUG, "WPS ER: friendlyName='%s'", ap->friendly_name);

@@ -1142,6 +1142,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 	wps->config_methods = wps_fix_config_methods(wps->config_methods);
+	wps->dev.config_methods = wps->config_methods;
 	os_memcpy(wps->dev.pri_dev_type, wpa_s->conf->device_type,
 		  WPS_DEV_TYPE_LEN);
 

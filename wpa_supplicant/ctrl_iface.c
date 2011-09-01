@@ -3490,8 +3490,11 @@ char * wpa_supplicant_global_ctrl_iface_process(struct wpa_global *global,
 	char *reply;
 	const int reply_size = 2048;
 	int reply_len;
+	int level = MSG_DEBUG;
 
-	wpa_hexdump_ascii(MSG_DEBUG, "RX global ctrl_iface",
+	if (os_strcmp(buf, "PING") == 0)
+		level = MSG_EXCESSIVE;
+	wpa_hexdump_ascii(level, "RX global ctrl_iface",
 			  (const u8 *) buf, os_strlen(buf));
 
 	reply = os_malloc(reply_size);

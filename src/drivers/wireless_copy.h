@@ -77,24 +77,22 @@
 /***************************** INCLUDES *****************************/
 
  /* jkm - replaced linux headers with C library headers, added typedefs */
-#if 0
+#ifdef ANDROID
 #include <linux/types.h>		/* for __u* and __s* typedefs */
 #include <linux/socket.h>		/* for "struct sockaddr" et al	*/
 #include <linux/if.h>			/* for IFNAMSIZ and co... */
-#else
+#else /* ANDROID */
 #include <sys/types.h>
 #include <net/if.h>
-#ifndef ANDROID
 typedef __uint32_t __u32;
 typedef __int32_t __s32;
 typedef __uint16_t __u16;
 typedef __int16_t __s16;
 typedef __uint8_t __u8;
-#endif /* ANDROID */
 #ifndef __user
 #define __user
 #endif /* __user */
-#endif
+#endif /* ANDROID */
 
 /***************************** VERSION *****************************/
 /*

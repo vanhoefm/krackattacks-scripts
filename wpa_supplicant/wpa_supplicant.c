@@ -934,6 +934,7 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_IEEE80211W */
 
+	wpa_s->wpa_proto = proto;
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_PROTO, proto);
 	wpa_sm_set_param(wpa_s->wpa, WPA_PARAM_RSN_ENABLED,
 			 !!(ssid->proto & WPA_PROTO_RSN));
@@ -1313,6 +1314,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	params.pairwise_suite = cipher_pairwise;
 	params.group_suite = cipher_group;
 	params.key_mgmt_suite = key_mgmt2driver(wpa_s->key_mgmt);
+	params.wpa_proto = wpa_s->wpa_proto;
 	params.auth_alg = algs;
 	params.mode = ssid->mode;
 	for (i = 0; i < NUM_WEP_KEYS; i++) {

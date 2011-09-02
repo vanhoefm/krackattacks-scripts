@@ -4957,16 +4957,15 @@ static int wpa_driver_nl80211_connect(
 	NLA_PUT_U32(msg, NL80211_ATTR_AUTH_TYPE, type);
 
 skip_auth_type:
-	if (params->wpa_ie && params->wpa_ie_len &&
-	    params->key_mgmt_suite != KEY_MGMT_WPS) {
-		enum nl80211_wpa_versions ver;
+	if (params->wpa_proto) {
+		enum nl80211_wpa_versions ver = 0;
 
-		if (params->wpa_ie[0] == WLAN_EID_RSN)
-			ver = NL80211_WPA_VERSION_2;
-		else
-			ver = NL80211_WPA_VERSION_1;
+		if (params->wpa_proto & WPA_PROTO_WPA)
+			ver |= NL80211_WPA_VERSION_1;
+		if (params->wpa_proto & WPA_PROTO_RSN)
+			ver |= NL80211_WPA_VERSION_2;
 
-		wpa_printf(MSG_DEBUG, "  * WPA Version %d", ver);
+		wpa_printf(MSG_DEBUG, "  * WPA Versions 0x%x", ver);
 		NLA_PUT_U32(msg, NL80211_ATTR_WPA_VERSIONS, ver);
 	}
 

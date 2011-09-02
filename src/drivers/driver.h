@@ -351,6 +351,11 @@ struct wpa_driver_associate_params {
 	size_t wpa_ie_len;
 
 	/**
+	 * wpa_proto - Bitfield of WPA_PROTO_* values to indicate WPA/WPA2
+	 */
+	unsigned int wpa_proto;
+
+	/**
 	 * pairwise_suite - Selected pairwise cipher suite
 	 *
 	 * This is usually ignored if @wpa_ie is used.

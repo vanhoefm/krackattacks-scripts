@@ -366,6 +366,7 @@ struct wpa_supplicant {
 	int pairwise_cipher;
 	int group_cipher;
 	int key_mgmt;
+	int wpa_proto;
 	int mgmt_group_cipher;
 
 	void *drv_priv; /* private data used by driver_ops */
@@ -458,6 +459,7 @@ struct wpa_supplicant {
 		u8 prev_bssid[ETH_ALEN];
 		int prev_bssid_set;
 		int auth_alg;
+		int proto;
 
 		int sa_query_count; /* number of pending SA Query requests;
 				     * 0 = no SA Query in progress */

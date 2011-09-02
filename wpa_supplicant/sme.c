@@ -392,13 +392,15 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		wpa_dbg(wpa_s, MSG_DEBUG, "SME: Could not parse own IEs?!");
 		os_memset(&elems, 0, sizeof(elems));
 	}
-	if (elems.rsn_ie)
+	if (elems.rsn_ie) {
+		params.wpa_proto = WPA_PROTO_RSN;
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, elems.rsn_ie - 2,
 					elems.rsn_ie_len + 2);
-	else if (elems.wpa_ie)
+	} else if (elems.wpa_ie) {
+		params.wpa_proto = WPA_PROTO_WPA;
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, elems.wpa_ie - 2,
 					elems.wpa_ie_len + 2);
-	else
+	} else
 		wpa_sm_set_assoc_wpa_ie(wpa_s->wpa, NULL, 0);
 	if (wpa_s->current_ssid && wpa_s->current_ssid->p2p_group)
 		params.p2p = 1;

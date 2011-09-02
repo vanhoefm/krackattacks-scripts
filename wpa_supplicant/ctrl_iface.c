@@ -340,7 +340,10 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 
 	if (os_strcmp(cmd, "any") == 0)
 		_bssid = NULL;
-	else if (hwaddr_aton(cmd, bssid)) {
+	else if (os_strcmp(cmd, "get") == 0) {
+		ret = wps_generate_pin();
+		goto done;
+	} else if (hwaddr_aton(cmd, bssid)) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE WPS_PIN: invalid BSSID '%s'",
 			   cmd);
 		return -1;
@@ -367,6 +370,7 @@ static int wpa_supplicant_ctrl_iface_wps_pin(struct wpa_supplicant *wpa_s,
 	if (ret < 0)
 		return -1;
 
+done:
 	/* Return the generated PIN */
 	ret = os_snprintf(buf, buflen, "%08d", ret);
 	if (ret < 0 || (size_t) ret >= buflen)

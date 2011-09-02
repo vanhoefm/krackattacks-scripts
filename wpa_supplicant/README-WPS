@@ -127,6 +127,11 @@ This starts the WPS negotiation in the same way as above with the
 generated PIN.
 
 
+If a random PIN is needed for a user interface, "wpa_cli wps_pin get"
+can be used to generate a new PIN without starting WPS negotiation.
+This random PIN can then be passed as an argument to another wps_pin
+call when the actual operation should be started.
+
 If the client design wants to support optional WPS PBC mode, this can
 be enabled by either a physical button in the client device or a
 virtual button in the user interface. The PBC operation requires that

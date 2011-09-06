@@ -33,6 +33,8 @@
 #define WLAN_STA_WDS BIT(14)
 #define WLAN_STA_ASSOC_REQ_OK BIT(15)
 #define WLAN_STA_WPS2 BIT(16)
+#define WLAN_STA_PENDING_DISASSOC_CB BIT(29)
+#define WLAN_STA_PENDING_DEAUTH_CB BIT(30)
 #define WLAN_STA_NONERP BIT(31)
 
 /* Maximum number of supported rates (from both Supported Rates and Extended

@@ -555,6 +555,7 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 	ieee802_1x_free_station(sta);
 
 	sta->disassoc_reason = reason;
+	sta->flags |= WLAN_STA_PENDING_DISASSOC_CB;
 	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
 	eloop_register_timeout(hapd->iface->drv_flags &
 			       WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS ? 2 : 0, 0,
@@ -587,6 +588,7 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 	ieee802_1x_free_station(sta);
 
 	sta->deauth_reason = reason;
+	sta->flags |= WLAN_STA_PENDING_DEAUTH_CB;
 	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
 	eloop_register_timeout(hapd->iface->drv_flags &
 			       WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS ? 2 : 0, 0,
@@ -829,6 +831,7 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 	sta->timeout_next = STA_REMOVE;
 
 	sta->deauth_reason = reason;
+	sta->flags |= WLAN_STA_PENDING_DEAUTH_CB;
 	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
 	eloop_register_timeout(hapd->iface->drv_flags &
 			       WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS ? 2 : 0, 0,
@@ -838,6 +841,11 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 
 void ap_sta_deauth_cb(struct hostapd_data *hapd, struct sta_info *sta)
 {
+	if (!(sta->flags & WLAN_STA_PENDING_DEAUTH_CB)) {
+		wpa_printf(MSG_DEBUG, "Ignore deauth cb for test frame");
+		return;
+	}
+	sta->flags &= ~WLAN_STA_PENDING_DEAUTH_CB;
 	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
 	ap_sta_deauth_cb_timeout(hapd, sta);
 }
@@ -845,4 +853,11 @@ void ap_sta_deauth_cb(struct hostapd_data *hapd, struct sta_info *sta)
 
 void ap_sta_disassoc_cb(struct hostapd_data *hapd, struct sta_info *sta)
 {
+	if (!(sta->flags & WLAN_STA_PENDING_DISASSOC_CB)) {
+		wpa_printf(MSG_DEBUG, "Ignore disassoc cb for test frame");
+		return;
+	}
+	sta->flags &= ~WLAN_STA_PENDING_DISASSOC_CB;
+	eloop_cancel_timeout(ap_sta_disassoc_cb_timeout, hapd, sta);
+	ap_sta_disassoc_cb_timeout(hapd, sta);
 }

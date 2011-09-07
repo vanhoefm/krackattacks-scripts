@@ -1409,6 +1409,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: REMOVE_NETWORK id=%d", id);
 
 	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (ssid)
+		wpas_notify_network_removed(wpa_s, ssid);
 	if (ssid == NULL ||
 	    wpa_config_remove_network(wpa_s->conf, id) < 0) {
 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find network "

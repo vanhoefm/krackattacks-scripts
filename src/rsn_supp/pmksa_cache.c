@@ -230,6 +230,40 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 
 
 /**
+ * pmksa_cache_flush - Flush PMKSA cache entries for a specific network
+ * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
+ * @network_ctx: Network configuration context or %NULL to flush all entries
+ */
+void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx)
+{
+	struct rsn_pmksa_cache_entry *entry, *prev = NULL, *tmp;
+	int removed = 0;
+
+	entry = pmksa->pmksa;
+	while (entry) {
+		if (entry->network_ctx == network_ctx || network_ctx == NULL) {
+			wpa_printf(MSG_DEBUG, "RSN: Flush PMKSA cache entry "
+				   "for " MACSTR, MAC2STR(entry->aa));
+			if (prev)
+				prev->next = entry->next;
+			else
+				pmksa->pmksa = entry->next;
+			tmp = entry;
+			entry = entry->next;
+			wpa_sm_remove_pmkid(pmksa->sm, tmp->aa, tmp->pmkid);
+			pmksa_cache_free_entry(pmksa, tmp, 0);
+			removed++;
+		} else {
+			prev = entry;
+			entry = entry->next;
+		}
+	}
+	if (removed)
+		pmksa_cache_set_expiration(pmksa);
+}
+
+
+/**
  * pmksa_cache_deinit - Free all entries in PMKSA cache
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
  */
@@ -271,22 +305,6 @@ struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
 		entry = entry->next;
 	}
 	return NULL;
-}
-
-
-/**
- * pmksa_cache_notify_reconfig - Reconfiguration notification for PMKSA cache
- * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
- *
- * Clear references to old data structures when wpa_supplicant is reconfigured.
- */
-void pmksa_cache_notify_reconfig(struct rsn_pmksa_cache *pmksa)
-{
-	struct rsn_pmksa_cache_entry *entry = pmksa->pmksa;
-	while (entry) {
-		entry->network_ctx = NULL;
-		entry = entry->next;
-	}
 }
 
 

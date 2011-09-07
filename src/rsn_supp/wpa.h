@@ -136,6 +136,8 @@ int wpa_sm_has_ptk(struct wpa_sm *sm);
 
 void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr);
 
+void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx);
+
 #else /* CONFIG_NO_WPA */
 
 static inline struct wpa_sm * wpa_sm_init(struct wpa_sm_ctx *ctx)
@@ -283,6 +285,11 @@ static inline int wpa_sm_has_ptk(struct wpa_sm *sm)
 
 static inline void wpa_sm_update_replay_ctr(struct wpa_sm *sm,
 					    const u8 *replay_ctr)
+{
+}
+
+static inline void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm,
+					    void *network_ctx)
 {
 }
 

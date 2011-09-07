@@ -1395,8 +1395,8 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 			wpas_notify_network_removed(wpa_s, remove_ssid);
 			wpa_config_remove_network(wpa_s->conf, id);
 		}
+		eapol_sm_invalidate_cached_session(wpa_s->eapol);
 		if (wpa_s->current_ssid) {
-			eapol_sm_invalidate_cached_session(wpa_s->eapol);
 			wpa_sm_set_config(wpa_s->wpa, NULL);
 			eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 			wpa_supplicant_disassociate(wpa_s,
@@ -1418,12 +1418,15 @@ static int wpa_supplicant_ctrl_iface_remove_network(
 		return -1;
 	}
 
-	if (ssid == wpa_s->current_ssid) {
+	if (ssid == wpa_s->current_ssid || wpa_s->current_ssid == NULL) {
 		/*
-		 * Invalidate the EAP session cache if the current network is
-		 * removed.
+		 * Invalidate the EAP session cache if the current or
+		 * previously used network is removed.
 		 */
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
+	}
+
+	if (ssid == wpa_s->current_ssid) {
 		wpa_sm_set_config(wpa_s->wpa, NULL);
 		eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 
@@ -1471,10 +1474,12 @@ static int wpa_supplicant_ctrl_iface_set_network(
 		return -1;
 	}
 
-	if (wpa_s->current_ssid == ssid) {
+	wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
+
+	if (wpa_s->current_ssid == ssid || wpa_s->current_ssid == NULL) {
 		/*
 		 * Invalidate the EAP session cache if anything in the current
-		 * configuration changes.
+		 * or previously used configuration changes.
 		 */
 		eapol_sm_invalidate_cached_session(wpa_s->eapol);
 	}

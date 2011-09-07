@@ -726,6 +726,7 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	}
 	eapol_sm_notify_config(wpa_s->eapol, NULL, NULL);
 	wpa_sm_set_config(wpa_s->wpa, NULL);
+	wpa_sm_pmksa_cache_flush(wpa_s->wpa, NULL);
 	wpa_sm_set_fast_reauth(wpa_s->wpa, wpa_s->conf->fast_reauth);
 	rsn_preauth_deinit(wpa_s->wpa);
 

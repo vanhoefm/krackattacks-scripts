@@ -2269,8 +2269,6 @@ void wpa_sm_set_config(struct wpa_sm *sm, struct rsn_supp_config *config)
 		sm->ssid_len = 0;
 		sm->wpa_ptk_rekey = 0;
 	}
-	if (config == NULL || config->network_ctx != sm->network_ctx)
-		pmksa_cache_notify_reconfig(sm->pmksa);
 }
 
 
@@ -2653,4 +2651,12 @@ int wpa_sm_has_ptk(struct wpa_sm *sm)
 void wpa_sm_update_replay_ctr(struct wpa_sm *sm, const u8 *replay_ctr)
 {
 	os_memcpy(sm->rx_replay_counter, replay_ctr, WPA_REPLAY_COUNTER_LEN);
+}
+
+
+void wpa_sm_pmksa_cache_flush(struct wpa_sm *sm, void *network_ctx)
+{
+#ifndef CONFIG_NO_WPA2
+	pmksa_cache_flush(sm->pmksa, network_ctx);
+#endif /* CONFIG_NO_WPA2 */
 }

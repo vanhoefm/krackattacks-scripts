@@ -57,7 +57,6 @@ int pmksa_cache_list(struct rsn_pmksa_cache *pmksa, char *buf, size_t len);
 struct rsn_pmksa_cache_entry *
 pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		const u8 *aa, const u8 *spa, void *network_ctx, int akmp);
-void pmksa_cache_notify_reconfig(struct rsn_pmksa_cache *pmksa);
 struct rsn_pmksa_cache_entry * pmksa_cache_get_current(struct wpa_sm *sm);
 void pmksa_cache_clear_current(struct wpa_sm *sm);
 int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
@@ -66,6 +65,7 @@ int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
 struct rsn_pmksa_cache_entry *
 pmksa_cache_get_opportunistic(struct rsn_pmksa_cache *pmksa,
 			      void *network_ctx, const u8 *aa);
+void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx);
 
 #else /* IEEE8021X_EAPOL and !CONFIG_NO_WPA2 */
 
@@ -106,10 +106,6 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 	return NULL;
 }
 
-static inline void pmksa_cache_notify_reconfig(struct rsn_pmksa_cache *pmksa)
-{
-}
-
 static inline void pmksa_cache_clear_current(struct wpa_sm *sm)
 {
 }
@@ -120,6 +116,11 @@ static inline int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
 					  int try_opportunistic)
 {
 	return -1;
+}
+
+static inline void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa,
+				     void *network_ctx)
+{
 }
 
 #endif /* IEEE8021X_EAPOL and !CONFIG_NO_WPA2 */

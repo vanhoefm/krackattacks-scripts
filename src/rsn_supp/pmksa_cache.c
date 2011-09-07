@@ -66,6 +66,7 @@ static void pmksa_cache_expire(void *eloop_ctx, void *timeout_ctx)
 		pmksa->pmksa = entry->next;
 		wpa_printf(MSG_DEBUG, "RSN: expired PMKSA cache entry for "
 			   MACSTR, MAC2STR(entry->aa));
+		wpa_sm_remove_pmkid(pmksa->sm, entry->aa, entry->pmkid);
 		pmksa_cache_free_entry(pmksa, entry, 0);
 	}
 

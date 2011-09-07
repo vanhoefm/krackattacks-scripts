@@ -773,6 +773,7 @@ endif
 
 ifdef NEED_MILENAGE
 OBJS += ../src/crypto/milenage.o
+NEED_AES_ENCBLOCK=y
 endif
 
 ifdef CONFIG_PKCS12

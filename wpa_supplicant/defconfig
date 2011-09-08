@@ -481,3 +481,6 @@ CONFIG_PEERKEY=y
 # external networks (GAS/ANQP to learn more about the networks and network
 # selection based on available credentials).
 #CONFIG_INTERWORKING=y
+
+# Hotspot 2.0
+#CONFIG_HS20=y

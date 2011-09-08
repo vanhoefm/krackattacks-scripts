@@ -69,6 +69,12 @@ struct wpa_bss {
 	struct wpabuf *anqp_3gpp;
 	struct wpabuf *anqp_domain_name;
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	struct wpabuf *hs20_operator_friendly_name;
+	struct wpabuf *hs20_wan_metrics;
+	struct wpabuf *hs20_connection_capability;
+	struct wpabuf *hs20_operating_class;
+#endif /* CONFIG_HS20 */
 	size_t ie_len;
 	size_t beacon_ie_len;
 	/* followed by ie_len octets of IEs */

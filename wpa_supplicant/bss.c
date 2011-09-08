@@ -53,6 +53,12 @@ static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	wpabuf_free(bss->anqp_3gpp);
 	wpabuf_free(bss->anqp_domain_name);
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	wpabuf_free(bss->hs20_operator_friendly_name);
+	wpabuf_free(bss->hs20_wan_metrics);
+	wpabuf_free(bss->hs20_connection_capability);
+	wpabuf_free(bss->hs20_operating_class);
+#endif /* CONFIG_HS20 */
 	os_free(bss);
 }
 

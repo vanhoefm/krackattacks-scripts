@@ -107,8 +107,6 @@ static int p2p_peer_channels(struct p2p_data *p2p, struct p2p_device *dev,
 static u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method)
 {
 	switch (wps_method) {
-	case WPS_PIN_LABEL:
-		return DEV_PW_DEFAULT;
 	case WPS_PIN_DISPLAY:
 		return DEV_PW_REGISTRAR_SPECIFIED;
 	case WPS_PIN_KEYPAD:
@@ -124,8 +122,6 @@ static u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method)
 static const char * p2p_wps_method_str(enum p2p_wps_method wps_method)
 {
 	switch (wps_method) {
-	case WPS_PIN_LABEL:
-		return "Label";
 	case WPS_PIN_DISPLAY:
 		return "Display";
 	case WPS_PIN_KEYPAD:
@@ -516,18 +512,6 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 		}
 
 		switch (msg.dev_password_id) {
-		case DEV_PW_DEFAULT:
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: PIN from peer Label");
-			if (dev->wps_method != WPS_PIN_KEYPAD) {
-				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-					"P2P: We have wps_method=%s -> "
-					"incompatible",
-					p2p_wps_method_str(dev->wps_method));
-				status = P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD;
-				goto fail;
-			}
-			break;
 		case DEV_PW_REGISTRAR_SPECIFIED:
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: PIN from peer Display");
@@ -543,8 +527,7 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 		case DEV_PW_USER_SPECIFIED:
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: Peer entered PIN on Keypad");
-			if (dev->wps_method != WPS_PIN_LABEL &&
-			    dev->wps_method != WPS_PIN_DISPLAY) {
+			if (dev->wps_method != WPS_PIN_DISPLAY) {
 				wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 					"P2P: We have wps_method=%s -> "
 					"incompatible",
@@ -899,18 +882,6 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 		dev->oper_freq = 0;
 
 	switch (msg.dev_password_id) {
-	case DEV_PW_DEFAULT:
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: PIN from peer Label");
-		if (dev->wps_method != WPS_PIN_KEYPAD) {
-			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-				"P2P: We have wps_method=%s -> "
-				"incompatible",
-				p2p_wps_method_str(dev->wps_method));
-			status = P2P_SC_FAIL_INCOMPATIBLE_PROV_METHOD;
-			goto fail;
-		}
-		break;
 	case DEV_PW_REGISTRAR_SPECIFIED:
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: PIN from peer Display");
@@ -926,8 +897,7 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 	case DEV_PW_USER_SPECIFIED:
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Peer entered PIN on Keypad");
-		if (dev->wps_method != WPS_PIN_LABEL &&
-		    dev->wps_method != WPS_PIN_DISPLAY) {
+		if (dev->wps_method != WPS_PIN_DISPLAY) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: We have wps_method=%s -> "
 				"incompatible",

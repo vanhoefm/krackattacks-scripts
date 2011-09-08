@@ -470,8 +470,6 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 				wps_method = WPS_PBC;
 			else if (!os_strcmp(entry.str_value, "pin"))
 				wps_method = WPS_PIN_DISPLAY;
-			else if (!os_strcmp(entry.str_value, "label"))
-				wps_method = WPS_PIN_LABEL;
 			else if (!os_strcmp(entry.str_value, "display"))
 				wps_method = WPS_PIN_DISPLAY;
 			else if (!os_strcmp(entry.str_value, "keypad"))
@@ -495,8 +493,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 	/*
 	 * Validate the wps_method specified and the pin value.
 	 */
-	if ((!pin || !pin[0]) &&
-	    ((wps_method == WPS_PIN_LABEL) || (wps_method == WPS_PIN_KEYPAD)))
+	if ((!pin || !pin[0]) && (wps_method == WPS_PIN_KEYPAD))
 		goto inv_args;
 
 	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,

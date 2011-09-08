@@ -2936,8 +2936,6 @@ static const char * p2p_wps_method_text(enum p2p_wps_method method)
 	switch (method) {
 	case WPS_NOT_READY:
 		return "not-ready";
-	case WPS_PIN_LABEL:
-		return "Label";
 	case WPS_PIN_DISPLAY:
 		return "Display";
 	case WPS_PIN_KEYPAD:

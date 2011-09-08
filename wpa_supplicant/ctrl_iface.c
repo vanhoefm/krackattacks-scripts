@@ -2187,9 +2187,7 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 		wps_method = WPS_PIN_KEYPAD;
 		if (pos) {
 			*pos++ = '\0';
-			if (os_strncmp(pos, "label", 5) == 0)
-				wps_method = WPS_PIN_LABEL;
-			else if (os_strncmp(pos, "display", 7) == 0)
+			if (os_strncmp(pos, "display", 7) == 0)
 				wps_method = WPS_PIN_DISPLAY;
 		}
 	}

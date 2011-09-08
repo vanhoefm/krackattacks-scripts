@@ -2713,7 +2713,6 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		wpa_s->pending_pd_before_join = 1;
 
 		switch (wpa_s->pending_join_wps_method) {
-		case WPS_PIN_LABEL:
 		case WPS_PIN_DISPLAY:
 			method = WPS_CONFIG_KEYPAD;
 			break;

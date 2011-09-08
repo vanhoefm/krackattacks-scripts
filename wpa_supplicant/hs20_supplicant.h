@@ -8,6 +8,8 @@
 #ifndef HS20_SUPPLICANT_H
 #define HS20_SUPPLICANT_H
 
+void wpas_hs20_add_indication(struct wpabuf *buf);
+
 int hs20_anqp_send_req(struct wpa_supplicant *wpa_s, const u8 *dst, u32 stypes,
 		       const u8 *payload, size_t payload_len);
 struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,

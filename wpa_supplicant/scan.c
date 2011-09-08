@@ -17,6 +17,7 @@
 #include "wps_supplicant.h"
 #include "p2p_supplicant.h"
 #include "p2p/p2p.h"
+#include "hs20_supplicant.h"
 #include "notify.h"
 #include "bss.h"
 #include "scan.h"
@@ -625,6 +626,11 @@ ssid_list_set:
 
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
 	extra_ie = wpa_supplicant_extra_ies(wpa_s, &params);
+
+#ifdef CONFIG_HS20
+	if (wpa_s->conf->hs20 && wpabuf_resize(&extra_ie, 6) == 0)
+		wpas_hs20_add_indication(extra_ie);
+#endif /* CONFIG_HS20 */
 
 	if (params.freqs == NULL && wpa_s->next_scan_freqs) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Optimize scan based on previously "

@@ -23,6 +23,16 @@
 #include "hs20_supplicant.h"
 
 
+void wpas_hs20_add_indication(struct wpabuf *buf)
+{
+	wpabuf_put_u8(buf, WLAN_EID_VENDOR_SPECIFIC);
+	wpabuf_put_u8(buf, 5);
+	wpabuf_put_be24(buf, OUI_WFA);
+	wpabuf_put_u8(buf, HS20_INDICATION_OUI_TYPE);
+	wpabuf_put_u8(buf, 0x00); /* Hotspot Configuration */
+}
+
+
 struct wpabuf * hs20_build_anqp_req(u32 stypes, const u8 *payload,
 				    size_t payload_len)
 {

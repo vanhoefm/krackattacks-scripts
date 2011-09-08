@@ -741,6 +741,9 @@ endif
 ifdef CONFIG_INTERWORKING
 OBJS += ../src/ap/gas_serv.o
 endif
+ifdef CONFIG_HS20
+OBJS += ../src/ap/hs20.o
+endif
 endif
 
 ifdef NEED_RSN_AUTHENTICATOR

@@ -772,6 +772,7 @@ endif
 
 ifdef CONFIG_HS20
 CFLAGS += -DCONFIG_HS20
+OBJS += ../src/ap/hs20.o
 CONFIG_INTERWORKING=y
 endif
 

@@ -17,6 +17,7 @@
 #include "sta_info.h"
 #include "ap_config.h"
 #include "p2p_hostapd.h"
+#include "hs20.h"
 #include "ap_drv_ops.h"
 
 
@@ -146,6 +147,20 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 		}
 	}
 #endif /* CONFIG_P2P_MANAGER */
+
+#ifdef CONFIG_HS20
+	pos = buf;
+	pos = hostapd_eid_hs20_indication(hapd, pos);
+	if (pos != buf) {
+		if (wpabuf_resize(&beacon, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(beacon, buf, pos - buf);
+
+		if (wpabuf_resize(&proberesp, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(proberesp, buf, pos - buf);
+	}
+#endif /* CONFIG_HS20 */
 
 	*beacon_ret = beacon;
 	*proberesp_ret = proberesp;

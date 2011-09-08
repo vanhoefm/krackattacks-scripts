@@ -33,6 +33,7 @@
 #include "p2p_hostapd.h"
 #include "ap_drv_ops.h"
 #include "beacon.h"
+#include "hs20.h"
 
 
 #ifdef NEED_AP_MLME
@@ -291,6 +292,10 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 	    P2P_MANAGE)
 		pos = hostapd_eid_p2p_manage(hapd, pos);
 #endif /* CONFIG_P2P_MANAGER */
+
+#ifdef CONFIG_HS20
+	pos = hostapd_eid_hs20_indication(hapd, pos);
+#endif /* CONFIG_HS20 */
 
 	*resp_len = pos - (u8 *) resp;
 	return (u8 *) resp;
@@ -628,6 +633,10 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	    P2P_MANAGE)
 		tailpos = hostapd_eid_p2p_manage(hapd, tailpos);
 #endif /* CONFIG_P2P_MANAGER */
+
+#ifdef CONFIG_HS20
+	tailpos = hostapd_eid_hs20_indication(hapd, tailpos);
+#endif /* CONFIG_HS20 */
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 

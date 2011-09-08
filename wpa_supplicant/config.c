@@ -2875,6 +2875,9 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(filter_ssids, 0, 1), 0 },
 	{ INT(max_num_sta), 0 },
 	{ INT_RANGE(disassoc_low_ack, 0, 1), 0 },
+#ifdef CONFIG_HS20
+	{ INT_RANGE(hs20, 0, 1), 0 },
+#endif /* CONFIG_HS20 */
 	{ INT_RANGE(interworking, 0, 1), 0 },
 	{ FUNC(hessid), 0 },
 	{ INT_RANGE(access_network_type, 0, 15), 0 },

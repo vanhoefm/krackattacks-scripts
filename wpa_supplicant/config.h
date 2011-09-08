@@ -613,6 +613,11 @@ struct wpa_config {
 	u8 hessid[ETH_ALEN];
 
 	/**
+	 * hs20 - Hotspot 2.0
+	 */
+	int hs20;
+
+	/**
 	 * pbc_in_m1 - AP mode WPS probing workaround for PBC with Windows 7
 	 *
 	 * Windows 7 uses incorrect way of figuring out AP's WPS capabilities

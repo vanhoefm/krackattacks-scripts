@@ -836,6 +836,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "max_num_sta=%u\n", config->max_num_sta);
 	if (config->disassoc_low_ack)
 		fprintf(f, "disassoc_low_ack=%u\n", config->disassoc_low_ack);
+#ifdef CONFIG_HS20
+	if (config->hs20)
+		fprintf(f, "hs20=1\n");
+#endif /* CONFIG_HS20 */
 #ifdef CONFIG_INTERWORKING
 	if (config->interworking)
 		fprintf(f, "interworking=%u\n", config->interworking);

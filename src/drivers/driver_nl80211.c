@@ -2273,7 +2273,7 @@ static int nl80211_register_action_frame(struct wpa_driver_nl80211_data *drv,
 
 static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 {
-#ifdef CONFIG_P2P
+#if defined(CONFIG_P2P) || defined(CONFIG_INTERWORKING)
 	/* GAS Initial Request */
 	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0a", 2) < 0)
 		return -1;
@@ -2286,6 +2286,8 @@ static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 	/* GAS Comeback Response */
 	if (nl80211_register_action_frame(drv, (u8 *) "\x04\x0d", 2) < 0)
 		return -1;
+#endif /* CONFIG_P2P || CONFIG_INTERWORKING */
+#ifdef CONFIG_P2P
 	/* P2P Public Action */
 	if (nl80211_register_action_frame(drv,
 					  (u8 *) "\x04\x09\x50\x6f\x9a\x09",

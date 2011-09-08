@@ -14,6 +14,12 @@
 #include <sys/ioctl.h>
 
 #include "common.h"
+#include "eloop.h"
+#include "common/ieee802_11_defs.h"
+#include "l2_packet/l2_packet.h"
+#include "p2p/p2p.h"
+
+#include "common.h"
 #ifndef _BYTE_ORDER
 #ifdef WORDS_BIGENDIAN
 #define _BYTE_ORDER _BIG_ENDIAN
@@ -1220,6 +1226,92 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 	}
 }
 
+/*
+* Handle size of data problem. WEXT only allows data of 256 bytes for custom
+* events, and p2p data can be much bigger. So the athr driver sends a small
+* event telling me to collect the big data with an ioctl.
+* On the first event, send all pending events to supplicant.
+*/
+static void fetch_pending_big_events(struct atheros_driver_data *drv)
+{
+	union wpa_event_data event;
+	const struct ieee80211_mgmt *mgmt;
+	u8 tbuf[IW_PRIV_SIZE_MASK]; /* max size is 2047 bytes */
+	u16 fc, stype;
+	struct iwreq iwr;
+	size_t data_len;
+	u32 freq, frame_type;
+
+	while (1) {
+		os_memset(&iwr, 0, sizeof(iwr));
+		os_strncpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
+
+		iwr.u.data.pointer = (void *) tbuf;
+		iwr.u.data.length = sizeof(tbuf);
+		iwr.u.data.flags = IEEE80211_IOC_P2P_FETCH_FRAME;
+
+		if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_P2P_BIG_PARAM, &iwr)
+		    < 0) {
+			if (errno == ENOSPC) {
+				wpa_printf(MSG_DEBUG, "%s:%d exit",
+					   __func__, __LINE__);
+				return;
+			}
+			wpa_printf(MSG_DEBUG, "athr: %s: P2P_BIG_PARAM["
+				   "P2P_FETCH_FRAME] failed: %s",
+				   __func__, strerror(errno));
+			return;
+		}
+		data_len = iwr.u.data.length;
+		wpa_hexdump(MSG_DEBUG, "athr: P2P_FETCH_FRAME data",
+			    (u8 *) tbuf, data_len);
+		if (data_len < sizeof(freq) + sizeof(frame_type) + 24) {
+			wpa_printf(MSG_DEBUG, "athr: frame too short");
+			continue;
+		}
+		os_memcpy(&freq, tbuf, sizeof(freq));
+		os_memcpy(&frame_type, &tbuf[sizeof(freq)],
+			  sizeof(frame_type));
+		mgmt = (void *) &tbuf[sizeof(freq) + sizeof(frame_type)];
+		data_len -= sizeof(freq) + sizeof(frame_type);
+
+		if (frame_type == IEEE80211_EV_RX_MGMT) {
+			fc = le_to_host16(mgmt->frame_control);
+			stype = WLAN_FC_GET_STYPE(fc);
+
+			wpa_printf(MSG_DEBUG, "athr: EV_RX_MGMT stype=%u "
+				"freq=%u len=%u", stype, freq, (int) data_len);
+
+			if (stype == WLAN_FC_STYPE_ACTION) {
+				os_memset(&event, 0, sizeof(event));
+				event.rx_mgmt.frame = (const u8 *) mgmt;
+				event.rx_mgmt.frame_len = data_len;
+				wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT,
+						     &event);
+				continue;
+			}
+		} else {
+			wpa_printf(MSG_DEBUG, "athr: %s unknown type %d",
+				   __func__, frame_type);
+			continue;
+		}
+	}
+}
+
+static void
+atheros_wireless_event_atheros_custom(struct atheros_driver_data *drv,
+				      int opcode, char *buf, int len)
+{
+	switch (opcode) {
+	case IEEE80211_EV_RX_MGMT:
+		wpa_printf(MSG_DEBUG, "WEXT: EV_RX_MGMT");
+		fetch_pending_big_events(drv);
+		break;
+	default:
+		break;
+	}
+}
+
 static void
 atheros_wireless_event_wireless(struct atheros_driver_data *drv,
 				char *data, int len)
@@ -1275,8 +1367,15 @@ atheros_wireless_event_wireless(struct atheros_driver_data *drv,
 				return;		/* XXX */
 			memcpy(buf, custom, iwe->u.data.length);
 			buf[iwe->u.data.length] = '\0';
-			atheros_wireless_event_wireless_custom(
-				drv, buf, buf + iwe->u.data.length);
+
+			if (iwe->u.data.flags != 0) {
+				atheros_wireless_event_atheros_custom(
+					drv, (int) iwe->u.data.flags,
+					buf, len);
+			} else {
+				atheros_wireless_event_wireless_custom(
+					drv, buf, buf + iwe->u.data.length);
+			}
 			free(buf);
 			break;
 		}
@@ -1710,6 +1809,65 @@ static int atheros_add_sta_node(void *priv, const u8 *addr, u16 auth_alg)
 #endif /* CONFIG_IEEE80211R */
 
 
+/* Use only to set a big param, get will not work. */
+static int
+set80211big(struct atheros_driver_data *drv, int op, const void *data, int len)
+{
+	struct iwreq iwr;
+
+	os_memset(&iwr, 0, sizeof(iwr));
+	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
+
+	iwr.u.data.pointer = (void *) data;
+	iwr.u.data.length = len;
+	iwr.u.data.flags = op;
+	wpa_printf(MSG_DEBUG, "%s: op=0x%x=%d (%s) len=0x%x",
+		   __func__, op, op, athr_get_param_name(op), len);
+
+	if (ioctl(drv->ioctl_sock, IEEE80211_IOCTL_P2P_BIG_PARAM, &iwr) < 0) {
+		wpa_printf(MSG_DEBUG, "%s: op=0x%x (%s) subop=0x%x=%d "
+			   "value=0x%x,0x%x failed: %d (%s)",
+			   __func__, op, athr_get_ioctl_name(op), iwr.u.mode,
+			   iwr.u.mode, iwr.u.data.length,
+			   iwr.u.data.flags, errno, strerror(errno));
+		return -1;
+	}
+	return 0;
+}
+
+
+static int atheros_send_action(void *priv, unsigned int freq,
+			       unsigned int wait,
+			       const u8 *dst, const u8 *src,
+			       const u8 *bssid,
+			       const u8 *data, size_t data_len, int no_cck)
+{
+	struct atheros_driver_data *drv = priv;
+	struct ieee80211_p2p_send_action *act;
+	int res;
+
+	act = os_zalloc(sizeof(*act) + data_len);
+	if (act == NULL)
+		return -1;
+	act->freq = freq;
+	os_memcpy(act->dst_addr, dst, ETH_ALEN);
+	os_memcpy(act->src_addr, src, ETH_ALEN);
+	os_memcpy(act->bssid, bssid, ETH_ALEN);
+	os_memcpy(act + 1, data, data_len);
+	wpa_printf(MSG_DEBUG, "%s: freq=%d, wait=%u, dst=" MACSTR ", src="
+		   MACSTR ", bssid=" MACSTR,
+		   __func__, act->freq, wait, MAC2STR(act->dst_addr),
+		   MAC2STR(act->src_addr), MAC2STR(act->bssid));
+	wpa_hexdump(MSG_MSGDUMP, "athr: act", (u8 *) act, sizeof(*act));
+	wpa_hexdump(MSG_MSGDUMP, "athr: data", data, data_len);
+
+	res = set80211big(drv, IEEE80211_IOC_P2P_SEND_ACTION,
+			  act, sizeof(*act) + data_len);
+	os_free(act);
+	return res;
+}
+
+
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
 	.hapd_init		= atheros_init,
@@ -1740,4 +1898,5 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.add_tspec      	= atheros_add_tspec,
 	.add_sta_node    	= atheros_add_sta_node,
 #endif /* CONFIG_IEEE80211R */
+	.send_action		= atheros_send_action,
 };

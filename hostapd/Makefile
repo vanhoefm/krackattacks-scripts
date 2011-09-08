@@ -770,6 +770,11 @@ CFLAGS += -DCONFIG_P2P_MANAGER
 OBJS += ../src/ap/p2p_hostapd.o
 endif
 
+ifdef CONFIG_HS20
+CFLAGS += -DCONFIG_HS20
+CONFIG_INTERWORKING=y
+endif
+
 ifdef CONFIG_INTERWORKING
 CFLAGS += -DCONFIG_INTERWORKING
 OBJS += ../src/common/gas.o

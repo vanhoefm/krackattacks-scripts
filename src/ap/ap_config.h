@@ -394,6 +394,10 @@ struct hostapd_bss_config {
 	u16 gas_comeback_delay;
 	int gas_frag_limit;
 
+#ifdef CONFIG_HS20
+	int hs20;
+#endif /* CONFIG_HS20 */
+
 	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */
 
 #ifdef CONFIG_RADIUS_TEST

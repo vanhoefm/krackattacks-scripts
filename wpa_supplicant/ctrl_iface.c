@@ -28,6 +28,7 @@
 #include "ap.h"
 #include "p2p_supplicant.h"
 #include "p2p/p2p.h"
+#include "hs20_supplicant.h"
 #include "notify.h"
 #include "bss.h"
 #include "scan.h"
@@ -3713,6 +3714,111 @@ static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 #endif /* CONFIG_INTERWORKING */
 
 
+#ifdef CONFIG_HS20
+
+static int get_hs20_anqp(struct wpa_supplicant *wpa_s, char *dst)
+{
+	u8 dst_addr[ETH_ALEN];
+	int used;
+	char *pos;
+	u32 subtypes = 0;
+
+	used = hwaddr_aton2(dst, dst_addr);
+	if (used < 0)
+		return -1;
+	pos = dst + used;
+	for (;;) {
+		int num = atoi(pos);
+		if (num <= 0 || num > 31)
+			return -1;
+		subtypes |= BIT(num);
+		pos = os_strchr(pos + 1, ',');
+		if (pos == NULL)
+			break;
+		pos++;
+	}
+
+	if (subtypes == 0)
+		return -1;
+
+	return hs20_anqp_send_req(wpa_s, dst_addr, subtypes, NULL, 0);
+}
+
+
+static int hs20_nai_home_realm_list(struct wpa_supplicant *wpa_s,
+				    const u8 *addr, const char *realm)
+{
+	u8 *buf;
+	size_t rlen, len;
+	int ret;
+
+	rlen = os_strlen(realm);
+	len = 3 + rlen;
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+	buf[0] = 1; /* NAI Home Realm Count */
+	buf[1] = 0; /* Formatted in accordance with RFC 4282 */
+	buf[2] = rlen;
+	os_memcpy(buf + 3, realm, rlen);
+
+	ret = hs20_anqp_send_req(wpa_s, addr,
+				 BIT(HS20_STYPE_NAI_HOME_REALM_QUERY),
+				 buf, len);
+
+	os_free(buf);
+
+	return ret;
+}
+
+
+static int hs20_get_nai_home_realm_list(struct wpa_supplicant *wpa_s,
+					char *dst)
+{
+	struct wpa_cred *cred = wpa_s->conf->cred;
+	u8 dst_addr[ETH_ALEN];
+	int used;
+	u8 *buf;
+	size_t len;
+	int ret;
+
+	used = hwaddr_aton2(dst, dst_addr);
+	if (used < 0)
+		return -1;
+
+	while (dst[used] == ' ')
+		used++;
+	if (os_strncmp(dst + used, "realm=", 6) == 0)
+		return hs20_nai_home_realm_list(wpa_s, dst_addr,
+						dst + used + 6);
+
+	len = os_strlen(dst + used);
+
+	if (len == 0 && cred && cred->realm)
+		return hs20_nai_home_realm_list(wpa_s, dst_addr, cred->realm);
+
+	if (len % 1)
+		return -1;
+	len /= 2;
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return -1;
+	if (hexstr2bin(dst + used, buf, len) < 0) {
+		os_free(buf);
+		return -1;
+	}
+
+	ret = hs20_anqp_send_req(wpa_s, dst_addr,
+				 BIT(HS20_STYPE_NAI_HOME_REALM_QUERY),
+				 buf, len);
+	os_free(buf);
+
+	return ret;
+}
+
+#endif /* CONFIG_HS20 */
+
+
 static int wpa_supplicant_ctrl_iface_sta_autoconnect(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
@@ -4026,6 +4132,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (get_anqp(wpa_s, buf + 9) < 0)
 			reply_len = -1;
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	} else if (os_strncmp(buf, "HS20_ANQP_GET ", 14) == 0) {
+		if (get_hs20_anqp(wpa_s, buf + 14) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "HS20_GET_NAI_HOME_REALM_LIST ", 29) == 0) {
+		if (hs20_get_nai_home_realm_list(wpa_s, buf + 29) < 0)
+			reply_len = -1;
+#endif /* CONFIG_HS20 */
 	} else if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0)
 	{
 		if (wpa_supplicant_ctrl_iface_ctrl_rsp(

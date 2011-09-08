@@ -20,6 +20,7 @@
 #include "utils/edit.h"
 #include "utils/list.h"
 #include "common/version.h"
+#include "common/ieee802_11_defs.h"
 #ifdef ANDROID
 #include <cutils/properties.h>
 #endif /* ANDROID */
@@ -2659,6 +2660,60 @@ static int wpa_cli_cmd_anqp_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 #endif /* CONFIG_INTERWORKING */
 
 
+#ifdef CONFIG_HS20
+
+static int wpa_cli_cmd_hs20_anqp_get(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid HS20_ANQP_GET command: needs two arguments "
+		       "(addr and subtype list)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "HS20_ANQP_GET %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_get_nai_home_realm_list(struct wpa_ctrl *ctrl, int argc,
+					       char *argv[])
+{
+	char cmd[512];
+	int res;
+
+	if (argc == 0) {
+		printf("Command needs one or two arguments (dst mac addr and "
+		       "optional home realm)\n");
+		return -1;
+	}
+
+	if (argc == 1)
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "HS20_GET_NAI_HOME_REALM_LIST %s",
+				  argv[0]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd),
+				  "HS20_GET_NAI_HOME_REALM_LIST %s %s",
+				  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long command.\n");
+		return -1;
+	}
+
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+#endif /* CONFIG_HS20 */
+
+
 static int wpa_cli_cmd_sta_autoconnect(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
 {
@@ -3102,6 +3157,14 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "anqp_get", wpa_cli_cmd_anqp_get, cli_cmd_flag_none,
 	  "<addr> <info id>[,<info id>]... = request ANQP information" },
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_HS20
+	{ "hs20_anqp_get", wpa_cli_cmd_hs20_anqp_get, cli_cmd_flag_none,
+	  "<addr> <subtype>[,<subtype>]... = request HS 2.0 ANQP information"
+	},
+	{ "nai_home_realm_list", wpa_cli_cmd_get_nai_home_realm_list,
+	  cli_cmd_flag_none,
+	  "<addr> <home realm> = get HS20 nai home realm list" },
+#endif /* CONFIG_HS20 */
 	{ "sta_autoconnect", wpa_cli_cmd_sta_autoconnect, cli_cmd_flag_none,
 	  "<0/1> = disable/enable automatic reconnection" },
 	{ "tdls_discover", wpa_cli_cmd_tdls_discover,

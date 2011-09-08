@@ -1224,10 +1224,12 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			params.wps = WPS_MODE_PRIVACY;
 		else
 			params.wps = WPS_MODE_OPEN;
+		wpa_s->wpa_proto = 0;
 #endif /* CONFIG_WPS */
 	} else {
 		wpa_supplicant_set_non_wpa_policy(wpa_s, ssid);
 		wpa_ie_len = 0;
+		wpa_s->wpa_proto = 0;
 	}
 
 #ifdef CONFIG_P2P

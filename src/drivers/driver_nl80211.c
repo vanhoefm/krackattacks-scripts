@@ -1089,7 +1089,8 @@ static void mlme_event_remain_on_channel(struct wpa_driver_nl80211_data *drv,
 	if (cookie != drv->remain_on_chan_cookie)
 		return; /* not for us */
 
-	drv->pending_remain_on_chan = !cancel_event;
+	if (cancel_event)
+		drv->pending_remain_on_chan = 0;
 
 	os_memset(&data, 0, sizeof(data));
 	data.remain_on_channel.freq = freq;
@@ -6555,6 +6556,7 @@ static int wpa_driver_nl80211_remain_on_channel(void *priv, unsigned int freq,
 			   "0x%llx for freq=%u MHz duration=%u",
 			   (long long unsigned int) cookie, freq, duration);
 		drv->remain_on_chan_cookie = cookie;
+		drv->pending_remain_on_chan = 1;
 		return 0;
 	}
 	wpa_printf(MSG_DEBUG, "nl80211: Failed to request remain-on-channel "

@@ -264,6 +264,15 @@ struct wpa_driver_scan_params {
 	 * num_filter_ssids - Number of entries in filter_ssids array
 	 */
 	size_t num_filter_ssids;
+
+	/**
+	 * p2p_probe - Used to disable CCK (802.11b) rates for P2P probes
+	 *
+	 * When set, the driver is expected to remove rates 1, 2, 5.5, and 11
+	 * Mbps from the support rates element(s) in the Probe Request frames
+	 * and not to transmit the frames at any of those rates.
+	 */
+	u8 p2p_probe;
 };
 
 /**

@@ -2438,16 +2438,18 @@ static int wpa_driver_nl80211_scan(void *priv,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = 0, timeout;
-	struct nl_msg *msg, *ssids, *freqs;
+	struct nl_msg *msg, *ssids, *freqs, *rates;
 	size_t i;
 
 	msg = nlmsg_alloc();
 	ssids = nlmsg_alloc();
 	freqs = nlmsg_alloc();
-	if (!msg || !ssids || !freqs) {
+	rates = nlmsg_alloc();
+	if (!msg || !ssids || !freqs || !rates) {
 		nlmsg_free(msg);
 		nlmsg_free(ssids);
 		nlmsg_free(freqs);
+		nlmsg_free(rates);
 		return -1;
 	}
 
@@ -2485,6 +2487,18 @@ static int wpa_driver_nl80211_scan(void *priv,
 			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
 		}
 		nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
+	}
+
+	if (params->p2p_probe) {
+		/*
+		 * Remove 2.4 GHz rates 1, 2, 5.5, 11 Mbps from supported rates
+		 * by masking out everything else apart from the OFDM rates 6,
+		 * 9, 12, 18, 24, 36, 48, 54 Mbps from non-MCS rates. All 5 GHz
+		 * rates are left enabled.
+		 */
+		NLA_PUT(rates, NL80211_BAND_2GHZ, 8,
+			"\x0c\x12\x18\x24\x30\x48\x60\x6c");
+		nla_put_nested(msg, NL80211_ATTR_SCAN_SUPP_RATES, rates);
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -2538,6 +2552,7 @@ nla_put_failure:
 	nlmsg_free(ssids);
 	nlmsg_free(msg);
 	nlmsg_free(freqs);
+	nlmsg_free(rates);
 	return ret;
 }
 

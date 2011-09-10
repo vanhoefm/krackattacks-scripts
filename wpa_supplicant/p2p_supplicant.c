@@ -120,6 +120,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 
 	p2p_scan_ie(wpa_s->global->p2p, ies);
 
+	params.p2p_probe = 1;
 	params.extra_ies = wpabuf_head(ies);
 	params.extra_ies_len = wpabuf_len(ies);
 
@@ -2789,6 +2790,7 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 
 	p2p_scan_ie(wpa_s->global->p2p, ies);
 
+	params.p2p_probe = 1;
 	params.extra_ies = wpabuf_head(ies);
 	params.extra_ies_len = wpabuf_len(ies);
 

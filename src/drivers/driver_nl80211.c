@@ -1635,6 +1635,7 @@ struct wiphy_info_data {
 	int max_scan_ssids;
 	int ap_supported;
 	int p2p_supported;
+	int p2p_concurrent;
 	int auth_supported;
 	int connect_supported;
 	int offchan_tx_supported;
@@ -1648,6 +1649,17 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct wiphy_info_data *info = arg;
 	int p2p_go_supported = 0, p2p_client_supported = 0;
+	static struct nla_policy
+	iface_combination_policy[NUM_NL80211_IFACE_COMB] = {
+		[NL80211_IFACE_COMB_LIMITS] = { .type = NLA_NESTED },
+		[NL80211_IFACE_COMB_MAXNUM] = { .type = NLA_U32 },
+		[NL80211_IFACE_COMB_STA_AP_BI_MATCH] = { .type = NLA_FLAG },
+		[NL80211_IFACE_COMB_NUM_CHANNELS] = { .type = NLA_U32 },
+	},
+	iface_limit_policy[NUM_NL80211_IFACE_LIMIT] = {
+		[NL80211_IFACE_LIMIT_TYPES] = { .type = NLA_NESTED },
+		[NL80211_IFACE_LIMIT_MAX] = { .type = NLA_U32 },
+	};
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
 		  genlmsg_attrlen(gnlh, 0), NULL);
@@ -1672,6 +1684,63 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				p2p_client_supported = 1;
 				break;
 			}
+		}
+	}
+
+	if (tb[NL80211_ATTR_INTERFACE_COMBINATIONS]) {
+		struct nlattr *nl_combi;
+		int rem_combi;
+
+		nla_for_each_nested(nl_combi,
+				    tb[NL80211_ATTR_INTERFACE_COMBINATIONS],
+				    rem_combi) {
+			struct nlattr *tb_comb[NUM_NL80211_IFACE_COMB];
+			struct nlattr *tb_limit[NUM_NL80211_IFACE_LIMIT];
+			struct nlattr *nl_limit, *nl_mode;
+			int err, rem_limit, rem_mode;
+			int combination_has_p2p = 0, combination_has_mgd = 0;
+
+			err = nla_parse_nested(tb_comb, MAX_NL80211_IFACE_COMB,
+					       nl_combi,
+					       iface_combination_policy);
+			if (err || !tb_comb[NL80211_IFACE_COMB_LIMITS] ||
+			    !tb_comb[NL80211_IFACE_COMB_MAXNUM] ||
+			    !tb_comb[NL80211_IFACE_COMB_NUM_CHANNELS])
+				goto broken_combination;
+
+			nla_for_each_nested(nl_limit,
+					    tb_comb[NL80211_IFACE_COMB_LIMITS],
+					    rem_limit) {
+				err = nla_parse_nested(tb_limit,
+						       MAX_NL80211_IFACE_LIMIT,
+						       nl_limit,
+						       iface_limit_policy);
+				if (err ||
+				    !tb_limit[NL80211_IFACE_LIMIT_TYPES])
+					goto broken_combination;
+
+				nla_for_each_nested(
+					nl_mode,
+					tb_limit[NL80211_IFACE_LIMIT_TYPES],
+					rem_mode) {
+					int ift = nla_type(nl_mode);
+					if (ift == NL80211_IFTYPE_P2P_GO ||
+					    ift == NL80211_IFTYPE_P2P_CLIENT)
+						combination_has_p2p = 1;
+					if (ift == NL80211_IFTYPE_STATION)
+						combination_has_mgd = 1;
+				}
+				if (combination_has_p2p && combination_has_mgd)
+					break;
+			}
+
+			if (combination_has_p2p && combination_has_mgd) {
+				info->p2p_concurrent = 1;
+				break;
+			}
+
+broken_combination:
+			;
 		}
 	}
 
@@ -1771,6 +1840,12 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	if (info.p2p_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
+	if (info.p2p_concurrent) {
+		wpa_printf(MSG_DEBUG, "nl80211: Use separate P2P group "
+			   "interface (driver advertised support)");
+		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
+		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
+	}
 	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
 	drv->capa.max_remain_on_chan = info.max_remain_on_chan;

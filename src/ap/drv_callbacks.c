@@ -105,6 +105,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 
 	if (hapd->conf->wpa) {
 		if (ie == NULL || ielen == 0) {
+#ifdef CONFIG_WPS
 			if (hapd->conf->wps_state) {
 				wpa_printf(MSG_DEBUG, "STA did not include "
 					   "WPA/RSN IE in (Re)Association "
@@ -112,10 +113,12 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 				sta->flags |= WLAN_STA_MAYBE_WPS;
 				goto skip_wpa_check;
 			}
+#endif /* CONFIG_WPS */
 
 			wpa_printf(MSG_DEBUG, "No WPA/RSN IE from STA");
 			return -1;
 		}
+#ifdef CONFIG_WPS
 		if (hapd->conf->wps_state && ie[0] == 0xdd && ie[1] >= 4 &&
 		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
 			struct wpabuf *wps;
@@ -132,6 +135,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			}
 			goto skip_wpa_check;
 		}
+#endif /* CONFIG_WPS */
 
 		if (sta->wpa_sm == NULL)
 			sta->wpa_sm = wpa_auth_sta_init(hapd->wpa_auth,
@@ -167,6 +171,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			return -1;
 		}
 	} else if (hapd->conf->wps_state) {
+#ifdef CONFIG_WPS
 		struct wpabuf *wps;
 		wps = ieee802_11_vendor_ie_concat(ie, ielen,
 						  WPS_IE_VENDOR_TYPE);
@@ -194,8 +199,11 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		} else
 			sta->flags |= WLAN_STA_MAYBE_WPS;
 		wpabuf_free(wps);
+#endif /* CONFIG_WPS */
 	}
+#ifdef CONFIG_WPS
 skip_wpa_check:
+#endif /* CONFIG_WPS */
 
 	new_assoc = (sta->flags & WLAN_STA_ASSOC) == 0;
 	sta->flags |= WLAN_STA_AUTH | WLAN_STA_ASSOC;

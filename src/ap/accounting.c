@@ -236,6 +236,7 @@ static void accounting_interim_update(void *eloop_ctx, void *timeout_ctx)
 void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 {
 	struct radius_msg *msg;
+	struct os_time t;
 	int interval;
 
 	if (sta->acct_session_started)
@@ -247,7 +248,8 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 		       "starting accounting session %08X-%08X",
 		       sta->acct_session_id_hi, sta->acct_session_id_lo);
 
-	time(&sta->acct_session_start);
+	os_get_time(&t);
+	sta->acct_session_start = t.sec;
 	sta->last_rx_bytes = sta->last_tx_bytes = 0;
 	sta->acct_input_gigawords = sta->acct_output_gigawords = 0;
 	hostapd_drv_sta_clear_stats(hapd, sta->addr);

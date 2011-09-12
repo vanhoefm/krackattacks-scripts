@@ -62,7 +62,7 @@ static void ieee80211_tkip_countermeasures_start(struct hostapd_data *hapd)
 
 void michael_mic_failure(struct hostapd_data *hapd, const u8 *addr, int local)
 {
-	time_t now;
+	struct os_time now;
 
 	if (addr && local) {
 		struct sta_info *sta = ap_get_sta(hapd, addr);
@@ -82,13 +82,13 @@ void michael_mic_failure(struct hostapd_data *hapd, const u8 *addr, int local)
 		}
 	}
 
-	time(&now);
-	if (now > hapd->michael_mic_failure + 60) {
+	os_get_time(&now);
+	if (now.sec > hapd->michael_mic_failure + 60) {
 		hapd->michael_mic_failures = 1;
 	} else {
 		hapd->michael_mic_failures++;
 		if (hapd->michael_mic_failures > 1)
 			ieee80211_tkip_countermeasures_start(hapd);
 	}
-	hapd->michael_mic_failure = now;
+	hapd->michael_mic_failure = now.sec;
 }

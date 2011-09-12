@@ -1923,6 +1923,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	int len = 0, ret;
 	struct eapol_state_machine *sm = sta->eapol_sm;
+	struct os_time t;
 
 	if (sm == NULL)
 		return 0;
@@ -2037,6 +2038,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	len += ret;
 
 	/* dot1xAuthSessionStatsTable */
+	os_get_time(&t);
 	ret = os_snprintf(buf + len, buflen - len,
 			  /* TODO: dot1xAuthSessionOctetsRx */
 			  /* TODO: dot1xAuthSessionOctetsTx */
@@ -2051,8 +2053,7 @@ int ieee802_1x_get_mib_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			  (wpa_key_mgmt_wpa_ieee8021x(
 				   wpa_auth_sta_key_mgmt(sta->wpa_sm))) ?
 			  1 : 2,
-			  (unsigned int) (time(NULL) -
-					  sta->acct_session_start),
+			  (unsigned int) (t.sec - sta->acct_session_start),
 			  sm->identity);
 	if (ret < 0 || (size_t) ret >= buflen - len)
 		return len;

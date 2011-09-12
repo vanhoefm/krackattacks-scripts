@@ -241,6 +241,7 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 		return HOSTAPD_ACL_REJECT;
 #else /* CONFIG_NO_RADIUS */
 		struct hostapd_acl_query_data *query;
+		struct os_time t;
 
 		/* Check whether ACL cache has an entry for this station */
 		int res = hostapd_acl_cache_get(hapd, addr, session_timeout,
@@ -271,7 +272,8 @@ int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			wpa_printf(MSG_ERROR, "malloc for query data failed");
 			return HOSTAPD_ACL_REJECT;
 		}
-		time(&query->timestamp);
+		os_get_time(&t);
+		query->timestamp = t.sec;
 		os_memcpy(query->addr, addr, ETH_ALEN);
 		if (hostapd_radius_acl_query(hapd, addr, query)) {
 			wpa_printf(MSG_DEBUG, "Failed to send Access-Request "
@@ -397,6 +399,7 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 	struct hostapd_acl_query_data *query, *prev;
 	struct hostapd_cached_radius_acl *cache;
 	struct radius_hdr *hdr = radius_msg_get_hdr(msg);
+	struct os_time t;
 
 	query = hapd->acl_queries;
 	prev = NULL;
@@ -431,7 +434,8 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 		wpa_printf(MSG_DEBUG, "Failed to add ACL cache entry");
 		goto done;
 	}
-	time(&cache->timestamp);
+	os_get_time(&t);
+	cache->timestamp = t.sec;
 	os_memcpy(cache->addr, query->addr, sizeof(cache->addr));
 	if (hdr->code == RADIUS_CODE_ACCESS_ACCEPT) {
 		if (radius_msg_get_attr_int32(msg, RADIUS_ATTR_SESSION_TIMEOUT,

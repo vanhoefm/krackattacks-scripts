@@ -34,7 +34,6 @@
 #include <errno.h>
 #endif /* _WIN32_WCE */
 #include <ctype.h>
-#include <time.h>
 
 #ifndef CONFIG_TI_COMPILER
 #ifndef _MSC_VER

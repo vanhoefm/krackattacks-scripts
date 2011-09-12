@@ -14,6 +14,8 @@
 
 #include "includes.h"
 
+#include <time.h>
+
 #ifdef ANDROID
 #include <linux/capability.h>
 #include <linux/prctl.h>

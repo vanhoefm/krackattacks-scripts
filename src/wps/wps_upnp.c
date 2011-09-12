@@ -172,7 +172,7 @@
 
 #include "includes.h"
 
-#include <assert.h>
+#include <time.h>
 #include <net/if.h>
 #include <netdb.h>
 #include <sys/ioctl.h>

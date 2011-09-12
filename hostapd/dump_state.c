@@ -13,6 +13,7 @@
  */
 
 #include "utils/includes.h"
+#include <time.h>
 
 #include "utils/common.h"
 #include "radius/radius_client.h"

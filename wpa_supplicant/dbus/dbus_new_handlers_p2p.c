@@ -510,9 +510,13 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 				   go_intent, freq);
 
 	if (new_pin >= 0) {
+		char npin[9];
+		char *generated_pin;
+		os_snprintf(npin, sizeof(npin), "%08d", new_pin);
+		generated_pin = npin;
 		reply = dbus_message_new_method_return(message);
-		dbus_message_append_args(reply, DBUS_TYPE_INT32,
-					 &new_pin, DBUS_TYPE_INVALID);
+		dbus_message_append_args(reply, DBUS_TYPE_STRING,
+					 &generated_pin, DBUS_TYPE_INVALID);
 	} else {
 		switch (new_pin) {
 		case -2:

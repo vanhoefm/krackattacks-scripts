@@ -2204,7 +2204,7 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 	  (WPADBusMethodHandler)wpas_dbus_handler_p2p_connect,
 	  {
 		  { "args", "a{sv}", ARG_IN },
-		  { "generated_pin", "i", ARG_OUT },
+		  { "generated_pin", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

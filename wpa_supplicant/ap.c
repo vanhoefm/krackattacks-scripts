@@ -160,6 +160,22 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 			return -1;
 		os_memcpy(bss->ssid.wpa_psk->psk, ssid->psk, PMK_LEN);
 		bss->ssid.wpa_psk->group = 1;
+	} else if (ssid->wep_key_len[0] || ssid->wep_key_len[1] ||
+		   ssid->wep_key_len[2] || ssid->wep_key_len[3]) {
+		struct hostapd_wep_keys *wep = &bss->ssid.wep;
+		int i;
+		for (i = 0; i < NUM_WEP_KEYS; i++) {
+			if (ssid->wep_key_len[i] == 0)
+				continue;
+			wep->key[i] = os_malloc(ssid->wep_key_len[i]);
+			if (wep->key[i] == NULL)
+				return -1;
+			os_memcpy(wep->key[i], ssid->wep_key[i],
+				  ssid->wep_key_len[i]);
+			wep->len[i] = ssid->wep_key_len[i];
+		}
+		wep->idx = ssid->wep_tx_keyidx;
+		wep->keys_set = 1;
 	}
 
 	/* Select group cipher based on the enabled pairwise cipher suites */

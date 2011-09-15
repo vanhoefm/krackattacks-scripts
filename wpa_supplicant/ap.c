@@ -181,12 +181,29 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	else if (bss->wpa)
 		bss->ssid.security_policy = SECURITY_WPA_PSK;
 	else if (bss->ieee802_1x) {
+		int cipher = WPA_CIPHER_NONE;
 		bss->ssid.security_policy = SECURITY_IEEE_802_1X;
 		bss->ssid.wep.default_len = bss->default_wep_key_len;
-	} else if (bss->ssid.wep.keys_set)
+		if (bss->default_wep_key_len)
+			cipher = bss->default_wep_key_len >= 13 ?
+				WPA_CIPHER_WEP104 : WPA_CIPHER_WEP40;
+		bss->wpa_group = cipher;
+		bss->wpa_pairwise = cipher;
+		bss->rsn_pairwise = cipher;
+	} else if (bss->ssid.wep.keys_set) {
+		int cipher = WPA_CIPHER_WEP40;
+		if (bss->ssid.wep.len[0] >= 13)
+			cipher = WPA_CIPHER_WEP104;
 		bss->ssid.security_policy = SECURITY_STATIC_WEP;
-	else
+		bss->wpa_group = cipher;
+		bss->wpa_pairwise = cipher;
+		bss->rsn_pairwise = cipher;
+	} else {
 		bss->ssid.security_policy = SECURITY_PLAINTEXT;
+		bss->wpa_group = WPA_CIPHER_NONE;
+		bss->wpa_pairwise = WPA_CIPHER_NONE;
+		bss->rsn_pairwise = WPA_CIPHER_NONE;
+	}
 
 #ifdef CONFIG_WPS
 	/*

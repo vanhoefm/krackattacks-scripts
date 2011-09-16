@@ -346,6 +346,7 @@ pmksa_cache_get_opportunistic(struct rsn_pmksa_cache *pmksa, void *network_ctx,
 {
 	struct rsn_pmksa_cache_entry *entry = pmksa->pmksa;
 
+	wpa_printf(MSG_DEBUG, "RSN: Consider " MACSTR " for OKC", MAC2STR(aa));
 	if (network_ctx == NULL)
 		return NULL;
 	while (entry) {

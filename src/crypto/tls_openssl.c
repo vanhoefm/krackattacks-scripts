@@ -59,6 +59,7 @@ struct tls_global {
 	void (*event_cb)(void *ctx, enum tls_event ev,
 			 union tls_event_data *data);
 	void *cb_ctx;
+	int cert_in_cb;
 };
 
 static struct tls_global *tls_global = NULL;
@@ -694,6 +695,7 @@ void * tls_init(const struct tls_config *conf)
 		if (conf) {
 			tls_global->event_cb = conf->event_cb;
 			tls_global->cb_ctx = conf->cb_ctx;
+			tls_global->cert_in_cb = conf->cert_in_cb;
 		}
 
 #ifdef CONFIG_FIPS
@@ -1144,7 +1146,7 @@ static void openssl_tls_cert_event(struct tls_connection *conn,
 		return;
 
 	os_memset(&ev, 0, sizeof(ev));
-	if (conn->cert_probe) {
+	if (conn->cert_probe || tls_global->cert_in_cb) {
 		cert = get_x509_cert(err_cert);
 		ev.peer_cert.cert = cert;
 	}

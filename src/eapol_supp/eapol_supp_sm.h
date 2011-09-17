@@ -231,6 +231,11 @@ struct eapol_ctx {
 	 */
 	void (*cert_cb)(void *ctx, int depth, const char *subject,
 			const char *cert_hash, const struct wpabuf *cert);
+
+	/**
+	 * cert_in_cb - Include server certificates in callback
+	 */
+	int cert_in_cb;
 };
 
 

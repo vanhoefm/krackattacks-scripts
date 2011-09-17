@@ -72,6 +72,7 @@ struct tls_config {
 	const char *pkcs11_engine_path;
 	const char *pkcs11_module_path;
 	int fips_mode;
+	int cert_in_cb;
 
 	void (*event_cb)(void *ctx, enum tls_event ev,
 			 union tls_event_data *data);

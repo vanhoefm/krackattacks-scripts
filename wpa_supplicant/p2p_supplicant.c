@@ -816,11 +816,11 @@ static void wpas_send_action_done(void *ctx)
 	wpa_printf(MSG_DEBUG, "P2P: Action frame sequence done notification");
 	wpabuf_free(wpa_s->pending_action_tx);
 	wpa_s->pending_action_tx = NULL;
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) {
-		if (wpa_s->action_tx_wait_time)
-			wpa_drv_send_action_cancel_wait(wpa_s);
-		wpa_s->off_channel_freq = 0;
-	} else if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX &&
+	    wpa_s->action_tx_wait_time)
+		wpa_drv_send_action_cancel_wait(wpa_s);
+
+	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
 		wpa_drv_cancel_remain_on_channel(wpa_s);
 		wpa_s->off_channel_freq = 0;
 		wpa_s->roc_waiting_drv_freq = 0;

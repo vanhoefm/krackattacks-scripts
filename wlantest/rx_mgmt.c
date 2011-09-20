@@ -336,10 +336,13 @@ static void rx_mgmt_assoc_resp(struct wlantest *wt, const u8 *data, size_t len)
 			wpa_printf(MSG_INFO, "Failed to parse IEs in "
 				   "AssocResp from " MACSTR,
 				   MAC2STR(mgmt->sa));
-		} else if (elems.timeout_int == 0 ||
-			   elems.timeout_int_len != 5) {
-			wpa_printf(MSG_INFO, "No valid Timeout Interval IE in "
-				   "AssocResp (status=30) from " MACSTR,
+		} else if (elems.timeout_int == NULL ||
+			   elems.timeout_int_len != 5 ||
+			   elems.timeout_int[0] !=
+			   WLAN_TIMEOUT_ASSOC_COMEBACK) {
+			wpa_printf(MSG_INFO, "No valid Timeout Interval IE "
+				   "with Assoc Comeback time in AssocResp "
+				   "(status=30) from " MACSTR,
 				   MAC2STR(mgmt->sa));
 		} else {
 			sta->counters[
@@ -465,10 +468,13 @@ static void rx_mgmt_reassoc_resp(struct wlantest *wt, const u8 *data,
 			wpa_printf(MSG_INFO, "Failed to parse IEs in "
 				   "ReassocResp from " MACSTR,
 				   MAC2STR(mgmt->sa));
-		} else if (elems.timeout_int == 0 ||
-			   elems.timeout_int_len != 5) {
-			wpa_printf(MSG_INFO, "No valid Timeout Interval IE in "
-				   "ReassocResp (status=30) from " MACSTR,
+		} else if (elems.timeout_int == NULL ||
+			   elems.timeout_int_len != 5 ||
+			   elems.timeout_int[0] !=
+			   WLAN_TIMEOUT_ASSOC_COMEBACK) {
+			wpa_printf(MSG_INFO, "No valid Timeout Interval IE "
+				   "with Assoc Comeback time in ReassocResp "
+				   "(status=30) from " MACSTR,
 				   MAC2STR(mgmt->sa));
 		} else {
 			sta->counters[

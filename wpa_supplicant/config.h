@@ -123,7 +123,7 @@ struct wpa_config {
 	 * If this is specified, %wpa_supplicant will open a control interface
 	 * that is available for external programs to manage %wpa_supplicant.
 	 * The meaning of this string depends on which control interface
-	 * mechanism is used. For all cases, the existance of this parameter
+	 * mechanism is used. For all cases, the existence of this parameter
 	 * in configuration is used to determine whether the control interface
 	 * is enabled.
 	 *

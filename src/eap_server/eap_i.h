@@ -119,7 +119,7 @@ struct eap_sm {
 
 	/* Full authenticator state machine local variables */
 
-	/* Long-term (maintained betwen packets) */
+	/* Long-term (maintained between packets) */
 	EapType currentMethod;
 	int currentId;
 	enum {

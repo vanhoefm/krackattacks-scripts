@@ -335,7 +335,7 @@ DBusMessage * wpas_dbus_handler_p2p_group_add(DBusMessage *message,
 			goto out;
 		}
 
-		/* Get the SSID structure form the persistant group id */
+		/* Get the SSID structure from the persistent group id */
 		ssid = wpa_config_get_network(wpa_s->conf, group_id);
 		if (ssid == NULL || ssid->disabled != 2)
 			goto inv_args;
@@ -597,7 +597,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 	if (persistent) {
 		/*
 		 * A group ID is defined meaning we want to re-invoke a
-		 * persistant group
+		 * persistent group
 		 */
 
 		iface = wpas_dbus_new_decompose_object_path(pg_object_path, 1,
@@ -616,7 +616,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 			goto out;
 		}
 
-		/* Get the SSID structure form the persistant group id */
+		/* Get the SSID structure from the persistent group id */
 		ssid = wpa_config_get_network(wpa_s->conf, group_id);
 		if (ssid == NULL || ssid->disabled != 2)
 			goto err;
@@ -767,7 +767,7 @@ dbus_bool_t wpas_dbus_getter_p2p_device_properties(DBusMessageIter *iter,
 					 wpa_s->conf->p2p_go_intent))
 		goto err_no_mem;
 
-	/* Persistant Reconnect */
+	/* Persistent Reconnect */
 	if (!wpa_dbus_dict_append_bool(&dict_iter, "PersistantReconnect",
 				       wpa_s->conf->persistent_reconnect))
 		goto err_no_mem;
@@ -1271,7 +1271,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
 
 
 /**
- * wpas_dbus_getter_persistent_groups - Get array of peristent group objects
+ * wpas_dbus_getter_persistent_groups - Get array of persistent group objects
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure
  * @user_data: Function specific data

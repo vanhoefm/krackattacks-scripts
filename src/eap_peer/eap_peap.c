@@ -196,7 +196,7 @@ static void eap_peap_deinit(struct eap_sm *sm, void *priv)
  * @nak_type: TLV type (EAP_TLV_*)
  * Returns: Buffer to the allocated EAP-TLV NAK message or %NULL on failure
  *
- * This funtion builds an EAP-TLV NAK message. The caller is responsible for
+ * This function builds an EAP-TLV NAK message. The caller is responsible for
  * freeing the returned buffer.
  */
 static struct wpabuf * eap_tlv_build_nak(int id, u16 nak_type)
@@ -346,8 +346,8 @@ static int eap_tlv_add_cryptobinding(struct eap_sm *sm,
  * @status: Status (EAP_TLV_RESULT_SUCCESS or EAP_TLV_RESULT_FAILURE)
  * Returns: Buffer to the allocated EAP-TLV Result message or %NULL on failure
  *
- * This funtion builds an EAP-TLV Result message. The caller is responsible for
- * freeing the returned buffer.
+ * This function builds an EAP-TLV Result message. The caller is responsible
+ * for freeing the returned buffer.
  */
 static struct wpabuf * eap_tlv_build_result(struct eap_sm *sm,
 					    struct eap_peap_data *data,

@@ -4366,7 +4366,7 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 
 	ret = nl80211_create_iface_once(drv, ifname, iftype, addr, wds);
 
-	/* if error occured and interface exists already */
+	/* if error occurred and interface exists already */
 	if (ret == -ENFILE && if_nametoindex(ifname)) {
 		wpa_printf(MSG_INFO, "Try to remove and re-create %s", ifname);
 

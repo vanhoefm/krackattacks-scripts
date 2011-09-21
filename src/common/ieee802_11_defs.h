@@ -628,7 +628,7 @@ struct wmm_parameter_element {
 	u8 oui_type; /* 2 */
 	u8 oui_subtype; /* 1 */
 	u8 version; /* 1 for WMM version 1.0 */
-	u8 qos_info; /* AP/STA specif QoS info */
+	u8 qos_info; /* AP/STA specific QoS info */
 	u8 reserved; /* 0 */
 	struct wmm_ac_parameter ac[4]; /* AC_BE, AC_BK, AC_VI, AC_VO */
 

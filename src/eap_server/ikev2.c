@@ -404,7 +404,7 @@ static int ikev2_process_ker(struct ikev2_initiator_data *data,
 	}
 
 	/* RFC 4306, Section 3.4:
-	 * The length of DH public value MUST be equal to the lenght of the
+	 * The length of DH public value MUST be equal to the length of the
 	 * prime modulus.
 	 */
 	if (ker_len - 4 != data->dh->prime_len) {

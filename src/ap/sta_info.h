@@ -120,7 +120,7 @@ struct sta_info {
  * passed since last received frame from the station, a nullfunc data frame is
  * sent to the station. If this frame is not acknowledged and no other frames
  * have been received, the station will be disassociated after
- * AP_DISASSOC_DELAY seconds. Similarily, the station will be deauthenticated
+ * AP_DISASSOC_DELAY seconds. Similarly, the station will be deauthenticated
  * after AP_DEAUTH_DELAY seconds has passed after disassociation. */
 #define AP_MAX_INACTIVITY (5 * 60)
 #define AP_DISASSOC_DELAY (1)

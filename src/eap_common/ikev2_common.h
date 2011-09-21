@@ -139,7 +139,7 @@ enum {
 	IKEV2_TRANSFORM_ESN = 5
 };
 
-/* IKEv2 Tranform Type 1 (Encryption Algorithm) */
+/* IKEv2 Transform Type 1 (Encryption Algorithm) */
 enum {
 	ENCR_DES_IV64 = 1,
 	ENCR_DES = 2,

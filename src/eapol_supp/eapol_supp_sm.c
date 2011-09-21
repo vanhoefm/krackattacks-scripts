@@ -561,7 +561,7 @@ SM_STEP(SUPP_BE)
 		 * IEEE Std 802.1X-2004 has transitions from REQUEST to FAIL
 		 * and SUCCESS based on eapFail and eapSuccess, respectively.
 		 * However, IEEE Std 802.1X-2004 is also specifying that
-		 * eapNoResp should be set in conjuction with eapSuccess and
+		 * eapNoResp should be set in conjunction with eapSuccess and
 		 * eapFail which would mean that more than one of the
 		 * transitions here would be activated at the same time.
 		 * Skipping RESPONSE and/or RECEIVE states in these cases can

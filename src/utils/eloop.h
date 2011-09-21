@@ -144,7 +144,7 @@ void eloop_unregister_sock(int sock, eloop_event_type type);
  * Returns: 0 on success, -1 on failure
  *
  * Register an event handler for the given event. This function is used to
- * register eloop implementation specific events which are mainly targetted for
+ * register eloop implementation specific events which are mainly targeted for
  * operating system specific code (driver interface and l2_packet) since the
  * portable code will not be able to use such an OS-specific call. The handler
  * function will be called whenever the event is triggered. The handler

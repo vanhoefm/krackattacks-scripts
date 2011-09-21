@@ -956,7 +956,7 @@ static void web_connection_parse_subscribe(struct upnp_wps_device_sm *sm,
 			break; /* no unterminated lines allowed */
 
 		/* NT assures that it is our type of subscription;
-		 * not used for a renewl.
+		 * not used for a renewal.
 		 **/
 		match = "NT:";
 		match_len = os_strlen(match);

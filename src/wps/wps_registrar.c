@@ -891,8 +891,8 @@ static void wps_registrar_pbc_timeout(void *eloop_ctx, void *timeout_ctx)
  * PBC mode. The PBC mode will be stopped after walk time (2 minutes) timeout
  * or when a PBC registration is completed. If more than one Enrollee in active
  * PBC mode has been detected during the monitor time (previous 2 minutes), the
- * PBC mode is not actived and -2 is returned to indicate session overlap. This
- * is skipped if a specific Enrollee is selected.
+ * PBC mode is not activated and -2 is returned to indicate session overlap.
+ * This is skipped if a specific Enrollee is selected.
  */
 int wps_registrar_button_pushed(struct wps_registrar *reg,
 				const u8 *p2p_dev_addr)

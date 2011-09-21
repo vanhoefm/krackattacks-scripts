@@ -1023,7 +1023,7 @@ P2P-SERV-DISC-REQ 2412 02:40:61:c2:f3:b7 0 0 02000001
 
 P2P-SERV-DISC-RESP: Indicate reception of a P2P service discovery
 response. The following parameters are included after the event prefix:
-source address, dialog token, Service Responce TLV(s) as hexdump.
+source address, dialog token, Service Response TLV(s) as hexdump.
 
 \verbatim
 P2P-SERV-DISC-RESP 02:40:61:c2:f3:b7 0 0300000101

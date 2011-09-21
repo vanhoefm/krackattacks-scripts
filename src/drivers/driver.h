@@ -1438,7 +1438,7 @@ struct wpa_driver_ops {
 	 * Returns: Pointer to private data, %NULL on failure
 	 *
 	 * This function is used instead of init() or init2() when the driver
-	 * wrapper is used withh hostapd.
+	 * wrapper is used with hostapd.
 	 */
 	void * (*hapd_init)(struct hostapd_data *hapd,
 			    struct wpa_init_params *params);

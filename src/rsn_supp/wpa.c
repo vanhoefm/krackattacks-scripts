@@ -476,7 +476,7 @@ static void wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
 		 * Start preauthentication after a short wait to avoid a
 		 * possible race condition between the data receive and key
 		 * configuration after the 4-Way Handshake. This increases the
-		 * likelyhood of the first preauth EAPOL-Start frame getting to
+		 * likelihood of the first preauth EAPOL-Start frame getting to
 		 * the target AP.
 		 */
 		eloop_register_timeout(1, 0, wpa_sm_start_preauth, sm, NULL);

@@ -123,7 +123,7 @@ s{
  {
     $1 . fixcomment($2) . $3
  }gesx;
-# ^^^^ Modes: g - Global, match all occurances.
+# ^^^^ Modes: g - Global, match all occurrences.
 #             e - Evaluate the replacement as an expression.
 #             s - Single-line - allows the pattern to match across newlines.
 #             x - eXtended pattern, ignore embedded whitespace

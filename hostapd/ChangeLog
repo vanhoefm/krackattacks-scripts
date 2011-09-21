@@ -82,7 +82,7 @@ ChangeLog for hostapd
 	* updated management frame protection to use IEEE Std 802.11w-2009
 	* fixed number of small WPS issues and added workarounds to
 	  interoperate with common deployed broken implementations
-	* added some IEEE 802.11n co-existance rules to disable 40 MHz channels
+	* added some IEEE 802.11n co-existence rules to disable 40 MHz channels
 	  or modify primary/secondary channels if needed based on neighboring
 	  networks
 	* added support for NFC out-of-band mechanism with WPS

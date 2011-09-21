@@ -224,7 +224,7 @@ static int sha256_done(struct sha256_state *md, unsigned char *out)
 		md->curlen = 0;
 	}
 
-	/* pad upto 56 bytes of zeroes */
+	/* pad up to 56 bytes of zeroes */
 	while (md->curlen < 56) {
 		md->buf[md->curlen++] = (unsigned char) 0;
 	}

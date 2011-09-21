@@ -905,7 +905,7 @@ static int wpas_dbus_get_group_obj_path(struct wpa_supplicant *wpa_s,
 
 /**
  * wpas_dbus_signal_p2p_group_started - Signals P2P group has
- * started.Emitted when a group is succesfully started
+ * started. Emitted when a group is successfully started
  * irrespective of the role (client/GO) of the current device
  *
  * @wpa_s: %wpa_supplicant network interface data

@@ -448,6 +448,7 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 	if (hapd_iface == NULL)
 		return -1;
 	hapd_iface->owner = wpa_s;
+	hapd_iface->drv_flags = wpa_s->drv_flags;
 
 	wpa_s->ap_iface->conf = conf = hostapd_config_defaults();
 	if (conf == NULL) {

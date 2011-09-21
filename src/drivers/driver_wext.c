@@ -1387,7 +1387,7 @@ static void wpa_driver_wext_add_scan_entry(struct wpa_scan_results *res,
 struct wpa_scan_results * wpa_driver_wext_get_scan_results(void *priv)
 {
 	struct wpa_driver_wext_data *drv = priv;
-	size_t ap_num = 0, len;
+	size_t len;
 	int first;
 	u8 *res_buf;
 	struct iw_event iwe_buf, *iwe = &iwe_buf;
@@ -1399,7 +1399,6 @@ struct wpa_scan_results * wpa_driver_wext_get_scan_results(void *priv)
 	if (res_buf == NULL)
 		return NULL;
 
-	ap_num = 0;
 	first = 1;
 
 	res = os_zalloc(sizeof(*res));

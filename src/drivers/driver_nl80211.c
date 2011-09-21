@@ -1471,6 +1471,40 @@ static void nl80211_rekey_offload_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_pmksa_candidate_event(struct wpa_driver_nl80211_data *drv,
+					  struct nlattr **tb)
+{
+	struct nlattr *cand[NUM_NL80211_PMKSA_CANDIDATE];
+	static struct nla_policy cand_policy[NUM_NL80211_PMKSA_CANDIDATE] = {
+		[NL80211_PMKSA_CANDIDATE_INDEX] = { .type = NLA_U32 },
+		[NL80211_PMKSA_CANDIDATE_BSSID] = {
+			.minlen = ETH_ALEN,
+			.maxlen = ETH_ALEN,
+		},
+		[NL80211_PMKSA_CANDIDATE_PREAUTH] = { .type = NLA_FLAG },
+	};
+	union wpa_event_data data;
+
+	if (!tb[NL80211_ATTR_PMKSA_CANDIDATE])
+		return;
+	if (nla_parse_nested(cand, MAX_NL80211_PMKSA_CANDIDATE,
+			     tb[NL80211_ATTR_PMKSA_CANDIDATE], cand_policy))
+		return;
+	if (!cand[NL80211_PMKSA_CANDIDATE_INDEX] ||
+	    !cand[NL80211_PMKSA_CANDIDATE_BSSID])
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	os_memcpy(data.pmkid_candidate.bssid,
+		  nla_data(cand[NL80211_PMKSA_CANDIDATE_BSSID]), ETH_ALEN);
+	data.pmkid_candidate.index =
+		nla_get_u32(cand[NL80211_PMKSA_CANDIDATE_INDEX]);
+	data.pmkid_candidate.preauth =
+		cand[NL80211_PMKSA_CANDIDATE_PREAUTH] != NULL;
+	wpa_supplicant_event(drv->ctx, EVENT_PMKID_CANDIDATE, &data);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -1577,6 +1611,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 		break;
 	case NL80211_CMD_SET_REKEY_OFFLOAD:
 		nl80211_rekey_offload_event(drv, tb);
+		break;
+	case NL80211_CMD_PMKSA_CANDIDATE:
+		nl80211_pmksa_candidate_event(drv, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

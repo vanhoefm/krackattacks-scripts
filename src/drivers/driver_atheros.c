@@ -1334,6 +1334,8 @@ atheros_get_ssid(void *priv, u8 *buf, int len)
 	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 	iwr.u.essid.pointer = (caddr_t) buf;
 	iwr.u.essid.length = len;
+	iwr.u.essid.length = (len > IW_ESSID_MAX_SIZE) ?
+		IW_ESSID_MAX_SIZE : len;
 
 	if (ioctl(drv->ioctl_sock, SIOCGIWESSID, &iwr) < 0) {
 		perror("ioctl[SIOCGIWESSID]");

@@ -2058,6 +2058,38 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			extern int rsn_testing;
 			rsn_testing = atoi(pos);
 #endif /* CONFIG_RSN_TESTING */
+#ifdef CONFIG_INTERWORKING
+		} else if (os_strcmp(buf, "interworking") == 0) {
+			bss->interworking = atoi(pos);
+		} else if (os_strcmp(buf, "access_network_type") == 0) {
+			bss->access_network_type = atoi(pos);
+			if (bss->access_network_type < 0 ||
+			    bss->access_network_type > 15) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "access_network_type", line);
+				errors++;
+			}
+		} else if (os_strcmp(buf, "internet") == 0) {
+			bss->internet = atoi(pos);
+		} else if (os_strcmp(buf, "asra") == 0) {
+			bss->asra = atoi(pos);
+		} else if (os_strcmp(buf, "esr") == 0) {
+			bss->esr = atoi(pos);
+		} else if (os_strcmp(buf, "uesa") == 0) {
+			bss->uesa = atoi(pos);
+		} else if (os_strcmp(buf, "venue_group") == 0) {
+			bss->venue_group = atoi(pos);
+			bss->venue_info_set = 1;
+		} else if (os_strcmp(buf, "venue_type") == 0) {
+			bss->venue_type = atoi(pos);
+			bss->venue_info_set = 1;
+		} else if (os_strcmp(buf, "hessid") == 0) {
+			if (hwaddr_aton(pos, bss->hessid)) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "hessid", line);
+				errors++;
+			}
+#endif /* CONFIG_INTERWORKING */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

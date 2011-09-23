@@ -166,17 +166,28 @@ u16 hostapd_own_capab_info(struct hostapd_data *hapd, struct sta_info *sta,
 u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 {
 	u8 *pos = eid;
+	u8 len = 0;
 
-	if ((hapd->conf->tdls & (TDLS_PROHIBIT | TDLS_PROHIBIT_CHAN_SWITCH)) ==
-	    0)
+	if (hapd->conf->tdls & (TDLS_PROHIBIT | TDLS_PROHIBIT_CHAN_SWITCH))
+		len = 5;
+	if (len < 4 && hapd->conf->interworking)
+		len = 4;
+	if (len == 0)
 		return eid;
 
 	*pos++ = WLAN_EID_EXT_CAPAB;
-	*pos++ = 5;
+	*pos++ = len;
 	*pos++ = 0x00;
 	*pos++ = 0x00;
 	*pos++ = 0x00;
-	*pos++ = 0x00;
+
+	*pos = 0x00;
+	if (hapd->conf->interworking)
+		*pos |= 0x80; /* Bit 31 - Interworking */
+	pos++;
+
+	if (len < 5)
+		return pos;
 	*pos = 0x00;
 	if (hapd->conf->tdls & TDLS_PROHIBIT)
 		*pos |= 0x40; /* Bit 38 - TDLS Prohibited */

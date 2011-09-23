@@ -744,6 +744,10 @@ CFLAGS += -DCONFIG_P2P_MANAGER
 OBJS += ../src/ap/p2p_hostapd.o
 endif
 
+ifdef CONFIG_INTERWORKING
+CFLAGS += -DCONFIG_INTERWORKING
+endif
+
 ifdef CONFIG_WPA_CLI_EDIT
 OBJS_c += ../src/utils/edit.o
 else

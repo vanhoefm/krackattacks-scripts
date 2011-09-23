@@ -236,3 +236,8 @@ CONFIG_IPV6=y
 # can be configured to include faster routines for exptmod, sqr, and div to
 # speed up DH and RSA calculation considerably
 #CONFIG_INTERNAL_LIBTOMMATH_FAST=y
+
+# Interworking (IEEE 802.11u)
+# This can be used to enable functionality to improve interworking with
+# external networks.
+#CONFIG_INTERWORKING=y

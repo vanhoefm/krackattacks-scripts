@@ -334,6 +334,18 @@ struct hostapd_bss_config {
 #define TDLS_PROHIBIT_CHAN_SWITCH BIT(1)
 	int tdls;
 	int disable_11n;
+
+	/* IEEE 802.11u - Interworking */
+	int interworking;
+	int access_network_type;
+	int internet;
+	int asra;
+	int esr;
+	int uesa;
+	int venue_info_set;
+	u8 venue_group;
+	u8 venue_type;
+	u8 hessid[ETH_ALEN];
 };
 
 

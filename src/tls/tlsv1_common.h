@@ -1,6 +1,6 @@
 /*
- * TLSv1 common definitions
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) common definitions
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -17,7 +17,13 @@
 
 #include "crypto/crypto.h"
 
-#define TLS_VERSION 0x0301 /* TLSv1 */
+#define TLS_VERSION_1 0x0301 /* TLSv1 */
+#define TLS_VERSION_1_1 0x0302 /* TLSv1.1 */
+#ifdef CONFIG_TLSV11
+#define TLS_VERSION TLS_VERSION_1_1
+#else /* CONFIG_TLSV11 */
+#define TLS_VERSION TLS_VERSION_1
+#endif /* CONFIG_TLSV11 */
 #define TLS_RANDOM_LEN 32
 #define TLS_PRE_MASTER_SECRET_LEN 48
 #define TLS_MASTER_SECRET_LEN 48

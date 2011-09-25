@@ -335,6 +335,13 @@ CONFIG_PEERKEY=y
 # apply for distribution of the resulting binary.
 #CONFIG_GNUTLS_EXTRA=y
 
+# TLS-based EAP methods require at least TLS v1.0. Newer version of TLS (v1.1)
+# can be enabled to get a stronger construction of messages when block ciphers
+# are used. It should be noted that some existing TLS v1.0 -based
+# implementation may not be compatible with TLS v1.1 message (ClientHello is
+# sent prior to negotiating which version will be used)
+#CONFIG_TLSV11=y
+
 # If CONFIG_TLS=internal is used, additional library and include paths are
 # needed for LibTomMath. Alternatively, an integrated, minimal version of
 # LibTomMath can be used. See beginning of libtommath.c for details on benefits

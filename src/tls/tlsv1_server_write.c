@@ -1,5 +1,5 @@
 /*
- * TLSv1 server - write handshake message
+ * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) server - write handshake message
  * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -87,7 +87,7 @@ static int tls_write_server_hello(struct tlsv1_server *conn,
 	pos += 3;
 	/* body - ServerHello */
 	/* ProtocolVersion server_version */
-	WPA_PUT_BE16(pos, TLS_VERSION);
+	WPA_PUT_BE16(pos, conn->rl.tls_version);
 	pos += 2;
 	/* Random random: uint32 gmt_unix_time, opaque random_bytes */
 	os_memcpy(pos, conn->server_random, TLS_RANDOM_LEN);
@@ -764,7 +764,8 @@ u8 * tlsv1_server_send_alert(struct tlsv1_server *conn, u8 level,
 	/* ContentType type */
 	*pos++ = TLS_CONTENT_TYPE_ALERT;
 	/* ProtocolVersion version */
-	WPA_PUT_BE16(pos, TLS_VERSION);
+	WPA_PUT_BE16(pos, conn->rl.tls_version ? conn->rl.tls_version :
+		     TLS_VERSION);
 	pos += 2;
 	/* uint16 length (to be filled) */
 	length = pos;

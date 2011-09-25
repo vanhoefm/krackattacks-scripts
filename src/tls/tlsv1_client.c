@@ -1,5 +1,5 @@
 /*
- * TLSv1 client (RFC 2246)
+ * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) client
  * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -80,8 +80,9 @@ int tls_derive_keys(struct tlsv1_client *conn,
 
 	os_memcpy(seed, conn->server_random, TLS_RANDOM_LEN);
 	os_memcpy(seed + TLS_RANDOM_LEN, conn->client_random, TLS_RANDOM_LEN);
-	key_block_len = 2 * (conn->rl.hash_size + conn->rl.key_material_len +
-			     conn->rl.iv_size);
+	key_block_len = 2 * (conn->rl.hash_size + conn->rl.key_material_len);
+	if (conn->rl.tls_version == TLS_VERSION_1)
+		key_block_len += 2 * conn->rl.iv_size;
 	if (tls_prf(conn->master_secret, TLS_MASTER_SECRET_LEN,
 		    "key expansion", seed, 2 * TLS_RANDOM_LEN,
 		    key_block, key_block_len)) {
@@ -107,12 +108,21 @@ int tls_derive_keys(struct tlsv1_client *conn,
 	os_memcpy(conn->rl.read_key, pos, conn->rl.key_material_len);
 	pos += conn->rl.key_material_len;
 
-	/* client_write_IV */
-	os_memcpy(conn->rl.write_iv, pos, conn->rl.iv_size);
-	pos += conn->rl.iv_size;
-	/* server_write_IV */
-	os_memcpy(conn->rl.read_iv, pos, conn->rl.iv_size);
-	pos += conn->rl.iv_size;
+	if (conn->rl.tls_version == TLS_VERSION_1) {
+		/* client_write_IV */
+		os_memcpy(conn->rl.write_iv, pos, conn->rl.iv_size);
+		pos += conn->rl.iv_size;
+		/* server_write_IV */
+		os_memcpy(conn->rl.read_iv, pos, conn->rl.iv_size);
+		pos += conn->rl.iv_size;
+	} else {
+		/*
+		 * Use IV field to set the mask value for TLS v1.1. A fixed
+		 * mask of zero is used per the RFC 4346, 6.2.3.2 CBC Block
+		 * Cipher option 2a.
+		 */
+		os_memset(conn->rl.write_iv, 0, conn->rl.iv_size);
+	}
 
 	return 0;
 }
@@ -357,6 +367,8 @@ struct tlsv1_client * tlsv1_client_init(void)
 	suites[count++] = TLS_RSA_WITH_RC4_128_SHA;
 	suites[count++] = TLS_RSA_WITH_RC4_128_MD5;
 	conn->num_cipher_suites = count;
+
+	conn->rl.tls_version = TLS_VERSION;
 
 	return conn;
 }

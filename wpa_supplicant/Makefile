@@ -806,6 +806,10 @@ ifndef CONFIG_TLS
 CONFIG_TLS=openssl
 endif
 
+ifdef CONFIG_TLSV11
+CFLAGS += -DCONFIG_TLSV11
+endif
+
 ifeq ($(CONFIG_TLS), openssl)
 ifdef TLS_FUNCS
 CFLAGS += -DEAP_TLS_OPENSSL

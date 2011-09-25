@@ -1,5 +1,5 @@
 /*
- * TLSv1 Record Protocol
+ * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) Record Protocol
  * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -139,7 +139,7 @@ int tlsv1_record_change_read_cipher(struct tlsv1_record_layer *rl)
  * @rl: Pointer to TLS record layer data
  * @content_type: Content type (TLS_CONTENT_TYPE_*)
  * @buf: Buffer for the generated TLS message (needs to have extra space for
- * header and HMAC)
+ * header, IV (TLS v1.1), and HMAC)
  * @buf_size: Maximum buf size
  * @payload: Payload to be sent
  * @payload_len: Length of the payload
@@ -156,6 +156,7 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 	u8 *pos, *ct_start, *length, *cpayload;
 	struct crypto_hash *hmac;
 	size_t clen;
+	int explicit_iv;
 
 	pos = buf;
 	if (pos + TLS_RECORD_HEADER_LEN > buf + buf_size)
@@ -165,7 +166,7 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 	ct_start = pos;
 	*pos++ = content_type;
 	/* ProtocolVersion version */
-	WPA_PUT_BE16(pos, TLS_VERSION);
+	WPA_PUT_BE16(pos, rl->tls_version);
 	pos += 2;
 	/* uint16 length */
 	length = pos;
@@ -173,6 +174,22 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 	pos += 2;
 
 	cpayload = pos;
+	explicit_iv = rl->write_cipher_suite != TLS_NULL_WITH_NULL_NULL &&
+		rl->iv_size && rl->tls_version == TLS_VERSION_1_1;
+	if (explicit_iv) {
+		/* opaque IV[Cipherspec.block_length] */
+		if (pos + rl->iv_size > buf + buf_size)
+			return -1;
+
+		/*
+		 * Use random number R per the RFC 4346, 6.2.3.2 CBC Block
+		 * Cipher option 2a.
+		 */
+
+		if (os_get_random(pos, rl->iv_size))
+			return -1;
+		pos += rl->iv_size;
+	}
 
 	/*
 	 * opaque fragment[TLSPlaintext.length]
@@ -343,6 +360,9 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 			return -1;
 		}
 		plen = in_len;
+		wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Record Layer - Decrypted "
+				"data", out_data, plen);
+
 		if (rl->iv_size) {
 			/*
 			 * TLS v1.0 defines different alert values for various
@@ -354,6 +374,19 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 			 * error, run through the MAC check to make timing
 			 * attacks more difficult.
 			 */
+
+			if (rl->tls_version == TLS_VERSION_1_1) {
+				/* Remove opaque IV[Cipherspec.block_length] */
+				if (plen < rl->iv_size) {
+					wpa_printf(MSG_DEBUG, "TLSv1.1: Not "
+						   "enough room for IV");
+					force_mac_error = 1;
+					goto check_mac;
+				}
+				os_memmove(out_data, out_data + rl->iv_size,
+					   plen - rl->iv_size);
+				plen -= rl->iv_size;
+			}
 
 			/* Verify and remove padding */
 			if (plen == 0) {
@@ -387,9 +420,9 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		}
 
 	check_mac:
-		wpa_hexdump(MSG_MSGDUMP,
-			    "TLSv1: Record Layer - Decrypted data",
-			    out_data, plen);
+		wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Record Layer - Decrypted "
+				"data with IV and padding removed",
+				out_data, plen);
 
 		if (plen < rl->hash_size) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Too short record; no "

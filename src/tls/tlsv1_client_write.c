@@ -1,5 +1,5 @@
 /*
- * TLSv1 client - write handshake message
+ * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) client - write handshake message
  * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -774,7 +774,8 @@ u8 * tlsv1_client_send_alert(struct tlsv1_client *conn, u8 level,
 	/* ContentType type */
 	*pos++ = TLS_CONTENT_TYPE_ALERT;
 	/* ProtocolVersion version */
-	WPA_PUT_BE16(pos, TLS_VERSION);
+	WPA_PUT_BE16(pos, conn->rl.tls_version ? conn->rl.tls_version :
+		     TLS_VERSION);
 	pos += 2;
 	/* uint16 length (to be filled) */
 	length = pos;

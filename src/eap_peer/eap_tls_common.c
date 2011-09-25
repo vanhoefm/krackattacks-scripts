@@ -112,7 +112,6 @@ static int eap_tls_params_from_conf(struct eap_sm *sm,
 		wpa_printf(MSG_DEBUG, "TLS: using phase1 config options");
 		eap_tls_params_from_conf1(params, config);
 	}
-	params->tls_ia = data->tls_ia;
 
 	/*
 	 * Use blob data, if available. Otherwise, leave reference to external

@@ -2811,35 +2811,6 @@ unsigned int tls_capabilities(void *tls_ctx)
 }
 
 
-int tls_connection_set_ia(void *tls_ctx, struct tls_connection *conn,
-			  int tls_ia)
-{
-	return -1;
-}
-
-
-struct wpabuf * tls_connection_ia_send_phase_finished(
-	void *tls_ctx, struct tls_connection *conn, int final)
-{
-	return NULL;
-}
-
-
-int tls_connection_ia_final_phase_finished(void *tls_ctx,
-					   struct tls_connection *conn)
-{
-	return -1;
-}
-
-
-int tls_connection_ia_permute_inner_secret(void *tls_ctx,
-					   struct tls_connection *conn,
-					   const u8 *key, size_t key_len)
-{
-	return -1;
-}
-
-
 #if defined(EAP_FAST) || defined(EAP_FAST_DYNAMIC) || defined(EAP_SERVER_FAST)
 /* Pre-shared secred requires a patch to openssl, so this function is
  * commented out unless explicitly needed for EAP-FAST in order to be able to

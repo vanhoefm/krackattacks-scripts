@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-TTLS (RFC 5281)
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -26,17 +26,7 @@
 #include "eap_config.h"
 
 
-/* Maximum supported TTLS version
- * 0 = RFC 5281
- * 1 = draft-funk-eap-ttls-v1-00.txt
- */
-#ifndef EAP_TTLS_VERSION
-#define EAP_TTLS_VERSION 0 /* TTLSv1 implementation is not yet complete */
-#endif /* EAP_TTLS_VERSION */
-
-
-#define MSCHAPV2_KEY_LEN 16
-#define MSCHAPV2_NT_RESPONSE_LEN 24
+#define EAP_TTLS_VERSION 0
 
 
 static void eap_ttls_deinit(struct eap_sm *sm, void *priv);
@@ -44,9 +34,8 @@ static void eap_ttls_deinit(struct eap_sm *sm, void *priv);
 
 struct eap_ttls_data {
 	struct eap_ssl_data ssl;
-	int ssl_initialized;
 
-	int ttls_version, force_ttls_version;
+	int ttls_version;
 
 	const struct eap_method *phase2_method;
 	void *phase2_priv;
@@ -91,21 +80,8 @@ static void * eap_ttls_init(struct eap_sm *sm)
 	if (data == NULL)
 		return NULL;
 	data->ttls_version = EAP_TTLS_VERSION;
-	data->force_ttls_version = -1;
 	selected = "EAP";
 	data->phase2_type = EAP_TTLS_PHASE2_EAP;
-
-#if EAP_TTLS_VERSION > 0
-	if (config && config->phase1) {
-		const char *pos = os_strstr(config->phase1, "ttlsver=");
-		if (pos) {
-			data->force_ttls_version = atoi(pos + 8);
-			data->ttls_version = data->force_ttls_version;
-			wpa_printf(MSG_DEBUG, "EAP-TTLS: Forced TTLS version "
-				   "%d", data->force_ttls_version);
-		}
-	}
-#endif /* EAP_TTLS_VERSION */
 
 	if (config && config->phase2) {
 		if (os_strstr(config->phase2, "autheap=")) {
@@ -140,19 +116,11 @@ static void * eap_ttls_init(struct eap_sm *sm)
 		data->phase2_eap_type.method = EAP_TYPE_NONE;
 	}
 
-#if EAP_TTLS_VERSION > 0
-	if (!(tls_capabilities(sm->ssl_ctx) & TLS_CAPABILITY_IA) &&
-	    data->ttls_version > 0) {
-		if (data->force_ttls_version > 0) {
-			wpa_printf(MSG_INFO, "EAP-TTLS: Forced TTLSv%d and "
-				   "TLS library does not support TLS/IA.",
-				   data->force_ttls_version);
-			eap_ttls_deinit(sm, data);
-			return NULL;
-		}
-		data->ttls_version = 0;
+	if (eap_peer_tls_ssl_init(sm, &data->ssl, config)) {
+		wpa_printf(MSG_INFO, "EAP-TTLS: Failed to initialize SSL.");
+		eap_ttls_deinit(sm, data);
+		return NULL;
 	}
-#endif /* EAP_TTLS_VERSION */
 
 	return data;
 }
@@ -176,8 +144,7 @@ static void eap_ttls_deinit(struct eap_sm *sm, void *priv)
 		return;
 	eap_ttls_phase2_eap_deinit(sm, data);
 	os_free(data->phase2_eap_types);
-	if (data->ssl_initialized)
-		eap_peer_tls_ssl_deinit(sm, &data->ssl);
+	eap_peer_tls_ssl_deinit(sm, &data->ssl);
 	os_free(data->key_data);
 	wpabuf_free(data->pending_phase2_req);
 	os_free(data);
@@ -246,39 +213,6 @@ static int eap_ttls_avp_encapsulate(struct wpabuf **resp, u32 avp_code,
 }
 
 
-#if EAP_TTLS_VERSION > 0
-static int eap_ttls_ia_permute_inner_secret(struct eap_sm *sm,
-					    struct eap_ttls_data *data,
-					    const u8 *key, size_t key_len)
-{
-	u8 *buf;
-	size_t buf_len;
-	int ret;
-
-	if (key) {
-		buf_len = 2 + key_len;
-		buf = os_malloc(buf_len);
-		if (buf == NULL)
-			return -1;
-		WPA_PUT_BE16(buf, key_len);
-		os_memcpy(buf + 2, key, key_len);
-	} else {
-		buf = NULL;
-		buf_len = 0;
-	}
-
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Session keys for TLS/IA inner "
-			"secret permutation", buf, buf_len);
-	ret = tls_connection_ia_permute_inner_secret(sm->ssl_ctx,
-						     data->ssl.conn,
-						     buf, buf_len);
-	os_free(buf);
-
-	return ret;
-}
-#endif /* EAP_TTLS_VERSION */
-
-
 static int eap_ttls_v0_derive_key(struct eap_sm *sm,
 				  struct eap_ttls_data *data)
 {
@@ -298,156 +232,10 @@ static int eap_ttls_v0_derive_key(struct eap_sm *sm,
 }
 
 
-#if EAP_TTLS_VERSION > 0
-static int eap_ttls_v1_derive_key(struct eap_sm *sm,
-				  struct eap_ttls_data *data)
-{
-	struct tls_keys keys;
-	u8 *rnd;
-
-	os_free(data->key_data);
-	data->key_data = NULL;
-
-	os_memset(&keys, 0, sizeof(keys));
-	if (tls_connection_get_keys(sm->ssl_ctx, data->ssl.conn, &keys) ||
-	    keys.client_random == NULL || keys.server_random == NULL ||
-	    keys.inner_secret == NULL) {
-		wpa_printf(MSG_INFO, "EAP-TTLS: Could not get inner secret, "
-			   "client random, or server random to derive keying "
-			   "material");
-		return -1;
-	}
-
-	rnd = os_malloc(keys.client_random_len + keys.server_random_len);
-	data->key_data = os_malloc(EAP_TLS_KEY_LEN);
-	if (rnd == NULL || data->key_data == NULL) {
-		wpa_printf(MSG_INFO, "EAP-TTLS: No memory for key derivation");
-		os_free(rnd);
-		os_free(data->key_data);
-		data->key_data = NULL;
-		return -1;
-	}
-	os_memcpy(rnd, keys.client_random, keys.client_random_len);
-	os_memcpy(rnd + keys.client_random_len, keys.server_random,
-		  keys.server_random_len);
-
-	if (tls_prf(keys.inner_secret, keys.inner_secret_len,
-		    "ttls v1 keying material", rnd, keys.client_random_len +
-		    keys.server_random_len, data->key_data, EAP_TLS_KEY_LEN)) {
-		wpa_printf(MSG_DEBUG, "EAP-TTLS: Failed to derive key");
-		os_free(rnd);
-		os_free(data->key_data);
-		data->key_data = NULL;
-		return -1;
-	}
-
-	wpa_hexdump(MSG_DEBUG, "EAP-TTLS: client/server random",
-		    rnd, keys.client_random_len + keys.server_random_len);
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: TLS/IA inner secret",
-			keys.inner_secret, keys.inner_secret_len);
-
-	os_free(rnd);
-
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Derived key",
-			data->key_data, EAP_TLS_KEY_LEN);
-
-	return 0;
-}
-#endif /* EAP_TTLS_VERSION */
-
-
 static u8 * eap_ttls_implicit_challenge(struct eap_sm *sm,
 					struct eap_ttls_data *data, size_t len)
 {
-#if EAP_TTLS_VERSION > 0
-	struct tls_keys keys;
-	u8 *challenge, *rnd;
-#endif /* EAP_TTLS_VERSION */
-
-	if (data->ttls_version == 0) {
-		return eap_peer_tls_derive_key(sm, &data->ssl,
-					       "ttls challenge", len);
-	}
-
-#if EAP_TTLS_VERSION > 0
-
-	os_memset(&keys, 0, sizeof(keys));
-	if (tls_connection_get_keys(sm->ssl_ctx, data->ssl.conn, &keys) ||
-	    keys.client_random == NULL || keys.server_random == NULL ||
-	    keys.inner_secret == NULL) {
-		wpa_printf(MSG_INFO, "EAP-TTLS: Could not get inner secret, "
-			   "client random, or server random to derive "
-			   "implicit challenge");
-		return NULL;
-	}
-
-	rnd = os_malloc(keys.client_random_len + keys.server_random_len);
-	challenge = os_malloc(len);
-	if (rnd == NULL || challenge == NULL) {
-		wpa_printf(MSG_INFO, "EAP-TTLS: No memory for implicit "
-			   "challenge derivation");
-		os_free(rnd);
-		os_free(challenge);
-		return NULL;
-	}
-	os_memcpy(rnd, keys.server_random, keys.server_random_len);
-	os_memcpy(rnd + keys.server_random_len, keys.client_random,
-		  keys.client_random_len);
-
-	if (tls_prf(keys.inner_secret, keys.inner_secret_len,
-		    "inner application challenge", rnd,
-		    keys.client_random_len + keys.server_random_len,
-		    challenge, len)) {
-		wpa_printf(MSG_DEBUG, "EAP-TTLS: Failed to derive implicit "
-			   "challenge");
-		os_free(rnd);
-		os_free(challenge);
-		return NULL;
-	}
-
-	os_free(rnd);
-
-	wpa_hexdump_key(MSG_DEBUG, "EAP-TTLS: Derived implicit challenge",
-			challenge, len);
-
-	return challenge;
-
-#else /* EAP_TTLS_VERSION */
-
-	return NULL;
-
-#endif /* EAP_TTLS_VERSION */
-}
-
-
-static void eap_ttlsv1_phase2_eap_finish(struct eap_sm *sm,
-					 struct eap_ttls_data *data,
-					 struct eap_method_ret *ret)
-{
-#if EAP_TTLS_VERSION > 0
-	if (data->ttls_version > 0) {
-		const struct eap_method *m = data->phase2_method;
-		void *priv = data->phase2_priv;
-
-		/* TTLSv1 requires TLS/IA FinalPhaseFinished */
-		if (ret->decision == DECISION_UNCOND_SUCC)
-			ret->decision = DECISION_COND_SUCC;
-		ret->methodState = METHOD_CONT;
-
-		if (ret->decision == DECISION_COND_SUCC &&
-		    m->isKeyAvailable && m->getKey &&
-		    m->isKeyAvailable(sm, priv)) {
-			u8 *key;
-			size_t key_len;
-			key = m->getKey(sm, priv, &key_len);
-			if (key) {
-				eap_ttls_ia_permute_inner_secret(
-					sm, data, key, key_len);
-				os_free(key);
-			}
-		}
-	}
-#endif /* EAP_TTLS_VERSION */
+	return eap_peer_tls_derive_key(sm, &data->ssl, "ttls challenge", len);
 }
 
 
@@ -494,7 +282,6 @@ static int eap_ttls_phase2_eap_process(struct eap_sm *sm,
 		ret->methodState = iret.methodState;
 		ret->decision = iret.decision;
 	}
-	eap_ttlsv1_phase2_eap_finish(sm, data, ret);
 
 	return 0;
 }
@@ -615,26 +402,6 @@ static int eap_ttls_phase2_request_eap(struct eap_sm *sm,
 }
 
 
-static void eap_ttlsv1_permute_inner(struct eap_sm *sm,
-				     struct eap_ttls_data *data)
-{
-#if EAP_TTLS_VERSION > 0
-	u8 session_key[2 * MSCHAPV2_KEY_LEN];
-
-	if (data->ttls_version == 0)
-		return;
-
-	get_asymetric_start_key(data->master_key, session_key,
-				MSCHAPV2_KEY_LEN, 0, 0);
-	get_asymetric_start_key(data->master_key,
-				session_key + MSCHAPV2_KEY_LEN,
-				MSCHAPV2_KEY_LEN, 1, 0);
-	eap_ttls_ia_permute_inner_secret(sm, data, session_key,
-					 sizeof(session_key));
-#endif /* EAP_TTLS_VERSION */
-}
-
-
 static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 					    struct eap_ttls_data *data,
 					    struct eap_method_ret *ret,
@@ -702,8 +469,6 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 	}
 	data->auth_response_valid = 1;
 
-	eap_ttlsv1_permute_inner(sm, data);
-
 	pos += 24;
 	os_free(challenge);
 	AVP_PAD(buf, pos);
@@ -711,7 +476,7 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 	wpabuf_put(msg, pos - buf);
 	*resp = msg;
 
-	if (sm->workaround && data->ttls_version == 0) {
+	if (sm->workaround) {
 		/* At least FreeRADIUS seems to be terminating
 		 * EAP-TTLS/MSHCAPV2 without the expected MS-CHAP-v2 Success
 		 * packet. */
@@ -798,17 +563,10 @@ static int eap_ttls_phase2_request_mschap(struct eap_sm *sm,
 	wpabuf_put(msg, pos - buf);
 	*resp = msg;
 
-	if (data->ttls_version > 0) {
-		/* EAP-TTLSv1 uses TLS/IA FinalPhaseFinished to report success,
-		 * so do not allow connection to be terminated yet. */
-		ret->methodState = METHOD_CONT;
-		ret->decision = DECISION_COND_SUCC;
-	} else {
-		/* EAP-TTLS/MSCHAP does not provide tunneled success
-		 * notification, so assume that Phase2 succeeds. */
-		ret->methodState = METHOD_DONE;
-		ret->decision = DECISION_COND_SUCC;
-	}
+	/* EAP-TTLS/MSCHAP does not provide tunneled success
+	 * notification, so assume that Phase2 succeeds. */
+	ret->methodState = METHOD_DONE;
+	ret->decision = DECISION_COND_SUCC;
 
 	return 0;
 }
@@ -859,17 +617,10 @@ static int eap_ttls_phase2_request_pap(struct eap_sm *sm,
 	wpabuf_put(msg, pos - buf);
 	*resp = msg;
 
-	if (data->ttls_version > 0) {
-		/* EAP-TTLSv1 uses TLS/IA FinalPhaseFinished to report success,
-		 * so do not allow connection to be terminated yet. */
-		ret->methodState = METHOD_CONT;
-		ret->decision = DECISION_COND_SUCC;
-	} else {
-		/* EAP-TTLS/PAP does not provide tunneled success notification,
-		 * so assume that Phase2 succeeds. */
-		ret->methodState = METHOD_DONE;
-		ret->decision = DECISION_COND_SUCC;
-	}
+	/* EAP-TTLS/PAP does not provide tunneled success notification,
+	 * so assume that Phase2 succeeds. */
+	ret->methodState = METHOD_DONE;
+	ret->decision = DECISION_COND_SUCC;
 
 	return 0;
 }
@@ -942,17 +693,10 @@ static int eap_ttls_phase2_request_chap(struct eap_sm *sm,
 	wpabuf_put(msg, pos - buf);
 	*resp = msg;
 
-	if (data->ttls_version > 0) {
-		/* EAP-TTLSv1 uses TLS/IA FinalPhaseFinished to report success,
-		 * so do not allow connection to be terminated yet. */
-		ret->methodState = METHOD_CONT;
-		ret->decision = DECISION_COND_SUCC;
-	} else {
-		/* EAP-TTLS/CHAP does not provide tunneled success
-		 * notification, so assume that Phase2 succeeds. */
-		ret->methodState = METHOD_DONE;
-		ret->decision = DECISION_COND_SUCC;
-	}
+	/* EAP-TTLS/CHAP does not provide tunneled success
+	 * notification, so assume that Phase2 succeeds. */
+	ret->methodState = METHOD_DONE;
+	ret->decision = DECISION_COND_SUCC;
 
 	return 0;
 }
@@ -1025,36 +769,6 @@ static int eap_ttls_phase2_request(struct eap_sm *sm,
 
 	return res;
 }
-
-
-#if EAP_TTLS_VERSION > 0
-static struct wpabuf * eap_ttls_build_phase_finished(
-	struct eap_sm *sm, struct eap_ttls_data *data, int id, int final)
-{
-	struct wpabuf *req, *buf;
-
-	buf = tls_connection_ia_send_phase_finished(sm->ssl_ctx,
-						    data->ssl.conn,
-						    final);
-	if (buf == NULL)
-		return NULL;
-
-	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_TTLS,
-			    1 + wpabuf_len(buf),
-			    EAP_CODE_RESPONSE, id);
-	if (req == NULL) {
-		wpabuf_free(buf);
-		return NULL;
-	}
-
-	wpabuf_put_u8(req, data->ttls_version);
-	wpabuf_put_buf(req, buf);
-	wpabuf_free(buf);
-	eap_update_len(req);
-
-	return req;
-}
-#endif /* EAP_TTLS_VERSION */
 
 
 struct ttls_parse_avp {
@@ -1366,19 +1080,9 @@ static int eap_ttls_process_phase2_mschapv2(struct eap_sm *sm,
 
 	wpa_printf(MSG_INFO, "EAP-TTLS: Phase 2 MSCHAPV2 "
 		   "authentication succeeded");
-	if (data->ttls_version > 0) {
-		/*
-		 * EAP-TTLSv1 uses TLS/IA FinalPhaseFinished to report
-		 * success, so do not allow connection to be terminated
-		 * yet.
-		 */
-		ret->methodState = METHOD_CONT;
-		ret->decision = DECISION_COND_SUCC;
-	} else {
-		ret->methodState = METHOD_DONE;
-		ret->decision = DECISION_UNCOND_SUCC;
-		data->phase2_success = 1;
-	}
+	ret->methodState = METHOD_DONE;
+	ret->decision = DECISION_UNCOND_SUCC;
+	data->phase2_success = 1;
 
 	/*
 	 * Reply with empty data; authentication server will reply
@@ -1491,24 +1195,6 @@ static int eap_ttls_process_decrypted(struct eap_sm *sm,
 
 	return 0;
 }
-
-
-#if EAP_TTLS_VERSION > 0
-static void eap_ttls_final_phase_finished(struct eap_sm *sm,
-					  struct eap_ttls_data *data,
-					  struct eap_method_ret *ret,
-					  u8 identifier,
-					  struct wpabuf **out_data)
-{
-	wpa_printf(MSG_DEBUG, "EAP-TTLS: FinalPhaseFinished received");
-	wpa_printf(MSG_INFO, "EAP-TTLS: TLS/IA authentication succeeded");
-	ret->methodState = METHOD_DONE;
-	ret->decision = DECISION_UNCOND_SUCC;
-	data->phase2_success = 1;
-	*out_data = eap_ttls_build_phase_finished(sm, data, identifier, 1);
-	eap_ttls_v1_derive_key(sm, data);
-}
-#endif /* EAP_TTLS_VERSION */
 
 
 static int eap_ttls_implicit_identity_request(struct eap_sm *sm,
@@ -1627,17 +1313,6 @@ static int eap_ttls_decrypt(struct eap_sm *sm, struct eap_ttls_data *data,
 	if (retval)
 		goto done;
 
-#if EAP_TTLS_VERSION > 0
-	if (data->ttls_version > 0 &&
-	    (in_decrypted == NULL || wpabuf_len(in_decrypted) == 0) &&
-	    tls_connection_ia_final_phase_finished(sm->ssl_ctx,
-						   data->ssl.conn)) {
-		eap_ttls_final_phase_finished(sm, data, ret, identifier,
-					      out_data);
-		goto done;
-	}
-#endif /* EAP_TTLS_VERSION */
-
 continue_req:
 	data->phase2_start = 0;
 
@@ -1659,46 +1334,6 @@ done:
 	}
 
 	return retval;
-}
-
-
-static int eap_ttls_process_start(struct eap_sm *sm,
-				  struct eap_ttls_data *data, u8 flags,
-				  struct eap_method_ret *ret)
-{
-	struct eap_peer_config *config = eap_get_config(sm);
-
-	wpa_printf(MSG_DEBUG, "EAP-TTLS: Start (server ver=%d, own ver=%d)",
-		   flags & EAP_TLS_VERSION_MASK, data->ttls_version);
-#if EAP_TTLS_VERSION > 0
-	if ((flags & EAP_TLS_VERSION_MASK) < data->ttls_version)
-		data->ttls_version = flags & EAP_TLS_VERSION_MASK;
-	if (data->force_ttls_version >= 0 &&
-	    data->force_ttls_version != data->ttls_version) {
-		wpa_printf(MSG_WARNING, "EAP-TTLS: Failed to select "
-			   "forced TTLS version %d",
-			   data->force_ttls_version);
-		ret->methodState = METHOD_DONE;
-		ret->decision = DECISION_FAIL;
-		ret->allowNotifications = FALSE;
-		return -1;
-	}
-	wpa_printf(MSG_DEBUG, "EAP-TTLS: Using TTLS version %d",
-		   data->ttls_version);
-
-	if (data->ttls_version > 0)
-		data->ssl.tls_ia = 1;
-#endif /* EAP_TTLS_VERSION */
-	if (!data->ssl_initialized &&
-	    eap_peer_tls_ssl_init(sm, &data->ssl, config)) {
-		wpa_printf(MSG_INFO, "EAP-TTLS: Failed to initialize SSL.");
-		return -1;
-	}
-	data->ssl_initialized = 1;
-
-	wpa_printf(MSG_DEBUG, "EAP-TTLS: Start");
-
-	return 0;
 }
 
 
@@ -1725,8 +1360,7 @@ static int eap_ttls_process_handshake(struct eap_sm *sm,
 			ret->methodState = METHOD_MAY_CONT;
 		}
 		data->phase2_start = 1;
-		if (data->ttls_version == 0)
-			eap_ttls_v0_derive_key(sm, data);
+		eap_ttls_v0_derive_key(sm, data);
 
 		if (*out_data == NULL || wpabuf_len(*out_data) == 0) {
 			if (eap_ttls_decrypt(sm, data, ret, identifier,
@@ -1761,7 +1395,7 @@ static void eap_ttls_check_auth_status(struct eap_sm *sm,
 				       struct eap_ttls_data *data,
 				       struct eap_method_ret *ret)
 {
-	if (data->ttls_version == 0 && ret->methodState == METHOD_DONE) {
+	if (ret->methodState == METHOD_DONE) {
 		ret->allowNotifications = FALSE;
 		if (ret->decision == DECISION_UNCOND_SUCC ||
 		    ret->decision == DECISION_COND_SUCC) {
@@ -1779,8 +1413,7 @@ static void eap_ttls_check_auth_status(struct eap_sm *sm,
 			}
 #endif /* EAP_TNC */
 		}
-	} else if (data->ttls_version == 0 &&
-		   ret->methodState == METHOD_MAY_CONT &&
+	} else if (ret->methodState == METHOD_MAY_CONT &&
 		   (ret->decision == DECISION_UNCOND_SUCC ||
 		    ret->decision == DECISION_COND_SUCC)) {
 			wpa_printf(MSG_DEBUG, "EAP-TTLS: Authentication "
@@ -1808,8 +1441,9 @@ static struct wpabuf * eap_ttls_process(struct eap_sm *sm, void *priv,
 	id = eap_get_id(reqData);
 
 	if (flags & EAP_TLS_FLAGS_START) {
-		if (eap_ttls_process_start(sm, data, flags, ret) < 0)
-			return NULL;
+		wpa_printf(MSG_DEBUG, "EAP-TTLS: Start (server ver=%d, own "
+			   "ver=%d)", flags & EAP_TLS_VERSION_MASK,
+			   data->ttls_version);
 
 		/* RFC 5281, Ch. 9.2:
 		 * "This packet MAY contain additional information in the form
@@ -1817,13 +1451,6 @@ static struct wpabuf * eap_ttls_process(struct eap_sm *sm, void *priv,
 		 * For now, ignore any potential extra data.
 		 */
 		left = 0;
-	} else if (!data->ssl_initialized) {
-		wpa_printf(MSG_DEBUG, "EAP-TTLS: First message did not "
-			   "include Start flag");
-		ret->methodState = METHOD_DONE;
-		ret->decision = DECISION_FAIL;
-		ret->allowNotifications = FALSE;
-		return NULL;
 	}
 
 	resp = NULL;

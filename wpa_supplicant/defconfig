@@ -322,18 +322,10 @@ CONFIG_PEERKEY=y
 
 # Select TLS implementation
 # openssl = OpenSSL (default)
-# gnutls = GnuTLS (needed for TLS/IA, see also CONFIG_GNUTLS_EXTRA)
+# gnutls = GnuTLS
 # internal = Internal TLSv1 implementation (experimental)
 # none = Empty template
 #CONFIG_TLS=openssl
-
-# Whether to enable TLS/IA support, which is required for EAP-TTLSv1.
-# You need CONFIG_TLS=gnutls for this to have any effect. Please note that
-# even though the core GnuTLS library is released under LGPL, this extra
-# library uses GPL and as such, the terms of GPL apply to the combination
-# of wpa_supplicant and GnuTLS if this option is enabled. BSD license may not
-# apply for distribution of the resulting binary.
-#CONFIG_GNUTLS_EXTRA=y
 
 # TLS-based EAP methods require at least TLS v1.0. Newer version of TLS (v1.1)
 # can be enabled to get a stronger construction of messages when block ciphers

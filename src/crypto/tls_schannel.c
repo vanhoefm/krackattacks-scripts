@@ -736,32 +736,3 @@ unsigned int tls_capabilities(void *tls_ctx)
 {
 	return 0;
 }
-
-
-int tls_connection_set_ia(void *tls_ctx, struct tls_connection *conn,
-			  int tls_ia)
-{
-	return -1;
-}
-
-
-struct wpabuf * tls_connection_ia_send_phase_finished(
-	void *tls_ctx, struct tls_connection *conn, int final);
-{
-	return NULL;
-}
-
-
-int tls_connection_ia_final_phase_finished(void *tls_ctx,
-					   struct tls_connection *conn)
-{
-	return -1;
-}
-
-
-int tls_connection_ia_permute_inner_secret(void *tls_ctx,
-					   struct tls_connection *conn,
-					   const u8 *key, size_t key_len)
-{
-	return -1;
-}

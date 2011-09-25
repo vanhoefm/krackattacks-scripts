@@ -456,10 +456,6 @@ ifeq ($(CONFIG_TLS), gnutls)
 ifdef TLS_FUNCS
 OBJS += ../src/crypto/tls_gnutls.o
 LIBS += -lgnutls -lgpg-error
-ifdef CONFIG_GNUTLS_EXTRA
-CFLAGS += -DCONFIG_GNUTLS_EXTRA
-LIBS += -lgnutls-extra
-endif
 endif
 OBJS += ../src/crypto/crypto_gnutls.o
 HOBJS += ../src/crypto/crypto_gnutls.o

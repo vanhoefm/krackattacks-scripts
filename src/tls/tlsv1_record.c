@@ -317,58 +317,57 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		return -1;
 	}
 
-	os_memcpy(out_data, in_data, in_len);
-	*out_len = in_len;
-
 	if (rl->read_cipher_suite != TLS_NULL_WITH_NULL_NULL) {
-		if (crypto_cipher_decrypt(rl->read_cbc, out_data,
+		size_t plen;
+		if (crypto_cipher_decrypt(rl->read_cbc, in_data,
 					  out_data, in_len) < 0) {
 			*alert = TLS_ALERT_DECRYPTION_FAILED;
 			return -1;
 		}
+		plen = in_len;
 		if (rl->iv_size) {
-			if (in_len == 0) {
+			if (plen == 0) {
 				wpa_printf(MSG_DEBUG, "TLSv1: Too short record"
 					   " (no pad)");
 				*alert = TLS_ALERT_DECODE_ERROR;
 				return -1;
 			}
-			padlen = out_data[in_len - 1];
-			if (padlen >= in_len) {
+			padlen = out_data[plen - 1];
+			if (padlen >= plen) {
 				wpa_printf(MSG_DEBUG, "TLSv1: Incorrect pad "
-					   "length (%u, in_len=%lu) in "
+					   "length (%u, plen=%lu) in "
 					   "received record",
-					   padlen, (unsigned long) in_len);
+					   padlen, (unsigned long) plen);
 				*alert = TLS_ALERT_DECRYPTION_FAILED;
 				return -1;
 			}
-			for (i = in_len - padlen; i < in_len; i++) {
+			for (i = plen - padlen; i < plen; i++) {
 				if (out_data[i] != padlen) {
 					wpa_hexdump(MSG_DEBUG,
 						    "TLSv1: Invalid pad in "
 						    "received record",
-						    out_data + in_len - padlen,
+						    out_data + plen - padlen,
 						    padlen);
 					*alert = TLS_ALERT_DECRYPTION_FAILED;
 					return -1;
 				}
 			}
 
-			*out_len -= padlen + 1;
+			plen -= padlen + 1;
 		}
 
 		wpa_hexdump(MSG_MSGDUMP,
 			    "TLSv1: Record Layer - Decrypted data",
-			    out_data, in_len);
+			    out_data, plen);
 
-		if (*out_len < rl->hash_size) {
+		if (plen < rl->hash_size) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Too short record; no "
 				   "hash value");
 			*alert = TLS_ALERT_INTERNAL_ERROR;
 			return -1;
 		}
 
-		*out_len -= rl->hash_size;
+		plen -= rl->hash_size;
 
 		hmac = crypto_hash_init(rl->hash_alg, rl->read_mac_secret,
 					rl->hash_size);
@@ -382,9 +381,9 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		crypto_hash_update(hmac, rl->read_seq_num, TLS_SEQ_NUM_LEN);
 		/* type + version + length + fragment */
 		crypto_hash_update(hmac, in_data - TLS_RECORD_HEADER_LEN, 3);
-		WPA_PUT_BE16(len, *out_len);
+		WPA_PUT_BE16(len, plen);
 		crypto_hash_update(hmac, len, 2);
-		crypto_hash_update(hmac, out_data, *out_len);
+		crypto_hash_update(hmac, out_data, plen);
 		hlen = sizeof(hash);
 		if (crypto_hash_finish(hmac, hash, &hlen) < 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Record Layer - Failed "
@@ -392,12 +391,17 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 			return -1;
 		}
 		if (hlen != rl->hash_size ||
-		    os_memcmp(hash, out_data + *out_len, hlen) != 0) {
+		    os_memcmp(hash, out_data + plen, hlen) != 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Invalid HMAC value in "
 				   "received message");
 			*alert = TLS_ALERT_BAD_RECORD_MAC;
 			return -1;
 		}
+
+		*out_len = plen;
+	} else {
+		os_memcpy(out_data, in_data, in_len);
+		*out_len = in_len;
 	}
 
 	/* TLSCompressed must not be more than 2^14+1024 bytes */

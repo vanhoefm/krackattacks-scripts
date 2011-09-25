@@ -250,6 +250,7 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 	u8 padlen;
 	struct crypto_hash *hmac;
 	u8 len[2], hash[100];
+	int force_mac_error = 0;
 
 	wpa_hexdump(MSG_MSGDUMP, "TLSv1: Record Layer - Received",
 		    in_data, in_len);
@@ -326,11 +327,23 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		}
 		plen = in_len;
 		if (rl->iv_size) {
+			/*
+			 * TLS v1.0 defines different alert values for various
+			 * failures. That may information to aid in attacks, so
+			 * use the same bad_record_mac alert regardless of the
+			 * issues.
+			 *
+			 * In addition, instead of returning immediately on
+			 * error, run through the MAC check to make timing
+			 * attacks more difficult.
+			 */
+
+			/* Verify and remove padding */
 			if (plen == 0) {
 				wpa_printf(MSG_DEBUG, "TLSv1: Too short record"
 					   " (no pad)");
-				*alert = TLS_ALERT_DECODE_ERROR;
-				return -1;
+				force_mac_error = 1;
+				goto check_mac;
 			}
 			padlen = out_data[plen - 1];
 			if (padlen >= plen) {
@@ -338,8 +351,8 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 					   "length (%u, plen=%lu) in "
 					   "received record",
 					   padlen, (unsigned long) plen);
-				*alert = TLS_ALERT_DECRYPTION_FAILED;
-				return -1;
+				force_mac_error = 1;
+				goto check_mac;
 			}
 			for (i = plen - padlen; i < plen; i++) {
 				if (out_data[i] != padlen) {
@@ -348,14 +361,15 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 						    "received record",
 						    out_data + plen - padlen,
 						    padlen);
-					*alert = TLS_ALERT_DECRYPTION_FAILED;
-					return -1;
+					force_mac_error = 1;
+					goto check_mac;
 				}
 			}
 
 			plen -= padlen + 1;
 		}
 
+	check_mac:
 		wpa_hexdump(MSG_MSGDUMP,
 			    "TLSv1: Record Layer - Decrypted data",
 			    out_data, plen);
@@ -363,7 +377,7 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		if (plen < rl->hash_size) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Too short record; no "
 				   "hash value");
-			*alert = TLS_ALERT_INTERNAL_ERROR;
+			*alert = TLS_ALERT_BAD_RECORD_MAC;
 			return -1;
 		}
 
@@ -388,12 +402,15 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		if (crypto_hash_finish(hmac, hash, &hlen) < 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Record Layer - Failed "
 				   "to calculate HMAC");
+			*alert = TLS_ALERT_INTERNAL_ERROR;
 			return -1;
 		}
 		if (hlen != rl->hash_size ||
-		    os_memcmp(hash, out_data + plen, hlen) != 0) {
+		    os_memcmp(hash, out_data + plen, hlen) != 0 ||
+		    force_mac_error) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Invalid HMAC value in "
-				   "received message");
+				   "received message (force_mac_error=%d)",
+				   force_mac_error);
 			*alert = TLS_ALERT_BAD_RECORD_MAC;
 			return -1;
 		}

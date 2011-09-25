@@ -1,6 +1,6 @@
 /*
  * TLSv1 Record Protocol
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -275,9 +275,14 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		return -1;
 	}
 
-	if (WPA_GET_BE16(in_data + 1) != TLS_VERSION) {
+	/*
+	 * TLS v1.0 and v1.1 RFCs were not exactly clear on the use of the
+	 * protocol version in record layer. As such, accept any {03,xx} value
+	 * to remain compatible with existing implementations.
+	 */
+	if (in_data[1] != 0x03) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected protocol version "
-			   "%d.%d", in_data[1], in_data[2]);
+			   "%u.%u", in_data[1], in_data[2]);
 		*alert = TLS_ALERT_PROTOCOL_VERSION;
 		return -1;
 	}

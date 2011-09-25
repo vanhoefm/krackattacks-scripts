@@ -1,6 +1,6 @@
 /*
  * SSL/TLS interface functions for GnuTLS
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -35,12 +35,8 @@ int gnutls_ia_verify_endphase(gnutls_session_t session, char *checksum);
 #include "tls.h"
 
 
-#ifndef TLS_RANDOM_SIZE
-#define TLS_RANDOM_SIZE 32
-#endif
-#ifndef TLS_MASTER_SIZE
-#define TLS_MASTER_SIZE 48
-#endif
+#define WPA_TLS_RANDOM_SIZE 32
+#define WPA_TLS_MASTER_SIZE 48
 
 
 #if LIBGNUTLS_VERSION_NUMBER < 0x010302
@@ -77,9 +73,9 @@ typedef struct {
 	gnutls_mac_algorithm_t write_mac_algorithm;
 	gnutls_compression_method_t write_compression_algorithm;
 	cipher_suite_st current_cipher_suite;
-	opaque master_secret[TLS_MASTER_SIZE];
-	opaque client_random[TLS_RANDOM_SIZE];
-	opaque server_random[TLS_RANDOM_SIZE];
+	opaque master_secret[WPA_TLS_MASTER_SIZE];
+	opaque client_random[WPA_TLS_RANDOM_SIZE];
+	opaque server_random[WPA_TLS_RANDOM_SIZE];
 	/* followed by stuff we are not interested in */
 } security_parameters_st;
 
@@ -131,7 +127,7 @@ struct tls_connection {
 	u8 *session_keys;
 	size_t session_keys_len;
 
-	u8 inner_secret[TLS_MASTER_SIZE];
+	u8 inner_secret[WPA_TLS_MASTER_SIZE];
 #endif /* GNUTLS_IA */
 };
 
@@ -285,8 +281,12 @@ static ssize_t tls_push_func(gnutls_transport_ptr ptr, const void *buf,
 static int tls_gnutls_init_session(struct tls_global *global,
 				   struct tls_connection *conn)
 {
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020200
+	const char *err;
+#else /* LIBGNUTLS_VERSION_NUMBER >= 0x020200 */
 	const int cert_types[2] = { GNUTLS_CRT_X509, 0 };
 	const int protos[2] = { GNUTLS_TLS1, 0 };
+#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020200 */
 	int ret;
 
 	ret = gnutls_init(&conn->session,
@@ -301,6 +301,15 @@ static int tls_gnutls_init_session(struct tls_global *global,
 	if (ret < 0)
 		goto fail;
 
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020200
+	ret = gnutls_priority_set_direct(conn->session, "NORMAL:-VERS-SSL3.0",
+					 &err);
+	if (ret < 0) {
+		wpa_printf(MSG_ERROR, "GnuTLS: Priority string failure at "
+			   "'%s'", err);
+		goto fail;
+	}
+#else /* LIBGNUTLS_VERSION_NUMBER >= 0x020200 */
 	ret = gnutls_certificate_type_set_priority(conn->session, cert_types);
 	if (ret < 0)
 		goto fail;
@@ -308,6 +317,7 @@ static int tls_gnutls_init_session(struct tls_global *global,
 	ret = gnutls_protocol_set_priority(conn->session, protos);
 	if (ret < 0)
 		goto fail;
+#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020200 */
 
 	gnutls_transport_set_pull_function(conn->session, tls_pull_func);
 	gnutls_transport_set_push_function(conn->session, tls_push_func);
@@ -597,11 +607,13 @@ int tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
 				conn->xcred, GNUTLS_VERIFY_ALLOW_SIGN_RSA_MD5);
 		}
 
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
 		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
 			gnutls_certificate_set_verify_flags(
 				conn->xcred,
 				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
 		}
+#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x020800 */
 	}
 
 	if (params->client_cert && params->private_key) {
@@ -729,11 +741,13 @@ int tls_global_set_params(void *tls_ctx,
 				GNUTLS_VERIFY_ALLOW_SIGN_RSA_MD5);
 		}
 
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
 		if (params->flags & TLS_CONN_DISABLE_TIME_CHECKS) {
 			gnutls_certificate_set_verify_flags(
 				global->xcred,
 				GNUTLS_VERIFY_DISABLE_TIME_CHECKS);
 		}
+#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x020800 */
 	}
 
 	if (params->client_cert && params->private_key) {
@@ -822,10 +836,11 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 
 	os_memset(keys, 0, sizeof(*keys));
 
+#if LIBGNUTLS_VERSION_NUMBER < 0x020c00
 #ifdef GNUTLS_INTERNAL_STRUCTURE_HACK
 	sec = &conn->session->security_parameters;
 	keys->master_key = sec->master_secret;
-	keys->master_key_len = TLS_MASTER_SIZE;
+	keys->master_key_len = WPA_TLS_MASTER_SIZE;
 	keys->client_random = sec->client_random;
 	keys->server_random = sec->server_random;
 #else /* GNUTLS_INTERNAL_STRUCTURE_HACK */
@@ -835,16 +850,19 @@ int tls_connection_get_keys(void *ssl_ctx, struct tls_connection *conn,
 		(u8 *) gnutls_session_get_server_random(conn->session);
 	/* No access to master_secret */
 #endif /* GNUTLS_INTERNAL_STRUCTURE_HACK */
+#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020c00 */
 
 #ifdef GNUTLS_IA
 	gnutls_ia_extract_inner_secret(conn->session,
 				       (char *) conn->inner_secret);
 	keys->inner_secret = conn->inner_secret;
-	keys->inner_secret_len = TLS_MASTER_SIZE;
+	keys->inner_secret_len = WPA_TLS_MASTER_SIZE;
 #endif /* GNUTLS_IA */
 
-	keys->client_random_len = TLS_RANDOM_SIZE;
-	keys->server_random_len = TLS_RANDOM_SIZE;
+#if LIBGNUTLS_VERSION_NUMBER < 0x020c00
+	keys->client_random_len = WPA_TLS_RANDOM_SIZE;
+	keys->server_random_len = WPA_TLS_RANDOM_SIZE;
+#endif /* LIBGNUTLS_VERSION_NUMBER < 0x020c00 */
 
 	return 0;
 }
@@ -883,11 +901,13 @@ static int tls_connection_verify_peer(struct tls_connection *conn,
 
 	if (conn->verify_peer && (status & GNUTLS_CERT_INVALID)) {
 		wpa_printf(MSG_INFO, "TLS: Peer certificate not trusted");
+		*err = GNUTLS_A_INTERNAL_ERROR;
 		if (status & GNUTLS_CERT_INSECURE_ALGORITHM) {
 			wpa_printf(MSG_INFO, "TLS: Certificate uses insecure "
 				   "algorithm");
 			*err = GNUTLS_A_INSUFFICIENT_SECURITY;
 		}
+#if LIBGNUTLS_VERSION_NUMBER >= 0x020800
 		if (status & GNUTLS_CERT_NOT_ACTIVATED) {
 			wpa_printf(MSG_INFO, "TLS: Certificate not yet "
 				   "activated");
@@ -897,6 +917,7 @@ static int tls_connection_verify_peer(struct tls_connection *conn,
 			wpa_printf(MSG_INFO, "TLS: Certificate expired");
 			*err = GNUTLS_A_CERTIFICATE_EXPIRED;
 		}
+#endif /* LIBGNUTLS_VERSION_NUMBER >= 0x020800 */
 		return -1;
 	}
 

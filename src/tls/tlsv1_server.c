@@ -1,6 +1,6 @@
 /*
  * TLSv1 server (RFC 2246)
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -201,10 +201,8 @@ int tlsv1_server_encrypt(struct tlsv1_server *conn,
 	wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Plaintext AppData",
 			in_data, in_len);
 
-	os_memcpy(out_data + TLS_RECORD_HEADER_LEN, in_data, in_len);
-
 	if (tlsv1_record_send(&conn->rl, TLS_CONTENT_TYPE_APPLICATION_DATA,
-			      out_data, out_len, in_len, &rlen) < 0) {
+			      out_data, out_len, in_data, in_len, &rlen) < 0) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to create a record");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
 				   TLS_ALERT_INTERNAL_ERROR);

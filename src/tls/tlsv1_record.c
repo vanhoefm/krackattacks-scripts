@@ -138,10 +138,10 @@ int tlsv1_record_change_read_cipher(struct tlsv1_record_layer *rl)
  * tlsv1_record_send - TLS record layer: Send a message
  * @rl: Pointer to TLS record layer data
  * @content_type: Content type (TLS_CONTENT_TYPE_*)
- * @buf: Buffer to send (with TLS_RECORD_HEADER_LEN octets reserved in the
- * beginning for record layer to fill in; payload filled in after this and
- * extra space in the end for HMAC).
+ * @buf: Buffer for the generated TLS message (needs to have extra space for
+ * header and HMAC)
  * @buf_size: Maximum buf size
+ * @payload: Payload to be sent
  * @payload_len: Length of the payload
  * @out_len: Buffer for returning the used buf length
  * Returns: 0 on success, -1 on failure
@@ -150,13 +150,17 @@ int tlsv1_record_change_read_cipher(struct tlsv1_record_layer *rl)
  * the data using the current write cipher.
  */
 int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
-		      size_t buf_size, size_t payload_len, size_t *out_len)
+		      size_t buf_size, const u8 *payload, size_t payload_len,
+		      size_t *out_len)
 {
-	u8 *pos, *ct_start, *length, *payload;
+	u8 *pos, *ct_start, *length, *cpayload;
 	struct crypto_hash *hmac;
 	size_t clen;
 
 	pos = buf;
+	if (pos + TLS_RECORD_HEADER_LEN > buf + buf_size)
+		return -1;
+
 	/* ContentType type */
 	ct_start = pos;
 	*pos++ = content_type;
@@ -168,11 +172,23 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 	WPA_PUT_BE16(length, payload_len);
 	pos += 2;
 
-	/* opaque fragment[TLSPlaintext.length] */
-	payload = pos;
+	cpayload = pos;
+
+	/*
+	 * opaque fragment[TLSPlaintext.length]
+	 * (opaque content[TLSCompressed.length] in GenericBlockCipher)
+	 */
+	if (pos + payload_len > buf + buf_size)
+		return -1;
+	os_memmove(pos, payload, payload_len);
 	pos += payload_len;
 
 	if (rl->write_cipher_suite != TLS_NULL_WITH_NULL_NULL) {
+		/*
+		 * MAC calculated over seq_num + TLSCompressed.type +
+		 * TLSCompressed.version + TLSCompressed.length +
+		 * TLSCompressed.fragment
+		 */
 		hmac = crypto_hash_init(rl->hash_alg, rl->write_mac_secret,
 					rl->hash_size);
 		if (hmac == NULL) {
@@ -182,7 +198,8 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 		}
 		crypto_hash_update(hmac, rl->write_seq_num, TLS_SEQ_NUM_LEN);
 		/* type + version + length + fragment */
-		crypto_hash_update(hmac, ct_start, pos - ct_start);
+		crypto_hash_update(hmac, ct_start, TLS_RECORD_HEADER_LEN);
+		crypto_hash_update(hmac, payload, payload_len);
 		clen = buf + buf_size - pos;
 		if (clen < rl->hash_size) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Record Layer - Not "
@@ -200,7 +217,7 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 			    pos, clen);
 		pos += clen;
 		if (rl->iv_size) {
-			size_t len = pos - payload;
+			size_t len = pos - cpayload;
 			size_t pad;
 			pad = (len + 1) % rl->iv_size;
 			if (pad)
@@ -214,8 +231,8 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 			pos += pad + 1;
 		}
 
-		if (crypto_cipher_encrypt(rl->write_cbc, payload,
-					  payload, pos - payload) < 0)
+		if (crypto_cipher_encrypt(rl->write_cbc, cpayload,
+					  cpayload, pos - cpayload) < 0)
 			return -1;
 	}
 

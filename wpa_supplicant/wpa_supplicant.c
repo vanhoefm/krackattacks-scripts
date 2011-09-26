@@ -527,6 +527,8 @@ const char * wpa_supplicant_state_txt(enum wpa_states state)
 
 static void wpa_supplicant_start_bgscan(struct wpa_supplicant *wpa_s)
 {
+	if (wpas_driver_bss_selection(wpa_s))
+		return;
 	if (wpa_s->current_ssid == wpa_s->bgscan_ssid)
 		return;
 

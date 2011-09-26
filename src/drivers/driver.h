@@ -689,6 +689,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_EAPOL_TX_STATUS		0x00010000
 /* Driver indicates TX status events for Deauth/Disassoc frames */
 #define WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS		0x00020000
+/* Driver supports roaming (BSS selection) in firmware */
+#define WPA_DRIVER_FLAGS_BSS_SELECTION			0x00040000
 	unsigned int flags;
 
 	int max_scan_ssids;

@@ -214,7 +214,9 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 	}
 
 	if (action_code == WLAN_TDLS_SETUP_CONFIRM ||
-	    action_code == WLAN_TDLS_TEARDOWN)
+	    action_code == WLAN_TDLS_TEARDOWN ||
+	    action_code == WLAN_TDLS_DISCOVERY_REQUEST ||
+	    action_code == WLAN_TDLS_DISCOVERY_RESPONSE)
 		return 0; /* No retries */
 
 	for (peer = sm->tdls; peer; peer = peer->next) {
@@ -802,6 +804,26 @@ static int wpa_tdls_send_error(struct wpa_sm *sm, const u8 *dst,
 }
 
 
+static struct wpa_tdls_peer *
+wpa_tdls_add_peer(struct wpa_sm *sm, const u8 *addr)
+{
+	struct wpa_tdls_peer *peer;
+
+	wpa_printf(MSG_INFO, "TDLS: Creating peer entry for " MACSTR,
+		   MAC2STR(addr));
+
+	peer = os_zalloc(sizeof(*peer));
+	if (peer == NULL)
+		return NULL;
+
+	os_memcpy(peer->addr, addr, ETH_ALEN);
+	peer->next = sm->tdls;
+	sm->tdls = peer;
+
+	return peer;
+}
+
+
 static int wpa_tdls_send_tpk_m1(struct wpa_sm *sm,
 				struct wpa_tdls_peer *peer)
 {
@@ -1141,6 +1163,67 @@ skip_ies:
 	os_free(rbuf);
 
 	return 0;
+}
+
+
+static int wpa_tdls_send_discovery_response(struct wpa_sm *sm,
+					    struct wpa_tdls_peer *peer,
+					    u8 dialog_token)
+{
+	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Discovery Response "
+		   "(peer " MACSTR ")", MAC2STR(peer->addr));
+
+	return wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_DISCOVERY_RESPONSE,
+				 dialog_token, 0, NULL, 0);
+}
+
+
+static int
+wpa_tdls_process_discovery_request(struct wpa_sm *sm, const u8 *addr,
+				   const u8 *buf, size_t len)
+{
+	struct wpa_eapol_ie_parse kde;
+	const struct wpa_tdls_lnkid *lnkid;
+	struct wpa_tdls_peer *peer;
+	size_t min_req_len = sizeof(struct wpa_tdls_frame) +
+		1 /* dialog token */ + sizeof(struct wpa_tdls_lnkid);
+	u8 dialog_token;
+
+	wpa_printf(MSG_DEBUG, "TDLS: Discovery Request from " MACSTR,
+		   MAC2STR(addr));
+
+	if (len < min_req_len) {
+		wpa_printf(MSG_DEBUG, "TDLS Discovery Request is too short: "
+			   "%d", (int) len);
+		return -1;
+	}
+
+	dialog_token = buf[sizeof(struct wpa_tdls_frame)];
+
+	if (wpa_supplicant_parse_ies(buf + sizeof(struct wpa_tdls_frame) + 1,
+				     len - (sizeof(struct wpa_tdls_frame) + 1),
+				     &kde) < 0)
+		return -1;
+
+	if (!kde.lnkid) {
+		wpa_printf(MSG_DEBUG, "TDLS: Link ID not found in Discovery "
+			   "Request");
+		return -1;
+	}
+
+	lnkid = (const struct wpa_tdls_lnkid *) kde.lnkid;
+
+	if (os_memcmp(sm->bssid, lnkid->bssid, ETH_ALEN) != 0) {
+		wpa_printf(MSG_DEBUG, "TDLS: Discovery Request from different "
+			   " BSS " MACSTR, MAC2STR(lnkid->bssid));
+		return -1;
+	}
+
+	peer = wpa_tdls_add_peer(sm, addr);
+	if (peer == NULL)
+		return -1;
+
+	return wpa_tdls_send_discovery_response(sm, peer, dialog_token);
 }
 
 
@@ -1937,6 +2020,9 @@ static void wpa_supplicant_rx_tdls(void *ctx, const u8 *src_addr,
 		break;
 	case WLAN_TDLS_TEARDOWN:
 		wpa_tdls_recv_teardown(sm, src_addr, buf, len);
+		break;
+	case WLAN_TDLS_DISCOVERY_REQUEST:
+		wpa_tdls_process_discovery_request(sm, src_addr, buf, len);
 		break;
 	default:
 		/* Kernel code will process remaining frames */

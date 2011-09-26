@@ -1417,12 +1417,9 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 				break;
 		}
 		if (peer == NULL) {
-			peer = os_zalloc(sizeof(*peer));
+			peer = wpa_tdls_add_peer(sm, src_addr);
 			if (peer == NULL)
 				goto error;
-			os_memcpy(peer->addr, src_addr, ETH_ALEN);
-			peer->next = sm->tdls;
-			sm->tdls = peer;
 		}
 		wpa_printf(MSG_DEBUG, "TDLS: Testing concurrent initiation of "
 			   "TDLS setup - send own request");
@@ -2057,15 +2054,9 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	}
 
 	if (peer == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No matching entry found for "
-			   "peer, creating one for " MACSTR, MAC2STR(addr));
-		peer = os_malloc(sizeof(*peer));
+		peer = wpa_tdls_add_peer(sm, addr);
 		if (peer == NULL)
 			return -1;
-		os_memset(peer, 0, sizeof(*peer));
-		os_memcpy(peer->addr, addr, ETH_ALEN);
-		peer->next = sm->tdls;
-		sm->tdls = peer;
 	}
 
 	peer->initiator = 1;

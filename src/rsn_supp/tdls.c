@@ -1271,6 +1271,18 @@ wpa_tdls_process_discovery_request(struct wpa_sm *sm, const u8 *addr,
 }
 
 
+int wpa_tdls_send_discovery_request(struct wpa_sm *sm, const u8 *addr)
+{
+	if (sm->tdls_disabled || !sm->tdls_supported)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "TDLS: Sending Discovery Request to peer "
+		   MACSTR, MAC2STR(addr));
+	return wpa_tdls_tpk_send(sm, addr, WLAN_TDLS_DISCOVERY_REQUEST,
+				 1, 0, NULL, 0);
+}
+
+
 static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 				   const u8 *buf, size_t len)
 {

@@ -2209,6 +2209,16 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wnm_action_rx(wpa_s, &data->rx_action);
 			break;
 		}
+#ifdef CONFIG_TDLS
+		if (data->rx_action.category == WLAN_ACTION_PUBLIC &&
+		    data->rx_action.len >= 4 &&
+		    data->rx_action.data[0] == WLAN_TDLS_DISCOVERY_RESPONSE) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "TDLS: Received Discovery "
+				"Response from " MACSTR,
+				MAC2STR(data->rx_action.sa));
+			break;
+		}
+#endif /* CONFIG_TDLS */
 #ifdef CONFIG_P2P
 		wpas_p2p_rx_action(wpa_s, data->rx_action.da,
 				   data->rx_action.sa,

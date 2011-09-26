@@ -972,7 +972,7 @@ skip_ies:
 		   "Handshake Message 1 (peer " MACSTR ")",
 		   MAC2STR(peer->addr));
 
-	wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_SETUP_REQUEST, 0, 0,
+	wpa_tdls_tpk_send(sm, peer->addr, WLAN_TDLS_SETUP_REQUEST, 1, 0,
 			  rbuf, pos - rbuf);
 	os_free(rbuf);
 

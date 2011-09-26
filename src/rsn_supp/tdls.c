@@ -88,6 +88,8 @@ static void wpa_tdls_peer_free(struct wpa_sm *sm, struct wpa_tdls_peer *peer);
 
 
 #define TDLS_MAX_IE_LEN 80
+#define IEEE80211_MAX_SUPP_RATES 32
+
 struct wpa_tdls_peer {
 	struct wpa_tdls_peer *next;
 	int initiator; /* whether this end was initiator for TDLS setup */
@@ -119,6 +121,11 @@ struct wpa_tdls_peer {
 		int buf_len;    /* length of TPK message for retransmission */
 		u8 *buf;        /* buffer for TPK message */
 	} sm_tmr;
+
+	u16 capability;
+
+	u8 supp_rates[IEEE80211_MAX_SUPP_RATES];
+	size_t supp_rates_len;
 };
 
 
@@ -1299,6 +1306,32 @@ int wpa_tdls_send_discovery_request(struct wpa_sm *sm, const u8 *addr)
 }
 
 
+static int copy_supp_rates(const struct wpa_eapol_ie_parse *kde,
+			   struct wpa_tdls_peer *peer)
+{
+	if (!kde->supp_rates) {
+		wpa_printf(MSG_DEBUG, "TDLS: No supported rates received");
+		return -1;
+	}
+
+	peer->supp_rates_len = kde->supp_rates_len - 2;
+	if (peer->supp_rates_len > IEEE80211_MAX_SUPP_RATES)
+		peer->supp_rates_len = IEEE80211_MAX_SUPP_RATES;
+	os_memcpy(peer->supp_rates, kde->supp_rates + 2, peer->supp_rates_len);
+
+	if (kde->ext_supp_rates) {
+		int clen = kde->ext_supp_rates_len - 2;
+		if (peer->supp_rates_len + clen > IEEE80211_MAX_SUPP_RATES)
+			clen = IEEE80211_MAX_SUPP_RATES - peer->supp_rates_len;
+		os_memcpy(peer->supp_rates + peer->supp_rates_len,
+			  kde->ext_supp_rates + 2, clen);
+		peer->supp_rates_len += clen;
+	}
+
+	return 0;
+}
+
+
 static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 				   const u8 *buf, size_t len)
 {
@@ -1321,6 +1354,7 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	u16 ielen;
 	u16 status = WLAN_STATUS_UNSPECIFIED_FAILURE;
 	int tdls_prohibited = sm->tdls_prohibited;
+	int existing_peer = 0;
 
 	if (len < 3 + 3)
 		return -1;
@@ -1333,7 +1367,22 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_printf(MSG_INFO, "TDLS: Dialog Token in TPK M1 %d", dtoken);
 
-	cpos += 2; /* capability information */
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0) {
+			existing_peer = 1;
+			break;
+		}
+	}
+
+	if (peer == NULL) {
+		peer = wpa_tdls_add_peer(sm, src_addr);
+		if (peer == NULL)
+			goto error;
+	}
+
+	/* capability information */
+	peer->capability = WPA_GET_LE16(cpos);
+	cpos += 2;
 
 	ielen = len - (cpos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies(cpos, ielen, &kde) < 0) {
@@ -1357,6 +1406,9 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 
 	wpa_printf(MSG_DEBUG, "TDLS: TPK M1 - TPK initiator " MACSTR,
 		   MAC2STR(src_addr));
+
+	if (copy_supp_rates(&kde, peer) < 0)
+		goto error;
 
 #ifdef CONFIG_TDLS_TESTING
 	if (tdls_testing & TDLS_TESTING_CONCURRENT_INIT) {
@@ -1457,26 +1509,10 @@ static int wpa_tdls_process_tpk_m1(struct wpa_sm *sm, const u8 *src_addr,
 	}
 
 skip_rsn:
-	/* Find existing entry and if found, use that instead of adding
-	 * a new one; how to handle the case where both ends initiate at the
+	/* If found, use existing entry instead of adding a new one;
+	 * how to handle the case where both ends initiate at the
 	 * same time? */
-	for (peer = sm->tdls; peer; peer = peer->next) {
-		if (os_memcmp(peer->addr, src_addr, ETH_ALEN) == 0)
-			break;
-	}
-
-	if (peer == NULL) {
-		wpa_printf(MSG_INFO, "TDLS: No matching entry found for "
-			   "peer, creating one for " MACSTR,
-			   MAC2STR(src_addr));
-		peer = os_malloc(sizeof(*peer));
-		if (peer == NULL)
-			goto error;
-		os_memset(peer, 0, sizeof(*peer));
-		os_memcpy(peer->addr, src_addr, ETH_ALEN);
-		peer->next = sm->tdls;
-		sm->tdls = peer;
-	} else {
+	if (existing_peer) {
 		if (peer->tpk_success) {
 			wpa_printf(MSG_DEBUG, "TDLS: TDLS Setup Request while "
 				   "direct link is enabled - tear down the "
@@ -1677,7 +1713,10 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 
 	if (len < 3 + 2 + 1 + 2)
 		return -1;
-	pos += 2; /* capability information */
+
+	/* capability information */
+	peer->capability = WPA_GET_LE16(pos);
+	pos += 2;
 
 	ielen = len - (pos - buf); /* start of IE in buf */
 	if (wpa_supplicant_parse_ies(pos, ielen, &kde) < 0) {
@@ -1707,6 +1746,9 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		status = WLAN_STATUS_NOT_IN_SAME_BSS;
 		goto error;
 	}
+
+	if (copy_supp_rates(&kde, peer) < 0)
+		goto error;
 
 	if (!wpa_tdls_get_privacy(sm)) {
 		peer->rsnie_p_len = 0;

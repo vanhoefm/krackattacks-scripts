@@ -424,11 +424,19 @@ int wpa_supplicant_parse_ies(const u8 *buf, size_t len,
 					    pos, 2 + pos[1]);
 			}
 		} else if (*pos == WLAN_EID_LINK_ID) {
-			ie->lnkid = pos;
-			ie->lnkid_len = pos[1] + 2;
+			if (pos[1] >= 18) {
+				ie->lnkid = pos;
+				ie->lnkid_len = pos[1] + 2;
+			}
 		} else if (*pos == WLAN_EID_EXT_CAPAB) {
 			ie->ext_capab = pos;
 			ie->ext_capab_len = pos[1] + 2;
+		} else if (*pos == WLAN_EID_SUPP_RATES) {
+			ie->supp_rates = pos;
+			ie->supp_rates_len = pos[1] + 2;
+		} else if (*pos == WLAN_EID_EXT_SUPP_RATES) {
+			ie->ext_supp_rates = pos;
+			ie->ext_supp_rates_len = pos[1] + 2;
 		} else if (*pos == WLAN_EID_VENDOR_SPECIFIC) {
 			ret = wpa_parse_generic(pos, end, ie);
 			if (ret < 0)

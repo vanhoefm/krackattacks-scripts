@@ -51,6 +51,10 @@ struct wpa_eapol_ie_parse {
 	size_t lnkid_len;
 	const u8 *ext_capab;
 	size_t ext_capab_len;
+	const u8 *supp_rates;
+	size_t supp_rates_len;
+	const u8 *ext_supp_rates;
+	size_t ext_supp_rates_len;
 };
 
 int wpa_supplicant_parse_ies(const u8 *buf, size_t len,

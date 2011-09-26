@@ -34,7 +34,7 @@
  */
 #define ATH_WPS_IE
 
-#include "os/linux/include/ieee80211_external.h"
+#include "ieee80211_external.h"
 
 
 #ifdef CONFIG_WPS

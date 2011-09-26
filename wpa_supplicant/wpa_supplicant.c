@@ -1114,7 +1114,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 
 	os_memset(&params, 0, sizeof(params));
 	wpa_s->reassociate = 0;
-	if (bss) {
+	if (bss && !wpas_driver_bss_selection(wpa_s)) {
 #ifdef CONFIG_IEEE80211R
 		const u8 *ie, *md = NULL;
 #endif /* CONFIG_IEEE80211R */
@@ -1301,10 +1301,12 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATING);
 	if (bss) {
-		params.bssid = bss->bssid;
 		params.ssid = bss->ssid;
 		params.ssid_len = bss->ssid_len;
-		params.freq = bss->freq;
+		if (!wpas_driver_bss_selection(wpa_s)) {
+			params.bssid = bss->bssid;
+			params.freq = bss->freq;
+		}
 	} else {
 		params.ssid = ssid->ssid;
 		params.ssid_len = ssid->ssid_len;
@@ -2823,4 +2825,11 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	 */
 	wpa_supplicant_req_scan(wpa_s, timeout / 1000,
 				1000 * (timeout % 1000));
+}
+
+
+int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s)
+{
+	return wpa_s->conf->ap_scan == 2 ||
+		(wpa_s->drv_flags & WPA_DRIVER_FLAGS_BSS_SELECTION);
 }

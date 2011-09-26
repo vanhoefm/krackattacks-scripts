@@ -635,6 +635,7 @@ void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
 void ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
 				    size_t num_hw_features);
 void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid);
+int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s);
 
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);

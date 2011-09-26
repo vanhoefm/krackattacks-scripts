@@ -812,6 +812,9 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 	if (wpa_s->current_ssid != ssid)
 		return 1; /* different network block */
 
+	if (wpas_driver_bss_selection(wpa_s))
+		return 0; /* Driver-based roaming */
+
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *res = scan_res->res[i];
 		const u8 *ie;
@@ -951,7 +954,8 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		return 0;
 	}
 
-	if (bgscan_notify_scan(wpa_s, scan_res) == 1) {
+	if (!wpas_driver_bss_selection(wpa_s) &&
+	    bgscan_notify_scan(wpa_s, scan_res) == 1) {
 		wpa_scan_results_free(scan_res);
 		return 0;
 	}

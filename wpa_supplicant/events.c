@@ -1755,9 +1755,8 @@ static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 		wpa_tdls_start(wpa_s->wpa, data->tdls.peer);
 		break;
 	case TDLS_REQUEST_TEARDOWN:
-		/* request from driver to add FTIE */
-		wpa_tdls_recv_teardown_notify(wpa_s->wpa, data->tdls.peer,
-					      data->tdls.reason_code);
+		wpa_tdls_send_teardown(wpa_s->wpa, data->tdls.peer,
+				       data->tdls.reason_code);
 		break;
 	}
 }

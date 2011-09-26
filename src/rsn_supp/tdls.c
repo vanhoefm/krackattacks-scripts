@@ -255,6 +255,26 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 }
 
 
+static int wpa_tdls_do_teardown(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
+				u16 reason_code)
+{
+	int ret;
+
+	if (sm->tdls_external_setup) {
+		ret = wpa_tdls_send_teardown(sm, peer->addr, reason_code);
+
+		/* disable the link after teardown was sent */
+		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
+	} else {
+		ret = wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
+	}
+
+	wpa_tdls_peer_free(sm, peer);
+
+	return ret;
+}
+
+
 static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 
@@ -293,15 +313,11 @@ static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 		eloop_register_timeout(peer->sm_tmr.timer / 1000, 0,
 				       wpa_tdls_tpk_retry_timeout, sm, peer);
 	} else {
-		wpa_printf(MSG_INFO, "Sending Tear_Down Request");
-		wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
-
-		wpa_printf(MSG_INFO, "Clearing SM: Peerkey(" MACSTR ")",
-			   MAC2STR(peer->addr));
 		eloop_cancel_timeout(wpa_tdls_tpk_retry_timeout, sm, peer);
 
-		/* clear the Peerkey statemachine */
-		wpa_tdls_peer_free(sm, peer);
+		wpa_printf(MSG_DEBUG, "TDLS: Sending Teardown Request");
+		wpa_tdls_do_teardown(sm, peer,
+				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
 	}
 }
 
@@ -578,7 +594,8 @@ static void wpa_tdls_tpk_timeout(void *eloop_ctx, void *timeout_ctx)
 	} else {
 		wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime expired for " MACSTR
 			   " - tear down", MAC2STR(peer->addr));
-		wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
+		wpa_tdls_do_teardown(sm, peer,
+				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
 	}
 }
 
@@ -617,8 +634,7 @@ static void wpa_tdls_linkid(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
 }
 
 
-int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
-				  u16 reason_code)
+int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 {
 	struct wpa_tdls_peer *peer;
 	struct wpa_tdls_ftie *ftie;
@@ -704,6 +720,34 @@ skip_ies:
 	wpa_tdls_peer_free(sm, peer);
 
 	return 0;
+}
+
+
+int wpa_tdls_teardown_link(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
+{
+	struct wpa_tdls_peer *peer;
+
+	if (sm->tdls_disabled || !sm->tdls_supported)
+		return -1;
+
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (peer == NULL) {
+		wpa_printf(MSG_DEBUG, "TDLS: Could not find peer " MACSTR
+		   " for link Teardown", MAC2STR(addr));
+		return -1;
+	}
+
+	if (!peer->tpk_success) {
+		wpa_printf(MSG_DEBUG, "TDLS: Peer " MACSTR
+		   " not connected - cannot Teardown link", MAC2STR(addr));
+		return -1;
+	}
+
+	return wpa_tdls_do_teardown(sm, peer, reason_code);
 }
 
 

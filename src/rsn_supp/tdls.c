@@ -625,7 +625,7 @@ int wpa_tdls_recv_teardown_notify(struct wpa_sm *sm, const u8 *addr,
 	u8 *rbuf, *pos;
 	int ielen;
 
-	if (sm->tdls_disabled)
+	if (sm->tdls_disabled || !sm->tdls_supported)
 		return -1;
 
 	/* Find the node and free from the list */
@@ -1823,7 +1823,7 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 	struct wpa_tdls_peer *peer;
 	int tdls_prohibited = sm->tdls_prohibited;
 
-	if (sm->tdls_disabled)
+	if (sm->tdls_disabled || !sm->tdls_supported)
 		return -1;
 
 #ifdef CONFIG_TDLS_TESTING
@@ -1870,7 +1870,7 @@ int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr)
 {
 	struct wpa_tdls_peer *peer;
 
-	if (sm->tdls_disabled)
+	if (sm->tdls_disabled || !sm->tdls_supported)
 		return -1;
 
 	for (peer = sm->tdls; peer; peer = peer->next) {
@@ -1899,8 +1899,9 @@ static void wpa_supplicant_rx_tdls(void *ctx, const u8 *src_addr,
 	wpa_hexdump(MSG_DEBUG, "TDLS: Received Data frame encapsulation",
 		    buf, len);
 
-	if (sm->tdls_disabled) {
-		wpa_printf(MSG_DEBUG, "TDLS: Discard message - TDLS disabled");
+	if (sm->tdls_disabled || !sm->tdls_supported) {
+		wpa_printf(MSG_DEBUG, "TDLS: Discard message - TDLS disabled "
+			   "or unsupported by driver");
 		return;
 	}
 
@@ -1968,6 +1969,21 @@ int wpa_tdls_init(struct wpa_sm *sm)
 			   "connection");
 		return -1;
 	}
+
+	/*
+	 * Drivers that support TDLS but don't implement the get_capa callback
+	 * are assumed to perform everything internally
+	 */
+	if (wpa_sm_tdls_get_capa(sm, &sm->tdls_supported,
+				 &sm->tdls_external_setup) < 0) {
+		sm->tdls_supported = 1;
+		sm->tdls_external_setup = 0;
+	}
+
+	wpa_printf(MSG_DEBUG, "TDLS: TDLS operation%s supported by "
+		   "driver", sm->tdls_supported ? "" : " not");
+	wpa_printf(MSG_DEBUG, "TDLS: Driver uses %s link setup",
+		   sm->tdls_external_setup ? "external" : "internal");
 
 	return 0;
 }

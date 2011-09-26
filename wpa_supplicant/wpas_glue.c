@@ -525,6 +525,27 @@ static int wpa_supplicant_mark_authenticated(void *ctx, const u8 *target_ap)
 
 #ifdef CONFIG_TDLS
 
+static int wpa_supplicant_tdls_get_capa(void *ctx, int *tdls_supported,
+					int *tdls_ext_setup)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	*tdls_supported = 0;
+	*tdls_ext_setup = 0;
+
+	if (!wpa_s->drv_capa_known)
+		return -1;
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT)
+		*tdls_supported = 1;
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP)
+		*tdls_ext_setup = 1;
+
+	return 0;
+}
+
+
 static int wpa_supplicant_send_tdls_mgmt(void *ctx, const u8 *dst,
 					 u8 action_code, u8 dialog_token,
 					 u16 status_code, const u8 *buf,
@@ -700,6 +721,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->mark_authenticated = wpa_supplicant_mark_authenticated;
 #endif /* CONFIG_IEEE80211R */
 #ifdef CONFIG_TDLS
+	ctx->tdls_get_capa = wpa_supplicant_tdls_get_capa;
 	ctx->send_tdls_mgmt = wpa_supplicant_send_tdls_mgmt;
 	ctx->tdls_oper = wpa_supplicant_tdls_oper;
 #endif /* CONFIG_TDLS */

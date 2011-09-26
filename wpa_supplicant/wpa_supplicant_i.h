@@ -500,6 +500,7 @@ struct wpa_supplicant {
 	unsigned int network_select:1;
 	unsigned int auto_select:1;
 #endif /* CONFIG_INTERWORKING */
+	unsigned int drv_capa_known;
 
 	struct {
 		struct hostapd_hw_modes *modes;

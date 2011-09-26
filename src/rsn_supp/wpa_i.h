@@ -98,6 +98,15 @@ struct wpa_sm {
 	struct wpa_tdls_peer *tdls;
 	int tdls_prohibited;
 	int tdls_disabled;
+
+	/* The driver supports TDLS */
+	int tdls_supported;
+
+	/*
+	 * The driver requires explicit discovery/setup/teardown frames sent
+	 * to it via tdls_mgmt.
+	 */
+	int tdls_external_setup;
 #endif /* CONFIG_TDLS */
 
 #ifdef CONFIG_IEEE80211R
@@ -253,6 +262,16 @@ static inline void wpa_sm_set_rekey_offload(struct wpa_sm *sm)
 }
 
 #ifdef CONFIG_TDLS
+static inline int wpa_sm_tdls_get_capa(struct wpa_sm *sm,
+				       int *tdls_supported,
+				       int *tdls_ext_setup)
+{
+	if (sm->ctx->tdls_get_capa)
+		return sm->ctx->tdls_get_capa(sm->ctx->ctx, tdls_supported,
+					      tdls_ext_setup);
+	return -1;
+}
+
 static inline int wpa_sm_send_tdls_mgmt(struct wpa_sm *sm, const u8 *dst,
 					u8 action_code, u8 dialog_token,
 					u16 status_code, const u8 *buf,

@@ -56,6 +56,8 @@ struct wpa_sm_ctx {
 			      const u8 *ies, size_t ies_len);
 	int (*mark_authenticated)(void *ctx, const u8 *target_ap);
 #ifdef CONFIG_TDLS
+	int (*tdls_get_capa)(void *ctx, int *tdls_supported,
+			     int *tdls_ext_setup);
 	int (*send_tdls_mgmt)(void *ctx, const u8 *dst,
 			      u8 action_code, u8 dialog_token,
 			      u16 status_code, const u8 *buf, size_t len);

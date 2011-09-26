@@ -2302,3 +2302,9 @@ void wpa_tdls_enable(struct wpa_sm *sm, int enabled)
 	wpa_printf(MSG_DEBUG, "TDLS: %s", enabled ? "enabled" : "disabled");
 	sm->tdls_disabled = !enabled;
 }
+
+
+int wpa_tdls_is_external_setup(struct wpa_sm *sm)
+{
+	return sm->tdls_external_setup;
+}

@@ -366,5 +366,6 @@ int wpa_tdls_send_discovery_request(struct wpa_sm *sm, const u8 *addr);
 int wpa_tdls_init(struct wpa_sm *sm);
 void wpa_tdls_deinit(struct wpa_sm *sm);
 void wpa_tdls_enable(struct wpa_sm *sm, int enabled);
+void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr);
 
 #endif /* WPA_H */

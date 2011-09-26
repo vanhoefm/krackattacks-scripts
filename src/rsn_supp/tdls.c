@@ -751,6 +751,22 @@ int wpa_tdls_teardown_link(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 }
 
 
+void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr)
+{
+	struct wpa_tdls_peer *peer;
+
+	for (peer = sm->tdls; peer; peer = peer->next) {
+		if (os_memcmp(peer->addr, addr, ETH_ALEN) == 0)
+			break;
+	}
+
+	if (peer) {
+		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, addr);
+		wpa_tdls_peer_free(sm, peer);
+	}
+}
+
+
 static int wpa_tdls_recv_teardown(struct wpa_sm *sm, const u8 *src_addr,
 				  const u8 *buf, size_t len)
 {

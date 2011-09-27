@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "common/ieee802_11_defs.h"
+#include "common/gas.h"
 #include "p2p_i.h"
 #include "p2p.h"
 
@@ -90,52 +91,21 @@ static struct wpabuf * p2p_build_sd_query(u16 update_indic,
 					  struct wpabuf *tlvs)
 {
 	struct wpabuf *buf;
-	u8 *len_pos, *len_pos2;
+	u8 *len_pos;
 
-	buf = wpabuf_alloc(1000 + wpabuf_len(tlvs));
+	buf = gas_anqp_build_initial_req(0, 100 + wpabuf_len(tlvs));
 	if (buf == NULL)
 		return NULL;
 
-	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
-	wpabuf_put_u8(buf, WLAN_PA_GAS_INITIAL_REQ);
-	wpabuf_put_u8(buf, 0); /* Dialog Token */
-
-	/* Advertisement Protocol IE */
-	wpabuf_put_u8(buf, WLAN_EID_ADV_PROTO);
-	wpabuf_put_u8(buf, 2); /* Length */
-	wpabuf_put_u8(buf, 0); /* QueryRespLenLimit | PAME-BI */
-	/* Advertisement Protocol */
-	wpabuf_put_u8(buf, ACCESS_NETWORK_QUERY_PROTOCOL);
-
-	/* Query Request */
-	len_pos = wpabuf_put(buf, 2); /* Length (to be filled) */
-
 	/* ANQP Query Request Frame */
-	wpabuf_put_le16(buf, ANQP_VENDOR_SPECIFIC); /* Info ID */
-	len_pos2 = wpabuf_put(buf, 2); /* Length (to be filled) */
+	len_pos = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
 	wpabuf_put_be24(buf, OUI_WFA);
 	wpabuf_put_u8(buf, P2P_OUI_TYPE);
 	wpabuf_put_le16(buf, update_indic); /* Service Update Indicator */
 	wpabuf_put_buf(buf, tlvs);
+	gas_anqp_set_element_len(buf, len_pos);
 
-	WPA_PUT_LE16(len_pos2, (u8 *) wpabuf_put(buf, 0) - len_pos2 - 2);
-	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(buf, 0) - len_pos - 2);
-
-	return buf;
-}
-
-
-static struct wpabuf * p2p_build_gas_comeback_req(u8 dialog_token)
-{
-	struct wpabuf *buf;
-
-	buf = wpabuf_alloc(3);
-	if (buf == NULL)
-		return NULL;
-
-	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
-	wpabuf_put_u8(buf, WLAN_PA_GAS_COMEBACK_REQ);
-	wpabuf_put_u8(buf, dialog_token);
+	gas_anqp_set_len(buf);
 
 	return buf;
 }
@@ -146,7 +116,7 @@ static void p2p_send_gas_comeback_req(struct p2p_data *p2p, const u8 *dst,
 {
 	struct wpabuf *req;
 
-	req = p2p_build_gas_comeback_req(dialog_token);
+	req = gas_build_comeback_req(dialog_token);
 	if (req == NULL)
 		return;
 
@@ -166,43 +136,26 @@ static struct wpabuf * p2p_build_sd_response(u8 dialog_token, u16 status_code,
 					     const struct wpabuf *tlvs)
 {
 	struct wpabuf *buf;
-	u8 *len_pos, *len_pos2;
+	u8 *len_pos;
 
-	buf = wpabuf_alloc(1000 + (tlvs ? wpabuf_len(tlvs) : 0));
+	buf = gas_anqp_build_initial_resp(dialog_token, status_code,
+					  comeback_delay,
+					  100 + (tlvs ? wpabuf_len(tlvs) : 0));
 	if (buf == NULL)
 		return NULL;
 
-	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
-	wpabuf_put_u8(buf, WLAN_PA_GAS_INITIAL_RESP);
-	wpabuf_put_u8(buf, dialog_token);
-	wpabuf_put_le16(buf, status_code);
-	wpabuf_put_le16(buf, comeback_delay);
-
-	/* Advertisement Protocol IE */
-	wpabuf_put_u8(buf, WLAN_EID_ADV_PROTO);
-	wpabuf_put_u8(buf, 2); /* Length */
-	wpabuf_put_u8(buf, 0x7f); /* QueryRespLenLimit | PAME-BI */
-	/* Advertisement Protocol */
-	wpabuf_put_u8(buf, ACCESS_NETWORK_QUERY_PROTOCOL);
-
-	/* Query Response */
-	len_pos = wpabuf_put(buf, 2); /* Length (to be filled) */
-
 	if (tlvs) {
 		/* ANQP Query Response Frame */
-		wpabuf_put_le16(buf, ANQP_VENDOR_SPECIFIC); /* Info ID */
-		len_pos2 = wpabuf_put(buf, 2); /* Length (to be filled) */
+		len_pos = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
 		wpabuf_put_be24(buf, OUI_WFA);
 		wpabuf_put_u8(buf, P2P_OUI_TYPE);
 		 /* Service Update Indicator */
 		wpabuf_put_le16(buf, update_indic);
 		wpabuf_put_buf(buf, tlvs);
-
-		WPA_PUT_LE16(len_pos2,
-			     (u8 *) wpabuf_put(buf, 0) - len_pos2 - 2);
+		gas_anqp_set_element_len(buf, len_pos);
 	}
 
-	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(buf, 0) - len_pos - 2);
+	gas_anqp_set_len(buf);
 
 	return buf;
 }
@@ -216,28 +169,11 @@ static struct wpabuf * p2p_build_gas_comeback_resp(u8 dialog_token,
 						   u16 total_len)
 {
 	struct wpabuf *buf;
-	u8 *len_pos;
 
-	buf = wpabuf_alloc(1000 + len);
+	buf = gas_anqp_build_comeback_resp(dialog_token, status_code, frag_id,
+					   more, 0, 100 + len);
 	if (buf == NULL)
 		return NULL;
-
-	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
-	wpabuf_put_u8(buf, WLAN_PA_GAS_COMEBACK_RESP);
-	wpabuf_put_u8(buf, dialog_token);
-	wpabuf_put_le16(buf, status_code);
-	wpabuf_put_u8(buf, frag_id | (more ? 0x80 : 0));
-	wpabuf_put_le16(buf, 0); /* Comeback Delay */
-
-	/* Advertisement Protocol IE */
-	wpabuf_put_u8(buf, WLAN_EID_ADV_PROTO);
-	wpabuf_put_u8(buf, 2); /* Length */
-	wpabuf_put_u8(buf, 0x7f); /* QueryRespLenLimit | PAME-BI */
-	/* Advertisement Protocol */
-	wpabuf_put_u8(buf, ACCESS_NETWORK_QUERY_PROTOCOL);
-
-	/* Query Response */
-	len_pos = wpabuf_put(buf, 2); /* Length (to be filled) */
 
 	if (frag_id == 0) {
 		/* ANQP Query Response Frame */
@@ -250,8 +186,7 @@ static struct wpabuf * p2p_build_gas_comeback_resp(u8 dialog_token,
 	}
 
 	wpabuf_put_data(buf, data, len);
-
-	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(buf, 0) - len_pos - 2);
+	gas_anqp_set_len(buf);
 
 	return buf;
 }

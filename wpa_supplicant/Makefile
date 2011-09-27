@@ -201,6 +201,7 @@ OBJS += ../src/p2p/p2p_dev_disc.o
 OBJS += ../src/p2p/p2p_group.o
 OBJS += ../src/ap/p2p_hostapd.o
 CFLAGS += -DCONFIG_P2P
+NEED_GAS=y
 NEED_80211_COMMON=y
 ifdef CONFIG_P2P_STRICT
 CFLAGS += -DCONFIG_P2P_STRICT
@@ -1280,6 +1281,10 @@ endif
 ifdef NEED_BGSCAN
 CFLAGS += -DCONFIG_BGSCAN
 OBJS += bgscan.o
+endif
+
+ifdef NEED_GAS
+OBJS += ../src/common/gas.o
 endif
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o

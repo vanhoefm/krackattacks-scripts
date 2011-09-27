@@ -1536,11 +1536,23 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_TRIGGER_SCAN:
 		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger");
 		break;
+	case NL80211_CMD_START_SCHED_SCAN:
+		wpa_printf(MSG_DEBUG, "nl80211: Sched scan started");
+		break;
+	case NL80211_CMD_SCHED_SCAN_STOPPED:
+		wpa_printf(MSG_DEBUG, "nl80211: Sched scan stopped");
+		wpa_supplicant_event(drv->ctx, EVENT_SCHED_SCAN_STOPPED, NULL);
+		break;
 	case NL80211_CMD_NEW_SCAN_RESULTS:
 		wpa_printf(MSG_DEBUG, "nl80211: New scan results available");
 		drv->scan_complete_events = 1;
 		eloop_cancel_timeout(wpa_driver_nl80211_scan_timeout, drv,
 				     drv->ctx);
+		send_scan_event(drv, 0, tb);
+		break;
+	case NL80211_CMD_SCHED_SCAN_RESULTS:
+		wpa_printf(MSG_DEBUG,
+			   "nl80211: New sched scan results available");
 		send_scan_event(drv, 0, tb);
 		break;
 	case NL80211_CMD_SCAN_ABORTED:
@@ -1681,6 +1693,7 @@ nla_put_failure:
 
 struct wiphy_info_data {
 	int max_scan_ssids;
+	int max_sched_scan_ssids;
 	int ap_supported;
 	int p2p_supported;
 	int p2p_concurrent;
@@ -1689,6 +1702,7 @@ struct wiphy_info_data {
 	int offchan_tx_supported;
 	int max_remain_on_chan;
 	int firmware_roam;
+	int sched_scan_supported;
 };
 
 
@@ -1716,6 +1730,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	if (tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS])
 		info->max_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS]);
+
+	if (tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS])
+		info->max_sched_scan_ssids =
+			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS]);
 
 	if (tb[NL80211_ATTR_SUPPORTED_IFTYPES]) {
 		struct nlattr *nl_mode;
@@ -1806,6 +1824,8 @@ broken_combination:
 				info->auth_supported = 1;
 			else if (cmd == NL80211_CMD_CONNECT)
 				info->connect_supported = 1;
+			else if (cmd == NL80211_CMD_START_SCHED_SCAN)
+				info->sched_scan_supported = 1;
 		}
 	}
 
@@ -1871,6 +1891,9 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		WPA_DRIVER_AUTH_LEAP;
 
 	drv->capa.max_scan_ssids = info.max_scan_ssids;
+	drv->capa.max_sched_scan_ssids = info.max_sched_scan_ssids;
+	drv->capa.sched_scan_supported = info.sched_scan_supported;
+
 	if (info.ap_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
 
@@ -2610,6 +2633,130 @@ nla_put_failure:
 	nlmsg_free(msg);
 	nlmsg_free(freqs);
 	nlmsg_free(rates);
+	return ret;
+}
+
+
+/**
+ * wpa_driver_nl80211_sched_scan - Initiate a scheduled scan
+ * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
+ * @params: Scan parameters
+ * @interval: Interval between scan cycles in milliseconds
+ * Returns: 0 on success, -1 on failure or if not supported
+ */
+static int wpa_driver_nl80211_sched_scan(void *priv,
+					 struct wpa_driver_scan_params *params,
+					 u32 interval)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int ret = 0;
+	struct nl_msg *msg, *ssids, *freqs;
+	size_t i;
+
+	msg = nlmsg_alloc();
+	ssids = nlmsg_alloc();
+	freqs = nlmsg_alloc();
+	if (!msg || !ssids || !freqs) {
+		nlmsg_free(msg);
+		nlmsg_free(ssids);
+		nlmsg_free(freqs);
+		return -1;
+	}
+
+	os_free(drv->filter_ssids);
+	drv->filter_ssids = params->filter_ssids;
+	params->filter_ssids = NULL;
+	drv->num_filter_ssids = params->num_filter_ssids;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_START_SCHED_SCAN, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval);
+
+	for (i = 0; i < params->num_ssids; i++) {
+		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Sched scan SSID",
+				  params->ssids[i].ssid,
+				  params->ssids[i].ssid_len);
+		NLA_PUT(ssids, i + 1, params->ssids[i].ssid_len,
+			params->ssids[i].ssid);
+	}
+	if (params->num_ssids)
+		nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
+
+	if (params->extra_ies) {
+		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Sched scan extra IEs",
+				  params->extra_ies, params->extra_ies_len);
+		NLA_PUT(msg, NL80211_ATTR_IE, params->extra_ies_len,
+			params->extra_ies);
+	}
+
+	if (params->freqs) {
+		for (i = 0; params->freqs[i]; i++) {
+			wpa_printf(MSG_MSGDUMP, "nl80211: Scan frequency %u "
+				   "MHz", params->freqs[i]);
+			NLA_PUT_U32(freqs, i + 1, params->freqs[i]);
+		}
+		nla_put_nested(msg, NL80211_ATTR_SCAN_FREQUENCIES, freqs);
+	}
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+
+	/* TODO: if we get an error here, we should fall back to normal scan */
+
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Sched scan start failed: "
+			   "ret=%d (%s)", ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Sched scan requested (ret=%d) - "
+		   "scan interval %d msec", ret, interval);
+
+nla_put_failure:
+	nlmsg_free(ssids);
+	nlmsg_free(msg);
+	nlmsg_free(freqs);
+	return ret;
+}
+
+
+/**
+ * wpa_driver_nl80211_stop_sched_scan - Stop a scheduled scan
+ * @priv: Pointer to private driver data from wpa_driver_nl80211_init()
+ * Returns: 0 on success, -1 on failure or if not supported
+ */
+static int wpa_driver_nl80211_stop_sched_scan(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	int ret = 0;
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_STOP_SCHED_SCAN, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+
+	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Sched scan stop failed: "
+			   "ret=%d (%s)", ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+
+	wpa_printf(MSG_DEBUG, "nl80211: Sched scan stop sent (ret=%d)", ret);
+
+nla_put_failure:
+	nlmsg_free(msg);
 	return ret;
 }
 
@@ -7175,6 +7322,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.get_ssid = wpa_driver_nl80211_get_ssid,
 	.set_key = wpa_driver_nl80211_set_key,
 	.scan2 = wpa_driver_nl80211_scan,
+	.sched_scan = wpa_driver_nl80211_sched_scan,
+	.stop_sched_scan = wpa_driver_nl80211_stop_sched_scan,
 	.get_scan_results2 = wpa_driver_nl80211_get_scan_results,
 	.deauthenticate = wpa_driver_nl80211_deauthenticate,
 	.disassociate = wpa_driver_nl80211_disassociate,

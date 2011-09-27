@@ -195,7 +195,7 @@ struct wpa_interface_info {
 	const char *drv_name;
 };
 
-#define WPAS_MAX_SCAN_SSIDS 10
+#define WPAS_MAX_SCAN_SSIDS 16
 
 /**
  * struct wpa_driver_scan_params - Scan parameters

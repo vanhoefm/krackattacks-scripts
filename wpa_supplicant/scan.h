@@ -17,6 +17,8 @@
 
 int wpa_supplicant_enabled_networks(struct wpa_config *conf);
 void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec);
+int wpa_supplicant_delayed_sched_scan(struct wpa_supplicant *wpa_s,
+				      int sec, int usec);
 int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_cancel_sched_scan(struct wpa_supplicant *wpa_s);

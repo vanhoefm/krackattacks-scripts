@@ -216,6 +216,18 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 
 
 static void
+wpa_supplicant_delayed_sched_scan_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Starting delayed sched scan");
+
+	if (wpa_supplicant_req_sched_scan(wpa_s))
+		wpa_supplicant_req_scan(wpa_s, 0, 0);
+}
+
+
+static void
 wpa_supplicant_sched_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -611,6 +623,29 @@ void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec)
 		sec, usec);
 	eloop_cancel_timeout(wpa_supplicant_scan, wpa_s, NULL);
 	eloop_register_timeout(sec, usec, wpa_supplicant_scan, wpa_s, NULL);
+}
+
+
+/**
+ * wpa_supplicant_delayed_sched_scan - Request a delayed scheduled scan
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @sec: Number of seconds after which to scan
+ * @usec: Number of microseconds after which to scan
+ *
+ * This function is used to schedule periodic scans for neighboring
+ * access points after the specified time.
+ */
+int wpa_supplicant_delayed_sched_scan(struct wpa_supplicant *wpa_s,
+				      int sec, int usec)
+{
+	if (!wpa_s->sched_scan_supported)
+		return -1;
+
+	eloop_register_timeout(sec, usec,
+			       wpa_supplicant_delayed_sched_scan_timeout,
+			       wpa_s, NULL);
+
+	return 0;
 }
 
 

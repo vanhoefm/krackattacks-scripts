@@ -354,41 +354,73 @@ static void wpa_supplicant_optimize_freqs(
 }
 
 
+#ifdef CONFIG_INTERWORKING
+static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
+					   struct wpabuf *buf)
+{
+	if (wpa_s->conf->interworking == 0)
+		return;
+
+	wpabuf_put_u8(buf, WLAN_EID_EXT_CAPAB);
+	wpabuf_put_u8(buf, 4);
+	wpabuf_put_u8(buf, 0x00);
+	wpabuf_put_u8(buf, 0x00);
+	wpabuf_put_u8(buf, 0x00);
+	wpabuf_put_u8(buf, 0x80); /* Bit 31 - Interworking */
+
+	wpabuf_put_u8(buf, WLAN_EID_INTERWORKING);
+	wpabuf_put_u8(buf, is_zero_ether_addr(wpa_s->conf->hessid) ? 1 :
+		      1 + ETH_ALEN);
+	wpabuf_put_u8(buf, INTERWORKING_ANT_WILDCARD);
+	/* No Venue Info */
+	if (!is_zero_ether_addr(wpa_s->conf->hessid))
+		wpabuf_put_data(buf, wpa_s->conf->hessid, ETH_ALEN);
+}
+#endif /* CONFIG_INTERWORKING */
+
+
 static struct wpabuf *
 wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s,
 			 struct wpa_driver_scan_params *params)
 {
-	struct wpabuf *wps_ie = NULL;
+	struct wpabuf *extra_ie = NULL;
 #ifdef CONFIG_WPS
 	int wps = 0;
 	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
+#endif /* CONFIG_WPS */
 
+#ifdef CONFIG_INTERWORKING
+	if (wpa_s->conf->interworking &&
+	    wpabuf_resize(&extra_ie, 100) == 0)
+		wpas_add_interworking_elements(wpa_s, extra_ie);
+#endif /* CONFIG_INTERWORKING */
+
+#ifdef CONFIG_WPS
 	wps = wpas_wps_in_use(wpa_s, &req_type);
 
 	if (wps) {
+		struct wpabuf *wps_ie;
 		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
 						wpa_s->wps->uuid, req_type,
 						0, NULL);
 		if (wps_ie) {
-			params->extra_ies = wpabuf_head(wps_ie);
-			params->extra_ies_len = wpabuf_len(wps_ie);
+			if (wpabuf_resize(&extra_ie, wpabuf_len(wps_ie)) == 0)
+				wpabuf_put_buf(extra_ie, wps_ie);
+			wpabuf_free(wps_ie);
 		}
 	}
 
 #ifdef CONFIG_P2P
-	if (wps_ie) {
+	if (wps) {
 		size_t ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
-		if (wpabuf_resize(&wps_ie, ielen) == 0) {
-			wpas_p2p_scan_ie(wpa_s, wps_ie);
-			params->extra_ies = wpabuf_head(wps_ie);
-			params->extra_ies_len = wpabuf_len(wps_ie);
-		}
+		if (wpabuf_resize(&extra_ie, ielen) == 0)
+			wpas_p2p_scan_ie(wpa_s, extra_ie);
 	}
 #endif /* CONFIG_P2P */
 
 #endif /* CONFIG_WPS */
 
-	return wps_ie;
+	return extra_ie;
 }
 
 
@@ -397,7 +429,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
 	int scan_req = 0, ret;
-	struct wpabuf *wps_ie;
+	struct wpabuf *extra_ie;
 	struct wpa_driver_scan_params params;
 	size_t max_ssids;
 	enum wpa_states prev_state;
@@ -558,7 +590,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
-	wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
+	extra_ie = wpa_supplicant_extra_ies(wpa_s, &params);
 
 	if (params.freqs == NULL && wpa_s->next_scan_freqs) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Optimize scan based on previously "
@@ -570,10 +602,14 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	params.filter_ssids = wpa_supplicant_build_filter_ssids(
 		wpa_s->conf, &params.num_filter_ssids);
+	if (extra_ie) {
+		params.extra_ies = wpabuf_head(extra_ie);
+		params.extra_ies_len = wpabuf_len(extra_ie);
+	}
 
 	ret = wpa_supplicant_trigger_scan(wpa_s, &params);
 
-	wpabuf_free(wps_ie);
+	wpabuf_free(extra_ie);
 	os_free(params.freqs);
 	os_free(params.filter_ssids);
 

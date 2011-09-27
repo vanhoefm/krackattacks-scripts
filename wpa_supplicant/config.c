@@ -2381,6 +2381,20 @@ static int wpa_config_process_sec_device_type(
 #endif /* CONFIG_P2P */
 
 
+static int wpa_config_process_hessid(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	if (hwaddr_aton2(pos, config->hessid) < 0) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid hessid '%s'",
+			   line, pos);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 #ifdef OFFSET
 #undef OFFSET
 #endif /* OFFSET */
@@ -2445,7 +2459,9 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(bss_expiration_scan_count), 0 },
 	{ INT_RANGE(filter_ssids, 0, 1), 0 },
 	{ INT(max_num_sta), 0 },
-	{ INT_RANGE(disassoc_low_ack, 0, 1), 0 }
+	{ INT_RANGE(disassoc_low_ack, 0, 1), 0 },
+	{ INT_RANGE(interworking, 0, 1), 0 },
+	{ FUNC(hessid), 0 }
 };
 
 #undef FUNC

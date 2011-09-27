@@ -426,6 +426,20 @@ struct wpa_config {
 	 * disassoc_low_ack - Disassocicate stations with massive packet loss
 	 */
 	int disassoc_low_ack;
+
+	/**
+	 * interworking - Whether Interworking (IEEE 802.11u) is enabled
+	 */
+	int interworking;
+
+	/**
+	 * hessid - Homogenous ESS identifier
+	 *
+	 * If this is set (any octet is non-zero), scans will be used to
+	 * request response only from BSSes belonging to the specified
+	 * Homogeneous ESS. This is used only if interworking is enabled.
+	 */
+	u8 hessid[ETH_ALEN];
 };
 
 

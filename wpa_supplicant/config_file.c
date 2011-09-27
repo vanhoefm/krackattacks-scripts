@@ -703,6 +703,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "max_num_sta=%u\n", config->max_num_sta);
 	if (config->disassoc_low_ack)
 		fprintf(f, "disassoc_low_ack=%u\n", config->disassoc_low_ack);
+	if (config->interworking)
+		fprintf(f, "interworking=%u\n", config->interworking);
+	if (!is_zero_ether_addr(config->hessid))
+		fprintf(f, "hessid=" MACSTR "\n", MAC2STR(config->hessid));
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

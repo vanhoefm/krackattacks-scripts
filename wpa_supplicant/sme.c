@@ -237,6 +237,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_P2P */
 
+	wpa_supplicant_cancel_sched_scan(wpa_s);
 	wpa_supplicant_cancel_scan(wpa_s);
 
 	wpa_msg(wpa_s, MSG_INFO, "SME: Trying to authenticate with " MACSTR

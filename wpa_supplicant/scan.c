@@ -628,7 +628,6 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *ssid;
 	struct wpabuf *wps_ie = NULL;
 	int ret;
-	int use_wildcard = 0;
 	unsigned int max_sched_scan_ssids;
 
 	if (!wpa_s->sched_scan_supported)
@@ -643,6 +642,10 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		return 0;
 
 	os_memset(&params, 0, sizeof(params));
+
+	/* If we can't allocate space for the filters, we just don't filter */
+	params.filter_ssids = os_zalloc(wpa_s->max_match_sets *
+					sizeof(struct wpa_driver_scan_filter));
 
 	prev_state = wpa_s->wpa_state;
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
@@ -678,33 +681,36 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			continue;
 		}
 
-		if (!ssid->scan_ssid)
-			use_wildcard = 1;
-		else {
+		if (params.filter_ssids && ssid->ssid && ssid->ssid_len) {
+			os_memcpy(params.filter_ssids[params.num_filter_ssids].ssid,
+				  ssid->ssid, ssid->ssid_len);
+			params.filter_ssids[params.num_filter_ssids].ssid_len =
+				ssid->ssid_len;
+			params.num_filter_ssids++;
+		}
+
+		if (ssid->scan_ssid) {
 			params.ssids[params.num_ssids].ssid =
 				ssid->ssid;
 			params.ssids[params.num_ssids].ssid_len =
 				ssid->ssid_len;
 			params.num_ssids++;
-			if (params.num_ssids + 1 >= max_sched_scan_ssids) {
+			if (params.num_ssids >= max_sched_scan_ssids) {
 				wpa_s->prev_sched_ssid = ssid;
 				break;
 			}
 		}
+
+		if (params.num_filter_ssids >= wpa_s->max_match_sets)
+			break;
 		wpa_s->prev_sched_ssid = ssid;
 		ssid = ssid->next;
 	}
 
-	if (ssid || use_wildcard) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "Include wildcard SSID in "
-			"the sched scan request");
-		params.num_ssids++;
-	} else {
-		wpa_dbg(wpa_s, MSG_DEBUG, "ssid %p - list ended", ssid);
-	}
-
-	if (!params.num_ssids)
+	if (!params.num_ssids) {
+		os_free(params.filter_ssids);
 		return 0;
+	}
 
 	if (wpa_s->wps)
 		wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
@@ -716,6 +722,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	ret = wpa_supplicant_start_sched_scan(wpa_s, &params,
 					      wpa_s->sched_scan_interval);
 	wpabuf_free(wps_ie);
+	os_free(params.filter_ssids);
 	if (ret) {
 		wpa_msg(wpa_s, MSG_WARNING, "Failed to initiate sched scan");
 		if (prev_state != wpa_s->wpa_state)

@@ -387,6 +387,12 @@ struct wpa_supplicant {
 					  */
 #define WILDCARD_SSID_SCAN ((struct wpa_ssid *) 1)
 
+	struct wpa_ssid *prev_sched_ssid; /* last SSID used in sched scan */
+	int sched_scan_timeout;
+	int sched_scan_interval;
+	int first_sched_scan;
+	int sched_scan_timed_out;
+
 	void (*scan_res_handler)(struct wpa_supplicant *wpa_s,
 				 struct wpa_scan_results *scan_res);
 	struct dl_list bss; /* struct wpa_bss::list */
@@ -405,6 +411,7 @@ struct wpa_supplicant {
 
 	enum wpa_states wpa_state;
 	int scanning;
+	int sched_scanning;
 	int new_connection;
 	int reassociated_connection;
 
@@ -428,6 +435,8 @@ struct wpa_supplicant {
 	struct wpa_client_mlme mlme;
 	unsigned int drv_flags;
 	int max_scan_ssids;
+	int max_sched_scan_ssids;
+	int sched_scan_supported;
 	unsigned int max_remain_on_chan;
 	unsigned int max_stations;
 

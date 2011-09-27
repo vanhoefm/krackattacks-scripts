@@ -2263,6 +2263,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_sm_update_replay_ctr(wpa_s->wpa,
 					 data->driver_gtk_rekey.replay_ctr);
 		break;
+	case EVENT_SCHED_SCAN_STOPPED:
+		wpa_s->sched_scanning = 0;
+		wpa_supplicant_notify_scanning(wpa_s, 0);
+
+		/*
+		 * If we timed out, start a new sched scan to continue
+		 * searching for more SSIDs.
+		 */
+		if (wpa_s->sched_scan_timed_out)
+			wpa_supplicant_req_sched_scan(wpa_s);
+		break;
 	default:
 		wpa_msg(wpa_s, MSG_INFO, "Unknown event %d", event);
 		break;

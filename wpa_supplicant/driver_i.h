@@ -79,6 +79,23 @@ static inline int wpa_drv_scan(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
+static inline int wpa_drv_sched_scan(struct wpa_supplicant *wpa_s,
+				     struct wpa_driver_scan_params *params,
+				     u32 interval)
+{
+	if (wpa_s->driver->sched_scan)
+		return wpa_s->driver->sched_scan(wpa_s->drv_priv,
+						 params, interval);
+	return -1;
+}
+
+static inline int wpa_drv_stop_sched_scan(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->driver->stop_sched_scan)
+		return wpa_s->driver->stop_sched_scan(wpa_s->drv_priv);
+	return -1;
+}
+
 static inline struct wpa_scan_results * wpa_drv_get_scan_results2(
 	struct wpa_supplicant *wpa_s)
 {

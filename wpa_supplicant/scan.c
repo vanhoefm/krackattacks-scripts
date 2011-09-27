@@ -215,6 +215,54 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 }
 
 
+static void
+wpa_supplicant_sched_scan_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Sched scan timeout - stopping it");
+
+	wpa_s->sched_scan_timed_out = 1;
+	wpa_supplicant_cancel_sched_scan(wpa_s);
+}
+
+
+static int
+wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
+				struct wpa_driver_scan_params *params,
+				int interval)
+{
+	int ret;
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
+		return -1;
+
+	wpa_supplicant_notify_scanning(wpa_s, 1);
+	ret = wpa_drv_sched_scan(wpa_s, params, interval * 1000);
+	if (ret)
+		wpa_supplicant_notify_scanning(wpa_s, 0);
+	else
+		wpa_s->sched_scanning = 1;
+
+	return ret;
+}
+
+
+static int wpa_supplicant_stop_sched_scan(struct wpa_supplicant *wpa_s)
+{
+	int ret;
+
+	ret = wpa_drv_stop_sched_scan(wpa_s);
+	if (ret) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "stopping sched_scan failed!");
+		/* TODO: what to do if stopping fails? */
+		return -1;
+	}
+
+	return ret;
+}
+
+
 static struct wpa_driver_scan_filter *
 wpa_supplicant_build_filter_ssids(struct wpa_config *conf, size_t *num_ssids)
 {
@@ -567,6 +615,130 @@ void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec)
 
 
 /**
+ * wpa_supplicant_req_sched_scan - Start a periodic scheduled scan
+ * @wpa_s: Pointer to wpa_supplicant data
+ *
+ * This function is used to schedule periodic scans for neighboring
+ * access points repeating the scan continuously.
+ */
+int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_driver_scan_params params;
+	enum wpa_states prev_state;
+	struct wpa_ssid *ssid;
+	struct wpabuf *wps_ie = NULL;
+	int ret;
+	int use_wildcard = 0;
+	unsigned int max_sched_scan_ssids;
+
+	if (!wpa_s->sched_scan_supported)
+		return -1;
+
+	if (wpa_s->max_sched_scan_ssids > WPAS_MAX_SCAN_SSIDS)
+		max_sched_scan_ssids = WPAS_MAX_SCAN_SSIDS;
+	else
+		max_sched_scan_ssids = wpa_s->max_sched_scan_ssids;
+
+	if (wpa_s->sched_scanning)
+		return 0;
+
+	os_memset(&params, 0, sizeof(params));
+
+	prev_state = wpa_s->wpa_state;
+	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
+	    wpa_s->wpa_state == WPA_INACTIVE)
+		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
+
+	/* Find the starting point from which to continue scanning */
+	ssid = wpa_s->conf->ssid;
+	if (wpa_s->prev_sched_ssid) {
+		while (ssid) {
+			if (ssid == wpa_s->prev_sched_ssid) {
+				ssid = ssid->next;
+				break;
+			}
+			ssid = ssid->next;
+		}
+	}
+
+	if (!ssid || !wpa_s->prev_sched_ssid) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Beginning of SSID list");
+
+		wpa_s->sched_scan_interval = 2;
+		wpa_s->sched_scan_timeout = max_sched_scan_ssids * 2;
+		wpa_s->first_sched_scan = 1;
+		ssid = wpa_s->conf->ssid;
+		wpa_s->prev_sched_ssid = ssid;
+	}
+
+	while (ssid) {
+		if (ssid->disabled) {
+			wpa_s->prev_sched_ssid = ssid;
+			ssid = ssid->next;
+			continue;
+		}
+
+		if (!ssid->scan_ssid)
+			use_wildcard = 1;
+		else {
+			params.ssids[params.num_ssids].ssid =
+				ssid->ssid;
+			params.ssids[params.num_ssids].ssid_len =
+				ssid->ssid_len;
+			params.num_ssids++;
+			if (params.num_ssids + 1 >= max_sched_scan_ssids) {
+				wpa_s->prev_sched_ssid = ssid;
+				break;
+			}
+		}
+		wpa_s->prev_sched_ssid = ssid;
+		ssid = ssid->next;
+	}
+
+	if (ssid || use_wildcard) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Include wildcard SSID in "
+			"the sched scan request");
+		params.num_ssids++;
+	} else {
+		wpa_dbg(wpa_s, MSG_DEBUG, "ssid %p - list ended", ssid);
+	}
+
+	if (!params.num_ssids)
+		return 0;
+
+	if (wpa_s->wps)
+		wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
+
+	wpa_dbg(wpa_s, MSG_DEBUG,
+		"Starting sched scan: interval %d timeout %d",
+		wpa_s->sched_scan_interval, wpa_s->sched_scan_timeout);
+
+	ret = wpa_supplicant_start_sched_scan(wpa_s, &params,
+					      wpa_s->sched_scan_interval);
+	wpabuf_free(wps_ie);
+	if (ret) {
+		wpa_msg(wpa_s, MSG_WARNING, "Failed to initiate sched scan");
+		if (prev_state != wpa_s->wpa_state)
+			wpa_supplicant_set_state(wpa_s, prev_state);
+		return ret;
+	}
+
+	/* If we have more SSIDs to scan, add a timeout so we scan them too */
+	if (ssid || !wpa_s->first_sched_scan) {
+		wpa_s->sched_scan_timed_out = 0;
+		eloop_register_timeout(wpa_s->sched_scan_timeout, 0,
+				       wpa_supplicant_sched_scan_timeout,
+				       wpa_s, NULL);
+		wpa_s->first_sched_scan = 0;
+		wpa_s->sched_scan_timeout /= 2;
+		wpa_s->sched_scan_interval *= 2;
+	}
+
+	return 0;
+}
+
+
+/**
  * wpa_supplicant_cancel_scan - Cancel a scheduled scan request
  * @wpa_s: Pointer to wpa_supplicant data
  *
@@ -577,6 +749,23 @@ void wpa_supplicant_cancel_scan(struct wpa_supplicant *wpa_s)
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "Cancelling scan request");
 	eloop_cancel_timeout(wpa_supplicant_scan, wpa_s, NULL);
+}
+
+
+/**
+ * wpa_supplicant_cancel_sched_scan - Stop running scheduled scans
+ * @wpa_s: Pointer to wpa_supplicant data
+ *
+ * This function is used to stop a periodic scheduled scan.
+ */
+void wpa_supplicant_cancel_sched_scan(struct wpa_supplicant *wpa_s)
+{
+	if (!wpa_s->sched_scanning)
+		return;
+
+	wpa_dbg(wpa_s, MSG_DEBUG, "Cancelling sched scan");
+	eloop_cancel_timeout(wpa_supplicant_sched_scan_timeout, wpa_s, NULL);
+	wpa_supplicant_stop_sched_scan(wpa_s);
 }
 
 

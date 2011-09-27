@@ -1703,6 +1703,7 @@ struct wiphy_info_data {
 	int max_remain_on_chan;
 	int firmware_roam;
 	int sched_scan_supported;
+	int max_match_sets;
 };
 
 
@@ -1734,6 +1735,10 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	if (tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS])
 		info->max_sched_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS]);
+
+	if (tb[NL80211_ATTR_MAX_MATCH_SETS])
+		info->max_match_sets =
+			nla_get_u8(tb[NL80211_ATTR_MAX_MATCH_SETS]);
 
 	if (tb[NL80211_ATTR_SUPPORTED_IFTYPES]) {
 		struct nlattr *nl_mode;
@@ -1893,6 +1898,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.max_scan_ssids = info.max_scan_ssids;
 	drv->capa.max_sched_scan_ssids = info.max_sched_scan_ssids;
 	drv->capa.sched_scan_supported = info.sched_scan_supported;
+	drv->capa.max_match_sets = info.max_match_sets;
 
 	if (info.ap_supported)
 		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
@@ -2651,7 +2657,7 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = 0;
-	struct nl_msg *msg, *ssids, *freqs;
+	struct nl_msg *msg, *ssids, *freqs, *match_set_ssid, *match_sets;
 	size_t i;
 
 	msg = nlmsg_alloc();
@@ -2675,6 +2681,31 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval);
+
+	if (drv->num_filter_ssids) {
+		match_sets = nlmsg_alloc();
+
+		for (i = 0; i < drv->num_filter_ssids; i++) {
+			wpa_hexdump_ascii(MSG_MSGDUMP,
+					  "nl80211: Sched scan filter SSID",
+					  drv->filter_ssids[i].ssid,
+					  drv->filter_ssids[i].ssid_len);
+
+			match_set_ssid = nlmsg_alloc();
+			nla_put(match_set_ssid,
+				NL80211_ATTR_SCHED_SCAN_MATCH_SSID,
+				drv->filter_ssids[i].ssid_len,
+				drv->filter_ssids[i].ssid);
+
+			nla_put_nested(match_sets, i + 1, match_set_ssid);
+
+			nlmsg_free(match_set_ssid);
+		}
+
+		nla_put_nested(msg, NL80211_ATTR_SCHED_SCAN_MATCH,
+			       match_sets);
+		nlmsg_free(match_sets);
+	}
 
 	for (i = 0; i < params->num_ssids; i++) {
 		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Sched scan SSID",

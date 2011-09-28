@@ -38,6 +38,7 @@
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "sme.h"
+#include "gas_query.h"
 #include "p2p_supplicant.h"
 #include "bgscan.h"
 #include "ap.h"
@@ -2026,6 +2027,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 #endif /* CONFIG_SME */
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_GAS
+		if (data->rx_action.category == WLAN_ACTION_PUBLIC &&
+		    gas_query_rx(wpa_s->gas, data->rx_action.da,
+				 data->rx_action.sa, data->rx_action.bssid,
+				 data->rx_action.data, data->rx_action.len,
+				 data->rx_action.freq) == 0)
+			break;
+#endif /* CONFIG_GAS */
 #ifdef CONFIG_P2P
 		wpas_p2p_rx_action(wpa_s, data->rx_action.da,
 				   data->rx_action.sa,

@@ -1285,6 +1285,8 @@ endif
 
 ifdef NEED_GAS
 OBJS += ../src/common/gas.o
+OBJS += gas_query.o
+CFLAGS += -DCONFIG_GAS
 endif
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o

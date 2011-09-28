@@ -563,6 +563,8 @@ struct wpa_supplicant {
 	int best_24_freq;
 	int best_5_freq;
 	int best_overall_freq;
+
+	struct gas_query *gas;
 };
 
 

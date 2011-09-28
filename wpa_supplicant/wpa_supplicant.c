@@ -43,6 +43,7 @@
 #include "wps_supplicant.h"
 #include "ibss_rsn.h"
 #include "sme.h"
+#include "gas_query.h"
 #include "ap.h"
 #include "p2p_supplicant.h"
 #include "notify.h"
@@ -441,6 +442,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;
+
+	gas_query_deinit(wpa_s->gas);
+	wpa_s->gas = NULL;
 }
 
 
@@ -2282,6 +2286,12 @@ next_driver:
 			   "to manually remove this file before starting "
 			   "wpa_supplicant again.\n",
 			   wpa_s->conf->ctrl_interface);
+		return -1;
+	}
+
+	wpa_s->gas = gas_query_init(wpa_s);
+	if (wpa_s->gas == NULL) {
+		wpa_printf(MSG_ERROR, "Failed to initialize GAS query");
 		return -1;
 	}
 

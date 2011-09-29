@@ -284,6 +284,20 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
+#ifdef CONFIG_P2P
+	if (wpas_p2p_in_progress(wpa_s)) {
+		if (wpa_s->wpa_state == WPA_SCANNING) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Delay station mode scan "
+				"while P2P operation is in progress");
+			wpa_supplicant_req_scan(wpa_s, 5, 0);
+		} else {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Do not request scan while "
+				"P2P operation is in progress");
+		}
+		return;
+	}
+#endif /* CONFIG_P2P */
+
 	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) ||
 	    wpa_s->conf->ap_scan == 2)
 		max_ssids = 1;

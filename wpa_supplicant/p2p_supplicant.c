@@ -4365,3 +4365,12 @@ int wpas_p2p_disconnect(struct wpa_supplicant *wpa_s)
 
 	return 0;
 }
+
+
+int wpas_p2p_in_progress(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return 0;
+
+	return p2p_in_progress(wpa_s->global->p2p);
+}

@@ -1509,4 +1509,11 @@ int p2p_add_wps_vendor_extension(struct p2p_data *p2p,
 int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
 			 int cfg_op_channel);
 
+/**
+ * p2p_in_progress - Check whether a P2P operation is progress
+ * @p2p: P2P module context from p2p_init()
+ * Returns: 0 if P2P module is idle or 1 if an operation is in progress
+ */
+int p2p_in_progress(struct p2p_data *p2p);
+
 #endif /* P2P_H */

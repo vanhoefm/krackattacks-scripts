@@ -3687,5 +3687,5 @@ int p2p_in_progress(struct p2p_data *p2p)
 {
 	if (p2p == NULL)
 		return 0;
-	return p2p->state != P2P_IDLE;
+	return p2p->state != P2P_IDLE && p2p->state != P2P_PROVISIONING;
 }

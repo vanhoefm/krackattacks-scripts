@@ -103,6 +103,14 @@ int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
 			   const u8 *addr, int reason);
 int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
 			     const u8 *addr, int reason);
+int hostapd_add_sta_node(struct hostapd_data *hapd, const u8 *addr,
+			 u16 auth_alg);
+int hostapd_sta_auth(struct hostapd_data *hapd, const u8 *addr,
+		     u16 seq, u16 status, const u8 *ie, size_t len);
+int hostapd_sta_assoc(struct hostapd_data *hapd, const u8 *addr,
+		      int reassoc, u16 status, const u8 *ie, size_t len);
+int hostapd_add_tspec(struct hostapd_data *hapd, const u8 *addr,
+		      u8 *tspec_ie, size_t tspec_ielen);
 
 
 #include "drivers/driver.h"

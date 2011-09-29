@@ -2397,6 +2397,65 @@ struct wpa_driver_ops {
 	 */
 	void (*set_rekey_info)(void *priv, const u8 *kek, const u8 *kck,
 			       const u8 *replay_ctr);
+
+	/**
+	 * sta_assoc - Station association indication
+	 * @priv: Private driver interface data
+	 * @own_addr: Source address and BSSID for association frame
+	 * @addr: MAC address of the station to associate
+	 * @reassoc: flag to indicate re-association
+	 * @status: association response status code
+	 * @ie: assoc response ie buffer
+	 * @len: ie buffer length
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function indicates the driver to send (Re)Association
+	 * Response frame to the station.
+	 */
+	 int (*sta_assoc)(void *priv, const u8 *own_addr, const u8 *addr,
+			  int reassoc, u16 status, const u8 *ie, size_t len);
+
+	/**
+	 * sta_auth - Station authentication indication
+	 * @priv: Private driver interface data
+	 * @own_addr: Source address and BSSID for authentication frame
+	 * @addr: MAC address of the station to associate
+	 * @seq: authentication sequence number
+	 * @status: authentication response status code
+	 * @ie: authentication frame ie buffer
+	 * @len: ie buffer length
+	 *
+	 * This function indicates the driver to send Authentication frame
+	 * to the station.
+	 */
+	 int (*sta_auth)(void *priv, const u8 *own_addr, const u8 *addr,
+			 u16 seq, u16 status, const u8 *ie, size_t len);
+
+	/**
+	 * add_tspec - Add traffic stream
+	 * @priv: Private driver interface data
+	 * @addr: MAC address of the station to associate
+	 * @tspec_ie: tspec ie buffer
+	 * @tspec_ielen: tspec ie length
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function adds the traffic steam for the station
+	 * and fills the medium_time in tspec_ie.
+	 */
+	 int (*add_tspec)(void *priv, const u8 *addr, u8 *tspec_ie,
+			  size_t tspec_ielen);
+
+	/**
+	 * add_sta_node - Add a station node in the driver
+	 * @priv: Private driver interface data
+	 * @addr: MAC address of the station to add
+	 * @auth_alg: authentication algorithm used by the station
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function adds the station node in the driver, when
+	 * the station gets added by FT-over-DS.
+	 */
+	int (*add_sta_node)(void *priv, const u8 *addr, u16 auth_alg);
 };
 
 
@@ -3033,7 +3092,9 @@ union wpa_event_data {
 	 */
 	struct auth_info {
 		u8 peer[ETH_ALEN];
+		u8 bssid[ETH_ALEN];
 		u16 auth_type;
+		u16 auth_transaction;
 		u16 status_code;
 		const u8 *ies;
 		size_t ies_len;

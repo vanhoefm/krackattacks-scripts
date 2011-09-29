@@ -332,6 +332,35 @@ int hostapd_set_wds_sta(struct hostapd_data *hapd, const u8 *addr, int aid,
 }
 
 
+int hostapd_add_sta_node(struct hostapd_data *hapd, const u8 *addr,
+			 u16 auth_alg)
+{
+	if (hapd->driver == NULL || hapd->driver->add_sta_node == NULL)
+		return 0;
+	return hapd->driver->add_sta_node(hapd->drv_priv, addr, auth_alg);
+}
+
+
+int hostapd_sta_auth(struct hostapd_data *hapd, const u8 *addr,
+		     u16 seq, u16 status, const u8 *ie, size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_auth == NULL)
+		return 0;
+	return hapd->driver->sta_auth(hapd->drv_priv, hapd->own_addr, addr,
+				      seq, status, ie, len);
+}
+
+
+int hostapd_sta_assoc(struct hostapd_data *hapd, const u8 *addr,
+		      int reassoc, u16 status, const u8 *ie, size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->sta_assoc == NULL)
+		return 0;
+	return hapd->driver->sta_assoc(hapd->drv_priv, hapd->own_addr, addr,
+				       reassoc, status, ie, len);
+}
+
+
 int hostapd_sta_add(struct hostapd_data *hapd,
 		    const u8 *addr, u16 aid, u16 capability,
 		    const u8 *supp_rates, size_t supp_rates_len,
@@ -356,6 +385,16 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 	params.ht_capabilities = ht_capab;
 	params.flags = hostapd_sta_flags_to_drv(flags);
 	return hapd->driver->sta_add(hapd->drv_priv, &params);
+}
+
+
+int hostapd_add_tspec(struct hostapd_data *hapd, const u8 *addr,
+		      u8 *tspec_ie, size_t tspec_ielen)
+{
+	if (hapd->driver == NULL || hapd->driver->add_tspec == NULL)
+		return 0;
+	return hapd->driver->add_tspec(hapd->drv_priv, addr, tspec_ie,
+				       tspec_ielen);
 }
 
 

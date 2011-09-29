@@ -50,6 +50,7 @@
 #include "bgscan.h"
 #include "bss.h"
 #include "scan.h"
+#include "offchannel.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -439,6 +440,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 #ifdef CONFIG_P2P
 	wpas_p2p_deinit(wpa_s);
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_OFFCHANNEL
+	offchannel_deinit(wpa_s);
+#endif /* CONFIG_OFFCHANNEL */
 
 	os_free(wpa_s->next_scan_freqs);
 	wpa_s->next_scan_freqs = NULL;

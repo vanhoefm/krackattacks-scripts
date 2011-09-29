@@ -45,6 +45,7 @@
 #include "bss.h"
 #include "mlme.h"
 #include "scan.h"
+#include "offchannel.h"
 
 
 static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
@@ -1914,27 +1915,28 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 			sme_event_assoc_timed_out(wpa_s, data);
 		break;
-#ifdef CONFIG_AP
 	case EVENT_TX_STATUS:
 		wpa_dbg(wpa_s, MSG_DEBUG, "EVENT_TX_STATUS dst=" MACSTR
 			" type=%d stype=%d",
 			MAC2STR(data->tx_status.dst),
 			data->tx_status.type, data->tx_status.stype);
+#ifdef CONFIG_AP
 		if (wpa_s->ap_iface == NULL) {
-#ifdef CONFIG_P2P
+#ifdef CONFIG_OFFCHANNEL
 			if (data->tx_status.type == WLAN_FC_TYPE_MGMT &&
 			    data->tx_status.stype == WLAN_FC_STYPE_ACTION)
-				wpas_send_action_tx_status(
+				offchannel_send_action_tx_status(
 					wpa_s, data->tx_status.dst,
 					data->tx_status.data,
 					data->tx_status.data_len,
 					data->tx_status.ack ?
-					P2P_SEND_ACTION_SUCCESS :
-					P2P_SEND_ACTION_NO_ACK);
-#endif /* CONFIG_P2P */
+					OFFCHANNEL_SEND_ACTION_SUCCESS :
+					OFFCHANNEL_SEND_ACTION_NO_ACK);
+#endif /* CONFIG_OFFCHANNEL */
 			break;
 		}
-#ifdef CONFIG_P2P
+#endif /* CONFIG_AP */
+#ifdef CONFIG_OFFCHANNEL
 		wpa_dbg(wpa_s, MSG_DEBUG, "EVENT_TX_STATUS pending_dst="
 			MACSTR, MAC2STR(wpa_s->parent->pending_action_dst));
 		/*
@@ -1945,16 +1947,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		    data->tx_status.stype == WLAN_FC_STYPE_ACTION &&
 		    os_memcmp(wpa_s->parent->pending_action_dst,
 			      data->tx_status.dst, ETH_ALEN) == 0) {
-			wpas_send_action_tx_status(
+			offchannel_send_action_tx_status(
 				wpa_s->parent, data->tx_status.dst,
 				data->tx_status.data,
 				data->tx_status.data_len,
 				data->tx_status.ack ?
-				P2P_SEND_ACTION_SUCCESS :
-				P2P_SEND_ACTION_NO_ACK);
+				OFFCHANNEL_SEND_ACTION_SUCCESS :
+				OFFCHANNEL_SEND_ACTION_NO_ACK);
 			break;
 		}
-#endif /* CONFIG_P2P */
+#endif /* CONFIG_OFFCHANNEL */
+#ifdef CONFIG_AP
 		switch (data->tx_status.type) {
 		case WLAN_FC_TYPE_MGMT:
 			ap_mgmt_tx_cb(wpa_s, data->tx_status.data,
@@ -1969,7 +1972,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				     data->tx_status.ack);
 			break;
 		}
+#endif /* CONFIG_AP */
 		break;
+#ifdef CONFIG_AP
 	case EVENT_RX_FROM_UNKNOWN:
 		if (wpa_s->ap_iface == NULL)
 			break;
@@ -2067,16 +2072,29 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				      data->rx_probe_req.ie_len);
 #endif /* CONFIG_P2P */
 		break;
-#ifdef CONFIG_P2P
 	case EVENT_REMAIN_ON_CHANNEL:
+#ifdef CONFIG_OFFCHANNEL
+		offchannel_remain_on_channel_cb(
+			wpa_s, data->remain_on_channel.freq,
+			data->remain_on_channel.duration);
+#endif /* CONFIG_OFFCHANNEL */
+#ifdef CONFIG_P2P
 		wpas_p2p_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq,
 			data->remain_on_channel.duration);
+#endif /* CONFIG_P2P */
 		break;
 	case EVENT_CANCEL_REMAIN_ON_CHANNEL:
+#ifdef CONFIG_OFFCHANNEL
+		offchannel_cancel_remain_on_channel_cb(
+			wpa_s, data->remain_on_channel.freq);
+#endif /* CONFIG_OFFCHANNEL */
+#ifdef CONFIG_P2P
 		wpas_p2p_cancel_remain_on_channel_cb(
 			wpa_s, data->remain_on_channel.freq);
+#endif /* CONFIG_P2P */
 		break;
+#ifdef CONFIG_P2P
 	case EVENT_P2P_DEV_FOUND: {
 		struct p2p_peer_info peer_info;
 

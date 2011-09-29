@@ -21,6 +21,7 @@
 #include "common/gas.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
+#include "offchannel.h"
 #include "gas_query.h"
 
 
@@ -32,7 +33,8 @@ struct gas_query_pending {
 	u8 addr[ETH_ALEN];
 	u8 dialog_token;
 	u8 next_frag_id;
-	int wait_comeback;
+	int wait_comeback:1;
+	int offchannel_tx_started:1;
 	int freq;
 	u16 status_code;
 	struct wpabuf *adv_proto;
@@ -73,6 +75,8 @@ static void gas_query_done(struct gas_query *gas,
 			   struct gas_query_pending *query,
 			   enum gas_query_result result)
 {
+	if (query->offchannel_tx_started)
+		offchannel_send_action_done(gas->wpa_s);
 	eloop_cancel_timeout(gas_query_tx_comeback_timeout, gas, query);
 	eloop_cancel_timeout(gas_query_timeout, gas, query);
 	dl_list_del(&query->list);
@@ -127,12 +131,17 @@ static int gas_query_append(struct gas_query_pending *query, const u8 *data,
 static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 			struct wpabuf *req)
 {
+	int res;
 	wpa_printf(MSG_DEBUG, "GAS: Send action frame to " MACSTR " len=%u "
 		   "freq=%d", MAC2STR(query->addr),
 		   (unsigned int) wpabuf_len(req), query->freq);
-	return wpa_drv_send_action(gas->wpa_s, query->freq, 0, query->addr,
-				   gas->wpa_s->own_addr, query->addr,
-				   wpabuf_head(req), wpabuf_len(req));
+	res = offchannel_send_action(gas->wpa_s, query->freq, query->addr,
+				     gas->wpa_s->own_addr, query->addr,
+				     wpabuf_head(req), wpabuf_len(req), 1000,
+				     NULL);
+	if (res == 0)
+		query->offchannel_tx_started = 1;
+	return res;
 }
 
 

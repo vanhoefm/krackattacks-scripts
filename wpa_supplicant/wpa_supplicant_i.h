@@ -322,6 +322,13 @@ struct wpa_client_mlme {
 #endif /* CONFIG_CLIENT_MLME */
 };
 
+enum offchannel_send_action_result {
+	OFFCHANNEL_SEND_ACTION_SUCCESS /* Frame was send and acknowledged */,
+	OFFCHANNEL_SEND_ACTION_NO_ACK /* Frame was sent, but not acknowledged
+				       */,
+	OFFCHANNEL_SEND_ACTION_FAILED /* Frame was not sent due to a failure */
+};
+
 /**
  * struct wpa_supplicant - Internal data for wpa_supplicant interface
  *
@@ -478,13 +485,6 @@ struct wpa_supplicant {
 	void *ap_configured_cb_data;
 #endif /* CONFIG_AP */
 
-#ifdef CONFIG_P2P
-	struct p2p_go_neg_results *go_params;
-	int create_p2p_iface;
-	u8 pending_interface_addr[ETH_ALEN];
-	char pending_interface_name[100];
-	int pending_interface_type;
-	int p2p_group_idx;
 	unsigned int off_channel_freq;
 	struct wpabuf *pending_action_tx;
 	u8 pending_action_src[ETH_ALEN];
@@ -492,6 +492,22 @@ struct wpa_supplicant {
 	u8 pending_action_bssid[ETH_ALEN];
 	unsigned int pending_action_freq;
 	int pending_action_without_roc;
+	void (*pending_action_tx_status_cb)(struct wpa_supplicant *wpa_s,
+					    unsigned int freq, const u8 *dst,
+					    const u8 *src, const u8 *bssid,
+					    const u8 *data, size_t data_len,
+					    enum offchannel_send_action_result
+					    result);
+	unsigned int roc_waiting_drv_freq;
+	int action_tx_wait_time;
+
+#ifdef CONFIG_P2P
+	struct p2p_go_neg_results *go_params;
+	int create_p2p_iface;
+	u8 pending_interface_addr[ETH_ALEN];
+	char pending_interface_name[100];
+	int pending_interface_type;
+	int p2p_group_idx;
 	unsigned int pending_listen_freq;
 	unsigned int pending_listen_duration;
 	enum {
@@ -515,8 +531,6 @@ struct wpa_supplicant {
 	u8 pending_join_dev_addr[ETH_ALEN];
 	int pending_join_wps_method;
 	int p2p_join_scan_count;
-	unsigned int roc_waiting_drv_freq;
-	int action_tx_wait_time;
 	int force_long_sd;
 
 	/*

@@ -202,6 +202,7 @@ OBJS += ../src/p2p/p2p_group.o
 OBJS += ../src/ap/p2p_hostapd.o
 CFLAGS += -DCONFIG_P2P
 NEED_GAS=y
+NEED_OFFCHANNEL=y
 NEED_80211_COMMON=y
 ifdef CONFIG_P2P_STRICT
 CFLAGS += -DCONFIG_P2P_STRICT
@@ -1287,6 +1288,12 @@ ifdef NEED_GAS
 OBJS += ../src/common/gas.o
 OBJS += gas_query.o
 CFLAGS += -DCONFIG_GAS
+NEED_OFFCHANNEL=y
+endif
+
+ifdef NEED_OFFCHANNEL
+OBJS += offchannel.o
+CFLAGS += -DCONFIG_OFFCHANNEL
 endif
 
 OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o

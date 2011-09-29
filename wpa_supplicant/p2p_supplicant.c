@@ -149,6 +149,9 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 
 	wpabuf_free(ies);
 
+	if (ret < 0)
+		wpa_s->scan_res_handler = NULL;
+
 	return ret;
 }
 

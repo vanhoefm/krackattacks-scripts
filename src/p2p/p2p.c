@@ -907,6 +907,8 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	} else {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Failed to start "
 			"p2p_scan");
+		p2p_set_state(p2p, P2P_IDLE);
+		eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
 	}
 
 	return res;

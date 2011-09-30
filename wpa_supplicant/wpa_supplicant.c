@@ -20,6 +20,7 @@
 
 #include "common.h"
 #include "crypto/random.h"
+#include "crypto/sha1.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
 #include "eap_server/eap_methods.h"
@@ -1059,8 +1060,20 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 
 	if (ssid->key_mgmt &
 	    (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_FT_PSK | WPA_KEY_MGMT_PSK_SHA256))
+	{
 		wpa_sm_set_pmk(wpa_s->wpa, ssid->psk, PMK_LEN);
-	else
+#ifndef CONFIG_NO_PBKDF2
+		if (bss && ssid->bssid_set && ssid->ssid_len == 0 &&
+		    ssid->passphrase) {
+			u8 psk[PMK_LEN];
+		        pbkdf2_sha1(ssid->passphrase, (char *) bss->ssid,
+				    bss->ssid_len, 4096, psk, PMK_LEN);
+		        wpa_hexdump_key(MSG_MSGDUMP, "PSK (from passphrase)",
+					psk, PMK_LEN);
+			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
+		}
+#endif /* CONFIG_NO_PBKDF2 */
+	} else
 		wpa_sm_set_pmk_from_pmksa(wpa_s->wpa);
 
 	return 0;
@@ -1827,6 +1840,12 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
 			return entry;
 #endif /* CONFIG_WPS */
+
+		if (!entry->disabled && entry->bssid_set &&
+		    entry->ssid_len == 0 &&
+		    os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0)
+			return entry;
+
 		entry = entry->next;
 	}
 

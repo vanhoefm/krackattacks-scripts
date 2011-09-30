@@ -562,6 +562,10 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		}
 #endif /* CONFIG_WPS */
 
+		if (ssid->bssid_set && ssid->ssid_len == 0 &&
+		    os_memcmp(bss->bssid, ssid->bssid, ETH_ALEN) == 0)
+			check_ssid = 0;
+
 		if (check_ssid &&
 		    (ssid_len != ssid->ssid_len ||
 		     os_memcmp(ssid_, ssid->ssid, ssid_len) != 0)) {

@@ -1410,6 +1410,25 @@ static int wps_build_credential(struct wpabuf *msg,
 }
 
 
+int wps_build_credential_wrap(struct wpabuf *msg,
+			      const struct wps_credential *cred)
+{
+	struct wpabuf *wbuf;
+	wbuf = wpabuf_alloc(200);
+	if (wbuf == NULL)
+		return -1;
+	if (wps_build_credential(wbuf, cred)) {
+		wpabuf_free(wbuf);
+		return -1;
+	}
+	wpabuf_put_be16(msg, ATTR_CRED);
+	wpabuf_put_be16(msg, wpabuf_len(wbuf));
+	wpabuf_put_buf(msg, wbuf);
+	wpabuf_free(wbuf);
+	return 0;
+}
+
+
 int wps_build_cred(struct wps_data *wps, struct wpabuf *msg)
 {
 	struct wpabuf *cred;

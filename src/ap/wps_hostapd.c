@@ -242,6 +242,20 @@ static void wps_reload_config(void *eloop_data, void *user_ctx)
 }
 
 
+static void hapd_new_ap_event(struct hostapd_data *hapd, const u8 *attr,
+			      size_t attr_len)
+{
+	size_t blen = attr_len * 2 + 1;
+	char *buf = os_malloc(blen);
+	if (buf) {
+		wpa_snprintf_hex(buf, blen, attr, attr_len);
+		wpa_msg(hapd->msg_ctx, MSG_INFO,
+			WPS_EVENT_NEW_AP_SETTINGS "%s", buf);
+		os_free(buf);
+	}
+}
+
+
 static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 {
 	const struct wps_credential *cred = ctx;
@@ -271,15 +285,15 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 
 	if ((hapd->conf->wps_cred_processing == 1 ||
 	     hapd->conf->wps_cred_processing == 2) && cred->cred_attr) {
-		size_t blen = cred->cred_attr_len * 2 + 1;
-		char *_buf = os_malloc(blen);
-		if (_buf) {
-			wpa_snprintf_hex(_buf, blen,
-					 cred->cred_attr, cred->cred_attr_len);
-			wpa_msg(hapd->msg_ctx, MSG_INFO, "%s%s",
-				WPS_EVENT_NEW_AP_SETTINGS, _buf);
-			os_free(_buf);
-		}
+		hapd_new_ap_event(hapd, cred->cred_attr, cred->cred_attr_len);
+	} else if (hapd->conf->wps_cred_processing == 1 ||
+		   hapd->conf->wps_cred_processing == 2) {
+		struct wpabuf *attr;
+		attr = wpabuf_alloc(200);
+		if (attr && wps_build_credential_wrap(attr, cred) == 0)
+			hapd_new_ap_event(hapd, wpabuf_head_u8(attr),
+					  wpabuf_len(attr));
+		wpabuf_free(attr);
 	} else
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_NEW_AP_SETTINGS);
 

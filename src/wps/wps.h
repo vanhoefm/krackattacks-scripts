@@ -793,6 +793,9 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 int wps_registrar_config_ap(struct wps_registrar *reg,
 			    struct wps_credential *cred);
 
+int wps_build_credential_wrap(struct wpabuf *msg,
+			      const struct wps_credential *cred);
+
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);
 unsigned int wps_generate_pin(void);

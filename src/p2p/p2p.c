@@ -1517,6 +1517,7 @@ static void p2p_add_dev_from_probe_req(struct p2p_data *p2p, const u8 *addr,
 	if (dev) {
 		if (dev->country[0] == 0 && msg.listen_channel)
 			os_memcpy(dev->country, msg.listen_channel, 3);
+		os_get_time(&dev->last_seen);
 		p2p_parse_free(&msg);
 		return; /* already known */
 	}

@@ -186,6 +186,14 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 			wpa_printf(MSG_DEBUG, "RSN: Replace PMKSA entry for "
 				   "the current AP");
 			pmksa_cache_free_entry(pmksa, pos, 1);
+
+			/*
+			 * If OKC is used, there may be other PMKSA cache
+			 * entries based on the same PMK. These needs to be
+			 * flushed so that a new entry can be created based on
+			 * the new PMK.
+			 */
+			pmksa_cache_flush(pmksa, network_ctx);
 			break;
 		}
 		prev = pos;

@@ -1977,6 +1977,14 @@ dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 		goto nomem;
 	/***** Modes end */
 
+	if (res >= 0) {
+		dbus_int32_t max_scan_ssid = capa.max_scan_ssids;
+
+		if (!wpa_dbus_dict_append_int32(&iter_dict, "MaxScanSSID",
+						max_scan_ssid))
+			goto nomem;
+	}
+
 	if (!wpa_dbus_dict_close_write(&variant_iter, &iter_dict))
 		goto nomem;
 	if (!dbus_message_iter_close_container(iter, &variant_iter))

@@ -1660,6 +1660,14 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 		if (was_disabled != other_ssid->disabled)
 			wpas_notify_network_enabled_changed(wpa_s, other_ssid);
 	}
+
+	if (ssid && ssid == wpa_s->current_ssid && wpa_s->current_ssid) {
+		/* We are already associated with the selected network */
+		wpa_printf(MSG_DEBUG, "Already associated with the "
+			   "selected network - do nothing");
+		return;
+	}
+
 	wpa_s->connect_without_scan = NULL;
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;

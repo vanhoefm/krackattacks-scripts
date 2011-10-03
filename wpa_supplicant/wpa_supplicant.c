@@ -45,6 +45,7 @@
 #include "bss.h"
 #include "scan.h"
 #include "offchannel.h"
+#include "hs20_supplicant.h"
 
 const char *wpa_supplicant_version =
 "wpa_supplicant v" VERSION_STR "\n"
@@ -1274,6 +1275,20 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		}
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_HS20
+	if (wpa_s->conf->hs20) {
+		struct wpabuf *hs20;
+		hs20 = wpabuf_alloc(20);
+		if (hs20) {
+			wpas_hs20_add_indication(hs20);
+			os_memcpy(wpa_ie + wpa_ie_len, wpabuf_head(hs20),
+				  wpabuf_len(hs20));
+			wpa_ie_len += wpabuf_len(hs20);
+			wpabuf_free(hs20);
+		}
+	}
+#endif /* CONFIG_HS20 */
 
 #ifdef CONFIG_INTERWORKING
 	if (wpa_s->conf->interworking) {

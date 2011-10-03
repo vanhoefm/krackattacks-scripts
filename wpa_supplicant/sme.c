@@ -26,6 +26,7 @@
 #include "bss.h"
 #include "scan.h"
 #include "sme.h"
+#include "hs20_supplicant.h"
 
 #define SME_AUTH_TIMEOUT 5
 #define SME_ASSOC_TIMEOUT 5
@@ -221,6 +222,21 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 			wpa_s->sme.assoc_req_ie_len += res;
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_HS20
+	if (wpa_s->conf->hs20) {
+		struct wpabuf *hs20;
+		hs20 = wpabuf_alloc(20);
+		if (hs20) {
+			wpas_hs20_add_indication(hs20);
+			os_memcpy(wpa_s->sme.assoc_req_ie +
+				  wpa_s->sme.assoc_req_ie_len,
+				  wpabuf_head(hs20), wpabuf_len(hs20));
+			wpa_s->sme.assoc_req_ie_len += wpabuf_len(hs20);
+			wpabuf_free(hs20);
+		}
+	}
+#endif /* CONFIG_HS20 */
 
 #ifdef CONFIG_INTERWORKING
 	if (wpa_s->conf->interworking) {

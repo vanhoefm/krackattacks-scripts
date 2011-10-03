@@ -1007,6 +1007,16 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 		return pos - buf;
 	pos += ret;
 
+#ifdef CONFIG_HS20
+	if (wpa_s->current_bss &&
+	    wpa_bss_get_vendor_ie(wpa_s->current_bss, HS20_IE_VENDOR_TYPE)) {
+		ret = os_snprintf(pos, end - pos, "hs20=1\n");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+#endif /* CONFIG_HS20 */
+
 	if (wpa_key_mgmt_wpa_ieee8021x(wpa_s->key_mgmt) ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_IEEE8021X_NO_WPA) {
 		res = eapol_sm_get_status(wpa_s->eapol, pos, end - pos,
@@ -1497,6 +1507,14 @@ static int wpa_supplicant_ctrl_iface_scan_result(
 			return -1;
 		pos += ret;
 	}
+#ifdef CONFIG_HS20
+	if (wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE)) {
+		ret = os_snprintf(pos, end - pos, "[HS20]");
+		if (ret < 0 || ret >= end - pos)
+			return -1;
+		pos += ret;
+	}
+#endif /* CONFIG_HS20 */
 
 	ret = os_snprintf(pos, end - pos, "\t%s",
 			  wpa_ssid_txt(bss->ssid, bss->ssid_len));
@@ -2474,6 +2492,14 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 				return 0;
 			pos += ret;
 		}
+#ifdef CONFIG_HS20
+		if (wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE)) {
+			ret = os_snprintf(pos, end - pos, "[HS20]");
+			if (ret < 0 || ret >= end - pos)
+				return -1;
+			pos += ret;
+		}
+#endif /* CONFIG_HS20 */
 
 		ret = os_snprintf(pos, end - pos, "\n");
 		if (ret < 0 || ret >= end - pos)

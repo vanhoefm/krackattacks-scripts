@@ -1943,12 +1943,6 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 			return pos - buf;
 		pos += ret;
 	}
-	if (wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE)) {
-		ret = os_snprintf(pos, end - pos, "[P2P]");
-		if (ret < 0 || ret >= end - pos)
-			return pos - buf;
-		pos += ret;
-	}
 
 	ret = os_snprintf(pos, end - pos, "\n");
 	if (ret < 0 || ret >= end - pos)
@@ -1981,6 +1975,12 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	}
 	if (bss->caps & IEEE80211_CAP_ESS) {
 		ret = os_snprintf(pos, end - pos, "[ESS]");
+		if (ret < 0 || ret >= end - pos)
+			return pos - buf;
+		pos += ret;
+	}
+	if (wpa_bss_get_vendor_ie(bss, P2P_IE_VENDOR_TYPE)) {
+		ret = os_snprintf(pos, end - pos, "[P2P]");
 		if (ret < 0 || ret >= end - pos)
 			return pos - buf;
 		pos += ret;

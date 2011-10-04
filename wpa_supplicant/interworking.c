@@ -17,9 +17,11 @@
 #include "common.h"
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
+#include "common/wpa_ctrl.h"
 #include "drivers/driver.h"
 #include "wpa_supplicant_i.h"
 #include "bss.h"
+#include "scan.h"
 #include "gas_query.h"
 #include "interworking.h"
 
@@ -108,6 +110,46 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 }
 
 
+int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	if (bss == NULL)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR,
+		   MAC2STR(bss->bssid));
+	/* TODO: create network block and connect */
+	return 0;
+}
+
+
+static void interworking_select_network(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss, *selected = NULL;
+	unsigned int count = 0;
+
+	wpa_s->network_select = 0;
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		if (bss->anqp_nai_realm == NULL)
+			continue;
+		/* TODO: verify that matching credentials are available */
+		count++;
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR,
+			MAC2STR(bss->bssid));
+		if (selected == NULL && wpa_s->auto_select)
+			selected = bss;
+	}
+
+	if (count == 0) {
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_NO_MATCH "No network "
+			"with matching credentials found");
+	}
+
+	if (selected)
+		interworking_connect(wpa_s, selected);
+}
+
+
 static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss;
@@ -137,22 +179,32 @@ static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s)
 	if (found == 0) {
 		wpa_msg(wpa_s, MSG_INFO, "ANQP fetch completed");
 		wpa_s->fetch_anqp_in_progress = 0;
+		if (wpa_s->network_select)
+			interworking_select_network(wpa_s);
 	}
 }
 
 
-int interworking_fetch_anqp(struct wpa_supplicant *wpa_s)
+static void interworking_start_fetch_anqp(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss;
-
-	if (wpa_s->fetch_anqp_in_progress)
-		return 0;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list)
 		bss->flags &= ~WPA_BSS_ANQP_FETCH_TRIED;
 
 	wpa_s->fetch_anqp_in_progress = 1;
 	interworking_next_anqp_fetch(wpa_s);
+}
+
+
+int interworking_fetch_anqp(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->fetch_anqp_in_progress || wpa_s->network_select)
+		return 0;
+
+	wpa_s->network_select = 0;
+
+	interworking_start_fetch_anqp(wpa_s);
 
 	return 0;
 }
@@ -350,4 +402,28 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 						slen);
 		pos += slen;
 	}
+}
+
+
+static void interworking_scan_res_handler(struct wpa_supplicant *wpa_s,
+					  struct wpa_scan_results *scan_res)
+{
+	wpa_printf(MSG_DEBUG, "Interworking: Scan results available - start "
+		   "ANQP fetch");
+	interworking_start_fetch_anqp(wpa_s);
+}
+
+
+int interworking_select(struct wpa_supplicant *wpa_s, int auto_select)
+{
+	interworking_stop_fetch_anqp(wpa_s);
+	wpa_s->network_select = 1;
+	wpa_s->auto_select = !!auto_select;
+	wpa_printf(MSG_DEBUG, "Interworking: Start scan for network "
+		   "selection");
+	wpa_s->scan_res_handler = interworking_scan_res_handler;
+	wpa_s->scan_req = 2;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	return 0;
 }

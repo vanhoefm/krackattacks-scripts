@@ -2931,6 +2931,27 @@ static int p2p_ctrl_ext_listen(struct wpa_supplicant *wpa_s, char *cmd)
 
 
 #ifdef CONFIG_INTERWORKING
+static int ctrl_interworking_connect(struct wpa_supplicant *wpa_s, char *dst)
+{
+	u8 bssid[ETH_ALEN];
+	struct wpa_bss *bss;
+
+	if (hwaddr_aton(dst, bssid)) {
+		wpa_printf(MSG_DEBUG, "Invalid BSSID '%s'", dst);
+		return -1;
+	}
+
+	bss = wpa_bss_get_bssid(wpa_s, bssid);
+	if (bss == NULL) {
+		wpa_printf(MSG_DEBUG, "Could not find BSS " MACSTR,
+			   MAC2STR(bssid));
+		return -1;
+	}
+
+	return interworking_connect(wpa_s, bss);
+}
+
+
 static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
 {
 	u8 dst_addr[ETH_ALEN];
@@ -3262,6 +3283,13 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 			reply_len = -1;
 	} else if (os_strcmp(buf, "STOP_FETCH_ANQP") == 0) {
 		interworking_stop_fetch_anqp(wpa_s);
+	} else if (os_strncmp(buf, "INTERWORKING_SELECT", 19) == 0) {
+		if (interworking_select(wpa_s, os_strstr(buf + 19, "auto") !=
+					NULL) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "INTERWORKING_CONNECT ", 21) == 0) {
+		if (ctrl_interworking_connect(wpa_s, buf + 21) < 0)
+			reply_len = -1;
 	} else if (os_strncmp(buf, "ANQP_GET ", 9) == 0) {
 		if (get_anqp(wpa_s, buf + 9) < 0)
 			reply_len = -1;

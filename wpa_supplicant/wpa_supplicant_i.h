@@ -591,7 +591,9 @@ struct wpa_supplicant {
 	struct gas_query *gas;
 
 #ifdef CONFIG_INTERWORKING
-	int fetch_anqp_in_progress;
+	int fetch_anqp_in_progress:1;
+	int network_select:1;
+	int auto_select:1;
 #endif /* CONFIG_INTERWORKING */
 };
 

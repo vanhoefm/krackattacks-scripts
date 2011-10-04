@@ -2234,6 +2234,44 @@ static int wpa_cli_cmd_stop_fetch_anqp(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_interworking_select(struct wpa_ctrl *ctrl, int argc,
+					   char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc == 0)
+		return wpa_ctrl_command(ctrl, "INTERWORKING_SELECT");
+
+	res = os_snprintf(cmd, sizeof(cmd), "INTERWORKING_SELECT %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_interworking_connect(struct wpa_ctrl *ctrl, int argc,
+					    char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid INTERWORKING_CONNECT commands: needs one "
+		       "argument (BSSID)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "INTERWORKING_CONNECT %s",
+			  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_anqp_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
 	char cmd[100];
@@ -2655,6 +2693,12 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "= fetch ANQP information for all APs" },
 	{ "stop_fetch_anqp", wpa_cli_cmd_stop_fetch_anqp, cli_cmd_flag_none,
 	  "= stop fetch_anqp operation" },
+	{ "interworking_select", wpa_cli_cmd_interworking_select,
+	  cli_cmd_flag_none,
+	  "[auto] = perform Interworking network selection" },
+	{ "interworking_connect", wpa_cli_cmd_interworking_connect,
+	  cli_cmd_flag_none,
+	  "<BSSID> = connect using Interworking credentials" },
 	{ "anqp_get", wpa_cli_cmd_anqp_get, cli_cmd_flag_none,
 	  "<addr> <info id>[,<info id>]... = request ANQP information" },
 #endif /* CONFIG_INTERWORKING */

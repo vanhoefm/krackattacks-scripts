@@ -25,5 +25,7 @@ void anqp_resp_cb(void *ctx, const u8 *dst, u8 dialog_token,
 		  const struct wpabuf *resp, u16 status_code);
 int interworking_fetch_anqp(struct wpa_supplicant *wpa_s);
 void interworking_stop_fetch_anqp(struct wpa_supplicant *wpa_s);
+int interworking_select(struct wpa_supplicant *wpa_s, int auto_select);
+int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss);
 
 #endif /* INTERWORKING_H */

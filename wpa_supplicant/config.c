@@ -1727,6 +1727,9 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->p2p_ssid_postfix);
 	os_free(config->pssid);
 	os_free(config->home_realm);
+	os_free(config->home_username);
+	os_free(config->home_password);
+	os_free(config->home_ca_cert);
 	os_free(config);
 }
 
@@ -1906,6 +1909,27 @@ int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
 		ret = -1;
 	}
 
+	return ret;
+}
+
+
+int wpa_config_set_quoted(struct wpa_ssid *ssid, const char *var,
+			  const char *value)
+{
+	size_t len;
+	char *buf;
+	int ret;
+
+	len = os_strlen(value);
+	buf = os_malloc(len + 3);
+	if (buf == NULL)
+		return -1;
+	buf[0] = '"';
+	os_memcpy(buf + 1, value, len);
+	buf[len + 1] = '"';
+	buf[len + 2] = '\0';
+	ret = wpa_config_set(ssid, var, buf, 0);
+	os_free(buf);
 	return ret;
 }
 
@@ -2462,6 +2486,9 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(max_num_sta), 0 },
 	{ INT_RANGE(disassoc_low_ack, 0, 1), 0 },
 	{ STR(home_realm), 0 },
+	{ STR(home_username), 0 },
+	{ STR(home_password), 0 },
+	{ STR(home_ca_cert), 0 },
 	{ INT_RANGE(interworking, 0, 1), 0 },
 	{ FUNC(hessid), 0 }
 };

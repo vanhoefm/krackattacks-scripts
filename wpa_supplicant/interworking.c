@@ -20,10 +20,12 @@
 #include "common/wpa_ctrl.h"
 #include "drivers/driver.h"
 #include "eap_common/eap_defs.h"
+#include "eap_peer/eap_methods.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
 #include "bss.h"
 #include "scan.h"
+#include "notify.h"
 #include "gas_query.h"
 #include "interworking.h"
 
@@ -371,15 +373,194 @@ static int nai_realm_match(struct nai_realm *realm, const char *home_realm)
 }
 
 
+static int nai_realm_cred_username(struct nai_realm_eap *eap)
+{
+	if (eap_get_name(EAP_VENDOR_IETF, eap->method) == NULL)
+		return 0; /* method not supported */
+
+	if (eap->method != EAP_TYPE_TTLS && eap->method != EAP_TYPE_PEAP) {
+		/* Only tunneled methods with username/password supported */
+		return 0;
+	}
+
+	if (eap->method == EAP_TYPE_PEAP &&
+	    eap_get_name(EAP_VENDOR_IETF, eap->inner_method) == NULL)
+		return 0;
+
+	if (eap->method == EAP_TYPE_TTLS) {
+		if (eap->inner_method == 0 && eap->inner_non_eap == 0)
+			return 0;
+		if (eap->inner_method &&
+		    eap_get_name(EAP_VENDOR_IETF, eap->inner_method) == NULL)
+			return 0;
+		if (eap->inner_non_eap &&
+		    eap->inner_non_eap != NAI_REALM_INNER_NON_EAP_PAP &&
+		    eap->inner_non_eap != NAI_REALM_INNER_NON_EAP_CHAP &&
+		    eap->inner_non_eap != NAI_REALM_INNER_NON_EAP_MSCHAP &&
+		    eap->inner_non_eap != NAI_REALM_INNER_NON_EAP_MSCHAPV2)
+			return 0;
+	}
+
+	if (eap->inner_method &&
+	    eap->inner_method != EAP_TYPE_GTC &&
+	    eap->inner_method != EAP_TYPE_MSCHAPV2)
+		return 0;
+
+	return 1;
+}
+
+
+struct nai_realm_eap * nai_realm_find_eap(struct wpa_supplicant *wpa_s,
+					  struct nai_realm *realm)
+{
+	u8 e;
+
+	if (wpa_s->conf->home_username == NULL ||
+	    wpa_s->conf->home_username[0] == '\0' ||
+	    wpa_s->conf->home_password == NULL ||
+	    wpa_s->conf->home_password[0] == '\0')
+		return NULL;
+
+	for (e = 0; e < realm->eap_count; e++) {
+		struct nai_realm_eap *eap = &realm->eap[e];
+		if (nai_realm_cred_username(eap))
+			return eap;
+	}
+
+	return NULL;
+}
+
+
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
+	struct wpa_ssid *ssid;
+	struct nai_realm *realm;
+	struct nai_realm_eap *eap = NULL;
+	u16 count, i;
+	char buf[100];
+	const u8 *ie;
+
 	if (bss == NULL)
 		return -1;
+	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
+	if (ie == NULL || ie[1] == 0) {
+		wpa_printf(MSG_DEBUG, "Interworking: No SSID known for "
+			   MACSTR, MAC2STR(bss->bssid));
+		return -1;
+	}
+
+	realm = nai_realm_parse(bss->anqp_nai_realm, &count);
+	if (realm == NULL) {
+		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
+			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
+		nai_realm_free(realm, count);
+		return -1;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (!nai_realm_match(&realm[i], wpa_s->conf->home_realm))
+			continue;
+		eap = nai_realm_find_eap(wpa_s, &realm[i]);
+		if (eap)
+			break;
+	}
+
+	if (!eap) {
+		wpa_printf(MSG_DEBUG, "Interworking: No matching credentials "
+			   "and EAP method found for " MACSTR,
+			   MAC2STR(bss->bssid));
+		nai_realm_free(realm, count);
+		return -1;
+	}
 
 	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR,
 		   MAC2STR(bss->bssid));
-	/* TODO: create network block and connect */
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (ssid == NULL) {
+		nai_realm_free(realm, count);
+		return -1;
+	}
+	wpas_notify_network_added(wpa_s, ssid);
+	wpa_config_set_network_defaults(ssid);
+	ssid->temporary = 1;
+	ssid->ssid = os_zalloc(ie[1] + 1);
+	if (ssid->ssid == NULL)
+		goto fail;
+	os_memcpy(ssid->ssid, ie + 2, ie[1]);
+	ssid->ssid_len = ie[1];
+
+	if (wpa_config_set(ssid, "eap", eap_get_name(EAP_VENDOR_IETF,
+						     eap->method), 0) < 0)
+		goto fail;
+
+	if (wpa_s->conf->home_username && wpa_s->conf->home_username[0] &&
+	    wpa_config_set_quoted(ssid, "identity",
+				  wpa_s->conf->home_username) < 0)
+		goto fail;
+
+	if (wpa_s->conf->home_password && wpa_s->conf->home_password[0] &&
+	    wpa_config_set_quoted(ssid, "password", wpa_s->conf->home_password)
+	    < 0)
+		goto fail;
+
+	switch (eap->method) {
+	case EAP_TYPE_TTLS:
+		if (eap->inner_method) {
+			os_snprintf(buf, sizeof(buf), "\"autheap=%s\"",
+				    eap_get_name(EAP_VENDOR_IETF,
+						 eap->inner_method));
+			if (wpa_config_set(ssid, "phase2", buf, 0) < 0)
+				goto fail;
+			break;
+		}
+		switch (eap->inner_non_eap) {
+		case NAI_REALM_INNER_NON_EAP_PAP:
+			if (wpa_config_set(ssid, "phase2", "\"auth=PAP\"", 0) <
+			    0)
+				goto fail;
+			break;
+		case NAI_REALM_INNER_NON_EAP_CHAP:
+			if (wpa_config_set(ssid, "phase2", "\"auth=CHAP\"", 0)
+			    < 0)
+				goto fail;
+			break;
+		case NAI_REALM_INNER_NON_EAP_MSCHAP:
+			if (wpa_config_set(ssid, "phase2", "\"auth=CHAP\"", 0)
+			    < 0)
+				goto fail;
+			break;
+		case NAI_REALM_INNER_NON_EAP_MSCHAPV2:
+			if (wpa_config_set(ssid, "phase2", "\"auth=MSCHAPV2\"",
+					   0) < 0)
+				goto fail;
+			break;
+		}
+		break;
+	case EAP_TYPE_PEAP:
+		os_snprintf(buf, sizeof(buf), "\"auth=%s\"",
+			    eap_get_name(EAP_VENDOR_IETF, eap->inner_method));
+		if (wpa_config_set(ssid, "phase2", buf, 0) < 0)
+			goto fail;
+		break;
+	}
+
+	if (wpa_s->conf->home_ca_cert && wpa_s->conf->home_ca_cert[0] &&
+	    wpa_config_set_quoted(ssid, "ca_cert", wpa_s->conf->home_ca_cert) <
+	    0)
+		goto fail;
+
+	nai_realm_free(realm, count);
+
+	wpa_supplicant_select_network(wpa_s, ssid);
+
 	return 0;
+
+fail:
+	wpas_notify_network_removed(wpa_s, ssid);
+	wpa_config_remove_network(wpa_s->conf, ssid->id);
+	nai_realm_free(realm, count);
+	return -1;
 }
 
 
@@ -406,7 +587,9 @@ static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
 	}
 
 	for (i = 0; i < count; i++) {
-		if (nai_realm_match(&realm[i], wpa_s->conf->home_realm)) {
+		if (!nai_realm_match(&realm[i], wpa_s->conf->home_realm))
+			continue;
+		if (nai_realm_find_eap(wpa_s, &realm[i])) {
 			found++;
 			break;
 		}

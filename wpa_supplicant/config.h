@@ -445,6 +445,21 @@ struct wpa_config {
 	 * home_realm - Home Realm for Interworking
 	 */
 	char *home_realm;
+
+	/**
+	 * home_username - Username for Interworking network selection
+	 */
+	char *home_username;
+
+	/**
+	 * home_password - Password for Interworking network selection
+	 */
+	char *home_password;
+
+	/**
+	 * home_ca_cert - CA certificate for Interworking network selection
+	 */
+	char *home_ca_cert;
 };
 
 
@@ -461,6 +476,8 @@ int wpa_config_remove_network(struct wpa_config *config, int id);
 void wpa_config_set_network_defaults(struct wpa_ssid *ssid);
 int wpa_config_set(struct wpa_ssid *ssid, const char *var, const char *value,
 		   int line);
+int wpa_config_set_quoted(struct wpa_ssid *ssid, const char *var,
+			  const char *value);
 char ** wpa_config_get_all(struct wpa_ssid *ssid, int get_keys);
 char * wpa_config_get(struct wpa_ssid *ssid, const char *var);
 char * wpa_config_get_no_key(struct wpa_ssid *ssid, const char *var);

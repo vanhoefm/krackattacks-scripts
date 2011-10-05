@@ -19,7 +19,9 @@
 #include "common/gas.h"
 #include "common/wpa_ctrl.h"
 #include "drivers/driver.h"
+#include "eap_common/eap_defs.h"
 #include "wpa_supplicant_i.h"
+#include "config.h"
 #include "bss.h"
 #include "scan.h"
 #include "gas_query.h"
@@ -110,6 +112,265 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 }
 
 
+struct nai_realm_eap {
+	u8 method;
+	u8 inner_method;
+	enum nai_realm_eap_auth_inner_non_eap inner_non_eap;
+	u8 cred_type;
+	u8 tunneled_cred_type;
+};
+
+struct nai_realm {
+	u8 encoding;
+	char *realm;
+	u8 eap_count;
+	struct nai_realm_eap *eap;
+};
+
+
+static void nai_realm_free(struct nai_realm *realms, u16 count)
+{
+	u16 i;
+
+	if (realms == NULL)
+		return;
+	for (i = 0; i < count; i++) {
+		os_free(realms[i].eap);
+		os_free(realms[i].realm);
+	}
+	os_free(realms);
+}
+
+
+static const u8 * nai_realm_parse_eap(struct nai_realm_eap *e, const u8 *pos,
+				      const u8 *end)
+{
+	u8 elen, auth_count, a;
+	const u8 *e_end;
+
+	if (pos + 3 > end) {
+		wpa_printf(MSG_DEBUG, "No room for EAP Method fixed fields");
+		return NULL;
+	}
+
+	elen = *pos++;
+	if (pos + elen > end || elen < 2) {
+		wpa_printf(MSG_DEBUG, "No room for EAP Method subfield");
+		return NULL;
+	}
+	e_end = pos + elen;
+	e->method = *pos++;
+	auth_count = *pos++;
+	wpa_printf(MSG_DEBUG, "EAP Method: len=%u method=%u auth_count=%u",
+		   elen, e->method, auth_count);
+
+	for (a = 0; a < auth_count; a++) {
+		u8 id, len;
+
+		if (pos + 2 > end || pos + 2 + pos[1] > end) {
+			wpa_printf(MSG_DEBUG, "No room for Authentication "
+				   "Parameter subfield");
+			return NULL;
+		}
+
+		id = *pos++;
+		len = *pos++;
+
+		switch (id) {
+		case NAI_REALM_EAP_AUTH_NON_EAP_INNER_AUTH:
+			if (len < 1)
+				break;
+			e->inner_non_eap = *pos;
+			if (e->method != EAP_TYPE_TTLS)
+				break;
+			switch (*pos) {
+			case NAI_REALM_INNER_NON_EAP_PAP:
+				wpa_printf(MSG_DEBUG, "EAP-TTLS/PAP");
+				break;
+			case NAI_REALM_INNER_NON_EAP_CHAP:
+				wpa_printf(MSG_DEBUG, "EAP-TTLS/CHAP");
+				break;
+			case NAI_REALM_INNER_NON_EAP_MSCHAP:
+				wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAP");
+				break;
+			case NAI_REALM_INNER_NON_EAP_MSCHAPV2:
+				wpa_printf(MSG_DEBUG, "EAP-TTLS/MSCHAPV2");
+				break;
+			}
+			break;
+		case NAI_REALM_EAP_AUTH_INNER_AUTH_EAP_METHOD:
+			if (len < 1)
+				break;
+			e->inner_method = *pos;
+			wpa_printf(MSG_DEBUG, "Inner EAP method: %u",
+				   e->inner_method);
+			break;
+		case NAI_REALM_EAP_AUTH_CRED_TYPE:
+			if (len < 1)
+				break;
+			e->cred_type = *pos;
+			wpa_printf(MSG_DEBUG, "Credential Type: %u",
+				   e->cred_type);
+			break;
+		case NAI_REALM_EAP_AUTH_TUNNELED_CRED_TYPE:
+			if (len < 1)
+				break;
+			e->tunneled_cred_type = *pos;
+			wpa_printf(MSG_DEBUG, "Tunneled EAP Method Credential "
+				   "Type: %u", e->tunneled_cred_type);
+			break;
+		default:
+			wpa_printf(MSG_DEBUG, "Unsupported Authentication "
+				   "Parameter: id=%u len=%u", id, len);
+			wpa_hexdump(MSG_DEBUG, "Authentication Parameter "
+				    "Value", pos, len);
+			break;
+		}
+
+		pos += len;
+	}
+
+	return e_end;
+}
+
+
+static const u8 * nai_realm_parse_realm(struct nai_realm *r, const u8 *pos,
+					const u8 *end)
+{
+	u16 len;
+	const u8 *f_end;
+	u8 realm_len, e;
+
+	if (end - pos < 4) {
+		wpa_printf(MSG_DEBUG, "No room for NAI Realm Data "
+			   "fixed fields");
+		return NULL;
+	}
+
+	len = WPA_GET_LE16(pos); /* NAI Realm Data field Length */
+	pos += 2;
+	if (pos + len > end || len < 3) {
+		wpa_printf(MSG_DEBUG, "No room for NAI Realm Data "
+			   "(len=%u; left=%u)",
+			   len, (unsigned int) (end - pos));
+		return NULL;
+	}
+	f_end = pos + len;
+
+	r->encoding = *pos++;
+	realm_len = *pos++;
+	if (pos + realm_len > f_end) {
+		wpa_printf(MSG_DEBUG, "No room for NAI Realm "
+			   "(len=%u; left=%u)",
+			   realm_len, (unsigned int) (f_end - pos));
+		return NULL;
+	}
+	wpa_hexdump_ascii(MSG_DEBUG, "NAI Realm", pos, realm_len);
+	r->realm = os_malloc(realm_len + 1);
+	if (r->realm == NULL)
+		return NULL;
+	os_memcpy(r->realm, pos, realm_len);
+	r->realm[realm_len] = '\0';
+	pos += realm_len;
+
+	if (pos + 1 > f_end) {
+		wpa_printf(MSG_DEBUG, "No room for EAP Method Count");
+		return NULL;
+	}
+	r->eap_count = *pos++;
+	wpa_printf(MSG_DEBUG, "EAP Count: %u", r->eap_count);
+	if (pos + r->eap_count * 3 > f_end) {
+		wpa_printf(MSG_DEBUG, "No room for EAP Methods");
+		return NULL;
+	}
+	r->eap = os_zalloc(r->eap_count * sizeof(struct nai_realm_eap));
+	if (r->eap == NULL)
+		return NULL;
+
+	for (e = 0; e < r->eap_count; e++) {
+		pos = nai_realm_parse_eap(&r->eap[e], pos, f_end);
+		if (pos == NULL)
+			return NULL;
+	}
+
+	return f_end;
+}
+
+
+static struct nai_realm * nai_realm_parse(struct wpabuf *anqp, u16 *count)
+{
+	struct nai_realm *realm;
+	const u8 *pos, *end;
+	u16 i, num;
+
+	if (anqp == NULL || wpabuf_len(anqp) < 2)
+		return NULL;
+
+	pos = wpabuf_head_u8(anqp);
+	end = pos + wpabuf_len(anqp);
+	num = WPA_GET_LE16(pos);
+	wpa_printf(MSG_DEBUG, "NAI Realm Count: %u", num);
+	pos += 2;
+
+	if (num * 5 > end - pos) {
+		wpa_printf(MSG_DEBUG, "Invalid NAI Realm Count %u - not "
+			   "enough data (%u octets) for that many realms",
+			   num, (unsigned int) (end - pos));
+		return NULL;
+	}
+
+	realm = os_zalloc(num * sizeof(struct nai_realm));
+	if (realm == NULL)
+		return NULL;
+
+	for (i = 0; i < num; i++) {
+		pos = nai_realm_parse_realm(&realm[i], pos, end);
+		if (pos == NULL) {
+			nai_realm_free(realm, num);
+			return NULL;
+		}
+	}
+
+	*count = num;
+	return realm;
+}
+
+
+static int nai_realm_match(struct nai_realm *realm, const char *home_realm)
+{
+	char *tmp, *pos, *end;
+	int match = 0;
+
+	if (realm->realm == NULL)
+		return 0;
+
+	if (os_strchr(realm->realm, ';') == NULL)
+		return os_strcasecmp(realm->realm, home_realm) == 0;
+
+	tmp = os_strdup(realm->realm);
+	if (tmp == NULL)
+		return 0;
+
+	pos = tmp;
+	while (*pos) {
+		end = os_strchr(pos, ';');
+		if (end)
+			*end = '\0';
+		if (os_strcasecmp(pos, home_realm) == 0) {
+			match = 1;
+			break;
+		}
+		if (end == NULL)
+			break;
+		pos = end + 1;
+	}
+
+	os_free(tmp);
+
+	return match;
+}
+
+
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	if (bss == NULL)
@@ -122,6 +383,41 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 }
 
 
+static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
+					      struct wpa_bss *bss)
+{
+	struct nai_realm *realm;
+	u16 count, i;
+	int found = 0;
+
+	if (bss->anqp_nai_realm == NULL)
+		return 0;
+
+	if (wpa_s->conf->home_realm == NULL)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Parsing NAI Realm list from "
+		   MACSTR, MAC2STR(bss->bssid));
+	realm = nai_realm_parse(bss->anqp_nai_realm, &count);
+	if (realm == NULL) {
+		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
+			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
+		return 0;
+	}
+
+	for (i = 0; i < count; i++) {
+		if (nai_realm_match(&realm[i], wpa_s->conf->home_realm)) {
+			found++;
+			break;
+		}
+	}
+
+	nai_realm_free(realm, count);
+
+	return found;
+}
+
+
 static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *selected = NULL;
@@ -130,9 +426,8 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	wpa_s->network_select = 0;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
-		if (bss->anqp_nai_realm == NULL)
+		if (!interworking_credentials_available(wpa_s, bss))
 			continue;
-		/* TODO: verify that matching credentials are available */
 		count++;
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR,
 			MAC2STR(bss->bssid));

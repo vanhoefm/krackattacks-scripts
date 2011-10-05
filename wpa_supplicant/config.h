@@ -440,6 +440,11 @@ struct wpa_config {
 	 * Homogeneous ESS. This is used only if interworking is enabled.
 	 */
 	u8 hessid[ETH_ALEN];
+
+	/**
+	 * home_realm - Home Realm for Interworking
+	 */
+	char *home_realm;
 };
 
 

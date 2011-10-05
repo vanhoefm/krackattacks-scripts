@@ -381,13 +381,17 @@ static int wpa_cli_cmd_set(struct wpa_ctrl *ctrl, int argc, char *argv[])
 		return 0;
 	}
 
-	if (argc != 2) {
+	if (argc != 1 && argc != 2) {
 		printf("Invalid SET command: needs two arguments (variable "
 		       "name and value)\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "SET %s %s", argv[0], argv[1]);
+	if (argc == 1)
+		res = os_snprintf(cmd, sizeof(cmd), "SET %s ", argv[0]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "SET %s %s",
+				  argv[0], argv[1]);
 	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
 		printf("Too long SET command.\n");
 		return -1;

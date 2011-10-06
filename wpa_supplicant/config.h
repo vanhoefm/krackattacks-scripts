@@ -460,6 +460,17 @@ struct wpa_config {
 	 * home_ca_cert - CA certificate for Interworking network selection
 	 */
 	char *home_ca_cert;
+
+	/**
+	 * home_imsi - IMSI in <MCC> | <MNC> | '-' | <MSIN> format
+	 */
+	char *home_imsi;
+
+	/**
+	 * home_milenage - Milenage parameters for SIM/USIM simulator in
+	 *	<Ki>:<OPc>:<SQN> format
+	 */
+	char *home_milenage;
 };
 
 

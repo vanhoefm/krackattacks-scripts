@@ -30,6 +30,18 @@
 #include "interworking.h"
 
 
+#if defined(EAP_SIM) | defined(EAP_SIM_DYNAMIC)
+#define INTERWORKING_3GPP
+#else
+#if defined(EAP_AKA) | defined(EAP_AKA_DYNAMIC)
+#define INTERWORKING_3GPP
+#else
+#if defined(EAP_AKA_PRIME) | defined(EAP_AKA_PRIME_DYNAMIC)
+#define INTERWORKING_3GPP
+#endif
+#endif
+#endif
+
 static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s);
 
 
@@ -343,7 +355,7 @@ static int nai_realm_match(struct nai_realm *realm, const char *home_realm)
 	char *tmp, *pos, *end;
 	int match = 0;
 
-	if (realm->realm == NULL)
+	if (realm->realm == NULL || home_realm == NULL)
 		return 0;
 
 	if (os_strchr(realm->realm, ';') == NULL)
@@ -431,6 +443,187 @@ struct nai_realm_eap * nai_realm_find_eap(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef INTERWORKING_3GPP
+
+static int plmn_id_match(struct wpabuf *anqp, const char *imsi)
+{
+	const char *sep;
+	u8 plmn[3];
+	const u8 *pos, *end;
+	u8 udhl;
+
+	sep = os_strchr(imsi, '-');
+	if (sep == NULL || (sep - imsi != 5 && sep - imsi != 6))
+		return 0;
+
+	/* See Annex A of 3GPP TS 24.234 v8.1.0 for description */
+	plmn[0] = (imsi[0] - '0') | ((imsi[1] - '0') << 4);
+	plmn[1] = imsi[2] - '0';
+	if (sep - imsi == 6)
+		plmn[1] |= (imsi[5] - '0') << 4;
+	else
+		plmn[1] |= 0xf0;
+	plmn[2] = (imsi[3] - '0') | ((imsi[4] - '0') << 4);
+
+	if (anqp == NULL)
+		return 0;
+	pos = wpabuf_head_u8(anqp);
+	end = pos + wpabuf_len(anqp);
+	if (pos + 2 > end)
+		return 0;
+	if (*pos != 0) {
+		wpa_printf(MSG_DEBUG, "Unsupported GUD version 0x%x", *pos);
+		return 0;
+	}
+	pos++;
+	udhl = *pos++;
+	if (pos + udhl > end) {
+		wpa_printf(MSG_DEBUG, "Invalid UDHL");
+		return 0;
+	}
+	end = pos + udhl;
+
+	while (pos + 2 <= end) {
+		u8 iei, len;
+		const u8 *l_end;
+		iei = *pos++;
+		len = *pos++ & 0x7f;
+		if (pos + len > end)
+			break;
+		l_end = pos + len;
+
+		if (iei == 0 && len > 0) {
+			/* PLMN List */
+			u8 num, i;
+			num = *pos++;
+			for (i = 0; i < num; i++) {
+				if (pos + 3 > end)
+					break;
+				if (os_memcmp(pos, plmn, 3) == 0)
+					return 1; /* Found matching PLMN */
+			}
+		}
+
+		pos = l_end;
+	}
+
+	return 0;
+}
+
+
+static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
+{
+	const char *sep, *msin;
+	char nai[100], *end, *pos;
+	size_t msin_len, plmn_len;
+
+	/*
+	 * TS 23.003, Clause 14 (3GPP to WLAN Interworking)
+	 * Root NAI:
+	 * <aka:0|sim:1><IMSI>@wlan.mnc<MNC>.mcc<MCC>.3gppnetwork.org
+	 * <MNC> is zero-padded to three digits in case two-digit MNC is used
+	 */
+
+	if (imsi == NULL || os_strlen(imsi) > 16) {
+		wpa_printf(MSG_DEBUG, "No valid IMSI available");
+		return -1;
+	}
+	sep = os_strchr(imsi, '-');
+	if (sep == NULL)
+		return -1;
+	plmn_len = sep - imsi;
+	if (plmn_len != 5 && plmn_len != 6)
+		return -1;
+	msin = sep + 1;
+	msin_len = os_strlen(msin);
+
+	pos = nai;
+	end = pos + sizeof(nai);
+	*pos++ = prefix;
+	os_memcpy(pos, imsi, plmn_len);
+	pos += plmn_len;
+	os_memcpy(pos, msin, msin_len);
+	pos += msin_len;
+	pos += os_snprintf(pos, end - pos, "@wlan.mnc");
+	if (plmn_len == 5) {
+		*pos++ = '0';
+		*pos++ = imsi[3];
+		*pos++ = imsi[4];
+	} else {
+		*pos++ = imsi[3];
+		*pos++ = imsi[4];
+		*pos++ = imsi[5];
+	}
+	pos += os_snprintf(pos, end - pos, ".mcc%c%c%c.3gppnetwork.org",
+			   imsi[0], imsi[1], imsi[2]);
+
+	return wpa_config_set_quoted(ssid, "identity", nai);
+}
+
+#endif /* INTERWORKING_3GPP */
+
+
+static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
+				     struct wpa_bss *bss)
+{
+#ifdef INTERWORKING_3GPP
+	struct wpa_ssid *ssid;
+	const u8 *ie;
+
+	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
+	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR " (3GPP)",
+		   MAC2STR(bss->bssid));
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (ssid == NULL)
+		return -1;
+
+	wpas_notify_network_added(wpa_s, ssid);
+	wpa_config_set_network_defaults(ssid);
+	ssid->temporary = 1;
+	ssid->ssid = os_zalloc(ie[1] + 1);
+	if (ssid->ssid == NULL)
+		goto fail;
+	os_memcpy(ssid->ssid, ie + 2, ie[1]);
+	ssid->ssid_len = ie[1];
+
+	/* TODO: figure out whether to use EAP-SIM, EAP-AKA, or EAP-AKA' */
+	if (wpa_config_set(ssid, "eap", "SIM", 0) < 0) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM not supported");
+		goto fail;
+	}
+	if (set_root_nai(ssid, wpa_s->conf->home_imsi, '1') < 0) {
+		wpa_printf(MSG_DEBUG, "Failed to set Root NAI");
+		goto fail;
+	}
+
+	if (wpa_s->conf->home_milenage && wpa_s->conf->home_milenage[0]) {
+		if (wpa_config_set_quoted(ssid, "password",
+					  wpa_s->conf->home_milenage) < 0)
+			goto fail;
+	} else {
+		/* TODO: PIN */
+		if (wpa_config_set_quoted(ssid, "pcsc", "") < 0)
+			goto fail;
+	}
+
+	if (wpa_s->conf->home_password && wpa_s->conf->home_password[0] &&
+	    wpa_config_set_quoted(ssid, "password", wpa_s->conf->home_password)
+	    < 0)
+		goto fail;
+
+	wpa_supplicant_select_network(wpa_s, ssid);
+
+	return 0;
+
+fail:
+	wpas_notify_network_removed(wpa_s, ssid);
+	wpa_config_remove_network(wpa_s->conf, ssid->id);
+#endif /* INTERWORKING_3GPP */
+	return -1;
+}
+
+
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	struct wpa_ssid *ssid;
@@ -453,8 +646,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	if (realm == NULL) {
 		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
 			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
-		nai_realm_free(realm, count);
-		return -1;
+		count = 0;
 	}
 
 	for (i = 0; i < count; i++) {
@@ -466,6 +658,12 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	}
 
 	if (!eap) {
+		if (interworking_connect_3gpp(wpa_s, bss) == 0) {
+			if (realm)
+				nai_realm_free(realm, count);
+			return 0;
+		}
+
 		wpa_printf(MSG_DEBUG, "Interworking: No matching credentials "
 			   "and EAP method found for " MACSTR,
 			   MAC2STR(bss->bssid));
@@ -564,8 +762,31 @@ fail:
 }
 
 
-static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
-					      struct wpa_bss *bss)
+static int interworking_credentials_available_3gpp(
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	int ret = 0;
+
+#ifdef INTERWORKING_3GPP
+	if (bss->anqp_3gpp == NULL)
+		return ret;
+
+	if (wpa_s->conf->home_imsi == NULL || !wpa_s->conf->home_imsi[0] ||
+	    wpa_s->conf->home_milenage == NULL ||
+	    !wpa_s->conf->home_milenage[0])
+		return ret;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Parsing 3GPP info from " MACSTR,
+		   MAC2STR(bss->bssid));
+	ret = plmn_id_match(bss->anqp_3gpp, wpa_s->conf->home_imsi);
+	wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
+#endif /* INTERWORKING_3GPP */
+	return ret;
+}
+
+
+static int interworking_credentials_available_realm(
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	struct nai_realm *realm;
 	u16 count, i;
@@ -598,6 +819,14 @@ static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
 	nai_realm_free(realm, count);
 
 	return found;
+}
+
+
+static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
+					      struct wpa_bss *bss)
+{
+	return interworking_credentials_available_realm(wpa_s, bss) ||
+		interworking_credentials_available_3gpp(wpa_s, bss);
 }
 
 

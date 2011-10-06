@@ -1730,6 +1730,8 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->home_username);
 	os_free(config->home_password);
 	os_free(config->home_ca_cert);
+	os_free(config->home_imsi);
+	os_free(config->home_milenage);
 	os_free(config);
 }
 
@@ -2489,6 +2491,8 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(home_username), 0 },
 	{ STR(home_password), 0 },
 	{ STR(home_ca_cert), 0 },
+	{ STR(home_imsi), 0 },
+	{ STR(home_milenage), 0 },
 	{ INT_RANGE(interworking, 0, 1), 0 },
 	{ FUNC(hessid), 0 }
 };

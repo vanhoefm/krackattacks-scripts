@@ -712,6 +712,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "home_password=%s\n", config->home_password);
 	if (config->home_ca_cert)
 		fprintf(f, "home_ca_cert=%s\n", config->home_ca_cert);
+	if (config->home_imsi)
+		fprintf(f, "home_imsi=%s\n", config->home_imsi);
+	if (config->home_milenage)
+		fprintf(f, "home_milenage=%s\n", config->home_milenage);
 	if (config->interworking)
 		fprintf(f, "interworking=%u\n", config->interworking);
 	if (!is_zero_ether_addr(config->hessid))

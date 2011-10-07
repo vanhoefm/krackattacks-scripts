@@ -240,6 +240,8 @@
 #define WLAN_ACTION_FT 6
 #define WLAN_ACTION_HT 7
 #define WLAN_ACTION_SA_QUERY 8
+#define WLAN_ACTION_WNM 10
+#define WLAN_ACTION_UNPROTECTED_WNM 11
 #define WLAN_ACTION_TDLS 12
 #define WLAN_ACTION_WMM 17 /* WMM Specification 1.1 */
 #define WLAN_ACTION_VENDOR_SPECIFIC 127
@@ -455,6 +457,18 @@ struct ieee80211_mgmt {
 					/* Vendor-specific content */
 					u8 variable[0];
 				} STRUCT_PACKED vs_public_action;
+				struct {
+					u8 action; /* 7 */
+					u8 dialog_token;
+					u8 req_mode;
+					le16 disassoc_timer;
+					u8 validity_interval;
+					/* BSS Termination Duration (optional),
+					 * Session Information URL (optional),
+					 * BSS Transition Candidate List
+					 * Entries */
+					u8 variable[0];
+				} STRUCT_PACKED bss_tm_req;
 			} u;
 		} STRUCT_PACKED action;
 	} u;
@@ -815,5 +829,45 @@ enum p2p_sd_status {
 /* AKM suite selectors */
 #define WLAN_AKM_SUITE_8021X		0x000FAC01
 #define WLAN_AKM_SUITE_PSK		0x000FAC02
+
+
+/* IEEE 802.11v - WNM Action field values */
+enum wnm_action {
+	WNM_EVENT_REQ = 0,
+	WNM_EVENT_REPORT = 1,
+	WNM_DIAGNOSTIC_REQ = 2,
+	WNM_DIAGNOSTIC_REPORT = 3,
+	WNM_LOCATION_CFG_REQ = 4,
+	WNM_LOCATION_CFG_RESP = 5,
+	WNM_BSS_TRANS_MGMT_QUERY = 6,
+	WNM_BSS_TRANS_MGMT_REQ = 7,
+	WNM_BSS_TRANS_MGMT_RESP = 8,
+	WNM_FMS_REQ = 9,
+	WNM_FMS_RESP = 10,
+	WNM_COLLOCATED_INTERFERENCE_REQ = 11,
+	WNM_COLLOCATED_INTERFERENCE_REPORT = 12,
+	WNM_TFS_REQ = 13,
+	WNM_TFS_RESP = 14,
+	WNM_TFS_NOTIFY = 15,
+	WNM_SLEEP_MODE_REQ = 16,
+	WNM_SLEEP_MODE_RESP = 17,
+	WNM_TIM_BROADCAST_REQ = 18,
+	WNM_TIM_BROADCAST_RESP = 19,
+	WNM_QOS_TRAFFIC_CAPAB_UPDATE = 20,
+	WNM_CHANNEL_USAGE_REQ = 21,
+	WNM_CHANNEL_USAGE_RESP = 22,
+	WNM_DMS_REQ = 23,
+	WNM_DMS_RESP = 24,
+	WNM_TIMING_MEASUREMENT_REQ = 25,
+	WNM_NOTIFICATION_REQ = 26,
+	WNM_NOTIFICATION_RESP = 27
+};
+
+/* IEEE 802.11v - BSS Transition Management Request - Request Mode */
+#define WNM_BSS_TM_REQ_PREF_CAND_LIST_INCLUDED BIT(0)
+#define WNM_BSS_TM_REQ_ABRIDGED BIT(1)
+#define WNM_BSS_TM_REQ_DISASSOC_IMMINENT BIT(2)
+#define WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED BIT(3)
+#define WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT BIT(4)
 
 #endif /* IEEE802_11_DEFS_H */

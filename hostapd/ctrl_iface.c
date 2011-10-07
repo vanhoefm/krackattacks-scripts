@@ -526,6 +526,57 @@ static int hostapd_ctrl_iface_wps_config(struct hostapd_data *hapd, char *txt)
 #endif /* CONFIG_WPS */
 
 
+static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
+					   const char *cmd)
+{
+	u8 addr[ETH_ALEN];
+	const char *url;
+	u8 buf[1000], *pos;
+	struct ieee80211_mgmt *mgmt;
+	size_t url_len;
+
+	if (hwaddr_aton(cmd, addr))
+		return -1;
+	url = cmd + 17;
+	if (*url != ' ')
+		return -1;
+	url++;
+	url_len = os_strlen(url);
+	if (url_len > 255)
+		return -1;
+
+	os_memset(buf, 0, sizeof(buf));
+	mgmt = (struct ieee80211_mgmt *) buf;
+	mgmt->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_ACTION);
+	os_memcpy(mgmt->da, addr, ETH_ALEN);
+	os_memcpy(mgmt->sa, hapd->own_addr, ETH_ALEN);
+	os_memcpy(mgmt->bssid, hapd->own_addr, ETH_ALEN);
+	mgmt->u.action.category = WLAN_ACTION_WNM;
+	mgmt->u.action.u.bss_tm_req.action = WNM_BSS_TRANS_MGMT_REQ;
+	mgmt->u.action.u.bss_tm_req.dialog_token = 1;
+	mgmt->u.action.u.bss_tm_req.req_mode =
+		WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT;
+	mgmt->u.action.u.bss_tm_req.disassoc_timer = host_to_le16(0);
+	mgmt->u.action.u.bss_tm_req.validity_interval = 0;
+
+	pos = mgmt->u.action.u.bss_tm_req.variable;
+
+	/* Session Information URL */
+	*pos++ = url_len;
+	os_memcpy(pos, url, url_len);
+	pos += url_len;
+
+	if (hostapd_drv_send_mlme(hapd, buf, pos - buf) < 0) {
+		wpa_printf(MSG_DEBUG, "Failed to send BSS Transition "
+			   "Management Request frame");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static int hostapd_ctrl_iface_get_config(struct hostapd_data *hapd,
 					 char *buf, size_t buflen)
 {
@@ -879,6 +930,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 		if (hostapd_ctrl_iface_wps_config(hapd, buf + 11) < 0)
 			reply_len = -1;
 #endif /* CONFIG_WPS */
+	} else if (os_strncmp(buf, "ESS_DISASSOC ", 13) == 0) {
+		if (hostapd_ctrl_iface_ess_disassoc(hapd, buf + 13))
+			reply_len = -1;
 	} else if (os_strcmp(buf, "GET_CONFIG") == 0) {
 		reply_len = hostapd_ctrl_iface_get_config(hapd, reply,
 							  reply_size);

@@ -2312,6 +2312,10 @@ static int nl80211_register_action_frames(struct wpa_driver_nl80211_data *drv)
 		drv->capa.key_mgmt |= WPA_DRIVER_CAPA_KEY_MGMT_FT |
 			WPA_DRIVER_CAPA_KEY_MGMT_FT_PSK;
 
+	/* WNM - BSS Transition Management Request */
+	if (nl80211_register_action_frame(drv, (u8 *) "\x0a\x07", 2) < 0)
+		return -1;
+
 	return 0;
 }
 

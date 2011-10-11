@@ -581,7 +581,10 @@ void p2p_process_go_neg_req(struct p2p_data *p2p, const u8 *sa,
 						   p2p->op_channel))
 				p2p_reselect_channel(p2p, &intersection);
 
-			p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
+			if (!p2p->ssid_set) {
+				p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
+				p2p->ssid_set = 1;
+			}
 		}
 
 		dev->go_state = go ? LOCAL_GO : REMOTE_GO;
@@ -950,7 +953,10 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 					   p2p->op_channel))
 			p2p_reselect_channel(p2p, &intersection);
 
-		p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
+		if (!p2p->ssid_set) {
+			p2p_build_ssid(p2p, p2p->ssid, &p2p->ssid_len);
+			p2p->ssid_set = 1;
+		}
 	}
 
 	p2p_set_state(p2p, P2P_GO_NEG);

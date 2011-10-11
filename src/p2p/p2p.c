@@ -1047,6 +1047,7 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	if (p2p_prepare_channel(p2p, force_freq) < 0)
 		return -1;
 
+	p2p->ssid_set = 0;
 	dev = p2p_get_device(p2p, peer_addr);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
@@ -1314,6 +1315,7 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 	res.peer_config_timeout = go ? peer->client_timeout : peer->go_timeout;
 
 	p2p_clear_timeout(p2p);
+	p2p->ssid_set = 0;
 	peer->go_neg_req_sent = 0;
 	peer->wps_method = WPS_NOT_READY;
 

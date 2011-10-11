@@ -273,6 +273,11 @@ struct p2p_data {
 	size_t ssid_len;
 
 	/**
+	 * ssid_set - Whether SSID is already set for GO Negotiation
+	 */
+	int ssid_set;
+
+	/**
 	 * Regulatory class for own operational channel
 	 */
 	u8 op_reg_class;

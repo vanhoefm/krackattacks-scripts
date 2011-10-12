@@ -3489,6 +3489,11 @@ void wpas_p2p_group_deinit(struct wpa_supplicant *wpa_s)
 {
 	p2p_group_deinit(wpa_s->p2p_group);
 	wpa_s->p2p_group = NULL;
+
+	wpa_s->ap_configured_cb = NULL;
+	wpa_s->ap_configured_cb_ctx = NULL;
+	wpa_s->ap_configured_cb_data = NULL;
+	wpa_s->connect_without_scan = NULL;
 }
 
 

@@ -1037,11 +1037,15 @@ static struct wpabuf * eap_fast_process_pac(struct eap_sm *sm,
 	} else {
 		/*
 		 * This is PAC refreshing, i.e., normal authentication that is
-		 * expected to be completed with an EAP-Success.
+		 * expected to be completed with an EAP-Success. However,
+		 * RFC 5422, Section 3.5 allows EAP-Failure to be sent even
+		 * after protected success exchange in case of EAP-Fast
+		 * provisioning, so we better use DECISION_COND_SUCC here
+		 * instead of DECISION_UNCOND_SUCC.
 		 */
 		wpa_printf(MSG_DEBUG, "EAP-FAST: Send PAC-Acknowledgement TLV "
 			   "- PAC refreshing completed successfully");
-		ret->decision = DECISION_UNCOND_SUCC;
+		ret->decision = DECISION_COND_SUCC;
 	}
 	ret->methodState = METHOD_DONE;
 	return eap_fast_tlv_pac_ack();

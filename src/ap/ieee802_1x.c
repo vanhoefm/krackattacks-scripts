@@ -2080,14 +2080,18 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 			       "Added PMKSA cache entry (IEEE 802.1X)");
 	}
 
-#ifdef CONFIG_WPS
-	if (!success && (sta->flags & WLAN_STA_WPS)) {
+	if (!success) {
 		/*
 		 * Many devices require deauthentication after WPS provisioning
 		 * and some may not be be able to do that themselves, so
-		 * disconnect the client here.
+		 * disconnect the client here. In addition, this may also
+		 * benefit IEEE 802.1X/EAPOL authentication cases, too since
+		 * the EAPOL PAE state machine would remain in HELD state for
+		 * considerable amount of time and some EAP methods, like
+		 * EAP-FAST with anonymous provisioning, may require another
+		 * EAPOL authentication to be started to complete connection.
 		 */
-		wpa_printf(MSG_DEBUG, "WPS: Force disconnection after "
+		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Force disconnection after "
 			   "EAP-Failure");
 		/* Add a small sleep to increase likelihood of previously
 		 * requested EAP-Failure TX getting out before this should the
@@ -2095,7 +2099,6 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 		 */
 		os_sleep(0, 10000);
 		ap_sta_disconnect(hapd, sta, sta->addr,
-				  WLAN_REASON_PREV_AUTH_NOT_VALID);
+				  WLAN_REASON_IEEE_802_1X_AUTH_FAILED);
 	}
-#endif /* CONFIG_WPS */
 }

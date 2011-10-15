@@ -1599,6 +1599,7 @@ static int ieee802_1x_get_eap_user(void *ctx, const u8 *identity,
 		os_memcpy(user->password, eap_user->password,
 			  eap_user->password_len);
 		user->password_len = eap_user->password_len;
+		user->password_hash = eap_user->password_hash;
 	}
 	user->force_version = eap_user->force_version;
 	user->ttls_auth = eap_user->ttls_auth;

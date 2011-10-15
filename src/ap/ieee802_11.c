@@ -1714,6 +1714,11 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
 			       "Could not add STA to kernel driver");
+
+		ap_sta_disconnect(hapd, sta, sta->addr,
+				  WLAN_REASON_DISASSOC_AP_BUSY);
+
+		goto fail;
 	}
 
 	if (sta->flags & WLAN_STA_WDS)

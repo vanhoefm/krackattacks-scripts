@@ -1,6 +1,6 @@
 /*
  * Command line editing and history
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -24,6 +24,8 @@
 static char cmdbuf[CMD_BUF_LEN];
 static int cmdbuf_pos = 0;
 static int cmdbuf_len = 0;
+static char currbuf[CMD_BUF_LEN];
+static int currbuf_valid = 0;
 
 #define HISTORY_MAX 100
 
@@ -231,11 +233,14 @@ static void history_prev(void)
 
 	if (history_curr ==
 	    dl_list_first(&history_list, struct edit_history, list)) {
-		cmdbuf[cmdbuf_len] = '\0';
-		history_add(cmdbuf);
+		if (!currbuf_valid) {
+			cmdbuf[cmdbuf_len] = '\0';
+			os_memcpy(currbuf, cmdbuf, cmdbuf_len + 1);
+			currbuf_valid = 1;
+			history_use();
+			return;
+		}
 	}
-
-	history_use();
 
 	if (history_curr ==
 	    dl_list_last(&history_list, struct edit_history, list))
@@ -243,6 +248,7 @@ static void history_prev(void)
 
 	history_curr = dl_list_entry(history_curr->list.next,
 				     struct edit_history, list);
+	history_use();
 }
 
 
@@ -250,8 +256,16 @@ static void history_next(void)
 {
 	if (history_curr == NULL ||
 	    history_curr ==
-	    dl_list_first(&history_list, struct edit_history, list))
+	    dl_list_first(&history_list, struct edit_history, list)) {
+		if (currbuf_valid) {
+			currbuf_valid = 0;
+			edit_clear_line();
+			cmdbuf_len = cmdbuf_pos = os_strlen(currbuf);
+			os_memcpy(cmdbuf, currbuf, cmdbuf_len);
+			edit_redraw();
+		}
 		return;
+	}
 
 	history_curr = dl_list_entry(history_curr->list.prev,
 				     struct edit_history, list);
@@ -309,6 +323,8 @@ static void history_debug_dump(void)
 	printf("\r");
 	dl_list_for_each_reverse(h, &history_list, struct edit_history, list)
 		printf("%s%s\n", h == history_curr ? "[C]" : "", h->str);
+	if (currbuf_valid)
+		printf("{%s}\n", currbuf);
 	edit_redraw();
 }
 
@@ -1104,6 +1120,7 @@ int edit_init(void (*cmd_cb)(void *ctx, char *cmd),
 	      char ** (*completion_cb)(void *ctx, const char *cmd, int pos),
 	      void *ctx, const char *history_file)
 {
+	currbuf[0] = '\0';
 	dl_list_init(&history_list);
 	history_curr = NULL;
 	if (history_file)

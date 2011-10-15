@@ -52,13 +52,13 @@ static void wpa_supplicant_gen_assoc_event(struct wpa_supplicant *wpa_s)
 
 
 #ifdef CONFIG_WPS
-static int wpas_wps_in_use(struct wpa_config *conf,
+static int wpas_wps_in_use(struct wpa_supplicant *wpa_s,
 			   enum wps_request_type *req_type)
 {
 	struct wpa_ssid *ssid;
 	int wps = 0;
 
-	for (ssid = conf->ssid; ssid; ssid = ssid->next) {
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
 		if (!(ssid->key_mgmt & WPA_KEY_MGMT_WPS))
 			continue;
 
@@ -70,6 +70,14 @@ static int wpas_wps_in_use(struct wpa_config *conf,
 		if (os_strstr(ssid->eap.phase1, "pbc=1"))
 			return 2;
 	}
+
+#ifdef CONFIG_P2P
+	wpa_s->wps->dev.p2p = 1;
+	if (!wps) {
+		wps = 1;
+		*req_type = WPS_REQ_ENROLLEE_INFO;
+	}
+#endif /* CONFIG_P2P */
 
 	return wps;
 }
@@ -240,16 +248,96 @@ wpa_supplicant_build_filter_ssids(struct wpa_config *conf, size_t *num_ssids)
 }
 
 
+static void wpa_supplicant_optimize_freqs(
+	struct wpa_supplicant *wpa_s, struct wpa_driver_scan_params *params)
+{
+#ifdef CONFIG_P2P
+	if (params->freqs == NULL && wpa_s->p2p_in_provisioning &&
+	    wpa_s->go_params) {
+		/* Optimize provisioning state scan based on GO information */
+		if (wpa_s->p2p_in_provisioning < 5 &&
+		    wpa_s->go_params->freq > 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only GO "
+				"preferred frequency %d MHz",
+				wpa_s->go_params->freq);
+			params->freqs = os_zalloc(2 * sizeof(int));
+			if (params->freqs)
+				params->freqs[0] = wpa_s->go_params->freq;
+		} else if (wpa_s->p2p_in_provisioning < 8 &&
+			   wpa_s->go_params->freq_list[0]) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only common "
+				"channels");
+			int_array_concat(&params->freqs,
+					 wpa_s->go_params->freq_list);
+			if (params->freqs)
+				int_array_sort_unique(params->freqs);
+		}
+		wpa_s->p2p_in_provisioning++;
+	}
+#endif /* CONFIG_P2P */
+
+#ifdef CONFIG_WPS
+	if (params->freqs == NULL && wpa_s->after_wps && wpa_s->wps_freq) {
+		/*
+		 * Optimize post-provisioning scan based on channel used
+		 * during provisioning.
+		 */
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Scan only frequency %u MHz "
+			"that was used during provisioning", wpa_s->wps_freq);
+		params->freqs = os_zalloc(2 * sizeof(int));
+		if (params->freqs)
+			params->freqs[0] = wpa_s->wps_freq;
+		wpa_s->after_wps--;
+	}
+
+#endif /* CONFIG_WPS */
+}
+
+
+static struct wpabuf *
+wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s,
+			 struct wpa_driver_scan_params *params)
+{
+	struct wpabuf *wps_ie = NULL;
+#ifdef CONFIG_WPS
+	int wps = 0;
+	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
+
+	wps = wpas_wps_in_use(wpa_s, &req_type);
+
+	if (wps) {
+		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
+						wpa_s->wps->uuid, req_type,
+						0, NULL);
+		if (wps_ie) {
+			params->extra_ies = wpabuf_head(wps_ie);
+			params->extra_ies_len = wpabuf_len(wps_ie);
+		}
+	}
+
+#ifdef CONFIG_P2P
+	if (wps_ie) {
+		size_t ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
+		if (wpabuf_resize(&wps_ie, ielen) == 0) {
+			wpas_p2p_scan_ie(wpa_s, wps_ie);
+			params->extra_ies = wpabuf_head(wps_ie);
+			params->extra_ies_len = wpabuf_len(wps_ie);
+		}
+	}
+#endif /* CONFIG_P2P */
+
+#endif /* CONFIG_WPS */
+
+	return wps_ie;
+}
+
+
 static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
 	int scan_req = 0, ret;
-	struct wpabuf *wps_ie = NULL;
-#ifdef CONFIG_WPS
-	int wps = 0;
-	enum wps_request_type req_type = WPS_REQ_ENROLLEE_INFO;
-#endif /* CONFIG_WPS */
+	struct wpabuf *wps_ie;
 	struct wpa_driver_scan_params params;
 	size_t max_ssids;
 	enum wpa_states prev_state;
@@ -306,10 +394,6 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		if (max_ssids > WPAS_MAX_SCAN_SSIDS)
 			max_ssids = WPAS_MAX_SCAN_SSIDS;
 	}
-
-#ifdef CONFIG_WPS
-	wps = wpas_wps_in_use(wpa_s->conf, &req_type);
-#endif /* CONFIG_WPS */
 
 	scan_req = wpa_s->scan_req;
 	wpa_s->scan_req = 0;
@@ -413,72 +497,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 			"SSID");
 	}
 
-#ifdef CONFIG_P2P
-	wpa_s->wps->dev.p2p = 1;
-	if (!wps) {
-		wps = 1;
-		req_type = WPS_REQ_ENROLLEE_INFO;
-	}
-
-	if (params.freqs == NULL && wpa_s->p2p_in_provisioning &&
-	    wpa_s->go_params) {
-		/* Optimize provisioning state scan based on GO information */
-		if (wpa_s->p2p_in_provisioning < 5 &&
-		    wpa_s->go_params->freq > 0) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only GO "
-				"preferred frequency %d MHz",
-				wpa_s->go_params->freq);
-			params.freqs = os_zalloc(2 * sizeof(int));
-			if (params.freqs)
-				params.freqs[0] = wpa_s->go_params->freq;
-		} else if (wpa_s->p2p_in_provisioning < 8 &&
-			   wpa_s->go_params->freq_list[0]) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Scan only common "
-				"channels");
-			int_array_concat(&params.freqs,
-					 wpa_s->go_params->freq_list);
-			if (params.freqs)
-				int_array_sort_unique(params.freqs);
-		}
-		wpa_s->p2p_in_provisioning++;
-	}
-#endif /* CONFIG_P2P */
-
-#ifdef CONFIG_WPS
-	if (params.freqs == NULL && wpa_s->after_wps && wpa_s->wps_freq) {
-		/*
-		 * Optimize post-provisioning scan based on channel used
-		 * during provisioning.
-		 */
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Scan only frequency %u MHz "
-			"that was used during provisioning", wpa_s->wps_freq);
-		params.freqs = os_zalloc(2 * sizeof(int));
-		if (params.freqs)
-			params.freqs[0] = wpa_s->wps_freq;
-		wpa_s->after_wps--;
-	}
-
-	if (wps) {
-		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
-						wpa_s->wps->uuid, req_type,
-						0, NULL);
-		if (wps_ie) {
-			params.extra_ies = wpabuf_head(wps_ie);
-			params.extra_ies_len = wpabuf_len(wps_ie);
-		}
-	}
-#endif /* CONFIG_WPS */
-
-#ifdef CONFIG_P2P
-	if (wps_ie) {
-		size_t ielen = p2p_scan_ie_buf_len(wpa_s->global->p2p);
-		if (wpabuf_resize(&wps_ie, ielen) == 0) {
-			wpas_p2p_scan_ie(wpa_s, wps_ie);
-			params.extra_ies = wpabuf_head(wps_ie);
-			params.extra_ies_len = wpabuf_len(wps_ie);
-		}
-	}
-#endif /* CONFIG_P2P */
+	wpa_supplicant_optimize_freqs(wpa_s, &params);
+	wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
 
 	if (params.freqs == NULL && wpa_s->next_scan_freqs) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Optimize scan based on previously "

@@ -4698,7 +4698,19 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	int optval;
 	socklen_t optlen;
 
-	snprintf(buf, IFNAMSIZ, "mon.%s", drv->first_bss.ifname);
+	if (os_strncmp(drv->first_bss.ifname, "p2p-", 4) == 0) {
+		/*
+		 * P2P interface name is of the format p2p-%s-%d. For monitor
+		 * interface name corresponding to P2P GO, replace "p2p-" with
+		 * "mon-" to retain the same interface name length and to
+		 * indicate that it is a monitor interface.
+		 */
+		snprintf(buf, IFNAMSIZ, "mon-%s", drv->first_bss.ifname + 4);
+	} else {
+		/* Non-P2P interface with AP functionality. */
+		snprintf(buf, IFNAMSIZ, "mon.%s", drv->first_bss.ifname);
+	}
+
 	buf[IFNAMSIZ - 1] = '\0';
 
 	drv->monitor_ifidx =

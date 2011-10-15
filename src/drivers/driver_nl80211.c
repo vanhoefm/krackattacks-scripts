@@ -4123,6 +4123,9 @@ static int wpa_driver_nl80211_set_freq(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg;
 	int ret;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Set freq %d (ht_enabled=%d "
+		   "sec_channel_offset=%d)",
+		   freq, ht_enabled, sec_channel_offset);
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -1;

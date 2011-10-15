@@ -599,8 +599,8 @@ struct wpa_driver_ap_params {
 	/**
 	 * beacon_ies - WPS/P2P IE(s) for Beacon frames
 	 *
-	 * This is used to add IEs like WPS IE and P2P IE by drivers that do not
-	 * use the full Beacon template.
+	 * This is used to add IEs like WPS IE and P2P IE by drivers that do
+	 * not use the full Beacon template.
 	 */
 	const struct wpabuf *beacon_ies;
 
@@ -1460,7 +1460,7 @@ struct wpa_driver_ops {
 	 * This is an optional function to configure the kernel driver to
 	 * enable/disable IEEE 802.1X support and set WPA/WPA2 parameters. This
 	 * can be left undefined (set to %NULL) if IEEE 802.1X support is
-	 * always enabled and the driver uses set_beacon() to set WPA/RSN IE
+	 * always enabled and the driver uses set_ap() to set WPA/RSN IE
 	 * for Beacon frames.
 	 */
 	int (*set_ieee8021x)(void *priv, struct wpa_bss_params *params);
@@ -1473,7 +1473,7 @@ struct wpa_driver_ops {
 	 *
 	 * This is an optional function to configure privacy field in the
 	 * kernel driver for Beacon frames. This can be left undefined (set to
-	 * %NULL) if the driver uses the Beacon template from set_beacon().
+	 * %NULL) if the driver uses the Beacon template from set_ap().
 	 */
 	int (*set_privacy)(void *priv, int enabled);
 
@@ -1515,7 +1515,7 @@ struct wpa_driver_ops {
 	 * This is an optional function to add information elements in the
 	 * kernel driver for Beacon and Probe Response frames. This can be left
 	 * undefined (set to %NULL) if the driver uses the Beacon template from
-	 * set_beacon().
+	 * set_ap().
 	 */
 	int (*set_generic_elem)(void *priv, const u8 *elem, size_t elem_len);
 
@@ -1589,8 +1589,7 @@ struct wpa_driver_ops {
 	 * Returns: Length of the SSID on success, -1 on failure
 	 *
 	 * This function need not be implemented if the driver uses Beacon
-	 * template from set_beacon() and does not reply to Probe Request
-	 * frames.
+	 * template from set_ap() and does not reply to Probe Request frames.
 	 */
 	int (*hapd_get_ssid)(void *priv, u8 *buf, int len);
 
@@ -1855,7 +1854,7 @@ struct wpa_driver_ops {
 	 *
 	 * This is an optional function to add WPS IE in the kernel driver for
 	 * Beacon and Probe Response frames. This can be left undefined (set
-	 * to %NULL) if the driver uses the Beacon template from set_beacon()
+	 * to %NULL) if the driver uses the Beacon template from set_ap()
 	 * and does not process Probe Request frames. If the driver takes care
 	 * of (Re)Association frame processing, the assocresp buffer includes
 	 * WPS IE(s) that need to be added to (Re)Association Response frames

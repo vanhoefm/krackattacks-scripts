@@ -699,6 +699,7 @@ CFLAGS += -DCONFIG_NO_RANDOM_POOL
 else
 OBJS += ../src/crypto/random.o
 HOBJS += ../src/crypto/random.o
+HOBJS += ../src/utils/eloop.o
 HOBJS += $(SHA1OBJS)
 HOBJS += ../src/crypto/md5.o
 endif

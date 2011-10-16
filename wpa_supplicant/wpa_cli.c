@@ -2219,6 +2219,42 @@ static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
 #endif /* CONFIG_P2P */
 
 
+#ifdef CONFIG_INTERWORKING
+static int wpa_cli_cmd_fetch_anqp(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "FETCH_ANQP");
+}
+
+
+static int wpa_cli_cmd_stop_fetch_anqp(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "STOP_FETCH_ANQP");
+}
+
+
+static int wpa_cli_cmd_anqp_get(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid ANQP_GET command: needs two arguments "
+		       "(addr and info id list)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "ANQP_GET %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+#endif /* CONFIG_INTERWORKING */
+
+
 static int wpa_cli_cmd_sta_autoconnect(struct wpa_ctrl *ctrl, int argc,
 				       char *argv[])
 {
@@ -2613,6 +2649,15 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "p2p_ext_listen", wpa_cli_cmd_p2p_ext_listen, cli_cmd_flag_none,
 	  "[<period> <interval>] = set extended listen timing" },
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_INTERWORKING
+	{ "fetch_anqp", wpa_cli_cmd_fetch_anqp, cli_cmd_flag_none,
+	  "= fetch ANQP information for all APs" },
+	{ "stop_fetch_anqp", wpa_cli_cmd_stop_fetch_anqp, cli_cmd_flag_none,
+	  "= stop fetch_anqp operation" },
+	{ "anqp_get", wpa_cli_cmd_anqp_get, cli_cmd_flag_none,
+	  "<addr> <info id>[,<info id>]... = request ANQP information" },
+#endif /* CONFIG_INTERWORKING */
 	{ "sta_autoconnect", wpa_cli_cmd_sta_autoconnect, cli_cmd_flag_none,
 	  "<0/1> = disable/enable automatic reconnection" },
 	{ "tdls_discover", wpa_cli_cmd_tdls_discover,

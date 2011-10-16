@@ -50,6 +50,15 @@ static void wpa_bss_remove(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		" SSID '%s'", bss->id, MAC2STR(bss->bssid),
 		wpa_ssid_txt(bss->ssid, bss->ssid_len));
 	wpas_notify_bss_removed(wpa_s, bss->bssid, bss->id);
+#ifdef CONFIG_INTERWORKING
+	wpabuf_free(bss->anqp_venue_name);
+	wpabuf_free(bss->anqp_network_auth_type);
+	wpabuf_free(bss->anqp_roaming_consortium);
+	wpabuf_free(bss->anqp_ip_addr_type_availability);
+	wpabuf_free(bss->anqp_nai_realm);
+	wpabuf_free(bss->anqp_3gpp);
+	wpabuf_free(bss->anqp_domain_name);
+#endif /* CONFIG_INTERWORKING */
 	os_free(bss);
 }
 

@@ -23,6 +23,7 @@ struct wpa_scan_res;
 #define WPA_BSS_LEVEL_DBM		BIT(3)
 #define WPA_BSS_AUTHENTICATED		BIT(4)
 #define WPA_BSS_ASSOCIATED		BIT(5)
+#define WPA_BSS_ANQP_FETCH_TRIED	BIT(6)
 
 /**
  * struct wpa_bss - BSS table
@@ -65,6 +66,15 @@ struct wpa_bss {
 	int level;
 	u64 tsf;
 	struct os_time last_update;
+#ifdef CONFIG_INTERWORKING
+	struct wpabuf *anqp_venue_name;
+	struct wpabuf *anqp_network_auth_type;
+	struct wpabuf *anqp_roaming_consortium;
+	struct wpabuf *anqp_ip_addr_type_availability;
+	struct wpabuf *anqp_nai_realm;
+	struct wpabuf *anqp_3gpp;
+	struct wpabuf *anqp_domain_name;
+#endif /* CONFIG_INTERWORKING */
 	size_t ie_len;
 	size_t beacon_ie_len;
 	/* followed by ie_len octets of IEs */

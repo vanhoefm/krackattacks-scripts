@@ -210,6 +210,7 @@ endif
 endif
 
 ifdef CONFIG_INTERWORKING
+OBJS += interworking.o
 CFLAGS += -DCONFIG_INTERWORKING
 NEED_GAS=y
 endif

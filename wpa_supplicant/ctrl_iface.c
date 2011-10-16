@@ -38,6 +38,7 @@
 #include "bss.h"
 #include "scan.h"
 #include "ctrl_iface.h"
+#include "interworking.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -1870,6 +1871,41 @@ static int wpa_supplicant_ctrl_iface_get_capability(
 }
 
 
+#ifdef CONFIG_INTERWORKING
+static char * anqp_add_hex(char *pos, char *end, const char *title,
+			   struct wpabuf *data)
+{
+	char *start = pos;
+	size_t i;
+	int ret;
+	const u8 *d;
+
+	if (data == NULL)
+		return start;
+
+	ret = os_snprintf(pos, end - pos, "%s=", title);
+	if (ret < 0 || ret >= end - pos)
+		return start;
+	pos += ret;
+
+	d = wpabuf_head_u8(data);
+	for (i = 0; i < wpabuf_len(data); i++) {
+		ret = os_snprintf(pos, end - pos, "%02x", *d++);
+		if (ret < 0 || ret >= end - pos)
+			return start;
+		pos += ret;
+	}
+
+	ret = os_snprintf(pos, end - pos, "\n");
+	if (ret < 0 || ret >= end - pos)
+		return start;
+	pos += ret;
+
+	return pos;
+}
+#endif /* CONFIG_INTERWORKING */
+
+
 static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 					 const char *cmd, char *buf,
 					 size_t buflen)
@@ -2012,6 +2048,20 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		return pos - buf;
 	pos += ret;
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_INTERWORKING
+	pos = anqp_add_hex(pos, end, "anqp_venue_name", bss->anqp_venue_name);
+	pos = anqp_add_hex(pos, end, "anqp_network_auth_type",
+			   bss->anqp_network_auth_type);
+	pos = anqp_add_hex(pos, end, "anqp_roaming_consortium",
+			   bss->anqp_roaming_consortium);
+	pos = anqp_add_hex(pos, end, "anqp_ip_addr_type_availability",
+			   bss->anqp_ip_addr_type_availability);
+	pos = anqp_add_hex(pos, end, "anqp_nai_realm", bss->anqp_nai_realm);
+	pos = anqp_add_hex(pos, end, "anqp_3gpp", bss->anqp_3gpp);
+	pos = anqp_add_hex(pos, end, "anqp_domain_name",
+			   bss->anqp_domain_name);
+#endif /* CONFIG_INTERWORKING */
 
 	return pos - buf;
 }
@@ -2880,6 +2930,38 @@ static int p2p_ctrl_ext_listen(struct wpa_supplicant *wpa_s, char *cmd)
 #endif /* CONFIG_P2P */
 
 
+#ifdef CONFIG_INTERWORKING
+static int get_anqp(struct wpa_supplicant *wpa_s, char *dst)
+{
+	u8 dst_addr[ETH_ALEN];
+	int used;
+	char *pos;
+#define MAX_ANQP_INFO_ID 100
+	u16 id[MAX_ANQP_INFO_ID];
+	size_t num_id = 0;
+
+	used = hwaddr_aton2(dst, dst_addr);
+	if (used < 0)
+		return -1;
+	pos = dst + used;
+	while (num_id < MAX_ANQP_INFO_ID) {
+		id[num_id] = atoi(pos);
+		if (id[num_id])
+			num_id++;
+		pos = os_strchr(pos + 1, ',');
+		if (pos == NULL)
+			break;
+		pos++;
+	}
+
+	if (num_id == 0)
+		return -1;
+
+	return anqp_send_req(wpa_s, dst_addr, id, num_id);
+}
+#endif /* CONFIG_INTERWORKING */
+
+
 static int wpa_supplicant_ctrl_iface_sta_autoconnect(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
@@ -3174,6 +3256,16 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (p2p_ctrl_ext_listen(wpa_s, "") < 0)
 			reply_len = -1;
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_INTERWORKING
+	} else if (os_strcmp(buf, "FETCH_ANQP") == 0) {
+		if (interworking_fetch_anqp(wpa_s) < 0)
+			reply_len = -1;
+	} else if (os_strcmp(buf, "STOP_FETCH_ANQP") == 0) {
+		interworking_stop_fetch_anqp(wpa_s);
+	} else if (os_strncmp(buf, "ANQP_GET ", 9) == 0) {
+		if (get_anqp(wpa_s, buf + 9) < 0)
+			reply_len = -1;
+#endif /* CONFIG_INTERWORKING */
 	} else if (os_strncmp(buf, WPA_CTRL_RSP, os_strlen(WPA_CTRL_RSP)) == 0)
 	{
 		if (wpa_supplicant_ctrl_iface_ctrl_rsp(

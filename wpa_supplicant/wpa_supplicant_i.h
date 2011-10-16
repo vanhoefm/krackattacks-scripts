@@ -589,6 +589,10 @@ struct wpa_supplicant {
 	int best_overall_freq;
 
 	struct gas_query *gas;
+
+#ifdef CONFIG_INTERWORKING
+	int fetch_anqp_in_progress;
+#endif /* CONFIG_INTERWORKING */
 };
 
 

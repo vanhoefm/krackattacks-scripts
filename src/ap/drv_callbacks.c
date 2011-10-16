@@ -43,10 +43,10 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	struct sta_info *sta;
 	int new_assoc, res;
 	struct ieee802_11_elems elems;
-#ifdef CONFIG_P2P
+#if defined(CONFIG_P2P) || defined(CONFIG_WPS)
 	const u8 *all_ies = ie;
 	size_t all_ies_len = ielen;
-#endif /* CONFIG_P2P */
+#endif /* CONFIG_P2P || CONFIG_WPS */
 
 	if (addr == NULL) {
 		/*
@@ -173,24 +173,23 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	} else if (hapd->conf->wps_state) {
 #ifdef CONFIG_WPS
 		struct wpabuf *wps;
-		wps = ieee802_11_vendor_ie_concat(ie, ielen,
-						  WPS_IE_VENDOR_TYPE);
+		if (all_ies)
+			wps = ieee802_11_vendor_ie_concat(all_ies, all_ies_len,
+							  WPS_IE_VENDOR_TYPE);
+		else
+			wps = NULL;
 #ifdef CONFIG_WPS_STRICT
-		if (ie) {
-			if (wps && wps_validate_assoc_req(wps) < 0) {
-				hostapd_drv_sta_disassoc(
-					hapd, sta->addr,
-					WLAN_REASON_INVALID_IE);
-				ap_free_sta(hapd, sta);
-				wpabuf_free(wps);
-				return -1;
-			}
+		if (wps && wps_validate_assoc_req(wps) < 0) {
+			hostapd_drv_sta_disassoc(hapd, sta->addr,
+						 WLAN_REASON_INVALID_IE);
+			ap_free_sta(hapd, sta);
+			wpabuf_free(wps);
+			return -1;
 		}
 #endif /* CONFIG_WPS_STRICT */
-		if (ie && ielen > 4 && ie[0] == 0xdd && ie[1] >= 4 &&
-		    os_memcmp(ie + 2, "\x00\x50\xf2\x04", 4) == 0) {
+		if (wps) {
 			sta->flags |= WLAN_STA_WPS;
-			if (wps && wps_is_20(wps)) {
+			if (wps_is_20(wps)) {
 				wpa_printf(MSG_DEBUG, "WPS: STA supports "
 					   "WPS 2.0");
 				sta->flags |= WLAN_STA_WPS2;

@@ -1894,8 +1894,7 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 #endif /* CONFIG_P2P */
 
 	/* Do nothing if the control interface is not turned on */
-	if (wpa_s == NULL || wpa_s->global == NULL ||
-	    wpa_s->dbus_new_path == NULL)
+	if (wpa_s->global == NULL || wpa_s->dbus_new_path == NULL)
 		return 0;
 	ctrl_iface = wpa_s->global->dbus;
 	if (ctrl_iface == NULL)

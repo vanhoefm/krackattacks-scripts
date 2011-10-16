@@ -185,7 +185,6 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 				wpabuf_free(wps);
 				return -1;
 			}
-			wpabuf_free(wps);
 		}
 #endif /* CONFIG_WPS_STRICT */
 		if (ie && ielen > 4 && ie[0] == 0xdd && ie[1] >= 4 &&

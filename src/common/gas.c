@@ -72,7 +72,7 @@ gas_build_resp(u8 action, u8 dialog_token, u16 status_code, u8 frag_id,
 }
 
 
-static struct wpabuf *
+struct wpabuf *
 gas_build_initial_resp(u8 dialog_token, u16 status_code, u16 comeback_delay,
 		       size_t size)
 {

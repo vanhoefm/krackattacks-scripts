@@ -45,6 +45,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	struct ieee802_11_elems elems;
 	const u8 *ie;
 	size_t ielen;
+	u16 reason = WLAN_REASON_UNSPECIFIED;
 
 	if (addr == NULL) {
 		/*
@@ -146,27 +147,24 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 		res = wpa_validate_wpa_ie(hapd->wpa_auth, sta->wpa_sm,
 					  ie, ielen, NULL, 0);
 		if (res != WPA_IE_OK) {
-			int resp;
 			wpa_printf(MSG_DEBUG, "WPA/RSN information element "
 				   "rejected? (res %u)", res);
 			wpa_hexdump(MSG_DEBUG, "IE", ie, ielen);
 			if (res == WPA_INVALID_GROUP)
-				resp = WLAN_REASON_GROUP_CIPHER_NOT_VALID;
+				reason = WLAN_REASON_GROUP_CIPHER_NOT_VALID;
 			else if (res == WPA_INVALID_PAIRWISE)
-				resp = WLAN_REASON_PAIRWISE_CIPHER_NOT_VALID;
+				reason = WLAN_REASON_PAIRWISE_CIPHER_NOT_VALID;
 			else if (res == WPA_INVALID_AKMP)
-				resp = WLAN_REASON_AKMP_NOT_VALID;
+				reason = WLAN_REASON_AKMP_NOT_VALID;
 #ifdef CONFIG_IEEE80211W
 			else if (res == WPA_MGMT_FRAME_PROTECTION_VIOLATION)
-				resp = WLAN_REASON_INVALID_IE;
+				reason = WLAN_REASON_INVALID_IE;
 			else if (res == WPA_INVALID_MGMT_GROUP_CIPHER)
-				resp = WLAN_REASON_GROUP_CIPHER_NOT_VALID;
+				reason = WLAN_REASON_GROUP_CIPHER_NOT_VALID;
 #endif /* CONFIG_IEEE80211W */
 			else
-				resp = WLAN_REASON_INVALID_IE;
-			hostapd_drv_sta_disassoc(hapd, sta->addr, resp);
-			ap_free_sta(hapd, sta);
-			return -1;
+				reason = WLAN_REASON_INVALID_IE;
+			goto fail;
 		}
 	} else if (hapd->conf->wps_state) {
 #ifdef CONFIG_WPS
@@ -178,11 +176,9 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 			wps = NULL;
 #ifdef CONFIG_WPS_STRICT
 		if (wps && wps_validate_assoc_req(wps) < 0) {
-			hostapd_drv_sta_disassoc(hapd, sta->addr,
-						 WLAN_REASON_INVALID_IE);
-			ap_free_sta(hapd, sta);
+			reason = WLAN_REASON_INVALID_IE;
 			wpabuf_free(wps);
-			return -1;
+			goto fail;
 		}
 #endif /* CONFIG_WPS_STRICT */
 		if (wps) {
@@ -215,6 +211,11 @@ skip_wpa_check:
 #endif /* CONFIG_P2P */
 
 	return 0;
+
+fail:
+	hostapd_drv_sta_disassoc(hapd, sta->addr, reason);
+	ap_free_sta(hapd, sta);
+	return -1;
 }
 
 

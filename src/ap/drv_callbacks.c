@@ -38,15 +38,13 @@
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
-			const u8 *ie, size_t ielen, int reassoc)
+			const u8 *req_ies, size_t req_ies_len, int reassoc)
 {
 	struct sta_info *sta;
 	int new_assoc, res;
 	struct ieee802_11_elems elems;
-#if defined(CONFIG_P2P) || defined(CONFIG_WPS)
-	const u8 *all_ies = ie;
-	size_t all_ies_len = ielen;
-#endif /* CONFIG_P2P || CONFIG_WPS */
+	const u8 *ie;
+	size_t ielen;
 
 	if (addr == NULL) {
 		/*
@@ -65,7 +63,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	hostapd_logger(hapd, addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "associated");
 
-	ieee802_11_parse_elems(ie, ielen, &elems, 0);
+	ieee802_11_parse_elems(req_ies, req_ies_len, &elems, 0);
 	if (elems.wps_ie) {
 		ie = elems.wps_ie - 2;
 		ielen = elems.wps_ie_len + 2;
@@ -98,7 +96,7 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 #ifdef CONFIG_P2P
 	if (elems.p2p) {
 		wpabuf_free(sta->p2p_ie);
-		sta->p2p_ie = ieee802_11_vendor_ie_concat(all_ies, all_ies_len,
+		sta->p2p_ie = ieee802_11_vendor_ie_concat(req_ies, req_ies_len,
 							  P2P_IE_VENDOR_TYPE);
 	}
 #endif /* CONFIG_P2P */
@@ -173,8 +171,8 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	} else if (hapd->conf->wps_state) {
 #ifdef CONFIG_WPS
 		struct wpabuf *wps;
-		if (all_ies)
-			wps = ieee802_11_vendor_ie_concat(all_ies, all_ies_len,
+		if (req_ies)
+			wps = ieee802_11_vendor_ie_concat(req_ies, req_ies_len,
 							  WPS_IE_VENDOR_TYPE);
 		else
 			wps = NULL;
@@ -213,7 +211,7 @@ skip_wpa_check:
 
 #ifdef CONFIG_P2P
 	p2p_group_notif_assoc(hapd->p2p_group, sta->addr,
-			      all_ies, all_ies_len);
+			      req_ies, req_ies_len);
 #endif /* CONFIG_P2P */
 
 	return 0;

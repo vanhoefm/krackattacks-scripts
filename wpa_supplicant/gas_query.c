@@ -33,8 +33,8 @@ struct gas_query_pending {
 	u8 addr[ETH_ALEN];
 	u8 dialog_token;
 	u8 next_frag_id;
-	int wait_comeback:1;
-	int offchannel_tx_started:1;
+	unsigned int wait_comeback:1;
+	unsigned int offchannel_tx_started:1;
 	int freq;
 	u16 status_code;
 	struct wpabuf *adv_proto;

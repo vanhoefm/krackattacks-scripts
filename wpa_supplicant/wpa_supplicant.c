@@ -1289,6 +1289,22 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	}
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_INTERWORKING
+	if (wpa_s->conf->interworking) {
+		u8 *pos = wpa_ie;
+		if (wpa_ie_len > 0 && pos[0] == WLAN_EID_RSN)
+			pos += 2 + pos[1];
+		os_memmove(pos + 6, pos, wpa_ie_len - (pos - wpa_ie));
+		wpa_ie_len += 6;
+		*pos++ = WLAN_EID_EXT_CAPAB;
+		*pos++ = 4;
+		*pos++ = 0x00;
+		*pos++ = 0x00;
+		*pos++ = 0x00;
+		*pos++ = 0x80; /* Bit 31 - Interworking */
+	}
+#endif /* CONFIG_INTERWORKING */
+
 	wpa_clear_keys(wpa_s, bss ? bss->bssid : NULL);
 	use_crypt = 1;
 	cipher_pairwise = cipher_suite2driver(wpa_s->pairwise_cipher);

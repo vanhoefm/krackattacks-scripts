@@ -23,6 +23,7 @@
 #include "scan.h"
 #include "notify.h"
 #include "gas_query.h"
+#include "hs20_supplicant.h"
 #include "interworking.h"
 
 
@@ -114,6 +115,28 @@ static int interworking_anqp_send_req(struct wpa_supplicant *wpa_s,
 
 	wpa_printf(MSG_DEBUG, "Interworking: ANQP Query Request to " MACSTR,
 		   MAC2STR(bss->bssid));
+
+#ifdef CONFIG_HS20
+	if (wpa_bss_get_vendor_ie(bss, HS20_IE_VENDOR_TYPE)) {
+		u8 *len_pos;
+
+		extra = wpabuf_alloc(100);
+		if (!extra)
+			return -1;
+
+		len_pos = gas_anqp_add_element(extra, ANQP_VENDOR_SPECIFIC);
+		wpabuf_put_be24(extra, OUI_WFA);
+		wpabuf_put_u8(extra, HS20_ANQP_OUI_TYPE);
+		wpabuf_put_u8(extra, HS20_STYPE_QUERY_LIST);
+		wpabuf_put_u8(extra, 0); /* Reserved */
+		wpabuf_put_u8(extra, HS20_STYPE_CAPABILITY_LIST);
+		wpabuf_put_u8(extra, HS20_STYPE_OPERATOR_FRIENDLY_NAME);
+		wpabuf_put_u8(extra, HS20_STYPE_WAN_METRICS);
+		wpabuf_put_u8(extra, HS20_STYPE_CONNECTION_CAPABILITY);
+		wpabuf_put_u8(extra, HS20_STYPE_OPERATING_CLASS);
+		gas_anqp_set_element_len(extra, len_pos);
+	}
+#endif /* CONFIG_HS20 */
 
 	buf = anqp_build_req(info_ids, sizeof(info_ids) / sizeof(info_ids[0]),
 			     extra);
@@ -1279,6 +1302,9 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 {
 	const u8 *pos = data;
 	struct wpa_bss *bss = wpa_bss_get_bssid(wpa_s, sa);
+#ifdef CONFIG_HS20
+	u8 type;
+#endif /* CONFIG_HS20 */
 
 	switch (info_id) {
 	case ANQP_CAPABILITY_LIST:
@@ -1362,6 +1388,28 @@ static void interworking_parse_rx_anqp_resp(struct wpa_supplicant *wpa_s,
 			return;
 
 		switch (WPA_GET_BE24(pos)) {
+#ifdef CONFIG_HS20
+		case OUI_WFA:
+			pos += 3;
+			slen -= 3;
+
+			if (slen < 1)
+				return;
+			type = *pos++;
+			slen--;
+
+			switch (type) {
+			case HS20_ANQP_OUI_TYPE:
+				hs20_parse_rx_hs20_anqp_resp(wpa_s, sa, pos,
+							     slen);
+				break;
+			default:
+				wpa_printf(MSG_DEBUG, "HS20: Unsupported ANQP "
+					   "vendor type %u", type);
+				break;
+			}
+			break;
+#endif /* CONFIG_HS20 */
 		default:
 			wpa_printf(MSG_DEBUG, "Interworking: Unsupported "
 				   "vendor-specific ANQP OUI %06x",

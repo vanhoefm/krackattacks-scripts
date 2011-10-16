@@ -542,7 +542,7 @@ static struct wpabuf * eap_fast_tlv_pac_ack(void)
 
 static struct wpabuf * eap_fast_process_eap_payload_tlv(
 	struct eap_sm *sm, struct eap_fast_data *data,
-	struct eap_method_ret *ret, const struct eap_hdr *req,
+	struct eap_method_ret *ret,
 	u8 *eap_payload_tlv, size_t eap_payload_tlv_len)
 {
 	struct eap_hdr *hdr;
@@ -1188,7 +1188,7 @@ static int eap_fast_process_decrypted(struct eap_sm *sm,
 
 	if (tlv.eap_payload_tlv) {
 		tmp = eap_fast_process_eap_payload_tlv(
-			sm, data, ret, req, tlv.eap_payload_tlv,
+			sm, data, ret, tlv.eap_payload_tlv,
 			tlv.eap_payload_tlv_len);
 		resp = wpabuf_concat(resp, tmp);
 	}

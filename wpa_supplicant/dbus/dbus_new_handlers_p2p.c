@@ -101,6 +101,7 @@ DBusMessage * wpas_dbus_handler_p2p_find(DBusMessage *message,
 			    (entry.array_type != WPAS_DBUS_TYPE_BINARRAY))
 				goto error_clear;
 
+			os_free(req_dev_types);
 			req_dev_types =
 				os_malloc(WPS_DEV_TYPE_LEN * entry.array_len);
 			if (!req_dev_types)

@@ -614,6 +614,9 @@ struct wpa_driver_ap_params {
 
 	/**
 	 * assocresp_ies - WPS IE(s) for (Re)Association Response frames
+	 *
+	 * This is used to add IEs like WPS IE by drivers that reply to
+	 * (Re)Association Request frames internally.
 	 */
 	const struct wpabuf *assocresp_ies;
 };
@@ -1465,6 +1468,8 @@ struct wpa_driver_ops {
 	 * can be left undefined (set to %NULL) if IEEE 802.1X support is
 	 * always enabled and the driver uses set_ap() to set WPA/RSN IE
 	 * for Beacon frames.
+	 *
+	 * DEPRECATED - use set_ap() instead
 	 */
 	int (*set_ieee8021x)(void *priv, struct wpa_bss_params *params);
 
@@ -1477,6 +1482,8 @@ struct wpa_driver_ops {
 	 * This is an optional function to configure privacy field in the
 	 * kernel driver for Beacon frames. This can be left undefined (set to
 	 * %NULL) if the driver uses the Beacon template from set_ap().
+	 *
+	 * DEPRECATED - use set_ap() instead
 	 */
 	int (*set_privacy)(void *priv, int enabled);
 
@@ -1519,6 +1526,8 @@ struct wpa_driver_ops {
 	 * kernel driver for Beacon and Probe Response frames. This can be left
 	 * undefined (set to %NULL) if the driver uses the Beacon template from
 	 * set_ap().
+	 *
+	 * DEPRECATED - use set_ap() instead
 	 */
 	int (*set_generic_elem)(void *priv, const u8 *elem, size_t elem_len);
 
@@ -1602,6 +1611,8 @@ struct wpa_driver_ops {
 	 * @buf: SSID
 	 * @len: Length of the SSID in octets
 	 * Returns: 0 on success, -1 on failure
+	 *
+	 * DEPRECATED - use set_ap() instead
 	 */
 	int (*hapd_set_ssid)(void *priv, const u8 *buf, int len);
 
@@ -1870,6 +1881,8 @@ struct wpa_driver_ops {
 	 * also used to provide Probe Response IEs for P2P Listen state
 	 * operations for drivers that generate the Probe Response frames
 	 * internally.
+	 *
+	 * DEPRECATED - use set_ap() instead
 	 */
 	int (*set_ap_wps_ie)(void *priv, const struct wpabuf *beacon,
 			     const struct wpabuf *proberesp,
@@ -2383,6 +2396,8 @@ struct wpa_driver_ops {
 	 * This function can be used to set authentication algorithms for AP
 	 * mode when static WEP is used. If the driver uses user space MLME/SME
 	 * implementation, there is no need to implement this function.
+	 *
+	 * DEPRECATED - use set_ap() instead
 	 */
 	int (*set_authmode)(void *priv, int authmode);
 

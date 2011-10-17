@@ -20,17 +20,7 @@ struct ieee80211_mgmt;
 
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len);
-#ifdef NEED_AP_MLME
 void ieee802_11_set_beacon(struct hostapd_data *hapd);
 void ieee802_11_set_beacons(struct hostapd_iface *iface);
-#else /* NEED_AP_MLME */
-static inline void ieee802_11_set_beacon(struct hostapd_data *hapd)
-{
-}
-
-static inline void ieee802_11_set_beacons(struct hostapd_iface *iface)
-{
-}
-#endif /* NEED_AP_MLME */
 
 #endif /* BEACON_H */

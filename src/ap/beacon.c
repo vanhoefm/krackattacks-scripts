@@ -35,6 +35,8 @@
 #include "beacon.h"
 
 
+#ifdef NEED_AP_MLME
+
 static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
 {
 	u8 erp = 0;
@@ -434,20 +436,96 @@ void handle_probe_req(struct hostapd_data *hapd,
 }
 
 
+static int hostapd_set_ap_isolate(struct hostapd_data *hapd, int value)
+{
+	if (hapd->driver == NULL || hapd->driver->set_intra_bss == NULL)
+		return 0;
+	return hapd->driver->set_intra_bss(hapd->drv_priv, !value);
+}
+
+
+static int hostapd_set_bss_params(struct hostapd_data *hapd,
+				  int use_protection)
+{
+	int ret = 0;
+	int preamble;
+#ifdef CONFIG_IEEE80211N
+	u8 buf[60], *ht_capab, *ht_oper, *pos;
+
+	pos = buf;
+	ht_capab = pos;
+	pos = hostapd_eid_ht_capabilities(hapd, pos);
+	ht_oper = pos;
+	pos = hostapd_eid_ht_operation(hapd, pos);
+	if (pos > ht_oper && ht_oper > ht_capab &&
+	    hostapd_set_ht_params(hapd, ht_capab + 2, ht_capab[1],
+				  ht_oper + 2, ht_oper[1])) {
+		wpa_printf(MSG_ERROR, "Could not set HT capabilities "
+			   "for kernel driver");
+		ret = -1;
+	}
+
+#endif /* CONFIG_IEEE80211N */
+
+	if (hostapd_set_cts_protect(hapd, use_protection)) {
+		wpa_printf(MSG_ERROR, "Failed to set CTS protect in kernel "
+			   "driver");
+		ret = -1;
+	}
+
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G &&
+	    hostapd_set_short_slot_time(hapd,
+					hapd->iface->num_sta_no_short_slot_time
+					> 0 ? 0 : 1)) {
+		wpa_printf(MSG_ERROR, "Failed to set Short Slot Time option "
+			   "in kernel driver");
+		ret = -1;
+	}
+
+	if (hapd->iface->num_sta_no_short_preamble == 0 &&
+	    hapd->iconf->preamble == SHORT_PREAMBLE)
+		preamble = SHORT_PREAMBLE;
+	else
+		preamble = LONG_PREAMBLE;
+	if (hostapd_set_preamble(hapd, preamble)) {
+		wpa_printf(MSG_ERROR, "Could not set preamble for kernel "
+			   "driver");
+		ret = -1;
+	}
+
+	if (hostapd_set_ap_isolate(hapd, hapd->conf->isolate) &&
+	    hapd->conf->isolate) {
+		wpa_printf(MSG_ERROR, "Could not enable AP isolation in "
+			   "kernel driver");
+		ret = -1;
+	}
+
+	return ret;
+}
+
+#endif /* NEED_AP_MLME */
+
+
 void ieee802_11_set_beacon(struct hostapd_data *hapd)
 {
-	struct ieee80211_mgmt *head;
-	u8 *pos, *tail, *tailpos;
-	u16 capab_info;
-	size_t head_len, tail_len;
+	struct ieee80211_mgmt *head = NULL;
+	u8 *tail = NULL;
+	size_t head_len = 0, tail_len = 0;
 	struct wpa_driver_ap_params params;
 	struct wpabuf *beacon, *proberesp, *assocresp;
+#ifdef NEED_AP_MLME
+	u16 capab_info;
+	u8 *pos, *tailpos;
+#endif /* NEED_AP_MLME */
 
 #ifdef CONFIG_P2P
 	if ((hapd->conf->p2p & (P2P_ENABLED | P2P_GROUP_OWNER)) == P2P_ENABLED)
 		goto no_beacon;
 #endif /* CONFIG_P2P */
 	hapd->beacon_set_done = 1;
+
+#ifdef NEED_AP_MLME
 
 #define BEACON_HEAD_BUF_SIZE 256
 #define BEACON_TAIL_BUF_SIZE 512
@@ -556,6 +634,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
+#endif /* NEED_AP_MLME */
+
 	os_memset(&params, 0, sizeof(params));
 	params.head = (u8 *) head;
 	params.head_len = head_len;
@@ -600,8 +680,10 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 #ifdef CONFIG_P2P
 no_beacon:
 #endif /* CONFIG_P2P */
+#ifdef NEED_AP_MLME
 	hostapd_set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
 					ERP_INFO_USE_PROTECTION));
+#endif /* NEED_AP_MLME */
 }
 
 

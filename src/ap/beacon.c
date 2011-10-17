@@ -573,6 +573,10 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	else
 		params.ht_opmode = hapd->iface->ht_op_mode;
 #endif /* NEED_AP_MLME */
+	params.interworking = hapd->conf->interworking;
+	if (hapd->conf->interworking &&
+	    !is_zero_ether_addr(hapd->conf->hessid))
+		params.hessid = hapd->conf->hessid;
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);

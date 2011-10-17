@@ -650,6 +650,16 @@ struct wpa_driver_ap_params {
 	 * ht_opmode - HT operation mode or -1 if HT not in use
 	 */
 	int ht_opmode;
+
+	/**
+	 * interworking - Whether Interworking is enabled
+	 */
+	int interworking;
+
+	/**
+	 * hessid - Homogeneous ESS identifier or %NULL if not set
+	 */
+	const u8 *hessid;
 };
 
 /**

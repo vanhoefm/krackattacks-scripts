@@ -243,3 +243,22 @@ u8 * hostapd_eid_interworking(struct hostapd_data *hapd, u8 *eid)
 
 	return pos;
 }
+
+
+u8 * hostapd_eid_adv_proto(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+#ifdef CONFIG_INTERWORKING
+
+	/* TODO: Separate configuration for ANQP? */
+	if (!hapd->conf->interworking)
+		return eid;
+
+	*pos++ = WLAN_EID_ADV_PROTO;
+	*pos++ = 2;
+	*pos++ = 0; /* Query Response Length Limit | PAME-BI */
+	*pos++ = ACCESS_NETWORK_QUERY_PROTOCOL;
+#endif /* CONFIG_INTERWORKING */
+
+	return pos;
+}

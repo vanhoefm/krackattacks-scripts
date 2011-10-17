@@ -59,6 +59,7 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 		wpabuf_put_data(assocresp, buf, pos - buf);
 	}
 	pos = hostapd_eid_interworking(hapd, pos);
+	pos = hostapd_eid_adv_proto(hapd, pos);
 	if (pos != buf) {
 		if (wpabuf_resize(&beacon, pos - buf) != 0)
 			goto fail;

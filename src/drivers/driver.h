@@ -2131,13 +2131,6 @@ struct wpa_driver_ops {
 	int (*ampdu)(void *priv, int ampdu);
 
 	/**
-	 * set_intra_bss - Enables/Disables intra BSS bridging
-	 *
-	 * DEPRECATED - use set_ap() parameter isolate instead
-	 */
-	int (*set_intra_bss)(void *priv, int enabled);
-
-	/**
 	 * get_radio_name - Get physical radio name for the device
 	 * @priv: Private driver interface data
 	 * Returns: Radio name or %NULL if not known

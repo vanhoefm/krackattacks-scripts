@@ -444,14 +444,6 @@ static inline int wpa_drv_if_remove(struct wpa_supplicant *wpa_s,
 	return -1;
 }
 
-static inline int wpa_drv_set_intra_bss(struct wpa_supplicant *wpa_s,
-					int enabled)
-{
-	if (wpa_s->driver->set_intra_bss)
-		return wpa_s->driver->set_intra_bss(wpa_s->drv_priv, enabled);
-	return -1;
-}
-
 static inline int wpa_drv_remain_on_channel(struct wpa_supplicant *wpa_s,
 					    unsigned int freq,
 					    unsigned int duration)

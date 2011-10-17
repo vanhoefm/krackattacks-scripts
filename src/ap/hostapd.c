@@ -261,6 +261,8 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 	wpabuf_free(hapd->p2p_probe_resp_ie);
 	hapd->p2p_probe_resp_ie = NULL;
 #endif /* CONFIG_P2P */
+
+	wpabuf_free(hapd->time_adv);
 }
 
 

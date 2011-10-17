@@ -2092,6 +2092,20 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			extern int rsn_testing;
 			rsn_testing = atoi(pos);
 #endif /* CONFIG_RSN_TESTING */
+		} else if (os_strcmp(buf, "time_advertisement") == 0) {
+			bss->time_advertisement = atoi(pos);
+		} else if (os_strcmp(buf, "time_zone") == 0) {
+			size_t tz_len = os_strlen(pos);
+			if (tz_len < 4 || tz_len > 255) {
+				wpa_printf(MSG_DEBUG, "Line %d: invalid "
+					   "time_zone", line);
+				errors++;
+				continue;
+			}
+			os_free(bss->time_zone);
+			bss->time_zone = os_strdup(pos);
+			if (bss->time_zone == NULL)
+				errors++;
 #ifdef CONFIG_INTERWORKING
 		} else if (os_strcmp(buf, "interworking") == 0) {
 			bss->interworking = atoi(pos);

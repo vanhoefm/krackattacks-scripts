@@ -108,6 +108,10 @@ struct hostapd_data {
 
 	int parameter_set_count;
 
+	/* Time Advertisement */
+	u8 time_update_counter;
+	struct wpabuf *time_adv;
+
 #ifdef CONFIG_FULL_DYNAMIC_VLAN
 	struct full_dynamic_vlan *full_dynamic_vlan;
 #endif /* CONFIG_FULL_DYNAMIC_VLAN */

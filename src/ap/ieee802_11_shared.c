@@ -20,6 +20,7 @@
 #include "sta_info.h"
 #include "ap_config.h"
 #include "ap_drv_ops.h"
+#include "ieee802_11.h"
 
 
 #ifdef CONFIG_IEEE80211W
@@ -188,6 +189,8 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 	*pos++ = 0x00;
 
 	*pos = 0x00;
+	if (hapd->conf->time_advertisement == 2)
+		*pos |= 0x08; /* Bit 27 - UTC TSF Offset */
 	if (hapd->conf->interworking)
 		*pos |= 0x80; /* Bit 31 - Interworking */
 	pos++;
@@ -308,4 +311,92 @@ u8 * hostapd_eid_roaming_consortium(struct hostapd_data *hapd, u8 *eid)
 #endif /* CONFIG_INTERWORKING */
 
 	return pos;
+}
+
+
+u8 * hostapd_eid_time_adv(struct hostapd_data *hapd, u8 *eid)
+{
+	if (hapd->conf->time_advertisement != 2)
+		return eid;
+
+	if (hapd->time_adv == NULL &&
+	    hostapd_update_time_adv(hapd) < 0)
+		return eid;
+
+	os_memcpy(eid, wpabuf_head(hapd->time_adv),
+		  wpabuf_len(hapd->time_adv));
+	eid += wpabuf_len(hapd->time_adv);
+
+	return eid;
+}
+
+
+u8 * hostapd_eid_time_zone(struct hostapd_data *hapd, u8 *eid)
+{
+	size_t len;
+
+	if (hapd->conf->time_advertisement != 2)
+		return eid;
+
+	len = os_strlen(hapd->conf->time_zone);
+
+	*eid++ = WLAN_EID_TIME_ZONE;
+	*eid++ = len;
+	os_memcpy(eid, hapd->conf->time_zone, len);
+	eid += len;
+
+	return eid;
+}
+
+
+int hostapd_update_time_adv(struct hostapd_data *hapd)
+{
+	const int elen = 2 + 1 + 10 + 5 + 1;
+	struct os_time t;
+	struct os_tm tm;
+	u8 *pos;
+
+	if (hapd->conf->time_advertisement != 2)
+		return 0;
+
+	if (os_get_time(&t) < 0 || os_gmtime(t.sec, &tm) < 0)
+		return -1;
+
+	if (!hapd->time_adv) {
+		hapd->time_adv = wpabuf_alloc(elen);
+		if (hapd->time_adv == NULL)
+			return -1;
+		pos = wpabuf_put(hapd->time_adv, elen);
+	} else
+		pos = wpabuf_mhead_u8(hapd->time_adv);
+
+	*pos++ = WLAN_EID_TIME_ADVERTISEMENT;
+	*pos++ = 1 + 10 + 5 + 1;
+
+	*pos++ = 2; /* UTC time at which the TSF timer is 0 */
+
+	/* Time Value at TSF 0 */
+	/* FIX: need to calculate this based on the current TSF value */
+	WPA_PUT_LE16(pos, tm.year); /* Year */
+	pos += 2;
+	*pos++ = tm.month; /* Month */
+	*pos++ = tm.day; /* Day of month */
+	*pos++ = tm.hour; /* Hours */
+	*pos++ = tm.min; /* Minutes */
+	*pos++ = tm.sec; /* Seconds */
+	WPA_PUT_LE16(pos, 0); /* Milliseconds (not used) */
+	pos += 2;
+	*pos++ = 0; /* Reserved */
+
+	/* Time Error */
+	/* TODO: fill in an estimate on the error */
+	*pos++ = 0;
+	*pos++ = 0;
+	*pos++ = 0;
+	*pos++ = 0;
+	*pos++ = 0;
+
+	*pos++ = hapd->time_update_counter++;
+
+	return 0;
 }

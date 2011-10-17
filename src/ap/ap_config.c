@@ -426,6 +426,8 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 		ssid->dyn_vlan_keys = NULL;
 	}
 
+	os_free(conf->time_zone);
+
 #ifdef CONFIG_IEEE80211R
 	{
 		struct ft_remote_r0kh *r0kh, *r0kh_prev;

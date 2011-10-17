@@ -342,6 +342,10 @@ struct hostapd_bss_config {
 	int tdls;
 	int disable_11n;
 
+	/* IEEE 802.11v */
+	int time_advertisement;
+	char *time_zone;
+
 	/* IEEE 802.11u - Interworking */
 	int interworking;
 	int access_network_type;

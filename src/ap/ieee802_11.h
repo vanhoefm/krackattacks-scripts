@@ -72,5 +72,8 @@ void ieee802_11_sa_query_action(struct hostapd_data *hapd,
 u8 * hostapd_eid_interworking(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_adv_proto(struct hostapd_data *hapd, u8 *eid);
 u8 * hostapd_eid_roaming_consortium(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_time_adv(struct hostapd_data *hapd, u8 *eid);
+u8 * hostapd_eid_time_zone(struct hostapd_data *hapd, u8 *eid);
+int hostapd_update_time_adv(struct hostapd_data *hapd);
 
 #endif /* IEEE802_11_H */

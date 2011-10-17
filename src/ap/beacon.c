@@ -357,6 +357,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 	pos = hostapd_eid_ext_capab(hapd, pos);
 
+	pos = hostapd_eid_time_adv(hapd, pos);
+	pos = hostapd_eid_time_zone(hapd, pos);
+
 	pos = hostapd_eid_interworking(hapd, pos);
 	pos = hostapd_eid_adv_proto(hapd, pos);
 	pos = hostapd_eid_roaming_consortium(hapd, pos);
@@ -493,6 +496,12 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 #endif /* CONFIG_IEEE80211N */
 
 	tailpos = hostapd_eid_ext_capab(hapd, tailpos);
+
+	/*
+	 * TODO: Time Advertisement element should only be included in some
+	 * DTIM Beacon frames.
+	 */
+	tailpos = hostapd_eid_time_adv(hapd, tailpos);
 
 	tailpos = hostapd_eid_interworking(hapd, tailpos);
 	tailpos = hostapd_eid_adv_proto(hapd, tailpos);

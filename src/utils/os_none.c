@@ -38,6 +38,11 @@ int os_mktime(int year, int month, int day, int hour, int min, int sec,
 	return -1;
 }
 
+int os_gmtime(os_time_t t, struct os_tm *tm)
+{
+	return -1;
+}
+
 
 int os_daemonize(const char *pid_file)
 {

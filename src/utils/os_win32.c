@@ -92,6 +92,25 @@ int os_mktime(int year, int month, int day, int hour, int min, int sec,
 }
 
 
+int os_gmtime(os_time_t t, struct os_tm *tm)
+{
+	time_t t2;
+	struct tm *tm2;
+
+	t2 = t;
+	tm2 = gmtime(&t);
+	if (tm2 == NULL)
+		return -1;
+	tm->sec = tm2->tm_sec;
+	tm->min = tm2->tm_min;
+	tm->hour = tm2->tm_hour;
+	tm->day = tm2->tm_mday;
+	tm->month = tm2->tm_mon + 1;
+	tm->year = tm2->tm_year + 1900;
+	return 0;
+}
+
+
 int os_daemonize(const char *pid_file)
 {
 	/* TODO */

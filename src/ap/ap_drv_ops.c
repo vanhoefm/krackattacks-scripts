@@ -474,30 +474,6 @@ int hostapd_set_country(struct hostapd_data *hapd, const char *country)
 }
 
 
-int hostapd_set_cts_protect(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_cts_protect == NULL)
-		return 0;
-	return hapd->driver->set_cts_protect(hapd->drv_priv, value);
-}
-
-
-int hostapd_set_preamble(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_preamble == NULL)
-		return 0;
-	return hapd->driver->set_preamble(hapd->drv_priv, value);
-}
-
-
-int hostapd_set_short_slot_time(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_short_slot_time == NULL)
-		return 0;
-	return hapd->driver->set_short_slot_time(hapd->drv_priv, value);
-}
-
-
 int hostapd_set_tx_queue_params(struct hostapd_data *hapd, int queue, int aifs,
 				int cw_min, int cw_max, int burst_time)
 {
@@ -534,19 +510,6 @@ int hostapd_driver_commit(struct hostapd_data *hapd)
 	if (hapd->driver == NULL || hapd->driver->commit == NULL)
 		return 0;
 	return hapd->driver->commit(hapd->drv_priv);
-}
-
-
-int hostapd_set_ht_params(struct hostapd_data *hapd,
-			  const u8 *ht_capab, size_t ht_capab_len,
-			  const u8 *ht_oper, size_t ht_oper_len)
-{
-	if (hapd->driver == NULL || hapd->driver->set_ht_params == NULL ||
-	    ht_capab == NULL || ht_oper == NULL)
-		return 0;
-	return hapd->driver->set_ht_params(hapd->drv_priv,
-					   ht_capab, ht_capab_len,
-					   ht_oper, ht_oper_len);
 }
 
 

@@ -627,6 +627,29 @@ struct wpa_driver_ap_params {
 	 * frames between association stations.
 	 */
 	int isolate;
+
+	/**
+	 * cts_protect - Whether CTS protection is enabled
+	 */
+	int cts_protect;
+
+	/**
+	 * preamble - Whether short preamble is enabled
+	 */
+	int preamble;
+
+	/**
+	 * short_slot_time - Whether short slot time is enabled
+	 *
+	 * 0 = short slot time disable, 1 = short slot time enabled, -1 = do
+	 * not set (e.g., when 802.11g mode is not in use)
+	 */
+	int short_slot_time;
+
+	/**
+	 * ht_opmode - HT operation mode or -1 if HT not in use
+	 */
+	int ht_opmode;
 };
 
 /**
@@ -1711,30 +1734,6 @@ struct wpa_driver_ops {
 			     int mode);
 
 	/**
-	 * set_cts_protect - Set CTS protection mode (AP only)
-	 * @priv: Private driver interface data
-	 * @value: Whether CTS protection is enabled
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_cts_protect)(void *priv, int value);
-
-	/**
-	 * set_preamble - Set preamble mode (AP only)
-	 * @priv: Private driver interface data
-	 * @value: Whether short preamble is enabled
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_preamble)(void *priv, int value);
-
-	/**
-	 * set_short_slot_time - Set short slot time (AP only)
-	 * @priv: Private driver interface data
-	 * @value: Whether short slot time is enabled
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_short_slot_time)(void *priv, int value);
-
-	/**
 	 * set_tx_queue_params - Set TX queue parameters
 	 * @priv: Private driver interface data
 	 * @queue: Queue number (0 = VO, 1 = VI, 2 = BE, 3 = BK)
@@ -1850,19 +1849,6 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*set_radius_acl_expire)(void *priv, const u8 *mac);
-
-	/**
-	 * set_ht_params - Set HT parameters (AP only)
-	 * @priv: Private driver interface data
-	 * @ht_capab: HT Capabilities IE
-	 * @ht_capab_len: Length of ht_capab in octets
-	 * @ht_oper: HT Operation IE
-	 * @ht_oper_len: Length of ht_oper in octets
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_ht_params)(void *priv,
-			     const u8 *ht_capab, size_t ht_capab_len,
-			     const u8 *ht_oper, size_t ht_oper_len);
 
 	/**
 	 * set_ap_wps_ie - Add WPS IE(s) into Beacon/Probe Response frames (AP)

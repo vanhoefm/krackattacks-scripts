@@ -435,60 +435,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 		   elems.ssid_len == 0 ? "broadcast" : "our");
 }
 
-
-static int hostapd_set_bss_params(struct hostapd_data *hapd,
-				  int use_protection)
-{
-	int ret = 0;
-	int preamble;
-#ifdef CONFIG_IEEE80211N
-	u8 buf[60], *ht_capab, *ht_oper, *pos;
-
-	pos = buf;
-	ht_capab = pos;
-	pos = hostapd_eid_ht_capabilities(hapd, pos);
-	ht_oper = pos;
-	pos = hostapd_eid_ht_operation(hapd, pos);
-	if (pos > ht_oper && ht_oper > ht_capab &&
-	    hostapd_set_ht_params(hapd, ht_capab + 2, ht_capab[1],
-				  ht_oper + 2, ht_oper[1])) {
-		wpa_printf(MSG_ERROR, "Could not set HT capabilities "
-			   "for kernel driver");
-		ret = -1;
-	}
-
-#endif /* CONFIG_IEEE80211N */
-
-	if (hostapd_set_cts_protect(hapd, use_protection)) {
-		wpa_printf(MSG_ERROR, "Failed to set CTS protect in kernel "
-			   "driver");
-		ret = -1;
-	}
-
-	if (hapd->iface->current_mode &&
-	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G &&
-	    hostapd_set_short_slot_time(hapd,
-					hapd->iface->num_sta_no_short_slot_time
-					> 0 ? 0 : 1)) {
-		wpa_printf(MSG_ERROR, "Failed to set Short Slot Time option "
-			   "in kernel driver");
-		ret = -1;
-	}
-
-	if (hapd->iface->num_sta_no_short_preamble == 0 &&
-	    hapd->iconf->preamble == SHORT_PREAMBLE)
-		preamble = SHORT_PREAMBLE;
-	else
-		preamble = LONG_PREAMBLE;
-	if (hostapd_set_preamble(hapd, preamble)) {
-		wpa_printf(MSG_ERROR, "Could not set preamble for kernel "
-			   "driver");
-		ret = -1;
-	}
-
-	return ret;
-}
-
 #endif /* NEED_AP_MLME */
 
 
@@ -652,17 +598,28 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.proberesp_ies = proberesp;
 	params.assocresp_ies = assocresp;
 	params.isolate = hapd->conf->isolate;
+#ifdef NEED_AP_MLME
+	params.cts_protect = !!(ieee802_11_erp_info(hapd) &
+				ERP_INFO_USE_PROTECTION);
+	params.preamble = hapd->iface->num_sta_no_short_preamble == 0 &&
+		hapd->iconf->preamble == SHORT_PREAMBLE;
+	if (hapd->iface->current_mode &&
+	    hapd->iface->current_mode->mode == HOSTAPD_MODE_IEEE80211G)
+		params.short_slot_time =
+			hapd->iface->num_sta_no_short_slot_time > 0 ? 0 : 1;
+	else
+		params.short_slot_time = -1;
+	if (!hapd->iconf->ieee80211n || hapd->conf->disable_11n)
+		params.ht_opmode = -1;
+	else
+		params.ht_opmode = hapd->iface->ht_op_mode;
+#endif /* NEED_AP_MLME */
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);
 
 	os_free(tail);
 	os_free(head);
-
-#ifdef NEED_AP_MLME
-	hostapd_set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
-					ERP_INFO_USE_PROTECTION));
-#endif /* NEED_AP_MLME */
 }
 
 

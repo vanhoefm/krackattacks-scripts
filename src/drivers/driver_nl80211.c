@@ -4182,6 +4182,35 @@ static int nl80211_set_ap_isolate(struct i802_bss *bss, int enabled)
 }
 
 
+static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
+			   int slot, int ht_opmode)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_BSS, 0);
+
+	if (cts >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_BSS_CTS_PROT, cts);
+	if (preamble >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_PREAMBLE, preamble);
+	if (slot >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_SLOT_TIME, slot);
+	if (ht_opmode >= 0)
+		NLA_PUT_U16(msg, NL80211_ATTR_BSS_HT_OPMODE, ht_opmode);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static int wpa_driver_nl80211_set_ap(void *priv,
 				     struct wpa_driver_ap_params *params)
 {
@@ -4321,6 +4350,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 				   "not used");
 			ret = 0;
 		}
+
+		nl80211_set_bss(bss, params->cts_protect, params->preamble,
+				params->short_slot_time, params->ht_opmode);
 	}
 	return ret;
  nla_put_failure:
@@ -6104,54 +6136,6 @@ static int i802_set_tx_queue_params(void *priv, int queue, int aifs,
 }
 
 
-static int i802_set_bss(void *priv, int cts, int preamble, int slot,
-			int ht_opmode)
-{
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct nl_msg *msg;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_SET_BSS, 0);
-
-	if (cts >= 0)
-		NLA_PUT_U8(msg, NL80211_ATTR_BSS_CTS_PROT, cts);
-	if (preamble >= 0)
-		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_PREAMBLE, preamble);
-	if (slot >= 0)
-		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_SLOT_TIME, slot);
-	if (ht_opmode >= 0)
-		NLA_PUT_U16(msg, NL80211_ATTR_BSS_HT_OPMODE, ht_opmode);
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
-static int i802_set_cts_protect(void *priv, int value)
-{
-	return i802_set_bss(priv, value, -1, -1, -1);
-}
-
-
-static int i802_set_preamble(void *priv, int value)
-{
-	return i802_set_bss(priv, -1, value, -1, -1);
-}
-
-
-static int i802_set_short_slot_time(void *priv, int value)
-{
-	return i802_set_bss(priv, -1, -1, value, -1);
-}
-
-
 static int i802_set_sta_vlan(void *priv, const u8 *addr,
 			     const char *ifname, int vlan_id)
 {
@@ -6182,19 +6166,6 @@ static int i802_set_sta_vlan(void *priv, const u8 *addr,
 	}
  nla_put_failure:
 	return ret;
-}
-
-
-static int i802_set_ht_params(void *priv, const u8 *ht_capab,
-			      size_t ht_capab_len, const u8 *ht_oper,
-			      size_t ht_oper_len)
-{
-	if (ht_oper_len >= 6) {
-		/* ht opmode uses 16bit in octet 5 & 6 */
-		u16 ht_opmode = le_to_host16(((u16 *) ht_oper)[2]);
-		return i802_set_bss(priv, -1, -1, -1, ht_opmode);
-	} else
-		return -1;
 }
 
 
@@ -7402,12 +7373,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.sta_clear_stats = i802_sta_clear_stats,
 	.set_rts = i802_set_rts,
 	.set_frag = i802_set_frag,
-	.set_cts_protect = i802_set_cts_protect,
-	.set_preamble = i802_set_preamble,
-	.set_short_slot_time = i802_set_short_slot_time,
 	.set_tx_queue_params = i802_set_tx_queue_params,
 	.set_sta_vlan = i802_set_sta_vlan,
-	.set_ht_params = i802_set_ht_params,
 	.set_rate_sets = i802_set_rate_sets,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,

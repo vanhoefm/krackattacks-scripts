@@ -436,14 +436,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 }
 
 
-static int hostapd_set_ap_isolate(struct hostapd_data *hapd, int value)
-{
-	if (hapd->driver == NULL || hapd->driver->set_intra_bss == NULL)
-		return 0;
-	return hapd->driver->set_intra_bss(hapd->drv_priv, !value);
-}
-
-
 static int hostapd_set_bss_params(struct hostapd_data *hapd,
 				  int use_protection)
 {
@@ -491,13 +483,6 @@ static int hostapd_set_bss_params(struct hostapd_data *hapd,
 	if (hostapd_set_preamble(hapd, preamble)) {
 		wpa_printf(MSG_ERROR, "Could not set preamble for kernel "
 			   "driver");
-		ret = -1;
-	}
-
-	if (hostapd_set_ap_isolate(hapd, hapd->conf->isolate) &&
-	    hapd->conf->isolate) {
-		wpa_printf(MSG_ERROR, "Could not enable AP isolation in "
-			   "kernel driver");
 		ret = -1;
 	}
 
@@ -666,6 +651,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.beacon_ies = beacon;
 	params.proberesp_ies = proberesp;
 	params.assocresp_ies = assocresp;
+	params.isolate = hapd->conf->isolate;
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);

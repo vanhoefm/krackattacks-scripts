@@ -4161,6 +4161,27 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 }
 
 
+static int nl80211_set_ap_isolate(struct i802_bss *bss, int enabled)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
+		    NL80211_CMD_SET_BSS, 0);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
+	NLA_PUT_U8(msg, NL80211_ATTR_AP_ISOLATE, enabled);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+ nla_put_failure:
+	return -ENOBUFS;
+}
+
+
 static int wpa_driver_nl80211_set_ap(void *priv,
 				     struct wpa_driver_ap_params *params)
 {
@@ -4293,6 +4314,13 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			   ret, strerror(-ret));
 	} else {
 		bss->beacon_set = 1;
+		ret = nl80211_set_ap_isolate(bss, params->isolate);
+		if (!params->isolate && ret) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignore AP isolation "
+				   "configuration error since isolation is "
+				   "not used");
+			ret = 0;
+		}
 	}
 	return ret;
  nla_put_failure:
@@ -7190,28 +7218,6 @@ static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 }
 
 
-static int nl80211_set_intra_bss(void *priv, int enabled)
-{
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct nl_msg *msg;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0, 0,
-		    NL80211_CMD_SET_BSS, 0);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
-	NLA_PUT_U8(msg, NL80211_ATTR_AP_ISOLATE, !enabled);
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
 static int nl80211_set_param(void *priv, const char *param)
 {
 	wpa_printf(MSG_DEBUG, "nl80211: driver param='%s'", param);
@@ -7420,7 +7426,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.signal_monitor = nl80211_signal_monitor,
 	.signal_poll = nl80211_signal_poll,
 	.send_frame = nl80211_send_frame,
-	.set_intra_bss = nl80211_set_intra_bss,
 	.set_param = nl80211_set_param,
 	.get_radio_name = nl80211_get_radio_name,
 	.add_pmkid = nl80211_add_pmkid,

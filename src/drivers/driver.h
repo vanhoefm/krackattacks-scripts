@@ -619,6 +619,14 @@ struct wpa_driver_ap_params {
 	 * (Re)Association Request frames internally.
 	 */
 	const struct wpabuf *assocresp_ies;
+
+	/**
+	 * isolate - Whether to isolate frames between associated stations
+	 *
+	 * If this is non-zero, the AP is requested to disable forwarding of
+	 * frames between association stations.
+	 */
+	int isolate;
 };
 
 /**
@@ -2128,6 +2136,8 @@ struct wpa_driver_ops {
 
 	/**
 	 * set_intra_bss - Enables/Disables intra BSS bridging
+	 *
+	 * DEPRECATED - use set_ap() parameter isolate instead
 	 */
 	int (*set_intra_bss)(void *priv, int enabled);
 

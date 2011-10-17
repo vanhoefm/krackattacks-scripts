@@ -519,10 +519,6 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	u8 *pos, *tailpos;
 #endif /* NEED_AP_MLME */
 
-#ifdef CONFIG_P2P
-	if ((hapd->conf->p2p & (P2P_ENABLED | P2P_GROUP_OWNER)) == P2P_ENABLED)
-		goto no_beacon;
-#endif /* CONFIG_P2P */
 	hapd->beacon_set_done = 1;
 
 #ifdef NEED_AP_MLME
@@ -677,9 +673,6 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	os_free(tail);
 	os_free(head);
 
-#ifdef CONFIG_P2P
-no_beacon:
-#endif /* CONFIG_P2P */
 #ifdef NEED_AP_MLME
 	hostapd_set_bss_params(hapd, !!(ieee802_11_erp_info(hapd) &
 					ERP_INFO_USE_PROTECTION));

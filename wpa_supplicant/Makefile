@@ -678,6 +678,7 @@ OBJS += ../src/ap/ap_mlme.o
 OBJS += ../src/ap/ieee802_1x.o
 OBJS += ../src/eapol_auth/eapol_auth_sm.o
 OBJS += ../src/ap/ieee802_11_auth.o
+OBJS += ../src/ap/ieee802_11_shared.o
 OBJS += ../src/ap/drv_callbacks.o
 OBJS += ../src/ap/ap_drv_ops.o
 ifdef CONFIG_IEEE80211N

@@ -64,5 +64,10 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);
 void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 				int wds);
+u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
+				     struct sta_info *sta, u8 *eid);
+void ieee802_11_sa_query_action(struct hostapd_data *hapd,
+				const u8 *sa, const u8 action_type,
+				const u8 *trans_id);
 
 #endif /* IEEE802_11_H */

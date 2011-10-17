@@ -51,6 +51,7 @@ OBJS += ../src/ap/ap_mlme.o
 OBJS += ../src/ap/wpa_auth_ie.o
 OBJS += ../src/ap/preauth_auth.o
 OBJS += ../src/ap/pmksa_cache_auth.o
+OBJS += ../src/ap/ieee802_11_shared.o
 
 OBJS_c = hostapd_cli.o ../src/common/wpa_ctrl.o ../src/utils/os_$(CONFIG_OS).o
 

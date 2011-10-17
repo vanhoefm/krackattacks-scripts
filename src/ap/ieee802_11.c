@@ -199,34 +199,6 @@ u8 * hostapd_eid_ext_capab(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-#ifdef CONFIG_IEEE80211W
-static u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
-					    struct sta_info *sta, u8 *eid)
-{
-	u8 *pos = eid;
-	u32 timeout, tu;
-	struct os_time now, passed;
-
-	*pos++ = WLAN_EID_TIMEOUT_INTERVAL;
-	*pos++ = 5;
-	*pos++ = WLAN_TIMEOUT_ASSOC_COMEBACK;
-	os_get_time(&now);
-	os_time_sub(&now, &sta->sa_query_start, &passed);
-	tu = (passed.sec * 1000000 + passed.usec) / 1024;
-	if (hapd->conf->assoc_sa_query_max_timeout > tu)
-		timeout = hapd->conf->assoc_sa_query_max_timeout - tu;
-	else
-		timeout = 0;
-	if (timeout < hapd->conf->assoc_sa_query_max_timeout)
-		timeout++; /* add some extra time for local timers */
-	WPA_PUT_LE32(pos, timeout);
-	pos += 4;
-
-	return pos;
-}
-#endif /* CONFIG_IEEE80211W */
-
-
 void ieee802_11_print_ssid(char *buf, const u8 *ssid, u8 len)
 {
 	int i;
@@ -1263,81 +1235,11 @@ static void handle_beacon(struct hostapd_data *hapd,
 
 #ifdef CONFIG_IEEE80211W
 
-/* MLME-SAQuery.request */
-void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
-				  const u8 *addr, const u8 *trans_id)
-{
-	struct ieee80211_mgmt mgmt;
-	u8 *end;
-
-	wpa_printf(MSG_DEBUG, "IEEE 802.11: Sending SA Query Request to "
-		   MACSTR, MAC2STR(addr));
-	wpa_hexdump(MSG_DEBUG, "IEEE 802.11: SA Query Transaction ID",
-		    trans_id, WLAN_SA_QUERY_TR_ID_LEN);
-
-	os_memset(&mgmt, 0, sizeof(mgmt));
-	mgmt.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_ACTION);
-	os_memcpy(mgmt.da, addr, ETH_ALEN);
-	os_memcpy(mgmt.sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(mgmt.bssid, hapd->own_addr, ETH_ALEN);
-	mgmt.u.action.category = WLAN_ACTION_SA_QUERY;
-	mgmt.u.action.u.sa_query_req.action = WLAN_SA_QUERY_REQUEST;
-	os_memcpy(mgmt.u.action.u.sa_query_req.trans_id, trans_id,
-		  WLAN_SA_QUERY_TR_ID_LEN);
-	end = mgmt.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hostapd_drv_send_mlme(hapd, &mgmt, end - (u8 *) &mgmt) < 0)
-		perror("ieee802_11_send_sa_query_req: send");
-}
-
-
-static void hostapd_sa_query_request(struct hostapd_data *hapd,
-				     const struct ieee80211_mgmt *mgmt)
-{
-	struct sta_info *sta;
-	struct ieee80211_mgmt resp;
-	u8 *end;
-
-	wpa_printf(MSG_DEBUG, "IEEE 802.11: Received SA Query Request from "
-		   MACSTR, MAC2STR(mgmt->sa));
-	wpa_hexdump(MSG_DEBUG, "IEEE 802.11: SA Query Transaction ID",
-		    mgmt->u.action.u.sa_query_resp.trans_id,
-		    WLAN_SA_QUERY_TR_ID_LEN);
-
-	sta = ap_get_sta(hapd, mgmt->sa);
-	if (sta == NULL || !(sta->flags & WLAN_STA_ASSOC)) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: Ignore SA Query Request "
-			   "from unassociated STA " MACSTR, MAC2STR(mgmt->sa));
-		return;
-	}
-
-	wpa_printf(MSG_DEBUG, "IEEE 802.11: Sending SA Query Response to "
-		   MACSTR, MAC2STR(mgmt->sa));
-
-	os_memset(&resp, 0, sizeof(resp));
-	resp.frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					  WLAN_FC_STYPE_ACTION);
-	os_memcpy(resp.da, mgmt->sa, ETH_ALEN);
-	os_memcpy(resp.sa, hapd->own_addr, ETH_ALEN);
-	os_memcpy(resp.bssid, hapd->own_addr, ETH_ALEN);
-	resp.u.action.category = WLAN_ACTION_SA_QUERY;
-	resp.u.action.u.sa_query_req.action = WLAN_SA_QUERY_RESPONSE;
-	os_memcpy(resp.u.action.u.sa_query_req.trans_id,
-		  mgmt->u.action.u.sa_query_req.trans_id,
-		  WLAN_SA_QUERY_TR_ID_LEN);
-	end = resp.u.action.u.sa_query_req.trans_id + WLAN_SA_QUERY_TR_ID_LEN;
-	if (hostapd_drv_send_mlme(hapd, &resp, end - (u8 *) &resp) < 0)
-		perror("hostapd_sa_query_request: send");
-}
-
-
 static void hostapd_sa_query_action(struct hostapd_data *hapd,
 				    const struct ieee80211_mgmt *mgmt,
 				    size_t len)
 {
-	struct sta_info *sta;
 	const u8 *end;
-	int i;
 
 	end = mgmt->u.action.u.sa_query_resp.trans_id +
 		WLAN_SA_QUERY_TR_ID_LEN;
@@ -1347,50 +1249,9 @@ static void hostapd_sa_query_action(struct hostapd_data *hapd,
 		return;
 	}
 
-	if (mgmt->u.action.u.sa_query_resp.action == WLAN_SA_QUERY_REQUEST) {
-		hostapd_sa_query_request(hapd, mgmt);
-		return;
-	}
-
-	if (mgmt->u.action.u.sa_query_resp.action != WLAN_SA_QUERY_RESPONSE) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: Unexpected SA Query "
-			   "Action %d", mgmt->u.action.u.sa_query_resp.action);
-		return;
-	}
-
-	wpa_printf(MSG_DEBUG, "IEEE 802.11: Received SA Query Response from "
-		   MACSTR, MAC2STR(mgmt->sa));
-	wpa_hexdump(MSG_DEBUG, "IEEE 802.11: SA Query Transaction ID",
-		    mgmt->u.action.u.sa_query_resp.trans_id,
-		    WLAN_SA_QUERY_TR_ID_LEN);
-
-	/* MLME-SAQuery.confirm */
-
-	sta = ap_get_sta(hapd, mgmt->sa);
-	if (sta == NULL || sta->sa_query_trans_id == NULL) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: No matching STA with "
-			   "pending SA Query request found");
-		return;
-	}
-
-	for (i = 0; i < sta->sa_query_count; i++) {
-		if (os_memcmp(sta->sa_query_trans_id +
-			      i * WLAN_SA_QUERY_TR_ID_LEN,
-			      mgmt->u.action.u.sa_query_resp.trans_id,
-			      WLAN_SA_QUERY_TR_ID_LEN) == 0)
-			break;
-	}
-
-	if (i >= sta->sa_query_count) {
-		wpa_printf(MSG_DEBUG, "IEEE 802.11: No matching SA Query "
-			   "transaction identifier found");
-		return;
-	}
-
-	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
-		       HOSTAPD_LEVEL_DEBUG,
-		       "Reply to pending SA Query received");
-	ap_sta_stop_sa_query(hapd, sta);
+	ieee802_11_sa_query_action(hapd, mgmt->sa,
+				   mgmt->u.action.u.sa_query_resp.action,
+				   mgmt->u.action.u.sa_query_resp.trans_id);
 }
 
 

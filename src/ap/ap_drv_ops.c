@@ -47,8 +47,27 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 			       struct wpabuf **assocresp_ret)
 {
 	struct wpabuf *beacon = NULL, *proberesp = NULL, *assocresp = NULL;
+	u8 buf[100], *pos;
 
 	*beacon_ret = *proberesp_ret = *assocresp_ret = NULL;
+
+	pos = buf;
+	pos = hostapd_eid_ext_capab(hapd, pos);
+	if (pos != buf) {
+		if (wpabuf_resize(&assocresp, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(assocresp, buf, pos - buf);
+	}
+	pos = hostapd_eid_interworking(hapd, pos);
+	if (pos != buf) {
+		if (wpabuf_resize(&beacon, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(beacon, buf, pos - buf);
+
+		if (wpabuf_resize(&proberesp, pos - buf) != 0)
+			goto fail;
+		wpabuf_put_data(proberesp, buf, pos - buf);
+	}
 
 	if (hapd->wps_beacon_ie) {
 		if (wpabuf_resize(&beacon, wpabuf_len(hapd->wps_beacon_ie)) <

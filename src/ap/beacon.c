@@ -198,46 +198,6 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len)
 }
 
 
-static u8 * hostapd_eid_interworking(struct hostapd_data *hapd, u8 *eid)
-{
-	u8 *pos = eid;
-#ifdef CONFIG_INTERWORKING
-	u8 *len;
-
-	if (!hapd->conf->interworking)
-		return eid;
-
-	*pos++ = WLAN_EID_INTERWORKING;
-	len = pos++;
-
-	*pos = hapd->conf->access_network_type;
-	if (hapd->conf->internet)
-		*pos |= INTERWORKING_ANO_INTERNET;
-	if (hapd->conf->asra)
-		*pos |= INTERWORKING_ANO_ASRA;
-	if (hapd->conf->esr)
-		*pos |= INTERWORKING_ANO_ESR;
-	if (hapd->conf->uesa)
-		*pos |= INTERWORKING_ANO_UESA;
-	pos++;
-
-	if (hapd->conf->venue_info_set) {
-		*pos++ = hapd->conf->venue_group;
-		*pos++ = hapd->conf->venue_type;
-	}
-
-	if (!is_zero_ether_addr(hapd->conf->hessid)) {
-		os_memcpy(pos, hapd->conf->hessid, ETH_ALEN);
-		pos += ETH_ALEN;
-	}
-
-	*len = pos - len - 1;
-#endif /* CONFIG_INTERWORKING */
-
-	return pos;
-}
-
-
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len)
 {

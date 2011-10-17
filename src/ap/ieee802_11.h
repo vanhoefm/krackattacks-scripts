@@ -69,5 +69,6 @@ u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,
 void ieee802_11_sa_query_action(struct hostapd_data *hapd,
 				const u8 *sa, const u8 action_type,
 				const u8 *trans_id);
+u8 * hostapd_eid_interworking(struct hostapd_data *hapd, u8 *eid);
 
 #endif /* IEEE802_11_H */

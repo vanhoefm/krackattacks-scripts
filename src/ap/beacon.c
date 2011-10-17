@@ -184,8 +184,7 @@ static u8 * hostapd_eid_country(struct hostapd_data *hapd, u8 *eid,
 }
 
 
-static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len,
-			    struct sta_info *sta)
+static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len)
 {
 	const u8 *ie;
 	size_t ielen;
@@ -389,7 +388,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	pos = hostapd_eid_ext_supp_rates(hapd, pos);
 
 	/* RSN, MDIE, WPA */
-	pos = hostapd_eid_wpa(hapd, pos, epos - pos, sta);
+	pos = hostapd_eid_wpa(hapd, pos, epos - pos);
 
 #ifdef CONFIG_IEEE80211N
 	pos = hostapd_eid_ht_capabilities(hapd, pos);
@@ -524,7 +523,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	/* RSN, MDIE, WPA */
 	tailpos = hostapd_eid_wpa(hapd, tailpos, tail + BEACON_TAIL_BUF_SIZE -
-				  tailpos, NULL);
+				  tailpos);
 
 #ifdef CONFIG_IEEE80211N
 	tailpos = hostapd_eid_ht_capabilities(hapd, tailpos);

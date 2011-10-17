@@ -1393,6 +1393,34 @@ static int atheros_set_authmode(void *priv, int auth_algs)
 	return set80211param(priv, IEEE80211_PARAM_AUTHMODE, authmode);
 }
 
+static int atheros_set_ap(void *priv, struct wpa_driver_ap_params *params)
+{
+	/*
+	 * TODO: Use this to replace set_authmode, set_privacy, set_ieee8021x,
+	 * set_generic_elem, and hapd_set_ssid.
+	 */
+
+	wpa_printf(MSG_DEBUG, "atheros: set_ap - pairwise_ciphers=0x%x "
+		   "group_cipher=0x%x key_mgmt_suites=0x%x auth_algs=0x%x "
+		   "wpa_version=0x%x privacy=%d interworking=%d",
+		   params->pairwise_ciphers, params->group_cipher,
+		   params->key_mgmt_suites, params->auth_algs,
+		   params->wpa_version, params->privacy, params->interworking);
+	wpa_hexdump_ascii(MSG_DEBUG, "atheros: SSID",
+			  params->ssid, params->ssid_len);
+	if (params->hessid)
+		wpa_printf(MSG_DEBUG, "atheros: HESSID " MACSTR,
+			   MAC2STR(params->hessid));
+	wpa_hexdump_buf(MSG_DEBUG, "atheros: beacon_ies",
+			params->beacon_ies);
+	wpa_hexdump_buf(MSG_DEBUG, "atheros: proberesp_ies",
+			params->proberesp_ies);
+	wpa_hexdump_buf(MSG_DEBUG, "atheros: assocresp_ies",
+			params->assocresp_ies);
+
+	return 0;
+}
+
 const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.name			= "atheros",
 	.hapd_init		= atheros_init,
@@ -1415,4 +1443,5 @@ const struct wpa_driver_ops wpa_driver_atheros_ops = {
 	.commit			= atheros_commit,
 	.set_ap_wps_ie		= atheros_set_ap_wps_ie,
 	.set_authmode		= atheros_set_authmode,
+	.set_ap			= atheros_set_ap,
 };

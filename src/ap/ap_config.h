@@ -142,6 +142,13 @@ struct hostapd_wmm_ac_params {
 };
 
 
+#define MAX_ROAMING_CONSORTIUM_LEN 15
+
+struct hostapd_roaming_consortium {
+	u8 len;
+	u8 oi[MAX_ROAMING_CONSORTIUM_LEN];
+};
+
 /**
  * struct hostapd_bss_config - Per-BSS configuration
  */
@@ -346,6 +353,10 @@ struct hostapd_bss_config {
 	u8 venue_group;
 	u8 venue_type;
 	u8 hessid[ETH_ALEN];
+
+	/* IEEE 802.11u - Roaming Consortium list */
+	unsigned int roaming_consortium_count;
+	struct hostapd_roaming_consortium *roaming_consortium;
 };
 
 

@@ -1142,6 +1142,40 @@ static int hostapd_config_check(struct hostapd_config *conf)
 }
 
 
+#ifdef CONFIG_INTERWORKING
+static int parse_roaming_consortium(struct hostapd_bss_config *bss, char *pos,
+				    int line)
+{
+	size_t len = os_strlen(pos);
+	u8 oi[MAX_ROAMING_CONSORTIUM_LEN];
+
+	struct hostapd_roaming_consortium *rc;
+
+	if ((len & 1) || len < 2 * 3 || len / 2 > MAX_ROAMING_CONSORTIUM_LEN ||
+	    hexstr2bin(pos, oi, len / 2)) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid roaming_consortium "
+			   "'%s'", line, pos);
+		return -1;
+	}
+	len /= 2;
+
+	rc = os_realloc(bss->roaming_consortium,
+			sizeof(struct hostapd_roaming_consortium) *
+			(bss->roaming_consortium_count + 1));
+	if (rc == NULL)
+		return -1;
+
+	os_memcpy(rc[bss->roaming_consortium_count].oi, oi, len);
+	rc[bss->roaming_consortium_count].len = len;
+
+	bss->roaming_consortium = rc;
+	bss->roaming_consortium_count++;
+
+	return 0;
+}
+#endif /* CONFIG_INTERWORKING */
+
+
 /**
  * hostapd_config_read - Read and parse a configuration file
  * @fname: Configuration file name (including path, if needed)
@@ -2089,6 +2123,9 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   "hessid", line);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "roaming_consortium") == 0) {
+			if (parse_roaming_consortium(bss, pos, line) < 0)
+				errors++;
 #endif /* CONFIG_INTERWORKING */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "

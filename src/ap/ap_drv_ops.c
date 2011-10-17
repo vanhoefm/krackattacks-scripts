@@ -47,7 +47,7 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 			       struct wpabuf **assocresp_ret)
 {
 	struct wpabuf *beacon = NULL, *proberesp = NULL, *assocresp = NULL;
-	u8 buf[100], *pos;
+	u8 buf[200], *pos;
 
 	*beacon_ret = *proberesp_ret = *assocresp_ret = NULL;
 
@@ -60,6 +60,7 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	}
 	pos = hostapd_eid_interworking(hapd, pos);
 	pos = hostapd_eid_adv_proto(hapd, pos);
+	pos = hostapd_eid_roaming_consortium(hapd, pos);
 	if (pos != buf) {
 		if (wpabuf_resize(&beacon, pos - buf) != 0)
 			goto fail;

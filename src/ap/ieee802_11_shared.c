@@ -262,3 +262,50 @@ u8 * hostapd_eid_adv_proto(struct hostapd_data *hapd, u8 *eid)
 
 	return pos;
 }
+
+
+u8 * hostapd_eid_roaming_consortium(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+#ifdef CONFIG_INTERWORKING
+	u8 *len;
+	unsigned int i, count;
+
+	if (!hapd->conf->interworking ||
+	    hapd->conf->roaming_consortium == NULL ||
+	    hapd->conf->roaming_consortium_count == 0)
+		return eid;
+
+	*pos++ = WLAN_EID_ROAMING_CONSORTIUM;
+	len = pos++;
+
+	/* Number of ANQP OIs (in addition to the max 3 listed here) */
+	if (hapd->conf->roaming_consortium_count > 3 + 255)
+		*pos++ = 255;
+	else if (hapd->conf->roaming_consortium_count > 3)
+		*pos++ = hapd->conf->roaming_consortium_count - 3;
+	else
+		*pos++ = 0;
+
+	/* OU #1 and #2 Lengths */
+	*pos = hapd->conf->roaming_consortium[0].len;
+	if (hapd->conf->roaming_consortium_count > 1)
+		*pos |= hapd->conf->roaming_consortium[1].len << 4;
+	pos++;
+
+	if (hapd->conf->roaming_consortium_count > 3)
+		count = 3;
+	else
+		count = hapd->conf->roaming_consortium_count;
+
+	for (i = 0; i < count; i++) {
+		os_memcpy(pos, hapd->conf->roaming_consortium[i].oi,
+			  hapd->conf->roaming_consortium[i].len);
+		pos += hapd->conf->roaming_consortium[i].len;
+	}
+
+	*len = pos - len - 1;
+#endif /* CONFIG_INTERWORKING */
+
+	return pos;
+}

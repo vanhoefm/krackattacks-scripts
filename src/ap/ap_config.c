@@ -467,6 +467,8 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->model_url);
 	os_free(conf->upc);
 #endif /* CONFIG_WPS */
+
+	os_free(conf->roaming_consortium);
 }
 
 

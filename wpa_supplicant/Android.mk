@@ -174,7 +174,7 @@ endif
 
 ifdef CONFIG_TDLS
 L_CFLAGS += -DCONFIG_TDLS
-OBJS += src/rsn_supp/tdls.o
+OBJS += src/rsn_supp/tdls.c
 NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
@@ -218,10 +218,18 @@ OBJS += src/p2p/p2p_dev_disc.c
 OBJS += src/p2p/p2p_group.c
 OBJS += src/ap/p2p_hostapd.c
 L_CFLAGS += -DCONFIG_P2P
+NEED_GAS=y
+NEED_OFFCHANNEL=y
 NEED_80211_COMMON=y
 ifdef CONFIG_P2P_STRICT
 L_CFLAGS += -DCONFIG_P2P_STRICT
 endif
+endif
+
+ifdef CONFIG_INTERWORKING
+OBJS += interworking.c
+L_CFLAGS += -DCONFIG_INTERWORKING
+NEED_GAS=y
 endif
 
 ifdef CONFIG_NO_WPA2
@@ -688,8 +696,10 @@ OBJS += src/ap/ap_mlme.c
 OBJS += src/ap/ieee802_1x.c
 OBJS += src/eapol_auth/eapol_auth_sm.c
 OBJS += src/ap/ieee802_11_auth.c
+OBJS += src/ap/ieee802_11_shared.c
 OBJS += src/ap/drv_callbacks.c
 OBJS += src/ap/ap_drv_ops.c
+OBJS += src/ap/beacon.c
 ifdef CONFIG_IEEE80211N
 OBJS += src/ap/ieee802_11_ht.c
 endif
@@ -707,7 +717,6 @@ L_CFLAGS += -DCONFIG_IEEE80211N
 endif
 
 ifdef NEED_AP_MLME
-OBJS += src/ap/beacon.c
 OBJS += src/ap/wmm.c
 OBJS += src/ap/ap_list.c
 OBJS += src/ap/ieee802_11.c
@@ -791,6 +800,7 @@ endif
 
 ifdef NEED_MILENAGE
 OBJS += src/crypto/milenage.c
+NEED_AES_ENCBLOCK=y
 endif
 
 ifdef CONFIG_PKCS12
@@ -823,6 +833,10 @@ ifndef CONFIG_TLS
 CONFIG_TLS=openssl
 endif
 
+ifdef CONFIG_TLSV11
+L_CFLAGS += -DCONFIG_TLSV11
+endif
+
 ifeq ($(CONFIG_TLS), openssl)
 ifdef TLS_FUNCS
 L_CFLAGS += -DEAP_TLS_OPENSSL
@@ -842,10 +856,6 @@ ifeq ($(CONFIG_TLS), gnutls)
 ifdef TLS_FUNCS
 OBJS += src/crypto/tls_gnutls.c
 LIBS += -lgnutls -lgpg-error
-ifdef CONFIG_GNUTLS_EXTRA
-L_CFLAGS += -DCONFIG_GNUTLS_EXTRA
-LIBS += -lgnutls-extra
-endif
 endif
 OBJS += src/crypto/crypto_gnutls.c
 OBJS_p += src/crypto/crypto_gnutls.c
@@ -1044,7 +1054,9 @@ ifdef NEED_FIPS186_2_PRF
 SHA1OBJS += src/crypto/fips_prf_internal.c
 endif
 endif
-ifndef CONFIG_NO_WPA_PASSPHRASE
+ifdef CONFIG_NO_WPA_PASSPHRASE
+L_CFLAGS += -DCONFIG_NO_PBKDF2
+else
 SHA1OBJS += src/crypto/sha1-pbkdf2.c
 endif
 ifdef NEED_T_PRF
@@ -1141,6 +1153,9 @@ DBUS_CFLAGS += -DCONFIG_CTRL_IFACE_DBUS -DDBUS_API_SUBJECT_TO_CHANGE
 DBUS_OBJS += dbus/dbus_old.c dbus/dbus_old_handlers.c
 ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_old_handlers_wps.c
+endif
+ifdef CONFIG_P2P
+DBUS_OBJS += dbus/dbus_new_handlers_p2p.c
 endif
 DBUS_OBJS += dbus/dbus_dict_helpers.c
 ifndef DBUS_LIBS
@@ -1261,6 +1276,9 @@ endif
 
 ifdef CONFIG_DEBUG_SYSLOG
 L_CFLAGS += -DCONFIG_DEBUG_SYSLOG
+ifdef CONFIG_DEBUG_SYSLOG_FACILITY
+L_CFLAGS += -DLOG_HOSTAPD="$(CONFIG_DEBUG_SYSLOG_FACILITY)"
+endif
 endif
 
 ifdef CONFIG_DEBUG_FILE
@@ -1294,6 +1312,18 @@ endif
 ifdef NEED_BGSCAN
 L_CFLAGS += -DCONFIG_BGSCAN
 OBJS += bgscan.c
+endif
+
+ifdef NEED_GAS
+OBJS += ../src/common/gas.c
+OBJS += gas_query.c
+L_CFLAGS += -DCONFIG_GAS
+NEED_OFFCHANNEL=y
+endif
+
+ifdef NEED_OFFCHANNEL
+OBJS += offchannel.c
+L_CFLAGS += -DCONFIG_OFFCHANNEL
 endif
 
 OBJS_wpa_rm := ctrl_iface.c mlme.c ctrl_iface_unix.c

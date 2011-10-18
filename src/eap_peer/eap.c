@@ -147,6 +147,7 @@ SM_STATE(EAP, INITIALIZE)
 	sm->methodState = METHOD_NONE;
 	sm->allowNotifications = TRUE;
 	sm->decision = DECISION_FAIL;
+	sm->ClientTimeout = EAP_CLIENT_TIMEOUT_DEFAULT;
 	eapol_set_int(sm, EAPOL_idleWhile, sm->ClientTimeout);
 	eapol_set_bool(sm, EAPOL_eapSuccess, FALSE);
 	eapol_set_bool(sm, EAPOL_eapFail, FALSE);

@@ -2442,6 +2442,8 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 #ifdef CONFIG_HS20
 		} else if (os_strcmp(buf, "hs20") == 0) {
 			bss->hs20 = atoi(pos);
+		} else if (os_strcmp(buf, "disable_dgaf") == 0) {
+			bss->disable_dgaf = atoi(pos);
 #endif /* CONFIG_HS20 */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "

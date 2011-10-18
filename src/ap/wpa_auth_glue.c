@@ -70,6 +70,9 @@ static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 	wconf->pmk_r1_push = conf->pmk_r1_push;
 	wconf->ft_over_ds = conf->ft_over_ds;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_HS20
+	wconf->disable_gtk = conf->disable_dgaf;
+#endif /* CONFIG_HS20 */
 }
 
 

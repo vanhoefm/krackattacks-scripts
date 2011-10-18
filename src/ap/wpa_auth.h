@@ -158,6 +158,7 @@ struct wpa_auth_config {
 	int pmk_r1_push;
 	int ft_over_ds;
 #endif /* CONFIG_IEEE80211R */
+	int disable_gtk;
 };
 
 typedef enum {

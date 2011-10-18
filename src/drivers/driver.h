@@ -740,6 +740,11 @@ struct wpa_driver_ap_params {
 	 * This is used by driver which advertises this capability.
 	 */
 	int ap_max_inactivity;
+
+	/**
+	 * disable_dgaf - Whether group-addressed frames are disabled
+	 */
+	int disable_dgaf;
 };
 
 /**

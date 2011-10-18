@@ -25,6 +25,7 @@ u8 * hostapd_eid_hs20_indication(struct hostapd_data *hapd, u8 *eid)
 	WPA_PUT_BE24(eid, OUI_WFA);
 	eid += 3;
 	*eid++ = HS20_INDICATION_OUI_TYPE;
-	*eid++ = 0x00; /* Hotspot Configuration: DGAF Enabled */
+	/* Hotspot Configuration: DGAF Enabled */
+	*eid++ = hapd->conf->disable_dgaf ? 0x01 : 0x00;
 	return eid;
 }

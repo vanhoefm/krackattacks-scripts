@@ -396,6 +396,7 @@ struct hostapd_bss_config {
 
 #ifdef CONFIG_HS20
 	int hs20;
+	int disable_dgaf;
 #endif /* CONFIG_HS20 */
 
 	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */

@@ -1898,6 +1898,14 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 	    wpa_auth_get_seqnum(sm->wpa_auth, NULL, gsm->GN_igtk, igtk.pn) < 0)
 		os_memset(igtk.pn, 0, sizeof(igtk.pn));
 	os_memcpy(igtk.igtk, gsm->IGTK[gsm->GN_igtk - 4], WPA_IGTK_LEN);
+	if (sm->wpa_auth->conf.disable_gtk) {
+		/*
+		 * Provide unique random IGTK to each STA to prevent use of
+		 * IGTK in the BSS.
+		 */
+		if (random_get_bytes(igtk.igtk, WPA_IGTK_LEN) < 0)
+			return pos;
+	}
 	pos = wpa_add_kde(pos, RSN_KEY_DATA_IGTK,
 			  (const u8 *) &igtk, sizeof(igtk), NULL, 0);
 
@@ -1922,7 +1930,7 @@ static u8 * ieee80211w_kde_add(struct wpa_state_machine *sm, u8 *pos)
 
 SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 {
-	u8 rsc[WPA_KEY_RSC_LEN], *_rsc, *gtk, *kde, *pos;
+	u8 rsc[WPA_KEY_RSC_LEN], *_rsc, *gtk, *kde, *pos, dummy_gtk[32];
 	size_t gtk_len, kde_len;
 	struct wpa_group *gsm = sm->group;
 	u8 *wpa_ie;
@@ -1960,6 +1968,15 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		secure = 1;
 		gtk = gsm->GTK[gsm->GN - 1];
 		gtk_len = gsm->GTK_len;
+		if (sm->wpa_auth->conf.disable_gtk) {
+			/*
+			 * Provide unique random GTK to each STA to prevent use
+			 * of GTK in the BSS.
+			 */
+			if (random_get_bytes(dummy_gtk, gtk_len) < 0)
+				return;
+			gtk = dummy_gtk;
+		}
 		keyidx = gsm->GN;
 		_rsc = rsc;
 		encr = 1;
@@ -2256,6 +2273,7 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 	struct wpa_group *gsm = sm->group;
 	u8 *kde, *pos, hdr[2];
 	size_t kde_len;
+	u8 *gtk, dummy_gtk[32];
 
 	SM_ENTRY_MA(WPA_PTK_GROUP, REKEYNEGOTIATING, wpa_ptk_group);
 
@@ -2276,6 +2294,16 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 	wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
 			"sending 1/2 msg of Group Key Handshake");
 
+	gtk = gsm->GTK[gsm->GN - 1];
+	if (sm->wpa_auth->conf.disable_gtk) {
+		/*
+		 * Provide unique random GTK to each STA to prevent use
+		 * of GTK in the BSS.
+		 */
+		if (random_get_bytes(dummy_gtk, gsm->GTK_len) < 0)
+			return;
+		gtk = dummy_gtk;
+	}
 	if (sm->wpa == WPA_VERSION_WPA2) {
 		kde_len = 2 + RSN_SELECTOR_LEN + 2 + gsm->GTK_len +
 			ieee80211w_kde_len(sm);
@@ -2287,10 +2315,10 @@ SM_STATE(WPA_PTK_GROUP, REKEYNEGOTIATING)
 		hdr[0] = gsm->GN & 0x03;
 		hdr[1] = 0;
 		pos = wpa_add_kde(pos, RSN_KEY_DATA_GROUPKEY, hdr, 2,
-				  gsm->GTK[gsm->GN - 1], gsm->GTK_len);
+				  gtk, gsm->GTK_len);
 		pos = ieee80211w_kde_add(sm, pos);
 	} else {
-		kde = gsm->GTK[gsm->GN - 1];
+		kde = gtk;
 		pos = kde + gsm->GTK_len;
 	}
 

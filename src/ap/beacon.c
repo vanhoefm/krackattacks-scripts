@@ -703,6 +703,9 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 		params.hessid = hapd->conf->hessid;
 	params.access_network_type = hapd->conf->access_network_type;
 	params.ap_max_inactivity = hapd->conf->ap_max_inactivity;
+#ifdef CONFIG_HS20
+	params.disable_dgaf = hapd->conf->disable_dgaf;
+#endif /* CONFIG_HS20 */
 	if (hostapd_drv_set_ap(hapd, &params))
 		wpa_printf(MSG_ERROR, "Failed to set beacon parameters");
 	hostapd_free_ap_extra_ies(hapd, beacon, proberesp, assocresp);

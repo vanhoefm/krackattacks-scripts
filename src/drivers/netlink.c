@@ -34,7 +34,7 @@ static void netlink_receive_link(struct netlink_data *netlink,
 	if (cb == NULL || NLMSG_PAYLOAD(h, 0) < sizeof(struct ifinfomsg))
 		return;
 	cb(netlink->cfg->ctx, NLMSG_DATA(h),
-	   NLMSG_DATA(h) + NLMSG_ALIGN(sizeof(struct ifinfomsg)),
+	   (u8 *) NLMSG_DATA(h) + NLMSG_ALIGN(sizeof(struct ifinfomsg)),
 	   NLMSG_PAYLOAD(h, sizeof(struct ifinfomsg)));
 }
 

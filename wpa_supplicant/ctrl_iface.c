@@ -39,6 +39,7 @@
 #include "scan.h"
 #include "ctrl_iface.h"
 #include "interworking.h"
+#include "blacklist.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -917,6 +918,59 @@ static int wpa_supplicant_ctrl_iface_bssid(struct wpa_supplicant *wpa_s,
 	ssid->bssid_set = !is_zero_ether_addr(bssid);
 
 	return 0;
+}
+
+
+static int wpa_supplicant_ctrl_iface_blacklist(struct wpa_supplicant *wpa_s,
+					       char *cmd, char *buf,
+					       size_t buflen)
+{
+	u8 bssid[ETH_ALEN];
+	struct wpa_blacklist *e;
+	char *pos, *end;
+	int ret;
+
+	/* cmd: "BLACKLIST [<BSSID>]" */
+	if (*cmd == '\0') {
+		pos = buf;
+		end = buf + buflen;
+		e = wpa_s->blacklist;
+		while (e) {
+			ret = os_snprintf(pos, end - pos, MACSTR "\n",
+					  MAC2STR(e->bssid));
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+			e = e->next;
+		}
+		return pos - buf;
+	}
+
+	cmd++;
+	if (os_strncmp(cmd, "clear", 5) == 0) {
+		wpa_blacklist_clear(wpa_s);
+		os_memcpy(buf, "OK\n", 3);
+		return 3;
+	}
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: BLACKLIST bssid='%s'", cmd);
+	if (hwaddr_aton(cmd, bssid)) {
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: invalid BSSID '%s'", cmd);
+		return -1;
+	}
+
+	/*
+	 * Add the BSSID twice, so its count will be 2, causing it to be
+	 * skipped when processing scan results.
+	 */
+	ret = wpa_blacklist_add(wpa_s, bssid);
+	if (ret != 0)
+		return -1;
+	ret = wpa_blacklist_add(wpa_s, bssid);
+	if (ret != 0)
+		return -1;
+	os_memcpy(buf, "OK\n", 3);
+	return 3;
 }
 
 
@@ -3402,6 +3456,9 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "BSSID ", 6) == 0) {
 		if (wpa_supplicant_ctrl_iface_bssid(wpa_s, buf + 6))
 			reply_len = -1;
+	} else if (os_strncmp(buf, "BLACKLIST", 9) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_blacklist(
+			wpa_s, buf + 9, reply, reply_size);
 	} else if (os_strncmp(buf, "LOG_LEVEL", 9) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_log_level(
 			wpa_s, buf + 9, reply, reply_size);

@@ -32,6 +32,7 @@
 #include "netlink.h"
 #include "linux_ioctl.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 
 
 /* MTU to be set for the wlan#ap device; this is mainly needed for IEEE 802.1X
@@ -84,8 +85,8 @@ static void handle_data(struct hostap_driver_data *drv, u8 *buf, size_t len,
 
 	sa = hdr->addr2;
 	os_memset(&event, 0, sizeof(event));
-	event.rx_from_unknown.frame = buf;
-	event.rx_from_unknown.len = len;
+	event.rx_from_unknown.bssid = get_hdr_bssid(hdr, len);
+	event.rx_from_unknown.addr = sa;
 	wpa_supplicant_event(drv->hapd, EVENT_RX_FROM_UNKNOWN, &event);
 
 	pos = (u8 *) (hdr + 1);

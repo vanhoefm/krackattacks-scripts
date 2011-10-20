@@ -576,16 +576,11 @@ void ap_client_poll_ok(void *ctx, const u8 *addr)
 }
 
 
-void ap_rx_from_unknown_sta(void *ctx, const u8 *frame, size_t len)
+void ap_rx_from_unknown_sta(void *ctx, const u8 *addr, int wds)
 {
 #ifdef NEED_AP_MLME
 	struct wpa_supplicant *wpa_s = ctx;
-	const struct ieee80211_hdr *hdr =
-		(const struct ieee80211_hdr *) frame;
-	u16 fc = le_to_host16(hdr->frame_control);
-	ieee802_11_rx_from_unknown(wpa_s->ap_iface->bss[0], hdr->addr2,
-				   (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
-				   (WLAN_FC_TODS | WLAN_FC_FROMDS));
+	ieee802_11_rx_from_unknown(wpa_s->ap_iface->bss[0], addr, wds);
 #endif /* NEED_AP_MLME */
 }
 

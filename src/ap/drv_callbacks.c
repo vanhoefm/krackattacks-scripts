@@ -320,17 +320,14 @@ static struct hostapd_data * get_hapd_bssid(struct hostapd_iface *iface,
 
 
 static void hostapd_rx_from_unknown_sta(struct hostapd_data *hapd,
-					const u8 *frame, size_t len)
+					const u8 *bssid, const u8 *addr,
+					int wds)
 {
-	const struct ieee80211_hdr *hdr = (const struct ieee80211_hdr *) frame;
-	u16 fc = le_to_host16(hdr->frame_control);
-	hapd = get_hapd_bssid(hapd->iface, get_hdr_bssid(hdr, len));
+	hapd = get_hapd_bssid(hapd->iface, bssid);
 	if (hapd == NULL || hapd == HAPD_BROADCAST)
 		return;
 
-	ieee802_11_rx_from_unknown(hapd, hdr->addr2,
-				   (fc & (WLAN_FC_TODS | WLAN_FC_FROMDS)) ==
-				   (WLAN_FC_TODS | WLAN_FC_FROMDS));
+	ieee802_11_rx_from_unknown(hapd, addr, wds);
 }
 
 
@@ -513,8 +510,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		hostapd_client_poll_ok(hapd, data->client_poll.addr);
 		break;
 	case EVENT_RX_FROM_UNKNOWN:
-		hostapd_rx_from_unknown_sta(hapd, data->rx_from_unknown.frame,
-					    data->rx_from_unknown.len);
+		hostapd_rx_from_unknown_sta(hapd, data->rx_from_unknown.bssid,
+					    data->rx_from_unknown.addr,
+					    data->rx_from_unknown.wds);
 		break;
 	case EVENT_RX_MGMT:
 		hostapd_mgmt_rx(hapd, &data->rx_mgmt);

@@ -3234,8 +3234,9 @@ union wpa_event_data {
 	 * struct rx_from_unknown - Data for EVENT_RX_FROM_UNKNOWN events
 	 */
 	struct rx_from_unknown {
-		const u8 *frame;
-		size_t len;
+		const u8 *bssid;
+		const u8 *addr;
+		int wds;
 	} rx_from_unknown;
 
 	/**

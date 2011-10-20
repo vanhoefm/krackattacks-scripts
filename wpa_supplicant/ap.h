@@ -42,7 +42,7 @@ int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
 void ap_tx_status(void *ctx, const u8 *addr,
 		  const u8 *buf, size_t len, int ack);
 void ap_client_poll_ok(void *ctx, const u8 *addr);
-void ap_rx_from_unknown_sta(void *ctx, const u8 *frame, size_t len);
+void ap_rx_from_unknown_sta(void *ctx, const u8 *addr, int wds);
 void ap_mgmt_rx(void *ctx, struct rx_mgmt *rx_mgmt);
 void ap_mgmt_tx_cb(void *ctx, const u8 *buf, size_t len, u16 stype, int ok);
 int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s);

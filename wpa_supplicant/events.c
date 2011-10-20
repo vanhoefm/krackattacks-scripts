@@ -2033,8 +2033,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_RX_FROM_UNKNOWN:
 		if (wpa_s->ap_iface == NULL)
 			break;
-		ap_rx_from_unknown_sta(wpa_s, data->rx_from_unknown.frame,
-				       data->rx_from_unknown.len);
+		ap_rx_from_unknown_sta(wpa_s, data->rx_from_unknown.addr,
+				       data->rx_from_unknown.wds);
 		break;
 	case EVENT_RX_MGMT:
 		if (wpa_s->ap_iface == NULL) {

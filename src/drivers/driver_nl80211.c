@@ -34,6 +34,7 @@
 #include "eloop.h"
 #include "utils/list.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "l2_packet/l2_packet.h"
 #include "netlink.h"
 #include "linux_ioctl.h"
@@ -4661,10 +4662,20 @@ static void handle_tx_callback(void *ctx, u8 *buf, size_t len, int ok)
 static void from_unknown_sta(struct wpa_driver_nl80211_data *drv,
 			     u8 *buf, size_t len)
 {
+	struct ieee80211_hdr *hdr = (void *)buf;
+	u16 fc;
 	union wpa_event_data event;
+
+	if (len < sizeof(*hdr))
+		return;
+
+	fc = le_to_host16(hdr->frame_control);
+
 	os_memset(&event, 0, sizeof(event));
-	event.rx_from_unknown.frame = buf;
-	event.rx_from_unknown.len = len;
+	event.rx_from_unknown.bssid = get_hdr_bssid(hdr, len);
+	event.rx_from_unknown.addr = hdr->addr2;
+	event.rx_from_unknown.wds = (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) ==
+		(WLAN_FC_FROMDS | WLAN_FC_TODS);
 	wpa_supplicant_event(drv->ctx, EVENT_RX_FROM_UNKNOWN, &event);
 }
 

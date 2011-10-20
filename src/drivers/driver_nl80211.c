@@ -2340,8 +2340,9 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	if ((drv->global == NULL ||
 	     drv->ifindex != drv->global->if_add_ifindex) &&
 	    wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION) < 0) {
-		wpa_printf(MSG_DEBUG, "nl80211: Could not configure driver to "
+		wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to "
 			   "use managed mode");
+		return -1;
 	}
 
 	if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 1)) {
@@ -5711,15 +5712,21 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	wpa_printf(MSG_DEBUG, "nl80211: Try mode change after setting "
 		   "interface down");
 	for (i = 0; i < 10; i++) {
-		if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 0) ==
-		    0) {
+		int res;
+		res = linux_set_iface_flags(drv->ioctl_sock, bss->ifname, 0);
+		if (res == -EACCES || res == -ENODEV)
+			break;
+		if (res == 0) {
 			/* Try to set the mode again while the interface is
 			 * down */
 			ret = nl80211_set_mode(drv, drv->ifindex, nlmode);
-			if (linux_set_iface_flags(drv->ioctl_sock, bss->ifname,
-						  1))
+			if (ret == -EACCES)
+				break;
+			res = linux_set_iface_flags(drv->ioctl_sock,
+						    bss->ifname, 1);
+			if (res && !ret)
 				ret = -1;
-			if (!ret)
+			else if (ret != -EBUSY)
 				break;
 		} else
 			wpa_printf(MSG_DEBUG, "nl80211: Failed to set "

@@ -24,6 +24,7 @@
 int linux_set_iface_flags(int sock, const char *ifname, int dev_up)
 {
 	struct ifreq ifr;
+	int ret;
 
 	if (sock < 0)
 		return -1;
@@ -32,9 +33,10 @@ int linux_set_iface_flags(int sock, const char *ifname, int dev_up)
 	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
 
 	if (ioctl(sock, SIOCGIFFLAGS, &ifr) != 0) {
+		ret = errno ? -errno : -999;
 		wpa_printf(MSG_ERROR, "Could not read interface %s flags: %s",
 			   ifname, strerror(errno));
-		return -1;
+		return ret;
 	}
 
 	if (dev_up) {
@@ -48,9 +50,10 @@ int linux_set_iface_flags(int sock, const char *ifname, int dev_up)
 	}
 
 	if (ioctl(sock, SIOCSIFFLAGS, &ifr) != 0) {
+		ret = errno ? -errno : -999;
 		wpa_printf(MSG_ERROR, "Could not set interface %s flags: %s",
 			   ifname, strerror(errno));
-		return -1;
+		return ret;
 	}
 
 	return 0;

@@ -77,5 +77,7 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 int ieee802_11_ie_count(const u8 *ies, size_t ies_len);
 struct wpabuf * ieee802_11_vendor_ie_concat(const u8 *ies, size_t ies_len,
 					    u32 oui_type);
+struct ieee80211_hdr;
+const u8 * get_hdr_bssid(const struct ieee80211_hdr *hdr, size_t len);
 
 #endif /* IEEE802_11_COMMON_H */

@@ -345,3 +345,43 @@ struct wpabuf * ieee802_11_vendor_ie_concat(const u8 *ies, size_t ies_len,
 
 	return buf;
 }
+
+
+const u8 * get_hdr_bssid(const struct ieee80211_hdr *hdr, size_t len)
+{
+	u16 fc, type, stype;
+
+	/*
+	 * PS-Poll frames are 16 bytes. All other frames are
+	 * 24 bytes or longer.
+	 */
+	if (len < 16)
+		return NULL;
+
+	fc = le_to_host16(hdr->frame_control);
+	type = WLAN_FC_GET_TYPE(fc);
+	stype = WLAN_FC_GET_STYPE(fc);
+
+	switch (type) {
+	case WLAN_FC_TYPE_DATA:
+		if (len < 24)
+			return NULL;
+		switch (fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)) {
+		case WLAN_FC_FROMDS | WLAN_FC_TODS:
+		case WLAN_FC_TODS:
+			return hdr->addr1;
+		case WLAN_FC_FROMDS:
+			return hdr->addr2;
+		default:
+			return NULL;
+		}
+	case WLAN_FC_TYPE_CTRL:
+		if (stype != WLAN_FC_STYPE_PSPOLL)
+			return NULL;
+		return hdr->addr1;
+	case WLAN_FC_TYPE_MGMT:
+		return hdr->addr3;
+	default:
+		return NULL;
+	}
+}

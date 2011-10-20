@@ -3328,5 +3328,6 @@ const struct wpa_driver_ops wpa_driver_ndis_ops = {
 	NULL /* add_tspec */,
 	NULL /* add_sta_node */,
 	NULL /* sched_scan */,
-	NULL /* stop_sched_scan */
+	NULL /* stop_sched_scan */,
+	NULL /* poll_client */
 };

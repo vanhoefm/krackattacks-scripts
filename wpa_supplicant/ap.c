@@ -566,6 +566,16 @@ void ap_tx_status(void *ctx, const u8 *addr,
 }
 
 
+void ap_client_poll_ok(void *ctx, const u8 *addr)
+{
+#ifdef NEED_AP_MLME
+	struct wpa_supplicant *wpa_s = ctx;
+	if (wpa_s->ap_iface)
+		hostapd_client_poll_ok(wpa_s->ap_iface->bss[0], addr);
+#endif /* NEED_AP_MLME */
+}
+
+
 void ap_rx_from_unknown_sta(void *ctx, const u8 *frame, size_t len)
 {
 #ifdef NEED_AP_MLME

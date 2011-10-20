@@ -207,4 +207,13 @@ static inline int hostapd_drv_set_authmode(struct hostapd_data *hapd,
 	return hapd->driver->set_authmode(hapd->drv_priv, auth_algs);
 }
 
+static inline void hostapd_drv_poll_client(struct hostapd_data *hapd,
+					   const u8 *own_addr, const u8 *addr,
+					   int qos)
+{
+	if (hapd->driver == NULL || hapd->driver->poll_client == NULL)
+		return;
+	hapd->driver->poll_client(hapd->drv_priv, own_addr, addr, qos);
+}
+
 #endif /* AP_DRV_OPS */

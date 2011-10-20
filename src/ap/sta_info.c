@@ -319,52 +319,10 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 
 	if (sta->timeout_next == STA_NULLFUNC &&
 	    (sta->flags & WLAN_STA_ASSOC)) {
-#ifndef CONFIG_NATIVE_WINDOWS
-		/* send data frame to poll STA and check whether this frame
-		 * is ACKed */
-		struct {
-			struct ieee80211_hdr hdr;
-			u16 qos_ctl;
-		} STRUCT_PACKED nulldata;
-		int size = sizeof(struct ieee80211_hdr);
-
-		wpa_printf(MSG_DEBUG, "  Polling STA with data frame");
+		wpa_printf(MSG_DEBUG, "  Polling STA");
 		sta->flags |= WLAN_STA_PENDING_POLL;
-
-		os_memset(&nulldata, 0, sizeof(nulldata));
-		if (hapd->driver &&
-		    os_strcmp(hapd->driver->name, "hostap") == 0) {
-			/*
-			 * WLAN_FC_STYPE_NULLFUNC would be more appropriate,
-			 * but it is apparently not retried so TX Exc events
-			 * are not received for it.
-			 */
-			nulldata.hdr.frame_control =
-				IEEE80211_FC(WLAN_FC_TYPE_DATA,
-					     WLAN_FC_STYPE_DATA);
-		} else {
-			if (sta->flags & WLAN_STA_WMM) {
-				nulldata.hdr.frame_control =
-					IEEE80211_FC(WLAN_FC_TYPE_DATA,
-						     WLAN_FC_STYPE_QOS_NULL);
-				size = sizeof(nulldata);
-			} else
-				nulldata.hdr.frame_control =
-					IEEE80211_FC(WLAN_FC_TYPE_DATA,
-						     WLAN_FC_STYPE_NULLFUNC);
-		}
-
-		nulldata.hdr.frame_control |= host_to_le16(WLAN_FC_FROMDS);
-		os_memcpy(nulldata.hdr.IEEE80211_DA_FROMDS, sta->addr,
-			  ETH_ALEN);
-		os_memcpy(nulldata.hdr.IEEE80211_BSSID_FROMDS, hapd->own_addr,
-			  ETH_ALEN);
-		os_memcpy(nulldata.hdr.IEEE80211_SA_FROMDS, hapd->own_addr,
-			  ETH_ALEN);
-
-		if (hostapd_drv_send_mlme(hapd, &nulldata, size) < 0)
-			perror("ap_handle_timer: send");
-#endif /* CONFIG_NATIVE_WINDOWS */
+		hostapd_drv_poll_client(hapd, hapd->own_addr, sta->addr,
+					sta->flags & WLAN_STA_WMM);
 	} else if (sta->timeout_next != STA_REMOVE) {
 		int deauth = sta->timeout_next == STA_DEAUTH;
 

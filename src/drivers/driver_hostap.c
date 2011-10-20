@@ -1143,6 +1143,33 @@ static struct hostapd_hw_modes * hostap_get_hw_feature_data(void *priv,
 	return mode;
 }
 
+
+static void wpa_driver_hostap_poll_client(void *priv, const u8 *own_addr,
+					  const u8 *addr, int qos)
+{
+	struct ieee80211_hdr hdr;
+
+	os_memset(&hdr, 0, sizeof(hdr));
+
+	/*
+	 * WLAN_FC_STYPE_NULLFUNC would be more appropriate,
+	 * but it is apparently not retried so TX Exc events
+	 * are not received for it.
+	 * This is the reason the driver overrides the default
+	 * handling.
+	 */
+	hdr.frame_control = IEEE80211_FC(WLAN_FC_TYPE_DATA,
+					 WLAN_FC_STYPE_DATA);
+
+	hdr.frame_control |=
+		host_to_le16(WLAN_FC_FROMDS);
+	os_memcpy(hdr.IEEE80211_DA_FROMDS, addr, ETH_ALEN);
+	os_memcpy(hdr.IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
+	os_memcpy(hdr.IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
+
+	hostap_send_mlme(priv, (u8 *)&hdr, sizeof(hdr));
+}
+
 #else /* HOSTAPD */
 
 struct wpa_driver_hostap_data {
@@ -1650,6 +1677,7 @@ const struct wpa_driver_ops wpa_driver_hostap_ops = {
 	.get_hw_feature_data = hostap_get_hw_feature_data,
 	.set_ap_wps_ie = hostap_set_ap_wps_ie,
 	.set_freq = hostap_set_freq,
+	.poll_client = wpa_driver_hostap_poll_client,
 #else /* HOSTAPD */
 	.get_bssid = wpa_driver_hostap_get_bssid,
 	.get_ssid = wpa_driver_hostap_get_ssid,

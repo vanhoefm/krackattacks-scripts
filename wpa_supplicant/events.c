@@ -2027,6 +2027,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		break;
 #ifdef CONFIG_AP
+	case EVENT_DRIVER_CLIENT_POLL_OK:
+		ap_client_poll_ok(wpa_s, data->client_poll.addr);
+		break;
 	case EVENT_RX_FROM_UNKNOWN:
 		if (wpa_s->ap_iface == NULL)
 			break;

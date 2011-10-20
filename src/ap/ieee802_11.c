@@ -1735,6 +1735,32 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
+void hostapd_client_poll_ok(struct hostapd_data *hapd, const u8 *addr)
+{
+	struct sta_info *sta;
+	struct hostapd_iface *iface = hapd->iface;
+
+	sta = ap_get_sta(hapd, addr);
+	if (sta == NULL && iface->num_bss > 1) {
+		size_t j;
+		for (j = 0; j < iface->num_bss; j++) {
+			hapd = iface->bss[j];
+			sta = ap_get_sta(hapd, addr);
+			if (sta)
+				break;
+		}
+	}
+	if (sta == NULL)
+		return;
+	if (!(sta->flags & WLAN_STA_PENDING_POLL))
+		return;
+
+	wpa_printf(MSG_DEBUG, "STA " MACSTR " ACKed pending "
+		   "activity poll", MAC2STR(sta->addr));
+	sta->flags &= ~WLAN_STA_PENDING_POLL;
+}
+
+
 void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 				int wds)
 {

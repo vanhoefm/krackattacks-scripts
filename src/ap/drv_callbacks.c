@@ -549,6 +549,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 		break;
+	case EVENT_DRIVER_CLIENT_POLL_OK:
+		hostapd_client_poll_ok(hapd, data->client_poll.addr);
+		break;
 	case EVENT_RX_FROM_UNKNOWN:
 		hostapd_rx_from_unknown_sta(hapd, data->rx_from_unknown.frame,
 					    data->rx_from_unknown.len);

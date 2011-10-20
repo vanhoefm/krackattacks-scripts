@@ -2501,6 +2501,20 @@ struct wpa_driver_ops {
 	 * sched_scan is supported.
 	 */
 	int (*stop_sched_scan)(void *priv);
+
+	/**
+	 * poll_client - Probe (null data or such) the given station
+	 * @priv: Private driver interface data
+	 * @own_addr: MAC address of sending interface
+	 * @addr: MAC address of the station to probe
+	 * @qos: Indicates whether station is QoS station
+	 *
+	 * This function is used to verify whether an associated station is
+	 * still present. This function does not need to be implemented if the
+	 * driver provides such inactivity polling mechanism.
+	 */
+	void (*poll_client)(void *priv, const u8 *own_addr,
+			    const u8 *addr, int qos);
 };
 
 
@@ -2918,7 +2932,15 @@ enum wpa_event_type {
 	/**
 	 * EVENT_SCHED_SCAN_STOPPED - Scheduled scan was stopped
 	 */
-	EVENT_SCHED_SCAN_STOPPED
+	EVENT_SCHED_SCAN_STOPPED,
+
+	/**
+	 * EVENT_DRIVER_CLIENT_POLL_OK - Station responded to poll
+	 *
+	 * This event indicates that the station responded to the poll
+	 * initiated with @poll_client.
+	 */
+	EVENT_DRIVER_CLIENT_POLL_OK
 };
 
 
@@ -3472,6 +3494,14 @@ union wpa_event_data {
 		const u8 *bssid;
 		const u8 *replay_ctr;
 	} driver_gtk_rekey;
+
+	/**
+	 * struct client_poll - Data for EVENT_DRIVER_CLIENT_POLL_OK events
+	 * @addr: station address
+	 */
+	struct client_poll {
+		u8 addr[ETH_ALEN];
+	} client_poll;
 };
 
 /**

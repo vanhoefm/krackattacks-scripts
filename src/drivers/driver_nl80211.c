@@ -7329,6 +7329,43 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 }
 
 
+static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
+				int qos)
+{
+	struct i802_bss *bss = priv;
+	struct {
+		struct ieee80211_hdr hdr;
+		u16 qos_ctl;
+	} STRUCT_PACKED nulldata;
+	size_t size;
+
+	/* Send data frame to poll STA and check whether this frame is ACKed */
+
+	os_memset(&nulldata, 0, sizeof(nulldata));
+
+	if (qos) {
+		nulldata.hdr.frame_control =
+			IEEE80211_FC(WLAN_FC_TYPE_DATA,
+				     WLAN_FC_STYPE_QOS_NULL);
+		size = sizeof(nulldata);
+	} else {
+		nulldata.hdr.frame_control =
+			IEEE80211_FC(WLAN_FC_TYPE_DATA,
+				     WLAN_FC_STYPE_NULLFUNC);
+		size = sizeof(struct ieee80211_hdr);
+	}
+
+	nulldata.hdr.frame_control |= host_to_le16(WLAN_FC_FROMDS);
+	os_memcpy(nulldata.hdr.IEEE80211_DA_FROMDS, addr, ETH_ALEN);
+	os_memcpy(nulldata.hdr.IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
+	os_memcpy(nulldata.hdr.IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
+
+	if (wpa_driver_nl80211_send_mlme(bss, (u8 *) &nulldata, size) < 0)
+		wpa_printf(MSG_DEBUG, "nl80211_send_null_frame: Failed to "
+			   "send poll frame");
+}
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -7399,4 +7436,5 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.remove_pmkid = nl80211_remove_pmkid,
 	.flush_pmkid = nl80211_flush_pmkid,
 	.set_rekey_info = nl80211_set_rekey_info,
+	.poll_client = nl80211_poll_client,
 };

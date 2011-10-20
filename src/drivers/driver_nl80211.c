@@ -1704,18 +1704,9 @@ nla_put_failure:
 
 
 struct wiphy_info_data {
-	int max_scan_ssids;
-	int max_sched_scan_ssids;
-	int ap_supported;
-	int p2p_supported;
-	int p2p_concurrent;
-	int auth_supported;
-	int connect_supported;
-	int offchan_tx_supported;
-	int max_remain_on_chan;
-	int firmware_roam;
-	int sched_scan_supported;
-	int max_match_sets;
+	struct wpa_driver_capa *capa;
+
+	unsigned int error:1;
 };
 
 
@@ -1725,6 +1716,9 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct wiphy_info_data *info = arg;
 	int p2p_go_supported = 0, p2p_client_supported = 0;
+	int p2p_concurrent = 0;
+	int auth_supported = 0, connect_supported = 0;
+	struct wpa_driver_capa *capa = info->capa;
 	static struct nla_policy
 	iface_combination_policy[NUM_NL80211_IFACE_COMB] = {
 		[NL80211_IFACE_COMB_LIMITS] = { .type = NLA_NESTED },
@@ -1741,15 +1735,15 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 		  genlmsg_attrlen(gnlh, 0), NULL);
 
 	if (tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS])
-		info->max_scan_ssids =
+		capa->max_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCAN_SSIDS]);
 
 	if (tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS])
-		info->max_sched_scan_ssids =
+		capa->max_sched_scan_ssids =
 			nla_get_u8(tb[NL80211_ATTR_MAX_NUM_SCHED_SCAN_SSIDS]);
 
 	if (tb[NL80211_ATTR_MAX_MATCH_SETS])
-		info->max_match_sets =
+		capa->max_match_sets =
 			nla_get_u8(tb[NL80211_ATTR_MAX_MATCH_SETS]);
 
 	if (tb[NL80211_ATTR_SUPPORTED_IFTYPES]) {
@@ -1759,7 +1753,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 				    tb[NL80211_ATTR_SUPPORTED_IFTYPES], i) {
 			switch (nla_type(nl_mode)) {
 			case NL80211_IFTYPE_AP:
-				info->ap_supported = 1;
+				capa->flags |= WPA_DRIVER_FLAGS_AP;
 				break;
 			case NL80211_IFTYPE_P2P_GO:
 				p2p_go_supported = 1;
@@ -1819,7 +1813,7 @@ static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 			}
 
 			if (combination_has_p2p && combination_has_mgd) {
-				info->p2p_concurrent = 1;
+				p2p_concurrent = 1;
 				break;
 			}
 
@@ -1828,33 +1822,60 @@ broken_combination:
 		}
 	}
 
-	info->p2p_supported = p2p_go_supported && p2p_client_supported;
-
 	if (tb[NL80211_ATTR_SUPPORTED_COMMANDS]) {
 		struct nlattr *nl_cmd;
 		int i;
 
 		nla_for_each_nested(nl_cmd,
 				    tb[NL80211_ATTR_SUPPORTED_COMMANDS], i) {
-			u32 cmd = nla_get_u32(nl_cmd);
-			if (cmd == NL80211_CMD_AUTHENTICATE)
-				info->auth_supported = 1;
-			else if (cmd == NL80211_CMD_CONNECT)
-				info->connect_supported = 1;
-			else if (cmd == NL80211_CMD_START_SCHED_SCAN)
-				info->sched_scan_supported = 1;
+			switch (nla_get_u32(nl_cmd)) {
+			case NL80211_CMD_AUTHENTICATE:
+				auth_supported = 1;
+				break;
+			case NL80211_CMD_CONNECT:
+				connect_supported = 1;
+				break;
+			case NL80211_CMD_START_SCHED_SCAN:
+				capa->sched_scan_supported = 1;
+				break;
+			}
 		}
 	}
 
-	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK])
-		info->offchan_tx_supported = 1;
+	if (tb[NL80211_ATTR_OFFCHANNEL_TX_OK]) {
+		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based "
+			   "off-channel TX");
+		capa->flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_TX;
+	}
 
-	if (tb[NL80211_ATTR_ROAM_SUPPORT])
-		info->firmware_roam = 1;
+	if (tb[NL80211_ATTR_ROAM_SUPPORT]) {
+		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based roaming");
+		capa->flags |= WPA_DRIVER_FLAGS_BSS_SELECTION;
+	}
+
+	/* default to 5000 since early versions of mac80211 don't set it */
+	capa->max_remain_on_chan = 5000;
 
 	if (tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION])
-		info->max_remain_on_chan =
+		capa->max_remain_on_chan =
 			nla_get_u32(tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION]);
+
+	if (auth_supported)
+		capa->flags |= WPA_DRIVER_FLAGS_SME;
+	else if (!connect_supported) {
+		wpa_printf(MSG_INFO, "nl80211: Driver does not support "
+			   "authentication/association or connect commands");
+		info->error = 1;
+	}
+
+	if (p2p_go_supported && p2p_client_supported)
+		capa->flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
+	if (p2p_concurrent) {
+		wpa_printf(MSG_DEBUG, "nl80211: Use separate P2P group "
+			   "interface (driver advertised support)");
+		capa->flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
+		capa->flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
+	}
 
 	return NL_SKIP;
 }
@@ -1866,9 +1887,7 @@ static int wpa_driver_nl80211_get_info(struct wpa_driver_nl80211_data *drv,
 	struct nl_msg *msg;
 
 	os_memset(info, 0, sizeof(*info));
-
-	/* default to 5000 since early versions of mac80211 don't set it */
-	info->max_remain_on_chan = 5000;
+	info->capa = &drv->capa;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -1893,6 +1912,10 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	struct wiphy_info_data info;
 	if (wpa_driver_nl80211_get_info(drv, &info))
 		return -1;
+
+	if (info.error)
+		return -1;
+
 	drv->has_capability = 1;
 	/* For now, assume TKIP, CCMP, WPA, WPA2 are supported */
 	drv->capa.key_mgmt = WPA_DRIVER_CAPA_KEY_MGMT_WPA |
@@ -1907,46 +1930,10 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;
 
-	drv->capa.max_scan_ssids = info.max_scan_ssids;
-	drv->capa.max_sched_scan_ssids = info.max_sched_scan_ssids;
-	drv->capa.sched_scan_supported = info.sched_scan_supported;
-	drv->capa.max_match_sets = info.max_match_sets;
-
-	if (info.ap_supported)
-		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
-
-	if (info.auth_supported)
-		drv->capa.flags |= WPA_DRIVER_FLAGS_SME;
-	else if (!info.connect_supported) {
-		wpa_printf(MSG_INFO, "nl80211: Driver does not support "
-			   "authentication/association or connect commands");
-		return -1;
-	}
-
-	if (info.offchan_tx_supported) {
-		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based "
-			   "off-channel TX");
-		drv->capa.flags |= WPA_DRIVER_FLAGS_OFFCHANNEL_TX;
-	}
-
-	if (info.firmware_roam) {
-		wpa_printf(MSG_DEBUG, "nl80211: Using driver-based roaming");
-		drv->capa.flags |= WPA_DRIVER_FLAGS_BSS_SELECTION;
-	}
-
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SANE_ERROR_CODES;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
-	if (info.p2p_supported)
-		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CAPABLE;
-	if (info.p2p_concurrent) {
-		wpa_printf(MSG_DEBUG, "nl80211: Use separate P2P group "
-			   "interface (driver advertised support)");
-		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_CONCURRENT;
-		drv->capa.flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
-	}
 	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
-	drv->capa.max_remain_on_chan = info.max_remain_on_chan;
 
 	return 0;
 }

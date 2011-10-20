@@ -87,6 +87,17 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 
 	nl_handle_destroy(handle);
 }
+
+static inline int __genl_ctrl_alloc_cache(struct nl_handle *h,
+					  struct nl_cache **cache)
+{
+	struct nl_cache *tmp = genl_ctrl_alloc_cache(h);
+	if (!tmp)
+		return -ENOMEM;
+	*cache = tmp;
+	return 0;
+}
+#define genl_ctrl_alloc_cache __genl_ctrl_alloc_cache
 #endif /* CONFIG_LIBNL20 */
 
 
@@ -1979,7 +1990,6 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 		goto err3;
 	}
 
-#ifdef CONFIG_LIBNL20
 	if (genl_ctrl_alloc_cache(drv->nl_handle, &drv->nl_cache) < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
 			   "netlink cache");
@@ -1991,20 +2001,6 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 			   "netlink cache (event)");
 		goto err3b;
 	}
-#else /* CONFIG_LIBNL20 */
-	drv->nl_cache = genl_ctrl_alloc_cache(drv->nl_handle);
-	if (drv->nl_cache == NULL) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
-			   "netlink cache");
-		goto err3;
-	}
-	drv->nl_cache_event = genl_ctrl_alloc_cache(drv->nl_handle_event);
-	if (drv->nl_cache_event == NULL) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
-			   "netlink cache (event)");
-		goto err3b;
-	}
-#endif /* CONFIG_LIBNL20 */
 
 	drv->nl80211 = genl_ctrl_search_by_name(drv->nl_cache, "nl80211");
 	if (drv->nl80211 == NULL) {
@@ -6959,21 +6955,12 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 		return -1;
 	}
 
-#ifdef CONFIG_LIBNL20
 	if (genl_ctrl_alloc_cache(drv->nl_handle_preq,
 				  &drv->nl_cache_preq) < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
 			   "netlink cache (preq)");
 		goto out_err2;
 	}
-#else /* CONFIG_LIBNL20 */
-	drv->nl_cache_preq = genl_ctrl_alloc_cache(drv->nl_handle_preq);
-	if (drv->nl_cache_preq == NULL) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
-			   "netlink cache (preq)");
-		goto out_err2;
-	}
-#endif /* CONFIG_LIBNL20 */
 
 	if (nl80211_register_frame(drv, drv->nl_handle_preq,
 				   (WLAN_FC_TYPE_MGMT << 2) |

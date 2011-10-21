@@ -660,6 +660,14 @@ struct wpa_driver_ap_params {
 	 * hessid - Homogeneous ESS identifier or %NULL if not set
 	 */
 	const u8 *hessid;
+
+	/**
+	 * access_network_type - Access Network Type (0..15)
+	 *
+	 * This is used for filtering Probe Request frames when Interworking is
+	 * enabled.
+	 */
+	u8 access_network_type;
 };
 
 /**

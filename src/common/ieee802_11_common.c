@@ -259,6 +259,10 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 				break;
 			elems->link_id = pos;
 			break;
+		case WLAN_EID_INTERWORKING:
+			elems->interworking = pos;
+			elems->interworking_len = elen;
+			break;
 		default:
 			unknown++;
 			if (!show_errors)

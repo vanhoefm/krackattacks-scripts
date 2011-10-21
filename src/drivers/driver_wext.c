@@ -1377,7 +1377,7 @@ static void wpa_driver_wext_add_scan_entry(struct wpa_scan_results *res,
 	tmp[res->num++] = r;
 	res->res = tmp;
 }
-				      
+
 
 /**
  * wpa_driver_wext_get_scan_results - Fetch the latest scan results

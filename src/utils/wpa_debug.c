@@ -32,6 +32,10 @@ int wpa_debug_timestamp = 0;
 
 #include <android/log.h>
 
+#ifndef ANDROID_LOG_NAME
+#define ANDROID_LOG_NAME	"wpa_supplicant"
+#endif /* ANDROID_LOG_NAME */
+
 void android_printf(int level, char *format, ...)
 {
 	if (level >= wpa_debug_level) {
@@ -45,7 +49,7 @@ void android_printf(int level, char *format, ...)
 		else
 			level = ANDROID_LOG_DEBUG;
 		va_start(ap, format);
-		__android_log_vprint(level, "wpa_supplicant", format, ap);
+		__android_log_vprint(level, ANDROID_LOG_NAME, format, ap);
 		va_end(ap);
 	}
 }

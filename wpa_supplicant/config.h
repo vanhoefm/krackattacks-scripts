@@ -28,6 +28,7 @@
 #define DEFAULT_BSS_EXPIRATION_AGE 180
 #define DEFAULT_BSS_EXPIRATION_SCAN_COUNT 2
 #define DEFAULT_MAX_NUM_STA 128
+#define DEFAULT_ACCESS_NETWORK_TYPE 15
 
 #include "config_ssid.h"
 #include "wps/wps.h"
@@ -431,6 +432,15 @@ struct wpa_config {
 	 * interworking - Whether Interworking (IEEE 802.11u) is enabled
 	 */
 	int interworking;
+
+	/**
+	 * access_network_type - Access Network Type
+	 *
+	 * When Interworking is enabled, scans will be limited to APs that
+	 * advertise the specified Access Network Type (0..15; with 15
+	 * indicating wildcard match).
+	 */
+	int access_network_type;
 
 	/**
 	 * hessid - Homogenous ESS identifier

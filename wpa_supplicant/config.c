@@ -2200,6 +2200,7 @@ struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 	config->bss_expiration_age = DEFAULT_BSS_EXPIRATION_AGE;
 	config->bss_expiration_scan_count = DEFAULT_BSS_EXPIRATION_SCAN_COUNT;
 	config->max_num_sta = DEFAULT_MAX_NUM_STA;
+	config->access_network_type = DEFAULT_ACCESS_NETWORK_TYPE;
 
 	if (ctrl_interface)
 		config->ctrl_interface = os_strdup(ctrl_interface);
@@ -2494,7 +2495,8 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(home_imsi), 0 },
 	{ STR(home_milenage), 0 },
 	{ INT_RANGE(interworking, 0, 1), 0 },
-	{ FUNC(hessid), 0 }
+	{ FUNC(hessid), 0 },
+	{ INT_RANGE(access_network_type, 0, 15), 0 }
 };
 
 #undef FUNC

@@ -371,7 +371,7 @@ static void wpas_add_interworking_elements(struct wpa_supplicant *wpa_s,
 	wpabuf_put_u8(buf, WLAN_EID_INTERWORKING);
 	wpabuf_put_u8(buf, is_zero_ether_addr(wpa_s->conf->hessid) ? 1 :
 		      1 + ETH_ALEN);
-	wpabuf_put_u8(buf, INTERWORKING_ANT_WILDCARD);
+	wpabuf_put_u8(buf, wpa_s->conf->access_network_type);
 	/* No Venue Info */
 	if (!is_zero_ether_addr(wpa_s->conf->hessid))
 		wpabuf_put_data(buf, wpa_s->conf->hessid, ETH_ALEN);

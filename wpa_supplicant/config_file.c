@@ -720,6 +720,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "interworking=%u\n", config->interworking);
 	if (!is_zero_ether_addr(config->hessid))
 		fprintf(f, "hessid=" MACSTR "\n", MAC2STR(config->hessid));
+	if (config->access_network_type != DEFAULT_ACCESS_NETWORK_TYPE)
+		fprintf(f, "access_network_type=%d\n",
+			config->access_network_type);
 #endif /* CONFIG_INTERWORKING */
 }
 

@@ -1840,31 +1840,36 @@ static void wpa_driver_wext_disconnect(struct wpa_driver_wext_data *drv)
 	}
 
 	if (iwr.u.mode == IW_MODE_INFRA) {
+		/* Clear the BSSID selection */
+		if (wpa_driver_wext_set_bssid(drv, null_bssid) < 0) {
+			wpa_printf(MSG_DEBUG, "WEXT: Failed to clear BSSID "
+				   "selection on disconnect");
+		}
+
 		if (drv->cfg80211) {
 			/*
 			 * cfg80211 supports SIOCSIWMLME commands, so there is
 			 * no need for the random SSID hack, but clear the
-			 * BSSID and SSID.
+			 * SSID.
 			 */
-			if (wpa_driver_wext_set_bssid(drv, null_bssid) < 0 ||
-			    wpa_driver_wext_set_ssid(drv, (u8 *) "", 0) < 0) {
+			if (wpa_driver_wext_set_ssid(drv, (u8 *) "", 0) < 0) {
 				wpa_printf(MSG_DEBUG, "WEXT: Failed to clear "
-					   "to disconnect");
+					   "SSID on disconnect");
 			}
 			return;
 		}
+
 		/*
-		 * Clear the BSSID selection and set a random SSID to make sure
-		 * the driver will not be trying to associate with something
-		 * even if it does not understand SIOCSIWMLME commands (or
-		 * tries to associate automatically after deauth/disassoc).
+		 * Set a random SSID to make sure the driver will not be trying
+		 * to associate with something even if it does not understand
+		 * SIOCSIWMLME commands (or tries to associate automatically
+		 * after deauth/disassoc).
 		 */
 		for (i = 0; i < 32; i++)
 			ssid[i] = rand() & 0xFF;
-		if (wpa_driver_wext_set_bssid(drv, null_bssid) < 0 ||
-		    wpa_driver_wext_set_ssid(drv, ssid, 32) < 0) {
+		if (wpa_driver_wext_set_ssid(drv, ssid, 32) < 0) {
 			wpa_printf(MSG_DEBUG, "WEXT: Failed to set bogus "
-				   "BSSID/SSID to disconnect");
+				   "SSID to disconnect");
 		}
 	}
 }

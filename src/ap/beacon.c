@@ -297,6 +297,36 @@ void handle_probe_req(struct hostapd_data *hapd,
 		return;
 	}
 
+#ifdef CONFIG_INTERWORKING
+	if (elems.interworking && elems.interworking_len >= 1) {
+		u8 ant = elems.interworking[0] & 0x0f;
+		if (ant != INTERWORKING_ANT_WILDCARD &&
+		    ant != hapd->conf->access_network_type) {
+			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
+				   " for mismatching ANT %u ignored",
+				   MAC2STR(mgmt->sa), ant);
+			return;
+		}
+	}
+
+	if (elems.interworking &&
+	    (elems.interworking_len == 7 || elems.interworking_len == 9)) {
+		const u8 *hessid;
+		if (elems.interworking_len == 7)
+			hessid = elems.interworking + 1;
+		else
+			hessid = elems.interworking + 1 + 2;
+		if (!is_broadcast_ether_addr(hessid) &&
+		    os_memcmp(hessid, hapd->conf->hessid, ETH_ALEN) != 0) {
+			wpa_printf(MSG_MSGDUMP, "Probe Request from " MACSTR
+				   " for mismatching HESSID " MACSTR
+				   " ignored",
+				   MAC2STR(mgmt->sa), MAC2STR(hessid));
+			return;
+		}
+	}
+#endif /* CONFIG_INTERWORKING */
+
 	/* TODO: verify that supp_rates contains at least one matching rate
 	 * with AP configuration */
 #define MAX_PROBERESP_LEN 768

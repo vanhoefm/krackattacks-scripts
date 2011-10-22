@@ -203,6 +203,9 @@ CONFIG_EAP_LEAP=y
 #CONFIG_WPS2=y
 # Enable WPS external registrar functionality
 #CONFIG_WPS_ER=y
+# Disable credentials for an open network by default when acting as a WPS
+# registrar.
+#CONFIG_WPS_REG_DISABLE_OPEN=y
 
 # EAP-IKEv2
 #CONFIG_EAP_IKEV2=y

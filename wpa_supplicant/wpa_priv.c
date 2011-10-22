@@ -825,7 +825,7 @@ static void wpa_priv_send_ft_response(struct wpa_priv_interface *iface,
 }
 
 
-void wpa_supplicant_event(void *ctx, wpa_event_type event,
+void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct wpa_priv_interface *iface = ctx;
@@ -915,7 +915,7 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 }
 
 
-static void wpa_priv_terminate(int sig, void *eloop_ctx, void *signal_ctx)
+static void wpa_priv_terminate(int sig, void *signal_ctx)
 {
 	wpa_printf(MSG_DEBUG, "wpa_priv termination requested");
 	eloop_terminate();

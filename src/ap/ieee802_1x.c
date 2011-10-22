@@ -1816,7 +1816,7 @@ int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 
 	/* EAPOL EAP-Packet packets are eventually re-sent by either Supplicant
 	 * or Authenticator state machines, but EAPOL-Key packets are not
-	 * retransmitted in case of failure. Try to re-sent failed EAPOL-Key
+	 * retransmitted in case of failure. Try to re-send failed EAPOL-Key
 	 * packets couple of times because otherwise STA keys become
 	 * unsynchronized with AP. */
 	if (xhdr->type == IEEE802_1X_TYPE_EAPOL_KEY && !ack &&

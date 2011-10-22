@@ -88,6 +88,7 @@ CFLAGS += -DWPA_TRACE
 OBJS += ../src/utils/trace.o
 OBJS_p += ../src/utils/trace.o
 OBJS_c += ../src/utils/trace.o
+OBJS_priv += ../src/utils/trace.o
 LDFLAGS += -rdynamic
 CFLAGS += -funwind-tables
 ifdef CONFIG_WPA_TRACE_BFD

@@ -171,6 +171,7 @@ struct nl80211_global {
 };
 
 static void nl80211_global_deinit(void *priv);
+static void wpa_driver_nl80211_deinit(void *priv);
 
 struct i802_bss {
 	struct wpa_driver_nl80211_data *drv;
@@ -221,6 +222,7 @@ struct wpa_driver_nl80211_data {
 	int disable_11b_rates;
 
 	unsigned int pending_remain_on_chan:1;
+	unsigned int in_interface_list:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -2211,22 +2213,15 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 				 nl80211_l2_read, drv, 0);
 #endif /* CONFIG_AP */
 
-	if (drv->global)
+	if (drv->global) {
 		dl_list_add(&drv->global->interfaces, &drv->list);
+		drv->in_interface_list = 1;
+	}
 
 	return bss;
 
 failed:
-	rfkill_deinit(drv->rfkill);
-	if (drv->ioctl_sock >= 0)
-		close(drv->ioctl_sock);
-
-	genl_family_put(drv->nl80211);
-	nl_destroy_handles(&drv->nl);
-	nl_cb_put(drv->nl_cb);
-	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_event.handle));
-
-	os_free(drv);
+	wpa_driver_nl80211_deinit(bss);
 	return NULL;
 }
 
@@ -2491,7 +2486,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	os_free(drv->filter_ssids);
 
-	if (drv->global)
+	if (drv->in_interface_list)
 		dl_list_del(&drv->list);
 
 	os_free(drv);

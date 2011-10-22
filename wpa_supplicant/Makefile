@@ -1328,6 +1328,9 @@ OBJS_priv += ../src/utils/common.o
 OBJS_priv += ../src/utils/wpa_debug.o
 OBJS_priv += ../src/utils/wpabuf.o
 OBJS_priv += wpa_priv.o
+ifdef CONFIG_DRIVER_NL80211
+OBJS_priv += ../src/common/ieee802_11_common.o
+endif
 ifdef CONFIG_DRIVER_TEST
 OBJS_priv += $(SHA1OBJS)
 OBJS_priv += $(MD5OBJS)

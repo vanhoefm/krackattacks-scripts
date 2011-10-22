@@ -6395,6 +6395,8 @@ static void *i802_init(struct hostapd_data *hapd,
 
 	drv = bss->drv;
 	drv->nlmode = NL80211_IFTYPE_AP;
+	drv->eapol_sock = -1;
+
 	if (linux_br_get(brname, params->ifname) == 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Interface %s is in bridge %s",
 			   params->ifname, brname);
@@ -6462,18 +6464,7 @@ static void *i802_init(struct hostapd_data *hapd,
 	return bss;
 
 failed:
-	nl80211_remove_monitor_interface(drv);
-	rfkill_deinit(drv->rfkill);
-	if (drv->ioctl_sock >= 0)
-		close(drv->ioctl_sock);
-
-	genl_family_put(drv->nl80211);
-	nl_cache_free(drv->nl_cache);
-	nl80211_handle_destroy(drv->nl_handle);
-	nl_cb_put(drv->nl_cb);
-	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_handle_event));
-
-	os_free(drv);
+	wpa_driver_nl80211_deinit(bss);
 	return NULL;
 }
 

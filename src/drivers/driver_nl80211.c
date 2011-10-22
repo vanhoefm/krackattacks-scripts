@@ -6377,7 +6377,8 @@ static void *i802_init(struct hostapd_data *hapd,
 	int ifindex, br_ifindex;
 	int br_added = 0;
 
-	bss = wpa_driver_nl80211_init(hapd, params->ifname, NULL);
+	bss = wpa_driver_nl80211_init(hapd, params->ifname,
+				      params->global_priv);
 	if (bss == NULL)
 		return NULL;
 

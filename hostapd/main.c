@@ -37,6 +37,16 @@ extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
 extern int wpa_debug_timestamp;
 
+extern struct wpa_driver_ops *wpa_drivers[];
+
+
+struct hapd_global {
+	void **drv_priv;
+	size_t drv_count;
+};
+
+static struct hapd_global global;
+
 
 struct hapd_interfaces {
 	size_t count;
@@ -246,6 +256,12 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 		b = NULL;
 
 	os_memset(&params, 0, sizeof(params));
+	for (i = 0; wpa_drivers[i]; i++) {
+		if (wpa_drivers[i] == hapd->driver) {
+			params.global_priv = global.drv_priv[i];
+			break;
+		}
+	}
 	params.bssid = b;
 	params.ifname = hapd->conf->iface;
 	params.ssid = (const u8 *) hapd->conf->ssid.ssid;
@@ -372,6 +388,10 @@ static void handle_dump_state(int sig, void *signal_ctx)
 static int hostapd_global_init(struct hapd_interfaces *interfaces,
 			       const char *entropy_file)
 {
+	int i;
+
+	os_memset(&global, 0, sizeof(global));
+
 	hostapd_logger_register_cb(hostapd_logger_cb);
 
 	if (eap_server_register_methods()) {
@@ -396,12 +416,42 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces,
 	openlog("hostapd", 0, LOG_DAEMON);
 #endif /* CONFIG_NATIVE_WINDOWS */
 
+	for (i = 0; wpa_drivers[i]; i++)
+		global.drv_count++;
+	if (global.drv_count == 0) {
+		wpa_printf(MSG_ERROR, "No drivers enabled");
+		return -1;
+	}
+	global.drv_priv = os_zalloc(global.drv_count * sizeof(void *));
+	if (global.drv_priv == NULL)
+		return -1;
+	for (i = 0; wpa_drivers[i]; i++) {
+		if (!wpa_drivers[i]->global_init)
+			continue;
+		global.drv_priv[i] = wpa_drivers[i]->global_init();
+		if (global.drv_priv[i] == NULL) {
+			wpa_printf(MSG_ERROR, "Failed to initialize driver "
+				   "'%s'", wpa_drivers[i]->name);
+			return -1;
+		}
+	}
+
 	return 0;
 }
 
 
 static void hostapd_global_deinit(const char *pid_file)
 {
+	int i;
+
+	for (i = 0; wpa_drivers[i] && global.drv_priv; i++) {
+		if (!global.drv_priv[i])
+			continue;
+		wpa_drivers[i]->global_deinit(global.drv_priv[i]);
+	}
+	os_free(global.drv_priv);
+	global.drv_priv = NULL;
+
 #ifdef EAP_SERVER_TNC
 	tncs_global_deinit();
 #endif /* EAP_SERVER_TNC */

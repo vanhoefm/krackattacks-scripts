@@ -837,6 +837,7 @@ enum wpa_driver_if_type {
 };
 
 struct wpa_init_params {
+	void *global_priv;
 	const u8 *bssid;
 	const char *ifname;
 	const u8 *ssid;

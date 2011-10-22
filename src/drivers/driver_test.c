@@ -1232,6 +1232,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 		return NULL;
 	drv->ap = 1;
 	bss = dl_list_first(&drv->bss, struct test_driver_bss, list);
+	drv->global = params->global_priv;
 
 	bss->bss_ctx = hapd;
 	os_memcpy(bss->bssid, drv->own_addr, ETH_ALEN);

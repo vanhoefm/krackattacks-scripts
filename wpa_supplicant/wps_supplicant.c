@@ -194,7 +194,9 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	u8 key_idx = 0;
 	u16 auth_type;
+#ifdef CONFIG_WPS_REG_DISABLE_OPEN
 	int registrar = 0;
+#endif /* CONFIG_WPS_REG_DISABLE_OPEN */
 
 	if ((wpa_s->conf->wps_cred_processing == 1 ||
 	     wpa_s->conf->wps_cred_processing == 2) && cred->cred_attr) {
@@ -248,11 +250,13 @@ static int wpa_supplicant_wps_cred(void *ctx,
 	if (ssid && (ssid->key_mgmt & WPA_KEY_MGMT_WPS)) {
 		wpa_printf(MSG_DEBUG, "WPS: Replace WPS network block based "
 			   "on the received credential");
+#ifdef CONFIG_WPS_REG_DISABLE_OPEN
 		if (ssid->eap.identity &&
 		    ssid->eap.identity_len == WSC_ID_REGISTRAR_LEN &&
 		    os_memcmp(ssid->eap.identity, WSC_ID_REGISTRAR,
 			      WSC_ID_REGISTRAR_LEN) == 0)
 			registrar = 1;
+#endif /* CONFIG_WPS_REG_DISABLE_OPEN */
 		os_free(ssid->eap.identity);
 		ssid->eap.identity = NULL;
 		ssid->eap.identity_len = 0;

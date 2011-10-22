@@ -169,6 +169,8 @@ struct nl80211_global {
 	int if_add_ifindex;
 	struct netlink_data *netlink;
 	struct nl_cb *nl_cb;
+	struct nl80211_handles nl;
+	struct genl_family *nl80211;
 };
 
 static void nl80211_global_deinit(void *priv);
@@ -204,8 +206,7 @@ struct wpa_driver_nl80211_data {
 
 	int scan_complete_events;
 
-	struct nl80211_handles nl, nl_event, nl_preq;
-	struct genl_family *nl80211;
+	struct nl80211_handles nl_event, nl_preq;
 
 	u8 auth_bssid[ETH_ALEN];
 	u8 bssid[ETH_ALEN];
@@ -383,7 +384,7 @@ static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 			      int (*valid_handler)(struct nl_msg *, void *),
 			      void *valid_data)
 {
-	return send_and_recv(drv, drv->nl.handle, msg, valid_handler,
+	return send_and_recv(drv, drv->global->nl.handle, msg, valid_handler,
 			     valid_data);
 }
 
@@ -435,7 +436,8 @@ static int nl_get_multicast_id(struct wpa_driver_nl80211_data *drv,
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
-	genlmsg_put(msg, 0, 0, genl_ctrl_resolve(drv->nl.handle, "nlctrl"),
+	genlmsg_put(msg, 0, 0,
+		    genl_ctrl_resolve(drv->global->nl.handle, "nlctrl"),
 		    0, 0, CTRL_CMD_GETFAMILY, 0);
 	NLA_PUT_STRING(msg, CTRL_ATTR_FAMILY_NAME, family);
 
@@ -453,8 +455,8 @@ nla_put_failure:
 static void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 			  struct nl_msg *msg, int flags, uint8_t cmd)
 {
-	return genlmsg_put(msg, 0, 0, genl_family_get_id(drv->nl80211), 0,
-			   flags, cmd, 0);
+	return genlmsg_put(msg, 0, 0, genl_family_get_id(drv->global->nl80211),
+			   0, flags, cmd, 0);
 }
 
 
@@ -2021,6 +2023,17 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 		return -1;
 	}
 
+	if (nl_create_handles(&global->nl, global->nl_cb, "nl"))
+		return -1;
+
+	global->nl80211 = genl_ctrl_search_by_name(global->nl.cache,
+						   "nl80211");
+	if (global->nl80211 == NULL) {
+		wpa_printf(MSG_ERROR, "nl80211: 'nl80211' generic netlink not "
+			   "found");
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -2032,18 +2045,8 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 
 	/* Initialize generic netlink and nl80211 */
 
-	if (nl_create_handles(&drv->nl, global->nl_cb, "nl"))
-		goto err2;
-
 	if (nl_create_handles(&drv->nl_event, global->nl_cb, "event"))
 		goto err3;
-
-	drv->nl80211 = genl_ctrl_search_by_name(drv->nl.cache, "nl80211");
-	if (drv->nl80211 == NULL) {
-		wpa_printf(MSG_ERROR, "nl80211: 'nl80211' generic netlink not "
-			   "found");
-		goto err4;
-	}
 
 	ret = nl_get_multicast_id(drv, "nl80211", "scan");
 	if (ret >= 0)
@@ -2084,8 +2087,6 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 err4:
 	nl_destroy_handles(&drv->nl_event);
 err3:
-	nl_destroy_handles(&drv->nl);
-err2:
 	return -1;
 }
 
@@ -2484,8 +2485,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		close(drv->ioctl_sock);
 
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_event.handle));
-	genl_family_put(drv->nl80211);
-	nl_destroy_handles(&drv->nl);
 	nl_destroy_handles(&drv->nl_event);
 
 	os_free(drv->filter_ssids);
@@ -7192,6 +7191,10 @@ static void nl80211_global_deinit(void *priv)
 
 	if (global->netlink)
 		netlink_deinit(global->netlink);
+
+	if (global->nl80211)
+		genl_family_put(global->nl80211);
+	nl_destroy_handles(&global->nl);
 
 	if (global->nl_cb)
 		nl_cb_put(global->nl_cb);

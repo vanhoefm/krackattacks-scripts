@@ -36,7 +36,6 @@
 #include "rsn_supp/preauth.h"
 #include "rsn_supp/pmksa_cache.h"
 #include "common/wpa_ctrl.h"
-#include "mlme.h"
 #include "common/ieee802_11_defs.h"
 #include "p2p/p2p.h"
 #include "blacklist.h"
@@ -419,8 +418,6 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpa_supplicant_cancel_scan(wpa_s);
 	wpa_supplicant_cancel_auth_timeout(wpa_s);
-
-	ieee80211_sta_deinit(wpa_s);
 
 	wpas_wps_deinit(wpa_s);
 
@@ -1405,10 +1402,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	else
 		params.uapsd = -1;
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		ret = ieee80211_sta_associate(wpa_s, &params);
-	else
-		ret = wpa_drv_associate(wpa_s, &params);
+	ret = wpa_drv_associate(wpa_s, &params);
 	if (ret < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "Association request to the driver "
 			"failed");
@@ -1514,10 +1508,7 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 	u8 *addr = NULL;
 
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
-		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-			ieee80211_sta_disassociate(wpa_s, reason_code);
-		else
-			wpa_drv_disassociate(wpa_s, wpa_s->bssid, reason_code);
+		wpa_drv_disassociate(wpa_s, wpa_s->bssid, reason_code);
 		addr = wpa_s->bssid;
 	}
 
@@ -1539,11 +1530,7 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 	u8 *addr = NULL;
 
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
-		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-			ieee80211_sta_deauthenticate(wpa_s, reason_code);
-		else
-			wpa_drv_deauthenticate(wpa_s, wpa_s->bssid,
-					       reason_code);
+		wpa_drv_deauthenticate(wpa_s, wpa_s->bssid, reason_code);
 		addr = wpa_s->bssid;
 	}
 
@@ -1834,25 +1821,15 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 	u8 bssid[ETH_ALEN];
 	int wired;
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-		if (ieee80211_sta_get_ssid(wpa_s, ssid, &ssid_len)) {
-			wpa_msg(wpa_s, MSG_WARNING, "Could not read SSID from "
-				"MLME");
-			return NULL;
-		}
-	} else {
-		res = wpa_drv_get_ssid(wpa_s, ssid);
-		if (res < 0) {
-			wpa_msg(wpa_s, MSG_WARNING, "Could not read SSID from "
-				"driver");
-			return NULL;
-		}
-		ssid_len = res;
+	res = wpa_drv_get_ssid(wpa_s, ssid);
+	if (res < 0) {
+		wpa_msg(wpa_s, MSG_WARNING, "Could not read SSID from "
+			"driver");
+		return NULL;
 	}
+	ssid_len = res;
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		os_memcpy(bssid, wpa_s->bssid, ETH_ALEN);
-	else if (wpa_drv_get_bssid(wpa_s, bssid) < 0) {
+	if (wpa_drv_get_bssid(wpa_s, bssid) < 0) {
 		wpa_msg(wpa_s, MSG_WARNING, "Could not read BSSID from "
 			"driver");
 		return NULL;
@@ -2306,10 +2283,6 @@ next_driver:
 
 	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
 		wpa_s->drv_flags = capa.flags;
-		if (capa.flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-			if (ieee80211_sta_init(wpa_s))
-				return -1;
-		}
 		wpa_s->max_scan_ssids = capa.max_scan_ssids;
 		wpa_s->max_sched_scan_ssids = capa.max_sched_scan_ssids;
 		wpa_s->sched_scan_supported = capa.sched_scan_supported;

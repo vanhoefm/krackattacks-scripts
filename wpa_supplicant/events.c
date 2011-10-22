@@ -43,7 +43,6 @@
 #include "bgscan.h"
 #include "ap.h"
 #include "bss.h"
-#include "mlme.h"
 #include "scan.h"
 #include "offchannel.h"
 
@@ -1248,11 +1247,8 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 		return;
 
 	wpa_supplicant_set_state(wpa_s, WPA_ASSOCIATED);
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		os_memcpy(bssid, wpa_s->bssid, ETH_ALEN);
-	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) ||
-	    (wpa_drv_get_bssid(wpa_s, bssid) >= 0 &&
-	     os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0)) {
+	if (wpa_drv_get_bssid(wpa_s, bssid) >= 0 &&
+	    os_memcmp(bssid, wpa_s->bssid, ETH_ALEN) != 0) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Associated to a new BSS: BSSID="
 			MACSTR, MAC2STR(bssid));
 		random_add_randomness(bssid, ETH_ALEN);
@@ -2217,18 +2213,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				 data->p2p_sd_resp.tlvs_len);
 		break;
 #endif /* CONFIG_P2P */
-#ifdef CONFIG_CLIENT_MLME
-	case EVENT_MLME_RX: {
-		struct ieee80211_rx_status rx_status;
-		os_memset(&rx_status, 0, sizeof(rx_status));
-		rx_status.freq = data->mlme_rx.freq;
-		rx_status.channel = data->mlme_rx.channel;
-		rx_status.ssi = data->mlme_rx.ssi;
-		ieee80211_sta_rx(wpa_s, data->mlme_rx.buf, data->mlme_rx.len,
-				 &rx_status);
-		break;
-	}
-#endif /* CONFIG_CLIENT_MLME */
 	case EVENT_EAPOL_RX:
 		wpa_supplicant_rx_eapol(wpa_s, data->eapol_rx.src,
 					data->eapol_rx.data,

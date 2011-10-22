@@ -89,7 +89,6 @@ struct wpa_driver_test_data {
 	int use_associnfo;
 	u8 assoc_wpa_ie[80];
 	size_t assoc_wpa_ie_len;
-	int use_mlme;
 	int associated;
 	u8 *probe_req_ie;
 	size_t probe_req_ie_len;
@@ -2394,13 +2393,6 @@ static int wpa_driver_test_set_param(void *priv, const char *param)
 		drv->use_associnfo = 1;
 	}
 
-#ifdef CONFIG_CLIENT_MLME
-	if (os_strstr(param, "use_mlme=1")) {
-		wpa_printf(MSG_DEBUG, "test_driver: Use internal MLME");
-		drv->use_mlme = 1;
-	}
-#endif /* CONFIG_CLIENT_MLME */
-
 	if (os_strstr(param, "p2p_mgmt=1")) {
 		wpa_printf(MSG_DEBUG, "test_driver: Use internal P2P "
 			   "management");
@@ -2514,8 +2506,6 @@ static int wpa_driver_test_get_capa(void *priv, struct wpa_driver_capa *capa)
 	capa->auth = WPA_DRIVER_AUTH_OPEN |
 		WPA_DRIVER_AUTH_SHARED |
 		WPA_DRIVER_AUTH_LEAP;
-	if (drv->use_mlme)
-		capa->flags |= WPA_DRIVER_FLAGS_USER_SPACE_MLME;
 	if (drv->p2p)
 		capa->flags |= WPA_DRIVER_FLAGS_P2P_MGMT;
 	capa->flags |= WPA_DRIVER_FLAGS_AP;

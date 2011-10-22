@@ -24,7 +24,6 @@
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
 #include "rsn_supp/pmksa_cache.h"
-#include "mlme.h"
 #include "sme.h"
 #include "common/ieee802_11_defs.h"
 #include "common/wpa_ctrl.h"
@@ -438,10 +437,6 @@ static void * wpa_supplicant_get_network_ctx(void *wpa_s)
 static int wpa_supplicant_get_bssid(void *ctx, u8 *bssid)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) {
-		os_memcpy(bssid, wpa_s->bssid, ETH_ALEN);
-		return 0;
-	}
 	return wpa_drv_get_bssid(wpa_s, bssid);
 }
 
@@ -489,8 +484,6 @@ static int wpa_supplicant_update_ft_ies(void *ctx, const u8 *md,
 					const u8 *ies, size_t ies_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		return ieee80211_sta_update_ft_ies(wpa_s, md, ies, ies_len);
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
 		return sme_update_ft_ies(wpa_s, md, ies, ies_len);
 	return wpa_drv_update_ft_ies(wpa_s, md, ies, ies_len);
@@ -502,9 +495,6 @@ static int wpa_supplicant_send_ft_action(void *ctx, u8 action,
 					 const u8 *ies, size_t ies_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		return ieee80211_sta_send_ft_action(wpa_s, action, target_ap,
-						    ies, ies_len);
 	return wpa_drv_send_ft_action(wpa_s, action, target_ap, ies, ies_len);
 }
 
@@ -514,9 +504,6 @@ static int wpa_supplicant_mark_authenticated(void *ctx, const u8 *target_ap)
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_driver_auth_params params;
 	struct wpa_bss *bss;
-
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		return -1;
 
 	bss = wpa_bss_get_bssid(wpa_s, target_ap);
 	if (bss == NULL)

@@ -30,7 +30,6 @@
 #include "ap.h"
 #include "config_ssid.h"
 #include "config.h"
-#include "mlme.h"
 #include "notify.h"
 #include "scan.h"
 #include "bss.h"
@@ -145,10 +144,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	}
 
 	wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		ret = ieee80211_sta_req_scan(wpa_s, &params);
-	else
-		ret = wpa_drv_scan(wpa_s, &params);
+	ret = wpa_drv_scan(wpa_s, &params);
 
 	wpabuf_free(ies);
 
@@ -157,27 +153,6 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 
 	return ret;
 }
-
-
-#ifdef CONFIG_CLIENT_MLME
-static void p2p_rx_action_mlme(void *ctx, const u8 *buf, size_t len, int freq)
-{
-	struct wpa_supplicant *wpa_s = ctx;
-	const struct ieee80211_mgmt *mgmt;
-	size_t hdr_len;
-
-	if (wpa_s->global->p2p == NULL || wpa_s->global->p2p_disabled)
-		return;
-	mgmt = (const struct ieee80211_mgmt *) buf;
-	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
-	if (hdr_len > len)
-		return;
-	p2p_rx_action(wpa_s->global->p2p, mgmt->da, mgmt->sa, mgmt->bssid,
-		      mgmt->u.action.category,
-		      &mgmt->u.action.u.vs_public_action.action,
-		      len - hdr_len, freq);
-}
-#endif /* CONFIG_CLIENT_MLME */
 
 
 static enum wpa_driver_if_type wpas_p2p_if_type(int p2p_group_interface)
@@ -2159,13 +2134,6 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
 		return 0;
 
-#ifdef CONFIG_CLIENT_MLME
-	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)) {
-		wpa_s->mlme.public_action_cb = p2p_rx_action_mlme;
-		wpa_s->mlme.public_action_cb_ctx = wpa_s;
-	}
-#endif /* CONFIG_CLIENT_MLME */
-
 	if (wpa_drv_disable_11b_rates(wpa_s, 1) < 0) {
 		wpa_printf(MSG_DEBUG, "P2P: Failed to disable 11b rates");
 		/* Continue anyway; this is not really a fatal error */
@@ -2599,10 +2567,7 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 	 * the new scan results become available.
 	 */
 	wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		ret = ieee80211_sta_req_scan(wpa_s, &params);
-	else
-		ret = wpa_drv_scan(wpa_s, &params);
+	ret = wpa_drv_scan(wpa_s, &params);
 
 	wpabuf_free(ies);
 

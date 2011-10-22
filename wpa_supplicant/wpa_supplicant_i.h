@@ -228,100 +228,6 @@ struct wpa_global {
 };
 
 
-struct wpa_client_mlme {
-#ifdef CONFIG_CLIENT_MLME
-	enum {
-		IEEE80211_DISABLED, IEEE80211_AUTHENTICATE,
-		IEEE80211_ASSOCIATE, IEEE80211_ASSOCIATED,
-		IEEE80211_IBSS_SEARCH, IEEE80211_IBSS_JOINED
-	} state;
-	u8 prev_bssid[ETH_ALEN];
-	u8 ssid[32];
-	size_t ssid_len;
-	u16 aid;
-	u16 ap_capab, capab;
-	u8 *extra_ie; /* to be added to the end of AssocReq */
-	size_t extra_ie_len;
-	u8 *extra_probe_ie; /* to be added to the end of ProbeReq */
-	size_t extra_probe_ie_len;
-	enum wpa_key_mgmt key_mgmt;
-
-	/* The last AssocReq/Resp IEs */
-	u8 *assocreq_ies, *assocresp_ies;
-	size_t assocreq_ies_len, assocresp_ies_len;
-
-	int auth_tries, assoc_tries;
-
-	unsigned int ssid_set:1;
-	unsigned int bssid_set:1;
-	unsigned int prev_bssid_set:1;
-	unsigned int authenticated:1;
-	unsigned int associated:1;
-	unsigned int probereq_poll:1;
-	unsigned int use_protection:1;
-	unsigned int create_ibss:1;
-	unsigned int mixed_cell:1;
-	unsigned int wmm_enabled:1;
-
-	struct os_time last_probe;
-
-	unsigned int auth_algs; /* bitfield of allowed auth algs
-				 * (WPA_AUTH_ALG_*) */
-	int auth_alg; /* currently used IEEE 802.11 authentication algorithm */
-	int auth_transaction;
-
-	struct os_time ibss_join_req;
-	u8 *probe_resp; /* ProbeResp template for IBSS */
-	size_t probe_resp_len;
-	u32 supp_rates_bits;
-
-	int wmm_last_param_set;
-
-	int sta_scanning;
-	int scan_hw_mode_idx;
-	int scan_channel_idx;
-	enum { SCAN_SET_CHANNEL, SCAN_SEND_PROBE } scan_state;
-	struct os_time last_scan_completed;
-	int scan_oper_channel;
-	int scan_oper_freq;
-	int scan_oper_phymode;
-	u8 scan_ssid[32];
-	size_t scan_ssid_len;
-	int scan_skip_11b;
-	int *scan_freqs;
-
-	struct ieee80211_sta_bss *sta_bss_list;
-#define STA_HASH_SIZE 256
-#define STA_HASH(sta) (sta[5])
-	struct ieee80211_sta_bss *sta_bss_hash[STA_HASH_SIZE];
-
-	int cts_protect_erp_frames;
-
-	enum hostapd_hw_mode phymode; /* current mode */
-	struct hostapd_hw_modes *modes;
-	size_t num_modes;
-	unsigned int hw_modes; /* bitfield of allowed hardware modes;
-				* (1 << HOSTAPD_MODE_*) */
-	int num_curr_rates;
-	int *curr_rates;
-	int freq; /* The current frequency in MHz */
-	int channel; /* The current IEEE 802.11 channel number */
-
-#ifdef CONFIG_IEEE80211R
-	u8 current_md[6];
-	u8 *ft_ies;
-	size_t ft_ies_len;
-#endif /* CONFIG_IEEE80211R */
-
-	void (*public_action_cb)(void *ctx, const u8 *buf, size_t len,
-				 int freq);
-	void *public_action_cb_ctx;
-
-#else /* CONFIG_CLIENT_MLME */
-	int dummy; /* to keep MSVC happy */
-#endif /* CONFIG_CLIENT_MLME */
-};
-
 enum offchannel_send_action_result {
 	OFFCHANNEL_SEND_ACTION_SUCCESS /* Frame was send and acknowledged */,
 	OFFCHANNEL_SEND_ACTION_NO_ACK /* Frame was sent, but not acknowledged
@@ -432,7 +338,6 @@ struct wpa_supplicant {
 	int *next_scan_freqs;
 	int scan_interval; /* time in sec between scans to find suitable AP */
 
-	struct wpa_client_mlme mlme;
 	unsigned int drv_flags;
 	int max_scan_ssids;
 	int max_sched_scan_ssids;

@@ -1234,12 +1234,6 @@ OBJS += sme.o
 CFLAGS += -DCONFIG_SME
 endif
 
-ifdef CONFIG_CLIENT_MLME
-OBJS += mlme.o
-CFLAGS += -DCONFIG_CLIENT_MLME
-NEED_80211_COMMON=y
-endif
-
 ifdef NEED_80211_COMMON
 OBJS += ../src/common/ieee802_11_common.o
 endif
@@ -1304,7 +1298,7 @@ OBJS += offchannel.o
 CFLAGS += -DCONFIG_OFFCHANNEL
 endif
 
-OBJS_wpa_rm := ctrl_iface.o mlme.o ctrl_iface_unix.o
+OBJS_wpa_rm := ctrl_iface.o ctrl_iface_unix.o
 OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.o
 ifdef CONFIG_AUTHENTICATOR
 OBJS_wpa += tests/link_test.o

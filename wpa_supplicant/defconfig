@@ -114,11 +114,6 @@ CONFIG_DRIVER_NL80211=y
 # Driver interface for development testing
 #CONFIG_DRIVER_TEST=y
 
-# Include client MLME (management frame processing) for test driver
-# This can be used to test MLME operations in hostapd with the test interface.
-# space.
-#CONFIG_CLIENT_MLME=y
-
 # Driver interface for wired Ethernet drivers
 CONFIG_DRIVER_WIRED=y
 

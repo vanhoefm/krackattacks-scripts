@@ -20,7 +20,6 @@
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
-#include "mlme.h"
 #include "wps_supplicant.h"
 #include "p2p_supplicant.h"
 #include "p2p/p2p.h"
@@ -200,11 +199,7 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_notify_scanning(wpa_s, 1);
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		ret = ieee80211_sta_req_scan(wpa_s, params);
-	else
-		ret = wpa_drv_scan(wpa_s, params);
-
+	ret = wpa_drv_scan(wpa_s, params);
 	if (ret) {
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 		wpas_notify_scan_done(wpa_s, 0);
@@ -245,9 +240,6 @@ wpa_supplicant_start_sched_scan(struct wpa_supplicant *wpa_s,
 				int interval)
 {
 	int ret;
-
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		return -1;
 
 	wpa_supplicant_notify_scanning(wpa_s, 1);
 	ret = wpa_drv_sched_scan(wpa_s, params, interval * 1000);
@@ -478,8 +470,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 #endif /* CONFIG_P2P */
 
-	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME) ||
-	    wpa_s->conf->ap_scan == 2)
+	if (wpa_s->conf->ap_scan == 2)
 		max_ssids = 1;
 	else {
 		max_ssids = wpa_s->max_scan_ssids;
@@ -1100,10 +1091,7 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 	size_t i;
 	int (*compar)(const void *, const void *) = wpa_scan_result_compar;
 
-	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_USER_SPACE_MLME)
-		scan_res = ieee80211_sta_get_scan_results(wpa_s);
-	else
-		scan_res = wpa_drv_get_scan_results2(wpa_s);
+	scan_res = wpa_drv_get_scan_results2(wpa_s);
 	if (scan_res == NULL) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results");
 		return NULL;

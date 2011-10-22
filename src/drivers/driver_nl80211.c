@@ -168,6 +168,7 @@ struct nl80211_global {
 	struct dl_list interfaces;
 	int if_add_ifindex;
 	struct netlink_data *netlink;
+	struct nl_cb *nl_cb;
 };
 
 static void nl80211_global_deinit(void *priv);
@@ -204,7 +205,6 @@ struct wpa_driver_nl80211_data {
 	int scan_complete_events;
 
 	struct nl80211_handles nl, nl_event, nl_preq;
-	struct nl_cb *nl_cb;
 	struct genl_family *nl80211;
 
 	u8 auth_bssid[ETH_ALEN];
@@ -351,7 +351,7 @@ static int send_and_recv(struct wpa_driver_nl80211_data *drv,
 	struct nl_cb *cb;
 	int err = -ENOMEM;
 
-	cb = nl_cb_clone(drv->nl_cb);
+	cb = nl_cb_clone(drv->global->nl_cb);
 	if (!cb)
 		goto out;
 
@@ -1732,7 +1732,7 @@ static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 
 	wpa_printf(MSG_DEBUG, "nl80211: Event message available");
 
-	cb = nl_cb_clone(drv->nl_cb);
+	cb = nl_cb_clone(drv->global->nl_cb);
 	if (!cb)
 		return;
 	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
@@ -2012,23 +2012,30 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 }
 
 
+static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
+{
+	global->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (global->nl_cb == NULL) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate netlink "
+			   "callbacks");
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 {
+	struct nl80211_global *global = drv->global;
 	int ret;
 
 	/* Initialize generic netlink and nl80211 */
 
-	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
-	if (drv->nl_cb == NULL) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate netlink "
-			   "callbacks");
-		goto err1;
-	}
-
-	if (nl_create_handles(&drv->nl, drv->nl_cb, "nl"))
+	if (nl_create_handles(&drv->nl, global->nl_cb, "nl"))
 		goto err2;
 
-	if (nl_create_handles(&drv->nl_event, drv->nl_cb, "event"))
+	if (nl_create_handles(&drv->nl_event, global->nl_cb, "event"))
 		goto err3;
 
 	drv->nl80211 = genl_ctrl_search_by_name(drv->nl.cache, "nl80211");
@@ -2079,8 +2086,6 @@ err4:
 err3:
 	nl_destroy_handles(&drv->nl);
 err2:
-	nl_cb_put(drv->nl_cb);
-err1:
 	return -1;
 }
 
@@ -2482,7 +2487,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	genl_family_put(drv->nl80211);
 	nl_destroy_handles(&drv->nl);
 	nl_destroy_handles(&drv->nl_event);
-	nl_cb_put(drv->nl_cb);
 
 	os_free(drv->filter_ssids);
 
@@ -6908,7 +6912,7 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 		return 0;
 	}
 
-	if (nl_create_handles(&drv->nl_preq, drv->nl_cb, "preq"))
+	if (nl_create_handles(&drv->nl_preq, drv->global->nl_cb, "preq"))
 		return -1;
 
 	if (nl80211_register_frame(drv, drv->nl_preq.handle,
@@ -7164,6 +7168,9 @@ static void * nl80211_global_init(void)
 		goto err;
 	}
 
+	if (wpa_driver_nl80211_init_nl_global(global) < 0)
+		goto err;
+
 	return global;
 
 err:
@@ -7185,6 +7192,9 @@ static void nl80211_global_deinit(void *priv)
 
 	if (global->netlink)
 		netlink_deinit(global->netlink);
+
+	if (global->nl_cb)
+		nl_cb_put(global->nl_cb);
 
 	os_free(global);
 }

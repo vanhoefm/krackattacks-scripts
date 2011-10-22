@@ -277,7 +277,15 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 					enum wpa_driver_if_type type,
 					const char *ifname);
 #else /* HOSTAPD */
-static int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
+static inline void add_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
+{
+}
+
+static inline void del_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
+{
+}
+
+static inline int have_ifidx(struct wpa_driver_nl80211_data *drv, int ifidx)
 {
 	return 0;
 }
@@ -637,7 +645,6 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		attr = RTA_NEXT(attr, attrlen);
 	}
 
-#ifdef HOSTAPD
 	if (ifi->ifi_family == AF_BRIDGE && brid) {
 		/* device has been added to bridge */
 		char namebuf[IFNAMSIZ];
@@ -646,7 +653,6 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 			   brid, namebuf);
 		add_ifidx(drv, brid);
 	}
-#endif /* HOSTAPD */
 }
 
 
@@ -682,7 +688,6 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 		attr = RTA_NEXT(attr, attrlen);
 	}
 
-#ifdef HOSTAPD
 	if (ifi->ifi_family == AF_BRIDGE && brid) {
 		/* device has been removed from bridge */
 		char namebuf[IFNAMSIZ];
@@ -691,7 +696,6 @@ static void wpa_driver_nl80211_event_rtm_dellink(void *ctx,
 			   "%s", brid, namebuf);
 		del_ifidx(drv, brid);
 	}
-#endif /* HOSTAPD */
 }
 
 
@@ -4463,10 +4467,8 @@ static void nl80211_remove_iface(struct wpa_driver_nl80211_data *drv,
 
 	wpa_printf(MSG_DEBUG, "nl80211: Remove interface ifindex=%d", ifidx);
 
-#ifdef HOSTAPD
 	/* stop listening for EAPOL on this interface */
 	del_ifidx(drv, ifidx);
-#endif /* HOSTAPD */
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -4558,10 +4560,8 @@ static int nl80211_create_iface_once(struct wpa_driver_nl80211_data *drv,
 	if (ifidx <= 0)
 		return -1;
 
-#ifdef HOSTAPD
 	/* start listening for EAPOL on this interface */
 	add_ifidx(drv, ifidx);
-#endif /* HOSTAPD */
 
 	if (addr && iftype != NL80211_IFTYPE_MONITOR &&
 	    linux_set_ifhwaddr(drv->global->ioctl_sock, ifname, addr)) {

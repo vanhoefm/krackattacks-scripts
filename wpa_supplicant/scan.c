@@ -1139,17 +1139,3 @@ int wpa_supplicant_update_scan_results(struct wpa_supplicant *wpa_s)
 
 	return 0;
 }
-
-
-void wpa_scan_results_free(struct wpa_scan_results *res)
-{
-	size_t i;
-
-	if (res == NULL)
-		return;
-
-	for (i = 0; i < res->num; i++)
-		os_free(res->res[i]);
-	os_free(res->res);
-	os_free(res);
-}

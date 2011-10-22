@@ -38,6 +38,5 @@ struct wpabuf * wpa_scan_get_vendor_ie_multi(const struct wpa_scan_res *res,
 					     u32 vendor_type);
 struct wpabuf * wpa_scan_get_vendor_ie_multi_beacon(
 	const struct wpa_scan_res *res, u32 vendor_type);
-void wpa_scan_results_free(struct wpa_scan_results *res);
 
 #endif /* SCAN_H */

@@ -3065,20 +3065,6 @@ static void wpa_driver_nl80211_check_bss_status(
 }
 
 
-static void wpa_scan_results_free(struct wpa_scan_results *res)
-{
-	size_t i;
-
-	if (res == NULL)
-		return;
-
-	for (i = 0; i < res->num; i++)
-		os_free(res->res[i]);
-	os_free(res->res);
-	os_free(res);
-}
-
-
 static struct wpa_scan_results *
 nl80211_get_scan_results(struct wpa_driver_nl80211_data *drv)
 {

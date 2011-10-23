@@ -1957,6 +1957,17 @@ broken_combination:
 		capa->flags |= WPA_DRIVER_FLAGS_P2P_MGMT_AND_NON_P2P;
 	}
 
+	if (tb[NL80211_ATTR_TDLS_SUPPORT]) {
+		wpa_printf(MSG_DEBUG, "nl80211: TDLS supported");
+		capa->flags |= WPA_DRIVER_FLAGS_TDLS_SUPPORT;
+
+		if (tb[NL80211_ATTR_TDLS_EXTERNAL_SETUP]) {
+			wpa_printf(MSG_DEBUG, "nl80211: TDLS external setup");
+			capa->flags |=
+				WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP;
+		}
+	}
+
 	return NL_SKIP;
 }
 
@@ -7329,6 +7340,95 @@ static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 
+#ifdef CONFIG_TDLS
+
+static int nl80211_send_tdls_mgmt(void *priv, const u8 *dst, u8 action_code,
+				  u8 dialog_token, u16 status_code,
+				  const u8 *buf, size_t len)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT))
+		return -EOPNOTSUPP;
+
+	if (!dst)
+		return -EINVAL;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_TDLS_MGMT);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, dst);
+	NLA_PUT_U8(msg, NL80211_ATTR_TDLS_ACTION, action_code);
+	NLA_PUT_U8(msg, NL80211_ATTR_TDLS_DIALOG_TOKEN, dialog_token);
+	NLA_PUT_U16(msg, NL80211_ATTR_STATUS_CODE, status_code);
+	NLA_PUT(msg, NL80211_ATTR_IE, len, buf);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
+static int nl80211_tdls_oper(void *priv, enum tdls_oper oper, const u8 *peer)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	enum nl80211_tdls_operation nl80211_oper;
+
+	if (!(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT))
+		return -EOPNOTSUPP;
+
+	switch (oper) {
+	case TDLS_DISCOVERY_REQ:
+		nl80211_oper = NL80211_TDLS_DISCOVERY_REQ;
+		break;
+	case TDLS_SETUP:
+		nl80211_oper = NL80211_TDLS_SETUP;
+		break;
+	case TDLS_TEARDOWN:
+		nl80211_oper = NL80211_TDLS_TEARDOWN;
+		break;
+	case TDLS_ENABLE_LINK:
+		nl80211_oper = NL80211_TDLS_ENABLE_LINK;
+		break;
+	case TDLS_DISABLE_LINK:
+		nl80211_oper = NL80211_TDLS_DISABLE_LINK;
+		break;
+	case TDLS_ENABLE:
+		return 0;
+	case TDLS_DISABLE:
+		return 0;
+	default:
+		return -EINVAL;
+	}
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_TDLS_OPER);
+	NLA_PUT_U8(msg, NL80211_ATTR_TDLS_OPERATION, nl80211_oper);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, drv->ifindex);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, peer);
+
+	return send_and_recv_msgs(drv, msg, NULL, NULL);
+
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+#endif /* CONFIG TDLS */
+
+
 const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.name = "nl80211",
 	.desc = "Linux nl80211/cfg80211",
@@ -7400,4 +7500,8 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.flush_pmkid = nl80211_flush_pmkid,
 	.set_rekey_info = nl80211_set_rekey_info,
 	.poll_client = nl80211_poll_client,
+#ifdef CONFIG_TDLS
+	.send_tdls_mgmt = nl80211_send_tdls_mgmt,
+	.tdls_oper = nl80211_tdls_oper,
+#endif /* CONFIG_TDLS */
 };

@@ -747,6 +747,10 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS		0x00020000
 /* Driver supports roaming (BSS selection) in firmware */
 #define WPA_DRIVER_FLAGS_BSS_SELECTION			0x00040000
+/* Driver supports operating as a TDLS peer */
+#define WPA_DRIVER_FLAGS_TDLS_SUPPORT			0x00080000
+/* Driver requires external TDLS setup/teardown/discovery */
+#define WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP		0x00100000
 	unsigned int flags;
 
 	int max_scan_ssids;

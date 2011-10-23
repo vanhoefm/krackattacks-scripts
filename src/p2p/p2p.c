@@ -778,19 +778,18 @@ static int p2p_run_after_scan(struct p2p_data *p2p)
 	enum p2p_after_scan op;
 
 	if (p2p->after_scan_tx) {
-		int ret;
 		/* TODO: schedule p2p_run_after_scan to be called from TX
 		 * status callback(?) */
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send pending "
 			"Action frame at p2p_scan completion");
-		ret = p2p->cfg->send_action(p2p->cfg->cb_ctx,
-					    p2p->after_scan_tx->freq,
-					    p2p->after_scan_tx->dst,
-					    p2p->after_scan_tx->src,
-					    p2p->after_scan_tx->bssid,
-					    (u8 *) (p2p->after_scan_tx + 1),
-					    p2p->after_scan_tx->len,
-					    p2p->after_scan_tx->wait_time);
+		p2p->cfg->send_action(p2p->cfg->cb_ctx,
+				      p2p->after_scan_tx->freq,
+				      p2p->after_scan_tx->dst,
+				      p2p->after_scan_tx->src,
+				      p2p->after_scan_tx->bssid,
+				      (u8 *) (p2p->after_scan_tx + 1),
+				      p2p->after_scan_tx->len,
+				      p2p->after_scan_tx->wait_time);
 		os_free(p2p->after_scan_tx);
 		p2p->after_scan_tx = NULL;
 		return 1;

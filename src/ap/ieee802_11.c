@@ -1230,7 +1230,10 @@ static int robust_action_frame(u8 category)
 static void handle_action(struct hostapd_data *hapd,
 			  const struct ieee80211_mgmt *mgmt, size_t len)
 {
+#if defined(CONFIG_IEEE80211W) || defined(CONFIG_IEEE80211R)
 	struct sta_info *sta;
+	sta = ap_get_sta(hapd, mgmt->sa);
+#endif /* CONFIG_IEEE80211W || CONFIG_IEEE80211R */
 
 	if (len < IEEE80211_HDRLEN + 1) {
 		hostapd_logger(hapd, mgmt->sa, HOSTAPD_MODULE_IEEE80211,
@@ -1240,7 +1243,6 @@ static void handle_action(struct hostapd_data *hapd,
 		return;
 	}
 
-	sta = ap_get_sta(hapd, mgmt->sa);
 #ifdef CONFIG_IEEE80211W
 	if (sta && (sta->flags & WLAN_STA_MFP) &&
 	    !(mgmt->frame_control & host_to_le16(WLAN_FC_ISWEP) &&

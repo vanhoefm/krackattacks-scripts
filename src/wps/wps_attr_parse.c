@@ -557,7 +557,9 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 {
 	const u8 *pos, *end;
 	u16 type, len;
+#ifdef WPS_WORKAROUNDS
 	u16 prev_type = 0;
+#endif /* WPS_WORKAROUNDS */
 
 	os_memset(attr, 0, sizeof(*attr));
 	pos = wpabuf_head(msg);
@@ -622,7 +624,9 @@ int wps_parse_msg(const struct wpabuf *msg, struct wps_parse_attr *attr)
 		if (wps_set_attr(attr, type, pos, len) < 0)
 			return -1;
 
+#ifdef WPS_WORKAROUNDS
 		prev_type = type;
+#endif /* WPS_WORKAROUNDS */
 		pos += len;
 	}
 

@@ -2764,7 +2764,6 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 static void test_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_driver_test_data *drv = eloop_ctx;
-	int res;
 
 	if (drv->pending_action_tx == NULL)
 		return;
@@ -2777,12 +2776,12 @@ static void test_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 	}
 	wpa_printf(MSG_DEBUG, "P2P: Sending pending Action frame to "
 		   MACSTR, MAC2STR(drv->pending_action_dst));
-	res = wpa_driver_test_send_action(drv, drv->pending_action_freq, 0,
-					  drv->pending_action_dst,
-					  drv->pending_action_src,
-					  drv->pending_action_bssid,
-					  wpabuf_head(drv->pending_action_tx),
-					  wpabuf_len(drv->pending_action_tx));
+	wpa_driver_test_send_action(drv, drv->pending_action_freq, 0,
+				    drv->pending_action_dst,
+				    drv->pending_action_src,
+				    drv->pending_action_bssid,
+				    wpabuf_head(drv->pending_action_tx),
+				    wpabuf_len(drv->pending_action_tx));
 }
 #endif /* CONFIG_P2P */
 

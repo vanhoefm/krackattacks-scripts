@@ -253,35 +253,6 @@ wpa_drv_get_hw_feature_data(struct wpa_supplicant *wpa_s, u16 *num_modes,
 	return NULL;
 }
 
-static inline int wpa_drv_set_channel(struct wpa_supplicant *wpa_s,
-				      enum hostapd_hw_mode phymode, int chan,
-				      int freq)
-{
-	if (wpa_s->driver->set_channel)
-		return wpa_s->driver->set_channel(wpa_s->drv_priv, phymode,
-						  chan, freq);
-	return -1;
-}
-
-static inline int wpa_drv_set_ssid(struct wpa_supplicant *wpa_s,
-				   const u8 *ssid, size_t ssid_len)
-{
-	if (wpa_s->driver->set_ssid) {
-		return wpa_s->driver->set_ssid(wpa_s->drv_priv, ssid,
-					       ssid_len);
-	}
-	return -1;
-}
-
-static inline int wpa_drv_set_bssid(struct wpa_supplicant *wpa_s,
-				    const u8 *bssid)
-{
-	if (wpa_s->driver->set_bssid) {
-		return wpa_s->driver->set_bssid(wpa_s->drv_priv, bssid);
-	}
-	return -1;
-}
-
 static inline int wpa_drv_set_country(struct wpa_supplicant *wpa_s,
 				      const char *alpha2)
 {
@@ -296,24 +267,6 @@ static inline int wpa_drv_send_mlme(struct wpa_supplicant *wpa_s,
 	if (wpa_s->driver->send_mlme)
 		return wpa_s->driver->send_mlme(wpa_s->drv_priv,
 						data, data_len);
-	return -1;
-}
-
-static inline int wpa_drv_mlme_add_sta(struct wpa_supplicant *wpa_s,
-				       const u8 *addr, const u8 *supp_rates,
-				       size_t supp_rates_len)
-{
-	if (wpa_s->driver->mlme_add_sta)
-		return wpa_s->driver->mlme_add_sta(wpa_s->drv_priv, addr,
-						   supp_rates, supp_rates_len);
-	return -1;
-}
-
-static inline int wpa_drv_mlme_remove_sta(struct wpa_supplicant *wpa_s,
-					  const u8 *addr)
-{
-	if (wpa_s->driver->mlme_remove_sta)
-		return wpa_s->driver->mlme_remove_sta(wpa_s->drv_priv, addr);
 	return -1;
 }
 

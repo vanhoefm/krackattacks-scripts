@@ -2535,50 +2535,6 @@ static int wpa_driver_test_mlme_setprotection(void *priv, const u8 *addr,
 }
 
 
-static int wpa_driver_test_set_channel(void *priv,
-				       enum hostapd_hw_mode phymode,
-				       int chan, int freq)
-{
-	struct test_driver_bss *dbss = priv;
-	struct wpa_driver_test_data *drv = dbss->drv;
-	wpa_printf(MSG_DEBUG, "%s: phymode=%d chan=%d freq=%d",
-		   __func__, phymode, chan, freq);
-	drv->current_freq = freq;
-	return 0;
-}
-
-
-static int wpa_driver_test_mlme_add_sta(void *priv, const u8 *addr,
-					const u8 *supp_rates,
-					size_t supp_rates_len)
-{
-	wpa_printf(MSG_DEBUG, "%s: addr=" MACSTR, __func__, MAC2STR(addr));
-	return 0;
-}
-
-
-static int wpa_driver_test_mlme_remove_sta(void *priv, const u8 *addr)
-{
-	wpa_printf(MSG_DEBUG, "%s: addr=" MACSTR, __func__, MAC2STR(addr));
-	return 0;
-}
-
-
-static int wpa_driver_test_set_ssid(void *priv, const u8 *ssid,
-				    size_t ssid_len)
-{
-	wpa_printf(MSG_DEBUG, "%s", __func__);
-	return 0;
-}
-
-
-static int wpa_driver_test_set_bssid(void *priv, const u8 *bssid)
-{
-	wpa_printf(MSG_DEBUG, "%s: bssid=" MACSTR, __func__, MAC2STR(bssid));
-	return 0;
-}
-
-
 static void * wpa_driver_test_global_init(void)
 {
 	struct wpa_driver_test_global *global;
@@ -3357,11 +3313,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.get_mac_addr = wpa_driver_test_get_mac_addr,
 	.send_eapol = wpa_driver_test_send_eapol,
 	.mlme_setprotection = wpa_driver_test_mlme_setprotection,
-	.set_channel = wpa_driver_test_set_channel,
-	.set_ssid = wpa_driver_test_set_ssid,
-	.set_bssid = wpa_driver_test_set_bssid,
-	.mlme_add_sta = wpa_driver_test_mlme_add_sta,
-	.mlme_remove_sta = wpa_driver_test_mlme_remove_sta,
 	.get_scan_results2 = wpa_driver_test_get_scan_results2,
 	.global_init = wpa_driver_test_global_init,
 	.global_deinit = wpa_driver_test_global_deinit,

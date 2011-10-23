@@ -1269,43 +1269,6 @@ struct wpa_driver_ops {
 							 u16 *flags);
 
 	/**
-	 * set_channel - Set channel
-	 * @priv: Private driver interface data
-	 * @phymode: HOSTAPD_MODE_IEEE80211B, ..
-	 * @chan: IEEE 802.11 channel number
-	 * @freq: Frequency of the channel in MHz
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to wpa_supplicant.
-	 */
-	int (*set_channel)(void *priv, enum hostapd_hw_mode phymode, int chan,
-			   int freq);
-
-	/**
-	 * set_ssid - Set SSID
-	 * @priv: Private driver interface data
-	 * @ssid: SSID
-	 * @ssid_len: SSID length
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to wpa_supplicant.
-	 */
-	int (*set_ssid)(void *priv, const u8 *ssid, size_t ssid_len);
-
-	/**
-	 * set_bssid - Set BSSID
-	 * @priv: Private driver interface data
-	 * @bssid: BSSID
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to wpa_supplicant.
-	 */
-	int (*set_bssid)(void *priv, const u8 *bssid);
-
-	/**
 	 * send_mlme - Send management frame from MLME
 	 * @priv: Private driver interface data
 	 * @data: IEEE 802.11 management frame with IEEE 802.11 header
@@ -1313,35 +1276,6 @@ struct wpa_driver_ops {
 	 * Returns: 0 on success, -1 on failure
 	 */
 	int (*send_mlme)(void *priv, const u8 *data, size_t data_len);
-
-	/**
-	 * mlme_add_sta - Add a STA entry into the driver/netstack
-	 * @priv: Private driver interface data
-	 * @addr: MAC address of the STA (e.g., BSSID of the AP)
-	 * @supp_rates: Supported rate set (from (Re)AssocResp); in IEEE 802.11
-	 * format (one octet per rate, 1 = 0.5 Mbps)
-	 * @supp_rates_len: Number of entries in supp_rates
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to wpa_supplicant. When the MLME code
-	 * completes association with an AP, this function is called to
-	 * configure the driver/netstack with a STA entry for data frame
-	 * processing (TX rate control, encryption/decryption).
-	 */
-	int (*mlme_add_sta)(void *priv, const u8 *addr, const u8 *supp_rates,
-			    size_t supp_rates_len);
-
-	/**
-	 * mlme_remove_sta - Remove a STA entry from the driver/netstack
-	 * @priv: Private driver interface data
-	 * @addr: MAC address of the STA (e.g., BSSID of the AP)
-	 * Returns: 0 on success, -1 on failure
-	 *
-	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to wpa_supplicant.
-	 */
-	int (*mlme_remove_sta)(void *priv, const u8 *addr);
 
 	/**
 	 * update_ft_ies - Update FT (IEEE 802.11r) IEs

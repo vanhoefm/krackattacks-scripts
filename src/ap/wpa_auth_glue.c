@@ -384,7 +384,7 @@ static int hostapd_wpa_auth_send_ether(void *ctx, const u8 *dst, u16 proto,
 	ret = l2_packet_send(hapd->l2, dst, proto, (u8 *) buf,
 			     sizeof(*buf) + data_len);
 	os_free(buf);
-	return -1;
+	return ret;
 }
 
 

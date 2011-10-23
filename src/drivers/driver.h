@@ -1260,9 +1260,6 @@ struct wpa_driver_ops {
 	 * flags: Variable for returning hardware feature flags
 	 * Returns: Pointer to allocated hardware data on success or %NULL on
 	 * failure. Caller is responsible for freeing this.
-	 *
-	 * This function is only needed for drivers that export MLME
-	 * (management frame processing) to %wpa_supplicant or hostapd.
 	 */
 	struct hostapd_hw_modes * (*get_hw_feature_data)(void *priv,
 							 u16 *num_modes,

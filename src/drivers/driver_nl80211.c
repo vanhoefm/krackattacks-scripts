@@ -3657,6 +3657,7 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 
 		mode = &phy_info->modes[*(phy_info->num_modes)];
 		memset(mode, 0, sizeof(*mode));
+		mode->flags = HOSTAPD_MODE_FLAG_HT_INFO_KNOWN;
 		*(phy_info->num_modes) += 1;
 
 		nla_parse(tb_band, NL80211_BAND_ATTR_MAX, nla_data(nl_band),

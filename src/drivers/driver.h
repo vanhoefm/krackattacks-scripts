@@ -60,6 +60,8 @@ struct hostapd_channel_data {
 	u8 max_tx_power;
 };
 
+#define HOSTAPD_MODE_FLAG_HT_INFO_KNOWN BIT(0)
+
 /**
  * struct hostapd_hw_modes - Supported hardware mode information
  */
@@ -103,6 +105,8 @@ struct hostapd_hw_modes {
 	 * a_mpdu_params - A-MPDU (IEEE 802.11n) parameters
 	 */
 	u8 a_mpdu_params;
+
+	unsigned int flags; /* HOSTAPD_MODE_FLAG_* */
 };
 
 

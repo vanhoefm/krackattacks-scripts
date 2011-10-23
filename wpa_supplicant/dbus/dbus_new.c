@@ -1462,7 +1462,6 @@ void wpas_dbus_signal_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 				   enum wpas_dbus_prop property)
 {
-	WPADBusPropertyAccessor getter;
 	char *prop;
 
 	if (wpa_s->dbus_new_path == NULL)
@@ -1470,31 +1469,24 @@ void wpas_dbus_signal_prop_changed(struct wpa_supplicant *wpa_s,
 
 	switch (property) {
 	case WPAS_DBUS_PROP_AP_SCAN:
-		getter = wpas_dbus_getter_ap_scan;
 		prop = "ApScan";
 		break;
 	case WPAS_DBUS_PROP_SCANNING:
-		getter = wpas_dbus_getter_scanning;
 		prop = "Scanning";
 		break;
 	case WPAS_DBUS_PROP_STATE:
-		getter = wpas_dbus_getter_state;
 		prop = "State";
 		break;
 	case WPAS_DBUS_PROP_CURRENT_BSS:
-		getter = wpas_dbus_getter_current_bss;
 		prop = "CurrentBSS";
 		break;
 	case WPAS_DBUS_PROP_CURRENT_NETWORK:
-		getter = wpas_dbus_getter_current_network;
 		prop = "CurrentNetwork";
 		break;
 	case WPAS_DBUS_PROP_BSSS:
-		getter = wpas_dbus_getter_bsss;
 		prop = "BSSs";
 		break;
 	case WPAS_DBUS_PROP_CURRENT_AUTH_MODE:
-		getter = wpas_dbus_getter_current_auth_mode;
 		prop = "CurrentAuthMode";
 		break;
 	default:

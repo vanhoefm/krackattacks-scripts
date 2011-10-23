@@ -213,9 +213,9 @@ int main(int argc, char *argv[])
 		if (r == 0)
 			break; /* timeout */
 
-		if (FD_SET(s1, &rfds))
+		if (FD_ISSET(s1, &rfds))
 			rx(s1, 1, argv[1], ifindex1, &res);
-		if (FD_SET(s2, &rfds))
+		if (FD_ISSET(s2, &rfds))
 			rx(s2, 2, argv[2], ifindex2, &res);
 
 		if (res.rx_unicast1 && res.rx_broadcast1 &&

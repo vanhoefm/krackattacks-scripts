@@ -478,6 +478,112 @@ static int freq_allowed(int *freqs, int freq)
 }
 
 
+static int ht_supported(const struct hostapd_hw_modes *mode)
+{
+	if (!(mode->flags & HOSTAPD_MODE_FLAG_HT_INFO_KNOWN)) {
+		/*
+		 * The driver did not indicate whether it supports HT. Assume
+		 * it does to avoid connection issues.
+		 */
+		return 1;
+	}
+
+	/*
+	 * IEEE Std 802.11n-2009 20.1.1:
+	 * An HT non-AP STA shall support all EQM rates for one spatial stream.
+	 */
+	return mode->mcs_set[0] == 0xff;
+}
+
+
+static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_scan_res *bss)
+{
+	const struct hostapd_hw_modes *mode = NULL, *modes;
+	const u8 scan_ie[2] = { WLAN_EID_SUPP_RATES, WLAN_EID_EXT_SUPP_RATES };
+	const u8 *rate_ie;
+	int i, j, k;
+
+	modes = wpa_s->hw.modes;
+	if (modes == NULL) {
+		/*
+		 * The driver does not provide any additional information
+		 * about the utilized hardware, so allow the connection attempt
+		 * to continue.
+		 */
+		return 1;
+	}
+
+	for (i = 0; i < wpa_s->hw.num_modes; i++) {
+		for (j = 0; j < modes[i].num_channels; j++) {
+			int freq = modes[i].channels[j].freq;
+			if (freq == bss->freq) {
+				if (mode &&
+				    mode->mode == HOSTAPD_MODE_IEEE80211G)
+					break; /* do not allow 802.11b replace
+						* 802.11g */
+				mode = &modes[i];
+				break;
+			}
+		}
+	}
+
+	if (mode == NULL)
+		return 0;
+
+	for (i = 0; i < (int) sizeof(scan_ie); i++) {
+		rate_ie = wpa_scan_get_ie(bss, scan_ie[i]);
+		if (rate_ie == NULL)
+			continue;
+
+		for (j = 2; j < rate_ie[1] + 2; j++) {
+			int flagged = !!(rate_ie[j] & 0x80);
+			int r = (rate_ie[j] & 0x7f) * 5;
+
+			/*
+			 * IEEE Std 802.11n-2009 7.3.2.2:
+			 * The new BSS Membership selector value is encoded
+			 * like a legacy basic rate, but it is not a rate and
+			 * only indicates if the BSS members are required to
+			 * support the mandatory features of Clause 20 [HT PHY]
+			 * in order to join the BSS.
+			 */
+			if (flagged && ((rate_ie[j] & 0x7f) ==
+					BSS_MEMBERSHIP_SELECTOR_HT_PHY)) {
+				if (!ht_supported(mode)) {
+					wpa_dbg(wpa_s, MSG_DEBUG,
+						"   hardware does not support "
+						"HT PHY");
+					return 0;
+				}
+				continue;
+			}
+
+			if (!flagged)
+				continue;
+
+			/* check for legacy basic rates */
+			for (k = 0; k < mode->num_rates; k++) {
+				if (mode->rates[k] == r)
+					break;
+			}
+			if (k == mode->num_rates) {
+				/*
+				 * IEEE Std 802.11-2007 7.3.2.2 demands that in
+				 * order to join a BSS all required rates
+				 * have to be supported by the hardware.
+				 */
+				wpa_dbg(wpa_s, MSG_DEBUG, "   hardware does "
+					"not support required rate %d.%d Mbps",
+					r / 10, r % 10);
+				return 0;
+			}
+		}
+	}
+
+	return 1;
+}
+
+
 static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 					    int i, struct wpa_scan_res *bss,
 					    struct wpa_ssid *group)
@@ -607,6 +713,12 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 		if (!freq_allowed(ssid->freq_list, bss->freq)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - frequency not "
 				"allowed");
+			continue;
+		}
+
+		if (!rate_match(wpa_s, bss)) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - rate sets do "
+				"not match");
 			continue;
 		}
 

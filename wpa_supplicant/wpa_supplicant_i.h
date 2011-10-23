@@ -500,6 +500,12 @@ struct wpa_supplicant {
 	unsigned int network_select:1;
 	unsigned int auto_select:1;
 #endif /* CONFIG_INTERWORKING */
+
+	struct {
+		struct hostapd_hw_modes *modes;
+		u16 num_modes;
+		u16 flags;
+	} hw;
 };
 
 
@@ -569,8 +575,6 @@ enum wpa_key_mgmt key_mgmt2driver(int key_mgmt);
 enum wpa_cipher cipher_suite2driver(int cipher);
 void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
-void ieee80211_sta_free_hw_features(struct hostapd_hw_modes *hw_features,
-				    size_t num_hw_features);
 void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s);
 

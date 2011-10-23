@@ -2030,8 +2030,7 @@ struct p2p_oper_class_map {
 static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 				   struct p2p_channels *chan)
 {
-	struct hostapd_hw_modes *modes, *mode;
-	u16 num_modes, flags;
+	struct hostapd_hw_modes *mode;
 	int cla, op;
 	struct p2p_oper_class_map op_class[] = {
 		{ HOSTAPD_MODE_IEEE80211G, 81, 1, 13, 1, BW20 },
@@ -2049,8 +2048,7 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 		{ -1, 0, 0, 0, 0, BW20 }
 	};
 
-	modes = wpa_drv_get_hw_feature_data(wpa_s, &num_modes, &flags);
-	if (modes == NULL) {
+	if (wpa_s->hw.modes == NULL) {
 		wpa_printf(MSG_DEBUG, "P2P: Driver did not support fetching "
 			   "of all supported channels; assume dualband "
 			   "support");
@@ -2064,7 +2062,7 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 		u8 ch;
 		struct p2p_reg_class *reg = NULL;
 
-		mode = get_mode(modes, num_modes, o->mode);
+		mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, o->mode);
 		if (mode == NULL)
 			continue;
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
@@ -2096,8 +2094,6 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 	}
 
 	chan->reg_classes = cla;
-
-	ieee80211_sta_free_hw_features(modes, num_modes);
 
 	return 0;
 }

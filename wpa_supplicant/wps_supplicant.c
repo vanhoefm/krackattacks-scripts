@@ -1121,7 +1121,7 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	struct wps_context *wps;
 	struct wps_registrar_config rcfg;
 	struct hostapd_hw_modes *modes;
-	u16 num_modes, flags, m;
+	u16 m;
 
 	wps = os_zalloc(sizeof(*wps));
 	if (wps == NULL)
@@ -1155,16 +1155,15 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 		  WPS_DEV_TYPE_LEN * wps->dev.num_sec_dev_types);
 
 	wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
-	modes = wpa_drv_get_hw_feature_data(wpa_s, &num_modes, &flags);
+	modes = wpa_s->hw.modes;
 	if (modes) {
-		for (m = 0; m < num_modes; m++) {
+		for (m = 0; m < wpa_s->hw.num_modes; m++) {
 			if (modes[m].mode == HOSTAPD_MODE_IEEE80211B ||
 			    modes[m].mode == HOSTAPD_MODE_IEEE80211G)
 				wps->dev.rf_bands |= WPS_RF_24GHZ;
 			else if (modes[m].mode == HOSTAPD_MODE_IEEE80211A)
 				wps->dev.rf_bands |= WPS_RF_50GHZ;
 		}
-		ieee80211_sta_free_hw_features(modes, num_modes);
 	}
 	if (wps->dev.rf_bands == 0) {
 		/*

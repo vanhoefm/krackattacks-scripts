@@ -257,10 +257,22 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 
 	os_memset(&params, 0, sizeof(params));
 	for (i = 0; wpa_drivers[i]; i++) {
-		if (wpa_drivers[i] == hapd->driver) {
-			params.global_priv = global.drv_priv[i];
-			break;
+		if (wpa_drivers[i] != hapd->driver)
+			continue;
+
+		if (global.drv_priv[i] == NULL &&
+		    wpa_drivers[i]->global_init) {
+			global.drv_priv[i] = wpa_drivers[i]->global_init();
+			if (global.drv_priv[i] == NULL) {
+				wpa_printf(MSG_ERROR, "Failed to initialize "
+					   "driver '%s'",
+					   wpa_drivers[i]->name);
+				return -1;
+			}
 		}
+
+		params.global_priv = global.drv_priv[i];
+		break;
 	}
 	params.bssid = b;
 	params.ifname = hapd->conf->iface;
@@ -425,16 +437,6 @@ static int hostapd_global_init(struct hapd_interfaces *interfaces,
 	global.drv_priv = os_zalloc(global.drv_count * sizeof(void *));
 	if (global.drv_priv == NULL)
 		return -1;
-	for (i = 0; wpa_drivers[i]; i++) {
-		if (!wpa_drivers[i]->global_init)
-			continue;
-		global.drv_priv[i] = wpa_drivers[i]->global_init();
-		if (global.drv_priv[i] == NULL) {
-			wpa_printf(MSG_ERROR, "Failed to initialize driver "
-				   "'%s'", wpa_drivers[i]->name);
-			return -1;
-		}
-	}
 
 	return 0;
 }

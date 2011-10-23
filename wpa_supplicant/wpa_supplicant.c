@@ -1867,6 +1867,26 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 }
 
 
+static int select_driver(struct wpa_supplicant *wpa_s, int i)
+{
+	struct wpa_global *global = wpa_s->global;
+
+	if (wpa_drivers[i]->global_init && global->drv_priv[i] == NULL) {
+		global->drv_priv[i] = wpa_drivers[i]->global_init();
+		if (global->drv_priv[i] == NULL) {
+			wpa_printf(MSG_ERROR, "Failed to initialize driver "
+				   "'%s'", wpa_drivers[i]->name);
+			return -1;
+		}
+	}
+
+	wpa_s->driver = wpa_drivers[i];
+	wpa_s->global_drv_priv = global->drv_priv[i];
+
+	return 0;
+}
+
+
 static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 				     const char *name)
 {
@@ -1885,9 +1905,7 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 
 	if (name == NULL) {
 		/* default to first driver in the list */
-		wpa_s->driver = wpa_drivers[0];
-		wpa_s->global_drv_priv = wpa_s->global->drv_priv[0];
-		return 0;
+		return select_driver(wpa_s, 0);
 	}
 
 	do {
@@ -1900,12 +1918,8 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 		for (i = 0; wpa_drivers[i]; i++) {
 			if (os_strlen(wpa_drivers[i]->name) == len &&
 			    os_strncmp(driver, wpa_drivers[i]->name, len) ==
-			    0) {
-				wpa_s->driver = wpa_drivers[i];
-				wpa_s->global_drv_priv =
-					wpa_s->global->drv_priv[i];
-				return 0;
-			}
+			    0)
+				return select_driver(wpa_s, i);
 		}
 
 		driver = pos + 1;
@@ -2624,17 +2638,6 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	if (global->drv_priv == NULL) {
 		wpa_supplicant_deinit(global);
 		return NULL;
-	}
-	for (i = 0; wpa_drivers[i]; i++) {
-		if (!wpa_drivers[i]->global_init)
-			continue;
-		global->drv_priv[i] = wpa_drivers[i]->global_init();
-		if (global->drv_priv[i] == NULL) {
-			wpa_printf(MSG_ERROR, "Failed to initialize driver "
-				   "'%s'", wpa_drivers[i]->name);
-			wpa_supplicant_deinit(global);
-			return NULL;
-		}
 	}
 
 	return global;

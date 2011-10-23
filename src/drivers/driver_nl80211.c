@@ -3164,6 +3164,10 @@ static int wpa_driver_nl80211_set_key(const char *ifname, void *priv,
 		   "set_tx=%d seq_len=%lu key_len=%lu",
 		   __func__, ifindex, alg, addr, key_idx, set_tx,
 		   (unsigned long) seq_len, (unsigned long) key_len);
+#ifdef CONFIG_TDLS
+	if (key_idx == -1)
+		key_idx = 0;
+#endif /* CONFIG_TDLS */
 
 	msg = nlmsg_alloc();
 	if (!msg)

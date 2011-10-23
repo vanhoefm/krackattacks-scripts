@@ -4409,6 +4409,8 @@ static u32 sta_flags_nl80211(int flags)
 		f |= BIT(NL80211_STA_FLAG_SHORT_PREAMBLE);
 	if (flags & WPA_STA_MFP)
 		f |= BIT(NL80211_STA_FLAG_MFP);
+	if (flags & WPA_STA_TDLS_PEER)
+		f |= BIT(NL80211_STA_FLAG_TDLS_PEER);
 
 	return f;
 }
@@ -4423,19 +4425,26 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	struct nl80211_sta_flag_update upd;
 	int ret = -ENOBUFS;
 
+	if ((params->flags & WPA_STA_TDLS_PEER) &&
+	    !(drv->capa.flags & WPA_DRIVER_FLAGS_TDLS_SUPPORT))
+		return -EOPNOTSUPP;
+
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
 
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_NEW_STATION);
+	nl80211_cmd(drv, msg, 0, params->set ? NL80211_CMD_SET_STATION :
+		    NL80211_CMD_NEW_STATION);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
 	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->addr);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
 	NLA_PUT(msg, NL80211_ATTR_STA_SUPPORTED_RATES, params->supp_rates_len,
 		params->supp_rates);
-	NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
-		    params->listen_interval);
+	if (!params->set) {
+		NLA_PUT_U16(msg, NL80211_ATTR_STA_AID, params->aid);
+		NLA_PUT_U16(msg, NL80211_ATTR_STA_LISTEN_INTERVAL,
+			    params->listen_interval);
+	}
 	if (params->ht_capabilities) {
 		NLA_PUT(msg, NL80211_ATTR_HT_CAPABILITY,
 			sizeof(*params->ht_capabilities),
@@ -4449,8 +4458,9 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
 	if (ret)
-		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_NEW_STATION "
-			   "result: %d (%s)", ret, strerror(-ret));
+		wpa_printf(MSG_DEBUG, "nl80211: NL80211_CMD_%s_STATION "
+			   "result: %d (%s)", params->set ? "SET" : "NEW", ret,
+			   strerror(-ret));
 	if (ret == -EEXIST)
 		ret = 0;
  nla_put_failure:
@@ -5137,6 +5147,9 @@ static int wpa_driver_nl80211_sta_set_flags(void *priv, const u8 *addr,
 
 	if (total_flags & WPA_STA_MFP)
 		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_MFP);
+
+	if (total_flags & WPA_STA_TDLS_PEER)
+		NLA_PUT_FLAG(flags, NL80211_STA_FLAG_TDLS_PEER);
 
 	if (nla_put_nested(msg, NL80211_ATTR_STA_FLAGS, flags))
 		goto nla_put_failure;

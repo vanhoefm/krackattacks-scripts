@@ -794,6 +794,7 @@ struct hostapd_sta_add_params {
 	u16 listen_interval;
 	const struct ieee80211_ht_capabilities *ht_capabilities;
 	u32 flags; /* bitmask of WPA_STA_* flags */
+	int set; /* Set STA parameters instead of add */
 };
 
 struct hostapd_freq_params {
@@ -878,6 +879,7 @@ struct wpa_bss_params {
 #define WPA_STA_WMM BIT(1)
 #define WPA_STA_SHORT_PREAMBLE BIT(2)
 #define WPA_STA_MFP BIT(3)
+#define WPA_STA_TDLS_PEER BIT(4)
 
 /**
  * struct p2p_params - P2P parameters for driver-based P2P management
@@ -1622,6 +1624,9 @@ struct wpa_driver_ops {
 	 * This function is used to add a station entry to the driver once the
 	 * station has completed association. This is only used if the driver
 	 * does not take care of association processing.
+	 *
+	 * With TDLS, this function is also used to add or set (params->set 1)
+	 * TDLS peer entries.
 	 */
 	int (*sta_add)(void *priv, struct hostapd_sta_add_params *params);
 
@@ -2313,7 +2318,7 @@ struct wpa_driver_ops {
 	 * @status_code: Status Code or Reason Code to use (if needed)
 	 * @buf: TDLS IEs to add to the message
 	 * @len: Length of buf in octets
-	 * Returns: 0 on success, -1 on failure
+	 * Returns: 0 on success, negative (<0) on failure
 	 *
 	 * This optional function can be used to send packet to driver which is
 	 * responsible for receiving and sending all TDLS packets.
@@ -2322,6 +2327,16 @@ struct wpa_driver_ops {
 			      u8 dialog_token, u16 status_code,
 			      const u8 *buf, size_t len);
 
+	/**
+	 * tdls_oper - Ask the driver to perform high-level TDLS operations
+	 * @priv: Private driver interface data
+	 * @oper: TDLS high-level operation. See %enum tdls_oper
+	 * @peer: Destination (peer) MAC address
+	 * Returns: 0 on success, negative (<0) on failure
+	 *
+	 * This optional function can be used to send high-level TDLS commands
+	 * to the driver.
+	 */
 	int (*tdls_oper)(void *priv, enum tdls_oper oper, const u8 *peer);
 
 	/**

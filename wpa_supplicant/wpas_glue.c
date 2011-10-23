@@ -563,6 +563,27 @@ static int wpa_supplicant_tdls_oper(void *ctx, int oper, const u8 *peer)
 	return wpa_drv_tdls_oper(wpa_s, oper, peer);
 }
 
+
+static int wpa_supplicant_tdls_peer_addset(
+	void *ctx, const u8 *peer, int add, u16 capability,
+	const u8 *supp_rates, size_t supp_rates_len)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+	struct hostapd_sta_add_params params;
+
+	params.addr = peer;
+	params.aid = 1;
+	params.capability = capability;
+	params.flags = WPA_STA_TDLS_PEER | WPA_STA_AUTHORIZED;
+	params.ht_capabilities = NULL;
+	params.listen_interval = 0;
+	params.supp_rates = supp_rates;
+	params.supp_rates_len = supp_rates_len;
+	params.set = !add;
+
+	return wpa_drv_sta_add(wpa_s, &params);
+}
+
 #endif /* CONFIG_TDLS */
 
 
@@ -724,6 +745,7 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s)
 	ctx->tdls_get_capa = wpa_supplicant_tdls_get_capa;
 	ctx->send_tdls_mgmt = wpa_supplicant_send_tdls_mgmt;
 	ctx->tdls_oper = wpa_supplicant_tdls_oper;
+	ctx->tdls_peer_addset = wpa_supplicant_tdls_peer_addset;
 #endif /* CONFIG_TDLS */
 	ctx->set_rekey_offload = wpa_supplicant_set_rekey_offload;
 

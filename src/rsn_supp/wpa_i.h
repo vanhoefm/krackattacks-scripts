@@ -291,6 +291,18 @@ static inline int wpa_sm_tdls_oper(struct wpa_sm *sm, int oper,
 		return sm->ctx->tdls_oper(sm->ctx->ctx, oper, peer);
 	return -1;
 }
+
+static inline int
+wpa_sm_tdls_peer_addset(struct wpa_sm *sm, const u8 *addr, int add,
+			u16 capability, const u8 *supp_rates,
+			size_t supp_rates_len)
+{
+	if (sm->ctx->tdls_peer_addset)
+		return sm->ctx->tdls_peer_addset(sm->ctx->ctx, addr, add,
+						 capability, supp_rates,
+						 supp_rates_len);
+	return -1;
+}
 #endif /* CONFIG_TDLS */
 
 void wpa_eapol_key_send(struct wpa_sm *sm, const u8 *kck,

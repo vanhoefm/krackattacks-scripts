@@ -1624,8 +1624,14 @@ skip_rsn:
 	wpa_tdls_generate_tpk(peer, sm->own_addr, sm->bssid);
 
 skip_rsn_check:
+	/* add the peer to the driver as a "setup in progress" peer */
+	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, NULL, 0);
+
 	wpa_printf(MSG_DEBUG, "TDLS: Sending TDLS Setup Response / TPK M2");
-	wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer);
+	if (wpa_tdls_send_tpk_m2(sm, src_addr, dtoken, lnkid, peer) < 0) {
+		wpa_tdls_disable_link(sm, peer->addr);
+		goto error;
+	}
 
 	return 0;
 
@@ -1658,6 +1664,11 @@ static void wpa_tdls_enable_link(struct wpa_sm *sm, struct wpa_tdls_peer *peer)
 	}
 #endif /* CONFIG_TDLS_TESTING */
 	}
+
+	/* add supported rates and capabilities to the TDLS peer */
+	wpa_sm_tdls_peer_addset(sm, peer->addr, 0, peer->capability,
+				peer->supp_rates, peer->supp_rates_len);
+
 	wpa_sm_tdls_oper(sm, TDLS_ENABLE_LINK, peer->addr);
 }
 
@@ -2059,7 +2070,15 @@ int wpa_tdls_start(struct wpa_sm *sm, const u8 *addr)
 
 	peer->initiator = 1;
 
-	return wpa_tdls_send_tpk_m1(sm, peer);
+	/* add the peer to the driver as a "setup in progress" peer */
+	wpa_sm_tdls_peer_addset(sm, peer->addr, 1, 0, NULL, 0);
+
+	if (wpa_tdls_send_tpk_m1(sm, peer) < 0) {
+		wpa_tdls_disable_link(sm, peer->addr);
+		return -1;
+	}
+
+	return 0;
 }
 
 

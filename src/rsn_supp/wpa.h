@@ -62,6 +62,9 @@ struct wpa_sm_ctx {
 			      u8 action_code, u8 dialog_token,
 			      u16 status_code, const u8 *buf, size_t len);
 	int (*tdls_oper)(void *ctx, int oper, const u8 *peer);
+	int (*tdls_peer_addset)(void *ctx, const u8 *addr, int add,
+				u16 capability, const u8 *supp_rates,
+				size_t supp_rates_len);
 #endif /* CONFIG_TDLS */
 	void (*set_rekey_offload)(void *ctx, const u8 *kek, const u8 *kck,
 				  const u8 *replay_ctr);

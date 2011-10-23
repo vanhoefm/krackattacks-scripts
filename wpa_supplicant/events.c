@@ -230,6 +230,7 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid)
 {
 #ifdef IEEE8021X_EAPOL
+#ifdef PCSC_FUNCS
 	int aka = 0, sim = 0, type;
 
 	if (ssid->eap.pcsc == NULL || wpa_s->scard != NULL)
@@ -281,6 +282,7 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 	}
 	wpa_sm_set_scard_ctx(wpa_s->wpa, wpa_s->scard);
 	eapol_sm_register_scard_ctx(wpa_s->eapol, wpa_s->scard);
+#endif /* PCSC_FUNCS */
 #endif /* IEEE8021X_EAPOL */
 
 	return 0;

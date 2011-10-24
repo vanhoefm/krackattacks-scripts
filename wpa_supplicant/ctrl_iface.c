@@ -40,6 +40,7 @@
 #include "ctrl_iface.h"
 #include "interworking.h"
 #include "blacklist.h"
+#include "wpas_glue.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -684,6 +685,73 @@ static int wpa_supplicant_ctrl_iface_ibss_rsn(
 #endif /* CONFIG_IBSS_RSN */
 
 
+int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
+					      struct wpa_ssid *ssid,
+					      const char *field,
+					      const char *value)
+{
+	struct eap_peer_config *eap = &ssid->eap;
+
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: response handle field=%s", field);
+	wpa_hexdump_ascii_key(MSG_DEBUG, "CTRL_IFACE: response value",
+			      (const u8 *) value, os_strlen(value));
+
+	switch (wpa_supplicant_ctrl_req_from_string(field)) {
+	case WPA_CTRL_REQ_EAP_IDENTITY:
+		os_free(eap->identity);
+		eap->identity = (u8 *) os_strdup(value);
+		eap->identity_len = os_strlen(value);
+		eap->pending_req_identity = 0;
+		if (ssid == wpa_s->current_ssid)
+			wpa_s->reassociate = 1;
+		break;
+	case WPA_CTRL_REQ_EAP_PASSWORD:
+		os_free(eap->password);
+		eap->password = (u8 *) os_strdup(value);
+		eap->password_len = os_strlen(value);
+		eap->pending_req_password = 0;
+		if (ssid == wpa_s->current_ssid)
+			wpa_s->reassociate = 1;
+		break;
+	case WPA_CTRL_REQ_EAP_NEW_PASSWORD:
+		os_free(eap->new_password);
+		eap->new_password = (u8 *) os_strdup(value);
+		eap->new_password_len = os_strlen(value);
+		eap->pending_req_new_password = 0;
+		if (ssid == wpa_s->current_ssid)
+			wpa_s->reassociate = 1;
+		break;
+	case WPA_CTRL_REQ_EAP_PIN:
+		os_free(eap->pin);
+		eap->pin = os_strdup(value);
+		eap->pending_req_pin = 0;
+		if (ssid == wpa_s->current_ssid)
+			wpa_s->reassociate = 1;
+		break;
+	case WPA_CTRL_REQ_EAP_OTP:
+		os_free(eap->otp);
+		eap->otp = (u8 *) os_strdup(value);
+		eap->otp_len = os_strlen(value);
+		os_free(eap->pending_req_otp);
+		eap->pending_req_otp = NULL;
+		eap->pending_req_otp_len = 0;
+		break;
+	case WPA_CTRL_REQ_EAP_PASSPHRASE:
+		os_free(eap->private_key_passwd);
+		eap->private_key_passwd = (u8 *) os_strdup(value);
+		eap->pending_req_passphrase = 0;
+		if (ssid == wpa_s->current_ssid)
+			wpa_s->reassociate = 1;
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown field '%s'", field);
+		return -1;
+	}
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_ctrl_rsp(struct wpa_supplicant *wpa_s,
 					      char *rsp)
 {
@@ -691,7 +759,6 @@ static int wpa_supplicant_ctrl_iface_ctrl_rsp(struct wpa_supplicant *wpa_s,
 	char *pos, *id_pos;
 	int id;
 	struct wpa_ssid *ssid;
-	struct eap_peer_config *eap;
 
 	pos = os_strchr(rsp, '-');
 	if (pos == NULL)
@@ -713,54 +780,9 @@ static int wpa_supplicant_ctrl_iface_ctrl_rsp(struct wpa_supplicant *wpa_s,
 			   "to update", id);
 		return -1;
 	}
-	eap = &ssid->eap;
 
-	if (os_strcmp(rsp, "IDENTITY") == 0) {
-		os_free(eap->identity);
-		eap->identity = (u8 *) os_strdup(pos);
-		eap->identity_len = os_strlen(pos);
-		eap->pending_req_identity = 0;
-		if (ssid == wpa_s->current_ssid)
-			wpa_s->reassociate = 1;
-	} else if (os_strcmp(rsp, "PASSWORD") == 0) {
-		os_free(eap->password);
-		eap->password = (u8 *) os_strdup(pos);
-		eap->password_len = os_strlen(pos);
-		eap->pending_req_password = 0;
-		if (ssid == wpa_s->current_ssid)
-			wpa_s->reassociate = 1;
-	} else if (os_strcmp(rsp, "NEW_PASSWORD") == 0) {
-		os_free(eap->new_password);
-		eap->new_password = (u8 *) os_strdup(pos);
-		eap->new_password_len = os_strlen(pos);
-		eap->pending_req_new_password = 0;
-		if (ssid == wpa_s->current_ssid)
-			wpa_s->reassociate = 1;
-	} else if (os_strcmp(rsp, "PIN") == 0) {
-		os_free(eap->pin);
-		eap->pin = os_strdup(pos);
-		eap->pending_req_pin = 0;
-		if (ssid == wpa_s->current_ssid)
-			wpa_s->reassociate = 1;
-	} else if (os_strcmp(rsp, "OTP") == 0) {
-		os_free(eap->otp);
-		eap->otp = (u8 *) os_strdup(pos);
-		eap->otp_len = os_strlen(pos);
-		os_free(eap->pending_req_otp);
-		eap->pending_req_otp = NULL;
-		eap->pending_req_otp_len = 0;
-	} else if (os_strcmp(rsp, "PASSPHRASE") == 0) {
-		os_free(eap->private_key_passwd);
-		eap->private_key_passwd = (u8 *) os_strdup(pos);
-		eap->pending_req_passphrase = 0;
-		if (ssid == wpa_s->current_ssid)
-			wpa_s->reassociate = 1;
-	} else {
-		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Unknown field '%s'", rsp);
-		return -1;
-	}
-
-	return 0;
+	return wpa_supplicant_ctrl_iface_ctrl_rsp_handle(wpa_s, ssid, rsp,
+							 pos);
 #else /* IEEE8021X_EAPOL */
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: 802.1X not included");
 	return -1;

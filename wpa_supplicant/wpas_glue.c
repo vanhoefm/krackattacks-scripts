@@ -587,6 +587,24 @@ static int wpa_supplicant_tdls_peer_addset(
 #endif /* CONFIG_TDLS */
 
 
+enum wpa_ctrl_req_type wpa_supplicant_ctrl_req_from_string(const char *field)
+{
+	if (os_strcmp(field, "IDENTITY") == 0)
+		return WPA_CTRL_REQ_EAP_IDENTITY;
+	else if (os_strcmp(field, "PASSWORD") == 0)
+		return WPA_CTRL_REQ_EAP_PASSWORD;
+	else if (os_strcmp(field, "NEW_PASSWORD") == 0)
+		return WPA_CTRL_REQ_EAP_NEW_PASSWORD;
+	else if (os_strcmp(field, "PIN") == 0)
+		return WPA_CTRL_REQ_EAP_PIN;
+	else if (os_strcmp(field, "OTP") == 0)
+		return WPA_CTRL_REQ_EAP_OTP;
+	else if (os_strcmp(field, "PASSPHRASE") == 0)
+		return WPA_CTRL_REQ_EAP_PASSPHRASE;
+	return WPA_CTRL_REQ_UNKNOWN;
+}
+
+
 const char * wpa_supplicant_ctrl_req_to_string(enum wpa_ctrl_req_type field,
 					       const char *default_txt,
 					       const char **txt)

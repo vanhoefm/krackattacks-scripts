@@ -15,6 +15,8 @@
 #ifndef WPAS_GLUE_H
 #define WPAS_GLUE_H
 
+enum wpa_ctrl_req_type;
+
 int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
@@ -23,5 +25,7 @@ void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 const char * wpa_supplicant_ctrl_req_to_string(enum wpa_ctrl_req_type field,
 					       const char *default_txt,
 					       const char **txt);
+
+enum wpa_ctrl_req_type wpa_supplicant_ctrl_req_from_string(const char *field);
 
 #endif /* WPAS_GLUE_H */

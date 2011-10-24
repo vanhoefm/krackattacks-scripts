@@ -271,6 +271,7 @@ enum hostapd_hw_mode {
  * enum wpa_ctrl_req_type - Control interface request types
  */
 enum wpa_ctrl_req_type {
+	WPA_CTRL_REQ_UNKNOWN,
 	WPA_CTRL_REQ_EAP_IDENTITY,
 	WPA_CTRL_REQ_EAP_PASSWORD,
 	WPA_CTRL_REQ_EAP_NEW_PASSWORD,

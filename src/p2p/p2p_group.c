@@ -147,8 +147,11 @@ static void p2p_group_add_common_ies(struct p2p_group *group,
 	dev_capab |= P2P_DEV_CAPAB_SERVICE_DISCOVERY;
 	dev_capab |= P2P_DEV_CAPAB_INVITATION_PROCEDURE;
 	group_capab |= P2P_GROUP_CAPAB_GROUP_OWNER;
-	if (group->cfg->persistent_group)
+	if (group->cfg->persistent_group) {
 		group_capab |= P2P_GROUP_CAPAB_PERSISTENT_GROUP;
+		if (group->cfg->persistent_group == 2)
+			group_capab |= P2P_GROUP_CAPAB_PERSISTENT_RECONN;
+	}
 	if (group->p2p->cfg->p2p_intra_bss)
 		group_capab |= P2P_GROUP_CAPAB_INTRA_BSS_DIST;
 	if (group->group_formation)

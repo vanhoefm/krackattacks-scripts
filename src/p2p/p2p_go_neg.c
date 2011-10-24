@@ -152,8 +152,11 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 
 	len = p2p_buf_add_ie_hdr(buf);
 	group_capab = 0;
-	if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP)
+	if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP) {
 		group_capab |= P2P_GROUP_CAPAB_PERSISTENT_GROUP;
+		if (peer->flags & P2P_DEV_PREFER_PERSISTENT_RECONN)
+			group_capab |= P2P_GROUP_CAPAB_PERSISTENT_RECONN;
+	}
 	if (p2p->cross_connect)
 		group_capab |= P2P_GROUP_CAPAB_CROSS_CONN;
 	if (p2p->cfg->p2p_intra_bss)
@@ -242,8 +245,12 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 	p2p_buf_add_status(buf, status);
 	group_capab = 0;
 	if (peer && peer->go_state == LOCAL_GO) {
-		if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP)
+		if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP) {
 			group_capab |= P2P_GROUP_CAPAB_PERSISTENT_GROUP;
+			if (peer->flags & P2P_DEV_PREFER_PERSISTENT_RECONN)
+				group_capab |=
+					P2P_GROUP_CAPAB_PERSISTENT_RECONN;
+		}
 		if (p2p->cross_connect)
 			group_capab |= P2P_GROUP_CAPAB_CROSS_CONN;
 		if (p2p->cfg->p2p_intra_bss)
@@ -673,8 +680,12 @@ static struct wpabuf * p2p_build_go_neg_conf(struct p2p_data *p2p,
 	p2p_buf_add_status(buf, status);
 	group_capab = 0;
 	if (peer->go_state == LOCAL_GO) {
-		if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP)
+		if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP) {
 			group_capab |= P2P_GROUP_CAPAB_PERSISTENT_GROUP;
+			if (peer->flags & P2P_DEV_PREFER_PERSISTENT_RECONN)
+				group_capab |=
+					P2P_GROUP_CAPAB_PERSISTENT_RECONN;
+		}
 		if (p2p->cross_connect)
 			group_capab |= P2P_GROUP_CAPAB_CROSS_CONN;
 		if (p2p->cfg->p2p_intra_bss)

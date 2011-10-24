@@ -1029,6 +1029,26 @@ static int p2p_prepare_channel(struct p2p_data *p2p, unsigned int force_freq)
 }
 
 
+static void p2p_set_dev_persistent(struct p2p_device *dev,
+				   int persistent_group)
+{
+	switch (persistent_group) {
+	case 0:
+		dev->flags &= ~(P2P_DEV_PREFER_PERSISTENT_GROUP |
+				P2P_DEV_PREFER_PERSISTENT_RECONN);
+		break;
+	case 1:
+		dev->flags |= P2P_DEV_PREFER_PERSISTENT_GROUP;
+		dev->flags &= ~P2P_DEV_PREFER_PERSISTENT_RECONN;
+		break;
+	case 2:
+		dev->flags |= P2P_DEV_PREFER_PERSISTENT_GROUP |
+			P2P_DEV_PREFER_PERSISTENT_RECONN;
+		break;
+	}
+}
+
+
 int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		enum p2p_wps_method wps_method,
 		int go_intent, const u8 *own_interface_addr,
@@ -1086,10 +1106,7 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	dev->connect_reqs = 0;
 	dev->go_neg_req_sent = 0;
 	dev->go_state = UNKNOWN_GO;
-	if (persistent_group)
-		dev->flags |= P2P_DEV_PREFER_PERSISTENT_GROUP;
-	else
-		dev->flags &= ~P2P_DEV_PREFER_PERSISTENT_GROUP;
+	p2p_set_dev_persistent(dev, persistent_group);
 	p2p->go_intent = go_intent;
 	os_memcpy(p2p->intended_addr, own_interface_addr, ETH_ALEN);
 
@@ -1159,10 +1176,7 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 	dev->flags &= ~P2P_DEV_USER_REJECTED;
 	dev->go_neg_req_sent = 0;
 	dev->go_state = UNKNOWN_GO;
-	if (persistent_group)
-		dev->flags |= P2P_DEV_PREFER_PERSISTENT_GROUP;
-	else
-		dev->flags &= ~P2P_DEV_PREFER_PERSISTENT_GROUP;
+	p2p_set_dev_persistent(dev, persistent_group);
 	p2p->go_intent = go_intent;
 	os_memcpy(p2p->intended_addr, own_interface_addr, ETH_ALEN);
 
@@ -1273,8 +1287,12 @@ void p2p_go_complete(struct p2p_data *p2p, struct p2p_device *peer)
 	os_memcpy(res.peer_device_addr, peer->info.p2p_device_addr, ETH_ALEN);
 	os_memcpy(res.peer_interface_addr, peer->intended_addr, ETH_ALEN);
 	res.wps_method = peer->wps_method;
-	if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP)
-		res.persistent_group = 1;
+	if (peer->flags & P2P_DEV_PREFER_PERSISTENT_GROUP) {
+		if (peer->flags & P2P_DEV_PREFER_PERSISTENT_RECONN)
+			res.persistent_group = 2;
+		else
+			res.persistent_group = 1;
+	}
 
 	if (go) {
 		/* Setup AP mode for WPS provisioning */

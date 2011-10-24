@@ -89,6 +89,7 @@ struct p2p_device {
 #define P2P_DEV_FORCE_FREQ BIT(13)
 #define P2P_DEV_PD_FOR_JOIN BIT(14)
 #define P2P_DEV_REPORTED_ONCE BIT(15)
+#define P2P_DEV_PREFER_PERSISTENT_RECONN BIT(16)
 	unsigned int flags;
 
 	int status; /* enum p2p_status_code */

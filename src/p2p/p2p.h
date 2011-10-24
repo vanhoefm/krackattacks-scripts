@@ -120,6 +120,9 @@ struct p2p_go_neg_results {
 
 	/**
 	 * persistent_group - Whether the group should be made persistent
+	 * 0 = not persistent
+	 * 1 = persistent group without persistent reconnect
+	 * 2 = persistent group with persistent reconnect
 	 */
 	int persistent_group;
 
@@ -846,7 +849,9 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout);
  * @go_intent: Local GO intent value (1..15)
  * @own_interface_addr: Intended interface address to use with the group
  * @force_freq: The only allowed channel frequency in MHz or 0
- * @persistent_group: Whether to create a persistent group
+ * @persistent_group: Whether to create a persistent group (0 = no, 1 =
+ * persistent group without persistent reconnect, 2 = persistent group with
+ * persistent reconnect)
  * Returns: 0 on success, -1 on failure
  */
 int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
@@ -862,7 +867,9 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
  * @go_intent: Local GO intent value (1..15)
  * @own_interface_addr: Intended interface address to use with the group
  * @force_freq: The only allowed channel frequency in MHz or 0
- * @persistent_group: Whether to create a persistent group
+ * @persistent_group: Whether to create a persistent group (0 = no, 1 =
+ * persistent group without persistent reconnect, 2 = persistent group with
+ * persistent reconnect)
  * Returns: 0 on success, -1 on failure
  *
  * This is like p2p_connect(), but the actual group negotiation is not
@@ -1164,6 +1171,9 @@ struct p2p_group;
 struct p2p_group_config {
 	/**
 	 * persistent_group - Whether the group is persistent
+	 * 0 = not a persistent group
+	 * 1 = persistent group without persistent reconnect
+	 * 2 = persistent group with persistent reconnect
 	 */
 	int persistent_group;
 

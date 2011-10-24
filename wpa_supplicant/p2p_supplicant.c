@@ -756,6 +756,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 
 	d->p2p_group_idle = s->p2p_group_idle;
 	d->p2p_intra_bss = s->p2p_intra_bss;
+	d->persistent_reconnect = s->persistent_reconnect;
 }
 
 
@@ -2376,6 +2377,9 @@ static int wpas_p2p_start_go_neg(struct wpa_supplicant *wpa_s,
 				 int go_intent, const u8 *own_interface_addr,
 				 unsigned int force_freq, int persistent_group)
 {
+	if (persistent_group && wpa_s->conf->persistent_reconnect)
+		persistent_group = 2;
+
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT) {
 		return wpa_drv_p2p_connect(wpa_s, peer_addr, wps_method,
 					   go_intent, own_interface_addr,
@@ -2394,6 +2398,9 @@ static int wpas_p2p_auth_go_neg(struct wpa_supplicant *wpa_s,
 				int go_intent, const u8 *own_interface_addr,
 				unsigned int force_freq, int persistent_group)
 {
+	if (persistent_group && wpa_s->conf->persistent_reconnect)
+		persistent_group = 2;
+
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
 		return -1;
 
@@ -3210,7 +3217,10 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 	if (cfg == NULL)
 		return NULL;
 
-	cfg->persistent_group = persistent_group;
+	if (persistent_group && wpa_s->conf->persistent_reconnect)
+		cfg->persistent_group = 2;
+	else if (persistent_group)
+		cfg->persistent_group = 1;
 	os_memcpy(cfg->interface_addr, wpa_s->own_addr, ETH_ALEN);
 	if (wpa_s->max_stations &&
 	    wpa_s->max_stations < wpa_s->conf->max_num_sta)

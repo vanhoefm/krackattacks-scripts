@@ -843,6 +843,38 @@ static void atheros_raw_recv_11r(void *ctx, const u8 *src_addr, const u8 *buf,
 }
 #endif /* CONFIG_IEEE80211R */
 
+#ifdef CONFIG_HS20
+static void atheros_raw_recv_hs20(void *ctx, const u8 *src_addr, const u8 *buf,
+				 size_t len)
+{
+	struct atheros_driver_data *drv = ctx;
+	const struct ieee80211_mgmt *mgmt;
+	u16 fc;
+	union wpa_event_data event;
+
+	/* Send the Action frame for HS20 processing */
+
+	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.action.category) +
+	    sizeof(mgmt->u.action.u.public_action))
+		return;
+
+	mgmt = (const struct ieee80211_mgmt *) buf;
+
+	fc = le_to_host16(mgmt->frame_control);
+	if (WLAN_FC_GET_TYPE(fc) != WLAN_FC_TYPE_MGMT ||
+	    WLAN_FC_GET_STYPE(fc) != WLAN_FC_STYPE_ACTION ||
+	    mgmt->u.action.category != WLAN_ACTION_PUBLIC)
+		return;
+
+	wpa_printf(MSG_DEBUG, "%s:Received Public Action frame", __func__);
+
+	os_memset(&event, 0, sizeof(event));
+	event.rx_mgmt.frame = (const u8 *) mgmt;
+	event.rx_mgmt.frame_len = len;
+	wpa_supplicant_event(drv->hapd, EVENT_RX_MGMT, &event);
+}
+#endif /* CONFIG_HS20 */
+
 #if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R)
 static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 				size_t len)
@@ -853,6 +885,9 @@ static void atheros_raw_receive(void *ctx, const u8 *src_addr, const u8 *buf,
 #ifdef CONFIG_IEEE80211R
 	atheros_raw_recv_11r(ctx, src_addr, buf, len);
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_HS20
+	atheros_raw_recv_hs20(ctx, src_addr, buf, len);
+#endif /* CONFIG_HS20 */
 }
 #endif /* CONFIG_WPS || CONFIG_IEEE80211R */
 
@@ -871,6 +906,9 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 			       IEEE80211_FILTER_TYPE_AUTH |
 			       IEEE80211_FILTER_TYPE_ACTION);
 #endif
+#ifdef CONFIG_HS20
+	filt.app_filterype |= IEEE80211_FILTER_TYPE_ACTION;
+#endif /* CONFIG_HS20 */
 	if (filt.app_filterype) {
 		ret = set80211priv(drv, IEEE80211_IOCTL_FILTERFRAME, &filt,
 				   sizeof(struct ieee80211req_set_filter));
@@ -1172,8 +1210,8 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		 */
 		wpa_supplicant_event(drv->hapd, EVENT_WPS_BUTTON_PUSHED, NULL);
 #endif /* CONFIG_WPS */
-#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R)
-#define WPS_FRAM_TAG_SIZE 30 /* hardcoded in driver */
+#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R) || defined(CONFIG_HS20)
+#define MGMT_FRAM_TAG_SIZE 30 /* hardcoded in driver */
 	} else if (strncmp(custom, "Manage.prob_req ", 16) == 0) {
 		/*
 		 * Atheros driver uses a hack to pass Probe Request frames as a
@@ -1182,46 +1220,46 @@ atheros_wireless_event_wireless_custom(struct atheros_driver_data *drv,
 		 * Format: "Manage.prob_req <frame len>" | zero padding | frame
 		 */
 		int len = atoi(custom + 16);
-		if (len < 0 || custom + WPS_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
 			wpa_printf(MSG_DEBUG, "Invalid Manage.prob_req event "
 				   "length %d", len);
 			return;
 		}
 		atheros_raw_receive(drv, NULL,
-				    (u8 *) custom + WPS_FRAM_TAG_SIZE, len);
+				    (u8 *) custom + MGMT_FRAM_TAG_SIZE, len);
 	} else if (strncmp(custom, "Manage.assoc_req ", 17) == 0) {
 		/* Format: "Manage.assoc_req <frame len>" | zero padding |
 		 * frame */
 		int len = atoi(custom + 17);
-		if (len < 0 || custom + WPS_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
 			wpa_printf(MSG_DEBUG, "Invalid Manage.prob_req/"
 				   "assoc_req/auth event length %d", len);
 			return;
 		}
 		atheros_raw_receive(drv, NULL,
-				    (u8 *) custom + WPS_FRAM_TAG_SIZE, len);
+				    (u8 *) custom + MGMT_FRAM_TAG_SIZE, len);
 	} else if (strncmp(custom, "Manage.action ", 14) == 0) {
 		/* Format: "Manage.assoc_req <frame len>" | zero padding |
 		 * frame */
 		int len = atoi(custom + 14);
-		if (len < 0 || custom + WPS_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
 			wpa_printf(MSG_DEBUG, "Invalid Manage.prob_req/"
 				   "assoc_req/auth event length %d", len);
 			return;
 		}
 		atheros_raw_receive(drv, NULL,
-				    (u8 *) custom + WPS_FRAM_TAG_SIZE, len);
+				    (u8 *) custom + MGMT_FRAM_TAG_SIZE, len);
 	} else if (strncmp(custom, "Manage.auth ", 12) == 0) {
 		/* Format: "Manage.auth <frame len>" | zero padding | frame
 		 */
 		int len = atoi(custom + 12);
-		if (len < 0 || custom + WPS_FRAM_TAG_SIZE + len > end) {
+		if (len < 0 || custom + MGMT_FRAM_TAG_SIZE + len > end) {
 			wpa_printf(MSG_DEBUG, "Invalid Manage.prob_req/"
 				   "assoc_req/auth event length %d", len);
 			return;
 		}
 		atheros_raw_receive(drv, NULL,
-				    (u8 *) custom + WPS_FRAM_TAG_SIZE, len);
+				    (u8 *) custom + MGMT_FRAM_TAG_SIZE, len);
 #endif /* CONFIG_WPS or CONFIG_IEEE80211R */
 	}
 }

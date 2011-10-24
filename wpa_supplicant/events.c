@@ -819,22 +819,22 @@ static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
-			    struct wpa_bss *selected,
-			    struct wpa_ssid *ssid)
+int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
+			   struct wpa_bss *selected,
+			   struct wpa_ssid *ssid)
 {
 	if (wpas_wps_scan_pbc_overlap(wpa_s, selected, ssid)) {
 		wpa_msg(wpa_s, MSG_INFO, WPS_EVENT_OVERLAP
 			"PBC session overlap");
 #ifdef CONFIG_P2P
 		if (wpas_p2p_notif_pbc_overlap(wpa_s) == 1)
-			return;
+			return -1;
 #endif /* CONFIG_P2P */
 
 #ifdef CONFIG_WPS
 		wpas_wps_cancel(wpa_s);
 #endif /* CONFIG_WPS */
-		return;
+		return -1;
 	}
 
 	/*
@@ -850,7 +850,7 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 	      0))) {
 		if (wpa_supplicant_scard_init(wpa_s, ssid)) {
 			wpa_supplicant_req_new_scan(wpa_s, 10, 0);
-			return;
+			return 0;
 		}
 		wpa_msg(wpa_s, MSG_DEBUG, "Request association: "
 			"reassociate: %d  selected: "MACSTR "  bssid: " MACSTR
@@ -863,6 +863,8 @@ void wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "Already associated with the "
 			"selected AP");
 	}
+
+	return 0;
 }
 
 
@@ -1088,7 +1090,11 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		wpa_scan_results_free(scan_res);
 		if (skip)
 			return 0;
-		wpa_supplicant_connect(wpa_s, selected, ssid);
+
+		if (wpa_supplicant_connect(wpa_s, selected, ssid) < 0) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "Connect failed");
+			return -1;
+		}
 		wpa_supplicant_rsn_preauth_scan_results(wpa_s);
 	} else {
 		wpa_scan_results_free(scan_res);

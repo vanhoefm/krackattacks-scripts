@@ -1468,16 +1468,11 @@ int eap_sm_get_status(struct eap_sm *sm, char *buf, size_t buflen, int verbose)
 
 
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
-typedef enum {
-	TYPE_IDENTITY, TYPE_PASSWORD, TYPE_OTP, TYPE_PIN, TYPE_NEW_PASSWORD,
-	TYPE_PASSPHRASE
-} eap_ctrl_req_type;
-
-static void eap_sm_request(struct eap_sm *sm, eap_ctrl_req_type type,
+static void eap_sm_request(struct eap_sm *sm, enum wpa_ctrl_req_type field,
 			   const char *msg, size_t msglen)
 {
 	struct eap_peer_config *config;
-	char *field, *txt, *tmp;
+	char *txt = NULL, *tmp;
 
 	if (sm == NULL)
 		return;
@@ -1485,29 +1480,20 @@ static void eap_sm_request(struct eap_sm *sm, eap_ctrl_req_type type,
 	if (config == NULL)
 		return;
 
-	switch (type) {
-	case TYPE_IDENTITY:
-		field = "IDENTITY";
-		txt = "Identity";
+	switch (field) {
+	case WPA_CTRL_REQ_EAP_IDENTITY:
 		config->pending_req_identity++;
 		break;
-	case TYPE_PASSWORD:
-		field = "PASSWORD";
-		txt = "Password";
+	case WPA_CTRL_REQ_EAP_PASSWORD:
 		config->pending_req_password++;
 		break;
-	case TYPE_NEW_PASSWORD:
-		field = "NEW_PASSWORD";
-		txt = "New Password";
+	case WPA_CTRL_REQ_EAP_NEW_PASSWORD:
 		config->pending_req_new_password++;
 		break;
-	case TYPE_PIN:
-		field = "PIN";
-		txt = "PIN";
+	case WPA_CTRL_REQ_EAP_PIN:
 		config->pending_req_pin++;
 		break;
-	case TYPE_OTP:
-		field = "OTP";
+	case WPA_CTRL_REQ_EAP_OTP:
 		if (msg) {
 			tmp = os_malloc(msglen + 3);
 			if (tmp == NULL)
@@ -1526,9 +1512,7 @@ static void eap_sm_request(struct eap_sm *sm, eap_ctrl_req_type type,
 			txt = config->pending_req_otp;
 		}
 		break;
-	case TYPE_PASSPHRASE:
-		field = "PASSPHRASE";
-		txt = "Private key passphrase";
+	case WPA_CTRL_REQ_EAP_PASSPHRASE:
 		config->pending_req_passphrase++;
 		break;
 	default:
@@ -1561,7 +1545,7 @@ const char * eap_sm_get_method_name(struct eap_sm *sm)
  */
 void eap_sm_request_identity(struct eap_sm *sm)
 {
-	eap_sm_request(sm, TYPE_IDENTITY, NULL, 0);
+	eap_sm_request(sm, WPA_CTRL_REQ_EAP_IDENTITY, NULL, 0);
 }
 
 
@@ -1576,7 +1560,7 @@ void eap_sm_request_identity(struct eap_sm *sm)
  */
 void eap_sm_request_password(struct eap_sm *sm)
 {
-	eap_sm_request(sm, TYPE_PASSWORD, NULL, 0);
+	eap_sm_request(sm, WPA_CTRL_REQ_EAP_PASSWORD, NULL, 0);
 }
 
 
@@ -1591,7 +1575,7 @@ void eap_sm_request_password(struct eap_sm *sm)
  */
 void eap_sm_request_new_password(struct eap_sm *sm)
 {
-	eap_sm_request(sm, TYPE_NEW_PASSWORD, NULL, 0);
+	eap_sm_request(sm, WPA_CTRL_REQ_EAP_NEW_PASSWORD, NULL, 0);
 }
 
 
@@ -1606,7 +1590,7 @@ void eap_sm_request_new_password(struct eap_sm *sm)
  */
 void eap_sm_request_pin(struct eap_sm *sm)
 {
-	eap_sm_request(sm, TYPE_PIN, NULL, 0);
+	eap_sm_request(sm, WPA_CTRL_REQ_EAP_PIN, NULL, 0);
 }
 
 
@@ -1622,7 +1606,7 @@ void eap_sm_request_pin(struct eap_sm *sm)
  */
 void eap_sm_request_otp(struct eap_sm *sm, const char *msg, size_t msg_len)
 {
-	eap_sm_request(sm, TYPE_OTP, msg, msg_len);
+	eap_sm_request(sm, WPA_CTRL_REQ_EAP_OTP, msg, msg_len);
 }
 
 
@@ -1637,7 +1621,7 @@ void eap_sm_request_otp(struct eap_sm *sm, const char *msg, size_t msg_len)
  */
 void eap_sm_request_passphrase(struct eap_sm *sm)
 {
-	eap_sm_request(sm, TYPE_PASSPHRASE, NULL, 0);
+	eap_sm_request(sm, WPA_CTRL_REQ_EAP_PASSPHRASE, NULL, 0);
 }
 
 

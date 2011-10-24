@@ -587,13 +587,60 @@ static int wpa_supplicant_tdls_peer_addset(
 #endif /* CONFIG_TDLS */
 
 
+const char * wpa_supplicant_ctrl_req_to_string(enum wpa_ctrl_req_type field,
+					       const char *default_txt,
+					       const char **txt)
+{
+	const char *ret = NULL;
+
+	*txt = default_txt;
+
+	switch (field) {
+	case WPA_CTRL_REQ_EAP_IDENTITY:
+		*txt = "Identity";
+		ret = "IDENTITY";
+		break;
+	case WPA_CTRL_REQ_EAP_PASSWORD:
+		*txt = "Password";
+		ret = "PASSWORD";
+		break;
+	case WPA_CTRL_REQ_EAP_NEW_PASSWORD:
+		*txt = "New Password";
+		ret = "NEW_PASSWORD";
+		break;
+	case WPA_CTRL_REQ_EAP_PIN:
+		*txt = "PIN";
+		ret = "PIN";
+		break;
+	case WPA_CTRL_REQ_EAP_OTP:
+		ret = "OTP";
+		break;
+	case WPA_CTRL_REQ_EAP_PASSPHRASE:
+		*txt = "Private key passphrase";
+		ret = "PASSPHRASE";
+		break;
+	default:
+		break;
+	}
+
+	/* txt needs to be something */
+	if (*txt == NULL) {
+		wpa_printf(MSG_WARNING, "No message for request %d", field);
+		ret = NULL;
+	}
+
+	return ret;
+}
+
 #ifdef IEEE8021X_EAPOL
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
-static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
-					    const char *txt)
+static void wpa_supplicant_eap_param_needed(void *ctx,
+					    enum wpa_ctrl_req_type field,
+					    const char *default_txt)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
+	const char *field_name, *txt = NULL;
 	char *buf;
 	size_t buflen;
 	int len;
@@ -601,13 +648,21 @@ static void wpa_supplicant_eap_param_needed(void *ctx, const char *field,
 	if (ssid == NULL)
 		return;
 
+	field_name = wpa_supplicant_ctrl_req_to_string(field, default_txt,
+						       &txt);
+	if (field_name == NULL) {
+		wpa_printf(MSG_WARNING, "Unhandled EAP param %d needed",
+			   field);
+		return;
+	}
+
 	buflen = 100 + os_strlen(txt) + ssid->ssid_len;
 	buf = os_malloc(buflen);
 	if (buf == NULL)
 		return;
 	len = os_snprintf(buf, buflen,
 			  WPA_CTRL_REQ "%s-%d:%s needed for SSID ",
-			  field, ssid->id, txt);
+			  field_name, ssid->id, txt);
 	if (len < 0 || (size_t) len >= buflen) {
 		os_free(buf);
 		return;

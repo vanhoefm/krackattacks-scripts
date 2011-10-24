@@ -20,4 +20,8 @@ int wpa_supplicant_init_wpa(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_rsn_supp_set_config(struct wpa_supplicant *wpa_s,
 					struct wpa_ssid *ssid);
 
+const char * wpa_supplicant_ctrl_req_to_string(enum wpa_ctrl_req_type field,
+					       const char *default_txt,
+					       const char **txt);
+
 #endif /* WPAS_GLUE_H */

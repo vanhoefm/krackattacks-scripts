@@ -1813,7 +1813,7 @@ static void eapol_sm_notify_pending(void *ctx)
 
 
 #if defined(CONFIG_CTRL_IFACE) || !defined(CONFIG_NO_STDOUT_DEBUG)
-static void eapol_sm_eap_param_needed(void *ctx, const char *field,
+static void eapol_sm_eap_param_needed(void *ctx, enum wpa_ctrl_req_type field,
 				      const char *txt)
 {
 	struct eapol_sm *sm = ctx;

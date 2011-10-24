@@ -25,6 +25,7 @@ struct wps_event_m2d;
 struct wps_event_fail;
 struct wps_credential;
 enum wpa_states;
+enum wpa_ctrl_req_type;
 
 enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_AP_SCAN,
@@ -131,6 +132,10 @@ void wpas_dbus_bss_signal_prop_changed(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_network_enabled_changed(struct wpa_supplicant *wpa_s,
 					      struct wpa_ssid *ssid);
 void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id);
+void wpas_dbus_signal_network_request(struct wpa_supplicant *wpa_s,
+				      struct wpa_ssid *ssid,
+				      enum wpa_ctrl_req_type rtype,
+				      const char *default_text);
 void wpas_dbus_signal_scan_done(struct wpa_supplicant *wpa_s, int success);
 void wpas_dbus_signal_wps_cred(struct wpa_supplicant *wpa_s,
 			       const struct wps_credential *cred);
@@ -238,6 +243,12 @@ static inline void wpas_dbus_signal_network_enabled_changed(
 
 static inline void wpas_dbus_signal_network_selected(
 	struct wpa_supplicant *wpa_s, int id)
+{
+}
+
+static inline void wpas_dbus_signal_network_request(
+	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
+	enum wpa_ctrl_req_type rtype, const char *default_txt)
 {
 }
 

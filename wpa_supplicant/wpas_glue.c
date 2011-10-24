@@ -648,6 +648,8 @@ static void wpa_supplicant_eap_param_needed(void *ctx,
 	if (ssid == NULL)
 		return;
 
+	wpas_notify_network_request(wpa_s, ssid, field, default_txt);
+
 	field_name = wpa_supplicant_ctrl_req_to_string(field, default_txt,
 						       &txt);
 	if (field_name == NULL) {

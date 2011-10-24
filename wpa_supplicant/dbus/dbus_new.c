@@ -22,6 +22,7 @@
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../bss.h"
+#include "../wpas_glue.h"
 #include "dbus_new_helpers.h"
 #include "dbus_dict_helpers.h"
 #include "dbus_new.h"
@@ -378,6 +379,67 @@ static void wpas_dbus_signal_network_removed(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_network_selected(struct wpa_supplicant *wpa_s, int id)
 {
 	wpas_dbus_signal_network(wpa_s, id, "NetworkSelected", FALSE);
+}
+
+
+/**
+ * wpas_dbus_signal_network_request - Indicate that additional information
+ * (EAP password, etc.) is required to complete the association to this SSID
+ * @wpa_s: %wpa_supplicant network interface data
+ * @rtype: The specific additional information required
+ * @default_text: Optional description of required information
+ *
+ * Request additional information or passwords to complete an association
+ * request.
+ */
+void wpas_dbus_signal_network_request(struct wpa_supplicant *wpa_s,
+				      struct wpa_ssid *ssid,
+				      enum wpa_ctrl_req_type rtype,
+				      const char *default_txt)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter;
+	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
+	const char *field, *txt = NULL, *net_ptr;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	field = wpa_supplicant_ctrl_req_to_string(rtype, default_txt, &txt);
+	if (field == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      "NetworkRequest");
+	if (msg == NULL)
+		return;
+
+	os_snprintf(net_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_NETWORKS_PART "/%u",
+		    wpa_s->dbus_new_path, ssid->id);
+	net_ptr = &net_obj_path[0];
+
+	dbus_message_iter_init_append(msg, &iter);
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_OBJECT_PATH,
+					    &net_ptr))
+		goto err;
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &field))
+		goto err;
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &txt))
+		goto err;
+
+	dbus_connection_send(iface->con, msg, NULL);
+	dbus_message_unref(msg);
+	return;
+
+err:
+	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+	dbus_message_unref(msg);
 }
 
 
@@ -1686,6 +1748,14 @@ static const struct wpa_dbus_signal_desc wpas_dbus_global_signals[] = {
 	{ "InterfaceRemoved", WPAS_DBUS_NEW_INTERFACE,
 	  {
 		  { "path", "o", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "NetworkRequest", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "path", "o", ARG_OUT },
+		  { "field", "s", ARG_OUT },
+		  { "text", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

@@ -78,7 +78,7 @@ struct wpa_dbus_signal_desc {
 	/* signal interface */
 	const char *dbus_interface;
 	/* array of arguments */
-	struct wpa_dbus_argument args[3];
+	struct wpa_dbus_argument args[4];
 };
 
 /**

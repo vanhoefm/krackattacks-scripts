@@ -141,6 +141,15 @@ void wpas_notify_network_selected(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_network_request(struct wpa_supplicant *wpa_s,
+				 struct wpa_ssid *ssid,
+				 enum wpa_ctrl_req_type rtype,
+				 const char *default_txt)
+{
+	wpas_dbus_signal_network_request(wpa_s, ssid, rtype, default_txt);
+}
+
+
 void wpas_notify_scanning(struct wpa_supplicant *wpa_s)
 {
 	/* notify the old DBus API */

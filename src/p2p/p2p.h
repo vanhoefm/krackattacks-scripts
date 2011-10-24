@@ -1488,6 +1488,15 @@ unsigned int p2p_get_group_num_members(struct p2p_group *group);
 const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next);
 
 /**
+ * p2p_group_get_dev_addr - Get a P2P Device Address of a client in a group
+ * @group: P2P group context from p2p_group_init()
+ * @addr: P2P Interface Address of the client
+ * Returns: P2P Device Address of the client if found or %NULL if no match
+ * found
+ */
+const u8 * p2p_group_get_dev_addr(struct p2p_group *group, const u8 *addr);
+
+/**
  * p2p_get_peer_found - Get P2P peer info structure of a found peer
  * @p2p: P2P module context from p2p_init()
  * @addr: P2P Device Address of the peer or %NULL to indicate the first peer

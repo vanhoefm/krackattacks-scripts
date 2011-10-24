@@ -27,6 +27,7 @@
 #include "eap_common/eap_wsc_common.h"
 #include "eapol_auth/eapol_auth_sm.h"
 #include "eapol_auth/eapol_auth_sm_i.h"
+#include "p2p/p2p.h"
 #include "hostapd.h"
 #include "accounting.h"
 #include "sta_info.h"
@@ -89,9 +90,23 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 		return;
 
 	if (authorized) {
-		if (!ap_sta_is_authorized(sta))
-			wpa_msg(hapd->msg_ctx, MSG_INFO,
-				AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
+		if (!ap_sta_is_authorized(sta)) {
+			const u8 *dev_addr = NULL;
+#ifdef CONFIG_P2P
+			dev_addr = p2p_group_get_dev_addr(hapd->p2p_group,
+							  sta->addr);
+#endif /* CONFIG_P2P */
+
+			if (dev_addr)
+				wpa_msg(hapd->msg_ctx, MSG_INFO,
+					AP_STA_CONNECTED MACSTR
+					" dev_addr=" MACSTR,
+					MAC2STR(sta->addr), MAC2STR(dev_addr));
+			else
+				wpa_msg(hapd->msg_ctx, MSG_INFO,
+					AP_STA_CONNECTED MACSTR,
+					MAC2STR(sta->addr));
+		}
 		ap_sta_set_authorized(hapd, sta, 1);
 		res = hostapd_set_authorized(hapd, sta, 1);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,

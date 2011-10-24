@@ -546,6 +546,19 @@ static struct p2p_group_member * p2p_group_get_client_iface(
 }
 
 
+const u8 * p2p_group_get_dev_addr(struct p2p_group *group, const u8 *addr)
+{
+	struct p2p_group_member *m;
+
+	if (group == NULL)
+		return NULL;
+	m = p2p_group_get_client_iface(group, addr);
+	if (m && !is_zero_ether_addr(m->dev_addr))
+		return m->dev_addr;
+	return NULL;
+}
+
+
 static struct wpabuf * p2p_build_go_disc_req(void)
 {
 	struct wpabuf *buf;

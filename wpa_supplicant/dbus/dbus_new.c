@@ -2188,6 +2188,15 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+	{ "NetworkReply", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_network_reply,
+	  {
+		  { "path", "o", ARG_IN },
+		  { "field", "s", ARG_IN },
+		  { "value", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
 	{ "AddBlob", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  (WPADBusMethodHandler) &wpas_dbus_handler_add_blob,
 	  {

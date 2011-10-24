@@ -28,6 +28,7 @@
 #include "../wpas_glue.h"
 #include "../bss.h"
 #include "../scan.h"
+#include "../ctrl_iface.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
@@ -1470,6 +1471,70 @@ out:
 	os_free(iface);
 	os_free(net_id);
 	return reply;
+}
+
+
+/**
+ * wpas_dbus_handler_network_reply - Reply to a NetworkRequest signal
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL on success or dbus error on failure
+ *
+ * Handler function for "NetworkReply" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_network_reply(DBusMessage *message,
+					      struct wpa_supplicant *wpa_s)
+{
+#ifdef IEEE8021X_EAPOL
+	DBusMessage *reply = NULL;
+	const char *op, *field, *value;
+	char *iface = NULL, *net_id = NULL;
+	int id;
+	struct wpa_ssid *ssid;
+
+	if (!dbus_message_get_args(message, NULL,
+	                           DBUS_TYPE_OBJECT_PATH, &op,
+	                           DBUS_TYPE_STRING, &field,
+	                           DBUS_TYPE_STRING, &value,
+			           DBUS_TYPE_INVALID))
+		return wpas_dbus_error_invalid_args(message, NULL);
+
+	/* Extract the network ID and ensure the network */
+	/* is actually a child of this interface */
+	iface = wpas_dbus_new_decompose_object_path(op, 0, &net_id, NULL);
+	if (iface == NULL || os_strcmp(iface, wpa_s->dbus_new_path) != 0) {
+		reply = wpas_dbus_error_invalid_args(message, op);
+		goto out;
+	}
+
+	id = strtoul(net_id, NULL, 10);
+	if (errno == EINVAL) {
+		reply = wpas_dbus_error_invalid_args(message, net_id);
+		goto out;
+	}
+
+	ssid = wpa_config_get_network(wpa_s->conf, id);
+	if (ssid == NULL) {
+		reply = wpas_dbus_error_network_unknown(message);
+		goto out;
+	}
+
+	if (wpa_supplicant_ctrl_iface_ctrl_rsp_handle(wpa_s, ssid,
+						      field, value) < 0)
+		reply = wpas_dbus_error_invalid_args(message, field);
+	else {
+		/* Tell EAP to retry immediately */
+		eapol_sm_notify_ctrl_response(wpa_s->eapol);
+	}
+
+out:
+	os_free(iface);
+	os_free(net_id);
+	return reply;
+#else /* IEEE8021X_EAPOL */
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: 802.1X not included");
+	return wpas_dbus_error_unknown_error(message, "802.1X not included");
+#endif /* IEEE8021X_EAPOL */
 }
 
 

@@ -66,7 +66,7 @@ struct wpa_dbus_method_desc {
 	/* method handling function */
 	WPADBusMethodHandler method_handler;
 	/* array of arguments */
-	struct wpa_dbus_argument args[3];
+	struct wpa_dbus_argument args[4];
 };
 
 /**

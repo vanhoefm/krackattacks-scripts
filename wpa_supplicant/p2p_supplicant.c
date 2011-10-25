@@ -3014,6 +3014,10 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
+	/* Make sure we are not running find during connection establishment */
+	wpa_printf(MSG_DEBUG, "P2P: Stop any on-going P2P FIND");
+	wpas_p2p_stop_find(wpa_s);
+
 	if (freq == 2) {
 		wpa_printf(MSG_DEBUG, "P2P: Request to start GO on 2.4 GHz "
 			   "band");

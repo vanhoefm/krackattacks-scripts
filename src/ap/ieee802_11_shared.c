@@ -259,7 +259,7 @@ u8 * hostapd_eid_adv_proto(struct hostapd_data *hapd, u8 *eid)
 
 	*pos++ = WLAN_EID_ADV_PROTO;
 	*pos++ = 2;
-	*pos++ = 0; /* Query Response Length Limit | PAME-BI */
+	*pos++ = 0x7F; /* Query Response Length Limit | PAME-BI */
 	*pos++ = ACCESS_NETWORK_QUERY_PROTOCOL;
 #endif /* CONFIG_INTERWORKING */
 

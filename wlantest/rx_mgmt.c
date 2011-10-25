@@ -190,6 +190,7 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
+	u16 fc, reason;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -206,10 +207,11 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 		return;
 	}
 
+	reason = le_to_host16(mgmt->u.deauth.reason_code);
 	wpa_printf(MSG_DEBUG, "DEAUTH " MACSTR " -> " MACSTR
 		   " (reason=%u) (valid=%d)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-		   le_to_host16(mgmt->u.deauth.reason_code), valid);
+		   reason, valid);
 	wpa_hexdump(MSG_MSGDUMP, "DEAUTH payload", data + 24, len - 24);
 
 	if (sta == NULL) {
@@ -225,6 +227,12 @@ static void rx_mgmt_deauth(struct wlantest *wt, const u8 *data, size_t len,
 			sta->counters[WLANTEST_STA_COUNTER_DEAUTH_RX_ASLEEP]++;
 		else
 			sta->counters[WLANTEST_STA_COUNTER_DEAUTH_RX_AWAKE]++;
+
+		fc = le_to_host16(mgmt->frame_control);
+		if (!(fc & WLAN_FC_ISWEP) && reason == 6)
+			sta->counters[WLANTEST_STA_COUNTER_DEAUTH_RX_RC6]++;
+		else if (!(fc & WLAN_FC_ISWEP) && reason == 7)
+			sta->counters[WLANTEST_STA_COUNTER_DEAUTH_RX_RC7]++;
 	} else
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DEAUTH_TX :
 			      WLANTEST_STA_COUNTER_INVALID_DEAUTH_TX]++;
@@ -526,6 +534,7 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 	const struct ieee80211_mgmt *mgmt;
 	struct wlantest_bss *bss;
 	struct wlantest_sta *sta;
+	u16 fc, reason;
 
 	mgmt = (const struct ieee80211_mgmt *) data;
 	bss = bss_get(wt, mgmt->bssid);
@@ -542,10 +551,11 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 		return;
 	}
 
+	reason = le_to_host16(mgmt->u.disassoc.reason_code);
 	wpa_printf(MSG_DEBUG, "DISASSOC " MACSTR " -> " MACSTR
 		   " (reason=%u) (valid=%d)",
 		   MAC2STR(mgmt->sa), MAC2STR(mgmt->da),
-		   le_to_host16(mgmt->u.disassoc.reason_code), valid);
+		   reason, valid);
 	wpa_hexdump(MSG_MSGDUMP, "DISASSOC payload", data + 24, len - 24);
 
 	if (sta == NULL) {
@@ -563,6 +573,12 @@ static void rx_mgmt_disassoc(struct wlantest *wt, const u8 *data, size_t len,
 		else
 			sta->counters[
 				WLANTEST_STA_COUNTER_DISASSOC_RX_AWAKE]++;
+
+		fc = le_to_host16(mgmt->frame_control);
+		if (!(fc & WLAN_FC_ISWEP) && reason == 6)
+			sta->counters[WLANTEST_STA_COUNTER_DISASSOC_RX_RC6]++;
+		else if (!(fc & WLAN_FC_ISWEP) && reason == 7)
+			sta->counters[WLANTEST_STA_COUNTER_DISASSOC_RX_RC7]++;
 	} else
 		sta->counters[valid ? WLANTEST_STA_COUNTER_VALID_DISASSOC_TX :
 			      WLANTEST_STA_COUNTER_INVALID_DISASSOC_TX]++;

@@ -552,6 +552,10 @@ static const struct sta_counters sta_counters[] = {
 	{ "disassoc_rx_asleep", WLANTEST_STA_COUNTER_DISASSOC_RX_ASLEEP },
 	{ "disassoc_rx_awake", WLANTEST_STA_COUNTER_DISASSOC_RX_AWAKE },
 	{ "prot_data_tx", WLANTEST_STA_COUNTER_PROT_DATA_TX },
+	{ "deauth_rx_rc6", WLANTEST_STA_COUNTER_DEAUTH_RX_RC6 },
+	{ "deauth_rx_rc7", WLANTEST_STA_COUNTER_DEAUTH_RX_RC7 },
+	{ "disassoc_rx_rc6", WLANTEST_STA_COUNTER_DISASSOC_RX_RC6 },
+	{ "disassoc_rx_rc7", WLANTEST_STA_COUNTER_DISASSOC_RX_RC7 },
 	{ NULL, 0 }
 };
 

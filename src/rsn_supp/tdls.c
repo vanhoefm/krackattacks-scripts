@@ -702,10 +702,11 @@ int wpa_tdls_send_teardown(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 		ftie->ie_len += 170;
 		*pos++ = 255; /* FTIE subelem */
 		*pos++ = 168; /* FTIE subelem length */
+		pos += 168;
 	}
 #endif /* CONFIG_TDLS_TESTING */
 	wpa_hexdump(MSG_DEBUG, "TDLS: FTIE for TDLS Teardown handshake",
-		    (u8 *) ftie, sizeof(*ftie));
+		    (u8 *) ftie, pos - (u8 *) ftie);
 
 	/* compute MIC before sending */
 	wpa_tdls_linkid(sm, peer, &lnkid);

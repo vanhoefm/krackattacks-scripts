@@ -1727,6 +1727,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 	if (status != WLAN_STATUS_SUCCESS) {
 		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M2: %u",
 			   status);
+		if (sm->tdls_external_setup)
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
 		return -1;
 	}
 
@@ -1867,6 +1869,8 @@ static int wpa_tdls_process_tpk_m2(struct wpa_sm *sm, const u8 *src_addr,
 		/* Discard the frame */
 		wpa_tdls_del_key(sm, peer);
 		wpa_tdls_peer_free(sm, peer);
+		if (sm->tdls_external_setup)
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
 		return -1;
 	}
 
@@ -1886,6 +1890,8 @@ skip_rsn:
 error:
 	wpa_tdls_send_error(sm, src_addr, WLAN_TDLS_SETUP_CONFIRM, dtoken,
 			    status);
+	if (sm->tdls_external_setup)
+		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
 	return -1;
 }
 
@@ -1926,6 +1932,8 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (status != 0) {
 		wpa_printf(MSG_INFO, "TDLS: Status code in TPK M3: %u",
 			   status);
+		if (sm->tdls_external_setup)
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
 		return -1;
 	}
 	pos += 2 /* status code */ + 1 /* dialog token */;
@@ -1998,6 +2006,8 @@ static int wpa_tdls_process_tpk_m3(struct wpa_sm *sm, const u8 *src_addr,
 	if (lifetime != peer->lifetime) {
 		wpa_printf(MSG_INFO, "TDLS: Unexpected TPK lifetime %u in "
 			   "TPK M3 (expected %u)", lifetime, peer->lifetime);
+		if (sm->tdls_external_setup)
+			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
 		return -1;
 	}
 

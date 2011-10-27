@@ -1553,6 +1553,19 @@ skip_rsn:
 		}
 	}
 
+#ifdef CONFIG_TDLS_TESTING
+	if (tdls_testing & TDLS_TESTING_CONCURRENT_INIT) {
+		if (os_memcmp(sm->own_addr, peer->addr, ETH_ALEN) < 0) {
+			/*
+			 * The request frame from us is going to win, so do not
+			 * replace information based on this request frame from
+			 * the peer.
+			 */
+			goto skip_rsn_check;
+		}
+	}
+#endif /* CONFIG_TDLS_TESTING */
+
 	peer->initiator = 0; /* Need to check */
 	peer->dtoken = dtoken;
 

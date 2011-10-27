@@ -2106,6 +2106,14 @@ int wpa_tdls_reneg(struct wpa_sm *sm, const u8 *addr)
 	if (peer == NULL || !peer->tpk_success)
 		return -1;
 
+	if (sm->tdls_external_setup) {
+		/*
+		 * Disable previous link to allow renegotiation to be completed
+		 * on AP path.
+		 */
+		wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, peer->addr);
+	}
+
 	return wpa_tdls_start(sm, addr);
 }
 

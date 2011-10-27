@@ -1521,7 +1521,11 @@ skip_rsn:
 			 * some drivers handling the new request frame. */
 			wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK, src_addr);
 #else
-			wpa_tdls_del_key(sm, peer);
+			if (sm->tdls_external_setup)
+				wpa_sm_tdls_oper(sm, TDLS_DISABLE_LINK,
+						 src_addr);
+			else
+				wpa_tdls_del_key(sm, peer);
 #endif
 			wpa_tdls_peer_free(sm, peer);
 		}

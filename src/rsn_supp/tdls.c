@@ -263,7 +263,7 @@ static int wpa_tdls_tpk_send(struct wpa_sm *sm, const u8 *dest, u8 action_code,
 
 
 static int wpa_tdls_do_teardown(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
-				u16 reason_code)
+				u16 reason_code, int free_peer)
 {
 	int ret;
 
@@ -276,7 +276,8 @@ static int wpa_tdls_do_teardown(struct wpa_sm *sm, struct wpa_tdls_peer *peer,
 		ret = wpa_sm_tdls_oper(sm, TDLS_TEARDOWN, peer->addr);
 	}
 
-	wpa_tdls_peer_free(sm, peer);
+	if (sm->tdls_external_setup || free_peer)
+		wpa_tdls_peer_free(sm, peer);
 
 	return ret;
 }
@@ -324,7 +325,7 @@ static void wpa_tdls_tpk_retry_timeout(void *eloop_ctx, void *timeout_ctx)
 
 		wpa_printf(MSG_DEBUG, "TDLS: Sending Teardown Request");
 		wpa_tdls_do_teardown(sm, peer,
-				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED, 1);
 	}
 }
 
@@ -602,7 +603,7 @@ static void wpa_tdls_tpk_timeout(void *eloop_ctx, void *timeout_ctx)
 		wpa_printf(MSG_DEBUG, "TDLS: TPK lifetime expired for " MACSTR
 			   " - tear down", MAC2STR(peer->addr));
 		wpa_tdls_do_teardown(sm, peer,
-				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED);
+				     WLAN_REASON_TDLS_TEARDOWN_UNSPECIFIED, 1);
 	}
 }
 
@@ -755,7 +756,7 @@ int wpa_tdls_teardown_link(struct wpa_sm *sm, const u8 *addr, u16 reason_code)
 		return -1;
 	}
 
-	return wpa_tdls_do_teardown(sm, peer, reason_code);
+	return wpa_tdls_do_teardown(sm, peer, reason_code, 0);
 }
 
 

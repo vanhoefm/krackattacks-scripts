@@ -34,6 +34,7 @@
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,
 				  struct wpa_auth_config *wconf)
 {
+	os_memset(wconf, 0, sizeof(*wconf));
 	wconf->wpa = conf->wpa;
 	wconf->wpa_key_mgmt = conf->wpa_key_mgmt;
 	wconf->wpa_pairwise = conf->wpa_pairwise;

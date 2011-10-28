@@ -111,6 +111,7 @@ struct cli_txt_entry {
 
 static DEFINE_DL_LIST(bsses); /* struct cli_txt_entry */
 static DEFINE_DL_LIST(p2p_peers); /* struct cli_txt_entry */
+static DEFINE_DL_LIST(p2p_groups); /* struct cli_txt_entry */
 
 
 static void print_help(void);
@@ -183,6 +184,23 @@ static void cli_txt_list_del_addr(struct dl_list *txt_list, const char *txt)
 }
 
 
+static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt)
+{
+	const char *end;
+	char *buf;
+	end = os_strchr(txt, ' ');
+	if (end == NULL)
+		end = txt + os_strlen(txt);
+	buf = os_malloc(end - txt + 1);
+	if (buf == NULL)
+		return;
+	os_memcpy(buf, txt, end - txt);
+	buf[end - txt] = '\0';
+	cli_txt_list_del(txt_list, buf);
+	os_free(buf);
+}
+
+
 static int cli_txt_list_add(struct dl_list *txt_list, const char *txt)
 {
 	struct cli_txt_entry *e;
@@ -210,6 +228,25 @@ static int cli_txt_list_add_addr(struct dl_list *txt_list, const char *txt)
 		return -1;
 	os_snprintf(buf, sizeof(buf), MACSTR, MAC2STR(addr));
 	return cli_txt_list_add(txt_list, buf);
+}
+
+
+static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
+{
+	const char *end;
+	char *buf;
+	int ret;
+	end = os_strchr(txt, ' ');
+	if (end == NULL)
+		end = txt + os_strlen(txt);
+	buf = os_malloc(end - txt + 1);
+	if (buf == NULL)
+		return -1;
+	os_memcpy(buf, txt, end - txt);
+	buf[end - txt] = '\0';
+	ret = cli_txt_list_add(txt_list, buf);
+	os_free(buf);
+	return ret;
 }
 
 
@@ -1990,6 +2027,21 @@ static int wpa_cli_cmd_p2p_group_remove(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static char ** wpa_cli_complete_p2p_group_remove(const char *str, int pos)
+{
+	int arg = get_cmd_arg_num(str, pos);
+	char **res = NULL;
+
+	switch (arg) {
+	case 1:
+		res = cli_txt_list_array(&p2p_groups);
+		break;
+	}
+
+	return res;
+}
+
+
 static int wpa_cli_cmd_p2p_group_add(struct wpa_ctrl *ctrl, int argc,
 					char *argv[])
 {
@@ -3033,6 +3085,8 @@ static char ** wpa_cli_cmd_completion(const char *cmd, const char *str,
 		return wpa_cli_complete_p2p_connect(str, pos);
 	if (os_strcasecmp(cmd, "p2p_peer") == 0)
 		return wpa_cli_complete_p2p_peer(str, pos);
+	if (os_strcasecmp(cmd, "p2p_group_remove") == 0)
+		return wpa_cli_complete_p2p_group_remove(str, pos);
 #endif /* CONFIG_P2P */
 
 	for (i = 0; wpa_cli_commands[i].cmd; i++) {
@@ -3286,6 +3340,22 @@ static void cli_event(const char *str)
 		cli_txt_list_del_addr(&p2p_peers, s + 14);
 		return;
 	}
+
+	if (str_starts(start, P2P_EVENT_GROUP_STARTED)) {
+		s = os_strchr(start, ' ');
+		if (s == NULL)
+			return;
+		cli_txt_list_add_word(&p2p_groups, s + 1);
+		return;
+	}
+
+	if (str_starts(start, P2P_EVENT_GROUP_REMOVED)) {
+		s = os_strchr(start, ' ');
+		if (s == NULL)
+			return;
+		cli_txt_list_del_word(&p2p_groups, s + 1);
+		return;
+	}
 #endif /* CONFIG_P2P */
 }
 
@@ -3420,6 +3490,7 @@ static void wpa_cli_interactive(void)
 	eloop_run();
 
 	cli_txt_list_flush(&p2p_peers);
+	cli_txt_list_flush(&p2p_groups);
 	cli_txt_list_flush(&bsses);
 	edit_deinit(hfile, wpa_cli_edit_filter_history_cb);
 	os_free(hfile);

@@ -66,6 +66,7 @@ OBJS_p += ../src/utils/wpa_debug.o
 OBJS_p += ../src/utils/wpabuf.o
 OBJS_c = wpa_cli.o ../src/common/wpa_ctrl.o
 OBJS_c += ../src/utils/wpa_debug.o
+OBJS_c += ../src/utils/common.o
 
 ifndef CONFIG_OS
 ifdef CONFIG_NATIVE_WINDOWS

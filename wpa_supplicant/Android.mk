@@ -84,6 +84,7 @@ OBJS_p += src/utils/wpa_debug.c
 OBJS_p += src/utils/wpabuf.c
 OBJS_c = wpa_cli.c src/common/wpa_ctrl.c
 OBJS_c += src/utils/wpa_debug.c
+OBJS_c += src/utils/common.c
 OBJS_d =
 OBJS_priv =
 

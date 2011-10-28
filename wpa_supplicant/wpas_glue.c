@@ -437,6 +437,13 @@ static int wpa_supplicant_set_key(void *_wpa_s, enum wpa_alg alg,
 		/* Clear the MIC error counter when setting a new PTK. */
 		wpa_s->mic_errors_seen = 0;
 	}
+#ifdef CONFIG_TESTING_GET_GTK
+	if (key_idx > 0 && addr && is_broadcast_ether_addr(addr) &&
+	    alg != WPA_ALG_NONE && key_len <= sizeof(wpa_s->last_gtk)) {
+		os_memcpy(wpa_s->last_gtk, key, key_len);
+		wpa_s->last_gtk_len = key_len;
+	}
+#endif /* CONFIG_TESTING_GET_GTK */
 	return wpa_drv_set_key(wpa_s, alg, addr, key_idx, set_tx, seq, seq_len,
 			       key, key_len);
 }

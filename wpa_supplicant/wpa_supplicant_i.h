@@ -708,6 +708,11 @@ struct wpa_supplicant {
 	u8 wnm_bss_termination_duration[12];
 	struct neighbor_report *wnm_neighbor_report_elements;
 #endif /* CONFIG_WNM */
+
+#ifdef CONFIG_TESTING_GET_GTK
+	u8 last_gtk[32];
+	size_t last_gtk_len;
+#endif /* CONFIG_TESTING_GET_GTK */
 };
 
 

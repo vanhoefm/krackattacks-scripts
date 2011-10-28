@@ -99,6 +99,10 @@ extern "C" {
 
 /** P2P device found */
 #define P2P_EVENT_DEVICE_FOUND "P2P-DEVICE-FOUND "
+
+/** P2P device lost */
+#define P2P_EVENT_DEVICE_LOST "P2P-DEVICE-LOST "
+
 /** A P2P device requested GO negotiation, but we were not ready to start the
  * negotiation */
 #define P2P_EVENT_GO_NEG_REQUEST "P2P-GO-NEG-REQUEST "

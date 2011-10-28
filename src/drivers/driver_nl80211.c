@@ -601,6 +601,14 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 		   (ifi->ifi_flags & IFF_DORMANT) ? "[DORMANT]" : "");
 
 	if (!drv->if_disabled && !(ifi->ifi_flags & IFF_UP)) {
+		char namebuf[IFNAMSIZ];
+		if (if_indextoname(ifi->ifi_index, namebuf) &&
+		    linux_iface_up(drv->global->ioctl_sock,
+				   drv->first_bss.ifname) > 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface down "
+				   "event since interface %s is up", namebuf);
+			return;
+		}
 		wpa_printf(MSG_DEBUG, "nl80211: Interface down");
 		if (drv->ignore_if_down_event) {
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface down "

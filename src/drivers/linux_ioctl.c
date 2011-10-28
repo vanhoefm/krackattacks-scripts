@@ -60,6 +60,28 @@ int linux_set_iface_flags(int sock, const char *ifname, int dev_up)
 }
 
 
+int linux_iface_up(int sock, const char *ifname)
+{
+	struct ifreq ifr;
+	int ret;
+
+	if (sock < 0)
+		return -1;
+
+	os_memset(&ifr, 0, sizeof(ifr));
+	os_strlcpy(ifr.ifr_name, ifname, IFNAMSIZ);
+
+	if (ioctl(sock, SIOCGIFFLAGS, &ifr) != 0) {
+		ret = errno ? -errno : -999;
+		wpa_printf(MSG_ERROR, "Could not read interface %s flags: %s",
+			   ifname, strerror(errno));
+		return ret;
+	}
+
+	return !!(ifr.ifr_flags & IFF_UP);
+}
+
+
 int linux_get_ifhwaddr(int sock, const char *ifname, u8 *addr)
 {
 	struct ifreq ifr;

@@ -1706,17 +1706,6 @@ struct wpa_driver_ops {
 				   int cw_max, int burst_time);
 
 	/**
-	 * valid_bss_mask - Validate BSSID mask
-	 * @priv: Private driver interface data
-	 * @addr: Address
-	 * @mask: Mask
-	 * Returns: 0 if mask is valid, -1 if mask is not valid, 1 if mask can
-	 * be used, but the main interface address must be the first address in
-	 * the block if mask is applied
-	 */
-	int (*valid_bss_mask)(void *priv, const u8 *addr, const u8 *mask);
-
-	/**
 	 * if_add - Add a virtual interface
 	 * @priv: Private driver interface data
 	 * @type: Interface type

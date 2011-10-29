@@ -371,7 +371,6 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 	u8 mask[ETH_ALEN] = { 0 };
 	struct hostapd_data *hapd = iface->bss[0];
 	unsigned int i = iface->conf->num_bss, bits = 0, j;
-	int res;
 	int auto_addr = 0;
 
 	if (hostapd_drv_none(hapd))
@@ -434,17 +433,6 @@ static int hostapd_validate_bssid_configuration(struct hostapd_iface *iface)
 skip_mask_ext:
 	wpa_printf(MSG_DEBUG, "BSS count %lu, BSSID mask " MACSTR " (%d bits)",
 		   (unsigned long) iface->conf->num_bss, MAC2STR(mask), bits);
-
-	res = hostapd_valid_bss_mask(hapd, hapd->own_addr, mask);
-	if (res == 0)
-		return 0;
-
-	if (res < 0) {
-		wpa_printf(MSG_ERROR, "Driver did not accept BSSID mask "
-			   MACSTR " for start address " MACSTR ".",
-			   MAC2STR(mask), MAC2STR(hapd->own_addr));
-		return -1;
-	}
 
 	if (!auto_addr)
 		return 0;

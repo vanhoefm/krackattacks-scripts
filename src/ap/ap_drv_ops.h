@@ -71,8 +71,6 @@ int hostapd_set_rate_sets(struct hostapd_data *hapd, int *supp_rates,
 int hostapd_set_country(struct hostapd_data *hapd, const char *country);
 int hostapd_set_tx_queue_params(struct hostapd_data *hapd, int queue, int aifs,
 				int cw_min, int cw_max, int burst_time);
-int hostapd_valid_bss_mask(struct hostapd_data *hapd, const u8 *addr,
-			   const u8 *mask);
 struct hostapd_hw_modes *
 hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 			    u16 *flags);

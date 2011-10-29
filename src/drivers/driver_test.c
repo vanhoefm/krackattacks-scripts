@@ -1101,13 +1101,6 @@ static int test_driver_if_remove(void *priv, enum wpa_driver_if_type type,
 }
 
 
-static int test_driver_valid_bss_mask(void *priv, const u8 *addr,
-				      const u8 *mask)
-{
-	return 0;
-}
-
-
 static int test_driver_set_ssid(void *priv, const u8 *buf, int len)
 {
 	struct test_driver_bss *bss = priv;
@@ -3294,7 +3287,6 @@ const struct wpa_driver_ops wpa_driver_test_ops = {
 	.get_hw_feature_data = wpa_driver_test_get_hw_feature_data,
 	.if_add = test_driver_if_add,
 	.if_remove = test_driver_if_remove,
-	.valid_bss_mask = test_driver_valid_bss_mask,
 	.hapd_set_ssid = test_driver_set_ssid,
 	.set_privacy = test_driver_set_privacy,
 	.set_sta_vlan = test_driver_set_sta_vlan,

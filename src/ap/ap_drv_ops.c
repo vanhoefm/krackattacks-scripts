@@ -504,15 +504,6 @@ int hostapd_set_tx_queue_params(struct hostapd_data *hapd, int queue, int aifs,
 }
 
 
-int hostapd_valid_bss_mask(struct hostapd_data *hapd, const u8 *addr,
-			   const u8 *mask)
-{
-	if (hapd->driver == NULL || hapd->driver->valid_bss_mask == NULL)
-		return 1;
-	return hapd->driver->valid_bss_mask(hapd->drv_priv, addr, mask);
-}
-
-
 struct hostapd_hw_modes *
 hostapd_get_hw_feature_data(struct hostapd_data *hapd, u16 *num_modes,
 			    u16 *flags)

@@ -220,8 +220,8 @@ struct wpa_driver_nl80211_data {
 	int monitor_sock;
 	int monitor_ifidx;
 	int no_monitor_iface_capab;
-	int disable_11b_rates;
 
+	unsigned int disabled_11b_rates:1;
 	unsigned int pending_remain_on_chan:1;
 	unsigned int in_interface_list:1;
 
@@ -310,6 +310,13 @@ static int is_sta_interface(enum nl80211_iftype nlmode)
 {
 	return (nlmode == NL80211_IFTYPE_STATION ||
 		nlmode == NL80211_IFTYPE_P2P_CLIENT);
+}
+
+
+static int is_p2p_interface(enum nl80211_iftype nlmode)
+{
+	return (nlmode == NL80211_IFTYPE_P2P_CLIENT ||
+		nlmode == NL80211_IFTYPE_P2P_GO);
 }
 
 
@@ -2419,17 +2426,6 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 				       drv, drv->ctx);
 	}
 
-#ifdef CONFIG_P2P
-	if (drv->capa.flags & WPA_DRIVER_FLAGS_P2P_CAPABLE) {
-		/*
-		 * FIX: Do this conditionally on the interface type to avoid
-		 * changing non-P2P use cases.
-		 */
-		drv->disable_11b_rates = 1;
-		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
-	}
-#endif /* CONFIG_P2P */
-
 	return 0;
 }
 
@@ -2507,10 +2503,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		os_free(drv->if_indices);
 #endif /* HOSTAPD */
 
-	if (drv->disable_11b_rates) {
-		drv->disable_11b_rates = 0;
+	if (drv->disabled_11b_rates)
 		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
-	}
 
 	netlink_send_oper_ifla(drv->global->netlink, drv->ifindex, 0,
 			       IF_OPER_UP);
@@ -4651,7 +4645,7 @@ static int nl80211_create_iface(struct wpa_driver_nl80211_data *drv,
 						wds);
 	}
 
-	if (ret >= 0 && drv->disable_11b_rates)
+	if (ret >= 0 && is_p2p_interface(iftype))
 		nl80211_disable_11b_rates(drv, ret, 1);
 
 	return ret;
@@ -5783,8 +5777,13 @@ done:
 		bss->beacon_set = 0;
 	}
 
-	if (!ret && drv->disable_11b_rates)
+	if (!ret && is_p2p_interface(drv->nlmode)) {
 		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
+		drv->disabled_11b_rates = 1;
+	} else if (!ret && drv->disabled_11b_rates) {
+		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
+		drv->disabled_11b_rates = 0;
+	}
 
 	if (ret)
 		wpa_printf(MSG_DEBUG, "nl80211: Interface mode change to %d "

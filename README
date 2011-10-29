@@ -8,6 +8,9 @@ These programs are dual-licensed under both the GPL version 2 and BSD
 license (the one with advertisement clause removed). Either license
 may be used at your option.
 
+If you are submitting changes to the project, please see CONTRIBUTIONS
+file for more instructions.
+
 
 This package may include either wpa_supplicant, hostapd, or both. See
 README file respective subdirectories (wpa_supplicant/README or

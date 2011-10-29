@@ -647,7 +647,7 @@ static void sme_send_sa_query_req(struct wpa_supplicant *wpa_s,
 	os_memcpy(req + 2, trans_id, WLAN_SA_QUERY_TR_ID_LEN);
 	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
 				wpa_s->own_addr, wpa_s->bssid,
-				req, sizeof(req)) < 0)
+				req, sizeof(req), 0) < 0)
 		wpa_msg(wpa_s, MSG_INFO, "SME: Failed to send SA Query "
 			"Request");
 }

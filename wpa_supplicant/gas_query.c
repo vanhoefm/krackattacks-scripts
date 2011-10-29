@@ -138,7 +138,7 @@ static int gas_query_tx(struct gas_query *gas, struct gas_query_pending *query,
 	res = offchannel_send_action(gas->wpa_s, query->freq, query->addr,
 				     gas->wpa_s->own_addr, query->addr,
 				     wpabuf_head(req), wpabuf_len(req), 1000,
-				     NULL);
+				     NULL, 0);
 	if (res == 0)
 		query->offchannel_tx_started = 1;
 	return res;

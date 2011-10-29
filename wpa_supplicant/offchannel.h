@@ -24,7 +24,8 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 					 const u8 *src, const u8 *bssid,
 					 const u8 *data, size_t data_len,
 					 enum offchannel_send_action_result
-					 result));
+					 result),
+			   int no_cck);
 void offchannel_send_action_done(struct wpa_supplicant *wpa_s);
 void offchannel_remain_on_channel_cb(struct wpa_supplicant *wpa_s,
 				     unsigned int freq, unsigned int duration);

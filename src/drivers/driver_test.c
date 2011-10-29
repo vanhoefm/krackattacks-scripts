@@ -116,6 +116,7 @@ struct wpa_driver_test_data {
 	u8 pending_action_dst[ETH_ALEN];
 	u8 pending_action_bssid[ETH_ALEN];
 	unsigned int pending_action_freq;
+	unsigned int pending_action_no_cck;
 	unsigned int pending_listen_freq;
 	unsigned int pending_listen_duration;
 	int pending_p2p_scan;
@@ -2670,7 +2671,8 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 				       unsigned int wait,
 				       const u8 *dst, const u8 *src,
 				       const u8 *bssid,
-				       const u8 *data, size_t data_len)
+				       const u8 *data, size_t data_len,
+				       int no_cck)
 {
 	struct test_driver_bss *dbss = priv;
 	struct wpa_driver_test_data *drv = dbss->drv;
@@ -2730,7 +2732,8 @@ static void test_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 				    drv->pending_action_src,
 				    drv->pending_action_bssid,
 				    wpabuf_head(drv->pending_action_tx),
-				    wpabuf_len(drv->pending_action_tx));
+				    wpabuf_len(drv->pending_action_tx),
+				    drv->pending_action_no_cck);
 }
 #endif /* CONFIG_P2P */
 
@@ -3013,6 +3016,7 @@ static int test_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	os_memcpy(drv->pending_action_dst, dst, ETH_ALEN);
 	os_memcpy(drv->pending_action_bssid, bssid, ETH_ALEN);
 	drv->pending_action_freq = freq;
+	drv->pending_action_no_cck = 1;
 
 	if (drv->off_channel_freq == freq) {
 		/* Already on requested channel; send immediately */

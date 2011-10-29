@@ -120,7 +120,8 @@ static void wpas_send_action_cb(void *eloop_ctx, void *timeout_ctx)
 				  wpa_s->pending_action_src,
 				  wpa_s->pending_action_bssid,
 				  wpabuf_head(wpa_s->pending_action_tx),
-				  wpabuf_len(wpa_s->pending_action_tx));
+				  wpabuf_len(wpa_s->pending_action_tx),
+				  wpa_s->pending_action_no_cck);
 	if (res) {
 		wpa_printf(MSG_DEBUG, "Off-channel: Failed to send the "
 			   "pending Action frame");
@@ -177,7 +178,8 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 					 const u8 *src, const u8 *bssid,
 					 const u8 *data, size_t data_len,
 					 enum offchannel_send_action_result
-					 result))
+					 result),
+			   int no_cck)
 {
 	wpa_printf(MSG_DEBUG, "Off-channel: Send action frame: freq=%d dst="
 		   MACSTR " src=" MACSTR " bssid=" MACSTR " len=%d",
@@ -204,6 +206,7 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 	os_memcpy(wpa_s->pending_action_dst, dst, ETH_ALEN);
 	os_memcpy(wpa_s->pending_action_bssid, bssid, ETH_ALEN);
 	wpa_s->pending_action_freq = freq;
+	wpa_s->pending_action_no_cck = no_cck;
 
 	if (freq != 0 && wpa_s->drv_flags & WPA_DRIVER_FLAGS_OFFCHANNEL_TX) {
 		struct wpa_supplicant *iface;
@@ -212,12 +215,13 @@ int offchannel_send_action(struct wpa_supplicant *wpa_s, unsigned int freq,
 					      wpa_s->pending_action_src);
 		wpa_s->action_tx_wait_time = wait_time;
 
-		return wpa_drv_send_action(iface, wpa_s->pending_action_freq,
-					wait_time, wpa_s->pending_action_dst,
-					wpa_s->pending_action_src,
-					wpa_s->pending_action_bssid,
-					wpabuf_head(wpa_s->pending_action_tx),
-					wpabuf_len(wpa_s->pending_action_tx));
+		return wpa_drv_send_action(
+			iface, wpa_s->pending_action_freq,
+			wait_time, wpa_s->pending_action_dst,
+			wpa_s->pending_action_src, wpa_s->pending_action_bssid,
+			wpabuf_head(wpa_s->pending_action_tx),
+			wpabuf_len(wpa_s->pending_action_tx),
+			wpa_s->pending_action_no_cck);
 	}
 
 	if (freq) {

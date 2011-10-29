@@ -406,6 +406,7 @@ struct wpa_supplicant {
 	u8 pending_action_dst[ETH_ALEN];
 	u8 pending_action_bssid[ETH_ALEN];
 	unsigned int pending_action_freq;
+	int pending_action_no_cck;
 	int pending_action_without_roc;
 	void (*pending_action_tx_status_cb)(struct wpa_supplicant *wpa_s,
 					    unsigned int freq, const u8 *dst,

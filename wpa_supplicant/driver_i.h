@@ -352,12 +352,13 @@ static inline int wpa_drv_send_action(struct wpa_supplicant *wpa_s,
 				      unsigned int wait,
 				      const u8 *dst, const u8 *src,
 				      const u8 *bssid,
-				      const u8 *data, size_t data_len)
+				      const u8 *data, size_t data_len,
+				      int no_cck)
 {
 	if (wpa_s->driver->send_action)
 		return wpa_s->driver->send_action(wpa_s->drv_priv, freq,
 						  wait, dst, src, bssid,
-						  data, data_len);
+						  data, data_len, no_cck);
 	return -1;
 }
 

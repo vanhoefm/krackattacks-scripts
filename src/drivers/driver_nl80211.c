@@ -266,7 +266,8 @@ static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv);
 static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 				  unsigned int freq, unsigned int wait,
-				  const u8 *buf, size_t buf_len, u64 *cookie);
+				  const u8 *buf, size_t buf_len, u64 *cookie,
+				  int no_cck);
 static int wpa_driver_nl80211_probe_req_report(void *priv, int report);
 
 #ifdef HOSTAPD
@@ -4140,12 +4141,12 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 		 * of wpa_supplicant.
 		 */
 		return nl80211_send_frame_cmd(drv, drv->last_mgmt_freq, 0,
-					      data, data_len, NULL);
+					      data, data_len, NULL, 1);
 	}
 
 	if (drv->no_monitor_iface_capab && is_ap_interface(drv->nlmode)) {
 		return nl80211_send_frame_cmd(drv, drv->ap_oper_freq, 0,
-					      data, data_len, NULL);
+					      data, data_len, NULL, 0);
 	}
 
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
@@ -6743,7 +6744,7 @@ static int cookie_handler(struct nl_msg *msg, void *arg)
 static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 				  unsigned int freq, unsigned int wait,
 				  const u8 *buf, size_t buf_len,
-				  u64 *cookie_out)
+				  u64 *cookie_out, int no_cck)
 {
 	struct nl_msg *msg;
 	u64 cookie;
@@ -6760,7 +6761,8 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 	if (wait)
 		NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
 	NLA_PUT_FLAG(msg, NL80211_ATTR_OFFCHANNEL_TX_OK);
-	NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
+	if (no_cck)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
 
 	NLA_PUT(msg, NL80211_ATTR_FRAME, buf_len, buf);
 
@@ -6789,7 +6791,8 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 					  unsigned int wait_time,
 					  const u8 *dst, const u8 *src,
 					  const u8 *bssid,
-					  const u8 *data, size_t data_len)
+					  const u8 *data, size_t data_len,
+					  int no_cck)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -6798,7 +6801,7 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	struct ieee80211_hdr *hdr;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Send Action frame (ifindex=%d, "
-		   "wait=%d ms)", drv->ifindex, wait_time);
+		   "wait=%d ms no_cck=%d)", drv->ifindex, wait_time, no_cck);
 
 	buf = os_zalloc(24 + data_len);
 	if (buf == NULL)
@@ -6816,7 +6819,8 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	else
 		ret = nl80211_send_frame_cmd(drv, freq, wait_time, buf,
 					     24 + data_len,
-					     &drv->send_action_cookie);
+					     &drv->send_action_cookie,
+					     no_cck);
 
 	os_free(buf);
 	return ret;
@@ -7086,7 +7090,7 @@ static int nl80211_send_ft_action(void *priv, u8 action, const u8 *target_ap,
 
 	ret = wpa_driver_nl80211_send_action(bss, drv->assoc_freq, 0,
 					     drv->bssid, own_addr, drv->bssid,
-					     data, data_len);
+					     data, data_len, 0);
 	os_free(data);
 
 	return ret;

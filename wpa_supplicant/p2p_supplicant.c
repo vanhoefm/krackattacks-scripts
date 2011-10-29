@@ -593,7 +593,7 @@ static int wpas_send_action(void *ctx, unsigned int freq, const u8 *dst,
 	struct wpa_supplicant *wpa_s = ctx;
 	return offchannel_send_action(wpa_s, freq, dst, src, bssid, buf, len,
 				      wait_time,
-				      wpas_p2p_send_action_tx_status);
+				      wpas_p2p_send_action_tx_status, 1);
 }
 
 

@@ -598,6 +598,16 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		params.extra_ies_len = wpabuf_len(extra_ie);
 	}
 
+#ifdef CONFIG_P2P
+	if (wpa_s->p2p_in_provisioning) {
+		/*
+		 * The interface may not yet be in P2P mode, so we have to
+		 * explicitly request P2P probe to disable CCK rates.
+		 */
+		params.p2p_probe = 1;
+	}
+#endif /* CONFIG_P2P */
+
 	ret = wpa_supplicant_trigger_scan(wpa_s, &params);
 
 	wpabuf_free(extra_ie);

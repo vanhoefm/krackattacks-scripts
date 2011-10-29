@@ -1947,19 +1947,6 @@ struct wpa_driver_ops {
 	int (*probe_req_report)(void *priv, int report);
 
 	/**
-	 * disable_11b_rates - Set whether IEEE 802.11b rates are used for TX
-	 * @priv: Private driver interface data
-	 * @disabled: Whether IEEE 802.11b rates are disabled
-	 * Returns: 0 on success, -1 on failure (or if not supported)
-	 *
-	 * This command is used to disable IEEE 802.11b rates (1, 2, 5.5, and
-	 * 11 Mbps) as TX rates for data and management frames. This can be
-	 * used to optimize channel use when there is no need to support IEEE
-	 * 802.11b-only devices.
-	 */
-	int (*disable_11b_rates)(void *priv, int disabled);
-
-	/**
 	 * deinit_ap - Deinitialize AP mode
 	 * @priv: Private driver interface data
 	 * Returns: 0 on success, -1 on failure (or if not supported)

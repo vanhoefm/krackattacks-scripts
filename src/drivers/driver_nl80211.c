@@ -2419,6 +2419,17 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 				       drv, drv->ctx);
 	}
 
+#ifdef CONFIG_P2P
+	if (drv->capa.flags & WPA_DRIVER_FLAGS_P2P_CAPABLE) {
+		/*
+		 * FIX: Do this conditionally on the interface type to avoid
+		 * changing non-P2P use cases.
+		 */
+		drv->disable_11b_rates = 1;
+		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
+	}
+#endif /* CONFIG_P2P */
+
 	return 0;
 }
 
@@ -7022,15 +7033,6 @@ nla_put_failure:
 }
 
 
-static int wpa_driver_nl80211_disable_11b_rates(void *priv, int disabled)
-{
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	drv->disable_11b_rates = disabled;
-	return nl80211_disable_11b_rates(drv, drv->ifindex, disabled);
-}
-
-
 static int wpa_driver_nl80211_deinit_ap(void *priv)
 {
 	struct i802_bss *bss = priv;
@@ -7530,7 +7532,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.cancel_remain_on_channel =
 	wpa_driver_nl80211_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_nl80211_probe_req_report,
-	.disable_11b_rates = wpa_driver_nl80211_disable_11b_rates,
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
 	.resume = wpa_driver_nl80211_resume,
 	.send_ft_action = nl80211_send_ft_action,

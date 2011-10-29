@@ -2134,11 +2134,6 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_CAPABLE))
 		return 0;
 
-	if (wpa_drv_disable_11b_rates(wpa_s, 1) < 0) {
-		wpa_printf(MSG_DEBUG, "P2P: Failed to disable 11b rates");
-		/* Continue anyway; this is not really a fatal error */
-	}
-
 	if (global->p2p)
 		return 0;
 

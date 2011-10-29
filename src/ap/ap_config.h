@@ -381,12 +381,6 @@ struct hostapd_config {
 		LONG_PREAMBLE = 0,
 		SHORT_PREAMBLE = 1
 	} preamble;
-	enum {
-		CTS_PROTECTION_AUTOMATIC = 0,
-		CTS_PROTECTION_FORCE_ENABLED = 1,
-		CTS_PROTECTION_FORCE_DISABLED = 2,
-		CTS_PROTECTION_AUTOMATIC_NO_OLBC = 3,
-	} cts_protection_type;
 
 	int *supported_rates;
 	int *basic_rates;

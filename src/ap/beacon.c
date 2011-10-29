@@ -45,23 +45,11 @@ static u8 ieee802_11_erp_info(struct hostapd_data *hapd)
 	    hapd->iface->current_mode->mode != HOSTAPD_MODE_IEEE80211G)
 		return 0;
 
-	switch (hapd->iconf->cts_protection_type) {
-	case CTS_PROTECTION_FORCE_ENABLED:
-		erp |= ERP_INFO_NON_ERP_PRESENT | ERP_INFO_USE_PROTECTION;
-		break;
-	case CTS_PROTECTION_FORCE_DISABLED:
-		erp = 0;
-		break;
-	case CTS_PROTECTION_AUTOMATIC:
-		if (hapd->iface->olbc)
-			erp |= ERP_INFO_USE_PROTECTION;
-		/* continue */
-	case CTS_PROTECTION_AUTOMATIC_NO_OLBC:
-		if (hapd->iface->num_sta_non_erp > 0) {
-			erp |= ERP_INFO_NON_ERP_PRESENT |
-				ERP_INFO_USE_PROTECTION;
-		}
-		break;
+	if (hapd->iface->olbc)
+		erp |= ERP_INFO_USE_PROTECTION;
+	if (hapd->iface->num_sta_non_erp > 0) {
+		erp |= ERP_INFO_NON_ERP_PRESENT |
+			ERP_INFO_USE_PROTECTION;
 	}
 	if (hapd->iface->num_sta_no_short_preamble > 0 ||
 	    hapd->iconf->preamble == LONG_PREAMBLE)

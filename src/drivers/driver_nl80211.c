@@ -2496,8 +2496,10 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		os_free(drv->if_indices);
 #endif /* HOSTAPD */
 
-	if (drv->disable_11b_rates)
+	if (drv->disable_11b_rates) {
+		drv->disable_11b_rates = 0;
 		nl80211_disable_11b_rates(drv, drv->ifindex, 0);
+	}
 
 	netlink_send_oper_ifla(drv->global->netlink, drv->ifindex, 0,
 			       IF_OPER_UP);
@@ -6997,8 +6999,10 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 	band = nla_nest_start(msg, NL80211_BAND_2GHZ);
 	if (!band)
 		goto nla_put_failure;
-	NLA_PUT(msg, NL80211_TXRATE_LEGACY, 8,
-		"\x0c\x12\x18\x24\x30\x48\x60\x6c");
+	if (disabled) {
+		NLA_PUT(msg, NL80211_TXRATE_LEGACY, 8,
+			"\x0c\x12\x18\x24\x30\x48\x60\x6c");
+	}
 	nla_nest_end(msg, band);
 
 	nla_nest_end(msg, bands);

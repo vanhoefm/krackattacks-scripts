@@ -5770,6 +5770,9 @@ done:
 		bss->beacon_set = 0;
 	}
 
+	if (!ret && drv->disable_11b_rates)
+		nl80211_disable_11b_rates(drv, drv->ifindex, 1);
+
 	if (ret)
 		wpa_printf(MSG_DEBUG, "nl80211: Interface mode change to %d "
 			   "from %d failed", nlmode, drv->nlmode);

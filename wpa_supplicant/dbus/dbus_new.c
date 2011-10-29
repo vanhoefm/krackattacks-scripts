@@ -1689,6 +1689,7 @@ static const struct wpa_dbus_signal_desc wpas_dbus_global_signals[] = {
 		  END_ARGS
 	  }
 	},
+	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
 	{ "PropertiesChanged", WPAS_DBUS_NEW_INTERFACE,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
@@ -1777,6 +1778,7 @@ static const struct wpa_dbus_property_desc wpas_dbus_network_properties[] = {
 
 
 static const struct wpa_dbus_signal_desc wpas_dbus_network_signals[] = {
+	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
 	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_NETWORK,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
@@ -1953,6 +1955,7 @@ static const struct wpa_dbus_property_desc wpas_dbus_bss_properties[] = {
 
 
 static const struct wpa_dbus_signal_desc wpas_dbus_bss_signals[] = {
+	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
 	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_BSS,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
@@ -2477,6 +2480,7 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 		  END_ARGS
 	  }
 	},
+	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
 	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },
@@ -2497,6 +2501,7 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 		  END_ARGS
 	  }
 	},
+	/* Deprecated: use org.freedesktop.DBus.Properties.PropertiesChanged */
 	{ "PropertiesChanged", WPAS_DBUS_NEW_IFACE_WPS,
 	  {
 		  { "properties", "a{sv}", ARG_OUT },

@@ -610,7 +610,7 @@ int wpa_dbus_unregister_object_per_iface(
 
 static dbus_bool_t put_changed_properties(
 	const struct wpa_dbus_object_desc *obj_dsc, const char *interface,
-	DBusMessageIter *dict_iter)
+	DBusMessageIter *dict_iter, int clear_changed)
 {
 	DBusMessageIter entry_iter;
 	const struct wpa_dbus_property_desc *dsc;
@@ -624,7 +624,8 @@ static dbus_bool_t put_changed_properties(
 			continue;
 		if (os_strcmp(dsc->dbus_interface, interface) != 0)
 			continue;
-		obj_dsc->prop_changed_flags[i] = 0;
+		if (clear_changed)
+			obj_dsc->prop_changed_flags[i] = 0;
 
 		if (!dbus_message_iter_open_container(dict_iter,
 						      DBUS_TYPE_DICT_ENTRY,
@@ -660,7 +661,57 @@ static dbus_bool_t put_changed_properties(
 }
 
 
-static void send_prop_changed_signal(
+static void do_send_prop_changed_signal(
+	DBusConnection *con, const char *path, const char *interface,
+	const struct wpa_dbus_object_desc *obj_dsc)
+{
+	DBusMessage *msg;
+	DBusMessageIter signal_iter, dict_iter;
+
+	msg = dbus_message_new_signal(path, DBUS_INTERFACE_PROPERTIES,
+				      "PropertiesChanged");
+	if (msg == NULL)
+		return;
+
+	dbus_message_iter_init_append(msg, &signal_iter);
+
+	if (!dbus_message_iter_append_basic(&signal_iter, DBUS_TYPE_STRING,
+					    &interface))
+		goto err;
+
+	/* Changed properties dict */
+	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
+					      "{sv}", &dict_iter))
+		goto err;
+
+	if (!put_changed_properties(obj_dsc, interface, &dict_iter, 0))
+		goto err;
+
+	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
+		goto err;
+
+	/* Invalidated properties array (empty) */
+	if (!dbus_message_iter_open_container(&signal_iter, DBUS_TYPE_ARRAY,
+					      "s", &dict_iter))
+		goto err;
+
+	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
+		goto err;
+
+	dbus_connection_send(con, msg, NULL);
+
+out:
+	dbus_message_unref(msg);
+	return;
+
+err:
+	wpa_printf(MSG_DEBUG, "dbus: %s: Failed to construct signal",
+		   __func__);
+	goto out;
+}
+
+
+static void do_send_deprecated_prop_changed_signal(
 	DBusConnection *con, const char *path, const char *interface,
 	const struct wpa_dbus_object_desc *obj_dsc)
 {
@@ -677,7 +728,7 @@ static void send_prop_changed_signal(
 					      "{sv}", &dict_iter))
 		goto err;
 
-	if (!put_changed_properties(obj_dsc, interface, &dict_iter))
+	if (!put_changed_properties(obj_dsc, interface, &dict_iter, 1))
 		goto err;
 
 	if (!dbus_message_iter_close_container(&signal_iter, &dict_iter))
@@ -693,6 +744,29 @@ err:
 	wpa_printf(MSG_DEBUG, "dbus: %s: Failed to construct signal",
 		   __func__);
 	goto out;
+}
+
+
+static void send_prop_changed_signal(
+	DBusConnection *con, const char *path, const char *interface,
+	const struct wpa_dbus_object_desc *obj_dsc)
+{
+	/*
+	 * First, send property change notification on the standardized
+	 * org.freedesktop.DBus.Properties interface. This call will not
+	 * clear the property change bits, so that they are preserved for
+	 * the call that follows.
+	 */
+	do_send_prop_changed_signal(con, path, interface, obj_dsc);
+
+	/*
+	 * Now send PropertiesChanged on our own interface for backwards
+	 * compatibility. This is deprecated and will be removed in a future
+	 * release.
+	 */
+	do_send_deprecated_prop_changed_signal(con, path, interface, obj_dsc);
+
+	/* Property change bits have now been cleared. */
 }
 
 

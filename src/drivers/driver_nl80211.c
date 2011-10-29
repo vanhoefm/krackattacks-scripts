@@ -2612,6 +2612,8 @@ static int wpa_driver_nl80211_scan(void *priv,
 		NLA_PUT(rates, NL80211_BAND_2GHZ, 8,
 			"\x0c\x12\x18\x24\x30\x48\x60\x6c");
 		nla_put_nested(msg, NL80211_ATTR_SCAN_SUPP_RATES, rates);
+
+		NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -6758,6 +6760,8 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 	if (wait)
 		NLA_PUT_U32(msg, NL80211_ATTR_DURATION, wait);
 	NLA_PUT_FLAG(msg, NL80211_ATTR_OFFCHANNEL_TX_OK);
+	NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
+
 	NLA_PUT(msg, NL80211_ATTR_FRAME, buf_len, buf);
 
 	cookie = 0;

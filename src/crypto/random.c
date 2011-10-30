@@ -364,8 +364,8 @@ static void random_write_entropy(void)
 
 	f = fopen(random_entropy_file, "wb");
 	if (f == NULL) {
-		wpa_printf(MSG_ERROR, "random: Could not write %s",
-			   random_entropy_file);
+		wpa_printf(MSG_ERROR, "random: Could not open entropy file %s "
+			   "for writing", random_entropy_file);
 		return;
 	}
 
@@ -375,8 +375,8 @@ static void random_write_entropy(void)
 		fail = 1;
 	fclose(f);
 	if (fail) {
-		wpa_printf(MSG_ERROR, "random: Could not entropy data to %s",
-			   random_entropy_file);
+		wpa_printf(MSG_ERROR, "random: Could not write entropy data "
+			   "to %s", random_entropy_file);
 		return;
 	}
 

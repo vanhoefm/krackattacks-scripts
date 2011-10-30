@@ -1037,15 +1037,6 @@ static int wpa_scan_result_compar(const void *a, const void *b)
 		snr_b = wb->level;
 	}
 
-	wpa_printf(MSG_EXCESSIVE, "BSS(a) " MACSTR " freq:%d level:%d "
-		   "noise:%d snr:%d flags:0x%x",
-		   MAC2STR(wa->bssid), wa->freq, wa->level, wa->noise, snr_a,
-		   wa->flags);
-	wpa_printf(MSG_EXCESSIVE, "BSS(b) " MACSTR " freq:%d level:%d "
-		   "noise:%d snr:%d flags:0x%x",
-		   MAC2STR(wb->bssid), wb->freq, wb->level, wb->noise, snr_b,
-		   wb->flags);
-
 	/* best/max rate preferred if SNR close enough */
         if ((snr_a && snr_b && abs(snr_b - snr_a) < 5) ||
 	    (wa->qual && wb->qual && abs(wb->qual - wa->qual) < 10)) {
@@ -1118,6 +1109,35 @@ static int wpa_scan_result_wps_compar(const void *a, const void *b)
 #endif /* CONFIG_WPS */
 
 
+static void dump_scan_res(struct wpa_scan_results *scan_res)
+{
+	size_t i;
+
+	if (scan_res->res == NULL || scan_res->num == 0)
+		return;
+
+	wpa_printf(MSG_EXCESSIVE, "Sorted scan results");
+
+	for (i = 0; i < scan_res->num; i++) {
+		struct wpa_scan_res *r = scan_res->res[i];
+		if ((r->flags & (WPA_SCAN_LEVEL_DBM | WPA_SCAN_NOISE_INVALID))
+		    == WPA_SCAN_LEVEL_DBM) {
+			int snr = r->level - r->noise;
+			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
+				   "noise=%d level=%d snr=%d%s flags=0x%x",
+				   MAC2STR(r->bssid), r->freq, r->qual,
+				   r->noise, r->level, snr,
+				   snr >= GREAT_SNR ? "*" : "", r->flags);
+		} else {
+			wpa_printf(MSG_EXCESSIVE, MACSTR " freq=%d qual=%d "
+				   "noise=%d level=%d flags=0x%x",
+				   MAC2STR(r->bssid), r->freq, r->qual,
+				   r->noise, r->level, r->flags);
+		}
+	}
+}
+
+
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1153,6 +1173,7 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 
 	qsort(scan_res->res, scan_res->num, sizeof(struct wpa_scan_res *),
 	      compar);
+	dump_scan_res(scan_res);
 
 	wpa_bss_update_start(wpa_s);
 	for (i = 0; i < scan_res->num; i++)

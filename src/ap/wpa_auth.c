@@ -710,6 +710,26 @@ static int ft_check_msg_2_of_4(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_IEEE80211R */
 
 
+static void wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
+				     struct wpa_state_machine *sm, int group)
+{
+	/* Supplicant reported a Michael MIC error */
+	wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
+			 "received EAPOL-Key Error Request "
+			 "(STA detected Michael MIC failure (group=%d))",
+			 group);
+	wpa_auth_mic_failure_report(wpa_auth, sm->addr);
+	sm->dot11RSNAStatsTKIPRemoteMICFailures++;
+	wpa_auth->dot11RSNAStatsTKIPRemoteMICFailures++;
+
+	/*
+	 * Error report is not a request for a new key handshake, but since
+	 * Authenticator may do it, let's change the keys now anyway.
+	 */
+	wpa_request_new_ptk(sm);
+}
+
+
 void wpa_receive(struct wpa_authenticator *wpa_auth,
 		 struct wpa_state_machine *sm,
 		 u8 *data, size_t data_len)
@@ -1015,17 +1035,9 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 #endif /* CONFIG_PEERKEY */
 			return;
 		} else if (key_info & WPA_KEY_INFO_ERROR) {
-			/* Supplicant reported a Michael MIC error */
-			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
-					"received EAPOL-Key Error Request "
-					"(STA detected Michael MIC failure)");
-			wpa_auth_mic_failure_report(wpa_auth, sm->addr);
-			sm->dot11RSNAStatsTKIPRemoteMICFailures++;
-			wpa_auth->dot11RSNAStatsTKIPRemoteMICFailures++;
-			/* Error report is not a request for a new key
-			 * handshake, but since Authenticator may do it, let's
-			 * change the keys now anyway. */
-			wpa_request_new_ptk(sm);
+			wpa_receive_error_report(
+				wpa_auth, sm,
+				!(key_info & WPA_KEY_INFO_KEY_TYPE));
 		} else if (key_info & WPA_KEY_INFO_KEY_TYPE) {
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"received EAPOL-Key Request for new "

@@ -718,9 +718,20 @@ static void wpa_receive_error_report(struct wpa_authenticator *wpa_auth,
 			 "received EAPOL-Key Error Request "
 			 "(STA detected Michael MIC failure (group=%d))",
 			 group);
-	wpa_auth_mic_failure_report(wpa_auth, sm->addr);
-	sm->dot11RSNAStatsTKIPRemoteMICFailures++;
-	wpa_auth->dot11RSNAStatsTKIPRemoteMICFailures++;
+
+	if (group && wpa_auth->conf.wpa_group != WPA_CIPHER_TKIP) {
+		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
+				"ignore Michael MIC failure report since "
+				"group cipher is not TKIP");
+	} else if (!group && sm->pairwise != WPA_CIPHER_TKIP) {
+		wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
+				"ignore Michael MIC failure report since "
+				"pairwise cipher is not TKIP");
+	} else {
+		wpa_auth_mic_failure_report(wpa_auth, sm->addr);
+		sm->dot11RSNAStatsTKIPRemoteMICFailures++;
+		wpa_auth->dot11RSNAStatsTKIPRemoteMICFailures++;
+	}
 
 	/*
 	 * Error report is not a request for a new key handshake, but since

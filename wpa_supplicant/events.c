@@ -503,6 +503,9 @@ static int rate_match(struct wpa_supplicant *wpa_s, struct wpa_scan_res *bss)
 	const u8 *rate_ie;
 	int i, j, k;
 
+	if (bss->freq == 0)
+		return 1; /* Cannot do matching without knowing band */
+
 	modes = wpa_s->hw.modes;
 	if (modes == NULL) {
 		/*

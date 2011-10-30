@@ -2507,6 +2507,7 @@ void wpa_gtk_rekey(struct wpa_authenticator *wpa_auth)
 		group->GN_igtk = tmp;
 #endif /* CONFIG_IEEE80211W */
 		wpa_gtk_update(wpa_auth, group);
+		wpa_group_config_group_keys(wpa_auth, group);
 	}
 }
 

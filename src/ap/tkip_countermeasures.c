@@ -1,6 +1,6 @@
 /*
  * hostapd / TKIP countermeasures
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -57,6 +57,12 @@ static void ieee80211_tkip_countermeasures_start(struct hostapd_data *hapd)
 		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 		hostapd_drv_sta_remove(hapd, sta->addr);
 	}
+}
+
+
+void ieee80211_tkip_countermeasures_deinit(struct hostapd_data *hapd)
+{
+	eloop_cancel_timeout(ieee80211_tkip_countermeasures_stop, hapd, NULL);
 }
 
 

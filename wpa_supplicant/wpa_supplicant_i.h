@@ -585,6 +585,8 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 			   struct wpa_bss *selected,
 			   struct wpa_ssid *ssid);
+void wpa_supplicant_stop_countermeasures(void *eloop_ctx, void *sock_ctx);
+void wpa_supplicant_delayed_mic_error_report(void *eloop_ctx, void *sock_ctx);
 
 /* eap_register.c */
 int eap_register_methods(void);

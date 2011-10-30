@@ -434,6 +434,11 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	wpa_supplicant_cancel_scan(wpa_s);
 	wpa_supplicant_cancel_auth_timeout(wpa_s);
+	eloop_cancel_timeout(wpa_supplicant_stop_countermeasures, wpa_s, NULL);
+#ifdef CONFIG_DELAYED_MIC_ERROR_REPORT
+	eloop_cancel_timeout(wpa_supplicant_delayed_mic_error_report,
+			     wpa_s, NULL);
+#endif /* CONFIG_DELAYED_MIC_ERROR_REPORT */
 
 	wpas_wps_deinit(wpa_s);
 

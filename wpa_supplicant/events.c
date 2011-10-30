@@ -96,8 +96,7 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 }
 
 
-static void wpa_supplicant_stop_countermeasures(void *eloop_ctx,
-						void *sock_ctx)
+void wpa_supplicant_stop_countermeasures(void *eloop_ctx, void *sock_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 
@@ -1584,8 +1583,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 
 
 #ifdef CONFIG_DELAYED_MIC_ERROR_REPORT
-static void wpa_supplicant_delayed_mic_error_report(void *eloop_ctx,
-						    void *sock_ctx)
+void wpa_supplicant_delayed_mic_error_report(void *eloop_ctx, void *sock_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 

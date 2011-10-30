@@ -548,6 +548,7 @@ void hostapd_reconfig_wpa(struct hostapd_data *hapd)
 
 void hostapd_deinit_wpa(struct hostapd_data *hapd)
 {
+	ieee80211_tkip_countermeasures_deinit(hapd);
 	rsn_preauth_iface_deinit(hapd);
 	if (hapd->wpa_auth) {
 		wpa_deinit(hapd->wpa_auth);

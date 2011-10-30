@@ -1090,8 +1090,10 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		skip = !wpa_supplicant_need_to_roam(wpa_s, selected, ssid,
 						    scan_res);
 		wpa_scan_results_free(scan_res);
-		if (skip)
+		if (skip) {
+			wpa_supplicant_rsn_preauth_scan_results(wpa_s);
 			return 0;
+		}
 
 		if (wpa_supplicant_connect(wpa_s, selected, ssid) < 0) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "Connect failed");

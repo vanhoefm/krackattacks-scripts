@@ -1602,6 +1602,35 @@ static int wps_build_ap_settings(struct wps_data *wps, struct wpabuf *msg)
 }
 
 
+static struct wpabuf * wps_build_ap_cred(struct wps_data *wps)
+{
+	struct wpabuf *msg, *plain;
+
+	msg = wpabuf_alloc(1000);
+	if (msg == NULL)
+		return NULL;
+
+	plain = wpabuf_alloc(200);
+	if (plain == NULL) {
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+	if (wps_build_ap_settings(wps, plain)) {
+		wpabuf_free(plain);
+		wpabuf_free(msg);
+		return NULL;
+	}
+
+	wpabuf_put_be16(msg, ATTR_CRED);
+	wpabuf_put_be16(msg, wpabuf_len(plain));
+	wpabuf_put_buf(msg, plain);
+	wpabuf_free(plain);
+
+	return msg;
+}
+
+
 static struct wpabuf * wps_build_m2(struct wps_data *wps)
 {
 	struct wpabuf *msg;
@@ -2560,6 +2589,8 @@ static void wps_cred_update(struct wps_credential *dst,
 static int wps_process_ap_settings_r(struct wps_data *wps,
 				     struct wps_parse_attr *attr)
 {
+	struct wpabuf *msg;
+
 	if (wps->wps->ap || wps->er)
 		return 0;
 
@@ -2586,12 +2617,24 @@ static int wps_process_ap_settings_r(struct wps_data *wps,
 		 */
 		wps_registrar_pin_completed(wps->wps->registrar);
 
+		msg = wps_build_ap_cred(wps);
+		if (msg == NULL)
+			return -1;
+		wps->cred.cred_attr = wpabuf_head(msg);
+		wps->cred.cred_attr_len = wpabuf_len(msg);
+
 		if (wps->ap_settings_cb) {
 			wps->ap_settings_cb(wps->ap_settings_cb_ctx,
 					    &wps->cred);
+			wpabuf_free(msg);
 			return 1;
 		}
 		wps_sta_cred_cb(wps);
+
+		wps->cred.cred_attr = NULL;
+		wps->cred.cred_attr_len = 0;
+		wpabuf_free(msg);
+
 		return 1;
 	}
 }

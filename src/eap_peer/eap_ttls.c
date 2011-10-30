@@ -1220,6 +1220,21 @@ static int eap_ttls_implicit_identity_request(struct eap_sm *sm,
 			   "processing failed");
 		retval = -1;
 	} else {
+		struct eap_peer_config *config = eap_get_config(sm);
+		if (resp == NULL &&
+		    (config->pending_req_identity ||
+		     config->pending_req_password ||
+		     config->pending_req_otp ||
+		     config->pending_req_new_password)) {
+			/*
+			 * Use empty buffer to force implicit request
+			 * processing when EAP request is re-processed after
+			 * user input.
+			 */
+			wpabuf_free(data->pending_phase2_req);
+			data->pending_phase2_req = wpabuf_alloc(0);
+		}
+
 		retval = eap_ttls_encrypt_response(sm, data, resp, identifier,
 						   out_data);
 	}

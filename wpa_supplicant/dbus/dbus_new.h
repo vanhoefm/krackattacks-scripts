@@ -16,6 +16,7 @@
 #ifndef CTRL_IFACE_DBUS_NEW_H
 #define CTRL_IFACE_DBUS_NEW_H
 
+#include "common/defs.h"
 #include "p2p/p2p.h"
 
 struct wpa_global;
@@ -24,8 +25,6 @@ struct wpa_ssid;
 struct wps_event_m2d;
 struct wps_event_fail;
 struct wps_credential;
-enum wpa_states;
-enum wpa_ctrl_req_type;
 
 enum wpas_dbus_prop {
 	WPAS_DBUS_PROP_AP_SCAN,

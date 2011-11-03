@@ -13,6 +13,7 @@
  */
 
 #include "includes.h"
+#include <time.h>
 #include <winsock2.h>
 #include <wincrypt.h>
 

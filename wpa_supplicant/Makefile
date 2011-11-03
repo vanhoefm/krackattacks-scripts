@@ -1476,11 +1476,8 @@ WINALL=wpa_supplicant.exe wpa_cli.exe wpa_passphrase.exe win_if_list.exe
 windows-bin: $(WINALL)
 	$(STRIP) $(WINALL)
 
-wpa_gui/Makefile:
-	qmake -o wpa_gui/Makefile wpa_gui/wpa_gui.pro 
-
-wpa_gui: wpa_gui/Makefile
-	$(MAKE) -C wpa_gui
+wpa_gui:
+	@echo "wpa_gui has been removed - see wpa_gui-qt4 for replacement"
 
 wpa_gui-qt4/Makefile:
 	qmake -o wpa_gui-qt4/Makefile wpa_gui-qt4/wpa_gui.pro 

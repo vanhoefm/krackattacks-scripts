@@ -17,6 +17,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "drivers/driver.h"
@@ -375,6 +376,9 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		mlme_deauthenticate_indication(
 			hapd, sta,
 			WLAN_REASON_PREV_AUTH_NOT_VALID);
+
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
+			MAC2STR(sta->addr));
 		ap_free_sta(hapd, sta);
 		break;
 	}

@@ -281,20 +281,22 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		int inactive_sec;
 		inactive_sec = hostapd_drv_get_inact_sec(hapd, sta->addr);
 		if (inactive_sec == -1) {
-			wpa_msg(hapd, MSG_DEBUG, "Check inactivity: Could not "
+			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
+				"Check inactivity: Could not "
 				"get station info rom kernel driver for "
 				MACSTR, MAC2STR(sta->addr));
 		} else if (inactive_sec < hapd->conf->ap_max_inactivity &&
 			   sta->flags & WLAN_STA_ASSOC) {
 			/* station activity detected; reset timeout state */
-			wpa_msg(hapd, MSG_DEBUG, "Station " MACSTR " has been "
-				"active %is ago",
+			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
+				"Station " MACSTR " has been active %is ago",
 				MAC2STR(sta->addr), inactive_sec);
 			sta->timeout_next = STA_NULLFUNC;
 			next_time = hapd->conf->ap_max_inactivity -
 				inactive_sec;
 		} else {
-			wpa_msg(hapd, MSG_DEBUG, "Station " MACSTR " has been "
+			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
+				"Station " MACSTR " has been "
 				"inactive too long: %d sec, max allowed: %d",
 				MAC2STR(sta->addr), inactive_sec,
 				hapd->conf->ap_max_inactivity);
@@ -304,8 +306,8 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	if ((sta->flags & WLAN_STA_ASSOC) &&
 	    sta->timeout_next == STA_DISASSOC &&
 	    !(sta->flags & WLAN_STA_PENDING_POLL)) {
-		wpa_msg(hapd, MSG_DEBUG, "Station " MACSTR " has ACKed data "
-			"poll", MAC2STR(sta->addr));
+		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "Station " MACSTR
+			" has ACKed data poll", MAC2STR(sta->addr));
 		/* data nullfunc frame poll did not produce TX errors; assume
 		 * station ACKed it */
 		sta->timeout_next = STA_NULLFUNC;

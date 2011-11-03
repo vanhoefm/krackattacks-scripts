@@ -184,6 +184,7 @@ static void cli_txt_list_del_addr(struct dl_list *txt_list, const char *txt)
 }
 
 
+#ifdef CONFIG_P2P
 static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt)
 {
 	const char *end;
@@ -199,6 +200,7 @@ static void cli_txt_list_del_word(struct dl_list *txt_list, const char *txt)
 	cli_txt_list_del(txt_list, buf);
 	os_free(buf);
 }
+#endif /* CONFIG_P2P */
 
 
 static int cli_txt_list_add(struct dl_list *txt_list, const char *txt)
@@ -220,6 +222,7 @@ static int cli_txt_list_add(struct dl_list *txt_list, const char *txt)
 }
 
 
+#ifdef CONFIG_P2P
 static int cli_txt_list_add_addr(struct dl_list *txt_list, const char *txt)
 {
 	u8 addr[ETH_ALEN];
@@ -248,6 +251,7 @@ static int cli_txt_list_add_word(struct dl_list *txt_list, const char *txt)
 	os_free(buf);
 	return ret;
 }
+#endif /* CONFIG_P2P */
 
 
 static char ** cli_txt_list_array(struct dl_list *txt_list)

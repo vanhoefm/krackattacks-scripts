@@ -90,32 +90,11 @@ void ieee802_1x_set_sta_authorized(struct hostapd_data *hapd,
 		return;
 
 	if (authorized) {
-		if (!ap_sta_is_authorized(sta)) {
-			const u8 *dev_addr = NULL;
-#ifdef CONFIG_P2P
-			dev_addr = p2p_group_get_dev_addr(hapd->p2p_group,
-							  sta->addr);
-#endif /* CONFIG_P2P */
-
-			if (dev_addr)
-				wpa_msg(hapd->msg_ctx, MSG_INFO,
-					AP_STA_CONNECTED MACSTR
-					" dev_addr=" MACSTR,
-					MAC2STR(sta->addr), MAC2STR(dev_addr));
-			else
-				wpa_msg(hapd->msg_ctx, MSG_INFO,
-					AP_STA_CONNECTED MACSTR,
-					MAC2STR(sta->addr));
-		}
 		ap_sta_set_authorized(hapd, sta, 1);
 		res = hostapd_set_authorized(hapd, sta, 1);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "authorizing port");
 	} else {
-		if (ap_sta_is_authorized(sta) && (sta->flags & WLAN_STA_ASSOC))
-			wpa_msg(hapd->msg_ctx, MSG_INFO,
-				AP_STA_DISCONNECTED MACSTR,
-				MAC2STR(sta->addr));
 		ap_sta_set_authorized(hapd, sta, 0);
 		res = hostapd_set_authorized(hapd, sta, 0);
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,

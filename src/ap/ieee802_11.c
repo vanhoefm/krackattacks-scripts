@@ -1111,9 +1111,8 @@ static void handle_disassoc(struct hostapd_data *hapd,
 		return;
 	}
 
+	ap_sta_set_authorized(hapd, sta, 0);
 	sta->flags &= ~(WLAN_STA_ASSOC | WLAN_STA_ASSOC_REQ_OK);
-	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
-		MAC2STR(sta->addr));
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DISASSOC);
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_INFO, "disassociated");
@@ -1161,10 +1160,9 @@ static void handle_deauth(struct hostapd_data *hapd,
 		return;
 	}
 
+	ap_sta_set_authorized(hapd, sta, 0);
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC |
 			WLAN_STA_ASSOC_REQ_OK);
-	wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
-		MAC2STR(sta->addr));
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
 	hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 		       HOSTAPD_LEVEL_DEBUG, "deauthenticated");
@@ -1519,8 +1517,6 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 		 * step.
 		 */
 		ap_sta_set_authorized(hapd, sta, 1);
-		wpa_msg(hapd->msg_ctx, MSG_INFO,
-			AP_STA_CONNECTED MACSTR, MAC2STR(sta->addr));
 	}
 
 	if (reassoc)

@@ -351,6 +351,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 				       hapd, sta);
 		break;
 	case STA_DISASSOC:
+		ap_sta_set_authorized(hapd, sta, 0);
 		sta->flags &= ~WLAN_STA_ASSOC;
 		ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
 		if (!sta->acct_terminate_cause)
@@ -378,9 +379,6 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		mlme_deauthenticate_indication(
 			hapd, sta,
 			WLAN_REASON_PREV_AUTH_NOT_VALID);
-
-		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
-			MAC2STR(sta->addr));
 		ap_free_sta(hapd, sta);
 		break;
 	}
@@ -776,10 +774,25 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 	if (!!authorized == !!(sta->flags & WLAN_STA_AUTHORIZED))
 		return;
 
-	if (authorized)
+	if (authorized) {
+		const u8 *dev_addr = NULL;
+#ifdef CONFIG_P2P
+		dev_addr = p2p_group_get_dev_addr(hapd->p2p_group, sta->addr);
+#endif /* CONFIG_P2P */
+		if (dev_addr)
+			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED
+				MACSTR " dev_addr=" MACSTR,
+				MAC2STR(sta->addr), MAC2STR(dev_addr));
+		else
+			wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_CONNECTED
+				MACSTR, MAC2STR(sta->addr));
+
 		sta->flags |= WLAN_STA_AUTHORIZED;
-	else
+	} else {
+		wpa_msg(hapd->msg_ctx, MSG_INFO, AP_STA_DISCONNECTED MACSTR,
+			MAC2STR(sta->addr));
 		sta->flags &= ~WLAN_STA_AUTHORIZED;
+	}
 
 	if (hapd->sta_authorized_cb)
 		hapd->sta_authorized_cb(hapd->sta_authorized_cb_ctx,

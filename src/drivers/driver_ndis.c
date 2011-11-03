@@ -3213,114 +3213,33 @@ wpa_driver_ndis_get_interfaces(void *global_priv)
 }
 
 
-const struct wpa_driver_ops wpa_driver_ndis_ops = {
-	"ndis",
-	"Windows NDIS driver",
-	wpa_driver_ndis_get_bssid,
-	wpa_driver_ndis_get_ssid,
-	wpa_driver_ndis_set_key,
-	wpa_driver_ndis_init,
-	wpa_driver_ndis_deinit,
-	NULL /* set_param */,
-	NULL /* set_countermeasures */,
-	wpa_driver_ndis_deauthenticate,
-	wpa_driver_ndis_disassociate,
-	wpa_driver_ndis_associate,
-	wpa_driver_ndis_add_pmkid,
-	wpa_driver_ndis_remove_pmkid,
-	wpa_driver_ndis_flush_pmkid,
-	wpa_driver_ndis_get_capa,
-	wpa_driver_ndis_poll,
-	wpa_driver_ndis_get_ifname,
-	wpa_driver_ndis_get_mac_addr,
-	NULL /* send_eapol */,
-	NULL /* set_operstate */,
-	NULL /* mlme_setprotection */,
-	NULL /* get_hw_feature_data */,
-	NULL /* send_mlme */,
-	NULL /* update_ft_ies */,
-	NULL /* send_ft_action */,
-	wpa_driver_ndis_get_scan_results,
-	NULL /* set_country */,
-	NULL /* global_init */,
-	NULL /* global_deinit */,
-	NULL /* init2 */,
-	wpa_driver_ndis_get_interfaces,
-	wpa_driver_ndis_scan,
-	NULL /* authenticate */,
-	NULL /* set_ap */,
-	NULL /* hapd_init */,
-	NULL /* hapd_deinit */,
-	NULL /* set_ieee8021x */,
-	NULL /* set_privacy */,
-	NULL /* get_seqnum */,
-	NULL /* flush */,
-	NULL /* set_generic_elem */,
-	NULL /* read_sta_data */,
-	NULL /* hapd_send_eapol */,
-	NULL /* sta_deauth */,
-	NULL /* sta_disassoc */,
-	NULL /* sta_remove */,
-	NULL /* hapd_get_ssid */,
-	NULL /* hapd_set_ssid */,
-	NULL /* hapd_set_countermeasures */,
-	NULL /* sta_add */,
-	NULL /* get_inact_sec */,
-	NULL /* sta_clear_stats */,
-	NULL /* set_freq */,
-	NULL /* set_rts */,
-	NULL /* set_frag */,
-	NULL /* sta_set_flags */,
-	NULL /* set_rate_sets */,
-	NULL /* set_tx_queue_params */,
-	NULL /* if_add */,
-	NULL /* if_remove */,
-	NULL /* set_sta_vlan */,
-	NULL /* commit */,
-	NULL /* send_ether */,
-	NULL /* set_radius_acl_auth */,
-	NULL /* set_radius_acl_expire */,
-	NULL /* set_ap_wps_ie */,
-	NULL /* set_supp_port */,
-	NULL /* set_wds_sta */,
-	NULL /* send_action */,
-	NULL /* send_action_cancel_wait */,
-	NULL /* remain_on_channel */,
-	NULL /* cancel_remain_on_channel */,
-	NULL /* probe_req_report */,
-	NULL /* deinit_ap */,
-	NULL /* suspend */,
-	NULL /* resume */,
-	NULL /* signal_monitor */,
-	NULL /* send_frame */,
-	NULL /* shared_freq */,
-	NULL /* get_noa */,
-	NULL /* set_noa */,
-	NULL /* set_p2p_powersave */,
-	NULL /* ampdu */,
-	NULL /* get_radio_name */,
-	NULL /* p2p_find */,
-	NULL /* p2p_stop_find */,
-	NULL /* p2p_listen */,
-	NULL /* p2p_connect */,
-	NULL /* wps_success_cb */,
-	NULL /* p2p_group_formation_failed */,
-	NULL /* p2p_set_params */,
-	NULL /* p2p_prov_disc_req */,
-	NULL /* p2p_sd_request */,
-	NULL /* p2p_sd_cancel_request */,
-	NULL /* p2p_sd_response */,
-	NULL /* p2p_service_update */,
-	NULL /* p2p_reject */,
-	NULL /* p2p_invite */,
-	NULL /* send_tdls_mgmt */,
-	NULL /* tdls_oper */,
-	NULL /* signal_poll */,
-	NULL /* sta_assoc */,
-	NULL /* sta_auth */,
-	NULL /* add_tspec */,
-	NULL /* add_sta_node */,
-	NULL /* sched_scan */,
-	NULL /* stop_sched_scan */,
-	NULL /* poll_client */
-};
+static const char *ndis_drv_name = "ndis";
+static const char *ndis_drv_desc = "Windows NDIS driver";
+
+struct wpa_driver_ops wpa_driver_ndis_ops;
+
+void driver_ndis_init_ops(void)
+{
+	os_memset(&wpa_driver_ndis_ops, 0, sizeof(wpa_driver_ndis_ops));
+	wpa_driver_ndis_ops.name = ndis_drv_name;
+	wpa_driver_ndis_ops.desc = ndis_drv_desc;
+	wpa_driver_ndis_ops.get_bssid = wpa_driver_ndis_get_bssid;
+	wpa_driver_ndis_ops.get_ssid = wpa_driver_ndis_get_ssid;
+	wpa_driver_ndis_ops.set_key = wpa_driver_ndis_set_key;
+	wpa_driver_ndis_ops.init = wpa_driver_ndis_init;
+	wpa_driver_ndis_ops.deinit = wpa_driver_ndis_deinit;
+	wpa_driver_ndis_ops.deauthenticate = wpa_driver_ndis_deauthenticate;
+	wpa_driver_ndis_ops.disassociate = wpa_driver_ndis_disassociate;
+	wpa_driver_ndis_ops.associate = wpa_driver_ndis_associate;
+	wpa_driver_ndis_ops.add_pmkid = wpa_driver_ndis_add_pmkid;
+	wpa_driver_ndis_ops.remove_pmkid = wpa_driver_ndis_remove_pmkid;
+	wpa_driver_ndis_ops.flush_pmkid = wpa_driver_ndis_flush_pmkid;
+	wpa_driver_ndis_ops.get_capa = wpa_driver_ndis_get_capa;
+	wpa_driver_ndis_ops.poll = wpa_driver_ndis_poll;
+	wpa_driver_ndis_ops.get_ifname = wpa_driver_ndis_get_ifname;
+	wpa_driver_ndis_ops.get_mac_addr = wpa_driver_ndis_get_mac_addr;
+	wpa_driver_ndis_ops.get_scan_results2 =
+		wpa_driver_ndis_get_scan_results;
+	wpa_driver_ndis_ops.get_interfaces = wpa_driver_ndis_get_interfaces;
+	wpa_driver_ndis_ops.scan2 = wpa_driver_ndis_scan;
+}

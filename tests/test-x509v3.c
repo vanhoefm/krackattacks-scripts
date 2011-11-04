@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("\n\nValidating certificate chain\n");
-	if (x509_certificate_chain_validate(last, certs, &reason) < 0) {
+	if (x509_certificate_chain_validate(last, certs, &reason, 0) < 0) {
 		printf("\nCertificate chain validation failed: %d\n", reason);
 		return -1;
 	}

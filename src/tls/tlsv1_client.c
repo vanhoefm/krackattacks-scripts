@@ -147,6 +147,7 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 	u8 *msg = NULL, *in_msg, *in_pos, *in_end, alert, ct;
 	size_t in_msg_len;
 	int no_appl_data;
+	int used;
 
 	if (conn->state == CLIENT_HELLO) {
 		if (in_len)
@@ -166,10 +167,18 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 	/* Each received packet may include multiple records */
 	while (pos < end) {
 		in_msg_len = in_len;
-		if (tlsv1_record_receive(&conn->rl, pos, end - pos,
-					 in_msg, &in_msg_len, &alert)) {
+		used = tlsv1_record_receive(&conn->rl, pos, end - pos,
+					    in_msg, &in_msg_len, &alert);
+		if (used < 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Processing received "
 				   "record failed");
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
+			goto failed;
+		}
+		if (used == 0) {
+			/* need more data */
+			wpa_printf(MSG_DEBUG, "TLSv1: Partial processing not "
+				   "yet supported");
 			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
 			goto failed;
 		}
@@ -190,7 +199,7 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 			in_pos += in_msg_len;
 		}
 
-		pos += TLS_RECORD_HEADER_LEN + WPA_GET_BE16(pos + 3);
+		pos += used;
 	}
 
 	os_free(in_msg);
@@ -266,8 +275,8 @@ int tlsv1_client_decrypt(struct tlsv1_client *conn,
 			 u8 *out_data, size_t out_len)
 {
 	const u8 *in_end, *pos;
-	int res;
-	u8 alert, *out_end, *out_pos;
+	int used;
+	u8 alert, *out_end, *out_pos, ct;
 	size_t olen;
 
 	pos = in_data;
@@ -276,23 +285,53 @@ int tlsv1_client_decrypt(struct tlsv1_client *conn,
 	out_end = out_data + out_len;
 
 	while (pos < in_end) {
-		if (pos[0] != TLS_CONTENT_TYPE_APPLICATION_DATA) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Unexpected content type "
-				   "0x%x", pos[0]);
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				  TLS_ALERT_UNEXPECTED_MESSAGE);
-			return -1;
-		}
-
+		ct = pos[0];
 		olen = out_end - out_pos;
-		res = tlsv1_record_receive(&conn->rl, pos, in_end - pos,
-					   out_pos, &olen, &alert);
-		if (res < 0) {
+		used = tlsv1_record_receive(&conn->rl, pos, in_end - pos,
+					    out_pos, &olen, &alert);
+		if (used < 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Record layer processing "
 				   "failed");
 			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
 			return -1;
 		}
+		if (used == 0) {
+			/* need more data */
+			wpa_printf(MSG_DEBUG, "TLSv1: Partial processing not "
+				   "yet supported");
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
+			return -1;
+		}
+
+		if (ct == TLS_CONTENT_TYPE_ALERT) {
+			if (olen < 2) {
+				wpa_printf(MSG_DEBUG, "TLSv1: Alert "
+					   "underflow");
+				tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					  TLS_ALERT_DECODE_ERROR);
+				return -1;
+			}
+			wpa_printf(MSG_DEBUG, "TLSv1: Received alert %d:%d",
+				   out_pos[0], out_pos[1]);
+			if (out_pos[0] == TLS_ALERT_LEVEL_WARNING) {
+				/* Continue processing */
+				pos += used;
+				continue;
+			}
+
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, out_pos[1]);
+			return -1;
+		}
+
+		if (ct != TLS_CONTENT_TYPE_APPLICATION_DATA) {
+			wpa_printf(MSG_DEBUG, "TLSv1: Unexpected content type "
+				   "0x%x when decrypting application data",
+				   pos[0]);
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				  TLS_ALERT_UNEXPECTED_MESSAGE);
+			return -1;
+		}
+
 		out_pos += olen;
 		if (out_pos > out_end) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Buffer not large enough "
@@ -302,7 +341,7 @@ int tlsv1_client_decrypt(struct tlsv1_client *conn,
 			return -1;
 		}
 
-		pos += TLS_RECORD_HEADER_LEN + WPA_GET_BE16(pos + 3);
+		pos += used;
 	}
 
 	return out_pos - out_data;

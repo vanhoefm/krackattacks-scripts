@@ -271,7 +271,8 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
  * @out_len: Set to maximum out_data length by caller; used to return the
  * length of the used data
  * @alert: Buffer for returning an alert value on failure
- * Returns: 0 on success, -1 on failure
+ * Returns: Number of bytes used from in_data on success, 0 if record was not
+ *	complete (more data needed), or -1 on failure
  *
  * This function decrypts the received message, verifies HMAC and TLS record
  * layer header.
@@ -285,30 +286,21 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 	struct crypto_hash *hmac;
 	u8 len[2], hash[100];
 	int force_mac_error = 0;
-
-	wpa_hexdump(MSG_MSGDUMP, "TLSv1: Record Layer - Received",
-		    in_data, in_len);
+	u8 ct;
 
 	if (in_len < TLS_RECORD_HEADER_LEN) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Too short record (in_len=%lu)",
+		wpa_printf(MSG_DEBUG, "TLSv1: Too short record (in_len=%lu) - "
+			   "need more data",
 			   (unsigned long) in_len);
-		*alert = TLS_ALERT_DECODE_ERROR;
-		return -1;
+		wpa_hexdump(MSG_MSGDUMP, "TLSv1: Record Layer - Received",
+			    in_data, in_len);
+		return 0;
 	}
 
+	ct = in_data[0];
+	rlen = WPA_GET_BE16(in_data + 3);
 	wpa_printf(MSG_DEBUG, "TLSv1: Received content type %d version %d.%d "
-		   "length %d", in_data[0], in_data[1], in_data[2],
-		   WPA_GET_BE16(in_data + 3));
-
-	if (in_data[0] != TLS_CONTENT_TYPE_HANDSHAKE &&
-	    in_data[0] != TLS_CONTENT_TYPE_CHANGE_CIPHER_SPEC &&
-	    in_data[0] != TLS_CONTENT_TYPE_ALERT &&
-	    in_data[0] != TLS_CONTENT_TYPE_APPLICATION_DATA) {
-		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected content type 0x%x",
-			   in_data[0]);
-		*alert = TLS_ALERT_UNEXPECTED_MESSAGE;
-		return -1;
-	}
+		   "length %d", ct, in_data[1], in_data[2], (int) rlen);
 
 	/*
 	 * TLS v1.0 and v1.1 RFCs were not exactly clear on the use of the
@@ -321,8 +313,6 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		*alert = TLS_ALERT_PROTOCOL_VERSION;
 		return -1;
 	}
-
-	rlen = WPA_GET_BE16(in_data + 3);
 
 	/* TLSCiphertext must not be more than 2^14+2048 bytes */
 	if (TLS_RECORD_HEADER_LEN + rlen > 18432) {
@@ -339,7 +329,19 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 		wpa_printf(MSG_DEBUG, "TLSv1: Not all record data included "
 			   "(rlen=%lu > in_len=%lu)",
 			   (unsigned long) rlen, (unsigned long) in_len);
-		*alert = TLS_ALERT_DECODE_ERROR;
+		return 0;
+	}
+
+	wpa_hexdump(MSG_MSGDUMP, "TLSv1: Record Layer - Received",
+		    in_data, rlen);
+
+	if (ct != TLS_CONTENT_TYPE_HANDSHAKE &&
+	    ct != TLS_CONTENT_TYPE_CHANGE_CIPHER_SPEC &&
+	    ct != TLS_CONTENT_TYPE_ALERT &&
+	    ct != TLS_CONTENT_TYPE_APPLICATION_DATA) {
+		wpa_printf(MSG_DEBUG, "TLSv1: Ignore record with unknown "
+			   "content type 0x%x", ct);
+		*alert = TLS_ALERT_UNEXPECTED_MESSAGE;
 		return -1;
 	}
 
@@ -417,13 +419,13 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 			}
 
 			plen -= padlen + 1;
+
+			wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Record Layer - "
+					"Decrypted data with IV and padding "
+					"removed", out_data, plen);
 		}
 
 	check_mac:
-		wpa_hexdump_key(MSG_MSGDUMP, "TLSv1: Record Layer - Decrypted "
-				"data with IV and padding removed",
-				out_data, plen);
-
 		if (plen < rl->hash_size) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Too short record; no "
 				   "hash value");
@@ -481,5 +483,5 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 
 	inc_byte_array(rl->read_seq_num, TLS_SEQ_NUM_LEN);
 
-	return 0;
+	return TLS_RECORD_HEADER_LEN + rlen;
 }

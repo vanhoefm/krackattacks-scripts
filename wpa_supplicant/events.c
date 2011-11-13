@@ -1945,13 +1945,14 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
 	    event != EVENT_INTERFACE_ENABLED &&
 	    event != EVENT_INTERFACE_STATUS) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "Ignore event %d while interface is "
-			"disabled", event);
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Ignore event %s (%d) while interface is disabled",
+			event_to_string(event), event);
 		return;
 	}
 
-	wpa_dbg(wpa_s, MSG_DEBUG, "Event %d received on interface %s",
-		event, wpa_s->ifname);
+	wpa_dbg(wpa_s, MSG_DEBUG, "Event %s (%d) received",
+		event_to_string(event), event);
 
 	switch (event) {
 	case EVENT_AUTH:

@@ -164,7 +164,7 @@ static int sha256_process(struct sha256_state *md, const unsigned char *in,
 	unsigned long n;
 #define block_size 64
 
-	if (md->curlen > sizeof(md->buf))
+	if (md->curlen >= sizeof(md->buf))
 		return -1;
 
 	while (inlen > 0) {

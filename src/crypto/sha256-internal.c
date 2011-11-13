@@ -1,6 +1,6 @@
 /*
  * SHA-256 hash implementation and interface functions
- * Copyright (c) 2003-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -18,10 +18,12 @@
 #include "sha256.h"
 #include "crypto.h"
 
+#define SHA256_BLOCK_SIZE 64
+
 struct sha256_state {
 	u64 length;
 	u32 state[8], curlen;
-	u8 buf[64];
+	u8 buf[SHA256_BLOCK_SIZE];
 };
 
 static void sha256_init(struct sha256_state *md);
@@ -162,28 +164,27 @@ static int sha256_process(struct sha256_state *md, const unsigned char *in,
 			  unsigned long inlen)
 {
 	unsigned long n;
-#define block_size 64
 
 	if (md->curlen >= sizeof(md->buf))
 		return -1;
 
 	while (inlen > 0) {
-		if (md->curlen == 0 && inlen >= block_size) {
+		if (md->curlen == 0 && inlen >= SHA256_BLOCK_SIZE) {
 			if (sha256_compress(md, (unsigned char *) in) < 0)
 				return -1;
-			md->length += block_size * 8;
-			in += block_size;
-			inlen -= block_size;
+			md->length += SHA256_BLOCK_SIZE * 8;
+			in += SHA256_BLOCK_SIZE;
+			inlen -= SHA256_BLOCK_SIZE;
 		} else {
-			n = MIN(inlen, (block_size - md->curlen));
+			n = MIN(inlen, (SHA256_BLOCK_SIZE - md->curlen));
 			os_memcpy(md->buf + md->curlen, in, n);
 			md->curlen += n;
 			in += n;
 			inlen -= n;
-			if (md->curlen == block_size) {
+			if (md->curlen == SHA256_BLOCK_SIZE) {
 				if (sha256_compress(md, md->buf) < 0)
 					return -1;
-				md->length += 8 * block_size;
+				md->length += 8 * SHA256_BLOCK_SIZE;
 				md->curlen = 0;
 			}
 		}
@@ -217,7 +218,7 @@ static int sha256_done(struct sha256_state *md, unsigned char *out)
 	 * encoding like normal.
 	 */
 	if (md->curlen > 56) {
-		while (md->curlen < 64) {
+		while (md->curlen < SHA256_BLOCK_SIZE) {
 			md->buf[md->curlen++] = (unsigned char) 0;
 		}
 		sha256_compress(md, md->buf);

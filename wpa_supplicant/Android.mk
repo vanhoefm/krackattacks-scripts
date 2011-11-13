@@ -1330,6 +1330,8 @@ OBJS += offchannel.c
 L_CFLAGS += -DCONFIG_OFFCHANNEL
 endif
 
+OBJS += src/drivers/driver_common.c
+
 OBJS_wpa_rm := ctrl_iface.c ctrl_iface_unix.c
 OBJS_wpa := $(filter-out $(OBJS_wpa_rm),$(OBJS)) $(OBJS_h) tests/test_wpa.c
 ifdef CONFIG_AUTHENTICATOR

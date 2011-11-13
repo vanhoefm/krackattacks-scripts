@@ -3492,17 +3492,7 @@ static inline void drv_event_eapol_rx(void *ctx, const u8 *src, const u8 *data,
 	wpa_supplicant_event(ctx, EVENT_EAPOL_RX, &event);
 }
 
-static inline void wpa_scan_results_free(struct wpa_scan_results *res)
-{
-	size_t i;
-
-	if (res == NULL)
-		return;
-
-	for (i = 0; i < res->num; i++)
-		os_free(res->res[i]);
-	os_free(res->res);
-	os_free(res);
-}
+/* driver_common.c */
+void wpa_scan_results_free(struct wpa_scan_results *res);
 
 #endif /* DRIVER_H */

@@ -15,7 +15,7 @@ SOURCE		wpa_supplicant.c events.c
 SOURCEPATH	..\..\src\rsn_supp
 SOURCE		wpa.c preauth.c pmksa_cache.c peerkey.c wpa_ie.c
 SOURCEPATH	..\..\src\drivers
-SOURCE		drivers.c
+SOURCE		drivers.c driver_common.c
 SOURCEPATH	..\..\src\common
 SOURCE		wpa_common.c
 SOURCEPATH	..\..\src\utils

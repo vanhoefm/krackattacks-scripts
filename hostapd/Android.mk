@@ -766,6 +766,8 @@ L_CFLAGS += -DCONFIG_P2P_MANAGER
 OBJS += src/ap/p2p_hostapd.c
 endif
 
+OBJS += src/drivers/driver_common.c
+
 ifdef CONFIG_NO_STDOUT_DEBUG
 L_CFLAGS += -DCONFIG_NO_STDOUT_DEBUG
 endif

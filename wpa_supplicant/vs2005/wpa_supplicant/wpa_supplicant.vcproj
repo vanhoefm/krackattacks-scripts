@@ -251,6 +251,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\drivers\driver_common.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\drivers\driver_ndis.c"
 				>
 			</File>

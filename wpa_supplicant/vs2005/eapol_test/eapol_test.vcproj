@@ -251,6 +251,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\src\drivers\driver_common.c"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\src\eap_peer\eap.c"
 				>
 			</File>

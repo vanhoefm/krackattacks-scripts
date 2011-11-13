@@ -749,6 +749,8 @@ ifdef CONFIG_INTERWORKING
 CFLAGS += -DCONFIG_INTERWORKING
 endif
 
+OBJS += ../src/drivers/driver_common.o
+
 ifdef CONFIG_WPA_CLI_EDIT
 OBJS_c += ../src/utils/edit.o
 else

@@ -25,7 +25,6 @@
 #include "../wpa_supplicant_i.h"
 #include "../driver_i.h"
 #include "../notify.h"
-#include "../wpas_glue.h"
 #include "../bss.h"
 #include "../scan.h"
 #include "../ctrl_iface.h"

@@ -20,7 +20,6 @@
 #include "crypto/crypto.h"
 #include "crypto/random.h"
 #include "common/ieee802_11_defs.h"
-#include "common/wpa_ctrl.h"
 #include "radius/radius.h"
 #include "radius/radius_client.h"
 #include "eap_server/eap.h"

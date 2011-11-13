@@ -29,7 +29,6 @@
 #include "wps_supplicant.h"
 #include "p2p_supplicant.h"
 #include "notify.h"
-#include "blacklist.h"
 #include "bss.h"
 #include "scan.h"
 #include "sme.h"

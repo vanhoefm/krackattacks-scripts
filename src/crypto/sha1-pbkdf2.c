@@ -16,8 +16,6 @@
 
 #include "common.h"
 #include "sha1.h"
-#include "md5.h"
-#include "crypto.h"
 
 static int pbkdf2_sha1_f(const char *passphrase, const char *ssid,
 			 size_t ssid_len, int iterations, unsigned int count,

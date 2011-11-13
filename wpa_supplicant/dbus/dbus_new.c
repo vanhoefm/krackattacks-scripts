@@ -27,7 +27,6 @@
 #include "dbus_dict_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
-#include "dbus_common.h"
 #include "dbus_common_i.h"
 #include "dbus_new_handlers_p2p.h"
 #include "p2p/p2p.h"

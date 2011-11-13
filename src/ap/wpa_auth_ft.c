@@ -24,7 +24,6 @@
 #include "wmm.h"
 #include "wpa_auth.h"
 #include "wpa_auth_i.h"
-#include "wpa_auth_ie.h"
 
 
 #ifdef CONFIG_IEEE80211R

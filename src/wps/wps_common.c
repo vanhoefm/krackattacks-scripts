@@ -22,7 +22,6 @@
 #include "crypto/sha256.h"
 #include "crypto/random.h"
 #include "wps_i.h"
-#include "wps_dev_attr.h"
 
 
 void wps_kdf(const u8 *key, const u8 *label_prefix, size_t label_prefix_len,

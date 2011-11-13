@@ -203,8 +203,10 @@ skip_wpa_check:
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 1);
 
 #ifdef CONFIG_P2P
-	p2p_group_notif_assoc(hapd->p2p_group, sta->addr,
-			      req_ies, req_ies_len);
+	if (req_ies) {
+		p2p_group_notif_assoc(hapd->p2p_group, sta->addr,
+				      req_ies, req_ies_len);
+	}
 #endif /* CONFIG_P2P */
 
 	return 0;

@@ -1090,8 +1090,7 @@ radius_msg_add_attr_user_password(struct radius_msg *msg,
 				  const u8 *secret, size_t secret_len)
 {
 	u8 buf[128];
-	int padlen, i;
-	size_t buf_len, pos;
+	size_t padlen, i, buf_len, pos;
 	const u8 *addr[2];
 	size_t len[2];
 	u8 hash[16];
@@ -1103,7 +1102,7 @@ radius_msg_add_attr_user_password(struct radius_msg *msg,
 	buf_len = data_len;
 
 	padlen = data_len % 16;
-	if (padlen) {
+	if (padlen && data_len < sizeof(buf)) {
 		padlen = 16 - padlen;
 		os_memset(buf + data_len, 0, padlen);
 		buf_len += padlen;

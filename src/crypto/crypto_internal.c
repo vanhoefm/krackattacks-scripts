@@ -63,7 +63,8 @@ struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
 		ctx->key_len = key_len;
 
 		os_memcpy(k_pad, key, key_len);
-		os_memset(k_pad + key_len, 0, sizeof(k_pad) - key_len);
+		if (key_len < sizeof(k_pad))
+			os_memset(k_pad + key_len, 0, sizeof(k_pad) - key_len);
 		for (i = 0; i < sizeof(k_pad); i++)
 			k_pad[i] ^= 0x36;
 		MD5Init(&ctx->u.md5);

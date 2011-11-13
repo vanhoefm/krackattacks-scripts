@@ -285,8 +285,10 @@ static int eap_peap_derive_cmk(struct eap_sm *sm, struct eap_peap_data *data)
 	 * in the end of the label just before ISK; is that just a typo?)
 	 */
 	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: TempKey", tk, 40);
-	peap_prfplus(data->peap_version, tk, 40, "Inner Methods Compound Keys",
-		     isk, sizeof(isk), imck, sizeof(imck));
+	if (peap_prfplus(data->peap_version, tk, 40,
+			 "Inner Methods Compound Keys",
+			 isk, sizeof(isk), imck, sizeof(imck)) < 0)
+		return -1;
 	wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: IMCK (IPMKj)",
 			imck, sizeof(imck));
 
@@ -1247,9 +1249,12 @@ static u8 * eap_peap_getKey(struct eap_sm *sm, void *priv, size_t *len)
 		 * termination for this label while the one used for deriving
 		 * IPMK|CMK did not use null termination.
 		 */
-		peap_prfplus(data->peap_version, data->ipmk, 40,
-			     "Session Key Generating Function",
-			     (u8 *) "\00", 1, csk, sizeof(csk));
+		if (peap_prfplus(data->peap_version, data->ipmk, 40,
+				 "Session Key Generating Function",
+				 (u8 *) "\00", 1, csk, sizeof(csk)) < 0) {
+			os_free(key);
+			return NULL;
+		}
 		wpa_hexdump_key(MSG_DEBUG, "EAP-PEAP: CSK", csk, sizeof(csk));
 		os_memcpy(key, csk, EAP_TLS_KEY_LEN);
 		wpa_hexdump(MSG_DEBUG, "EAP-PEAP: Derived key",

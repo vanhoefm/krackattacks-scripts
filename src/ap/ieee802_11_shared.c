@@ -323,6 +323,9 @@ u8 * hostapd_eid_time_adv(struct hostapd_data *hapd, u8 *eid)
 	    hostapd_update_time_adv(hapd) < 0)
 		return eid;
 
+	if (hapd->time_adv == NULL)
+		return eid;
+
 	os_memcpy(eid, wpabuf_head(hapd->time_adv),
 		  wpabuf_len(hapd->time_adv));
 	eid += wpabuf_len(hapd->time_adv);

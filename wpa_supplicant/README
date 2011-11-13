@@ -138,24 +138,6 @@ Current hardware/software requirements:
 	default option to start with before falling back to driver specific
 	interface.
 
-	Host AP driver for Prism2/2.5/3 (development snapshot/v0.2.x)
-	(http://hostap.epitest.fi/)
-	Driver need to be set in Managed mode ('iwconfig wlan0 mode managed').
-	Please note that station firmware version needs to be 1.7.0 or newer
-	to work in WPA mode.
-
-	Linuxant DriverLoader (http://www.linuxant.com/driverloader/)
-	with Windows NDIS driver for your wlan card supporting WPA.
-
-	madwifi driver for cards based on Atheros chip set (ar521x)
-	(http://sourceforge.net/projects/madwifi/)
-	Please note that you will need to modify the wpa_supplicant .config
-	file to use the correct path for the madwifi driver root directory
-	(CFLAGS += -I../madwifi/wpa line in example defconfig).
-
-	Linux ndiswrapper (http://ndiswrapper.sourceforge.net/) with
-	Windows NDIS driver.
-
 	In theory, any driver that supports Linux wireless extensions can be
 	used with IEEE 802.1X (i.e., not WPA) when using ap_scan=0 option in
 	configuration file.
@@ -332,7 +314,7 @@ and a list of available options and additional notes.
 The build time configuration can be used to select only the needed
 features and limit the binary size and requirements for external
 libraries. The main configuration parts are the selection of which
-driver interfaces (e.g., hostap, madwifi, ..) and which authentication
+driver interfaces (e.g., nl80211, wext, ..) and which authentication
 methods (e.g., EAP-TLS, EAP-PEAP, ..) are included.
 
 Following build time configuration options are used to control IEEE
@@ -367,17 +349,15 @@ CONFIG_PCSC=y
 Following options can be added to .config to select which driver
 interfaces are included.
 
-CONFIG_DRIVER_HOSTAP=y
-CONFIG_DRIVER_MADWIFI=y
+CONFIG_DRIVER_NL80211=y
 CONFIG_DRIVER_WEXT=y
 CONFIG_DRIVER_BSD=y
 CONFIG_DRIVER_NDIS=y
 
-Following example includes all features and driver interfaces that are
-included in the wpa_supplicant package:
+Following example includes some more features and driver interfaces that
+are included in the wpa_supplicant package:
 
-CONFIG_DRIVER_HOSTAP=y
-CONFIG_DRIVER_MADWIFI=y
+CONFIG_DRIVER_NL80211=y
 CONFIG_DRIVER_WEXT=y
 CONFIG_DRIVER_BSD=y
 CONFIG_DRIVER_NDIS=y
@@ -471,9 +451,6 @@ options:
   -N = start describing new interface
 
 drivers:
-  hostap = Host AP driver (Intersil Prism2/2.5/3) [default]
-	(this can also be used with Linuxant DriverLoader)
-  madwifi = MADWIFI 802.11 support (Atheros, etc.) (deprecated; use wext)
   wext = Linux wireless extensions (generic)
   wired = wpa_supplicant wired Ethernet driver
   roboswitch = wpa_supplicant Broadcom switch driver
@@ -507,15 +484,15 @@ separated with -N argument. As an example, following command would
 start wpa_supplicant for two interfaces:
 
 wpa_supplicant \
-	-c wpa1.conf -i wlan0 -D hostap -N \
-	-c wpa2.conf -i ath0 -D madwifi
+	-c wpa1.conf -i wlan0 -D nl80211 -N \
+	-c wpa2.conf -i wlan1 -D wext
 
 
 If the interface is added in a Linux bridge (e.g., br0), the bridge
 interface needs to be configured to wpa_supplicant in addition to the
 main interface:
 
-wpa_supplicant -cw.conf -Dmadwifi -iath0 -bbr0
+wpa_supplicant -cw.conf -Dwext -iwlan0 -bbr0
 
 
 Configuration file

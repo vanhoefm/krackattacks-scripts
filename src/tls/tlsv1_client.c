@@ -196,7 +196,6 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 		if (used == 0) {
 			struct wpabuf *partial;
 			wpa_printf(MSG_DEBUG, "TLSv1: Need more data");
-			os_free(in_msg);
 			partial = wpabuf_alloc_copy(pos, end - pos);
 			wpabuf_free(conn->partial_input);
 			conn->partial_input = partial;
@@ -208,6 +207,7 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 					  TLS_ALERT_INTERNAL_ERROR);
 				goto failed;
 			}
+			os_free(in_msg);
 			if (need_more_data)
 				*need_more_data = 1;
 			return 0;

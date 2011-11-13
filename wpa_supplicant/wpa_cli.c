@@ -2663,6 +2663,13 @@ static int wpa_cli_cmd_signal_poll(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_reauthenticate(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "REAUTHENTICATE");
+}
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -3005,6 +3012,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "signal_poll", wpa_cli_cmd_signal_poll,
 	  cli_cmd_flag_none,
 	  "= get signal parameters" },
+	{ "reauthenticate", wpa_cli_cmd_reauthenticate, cli_cmd_flag_none,
+	  "= trigger IEEE 802.1X/EAPOL reauthentication" },
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

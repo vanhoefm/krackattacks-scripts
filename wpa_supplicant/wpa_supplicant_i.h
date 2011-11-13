@@ -266,7 +266,7 @@ struct wpa_supplicant {
 	os_time_t last_michael_mic_error;
 	u8 bssid[ETH_ALEN];
 	u8 pending_bssid[ETH_ALEN]; /* If wpa_state == WPA_ASSOCIATING, this
-				     * field contains the targer BSSID. */
+				     * field contains the target BSSID. */
 	int reassociate; /* reassociation requested */
 	int disconnected; /* all connections disabled; i.e., do no reassociate
 			   * before this has been cleared */

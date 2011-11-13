@@ -2278,6 +2278,8 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 	struct rfkill_config *rcfg;
 	struct i802_bss *bss;
 
+	if (global_priv == NULL)
+		return NULL;
 	drv = os_zalloc(sizeof(*drv));
 	if (drv == NULL)
 		return NULL;
@@ -2452,8 +2454,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 	 * dynamically added interface (e.g., P2P) that was already configured
 	 * with proper iftype.
 	 */
-	if ((drv->global == NULL ||
-	     drv->ifindex != drv->global->if_add_ifindex) &&
+	if (drv->ifindex != drv->global->if_add_ifindex &&
 	    wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION) < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Could not configure driver to "
 			   "use managed mode");

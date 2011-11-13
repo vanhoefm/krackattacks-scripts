@@ -97,18 +97,6 @@ NEED_LINUX_IOCTL=y
 NEED_RFKILL=y
 endif
 
-ifdef CONFIG_DRIVER_RALINK
-DRV_WPA_CFLAGS += -DCONFIG_DRIVER_RALINK
-DRV_WPA_OBJS += src/drivers/driver_ralink.c
-NEED_NETLINK=y
-NEED_LINUX_IOCTL=y
-endif
-
-ifdef CONFIG_DRIVER_BROADCOM
-DRV_WPA_CFLAGS += -DCONFIG_DRIVER_BROADCOM
-DRV_WPA_OBJS += src/drivers/driver_broadcom.c
-endif
-
 ifdef CONFIG_DRIVER_NDIS
 DRV_WPA_CFLAGS += -DCONFIG_DRIVER_NDIS
 DRV_WPA_OBJS += src/drivers/driver_ndis.c
@@ -122,20 +110,6 @@ CONFIG_WINPCAP=y
 ifdef CONFIG_USE_NDISUIO
 DRV_WPA_CFLAGS += -DCONFIG_USE_NDISUIO
 endif
-endif
-
-ifdef CONFIG_DRIVER_OSX
-DRV_WPA_CFLAGS += -DCONFIG_DRIVER_OSX
-DRV_WPA_OBJS += src/drivers/driver_osx.c
-DRV_WPA_LDFLAGS += -framework CoreFoundation
-DRV_WPA_LDFLAGS += -F/System/Library/PrivateFrameworks -framework Apple80211
-endif
-
-ifdef CONFIG_DRIVER_IPHONE
-DRV_WPA_CFLAGS += -DCONFIG_DRIVER_IPHONE
-DRV_WPA_OBJS += src/drivers/driver_iphone.c
-DRV_WPA_OBJS += src/drivers/MobileApple80211.c
-DRV_WPA_LDFLAGS += -framework CoreFoundation
 endif
 
 ifdef CONFIG_DRIVER_ROBOSWITCH

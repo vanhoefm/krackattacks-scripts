@@ -156,21 +156,6 @@ Current hardware/software requirements:
 	Linux ndiswrapper (http://ndiswrapper.sourceforge.net/) with
 	Windows NDIS driver.
 
-	Broadcom wl.o driver (old version only)
-	This is a generic Linux driver for Broadcom IEEE 802.11a/g cards.
-	However, it is proprietary driver that is not publicly available
-	except for couple of exceptions, mainly Broadcom-based APs/wireless
-	routers that use Linux. The driver binary can be downloaded, e.g.,
-	from Linksys support site (http://www.linksys.com/support/gpl.asp)
-	for Linksys WRT54G. The GPL tarball includes cross-compiler and
-	the needed header file, wlioctl.h, for compiling wpa_supplicant.
-	This driver support in wpa_supplicant is expected to work also with
-	other devices based on Broadcom driver (assuming the driver includes
-	client mode support). Please note that the newer Broadcom driver
-	("hybrid Linux driver") supports Linux wireless extensions and does
-	not need (or even work) with the specific driver wrapper. Use -Dwext
-	with that driver.
-
 	In theory, any driver that supports Linux wireless extensions can be
 	used with IEEE 802.1X (i.e., not WPA) when using ap_scan=0 option in
 	configuration file.
@@ -385,8 +370,6 @@ interfaces are included.
 CONFIG_DRIVER_HOSTAP=y
 CONFIG_DRIVER_MADWIFI=y
 CONFIG_DRIVER_WEXT=y
-CONFIG_DRIVER_RALINK=y
-CONFIG_DRIVER_BROADCOM=y
 CONFIG_DRIVER_BSD=y
 CONFIG_DRIVER_NDIS=y
 
@@ -396,7 +379,6 @@ included in the wpa_supplicant package:
 CONFIG_DRIVER_HOSTAP=y
 CONFIG_DRIVER_MADWIFI=y
 CONFIG_DRIVER_WEXT=y
-CONFIG_DRIVER_BROADCOM=y
 CONFIG_DRIVER_BSD=y
 CONFIG_DRIVER_NDIS=y
 CONFIG_IEEE8021X_EAPOL=y
@@ -493,8 +475,6 @@ drivers:
 	(this can also be used with Linuxant DriverLoader)
   madwifi = MADWIFI 802.11 support (Atheros, etc.) (deprecated; use wext)
   wext = Linux wireless extensions (generic)
-  ralink = Ralink Client driver
-  broadcom = Broadcom wl.o driver
   wired = wpa_supplicant wired Ethernet driver
   roboswitch = wpa_supplicant Broadcom switch driver
   bsd = BSD 802.11 support (Atheros, etc.)

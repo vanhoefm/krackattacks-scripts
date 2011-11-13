@@ -444,8 +444,9 @@ static int eap_fast_phase2_request(struct eap_sm *sm,
 		return 0;
 	}
 
-	if (data->phase2_priv == NULL &&
-	    eap_fast_init_phase2_method(sm, data) < 0) {
+	if ((data->phase2_priv == NULL &&
+	     eap_fast_init_phase2_method(sm, data) < 0) ||
+	    data->phase2_method == NULL) {
 		wpa_printf(MSG_INFO, "EAP-FAST: Failed to initialize "
 			   "Phase 2 EAP method %d", *pos);
 		ret->methodState = METHOD_DONE;

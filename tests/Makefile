@@ -45,6 +45,9 @@ test-asn1: test-asn1.o $(LIBS)
 test-base64: test-base64.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 
+test-https: test-https.o $(LIBS)
+	$(LDO) $(LDFLAGS) -o $@ $< $(LLIBS)
+
 test-list: test-list.o $(LIBS)
 	$(LDO) $(LDFLAGS) -o $@ $^
 

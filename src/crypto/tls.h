@@ -347,6 +347,12 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 					 const struct wpabuf *in_data,
 					 struct wpabuf **appl_data);
 
+struct wpabuf * tls_connection_handshake2(void *tls_ctx,
+					  struct tls_connection *conn,
+					  const struct wpabuf *in_data,
+					  struct wpabuf **appl_data,
+					  int *more_data_needed);
+
 /**
  * tls_connection_server_handshake - Process TLS handshake (server side)
  * @tls_ctx: TLS context data from tls_init()
@@ -391,6 +397,11 @@ struct wpabuf * tls_connection_encrypt(void *tls_ctx,
 struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 				       struct tls_connection *conn,
 				       const struct wpabuf *in_data);
+
+struct wpabuf * tls_connection_decrypt2(void *tls_ctx,
+					struct tls_connection *conn,
+					const struct wpabuf *in_data,
+					int *more_data_needed);
 
 /**
  * tls_connection_resumed - Was session resumption used

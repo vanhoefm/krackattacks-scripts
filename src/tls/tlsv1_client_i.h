@@ -68,6 +68,8 @@ struct tlsv1_client {
 
 	tlsv1_client_session_ticket_cb session_ticket_cb;
 	void *session_ticket_cb_ctx;
+
+	struct wpabuf *partial_input;
 };
 
 

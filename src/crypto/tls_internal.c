@@ -332,6 +332,17 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 					 const struct wpabuf *in_data,
 					 struct wpabuf **appl_data)
 {
+	return tls_connection_handshake2(tls_ctx, conn, in_data, appl_data,
+					 NULL);
+}
+
+
+struct wpabuf * tls_connection_handshake2(void *tls_ctx,
+					  struct tls_connection *conn,
+					  const struct wpabuf *in_data,
+					  struct wpabuf **appl_data,
+					  int *need_more_data)
+{
 #ifdef CONFIG_TLS_INTERNAL_CLIENT
 	u8 *res, *ad;
 	size_t res_len, ad_len;
@@ -344,7 +355,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
 	res = tlsv1_client_handshake(conn->client,
 				     in_data ? wpabuf_head(in_data) : NULL,
 				     in_data ? wpabuf_len(in_data) : 0,
-				     &res_len, &ad, &ad_len);
+				     &res_len, &ad, &ad_len, need_more_data);
 	if (res == NULL)
 		return NULL;
 	out = wpabuf_alloc_ext_data(res, res_len);
@@ -455,23 +466,23 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx,
 				       struct tls_connection *conn,
 				       const struct wpabuf *in_data)
 {
+	return tls_connection_decrypt2(tls_ctx, conn, in_data, NULL);
+}
+
+
+struct wpabuf * tls_connection_decrypt2(void *tls_ctx,
+					struct tls_connection *conn,
+					const struct wpabuf *in_data,
+					int *need_more_data)
+{
+	if (need_more_data)
+		*need_more_data = 0;
+
 #ifdef CONFIG_TLS_INTERNAL_CLIENT
 	if (conn->client) {
-		struct wpabuf *buf;
-		int res;
-		buf = wpabuf_alloc((wpabuf_len(in_data) + 500) * 3);
-		if (buf == NULL)
-			return NULL;
-		res = tlsv1_client_decrypt(conn->client, wpabuf_head(in_data),
-					   wpabuf_len(in_data),
-					   wpabuf_mhead(buf),
-					   wpabuf_size(buf));
-		if (res < 0) {
-			wpabuf_free(buf);
-			return NULL;
-		}
-		wpabuf_put(buf, res);
-		return buf;
+		return tlsv1_client_decrypt(conn->client, wpabuf_head(in_data),
+					    wpabuf_len(in_data),
+					    need_more_data);
 	}
 #endif /* CONFIG_TLS_INTERNAL_CLIENT */
 #ifdef CONFIG_TLS_INTERNAL_SERVER

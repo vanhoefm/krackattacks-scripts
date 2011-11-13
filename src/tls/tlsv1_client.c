@@ -136,23 +136,41 @@ int tls_derive_keys(struct tlsv1_client *conn,
  * @out_len: Length of the output buffer.
  * @appl_data: Pointer to application data pointer, or %NULL if dropped
  * @appl_data_len: Pointer to variable that is set to appl_data length
+ * @need_more_data: Set to 1 if more data would be needed to complete
+ *	processing
  * Returns: Pointer to output data, %NULL on failure
  */
 u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 			    const u8 *in_data, size_t in_len,
 			    size_t *out_len, u8 **appl_data,
-			    size_t *appl_data_len)
+			    size_t *appl_data_len, int *need_more_data)
 {
 	const u8 *pos, *end;
-	u8 *msg = NULL, *in_msg, *in_pos, *in_end, alert, ct;
+	u8 *msg = NULL, *in_msg = NULL, *in_pos, *in_end, alert, ct;
 	size_t in_msg_len;
 	int no_appl_data;
 	int used;
+
+	if (need_more_data)
+		*need_more_data = 0;
 
 	if (conn->state == CLIENT_HELLO) {
 		if (in_len)
 			return NULL;
 		return tls_send_client_hello(conn, out_len);
+	}
+
+	if (conn->partial_input) {
+		if (wpabuf_resize(&conn->partial_input, in_len) < 0) {
+			wpa_printf(MSG_DEBUG, "TLSv1: Failed to allocate "
+				   "memory for pending record");
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				  TLS_ALERT_INTERNAL_ERROR);
+			goto failed;
+		}
+		wpabuf_put_data(conn->partial_input, in_data, in_len);
+		in_data = wpabuf_head(conn->partial_input);
+		in_len = wpabuf_len(conn->partial_input);
 	}
 
 	if (in_data == NULL || in_len == 0)
@@ -176,11 +194,23 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 			goto failed;
 		}
 		if (used == 0) {
-			/* need more data */
-			wpa_printf(MSG_DEBUG, "TLSv1: Partial processing not "
-				   "yet supported");
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
-			goto failed;
+			struct wpabuf *partial;
+			wpa_printf(MSG_DEBUG, "TLSv1: Need more data");
+			os_free(in_msg);
+			partial = wpabuf_alloc_copy(pos, end - pos);
+			wpabuf_free(conn->partial_input);
+			conn->partial_input = partial;
+			if (conn->partial_input == NULL) {
+				wpa_printf(MSG_DEBUG, "TLSv1: Failed to "
+					   "allocate memory for pending "
+					   "record");
+				tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					  TLS_ALERT_INTERNAL_ERROR);
+				goto failed;
+			}
+			if (need_more_data)
+				*need_more_data = 1;
+			return 0;
 		}
 		ct = pos[0];
 
@@ -211,6 +241,8 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 failed:
 	os_free(in_msg);
 	if (conn->alert_level) {
+		wpabuf_free(conn->partial_input);
+		conn->partial_input = NULL;
 		conn->state = FAILED;
 		os_free(msg);
 		msg = tlsv1_client_send_alert(conn, conn->alert_level,
@@ -219,6 +251,11 @@ failed:
 	} else if (msg == NULL) {
 		msg = os_zalloc(1);
 		*out_len = 0;
+	}
+
+	if (need_more_data == NULL || !(*need_more_data)) {
+		wpabuf_free(conn->partial_input);
+		conn->partial_input = NULL;
 	}
 
 	return msg;
@@ -263,53 +300,80 @@ int tlsv1_client_encrypt(struct tlsv1_client *conn,
  * @conn: TLSv1 client connection data from tlsv1_client_init()
  * @in_data: Pointer to input buffer (encrypted TLS data)
  * @in_len: Input buffer length
- * @out_data: Pointer to output buffer (decrypted data from TLS tunnel)
- * @out_len: Maximum out_data length
- * Returns: Number of bytes written to out_data, -1 on failure
+ * @need_more_data: Set to 1 if more data would be needed to complete
+ *	processing
+ * Returns: Decrypted data or %NULL on failure
  *
  * This function is used after TLS handshake has been completed successfully to
  * receive data from the encrypted tunnel.
  */
-int tlsv1_client_decrypt(struct tlsv1_client *conn,
-			 const u8 *in_data, size_t in_len,
-			 u8 *out_data, size_t out_len)
+struct wpabuf * tlsv1_client_decrypt(struct tlsv1_client *conn,
+				     const u8 *in_data, size_t in_len,
+				     int *need_more_data)
 {
 	const u8 *in_end, *pos;
 	int used;
-	u8 alert, *out_end, *out_pos, ct;
+	u8 alert, *out_pos, ct;
 	size_t olen;
+	struct wpabuf *buf = NULL;
+
+	if (need_more_data)
+		*need_more_data = 0;
+
+	if (conn->partial_input) {
+		if (wpabuf_resize(&conn->partial_input, in_len) < 0) {
+			wpa_printf(MSG_DEBUG, "TLSv1: Failed to allocate "
+				   "memory for pending record");
+			alert = TLS_ALERT_INTERNAL_ERROR;
+			goto fail;
+		}
+		wpabuf_put_data(conn->partial_input, in_data, in_len);
+		in_data = wpabuf_head(conn->partial_input);
+		in_len = wpabuf_len(conn->partial_input);
+	}
 
 	pos = in_data;
 	in_end = in_data + in_len;
-	out_pos = out_data;
-	out_end = out_data + out_len;
 
 	while (pos < in_end) {
 		ct = pos[0];
-		olen = out_end - out_pos;
+		if (wpabuf_resize(&buf, in_end - pos) < 0) {
+			alert = TLS_ALERT_INTERNAL_ERROR;
+			goto fail;
+		}
+		out_pos = wpabuf_put(buf, 0);
+		olen = wpabuf_tailroom(buf);
 		used = tlsv1_record_receive(&conn->rl, pos, in_end - pos,
 					    out_pos, &olen, &alert);
 		if (used < 0) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Record layer processing "
 				   "failed");
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
-			return -1;
+			goto fail;
 		}
 		if (used == 0) {
-			/* need more data */
-			wpa_printf(MSG_DEBUG, "TLSv1: Partial processing not "
-				   "yet supported");
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
-			return -1;
+			struct wpabuf *partial;
+			wpa_printf(MSG_DEBUG, "TLSv1: Need more data");
+			partial = wpabuf_alloc_copy(pos, in_end - pos);
+			wpabuf_free(conn->partial_input);
+			conn->partial_input = partial;
+			if (conn->partial_input == NULL) {
+				wpa_printf(MSG_DEBUG, "TLSv1: Failed to "
+					   "allocate memory for pending "
+					   "record");
+				alert = TLS_ALERT_INTERNAL_ERROR;
+				goto fail;
+			}
+			if (need_more_data)
+				*need_more_data = 1;
+			return buf;
 		}
 
 		if (ct == TLS_CONTENT_TYPE_ALERT) {
 			if (olen < 2) {
 				wpa_printf(MSG_DEBUG, "TLSv1: Alert "
 					   "underflow");
-				tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
-					  TLS_ALERT_DECODE_ERROR);
-				return -1;
+				alert = TLS_ALERT_DECODE_ERROR;
+				goto fail;
 			}
 			wpa_printf(MSG_DEBUG, "TLSv1: Received alert %d:%d",
 				   out_pos[0], out_pos[1]);
@@ -319,32 +383,33 @@ int tlsv1_client_decrypt(struct tlsv1_client *conn,
 				continue;
 			}
 
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL, out_pos[1]);
-			return -1;
+			alert = out_pos[1];
+			goto fail;
 		}
 
 		if (ct != TLS_CONTENT_TYPE_APPLICATION_DATA) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Unexpected content type "
 				   "0x%x when decrypting application data",
 				   pos[0]);
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				  TLS_ALERT_UNEXPECTED_MESSAGE);
-			return -1;
+			alert = TLS_ALERT_UNEXPECTED_MESSAGE;
+			goto fail;
 		}
 
-		out_pos += olen;
-		if (out_pos > out_end) {
-			wpa_printf(MSG_DEBUG, "TLSv1: Buffer not large enough "
-				   "for processing the received record");
-			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
-				  TLS_ALERT_INTERNAL_ERROR);
-			return -1;
-		}
+		wpabuf_put(buf, olen);
 
 		pos += used;
 	}
 
-	return out_pos - out_data;
+	wpabuf_free(conn->partial_input);
+	conn->partial_input = NULL;
+	return buf;
+
+fail:
+	wpabuf_free(buf);
+	wpabuf_free(conn->partial_input);
+	conn->partial_input = NULL;
+	tls_alert(conn, TLS_ALERT_LEVEL_FATAL, alert);
+	return NULL;
 }
 
 
@@ -427,6 +492,7 @@ void tlsv1_client_deinit(struct tlsv1_client *conn)
 	os_free(conn->client_hello_ext);
 	tlsv1_client_free_dh(conn);
 	tlsv1_cred_free(conn->cred);
+	wpabuf_free(conn->partial_input);
 	os_free(conn);
 }
 

@@ -406,13 +406,13 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 				force_mac_error = 1;
 				goto check_mac;
 			}
-			for (i = plen - padlen; i < plen; i++) {
+			for (i = plen - padlen - 1; i < plen - 1; i++) {
 				if (out_data[i] != padlen) {
 					wpa_hexdump(MSG_DEBUG,
 						    "TLSv1: Invalid pad in "
 						    "received record",
-						    out_data + plen - padlen,
-						    padlen);
+						    out_data + plen - padlen -
+						    1, padlen + 1);
 					force_mac_error = 1;
 					goto check_mac;
 				}

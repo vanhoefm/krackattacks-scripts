@@ -2490,9 +2490,7 @@ dbus_bool_t wpas_dbus_getter_bridge_ifname(DBusMessageIter *iter,
 					   void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	const char *bridge_ifname;
-
-	bridge_ifname = wpa_s->bridge_ifname ? wpa_s->bridge_ifname : "";
+	const char *bridge_ifname = wpa_s->bridge_ifname;
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
 						&bridge_ifname, error);
 }

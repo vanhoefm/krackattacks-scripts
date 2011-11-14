@@ -22,6 +22,7 @@
 #include "wps/wps_i.h"
 #include "p2p/p2p.h"
 #include "ap/hostapd.h"
+#include "ap/ap_config.h"
 #include "ap/p2p_hostapd.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
@@ -3176,6 +3177,11 @@ static void wpas_p2p_ie_update(void *ctx, struct wpabuf *beacon_ies,
 	struct wpa_supplicant *wpa_s = ctx;
 	if (wpa_s->ap_iface) {
 		struct hostapd_data *hapd = wpa_s->ap_iface->bss[0];
+		if (!(hapd->conf->p2p & P2P_GROUP_OWNER)) {
+			wpabuf_free(beacon_ies);
+			wpabuf_free(proberesp_ies);
+			return;
+		}
 		if (beacon_ies) {
 			wpabuf_free(hapd->p2p_beacon_ie);
 			hapd->p2p_beacon_ie = beacon_ies;

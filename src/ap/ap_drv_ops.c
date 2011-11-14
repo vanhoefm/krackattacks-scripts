@@ -108,10 +108,10 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	}
 
 	if (hapd->p2p_probe_resp_ie) {
-		if (wpabuf_resize(&beacon, wpabuf_len(hapd->p2p_probe_resp_ie))
-		    < 0)
+		if (wpabuf_resize(&proberesp,
+				  wpabuf_len(hapd->p2p_probe_resp_ie)) < 0)
 			goto fail;
-		wpabuf_put_buf(beacon, hapd->p2p_probe_resp_ie);
+		wpabuf_put_buf(proberesp, hapd->p2p_probe_resp_ie);
 	}
 #endif /* CONFIG_P2P */
 

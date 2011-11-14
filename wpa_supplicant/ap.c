@@ -213,9 +213,13 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 
 #ifdef CONFIG_WPS
 	/*
-	 * Enable WPS by default, but require user interaction to actually use
-	 * it. Only the internal Registrar is supported.
+	 * Enable WPS by default for open and WPA/WPA2-Personal network, but
+	 * require user interaction to actually use it. Only the internal
+	 * Registrar is supported.
 	 */
+	if (bss->ssid.security_policy != SECURITY_WPA_PSK &&
+	    bss->ssid.security_policy != SECURITY_PLAINTEXT)
+		goto no_wps;
 	bss->eap_server = 1;
 	bss->wps_state = 2;
 	bss->ap_setup_locked = 2;
@@ -240,6 +244,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	else
 		os_memcpy(bss->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 	os_memcpy(bss->os_version, wpa_s->conf->os_version, 4);
+no_wps:
 #endif /* CONFIG_WPS */
 
 	if (wpa_s->max_stations &&

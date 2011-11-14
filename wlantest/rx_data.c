@@ -342,9 +342,9 @@ skip_replay_det:
 		const u8 *peer_addr = NULL;
 		if (!(fc & (WLAN_FC_FROMDS | WLAN_FC_TODS)))
 			peer_addr = hdr->addr1;
+		os_memcpy(rsc, pn, 6);
 		rx_data_process(wt, bss->bssid, sta->addr, dst, src, decrypted,
 				dlen, 1, peer_addr);
-		os_memcpy(rsc, pn, 6);
 		write_pcap_decrypted(wt, (const u8 *) hdr, 24 + (qos ? 2 : 0),
 				     decrypted, dlen);
 	}

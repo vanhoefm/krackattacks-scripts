@@ -70,6 +70,8 @@ struct wlantest_sta {
 	u8 snonce[32]; /* SNonce from the previous EAPOL-Key msg 2/4 */
 	struct wpa_ptk ptk; /* Derived PTK */
 	int ptk_set;
+	struct wpa_ptk tptk; /* Derived PTK during rekeying */
+	int tptk_set;
 	u8 rsc_tods[16 + 1][6];
 	u8 rsc_fromds[16 + 1][6];
 	u8 ap_sa_query_tr[2];

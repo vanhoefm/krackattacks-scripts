@@ -25,7 +25,7 @@
 #include <fcntl.h>
 #include <net/if_arp.h>
 
-#include "wireless_copy.h"
+#include "linux_wext.h"
 #include "common.h"
 #include "eloop.h"
 #include "common/ieee802_11_defs.h"

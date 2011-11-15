@@ -15,7 +15,7 @@
 #include "includes.h"
 #include <sys/ioctl.h>
 
-#include "wireless_copy.h"
+#include "linux_wext.h"
 #include "common.h"
 #include "driver.h"
 #include "driver_wext.h"

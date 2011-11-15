@@ -45,7 +45,7 @@
 #endif
 #endif /* CONFIG_WPS */
 
-#include "wireless_copy.h"
+#include "linux_wext.h"
 
 #include "driver.h"
 #include "eloop.h"

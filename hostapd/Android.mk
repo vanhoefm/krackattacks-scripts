@@ -73,6 +73,8 @@ OBJS += src/ap/ap_mlme.c
 OBJS += src/ap/wpa_auth_ie.c
 OBJS += src/ap/preauth_auth.c
 OBJS += src/ap/pmksa_cache_auth.c
+OBJS += src/ap/ieee802_11_shared.c
+OBJS += src/ap/beacon.c
 OBJS_d =
 OBJS_p =
 LIBS =
@@ -750,7 +752,6 @@ OBJS += src/utils/base64.c
 endif
 
 ifdef NEED_AP_MLME
-OBJS += src/ap/beacon.c
 OBJS += src/ap/wmm.c
 OBJS += src/ap/ap_list.c
 OBJS += src/ap/ieee802_11.c

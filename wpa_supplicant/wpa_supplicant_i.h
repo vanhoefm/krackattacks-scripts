@@ -476,6 +476,8 @@ struct wpa_supplicant {
 		P2P_GROUP_REMOVAL_IDLE_TIMEOUT,
 		P2P_GROUP_REMOVAL_UNAVAILABLE
 	} removal_reason;
+
+	unsigned int p2p_cb_on_scan_complete:1;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

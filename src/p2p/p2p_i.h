@@ -201,6 +201,11 @@ struct p2p_data {
 		 * P2P_INVITE_LISTEN - Listen during Invite
 		 */
 		P2P_INVITE_LISTEN,
+
+		/**
+		 * P2P_SEARCH_WHEN_READY - Waiting to start Search
+		 */
+		P2P_SEARCH_WHEN_READY,
 	} state;
 
 	/**
@@ -355,6 +360,7 @@ struct p2p_data {
 	int inv_persistent;
 
 	enum p2p_discovery_type find_type;
+	unsigned int last_p2p_find_timeout;
 	u8 last_prog_scan_class;
 	u8 last_prog_scan_chan;
 	int p2p_scan_running;

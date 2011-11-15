@@ -106,6 +106,8 @@ static const char * p2p_state_txt(int state)
 		return "INVITE";
 	case P2P_INVITE_LISTEN:
 		return "INVITE_LISTEN";
+	case P2P_SEARCH_WHEN_READY:
+		return "SEARCH_WHEN_READY";
 	default:
 		return "?";
 	}
@@ -878,6 +880,7 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	p2p_device_clear_reported(p2p);
 	p2p_set_state(p2p, P2P_SEARCH);
 	eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
+	p2p->last_p2p_find_timeout = timeout;
 	if (timeout)
 		eloop_register_timeout(timeout, 0, p2p_find_timeout,
 				       p2p, NULL);
@@ -903,6 +906,13 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 		eloop_cancel_timeout(p2p_scan_timeout, p2p, NULL);
 		eloop_register_timeout(P2P_SCAN_TIMEOUT, 0, p2p_scan_timeout,
 				       p2p, NULL);
+	} else if (res == 1) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Could not start "
+			"p2p_scan at this point - will try again after "
+			"previous scan completes");
+		res = 0;
+		p2p_set_state(p2p, P2P_SEARCH_WHEN_READY);
+		eloop_cancel_timeout(p2p_find_timeout, p2p, NULL);
 	} else {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Failed to start "
 			"p2p_scan");
@@ -911,6 +921,19 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	}
 
 	return res;
+}
+
+
+int p2p_other_scan_completed(struct p2p_data *p2p)
+{
+	if (p2p->state != P2P_SEARCH_WHEN_READY)
+		return 0;
+	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting pending P2P find "
+		"now that previous scan was completed");
+	if (p2p_find(p2p, p2p->last_p2p_find_timeout, p2p->find_type,
+		     p2p->num_req_dev_types, p2p->req_dev_types) < 0)
+		return 0;
+	return 1;
 }
 
 
@@ -2946,6 +2969,8 @@ static void p2p_state_timeout(void *eloop_ctx, void *timeout_ctx)
 		break;
 	case P2P_INVITE_LISTEN:
 		p2p_timeout_invite_listen(p2p);
+		break;
+	case P2P_SEARCH_WHEN_READY:
 		break;
 	}
 }

@@ -26,7 +26,7 @@ endif
 
 ifeq ($(WPA_BUILD_SUPPLICANT),true)
 
-include $(LOCAL_PATH)/.config
+include $(LOCAL_PATH)/android.config
 
 # To ignore possible wrong network configurations
 L_CFLAGS = -DWPA_IGNORE_CONFIG_ERRORS

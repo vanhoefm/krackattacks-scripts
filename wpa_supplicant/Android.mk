@@ -1164,9 +1164,6 @@ DBUS_OBJS += dbus/dbus_old.c dbus/dbus_old_handlers.c
 ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_old_handlers_wps.c
 endif
-ifdef CONFIG_P2P
-DBUS_OBJS += dbus/dbus_new_handlers_p2p.c
-endif
 DBUS_OBJS += dbus/dbus_dict_helpers.c
 ifndef DBUS_LIBS
 DBUS_LIBS := $(shell $(PKG_CONFIG) --libs dbus-1)
@@ -1196,6 +1193,9 @@ DBUS_OBJS += dbus/dbus_new_helpers.c
 DBUS_OBJS += dbus/dbus_new.c dbus/dbus_new_handlers.c
 ifdef CONFIG_WPS
 DBUS_OBJS += dbus/dbus_new_handlers_wps.c
+endif
+ifdef CONFIG_P2P
+DBUS_OBJS += dbus/dbus_new_handlers_p2p.c
 endif
 ifndef DBUS_LIBS
 DBUS_LIBS := $(shell $(PKG_CONFIG) --libs dbus-1)

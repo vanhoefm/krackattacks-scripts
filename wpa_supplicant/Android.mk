@@ -68,7 +68,7 @@ INCLUDES += $(LOCAL_PATH)/src/wps
 INCLUDES += external/openssl/include
 INCLUDES += frameworks/base/cmds/keystore
 ifdef CONFIG_DRIVER_NL80211
-INCLUDES += external/libnl_2/include
+INCLUDES += external/libnl-headers
 endif
 
 OBJS = config.c
@@ -1427,7 +1427,7 @@ ifeq ($(CONFIG_TLS), openssl)
 LOCAL_SHARED_LIBRARIES += libcrypto libssl
 endif
 ifdef CONFIG_DRIVER_NL80211
-LOCAL_SHARED_LIBRARIES += libnl_2
+LOCAL_STATIC_LIBRARIES += libnl_2
 endif
 LOCAL_CFLAGS := $(L_CFLAGS)
 LOCAL_SRC_FILES := $(OBJS)

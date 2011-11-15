@@ -40,4 +40,12 @@ typedef __uint8_t __u8;
 
 #include <linux/wireless.h>
 
+#ifndef IW_ENCODE_ALG_PMK
+#define IW_ENCODE_ALG_PMK 4
+#endif
+
+#ifndef IW_ENC_CAPA_4WAY_HANDSHAKE
+#define IW_ENC_CAPA_4WAY_HANDSHAKE 0x00000010
+#endif
+
 #endif /* LINUX_WEXT_H */

@@ -782,9 +782,15 @@ L_CFLAGS += -DCONFIG_ANDROID_LOG
 endif
 
 OBJS_c = hostapd_cli.c src/common/wpa_ctrl.c src/utils/os_$(CONFIG_OS).c
+OBJS_c += src/utils/eloop.c
 ifdef CONFIG_WPA_TRACE
 OBJS_c += src/utils/trace.c
+endif
 OBJS_c += src/utils/wpa_debug.c
+ifdef CONFIG_WPA_CLI_EDIT
+OBJS_c += src/utils/edit.c
+else
+OBJS_c += src/utils/edit_simple.c
 endif
 
 ifeq ($(WPA_BUILD_HOSTAPD),true)

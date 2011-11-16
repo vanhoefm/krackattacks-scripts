@@ -88,23 +88,11 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 
 	nl_handle_destroy(handle);
 }
-
-static inline int __genl_ctrl_alloc_cache(struct nl_handle *h,
-					  struct nl_cache **cache)
-{
-	struct nl_cache *tmp = genl_ctrl_alloc_cache(h);
-	if (!tmp)
-		return -ENOMEM;
-	*cache = tmp;
-	return 0;
-}
-#define genl_ctrl_alloc_cache __genl_ctrl_alloc_cache
 #endif /* CONFIG_LIBNL20 */
 
 
 struct nl80211_handles {
 	struct nl_handle *handle;
-	struct nl_cache *cache;
 };
 
 
@@ -127,12 +115,6 @@ static int nl_create_handles(struct nl80211_handles *handles, struct nl_cb *cb,
 		goto err;
 	}
 
-	if (genl_ctrl_alloc_cache(handles->handle, &handles->cache) < 0) {
-		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate generic "
-			   "netlink cache (%s)", dbg);
-		goto err;
-	}
-
 	return 0;
 err:
 	nl80211_handle_destroy(handles->handle);
@@ -144,7 +126,6 @@ static void nl_destroy_handles(struct nl80211_handles *handles)
 {
 	if (handles->handle == NULL)
 		return;
-	nl_cache_free(handles->cache);
 	nl80211_handle_destroy(handles->handle);
 	handles->handle = NULL;
 }
@@ -170,7 +151,7 @@ struct nl80211_global {
 	struct netlink_data *netlink;
 	struct nl_cb *nl_cb;
 	struct nl80211_handles nl;
-	struct genl_family *nl80211;
+	int nl80211_id;
 	int ioctl_sock; /* socket for ioctl() use */
 };
 
@@ -471,7 +452,7 @@ nla_put_failure:
 static void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 			  struct nl_msg *msg, int flags, uint8_t cmd)
 {
-	return genlmsg_put(msg, 0, 0, genl_family_get_id(drv->global->nl80211),
+	return genlmsg_put(msg, 0, 0, drv->global->nl80211_id,
 			   0, flags, cmd, 0);
 }
 
@@ -2131,9 +2112,8 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 	if (nl_create_handles(&global->nl, global->nl_cb, "nl"))
 		return -1;
 
-	global->nl80211 = genl_ctrl_search_by_name(global->nl.cache,
-						   "nl80211");
-	if (global->nl80211 == NULL) {
+	global->nl80211_id = genl_ctrl_resolve(global->nl.handle, "nl80211");
+	if (global->nl80211_id < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: 'nl80211' generic netlink not "
 			   "found");
 		return -1;
@@ -7320,8 +7300,6 @@ static void nl80211_global_deinit(void *priv)
 	if (global->netlink)
 		netlink_deinit(global->netlink);
 
-	if (global->nl80211)
-		genl_family_put(global->nl80211);
 	nl_destroy_handles(&global->nl);
 
 	if (global->nl_cb)

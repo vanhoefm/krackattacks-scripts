@@ -313,6 +313,36 @@ static struct wpabuf * p2p_build_client_info(const u8 *addr,
 }
 
 
+static int p2p_group_remove_member(struct p2p_group *group, const u8 *addr)
+{
+	struct p2p_group_member *m, *prev;
+
+	if (group == NULL)
+		return 0;
+
+	m = group->members;
+	prev = NULL;
+	while (m) {
+		if (os_memcmp(m->addr, addr, ETH_ALEN) == 0)
+			break;
+		prev = m;
+		m = m->next;
+	}
+
+	if (m == NULL)
+		return 0;
+
+	if (prev)
+		prev->next = m->next;
+	else
+		group->members = m->next;
+	p2p_group_free_member(m);
+	group->num_members--;
+
+	return 1;
+}
+
+
 int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 			  const u8 *ie, size_t len)
 {
@@ -331,6 +361,8 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 						       &m->dev_capab,
 						       m->dev_addr);
 	}
+
+	p2p_group_remove_member(group, addr);
 
 	m->next = group->members;
 	group->members = m;
@@ -374,27 +406,7 @@ struct wpabuf * p2p_group_assoc_resp_ie(struct p2p_group *group, u8 status)
 
 void p2p_group_notif_disassoc(struct p2p_group *group, const u8 *addr)
 {
-	struct p2p_group_member *m, *prev;
-
-	if (group == NULL)
-		return;
-
-	m = group->members;
-	prev = NULL;
-	while (m) {
-		if (os_memcmp(m->addr, addr, ETH_ALEN) == 0)
-			break;
-		prev = m;
-		m = m->next;
-	}
-
-	if (m) {
-		if (prev)
-			prev->next = m->next;
-		else
-			group->members = m->next;
-		p2p_group_free_member(m);
-		group->num_members--;
+	if (p2p_group_remove_member(group, addr)) {
 		wpa_msg(group->p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Remove "
 			"client " MACSTR " from group; num_members=%u/%u",
 			MAC2STR(addr), group->num_members,

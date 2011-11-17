@@ -67,12 +67,11 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		/* Use special PIN '00000000' for PBC */
 		data->dev_pw_id = DEV_PW_PUSHBUTTON;
 		os_free(data->dev_password);
-		data->dev_password = os_malloc(8);
+		data->dev_password = (u8 *) os_strdup("00000000");
 		if (data->dev_password == NULL) {
 			os_free(data);
 			return NULL;
 		}
-		os_memset(data->dev_password, '0', 8);
 		data->dev_password_len = 8;
 	}
 

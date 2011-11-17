@@ -766,6 +766,9 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	key = (struct wpa_eapol_key *) (hdr + 1);
 	key_info = WPA_GET_BE16(key->key_info);
 	key_data_length = WPA_GET_BE16(key->key_data_length);
+	wpa_printf(MSG_DEBUG, "WPA: Received EAPOL-Key from " MACSTR
+		   " key_info=0x%x type=%u key_data_length=%u",
+		   MAC2STR(sm->addr), key_info, key->type, key_data_length);
 	if (key_data_length > data_len - sizeof(*hdr) - sizeof(*key)) {
 		wpa_printf(MSG_INFO, "WPA: Invalid EAPOL-Key frame - "
 			   "key_data overflow (%d > %lu)",
@@ -1095,6 +1098,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	os_memcpy(sm->last_rx_eapol_key, data, data_len);
 	sm->last_rx_eapol_key_len = data_len;
 
+	sm->rx_eapol_key_secure = !!(key_info & WPA_KEY_INFO_SECURE);
 	sm->EAPOLKeyReceived = TRUE;
 	sm->EAPOLKeyPairwise = !!(key_info & WPA_KEY_INFO_KEY_TYPE);
 	sm->EAPOLKeyRequest = !!(key_info & WPA_KEY_INFO_REQUEST);
@@ -1882,6 +1886,20 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 		gtk_len = 0;
 		keyidx = 0;
 		_rsc = NULL;
+		if (sm->rx_eapol_key_secure) {
+			/*
+			 * It looks like Windows 7 supplicant tries to use
+			 * Secure bit in msg 2/4 after having reported Michael
+			 * MIC failure and it then rejects the 4-way handshake
+			 * if msg 3/4 does not set Secure bit. Work around this
+			 * by setting the Secure bit here even in the case of
+			 * WPA if the supplicant used it first.
+			 */
+			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
+					"STA used Secure bit in WPA msg 3/4 - "
+					"set Secure for 4/4 as workaround");
+			secure = 1;
+		}
 	}
 
 	kde_len = wpa_ie_len + ieee80211w_kde_len(sm);

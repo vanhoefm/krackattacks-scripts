@@ -1568,7 +1568,7 @@ static int ieee802_1x_get_eap_user(void *ctx, const u8 *identity,
 {
 	struct hostapd_data *hapd = ctx;
 	const struct hostapd_eap_user *eap_user;
-	int i, count;
+	int i;
 
 	eap_user = hostapd_get_eap_user(hapd->conf, identity,
 					identity_len, phase2);
@@ -1577,10 +1577,7 @@ static int ieee802_1x_get_eap_user(void *ctx, const u8 *identity,
 
 	os_memset(user, 0, sizeof(*user));
 	user->phase2 = phase2;
-	count = EAP_USER_MAX_METHODS;
-	if (count > EAP_MAX_METHODS)
-		count = EAP_MAX_METHODS;
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < EAP_MAX_METHODS; i++) {
 		user->methods[i].vendor = eap_user->methods[i].vendor;
 		user->methods[i].method = eap_user->methods[i].method;
 	}

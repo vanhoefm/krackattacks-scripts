@@ -104,7 +104,6 @@ struct hostapd_wpa_psk {
 	u8 addr[ETH_ALEN];
 };
 
-#define EAP_USER_MAX_METHODS 8
 struct hostapd_eap_user {
 	struct hostapd_eap_user *next;
 	u8 *identity;
@@ -112,7 +111,7 @@ struct hostapd_eap_user {
 	struct {
 		int vendor;
 		u32 method;
-	} methods[EAP_USER_MAX_METHODS];
+	} methods[EAP_MAX_METHODS];
 	u8 *password;
 	size_t password_len;
 	int phase2;

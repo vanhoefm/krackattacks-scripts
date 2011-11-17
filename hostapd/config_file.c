@@ -330,7 +330,7 @@ static int hostapd_config_read_eap_user(const char *fname,
 			}
 
 			num_methods++;
-			if (num_methods >= EAP_USER_MAX_METHODS)
+			if (num_methods >= EAP_MAX_METHODS)
 				break;
 		skip_eap:
 			if (pos3 == NULL)

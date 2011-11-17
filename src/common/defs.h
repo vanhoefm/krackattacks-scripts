@@ -281,4 +281,7 @@ enum wpa_ctrl_req_type {
 	NUM_WPA_CTRL_REQS
 };
 
+/* Maximum number of EAP methods to store for EAP server user information */
+#define EAP_MAX_METHODS 8
+
 #endif /* DEFS_H */

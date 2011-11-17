@@ -60,7 +60,7 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 				       struct eap_user *user)
 {
 	const struct hostapd_eap_user *eap_user;
-	int i, count;
+	int i;
 
 	eap_user = hostapd_get_eap_user(ctx, identity, identity_len, phase2);
 	if (eap_user == NULL)
@@ -70,10 +70,7 @@ static int hostapd_radius_get_eap_user(void *ctx, const u8 *identity,
 		return 0;
 
 	os_memset(user, 0, sizeof(*user));
-	count = EAP_USER_MAX_METHODS;
-	if (count > EAP_MAX_METHODS)
-		count = EAP_MAX_METHODS;
-	for (i = 0; i < count; i++) {
+	for (i = 0; i < EAP_MAX_METHODS; i++) {
 		user->methods[i].vendor = eap_user->methods[i].vendor;
 		user->methods[i].method = eap_user->methods[i].method;
 	}

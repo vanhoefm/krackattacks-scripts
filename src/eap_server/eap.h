@@ -22,8 +22,6 @@
 
 struct eap_sm;
 
-#define EAP_MAX_METHODS 8
-
 #define EAP_TTLS_AUTH_PAP 1
 #define EAP_TTLS_AUTH_CHAP 2
 #define EAP_TTLS_AUTH_MSCHAP 4

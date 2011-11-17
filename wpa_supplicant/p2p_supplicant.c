@@ -3399,6 +3399,14 @@ int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout)
 	eloop_cancel_timeout(wpas_p2p_long_listen_timeout, wpa_s, NULL);
 	wpa_s->p2p_long_listen = 0;
 
+	/*
+	 * Stop previous find/listen operation to avoid trying to request a new
+	 * remain-on-channel operation while the driver is still running the
+	 * previous one.
+	 */
+	if (wpa_s->global->p2p)
+		p2p_stop_find(wpa_s->global->p2p);
+
 	res = wpas_p2p_listen_start(wpa_s, timeout * 1000);
 	if (res == 0 && timeout * 1000 > wpa_s->max_remain_on_chan) {
 		wpa_s->p2p_long_listen = timeout * 1000;

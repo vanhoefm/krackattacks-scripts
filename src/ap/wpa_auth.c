@@ -1896,8 +1896,8 @@ SM_STATE(WPA_PTK, PTKINITNEGOTIATING)
 			 * WPA if the supplicant used it first.
 			 */
 			wpa_auth_logger(sm->wpa_auth, sm->addr, LOGGER_DEBUG,
-					"STA used Secure bit in WPA msg 3/4 - "
-					"set Secure for 4/4 as workaround");
+					"STA used Secure bit in WPA msg 2/4 - "
+					"set Secure for 3/4 as workaround");
 			secure = 1;
 		}
 	}

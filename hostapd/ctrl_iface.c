@@ -32,7 +32,6 @@
 #include "ap/wpa_auth.h"
 #include "ap/ieee802_11.h"
 #include "ap/sta_info.h"
-#include "ap/accounting.h"
 #include "ap/wps_hostapd.h"
 #include "ap/ctrl_iface_ap.h"
 #include "ap/ap_drv_ops.h"

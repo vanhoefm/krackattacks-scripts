@@ -136,7 +136,7 @@ void wpa_hexdump_key(int level, const char *title, const u8 *buf, size_t len);
 static inline void wpa_hexdump_buf_key(int level, const char *title,
 				       const struct wpabuf *buf)
 {
-	wpa_hexdump_key(level, title, buf ? wpabuf_head(buf) : 0,
+	wpa_hexdump_key(level, title, buf ? wpabuf_head(buf) : NULL,
 			buf ? wpabuf_len(buf) : 0);
 }
 

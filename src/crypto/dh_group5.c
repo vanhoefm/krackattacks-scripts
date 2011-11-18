@@ -22,7 +22,7 @@
 void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
 {
 	*publ = dh_init(dh_groups_get(5), priv);
-	if (*publ == 0)
+	if (*publ == NULL)
 		return NULL;
 	return (void *) 1;
 }

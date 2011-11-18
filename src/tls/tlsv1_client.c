@@ -210,7 +210,7 @@ u8 * tlsv1_client_handshake(struct tlsv1_client *conn,
 			os_free(in_msg);
 			if (need_more_data)
 				*need_more_data = 1;
-			return 0;
+			return NULL;
 		}
 		ct = pos[0];
 

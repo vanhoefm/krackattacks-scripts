@@ -27,7 +27,7 @@ struct p2p_sd_query * p2p_pending_sd_req(struct p2p_data *p2p,
 	struct p2p_sd_query *q;
 
 	if (!(dev->info.dev_capab & P2P_DEV_CAPAB_SERVICE_DISCOVERY))
-		return 0; /* peer does not support SD */
+		return NULL; /* peer does not support SD */
 
 	for (q = p2p->sd_queries; q; q = q->next) {
 		if (q->for_all_peers && !(dev->flags & P2P_DEV_SD_INFO))

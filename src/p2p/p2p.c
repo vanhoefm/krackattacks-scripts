@@ -146,6 +146,8 @@ void p2p_go_neg_failed(struct p2p_data *p2p, struct p2p_device *peer,
 	struct p2p_go_neg_results res;
 	p2p_clear_timeout(p2p);
 	p2p_set_state(p2p, P2P_IDLE);
+	if (p2p->go_neg_peer)
+		p2p->go_neg_peer->wps_method = WPS_NOT_READY;
 	p2p->go_neg_peer = NULL;
 
 	os_memset(&res, 0, sizeof(res));

@@ -29,6 +29,7 @@
 #include "ap_drv_ops.h"
 #include "ap_config.h"
 #include "wpa_auth.h"
+#include "wpa_auth_glue.h"
 
 
 static void hostapd_wpa_auth_conf(struct hostapd_bss_config *conf,

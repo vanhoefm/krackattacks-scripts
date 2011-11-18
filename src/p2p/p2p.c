@@ -365,7 +365,7 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 	 * group, the information will be restored in the loop following this.
 	 */
 	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
-		if (os_memcpy(dev->member_in_go_iface, go_interface_addr,
+		if (os_memcmp(dev->member_in_go_iface, go_interface_addr,
 			      ETH_ALEN) == 0) {
 			os_memset(dev->member_in_go_iface, 0, ETH_ALEN);
 			os_memset(dev->member_in_go_dev, 0, ETH_ALEN);

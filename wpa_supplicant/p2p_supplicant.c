@@ -2670,6 +2670,7 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 	u8 bssid[ETH_ALEN];
 	int ret = 0;
 	enum wpa_driver_if_type iftype;
+	const u8 *if_addr;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
@@ -2765,44 +2766,34 @@ int wpas_p2p_connect(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	wpa_s->create_p2p_iface = wpas_p2p_create_iface(wpa_s);
 
-	if (!wpa_s->create_p2p_iface) {
-		if (auth) {
-			if (wpas_p2p_auth_go_neg(wpa_s, peer_addr, wps_method,
-						 go_intent, wpa_s->own_addr,
-						 force_freq, persistent_group)
-			    < 0)
-				return -1;
-			return ret;
-		}
-		if (wpas_p2p_start_go_neg(wpa_s, peer_addr, wps_method,
-					  go_intent, wpa_s->own_addr,
-					  force_freq, persistent_group) < 0)
+	if (wpa_s->create_p2p_iface) {
+		/* Prepare to add a new interface for the group */
+		iftype = WPA_IF_P2P_GROUP;
+		if (go_intent == 15)
+			iftype = WPA_IF_P2P_GO;
+		if (wpas_p2p_add_group_interface(wpa_s, iftype) < 0) {
+			wpa_printf(MSG_ERROR, "P2P: Failed to allocate a new "
+				   "interface for the group");
 			return -1;
-		return ret;
-	}
+		}
 
-	/* Prepare to add a new interface for the group */
-	iftype = WPA_IF_P2P_GROUP;
-	if (go_intent == 15)
-		iftype = WPA_IF_P2P_GO;
-	if (wpas_p2p_add_group_interface(wpa_s, iftype) < 0) {
-		wpa_printf(MSG_ERROR, "P2P: Failed to allocate a new "
-			   "interface for the group");
-		return -1;
-	}
+		if_addr = wpa_s->pending_interface_addr;
+	} else
+		if_addr = wpa_s->own_addr;
 
 	if (auth) {
 		if (wpas_p2p_auth_go_neg(wpa_s, peer_addr, wps_method,
-					 go_intent,
-					 wpa_s->pending_interface_addr,
+					 go_intent, if_addr,
 					 force_freq, persistent_group) < 0)
 			return -1;
 		return ret;
 	}
-	if (wpas_p2p_start_go_neg(wpa_s, peer_addr, wps_method, go_intent,
-				  wpa_s->pending_interface_addr,
-				  force_freq, persistent_group) < 0) {
-		wpas_p2p_remove_pending_group_interface(wpa_s);
+
+	if (wpas_p2p_start_go_neg(wpa_s, peer_addr, wps_method,
+				  go_intent, if_addr, force_freq,
+				  persistent_group) < 0) {
+		if (wpa_s->create_p2p_iface)
+			wpas_p2p_remove_pending_group_interface(wpa_s);
 		return -1;
 	}
 	return ret;

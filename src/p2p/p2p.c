@@ -627,8 +627,13 @@ static void p2p_device_free(struct p2p_data *p2p, struct p2p_device *dev)
 {
 	int i;
 
-	if (p2p->go_neg_peer == dev)
+	if (p2p->go_neg_peer == dev) {
+		/*
+		 * If GO Negotiation is in progress, report that it has failed.
+		 */
+		p2p_go_neg_failed(p2p, dev, -1);
 		p2p->go_neg_peer = NULL;
+	}
 	if (p2p->invite_peer == dev)
 		p2p->invite_peer = NULL;
 	if (p2p->sd_peer == dev)

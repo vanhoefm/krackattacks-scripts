@@ -27,9 +27,9 @@
 #ifdef WPA_TRACE
 
 #include "common.h"
-#include "list.h"
 #include "wpa_debug.h"
 #include "trace.h"
+#include "list.h"
 
 static struct dl_list alloc_list;
 

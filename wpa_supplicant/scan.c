@@ -710,8 +710,10 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	else
 		max_sched_scan_ssids = wpa_s->max_sched_scan_ssids;
 
-	if (wpa_s->sched_scanning)
+	if (wpa_s->sched_scanning) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Already sched scanning");
 		return 0;
+	}
 
 	os_memset(&params, 0, sizeof(params));
 
@@ -754,6 +756,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		}
 
 		if (params.filter_ssids && ssid->ssid && ssid->ssid_len) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "add to filter ssid: %s",
+				wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 			os_memcpy(params.filter_ssids[params.num_filter_ssids].ssid,
 				  ssid->ssid, ssid->ssid_len);
 			params.filter_ssids[params.num_filter_ssids].ssid_len =
@@ -762,6 +766,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		}
 
 		if (ssid->scan_ssid) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "add to active scan ssid: %s",
+				wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 			params.ssids[params.num_ssids].ssid =
 				ssid->ssid;
 			params.ssids[params.num_ssids].ssid_len =
@@ -777,11 +783,6 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			break;
 		wpa_s->prev_sched_ssid = ssid;
 		ssid = ssid->next;
-	}
-
-	if (!params.num_ssids) {
-		os_free(params.filter_ssids);
-		return 0;
 	}
 
 	if (wpa_s->wps)

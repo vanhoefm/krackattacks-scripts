@@ -1412,9 +1412,9 @@ static void p2p_rx_p2p_action(struct p2p_data *p2p, const u8 *sa,
 }
 
 
-void p2p_rx_action_public(struct p2p_data *p2p, const u8 *da, const u8 *sa,
-			  const u8 *bssid, const u8 *data, size_t len,
-			  int freq)
+static void p2p_rx_action_public(struct p2p_data *p2p, const u8 *da,
+				 const u8 *sa, const u8 *bssid, const u8 *data,
+				 size_t len, int freq)
 {
 	if (len < 1)
 		return;
@@ -2377,7 +2377,7 @@ static void p2p_sd_cb(struct p2p_data *p2p, int success)
  * p2p_retry_pd - Retry any pending provision disc requests in IDLE state
  * @p2p: P2P module context from p2p_init()
  */
-void p2p_retry_pd(struct p2p_data *p2p)
+static void p2p_retry_pd(struct p2p_data *p2p)
 {
 	struct p2p_device *dev;
 

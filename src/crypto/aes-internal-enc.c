@@ -27,7 +27,7 @@
 #include "crypto.h"
 #include "aes_i.h"
 
-void rijndaelEncrypt(const u32 rk[/*44*/], const u8 pt[16], u8 ct[16])
+static void rijndaelEncrypt(const u32 rk[/*44*/], const u8 pt[16], u8 ct[16])
 {
 	u32 s0, s1, s2, s3, t0, t1, t2, t3;
 	const int Nr = 10;

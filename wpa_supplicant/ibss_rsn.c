@@ -168,8 +168,8 @@ static void supp_deauthenticate(void * ctx, int reason_code)
 }
 
 
-int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
-		       const u8 *psk)
+static int ibss_rsn_supp_init(struct ibss_rsn_peer *peer, const u8 *own_addr,
+			      const u8 *psk)
 {
 	struct wpa_sm_ctx *ctx = os_zalloc(sizeof(*ctx));
 	if (ctx == NULL)

@@ -79,8 +79,8 @@ void ieee802_11_send_sa_query_req(struct hostapd_data *hapd,
 }
 
 
-void ieee802_11_send_sa_query_resp(struct hostapd_data *hapd,
-				   const u8 *sa, const u8 *trans_id)
+static void ieee802_11_send_sa_query_resp(struct hostapd_data *hapd,
+					  const u8 *sa, const u8 *trans_id)
 {
 	struct sta_info *sta;
 	struct ieee80211_mgmt resp;

@@ -32,7 +32,7 @@ struct pkcs5_params {
 };
 
 
-enum pkcs5_alg pkcs5_get_alg(struct asn1_oid *oid)
+static enum pkcs5_alg pkcs5_get_alg(struct asn1_oid *oid)
 {
 	if (oid->len == 7 &&
 	    oid->oid[0] == 1 /* iso */ &&

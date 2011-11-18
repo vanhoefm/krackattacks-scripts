@@ -422,8 +422,8 @@ static int nai_realm_cred_username(struct nai_realm_eap *eap)
 }
 
 
-struct nai_realm_eap * nai_realm_find_eap(struct wpa_supplicant *wpa_s,
-					  struct nai_realm *realm)
+static struct nai_realm_eap * nai_realm_find_eap(struct wpa_supplicant *wpa_s,
+						 struct nai_realm *realm)
 {
 	u8 e;
 

@@ -1752,8 +1752,8 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 }
 
 
-void wpas_prov_disc_fail(void *ctx, const u8 *peer,
-			 enum p2p_prov_disc_status status)
+static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
+				enum p2p_prov_disc_status status)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 

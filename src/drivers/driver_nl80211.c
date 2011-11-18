@@ -3020,7 +3020,7 @@ static int bss_info_handler(struct nl_msg *msg, void *arg)
 		r->flags |= WPA_SCAN_LEVEL_DBM | WPA_SCAN_QUAL_INVALID;
 	} else if (bss[NL80211_BSS_SIGNAL_UNSPEC]) {
 		r->level = nla_get_u8(bss[NL80211_BSS_SIGNAL_UNSPEC]);
-		r->flags |= WPA_SCAN_LEVEL_INVALID;
+		r->flags |= WPA_SCAN_QUAL_INVALID;
 	} else
 		r->flags |= WPA_SCAN_LEVEL_INVALID | WPA_SCAN_QUAL_INVALID;
 	if (bss[NL80211_BSS_TSF])

@@ -200,11 +200,11 @@ struct wpa_driver_nl80211_data {
 
 	int monitor_sock;
 	int monitor_ifidx;
-	int no_monitor_iface_capab;
 
 	unsigned int disabled_11b_rates:1;
 	unsigned int pending_remain_on_chan:1;
 	unsigned int in_interface_list:1;
+	unsigned int device_ap_sme:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -1546,7 +1546,7 @@ static void nl80211_new_station_event(struct wpa_driver_nl80211_data *drv,
 	addr = nla_data(tb[NL80211_ATTR_MAC]);
 	wpa_printf(MSG_DEBUG, "nl80211: New station " MACSTR, MAC2STR(addr));
 
-	if (is_ap_interface(drv->nlmode) && drv->no_monitor_iface_capab) {
+	if (is_ap_interface(drv->nlmode) && drv->device_ap_sme) {
 		u8 *ies = NULL;
 		size_t ies_len = 0;
 		if (tb[NL80211_ATTR_IE]) {
@@ -1579,7 +1579,7 @@ static void nl80211_del_station_event(struct wpa_driver_nl80211_data *drv,
 	wpa_printf(MSG_DEBUG, "nl80211: Delete station " MACSTR,
 		   MAC2STR(addr));
 
-	if (is_ap_interface(drv->nlmode) && drv->no_monitor_iface_capab) {
+	if (is_ap_interface(drv->nlmode) && drv->device_ap_sme) {
 		drv_event_disassoc(drv->ctx, addr);
 		return;
 	}
@@ -1858,6 +1858,7 @@ struct wiphy_info_data {
 	struct wpa_driver_capa *capa;
 
 	unsigned int error:1;
+	unsigned int device_ap_sme:1;
 };
 
 
@@ -2039,6 +2040,9 @@ broken_combination:
 		}
 	}
 
+	if (tb[NL80211_ATTR_DEVICE_AP_SME])
+		info->device_ap_sme = 1;
+
 	return NL_SKIP;
 }
 
@@ -2095,6 +2099,8 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
+
+	drv->device_ap_sme = info.device_ap_sme;
 
 	return 0;
 }
@@ -4209,7 +4215,7 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 					      data, data_len, NULL, 1);
 	}
 
-	if (drv->no_monitor_iface_capab && is_ap_interface(drv->nlmode)) {
+	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
 		return nl80211_send_frame_cmd(drv, drv->ap_oper_freq, 0,
 					      data, data_len, NULL, 0);
 	}
@@ -5044,9 +5050,15 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 				     0);
 
 	if (drv->monitor_ifidx == -EOPNOTSUPP) {
+		/*
+		 * This is backward compatibility for a few versions of
+		 * the kernel only that didn't advertise the right
+		 * attributes for the only driver that then supported
+		 * AP mode w/o monitor -- ath6kl.
+		 */
 		wpa_printf(MSG_DEBUG, "nl80211: Driver does not support "
 			   "monitor interface type - try to run without it");
-		drv->no_monitor_iface_capab = 1;
+		drv->device_ap_sme = 1;
 	}
 
 	if (drv->monitor_ifidx < 0)
@@ -5129,7 +5141,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	int qos = flags & WPA_STA_WMM;
 
 #ifdef CONFIG_AP
-	if (drv->no_monitor_iface_capab)
+	if (drv->device_ap_sme)
 		return nl80211_send_eapol_data(bss, addr, data, data_len,
 					       own_addr);
 #endif /* CONFIG_AP */
@@ -5262,7 +5274,7 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		return -1;
 	}
 
-	if (drv->no_monitor_iface_capab) {
+	if (drv->device_ap_sme) {
 		if (wpa_driver_nl80211_probe_req_report(&drv->first_bss, 1) < 0)
 		{
 			wpa_printf(MSG_DEBUG, "nl80211: Failed to enable "
@@ -5824,13 +5836,13 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 done:
 	if (!ret && is_ap_interface(nlmode)) {
 		/* Setup additional AP mode functionality if needed */
-		if (!drv->no_monitor_iface_capab && drv->monitor_ifidx < 0 &&
+		if (!drv->device_ap_sme && drv->monitor_ifidx < 0 &&
 		    nl80211_create_monitor_interface(drv) &&
-		    !drv->no_monitor_iface_capab)
+		    !drv->device_ap_sme)
 			return -1;
 	} else if (!ret && !is_ap_interface(nlmode)) {
 		/* Remove additional AP mode functionality */
-		if (was_ap && drv->no_monitor_iface_capab)
+		if (was_ap && drv->device_ap_sme)
 			wpa_driver_nl80211_probe_req_report(bss, 0);
 		nl80211_remove_monitor_interface(drv);
 		bss->beacon_set = 0;

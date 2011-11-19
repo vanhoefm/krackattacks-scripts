@@ -75,8 +75,8 @@ void eap_pwd_kdf(u8 *key, int keylen, u8 *label, int labellen,
 
 	/* since we're expanding to a bit length, mask off the excess */
 	if (resultbitlen % 8) {
-		mask >>= ((resultbytelen * 8) - resultbitlen);
-		result[0] &= mask;
+		mask <<= (8 - (resultbitlen % 8));
+		result[resultbytelen - 1] &= mask;
 	}
 }
 
@@ -189,6 +189,18 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 			    prfbuf, primebitlen);
 
 		BN_bin2bn(prfbuf, primebytelen, x_candidate);
+
+		/*
+		 * eap_pwd_kdf() returns a string of bits 0..primebitlen but
+		 * BN_bin2bn will treat that string of bits as a big endian
+		 * number. If the primebitlen is not an even multiple of 8
+		 * then excessive bits-- those _after_ primebitlen-- so now
+		 * we have to shift right the amount we masked off.
+		 */
+		if (primebitlen % 8)
+			BN_rshift(x_candidate, x_candidate,
+				  (8 - (primebitlen % 8)));
+
 		if (BN_ucmp(x_candidate, grp->prime) >= 0)
 			continue;
 

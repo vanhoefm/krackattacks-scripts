@@ -205,6 +205,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int pending_remain_on_chan:1;
 	unsigned int in_interface_list:1;
 	unsigned int device_ap_sme:1;
+	unsigned int poll_command_supported:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -1669,6 +1670,22 @@ static void nl80211_pmksa_candidate_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_client_probe_event(struct wpa_driver_nl80211_data *drv,
+				       struct nlattr **tb)
+{
+	union wpa_event_data data;
+
+	if (!tb[NL80211_ATTR_MAC] || !tb[NL80211_ATTR_ACK])
+		return;
+
+	os_memset(&data, 0, sizeof(data));
+	os_memcpy(data.client_poll.addr,
+		  nla_data(tb[NL80211_ATTR_MAC]), ETH_ALEN);
+
+	wpa_supplicant_event(drv->ctx, EVENT_DRIVER_CLIENT_POLL_OK, &data);
+}
+
+
 static int process_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -1791,6 +1808,9 @@ static int process_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_PMKSA_CANDIDATE:
 		nl80211_pmksa_candidate_event(drv, tb);
 		break;
+	case NL80211_CMD_PROBE_CLIENT:
+		nl80211_client_probe_event(drv, tb);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
 			   "(cmd=%d)", gnlh->cmd);
@@ -1859,6 +1879,7 @@ struct wiphy_info_data {
 
 	unsigned int error:1;
 	unsigned int device_ap_sme:1;
+	unsigned int poll_command_supported:1;
 };
 
 
@@ -1990,6 +2011,9 @@ broken_combination:
 			case NL80211_CMD_START_SCHED_SCAN:
 				capa->sched_scan_supported = 1;
 				break;
+			case NL80211_CMD_PROBE_CLIENT:
+				info->poll_command_supported = 1;
+				break;
 			}
 		}
 	}
@@ -2101,6 +2125,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
 
 	drv->device_ap_sme = info.device_ap_sme;
+	drv->poll_command_supported = info.poll_command_supported;
 
 	return 0;
 }
@@ -7458,10 +7483,11 @@ static void nl80211_set_rekey_info(void *priv, const u8 *kek, const u8 *kck,
 }
 
 
-static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
-				int qos)
+static void nl80211_send_null_frame(struct i802_bss *bss, const u8 *own_addr,
+				    const u8 *addr, int qos)
 {
-	struct i802_bss *bss = priv;
+	/* send data frame to poll STA and check whether
+	 * this frame is ACKed */
 	struct {
 		struct ieee80211_hdr hdr;
 		u16 qos_ctl;
@@ -7492,6 +7518,33 @@ static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
 	if (wpa_driver_nl80211_send_mlme(bss, (u8 *) &nulldata, size) < 0)
 		wpa_printf(MSG_DEBUG, "nl80211_send_null_frame: Failed to "
 			   "send poll frame");
+}
+
+static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
+				int qos)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+
+	if (!drv->poll_command_supported) {
+		nl80211_send_null_frame(bss, own_addr, addr, qos);
+		return;
+	}
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_PROBE_CLIENT);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+	NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, addr);
+
+	send_and_recv_msgs(drv, msg, NULL, NULL);
+	return;
+ nla_put_failure:
+	nlmsg_free(msg);
 }
 
 

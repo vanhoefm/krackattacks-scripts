@@ -218,7 +218,7 @@ struct wpa_driver_nl80211_data {
 	struct i802_bss first_bss;
 
 #ifdef CONFIG_AP
-	struct l2_packet_data *l2;
+	int eapol_tx_sock;
 #endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
@@ -2239,16 +2239,6 @@ static void nl80211_get_phy_name(struct wpa_driver_nl80211_data *drv)
 }
 
 
-#ifdef CONFIG_AP
-static void nl80211_l2_read(void *ctx, const u8 *src_addr, const u8 *buf,
-			    size_t len)
-{
-	wpa_printf(MSG_DEBUG, "nl80211: l2_packet read %u",
-		   (unsigned int) len);
-}
-#endif /* CONFIG_AP */
-
-
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -2276,6 +2266,9 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 	os_strlcpy(bss->ifname, ifname, sizeof(bss->ifname));
 	drv->monitor_ifidx = -1;
 	drv->monitor_sock = -1;
+#ifdef CONFIG_AP
+	drv->eapol_tx_sock = -1;
+#endif /* CONFIG_AP */
 	drv->ap_scan_as_station = NL80211_IFTYPE_UNSPECIFIED;
 
 	if (wpa_driver_nl80211_init_nl(drv)) {
@@ -2302,8 +2295,7 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 		goto failed;
 
 #ifdef CONFIG_AP
-	drv->l2 = l2_packet_init(ifname, NULL, ETH_P_EAPOL,
-				 nl80211_l2_read, drv, 0);
+	drv->eapol_tx_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
 #endif /* CONFIG_AP */
 
 	if (drv->global) {
@@ -2521,8 +2513,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 #ifdef CONFIG_AP
-	if (drv->l2)
-		l2_packet_deinit(drv->l2);
+	if (drv->eapol_tx_sock >= 0)
+		close(drv->eapol_tx_sock);
 #endif /* CONFIG_AP */
 
 	if (drv->nl_preq.handle)
@@ -5111,17 +5103,29 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 #ifdef CONFIG_AP
 static int nl80211_send_eapol_data(struct i802_bss *bss,
 				   const u8 *addr, const u8 *data,
-				   size_t data_len, const u8 *own_addr)
+				   size_t data_len)
 {
-	if (bss->drv->l2 == NULL) {
-		wpa_printf(MSG_DEBUG, "nl80211: No l2_packet to send EAPOL");
+	struct sockaddr_ll ll;
+	int ret;
+
+	if (bss->drv->eapol_tx_sock < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: No socket to send EAPOL");
 		return -1;
 	}
 
-	if (l2_packet_send(bss->drv->l2, addr, ETH_P_EAPOL, data, data_len) <
-	    0)
-		return -1;
-	return 0;
+	os_memset(&ll, 0, sizeof(ll));
+	ll.sll_family = AF_PACKET;
+	ll.sll_ifindex = bss->ifindex;
+	ll.sll_protocol = htons(ETH_P_PAE);
+	ll.sll_halen = ETH_ALEN;
+	os_memcpy(ll.sll_addr, addr, ETH_ALEN);
+	ret = sendto(bss->drv->eapol_tx_sock, data, data_len, 0,
+		     (struct sockaddr *) &ll, sizeof(ll));
+	if (ret < 0)
+		wpa_printf(MSG_ERROR, "nl80211: EAPOL TX: %s",
+			   strerror(errno));
+
+	return ret;
 }
 #endif /* CONFIG_AP */
 
@@ -5142,8 +5146,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 
 #ifdef CONFIG_AP
 	if (drv->device_ap_sme)
-		return nl80211_send_eapol_data(bss, addr, data, data_len,
-					       own_addr);
+		return nl80211_send_eapol_data(bss, addr, data, data_len);
 #endif /* CONFIG_AP */
 
 	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +

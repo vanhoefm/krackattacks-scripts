@@ -198,6 +198,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	struct sta_info *sta = NULL;
 	size_t buflen;
 	size_t i;
+	int noack;
 
 	ie = mgmt->u.probe_req.variable;
 	if (len < IEEE80211_HDRLEN + sizeof(mgmt->u.probe_req))
@@ -407,7 +408,13 @@ void handle_probe_req(struct hostapd_data *hapd,
 		pos = hostapd_eid_p2p_manage(hapd, pos);
 #endif /* CONFIG_P2P_MANAGER */
 
-	if (hostapd_drv_send_mlme(hapd, resp, pos - (u8 *) resp, 0) < 0)
+	/*
+	 * If this is a broadcast probe request, apply no ack policy to avoid
+	 * excessive retries.
+	 */
+	noack = !!(elems.ssid_len == 0 && is_broadcast_ether_addr(mgmt->da));
+
+	if (hostapd_drv_send_mlme(hapd, resp, pos - (u8 *) resp, noack) < 0)
 		perror("handle_probe_req: send");
 
 	os_free(resp);

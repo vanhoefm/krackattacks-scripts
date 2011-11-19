@@ -423,8 +423,7 @@ eap_pwd_perform_commit_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	BN_bn2bin(y, element + BN_num_bytes(data->grp->prime) + offset);
 
 	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PWD,
-			     sizeof(struct eap_pwd_hdr) +
-			     BN_num_bytes(data->grp->order) +
+			     1 + BN_num_bytes(data->grp->order) +
 			     (2 * BN_num_bytes(data->grp->prime)),
 			     EAP_CODE_RESPONSE, eap_get_id(reqData));
 	if (resp == NULL)
@@ -633,7 +632,7 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	H_Final(&ctx, conf);
 
 	resp = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PWD,
-			     sizeof(struct eap_pwd_hdr) + SHA256_DIGEST_LENGTH,
+			     1 + SHA256_DIGEST_LENGTH,
 			     EAP_CODE_RESPONSE, eap_get_id(reqData));
 	if (resp == NULL)
 		goto fin;

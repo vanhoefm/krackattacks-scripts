@@ -35,13 +35,8 @@ typedef struct group_definition_ {
 
 /*
  * EAP-pwd header, included on all payloads
+ * L(1 bit) | M(1 bit) | exch(6 bits) | total_length(if L is set)
  */
-struct eap_pwd_hdr {
-	u8 l_bit:1;
-	u8 m_bit:1;
-	u8 exch:6;
-	u8 total_length[0];         /* included when l_bit is set */
-} STRUCT_PACKED;
 
 #define EAP_PWD_OPCODE_ID_EXCH          1
 #define EAP_PWD_OPCODE_COMMIT_EXCH      2

@@ -156,8 +156,8 @@ eap_pwd_build_id_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 
 	wpa_printf(MSG_DEBUG, "EAP-pwd: ID/Request");
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PWD,
-			    sizeof(struct eap_pwd_hdr) +
-			    sizeof(struct eap_pwd_id) + data->id_server_len,
+			    1 + sizeof(struct eap_pwd_id) +
+			    data->id_server_len,
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL) {
 		eap_pwd_state(data, FAILURE);
@@ -257,8 +257,7 @@ eap_pwd_build_commit_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	BN_bn2bin(y, element + BN_num_bytes(data->grp->prime) + offset);
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PWD,
-			    sizeof(struct eap_pwd_hdr) +
-			    (2 * BN_num_bytes(data->grp->prime)) +
+			    1 + (2 * BN_num_bytes(data->grp->prime)) +
 			    BN_num_bytes(data->grp->order),
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL)
@@ -385,7 +384,7 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	os_memcpy(data->my_confirm, conf, SHA256_DIGEST_LENGTH);
 
 	req = eap_msg_alloc(EAP_VENDOR_IETF, EAP_TYPE_PWD,
-			    sizeof(struct eap_pwd_hdr) + SHA256_DIGEST_LENGTH,
+			    1 + SHA256_DIGEST_LENGTH,
 			    EAP_CODE_REQUEST, id);
 	if (req == NULL)
 		goto fin;

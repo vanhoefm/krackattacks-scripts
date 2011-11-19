@@ -289,6 +289,7 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	HMAC_CTX ctx;
 	u8 conf[SHA256_DIGEST_LENGTH], *cruft = NULL, *ptr;
 	u16 grp;
+	int offset;
 
 	wpa_printf(MSG_DEBUG, "EAP-pwd: Confirm/Request");
 
@@ -313,7 +314,8 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	 * First is k
 	 */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(data->k, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(data->k);
+	BN_bn2bin(data->k, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 
 	/* server element: x, y */
@@ -326,15 +328,19 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	}
 
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(x, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
+	BN_bn2bin(x, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(y, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
+	BN_bn2bin(y, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 
 	/* server scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(data->my_scalar, cruft);
+	offset = BN_num_bytes(data->grp->order) -
+		BN_num_bytes(data->my_scalar);
+	BN_bn2bin(data->my_scalar, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
 
 	/* peer element: x, y */
@@ -347,15 +353,19 @@ eap_pwd_build_confirm_req(struct eap_sm *sm, struct eap_pwd_data *data, u8 id)
 	}
 
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(x, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
+	BN_bn2bin(x, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(y, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
+	BN_bn2bin(y, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 
 	/* peer scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(data->peer_scalar, cruft);
+	offset = BN_num_bytes(data->grp->order) -
+		BN_num_bytes(data->peer_scalar);
+	BN_bn2bin(data->peer_scalar, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
 
 	/* ciphersuite */
@@ -624,6 +634,7 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	u32 cs;
 	u16 grp;
 	u8 conf[SHA256_DIGEST_LENGTH], *cruft = NULL, *ptr;
+	int offset;
 
 	/* build up the ciphersuite: group | random_function | prf */
 	grp = htons(data->group_num);
@@ -649,7 +660,8 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 
 	/* k */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(data->k, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(data->k);
+	BN_bn2bin(data->k, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 
 	/* peer element: x, y */
@@ -661,15 +673,19 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 		goto fin;
 	}
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(x, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
+	BN_bn2bin(x, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(y, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
+	BN_bn2bin(y, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 
 	/* peer scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(data->peer_scalar, cruft);
+	offset = BN_num_bytes(data->grp->order) -
+		BN_num_bytes(data->peer_scalar);
+	BN_bn2bin(data->peer_scalar, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
 
 	/* server element: x, y */
@@ -682,15 +698,19 @@ eap_pwd_process_confirm_resp(struct eap_sm *sm, struct eap_pwd_data *data,
 	}
 
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(x, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
+	BN_bn2bin(x, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(y, cruft);
+	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
+	BN_bn2bin(y, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
 
 	/* server scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
-	BN_bn2bin(data->my_scalar, cruft);
+	offset = BN_num_bytes(data->grp->order) -
+		BN_num_bytes(data->my_scalar);
+	BN_bn2bin(data->my_scalar, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
 
 	/* ciphersuite */

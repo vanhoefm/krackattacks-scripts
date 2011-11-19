@@ -284,6 +284,7 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 	u8 mk[SHA256_DIGEST_LENGTH], *cruft;
 	u8 session_id[SHA256_DIGEST_LENGTH + 1];
 	u8 msk_emsk[EAP_MSK_LEN + EAP_EMSK_LEN];
+	int offset;
 
 	if ((cruft = os_malloc(BN_num_bytes(grp->prime))) == NULL)
 		return -1;
@@ -295,16 +296,21 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 	session_id[0] = EAP_TYPE_PWD;
 	H_Init(&ctx);
 	H_Update(&ctx, (u8 *)ciphersuite, sizeof(u32));
-	BN_bn2bin(peer_scalar, cruft);
+	offset = BN_num_bytes(grp->order) - BN_num_bytes(peer_scalar);
+	os_memset(cruft, 0, BN_num_bytes(grp->prime));
+	BN_bn2bin(peer_scalar, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
-	BN_bn2bin(server_scalar, cruft);
+	offset = BN_num_bytes(grp->order) - BN_num_bytes(server_scalar);
+	os_memset(cruft, 0, BN_num_bytes(grp->prime));
+	BN_bn2bin(server_scalar, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
 	H_Final(&ctx, &session_id[1]);
 
 	/* then compute MK = H(k | commit-peer | commit-server) */
 	H_Init(&ctx);
+	offset = BN_num_bytes(grp->prime) - BN_num_bytes(k);
 	os_memset(cruft, 0, BN_num_bytes(grp->prime));
-	BN_bn2bin(k, cruft);
+	BN_bn2bin(k, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(grp->prime));
 	H_Update(&ctx, commit_peer, SHA256_DIGEST_LENGTH);
 	H_Update(&ctx, commit_server, SHA256_DIGEST_LENGTH);

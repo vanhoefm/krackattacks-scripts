@@ -15,6 +15,7 @@
 #include <cstdio>
 
 #include "scanresults.h"
+#include "signalbar.h"
 #include "wpagui.h"
 #include "networkconfig.h"
 
@@ -33,6 +34,7 @@ ScanResults::ScanResults(QWidget *parent, const char *, bool, Qt::WFlags)
 	wpagui = NULL;
 	scanResultsWidget->setItemsExpandable(FALSE);
 	scanResultsWidget->setRootIsDecorated(FALSE);
+	scanResultsWidget->setItemDelegate(new SignalBar(scanResultsWidget));
 }
 
 
@@ -91,7 +93,7 @@ void ScanResults::updateResults()
 				bssid = (*it).mid(pos);
 			else if ((*it).startsWith("freq="))
 				freq = (*it).mid(pos);
-			else if ((*it).startsWith("qual="))
+			else if ((*it).startsWith("level="))
 				signal = (*it).mid(pos);
 			else if ((*it).startsWith("flags="))
 				flags = (*it).mid(pos);

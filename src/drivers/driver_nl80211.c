@@ -4158,7 +4158,7 @@ wpa_driver_nl80211_get_hw_feature_data(void *priv, u16 *num_modes, u16 *flags)
 
 static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 					 const void *data, size_t len,
-					 int encrypt)
+					 int encrypt, int noack)
 {
 	__u8 rtap_hdr[] = {
 		0x00, 0x00, /* radiotap version */
@@ -4189,6 +4189,7 @@ static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 		.msg_flags = 0,
 	};
 	int res;
+	u16 txflags = 0;
 
 	if (encrypt)
 		rtap_hdr[8] |= IEEE80211_RADIOTAP_F_WEP;
@@ -4198,6 +4199,10 @@ static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 			   "for %s", __func__);
 		return -1;
 	}
+
+	if (noack)
+		txflags |= IEEE80211_RADIOTAP_F_TX_NOACK;
+	*(le16 *) &rtap_hdr[12] = host_to_le16(txflags);
 
 	res = sendmsg(drv->monitor_sock, &msg, 0);
 	if (res < 0) {
@@ -4251,7 +4256,8 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 			encrypt = 0;
 	}
 
-	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt);
+	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt,
+					     noack);
 }
 
 
@@ -5211,7 +5217,7 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = wpa_driver_nl80211_send_frame(drv, (u8 *) hdr, len, encrypt);
+	res = wpa_driver_nl80211_send_frame(drv, (u8 *) hdr, len, encrypt, 0);
 	if (res < 0) {
 		wpa_printf(MSG_ERROR, "i802_send_eapol - packet len: %lu - "
 			   "failed: %d (%s)",
@@ -7300,7 +7306,7 @@ static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
-	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt);
+	return wpa_driver_nl80211_send_frame(drv, data, data_len, encrypt, 0);
 }
 
 

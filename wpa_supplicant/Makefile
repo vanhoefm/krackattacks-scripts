@@ -1399,15 +1399,17 @@ wpa_priv: $(BCHECK) $(OBJS_priv)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_priv $(OBJS_priv) $(LIBS)
 	@$(E) "  LD " $@
 
-wpa_supplicant: .config $(BCHECK) $(OBJS) $(EXTRA_progs)
+$(OBJS_c) $(OBJS_t) $(OBJS_t2) $(OBJS) $(BCHECK) $(EXTRA_progs): .config
+
+wpa_supplicant: $(BCHECK) $(OBJS) $(EXTRA_progs)
 	$(Q)$(LDO) $(LDFLAGS) -o wpa_supplicant $(OBJS) $(LIBS) $(EXTRALIBS)
 	@$(E) "  LD " $@
 
-eapol_test: .config $(OBJS_t)
+eapol_test: $(OBJS_t)
 	$(Q)$(LDO) $(LDFLAGS) -o eapol_test $(OBJS_t) $(LIBS)
 	@$(E) "  LD " $@
 
-preauth_test: .config $(OBJS_t2) 
+preauth_test: $(OBJS_t2)
 	$(Q)$(LDO) $(LDFLAGS) -o preauth_test $(OBJS_t2) $(LIBS)
 	@$(E) "  LD " $@
 

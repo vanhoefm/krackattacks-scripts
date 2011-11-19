@@ -504,6 +504,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 		break;
+	case EVENT_EAPOL_TX_STATUS:
+		hostapd_eapol_tx_status(hapd, data->eapol_tx_status.dst,
+					data->eapol_tx_status.data,
+					data->eapol_tx_status.data_len,
+					data->eapol_tx_status.ack);
+		break;
 	case EVENT_DRIVER_CLIENT_POLL_OK:
 		hostapd_client_poll_ok(hapd, data->client_poll.addr);
 		break;

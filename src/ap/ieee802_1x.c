@@ -1766,15 +1766,13 @@ int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 			 const u8 *buf, size_t len, int ack)
 {
 	struct ieee80211_hdr *hdr;
-	struct ieee802_1x_hdr *xhdr;
-	struct ieee802_1x_eapol_key *key;
 	u8 *pos;
 	const unsigned char rfc1042_hdr[ETH_ALEN] =
 		{ 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
 
 	if (sta == NULL)
 		return -1;
-	if (len < sizeof(*hdr) + sizeof(rfc1042_hdr) + 2 + sizeof(*xhdr))
+	if (len < sizeof(*hdr) + sizeof(rfc1042_hdr) + 2)
 		return 0;
 
 	hdr = (struct ieee80211_hdr *) buf;
@@ -1786,16 +1784,30 @@ int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 		return 0;
 	pos += 2;
 
-	xhdr = (struct ieee802_1x_hdr *) pos;
-	pos += sizeof(*xhdr);
+	return ieee802_1x_eapol_tx_status(hapd, sta, pos, buf + len - pos,
+					  ack);
+}
 
+
+int ieee802_1x_eapol_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
+			       const u8 *buf, int len, int ack)
+{
+	const struct ieee802_1x_hdr *xhdr =
+		(const struct ieee802_1x_hdr *) buf;
+	const u8 *pos = buf + sizeof(*xhdr);
+	struct ieee802_1x_eapol_key *key;
+
+	if (len < (int) sizeof(*xhdr))
+		return 0;
 	wpa_printf(MSG_DEBUG, "IEEE 802.1X: " MACSTR " TX status - version=%d "
 		   "type=%d length=%d - ack=%d",
 		   MAC2STR(sta->addr), xhdr->version, xhdr->type,
 		   be_to_host16(xhdr->length), ack);
 
-	if (xhdr->type == IEEE802_1X_TYPE_EAPOL_KEY &&
-	    pos + sizeof(struct wpa_eapol_key) <= buf + len) {
+	if (xhdr->type != IEEE802_1X_TYPE_EAPOL_KEY)
+		return 0;
+
+	if (pos + sizeof(struct wpa_eapol_key) <= buf + len) {
 		const struct wpa_eapol_key *wpa;
 		wpa = (const struct wpa_eapol_key *) pos;
 		if (wpa->type == EAPOL_KEY_TYPE_RSN ||
@@ -1809,8 +1821,7 @@ int ieee802_1x_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 	 * retransmitted in case of failure. Try to re-send failed EAPOL-Key
 	 * packets couple of times because otherwise STA keys become
 	 * unsynchronized with AP. */
-	if (xhdr->type == IEEE802_1X_TYPE_EAPOL_KEY && !ack &&
-	    pos + sizeof(*key) <= buf + len) {
+	if (!ack && pos + sizeof(*key) <= buf + len) {
 		key = (struct ieee802_1x_eapol_key *) pos;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE8021X,
 			       HOSTAPD_LEVEL_DEBUG, "did not Ack EAPOL-Key "

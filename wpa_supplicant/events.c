@@ -2158,6 +2158,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		break;
 #ifdef CONFIG_AP
+	case EVENT_EAPOL_TX_STATUS:
+		ap_eapol_tx_status(wpa_s, data->eapol_tx_status.dst,
+				   data->eapol_tx_status.data,
+				   data->eapol_tx_status.data_len,
+				   data->eapol_tx_status.ack);
+		break;
 	case EVENT_DRIVER_CLIENT_POLL_OK:
 		ap_client_poll_ok(wpa_s, data->client_poll.addr);
 		break;

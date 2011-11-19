@@ -1733,6 +1733,29 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 }
 
 
+void hostapd_eapol_tx_status(struct hostapd_data *hapd, const u8 *dst,
+			     const u8 *data, size_t len, int ack)
+{
+	struct sta_info *sta;
+	struct hostapd_iface *iface = hapd->iface;
+
+	sta = ap_get_sta(hapd, dst);
+	if (sta == NULL && iface->num_bss > 1) {
+		size_t j;
+		for (j = 0; j < iface->num_bss; j++) {
+			hapd = iface->bss[j];
+			sta = ap_get_sta(hapd, dst);
+			if (sta)
+				break;
+		}
+	}
+	if (sta == NULL)
+		return;
+
+	ieee802_1x_eapol_tx_status(hapd, sta, data, len, ack);
+}
+
+
 void hostapd_client_poll_ok(struct hostapd_data *hapd, const u8 *addr)
 {
 	struct sta_info *sta;

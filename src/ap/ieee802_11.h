@@ -62,6 +62,8 @@ u16 copy_sta_ht_capab(struct hostapd_data *hapd, struct sta_info *sta,
 void update_ht_state(struct hostapd_data *hapd, struct sta_info *sta);
 void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 		       const u8 *buf, size_t len, int ack);
+void hostapd_eapol_tx_status(struct hostapd_data *hapd, const u8 *dst,
+			     const u8 *data, size_t len, int ack);
 void ieee802_11_rx_from_unknown(struct hostapd_data *hapd, const u8 *src,
 				int wds);
 u8 * hostapd_eid_assoc_comeback_time(struct hostapd_data *hapd,

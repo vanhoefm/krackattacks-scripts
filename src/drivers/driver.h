@@ -2877,7 +2877,12 @@ enum wpa_event_type {
 	 * This event indicates that the station responded to the poll
 	 * initiated with @poll_client.
 	 */
-	EVENT_DRIVER_CLIENT_POLL_OK
+	EVENT_DRIVER_CLIENT_POLL_OK,
+
+	/**
+	 * EVENT_EAPOL_TX_STATUS - notify of EAPOL TX status
+	 */
+	EVENT_EAPOL_TX_STATUS
 };
 
 
@@ -3440,6 +3445,23 @@ union wpa_event_data {
 	struct client_poll {
 		u8 addr[ETH_ALEN];
 	} client_poll;
+
+	/**
+	 * struct eapol_tx_status
+	 * @dst: Original destination
+	 * @data: Data starting with IEEE 802.1X header (!)
+	 * @data_len: Length of data
+	 * @ack: Indicates ack or lost frame
+	 *
+	 * This corresponds to hapd_send_eapol if the frame sent
+	 * there isn't just reported as EVENT_TX_STATUS.
+	 */
+	struct eapol_tx_status {
+		const u8 *dst;
+		const u8 *data;
+		int data_len;
+		int ack;
+	} eapol_tx_status;
 };
 
 /**

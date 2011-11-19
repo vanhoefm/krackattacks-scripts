@@ -765,8 +765,9 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			params.num_filter_ssids++;
 		}
 
-		if (ssid->scan_ssid) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "add to active scan ssid: %s",
+		if (ssid->scan_ssid && ssid->ssid && ssid->ssid_len) {
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"add to active scan ssid: %s",
 				wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 			params.ssids[params.num_ssids].ssid =
 				ssid->ssid;

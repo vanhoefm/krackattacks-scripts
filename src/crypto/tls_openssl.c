@@ -1663,6 +1663,7 @@ static int tls_global_client_cert(SSL_CTX *ssl_ctx, const char *client_cert)
 
 	if (SSL_CTX_use_certificate_file(ssl_ctx, client_cert,
 					 SSL_FILETYPE_ASN1) != 1 &&
+	    SSL_CTX_use_certificate_chain_file(ssl_ctx, client_cert) != 1 &&
 	    SSL_CTX_use_certificate_file(ssl_ctx, client_cert,
 					 SSL_FILETYPE_PEM) != 1) {
 		tls_show_errors(MSG_INFO, __func__,

@@ -266,7 +266,7 @@ static inline int wpa_drv_send_mlme(struct wpa_supplicant *wpa_s,
 {
 	if (wpa_s->driver->send_mlme)
 		return wpa_s->driver->send_mlme(wpa_s->drv_priv,
-						data, data_len);
+						data, data_len, 0);
 	return -1;
 }
 

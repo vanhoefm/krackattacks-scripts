@@ -309,7 +309,7 @@ static int test_driver_send_ether(void *priv, const u8 *dst, const u8 *src,
 
 
 static int wpa_driver_test_send_mlme(void *priv, const u8 *data,
-				     size_t data_len)
+				     size_t data_len, int noack)
 {
 	struct test_driver_bss *dbss = priv;
 	struct wpa_driver_test_data *drv = dbss->drv;
@@ -2705,7 +2705,7 @@ static int wpa_driver_test_send_action(void *priv, unsigned int freq,
 	os_memcpy(hdr->addr2, src, ETH_ALEN);
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
-	ret = wpa_driver_test_send_mlme(priv, buf, 24 + data_len);
+	ret = wpa_driver_test_send_mlme(priv, buf, 24 + data_len, 0);
 	os_free(buf);
 	return ret;
 }

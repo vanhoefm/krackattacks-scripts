@@ -269,7 +269,7 @@ static void send_auth_reply(struct hostapd_data *hapd,
 		   " auth_alg=%d auth_transaction=%d resp=%d (IE len=%lu)",
 		   MAC2STR(dst), auth_alg, auth_transaction,
 		   resp, (unsigned long) ies_len);
-	if (hostapd_drv_send_mlme(hapd, reply, rlen) < 0)
+	if (hostapd_drv_send_mlme(hapd, reply, rlen, 0) < 0)
 		perror("send_auth_reply: send");
 
 	os_free(buf);
@@ -805,7 +805,7 @@ static void send_deauth(struct hostapd_data *hapd, const u8 *addr,
 	send_len = IEEE80211_HDRLEN + sizeof(reply.u.deauth);
 	reply.u.deauth.reason_code = host_to_le16(reason_code);
 
-	if (hostapd_drv_send_mlme(hapd, &reply, send_len) < 0)
+	if (hostapd_drv_send_mlme(hapd, &reply, send_len, 0) < 0)
 		wpa_printf(MSG_INFO, "Failed to send deauth: %s",
 			   strerror(errno));
 }
@@ -910,7 +910,7 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 
 	send_len += p - reply->u.assoc_resp.variable;
 
-	if (hostapd_drv_send_mlme(hapd, reply, send_len) < 0)
+	if (hostapd_drv_send_mlme(hapd, reply, send_len, 0) < 0)
 		wpa_printf(MSG_INFO, "Failed to send assoc resp: %s",
 			   strerror(errno));
 }
@@ -1322,7 +1322,7 @@ static void handle_action(struct hostapd_data *hapd,
 		os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);
 		resp->u.action.category |= 0x80;
 
-		hostapd_drv_send_mlme(hapd, resp, len);
+		hostapd_drv_send_mlme(hapd, resp, len, 0);
 		os_free(resp);
 	}
 }

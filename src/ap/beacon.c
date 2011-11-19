@@ -407,7 +407,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 		pos = hostapd_eid_p2p_manage(hapd, pos);
 #endif /* CONFIG_P2P_MANAGER */
 
-	if (hostapd_drv_send_mlme(hapd, resp, pos - (u8 *) resp) < 0)
+	if (hostapd_drv_send_mlme(hapd, resp, pos - (u8 *) resp, 0) < 0)
 		perror("handle_probe_req: send");
 
 	os_free(resp);

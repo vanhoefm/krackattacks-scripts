@@ -1276,9 +1276,11 @@ struct wpa_driver_ops {
 	 * @priv: Private driver interface data
 	 * @data: IEEE 802.11 management frame with IEEE 802.11 header
 	 * @data_len: Size of the management frame
+	 * @noack: Do not wait for this frame to be acked (disable retries)
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*send_mlme)(void *priv, const u8 *data, size_t data_len);
+	int (*send_mlme)(void *priv, const u8 *data, size_t data_len,
+			 int noack);
 
 	/**
 	 * update_ft_ies - Update FT (IEEE 802.11r) IEs

@@ -416,7 +416,7 @@ static int hostapd_wpa_auth_send_ft_action(void *ctx, const u8 *dst,
 	os_memcpy(m->bssid, hapd->own_addr, ETH_ALEN);
 	os_memcpy(&m->u, data, data_len);
 
-	res = hostapd_drv_send_mlme(hapd, (u8 *) m, mlen);
+	res = hostapd_drv_send_mlme(hapd, (u8 *) m, mlen, 0);
 	os_free(m);
 	return res;
 }

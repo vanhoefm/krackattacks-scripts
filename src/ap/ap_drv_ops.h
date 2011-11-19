@@ -89,7 +89,7 @@ int hostapd_drv_set_key(const char *ifname,
 			const u8 *seq, size_t seq_len,
 			const u8 *key, size_t key_len);
 int hostapd_drv_send_mlme(struct hostapd_data *hapd,
-			  const void *msg, size_t len);
+			  const void *msg, size_t len, int noack);
 int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
 			   const u8 *addr, int reason);
 int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,

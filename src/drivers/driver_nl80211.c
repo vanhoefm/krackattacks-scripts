@@ -4209,7 +4209,7 @@ static int wpa_driver_nl80211_send_frame(struct wpa_driver_nl80211_data *drv,
 
 
 static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
-					size_t data_len)
+					size_t data_len, int noack)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
@@ -6328,7 +6328,7 @@ static int i802_sta_deauth(void *priv, const u8 *own_addr, const u8 *addr,
 	mgmt.u.deauth.reason_code = host_to_le16(reason);
 	return wpa_driver_nl80211_send_mlme(bss, (u8 *) &mgmt,
 					    IEEE80211_HDRLEN +
-					    sizeof(mgmt.u.deauth));
+					    sizeof(mgmt.u.deauth), 0);
 }
 
 
@@ -6347,7 +6347,7 @@ static int i802_sta_disassoc(void *priv, const u8 *own_addr, const u8 *addr,
 	mgmt.u.disassoc.reason_code = host_to_le16(reason);
 	return wpa_driver_nl80211_send_mlme(bss, (u8 *) &mgmt,
 					    IEEE80211_HDRLEN +
-					    sizeof(mgmt.u.disassoc));
+					    sizeof(mgmt.u.disassoc), 0);
 }
 
 #endif /* HOSTAPD || CONFIG_AP */
@@ -6929,7 +6929,8 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
 	if (is_ap_interface(drv->nlmode))
-		ret = wpa_driver_nl80211_send_mlme(priv, buf, 24 + data_len);
+		ret = wpa_driver_nl80211_send_mlme(priv, buf, 24 + data_len,
+						   0);
 	else
 		ret = nl80211_send_frame_cmd(drv, freq, wait_time, buf,
 					     24 + data_len,
@@ -7515,7 +7516,7 @@ static void nl80211_send_null_frame(struct i802_bss *bss, const u8 *own_addr,
 	os_memcpy(nulldata.hdr.IEEE80211_BSSID_FROMDS, own_addr, ETH_ALEN);
 	os_memcpy(nulldata.hdr.IEEE80211_SA_FROMDS, own_addr, ETH_ALEN);
 
-	if (wpa_driver_nl80211_send_mlme(bss, (u8 *) &nulldata, size) < 0)
+	if (wpa_driver_nl80211_send_mlme(bss, (u8 *) &nulldata, size, 0) < 0)
 		wpa_printf(MSG_DEBUG, "nl80211_send_null_frame: Failed to "
 			   "send poll frame");
 }

@@ -566,7 +566,7 @@ static int hostapd_ctrl_iface_ess_disassoc(struct hostapd_data *hapd,
 	os_memcpy(pos, url, url_len);
 	pos += url_len;
 
-	if (hostapd_drv_send_mlme(hapd, buf, pos - buf) < 0) {
+	if (hostapd_drv_send_mlme(hapd, buf, pos - buf, 0) < 0) {
 		wpa_printf(MSG_DEBUG, "Failed to send BSS Transition "
 			   "Management Request frame");
 		return -1;

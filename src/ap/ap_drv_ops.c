@@ -573,11 +573,11 @@ int hostapd_drv_set_key(const char *ifname, struct hostapd_data *hapd,
 
 
 int hostapd_drv_send_mlme(struct hostapd_data *hapd,
-			  const void *msg, size_t len)
+			  const void *msg, size_t len, int noack)
 {
 	if (hapd->driver == NULL || hapd->driver->send_mlme == NULL)
 		return 0;
-	return hapd->driver->send_mlme(hapd->drv_priv, msg, len);
+	return hapd->driver->send_mlme(hapd->drv_priv, msg, len, noack);
 }
 
 

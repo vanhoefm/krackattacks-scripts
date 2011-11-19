@@ -249,7 +249,7 @@ static void nl80211_remove_monitor_interface(
 static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 				  unsigned int freq, unsigned int wait,
 				  const u8 *buf, size_t buf_len, u64 *cookie,
-				  int no_cck);
+				  int no_cck, int no_ack);
 static int wpa_driver_nl80211_probe_req_report(void *priv, int report);
 
 #ifdef HOSTAPD
@@ -4234,12 +4234,12 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 		 * of wpa_supplicant.
 		 */
 		return nl80211_send_frame_cmd(drv, drv->last_mgmt_freq, 0,
-					      data, data_len, NULL, 1);
+					      data, data_len, NULL, 1, noack);
 	}
 
 	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
 		return nl80211_send_frame_cmd(drv, drv->ap_oper_freq, 0,
-					      data, data_len, NULL, 0);
+					      data, data_len, NULL, 0, noack);
 	}
 
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
@@ -6864,7 +6864,7 @@ static int cookie_handler(struct nl_msg *msg, void *arg)
 static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 				  unsigned int freq, unsigned int wait,
 				  const u8 *buf, size_t buf_len,
-				  u64 *cookie_out, int no_cck)
+				  u64 *cookie_out, int no_cck, int no_ack)
 {
 	struct nl_msg *msg;
 	u64 cookie;
@@ -6883,6 +6883,8 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 	NLA_PUT_FLAG(msg, NL80211_ATTR_OFFCHANNEL_TX_OK);
 	if (no_cck)
 		NLA_PUT_FLAG(msg, NL80211_ATTR_TX_NO_CCK_RATE);
+	if (no_ack)
+		NLA_PUT_FLAG(msg, NL80211_ATTR_DONT_WAIT_FOR_ACK);
 
 	NLA_PUT(msg, NL80211_ATTR_FRAME, buf_len, buf);
 
@@ -6895,11 +6897,12 @@ static int nl80211_send_frame_cmd(struct wpa_driver_nl80211_data *drv,
 			   freq, wait);
 		goto nla_put_failure;
 	}
-	wpa_printf(MSG_DEBUG, "nl80211: Frame TX command accepted; "
-		   "cookie 0x%llx", (long long unsigned int) cookie);
+	wpa_printf(MSG_DEBUG, "nl80211: Frame TX command accepted%s; "
+		   "cookie 0x%llx", no_ack ? " (no ACK)" : "",
+		   (long long unsigned int) cookie);
 
 	if (cookie_out)
-		*cookie_out = cookie;
+		*cookie_out = no_ack ? (u64) -1 : cookie;
 
 nla_put_failure:
 	nlmsg_free(msg);
@@ -6941,7 +6944,7 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 		ret = nl80211_send_frame_cmd(drv, freq, wait_time, buf,
 					     24 + data_len,
 					     &drv->send_action_cookie,
-					     no_cck);
+					     no_cck, 0);
 
 	os_free(buf);
 	return ret;

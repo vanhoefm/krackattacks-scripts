@@ -167,6 +167,8 @@ struct i802_bss {
 	unsigned int beacon_set:1;
 	unsigned int added_if_into_bridge:1;
 	unsigned int added_bridge:1;
+
+	struct nl80211_handles nl_preq;
 };
 
 struct wpa_driver_nl80211_data {
@@ -187,7 +189,7 @@ struct wpa_driver_nl80211_data {
 
 	int scan_complete_events;
 
-	struct nl80211_handles nl_event, nl_preq;
+	struct nl80211_handles nl_event;
 
 	u8 auth_bssid[ETH_ALEN];
 	u8 bssid[ETH_ALEN];
@@ -2542,7 +2544,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 		close(drv->eapol_tx_sock);
 #endif /* CONFIG_AP */
 
-	if (drv->nl_preq.handle)
+	if (bss->nl_preq.handle)
 		wpa_driver_nl80211_probe_req_report(bss, 0);
 	if (bss->added_if_into_bridge) {
 		if (linux_br_del_if(drv->global->ioctl_sock, bss->brname,
@@ -7057,37 +7059,37 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 	if (!report) {
-		if (drv->nl_preq.handle) {
+		if (bss->nl_preq.handle) {
 			eloop_unregister_read_sock(
-				nl_socket_get_fd(drv->nl_preq.handle));
-			nl_destroy_handles(&drv->nl_preq);
+				nl_socket_get_fd(bss->nl_preq.handle));
+			nl_destroy_handles(&bss->nl_preq);
 		}
 		return 0;
 	}
 
-	if (drv->nl_preq.handle) {
+	if (bss->nl_preq.handle) {
 		wpa_printf(MSG_DEBUG, "nl80211: Probe Request reporting "
 			   "already on!");
 		return 0;
 	}
 
-	if (nl_create_handles(&drv->nl_preq, drv->global->nl_cb, "preq"))
+	if (nl_create_handles(&bss->nl_preq, drv->global->nl_cb, "preq"))
 		return -1;
 
-	if (nl80211_register_frame(drv, drv->nl_preq.handle,
+	if (nl80211_register_frame(drv, bss->nl_preq.handle,
 				   (WLAN_FC_TYPE_MGMT << 2) |
 				   (WLAN_FC_STYPE_PROBE_REQ << 4),
 				   NULL, 0) < 0)
 		goto out_err;
 
-	eloop_register_read_sock(nl_socket_get_fd(drv->nl_preq.handle),
+	eloop_register_read_sock(nl_socket_get_fd(bss->nl_preq.handle),
 				 wpa_driver_nl80211_event_receive, drv,
-				 drv->nl_preq.handle);
+				 bss->nl_preq.handle);
 
 	return 0;
 
  out_err:
-	nl_destroy_handles(&drv->nl_preq);
+	nl_destroy_handles(&bss->nl_preq);
 	return -1;
 }
 

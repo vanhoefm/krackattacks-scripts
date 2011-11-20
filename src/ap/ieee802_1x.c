@@ -682,7 +682,8 @@ void ieee802_1x_receive(struct hostapd_data *hapd, const u8 *sa, const u8 *buf,
 	wpa_printf(MSG_DEBUG, "IEEE 802.1X: %lu bytes from " MACSTR,
 		   (unsigned long) len, MAC2STR(sa));
 	sta = ap_get_sta(hapd, sa);
-	if (!sta || !(sta->flags & (WLAN_STA_ASSOC | WLAN_STA_PREAUTH))) {
+	if (!sta || (!(sta->flags & (WLAN_STA_ASSOC | WLAN_STA_PREAUTH)) &&
+		     !(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_WIRED))) {
 		wpa_printf(MSG_DEBUG, "IEEE 802.1X data frame from not "
 			   "associated/Pre-authenticating STA");
 		return;

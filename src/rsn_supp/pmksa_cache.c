@@ -49,6 +49,7 @@ static void pmksa_cache_free_entry(struct rsn_pmksa_cache *pmksa,
 				   struct rsn_pmksa_cache_entry *entry,
 				   int replace)
 {
+	wpa_sm_remove_pmkid(pmksa->sm, entry->aa, entry->pmkid);
 	pmksa->pmksa_count--;
 	pmksa->free_cb(entry, pmksa->ctx, replace);
 	_pmksa_cache_free_entry(entry);
@@ -66,7 +67,6 @@ static void pmksa_cache_expire(void *eloop_ctx, void *timeout_ctx)
 		pmksa->pmksa = entry->next;
 		wpa_printf(MSG_DEBUG, "RSN: expired PMKSA cache entry for "
 			   MACSTR, MAC2STR(entry->aa));
-		wpa_sm_remove_pmkid(pmksa->sm, entry->aa, entry->pmkid);
 		pmksa_cache_free_entry(pmksa, entry, 0);
 	}
 
@@ -207,7 +207,6 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		wpa_printf(MSG_DEBUG, "RSN: removed the oldest PMKSA cache "
 			   "entry (for " MACSTR ") to make room for new one",
 			   MAC2STR(pos->aa));
-		wpa_sm_remove_pmkid(pmksa->sm, pos->aa, pos->pmkid);
 		pmksa_cache_free_entry(pmksa, pos, 0);
 	}
 
@@ -258,7 +257,6 @@ void pmksa_cache_flush(struct rsn_pmksa_cache *pmksa, void *network_ctx)
 				pmksa->pmksa = entry->next;
 			tmp = entry;
 			entry = entry->next;
-			wpa_sm_remove_pmkid(pmksa->sm, tmp->aa, tmp->pmkid);
 			pmksa_cache_free_entry(pmksa, tmp, 0);
 			removed++;
 		} else {

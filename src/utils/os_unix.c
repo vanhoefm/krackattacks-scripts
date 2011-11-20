@@ -109,8 +109,9 @@ int os_mktime(int year, int month, int day, int hour, int min, int sec,
 int os_gmtime(os_time_t t, struct os_tm *tm)
 {
 	struct tm *tm2;
+	time_t t2 = t;
 
-	tm2 = gmtime(&t);
+	tm2 = gmtime(&t2);
 	if (tm2 == NULL)
 		return -1;
 	tm->sec = tm2->tm_sec;

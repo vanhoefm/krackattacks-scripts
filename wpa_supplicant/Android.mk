@@ -24,6 +24,8 @@ ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),)
   CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y
 endif
 
+ifeq ($(WPA_BUILD_SUPPLICANT),true)
+
 include $(LOCAL_PATH)/.config
 
 # To ignore possible wrong network configurations
@@ -1397,8 +1399,6 @@ endif
 ifndef LDO
 LDO=$(CC)
 endif
-
-ifeq ($(WPA_BUILD_SUPPLICANT),true)
 
 ########################
 

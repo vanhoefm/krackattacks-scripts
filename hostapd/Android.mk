@@ -6,6 +6,8 @@ ifneq ($(BOARD_HOSTAPD_DRIVER),)
   CONFIG_DRIVER_$(BOARD_HOSTAPD_DRIVER) := y
 endif
 
+ifeq ($(WPA_BUILD_HOSTAPD),true)
+
 include $(LOCAL_PATH)/.config
 
 # To ignore possible wrong network configurations
@@ -790,8 +792,6 @@ OBJS_c += src/utils/edit.c
 else
 OBJS_c += src/utils/edit_simple.c
 endif
-
-ifeq ($(WPA_BUILD_HOSTAPD),true)
 
 ########################
 

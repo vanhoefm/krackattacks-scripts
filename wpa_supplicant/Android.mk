@@ -19,11 +19,9 @@ LOCAL_PATH := $(call my-dir)
 PKG_CONFIG ?= pkg-config
 
 WPA_BUILD_SUPPLICANT := false
-ifneq ($(TARGET_SIMULATOR),true)
-  ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),)
-    WPA_BUILD_SUPPLICANT := true
-    CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y
-  endif
+ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),)
+  WPA_BUILD_SUPPLICANT := true
+  CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y
 endif
 
 include $(LOCAL_PATH)/.config

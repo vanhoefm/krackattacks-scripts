@@ -115,11 +115,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 
 	if ((wpa_bss_get_vendor_ie(bss, WPA_IE_VENDOR_TYPE) ||
 	     wpa_bss_get_ie(bss, WLAN_EID_RSN)) &&
-	    (ssid->key_mgmt & (WPA_KEY_MGMT_IEEE8021X | WPA_KEY_MGMT_PSK |
-			       WPA_KEY_MGMT_FT_IEEE8021X |
-			       WPA_KEY_MGMT_FT_PSK |
-			       WPA_KEY_MGMT_IEEE8021X_SHA256 |
-			       WPA_KEY_MGMT_PSK_SHA256))) {
+	    wpa_key_mgmt_wpa(ssid->key_mgmt)) {
 		int try_opportunistic;
 		try_opportunistic = ssid->proactive_key_caching &&
 			(ssid->proto & WPA_PROTO_RSN);
@@ -135,11 +131,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 				"key management and encryption suites");
 			return;
 		}
-	} else if (ssid->key_mgmt &
-		   (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_IEEE8021X |
-		    WPA_KEY_MGMT_WPA_NONE | WPA_KEY_MGMT_FT_PSK |
-		    WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_PSK_SHA256 |
-		    WPA_KEY_MGMT_IEEE8021X_SHA256)) {
+	} else if (wpa_key_mgmt_wpa_any(ssid->key_mgmt)) {
 		wpa_s->sme.assoc_req_ie_len = sizeof(wpa_s->sme.assoc_req_ie);
 		if (wpa_supplicant_set_suites(wpa_s, NULL, ssid,
 					      wpa_s->sme.assoc_req_ie,
@@ -178,8 +170,7 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 		wpa_ft_prepare_auth_request(wpa_s->wpa, ie);
 	}
 
-	if (md && ssid->key_mgmt & (WPA_KEY_MGMT_FT_PSK |
-				    WPA_KEY_MGMT_FT_IEEE8021X)) {
+	if (md && wpa_key_mgmt_ft(ssid->key_mgmt)) {
 		if (wpa_s->sme.assoc_req_ie_len + 5 <
 		    sizeof(wpa_s->sme.assoc_req_ie)) {
 			struct rsn_mdie *mdie;

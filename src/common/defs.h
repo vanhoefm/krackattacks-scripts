@@ -76,6 +76,11 @@ static inline int wpa_key_mgmt_wpa(int akm)
 		wpa_key_mgmt_wpa_psk(akm);
 }
 
+static inline int wpa_key_mgmt_wpa_any(int akm)
+{
+	return wpa_key_mgmt_wpa(akm) || (akm & WPA_KEY_MGMT_WPA_NONE);
+}
+
 
 #define WPA_PROTO_WPA BIT(0)
 #define WPA_PROTO_RSN BIT(1)

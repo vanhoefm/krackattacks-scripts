@@ -1075,8 +1075,7 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 	}
 
 #ifdef CONFIG_IEEE80211R
-	if ((bss->wpa_key_mgmt &
-	     (WPA_KEY_MGMT_FT_PSK | WPA_KEY_MGMT_FT_IEEE8021X)) &&
+	if (wpa_key_mgmt_ft(bss->wpa_key_mgmt) &&
 	    (bss->nas_identifier == NULL ||
 	     os_strlen(bss->nas_identifier) < 1 ||
 	     os_strlen(bss->nas_identifier) > FT_R0KH_ID_MAX_LEN)) {

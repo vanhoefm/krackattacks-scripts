@@ -347,9 +347,7 @@ static void handle_auth(struct hostapd_data *hapd,
 	if (!(((hapd->conf->auth_algs & WPA_AUTH_ALG_OPEN) &&
 	       auth_alg == WLAN_AUTH_OPEN) ||
 #ifdef CONFIG_IEEE80211R
-	      (hapd->conf->wpa &&
-	       (hapd->conf->wpa_key_mgmt &
-		(WPA_KEY_MGMT_FT_IEEE8021X | WPA_KEY_MGMT_FT_PSK)) &&
+	      (hapd->conf->wpa && wpa_key_mgmt_ft(hapd->conf->wpa_key_mgmt) &&
 	       auth_alg == WLAN_AUTH_FT) ||
 #endif /* CONFIG_IEEE80211R */
 	      ((hapd->conf->auth_algs & WPA_AUTH_ALG_SHARED) &&

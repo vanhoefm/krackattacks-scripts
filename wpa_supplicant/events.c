@@ -70,11 +70,7 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Network configuration found for the "
 		"current AP");
-	if (ssid->key_mgmt & (WPA_KEY_MGMT_PSK | WPA_KEY_MGMT_IEEE8021X |
-			      WPA_KEY_MGMT_WPA_NONE |
-			      WPA_KEY_MGMT_FT_PSK | WPA_KEY_MGMT_FT_IEEE8021X |
-			      WPA_KEY_MGMT_PSK_SHA256 |
-			      WPA_KEY_MGMT_IEEE8021X_SHA256)) {
+	if (wpa_key_mgmt_wpa_any(ssid->key_mgmt)) {
 		u8 wpa_ie[80];
 		size_t wpa_ie_len = sizeof(wpa_ie);
 		wpa_supplicant_set_suites(wpa_s, NULL, ssid,

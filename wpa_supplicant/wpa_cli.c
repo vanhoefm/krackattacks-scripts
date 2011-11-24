@@ -2376,13 +2376,13 @@ static int wpa_cli_cmd_p2p_peers(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 	if (wpa_ctrl_command_p2p_peer(ctrl, "P2P_PEER FIRST",
 				      addr, sizeof(addr), discovered))
-		return 0;
+		return -1;
 	do {
 		os_snprintf(cmd, sizeof(cmd), "P2P_PEER NEXT-%s", addr);
 	} while (wpa_ctrl_command_p2p_peer(ctrl, cmd, addr, sizeof(addr),
 			 discovered) == 0);
 
-	return -1;
+	return 0;
 }
 
 

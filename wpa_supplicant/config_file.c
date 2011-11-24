@@ -649,7 +649,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		char _buf[WPS_DEV_TYPE_BUFSIZE], *buf;
 		buf = wps_dev_type_bin2str(config->device_type,
 					   _buf, sizeof(_buf));
-		fprintf(f, "device_type=%s\n", buf);
+		if (os_strcmp(buf, "0-00000000-0") != 0)
+			fprintf(f, "device_type=%s\n", buf);
 	}
 	if (WPA_GET_BE32(config->os_version))
 		fprintf(f, "os_version=%08x\n",

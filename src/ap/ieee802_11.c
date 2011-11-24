@@ -868,7 +868,8 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 		p = hostapd_eid_wmm(hapd, p);
 
 #ifdef CONFIG_WPS
-	if (sta->flags & WLAN_STA_WPS) {
+	if ((sta->flags & WLAN_STA_WPS) ||
+	    ((sta->flags & WLAN_STA_MAYBE_WPS) && hapd->conf->wpa)) {
 		struct wpabuf *wps = wps_build_assoc_resp_ie();
 		if (wps) {
 			os_memcpy(p, wpabuf_head(wps), wpabuf_len(wps));

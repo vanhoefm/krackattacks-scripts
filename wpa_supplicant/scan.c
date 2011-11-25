@@ -755,7 +755,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			continue;
 		}
 
-		if (params.filter_ssids && ssid->ssid && ssid->ssid_len) {
+		if (params.num_filter_ssids < wpa_s->max_match_sets &&
+		    params.filter_ssids && ssid->ssid && ssid->ssid_len) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "add to filter ssid: %s",
 				wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 			os_memcpy(params.filter_ssids[params.num_filter_ssids].ssid,

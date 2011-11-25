@@ -2798,7 +2798,8 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval);
 
-	if (drv->num_filter_ssids) {
+	if (drv->num_filter_ssids &&
+	    (int) drv->num_filter_ssids <= drv->capa.max_match_sets) {
 		match_sets = nlmsg_alloc();
 
 		for (i = 0; i < drv->num_filter_ssids; i++) {

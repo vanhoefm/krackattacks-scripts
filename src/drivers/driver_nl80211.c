@@ -7565,6 +7565,45 @@ static void nl80211_poll_client(void *priv, const u8 *own_addr, const u8 *addr,
 }
 
 
+static int nl80211_set_power_save(struct i802_bss *bss, int enabled)
+{
+	struct nl_msg *msg;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -ENOMEM;
+
+	nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_SET_POWER_SAVE);
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+	NLA_PUT_U32(msg, NL80211_ATTR_PS_STATE,
+		    enabled ? NL80211_PS_ENABLED : NL80211_PS_DISABLED);
+	return send_and_recv_msgs(bss->drv, msg, NULL, NULL);
+nla_put_failure:
+	nlmsg_free(msg);
+	return -ENOBUFS;
+}
+
+
+static int nl80211_set_p2p_powersave(void *priv, int legacy_ps, int opp_ps,
+				     int ctwindow)
+{
+	struct i802_bss *bss = priv;
+
+	wpa_printf(MSG_DEBUG, "nl80211: set_p2p_powersave (legacy_ps=%d "
+		   "opp_ps=%d ctwindow=%d)", legacy_ps, opp_ps, ctwindow);
+
+	if (opp_ps != -1 || ctwindow != -1)
+		return -1; /* Not yet supported */
+
+	if (legacy_ps == -1)
+		return 0;
+	if (legacy_ps != 0 && legacy_ps != 1)
+		return -1; /* Not yet supported */
+
+	return nl80211_set_power_save(bss, legacy_ps);
+}
+
+
 #ifdef CONFIG_TDLS
 
 static int nl80211_send_tdls_mgmt(void *priv, const u8 *dst, u8 action_code,
@@ -7725,6 +7764,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.flush_pmkid = nl80211_flush_pmkid,
 	.set_rekey_info = nl80211_set_rekey_info,
 	.poll_client = nl80211_poll_client,
+	.set_p2p_powersave = nl80211_set_p2p_powersave,
 #ifdef CONFIG_TDLS
 	.send_tdls_mgmt = nl80211_send_tdls_mgmt,
 	.tdls_oper = nl80211_tdls_oper,

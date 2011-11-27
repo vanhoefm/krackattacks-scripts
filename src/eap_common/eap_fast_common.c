@@ -133,9 +133,9 @@ u8 * eap_fast_derive_key(void *ssl_ctx, struct tls_connection *conn,
 
 	wpa_hexdump_key(MSG_MSGDUMP, "EAP-FAST: master_secret for key "
 			"expansion", keys.master_key, keys.master_key_len);
-	if (tls_prf(keys.master_key, keys.master_key_len,
-		    label, rnd, keys.client_random_len +
-		    keys.server_random_len, out, block_size + len))
+	if (tls_prf_sha1_md5(keys.master_key, keys.master_key_len,
+			     label, rnd, keys.client_random_len +
+			     keys.server_random_len, out, block_size + len))
 		goto fail;
 	os_free(rnd);
 	os_memmove(out, out + block_size, len);

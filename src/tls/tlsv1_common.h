@@ -220,5 +220,7 @@ void tls_verify_hash_add(struct tls_verify_hash *verify, const u8 *buf,
 void tls_verify_hash_free(struct tls_verify_hash *verify);
 int tls_version_ok(u16 ver);
 const char * tls_version_str(u16 ver);
+int tls_prf(const u8 *secret, size_t secret_len, const char *label,
+	    const u8 *seed, size_t seed_len, u8 *out, size_t outlen);
 
 #endif /* TLSV1_COMMON_H */

@@ -15,6 +15,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/sha1.h"
 #include "x509v3.h"
 #include "tlsv1_common.h"
 
@@ -264,4 +265,12 @@ const char * tls_version_str(u16 ver)
 	}
 
 	return "?";
+}
+
+
+int tls_prf(const u8 *secret, size_t secret_len, const char *label,
+	    const u8 *seed, size_t seed_len, u8 *out, size_t outlen)
+{
+	return tls_prf_sha1_md5(secret, secret_len, label, seed, seed_len, out,
+				outlen);
 }

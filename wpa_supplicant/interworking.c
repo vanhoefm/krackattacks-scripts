@@ -571,6 +571,8 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	const u8 *ie;
 
 	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
+	if (ie == NULL)
+		return -1;
 	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR " (3GPP)",
 		   MAC2STR(bss->bssid));
 

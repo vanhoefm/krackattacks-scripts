@@ -131,6 +131,8 @@ static int https_client(int s, const char *path)
 		if (in == NULL)
 			goto done;
 	}
+	wpabuf_free(out);
+	out = NULL;
 
 	wpa_printf(MSG_INFO, "TLS connection established");
 	if (appl)
@@ -154,6 +156,8 @@ static int https_client(int s, const char *path)
 		wpa_printf(MSG_ERROR, "send: %s", strerror(errno));
 		goto done;
 	}
+	wpabuf_free(out);
+	out = NULL;
 
 	wpa_printf(MSG_INFO, "Reading HTTP response");
 	for (;;) {

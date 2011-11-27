@@ -466,8 +466,10 @@ struct tlsv1_client * tlsv1_client_init(void)
 	count = 0;
 	suites = conn->cipher_suites;
 #ifndef CONFIG_CRYPTO_INTERNAL
+	suites[count++] = TLS_RSA_WITH_AES_256_CBC_SHA256;
 	suites[count++] = TLS_RSA_WITH_AES_256_CBC_SHA;
 #endif /* CONFIG_CRYPTO_INTERNAL */
+	suites[count++] = TLS_RSA_WITH_AES_128_CBC_SHA256;
 	suites[count++] = TLS_RSA_WITH_AES_128_CBC_SHA;
 	suites[count++] = TLS_RSA_WITH_3DES_EDE_CBC_SHA;
 	suites[count++] = TLS_RSA_WITH_RC4_128_SHA;
@@ -571,14 +573,23 @@ int tlsv1_client_get_cipher(struct tlsv1_client *conn, char *buf,
 	case TLS_RSA_WITH_3DES_EDE_CBC_SHA:
 		cipher = "DES-CBC3-SHA";
 		break;
+	case TLS_DH_anon_WITH_AES_128_CBC_SHA256:
+		cipher = "ADH-AES-128-SHA256";
+		break;
 	case TLS_DH_anon_WITH_AES_128_CBC_SHA:
 		cipher = "ADH-AES-128-SHA";
 		break;
 	case TLS_RSA_WITH_AES_256_CBC_SHA:
 		cipher = "AES-256-SHA";
 		break;
+	case TLS_RSA_WITH_AES_256_CBC_SHA256:
+		cipher = "AES-256-SHA256";
+		break;
 	case TLS_RSA_WITH_AES_128_CBC_SHA:
 		cipher = "AES-128-SHA";
+		break;
+	case TLS_RSA_WITH_AES_128_CBC_SHA256:
+		cipher = "AES-128-SHA256";
 		break;
 	default:
 		return -1;
@@ -731,8 +742,10 @@ int tlsv1_client_set_cipher_list(struct tlsv1_client *conn, u8 *ciphers)
 		count = 0;
 		suites = conn->cipher_suites;
 #ifndef CONFIG_CRYPTO_INTERNAL
+		suites[count++] = TLS_DH_anon_WITH_AES_256_CBC_SHA256;
 		suites[count++] = TLS_DH_anon_WITH_AES_256_CBC_SHA;
 #endif /* CONFIG_CRYPTO_INTERNAL */
+		suites[count++] = TLS_DH_anon_WITH_AES_128_CBC_SHA256;
 		suites[count++] = TLS_DH_anon_WITH_AES_128_CBC_SHA;
 		suites[count++] = TLS_DH_anon_WITH_3DES_EDE_CBC_SHA;
 		suites[count++] = TLS_DH_anon_WITH_RC4_128_MD5;

@@ -1,5 +1,5 @@
 /*
- * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) client
+ * TLS v1.0/v1.1/v1.2 client (RFC 2246, RFC 4346, RFC 5246)
  * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify

@@ -1,5 +1,5 @@
 /*
- * TLS v1.0 (RFC 2246) and v1.1 (RFC 4346) common definitions
+ * TLSv1 common definitions
  * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify

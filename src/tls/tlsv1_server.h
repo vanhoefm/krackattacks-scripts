@@ -1,6 +1,6 @@
 /*
- * TLSv1 server (RFC 2246)
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * TLS v1.0/v1.1/v1.2 server (RFC 2246, RFC 4346, RFC 5246)
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as

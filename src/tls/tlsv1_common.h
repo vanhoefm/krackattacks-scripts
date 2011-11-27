@@ -208,10 +208,13 @@ struct tls_cipher_data {
 struct tls_verify_hash {
 	struct crypto_hash *md5_client;
 	struct crypto_hash *sha1_client;
+	struct crypto_hash *sha256_client;
 	struct crypto_hash *md5_server;
 	struct crypto_hash *sha1_server;
+	struct crypto_hash *sha256_server;
 	struct crypto_hash *md5_cert;
 	struct crypto_hash *sha1_cert;
+	struct crypto_hash *sha256_cert;
 };
 
 

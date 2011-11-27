@@ -17,6 +17,7 @@
 #include "common.h"
 #include "crypto/md5.h"
 #include "crypto/sha1.h"
+#include "crypto/sha256.h"
 #include "crypto/tls.h"
 #include "x509v3.h"
 #include "tlsv1_common.h"
@@ -1041,6 +1042,21 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 	wpa_hexdump(MSG_MSGDUMP, "TLSv1: verify_data in Finished",
 		    pos, TLS_VERIFY_DATA_LEN);
 
+#ifdef CONFIG_TLSV12
+	if (conn->rl.tls_version >= TLS_VERSION_1_2) {
+		hlen = SHA256_MAC_LEN;
+		if (conn->verify.sha256_client == NULL ||
+		    crypto_hash_finish(conn->verify.sha256_client, hash, &hlen)
+		    < 0) {
+			tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,
+					   TLS_ALERT_INTERNAL_ERROR);
+			conn->verify.sha256_client = NULL;
+			return -1;
+		}
+		conn->verify.sha256_client = NULL;
+	} else {
+#endif /* CONFIG_TLSV12 */
+
 	hlen = MD5_MAC_LEN;
 	if (conn->verify.md5_client == NULL ||
 	    crypto_hash_finish(conn->verify.md5_client, hash, &hlen) < 0) {
@@ -1062,10 +1078,15 @@ static int tls_process_client_finished(struct tlsv1_server *conn, u8 ct,
 		return -1;
 	}
 	conn->verify.sha1_client = NULL;
+	hlen = MD5_MAC_LEN + SHA1_MAC_LEN;
+
+#ifdef CONFIG_TLSV12
+	}
+#endif /* CONFIG_TLSV12 */
 
 	if (tls_prf(conn->rl.tls_version,
 		    conn->master_secret, TLS_MASTER_SECRET_LEN,
-		    "client finished", hash, MD5_MAC_LEN + SHA1_MAC_LEN,
+		    "client finished", hash, hlen,
 		    verify_data, TLS_VERIFY_DATA_LEN)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to derive verify_data");
 		tlsv1_server_alert(conn, TLS_ALERT_LEVEL_FATAL,

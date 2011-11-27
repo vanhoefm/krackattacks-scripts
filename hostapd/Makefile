@@ -683,6 +683,9 @@ OBJS += ../src/crypto/sha256.o
 ifdef CONFIG_INTERNAL_SHA256
 OBJS += ../src/crypto/sha256-internal.o
 endif
+ifdef NEED_TLS_PRF_SHA256
+OBJS += ../src/crypto/sha256-tlsprf.o
+endif
 endif
 
 ifdef NEED_DH_GROUPS

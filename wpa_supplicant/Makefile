@@ -1094,6 +1094,9 @@ SHA256OBJS += ../src/crypto/sha256.o
 ifdef CONFIG_INTERNAL_SHA256
 SHA256OBJS += ../src/crypto/sha256-internal.o
 endif
+ifdef NEED_TLS_PRF_SHA256
+SHA256OBJS += ../src/crypto/sha256-tlsprf.o
+endif
 OBJS += $(SHA256OBJS)
 endif
 

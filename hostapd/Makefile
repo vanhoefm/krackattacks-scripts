@@ -678,6 +678,7 @@ endif
 endif
 
 ifdef NEED_SHA256
+CFLAGS += -DCONFIG_SHA256
 OBJS += ../src/crypto/sha256.o
 ifdef CONFIG_INTERNAL_SHA256
 OBJS += ../src/crypto/sha256-internal.o

@@ -133,14 +133,13 @@ static void * eap_aka_prime_init(struct eap_sm *sm)
 		return NULL;
 
 	data->eap_method = EAP_TYPE_AKA_PRIME;
-	data->network_name = os_malloc(os_strlen(network_name));
+	data->network_name = (u8 *) os_strdup(network_name);
 	if (data->network_name == NULL) {
 		os_free(data);
 		return NULL;
 	}
 
 	data->network_name_len = os_strlen(network_name);
-	os_memcpy(data->network_name, network_name, data->network_name_len);
 
 	data->state = IDENTITY;
 	eap_aka_determine_identity(sm, data, 1, 0);

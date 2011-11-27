@@ -609,7 +609,8 @@ static int tls_write_server_finished(struct tlsv1_server *conn,
 	}
 	conn->verify.sha1_server = NULL;
 
-	if (tls_prf(conn->master_secret, TLS_MASTER_SECRET_LEN,
+	if (tls_prf(conn->rl.tls_version,
+		    conn->master_secret, TLS_MASTER_SECRET_LEN,
 		    "server finished", hash, MD5_MAC_LEN + SHA1_MAC_LEN,
 		    verify_data + 1 + 3, TLS_VERIFY_DATA_LEN)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to generate verify_data");

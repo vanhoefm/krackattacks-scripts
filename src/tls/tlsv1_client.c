@@ -67,7 +67,8 @@ int tls_derive_keys(struct tlsv1_client *conn,
 		os_memcpy(seed, conn->client_random, TLS_RANDOM_LEN);
 		os_memcpy(seed + TLS_RANDOM_LEN, conn->server_random,
 			  TLS_RANDOM_LEN);
-		if (tls_prf(pre_master_secret, pre_master_secret_len,
+		if (tls_prf(conn->rl.tls_version,
+			    pre_master_secret, pre_master_secret_len,
 			    "master secret", seed, 2 * TLS_RANDOM_LEN,
 			    conn->master_secret, TLS_MASTER_SECRET_LEN)) {
 			wpa_printf(MSG_DEBUG, "TLSv1: Failed to derive "
@@ -83,7 +84,8 @@ int tls_derive_keys(struct tlsv1_client *conn,
 	key_block_len = 2 * (conn->rl.hash_size + conn->rl.key_material_len);
 	if (conn->rl.tls_version == TLS_VERSION_1)
 		key_block_len += 2 * conn->rl.iv_size;
-	if (tls_prf(conn->master_secret, TLS_MASTER_SECRET_LEN,
+	if (tls_prf(conn->rl.tls_version,
+		    conn->master_secret, TLS_MASTER_SECRET_LEN,
 		    "key expansion", seed, 2 * TLS_RANDOM_LEN,
 		    key_block, key_block_len)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to derive key_block");
@@ -536,7 +538,8 @@ int tlsv1_client_prf(struct tlsv1_client *conn, const char *label,
 			  TLS_RANDOM_LEN);
 	}
 
-	return tls_prf(conn->master_secret, TLS_MASTER_SECRET_LEN,
+	return tls_prf(conn->rl.tls_version,
+		       conn->master_secret, TLS_MASTER_SECRET_LEN,
 		       label, seed, 2 * TLS_RANDOM_LEN, out, out_len);
 }
 

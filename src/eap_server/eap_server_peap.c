@@ -1064,8 +1064,6 @@ static void eap_peap_process_phase2(struct eap_sm *sm,
 	wpa_hexdump_buf_key(MSG_DEBUG, "EAP-PEAP: Decrypted Phase 2 EAP",
 			    in_decrypted);
 
-	hdr = wpabuf_head(in_decrypted);
-
 	if (data->peap_version == 0 && data->state != PHASE2_TLV) {
 		const struct eap_hdr *resp;
 		struct eap_hdr *nhdr;

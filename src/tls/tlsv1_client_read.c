@@ -81,9 +81,7 @@ static int tls_process_server_hello(struct tlsv1_client *conn, u8 ct,
 	if (end - pos < 2)
 		goto decode_error;
 	tls_version = WPA_GET_BE16(pos);
-	if (tls_version != TLS_VERSION_1 &&
-	    (tls_version != TLS_VERSION_1_1 ||
-	     TLS_VERSION == TLS_VERSION_1)) {
+	if (!tls_version_ok(tls_version)) {
 		wpa_printf(MSG_DEBUG, "TLSv1: Unexpected protocol version in "
 			   "ServerHello %u.%u", pos[0], pos[1]);
 		tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
@@ -93,7 +91,7 @@ static int tls_process_server_hello(struct tlsv1_client *conn, u8 ct,
 	pos += 2;
 
 	wpa_printf(MSG_DEBUG, "TLSv1: Using TLS v%s",
-		   tls_version == TLS_VERSION_1_1 ? "1.1" : "1.0");
+		   tls_version_str(tls_version));
 	conn->rl.tls_version = tls_version;
 
 	/* Random random */

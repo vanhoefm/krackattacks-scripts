@@ -1,6 +1,6 @@
 /*
  * TLSv1 server - read handshake message
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -103,7 +103,7 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 	else
 		conn->rl.tls_version = conn->client_version;
 	wpa_printf(MSG_DEBUG, "TLSv1: Using TLS v%s",
-		   conn->rl.tls_version == TLS_VERSION_1_1 ? "1.1" : "1.0");
+		   tls_version_str(conn->rl.tls_version));
 
 	/* Random random */
 	if (end - pos < TLS_RANDOM_LEN)

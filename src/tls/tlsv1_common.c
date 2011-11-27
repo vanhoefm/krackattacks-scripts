@@ -1,6 +1,6 @@
 /*
  * TLSv1 common routines
- * Copyright (c) 2006-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2006-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -238,4 +238,30 @@ void tls_verify_hash_free(struct tls_verify_hash *verify)
 	verify->sha1_client = NULL;
 	verify->sha1_server = NULL;
 	verify->sha1_cert = NULL;
+}
+
+
+int tls_version_ok(u16 ver)
+{
+	if (ver == TLS_VERSION_1)
+		return 1;
+#ifdef CONFIG_TLSV11
+	if (ver == TLS_VERSION_1_1)
+		return 1;
+#endif /* CONFIG_TLSV11 */
+
+	return 0;
+}
+
+
+const char * tls_version_str(u16 ver)
+{
+	switch (ver) {
+	case TLS_VERSION_1:
+		return "1.0";
+	case TLS_VERSION_1_1:
+		return "1.1";
+	}
+
+	return "?";
 }

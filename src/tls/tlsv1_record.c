@@ -175,7 +175,7 @@ int tlsv1_record_send(struct tlsv1_record_layer *rl, u8 content_type, u8 *buf,
 
 	cpayload = pos;
 	explicit_iv = rl->write_cipher_suite != TLS_NULL_WITH_NULL_NULL &&
-		rl->iv_size && rl->tls_version == TLS_VERSION_1_1;
+		rl->iv_size && rl->tls_version >= TLS_VERSION_1_1;
 	if (explicit_iv) {
 		/* opaque IV[Cipherspec.block_length] */
 		if (pos + rl->iv_size > buf + buf_size)
@@ -377,7 +377,7 @@ int tlsv1_record_receive(struct tlsv1_record_layer *rl,
 			 * attacks more difficult.
 			 */
 
-			if (rl->tls_version == TLS_VERSION_1_1) {
+			if (rl->tls_version >= TLS_VERSION_1_1) {
 				/* Remove opaque IV[Cipherspec.block_length] */
 				if (plen < rl->iv_size) {
 					wpa_printf(MSG_DEBUG, "TLSv1.1: Not "

@@ -125,8 +125,10 @@ static struct wpabuf * eap_psk_build_3(struct eap_sm *sm,
 
 	os_memcpy(buf, data->id_s, data->id_s_len);
 	os_memcpy(buf + data->id_s_len, data->rand_p, EAP_PSK_RAND_LEN);
-	if (omac1_aes_128(data->ak, buf, buflen, psk->mac_s))
+	if (omac1_aes_128(data->ak, buf, buflen, psk->mac_s)) {
+		os_free(buf);
 		goto fail;
+	}
 	os_free(buf);
 
 	if (eap_psk_derive_keys(data->kdk, data->rand_p, data->tek, data->msk,

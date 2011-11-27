@@ -16,6 +16,7 @@
 
 #include "common.h"
 #include "crypto/sha1.h"
+#include "crypto/sha256.h"
 #include "x509v3.h"
 #include "tlsv1_common.h"
 
@@ -250,6 +251,10 @@ int tls_version_ok(u16 ver)
 	if (ver == TLS_VERSION_1_1)
 		return 1;
 #endif /* CONFIG_TLSV11 */
+#ifdef CONFIG_TLSV12
+	if (ver == TLS_VERSION_1_2)
+		return 1;
+#endif /* CONFIG_TLSV12 */
 
 	return 0;
 }
@@ -262,6 +267,8 @@ const char * tls_version_str(u16 ver)
 		return "1.0";
 	case TLS_VERSION_1_1:
 		return "1.1";
+	case TLS_VERSION_1_2:
+		return "1.2";
 	}
 
 	return "?";
@@ -271,6 +278,14 @@ const char * tls_version_str(u16 ver)
 int tls_prf(u16 ver, const u8 *secret, size_t secret_len, const char *label,
 	    const u8 *seed, size_t seed_len, u8 *out, size_t outlen)
 {
+#ifdef CONFIG_TLSV12
+	if (ver >= TLS_VERSION_1_2) {
+		tls_prf_sha256(secret, secret_len, label, seed, seed_len,
+			       out, outlen);
+		return 0;
+	}
+#endif /* CONFIG_TLSV12 */
+
 	return tls_prf_sha1_md5(secret, secret_len, label, seed, seed_len, out,
 				outlen);
 }

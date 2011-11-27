@@ -99,6 +99,10 @@ static int tls_process_client_hello(struct tlsv1_server *conn, u8 ct,
 
 	if (TLS_VERSION == TLS_VERSION_1)
 		conn->rl.tls_version = TLS_VERSION_1;
+#ifdef CONFIG_TLSV12
+	else if (conn->client_version >= TLS_VERSION_1_2)
+		conn->rl.tls_version = TLS_VERSION_1_2;
+#endif /* CONFIG_TLSV12 */
 	else if (conn->client_version > TLS_VERSION_1_1)
 		conn->rl.tls_version = TLS_VERSION_1_1;
 	else

@@ -97,6 +97,25 @@ enum {
 /* CompressionMethod */
 #define TLS_COMPRESSION_NULL 0
 
+/* HashAlgorithm */
+enum {
+	TLS_HASH_ALG_NONE = 0,
+	TLS_HASH_ALG_MD5 = 1,
+	TLS_HASH_ALG_SHA1 = 2,
+	TLS_HASH_ALG_SHA224 = 3,
+	TLS_HASH_ALG_SHA256 = 4,
+	TLS_HASH_ALG_SHA384 = 5,
+	TLS_HASH_ALG_SHA512 = 6
+};
+
+/* SignatureAlgorithm */
+enum {
+	TLS_SIGN_ALG_ANONYMOUS = 0,
+	TLS_SIGN_ALG_RSA = 1,
+	TLS_SIGN_ALG_DSA = 2,
+	TLS_SIGN_ALG_ECDSA = 3,
+};
+
 /* AlertLevel */
 #define TLS_ALERT_LEVEL_WARNING 1
 #define TLS_ALERT_LEVEL_FATAL 2

@@ -437,7 +437,7 @@ static int tls_write_client_certificate_verify(struct tlsv1_client *conn,
 {
 	u8 *pos, *rhdr, *hs_start, *hs_length, *signed_start;
 	size_t rlen, hlen, clen;
-	u8 hash[MD5_MAC_LEN + SHA1_MAC_LEN], *hpos;
+	u8 hash[100], *hpos;
 	enum { SIGN_ALG_RSA, SIGN_ALG_DSA } alg = SIGN_ALG_RSA;
 
 	pos = *msgpos;
@@ -477,6 +477,40 @@ static int tls_write_client_certificate_verify(struct tlsv1_client *conn,
 
 	hpos = hash;
 
+#ifdef CONFIG_TLSV12
+	if (conn->rl.tls_version == TLS_VERSION_1_2) {
+		hlen = SHA256_MAC_LEN;
+		if (conn->verify.sha256_cert == NULL ||
+		    crypto_hash_finish(conn->verify.sha256_cert, hpos, &hlen) <
+		    0) {
+			conn->verify.sha256_cert = NULL;
+			tls_alert(conn, TLS_ALERT_LEVEL_FATAL,
+				  TLS_ALERT_INTERNAL_ERROR);
+			return -1;
+		}
+		conn->verify.sha256_cert = NULL;
+
+		/*
+		 * RFC 3447, A.2.4 RSASSA-PKCS1-v1_5
+		 *
+		 * DigestInfo ::= SEQUENCE {
+		 *   digestAlgorithm DigestAlgorithm,
+		 *   digest OCTET STRING
+		 * }
+		 *
+		 * SHA-256 OID: sha256WithRSAEncryption ::= {pkcs-1 11}
+		 *
+		 * DER encoded DigestInfo for SHA256 per RFC 3447:
+		 * 30 31 30 0d 06 09 60 86 48 01 65 03 04 02 01 05 00 04 20 ||
+		 * H
+		 */
+		os_memmove(hash + 19, hash, hlen);
+		hlen += 19;
+		os_memcpy(hash, "\x30\x31\x30\x0d\x06\x09\x60\x86\x48\x01\x65"
+			  "\x03\x04\x02\x01\x05\x00\x04\x20", 19);
+	} else {
+#endif /* CONFIG_TLSV12 */
+
 	if (alg == SIGN_ALG_RSA) {
 		hlen = MD5_MAC_LEN;
 		if (conn->verify.md5_cert == NULL ||
@@ -507,7 +541,28 @@ static int tls_write_client_certificate_verify(struct tlsv1_client *conn,
 	if (alg == SIGN_ALG_RSA)
 		hlen += MD5_MAC_LEN;
 
+#ifdef CONFIG_TLSV12
+	}
+#endif /* CONFIG_TLSV12 */
+
 	wpa_hexdump(MSG_MSGDUMP, "TLSv1: CertificateVerify hash", hash, hlen);
+
+#ifdef CONFIG_TLSV12
+	if (conn->rl.tls_version >= TLS_VERSION_1_2) {
+		/*
+		 * RFC 5246, 4.7:
+		 * TLS v1.2 adds explicit indication of the used signature and
+		 * hash algorithms.
+		 *
+		 * struct {
+		 *   HashAlgorithm hash;
+		 *   SignatureAlgorithm signature;
+		 * } SignatureAndHashAlgorithm;
+		 */
+		*pos++ = TLS_HASH_ALG_SHA256;
+		*pos++ = TLS_SIGN_ALG_RSA;
+	}
+#endif /* CONFIG_TLSV12 */
 
 	/*
 	 * RFC 2246, 4.7:

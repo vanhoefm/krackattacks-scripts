@@ -88,6 +88,7 @@ int wpas_wps_eapol_cb(struct wpa_supplicant *wpa_s)
 		}
 		wpa_s->after_wps = 5;
 		wpa_s->wps_freq = wpa_s->assoc_freq;
+		wpa_s->normal_scans = 0;
 		wpa_s->reassociate = 1;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 		return 1;
@@ -814,6 +815,7 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 	wpa_s->scan_runs = 0;
+	wpa_s->normal_scans = 0;
 	wpa_s->wps_success = 0;
 	wpa_s->blacklist_cleared = 0;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);

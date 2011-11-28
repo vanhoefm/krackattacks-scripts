@@ -203,8 +203,10 @@ int wpa_supplicant_trigger_scan(struct wpa_supplicant *wpa_s,
 	if (ret) {
 		wpa_supplicant_notify_scanning(wpa_s, 0);
 		wpas_notify_scan_done(wpa_s, 0);
-	} else
+	} else {
 		wpa_s->scan_runs++;
+		wpa_s->normal_scans++;
+	}
 
 	return ret;
 }
@@ -702,6 +704,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	int ret;
 	unsigned int max_sched_scan_ssids;
 	int wildcard = 0;
+	int need_ssids;
 
 	if (!wpa_s->sched_scan_supported)
 		return -1;
@@ -718,6 +721,33 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		return 0;
 	}
 
+	need_ssids = 0;
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (!ssid->disabled && !ssid->scan_ssid) {
+			/* Use wildcard SSID to find this network */
+			wildcard = 1;
+		} else if (!ssid->disabled && ssid->ssid_len)
+			need_ssids++;
+	}
+	if (wildcard)
+		need_ssids++;
+
+	if (wpa_s->normal_scans < 3 &&
+	    (need_ssids <= wpa_s->max_scan_ssids ||
+	     wpa_s->max_scan_ssids >= (int) max_sched_scan_ssids)) {
+		/*
+		 * When normal scan can speed up operations, use that for the
+		 * first operations before starting the sched_scan to allow
+		 * user space sleep more. We do this only if the normal scan
+		 * has functionality that is suitable for this or if the
+		 * sched_scan does not have better support for multiple SSIDs.
+		 */
+		wpa_dbg(wpa_s, MSG_DEBUG, "Use normal scan instead of "
+			"sched_scan for initial scans (normal_scans=%d)",
+			wpa_s->normal_scans);
+		return -1;
+	}
+
 	os_memset(&params, 0, sizeof(params));
 
 	/* If we can't allocate space for the filters, we just don't filter */
@@ -728,14 +758,6 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
-
-	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
-		if (!ssid->disabled && !ssid->scan_ssid) {
-			/* Use wildcard SSID to find this network */
-			wildcard = 1;
-			break;
-		}
-	}
 
 	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;

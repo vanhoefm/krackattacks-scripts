@@ -3580,6 +3580,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strcmp(buf, "DISCONNECT") == 0) {
 		wpa_s->reassociate = 0;
 		wpa_s->disconnected = 1;
+		wpa_supplicant_cancel_sched_scan(wpa_s);
 		wpa_supplicant_deauthenticate(wpa_s,
 					      WLAN_REASON_DEAUTH_LEAVING);
 	} else if (os_strcmp(buf, "SCAN") == 0) {

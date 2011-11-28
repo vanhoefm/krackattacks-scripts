@@ -764,6 +764,13 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			params.filter_ssids[params.num_filter_ssids].ssid_len =
 				ssid->ssid_len;
 			params.num_filter_ssids++;
+		} else if (params.filter_ssids && ssid->ssid && ssid->ssid_len)
+		{
+			wpa_dbg(wpa_s, MSG_DEBUG, "Not enough room for SSID "
+				"filter for sched_scan - drop filter");
+			os_free(params.filter_ssids);
+			params.filter_ssids = NULL;
+			params.num_filter_ssids = 0;
 		}
 
 		if (ssid->scan_ssid && ssid->ssid && ssid->ssid_len) {
@@ -781,8 +788,6 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			}
 		}
 
-		if (params.num_filter_ssids >= wpa_s->max_match_sets)
-			break;
 		wpa_s->prev_sched_ssid = ssid;
 		ssid = ssid->next;
 	}

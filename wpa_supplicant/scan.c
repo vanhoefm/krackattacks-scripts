@@ -787,6 +787,11 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		ssid = ssid->next;
 	}
 
+	if (params.num_filter_ssids == 0) {
+		os_free(params.filter_ssids);
+		params.filter_ssids = NULL;
+	}
+
 	if (wpa_s->wps)
 		wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
 

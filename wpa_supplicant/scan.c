@@ -749,11 +749,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	}
 
 	while (ssid) {
-		if (ssid->disabled) {
-			wpa_s->prev_sched_ssid = ssid;
-			ssid = ssid->next;
-			continue;
-		}
+		if (ssid->disabled)
+			goto next;
 
 		if (params.num_filter_ssids < wpa_s->max_match_sets &&
 		    params.filter_ssids && ssid->ssid && ssid->ssid_len) {
@@ -788,6 +785,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			}
 		}
 
+	next:
 		wpa_s->prev_sched_ssid = ssid;
 		ssid = ssid->next;
 	}

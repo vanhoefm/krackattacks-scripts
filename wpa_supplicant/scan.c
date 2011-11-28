@@ -701,6 +701,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	struct wpabuf *wps_ie = NULL;
 	int ret;
 	unsigned int max_sched_scan_ssids;
+	int wildcard = 0;
 
 	if (!wpa_s->sched_scan_supported)
 		return -1;
@@ -709,6 +710,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		max_sched_scan_ssids = WPAS_MAX_SCAN_SSIDS;
 	else
 		max_sched_scan_ssids = wpa_s->max_sched_scan_ssids;
+	if (max_sched_scan_ssids < 1)
+		return -1;
 
 	if (wpa_s->sched_scanning) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Already sched scanning");
@@ -725,6 +728,14 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
+
+	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+		if (!ssid->disabled && !ssid->scan_ssid) {
+			/* Use wildcard SSID to find this network */
+			wildcard = 1;
+			break;
+		}
+	}
 
 	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;
@@ -746,6 +757,11 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		wpa_s->first_sched_scan = 1;
 		ssid = wpa_s->conf->ssid;
 		wpa_s->prev_sched_ssid = ssid;
+	}
+
+	if (wildcard) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Add wildcard SSID to sched_scan");
+		params.num_ssids++;
 	}
 
 	while (ssid) {
@@ -771,6 +787,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 		}
 
 		if (ssid->scan_ssid && ssid->ssid && ssid->ssid_len) {
+			if (params.num_ssids == max_sched_scan_ssids)
+				break; /* only room for broadcast SSID */
 			wpa_dbg(wpa_s, MSG_DEBUG,
 				"add to active scan ssid: %s",
 				wpa_ssid_txt(ssid->ssid, ssid->ssid_len));

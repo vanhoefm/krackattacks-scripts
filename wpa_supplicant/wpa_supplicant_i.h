@@ -510,6 +510,8 @@ struct wpa_supplicant {
 		u16 num_modes;
 		u16 flags;
 	} hw;
+
+	int pno;
 };
 
 

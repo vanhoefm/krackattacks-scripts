@@ -50,6 +50,75 @@ static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
 						  char *buf, int len);
 
 
+static int pno_start(struct wpa_supplicant *wpa_s)
+{
+	int ret;
+	size_t i, num_ssid;
+	struct wpa_ssid *ssid;
+	struct wpa_driver_scan_params params;
+
+	if (wpa_s->pno)
+		return 0;
+
+	os_memset(&params, 0, sizeof(params));
+
+	num_ssid = 0;
+	ssid = wpa_s->conf->ssid;
+	while (ssid) {
+		if (!ssid->disabled)
+			num_ssid++;
+		ssid = ssid->next;
+	}
+	if (num_ssid > WPAS_MAX_SCAN_SSIDS) {
+		wpa_printf(MSG_DEBUG, "PNO: Use only the first %u SSIDs from "
+			   "%u", WPAS_MAX_SCAN_SSIDS, (unsigned int) num_ssid);
+		num_ssid = WPAS_MAX_SCAN_SSIDS;
+	}
+
+	if (num_ssid == 0) {
+		wpa_printf(MSG_DEBUG, "PNO: No configured SSIDs");
+		return -1;
+	}
+
+	params.filter_ssids = os_malloc(sizeof(struct wpa_driver_scan_filter) *
+					num_ssid);
+	if (params.filter_ssids == NULL)
+		return -1;
+	i = 0;
+	while (ssid) {
+		if (!ssid->disabled) {
+			params.ssids[i].ssid = ssid->ssid;
+			params.ssids[i].ssid_len = ssid->ssid_len;
+			params.num_ssids++;
+			os_memcpy(params.filter_ssids[i].ssid, ssid->ssid,
+				  ssid->ssid_len);
+			params.filter_ssids[i].ssid_len = ssid->ssid_len;
+			params.num_filter_ssids++;
+			i++;
+			if (i == num_ssid)
+				break;
+		}
+		ssid = ssid->next;
+	}
+
+	ret = wpa_drv_sched_scan(wpa_s, &params, 10 * 1000);
+	os_free(params.filter_ssids);
+	if (ret == 0)
+		wpa_s->pno = 1;
+	return ret;
+}
+
+
+static int pno_stop(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->pno) {
+		wpa_s->pno = 0;
+		return wpa_drv_stop_sched_scan(wpa_s);
+	}
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -128,6 +197,11 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			ret = -1;
 		wpa_tdls_enable(wpa_s->wpa, !disabled);
 #endif /* CONFIG_TDLS */
+	} else if (os_strcasecmp(cmd, "pno") == 0) {
+		if (atoi(value))
+			ret = pno_start(wpa_s);
+		else
+			ret = pno_stop(wpa_s);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

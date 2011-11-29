@@ -85,6 +85,7 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 	if (params.filter_ssids == NULL)
 		return -1;
 	i = 0;
+	ssid = wpa_s->conf->ssid;
 	while (ssid) {
 		if (!ssid->disabled) {
 			params.ssids[i].ssid = ssid->ssid;

@@ -360,6 +360,8 @@ struct hostapd_bss_config {
 	/* IEEE 802.11u - Roaming Consortium list */
 	unsigned int roaming_consortium_count;
 	struct hostapd_roaming_consortium *roaming_consortium;
+
+	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */
 };
 
 

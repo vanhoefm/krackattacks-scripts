@@ -1768,6 +1768,21 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   "hw_mode '%s'", line, pos);
 				errors++;
 			}
+		} else if (os_strcmp(buf, "wps_rf_bands") == 0) {
+			if (os_strcmp(pos, "a") == 0)
+				bss->wps_rf_bands = WPS_RF_50GHZ;
+			else if (os_strcmp(pos, "g") == 0 ||
+				 os_strcmp(pos, "b") == 0)
+				bss->wps_rf_bands = WPS_RF_24GHZ;
+			else if (os_strcmp(pos, "ag") == 0 ||
+				 os_strcmp(pos, "ga") == 0)
+				bss->wps_rf_bands =
+					WPS_RF_24GHZ | WPS_RF_50GHZ;
+			else {
+				wpa_printf(MSG_ERROR, "Line %d: unknown "
+					   "wps_rf_band '%s'", line, pos);
+				errors++;
+			}
 		} else if (os_strcmp(buf, "channel") == 0) {
 			conf->channel = atoi(pos);
 		} else if (os_strcmp(buf, "beacon_int") == 0) {

@@ -941,6 +941,18 @@ static void wps_registrar_pin_completed(struct wps_registrar *reg)
 }
 
 
+void wps_registrar_complete(struct wps_registrar *registrar, const u8 *uuid_e)
+{
+	if (registrar->pbc) {
+		wps_registrar_remove_pbc_session(registrar,
+						 uuid_e);
+		wps_registrar_pbc_completed(registrar);
+	} else {
+		wps_registrar_pin_completed(registrar);
+	}
+}
+
+
 int wps_registrar_wps_cancel(struct wps_registrar *reg)
 {
 	if (reg->pbc) {

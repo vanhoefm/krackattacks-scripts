@@ -186,11 +186,26 @@ static void hostapd_wps_pin_needed_cb(void *ctx, const u8 *uuid_e,
 }
 
 
+struct wps_stop_reg_data {
+	struct hostapd_data *current_hapd;
+	const u8 *uuid_e;
+};
+
+static int wps_stop_registrar(struct hostapd_data *hapd, void *ctx)
+{
+	struct wps_stop_reg_data *data = ctx;
+	if (hapd != data->current_hapd && hapd->wps != NULL)
+		wps_registrar_complete(hapd->wps->registrar, data->uuid_e);
+	return 0;
+}
+
+
 static void hostapd_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 				       const u8 *uuid_e)
 {
 	struct hostapd_data *hapd = ctx;
 	char uuid[40];
+	struct wps_stop_reg_data data;
 	if (uuid_bin2str(uuid_e, uuid, sizeof(uuid)))
 		return;
 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_REG_SUCCESS MACSTR " %s",
@@ -198,6 +213,9 @@ static void hostapd_wps_reg_success_cb(void *ctx, const u8 *mac_addr,
 	if (hapd->wps_reg_success_cb)
 		hapd->wps_reg_success_cb(hapd->wps_reg_success_cb_ctx,
 					 mac_addr, uuid_e);
+	data.current_hapd = hapd;
+	data.uuid_e = uuid_e;
+	hostapd_wps_for_each(hapd, wps_stop_registrar, &data);
 }
 
 

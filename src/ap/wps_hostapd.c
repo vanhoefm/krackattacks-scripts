@@ -599,22 +599,16 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_TIMEOUT);
 		break;
 	case WPS_EV_ER_AP_ADD:
-		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_AP_ADD);
 		break;
 	case WPS_EV_ER_AP_REMOVE:
-		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_AP_REMOVE);
 		break;
 	case WPS_EV_ER_ENROLLEE_ADD:
-		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_ENROLLEE_ADD);
 		break;
 	case WPS_EV_ER_ENROLLEE_REMOVE:
-		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_ENROLLEE_REMOVE);
 		break;
 	case WPS_EV_ER_AP_SETTINGS:
-		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_AP_SETTINGS);
 		break;
 	case WPS_EV_ER_SET_SELECTED_REGISTRAR:
-		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_ER_SET_SEL_REG);
 		break;
 	}
 	if (hapd->wps_event_cb)

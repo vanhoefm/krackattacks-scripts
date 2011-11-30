@@ -228,7 +228,6 @@ void wps_success_event(struct wps_context *wps);
 void wps_pwd_auth_fail_event(struct wps_context *wps, int enrollee, int part);
 void wps_pbc_overlap_event(struct wps_context *wps);
 void wps_pbc_timeout_event(struct wps_context *wps);
-void wps_registrar_sel_registrar_changed_event(struct wps_context *wps);
 
 extern struct oob_device_data oob_ufd_device_data;
 extern struct oob_device_data oob_nfc_device_data;

@@ -1562,10 +1562,14 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	if (!wpa_s->auto_reconnect_disabled ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: Auto connect enabled: try to "
-			"reconnect (wps=%d)",
-			wpa_s->key_mgmt == WPA_KEY_MGMT_WPS);
+			"reconnect (wps=%d wpa_state=%d)",
+			wpa_s->key_mgmt == WPA_KEY_MGMT_WPS,
+			wpa_s->wpa_state);
 		if (wpa_s->wpa_state >= WPA_ASSOCIATING)
 			wpa_supplicant_req_scan(wpa_s, 0, 100000);
+		else
+			wpa_dbg(wpa_s, MSG_DEBUG, "Do not request new "
+				"immediate scan");
 	} else {
 		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: Auto connect disabled: do not "
 			"try to re-connect");

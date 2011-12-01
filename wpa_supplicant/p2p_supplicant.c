@@ -711,6 +711,8 @@ static void wpas_start_wps_go(struct wpa_supplicant *wpa_s,
 	if (ssid == NULL)
 		return;
 
+	wpa_s->show_group_started = 0;
+
 	wpa_config_set_network_defaults(ssid);
 	ssid->temporary = 1;
 	ssid->p2p_group = 1;

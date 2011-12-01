@@ -874,9 +874,10 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 					    char *buf, size_t buflen)
 {
 	char *pos, *end, tmp[30];
-	int res, verbose, ret;
+	int res, verbose, wps, ret;
 
 	verbose = os_strcmp(params, "-VERBOSE") == 0;
+	wps = os_strcmp(params, "-WPS") == 0;
 	pos = buf;
 	end = buf + buflen;
 	if (wpa_s->wpa_state >= WPA_ASSOCIATED) {
@@ -905,6 +906,17 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
 				return pos - buf;
 			pos += ret;
 
+			if (wps && ssid->passphrase &&
+			    wpa_key_mgmt_wpa_psk(ssid->key_mgmt) &&
+			    (ssid->mode == WPAS_MODE_AP ||
+			     ssid->mode == WPAS_MODE_P2P_GO)) {
+				ret = os_snprintf(pos, end - pos,
+						  "passphrase=%s\n",
+						  ssid->passphrase);
+				if (ret < 0 || ret >= end - pos)
+					return pos - buf;
+				pos += ret;
+			}
 			if (ssid->id_str) {
 				ret = os_snprintf(pos, end - pos,
 						  "id_str=%s\n",

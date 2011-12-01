@@ -454,8 +454,11 @@ static int wpa_ctrl_command(struct wpa_ctrl *ctrl, char *cmd)
 
 static int wpa_cli_cmd_status(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
-	int verbose = argc > 0 && os_strcmp(argv[0], "verbose") == 0;
-	return wpa_ctrl_command(ctrl, verbose ? "STATUS-VERBOSE" : "STATUS");
+	if (argc > 0 && os_strcmp(argv[0], "verbose") == 0)
+		return wpa_ctrl_command(ctrl, "STATUS-VERBOSE");
+	if (argc > 0 && os_strcmp(argv[0], "wps") == 0)
+		return wpa_ctrl_command(ctrl, "STATUS-WPS");
+	return wpa_ctrl_command(ctrl, "STATUS");
 }
 
 

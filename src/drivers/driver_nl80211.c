@@ -28,6 +28,7 @@
 #include <linux/rtnetlink.h>
 #include <netpacket/packet.h>
 #include <linux/filter.h>
+#include <linux/errqueue.h>
 #include "nl80211_copy.h"
 
 #include "common.h"
@@ -42,6 +43,26 @@
 #include "radiotap_iter.h"
 #include "rfkill.h"
 #include "driver.h"
+
+#ifndef SO_WIFI_STATUS
+# if defined(__sparc__)
+#  define SO_WIFI_STATUS	0x0025
+# elif defined(__parisc__)
+#  define SO_WIFI_STATUS	0x4022
+# else
+#  define SO_WIFI_STATUS	41
+# endif
+
+# define SCM_WIFI_STATUS	SO_WIFI_STATUS
+#endif
+
+#ifndef SO_EE_ORIGIN_TXSTATUS
+#define SO_EE_ORIGIN_TXSTATUS	4
+#endif
+
+#ifndef PACKET_TX_TIMESTAMP
+#define PACKET_TX_TIMESTAMP	16
+#endif
 
 #ifdef ANDROID
 #include "android_drv.h"
@@ -211,6 +232,7 @@ struct wpa_driver_nl80211_data {
 	unsigned int in_interface_list:1;
 	unsigned int device_ap_sme:1;
 	unsigned int poll_command_supported:1;
+	unsigned int data_tx_status:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -223,9 +245,7 @@ struct wpa_driver_nl80211_data {
 
 	struct i802_bss first_bss;
 
-#ifdef CONFIG_AP
 	int eapol_tx_sock;
-#endif /* CONFIG_AP */
 
 #ifdef HOSTAPD
 	int eapol_sock; /* socket for EAPOL frames */
@@ -1898,6 +1918,7 @@ struct wiphy_info_data {
 	unsigned int error:1;
 	unsigned int device_ap_sme:1;
 	unsigned int poll_command_supported:1;
+	unsigned int data_tx_status:1;
 };
 
 
@@ -2085,6 +2106,13 @@ broken_combination:
 	if (tb[NL80211_ATTR_DEVICE_AP_SME])
 		info->device_ap_sme = 1;
 
+	if (tb[NL80211_ATTR_FEATURE_FLAGS]) {
+		u32 flags = nla_get_u32(tb[NL80211_ATTR_FEATURE_FLAGS]);
+
+		if (flags & NL80211_FEATURE_SK_TX_STATUS)
+			info->data_tx_status = 1;
+	}
+
 	return NL_SKIP;
 }
 
@@ -2144,6 +2172,7 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 
 	drv->device_ap_sme = info.device_ap_sme;
 	drv->poll_command_supported = info.poll_command_supported;
+	drv->data_tx_status = info.data_tx_status;
 
 	return 0;
 }
@@ -2282,6 +2311,68 @@ static void nl80211_get_phy_name(struct wpa_driver_nl80211_data *drv)
 }
 
 
+static void wpa_driver_nl80211_handle_eapol_tx_status(int sock,
+						      void *eloop_ctx,
+						      void *handle)
+{
+	struct wpa_driver_nl80211_data *drv = eloop_ctx;
+	u8 data[2048];
+	struct msghdr msg;
+	struct iovec entry;
+	struct {
+		struct cmsghdr cm;
+		char control[512];
+	} control;
+	struct cmsghdr *cmsg;
+	int res, found_ee = 0, found_wifi = 0, acked = 0;
+	union wpa_event_data event;
+
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_iov = &entry;
+	msg.msg_iovlen = 1;
+	entry.iov_base = data;
+	entry.iov_len = sizeof(data);
+	msg.msg_control = &control;
+	msg.msg_controllen = sizeof(control);
+
+	res = recvmsg(sock, &msg, MSG_ERRQUEUE);
+	/* if error or not fitting 802.3 header, return */
+	if (res < 14)
+		return;
+
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg))
+	{
+		if (cmsg->cmsg_level == SOL_SOCKET &&
+		    cmsg->cmsg_type == SCM_WIFI_STATUS) {
+			int *ack;
+
+			found_wifi = 1;
+			ack = (void *)CMSG_DATA(cmsg);
+			acked = *ack;
+		}
+
+		if (cmsg->cmsg_level == SOL_PACKET &&
+		    cmsg->cmsg_type == PACKET_TX_TIMESTAMP) {
+			struct sock_extended_err *err =
+				(struct sock_extended_err *)CMSG_DATA(cmsg);
+
+			if (err->ee_origin == SO_EE_ORIGIN_TXSTATUS)
+				found_ee = 1;
+		}
+	}
+
+	if (!found_ee || !found_wifi)
+		return;
+
+	memset(&event, 0, sizeof(event));
+	event.eapol_tx_status.dst = data;
+	event.eapol_tx_status.data = data + 14;
+	event.eapol_tx_status.data_len = res - 14;
+	event.eapol_tx_status.ack = acked;
+	wpa_supplicant_event(drv->ctx, EVENT_EAPOL_TX_STATUS, &event);
+}
+
+
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -2309,9 +2400,7 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 	os_strlcpy(bss->ifname, ifname, sizeof(bss->ifname));
 	drv->monitor_ifidx = -1;
 	drv->monitor_sock = -1;
-#ifdef CONFIG_AP
 	drv->eapol_tx_sock = -1;
-#endif /* CONFIG_AP */
 	drv->ap_scan_as_station = NL80211_IFTYPE_UNSPECIFIED;
 
 	if (wpa_driver_nl80211_init_nl(drv)) {
@@ -2337,9 +2426,24 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 	if (wpa_driver_nl80211_finish_drv_init(drv))
 		goto failed;
 
-#ifdef CONFIG_AP
 	drv->eapol_tx_sock = socket(PF_PACKET, SOCK_DGRAM, 0);
-#endif /* CONFIG_AP */
+	if (drv->eapol_tx_sock < 0)
+		goto failed;
+
+	if (drv->data_tx_status) {
+		int enabled = 1;
+
+		if (setsockopt(drv->eapol_tx_sock, SOL_SOCKET, SO_WIFI_STATUS,
+			       &enabled, sizeof(enabled)) < 0) {
+			wpa_printf(MSG_DEBUG,
+				"nl80211: wifi status sockopt failed\n");
+			drv->data_tx_status = 0;
+		} else {
+			eloop_register_read_sock(drv->eapol_tx_sock,
+				wpa_driver_nl80211_handle_eapol_tx_status,
+				drv, NULL);
+		}
+	}
 
 	if (drv->global) {
 		dl_list_add(&drv->global->interfaces, &drv->list);
@@ -2555,10 +2659,10 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
-#ifdef CONFIG_AP
+	if (drv->data_tx_status)
+		eloop_unregister_read_sock(drv->eapol_tx_sock);
 	if (drv->eapol_tx_sock >= 0)
 		close(drv->eapol_tx_sock);
-#endif /* CONFIG_AP */
 
 	if (bss->nl_preq.handle)
 		wpa_driver_nl80211_probe_req_report(bss, 0);
@@ -5151,7 +5255,6 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 }
 
 
-#ifdef CONFIG_AP
 static int nl80211_send_eapol_data(struct i802_bss *bss,
 				   const u8 *addr, const u8 *data,
 				   size_t data_len)
@@ -5178,7 +5281,6 @@ static int nl80211_send_eapol_data(struct i802_bss *bss,
 
 	return ret;
 }
-#endif /* CONFIG_AP */
 
 
 static const u8 rfc1042_header[6] = { 0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00 };
@@ -5195,10 +5297,8 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	int res;
 	int qos = flags & WPA_STA_WMM;
 
-#ifdef CONFIG_AP
-	if (drv->device_ap_sme)
+	if (drv->device_ap_sme || drv->data_tx_status)
 		return nl80211_send_eapol_data(bss, addr, data, data_len);
-#endif /* CONFIG_AP */
 
 	len = sizeof(*hdr) + (qos ? 2 : 0) + sizeof(rfc1042_header) + 2 +
 		data_len;

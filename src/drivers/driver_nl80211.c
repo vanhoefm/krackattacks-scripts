@@ -2683,8 +2683,8 @@ static int wpa_driver_nl80211_scan(void *priv,
 		nla_put_nested(msg, NL80211_ATTR_SCAN_SSIDS, ssids);
 
 	if (params->extra_ies) {
-		wpa_hexdump_ascii(MSG_MSGDUMP, "nl80211: Scan extra IEs",
-				  params->extra_ies, params->extra_ies_len);
+		wpa_hexdump(MSG_MSGDUMP, "nl80211: Scan extra IEs",
+			    params->extra_ies, params->extra_ies_len);
 		NLA_PUT(msg, NL80211_ATTR_IE, params->extra_ies_len,
 			params->extra_ies);
 	}

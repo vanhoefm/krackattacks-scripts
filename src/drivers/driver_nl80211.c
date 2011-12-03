@@ -1865,11 +1865,11 @@ static int process_event(struct nl_msg *msg, void *arg)
 static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 					     void *handle)
 {
-	struct wpa_driver_nl80211_data *drv = eloop_ctx;
+	struct nl_cb *cb = eloop_ctx;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Event message available");
 
-	nl_recvmsgs(handle, drv->nl_cb);
+	nl_recvmsgs(handle, cb);
 }
 
 
@@ -2248,7 +2248,7 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 	nl_cb_set(drv->nl_cb, NL_CB_VALID, NL_CB_CUSTOM, process_event, drv);
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_event.handle),
-				 wpa_driver_nl80211_event_receive, drv,
+				 wpa_driver_nl80211_event_receive, drv->nl_cb,
 				 drv->nl_event.handle);
 
 	return 0;
@@ -7211,7 +7211,7 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 		goto out_err;
 
 	eloop_register_read_sock(nl_socket_get_fd(bss->nl_preq.handle),
-				 wpa_driver_nl80211_event_receive, drv,
+				 wpa_driver_nl80211_event_receive, drv->nl_cb,
 				 bss->nl_preq.handle);
 
 	return 0;

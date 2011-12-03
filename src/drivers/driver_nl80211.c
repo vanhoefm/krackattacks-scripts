@@ -4284,28 +4284,8 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 }
 
 
-static int nl80211_set_ap_isolate(struct i802_bss *bss, int enabled)
-{
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct nl_msg *msg;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_BSS);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
-	NLA_PUT_U8(msg, NL80211_ATTR_AP_ISOLATE, enabled);
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
 static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
-			   int slot, int ht_opmode)
+			   int slot, int ht_opmode, int ap_isolate)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
@@ -4324,6 +4304,8 @@ static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
 		NLA_PUT_U8(msg, NL80211_ATTR_BSS_SHORT_SLOT_TIME, slot);
 	if (ht_opmode >= 0)
 		NLA_PUT_U16(msg, NL80211_ATTR_BSS_HT_OPMODE, ht_opmode);
+	if (ap_isolate >= 0)
+		NLA_PUT_U8(msg, NL80211_ATTR_AP_ISOLATE, ap_isolate);
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -4463,16 +4445,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			   ret, strerror(-ret));
 	} else {
 		bss->beacon_set = 1;
-		ret = nl80211_set_ap_isolate(bss, params->isolate);
-		if (!params->isolate && ret) {
-			wpa_printf(MSG_DEBUG, "nl80211: Ignore AP isolation "
-				   "configuration error since isolation is "
-				   "not used");
-			ret = 0;
-		}
-
 		nl80211_set_bss(bss, params->cts_protect, params->preamble,
-				params->short_slot_time, params->ht_opmode);
+				params->short_slot_time, params->ht_opmode,
+				params->isolate);
 	}
 	return ret;
  nla_put_failure:

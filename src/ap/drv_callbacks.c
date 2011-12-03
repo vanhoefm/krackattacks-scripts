@@ -470,6 +470,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 {
 	struct hostapd_data *hapd = ctx;
 
+	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "Event %s (%d) received",
+		event_to_string(event), event);
+
 	switch (event) {
 	case EVENT_MICHAEL_MIC_FAILURE:
 		michael_mic_failure(hapd, data->michael_mic_failure.src, 1);

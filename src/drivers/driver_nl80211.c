@@ -226,6 +226,7 @@ struct wpa_driver_nl80211_data {
 
 	int monitor_sock;
 	int monitor_ifidx;
+	int monitor_refcount;
 
 	unsigned int disabled_11b_rates:1;
 	unsigned int pending_remain_on_chan:1;
@@ -5157,6 +5158,10 @@ static int add_monitor_filter(int s)
 static void nl80211_remove_monitor_interface(
 	struct wpa_driver_nl80211_data *drv)
 {
+	drv->monitor_refcount--;
+	if (drv->monitor_refcount > 0)
+		return;
+
 	if (drv->monitor_ifidx >= 0) {
 		nl80211_remove_iface(drv, drv->monitor_ifidx);
 		drv->monitor_ifidx = -1;
@@ -5176,6 +5181,11 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
 	struct sockaddr_ll ll;
 	int optval;
 	socklen_t optlen;
+
+	if (drv->monitor_ifidx >= 0) {
+		drv->monitor_refcount++;
+		return 0;
+	}
 
 	if (os_strncmp(drv->first_bss.ifname, "p2p-", 4) == 0) {
 		/*
@@ -5252,6 +5262,38 @@ nl80211_create_monitor_interface(struct wpa_driver_nl80211_data *drv)
  error:
 	nl80211_remove_monitor_interface(drv);
 	return -1;
+}
+
+
+static int nl80211_setup_ap(struct i802_bss *bss)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	if (!drv->device_ap_sme &&
+	    nl80211_create_monitor_interface(drv) &&
+	    !drv->device_ap_sme)
+		return -1;
+
+	if (drv->device_ap_sme &&
+	    wpa_driver_nl80211_probe_req_report(bss, 1) < 0) {
+		wpa_printf(MSG_DEBUG, "nl80211: Failed to enable "
+			   "Probe Request frame reporting in AP mode");
+		/* Try to survive without this */
+	}
+
+	return 0;
+}
+
+
+static void nl80211_teardown_ap(struct i802_bss *bss)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+
+	if (drv->device_ap_sme)
+		wpa_driver_nl80211_probe_req_report(bss, 0);
+	else
+		nl80211_remove_monitor_interface(drv);
+	bss->beacon_set = 0;
 }
 
 
@@ -5426,15 +5468,6 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 	    wpa_driver_nl80211_set_freq(drv, params->freq, 0, 0)) {
 		nl80211_remove_monitor_interface(drv);
 		return -1;
-	}
-
-	if (drv->device_ap_sme) {
-		if (wpa_driver_nl80211_probe_req_report(&drv->first_bss, 1) < 0)
-		{
-			wpa_printf(MSG_DEBUG, "nl80211: Failed to enable "
-				   "Probe Request frame reporting in AP mode");
-			/* Try to survive without this */
-		}
 	}
 
 	drv->ap_oper_freq = params->freq;
@@ -5988,18 +6021,19 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	}
 
 done:
-	if (!ret && is_ap_interface(nlmode)) {
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Interface mode change to %d "
+			   "from %d failed", nlmode, drv->nlmode);
+		return ret;
+	}
+
+	if (is_ap_interface(nlmode)) {
 		/* Setup additional AP mode functionality if needed */
-		if (!drv->device_ap_sme && drv->monitor_ifidx < 0 &&
-		    nl80211_create_monitor_interface(drv) &&
-		    !drv->device_ap_sme)
+		if (nl80211_setup_ap(bss))
 			return -1;
-	} else if (!ret && !is_ap_interface(nlmode)) {
+	} else if (was_ap) {
 		/* Remove additional AP mode functionality */
-		if (was_ap && drv->device_ap_sme)
-			wpa_driver_nl80211_probe_req_report(bss, 0);
-		nl80211_remove_monitor_interface(drv);
-		bss->beacon_set = 0;
+		nl80211_teardown_ap(bss);
 	}
 
 	if (!ret && is_p2p_interface(drv->nlmode)) {
@@ -6010,11 +6044,7 @@ done:
 		drv->disabled_11b_rates = 0;
 	}
 
-	if (ret)
-		wpa_printf(MSG_DEBUG, "nl80211: Interface mode change to %d "
-			   "from %d failed", nlmode, drv->nlmode);
-
-	return ret;
+	return 0;
 }
 
 

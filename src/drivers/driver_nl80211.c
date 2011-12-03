@@ -192,6 +192,8 @@ struct i802_bss {
 	unsigned int added_if_into_bridge:1;
 	unsigned int added_bridge:1;
 
+	int freq;
+
 	struct nl80211_handles nl_preq;
 };
 
@@ -239,7 +241,6 @@ struct wpa_driver_nl80211_data {
 	u64 send_action_cookie;
 
 	unsigned int last_mgmt_freq;
-	unsigned int ap_oper_freq;
 
 	struct wpa_driver_scan_filter *filter_ssids;
 	size_t num_filter_ssids;
@@ -4373,9 +4374,9 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 	}
 
 	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
-		return nl80211_send_frame_cmd(bss, drv->ap_oper_freq, 0,
-					      data, data_len, NULL, 0, noack,
-					      0);
+		return nl80211_send_frame_cmd(bss, bss->freq, 0,
+					      data, data_len, NULL,
+					      0, noack, 0);
 	}
 
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
@@ -4582,10 +4583,11 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 }
 
 
-static int wpa_driver_nl80211_set_freq(struct wpa_driver_nl80211_data *drv,
+static int wpa_driver_nl80211_set_freq(struct i802_bss *bss,
 				       int freq, int ht_enabled,
 				       int sec_channel_offset)
 {
+	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
 	int ret;
 
@@ -4618,8 +4620,10 @@ static int wpa_driver_nl80211_set_freq(struct wpa_driver_nl80211_data *drv,
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
-	if (ret == 0)
+	if (ret == 0) {
+		bss->freq = freq;
 		return 0;
+	}
 	wpa_printf(MSG_DEBUG, "nl80211: Failed to set channel (freq=%d): "
 		   "%d (%s)", freq, ret, strerror(-ret));
 nla_put_failure:
@@ -5465,12 +5469,10 @@ static int wpa_driver_nl80211_ap(struct wpa_driver_nl80211_data *drv,
 		nlmode = NL80211_IFTYPE_AP;
 
 	if (wpa_driver_nl80211_set_mode(&drv->first_bss, nlmode) ||
-	    wpa_driver_nl80211_set_freq(drv, params->freq, 0, 0)) {
+	    wpa_driver_nl80211_set_freq(&drv->first_bss, params->freq, 0, 0)) {
 		nl80211_remove_monitor_interface(drv);
 		return -1;
 	}
-
-	drv->ap_oper_freq = params->freq;
 
 	return 0;
 }
@@ -6106,8 +6108,7 @@ static int wpa_driver_nl80211_set_supp_port(void *priv, int authorized)
 static int i802_set_freq(void *priv, struct hostapd_freq_params *freq)
 {
 	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	return wpa_driver_nl80211_set_freq(drv, freq->freq, freq->ht_enabled,
+	return wpa_driver_nl80211_set_freq(bss, freq->freq, freq->ht_enabled,
 					   freq->sec_channel_offset);
 }
 

@@ -126,10 +126,14 @@ int hostapd_prepare_rates(struct hostapd_data *hapd,
 		return -1;
 	}
 
-	if (hostapd_set_rate_sets(hapd, basic_rates)) {
-		wpa_printf(MSG_ERROR, "Failed to update rate sets in kernel "
-			   "module");
-	}
+	i = 0;
+	while (basic_rates[i] >= 0)
+		i++;
+	os_free(hapd->iface->basic_rates);
+	hapd->iface->basic_rates = os_malloc(i * sizeof(int *));
+	if (hapd->iface->basic_rates)
+		os_memcpy(hapd->iface->basic_rates, basic_rates,
+			  i * sizeof(int *));
 
 	os_free(hapd->iface->current_rates);
 	hapd->iface->num_rates = 0;

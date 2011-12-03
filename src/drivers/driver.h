@@ -556,6 +556,14 @@ struct wpa_driver_ap_params {
 	int beacon_int;
 
 	/**
+	 * basic_rates: -1 terminated array of basic rates in 100 kbps
+	 *
+	 * This parameter can be used to set a specific basic rate set for the
+	 * BSS. If %NULL, default basic rate set is used.
+	 */
+	int *basic_rates;
+
+	/**
 	 * ssid - The SSID to use in Beacon/Probe Response frames
 	 */
 	const u8 *ssid;
@@ -1683,14 +1691,6 @@ struct wpa_driver_ops {
 	 */
 	int (*sta_set_flags)(void *priv, const u8 *addr,
 			     int total_flags, int flags_or, int flags_and);
-
-	/**
-	 * set_rate_sets - Set basic rate set (AP only)
-	 * @priv: Private driver interface data
-	 * @basic_rates: -1 terminated array of basic rates in 100 kbps
-	 * Returns: 0 on success, -1 on failure
-	 */
-	int (*set_rate_sets)(void *priv, int *basic_rates);
 
 	/**
 	 * set_tx_queue_params - Set TX queue parameters

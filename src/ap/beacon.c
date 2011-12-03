@@ -567,6 +567,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.tail_len = tail_len;
 	params.dtim_period = hapd->conf->dtim_period;
 	params.beacon_int = hapd->iconf->beacon_int;
+	params.basic_rates = hapd->iconf->basic_rates;
 	params.ssid = (u8 *) hapd->conf->ssid.ssid;
 	params.ssid_len = hapd->conf->ssid.ssid_len;
 	params.pairwise_ciphers = hapd->conf->rsn_pairwise ?

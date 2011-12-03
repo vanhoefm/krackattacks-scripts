@@ -4285,7 +4285,8 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 
 
 static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
-			   int slot, int ht_opmode, int ap_isolate)
+			   int slot, int ht_opmode, int ap_isolate,
+			   int *basic_rates)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
@@ -4306,6 +4307,19 @@ static int nl80211_set_bss(struct i802_bss *bss, int cts, int preamble,
 		NLA_PUT_U16(msg, NL80211_ATTR_BSS_HT_OPMODE, ht_opmode);
 	if (ap_isolate >= 0)
 		NLA_PUT_U8(msg, NL80211_ATTR_AP_ISOLATE, ap_isolate);
+
+	if (basic_rates) {
+		u8 rates[NL80211_MAX_SUPP_RATES];
+		u8 rates_len = 0;
+		int i;
+
+		for (i = 0; i < NL80211_MAX_SUPP_RATES && basic_rates[i] >= 0;
+		     i++)
+			rates[rates_len++] = basic_rates[i] / 5;
+
+		NLA_PUT(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len, rates);
+	}
+
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
 
 	return send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -4447,7 +4461,7 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		bss->beacon_set = 1;
 		nl80211_set_bss(bss, params->cts_protect, params->preamble,
 				params->short_slot_time, params->ht_opmode,
-				params->isolate);
+				params->isolate, params->basic_rates);
 	}
 	return ret;
  nla_put_failure:
@@ -6012,34 +6026,6 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 	memset(seq, 0, 6);
 
 	return send_and_recv_msgs(drv, msg, get_key_handler, seq);
- nla_put_failure:
-	return -ENOBUFS;
-}
-
-
-static int i802_set_rate_sets(void *priv, int *basic_rates)
-{
-	struct i802_bss *bss = priv;
-	struct wpa_driver_nl80211_data *drv = bss->drv;
-	struct nl_msg *msg;
-	u8 rates[NL80211_MAX_SUPP_RATES];
-	u8 rates_len = 0;
-	int i;
-
-	msg = nlmsg_alloc();
-	if (!msg)
-		return -ENOMEM;
-
-	nl80211_cmd(drv, msg, 0, NL80211_CMD_SET_BSS);
-
-	for (i = 0; i < NL80211_MAX_SUPP_RATES && basic_rates[i] >= 0; i++)
-		rates[rates_len++] = basic_rates[i] / 5;
-
-	NLA_PUT(msg, NL80211_ATTR_BSS_BASIC_RATES, rates_len, rates);
-
-	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, if_nametoindex(bss->ifname));
-
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
  nla_put_failure:
 	return -ENOBUFS;
 }
@@ -7864,7 +7850,6 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	.set_frag = i802_set_frag,
 	.set_tx_queue_params = i802_set_tx_queue_params,
 	.set_sta_vlan = i802_set_sta_vlan,
-	.set_rate_sets = i802_set_rate_sets,
 	.sta_deauth = i802_sta_deauth,
 	.sta_disassoc = i802_sta_disassoc,
 #endif /* HOSTAPD || CONFIG_AP */

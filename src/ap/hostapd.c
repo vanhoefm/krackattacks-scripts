@@ -291,6 +291,8 @@ static void hostapd_cleanup_iface(struct hostapd_iface *iface)
 	iface->hw_features = NULL;
 	os_free(iface->current_rates);
 	iface->current_rates = NULL;
+	os_free(iface->basic_rates);
+	iface->basic_rates = NULL;
 	ap_list_deinit(iface);
 	hostapd_config_free(iface->conf);
 	iface->conf = NULL;

@@ -475,14 +475,6 @@ int hostapd_sta_set_flags(struct hostapd_data *hapd, u8 *addr,
 }
 
 
-int hostapd_set_rate_sets(struct hostapd_data *hapd, int *basic_rates)
-{
-	if (hapd->driver == NULL || hapd->driver->set_rate_sets == NULL)
-		return 0;
-	return hapd->driver->set_rate_sets(hapd->drv_priv, basic_rates);
-}
-
-
 int hostapd_set_country(struct hostapd_data *hapd, const char *country)
 {
 	if (hapd->driver == NULL ||

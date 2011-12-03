@@ -199,6 +199,7 @@ struct hostapd_iface {
 	 * current_mode->channels */
 	int num_rates;
 	struct hostapd_rate_data *current_rates;
+	int *basic_rates;
 	int freq;
 
 	u16 hw_flags;

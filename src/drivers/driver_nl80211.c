@@ -4572,6 +4572,10 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 			num_suites * sizeof(u32), suites);
 	}
 
+	if (params->key_mgmt_suites & WPA_KEY_MGMT_IEEE8021X &&
+	    params->pairwise_ciphers & (WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40))
+		NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT_NO_ENCRYPT);
+
 	num_suites = 0;
 	if (params->pairwise_ciphers & WPA_CIPHER_CCMP)
 		suites[num_suites++] = WLAN_CIPHER_SUITE_CCMP;

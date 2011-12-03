@@ -628,7 +628,7 @@ struct wpa_driver_ap_params {
 	 * isolate - Whether to isolate frames between associated stations
 	 *
 	 * If this is non-zero, the AP is requested to disable forwarding of
-	 * frames between association stations.
+	 * frames between associated stations.
 	 */
 	int isolate;
 

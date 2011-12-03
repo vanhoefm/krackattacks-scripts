@@ -1685,15 +1685,12 @@ struct wpa_driver_ops {
 			     int total_flags, int flags_or, int flags_and);
 
 	/**
-	 * set_rate_sets - Set supported and basic rate sets (AP only)
+	 * set_rate_sets - Set basic rate set (AP only)
 	 * @priv: Private driver interface data
-	 * @supp_rates: -1 terminated array of supported rates in 100 kbps
 	 * @basic_rates: -1 terminated array of basic rates in 100 kbps
-	 * @mode: hardware mode (HOSTAPD_MODE_*)
 	 * Returns: 0 on success, -1 on failure
 	 */
-	int (*set_rate_sets)(void *priv, int *supp_rates, int *basic_rates,
-			     int mode);
+	int (*set_rate_sets)(void *priv, int *basic_rates);
 
 	/**
 	 * set_tx_queue_params - Set TX queue parameters

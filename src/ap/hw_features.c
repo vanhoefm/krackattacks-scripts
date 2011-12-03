@@ -126,8 +126,7 @@ int hostapd_prepare_rates(struct hostapd_data *hapd,
 		return -1;
 	}
 
-	if (hostapd_set_rate_sets(hapd, hapd->iconf->supported_rates,
-				  basic_rates, mode->mode)) {
+	if (hostapd_set_rate_sets(hapd, basic_rates)) {
 		wpa_printf(MSG_ERROR, "Failed to update rate sets in kernel "
 			   "module");
 	}

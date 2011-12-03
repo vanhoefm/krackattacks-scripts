@@ -6017,8 +6017,7 @@ static int i802_get_seqnum(const char *iface, void *priv, const u8 *addr,
 }
 
 
-static int i802_set_rate_sets(void *priv, int *supp_rates, int *basic_rates,
-			      int mode)
+static int i802_set_rate_sets(void *priv, int *basic_rates)
 {
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;

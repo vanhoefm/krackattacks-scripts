@@ -1727,7 +1727,7 @@ static void nl80211_client_probe_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static int process_event(struct nl_msg *msg, void *arg)
+static int process_drv_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
@@ -2245,7 +2245,8 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 
 	nl_cb_set(drv->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
 		  no_seq_check, NULL);
-	nl_cb_set(drv->nl_cb, NL_CB_VALID, NL_CB_CUSTOM, process_event, drv);
+	nl_cb_set(drv->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
+		  process_drv_event, drv);
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_event.handle),
 				 wpa_driver_nl80211_event_receive, drv->nl_cb,

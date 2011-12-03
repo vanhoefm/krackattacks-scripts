@@ -2054,25 +2054,15 @@ void wpa_supplicant_rx_eapol(void *ctx, const u8 *src_addr,
 }
 
 
-/**
- * wpa_supplicant_driver_init - Initialize driver interface parameters
- * @wpa_s: Pointer to wpa_supplicant data
- * Returns: 0 on success, -1 on failure
- *
- * This function is called to initialize driver interface parameters.
- * wpa_drv_init() must have been called before this function to initialize the
- * driver interface.
- */
-int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
+int wpa_supplicant_update_mac_addr(struct wpa_supplicant *wpa_s)
 {
-	static int interface_count = 0;
-
 	if (wpa_s->driver->send_eapol) {
 		const u8 *addr = wpa_drv_get_mac_addr(wpa_s);
 		if (addr)
 			os_memcpy(wpa_s->own_addr, addr, ETH_ALEN);
 	} else if (!(wpa_s->drv_flags &
 		     WPA_DRIVER_FLAGS_P2P_DEDICATED_INTERFACE)) {
+		l2_packet_deinit(wpa_s->l2);
 		wpa_s->l2 = l2_packet_init(wpa_s->ifname,
 					   wpa_drv_get_mac_addr(wpa_s),
 					   ETH_P_EAPOL,
@@ -2093,6 +2083,26 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	wpa_dbg(wpa_s, MSG_DEBUG, "Own MAC address: " MACSTR,
 		MAC2STR(wpa_s->own_addr));
 	wpa_sm_set_own_addr(wpa_s->wpa, wpa_s->own_addr);
+
+	return 0;
+}
+
+
+/**
+ * wpa_supplicant_driver_init - Initialize driver interface parameters
+ * @wpa_s: Pointer to wpa_supplicant data
+ * Returns: 0 on success, -1 on failure
+ *
+ * This function is called to initialize driver interface parameters.
+ * wpa_drv_init() must have been called before this function to initialize the
+ * driver interface.
+ */
+int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
+{
+	static int interface_count = 0;
+
+	if (wpa_supplicant_update_mac_addr(wpa_s) < 0)
+		return -1;
 
 	if (wpa_s->bridge_ifname[0]) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Receiving packets from bridge "

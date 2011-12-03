@@ -216,6 +216,7 @@ struct wpa_driver_nl80211_data {
 	int scan_complete_events;
 
 	struct nl80211_handles nl_event;
+	struct nl_cb *nl_cb;
 
 	u8 auth_bssid[ETH_ALEN];
 	u8 bssid[ETH_ALEN];
@@ -1864,18 +1865,11 @@ static int process_event(struct nl_msg *msg, void *arg)
 static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 					     void *handle)
 {
-	struct nl_cb *cb;
 	struct wpa_driver_nl80211_data *drv = eloop_ctx;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Event message available");
 
-	cb = nl_cb_clone(drv->global->nl_cb);
-	if (!cb)
-		return;
-	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
-	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, process_event, drv);
-	nl_recvmsgs(handle, cb);
-	nl_cb_put(cb);
+	nl_recvmsgs(handle, drv->nl_cb);
 }
 
 
@@ -2242,6 +2236,16 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 			   ret, strerror(-ret));
 		/* Continue without regulatory events */
 	}
+
+	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!drv->nl_cb) {
+		wpa_printf(MSG_ERROR, "nl80211: Failed to alloc cb struct");
+		goto err4;
+	}
+
+	nl_cb_set(drv->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
+		  no_seq_check, NULL);
+	nl_cb_set(drv->nl_cb, NL_CB_VALID, NL_CB_CUSTOM, process_event, drv);
 
 	eloop_register_read_sock(nl_socket_get_fd(drv->nl_event.handle),
 				 wpa_driver_nl80211_event_receive, drv,
@@ -2719,6 +2723,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_event.handle));
 	nl_destroy_handles(&drv->nl_event);
+	nl_cb_put(drv->nl_cb);
 
 	os_free(drv->filter_ssids);
 

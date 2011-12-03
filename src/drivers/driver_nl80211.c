@@ -195,6 +195,7 @@ struct i802_bss {
 	int freq;
 
 	struct nl80211_handles nl_preq;
+	struct nl_cb *nl_cb;
 };
 
 struct wpa_driver_nl80211_data {
@@ -1862,6 +1863,25 @@ static int process_drv_event(struct nl_msg *msg, void *arg)
 }
 
 
+static int process_bss_event(struct nl_msg *msg, void *arg)
+{
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	switch (gnlh->cmd) {
+	default:
+		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
+			   "(cmd=%d)", gnlh->cmd);
+		break;
+	}
+
+	return NL_SKIP;
+}
+
+
 static void wpa_driver_nl80211_event_receive(int sock, void *eloop_ctx,
 					     void *handle)
 {
@@ -2380,6 +2400,28 @@ static void wpa_driver_nl80211_handle_eapol_tx_status(int sock,
 }
 
 
+static int nl80211_init_bss(struct i802_bss *bss)
+{
+	bss->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!bss->nl_cb)
+		return -1;
+
+	nl_cb_set(bss->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
+		  no_seq_check, NULL);
+	nl_cb_set(bss->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
+		  process_bss_event, bss);
+
+	return 0;
+}
+
+
+static void nl80211_destroy_bss(struct i802_bss *bss)
+{
+	nl_cb_put(bss->nl_cb);
+	bss->nl_cb = NULL;
+}
+
+
 /**
  * wpa_driver_nl80211_init - Initialize nl80211 driver interface
  * @ctx: context to be used when calling wpa_supplicant functions,
@@ -2414,6 +2456,9 @@ static void * wpa_driver_nl80211_init(void *ctx, const char *ifname,
 		os_free(drv);
 		return NULL;
 	}
+
+	if (nl80211_init_bss(bss))
+		goto failed;
 
 	nl80211_get_phy_name(drv);
 
@@ -2725,6 +2770,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_event.handle));
 	nl_destroy_handles(&drv->nl_event);
 	nl_cb_put(drv->nl_cb);
+
+	nl80211_destroy_bss(&drv->first_bss);
 
 	os_free(drv->filter_ssids);
 
@@ -6910,6 +6957,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		drv->first_bss.next = new_bss;
 		if (drv_priv)
 			*drv_priv = new_bss;
+		nl80211_init_bss(new_bss);
 	}
 #endif /* HOSTAPD */
 
@@ -6961,6 +7009,7 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 		for (tbss = &drv->first_bss; tbss; tbss = tbss->next) {
 			if (tbss->next == bss) {
 				tbss->next = bss->next;
+				nl80211_destroy_bss(bss);
 				os_free(bss);
 				bss = NULL;
 				break;

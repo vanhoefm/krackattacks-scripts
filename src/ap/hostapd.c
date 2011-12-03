@@ -743,7 +743,7 @@ int hostapd_setup_interface_complete(struct hostapd_iface *iface, int err)
 	}
 
 	if (iface->current_mode) {
-		if (hostapd_prepare_rates(hapd, iface->current_mode)) {
+		if (hostapd_prepare_rates(iface, iface->current_mode)) {
 			wpa_printf(MSG_ERROR, "Failed to prepare rates "
 				   "table.");
 			hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,

@@ -2,7 +2,7 @@
  * hostapd / Hardware feature query and different modes
  * Copyright 2002-2003, Instant802 Networks, Inc.
  * Copyright 2005-2006, Devicescape Software, Inc.
- * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -101,7 +101,7 @@ int hostapd_get_hw_features(struct hostapd_iface *iface)
 }
 
 
-int hostapd_prepare_rates(struct hostapd_data *hapd,
+int hostapd_prepare_rates(struct hostapd_iface *iface,
 			  struct hostapd_hw_modes *mode)
 {
 	int i, num_basic_rates = 0;
@@ -110,8 +110,8 @@ int hostapd_prepare_rates(struct hostapd_data *hapd,
 	int basic_rates_g[] = { 10, 20, 55, 110, -1 };
 	int *basic_rates;
 
-	if (hapd->iconf->basic_rates)
-		basic_rates = hapd->iconf->basic_rates;
+	if (iface->conf->basic_rates)
+		basic_rates = iface->conf->basic_rates;
 	else switch (mode->mode) {
 	case HOSTAPD_MODE_IEEE80211A:
 		basic_rates = basic_rates_a;
@@ -129,18 +129,17 @@ int hostapd_prepare_rates(struct hostapd_data *hapd,
 	i = 0;
 	while (basic_rates[i] >= 0)
 		i++;
-	os_free(hapd->iface->basic_rates);
-	hapd->iface->basic_rates = os_malloc(i * sizeof(int *));
-	if (hapd->iface->basic_rates)
-		os_memcpy(hapd->iface->basic_rates, basic_rates,
-			  i * sizeof(int *));
+	os_free(iface->basic_rates);
+	iface->basic_rates = os_malloc(i * sizeof(int *));
+	if (iface->basic_rates)
+		os_memcpy(iface->basic_rates, basic_rates, i * sizeof(int *));
 
-	os_free(hapd->iface->current_rates);
-	hapd->iface->num_rates = 0;
+	os_free(iface->current_rates);
+	iface->num_rates = 0;
 
-	hapd->iface->current_rates =
+	iface->current_rates =
 		os_zalloc(mode->num_rates * sizeof(struct hostapd_rate_data));
-	if (!hapd->iface->current_rates) {
+	if (!iface->current_rates) {
 		wpa_printf(MSG_ERROR, "Failed to allocate memory for rate "
 			   "table.");
 		return -1;
@@ -149,27 +148,27 @@ int hostapd_prepare_rates(struct hostapd_data *hapd,
 	for (i = 0; i < mode->num_rates; i++) {
 		struct hostapd_rate_data *rate;
 
-		if (hapd->iconf->supported_rates &&
-		    !hostapd_rate_found(hapd->iconf->supported_rates,
+		if (iface->conf->supported_rates &&
+		    !hostapd_rate_found(iface->conf->supported_rates,
 					mode->rates[i]))
 			continue;
 
-		rate = &hapd->iface->current_rates[hapd->iface->num_rates];
+		rate = &iface->current_rates[iface->num_rates];
 		rate->rate = mode->rates[i];
 		if (hostapd_rate_found(basic_rates, rate->rate)) {
 			rate->flags |= HOSTAPD_RATE_BASIC;
 			num_basic_rates++;
 		}
 		wpa_printf(MSG_DEBUG, "RATE[%d] rate=%d flags=0x%x",
-			   hapd->iface->num_rates, rate->rate, rate->flags);
-		hapd->iface->num_rates++;
+			   iface->num_rates, rate->rate, rate->flags);
+		iface->num_rates++;
 	}
 
-	if ((hapd->iface->num_rates == 0 || num_basic_rates == 0) &&
-	    (!hapd->iconf->ieee80211n || !hapd->iconf->require_ht)) {
+	if ((iface->num_rates == 0 || num_basic_rates == 0) &&
+	    (!iface->conf->ieee80211n || !iface->conf->require_ht)) {
 		wpa_printf(MSG_ERROR, "No rates remaining in supported/basic "
 			   "rate sets (%d,%d).",
-			   hapd->iface->num_rates, num_basic_rates);
+			   iface->num_rates, num_basic_rates);
 		return -1;
 	}
 

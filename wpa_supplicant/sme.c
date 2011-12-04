@@ -265,7 +265,8 @@ void sme_authenticate(struct wpa_supplicant *wpa_s,
 	if (wpa_drv_authenticate(wpa_s, &params) < 0) {
 		wpa_msg(wpa_s, MSG_INFO, "SME: Authentication request to the "
 			"driver failed");
-		wpa_supplicant_req_scan(wpa_s, 1, 0);
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
+		wpas_connection_failed(wpa_s, bss->bssid);
 		return;
 	}
 

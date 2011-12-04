@@ -396,7 +396,8 @@ static void wpa_supplicant_process_1_of_4(struct wpa_sm *sm,
 		const u8 *_buf = (const u8 *) (key + 1);
 		size_t len = WPA_GET_BE16(key->key_data_length);
 		wpa_hexdump(MSG_DEBUG, "RSN: msg 1/4 key data", _buf, len);
-		wpa_supplicant_parse_ies(_buf, len, &ie);
+		if (wpa_supplicant_parse_ies(_buf, len, &ie) < 0)
+			goto failed;
 		if (ie.pmkid) {
 			wpa_hexdump(MSG_DEBUG, "RSN: PMKID from "
 				    "Authenticator", ie.pmkid, PMKID_LEN);
@@ -1085,7 +1086,8 @@ static void wpa_supplicant_process_3_of_4(struct wpa_sm *sm,
 	pos = (const u8 *) (key + 1);
 	len = WPA_GET_BE16(key->key_data_length);
 	wpa_hexdump(MSG_DEBUG, "WPA: IE KeyData", pos, len);
-	wpa_supplicant_parse_ies(pos, len, &ie);
+	if (wpa_supplicant_parse_ies(pos, len, &ie) < 0)
+		goto failed;
 	if (ie.gtk && !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: GTK IE in unencrypted key data");
@@ -1193,7 +1195,8 @@ static int wpa_supplicant_process_1_of_2_rsn(struct wpa_sm *sm,
 	struct wpa_eapol_ie_parse ie;
 
 	wpa_hexdump(MSG_DEBUG, "RSN: msg 1/2 key data", keydata, keydatalen);
-	wpa_supplicant_parse_ies(keydata, keydatalen, &ie);
+	if (wpa_supplicant_parse_ies(keydata, keydatalen, &ie) < 0)
+		return -1;
 	if (ie.gtk && !(key_info & WPA_KEY_INFO_ENCR_KEY_DATA)) {
 		wpa_msg(sm->ctx->msg_ctx, MSG_WARNING,
 			"WPA: GTK IE in unencrypted key data");

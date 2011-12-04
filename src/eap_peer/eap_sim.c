@@ -266,21 +266,20 @@ static int eap_sim_supported_ver(int version)
 
 static void eap_sim_clear_identities(struct eap_sim_data *data, int id)
 {
-	wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old%s%s%s",
-		   id & CLEAR_PSEUDONYM ? " pseudonym" : "",
-		   id & CLEAR_REAUTH_ID ? " reauth_id" : "",
-		   id & CLEAR_EAP_ID ? " eap_id" : "");
-	if (id & CLEAR_PSEUDONYM) {
+	if ((id & CLEAR_PSEUDONYM) && data->pseudonym) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old pseudonym");
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
 	}
-	if (id & CLEAR_REAUTH_ID) {
+	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old reauth_id");
 		os_free(data->reauth_id);
 		data->reauth_id = NULL;
 		data->reauth_id_len = 0;
 	}
-	if (id & CLEAR_EAP_ID) {
+	if ((id & CLEAR_EAP_ID) && data->last_eap_identity) {
+		wpa_printf(MSG_DEBUG, "EAP-SIM: forgetting old eap_id");
 		os_free(data->last_eap_identity);
 		data->last_eap_identity = NULL;
 		data->last_eap_identity_len = 0;

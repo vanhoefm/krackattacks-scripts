@@ -503,6 +503,7 @@ void sme_event_auth_timed_out(struct wpa_supplicant *wpa_s,
 			      union wpa_event_data *data)
 {
 	wpa_dbg(wpa_s, MSG_DEBUG, "SME: Authentication timed out");
+	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 	wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
 }
 

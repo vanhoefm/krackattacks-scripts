@@ -649,11 +649,11 @@ static struct wpabuf * eap_sim_process_challenge(struct eap_sm *sm,
 					    EAP_SIM_UNABLE_TO_PROCESS_PACKET);
 	}
 
-	/* Old reauthentication and pseudonym identities must not be used
-	 * anymore. In other words, if no new identities are received, full
-	 * authentication will be used on next reauthentication. */
-	eap_sim_clear_identities(data, CLEAR_PSEUDONYM | CLEAR_REAUTH_ID |
-				 CLEAR_EAP_ID);
+	/* Old reauthentication identity must not be used anymore. In
+	 * other words, if no new reauth identity is received, full
+	 * authentication will be used on next reauthentication (using
+	 * pseudonym identity or permanent identity). */
+	eap_sim_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
 
 	if (attr->encr_data) {
 		u8 *decrypted;

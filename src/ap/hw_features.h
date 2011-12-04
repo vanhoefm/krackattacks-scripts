@@ -60,7 +60,7 @@ static inline int hostapd_check_ht_capab(struct hostapd_iface *iface)
 	return 0;
 }
 
-static inline int hostapd_prepare_rates(struct hostapd_data *hapd,
+static inline int hostapd_prepare_rates(struct hostapd_iface *iface,
 					struct hostapd_hw_modes *mode)
 {
 	return 0;

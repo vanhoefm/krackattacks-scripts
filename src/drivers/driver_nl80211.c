@@ -4011,6 +4011,19 @@ retry:
 				nl80211_copy_auth_params(drv, params);
 				drv->scan_for_auth = 1;
 			}
+		} else if (is_retry) {
+			/*
+			 * Need to indicate this with an event since the return
+			 * value from the retry is not delivered to core code.
+			 */
+			union wpa_event_data event;
+			wpa_printf(MSG_DEBUG, "nl80211: Authentication retry "
+				   "failed");
+			os_memset(&event, 0, sizeof(event));
+			os_memcpy(event.timeout_event.addr, drv->auth_bssid_,
+				  ETH_ALEN);
+			wpa_supplicant_event(drv->ctx, EVENT_AUTH_TIMED_OUT,
+					     &event);
 		}
 
 		goto nla_put_failure;

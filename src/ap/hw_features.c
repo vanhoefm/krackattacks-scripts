@@ -130,9 +130,9 @@ int hostapd_prepare_rates(struct hostapd_iface *iface,
 	while (basic_rates[i] >= 0)
 		i++;
 	os_free(iface->basic_rates);
-	iface->basic_rates = os_malloc(i * sizeof(int *));
+	iface->basic_rates = os_malloc(i * sizeof(int));
 	if (iface->basic_rates)
-		os_memcpy(iface->basic_rates, basic_rates, i * sizeof(int *));
+		os_memcpy(iface->basic_rates, basic_rates, i * sizeof(int));
 
 	os_free(iface->current_rates);
 	iface->num_rates = 0;

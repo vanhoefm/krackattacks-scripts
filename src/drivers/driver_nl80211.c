@@ -238,6 +238,8 @@ struct wpa_driver_nl80211_data {
 	unsigned int device_ap_sme:1;
 	unsigned int poll_command_supported:1;
 	unsigned int data_tx_status:1;
+	unsigned int scan_for_auth:1;
+	unsigned int retry_auth:1;
 
 	u64 remain_on_chan_cookie;
 	u64 send_action_cookie;
@@ -261,6 +263,20 @@ struct wpa_driver_nl80211_data {
 	int last_freq;
 	int last_freq_ht;
 #endif /* HOSTAPD */
+
+	/* From failed authentication command */
+	int auth_freq;
+	u8 auth_bssid_[ETH_ALEN];
+	u8 auth_ssid[32];
+	size_t auth_ssid_len;
+	int auth_alg;
+	u8 *auth_ie;
+	size_t auth_ie_len;
+	u8 auth_wep_key[4][16];
+	size_t auth_wep_key_len[4];
+	int auth_wep_tx_keyidx;
+	int auth_local_state_change;
+	int auth_p2p;
 };
 
 
@@ -313,6 +329,8 @@ static int nl80211_disable_11b_rates(struct wpa_driver_nl80211_data *drv,
 				     int ifindex, int disabled);
 
 static int nl80211_leave_ibss(struct wpa_driver_nl80211_data *drv);
+static int wpa_driver_nl80211_authenticate_retry(
+	struct wpa_driver_nl80211_data *drv);
 
 
 static int is_ap_interface(enum nl80211_iftype nlmode)
@@ -1270,6 +1288,14 @@ static void send_scan_event(struct wpa_driver_nl80211_data *drv, int aborted,
 #define MAX_REPORT_FREQS 50
 	int freqs[MAX_REPORT_FREQS];
 	int num_freqs = 0;
+
+	if (drv->scan_for_auth) {
+		drv->scan_for_auth = 0;
+		wpa_printf(MSG_DEBUG, "nl80211: Scan results for missing "
+			   "cfg80211 BSS entry");
+		wpa_driver_nl80211_authenticate_retry(drv);
+		return;
+	}
 
 	os_memset(&event, 0, sizeof(event));
 	info = &event.scan_info;
@@ -2775,6 +2801,8 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	os_free(drv->filter_ssids);
 
+	os_free(drv->auth_ie);
+
 	if (drv->in_interface_list)
 		dl_list_del(&drv->list);
 
@@ -2817,6 +2845,8 @@ static int wpa_driver_nl80211_scan(void *priv,
 	int ret = 0, timeout;
 	struct nl_msg *msg, *ssids, *freqs, *rates;
 	size_t i;
+
+	drv->scan_for_auth = 0;
 
 	msg = nlmsg_alloc();
 	ssids = nlmsg_alloc();
@@ -3798,6 +3828,52 @@ static int wpa_driver_nl80211_disassociate(void *priv, const u8 *addr,
 }
 
 
+static void nl80211_copy_auth_params(struct wpa_driver_nl80211_data *drv,
+				     struct wpa_driver_auth_params *params)
+{
+	int i;
+
+	drv->auth_freq = params->freq;
+	drv->auth_alg = params->auth_alg;
+	drv->auth_wep_tx_keyidx = params->wep_tx_keyidx;
+	drv->auth_local_state_change = params->local_state_change;
+	drv->auth_p2p = params->p2p;
+
+	if (params->bssid)
+		os_memcpy(drv->auth_bssid_, params->bssid, ETH_ALEN);
+	else
+		os_memset(drv->auth_bssid_, 0, ETH_ALEN);
+
+	if (params->ssid) {
+		os_memcpy(drv->auth_ssid, params->ssid, params->ssid_len);
+		drv->auth_ssid_len = params->ssid_len;
+	} else
+		drv->auth_ssid_len = 0;
+
+
+	os_free(drv->auth_ie);
+	drv->auth_ie = NULL;
+	drv->auth_ie_len = 0;
+	if (params->ie) {
+		drv->auth_ie = os_malloc(params->ie_len);
+		if (drv->auth_ie) {
+			os_memcpy(drv->auth_ie, params->ie, params->ie_len);
+			drv->auth_ie_len = params->ie_len;
+		}
+	}
+
+	for (i = 0; i < 4; i++) {
+		if (params->wep_key[i] && params->wep_key_len[i] &&
+		    params->wep_key_len[i] <= 16) {
+			os_memcpy(drv->auth_wep_key[i], params->wep_key[i],
+				  params->wep_key_len[i]);
+			drv->auth_wep_key_len[i] = params->wep_key_len[i];
+		} else
+			drv->auth_wep_key_len[i] = 0;
+	}
+}
+
+
 static int wpa_driver_nl80211_authenticate(
 	void *priv, struct wpa_driver_auth_params *params)
 {
@@ -3808,6 +3884,10 @@ static int wpa_driver_nl80211_authenticate(
 	enum nl80211_auth_type type;
 	enum nl80211_iftype nlmode;
 	int count = 0;
+	int is_retry;
+
+	is_retry = drv->retry_auth;
+	drv->retry_auth = 0;
 
 	drv->associated = 0;
 	os_memset(drv->auth_bssid, 0, ETH_ALEN);
@@ -3903,6 +3983,36 @@ retry:
 			nlmsg_free(msg);
 			goto retry;
 		}
+
+		if (ret == -ENOENT && params->freq && !is_retry) {
+			/*
+			 * cfg80211 has likely expired the BSS entry even
+			 * though it was previously available in our internal
+			 * BSS table. To recover quickly, start a single
+			 * channel scan on the specified channel.
+			 */
+			struct wpa_driver_scan_params scan;
+			int freqs[2];
+
+			os_memset(&scan, 0, sizeof(scan));
+			scan.num_ssids = 1;
+			if (params->ssid) {
+				scan.ssids[0].ssid = params->ssid;
+				scan.ssids[0].ssid_len = params->ssid_len;
+			}
+			freqs[0] = params->freq;
+			freqs[1] = 0;
+			scan.freqs = freqs;
+			wpa_printf(MSG_DEBUG, "nl80211: Trigger single "
+				   "channel scan to refresh cfg80211 BSS "
+				   "entry");
+			ret = wpa_driver_nl80211_scan(bss, &scan);
+			if (ret == 0) {
+				nl80211_copy_auth_params(drv, params);
+				drv->scan_for_auth = 1;
+			}
+		}
+
 		goto nla_put_failure;
 	}
 	ret = 0;
@@ -3912,6 +4022,45 @@ retry:
 nla_put_failure:
 	nlmsg_free(msg);
 	return ret;
+}
+
+
+static int wpa_driver_nl80211_authenticate_retry(
+	struct wpa_driver_nl80211_data *drv)
+{
+	struct wpa_driver_auth_params params;
+	struct i802_bss *bss = &drv->first_bss;
+	int i;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Try to authenticate again");
+
+	os_memset(&params, 0, sizeof(params));
+	params.freq = drv->auth_freq;
+	params.auth_alg = drv->auth_alg;
+	params.wep_tx_keyidx = drv->auth_wep_tx_keyidx;
+	params.local_state_change = drv->auth_local_state_change;
+	params.p2p = drv->auth_p2p;
+
+	if (!is_zero_ether_addr(drv->auth_bssid_))
+		params.bssid = drv->auth_bssid_;
+
+	if (drv->auth_ssid_len) {
+		params.ssid = drv->auth_ssid;
+		params.ssid_len = drv->auth_ssid_len;
+	}
+
+	params.ie = drv->auth_ie;
+	params.ie_len = drv->auth_ie_len;
+
+	for (i = 0; i < 4; i++) {
+		if (drv->auth_wep_key_len[i]) {
+			params.wep_key[i] = drv->auth_wep_key[i];
+			params.wep_key_len[i] = drv->auth_wep_key_len[i];
+		}
+	}
+
+	drv->retry_auth = 1;
+	return wpa_driver_nl80211_authenticate(bss, &params);
 }
 
 

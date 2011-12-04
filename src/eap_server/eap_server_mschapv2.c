@@ -405,9 +405,12 @@ static void eap_mschapv2_process_response(struct eap_sm *sm,
 		if (sm->user->password_hash) {
 			pw_hash = sm->user->password;
 		} else {
-			nt_password_hash(sm->user->password,
-					 sm->user->password_len,
-					 pw_hash_buf);
+			if (nt_password_hash(sm->user->password,
+					     sm->user->password_len,
+					     pw_hash_buf) < 0) {
+				data->state = FAILURE;
+				return;
+			}
 			pw_hash = pw_hash_buf;
 		}
 		generate_authenticator_response_pwhash(

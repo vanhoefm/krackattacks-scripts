@@ -1533,12 +1533,22 @@ static void wpa_supplicant_event_assoc(struct wpa_supplicant *wpa_s,
 }
 
 
+static int disconnect_reason_recoverable(u16 reason_code)
+{
+	return reason_code == WLAN_REASON_DISASSOC_DUE_TO_INACTIVITY ||
+		reason_code == WLAN_REASON_CLASS2_FRAME_FROM_NONAUTH_STA ||
+		reason_code == WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA;
+}
+
+
 static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 					  u16 reason_code)
 {
 	const u8 *bssid;
 	int authenticating;
 	u8 prev_pending_bssid[ETH_ALEN];
+	struct wpa_bss *fast_reconnect = NULL;
+	struct wpa_ssid *fast_reconnect_ssid = NULL;
 
 	authenticating = wpa_s->wpa_state == WPA_AUTHENTICATING;
 	os_memcpy(prev_pending_bssid, wpa_s->pending_bssid, ETH_ALEN);
@@ -1561,17 +1571,29 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	}
 	if (!wpa_s->auto_reconnect_disabled ||
 	    wpa_s->key_mgmt == WPA_KEY_MGMT_WPS) {
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: Auto connect enabled: try to "
+		wpa_dbg(wpa_s, MSG_DEBUG, "Auto connect enabled: try to "
 			"reconnect (wps=%d wpa_state=%d)",
 			wpa_s->key_mgmt == WPA_KEY_MGMT_WPS,
 			wpa_s->wpa_state);
-		if (wpa_s->wpa_state >= WPA_ASSOCIATING)
+		if (wpa_s->wpa_state == WPA_COMPLETED &&
+		    wpa_s->current_ssid &&
+		    wpa_s->current_ssid->mode == WPAS_MODE_INFRA &&
+		    disconnect_reason_recoverable(reason_code)) {
+			/*
+			 * It looks like the AP has dropped association with
+			 * us, but could allow us to get back in. Try to
+			 * reconnect to the same BSS without full scan to save
+			 * time for some common cases.
+			 */
+			fast_reconnect = wpa_s->current_bss;
+			fast_reconnect_ssid = wpa_s->current_ssid;
+		} else if (wpa_s->wpa_state >= WPA_ASSOCIATING)
 			wpa_supplicant_req_scan(wpa_s, 0, 100000);
 		else
 			wpa_dbg(wpa_s, MSG_DEBUG, "Do not request new "
 				"immediate scan");
 	} else {
-		wpa_dbg(wpa_s, MSG_DEBUG, "WPA: Auto connect disabled: do not "
+		wpa_dbg(wpa_s, MSG_DEBUG, "Auto connect disabled: do not "
 			"try to re-connect");
 		wpa_s->reassociate = 0;
 		wpa_s->disconnected = 1;
@@ -1594,6 +1616,15 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 
 	if (authenticating && (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME))
 		sme_disassoc_while_authenticating(wpa_s, prev_pending_bssid);
+
+	if (fast_reconnect) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "Try to reconnect to the same BSS");
+		if (wpa_supplicant_connect(wpa_s, fast_reconnect,
+					   fast_reconnect_ssid) < 0) {
+			/* Recover through full scan */
+			wpa_supplicant_req_scan(wpa_s, 0, 100000);
+		}
+	}
 }
 
 

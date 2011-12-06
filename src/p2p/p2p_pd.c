@@ -191,8 +191,8 @@ out:
 					msg.device_name, msg.config_methods,
 					msg.capability ? msg.capability[0] : 0,
 					msg.capability ? msg.capability[1] :
-					0);
-
+					0,
+					msg.group_id, msg.group_id_len);
 	}
 	p2p_parse_free(&msg);
 }

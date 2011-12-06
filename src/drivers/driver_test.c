@@ -3196,7 +3196,8 @@ static void test_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 static void test_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 			       const u8 *dev_addr, const u8 *pri_dev_type,
 			       const char *dev_name, u16 supp_config_methods,
-			       u8 dev_capab, u8 group_capab)
+			       u8 dev_capab, u8 group_capab,
+			       const u8 *group_id, size_t group_id_len)
 {
 	wpa_printf(MSG_DEBUG, "%s(peer=" MACSTR " config_methods=0x%x)",
 		   __func__, MAC2STR(peer), config_methods);

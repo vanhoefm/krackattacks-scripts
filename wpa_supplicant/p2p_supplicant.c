@@ -1688,13 +1688,28 @@ static void wpas_prov_disc_local_keypad(struct wpa_supplicant *wpa_s,
 void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 			const u8 *dev_addr, const u8 *pri_dev_type,
 			const char *dev_name, u16 supp_config_methods,
-			u8 dev_capab, u8 group_capab)
+			u8 dev_capab, u8 group_capab, const u8 *group_id,
+			size_t group_id_len)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
-	char params[200];
+	char params[300];
 	u8 empty_dev_type[8];
 	unsigned int generated_pin = 0;
+	struct wpa_supplicant *group = NULL;
+
+	if (group_id) {
+		for (group = wpa_s->global->ifaces; group; group = group->next)
+		{
+			struct wpa_ssid *s = group->current_ssid;
+			if (s != NULL &&
+			    s->mode == WPAS_MODE_P2P_GO &&
+			    group_id_len - ETH_ALEN == s->ssid_len &&
+			    os_memcmp(group_id + ETH_ALEN, s->ssid,
+				      s->ssid_len) == 0)
+				break;
+		}
+	}
 
 	if (pri_dev_type == NULL) {
 		os_memset(empty_dev_type, 0, sizeof(empty_dev_type));
@@ -1702,11 +1717,13 @@ void wpas_prov_disc_req(void *ctx, const u8 *peer, u16 config_methods,
 	}
 	os_snprintf(params, sizeof(params), " p2p_dev_addr=" MACSTR
 		    " pri_dev_type=%s name='%s' config_methods=0x%x "
-		    "dev_capab=0x%x group_capab=0x%x",
+		    "dev_capab=0x%x group_capab=0x%x%s%s",
 		    MAC2STR(dev_addr),
 		    wps_dev_type_bin2str(pri_dev_type, devtype,
 					 sizeof(devtype)),
-		    dev_name, supp_config_methods, dev_capab, group_capab);
+		    dev_name, supp_config_methods, dev_capab, group_capab,
+		    group ? " group=" : "",
+		    group ? group->ifname : "");
 	params[sizeof(params) - 1] = '\0';
 
 	if (config_methods & WPS_CONFIG_DISPLAY) {

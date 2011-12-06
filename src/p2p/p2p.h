@@ -594,6 +594,8 @@ struct p2p_config {
 	 * @supp_config_methods: Supported configuration Methods
 	 * @dev_capab: Device Capabilities
 	 * @group_capab: Group Capabilities
+	 * @group_id: P2P Group ID (or %NULL if not included)
+	 * @group_id_len: Length of P2P Group ID
 	 *
 	 * This callback is used to indicate reception of a Provision Discovery
 	 * Request frame that the P2P module accepted.
@@ -601,7 +603,8 @@ struct p2p_config {
 	void (*prov_disc_req)(void *ctx, const u8 *peer, u16 config_methods,
 			      const u8 *dev_addr, const u8 *pri_dev_type,
 			      const char *dev_name, u16 supp_config_methods,
-			      u8 dev_capab, u8 group_capab);
+			      u8 dev_capab, u8 group_capab,
+			      const u8 *group_id, size_t group_id_len);
 
 	/**
 	 * prov_disc_resp - Callback on Provisiong Discovery Response

@@ -2375,7 +2375,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				   data->p2p_prov_disc_req.dev_name,
 				   data->p2p_prov_disc_req.supp_config_methods,
 				   data->p2p_prov_disc_req.dev_capab,
-				   data->p2p_prov_disc_req.group_capab);
+				   data->p2p_prov_disc_req.group_capab,
+				   NULL, 0);
 		break;
 	case EVENT_P2P_PROV_DISC_RESPONSE:
 		wpas_prov_disc_resp(wpa_s, data->p2p_prov_disc_resp.peer,

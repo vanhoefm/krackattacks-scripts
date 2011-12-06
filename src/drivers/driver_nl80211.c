@@ -115,43 +115,34 @@ static void nl80211_handle_destroy(struct nl_handle *handle)
 #endif /* CONFIG_LIBNL20 */
 
 
-struct nl80211_handles {
-	struct nl_handle *handle;
-};
-
-
-static int nl_create_handles(struct nl80211_handles *handles, struct nl_cb *cb,
-			     const char *dbg)
+static struct nl_handle * nl_create_handle(struct nl_cb *cb, const char *dbg)
 {
-	if (!handles)
-		return -1;
+	struct nl_handle *handle;
 
-	handles->handle = nl80211_handle_alloc(cb);
-	if (handles->handle == NULL) {
+	handle = nl80211_handle_alloc(cb);
+	if (handle == NULL) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate netlink "
 			   "callbacks (%s)", dbg);
-		return -1;
+		return NULL;
 	}
 
-	if (genl_connect(handles->handle)) {
+	if (genl_connect(handle)) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to connect to generic "
 			   "netlink (%s)", dbg);
-		goto err;
+		nl80211_handle_destroy(handle);
+		return NULL;
 	}
 
-	return 0;
-err:
-	nl80211_handle_destroy(handles->handle);
-	return -1;
+	return handle;
 }
 
 
-static void nl_destroy_handles(struct nl80211_handles *handles)
+static void nl_destroy_handles(struct nl_handle **handle)
 {
-	if (handles->handle == NULL)
+	if (*handle == NULL)
 		return;
-	nl80211_handle_destroy(handles->handle);
-	handles->handle = NULL;
+	nl80211_handle_destroy(*handle);
+	*handle = NULL;
 }
 
 
@@ -174,11 +165,11 @@ struct nl80211_global {
 	int if_add_ifindex;
 	struct netlink_data *netlink;
 	struct nl_cb *nl_cb;
-	struct nl80211_handles nl;
+	struct nl_handle *nl;
 	int nl80211_id;
 	int ioctl_sock; /* socket for ioctl() use */
 
-	struct nl80211_handles nl_event;
+	struct nl_handle *nl_event;
 };
 
 struct nl80211_wiphy_data {
@@ -186,7 +177,7 @@ struct nl80211_wiphy_data {
 	struct dl_list bsss;
 	struct dl_list drvs;
 
-	struct nl80211_handles nl_beacons;
+	struct nl_handle *nl_beacons;
 	struct nl_cb *nl_cb;
 
 	int wiphy_idx;
@@ -207,7 +198,7 @@ struct i802_bss {
 
 	int freq;
 
-	struct nl80211_handles nl_preq, nl_mgmt;
+	struct nl_handle *nl_preq, *nl_mgmt;
 	struct nl_cb *nl_cb;
 
 	struct nl80211_wiphy_data *wiphy_data;
@@ -451,7 +442,7 @@ static int send_and_recv_msgs_global(struct nl80211_global *global,
 				     int (*valid_handler)(struct nl_msg *, void *),
 				     void *valid_data)
 {
-	return send_and_recv(global, global->nl.handle, msg, valid_handler,
+	return send_and_recv(global, global->nl, msg, valid_handler,
 			     valid_data);
 }
 
@@ -461,7 +452,7 @@ static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 			      int (*valid_handler)(struct nl_msg *, void *),
 			      void *valid_data)
 {
-	return send_and_recv(drv->global, drv->global->nl.handle, msg,
+	return send_and_recv(drv->global, drv->global->nl, msg,
 			     valid_handler, valid_data);
 }
 
@@ -513,8 +504,7 @@ static int nl_get_multicast_id(struct nl80211_global *global,
 	msg = nlmsg_alloc();
 	if (!msg)
 		return -ENOMEM;
-	genlmsg_put(msg, 0, 0,
-		    genl_ctrl_resolve(global->nl.handle, "nlctrl"),
+	genlmsg_put(msg, 0, 0, genl_ctrl_resolve(global->nl, "nlctrl"),
 		    0, 0, CTRL_CMD_GETFAMILY, 0);
 	NLA_PUT_STRING(msg, CTRL_ATTR_FAMILY_NAME, family);
 
@@ -596,7 +586,7 @@ static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY, w->wiphy_idx);
 
-	ret = send_and_recv(drv->global, w->nl_beacons.handle, msg, NULL, NULL);
+	ret = send_and_recv(drv->global, w->nl_beacons, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Register beacons command "
@@ -688,8 +678,9 @@ nl80211_get_wiphy_data_ap(struct i802_bss *bss)
 	nl_cb_set(w->nl_cb, NL_CB_VALID, NL_CB_CUSTOM, process_beacon_event,
 		  w);
 
-	if (nl_create_handles(&w->nl_beacons, bss->drv->global->nl_cb,
-			      "wiphy beacons")) {
+	w->nl_beacons = nl_create_handle(bss->drv->global->nl_cb,
+					 "wiphy beacons");
+	if (w->nl_beacons == NULL) {
 		os_free(w);
 		return NULL;
 	}
@@ -700,9 +691,8 @@ nl80211_get_wiphy_data_ap(struct i802_bss *bss)
 		return NULL;
 	}
 
-	eloop_register_read_sock(nl_socket_get_fd(w->nl_beacons.handle),
-				 nl80211_recv_beacons, w,
-				 w->nl_beacons.handle);
+	eloop_register_read_sock(nl_socket_get_fd(w->nl_beacons),
+				 nl80211_recv_beacons, w, w->nl_beacons);
 
 	dl_list_add(&nl80211_wiphys, &w->list);
 
@@ -749,7 +739,7 @@ static void nl80211_put_wiphy_data_ap(struct i802_bss *bss)
 	if (!dl_list_empty(&w->bsss))
 		return;
 
-	eloop_unregister_read_sock(nl_socket_get_fd(w->nl_beacons.handle));
+	eloop_unregister_read_sock(nl_socket_get_fd(w->nl_beacons));
 
 	nl_cb_put(w->nl_cb);
 	nl_destroy_handles(&w->nl_beacons);
@@ -2563,22 +2553,24 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 		return -1;
 	}
 
-	if (nl_create_handles(&global->nl, global->nl_cb, "nl"))
+	global->nl = nl_create_handle(global->nl_cb, "nl");
+	if (global->nl == NULL)
 		goto err;
 
-	global->nl80211_id = genl_ctrl_resolve(global->nl.handle, "nl80211");
+	global->nl80211_id = genl_ctrl_resolve(global->nl, "nl80211");
 	if (global->nl80211_id < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: 'nl80211' generic netlink not "
 			   "found");
 		goto err;
 	}
 
-	if (nl_create_handles(&global->nl_event, global->nl_cb, "event"))
+	global->nl_event = nl_create_handle(global->nl_cb, "event");
+	if (global->nl_event == NULL)
 		goto err;
 
 	ret = nl_get_multicast_id(global, "nl80211", "scan");
 	if (ret >= 0)
-		ret = nl_socket_add_membership(global->nl_event.handle, ret);
+		ret = nl_socket_add_membership(global->nl_event, ret);
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Could not add multicast "
 			   "membership for scan events: %d (%s)",
@@ -2588,7 +2580,7 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 
 	ret = nl_get_multicast_id(global, "nl80211", "mlme");
 	if (ret >= 0)
-		ret = nl_socket_add_membership(global->nl_event.handle, ret);
+		ret = nl_socket_add_membership(global->nl_event, ret);
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Could not add multicast "
 			   "membership for mlme events: %d (%s)",
@@ -2598,7 +2590,7 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 
 	ret = nl_get_multicast_id(global, "nl80211", "regulatory");
 	if (ret >= 0)
-		ret = nl_socket_add_membership(global->nl_event.handle, ret);
+		ret = nl_socket_add_membership(global->nl_event, ret);
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
 			   "membership for regulatory events: %d (%s)",
@@ -2611,9 +2603,9 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 	nl_cb_set(global->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
 		  process_global_event, global);
 
-	eloop_register_read_sock(nl_socket_get_fd(global->nl_event.handle),
+	eloop_register_read_sock(nl_socket_get_fd(global->nl_event),
 				 wpa_driver_nl80211_event_receive,
-				 global->nl_cb, global->nl_event.handle);
+				 global->nl_cb, global->nl_event);
 
 	return 0;
 
@@ -2913,18 +2905,19 @@ static int nl80211_alloc_mgmt_handle(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
-	if (bss->nl_mgmt.handle) {
+	if (bss->nl_mgmt) {
 		wpa_printf(MSG_DEBUG, "nl80211: Mgmt reporting "
 			   "already on!");
 		return -1;
 	}
 
-	if (nl_create_handles(&bss->nl_mgmt, drv->nl_cb, "mgmt"))
+	bss->nl_mgmt = nl_create_handle(drv->nl_cb, "mgmt");
+	if (bss->nl_mgmt == NULL)
 		return -1;
 
-	eloop_register_read_sock(nl_socket_get_fd(bss->nl_mgmt.handle),
+	eloop_register_read_sock(nl_socket_get_fd(bss->nl_mgmt),
 				 wpa_driver_nl80211_event_receive, bss->nl_cb,
-				 bss->nl_mgmt.handle);
+				 bss->nl_mgmt);
 
 	return 0;
 }
@@ -2934,7 +2927,7 @@ static int nl80211_register_action_frame(struct i802_bss *bss,
 					 const u8 *match, size_t match_len)
 {
 	u16 type = (WLAN_FC_TYPE_MGMT << 2) | (WLAN_FC_STYPE_ACTION << 4);
-	return nl80211_register_frame(bss, bss->nl_mgmt.handle,
+	return nl80211_register_frame(bss, bss->nl_mgmt,
 				      type, match, match_len);
 }
 
@@ -3015,7 +3008,7 @@ static int nl80211_register_spurious_class3(struct i802_bss *bss)
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
 
-	ret = send_and_recv(drv->global, bss->nl_mgmt.handle, msg, NULL, NULL);
+	ret = send_and_recv(drv->global, bss->nl_mgmt, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Register spurious class3 "
@@ -3053,7 +3046,7 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 		return -1;
 
 	for (i = 0; i < sizeof(stypes) / sizeof(stypes[0]); i++) {
-		if (nl80211_register_frame(bss, bss->nl_mgmt.handle,
+		if (nl80211_register_frame(bss, bss->nl_mgmt,
 					   (WLAN_FC_TYPE_MGMT << 2) |
 					   (stypes[i] << 4),
 					   NULL, 0) < 0) {
@@ -3070,7 +3063,7 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 	return 0;
 
 out_err:
-	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt.handle));
+	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
 	nl_destroy_handles(&bss->nl_mgmt);
 	return -1;
 }
@@ -3078,9 +3071,9 @@ out_err:
 
 static void nl80211_mgmt_unsubscribe(struct i802_bss *bss)
 {
-	if (bss->nl_mgmt.handle == NULL)
+	if (bss->nl_mgmt == NULL)
 		return;
-	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt.handle));
+	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
 	nl_destroy_handles(&bss->nl_mgmt);
 
 	nl80211_put_wiphy_data_ap(bss);
@@ -3183,7 +3176,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	if (drv->eapol_tx_sock >= 0)
 		close(drv->eapol_tx_sock);
 
-	if (bss->nl_preq.handle)
+	if (bss->nl_preq)
 		wpa_driver_nl80211_probe_req_report(bss, 0);
 	if (bss->added_if_into_bridge) {
 		if (linux_br_del_if(drv->global->ioctl_sock, bss->brname,
@@ -7874,32 +7867,33 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 	if (!report) {
-		if (bss->nl_preq.handle) {
+		if (bss->nl_preq) {
 			eloop_unregister_read_sock(
-				nl_socket_get_fd(bss->nl_preq.handle));
+				nl_socket_get_fd(bss->nl_preq));
 			nl_destroy_handles(&bss->nl_preq);
 		}
 		return 0;
 	}
 
-	if (bss->nl_preq.handle) {
+	if (bss->nl_preq) {
 		wpa_printf(MSG_DEBUG, "nl80211: Probe Request reporting "
 			   "already on!");
 		return 0;
 	}
 
-	if (nl_create_handles(&bss->nl_preq, drv->global->nl_cb, "preq"))
+	bss->nl_preq = nl_create_handle(drv->global->nl_cb, "preq");
+	if (bss->nl_preq == NULL)
 		return -1;
 
-	if (nl80211_register_frame(bss, bss->nl_preq.handle,
+	if (nl80211_register_frame(bss, bss->nl_preq,
 				   (WLAN_FC_TYPE_MGMT << 2) |
 				   (WLAN_FC_STYPE_PROBE_REQ << 4),
 				   NULL, 0) < 0)
 		goto out_err;
 
-	eloop_register_read_sock(nl_socket_get_fd(bss->nl_preq.handle),
+	eloop_register_read_sock(nl_socket_get_fd(bss->nl_preq),
 				 wpa_driver_nl80211_event_receive, bss->nl_cb,
-				 bss->nl_preq.handle);
+				 bss->nl_preq);
 
 	return 0;
 
@@ -8209,9 +8203,9 @@ static void nl80211_global_deinit(void *priv)
 
 	nl_destroy_handles(&global->nl);
 
-	if (global->nl_event.handle) {
+	if (global->nl_event) {
 		eloop_unregister_read_sock(
-			nl_socket_get_fd(global->nl_event.handle));
+			nl_socket_get_fd(global->nl_event));
 		nl_destroy_handles(&global->nl_event);
 	}
 

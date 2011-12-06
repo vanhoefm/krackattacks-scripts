@@ -2005,8 +2005,8 @@ static void nl80211_client_probe_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
-static void nl80211_spurious_class3_frame(struct i802_bss *bss,
-					  struct nlattr **tb)
+static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
+				   int wds)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	union wpa_event_data event;
@@ -2022,6 +2022,7 @@ static void nl80211_spurious_class3_frame(struct i802_bss *bss,
 	os_memset(&event, 0, sizeof(event));
 	event.rx_from_unknown.bssid = bssid;
 	event.rx_from_unknown.addr = nla_data(tb[NL80211_ATTR_MAC]);
+	event.rx_from_unknown.wds = wds;
 
 	wpa_supplicant_event(drv->ctx, EVENT_RX_FROM_UNKNOWN, &event);
 }
@@ -2210,7 +2211,10 @@ static int process_bss_event(struct nl_msg *msg, void *arg)
 			   tb[NL80211_ATTR_COOKIE]);
 		break;
 	case NL80211_CMD_UNEXPECTED_FRAME:
-		nl80211_spurious_class3_frame(bss, tb);
+		nl80211_spurious_frame(bss, tb, 0);
+		break;
+	case NL80211_CMD_UNEXPECTED_4ADDR_FRAME:
+		nl80211_spurious_frame(bss, tb, 1);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "

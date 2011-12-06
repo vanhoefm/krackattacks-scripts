@@ -1758,6 +1758,28 @@ static void nl80211_client_probe_event(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void nl80211_spurious_class3_frame(struct i802_bss *bss,
+					  struct nlattr **tb)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	union wpa_event_data event;
+	u8 bssid[ETH_ALEN];
+
+	if (!tb[NL80211_ATTR_MAC])
+		return;
+
+	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname, bssid) <
+	    0)
+		return;
+
+	os_memset(&event, 0, sizeof(event));
+	event.rx_from_unknown.bssid = bssid;
+	event.rx_from_unknown.addr = nla_data(tb[NL80211_ATTR_MAC]);
+
+	wpa_supplicant_event(drv->ctx, EVENT_RX_FROM_UNKNOWN, &event);
+}
+
+
 static int process_drv_event(struct nl_msg *msg, void *arg)
 {
 	struct wpa_driver_nl80211_data *drv = arg;
@@ -1908,6 +1930,9 @@ static int process_bss_event(struct nl_msg *msg, void *arg)
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
 			   tb[NL80211_ATTR_COOKIE]);
+		break;
+	case NL80211_CMD_UNEXPECTED_FRAME:
+		nl80211_spurious_class3_frame(bss, tb);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
@@ -2691,6 +2716,35 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 }
 
 
+static int nl80211_register_spurious_class3(struct i802_bss *bss)
+{
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_UNEXPECTED_FRAME);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+
+	ret = send_and_recv(drv, bss->nl_mgmt.handle, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Register spurious class3 "
+			   "failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+	ret = 0;
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
 static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 {
 	static const int stypes[] = {
@@ -2721,6 +2775,9 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 			goto out_err;
 		}
 	}
+
+	if (nl80211_register_spurious_class3(bss))
+		goto out_err;
 
 	return 0;
 

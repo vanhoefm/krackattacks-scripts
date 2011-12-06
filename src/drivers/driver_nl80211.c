@@ -177,6 +177,8 @@ struct nl80211_global {
 	struct nl80211_handles nl;
 	int nl80211_id;
 	int ioctl_sock; /* socket for ioctl() use */
+
+	struct nl80211_handles nl_event;
 };
 
 struct nl80211_wiphy_data {
@@ -231,7 +233,6 @@ struct wpa_driver_nl80211_data {
 
 	int scan_complete_events;
 
-	struct nl80211_handles nl_event;
 	struct nl_cb *nl_cb;
 
 	u8 auth_bssid[ETH_ALEN];
@@ -410,7 +411,7 @@ static int no_seq_check(struct nl_msg *msg, void *arg)
 }
 
 
-static int send_and_recv(struct wpa_driver_nl80211_data *drv,
+static int send_and_recv(struct nl80211_global *global,
 			 struct nl_handle *nl_handle, struct nl_msg *msg,
 			 int (*valid_handler)(struct nl_msg *, void *),
 			 void *valid_data)
@@ -418,7 +419,7 @@ static int send_and_recv(struct wpa_driver_nl80211_data *drv,
 	struct nl_cb *cb;
 	int err = -ENOMEM;
 
-	cb = nl_cb_clone(drv->global->nl_cb);
+	cb = nl_cb_clone(global->nl_cb);
 	if (!cb)
 		goto out;
 
@@ -445,13 +446,23 @@ static int send_and_recv(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static int send_and_recv_msgs_global(struct nl80211_global *global,
+				     struct nl_msg *msg,
+				     int (*valid_handler)(struct nl_msg *, void *),
+				     void *valid_data)
+{
+	return send_and_recv(global, global->nl.handle, msg, valid_handler,
+			     valid_data);
+}
+
+
 static int send_and_recv_msgs(struct wpa_driver_nl80211_data *drv,
 			      struct nl_msg *msg,
 			      int (*valid_handler)(struct nl_msg *, void *),
 			      void *valid_data)
 {
-	return send_and_recv(drv, drv->global->nl.handle, msg, valid_handler,
-			     valid_data);
+	return send_and_recv(drv->global, drv->global->nl.handle, msg,
+			     valid_handler, valid_data);
 }
 
 
@@ -492,7 +503,7 @@ static int family_handler(struct nl_msg *msg, void *arg)
 }
 
 
-static int nl_get_multicast_id(struct wpa_driver_nl80211_data *drv,
+static int nl_get_multicast_id(struct nl80211_global *global,
 			       const char *family, const char *group)
 {
 	struct nl_msg *msg;
@@ -503,11 +514,11 @@ static int nl_get_multicast_id(struct wpa_driver_nl80211_data *drv,
 	if (!msg)
 		return -ENOMEM;
 	genlmsg_put(msg, 0, 0,
-		    genl_ctrl_resolve(drv->global->nl.handle, "nlctrl"),
+		    genl_ctrl_resolve(global->nl.handle, "nlctrl"),
 		    0, 0, CTRL_CMD_GETFAMILY, 0);
 	NLA_PUT_STRING(msg, CTRL_ATTR_FAMILY_NAME, family);
 
-	ret = send_and_recv_msgs(drv, msg, family_handler, &res);
+	ret = send_and_recv_msgs_global(global, msg, family_handler, &res);
 	msg = NULL;
 	if (ret == 0)
 		ret = res.id;
@@ -585,7 +596,7 @@ static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY, w->wiphy_idx);
 
-	ret = send_and_recv(drv, w->nl_beacons.handle, msg, NULL, NULL);
+	ret = send_and_recv(drv->global, w->nl_beacons.handle, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Register beacons command "
@@ -2016,34 +2027,18 @@ static void nl80211_spurious_class3_frame(struct i802_bss *bss,
 }
 
 
-static int process_drv_event(struct nl_msg *msg, void *arg)
+static void do_process_drv_event(struct wpa_driver_nl80211_data *drv,
+				 int cmd, struct nlattr **tb)
 {
-	struct wpa_driver_nl80211_data *drv = arg;
-	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
-	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-
-	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
-		  genlmsg_attrlen(gnlh, 0), NULL);
-
-	if (tb[NL80211_ATTR_IFINDEX]) {
-		int ifindex = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
-		if (ifindex != drv->ifindex && !have_ifidx(drv, ifindex)) {
-			wpa_printf(MSG_DEBUG, "nl80211: Ignored event (cmd=%d)"
-				   " for foreign interface (ifindex %d)",
-				   gnlh->cmd, ifindex);
-			return NL_SKIP;
-		}
-	}
-
 	if (drv->ap_scan_as_station != NL80211_IFTYPE_UNSPECIFIED &&
-	    (gnlh->cmd == NL80211_CMD_NEW_SCAN_RESULTS ||
-	     gnlh->cmd == NL80211_CMD_SCAN_ABORTED)) {
+	    (cmd == NL80211_CMD_NEW_SCAN_RESULTS ||
+	     cmd == NL80211_CMD_SCAN_ABORTED)) {
 		wpa_driver_nl80211_set_mode(&drv->first_bss,
 					    drv->ap_scan_as_station);
 		drv->ap_scan_as_station = NL80211_IFTYPE_UNSPECIFIED;
 	}
 
-	switch (gnlh->cmd) {
+	switch (cmd) {
 	case NL80211_CMD_TRIGGER_SCAN:
 		wpa_printf(MSG_DEBUG, "nl80211: Scan trigger");
 		break;
@@ -2083,14 +2078,14 @@ static int process_drv_event(struct nl_msg *msg, void *arg)
 	case NL80211_CMD_FRAME_TX_STATUS:
 	case NL80211_CMD_UNPROT_DEAUTHENTICATE:
 	case NL80211_CMD_UNPROT_DISASSOCIATE:
-		mlme_event(drv, gnlh->cmd, tb[NL80211_ATTR_FRAME],
+		mlme_event(drv, cmd, tb[NL80211_ATTR_FRAME],
 			   tb[NL80211_ATTR_MAC], tb[NL80211_ATTR_TIMED_OUT],
 			   tb[NL80211_ATTR_WIPHY_FREQ], tb[NL80211_ATTR_ACK],
 			   tb[NL80211_ATTR_COOKIE]);
 		break;
 	case NL80211_CMD_CONNECT:
 	case NL80211_CMD_ROAM:
-		mlme_event_connect(drv, gnlh->cmd,
+		mlme_event_connect(drv, cmd,
 				   tb[NL80211_ATTR_STATUS_CODE],
 				   tb[NL80211_ATTR_MAC],
 				   tb[NL80211_ATTR_REQ_IE],
@@ -2142,8 +2137,55 @@ static int process_drv_event(struct nl_msg *msg, void *arg)
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "nl80211: Ignored unknown event "
-			   "(cmd=%d)", gnlh->cmd);
+			   "(cmd=%d)", cmd);
 		break;
+	}
+}
+
+
+static int process_drv_event(struct nl_msg *msg, void *arg)
+{
+	struct wpa_driver_nl80211_data *drv = arg;
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_IFINDEX]) {
+		int ifindex = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+		if (ifindex != drv->ifindex && !have_ifidx(drv, ifindex)) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignored event (cmd=%d)"
+				   " for foreign interface (ifindex %d)",
+				   gnlh->cmd, ifindex);
+			return NL_SKIP;
+		}
+	}
+
+	do_process_drv_event(drv, gnlh->cmd, tb);
+	return NL_SKIP;
+}
+
+
+static int process_global_event(struct nl_msg *msg, void *arg)
+{
+	struct nl80211_global *global = arg;
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct wpa_driver_nl80211_data *drv;
+	int ifidx = -1;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_IFINDEX])
+		ifidx = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
+
+	dl_list_for_each(drv, &global->interfaces,
+			 struct wpa_driver_nl80211_data, list) {
+		if (ifidx == -1 || ifidx == drv->ifindex ||
+		    have_ifidx(drv, ifidx))
+			do_process_drv_event(drv, gnlh->cmd, tb);
 	}
 
 	return NL_SKIP;
@@ -2508,6 +2550,8 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 
 static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 {
+	int ret;
+
 	global->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
 	if (global->nl_cb == NULL) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to allocate netlink "
@@ -2516,52 +2560,41 @@ static int wpa_driver_nl80211_init_nl_global(struct nl80211_global *global)
 	}
 
 	if (nl_create_handles(&global->nl, global->nl_cb, "nl"))
-		return -1;
+		goto err;
 
 	global->nl80211_id = genl_ctrl_resolve(global->nl.handle, "nl80211");
 	if (global->nl80211_id < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: 'nl80211' generic netlink not "
 			   "found");
-		return -1;
+		goto err;
 	}
 
-	return 0;
-}
+	if (nl_create_handles(&global->nl_event, global->nl_cb, "event"))
+		goto err;
 
-
-static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
-{
-	struct nl80211_global *global = drv->global;
-	int ret;
-
-	/* Initialize generic netlink and nl80211 */
-
-	if (nl_create_handles(&drv->nl_event, global->nl_cb, "event"))
-		goto err3;
-
-	ret = nl_get_multicast_id(drv, "nl80211", "scan");
+	ret = nl_get_multicast_id(global, "nl80211", "scan");
 	if (ret >= 0)
-		ret = nl_socket_add_membership(drv->nl_event.handle, ret);
+		ret = nl_socket_add_membership(global->nl_event.handle, ret);
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Could not add multicast "
 			   "membership for scan events: %d (%s)",
 			   ret, strerror(-ret));
-		goto err4;
+		goto err;
 	}
 
-	ret = nl_get_multicast_id(drv, "nl80211", "mlme");
+	ret = nl_get_multicast_id(global, "nl80211", "mlme");
 	if (ret >= 0)
-		ret = nl_socket_add_membership(drv->nl_event.handle, ret);
+		ret = nl_socket_add_membership(global->nl_event.handle, ret);
 	if (ret < 0) {
 		wpa_printf(MSG_ERROR, "nl80211: Could not add multicast "
 			   "membership for mlme events: %d (%s)",
 			   ret, strerror(-ret));
-		goto err4;
+		goto err;
 	}
 
-	ret = nl_get_multicast_id(drv, "nl80211", "regulatory");
+	ret = nl_get_multicast_id(global, "nl80211", "regulatory");
 	if (ret >= 0)
-		ret = nl_socket_add_membership(drv->nl_event.handle, ret);
+		ret = nl_socket_add_membership(global->nl_event.handle, ret);
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "nl80211: Could not add multicast "
 			   "membership for regulatory events: %d (%s)",
@@ -2569,10 +2602,31 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 		/* Continue without regulatory events */
 	}
 
+	nl_cb_set(global->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
+		  no_seq_check, NULL);
+	nl_cb_set(global->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
+		  process_global_event, global);
+
+	eloop_register_read_sock(nl_socket_get_fd(global->nl_event.handle),
+				 wpa_driver_nl80211_event_receive,
+				 global->nl_cb, global->nl_event.handle);
+
+	return 0;
+
+err:
+	nl_destroy_handles(&global->nl_event);
+	nl_destroy_handles(&global->nl);
+	nl_cb_put(global->nl_cb);
+	return -1;
+}
+
+
+static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
+{
 	drv->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
 	if (!drv->nl_cb) {
 		wpa_printf(MSG_ERROR, "nl80211: Failed to alloc cb struct");
-		goto err4;
+		return -1;
 	}
 
 	nl_cb_set(drv->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM,
@@ -2580,16 +2634,7 @@ static int wpa_driver_nl80211_init_nl(struct wpa_driver_nl80211_data *drv)
 	nl_cb_set(drv->nl_cb, NL_CB_VALID, NL_CB_CUSTOM,
 		  process_drv_event, drv);
 
-	eloop_register_read_sock(nl_socket_get_fd(drv->nl_event.handle),
-				 wpa_driver_nl80211_event_receive, drv->nl_cb,
-				 drv->nl_event.handle);
-
 	return 0;
-
-err4:
-	nl_destroy_handles(&drv->nl_event);
-err3:
-	return -1;
 }
 
 
@@ -2843,7 +2888,7 @@ static int nl80211_register_frame(struct i802_bss *bss,
 	NLA_PUT_U16(msg, NL80211_ATTR_FRAME_TYPE, type);
 	NLA_PUT(msg, NL80211_ATTR_FRAME_MATCH, match_len, match);
 
-	ret = send_and_recv(drv, nl_handle, msg, NULL, NULL);
+	ret = send_and_recv(drv->global, nl_handle, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Register frame command "
@@ -2966,7 +3011,7 @@ static int nl80211_register_spurious_class3(struct i802_bss *bss)
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
 
-	ret = send_and_recv(drv, bss->nl_mgmt.handle, msg, NULL, NULL);
+	ret = send_and_recv(drv->global, bss->nl_mgmt.handle, msg, NULL, NULL);
 	msg = NULL;
 	if (ret) {
 		wpa_printf(MSG_DEBUG, "nl80211: Register spurious class3 "
@@ -3186,8 +3231,6 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
 	nl80211_mgmt_unsubscribe(bss);
 
-	eloop_unregister_read_sock(nl_socket_get_fd(drv->nl_event.handle));
-	nl_destroy_handles(&drv->nl_event);
 	nl_cb_put(drv->nl_cb);
 
 	nl80211_destroy_bss(&drv->first_bss);
@@ -8162,8 +8205,13 @@ static void nl80211_global_deinit(void *priv)
 
 	nl_destroy_handles(&global->nl);
 
-	if (global->nl_cb)
-		nl_cb_put(global->nl_cb);
+	if (global->nl_event.handle) {
+		eloop_unregister_read_sock(
+			nl_socket_get_fd(global->nl_event.handle));
+		nl_destroy_handles(&global->nl_event);
+	}
+
+	nl_cb_put(global->nl_cb);
 
 	if (global->ioctl_sock >= 0)
 		close(global->ioctl_sock);

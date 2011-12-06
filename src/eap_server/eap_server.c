@@ -169,13 +169,6 @@ SM_STATE(EAP, INITIALIZE)
 	sm->num_rounds = 0;
 	sm->method_pending = METHOD_PENDING_NONE;
 
-	/*
-	 * Start reauthentication with identity request even though we know the
-	 * previously used identity. This is needed to get reauthentication
-	 * started properly.
-	 */
-	sm->start_reauth = TRUE;
-
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_STARTED
 		MACSTR, MAC2STR(sm->peer_addr));
 }
@@ -596,6 +589,13 @@ SM_STATE(EAP, SUCCESS2)
 	}
 
 	sm->eap_if.eapSuccess = TRUE;
+
+	/*
+	 * Start reauthentication with identity request even though we know the
+	 * previously used identity. This is needed to get reauthentication
+	 * started properly.
+	 */
+	sm->start_reauth = TRUE;
 }
 
 

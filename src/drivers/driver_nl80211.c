@@ -179,6 +179,17 @@ struct nl80211_global {
 	int ioctl_sock; /* socket for ioctl() use */
 };
 
+struct nl80211_wiphy_data {
+	struct dl_list list;
+	struct dl_list bsss;
+	struct dl_list drvs;
+
+	struct nl80211_handles nl_beacons;
+	struct nl_cb *nl_cb;
+
+	int wiphy_idx;
+};
+
 static void nl80211_global_deinit(void *priv);
 static void wpa_driver_nl80211_deinit(void *priv);
 
@@ -196,11 +207,15 @@ struct i802_bss {
 
 	struct nl80211_handles nl_preq, nl_mgmt;
 	struct nl_cb *nl_cb;
+
+	struct nl80211_wiphy_data *wiphy_data;
+	struct dl_list wiphy_list;
 };
 
 struct wpa_driver_nl80211_data {
 	struct nl80211_global *global;
 	struct dl_list list;
+	struct dl_list wiphy_list;
 	u8 addr[ETH_ALEN];
 	char phyname[32];
 	void *ctx;
@@ -508,6 +523,227 @@ static void * nl80211_cmd(struct wpa_driver_nl80211_data *drv,
 {
 	return genlmsg_put(msg, 0, 0, drv->global->nl80211_id,
 			   0, flags, cmd, 0);
+}
+
+
+struct wiphy_idx_data {
+	int wiphy_idx;
+};
+
+
+static int netdev_info_handler(struct nl_msg *msg, void *arg)
+{
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct wiphy_idx_data *info = arg;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (tb[NL80211_ATTR_WIPHY])
+		info->wiphy_idx = nla_get_u32(tb[NL80211_ATTR_WIPHY]);
+
+	return NL_SKIP;
+}
+
+
+static int nl80211_get_wiphy_index(struct i802_bss *bss)
+{
+	struct nl_msg *msg;
+	struct wiphy_idx_data data = {
+		.wiphy_idx = -1,
+	};
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(bss->drv, msg, 0, NL80211_CMD_GET_INTERFACE);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
+
+	if (send_and_recv_msgs(bss->drv, msg, netdev_info_handler, &data) == 0)
+		return data.wiphy_idx;
+	msg = NULL;
+nla_put_failure:
+	nlmsg_free(msg);
+	return -1;
+}
+
+
+static int nl80211_register_beacons(struct wpa_driver_nl80211_data *drv,
+				    struct nl80211_wiphy_data *w)
+{
+	struct nl_msg *msg;
+	int ret = -1;
+
+	msg = nlmsg_alloc();
+	if (!msg)
+		return -1;
+
+	nl80211_cmd(drv, msg, 0, NL80211_CMD_REGISTER_BEACONS);
+
+	NLA_PUT_U32(msg, NL80211_ATTR_WIPHY, w->wiphy_idx);
+
+	ret = send_and_recv(drv, w->nl_beacons.handle, msg, NULL, NULL);
+	msg = NULL;
+	if (ret) {
+		wpa_printf(MSG_DEBUG, "nl80211: Register beacons command "
+			   "failed: ret=%d (%s)",
+			   ret, strerror(-ret));
+		goto nla_put_failure;
+	}
+	ret = 0;
+nla_put_failure:
+	nlmsg_free(msg);
+	return ret;
+}
+
+
+static void nl80211_recv_beacons(int sock, void *eloop_ctx, void *handle)
+{
+	struct nl80211_wiphy_data *w = eloop_ctx;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Beacon event message available");
+
+	nl_recvmsgs(handle, w->nl_cb);
+}
+
+
+static int process_beacon_event(struct nl_msg *msg, void *arg)
+{
+	struct nl80211_wiphy_data *w = arg;
+	struct wpa_driver_nl80211_data *drv;
+	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
+	struct nlattr *tb[NL80211_ATTR_MAX + 1];
+	union wpa_event_data event;
+
+	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
+		  genlmsg_attrlen(gnlh, 0), NULL);
+
+	if (gnlh->cmd != NL80211_CMD_FRAME) {
+		wpa_printf(MSG_DEBUG, "nl80211: Unexpected beacon event? (%d)",
+			   gnlh->cmd);
+		return NL_SKIP;
+	}
+
+	if (!tb[NL80211_ATTR_FRAME])
+		return NL_SKIP;
+
+	dl_list_for_each(drv, &w->drvs, struct wpa_driver_nl80211_data,
+			 wiphy_list) {
+		os_memset(&event, 0, sizeof(event));
+		event.rx_mgmt.frame = nla_data(tb[NL80211_ATTR_FRAME]);
+		event.rx_mgmt.frame_len = nla_len(tb[NL80211_ATTR_FRAME]);
+		wpa_supplicant_event(drv->ctx, EVENT_RX_MGMT, &event);
+	}
+
+	return NL_SKIP;
+}
+
+
+static struct nl80211_wiphy_data *
+nl80211_get_wiphy_data_ap(struct i802_bss *bss)
+{
+	static DEFINE_DL_LIST(nl80211_wiphys);
+	struct nl80211_wiphy_data *w;
+	int wiphy_idx, found = 0;
+	struct i802_bss *tmp_bss;
+
+	if (bss->wiphy_data != NULL)
+		return bss->wiphy_data;
+
+	wiphy_idx = nl80211_get_wiphy_index(bss);
+
+	dl_list_for_each(w, &nl80211_wiphys, struct nl80211_wiphy_data, list) {
+		if (w->wiphy_idx == wiphy_idx)
+			goto add;
+	}
+
+	/* alloc new one */
+	w = os_zalloc(sizeof(*w));
+	if (w == NULL)
+		return NULL;
+	w->wiphy_idx = wiphy_idx;
+	dl_list_init(&w->bsss);
+	dl_list_init(&w->drvs);
+
+	w->nl_cb = nl_cb_alloc(NL_CB_DEFAULT);
+	if (!w->nl_cb) {
+		os_free(w);
+		return NULL;
+	}
+	nl_cb_set(w->nl_cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, no_seq_check, NULL);
+	nl_cb_set(w->nl_cb, NL_CB_VALID, NL_CB_CUSTOM, process_beacon_event,
+		  w);
+
+	if (nl_create_handles(&w->nl_beacons, bss->drv->global->nl_cb,
+			      "wiphy beacons")) {
+		os_free(w);
+		return NULL;
+	}
+
+	if (nl80211_register_beacons(bss->drv, w)) {
+		nl_destroy_handles(&w->nl_beacons);
+		os_free(w);
+		return NULL;
+	}
+
+	eloop_register_read_sock(nl_socket_get_fd(w->nl_beacons.handle),
+				 nl80211_recv_beacons, w,
+				 w->nl_beacons.handle);
+
+	dl_list_add(&nl80211_wiphys, &w->list);
+
+add:
+	/* drv entry for this bss already there? */
+	dl_list_for_each(tmp_bss, &w->bsss, struct i802_bss, wiphy_list) {
+		if (tmp_bss->drv == bss->drv) {
+			found = 1;
+			break;
+		}
+	}
+	/* if not add it */
+	if (!found)
+		dl_list_add(&w->drvs, &bss->drv->wiphy_list);
+
+	dl_list_add(&w->bsss, &bss->wiphy_list);
+	bss->wiphy_data = w;
+	return w;
+}
+
+
+static void nl80211_put_wiphy_data_ap(struct i802_bss *bss)
+{
+	struct nl80211_wiphy_data *w = bss->wiphy_data;
+	struct i802_bss *tmp_bss;
+	int found = 0;
+
+	if (w == NULL)
+		return;
+	bss->wiphy_data = NULL;
+	dl_list_del(&bss->wiphy_list);
+
+	/* still any for this drv present? */
+	dl_list_for_each(tmp_bss, &w->bsss, struct i802_bss, wiphy_list) {
+		if (tmp_bss->drv == bss->drv) {
+			found = 1;
+			break;
+		}
+	}
+	/* if not remove it */
+	if (!found)
+		dl_list_del(&bss->drv->wiphy_list);
+
+	if (!dl_list_empty(&w->bsss))
+		return;
+
+	eloop_unregister_read_sock(nl_socket_get_fd(w->nl_beacons.handle));
+
+	nl_cb_put(w->nl_cb);
+	nl_destroy_handles(&w->nl_beacons);
+	dl_list_del(&w->list);
+	os_free(w);
 }
 
 
@@ -2779,6 +3015,9 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 	if (nl80211_register_spurious_class3(bss))
 		goto out_err;
 
+	if (nl80211_get_wiphy_data_ap(bss) == NULL)
+		goto out_err;
+
 	return 0;
 
 out_err:
@@ -2794,6 +3033,8 @@ static void nl80211_mgmt_unsubscribe(struct i802_bss *bss)
 		return;
 	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt.handle));
 	nl_destroy_handles(&bss->nl_mgmt);
+
+	nl80211_put_wiphy_data_ap(bss);
 }
 
 

@@ -114,6 +114,34 @@ static const char * p2p_state_txt(int state)
 }
 
 
+u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr)
+{
+	struct p2p_device *dev = NULL;
+
+	if (!addr || !p2p)
+		return 0;
+
+	dev = p2p_get_device(p2p, addr);
+	if (dev)
+		return dev->wps_prov_info;
+	else
+		return 0;
+}
+
+
+void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *iface_addr)
+{
+	struct p2p_device *dev = NULL;
+
+	if (!iface_addr || !p2p)
+		return;
+
+	dev = p2p_get_device_interface(p2p, iface_addr);
+	if (dev)
+		dev->wps_prov_info = 0;
+}
+
+
 void p2p_set_state(struct p2p_data *p2p, int new_state)
 {
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: State %s -> %s",

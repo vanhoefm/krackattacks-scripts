@@ -73,6 +73,14 @@ struct p2p_device {
 	 */
 	u16 req_config_methods;
 
+	/**
+	 * wps_prov_info - Stored provisioning WPS config method
+	 *
+	 * This is used to store pending WPS config method between Provisioning
+	 * Discovery and connection to a running group.
+	 */
+	u16 wps_prov_info;
+
 #define P2P_DEV_PROBE_REQ_ONLY BIT(0)
 #define P2P_DEV_REPORTED BIT(1)
 #define P2P_DEV_NOT_YET_READY BIT(2)

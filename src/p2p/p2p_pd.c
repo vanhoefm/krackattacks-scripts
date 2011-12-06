@@ -267,6 +267,10 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 			MAC2STR(sa));
 		dev->flags |= P2P_DEV_PD_PEER_KEYPAD;
 	}
+
+	/* Store the provisioning info */
+	dev->wps_prov_info = msg.wps_config_methods;
+
 	p2p_parse_free(&msg);
 
 out:
@@ -351,6 +355,9 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 		MAC2STR(peer_addr), config_methods);
 	if (config_methods == 0)
 		return -1;
+
+	/* Reset provisioning info */
+	dev->wps_prov_info = 0;
 
 	dev->req_config_methods = config_methods;
 	if (join)

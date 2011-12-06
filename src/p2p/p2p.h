@@ -1035,6 +1035,28 @@ void p2p_wps_success_cb(struct p2p_data *p2p, const u8 *mac_addr);
  */
 void p2p_group_formation_failed(struct p2p_data *p2p);
 
+/**
+ * p2p_get_provisioning_info - Get any stored provisioning info
+ * @p2p: P2P module context from p2p_init()
+ * @addr: Peer P2P Device Address
+ * Returns: WPS provisioning information (WPS config method) or 0 if no
+ * information is available
+ *
+ * This function is used to retrieve stored WPS provisioning info for the given
+ * peer.
+ */
+u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr);
+
+/**
+ * p2p_clear_provisioning_info - Clear any stored provisioning info
+ * @p2p: P2P module context from p2p_init()
+ * @iface_addr: Peer P2P Interface Address
+ *
+ * This function is used to clear stored WPS provisioning info for the given
+ * peer.
+ */
+void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *iface_addr);
+
 
 /* Event notifications from lower layer driver operations */
 

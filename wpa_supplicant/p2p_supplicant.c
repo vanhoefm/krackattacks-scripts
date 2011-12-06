@@ -2296,6 +2296,14 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 {
 	if (wpa_s->driver && wpa_s->drv_priv)
 		wpa_drv_probe_req_report(wpa_s, 0);
+
+	if (wpa_s->go_params) {
+		/* Clear any stored provisioning info */
+		p2p_clear_provisioning_info(
+			wpa_s->global->p2p,
+			wpa_s->go_params->peer_interface_addr);
+	}
+
 	os_free(wpa_s->go_params);
 	wpa_s->go_params = NULL;
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s, NULL);
@@ -2503,6 +2511,21 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		default:
 			method = 0;
 			break;
+		}
+
+		if ((p2p_get_provisioning_info(wpa_s->global->p2p,
+					       wpa_s->pending_join_dev_addr) ==
+		     method)) {
+			/*
+			 * We have already performed provision discovery for
+			 * joining the group. Proceed directly to join
+			 * operation without duplicated provision discovery. */
+			wpa_printf(MSG_DEBUG, "P2P: Provisioning discovery "
+				   "with " MACSTR " already done - proceed to "
+				   "join",
+				   MAC2STR(wpa_s->pending_join_dev_addr));
+			wpa_s->pending_pd_before_join = 0;
+			goto start;
 		}
 
 		if (p2p_prov_disc_req(wpa_s->global->p2p,
@@ -3258,6 +3281,9 @@ void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		return;
 	}
 
+	/* Clear any stored provisioning info */
+	p2p_clear_provisioning_info(wpa_s->global->p2p, peer_addr);
+
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s->parent,
 			     NULL);
 	if (wpa_s->global->p2p)
@@ -3276,6 +3302,13 @@ void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 			   "provisioning not in progress");
 		return;
 	}
+
+	if (wpa_s->go_params) {
+		p2p_clear_provisioning_info(
+			wpa_s->global->p2p,
+			wpa_s->go_params->peer_interface_addr);
+	}
+
 	wpas_notify_p2p_wps_failed(wpa_s, fail);
 }
 

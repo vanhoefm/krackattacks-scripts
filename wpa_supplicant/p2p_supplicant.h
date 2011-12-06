@@ -43,7 +43,7 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 			  int registrar);
 int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
-		       const char *config_method);
+		       const char *config_method, int join);
 void wpas_send_action_tx_status(struct wpa_supplicant *wpa_s, const u8 *dst,
 				const u8 *data, size_t data_len,
 				enum p2p_send_action_result result);

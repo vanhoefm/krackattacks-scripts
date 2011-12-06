@@ -2077,15 +2077,19 @@ static int wpa_cli_cmd_p2p_prov_disc(struct wpa_ctrl *ctrl, int argc,
 	char cmd[128];
 	int res;
 
-	if (argc != 2) {
-		printf("Invalid P2P_PROV_DISC command: needs two arguments "
-		       "(address and config method\n"
-		       "(display, keypad, or pbc)\n");
+	if (argc != 2 && argc != 3) {
+		printf("Invalid P2P_PROV_DISC command: needs at least "
+		       "two arguments, address and config method\n"
+		       "(display, keypad, or pbc) and an optional join\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s %s",
-			  argv[0], argv[1]);
+	if (argc == 3)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_PROV_DISC %s %s",
+				  argv[0], argv[1]);
 	if (res < 0 || (size_t) res >= sizeof(cmd))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';

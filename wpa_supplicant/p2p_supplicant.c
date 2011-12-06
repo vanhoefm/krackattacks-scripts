@@ -3281,30 +3281,32 @@ void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 
 
 int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
-		       const char *config_method)
+		       const char *config_method, int join)
 {
 	u16 config_methods;
 
-	if (os_strcmp(config_method, "display") == 0)
+	if (os_strncmp(config_method, "display", 7) == 0)
 		config_methods = WPS_CONFIG_DISPLAY;
-	else if (os_strcmp(config_method, "keypad") == 0)
+	else if (os_strncmp(config_method, "keypad", 6) == 0)
 		config_methods = WPS_CONFIG_KEYPAD;
-	else if (os_strcmp(config_method, "pbc") == 0 ||
-		 os_strcmp(config_method, "pushbutton") == 0)
+	else if (os_strncmp(config_method, "pbc", 3) == 0 ||
+		 os_strncmp(config_method, "pushbutton", 10) == 0)
 		config_methods = WPS_CONFIG_PUSHBUTTON;
-	else
+	else {
+		wpa_printf(MSG_DEBUG, "P2P: Unknown config method");
 		return -1;
+	}
 
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT) {
 		return wpa_drv_p2p_prov_disc_req(wpa_s, peer_addr,
-						 config_methods);
+						 config_methods, join);
 	}
 
 	if (wpa_s->global->p2p == NULL || wpa_s->global->p2p_disabled)
 		return -1;
 
 	return p2p_prov_disc_req(wpa_s->global->p2p, peer_addr,
-				 config_methods, 0);
+				 config_methods, join);
 }
 
 

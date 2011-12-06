@@ -101,7 +101,7 @@ Flush P2P peer table and state.
 
 Group Formation
 
-p2p_prov_disc <peer device address> <display|keypad|pbc>
+p2p_prov_disc <peer device address> <display|keypad|pbc> [join]
 
 Send P2P provision discovery request to the specified peer. The
 parameters for this command are the P2P device address of the peer and
@@ -109,6 +109,10 @@ the desired configuration method. For example, "p2p_prov_disc
 02:01:02:03:04:05 display" would request the peer to display a PIN for
 us and "p2p_prov_disc 02:01:02:03:04:05 keypad" would request the peer
 to enter a PIN that we display.
+
+The optional "join" parameter can be used to indicate that this command
+is requesting an already running GO to prepare for a new client. This is
+mainly used with "display" to request it to display a PIN.
 
 p2p_connect <peer device address> <pbc|pin|PIN#> [display|keypad]
 	[persistent] [join|auth] [go_intent=<0..15>] [freq=<in MHz>]

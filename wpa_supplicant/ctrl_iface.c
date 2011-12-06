@@ -2551,7 +2551,7 @@ static int p2p_ctrl_prov_disc(struct wpa_supplicant *wpa_s, char *cmd)
 	u8 addr[ETH_ALEN];
 	char *pos;
 
-	/* <addr> <config method> */
+	/* <addr> <config method> [join] */
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2561,7 +2561,8 @@ static int p2p_ctrl_prov_disc(struct wpa_supplicant *wpa_s, char *cmd)
 		return -1;
 	pos++;
 
-	return wpas_p2p_prov_disc(wpa_s, addr, pos);
+	return wpas_p2p_prov_disc(wpa_s, addr, pos,
+				  os_strstr(pos, "join") != NULL);
 }
 
 

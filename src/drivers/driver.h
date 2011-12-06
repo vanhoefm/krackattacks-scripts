@@ -2194,7 +2194,7 @@ struct wpa_driver_ops {
 	 * struct wpa_driver_capa.
 	 */
 	int (*p2p_prov_disc_req)(void *priv, const u8 *peer_addr,
-				 u16 config_methods);
+				 u16 config_methods, int join);
 
 	/**
 	 * p2p_sd_request - Schedule a service discovery query

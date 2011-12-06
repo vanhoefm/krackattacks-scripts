@@ -569,12 +569,12 @@ static inline int wpa_drv_p2p_set_params(struct wpa_supplicant *wpa_s,
 
 static inline int wpa_drv_p2p_prov_disc_req(struct wpa_supplicant *wpa_s,
 					    const u8 *peer_addr,
-					    u16 config_methods)
+					    u16 config_methods, int join)
 {
 	if (!wpa_s->driver->p2p_prov_disc_req)
 		return -1;
 	return wpa_s->driver->p2p_prov_disc_req(wpa_s->drv_priv, peer_addr,
-						config_methods);
+						config_methods, join);
 }
 
 static inline u64 wpa_drv_p2p_sd_request(struct wpa_supplicant *wpa_s,

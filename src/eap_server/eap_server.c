@@ -136,6 +136,14 @@ SM_STATE(EAP, INITIALIZE)
 {
 	SM_ENTRY(EAP, INITIALIZE);
 
+	if (sm->eap_if.eapRestart && !sm->eap_server && sm->identity) {
+		/*
+		 * Need to allow internal Identity method to be used instead
+		 * of passthrough at the beginning of reauthentication.
+		 */
+		eap_server_clear_identity(sm);
+	}
+
 	sm->currentId = -1;
 	sm->eap_if.eapSuccess = FALSE;
 	sm->eap_if.eapFail = FALSE;

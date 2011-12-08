@@ -2155,6 +2155,11 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			if (parse_roaming_consortium(bss, pos, line) < 0)
 				errors++;
 #endif /* CONFIG_INTERWORKING */
+#ifdef CONFIG_RADIUS_TEST
+		} else if (os_strcmp(buf, "dump_msk_file") == 0) {
+			os_free(bss->dump_msk_file);
+			bss->dump_msk_file = os_strdup(pos);
+#endif /* CONFIG_RADIUS_TEST */
 		} else {
 			wpa_printf(MSG_ERROR, "Line %d: unknown configuration "
 				   "item '%s'", line, buf);

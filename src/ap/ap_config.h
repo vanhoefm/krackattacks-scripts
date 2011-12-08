@@ -362,6 +362,10 @@ struct hostapd_bss_config {
 	struct hostapd_roaming_consortium *roaming_consortium;
 
 	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */
+
+#ifdef CONFIG_RADIUS_TEST
+	char *dump_msk_file;
+#endif /* CONFIG_RADIUS_TEST */
 };
 
 

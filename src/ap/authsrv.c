@@ -117,6 +117,9 @@ static int hostapd_setup_radius_srv(struct hostapd_data *hapd)
 	srv.eap_req_id_text = conf->eap_req_id_text;
 	srv.eap_req_id_text_len = conf->eap_req_id_text_len;
 	srv.pwd_group = conf->pwd_group;
+#ifdef CONFIG_RADIUS_TEST
+	srv.dump_msk_file = conf->dump_msk_file;
+#endif /* CONFIG_RADIUS_TEST */
 
 	hapd->radius_srv = radius_server_init(&srv);
 	if (hapd->radius_srv == NULL) {

@@ -471,6 +471,10 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 #endif /* CONFIG_WPS */
 
 	os_free(conf->roaming_consortium);
+
+#ifdef CONFIG_RADIUS_TEST
+	os_free(conf->dump_msk_file);
+#endif /* CONFIG_RADIUS_TEST */
 }
 
 

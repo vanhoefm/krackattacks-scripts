@@ -1,6 +1,6 @@
 /*
  * wlantest - IEEE 802.11 protocol monitoring and testing tool
- * Copyright (c) 2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2010-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -35,7 +35,7 @@ static void usage(void)
 	       "[-p<passphrase>]\n"
 		"         [-I<wired ifname>] [-R<wired pcap file>] "
 	       "[-P<RADIUS shared secret>]\n"
-		"         [-w<write pcap file>]\n");
+		"         [-w<write pcap file>] [-f<MSK/PMK file>]\n");
 }
 
 
@@ -136,6 +136,41 @@ static void add_secret(struct wlantest *wt, const char *secret)
 }
 
 
+static int add_pmk_file(struct wlantest *wt, const char *pmk_file)
+{
+	FILE *f;
+	u8 pmk[32];
+	char buf[300], *pos;
+	struct wlantest_pmk *p;
+
+	f = fopen(pmk_file, "r");
+	if (f == NULL) {
+		wpa_printf(MSG_ERROR, "Could not open '%s'", pmk_file);
+		return -1;
+	}
+
+	while (fgets(buf, sizeof(buf), f)) {
+		pos = buf;
+		while (*pos && *pos != '\r' && *pos != '\n')
+			pos++;
+		*pos = '\0';
+		if (pos - buf < 2 * 32)
+			continue;
+		if (hexstr2bin(buf, pmk, 32) < 0)
+			continue;
+		p = os_zalloc(sizeof(*p));
+		if (p == NULL)
+			break;
+		os_memcpy(p->pmk, pmk, 32);
+		dl_list_add(&wt->pmk, &p->list);
+		wpa_hexdump(MSG_DEBUG, "Added PMK from file", pmk, 32);
+	}
+
+	fclose(f);
+	return 0;
+}
+
+
 int add_wep(struct wlantest *wt, const char *key)
 {
 	struct wlantest_wep *w;
@@ -179,7 +214,7 @@ int main(int argc, char *argv[])
 	wlantest_init(&wt);
 
 	for (;;) {
-		c = getopt(argc, argv, "cdhi:I:p:P:qr:R:w:W:");
+		c = getopt(argc, argv, "cdf:hi:I:p:P:qr:R:w:W:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -189,6 +224,10 @@ int main(int argc, char *argv[])
 		case 'd':
 			if (wpa_debug_level > 0)
 				wpa_debug_level--;
+			break;
+		case 'f':
+			if (add_pmk_file(&wt, optarg) < 0)
+				return -1;
 			break;
 		case 'h':
 			usage();

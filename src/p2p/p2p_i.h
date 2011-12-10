@@ -18,8 +18,6 @@
 #include "utils/list.h"
 #include "p2p.h"
 
-/* TODO: add removal of expired P2P device entries */
-
 enum p2p_go_state {
 	UNKNOWN_GO,
 	LOCAL_GO,

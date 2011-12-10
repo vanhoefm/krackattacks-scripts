@@ -2268,6 +2268,23 @@ struct wiphy_info_data {
 };
 
 
+static unsigned int probe_resp_offload_support(int supp_protocols)
+{
+	unsigned int prot = 0;
+
+	if (supp_protocols & NL80211_PROBE_RESP_OFFLOAD_SUPPORT_WPS)
+		prot |= WPA_DRIVER_PROBE_RESP_OFFLOAD_WPS;
+	if (supp_protocols & NL80211_PROBE_RESP_OFFLOAD_SUPPORT_WPS2)
+		prot |= WPA_DRIVER_PROBE_RESP_OFFLOAD_WPS2;
+	if (supp_protocols & NL80211_PROBE_RESP_OFFLOAD_SUPPORT_P2P)
+		prot |= WPA_DRIVER_PROBE_RESP_OFFLOAD_P2P;
+	if (supp_protocols & NL80211_PROBE_RESP_OFFLOAD_SUPPORT_80211U)
+		prot |= WPA_DRIVER_PROBE_RESP_OFFLOAD_INTERWORKING;
+
+	return prot;
+}
+
+
 static int wiphy_info_handler(struct nl_msg *msg, void *arg)
 {
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
@@ -2457,6 +2474,16 @@ broken_combination:
 
 		if (flags & NL80211_FEATURE_SK_TX_STATUS)
 			info->data_tx_status = 1;
+	}
+
+	if (tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]) {
+		int protocols =
+			nla_get_u32(tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]);
+		wpa_printf(MSG_DEBUG, "nl80211: Supports Probe Response "
+			   "offload in AP mode");
+		capa->flags |= WPA_DRIVER_FLAGS_PROBE_RESP_OFFLOAD;
+		capa->probe_resp_offloads =
+			probe_resp_offload_support(protocols);
 	}
 
 	return NL_SKIP;

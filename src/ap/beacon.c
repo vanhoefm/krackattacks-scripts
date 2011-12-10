@@ -186,18 +186,121 @@ static u8 * hostapd_eid_wpa(struct hostapd_data *hapd, u8 *eid, size_t len)
 }
 
 
+static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
+				   struct sta_info *sta,
+				   const struct ieee80211_mgmt *req,
+				   int is_p2p, size_t *resp_len)
+{
+	struct ieee80211_mgmt *resp;
+	u8 *pos, *epos;
+	size_t buflen;
+
+#define MAX_PROBERESP_LEN 768
+	buflen = MAX_PROBERESP_LEN;
+#ifdef CONFIG_WPS
+	if (hapd->wps_probe_resp_ie)
+		buflen += wpabuf_len(hapd->wps_probe_resp_ie);
+#endif /* CONFIG_WPS */
+#ifdef CONFIG_P2P
+	if (hapd->p2p_probe_resp_ie)
+		buflen += wpabuf_len(hapd->p2p_probe_resp_ie);
+#endif /* CONFIG_P2P */
+	resp = os_zalloc(buflen);
+	if (resp == NULL)
+		return NULL;
+
+	epos = ((u8 *) resp) + MAX_PROBERESP_LEN;
+
+	resp->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
+					   WLAN_FC_STYPE_PROBE_RESP);
+	if (req)
+		os_memcpy(resp->da, req->sa, ETH_ALEN);
+	os_memcpy(resp->sa, hapd->own_addr, ETH_ALEN);
+
+	os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);
+	resp->u.probe_resp.beacon_int =
+		host_to_le16(hapd->iconf->beacon_int);
+
+	/* hardware or low-level driver will setup seq_ctrl and timestamp */
+	resp->u.probe_resp.capab_info =
+		host_to_le16(hostapd_own_capab_info(hapd, sta, 1));
+
+	pos = resp->u.probe_resp.variable;
+	*pos++ = WLAN_EID_SSID;
+	*pos++ = hapd->conf->ssid.ssid_len;
+	os_memcpy(pos, hapd->conf->ssid.ssid, hapd->conf->ssid.ssid_len);
+	pos += hapd->conf->ssid.ssid_len;
+
+	/* Supported rates */
+	pos = hostapd_eid_supp_rates(hapd, pos);
+
+	/* DS Params */
+	pos = hostapd_eid_ds_params(hapd, pos);
+
+	pos = hostapd_eid_country(hapd, pos, epos - pos);
+
+	/* ERP Information element */
+	pos = hostapd_eid_erp_info(hapd, pos);
+
+	/* Extended supported rates */
+	pos = hostapd_eid_ext_supp_rates(hapd, pos);
+
+	/* RSN, MDIE, WPA */
+	pos = hostapd_eid_wpa(hapd, pos, epos - pos);
+
+#ifdef CONFIG_IEEE80211N
+	pos = hostapd_eid_ht_capabilities(hapd, pos);
+	pos = hostapd_eid_ht_operation(hapd, pos);
+#endif /* CONFIG_IEEE80211N */
+
+	pos = hostapd_eid_ext_capab(hapd, pos);
+
+	pos = hostapd_eid_time_adv(hapd, pos);
+	pos = hostapd_eid_time_zone(hapd, pos);
+
+	pos = hostapd_eid_interworking(hapd, pos);
+	pos = hostapd_eid_adv_proto(hapd, pos);
+	pos = hostapd_eid_roaming_consortium(hapd, pos);
+
+	/* Wi-Fi Alliance WMM */
+	pos = hostapd_eid_wmm(hapd, pos);
+
+#ifdef CONFIG_WPS
+	if (hapd->conf->wps_state && hapd->wps_probe_resp_ie) {
+		os_memcpy(pos, wpabuf_head(hapd->wps_probe_resp_ie),
+			  wpabuf_len(hapd->wps_probe_resp_ie));
+		pos += wpabuf_len(hapd->wps_probe_resp_ie);
+	}
+#endif /* CONFIG_WPS */
+
+#ifdef CONFIG_P2P
+	if ((hapd->conf->p2p & P2P_ENABLED) && is_p2p &&
+	    hapd->p2p_probe_resp_ie) {
+		os_memcpy(pos, wpabuf_head(hapd->p2p_probe_resp_ie),
+			  wpabuf_len(hapd->p2p_probe_resp_ie));
+		pos += wpabuf_len(hapd->p2p_probe_resp_ie);
+	}
+#endif /* CONFIG_P2P */
+#ifdef CONFIG_P2P_MANAGER
+	if ((hapd->conf->p2p & (P2P_MANAGE | P2P_ENABLED | P2P_GROUP_OWNER)) ==
+	    P2P_MANAGE)
+		pos = hostapd_eid_p2p_manage(hapd, pos);
+#endif /* CONFIG_P2P_MANAGER */
+
+	*resp_len = pos - (u8 *) resp;
+	return (u8 *) resp;
+}
+
+
 void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len)
 {
-	struct ieee80211_mgmt *resp;
+	u8 *resp;
 	struct ieee802_11_elems elems;
-	char *ssid;
-	u8 *pos, *epos;
 	const u8 *ie;
-	size_t ssid_len, ie_len;
+	size_t ie_len;
 	struct sta_info *sta = NULL;
-	size_t buflen;
-	size_t i;
+	size_t i, resp_len;
 	int noack;
 
 	ie = mgmt->u.probe_req.variable;
@@ -219,9 +322,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 			   MAC2STR(mgmt->sa));
 		return;
 	}
-
-	ssid = NULL;
-	ssid_len = 0;
 
 	if ((!elems.ssid || !elems.supp_rates)) {
 		wpa_printf(MSG_DEBUG, "STA " MACSTR " sent probe request "
@@ -267,13 +367,9 @@ void handle_probe_req(struct hostapd_data *hapd,
 	    (elems.ssid_len == hapd->conf->ssid.ssid_len &&
 	     os_memcmp(elems.ssid, hapd->conf->ssid.ssid, elems.ssid_len) ==
 	     0)) {
-		ssid = hapd->conf->ssid.ssid;
-		ssid_len = hapd->conf->ssid.ssid_len;
 		if (sta)
 			sta->ssid_probe = &hapd->conf->ssid;
-	}
-
-	if (!ssid) {
+	} else {
 		if (!(mgmt->da[0] & 0x01)) {
 			char ssid_txt[33];
 			ieee802_11_print_ssid(ssid_txt, elems.ssid,
@@ -318,95 +414,11 @@ void handle_probe_req(struct hostapd_data *hapd,
 
 	/* TODO: verify that supp_rates contains at least one matching rate
 	 * with AP configuration */
-#define MAX_PROBERESP_LEN 768
-	buflen = MAX_PROBERESP_LEN;
-#ifdef CONFIG_WPS
-	if (hapd->wps_probe_resp_ie)
-		buflen += wpabuf_len(hapd->wps_probe_resp_ie);
-#endif /* CONFIG_WPS */
-#ifdef CONFIG_P2P
-	if (hapd->p2p_probe_resp_ie)
-		buflen += wpabuf_len(hapd->p2p_probe_resp_ie);
-#endif /* CONFIG_P2P */
-	resp = os_zalloc(buflen);
+
+	resp = hostapd_gen_probe_resp(hapd, sta, mgmt, elems.p2p != NULL,
+				      &resp_len);
 	if (resp == NULL)
 		return;
-	epos = ((u8 *) resp) + MAX_PROBERESP_LEN;
-
-	resp->frame_control = IEEE80211_FC(WLAN_FC_TYPE_MGMT,
-					   WLAN_FC_STYPE_PROBE_RESP);
-	os_memcpy(resp->da, mgmt->sa, ETH_ALEN);
-	os_memcpy(resp->sa, hapd->own_addr, ETH_ALEN);
-
-	os_memcpy(resp->bssid, hapd->own_addr, ETH_ALEN);
-	resp->u.probe_resp.beacon_int =
-		host_to_le16(hapd->iconf->beacon_int);
-
-	/* hardware or low-level driver will setup seq_ctrl and timestamp */
-	resp->u.probe_resp.capab_info =
-		host_to_le16(hostapd_own_capab_info(hapd, sta, 1));
-
-	pos = resp->u.probe_resp.variable;
-	*pos++ = WLAN_EID_SSID;
-	*pos++ = ssid_len;
-	os_memcpy(pos, ssid, ssid_len);
-	pos += ssid_len;
-
-	/* Supported rates */
-	pos = hostapd_eid_supp_rates(hapd, pos);
-
-	/* DS Params */
-	pos = hostapd_eid_ds_params(hapd, pos);
-
-	pos = hostapd_eid_country(hapd, pos, epos - pos);
-
-	/* ERP Information element */
-	pos = hostapd_eid_erp_info(hapd, pos);
-
-	/* Extended supported rates */
-	pos = hostapd_eid_ext_supp_rates(hapd, pos);
-
-	/* RSN, MDIE, WPA */
-	pos = hostapd_eid_wpa(hapd, pos, epos - pos);
-
-#ifdef CONFIG_IEEE80211N
-	pos = hostapd_eid_ht_capabilities(hapd, pos);
-	pos = hostapd_eid_ht_operation(hapd, pos);
-#endif /* CONFIG_IEEE80211N */
-
-	pos = hostapd_eid_ext_capab(hapd, pos);
-
-	pos = hostapd_eid_time_adv(hapd, pos);
-	pos = hostapd_eid_time_zone(hapd, pos);
-
-	pos = hostapd_eid_interworking(hapd, pos);
-	pos = hostapd_eid_adv_proto(hapd, pos);
-	pos = hostapd_eid_roaming_consortium(hapd, pos);
-
-	/* Wi-Fi Alliance WMM */
-	pos = hostapd_eid_wmm(hapd, pos);
-
-#ifdef CONFIG_WPS
-	if (hapd->conf->wps_state && hapd->wps_probe_resp_ie) {
-		os_memcpy(pos, wpabuf_head(hapd->wps_probe_resp_ie),
-			  wpabuf_len(hapd->wps_probe_resp_ie));
-		pos += wpabuf_len(hapd->wps_probe_resp_ie);
-	}
-#endif /* CONFIG_WPS */
-
-#ifdef CONFIG_P2P
-	if ((hapd->conf->p2p & P2P_ENABLED) && elems.p2p &&
-	    hapd->p2p_probe_resp_ie) {
-		os_memcpy(pos, wpabuf_head(hapd->p2p_probe_resp_ie),
-			  wpabuf_len(hapd->p2p_probe_resp_ie));
-		pos += wpabuf_len(hapd->p2p_probe_resp_ie);
-	}
-#endif /* CONFIG_P2P */
-#ifdef CONFIG_P2P_MANAGER
-	if ((hapd->conf->p2p & (P2P_MANAGE | P2P_ENABLED | P2P_GROUP_OWNER)) ==
-	    P2P_MANAGE)
-		pos = hostapd_eid_p2p_manage(hapd, pos);
-#endif /* CONFIG_P2P_MANAGER */
 
 	/*
 	 * If this is a broadcast probe request, apply no ack policy to avoid
@@ -414,7 +426,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	 */
 	noack = !!(elems.ssid_len == 0 && is_broadcast_ether_addr(mgmt->da));
 
-	if (hostapd_drv_send_mlme(hapd, resp, pos - (u8 *) resp, noack) < 0)
+	if (hostapd_drv_send_mlme(hapd, resp, resp_len, noack) < 0)
 		perror("handle_probe_req: send");
 
 	os_free(resp);

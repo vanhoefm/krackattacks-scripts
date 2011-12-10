@@ -196,6 +196,8 @@ struct i802_bss {
 	unsigned int added_if_into_bridge:1;
 	unsigned int added_bridge:1;
 
+	u8 addr[ETH_ALEN];
+
 	int freq;
 
 	struct nl_handle *nl_preq, *nl_mgmt;
@@ -209,7 +211,6 @@ struct wpa_driver_nl80211_data {
 	struct nl80211_global *global;
 	struct dl_list list;
 	struct dl_list wiphy_list;
-	u8 addr[ETH_ALEN];
 	char phyname[32];
 	void *ctx;
 	int ifindex;
@@ -2000,17 +2001,12 @@ static void nl80211_spurious_frame(struct i802_bss *bss, struct nlattr **tb,
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	union wpa_event_data event;
-	u8 bssid[ETH_ALEN];
 
 	if (!tb[NL80211_ATTR_MAC])
 		return;
 
-	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname, bssid) <
-	    0)
-		return;
-
 	os_memset(&event, 0, sizeof(event));
-	event.rx_from_unknown.bssid = bssid;
+	event.rx_from_unknown.bssid = bss->addr;
 	event.rx_from_unknown.addr = nla_data(tb[NL80211_ATTR_MAC]);
 	event.rx_from_unknown.wds = wds;
 
@@ -3130,7 +3126,7 @@ wpa_driver_nl80211_finish_drv_init(struct wpa_driver_nl80211_data *drv)
 		return -1;
 
 	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
-			       drv->addr))
+			       bss->addr))
 		return -1;
 
 	if (send_rfkill_event) {
@@ -7417,6 +7413,8 @@ static void *i802_init(struct hostapd_data *hapd,
 			       params->own_addr))
 		goto failed;
 
+	memcpy(bss->addr, params->own_addr, ETH_ALEN);
+
 	return bss;
 
 failed:
@@ -7460,7 +7458,7 @@ static int nl80211_addr_in_use(struct nl80211_global *global, const u8 *addr)
 	struct wpa_driver_nl80211_data *drv;
 	dl_list_for_each(drv, &global->interfaces,
 			 struct wpa_driver_nl80211_data, list) {
-		if (os_memcmp(addr, drv->addr, ETH_ALEN) == 0)
+		if (os_memcmp(addr, drv->first_bss.addr, ETH_ALEN) == 0)
 			return 1;
 	}
 	return 0;
@@ -7475,9 +7473,9 @@ static int nl80211_p2p_interface_addr(struct wpa_driver_nl80211_data *drv,
 	if (!drv->global)
 		return -1;
 
-	os_memcpy(new_addr, drv->addr, ETH_ALEN);
+	os_memcpy(new_addr, drv->first_bss.addr, ETH_ALEN);
 	for (idx = 0; idx < 64; idx++) {
-		new_addr[0] = drv->addr[0] | 0x02;
+		new_addr[0] = drv->first_bss.addr[0] | 0x02;
 		new_addr[0] ^= idx << 2;
 		if (!nl80211_addr_in_use(drv->global, new_addr))
 			break;
@@ -7581,6 +7579,7 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 			return -1;
 		}
 		os_strlcpy(new_bss->ifname, ifname, IFNAMSIZ);
+		os_memcpy(new_bss->addr, if_addr, ETH_ALEN);
 		new_bss->ifindex = ifidx;
 		new_bss->drv = drv;
 		new_bss->next = drv->first_bss.next;
@@ -7982,11 +7981,7 @@ static int nl80211_send_ft_action(void *priv, u8 action, const u8 *target_ap,
 	int ret;
 	u8 *data, *pos;
 	size_t data_len;
-	u8 own_addr[ETH_ALEN];
-
-	if (linux_get_ifhwaddr(drv->global->ioctl_sock, bss->ifname,
-			       own_addr) < 0)
-		return -1;
+	const u8 *own_addr = bss->addr;
 
 	if (action != 1) {
 		wpa_printf(MSG_ERROR, "nl80211: Unsupported send_ft_action "
@@ -8101,7 +8096,7 @@ static int wpa_driver_nl80211_shared_freq(void *priv)
 		wpa_printf(MSG_DEBUG, "nl80211: Found a match for PHY %s - %s "
 			   MACSTR,
 			   driver->phyname, driver->first_bss.ifname,
-			   MAC2STR(driver->addr));
+			   MAC2STR(driver->first_bss.addr));
 		freq = nl80211_get_assoc_freq(driver);
 		wpa_printf(MSG_DEBUG, "nl80211: Shared freq for PHY %s: %d",
 			   drv->phyname, freq);

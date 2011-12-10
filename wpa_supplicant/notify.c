@@ -252,6 +252,9 @@ void wpas_notify_network_removed(struct wpa_supplicant *wpa_s,
 		wpa_sm_pmksa_cache_flush(wpa_s->wpa, ssid);
 	if (wpa_s->global->p2p_group_formation != wpa_s)
 		wpas_dbus_unregister_network(wpa_s, ssid->id);
+#ifdef CONFIG_P2P
+	wpas_p2p_network_removed(wpa_s, ssid);
+#endif /* CONFIG_P2P */
 }
 
 

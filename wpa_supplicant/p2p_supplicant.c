@@ -4215,3 +4215,17 @@ int wpas_p2p_in_progress(struct wpa_supplicant *wpa_s)
 
 	return p2p_in_progress(wpa_s->global->p2p);
 }
+
+
+void wpas_p2p_network_removed(struct wpa_supplicant *wpa_s,
+			      struct wpa_ssid *ssid)
+
+{
+	if (wpa_s->p2p_in_provisioning && ssid->p2p_group &&
+	    eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+				 wpa_s->parent, NULL) > 0) {
+		wpa_printf(MSG_DEBUG, "P2P: Canceled group formation due to "
+			   "P2P group network getting removed");
+		wpas_p2p_group_formation_timeout(wpa_s->parent, NULL);
+	}
+}

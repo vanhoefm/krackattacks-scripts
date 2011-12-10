@@ -5162,6 +5162,9 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 	NLA_PUT_U32(msg, NL80211_ATTR_DTIM_PERIOD, params->dtim_period);
 	NLA_PUT(msg, NL80211_ATTR_SSID, params->ssid_len,
 		params->ssid);
+	if (params->proberesp && params->proberesp_len)
+		NLA_PUT(msg, NL80211_ATTR_PROBE_RESP, params->proberesp_len,
+			params->proberesp);
 	switch (params->hide_ssid) {
 	case NO_SSID_HIDING:
 		NLA_PUT_U32(msg, NL80211_ATTR_HIDDEN_SSID,

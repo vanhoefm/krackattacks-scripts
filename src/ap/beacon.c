@@ -436,6 +436,42 @@ void handle_probe_req(struct hostapd_data *hapd,
 		   elems.ssid_len == 0 ? "broadcast" : "our");
 }
 
+
+static u8 * hostapd_probe_resp_offloads(struct hostapd_data *hapd,
+					size_t *resp_len)
+{
+	/* check probe response offloading caps and print warnings */
+	if (!(hapd->iface->drv_flags & WPA_DRIVER_FLAGS_PROBE_RESP_OFFLOAD))
+		return NULL;
+
+#ifdef CONFIG_WPS
+	if (hapd->conf->wps_state && hapd->wps_probe_resp_ie &&
+	    (!(hapd->iface->probe_resp_offloads &
+	       (WPA_DRIVER_PROBE_RESP_OFFLOAD_WPS |
+		WPA_DRIVER_PROBE_RESP_OFFLOAD_WPS2))))
+		wpa_printf(MSG_WARNING, "Device is trying to offload WPS "
+			   "Probe Response while not supporting this");
+#endif /* CONFIG_WPS */
+
+#ifdef CONFIG_P2P
+	if ((hapd->conf->p2p & P2P_ENABLED) && hapd->p2p_probe_resp_ie &&
+	    !(hapd->iface->probe_resp_offloads &
+	      WPA_DRIVER_PROBE_RESP_OFFLOAD_P2P))
+		wpa_printf(MSG_WARNING, "Device is trying to offload P2P "
+			   "Probe Response while not supporting this");
+#endif  /* CONFIG_P2P */
+
+	if (hapd->conf->interworking &&
+	    !(hapd->iface->probe_resp_offloads &
+	      WPA_DRIVER_PROBE_RESP_OFFLOAD_INTERWORKING))
+		wpa_printf(MSG_WARNING, "Device is trying to offload "
+			   "Interworking Probe Response while not supporting "
+			   "this");
+
+	/* Generate a Probe Response template for the non-P2P case */
+	return hostapd_gen_probe_resp(hapd, NULL, NULL, 0, resp_len);
+}
+
 #endif /* NEED_AP_MLME */
 
 
@@ -444,6 +480,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	struct ieee80211_mgmt *head = NULL;
 	u8 *tail = NULL;
 	size_t head_len = 0, tail_len = 0;
+	u8 *resp = NULL;
+	size_t resp_len = 0;
 	struct wpa_driver_ap_params params;
 	struct wpabuf *beacon, *proberesp, *assocresp;
 #ifdef NEED_AP_MLME
@@ -570,6 +608,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	tail_len = tailpos > tail ? tailpos - tail : 0;
 
+	resp = hostapd_probe_resp_offloads(hapd, &resp_len);
 #endif /* NEED_AP_MLME */
 
 	os_memset(&params, 0, sizeof(params));
@@ -577,6 +616,8 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 	params.head_len = head_len;
 	params.tail = tail;
 	params.tail_len = tail_len;
+	params.proberesp = resp;
+	params.proberesp_len = resp_len;
 	params.dtim_period = hapd->conf->dtim_period;
 	params.beacon_int = hapd->iconf->beacon_int;
 	params.basic_rates = hapd->iconf->basic_rates;
@@ -635,6 +676,7 @@ void ieee802_11_set_beacon(struct hostapd_data *hapd)
 
 	os_free(tail);
 	os_free(head);
+	os_free(resp);
 }
 
 

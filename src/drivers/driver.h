@@ -564,6 +564,19 @@ struct wpa_driver_ap_params {
 	int *basic_rates;
 
 	/**
+	 * proberesp - Probe Response template
+	 *
+	 * This is used by drivers that reply to Probe Requests internally in
+	 * AP mode and require the full Probe Response template.
+	 */
+	const u8 *proberesp;
+
+	/**
+	 * proberesp_len - Length of the proberesp buffer in octets
+	 */
+	size_t proberesp_len;
+
+	/**
 	 * ssid - The SSID to use in Beacon/Probe Response frames
 	 */
 	const u8 *ssid;

@@ -2094,8 +2094,8 @@ static void ieee802_1x_finished(struct hostapd_data *hapd,
 		 * EAP-FAST with anonymous provisioning, may require another
 		 * EAPOL authentication to be started to complete connection.
 		 */
-		wpa_printf(MSG_DEBUG, "IEEE 802.1X: Force disconnection after "
-			   "EAP-Failure");
+		wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "IEEE 802.1X: Force "
+			"disconnection after EAP-Failure");
 		/* Add a small sleep to increase likelihood of previously
 		 * requested EAP-Failure TX getting out before this should the
 		 * driver reorder operations.

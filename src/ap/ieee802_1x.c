@@ -1417,6 +1417,9 @@ void ieee802_1x_abort_auth(struct hostapd_data *hapd, struct sta_info *sta)
 		 * request and we cannot continue EAP processing (EAP-Failure
 		 * could only be sent if the EAP peer actually replied).
 		 */
+		wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "EAP Timeout, STA " MACSTR,
+			MAC2STR(sta->addr));
+
 		sm->eap_if->portEnabled = FALSE;
 		ap_sta_disconnect(hapd, sta, sta->addr,
 				  WLAN_REASON_PREV_AUTH_NOT_VALID);

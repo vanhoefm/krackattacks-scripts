@@ -329,9 +329,10 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	} else if (sta->timeout_next != STA_REMOVE) {
 		int deauth = sta->timeout_next == STA_DEAUTH;
 
-		wpa_printf(MSG_DEBUG, "Sending %s info to STA " MACSTR,
-			   deauth ? "deauthentication" : "disassociation",
-			   MAC2STR(sta->addr));
+		wpa_dbg(hapd->msg_ctx, MSG_DEBUG,
+			"Timeout, sending %s info to STA " MACSTR,
+			deauth ? "deauthentication" : "disassociation",
+			MAC2STR(sta->addr));
 
 		if (deauth) {
 			hostapd_drv_sta_deauth(
@@ -372,7 +373,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	case STA_REMOVE:
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO, "deauthenticated due to "
-			       "inactivity");
+			       "inactivity (timer DEAUTH/REMOVE)");
 		if (!sta->acct_terminate_cause)
 			sta->acct_terminate_cause =
 				RADIUS_ACCT_TERMINATE_CAUSE_IDLE_TIMEOUT;

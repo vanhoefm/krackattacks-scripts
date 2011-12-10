@@ -194,6 +194,7 @@ static void wpa_sta_disconnect(struct wpa_authenticator *wpa_auth,
 {
 	if (wpa_auth->cb.disconnect == NULL)
 		return;
+	wpa_printf(MSG_DEBUG, "wpa_sta_disconnect STA " MACSTR, MAC2STR(addr));
 	wpa_auth->cb.disconnect(wpa_auth->cb.ctx, addr,
 				WLAN_REASON_PREV_AUTH_NOT_VALID);
 }

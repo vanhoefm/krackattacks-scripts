@@ -340,6 +340,13 @@ struct wpa_supplicant {
 	int normal_scans; /* normal scans run before sched_scan */
 
 	unsigned int drv_flags;
+
+	/*
+	 * A bitmap of supported protocols for probe response offload. See
+	 * struct wpa_driver_capa in driver.h
+	 */
+	unsigned int probe_resp_offloads;
+
 	int max_scan_ssids;
 	int max_sched_scan_ssids;
 	int sched_scan_supported;

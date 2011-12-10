@@ -192,6 +192,13 @@ struct hostapd_iface {
 	struct ap_info *ap_iter_list;
 
 	unsigned int drv_flags;
+
+	/*
+	 * A bitmap of supported protocols for probe response offload. See
+	 * struct wpa_driver_capa in driver.h
+	 */
+	unsigned int probe_resp_offloads;
+
 	struct hostapd_hw_modes *hw_features;
 	int num_hw_features;
 	struct hostapd_hw_modes *current_mode;

@@ -303,8 +303,10 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 	}
 
 	if (hapd->driver->get_capa &&
-	    hapd->driver->get_capa(hapd->drv_priv, &capa) == 0)
+	    hapd->driver->get_capa(hapd->drv_priv, &capa) == 0) {
 		iface->drv_flags = capa.flags;
+		iface->probe_resp_offloads = capa.probe_resp_offloads;
+	}
 
 	return 0;
 }

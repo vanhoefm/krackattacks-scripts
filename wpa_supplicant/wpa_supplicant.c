@@ -2326,6 +2326,7 @@ next_driver:
 	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
 		wpa_s->drv_capa_known = 1;
 		wpa_s->drv_flags = capa.flags;
+		wpa_s->probe_resp_offloads = capa.probe_resp_offloads;
 		wpa_s->max_scan_ssids = capa.max_scan_ssids;
 		wpa_s->max_sched_scan_ssids = capa.max_sched_scan_ssids;
 		wpa_s->sched_scan_supported = capa.sched_scan_supported;

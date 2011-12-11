@@ -391,6 +391,20 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 
 void p2p_reset_pending_pd(struct p2p_data *p2p)
 {
+	struct p2p_device *dev;
+
+	dl_list_for_each(dev, &p2p->devices, struct p2p_device, list) {
+		if (os_memcmp(p2p->pending_pd_devaddr,
+			      dev->info.p2p_device_addr, ETH_ALEN))
+			continue;
+		if (!dev->req_config_methods)
+			continue;
+		if (dev->flags & P2P_DEV_PD_FOR_JOIN)
+			continue;
+		/* Reset the config methods of the device */
+		dev->req_config_methods = 0;
+	}
+
 	p2p->user_initiated_pd = 0;
 	os_memset(p2p->pending_pd_devaddr, 0, ETH_ALEN);
 	p2p->pd_retries = 0;

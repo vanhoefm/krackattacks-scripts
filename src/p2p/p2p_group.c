@@ -670,7 +670,7 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 			    curr_noa_len);
 
 	/* TODO: properly process request and store copy */
-	if (curr_noa_len > 0)
+	if (curr_noa_len > 0 || curr_noa_len == -1)
 		return P2P_SC_FAIL_UNABLE_TO_ACCOMMODATE;
 
 	return P2P_SC_SUCCESS;

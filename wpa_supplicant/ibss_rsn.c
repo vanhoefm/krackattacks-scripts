@@ -339,6 +339,8 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 		return -1;
 	}
 
+	wpa_init_keys(ibss_rsn->auth_group);
+
 	return 0;
 }
 

@@ -972,6 +972,7 @@ void wpas_dev_found(void *ctx, const u8 *addr,
 		    const struct p2p_peer_info *info,
 		    int new_device)
 {
+#ifndef CONFIG_NO_STDOUT_DEBUG
 	struct wpa_supplicant *wpa_s = ctx;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
 
@@ -984,6 +985,7 @@ void wpas_dev_found(void *ctx, const u8 *addr,
 				     sizeof(devtype)),
 		info->device_name, info->config_methods,
 		info->dev_capab, info->group_capab);
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 
 	wpas_notify_p2p_device_found(ctx, info->p2p_device_addr, new_device);
 }

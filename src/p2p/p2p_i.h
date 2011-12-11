@@ -67,7 +67,7 @@ struct p2p_device {
 	size_t oper_ssid_len;
 
 	/**
-	 * req_config_methods - Pending provisioning discovery methods
+	 * req_config_methods - Pending provision discovery methods
 	 */
 	u16 req_config_methods;
 

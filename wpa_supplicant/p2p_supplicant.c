@@ -2537,7 +2537,7 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 			 * We have already performed provision discovery for
 			 * joining the group. Proceed directly to join
 			 * operation without duplicated provision discovery. */
-			wpa_printf(MSG_DEBUG, "P2P: Provisioning discovery "
+			wpa_printf(MSG_DEBUG, "P2P: Provision discovery "
 				   "with " MACSTR " already done - proceed to "
 				   "join",
 				   MAC2STR(wpa_s->pending_join_dev_addr));

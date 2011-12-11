@@ -2366,7 +2366,7 @@ void p2p_continue_find(struct p2p_data *p2p)
 		} else if (dev->req_config_methods &&
 			   !(dev->flags & P2P_DEV_PD_FOR_JOIN)) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send "
-				"pending Provisioning Discovery Request to "
+				"pending Provision Discovery Request to "
 				MACSTR " (config methods 0x%x)",
 				MAC2STR(dev->info.p2p_device_addr),
 				dev->req_config_methods);
@@ -2435,7 +2435,7 @@ static void p2p_retry_pd(struct p2p_data *p2p)
 			continue;
 
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Send "
-			"pending Provisioning Discovery Request to "
+			"pending Provision Discovery Request to "
 			MACSTR " (config methods 0x%x)",
 			MAC2STR(dev->info.p2p_device_addr),
 			dev->req_config_methods);

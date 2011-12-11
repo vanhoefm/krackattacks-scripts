@@ -209,14 +209,14 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 		return;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-		"P2P: Received Provisioning Discovery Response from " MACSTR
+		"P2P: Received Provision Discovery Response from " MACSTR
 		" with config methods 0x%x",
 		MAC2STR(sa), msg.wps_config_methods);
 
 	dev = p2p_get_device(p2p, sa);
 	if (dev == NULL || !dev->req_config_methods) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Ignore Provisioning Discovery Response from "
+			"P2P: Ignore Provision Discovery Response from "
 			MACSTR " with no pending request", MAC2STR(sa));
 		p2p_parse_free(&msg);
 		return;
@@ -229,7 +229,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (dev->dialog_token != msg.dialog_token) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Ignore Provisioning Discovery Response with "
+			"P2P: Ignore Provision Discovery Response with "
 			"unexpected Dialog Token %u (expected %u)",
 			msg.dialog_token, dev->dialog_token);
 		p2p_parse_free(&msg);
@@ -246,7 +246,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 
 	if (msg.wps_config_methods != dev->req_config_methods) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Peer rejected "
-			"our Provisioning Discovery Request");
+			"our Provision Discovery Request");
 		if (p2p->cfg->prov_disc_fail)
 			p2p->cfg->prov_disc_fail(p2p->cfg->cb_ctx, sa,
 						 P2P_PROV_DISC_REJECTED);

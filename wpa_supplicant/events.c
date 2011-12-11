@@ -1618,12 +1618,14 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 		sme_disassoc_while_authenticating(wpa_s, prev_pending_bssid);
 
 	if (fast_reconnect) {
+#ifndef CONFIG_NO_SCAN_PROCESSING
 		wpa_dbg(wpa_s, MSG_DEBUG, "Try to reconnect to the same BSS");
 		if (wpa_supplicant_connect(wpa_s, fast_reconnect,
 					   fast_reconnect_ssid) < 0) {
 			/* Recover through full scan */
 			wpa_supplicant_req_scan(wpa_s, 0, 100000);
 		}
+#endif /* CONFIG_NO_SCAN_PROCESSING */
 	}
 }
 

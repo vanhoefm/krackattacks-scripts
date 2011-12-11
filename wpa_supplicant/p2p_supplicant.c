@@ -689,7 +689,7 @@ static void p2p_go_configured(void *ctx, void *data)
 	}
 	if (params->wps_method == WPS_PBC)
 		wpa_supplicant_ap_wps_pbc(wpa_s, params->peer_interface_addr,
-					  NULL);
+					  params->peer_device_addr);
 	else if (wpa_s->p2p_pin[0])
 		wpa_supplicant_ap_wps_pin(wpa_s, params->peer_interface_addr,
 					  wpa_s->p2p_pin, NULL, 0);

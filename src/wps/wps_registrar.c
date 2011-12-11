@@ -310,13 +310,17 @@ static void wps_registrar_add_pbc_session(struct wps_registrar *reg,
 
 
 static void wps_registrar_remove_pbc_session(struct wps_registrar *reg,
-					     const u8 *uuid_e)
+					     const u8 *uuid_e,
+					     const u8 *p2p_dev_addr)
 {
 	struct wps_pbc_session *pbc, *prev = NULL, *tmp;
 
 	pbc = reg->pbc_sessions;
 	while (pbc) {
-		if (os_memcmp(pbc->uuid_e, uuid_e, WPS_UUID_LEN) == 0) {
+		if (os_memcmp(pbc->uuid_e, uuid_e, WPS_UUID_LEN) == 0 ||
+		    (p2p_dev_addr && !is_zero_ether_addr(reg->p2p_dev_addr) &&
+		     os_memcmp(reg->p2p_dev_addr, p2p_dev_addr, ETH_ALEN) ==
+		     0)) {
 			if (prev)
 				prev->next = pbc->next;
 			else
@@ -945,7 +949,7 @@ void wps_registrar_complete(struct wps_registrar *registrar, const u8 *uuid_e)
 {
 	if (registrar->pbc) {
 		wps_registrar_remove_pbc_session(registrar,
-						 uuid_e);
+						 uuid_e, NULL);
 		wps_registrar_pbc_completed(registrar);
 	} else {
 		wps_registrar_pin_completed(registrar);
@@ -3047,7 +3051,8 @@ static enum wps_process_res wps_process_wsc_done(struct wps_data *wps,
 
 	if (wps->pbc) {
 		wps_registrar_remove_pbc_session(wps->wps->registrar,
-						 wps->uuid_e);
+						 wps->uuid_e,
+						 wps->p2p_dev_addr);
 		wps_registrar_pbc_completed(wps->wps->registrar);
 	} else {
 		wps_registrar_pin_completed(wps->wps->registrar);

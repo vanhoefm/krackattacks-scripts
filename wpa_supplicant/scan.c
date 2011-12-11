@@ -1168,6 +1168,7 @@ static int wpa_scan_result_wps_compar(const void *a, const void *b)
 
 static void dump_scan_res(struct wpa_scan_results *scan_res)
 {
+#ifndef CONFIG_NO_STDOUT_DEBUG
 	size_t i;
 
 	if (scan_res->res == NULL || scan_res->num == 0)
@@ -1192,6 +1193,7 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 				   r->noise, r->level, r->flags);
 		}
 	}
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 }
 
 

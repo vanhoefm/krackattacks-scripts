@@ -1490,26 +1490,26 @@ void wpas_sd_response(void *ctx, const u8 *sa, u16 update_indic,
 }
 
 
-void * wpas_p2p_sd_request(struct wpa_supplicant *wpa_s, const u8 *dst,
-			   const struct wpabuf *tlvs)
+u64 wpas_p2p_sd_request(struct wpa_supplicant *wpa_s, const u8 *dst,
+			const struct wpabuf *tlvs)
 {
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
-		return (void *) wpa_drv_p2p_sd_request(wpa_s, dst, tlvs);
+		return wpa_drv_p2p_sd_request(wpa_s, dst, tlvs);
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
-		return NULL;
-	return p2p_sd_request(wpa_s->global->p2p, dst, tlvs);
+		return 0;
+	return (uintptr_t) p2p_sd_request(wpa_s->global->p2p, dst, tlvs);
 }
 
 
-void * wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
-				u8 version, const char *query)
+u64 wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
+			     u8 version, const char *query)
 {
 	struct wpabuf *tlvs;
-	void *ret;
+	u64 ret;
 
 	tlvs = wpabuf_alloc(2 + 1 + 1 + 1 + os_strlen(query));
 	if (tlvs == NULL)
-		return NULL;
+		return 0;
 	wpabuf_put_le16(tlvs, 1 + 1 + 1 + os_strlen(query));
 	wpabuf_put_u8(tlvs, P2P_SERV_UPNP); /* Service Protocol Type */
 	wpabuf_put_u8(tlvs, 1); /* Service Transaction ID */
@@ -1521,13 +1521,14 @@ void * wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
 }
 
 
-int wpas_p2p_sd_cancel_request(struct wpa_supplicant *wpa_s, void *req)
+int wpas_p2p_sd_cancel_request(struct wpa_supplicant *wpa_s, u64 req)
 {
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
-		return wpa_drv_p2p_sd_cancel_request(wpa_s, (u64) req);
+		return wpa_drv_p2p_sd_cancel_request(wpa_s, req);
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
-	return p2p_sd_cancel_request(wpa_s->global->p2p, req);
+	return p2p_sd_cancel_request(wpa_s->global->p2p,
+				     (void *) (uintptr_t) req);
 }
 
 

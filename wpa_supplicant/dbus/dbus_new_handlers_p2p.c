@@ -2020,13 +2020,11 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_req(
 		if (version <= 0 || service == NULL)
 			goto error;
 
-		ref = (unsigned long) wpas_p2p_sd_request_upnp(wpa_s, addr,
-							       version,
-							       service);
+		ref = wpas_p2p_sd_request_upnp(wpa_s, addr, version, service);
 	} else {
 		if (tlv == NULL)
 			goto error;
-		ref = (unsigned long)wpas_p2p_sd_request(wpa_s, addr, tlv);
+		ref = wpas_p2p_sd_request(wpa_s, addr, tlv);
 		wpabuf_free(tlv);
 	}
 
@@ -2127,7 +2125,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_cancel_req(
 	if (req == 0)
 		goto error;
 
-	if (!wpas_p2p_sd_cancel_request(wpa_s, (void *)(unsigned long) req))
+	if (!wpas_p2p_sd_cancel_request(wpa_s, req))
 		goto error;
 
 	return NULL;

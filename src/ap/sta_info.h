@@ -98,6 +98,7 @@ struct sta_info {
 	struct hostapd_ssid *ssid_probe; /* SSID selection based on ProbeReq */
 
 	int vlan_id;
+	u8 *psk; /* PSK from RADIUS authentication server */
 
 	struct ieee80211_ht_capabilities *ht_capabilities;
 

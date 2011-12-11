@@ -218,6 +218,8 @@ static struct radius_attr_type radius_attrs[] =
 	{ RADIUS_ATTR_TUNNEL_TYPE, "Tunnel-Type", RADIUS_ATTR_HEXDUMP },
 	{ RADIUS_ATTR_TUNNEL_MEDIUM_TYPE, "Tunnel-Medium-Type",
 	  RADIUS_ATTR_HEXDUMP },
+	{ RADIUS_ATTR_TUNNEL_PASSWORD, "Tunnel-Password",
+	  RADIUS_ATTR_UNDIST },
 	{ RADIUS_ATTR_CONNECT_INFO, "Connect-Info", RADIUS_ATTR_TEXT },
 	{ RADIUS_ATTR_EAP_MESSAGE, "EAP-Message", RADIUS_ATTR_UNDIST },
 	{ RADIUS_ATTR_MESSAGE_AUTHENTICATOR, "Message-Authenticator",
@@ -1272,6 +1274,120 @@ int radius_msg_get_vlanid(struct radius_msg *msg)
 	}
 
 	return -1;
+}
+
+
+/**
+ * radius_msg_get_tunnel_password - Parse RADIUS attribute Tunnel-Password
+ * @msg: Received RADIUS message
+ * @keylen: Length of returned password
+ * @secret: RADIUS shared secret
+ * @secret_len: Length of secret
+ * @sent_msg: Sent RADIUS message
+ * Returns: pointer to password (free with os_free) or %NULL
+ */
+char * radius_msg_get_tunnel_password(struct radius_msg *msg, int *keylen,
+				      const u8 *secret, size_t secret_len,
+				      struct radius_msg *sent_msg)
+{
+	u8 *buf = NULL;
+	size_t buflen;
+	const u8 *salt;
+	u8 *str;
+	const u8 *addr[3];
+	size_t len[3];
+	u8 hash[16];
+	u8 *pos;
+	size_t i;
+	struct radius_attr_hdr *attr;
+	const u8 *data;
+	size_t dlen;
+	const u8 *fdata = NULL; /* points to found item */
+	size_t fdlen = -1;
+	char *ret = NULL;
+
+	/* find attribute with lowest tag and check it */
+	for (i = 0; i < msg->attr_used; i++) {
+		attr = radius_get_attr_hdr(msg, i);
+		if (attr == NULL ||
+		    attr->type != RADIUS_ATTR_TUNNEL_PASSWORD) {
+			continue;
+		}
+		if (attr->length <= 5)
+			continue;
+		data = (const u8 *) (attr + 1);
+		dlen = attr->length - sizeof(*attr);
+		if (dlen <= 3 || dlen % 16 != 3)
+			continue;
+		if (fdata != NULL && fdata[0] <= data[0])
+			continue;
+
+		fdata = data;
+		fdlen = dlen;
+	}
+	if (fdata == NULL)
+		goto out;
+
+	/* alloc writable memory for decryption */
+	buf = os_malloc(fdlen);
+	if (buf == NULL)
+		goto out;
+	os_memcpy(buf, fdata, fdlen);
+	buflen = fdlen;
+
+	/* init pointers */
+	salt = buf + 1;
+	str = buf + 3;
+
+	/* decrypt blocks */
+	pos = buf + buflen - 16; /* last block */
+	while (pos >= str + 16) { /* all but the first block */
+		addr[0] = secret;
+		len[0] = secret_len;
+		addr[1] = pos - 16;
+		len[1] = 16;
+		md5_vector(2, addr, len, hash);
+
+		for (i = 0; i < 16; i++)
+			pos[i] ^= hash[i];
+
+		pos -= 16;
+	}
+
+	/* decrypt first block */
+	if (str != pos)
+		goto out;
+	addr[0] = secret;
+	len[0] = secret_len;
+	addr[1] = sent_msg->hdr->authenticator;
+	len[1] = 16;
+	addr[2] = salt;
+	len[2] = 2;
+	md5_vector(3, addr, len, hash);
+
+	for (i = 0; i < 16; i++)
+		pos[i] ^= hash[i];
+
+	/* derive plaintext length from first subfield */
+	*keylen = (unsigned char) str[0];
+	if ((u8 *) (str + *keylen) >= (u8 *) (buf + buflen)) {
+		/* decryption error - invalid key length */
+		goto out;
+	}
+	if (*keylen == 0) {
+		/* empty password */
+		goto out;
+	}
+
+	/* copy passphrase into new buffer */
+	ret = os_malloc(*keylen);
+	if (ret)
+		os_memcpy(ret, str + 1, *keylen);
+
+out:
+	/* return new buffer */
+	os_free(buf);
+	return ret;
 }
 
 

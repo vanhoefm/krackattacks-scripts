@@ -313,6 +313,8 @@ static void handle_auth(struct hostapd_data *hapd,
 	const u8 *challenge = NULL;
 	u32 session_timeout, acct_interim_interval;
 	int vlan_id = 0;
+	u8 psk[PMK_LEN];
+	int has_psk = 0;
 	u8 resp_ies[2 + WLAN_AUTH_CHALLENGE_LEN];
 	size_t resp_ies_len = 0;
 
@@ -375,7 +377,9 @@ static void handle_auth(struct hostapd_data *hapd,
 
 	res = hostapd_allowed_address(hapd, mgmt->sa, (u8 *) mgmt, len,
 				      &session_timeout,
-				      &acct_interim_interval, &vlan_id);
+				      &acct_interim_interval, &vlan_id,
+				      psk, &has_psk);
+
 	if (res == HOSTAPD_ACL_REJECT) {
 		printf("Station " MACSTR " not allowed to authenticate.\n",
 		       MAC2STR(mgmt->sa));
@@ -411,6 +415,16 @@ static void handle_auth(struct hostapd_data *hapd,
 		sta->vlan_id = vlan_id;
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_RADIUS,
 			       HOSTAPD_LEVEL_INFO, "VLAN ID %d", sta->vlan_id);
+	}
+
+	if (has_psk && hapd->conf->wpa_psk_radius != PSK_RADIUS_IGNORED) {
+		os_free(sta->psk);
+		sta->psk = os_malloc(PMK_LEN);
+		if (sta->psk)
+			os_memcpy(sta->psk, psk, PMK_LEN);
+	} else {
+		os_free(sta->psk);
+		sta->psk = NULL;
 	}
 
 	sta->flags &= ~WLAN_STA_PREAUTH;

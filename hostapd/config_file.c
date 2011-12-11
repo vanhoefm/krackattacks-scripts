@@ -1050,9 +1050,18 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 		return -1;
 	}
 
+	if (bss->wpa && bss->wpa_psk_radius != PSK_RADIUS_IGNORED &&
+	    bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH) {
+		wpa_printf(MSG_ERROR, "WPA-PSK using RADIUS enabled, but no "
+			   "RADIUS checking (macaddr_acl=2) enabled.");
+		return -1;
+	}
+
 	if (bss->wpa && (bss->wpa_key_mgmt & WPA_KEY_MGMT_PSK) &&
 	    bss->ssid.wpa_psk == NULL && bss->ssid.wpa_passphrase == NULL &&
-	    bss->ssid.wpa_psk_file == NULL) {
+	    bss->ssid.wpa_psk_file == NULL &&
+	    (bss->wpa_psk_radius != PSK_RADIUS_REQUIRED ||
+	     bss->macaddr_acl != USE_EXTERNAL_RADIUS_AUTH)) {
 		wpa_printf(MSG_ERROR, "WPA-PSK enabled, but PSK or passphrase "
 			   "is not configured.");
 		return -1;
@@ -1629,6 +1638,16 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				hostapd_config_parse_key_mgmt(line, pos);
 			if (bss->wpa_key_mgmt == -1)
 				errors++;
+		} else if (os_strcmp(buf, "wpa_psk_radius") == 0) {
+			bss->wpa_psk_radius = atoi(pos);
+			if (bss->wpa_psk_radius != PSK_RADIUS_IGNORED &&
+			    bss->wpa_psk_radius != PSK_RADIUS_ACCEPTED &&
+			    bss->wpa_psk_radius != PSK_RADIUS_REQUIRED) {
+				wpa_printf(MSG_ERROR, "Line %d: unknown "
+					   "wpa_psk_radius %d",
+					   line, bss->wpa_psk_radius);
+				errors++;
+			}
 		} else if (os_strcmp(buf, "wpa_pairwise") == 0) {
 			bss->wpa_pairwise =
 				hostapd_config_parse_cipher(line, pos);

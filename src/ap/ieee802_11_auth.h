@@ -24,7 +24,8 @@ enum {
 
 int hostapd_allowed_address(struct hostapd_data *hapd, const u8 *addr,
 			    const u8 *msg, size_t len, u32 *session_timeout,
-			    u32 *acct_interim_interval, int *vlan_id);
+			    u32 *acct_interim_interval, int *vlan_id,
+			    u8 *psk, int *has_psk);
 int hostapd_acl_init(struct hostapd_data *hapd);
 void hostapd_acl_deinit(struct hostapd_data *hapd);
 

@@ -219,6 +219,11 @@ struct hostapd_bss_config {
 	/* dot11AssociationSAQueryRetryTimeout (in TUs) */
 	int assoc_sa_query_retry_timeout;
 #endif /* CONFIG_IEEE80211W */
+	enum {
+		PSK_RADIUS_IGNORED = 0,
+		PSK_RADIUS_ACCEPTED = 1,
+		PSK_RADIUS_REQUIRED = 2
+	} wpa_psk_radius;
 	int wpa_pairwise;
 	int wpa_group;
 	int wpa_group_rekey;

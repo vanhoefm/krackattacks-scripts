@@ -186,6 +186,9 @@ static const u8 * hostapd_wpa_auth_get_psk(void *ctx, const u8 *addr,
 					   const u8 *prev_psk)
 {
 	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta = ap_get_sta(hapd, addr);
+	if (sta && sta->psk)
+		return sta->psk;
 	return hostapd_get_psk(hapd->conf, addr, prev_psk);
 }
 

@@ -82,6 +82,7 @@ enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_NAS_PORT_TYPE = 61,
        RADIUS_ATTR_TUNNEL_TYPE = 64,
        RADIUS_ATTR_TUNNEL_MEDIUM_TYPE = 65,
+       RADIUS_ATTR_TUNNEL_PASSWORD = 69,
        RADIUS_ATTR_CONNECT_INFO = 77,
        RADIUS_ATTR_EAP_MESSAGE = 79,
        RADIUS_ATTR_MESSAGE_AUTHENTICATOR = 80,
@@ -231,6 +232,9 @@ radius_msg_add_attr_user_password(struct radius_msg *msg,
 				  const u8 *secret, size_t secret_len);
 int radius_msg_get_attr(struct radius_msg *msg, u8 type, u8 *buf, size_t len);
 int radius_msg_get_vlanid(struct radius_msg *msg);
+char * radius_msg_get_tunnel_password(struct radius_msg *msg, int *keylen,
+				      const u8 *secret, size_t secret_len,
+				      struct radius_msg *sent_msg);
 
 static inline int radius_msg_add_attr_int32(struct radius_msg *msg, u8 type,
 					    u32 value)

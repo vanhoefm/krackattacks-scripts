@@ -794,6 +794,10 @@ static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
 {
 	struct wpa_ssid *ssid;
 
+	if (wpa_s->current_ssid)
+		wpa_supplicant_deauthenticate(
+			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+
 	/* Mark all other networks disabled and trigger reassociation */
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {

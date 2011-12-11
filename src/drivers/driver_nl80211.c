@@ -2636,6 +2636,7 @@ err:
 	nl_destroy_handles(&global->nl_event);
 	nl_destroy_handles(&global->nl);
 	nl_cb_put(global->nl_cb);
+	global->nl_cb = NULL;
 	return -1;
 }
 
@@ -6680,12 +6681,17 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	int ret = -1;
 	int i;
 	int was_ap = is_ap_interface(drv->nlmode);
+	int res;
 
-	if (nl80211_set_mode(drv, drv->ifindex, nlmode) == 0) {
+	res = nl80211_set_mode(drv, drv->ifindex, nlmode);
+	if (res == 0) {
 		drv->nlmode = nlmode;
 		ret = 0;
 		goto done;
 	}
+
+	if (res == -ENODEV)
+		return -1;
 
 	if (nlmode == drv->nlmode) {
 		wpa_printf(MSG_DEBUG, "nl80211: Interface already in "
@@ -6701,7 +6707,6 @@ static int wpa_driver_nl80211_set_mode(struct i802_bss *bss,
 	wpa_printf(MSG_DEBUG, "nl80211: Try mode change after setting "
 		   "interface down");
 	for (i = 0; i < 10; i++) {
-		int res;
 		res = linux_set_iface_flags(drv->global->ioctl_sock,
 					    bss->ifname, 0);
 		if (res == -EACCES || res == -ENODEV)

@@ -8607,7 +8607,8 @@ static int android_pno_start(struct i802_bss *bss,
 		     WEXT_PNO_NONSSID_SECTIONS_SIZE + 1) >= (int) sizeof(buf))
 			break;
 		wpa_hexdump_ascii(MSG_DEBUG, "For PNO Scan",
-				  ssid[i].ssid, ssid[i].ssid_len);
+				  params->ssids[i].ssid,
+				  params->ssids[i].ssid_len);
 		buf[bp++] = WEXT_PNO_SSID_SECTION;
 		buf[bp++] = params->ssids[i].ssid_len;
 		os_memcpy(&buf[bp], params->ssids[i].ssid,

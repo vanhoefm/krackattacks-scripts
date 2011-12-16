@@ -33,6 +33,7 @@ struct hapd_interfaces {
 	int (*for_each_interface)(struct hapd_interfaces *interfaces,
 				  int (*cb)(struct hostapd_iface *iface,
 					    void *ctx), void *ctx);
+	int (*driver_init)(struct hostapd_iface *iface);
 
 	size_t count;
 	int global_ctrl_sock;
@@ -269,6 +270,10 @@ void hostapd_interface_deinit(struct hostapd_iface *iface);
 void hostapd_interface_free(struct hostapd_iface *iface);
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
+void hostapd_interface_deinit_free(struct hostapd_iface *iface);
+int hostapd_enable_iface(struct hostapd_iface *hapd_iface);
+int hostapd_reload_iface(struct hostapd_iface *hapd_iface);
+int hostapd_disable_iface(struct hostapd_iface *hapd_iface);
 
 /* utils.c */
 int hostapd_register_probereq_cb(struct hostapd_data *hapd,

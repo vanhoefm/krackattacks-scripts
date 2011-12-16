@@ -279,21 +279,6 @@ static int hostapd_driver_init(struct hostapd_iface *iface)
 }
 
 
-static void hostapd_interface_deinit_free(struct hostapd_iface *iface)
-{
-	const struct wpa_driver_ops *driver;
-	void *drv_priv;
-	if (iface == NULL)
-		return;
-	driver = iface->bss[0]->driver;
-	drv_priv = iface->bss[0]->drv_priv;
-	hostapd_interface_deinit(iface);
-	if (driver && driver->hapd_deinit && drv_priv)
-		driver->hapd_deinit(drv_priv);
-	hostapd_interface_free(iface);
-}
-
-
 static struct hostapd_iface *
 hostapd_interface_init(struct hapd_interfaces *interfaces,
 		       const char *config_fname, int debug)
@@ -565,6 +550,7 @@ int main(int argc, char *argv[])
 	interfaces.for_each_interface = hostapd_for_each_interface;
 	interfaces.ctrl_iface_init = hostapd_ctrl_iface_init;
 	interfaces.ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
+	interfaces.driver_init = hostapd_driver_init;
 	interfaces.global_iface_path = NULL;
 	interfaces.global_iface_name = NULL;
 	interfaces.global_ctrl_sock = -1;

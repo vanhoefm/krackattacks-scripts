@@ -1048,6 +1048,108 @@ void hostapd_interface_free(struct hostapd_iface *iface)
 }
 
 
+#ifdef HOSTAPD
+
+void hostapd_interface_deinit_free(struct hostapd_iface *iface)
+{
+	const struct wpa_driver_ops *driver;
+	void *drv_priv;
+	if (iface == NULL)
+		return;
+	driver = iface->bss[0]->driver;
+	drv_priv = iface->bss[0]->drv_priv;
+	hostapd_interface_deinit(iface);
+	if (driver && driver->hapd_deinit && drv_priv)
+		driver->hapd_deinit(drv_priv);
+	hostapd_interface_free(iface);
+}
+
+
+int hostapd_enable_iface(struct hostapd_iface *hapd_iface)
+{
+	if (hapd_iface->bss[0]->drv_priv != NULL) {
+		wpa_printf(MSG_ERROR, "Interface %s already enabled",
+			   hapd_iface->conf->bss[0].iface);
+		return -1;
+	}
+
+	wpa_printf(MSG_DEBUG, "Enable interface %s",
+		   hapd_iface->conf->bss[0].iface);
+
+	if (hapd_iface->interfaces == NULL ||
+	    hapd_iface->interfaces->driver_init == NULL ||
+	    hapd_iface->interfaces->driver_init(hapd_iface) ||
+	    hostapd_setup_interface(hapd_iface)) {
+		hostapd_interface_deinit_free(hapd_iface);
+		return -1;
+	}
+	return 0;
+}
+
+
+int hostapd_reload_iface(struct hostapd_iface *hapd_iface)
+{
+	size_t j;
+
+	wpa_printf(MSG_DEBUG, "Reload interface %s",
+		   hapd_iface->conf->bss[0].iface);
+	for (j = 0; j < hapd_iface->num_bss; j++) {
+		hostapd_flush_old_stations(hapd_iface->bss[j],
+					   WLAN_REASON_PREV_AUTH_NOT_VALID);
+
+#ifndef CONFIG_NO_RADIUS
+		/* TODO: update dynamic data based on changed configuration
+		 * items (e.g., open/close sockets, etc.) */
+		radius_client_flush(hapd_iface->bss[j]->radius, 0);
+#endif  /* CONFIG_NO_RADIUS */
+
+		hostapd_reload_bss(hapd_iface->bss[j]);
+	}
+	return 0;
+}
+
+
+int hostapd_disable_iface(struct hostapd_iface *hapd_iface)
+{
+	size_t j;
+	struct hostapd_bss_config *bss = hapd_iface->bss[0]->conf;
+	const struct wpa_driver_ops *driver;
+	void *drv_priv;
+
+	if (hapd_iface == NULL)
+		return -1;
+	driver = hapd_iface->bss[0]->driver;
+	drv_priv = hapd_iface->bss[0]->drv_priv;
+
+	/* whatever hostapd_interface_deinit does */
+	for (j = 0; j < hapd_iface->num_bss; j++) {
+		struct hostapd_data *hapd = hapd_iface->bss[j];
+		hostapd_free_stas(hapd);
+		hostapd_flush_old_stations(hapd, WLAN_REASON_DEAUTH_LEAVING);
+		hostapd_clear_wep(hapd);
+		hostapd_free_hapd_data(hapd);
+	}
+
+	if (driver && driver->hapd_deinit && drv_priv) {
+		driver->hapd_deinit(drv_priv);
+		hapd_iface->bss[0]->drv_priv = NULL;
+	}
+
+	/* From hostapd_cleanup_iface: These were initialized in
+	 * hostapd_setup_interface and hostapd_setup_interface_complete
+	 */
+	hostapd_cleanup_iface_partial(hapd_iface);
+	bss->wpa = 0;
+	bss->wpa_key_mgmt = -1;
+	bss->wpa_pairwise = -1;
+
+	wpa_printf(MSG_DEBUG, "Interface %s disabled", bss->iface);
+	return 0;
+}
+
+#endif /* HOSTAPD */
+
+
 /**
  * hostapd_new_assoc_sta - Notify that a new station associated with the AP
  * @hapd: Pointer to BSS data

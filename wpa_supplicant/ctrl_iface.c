@@ -769,6 +769,7 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 					      const char *field,
 					      const char *value)
 {
+#ifdef IEEE8021X_EAPOL
 	struct eap_peer_config *eap = &ssid->eap;
 
 	wpa_printf(MSG_DEBUG, "CTRL_IFACE: response handle field=%s", field);
@@ -828,6 +829,10 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 	}
 
 	return 0;
+#else /* IEEE8021X_EAPOL */
+	wpa_printf(MSG_DEBUG, "CTRL_IFACE: IEEE 802.1X not included");
+	return -1;
+#endif /* IEEE8021X_EAPOL */
 }
 
 

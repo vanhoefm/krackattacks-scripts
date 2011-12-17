@@ -61,6 +61,9 @@ struct sta_info {
 	unsigned int ht_20mhz_set:1;
 	unsigned int no_p2p_set:1;
 
+	u8 uapsd_queues;
+	u8 max_sp;
+
 	u16 auth_alg;
 	u8 previous_ap[6];
 

@@ -552,14 +552,23 @@ static u16 check_wmm(struct hostapd_data *hapd, struct sta_info *sta,
 {
 	sta->flags &= ~WLAN_STA_WMM;
 	if (wmm_ie && hapd->conf->wmm_enabled) {
-		if (hostapd_eid_wmm_valid(hapd, wmm_ie, wmm_ie_len))
+		struct wmm_information_element *wmm;
+		u8 qos_info;
+
+		if (hostapd_eid_wmm_valid(hapd, wmm_ie, wmm_ie_len)) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_WPA,
 				       HOSTAPD_LEVEL_DEBUG,
 				       "invalid WMM element in association "
 				       "request");
-		else
-			sta->flags |= WLAN_STA_WMM;
+			return WLAN_STATUS_UNSPECIFIED_FAILURE;
+		}
+
+		sta->flags |= WLAN_STA_WMM;
+		wmm = (struct wmm_information_element *) wmm_ie;
+		qos_info = wmm->qos_info;
+		sta->uapsd_queues = qos_info & 0xf;
+		sta->max_sp = qos_info >> 5;
 	}
 	return WLAN_STATUS_SUCCESS;
 }
@@ -1562,7 +1571,7 @@ static void handle_assoc_cb(struct hostapd_data *hapd,
 			    sta->supported_rates, sta->supported_rates_len,
 			    sta->listen_interval,
 			    sta->flags & WLAN_STA_HT ? &ht_cap : NULL,
-			    sta->flags)) {
+			    sta->flags, sta->uapsd_queues, sta->max_sp)) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_NOTICE,
 			       "Could not add STA to kernel driver");

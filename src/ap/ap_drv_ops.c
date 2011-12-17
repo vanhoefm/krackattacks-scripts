@@ -318,7 +318,7 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 		    const u8 *supp_rates, size_t supp_rates_len,
 		    u16 listen_interval,
 		    const struct ieee80211_ht_capabilities *ht_capab,
-		    u32 flags)
+		    u32 flags, u8 uapsd_queues, u8 max_sp)
 {
 	struct hostapd_sta_add_params params;
 
@@ -336,6 +336,8 @@ int hostapd_sta_add(struct hostapd_data *hapd,
 	params.listen_interval = listen_interval;
 	params.ht_capabilities = ht_capab;
 	params.flags = hostapd_sta_flags_to_drv(flags);
+	params.uapsd_queues = uapsd_queues;
+	params.max_sp = max_sp;
 	return hapd->driver->sta_add(hapd->drv_priv, &params);
 }
 

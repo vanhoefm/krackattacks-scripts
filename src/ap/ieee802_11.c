@@ -555,7 +555,7 @@ static u16 check_wmm(struct hostapd_data *hapd, struct sta_info *sta,
 	if (wmm_ie && hapd->conf->wmm_enabled) {
 		struct wmm_information_element *wmm;
 
-		if (hostapd_eid_wmm_valid(hapd, wmm_ie, wmm_ie_len)) {
+		if (!hostapd_eid_wmm_valid(hapd, wmm_ie, wmm_ie_len)) {
 			hostapd_logger(hapd, sta->addr,
 				       HOSTAPD_MODULE_WPA,
 				       HOSTAPD_LEVEL_DEBUG,

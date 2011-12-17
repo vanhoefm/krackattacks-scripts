@@ -98,9 +98,11 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 }
 
 
-/* This function is called when a station sends an association request with
- * WMM info element. The function returns zero on success or non-zero on any
- * error in WMM element. eid does not include Element ID and Length octets. */
+/*
+ * This function is called when a station sends an association request with
+ * WMM info element. The function returns 1 on success or 0 on any error in WMM
+ * element. eid does not include Element ID and Length octets.
+ */
 int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid, size_t len)
 {
 	struct wmm_information_element *wmm;
@@ -110,7 +112,7 @@ int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid, size_t len)
 	if (len < sizeof(struct wmm_information_element)) {
 		wpa_printf(MSG_DEBUG, "Too short WMM IE (len=%lu)",
 			   (unsigned long) len);
-		return -1;
+		return 0;
 	}
 
 	wmm = (struct wmm_information_element *) eid;
@@ -121,10 +123,10 @@ int hostapd_eid_wmm_valid(struct hostapd_data *hapd, const u8 *eid, size_t len)
 	if (wmm->oui_subtype != WMM_OUI_SUBTYPE_INFORMATION_ELEMENT ||
 	    wmm->version != WMM_VERSION) {
 		wpa_printf(MSG_DEBUG, "Unsupported WMM IE Subtype/Version");
-		return -1;
+		return 0;
 	}
 
-	return 0;
+	return 1;
 }
 
 

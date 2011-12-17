@@ -2405,6 +2405,9 @@ static void wpa_supplicant_ctrl_iface_drop_sa(struct wpa_supplicant *wpa_s)
 static int wpa_supplicant_ctrl_iface_roam(struct wpa_supplicant *wpa_s,
 					  char *addr)
 {
+#ifdef CONFIG_NO_SCAN_PROCESSING
+	return -1;
+#else /* CONFIG_NO_SCAN_PROCESSING */
 	u8 bssid[ETH_ALEN];
 	struct wpa_bss *bss;
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
@@ -2439,6 +2442,7 @@ static int wpa_supplicant_ctrl_iface_roam(struct wpa_supplicant *wpa_s,
 	wpa_supplicant_connect(wpa_s, bss, ssid);
 
 	return 0;
+#endif /* CONFIG_NO_SCAN_PROCESSING */
 }
 
 

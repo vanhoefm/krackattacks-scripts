@@ -677,6 +677,10 @@ struct wmm_information_element {
 
 } STRUCT_PACKED;
 
+#define WMM_QOSINFO_STA_AC_MASK 0x0f
+#define WMM_QOSINFO_STA_SP_MASK 0x03
+#define WMM_QOSINFO_STA_SP_SHIFT 5
+
 #define WMM_AC_AIFSN_MASK 0x0f
 #define WMM_AC_AIFNS_SHIFT 0
 #define WMM_AC_ACM 0x10

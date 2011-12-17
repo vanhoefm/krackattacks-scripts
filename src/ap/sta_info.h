@@ -52,6 +52,7 @@ struct sta_info {
 	u16 listen_interval; /* or beacon_int for APs */
 	u8 supported_rates[WLAN_SUPP_RATES_MAX];
 	int supported_rates_len;
+	u8 qosinfo; /* Valid when WLAN_STA_WMM is set */
 
 	unsigned int nonerp_set:1;
 	unsigned int no_short_slot_time_set:1;
@@ -60,9 +61,6 @@ struct sta_info {
 	unsigned int no_ht_set:1;
 	unsigned int ht_20mhz_set:1;
 	unsigned int no_p2p_set:1;
-
-	u8 uapsd_queues;
-	u8 max_sp;
 
 	u16 auth_alg;
 	u8 previous_ap[6];

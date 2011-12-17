@@ -5406,12 +5406,11 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 			goto nla_put_failure;
 
 		NLA_PUT_U8(wme, NL80211_STA_WME_UAPSD_QUEUES,
-			   params->uapsd_queues);
-		NLA_PUT_U8(wme, NL80211_STA_WME_MAX_SP, params->max_sp);
+				params->qosinfo & WMM_QOSINFO_STA_AC_MASK);
+		NLA_PUT_U8(wme, NL80211_STA_WME_MAX_SP,
+				(params->qosinfo > WMM_QOSINFO_STA_SP_SHIFT) &
+				WMM_QOSINFO_STA_SP_MASK);
 		nla_put_nested(msg, NL80211_ATTR_STA_WME, wme);
-
-		nlmsg_free(wme);
-		wme = NULL;
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);
@@ -5423,8 +5422,7 @@ static int wpa_driver_nl80211_sta_add(void *priv,
 	if (ret == -EEXIST)
 		ret = 0;
  nla_put_failure:
-	if (wme)
-		nlmsg_free(wme);
+	nlmsg_free(wme);
 	nlmsg_free(msg);
 	return ret;
 }

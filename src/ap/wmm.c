@@ -72,7 +72,8 @@ u8 * hostapd_eid_wmm(struct hostapd_data *hapd, u8 *eid)
 	wmm->version = WMM_VERSION;
 	wmm->qos_info = hapd->parameter_set_count & 0xf;
 
-	if (hapd->conf->wmm_uapsd)
+	if (hapd->conf->wmm_uapsd &&
+	    (hapd->iface->drv_flags & WPA_DRIVER_FLAGS_AP_UAPSD))
 		wmm->qos_info |= 0x80;
 
 	wmm->reserved = 0;

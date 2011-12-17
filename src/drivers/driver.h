@@ -774,6 +774,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_TDLS_EXTERNAL_SETUP		0x00100000
 /* Driver indicates support for Probe Response offloading in AP mode */
 #define WPA_DRIVER_FLAGS_PROBE_RESP_OFFLOAD		0x00200000
+/* Driver supports U-APSD in AP mode */
+#define WPA_DRIVER_FLAGS_AP_UAPSD			0x00400000
 	unsigned int flags;
 
 	int max_scan_ssids;

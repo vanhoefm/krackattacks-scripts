@@ -2434,6 +2434,9 @@ broken_combination:
 	/* default to 5000 since early versions of mac80211 don't set it */
 	capa->max_remain_on_chan = 5000;
 
+	if (tb[NL80211_ATTR_SUPPORT_AP_UAPSD])
+		capa->flags |= WPA_DRIVER_FLAGS_AP_UAPSD;
+
 	if (tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION])
 		capa->max_remain_on_chan =
 			nla_get_u32(tb[NL80211_ATTR_MAX_REMAIN_ON_CHANNEL_DURATION]);

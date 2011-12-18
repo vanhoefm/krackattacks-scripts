@@ -4018,7 +4018,9 @@ void wpas_p2p_notif_connected(struct wpa_supplicant *wpa_s)
 void wpas_p2p_notif_disconnected(struct wpa_supplicant *wpa_s)
 {
 	wpas_p2p_disable_cross_connect(wpa_s);
-	if (!wpa_s->ap_iface)
+	if (!wpa_s->ap_iface &&
+	    !eloop_is_timeout_registered(wpas_p2p_group_idle_timeout,
+					 wpa_s, NULL))
 		wpas_p2p_set_group_idle_timeout(wpa_s);
 }
 

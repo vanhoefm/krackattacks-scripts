@@ -97,7 +97,7 @@ void wpas_notify_p2p_group_removed(struct wpa_supplicant *wpa_s,
 void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 				const u8 *src, u16 dev_passwd_id);
 void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s,
-				      int status);
+				      struct p2p_go_neg_results *res);
 void wpas_notify_p2p_invitation_result(struct wpa_supplicant *wpa_s,
 				       int status, const u8 *bssid);
 void wpas_notify_p2p_sd_request(struct wpa_supplicant *wpa_s,

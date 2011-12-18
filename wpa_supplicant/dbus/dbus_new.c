@@ -1044,34 +1044,117 @@ nomem:
  * on status.
  * @status: Status of the GO neg request. 0 for success, other for errors.
  */
-void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s, int status)
+void wpas_dbus_signal_p2p_go_neg_resp(struct wpa_supplicant *wpa_s,
+				      struct p2p_go_neg_results *res)
 {
 	DBusMessage *msg;
-	DBusMessageIter iter;
+	DBusMessageIter iter, dict_iter;
+	DBusMessageIter iter_dict_entry, iter_dict_val, iter_dict_array;
 	struct wpas_dbus_priv *iface;
+	char peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
+	dbus_int32_t freqs[P2P_MAX_CHANNELS];
+	dbus_int32_t *f_array = freqs;
+
 
 	iface = wpa_s->global->dbus;
 
+	os_memset(freqs, 0, sizeof(freqs));
 	/* Do nothing if the control interface is not turned on */
 	if (iface == NULL)
 		return;
 
+	os_snprintf(peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+		    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/" COMPACT_MACSTR,
+		    wpa_s->dbus_new_path, MAC2STR(res->peer_device_addr));
+	path = peer_obj_path;
+
 	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
 				      WPAS_DBUS_NEW_IFACE_P2PDEVICE,
-				      status ? "GONegotiationFailure" :
-					       "GONegotiationSuccess");
+				      res->status ? "GONegotiationFailure" :
+						    "GONegotiationSuccess");
 	if (msg == NULL)
 		return;
 
-	if (status) {
-		dbus_message_iter_init_append(msg, &iter);
-		if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_INT32,
-						    &status)) {
-			wpa_printf(MSG_ERROR,
-				   "dbus: Failed to construct signal");
-			goto err;
+	dbus_message_iter_init_append(msg, &iter);
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
+		goto err;
+	if (!wpa_dbus_dict_append_object_path(&dict_iter, "peer_object",
+					      path) ||
+	    !wpa_dbus_dict_append_int32(&dict_iter, "status", res->status))
+		goto err;
+
+	if (!res->status) {
+		int i = 0;
+		int freq_list_num = 0;
+
+		if (res->role_go) {
+			if (!wpa_dbus_dict_append_byte_array(
+				    &dict_iter, "passphrase",
+				    (const char *) res->passphrase,
+				    sizeof(res->passphrase)))
+				goto err;
 		}
+
+		if (!wpa_dbus_dict_append_string(&dict_iter, "role_go",
+						 res->role_go ? "GO" :
+						 "client") ||
+		    !wpa_dbus_dict_append_int32(&dict_iter, "frequency",
+						res->freq) ||
+		    !wpa_dbus_dict_append_byte_array(&dict_iter, "ssid",
+						     (const char *) res->ssid,
+						     res->ssid_len) ||
+		    !wpa_dbus_dict_append_byte_array(&dict_iter,
+						     "peer_device_addr",
+						     (const char *)
+						     res->peer_device_addr,
+						     ETH_ALEN) ||
+		    !wpa_dbus_dict_append_byte_array(&dict_iter,
+						     "peer_interface_addr",
+						     (const char *)
+						     res->peer_interface_addr,
+						     ETH_ALEN) ||
+		    !wpa_dbus_dict_append_string(&dict_iter, "wps_method",
+						 p2p_wps_method_text(
+							 res->wps_method)))
+			goto err;
+
+		for (i = 0; i < P2P_MAX_CHANNELS; i++) {
+			if (res->freq_list[i]) {
+				freqs[i] = res->freq_list[i];
+				freq_list_num++;
+			}
+		}
+
+		if (!wpa_dbus_dict_begin_array(&dict_iter,
+					       "frequency_list",
+					       DBUS_TYPE_INT32_AS_STRING,
+					       &iter_dict_entry,
+					       &iter_dict_val,
+					       &iter_dict_array))
+			goto err;
+
+		if (!dbus_message_iter_append_fixed_array(&iter_dict_array,
+							  DBUS_TYPE_INT32,
+							  &f_array,
+							  freq_list_num))
+			goto err;
+
+		if (!wpa_dbus_dict_end_array(&dict_iter,
+					     &iter_dict_entry,
+					     &iter_dict_val,
+					     &iter_dict_array))
+			goto err;
+
+		if (!wpa_dbus_dict_append_int32(&dict_iter, "persistent_group",
+						res->persistent_group) ||
+		    !wpa_dbus_dict_append_uint32(&dict_iter,
+						 "peer_config_timeout",
+						 res->peer_config_timeout))
+			goto err;
 	}
+
+	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
+		goto err;
 
 	dbus_connection_send(iface->con, msg, NULL);
 err:

@@ -446,9 +446,10 @@ void wpas_notify_p2p_go_neg_req(struct wpa_supplicant *wpa_s,
 }
 
 
-void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s, int status)
+void wpas_notify_p2p_go_neg_completed(struct wpa_supplicant *wpa_s,
+				      struct p2p_go_neg_results *res)
 {
-	wpas_dbus_signal_p2p_go_neg_resp(wpa_s, status);
+	wpas_dbus_signal_p2p_go_neg_resp(wpa_s, res);
 }
 
 

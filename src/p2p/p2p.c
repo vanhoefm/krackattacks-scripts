@@ -3032,7 +3032,7 @@ int p2p_reject(struct p2p_data *p2p, const u8 *peer_addr)
 }
 
 
-static const char * p2p_wps_method_text(enum p2p_wps_method method)
+const char * p2p_wps_method_text(enum p2p_wps_method method)
 {
 	switch (method) {
 	case WPS_NOT_READY:

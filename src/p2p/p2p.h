@@ -1574,4 +1574,6 @@ int p2p_in_progress(struct p2p_data *p2p);
  */
 int p2p_other_scan_completed(struct p2p_data *p2p);
 
+const char * p2p_wps_method_text(enum p2p_wps_method method);
+
 #endif /* P2P_H */

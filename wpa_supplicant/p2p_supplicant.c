@@ -910,13 +910,13 @@ void wpas_go_neg_completed(void *ctx, struct p2p_go_neg_results *res)
 	if (res->status) {
 		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_FAILURE "status=%d",
 			res->status);
-		wpas_notify_p2p_go_neg_completed(wpa_s, res->status);
+		wpas_notify_p2p_go_neg_completed(wpa_s, res);
 		wpas_p2p_remove_pending_group_interface(wpa_s);
 		return;
 	}
 
 	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_GO_NEG_SUCCESS);
-	wpas_notify_p2p_go_neg_completed(wpa_s, P2P_SC_SUCCESS);
+	wpas_notify_p2p_go_neg_completed(wpa_s, res);
 
 	if (wpa_s->create_p2p_iface) {
 		struct wpa_supplicant *group_wpa_s =

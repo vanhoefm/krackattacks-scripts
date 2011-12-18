@@ -2828,7 +2828,7 @@ static void p2p_timeout_wait_peer_connect(struct p2p_data *p2p)
 	 * state once per second to give other uses a chance to use the radio.
 	 */
 	p2p_set_state(p2p, P2P_WAIT_PEER_IDLE);
-	p2p_set_timeout(p2p, 1, 0);
+	p2p_set_timeout(p2p, 0, 500000);
 }
 
 

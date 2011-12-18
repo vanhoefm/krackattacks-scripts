@@ -377,7 +377,10 @@ struct wpa_config {
 	 * stations in the group. As a P2P client, this means no GO seen in
 	 * scan results. The maximum idle time is specified in seconds with 0
 	 * indicating no time limit, i.e., the P2P group remains in active
-	 * state indefinitely until explicitly removed.
+	 * state indefinitely until explicitly removed. As a P2P client, the
+	 * maximum idle time of P2P_MAX_CLIENT_IDLE seconds is enforced, i.e.,
+	 * this parameter is mainly meant for GO use and for P2P client, it can
+	 * only be used to reduce the default timeout to smaller value.
 	 */
 	unsigned int p2p_group_idle;
 

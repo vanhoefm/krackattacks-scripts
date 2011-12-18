@@ -45,6 +45,14 @@
  */
 #define P2P_MAX_JOIN_SCAN_ATTEMPTS 10
 
+#ifndef P2P_MAX_CLIENT_IDLE
+/*
+ * How many seconds to try to reconnect to the GO when connection in P2P client
+ * role has been lost.
+ */
+#define P2P_MAX_CLIENT_IDLE 10
+#endif /* P2P_MAX_CLIENT_IDLE */
+
 
 static void wpas_p2p_long_listen_timeout(void *eloop_ctx, void *timeout_ctx);
 static struct wpa_supplicant *
@@ -3743,11 +3751,19 @@ int wpas_p2p_ext_listen(struct wpa_supplicant *wpa_s, unsigned int period,
 }
 
 
+static int wpas_p2p_is_client(struct wpa_supplicant *wpa_s)
+{
+	return wpa_s->current_ssid != NULL &&
+		wpa_s->current_ssid->p2p_group &&
+		wpa_s->current_ssid->mode == WPAS_MODE_INFRA;
+}
+
+
 static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 
-	if (wpa_s->conf->p2p_group_idle == 0) {
+	if (wpa_s->conf->p2p_group_idle == 0 && !wpas_p2p_is_client(wpa_s)) {
 		wpa_printf(MSG_DEBUG, "P2P: Ignore group idle timeout - "
 			   "disabled");
 		return;
@@ -3762,17 +3778,24 @@ static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx)
 
 static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 {
-	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
-	if (wpa_s->conf->p2p_group_idle == 0)
-		return;
+	unsigned int timeout;
 
+	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
 	if (wpa_s->current_ssid == NULL || !wpa_s->current_ssid->p2p_group)
 		return;
 
+	timeout = wpa_s->conf->p2p_group_idle;
+	if (wpa_s->current_ssid->mode == WPAS_MODE_INFRA &&
+	    (timeout == 0 || timeout > P2P_MAX_CLIENT_IDLE))
+	    timeout = P2P_MAX_CLIENT_IDLE;
+
+	if (timeout == 0)
+		return;
+
 	wpa_printf(MSG_DEBUG, "P2P: Set P2P group idle timeout to %u seconds",
-		   wpa_s->conf->p2p_group_idle);
-	eloop_register_timeout(wpa_s->conf->p2p_group_idle, 0,
-			       wpas_p2p_group_idle_timeout, wpa_s, NULL);
+		   timeout);
+	eloop_register_timeout(timeout, 0, wpas_p2p_group_idle_timeout,
+			       wpa_s, NULL);
 }
 
 

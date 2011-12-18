@@ -283,12 +283,16 @@ out:
 
 
 int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
-			   int join)
+			   int join, int force_freq)
 {
 	struct wpabuf *req;
 	int freq;
 
-	freq = dev->listen_freq > 0 ? dev->listen_freq : dev->oper_freq;
+	if (force_freq > 0)
+		freq = force_freq;
+	else
+		freq = dev->listen_freq > 0 ? dev->listen_freq :
+			dev->oper_freq;
 	if (freq <= 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: No Listen/Operating frequency known for the "
@@ -336,7 +340,7 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 
 
 int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
-		      u16 config_methods, int join)
+		      u16 config_methods, int join, int force_freq)
 {
 	struct p2p_device *dev;
 
@@ -385,7 +389,7 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 	if (p2p->user_initiated_pd && p2p->state == P2P_IDLE)
 		p2p->pd_retries = MAX_PROV_DISC_REQ_RETRIES;
 
-	return p2p_send_prov_disc_req(p2p, dev, join);
+	return p2p_send_prov_disc_req(p2p, dev, join, force_freq);
 }
 
 

@@ -897,6 +897,7 @@ int p2p_reject(struct p2p_data *p2p, const u8 *peer_addr);
  * @peer_addr: MAC address of the peer P2P client
  * @config_methods: WPS Config Methods value (only one bit set)
  * @join: Whether this is used by a client joining an active group
+ * @force_freq: Forced TX frequency for the frame (mainly for the join case)
  * Returns: 0 on success, -1 on failure
  *
  * This function can be used to request a discovered P2P peer to display a PIN
@@ -908,7 +909,7 @@ int p2p_reject(struct p2p_data *p2p, const u8 *peer_addr);
  * indicated with the p2p_config::prov_disc_resp() callback.
  */
 int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
-		      u16 config_methods, int join);
+		      u16 config_methods, int join, int force_freq);
 
 /**
  * p2p_sd_request - Schedule a service discovery query

@@ -2549,8 +2549,8 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 		}
 
 		if (p2p_prov_disc_req(wpa_s->global->p2p,
-				      wpa_s->pending_join_dev_addr, method, 1)
-		    < 0) {
+				      wpa_s->pending_join_dev_addr, method, 1,
+				      freq) < 0) {
 			wpa_printf(MSG_DEBUG, "P2P: Failed to send Provision "
 				   "Discovery Request before joining an "
 				   "existing group");
@@ -3359,7 +3359,7 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		return -1;
 
 	return p2p_prov_disc_req(wpa_s->global->p2p, peer_addr,
-				 config_methods, join);
+				 config_methods, join, 0);
 }
 
 

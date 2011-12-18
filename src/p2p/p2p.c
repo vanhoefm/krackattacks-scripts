@@ -2373,7 +2373,7 @@ void p2p_continue_find(struct p2p_data *p2p)
 				MACSTR " (config methods 0x%x)",
 				MAC2STR(dev->info.p2p_device_addr),
 				dev->req_config_methods);
-			if (p2p_send_prov_disc_req(p2p, dev, 0) == 0)
+			if (p2p_send_prov_disc_req(p2p, dev, 0, 0) == 0)
 				return;
 		}
 	}
@@ -2442,7 +2442,7 @@ static void p2p_retry_pd(struct p2p_data *p2p)
 			MACSTR " (config methods 0x%x)",
 			MAC2STR(dev->info.p2p_device_addr),
 			dev->req_config_methods);
-		p2p_send_prov_disc_req(p2p, dev, 0);
+		p2p_send_prov_disc_req(p2p, dev, 0, 0);
 		return;
 	}
 }

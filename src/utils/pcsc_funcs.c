@@ -812,7 +812,7 @@ static int scard_get_record_len(struct scard_data *scard, unsigned char recnum,
 	wpa_hexdump(MSG_DEBUG, "SCARD: file length determination response",
 		    buf, blen);
 
-	if (blen < 2 || buf[0] != 0x6c) {
+	if (blen < 2 || (buf[0] != 0x6c && buf[0] != 0x67)) {
 		wpa_printf(MSG_DEBUG, "SCARD: unexpected response to file "
 			   "length determination");
 		return -1;

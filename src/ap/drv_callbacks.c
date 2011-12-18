@@ -469,9 +469,23 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			  union wpa_event_data *data)
 {
 	struct hostapd_data *hapd = ctx;
+#ifndef CONFIG_NO_STDOUT_DEBUG
+	int level = MSG_DEBUG;
 
-	wpa_dbg(hapd->msg_ctx, MSG_DEBUG, "Event %s (%d) received",
+	if (event == EVENT_RX_MGMT && data && data->rx_mgmt.frame &&
+	    data->rx_mgmt.frame_len >= 24) {
+		const struct ieee80211_hdr *hdr;
+		u16 fc;
+		hdr = (const struct ieee80211_hdr *) data->rx_mgmt.frame;
+		fc = le_to_host16(hdr->frame_control);
+		if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
+		    WLAN_FC_GET_STYPE(fc) == WLAN_FC_STYPE_BEACON)
+			level = MSG_EXCESSIVE;
+	}
+
+	wpa_dbg(hapd->msg_ctx, level, "Event %s (%d) received",
 		event_to_string(event), event);
+#endif /* CONFIG_NO_STDOUT_DEBUG */
 
 	switch (event) {
 	case EVENT_MICHAEL_MIC_FAILURE:

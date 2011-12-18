@@ -19,6 +19,8 @@
 #include "../config.h"
 #include "../wpa_supplicant_i.h"
 #include "../wps_supplicant.h"
+#include "../driver_i.h"
+#include "../ap.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
@@ -30,6 +32,7 @@ struct wps_start_params {
 	int type; /* 0 - not set, 1 - pin,      2 - pbc       */
 	u8 *bssid;
 	char *pin;
+	u8 *p2p_dev_addr;
 };
 
 
@@ -148,6 +151,41 @@ static int wpas_dbus_handler_wps_pin(DBusMessage *message,
 }
 
 
+#ifdef CONFIG_P2P
+static int wpas_dbus_handler_wps_p2p_dev_addr(DBusMessage *message,
+					      DBusMessageIter *entry_iter,
+					      struct wps_start_params *params,
+					      DBusMessage **reply)
+{
+	DBusMessageIter variant_iter, array_iter;
+	int len;
+
+	dbus_message_iter_recurse(entry_iter, &variant_iter);
+	if (dbus_message_iter_get_arg_type(&variant_iter) != DBUS_TYPE_ARRAY ||
+	    dbus_message_iter_get_element_type(&variant_iter) !=
+	    DBUS_TYPE_BYTE) {
+		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong "
+			   "P2PDeviceAddress type, byte array required");
+		*reply = wpas_dbus_error_invalid_args(
+			message, "P2PDeviceAddress must be a byte array");
+		return -1;
+	}
+	dbus_message_iter_recurse(&variant_iter, &array_iter);
+	dbus_message_iter_get_fixed_array(&array_iter, &params->p2p_dev_addr,
+					  &len);
+	if (len != ETH_ALEN) {
+		wpa_printf(MSG_DEBUG, "dbus: WPS.Start - Wrong "
+			   "P2PDeviceAddress length %d", len);
+		*reply = wpas_dbus_error_invalid_args(message,
+						      "P2PDeviceAddress "
+						      "has wrong length");
+		return -1;
+	}
+	return 0;
+}
+#endif /* CONFIG_P2P */
+
+
 static int wpas_dbus_handler_wps_start_entry(DBusMessage *message, char *key,
 					     DBusMessageIter *entry_iter,
 					     struct wps_start_params *params,
@@ -165,6 +203,11 @@ static int wpas_dbus_handler_wps_start_entry(DBusMessage *message, char *key,
 	else if (os_strcmp(key, "Pin") == 0)
 		return wpas_dbus_handler_wps_pin(message, entry_iter,
 						 params, reply);
+#ifdef CONFIG_P2P
+	else if (os_strcmp(key, "P2PDeviceAddress") == 0)
+		return wpas_dbus_handler_wps_p2p_dev_addr(message, entry_iter,
+							  params, reply);
+#endif /* CONFIG_P2P */
 
 	wpa_printf(MSG_DEBUG, "dbus: WPS.Start - unknown key %s", key);
 	*reply = wpas_dbus_error_invalid_args(message, key);
@@ -231,12 +274,31 @@ DBusMessage * wpas_dbus_handler_wps_start(DBusMessage *message,
 		ret = wpas_wps_start_reg(wpa_s, params.bssid, params.pin,
 					 NULL);
 	else if (params.type == 1) {
-		ret = wpas_wps_start_pin(wpa_s, params.bssid, params.pin, 0,
-					 DEV_PW_DEFAULT);
-		if (ret > 0)
-			os_snprintf(npin, sizeof(npin), "%08d", ret);
-	} else
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface)
+			ret = wpa_supplicant_ap_wps_pin(wpa_s,
+							params.bssid,
+							params.pin,
+							npin, sizeof(npin));
+		else
+#endif /* CONFIG_AP */
+		{
+			ret = wpas_wps_start_pin(wpa_s, params.bssid,
+						 params.pin, 0,
+						 DEV_PW_DEFAULT);
+			if (ret > 0)
+				os_snprintf(npin, sizeof(npin), "%08d", ret);
+		}
+	} else {
+#ifdef CONFIG_AP
+		if (wpa_s->ap_iface)
+			ret = wpa_supplicant_ap_wps_pbc(wpa_s,
+							params.bssid,
+							params.p2p_dev_addr);
+		else
+#endif /* CONFIG_AP */
 		ret = wpas_wps_start_pbc(wpa_s, params.bssid, 0);
+	}
 
 	if (ret < 0) {
 		wpa_printf(MSG_DEBUG, "dbus: WPS.Start wpas_wps_failed in "

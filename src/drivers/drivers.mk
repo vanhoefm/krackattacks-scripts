@@ -26,15 +26,22 @@ NEED_AP_MLME=y
 NEED_NETLINK=y
 NEED_LINUX_IOCTL=y
 NEED_RFKILL=y
-ifdef CONFIG_LIBNL_TINY
-DRV_LIBS += -lnl-tiny
-else
-DRV_LIBS += -lnl
-endif
 
-ifdef CONFIG_LIBNL20
-DRV_LIBS += -lnl-genl
-DRV_CFLAGS += -DCONFIG_LIBNL20
+ifdef CONFIG_LIBNL32
+  DRV_LIBS += -lnl-3
+  DRV_LIBS += -lnl-genl-3
+  DRV_CFLAGS += -DCONFIG_LIBNL20
+else
+  ifdef CONFIG_LIBNL_TINY
+    DRV_LIBS += -lnl-tiny
+  else
+    DRV_LIBS += -lnl
+  endif
+
+  ifdef CONFIG_LIBNL20
+    DRV_LIBS += -lnl-genl
+    DRV_CFLAGS += -DCONFIG_LIBNL20
+  endif
 endif
 endif
 

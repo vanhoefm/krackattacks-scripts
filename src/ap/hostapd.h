@@ -35,6 +35,9 @@ struct hapd_interfaces {
 					    void *ctx), void *ctx);
 
 	size_t count;
+	int global_ctrl_sock;
+	char *global_iface_path;
+	char *global_iface_name;
 	struct hostapd_iface **iface;
 };
 

@@ -1092,6 +1092,191 @@ void hostapd_ctrl_iface_deinit(struct hostapd_data *hapd)
 }
 
 
+static void hostapd_global_ctrl_iface_receive(int sock, void *eloop_ctx,
+					      void *sock_ctx)
+{
+	char buf[256];
+	int res;
+	struct sockaddr_un from;
+	socklen_t fromlen = sizeof(from);
+	char reply[24];
+	int reply_len;
+
+	res = recvfrom(sock, buf, sizeof(buf) - 1, 0,
+		       (struct sockaddr *) &from, &fromlen);
+	if (res < 0) {
+		perror("recvfrom(ctrl_iface)");
+		return;
+	}
+	buf[res] = '\0';
+
+	os_memcpy(reply, "OK\n", 3);
+	reply_len = 3;
+
+	if (os_strcmp(buf, "PING") == 0) {
+		os_memcpy(reply, "PONG\n", 5);
+		reply_len = 5;
+	} else {
+		wpa_printf(MSG_DEBUG, "Unrecognized global ctrl_iface command "
+			   "ignored");
+		reply_len = -1;
+	}
+
+	if (reply_len < 0) {
+		os_memcpy(reply, "FAIL\n", 5);
+		reply_len = 5;
+	}
+
+	sendto(sock, reply, reply_len, 0, (struct sockaddr *) &from, fromlen);
+}
+
+
+static char * hostapd_global_ctrl_iface_path(struct hapd_interfaces *interface)
+{
+	char *buf;
+	size_t len;
+
+	if (interface->global_iface_path == NULL)
+		return NULL;
+
+	len = os_strlen(interface->global_iface_path) +
+		os_strlen(interface->global_iface_name) + 2;
+	buf = os_malloc(len);
+	if (buf == NULL)
+		return NULL;
+
+	os_snprintf(buf, len, "%s/%s", interface->global_iface_path,
+		    interface->global_iface_name);
+	buf[len - 1] = '\0';
+	return buf;
+}
+
+
+int hostapd_global_ctrl_iface_init(struct hapd_interfaces *interface)
+{
+	struct sockaddr_un addr;
+	int s = -1;
+	char *fname = NULL;
+
+	if (interface->global_iface_path == NULL) {
+		wpa_printf(MSG_DEBUG, "ctrl_iface not configured!");
+		return 0;
+	}
+
+	if (mkdir(interface->global_iface_path, S_IRWXU | S_IRWXG) < 0) {
+		if (errno == EEXIST) {
+			wpa_printf(MSG_DEBUG, "Using existing control "
+				   "interface directory.");
+		} else {
+			perror("mkdir[ctrl_interface]");
+			goto fail;
+		}
+	}
+
+	if (os_strlen(interface->global_iface_path) + 1 +
+	    os_strlen(interface->global_iface_name) >= sizeof(addr.sun_path))
+		goto fail;
+
+	s = socket(PF_UNIX, SOCK_DGRAM, 0);
+	if (s < 0) {
+		perror("socket(PF_UNIX)");
+		goto fail;
+	}
+
+	os_memset(&addr, 0, sizeof(addr));
+#ifdef __FreeBSD__
+	addr.sun_len = sizeof(addr);
+#endif /* __FreeBSD__ */
+	addr.sun_family = AF_UNIX;
+	fname = hostapd_global_ctrl_iface_path(interface);
+	if (fname == NULL)
+		goto fail;
+	os_strlcpy(addr.sun_path, fname, sizeof(addr.sun_path));
+	if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+		wpa_printf(MSG_DEBUG, "ctrl_iface bind(PF_UNIX) failed: %s",
+			   strerror(errno));
+		if (connect(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
+			wpa_printf(MSG_DEBUG, "ctrl_iface exists, but does not"
+				   " allow connections - assuming it was left"
+				   "over from forced program termination");
+			if (unlink(fname) < 0) {
+				perror("unlink[ctrl_iface]");
+				wpa_printf(MSG_ERROR, "Could not unlink "
+					   "existing ctrl_iface socket '%s'",
+					   fname);
+				goto fail;
+			}
+			if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) <
+			    0) {
+				perror("bind(PF_UNIX)");
+				goto fail;
+			}
+			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "
+				   "ctrl_iface socket '%s'", fname);
+		} else {
+			wpa_printf(MSG_INFO, "ctrl_iface exists and seems to "
+				   "be in use - cannot override it");
+			wpa_printf(MSG_INFO, "Delete '%s' manually if it is "
+				   "not used anymore", fname);
+			os_free(fname);
+			fname = NULL;
+			goto fail;
+		}
+	}
+
+	if (chmod(fname, S_IRWXU | S_IRWXG) < 0) {
+		perror("chmod[ctrl_interface/ifname]");
+		goto fail;
+	}
+	os_free(fname);
+
+	interface->global_ctrl_sock = s;
+	eloop_register_read_sock(s, hostapd_global_ctrl_iface_receive,
+				 interface, NULL);
+
+	return 0;
+
+fail:
+	if (s >= 0)
+		close(s);
+	if (fname) {
+		unlink(fname);
+		os_free(fname);
+	}
+	return -1;
+}
+
+
+void hostapd_global_ctrl_iface_deinit(struct hapd_interfaces *interfaces)
+{
+	char *fname = NULL;
+
+	if (interfaces->global_ctrl_sock > -1) {
+		eloop_unregister_read_sock(interfaces->global_ctrl_sock);
+		close(interfaces->global_ctrl_sock);
+		interfaces->global_ctrl_sock = -1;
+		fname = hostapd_global_ctrl_iface_path(interfaces);
+		if (fname) {
+			unlink(fname);
+			os_free(fname);
+		}
+
+		if (interfaces->global_iface_path &&
+		    rmdir(interfaces->global_iface_path) < 0) {
+			if (errno == ENOTEMPTY) {
+				wpa_printf(MSG_DEBUG, "Control interface "
+					   "directory not empty - leaving it "
+					   "behind");
+			} else {
+				perror("rmdir[ctrl_interface]");
+			}
+		}
+		os_free(interfaces->global_iface_path);
+		interfaces->global_iface_path = NULL;
+	}
+}
+
+
 static void hostapd_ctrl_iface_send(struct hostapd_data *hapd, int level,
 				    const char *buf, size_t len)
 {

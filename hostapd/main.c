@@ -494,13 +494,15 @@ static void usage(void)
 	fprintf(stderr,
 		"\n"
 		"usage: hostapd [-hdBKtv] [-P <PID file>] [-e <entropy file>] "
-		"<configuration file(s)>\n"
+		"\\\n"
+		"         [-g <global ctrl_iface>] <configuration file(s)>\n"
 		"\n"
 		"options:\n"
 		"   -h   show this usage\n"
 		"   -d   show more debug messages (-dd for even more)\n"
 		"   -B   run daemon in the background\n"
 		"   -e   entropy file\n"
+		"   -g   global control interface path\n"
 		"   -P   PID file\n"
 		"   -K   include key data in debug messages\n"
 #ifdef CONFIG_DEBUG_FILE
@@ -519,6 +521,28 @@ static const char * hostapd_msg_ifname_cb(void *ctx)
 	if (hapd && hapd->iconf && hapd->iconf->bss)
 		return hapd->iconf->bss->iface;
 	return NULL;
+}
+
+
+static int hostapd_get_global_ctrl_iface(struct hapd_interfaces *interfaces,
+					 const char *path)
+{
+	char *pos;
+	os_free(interfaces->global_iface_path);
+	interfaces->global_iface_path = os_strdup(path);
+	if (interfaces->global_iface_path == NULL)
+		return -1;
+	pos = os_strrchr(interfaces->global_iface_path, '/');
+	if (pos == NULL) {
+		os_free(interfaces->global_iface_path);
+		interfaces->global_iface_path = NULL;
+		return -1;
+	}
+
+	*pos = '\0';
+	interfaces->global_iface_name = pos + 1;
+
+	return 0;
 }
 
 
@@ -541,9 +565,12 @@ int main(int argc, char *argv[])
 	interfaces.for_each_interface = hostapd_for_each_interface;
 	interfaces.ctrl_iface_init = hostapd_ctrl_iface_init;
 	interfaces.ctrl_iface_deinit = hostapd_ctrl_iface_deinit;
+	interfaces.global_iface_path = NULL;
+	interfaces.global_iface_name = NULL;
+	interfaces.global_ctrl_sock = -1;
 
 	for (;;) {
-		c = getopt(argc, argv, "Bde:f:hKP:tv");
+		c = getopt(argc, argv, "Bde:f:hKP:tvg:");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -577,6 +604,9 @@ int main(int argc, char *argv[])
 		case 'v':
 			show_version();
 			exit(1);
+			break;
+		case 'g':
+			hostapd_get_global_ctrl_iface(&interfaces, optarg);
 			break;
 
 		default:
@@ -613,12 +643,15 @@ int main(int argc, char *argv[])
 			goto out;
 	}
 
+	hostapd_global_ctrl_iface_init(&interfaces);
+
 	if (hostapd_global_run(&interfaces, daemonize, pid_file))
 		goto out;
 
 	ret = 0;
 
  out:
+	hostapd_global_ctrl_iface_deinit(&interfaces);
 	/* Deinitialize all interfaces */
 	for (i = 0; i < interfaces.count; i++)
 		hostapd_interface_deinit_free(interfaces.iface[i]);

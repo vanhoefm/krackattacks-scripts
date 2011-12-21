@@ -1990,7 +1990,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
 	    event != EVENT_INTERFACE_ENABLED &&
-	    event != EVENT_INTERFACE_STATUS) {
+	    event != EVENT_INTERFACE_STATUS &&
+	    event != EVENT_SCHED_SCAN_STOPPED) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"Ignore event %s (%d) while interface is disabled",
 			event_to_string(event), event);
@@ -2523,6 +2524,9 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_SCHED_SCAN_STOPPED:
 		wpa_s->sched_scanning = 0;
 		wpa_supplicant_notify_scanning(wpa_s, 0);
+
+		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
+			break;
 
 		/*
 		 * If we timed out, start a new sched scan to continue

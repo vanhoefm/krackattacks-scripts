@@ -913,7 +913,9 @@ int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
 	struct wpa_ssid *ssid = wpa_s->current_ssid;
 	struct hostapd_data *hapd;
 
-	if (ssid == NULL || wpa_s->ap_iface == NULL)
+	if (ssid == NULL || wpa_s->ap_iface == NULL ||
+	    ssid->mode == WPAS_MODE_INFRA ||
+	    ssid->mode == WPAS_MODE_IBSS)
 		return -1;
 
 #ifdef CONFIG_P2P
@@ -924,8 +926,10 @@ int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
 			P2P_GROUP_FORMATION;
 #endif /* CONFIG_P2P */
 
-	ieee802_11_set_beacons(iface);
 	hapd = iface->bss[0];
+	if (hapd->drv_priv == NULL)
+		return -1;
+	ieee802_11_set_beacons(iface);
 	hostapd_set_ap_wps_ie(hapd);
 
 	return 0;

@@ -1352,8 +1352,11 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 		os_free(buf);
 	}
 
-	if (wpa_s->p2p_sd_over_ctrl_iface)
+	if (wpa_s->p2p_sd_over_ctrl_iface) {
+		wpas_notify_p2p_sd_request(wpa_s, freq, sa, dialog_token,
+					   update_indic, tlvs, tlvs_len);
 		return; /* to be processed by an external program */
+	}
 
 	resp = wpabuf_alloc(10000);
 	if (resp == NULL)

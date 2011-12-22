@@ -493,6 +493,18 @@ static void write_wep_key(FILE *f, int idx, struct wpa_ssid *ssid)
 }
 
 
+#ifdef CONFIG_P2P
+static void write_p2p_client_list(FILE *f, struct wpa_ssid *ssid)
+{
+	char *value = wpa_config_get(ssid, "p2p_client_list");
+	if (value == NULL)
+		return;
+	fprintf(f, "\tp2p_client_list=%s\n", value);
+	os_free(value);
+}
+#endif /* CONFIG_P2P */
+
+
 static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 {
 	int i;
@@ -567,6 +579,9 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	INT(ieee80211w);
 #endif /* CONFIG_IEEE80211W */
 	STR(id_str);
+#ifdef CONFIG_P2P
+	write_p2p_client_list(f, ssid);
+#endif /* CONFIG_P2P */
 
 #undef STR
 #undef INT

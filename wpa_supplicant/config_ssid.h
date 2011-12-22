@@ -387,6 +387,20 @@ struct wpa_ssid {
 	int *freq_list;
 
 	/**
+	 * p2p_client_list - List of P2P Clients in a persistent group (GO)
+	 *
+	 * This is a list of P2P Clients (P2P Device Address) that have joined
+	 * the persistent group. This is maintained on the GO for persistent
+	 * group entries (disabled == 2).
+	 */
+	u8 *p2p_client_list;
+
+	/**
+	 * num_p2p_clients - Number of entries in p2p_client_list
+	 */
+	size_t num_p2p_clients;
+
+	/**
 	 * p2p_group - Network generated as a P2P group (used internally)
 	 */
 	int p2p_group;

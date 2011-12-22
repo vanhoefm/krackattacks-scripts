@@ -328,9 +328,9 @@ static void ap_wps_event_cb(void *ctx, enum wps_event event,
 
 
 static void ap_sta_authorized_cb(void *ctx, const u8 *mac_addr,
-				 int authorized)
+				 int authorized, const u8 *p2p_dev_addr)
 {
-	wpas_notify_sta_authorized(ctx, mac_addr, authorized);
+	wpas_notify_sta_authorized(ctx, mac_addr, authorized, p2p_dev_addr);
 }
 
 

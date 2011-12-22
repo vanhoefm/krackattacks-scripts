@@ -133,5 +133,7 @@ void wpas_p2p_network_removed(struct wpa_supplicant *wpa_s,
 			      struct wpa_ssid *ssid);
 struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
 					  const u8 *addr);
+void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
+				       const u8 *addr);
 
 #endif /* P2P_SUPPLICANT_H */

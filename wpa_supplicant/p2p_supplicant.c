@@ -465,6 +465,52 @@ static int wpas_p2p_store_persistent_group(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_p2p_add_persistent_group_client(struct wpa_supplicant *wpa_s,
+						 const u8 *addr)
+{
+	struct wpa_ssid *ssid, *s;
+	u8 *n;
+	size_t i;
+
+	ssid = wpa_s->current_ssid;
+	if (ssid == NULL || ssid->mode != WPAS_MODE_P2P_GO ||
+	    !ssid->p2p_persistent_group)
+		return;
+
+	for (s = wpa_s->parent->conf->ssid; s; s = s->next) {
+		if (s->disabled != 2 || s->mode != WPAS_MODE_P2P_GO)
+			continue;
+
+		if (s->ssid_len == ssid->ssid_len &&
+		    os_memcmp(s->ssid, ssid->ssid, s->ssid_len) == 0)
+			break;
+	}
+
+	if (s == NULL)
+		return;
+
+	for (i = 0; s->p2p_client_list && i < s->num_p2p_clients; i++) {
+		if (os_memcmp(s->p2p_client_list + i * ETH_ALEN, addr,
+			      ETH_ALEN) == 0)
+			return; /* already in list */
+	}
+
+	n = os_realloc(s->p2p_client_list,
+		       (s->num_p2p_clients + 1) * ETH_ALEN);
+	if (n == NULL)
+		return;
+	os_memcpy(n + s->num_p2p_clients * ETH_ALEN, addr, ETH_ALEN);
+	s->p2p_client_list = n;
+	s->num_p2p_clients++;
+
+#ifndef CONFIG_NO_CONFIG_WRITE
+	if (wpa_s->parent->conf->update_config &&
+	    wpa_config_write(wpa_s->parent->confname, wpa_s->parent->conf))
+		wpa_printf(MSG_DEBUG, "P2P: Failed to update configuration");
+#endif /* CONFIG_NO_CONFIG_WRITE */
+}
+
+
 static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 					   int success)
 {
@@ -4266,12 +4312,31 @@ struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
 					  const u8 *addr)
 {
 	struct wpa_ssid *s;
+	size_t i;
 
 	for (s = wpa_s->conf->ssid; s; s = s->next) {
-		if (s->disabled == 2 &&
-		    os_memcmp(s->bssid, addr, ETH_ALEN) == 0)
-			return s;
+		if (s->disabled != 2)
+			continue;
+		if (os_memcmp(s->bssid, addr, ETH_ALEN) == 0)
+			return s; /* peer is GO in the persistent group */
+		if (s->mode != WPAS_MODE_P2P_GO || s->p2p_client_list == NULL)
+			continue;
+		for (i = 0; i < s->num_p2p_clients; i++) {
+			if (os_memcmp(s->p2p_client_list + i * ETH_ALEN,
+				      addr, ETH_ALEN) == 0)
+				return s; /* peer is P2P client in persistent
+					   * group */
+		}
 	}
 
 	return NULL;
+}
+
+
+void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
+				       const u8 *addr)
+{
+	if (addr == NULL)
+		return;
+	wpas_p2p_add_persistent_group_client(wpa_s, addr);
 }

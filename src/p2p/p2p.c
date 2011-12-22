@@ -3216,6 +3216,12 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 }
 
 
+int p2p_peer_known(struct p2p_data *p2p, const u8 *addr)
+{
+	return p2p_get_device(p2p, addr) != NULL;
+}
+
+
 void p2p_set_client_discoverability(struct p2p_data *p2p, int enabled)
 {
 	if (enabled) {

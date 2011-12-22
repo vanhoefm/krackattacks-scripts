@@ -497,7 +497,7 @@ DBusMessage * wpas_dbus_handler_p2p_connect(DBusMessage *message,
 
 	if (!peer_object_path || (wps_method == WPS_NOT_READY) ||
 	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
-	    (p2p_get_peer_info(wpa_s->global->p2p, addr, 0, NULL, 0) < 0))
+	    !p2p_peer_known(wpa_s->global->p2p, addr))
 		goto inv_args;
 
 	/*
@@ -603,8 +603,7 @@ DBusMessage * wpas_dbus_handler_p2p_invite(DBusMessage *message,
 
 	if (!peer_object_path ||
 	    (parse_peer_object_path(peer_object_path, peer_addr) < 0) ||
-	    (p2p_get_peer_info(wpa_s->global->p2p,
-			       peer_addr, 0, NULL, 0) < 0)) {
+	    !p2p_peer_known(wpa_s->global->p2p, peer_addr)) {
 		goto err;
 	}
 
@@ -2013,7 +2012,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_req(
 
 	if (!peer_object_path ||
 	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
-	    (p2p_get_peer_info(wpa_s->global->p2p, addr, 0, NULL, 0) < 0))
+	    !p2p_peer_known(wpa_s->global->p2p, addr))
 		goto error;
 
 	if (upnp == 1) {
@@ -2094,7 +2093,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_res(
 	}
 	if (!peer_object_path ||
 	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
-	    (p2p_get_peer_info(wpa_s->global->p2p, addr, 0, NULL, 0) < 0))
+	    !p2p_peer_known(wpa_s->global->p2p, addr))
 		goto error;
 
 	if (tlv == NULL)

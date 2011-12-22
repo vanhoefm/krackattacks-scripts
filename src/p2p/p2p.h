@@ -1428,6 +1428,14 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 		      char *buf, size_t buflen);
 
 /**
+ * p2p_peer_known - Check whether P2P peer is known
+ * @p2p: P2P module context from p2p_init()
+ * @addr: P2P Device Address of the peer
+ * Returns: 1 if the specified device is in the P2P peer table or 0 if not
+ */
+int p2p_peer_known(struct p2p_data *p2p, const u8 *addr);
+
+/**
  * p2p_set_client_discoverability - Set client discoverability capability
  * @p2p: P2P module context from p2p_init()
  * @enabled: Whether client discoverability will be enabled

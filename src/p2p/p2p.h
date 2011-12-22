@@ -1439,7 +1439,7 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 void p2p_set_client_discoverability(struct p2p_data *p2p, int enabled);
 
 /**
- * p2p_set_manageD_oper - Set managed P2P Device operations capability
+ * p2p_set_managed_oper - Set managed P2P Device operations capability
  * @p2p: P2P module context from p2p_init()
  * @enabled: Whether managed P2P Device operations will be enabled
  */

@@ -2989,6 +2989,7 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 	const struct p2p_peer_info *info;
 	char *pos, *end;
 	char devtype[WPS_DEV_TYPE_BUFSIZE];
+	struct wpa_ssid *ssid;
 
 	if (!wpa_s->global->p2p)
 		return -1;
@@ -3042,9 +3043,17 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 		return pos - buf;
 	pos += res;
 
+	ssid = wpas_p2p_get_persistent(wpa_s, info->p2p_device_addr);
+	if (ssid) {
+		res = os_snprintf(pos, end - pos, "persistent=%d\n", ssid->id);
+		if (res < 0 || res >= end - pos)
+			return pos - buf;
+		pos += res;
+	}
+
 	res = p2p_get_peer_info_txt(info, pos, end - pos);
 	if (res < 0)
-		return -1;
+		return pos - buf;
 	pos += res;
 
 	return pos - buf;

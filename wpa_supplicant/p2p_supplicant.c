@@ -4260,3 +4260,18 @@ void wpas_p2p_network_removed(struct wpa_supplicant *wpa_s,
 		wpas_p2p_group_formation_timeout(wpa_s->parent, NULL);
 	}
 }
+
+
+struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
+					  const u8 *addr)
+{
+	struct wpa_ssid *s;
+
+	for (s = wpa_s->conf->ssid; s; s = s->next) {
+		if (s->disabled == 2 &&
+		    os_memcmp(s->bssid, addr, ETH_ALEN) == 0)
+			return s;
+	}
+
+	return NULL;
+}

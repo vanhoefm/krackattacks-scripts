@@ -326,8 +326,8 @@ static u8 * decrypt_eapol_key_data(const u8 *kek, u16 ver,
 }
 
 
-static void learn_kde_keys(struct wlantest_bss *bss, const u8 *buf, size_t len,
-			   const u8 *rsc)
+static void learn_kde_keys(struct wlantest_bss *bss, struct wlantest_sta *sta,
+			   const u8 *buf, size_t len, const u8 *rsc)
 {
 	struct wpa_eapol_ie_parse ie;
 
@@ -361,7 +361,9 @@ static void learn_kde_keys(struct wlantest_bss *bss, const u8 *buf, size_t len,
 			wpa_hexdump(MSG_DEBUG, "GTK", ie.gtk + 2,
 				    ie.gtk_len - 2);
 			bss->gtk_len[id] = ie.gtk_len - 2;
+			sta->gtk_len = ie.gtk_len - 2;
 			os_memcpy(bss->gtk[id], ie.gtk + 2, ie.gtk_len - 2);
+			os_memcpy(sta->gtk, ie.gtk + 2, ie.gtk_len - 2);
 			bss->rsc[id][0] = rsc[5];
 			bss->rsc[id][1] = rsc[4];
 			bss->rsc[id][2] = rsc[3];
@@ -369,6 +371,7 @@ static void learn_kde_keys(struct wlantest_bss *bss, const u8 *buf, size_t len,
 			bss->rsc[id][4] = rsc[1];
 			bss->rsc[id][5] = rsc[0];
 			bss->gtk_idx = id;
+			sta->gtk_idx = id;
 			wpa_hexdump(MSG_DEBUG, "RSC", bss->rsc[id], 6);
 		} else {
 			wpa_printf(MSG_INFO, "Invalid GTK KDE length %u",
@@ -561,7 +564,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 			    bss->rsnie[0] ? 2 + bss->rsnie[1] : 0);
 	}
 
-	learn_kde_keys(bss, decrypted, decrypted_len, hdr->key_rsc);
+	learn_kde_keys(bss, sta, decrypted, decrypted_len, hdr->key_rsc);
 	os_free(decrypted_buf);
 }
 
@@ -711,7 +714,8 @@ static void rx_data_eapol_key_1_of_2(struct wlantest *wt, const u8 *dst,
 				     decrypted, plain_len);
 	}
 	if (sta->proto & WPA_PROTO_RSN)
-		learn_kde_keys(bss, decrypted, decrypted_len, hdr->key_rsc);
+		learn_kde_keys(bss, sta, decrypted, decrypted_len,
+			       hdr->key_rsc);
 	else {
 		int klen = bss->group_cipher == WPA_CIPHER_TKIP ? 32 : 16;
 		if (decrypted_len == klen) {

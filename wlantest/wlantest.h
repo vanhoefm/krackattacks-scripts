@@ -93,6 +93,10 @@ struct wlantest_sta {
 
 	int pwrmgt;
 	int pspoll;
+
+	u8 gtk[32];
+	size_t gtk_len;
+	int gtk_idx;
 };
 
 struct wlantest_tdls {

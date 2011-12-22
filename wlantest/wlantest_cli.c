@@ -1226,6 +1226,7 @@ static const struct sta_infos sta_infos[] = {
 	{ "key_mgmt", WLANTEST_STA_INFO_KEY_MGMT },
 	{ "rsn_capab", WLANTEST_STA_INFO_RSN_CAPAB },
 	{ "state", WLANTEST_STA_INFO_STATE },
+	{ "gtk", WLANTEST_STA_INFO_GTK },
 	{ NULL, 0 }
 };
 

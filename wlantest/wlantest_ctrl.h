@@ -157,6 +157,7 @@ enum wlantest_sta_info {
 	WLANTEST_STA_INFO_KEY_MGMT,
 	WLANTEST_STA_INFO_RSN_CAPAB,
 	WLANTEST_STA_INFO_STATE,
+	WLANTEST_STA_INFO_GTK,
 };
 
 enum wlantest_bss_info {

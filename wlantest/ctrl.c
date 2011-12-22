@@ -990,6 +990,15 @@ static void info_print_state(char *buf, size_t len, int state)
 }
 
 
+static void info_print_gtk(char *buf, size_t len, struct wlantest_sta *sta)
+{
+	size_t pos;
+
+	pos = os_snprintf(buf, len, "IDX=%d,GTK=", sta->gtk_idx);
+	wpa_snprintf_hex(buf + pos, len - pos, sta->gtk, sta->gtk_len);
+}
+
+
 static void ctrl_info_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 {
 	u8 *addr;
@@ -1028,6 +1037,9 @@ static void ctrl_info_sta(struct wlantest *wt, int sock, u8 *cmd, size_t clen)
 		break;
 	case WLANTEST_STA_INFO_STATE:
 		info_print_state(resp, sizeof(resp), sta->state);
+		break;
+	case WLANTEST_STA_INFO_GTK:
+		info_print_gtk(resp, sizeof(resp), sta);
 		break;
 	default:
 		ctrl_send_simple(wt, sock, WLANTEST_CTRL_INVALID_CMD);

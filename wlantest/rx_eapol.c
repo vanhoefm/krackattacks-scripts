@@ -417,7 +417,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 	struct wlantest_sta *sta;
 	const struct ieee802_1x_hdr *eapol;
 	const struct wpa_eapol_key *hdr;
-	const u8 *key_data, *kck;
+	const u8 *key_data, *kck, *kek;
 	int recalc = 0;
 	u16 key_info, ver;
 	u8 *decrypted_buf = NULL;
@@ -454,10 +454,12 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 		return;
 	}
 
+	kek = sta->ptk.kek;
 	kck = sta->ptk.kck;
 	if (sta->tptk_set) {
 		wpa_printf(MSG_DEBUG, "Use TPTK for validation EAPOL-Key MIC");
 		kck = sta->tptk.kck;
+		kek = sta->tptk.kek;
 	}
 	if (check_mic(kck, key_info & WPA_KEY_INFO_TYPE_MASK, data, len) < 0) {
 		wpa_printf(MSG_INFO, "Mismatch in EAPOL-Key 3/4 MIC");
@@ -474,7 +476,7 @@ static void rx_data_eapol_key_3_of_4(struct wlantest *wt, const u8 *dst,
 		decrypted_len = WPA_GET_BE16(hdr->key_data_length);
 	} else {
 		ver = key_info & WPA_KEY_INFO_TYPE_MASK;
-		decrypted_buf = decrypt_eapol_key_data(sta->ptk.kek, ver, hdr,
+		decrypted_buf = decrypt_eapol_key_data(kek, ver, hdr,
 						       &decrypted_len);
 		if (decrypted_buf == NULL) {
 			wpa_printf(MSG_INFO, "Failed to decrypt EAPOL-Key Key "

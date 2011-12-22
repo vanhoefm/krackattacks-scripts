@@ -3070,14 +3070,10 @@ static const char * p2p_go_state_text(enum p2p_go_state go_state)
 }
 
 
-int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
-		      char *buf, size_t buflen)
+const struct p2p_peer_info * p2p_get_peer_info(struct p2p_data *p2p,
+					       const u8 *addr, int next)
 {
 	struct p2p_device *dev;
-	int res;
-	char *pos, *end;
-	struct os_time now;
-	char devtype[WPS_DEV_TYPE_BUFSIZE];
 
 	if (addr)
 		dev = p2p_get_device(p2p, addr);
@@ -3091,35 +3087,37 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 	}
 
 	if (dev == NULL)
+		return NULL;
+
+	return &dev->info;
+}
+
+
+int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
+			  char *buf, size_t buflen)
+{
+	struct p2p_device *dev;
+	int res;
+	char *pos, *end;
+	struct os_time now;
+
+	if (info == NULL)
 		return -1;
+
+	dev = (struct p2p_device *) (((u8 *) info) -
+				     offsetof(struct p2p_device, info));
 
 	pos = buf;
 	end = buf + buflen;
-
-	res = os_snprintf(pos, end - pos, MACSTR "\n",
-			  MAC2STR(dev->info.p2p_device_addr));
-	if (res < 0 || res >= end - pos)
-		return pos - buf;
-	pos += res;
 
 	os_get_time(&now);
 	res = os_snprintf(pos, end - pos,
 			  "age=%d\n"
 			  "listen_freq=%d\n"
-			  "level=%d\n"
 			  "wps_method=%s\n"
 			  "interface_addr=" MACSTR "\n"
 			  "member_in_go_dev=" MACSTR "\n"
 			  "member_in_go_iface=" MACSTR "\n"
-			  "pri_dev_type=%s\n"
-			  "device_name=%s\n"
-			  "manufacturer=%s\n"
-			  "model_name=%s\n"
-			  "model_number=%s\n"
-			  "serial_number=%s\n"
-			  "config_methods=0x%x\n"
-			  "dev_capab=0x%x\n"
-			  "group_capab=0x%x\n"
 			  "go_neg_req_sent=%d\n"
 			  "go_state=%s\n"
 			  "dialog_token=%u\n"
@@ -3133,21 +3131,10 @@ int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
 			  "invitation_reqs=%u\n",
 			  (int) (now.sec - dev->last_seen.sec),
 			  dev->listen_freq,
-			  dev->info.level,
 			  p2p_wps_method_text(dev->wps_method),
 			  MAC2STR(dev->interface_addr),
 			  MAC2STR(dev->member_in_go_dev),
 			  MAC2STR(dev->member_in_go_iface),
-			  wps_dev_type_bin2str(dev->info.pri_dev_type,
-					       devtype, sizeof(devtype)),
-			  dev->info.device_name,
-			  dev->info.manufacturer,
-			  dev->info.model_name,
-			  dev->info.model_number,
-			  dev->info.serial_number,
-			  dev->info.config_methods,
-			  dev->info.dev_capab,
-			  dev->info.group_capab,
 			  dev->go_neg_req_sent,
 			  p2p_go_state_text(dev->go_state),
 			  dev->dialog_token,

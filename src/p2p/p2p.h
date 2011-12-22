@@ -1416,16 +1416,28 @@ int p2p_get_cross_connect_disallowed(const struct wpabuf *p2p_ie);
 const u8 * p2p_get_go_dev_addr(const struct wpabuf *p2p_ie);
 
 /**
- * p2p_get_peer_info - Get P2P peer information in text format
+ * p2p_get_peer_info - Get P2P peer information
  * @p2p: P2P module context from p2p_init()
  * @addr: P2P Device Address of the peer or %NULL to indicate the first peer
  * @next: Whether to select the peer entry following the one indicated by addr
+ * Returns: Pointer to peer info or %NULL if not found
+ */
+const struct p2p_peer_info * p2p_get_peer_info(struct p2p_data *p2p,
+					       const u8 *addr, int next);
+
+/**
+ * p2p_get_peer_info_txt - Get internal P2P peer information in text format
+ * @info: Pointer to P2P peer info from p2p_get_peer_info()
  * @buf: Buffer for returning text
  * @buflen: Maximum buffer length
  * Returns: Number of octets written to the buffer or -1 on failure
+ *
+ * Note: This information is internal to the P2P module and subject to change.
+ * As such, this should not really be used by external programs for purposes
+ * other than debugging.
  */
-int p2p_get_peer_info(struct p2p_data *p2p, const u8 *addr, int next,
-		      char *buf, size_t buflen);
+int p2p_get_peer_info_txt(const struct p2p_peer_info *info,
+			  char *buf, size_t buflen);
 
 /**
  * p2p_peer_known - Check whether P2P peer is known

@@ -2985,7 +2985,10 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 			 char *buf, size_t buflen)
 {
 	u8 addr[ETH_ALEN], *addr_ptr;
-	int next;
+	int next, res;
+	const struct p2p_peer_info *info;
+	char *pos, *end;
+	char devtype[WPS_DEV_TYPE_BUFSIZE];
 
 	if (!wpa_s->global->p2p)
 		return -1;
@@ -3005,8 +3008,46 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 		next = 0;
 	}
 
-	return p2p_get_peer_info(wpa_s->global->p2p, addr_ptr, next,
-				 buf, buflen);
+	info = p2p_get_peer_info(wpa_s->global->p2p, addr_ptr, next);
+	if (info == NULL)
+		return -1;
+
+	pos = buf;
+	end = buf + buflen;
+
+	res = os_snprintf(pos, end - pos, MACSTR "\n"
+			  "pri_dev_type=%s\n"
+			  "device_name=%s\n"
+			  "manufacturer=%s\n"
+			  "model_name=%s\n"
+			  "model_number=%s\n"
+			  "serial_number=%s\n"
+			  "config_methods=0x%x\n"
+			  "dev_capab=0x%x\n"
+			  "group_capab=0x%x\n"
+			  "level=%d\n",
+			  MAC2STR(info->p2p_device_addr),
+			  wps_dev_type_bin2str(info->pri_dev_type,
+					       devtype, sizeof(devtype)),
+			  info->device_name,
+			  info->manufacturer,
+			  info->model_name,
+			  info->model_number,
+			  info->serial_number,
+			  info->config_methods,
+			  info->dev_capab,
+			  info->group_capab,
+			  info->level);
+	if (res < 0 || res >= end - pos)
+		return pos - buf;
+	pos += res;
+
+	res = p2p_get_peer_info_txt(info, pos, end - pos);
+	if (res < 0)
+		return -1;
+	pos += res;
+
+	return pos - buf;
 }
 
 

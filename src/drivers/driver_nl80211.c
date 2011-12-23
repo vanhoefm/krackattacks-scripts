@@ -3163,6 +3163,28 @@ out_err:
 }
 
 
+static int nl80211_mgmt_subscribe_ap_dev_sme(struct i802_bss *bss)
+{
+	if (nl80211_alloc_mgmt_handle(bss))
+		return -1;
+	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with AP "
+		   "handle %p (device SME)", bss->nl_mgmt);
+
+	if (nl80211_register_frame(bss, bss->nl_mgmt,
+				   (WLAN_FC_TYPE_MGMT << 2) |
+				   (WLAN_FC_STYPE_ACTION << 4),
+				   NULL, 0) < 0)
+		goto out_err;
+
+	return 0;
+
+out_err:
+	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
+	nl_destroy_handles(&bss->nl_mgmt);
+	return -1;
+}
+
+
 static void nl80211_mgmt_unsubscribe(struct i802_bss *bss, const char *reason)
 {
 	if (bss->nl_mgmt == NULL)
@@ -6084,6 +6106,10 @@ static int nl80211_setup_ap(struct i802_bss *bss)
 		if (nl80211_mgmt_subscribe_ap(bss))
 			return -1;
 
+	if (drv->device_ap_sme && !drv->use_monitor)
+		if (nl80211_mgmt_subscribe_ap_dev_sme(bss))
+			return -1;
+
 	if (!drv->device_ap_sme && drv->use_monitor &&
 	    nl80211_create_monitor_interface(drv) &&
 	    !drv->device_ap_sme)
@@ -6104,9 +6130,11 @@ static void nl80211_teardown_ap(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
-	if (drv->device_ap_sme)
+	if (drv->device_ap_sme) {
 		wpa_driver_nl80211_probe_req_report(bss, 0);
-	else if (drv->use_monitor)
+		if (!drv->use_monitor)
+			nl80211_mgmt_unsubscribe(bss, "AP teardown (dev SME)");
+	} else if (drv->use_monitor)
 		nl80211_remove_monitor_interface(drv);
 	else
 		nl80211_mgmt_unsubscribe(bss, "AP teardown");

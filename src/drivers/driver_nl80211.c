@@ -7046,6 +7046,7 @@ static int i802_flush(void *priv)
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct nl_msg *msg;
+	int res;
 
 	msg = nlmsg_alloc();
 	if (!msg)
@@ -7059,7 +7060,12 @@ static int i802_flush(void *priv)
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX,
 		    if_nametoindex(bss->ifname));
 
-	return send_and_recv_msgs(drv, msg, NULL, NULL);
+	res = send_and_recv_msgs(drv, msg, NULL, NULL);
+	if (res) {
+		wpa_printf(MSG_DEBUG, "nl80211: Station flush failed: ret=%d "
+			   "(%s)", res, strerror(-res));
+	}
+	return res;
  nla_put_failure:
 	nlmsg_free(msg);
 	return -ENOBUFS;

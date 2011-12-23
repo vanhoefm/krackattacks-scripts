@@ -2945,6 +2945,11 @@ static int nl80211_register_frame(struct i802_bss *bss,
 	if (!msg)
 		return -1;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Register frame type=0x%x nl_handle=%p",
+		   type, nl_handle);
+	wpa_hexdump(MSG_DEBUG, "nl80211: Register frame match",
+		    match, match_len);
+
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_REGISTER_ACTION);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);
@@ -2974,7 +2979,7 @@ static int nl80211_alloc_mgmt_handle(struct i802_bss *bss)
 
 	if (bss->nl_mgmt) {
 		wpa_printf(MSG_DEBUG, "nl80211: Mgmt reporting "
-			   "already on!");
+			   "already on! (nl_mgmt=%p)", bss->nl_mgmt);
 		return -1;
 	}
 
@@ -3005,6 +3010,8 @@ static int nl80211_mgmt_subscribe_non_ap(struct i802_bss *bss)
 
 	if (nl80211_alloc_mgmt_handle(bss))
 		return -1;
+	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with non-AP "
+		   "handle %p", bss->nl_mgmt);
 
 #if defined(CONFIG_P2P) || defined(CONFIG_INTERWORKING)
 	/* GAS Initial Request */
@@ -3111,6 +3118,8 @@ static int nl80211_mgmt_subscribe_ap(struct i802_bss *bss)
 
 	if (nl80211_alloc_mgmt_handle(bss))
 		return -1;
+	wpa_printf(MSG_DEBUG, "nl80211: Subscribe to mgmt frames with AP "
+		   "handle %p", bss->nl_mgmt);
 
 	for (i = 0; i < sizeof(stypes) / sizeof(stypes[0]); i++) {
 		if (nl80211_register_frame(bss, bss->nl_mgmt,
@@ -3136,10 +3145,12 @@ out_err:
 }
 
 
-static void nl80211_mgmt_unsubscribe(struct i802_bss *bss)
+static void nl80211_mgmt_unsubscribe(struct i802_bss *bss, const char *reason)
 {
 	if (bss->nl_mgmt == NULL)
 		return;
+	wpa_printf(MSG_DEBUG, "nl80211: Unsubscribe mgmt frames handle %p "
+		   "(%s)", bss->nl_mgmt, reason);
 	eloop_unregister_read_sock(nl_socket_get_fd(bss->nl_mgmt));
 	nl_destroy_handles(&bss->nl_mgmt);
 
@@ -3294,7 +3305,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 
 	(void) linux_set_iface_flags(drv->global->ioctl_sock, bss->ifname, 0);
 	wpa_driver_nl80211_set_mode(bss, NL80211_IFTYPE_STATION);
-	nl80211_mgmt_unsubscribe(bss);
+	nl80211_mgmt_unsubscribe(bss, "deinit");
 
 	nl_cb_put(drv->nl_cb);
 
@@ -6040,6 +6051,9 @@ static int nl80211_setup_ap(struct i802_bss *bss)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
+	wpa_printf(MSG_DEBUG, "nl80211: Setup AP - device_ap_sme=%d "
+		   "use_monitor=%d", drv->device_ap_sme, drv->use_monitor);
+
 	/*
 	 * Disable Probe Request reporting unless we need it in this way for
 	 * devices that include the AP SME, in the other case (unless using
@@ -6077,7 +6091,7 @@ static void nl80211_teardown_ap(struct i802_bss *bss)
 	else if (drv->use_monitor)
 		nl80211_remove_monitor_interface(drv);
 	else
-		nl80211_mgmt_unsubscribe(bss);
+		nl80211_mgmt_unsubscribe(bss, "AP teardown");
 
 	bss->beacon_set = 0;
 }
@@ -6819,7 +6833,7 @@ done:
 	}
 
 	if (is_ap_interface(nlmode)) {
-		nl80211_mgmt_unsubscribe(bss);
+		nl80211_mgmt_unsubscribe(bss, "start AP");
 		/* Setup additional AP mode functionality if needed */
 		if (nl80211_setup_ap(bss))
 			return -1;
@@ -6827,7 +6841,7 @@ done:
 		/* Remove additional AP mode functionality */
 		nl80211_teardown_ap(bss);
 	} else {
-		nl80211_mgmt_unsubscribe(bss);
+		nl80211_mgmt_unsubscribe(bss, "mode change");
 	}
 
 	if (!is_ap_interface(nlmode) &&
@@ -7993,6 +8007,8 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 
 	if (!report) {
 		if (bss->nl_preq) {
+			wpa_printf(MSG_DEBUG, "nl80211: Disable Probe Request "
+				   "reporting nl_preq=%p", bss->nl_preq);
 			eloop_unregister_read_sock(
 				nl_socket_get_fd(bss->nl_preq));
 			nl_destroy_handles(&bss->nl_preq);
@@ -8002,13 +8018,15 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 
 	if (bss->nl_preq) {
 		wpa_printf(MSG_DEBUG, "nl80211: Probe Request reporting "
-			   "already on!");
+			   "already on! nl_preq=%p", bss->nl_preq);
 		return 0;
 	}
 
 	bss->nl_preq = nl_create_handle(drv->global->nl_cb, "preq");
 	if (bss->nl_preq == NULL)
 		return -1;
+	wpa_printf(MSG_DEBUG, "nl80211: Enable Probe Request "
+		   "reporting nl_preq=%p", bss->nl_preq);
 
 	if (nl80211_register_frame(bss, bss->nl_preq,
 				   (WLAN_FC_TYPE_MGMT << 2) |

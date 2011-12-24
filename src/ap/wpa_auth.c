@@ -869,7 +869,7 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 	if (!(key_info & WPA_KEY_INFO_REQUEST) &&
 	    !wpa_replay_counter_valid(sm, key->replay_counter)) {
 		int i;
-		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_INFO,
+		wpa_auth_vlogger(wpa_auth, sm->addr, LOGGER_DEBUG,
 				 "received EAPOL-Key %s with unexpected "
 				 "replay counter", msgtxt);
 		for (i = 0; i < RSNA_MAX_EAPOL_RETRIES; i++) {

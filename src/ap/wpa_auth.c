@@ -1071,9 +1071,6 @@ void wpa_receive(struct wpa_authenticator *wpa_auth,
 			wpa_auth_logger(wpa_auth, sm->addr, LOGGER_INFO,
 					"received EAPOL-Key Request for GTK "
 					"rekeying");
-			/* FIX: why was this triggering PTK rekeying for the
-			 * STA that requested Group Key rekeying?? */
-			/* wpa_request_new_ptk(sta->wpa_sm); */
 			eloop_cancel_timeout(wpa_rekey_gtk, wpa_auth, NULL);
 			wpa_rekey_gtk(wpa_auth, NULL);
 		}

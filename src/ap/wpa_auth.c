@@ -1,6 +1,6 @@
 /*
- * hostapd - IEEE 802.11i-2004 / WPA Authenticator
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * IEEE 802.11 RSN / WPA Authenticator
+ * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -52,6 +52,7 @@ static const u32 dot11RSNAConfigGroupUpdateCount = 4;
 static const u32 dot11RSNAConfigPairwiseUpdateCount = 4;
 static const u32 eapol_key_timeout_first = 100; /* ms */
 static const u32 eapol_key_timeout_subseq = 1000; /* ms */
+static const u32 eapol_key_timeout_first_group = 500; /* ms */
 
 /* TODO: make these configurable */
 static const int dot11RSNAConfigPMKLifetime = 43200;
@@ -1336,7 +1337,8 @@ static void wpa_send_eapol(struct wpa_authenticator *wpa_auth,
 
 	ctr = pairwise ? sm->TimeoutCtr : sm->GTimeoutCtr;
 	if (ctr == 1 && wpa_auth->conf.tx_status)
-		timeout_ms = eapol_key_timeout_first;
+		timeout_ms = pairwise ? eapol_key_timeout_first :
+			eapol_key_timeout_first_group;
 	else
 		timeout_ms = eapol_key_timeout_subseq;
 	if (pairwise && ctr == 1 && !(key_info & WPA_KEY_INFO_MIC))

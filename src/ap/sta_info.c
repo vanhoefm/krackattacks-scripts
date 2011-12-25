@@ -301,12 +301,16 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 				"inactive too long: %d sec, max allowed: %d",
 				MAC2STR(sta->addr), inactive_sec,
 				hapd->conf->ap_max_inactivity);
+
+			if (hapd->conf->skip_inactivity_poll)
+				sta->timeout_next = STA_DISASSOC;
 		}
 	}
 
 	if ((sta->flags & WLAN_STA_ASSOC) &&
 	    sta->timeout_next == STA_DISASSOC &&
-	    !(sta->flags & WLAN_STA_PENDING_POLL)) {
+	    !(sta->flags & WLAN_STA_PENDING_POLL) &&
+	    !hapd->conf->skip_inactivity_poll) {
 		wpa_msg(hapd->msg_ctx, MSG_DEBUG, "Station " MACSTR
 			" has ACKed data poll", MAC2STR(sta->addr));
 		/* data nullfunc frame poll did not produce TX errors; assume

@@ -340,6 +340,7 @@ struct hostapd_bss_config {
 	int p2p;
 
 	int disassoc_low_ack;
+	int skip_inactivity_poll;
 
 #define TDLS_PROHIBIT BIT(0)
 #define TDLS_PROHIBIT_CHAN_SWITCH BIT(1)

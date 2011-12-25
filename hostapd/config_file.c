@@ -1334,6 +1334,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 			bss->isolate = atoi(pos);
 		} else if (os_strcmp(buf, "ap_max_inactivity") == 0) {
 			bss->ap_max_inactivity = atoi(pos);
+		} else if (os_strcmp(buf, "skip_inactivity_poll") == 0) {
+			bss->skip_inactivity_poll = atoi(pos);
 		} else if (os_strcmp(buf, "country_code") == 0) {
 			os_memcpy(conf->country, pos, 2);
 			/* FIX: make this configurable */

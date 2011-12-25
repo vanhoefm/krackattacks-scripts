@@ -553,7 +553,7 @@ static void wpas_group_formation_completed(struct wpa_supplicant *wpa_s,
 		client = ssid->mode == WPAS_MODE_INFRA;
 		if (ssid->mode == WPAS_MODE_P2P_GO) {
 			persistent = ssid->p2p_persistent_group;
-			os_memcpy(go_dev_addr, wpa_s->parent->own_addr,
+			os_memcpy(go_dev_addr, wpa_s->global->p2p_dev_addr,
 				  ETH_ALEN);
 		} else
 			persistent = wpas_p2p_persistent_group(wpa_s,
@@ -719,13 +719,13 @@ static void p2p_go_configured(void *ctx, void *data)
 			wpa_ssid_txt(ssid->ssid, ssid->ssid_len),
 			ssid->frequency,
 			params->passphrase ? params->passphrase : "",
-			MAC2STR(wpa_s->parent->own_addr),
+			MAC2STR(wpa_s->global->p2p_dev_addr),
 			params->persistent_group ? " [PERSISTENT]" : "");
 
 		if (params->persistent_group)
 			network_id = wpas_p2p_store_persistent_group(
 				wpa_s->parent, ssid,
-				wpa_s->parent->own_addr);
+				wpa_s->global->p2p_dev_addr);
 		if (network_id < 0)
 			network_id = ssid->id;
 		wpas_notify_p2p_group_started(wpa_s, ssid, network_id, 0);
@@ -2267,7 +2267,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.get_noa = wpas_get_noa;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
-	os_memcpy(p2p.dev_addr, wpa_s->own_addr, ETH_ALEN);
+	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);
 	p2p.dev_name = wpa_s->conf->device_name;
 	p2p.manufacturer = wpa_s->conf->manufacturer;
 	p2p.model_name = wpa_s->conf->model_name;
@@ -3684,7 +3684,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 		role = P2P_INVITE_ROLE_ACTIVE_GO;
 		bssid = wpa_s->own_addr;
 		if (go_dev_addr == NULL)
-			go_dev_addr = wpa_s->parent->own_addr;
+			go_dev_addr = wpa_s->global->p2p_dev_addr;
 	} else {
 		role = P2P_INVITE_ROLE_CLIENT;
 		if (wpa_s->wpa_state < WPA_ASSOCIATED) {

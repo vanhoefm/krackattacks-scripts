@@ -788,7 +788,8 @@ wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 				break;
 		}
 
-		if (selected == NULL && wpa_s->blacklist) {
+		if (selected == NULL && wpa_s->blacklist &&
+		    !wpa_s->countermeasures) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "No APs found - clear "
 				"blacklist and try again");
 			wpa_blacklist_clear(wpa_s);
@@ -1675,6 +1676,9 @@ wpa_supplicant_event_michael_mic_failure(struct wpa_supplicant *wpa_s,
 
 		/* initialize countermeasures */
 		wpa_s->countermeasures = 1;
+
+		wpa_blacklist_add(wpa_s, wpa_s->bssid);
+
 		wpa_msg(wpa_s, MSG_WARNING, "TKIP countermeasures started");
 
 		/*

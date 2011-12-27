@@ -8058,7 +8058,16 @@ static int wpa_driver_nl80211_probe_req_report(void *priv, int report)
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
 	if (!report) {
-		if (bss->nl_preq) {
+		if (bss->nl_preq && drv->device_ap_sme &&
+		    is_ap_interface(drv->nlmode)) {
+			/*
+			 * Do not disable Probe Request reporting that was
+			 * enabled in nl80211_setup_ap().
+			 */
+			wpa_printf(MSG_DEBUG, "nl80211: Skip disabling of "
+				   "Probe Request reporting nl_preq=%p while "
+				   "in AP mode", bss->nl_preq);
+		} else if (bss->nl_preq) {
 			wpa_printf(MSG_DEBUG, "nl80211: Disable Probe Request "
 				   "reporting nl_preq=%p", bss->nl_preq);
 			eloop_unregister_read_sock(

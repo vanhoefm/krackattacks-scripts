@@ -3005,9 +3005,9 @@ int wpas_p2p_group_remove(struct wpa_supplicant *wpa_s, const char *ifname)
 }
 
 
-static void wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
-				    struct p2p_go_neg_results *params,
-				    int freq)
+static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
+				   struct p2p_go_neg_results *params,
+				   int freq)
 {
 	u8 bssid[ETH_ALEN];
 	int res;
@@ -3068,7 +3068,16 @@ static void wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Force GO on the channel we are "
 			   "already using on a shared interface");
 		params->freq = res;
+	} else if (res > 0 && freq != res &&
+		   !(wpa_s->drv_flags &
+		     WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT)) {
+		wpa_printf(MSG_DEBUG, "P2P: Cannot start P2P group on %u MHz "
+			   "while connected on another channel (%u MHz)",
+			   freq, res);
+		return -1;
 	}
+
+	return 0;
 }
 
 
@@ -3163,7 +3172,8 @@ int wpas_p2p_group_add(struct wpa_supplicant *wpa_s, int persistent_group,
 		return -1;
 	}
 
-	wpas_p2p_init_go_params(wpa_s, &params, freq);
+	if (wpas_p2p_init_go_params(wpa_s, &params, freq))
+		return -1;
 	p2p_go_params(wpa_s->global->p2p, &params);
 	params.persistent_group = persistent_group;
 
@@ -3246,7 +3256,8 @@ int wpas_p2p_group_add_persistent(struct wpa_supplicant *wpa_s,
 	if (ssid->mode != WPAS_MODE_P2P_GO)
 		return -1;
 
-	wpas_p2p_init_go_params(wpa_s, &params, freq);
+	if (wpas_p2p_init_go_params(wpa_s, &params, freq))
+		return -1;
 
 	params.role_go = 1;
 	if (ssid->passphrase == NULL ||

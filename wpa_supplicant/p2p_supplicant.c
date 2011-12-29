@@ -2732,6 +2732,13 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	os_memcpy(res.peer_interface_addr, wpa_s->pending_join_iface_addr,
 		  ETH_ALEN);
 	res.wps_method = wpa_s->pending_join_wps_method;
+	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
+		wpa_printf(MSG_DEBUG, "P2P: Cancel remain-on-channel prior to "
+			   "starting client");
+		wpa_drv_cancel_remain_on_channel(wpa_s);
+		wpa_s->off_channel_freq = 0;
+		wpa_s->roc_waiting_drv_freq = 0;
+	}
 	wpas_start_wps_enrollee(group, &res);
 
 	/*

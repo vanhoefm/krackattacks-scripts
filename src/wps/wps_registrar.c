@@ -962,6 +962,7 @@ int wps_registrar_wps_cancel(struct wps_registrar *reg)
 	if (reg->pbc) {
 		wpa_printf(MSG_DEBUG, "WPS: PBC is set - cancelling it");
 		wps_registrar_pbc_timeout(reg, NULL);
+		eloop_cancel_timeout(wps_registrar_pbc_timeout, reg, NULL);
 		return 1;
 	} else if (reg->selected_registrar) {
 		/* PIN Method */

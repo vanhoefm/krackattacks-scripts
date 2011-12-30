@@ -606,7 +606,7 @@ static void nl80211_recv_beacons(int sock, void *eloop_ctx, void *handle)
 {
 	struct nl80211_wiphy_data *w = eloop_ctx;
 
-	wpa_printf(MSG_DEBUG, "nl80211: Beacon event message available");
+	wpa_printf(MSG_EXCESSIVE, "nl80211: Beacon event message available");
 
 	nl_recvmsgs(handle, w->nl_cb);
 }

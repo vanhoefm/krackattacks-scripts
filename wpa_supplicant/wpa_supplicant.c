@@ -2849,6 +2849,11 @@ void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid)
 	int *freqs = NULL;
 
 	/*
+	 * Remove possible authentication timeout since the connection failed.
+	 */
+	eloop_cancel_timeout(wpa_supplicant_timeout, wpa_s, NULL);
+
+	/*
 	 * Add the failed BSSID into the blacklist and speed up next scan
 	 * attempt if there could be other APs that could accept association.
 	 * The current blacklist count indicates how many times we have tried

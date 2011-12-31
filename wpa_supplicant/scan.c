@@ -344,6 +344,16 @@ static void wpa_supplicant_optimize_freqs(
 		wpa_s->after_wps--;
 	}
 
+	if (params->freqs == NULL && wpa_s->known_wps_freq && wpa_s->wps_freq)
+	{
+		/* Optimize provisioning scan based on already known channel */
+		wpa_dbg(wpa_s, MSG_DEBUG, "WPS: Scan only frequency %u MHz",
+			wpa_s->wps_freq);
+		params->freqs = os_zalloc(2 * sizeof(int));
+		if (params->freqs)
+			params->freqs[0] = wpa_s->wps_freq;
+		wpa_s->known_wps_freq = 0; /* only do this once */
+	}
 #endif /* CONFIG_WPS */
 }
 

@@ -790,9 +790,19 @@ static struct wpa_ssid * wpas_wps_add_network(struct wpa_supplicant *wpa_s,
 
 
 static void wpas_wps_reassoc(struct wpa_supplicant *wpa_s,
-			     struct wpa_ssid *selected)
+			     struct wpa_ssid *selected, const u8 *bssid)
 {
 	struct wpa_ssid *ssid;
+	struct wpa_bss *bss;
+
+	wpa_s->known_wps_freq = 0;
+	if (bssid) {
+		bss = wpa_bss_get_bssid(wpa_s, bssid);
+		if (bss && bss->freq > 0) {
+			wpa_s->known_wps_freq = 1;
+			wpa_s->wps_freq = bss->freq;
+		}
+	}
 
 	if (wpa_s->current_ssid)
 		wpa_supplicant_deauthenticate(
@@ -853,7 +863,7 @@ int wpas_wps_start_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
-	wpas_wps_reassoc(wpa_s, ssid);
+	wpas_wps_reassoc(wpa_s, ssid, bssid);
 	return 0;
 }
 
@@ -896,7 +906,7 @@ int wpas_wps_start_pin(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
-	wpas_wps_reassoc(wpa_s, ssid);
+	wpas_wps_reassoc(wpa_s, ssid, bssid);
 	return rpin;
 }
 
@@ -1016,7 +1026,7 @@ int wpas_wps_start_reg(struct wpa_supplicant *wpa_s, const u8 *bssid,
 		ssid->eap.fragment_size = wpa_s->wps_fragment_size;
 	eloop_register_timeout(WPS_PBC_WALK_TIME, 0, wpas_wps_timeout,
 			       wpa_s, NULL);
-	wpas_wps_reassoc(wpa_s, ssid);
+	wpas_wps_reassoc(wpa_s, ssid, bssid);
 	return 0;
 }
 

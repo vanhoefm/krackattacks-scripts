@@ -495,6 +495,7 @@ struct wpa_supplicant {
 	struct wpa_ssid *connect_without_scan;
 
 	int after_wps;
+	int known_wps_freq;
 	unsigned int wps_freq;
 	int wps_fragment_size;
 	int auto_reconnect_disabled;

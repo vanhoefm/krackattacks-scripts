@@ -164,6 +164,12 @@ static void add_interfaces(struct dl_list *list, struct wpabuf *xml)
 		if (wpabuf_len(iface->xml) + 20 < wpabuf_tailroom(xml)) {
 			wpabuf_put_buf(xml, iface->xml);
 			wpabuf_put_str(xml, "</interface>");
+		} else {
+			wpa_printf(MSG_DEBUG, "dbus: Not enough room for "
+				   "add_interfaces inspect data: tailroom %u, "
+				   "add %u",
+				   (unsigned int) wpabuf_tailroom(xml),
+				   (unsigned int) wpabuf_len(iface->xml));
 		}
 		dl_list_del(&iface->list);
 		wpabuf_free(iface->xml);
@@ -251,7 +257,7 @@ DBusMessage * wpa_dbus_introspect(DBusMessage *message,
 	DBusMessage *reply;
 	struct wpabuf *xml;
 
-	xml = wpabuf_alloc(8000);
+	xml = wpabuf_alloc(10000);
 	if (xml == NULL)
 		return NULL;
 

@@ -93,6 +93,7 @@ run-tests: $(TESTS)
 clean:
 	$(MAKE) -C ../src clean
 	rm -f $(TESTS) *~ *.o *.d
+	rm -f test-https
 	rm -f test_x509v3_nist.out.*
 	rm -f test_x509v3_nist2.out.*
 

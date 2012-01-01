@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - Driver event processing
- * Copyright (c) 2003-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1543,7 +1543,8 @@ static int disconnect_reason_recoverable(u16 reason_code)
 
 
 static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
-					  u16 reason_code)
+					  u16 reason_code,
+					  int locally_generated)
 {
 	const u8 *bssid;
 	int authenticating;
@@ -1579,6 +1580,7 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 		if (wpa_s->wpa_state == WPA_COMPLETED &&
 		    wpa_s->current_ssid &&
 		    wpa_s->current_ssid->mode == WPAS_MODE_INFRA &&
+		    !locally_generated &&
 		    disconnect_reason_recoverable(reason_code)) {
 			/*
 			 * It looks like the AP has dropped association with
@@ -1991,6 +1993,7 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	u16 reason_code = 0;
+	int locally_generated = 0;
 
 	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED &&
 	    event != EVENT_INTERFACE_ENABLED &&
@@ -2032,8 +2035,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 	case EVENT_DISASSOC:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Disassociation notification");
 		if (data) {
-			wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u",
-				data->disassoc_info.reason_code);
+			wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u%s",
+				data->disassoc_info.reason_code,
+				data->disassoc_info.locally_generated ?
+				" (locally generated)" : "");
 			if (data->disassoc_info.addr)
 				wpa_dbg(wpa_s, MSG_DEBUG, " * address " MACSTR,
 					MAC2STR(data->disassoc_info.addr));
@@ -2052,6 +2057,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		if (data) {
 			reason_code = data->disassoc_info.reason_code;
+			locally_generated =
+				data->disassoc_info.locally_generated;
 			wpa_hexdump(MSG_DEBUG, "Disassociation frame IE(s)",
 				    data->disassoc_info.ie,
 				    data->disassoc_info.ie_len);
@@ -2071,8 +2078,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				"Deauthentication notification");
 			if (data) {
 				reason_code = data->deauth_info.reason_code;
-				wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u",
-					data->deauth_info.reason_code);
+				locally_generated =
+					data->deauth_info.locally_generated;
+				wpa_dbg(wpa_s, MSG_DEBUG, " * reason %u%s",
+					data->deauth_info.reason_code,
+					data->deauth_info.locally_generated ?
+					" (locally generated)" : "");
 				if (data->deauth_info.addr) {
 					wpa_dbg(wpa_s, MSG_DEBUG, " * address "
 						MACSTR,
@@ -2104,7 +2115,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			break;
 		}
 #endif /* CONFIG_AP */
-		wpa_supplicant_event_disassoc(wpa_s, reason_code);
+		wpa_supplicant_event_disassoc(wpa_s, reason_code,
+					      locally_generated);
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:
 		wpa_supplicant_event_michael_mic_failure(wpa_s, data);

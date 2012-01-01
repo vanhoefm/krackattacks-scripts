@@ -1,6 +1,6 @@
 /*
  * Driver interaction with Linux nl80211/cfg80211
- * Copyright (c) 2002-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  * Copyright (c) 2003-2004, Instant802 Networks, Inc.
  * Copyright (c) 2005-2006, Devicescape Software, Inc.
  * Copyright (c) 2007, Johannes Berg <johannes@sipsolutions.net>
@@ -1151,7 +1151,8 @@ static void mlme_event_connect(struct wpa_driver_nl80211_data *drv,
 
 
 static void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
-				  struct nlattr *reason, struct nlattr *addr)
+				  struct nlattr *reason, struct nlattr *addr,
+				  struct nlattr *by_ap)
 {
 	union wpa_event_data data;
 
@@ -1169,6 +1170,7 @@ static void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
 	os_memset(&data, 0, sizeof(data));
 	if (reason)
 		data.disassoc_info.reason_code = nla_get_u16(reason);
+	data.disassoc_info.locally_generated = by_ap == NULL;
 	wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, &data);
 }
 
@@ -1309,6 +1311,8 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 		reason_code = le_to_host16(mgmt->u.deauth.reason_code);
 
 	if (type == EVENT_DISASSOC) {
+		event.disassoc_info.locally_generated =
+			!os_memcmp(mgmt->sa, drv->first_bss.addr, ETH_ALEN);
 		event.disassoc_info.addr = bssid;
 		event.disassoc_info.reason_code = reason_code;
 		if (frame + len > mgmt->u.disassoc.variable) {
@@ -1317,6 +1321,8 @@ static void mlme_event_deauth_disassoc(struct wpa_driver_nl80211_data *drv,
 				mgmt->u.disassoc.variable;
 		}
 	} else {
+		event.deauth_info.locally_generated =
+			!os_memcmp(mgmt->sa, drv->first_bss.addr, ETH_ALEN);
 		event.deauth_info.addr = bssid;
 		event.deauth_info.reason_code = reason_code;
 		if (frame + len > mgmt->u.deauth.variable) {
@@ -2083,7 +2089,8 @@ static void do_process_drv_event(struct wpa_driver_nl80211_data *drv,
 		break;
 	case NL80211_CMD_DISCONNECT:
 		mlme_event_disconnect(drv, tb[NL80211_ATTR_REASON_CODE],
-				      tb[NL80211_ATTR_MAC]);
+				      tb[NL80211_ATTR_MAC],
+				      tb[NL80211_ATTR_DISCONNECTED_BY_AP]);
 		break;
 	case NL80211_CMD_MICHAEL_MIC_FAILURE:
 		mlme_event_michael_mic_failure(drv, tb);

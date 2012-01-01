@@ -1,6 +1,6 @@
 /*
  * Driver interface definition
- * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -3028,6 +3028,11 @@ union wpa_event_data {
 		 * ie_len - Length of ie buffer in octets
 		 */
 		size_t ie_len;
+
+		/**
+		 * locally_generated - Whether the frame was locally generated
+		 */
+		int locally_generated;
 	} disassoc_info;
 
 	/**
@@ -3054,6 +3059,11 @@ union wpa_event_data {
 		 * ie_len - Length of ie buffer in octets
 		 */
 		size_t ie_len;
+
+		/**
+		 * locally_generated - Whether the frame was locally generated
+		 */
+		int locally_generated;
 	} deauth_info;
 
 	/**

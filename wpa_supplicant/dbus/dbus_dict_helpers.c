@@ -739,7 +739,7 @@ static dbus_bool_t _wpa_dbus_dict_entry_get_byte_array(
 {
 	dbus_uint32_t count = 0;
 	dbus_bool_t success = FALSE;
-	char *buffer, *nbuffer;;
+	char *buffer, *nbuffer;
 
 	entry->bytearray_value = NULL;
 	entry->array_type = DBUS_TYPE_BYTE;

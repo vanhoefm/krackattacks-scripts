@@ -284,8 +284,14 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 		if (inactive_sec == -1) {
 			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
 				"Check inactivity: Could not "
-				"get station info rom kernel driver for "
+				"get station info from kernel driver for "
 				MACSTR, MAC2STR(sta->addr));
+			/*
+			 * The driver may not support this functionality.
+			 * Anyway, try again after the next inactivity timeout,
+			 * but do not disconnect the station now.
+			 */
+			next_time = hapd->conf->ap_max_inactivity;
 		} else if (inactive_sec < hapd->conf->ap_max_inactivity &&
 			   sta->flags & WLAN_STA_ASSOC) {
 			/* station activity detected; reset timeout state */

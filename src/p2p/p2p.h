@@ -1327,6 +1327,11 @@ int p2p_group_notif_noa(struct p2p_group *group, const u8 *noa,
 int p2p_group_match_dev_type(struct p2p_group *group, struct wpabuf *wps);
 
 /**
+ * p2p_group_match_dev_id - Match P2P Device Address in group with requested device id
+ */
+int p2p_group_match_dev_id(struct p2p_group *group, struct wpabuf *p2p);
+
+/**
  * p2p_group_go_discover - Send GO Discoverability Request to a group client
  * @group: P2P group context from p2p_group_init()
  * Returns: 0 on success (frame scheduled); -1 if client was not found

@@ -343,6 +343,18 @@ void handle_probe_req(struct hostapd_data *hapd,
 		}
 		wpabuf_free(wps);
 	}
+
+	if (hapd->p2p && elems.p2p) {
+		struct wpabuf *p2p;
+		p2p = ieee802_11_vendor_ie_concat(ie, ie_len, P2P_IE_VENDOR_TYPE);
+		if (p2p && !p2p_group_match_dev_id(hapd->p2p_group, p2p)) {
+			wpa_printf(MSG_MSGDUMP, "P2P: Ignore Probe Request "
+				   "due to mismatch with Device ID");
+			wpabuf_free(p2p);
+			return;
+		}
+		wpabuf_free(p2p);
+	}
 #endif /* CONFIG_P2P */
 
 	if (hapd->conf->ignore_broadcast_ssid && elems.ssid_len == 0) {

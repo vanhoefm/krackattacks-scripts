@@ -381,6 +381,8 @@ struct p2p_data {
 	/* Requested device types for find/search */
 	unsigned int num_req_dev_types;
 	u8 *req_dev_types;
+	u8 *find_dev_id;
+	u8 find_dev_id_buf[ETH_ALEN];
 
 	struct p2p_group **groups;
 	size_t num_groups;

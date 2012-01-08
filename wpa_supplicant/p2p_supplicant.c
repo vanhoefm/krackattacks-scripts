@@ -94,7 +94,7 @@ static void wpas_p2p_scan_res_handler(struct wpa_supplicant *wpa_s,
 
 static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			 unsigned int num_req_dev_types,
-			 const u8 *req_dev_types)
+			 const u8 *req_dev_types, const u8 *dev_id)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	struct wpa_driver_scan_params params;
@@ -130,7 +130,7 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	wpabuf_put_buf(ies, wps_ie);
 	wpabuf_free(wps_ie);
 
-	p2p_scan_ie(wpa_s->global->p2p, ies);
+	p2p_scan_ie(wpa_s->global->p2p, ies, dev_id);
 
 	params.p2p_probe = 1;
 	params.extra_ies = wpabuf_head(ies);
@@ -2667,7 +2667,7 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 	wpabuf_put_buf(ies, wps_ie);
 	wpabuf_free(wps_ie);
 
-	p2p_scan_ie(wpa_s->global->p2p, ies);
+	p2p_scan_ie(wpa_s->global->p2p, ies, NULL);
 
 	params.p2p_probe = 1;
 	params.extra_ies = wpabuf_head(ies);
@@ -3459,7 +3459,8 @@ static void wpas_p2p_clear_pending_action_tx(struct wpa_supplicant *wpa_s)
 
 int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 		  enum p2p_discovery_type type,
-		  unsigned int num_req_dev_types, const u8 *req_dev_types)
+		  unsigned int num_req_dev_types, const u8 *req_dev_types,
+		  const u8 *dev_id)
 {
 	wpas_p2p_clear_pending_action_tx(wpa_s);
 	wpa_s->p2p_long_listen = 0;
@@ -3471,7 +3472,7 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 		return -1;
 
 	return p2p_find(wpa_s->global->p2p, timeout, type,
-			num_req_dev_types, req_dev_types);
+			num_req_dev_types, req_dev_types, dev_id);
 }
 
 
@@ -3599,7 +3600,7 @@ void wpas_p2p_scan_ie(struct wpa_supplicant *wpa_s, struct wpabuf *ies)
 	if (wpa_s->global->p2p == NULL)
 		return;
 
-	p2p_scan_ie(wpa_s->global->p2p, ies);
+	p2p_scan_ie(wpa_s->global->p2p, ies, NULL);
 }
 
 

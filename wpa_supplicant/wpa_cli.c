@@ -1930,7 +1930,10 @@ static int wpa_cli_cmd_p2p_find(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	if (argc == 0)
 		return wpa_ctrl_command(ctrl, "P2P_FIND");
 
-	if (argc > 1)
+	if (argc > 2)
+		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s %s %s",
+				  argv[0], argv[1], argv[2]);
+	else if (argc > 1)
 		res = os_snprintf(cmd, sizeof(cmd), "P2P_FIND %s %s",
 				  argv[0], argv[1]);
 	else

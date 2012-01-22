@@ -921,6 +921,16 @@ static int wpas_dbus_get_scan_ssids(DBusMessage *message, DBusMessageIter *var,
 
 		dbus_message_iter_get_fixed_array(&sub_array_iter, &val, &len);
 
+		if (len > MAX_SSID_LEN) {
+			wpa_printf(MSG_DEBUG,
+				   "wpas_dbus_handler_scan[dbus]: "
+				   "SSID too long (len=%d max_len=%d)",
+				   len, MAX_SSID_LEN);
+			*reply = wpas_dbus_error_invalid_args(
+				message, "Invalid SSID: too long");
+			return -1;
+		}
+
 		if (len != 0) {
 			ssid = os_malloc(len);
 			if (ssid == NULL) {

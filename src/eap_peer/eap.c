@@ -879,6 +879,26 @@ static void eap_sm_processIdentity(struct eap_sm *sm, const struct wpabuf *req)
 
 #ifdef PCSC_FUNCS
 
+/*
+ * Rules for figuring out MNC length based on IMSI for SIM cards that do not
+ * include MNC length field.
+ */
+static int mnc_len_from_imsi(const char *imsi)
+{
+	char mcc_str[4];
+	unsigned int mcc;
+
+	os_memcpy(mcc_str, imsi, 3);
+	mcc_str[3] = '\0';
+	mcc = atoi(mcc_str);
+
+	if (mcc == 244)
+		return 2; /* Networks in Finland use 2-digit MNC */
+
+	return -1;
+}
+
+
 static int eap_sm_append_3gpp_realm(struct eap_sm *sm, char *imsi,
 				    size_t max_len, size_t *imsi_len)
 {
@@ -892,6 +912,8 @@ static int eap_sm_append_3gpp_realm(struct eap_sm *sm, char *imsi,
 
 	/* MNC (2 or 3 digits) */
 	mnc_len = scard_get_mnc_len(sm->scard_ctx);
+	if (mnc_len < 0)
+		mnc_len = mnc_len_from_imsi(imsi);
 	if (mnc_len < 0) {
 		wpa_printf(MSG_INFO, "Failed to get MNC length from (U)SIM "
 			   "assuming 3");

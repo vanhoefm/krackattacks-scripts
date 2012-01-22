@@ -877,6 +877,9 @@ static int scard_test(void)
 	wpa_hexdump_ascii(MSG_DEBUG, "SCARD: IMSI", (u8 *) imsi, len);
 	/* NOTE: Permanent Username: 1 | IMSI */
 
+	wpa_printf(MSG_DEBUG, "SCARD: MNC length %d",
+		   scard_get_mnc_len(scard));
+
 	os_memset(_rand, 0, sizeof(_rand));
 	if (scard_gsm_auth(scard, _rand, sres, kc))
 		goto failed;

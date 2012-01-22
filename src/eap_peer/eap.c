@@ -895,6 +895,11 @@ static int eap_sm_imsi_identity(struct eap_sm *sm,
 
 	wpa_hexdump_ascii(MSG_DEBUG, "IMSI", (u8 *) imsi, imsi_len);
 
+	if (imsi_len < 7) {
+		wpa_printf(MSG_WARNING, "Too short IMSI for SIM identity");
+		return -1;
+	}
+
 	for (i = 0; m && (m[i].vendor != EAP_VENDOR_IETF ||
 			  m[i].method != EAP_TYPE_NONE); i++) {
 		if (m[i].vendor == EAP_VENDOR_IETF &&

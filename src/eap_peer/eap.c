@@ -879,30 +879,16 @@ static void eap_sm_processIdentity(struct eap_sm *sm, const struct wpabuf *req)
 
 #ifdef PCSC_FUNCS
 
-static int eap_sm_append_3gpp_realm(struct eap_sm *sm,
-				    struct eap_peer_config *conf)
+static int eap_sm_append_3gpp_realm(struct eap_sm *sm, char *imsi,
+				    size_t max_len, size_t *imsi_len)
 {
-	const char *realm_3gpp = "@wlan.mnc000.mcc000.3gppnetwork.org";
-	u8 *full_id = NULL;
-	size_t full_id_len = 0;
 	int mnc_len;
+	char *pos, mnc[4];
 
-	full_id = os_malloc(conf->identity_len + os_strlen(realm_3gpp));
-	if (full_id == NULL) {
-		wpa_printf(MSG_WARNING, "Failed to allocate buffer for "
-			   "3GPP realm");
+	if (*imsi_len + 36 > max_len) {
+		wpa_printf(MSG_WARNING, "No room for realm in IMSI buffer");
 		return -1;
 	}
-
-	os_memcpy(full_id, conf->identity, conf->identity_len);
-	os_memcpy(full_id + conf->identity_len,
-		  realm_3gpp, os_strlen(realm_3gpp));
-	full_id_len = conf->identity_len + os_strlen(realm_3gpp);
-
-	/* MCC */
-	full_id[conf->identity_len + 16] = full_id[1];
-	full_id[conf->identity_len + 17] = full_id[2];
-	full_id[conf->identity_len + 18] = full_id[3];
 
 	/* MNC (2 or 3 digits) */
 	mnc_len = scard_get_mnc_len(sm->scard_ctx);
@@ -913,17 +899,21 @@ static int eap_sm_append_3gpp_realm(struct eap_sm *sm,
 	}
 
 	if (mnc_len == 2) {
-		full_id[conf->identity_len + 10] = full_id[4];
-		full_id[conf->identity_len + 11] = full_id[5];
+		mnc[0] = '0';
+		mnc[1] = imsi[3];
+		mnc[2] = imsi[4];
 	} else if (mnc_len == 3) {
-		full_id[conf->identity_len +  9] = full_id[4];
-		full_id[conf->identity_len + 10] = full_id[5];
-		full_id[conf->identity_len + 11] = full_id[6];
+		mnc[0] = imsi[3];
+		mnc[1] = imsi[4];
+		mnc[2] = imsi[5];
 	}
+	mnc[3] = '\0';
 
-	os_free(conf->identity);
-	conf->identity = full_id;
-	conf->identity_len = full_id_len;
+	pos = imsi + *imsi_len;
+	pos += os_snprintf(pos, imsi + max_len - pos,
+			   "@wlan.mnc%s.mcc%c%c%c.3gppnetwork.org",
+			   mnc, imsi[0], imsi[1], imsi[2]);
+	*imsi_len = pos - imsi;
 
 	return 0;
 }
@@ -951,6 +941,12 @@ static int eap_sm_imsi_identity(struct eap_sm *sm,
 		return -1;
 	}
 
+	if (eap_sm_append_3gpp_realm(sm, imsi, sizeof(imsi), &imsi_len) < 0) {
+		wpa_printf(MSG_WARNING, "Could not add realm to SIM identity");
+		return -1;
+	}
+	wpa_hexdump_ascii(MSG_DEBUG, "IMSI + realm", (u8 *) imsi, imsi_len);
+
 	for (i = 0; m && (m[i].vendor != EAP_VENDOR_IETF ||
 			  m[i].method != EAP_TYPE_NONE); i++) {
 		if (m[i].vendor == EAP_VENDOR_IETF &&
@@ -972,7 +968,7 @@ static int eap_sm_imsi_identity(struct eap_sm *sm,
 	os_memcpy(conf->identity + 1, imsi, imsi_len);
 	conf->identity_len = 1 + imsi_len;
 
-	return eap_sm_append_3gpp_realm(sm, conf);
+	return 0;
 }
 
 #endif /* PCSC_FUNCS */

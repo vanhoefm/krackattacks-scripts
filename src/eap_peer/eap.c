@@ -878,6 +878,57 @@ static void eap_sm_processIdentity(struct eap_sm *sm, const struct wpabuf *req)
 
 
 #ifdef PCSC_FUNCS
+
+static int eap_sm_append_3gpp_realm(struct eap_sm *sm,
+				    struct eap_peer_config *conf)
+{
+	const char *realm_3gpp = "@wlan.mnc000.mcc000.3gppnetwork.org";
+	u8 *full_id = NULL;
+	size_t full_id_len = 0;
+	int mnc_len;
+
+	full_id = os_malloc(conf->identity_len + os_strlen(realm_3gpp));
+	if (full_id == NULL) {
+		wpa_printf(MSG_WARNING, "Failed to allocate buffer for "
+			   "3GPP realm");
+		return -1;
+	}
+
+	os_memcpy(full_id, conf->identity, conf->identity_len);
+	os_memcpy(full_id + conf->identity_len,
+		  realm_3gpp, os_strlen(realm_3gpp));
+	full_id_len = conf->identity_len + os_strlen(realm_3gpp);
+
+	/* MCC */
+	full_id[conf->identity_len + 16] = full_id[1];
+	full_id[conf->identity_len + 17] = full_id[2];
+	full_id[conf->identity_len + 18] = full_id[3];
+
+	/* MNC (2 or 3 digits) */
+	mnc_len = scard_get_mnc_len(sm->scard_ctx);
+	if (mnc_len < 0) {
+		wpa_printf(MSG_INFO, "Failed to get MNC length from (U)SIM "
+			   "assuming 3");
+		mnc_len = 3;
+	}
+
+	if (mnc_len == 2) {
+		full_id[conf->identity_len + 10] = full_id[4];
+		full_id[conf->identity_len + 11] = full_id[5];
+	} else if (mnc_len == 3) {
+		full_id[conf->identity_len +  9] = full_id[4];
+		full_id[conf->identity_len + 10] = full_id[5];
+		full_id[conf->identity_len + 11] = full_id[6];
+	}
+
+	os_free(conf->identity);
+	conf->identity = full_id;
+	conf->identity_len = full_id_len;
+
+	return 0;
+}
+
+
 static int eap_sm_imsi_identity(struct eap_sm *sm,
 				struct eap_peer_config *conf)
 {
@@ -921,8 +972,9 @@ static int eap_sm_imsi_identity(struct eap_sm *sm,
 	os_memcpy(conf->identity + 1, imsi, imsi_len);
 	conf->identity_len = 1 + imsi_len;
 
-	return 0;
+	return eap_sm_append_3gpp_realm(sm, conf);
 }
+
 #endif /* PCSC_FUNCS */
 
 

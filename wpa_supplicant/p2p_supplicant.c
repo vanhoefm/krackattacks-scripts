@@ -309,6 +309,7 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 		 */
 		wpa_config_remove_network(wpa_s->conf, id);
 		wpa_supplicant_clear_status(wpa_s);
+		wpa_supplicant_cancel_sched_scan(wpa_s);
 	} else {
 		wpa_printf(MSG_DEBUG, "P2P: Temporary group network not "
 			   "found");
@@ -3471,6 +3472,8 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
+	wpa_supplicant_cancel_sched_scan(wpa_s);
+
 	return p2p_find(wpa_s->global->p2p, timeout, type,
 			num_req_dev_types, req_dev_types, dev_id);
 }
@@ -3510,6 +3513,7 @@ int wpas_p2p_listen(struct wpa_supplicant *wpa_s, unsigned int timeout)
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
+	wpa_supplicant_cancel_sched_scan(wpa_s);
 	wpas_p2p_clear_pending_action_tx(wpa_s);
 
 	if (timeout == 0) {

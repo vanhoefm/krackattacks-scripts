@@ -5168,7 +5168,8 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 
 	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
 		return nl80211_send_frame_cmd(bss, bss->freq, 0,
-					      data, data_len, NULL,
+					      data, data_len,
+					      &drv->send_action_cookie,
 					      0, noack, 0);
 	}
 

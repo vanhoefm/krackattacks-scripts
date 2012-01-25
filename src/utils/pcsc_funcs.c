@@ -1059,7 +1059,7 @@ int scard_get_mnc_len(struct scard_data *scard)
 		wpa_printf(MSG_DEBUG, "SCARD: MNC length not available");
 		return -7;
 	}
-	if (file_size < 4 || file_size > sizeof(buf)) {
+	if (file_size < 4 || file_size > (int) sizeof(buf)) {
 		wpa_printf(MSG_DEBUG, "SCARD: invalid file length=%ld",
 			   (long) file_size);
 		return -4;

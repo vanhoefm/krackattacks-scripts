@@ -2207,6 +2207,26 @@ static int wpas_get_noa(void *ctx, const u8 *interface_addr, u8 *buf,
 }
 
 
+static int wpas_go_connected(void *ctx, const u8 *dev_addr)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	for (wpa_s = wpa_s->global->ifaces; wpa_s; wpa_s = wpa_s->next) {
+		struct wpa_ssid *ssid = wpa_s->current_ssid;
+		if (ssid == NULL)
+			continue;
+		if (ssid->mode != WPAS_MODE_INFRA)
+			continue;
+		if (wpa_s->wpa_state != WPA_COMPLETED)
+			continue;
+		if (os_memcmp(wpa_s->go_dev_addr, dev_addr, ETH_ALEN) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
 /**
  * wpas_p2p_init - Initialize P2P module for %wpa_supplicant
  * @global: Pointer to global data from wpa_supplicant_init()
@@ -2266,6 +2286,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	p2p.invitation_received = wpas_invitation_received;
 	p2p.invitation_result = wpas_invitation_result;
 	p2p.get_noa = wpas_get_noa;
+	p2p.go_connected = wpas_go_connected;
 
 	os_memcpy(wpa_s->global->p2p_dev_addr, wpa_s->own_addr, ETH_ALEN);
 	os_memcpy(p2p.dev_addr, wpa_s->global->p2p_dev_addr, ETH_ALEN);

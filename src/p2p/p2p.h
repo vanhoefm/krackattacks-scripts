@@ -706,6 +706,15 @@ struct p2p_config {
 	 * local failure in transmitting the Invitation Request.
 	 */
 	void (*invitation_result)(void *ctx, int status, const u8 *bssid);
+
+	/**
+	 * go_connected - Check whether we are connected to a GO
+	 * @ctx: Callback context from cb_ctx
+	 * @dev_addr: P2P Device Address of a GO
+	 * Returns: 1 if we are connected as a P2P client to the specified GO
+	 * or 0 if not.
+	 */
+	int (*go_connected)(void *ctx, const u8 *dev_addr);
 };
 
 

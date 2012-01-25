@@ -62,6 +62,18 @@ static void p2p_expire_peers(struct p2p_data *p2p)
 	dl_list_for_each_safe(dev, n, &p2p->devices, struct p2p_device, list) {
 		if (dev->last_seen.sec + P2P_PEER_EXPIRATION_AGE >= now.sec)
 			continue;
+
+		if (p2p->cfg->go_connected &&
+		    p2p->cfg->go_connected(p2p->cfg->cb_ctx,
+					   dev->info.p2p_device_addr)) {
+			/*
+			 * We are connected as a client to a group in which the
+			 * peer is the GO, so do not expire the peer entry.
+			 */
+			os_get_time(&dev->last_seen);
+			continue;
+		}
+
 		for (i = 0; i < p2p->num_groups; i++) {
 			if (p2p_group_is_client_connected(
 				    p2p->groups[i], dev->info.p2p_device_addr))

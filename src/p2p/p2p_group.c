@@ -724,3 +724,16 @@ const u8 * p2p_iterate_group_members(struct p2p_group *group, void **next)
 
 	return iter->addr;
 }
+
+
+int p2p_group_is_client_connected(struct p2p_group *group, const u8 *dev_addr)
+{
+	struct p2p_group_member *m;
+
+	for (m = group->members; m; m = m->next) {
+		if (os_memcmp(m->dev_addr, dev_addr, ETH_ALEN) == 0)
+			return 1;
+	}
+
+	return 0;
+}

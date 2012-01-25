@@ -851,6 +851,8 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 	if (sta == NULL)
 		return;
 	ap_sta_set_authorized(hapd, sta, 0);
+	wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
+	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,

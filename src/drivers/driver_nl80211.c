@@ -5127,24 +5127,32 @@ static int wpa_driver_nl80211_send_mntr(struct wpa_driver_nl80211_data *drv,
 
 static int wpa_driver_nl80211_send_frame(struct i802_bss *bss,
 					 const void *data, size_t len,
-					 int encrypt, int noack)
+					 int encrypt, int noack,
+					 unsigned int freq, int no_cck,
+					 int offchanok, unsigned int wait_time)
 {
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	u64 cookie;
+
+	if (freq == 0)
+		freq = bss->freq;
 
 	if (drv->use_monitor)
 		return wpa_driver_nl80211_send_mntr(drv, data, len,
 						    encrypt, noack);
 
-	return nl80211_send_frame_cmd(bss, bss->freq, 0, data, len,
-				      &cookie, 0, noack, 0);
+	return nl80211_send_frame_cmd(bss, freq, wait_time, data, len,
+				      &cookie, no_cck, noack, offchanok);
 }
 
 
-static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
-					size_t data_len, int noack)
+static int wpa_driver_nl80211_send_mlme_freq(struct i802_bss *bss,
+					     const u8 *data,
+					     size_t data_len, int noack,
+					     unsigned int freq, int no_cck,
+					     int offchanok,
+					     unsigned int wait_time)
 {
-	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	struct ieee80211_mgmt *mgmt;
 	int encrypt = 1;
@@ -5161,16 +5169,20 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 		 * but it works due to the single-threaded nature
 		 * of wpa_supplicant.
 		 */
-		return nl80211_send_frame_cmd(bss, drv->last_mgmt_freq, 0,
+		if (freq == 0)
+			freq = drv->last_mgmt_freq;
+		return nl80211_send_frame_cmd(bss, freq, 0,
 					      data, data_len, NULL, 1, noack,
 					      1);
 	}
 
 	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
-		return nl80211_send_frame_cmd(bss, bss->freq, 0,
+		if (freq == 0)
+			freq = bss->freq;
+		return nl80211_send_frame_cmd(bss, freq, 0,
 					      data, data_len,
 					      &drv->send_action_cookie,
-					      0, noack, 0);
+					      no_cck, noack, offchanok);
 	}
 
 	if (WLAN_FC_GET_TYPE(fc) == WLAN_FC_TYPE_MGMT &&
@@ -5188,7 +5200,17 @@ static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
 	}
 
 	return wpa_driver_nl80211_send_frame(bss, data, data_len, encrypt,
-					     noack);
+					     noack, freq, no_cck, offchanok,
+					     wait_time);
+}
+
+
+static int wpa_driver_nl80211_send_mlme(void *priv, const u8 *data,
+					size_t data_len, int noack)
+{
+	struct i802_bss *bss = priv;
+	return wpa_driver_nl80211_send_mlme_freq(bss, data, data_len, noack,
+						 0, 0, 0, 0);
 }
 
 
@@ -6233,7 +6255,8 @@ static int wpa_driver_nl80211_hapd_send_eapol(
 	pos += 2;
 	memcpy(pos, data, data_len);
 
-	res = wpa_driver_nl80211_send_frame(bss, (u8 *) hdr, len, encrypt, 0);
+	res = wpa_driver_nl80211_send_frame(bss, (u8 *) hdr, len, encrypt, 0,
+					    0, 0, 0, 0);
 	if (res < 0) {
 		wpa_printf(MSG_ERROR, "i802_send_eapol - packet len: %lu - "
 			   "failed: %d (%s)",
@@ -7929,7 +7952,8 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	struct ieee80211_hdr *hdr;
 
 	wpa_printf(MSG_DEBUG, "nl80211: Send Action frame (ifindex=%d, "
-		   "wait=%d ms no_cck=%d)", drv->ifindex, wait_time, no_cck);
+		   "freq=%u MHz wait=%d ms no_cck=%d)",
+		   drv->ifindex, freq, wait_time, no_cck);
 
 	buf = os_zalloc(24 + data_len);
 	if (buf == NULL)
@@ -7943,8 +7967,10 @@ static int wpa_driver_nl80211_send_action(void *priv, unsigned int freq,
 	os_memcpy(hdr->addr3, bssid, ETH_ALEN);
 
 	if (is_ap_interface(drv->nlmode))
-		ret = wpa_driver_nl80211_send_mlme(priv, buf, 24 + data_len,
-						   0);
+		ret = wpa_driver_nl80211_send_mlme_freq(priv, buf,
+							24 + data_len,
+							0, freq, no_cck, 1,
+							wait_time);
 	else
 		ret = nl80211_send_frame_cmd(bss, freq, wait_time, buf,
 					     24 + data_len,
@@ -8326,7 +8352,8 @@ static int nl80211_send_frame(void *priv, const u8 *data, size_t data_len,
 			      int encrypt)
 {
 	struct i802_bss *bss = priv;
-	return wpa_driver_nl80211_send_frame(bss, data, data_len, encrypt, 0);
+	return wpa_driver_nl80211_send_frame(bss, data, data_len, encrypt, 0,
+					     0, 0, 0, 0);
 }
 
 

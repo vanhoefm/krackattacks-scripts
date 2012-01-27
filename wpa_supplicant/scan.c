@@ -71,10 +71,12 @@ static int wpas_wps_in_use(struct wpa_supplicant *wpa_s,
 	}
 
 #ifdef CONFIG_P2P
-	wpa_s->wps->dev.p2p = 1;
-	if (!wps) {
-		wps = 1;
-		*req_type = WPS_REQ_ENROLLEE_INFO;
+	if (!wpa_s->global->p2p_disabled && wpa_s->global->p2p) {
+		wpa_s->wps->dev.p2p = 1;
+		if (!wps) {
+			wps = 1;
+			*req_type = WPS_REQ_ENROLLEE_INFO;
+		}
 	}
 #endif /* CONFIG_P2P */
 

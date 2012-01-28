@@ -1476,6 +1476,9 @@ eap_ikev2.so: ../src/eap_peer/eap_ikev2.c ../src/eap_peer/ikev2.c ../src/eap_com
 %.service: %.service.in
 	sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
 
+%@.service: %.service.arg.in
+	sed -e 's|\@BINDIR\@|$(BINDIR)|g' $< >$@
+
 wpa_supplicant.exe: wpa_supplicant
 	mv -f $< $@
 wpa_cli.exe: wpa_cli

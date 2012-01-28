@@ -6421,6 +6421,12 @@ retry:
 	if (ret)
 		goto nla_put_failure;
 
+	if (params->bssid && params->fixed_bssid) {
+		wpa_printf(MSG_DEBUG, "  * BSSID=" MACSTR,
+			   MAC2STR(params->bssid));
+		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
+	}
+
 	if (params->wpa_ie) {
 		wpa_hexdump(MSG_DEBUG,
 			    "  * Extra IEs for Beacon/Probe Response frames",

@@ -2867,13 +2867,15 @@ dbus_bool_t wpas_dbus_getter_bss_signal(DBusMessageIter *iter,
 {
 	struct bss_handler_args *args = user_data;
 	struct wpa_bss *res;
+	s16 level;
 
 	res = get_bss_helper(args, error, __func__);
 	if (!res)
 		return FALSE;
 
+	level = (s16) res->level;
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_INT16,
-						&res->level, error);
+						&level, error);
 }
 
 
@@ -2891,13 +2893,15 @@ dbus_bool_t wpas_dbus_getter_bss_frequency(DBusMessageIter *iter,
 {
 	struct bss_handler_args *args = user_data;
 	struct wpa_bss *res;
+	u16 freq;
 
 	res = get_bss_helper(args, error, __func__);
 	if (!res)
 		return FALSE;
 
+	freq = (u16) res->freq;
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_UINT16,
-						&res->freq, error);
+						&freq, error);
 }
 
 

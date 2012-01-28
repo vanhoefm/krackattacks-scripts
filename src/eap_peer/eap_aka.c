@@ -256,24 +256,44 @@ static void eap_aka_clear_identities(struct eap_aka_data *data, int id)
 }
 
 
-static int eap_aka_learn_ids(struct eap_aka_data *data,
+static int eap_aka_learn_ids(struct eap_sm *sm, struct eap_aka_data *data,
 			     struct eap_sim_attrs *attr)
 {
 	if (attr->next_pseudonym) {
+		const u8 *identity = NULL;
+		size_t identity_len = 0;
+		const u8 *realm = NULL;
+		size_t realm_len = 0;
+
+		wpa_hexdump_ascii(MSG_DEBUG,
+				  "EAP-AKA: (encr) AT_NEXT_PSEUDONYM",
+				  attr->next_pseudonym,
+				  attr->next_pseudonym_len);
 		os_free(data->pseudonym);
-		data->pseudonym = os_malloc(attr->next_pseudonym_len);
+		/* Look for the realm of the permanent identity */
+		identity = eap_get_config_identity(sm, &identity_len);
+		if (identity) {
+			for (realm = identity, realm_len = identity_len;
+			     realm_len > 0; realm_len--, realm++) {
+				if (*realm == '@')
+					break;
+			}
+		}
+		data->pseudonym = os_malloc(attr->next_pseudonym_len +
+					    realm_len);
 		if (data->pseudonym == NULL) {
 			wpa_printf(MSG_INFO, "EAP-AKA: (encr) No memory for "
 				   "next pseudonym");
+			data->pseudonym_len = 0;
 			return -1;
 		}
 		os_memcpy(data->pseudonym, attr->next_pseudonym,
 			  attr->next_pseudonym_len);
-		data->pseudonym_len = attr->next_pseudonym_len;
-		wpa_hexdump_ascii(MSG_DEBUG,
-				  "EAP-AKA: (encr) AT_NEXT_PSEUDONYM",
-				  data->pseudonym,
-				  data->pseudonym_len);
+		if (realm_len) {
+			os_memcpy(data->pseudonym + attr->next_pseudonym_len,
+				  realm, realm_len);
+		}
+		data->pseudonym_len = attr->next_pseudonym_len + realm_len;
 	}
 
 	if (attr->next_reauth_id) {
@@ -282,6 +302,7 @@ static int eap_aka_learn_ids(struct eap_aka_data *data,
 		if (data->reauth_id == NULL) {
 			wpa_printf(MSG_INFO, "EAP-AKA: (encr) No memory for "
 				   "next reauth_id");
+			data->reauth_id_len = 0;
 			return -1;
 		}
 		os_memcpy(data->reauth_id, attr->next_reauth_id,
@@ -894,7 +915,7 @@ static struct wpabuf * eap_aka_process_challenge(struct eap_sm *sm,
 			return eap_aka_client_error(
 				data, id, EAP_AKA_UNABLE_TO_PROCESS_PACKET);
 		}
-		eap_aka_learn_ids(data, &eattr);
+		eap_aka_learn_ids(sm, data, &eattr);
 		os_free(decrypted);
 	}
 
@@ -1112,7 +1133,7 @@ static struct wpabuf * eap_aka_process_reauthentication(
 					   data->msk, data->emsk);
 	}
 	eap_aka_clear_identities(data, CLEAR_REAUTH_ID | CLEAR_EAP_ID);
-	eap_aka_learn_ids(data, &eattr);
+	eap_aka_learn_ids(sm, data, &eattr);
 
 	if (data->result_ind && attr->result_ind)
 		data->use_result_ind = 1;

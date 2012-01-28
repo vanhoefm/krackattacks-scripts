@@ -1364,6 +1364,13 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 		params.ssid = ssid->ssid;
 		params.ssid_len = ssid->ssid_len;
 	}
+
+	if (ssid->mode == WPAS_MODE_IBSS && ssid->bssid_set &&
+	    wpa_s->conf->ap_scan == 2) {
+		params.bssid = ssid->bssid;
+		params.fixed_bssid = 1;
+	}
+
 	if (ssid->mode == WPAS_MODE_IBSS && ssid->frequency > 0 &&
 	    params.freq == 0)
 		params.freq = ssid->frequency; /* Initial channel for IBSS */

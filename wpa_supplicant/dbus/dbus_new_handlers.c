@@ -2181,6 +2181,54 @@ dbus_bool_t wpas_dbus_setter_ap_scan(DBusMessageIter *iter, DBusError *error,
 
 
 /**
+ * wpas_dbus_getter_fast_reauth - Control fast
+ * reauthentication (TLS session resumption)
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter function for "FastReauth" property.
+ */
+dbus_bool_t wpas_dbus_getter_fast_reauth(DBusMessageIter *iter,
+					 DBusError *error,
+					 void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_bool_t fast_reauth = wpa_s->conf->fast_reauth ? TRUE : FALSE;
+
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_BOOLEAN,
+						&fast_reauth, error);
+}
+
+
+/**
+ * wpas_dbus_setter_fast_reauth - Control fast
+ * reauthentication (TLS session resumption)
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter function for "FastReauth" property.
+ */
+dbus_bool_t wpas_dbus_setter_fast_reauth(DBusMessageIter *iter,
+				     DBusError *error,
+				     void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_bool_t fast_reauth;
+
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_BOOLEAN,
+					      &fast_reauth))
+		return FALSE;
+
+	wpa_s->conf->fast_reauth = fast_reauth;
+	return TRUE;
+}
+
+
+/**
  * wpas_dbus_getter_bss_expire_age - Get BSS entry expiration age
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

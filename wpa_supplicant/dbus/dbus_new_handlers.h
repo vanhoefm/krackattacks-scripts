@@ -133,6 +133,14 @@ dbus_bool_t wpas_dbus_getter_ap_scan(DBusMessageIter *iter, DBusError *error,
 dbus_bool_t wpas_dbus_setter_ap_scan(DBusMessageIter *iter, DBusError *error,
 				     void *user_data);
 
+dbus_bool_t wpas_dbus_getter_fast_reauth(DBusMessageIter *iter,
+					 DBusError *error,
+					 void *user_data);
+
+dbus_bool_t wpas_dbus_setter_fast_reauth(DBusMessageIter *iter,
+					 DBusError *error,
+					 void *user_data);
+
 dbus_bool_t wpas_dbus_getter_bss_expire_age(DBusMessageIter *iter,
 					    DBusError *error, void *user_data);
 

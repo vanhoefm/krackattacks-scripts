@@ -2555,6 +2555,10 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	  wpas_dbus_getter_networks,
 	  NULL
 	},
+	{ "FastReauth", WPAS_DBUS_NEW_IFACE_INTERFACE, "b",
+	  wpas_dbus_getter_fast_reauth,
+	  wpas_dbus_setter_fast_reauth
+	},
 #ifdef CONFIG_WPS
 	{ "ProcessCredentials", WPAS_DBUS_NEW_IFACE_WPS, "b",
 	  wpas_dbus_getter_process_credentials,

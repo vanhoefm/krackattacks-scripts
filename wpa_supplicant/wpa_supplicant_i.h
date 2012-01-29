@@ -36,6 +36,7 @@ struct scan_info;
 struct wpa_bss;
 struct wpa_scan_results;
 struct hostapd_hw_modes;
+struct wpa_driver_associate_params;
 
 /*
  * Forward declarations of private structures used within the ctrl_iface
@@ -528,6 +529,10 @@ struct wpa_supplicant {
 
 
 /* wpa_supplicant.c */
+void wpa_supplicant_apply_ht_overrides(
+	struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid,
+	struct wpa_driver_associate_params *params);
+
 int wpa_set_wep_keys(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
 
 int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s);

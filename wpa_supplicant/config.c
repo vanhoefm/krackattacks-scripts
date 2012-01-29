@@ -1598,6 +1598,14 @@ static const struct parse_data ssid_fields[] = {
 #ifdef CONFIG_P2P
 	{ FUNC(p2p_client_list) },
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_HT_OVERRIDES
+	{ INT_RANGE(disable_ht, 0, 1) },
+	{ INT_RANGE(disable_ht40, -1, 1) },
+	{ INT_RANGE(disable_max_amsdu, -1, 1) },
+	{ INT_RANGE(ampdu_factor, -1, 3) },
+	{ INT_RANGE(ampdu_density, -1, 7) },
+	{ STR(ht_mcs) },
+#endif /* CONFIG_HT_OVERRIDES */
 };
 
 #undef OFFSET
@@ -1765,6 +1773,9 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 	os_free(ssid->freq_list);
 	os_free(ssid->bgscan);
 	os_free(ssid->p2p_client_list);
+#ifdef CONFIG_HT_OVERRIDES
+	os_free(ssid->ht_mcs);
+#endif /* CONFIG_HT_OVERRIDES */
 	os_free(ssid);
 }
 
@@ -1952,6 +1963,13 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->eap_workaround = DEFAULT_EAP_WORKAROUND;
 	ssid->eap.fragment_size = DEFAULT_FRAGMENT_SIZE;
 #endif /* IEEE8021X_EAPOL */
+#ifdef CONFIG_HT_OVERRIDES
+	ssid->disable_ht = DEFAULT_DISABLE_HT;
+	ssid->disable_ht40 = DEFAULT_DISABLE_HT40;
+	ssid->disable_max_amsdu = DEFAULT_DISABLE_MAX_AMSDU;
+	ssid->ampdu_factor = DEFAULT_AMPDU_FACTOR;
+	ssid->ampdu_density = DEFAULT_AMPDU_DENSITY;
+#endif /* CONFIG_HT_OVERRIDES */
 }
 
 

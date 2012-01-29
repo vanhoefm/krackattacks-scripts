@@ -31,6 +31,12 @@
 		       WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40)
 #define DEFAULT_FRAGMENT_SIZE 1398
 
+#define DEFAULT_DISABLE_HT 0
+#define DEFAULT_DISABLE_HT40 0
+#define DEFAULT_DISABLE_MAX_AMSDU -1 /* no change */
+#define DEFAULT_AMPDU_FACTOR -1 /* no change */
+#define DEFAULT_AMPDU_DENSITY -1 /* no change */
+
 /**
  * struct wpa_ssid - Network configuration data
  *
@@ -422,6 +428,54 @@ struct wpa_ssid {
 	 * WPS or similar so that they may be exported.
 	 */
 	int export_keys;
+
+#ifdef CONFIG_HT_OVERRIDES
+	/**
+	 * disable_ht - Disable HT (IEEE 802.11n) for this network
+	 *
+	 * By default, use it if it is available, but this can be configured
+	 * to 1 to have it disabled.
+	 */
+	int disable_ht;
+
+	/**
+	 * disable_ht40 - Disable HT40 for this network
+	 *
+	 * By default, use it if it is available, but this can be configured
+	 * to 1 to have it disabled.
+	 */
+	int disable_ht40;
+
+	/**
+	 * disable_max_amsdu - Disable MAX A-MSDU
+	 *
+	 * A-MDSU will be 3839 bytes when disabled, or 7935
+	 * when enabled (assuming it is otherwise supported)
+	 * -1 (default) means do not apply any settings to the kernel.
+	 */
+	int disable_max_amsdu;
+
+	/**
+	 * ampdu_factor - Maximum A-MPDU Length Exponent
+	 *
+	 * Value: 0-3, see 7.3.2.56.3 in IEEE Std 802.11n-2009.
+	 */
+	int ampdu_factor;
+
+	/**
+	 * ampdu_density - Minimum A-MPDU Start Spacing
+	 *
+	 * Value: 0-7, see 7.3.2.56.3 in IEEE Std 802.11n-2009.
+	 */
+	int ampdu_density;
+
+	/**
+	 * ht_mcs - Allowed HT-MCS rates, in ASCII hex: ffff0000...
+	 *
+	 * By default (empty string): Use whatever the OS has configured.
+	 */
+	char *ht_mcs;
+#endif /* CONFIG_HT_OVERRIDES */
 };
 
 #endif /* CONFIG_SSID_H */

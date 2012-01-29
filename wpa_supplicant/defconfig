@@ -217,6 +217,9 @@ CONFIG_SMARTCARD=y
 # Enable this if EAP-SIM or EAP-AKA is included
 #CONFIG_PCSC=y
 
+# Support HT overrides (disable HT/HT40, mask MCS rates, etc.)
+#CONFIG_HT_OVERRIDES=y
+
 # Development testing
 #CONFIG_EAPOL_TEST=y
 

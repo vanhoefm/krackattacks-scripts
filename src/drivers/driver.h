@@ -523,6 +523,19 @@ struct wpa_driver_associate_params {
 	 * 0 = Do not fix BSSID.
 	 */
 	int fixed_bssid;
+
+	/**
+	 * disable_ht - Disable HT (IEEE 802.11n) for this connection
+	 */
+	int disable_ht;
+
+	/**
+	 * HT Capabilities over-rides. Only bits set in the mask will be used,
+	 * and not all values are used by the kernel anyway. Currently, MCS,
+	 * MPDU and MSDU fields are used.
+	 */
+	const u8 *htcaps;       /* struct ieee80211_ht_capabilities * */
+	const u8 *htcaps_mask;  /* struct ieee80211_ht_capabilities * */
 };
 
 enum hide_ssid {

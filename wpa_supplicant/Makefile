@@ -15,12 +15,13 @@ CFLAGS += -I../src/utils
 
 -include .config
 
-ALL=wpa_supplicant wpa_cli
+BINALL=wpa_supplicant wpa_cli
 
 ifndef CONFIG_NO_WPA_PASSPHRASE
-ALL += wpa_passphrase
+BINALL += wpa_passphrase
 endif
 
+ALL = $(BINALL)
 ALL += systemd/wpa_supplicant.service
 ALL += systemd/wpa_supplicant@.service
 ALL += systemd/wpa_supplicant-nl80211@.service
@@ -51,7 +52,7 @@ mkconfig:
 $(DESTDIR)$(BINDIR)/%: %
 	install -D $(<) $(@)
 
-install: $(addprefix $(DESTDIR)$(BINDIR)/,$(ALL))
+install: $(addprefix $(DESTDIR)$(BINDIR)/,$(BINALL))
 	$(MAKE) -C ../src install
 
 OBJS = config.o

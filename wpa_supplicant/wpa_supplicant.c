@@ -400,16 +400,10 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 		wpa_s->l2_br = NULL;
 	}
 
-	if (wpa_s->ctrl_iface) {
-		wpa_supplicant_ctrl_iface_deinit(wpa_s->ctrl_iface);
-		wpa_s->ctrl_iface = NULL;
-	}
 	if (wpa_s->conf != NULL) {
 		struct wpa_ssid *ssid;
 		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next)
 			wpas_notify_network_removed(wpa_s, ssid);
-		wpa_config_free(wpa_s->conf);
-		wpa_s->conf = NULL;
 	}
 
 	os_free(wpa_s->confname);
@@ -2419,6 +2413,19 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 
 	if (notify)
 		wpas_notify_iface_removed(wpa_s);
+
+	if (terminate)
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_TERMINATING);
+
+	if (wpa_s->ctrl_iface) {
+		wpa_supplicant_ctrl_iface_deinit(wpa_s->ctrl_iface);
+		wpa_s->ctrl_iface = NULL;
+	}
+
+	if (wpa_s->conf != NULL) {
+		wpa_config_free(wpa_s->conf);
+		wpa_s->conf = NULL;
+	}
 }
 
 

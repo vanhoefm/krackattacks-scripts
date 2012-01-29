@@ -2414,11 +2414,11 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_cleanup(wpa_s);
 
-	if (notify)
-		wpas_notify_iface_removed(wpa_s);
-
 	if (wpa_s->drv_priv)
 		wpa_drv_deinit(wpa_s);
+
+	if (notify)
+		wpas_notify_iface_removed(wpa_s);
 }
 
 

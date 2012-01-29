@@ -673,11 +673,6 @@ void wpa_supplicant_terminate_proc(struct wpa_global *global)
 static void wpa_supplicant_terminate(int sig, void *signal_ctx)
 {
 	struct wpa_global *global = signal_ctx;
-	struct wpa_supplicant *wpa_s;
-	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
-		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_TERMINATING "- signal %d "
-			"received", sig);
-	}
 	wpa_supplicant_terminate_proc(global);
 }
 

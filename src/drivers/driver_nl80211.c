@@ -7813,6 +7813,10 @@ static int wpa_driver_nl80211_if_add(void *priv, enum wpa_driver_if_type type,
 		if (drv_priv)
 			*drv_priv = new_bss;
 		nl80211_init_bss(new_bss);
+
+		/* Subscribe management frames for this WPA_IF_AP_BSS */
+		if (nl80211_setup_ap(new_bss))
+			return -1;
 	}
 #endif /* HOSTAPD */
 
@@ -7864,6 +7868,8 @@ static int wpa_driver_nl80211_if_remove(void *priv,
 		for (tbss = &drv->first_bss; tbss; tbss = tbss->next) {
 			if (tbss->next == bss) {
 				tbss->next = bss->next;
+				/* Unsubscribe management frames */
+				nl80211_teardown_ap(bss);
 				nl80211_destroy_bss(bss);
 				os_free(bss);
 				bss = NULL;

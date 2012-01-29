@@ -166,6 +166,38 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 	size_t i;
 	if (level < wpa_debug_level)
 		return;
+#ifdef CONFIG_DEBUG_SYSLOG
+	if (wpa_debug_syslog) {
+		const char *display;
+		char *strbuf = NULL;
+
+		if (buf == NULL) {
+			display = " [NULL]";
+		} else if (len == 0) {
+			display = "";
+		} else if (show && len) {
+			strbuf = os_malloc(1 + 3 * len);
+			if (strbuf == NULL) {
+				wpa_printf(MSG_ERROR, "wpa_hexdump: Failed to "
+					   "allocate message buffer");
+				return;
+			}
+
+			for (i = 0; i < len; i++)
+				os_snprintf(&strbuf[i * 3], 4, " %02x",
+					    buf[i]);
+
+			display = strbuf;
+		} else {
+			display = " [REMOVED]";
+		}
+
+		syslog(syslog_priority(level), "%s - hexdump(len=%lu):%s",
+		       title, len, display);
+		os_free(strbuf);
+		return;
+	}
+#endif /* CONFIG_DEBUG_SYSLOG */
 	wpa_debug_print_timestamp();
 #ifdef CONFIG_DEBUG_FILE
 	if (out_file) {

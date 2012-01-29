@@ -578,7 +578,8 @@ void wpa_show_license(void);
 struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 						 struct wpa_interface *iface);
 int wpa_supplicant_remove_iface(struct wpa_global *global,
-				struct wpa_supplicant *wpa_s);
+				struct wpa_supplicant *wpa_s,
+				int terminate);
 struct wpa_supplicant * wpa_supplicant_get_iface(struct wpa_global *global,
 						 const char *ifname);
 struct wpa_global * wpa_supplicant_init(struct wpa_params *params);

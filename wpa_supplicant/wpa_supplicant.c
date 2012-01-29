@@ -2402,7 +2402,7 @@ next_driver:
 
 
 static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
-					int notify)
+					int notify, int terminate)
 {
 	if (wpa_s->drv_priv) {
 		wpa_supplicant_deauthenticate(wpa_s,
@@ -2468,14 +2468,14 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	if (wpa_supplicant_init_iface(wpa_s, &t_iface)) {
 		wpa_printf(MSG_DEBUG, "Failed to add interface %s",
 			   iface->ifname);
-		wpa_supplicant_deinit_iface(wpa_s, 0);
+		wpa_supplicant_deinit_iface(wpa_s, 0, 0);
 		os_free(wpa_s);
 		return NULL;
 	}
 
 	/* Notify the control interfaces about new iface */
 	if (wpas_notify_iface_added(wpa_s)) {
-		wpa_supplicant_deinit_iface(wpa_s, 1);
+		wpa_supplicant_deinit_iface(wpa_s, 1, 0);
 		os_free(wpa_s);
 		return NULL;
 	}
@@ -2504,7 +2504,8 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
  * %wpa_supplicant is terminated.
  */
 int wpa_supplicant_remove_iface(struct wpa_global *global,
-				struct wpa_supplicant *wpa_s)
+				struct wpa_supplicant *wpa_s,
+				int terminate)
 {
 	struct wpa_supplicant *prev;
 
@@ -2524,7 +2525,7 @@ int wpa_supplicant_remove_iface(struct wpa_global *global,
 
 	if (global->p2p_group_formation == wpa_s)
 		global->p2p_group_formation = NULL;
-	wpa_supplicant_deinit_iface(wpa_s, 1);
+	wpa_supplicant_deinit_iface(wpa_s, 1, terminate);
 	os_free(wpa_s);
 
 	return 0;
@@ -2740,7 +2741,7 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 #endif /* CONFIG_P2P */
 
 	while (global->ifaces)
-		wpa_supplicant_remove_iface(global, global->ifaces);
+		wpa_supplicant_remove_iface(global, global->ifaces, 1);
 
 	if (global->ctrl_iface)
 		wpa_supplicant_global_ctrl_iface_deinit(global->ctrl_iface);

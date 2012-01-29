@@ -576,7 +576,7 @@ DBusMessage * wpas_dbus_handler_remove_interface(DBusMessage *message,
 	wpa_s = get_iface_by_dbus_path(global, path);
 	if (wpa_s == NULL)
 		reply = wpas_dbus_error_iface_unknown(message);
-	else if (wpa_supplicant_remove_iface(global, wpa_s)) {
+	else if (wpa_supplicant_remove_iface(global, wpa_s, 0)) {
 		reply = wpas_dbus_error_unknown_error(
 			message, "wpa_supplicant couldn't remove this "
 			"interface.");

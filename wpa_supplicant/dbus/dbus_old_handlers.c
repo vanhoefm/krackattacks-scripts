@@ -229,7 +229,7 @@ DBusMessage * wpas_dbus_global_remove_interface(DBusMessage *message,
 		goto out;
 	}
 
-	if (!wpa_supplicant_remove_iface(global, wpa_s)) {
+	if (!wpa_supplicant_remove_iface(global, wpa_s, 0)) {
 		reply = wpas_dbus_new_success_reply(message);
 	} else {
 		reply = dbus_message_new_error(message,

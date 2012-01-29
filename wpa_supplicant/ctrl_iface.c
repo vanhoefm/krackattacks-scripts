@@ -3883,7 +3883,7 @@ static int wpa_supplicant_global_iface_remove(struct wpa_global *global,
 	wpa_s = wpa_supplicant_get_iface(global, cmd);
 	if (wpa_s == NULL)
 		return -1;
-	return wpa_supplicant_remove_iface(global, wpa_s);
+	return wpa_supplicant_remove_iface(global, wpa_s, 0);
 }
 
 

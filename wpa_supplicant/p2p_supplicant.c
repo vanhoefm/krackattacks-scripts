@@ -280,7 +280,7 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 		global = wpa_s->global;
 		ifname = os_strdup(wpa_s->ifname);
 		type = wpas_p2p_if_type(wpa_s->p2p_group_interface);
-		wpa_supplicant_remove_iface(wpa_s->global, wpa_s);
+		wpa_supplicant_remove_iface(wpa_s->global, wpa_s, 0);
 		wpa_s = global->ifaces;
 		if (wpa_s && ifname)
 			wpa_drv_if_remove(wpa_s, type, ifname);
@@ -2449,7 +2449,7 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 			break;
 		ifname = os_strdup(tmp->ifname);
 		type = wpas_p2p_if_type(tmp->p2p_group_interface);
-		wpa_supplicant_remove_iface(global, tmp);
+		wpa_supplicant_remove_iface(global, tmp, 0);
 		if (ifname)
 			wpa_drv_if_remove(wpa_s, type, ifname);
 		os_free(ifname);

@@ -966,9 +966,7 @@ continue_processing:
 			wpa_printf(MSG_DEBUG, "WPA: Reject 4-way handshake to "
 				   "collect more entropy for random number "
 				   "generation");
-			sm->group->reject_4way_hs_for_entropy = FALSE;
 			random_mark_pool_ready();
-			sm->group->first_sta_seen = FALSE;
 			wpa_sta_disconnect(wpa_auth, sm->addr);
 			return;
 		}
@@ -1614,9 +1612,11 @@ SM_STATE(WPA_PTK, AUTHENTICATION)
 }
 
 
-static void wpa_group_first_station(struct wpa_authenticator *wpa_auth,
-				    struct wpa_group *group)
+static void wpa_group_ensure_init(struct wpa_authenticator *wpa_auth,
+				  struct wpa_group *group)
 {
+	if (group->first_sta_seen)
+		return;
 	/*
 	 * System has run bit further than at the time hostapd was started
 	 * potentially very early during boot up. This provides better chances
@@ -1630,7 +1630,11 @@ static void wpa_group_first_station(struct wpa_authenticator *wpa_auth,
 		wpa_printf(MSG_INFO, "WPA: Not enough entropy in random pool "
 			   "to proceed - reject first 4-way handshake");
 		group->reject_4way_hs_for_entropy = TRUE;
+	} else {
+		group->first_sta_seen = TRUE;
+		group->reject_4way_hs_for_entropy = FALSE;
 	}
+
 	wpa_group_init_gmk_and_counter(wpa_auth, group);
 	wpa_gtk_update(wpa_auth, group);
 	wpa_group_config_group_keys(wpa_auth, group);
@@ -1641,10 +1645,7 @@ SM_STATE(WPA_PTK, AUTHENTICATION2)
 {
 	SM_ENTRY_MA(WPA_PTK, AUTHENTICATION2, wpa_ptk);
 
-	if (!sm->group->first_sta_seen) {
-		wpa_group_first_station(sm->wpa_auth, sm->group);
-		sm->group->first_sta_seen = TRUE;
-	}
+	wpa_group_ensure_init(sm->wpa_auth, sm->group);
 
 	os_memcpy(sm->ANonce, sm->group->Counter, WPA_NONCE_LEN);
 	wpa_hexdump(MSG_DEBUG, "WPA: Assign ANonce", sm->ANonce,

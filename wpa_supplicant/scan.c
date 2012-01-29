@@ -530,6 +530,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 
 	if (scan_req != 2 && wpa_s->conf->ap_scan == 2) {
 		wpa_s->connect_without_scan = NULL;
+		wpa_s->prev_scan_wildcard = 0;
 		wpa_supplicant_assoc_try(wpa_s, ssid);
 		return;
 	} else if (wpa_s->conf->ap_scan == 2) {
@@ -578,15 +579,32 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		int_array_sort_unique(params.freqs);
 	}
 
-	if (ssid) {
-		wpa_s->prev_scan_ssid = ssid;
-		if (max_ssids > 1) {
-			wpa_dbg(wpa_s, MSG_DEBUG, "Include wildcard SSID in "
-				"the scan request");
-			params.num_ssids++;
+	if (ssid && max_ssids == 1) {
+		/*
+		 * If the driver is limited to 1 SSID at a time interleave
+		 * wildcard SSID scans with specific SSID scans to avoid
+		 * waiting a long time for a wildcard scan.
+		 */
+		if (!wpa_s->prev_scan_wildcard) {
+			params.ssids[0].ssid = NULL;
+			params.ssids[0].ssid_len = 0;
+			wpa_s->prev_scan_wildcard = 1;
+			wpa_dbg(wpa_s, MSG_DEBUG, "Starting AP scan for "
+				"wildcard SSID (Interleave with specific)");
+		} else {
+			wpa_s->prev_scan_ssid = ssid;
+			wpa_s->prev_scan_wildcard = 0;
+			wpa_dbg(wpa_s, MSG_DEBUG,
+				"Starting AP scan for specific SSID: %s",
+				wpa_ssid_txt(ssid->ssid, ssid->ssid_len));
 		}
-		wpa_dbg(wpa_s, MSG_DEBUG, "Starting AP scan for specific "
-			"SSID(s)");
+	} else if (ssid) {
+		/* max_ssids > 1 */
+
+		wpa_s->prev_scan_ssid = ssid;
+		wpa_dbg(wpa_s, MSG_DEBUG, "Include wildcard SSID in "
+			"the scan request");
+		params.num_ssids++;
 	} else {
 		wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 		params.num_ssids++;

@@ -285,6 +285,9 @@ struct wpa_supplicant {
 	void *drv_priv; /* private data used by driver_ops */
 	void *global_drv_priv;
 
+	/* previous scan was wildcard when interleaving between
+	 * wildcard scans and specific SSID scan when max_ssids=1 */
+	int prev_scan_wildcard;
 	struct wpa_ssid *prev_scan_ssid; /* previously scanned SSID;
 					  * NULL = not yet initialized (start
 					  * with wildcard SSID)

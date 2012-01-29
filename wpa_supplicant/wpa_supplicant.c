@@ -2137,6 +2137,8 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	wpa_drv_flush_pmkid(wpa_s);
 
 	wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
+	wpa_s->prev_scan_wildcard = 0;
+
 	if (wpa_supplicant_enabled_networks(wpa_s->conf)) {
 		if (wpa_supplicant_delayed_sched_scan(wpa_s, interface_count,
 						      100000))

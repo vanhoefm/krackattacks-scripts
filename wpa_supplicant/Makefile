@@ -48,9 +48,10 @@ mkconfig:
 	echo CONFIG_DRIVER_HOSTAP=y >> .config
 	echo CONFIG_DRIVER_WEXT=y >> .config
 
-install: all
-	mkdir -p $(DESTDIR)$(BINDIR)
-	for i in $(ALL); do cp $$i $(DESTDIR)$(BINDIR)/$$i; done
+$(DESTDIR)$(BINDIR)/%: %
+	install -D $(<) $(@)
+
+install: $(addprefix $(DESTDIR)$(BINDIR)/,$(ALL))
 	$(MAKE) -C ../src install
 
 OBJS = config.o

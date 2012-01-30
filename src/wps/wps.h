@@ -457,7 +457,12 @@ enum wps_event {
 	/**
 	 * WPS_EV_ER_SET_SELECTED_REGISTRAR - ER: SetSelectedRegistrar event
 	 */
-	WPS_EV_ER_SET_SELECTED_REGISTRAR
+	WPS_EV_ER_SET_SELECTED_REGISTRAR,
+
+	/**
+	 * WPS_EV_AP_PIN_SUCCESS - External Registrar used correct AP PIN
+	 */
+	WPS_EV_AP_PIN_SUCCESS
 };
 
 /**

@@ -512,6 +512,8 @@ static void hostapd_wps_reenable_ap_pin(void *eloop_data, void *user_ctx)
 
 	if (hapd->conf->ap_setup_locked)
 		return;
+	if (hapd->ap_pin_failures_consecutive >= 10)
+		return;
 
 	wpa_printf(MSG_DEBUG, "WPS: Re-enable AP PIN");
 	wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);
@@ -533,8 +535,10 @@ static int wps_pwd_auth_fail(struct hostapd_data *hapd, void *ctx)
 	 * force attacks.
 	 */
 	hapd->ap_pin_failures++;
-	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u",
-		   hapd->ap_pin_failures);
+	hapd->ap_pin_failures_consecutive++;
+	wpa_printf(MSG_DEBUG, "WPS: AP PIN authentication failure number %u "
+		   "(%u consecutive)",
+		   hapd->ap_pin_failures, hapd->ap_pin_failures_consecutive);
 	if (hapd->ap_pin_failures < 3)
 		return 0;
 
@@ -543,7 +547,15 @@ static int wps_pwd_auth_fail(struct hostapd_data *hapd, void *ctx)
 
 	wps_registrar_update_ie(hapd->wps->registrar);
 
-	if (!hapd->conf->ap_setup_locked) {
+	if (!hapd->conf->ap_setup_locked &&
+	    hapd->ap_pin_failures_consecutive >= 10) {
+		/*
+		 * In indefinite lockdown - disable automatic AP PIN
+		 * reenablement.
+		 */
+		eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
+		wpa_printf(MSG_DEBUG, "WPS: AP PIN disabled indefinitely");
+	} else if (!hapd->conf->ap_setup_locked) {
 		if (hapd->ap_pin_lockout_time == 0)
 			hapd->ap_pin_lockout_time = 60;
 		else if (hapd->ap_pin_lockout_time < 365 * 24 * 60 * 60 &&
@@ -566,6 +578,29 @@ static void hostapd_pwd_auth_fail(struct hostapd_data *hapd,
 				  struct wps_event_pwd_auth_fail *data)
 {
 	hostapd_wps_for_each(hapd, wps_pwd_auth_fail, data);
+}
+
+
+static int wps_ap_pin_success(struct hostapd_data *hapd, void *ctx)
+{
+	if (hapd->conf->ap_pin == NULL || hapd->wps == NULL)
+		return 0;
+
+	if (hapd->ap_pin_failures_consecutive == 0)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "WPS: Clear consecutive AP PIN failure counter "
+		   "- total validation failures %u (%u consecutive)",
+		   hapd->ap_pin_failures, hapd->ap_pin_failures_consecutive);
+	hapd->ap_pin_failures_consecutive = 0;
+
+	return 0;
+}
+
+
+static void hostapd_wps_ap_pin_success(struct hostapd_data *hapd)
+{
+	hostapd_wps_for_each(hapd, wps_ap_pin_success, NULL);
 }
 
 
@@ -627,6 +662,9 @@ static void hostapd_wps_event_cb(void *ctx, enum wps_event event,
 	case WPS_EV_ER_AP_SETTINGS:
 		break;
 	case WPS_EV_ER_SET_SELECTED_REGISTRAR:
+		break;
+	case WPS_EV_AP_PIN_SUCCESS:
+		hostapd_wps_ap_pin_success(hapd);
 		break;
 	}
 	if (hapd->wps_event_cb)
@@ -1293,6 +1331,7 @@ static void hostapd_wps_ap_pin_enable(struct hostapd_data *hapd, int timeout)
 {
 	wpa_printf(MSG_DEBUG, "WPS: Enabling AP PIN (timeout=%d)", timeout);
 	hapd->ap_pin_failures = 0;
+	hapd->ap_pin_failures_consecutive = 0;
 	hapd->conf->ap_setup_locked = 0;
 	if (hapd->wps->ap_setup_locked) {
 		wpa_msg(hapd->msg_ctx, MSG_INFO, WPS_EVENT_AP_SETUP_UNLOCKED);

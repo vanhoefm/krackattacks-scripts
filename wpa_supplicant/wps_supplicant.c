@@ -664,6 +664,8 @@ static void wpa_supplicant_wps_event(void *ctx, enum wps_event event,
 		wpa_supplicant_wps_event_er_set_sel_reg(wpa_s,
 							&data->set_sel_reg);
 		break;
+	case WPS_EV_AP_PIN_SUCCESS:
+		break;
 	}
 }
 

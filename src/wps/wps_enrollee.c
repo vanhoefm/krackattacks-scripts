@@ -1064,6 +1064,10 @@ static enum wps_process_res wps_process_m6(struct wps_data *wps,
 	}
 	wpabuf_free(decrypted);
 
+	if (wps->wps->ap)
+		wps->wps->event_cb(wps->wps->cb_ctx, WPS_EV_AP_PIN_SUCCESS,
+				   NULL);
+
 	wps->state = SEND_M7;
 	return WPS_CONTINUE;
 }

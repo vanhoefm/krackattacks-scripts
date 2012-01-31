@@ -726,8 +726,8 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 				goto fail;
 			break;
 		case NAI_REALM_INNER_NON_EAP_MSCHAP:
-			if (wpa_config_set(ssid, "phase2", "\"auth=CHAP\"", 0)
-			    < 0)
+			if (wpa_config_set(ssid, "phase2", "\"auth=MSCHAP\"",
+					   0) < 0)
 				goto fail;
 			break;
 		case NAI_REALM_INNER_NON_EAP_MSCHAPV2:

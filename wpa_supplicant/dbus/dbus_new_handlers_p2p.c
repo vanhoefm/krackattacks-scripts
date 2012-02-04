@@ -1770,13 +1770,13 @@ dbus_bool_t wpas_dbus_setter_p2p_group_properties(DBusMessageIter *iter,
 	DBusMessageIter variant_iter, iter_dict;
 	struct wpa_dbus_dict_entry entry = { .type = DBUS_TYPE_STRING };
 	unsigned int i;
-	struct hostapd_data *hapd = wpa_s->ap_iface->bss[0];
+	struct hostapd_data *hapd = NULL;
 
-	if (!hapd) {
-		dbus_set_error_const(error, DBUS_ERROR_FAILED,
-				     "internal error");
+	if (wpas_get_p2p_role(wpa_s) == WPAS_P2P_ROLE_GO &&
+	    wpa_s->ap_iface != NULL)
+		hapd = wpa_s->ap_iface->bss[0];
+	else
 		return FALSE;
-	}
 
 	dbus_message_iter_recurse(iter, &variant_iter);
 	if (!wpa_dbus_dict_open_read(&variant_iter, &iter_dict, error))

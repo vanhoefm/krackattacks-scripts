@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - RSN PMKSA cache
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, 2011-2012, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -99,7 +99,7 @@ static void pmksa_cache_set_expiration(struct rsn_pmksa_cache *pmksa)
 	eloop_register_timeout(sec + 1, 0, pmksa_cache_expire, pmksa, NULL);
 
 	entry = pmksa->sm->cur_pmksa ? pmksa->sm->cur_pmksa :
-		pmksa_cache_get(pmksa, pmksa->sm->bssid, NULL);
+		pmksa_cache_get(pmksa, pmksa->sm->bssid, NULL, NULL);
 	if (entry) {
 		sec = pmksa->pmksa->reauth_time - now.sec;
 		if (sec < 0)
@@ -228,8 +228,8 @@ pmksa_cache_add(struct rsn_pmksa_cache *pmksa, const u8 *pmk, size_t pmk_len,
 		prev->next = entry;
 	}
 	pmksa->pmksa_count++;
-	wpa_printf(MSG_DEBUG, "RSN: added PMKSA cache entry for " MACSTR,
-		   MAC2STR(entry->aa));
+	wpa_printf(MSG_DEBUG, "RSN: Added PMKSA cache entry for " MACSTR
+		   " network_ctx=%p", MAC2STR(entry->aa), network_ctx);
 	wpa_sm_add_pmkid(pmksa->sm, entry->aa, entry->pmkid);
 
 	return entry;
@@ -297,16 +297,19 @@ void pmksa_cache_deinit(struct rsn_pmksa_cache *pmksa)
  * @pmksa: Pointer to PMKSA cache data from pmksa_cache_init()
  * @aa: Authenticator address or %NULL to match any
  * @pmkid: PMKID or %NULL to match any
+ * @network_ctx: Network context or %NULL to match any
  * Returns: Pointer to PMKSA cache entry or %NULL if no match was found
  */
 struct rsn_pmksa_cache_entry * pmksa_cache_get(struct rsn_pmksa_cache *pmksa,
-					       const u8 *aa, const u8 *pmkid)
+					       const u8 *aa, const u8 *pmkid,
+					       const void *network_ctx)
 {
 	struct rsn_pmksa_cache_entry *entry = pmksa->pmksa;
 	while (entry) {
 		if ((aa == NULL || os_memcmp(entry->aa, aa, ETH_ALEN) == 0) &&
 		    (pmkid == NULL ||
-		     os_memcmp(entry->pmkid, pmkid, PMKID_LEN) == 0))
+		     os_memcmp(entry->pmkid, pmkid, PMKID_LEN) == 0) &&
+		    (network_ctx == NULL || network_ctx == entry->network_ctx))
 			return entry;
 		entry = entry->next;
 	}
@@ -410,20 +413,32 @@ int pmksa_cache_set_current(struct wpa_sm *sm, const u8 *pmkid,
 			    int try_opportunistic)
 {
 	struct rsn_pmksa_cache *pmksa = sm->pmksa;
+	wpa_printf(MSG_DEBUG, "RSN: PMKSA cache search - network_ctx=%p "
+		   "try_opportunistic=%d", network_ctx, try_opportunistic);
+	if (pmkid)
+		wpa_hexdump(MSG_DEBUG, "RSN: Search for PMKID",
+			    pmkid, PMKID_LEN);
+	if (bssid)
+		wpa_printf(MSG_DEBUG, "RSN: Search for BSSID " MACSTR,
+			   MAC2STR(bssid));
+
 	sm->cur_pmksa = NULL;
 	if (pmkid)
-		sm->cur_pmksa = pmksa_cache_get(pmksa, NULL, pmkid);
+		sm->cur_pmksa = pmksa_cache_get(pmksa, NULL, pmkid,
+						network_ctx);
 	if (sm->cur_pmksa == NULL && bssid)
-		sm->cur_pmksa = pmksa_cache_get(pmksa, bssid, NULL);
+		sm->cur_pmksa = pmksa_cache_get(pmksa, bssid, NULL,
+						network_ctx);
 	if (sm->cur_pmksa == NULL && try_opportunistic && bssid)
 		sm->cur_pmksa = pmksa_cache_get_opportunistic(pmksa,
 							      network_ctx,
 							      bssid);
 	if (sm->cur_pmksa) {
-		wpa_hexdump(MSG_DEBUG, "RSN: PMKID",
+		wpa_hexdump(MSG_DEBUG, "RSN: PMKSA cache entry found - PMKID",
 			    sm->cur_pmksa->pmkid, PMKID_LEN);
 		return 0;
 	}
+	wpa_printf(MSG_DEBUG, "RSN: No PMKSA cache entry found");
 	return -1;
 }
 

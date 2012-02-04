@@ -1944,8 +1944,11 @@ static int wpa_supplicant_set_driver(struct wpa_supplicant *wpa_s,
 		for (i = 0; wpa_drivers[i]; i++) {
 			if (os_strlen(wpa_drivers[i]->name) == len &&
 			    os_strncmp(driver, wpa_drivers[i]->name, len) ==
-			    0)
-				return select_driver(wpa_s, i);
+			    0) {
+				/* First driver that succeeds wins */
+				if (select_driver(wpa_s, i) == 0)
+					return 0;
+			}
 		}
 
 		driver = pos + 1;

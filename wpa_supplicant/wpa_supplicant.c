@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant
- * Copyright (c) 2003-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1667,10 +1667,13 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 {
 
 	struct wpa_ssid *other_ssid;
+	int disconnected = 0;
 
-	if (ssid && ssid != wpa_s->current_ssid && wpa_s->current_ssid)
+	if (ssid && ssid != wpa_s->current_ssid && wpa_s->current_ssid) {
 		wpa_supplicant_disassociate(
 			wpa_s, WLAN_REASON_DEAUTH_LEAVING);
+		disconnected = 1;
+	}
 
 	/*
 	 * Mark all other networks disabled or mark all networks enabled if no
@@ -1698,7 +1701,7 @@ void wpa_supplicant_select_network(struct wpa_supplicant *wpa_s,
 	wpa_s->connect_without_scan = NULL;
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	wpa_supplicant_req_scan(wpa_s, 0, disconnected ? 100000 : 0);
 
 	if (ssid)
 		wpas_notify_network_selected(wpa_s, ssid);

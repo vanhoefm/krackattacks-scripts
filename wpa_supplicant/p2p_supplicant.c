@@ -1808,6 +1808,16 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 	struct wpa_supplicant *wpa_s = ctx;
 	unsigned int generated_pin = 0;
 
+	if (wpa_s->pending_pd_before_join &&
+	    (os_memcmp(peer, wpa_s->pending_join_dev_addr, ETH_ALEN) == 0 ||
+	     os_memcmp(peer, wpa_s->pending_join_iface_addr, ETH_ALEN) == 0)) {
+		wpa_s->pending_pd_before_join = 0;
+		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
+			   "join-existing-group operation");
+		wpas_p2p_join_start(wpa_s);
+		return;
+	}
+
 	if (config_methods & WPS_CONFIG_DISPLAY)
 		wpas_prov_disc_local_keypad(wpa_s, peer, "");
 	else if (config_methods & WPS_CONFIG_KEYPAD) {
@@ -1820,15 +1830,6 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 	wpas_notify_p2p_provision_discovery(wpa_s, peer, 0 /* response */,
 					    P2P_PROV_DISC_SUCCESS,
 					    config_methods, generated_pin);
-
-	if (wpa_s->pending_pd_before_join &&
-	    (os_memcmp(peer, wpa_s->pending_join_dev_addr, ETH_ALEN) == 0 ||
-	     os_memcmp(peer, wpa_s->pending_join_iface_addr, ETH_ALEN) == 0)) {
-		wpa_s->pending_pd_before_join = 0;
-		wpa_printf(MSG_DEBUG, "P2P: Starting pending "
-			   "join-existing-group operation");
-		wpas_p2p_join_start(wpa_s);
-	}
 }
 
 

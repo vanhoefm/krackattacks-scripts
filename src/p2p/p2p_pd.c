@@ -369,9 +369,8 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 	else
 		dev->flags &= ~P2P_DEV_PD_FOR_JOIN;
 
-	if (p2p->go_neg_peer ||
-	    (p2p->state != P2P_IDLE && p2p->state != P2P_SEARCH &&
-	     p2p->state != P2P_LISTEN_ONLY)) {
+	if (p2p->state != P2P_IDLE && p2p->state != P2P_SEARCH &&
+	    p2p->state != P2P_LISTEN_ONLY) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Busy with other "
 			"operations; postpone Provision Discovery Request "
 			"with " MACSTR " (config methods 0x%x)",

@@ -3736,6 +3736,7 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 	enum p2p_invite_role role;
 	u8 *bssid = NULL;
 	struct wpa_ssid *ssid;
+	int persistent;
 
 	for (wpa_s = global->ifaces; wpa_s; wpa_s = wpa_s->next) {
 		if (os_strcmp(wpa_s->ifname, ifname) == 0)
@@ -3752,6 +3753,10 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 			   "invitation");
 		return -1;
 	}
+
+	persistent = ssid->p2p_persistent_group &&
+		wpas_p2p_get_persistent(wpa_s->parent, peer_addr,
+					ssid->ssid, ssid->ssid_len);
 
 	if (ssid->mode == WPAS_MODE_P2P_GO) {
 		role = P2P_INVITE_ROLE_ACTIVE_GO;
@@ -3775,14 +3780,14 @@ int wpas_p2p_invite_group(struct wpa_supplicant *wpa_s, const char *ifname,
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
 		return wpa_drv_p2p_invite(wpa_s, peer_addr, role, bssid,
 					  ssid->ssid, ssid->ssid_len,
-					  go_dev_addr, 0);
+					  go_dev_addr, persistent);
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
 
 	return p2p_invite(wpa_s->global->p2p, peer_addr, role, bssid,
 			  ssid->ssid, ssid->ssid_len, wpa_s->assoc_freq,
-			  go_dev_addr, 0);
+			  go_dev_addr, persistent);
 }
 
 
@@ -4382,13 +4387,18 @@ void wpas_p2p_network_removed(struct wpa_supplicant *wpa_s,
 
 
 struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
-					  const u8 *addr)
+					  const u8 *addr, const u8 *ssid,
+					  size_t ssid_len)
 {
 	struct wpa_ssid *s;
 	size_t i;
 
 	for (s = wpa_s->conf->ssid; s; s = s->next) {
 		if (s->disabled != 2)
+			continue;
+		if (ssid &&
+		    (ssid_len != s->ssid_len ||
+		     os_memcmp(ssid, s->ssid, ssid_len) != 0))
 			continue;
 		if (os_memcmp(s->bssid, addr, ETH_ALEN) == 0)
 			return s; /* peer is GO in the persistent group */

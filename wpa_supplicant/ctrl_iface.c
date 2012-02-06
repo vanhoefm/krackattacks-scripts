@@ -3053,7 +3053,7 @@ static int p2p_ctrl_peer(struct wpa_supplicant *wpa_s, char *cmd,
 		return pos - buf;
 	pos += res;
 
-	ssid = wpas_p2p_get_persistent(wpa_s, info->p2p_device_addr);
+	ssid = wpas_p2p_get_persistent(wpa_s, info->p2p_device_addr, NULL, 0);
 	if (ssid) {
 		res = os_snprintf(pos, end - pos, "persistent=%d\n", ssid->id);
 		if (res < 0 || res >= end - pos)

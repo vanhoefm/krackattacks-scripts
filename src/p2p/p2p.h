@@ -1377,6 +1377,15 @@ int p2p_ie_text(struct wpabuf *p2p_ie, char *buf, char *end);
 int p2p_scan_result_text(const u8 *ies, size_t ies_len, char *buf, char *end);
 
 /**
+ * p2p_parse_dev_addr - Parse P2P Device Address from P2P IE(s)
+ * @ies: Information elements from scan results
+ * @ies_len: ies buffer length in octets
+ * @dev_addr: Buffer for returning P2P Device Address
+ * Returns: 0 on success or -1 if P2P Device Address could not be parsed
+ */
+int p2p_parse_dev_addr(const u8 *ies, size_t ies_len, u8 *dev_addr);
+
+/**
  * p2p_assoc_req_ie - Build P2P IE for (Re)Association Request frame
  * @p2p: P2P module context from p2p_init()
  * @bssid: BSSID

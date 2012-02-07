@@ -1512,9 +1512,6 @@ void p2p_set_cross_connect(struct p2p_data *p2p, int enabled);
 
 int p2p_get_oper_freq(struct p2p_data *p2p, const u8 *iface_addr);
 
-int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
-		   const u8 *ies, size_t ies_len);
-
 /**
  * p2p_set_intra_bss_dist - Set intra BSS distribution
  * @p2p: P2P module context from p2p_init()

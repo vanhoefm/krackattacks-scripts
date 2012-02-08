@@ -2193,6 +2193,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	int ret;
 	char *pos, *end;
 	const u8 *ie, *ie2;
+	struct os_time now;
 
 	if (os_strcmp(cmd, "FIRST") == 0)
 		bss = dl_list_first(&wpa_s->bss, struct wpa_bss, list);
@@ -2235,6 +2236,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	if (bss == NULL)
 		return 0;
 
+	os_get_time(&now);
 	pos = buf;
 	end = buf + buflen;
 	ret = os_snprintf(pos, end - pos,
@@ -2247,11 +2249,13 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 			  "noise=%d\n"
 			  "level=%d\n"
 			  "tsf=%016llu\n"
+			  "age=%d\n"
 			  "ie=",
 			  bss->id,
 			  MAC2STR(bss->bssid), bss->freq, bss->beacon_int,
 			  bss->caps, bss->qual, bss->noise, bss->level,
-			  (unsigned long long) bss->tsf);
+			  (unsigned long long) bss->tsf,
+			  (int) (now.sec - bss->last_update.sec));
 	if (ret < 0 || ret >= end - pos)
 		return pos - buf;
 	pos += ret;

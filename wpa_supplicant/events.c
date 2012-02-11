@@ -994,30 +994,6 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 }
 
 
-static int wpa_supplicant_assoc_update_ie(struct wpa_supplicant *wpa_s)
-{
-	const u8 *bss_wpa = NULL, *bss_rsn = NULL;
-
-	if (!wpa_s->current_bss || !wpa_s->current_ssid)
-		return -1;
-
-	if (!wpa_key_mgmt_wpa_any(wpa_s->current_ssid->key_mgmt))
-		return 0;
-
-	bss_wpa = wpa_bss_get_vendor_ie(wpa_s->current_bss,
-					WPA_IE_VENDOR_TYPE);
-	bss_rsn = wpa_bss_get_ie(wpa_s->current_bss, WLAN_EID_RSN);
-
-	if (wpa_sm_set_ap_wpa_ie(wpa_s->wpa, bss_wpa,
-				 bss_wpa ? 2 + bss_wpa[1] : 0) ||
-	    wpa_sm_set_ap_rsn_ie(wpa_s->wpa, bss_rsn,
-				 bss_rsn ? 2 + bss_rsn[1] : 0))
-		return -1;
-
-	return 0;
-}
-
-
 /* Return < 0 if no scan results could be fetched. */
 static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data)
@@ -1396,6 +1372,30 @@ static struct wpa_bss * wpa_supplicant_get_new_bss(
 		bss = wpa_bss_get_bssid(wpa_s, bssid);
 
 	return bss;
+}
+
+
+static int wpa_supplicant_assoc_update_ie(struct wpa_supplicant *wpa_s)
+{
+	const u8 *bss_wpa = NULL, *bss_rsn = NULL;
+
+	if (!wpa_s->current_bss || !wpa_s->current_ssid)
+		return -1;
+
+	if (!wpa_key_mgmt_wpa_any(wpa_s->current_ssid->key_mgmt))
+		return 0;
+
+	bss_wpa = wpa_bss_get_vendor_ie(wpa_s->current_bss,
+					WPA_IE_VENDOR_TYPE);
+	bss_rsn = wpa_bss_get_ie(wpa_s->current_bss, WLAN_EID_RSN);
+
+	if (wpa_sm_set_ap_wpa_ie(wpa_s->wpa, bss_wpa,
+				 bss_wpa ? 2 + bss_wpa[1] : 0) ||
+	    wpa_sm_set_ap_rsn_ie(wpa_s->wpa, bss_rsn,
+				 bss_rsn ? 2 + bss_rsn[1] : 0))
+		return -1;
+
+	return 0;
 }
 
 

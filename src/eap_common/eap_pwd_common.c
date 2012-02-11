@@ -2,14 +2,8 @@
  * EAP server/peer: EAP-pwd shared routines
  * Copyright (c) 2010, Dan Harkins <dharkins@lounge.org>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the BSD license.
- *
- * Alternatively, this software may be distributed under the terms of the
- * GNU General Public License version 2 as published by the Free Software
- * Foundation.
- *
- * See README and COPYING for more details.
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
  */
 
 #include "includes.h"

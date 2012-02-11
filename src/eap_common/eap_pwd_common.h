@@ -37,16 +37,17 @@ typedef struct group_definition_ {
  * EAP-pwd header, included on all payloads
  * L(1 bit) | M(1 bit) | exch(6 bits) | total_length(if L is set)
  */
+#define EAP_PWD_HDR_SIZE                1
 
 #define EAP_PWD_OPCODE_ID_EXCH          1
 #define EAP_PWD_OPCODE_COMMIT_EXCH      2
 #define EAP_PWD_OPCODE_CONFIRM_EXCH     3
-#define EAP_PWD_GET_LENGTH_BIT(x)       ((x)->lm_exch & 0x80)
-#define EAP_PWD_SET_LENGTH_BIT(x)       ((x)->lm_exch |= 0x80)
-#define EAP_PWD_GET_MORE_BIT(x)         ((x)->lm_exch & 0x40)
-#define EAP_PWD_SET_MORE_BIT(x)         ((x)->lm_exch |= 0x40)
-#define EAP_PWD_GET_EXCHANGE(x)         ((x)->lm_exch & 0x3f)
-#define EAP_PWD_SET_EXCHANGE(x,y)       ((x)->lm_exch |= (y))
+#define EAP_PWD_GET_LENGTH_BIT(x)       ((x) & 0x80)
+#define EAP_PWD_SET_LENGTH_BIT(x)       ((x) |= 0x80)
+#define EAP_PWD_GET_MORE_BIT(x)         ((x) & 0x40)
+#define EAP_PWD_SET_MORE_BIT(x)         ((x) |= 0x40)
+#define EAP_PWD_GET_EXCHANGE(x)         ((x) & 0x3f)
+#define EAP_PWD_SET_EXCHANGE(x,y)       ((x) |= (y))
 
 /* EAP-pwd-ID payload */
 struct eap_pwd_id {

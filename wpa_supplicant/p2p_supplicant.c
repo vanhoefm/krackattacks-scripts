@@ -2222,7 +2222,8 @@ static int wpas_go_connected(void *ctx, const u8 *dev_addr)
 			continue;
 		if (ssid->mode != WPAS_MODE_INFRA)
 			continue;
-		if (wpa_s->wpa_state != WPA_COMPLETED)
+		if (wpa_s->wpa_state != WPA_COMPLETED &&
+		    wpa_s->wpa_state != WPA_GROUP_HANDSHAKE)
 			continue;
 		if (os_memcmp(wpa_s->go_dev_addr, dev_addr, ETH_ALEN) == 0)
 			return 1;

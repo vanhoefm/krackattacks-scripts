@@ -37,28 +37,11 @@ static const char *wpa_cli_version =
 
 
 static const char *wpa_cli_license =
-"This program is free software. You can distribute it and/or modify it\n"
-"under the terms of the GNU General Public License version 2.\n"
-"\n"
-"Alternatively, this software may be distributed under the terms of the\n"
-"BSD license. See README and COPYING for more details.\n";
+"This software may be distributed under the terms of the BSD license.\n"
+"See README for more details.\n";
 
 static const char *wpa_cli_full_license =
-"This program is free software; you can redistribute it and/or modify\n"
-"it under the terms of the GNU General Public License version 2 as\n"
-"published by the Free Software Foundation.\n"
-"\n"
-"This program is distributed in the hope that it will be useful,\n"
-"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-"GNU General Public License for more details.\n"
-"\n"
-"You should have received a copy of the GNU General Public License\n"
-"along with this program; if not, write to the Free Software\n"
-"Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA\n"
-"\n"
-"Alternatively, this software may be distributed under the terms of the\n"
-"BSD license.\n"
+"This software may be distributed under the terms of the BSD license.\n"
 "\n"
 "Redistribution and use in source and binary forms, with or without\n"
 "modification, are permitted provided that the following conditions are\n"

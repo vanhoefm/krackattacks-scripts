@@ -69,7 +69,7 @@ static void usage(void)
 #endif /* CONFIG_DEBUG_SYSLOG */
 	printf("  -t = include timestamp in debug messages\n"
 	       "  -h = show this help text\n"
-	       "  -L = show license (GPL and BSD)\n"
+	       "  -L = show license (BSD)\n"
 	       "  -o = override driver parameter for new interfaces\n"
 	       "  -O = override ctrl_interface parameter for new interfaces\n"
 	       "  -p = driver parameters\n"

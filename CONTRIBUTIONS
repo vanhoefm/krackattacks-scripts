@@ -13,17 +13,25 @@ The items (a) through (d) are identical to the Developer's Certificate
 of Origin 1.1. To enable cleaner licensing option to be provided in the
 future, an additional item (e) is included.
 
-In case of most files in hostap.git, "under the open source license
-indicated in the file" means that the contribution is licensed both
-under GPL v2 and modified BSD license (see below) and the choice between
-these licenses is given to anyone who redistributes or uses the
-software. As such, the contribution has to be licensed under both
-options to allow this choice.
+Until February 11, 2012, in case of most files in hostap.git, "under the
+open source license indicated in the file" means that the contribution
+is licensed both under GPL v2 and modified BSD license (see below) and
+the choice between these licenses is given to anyone who redistributes
+or uses the software. As such, the contribution has to be licensed under
+both options to allow this choice.
+
+As of February 11, 2012, the project has chosen to use only the BSD
+license option for future distribution. As such, the GPL v2 license
+option is no longer used and the contributions are not required to be
+licensed until GPL v2. In case of most files in hostap.git, "under the
+open source license indicated in the file" means that the contribution
+is licensed under the modified BSD license (see below).
+
 
 The additional item (e) is used to collect explicit approval to license
 the contribution with only the modified BSD license (see below), i.e.,
-without the GPL v2 option. This is done to allow simpler licensing terms
-to be used in the future. It should be noted that the modified BSD
+without the GPL v2 option. This was done to allow simpler licensing
+terms to be used in the future. It should be noted that the modified BSD
 license is compatible with GNU GPL and as such, this possible move to
 simpler licensing option does not prevent use of this software in
 GPL projects.
@@ -72,7 +80,7 @@ unfortunately be accepted.
 
 Modified BSD license (no advertisement clause):
 
-Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi> and contributors
+Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi> and contributors
 All Rights Reserved.
 
 Redistribution and use in source and binary forms, with or without

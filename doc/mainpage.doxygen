@@ -8,10 +8,10 @@ modified, how new drivers can be supported, and how the source code
 can be ported to other operating systems. If any information is
 missing, feel free to contact Jouni Malinen <j@w1.fi> for more
 information. Contributions as patch files are also very welcome at the
-same address. Please note that this software is licensed under dual
-license, GPLv2 or BSD at user's choice. All contributions to
-%wpa_supplicant and hostapd are expected to use compatible licensing
-terms.
+same address. Please note that this software is licensed under the
+BSD license (the one with advertisement clause removed). All
+contributions to %wpa_supplicant and hostapd are expected to use
+compatible licensing terms.
 
 The source code and read-only access to the combined %wpa_supplicant
 and hostapd Git repository is available from the project home page at

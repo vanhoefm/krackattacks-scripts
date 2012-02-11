@@ -57,11 +57,8 @@ const char *wpa_supplicant_version =
 "Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi> and contributors";
 
 const char *wpa_supplicant_license =
-"This program is free software. You can distribute it and/or modify it\n"
-"under the terms of the GNU General Public License version 2.\n"
-"\n"
-"Alternatively, this software may be distributed under the terms of the\n"
-"BSD license. See README and COPYING for more details.\n"
+"This software may be distributed under the terms of the BSD license.\n"
+"See README for more details.\n"
 #ifdef EAP_TLS_OPENSSL
 "\nThis product includes software developed by the OpenSSL Project\n"
 "for use in the OpenSSL Toolkit (http://www.openssl.org/)\n"
@@ -71,22 +68,9 @@ const char *wpa_supplicant_license =
 #ifndef CONFIG_NO_STDOUT_DEBUG
 /* Long text divided into parts in order to fit in C89 strings size limits. */
 const char *wpa_supplicant_full_license1 =
-"This program is free software; you can redistribute it and/or modify\n"
-"it under the terms of the GNU General Public License version 2 as\n"
-"published by the Free Software Foundation.\n"
-"\n"
-"This program is distributed in the hope that it will be useful,\n"
-"but WITHOUT ANY WARRANTY; without even the implied warranty of\n"
-"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n"
-"GNU General Public License for more details.\n"
-"\n";
+"";
 const char *wpa_supplicant_full_license2 =
-"You should have received a copy of the GNU General Public License\n"
-"along with this program; if not, write to the Free Software\n"
-"Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA\n"
-"\n"
-"Alternatively, this software may be distributed under the terms of the\n"
-"BSD license.\n"
+"This software may be distributed under the terms of the BSD license.\n"
 "\n"
 "Redistribution and use in source and binary forms, with or without\n"
 "modification, are permitted provided that the following conditions are\n"

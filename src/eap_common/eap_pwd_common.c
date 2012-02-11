@@ -277,7 +277,7 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 
 int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 		 BIGNUM *peer_scalar, BIGNUM *server_scalar,
-		 u8 *commit_peer, u8 *commit_server,
+		 u8 *confirm_peer, u8 *confirm_server,
 		 u32 *ciphersuite, u8 *msk, u8 *emsk)
 {
 	HMAC_CTX ctx;
@@ -306,14 +306,14 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
 	H_Final(&ctx, &session_id[1]);
 
-	/* then compute MK = H(k | commit-peer | commit-server) */
+	/* then compute MK = H(k | confirm-peer | confirm-server) */
 	H_Init(&ctx);
 	offset = BN_num_bytes(grp->prime) - BN_num_bytes(k);
 	os_memset(cruft, 0, BN_num_bytes(grp->prime));
 	BN_bn2bin(k, cruft + offset);
 	H_Update(&ctx, cruft, BN_num_bytes(grp->prime));
-	H_Update(&ctx, commit_peer, SHA256_DIGEST_LENGTH);
-	H_Update(&ctx, commit_server, SHA256_DIGEST_LENGTH);
+	H_Update(&ctx, confirm_peer, SHA256_DIGEST_LENGTH);
+	H_Update(&ctx, confirm_server, SHA256_DIGEST_LENGTH);
 	H_Final(&ctx, mk);
 
 	/* stretch the mk with the session-id to get MSK | EMSK */

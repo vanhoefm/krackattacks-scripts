@@ -2,14 +2,8 @@
  * EAP peer state machines (RFC 4137)
  * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * Alternatively, this software may be distributed under the terms of BSD
- * license.
- *
- * See README and COPYING for more details.
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
  *
  * This file implements the Peer State Machine as defined in RFC 4137. The used
  * states and state transitions match mostly with the RFC. However, there are

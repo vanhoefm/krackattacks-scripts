@@ -2,14 +2,8 @@
  * WPA Supplicant / PC/SC smartcard interface for USIM, GSM SIM
  * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * Alternatively, this software may be distributed under the terms of BSD
- * license.
- *
- * See README and COPYING for more details.
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
  *
  * This file implements wrapper functions for accessing GSM SIM and 3GPP USIM
  * cards through PC/SC smartcard library. These functions are used to implement

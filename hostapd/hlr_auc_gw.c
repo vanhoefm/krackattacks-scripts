@@ -2,14 +2,8 @@
  * HLR/AuC testing gateway for hostapd EAP-SIM/AKA database/authenticator
  * Copyright (c) 2005-2007, Jouni Malinen <j@w1.fi>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- *
- * Alternatively, this software may be distributed under the terms of BSD
- * license.
- *
- * See README and COPYING for more details.
+ * This software may be distributed under the terms of the BSD license.
+ * See README for more details.
  *
  * This is an example implementation of the EAP-SIM/AKA database/authentication
  * gateway interface to HLR/AuC. It is expected to be replaced with an

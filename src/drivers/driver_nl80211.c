@@ -6421,6 +6421,14 @@ retry:
 		NLA_PUT(msg, NL80211_ATTR_MAC, ETH_ALEN, params->bssid);
 	}
 
+	if (params->key_mgmt_suite == KEY_MGMT_802_1X ||
+	    params->key_mgmt_suite == KEY_MGMT_PSK ||
+	    params->key_mgmt_suite == KEY_MGMT_802_1X_SHA256 ||
+	    params->key_mgmt_suite == KEY_MGMT_PSK_SHA256) {
+		wpa_printf(MSG_DEBUG, "  * control port");
+		NLA_PUT_FLAG(msg, NL80211_ATTR_CONTROL_PORT);
+	}
+
 	if (params->wpa_ie) {
 		wpa_hexdump(MSG_DEBUG,
 			    "  * Extra IEs for Beacon/Probe Response frames",

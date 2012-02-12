@@ -314,6 +314,53 @@ static int auth_for_each_sta(void *ctx, int (*cb)(struct wpa_state_machine *sm,
 }
 
 
+static void ibss_set_sta_authorized(struct ibss_rsn *ibss_rsn,
+				    struct ibss_rsn_peer *peer, int authorized)
+{
+	int res;
+
+	if (authorized) {
+		res = wpa_drv_sta_set_flags(ibss_rsn->wpa_s, peer->addr,
+					    WPA_STA_AUTHORIZED,
+					    WPA_STA_AUTHORIZED, ~0);
+		wpa_printf(MSG_DEBUG, "AUTH: " MACSTR " authorizing port",
+			   MAC2STR(peer->addr));
+	} else {
+		res = wpa_drv_sta_set_flags(ibss_rsn->wpa_s, peer->addr,
+					    0, 0, ~WPA_STA_AUTHORIZED);
+		wpa_printf(MSG_DEBUG, "AUTH: " MACSTR " unauthorizing port",
+			   MAC2STR(peer->addr));
+	}
+
+	if (res && errno != ENOENT) {
+		wpa_printf(MSG_DEBUG, "Could not set station " MACSTR " flags "
+			   "for kernel driver (errno=%d)",
+			   MAC2STR(peer->addr), errno);
+	}
+}
+
+
+static void auth_set_eapol(void *ctx, const u8 *addr,
+				       wpa_eapol_variable var, int value)
+{
+	struct ibss_rsn *ibss_rsn = ctx;
+	struct ibss_rsn_peer *peer = ibss_rsn_get_peer(ibss_rsn, addr);
+
+	if (peer == NULL)
+		return;
+
+	switch (var) {
+	case WPA_EAPOL_authorized:
+		ibss_set_sta_authorized(ibss_rsn, peer, value);
+		break;
+	default:
+		/* do not handle any other event */
+		wpa_printf(MSG_DEBUG, "AUTH: eapol event not handled %d", var);
+		break;
+	}
+}
+
+
 static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 				    const u8 *own_addr)
 {
@@ -334,6 +381,7 @@ static int ibss_rsn_auth_init_group(struct ibss_rsn *ibss_rsn,
 	os_memset(&cb, 0, sizeof(cb));
 	cb.ctx = ibss_rsn;
 	cb.logger = auth_logger;
+	cb.set_eapol = auth_set_eapol;
 	cb.send_eapol = auth_send_eapol;
 	cb.get_psk = auth_get_psk;
 	cb.set_key = auth_set_key;

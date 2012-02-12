@@ -306,6 +306,9 @@ CONFIG_BACKEND=file
 # eloop_none = Empty template
 #CONFIG_ELOOP=eloop
 
+# Should we use poll instead of select? Select is used by default.
+#CONFIG_ELOOP_POLL=y
+
 # Select layer 2 packet implementation
 # linux = Linux packet socket (default)
 # pcap = libpcap/libdnet/WinPcap

@@ -140,9 +140,39 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
                                      void *eloop_data, void *user_data)
 {
 	struct eloop_sock *tmp;
+	int new_max_sock;
+
+	if (sock > eloop.max_sock)
+		new_max_sock = sock;
+	else
+		new_max_sock = eloop.max_sock;
 
 	if (table == NULL)
 		return -1;
+
+#ifdef CONFIG_ELOOP_POLL
+	if (new_max_sock >= eloop.max_pollfd_map) {
+		struct pollfd **nmap;
+		nmap = os_realloc(eloop.pollfds_map, sizeof(struct pollfd *) *
+				  (new_max_sock + 50));
+		if (nmap == NULL)
+			return -1;
+
+		eloop.max_pollfd_map = new_max_sock + 50;
+		eloop.pollfds_map = nmap;
+	}
+
+	if (eloop.count + 1 > eloop.max_poll_fds) {
+		struct pollfd *n;
+		int nmax = eloop.count + 1 + 50;
+		n = os_realloc(eloop.pollfds, sizeof(struct pollfd) * nmax);
+		if (n == NULL)
+			return -1;
+
+		eloop.max_poll_fds = nmax;
+		eloop.pollfds = n;
+	}
+#endif /* CONFIG_ELOOP_POLL */
 
 	eloop_trace_sock_remove_ref(table);
 	tmp = (struct eloop_sock *)
@@ -158,28 +188,8 @@ static int eloop_sock_table_add_sock(struct eloop_sock_table *table,
 	wpa_trace_record(&tmp[table->count]);
 	table->count++;
 	table->table = tmp;
-	if (sock > eloop.max_sock)
-		eloop.max_sock = sock;
+	eloop.max_sock = new_max_sock;
 	eloop.count++;
-#ifdef CONFIG_ELOOP_POLL
-	if (eloop.max_sock >= eloop.max_pollfd_map) {
-		os_free(eloop.pollfds_map);
-		eloop.max_pollfd_map = eloop.max_sock + 50;
-		eloop.pollfds_map = os_zalloc(sizeof(struct pollfd *) *
-					      eloop.max_pollfd_map);
-		if (!eloop.pollfds_map)
-			eloop.max_pollfd_map = 0;
-	}
-
-	if (eloop.count > eloop.max_poll_fds) {
-		os_free(eloop.pollfds);
-		eloop.max_poll_fds = eloop.count + 50;
-		eloop.pollfds = os_zalloc(sizeof(struct pollfd) *
-					  eloop.max_poll_fds);
-		if (!eloop.pollfds)
-			eloop.max_poll_fds = 0;
-	}
-#endif /* CONFIG_ELOOP_POLL */
 	table->changed = 1;
 	eloop_trace_sock_add_ref(table);
 

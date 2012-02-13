@@ -19,9 +19,10 @@
 static void upnp_er_set_selected_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct subscription *s = eloop_ctx;
+	struct wps_registrar *reg = timeout_ctx;
 	wpa_printf(MSG_DEBUG, "WPS: SetSelectedRegistrar from ER timed out");
 	s->selected_registrar = 0;
-	wps_registrar_selected_registrar_changed(s->reg);
+	wps_registrar_selected_registrar_changed(reg);
 }
 
 
@@ -40,7 +41,7 @@ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
 		return -1;
 
 	s->reg = reg;
-	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, NULL);
+	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, reg);
 
 	os_memset(s->authorized_macs, 0, sizeof(s->authorized_macs));
 	if (attr.selected_registrar == NULL || *attr.selected_registrar == 0) {
@@ -67,7 +68,7 @@ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
 #endif /* CONFIG_WPS2 */
 		}
 		eloop_register_timeout(WPS_PBC_WALK_TIME, 0,
-				       upnp_er_set_selected_timeout, s, NULL);
+				       upnp_er_set_selected_timeout, s, reg);
 	}
 
 	wps_registrar_selected_registrar_changed(reg);
@@ -76,10 +77,11 @@ int upnp_er_set_selected_registrar(struct wps_registrar *reg,
 }
 
 
-void upnp_er_remove_notification(struct subscription *s)
+void upnp_er_remove_notification(struct wps_registrar *reg,
+				 struct subscription *s)
 {
 	s->selected_registrar = 0;
-	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, NULL);
-	if (s->reg)
-		wps_registrar_selected_registrar_changed(s->reg);
+	eloop_cancel_timeout(upnp_er_set_selected_timeout, s, reg);
+	if (reg)
+		wps_registrar_selected_registrar_changed(reg);
 }

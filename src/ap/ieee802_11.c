@@ -1738,7 +1738,7 @@ void hostapd_tx_status(struct hostapd_data *hapd, const u8 *addr,
 				break;
 		}
 	}
-	if (sta == NULL)
+	if (sta == NULL || !(sta->flags & WLAN_STA_ASSOC))
 		return;
 	if (sta->flags & WLAN_STA_PENDING_POLL) {
 		wpa_printf(MSG_DEBUG, "STA " MACSTR " %s pending "

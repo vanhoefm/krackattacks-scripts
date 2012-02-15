@@ -752,6 +752,20 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			wildcard = 1;
 		} else if (!ssid->disabled && ssid->ssid_len)
 			need_ssids++;
+
+#ifdef CONFIG_WPS
+		if (!ssid->disabled && ssid->key_mgmt == WPA_KEY_MGMT_WPS) {
+			/*
+			 * Normal scan is more reliable and faster for WPS
+			 * operations and since these are for short periods of
+			 * time, the benefit of trying to use sched_scan would
+			 * be limited.
+			 */
+			wpa_dbg(wpa_s, MSG_DEBUG, "Use normal scan instead of "
+				"sched_scan for WPS");
+			return -1;
+		}
+#endif /* CONFIG_WPS */
 	}
 	if (wildcard)
 		need_ssids++;

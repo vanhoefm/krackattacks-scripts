@@ -227,21 +227,9 @@ static int hostapd_broadcast_wep_set(struct hostapd_data *hapd)
 	return errors;
 }
 
-/**
- * hostapd_cleanup - Per-BSS cleanup (deinitialization)
- * @hapd: Pointer to BSS data
- *
- * This function is used to free all per-BSS data structures and resources.
- * This gets called in a loop for each BSS between calls to
- * hostapd_cleanup_iface_pre() and hostapd_cleanup_iface() when an interface
- * is deinitialized. Most of the modules that are initialized in
- * hostapd_setup_bss() are deinitialized here.
- */
-static void hostapd_cleanup(struct hostapd_data *hapd)
-{
-	if (hapd->iface->ctrl_iface_deinit)
-		hapd->iface->ctrl_iface_deinit(hapd);
 
+static void hostapd_free_hapd_data(struct hostapd_data *hapd)
+{
 	iapp_deinit(hapd->iapp);
 	hapd->iapp = NULL;
 	accounting_deinit(hapd);
@@ -274,6 +262,24 @@ static void hostapd_cleanup(struct hostapd_data *hapd)
 #endif /* CONFIG_P2P */
 
 	wpabuf_free(hapd->time_adv);
+}
+
+
+/**
+ * hostapd_cleanup - Per-BSS cleanup (deinitialization)
+ * @hapd: Pointer to BSS data
+ *
+ * This function is used to free all per-BSS data structures and resources.
+ * This gets called in a loop for each BSS between calls to
+ * hostapd_cleanup_iface_pre() and hostapd_cleanup_iface() when an interface
+ * is deinitialized. Most of the modules that are initialized in
+ * hostapd_setup_bss() are deinitialized here.
+ */
+static void hostapd_cleanup(struct hostapd_data *hapd)
+{
+	if (hapd->iface->ctrl_iface_deinit)
+		hapd->iface->ctrl_iface_deinit(hapd);
+	hostapd_free_hapd_data(hapd);
 }
 
 

@@ -2276,3 +2276,28 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 
 	return conf;
 }
+
+
+int hostapd_set_iface(struct hostapd_config *conf,
+		      struct hostapd_bss_config *bss, char *field, char *value)
+{
+	int errors = 0;
+	size_t i;
+
+	errors = hostapd_config_fill(conf, bss, field, value, 0);
+	if (errors) {
+		wpa_printf(MSG_INFO, "Failed to set configuration field '%s' "
+			   "to value '%s'", field, value);
+		return -1;
+	}
+
+	for (i = 0; i < conf->num_bss; i++)
+		hostapd_set_security_params(&conf->bss[i]);
+
+	if (hostapd_config_check(conf)) {
+		wpa_printf(MSG_ERROR, "Configuration check failed");
+		errors++;
+	}
+
+	return 0;
+}

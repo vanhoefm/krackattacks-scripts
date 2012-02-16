@@ -31,6 +31,7 @@
 #include "ap/ap_drv_ops.h"
 #include "wps/wps_defs.h"
 #include "wps/wps.h"
+#include "config_file.h"
 #include "ctrl_iface.h"
 
 
@@ -774,7 +775,7 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 			   wps_testing_dummy_cred);
 #endif /* CONFIG_WPS_TESTING */
 	} else {
-		ret = -1;
+		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
 	}
 
 	return ret;

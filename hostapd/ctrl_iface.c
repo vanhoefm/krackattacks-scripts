@@ -989,7 +989,10 @@ int hostapd_ctrl_iface_init(struct hostapd_data *hapd)
 	int s = -1;
 	char *fname = NULL;
 
-	hapd->ctrl_sock = -1;
+	if (hapd->ctrl_sock > -1) {
+		wpa_printf(MSG_DEBUG, "ctrl_iface already exists!");
+		return 0;
+	}
 
 	if (hapd->conf->ctrl_interface == NULL)
 		return 0;

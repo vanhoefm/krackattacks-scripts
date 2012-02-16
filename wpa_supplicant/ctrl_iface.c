@@ -203,6 +203,42 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			ret = -1;
 		else if (disabled)
 			wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
+	} else if (os_strcasecmp(cmd, "uapsd") == 0) {
+		if (os_strcmp(value, "disable") == 0)
+			wpa_s->set_sta_uapsd = 0;
+		else {
+			int be, bk, vi, vo;
+			char *pos;
+			/* format: BE,BK,VI,VO;max SP Length */
+			be = atoi(value);
+			pos = os_strchr(value, ',');
+			if (pos == NULL)
+				return -1;
+			pos++;
+			bk = atoi(pos);
+			pos = os_strchr(pos, ',');
+			if (pos == NULL)
+				return -1;
+			pos++;
+			vi = atoi(pos);
+			pos = os_strchr(pos, ',');
+			if (pos == NULL)
+				return -1;
+			pos++;
+			vo = atoi(pos);
+			/* ignore max SP Length for now */
+
+			wpa_s->set_sta_uapsd = 1;
+			wpa_s->sta_uapsd = 0;
+			if (be)
+				wpa_s->sta_uapsd |= BIT(0);
+			if (bk)
+				wpa_s->sta_uapsd |= BIT(1);
+			if (vi)
+				wpa_s->sta_uapsd |= BIT(2);
+			if (vo)
+				wpa_s->sta_uapsd |= BIT(3);
+		}
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

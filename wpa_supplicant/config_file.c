@@ -655,6 +655,25 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 }
 
 
+static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
+{
+	if (cred->realm)
+		fprintf(f, "\trealm=\"%s\"\n", cred->realm);
+	if (cred->username)
+		fprintf(f, "\tusername=\"%s\"\n", cred->username);
+	if (cred->password)
+		fprintf(f, "\tpassword=\"%s\"\n", cred->password);
+	if (cred->ca_cert)
+		fprintf(f, "\tca_cert=\"%s\"\n", cred->ca_cert);
+	if (cred->imsi)
+		fprintf(f, "\timsi=\"%s\"\n", cred->imsi);
+	if (cred->milenage)
+		fprintf(f, "\tmilenage=\"%s\"\n", cred->milenage);
+	if (cred->domain)
+		fprintf(f, "\tdomain=\"%s\"\n", cred->domain);
+}
+
+
 #ifndef CONFIG_NO_CONFIG_BLOBS
 static int wpa_config_write_blob(FILE *f, struct wpa_config_blob *blob)
 {
@@ -802,6 +821,7 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 #ifndef CONFIG_NO_CONFIG_WRITE
 	FILE *f;
 	struct wpa_ssid *ssid;
+	struct wpa_cred *cred;
 #ifndef CONFIG_NO_CONFIG_BLOBS
 	struct wpa_config_blob *blob;
 #endif /* CONFIG_NO_CONFIG_BLOBS */
@@ -816,6 +836,12 @@ int wpa_config_write(const char *name, struct wpa_config *config)
 	}
 
 	wpa_config_write_global(f, config);
+
+	for (cred = config->cred; cred; cred = cred->next) {
+		fprintf(f, "\ncred={\n");
+		wpa_config_write_cred(f, cred);
+		fprintf(f, "}\n");
+	}
 
 	for (ssid = config->ssid; ssid; ssid = ssid->next) {
 		if (ssid->key_mgmt == WPA_KEY_MGMT_WPS || ssid->temporary)

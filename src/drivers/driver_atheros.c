@@ -784,6 +784,14 @@ static int atheros_receive_probe_req(struct atheros_driver_data *drv)
 	return ret;
 }
 
+static int atheros_reset_appfilter(struct atheros_driver_data *drv)
+{
+	struct ieee80211req_set_filter filt;
+	filt.app_filterype = 0;
+	return set80211priv(drv, IEEE80211_IOCTL_FILTERFRAME, &filt,
+			    sizeof(struct ieee80211req_set_filter));
+}
+
 #ifdef CONFIG_WPS
 static int
 atheros_set_wps_ie(void *priv, const u8 *ie, size_t len, u32 frametype)
@@ -1302,6 +1310,7 @@ atheros_deinit(void *priv)
 {
 	struct atheros_driver_data *drv = priv;
 
+	atheros_reset_appfilter(drv);
 	netlink_deinit(drv->netlink);
 	(void) linux_set_iface_flags(drv->ioctl_sock, drv->iface, 0);
 	if (drv->ioctl_sock >= 0)

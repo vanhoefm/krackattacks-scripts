@@ -608,7 +608,9 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	    < 0)
 		goto fail;
 
-	wpa_supplicant_select_network(wpa_s, ssid);
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
 
 	return 0;
 
@@ -746,7 +748,9 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 
 	nai_realm_free(realm, count);
 
-	wpa_supplicant_select_network(wpa_s, ssid);
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
 
 	return 0;
 

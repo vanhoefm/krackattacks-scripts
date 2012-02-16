@@ -197,6 +197,12 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 			ret = pno_start(wpa_s);
 		else
 			ret = pno_stop(wpa_s);
+	} else if (os_strcasecmp(cmd, "radio_disabled") == 0) {
+		int disabled = atoi(value);
+		if (wpa_drv_radio_disable(wpa_s, disabled) < 0)
+			ret = -1;
+		else if (disabled)
+			wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

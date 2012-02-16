@@ -657,4 +657,12 @@ static inline void wpa_drv_set_rekey_info(struct wpa_supplicant *wpa_s,
 	wpa_s->driver->set_rekey_info(wpa_s->drv_priv, kek, kck, replay_ctr);
 }
 
+static inline int wpa_drv_radio_disable(struct wpa_supplicant *wpa_s,
+					int disabled)
+{
+	if (!wpa_s->driver->radio_disable)
+		return -1;
+	return wpa_s->driver->radio_disable(wpa_s->drv_priv, disabled);
+}
+
 #endif /* DRIVER_I_H */

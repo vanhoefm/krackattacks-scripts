@@ -2497,6 +2497,18 @@ struct wpa_driver_ops {
 	 */
 	void (*poll_client)(void *priv, const u8 *own_addr,
 			    const u8 *addr, int qos);
+
+	/**
+	 * radio_disable - Disable/enable radio
+	 * @priv: Private driver interface data
+	 * @disabled: 1=disable 0=enable radio
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This optional command is for testing purposes. It can be used to
+	 * disable the radio on a testbed device to simulate out-of-radio-range
+	 * conditions.
+	 */
+	int (*radio_disable)(void *priv, int disabled);
 };
 
 

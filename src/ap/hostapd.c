@@ -326,6 +326,15 @@ static void hostapd_cleanup_iface(struct hostapd_iface *iface)
 }
 
 
+static void hostapd_clear_wep(struct hostapd_data *hapd)
+{
+	if (hapd->drv_priv) {
+		hostapd_set_privacy(hapd, 0);
+		hostapd_broadcast_wep_clear(hapd);
+	}
+}
+
+
 static int hostapd_setup_encryption(char *iface, struct hostapd_data *hapd)
 {
 	int i;
@@ -904,6 +913,7 @@ void hostapd_interface_deinit(struct hostapd_iface *iface)
 		struct hostapd_data *hapd = iface->bss[j];
 		hostapd_free_stas(hapd);
 		hostapd_flush_old_stations(hapd);
+		hostapd_clear_wep(hapd);
 		hostapd_cleanup(hapd);
 	}
 }

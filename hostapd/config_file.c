@@ -1178,73 +1178,13 @@ static int parse_roaming_consortium(struct hostapd_bss_config *bss, char *pos,
 #endif /* CONFIG_INTERWORKING */
 
 
-/**
- * hostapd_config_read - Read and parse a configuration file
- * @fname: Configuration file name (including path, if needed)
- * Returns: Allocated configuration data structure
- */
-struct hostapd_config * hostapd_config_read(const char *fname)
+static int hostapd_config_fill(struct hostapd_config *conf,
+			       struct hostapd_bss_config *bss,
+			       char *buf, char *pos, int line)
 {
-	struct hostapd_config *conf;
-	struct hostapd_bss_config *bss;
-	FILE *f;
-	char buf[256], *pos;
-	int line = 0;
 	int errors = 0;
-	int pairwise;
-	size_t i;
 
-	f = fopen(fname, "r");
-	if (f == NULL) {
-		wpa_printf(MSG_ERROR, "Could not open configuration file '%s' "
-			   "for reading.", fname);
-		return NULL;
-	}
-
-	conf = hostapd_config_defaults();
-	if (conf == NULL) {
-		fclose(f);
-		return NULL;
-	}
-
-	/* set default driver based on configuration */
-	conf->driver = wpa_drivers[0];
-	if (conf->driver == NULL) {
-		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
-		hostapd_config_free(conf);
-		fclose(f);
-		return NULL;
-	}
-
-	bss = conf->last_bss = conf->bss;
-
-	while (fgets(buf, sizeof(buf), f)) {
-		bss = conf->last_bss;
-		line++;
-
-		if (buf[0] == '#')
-			continue;
-		pos = buf;
-		while (*pos != '\0') {
-			if (*pos == '\n') {
-				*pos = '\0';
-				break;
-			}
-			pos++;
-		}
-		if (buf[0] == '\0')
-			continue;
-
-		pos = os_strchr(buf, '=');
-		if (pos == NULL) {
-			wpa_printf(MSG_ERROR, "Line %d: invalid line '%s'",
-				   line, buf);
-			errors++;
-			continue;
-		}
-		*pos = '\0';
-		pos++;
-
+	{
 		if (os_strcmp(buf, "interface") == 0) {
 			os_strlcpy(conf->bss[0].iface, pos,
 				   sizeof(conf->bss[0].iface));
@@ -1446,7 +1386,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 					   "allocate memory for "
 					   "eap_req_id_text", line);
 				errors++;
-				continue;
+				return errors;
 			}
 			bss->eap_req_id_text_len =
 				os_strlen(bss->eap_req_id_text);
@@ -1694,7 +1634,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				wpa_printf(MSG_DEBUG, "Line %d: Invalid "
 					   "mobility_domain '%s'", line, pos);
 				errors++;
-				continue;
+				return errors;
 			}
 		} else if (os_strcmp(buf, "r1_key_holder") == 0) {
 			if (os_strlen(pos) != 2 * FT_R1KH_ID_LEN ||
@@ -1703,7 +1643,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				wpa_printf(MSG_DEBUG, "Line %d: Invalid "
 					   "r1_key_holder '%s'", line, pos);
 				errors++;
-				continue;
+				return errors;
 			}
 		} else if (os_strcmp(buf, "r0_key_lifetime") == 0) {
 			bss->r0_key_lifetime = atoi(pos);
@@ -1714,14 +1654,14 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				wpa_printf(MSG_DEBUG, "Line %d: Invalid "
 					   "r0kh '%s'", line, pos);
 				errors++;
-				continue;
+				return errors;
 			}
 		} else if (os_strcmp(buf, "r1kh") == 0) {
 			if (add_r1kh(bss, pos) < 0) {
 				wpa_printf(MSG_DEBUG, "Line %d: Invalid "
 					   "r1kh '%s'", line, pos);
 				errors++;
-				continue;
+				return errors;
 			}
 		} else if (os_strcmp(buf, "pmk_r1_push") == 0) {
 			bss->pmk_r1_push = atoi(pos);
@@ -1745,7 +1685,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d"
 					   " (from group name '%s')",
 					   bss->ctrl_interface_gid, group);
-				continue;
+				return errors;
 			}
 
 			/* Group name not found - try to parse this as gid */
@@ -1754,7 +1694,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				wpa_printf(MSG_DEBUG, "Line %d: Invalid group "
 					   "'%s'", line, group);
 				errors++;
-				continue;
+				return errors;
 			}
 			bss->ctrl_interface_gid_set = 1;
 			wpa_printf(MSG_DEBUG, "ctrl_interface_group=%d",
@@ -2133,7 +2073,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				wpa_printf(MSG_DEBUG, "Line %d: invalid "
 					   "time_zone", line);
 				errors++;
-				continue;
+				return errors;
 			}
 			os_free(bss->time_zone);
 			bss->time_zone = os_strdup(pos);
@@ -2184,6 +2124,79 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 				   "item '%s'", line, buf);
 			errors++;
 		}
+	}
+
+	return errors;
+}
+
+
+/**
+ * hostapd_config_read - Read and parse a configuration file
+ * @fname: Configuration file name (including path, if needed)
+ * Returns: Allocated configuration data structure
+ */
+struct hostapd_config * hostapd_config_read(const char *fname)
+{
+	struct hostapd_config *conf;
+	struct hostapd_bss_config *bss;
+	FILE *f;
+	char buf[256], *pos;
+	int line = 0;
+	int errors = 0;
+	int pairwise;
+	size_t i;
+
+	f = fopen(fname, "r");
+	if (f == NULL) {
+		wpa_printf(MSG_ERROR, "Could not open configuration file '%s' "
+			   "for reading.", fname);
+		return NULL;
+	}
+
+	conf = hostapd_config_defaults();
+	if (conf == NULL) {
+		fclose(f);
+		return NULL;
+	}
+
+	/* set default driver based on configuration */
+	conf->driver = wpa_drivers[0];
+	if (conf->driver == NULL) {
+		wpa_printf(MSG_ERROR, "No driver wrappers registered!");
+		hostapd_config_free(conf);
+		fclose(f);
+		return NULL;
+	}
+
+	bss = conf->last_bss = conf->bss;
+
+	while (fgets(buf, sizeof(buf), f)) {
+		bss = conf->last_bss;
+		line++;
+
+		if (buf[0] == '#')
+			continue;
+		pos = buf;
+		while (*pos != '\0') {
+			if (*pos == '\n') {
+				*pos = '\0';
+				break;
+			}
+			pos++;
+		}
+		if (buf[0] == '\0')
+			continue;
+
+		pos = os_strchr(buf, '=');
+		if (pos == NULL) {
+			wpa_printf(MSG_ERROR, "Line %d: invalid line '%s'",
+				   line, buf);
+			errors++;
+			continue;
+		}
+		*pos = '\0';
+		pos++;
+		errors += hostapd_config_fill(conf, bss, buf, pos, line);
 	}
 
 	fclose(f);

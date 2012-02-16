@@ -478,6 +478,14 @@ struct wpa_config {
 	 *	<Ki>:<OPc>:<SQN> format
 	 */
 	char *home_milenage;
+
+	/**
+	 * home_domain - Home service provider FQDN
+	 *
+	 * This is used to compare against the Domain Name List to figure out
+	 * whether the AP is operated by the Home SP.
+	 */
+	char *home_domain;
 };
 
 

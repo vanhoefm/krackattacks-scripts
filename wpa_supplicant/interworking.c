@@ -830,10 +830,41 @@ static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
 }
 
 
+static int interworking_home_sp(struct wpa_supplicant *wpa_s,
+				struct wpabuf *domain_names)
+{
+	const u8 *pos, *end;
+	size_t len;
+
+	if (wpa_s->conf->home_domain == NULL || domain_names == NULL)
+		return -1;
+
+	len = os_strlen(wpa_s->conf->home_domain);
+	pos = wpabuf_head(domain_names);
+	end = pos + wpabuf_len(domain_names);
+
+	while (pos + 1 < end) {
+		if (pos + 1 + pos[0] > end)
+			break;
+
+		if (pos[0] == len &&
+		    os_strncasecmp(wpa_s->conf->home_domain,
+				   (const char *) (pos + 1), len) == 0)
+			return 1;
+
+		pos += 1 + pos[0];
+	}
+
+	return 0;
+}
+
+
 static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
-	struct wpa_bss *bss, *selected = NULL;
+	struct wpa_bss *bss, *selected = NULL, *selected_home = NULL;
 	unsigned int count = 0;
+	const char *type;
+	int res;
 
 	wpa_s->network_select = 0;
 
@@ -841,10 +872,26 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		if (!interworking_credentials_available(wpa_s, bss))
 			continue;
 		count++;
-		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR,
-			MAC2STR(bss->bssid));
-		if (selected == NULL && wpa_s->auto_select)
-			selected = bss;
+		res = interworking_home_sp(wpa_s, bss->anqp_domain_name);
+		if (res > 0)
+			type = "home";
+		else if (res == 0)
+			type = "roaming";
+		else
+			type = "unknown";
+		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR " type=%s",
+			MAC2STR(bss->bssid), type);
+		if (wpa_s->auto_select) {
+			if (selected == NULL)
+				selected = bss;
+			if (selected_home == NULL && res > 0)
+				selected_home = bss;
+		}
+	}
+
+	if (selected_home && selected_home != selected) {
+		/* Prefer network operated by the Home SP */
+		selected = selected_home;
 	}
 
 	if (count == 0) {

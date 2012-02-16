@@ -178,6 +178,61 @@ static struct wpa_ssid * wpa_config_read_network(FILE *f, int *line, int id)
 }
 
 
+static struct wpa_cred * wpa_config_read_cred(FILE *f, int *line, int id)
+{
+	struct wpa_cred *cred;
+	int errors = 0, end = 0;
+	char buf[256], *pos, *pos2;
+
+	wpa_printf(MSG_MSGDUMP, "Line: %d - start of a new cred block", *line);
+	cred = os_zalloc(sizeof(*cred));
+	if (cred == NULL)
+		return NULL;
+	cred->id = id;
+
+	while (wpa_config_get_line(buf, sizeof(buf), f, line, &pos)) {
+		if (os_strcmp(pos, "}") == 0) {
+			end = 1;
+			break;
+		}
+
+		pos2 = os_strchr(pos, '=');
+		if (pos2 == NULL) {
+			wpa_printf(MSG_ERROR, "Line %d: Invalid cred line "
+				   "'%s'.", *line, pos);
+			errors++;
+			continue;
+		}
+
+		*pos2++ = '\0';
+		if (*pos2 == '"') {
+			if (os_strchr(pos2 + 1, '"') == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "quotation '%s'.", *line, pos2);
+				errors++;
+				continue;
+			}
+		}
+
+		if (wpa_config_set_cred(cred, pos, pos2, *line) < 0)
+			errors++;
+	}
+
+	if (!end) {
+		wpa_printf(MSG_ERROR, "Line %d: cred block was not "
+			   "terminated properly.", *line);
+		errors++;
+	}
+
+	if (errors) {
+		wpa_config_free_cred(cred);
+		cred = NULL;
+	}
+
+	return cred;
+}
+
+
 #ifndef CONFIG_NO_CONFIG_BLOBS
 static struct wpa_config_blob * wpa_config_read_blob(FILE *f, int *line,
 						     const char *name)
@@ -267,8 +322,10 @@ struct wpa_config * wpa_config_read(const char *name)
 	char buf[256], *pos;
 	int errors = 0, line = 0;
 	struct wpa_ssid *ssid, *tail = NULL, *head = NULL;
+	struct wpa_cred *cred, *cred_tail = NULL, *cred_head = NULL;
 	struct wpa_config *config;
 	int id = 0;
+	int cred_id = 0;
 
 	config = wpa_config_alloc_empty(NULL, NULL);
 	if (config == NULL)
@@ -302,6 +359,20 @@ struct wpa_config * wpa_config_read(const char *name)
 				errors++;
 				continue;
 			}
+		} else if (os_strcmp(pos, "cred={") == 0) {
+			cred = wpa_config_read_cred(f, &line, cred_id++);
+			if (cred == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: failed to "
+					   "parse cred block.", line);
+				errors++;
+				continue;
+			}
+			if (cred_head == NULL) {
+				cred_head = cred_tail = cred;
+			} else {
+				cred_tail->next = cred;
+				cred_tail = cred;
+			}
 #ifndef CONFIG_NO_CONFIG_BLOBS
 		} else if (os_strncmp(pos, "blob-base64-", 12) == 0) {
 			if (wpa_config_process_blob(config, f, &line, pos + 12)
@@ -322,6 +393,7 @@ struct wpa_config * wpa_config_read(const char *name)
 
 	config->ssid = head;
 	wpa_config_debug_dump_networks(config);
+	config->cred = cred_head;
 
 #ifndef WPA_IGNORE_CONFIG_ERRORS
 	if (errors) {
@@ -712,18 +784,6 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->disassoc_low_ack)
 		fprintf(f, "disassoc_low_ack=%u\n", config->disassoc_low_ack);
 #ifdef CONFIG_INTERWORKING
-	if (config->home_realm)
-		fprintf(f, "home_realm=%s\n", config->home_realm);
-	if (config->home_username)
-		fprintf(f, "home_username=%s\n", config->home_username);
-	if (config->home_password)
-		fprintf(f, "home_password=%s\n", config->home_password);
-	if (config->home_ca_cert)
-		fprintf(f, "home_ca_cert=%s\n", config->home_ca_cert);
-	if (config->home_imsi)
-		fprintf(f, "home_imsi=%s\n", config->home_imsi);
-	if (config->home_milenage)
-		fprintf(f, "home_milenage=%s\n", config->home_milenage);
 	if (config->interworking)
 		fprintf(f, "interworking=%u\n", config->interworking);
 	if (!is_zero_ether_addr(config->hessid))

@@ -416,15 +416,16 @@ static int nai_realm_cred_username(struct nai_realm_eap *eap)
 }
 
 
-static struct nai_realm_eap * nai_realm_find_eap(struct wpa_supplicant *wpa_s,
+static struct nai_realm_eap * nai_realm_find_eap(struct wpa_cred *cred,
 						 struct nai_realm *realm)
 {
 	u8 e;
 
-	if (wpa_s->conf->home_username == NULL ||
-	    wpa_s->conf->home_username[0] == '\0' ||
-	    wpa_s->conf->home_password == NULL ||
-	    wpa_s->conf->home_password[0] == '\0')
+	if (cred == NULL ||
+	    cred->username == NULL ||
+	    cred->username[0] == '\0' ||
+	    cred->password == NULL ||
+	    cred->password[0] == '\0')
 		return NULL;
 
 	for (e = 0; e < realm->eap_count; e++) {
@@ -571,8 +572,22 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 				     struct wpa_bss *bss)
 {
 #ifdef INTERWORKING_3GPP
+	struct wpa_cred *cred;
 	struct wpa_ssid *ssid;
 	const u8 *ie;
+
+	if (bss->anqp_3gpp == NULL)
+		return -1;
+
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		if (cred->imsi == NULL || !cred->imsi[0] ||
+		    cred->milenage == NULL || !cred->milenage[0])
+			continue;
+		if (plmn_id_match(bss->anqp_3gpp, cred->imsi))
+			break;
+	}
+	if (cred == NULL)
+		return -1;
 
 	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
 	if (ie == NULL)
@@ -598,14 +613,14 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "EAP-SIM not supported");
 		goto fail;
 	}
-	if (set_root_nai(ssid, wpa_s->conf->home_imsi, '1') < 0) {
+	if (set_root_nai(ssid, cred->imsi, '1') < 0) {
 		wpa_printf(MSG_DEBUG, "Failed to set Root NAI");
 		goto fail;
 	}
 
-	if (wpa_s->conf->home_milenage && wpa_s->conf->home_milenage[0]) {
+	if (cred->milenage && cred->milenage[0]) {
 		if (wpa_config_set_quoted(ssid, "password",
-					  wpa_s->conf->home_milenage) < 0)
+					  cred->milenage) < 0)
 			goto fail;
 	} else {
 		/* TODO: PIN */
@@ -613,9 +628,8 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 			goto fail;
 	}
 
-	if (wpa_s->conf->home_password && wpa_s->conf->home_password[0] &&
-	    wpa_config_set_quoted(ssid, "password", wpa_s->conf->home_password)
-	    < 0)
+	if (cred->password && cred->password[0] &&
+	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
 		goto fail;
 
 	wpa_s->disconnected = 0;
@@ -634,6 +648,7 @@ fail:
 
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
+	struct wpa_cred *cred;
 	struct wpa_ssid *ssid;
 	struct nai_realm *realm;
 	struct nai_realm_eap *eap = NULL;
@@ -641,7 +656,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	char buf[100];
 	const u8 *ie;
 
-	if (bss == NULL)
+	if (wpa_s->conf->cred == NULL || bss == NULL)
 		return -1;
 	ie = wpa_bss_get_ie(bss, WLAN_EID_SSID);
 	if (ie == NULL || ie[1] == 0) {
@@ -657,10 +672,14 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		count = 0;
 	}
 
-	for (i = 0; i < count; i++) {
-		if (!nai_realm_match(&realm[i], wpa_s->conf->home_realm))
-			continue;
-		eap = nai_realm_find_eap(wpa_s, &realm[i]);
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		for (i = 0; i < count; i++) {
+			if (!nai_realm_match(&realm[i], cred->realm))
+				continue;
+			eap = nai_realm_find_eap(cred, &realm[i]);
+			if (eap)
+				break;
+		}
 		if (eap)
 			break;
 	}
@@ -701,11 +720,11 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		goto fail;
 
 	if (eap->method == EAP_TYPE_TTLS &&
-	    wpa_s->conf->home_username && wpa_s->conf->home_username[0]) {
+	    cred->username && cred->username[0]) {
 		const char *pos;
 		char *anon;
 		/* Use anonymous NAI in Phase 1 */
-		pos = os_strchr(wpa_s->conf->home_username, '@');
+		pos = os_strchr(cred->username, '@');
 		if (pos) {
 			size_t buflen = 9 + os_strlen(pos) + 1;
 			anon = os_malloc(buflen);
@@ -725,14 +744,12 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		os_free(anon);
 	}
 
-	if (wpa_s->conf->home_username && wpa_s->conf->home_username[0] &&
-	    wpa_config_set_quoted(ssid, "identity",
-				  wpa_s->conf->home_username) < 0)
+	if (cred->username && cred->username[0] &&
+	    wpa_config_set_quoted(ssid, "identity", cred->username) < 0)
 		goto fail;
 
-	if (wpa_s->conf->home_password && wpa_s->conf->home_password[0] &&
-	    wpa_config_set_quoted(ssid, "password", wpa_s->conf->home_password)
-	    < 0)
+	if (cred->password && cred->password[0] &&
+	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
 		goto fail;
 
 	switch (eap->method) {
@@ -776,9 +793,8 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		break;
 	}
 
-	if (wpa_s->conf->home_ca_cert && wpa_s->conf->home_ca_cert[0] &&
-	    wpa_config_set_quoted(ssid, "ca_cert", wpa_s->conf->home_ca_cert) <
-	    0)
+	if (cred->ca_cert && cred->ca_cert[0] &&
+	    wpa_config_set_quoted(ssid, "ca_cert", cred->ca_cert) < 0)
 		goto fail;
 
 	nai_realm_free(realm, count);
@@ -800,29 +816,34 @@ fail:
 static int interworking_credentials_available_3gpp(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	int ret = 0;
+	struct wpa_cred *cred;
+	int ret;
 
 #ifdef INTERWORKING_3GPP
 	if (bss->anqp_3gpp == NULL)
-		return ret;
+		return 0;
 
-	if (wpa_s->conf->home_imsi == NULL || !wpa_s->conf->home_imsi[0] ||
-	    wpa_s->conf->home_milenage == NULL ||
-	    !wpa_s->conf->home_milenage[0])
-		return ret;
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		if (cred->imsi == NULL || !cred->imsi[0] ||
+		    cred->milenage == NULL || !cred->milenage[0])
+			continue;
 
-	wpa_printf(MSG_DEBUG, "Interworking: Parsing 3GPP info from " MACSTR,
-		   MAC2STR(bss->bssid));
-	ret = plmn_id_match(bss->anqp_3gpp, wpa_s->conf->home_imsi);
-	wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
+		wpa_printf(MSG_DEBUG, "Interworking: Parsing 3GPP info from "
+			   MACSTR, MAC2STR(bss->bssid));
+		ret = plmn_id_match(bss->anqp_3gpp, cred->imsi);
+		wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
+		if (ret)
+			return 1;
+	}
 #endif /* INTERWORKING_3GPP */
-	return ret;
+	return 0;
 }
 
 
 static int interworking_credentials_available_realm(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
+	struct wpa_cred *cred;
 	struct nai_realm *realm;
 	u16 count, i;
 	int found = 0;
@@ -830,7 +851,7 @@ static int interworking_credentials_available_realm(
 	if (bss->anqp_nai_realm == NULL)
 		return 0;
 
-	if (wpa_s->conf->home_realm == NULL)
+	if (wpa_s->conf->cred == NULL)
 		return 0;
 
 	wpa_printf(MSG_DEBUG, "Interworking: Parsing NAI Realm list from "
@@ -842,13 +863,20 @@ static int interworking_credentials_available_realm(
 		return 0;
 	}
 
-	for (i = 0; i < count; i++) {
-		if (!nai_realm_match(&realm[i], wpa_s->conf->home_realm))
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		if (cred->realm == NULL)
 			continue;
-		if (nai_realm_find_eap(wpa_s, &realm[i])) {
-			found++;
-			break;
+
+		for (i = 0; i < count; i++) {
+			if (!nai_realm_match(&realm[i], cred->realm))
+				continue;
+			if (nai_realm_find_eap(cred, &realm[i])) {
+				found++;
+				break;
+			}
 		}
+		if (found)
+			break;
 	}
 
 	nai_realm_free(realm, count);
@@ -895,33 +923,39 @@ static int domain_name_list_contains(struct wpabuf *domain_names,
 static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 				struct wpabuf *domain_names)
 {
+	struct wpa_cred *cred;
 #ifdef INTERWORKING_3GPP
 	char nai[100], *realm;
 #endif /* INTERWORKING_3GPP */
 
-	if (domain_names == NULL)
+	if (domain_names == NULL || wpa_s->conf->cred == NULL)
 		return -1;
 
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
 #ifdef INTERWORKING_3GPP
-	if (wpa_s->conf->home_imsi &&
-	    build_root_nai(nai, wpa_s->conf->home_imsi, 0) == 0) {
-		realm = os_strchr(nai, '@');
-		if (realm)
-			realm++;
-		wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
-			   "SIM/USIM domain %s", realm);
-		if (realm && domain_name_list_contains(domain_names, realm))
-			return 1;
-	}
+		if (cred->imsi &&
+		    build_root_nai(nai, cred->imsi, 0) == 0) {
+			realm = os_strchr(nai, '@');
+			if (realm)
+				realm++;
+			wpa_printf(MSG_DEBUG, "Interworking: Search for match "
+				   "with SIM/USIM domain %s", realm);
+			if (realm &&
+			    domain_name_list_contains(domain_names, realm))
+				return 1;
+		}
 #endif /* INTERWORKING_3GPP */
 
-	if (wpa_s->conf->home_domain == NULL)
-		return -1;
+		if (cred->domain == NULL)
+			continue;
 
-	wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
-		   "home SP FQDN %s", wpa_s->conf->home_domain);
-	return domain_name_list_contains(domain_names,
-					 wpa_s->conf->home_domain);
+		wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
+			   "home SP FQDN %s", cred->domain);
+		if (domain_name_list_contains(domain_names, cred->domain))
+			return 1;
+	}
+
+	return 0;
 }
 
 

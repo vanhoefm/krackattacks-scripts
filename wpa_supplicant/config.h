@@ -28,6 +28,67 @@
 #include "wps/wps.h"
 
 
+struct wpa_cred {
+	/**
+	 * next - Next credential in the list
+	 *
+	 * This pointer can be used to iterate over all credentials. The head
+	 * of this list is stored in the cred field of struct wpa_config.
+	 */
+	struct wpa_cred *next;
+
+	/**
+	 * id - Unique id for the credential
+	 *
+	 * This identifier is used as a unique identifier for each credential
+	 * block when using the control interface. Each credential is allocated
+	 * an id when it is being created, either when reading the
+	 * configuration file or when a new credential is added through the
+	 * control interface.
+	 */
+	int id;
+
+	/**
+	 * realm - Home Realm for Interworking
+	 */
+	char *realm;
+
+	/**
+	 * username - Username for Interworking network selection
+	 */
+	char *username;
+
+	/**
+	 * password - Password for Interworking network selection
+	 */
+	char *password;
+
+	/**
+	 * ca_cert - CA certificate for Interworking network selection
+	 */
+	char *ca_cert;
+
+	/**
+	 * imsi - IMSI in <MCC> | <MNC> | '-' | <MSIN> format
+	 */
+	char *imsi;
+
+	/**
+	 * milenage - Milenage parameters for SIM/USIM simulator in
+	 *	<Ki>:<OPc>:<SQN> format
+	 */
+	char *milenage;
+
+	/**
+	 * domain - Home service provider FQDN
+	 *
+	 * This is used to compare against the Domain Name List to figure out
+	 * whether the AP is operated by the Home SP.
+	 */
+	char *domain;
+};
+
+
 #define CFG_CHANGED_DEVICE_NAME BIT(0)
 #define CFG_CHANGED_CONFIG_METHODS BIT(1)
 #define CFG_CHANGED_DEVICE_TYPE BIT(2)
@@ -70,6 +131,13 @@ struct wpa_config {
 	 * pssid.
 	 */
 	int num_prio;
+
+	/**
+	 * cred - Head of the credential list
+	 *
+	 * This is the head for the list of all the configured credentials.
+	 */
+	struct wpa_cred *cred;
 
 	/**
 	 * eapol_version - IEEE 802.1X/EAPOL version number
@@ -447,45 +515,6 @@ struct wpa_config {
 	 * Homogeneous ESS. This is used only if interworking is enabled.
 	 */
 	u8 hessid[ETH_ALEN];
-
-	/**
-	 * home_realm - Home Realm for Interworking
-	 */
-	char *home_realm;
-
-	/**
-	 * home_username - Username for Interworking network selection
-	 */
-	char *home_username;
-
-	/**
-	 * home_password - Password for Interworking network selection
-	 */
-	char *home_password;
-
-	/**
-	 * home_ca_cert - CA certificate for Interworking network selection
-	 */
-	char *home_ca_cert;
-
-	/**
-	 * home_imsi - IMSI in <MCC> | <MNC> | '-' | <MSIN> format
-	 */
-	char *home_imsi;
-
-	/**
-	 * home_milenage - Milenage parameters for SIM/USIM simulator in
-	 *	<Ki>:<OPc>:<SQN> format
-	 */
-	char *home_milenage;
-
-	/**
-	 * home_domain - Home service provider FQDN
-	 *
-	 * This is used to compare against the Domain Name List to figure out
-	 * whether the AP is operated by the Home SP.
-	 */
-	char *home_domain;
 };
 
 
@@ -517,6 +546,10 @@ void wpa_config_set_blob(struct wpa_config *config,
 			 struct wpa_config_blob *blob);
 void wpa_config_free_blob(struct wpa_config_blob *blob);
 int wpa_config_remove_blob(struct wpa_config *config, const char *name);
+
+void wpa_config_free_cred(struct wpa_cred *cred);
+int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
+			const char *value, int line);
 
 struct wpa_config * wpa_config_alloc_empty(const char *ctrl_interface,
 					   const char *driver_param);

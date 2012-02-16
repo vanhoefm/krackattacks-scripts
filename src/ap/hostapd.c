@@ -39,6 +39,23 @@ static int hostapd_broadcast_wep_clear(struct hostapd_data *hapd);
 extern int wpa_debug_level;
 
 
+int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
+			       int (*cb)(struct hostapd_iface *iface,
+					 void *ctx), void *ctx)
+{
+	size_t i;
+	int ret;
+
+	for (i = 0; i < interfaces->count; i++) {
+		ret = cb(interfaces->iface[i], ctx);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
+
 static void hostapd_reload_bss(struct hostapd_data *hapd)
 {
 #ifndef CONFIG_NO_RADIUS

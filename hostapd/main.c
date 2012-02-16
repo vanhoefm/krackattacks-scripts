@@ -42,29 +42,6 @@ struct hapd_global {
 static struct hapd_global global;
 
 
-struct hapd_interfaces {
-	size_t count;
-	struct hostapd_iface **iface;
-};
-
-
-static int hostapd_for_each_interface(struct hapd_interfaces *interfaces,
-				      int (*cb)(struct hostapd_iface *iface,
-						void *ctx), void *ctx)
-{
-	size_t i;
-	int ret;
-
-	for (i = 0; i < interfaces->count; i++) {
-		ret = cb(interfaces->iface[i], ctx);
-		if (ret)
-			return ret;
-	}
-
-	return 0;
-}
-
-
 #ifndef CONFIG_NO_HOSTAPD_LOGGER
 static void hostapd_logger_cb(void *ctx, const u8 *addr, unsigned int module,
 			      int level, const char *txt, size_t len)

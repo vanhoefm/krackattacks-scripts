@@ -17,6 +17,7 @@
 #include "eap_peer/eap_methods.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
+#include "config_ssid.h"
 #include "bss.h"
 #include "scan.h"
 #include "notify.h"
@@ -973,6 +974,31 @@ static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 }
 
 
+static int interworking_find_network_match(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss;
+	struct wpa_ssid *ssid;
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
+			if (ssid->disabled || ssid->mode != WPAS_MODE_INFRA)
+				continue;
+			if (ssid->ssid_len != bss->ssid_len ||
+			    os_memcmp(ssid->ssid, bss->ssid, ssid->ssid_len) !=
+			    0)
+				continue;
+			/*
+			 * TODO: Consider more accurate matching of security
+			 * configuration similarly to what is done in events.c
+			 */
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+
 static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *selected = NULL, *selected_home = NULL;
@@ -1020,6 +1046,20 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 	}
 
 	if (count == 0) {
+		/*
+		 * No matching network was found based on configured
+		 * credentials. Check whether any of the enabled network blocks
+		 * have matching APs.
+		 */
+		if (interworking_find_network_match(wpa_s)) {
+			wpa_printf(MSG_DEBUG, "Interworking: Possible BSS "
+				   "match for enabled network configurations");
+			wpa_s->disconnected = 0;
+			wpa_s->reassociate = 1;
+			wpa_supplicant_req_scan(wpa_s, 0, 0);
+			return;
+		}
+
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_NO_MATCH "No network "
 			"with matching credentials found");
 	}

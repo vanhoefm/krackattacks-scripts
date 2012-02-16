@@ -690,6 +690,31 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 						     eap->method), 0) < 0)
 		goto fail;
 
+	if (eap->method == EAP_TYPE_TTLS &&
+	    wpa_s->conf->home_username && wpa_s->conf->home_username[0]) {
+		const char *pos;
+		char *anon;
+		/* Use anonymous NAI in Phase 1 */
+		pos = os_strchr(wpa_s->conf->home_username, '@');
+		if (pos) {
+			size_t buflen = 9 + os_strlen(pos) + 1;
+			anon = os_malloc(buflen);
+			if (anon == NULL)
+				goto fail;
+			os_snprintf(anon, buflen, "anonymous%s", pos);
+		} else {
+			anon = os_strdup("anonymous");
+			if (anon == NULL)
+				goto fail;
+		}
+		if (wpa_config_set_quoted(ssid, "anonymous_identity", anon) <
+		    0) {
+			os_free(anon);
+			goto fail;
+		}
+		os_free(anon);
+	}
+
 	if (wpa_s->conf->home_username && wpa_s->conf->home_username[0] &&
 	    wpa_config_set_quoted(ssid, "identity",
 				  wpa_s->conf->home_username) < 0)

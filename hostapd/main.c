@@ -315,7 +315,7 @@ static void hostapd_interface_deinit_free(struct hostapd_iface *iface)
 	driver = iface->bss[0]->driver;
 	drv_priv = iface->bss[0]->drv_priv;
 	hostapd_interface_deinit(iface);
-	if (driver && driver->hapd_deinit)
+	if (driver && driver->hapd_deinit && drv_priv)
 		driver->hapd_deinit(drv_priv);
 	hostapd_interface_free(iface);
 }

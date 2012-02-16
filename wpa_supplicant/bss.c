@@ -61,6 +61,8 @@ struct wpa_bss * wpa_bss_get(struct wpa_supplicant *wpa_s, const u8 *bssid,
 			     const u8 *ssid, size_t ssid_len)
 {
 	struct wpa_bss *bss;
+	if (!wpa_supplicant_filter_bssid_match(wpa_s, bssid))
+		return NULL;
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0 &&
 		    bss->ssid_len == ssid_len &&
@@ -526,6 +528,8 @@ struct wpa_bss * wpa_bss_get_bssid(struct wpa_supplicant *wpa_s,
 				   const u8 *bssid)
 {
 	struct wpa_bss *bss;
+	if (!wpa_supplicant_filter_bssid_match(wpa_s, bssid))
+		return NULL;
 	dl_list_for_each_reverse(bss, &wpa_s->bss, struct wpa_bss, list) {
 		if (os_memcmp(bss->bssid, bssid, ETH_ALEN) == 0)
 			return bss;

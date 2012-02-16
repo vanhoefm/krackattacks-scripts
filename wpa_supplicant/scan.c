@@ -1235,6 +1235,50 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 }
 
 
+int wpa_supplicant_filter_bssid_match(struct wpa_supplicant *wpa_s,
+				      const u8 *bssid)
+{
+	size_t i;
+
+	if (wpa_s->bssid_filter == NULL)
+		return 1;
+
+	for (i = 0; i < wpa_s->bssid_filter_count; i++) {
+		if (os_memcmp(wpa_s->bssid_filter + i * ETH_ALEN, bssid,
+			      ETH_ALEN) == 0)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static void filter_scan_res(struct wpa_supplicant *wpa_s,
+			    struct wpa_scan_results *res)
+{
+	size_t i, j;
+
+	if (wpa_s->bssid_filter == NULL)
+		return;
+
+	for (i = 0, j = 0; i < res->num; i++) {
+		if (wpa_supplicant_filter_bssid_match(wpa_s,
+						      res->res[i]->bssid)) {
+			res->res[j++] = res->res[i];
+		} else {
+			os_free(res->res[i]);
+			res->res[i] = NULL;
+		}
+	}
+
+	if (res->num != j) {
+		wpa_printf(MSG_DEBUG, "Filtered out %d scan results",
+			   (int) (res->num - j));
+		res->num = j;
+	}
+}
+
+
 /**
  * wpa_supplicant_get_scan_results - Get scan results
  * @wpa_s: Pointer to wpa_supplicant data
@@ -1259,6 +1303,7 @@ wpa_supplicant_get_scan_results(struct wpa_supplicant *wpa_s,
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to get scan results");
 		return NULL;
 	}
+	filter_scan_res(wpa_s, scan_res);
 
 #ifdef CONFIG_WPS
 	if (wpas_wps_in_progress(wpa_s)) {

@@ -114,6 +114,41 @@ static int pno_stop(struct wpa_supplicant *wpa_s)
 }
 
 
+static int set_bssid_filter(struct wpa_supplicant *wpa_s, char *val)
+{
+	char *pos;
+	u8 addr[ETH_ALEN], *filter = NULL, *n;
+	size_t count = 0;
+
+	pos = val;
+	while (pos) {
+		if (*pos == '\0')
+			break;
+		if (hwaddr_aton(pos, addr))
+			return -1;
+		n = os_realloc(filter, (count + 1) * ETH_ALEN);
+		if (n == NULL) {
+			os_free(filter);
+			return -1;
+		}
+		filter = n;
+		os_memcpy(filter + count * ETH_ALEN, addr, ETH_ALEN);
+		count++;
+
+		pos = os_strchr(pos, ' ');
+		if (pos)
+			pos++;
+	}
+
+	wpa_hexdump(MSG_DEBUG, "bssid_filter", filter, count * ETH_ALEN);
+	os_free(wpa_s->bssid_filter);
+	wpa_s->bssid_filter = filter;
+	wpa_s->bssid_filter_count = count;
+
+	return 0;
+}
+
+
 static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 					 char *cmd)
 {
@@ -241,6 +276,8 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		}
 	} else if (os_strcasecmp(cmd, "ps") == 0) {
 		ret = wpa_drv_set_p2p_powersave(wpa_s, atoi(value), -1, -1);
+	} else if (os_strcasecmp(cmd, "bssid_filter") == 0) {
+		ret = set_bssid_filter(wpa_s, value);
 	} else {
 		value[-1] = '=';
 		ret = wpa_config_process_global(wpa_s->conf, cmd, -1);

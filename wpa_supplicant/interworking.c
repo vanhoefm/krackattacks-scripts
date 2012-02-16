@@ -505,10 +505,10 @@ static int plmn_id_match(struct wpabuf *anqp, const char *imsi)
 }
 
 
-static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
+static int build_root_nai(char *nai, const char *imsi, char prefix)
 {
 	const char *sep, *msin;
-	char nai[100], *end, *pos;
+	char *end, *pos;
 	size_t msin_len, plmn_len;
 
 	/*
@@ -533,7 +533,8 @@ static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
 
 	pos = nai;
 	end = pos + sizeof(nai);
-	*pos++ = prefix;
+	if (prefix)
+		*pos++ = prefix;
 	os_memcpy(pos, imsi, plmn_len);
 	pos += plmn_len;
 	os_memcpy(pos, msin, msin_len);
@@ -551,6 +552,15 @@ static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
 	pos += os_snprintf(pos, end - pos, ".mcc%c%c%c.3gppnetwork.org",
 			   imsi[0], imsi[1], imsi[2]);
 
+	return 0;
+}
+
+
+static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
+{
+	char nai[100];
+	if (build_root_nai(nai, imsi, prefix) < 0)
+		return -1;
 	return wpa_config_set_quoted(ssid, "identity", nai);
 }
 
@@ -855,16 +865,13 @@ static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
 }
 
 
-static int interworking_home_sp(struct wpa_supplicant *wpa_s,
-				struct wpabuf *domain_names)
+static int domain_name_list_contains(struct wpabuf *domain_names,
+				     const char *domain)
 {
 	const u8 *pos, *end;
 	size_t len;
 
-	if (wpa_s->conf->home_domain == NULL || domain_names == NULL)
-		return -1;
-
-	len = os_strlen(wpa_s->conf->home_domain);
+	len = os_strlen(domain);
 	pos = wpabuf_head(domain_names);
 	end = pos + wpabuf_len(domain_names);
 
@@ -872,15 +879,49 @@ static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 		if (pos + 1 + pos[0] > end)
 			break;
 
+		wpa_hexdump_ascii(MSG_DEBUG, "Interworking: AP domain name",
+				  pos + 1, pos[0]);
 		if (pos[0] == len &&
-		    os_strncasecmp(wpa_s->conf->home_domain,
-				   (const char *) (pos + 1), len) == 0)
+		    os_strncasecmp(domain, (const char *) (pos + 1), len) == 0)
 			return 1;
 
 		pos += 1 + pos[0];
 	}
 
 	return 0;
+}
+
+
+static int interworking_home_sp(struct wpa_supplicant *wpa_s,
+				struct wpabuf *domain_names)
+{
+#ifdef INTERWORKING_3GPP
+	char nai[100], *realm;
+#endif /* INTERWORKING_3GPP */
+
+	if (domain_names == NULL)
+		return -1;
+
+#ifdef INTERWORKING_3GPP
+	if (wpa_s->conf->home_imsi &&
+	    build_root_nai(nai, wpa_s->conf->home_imsi, 0) == 0) {
+		realm = os_strchr(nai, '@');
+		if (realm)
+			realm++;
+		wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
+			   "SIM/USIM domain %s", realm);
+		if (realm && domain_name_list_contains(domain_names, realm))
+			return 1;
+	}
+#endif /* INTERWORKING_3GPP */
+
+	if (wpa_s->conf->home_domain == NULL)
+		return -1;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Search for match with "
+		   "home SP FQDN %s", wpa_s->conf->home_domain);
+	return domain_name_list_contains(domain_names,
+					 wpa_s->conf->home_domain);
 }
 
 

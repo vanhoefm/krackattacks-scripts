@@ -295,6 +295,18 @@ static void hostapd_cleanup_iface_pre(struct hostapd_iface *iface)
 }
 
 
+static void hostapd_cleanup_iface_partial(struct hostapd_iface *iface)
+{
+	hostapd_free_hw_features(iface->hw_features, iface->num_hw_features);
+	iface->hw_features = NULL;
+	os_free(iface->current_rates);
+	iface->current_rates = NULL;
+	os_free(iface->basic_rates);
+	iface->basic_rates = NULL;
+	ap_list_deinit(iface);
+}
+
+
 /**
  * hostapd_cleanup_iface - Complete per-interface cleanup
  * @iface: Pointer to interface data
@@ -304,13 +316,7 @@ static void hostapd_cleanup_iface_pre(struct hostapd_iface *iface)
  */
 static void hostapd_cleanup_iface(struct hostapd_iface *iface)
 {
-	hostapd_free_hw_features(iface->hw_features, iface->num_hw_features);
-	iface->hw_features = NULL;
-	os_free(iface->current_rates);
-	iface->current_rates = NULL;
-	os_free(iface->basic_rates);
-	iface->basic_rates = NULL;
-	ap_list_deinit(iface);
+	hostapd_cleanup_iface_partial(iface);
 	hostapd_config_free(iface->conf);
 	iface->conf = NULL;
 

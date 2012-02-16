@@ -2130,6 +2130,65 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 }
 
 
+static void hostapd_set_security_params(struct hostapd_bss_config *bss)
+{
+	int pairwise;
+
+	if (bss->individual_wep_key_len == 0) {
+		/* individual keys are not use; can use key idx0 for
+		 * broadcast keys */
+		bss->broadcast_key_idx_min = 0;
+	}
+
+	/* Select group cipher based on the enabled pairwise cipher
+	 * suites */
+	pairwise = 0;
+	if (bss->wpa & 1)
+		pairwise |= bss->wpa_pairwise;
+	if (bss->wpa & 2) {
+		if (bss->rsn_pairwise == 0)
+			bss->rsn_pairwise = bss->wpa_pairwise;
+		pairwise |= bss->rsn_pairwise;
+	}
+	if (pairwise & WPA_CIPHER_TKIP)
+		bss->wpa_group = WPA_CIPHER_TKIP;
+	else
+		bss->wpa_group = WPA_CIPHER_CCMP;
+
+	bss->radius->auth_server = bss->radius->auth_servers;
+	bss->radius->acct_server = bss->radius->acct_servers;
+
+	if (bss->wpa && bss->ieee802_1x) {
+		bss->ssid.security_policy = SECURITY_WPA;
+	} else if (bss->wpa) {
+		bss->ssid.security_policy = SECURITY_WPA_PSK;
+	} else if (bss->ieee802_1x) {
+		int cipher = WPA_CIPHER_NONE;
+		bss->ssid.security_policy = SECURITY_IEEE_802_1X;
+		bss->ssid.wep.default_len = bss->default_wep_key_len;
+		if (bss->default_wep_key_len)
+			cipher = bss->default_wep_key_len >= 13 ?
+				WPA_CIPHER_WEP104 : WPA_CIPHER_WEP40;
+		bss->wpa_group = cipher;
+		bss->wpa_pairwise = cipher;
+		bss->rsn_pairwise = cipher;
+	} else if (bss->ssid.wep.keys_set) {
+		int cipher = WPA_CIPHER_WEP40;
+		if (bss->ssid.wep.len[0] >= 13)
+			cipher = WPA_CIPHER_WEP104;
+		bss->ssid.security_policy = SECURITY_STATIC_WEP;
+		bss->wpa_group = cipher;
+		bss->wpa_pairwise = cipher;
+		bss->rsn_pairwise = cipher;
+	} else {
+		bss->ssid.security_policy = SECURITY_PLAINTEXT;
+		bss->wpa_group = WPA_CIPHER_NONE;
+		bss->wpa_pairwise = WPA_CIPHER_NONE;
+		bss->rsn_pairwise = WPA_CIPHER_NONE;
+	}
+}
+
+
 /**
  * hostapd_config_read - Read and parse a configuration file
  * @fname: Configuration file name (including path, if needed)
@@ -2143,7 +2202,6 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 	char buf[256], *pos;
 	int line = 0;
 	int errors = 0;
-	int pairwise;
 	size_t i;
 
 	f = fopen(fname, "r");
@@ -2201,62 +2259,8 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 
 	fclose(f);
 
-	for (i = 0; i < conf->num_bss; i++) {
-		bss = &conf->bss[i];
-
-		if (bss->individual_wep_key_len == 0) {
-			/* individual keys are not use; can use key idx0 for
-			 * broadcast keys */
-			bss->broadcast_key_idx_min = 0;
-		}
-
-		/* Select group cipher based on the enabled pairwise cipher
-		 * suites */
-		pairwise = 0;
-		if (bss->wpa & 1)
-			pairwise |= bss->wpa_pairwise;
-		if (bss->wpa & 2) {
-			if (bss->rsn_pairwise == 0)
-				bss->rsn_pairwise = bss->wpa_pairwise;
-			pairwise |= bss->rsn_pairwise;
-		}
-		if (pairwise & WPA_CIPHER_TKIP)
-			bss->wpa_group = WPA_CIPHER_TKIP;
-		else
-			bss->wpa_group = WPA_CIPHER_CCMP;
-
-		bss->radius->auth_server = bss->radius->auth_servers;
-		bss->radius->acct_server = bss->radius->acct_servers;
-
-		if (bss->wpa && bss->ieee802_1x) {
-			bss->ssid.security_policy = SECURITY_WPA;
-		} else if (bss->wpa) {
-			bss->ssid.security_policy = SECURITY_WPA_PSK;
-		} else if (bss->ieee802_1x) {
-			int cipher = WPA_CIPHER_NONE;
-			bss->ssid.security_policy = SECURITY_IEEE_802_1X;
-			bss->ssid.wep.default_len = bss->default_wep_key_len;
-			if (bss->default_wep_key_len)
-				cipher = bss->default_wep_key_len >= 13 ?
-					WPA_CIPHER_WEP104 : WPA_CIPHER_WEP40;
-			bss->wpa_group = cipher;
-			bss->wpa_pairwise = cipher;
-			bss->rsn_pairwise = cipher;
-		} else if (bss->ssid.wep.keys_set) {
-			int cipher = WPA_CIPHER_WEP40;
-			if (bss->ssid.wep.len[0] >= 13)
-				cipher = WPA_CIPHER_WEP104;
-			bss->ssid.security_policy = SECURITY_STATIC_WEP;
-			bss->wpa_group = cipher;
-			bss->wpa_pairwise = cipher;
-			bss->rsn_pairwise = cipher;
-		} else {
-			bss->ssid.security_policy = SECURITY_PLAINTEXT;
-			bss->wpa_group = WPA_CIPHER_NONE;
-			bss->wpa_pairwise = WPA_CIPHER_NONE;
-			bss->rsn_pairwise = WPA_CIPHER_NONE;
-		}
-	}
+	for (i = 0; i < conf->num_bss; i++)
+		hostapd_set_security_params(&conf->bss[i]);
 
 	if (hostapd_config_check(conf))
 		errors++;

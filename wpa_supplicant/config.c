@@ -2272,6 +2272,74 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 }
 
 
+struct wpa_cred * wpa_config_get_cred(struct wpa_config *config, int id)
+{
+	struct wpa_cred *cred;
+
+	cred = config->cred;
+	while (cred) {
+		if (id == cred->id)
+			break;
+		cred = cred->next;
+	}
+
+	return cred;
+}
+
+
+struct wpa_cred * wpa_config_add_cred(struct wpa_config *config)
+{
+	int id;
+	struct wpa_cred *cred, *last = NULL;
+
+	id = -1;
+	cred = config->cred;
+	while (cred) {
+		if (cred->id > id)
+			id = cred->id;
+		last = cred;
+		cred = cred->next;
+	}
+	id++;
+
+	cred = os_zalloc(sizeof(*cred));
+	if (cred == NULL)
+		return NULL;
+	cred->id = id;
+	if (last)
+		last->next = cred;
+	else
+		config->cred = cred;
+
+	return cred;
+}
+
+
+int wpa_config_remove_cred(struct wpa_config *config, int id)
+{
+	struct wpa_cred *cred, *prev = NULL;
+
+	cred = config->cred;
+	while (cred) {
+		if (id == cred->id)
+			break;
+		prev = cred;
+		cred = cred->next;
+	}
+
+	if (cred == NULL)
+		return -1;
+
+	if (prev)
+		prev->next = cred->next;
+	else
+		config->cred = cred->next;
+
+	wpa_config_free_cred(cred);
+	return 0;
+}
+
+
 #ifndef CONFIG_NO_CONFIG_BLOBS
 /**
  * wpa_config_get_blob - Get a named configuration blob

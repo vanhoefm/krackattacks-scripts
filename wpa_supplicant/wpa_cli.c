@@ -1602,6 +1602,61 @@ static int wpa_cli_cmd_get_network(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int wpa_cli_cmd_list_creds(struct wpa_ctrl *ctrl, int argc,
+				  char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "LIST_CREDS");
+}
+
+
+static int wpa_cli_cmd_add_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "ADD_CRED");
+}
+
+
+static int wpa_cli_cmd_remove_cred(struct wpa_ctrl *ctrl, int argc,
+				   char *argv[])
+{
+	char cmd[32];
+	int res;
+
+	if (argc < 1) {
+		printf("Invalid REMOVE_CRED command: needs one argument "
+		       "(cred id)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "REMOVE_CRED %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_set_cred(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 3) {
+		printf("Invalid SET_CRED command: needs three arguments\n"
+		       "(cred id, variable name, and value)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "SET_CRED %s %s %s",
+			  argv[0], argv[1], argv[2]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long SET_CRED command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
 static int wpa_cli_cmd_disconnect(struct wpa_ctrl *ctrl, int argc,
 				  char *argv[])
 {
@@ -2784,6 +2839,18 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "get_network", wpa_cli_cmd_get_network,
 	  cli_cmd_flag_none,
 	  "<network id> <variable> = get network variables" },
+	{ "list_creds", wpa_cli_cmd_list_creds,
+	  cli_cmd_flag_none,
+	  "= list configured credentials" },
+	{ "add_cred", wpa_cli_cmd_add_cred,
+	  cli_cmd_flag_none,
+	  "= add a credential" },
+	{ "remove_cred", wpa_cli_cmd_remove_cred,
+	  cli_cmd_flag_none,
+	  "<cred id> = remove a credential" },
+	{ "set_cred", wpa_cli_cmd_set_cred,
+	  cli_cmd_flag_sensitive,
+	  "<cred id> <variable> <value> = set credential variables" },
 	{ "save_config", wpa_cli_cmd_save_config,
 	  cli_cmd_flag_none,
 	  "= save the current configuration" },

@@ -2223,8 +2223,11 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	}
 
 	val = wpa_config_parse_string(value, &len);
-	if (val == NULL)
+	if (val == NULL) {
+		wpa_printf(MSG_ERROR, "Line %d: invalid field '%s' string "
+			   "value '%s'.", line, var, value);
 		return -1;
+	}
 
 	if (os_strcmp(var, "realm") == 0) {
 		os_free(cred->realm);

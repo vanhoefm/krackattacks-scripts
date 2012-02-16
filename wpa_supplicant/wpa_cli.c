@@ -1464,7 +1464,12 @@ static int wpa_cli_cmd_enable_network(struct wpa_ctrl *ctrl, int argc,
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "ENABLE_NETWORK %s", argv[0]);
+	if (argc > 1)
+		res = os_snprintf(cmd, sizeof(cmd), "ENABLE_NETWORK %s %s",
+				  argv[0], argv[1]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "ENABLE_NETWORK %s",
+				  argv[0]);
 	if (res < 0 || (size_t) res >= sizeof(cmd))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';

@@ -1592,6 +1592,11 @@ static int wpa_supplicant_ctrl_iface_enable_network(
 				   "ENABLE_NETWORK with persistent P2P group");
 			return -1;
 		}
+
+		if (os_strstr(cmd, " no-connect")) {
+			ssid->disabled = 0;
+			return 0;
+		}
 	}
 	wpa_supplicant_enable_network(wpa_s, ssid);
 

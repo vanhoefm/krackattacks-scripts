@@ -229,19 +229,19 @@ static int eap_aka_umts_auth(struct eap_sm *sm, struct eap_aka_data *data)
 
 static void eap_aka_clear_identities(struct eap_aka_data *data, int id)
 {
-	if (id & CLEAR_PSEUDONYM) {
+	if ((id & CLEAR_PSEUDONYM) && data->pseudonym) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: forgetting old pseudonym");
 		os_free(data->pseudonym);
 		data->pseudonym = NULL;
 		data->pseudonym_len = 0;
 	}
-	if (id & CLEAR_REAUTH_ID) {
+	if ((id & CLEAR_REAUTH_ID) && data->reauth_id) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: forgetting old reauth_id");
 		os_free(data->reauth_id);
 		data->reauth_id = NULL;
 		data->reauth_id_len = 0;
 	}
-	if (id & CLEAR_EAP_ID) {
+	if ((id & CLEAR_EAP_ID) && data->last_eap_identity) {
 		wpa_printf(MSG_DEBUG, "EAP-AKA: forgetting old eap_id");
 		os_free(data->last_eap_identity);
 		data->last_eap_identity = NULL;

@@ -2217,6 +2217,11 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	char *val;
 	size_t len;
 
+	if (os_strcmp(var, "priority") == 0) {
+		cred->priority = atoi(value);
+		return 0;
+	}
+
 	val = wpa_config_parse_string(value, &len);
 	if (val == NULL)
 		return -1;

@@ -657,6 +657,8 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 
 static void wpa_config_write_cred(FILE *f, struct wpa_cred *cred)
 {
+	if (cred->priority)
+		fprintf(f, "\tpriority=%d\n", cred->priority);
 	if (cred->realm)
 		fprintf(f, "\trealm=\"%s\"\n", cred->realm);
 	if (cred->username)

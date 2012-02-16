@@ -1,6 +1,6 @@
 /*
  * Interworking (IEEE 802.11u)
- * Copyright (c) 2011, Qualcomm Atheros
+ * Copyright (c) 2011-2012, Qualcomm Atheros, Inc.
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -601,6 +601,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 
 	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
+	ssid->priority = cred->priority;
 	ssid->temporary = 1;
 	ssid->ssid = os_zalloc(ie[1] + 1);
 	if (ssid->ssid == NULL)
@@ -632,6 +633,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
 		goto fail;
 
+	wpa_config_update_prio_list(wpa_s->conf);
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
@@ -708,6 +710,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	}
 	wpas_notify_network_added(wpa_s, ssid);
 	wpa_config_set_network_defaults(ssid);
+	ssid->priority = cred->priority;
 	ssid->temporary = 1;
 	ssid->ssid = os_zalloc(ie[1] + 1);
 	if (ssid->ssid == NULL)
@@ -799,6 +802,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 
 	nai_realm_free(realm, count);
 
+	wpa_config_update_prio_list(wpa_s->conf);
 	wpa_s->disconnected = 0;
 	wpa_s->reassociate = 1;
 	wpa_supplicant_req_scan(wpa_s, 0, 0);
@@ -813,15 +817,15 @@ fail:
 }
 
 
-static int interworking_credentials_available_3gpp(
+static struct wpa_cred * interworking_credentials_available_3gpp(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	struct wpa_cred *cred;
+	struct wpa_cred *cred, *selected = NULL;
 	int ret;
 
 #ifdef INTERWORKING_3GPP
 	if (bss->anqp_3gpp == NULL)
-		return 0;
+		return NULL;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
 		if (cred->imsi == NULL || !cred->imsi[0] ||
@@ -832,27 +836,29 @@ static int interworking_credentials_available_3gpp(
 			   MACSTR, MAC2STR(bss->bssid));
 		ret = plmn_id_match(bss->anqp_3gpp, cred->imsi);
 		wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
-		if (ret)
-			return 1;
+		if (ret) {
+			if (selected == NULL ||
+			    selected->priority < cred->priority)
+				selected = cred;
+		}
 	}
 #endif /* INTERWORKING_3GPP */
-	return 0;
+	return selected;
 }
 
 
-static int interworking_credentials_available_realm(
+static struct wpa_cred * interworking_credentials_available_realm(
 	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	struct wpa_cred *cred;
+	struct wpa_cred *cred, *selected = NULL;
 	struct nai_realm *realm;
 	u16 count, i;
-	int found = 0;
 
 	if (bss->anqp_nai_realm == NULL)
-		return 0;
+		return NULL;
 
 	if (wpa_s->conf->cred == NULL)
-		return 0;
+		return NULL;
 
 	wpa_printf(MSG_DEBUG, "Interworking: Parsing NAI Realm list from "
 		   MACSTR, MAC2STR(bss->bssid));
@@ -860,7 +866,7 @@ static int interworking_credentials_available_realm(
 	if (realm == NULL) {
 		wpa_printf(MSG_DEBUG, "Interworking: Could not parse NAI "
 			   "Realm list from " MACSTR, MAC2STR(bss->bssid));
-		return 0;
+		return NULL;
 	}
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
@@ -871,25 +877,33 @@ static int interworking_credentials_available_realm(
 			if (!nai_realm_match(&realm[i], cred->realm))
 				continue;
 			if (nai_realm_find_eap(cred, &realm[i])) {
-				found++;
+				if (selected == NULL ||
+				    selected->priority < cred->priority)
+					selected = cred;
 				break;
 			}
 		}
-		if (found)
-			break;
 	}
 
 	nai_realm_free(realm, count);
 
-	return found;
+	return selected;
 }
 
 
-static int interworking_credentials_available(struct wpa_supplicant *wpa_s,
-					      struct wpa_bss *bss)
+static struct wpa_cred * interworking_credentials_available(
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
-	return interworking_credentials_available_realm(wpa_s, bss) ||
-		interworking_credentials_available_3gpp(wpa_s, bss);
+	struct wpa_cred *cred, *cred2;
+
+	cred = interworking_credentials_available_realm(wpa_s, bss);
+	cred2 = interworking_credentials_available_3gpp(wpa_s, bss);
+	if (cred && cred2 && cred2->priority >= cred->priority)
+		cred = cred2;
+	if (!cred)
+		cred = cred2;
+
+	return cred;
 }
 
 
@@ -962,14 +976,17 @@ static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 static void interworking_select_network(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_bss *bss, *selected = NULL, *selected_home = NULL;
+	int selected_prio = -999999, selected_home_prio = -999999;
 	unsigned int count = 0;
 	const char *type;
 	int res;
+	struct wpa_cred *cred;
 
 	wpa_s->network_select = 0;
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
-		if (!interworking_credentials_available(wpa_s, bss))
+		cred = interworking_credentials_available(wpa_s, bss);
+		if (!cred)
 			continue;
 		count++;
 		res = interworking_home_sp(wpa_s, bss->anqp_domain_name);
@@ -982,14 +999,22 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		wpa_msg(wpa_s, MSG_INFO, INTERWORKING_AP MACSTR " type=%s",
 			MAC2STR(bss->bssid), type);
 		if (wpa_s->auto_select) {
-			if (selected == NULL)
+			if (selected == NULL ||
+			    cred->priority > selected_prio) {
 				selected = bss;
-			if (selected_home == NULL && res > 0)
+				selected_prio = cred->priority;
+			}
+			if (res > 0 &&
+			    (selected_home == NULL ||
+			     cred->priority > selected_home_prio)) {
 				selected_home = bss;
+				selected_home_prio = cred->priority;
+			}
 		}
 	}
 
-	if (selected_home && selected_home != selected) {
+	if (selected_home && selected_home != selected &&
+	    selected_home_prio >= selected_prio) {
 		/* Prefer network operated by the Home SP */
 		selected = selected_home;
 	}

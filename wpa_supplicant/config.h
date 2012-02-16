@@ -49,6 +49,18 @@ struct wpa_cred {
 	int id;
 
 	/**
+	 * priority - Priority group
+	 *
+	 * By default, all networks and credentials get the same priority group
+	 * (0). This field can be used to give higher priority for credentials
+	 * (and similarly in struct wpa_ssid for network blocks) to change the
+	 * Interworking automatic networking selection behavior. The matching
+	 * network (based on either an enabled network block or a credential)
+	 * with the highest priority value will be selected.
+	 */
+	int priority;
+
+	/**
 	 * realm - Home Realm for Interworking
 	 */
 	char *realm;

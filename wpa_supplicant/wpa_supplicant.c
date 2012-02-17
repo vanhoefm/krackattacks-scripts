@@ -2951,6 +2951,8 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	os_free(global->params.override_driver);
 	os_free(global->params.override_ctrl_interface);
 
+	os_free(global->p2p_disallow_freq);
+
 	os_free(global);
 	wpa_debug_close_syslog();
 	wpa_debug_close_file();

@@ -2030,6 +2030,31 @@ static void wpas_invitation_result(void *ctx, int status, const u8 *bssid)
 }
 
 
+static int wpas_p2p_disallowed_freq(struct wpa_global *global,
+				    unsigned int freq)
+{
+	unsigned int i;
+
+	if (global->p2p_disallow_freq == NULL)
+		return 0;
+
+	for (i = 0; i < global->num_p2p_disallow_freq; i++) {
+		if (freq >= global->p2p_disallow_freq[i].min &&
+		    freq <= global->p2p_disallow_freq[i].max)
+			return 1;
+	}
+
+	return 0;
+}
+
+
+static void wpas_p2p_add_chan(struct p2p_reg_class *reg, u8 chan)
+{
+	reg->channel[reg->channels] = chan;
+	reg->channels++;
+}
+
+
 static int wpas_p2p_default_channels(struct wpa_supplicant *wpa_s,
 				     struct p2p_channels *chan)
 {
@@ -2040,34 +2065,47 @@ static int wpas_p2p_default_channels(struct wpa_supplicant *wpa_s,
 
 	/* Operating class 81 - 2.4 GHz band channels 1..13 */
 	chan->reg_class[cla].reg_class = 81;
-	chan->reg_class[cla].channels = 11;
-	for (i = 0; i < 11; i++)
-		chan->reg_class[cla].channel[i] = i + 1;
-	cla++;
+	chan->reg_class[cla].channels = 0;
+	for (i = 0; i < 11; i++) {
+		if (!wpas_p2p_disallowed_freq(wpa_s->global, 2412 + i * 5))
+			wpas_p2p_add_chan(&chan->reg_class[cla], i + 1);
+	}
+	if (chan->reg_class[cla].channels)
+		cla++;
 
 	wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for lower 5 GHz "
 		   "band");
 
 	/* Operating class 115 - 5 GHz, channels 36-48 */
 	chan->reg_class[cla].reg_class = 115;
-	chan->reg_class[cla].channels = 4;
-	chan->reg_class[cla].channel[0] = 36;
-	chan->reg_class[cla].channel[1] = 40;
-	chan->reg_class[cla].channel[2] = 44;
-	chan->reg_class[cla].channel[3] = 48;
-	cla++;
+	chan->reg_class[cla].channels = 0;
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 36 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 36);
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 40 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 40);
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 44 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 44);
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 48 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 48);
+	if (chan->reg_class[cla].channels)
+		cla++;
 
 	wpa_printf(MSG_DEBUG, "P2P: Enable operating classes for higher 5 GHz "
 		   "band");
 
 	/* Operating class 124 - 5 GHz, channels 149,153,157,161 */
 	chan->reg_class[cla].reg_class = 124;
-	chan->reg_class[cla].channels = 4;
-	chan->reg_class[cla].channel[0] = 149;
-	chan->reg_class[cla].channel[1] = 153;
-	chan->reg_class[cla].channel[2] = 157;
-	chan->reg_class[cla].channel[3] = 161;
-	cla++;
+	chan->reg_class[cla].channels = 0;
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 149 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 149);
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 153 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 153);
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 156 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 157);
+	if (!wpas_p2p_disallowed_freq(wpa_s->global, 5000 + 161 * 5))
+		wpas_p2p_add_chan(&chan->reg_class[cla], 161);
+	if (chan->reg_class[cla].channels)
+		cla++;
 
 	chan->reg_classes = cla;
 	return 0;
@@ -2089,9 +2127,16 @@ static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
 }
 
 
-static int has_channel(struct hostapd_hw_modes *mode, u8 chan, int *flags)
+static int has_channel(struct wpa_global *global,
+		       struct hostapd_hw_modes *mode, u8 chan, int *flags)
 {
 	int i;
+	unsigned int freq;
+
+	freq = (mode->mode == HOSTAPD_MODE_IEEE80211A ? 5000 : 2407) +
+		chan * 5;
+	if (wpas_p2p_disallowed_freq(global, freq))
+		return 0;
 
 	for (i = 0; i < mode->num_channels; i++) {
 		if (mode->channels[i].chan == chan) {
@@ -2158,15 +2203,15 @@ static int wpas_p2p_setup_channels(struct wpa_supplicant *wpa_s,
 			continue;
 		for (ch = o->min_chan; ch <= o->max_chan; ch += o->inc) {
 			int flag;
-			if (!has_channel(mode, ch, &flag))
+			if (!has_channel(wpa_s->global, mode, ch, &flag))
 				continue;
 			if (o->bw == BW40MINUS &&
 			    (!(flag & HOSTAPD_CHAN_HT40MINUS) ||
-			     !has_channel(mode, ch - 4, NULL)))
+			     !has_channel(wpa_s->global, mode, ch - 4, NULL)))
 				continue;
 			if (o->bw == BW40PLUS &&
 			    (!(flag & HOSTAPD_CHAN_HT40PLUS) ||
-			     !has_channel(mode, ch + 4, NULL)))
+			     !has_channel(wpa_s->global, mode, ch + 4, NULL)))
 				continue;
 			if (reg == NULL) {
 				wpa_printf(MSG_DEBUG, "P2P: Add operating "
@@ -3104,7 +3149,18 @@ static int wpas_p2p_init_go_params(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq based on best 5 GHz "
 			   "channel %d MHz", params->freq);
 	} else {
-		params->freq = 2412;
+		int chan;
+		for (chan = 0; chan < 11; chan++) {
+			params->freq = 2412 + chan * 5;
+			if (!wpas_p2p_disallowed_freq(wpa_s->global,
+						      params->freq))
+				break;
+		}
+		if (chan == 11) {
+			wpa_printf(MSG_DEBUG, "P2P: No 2.4 GHz channel "
+				   "allowed");
+			return -1;
+		}
 		wpa_printf(MSG_DEBUG, "P2P: Set GO freq %d MHz (no preference "
 			   "known)", params->freq);
 	}

@@ -783,10 +783,28 @@ static void wpa_driver_nl80211_event_link(struct wpa_driver_nl80211_data *drv,
 		   del ? "removed" : "added");
 
 	if (os_strcmp(drv->first_bss.ifname, event.interface_status.ifname) == 0) {
-		if (del)
+		if (del) {
+			if (drv->if_removed) {
+				wpa_printf(MSG_DEBUG, "nl80211: if_removed "
+					   "already set - ignore event");
+				return;
+			}
 			drv->if_removed = 1;
-		else
+		} else {
+			if (if_nametoindex(drv->first_bss.ifname) == 0) {
+				wpa_printf(MSG_DEBUG, "nl80211: Interface %s "
+					   "does not exist - ignore "
+					   "RTM_NEWLINK",
+					   drv->first_bss.ifname);
+				return;
+			}
+			if (!drv->if_removed) {
+				wpa_printf(MSG_DEBUG, "nl80211: if_removed "
+					   "already cleared - ignore event");
+				return;
+			}
 			drv->if_removed = 0;
+		}
 	}
 
 	wpa_supplicant_event(drv->ctx, EVENT_INTERFACE_STATUS, &event);
@@ -903,6 +921,14 @@ static void wpa_driver_nl80211_event_rtm_newlink(void *ctx,
 			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface up "
 				   "event since interface %s is down",
 				   namebuf);
+		} else if (if_nametoindex(drv->first_bss.ifname) == 0) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface up "
+				   "event since interface %s does not exist",
+				   drv->first_bss.ifname);
+		} else if (drv->if_removed) {
+			wpa_printf(MSG_DEBUG, "nl80211: Ignore interface up "
+				   "event since interface %s is marked "
+				   "removed", drv->first_bss.ifname);
 		} else {
 			wpa_printf(MSG_DEBUG, "nl80211: Interface up");
 			drv->if_disabled = 0;

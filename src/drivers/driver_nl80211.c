@@ -3449,6 +3449,8 @@ static int wpa_driver_nl80211_scan(void *priv,
 	}
 
 	if (params->p2p_probe) {
+		wpa_printf(MSG_DEBUG, "nl80211: P2P probe - mask SuppRates");
+
 		/*
 		 * Remove 2.4 GHz rates 1, 2, 5.5, 11 Mbps from supported rates
 		 * by masking out everything else apart from the OFDM rates 6,

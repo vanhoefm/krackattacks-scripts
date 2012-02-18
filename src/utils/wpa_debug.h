@@ -18,32 +18,6 @@ enum {
 	MSG_EXCESSIVE, MSG_MSGDUMP, MSG_DEBUG, MSG_INFO, MSG_WARNING, MSG_ERROR
 };
 
-#ifdef CONFIG_ANDROID_LOG
-
-#define wpa_debug_print_timestamp() do {} while (0)
-#define wpa_hexdump(...)            do {} while (0)
-#define wpa_hexdump_key(...)        do {} while (0)
-#define wpa_hexdump_buf(l,t,b)      do {} while (0)
-#define wpa_hexdump_buf_key(l,t,b)  do {} while (0)
-#define wpa_hexdump_ascii(...)      do {} while (0)
-#define wpa_hexdump_ascii_key(...)  do {} while (0)
-#define wpa_debug_open_file(...)    do {} while (0)
-#define wpa_debug_close_file()      do {} while (0)
-#define wpa_dbg(...)                do {} while (0)
-
-static inline int wpa_debug_reopen_file(void)
-{
-	return 0;
-}
-
-
-void android_printf(int level, char *format, ...)
-PRINTF_FORMAT(2, 3);
-
-#define wpa_printf android_printf
-
-#else /* CONFIG_ANDROID_LOG */
-
 #ifdef CONFIG_NO_STDOUT_DEBUG
 
 #define wpa_debug_print_timestamp() do { } while (0)
@@ -176,8 +150,6 @@ void wpa_hexdump_ascii_key(int level, const char *title, const u8 *buf,
 #define wpa_dbg(args...) wpa_msg(args)
 
 #endif /* CONFIG_NO_STDOUT_DEBUG */
-
-#endif /* CONFIG_ANDROID_LOG */
 
 
 #ifdef CONFIG_NO_WPA_MSG

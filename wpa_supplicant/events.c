@@ -1820,11 +1820,13 @@ wpa_supplicant_event_interface_status(struct wpa_supplicant *wpa_s,
 			wpa_msg(wpa_s, MSG_INFO, "Failed to initialize the "
 				"driver after interface was added");
 		}
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		break;
 	case EVENT_INTERFACE_REMOVED:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Configured interface was removed");
 		wpa_s->interface_removed = 1;
 		wpa_supplicant_mark_disassoc(wpa_s);
+		wpa_supplicant_set_state(wpa_s, WPA_INTERFACE_DISABLED);
 		l2_packet_deinit(wpa_s->l2);
 		wpa_s->l2 = NULL;
 #ifdef CONFIG_IBSS_RSN

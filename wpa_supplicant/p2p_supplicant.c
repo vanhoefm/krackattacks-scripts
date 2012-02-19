@@ -213,8 +213,6 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 	char *gtype;
 	const char *reason;
 
-	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
-
 	ssid = wpa_s->current_ssid;
 	if (ssid == NULL) {
 		/*
@@ -263,6 +261,8 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 	}
 	wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_REMOVED "%s %s%s",
 		wpa_s->ifname, gtype, reason);
+
+	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
 
 	if (ssid)
 		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);

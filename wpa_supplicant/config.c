@@ -1659,12 +1659,13 @@ int wpa_config_add_prio_network(struct wpa_config *config,
 		return -1;
 
 	for (prio = 0; prio < config->num_prio; prio++) {
-		if (nlist[prio]->priority < ssid->priority)
+		if (nlist[prio]->priority < ssid->priority) {
+			os_memmove(&nlist[prio + 1], &nlist[prio],
+				   (config->num_prio - prio) *
+				   sizeof(struct wpa_ssid *));
 			break;
+		}
 	}
-
-	os_memmove(&nlist[prio + 1], &nlist[prio],
-		   (config->num_prio - prio) * sizeof(struct wpa_ssid *));
 
 	nlist[prio] = ssid;
 	config->num_prio++;

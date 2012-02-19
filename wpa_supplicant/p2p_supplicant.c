@@ -262,7 +262,8 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 	wpa_msg(wpa_s->parent, MSG_INFO, P2P_EVENT_GROUP_REMOVED "%s %s%s",
 		wpa_s->ifname, gtype, reason);
 
-	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
+	if (eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL) > 0)
+		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group idle timeout");
 
 	if (ssid)
 		wpas_notify_p2p_group_removed(wpa_s, ssid, gtype);
@@ -3958,7 +3959,9 @@ static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 {
 	unsigned int timeout;
 
-	eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
+	if (eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL) > 0)
+		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group idle timeout");
+
 	if (wpa_s->current_ssid == NULL || !wpa_s->current_ssid->p2p_group)
 		return;
 
@@ -4211,8 +4214,9 @@ void wpas_p2p_notif_connected(struct wpa_supplicant *wpa_s)
 		wpas_p2p_disable_cross_connect(wpa_s);
 	else
 		wpas_p2p_enable_cross_connect(wpa_s);
-	if (!wpa_s->ap_iface)
-		eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL);
+	if (!wpa_s->ap_iface &&
+	    eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL) > 0)
+		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group idle timeout");
 }
 
 

@@ -305,15 +305,15 @@ static void subscr_addr_add_url(struct subscription *s, const char *url,
 	int alloc_len;
 	char *scratch_mem = NULL;
 	char *mem;
-	char *domain_and_port;
+	char *host;
 	char *delim;
 	char *path;
-	char *domain;
 	int port = 80;  /* port to send to (default is port 80) */
 	struct addrinfo hints;
 	struct addrinfo *result = NULL;
 	struct addrinfo *rp;
 	int rerr;
+	size_t host_len, path_len;
 
 	/* url MUST begin with http: */
 	if (url_len < 7 || os_strncasecmp(url, "http://", 7))
@@ -321,30 +321,24 @@ static void subscr_addr_add_url(struct subscription *s, const char *url,
 	url += 7;
 	url_len -= 7;
 
-	/* allocate memory for the extra stuff we need */
-	alloc_len = 2 * (url_len + 1);
-	scratch_mem = os_zalloc(alloc_len);
+	/* Make a copy of the string to allow modification during parsing */
+	scratch_mem = os_malloc(url_len + 1);
 	if (scratch_mem == NULL)
 		goto fail;
-	mem = scratch_mem;
-	os_strncpy(mem, url, url_len);
-	wpa_printf(MSG_DEBUG, "WPS UPnP: Adding URL '%s'", mem);
-	domain_and_port = mem;
-	mem += 1 + os_strlen(mem);
-	delim = os_strchr(domain_and_port, '/');
+	os_memcpy(scratch_mem, url, url_len);
+	scratch_mem[url_len] = '\0';
+	wpa_printf(MSG_DEBUG, "WPS UPnP: Adding URL '%s'", scratch_mem);
+	host = scratch_mem;
+	path = os_strchr(host, '/');
+	if (path)
+		*path++ = '\0'; /* null terminate host */
+
+	/* Process and remove optional port component */
+	delim = os_strchr(host, ':');
 	if (delim) {
-		*delim++ = 0;   /* null terminate domain and port */
-		path = delim;
-	} else {
-		path = domain_and_port + os_strlen(domain_and_port);
-	}
-	domain = mem;
-	strcpy(domain, domain_and_port);
-	delim = os_strchr(domain, ':');
-	if (delim) {
-		*delim++ = 0;   /* null terminate domain */
-		if (isdigit(*delim))
-			port = atol(delim);
+		*delim = '\0'; /* null terminate host name for now */
+		if (isdigit(delim[1]))
+			port = atol(delim + 1);
 	}
 
 	/*
@@ -367,13 +361,21 @@ static void subscr_addr_add_url(struct subscription *s, const char *url,
 	hints.ai_flags = 0;
 #endif
 	hints.ai_protocol = 0;          /* Any protocol? */
-	rerr = getaddrinfo(domain, NULL /* fill in port ourselves */,
+	rerr = getaddrinfo(host, NULL /* fill in port ourselves */,
 			   &hints, &result);
 	if (rerr) {
 		wpa_printf(MSG_INFO, "WPS UPnP: Resolve error %d (%s) on: %s",
-			   rerr, gai_strerror(rerr), domain);
+			   rerr, gai_strerror(rerr), host);
 		goto fail;
 	}
+
+	if (delim)
+		*delim = ':'; /* Restore port */
+
+	host_len = os_strlen(host);
+	path_len = path ? os_strlen(path) : 0;
+	alloc_len = host_len + 1 + 1 + path_len + 1;
+
 	for (rp = result; rp; rp = rp->ai_next) {
 		struct subscr_addr *a;
 
@@ -386,16 +388,16 @@ static void subscr_addr_add_url(struct subscription *s, const char *url,
 
 		a = os_zalloc(sizeof(*a) + alloc_len);
 		if (a == NULL)
-			continue;
-		mem = (void *) (a + 1);
+			break;
+		mem = (char *) (a + 1);
 		a->domain_and_port = mem;
-		strcpy(mem, domain_and_port);
-		mem += 1 + strlen(mem);
+		os_memcpy(mem, host, host_len);
+		mem += host_len + 1;
 		a->path = mem;
-		if (path[0] != '/')
+		if (path == NULL || path[0] != '/')
 			*mem++ = '/';
-		strcpy(mem, path);
-		mem += 1 + os_strlen(mem);
+		if (path)
+			os_memcpy(mem, path, path_len);
 		os_memcpy(&a->saddr, rp->ai_addr, sizeof(a->saddr));
 		a->saddr.sin_port = htons(port);
 

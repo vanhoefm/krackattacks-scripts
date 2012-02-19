@@ -124,8 +124,10 @@ static int set_bssid_filter(struct wpa_supplicant *wpa_s, char *val)
 	while (pos) {
 		if (*pos == '\0')
 			break;
-		if (hwaddr_aton(pos, addr))
+		if (hwaddr_aton(pos, addr)) {
+			os_free(filter);
 			return -1;
+		}
 		n = os_realloc(filter, (count + 1) * ETH_ALEN);
 		if (n == NULL) {
 			os_free(filter);

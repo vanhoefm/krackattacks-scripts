@@ -507,7 +507,8 @@ static int plmn_id_match(struct wpabuf *anqp, const char *imsi)
 }
 
 
-static int build_root_nai(char *nai, const char *imsi, char prefix)
+static int build_root_nai(char *nai, size_t nai_len, const char *imsi,
+			  char prefix)
 {
 	const char *sep, *msin;
 	char *end, *pos;
@@ -534,7 +535,7 @@ static int build_root_nai(char *nai, const char *imsi, char prefix)
 	msin_len = os_strlen(msin);
 
 	pos = nai;
-	end = pos + sizeof(nai);
+	end = nai + nai_len;
 	if (prefix)
 		*pos++ = prefix;
 	os_memcpy(pos, imsi, plmn_len);
@@ -561,7 +562,7 @@ static int build_root_nai(char *nai, const char *imsi, char prefix)
 static int set_root_nai(struct wpa_ssid *ssid, const char *imsi, char prefix)
 {
 	char nai[100];
-	if (build_root_nai(nai, imsi, prefix) < 0)
+	if (build_root_nai(nai, sizeof(nai), imsi, prefix) < 0)
 		return -1;
 	return wpa_config_set_quoted(ssid, "identity", nai);
 }
@@ -949,7 +950,7 @@ static int interworking_home_sp(struct wpa_supplicant *wpa_s,
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
 #ifdef INTERWORKING_3GPP
 		if (cred->imsi &&
-		    build_root_nai(nai, cred->imsi, 0) == 0) {
+		    build_root_nai(nai, sizeof(nai), cred->imsi, 0) == 0) {
 			realm = os_strchr(nai, '@');
 			if (realm)
 				realm++;

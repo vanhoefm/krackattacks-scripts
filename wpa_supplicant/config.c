@@ -2276,6 +2276,8 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 			   line, var);
 	}
 
+	os_free(val);
+
 	return -1;
 }
 

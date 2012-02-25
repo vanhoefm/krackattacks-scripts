@@ -1341,6 +1341,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 {
 	struct peer_handler_args *peer_args = user_data;
 	const struct p2p_peer_info *info;
+	DBusMessageIter variant_iter, array_iter;
 
 	info = p2p_get_peer_found(peer_args->wpa_s->global->p2p,
 				  peer_args->p2p_device_addr, 0);
@@ -1350,29 +1351,80 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_secondary_device_types(
 		return FALSE;
 	}
 
-	if (info->wps_sec_dev_type_list_len) {
-		const u8 *sec_dev_type_list = info->wps_sec_dev_type_list;
-		int num_sec_dev_types = info->wps_sec_dev_type_list_len;
-
-		if (!wpas_dbus_simple_array_property_getter(iter,
-							    DBUS_TYPE_BYTE,
-							    sec_dev_type_list,
-							    num_sec_dev_types,
-							    error))
-			goto err_no_mem;
-		else
-			return TRUE;
+	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
+					      DBUS_TYPE_ARRAY_AS_STRING
+					      DBUS_TYPE_ARRAY_AS_STRING
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &variant_iter)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+		               "%s: failed to construct message 1", __func__);
+		return FALSE;
 	}
 
-	if (!wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE, NULL,
-						    0, error))
-		goto err_no_mem;
+	if (!dbus_message_iter_open_container(&variant_iter, DBUS_TYPE_ARRAY,
+					      DBUS_TYPE_ARRAY_AS_STRING
+					      DBUS_TYPE_BYTE_AS_STRING,
+					      &array_iter)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+		               "%s: failed to construct message 2", __func__);
+		return FALSE;
+	}
+
+	if (info->wps_sec_dev_type_list_len) {
+		const u8 *sec_dev_type_list = info->wps_sec_dev_type_list;
+		int num_sec_device_types =
+			info->wps_sec_dev_type_list_len / WPS_DEV_TYPE_LEN;
+		int i;
+		DBusMessageIter inner_array_iter;
+
+		for (i = 0; i < num_sec_device_types; i++) {
+			if (!dbus_message_iter_open_container(
+				    &array_iter, DBUS_TYPE_ARRAY,
+				    DBUS_TYPE_BYTE_AS_STRING,
+				    &inner_array_iter)) {
+				dbus_set_error(error, DBUS_ERROR_FAILED,
+					       "%s: failed to construct "
+					       "message 3 (%d)",
+					       __func__, i);
+				return FALSE;
+			}
+
+			if (!dbus_message_iter_append_fixed_array(
+				    &inner_array_iter, DBUS_TYPE_BYTE,
+				    &sec_dev_type_list, WPS_DEV_TYPE_LEN)) {
+				dbus_set_error(error, DBUS_ERROR_FAILED,
+					       "%s: failed to construct "
+					       "message 4 (%d)",
+					       __func__, i);
+				return FALSE;
+			}
+
+			if (!dbus_message_iter_close_container(
+				    &array_iter, &inner_array_iter)) {
+				dbus_set_error(error, DBUS_ERROR_FAILED,
+					       "%s: failed to construct "
+					       "message 5 (%d)",
+					       __func__, i);
+				return FALSE;
+			}
+
+			sec_dev_type_list += WPS_DEV_TYPE_LEN;
+		}
+	}
+
+	if (!dbus_message_iter_close_container(&variant_iter, &array_iter)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+		               "%s: failed to construct message 6", __func__);
+		return FALSE;
+	}
+
+	if (!dbus_message_iter_close_container(iter, &variant_iter)) {
+		dbus_set_error(error, DBUS_ERROR_FAILED,
+		               "%s: failed to construct message 7", __func__);
+		return FALSE;
+	}
 
 	return TRUE;
-
-err_no_mem:
-	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
-	return FALSE;
 }
 
 
@@ -1380,7 +1432,7 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
 						       DBusError *error,
 						       void *user_data)
 {
-	const struct wpabuf *vendor_extension[P2P_MAX_WPS_VENDOR_EXT];
+	struct wpabuf *vendor_extension[P2P_MAX_WPS_VENDOR_EXT];
 	int i, num;
 	struct peer_handler_args *peer_args = user_data;
 	const struct p2p_peer_info *info;
@@ -1401,12 +1453,10 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
 		num++;
 	}
 
-	if (!wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_STRING,
-						    vendor_extension, num,
-						    error)) {
-		dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
+	if (!wpas_dbus_simple_array_array_property_getter(iter, DBUS_TYPE_BYTE,
+							  vendor_extension,
+							  num, error))
 		return FALSE;
-	}
 
 	return TRUE;
 }

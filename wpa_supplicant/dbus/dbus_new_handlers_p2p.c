@@ -1465,10 +1465,12 @@ dbus_bool_t wpas_dbus_getter_p2p_peer_vendor_extension(DBusMessageIter *iter,
 dbus_bool_t wpas_dbus_getter_p2p_peer_ies(DBusMessageIter *iter,
 					  DBusError *error, void *user_data)
 {
+	dbus_bool_t success;
 	/* struct peer_handler_args *peer_args = user_data; */
 
-	dbus_set_error_const(error, DBUS_ERROR_FAILED, "not implemented");
-	return FALSE;
+	success = wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
+							 NULL, 0, error);
+	return success;
 }
 
 

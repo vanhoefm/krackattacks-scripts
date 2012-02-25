@@ -1916,6 +1916,42 @@ static int wpa_cli_cmd_all_sta(struct wpa_ctrl *ctrl, int argc, char *argv[])
 
 	return -1;
 }
+
+
+static int wpa_cli_cmd_deauthenticate(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	char buf[64];
+	if (argc < 1) {
+		printf("Invalid 'deauthenticate' command - exactly one "
+		       "argument, STA address, is required.\n");
+		return -1;
+	}
+	if (argc > 1)
+		os_snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s %s",
+			    argv[0], argv[1]);
+	else
+		os_snprintf(buf, sizeof(buf), "DEAUTHENTICATE %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
+
+
+static int wpa_cli_cmd_disassociate(struct wpa_ctrl *ctrl, int argc,
+				    char *argv[])
+{
+	char buf[64];
+	if (argc < 1) {
+		printf("Invalid 'disassociate' command - exactly one "
+		       "argument, STA address, is required.\n");
+		return -1;
+	}
+	if (argc > 1)
+		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s %s",
+			    argv[0], argv[1]);
+	else
+		os_snprintf(buf, sizeof(buf), "DISASSOCIATE %s", argv[0]);
+	return wpa_ctrl_command(ctrl, buf);
+}
 #endif /* CONFIG_AP */
 
 
@@ -2963,6 +2999,12 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "all_sta", wpa_cli_cmd_all_sta,
 	  cli_cmd_flag_none,
 	  "= get information about all associated stations (AP)" },
+	{ "deauthenticate", wpa_cli_cmd_deauthenticate,
+	  cli_cmd_flag_none,
+	  "<addr> = deauthenticate a station" },
+	{ "disassociate", wpa_cli_cmd_disassociate,
+	  cli_cmd_flag_none,
+	  "<addr> = disassociate a station" },
 #endif /* CONFIG_AP */
 	{ "suspend", wpa_cli_cmd_suspend, cli_cmd_flag_none,
 	  "= notification of suspend/hibernate" },

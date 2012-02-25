@@ -870,6 +870,26 @@ int ap_ctrl_iface_sta_next(struct wpa_supplicant *wpa_s, const char *txtaddr,
 }
 
 
+int ap_ctrl_iface_sta_disassociate(struct wpa_supplicant *wpa_s,
+				   const char *txtaddr)
+{
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	return hostapd_ctrl_iface_disassociate(wpa_s->ap_iface->bss[0],
+					       txtaddr);
+}
+
+
+int ap_ctrl_iface_sta_deauthenticate(struct wpa_supplicant *wpa_s,
+				     const char *txtaddr)
+{
+	if (wpa_s->ap_iface == NULL)
+		return -1;
+	return hostapd_ctrl_iface_deauthenticate(wpa_s->ap_iface->bss[0],
+						 txtaddr);
+}
+
+
 int ap_ctrl_iface_wpa_get_status(struct wpa_supplicant *wpa_s, char *buf,
 				 size_t buflen, int verbose)
 {

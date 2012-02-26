@@ -516,7 +516,8 @@ struct scard_data * scard_init(scard_sim_type sim_type, const char *reader)
 #endif /* UNICODE */
 
 	ret = SCardConnect(scard->ctx, &readers[pos], SCARD_SHARE_SHARED,
-			   SCARD_PROTOCOL_T0, &scard->card, &scard->protocol);
+			   SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
+			   &scard->card, &scard->protocol);
 	if (ret != SCARD_S_SUCCESS) {
 		if (ret == (long) SCARD_E_NO_SMARTCARD)
 			wpa_printf(MSG_INFO, "No smart card inserted.");

@@ -680,4 +680,14 @@ static inline int wpa_drv_switch_channel(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->switch_channel(wpa_s->drv_priv, freq);
 }
 
+static inline int wpa_drv_wnm_oper(struct wpa_supplicant *wpa_s,
+				   enum wnm_oper oper, const u8 *peer,
+				   u8 *buf, u16 *buf_len)
+{
+	if (!wpa_s->driver->wnm_oper)
+		return -1;
+	return wpa_s->driver->wnm_oper(wpa_s->drv_priv, oper, peer, buf,
+				       buf_len);
+}
+
 #endif /* DRIVER_I_H */

@@ -101,6 +101,10 @@ int hostapd_add_tspec(struct hostapd_data *hapd, const u8 *addr,
 
 #include "drivers/driver.h"
 
+int hostapd_drv_wnm_oper(struct hostapd_data *hapd,
+			 enum wnm_oper oper, const u8 *peer,
+			 u8 *buf, u16 *buf_len);
+
 static inline int hostapd_drv_set_countermeasures(struct hostapd_data *hapd,
 						  int enabled)
 {

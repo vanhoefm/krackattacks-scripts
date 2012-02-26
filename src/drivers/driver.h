@@ -999,6 +999,23 @@ enum tdls_oper {
 	TDLS_DISABLE
 };
 
+enum wnm_oper {
+	WNM_SLEEP_ENTER_CONFIRM,
+	WNM_SLEEP_ENTER_FAIL,
+	WNM_SLEEP_EXIT_CONFIRM,
+	WNM_SLEEP_EXIT_FAIL,
+	WNM_SLEEP_TFS_REQ_IE_ADD,   /* STA requests driver to add TFS req IE */
+	WNM_SLEEP_TFS_REQ_IE_NONE,  /* STA requests empty TFS req IE */
+	WNM_SLEEP_TFS_REQ_IE_SET,   /* AP requests driver to set TFS req IE for
+				     * a STA */
+	WNM_SLEEP_TFS_RESP_IE_ADD,  /* AP requests driver to add TFS resp IE
+				     * for a STA */
+	WNM_SLEEP_TFS_RESP_IE_NONE, /* AP requests empty TFS resp IE */
+	WNM_SLEEP_TFS_RESP_IE_SET,  /* AP requests driver to set TFS resp IE
+				     * for a STA */
+	WNM_SLEEP_TFS_IE_DEL        /* AP delete the TFS IE */
+};
+
 /**
  * struct wpa_signal_info - Information about channel signal quality
  */
@@ -2415,6 +2432,18 @@ struct wpa_driver_ops {
 	int (*tdls_oper)(void *priv, enum tdls_oper oper, const u8 *peer);
 
 	/**
+	 * wnm_oper - Notify driver of the WNM frame reception
+	 * @priv: Private driver interface data
+	 * @oper: WNM operation. See %enum wnm_oper
+	 * @peer: Destination (peer) MAC address
+	 * @buf: Buffer for the driver to fill in (for getting IE)
+	 * @buf_len: Return the len of buf
+	 * Returns: 0 on success, negative (<0) on failure
+	 */
+	int (*wnm_oper)(void *priv, enum wnm_oper oper, const u8 *peer,
+			u8 *buf, u16 *buf_len);
+
+	/**
 	 * signal_poll - Get current connection information
 	 * @priv: Private driver interface data
 	 * @signal_info: Connection info structure
@@ -3011,7 +3040,14 @@ enum wpa_event_type {
 	 *
 	 * Described in wpa_event_data.ch_switch
 	 * */
-	EVENT_CH_SWITCH
+	EVENT_CH_SWITCH,
+
+	/**
+	 * EVENT_WNM - Request WNM operation
+	 *
+	 * This event can be used to request a WNM operation to be performed.
+	 */
+	EVENT_WNM
 };
 
 
@@ -3212,6 +3248,24 @@ union wpa_event_data {
 		} oper;
 		u16 reason_code; /* for teardown */
 	} tdls;
+
+	/**
+	 * struct wnm - Data for EVENT_WNM
+	 */
+	struct wnm {
+		u8 addr[ETH_ALEN];
+		enum {
+			WNM_OPER_SLEEP,
+		} oper;
+		enum {
+			WNM_SLEEP_ENTER,
+			WNM_SLEEP_EXIT
+		} sleep_action;
+		int sleep_intval;
+		u16 reason_code;
+		u8 *buf;
+		u16 buf_len;
+	} wnm;
 
 	/**
 	 * struct ft_ies - FT information elements (EVENT_FT_RESPONSE)

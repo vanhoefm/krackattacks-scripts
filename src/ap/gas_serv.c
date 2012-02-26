@@ -135,9 +135,31 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 
 	len = gas_anqp_add_element(buf, ANQP_CAPABILITY_LIST);
 	wpabuf_put_le16(buf, ANQP_CAPABILITY_LIST);
+	if (hapd->conf->venue_name)
+		wpabuf_put_le16(buf, ANQP_VENUE_NAME);
 	if (hapd->conf->roaming_consortium)
 		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
 	gas_anqp_set_element_len(buf, len);
+}
+
+
+static void anqp_add_venue_name(struct hostapd_data *hapd, struct wpabuf *buf)
+{
+	if (hapd->conf->venue_name) {
+		u8 *len;
+		unsigned int i;
+		len = gas_anqp_add_element(buf, ANQP_VENUE_NAME);
+		wpabuf_put_u8(buf, hapd->conf->venue_group);
+		wpabuf_put_u8(buf, hapd->conf->venue_type);
+		for (i = 0; i < hapd->conf->venue_name_count; i++) {
+			struct hostapd_venue_name *vn;
+			vn = &hapd->conf->venue_name[i];
+			wpabuf_put_u8(buf, 3 + vn->name_len);
+			wpabuf_put_data(buf, vn->lang, 3);
+			wpabuf_put_data(buf, vn->name, vn->name_len);
+		}
+		gas_anqp_set_element_len(buf, len);
+	}
 }
 
 
@@ -171,6 +193,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 
 	if (request & ANQP_REQ_CAPABILITY_LIST)
 		anqp_add_capab_list(hapd, buf);
+	if (request & ANQP_REQ_VENUE_NAME)
+		anqp_add_venue_name(hapd, buf);
 	if (request & ANQP_REQ_ROAMING_CONSORTIUM)
 		anqp_add_roaming_consortium(hapd, buf);
 
@@ -223,6 +247,10 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 	case ANQP_CAPABILITY_LIST:
 		set_anqp_req(ANQP_REQ_CAPABILITY_LIST, "Capability List", 1, 0,
 			     0, qi);
+		break;
+	case ANQP_VENUE_NAME:
+		set_anqp_req(ANQP_REQ_VENUE_NAME, "Venue Name",
+			     hapd->conf->venue_name != NULL, 0, 0, qi);
 		break;
 	case ANQP_ROAMING_CONSORTIUM:
 		set_anqp_req(ANQP_REQ_ROAMING_CONSORTIUM, "Roaming Consortium",

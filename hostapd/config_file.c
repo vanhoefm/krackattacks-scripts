@@ -1175,6 +1175,49 @@ static int parse_roaming_consortium(struct hostapd_bss_config *bss, char *pos,
 
 	return 0;
 }
+
+
+static int parse_venue_name(struct hostapd_bss_config *bss, char *pos,
+			    int line)
+{
+	char *sep;
+	size_t clen, nlen;
+	struct hostapd_venue_name *vn;
+
+	sep = os_strchr(pos, ':');
+	if (sep == NULL)
+		goto fail;
+	*sep++ = '\0';
+
+	clen = os_strlen(pos);
+	if (clen < 2)
+		goto fail;
+	nlen = os_strlen(sep);
+	if (nlen > 252)
+		goto fail;
+
+	vn = os_realloc(bss->venue_name,
+			sizeof(struct hostapd_venue_name) *
+			(bss->venue_name_count + 1));
+	if (vn == NULL)
+		return -1;
+
+	bss->venue_name = vn;
+	vn = &bss->venue_name[bss->venue_name_count];
+	bss->venue_name_count++;
+
+	os_memset(vn->lang, 0, sizeof(vn->lang));
+	os_memcpy(vn->lang, pos, clen);
+	vn->name_len = nlen;
+	os_memcpy(vn->name, sep, nlen);
+
+	return 0;
+
+fail:
+	wpa_printf(MSG_ERROR, "Line %d: Invalid venue_name '%s'",
+		   line, pos);
+	return -1;
+}
 #endif /* CONFIG_INTERWORKING */
 
 
@@ -2112,6 +2155,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			}
 		} else if (os_strcmp(buf, "roaming_consortium") == 0) {
 			if (parse_roaming_consortium(bss, pos, line) < 0)
+				errors++;
+		} else if (os_strcmp(buf, "venue_name") == 0) {
+			if (parse_venue_name(bss, pos, line) < 0)
 				errors++;
 		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 			bss->gas_frag_limit = atoi(pos);

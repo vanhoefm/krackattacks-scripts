@@ -142,6 +142,12 @@ struct hostapd_roaming_consortium {
 	u8 oi[MAX_ROAMING_CONSORTIUM_LEN];
 };
 
+struct hostapd_venue_name {
+	u8 lang[3];
+	u8 name_len;
+	u8 name[252];
+};
+
 /**
  * struct hostapd_bss_config - Per-BSS configuration
  */
@@ -360,6 +366,10 @@ struct hostapd_bss_config {
 	/* IEEE 802.11u - Roaming Consortium list */
 	unsigned int roaming_consortium_count;
 	struct hostapd_roaming_consortium *roaming_consortium;
+
+	/* IEEE 802.11u - Venue Name duples */
+	unsigned int venue_name_count;
+	struct hostapd_venue_name *venue_name;
 
 	u16 gas_comeback_delay;
 	int gas_frag_limit;

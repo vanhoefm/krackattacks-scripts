@@ -16,6 +16,7 @@
 #include "crypto/random.h"
 #include "p2p/p2p.h"
 #include "wps/wps.h"
+#include "wnm_ap.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -502,6 +503,13 @@ static void hostapd_action_rx(struct hostapd_data *hapd,
 					   action->data + 2);
 	}
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_IEEE80211V
+	if (action->category == WLAN_ACTION_WNM) {
+		wpa_printf(MSG_DEBUG, "%s: WNM_ACTION length %d",
+			   __func__, (int) action->len);
+		ieee802_11_rx_wnm_action_ap(hapd, action);
+	}
+#endif /* CONFIG_IEEE80211V */
 }
 
 

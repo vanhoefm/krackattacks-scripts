@@ -87,6 +87,9 @@ struct wpa_state_machine {
 	unsigned int ft_completed:1;
 	unsigned int pmk_r1_name_valid:1;
 #endif /* CONFIG_IEEE80211R */
+#ifdef CONFIG_IEEE80211V
+	unsigned int is_wnmsleep:1;
+#endif /* CONFIG_IEEE80211V */
 
 	u8 req_replay_counter[WPA_REPLAY_COUNTER_LEN];
 	int req_replay_counter_used;

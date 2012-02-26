@@ -334,6 +334,10 @@ struct wpa_supplicant {
 			     * previous association event */
 
 	struct scard_data *scard;
+#ifdef PCSC_FUNCS
+	char imsi[20];
+	int mnc_len;
+#endif /* PCSC_FUNCS */
 
 	unsigned char last_eapol_src[ETH_ALEN];
 

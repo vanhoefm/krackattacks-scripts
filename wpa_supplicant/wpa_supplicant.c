@@ -2342,6 +2342,48 @@ void wpa_supplicant_apply_ht_overrides(
 #endif /* CONFIG_HT_OVERRIDES */
 
 
+static int pcsc_reader_init(struct wpa_supplicant *wpa_s)
+{
+#ifdef PCSC_FUNCS
+	size_t len;
+
+	if (!wpa_s->conf->pcsc_reader)
+		return 0;
+
+	wpa_s->scard = scard_init(SCARD_TRY_BOTH, wpa_s->conf->pcsc_reader);
+	if (!wpa_s->scard)
+		return 1;
+
+	if (wpa_s->conf->pcsc_pin &&
+	    scard_set_pin(wpa_s->scard, wpa_s->conf->pcsc_pin) < 0) {
+		scard_deinit(wpa_s->scard);
+		wpa_s->scard = NULL;
+		wpa_msg(wpa_s, MSG_ERROR, "PC/SC PIN validation failed");
+		return -1;
+	}
+
+	len = sizeof(wpa_s->imsi) - 1;
+	if (scard_get_imsi(wpa_s->scard, wpa_s->imsi, &len)) {
+		scard_deinit(wpa_s->scard);
+		wpa_s->scard = NULL;
+		wpa_msg(wpa_s, MSG_ERROR, "Could not read IMSI");
+		return -1;
+	}
+	wpa_s->imsi[len] = '\0';
+
+	wpa_s->mnc_len = scard_get_mnc_len(wpa_s->scard);
+
+	wpa_printf(MSG_DEBUG, "SCARD: IMSI %s (MNC length %d)",
+		   wpa_s->imsi, wpa_s->mnc_len);
+
+	wpa_sm_set_scard_ctx(wpa_s->wpa, wpa_s->scard);
+	eapol_sm_register_scard_ctx(wpa_s->eapol, wpa_s->scard);
+#endif /* PCSC_FUNCS */
+
+	return 0;
+}
+
+
 static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 				     struct wpa_interface *iface)
 {
@@ -2561,6 +2603,9 @@ next_driver:
 #endif /* CONFIG_P2P */
 
 	if (wpa_bss_init(wpa_s) < 0)
+		return -1;
+
+	if (pcsc_reader_init(wpa_s) < 0)
 		return -1;
 
 	return 0;

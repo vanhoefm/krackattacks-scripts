@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - test code
- * Copyright (c) 2003-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -856,7 +856,7 @@ static int scard_test(void)
 	unsigned char aka_ik[IK_LEN];
 	unsigned char aka_ck[CK_LEN];
 
-	scard = scard_init(SCARD_TRY_BOTH);
+	scard = scard_init(SCARD_TRY_BOTH, NULL);
 	if (scard == NULL)
 		return -1;
 	if (scard_set_pin(scard, "1234")) {
@@ -956,7 +956,7 @@ static int scard_get_triplets(int argc, char *argv[])
 		wpa_debug_level = 99;
 	}
 
-	scard = scard_init(SCARD_GSM_SIM_ONLY);
+	scard = scard_init(SCARD_GSM_SIM_ONLY, NULL);
 	if (scard == NULL) {
 		printf("Failed to open smartcard connection\n");
 		return -1;

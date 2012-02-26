@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Configuration file structures
- * Copyright (c) 2003-2005, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -289,6 +289,23 @@ struct wpa_config {
 	 * module is not loaded.
 	 */
 	char *pkcs11_module_path;
+
+	/**
+	 * pcsc_reader - PC/SC reader name prefix
+	 *
+	 * If not %NULL, PC/SC reader with a name that matches this prefix is
+	 * initialized for SIM/USIM access. Empty string can be used to match
+	 * the first available reader.
+	 */
+	char *pcsc_reader;
+
+	/**
+	 * pcsc_pin - PIN for USIM, GSM SIM, and smartcards
+	 *
+	 * This field is used to configure PIN for SIM/USIM for EAP-SIM and
+	 * EAP-AKA. If left out, this will be asked through control interface.
+	 */
+	char *pcsc_pin;
 
 	/**
 	 * driver_param - Driver interface parameters

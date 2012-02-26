@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Configuration parser and common functions
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1832,6 +1832,8 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->opensc_engine_path);
 	os_free(config->pkcs11_engine_path);
 	os_free(config->pkcs11_module_path);
+	os_free(config->pcsc_reader);
+	os_free(config->pcsc_pin);
 	os_free(config->driver_param);
 	os_free(config->device_name);
 	os_free(config->manufacturer);
@@ -2704,6 +2706,8 @@ static const struct global_parse_data global_fields[] = {
 	{ STR(opensc_engine_path), 0 },
 	{ STR(pkcs11_engine_path), 0 },
 	{ STR(pkcs11_module_path), 0 },
+	{ STR(pcsc_reader), 0 },
+	{ STR(pcsc_pin), 0 },
 	{ STR(driver_param), 0 },
 	{ INT(dot11RSNAConfigPMKLifetime), 0 },
 	{ INT(dot11RSNAConfigPMKReauthThreshold), 0 },

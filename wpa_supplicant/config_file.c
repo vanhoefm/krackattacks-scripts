@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Configuration backend: text file
- * Copyright (c) 2003-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -716,6 +716,10 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->pkcs11_module_path)
 		fprintf(f, "pkcs11_module_path=%s\n",
 			config->pkcs11_module_path);
+	if (config->pcsc_reader)
+		fprintf(f, "pcsc_reader=%s\n", config->pcsc_reader);
+	if (config->pcsc_pin)
+		fprintf(f, "pcsc_pin=%s\n", config->pcsc_pin);
 	if (config->driver_param)
 		fprintf(f, "driver_param=%s\n", config->driver_param);
 	if (config->dot11RSNAConfigPMKLifetime)

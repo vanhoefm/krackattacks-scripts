@@ -37,7 +37,7 @@ typedef enum {
 
 
 #ifdef PCSC_FUNCS
-struct scard_data * scard_init(scard_sim_type sim_type);
+struct scard_data * scard_init(scard_sim_type sim_type, const char *reader);
 void scard_deinit(struct scard_data *scard);
 
 int scard_set_pin(struct scard_data *scard, const char *pin);

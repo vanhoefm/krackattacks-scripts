@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / PC/SC smartcard interface for USIM, GSM SIM
- * Copyright (c) 2004-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2007, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -417,6 +417,7 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
 /**
  * scard_init - Initialize SIM/USIM connection using PC/SC
  * @sim_type: Allowed SIM types (SIM, USIM, or both)
+ * @reader: Reader name prefix to search for
  * Returns: Pointer to private data structure, or %NULL on failure
  *
  * This function is used to initialize SIM/USIM connection. PC/SC is used to
@@ -425,10 +426,10 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
  * access some of the card functions. Once the connection is not needed
  * anymore, scard_deinit() can be used to close it.
  */
-struct scard_data * scard_init(scard_sim_type sim_type)
+struct scard_data * scard_init(scard_sim_type sim_type, const char *reader)
 {
 	long ret;
-	unsigned long len;
+	unsigned long len, pos;
 	struct scard_data *scard;
 #ifdef CONFIG_NATIVE_WINDOWS
 	TCHAR *readers = NULL;
@@ -482,17 +483,39 @@ struct scard_data * scard_init(scard_sim_type sim_type)
 			   "available.");
 		goto failed;
 	}
-	/* readers is a list of available reader. Last entry is terminated with
-	 * double NUL.
-	 * TODO: add support for selecting the reader; now just use the first
-	 * one.. */
+	wpa_hexdump_ascii(MSG_DEBUG, "SCARD: Readers", (u8 *) readers, len);
+	/*
+	 * readers is a list of available readers. The last entry is terminated
+	 * with double null.
+	 */
+	pos = 0;
 #ifdef UNICODE
-	wpa_printf(MSG_DEBUG, "SCARD: Selected reader='%S'", readers);
+	/* TODO */
 #else /* UNICODE */
-	wpa_printf(MSG_DEBUG, "SCARD: Selected reader='%s'", readers);
+	while (pos < len) {
+		if (reader == NULL ||
+		    os_strncmp(&readers[pos], reader, os_strlen(reader)) == 0)
+			break;
+		while (pos < len && readers[pos])
+			pos++;
+		pos++; /* skip separating null */
+		if (pos < len && readers[pos] == '\0')
+			pos = len; /* double null terminates list */
+	}
+#endif /* UNICODE */
+	if (pos >= len) {
+		wpa_printf(MSG_WARNING, "SCARD: No reader with prefix '%s' "
+			   "found", reader);
+		goto failed;
+	}
+
+#ifdef UNICODE
+	wpa_printf(MSG_DEBUG, "SCARD: Selected reader='%S'", &readers[pos]);
+#else /* UNICODE */
+	wpa_printf(MSG_DEBUG, "SCARD: Selected reader='%s'", &readers[pos]);
 #endif /* UNICODE */
 
-	ret = SCardConnect(scard->ctx, readers, SCARD_SHARE_SHARED,
+	ret = SCardConnect(scard->ctx, &readers[pos], SCARD_SHARE_SHARED,
 			   SCARD_PROTOCOL_T0, &scard->card, &scard->protocol);
 	if (ret != SCARD_S_SUCCESS) {
 		if (ret == (long) SCARD_E_NO_SMARTCARD)

@@ -266,7 +266,7 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 	else
 		type = SCARD_GSM_SIM_ONLY;
 
-	wpa_s->scard = scard_init(type);
+	wpa_s->scard = scard_init(type, NULL);
 	if (wpa_s->scard == NULL) {
 		wpa_msg(wpa_s, MSG_WARNING, "Failed to initialize SIM "
 			"(pcsc-lite)");

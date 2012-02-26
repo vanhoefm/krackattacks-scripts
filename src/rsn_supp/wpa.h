@@ -366,4 +366,8 @@ void wpa_tdls_enable(struct wpa_sm *sm, int enabled);
 void wpa_tdls_disable_link(struct wpa_sm *sm, const u8 *addr);
 int wpa_tdls_is_external_setup(struct wpa_sm *sm);
 
+#ifdef CONFIG_IEEE80211V
+int wpa_wnmsleep_install_key(struct wpa_sm *sm, u8 subelem_id, u8 *buf);
+#endif /* CONFIG_IEEE80211V */
+
 #endif /* WPA_H */

@@ -23,6 +23,7 @@
 #include "eap_peer/eap.h"
 #include "ap/hostapd.h"
 #include "p2p/p2p.h"
+#include "wnm_sta.h"
 #include "notify.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
@@ -1990,6 +1991,25 @@ static void wpa_supplicant_event_tdls(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_TDLS */
 
 
+#ifdef CONFIG_IEEE80211V
+static void wpa_supplicant_event_wnm(struct wpa_supplicant *wpa_s,
+				     union wpa_event_data *data)
+{
+	if (data == NULL)
+		return;
+	switch (data->wnm.oper) {
+	case WNM_OPER_SLEEP:
+		wpa_printf(MSG_DEBUG, "Start sending WNM-Sleep Request "
+			   "(action=%d, intval=%d)",
+			   data->wnm.sleep_action, data->wnm.sleep_intval);
+		ieee802_11_send_wnmsleep_req(wpa_s, data->wnm.sleep_action,
+					     data->wnm.sleep_intval);
+		break;
+	}
+}
+#endif /* CONFIG_IEEE80211V */
+
+
 #ifdef CONFIG_IEEE80211R
 static void
 wpa_supplicant_event_ft_response(struct wpa_supplicant *wpa_s,
@@ -2313,6 +2333,11 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		wpa_supplicant_event_tdls(wpa_s, data);
 		break;
 #endif /* CONFIG_TDLS */
+#ifdef CONFIG_IEEE80211V
+	case EVENT_WNM:
+		wpa_supplicant_event_wnm(wpa_s, data);
+		break;
+#endif /* CONFIG_IEEE80211V */
 #ifdef CONFIG_IEEE80211R
 	case EVENT_FT_RESPONSE:
 		wpa_supplicant_event_ft_response(wpa_s, data);
@@ -2503,6 +2528,12 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		}
 #endif /* CONFIG_SME */
 #endif /* CONFIG_IEEE80211W */
+#ifdef CONFIG_IEEE80211V
+		if (data->rx_action.category == WLAN_ACTION_WNM) {
+			ieee802_11_rx_wnm_action(wpa_s, &data->rx_action);
+			break;
+		}
+#endif /* CONFIG_IEEE80211V */
 #ifdef CONFIG_GAS
 		if (data->rx_action.category == WLAN_ACTION_PUBLIC &&
 		    gas_query_rx(wpa_s->gas, data->rx_action.da,

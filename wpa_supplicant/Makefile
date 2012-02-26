@@ -167,6 +167,11 @@ NEED_SHA256=y
 NEED_AES_OMAC1=y
 endif
 
+ifdef CONFIG_IEEE80211V
+CFLAGS += -DCONFIG_IEEE80211V
+OBJS += wnm_sta.o
+endif
+
 ifdef CONFIG_TDLS
 CFLAGS += -DCONFIG_TDLS
 OBJS += ../src/rsn_supp/tdls.o

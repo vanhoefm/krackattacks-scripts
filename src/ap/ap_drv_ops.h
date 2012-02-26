@@ -86,6 +86,9 @@ int hostapd_drv_sta_deauth(struct hostapd_data *hapd,
 			   const u8 *addr, int reason);
 int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
 			     const u8 *addr, int reason);
+int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
+			    unsigned int wait, const u8 *dst, const u8 *data,
+			    size_t len);
 int hostapd_add_sta_node(struct hostapd_data *hapd, const u8 *addr,
 			 u16 auth_alg);
 int hostapd_sta_auth(struct hostapd_data *hapd, const u8 *addr,

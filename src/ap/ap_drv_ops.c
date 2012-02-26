@@ -584,3 +584,15 @@ int hostapd_drv_sta_disassoc(struct hostapd_data *hapd,
 	return hapd->driver->sta_disassoc(hapd->drv_priv, hapd->own_addr, addr,
 					  reason);
 }
+
+
+int hostapd_drv_send_action(struct hostapd_data *hapd, unsigned int freq,
+			    unsigned int wait, const u8 *dst, const u8 *data,
+			    size_t len)
+{
+	if (hapd->driver == NULL || hapd->driver->send_action == NULL)
+		return 0;
+	return hapd->driver->send_action(hapd->drv_priv, freq, wait, dst,
+					 hapd->own_addr, hapd->own_addr, data,
+					 len, 0);
+}

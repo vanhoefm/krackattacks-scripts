@@ -228,6 +228,9 @@
 #define WLAN_EID_20_40_BSS_INTOLERANT 73
 #define WLAN_EID_OVERLAPPING_BSS_SCAN_PARAMS 74
 #define WLAN_EID_MMIE 76
+#define WLAN_EID_TFS_REQ 91
+#define WLAN_EID_TFS_RESP 92
+#define WLAN_EID_WNMSLEEP 93
 #define WLAN_EID_TIME_ZONE 98
 #define WLAN_EID_LINK_ID 101
 #define WLAN_EID_INTERWORKING 107
@@ -486,6 +489,17 @@ struct ieee80211_mgmt {
 					u8 action; /* */
 					u8 trans_id[WLAN_SA_QUERY_TR_ID_LEN];
 				} STRUCT_PACKED sa_query_resp;
+				struct {
+					u8 action;
+					u8 dialogtoken;
+					u8 variable[0];
+				} STRUCT_PACKED wnm_sleep_req;
+				struct {
+					u8 action;
+					u8 dialogtoken;
+					le16 keydata_len;
+					u8 variable[0];
+				} STRUCT_PACKED wnm_sleep_resp;
 				struct {
 					u8 action;
 					u8 variable[0];
@@ -935,5 +949,29 @@ struct ieee80211_2040_intol_chan_report {
 	u8 op_class;
 	u8 variable[0];	/* Channel List */
 } STRUCT_PACKED;
+
+/* IEEE 802.11v - WNM-Sleep Mode element */
+struct wnm_sleep_element {
+	u8 eid;     /* WLAN_EID_WNMSLEEP */
+	u8 len;
+	u8 action_type; /* WLAN_WNM_SLEEP_ENTER/EXIT */
+	u8 status;
+	le16 intval;
+} STRUCT_PACKED;
+
+enum wnm_sleep_mode_response_status {
+	WNM_STATUS_SLEEP_ACCEPT = 0,
+	WNM_STATUS_SLEEP_EXIT_ACCEPT_GTK_UPDATE = 1,
+	WNM_STATUS_DENIED_ACTION = 2,
+	WNM_STATUS_DENIED_TMP = 3,
+	WNM_STATUS_DENIED_KEY = 4,
+	WNM_STATUS_DENIED_OTHER_WNM_SERVICE = 5
+};
+
+/* WNM-Sleep Mode subelement IDs */
+enum wnm_sleep_mode_subelement_id {
+	WNM_SLEEP_SUBELEM_GTK = 0,
+	WNM_SLEEP_SUBELEM_IGTK = 1
+};
 
 #endif /* IEEE802_11_DEFS_H */

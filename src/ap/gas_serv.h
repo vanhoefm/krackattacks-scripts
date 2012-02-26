@@ -11,6 +11,8 @@
 
 #define ANQP_REQ_CAPABILITY_LIST \
 	(1 << (ANQP_CAPABILITY_LIST - ANQP_QUERY_LIST))
+#define ANQP_REQ_ROAMING_CONSORTIUM \
+	(1 << (ANQP_ROAMING_CONSORTIUM - ANQP_QUERY_LIST))
 
 /* To account for latencies between hostapd and external ANQP processor */
 #define GAS_SERV_COMEBACK_DELAY_FUDGE 10

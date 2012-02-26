@@ -135,6 +135,25 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 
 	len = gas_anqp_add_element(buf, ANQP_CAPABILITY_LIST);
 	wpabuf_put_le16(buf, ANQP_CAPABILITY_LIST);
+	if (hapd->conf->roaming_consortium)
+		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
+	gas_anqp_set_element_len(buf, len);
+}
+
+
+static void anqp_add_roaming_consortium(struct hostapd_data *hapd,
+					struct wpabuf *buf)
+{
+	unsigned int i;
+	u8 *len;
+
+	len = gas_anqp_add_element(buf, ANQP_ROAMING_CONSORTIUM);
+	for (i = 0; i < hapd->conf->roaming_consortium_count; i++) {
+		struct hostapd_roaming_consortium *rc;
+		rc = &hapd->conf->roaming_consortium[i];
+		wpabuf_put_u8(buf, rc->len);
+		wpabuf_put_data(buf, rc->oi, rc->len);
+	}
 	gas_anqp_set_element_len(buf, len);
 }
 
@@ -152,6 +171,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 
 	if (request & ANQP_REQ_CAPABILITY_LIST)
 		anqp_add_capab_list(hapd, buf);
+	if (request & ANQP_REQ_ROAMING_CONSORTIUM)
+		anqp_add_roaming_consortium(hapd, buf);
 
 	return buf;
 }
@@ -202,6 +223,10 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 	case ANQP_CAPABILITY_LIST:
 		set_anqp_req(ANQP_REQ_CAPABILITY_LIST, "Capability List", 1, 0,
 			     0, qi);
+		break;
+	case ANQP_ROAMING_CONSORTIUM:
+		set_anqp_req(ANQP_REQ_ROAMING_CONSORTIUM, "Roaming Consortium",
+			     hapd->conf->roaming_consortium != NULL, 0, 0, qi);
 		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported Info Id %u",

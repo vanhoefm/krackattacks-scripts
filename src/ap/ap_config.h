@@ -361,6 +361,9 @@ struct hostapd_bss_config {
 	unsigned int roaming_consortium_count;
 	struct hostapd_roaming_consortium *roaming_consortium;
 
+	u16 gas_comeback_delay;
+	int gas_frag_limit;
+
 	u8 wps_rf_bands; /* RF bands for WPS (WPS_RF_*) */
 
 #ifdef CONFIG_RADIUS_TEST

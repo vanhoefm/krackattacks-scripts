@@ -2113,6 +2113,10 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		} else if (os_strcmp(buf, "roaming_consortium") == 0) {
 			if (parse_roaming_consortium(bss, pos, line) < 0)
 				errors++;
+		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
+			bss->gas_frag_limit = atoi(pos);
+		} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {
+			bss->gas_comeback_delay = atoi(pos);
 #endif /* CONFIG_INTERWORKING */
 #ifdef CONFIG_RADIUS_TEST
 		} else if (os_strcmp(buf, "dump_msk_file") == 0) {

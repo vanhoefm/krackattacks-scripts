@@ -30,6 +30,7 @@
 #include "ap_drv_ops.h"
 #include "ap_config.h"
 #include "p2p_hostapd.h"
+#include "gas_serv.h"
 
 
 static int hostapd_flush_old_stations(struct hostapd_data *hapd);
@@ -262,6 +263,10 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #endif /* CONFIG_P2P */
 
 	wpabuf_free(hapd->time_adv);
+
+#ifdef CONFIG_INTERWORKING
+	gas_serv_deinit(hapd);
+#endif /* CONFIG_INTERWORKING */
 }
 
 
@@ -652,6 +657,13 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 			   "failed.");
 		return -1;
 	}
+
+#ifdef CONFIG_INTERWORKING
+	if (gas_serv_init(hapd)) {
+		wpa_printf(MSG_ERROR, "GAS server initialization failed");
+		return -1;
+	}
+#endif /* CONFIG_INTERWORKING */
 
 	if (hapd->iface->ctrl_iface_init &&
 	    hapd->iface->ctrl_iface_init(hapd)) {

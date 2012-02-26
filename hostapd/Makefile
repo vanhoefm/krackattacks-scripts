@@ -759,6 +759,8 @@ endif
 
 ifdef CONFIG_INTERWORKING
 CFLAGS += -DCONFIG_INTERWORKING
+OBJS += ../src/common/gas.o
+OBJS += ../src/ap/gas_serv.o
 endif
 
 OBJS += ../src/drivers/driver_common.o

@@ -607,6 +607,14 @@ static int hostapd_ctrl_iface_set(struct hostapd_data *hapd, char *cmd)
 		wpa_printf(MSG_DEBUG, "WPS: Testing - dummy_cred=%d",
 			   wps_testing_dummy_cred);
 #endif /* CONFIG_WPS_TESTING */
+#ifdef CONFIG_INTERWORKING
+	} else if (os_strcasecmp(cmd, "gas_frag_limit") == 0) {
+		int val = atoi(value);
+		if (val <= 0)
+			ret = -1;
+		else
+			hapd->gas_frag_limit = val;
+#endif /* CONFIG_INTERWORKING */
 	} else {
 		ret = hostapd_set_iface(hapd->iconf, hapd->conf, cmd, value);
 	}

@@ -316,6 +316,8 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 	if (req == NULL)
 		return -1;
 
+	if (p2p->state != P2P_IDLE)
+		p2p_stop_listen_for_freq(p2p, freq);
 	p2p->pending_action_state = P2P_PENDING_PD;
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,

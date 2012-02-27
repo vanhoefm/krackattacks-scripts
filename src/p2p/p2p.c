@@ -1024,10 +1024,20 @@ void p2p_stop_find_for_freq(struct p2p_data *p2p, int freq)
 	p2p->go_neg_peer = NULL;
 	p2p->sd_peer = NULL;
 	p2p->invite_peer = NULL;
+	p2p_stop_listen_for_freq(p2p, freq);
+}
+
+
+void p2p_stop_listen_for_freq(struct p2p_data *p2p, int freq)
+{
 	if (freq > 0 && p2p->drv_in_listen == freq && p2p->in_listen) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Skip stop_listen "
 			"since we are on correct channel for response");
 		return;
+	}
+	if (p2p->in_listen) {
+		p2p->in_listen = 0;
+		p2p_clear_timeout(p2p);
 	}
 	if (p2p->drv_in_listen) {
 		/*

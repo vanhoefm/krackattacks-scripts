@@ -728,6 +728,9 @@ CFLAGS += -DEAP_SERVER_WSC
 OBJS += ../src/ap/wps_hostapd.o
 OBJS += ../src/eap_server/eap_server_wsc.o
 endif
+ifdef CONFIG_INTERWORKING
+OBJS += ../src/ap/gas_serv.o
+endif
 endif
 
 ifdef NEED_RSN_AUTHENTICATOR

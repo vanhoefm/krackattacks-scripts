@@ -580,7 +580,7 @@ void p2p_buf_add_noa(struct wpabuf *buf, u8 noa_index, u8 opp_ps, u8 ctwindow,
 void p2p_buf_add_ext_listen_timing(struct wpabuf *buf, u16 period,
 				   u16 interval);
 void p2p_buf_add_p2p_interface(struct wpabuf *buf, struct p2p_data *p2p);
-void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
+void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, int pw_id,
 		      int all_attr);
 
 /* p2p_sd.c */
@@ -608,6 +608,7 @@ void p2p_process_go_neg_resp(struct p2p_data *p2p, const u8 *sa,
 void p2p_process_go_neg_conf(struct p2p_data *p2p, const u8 *sa,
 			     const u8 *data, size_t len);
 int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev);
+u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method);
 
 /* p2p_pd.c */
 void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,

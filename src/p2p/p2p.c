@@ -775,6 +775,7 @@ static void p2p_search(struct p2p_data *p2p)
 {
 	int freq = 0;
 	enum p2p_scan_type type;
+	u16 pw_id = DEV_PW_DEFAULT;
 
 	if (p2p->drv_in_listen) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Driver is still "
@@ -795,6 +796,9 @@ static void p2p_search(struct p2p_data *p2p)
 		type = P2P_SCAN_SPECIFIC;
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting search "
 			"for freq %u (GO Neg)", freq);
+
+		/* Advertise immediate availability of WPS credential */
+		pw_id = p2p_wps_method_pw_id(p2p->go_neg_peer->wps_method);
 	} else if (p2p->invite_peer) {
 		/*
 		 * Only scan the known listen frequency of the peer
@@ -818,7 +822,7 @@ static void p2p_search(struct p2p_data *p2p)
 
 	if (p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, type, freq,
 			       p2p->num_req_dev_types, p2p->req_dev_types,
-			       p2p->find_dev_id)) {
+			       p2p->find_dev_id, pw_id)) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Scan request failed");
 		p2p_continue_find(p2p);
@@ -962,12 +966,14 @@ int p2p_find(struct p2p_data *p2p, unsigned int timeout,
 	case P2P_FIND_PROGRESSIVE:
 		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_FULL, 0,
 					 p2p->num_req_dev_types,
-					 p2p->req_dev_types, dev_id);
+					 p2p->req_dev_types, dev_id,
+					 DEV_PW_DEFAULT);
 		break;
 	case P2P_FIND_ONLY_SOCIAL:
 		res = p2p->cfg->p2p_scan(p2p->cfg->cb_ctx, P2P_SCAN_SOCIAL, 0,
 					 p2p->num_req_dev_types,
-					 p2p->req_dev_types, dev_id);
+					 p2p->req_dev_types, dev_id,
+					 DEV_PW_DEFAULT);
 		break;
 	default:
 		return -1;
@@ -1765,12 +1771,18 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 {
 	struct wpabuf *buf;
 	u8 *len;
+	int pw_id = -1;
 
 	buf = wpabuf_alloc(1000);
 	if (buf == NULL)
 		return NULL;
 
-	p2p_build_wps_ie(p2p, buf, DEV_PW_DEFAULT, 1);
+	if (p2p->go_neg_peer) {
+		/* Advertise immediate availability of WPS credential */
+		pw_id = p2p_wps_method_pw_id(p2p->go_neg_peer->wps_method);
+	}
+
+	p2p_build_wps_ie(p2p, buf, pw_id, 1);
 
 	/* P2P IE */
 	len = p2p_buf_add_ie_hdr(buf);

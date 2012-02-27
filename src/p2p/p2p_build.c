@@ -351,7 +351,7 @@ static void p2p_add_wps_string(struct wpabuf *buf, enum wps_attribute attr,
 }
 
 
-void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
+void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, int pw_id,
 		      int all_attr)
 {
 	u8 *len;
@@ -369,11 +369,14 @@ void p2p_build_wps_ie(struct p2p_data *p2p, struct wpabuf *buf, u16 pw_id,
 		wpabuf_put_u8(buf, WPS_STATE_NOT_CONFIGURED);
 	}
 
-	/* Device Password ID */
-	wpabuf_put_be16(buf, ATTR_DEV_PASSWORD_ID);
-	wpabuf_put_be16(buf, 2);
-	wpa_printf(MSG_DEBUG, "P2P: WPS IE Device Password ID: %d", pw_id);
-	wpabuf_put_be16(buf, pw_id);
+	if (pw_id >= 0) {
+		/* Device Password ID */
+		wpabuf_put_be16(buf, ATTR_DEV_PASSWORD_ID);
+		wpabuf_put_be16(buf, 2);
+		wpa_printf(MSG_DEBUG, "P2P: WPS IE Device Password ID: %d",
+			   pw_id);
+		wpabuf_put_be16(buf, pw_id);
+	}
 
 	if (all_attr) {
 		wpabuf_put_be16(buf, ATTR_RESPONSE_TYPE);

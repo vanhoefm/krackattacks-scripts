@@ -98,7 +98,7 @@ static int p2p_peer_channels(struct p2p_data *p2p, struct p2p_device *dev,
 }
 
 
-static u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method)
+u16 p2p_wps_method_pw_id(enum p2p_wps_method wps_method)
 {
 	switch (wps_method) {
 	case WPS_PIN_DISPLAY:

@@ -400,7 +400,9 @@ wpa_supplicant_extra_ies(struct wpa_supplicant *wpa_s,
 
 	if (wps) {
 		struct wpabuf *wps_ie;
-		wps_ie = wps_build_probe_req_ie(wps == 2, &wpa_s->wps->dev,
+		wps_ie = wps_build_probe_req_ie(wps == 2 ? DEV_PW_PUSHBUTTON :
+						DEV_PW_DEFAULT,
+						&wpa_s->wps->dev,
 						wpa_s->wps->uuid, req_type,
 						0, NULL);
 		if (wps_ie) {

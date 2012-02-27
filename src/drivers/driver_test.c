@@ -2912,7 +2912,7 @@ static int wpa_driver_test_p2p_set_params(void *priv,
 
 static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 			 unsigned int num_req_dev_types,
-			 const u8 *req_dev_types, const u8 *dev_id)
+			 const u8 *req_dev_types, const u8 *dev_id, u16 pw_id)
 {
 	struct wpa_driver_test_data *drv = ctx;
 	struct wpa_driver_scan_params params;
@@ -2933,8 +2933,8 @@ static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 
 #if 0 /* TODO: WPS IE */
 	wpa_s->wps->dev.p2p = 1;
-	wps_ie = wps_build_probe_req_ie(0, &wpa_s->wps->dev, wpa_s->wps->uuid,
-					WPS_REQ_ENROLLEE);
+	wps_ie = wps_build_probe_req_ie(pw_id, &wpa_s->wps->dev,
+					wpa_s->wps->uuid, WPS_REQ_ENROLLEE);
 #else
 	wps_ie = wpabuf_alloc(1);
 #endif

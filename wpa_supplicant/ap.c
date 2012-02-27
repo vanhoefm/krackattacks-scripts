@@ -145,6 +145,8 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	bss->ssid.ssid_len = ssid->ssid_len;
 	bss->ssid.ssid_set = 1;
 
+	bss->ignore_broadcast_ssid = ssid->ignore_broadcast_ssid;
+
 	if (ssid->auth_alg)
 		bss->auth_algs = ssid->auth_alg;
 
@@ -238,7 +240,10 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 			      * configuration */
 #endif /* CONFIG_WPS2 */
 	bss->eap_server = 1;
-	bss->wps_state = 2;
+
+	if (!ssid->ignore_broadcast_ssid)
+		bss->wps_state = 2;
+
 	bss->ap_setup_locked = 2;
 	if (wpa_s->conf->config_methods)
 		bss->config_methods = os_strdup(wpa_s->conf->config_methods);

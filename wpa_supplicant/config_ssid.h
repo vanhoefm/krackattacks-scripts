@@ -377,6 +377,20 @@ struct wpa_ssid {
 	char *bgscan;
 
 	/**
+	 * ignore_broadcast_ssid - Hide SSID in AP mode
+	 *
+	 * Send empty SSID in beacons and ignore probe request frames that do
+	 * not specify full SSID, i.e., require stations to know SSID.
+	 * default: disabled (0)
+	 * 1 = send empty (length=0) SSID in beacon and ignore probe request
+	 * for broadcast SSID
+	 * 2 = clear SSID (ASCII 0), but keep the original length (this may be
+	 * required with some clients that do not support empty SSID) and
+	 * ignore probe requests for broadcast SSID
+	 */
+	int ignore_broadcast_ssid;
+
+	/**
 	 * freq_list - Array of allowed frequencies or %NULL for all
 	 *
 	 * This is an optional zero-terminated array of frequencies in

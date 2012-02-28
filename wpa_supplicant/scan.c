@@ -513,9 +513,10 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	}
 
 #ifdef CONFIG_P2P
-	if (wpa_s->p2p_in_provisioning && wpa_s->go_params) {
+	if ((wpa_s->p2p_in_provisioning || wpa_s->show_group_started) &&
+	    wpa_s->go_params) {
 		wpa_printf(MSG_DEBUG, "P2P: Use specific SSID for scan during "
-			   "P2P provisioning");
+			   "P2P group formation");
 		params.ssids[0].ssid = wpa_s->go_params->ssid;
 		params.ssids[0].ssid_len = wpa_s->go_params->ssid_len;
 		params.num_ssids = 1;
@@ -641,7 +642,8 @@ ssid_list_set:
 	}
 
 #ifdef CONFIG_P2P
-	if (wpa_s->p2p_in_provisioning) {
+	if (wpa_s->p2p_in_provisioning ||
+	    (wpa_s->show_group_started && wpa_s->go_params)) {
 		/*
 		 * The interface may not yet be in P2P mode, so we have to
 		 * explicitly request P2P probe to disable CCK rates.

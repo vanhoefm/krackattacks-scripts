@@ -512,6 +512,17 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		}
 	}
 
+#ifdef CONFIG_P2P
+	if (wpa_s->p2p_in_provisioning && wpa_s->go_params) {
+		wpa_printf(MSG_DEBUG, "P2P: Use specific SSID for scan during "
+			   "P2P provisioning");
+		params.ssids[0].ssid = wpa_s->go_params->ssid;
+		params.ssids[0].ssid_len = wpa_s->go_params->ssid_len;
+		params.num_ssids = 1;
+		goto ssid_list_set;
+	}
+#endif /* CONFIG_P2P */
+
 	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;
 	if (wpa_s->prev_scan_ssid != WILDCARD_SSID_SCAN) {
@@ -607,6 +618,9 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		wpa_dbg(wpa_s, MSG_DEBUG, "Starting AP scan for wildcard "
 			"SSID");
 	}
+#ifdef CONFIG_P2P
+ssid_list_set:
+#endif /* CONFIG_P2P */
 
 	wpa_supplicant_optimize_freqs(wpa_s, &params);
 	extra_ie = wpa_supplicant_extra_ies(wpa_s, &params);

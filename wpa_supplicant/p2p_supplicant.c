@@ -2808,6 +2808,7 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_supplicant *group;
 	struct p2p_go_neg_results res;
+	struct wpa_bss *bss;
 
 	eloop_cancel_timeout(wpas_p2p_pd_before_join_timeout, wpa_s, NULL);
 	group = wpas_p2p_get_group_iface(wpa_s, 0, 0);
@@ -2825,6 +2826,13 @@ static int wpas_p2p_join_start(struct wpa_supplicant *wpa_s)
 	os_memcpy(res.peer_interface_addr, wpa_s->pending_join_iface_addr,
 		  ETH_ALEN);
 	res.wps_method = wpa_s->pending_join_wps_method;
+	bss = wpa_bss_get_bssid(wpa_s, wpa_s->pending_join_iface_addr);
+	if (bss) {
+		res.freq = bss->freq;
+		res.ssid_len = bss->ssid_len;
+		os_memcpy(res.ssid, bss->ssid, bss->ssid_len);
+	}
+
 	if (wpa_s->off_channel_freq || wpa_s->roc_waiting_drv_freq) {
 		wpa_printf(MSG_DEBUG, "P2P: Cancel remain-on-channel prior to "
 			   "starting client");

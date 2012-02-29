@@ -4337,6 +4337,7 @@ int wpas_p2p_cancel(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "P2P: Unauthorize pending GO Neg peer "
 			   MACSTR, MAC2STR(peer));
 		p2p_unauthorize(global->p2p, peer);
+		found = 1;
 	}
 
 	wpas_p2p_stop_find(wpa_s);

@@ -417,6 +417,20 @@ static int nai_realm_cred_username(struct nai_realm_eap *eap)
 }
 
 
+static int nai_realm_cred_cert(struct nai_realm_eap *eap)
+{
+	if (eap_get_name(EAP_VENDOR_IETF, eap->method) == NULL)
+		return 0; /* method not supported */
+
+	if (eap->method != EAP_TYPE_TLS) {
+		/* Only EAP-TLS supported for credential authentication */
+		return 0;
+	}
+
+	return 1;
+}
+
+
 static struct nai_realm_eap * nai_realm_find_eap(struct wpa_cred *cred,
 						 struct nai_realm *realm)
 {
@@ -425,13 +439,19 @@ static struct nai_realm_eap * nai_realm_find_eap(struct wpa_cred *cred,
 	if (cred == NULL ||
 	    cred->username == NULL ||
 	    cred->username[0] == '\0' ||
-	    cred->password == NULL ||
-	    cred->password[0] == '\0')
+	    ((cred->password == NULL ||
+	      cred->password[0] == '\0') &&
+	     (cred->private_key == NULL ||
+	      cred->private_key[0] == '\0')))
 		return NULL;
 
 	for (e = 0; e < realm->eap_count; e++) {
 		struct nai_realm_eap *eap = &realm->eap[e];
-		if (nai_realm_cred_username(eap))
+		if (cred->password && cred->password[0] &&
+		    nai_realm_cred_username(eap))
+			return eap;
+		if (cred->private_key && cred->private_key[0] &&
+		    nai_realm_cred_cert(eap))
 			return eap;
 	}
 
@@ -757,6 +777,19 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
 		goto fail;
 
+	if (cred->client_cert && cred->client_cert[0] &&
+	    wpa_config_set_quoted(ssid, "client_cert", cred->client_cert) < 0)
+		goto fail;
+
+	if (cred->private_key && cred->private_key[0] &&
+	    wpa_config_set_quoted(ssid, "private_key", cred->private_key) < 0)
+		goto fail;
+
+	if (cred->private_key_passwd && cred->private_key_passwd[0] &&
+	    wpa_config_set_quoted(ssid, "private_key_passwd",
+				  cred->private_key_passwd) < 0)
+		goto fail;
+
 	switch (eap->method) {
 	case EAP_TYPE_TTLS:
 		if (eap->inner_method) {
@@ -795,6 +828,8 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 			    eap_get_name(EAP_VENDOR_IETF, eap->inner_method));
 		if (wpa_config_set(ssid, "phase2", buf, 0) < 0)
 			goto fail;
+		break;
+	case EAP_TYPE_TLS:
 		break;
 	}
 

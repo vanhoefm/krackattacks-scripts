@@ -1782,6 +1782,9 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->username);
 	os_free(cred->password);
 	os_free(cred->ca_cert);
+	os_free(cred->client_cert);
+	os_free(cred->private_key);
+	os_free(cred->private_key_passwd);
 	os_free(cred->imsi);
 	os_free(cred->milenage);
 	os_free(cred->domain);
@@ -2254,6 +2257,24 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	if (os_strcmp(var, "ca_cert") == 0) {
 		os_free(cred->ca_cert);
 		cred->ca_cert = val;
+		return 0;
+	}
+
+	if (os_strcmp(var, "client_cert") == 0) {
+		os_free(cred->client_cert);
+		cred->client_cert = val;
+		return 0;
+	}
+
+	if (os_strcmp(var, "private_key") == 0) {
+		os_free(cred->private_key);
+		cred->private_key = val;
+		return 0;
+	}
+
+	if (os_strcmp(var, "private_key_passwd") == 0) {
+		os_free(cred->private_key_passwd);
+		cred->private_key_passwd = val;
 		return 0;
 	}
 

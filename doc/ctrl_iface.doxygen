@@ -1012,8 +1012,8 @@ P2P-PROV-DISC-PBC-RESP 02:40:61:c2:f3:b7
 
 P2P-SERV-DISC-REQ: Indicate reception of a P2P service discovery
 request. The following parameters are included after the event prefix:
-frequency in MHz, source address, dialog token, Service Query TLV(s) as
-hexdump.
+frequency in MHz, source address, dialog token, Service Update
+Indicator, Service Query TLV(s) as hexdump.
 
 \verbatim
 P2P-SERV-DISC-REQ 2412 02:40:61:c2:f3:b7 0 0 02000001
@@ -1023,7 +1023,8 @@ P2P-SERV-DISC-REQ 2412 02:40:61:c2:f3:b7 0 0 02000001
 
 P2P-SERV-DISC-RESP: Indicate reception of a P2P service discovery
 response. The following parameters are included after the event prefix:
-source address, dialog token, Service Response TLV(s) as hexdump.
+source address, Service Update Indicator, Service Response TLV(s) as
+hexdump.
 
 \verbatim
 P2P-SERV-DISC-RESP 02:40:61:c2:f3:b7 0 0300000101

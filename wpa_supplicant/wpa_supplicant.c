@@ -1507,10 +1507,15 @@ void wpa_supplicant_disassociate(struct wpa_supplicant *wpa_s,
 				 int reason_code)
 {
 	u8 *addr = NULL;
+	union wpa_event_data event;
 
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		wpa_drv_disassociate(wpa_s, wpa_s->bssid, reason_code);
 		addr = wpa_s->bssid;
+		os_memset(&event, 0, sizeof(event));
+		event.disassoc_info.reason_code = (u16) reason_code;
+		event.disassoc_info.locally_generated = 1;
+		wpa_supplicant_event(wpa_s, EVENT_DISASSOC, &event);
 	}
 
 	wpa_supplicant_clear_connection(wpa_s, addr);
@@ -1529,10 +1534,15 @@ void wpa_supplicant_deauthenticate(struct wpa_supplicant *wpa_s,
 				   int reason_code)
 {
 	u8 *addr = NULL;
+	union wpa_event_data event;
 
 	if (!is_zero_ether_addr(wpa_s->bssid)) {
 		wpa_drv_deauthenticate(wpa_s, wpa_s->bssid, reason_code);
 		addr = wpa_s->bssid;
+		os_memset(&event, 0, sizeof(event));
+		event.deauth_info.reason_code = (u16) reason_code;
+		event.deauth_info.locally_generated = 1;
+		wpa_supplicant_event(wpa_s, EVENT_DEAUTH, &event);
 	}
 
 	wpa_supplicant_clear_connection(wpa_s, addr);

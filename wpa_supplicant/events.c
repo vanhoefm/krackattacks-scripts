@@ -1659,9 +1659,13 @@ static void wpa_supplicant_event_disassoc(struct wpa_supplicant *wpa_s,
 	if (wpa_s->wpa_state >= WPA_AUTHENTICATING)
 		wpas_connection_failed(wpa_s, bssid);
 	wpa_sm_notify_disassoc(wpa_s->wpa);
-	wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid=" MACSTR
-		" reason=%d",
-		MAC2STR(bssid), reason_code);
+	if (!is_zero_ether_addr(bssid) ||
+	    wpa_s->wpa_state >= WPA_AUTHENTICATING) {
+		wpa_msg(wpa_s, MSG_INFO, WPA_EVENT_DISCONNECTED "bssid=" MACSTR
+			" reason=%d%s",
+			MAC2STR(bssid), reason_code,
+			locally_generated ? " locally_generated=1" : "");
+	}
 	if (wpa_supplicant_dynamic_keys(wpa_s)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Disconnect event - remove keys");
 		wpa_s->keys_cleared = 0;

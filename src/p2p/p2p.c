@@ -151,14 +151,14 @@ u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr)
 }
 
 
-void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *iface_addr)
+void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *addr)
 {
 	struct p2p_device *dev = NULL;
 
-	if (!iface_addr || !p2p)
+	if (!addr || !p2p)
 		return;
 
-	dev = p2p_get_device_interface(p2p, iface_addr);
+	dev = p2p_get_device(p2p, addr);
 	if (dev)
 		dev->wps_prov_info = 0;
 }

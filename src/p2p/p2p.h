@@ -1061,12 +1061,12 @@ u16 p2p_get_provisioning_info(struct p2p_data *p2p, const u8 *addr);
 /**
  * p2p_clear_provisioning_info - Clear any stored provisioning info
  * @p2p: P2P module context from p2p_init()
- * @iface_addr: Peer P2P Interface Address
+ * @iface_addr: Peer P2P Device Address
  *
  * This function is used to clear stored WPS provisioning info for the given
  * peer.
  */
-void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *iface_addr);
+void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *addr);
 
 
 /* Event notifications from lower layer driver operations */

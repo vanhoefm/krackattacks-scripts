@@ -2446,7 +2446,7 @@ void wpas_p2p_deinit(struct wpa_supplicant *wpa_s)
 		/* Clear any stored provisioning info */
 		p2p_clear_provisioning_info(
 			wpa_s->global->p2p,
-			wpa_s->go_params->peer_interface_addr);
+			wpa_s->go_params->peer_device_addr);
 	}
 
 	os_free(wpa_s->go_params);
@@ -3482,14 +3482,22 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 			  int registrar)
 {
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
 	if (!wpa_s->p2p_in_provisioning) {
 		wpa_printf(MSG_DEBUG, "P2P: Ignore WPS success event - P2P "
 			   "provisioning not in progress");
 		return;
 	}
 
-	/* Clear any stored provisioning info */
-	p2p_clear_provisioning_info(wpa_s->global->p2p, peer_addr);
+	if (ssid && ssid->mode == WPAS_MODE_INFRA) {
+		u8 go_dev_addr[ETH_ALEN];
+		os_memcpy(go_dev_addr, wpa_s->bssid, ETH_ALEN);
+		wpas_p2p_persistent_group(wpa_s, go_dev_addr, ssid->ssid,
+					  ssid->ssid_len);
+		/* Clear any stored provisioning info */
+		p2p_clear_provisioning_info(wpa_s->global->p2p, go_dev_addr);
+	}
 
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s->parent,
 			     NULL);
@@ -3513,7 +3521,7 @@ void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 	if (wpa_s->go_params) {
 		p2p_clear_provisioning_info(
 			wpa_s->global->p2p,
-			wpa_s->go_params->peer_interface_addr);
+			wpa_s->go_params->peer_device_addr);
 	}
 
 	wpas_notify_p2p_wps_failed(wpa_s, fail);

@@ -348,7 +348,7 @@ void wpa_supplicant_set_non_wpa_policy(struct wpa_supplicant *wpa_s,
 }
 
 
-static void free_hw_features(struct wpa_supplicant *wpa_s)
+void free_hw_features(struct wpa_supplicant *wpa_s)
 {
 	int i;
 	if (wpa_s->hw.modes == NULL)

@@ -586,6 +586,7 @@ int wpa_supplicant_set_bss_expiration_count(struct wpa_supplicant *wpa_s,
 int wpa_supplicant_set_debug_params(struct wpa_global *global,
 				    int debug_level, int debug_timestamp,
 				    int debug_show_keys);
+void free_hw_features(struct wpa_supplicant *wpa_s);
 
 void wpa_show_license(void);
 

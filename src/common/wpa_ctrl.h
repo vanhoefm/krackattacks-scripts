@@ -166,6 +166,7 @@ extern "C" {
 #define WPA_BSS_MASK_WPS_SCAN		BIT(13)
 #define WPA_BSS_MASK_P2P_SCAN		BIT(14)
 #define WPA_BSS_MASK_INTERNETW		BIT(15)
+#define WPA_BSS_MASK_WIFI_DISPLAY	BIT(16)
 
 
 /* wpa_supplicant/hostapd control interface access */

@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "common/version.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "common/wpa_ctrl.h"
 #include "eap_peer/eap.h"
 #include "eapol_supp/eapol_supp_sm.h"
@@ -2739,6 +2740,31 @@ static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		pos += ret;
 	}
 #endif /* CONFIG_P2P */
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (mask & WPA_BSS_MASK_WIFI_DISPLAY) {
+		struct wpabuf *wfd;
+		ie = (const u8 *) (bss + 1);
+		wfd = ieee802_11_vendor_ie_concat(ie, bss->ie_len,
+						  WFD_IE_VENDOR_TYPE);
+		if (wfd) {
+			ret = os_snprintf(pos, end - pos, "wfd_subelems=");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+
+			pos += wpa_snprintf_hex(pos, end - pos,
+						wpabuf_head(wfd),
+						wpabuf_len(wfd));
+			wpabuf_free(wfd);
+
+			ret = os_snprintf(pos, end - pos, "\n");
+			if (ret < 0 || ret >= end - pos)
+				return pos - buf;
+			pos += ret;
+		}
+	}
+#endif /* CONFIG_WIFI_DISPLAY */
 
 #ifdef CONFIG_INTERWORKING
 	if (mask & WPA_BSS_MASK_INTERNETW) {

@@ -256,6 +256,14 @@ p2p_serv_disc_req 00:00:00:00:00:00 upnp 10 urn:schemas-upnp-org:service:Content
 p2p_serv_disc_req 00:00:00:00:00:00 upnp 10 uuid:6859dede-8574-59ab-9332-123456789012
 p2p_serv_disc_req 00:00:00:00:00:00 upnp 10 urn:schemas-upnp-org:device:InternetGatewayDevice:1
 
+# Wi-Fi Display examples
+# format: wifi-display <list of roles> <list of subelements>
+p2p_serv_disc_req 00:00:00:00:00:00 wifi-display [source] 2,3,4,5
+p2p_serv_disc_req 02:01:02:03:04:05 wifi-display [pri-sink] 3
+p2p_serv_disc_req 00:00:00:00:00:00 wifi-display [sec-source] 2
+p2p_serv_disc_req 00:00:00:00:00:00 wifi-display [source+sink] 2,3,4,5
+p2p_serv_disc_req 00:00:00:00:00:00 wifi-display [source][pri-sink] 2,3,4,5
+
 p2p_serv_disc_cancel_req <query identifier>
 
 Cancel a pending P2P service discovery request. This command takes a

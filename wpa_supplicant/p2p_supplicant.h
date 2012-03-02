@@ -86,6 +86,8 @@ u64 wpas_p2p_sd_request(struct wpa_supplicant *wpa_s, const u8 *dst,
 			const struct wpabuf *tlvs);
 u64 wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
 			     u8 version, const char *query);
+u64 wpas_p2p_sd_request_wifi_display(struct wpa_supplicant *wpa_s,
+				     const u8 *dst, const char *role);
 int wpas_p2p_sd_cancel_request(struct wpa_supplicant *wpa_s, u64 req);
 void wpas_p2p_sd_response(struct wpa_supplicant *wpa_s, int freq,
 			  const u8 *dst, u8 dialog_token,

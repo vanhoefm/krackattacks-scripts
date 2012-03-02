@@ -3252,6 +3252,10 @@ static int p2p_ctrl_serv_disc_req(struct wpa_supplicant *wpa_s, char *cmd,
 			return -1;
 		pos++;
 		ref = wpas_p2p_sd_request_upnp(wpa_s, dst, version, pos);
+#ifdef CONFIG_WIFI_DISPLAY
+	} else if (os_strncmp(pos, "wifi-display ", 13) == 0) {
+		ref = wpas_p2p_sd_request_wifi_display(wpa_s, dst, pos + 13);
+#endif /* CONFIG_WIFI_DISPLAY */
 	} else {
 		len = os_strlen(pos);
 		if (len & 1)

@@ -109,6 +109,7 @@ struct p2p_sd_query {
 	struct p2p_sd_query *next;
 	u8 peer[ETH_ALEN];
 	int for_all_peers;
+	int wsd; /* Wi-Fi Display Service Discovery Request */
 	struct wpabuf *tlvs;
 };
 

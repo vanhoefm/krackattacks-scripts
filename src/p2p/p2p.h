@@ -964,6 +964,11 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 void * p2p_sd_request(struct p2p_data *p2p, const u8 *dst,
 		      const struct wpabuf *tlvs);
 
+#ifdef CONFIG_WIFI_DISPLAY
+void * p2p_sd_request_wfd(struct p2p_data *p2p, const u8 *dst,
+			  const struct wpabuf *tlvs);
+#endif /* CONFIG_WIFI_DISPLAY */
+
 /**
  * p2p_sd_cancel_request - Cancel a pending service discovery query
  * @p2p: P2P module context from p2p_init()

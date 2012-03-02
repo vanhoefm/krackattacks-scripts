@@ -1687,6 +1687,88 @@ u64 wpas_p2p_sd_request_upnp(struct wpa_supplicant *wpa_s, const u8 *dst,
 }
 
 
+#ifdef CONFIG_WIFI_DISPLAY
+
+static u64 wpas_p2p_sd_request_wfd(struct wpa_supplicant *wpa_s, const u8 *dst,
+				   const struct wpabuf *tlvs)
+{
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
+		return 0;
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+		return 0;
+	return (uintptr_t) p2p_sd_request_wfd(wpa_s->global->p2p, dst, tlvs);
+}
+
+
+#define MAX_WFD_SD_SUBELEMS 20
+
+static void wfd_add_sd_req_role(struct wpabuf *tlvs, u8 id, u8 role,
+				const char *subelems)
+{
+	u8 *len;
+	const char *pos;
+	int val;
+	int count = 0;
+
+	len = wpabuf_put(tlvs, 2);
+	wpabuf_put_u8(tlvs, P2P_SERV_WIFI_DISPLAY); /* Service Protocol Type */
+	wpabuf_put_u8(tlvs, id); /* Service Transaction ID */
+
+	wpabuf_put_u8(tlvs, role);
+
+	pos = subelems;
+	while (*pos) {
+		val = atoi(pos);
+		if (val >= 0 && val < 256) {
+			wpabuf_put_u8(tlvs, val);
+			count++;
+			if (count == MAX_WFD_SD_SUBELEMS)
+				break;
+		}
+		pos = os_strchr(pos + 1, ',');
+		if (pos == NULL)
+			break;
+		pos++;
+	}
+
+	WPA_PUT_LE16(len, (u8 *) wpabuf_put(tlvs, 0) - len - 2);
+}
+
+
+u64 wpas_p2p_sd_request_wifi_display(struct wpa_supplicant *wpa_s,
+				     const u8 *dst, const char *role)
+{
+	struct wpabuf *tlvs;
+	u64 ret;
+	const char *subelems;
+	u8 id = 1;
+
+	subelems = os_strchr(role, ' ');
+	if (subelems == NULL)
+		return 0;
+	subelems++;
+
+	tlvs = wpabuf_alloc(4 * (2 + 1 + 1 + 1 + MAX_WFD_SD_SUBELEMS));
+	if (tlvs == NULL)
+		return 0;
+
+	if (os_strstr(role, "[source]"))
+		wfd_add_sd_req_role(tlvs, id++, 0x00, subelems);
+	if (os_strstr(role, "[pri-sink]"))
+		wfd_add_sd_req_role(tlvs, id++, 0x01, subelems);
+	if (os_strstr(role, "[sec-sink]"))
+		wfd_add_sd_req_role(tlvs, id++, 0x02, subelems);
+	if (os_strstr(role, "[source+sink]"))
+		wfd_add_sd_req_role(tlvs, id++, 0x03, subelems);
+
+	ret = wpas_p2p_sd_request_wfd(wpa_s, dst, tlvs);
+	wpabuf_free(tlvs);
+	return ret;
+}
+
+#endif /* CONFIG_WIFI_DISPLAY */
+
+
 int wpas_p2p_sd_cancel_request(struct wpa_supplicant *wpa_s, u64 req)
 {
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)

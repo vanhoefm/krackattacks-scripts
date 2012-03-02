@@ -1479,6 +1479,62 @@ static void wpas_sd_req_upnp(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_WIFI_DISPLAY
+static void wpas_sd_req_wfd(struct wpa_supplicant *wpa_s,
+			    struct wpabuf *resp, u8 srv_trans_id,
+			    const u8 *query, size_t query_len)
+{
+	const u8 *pos;
+	u8 role;
+	u8 *len_pos;
+
+	wpa_hexdump(MSG_DEBUG, "P2P: SD Request for WFD", query, query_len);
+
+	if (!wpa_s->global->wifi_display) {
+		wpa_printf(MSG_DEBUG, "P2P: WFD protocol not available");
+		wpas_sd_add_proto_not_avail(resp, P2P_SERV_WIFI_DISPLAY,
+					    srv_trans_id);
+		return;
+	}
+
+	if (query_len < 1) {
+		wpa_printf(MSG_DEBUG, "P2P: Missing WFD Requested Device "
+			   "Role");
+		return;
+	}
+
+	if (wpabuf_tailroom(resp) < 5)
+		return;
+
+	pos = query;
+	role = *pos++;
+	wpa_printf(MSG_DEBUG, "P2P: WSD for device role 0x%x", role);
+
+	/* TODO: role specific handling */
+
+	/* Length (to be filled) */
+	len_pos = wpabuf_put(resp, 2);
+	wpabuf_put_u8(resp, P2P_SERV_WIFI_DISPLAY);
+	wpabuf_put_u8(resp, srv_trans_id);
+	wpabuf_put_u8(resp, P2P_SD_SUCCESS); /* Status Code */
+
+	while (pos < query + query_len) {
+		if (*pos < MAX_WFD_SUBELEMS &&
+		    wpa_s->global->wfd_subelem[*pos] &&
+		    wpabuf_tailroom(resp) >=
+		    wpabuf_len(wpa_s->global->wfd_subelem[*pos])) {
+			wpa_printf(MSG_DEBUG, "P2P: Add WSD response "
+				   "subelement %u", *pos);
+			wpabuf_put_buf(resp, wpa_s->global->wfd_subelem[*pos]);
+		}
+		pos++;
+	}
+
+	WPA_PUT_LE16(len_pos, (u8 *) wpabuf_put(resp, 0) - len_pos - 2);
+}
+#endif /* CONFIG_WIFI_DISPLAY */
+
+
 void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 		     u16 update_indic, const u8 *tlvs, size_t tlvs_len)
 {
@@ -1570,6 +1626,12 @@ void wpas_sd_request(void *ctx, int freq, const u8 *sa, u8 dialog_token,
 			wpas_sd_req_upnp(wpa_s, resp, srv_trans_id,
 					 pos, tlv_end - pos);
 			break;
+#ifdef CONFIG_WIFI_DISPLAY
+		case P2P_SERV_WIFI_DISPLAY:
+			wpas_sd_req_wfd(wpa_s, resp, srv_trans_id,
+					pos, tlv_end - pos);
+			break;
+#endif /* CONFIG_WIFI_DISPLAY */
 		default:
 			wpa_printf(MSG_DEBUG, "P2P: Unavailable service "
 				   "protocol %u", srv_proto);

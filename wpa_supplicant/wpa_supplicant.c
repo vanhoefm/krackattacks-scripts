@@ -41,6 +41,7 @@
 #include "gas_query.h"
 #include "ap.h"
 #include "p2p_supplicant.h"
+#include "wifi_display.h"
 #include "notify.h"
 #include "bgscan.h"
 #include "autoscan.h"
@@ -3190,6 +3191,14 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 		return NULL;
 	}
 
+#ifdef CONFIG_WIFI_DISPLAY
+	if (wifi_display_init(global) < 0) {
+		wpa_printf(MSG_ERROR, "Failed to initialize Wi-Fi Display");
+		wpa_supplicant_deinit(global);
+		return NULL;
+	}
+#endif /* CONFIG_WIFI_DISPLAY */
+
 	return global;
 }
 
@@ -3241,6 +3250,9 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	if (global == NULL)
 		return;
 
+#ifdef CONFIG_WIFI_DISPLAY
+	wifi_display_deinit(global);
+#endif /* CONFIG_WIFI_DISPLAY */
 #ifdef CONFIG_P2P
 	wpas_p2p_deinit_global(global);
 #endif /* CONFIG_P2P */

@@ -239,6 +239,12 @@ struct wpa_global {
 		WPA_CONC_PREF_STA,
 		WPA_CONC_PREF_P2P
 	} conc_pref;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	int wifi_display;
+#define MAX_WFD_SUBELEMS 10
+	struct wpabuf *wfd_subelem[MAX_WFD_SUBELEMS];
+#endif /* CONFIG_WIFI_DISPLAY */
 };
 
 

@@ -12,6 +12,7 @@
 #include "drivers/driver.h"
 #include "common/ieee802_11_defs.h"
 #include "wps/wps.h"
+#include "p2p/p2p.h"
 #include "hostapd.h"
 #include "ieee802_11.h"
 #include "sta_info.h"
@@ -147,6 +148,16 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 		}
 	}
 #endif /* CONFIG_P2P_MANAGER */
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (hapd->p2p_group) {
+		struct wpabuf *a;
+		a = p2p_group_assoc_resp_ie(hapd->p2p_group, P2P_SC_SUCCESS);
+		if (a && wpabuf_resize(&assocresp, wpabuf_len(a)) == 0)
+			wpabuf_put_buf(assocresp, a);
+		wpabuf_free(a);
+	}
+#endif /* CONFIG_WIFI_DISPLAY */
 
 #ifdef CONFIG_HS20
 	pos = buf;

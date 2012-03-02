@@ -237,6 +237,11 @@ CFLAGS += -DCONFIG_P2P_STRICT
 endif
 endif
 
+ifdef CONFIG_WIFI_DISPLAY
+CFLAGS += -DCONFIG_WIFI_DISPLAY
+OBJS += wifi_display.o
+endif
+
 ifdef CONFIG_HS20
 OBJS += hs20_supplicant.o
 CFLAGS += -DCONFIG_HS20

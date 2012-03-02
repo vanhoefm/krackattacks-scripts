@@ -97,6 +97,11 @@ static int ieee802_11_parse_vendor_specific(const u8 *pos, size_t elen,
 			elems->p2p = pos;
 			elems->p2p_len = elen;
 			break;
+		case WFD_OUI_TYPE:
+			/* Wi-Fi Alliance - WFD IE */
+			elems->wfd = pos;
+			elems->wfd_len = elen;
+			break;
 		case HS20_INDICATION_OUI_TYPE:
 			/* Hotspot 2.0 */
 			elems->hs20 = pos;

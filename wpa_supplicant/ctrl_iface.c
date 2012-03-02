@@ -29,6 +29,7 @@
 #include "p2p_supplicant.h"
 #include "p2p/p2p.h"
 #include "hs20_supplicant.h"
+#include "wifi_display.h"
 #include "notify.h"
 #include "bss.h"
 #include "scan.h"
@@ -283,6 +284,10 @@ static int wpa_supplicant_ctrl_iface_set(struct wpa_supplicant *wpa_s,
 		}
 	} else if (os_strcasecmp(cmd, "ps") == 0) {
 		ret = wpa_drv_set_p2p_powersave(wpa_s, atoi(value), -1, -1);
+#ifdef CONFIG_WIFI_DISPLAY
+	} else if (os_strcasecmp(cmd, "wifi_display") == 0) {
+		wifi_display_enable(wpa_s->global, !!atoi(value));
+#endif /* CONFIG_WIFI_DISPLAY */
 	} else if (os_strcasecmp(cmd, "bssid_filter") == 0) {
 		ret = set_bssid_filter(wpa_s, value);
 	} else {
@@ -310,6 +315,14 @@ static int wpa_supplicant_ctrl_iface_get(struct wpa_supplicant *wpa_s,
 			res = os_snprintf(buf, buflen, "%c%c",
 					  wpa_s->conf->country[0],
 					  wpa_s->conf->country[1]);
+#ifdef CONFIG_WIFI_DISPLAY
+	} else if (os_strcasecmp(cmd, "wifi_display") == 0) {
+		res = os_snprintf(buf, buflen, "%d",
+				  wpa_s->global->wifi_display);
+		if (res < 0 || (unsigned int) res >= buflen)
+			return -1;
+		return res;
+#endif /* CONFIG_WIFI_DISPLAY */
 	}
 
 	if (res < 0 || (unsigned int) res >= buflen)
@@ -4555,6 +4568,14 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		if (p2p_ctrl_ext_listen(wpa_s, "") < 0)
 			reply_len = -1;
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_WIFI_DISPLAY
+	} else if (os_strncmp(buf, "WFD_SUBELEM_SET ", 16) == 0) {
+		if (wifi_display_subelem_set(wpa_s->global, buf + 16) < 0)
+			reply_len = -1;
+	} else if (os_strncmp(buf, "WFD_SUBELEM_GET ", 16) == 0) {
+		reply_len = wifi_display_subelem_get(wpa_s->global, buf + 16,
+						     reply, reply_size);
+#endif /* CONFIG_WIFI_DISPLAY */
 #ifdef CONFIG_INTERWORKING
 	} else if (os_strcmp(buf, "FETCH_ANQP") == 0) {
 		if (interworking_fetch_anqp(wpa_s) < 0)

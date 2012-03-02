@@ -414,6 +414,13 @@ int p2p_parse_ies(const u8 *data, size_t len, struct p2p_message *msg)
 		return -1;
 	}
 
+#ifdef CONFIG_WIFI_DISPLAY
+	if (elems.wfd) {
+		msg->wfd_subelems = ieee802_11_vendor_ie_concat(
+			data, len, WFD_IE_VENDOR_TYPE);
+	}
+#endif /* CONFIG_WIFI_DISPLAY */
+
 	return 0;
 }
 
@@ -453,6 +460,10 @@ void p2p_parse_free(struct p2p_message *msg)
 	msg->p2p_attributes = NULL;
 	wpabuf_free(msg->wps_attributes);
 	msg->wps_attributes = NULL;
+#ifdef CONFIG_WIFI_DISPLAY
+	wpabuf_free(msg->wfd_subelems);
+	msg->wfd_subelems = NULL;
+#endif /* CONFIG_WIFI_DISPLAY */
 }
 
 

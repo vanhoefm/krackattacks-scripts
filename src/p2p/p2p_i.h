@@ -436,6 +436,20 @@ struct p2p_data {
 	/* Extra delay in milliseconds between search iterations */
 	unsigned int search_delay;
 	int in_search_delay;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	struct wpabuf *wfd_ie_beacon;
+	struct wpabuf *wfd_ie_probe_req;
+	struct wpabuf *wfd_ie_probe_resp;
+	struct wpabuf *wfd_ie_assoc_req;
+	struct wpabuf *wfd_ie_invitation;
+	struct wpabuf *wfd_ie_prov_disc_req;
+	struct wpabuf *wfd_ie_prov_disc_resp;
+	struct wpabuf *wfd_ie_go_neg;
+	struct wpabuf *wfd_dev_info;
+	struct wpabuf *wfd_assoc_bssid;
+	struct wpabuf *wfd_coupled_sink_info;
+#endif /* CONFIG_WIFI_DISPLAY */
 };
 
 /**
@@ -444,6 +458,7 @@ struct p2p_data {
 struct p2p_message {
 	struct wpabuf *p2p_attributes;
 	struct wpabuf *wps_attributes;
+	struct wpabuf *wfd_subelems;
 
 	u8 dialog_token;
 
@@ -564,6 +579,8 @@ u8 p2p_group_presence_req(struct p2p_group *group,
 			  const u8 *noa, size_t noa_len);
 int p2p_group_is_group_id_match(struct p2p_group *group, const u8 *group_id,
 				size_t group_id_len);
+void p2p_group_update_ies(struct p2p_group *group);
+struct wpabuf * p2p_group_get_wfd_ie(struct p2p_group *g);
 
 
 void p2p_buf_add_action_hdr(struct wpabuf *buf, u8 subtype, u8 dialog_token);

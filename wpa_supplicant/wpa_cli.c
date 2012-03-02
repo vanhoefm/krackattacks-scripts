@@ -2014,6 +2014,50 @@ static int wpa_cli_cmd_p2p_ext_listen(struct wpa_ctrl *ctrl, int argc,
 
 #endif /* CONFIG_P2P */
 
+#ifdef CONFIG_WIFI_DISPLAY
+
+static int wpa_cli_cmd_wfd_subelem_set(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 1 && argc != 2) {
+		printf("Invalid WFD_SUBELEM_SET command: needs one or two "
+		       "arguments (subelem, hexdump)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WFD_SUBELEM_SET %s %s",
+			  argv[0], argc > 1 ? argv[1] : "");
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_wfd_subelem_get(struct wpa_ctrl *ctrl, int argc,
+				       char *argv[])
+{
+	char cmd[100];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid WFD_SUBELEM_GET command: needs one "
+		       "argument (subelem)\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WFD_SUBELEM_GET %s",
+			  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd))
+		return -1;
+	cmd[sizeof(cmd) - 1] = '\0';
+	return wpa_ctrl_command(ctrl, cmd);
+}
+#endif /* CONFIG_WIFI_DISPLAY */
+
 
 #ifdef CONFIG_INTERWORKING
 static int wpa_cli_cmd_fetch_anqp(struct wpa_ctrl *ctrl, int argc,
@@ -2521,7 +2565,14 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  cli_cmd_flag_none,
 	  "[<period> <interval>] = set extended listen timing" },
 #endif /* CONFIG_P2P */
-
+#ifdef CONFIG_WIFI_DISPLAY
+	{ "wfd_subelem_set", wpa_cli_cmd_wfd_subelem_set, NULL,
+	  cli_cmd_flag_none,
+	  "<subelem> [contents] = set Wi-Fi Display subelement" },
+	{ "wfd_subelem_get", wpa_cli_cmd_wfd_subelem_get, NULL,
+	  cli_cmd_flag_none,
+	  "<subelem> = get Wi-Fi Display subelement" },
+#endif /* CONFIG_WIFI_DISPLAY */
 #ifdef CONFIG_INTERWORKING
 	{ "fetch_anqp", wpa_cli_cmd_fetch_anqp, NULL, cli_cmd_flag_none,
 	  "= fetch ANQP information for all APs" },

@@ -21,8 +21,27 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 	struct wpabuf *buf;
 	u8 *len;
 	const u8 *dev_addr;
+	size_t extra = 0;
 
-	buf = wpabuf_alloc(1000);
+#ifdef CONFIG_WIFI_DISPLAY
+	struct wpabuf *wfd_ie = p2p->wfd_ie_invitation;
+	if (wfd_ie && p2p->inv_role == P2P_INVITE_ROLE_ACTIVE_GO) {
+		size_t i;
+		for (i = 0; i < p2p->num_groups; i++) {
+			struct p2p_group *g = p2p->groups[i];
+			struct wpabuf *ie;
+			ie = p2p_group_get_wfd_ie(g);
+			if (ie) {
+				wfd_ie = ie;
+				break;
+			}
+		}
+	}
+	if (wfd_ie)
+		extra = wpabuf_len(wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
+
+	buf = wpabuf_alloc(1000 + extra);
 	if (buf == NULL)
 		return NULL;
 
@@ -55,6 +74,11 @@ static struct wpabuf * p2p_build_invitation_req(struct p2p_data *p2p,
 	p2p_buf_add_device_info(buf, p2p, peer);
 	p2p_buf_update_ie_hdr(buf, len);
 
+#ifdef CONFIG_WIFI_DISPLAY
+	if (wfd_ie)
+		wpabuf_put_buf(buf, wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
+
 	return buf;
 }
 
@@ -68,8 +92,30 @@ static struct wpabuf * p2p_build_invitation_resp(struct p2p_data *p2p,
 {
 	struct wpabuf *buf;
 	u8 *len;
+	size_t extra = 0;
 
-	buf = wpabuf_alloc(1000);
+#ifdef CONFIG_WIFI_DISPLAY
+	struct wpabuf *wfd_ie = p2p->wfd_ie_invitation;
+	if (wfd_ie && group_bssid) {
+		size_t i;
+		for (i = 0; i < p2p->num_groups; i++) {
+			struct p2p_group *g = p2p->groups[i];
+			struct wpabuf *ie;
+			if (!p2p_group_is_group_id_match(g, group_bssid,
+							 ETH_ALEN))
+				continue;
+			ie = p2p_group_get_wfd_ie(g);
+			if (ie) {
+				wfd_ie = ie;
+				break;
+			}
+		}
+	}
+	if (wfd_ie)
+		extra = wpabuf_len(wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
+
+	buf = wpabuf_alloc(1000 + extra);
 	if (buf == NULL)
 		return NULL;
 
@@ -87,6 +133,11 @@ static struct wpabuf * p2p_build_invitation_resp(struct p2p_data *p2p,
 	if (channels)
 		p2p_buf_add_channel_list(buf, p2p->cfg->country, channels);
 	p2p_buf_update_ie_hdr(buf, len);
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (wfd_ie)
+		wpabuf_put_buf(buf, wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	return buf;
 }

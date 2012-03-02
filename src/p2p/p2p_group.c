@@ -22,6 +22,7 @@ struct p2p_group_member {
 	u8 addr[ETH_ALEN]; /* P2P Interface Address */
 	u8 dev_addr[ETH_ALEN]; /* P2P Device Address */
 	struct wpabuf *p2p_ie;
+	struct wpabuf *wfd_ie;
 	struct wpabuf *client_info;
 	u8 dev_capab;
 };
@@ -37,10 +38,8 @@ struct p2p_group {
 	int group_formation;
 	int beacon_update;
 	struct wpabuf *noa;
+	struct wpabuf *wfd_ie;
 };
-
-
-static void p2p_group_update_ies(struct p2p_group *group);
 
 
 struct p2p_group * p2p_group_init(struct p2p_data *p2p,
@@ -74,6 +73,7 @@ struct p2p_group * p2p_group_init(struct p2p_data *p2p,
 
 static void p2p_group_free_member(struct p2p_group_member *m)
 {
+	wpabuf_free(m->wfd_ie);
 	wpabuf_free(m->p2p_ie);
 	wpabuf_free(m->client_info);
 	os_free(m);
@@ -118,6 +118,7 @@ void p2p_group_deinit(struct p2p_group *group)
 	p2p_group_free_members(group);
 	os_free(group->cfg);
 	wpabuf_free(group->noa);
+	wpabuf_free(group->wfd_ie);
 	os_free(group);
 }
 
@@ -172,10 +173,21 @@ static struct wpabuf * p2p_group_build_beacon_ie(struct p2p_group *group)
 {
 	struct wpabuf *ie;
 	u8 *len;
+	size_t extra = 0;
 
-	ie = wpabuf_alloc(257);
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->p2p->wfd_ie_beacon)
+		extra = wpabuf_len(group->p2p->wfd_ie_beacon);
+#endif /* CONFIG_WIFI_DISPLAY */
+
+	ie = wpabuf_alloc(257 + extra);
 	if (ie == NULL)
 		return NULL;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->p2p->wfd_ie_beacon)
+		wpabuf_put_buf(ie, group->p2p->wfd_ie_beacon);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	len = p2p_buf_add_ie_hdr(ie);
 	p2p_group_add_common_ies(group, ie);
@@ -187,16 +199,192 @@ static struct wpabuf * p2p_group_build_beacon_ie(struct p2p_group *group)
 }
 
 
+#ifdef CONFIG_WIFI_DISPLAY
+
+struct wpabuf * p2p_group_get_wfd_ie(struct p2p_group *g)
+{
+	return g->wfd_ie;
+}
+
+
+struct wpabuf * wifi_display_encaps(struct wpabuf *subelems)
+{
+	struct wpabuf *ie;
+	const u8 *pos, *end;
+
+	if (subelems == NULL)
+		return NULL;
+
+	ie = wpabuf_alloc(wpabuf_len(subelems) + 100);
+	if (ie == NULL)
+		return NULL;
+
+	pos = wpabuf_head(subelems);
+	end = pos + wpabuf_len(subelems);
+
+	while (end > pos) {
+		size_t frag_len = end - pos;
+		if (frag_len > 251)
+			frag_len = 251;
+		wpabuf_put_u8(ie, WLAN_EID_VENDOR_SPECIFIC);
+		wpabuf_put_u8(ie, 4 + frag_len);
+		wpabuf_put_be32(ie, WFD_IE_VENDOR_TYPE);
+		wpabuf_put_data(ie, pos, frag_len);
+		pos += frag_len;
+	}
+
+	return ie;
+}
+
+
+static int wifi_display_add_dev_info_descr(struct wpabuf *buf,
+					   struct p2p_group_member *m)
+{
+	const u8 *pos, *end;
+	const u8 *dev_info = NULL;
+	const u8 *assoc_bssid = NULL;
+	const u8 *coupled_sink = NULL;
+	u8 zero_addr[ETH_ALEN];
+
+	if (m->wfd_ie == NULL)
+		return 0;
+
+	os_memset(zero_addr, 0, ETH_ALEN);
+	pos = wpabuf_head_u8(m->wfd_ie);
+	end = pos + wpabuf_len(m->wfd_ie);
+	while (pos + 1 < end) {
+		u8 id;
+		u16 len;
+
+		id = *pos++;
+		len = WPA_GET_BE16(pos);
+		pos += 2;
+		if (pos + len > end)
+			break;
+
+		switch (id) {
+		case WFD_SUBELEM_DEVICE_INFO:
+			if (len < 6)
+				break;
+			dev_info = pos;
+			break;
+		case WFD_SUBELEM_ASSOCIATED_BSSID:
+			if (len < ETH_ALEN)
+				break;
+			assoc_bssid = pos;
+			break;
+		case WFD_SUBELEM_COUPLED_SINK:
+			if (len < 1 + ETH_ALEN)
+				break;
+			coupled_sink = pos;
+			break;
+		}
+
+		pos += len;
+	}
+
+	if (dev_info == NULL)
+		return 0;
+
+	wpabuf_put_u8(buf, 23);
+	wpabuf_put_data(buf, m->dev_addr, ETH_ALEN);
+	if (assoc_bssid)
+		wpabuf_put_data(buf, assoc_bssid, ETH_ALEN);
+	else
+		wpabuf_put_data(buf, zero_addr, ETH_ALEN);
+	wpabuf_put_data(buf, dev_info, 2); /* WFD Device Info */
+	wpabuf_put_data(buf, dev_info + 4, 2); /* WFD Device Max Throughput */
+	if (coupled_sink) {
+		wpabuf_put_data(buf, coupled_sink, 1 + ETH_ALEN);
+	} else {
+		wpabuf_put_u8(buf, 0);
+		wpabuf_put_data(buf, zero_addr, ETH_ALEN);
+	}
+
+	return 1;
+}
+
+
+static struct wpabuf *
+wifi_display_build_go_ie(struct p2p_group *group)
+{
+	struct wpabuf *wfd_subelems, *wfd_ie;
+	struct p2p_group_member *m;
+	u8 *len;
+	unsigned int count = 0;
+
+	if (!group->p2p->wfd_ie_probe_resp)
+		return NULL;
+
+	wfd_subelems = wpabuf_alloc(wpabuf_len(group->p2p->wfd_ie_probe_resp) +
+				    group->num_members * 24 + 100);
+	if (wfd_subelems == NULL)
+		return NULL;
+	if (group->p2p->wfd_dev_info)
+		wpabuf_put_buf(wfd_subelems, group->p2p->wfd_dev_info);
+	if (group->p2p->wfd_assoc_bssid)
+		wpabuf_put_buf(wfd_subelems,
+			       group->p2p->wfd_assoc_bssid);
+	if (group->p2p->wfd_coupled_sink_info)
+		wpabuf_put_buf(wfd_subelems,
+			       group->p2p->wfd_coupled_sink_info);
+
+	/* Build WFD Session Info */
+	wpabuf_put_u8(wfd_subelems, WFD_SUBELEM_SESSION_INFO);
+	len = wpabuf_put(wfd_subelems, 2);
+	m = group->members;
+	while (m) {
+		if (wifi_display_add_dev_info_descr(wfd_subelems, m))
+			count++;
+		m = m->next;
+	}
+
+	if (count == 0) {
+		/* No Wi-Fi Display clients - do not include subelement */
+		wfd_subelems->used -= 3;
+	} else {
+		WPA_PUT_BE16(len, (u8 *) wpabuf_put(wfd_subelems, 0) - len -
+			     2);
+		wpa_printf(MSG_DEBUG, "WFD: WFD Session Info: %u descriptors",
+			   count);
+	}
+
+	wfd_ie = wifi_display_encaps(wfd_subelems);
+	wpabuf_free(wfd_subelems);
+
+	return wfd_ie;
+}
+
+static void wifi_display_group_update(struct p2p_group *group)
+{
+	wpabuf_free(group->wfd_ie);
+	group->wfd_ie = wifi_display_build_go_ie(group);
+}
+
+#endif /* CONFIG_WIFI_DISPLAY */
+
+
 static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 {
 	u8 *group_info;
 	struct wpabuf *ie;
 	struct p2p_group_member *m;
 	u8 *len;
+	size_t extra = 0;
 
-	ie = wpabuf_alloc(257);
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->wfd_ie)
+		extra += wpabuf_len(group->wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
+
+	ie = wpabuf_alloc(257 + extra);
 	if (ie == NULL)
 		return NULL;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->wfd_ie)
+		wpabuf_put_buf(ie, group->wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	len = p2p_buf_add_ie_hdr(ie);
 
@@ -216,14 +404,19 @@ static struct wpabuf * p2p_group_build_probe_resp_ie(struct p2p_group *group)
 		     (u8 *) wpabuf_put(ie, 0) - group_info - 3);
 
 	p2p_buf_update_ie_hdr(ie, len);
+
 	return ie;
 }
 
 
-static void p2p_group_update_ies(struct p2p_group *group)
+void p2p_group_update_ies(struct p2p_group *group)
 {
 	struct wpabuf *beacon_ie;
 	struct wpabuf *probe_resp_ie;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	wifi_display_group_update(group);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	probe_resp_ie = p2p_group_build_probe_resp_ie(group);
 	if (probe_resp_ie == NULL)
@@ -354,6 +547,9 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 						       &m->dev_capab,
 						       m->dev_addr);
 	}
+#ifdef CONFIG_WIFI_DISPLAY
+	m->wfd_ie = ieee802_11_vendor_ie_concat(ie, len, WFD_IE_VENDOR_TYPE);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	p2p_group_remove_member(group, addr);
 
@@ -361,8 +557,9 @@ int p2p_group_notif_assoc(struct p2p_group *group, const u8 *addr,
 	group->members = m;
 	group->num_members++;
 	wpa_msg(group->p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Add client " MACSTR
-		" to group (p2p=%d client_info=%d); num_members=%u/%u",
-		MAC2STR(addr), m->p2p_ie ? 1 : 0, m->client_info ? 1 : 0,
+		" to group (p2p=%d wfd=%d client_info=%d); num_members=%u/%u",
+		MAC2STR(addr), m->p2p_ie ? 1 : 0, m->wfd_ie ? 1 : 0,
+		m->client_info ? 1 : 0,
 		group->num_members, group->cfg->max_clients);
 	if (group->num_members == group->cfg->max_clients)
 		group->beacon_update = 1;
@@ -378,6 +575,12 @@ struct wpabuf * p2p_group_assoc_resp_ie(struct p2p_group *group, u8 status)
 {
 	struct wpabuf *resp;
 	u8 *rlen;
+	size_t extra = 0;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->wfd_ie)
+		extra = wpabuf_len(group->wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
 
 	/*
 	 * (Re)Association Response - P2P IE
@@ -385,9 +588,15 @@ struct wpabuf * p2p_group_assoc_resp_ie(struct p2p_group *group, u8 status)
 	 *	denied)
 	 * Extended Listen Timing (may be present)
 	 */
-	resp = wpabuf_alloc(20);
+	resp = wpabuf_alloc(20 + extra);
 	if (resp == NULL)
 		return NULL;
+
+#ifdef CONFIG_WIFI_DISPLAY
+	if (group->wfd_ie)
+		wpabuf_put_buf(resp, group->wfd_ie);
+#endif /* CONFIG_WIFI_DISPLAY */
+
 	rlen = p2p_buf_add_ie_hdr(resp);
 	if (status != P2P_SC_SUCCESS)
 		p2p_buf_add_status(resp, status);

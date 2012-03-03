@@ -654,7 +654,8 @@ struct scard_data * scard_init(scard_sim_type sim_type, const char *reader)
 	}
 	if (pin_needed) {
 		scard->pin1_required = 1;
-		wpa_printf(MSG_DEBUG, "PIN1 needed for SIM access");
+		wpa_printf(MSG_DEBUG, "PIN1 needed for SIM access (retry "
+			   "counter=%d)", scard_get_pin_retry_counter(scard));
 	}
 
 	ret = SCardEndTransaction(scard->card, SCARD_LEAVE_CARD);
@@ -1007,6 +1008,46 @@ static int scard_verify_pin(struct scard_data *scard, const char *pin)
 	}
 
 	wpa_printf(MSG_DEBUG, "SCARD: PIN verified successfully");
+	return 0;
+}
+
+
+int scard_get_pin_retry_counter(struct scard_data *scard)
+{
+	long ret;
+	unsigned char resp[3];
+	unsigned char cmd[5] = { SIM_CMD_VERIFY_CHV1 };
+	size_t len;
+	u16 val;
+
+	wpa_printf(MSG_DEBUG, "SCARD: fetching PIN retry counter");
+
+	if (scard->sim_type == SCARD_USIM)
+		cmd[0] = USIM_CLA;
+	cmd[4] = 0; /* Empty data */
+
+	len = sizeof(resp);
+	ret = scard_transmit(scard, cmd, sizeof(cmd), resp, &len);
+	if (ret != SCARD_S_SUCCESS)
+		return -2;
+
+	if (len != 2) {
+		wpa_printf(MSG_WARNING, "SCARD: failed to fetch PIN retry "
+			   "counter");
+		return -1;
+	}
+
+	val = WPA_GET_BE16(resp);
+	if (val == 0x63c0 || val == 0x6983) {
+		wpa_printf(MSG_DEBUG, "SCARD: PIN has been blocked");
+		return 0;
+	}
+
+	if (val >= 0x63c0 && val <= 0x63cf)
+		return val & 0x000f;
+
+	wpa_printf(MSG_DEBUG, "SCARD: Unexpected PIN retry counter response "
+		   "value 0x%x", val);
 	return 0;
 }
 

@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / PC/SC smartcard interface for USIM, GSM SIM
- * Copyright (c) 2004-2006, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2006, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -49,6 +49,7 @@ int scard_umts_auth(struct scard_data *scard, const unsigned char *_rand,
 		    const unsigned char *autn,
 		    unsigned char *res, size_t *res_len,
 		    unsigned char *ik, unsigned char *ck, unsigned char *auts);
+int scard_get_pin_retry_counter(struct scard_data *scard);
 
 #else /* PCSC_FUNCS */
 
@@ -58,6 +59,7 @@ int scard_umts_auth(struct scard_data *scard, const unsigned char *_rand,
 #define scard_get_imsi(s, i, l) -1
 #define scard_gsm_auth(s, r, s2, k) -1
 #define scard_umts_auth(s, r, a, r2, rl, i, c, a2) -1
+#define scard_get_pin_retry_counter(s) -1
 
 #endif /* PCSC_FUNCS */
 

@@ -9,26 +9,6 @@
 #ifndef PCSC_FUNCS_H
 #define PCSC_FUNCS_H
 
-/* GSM files
- * File type in first octet:
- * 3F = Master File
- * 7F = Dedicated File
- * 2F = Elementary File under the Master File
- * 6F = Elementary File under a Dedicated File
- */
-#define SCARD_FILE_MF		0x3F00
-#define SCARD_FILE_GSM_DF	0x7F20
-#define SCARD_FILE_UMTS_DF	0x7F50
-#define SCARD_FILE_GSM_EF_IMSI	0x6F07
-#define SCARD_FILE_GSM_EF_AD	0x6FAD
-#define SCARD_FILE_EF_DIR	0x2F00
-#define SCARD_FILE_EF_ICCID	0x2FE2
-#define SCARD_FILE_EF_CK	0x6FE1
-#define SCARD_FILE_EF_IK	0x6FE2
-
-#define SCARD_CHV1_OFFSET	13
-#define SCARD_CHV1_FLAG		0x80
-
 typedef enum {
 	SCARD_GSM_SIM_ONLY,
 	SCARD_USIM_ONLY,

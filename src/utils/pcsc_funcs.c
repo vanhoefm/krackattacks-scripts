@@ -397,7 +397,7 @@ static int scard_get_aid(struct scard_data *scard, unsigned char *aid,
 		unsigned char rid[5];
 		unsigned char appl_code[2]; /* 0x1002 for 3G USIM */
 	} *efdir;
-	unsigned char buf[100];
+	unsigned char buf[127];
 	size_t blen;
 
 	efdir = (struct efdir *) buf;

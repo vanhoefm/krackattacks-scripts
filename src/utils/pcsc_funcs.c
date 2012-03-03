@@ -234,60 +234,59 @@ static int scard_read_record(struct scard_data *scard,
 static int scard_parse_fsp_templ(unsigned char *buf, size_t buf_len,
 				 int *ps_do, int *file_len)
 {
-		unsigned char *pos, *end;
+	unsigned char *pos, *end;
 
-		if (ps_do)
-			*ps_do = -1;
-		if (file_len)
-			*file_len = -1;
+	if (ps_do)
+		*ps_do = -1;
+	if (file_len)
+		*file_len = -1;
 
-		pos = buf;
-		end = pos + buf_len;
-		if (*pos != USIM_FSP_TEMPL_TAG) {
-			wpa_printf(MSG_DEBUG, "SCARD: file header did not "
-				   "start with FSP template tag");
-			return -1;
-		}
-		pos++;
-		if (pos >= end)
-			return -1;
-		if ((pos + pos[0]) < end)
-			end = pos + 1 + pos[0];
-		pos++;
-		wpa_hexdump(MSG_DEBUG, "SCARD: file header FSP template",
-			    pos, end - pos);
-
-		while (pos + 1 < end) {
-			wpa_printf(MSG_MSGDUMP, "SCARD: file header TLV "
-				   "0x%02x len=%d", pos[0], pos[1]);
-			if (pos + 2 + pos[1] > end)
-				break;
-
-			if (pos[0] == USIM_TLV_FILE_SIZE &&
-			    (pos[1] == 1 || pos[1] == 2) && file_len) {
-				if (pos[1] == 1)
-					*file_len = (int) pos[2];
-				else
-					*file_len = ((int) pos[2] << 8) |
-						(int) pos[3];
-				wpa_printf(MSG_DEBUG, "SCARD: file_size=%d",
-					   *file_len);
-			}
-
-			if (pos[0] == USIM_TLV_PIN_STATUS_TEMPLATE &&
-			    pos[1] >= 2 && pos[2] == USIM_PS_DO_TAG &&
-			    pos[3] >= 1 && ps_do) {
-				wpa_printf(MSG_DEBUG, "SCARD: PS_DO=0x%02x",
-					   pos[4]);
-				*ps_do = (int) pos[4];
-			}
-
-			pos += 2 + pos[1];
-
-			if (pos == end)
-				return 0;
-		}
+	pos = buf;
+	end = pos + buf_len;
+	if (*pos != USIM_FSP_TEMPL_TAG) {
+		wpa_printf(MSG_DEBUG, "SCARD: file header did not "
+			   "start with FSP template tag");
 		return -1;
+	}
+	pos++;
+	if (pos >= end)
+		return -1;
+	if ((pos + pos[0]) < end)
+		end = pos + 1 + pos[0];
+	pos++;
+	wpa_hexdump(MSG_DEBUG, "SCARD: file header FSP template",
+		    pos, end - pos);
+
+	while (pos + 1 < end) {
+		wpa_printf(MSG_MSGDUMP, "SCARD: file header TLV 0x%02x len=%d",
+			   pos[0], pos[1]);
+		if (pos + 2 + pos[1] > end)
+			break;
+
+		if (pos[0] == USIM_TLV_FILE_SIZE &&
+		    (pos[1] == 1 || pos[1] == 2) && file_len) {
+			if (pos[1] == 1)
+				*file_len = (int) pos[2];
+			else
+				*file_len = ((int) pos[2] << 8) |
+					(int) pos[3];
+			wpa_printf(MSG_DEBUG, "SCARD: file_size=%d",
+				   *file_len);
+		}
+
+		if (pos[0] == USIM_TLV_PIN_STATUS_TEMPLATE &&
+		    pos[1] >= 2 && pos[2] == USIM_PS_DO_TAG &&
+		    pos[3] >= 1 && ps_do) {
+			wpa_printf(MSG_DEBUG, "SCARD: PS_DO=0x%02x", pos[4]);
+			*ps_do = (int) pos[4];
+		}
+
+		pos += 2 + pos[1];
+
+		if (pos == end)
+			return 0;
+	}
+	return -1;
 }
 
 

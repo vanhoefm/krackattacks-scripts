@@ -70,6 +70,9 @@
 #define USIM_TLV_TOTAL_FILE_SIZE	0x81
 #define USIM_TLV_PIN_STATUS_TEMPLATE	0xC6
 #define USIM_TLV_SHORT_FILE_ID		0x88
+#define USIM_TLV_SECURITY_ATTR_8B	0x8B
+#define USIM_TLV_SECURITY_ATTR_8C	0x8C
+#define USIM_TLV_SECURITY_ATTR_AB	0xAB
 
 #define USIM_PS_DO_TAG			0x90
 
@@ -263,22 +266,68 @@ static int scard_parse_fsp_templ(unsigned char *buf, size_t buf_len,
 		if (pos + 2 + pos[1] > end)
 			break;
 
-		if (pos[0] == USIM_TLV_FILE_SIZE &&
-		    (pos[1] == 1 || pos[1] == 2) && file_len) {
-			if (pos[1] == 1)
-				*file_len = (int) pos[2];
-			else
-				*file_len = ((int) pos[2] << 8) |
-					(int) pos[3];
-			wpa_printf(MSG_DEBUG, "SCARD: file_size=%d",
-				   *file_len);
-		}
-
-		if (pos[0] == USIM_TLV_PIN_STATUS_TEMPLATE &&
-		    pos[1] >= 2 && pos[2] == USIM_PS_DO_TAG &&
-		    pos[3] >= 1 && ps_do) {
-			wpa_printf(MSG_DEBUG, "SCARD: PS_DO=0x%02x", pos[4]);
-			*ps_do = (int) pos[4];
+		switch (pos[0]) {
+		case USIM_TLV_FILE_DESC:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: File Descriptor TLV",
+				    pos + 2, pos[1]);
+			break;
+		case USIM_TLV_FILE_ID:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: File Identifier TLV",
+				    pos + 2, pos[1]);
+			break;
+		case USIM_TLV_DF_NAME:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: DF name (AID) TLV",
+				    pos + 2, pos[1]);
+			break;
+		case USIM_TLV_PROPR_INFO:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: Proprietary "
+				    "information TLV", pos + 2, pos[1]);
+			break;
+		case USIM_TLV_LIFE_CYCLE_STATUS:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: Life Cycle Status "
+				    "Integer TLV", pos + 2, pos[1]);
+			break;
+		case USIM_TLV_FILE_SIZE:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: File size TLV",
+				    pos + 2, pos[1]);
+			if ((pos[1] == 1 || pos[1] == 2) && file_len) {
+				if (pos[1] == 1)
+					*file_len = (int) pos[2];
+				else
+					*file_len = ((int) pos[2] << 8) |
+						(int) pos[3];
+				wpa_printf(MSG_DEBUG, "SCARD: file_size=%d",
+					   *file_len);
+			}
+			break;
+		case USIM_TLV_TOTAL_FILE_SIZE:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: Total file size TLV",
+				    pos + 2, pos[1]);
+			break;
+		case USIM_TLV_PIN_STATUS_TEMPLATE:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: PIN Status Template "
+				    "DO TLV", pos + 2, pos[1]);
+			if (pos[1] >= 2 && pos[2] == USIM_PS_DO_TAG &&
+			    pos[3] >= 1 && ps_do) {
+				wpa_printf(MSG_DEBUG, "SCARD: PS_DO=0x%02x",
+					   pos[4]);
+				*ps_do = (int) pos[4];
+			}
+			break;
+		case USIM_TLV_SHORT_FILE_ID:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: Short File "
+				    "Identifier (SFI) TLV", pos + 2, pos[1]);
+			break;
+		case USIM_TLV_SECURITY_ATTR_8B:
+		case USIM_TLV_SECURITY_ATTR_8C:
+		case USIM_TLV_SECURITY_ATTR_AB:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: Security attribute "
+				    "TLV", pos + 2, pos[1]);
+			break;
+		default:
+			wpa_hexdump(MSG_MSGDUMP, "SCARD: Unrecognized TLV",
+				    pos, 2 + pos[1]);
+			break;
 		}
 
 		pos += 2 + pos[1];

@@ -12,6 +12,7 @@
 #include "common/ieee802_11_defs.h"
 #include "common/gas.h"
 #include "common/wpa_ctrl.h"
+#include "utils/pcsc_funcs.h"
 #include "drivers/driver.h"
 #include "eap_common/eap_defs.h"
 #include "eap_peer/eap_methods.h"
@@ -656,6 +657,8 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 		wpa_printf(MSG_DEBUG, "EAP-SIM not supported");
 		goto fail;
 	}
+	if (cred->pcsc && wpa_s->scard && scard_supports_umts(wpa_s->scard))
+		wpa_config_set(ssid, "eap", "AKA", 0);
 	if (!cred->pcsc && set_root_nai(ssid, cred->imsi, '1') < 0) {
 		wpa_printf(MSG_DEBUG, "Failed to set Root NAI");
 		goto fail;

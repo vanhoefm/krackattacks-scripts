@@ -61,6 +61,11 @@ struct wpa_cred {
 	int priority;
 
 	/**
+	 * pcsc - Use PC/SC and SIM/USIM card
+	 */
+	int pcsc;
+
+	/**
 	 * realm - Home Realm for Interworking
 	 */
 	char *realm;

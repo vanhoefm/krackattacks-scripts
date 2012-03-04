@@ -461,21 +461,17 @@ static struct nai_realm_eap * nai_realm_find_eap(struct wpa_cred *cred,
 
 #ifdef INTERWORKING_3GPP
 
-static int plmn_id_match(struct wpabuf *anqp, const char *imsi)
+static int plmn_id_match(struct wpabuf *anqp, const char *imsi, int mnc_len)
 {
-	const char *sep;
 	u8 plmn[3];
 	const u8 *pos, *end;
 	u8 udhl;
 
-	sep = os_strchr(imsi, '-');
-	if (sep == NULL || (sep - imsi != 5 && sep - imsi != 6))
-		return 0;
-
 	/* See Annex A of 3GPP TS 24.234 v8.1.0 for description */
 	plmn[0] = (imsi[0] - '0') | ((imsi[1] - '0') << 4);
 	plmn[1] = imsi[2] - '0';
-	if (sep - imsi == 6)
+	/* default to MNC length 3 if unknown */
+	if (mnc_len != 2)
 		plmn[1] |= (imsi[5] - '0') << 4;
 	else
 		plmn[1] |= 0xf0;
@@ -602,10 +598,19 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 		return -1;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		char *sep;
+
 		if (cred->imsi == NULL || !cred->imsi[0] ||
 		    cred->milenage == NULL || !cred->milenage[0])
 			continue;
-		if (plmn_id_match(bss->anqp_3gpp, cred->imsi))
+
+		sep = os_strchr(cred->imsi, '-');
+		if (sep == NULL ||
+		    (sep - cred->imsi != 5 && sep - cred->imsi != 6))
+			continue;
+
+		if (plmn_id_match(bss->anqp_3gpp, cred->imsi,
+				  sep - cred->imsi - 3))
 			break;
 	}
 	if (cred == NULL)
@@ -865,13 +870,21 @@ static struct wpa_cred * interworking_credentials_available_3gpp(
 		return NULL;
 
 	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		char *sep;
+
 		if (cred->imsi == NULL || !cred->imsi[0] ||
 		    cred->milenage == NULL || !cred->milenage[0])
 			continue;
 
+		sep = os_strchr(cred->imsi, '-');
+		if (sep == NULL ||
+		    (sep - cred->imsi != 5 && sep - cred->imsi != 6))
+			continue;
+
 		wpa_printf(MSG_DEBUG, "Interworking: Parsing 3GPP info from "
 			   MACSTR, MAC2STR(bss->bssid));
-		ret = plmn_id_match(bss->anqp_3gpp, cred->imsi);
+		ret = plmn_id_match(bss->anqp_3gpp, cred->imsi,
+				    sep - cred->imsi - 3);
 		wpa_printf(MSG_DEBUG, "PLMN match %sfound", ret ? "" : "not ");
 		if (ret) {
 			if (selected == NULL ||

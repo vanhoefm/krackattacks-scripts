@@ -2937,6 +2937,8 @@ static int p2p_ctrl_serv_disc_resp(struct wpa_supplicant *wpa_s, char *cmd)
 static int p2p_ctrl_serv_disc_external(struct wpa_supplicant *wpa_s,
 				       char *cmd)
 {
+	if (os_strcmp(cmd, "0") && os_strcmp(cmd, "1"))
+		return -1;
 	wpa_s->p2p_sd_over_ctrl_iface = atoi(cmd);
 	return 0;
 }

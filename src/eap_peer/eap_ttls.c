@@ -435,7 +435,6 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 			   "implicit challenge");
 		return -1;
 	}
-	peer_challenge = challenge + 1 + EAP_TTLS_MSCHAPV2_CHALLENGE_LEN;
 
 	pos = eap_ttls_avp_add(buf, pos, RADIUS_ATTR_MS_CHAP_CHALLENGE,
 			       RADIUS_VENDOR_ID_MICROSOFT, 1,
@@ -448,7 +447,14 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 	data->ident = challenge[EAP_TTLS_MSCHAPV2_CHALLENGE_LEN];
 	*pos++ = data->ident;
 	*pos++ = 0; /* Flags */
-	os_memcpy(pos, peer_challenge, EAP_TTLS_MSCHAPV2_CHALLENGE_LEN);
+	if (os_get_random(pos, EAP_TTLS_MSCHAPV2_CHALLENGE_LEN) < 0) {
+		os_free(challenge);
+		wpabuf_free(msg);
+		wpa_printf(MSG_ERROR, "EAP-TTLS/MSCHAPV2: Failed to get "
+			   "random data for peer challenge");
+		return -1;
+	}
+	peer_challenge = pos;
 	pos += EAP_TTLS_MSCHAPV2_CHALLENGE_LEN;
 	os_memset(pos, 0, 8); /* Reserved, must be zero */
 	pos += 8;
@@ -456,6 +462,7 @@ static int eap_ttls_phase2_request_mschapv2(struct eap_sm *sm,
 				     password_len, pwhash, challenge,
 				     peer_challenge, pos, data->auth_response,
 				     data->master_key)) {
+		os_free(challenge);
 		wpabuf_free(msg);
 		wpa_printf(MSG_ERROR, "EAP-TTLS/MSCHAPV2: Failed to derive "
 			   "response");

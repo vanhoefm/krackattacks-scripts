@@ -328,6 +328,8 @@ static void wpa_bss_update(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 		nbss = os_realloc(bss, sizeof(*bss) + res->ie_len +
 				  res->beacon_ie_len);
 		if (nbss) {
+			if (wpa_s->current_bss == bss)
+				wpa_s->current_bss = nbss;
 			bss = nbss;
 			os_memcpy(bss + 1, res + 1,
 				  res->ie_len + res->beacon_ie_len);

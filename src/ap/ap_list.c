@@ -289,10 +289,8 @@ void ap_list_process_beacon(struct hostapd_iface *iface,
 	ap->num_beacons++;
 	os_get_time(&now);
 	ap->last_beacon = now.sec;
-	if (fi) {
-		ap->ssi_signal = fi->ssi_signal;
+	if (fi)
 		ap->datarate = fi->datarate;
-	}
 
 	if (!new_ap && ap != iface->ap_list) {
 		/* move AP entry into the beginning of the list so that the

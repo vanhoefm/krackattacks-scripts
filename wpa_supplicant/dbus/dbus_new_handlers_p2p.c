@@ -1798,9 +1798,11 @@ dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
 	const u8 *addr;
 	dbus_bool_t success = FALSE;
 
-	/* Ensure we are a GO */
-	if (wpa_s->wpa_state != WPA_COMPLETED)
-		return FALSE;
+	/* Verify correct role for this property */
+	if (wpas_get_p2p_role(wpa_s) != WPAS_P2P_ROLE_GO) {
+		return wpas_dbus_simple_array_property_getter(
+			iter, DBUS_TYPE_OBJECT_PATH, NULL, 0, error);
+	}
 
 	ssid = wpa_s->conf->ssid;
 	/* At present WPAS P2P_GO mode only applicable for p2p_go */
@@ -1848,111 +1850,145 @@ out_of_memory:
 }
 
 
-dbus_bool_t wpas_dbus_getter_p2p_group_properties(DBusMessageIter *iter,
+dbus_bool_t wpas_dbus_getter_p2p_group_ssid(DBusMessageIter *iter,
+					    DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	if (wpa_s->current_ssid == NULL)
+		return FALSE;
+	return wpas_dbus_simple_array_property_getter(
+		iter, DBUS_TYPE_BYTE, wpa_s->current_ssid->ssid,
+		wpa_s->current_ssid->ssid_len, error);
+}
+
+
+dbus_bool_t wpas_dbus_getter_p2p_group_bssid(DBusMessageIter *iter,
+					     DBusError *error,
+					     void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	u8 role = wpas_get_p2p_role(wpa_s);
+	u8 *p_bssid;
+
+	if (role == WPAS_P2P_ROLE_CLIENT) {
+		if (wpa_s->current_ssid == NULL)
+			return FALSE;
+		p_bssid = wpa_s->current_ssid->bssid;
+	} else {
+		if (wpa_s->ap_iface == NULL)
+			return FALSE;
+		p_bssid = wpa_s->ap_iface->bss[0]->own_addr;
+	}
+
+	return wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
+						      p_bssid, ETH_ALEN,
+						      error);
+}
+
+
+dbus_bool_t wpas_dbus_getter_p2p_group_frequency(DBusMessageIter *iter,
+						 DBusError *error,
+						 void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	u16 op_freq;
+	u8 role = wpas_get_p2p_role(wpa_s);
+
+	if (role == WPAS_P2P_ROLE_CLIENT) {
+		if (wpa_s->go_params == NULL)
+			return FALSE;
+		op_freq = wpa_s->go_params->freq;
+	} else {
+		if (wpa_s->ap_iface == NULL)
+			return FALSE;
+		op_freq = wpa_s->ap_iface->freq;
+	}
+
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_UINT16,
+						&op_freq, error);
+}
+
+
+dbus_bool_t wpas_dbus_getter_p2p_group_passphrase(DBusMessageIter *iter,
 						  DBusError *error,
 						  void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	DBusMessageIter variant_iter, dict_iter;
-	struct hostapd_data *hapd = NULL;
-	const struct wpabuf *vendor_ext[MAX_WPS_VENDOR_EXTENSIONS];
-	int num_vendor_ext = 0;
-	int i;
 	u8 role = wpas_get_p2p_role(wpa_s);
-	u16 op_freq = 0;
-	u8 *p_bssid = NULL;
-	char *role_name = NULL;
+	char *p_pass = NULL;
 
-	if (!wpa_s->current_ssid)
-		return FALSE;
-
-	/* Check current role and adjust information accordingly */
-	switch (role) {
-	case WPAS_P2P_ROLE_CLIENT:
-		/* go_params is only valid for a client */
-		if (wpa_s->go_params) {
-			op_freq = wpa_s->go_params->freq;
-			p_bssid = wpa_s->current_ssid->bssid;
-			role_name = "client";
-		} else
-			return FALSE;
-		break;
-	case WPAS_P2P_ROLE_GO:
-		/* ap_iface is only valid for a GO */
-		if (wpa_s->ap_iface) {
-			hapd = wpa_s->ap_iface->bss[0];
-			p_bssid = hapd->own_addr;
-			op_freq = wpa_s->ap_iface->freq;
-			role_name = "GO";
-		} else
-			return FALSE;
-		break;
-	default:
-		/* Error condition; this should NEVER occur */
-		return FALSE;
-	}
-
-	if (!dbus_message_iter_open_container(iter, DBUS_TYPE_VARIANT,
-					      "a{sv}", &variant_iter) ||
-	    !wpa_dbus_dict_open_write(&variant_iter, &dict_iter))
-		goto err_no_mem;
-	/* Provide the SSID */
-	if (!wpa_dbus_dict_append_byte_array(
-		    &dict_iter, "SSID",
-		    (const char *) wpa_s->current_ssid->ssid,
-		    wpa_s->current_ssid->ssid_len))
-		goto err_no_mem;
-	/* Provide the BSSID */
-	if (p_bssid &&
-	    !wpa_dbus_dict_append_byte_array(&dict_iter, "BSSID",
-					     (const char *) p_bssid, ETH_ALEN))
-		goto err_no_mem;
-	/* Provide the role within the group */
-	if (role_name &&
-	    !wpa_dbus_dict_append_string(&dict_iter, "Role", role_name))
-		goto err_no_mem;
-	/* Provide the operational frequency */
-	if (!wpa_dbus_dict_append_uint16(&dict_iter, "Frequency", op_freq))
-		goto err_no_mem;
-
-	/* Additional information for group owners */
+	/* Verify correct role for this property */
 	if (role == WPAS_P2P_ROLE_GO) {
-		/* Provide the passphrase */
-		if (!wpa_dbus_dict_append_string(&dict_iter, "Passphrase",
-					wpa_s->current_ssid->passphrase))
-			goto err_no_mem;
-		/* Parse WPS Vendor Extensions sent in Beacon/Probe Response */
-		for (i = 0; hapd && i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
-			if (hapd->conf->wps_vendor_ext[i] == NULL)
-				continue;
-			vendor_ext[num_vendor_ext++] =
-				hapd->conf->wps_vendor_ext[i];
-		}
-		if (!wpa_dbus_dict_append_wpabuf_array(&dict_iter,
-					"WPSVendorExtensions",
-					vendor_ext, num_vendor_ext))
-			goto err_no_mem;
-	} else {
-		/* If not a GO, provide the PSK */
-		if (!wpa_dbus_dict_append_byte_array(
-			    &dict_iter, "PSK",
-			    (const char *) wpa_s->current_ssid->psk, 32))
-			goto err_no_mem;
-	}
+		if (wpa_s->current_ssid == NULL)
+			return FALSE;
+		p_pass = wpa_s->current_ssid->passphrase;
+	} else
+		p_pass = "";
 
-	if (!wpa_dbus_dict_close_write(&variant_iter, &dict_iter) ||
-	    !dbus_message_iter_close_container(iter, &variant_iter))
-		goto err_no_mem;
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_STRING,
+						&p_pass, error);
 
-	return TRUE;
-
-err_no_mem:
-	dbus_set_error_const(error, DBUS_ERROR_NO_MEMORY, "no memory");
-	return FALSE;
 }
 
 
-dbus_bool_t wpas_dbus_setter_p2p_group_properties(DBusMessageIter *iter,
+dbus_bool_t wpas_dbus_getter_p2p_group_psk(DBusMessageIter *iter,
+					   DBusError *error, void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	u8 role = wpas_get_p2p_role(wpa_s);
+	u8 *p_psk = NULL;
+	u8 psk_len = 0;
+
+	/* Verify correct role for this property */
+	if (role == WPAS_P2P_ROLE_CLIENT) {
+		if (wpa_s->current_ssid == NULL)
+			return FALSE;
+		p_psk = wpa_s->current_ssid->psk;
+		psk_len = 32;
+	}
+
+	return wpas_dbus_simple_array_property_getter(iter, DBUS_TYPE_BYTE,
+						      &p_psk, psk_len, error);
+}
+
+
+dbus_bool_t wpas_dbus_getter_p2p_group_vendor_ext(DBusMessageIter *iter,
+						  DBusError *error,
+						  void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	struct hostapd_data *hapd;
+	struct wpabuf *vendor_ext[MAX_WPS_VENDOR_EXTENSIONS];
+	int num_vendor_ext = 0;
+	int i;
+
+	/* Verify correct role for this property */
+	if (wpas_get_p2p_role(wpa_s) == WPAS_P2P_ROLE_GO) {
+		if (wpa_s->ap_iface == NULL)
+			return FALSE;
+		hapd = wpa_s->ap_iface->bss[0];
+
+		/* Parse WPS Vendor Extensions sent in Beacon/Probe Response */
+		for (i = 0; i < MAX_WPS_VENDOR_EXTENSIONS; i++) {
+			if (hapd->conf->wps_vendor_ext[i] == NULL)
+				vendor_ext[i] = NULL;
+			else {
+				vendor_ext[num_vendor_ext++] =
+					hapd->conf->wps_vendor_ext[i];
+			}
+		}
+	}
+
+	/* Return vendor extensions or no data */
+	return wpas_dbus_simple_array_array_property_getter(iter,
+							    DBUS_TYPE_BYTE,
+							    vendor_ext,
+							    num_vendor_ext,
+						 error);
+}
+
+
+dbus_bool_t wpas_dbus_setter_p2p_group_vendor_ext(DBusMessageIter *iter,
 						  DBusError *error,
 						  void *user_data)
 {

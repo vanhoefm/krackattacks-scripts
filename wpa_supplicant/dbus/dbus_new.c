@@ -3126,10 +3126,37 @@ static const struct wpa_dbus_property_desc wpas_dbus_p2p_group_properties[] = {
 	  wpas_dbus_getter_p2p_group_members,
 	  NULL
 	},
-	{ "Properties",
-	  WPAS_DBUS_NEW_IFACE_P2P_GROUP, "a{sv}",
-	  wpas_dbus_getter_p2p_group_properties,
-	  wpas_dbus_setter_p2p_group_properties
+	{ "Group", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "o",
+	  wpas_dbus_getter_p2p_group,
+	  NULL
+	},
+	{ "Role", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "s",
+	  wpas_dbus_getter_p2p_role,
+	  NULL
+	},
+	{ "SSID", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "ay",
+	  wpas_dbus_getter_p2p_group_ssid,
+	  NULL
+	},
+	{ "BSSID", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "ay",
+	  wpas_dbus_getter_p2p_group_bssid,
+	  NULL
+	},
+	{ "Frequency", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "q",
+	  wpas_dbus_getter_p2p_group_frequency,
+	  NULL
+	},
+	{ "Passphrase", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "s",
+	  wpas_dbus_getter_p2p_group_passphrase,
+	  NULL
+	},
+	{ "PSK", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "ay",
+	  wpas_dbus_getter_p2p_group_psk,
+	  NULL
+	},
+	{ "WPSVendorExtensions", WPAS_DBUS_NEW_IFACE_P2P_GROUP, "aay",
+	  wpas_dbus_getter_p2p_group_vendor_ext,
+	  wpas_dbus_setter_p2p_group_vendor_ext
 	},
 	{ NULL, NULL, NULL, NULL, NULL }
 };
@@ -3251,10 +3278,6 @@ void wpas_dbus_unregister_p2p_group(struct wpa_supplicant *wpa_s,
 
 static const struct wpa_dbus_property_desc
 wpas_dbus_p2p_groupmember_properties[] = {
-	{ "Properties", WPAS_DBUS_NEW_IFACE_P2P_GROUPMEMBER, "a{sv}",
-	  wpas_dbus_getter_p2p_group_properties,
-	  NULL
-	},
 	{ NULL, NULL, NULL, NULL, NULL }
 };
 

@@ -161,11 +161,31 @@ dbus_bool_t wpas_dbus_getter_p2p_group_members(DBusMessageIter *iter,
 					       DBusError *error,
 					       void *user_data);
 
-dbus_bool_t wpas_dbus_getter_p2p_group_properties(DBusMessageIter *iter,
+dbus_bool_t wpas_dbus_getter_p2p_group_ssid(DBusMessageIter *iter,
+					    DBusError *error,
+					    void *user_data);
+
+dbus_bool_t wpas_dbus_getter_p2p_group_bssid(DBusMessageIter *iter,
+					     DBusError *error,
+					     void *user_data);
+
+dbus_bool_t wpas_dbus_getter_p2p_group_frequency(DBusMessageIter *iter,
+						 DBusError *error,
+						 void *user_data);
+
+dbus_bool_t wpas_dbus_getter_p2p_group_passphrase(DBusMessageIter *iter,
 						  DBusError *error,
 						  void *user_data);
 
-dbus_bool_t wpas_dbus_setter_p2p_group_properties(DBusMessageIter *iter,
+dbus_bool_t wpas_dbus_getter_p2p_group_psk(DBusMessageIter *iter,
+					   DBusError *error,
+					   void *user_data);
+
+dbus_bool_t wpas_dbus_getter_p2p_group_vendor_ext(DBusMessageIter *iter,
+						  DBusError *error,
+						  void *user_data);
+
+dbus_bool_t wpas_dbus_setter_p2p_group_vendor_ext(DBusMessageIter *iter,
 						  DBusError *error,
 						  void *user_data);
 

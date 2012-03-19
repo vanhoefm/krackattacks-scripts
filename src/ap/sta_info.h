@@ -156,6 +156,10 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 			 u16 reason);
 void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 			   u16 reason);
+#ifdef CONFIG_WPS
+int ap_sta_wps_cancel(struct hostapd_data *hapd,
+		      struct sta_info *sta, void *ctx);
+#endif /* CONFIG_WPS */
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		     int old_vlanid);
 void ap_sta_start_sa_query(struct hostapd_data *hapd, struct sta_info *sta);

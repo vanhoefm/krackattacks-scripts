@@ -1104,6 +1104,24 @@ int hostapd_wps_button_pushed(struct hostapd_data *hapd,
 }
 
 
+static int wps_cancel(struct hostapd_data *hapd, void *ctx)
+{
+	if (hapd->wps == NULL)
+		return 0;
+
+	wps_registrar_wps_cancel(hapd->wps->registrar);
+	ap_for_each_sta(hapd, ap_sta_wps_cancel, NULL);
+
+	return 0;
+}
+
+
+int hostapd_wps_cancel(struct hostapd_data *hapd)
+{
+	return hostapd_wps_for_each(hapd, wps_cancel, NULL);
+}
+
+
 #ifdef CONFIG_WPS_OOB
 int hostapd_wps_start_oob(struct hostapd_data *hapd, char *device_type,
 			  char *path, char *method, char *name)

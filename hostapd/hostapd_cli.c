@@ -392,6 +392,13 @@ static int hostapd_cli_cmd_wps_pbc(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+static int hostapd_cli_cmd_wps_cancel(struct wpa_ctrl *ctrl, int argc,
+				      char *argv[])
+{
+	return wpa_ctrl_command(ctrl, "WPS_CANCEL");
+}
+
+
 #ifdef CONFIG_WPS_OOB
 static int hostapd_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc,
 				   char *argv[])
@@ -719,6 +726,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 	{ "wps_pin", hostapd_cli_cmd_wps_pin },
 	{ "wps_check_pin", hostapd_cli_cmd_wps_check_pin },
 	{ "wps_pbc", hostapd_cli_cmd_wps_pbc },
+	{ "wps_cancel", hostapd_cli_cmd_wps_cancel },
 #ifdef CONFIG_WPS_OOB
 	{ "wps_oob", hostapd_cli_cmd_wps_oob },
 #endif /* CONFIG_WPS_OOB */

@@ -755,6 +755,9 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strcmp(buf, "WPS_PBC") == 0) {
 		if (hostapd_wps_button_pushed(hapd, NULL))
 			reply_len = -1;
+	} else if (os_strcmp(buf, "WPS_CANCEL") == 0) {
+		if (hostapd_wps_cancel(hapd))
+			reply_len = -1;
 #ifdef CONFIG_WPS_OOB
 	} else if (os_strncmp(buf, "WPS_OOB ", 8) == 0) {
 		if (hostapd_ctrl_iface_wps_oob(hapd, buf + 8))

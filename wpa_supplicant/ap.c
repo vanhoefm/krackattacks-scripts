@@ -659,21 +659,6 @@ int wpa_supplicant_ap_wps_pbc(struct wpa_supplicant *wpa_s, const u8 *bssid,
 }
 
 
-static int wpa_supplicant_ap_wps_sta_cancel(struct hostapd_data *hapd,
-					    struct sta_info *sta, void *ctx)
-{
-	if (sta && (sta->flags & WLAN_STA_WPS)) {
-		ap_sta_deauthenticate(hapd, sta,
-				      WLAN_REASON_PREV_AUTH_NOT_VALID);
-		wpa_printf(MSG_DEBUG, "WPS: %s: Deauth sta=" MACSTR,
-			   __func__, MAC2STR(sta->addr));
-		return 1;
-	}
-
-	return 0;
-}
-
-
 int wpa_supplicant_ap_wps_cancel(struct wpa_supplicant *wpa_s)
 {
 	struct wps_registrar *reg;
@@ -685,7 +670,7 @@ int wpa_supplicant_ap_wps_cancel(struct wpa_supplicant *wpa_s)
 	reg = wpa_s->ap_iface->bss[0]->wps->registrar;
 	reg_sel = wps_registrar_wps_cancel(reg);
 	wps_sta = ap_for_each_sta(wpa_s->ap_iface->bss[0],
-				  wpa_supplicant_ap_wps_sta_cancel, NULL);
+				  ap_sta_wps_cancel, NULL);
 
 	if (!reg_sel && !wps_sta) {
 		wpa_printf(MSG_DEBUG, "No WPS operation in progress at this "

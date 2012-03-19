@@ -592,6 +592,23 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 }
 
 
+#ifdef CONFIG_WPS
+int ap_sta_wps_cancel(struct hostapd_data *hapd,
+		      struct sta_info *sta, void *ctx)
+{
+	if (sta && (sta->flags & WLAN_STA_WPS)) {
+		ap_sta_deauthenticate(hapd, sta,
+				      WLAN_REASON_PREV_AUTH_NOT_VALID);
+		wpa_printf(MSG_DEBUG, "WPS: %s: Deauth sta=" MACSTR,
+			   __func__, MAC2STR(sta->addr));
+		return 1;
+	}
+
+	return 0;
+}
+#endif /* CONFIG_WPS */
+
+
 int ap_sta_bind_vlan(struct hostapd_data *hapd, struct sta_info *sta,
 		     int old_vlanid)
 {

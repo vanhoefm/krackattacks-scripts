@@ -51,9 +51,6 @@ ifeq ($(TARGET_ARCH),arm)
 L_CFLAGS += -mabi=aapcs-linux
 endif
 
-# OpenSSL is configured without engines on Android
-L_CFLAGS += -DOPENSSL_NO_ENGINE
-
 INCLUDES = $(LOCAL_PATH)
 INCLUDES += $(LOCAL_PATH)/src
 INCLUDES += $(LOCAL_PATH)/src/common

@@ -13,6 +13,7 @@
 #include "crypto/crypto.h"
 #include "common/defs.h"
 #include "common/ieee802_11_defs.h"
+#include "common/ieee802_11_common.h"
 #include "common/eapol_common.h"
 #include "common/wpa_common.h"
 #include "rsn_supp/wpa_ie.h"
@@ -219,6 +220,7 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - WPA IE",
 			    ie.wpa_ie, ie.wpa_ie_len);
 		if (os_memcmp(ie.wpa_ie, sta->rsnie, ie.wpa_ie_len) != 0) {
+			struct ieee802_11_elems elems;
 			wpa_printf(MSG_INFO, "Mismatch in WPA IE between "
 				   "EAPOL-Key 2/4 and (Re)Association "
 				   "Request from " MACSTR, MAC2STR(sta->addr));
@@ -228,6 +230,17 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 				    "Request",
 				    sta->rsnie,
 				    sta->rsnie[0] ? 2 + sta->rsnie[1] : 0);
+			/*
+			 * The sniffer may have missed (Re)Association
+			 * Request, so try to survive with the information from
+			 * EAPOL-Key.
+			 */
+			os_memset(&elems, 0, sizeof(elems));
+			elems.wpa_ie = ie.wpa_ie + 2;
+			elems.wpa_ie_len = ie.wpa_ie_len - 2;
+			wpa_printf(MSG_DEBUG, "Update STA data based on WPA "
+				   "IE in EAPOL-Key 2/4");
+			sta_update_assoc(sta, &elems);
 		}
 	}
 
@@ -235,6 +248,7 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 		wpa_hexdump(MSG_MSGDUMP, "EAPOL-Key Key Data - RSN IE",
 			    ie.rsn_ie, ie.rsn_ie_len);
 		if (os_memcmp(ie.rsn_ie, sta->rsnie, ie.rsn_ie_len) != 0) {
+			struct ieee802_11_elems elems;
 			wpa_printf(MSG_INFO, "Mismatch in RSN IE between "
 				   "EAPOL-Key 2/4 and (Re)Association "
 				   "Request from " MACSTR, MAC2STR(sta->addr));
@@ -244,6 +258,17 @@ static void rx_data_eapol_key_2_of_4(struct wlantest *wt, const u8 *dst,
 				    "Request",
 				    sta->rsnie,
 				    sta->rsnie[0] ? 2 + sta->rsnie[1] : 0);
+			/*
+			 * The sniffer may have missed (Re)Association
+			 * Request, so try to survive with the information from
+			 * EAPOL-Key.
+			 */
+			os_memset(&elems, 0, sizeof(elems));
+			elems.rsn_ie = ie.rsn_ie + 2;
+			elems.rsn_ie_len = ie.rsn_ie_len - 2;
+			wpa_printf(MSG_DEBUG, "Update STA data based on RSN "
+				   "IE in EAPOL-Key 2/4");
+			sta_update_assoc(sta, &elems);
 		}
 	}
 }

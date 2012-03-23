@@ -793,6 +793,12 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 			if (anon == NULL)
 				goto fail;
 			os_snprintf(anon, buflen, "anonymous%s", pos);
+		} else if (cred->realm) {
+			size_t buflen = 10 + os_strlen(cred->realm) + 1;
+			anon = os_malloc(buflen);
+			if (anon == NULL)
+				goto fail;
+			os_snprintf(anon, buflen, "anonymous@%s", cred->realm);
 		} else {
 			anon = os_strdup("anonymous");
 			if (anon == NULL)

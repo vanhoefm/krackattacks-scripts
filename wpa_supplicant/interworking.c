@@ -41,6 +41,19 @@
 static void interworking_next_anqp_fetch(struct wpa_supplicant *wpa_s);
 
 
+static void interworking_reconnect(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->wpa_state >= WPA_AUTHENTICATING) {
+		wpa_supplicant_cancel_sched_scan(wpa_s);
+		wpa_supplicant_deauthenticate(wpa_s,
+					      WLAN_REASON_DEAUTH_LEAVING);
+	}
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+}
+
+
 static struct wpabuf * anqp_build_req(u16 info_ids[], size_t num_ids,
 				      struct wpabuf *extra)
 {
@@ -682,9 +695,7 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 		goto fail;
 
 	wpa_config_update_prio_list(wpa_s->conf);
-	wpa_s->disconnected = 0;
-	wpa_s->reassociate = 1;
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	interworking_reconnect(wpa_s);
 
 	return 0;
 
@@ -866,9 +877,7 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 	nai_realm_free(realm, count);
 
 	wpa_config_update_prio_list(wpa_s->conf);
-	wpa_s->disconnected = 0;
-	wpa_s->reassociate = 1;
-	wpa_supplicant_req_scan(wpa_s, 0, 0);
+	interworking_reconnect(wpa_s);
 
 	return 0;
 
@@ -1139,9 +1148,7 @@ static void interworking_select_network(struct wpa_supplicant *wpa_s)
 		if (interworking_find_network_match(wpa_s)) {
 			wpa_printf(MSG_DEBUG, "Interworking: Possible BSS "
 				   "match for enabled network configurations");
-			wpa_s->disconnected = 0;
-			wpa_s->reassociate = 1;
-			wpa_supplicant_req_scan(wpa_s, 0, 0);
+			interworking_reconnect(wpa_s);
 			return;
 		}
 

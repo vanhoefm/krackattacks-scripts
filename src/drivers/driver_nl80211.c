@@ -2512,6 +2512,9 @@ broken_combination:
 
 		if (flags & NL80211_FEATURE_SK_TX_STATUS)
 			info->data_tx_status = 1;
+
+		if (flags & NL80211_FEATURE_INACTIVITY_TIMER)
+			capa->flags |= WPA_DRIVER_FLAGS_INACTIVITY_TIMER;
 	}
 
 	if (tb[NL80211_ATTR_PROBE_RESP_OFFLOAD]) {
@@ -5413,6 +5416,11 @@ static int wpa_driver_nl80211_set_ap(void *priv,
 		NLA_PUT(msg, NL80211_ATTR_IE_ASSOC_RESP,
 			wpabuf_len(params->assocresp_ies),
 			wpabuf_head(params->assocresp_ies));
+	}
+
+	if (drv->capa.flags & WPA_DRIVER_FLAGS_INACTIVITY_TIMER)  {
+		NLA_PUT_U16(msg, NL80211_ATTR_INACTIVITY_TIMEOUT,
+			    params->ap_max_inactivity);
 	}
 
 	ret = send_and_recv_msgs(drv, msg, NULL, NULL);

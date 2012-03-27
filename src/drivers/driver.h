@@ -707,6 +707,13 @@ struct wpa_driver_ap_params {
 	 * enabled.
 	 */
 	u8 access_network_type;
+
+	/**
+	 * ap_max_inactivity - Timeout in seconds to detect STA's inactivity
+	 *
+	 * This is used by driver which advertises this capability.
+	 */
+	int ap_max_inactivity;
 };
 
 /**
@@ -790,6 +797,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_PROBE_RESP_OFFLOAD		0x00200000
 /* Driver supports U-APSD in AP mode */
 #define WPA_DRIVER_FLAGS_AP_UAPSD			0x00400000
+/* Driver supports inactivity timer in AP mode */
+#define WPA_DRIVER_FLAGS_INACTIVITY_TIMER		0x00800000
 	unsigned int flags;
 
 	int max_scan_ssids;

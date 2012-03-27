@@ -1602,6 +1602,7 @@ static const struct parse_data ssid_fields[] = {
 	{ INT_RANGE(ampdu_density, -1, 7) },
 	{ STR(ht_mcs) },
 #endif /* CONFIG_HT_OVERRIDES */
+	{ INT(ap_max_inactivity) },
 };
 
 #undef OFFSET

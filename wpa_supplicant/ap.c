@@ -181,6 +181,9 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 		wep->keys_set = 1;
 	}
 
+	if (ssid->ap_max_inactivity)
+		bss->ap_max_inactivity = ssid->ap_max_inactivity;
+
 	/* Select group cipher based on the enabled pairwise cipher suites */
 	pairwise = 0;
 	if (bss->wpa & 1)

@@ -484,6 +484,14 @@ struct wpa_ssid {
 	 */
 	char *ht_mcs;
 #endif /* CONFIG_HT_OVERRIDES */
+
+	/**
+	 * ap_max_inactivity - Timeout in seconds to detect STA's inactivity
+	 *
+	 * This timeout value is used in AP mode to clean up inactive stations.
+	 * By default: 300 seconds.
+	 */
+	int ap_max_inactivity;
 };
 
 #endif /* CONFIG_SSID_H */

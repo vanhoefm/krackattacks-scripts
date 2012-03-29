@@ -164,6 +164,7 @@ struct wpa_cred {
 #define CFG_CHANGED_VENDOR_EXTENSION BIT(10)
 #define CFG_CHANGED_P2P_LISTEN_CHANNEL BIT(11)
 #define CFG_CHANGED_P2P_OPER_CHANNEL BIT(12)
+#define CFG_CHANGED_P2P_PREF_CHAN BIT(13)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data
@@ -503,6 +504,8 @@ struct wpa_config {
 	char *p2p_ssid_postfix;
 	int persistent_reconnect;
 	int p2p_intra_bss;
+	unsigned int num_p2p_pref_chan;
+	struct p2p_channel *p2p_pref_chan;
 
 #define MAX_WPS_VENDOR_EXT 10
 	/**

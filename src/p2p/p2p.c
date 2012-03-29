@@ -2212,6 +2212,16 @@ struct p2p_data * p2p_init(const struct p2p_config *cfg)
 		p2p->cfg->model_number = os_strdup(cfg->model_number);
 	if (cfg->serial_number)
 		p2p->cfg->serial_number = os_strdup(cfg->serial_number);
+	if (cfg->pref_chan) {
+		p2p->cfg->pref_chan = os_malloc(cfg->num_pref_chan *
+						sizeof(struct p2p_channel));
+		if (p2p->cfg->pref_chan) {
+			os_memcpy(p2p->cfg->pref_chan, cfg->pref_chan,
+				  cfg->num_pref_chan *
+				  sizeof(struct p2p_channel));
+		} else
+			p2p->cfg->num_pref_chan = 0;
+	}
 
 	p2p->min_disc_int = 1;
 	p2p->max_disc_int = 3;
@@ -2246,6 +2256,7 @@ void p2p_deinit(struct p2p_data *p2p)
 	os_free(p2p->cfg->model_name);
 	os_free(p2p->cfg->model_number);
 	os_free(p2p->cfg->serial_number);
+	os_free(p2p->cfg->pref_chan);
 	os_free(p2p->groups);
 	wpabuf_free(p2p->sd_resp);
 	os_free(p2p->after_scan_tx);
@@ -3697,6 +3708,28 @@ int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
 	p2p->cfg->op_reg_class = op_reg_class;
 	p2p->cfg->op_channel = op_channel;
 	p2p->cfg->cfg_op_channel = cfg_op_channel;
+	return 0;
+}
+
+
+int p2p_set_pref_chan(struct p2p_data *p2p, unsigned int num_pref_chan,
+		      const struct p2p_channel *pref_chan)
+{
+	struct p2p_channel *n;
+
+	if (pref_chan) {
+		n = os_malloc(num_pref_chan * sizeof(struct p2p_channel));
+		if (n == NULL)
+			return -1;
+		os_memcpy(n, pref_chan,
+			  num_pref_chan * sizeof(struct p2p_channel));
+	} else
+		n = NULL;
+
+	os_free(p2p->cfg->pref_chan);
+	p2p->cfg->pref_chan = n;
+	p2p->cfg->num_pref_chan = num_pref_chan;
+
 	return 0;
 }
 

@@ -4151,6 +4151,14 @@ void wpas_p2p_update_config(struct wpa_supplicant *wpa_s)
 			wpa_printf(MSG_ERROR, "P2P: Own oper channel update "
 				   "failed: %d", ret);
 	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_P2P_PREF_CHAN) {
+		if (p2p_set_pref_chan(p2p, wpa_s->conf->num_p2p_pref_chan,
+				      wpa_s->conf->p2p_pref_chan) < 0) {
+			wpa_printf(MSG_ERROR, "P2P: Preferred channel list "
+				   "update failed");
+		}
+	}
 }
 
 

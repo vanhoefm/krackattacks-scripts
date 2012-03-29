@@ -218,6 +218,11 @@ enum p2p_prov_disc_status {
 	P2P_PROV_DISC_REJECTED,
 };
 
+struct p2p_channel {
+	u8 op_class;
+	u8 chan;
+};
+
 /**
  * struct p2p_config - P2P configuration
  *
@@ -263,6 +268,16 @@ struct p2p_config {
 	 * numbering of the clases depends on the configured country code.
 	 */
 	struct p2p_channels channels;
+
+	/**
+	 * num_pref_chan - Number of pref_chan entries
+	 */
+	unsigned int num_pref_chan;
+
+	/**
+	 * pref_chan - Preferred channels for GO Negotiation
+	 */
+	struct p2p_channel *pref_chan;
 
 	/**
 	 * pri_dev_type - Primary Device Type (see WPS)
@@ -1607,6 +1622,16 @@ int p2p_add_wps_vendor_extension(struct p2p_data *p2p,
  */
 int p2p_set_oper_channel(struct p2p_data *p2p, u8 op_reg_class, u8 op_channel,
 			 int cfg_op_channel);
+
+/**
+ * p2p_set_pref_chan - Set P2P preferred channel list
+ * @p2p: P2P module context from p2p_init()
+ * @num_pref_chan: Number of entries in pref_chan list
+ * @pref_chan: Preferred channels or %NULL to remove preferences
+ * Returns: 0 on success, -1 on failure
+ */
+int p2p_set_pref_chan(struct p2p_data *p2p, unsigned int num_pref_chan,
+		      const struct p2p_channel *pref_chan);
 
 /**
  * p2p_in_progress - Check whether a P2P operation is progress

@@ -13,6 +13,7 @@
 #include "crypto/sha1.h"
 #include "rsn_supp/wpa.h"
 #include "eap_peer/eap.h"
+#include "p2p/p2p.h"
 #include "config.h"
 
 
@@ -1849,6 +1850,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->config_methods);
 	os_free(config->p2p_ssid_postfix);
 	os_free(config->pssid);
+	os_free(config->p2p_pref_chan);
 	os_free(config);
 }
 
@@ -2692,6 +2694,55 @@ static int wpa_config_process_sec_device_type(
 	config->num_sec_device_types++;
 	return 0;
 }
+
+
+static int wpa_config_process_p2p_pref_chan(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	struct p2p_channel *pref = NULL, *n;
+	unsigned int num = 0;
+	const char *pos2;
+	u8 op_class, chan;
+
+	/* format: class:chan,class:chan,... */
+
+	while (*pos) {
+		op_class = atoi(pos);
+		pos2 = os_strchr(pos, ':');
+		if (pos2 == NULL)
+			goto fail;
+		pos2++;
+		chan = atoi(pos2);
+
+		n = os_realloc(pref, (num + 1) * sizeof(struct p2p_channel));
+		if (n == NULL)
+			goto fail;
+		pref = n;
+		pref[num].op_class = op_class;
+		pref[num].chan = chan;
+		num++;
+
+		pos = os_strchr(pos2, ',');
+		if (pos == NULL)
+			break;
+		pos++;
+	}
+
+	os_free(config->p2p_pref_chan);
+	config->p2p_pref_chan = pref;
+	config->num_p2p_pref_chan = num;
+	wpa_hexdump(MSG_DEBUG, "P2P: Preferred class/channel pairs",
+		    (u8 *) config->p2p_pref_chan,
+		    config->num_p2p_pref_chan * sizeof(struct p2p_channel));
+
+	return 0;
+
+fail:
+	os_free(pref);
+	wpa_printf(MSG_ERROR, "Line %d: Invalid p2p_pref_chan list", line);
+	return -1;
+}
 #endif /* CONFIG_P2P */
 
 
@@ -2768,6 +2819,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(persistent_reconnect, 0, 1), 0 },
 	{ INT_RANGE(p2p_intra_bss, 0, 1), CFG_CHANGED_P2P_INTRA_BSS },
 	{ INT(p2p_group_idle), 0 },
+	{ FUNC(p2p_pref_chan), CFG_CHANGED_P2P_PREF_CHAN },
 #endif /* CONFIG_P2P */
 	{ FUNC(country), CFG_CHANGED_COUNTRY },
 	{ INT(bss_max_count), 0 },

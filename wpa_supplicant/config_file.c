@@ -16,6 +16,7 @@
 #include "config.h"
 #include "base64.h"
 #include "uuid.h"
+#include "p2p/p2p.h"
 
 
 /**
@@ -790,6 +791,16 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "p2p_intra_bss=%u\n", config->p2p_intra_bss);
 	if (config->p2p_group_idle)
 		fprintf(f, "p2p_group_idle=%u\n", config->p2p_group_idle);
+	if (config->p2p_pref_chan) {
+		unsigned int i;
+		fprintf(f, "p2p_pref_chan=");
+		for (i = 0; i < config->num_p2p_pref_chan; i++) {
+			fprintf(f, "%s%u:%u", i > 0 ? "," : "",
+				config->p2p_pref_chan[i].op_class,
+				config->p2p_pref_chan[i].chan);
+		}
+		fprintf(f, "\n");
+	}
 #endif /* CONFIG_P2P */
 	if (config->country[0] && config->country[1]) {
 		fprintf(f, "country=%c%c\n",

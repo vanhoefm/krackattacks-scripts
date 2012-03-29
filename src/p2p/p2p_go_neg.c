@@ -296,6 +296,7 @@ static void p2p_reselect_channel(struct p2p_data *p2p,
 	struct p2p_reg_class *cl;
 	int freq;
 	u8 op_reg_class, op_channel;
+	unsigned int i;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Selected operating "
 		"channel (reg_class %u channel %u) not acceptable to the "
@@ -326,6 +327,21 @@ static void p2p_reselect_channel(struct p2p_data *p2p,
 		p2p->op_reg_class = op_reg_class;
 		p2p->op_channel = op_channel;
 		return;
+	}
+
+	/* Select channel with highest preference if the peer supports it */
+	for (i = 0; p2p->cfg->pref_chan && i < p2p->cfg->num_pref_chan; i++) {
+		if (p2p_channels_includes(intersection,
+					  p2p->cfg->pref_chan[i].op_class,
+					  p2p->cfg->pref_chan[i].chan)) {
+			p2p->op_reg_class = p2p->cfg->pref_chan[i].op_class;
+			p2p->op_channel = p2p->cfg->pref_chan[i].chan;
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Pick "
+				"highest preferred chnnel (op_class %u "
+				"channel %u) from intersection",
+				p2p->op_reg_class, p2p->op_channel);
+			return;
+		}
 	}
 
 	/*

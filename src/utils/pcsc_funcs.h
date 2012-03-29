@@ -34,10 +34,11 @@ int scard_supports_umts(struct scard_data *scard);
 
 #else /* PCSC_FUNCS */
 
-#define scard_init(s) NULL
+#define scard_init(s, r) NULL
 #define scard_deinit(s) do { } while (0)
 #define scard_set_pin(s, p) -1
 #define scard_get_imsi(s, i, l) -1
+#define scard_get_mnc_len(s) -1
 #define scard_gsm_auth(s, r, s2, k) -1
 #define scard_umts_auth(s, r, a, r2, rl, i, c, a2) -1
 #define scard_get_pin_retry_counter(s) -1

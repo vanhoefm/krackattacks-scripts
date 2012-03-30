@@ -6575,6 +6575,12 @@ static int wpa_driver_nl80211_connect(
 		wpa_printf(MSG_DEBUG, "  * freq=%d", params->freq);
 		NLA_PUT_U32(msg, NL80211_ATTR_WIPHY_FREQ, params->freq);
 	}
+	if (params->bg_scan_period >= 0) {
+		wpa_printf(MSG_DEBUG, "  * bg scan period=%d",
+			   params->bg_scan_period);
+		NLA_PUT_U16(msg, NL80211_ATTR_BG_SCAN_PERIOD,
+			    params->bg_scan_period);
+	}
 	if (params->ssid) {
 		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
 				  params->ssid, params->ssid_len);
@@ -6772,6 +6778,12 @@ static int wpa_driver_nl80211_associate(
 		drv->assoc_freq = params->freq;
 	} else
 		drv->assoc_freq = 0;
+	if (params->bg_scan_period >= 0) {
+		wpa_printf(MSG_DEBUG, "  * bg scan period=%d",
+			   params->bg_scan_period);
+		NLA_PUT_U16(msg, NL80211_ATTR_BG_SCAN_PERIOD,
+			    params->bg_scan_period);
+	}
 	if (params->ssid) {
 		wpa_hexdump_ascii(MSG_DEBUG, "  * SSID",
 				  params->ssid, params->ssid_len);

@@ -1525,6 +1525,7 @@ static const struct parse_data ssid_fields[] = {
 	{ FUNC_KEY(psk) },
 	{ FUNC(proto) },
 	{ FUNC(key_mgmt) },
+	{ INT(bg_scan_period) },
 	{ FUNC(pairwise) },
 	{ FUNC(group) },
 	{ FUNC(auth_alg) },
@@ -1978,6 +1979,7 @@ void wpa_config_set_network_defaults(struct wpa_ssid *ssid)
 	ssid->pairwise_cipher = DEFAULT_PAIRWISE;
 	ssid->group_cipher = DEFAULT_GROUP;
 	ssid->key_mgmt = DEFAULT_KEY_MGMT;
+	ssid->bg_scan_period = DEFAULT_BG_SCAN_PERIOD;
 #ifdef IEEE8021X_EAPOL
 	ssid->eapol_flags = DEFAULT_EAPOL_FLAGS;
 	ssid->eap_workaround = DEFAULT_EAP_WORKAROUND;

@@ -1355,6 +1355,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	params.wpa_proto = wpa_s->wpa_proto;
 	params.auth_alg = algs;
 	params.mode = ssid->mode;
+	params.bg_scan_period = ssid->bg_scan_period;
 	for (i = 0; i < NUM_WEP_KEYS; i++) {
 		if (ssid->wep_key_len[i])
 			params.wep_key[i] = ssid->wep_key[i];

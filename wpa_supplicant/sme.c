@@ -371,6 +371,8 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 	params.ssid = wpa_s->sme.ssid;
 	params.ssid_len = wpa_s->sme.ssid_len;
 	params.freq = wpa_s->sme.freq;
+	params.bg_scan_period = wpa_s->current_ssid ?
+		wpa_s->current_ssid->bg_scan_period : -1;
 	params.wpa_ie = wpa_s->sme.assoc_req_ie_len ?
 		wpa_s->sme.assoc_req_ie : NULL;
 	params.wpa_ie_len = wpa_s->sme.assoc_req_ie_len;

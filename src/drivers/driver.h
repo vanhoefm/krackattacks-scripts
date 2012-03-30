@@ -333,6 +333,13 @@ struct wpa_driver_associate_params {
 	int freq;
 
 	/**
+	 * bg_scan_period - Background scan period in seconds, 0 to disable
+	 * background scan, or -1 to indicate no change to default driver
+	 * configuration
+	 */
+	int bg_scan_period;
+
+	/**
 	 * wpa_ie - WPA information element for (Re)Association Request
 	 * WPA information element to be included in (Re)Association
 	 * Request (including information element id and length). Use

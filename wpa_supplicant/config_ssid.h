@@ -25,6 +25,7 @@
 		       WPA_CIPHER_WEP104 | WPA_CIPHER_WEP40)
 #define DEFAULT_FRAGMENT_SIZE 1398
 
+#define DEFAULT_BG_SCAN_PERIOD -1
 #define DEFAULT_DISABLE_HT 0
 #define DEFAULT_DISABLE_HT40 0
 #define DEFAULT_DISABLE_MAX_AMSDU -1 /* no change */
@@ -155,6 +156,12 @@ struct wpa_ssid {
 	 * WPA_KEY_MGMT_*
 	 */
 	int key_mgmt;
+
+	/**
+	 * bg_scan_period - Background scan period in seconds, 0 to disable, or
+	 * -1 to indicate no change to default driver configuration
+	 */
+	int bg_scan_period;
 
 	/**
 	 * proto - Bitfield of allowed protocols, WPA_PROTO_*

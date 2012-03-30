@@ -2116,6 +2116,7 @@ int p2p_parse_dev_addr(const u8 *ies, size_t ies_len, u8 *dev_addr)
 {
 	struct wpabuf *p2p_ie;
 	struct p2p_message msg;
+	int ret = -1;
 
 	p2p_ie = ieee802_11_vendor_ie_concat(ies, ies_len,
 					     P2P_IE_VENDOR_TYPE);
@@ -2127,14 +2128,16 @@ int p2p_parse_dev_addr(const u8 *ies, size_t ies_len, u8 *dev_addr)
 		return -1;
 	}
 
-	if (msg.p2p_device_addr == NULL) {
-		wpabuf_free(p2p_ie);
-		return -1;
+	if (msg.p2p_device_addr) {
+		os_memcpy(dev_addr, msg.p2p_device_addr, ETH_ALEN);
+		ret = 0;
+	} else if (msg.device_id) {
+		os_memcpy(dev_addr, msg.device_id, ETH_ALEN);
+		ret = 0;
 	}
 
-	os_memcpy(dev_addr, msg.p2p_device_addr, ETH_ALEN);
 	wpabuf_free(p2p_ie);
-	return 0;
+	return ret;
 }
 
 

@@ -61,6 +61,10 @@ static void usage(void)
 #ifdef CONFIG_DEBUG_SYSLOG
 	printf("  -s = log output to syslog instead of stdout\n");
 #endif /* CONFIG_DEBUG_SYSLOG */
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	printf("  -T = record to Linux tracing in addition to logging\n");
+	printf("       (records all messages regardless of debug verbosity)\n");
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 	printf("  -t = include timestamp in debug messages\n"
 	       "  -h = show this help text\n"
 	       "  -L = show license (BSD)\n"
@@ -139,7 +143,8 @@ int main(int argc, char *argv[])
 	wpa_supplicant_fd_workaround();
 
 	for (;;) {
-		c = getopt(argc, argv, "b:Bc:C:D:de:f:g:hi:KLNo:O:p:P:qstuvW");
+		c = getopt(argc, argv,
+			   "b:Bc:C:D:de:f:g:hi:KLNo:O:p:P:qsTtuvW");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -214,6 +219,11 @@ int main(int argc, char *argv[])
 			params.wpa_debug_syslog++;
 			break;
 #endif /* CONFIG_DEBUG_SYSLOG */
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+		case 'T':
+			params.wpa_debug_tracing++;
+			break;
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 		case 't':
 			params.wpa_debug_timestamp++;
 			break;

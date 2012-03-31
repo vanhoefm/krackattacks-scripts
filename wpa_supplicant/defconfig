@@ -413,6 +413,12 @@ CONFIG_PEERKEY=y
 # Set syslog facility for debug messages
 #CONFIG_DEBUG_SYSLOG_FACILITY=LOG_DAEMON
 
+# Add support for sending all debug messages (regardless of debug verbosity)
+# to the Linux kernel tracing facility. This helps debug the entire stack by
+# making it easy to record everything happening from the driver up into the
+# same file, e.g., using trace-cmd.
+#CONFIG_DEBUG_LINUX_TRACING=y
+
 # Enable privilege separation (see README 'Privilege separation' for details)
 #CONFIG_PRIVSEP=y
 

@@ -255,6 +255,24 @@ static inline void wpa_debug_close_syslog(void)
 
 #endif /* CONFIG_DEBUG_SYSLOG */
 
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+
+int wpa_debug_open_linux_tracing(void);
+void wpa_debug_close_linux_tracing(void);
+
+#else /* CONFIG_DEBUG_LINUX_TRACING */
+
+static inline int wpa_debug_open_linux_tracing(void)
+{
+	return 0;
+}
+
+static inline void wpa_debug_close_linux_tracing(void)
+{
+}
+
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
+
 
 #ifdef EAPOL_TEST
 #define WPA_ASSERT(a)						       \

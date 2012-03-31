@@ -16,6 +16,18 @@
 static int wpa_debug_syslog = 0;
 #endif /* CONFIG_DEBUG_SYSLOG */
 
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdio.h>
+
+static FILE *wpa_debug_tracing_file = NULL;
+
+#define WPAS_TRACE_PFX "wpas <%d>: "
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
+
 
 int wpa_debug_level = MSG_INFO;
 int wpa_debug_show_keys = 0;
@@ -107,6 +119,77 @@ static int syslog_priority(int level)
 #endif /* CONFIG_DEBUG_SYSLOG */
 
 
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+
+int wpa_debug_open_linux_tracing(void)
+{
+	int mounts, trace_fd;
+	char buf[4096] = {};
+	ssize_t buflen;
+	char *line, *tmp1, *path = NULL;
+
+	mounts = open("/proc/mounts", O_RDONLY);
+	if (mounts < 0) {
+		printf("no /proc/mounts\n");
+		return -1;
+	}
+
+	buflen = read(mounts, buf, sizeof(buf) - 1);
+	close(mounts);
+	if (buflen < 0) {
+		printf("failed to read /proc/mounts\n");
+		return -1;
+	}
+
+	line = strtok_r(buf, "\n", &tmp1);
+	while (line) {
+		char *tmp2, *tmp_path, *fstype;
+		/* "<dev> <mountpoint> <fs type> ..." */
+		strtok_r(line, " ", &tmp2);
+		tmp_path = strtok_r(NULL, " ", &tmp2);
+		fstype = strtok_r(NULL, " ", &tmp2);
+		if (strcmp(fstype, "debugfs") == 0) {
+			path = tmp_path;
+			break;
+		}
+
+		line = strtok_r(NULL, "\n", &tmp1);
+	}
+
+	if (path == NULL) {
+		printf("debugfs mountpoint not found\n");
+		return -1;
+	}
+
+	snprintf(buf, sizeof(buf) - 1, "%s/tracing/trace_marker", path);
+
+	trace_fd = open(buf, O_WRONLY);
+	if (trace_fd < 0) {
+		printf("failed to open trace_marker file\n");
+		return -1;
+	}
+	wpa_debug_tracing_file = fdopen(trace_fd, "w");
+	if (wpa_debug_tracing_file == NULL) {
+		close(trace_fd);
+		printf("failed to fdopen()\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+
+void wpa_debug_close_linux_tracing(void)
+{
+	if (wpa_debug_tracing_file == NULL)
+		return;
+	fclose(wpa_debug_tracing_file);
+	wpa_debug_tracing_file = NULL;
+}
+
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
+
+
 /**
  * wpa_printf - conditional printf
  * @level: priority level (MSG_*) of the message
@@ -151,6 +234,17 @@ void wpa_printf(int level, const char *fmt, ...)
 #endif /* CONFIG_ANDROID_LOG */
 	}
 	va_end(ap);
+
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	if (wpa_debug_tracing_file != NULL) {
+		va_start(ap, fmt);
+		fprintf(wpa_debug_tracing_file, WPAS_TRACE_PFX, level);
+		vfprintf(wpa_debug_tracing_file, fmt, ap);
+		fprintf(wpa_debug_tracing_file, "\n");
+		fflush(wpa_debug_tracing_file);
+		va_end(ap);
+	}
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 }
 
 
@@ -158,6 +252,25 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 			 size_t len, int show)
 {
 	size_t i;
+
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	if (wpa_debug_tracing_file != NULL) {
+		fprintf(wpa_debug_tracing_file,
+			WPAS_TRACE_PFX "%s - hexdump(len=%lu):",
+			level, title, (unsigned long) len);
+		if (buf == NULL) {
+			fprintf(wpa_debug_tracing_file, " [NULL]\n");
+		} else if (!show) {
+			fprintf(wpa_debug_tracing_file, " [REMOVED]\n");
+		} else {
+			for (i = 0; i < len; i++)
+				fprintf(wpa_debug_tracing_file,
+					" %02x", buf[i]);
+		}
+		fflush(wpa_debug_tracing_file);
+	}
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
+
 	if (level < wpa_debug_level)
 		return;
 #ifdef CONFIG_ANDROID_LOG
@@ -280,6 +393,25 @@ static void _wpa_hexdump_ascii(int level, const char *title, const u8 *buf,
 	size_t i, llen;
 	const u8 *pos = buf;
 	const size_t line_len = 16;
+
+#ifdef CONFIG_DEBUG_LINUX_TRACING
+	if (wpa_debug_tracing_file != NULL) {
+		fprintf(wpa_debug_tracing_file,
+			WPAS_TRACE_PFX "%s - hexdump_ascii(len=%lu):",
+			level, title, (unsigned long) len);
+		if (buf == NULL) {
+			fprintf(wpa_debug_tracing_file, " [NULL]\n");
+		} else if (!show) {
+			fprintf(wpa_debug_tracing_file, " [REMOVED]\n");
+		} else {
+			/* can do ascii processing in userspace */
+			for (i = 0; i < len; i++)
+				fprintf(wpa_debug_tracing_file,
+					" %02x", buf[i]);
+		}
+		fflush(wpa_debug_tracing_file);
+	}
+#endif /* CONFIG_DEBUG_LINUX_TRACING */
 
 	if (level < wpa_debug_level)
 		return;

@@ -161,6 +161,11 @@ struct wpa_params {
 	int wpa_debug_syslog;
 
 	/**
+	 * wpa_debug_tracing - Enable log output through Linux tracing
+	 */
+	int wpa_debug_tracing;
+
+	/**
 	 * override_driver - Optional driver parameter override
 	 *
 	 * This parameter can be used to override the driver parameter in

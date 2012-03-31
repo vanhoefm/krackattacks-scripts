@@ -2875,6 +2875,14 @@ struct wpa_global * wpa_supplicant_init(struct wpa_params *params)
 	wpa_debug_open_file(params->wpa_debug_file_path);
 	if (params->wpa_debug_syslog)
 		wpa_debug_open_syslog();
+	if (params->wpa_debug_tracing) {
+		ret = wpa_debug_open_linux_tracing();
+		if (ret) {
+			wpa_printf(MSG_ERROR,
+				   "Failed to enable trace logging");
+			return NULL;
+		}
+	}
 
 	ret = eap_register_methods();
 	if (ret) {
@@ -3037,6 +3045,7 @@ void wpa_supplicant_deinit(struct wpa_global *global)
 	os_free(global);
 	wpa_debug_close_syslog();
 	wpa_debug_close_file();
+	wpa_debug_close_linux_tracing();
 }
 
 

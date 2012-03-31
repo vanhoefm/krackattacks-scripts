@@ -953,7 +953,7 @@ static int wpas_dbus_get_group_obj_path(struct wpa_supplicant *wpa_s,
 	if (os_memcmp(ssid->ssid, P2P_WILDCARD_SSID, P2P_WILDCARD_SSID_LEN))
 		return -1;
 
-	memcpy(group_name, ssid->ssid + P2P_WILDCARD_SSID_LEN, 2);
+	os_memcpy(group_name, ssid->ssid + P2P_WILDCARD_SSID_LEN, 2);
 	group_name[2] = '\0';
 
 	os_snprintf(group_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,

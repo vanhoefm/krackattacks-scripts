@@ -1880,7 +1880,7 @@ static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
 		return -1;
 	}
 	len = sizeof(buf) - 1;
-	ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
+	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len,
 			       wpa_cli_msg_cb);
 	if (ret == -2) {
 		printf("'%s' command timed out.\n", cmd);
@@ -1891,7 +1891,7 @@ static int wpa_ctrl_command_sta(struct wpa_ctrl *ctrl, char *cmd,
 	}
 
 	buf[len] = '\0';
-	if (memcmp(buf, "FAIL", 4) == 0)
+	if (os_memcmp(buf, "FAIL", 4) == 0)
 		return -1;
 	printf("%s", buf);
 
@@ -2425,7 +2425,7 @@ static int wpa_ctrl_command_p2p_peer(struct wpa_ctrl *ctrl, char *cmd,
 	if (ctrl_conn == NULL)
 		return -1;
 	len = sizeof(buf) - 1;
-	ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len,
+	ret = wpa_ctrl_request(ctrl, cmd, os_strlen(cmd), buf, &len,
 			       wpa_cli_msg_cb);
 	if (ret == -2) {
 		printf("'%s' command timed out.\n", cmd);
@@ -2436,7 +2436,7 @@ static int wpa_ctrl_command_p2p_peer(struct wpa_ctrl *ctrl, char *cmd,
 	}
 
 	buf[len] = '\0';
-	if (memcmp(buf, "FAIL", 4) == 0)
+	if (os_memcmp(buf, "FAIL", 4) == 0)
 		return -1;
 
 	pos = buf;

@@ -1104,5 +1104,5 @@ void wpa_dbus_dict_entry_clear(struct wpa_dbus_dict_entry *entry)
 		break;
 	}
 
-	memset(entry, 0, sizeof(struct wpa_dbus_dict_entry));
+	os_memset(entry, 0, sizeof(struct wpa_dbus_dict_entry));
 }

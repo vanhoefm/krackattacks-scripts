@@ -253,7 +253,7 @@ dbus_bool_t set_network_properties(struct wpa_supplicant *wpa_s,
 
 		if ((os_strcmp(entry.key, "psk") == 0 &&
 		     value[0] == '"' && ssid->ssid_len) ||
-		    (strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
+		    (os_strcmp(entry.key, "ssid") == 0 && ssid->passphrase))
 			wpa_config_update_psk(ssid);
 		else if (os_strcmp(entry.key, "priority") == 0)
 			wpa_config_update_prio_list(wpa_s->conf);
@@ -547,25 +547,25 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
-		if (!strcmp(entry.key, "Driver") &&
+		if (!os_strcmp(entry.key, "Driver") &&
 		    (entry.type == DBUS_TYPE_STRING)) {
 			driver = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (driver == NULL)
 				goto error;
-		} else if (!strcmp(entry.key, "Ifname") &&
+		} else if (!os_strcmp(entry.key, "Ifname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
 			ifname = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (ifname == NULL)
 				goto error;
-		} else if (!strcmp(entry.key, "ConfigFile") &&
+		} else if (!os_strcmp(entry.key, "ConfigFile") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
 			confname = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);
 			if (confname == NULL)
 				goto error;
-		} else if (!strcmp(entry.key, "BridgeIfname") &&
+		} else if (!os_strcmp(entry.key, "BridgeIfname") &&
 			   (entry.type == DBUS_TYPE_STRING)) {
 			bridge_ifname = os_strdup(entry.str_value);
 			wpa_dbus_dict_entry_clear(&entry);

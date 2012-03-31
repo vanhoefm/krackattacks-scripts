@@ -45,7 +45,7 @@ static int parse_peer_object_path(char *peer_path, u8 addr[ETH_ALEN])
 
 	if (!peer_path)
 		return -1;
-	p = strrchr(peer_path, '/');
+	p = os_strrchr(peer_path, '/');
 	if (!p)
 		return -1;
 	p++;

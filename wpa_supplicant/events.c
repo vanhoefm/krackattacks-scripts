@@ -2349,7 +2349,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpas_notify_preq(wpa_s, mgmt->sa, mgmt->da,
 					 mgmt->bssid, ie, ie_len,
 					 data->rx_mgmt.ssi_signal);
-			break;
 		}
 
 		ap_mgmt_rx(wpa_s, &data->rx_mgmt);

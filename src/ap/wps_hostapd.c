@@ -37,7 +37,8 @@ static void hostapd_wps_upnp_deinit(struct hostapd_data *hapd);
 
 static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr, const u8 *da,
 				    const u8 *bssid,
-				    const u8 *ie, size_t ie_len);
+				    const u8 *ie, size_t ie_len,
+				    int ssi_signal);
 static void hostapd_wps_ap_pin_timeout(void *eloop_data, void *user_ctx);
 
 
@@ -1178,7 +1179,8 @@ error:
 
 static int hostapd_wps_probe_req_rx(void *ctx, const u8 *addr, const u8 *da,
 				    const u8 *bssid,
-				    const u8 *ie, size_t ie_len)
+				    const u8 *ie, size_t ie_len,
+				    int ssi_signal)
 {
 	struct hostapd_data *hapd = ctx;
 	struct wpabuf *wps_ie;

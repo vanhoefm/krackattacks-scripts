@@ -1392,7 +1392,7 @@ void ieee802_11_mgmt(struct hostapd_data *hapd, const u8 *buf, size_t len,
 
 
 	if (stype == WLAN_FC_STYPE_PROBE_REQ) {
-		handle_probe_req(hapd, mgmt, len);
+		handle_probe_req(hapd, mgmt, len, fi->ssi_signal);
 		return;
 	}
 

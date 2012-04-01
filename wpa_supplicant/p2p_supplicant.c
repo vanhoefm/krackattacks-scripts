@@ -3697,7 +3697,7 @@ int wpas_p2p_assoc_req_ie(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
 
 int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
 			  const u8 *dst, const u8 *bssid,
-			  const u8 *ie, size_t ie_len)
+			  const u8 *ie, size_t ie_len, int ssi_signal)
 {
 	if (wpa_s->global->p2p_disabled)
 		return 0;

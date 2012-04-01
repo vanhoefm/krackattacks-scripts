@@ -293,7 +293,8 @@ static u8 * hostapd_gen_probe_resp(struct hostapd_data *hapd,
 
 
 void handle_probe_req(struct hostapd_data *hapd,
-		      const struct ieee80211_mgmt *mgmt, size_t len)
+		      const struct ieee80211_mgmt *mgmt, size_t len,
+		      int ssi_signal)
 {
 	u8 *resp;
 	struct ieee802_11_elems elems;
@@ -311,7 +312,7 @@ void handle_probe_req(struct hostapd_data *hapd,
 	for (i = 0; hapd->probereq_cb && i < hapd->num_probereq_cb; i++)
 		if (hapd->probereq_cb[i].cb(hapd->probereq_cb[i].ctx,
 					    mgmt->sa, mgmt->da, mgmt->bssid,
-					    ie, ie_len) > 0)
+					    ie, ie_len, ssi_signal) > 0)
 			return;
 
 	if (!hapd->iconf->send_probe_response)

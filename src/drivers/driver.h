@@ -3271,7 +3271,7 @@ union wpa_event_data {
 		const u8 *frame;
 		size_t frame_len;
 		u32 datarate;
-		u32 ssi_signal;
+		int ssi_signal; /* dBm */
 	} rx_mgmt;
 
 	/**
@@ -3389,6 +3389,11 @@ union wpa_event_data {
 		 * ie_len - Length of ie buffer in octets
 		 */
 		size_t ie_len;
+
+		/**
+		 * signal - signal strength in dBm (or 0 if not available)
+		 */
+		int ssi_signal;
 	} rx_probe_req;
 
 	/**

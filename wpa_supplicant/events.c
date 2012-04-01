@@ -2325,8 +2325,10 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				size_t ie_len = data->rx_mgmt.frame_len -
 					(mgmt->u.probe_req.variable -
 					 data->rx_mgmt.frame);
-				wpas_p2p_probe_req_rx(wpa_s, src, mgmt->da,
-						      mgmt->bssid, ie, ie_len);
+				wpas_p2p_probe_req_rx(
+					wpa_s, src, mgmt->da,
+					mgmt->bssid, ie, ie_len,
+					data->rx_mgmt.ssi_signal);
 				break;
 			}
 #endif /* CONFIG_P2P */
@@ -2402,7 +2404,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					     data->rx_probe_req.da,
 					     data->rx_probe_req.bssid,
 					     data->rx_probe_req.ie,
-					     data->rx_probe_req.ie_len);
+					     data->rx_probe_req.ie_len,
+					     data->rx_probe_req.ssi_signal);
 			break;
 		}
 #endif /* CONFIG_AP */
@@ -2411,7 +2414,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				      data->rx_probe_req.da,
 				      data->rx_probe_req.bssid,
 				      data->rx_probe_req.ie,
-				      data->rx_probe_req.ie_len);
+				      data->rx_probe_req.ie_len,
+				      data->rx_probe_req.ssi_signal);
 #endif /* CONFIG_P2P */
 		break;
 	case EVENT_REMAIN_ON_CHANNEL:

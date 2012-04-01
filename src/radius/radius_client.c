@@ -505,7 +505,7 @@ static void radius_client_update_timeout(struct radius_client_data *radius)
 			       NULL);
 	hostapd_logger(radius->ctx, NULL, HOSTAPD_MODULE_RADIUS,
 		       HOSTAPD_LEVEL_DEBUG, "Next RADIUS client retransmit in"
-		       " %ld seconds\n", (long int) (first - now.sec));
+		       " %ld seconds", (long int) (first - now.sec));
 }
 
 

@@ -22,5 +22,6 @@ void handle_probe_req(struct hostapd_data *hapd,
 		      const struct ieee80211_mgmt *mgmt, size_t len);
 void ieee802_11_set_beacon(struct hostapd_data *hapd);
 void ieee802_11_set_beacons(struct hostapd_iface *iface);
+void ieee802_11_update_beacons(struct hostapd_iface *iface);
 
 #endif /* BEACON_H */

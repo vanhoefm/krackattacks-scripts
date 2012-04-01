@@ -700,4 +700,14 @@ void ieee802_11_set_beacons(struct hostapd_iface *iface)
 		ieee802_11_set_beacon(iface->bss[i]);
 }
 
+
+/* only update beacons if started */
+void ieee802_11_update_beacons(struct hostapd_iface *iface)
+{
+	size_t i;
+	for (i = 0; i < iface->num_bss; i++)
+		if (iface->bss[i]->beacon_set_done)
+			ieee802_11_set_beacon(iface->bss[i]);
+}
+
 #endif /* CONFIG_NATIVE_WINDOWS */

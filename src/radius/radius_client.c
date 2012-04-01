@@ -678,7 +678,7 @@ int radius_client_send(struct radius_client_data *radius,
 	radius_client_list_add(radius, msg, msg_type, shared_secret,
 			       shared_secret_len, addr);
 
-	return res;
+	return 0;
 }
 
 

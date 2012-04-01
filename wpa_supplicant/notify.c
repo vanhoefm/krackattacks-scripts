@@ -82,7 +82,7 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_P2P
 	if (new_state == WPA_COMPLETED)
 		wpas_p2p_notif_connected(wpa_s);
-	else if (new_state < WPA_ASSOCIATED)
+	else if (old_state >= WPA_ASSOCIATED && new_state < WPA_ASSOCIATED)
 		wpas_p2p_notif_disconnected(wpa_s);
 #endif /* CONFIG_P2P */
 

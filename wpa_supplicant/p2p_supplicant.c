@@ -311,7 +311,10 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 		wpa_printf(MSG_DEBUG, "P2P: Temporary group network not "
 			   "found");
 	}
-	wpa_supplicant_ap_deinit(wpa_s);
+	if (wpa_s->ap_iface)
+		wpa_supplicant_ap_deinit(wpa_s);
+	else
+		wpa_drv_deinit_p2p_cli(wpa_s);
 }
 
 

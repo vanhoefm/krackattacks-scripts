@@ -2019,6 +2019,16 @@ struct wpa_driver_ops {
 	int (*deinit_ap)(void *priv);
 
 	/**
+	 * deinit_p2p_cli - Deinitialize P2P client mode
+	 * @priv: Private driver interface data
+	 * Returns: 0 on success, -1 on failure (or if not supported)
+	 *
+	 * This optional function can be used to disable P2P client mode. It
+	 * can be used to change the interface type back to station mode.
+	 */
+	int (*deinit_p2p_cli)(void *priv);
+
+	/**
 	 * suspend - Notification on system suspend/hibernate event
 	 * @priv: Private driver interface data
 	 */

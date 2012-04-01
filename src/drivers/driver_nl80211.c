@@ -8303,6 +8303,16 @@ static int wpa_driver_nl80211_deinit_ap(void *priv)
 }
 
 
+static int wpa_driver_nl80211_deinit_p2p_cli(void *priv)
+{
+	struct i802_bss *bss = priv;
+	struct wpa_driver_nl80211_data *drv = bss->drv;
+	if (drv->nlmode != NL80211_IFTYPE_P2P_CLIENT)
+		return -1;
+	return wpa_driver_nl80211_set_mode(priv, NL80211_IFTYPE_STATION);
+}
+
+
 static void wpa_driver_nl80211_resume(void *priv)
 {
 	struct i802_bss *bss = priv;
@@ -9028,6 +9038,7 @@ const struct wpa_driver_ops wpa_driver_nl80211_ops = {
 	wpa_driver_nl80211_cancel_remain_on_channel,
 	.probe_req_report = wpa_driver_nl80211_probe_req_report,
 	.deinit_ap = wpa_driver_nl80211_deinit_ap,
+	.deinit_p2p_cli = wpa_driver_nl80211_deinit_p2p_cli,
 	.resume = wpa_driver_nl80211_resume,
 	.send_ft_action = nl80211_send_ft_action,
 	.signal_monitor = nl80211_signal_monitor,

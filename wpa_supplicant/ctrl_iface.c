@@ -2581,10 +2581,7 @@ static int wpa_supplicant_ctrl_iface_scan_interval(
 	struct wpa_supplicant *wpa_s, char *cmd)
 {
 	int scan_int = atoi(cmd);
-	if (scan_int < 0)
-		return -1;
-	wpa_s->scan_interval = scan_int;
-	return 0;
+	return wpa_supplicant_set_scan_interval(wpa_s, scan_int);
 }
 
 

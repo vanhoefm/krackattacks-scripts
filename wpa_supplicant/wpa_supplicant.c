@@ -1783,6 +1783,29 @@ int wpa_supplicant_set_bss_expiration_count(struct wpa_supplicant *wpa_s,
 
 
 /**
+ * wpa_supplicant_set_scan_interval - Set scan interval
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * @scan_interval: scan interval in seconds
+ * Returns: 0 if succeed or -1 if scan_interval has an invalid value
+ *
+ */
+int wpa_supplicant_set_scan_interval(struct wpa_supplicant *wpa_s,
+				     int scan_interval)
+{
+	if (scan_interval < 0) {
+		wpa_msg(wpa_s, MSG_ERROR, "Invalid scan interval %d",
+			scan_interval);
+		return -1;
+	}
+	wpa_msg(wpa_s, MSG_DEBUG, "Setting scan interval: %d sec",
+		scan_interval);
+	wpa_s->scan_interval = scan_interval;
+
+	return 0;
+}
+
+
+/**
  * wpa_supplicant_set_debug_params - Set global debug params
  * @global: wpa_global structure
  * @debug_level: debug level

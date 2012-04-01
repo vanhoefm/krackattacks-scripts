@@ -352,6 +352,21 @@ fi.w1.wpa_supplicant1.CreateInterface.
       </li>
 
       <li>
+	<h3>BSSExpireAge - u - (read/write)</h3>
+	<p>Identical to bss_expiration_age entry in %wpa_supplicant configuration file.</p>
+      </li>
+
+      <li>
+	<h3>BSSExpireCount - u - (read/write)</h3>
+	<p>Identical to bss_expiration_scan_count entry in %wpa_supplicant configuration file.</p>
+      </li>
+
+      <li>
+	<h3>Country - s - (read/write)</h3>
+	<p>Identical to country entry in %wpa_supplicant configuration file.</p>
+      </li>
+
+      <li>
 	<h3>Ifname - s - (read)</h3>
 	<p>Name of network interface controlled by the interface, e.g., wlan0.</p>
       </li>
@@ -389,6 +404,16 @@ fi.w1.wpa_supplicant1.CreateInterface.
       <li>
 	<h3>Networks - ao - (read)</h3>
 	<p>List of D-Bus objects paths representing configured networks.</p>
+      </li>
+
+      <li>
+	<h3>FastReauth - b - (read/write)</h3>
+	<p>Identical to fast_reauth entry in %wpa_supplicant configuration file.</p>
+      </li>
+
+      <li>
+	<h3>ScanInterval - i - (read/write)</h3>
+	<p>Time (in seconds) between scans for a suitable AP. Must be >= 0.</p>
       </li>
     </ul>
 

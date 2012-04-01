@@ -2462,6 +2462,56 @@ dbus_bool_t wpas_dbus_setter_country(DBusMessageIter *iter, DBusError *error,
 
 
 /**
+ * wpas_dbus_getter_scan_interval - Get scan interval
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter function for "ScanInterval" property.
+ */
+dbus_bool_t wpas_dbus_getter_scan_interval(DBusMessageIter *iter,
+					   DBusError *error,
+					   void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_int32_t scan_interval = wpa_s->scan_interval;
+
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_INT32,
+						&scan_interval, error);
+}
+
+
+/**
+ * wpas_dbus_setter_scan_interval - Control scan interval
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Setter function for "ScanInterval" property.
+ */
+dbus_bool_t wpas_dbus_setter_scan_interval(DBusMessageIter *iter,
+					   DBusError *error,
+					   void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_int32_t scan_interval;
+
+	if (!wpas_dbus_simple_property_setter(iter, error, DBUS_TYPE_INT32,
+					      &scan_interval))
+		return FALSE;
+
+	if (wpa_supplicant_set_scan_interval(wpa_s, scan_interval)) {
+		dbus_set_error_const(error, DBUS_ERROR_FAILED,
+				     "scan_interval must be >= 0");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+
+/**
  * wpas_dbus_getter_ifname - Get interface name
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

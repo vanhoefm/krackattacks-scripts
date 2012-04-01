@@ -168,6 +168,14 @@ dbus_bool_t wpas_dbus_getter_country(DBusMessageIter *iter, DBusError *error,
 dbus_bool_t wpas_dbus_setter_country(DBusMessageIter *iter, DBusError *error,
 				     void *user_data);
 
+dbus_bool_t wpas_dbus_getter_scan_interval(DBusMessageIter *iter,
+					   DBusError *error,
+					   void *user_data);
+
+dbus_bool_t wpas_dbus_setter_scan_interval(DBusMessageIter *iter,
+					   DBusError *error,
+					   void *user_data);
+
 dbus_bool_t wpas_dbus_getter_ifname(DBusMessageIter *iter, DBusError *error,
 				    void *user_data);
 

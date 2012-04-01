@@ -3704,8 +3704,20 @@ int wpas_p2p_probe_req_rx(struct wpa_supplicant *wpa_s, const u8 *addr,
 	if (wpa_s->global->p2p == NULL)
 		return 0;
 
-	return p2p_probe_req_rx(wpa_s->global->p2p, addr, dst, bssid,
-				ie, ie_len);
+	switch (p2p_probe_req_rx(wpa_s->global->p2p, addr, dst, bssid,
+				 ie, ie_len)) {
+	case P2P_PREQ_NOT_P2P:
+		wpas_notify_preq(wpa_s, addr, dst, bssid, ie, ie_len,
+				 ssi_signal);
+		/* fall through */
+	case P2P_PREQ_MALFORMED:
+	case P2P_PREQ_NOT_LISTEN:
+	case P2P_PREQ_NOT_PROCESSED:
+	default: /* make gcc happy */
+		return 0;
+	case P2P_PREQ_PROCESSED:
+		return 1;
+	}
 }
 
 

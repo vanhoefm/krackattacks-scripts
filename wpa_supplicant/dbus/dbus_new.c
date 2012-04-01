@@ -31,6 +31,99 @@
 #include "dbus_new_handlers_p2p.h"
 #include "p2p/p2p.h"
 
+#ifdef CONFIG_AP /* until needed by something else */
+
+/*
+ * NameOwnerChanged handling
+ *
+ * Some services we provide allow an application to register for
+ * a signal that it needs. While it can also unregister, we must
+ * be prepared for the case where the application simply crashes
+ * and thus doesn't clean up properly. The way to handle this in
+ * DBus is to register for the NameOwnerChanged signal which will
+ * signal an owner change to NULL if the peer closes the socket
+ * for whatever reason.
+ *
+ * Handle this signal via a filter function whenever necessary.
+ * The code below also handles refcounting in case in the future
+ * there will be multiple instances of this subscription scheme.
+ */
+static const char wpas_dbus_noc_filter_str[] =
+	"interface=org.freedesktop.DBus,member=NameOwnerChanged";
+
+
+static DBusHandlerResult noc_filter(DBusConnection *conn,
+				    DBusMessage *message, void *data)
+{
+	struct wpas_dbus_priv *priv = data;
+
+	if (dbus_message_get_type(message) != DBUS_MESSAGE_TYPE_SIGNAL)
+		return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+
+	if (dbus_message_is_signal(message, DBUS_INTERFACE_DBUS,
+				   "NameOwnerChanged")) {
+		const char *name;
+		const char *prev_owner;
+		const char *new_owner;
+		DBusError derr;
+		struct wpa_supplicant *wpa_s;
+
+		dbus_error_init(&derr);
+
+		if (!dbus_message_get_args(message, &derr,
+					   DBUS_TYPE_STRING, &name,
+					   DBUS_TYPE_STRING, &prev_owner,
+					   DBUS_TYPE_STRING, &new_owner,
+					   DBUS_TYPE_INVALID)) {
+			/* Ignore this error */
+			dbus_error_free(&derr);
+			return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+		}
+
+		for (wpa_s = priv->global->ifaces; wpa_s; wpa_s = wpa_s->next)
+		{
+			if (wpa_s->preq_notify_peer != NULL &&
+			    os_strcmp(name, wpa_s->preq_notify_peer) == 0 &&
+			    (new_owner == NULL || os_strlen(new_owner) == 0)) {
+				/* probe request owner disconnected */
+				os_free(wpa_s->preq_notify_peer);
+				wpa_s->preq_notify_peer = NULL;
+				wpas_dbus_unsubscribe_noc(priv);
+			}
+		}
+	}
+
+	return DBUS_HANDLER_RESULT_NOT_YET_HANDLED;
+}
+
+
+void wpas_dbus_subscribe_noc(struct wpas_dbus_priv *priv)
+{
+	priv->dbus_noc_refcnt++;
+	if (priv->dbus_noc_refcnt > 1)
+		return;
+
+	if (!dbus_connection_add_filter(priv->con, noc_filter, priv, NULL)) {
+		wpa_printf(MSG_ERROR, "dbus: failed to add filter");
+		return;
+	}
+
+	dbus_bus_add_match(priv->con, wpas_dbus_noc_filter_str, NULL);
+}
+
+
+void wpas_dbus_unsubscribe_noc(struct wpas_dbus_priv *priv)
+{
+	priv->dbus_noc_refcnt--;
+	if (priv->dbus_noc_refcnt > 0)
+		return;
+
+	dbus_bus_remove_match(priv->con, wpas_dbus_noc_filter_str, NULL);
+	dbus_connection_remove_filter(priv->con, noc_filter, priv);
+}
+
+#endif /* CONFIG_AP */
+
 
 /**
  * wpas_dbus_signal_interface - Send a interface related event signal
@@ -2487,6 +2580,20 @@ static const struct wpa_dbus_method_desc wpas_dbus_interface_methods[] = {
 		  END_ARGS
 	  }
 	},
+#ifdef CONFIG_AP
+	{ "SubscribeProbeReq", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_subscribe_preq,
+	  {
+		  END_ARGS
+	  }
+	},
+	{ "UnsubscribeProbeReq", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) wpas_dbus_handler_unsubscribe_preq,
+	  {
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_AP */
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 
@@ -2813,6 +2920,14 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	  }
 	},
 #endif /* CONFIG_P2P */
+#ifdef CONFIG_AP
+	{ "ProbeRequest", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "args", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_AP */
 	{ "Certification", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "certification", "a{sv}", ARG_OUT },
@@ -2886,6 +3001,15 @@ int wpas_dbus_unregister_interface(struct wpa_supplicant *wpa_s)
 
 	wpa_printf(MSG_DEBUG, "dbus: Unregister interface object '%s'",
 		   wpa_s->dbus_new_path);
+
+#ifdef CONFIG_AP
+	if (wpa_s->preq_notify_peer) {
+		wpas_dbus_unsubscribe_noc(ctrl_iface);
+		os_free(wpa_s->preq_notify_peer);
+		wpa_s->preq_notify_peer = NULL;
+	}
+#endif /* CONFIG_AP */
+
 	if (wpa_dbus_unregister_object_per_iface(ctrl_iface,
 						 wpa_s->dbus_new_path))
 		return -1;

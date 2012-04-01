@@ -602,3 +602,13 @@ void wpas_notify_certification(struct wpa_supplicant *wpa_s, int depth,
 	/* notify the new DBus API */
 	wpas_dbus_signal_certification(wpa_s, depth, subject, cert_hash, cert);
 }
+
+
+void wpas_notify_preq(struct wpa_supplicant *wpa_s,
+		      const u8 *addr, const u8 *dst, const u8 *bssid,
+		      const u8 *ie, size_t ie_len, u32 ssi_signal)
+{
+#ifdef CONFIG_AP
+	wpas_dbus_signal_preq(wpa_s, addr, dst, bssid, ie, ie_len, ssi_signal);
+#endif /* CONFIG_AP */
+}

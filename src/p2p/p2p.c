@@ -1830,9 +1830,9 @@ static int supp_rates_11b_only(struct ieee802_11_elems *elems)
 }
 
 
-static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
-			    const u8 *dst, const u8 *bssid, const u8 *ie,
-			    size_t ie_len)
+static enum p2p_probe_req_status
+p2p_reply_probe(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
+		const u8 *bssid, const u8 *ie, size_t ie_len)
 {
 	struct ieee802_11_elems elems;
 	struct wpabuf *buf;
@@ -1842,55 +1842,55 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
 
 	if (!p2p->in_listen || !p2p->drv_in_listen) {
 		/* not in Listen state - ignore Probe Request */
-		return;
+		return P2P_PREQ_NOT_LISTEN;
 	}
 
 	if (ieee802_11_parse_elems((u8 *) ie, ie_len, &elems, 0) ==
 	    ParseFailed) {
 		/* Ignore invalid Probe Request frames */
-		return;
+		return P2P_PREQ_MALFORMED;
 	}
 
 	if (elems.p2p == NULL) {
 		/* not a P2P probe - ignore it */
-		return;
+		return P2P_PREQ_NOT_P2P;
 	}
 
 	if (dst && !is_broadcast_ether_addr(dst) &&
 	    os_memcmp(dst, p2p->cfg->dev_addr, ETH_ALEN) != 0) {
 		/* Not sent to the broadcast address or our P2P Device Address
 		 */
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 	}
 
 	if (bssid && !is_broadcast_ether_addr(bssid)) {
 		/* Not sent to the Wildcard BSSID */
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 	}
 
 	if (elems.ssid == NULL || elems.ssid_len != P2P_WILDCARD_SSID_LEN ||
 	    os_memcmp(elems.ssid, P2P_WILDCARD_SSID, P2P_WILDCARD_SSID_LEN) !=
 	    0) {
 		/* not using P2P Wildcard SSID - ignore */
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 	}
 
 	if (supp_rates_11b_only(&elems)) {
 		/* Indicates support for 11b rates only */
-		return;
+		return P2P_PREQ_NOT_P2P;
 	}
 
 	os_memset(&msg, 0, sizeof(msg));
 	if (p2p_parse_ies(ie, ie_len, &msg) < 0) {
 		/* Could not parse P2P attributes */
-		return;
+		return P2P_PREQ_NOT_P2P;
 	}
 
 	if (msg.device_id &&
 	    os_memcmp(msg.device_id, p2p->cfg->dev_addr, ETH_ALEN != 0)) {
 		/* Device ID did not match */
 		p2p_parse_free(&msg);
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 	}
 
 	/* Check Requested Device Type match */
@@ -1898,12 +1898,14 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
 	    !p2p_match_dev_type(p2p, msg.wps_attributes)) {
 		/* No match with Requested Device Type */
 		p2p_parse_free(&msg);
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 	}
 	p2p_parse_free(&msg);
 
-	if (!p2p->cfg->send_probe_resp)
-		return; /* Response generated elsewhere */
+	if (!p2p->cfg->send_probe_resp) {
+		/* Response generated elsewhere */
+		return P2P_PREQ_NOT_PROCESSED;
+	}
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Reply to P2P Probe Request in Listen state");
@@ -1916,12 +1918,12 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
 	 */
 	ies = p2p_build_probe_resp_ies(p2p);
 	if (ies == NULL)
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 
 	buf = wpabuf_alloc(200 + wpabuf_len(ies));
 	if (buf == NULL) {
 		wpabuf_free(ies);
-		return;
+		return P2P_PREQ_NOT_PROCESSED;
 	}
 
 	resp = NULL;
@@ -1964,15 +1966,20 @@ static void p2p_reply_probe(struct p2p_data *p2p, const u8 *addr,
 	p2p->cfg->send_probe_resp(p2p->cfg->cb_ctx, buf);
 
 	wpabuf_free(buf);
+
+	return P2P_PREQ_NOT_PROCESSED;
 }
 
 
-int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
-		     const u8 *bssid, const u8 *ie, size_t ie_len)
+enum p2p_probe_req_status
+p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
+		 const u8 *bssid, const u8 *ie, size_t ie_len)
 {
+	enum p2p_probe_req_status res;
+
 	p2p_add_dev_from_probe_req(p2p, addr, ie, ie_len);
 
-	p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len);
+	res = p2p_reply_probe(p2p, addr, dst, bssid, ie, ie_len);
 
 	if ((p2p->state == P2P_CONNECT || p2p->state == P2P_CONNECT_LISTEN) &&
 	    p2p->go_neg_peer &&
@@ -1983,7 +1990,7 @@ int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 			"P2P: Found GO Negotiation peer - try to start GO "
 			"negotiation from timeout");
 		eloop_register_timeout(0, 0, p2p_go_neg_start, p2p, NULL);
-		return 1;
+		return P2P_PREQ_PROCESSED;
 	}
 
 	if ((p2p->state == P2P_INVITE || p2p->state == P2P_INVITE_LISTEN) &&
@@ -1995,10 +2002,10 @@ int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
 			"P2P: Found Invite peer - try to start Invite from "
 			"timeout");
 		eloop_register_timeout(0, 0, p2p_invite_start, p2p, NULL);
-		return 1;
+		return P2P_PREQ_PROCESSED;
 	}
 
-	return 0;
+	return res;
 }
 
 

@@ -265,6 +265,9 @@ struct wpa_supplicant {
 #ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 	char *dbus_new_path;
 	char *dbus_groupobj_path;
+#ifdef CONFIG_AP
+	char *preq_notify_peer;
+#endif /* CONFIG_AP */
 #endif /* CONFIG_CTRL_IFACE_DBUS_NEW */
 	char bridge_ifname[16];
 

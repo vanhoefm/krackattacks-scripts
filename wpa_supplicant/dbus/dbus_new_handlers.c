@@ -32,6 +32,7 @@
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
 #include "dbus_dict_helpers.h"
+#include "dbus_common_i.h"
 
 extern int wpa_debug_level;
 extern int wpa_debug_show_keys;
@@ -3412,3 +3413,139 @@ dbus_bool_t wpas_dbus_setter_network_properties(DBusMessageIter *iter,
 	dbus_message_iter_recurse(iter, &variant_iter);
 	return set_network_properties(net->wpa_s, ssid, &variant_iter, error);
 }
+
+
+#ifdef CONFIG_AP
+
+DBusMessage * wpas_dbus_handler_subscribe_preq(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	struct wpas_dbus_priv *priv = wpa_s->global->dbus;
+	char *name;
+
+	if (wpa_s->preq_notify_peer != NULL) {
+		if (os_strcmp(dbus_message_get_sender(message),
+			      wpa_s->preq_notify_peer) == 0)
+			return NULL;
+
+		return dbus_message_new_error(message,
+			WPAS_DBUS_ERROR_SUBSCRIPTION_IN_USE,
+			"Another application is already subscribed");
+	}
+
+	name = os_strdup(dbus_message_get_sender(message));
+	if (!name)
+		return dbus_message_new_error(message, DBUS_ERROR_NO_MEMORY,
+					      "out of memory");
+
+	wpa_s->preq_notify_peer = name;
+
+	/* Subscribe to clean up if application closes socket */
+	wpas_dbus_subscribe_noc(priv);
+
+	/*
+	 * Double-check it's still alive to make sure that we didn't
+	 * miss the NameOwnerChanged signal, e.g. while strdup'ing.
+	 */
+	if (!dbus_bus_name_has_owner(priv->con, name, NULL)) {
+		/*
+		 * Application no longer exists, clean up.
+		 * The return value is irrelevant now.
+		 *
+		 * Need to check if the NameOwnerChanged handling
+		 * already cleaned up because we have processed
+		 * DBus messages while checking if the name still
+		 * has an owner.
+		 */
+		if (!wpa_s->preq_notify_peer)
+			return NULL;
+		os_free(wpa_s->preq_notify_peer);
+		wpa_s->preq_notify_peer = NULL;
+		wpas_dbus_unsubscribe_noc(priv);
+	}
+
+	return NULL;
+}
+
+
+DBusMessage * wpas_dbus_handler_unsubscribe_preq(
+	DBusMessage *message, struct wpa_supplicant *wpa_s)
+{
+	struct wpas_dbus_priv *priv = wpa_s->global->dbus;
+
+	if (!wpa_s->preq_notify_peer)
+		return dbus_message_new_error(message,
+			WPAS_DBUS_ERROR_NO_SUBSCRIPTION,
+			"Not subscribed");
+
+	if (os_strcmp(wpa_s->preq_notify_peer,
+		      dbus_message_get_sender(message)))
+		return dbus_message_new_error(message,
+			WPAS_DBUS_ERROR_SUBSCRIPTION_EPERM,
+			"Can't unsubscribe others");
+
+	os_free(wpa_s->preq_notify_peer);
+	wpa_s->preq_notify_peer = NULL;
+	wpas_dbus_unsubscribe_noc(priv);
+	return NULL;
+}
+
+
+void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
+			   const u8 *addr, const u8 *dst, const u8 *bssid,
+			   const u8 *ie, size_t ie_len, u32 ssi_signal)
+{
+	DBusMessage *msg;
+	DBusMessageIter iter, dict_iter;
+	struct wpas_dbus_priv *priv = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (priv == NULL)
+		return;
+
+	if (wpa_s->preq_notify_peer == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      "ProbeRequest");
+	if (msg == NULL)
+		return;
+
+	dbus_message_set_destination(msg, wpa_s->preq_notify_peer);
+
+	dbus_message_iter_init_append(msg, &iter);
+
+	if (!wpa_dbus_dict_open_write(&iter, &dict_iter))
+		goto fail;
+	if (addr && !wpa_dbus_dict_append_byte_array(&dict_iter, "addr",
+						     (const char *) addr,
+						     ETH_ALEN))
+		goto fail;
+	if (dst && !wpa_dbus_dict_append_byte_array(&dict_iter, "dst",
+						    (const char *) dst,
+						    ETH_ALEN))
+		goto fail;
+	if (bssid && !wpa_dbus_dict_append_byte_array(&dict_iter, "bssid",
+						      (const char *) bssid,
+						      ETH_ALEN))
+		goto fail;
+	if (ie && ie_len && !wpa_dbus_dict_append_byte_array(&dict_iter, "ies",
+							     (const char *) ie,
+							     ie_len))
+		goto fail;
+	if (ssi_signal && !wpa_dbus_dict_append_int32(&dict_iter, "signal",
+						      ssi_signal))
+		goto fail;
+	if (!wpa_dbus_dict_close_write(&iter, &dict_iter))
+		goto fail;
+
+	dbus_connection_send(priv->con, msg, NULL);
+	goto out;
+fail:
+	wpa_printf(MSG_ERROR, "dbus: Failed to construct signal");
+out:
+	dbus_message_unref(msg);
+}
+
+#endif /* CONFIG_AP */

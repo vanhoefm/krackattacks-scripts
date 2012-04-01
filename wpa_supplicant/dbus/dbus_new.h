@@ -115,6 +115,17 @@ enum wpas_dbus_bss_prop {
 #define WPAS_DBUS_ERROR_BLOB_UNKNOWN \
 	WPAS_DBUS_NEW_INTERFACE ".BlobUnknown"
 
+#define WPAS_DBUS_ERROR_SUBSCRIPTION_IN_USE \
+	WPAS_DBUS_NEW_INTERFACE ".SubscriptionInUse"
+#define WPAS_DBUS_ERROR_NO_SUBSCRIPTION \
+	WPAS_DBUS_NEW_INTERFACE ".NoSubscription"
+#define WPAS_DBUS_ERROR_SUBSCRIPTION_EPERM \
+	WPAS_DBUS_NEW_INTERFACE ".SubscriptionNotYou"
+
+
+void wpas_dbus_subscribe_noc(struct wpas_dbus_priv *priv);
+void wpas_dbus_unsubscribe_noc(struct wpas_dbus_priv *priv);
+
 
 #ifdef CONFIG_CTRL_IFACE_DBUS_NEW
 
@@ -210,6 +221,9 @@ void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 				    int depth, const char *subject,
 				    const char *cert_hash,
 				    const struct wpabuf *cert);
+void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
+			   const u8 *addr, const u8 *dst, const u8 *bssid,
+			   const u8 *ie, size_t ie_len, u32 ssi_signal);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -464,6 +478,14 @@ static inline void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 						  const char *subject,
 						  const char *cert_hash,
 						  const struct wpabuf *cert)
+{
+}
+
+static inline void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
+					 const u8 *addr, const u8 *dst,
+					 const u8 *bssid,
+					 const u8 *ie, size_t ie_len,
+					 u32 ssi_signal)
 {
 }
 

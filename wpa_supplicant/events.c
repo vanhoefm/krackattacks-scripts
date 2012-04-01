@@ -2309,15 +2309,17 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		ap_rx_from_unknown_sta(wpa_s, data->rx_from_unknown.addr,
 				       data->rx_from_unknown.wds);
 		break;
-	case EVENT_RX_MGMT:
+	case EVENT_RX_MGMT: {
+		u16 fc, stype;
+		const struct ieee80211_mgmt *mgmt;
+
+		mgmt = (const struct ieee80211_mgmt *)
+			data->rx_mgmt.frame;
+		fc = le_to_host16(mgmt->frame_control);
+		stype = WLAN_FC_GET_STYPE(fc);
+
 		if (wpa_s->ap_iface == NULL) {
 #ifdef CONFIG_P2P
-			u16 fc, stype;
-			const struct ieee80211_mgmt *mgmt;
-			mgmt = (const struct ieee80211_mgmt *)
-				data->rx_mgmt.frame;
-			fc = le_to_host16(mgmt->frame_control);
-			stype = WLAN_FC_GET_STYPE(fc);
 			if (stype == WLAN_FC_STYPE_PROBE_REQ &&
 			    data->rx_mgmt.frame_len > 24) {
 				const u8 *src = mgmt->sa;
@@ -2336,8 +2338,23 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 				"management frame in non-AP mode");
 			break;
 		}
+
+		if (stype == WLAN_FC_STYPE_PROBE_REQ &&
+		    data->rx_mgmt.frame_len > 24) {
+			const u8 *ie = mgmt->u.probe_req.variable;
+			size_t ie_len = data->rx_mgmt.frame_len -
+				(mgmt->u.probe_req.variable -
+				 data->rx_mgmt.frame);
+
+			wpas_notify_preq(wpa_s, mgmt->sa, mgmt->da,
+					 mgmt->bssid, ie, ie_len,
+					 data->rx_mgmt.ssi_signal);
+			break;
+		}
+
 		ap_mgmt_rx(wpa_s, &data->rx_mgmt);
 		break;
+		}
 #endif /* CONFIG_AP */
 	case EVENT_RX_ACTION:
 		wpa_dbg(wpa_s, MSG_DEBUG, "Received Action frame: SA=" MACSTR

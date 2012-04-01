@@ -266,4 +266,9 @@ DBusMessage * wpas_dbus_error_invalid_args(DBusMessage *message,
 DBusMessage * wpas_dbus_error_unknown_error(DBusMessage *message,
 					    const char *arg);
 
+DBusMessage * wpas_dbus_handler_subscribe_preq(
+	DBusMessage *message, struct wpa_supplicant *wpa_s);
+DBusMessage * wpas_dbus_handler_unsubscribe_preq(
+	DBusMessage *message, struct wpa_supplicant *wpa_s);
+
 #endif /* CTRL_IFACE_DBUS_HANDLERS_NEW_H */

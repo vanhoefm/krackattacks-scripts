@@ -1087,6 +1087,23 @@ void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *addr);
 /* Event notifications from lower layer driver operations */
 
 /**
+ * enum p2p_probe_req_status
+ *
+ * @P2P_PREQ_MALFORMED: frame was not well-formed
+ * @P2P_PREQ_NOT_LISTEN: device isn't in listen state, frame ignored
+ * @P2P_PREQ_NOT_P2P: frame was not a P2P probe request
+ * @P2P_PREQ_P2P_NOT_PROCESSED: frame was P2P but wasn't processed
+ * @P2P_PREQ_P2P_PROCESSED: frame has been processed by P2P
+ */
+enum p2p_probe_req_status {
+	P2P_PREQ_MALFORMED,
+	P2P_PREQ_NOT_LISTEN,
+	P2P_PREQ_NOT_P2P,
+	P2P_PREQ_NOT_PROCESSED,
+	P2P_PREQ_PROCESSED
+};
+
+/**
  * p2p_probe_req_rx - Report reception of a Probe Request frame
  * @p2p: P2P module context from p2p_init()
  * @addr: Source MAC address
@@ -1094,10 +1111,11 @@ void p2p_clear_provisioning_info(struct p2p_data *p2p, const u8 *addr);
  * @bssid: BSSID if available or %NULL
  * @ie: Information elements from the Probe Request frame body
  * @ie_len: Length of ie buffer in octets
- * Returns: 0 to indicate the frame was not processed or 1 if it was
+ * Returns: value indicating the type and status of the probe request
  */
-int p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
-		     const u8 *bssid, const u8 *ie, size_t ie_len);
+enum p2p_probe_req_status
+p2p_probe_req_rx(struct p2p_data *p2p, const u8 *addr, const u8 *dst,
+		 const u8 *bssid, const u8 *ie, size_t ie_len);
 
 /**
  * p2p_rx_action - Report received Action frame

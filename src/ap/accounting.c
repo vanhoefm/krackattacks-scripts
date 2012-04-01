@@ -259,8 +259,9 @@ void accounting_sta_start(struct hostapd_data *hapd, struct sta_info *sta)
 			       hapd, sta);
 
 	msg = accounting_msg(hapd, sta, RADIUS_ACCT_STATUS_TYPE_START);
-	if (msg)
-		radius_client_send(hapd->radius, msg, RADIUS_ACCT, sta->addr);
+	if (msg &&
+	    radius_client_send(hapd->radius, msg, RADIUS_ACCT, sta->addr) < 0)
+		radius_msg_free(msg);
 
 	sta->acct_session_started = 1;
 }
@@ -358,9 +359,10 @@ static void accounting_sta_report(struct hostapd_data *hapd,
 		goto fail;
 	}
 
-	radius_client_send(hapd->radius, msg,
-			   stop ? RADIUS_ACCT : RADIUS_ACCT_INTERIM,
-			   sta->addr);
+	if (radius_client_send(hapd->radius, msg,
+			       stop ? RADIUS_ACCT : RADIUS_ACCT_INTERIM,
+			       sta->addr) < 0)
+		goto fail;
 	return;
 
  fail:
@@ -463,7 +465,8 @@ static void accounting_report_state(struct hostapd_data *hapd, int on)
 		return;
 	}
 
-	radius_client_send(hapd->radius, msg, RADIUS_ACCT, NULL);
+	if (radius_client_send(hapd->radius, msg, RADIUS_ACCT, NULL) < 0)
+		radius_msg_free(msg);
 }
 
 

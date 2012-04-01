@@ -278,7 +278,9 @@ static void ieee802_1x_encapsulate_radius(struct eapol_test_data *e,
 		}
 	}
 
-	radius_client_send(e->radius, msg, RADIUS_AUTH, e->wpa_s->own_addr);
+	if (radius_client_send(e->radius, msg, RADIUS_AUTH, e->wpa_s->own_addr)
+	    < 0)
+		goto fail;
 	return;
 
  fail:

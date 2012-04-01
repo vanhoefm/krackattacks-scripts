@@ -193,7 +193,8 @@ static int hostapd_radius_acl_query(struct hostapd_data *hapd, const u8 *addr,
 		goto fail;
 	}
 
-	radius_client_send(hapd->radius, msg, RADIUS_AUTH, addr);
+	if (radius_client_send(hapd->radius, msg, RADIUS_AUTH, addr) < 0)
+		goto fail;
 	return 0;
 
  fail:

@@ -88,7 +88,8 @@ static void start_example(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	radius_client_send(ctx->radius, msg, RADIUS_AUTH, NULL);
+	if (radius_client_send(ctx->radius, msg, RADIUS_AUTH, NULL) < 0)
+		radius_msg_free(msg);
 }
 
 

@@ -1090,6 +1090,12 @@ static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 #endif /* CONFIG_IEEE80211R */
 
 #ifdef CONFIG_IEEE80211N
+	if (conf->ieee80211n && conf->hw_mode == HOSTAPD_MODE_IEEE80211B) {
+		bss->disable_11n = 1;
+		wpa_printf(MSG_ERROR, "HT (IEEE 802.11n) in 11b mode is not "
+			   "allowed, disabling HT capabilites");
+	}
+
 	if (conf->ieee80211n &&
 	    bss->ssid.security_policy == SECURITY_STATIC_WEP) {
 		bss->disable_11n = 1;

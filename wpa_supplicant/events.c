@@ -2124,7 +2124,8 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 			wpas_p2p_disassoc_notif(
 				wpa_s, data->disassoc_info.addr, reason_code,
 				data->disassoc_info.ie,
-				data->disassoc_info.ie_len);
+				data->disassoc_info.ie_len,
+				locally_generated);
 #endif /* CONFIG_P2P */
 		}
 		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME)
@@ -2152,13 +2153,6 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 					    "Deauthentication frame IE(s)",
 					    data->deauth_info.ie,
 					    data->deauth_info.ie_len);
-#ifdef CONFIG_P2P
-				wpas_p2p_deauth_notif(
-					wpa_s, data->deauth_info.addr,
-					reason_code,
-					data->deauth_info.ie,
-					data->deauth_info.ie_len);
-#endif /* CONFIG_P2P */
 			}
 		}
 #ifdef CONFIG_AP
@@ -2175,6 +2169,15 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 #endif /* CONFIG_AP */
 		wpa_supplicant_event_disassoc(wpa_s, reason_code,
 					      locally_generated);
+#ifdef CONFIG_P2P
+		if (event == EVENT_DEAUTH && data) {
+			wpas_p2p_deauth_notif(wpa_s, data->deauth_info.addr,
+					      reason_code,
+					      data->deauth_info.ie,
+					      data->deauth_info.ie_len,
+					      locally_generated);
+		}
+#endif /* CONFIG_P2P */
 		break;
 	case EVENT_MICHAEL_MIC_FAILURE:
 		wpa_supplicant_event_michael_mic_failure(wpa_s, data);

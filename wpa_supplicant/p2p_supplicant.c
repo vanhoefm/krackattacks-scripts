@@ -255,6 +255,9 @@ static void wpas_p2p_group_delete(struct wpa_supplicant *wpa_s)
 	case P2P_GROUP_REMOVAL_UNAVAILABLE:
 		reason = " reason=UNAVAILABLE";
 		break;
+	case P2P_GROUP_REMOVAL_GO_ENDING_SESSION:
+		reason = " reason=GO_ENDING_SESSION";
+		break;
 	default:
 		reason = "";
 		break;
@@ -4031,26 +4034,42 @@ static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 
 
 void wpas_p2p_deauth_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
-			   u16 reason_code, const u8 *ie, size_t ie_len)
+			   u16 reason_code, const u8 *ie, size_t ie_len,
+			   int locally_generated)
 {
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
 		return;
 
-	p2p_deauth_notif(wpa_s->global->p2p, bssid, reason_code, ie, ie_len);
+	if (!locally_generated)
+		p2p_deauth_notif(wpa_s->global->p2p, bssid, reason_code, ie,
+				 ie_len);
+
+	if (reason_code == WLAN_REASON_DEAUTH_LEAVING && !locally_generated &&
+	    wpa_s->current_ssid &&
+	    wpa_s->current_ssid->p2p_group &&
+	    wpa_s->current_ssid->mode == WPAS_MODE_INFRA) {
+		wpa_printf(MSG_DEBUG, "P2P: GO indicated that the P2P Group "
+			   "session is ending");
+		wpa_s->removal_reason = P2P_GROUP_REMOVAL_GO_ENDING_SESSION;
+		wpas_p2p_group_delete(wpa_s);
+	}
 }
 
 
 void wpas_p2p_disassoc_notif(struct wpa_supplicant *wpa_s, const u8 *bssid,
-			     u16 reason_code, const u8 *ie, size_t ie_len)
+			     u16 reason_code, const u8 *ie, size_t ie_len,
+			     int locally_generated)
 {
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return;
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
 		return;
 
-	p2p_disassoc_notif(wpa_s->global->p2p, bssid, reason_code, ie, ie_len);
+	if (!locally_generated)
+		p2p_disassoc_notif(wpa_s->global->p2p, bssid, reason_code, ie,
+				   ie_len);
 }
 
 

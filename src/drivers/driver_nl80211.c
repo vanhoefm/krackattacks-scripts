@@ -1189,9 +1189,9 @@ static void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
 	drv->associated = 0;
 	os_memset(&data, 0, sizeof(data));
 	if (reason)
-		data.disassoc_info.reason_code = nla_get_u16(reason);
-	data.disassoc_info.locally_generated = by_ap == NULL;
-	wpa_supplicant_event(drv->ctx, EVENT_DISASSOC, &data);
+		data.deauth_info.reason_code = nla_get_u16(reason);
+	data.deauth_info.locally_generated = by_ap == NULL;
+	wpa_supplicant_event(drv->ctx, EVENT_DEAUTH, &data);
 }
 
 

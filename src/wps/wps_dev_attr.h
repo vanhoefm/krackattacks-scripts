@@ -17,6 +17,7 @@ int wps_build_model_number(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_dev_name(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_device_attrs(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_os_version(struct wps_device_data *dev, struct wpabuf *msg);
+int wps_build_vendor_ext_m1(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_rf_bands(struct wps_device_data *dev, struct wpabuf *msg);
 int wps_build_primary_dev_type(struct wps_device_data *dev,
 			       struct wpabuf *msg);

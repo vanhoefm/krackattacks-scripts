@@ -203,6 +203,20 @@ int wps_build_os_version(struct wps_device_data *dev, struct wpabuf *msg)
 }
 
 
+int wps_build_vendor_ext_m1(struct wps_device_data *dev, struct wpabuf *msg)
+{
+	if (dev->vendor_ext_m1 != NULL) {
+		wpa_hexdump(MSG_DEBUG, "WPS:  * Vendor Extension M1",
+			    wpabuf_head_u8(dev->vendor_ext_m1),
+			    wpabuf_len(dev->vendor_ext_m1));
+		wpabuf_put_be16(msg, ATTR_VENDOR_EXT);
+		wpabuf_put_be16(msg, wpabuf_len(dev->vendor_ext_m1));
+		wpabuf_put_buf(msg, dev->vendor_ext_m1);
+	}
+	return 0;
+}
+
+
 int wps_build_rf_bands(struct wps_device_data *dev, struct wpabuf *msg)
 {
 	wpa_printf(MSG_DEBUG, "WPS:  * RF Bands (%x)", dev->rf_bands);

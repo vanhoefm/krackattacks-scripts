@@ -1130,6 +1130,23 @@ static void wpas_wps_set_uuid(struct wpa_supplicant *wpa_s,
 }
 
 
+static void wpas_wps_set_vendor_ext_m1(struct wpa_supplicant *wpa_s,
+				       struct wps_context *wps)
+{
+	wpabuf_free(wps->dev.vendor_ext_m1);
+	wps->dev.vendor_ext_m1 = NULL;
+
+	if (wpa_s->conf->wps_vendor_ext_m1) {
+		wps->dev.vendor_ext_m1 =
+			wpabuf_dup(wpa_s->conf->wps_vendor_ext_m1);
+		if (!wps->dev.vendor_ext_m1) {
+			wpa_printf(MSG_ERROR, "WPS: Cannot "
+				   "allocate memory for vendor_ext_m1");
+		}
+	}
+}
+
+
 int wpas_wps_init(struct wpa_supplicant *wpa_s)
 {
 	struct wps_context *wps;
@@ -1167,6 +1184,8 @@ int wpas_wps_init(struct wpa_supplicant *wpa_s)
 	wps->dev.num_sec_dev_types = wpa_s->conf->num_sec_device_types;
 	os_memcpy(wps->dev.sec_dev_type, wpa_s->conf->sec_device_type,
 		  WPS_DEV_TYPE_LEN * wps->dev.num_sec_dev_types);
+
+	wpas_wps_set_vendor_ext_m1(wpa_s, wps);
 
 	wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);
 	modes = wpa_s->hw.modes;
@@ -1228,6 +1247,7 @@ void wpas_wps_deinit(struct wpa_supplicant *wpa_s)
 	wpabuf_free(wpa_s->wps->dh_privkey);
 	wpabuf_free(wpa_s->wps->oob_conf.pubkey_hash);
 	wpabuf_free(wpa_s->wps->oob_conf.dev_password);
+	wpabuf_free(wpa_s->wps->dev.vendor_ext_m1);
 	os_free(wpa_s->wps->network_key);
 	os_free(wpa_s->wps);
 	wpa_s->wps = NULL;
@@ -1716,6 +1736,9 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 		os_memcpy(wps->dev.sec_dev_type, wpa_s->conf->sec_device_type,
 			  wps->dev.num_sec_dev_types * WPS_DEV_TYPE_LEN);
 	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_VENDOR_EXTENSION)
+		wpas_wps_set_vendor_ext_m1(wpa_s, wps);
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_OS_VERSION)
 		wps->dev.os_version = WPA_GET_BE32(wpa_s->conf->os_version);

@@ -507,6 +507,8 @@ struct wpa_config {
 	unsigned int num_p2p_pref_chan;
 	struct p2p_channel *p2p_pref_chan;
 
+	struct wpabuf *wps_vendor_ext_m1;
+
 #define MAX_WPS_VENDOR_EXT 10
 	/**
 	 * wps_vendor_ext - Vendor extension attributes in WPS

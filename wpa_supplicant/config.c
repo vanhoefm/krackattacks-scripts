@@ -1835,6 +1835,7 @@ void wpa_config_free(struct wpa_config *config)
 	}
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 
+	wpabuf_free(config->wps_vendor_ext_m1);
 	os_free(config->ctrl_interface);
 	os_free(config->ctrl_interface_group);
 	os_free(config->opensc_engine_path);
@@ -2673,6 +2674,43 @@ static int wpa_config_process_os_version(const struct global_parse_data *data,
 	return 0;
 }
 
+
+static int wpa_config_process_wps_vendor_ext_m1(
+	const struct global_parse_data *data,
+	struct wpa_config *config, int line, const char *pos)
+{
+	struct wpabuf *tmp;
+	int len = os_strlen(pos) / 2;
+	u8 *p;
+
+	if (!len) {
+		wpa_printf(MSG_ERROR, "Line %d: "
+			   "invalid wps_vendor_ext_m1", line);
+		return -1;
+	}
+
+	tmp = wpabuf_alloc(len);
+	if (tmp) {
+		p = wpabuf_put(tmp, len);
+
+		if (hexstr2bin(pos, p, len)) {
+			wpa_printf(MSG_ERROR, "Line %d: "
+				   "invalid wps_vendor_ext_m1", line);
+			wpabuf_free(tmp);
+			return -1;
+		}
+
+		wpabuf_free(config->wps_vendor_ext_m1);
+		config->wps_vendor_ext_m1 = tmp;
+	} else {
+		wpa_printf(MSG_ERROR, "Can not allocate "
+			   "memory for wps_vendor_ext_m1");
+		return -1;
+	}
+
+	return 0;
+}
+
 #endif /* CONFIG_WPS */
 
 #ifdef CONFIG_P2P
@@ -2809,6 +2847,7 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(os_version), CFG_CHANGED_OS_VERSION },
 	{ STR(config_methods), CFG_CHANGED_CONFIG_METHODS },
 	{ INT_RANGE(wps_cred_processing, 0, 2), 0 },
+	{ FUNC(wps_vendor_ext_m1), CFG_CHANGED_VENDOR_EXTENSION },
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	{ FUNC(sec_device_type), CFG_CHANGED_SEC_DEVICE_TYPE },

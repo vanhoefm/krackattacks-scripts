@@ -768,6 +768,16 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 	if (config->wps_cred_processing)
 		fprintf(f, "wps_cred_processing=%d\n",
 			config->wps_cred_processing);
+	if (config->wps_vendor_ext_m1) {
+		int i, len = wpabuf_len(config->wps_vendor_ext_m1);
+		const u8 *p = wpabuf_head_u8(config->wps_vendor_ext_m1);
+		if (len > 0) {
+			fprintf(f, "wps_vendor_ext_m1=");
+			for (i = 0; i < len; i++)
+				fprintf(f, "%02x", *p++);
+			fprintf(f, "\n");
+		}
+	}
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
 	if (config->p2p_listen_reg_class)

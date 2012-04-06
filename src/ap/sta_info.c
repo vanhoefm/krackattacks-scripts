@@ -284,6 +284,12 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	    (sta->timeout_next == STA_NULLFUNC ||
 	     sta->timeout_next == STA_DISASSOC)) {
 		int inactive_sec;
+		/*
+		 * Add random value to timeout so that we don't end up bouncing
+		 * all stations at the same time if we have lots of associated
+		 * stations that are idle (but keep re-associating).
+		 */
+		int fuzz = os_random() % 20;
 		inactive_sec = hostapd_drv_get_inact_sec(hapd, sta->addr);
 		if (inactive_sec == -1) {
 			wpa_msg(hapd->msg_ctx, MSG_DEBUG,
@@ -295,7 +301,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			 * Anyway, try again after the next inactivity timeout,
 			 * but do not disconnect the station now.
 			 */
-			next_time = hapd->conf->ap_max_inactivity;
+			next_time = hapd->conf->ap_max_inactivity + fuzz;
 		} else if (inactive_sec < hapd->conf->ap_max_inactivity &&
 			   sta->flags & WLAN_STA_ASSOC) {
 			/* station activity detected; reset timeout state */
@@ -303,7 +309,7 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 				"Station " MACSTR " has been active %is ago",
 				MAC2STR(sta->addr), inactive_sec);
 			sta->timeout_next = STA_NULLFUNC;
-			next_time = hapd->conf->ap_max_inactivity -
+			next_time = hapd->conf->ap_max_inactivity + fuzz -
 				inactive_sec;
 		} else {
 			wpa_msg(hapd->msg_ctx, MSG_DEBUG,

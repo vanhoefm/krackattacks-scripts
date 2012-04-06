@@ -1275,7 +1275,7 @@ static void * test_driver_init(struct hostapd_data *hapd,
 			alen = sizeof(addr_un);
 		}
 		if (bind(drv->test_socket, addr, alen) < 0) {
-			perror("bind(PF_UNIX)");
+			perror("test-driver-init: bind(PF_UNIX)");
 			close(drv->test_socket);
 			if (drv->own_socket_path)
 				unlink(drv->own_socket_path);
@@ -2252,7 +2252,7 @@ static int wpa_driver_test_attach(struct wpa_driver_test_data *drv,
 	os_strlcpy(addr.sun_path, drv->own_socket_path, sizeof(addr.sun_path));
 	if (bind(drv->test_socket, (struct sockaddr *) &addr,
 		 sizeof(addr)) < 0) {
-		perror("bind(PF_UNIX)");
+		perror("test-driver-attach: bind(PF_UNIX)");
 		close(drv->test_socket);
 		unlink(drv->own_socket_path);
 		os_free(drv->own_socket_path);

@@ -173,7 +173,7 @@ struct l2_packet_data * l2_packet_init(
 	addr.sun_family = AF_UNIX;
 	os_strlcpy(addr.sun_path, l2->own_socket_path, sizeof(addr.sun_path));
 	if (bind(l2->fd, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("bind(PF_UNIX)");
+		perror("l2-pkt-privsep: bind(PF_UNIX)");
 		goto fail;
 	}
 

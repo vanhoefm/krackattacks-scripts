@@ -651,7 +651,7 @@ static int wpa_driver_privsep_set_param(void *priv, const char *param)
 	os_strlcpy(addr.sun_path, drv->own_socket_path, sizeof(addr.sun_path));
 	if (bind(drv->priv_socket, (struct sockaddr *) &addr, sizeof(addr)) <
 	    0) {
-		perror("bind(PF_UNIX)");
+		perror("privsep-set-params priv-sock: bind(PF_UNIX)");
 		close(drv->priv_socket);
 		drv->priv_socket = -1;
 		unlink(drv->own_socket_path);
@@ -676,7 +676,7 @@ static int wpa_driver_privsep_set_param(void *priv, const char *param)
 	os_strlcpy(addr.sun_path, drv->own_cmd_path, sizeof(addr.sun_path));
 	if (bind(drv->cmd_socket, (struct sockaddr *) &addr, sizeof(addr)) < 0)
 	{
-		perror("bind(PF_UNIX)");
+		perror("privsep-set-params cmd-sock: bind(PF_UNIX)");
 		close(drv->cmd_socket);
 		drv->cmd_socket = -1;
 		unlink(drv->own_cmd_path);

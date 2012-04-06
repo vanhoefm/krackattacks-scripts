@@ -643,7 +643,7 @@ wpa_priv_interface_init(const char *dir, const char *params)
 			}
 			if (bind(iface->fd, (struct sockaddr *) &addr,
 				 sizeof(addr)) < 0) {
-				perror("bind(PF_UNIX)");
+				perror("wpa-priv-iface-init: bind(PF_UNIX)");
 				goto fail;
 			}
 			wpa_printf(MSG_DEBUG, "Successfully replaced leftover "

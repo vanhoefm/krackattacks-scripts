@@ -96,7 +96,7 @@ static int open_socket(const char *path)
 	addr.sun_family = AF_UNIX;
 	os_strlcpy(addr.sun_path, path, sizeof(addr.sun_path));
 	if (bind(s, (struct sockaddr *) &addr, sizeof(addr)) < 0) {
-		perror("bind(PF_UNIX)");
+		perror("hlr-auc-gw: bind(PF_UNIX)");
 		close(s);
 		return -1;
 	}

@@ -3807,8 +3807,9 @@ int main(int argc, char *argv[])
 		ctrl_conn = wpa_ctrl_open(global);
 #endif /* CONFIG_CTRL_IFACE_NAMED_PIPE */
 		if (ctrl_conn == NULL) {
-			perror("Failed to connect to wpa_supplicant - "
-			       "wpa_ctrl_open");
+			fprintf(stderr, "Failed to connect to wpa_supplicant "
+				"global interface: %s  error: %s\n",
+				global, strerror(errno));
 			return -1;
 		}
 	}
@@ -3830,8 +3831,8 @@ int main(int argc, char *argv[])
 			}
 
 			if (!warning_displayed) {
-				printf("Could not connect to wpa_supplicant - "
-				       "re-trying\n");
+				printf("Could not connect to wpa_supplicant: "
+				       "%s - re-trying\n", ctrl_ifname);
 				warning_displayed = 1;
 			}
 			os_sleep(1, 0);
@@ -3840,8 +3841,9 @@ int main(int argc, char *argv[])
 	} else {
 		if (!global &&
 		    wpa_cli_open_connection(ctrl_ifname, 0) < 0) {
-			perror("Failed to connect to wpa_supplicant - "
-			       "wpa_ctrl_open");
+			fprintf(stderr, "Failed to connect to non-global "
+				"ctrl_ifname: %s  error: %s\n",
+				ctrl_ifname, strerror(errno));
 			return -1;
 		}
 

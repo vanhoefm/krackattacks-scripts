@@ -379,6 +379,18 @@ void wpa_bss_update_scan_res(struct wpa_supplicant *wpa_s,
 	}
 
 	p2p = wpa_scan_get_vendor_ie(res, P2P_IE_VENDOR_TYPE);
+#ifdef CONFIG_P2P
+	if (p2p == NULL &&
+	    wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE) {
+		/*
+		 * If it's a P2P specific interface, then don't update
+		 * the scan result without a P2P IE.
+		 */
+		wpa_printf(MSG_DEBUG, "BSS: No P2P IE - skipping BSS " MACSTR
+			   " update for P2P interface", MAC2STR(res->bssid));
+		return;
+	}
+#endif /* CONFIG_P2P */
 	if (p2p && ssid[1] == P2P_WILDCARD_SSID_LEN &&
 	    os_memcmp(ssid + 2, P2P_WILDCARD_SSID, P2P_WILDCARD_SSID_LEN) == 0)
 		return; /* Skip P2P listen discovery results here */

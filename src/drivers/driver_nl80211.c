@@ -189,6 +189,7 @@ struct i802_bss {
 	unsigned int beacon_set:1;
 	unsigned int added_if_into_bridge:1;
 	unsigned int added_bridge:1;
+	unsigned int in_deinit:1;
 
 	u8 addr[ETH_ALEN];
 
@@ -3331,6 +3332,7 @@ static void wpa_driver_nl80211_deinit(void *priv)
 	struct i802_bss *bss = priv;
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 
+	bss->in_deinit = 1;
 	if (drv->data_tx_status)
 		eloop_unregister_read_sock(drv->eapol_tx_sock);
 	if (drv->eapol_tx_sock >= 0)
@@ -7008,7 +7010,7 @@ done:
 		nl80211_mgmt_unsubscribe(bss, "mode change");
 	}
 
-	if (!is_ap_interface(nlmode) &&
+	if (!bss->in_deinit && !is_ap_interface(nlmode) &&
 	    nl80211_mgmt_subscribe_non_ap(bss) < 0)
 		wpa_printf(MSG_DEBUG, "nl80211: Failed to register Action "
 			   "frame processing - ignore for now");

@@ -588,7 +588,7 @@ static void wpa_config_write_network(FILE *f, struct wpa_ssid *ssid)
 	write_psk(f, ssid);
 	write_proto(f, ssid);
 	write_key_mgmt(f, ssid);
-	INT(bg_scan_period);
+	INT_DEF(bg_scan_period, DEFAULT_BG_SCAN_PERIOD);
 	write_pairwise(f, ssid);
 	write_group(f, ssid);
 	write_auth_alg(f, ssid);

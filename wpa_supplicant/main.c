@@ -262,6 +262,9 @@ int main(int argc, char *argv[])
 		wpa_printf(MSG_ERROR, "Failed to initialize wpa_supplicant");
 		exitcode = -1;
 		goto out;
+	} else {
+		wpa_printf(MSG_INFO, "Successfully initialized "
+			   "wpa_supplicant");
 	}
 
 	for (i = 0; exitcode == 0 && i < iface_count; i++) {

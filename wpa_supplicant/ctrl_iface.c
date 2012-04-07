@@ -2397,58 +2397,14 @@ static char * anqp_add_hex(char *pos, char *end, const char *title,
 #endif /* CONFIG_INTERWORKING */
 
 
-static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
-					 const char *cmd, char *buf,
-					 size_t buflen)
+static int print_bss_info(struct wpa_supplicant *wpa_s, struct wpa_bss *bss,
+			  char *buf, size_t buflen)
 {
-	u8 bssid[ETH_ALEN];
 	size_t i;
-	struct wpa_bss *bss;
 	int ret;
 	char *pos, *end;
 	const u8 *ie, *ie2;
 	struct os_time now;
-
-	if (os_strcmp(cmd, "FIRST") == 0)
-		bss = dl_list_first(&wpa_s->bss, struct wpa_bss, list);
-	else if (os_strncmp(cmd, "ID-", 3) == 0) {
-		i = atoi(cmd + 3);
-		bss = wpa_bss_get_id(wpa_s, i);
-	} else if (os_strncmp(cmd, "NEXT-", 5) == 0) {
-		i = atoi(cmd + 5);
-		bss = wpa_bss_get_id(wpa_s, i);
-		if (bss) {
-			struct dl_list *next = bss->list_id.next;
-			if (next == &wpa_s->bss_id)
-				bss = NULL;
-			else
-				bss = dl_list_entry(next, struct wpa_bss,
-						    list_id);
-		}
-#ifdef CONFIG_P2P
-	} else if (os_strncmp(cmd, "p2p_dev_addr=", 13) == 0) {
-		if (hwaddr_aton(cmd + 13, bssid) == 0)
-			bss = wpa_bss_get_p2p_dev_addr(wpa_s, bssid);
-		else
-			bss = NULL;
-#endif /* CONFIG_P2P */
-	} else if (hwaddr_aton(cmd, bssid) == 0)
-		bss = wpa_bss_get_bssid(wpa_s, bssid);
-	else {
-		struct wpa_bss *tmp;
-		i = atoi(cmd);
-		bss = NULL;
-		dl_list_for_each(tmp, &wpa_s->bss_id, struct wpa_bss, list_id)
-		{
-			if (i-- == 0) {
-				bss = tmp;
-				break;
-			}
-		}
-	}
-
-	if (bss == NULL)
-		return 0;
 
 	os_get_time(&now);
 	pos = buf;
@@ -2566,6 +2522,59 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_INTERWORKING */
 
 	return pos - buf;
+}
+
+
+static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
+					 const char *cmd, char *buf,
+					 size_t buflen)
+{
+	u8 bssid[ETH_ALEN];
+	size_t i;
+	struct wpa_bss *bss;
+
+	if (os_strcmp(cmd, "FIRST") == 0)
+		bss = dl_list_first(&wpa_s->bss, struct wpa_bss, list);
+	else if (os_strncmp(cmd, "ID-", 3) == 0) {
+		i = atoi(cmd + 3);
+		bss = wpa_bss_get_id(wpa_s, i);
+	} else if (os_strncmp(cmd, "NEXT-", 5) == 0) {
+		i = atoi(cmd + 5);
+		bss = wpa_bss_get_id(wpa_s, i);
+		if (bss) {
+			struct dl_list *next = bss->list_id.next;
+			if (next == &wpa_s->bss_id)
+				bss = NULL;
+			else
+				bss = dl_list_entry(next, struct wpa_bss,
+						    list_id);
+		}
+#ifdef CONFIG_P2P
+	} else if (os_strncmp(cmd, "p2p_dev_addr=", 13) == 0) {
+		if (hwaddr_aton(cmd + 13, bssid) == 0)
+			bss = wpa_bss_get_p2p_dev_addr(wpa_s, bssid);
+		else
+			bss = NULL;
+#endif /* CONFIG_P2P */
+	} else if (hwaddr_aton(cmd, bssid) == 0)
+		bss = wpa_bss_get_bssid(wpa_s, bssid);
+	else {
+		struct wpa_bss *tmp;
+		i = atoi(cmd);
+		bss = NULL;
+		dl_list_for_each(tmp, &wpa_s->bss_id, struct wpa_bss, list_id)
+		{
+			if (i-- == 0) {
+				bss = tmp;
+				break;
+			}
+		}
+	}
+
+	if (bss == NULL)
+		return 0;
+
+	return print_bss_info(wpa_s, bss, buf, buflen);
 }
 
 

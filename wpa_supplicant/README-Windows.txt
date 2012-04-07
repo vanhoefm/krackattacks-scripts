@@ -4,8 +4,8 @@ wpa_supplicant for Windows
 Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi> and contributors
 All Rights Reserved.
 
-This program is dual-licensed under both the GPL version 2 and BSD
-license. Either license may be used at your option.
+This program is licensed under the BSD license (the one with
+advertisement clause removed).
 
 This product includes software developed by the OpenSSL Project
 for use in the OpenSSL Toolkit (http://www.openssl.org/). This

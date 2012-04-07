@@ -425,7 +425,7 @@ options:
   -K = include keys (passwords, etc.) in debug output
   -t = include timestamp in debug messages
   -h = show this help text
-  -L = show license (GPL and BSD)
+  -L = show license (BSD)
   -p = driver parameters
   -P = PID file
   -q = decrease debugging verbosity (-qq even less)

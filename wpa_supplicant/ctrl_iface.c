@@ -2609,10 +2609,54 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	u8 bssid[ETH_ALEN];
 	size_t i;
 	struct wpa_bss *bss;
+	struct wpa_bss *bsslast = NULL;
+	struct dl_list *next;
+	int ret = 0;
+	int len;
 	char *ctmp;
 	unsigned long mask = WPA_BSS_MASK_ALL;
 
-	if (os_strcmp(cmd, "FIRST") == 0)
+	if (os_strncmp(cmd, "RANGE=", 6) == 0) {
+		if (os_strncmp(cmd + 6, "ALL", 3) == 0) {
+			bss = dl_list_first(&wpa_s->bss_id, struct wpa_bss,
+					    list_id);
+			bsslast = dl_list_last(&wpa_s->bss_id, struct wpa_bss,
+					       list_id);
+		} else { /* N1-N2 */
+			unsigned int id1, id2;
+
+			if ((ctmp = os_strchr(cmd + 6, '-')) == NULL) {
+				wpa_printf(MSG_INFO, "Wrong BSS range "
+					   "format");
+				return 0;
+			}
+
+			id1 = atoi(cmd + 6);
+			bss = wpa_bss_get_id(wpa_s, id1);
+			id2 = atoi(ctmp + 1);
+			if (id2 == 0)
+				bsslast = dl_list_last(&wpa_s->bss_id,
+						       struct wpa_bss,
+						       list_id);
+			else {
+				bsslast = wpa_bss_get_id(wpa_s, id2);
+				if (bsslast == NULL && bss && id2 > id1) {
+					struct wpa_bss *tmp = bss;
+					for (;;) {
+						next = tmp->list_id.next;
+						if (next == &wpa_s->bss_id)
+							break;
+						tmp = dl_list_entry(
+							next, struct wpa_bss,
+							list_id);
+						if (tmp->id > id2)
+							break;
+						bsslast = tmp;
+					}
+				}
+			}
+		}
+	} else if (os_strcmp(cmd, "FIRST") == 0)
 		bss = dl_list_first(&wpa_s->bss, struct wpa_bss, list);
 	else if (os_strncmp(cmd, "ID-", 3) == 0) {
 		i = atoi(cmd + 3);
@@ -2621,7 +2665,7 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 		i = atoi(cmd + 5);
 		bss = wpa_bss_get_id(wpa_s, i);
 		if (bss) {
-			struct dl_list *next = bss->list_id.next;
+			next = bss->list_id.next;
 			if (next == &wpa_s->bss_id)
 				bss = NULL;
 			else
@@ -2659,7 +2703,22 @@ static int wpa_supplicant_ctrl_iface_bss(struct wpa_supplicant *wpa_s,
 	if (bss == NULL)
 		return 0;
 
-	return print_bss_info(wpa_s, bss, mask, buf, buflen);
+	if (bsslast == NULL)
+		bsslast = bss;
+	do {
+		len = print_bss_info(wpa_s, bss, mask, buf, buflen);
+		ret += len;
+		buf += len;
+		buflen -= len;
+		if (bss == bsslast)
+			break;
+		next = bss->list_id.next;
+		if (next == &wpa_s->bss_id)
+			break;
+		bss = dl_list_entry(next, struct wpa_bss, list_id);
+	} while (bss && len);
+
+	return ret;
 }
 
 

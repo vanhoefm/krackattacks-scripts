@@ -41,9 +41,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #ifndef __vxworks
-#ifndef __SYMBIAN32__
 #include <sys/uio.h>
-#endif /* __SYMBIAN32__ */
 #include <sys/time.h>
 #endif /* __vxworks */
 #endif /* CONFIG_TI_COMPILER */

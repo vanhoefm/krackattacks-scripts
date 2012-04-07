@@ -63,12 +63,6 @@ static inline unsigned int bswap_32(unsigned int v)
 #endif
 #endif /* CONFIG_TI_COMPILER */
 
-#ifdef __SYMBIAN32__
-#define __BIG_ENDIAN 4321
-#define __LITTLE_ENDIAN 1234
-#define __BYTE_ORDER __LITTLE_ENDIAN
-#endif /* __SYMBIAN32__ */
-
 #ifdef CONFIG_NATIVE_WINDOWS
 #include <winsock.h>
 
@@ -131,16 +125,6 @@ typedef unsigned short u16;
 typedef unsigned char u8;
 #define WPA_TYPES_DEFINED
 #endif /* CONFIG_TI_COMPILER */
-
-#ifdef __SYMBIAN32__
-#define __REMOVE_PLATSEC_DIAGNOSTICS__
-#include <e32def.h>
-typedef TUint64 u64;
-typedef TUint32 u32;
-typedef TUint16 u16;
-typedef TUint8 u8;
-#define WPA_TYPES_DEFINED
-#endif /* __SYMBIAN32__ */
 
 #ifndef WPA_TYPES_DEFINED
 #ifdef CONFIG_USE_INTTYPES_H

@@ -139,6 +139,27 @@ extern "C" {
 #define AP_STA_DISCONNECTED "AP-STA-DISCONNECTED "
 
 
+/* BSS command information masks */
+
+#define WPA_BSS_MASK_ALL		0xFFFFFFFF
+#define WPA_BSS_MASK_ID			BIT(0)
+#define WPA_BSS_MASK_BSSID		BIT(1)
+#define WPA_BSS_MASK_FREQ		BIT(2)
+#define WPA_BSS_MASK_BEACON_INT		BIT(3)
+#define WPA_BSS_MASK_CAPABILITIES	BIT(4)
+#define WPA_BSS_MASK_QUAL		BIT(5)
+#define WPA_BSS_MASK_NOISE		BIT(6)
+#define WPA_BSS_MASK_LEVEL		BIT(7)
+#define WPA_BSS_MASK_TSF		BIT(8)
+#define WPA_BSS_MASK_AGE		BIT(9)
+#define WPA_BSS_MASK_IE			BIT(10)
+#define WPA_BSS_MASK_FLAGS		BIT(11)
+#define WPA_BSS_MASK_SSID		BIT(12)
+#define WPA_BSS_MASK_WPS_SCAN		BIT(13)
+#define WPA_BSS_MASK_P2P_SCAN		BIT(14)
+#define WPA_BSS_MASK_INTERNETW		BIT(15)
+
+
 /* wpa_supplicant/hostapd control interface access */
 
 /**

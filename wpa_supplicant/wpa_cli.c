@@ -1696,13 +1696,16 @@ static int wpa_cli_cmd_bss(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	char cmd[64];
 	int res;
 
-	if (argc != 1) {
-		printf("Invalid BSS command: need one argument (index or "
-		       "BSSID)\n");
+	if (argc < 1) {
+		printf("Invalid BSS command: need at least one argument"
+		       "(index or BSSID)\n");
 		return -1;
 	}
 
-	res = os_snprintf(cmd, sizeof(cmd), "BSS %s", argv[0]);
+	res = os_snprintf(cmd, sizeof(cmd), "BSS %s%s%s%s%s", argv[0],
+			  argc > 1 ? " " : "", argc > 1 ? argv[1] : "",
+			  argc > 2 ? " " : "", argc > 2 ? argv[2] : "");
+
 	if (res < 0 || (size_t) res >= sizeof(cmd))
 		return -1;
 	cmd[sizeof(cmd) - 1] = '\0';

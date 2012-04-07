@@ -317,6 +317,7 @@ struct eap_sm {
 	void *msg_ctx;
 	void *scard_ctx;
 	void *ssl_ctx;
+	void *ssl_ctx2;
 
 	unsigned int workaround;
 

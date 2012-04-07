@@ -1,6 +1,6 @@
 /*
  * EAP peer state machines (RFC 4137)
- * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1321,6 +1321,13 @@ struct eap_sm * eap_peer_sm_init(void *eapol_ctx,
 		return NULL;
 	}
 
+	sm->ssl_ctx2 = tls_init(&tlsconf);
+	if (sm->ssl_ctx2 == NULL) {
+		wpa_printf(MSG_INFO, "SSL: Failed to initialize TLS "
+			   "context (2).");
+		/* Run without separate TLS context within TLS tunnel */
+	}
+
 	return sm;
 }
 
@@ -1338,6 +1345,8 @@ void eap_peer_sm_deinit(struct eap_sm *sm)
 		return;
 	eap_deinit_prev_method(sm, "EAP deinit");
 	eap_sm_abort(sm);
+	if (sm->ssl_ctx2)
+		tls_deinit(sm->ssl_ctx2);
 	tls_deinit(sm->ssl_ctx);
 	os_free(sm);
 }

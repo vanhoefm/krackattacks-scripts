@@ -1,6 +1,6 @@
 /*
  * EAP peer: EAP-TLS/PEAP/TTLS/FAST common functions
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2009, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -63,6 +63,11 @@ struct eap_ssl_data {
 	 * eap - EAP state machine allocated with eap_peer_sm_init()
 	 */
 	struct eap_sm *eap;
+
+	/**
+	 * ssl_ctx - TLS library context to use for the connection
+	 */
+	void *ssl_ctx;
 };
 
 

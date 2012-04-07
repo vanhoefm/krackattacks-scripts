@@ -1,6 +1,6 @@
 /*
  * EAP peer method: EAP-TLS (RFC 2716)
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -21,6 +21,7 @@ static void eap_tls_deinit(struct eap_sm *sm, void *priv);
 struct eap_tls_data {
 	struct eap_ssl_data ssl;
 	u8 *key_data;
+	void *ssl_ctx;
 };
 
 
@@ -39,6 +40,9 @@ static void * eap_tls_init(struct eap_sm *sm)
 	data = os_zalloc(sizeof(*data));
 	if (data == NULL)
 		return NULL;
+
+	data->ssl_ctx = sm->init_phase2 && sm->ssl_ctx2 ? sm->ssl_ctx2 :
+		sm->ssl_ctx;
 
 	if (eap_peer_tls_ssl_init(sm, &data->ssl, config)) {
 		wpa_printf(MSG_INFO, "EAP-TLS: Failed to initialize SSL.");
@@ -165,7 +169,7 @@ static struct wpabuf * eap_tls_process(struct eap_sm *sm, void *priv,
 		return eap_tls_failure(sm, data, ret, res, resp, id);
 	}
 
-	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn))
+	if (tls_connection_established(data->ssl_ctx, data->ssl.conn))
 		eap_tls_success(sm, data, ret);
 
 	if (res == 1) {
@@ -180,7 +184,7 @@ static struct wpabuf * eap_tls_process(struct eap_sm *sm, void *priv,
 static Boolean eap_tls_has_reauth_data(struct eap_sm *sm, void *priv)
 {
 	struct eap_tls_data *data = priv;
-	return tls_connection_established(sm->ssl_ctx, data->ssl.conn);
+	return tls_connection_established(data->ssl_ctx, data->ssl.conn);
 }
 
 

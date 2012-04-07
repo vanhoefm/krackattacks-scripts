@@ -1,6 +1,6 @@
 /*
  * EAP peer: EAP-TLS/PEAP/TTLS/FAST common functions
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -136,14 +136,14 @@ static int eap_tls_init_connection(struct eap_sm *sm,
 {
 	int res;
 
-	data->conn = tls_connection_init(sm->ssl_ctx);
+	data->conn = tls_connection_init(data->ssl_ctx);
 	if (data->conn == NULL) {
 		wpa_printf(MSG_INFO, "SSL: Failed to initialize new TLS "
 			   "connection");
 		return -1;
 	}
 
-	res = tls_connection_set_params(sm->ssl_ctx, data->conn, params);
+	res = tls_connection_set_params(data->ssl_ctx, data->conn, params);
 	if (res == TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED) {
 		/*
 		 * At this point with the pkcs11 engine the PIN might be wrong.
@@ -162,13 +162,13 @@ static int eap_tls_init_connection(struct eap_sm *sm,
 		config->pin = NULL;
 		eap_sm_request_pin(sm);
 		sm->ignore = TRUE;
-		tls_connection_deinit(sm->ssl_ctx, data->conn);
+		tls_connection_deinit(data->ssl_ctx, data->conn);
 		data->conn = NULL;
 		return -1;
 	} else if (res) {
 		wpa_printf(MSG_INFO, "TLS: Failed to set TLS connection "
 			   "parameters");
-		tls_connection_deinit(sm->ssl_ctx, data->conn);
+		tls_connection_deinit(data->ssl_ctx, data->conn);
 		data->conn = NULL;
 		return -1;
 	}
@@ -197,6 +197,8 @@ int eap_peer_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
 
 	data->eap = sm;
 	data->phase2 = sm->init_phase2;
+	data->ssl_ctx = sm->init_phase2 && sm->ssl_ctx2 ? sm->ssl_ctx2 :
+		sm->ssl_ctx;
 	if (eap_tls_params_from_conf(sm, data, &params, config, data->phase2) <
 	    0)
 		return -1;
@@ -234,7 +236,7 @@ int eap_peer_tls_ssl_init(struct eap_sm *sm, struct eap_ssl_data *data,
  */
 void eap_peer_tls_ssl_deinit(struct eap_sm *sm, struct eap_ssl_data *data)
 {
-	tls_connection_deinit(sm->ssl_ctx, data->conn);
+	tls_connection_deinit(data->ssl_ctx, data->conn);
 	eap_peer_tls_reset_input(data);
 	eap_peer_tls_reset_output(data);
 }
@@ -265,8 +267,8 @@ u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 		return NULL;
 
 	/* First, try to use TLS library function for PRF, if available. */
-	if (tls_connection_prf(sm->ssl_ctx, data->conn, label, 0, out, len) ==
-	    0)
+	if (tls_connection_prf(data->ssl_ctx, data->conn, label, 0, out, len)
+	    == 0)
 		return out;
 
 	/*
@@ -274,7 +276,7 @@ u8 * eap_peer_tls_derive_key(struct eap_sm *sm, struct eap_ssl_data *data,
 	 * session parameters and use an internal implementation of TLS PRF to
 	 * derive the key.
 	 */
-	if (tls_connection_get_keys(sm->ssl_ctx, data->conn, &keys))
+	if (tls_connection_get_keys(data->ssl_ctx, data->conn, &keys))
 		goto fail;
 
 	if (keys.client_random == NULL || keys.server_random == NULL ||
@@ -441,14 +443,14 @@ static int eap_tls_process_input(struct eap_sm *sm, struct eap_ssl_data *data,
 		WPA_ASSERT(data->tls_out == NULL);
 	}
 	appl_data = NULL;
-	data->tls_out = tls_connection_handshake(sm->ssl_ctx, data->conn,
+	data->tls_out = tls_connection_handshake(data->ssl_ctx, data->conn,
 						 msg, &appl_data);
 
 	eap_peer_tls_reset_input(data);
 
 	if (appl_data &&
-	    tls_connection_established(sm->ssl_ctx, data->conn) &&
-	    !tls_connection_get_failed(sm->ssl_ctx, data->conn)) {
+	    tls_connection_established(data->ssl_ctx, data->conn) &&
+	    !tls_connection_get_failed(data->ssl_ctx, data->conn)) {
 		wpa_hexdump_buf_key(MSG_MSGDUMP, "SSL: Application data",
 				    appl_data);
 		*out_data = appl_data;
@@ -616,7 +618,7 @@ int eap_peer_tls_process_helper(struct eap_sm *sm, struct eap_ssl_data *data,
 		return -1;
 	}
 
-	if (tls_connection_get_failed(sm->ssl_ctx, data->conn)) {
+	if (tls_connection_get_failed(data->ssl_ctx, data->conn)) {
 		/* TLS processing has failed - return error */
 		wpa_printf(MSG_DEBUG, "SSL: Failed - tls_out available to "
 			   "report error");
@@ -675,7 +677,7 @@ int eap_peer_tls_reauth_init(struct eap_sm *sm, struct eap_ssl_data *data)
 {
 	eap_peer_tls_reset_input(data);
 	eap_peer_tls_reset_output(data);
-	return tls_connection_shutdown(sm->ssl_ctx, data->conn);
+	return tls_connection_shutdown(data->ssl_ctx, data->conn);
 }
 
 
@@ -694,7 +696,8 @@ int eap_peer_tls_status(struct eap_sm *sm, struct eap_ssl_data *data,
 	char name[128];
 	int len = 0, ret;
 
-	if (tls_get_cipher(sm->ssl_ctx, data->conn, name, sizeof(name)) == 0) {
+	if (tls_get_cipher(data->ssl_ctx, data->conn, name, sizeof(name)) == 0)
+	{
 		ret = os_snprintf(buf + len, buflen - len,
 				  "EAP TLS cipher=%s\n", name);
 		if (ret < 0 || (size_t) ret >= buflen - len)
@@ -741,7 +744,7 @@ const u8 * eap_peer_tls_process_init(struct eap_sm *sm,
 	size_t left;
 	unsigned int tls_msg_len;
 
-	if (tls_get_errors(sm->ssl_ctx)) {
+	if (tls_get_errors(data->ssl_ctx)) {
 		wpa_printf(MSG_INFO, "SSL: TLS errors detected");
 		ret->ignore = TRUE;
 		return NULL;
@@ -849,7 +852,7 @@ int eap_peer_tls_decrypt(struct eap_sm *sm, struct eap_ssl_data *data,
 	if (msg == NULL)
 		return need_more_input ? 1 : -1;
 
-	*in_decrypted = tls_connection_decrypt(sm->ssl_ctx, data->conn, msg);
+	*in_decrypted = tls_connection_decrypt(data->ssl_ctx, data->conn, msg);
 	eap_peer_tls_reset_input(data);
 	if (*in_decrypted == NULL) {
 		wpa_printf(MSG_INFO, "SSL: Failed to decrypt Phase 2 data");
@@ -877,8 +880,8 @@ int eap_peer_tls_encrypt(struct eap_sm *sm, struct eap_ssl_data *data,
 {
 	if (in_data) {
 		eap_peer_tls_reset_output(data);
-		data->tls_out = tls_connection_encrypt(sm->ssl_ctx, data->conn,
-						       in_data);
+		data->tls_out = tls_connection_encrypt(data->ssl_ctx,
+						       data->conn, in_data);
 		if (data->tls_out == NULL) {
 			wpa_printf(MSG_INFO, "SSL: Failed to encrypt Phase 2 "
 				   "data (in_len=%lu)",

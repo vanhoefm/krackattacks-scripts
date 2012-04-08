@@ -2619,15 +2619,19 @@ static int wpas_check_freq_conflict(struct wpa_supplicant *wpa_s, int freq)
 			continue;
 		if (iface->current_ssid == NULL || iface->assoc_freq == 0)
 			continue;
-		if (wpa_drv_get_bssid(iface, bssid) == 0) {
-			if (freq != (int) wpa_s->assoc_freq) {
-				wpa_printf(MSG_DEBUG, "P2P: Frequency "
-					   "conflict - %s connected on %d MHz "
-					   "- new connection on %d MHz",
-					   wpa_s->ifname, wpa_s->assoc_freq,
-					   freq);
-				return 1;
-			}
+		if (iface->current_ssid->mode == WPAS_MODE_AP ||
+		    iface->current_ssid->mode == WPAS_MODE_P2P_GO)
+			shared_freq = iface->current_ssid->frequency;
+		else if (wpa_drv_get_bssid(iface, bssid) == 0)
+			shared_freq = iface->assoc_freq;
+		else
+			shared_freq = 0;
+
+		if (shared_freq && freq != shared_freq) {
+			wpa_printf(MSG_DEBUG, "P2P: Frequency conflict - %s "
+				   "connected on %d MHz - new connection on "
+				   "%d MHz", iface->ifname, shared_freq, freq);
+			return 1;
 		}
 	}
 

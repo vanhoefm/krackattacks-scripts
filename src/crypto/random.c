@@ -128,8 +128,6 @@ void random_add_randomness(const void *buf, size_t len)
 	static unsigned int count = 0;
 
 	count++;
-	wpa_printf(MSG_MSGDUMP, "Add randomness: count=%u entropy=%u",
-		   count, entropy);
 	if (entropy > MIN_COLLECT_ENTROPY && (count & 0x3ff) != 0) {
 		/*
 		 * No need to add more entropy at this point, so save CPU and
@@ -137,6 +135,8 @@ void random_add_randomness(const void *buf, size_t len)
 		 */
 		return;
 	}
+	wpa_printf(MSG_EXCESSIVE, "Add randomness: count=%u entropy=%u",
+		   count, entropy);
 
 	os_get_time(&t);
 	wpa_hexdump_key(MSG_EXCESSIVE, "random pool",

@@ -2605,6 +2605,44 @@ static void wpas_p2p_pd_before_join_timeout(void *eloop_ctx, void *timeout_ctx)
 }
 
 
+static int wpas_check_freq_conflict(struct wpa_supplicant *wpa_s, int freq)
+{
+	struct wpa_supplicant *iface;
+	int shared_freq;
+	u8 bssid[ETH_ALEN];
+
+	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_MULTI_CHANNEL_CONCURRENT)
+		return 0;
+
+	for (iface = wpa_s->global->ifaces; iface; iface = iface->next) {
+		if (!wpas_p2p_create_iface(wpa_s) && iface == wpa_s)
+			continue;
+		if (iface->current_ssid == NULL || iface->assoc_freq == 0)
+			continue;
+		if (wpa_drv_get_bssid(iface, bssid) == 0) {
+			if (freq != (int) wpa_s->assoc_freq) {
+				wpa_printf(MSG_DEBUG, "P2P: Frequency "
+					   "conflict - %s connected on %d MHz "
+					   "- new connection on %d MHz",
+					   wpa_s->ifname, wpa_s->assoc_freq,
+					   freq);
+				return 1;
+			}
+		}
+	}
+
+	shared_freq = wpa_drv_shared_freq(wpa_s);
+	if (shared_freq > 0 && shared_freq != freq) {
+		wpa_printf(MSG_DEBUG, "P2P: Frequency conflict - shared "
+			   "virtual interface connected on %d MHz - new "
+			   "connection on %d MHz", shared_freq, freq);
+		return 1;
+	}
+
+	return 0;
+}
+
+
 static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 				   struct wpa_scan_results *scan_res)
 {
@@ -2654,6 +2692,13 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 	}
 	if (freq > 0) {
 		u16 method;
+
+		if (wpas_check_freq_conflict(wpa_s, freq) > 0) {
+			wpa_msg(wpa_s->parent, MSG_INFO,
+				P2P_EVENT_GROUP_FORMATION_FAILURE
+				"reason=FREQ_CONFLICT");
+			return;
+		}
 
 		wpa_printf(MSG_DEBUG, "P2P: Send Provision Discovery Request "
 			   "prior to joining an existing group (GO " MACSTR

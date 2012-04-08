@@ -8449,7 +8449,10 @@ static int wpa_driver_nl80211_shared_freq(void *priv)
 			   MACSTR,
 			   driver->phyname, driver->first_bss.ifname,
 			   MAC2STR(driver->first_bss.addr));
-		freq = nl80211_get_assoc_freq(driver);
+		if (is_ap_interface(driver->nlmode))
+			freq = driver->first_bss.freq;
+		else
+			freq = nl80211_get_assoc_freq(driver);
 		wpa_printf(MSG_DEBUG, "nl80211: Shared freq for PHY %s: %d",
 			   drv->phyname, freq);
 	}

@@ -861,6 +861,12 @@ void * p2p_sd_request(struct p2p_data *p2p, const u8 *dst,
 	p2p->sd_queries = q;
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Added SD Query %p", q);
 
+	if (dst == NULL) {
+		struct p2p_device *dev;
+		dl_list_for_each(dev, &p2p->devices, struct p2p_device, list)
+			dev->flags &= ~P2P_DEV_SD_INFO;
+	}
+
 	return q;
 }
 

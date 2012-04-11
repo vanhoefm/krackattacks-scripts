@@ -78,6 +78,12 @@ int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
 	sta = ap_get_sta(hapd, addr);
 	if (sta) {
 		accounting_sta_stop(hapd, sta);
+
+		/*
+		 * Make sure that the previously registered inactivity timer
+		 * will not remove the STA immediately.
+		 */
+		sta->timeout_next = STA_NULLFUNC;
 	} else {
 		sta = ap_sta_add(hapd, addr);
 		if (sta == NULL)

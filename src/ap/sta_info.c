@@ -195,6 +195,8 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	if (set_beacon)
 		ieee802_11_set_beacons(hapd->iface);
 
+	wpa_printf(MSG_DEBUG, "%s: cancel ap_handle_timer for " MACSTR,
+		   __func__, MAC2STR(sta->addr));
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_cancel_timeout(ap_handle_session_timer, hapd, sta);
 	eloop_cancel_timeout(ap_sta_deauth_cb_timeout, hapd, sta);
@@ -272,6 +274,9 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	struct sta_info *sta = timeout_ctx;
 	unsigned long next_time = 0;
 
+	wpa_printf(MSG_DEBUG, "%s: " MACSTR " flags=0x%x timeout_next=%d",
+		   __func__, MAC2STR(sta->addr), sta->flags,
+		   sta->timeout_next);
 	if (sta->timeout_next == STA_REMOVE) {
 		hostapd_logger(hapd, sta->addr, HOSTAPD_MODULE_IEEE80211,
 			       HOSTAPD_LEVEL_INFO, "deauthenticated due to "
@@ -336,6 +341,9 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	if (next_time) {
+		wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "
+			   "for " MACSTR " (%lu seconds)",
+			   __func__, MAC2STR(sta->addr), next_time);
 		eloop_register_timeout(next_time, 0, ap_handle_timer, hapd,
 				       sta);
 		return;
@@ -369,6 +377,9 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 	switch (sta->timeout_next) {
 	case STA_NULLFUNC:
 		sta->timeout_next = STA_DISASSOC;
+		wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "
+			   "for " MACSTR " (%d seconds - AP_DISASSOC_DELAY)",
+			   __func__, MAC2STR(sta->addr), AP_DISASSOC_DELAY);
 		eloop_register_timeout(AP_DISASSOC_DELAY, 0, ap_handle_timer,
 				       hapd, sta);
 		break;
@@ -385,6 +396,9 @@ void ap_handle_timer(void *eloop_ctx, void *timeout_ctx)
 			       HOSTAPD_LEVEL_INFO, "disassociated due to "
 			       "inactivity");
 		sta->timeout_next = STA_DEAUTH;
+		wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "
+			   "for " MACSTR " (%d seconds - AP_DEAUTH_DELAY)",
+			   __func__, MAC2STR(sta->addr), AP_DEAUTH_DELAY);
 		eloop_register_timeout(AP_DEAUTH_DELAY, 0, ap_handle_timer,
 				       hapd, sta);
 		mlme_disassociate_indication(
@@ -477,6 +491,10 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	sta->acct_interim_interval = hapd->conf->acct_interim_interval;
 
 	/* initialize STA info data */
+	wpa_printf(MSG_DEBUG, "%s: register ap_handle_timer timeout "
+		   "for " MACSTR " (%d seconds - ap_max_inactivity)",
+		   __func__, MAC2STR(addr),
+		   hapd->conf->ap_max_inactivity);
 	eloop_register_timeout(hapd->conf->ap_max_inactivity, 0,
 			       ap_handle_timer, hapd, sta);
 	os_memcpy(sta->addr, addr, ETH_ALEN);
@@ -550,6 +568,11 @@ void ap_sta_disassociate(struct hostapd_data *hapd, struct sta_info *sta,
 	sta->flags &= ~WLAN_STA_ASSOC;
 	ap_sta_set_authorized(hapd, sta, 0);
 	sta->timeout_next = STA_DEAUTH;
+	wpa_printf(MSG_DEBUG, "%s: reschedule ap_handle_timer timeout "
+		   "for " MACSTR " (%d seconds - "
+		   "AP_MAX_INACTIVITY_AFTER_DISASSOC)",
+		   __func__, MAC2STR(sta->addr),
+		   AP_MAX_INACTIVITY_AFTER_DISASSOC);
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DISASSOC, 0,
 			       ap_handle_timer, hapd, sta);
@@ -583,6 +606,11 @@ void ap_sta_deauthenticate(struct hostapd_data *hapd, struct sta_info *sta,
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
 	ap_sta_set_authorized(hapd, sta, 0);
 	sta->timeout_next = STA_REMOVE;
+	wpa_printf(MSG_DEBUG, "%s: reschedule ap_handle_timer timeout "
+		   "for " MACSTR " (%d seconds - "
+		   "AP_MAX_INACTIVITY_AFTER_DEAUTH)",
+		   __func__, MAC2STR(sta->addr),
+		   AP_MAX_INACTIVITY_AFTER_DEAUTH);
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,
 			       ap_handle_timer, hapd, sta);
@@ -887,6 +915,11 @@ void ap_sta_disconnect(struct hostapd_data *hapd, struct sta_info *sta,
 	wpa_auth_sm_event(sta->wpa_sm, WPA_DEAUTH);
 	ieee802_1x_notify_port_enabled(sta->eapol_sm, 0);
 	sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
+	wpa_printf(MSG_DEBUG, "%s: reschedule ap_handle_timer timeout "
+		   "for " MACSTR " (%d seconds - "
+		   "AP_MAX_INACTIVITY_AFTER_DEAUTH)",
+		   __func__, MAC2STR(sta->addr),
+		   AP_MAX_INACTIVITY_AFTER_DEAUTH);
 	eloop_cancel_timeout(ap_handle_timer, hapd, sta);
 	eloop_register_timeout(AP_MAX_INACTIVITY_AFTER_DEAUTH, 0,
 			       ap_handle_timer, hapd, sta);

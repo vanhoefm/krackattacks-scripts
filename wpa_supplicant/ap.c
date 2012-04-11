@@ -81,14 +81,23 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	 */
 	if (wpa_s->hw.modes) {
 		struct hostapd_hw_modes *mode = NULL;
-		int i;
+		int i, no_ht = 0;
 		for (i = 0; i < wpa_s->hw.num_modes; i++) {
 			if (wpa_s->hw.modes[i].mode == conf->hw_mode) {
 				mode = &wpa_s->hw.modes[i];
 				break;
 			}
 		}
-		if (mode && mode->ht_capab) {
+
+#ifdef CONFIG_HT_OVERRIDES
+		if (ssid->disable_ht) {
+			conf->ieee80211n = 0;
+			conf->ht_capab = 0;
+			no_ht = 1;
+		}
+#endif /* CONFIG_HT_OVERRIDES */
+
+		if (!no_ht && mode && mode->ht_capab) {
 			conf->ieee80211n = 1;
 
 			/*

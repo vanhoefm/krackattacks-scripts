@@ -47,6 +47,14 @@
 #define P2P_MAX_CLIENT_IDLE 10
 #endif /* P2P_MAX_CLIENT_IDLE */
 
+#ifndef P2P_MAX_INITIAL_CONN_WAIT
+/*
+ * How many seconds to wait for initial 4-way handshake to get completed after
+ * WPS provisioning step.
+ */
+#define P2P_MAX_INITIAL_CONN_WAIT 10
+#endif /* P2P_MAX_INITIAL_CONN_WAIT */
+
 
 static void wpas_p2p_long_listen_timeout(void *eloop_ctx, void *timeout_ctx);
 static struct wpa_supplicant *
@@ -3617,6 +3625,17 @@ void wpas_p2p_wps_success(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 
 	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s->parent,
 			     NULL);
+	if (ssid && ssid->mode == WPAS_MODE_INFRA) {
+		/*
+		 * Use a separate timeout for initial data connection to
+		 * complete to allow the group to be removed automatically if
+		 * something goes wrong in this step before the P2P group idle
+		 * timeout mechanism is taken into use.
+		 */
+		eloop_register_timeout(P2P_MAX_INITIAL_CONN_WAIT, 0,
+				       wpas_p2p_group_formation_timeout,
+				       wpa_s, NULL);
+	}
 	if (wpa_s->global->p2p)
 		p2p_wps_success_cb(wpa_s->global->p2p, peer_addr);
 	else if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
@@ -3997,6 +4016,9 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	int persistent;
 	int freq;
 
+	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s->parent,
+			     NULL);
+
 	if (!wpa_s->show_group_started || !ssid)
 		return;
 
@@ -4126,6 +4148,19 @@ static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 		 */
 		wpa_printf(MSG_DEBUG, "P2P: Do not use P2P group idle timeout "
 			   "during provisioning");
+		return;
+	}
+
+	if (wpa_s->show_group_started) {
+		/*
+		 * Use the normal group formation timeout between the end of
+		 * the provisioning phase and completion of 4-way handshake to
+		 * avoid terminating this process too early due to group idle
+		 * timeout.
+		 */
+		wpa_printf(MSG_DEBUG, "P2P: Do not use P2P group idle timeout "
+			   "while waiting for initial 4-way handshake to "
+			   "complete");
 		return;
 	}
 

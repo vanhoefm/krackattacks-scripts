@@ -508,6 +508,11 @@ struct wpa_supplicant {
 	} removal_reason;
 
 	unsigned int p2p_cb_on_scan_complete:1;
+	unsigned int p2p_auto_join:1;
+	unsigned int p2p_persistent_group:1;
+	int p2p_go_intent;
+	int p2p_connect_freq;
+	struct os_time p2p_auto_started;
 #endif /* CONFIG_P2P */
 
 	struct wpa_ssid *bgscan_ssid;

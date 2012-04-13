@@ -2863,8 +2863,9 @@ static void wpas_p2p_join_scan(void *eloop_ctx, void *timeout_ctx)
 	 * Run a scan to update BSS table and start Provision Discovery once
 	 * the new scan results become available.
 	 */
-	wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
 	ret = wpa_drv_scan(wpa_s, &params);
+	if (!ret)
+		wpa_s->scan_res_handler = wpas_p2p_scan_res_join;
 
 	wpabuf_free(ies);
 

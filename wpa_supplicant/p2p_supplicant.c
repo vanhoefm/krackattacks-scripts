@@ -4124,7 +4124,7 @@ static void wpas_p2p_group_idle_timeout(void *eloop_ctx, void *timeout_ctx)
 
 static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 {
-	unsigned int timeout;
+	int timeout;
 
 	if (eloop_cancel_timeout(wpas_p2p_group_idle_timeout, wpa_s, NULL) > 0)
 		wpa_printf(MSG_DEBUG, "P2P: Cancelled P2P group idle timeout");
@@ -4139,6 +4139,13 @@ static void wpas_p2p_set_group_idle_timeout(struct wpa_supplicant *wpa_s)
 
 	if (timeout == 0)
 		return;
+
+	if (timeout < 0) {
+		if (wpa_s->current_ssid->mode == WPAS_MODE_INFRA)
+			timeout = 0; /* special client mode no-timeout */
+		else
+			return;
+	}
 
 	if (wpa_s->p2p_in_provisioning) {
 		/*

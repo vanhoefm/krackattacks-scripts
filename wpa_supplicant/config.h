@@ -526,9 +526,12 @@ struct wpa_config {
 	 * state indefinitely until explicitly removed. As a P2P client, the
 	 * maximum idle time of P2P_MAX_CLIENT_IDLE seconds is enforced, i.e.,
 	 * this parameter is mainly meant for GO use and for P2P client, it can
-	 * only be used to reduce the default timeout to smaller value.
+	 * only be used to reduce the default timeout to smaller value. A
+	 * special value -1 can be used to configure immediate removal of the
+	 * group for P2P client role on any disconnection after the data
+	 * connection has been established.
 	 */
-	unsigned int p2p_group_idle;
+	int p2p_group_idle;
 
 	/**
 	 * bss_max_count - Maximum number of BSS entries to keep in memory

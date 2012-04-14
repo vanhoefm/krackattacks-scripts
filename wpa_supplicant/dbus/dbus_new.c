@@ -2677,9 +2677,9 @@ static const struct wpa_dbus_property_desc wpas_dbus_interface_properties[] = {
 	},
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P
-	{ "P2PDeviceProperties", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "a{sv}",
-	  wpas_dbus_getter_p2p_device_properties,
-	  wpas_dbus_setter_p2p_device_properties
+	{ "P2PDeviceConfig", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "a{sv}",
+	  wpas_dbus_getter_p2p_device_config,
+	  wpas_dbus_setter_p2p_device_config
 	},
 	{ "Peers", WPAS_DBUS_NEW_IFACE_P2PDEVICE, "ao",
 	  wpas_dbus_getter_p2p_peers,

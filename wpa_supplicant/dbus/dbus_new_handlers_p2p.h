@@ -94,13 +94,13 @@ DBusMessage *wpas_dbus_handler_p2p_serv_disc_external(
 /*
  * P2P Device property accessor methods.
  */
-dbus_bool_t wpas_dbus_setter_p2p_device_properties(DBusMessageIter *iter,
-						   DBusError *error,
-						   void *user_data);
+dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data);
 
-dbus_bool_t wpas_dbus_getter_p2p_device_properties(DBusMessageIter *iter,
-						   DBusError *error,
-						   void *user_data);
+dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data);
 
 dbus_bool_t wpas_dbus_getter_p2p_peers(DBusMessageIter *iter, DBusError *error,
 				       void *user_data);

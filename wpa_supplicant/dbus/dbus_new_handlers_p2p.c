@@ -704,9 +704,9 @@ DBusMessage * wpas_dbus_handler_p2p_prov_disc_req(DBusMessage *message,
  * P2P Device property accessor methods.
  */
 
-dbus_bool_t wpas_dbus_getter_p2p_device_properties(DBusMessageIter *iter,
-						   DBusError *error,
-						   void *user_data)
+dbus_bool_t wpas_dbus_getter_p2p_device_config(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
 	DBusMessageIter variant_iter, dict_iter;
@@ -782,7 +782,7 @@ dbus_bool_t wpas_dbus_getter_p2p_device_properties(DBusMessageIter *iter,
 		goto err_no_mem;
 
 	/* Persistent Reconnect */
-	if (!wpa_dbus_dict_append_bool(&dict_iter, "PersistantReconnect",
+	if (!wpa_dbus_dict_append_bool(&dict_iter, "PersistentReconnect",
 				       wpa_s->conf->persistent_reconnect))
 		goto err_no_mem;
 
@@ -839,9 +839,9 @@ err_no_mem:
 }
 
 
-dbus_bool_t wpas_dbus_setter_p2p_device_properties(DBusMessageIter *iter,
-						   DBusError *error,
-						   void *user_data)
+dbus_bool_t wpas_dbus_setter_p2p_device_config(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
 	DBusMessageIter variant_iter, iter_dict;
@@ -927,7 +927,7 @@ dbus_bool_t wpas_dbus_setter_p2p_device_properties(DBusMessageIter *iter,
 			   (entry.type == DBUS_TYPE_UINT32) &&
 			   (entry.uint32_value <= 15))
 			wpa_s->conf->p2p_go_intent = entry.uint32_value;
-		else if ((os_strcmp(entry.key, "PersistantReconnect") == 0) &&
+		else if ((os_strcmp(entry.key, "PersistentReconnect") == 0) &&
 			 (entry.type == DBUS_TYPE_BOOLEAN))
 			wpa_s->conf->persistent_reconnect = entry.bool_value;
 		else if ((os_strcmp(entry.key, "ListenRegClass") == 0) &&

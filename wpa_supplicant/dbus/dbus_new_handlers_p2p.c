@@ -1140,13 +1140,18 @@ dbus_bool_t wpas_dbus_getter_p2p_group(DBusMessageIter *iter, DBusError *error,
 				       void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
+	char path_buf[WPAS_DBUS_OBJECT_PATH_MAX];
+	char *dbus_groupobj_path = path_buf;
 
 	if (wpa_s->dbus_groupobj_path == NULL)
-		return FALSE;
+		os_snprintf(dbus_groupobj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "/");
+	else
+		os_snprintf(dbus_groupobj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s", wpa_s->dbus_groupobj_path);
 
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_OBJECT_PATH,
-						&wpa_s->dbus_groupobj_path,
-						error);
+						&dbus_groupobj_path, error);
 }
 
 
@@ -1157,11 +1162,13 @@ dbus_bool_t wpas_dbus_getter_p2p_peergo(DBusMessageIter *iter,
 	char go_peer_obj_path[WPAS_DBUS_OBJECT_PATH_MAX], *path;
 
 	if (wpas_get_p2p_role(wpa_s) != WPAS_P2P_ROLE_CLIENT)
-		return FALSE;
+		os_snprintf(go_peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX, "/");
+	else
+		os_snprintf(go_peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
+			    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/"
+			    COMPACT_MACSTR,
+			    wpa_s->dbus_new_path, MAC2STR(wpa_s->go_dev_addr));
 
-	os_snprintf(go_peer_obj_path, WPAS_DBUS_OBJECT_PATH_MAX,
-		    "%s/" WPAS_DBUS_NEW_P2P_PEERS_PART "/" COMPACT_MACSTR,
-		    wpa_s->dbus_new_path, MAC2STR(wpa_s->go_dev_addr));
 	path = go_peer_obj_path;
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_OBJECT_PATH,
 						&path, error);

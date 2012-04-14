@@ -2265,7 +2265,7 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_req(
 	struct wpabuf *tlv = NULL;
 	u8 version = 0;
 	u64 ref = 0;
-	u8 addr[ETH_ALEN];
+	u8 addr_buf[ETH_ALEN], *addr;
 
 	dbus_message_iter_init(message, &iter);
 
@@ -2302,10 +2302,15 @@ DBusMessage * wpas_dbus_handler_p2p_service_sd_req(
 		wpa_dbus_dict_entry_clear(&entry);
 	}
 
-	if (!peer_object_path ||
-	    (parse_peer_object_path(peer_object_path, addr) < 0) ||
-	    !p2p_peer_known(wpa_s->global->p2p, addr))
-		goto error;
+	if (!peer_object_path) {
+		addr = NULL;
+	} else {
+		if (parse_peer_object_path(peer_object_path, addr_buf) < 0 ||
+		    !p2p_peer_known(wpa_s->global->p2p, addr_buf))
+			goto error;
+
+		addr = addr_buf;
+	}
 
 	if (upnp == 1) {
 		if (version <= 0 || service == NULL)

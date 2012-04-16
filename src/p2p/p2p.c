@@ -273,7 +273,7 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout)
 	p2p->pending_listen_usec = (timeout % 1000) * 1000;
 
 	if (p2p->p2p_scan_running) {
-		if (p2p->start_after_scan == P2P_AFTER_SCAN_NOTHING) {
+		if (p2p->start_after_scan == P2P_AFTER_SCAN_CONNECT) {
 			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 				"P2P: p2p_scan running - connect is already "
 				"pending - skip listen");

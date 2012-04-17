@@ -896,12 +896,12 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 
 	if (ssid || !wpa_s->first_sched_scan) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
-			"Starting sched scan: interval %d (no timeout)",
-			wpa_s->sched_scan_interval);
-	} else {
-		wpa_dbg(wpa_s, MSG_DEBUG,
 			"Starting sched scan: interval %d timeout %d",
 			wpa_s->sched_scan_interval, wpa_s->sched_scan_timeout);
+	} else {
+		wpa_dbg(wpa_s, MSG_DEBUG,
+			"Starting sched scan: interval %d (no timeout)",
+			wpa_s->sched_scan_interval);
 	}
 
 	ret = wpa_supplicant_start_sched_scan(wpa_s, &params,

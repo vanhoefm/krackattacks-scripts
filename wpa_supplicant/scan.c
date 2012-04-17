@@ -877,6 +877,10 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			params.num_ssids++;
 			if (params.num_ssids >= max_sched_scan_ssids) {
 				wpa_s->prev_sched_ssid = ssid;
+				do {
+					ssid = ssid->next;
+				} while (ssid &&
+					 (ssid->disabled || !ssid->scan_ssid));
 				break;
 			}
 		}

@@ -244,6 +244,15 @@ struct wpa_config {
 	int ap_scan;
 
 	/**
+	 * disable_scan_offload - Disable automatic offloading of scan requests
+	 *
+	 * By default, %wpa_supplicant tries to offload scanning if the driver
+	 * indicates support for this (sched_scan). This configuration
+	 * parameter can be used to disable this offloading mechanism.
+	 */
+	int disable_scan_offload;
+
+	/**
 	 * ctrl_interface - Parameters for the control interface
 	 *
 	 * If this is specified, %wpa_supplicant will open a control interface

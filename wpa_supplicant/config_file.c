@@ -710,6 +710,9 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "eapol_version=%d\n", config->eapol_version);
 	if (config->ap_scan != DEFAULT_AP_SCAN)
 		fprintf(f, "ap_scan=%d\n", config->ap_scan);
+	if (config->disable_scan_offload)
+		fprintf(f, "disable_scan_offload=%d\n",
+			config->disable_scan_offload);
 	if (config->fast_reauth != DEFAULT_FAST_REAUTH)
 		fprintf(f, "fast_reauth=%d\n", config->fast_reauth);
 	if (config->opensc_engine_path)

@@ -2822,6 +2822,7 @@ static const struct global_parse_data global_fields[] = {
 #endif /* CONFIG_CTRL_IFACE */
 	{ INT_RANGE(eapol_version, 1, 2), 0 },
 	{ INT(ap_scan), 0 },
+	{ INT(disable_scan_offload), 0 },
 	{ INT(fast_reauth), 0 },
 	{ STR(opensc_engine_path), 0 },
 	{ STR(pkcs11_engine_path), 0 },

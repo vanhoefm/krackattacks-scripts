@@ -116,6 +116,8 @@ extern "C" {
 #define P2P_EVENT_PROV_DISC_PBC_REQ "P2P-PROV-DISC-PBC-REQ "
 /* parameters: <peer address> */
 #define P2P_EVENT_PROV_DISC_PBC_RESP "P2P-PROV-DISC-PBC-RESP "
+/* parameters: <peer address> <status> */
+#define P2P_EVENT_PROV_DISC_FAILURE "P2P-PROV-DISC-FAILURE"
 /* parameters: <freq> <src addr> <dialog token> <update indicator> <TLVs> */
 #define P2P_EVENT_SERV_DISC_REQ "P2P-SERV-DISC-REQ "
 /* parameters: <src addr> <update indicator> <TLVs> */

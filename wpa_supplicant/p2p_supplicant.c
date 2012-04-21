@@ -2503,7 +2503,6 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 	while (wpa_s && wpa_s->p2p_group_interface != NOT_P2P_GROUP_INTERFACE)
 		wpa_s = wpa_s->next;
 	while (wpa_s) {
-		enum wpa_driver_if_type type;
 		tmp = global->ifaces;
 		while (tmp &&
 		       (tmp == wpa_s ||
@@ -2512,7 +2511,6 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 		}
 		if (tmp == NULL)
 			break;
-		type = wpas_p2p_if_type(tmp->p2p_group_interface);
 		/* Disconnect from the P2P group and deinit the interface */
 		wpas_p2p_disconnect(tmp);
 	}

@@ -2073,7 +2073,7 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 	if (!wpa_dbus_dict_open_read(&iter, &iter_dict, NULL))
 		goto error;
 
-	if (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
+	while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
 		if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
 			goto error;
 
@@ -2085,23 +2085,30 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 				bonjour = 1;
 			else
 				goto error_clear;
-			wpa_dbus_dict_entry_clear(&entry);
+		} else if (!os_strcmp(entry.key, "version") &&
+		           entry.type == DBUS_TYPE_INT32) {
+			version = entry.uint32_value;
+		} else if (!os_strcmp(entry.key, "service") &&
+			     (entry.type == DBUS_TYPE_STRING)) {
+			service = os_strdup(entry.str_value);
+		} else if (!os_strcmp(entry.key, "query")) {
+			if ((entry.type != DBUS_TYPE_ARRAY) ||
+			    (entry.array_type != DBUS_TYPE_BYTE))
+				goto error_clear;
+			query = wpabuf_alloc_copy(
+				entry.bytearray_value,
+				entry.array_len);
+		} else if (!os_strcmp(entry.key, "response")) {
+			if ((entry.type != DBUS_TYPE_ARRAY) ||
+			    (entry.array_type != DBUS_TYPE_BYTE))
+				goto error_clear;
+			resp = wpabuf_alloc_copy(entry.bytearray_value,
+						 entry.array_len);
 		}
+		wpa_dbus_dict_entry_clear(&entry);
 	}
 
 	if (upnp == 1) {
-		while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
-			if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
-				goto error;
-
-			if (!os_strcmp(entry.key, "version") &&
-			    entry.type == DBUS_TYPE_INT32)
-				version = entry.uint32_value;
-			else if (!os_strcmp(entry.key, "service") &&
-				 entry.type == DBUS_TYPE_STRING)
-				service = os_strdup(entry.str_value);
-			wpa_dbus_dict_entry_clear(&entry);
-		}
 		if (version <= 0 || service == NULL)
 			goto error;
 
@@ -2109,37 +2116,15 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 			goto error;
 
 		os_free(service);
+		service = NULL;
 	} else if (bonjour == 1) {
-		while (wpa_dbus_dict_has_dict_entry(&iter_dict)) {
-			if (!wpa_dbus_dict_get_entry(&iter_dict, &entry))
-				goto error;
-
-			if (!os_strcmp(entry.key, "query")) {
-				if ((entry.type != DBUS_TYPE_ARRAY) ||
-				    (entry.array_type != DBUS_TYPE_BYTE))
-					goto error_clear;
-				query = wpabuf_alloc_copy(
-					entry.bytearray_value,
-					entry.array_len);
-			} else if (!os_strcmp(entry.key, "response")) {
-				if ((entry.type != DBUS_TYPE_ARRAY) ||
-				    (entry.array_type != DBUS_TYPE_BYTE))
-					goto error_clear;
-				resp = wpabuf_alloc_copy(entry.bytearray_value,
-							 entry.array_len);
-			}
-
-			wpa_dbus_dict_entry_clear(&entry);
-		}
-
 		if (query == NULL || resp == NULL)
 			goto error;
 
-		if (wpas_p2p_service_add_bonjour(wpa_s, query, resp) < 0) {
-			wpabuf_free(query);
-			wpabuf_free(resp);
+		if (wpas_p2p_service_add_bonjour(wpa_s, query, resp) < 0)
 			goto error;
-		}
+		query = NULL;
+		resp = NULL;
 	} else
 		goto error;
 
@@ -2147,6 +2132,9 @@ DBusMessage * wpas_dbus_handler_p2p_add_service(DBusMessage *message,
 error_clear:
 	wpa_dbus_dict_entry_clear(&entry);
 error:
+	os_free(service);
+	wpabuf_free(query);
+	wpabuf_free(resp);
 	return wpas_dbus_error_invalid_args(message, NULL);
 }
 

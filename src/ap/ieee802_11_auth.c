@@ -493,7 +493,7 @@ hostapd_acl_recv_radius(struct radius_msg *msg, struct radius_msg *req,
 		}
 
 		if (hapd->conf->wpa_psk_radius == PSK_RADIUS_REQUIRED &&
-		    cache->psk == NULL)
+		    !cache->has_psk)
 			cache->accepted = HOSTAPD_ACL_REJECT;
 	} else
 		cache->accepted = HOSTAPD_ACL_REJECT;

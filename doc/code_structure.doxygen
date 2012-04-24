@@ -1,7 +1,7 @@
 /**
 \page code_structure Structure of the source code
 
-[ \ref wpa_supplicant_core "wpa_supplicant core functionality" |
+[ \ref _wpa_supplicant_core "wpa_supplicant core functionality" |
 \ref generic_helper_func "Generic helper functions" |
 \ref crypto_func "Cryptographic functions" |
 \ref tls_func "TLS library" |
@@ -29,7 +29,7 @@ all hardware/driver dependent functionality is implemented in
 driver_*.c.
 
 
-\section wpa_supplicant_core wpa_supplicant core functionality
+\section _wpa_supplicant_core wpa_supplicant core functionality
 
 wpa_supplicant.c
 	Program initialization, main control loop

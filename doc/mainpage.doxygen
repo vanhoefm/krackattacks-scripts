@@ -20,7 +20,7 @@ available as a PDF file from
 http://w1.fi/wpa_supplicant/wpa_supplicant-devel.pdf .
 
 
-\section wpa_supplicant wpa_supplicant
+\section _wpa_supplicant wpa_supplicant
 
 %wpa_supplicant is a WPA Supplicant for Linux, BSD and Windows with
 support for WPA and WPA2 (IEEE 802.11i / RSN). Supplicant is the IEEE
@@ -54,11 +54,11 @@ daemon and to get status information and event notifications. There is
 a small C library that provides helper functions to facilitate the use of the
 control interface. This library can also be used with C++.
 
-\image html wpa_supplicant.png "wpa_supplicant modules"
-\image latex wpa_supplicant.eps "wpa_supplicant modules" width=15cm
+\image html _wpa_supplicant.png "wpa_supplicant modules"
+\image latex _wpa_supplicant.eps "wpa_supplicant modules" width=15cm
 
 
-\section hostapd hostapd
+\section _hostapd hostapd
 
 hostapd includes IEEE 802.11 access point management (authentication /
 association), IEEE 802.1X/WPA/WPA2 Authenticator, EAP server, and

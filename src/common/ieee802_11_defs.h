@@ -254,6 +254,7 @@
 #define WLAN_ACTION_VENDOR_SPECIFIC 127
 
 /* Public action codes */
+#define WLAN_PA_20_40_BSS_COEX 0
 #define WLAN_PA_VENDOR_SPECIFIC 9
 #define WLAN_PA_GAS_INITIAL_REQ 10
 #define WLAN_PA_GAS_INITIAL_RESP 11
@@ -914,5 +915,25 @@ enum wnm_action {
 #define WNM_BSS_TM_REQ_DISASSOC_IMMINENT BIT(2)
 #define WNM_BSS_TM_REQ_BSS_TERMINATION_INCLUDED BIT(3)
 #define WNM_BSS_TM_REQ_ESS_DISASSOC_IMMINENT BIT(4)
+
+/* IEEE Std 802.11-2012, 8.4.2.62 20/40 BSS Coexistence element */
+#define WLAN_20_40_BSS_COEX_INFO_REQ            BIT(0)
+#define WLAN_20_40_BSS_COEX_40MHZ_INTOL         BIT(1)
+#define WLAN_20_40_BSS_COEX_20MHZ_WIDTH_REQ     BIT(2)
+#define WLAN_20_40_BSS_COEX_OBSS_EXEMPT_REQ     BIT(3)
+#define WLAN_20_40_BSS_COEX_OBSS_EXEMPT_GRNT    BIT(4)
+
+struct ieee80211_2040_bss_coex_ie {
+	u8 element_id;
+	u8 length;
+	u8 coex_param;
+} STRUCT_PACKED;
+
+struct ieee80211_2040_intol_chan_report {
+	u8 element_id;
+	u8 length;
+	u8 op_class;
+	u8 variable[0];	/* Channel List */
+} STRUCT_PACKED;
 
 #endif /* IEEE802_11_DEFS_H */

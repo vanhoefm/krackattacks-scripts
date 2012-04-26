@@ -544,7 +544,7 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
 
 
 /**
- * p2p_add_device - Add peer entries based on scan results
+ * p2p_add_device - Add peer entries based on scan results or P2P frames
  * @p2p: P2P module context from p2p_init()
  * @addr: Source address of Beacon or Probe Response frame (may be either
  *	P2P Device Address or P2P Interface Address)
@@ -552,6 +552,7 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
  * @freq: Frequency on which the Beacon or Probe Response frame was received
  * @ies: IEs from the Beacon or Probe Response frame
  * @ies_len: Length of ies buffer in octets
+ * @scan_res: Whether this was based on scan results
  * Returns: 0 on success, -1 on failure
  *
  * If the scan result is for a GO, the clients in the group will also be added
@@ -560,7 +561,7 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
  * Info attributes.
  */
 int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
-		   const u8 *ies, size_t ies_len)
+		   const u8 *ies, size_t ies_len, int scan_res)
 {
 	struct p2p_device *dev;
 	struct p2p_message msg;
@@ -629,16 +630,18 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 		}
 	}
 
-	if (dev->listen_freq && dev->listen_freq != freq) {
+	if (dev->listen_freq && dev->listen_freq != freq && scan_res) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Update Listen frequency based on scan "
 			"results (" MACSTR " %d -> %d MHz (DS param %d)",
 			MAC2STR(dev->info.p2p_device_addr), dev->listen_freq,
 			freq, msg.ds_params ? *msg.ds_params : -1);
 	}
-	dev->listen_freq = freq;
-	if (msg.group_info)
-		dev->oper_freq = freq;
+	if (scan_res) {
+		dev->listen_freq = freq;
+		if (msg.group_info)
+			dev->oper_freq = freq;
+	}
 	dev->info.level = level;
 
 	p2p_copy_wps_info(dev, 0, &msg);
@@ -657,8 +660,10 @@ int p2p_add_device(struct p2p_data *p2p, const u8 *addr, int freq, int level,
 			break;
 	}
 
-	p2p_add_group_clients(p2p, p2p_dev_addr, addr, freq, msg.group_info,
-			      msg.group_info_len);
+	if (scan_res) {
+		p2p_add_group_clients(p2p, p2p_dev_addr, addr, freq,
+				      msg.group_info, msg.group_info_len);
+	}
 
 	p2p_parse_free(&msg);
 
@@ -2598,7 +2603,7 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
 			 int level, const u8 *ies, size_t ies_len)
 {
-	p2p_add_device(p2p, bssid, freq, level, ies, ies_len);
+	p2p_add_device(p2p, bssid, freq, level, ies, ies_len, 1);
 
 	if (p2p->go_neg_peer && p2p->state == P2P_SEARCH &&
 	    os_memcmp(p2p->go_neg_peer->info.p2p_device_addr, bssid, ETH_ALEN)

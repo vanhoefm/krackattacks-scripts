@@ -101,7 +101,7 @@ Flush P2P peer table and state.
 
 Group Formation
 
-p2p_prov_disc <peer device address> <display|keypad|pbc> [join]
+p2p_prov_disc <peer device address> <display|keypad|pbc> [join|auto]
 
 Send P2P provision discovery request to the specified peer. The
 parameters for this command are the P2P device address of the peer and
@@ -112,7 +112,10 @@ to enter a PIN that we display.
 
 The optional "join" parameter can be used to indicate that this command
 is requesting an already running GO to prepare for a new client. This is
-mainly used with "display" to request it to display a PIN.
+mainly used with "display" to request it to display a PIN. The "auto"
+parameter can be used to request wpa_supplicant to automatically figure
+out whether the peer device is operating as a GO and if so, use
+join-a-group style PD instead of GO Negotiation style PD.
 
 p2p_connect <peer device address> <pbc|pin|PIN#> [display|keypad]
 	[persistent] [join|auth] [go_intent=<0..15>] [freq=<in MHz>]

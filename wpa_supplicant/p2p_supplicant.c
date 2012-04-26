@@ -1821,6 +1821,7 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 {
 	struct wpa_supplicant *wpa_s = ctx;
 	unsigned int generated_pin = 0;
+	char params[20];
 
 	if (wpa_s->pending_pd_before_join &&
 	    (os_memcmp(peer, wpa_s->pending_join_dev_addr, ETH_ALEN) == 0 ||
@@ -1832,14 +1833,22 @@ void wpas_prov_disc_resp(void *ctx, const u8 *peer, u16 config_methods)
 		return;
 	}
 
+	if (wpa_s->pending_pd_use == AUTO_PD_JOIN ||
+	    wpa_s->pending_pd_use == AUTO_PD_GO_NEG)
+		os_snprintf(params, sizeof(params), " peer_go=%d",
+			    wpa_s->pending_pd_use == AUTO_PD_JOIN);
+	else
+		params[0] = '\0';
+
 	if (config_methods & WPS_CONFIG_DISPLAY)
-		wpas_prov_disc_local_keypad(wpa_s, peer, "");
+		wpas_prov_disc_local_keypad(wpa_s, peer, params);
 	else if (config_methods & WPS_CONFIG_KEYPAD) {
 		generated_pin = wps_generate_pin();
-		wpas_prov_disc_local_display(wpa_s, peer, "", generated_pin);
+		wpas_prov_disc_local_display(wpa_s, peer, params,
+					     generated_pin);
 	} else if (config_methods & WPS_CONFIG_PUSHBUTTON)
-		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_RESP MACSTR,
-			MAC2STR(peer));
+		wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_PBC_RESP MACSTR
+			"%s", MAC2STR(peer), params);
 
 	wpas_notify_p2p_provision_discovery(wpa_s, peer, 0 /* response */,
 					    P2P_PROV_DISC_SUCCESS,
@@ -2595,6 +2604,13 @@ static void wpas_p2p_check_join_scan_limit(struct wpa_supplicant *wpa_s)
 			   " for join operationg - stop join attempt",
 			   MAC2STR(wpa_s->pending_join_iface_addr));
 		eloop_cancel_timeout(wpas_p2p_join_scan, wpa_s, NULL);
+		if (wpa_s->p2p_auto_pd) {
+			wpa_s->p2p_auto_pd = 0;
+			wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
+				" p2p_dev_addr=" MACSTR " status=N/A",
+				MAC2STR(wpa_s->pending_join_dev_addr));
+			return;
+		}
 		wpa_msg(wpa_s->parent, MSG_INFO,
 			P2P_EVENT_GROUP_FORMATION_FAILURE);
 	}
@@ -2701,6 +2717,25 @@ static void wpas_p2p_scan_res_join(struct wpa_supplicant *wpa_s,
 
 	if (scan_res)
 		wpas_p2p_scan_res_handler(wpa_s, scan_res);
+
+	if (wpa_s->p2p_auto_pd) {
+		int join = wpas_p2p_peer_go(wpa_s,
+					    wpa_s->pending_join_dev_addr);
+		wpa_s->p2p_auto_pd = 0;
+		wpa_s->pending_pd_use = join ? AUTO_PD_JOIN : AUTO_PD_GO_NEG;
+		wpa_printf(MSG_DEBUG, "P2P: Auto PD with " MACSTR " join=%d",
+			   MAC2STR(wpa_s->pending_join_dev_addr), join);
+		if (p2p_prov_disc_req(wpa_s->global->p2p,
+				      wpa_s->pending_join_dev_addr,
+				      wpa_s->pending_pd_config_methods, join,
+				      0) < 0) {
+			wpa_s->p2p_auto_pd = 0;
+			wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
+				" p2p_dev_addr=" MACSTR " status=N/A",
+				MAC2STR(wpa_s->pending_join_dev_addr));
+		}
+		return;
+	}
 
 	if (wpa_s->p2p_auto_join) {
 		if (!wpas_p2p_peer_go(wpa_s, wpa_s->pending_join_dev_addr)) {
@@ -2898,6 +2933,7 @@ static int wpas_p2p_join(struct wpa_supplicant *wpa_s, const u8 *iface_addr,
 		   MAC2STR(iface_addr), MAC2STR(dev_addr),
 		   auto_join ? " (auto_join)" : "");
 
+	wpa_s->p2p_auto_pd = 0;
 	wpa_s->p2p_auto_join = !!auto_join;
 	os_memcpy(wpa_s->pending_join_iface_addr, iface_addr, ETH_ALEN);
 	os_memcpy(wpa_s->pending_join_dev_addr, dev_addr, ETH_ALEN);
@@ -3666,10 +3702,12 @@ void wpas_p2p_wps_failed(struct wpa_supplicant *wpa_s,
 
 
 int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
-		       const char *config_method, int join)
+		       const char *config_method,
+		       enum wpas_p2p_prov_disc_use use)
 {
 	u16 config_methods;
 
+	wpa_s->pending_pd_use = NORMAL_PD;
 	if (os_strncmp(config_method, "display", 7) == 0)
 		config_methods = WPS_CONFIG_DISPLAY;
 	else if (os_strncmp(config_method, "keypad", 6) == 0)
@@ -3682,16 +3720,30 @@ int wpas_p2p_prov_disc(struct wpa_supplicant *wpa_s, const u8 *peer_addr,
 		return -1;
 	}
 
+	if (use == WPAS_P2P_PD_AUTO) {
+		os_memcpy(wpa_s->pending_join_dev_addr, peer_addr, ETH_ALEN);
+		wpa_s->pending_pd_config_methods = config_methods;
+		wpa_s->p2p_auto_pd = 1;
+		wpa_s->p2p_auto_join = 0;
+		wpa_s->pending_pd_before_join = 0;
+		wpas_p2p_stop_find(wpa_s);
+		wpa_s->p2p_join_scan_count = 0;
+		wpas_p2p_join_scan(wpa_s, NULL);
+		return 0;
+	}
+
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT) {
 		return wpa_drv_p2p_prov_disc_req(wpa_s, peer_addr,
-						 config_methods, join);
+						 config_methods,
+						 use == WPAS_P2P_PD_FOR_JOIN);
 	}
 
 	if (wpa_s->global->p2p == NULL || wpa_s->global->p2p_disabled)
 		return -1;
 
 	return p2p_prov_disc_req(wpa_s->global->p2p, peer_addr,
-				 config_methods, join, 0);
+				 config_methods, use == WPAS_P2P_PD_FOR_JOIN,
+				 0);
 }
 
 

@@ -2946,8 +2946,9 @@ static int p2p_ctrl_prov_disc(struct wpa_supplicant *wpa_s, char *cmd)
 {
 	u8 addr[ETH_ALEN];
 	char *pos;
+	enum wpas_p2p_prov_disc_use use = WPAS_P2P_PD_FOR_GO_NEG;
 
-	/* <addr> <config method> [join] */
+	/* <addr> <config method> [join|auto] */
 
 	if (hwaddr_aton(cmd, addr))
 		return -1;
@@ -2957,8 +2958,12 @@ static int p2p_ctrl_prov_disc(struct wpa_supplicant *wpa_s, char *cmd)
 		return -1;
 	pos++;
 
-	return wpas_p2p_prov_disc(wpa_s, addr, pos,
-				  os_strstr(pos, "join") != NULL);
+	if (os_strstr(pos, " join") != NULL)
+		use = WPAS_P2P_PD_FOR_JOIN;
+	else if (os_strstr(pos, " auto") != NULL)
+		use = WPAS_P2P_PD_AUTO;
+
+	return wpas_p2p_prov_disc(wpa_s, addr, pos, use);
 }
 
 

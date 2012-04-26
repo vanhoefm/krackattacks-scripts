@@ -1854,7 +1854,7 @@ static void wpas_prov_disc_fail(void *ctx, const u8 *peer,
 
 	wpa_msg(wpa_s, MSG_INFO, P2P_EVENT_PROV_DISC_FAILURE
 		" p2p_dev_addr=" MACSTR " status=%d",
-		MAC2STR(wpa_s->global->p2p_dev_addr), status);
+		MAC2STR(peer), status);
 
 	wpas_notify_p2p_provision_discovery(wpa_s, peer, 0 /* response */,
 					    status, 0, 0);

@@ -118,7 +118,8 @@ out whether the peer device is operating as a GO and if so, use
 join-a-group style PD instead of GO Negotiation style PD.
 
 p2p_connect <peer device address> <pbc|pin|PIN#> [display|keypad]
-	[persistent] [join|auth] [go_intent=<0..15>] [freq=<in MHz>]
+	[persistent|persistent=<network id>] [join|auth]
+	[go_intent=<0..15>] [freq=<in MHz>]
 
 Start P2P group formation with a discovered P2P peer. This includes
 optional group owner negotiation, group interface setup, provisioning,
@@ -131,7 +132,12 @@ the command return code), PIN# means that a pre-selected PIN can be
 used (e.g., 12345670). [display|keypad] is used with PIN method
 to specify which PIN is used (display=dynamically generated random PIN
 from local display, keypad=PIN entered from peer display). "persistent"
-parameter can be used to request a persistent group to be formed.
+parameter can be used to request a persistent group to be formed. The
+"persistent=<network id>" alternative can be used to pre-populate
+SSID/passphrase configuration based on a previously used persistent
+group where this device was the GO. The previously used parameters will
+then be used if the local end becomes the GO in GO Negotiation (which
+can be forced with go_intent=15).
 
 "join" indicates that this is a command to join an existing group as a
 client. It skips the GO Negotiation part. This will send a Provision

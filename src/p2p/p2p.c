@@ -1172,7 +1172,8 @@ static void p2p_set_dev_persistent(struct p2p_device *dev,
 int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		enum p2p_wps_method wps_method,
 		int go_intent, const u8 *own_interface_addr,
-		unsigned int force_freq, int persistent_group)
+		unsigned int force_freq, int persistent_group,
+		const u8 *force_ssid, size_t force_ssid_len)
 {
 	struct p2p_device *dev;
 
@@ -1186,7 +1187,6 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	if (p2p_prepare_channel(p2p, force_freq) < 0)
 		return -1;
 
-	p2p->ssid_set = 0;
 	dev = p2p_get_device(p2p, peer_addr);
 	if (dev == NULL || (dev->flags & P2P_DEV_PROBE_REQ_ONLY)) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
@@ -1217,6 +1217,15 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		 * acknowledge frames, assume it is sleeping and use device
 		 * discoverability via the GO at that point.
 		 */
+	}
+
+	p2p->ssid_set = 0;
+	if (force_ssid) {
+		wpa_hexdump_ascii(MSG_DEBUG, "P2P: Forced SSID",
+				  force_ssid, force_ssid_len);
+		os_memcpy(p2p->ssid, force_ssid, force_ssid_len);
+		p2p->ssid_len = force_ssid_len;
+		p2p->ssid_set = 1;
 	}
 
 	dev->flags &= ~P2P_DEV_NOT_YET_READY;
@@ -1270,7 +1279,8 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 		  enum p2p_wps_method wps_method,
 		  int go_intent, const u8 *own_interface_addr,
-		  unsigned int force_freq, int persistent_group)
+		  unsigned int force_freq, int persistent_group,
+		  const u8 *force_ssid, size_t force_ssid_len)
 {
 	struct p2p_device *dev;
 
@@ -1290,6 +1300,15 @@ int p2p_authorize(struct p2p_data *p2p, const u8 *peer_addr,
 			"P2P: Cannot authorize unknown P2P Device " MACSTR,
 			MAC2STR(peer_addr));
 		return -1;
+	}
+
+	p2p->ssid_set = 0;
+	if (force_ssid) {
+		wpa_hexdump_ascii(MSG_DEBUG, "P2P: Forced SSID",
+				  force_ssid, force_ssid_len);
+		os_memcpy(p2p->ssid, force_ssid, force_ssid_len);
+		p2p->ssid_len = force_ssid_len;
+		p2p->ssid_set = 1;
 	}
 
 	dev->flags &= ~P2P_DEV_NOT_YET_READY;

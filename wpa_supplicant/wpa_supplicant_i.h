@@ -515,6 +515,7 @@ struct wpa_supplicant {
 	unsigned int p2p_auto_join:1;
 	unsigned int p2p_auto_pd:1;
 	unsigned int p2p_persistent_group:1;
+	int p2p_persistent_id;
 	int p2p_go_intent;
 	int p2p_connect_freq;
 	struct os_time p2p_auto_started;

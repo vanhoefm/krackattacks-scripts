@@ -2855,14 +2855,15 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	enum p2p_wps_method wps_method;
 	int new_pin;
 	int ret;
-	int persistent_group;
+	int persistent_group, persistent_id = -1;
 	int join;
 	int auth;
 	int automatic;
 	int go_intent = -1;
 	int freq = 0;
 
-	/* <addr> <"pbc" | "pin" | PIN> [label|display|keypad] [persistent]
+	/* <addr> <"pbc" | "pin" | PIN> [label|display|keypad]
+	 * [persistent|persistent=<network id>]
 	 * [join] [auth] [go_intent=<0..15>] [freq=<in MHz>] */
 
 	if (hwaddr_aton(cmd, addr))
@@ -2874,6 +2875,19 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	pos++;
 
 	persistent_group = os_strstr(pos, " persistent") != NULL;
+	pos2 = os_strstr(pos, " persistent=");
+	if (pos2) {
+		struct wpa_ssid *ssid;
+		persistent_id = atoi(pos2 + 12);
+		ssid = wpa_config_get_network(wpa_s->conf, persistent_id);
+		if (ssid == NULL || ssid->disabled != 2 ||
+		    ssid->mode != WPAS_MODE_P2P_GO) {
+			wpa_printf(MSG_DEBUG, "CTRL_IFACE: Could not find "
+				   "SSID id=%d for persistent P2P group (GO)",
+				   persistent_id);
+			return -1;
+		}
+	}
 	join = os_strstr(pos, " join") != NULL;
 	auth = os_strstr(pos, " auth") != NULL;
 	automatic = os_strstr(pos, " auto") != NULL;
@@ -2912,7 +2926,7 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 
 	new_pin = wpas_p2p_connect(wpa_s, addr, pin, wps_method,
 				   persistent_group, automatic, join,
-				   auth, go_intent, freq);
+				   auth, go_intent, freq, persistent_id);
 	if (new_pin == -2) {
 		os_memcpy(buf, "FAIL-CHANNEL-UNAVAILABLE\n", 25);
 		return 25;

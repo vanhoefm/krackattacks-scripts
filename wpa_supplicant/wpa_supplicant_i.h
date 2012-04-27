@@ -635,6 +635,21 @@ void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
 void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s);
 
+/**
+ * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response
+ * @wpa_s: Pointer to wpa_supplicant data
+ * @ssid: Pointer to the network block the reply is for
+ * @field: field the response is a reply for
+ * @value: value (ie, password, etc) for @field
+ * Returns: 0 on success, non-zero on error
+ *
+ * Helper function to handle replies to control interface requests.
+ */
+int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
+					      struct wpa_ssid *ssid,
+					      const char *field,
+					      const char *value);
+
 /* events.c */
 void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s);
 int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,

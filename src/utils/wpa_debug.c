@@ -338,7 +338,7 @@ static void _wpa_hexdump(int level, const char *title, const u8 *buf,
 		}
 
 		syslog(syslog_priority(level), "%s - hexdump(len=%lu):%s",
-		       title, len, display);
+		       title, (unsigned long) len, display);
 		os_free(strbuf);
 		return;
 	}

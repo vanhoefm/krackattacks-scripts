@@ -635,7 +635,7 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	struct hostapd_data *hapd = ctx;
 	const struct ieee80211_mgmt *mgmt;
 	size_t hdr_len;
-	const u8 *sa, *bssid, *data;
+	const u8 *sa, *data;
 
 	mgmt = (const struct ieee80211_mgmt *) buf;
 	hdr_len = (const u8 *) &mgmt->u.action.u.vs_public_action.action - buf;
@@ -644,7 +644,6 @@ static void gas_serv_rx_public_action(void *ctx, const u8 *buf, size_t len,
 	if (mgmt->u.action.category != WLAN_ACTION_PUBLIC)
 		return;
 	sa = mgmt->sa;
-	bssid = mgmt->bssid;
 	len -= hdr_len;
 	data = &mgmt->u.action.u.public_action.action;
 	switch (data[0]) {

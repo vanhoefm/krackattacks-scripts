@@ -2122,11 +2122,11 @@ int wpas_dbus_unregister_network(struct wpa_supplicant *wpa_s, int nid)
 	struct wpas_dbus_priv *ctrl_iface;
 	char net_obj_path[WPAS_DBUS_OBJECT_PATH_MAX];
 	int ret;
+#ifdef CONFIG_P2P
 	struct wpa_ssid *ssid;
 
 	ssid = wpa_config_get_network(wpa_s->conf, nid);
 
-#ifdef CONFIG_P2P
 	/* If it is a persistent group unregister it as such */
 	if (ssid && network_is_persistent_group(ssid))
 		return wpas_dbus_unregister_persistent_group(wpa_s, nid);

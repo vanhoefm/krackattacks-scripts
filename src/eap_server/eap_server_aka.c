@@ -736,7 +736,7 @@ static void eap_aka_determine_identity(struct eap_sm *sm,
 			  sm->identity, identity_len);
 
 	if (data->eap_method == EAP_TYPE_AKA_PRIME) {
-		eap_aka_prime_derive_keys(identity, identity_len, data->ik,
+		eap_aka_prime_derive_keys(sm->identity, identity_len, data->ik,
 					  data->ck, data->k_encr, data->k_aut,
 					  data->k_re, data->msk, data->emsk);
 	} else {

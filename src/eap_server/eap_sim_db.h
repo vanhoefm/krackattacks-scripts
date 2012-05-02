@@ -1,6 +1,6 @@
 /*
  * hostapd / EAP-SIM database/authenticator gateway
- * Copyright (c) 2005-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2008, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -18,6 +18,15 @@
 #define EAP_AKA_PERMANENT_PREFIX '0'
 #define EAP_AKA_PSEUDONYM_PREFIX '2'
 #define EAP_AKA_REAUTH_ID_PREFIX '4'
+#define EAP_AKA_PRIME_PERMANENT_PREFIX '6'
+#define EAP_AKA_PRIME_PSEUDONYM_PREFIX '7'
+#define EAP_AKA_PRIME_REAUTH_ID_PREFIX '8'
+
+enum eap_sim_db_method {
+	EAP_SIM_DB_SIM,
+	EAP_SIM_DB_AKA,
+	EAP_SIM_DB_AKA_PRIME
+};
 
 void * eap_sim_db_init(const char *config,
 		       void (*get_complete_cb)(void *ctx, void *session_ctx),
@@ -36,9 +45,11 @@ int eap_sim_db_get_gsm_triplets(void *priv, const u8 *identity,
 int eap_sim_db_identity_known(void *priv, const u8 *identity,
 			      size_t identity_len);
 
-char * eap_sim_db_get_next_pseudonym(void *priv, int aka);
+char * eap_sim_db_get_next_pseudonym(void *priv,
+				     enum eap_sim_db_method method);
 
-char * eap_sim_db_get_next_reauth_id(void *priv, int aka);
+char * eap_sim_db_get_next_reauth_id(void *priv,
+				     enum eap_sim_db_method method);
 
 int eap_sim_db_add_pseudonym(void *priv, const u8 *identity,
 			     size_t identity_len, char *pseudonym);

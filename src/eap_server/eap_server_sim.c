@@ -133,7 +133,8 @@ static int eap_sim_build_encr(struct eap_sm *sm, struct eap_sim_data *data,
 	os_free(data->next_pseudonym);
 	if (nonce_s == NULL) {
 		data->next_pseudonym =
-			eap_sim_db_get_next_pseudonym(sm->eap_sim_db_priv, 0);
+			eap_sim_db_get_next_pseudonym(sm->eap_sim_db_priv,
+						      EAP_SIM_DB_SIM);
 	} else {
 		/* Do not update pseudonym during re-authentication */
 		data->next_pseudonym = NULL;
@@ -141,7 +142,8 @@ static int eap_sim_build_encr(struct eap_sm *sm, struct eap_sim_data *data,
 	os_free(data->next_reauth_id);
 	if (data->counter <= EAP_SIM_MAX_FAST_REAUTHS) {
 		data->next_reauth_id =
-			eap_sim_db_get_next_reauth_id(sm->eap_sim_db_priv, 0);
+			eap_sim_db_get_next_reauth_id(sm->eap_sim_db_priv,
+						      EAP_SIM_DB_SIM);
 	} else {
 		wpa_printf(MSG_DEBUG, "EAP-SIM: Max fast re-authentication "
 			   "count exceeded - force full authentication");

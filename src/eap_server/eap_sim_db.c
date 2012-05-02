@@ -1,6 +1,6 @@
 /*
  * hostapd / EAP-SIM database/authenticator gateway
- * Copyright (c) 2005-2007, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2005-2010, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -647,7 +647,8 @@ eap_sim_db_get_pseudonym(struct eap_sim_db_data *data, const u8 *identity,
 
 	if (identity_len == 0 ||
 	    (identity[0] != EAP_SIM_PSEUDONYM_PREFIX &&
-	     identity[0] != EAP_AKA_PSEUDONYM_PREFIX))
+	     identity[0] != EAP_AKA_PSEUDONYM_PREFIX &&
+	     identity[0] != EAP_AKA_PRIME_PSEUDONYM_PREFIX))
 		return NULL;
 
 	/* Remove possible realm from identity */
@@ -685,7 +686,8 @@ eap_sim_db_get_pseudonym_id(struct eap_sim_db_data *data, const u8 *identity,
 
 	if (identity_len == 0 ||
 	    (identity[0] != EAP_SIM_PERMANENT_PREFIX &&
-	     identity[0] != EAP_AKA_PERMANENT_PREFIX))
+	     identity[0] != EAP_AKA_PERMANENT_PREFIX &&
+	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX))
 		return NULL;
 
 	p = data->pseudonyms;
@@ -710,7 +712,8 @@ eap_sim_db_get_reauth(struct eap_sim_db_data *data, const u8 *identity,
 
 	if (identity_len == 0 ||
 	    (identity[0] != EAP_SIM_REAUTH_ID_PREFIX &&
-	     identity[0] != EAP_AKA_REAUTH_ID_PREFIX))
+	     identity[0] != EAP_AKA_REAUTH_ID_PREFIX &&
+	     identity[0] != EAP_AKA_PRIME_REAUTH_ID_PREFIX))
 		return NULL;
 
 	/* Remove possible realm from identity */
@@ -777,8 +780,9 @@ eap_sim_db_get_reauth_id(struct eap_sim_db_data *data, const u8 *identity,
  * @identity_len: Length of identity in bytes 
  * Returns: 0 if the user is found or -1 on failure
  *
- * In most cases, the user name is ['0','1'] | IMSI, i.e., 1 followed by the
- * IMSI in ASCII format, ['2','3'] | pseudonym, or ['4','5'] | reauth_id.
+ * In most cases, the user name is ['0','1','6'] | IMSI, i.e., 1 followed by
+ * the IMSI in ASCII format for EAP-SIM, ['2','3','7'] | pseudonym, or
+ * ['4','5','7'] | reauth_id.
  */
 int eap_sim_db_identity_known(void *priv, const u8 *identity,
 			      size_t identity_len)
@@ -789,21 +793,24 @@ int eap_sim_db_identity_known(void *priv, const u8 *identity,
 		return -1;
 
 	if (identity[0] == EAP_SIM_PSEUDONYM_PREFIX ||
-	    identity[0] == EAP_AKA_PSEUDONYM_PREFIX) {
+	    identity[0] == EAP_AKA_PSEUDONYM_PREFIX ||
+	    identity[0] == EAP_AKA_PRIME_PSEUDONYM_PREFIX) {
 		struct eap_sim_pseudonym *p =
 			eap_sim_db_get_pseudonym(data, identity, identity_len);
 		return p ? 0 : -1;
 	}
 
 	if (identity[0] == EAP_SIM_REAUTH_ID_PREFIX ||
-	    identity[0] == EAP_AKA_REAUTH_ID_PREFIX) {
+	    identity[0] == EAP_AKA_REAUTH_ID_PREFIX ||
+	    identity[0] == EAP_AKA_PRIME_REAUTH_ID_PREFIX) {
 		struct eap_sim_reauth *r =
 			eap_sim_db_get_reauth(data, identity, identity_len);
 		return r ? 0 : -1;
 	}
 
 	if (identity[0] != EAP_SIM_PERMANENT_PREFIX &&
-	    identity[0] != EAP_AKA_PERMANENT_PREFIX) {
+	    identity[0] != EAP_AKA_PERMANENT_PREFIX &&
+	    identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX) {
 		/* Unknown identity prefix */
 		return -1;
 	}
@@ -843,7 +850,7 @@ static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
 /**
  * eap_sim_db_get_next_pseudonym - EAP-SIM DB: Get next pseudonym
  * @priv: Private data pointer from eap_sim_db_init()
- * @aka: Using EAP-AKA instead of EAP-SIM
+ * @method: EAP method (SIM/AKA/AKA')
  * Returns: Next pseudonym (allocated string) or %NULL on failure
  *
  * This function is used to generate a pseudonym for EAP-SIM. The returned
@@ -851,18 +858,31 @@ static char * eap_sim_db_get_next(struct eap_sim_db_data *data, char prefix)
  * with eap_sim_db_add_pseudonym() once the authentication has been completed
  * successfully. Caller is responsible for freeing the returned buffer.
  */
-char * eap_sim_db_get_next_pseudonym(void *priv, int aka)
+char * eap_sim_db_get_next_pseudonym(void *priv, enum eap_sim_db_method method)
 {
 	struct eap_sim_db_data *data = priv;
-	return eap_sim_db_get_next(data, aka ? EAP_AKA_PSEUDONYM_PREFIX :
-				   EAP_SIM_PSEUDONYM_PREFIX);
+	char prefix = EAP_SIM_REAUTH_ID_PREFIX;
+
+	switch (method) {
+	case EAP_SIM_DB_SIM:
+		prefix = EAP_SIM_PSEUDONYM_PREFIX;
+		break;
+	case EAP_SIM_DB_AKA:
+		prefix = EAP_AKA_PSEUDONYM_PREFIX;
+		break;
+	case EAP_SIM_DB_AKA_PRIME:
+		prefix = EAP_AKA_PRIME_PSEUDONYM_PREFIX;
+		break;
+	}
+
+	return eap_sim_db_get_next(data, prefix);
 }
 
 
 /**
  * eap_sim_db_get_next_reauth_id - EAP-SIM DB: Get next reauth_id
  * @priv: Private data pointer from eap_sim_db_init()
- * @aka: Using EAP-AKA instead of EAP-SIM
+ * @method: EAP method (SIM/AKA/AKA')
  * Returns: Next reauth_id (allocated string) or %NULL on failure
  *
  * This function is used to generate a fast re-authentication identity for
@@ -871,11 +891,24 @@ char * eap_sim_db_get_next_pseudonym(void *priv, int aka)
  * has been completed successfully. Caller is responsible for freeing the
  * returned buffer.
  */
-char * eap_sim_db_get_next_reauth_id(void *priv, int aka)
+char * eap_sim_db_get_next_reauth_id(void *priv, enum eap_sim_db_method method)
 {
 	struct eap_sim_db_data *data = priv;
-	return eap_sim_db_get_next(data, aka ? EAP_AKA_REAUTH_ID_PREFIX :
-				   EAP_SIM_REAUTH_ID_PREFIX);
+	char prefix = EAP_SIM_REAUTH_ID_PREFIX;
+
+	switch (method) {
+	case EAP_SIM_DB_SIM:
+		prefix = EAP_SIM_REAUTH_ID_PREFIX;
+		break;
+	case EAP_SIM_DB_AKA:
+		prefix = EAP_AKA_REAUTH_ID_PREFIX;
+		break;
+	case EAP_SIM_DB_AKA_PRIME:
+		prefix = EAP_AKA_PRIME_REAUTH_ID_PREFIX;
+		break;
+	}
+
+	return eap_sim_db_get_next(data, prefix);
 }
 
 
@@ -1156,7 +1189,7 @@ void eap_sim_db_remove_reauth(void *priv, struct eap_sim_reauth *reauth)
  * called once the results become available.
  *
  * In most cases, the user name is '0' | IMSI, i.e., 0 followed by the IMSI in
- * ASCII format.
+ * ASCII format for EAP-AKA and '6' | IMSI for EAP-AKA'.
  *
  * When using an external server for AKA authentication, this function can
  * always start a request and return EAP_SIM_DB_PENDING immediately if
@@ -1178,7 +1211,8 @@ int eap_sim_db_get_aka_auth(void *priv, const u8 *identity,
 	char msg[40];
 
 	if (identity_len < 2 || identity == NULL ||
-	    identity[0] != EAP_AKA_PERMANENT_PREFIX) {
+	    (identity[0] != EAP_AKA_PERMANENT_PREFIX &&
+	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX)) {
 		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
 				  identity, identity_len);
 		return EAP_SIM_DB_FAILURE;
@@ -1281,7 +1315,8 @@ int eap_sim_db_resynchronize(void *priv, const u8 *identity,
 	size_t i;
 
 	if (identity_len < 2 || identity == NULL ||
-	    identity[0] != EAP_AKA_PERMANENT_PREFIX) {
+	    (identity[0] != EAP_AKA_PERMANENT_PREFIX &&
+	     identity[0] != EAP_AKA_PRIME_PERMANENT_PREFIX)) {
 		wpa_hexdump_ascii(MSG_DEBUG, "EAP-SIM DB: unexpected identity",
 				  identity, identity_len);
 		return -1;

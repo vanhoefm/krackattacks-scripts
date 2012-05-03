@@ -754,6 +754,47 @@ int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
 }
 
 
+static struct hostapd_hw_modes * get_mode(struct hostapd_hw_modes *modes,
+					  u16 num_modes,
+					  enum hostapd_hw_mode mode)
+{
+	u16 i;
+
+	for (i = 0; i < num_modes; i++) {
+		if (modes[i].mode == mode)
+			return &modes[i];
+	}
+
+	return NULL;
+}
+
+
+static void wpa_setband_scan_freqs_list(struct wpa_supplicant *wpa_s,
+					enum hostapd_hw_mode band,
+					struct wpa_driver_scan_params *params)
+{
+	/* Include only supported channels for the specified band */
+	struct hostapd_hw_modes *mode;
+	int count, i;
+
+	mode = get_mode(wpa_s->hw.modes, wpa_s->hw.num_modes, band);
+	if (mode == NULL) {
+		/* No channels supported in this band - use empty list */
+		params->freqs = os_zalloc(sizeof(int));
+		return;
+	}
+
+	params->freqs = os_zalloc((mode->num_channels + 1) * sizeof(int));
+	if (params->freqs == NULL)
+		return;
+	for (count = 0, i = 0; i < mode->num_channels; i++) {
+		if (mode->channels[i].flag & HOSTAPD_CHAN_DISABLED)
+			continue;
+		params->freqs[count++] = mode->channels[i].freq;
+	}
+}
+
+
 static void sme_obss_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 {
 	struct wpa_supplicant *wpa_s = eloop_ctx;
@@ -765,13 +806,14 @@ static void sme_obss_scan_timeout(void *eloop_ctx, void *timeout_ctx)
 	}
 
 	os_memset(&params, 0, sizeof(params));
-	/* TODO: 2.4 GHz channels only */
+	wpa_setband_scan_freqs_list(wpa_s, HOSTAPD_MODE_IEEE80211G, &params);
 	wpa_printf(MSG_DEBUG, "SME OBSS: Request an OBSS scan");
 
 	if (wpa_supplicant_trigger_scan(wpa_s, &params))
 		wpa_printf(MSG_DEBUG, "SME OBSS: Failed to trigger scan");
 	else
 		wpa_s->sme.sched_obss_scan = 1;
+	os_free(params.freqs);
 
 	eloop_register_timeout(wpa_s->sme.obss_scan_int, 0,
 			       sme_obss_scan_timeout, wpa_s, NULL);

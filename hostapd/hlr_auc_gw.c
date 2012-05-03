@@ -210,7 +210,7 @@ static int read_gsm_triplets(const char *fname)
 		gsm_db = g;
 		g = NULL;
 	}
-	free(g);
+	os_free(g);
 
 	fclose(f);
 
@@ -360,7 +360,7 @@ static int read_milenage(const char *fname)
 		milenage_db = m;
 		m = NULL;
 	}
-	free(m);
+	os_free(m);
 
 	fclose(f);
 
@@ -613,14 +613,14 @@ static void cleanup(void)
 	while (g) {
 		gprev = g;
 		g = g->next;
-		free(gprev);
+		os_free(gprev);
 	}
 
 	m = milenage_db;
 	while (m) {
 		prev = m;
 		m = m->next;
-		free(prev);
+		os_free(prev);
 	}
 
 	close(serv_sock);
@@ -660,6 +660,9 @@ int main(int argc, char *argv[])
 	int c;
 	char *milenage_file = NULL;
 	char *gsm_triplet_file = NULL;
+
+	if (os_program_init())
+		return -1;
 
 	socket_path = default_socket_path;
 
@@ -704,6 +707,8 @@ int main(int argc, char *argv[])
 
 	for (;;)
 		process(serv_sock);
+
+	os_program_deinit();
 
 	return 0;
 }

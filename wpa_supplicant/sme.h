@@ -35,6 +35,9 @@ void sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
 				       const u8 *prev_pending_bssid);
 void sme_deinit(struct wpa_supplicant *wpa_s);
 
+int sme_proc_obss_scan(struct wpa_supplicant *wpa_s);
+void sme_sched_obss_scan(struct wpa_supplicant *wpa_s, int enable);
+
 #else /* CONFIG_SME */
 
 static inline void sme_authenticate(struct wpa_supplicant *wpa_s,
@@ -92,6 +95,16 @@ sme_disassoc_while_authenticating(struct wpa_supplicant *wpa_s,
 }
 
 static inline void sme_deinit(struct wpa_supplicant *wpa_s)
+{
+}
+
+static inline int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
+{
+	return 0;
+}
+
+static inline void sme_sched_obss_scan(struct wpa_supplicant *wpa_s,
+				       int enable)
 {
 }
 

@@ -1077,6 +1077,11 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 
 	wpas_notify_scan_done(wpa_s, 1);
 
+	if (sme_proc_obss_scan(wpa_s) > 0) {
+		wpa_scan_results_free(scan_res);
+		return 0;
+	}
+
 	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s))) {
 		wpa_scan_results_free(scan_res);
 		return 0;

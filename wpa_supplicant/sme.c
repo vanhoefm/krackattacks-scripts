@@ -32,6 +32,7 @@
 
 static void sme_auth_timer(void *eloop_ctx, void *timeout_ctx);
 static void sme_assoc_timer(void *eloop_ctx, void *timeout_ctx);
+static void sme_obss_scan_timeout(void *eloop_ctx, void *timeout_ctx);
 #ifdef CONFIG_IEEE80211W
 static void sme_stop_sa_query(struct wpa_supplicant *wpa_s);
 #endif /* CONFIG_IEEE80211W */
@@ -606,6 +607,221 @@ void sme_deinit(struct wpa_supplicant *wpa_s)
 
 	eloop_cancel_timeout(sme_assoc_timer, wpa_s, NULL);
 	eloop_cancel_timeout(sme_auth_timer, wpa_s, NULL);
+	eloop_cancel_timeout(sme_obss_scan_timeout, wpa_s, NULL);
+}
+
+
+static void sme_send_2040_bss_coex(struct wpa_supplicant *wpa_s,
+				   const u8 *chan_list, u8 num_channels,
+				   u8 num_intol)
+{
+	struct ieee80211_2040_bss_coex_ie *bc_ie;
+	struct ieee80211_2040_intol_chan_report *ic_report;
+	struct wpabuf *buf;
+
+	wpa_printf(MSG_DEBUG, "SME: Send 20/40 BSS Coexistence to " MACSTR,
+		   MAC2STR(wpa_s->bssid));
+
+	buf = wpabuf_alloc(2 + /* action.category + action_code */
+			   sizeof(struct ieee80211_2040_bss_coex_ie) +
+			   sizeof(struct ieee80211_2040_intol_chan_report) +
+			   num_channels);
+	if (buf == NULL)
+		return;
+
+	wpabuf_put_u8(buf, WLAN_ACTION_PUBLIC);
+	wpabuf_put_u8(buf, WLAN_PA_20_40_BSS_COEX);
+
+	bc_ie = wpabuf_put(buf, sizeof(*bc_ie));
+	bc_ie->element_id = WLAN_EID_20_40_BSS_COEXISTENCE;
+	bc_ie->length = 1;
+	if (num_intol)
+		bc_ie->coex_param |= WLAN_20_40_BSS_COEX_20MHZ_WIDTH_REQ;
+
+	if (num_channels > 0) {
+		ic_report = wpabuf_put(buf, sizeof(*ic_report));
+		ic_report->element_id = WLAN_EID_20_40_BSS_INTOLERANT;
+		ic_report->length = num_channels + 1;
+		ic_report->op_class = 0;
+		os_memcpy(wpabuf_put(buf, num_channels), chan_list,
+			  num_channels);
+	}
+
+	if (wpa_drv_send_action(wpa_s, wpa_s->assoc_freq, 0, wpa_s->bssid,
+				wpa_s->own_addr, wpa_s->bssid,
+				wpabuf_head(buf), wpabuf_len(buf), 0) < 0) {
+		wpa_msg(wpa_s, MSG_INFO,
+			"SME: Failed to send 20/40 BSS Coexistence frame");
+	}
+
+	wpabuf_free(buf);
+}
+
+
+/**
+ * enum wpas_band - Frequency band
+ * @WPAS_BAND_2GHZ: 2.4 GHz ISM band
+ * @WPAS_BAND_5GHZ: around 5 GHz band (4.9 - 5.7 GHz)
+ */
+enum wpas_band {
+	WPAS_BAND_2GHZ,
+	WPAS_BAND_5GHZ,
+	WPAS_BAND_INVALID
+};
+
+/**
+ * freq_to_channel - Convert frequency into channel info
+ * @channel: Buffer for returning channel number
+ * Returns: Band (2 or 5 GHz)
+ */
+static enum wpas_band freq_to_channel(int freq, u8 *channel)
+{
+	enum wpas_band band = (freq <= 2484) ? WPAS_BAND_2GHZ : WPAS_BAND_5GHZ;
+	u8 chan = 0;
+
+	if (freq >= 2412 && freq <= 2472)
+		chan = (freq - 2407) / 5;
+	else if (freq == 2484)
+		chan = 14;
+	else if (freq >= 5180 && freq <= 5805)
+		chan = (freq - 5000) / 5;
+
+	*channel = chan;
+	return band;
+}
+
+
+int sme_proc_obss_scan(struct wpa_supplicant *wpa_s)
+{
+	struct wpa_bss *bss;
+	const u8 *ie;
+	u16 ht_cap;
+	u8 chan_list[P2P_MAX_CHANNELS], channel;
+	u8 num_channels = 0, num_intol = 0, i;
+
+	if (!wpa_s->sme.sched_obss_scan)
+		return 0;
+
+	wpa_s->sme.sched_obss_scan = 0;
+	if (!wpa_s->current_bss || wpa_s->wpa_state != WPA_COMPLETED)
+		return 1;
+
+	/*
+	 * Check whether AP uses regulatory triplet or channel triplet in
+	 * country info. Right now the operating class of the BSS channel
+	 * width trigger event is "unknown" (IEEE Std 802.11-2012 10.15.12),
+	 * based on the assumption that operating class triplet is not used in
+	 * beacon frame. If the First Channel Number/Operating Extension
+	 * Identifier octet has a positive integer value of 201 or greater,
+	 * then its operating class triplet.
+	 *
+	 * TODO: If Supported Operating Classes element is present in beacon
+	 * frame, have to lookup operating class in Annex E and fill them in
+	 * 2040 coex frame.
+	 */
+	ie = wpa_bss_get_ie(wpa_s->current_bss, WLAN_EID_COUNTRY);
+	if (ie && (ie[1] >= 6) && (ie[5] >= 201))
+		return 1;
+
+	os_memset(chan_list, 0, sizeof(chan_list));
+
+	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
+		/* Skip other band bss */
+		if (freq_to_channel(bss->freq, &channel) != WPAS_BAND_2GHZ)
+			continue;
+
+		ie = wpa_bss_get_ie(bss, WLAN_EID_HT_CAP);
+		ht_cap = (ie && (ie[1] == 26)) ? WPA_GET_LE16(ie + 2) : 0;
+
+		if (!ht_cap || (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)) {
+			/* Check whether the channel is already considered */
+			for (i = 0; i < num_channels; i++) {
+				if (channel == chan_list[i])
+					break;
+			}
+			if (i != num_channels)
+				continue;
+
+			if (ht_cap & HT_CAP_INFO_40MHZ_INTOLERANT)
+				num_intol++;
+
+			chan_list[num_channels++] = channel;
+		}
+	}
+
+	sme_send_2040_bss_coex(wpa_s, chan_list, num_channels, num_intol);
+	return 1;
+}
+
+
+static void sme_obss_scan_timeout(void *eloop_ctx, void *timeout_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+	struct wpa_driver_scan_params params;
+
+	if (!wpa_s->current_bss) {
+		wpa_printf(MSG_DEBUG, "SME OBSS: Ignore scan request");
+		return;
+	}
+
+	os_memset(&params, 0, sizeof(params));
+	/* TODO: 2.4 GHz channels only */
+	wpa_printf(MSG_DEBUG, "SME OBSS: Request an OBSS scan");
+
+	if (wpa_supplicant_trigger_scan(wpa_s, &params))
+		wpa_printf(MSG_DEBUG, "SME OBSS: Failed to trigger scan");
+	else
+		wpa_s->sme.sched_obss_scan = 1;
+
+	eloop_register_timeout(wpa_s->sme.obss_scan_int, 0,
+			       sme_obss_scan_timeout, wpa_s, NULL);
+}
+
+
+void sme_sched_obss_scan(struct wpa_supplicant *wpa_s, int enable)
+{
+	const u8 *ie;
+	struct wpa_bss *bss = wpa_s->current_bss;
+	struct wpa_ssid *ssid = wpa_s->current_ssid;
+
+	eloop_cancel_timeout(sme_obss_scan_timeout, wpa_s, NULL);
+	wpa_s->sme.sched_obss_scan = 0;
+	if (!enable)
+		return;
+
+	if (!(wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) || ssid == NULL ||
+	    ssid->mode != IEEE80211_MODE_INFRA)
+		return; /* Not using station SME in wpa_supplicant */
+
+	if (!wpa_s->hw.modes ||
+	    !(wpa_s->hw.modes->ht_capab & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+		return; /* Driver does not support HT40 */
+
+	if (bss == NULL || bss->freq < 2400 || bss->freq > 2500)
+		return; /* Not associated on 2.4 GHz band */
+
+	/* Check whether AP supports HT40 */
+	ie = wpa_bss_get_ie(wpa_s->current_bss, WLAN_EID_HT_CAP);
+	if (!ie || ie[1] < 2 ||
+	    !(WPA_GET_LE16(ie + 2) & HT_CAP_INFO_SUPP_CHANNEL_WIDTH_SET))
+		return; /* AP does not support HT40 */
+
+	ie = wpa_bss_get_ie(wpa_s->current_bss,
+			    WLAN_EID_OVERLAPPING_BSS_SCAN_PARAMS);
+	if (!ie || ie[1] < 14)
+		return; /* AP does not request OBSS scans */
+
+	wpa_s->sme.obss_scan_int = WPA_GET_LE16(ie + 6);
+	if (wpa_s->sme.obss_scan_int < 10) {
+		wpa_printf(MSG_DEBUG, "SME: Invalid OBSS Scan Interval %u "
+			   "replaced with the minimum 10 sec",
+			   wpa_s->sme.obss_scan_int);
+		wpa_s->sme.obss_scan_int = 10;
+	}
+	wpa_printf(MSG_DEBUG, "SME: OBSS Scan Interval %u sec",
+		   wpa_s->sme.obss_scan_int);
+	eloop_register_timeout(wpa_s->sme.obss_scan_int, 0,
+			       sme_obss_scan_timeout, wpa_s, NULL);
 }
 
 

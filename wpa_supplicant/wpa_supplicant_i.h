@@ -419,6 +419,8 @@ struct wpa_supplicant {
 					* sa_query_count octets of pending
 					* SA Query transaction identifiers */
 		struct os_time sa_query_start;
+		u8 sched_obss_scan;
+		u16 obss_scan_int;
 	} sme;
 #endif /* CONFIG_SME */
 
@@ -634,6 +636,7 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
 void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s);
+void wpa_supplicant_proc_40mhz_intolerant(struct wpa_supplicant *wpa_s);
 
 /**
  * wpa_supplicant_ctrl_iface_ctrl_rsp_handle - Handle a control response

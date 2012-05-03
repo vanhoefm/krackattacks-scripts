@@ -607,6 +607,8 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 #ifdef CONFIG_P2P
 		wpas_p2p_completed(wpa_s);
 #endif /* CONFIG_P2P */
+
+		sme_sched_obss_scan(wpa_s, 1);
 	} else if (state == WPA_DISCONNECTED || state == WPA_ASSOCIATING ||
 		   state == WPA_ASSOCIATED) {
 		wpa_s->new_connection = 1;
@@ -614,6 +616,7 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 #ifndef IEEE8021X_EAPOL
 		wpa_drv_set_supp_port(wpa_s, 0);
 #endif /* IEEE8021X_EAPOL */
+		sme_sched_obss_scan(wpa_s, 0);
 	}
 	wpa_s->wpa_state = state;
 

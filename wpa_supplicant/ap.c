@@ -278,6 +278,7 @@ static int wpa_supplicant_conf_ap(struct wpa_supplicant *wpa_s,
 	else
 		os_memcpy(bss->uuid, wpa_s->conf->uuid, WPS_UUID_LEN);
 	os_memcpy(bss->os_version, wpa_s->conf->os_version, 4);
+	bss->pbc_in_m1 = wpa_s->conf->pbc_in_m1;
 no_wps:
 #endif /* CONFIG_WPS */
 

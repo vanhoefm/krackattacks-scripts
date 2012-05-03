@@ -845,6 +845,8 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 		fprintf(f, "access_network_type=%d\n",
 			config->access_network_type);
 #endif /* CONFIG_INTERWORKING */
+	if (config->pbc_in_m1)
+		fprintf(f, "pbc_in_m1=%u\n", config->pbc_in_m1);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

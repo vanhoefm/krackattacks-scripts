@@ -837,6 +837,7 @@ static void wpas_p2p_clone_config(struct wpa_supplicant *dst,
 	d->p2p_intra_bss = s->p2p_intra_bss;
 	d->persistent_reconnect = s->persistent_reconnect;
 	d->max_num_sta = s->max_num_sta;
+	d->pbc_in_m1 = s->pbc_in_m1;
 }
 
 

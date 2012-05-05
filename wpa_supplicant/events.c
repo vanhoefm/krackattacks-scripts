@@ -238,7 +238,8 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 			if (eap->vendor == EAP_VENDOR_IETF) {
 				if (eap->method == EAP_TYPE_SIM)
 					sim = 1;
-				else if (eap->method == EAP_TYPE_AKA)
+				else if (eap->method == EAP_TYPE_AKA ||
+					 eap->method == EAP_TYPE_AKA_PRIME)
 					aka = 1;
 			}
 			eap++;
@@ -247,7 +248,9 @@ int wpa_supplicant_scard_init(struct wpa_supplicant *wpa_s,
 
 	if (eap_peer_get_eap_method(EAP_VENDOR_IETF, EAP_TYPE_SIM) == NULL)
 		sim = 0;
-	if (eap_peer_get_eap_method(EAP_VENDOR_IETF, EAP_TYPE_AKA) == NULL)
+	if (eap_peer_get_eap_method(EAP_VENDOR_IETF, EAP_TYPE_AKA) == NULL &&
+	    eap_peer_get_eap_method(EAP_VENDOR_IETF, EAP_TYPE_AKA_PRIME) ==
+	    NULL)
 		aka = 0;
 
 	if (!sim && !aka) {

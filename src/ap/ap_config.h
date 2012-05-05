@@ -1,6 +1,6 @@
 /*
  * hostapd / Configuration definitions and helpers functions
- * Copyright (c) 2003-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -177,6 +177,7 @@ struct hostapd_bss_config {
 	char *nas_identifier;
 	struct hostapd_radius_servers *radius;
 	int acct_interim_interval;
+	int radius_request_cui;
 
 	struct hostapd_ssid ssid;
 

@@ -541,6 +541,25 @@ static void ieee802_1x_encapsulate_radius(struct hostapd_data *hapd,
 		}
 	}
 
+	if (hapd->conf->radius_request_cui) {
+		const u8 *cui;
+		size_t cui_len;
+		/* Add previously learned CUI or nul CUI to request CUI */
+		if (sm->radius_cui) {
+			cui = wpabuf_head(sm->radius_cui);
+			cui_len = wpabuf_len(sm->radius_cui);
+		} else {
+			cui = (const u8 *) "\0";
+			cui_len = 1;
+		}
+		if (!radius_msg_add_attr(msg,
+					 RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+					 cui, cui_len)) {
+			wpa_printf(MSG_ERROR, "Could not add CUI");
+			goto fail;
+		}
+	}
+
 	if (radius_client_send(hapd->radius, msg, RADIUS_AUTH, sta->addr) < 0)
 		goto fail;
 

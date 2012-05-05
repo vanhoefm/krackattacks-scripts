@@ -34,7 +34,11 @@
  * text file in IMSI:Kc:SRES:RAND format, IMSI in ASCII, other fields as hex
  * strings. This is used to simulate an HLR/AuC. As such, it is not very useful
  * for real life authentication, but it is useful both as an example
- * implementation and for EAP-SIM testing.
+ * implementation and for EAP-SIM/AKA/AKA' testing.
+ *
+ * SQN generation follows the not time-based Profile 2 described in
+ * 3GPP TS 33.102 Annex C.3.2. The length of IND is 5 bits by default, but this
+ * can be changed with a command line options if needed.
  */
 
 #include "includes.h"
@@ -50,6 +54,7 @@ static int serv_sock = -1;
 static char *milenage_file = NULL;
 static int update_milenage = 0;
 static int sqn_changes = 0;
+static int ind_len = 5;
 
 /* GSM triplets */
 struct gsm_triplet {
@@ -537,6 +542,28 @@ send:
 }
 
 
+static void inc_sqn(u8 *sqn)
+{
+	u64 val, seq, ind;
+
+	/*
+	 * SQN = SEQ | IND = SEQ1 | SEQ2 | IND
+	 *
+	 * The mechanism used here is not time-based, so SEQ2 is void and
+	 * SQN = SEQ1 | IND. The length of IND is ind_len bits and the length
+	 * of SEQ1 is 48 - ind_len bits.
+	 */
+
+	/* Increment both SEQ and IND by one */
+	val = ((u64) WPA_GET_BE32(sqn) << 16) | ((u64) WPA_GET_BE16(sqn + 4));
+	seq = (val >> ind_len) + 1;
+	ind = (val + 1) & ((1 << ind_len) - 1);
+	val = (seq << ind_len) | ind;
+	WPA_PUT_BE32(sqn, val >> 16);
+	WPA_PUT_BE16(sqn + 4, val & 0xffff);
+}
+
+
 static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 			 char *imsi)
 {
@@ -556,7 +583,7 @@ static void aka_req_auth(int s, struct sockaddr_un *from, socklen_t fromlen,
 		if (random_get_bytes(_rand, EAP_AKA_RAND_LEN) < 0)
 			return;
 		res_len = EAP_AKA_RES_MAX_LEN;
-		inc_byte_array(m->sqn, 6);
+		inc_sqn(m->sqn);
 		sqn_changes = 1;
 		printf("AKA: Milenage with SQN=%02x%02x%02x%02x%02x%02x\n",
 		       m->sqn[0], m->sqn[1], m->sqn[2],
@@ -725,7 +752,8 @@ static void usage(void)
 	       "\n"
 	       "usage:\n"
 	       "hlr_auc_gw [-hu] [-s<socket path>] [-g<triplet file>] "
-	       "[-m<milenage file>]\n"
+	       "[-m<milenage file>] \\\n"
+	       "        [-i<IND len in bits>]\n"
 	       "\n"
 	       "options:\n"
 	       "  -h = show this usage help\n"
@@ -733,7 +761,8 @@ static void usage(void)
 	       "  -s<socket path> = path for UNIX domain socket\n"
 	       "                    (default: %s)\n"
 	       "  -g<triplet file> = path for GSM authentication triplets\n"
-	       "  -m<milenage file> = path for Milenage keys\n",
+	       "  -m<milenage file> = path for Milenage keys\n"
+	       "  -i<IND len in bits> = IND length for SQN (default: 5)\n",
 	       default_socket_path);
 }
 
@@ -749,7 +778,7 @@ int main(int argc, char *argv[])
 	socket_path = default_socket_path;
 
 	for (;;) {
-		c = getopt(argc, argv, "g:hm:s:u");
+		c = getopt(argc, argv, "g:hi:m:s:u");
 		if (c < 0)
 			break;
 		switch (c) {
@@ -759,6 +788,13 @@ int main(int argc, char *argv[])
 		case 'h':
 			usage();
 			return 0;
+		case 'i':
+			ind_len = atoi(optarg);
+			if (ind_len < 0 || ind_len > 32) {
+				printf("Invalid IND length\n");
+				return -1;
+			}
+			break;
 		case 'm':
 			milenage_file = optarg;
 			break;

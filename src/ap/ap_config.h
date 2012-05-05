@@ -116,6 +116,12 @@ struct hostapd_eap_user {
 	int ttls_auth; /* EAP_TTLS_AUTH_* bitfield */
 };
 
+struct hostapd_radius_attr {
+	u8 type;
+	struct wpabuf *val;
+	struct hostapd_radius_attr *next;
+};
+
 
 #define NUM_TX_QUEUES 4
 
@@ -178,6 +184,8 @@ struct hostapd_bss_config {
 	struct hostapd_radius_servers *radius;
 	int acct_interim_interval;
 	int radius_request_cui;
+	struct hostapd_radius_attr *radius_auth_req_attr;
+	struct hostapd_radius_attr *radius_acct_req_attr;
 
 	struct hostapd_ssid ssid;
 
@@ -455,5 +463,7 @@ const char * hostapd_get_vlan_id_ifname(struct hostapd_vlan *vlan,
 const struct hostapd_eap_user *
 hostapd_get_eap_user(const struct hostapd_bss_config *conf, const u8 *identity,
 		     size_t identity_len, int phase2);
+struct hostapd_radius_attr *
+hostapd_config_get_radius_attr(struct hostapd_radius_attr *attr, u8 type);
 
 #endif /* HOSTAPD_CONFIG_H */

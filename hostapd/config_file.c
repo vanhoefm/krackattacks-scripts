@@ -491,6 +491,76 @@ hostapd_config_read_radius_addr(struct hostapd_radius_server **server,
 
 	return ret;
 }
+
+
+static struct hostapd_radius_attr *
+hostapd_parse_radius_attr(const char *value)
+{
+	const char *pos;
+	char syntax;
+	struct hostapd_radius_attr *attr;
+	size_t len;
+
+	attr = os_zalloc(sizeof(*attr));
+	if (attr == NULL)
+		return NULL;
+
+	attr->type = atoi(value);
+
+	pos = os_strchr(value, ':');
+	if (pos == NULL) {
+		attr->val = wpabuf_alloc(1);
+		if (attr->val == NULL) {
+			os_free(attr);
+			return NULL;
+		}
+		wpabuf_put_u8(attr->val, 0);
+		return attr;
+	}
+
+	pos++;
+	if (pos[0] == '\0' || pos[1] != ':') {
+		os_free(attr);
+		return NULL;
+	}
+	syntax = *pos++;
+	pos++;
+
+	switch (syntax) {
+	case 's':
+		attr->val = wpabuf_alloc_copy(pos, os_strlen(pos));
+		break;
+	case 'x':
+		len = os_strlen(pos);
+		if (len & 1)
+			break;
+		len /= 2;
+		attr->val = wpabuf_alloc(len);
+		if (attr->val == NULL)
+			break;
+		if (hexstr2bin(pos, wpabuf_put(attr->val, len), len) < 0) {
+			wpabuf_free(attr->val);
+			os_free(attr);
+			return NULL;
+		}
+		break;
+	case 'd':
+		attr->val = wpabuf_alloc(4);
+		if (attr->val)
+			wpabuf_put_be32(attr->val, atoi(pos));
+		break;
+	default:
+		os_free(attr);
+		return NULL;
+	}
+
+	if (attr->val == NULL) {
+		os_free(attr);
+		return NULL;
+	}
+
+	return attr;
+}
 #endif /* CONFIG_NO_RADIUS */
 
 
@@ -1557,6 +1627,36 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->acct_interim_interval = atoi(pos);
 		} else if (os_strcmp(buf, "radius_request_cui") == 0) {
 			bss->radius_request_cui = atoi(pos);
+		} else if (os_strcmp(buf, "radius_auth_req_attr") == 0) {
+			struct hostapd_radius_attr *attr, *a;
+			attr = hostapd_parse_radius_attr(pos);
+			if (attr == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "radius_auth_req_attr", line);
+				errors++;
+			} else if (bss->radius_auth_req_attr == NULL) {
+				bss->radius_auth_req_attr = attr;
+			} else {
+				a = bss->radius_auth_req_attr;
+				while (a->next)
+					a = a->next;
+				a->next = attr;
+			}
+		} else if (os_strcmp(buf, "radius_acct_req_attr") == 0) {
+			struct hostapd_radius_attr *attr, *a;
+			attr = hostapd_parse_radius_attr(pos);
+			if (attr == NULL) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "radius_acct_req_attr", line);
+				errors++;
+			} else if (bss->radius_acct_req_attr == NULL) {
+				bss->radius_acct_req_attr = attr;
+			} else {
+				a = bss->radius_acct_req_attr;
+				while (a->next)
+					a = a->next;
+				a->next = attr;
+			}
 #endif /* CONFIG_NO_RADIUS */
 		} else if (os_strcmp(buf, "auth_algs") == 0) {
 			bss->auth_algs = atoi(pos);

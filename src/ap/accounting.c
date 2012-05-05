@@ -1,6 +1,6 @@
 /*
  * hostapd / RADIUS Accounting
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -39,6 +39,7 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 	u8 *val;
 	size_t len;
 	int i;
+	struct wpabuf *b;
 
 	msg = radius_msg_new(RADIUS_CODE_ACCOUNTING_REQUEST,
 			     radius_client_get_id(hapd->radius));
@@ -166,6 +167,15 @@ static struct radius_msg * accounting_msg(struct hostapd_data *hapd,
 				printf("Could not add Class\n");
 				goto fail;
 			}
+		}
+
+		b = ieee802_1x_get_radius_cui(sta->eapol_sm);
+		if (b &&
+		    !radius_msg_add_attr(msg,
+					 RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+					 wpabuf_head(b), wpabuf_len(b))) {
+			wpa_printf(MSG_ERROR, "Could not add CUI");
+			goto fail;
 		}
 	}
 

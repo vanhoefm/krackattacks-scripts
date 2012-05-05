@@ -978,6 +978,7 @@ void ieee802_1x_free_station(struct sta_info *sta)
 #ifndef CONFIG_NO_RADIUS
 	radius_msg_free(sm->last_recv_radius);
 	radius_free_class(&sm->radius_class);
+	wpabuf_free(sm->radius_cui);
 #endif /* CONFIG_NO_RADIUS */
 
 	os_free(sm->identity);
@@ -1199,6 +1200,32 @@ static void ieee802_1x_update_sta_identity(struct hostapd_data *hapd,
 }
 
 
+/* Update CUI based on Chargeable-User-Identity attribute in Access-Accept */
+static void ieee802_1x_update_sta_cui(struct hostapd_data *hapd,
+				      struct sta_info *sta,
+				      struct radius_msg *msg)
+{
+	struct eapol_state_machine *sm = sta->eapol_sm;
+	struct wpabuf *cui;
+	u8 *buf;
+	size_t len;
+
+	if (sm == NULL)
+		return;
+
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+				    &buf, &len, NULL) < 0)
+		return;
+
+	cui = wpabuf_alloc_copy(buf, len);
+	if (cui == NULL)
+		return;
+
+	wpabuf_free(sm->radius_cui);
+	sm->radius_cui = cui;
+}
+
+
 struct sta_id_search {
 	u8 identifier;
 	struct eapol_state_machine *sm;
@@ -1358,6 +1385,7 @@ ieee802_1x_receive_auth(struct radius_msg *msg, struct radius_msg *req,
 				    shared_secret_len);
 		ieee802_1x_store_radius_class(hapd, sta, msg);
 		ieee802_1x_update_sta_identity(hapd, sta, msg);
+		ieee802_1x_update_sta_cui(hapd, sta, msg);
 		if (sm->eap_if->eapKeyAvailable &&
 		    wpa_auth_pmksa_add(sta->wpa_sm, sm->eapol_key_crypt,
 				       session_timeout_set ?
@@ -1872,6 +1900,14 @@ u8 * ieee802_1x_get_radius_class(struct eapol_state_machine *sm, size_t *len,
 
 	*len = sm->radius_class.attr[idx].len;
 	return sm->radius_class.attr[idx].data;
+}
+
+
+struct wpabuf * ieee802_1x_get_radius_cui(struct eapol_state_machine *sm)
+{
+	if (sm == NULL)
+		return NULL;
+	return sm->radius_cui;
 }
 
 

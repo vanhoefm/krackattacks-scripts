@@ -157,6 +157,7 @@ struct eapol_state_machine {
 			      * Authentication server */
 	u8 eap_type_supp; /* EAP type of the last EAP packet from Supplicant */
 	struct radius_class_data radius_class;
+	struct wpabuf *radius_cui; /* Chargeable-User-Identity */
 
 	/* Keys for encrypting and signing EAPOL-Key frames */
 	u8 *eapol_key_sign;

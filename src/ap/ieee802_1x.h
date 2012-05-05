@@ -67,6 +67,7 @@ int ieee802_1x_eapol_tx_status(struct hostapd_data *hapd, struct sta_info *sta,
 u8 * ieee802_1x_get_identity(struct eapol_state_machine *sm, size_t *len);
 u8 * ieee802_1x_get_radius_class(struct eapol_state_machine *sm, size_t *len,
 				 int idx);
+struct wpabuf * ieee802_1x_get_radius_cui(struct eapol_state_machine *sm);
 const u8 * ieee802_1x_get_key(struct eapol_state_machine *sm, size_t *len);
 void ieee802_1x_notify_port_enabled(struct eapol_state_machine *sm,
 				    int enabled);

@@ -110,6 +110,7 @@ CONFIG_NO_ACCOUNTING=y
 else
 OBJS += ../src/radius/radius.o
 OBJS += ../src/radius/radius_client.o
+OBJS += ../src/radius/radius_das.o
 endif
 
 ifdef CONFIG_NO_ACCOUNTING

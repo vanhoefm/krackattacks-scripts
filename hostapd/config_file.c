@@ -561,6 +561,34 @@ hostapd_parse_radius_attr(const char *value)
 
 	return attr;
 }
+
+
+static int hostapd_parse_das_client(struct hostapd_bss_config *bss,
+				    const char *val)
+{
+	char *secret;
+	size_t len;
+
+	secret = os_strchr(val, ' ');
+	if (secret == NULL)
+		return -1;
+
+	secret++;
+	len = os_strlen(secret);
+
+	if (hostapd_parse_ip_addr(val, &bss->radius_das_client_addr))
+		return -1;
+
+	os_free(bss->radius_das_shared_secret);
+	bss->radius_das_shared_secret = os_malloc(len);
+	if (bss->radius_das_shared_secret == NULL)
+		return -1;
+
+	os_memcpy(bss->radius_das_shared_secret, secret, len);
+	bss->radius_das_shared_secret_len = len;
+
+	return 0;
+}
 #endif /* CONFIG_NO_RADIUS */
 
 
@@ -1656,6 +1684,14 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				while (a->next)
 					a = a->next;
 				a->next = attr;
+			}
+		} else if (os_strcmp(buf, "radius_das_port") == 0) {
+			bss->radius_das_port = atoi(pos);
+		} else if (os_strcmp(buf, "radius_das_client") == 0) {
+			if (hostapd_parse_das_client(bss, pos) < 0) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "DAS client", line);
+				errors++;
 			}
 #endif /* CONFIG_NO_RADIUS */
 		} else if (os_strcmp(buf, "auth_algs") == 0) {

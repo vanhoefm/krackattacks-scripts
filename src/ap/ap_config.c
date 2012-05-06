@@ -432,6 +432,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->radius_server_clients);
 	os_free(conf->test_socket);
 	os_free(conf->radius);
+	os_free(conf->radius_das_shared_secret);
 	hostapd_config_free_vlan(conf);
 	if (conf->ssid.dyn_vlan_keys) {
 		struct hostapd_ssid *ssid = &conf->ssid;

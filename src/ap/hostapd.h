@@ -85,6 +85,7 @@ struct hostapd_data {
 
 	struct radius_client_data *radius;
 	u32 acct_session_id_hi, acct_session_id_lo;
+	struct radius_das_data *radius_das;
 
 	struct iapp_data *iapp;
 

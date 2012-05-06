@@ -1,6 +1,6 @@
 /*
  * RADIUS message processing
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2011-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -147,6 +147,12 @@ static const char *radius_code_string(u8 code)
 	case RADIUS_CODE_STATUS_SERVER: return "Status-Server";
 	case RADIUS_CODE_STATUS_CLIENT: return "Status-Client";
 	case RADIUS_CODE_RESERVED: return "Reserved";
+	case RADIUS_CODE_DISCONNECT_REQUEST: return "Disconnect-Request";
+	case RADIUS_CODE_DISCONNECT_ACK: return "Disconnect-ACK";
+	case RADIUS_CODE_DISCONNECT_NAK: return "Disconnect-NAK";
+	case RADIUS_CODE_COA_REQUEST: return "CoA-Request";
+	case RADIUS_CODE_COA_ACK: return "CoA-ACK";
+	case RADIUS_CODE_COA_NAK: return "CoA-NAK";
 	default: return "?Unknown?";
 	}
 }
@@ -225,6 +231,7 @@ static struct radius_attr_type radius_attrs[] =
 	{ RADIUS_ATTR_CHARGEABLE_USER_IDENTITY, "Chargable-User-Identity",
 	  RADIUS_ATTR_TEXT },
 	{ RADIUS_ATTR_NAS_IPV6_ADDRESS, "NAS-IPv6-Address", RADIUS_ATTR_IPV6 },
+	{ RADIUS_ATTR_ERROR_CAUSE, "Error-Cause", RADIUS_ATTR_INT32 }
 };
 #define RADIUS_ATTRS (sizeof(radius_attrs) / sizeof(radius_attrs[0]))
 
@@ -406,6 +413,45 @@ int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 }
 
 
+int radius_msg_finish_das_resp(struct radius_msg *msg, const u8 *secret,
+			       size_t secret_len,
+			       const struct radius_hdr *req_hdr)
+{
+	const u8 *addr[2];
+	size_t len[2];
+	u8 auth[MD5_MAC_LEN];
+	struct radius_attr_hdr *attr;
+
+	os_memset(auth, 0, MD5_MAC_LEN);
+	attr = radius_msg_add_attr(msg, RADIUS_ATTR_MESSAGE_AUTHENTICATOR,
+				   auth, MD5_MAC_LEN);
+	if (attr == NULL) {
+		wpa_printf(MSG_WARNING, "Could not add Message-Authenticator");
+		return -1;
+	}
+
+	msg->hdr->length = htons(wpabuf_len(msg->buf));
+	os_memcpy(msg->hdr->authenticator, req_hdr->authenticator, 16);
+	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
+		 wpabuf_len(msg->buf), (u8 *) (attr + 1));
+
+	/* ResponseAuth = MD5(Code+ID+Length+RequestAuth+Attributes+Secret) */
+	addr[0] = wpabuf_head_u8(msg->buf);
+	len[0] = wpabuf_len(msg->buf);
+	addr[1] = secret;
+	len[1] = secret_len;
+	if (md5_vector(2, addr, len, msg->hdr->authenticator) < 0)
+		return -1;
+
+	if (wpabuf_len(msg->buf) > 0xffff) {
+		wpa_printf(MSG_WARNING, "RADIUS: Too long message (%lu)",
+			   (unsigned long) wpabuf_len(msg->buf));
+		return -1;
+	}
+	return 0;
+}
+
+
 void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 			    size_t secret_len)
 {
@@ -424,6 +470,88 @@ void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 		wpa_printf(MSG_WARNING, "RADIUS: Too long messages (%lu)",
 			   (unsigned long) wpabuf_len(msg->buf));
 	}
+}
+
+
+int radius_msg_verify_acct_req(struct radius_msg *msg, const u8 *secret,
+			       size_t secret_len)
+{
+	const u8 *addr[4];
+	size_t len[4];
+	u8 zero[MD5_MAC_LEN];
+	u8 hash[MD5_MAC_LEN];
+
+	os_memset(zero, 0, sizeof(zero));
+	addr[0] = (u8 *) msg->hdr;
+	len[0] = sizeof(struct radius_hdr) - MD5_MAC_LEN;
+	addr[1] = zero;
+	len[1] = MD5_MAC_LEN;
+	addr[2] = (u8 *) (msg->hdr + 1);
+	len[2] = wpabuf_len(msg->buf) - sizeof(struct radius_hdr);
+	addr[3] = secret;
+	len[3] = secret_len;
+	md5_vector(4, addr, len, hash);
+	return os_memcmp(msg->hdr->authenticator, hash, MD5_MAC_LEN) != 0;
+}
+
+
+int radius_msg_verify_das_req(struct radius_msg *msg, const u8 *secret,
+			      size_t secret_len)
+{
+	const u8 *addr[4];
+	size_t len[4];
+	u8 zero[MD5_MAC_LEN];
+	u8 hash[MD5_MAC_LEN];
+	u8 auth[MD5_MAC_LEN], orig[MD5_MAC_LEN];
+	u8 orig_authenticator[16];
+
+	struct radius_attr_hdr *attr = NULL, *tmp;
+	size_t i;
+
+	os_memset(zero, 0, sizeof(zero));
+	addr[0] = (u8 *) msg->hdr;
+	len[0] = sizeof(struct radius_hdr) - MD5_MAC_LEN;
+	addr[1] = zero;
+	len[1] = MD5_MAC_LEN;
+	addr[2] = (u8 *) (msg->hdr + 1);
+	len[2] = wpabuf_len(msg->buf) - sizeof(struct radius_hdr);
+	addr[3] = secret;
+	len[3] = secret_len;
+	md5_vector(4, addr, len, hash);
+	if (os_memcmp(msg->hdr->authenticator, hash, MD5_MAC_LEN) != 0)
+		return 1;
+
+	for (i = 0; i < msg->attr_used; i++) {
+		tmp = radius_get_attr_hdr(msg, i);
+		if (tmp->type == RADIUS_ATTR_MESSAGE_AUTHENTICATOR) {
+			if (attr != NULL) {
+				wpa_printf(MSG_WARNING, "Multiple "
+					   "Message-Authenticator attributes "
+					   "in RADIUS message");
+				return 1;
+			}
+			attr = tmp;
+		}
+	}
+
+	if (attr == NULL) {
+		/* Message-Authenticator is MAY; not required */
+		return 0;
+	}
+
+	os_memcpy(orig, attr + 1, MD5_MAC_LEN);
+	os_memset(attr + 1, 0, MD5_MAC_LEN);
+	os_memcpy(orig_authenticator, msg->hdr->authenticator,
+		  sizeof(orig_authenticator));
+	os_memset(msg->hdr->authenticator, 0,
+		  sizeof(msg->hdr->authenticator));
+	hmac_md5(secret, secret_len, wpabuf_head(msg->buf),
+		 wpabuf_len(msg->buf), auth);
+	os_memcpy(attr + 1, orig, MD5_MAC_LEN);
+	os_memcpy(msg->hdr->authenticator, orig_authenticator,
+		  sizeof(orig_authenticator));
+
+	return os_memcmp(orig, auth, MD5_MAC_LEN) != 0;
 }
 
 

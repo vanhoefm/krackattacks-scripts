@@ -1,6 +1,6 @@
 /*
  * RADIUS message processing
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2009, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -31,6 +31,12 @@ enum { RADIUS_CODE_ACCESS_REQUEST = 1,
        RADIUS_CODE_ACCESS_CHALLENGE = 11,
        RADIUS_CODE_STATUS_SERVER = 12,
        RADIUS_CODE_STATUS_CLIENT = 13,
+       RADIUS_CODE_DISCONNECT_REQUEST = 40,
+       RADIUS_CODE_DISCONNECT_ACK = 41,
+       RADIUS_CODE_DISCONNECT_NAK = 42,
+       RADIUS_CODE_COA_REQUEST = 43,
+       RADIUS_CODE_COA_ACK = 44,
+       RADIUS_CODE_COA_NAK = 45,
        RADIUS_CODE_RESERVED = 255
 };
 
@@ -83,7 +89,8 @@ enum { RADIUS_ATTR_USER_NAME = 1,
        RADIUS_ATTR_TUNNEL_PRIVATE_GROUP_ID = 81,
        RADIUS_ATTR_ACCT_INTERIM_INTERVAL = 85,
        RADIUS_ATTR_CHARGEABLE_USER_IDENTITY = 89,
-       RADIUS_ATTR_NAS_IPV6_ADDRESS = 95
+       RADIUS_ATTR_NAS_IPV6_ADDRESS = 95,
+       RADIUS_ATTR_ERROR_CAUSE = 101
 };
 
 
@@ -192,8 +199,15 @@ int radius_msg_finish(struct radius_msg *msg, const u8 *secret,
 		      size_t secret_len);
 int radius_msg_finish_srv(struct radius_msg *msg, const u8 *secret,
 			  size_t secret_len, const u8 *req_authenticator);
+int radius_msg_finish_das_resp(struct radius_msg *msg, const u8 *secret,
+			       size_t secret_len,
+			       const struct radius_hdr *req_hdr);
 void radius_msg_finish_acct(struct radius_msg *msg, const u8 *secret,
 			    size_t secret_len);
+int radius_msg_verify_acct_req(struct radius_msg *msg, const u8 *secret,
+			       size_t secret_len);
+int radius_msg_verify_das_req(struct radius_msg *msg, const u8 *secret,
+			       size_t secret_len);
 struct radius_attr_hdr * radius_msg_add_attr(struct radius_msg *msg, u8 type,
 					     const u8 *data, size_t data_len);
 struct radius_msg * radius_msg_parse(const u8 *data, size_t len);

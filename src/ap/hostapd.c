@@ -1,6 +1,6 @@
 /*
  * hostapd / Initialization and configuration
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -12,6 +12,7 @@
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
 #include "radius/radius_client.h"
+#include "radius/radius_das.h"
 #include "drivers/driver.h"
 #include "hostapd.h"
 #include "authsrv.h"
@@ -241,6 +242,8 @@ static void hostapd_free_hapd_data(struct hostapd_data *hapd)
 #ifndef CONFIG_NO_RADIUS
 	radius_client_deinit(hapd->radius);
 	hapd->radius = NULL;
+	radius_das_deinit(hapd->radius_das);
+	hapd->radius_das = NULL;
 #endif /* CONFIG_NO_RADIUS */
 
 	hostapd_deinit_wps(hapd);
@@ -626,6 +629,22 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 	if (hapd->radius == NULL) {
 		wpa_printf(MSG_ERROR, "RADIUS client initialization failed.");
 		return -1;
+	}
+
+	if (hapd->conf->radius_das_port) {
+		struct radius_das_conf das_conf;
+		os_memset(&das_conf, 0, sizeof(das_conf));
+		das_conf.port = hapd->conf->radius_das_port;
+		das_conf.shared_secret = hapd->conf->radius_das_shared_secret;
+		das_conf.shared_secret_len =
+			hapd->conf->radius_das_shared_secret_len;
+		das_conf.client_addr = &hapd->conf->radius_das_client_addr;
+		hapd->radius_das = radius_das_init(&das_conf);
+		if (hapd->radius_das == NULL) {
+			wpa_printf(MSG_ERROR, "RADIUS DAS initialization "
+				   "failed.");
+			return -1;
+		}
 	}
 #endif /* CONFIG_NO_RADIUS */
 

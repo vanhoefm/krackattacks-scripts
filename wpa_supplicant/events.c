@@ -57,7 +57,7 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 
-	if (ssid->disabled) {
+	if (wpas_network_disabled(ssid)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Selected network is disabled");
 		return -1;
 	}
@@ -640,7 +640,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	for (ssid = group; ssid; ssid = ssid->pnext) {
 		int check_ssid = wpa ? 1 : (ssid->ssid_len != 0);
 
-		if (ssid->disabled) {
+		if (wpas_network_disabled(ssid)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - disabled");
 			continue;
 		}
@@ -876,7 +876,7 @@ wpa_supplicant_pick_new_network(struct wpa_supplicant *wpa_s)
 	for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
 		for (ssid = wpa_s->conf->pssid[prio]; ssid; ssid = ssid->pnext)
 		{
-			if (ssid->disabled)
+			if (wpas_network_disabled(ssid))
 				continue;
 			if (ssid->mode == IEEE80211_MODE_IBSS ||
 			    ssid->mode == IEEE80211_MODE_AP)

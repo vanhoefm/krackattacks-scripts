@@ -1259,6 +1259,11 @@ static int wpa_config_parse_wep_key(u8 *key, size_t *len, int line,
 		os_free(buf);
 		return -1;
 	}
+	if (*len && *len != 5 && *len != 13 && *len != 16) {
+		wpa_printf(MSG_ERROR, "Line %d: Invalid WEP key length %u - "
+			   "this network block will be ignored",
+			   line, (unsigned int) *len);
+	}
 	os_memcpy(key, buf, *len);
 	os_free(buf);
 	res = os_snprintf(title, sizeof(title), "wep_key%d", idx);
@@ -2915,4 +2920,24 @@ int wpa_config_process_global(struct wpa_config *config, char *pos, int line)
 	}
 
 	return ret;
+}
+
+
+int wpas_network_disabled(struct wpa_ssid *ssid)
+{
+	int i;
+
+	if (ssid == NULL)
+		return 1;
+
+	if (ssid->disabled)
+		return 1;
+
+	for (i = 0; i < NUM_WEP_KEYS; i++) {
+		size_t len = ssid->wep_key_len[i];
+		if (len && len != 5 && len != 13 && len != 16)
+			return 1; /* invalid WEP key */
+	}
+
+	return 0;
 }

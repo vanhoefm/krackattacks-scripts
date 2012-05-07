@@ -1883,14 +1883,14 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 
 	entry = wpa_s->conf->ssid;
 	while (entry) {
-		if (!entry->disabled &&
+		if (!wpas_network_disabled(entry) &&
 		    ((ssid_len == entry->ssid_len &&
 		      os_memcmp(ssid, entry->ssid, ssid_len) == 0) || wired) &&
 		    (!entry->bssid_set ||
 		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
 			return entry;
 #ifdef CONFIG_WPS
-		if (!entry->disabled &&
+		if (!wpas_network_disabled(entry) &&
 		    (entry->key_mgmt & WPA_KEY_MGMT_WPS) &&
 		    (entry->ssid == NULL || entry->ssid_len == 0) &&
 		    (!entry->bssid_set ||
@@ -1898,7 +1898,7 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 			return entry;
 #endif /* CONFIG_WPS */
 
-		if (!entry->disabled && entry->bssid_set &&
+		if (!wpas_network_disabled(entry) && entry->bssid_set &&
 		    entry->ssid_len == 0 &&
 		    os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0)
 			return entry;

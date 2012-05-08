@@ -540,9 +540,8 @@ int wpa_supplicant_create_ap(struct wpa_supplicant *wpa_s,
 		hapd_iface->bss[i]->sta_authorized_cb_ctx = wpa_s;
 #ifdef CONFIG_P2P
 		hapd_iface->bss[i]->p2p = wpa_s->global->p2p;
-		hapd_iface->bss[i]->p2p_group = wpas_p2p_group_init(
-			wpa_s, ssid->p2p_persistent_group,
-			ssid->mode == WPAS_MODE_P2P_GROUP_FORMATION);
+		hapd_iface->bss[i]->p2p_group = wpas_p2p_group_init(wpa_s,
+								    ssid);
 #endif /* CONFIG_P2P */
 		hapd_iface->bss[i]->setup_complete_cb = wpas_ap_configured_cb;
 		hapd_iface->bss[i]->setup_complete_cb_ctx = wpa_s;

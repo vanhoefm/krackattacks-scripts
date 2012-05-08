@@ -3665,8 +3665,7 @@ static void wpas_p2p_idle_update(void *ctx, int idle)
 
 
 struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
-				       int persistent_group,
-				       int group_formation)
+				       struct wpa_ssid *ssid)
 {
 	struct p2p_group *group;
 	struct p2p_group_config *cfg;
@@ -3680,9 +3679,9 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 	if (cfg == NULL)
 		return NULL;
 
-	if (persistent_group && wpa_s->conf->persistent_reconnect)
+	if (ssid->p2p_persistent_group && wpa_s->conf->persistent_reconnect)
 		cfg->persistent_group = 2;
-	else if (persistent_group)
+	else if (ssid->p2p_persistent_group)
 		cfg->persistent_group = 1;
 	os_memcpy(cfg->interface_addr, wpa_s->own_addr, ETH_ALEN);
 	if (wpa_s->max_stations &&
@@ -3690,6 +3689,8 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 		cfg->max_clients = wpa_s->max_stations;
 	else
 		cfg->max_clients = wpa_s->conf->max_num_sta;
+	os_memcpy(cfg->ssid, ssid->ssid, ssid->ssid_len);
+	cfg->ssid_len = ssid->ssid_len;
 	cfg->cb_ctx = wpa_s;
 	cfg->ie_update = wpas_p2p_ie_update;
 	cfg->idle_update = wpas_p2p_idle_update;
@@ -3697,7 +3698,7 @@ struct p2p_group * wpas_p2p_group_init(struct wpa_supplicant *wpa_s,
 	group = p2p_group_init(wpa_s->global->p2p, cfg);
 	if (group == NULL)
 		os_free(cfg);
-	if (!group_formation)
+	if (ssid->mode != WPAS_MODE_P2P_GROUP_FORMATION)
 		p2p_group_notif_formation_done(group);
 	wpa_s->p2p_group = group;
 	return group;

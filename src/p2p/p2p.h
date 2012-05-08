@@ -1262,6 +1262,16 @@ struct p2p_group_config {
 	unsigned int max_clients;
 
 	/**
+	 * ssid - Group SSID
+	 */
+	u8 ssid[32];
+
+	/**
+	 * ssid_len - Length of SSID
+	 */
+	size_t ssid_len;
+
+	/**
 	 * cb_ctx - Context to use with callback functions
 	 */
 	void *cb_ctx;

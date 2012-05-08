@@ -1,11 +1,9 @@
 #!/bin/sh
 
-WINLOCAL=/home/jm/H-win/local
-
 set -e
 
 if [ -z "$1" ]; then
-    echo "build_release <version> [nobin]"
+    echo "build_release <version>"
     exit 1
 fi
 
@@ -47,102 +45,3 @@ rm -f wpa_supplicant-$VER/wpa_supplicant/doc/docbook/manpage.{links,refs}
 tar czf $RELDIR/wpa_supplicant-$VER.tar.gz wpa_supplicant-$VER
 cd ..
 rm -r $TMP
-
-if [ "$2" = "nobin" ]; then
-    exit 0
-fi
-
-
-cd $RELDIR
-
-    PDIR=wpa_supplicant-$VER
-    WDIR=wpa_supplicant-windows-bin-$VER
-    tar xzf $PDIR.tar.gz
-    mkdir "$WDIR"
-    cd "$PDIR/wpa_supplicant"
-    cat > .config <<EOF
-CONFIG_DRIVER_NDIS=y
-CONFIG_NATIVE_WINDOWS=y
-
-CC=i586-mingw32msvc-gcc
-STRIP=i586-mingw32msvc-strip
-PLATFORMSDKLIB=$WINLOCAL/lib
-CONFIG_NDIS_EVENTS_INTEGRATED=y
-
-CFLAGS += -I$WINLOCAL/include
-LIBS += -L$WINLOCAL/lib
-LIBS_w += -L$WINLOCAL/lib
-LIBS_p += -L$WINLOCAL/lib
-
-CONFIG_EAP_SIM=y
-CONFIG_SIM_SIMULATOR=y
-CONFIG_EAP_AKA=y
-CONFIG_USIM_SIMULATOR=y
-CONFIG_EAP_LEAP=y
-CONFIG_EAP_FAST=y
-CONFIG_EAP_TLS=y
-
-CONFIG_CTRL_IFACE=y
-CONFIG_EAP_FAST=y
-CONFIG_EAP_MSCHAPV2=y
-CONFIG_EAP_TTLS=y
-CONFIG_EAP_PEAP=y
-CONFIG_EAP_MD5=y
-CONFIG_EAP_GTC=y
-CONFIG_EAP_OTP=y
-CONFIG_EAP_PAX=y
-CONFIG_EAP_SAKE=y
-CONFIG_EAP_PSK=y
-CONFIG_EAP_TNC=y
-CONFIG_PKCS12=y
-CONFIG_PCSC=y
-CONFIG_WPS=y
-
-CONFIG_L2_PACKET=winpcap
-CONFIG_MAIN=main_winsvc
-CONFIG_BACKEND=winreg
-CONFIG_ELOOP=eloop_win
-CFLAGS += -DCONFIG_DEBUG_FILE
-EOF
-
-    # First, build the Windows service & registry version and rename it
-    make -j2 windows-bin
-    mv wpa_supplicant.exe wpasvc.exe
-
-    # Then, build "the standard" wpa_supplicant.exe
-    cat >> .config <<EOF
-CONFIG_MAIN=main
-CONFIG_BACKEND=file
-EOF
-
-    make -j2 windows-bin
-
-    for i in COPYING; do
-	unix2dos < ../$i > ../../"$WDIR"/$i
-    done
-    for i in README README-Windows.txt wpa_supplicant.conf; do
-	unix2dos < $i > ../../"$WDIR"/$i
-    done
-    mv *.exe ../../"$WDIR"
-    cp win_example.reg ../../"$WDIR"
-
-    cd wpa_gui-qt4
-    make -C icons
-    qmake -spec win32-x-g++
-    make -j2
-    cp release/wpa_gui.exe ../../../"$WDIR"
-    lrelease wpa_gui.pro
-    cp lang/wpa_gui_de.qm ../../../"$WDIR"
-    cd ../../..
-    rm -rf "$PDIR"
-    zip "$WDIR.zip" "$WDIR"/*
-    rm -rf "$WDIR"
-
-cd $RELDIR/..
-
-./build_nsis.sh "$RELDIR/$WDIR.zip"
-mv wpa_supplicant-$VER.exe $RELDIR
-
-ls -l $RELDIR/*$VER*
-
-exit 0

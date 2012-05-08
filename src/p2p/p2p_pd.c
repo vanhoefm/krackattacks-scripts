@@ -126,6 +126,21 @@ void p2p_process_prov_disc_req(struct p2p_data *p2p, const u8 *sa,
 		goto out;
 	}
 
+	if (msg.group_id) {
+		size_t i;
+		for (i = 0; i < p2p->num_groups; i++) {
+			if (p2p_group_is_group_id_match(p2p->groups[i],
+							msg.group_id,
+							msg.group_id_len))
+				break;
+		}
+		if (i == p2p->num_groups) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: PD "
+				"request for unknown P2P Group ID - reject");
+			goto out;
+		}
+	}
+
 	if (dev)
 		dev->flags &= ~(P2P_DEV_PD_PEER_DISPLAY |
 				P2P_DEV_PD_PEER_KEYPAD);

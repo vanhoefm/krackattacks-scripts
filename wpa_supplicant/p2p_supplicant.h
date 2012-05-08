@@ -140,5 +140,6 @@ struct wpa_ssid * wpas_p2p_get_persistent(struct wpa_supplicant *wpa_s,
 					  size_t ssid_len);
 void wpas_p2p_notify_ap_sta_authorized(struct wpa_supplicant *wpa_s,
 				       const u8 *addr);
+int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s);
 
 #endif /* P2P_SUPPLICANT_H */

@@ -199,6 +199,7 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	struct p2p_message msg;
 	struct p2p_device *dev;
 	u16 report_config_methods = 0;
+	int success = 0;
 
 	if (p2p_parse(data, len, &msg))
 		return;
@@ -267,11 +268,12 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 	dev->wps_prov_info = msg.wps_config_methods;
 
 	p2p_parse_free(&msg);
+	success = 1;
 
 out:
 	dev->req_config_methods = 0;
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
-	if (p2p->cfg->prov_disc_resp)
+	if (success && p2p->cfg->prov_disc_resp)
 		p2p->cfg->prov_disc_resp(p2p->cfg->cb_ctx, sa,
 					 report_config_methods);
 }

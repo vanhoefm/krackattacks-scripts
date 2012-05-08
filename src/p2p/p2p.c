@@ -2922,6 +2922,18 @@ int p2p_listen_end(struct p2p_data *p2p, unsigned int freq)
 				"new one");
 			return 1;
 		}
+		if (p2p->pending_listen_freq) {
+			/*
+			 * Better wait a bit if the driver is unable to start
+			 * offchannel operation for some reason. p2p_search()
+			 * will be started from internal timeout.
+			 */
+			wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Listen "
+				"operation did not seem to start - delay "
+				"search phase to avoid busy loop");
+			p2p_set_timeout(p2p, 0, 100000);
+			return 1;
+		}
 		p2p_search(p2p);
 		return 1;
 	}

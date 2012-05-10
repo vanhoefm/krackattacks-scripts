@@ -80,12 +80,12 @@ static int wpas_wps_in_use(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_WPS */
 
 
-int wpa_supplicant_enabled_networks(struct wpa_config *conf)
+int wpa_supplicant_enabled_networks(struct wpa_supplicant *wpa_s)
 {
-	struct wpa_ssid *ssid = conf->ssid;
+	struct wpa_ssid *ssid = wpa_s->conf->ssid;
 	int count = 0;
 	while (ssid) {
-		if (!wpas_network_disabled(ssid))
+		if (!wpas_network_disabled(wpa_s, ssid))
 			count++;
 		ssid = ssid->next;
 	}
@@ -97,7 +97,7 @@ static void wpa_supplicant_assoc_try(struct wpa_supplicant *wpa_s,
 				     struct wpa_ssid *ssid)
 {
 	while (ssid) {
-		if (!wpas_network_disabled(ssid))
+		if (!wpas_network_disabled(wpa_s, ssid))
 			break;
 		ssid = ssid->next;
 	}
@@ -447,7 +447,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		return;
 	}
 
-	if (!wpa_supplicant_enabled_networks(wpa_s->conf) &&
+	if (!wpa_supplicant_enabled_networks(wpa_s) &&
 	    !wpa_s->scan_req) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "No enabled networks - do not scan");
 		wpa_supplicant_set_state(wpa_s, WPA_INACTIVE);
@@ -554,7 +554,8 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		if (ssid == NULL && max_ssids > 1)
 			ssid = wpa_s->conf->ssid;
 		while (ssid) {
-			if (!wpas_network_disabled(ssid) && ssid->scan_ssid) {
+			if (!wpas_network_disabled(wpa_s, ssid) &&
+			    ssid->scan_ssid) {
 				wpa_hexdump_ascii(MSG_DEBUG, "Scan SSID",
 						  ssid->ssid, ssid->ssid_len);
 				params.ssids[params.num_ssids].ssid =
@@ -574,7 +575,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 		}
 
 		for (tssid = wpa_s->conf->ssid; tssid; tssid = tssid->next) {
-			if (wpas_network_disabled(tssid))
+			if (wpas_network_disabled(wpa_s, tssid))
 				continue;
 			if ((params.freqs || !freqs_set) && tssid->scan_freq) {
 				int_array_concat(&params.freqs,
@@ -695,7 +696,8 @@ void wpa_supplicant_req_scan(struct wpa_supplicant *wpa_s, int sec, int usec)
 		struct wpa_ssid *ssid = wpa_s->conf->ssid;
 
 		while (ssid) {
-			if (!wpas_network_disabled(ssid) && ssid->scan_ssid)
+			if (!wpas_network_disabled(wpa_s, ssid) &&
+			    ssid->scan_ssid)
 				break;
 			ssid = ssid->next;
 		}
@@ -771,14 +773,15 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 
 	need_ssids = 0;
 	for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
-		if (!wpas_network_disabled(ssid) && !ssid->scan_ssid) {
+		if (!wpas_network_disabled(wpa_s, ssid) && !ssid->scan_ssid) {
 			/* Use wildcard SSID to find this network */
 			wildcard = 1;
-		} else if (!wpas_network_disabled(ssid) && ssid->ssid_len)
+		} else if (!wpas_network_disabled(wpa_s, ssid) &&
+			   ssid->ssid_len)
 			need_ssids++;
 
 #ifdef CONFIG_WPS
-		if (!wpas_network_disabled(ssid) &&
+		if (!wpas_network_disabled(wpa_s, ssid) &&
 		    ssid->key_mgmt == WPA_KEY_MGMT_WPS) {
 			/*
 			 * Normal scan is more reliable and faster for WPS
@@ -850,7 +853,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	}
 
 	while (ssid) {
-		if (wpas_network_disabled(ssid))
+		if (wpas_network_disabled(wpa_s, ssid))
 			goto next;
 
 		if (params.num_filter_ssids < wpa_s->max_match_sets &&
@@ -887,7 +890,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 				do {
 					ssid = ssid->next;
 				} while (ssid &&
-					 (wpas_network_disabled(ssid) ||
+					 (wpas_network_disabled(wpa_s, ssid) ||
 					  !ssid->scan_ssid));
 				break;
 			}

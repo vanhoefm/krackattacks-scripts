@@ -60,7 +60,7 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 	num_ssid = 0;
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
-		if (!wpas_network_disabled(ssid))
+		if (!wpas_network_disabled(wpa_s, ssid))
 			num_ssid++;
 		ssid = ssid->next;
 	}
@@ -82,7 +82,7 @@ static int pno_start(struct wpa_supplicant *wpa_s)
 	i = 0;
 	ssid = wpa_s->conf->ssid;
 	while (ssid) {
-		if (!wpas_network_disabled(ssid)) {
+		if (!wpas_network_disabled(wpa_s, ssid)) {
 			params.ssids[i].ssid = ssid->ssid;
 			params.ssids[i].ssid_len = ssid->ssid_len;
 			params.num_ssids++;

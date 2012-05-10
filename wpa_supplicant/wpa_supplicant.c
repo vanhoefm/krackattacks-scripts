@@ -750,7 +750,7 @@ int wpa_supplicant_reload_configuration(struct wpa_supplicant *wpa_s)
 	wpa_supplicant_update_config(wpa_s);
 
 	wpa_supplicant_clear_status(wpa_s);
-	if (wpa_supplicant_enabled_networks(wpa_s->conf)) {
+	if (wpa_supplicant_enabled_networks(wpa_s)) {
 		wpa_s->reassociate = 1;
 		wpa_supplicant_req_scan(wpa_s, 0, 0);
 	}
@@ -1898,14 +1898,14 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 
 	entry = wpa_s->conf->ssid;
 	while (entry) {
-		if (!wpas_network_disabled(entry) &&
+		if (!wpas_network_disabled(wpa_s, entry) &&
 		    ((ssid_len == entry->ssid_len &&
 		      os_memcmp(ssid, entry->ssid, ssid_len) == 0) || wired) &&
 		    (!entry->bssid_set ||
 		     os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0))
 			return entry;
 #ifdef CONFIG_WPS
-		if (!wpas_network_disabled(entry) &&
+		if (!wpas_network_disabled(wpa_s, entry) &&
 		    (entry->key_mgmt & WPA_KEY_MGMT_WPS) &&
 		    (entry->ssid == NULL || entry->ssid_len == 0) &&
 		    (!entry->bssid_set ||
@@ -1913,7 +1913,7 @@ struct wpa_ssid * wpa_supplicant_get_ssid(struct wpa_supplicant *wpa_s)
 			return entry;
 #endif /* CONFIG_WPS */
 
-		if (!wpas_network_disabled(entry) && entry->bssid_set &&
+		if (!wpas_network_disabled(wpa_s, entry) && entry->bssid_set &&
 		    entry->ssid_len == 0 &&
 		    os_memcmp(bssid, entry->bssid, ETH_ALEN) == 0)
 			return entry;
@@ -2205,7 +2205,7 @@ int wpa_supplicant_driver_init(struct wpa_supplicant *wpa_s)
 	wpa_s->prev_scan_ssid = WILDCARD_SSID_SCAN;
 	wpa_s->prev_scan_wildcard = 0;
 
-	if (wpa_supplicant_enabled_networks(wpa_s->conf)) {
+	if (wpa_supplicant_enabled_networks(wpa_s)) {
 		if (wpa_supplicant_delayed_sched_scan(wpa_s, interface_count,
 						      100000))
 			wpa_supplicant_req_scan(wpa_s, interface_count,
@@ -2620,6 +2620,7 @@ next_driver:
 	if (wpa_drv_get_capa(wpa_s, &capa) == 0) {
 		wpa_s->drv_capa_known = 1;
 		wpa_s->drv_flags = capa.flags;
+		wpa_s->drv_enc = capa.enc;
 		wpa_s->probe_resp_offloads = capa.probe_resp_offloads;
 		wpa_s->max_scan_ssids = capa.max_scan_ssids;
 		wpa_s->max_sched_scan_ssids = capa.max_sched_scan_ssids;
@@ -3316,3 +3317,36 @@ int wpa_supplicant_ctrl_iface_ctrl_rsp_handle(struct wpa_supplicant *wpa_s,
 #endif /* IEEE8021X_EAPOL */
 }
 #endif /* CONFIG_CTRL_IFACE || CONFIG_CTRL_IFACE_DBUS_NEW */
+
+
+int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
+{
+	int i;
+	unsigned int drv_enc;
+
+	if (ssid == NULL)
+		return 1;
+
+	if (ssid->disabled)
+		return 1;
+
+	if (wpa_s && wpa_s->drv_capa_known)
+		drv_enc = wpa_s->drv_enc;
+	else
+		drv_enc = (unsigned int) -1;
+
+	for (i = 0; i < NUM_WEP_KEYS; i++) {
+		size_t len = ssid->wep_key_len[i];
+		if (len == 0)
+			continue;
+		if (len == 5 && (drv_enc & WPA_DRIVER_CAPA_ENC_WEP40))
+			continue;
+		if (len == 13 && (drv_enc & WPA_DRIVER_CAPA_ENC_WEP104))
+			continue;
+		if (len == 16 && (drv_enc & WPA_DRIVER_CAPA_ENC_WEP128))
+			continue;
+		return 1; /* invalid WEP key */
+	}
+
+	return 0;
+}

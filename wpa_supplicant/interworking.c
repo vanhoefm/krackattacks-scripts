@@ -1104,7 +1104,7 @@ static int interworking_find_network_match(struct wpa_supplicant *wpa_s)
 
 	dl_list_for_each(bss, &wpa_s->bss, struct wpa_bss, list) {
 		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
-			if (wpas_network_disabled(ssid) ||
+			if (wpas_network_disabled(wpa_s, ssid) ||
 			    ssid->mode != WPAS_MODE_INFRA)
 				continue;
 			if (ssid->ssid_len != bss->ssid_len ||

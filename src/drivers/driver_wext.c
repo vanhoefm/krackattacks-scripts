@@ -1575,6 +1575,7 @@ static int wpa_driver_wext_get_range(void *priv)
 		}
 		drv->capa.enc |= WPA_DRIVER_CAPA_ENC_WEP40 |
 			WPA_DRIVER_CAPA_ENC_WEP104;
+		drv->capa.enc |= WPA_DRIVER_CAPA_ENC_WEP128;
 		if (range->enc_capa & IW_ENC_CAPA_CIPHER_TKIP)
 			drv->capa.enc |= WPA_DRIVER_CAPA_ENC_TKIP;
 		if (range->enc_capa & IW_ENC_CAPA_CIPHER_CCMP)

@@ -362,6 +362,7 @@ struct wpa_supplicant {
 	int normal_scans; /* normal scans run before sched_scan */
 
 	unsigned int drv_flags;
+	unsigned int drv_enc;
 
 	/*
 	 * A bitmap of supported protocols for probe response offload. See
@@ -675,5 +676,7 @@ static inline int network_is_persistent_group(struct wpa_ssid *ssid)
 {
 	return ((ssid->disabled == 2) || ssid->p2p_persistent_group);
 }
+
+int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
 
 #endif /* WPA_SUPPLICANT_I_H */

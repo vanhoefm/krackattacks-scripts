@@ -57,7 +57,7 @@ static int wpa_supplicant_select_config(struct wpa_supplicant *wpa_s)
 		return -1;
 	}
 
-	if (wpas_network_disabled(ssid)) {
+	if (wpas_network_disabled(wpa_s, ssid)) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Selected network is disabled");
 		return -1;
 	}
@@ -612,7 +612,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	e = wpa_blacklist_get(wpa_s, bss->bssid);
 	if (e) {
 		int limit = 1;
-		if (wpa_supplicant_enabled_networks(wpa_s->conf) == 1) {
+		if (wpa_supplicant_enabled_networks(wpa_s) == 1) {
 			/*
 			 * When only a single network is enabled, we can
 			 * trigger blacklisting on the first failure. This
@@ -640,7 +640,7 @@ static struct wpa_ssid * wpa_scan_res_match(struct wpa_supplicant *wpa_s,
 	for (ssid = group; ssid; ssid = ssid->pnext) {
 		int check_ssid = wpa ? 1 : (ssid->ssid_len != 0);
 
-		if (wpas_network_disabled(ssid)) {
+		if (wpas_network_disabled(wpa_s, ssid)) {
 			wpa_dbg(wpa_s, MSG_DEBUG, "   skip - disabled");
 			continue;
 		}
@@ -805,7 +805,7 @@ wpa_supplicant_pick_network(struct wpa_supplicant *wpa_s,
 static void wpa_supplicant_req_new_scan(struct wpa_supplicant *wpa_s,
 					int timeout_sec, int timeout_usec)
 {
-	if (!wpa_supplicant_enabled_networks(wpa_s->conf)) {
+	if (!wpa_supplicant_enabled_networks(wpa_s)) {
 		/*
 		 * No networks are enabled; short-circuit request so
 		 * we don't wait timeout seconds before transitioning
@@ -876,7 +876,7 @@ wpa_supplicant_pick_new_network(struct wpa_supplicant *wpa_s)
 	for (prio = 0; prio < wpa_s->conf->num_prio; prio++) {
 		for (ssid = wpa_s->conf->pssid[prio]; ssid; ssid = ssid->pnext)
 		{
-			if (wpas_network_disabled(ssid))
+			if (wpas_network_disabled(wpa_s, ssid))
 				continue;
 			if (ssid->mode == IEEE80211_MODE_IBSS ||
 			    ssid->mode == IEEE80211_MODE_AP)

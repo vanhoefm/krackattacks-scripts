@@ -2924,23 +2924,3 @@ int wpa_config_process_global(struct wpa_config *config, char *pos, int line)
 
 	return ret;
 }
-
-
-int wpas_network_disabled(struct wpa_ssid *ssid)
-{
-	int i;
-
-	if (ssid == NULL)
-		return 1;
-
-	if (ssid->disabled)
-		return 1;
-
-	for (i = 0; i < NUM_WEP_KEYS; i++) {
-		size_t len = ssid->wep_key_len[i];
-		if (len && len != 5 && len != 13 && len != 16)
-			return 1; /* invalid WEP key */
-	}
-
-	return 0;
-}

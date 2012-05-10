@@ -1113,8 +1113,10 @@ static void wpas_wps_set_uuid(struct wpa_supplicant *wpa_s,
 		while (first && first->next)
 			first = first->next;
 		if (first && first != wpa_s) {
-			os_memcpy(wps->uuid, wpa_s->global->ifaces->wps->uuid,
-				  WPS_UUID_LEN);
+			if (wps != wpa_s->global->ifaces->wps)
+				os_memcpy(wps->uuid,
+					  wpa_s->global->ifaces->wps->uuid,
+					  WPS_UUID_LEN);
 			wpa_hexdump(MSG_DEBUG, "WPS: UUID from the first "
 				    "interface", wps->uuid, WPS_UUID_LEN);
 		} else {

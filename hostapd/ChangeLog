@@ -1,5 +1,112 @@
 ChangeLog for hostapd
 
+2012-05-10 - v1.0
+	* Add channel selection support in hostapd. See hostapd.conf.
+	* Add support for IEEE 802.11v Time Advertisement mechanism with UTC
+	  TSF offset. See hostapd.conf for config info.
+	* Delay STA entry removal until Deauth/Disassoc TX status in AP mode.
+	  This allows the driver to use PS buffering of Deauthentication and
+	  Disassociation frames when the STA is in power save sleep. Only
+	  available with drivers that provide TX status events for Deauth/
+	  Disassoc frames (nl80211).
+	* Allow PMKSA caching to be disabled on the Authenticator. See
+	  hostap.conf config parameter disable_pmksa_caching.
+	* atheros: Add support for IEEE 802.11w configuration.
+	* bsd: Add support for setting HT values in IFM_MMASK.
+	* Allow client isolation to be configured with ap_isolate. Client
+	  isolation can be used to prevent low-level bridging of frames
+	  between associated stations in the BSS. By default, this bridging
+	  is allowed.
+	* Allow coexistance of HT BSSes with WEP/TKIP BSSes.
+	* Add require_ht config parameter, which can be used to configure
+	  hostapd to reject association with any station that does not support
+	  HT PHY.
+	* Add support for writing debug log to a file using "-f" option. Also
+	  add relog CLI command to re-open the log file.
+	* Add bridge handling for WDS STA interfaces. By default they are
+	  added to the configured bridge of the AP interface (if present),
+	  but the user can also specify a separate bridge using cli command
+	  wds_bridge.
+	* hostapd_cli:
+	  - Add wds_bridge command for specifying bridge for WDS STA
+	    interfaces.
+	  - Add relog command for reopening log file.
+	  - Send AP-STA-DISCONNECTED event when an AP disconnects a station
+	    due to inactivity.
+	  - Add wps_config ctrl_interface command for configuring AP. This
+	    command can be used to configure the AP using the internal WPS
+	    registrar. It works in the same way as new AP settings received
+	    from an ER.
+	  - Many WPS/WPS ER commands - see WPS/WPS ER sections for details.
+	  - Add command get version, that returns hostapd version string.
+	* WNM: Add BSS Transition Management Request for ESS Disassoc Imminent.
+	  Use hostapd_cli ess_disassoc (STA addr) (URL) to send the
+	  notification to the STA.
+	* Allow AP mode to disconnect STAs based on low ACK condition (when
+	  the data connection is not working properly, e.g., due to the STA
+	  going outside the range of the AP). Disabled by default, enable by
+	  config option disassoc_low_ack.
+	* Add WPA_IGNORE_CONFIG_ERRORS build option to continue in case of bad
+	  config file.
+	* WPS:
+	  - Send AP Settings as a wrapped Credential attribute to ctrl_iface
+	    in WPS-NEW-AP-SETTINGS.
+	  - Dispatch more WPS events through hostapd ctrl_iface.
+	  - Add mechanism for indicating non-standard WPS errors.
+	  - Change concurrent radio AP to use only one WPS UPnP instance.
+	  - Add wps_check_pin command for processing PIN from user input.
+	    UIs can use this command to process a PIN entered by a user and to
+	    validate the checksum digit (if present).
+	  - Add hostap_cli get_config command to display current AP config.
+	  - Add new hostapd_cli command, wps_ap_pin, to manage AP PIN at
+	    runtime and support dynamic AP PIN management.
+	  - Disable AP PIN after 10 consecutive failures. Slow down attacks
+	    on failures up to 10.
+	  - Allow AP to start in Enrollee mode without AP PIN for probing,
+	    to be compatible with Windows 7.
+	  - Add Config Error into WPS-FAIL events to provide more info
+	    to the user on how to resolve the issue.
+	  - When controlling multiple interfaces:
+	     - apply WPS commands to all interfaces configured to use WPS
+	     - apply WPS config changes to all interfaces that use WPS
+	     - when an attack is detected on any interface, disable AP PIN on
+	       all interfaces
+	* WPS ER:
+	  - Show SetSelectedRegistrar events as ctrl_iface events.
+	  - Add special AP Setup Locked mode to allow read only ER.
+	    ap_setup_locked=2 can now be used to enable a special mode where
+	    WPS ER can learn the current AP settings, but cannot change them.
+	* WPS 2.0: Add support for WPS 2.0 (CONFIG_WPS2)
+	  - Add build option CONFIG_WPS_EXTENSIBILITY_TESTING to enable tool
+	    for testing protocol extensibility.
+	  - Add build option CONFIG_WPS_STRICT to allow disabling of WPS
+	    workarounds.
+	  - Add support for AuthorizedMACs attribute.
+	* TDLS:
+	  - Allow TDLS use or TDLS channel switching in the BSS to be
+	    prohibited in the BSS, using config params tdls_prohibit and
+	    tdls_prohibit_chan_switch.
+	* EAP server: Add support for configuring fragment size (see
+	  fragment_size in hostapd.conf).
+	* wlantest: Add a tool wlantest for IEEE802.11 protocol testing.
+	  wlantest can be used to capture frames from a monitor interface
+	  for realtime capturing or from pcap files for offline analysis.
+	* Interworking: Support added for 802.11u. Enable in .config with
+	  CONFIG_INTERWORKING. See hostapd.conf for config parameters for
+	  interworking.
+	* Android: Add build and runtime support for Android hostapd.
+	* Add a new debug message level for excessive information. Use
+	  -ddd to enable.
+	* TLS: Add support for tls_disable_time_checks=1 in client mode.
+	* Internal TLS:
+	  - Add support for TLS v1.1 (RFC 4346). Enable with build parameter
+	    CONFIG_TLSV11.
+	  - Add domainComponent parser for X.509 names
+	* Reorder some IEs to get closer to IEEE 802.11 standard. Move
+	  WMM into end of Beacon, Probe Resp and (Re)Assoc Resp frames.
+	  Move HT IEs to be later in (Re)Assoc Resp.
+	* Many bugfixes.
+
 2010-04-18 - v0.7.2
 	* fix WPS internal Registrar use when an external Registrar is also
 	  active

@@ -1,5 +1,179 @@
 ChangeLog for wpa_supplicant
 
+2012-05-10 - v1.0
+	* bsd: Add support for setting HT values in IFM_MMASK.
+	* Delay STA entry removal until Deauth/Disassoc TX status in AP mode.
+	  This allows the driver to use PS buffering of Deauthentication and
+	  Disassociation frames when the STA is in power save sleep. Only
+	  available with drivers that provide TX status events for Deauth/
+	  Disassoc frames (nl80211).
+	* Drop oldest unknown BSS table entries first. This makes it less
+	  likely to hit connection issues in environments with huge number
+	  of visible APs.
+	* Add systemd support.
+	* Add support for setting the syslog facility from the config file
+	  at build time.
+	* atheros: Add support for IEEE 802.11w configuration.
+	* AP mode: Allow enable HT20 if driver supports it, by setting the
+	  config parameter ieee80211n.
+	* Allow AP mode to disconnect STAs based on low ACK condition (when
+	  the data connection is not working properly, e.g., due to the STA
+	  going outside the range of the AP). Disabled by default, enable by
+	  config option disassoc_low_ack.
+	* nl80211:
+	  - Support GTK rekey offload.
+	  - Support PMKSA candidate events. This adds support for RSN
+	    pre-authentication with nl80211 interface and drivers that handle
+	    roaming internally.
+	* dbus:
+	  - Add a DBus signal for EAP SM requests, emitted on the Interface
+	    object.
+	  - Export max scan ssids supported by the driver as MaxScanSSID.
+	  - Add signal Certification for information about server certification.
+	  - Add BSSExpireAge and BSSExpireCount interface properties and
+	    support set/get, which allows for setting BSS cache expiration age
+	    and expiration scan count.
+	  - Add ConfigFile to AddInterface properties.
+	  - Add Interface.Country property and support to get/set the value.
+	  - Add DBus property CurrentAuthMode.
+	  - P2P DBus API added.
+	  - Emit property changed events (for property BSSs) when adding/
+	    removing BSSs.
+	  - Treat '' in SSIDs of Interface.Scan as a request for broadcast
+	    scan, instead of ignoring it.
+	  - Add DBus getter/setter for FastReauth.
+	  - Raise PropertiesChanged on org.freedesktop.DBus.Properties.
+	* wpa_cli:
+	  - Send AP-STA-DISCONNECTED event when an AP disconnects a station
+	    due to inactivity.
+	  - Make second argument to set command optional. This can be used to
+	    indicate a zero length value.
+	  - Add signal_poll command.
+	  - Add bss_expire_age and bss_expire_count commands to set/get BSS
+	    cache expiration age and expiration scan count.
+	  - Add ability to set scan interval (the time in seconds wpa_s waits
+	    before requesting a new scan after failing to find a suitable
+	    network in scan results) using scan_interval command.
+	  - Add event CTRL-EVENT-ASSOC-REJECT for association rejected.
+	  - Add command get version, that returns wpa_supplicant version string.
+	  - Add command sta_autoconnect for disabling automatic reconnection
+	    on receiving disconnection event.
+	  - Setting bssid parameter to an empty string "" or any can now be
+	    used to clear the bssid_set flag in a network block, i.e., to remove
+	    bssid filtering.
+	  - Add tdls_testing command to add a special testing feature for
+	    changing TDLS behavior. Build param CONFIG_TDLS_TESTING must be
+	    enabled as well.
+	  - For interworking, add wpa_cli commands interworking_select,
+	    interworking_connect, anqp_get, fetch_anqp, and stop_fetch_anqp.
+	  - Many P2P commands were added. See README-P2P.
+	  - Many WPS/WPS ER commands - see WPS/WPS ER sections for details.
+	  - Allow set command to change global config parameters.
+	  - Add log_level command, which can be used to display the current
+	    debugging level and to change the log level during run time.
+	  - Add note command, which can be used to insert notes to the debug
+	    log.
+	  - Add internal line edit implementation. CONFIG_WPA_CLI_EDIT=y
+	    can now be used to build wpa_cli with internal implementation of
+	    line editing and history support. This can be used as a replacement
+	    for CONFIG_READLINE=y.
+	* AP mode: Add max_num_sta config option, which can be used to limit
+	  the number of stations allowed to connect to the AP.
+	* Add WPA_IGNORE_CONFIG_ERRORS build option to continue in case of bad
+	  config file.
+	* wext: Increase scan timeout from 5 to 10 seconds.
+	* Add blacklist command, allowing an external program to
+	  manage the BSS blacklist and display its current contents.
+	* WPS:
+	  - Add wpa_cli wps_pin get command for generating random PINs. This can
+	    be used in a UI to generate a PIN without starting WPS (or P2P)
+	    operation.
+	  - Set RF bands based on driver capabilities, instead of hardcoding
+	    them.
+	  - Add mechanism for indicating non-standard WPS errors.
+	  - Add CONFIG_WPS_REG_DISABLE_OPEN=y option to disable open networks
+	    by default.
+	  - Add wps_ap_pin cli command for wpa_supplicant AP mode.
+	  - Add wps_check_pin cli command for processing PIN from user input.
+	    UIs can use this command to process a PIN entered by a user and to
+	    validate the checksum digit (if present).
+	  - Cancel WPS operation on PBC session overlap detection.
+	  - New wps_cancel command in wpa_cli will cancel a pending WPS
+	    operation.
+	  - wpa_cli action: Add WPS_EVENT_SUCCESS and WPS_EVENT_FAIL handlers.
+	  - Trigger WPS config update on Manufacturer, Model Name, Model
+	    Number, and Serial Number changes.
+	  - Fragment size is now configurable for EAP-WSC peer. Use
+	    wpa_cli set wps_fragment_size <val>.
+	  - Disable AP PIN after 10 consecutive failures. Slow down attacks on
+	    failures up to 10.
+	  - Allow AP to start in Enrollee mode without AP PIN for probing, to
+	    be compatible with Windows 7.
+	  - Add Config Error into WPS-FAIL events to provide more info to the
+	    user on how to resolve the issue.
+	  - Label and Display config methods are not allowed to be enabled
+	    at the same time, since it is unclear which PIN to use if both
+	    methods are advertised.
+	  - When controlling multiple interfaces:
+	     - apply WPS commands to all interfaces configured to use WPS
+	     - apply WPS config changes to all interfaces that use WPS
+	     - when an attack is detected on any interface, disable AP PIN on
+	       all interfaces
+	* WPS ER:
+	  - Add special AP Setup Locked mode to allow read only ER.
+	    ap_setup_locked=2 can now be used to enable a special mode where
+	    WPS ER can learn the current AP settings, but cannot change them.
+	  - Show SetSelectedRegistrar events as ctrl_iface events
+	  - Add wps_er_set_config to enroll a network based on a local
+	    network configuration block instead of having to (re-)learn the
+	    current AP settings with wps_er_learn.
+	  - Allow AP filtering based on IP address, add ctrl_iface event for
+	    learned AP settings, add wps_er_config command to configure an AP.
+	* WPS 2.0: Add support for WPS 2.0 (CONFIG_WPS2)
+	  - Add build option CONFIG_WPS_EXTENSIBILITY_TESTING to enable tool
+	    for testing protocol extensibility.
+	  - Add build option CONFIG_WPS_STRICT to allow disabling of WPS
+	    workarounds.
+	  - Add support for AuthorizedMACs attribute.
+	* TDLS:
+	  - Propogate TDLS related nl80211 capability flags from kernel and
+	    add them as driver capability flags. If the driver doesn't support
+	    capabilities, assume TDLS is supported internally. When TDLS is
+	    explicitly not supported, disable all user facing TDLS operations.
+	  - Allow TDLS to be disabled at runtime (mostly for testing).
+	    Use set tdls_disabled.
+	  - Honor AP TDLS settings that prohibit/allow TDLS.
+	  - Add a special testing feature for changing TDLS behavior. Use
+	    CONFIG_TDLS_TESTING build param to enable. Configure at runtime
+	    with tdls_testing cli command.
+	  - Add support for TDLS 802.11z.
+	* wlantest: Add a tool wlantest for IEEE802.11 protocol testing.
+	  wlantest can be used to capture frames from a monitor interface
+	  for realtime capturing or from pcap files for offline analysis.
+	* Interworking: Support added for 802.11u. Enable in .config with
+	  CONFIG_INTERWORKING. See wpa_supplicant.conf for config parameters
+	  for interworking. wpa_cli commands added to support this are
+	  interworking_select, interworking_connect, anqp_get, fetch_anqp,
+	  and stop_fetch_anqp.
+	* Android: Add build and runtime support for Android wpa_supplicant.
+	* bgscan learn: Add new bgscan that learns BSS information based on
+	  previous scans, and uses that information to dynamically generate
+	  the list of channels for background scans.
+	* Add a new debug message level for excessive information. Use
+	  -ddd to enable.
+	* TLS: Add support for tls_disable_time_checks=1 in client mode.
+	* Internal TLS:
+	  - Add support for TLS v1.1 (RFC 4346). Enable with build parameter
+	    CONFIG_TLSV11.
+	  - Add domainComponent parser for X.509 names.
+	* Linux: Add RFKill support by adding an interface state "disabled".
+	* Reorder some IEs to get closer to IEEE 802.11 standard. Move
+	  WMM into end of Beacon, Probe Resp and (Re)Assoc Resp frames.
+	  Move HT IEs to be later in (Re)Assoc Resp.
+	* Solaris: Add support for wired 802.1X client.
+	* Wi-Fi Direct support. See README-P2P for more information.
+	* Many bugfixes.
+
 2010-04-18 - v0.7.2
 	* nl80211: fixed number of issues with roaming
 	* avoid unnecessary roaming if multiple APs with similar signal

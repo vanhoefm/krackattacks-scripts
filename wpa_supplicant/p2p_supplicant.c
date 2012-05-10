@@ -2482,6 +2482,7 @@ int wpas_p2p_init(struct wpa_global *global, struct wpa_supplicant *wpa_s)
 	global->p2p = p2p_init(&p2p);
 	if (global->p2p == NULL)
 		return -1;
+	global->p2p_init_wpa_s = wpa_s;
 
 	for (i = 0; i < MAX_WPS_VENDOR_EXT; i++) {
 		if (wpa_s->conf->wps_vendor_ext[i] == NULL)
@@ -2570,6 +2571,7 @@ void wpas_p2p_deinit_global(struct wpa_global *global)
 
 	p2p_deinit(global->p2p);
 	global->p2p = NULL;
+	global->p2p_init_wpa_s = NULL;
 }
 
 

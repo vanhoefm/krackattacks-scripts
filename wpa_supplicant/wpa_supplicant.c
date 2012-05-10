@@ -2702,6 +2702,14 @@ static void wpa_supplicant_deinit_iface(struct wpa_supplicant *wpa_s,
 
 	wpa_supplicant_cleanup(wpa_s);
 
+#ifdef CONFIG_P2P
+	if (wpa_s == wpa_s->global->p2p_init_wpa_s && wpa_s->global->p2p) {
+		wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Disable P2P since removing "
+			"the management interface is being removed");
+		wpas_p2p_deinit_global(wpa_s->global);
+	}
+#endif /* CONFIG_P2P */
+
 	if (wpa_s->drv_priv)
 		wpa_drv_deinit(wpa_s);
 

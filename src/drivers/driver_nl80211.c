@@ -8005,6 +8005,9 @@ static int nl80211_send_frame_cmd(struct i802_bss *bss,
 	if (!msg)
 		return -1;
 
+	wpa_printf(MSG_DEBUG, "nl80211: CMD_FRAME freq=%u wait=%u no_cck=%d "
+		   "no_ack=%d offchanok=%d",
+		   freq, wait, no_cck, no_ack, offchanok);
 	nl80211_cmd(drv, msg, 0, NL80211_CMD_FRAME);
 
 	NLA_PUT_U32(msg, NL80211_ATTR_IFINDEX, bss->ifindex);

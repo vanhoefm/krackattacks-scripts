@@ -880,13 +880,17 @@ int p2p_listen(struct p2p_data *p2p, unsigned int timeout);
  * @force_ssid: Forced SSID for the group if we become GO or %NULL to generate
  *	a new SSID
  * @force_ssid_len: Length of $force_ssid buffer
+ * @pd_before_go_neg: Whether to send Provision Discovery prior to GO
+ *	Negotiation as an interoperability workaround when initiating group
+ *	formation
  * Returns: 0 on success, -1 on failure
  */
 int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		enum p2p_wps_method wps_method,
 		int go_intent, const u8 *own_interface_addr,
 		unsigned int force_freq, int persistent_group,
-		const u8 *force_ssid, size_t force_ssid_len);
+		const u8 *force_ssid, size_t force_ssid_len,
+		int pd_before_go_neg);
 
 /**
  * p2p_authorize - Authorize P2P group formation (GO negotiation)

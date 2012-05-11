@@ -520,6 +520,7 @@ struct wpa_supplicant {
 	unsigned int p2p_auto_pd:1;
 	unsigned int p2p_persistent_group:1;
 	unsigned int p2p_fallback_to_go_neg:1;
+	unsigned int p2p_pd_before_go_neg:1;
 	int p2p_persistent_id;
 	int p2p_go_intent;
 	int p2p_connect_freq;

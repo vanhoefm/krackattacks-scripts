@@ -119,7 +119,7 @@ join-a-group style PD instead of GO Negotiation style PD.
 
 p2p_connect <peer device address> <pbc|pin|PIN#> [display|keypad]
 	[persistent|persistent=<network id>] [join|auth]
-	[go_intent=<0..15>] [freq=<in MHz>]
+	[go_intent=<0..15>] [freq=<in MHz>] [provdisc]
 
 Start P2P group formation with a discovered P2P peer. This includes
 optional group owner negotiation, group interface setup, provisioning,
@@ -154,6 +154,11 @@ Negotiation.
 
 "freq" can be used to set a forced operating channel (e.g., freq=2412
 to select 2.4 GHz channel 1).
+
+"provdisc" can be used to request a Provision Discovery exchange to be
+used prior to starting GO Negotiation as a workaround with some deployed
+P2P implementations that require this to allow the user to accept the
+connection.
 
 p2p_group_add [persistent|persistent=<network id>] [freq=<freq in MHz>]
 

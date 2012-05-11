@@ -288,6 +288,15 @@ void p2p_process_prov_disc_resp(struct p2p_data *p2p, const u8 *sa,
 out:
 	dev->req_config_methods = 0;
 	p2p->cfg->send_action_done(p2p->cfg->cb_ctx);
+	if (dev->flags & P2P_DEV_PD_BEFORE_GO_NEG) {
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Start GO Neg after the PD-before-GO-Neg "
+			"workaround with " MACSTR,
+			MAC2STR(dev->info.p2p_device_addr));
+		dev->flags &= ~P2P_DEV_PD_BEFORE_GO_NEG;
+		p2p_connect_send(p2p, dev);
+		return;
+	}
 	if (success && p2p->cfg->prov_disc_resp)
 		p2p->cfg->prov_disc_resp(p2p->cfg->cb_ctx, sa,
 					 report_config_methods);

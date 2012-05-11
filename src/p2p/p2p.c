@@ -1173,16 +1173,17 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 		enum p2p_wps_method wps_method,
 		int go_intent, const u8 *own_interface_addr,
 		unsigned int force_freq, int persistent_group,
-		const u8 *force_ssid, size_t force_ssid_len)
+		const u8 *force_ssid, size_t force_ssid_len,
+		int pd_before_go_neg)
 {
 	struct p2p_device *dev;
 
 	wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 		"P2P: Request to start group negotiation - peer=" MACSTR
 		"  GO Intent=%d  Intended Interface Address=" MACSTR
-		" wps_method=%d persistent_group=%d",
+		" wps_method=%d persistent_group=%d pd_before_go_neg=%d",
 		MAC2STR(peer_addr), go_intent, MAC2STR(own_interface_addr),
-		wps_method, persistent_group);
+		wps_method, persistent_group, pd_before_go_neg);
 
 	if (p2p_prepare_channel(p2p, force_freq) < 0)
 		return -1;
@@ -1232,6 +1233,10 @@ int p2p_connect(struct p2p_data *p2p, const u8 *peer_addr,
 	dev->flags &= ~P2P_DEV_USER_REJECTED;
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_RESPONSE;
 	dev->flags &= ~P2P_DEV_WAIT_GO_NEG_CONFIRM;
+	if (pd_before_go_neg)
+		dev->flags |= P2P_DEV_PD_BEFORE_GO_NEG;
+	else
+		dev->flags &= ~P2P_DEV_PD_BEFORE_GO_NEG;
 	dev->connect_reqs = 0;
 	dev->go_neg_req_sent = 0;
 	dev->go_state = UNKNOWN_GO;

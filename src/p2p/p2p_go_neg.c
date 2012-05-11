@@ -184,6 +184,23 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 	struct wpabuf *req;
 	int freq;
 
+	if (dev->flags & P2P_DEV_PD_BEFORE_GO_NEG) {
+		u16 config_method;
+		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
+			"P2P: Use PD-before-GO-Neg workaround for " MACSTR,
+			MAC2STR(dev->info.p2p_device_addr));
+		if (dev->wps_method == WPS_PIN_DISPLAY)
+			config_method = WPS_CONFIG_KEYPAD;
+		else if (dev->wps_method == WPS_PIN_KEYPAD)
+			config_method = WPS_CONFIG_DISPLAY;
+		else if (dev->wps_method == WPS_PBC)
+			config_method = WPS_CONFIG_PUSHBUTTON;
+		else
+			return -1;
+		return p2p_prov_disc_req(p2p, dev->info.p2p_device_addr,
+					 config_method, 0, 0);
+	}
+
 	freq = dev->listen_freq > 0 ? dev->listen_freq : dev->oper_freq;
 	if (freq <= 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,

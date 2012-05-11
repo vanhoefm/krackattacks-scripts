@@ -1249,6 +1249,7 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 
 	for (i = 0; i < scan_res->num; i++) {
 		struct wpa_scan_res *r = scan_res->res[i];
+		u8 *pos;
 		if ((r->flags & (WPA_SCAN_LEVEL_DBM | WPA_SCAN_NOISE_INVALID))
 		    == WPA_SCAN_LEVEL_DBM) {
 			int snr = r->level - r->noise;
@@ -1263,6 +1264,13 @@ static void dump_scan_res(struct wpa_scan_results *scan_res)
 				   MAC2STR(r->bssid), r->freq, r->qual,
 				   r->noise, r->level, r->flags);
 		}
+		pos = (u8 *) (r + 1);
+		if (r->ie_len)
+			wpa_hexdump(MSG_EXCESSIVE, "IEs", pos, r->ie_len);
+		pos += r->ie_len;
+		if (r->beacon_ie_len)
+			wpa_hexdump(MSG_EXCESSIVE, "Beacon IEs",
+				    pos, r->beacon_ie_len);
 	}
 #endif /* CONFIG_NO_STDOUT_DEBUG */
 }

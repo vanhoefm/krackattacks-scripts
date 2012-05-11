@@ -5217,7 +5217,9 @@ static int wpa_driver_nl80211_send_mlme_freq(struct i802_bss *bss,
 	if (drv->device_ap_sme && is_ap_interface(drv->nlmode)) {
 		if (freq == 0)
 			freq = bss->freq;
-		return nl80211_send_frame_cmd(bss, freq, 0,
+		return nl80211_send_frame_cmd(bss, freq,
+					      (int) freq == bss->freq ? 0 :
+					      wait_time,
 					      data, data_len,
 					      &drv->send_action_cookie,
 					      no_cck, noack, offchanok);

@@ -1347,7 +1347,12 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 	if (bss) {
 		params.ssid = bss->ssid;
 		params.ssid_len = bss->ssid_len;
-		if (!wpas_driver_bss_selection(wpa_s)) {
+		if (!wpas_driver_bss_selection(wpa_s) || ssid->bssid_set) {
+			wpa_printf(MSG_DEBUG, "Limit connection to BSSID "
+				   MACSTR " freq=%u MHz based on scan results "
+				   "(bssid_set=%d)",
+				   MAC2STR(bss->bssid), bss->freq,
+				   ssid->bssid_set);
 			params.bssid = bss->bssid;
 			params.freq = bss->freq;
 		}

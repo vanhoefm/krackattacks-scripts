@@ -263,6 +263,7 @@ static int wpa_supplicant_wps_cred(void *ctx,
 		ssid->eap.eap_methods = NULL;
 		if (!ssid->p2p_group)
 			ssid->temporary = 0;
+		ssid->bssid_set = 0;
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS: Create a new network based on the "
 			   "received credential");

@@ -1,3 +1,9 @@
+# Copyright (C) 2008 The Android Open Source Project
+#
+# This software may be distributed under the terms of the BSD license.
+# See README for more details.
+#
+
 LOCAL_PATH := $(call my-dir)
 
 WPA_BUILD_HOSTAPD := false

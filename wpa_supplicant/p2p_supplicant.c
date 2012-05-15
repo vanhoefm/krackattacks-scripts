@@ -4844,6 +4844,7 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 	if (wpa_s->global->p2p_group_formation)
 		group = wpa_s->global->p2p_group_formation;
 	wpa_s = wpa_s->parent;
+	offchannel_send_action_done(wpa_s);
 	if (group_added)
 		wpas_p2p_group_delete(group, 1);
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: Fall back to GO Negotiation");
@@ -4860,6 +4861,9 @@ int wpas_p2p_scan_no_go_seen(struct wpa_supplicant *wpa_s)
 	if (!wpa_s->p2p_fallback_to_go_neg ||
 	    wpa_s->p2p_in_provisioning <= 5)
 		return 0;
+
+	if (wpas_p2p_peer_go(wpa_s, wpa_s->pending_join_dev_addr) > 0)
+		return 0; /* peer operating as a GO */
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "P2P: GO not found for p2p_connect-auto - "
 		"fallback to GO Negotiation");

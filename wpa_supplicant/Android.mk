@@ -1569,7 +1569,6 @@ include $(BUILD_EXECUTABLE)
 #
 #include $(CLEAR_VARS)
 #LOCAL_MODULE := wpa_supplicant.conf
-#LOCAL_MODULE_TAGS := user
 #LOCAL_MODULE_CLASS := ETC
 #LOCAL_MODULE_PATH := $(local_target_dir)
 #LOCAL_SRC_FILES := $(LOCAL_MODULE)

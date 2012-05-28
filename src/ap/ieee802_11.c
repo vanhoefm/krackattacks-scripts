@@ -876,6 +876,7 @@ static void send_assoc_resp(struct hostapd_data *hapd, struct sta_info *sta,
 #endif /* CONFIG_IEEE80211N */
 
 	p = hostapd_eid_ext_capab(hapd, p);
+	p = hostapd_eid_bss_max_idle_period(hapd, p);
 
 	if (sta->flags & WLAN_STA_WMM)
 		p = hostapd_eid_wmm(hapd, p);

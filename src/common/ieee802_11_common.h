@@ -38,6 +38,8 @@ struct ieee802_11_elems {
 	const u8 *link_id;
 	const u8 *interworking;
 	const u8 *hs20;
+	const u8 *ext_capab;
+	const u8 *bss_max_idle_period;
 
 	u8 ssid_len;
 	u8 supp_rates_len;
@@ -65,6 +67,7 @@ struct ieee802_11_elems {
 	u8 p2p_len;
 	u8 interworking_len;
 	u8 hs20_len;
+	u8 ext_capab_len;
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;

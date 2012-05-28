@@ -423,6 +423,7 @@ struct wpa_supplicant {
 		struct os_time sa_query_start;
 		u8 sched_obss_scan;
 		u16 obss_scan_int;
+		u16 bss_max_idle_period;
 	} sme;
 #endif /* CONFIG_SME */
 
@@ -664,6 +665,7 @@ int wpa_supplicant_connect(struct wpa_supplicant *wpa_s,
 			   struct wpa_ssid *ssid);
 void wpa_supplicant_stop_countermeasures(void *eloop_ctx, void *sock_ctx);
 void wpa_supplicant_delayed_mic_error_report(void *eloop_ctx, void *sock_ctx);
+void wnm_bss_keep_alive_deinit(struct wpa_supplicant *wpa_s);
 
 /* eap_register.c */
 int eap_register_methods(void);

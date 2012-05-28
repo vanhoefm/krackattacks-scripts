@@ -1,6 +1,6 @@
 /*
  * IEEE 802.11 Common routines
- * Copyright (c) 2002-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -261,6 +261,15 @@ ParseRes ieee802_11_parse_elems(const u8 *start, size_t len,
 		case WLAN_EID_INTERWORKING:
 			elems->interworking = pos;
 			elems->interworking_len = elen;
+			break;
+		case WLAN_EID_EXT_CAPAB:
+			elems->ext_capab = pos;
+			elems->ext_capab_len = elen;
+			break;
+		case WLAN_EID_BSS_MAX_IDLE_PERIOD:
+			if (elen < 3)
+				break;
+			elems->bss_max_idle_period = pos;
 			break;
 		default:
 			unknown++;

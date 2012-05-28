@@ -136,6 +136,10 @@ CONFIG_IPV6=y
 # IEEE 802.11n (High Throughput) support
 #CONFIG_IEEE80211N=y
 
+# Wireless Network Management (IEEE Std 802.11v-2011)
+# Note: This is experimental and not complete implementation.
+#CONFIG_WNM=y
+
 # Remove debugging code that is printing out debug messages to stdout.
 # This can be used to reduce the size of the hostapd considerably if debugging
 # code is not needed.

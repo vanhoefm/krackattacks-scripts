@@ -449,6 +449,8 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 
 	os_free(wpa_s->bssid_filter);
 	wpa_s->bssid_filter = NULL;
+
+	wnm_bss_keep_alive_deinit(wpa_s);
 }
 
 

@@ -169,6 +169,10 @@ ifdef CONFIG_IEEE80211N
 CFLAGS += -DCONFIG_IEEE80211N
 endif
 
+ifdef CONFIG_WNM
+CFLAGS += -DCONFIG_WNM
+endif
+
 include ../src/drivers/drivers.mak
 OBJS += $(DRV_AP_OBJS)
 CFLAGS += $(DRV_AP_CFLAGS)

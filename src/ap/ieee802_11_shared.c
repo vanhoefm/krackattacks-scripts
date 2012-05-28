@@ -1,6 +1,6 @@
 /*
  * hostapd / IEEE 802.11 Management
- * Copyright (c) 2002-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -396,4 +396,32 @@ int hostapd_update_time_adv(struct hostapd_data *hapd)
 	*pos++ = hapd->time_update_counter++;
 
 	return 0;
+}
+
+
+u8 * hostapd_eid_bss_max_idle_period(struct hostapd_data *hapd, u8 *eid)
+{
+	u8 *pos = eid;
+
+#ifdef CONFIG_WNM
+	if (hapd->conf->ap_max_inactivity > 0) {
+		unsigned int val;
+		*pos++ = WLAN_EID_BSS_MAX_IDLE_PERIOD;
+		*pos++ = 3;
+		val = hapd->conf->ap_max_inactivity;
+		if (val > 68000)
+			val = 68000;
+		val *= 1000;
+		val /= 1024;
+		if (val == 0)
+			val = 1;
+		if (val > 65535)
+			val = 65535;
+		WPA_PUT_LE16(pos, val);
+		pos += 2;
+		*pos++ = 0x00; /* TODO: Protected Keep-Alive Required */
+	}
+#endif /* CONFIG_WNM */
+
+	return pos;
 }

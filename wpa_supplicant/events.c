@@ -103,6 +103,8 @@ void wpa_supplicant_mark_disassoc(struct wpa_supplicant *wpa_s)
 {
 	int bssid_changed;
 
+	wnm_bss_keep_alive_deinit(wpa_s);
+
 #ifdef CONFIG_IBSS_RSN
 	ibss_rsn_deinit(wpa_s->ibss_rsn);
 	wpa_s->ibss_rsn = NULL;
@@ -1200,6 +1202,78 @@ static void wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 #endif /* CONFIG_NO_SCAN_PROCESSING */
 
 
+#ifdef CONFIG_WNM
+
+static void wnm_bss_keep_alive(void *eloop_ctx, void *sock_ctx)
+{
+	struct wpa_supplicant *wpa_s = eloop_ctx;
+
+	if (wpa_s->wpa_state < WPA_ASSOCIATED)
+		return;
+
+	wpa_printf(MSG_DEBUG, "WNM: Send keep-alive");
+	/* TODO: could skip this if normal data traffic has been sent */
+	/* TODO: send keep alive frame - better use some short unicast data
+	 * frame that gets protected if PTK is set */
+
+	if (wpa_s->sme.bss_max_idle_period) {
+		unsigned int msec;
+		msec = wpa_s->sme.bss_max_idle_period * 1024; /* times 1000 */
+		if (msec > 100)
+			msec -= 100;
+		eloop_register_timeout(msec / 1000, msec % 1000 * 1000,
+				       wnm_bss_keep_alive, wpa_s, NULL);
+	}
+}
+
+
+static void wnm_process_assoc_resp(struct wpa_supplicant *wpa_s,
+				   const u8 *ies, size_t ies_len)
+{
+	struct ieee802_11_elems elems;
+
+	if (ies == NULL)
+		return;
+
+	if (ieee802_11_parse_elems(ies, ies_len, &elems, 1) == ParseFailed)
+		return;
+
+#ifdef CONFIG_SME
+	if (elems.bss_max_idle_period) {
+		unsigned int msec;
+		wpa_s->sme.bss_max_idle_period =
+			WPA_GET_LE16(elems.bss_max_idle_period);
+		wpa_printf(MSG_DEBUG, "WNM: BSS Max Idle Period: %u (* 1000 "
+			   "TU)%s", wpa_s->sme.bss_max_idle_period,
+			   (elems.bss_max_idle_period[2] & 0x01) ?
+			   " (protected keep-live required)" : "");
+		if (wpa_s->sme.bss_max_idle_period == 0)
+			wpa_s->sme.bss_max_idle_period = 1;
+		if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_SME) {
+			eloop_cancel_timeout(wnm_bss_keep_alive, wpa_s, NULL);
+			 /* msec times 1000 */
+			msec = wpa_s->sme.bss_max_idle_period * 1024;
+			if (msec > 100)
+				msec -= 100;
+			eloop_register_timeout(msec / 1000, msec % 1000 * 1000,
+					       wnm_bss_keep_alive, wpa_s,
+					       NULL);
+		}
+	}
+#endif /* CONFIG_SME */
+}
+
+#endif /* CONFIG_WNM */
+
+
+void wnm_bss_keep_alive_deinit(struct wpa_supplicant *wpa_s)
+{
+#ifdef CONFIG_WNM
+	eloop_cancel_timeout(wnm_bss_keep_alive, wpa_s, NULL);
+#endif /* CONFIG_WNM */
+}
+
+
 static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 					  union wpa_event_data *data)
 {
@@ -1217,6 +1291,10 @@ static int wpa_supplicant_event_associnfo(struct wpa_supplicant *wpa_s,
 		wpa_tdls_assoc_resp_ies(wpa_s->wpa, data->assoc_info.resp_ies,
 					data->assoc_info.resp_ies_len);
 #endif /* CONFIG_TDLS */
+#ifdef CONFIG_WNM
+		wnm_process_assoc_resp(wpa_s, data->assoc_info.resp_ies,
+				       data->assoc_info.resp_ies_len);
+#endif /* CONFIG_WNM */
 	}
 	if (data->assoc_info.beacon_ies)
 		wpa_hexdump(MSG_DEBUG, "beacon_ies",

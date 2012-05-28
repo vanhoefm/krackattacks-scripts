@@ -1216,6 +1216,7 @@ static void wnm_bss_keep_alive(void *eloop_ctx, void *sock_ctx)
 	/* TODO: send keep alive frame - better use some short unicast data
 	 * frame that gets protected if PTK is set */
 
+#ifdef CONFIG_SME
 	if (wpa_s->sme.bss_max_idle_period) {
 		unsigned int msec;
 		msec = wpa_s->sme.bss_max_idle_period * 1024; /* times 1000 */
@@ -1224,6 +1225,7 @@ static void wnm_bss_keep_alive(void *eloop_ctx, void *sock_ctx)
 		eloop_register_timeout(msec / 1000, msec % 1000 * 1000,
 				       wnm_bss_keep_alive, wpa_s, NULL);
 	}
+#endif /* CONFIG_SME */
 }
 
 

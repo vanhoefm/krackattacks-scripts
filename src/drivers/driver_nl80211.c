@@ -2198,7 +2198,7 @@ static int process_global_event(struct nl_msg *msg, void *arg)
 	struct nl80211_global *global = arg;
 	struct genlmsghdr *gnlh = nlmsg_data(nlmsg_hdr(msg));
 	struct nlattr *tb[NL80211_ATTR_MAX + 1];
-	struct wpa_driver_nl80211_data *drv;
+	struct wpa_driver_nl80211_data *drv, *tmp;
 	int ifidx = -1;
 
 	nla_parse(tb, NL80211_ATTR_MAX, genlmsg_attrdata(gnlh, 0),
@@ -2207,8 +2207,8 @@ static int process_global_event(struct nl_msg *msg, void *arg)
 	if (tb[NL80211_ATTR_IFINDEX])
 		ifidx = nla_get_u32(tb[NL80211_ATTR_IFINDEX]);
 
-	dl_list_for_each(drv, &global->interfaces,
-			 struct wpa_driver_nl80211_data, list) {
+	dl_list_for_each_safe(drv, tmp, &global->interfaces,
+			      struct wpa_driver_nl80211_data, list) {
 		if (ifidx == -1 || ifidx == drv->ifindex ||
 		    have_ifidx(drv, ifidx))
 			do_process_drv_event(drv, gnlh->cmd, tb);

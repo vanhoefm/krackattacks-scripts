@@ -499,6 +499,12 @@ struct wpa_ssid {
 	 * By default: 300 seconds.
 	 */
 	int ap_max_inactivity;
+
+	/**
+	 * dtim_period - DTIM period in Beacon intervals
+	 * By default: 2
+	 */
+	int dtim_period;
 };
 
 #endif /* CONFIG_SSID_H */

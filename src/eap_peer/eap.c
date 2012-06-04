@@ -81,6 +81,16 @@ static struct wpabuf * eapol_get_eapReqData(struct eap_sm *sm)
 }
 
 
+static void eap_notify_status(struct eap_sm *sm, const char *status,
+				      const char *parameter)
+{
+	wpa_printf(MSG_DEBUG, "EAP: Status notification: %s (param=%s)",
+		   status, parameter);
+	if (sm->eapol_cb->notify_status)
+		sm->eapol_cb->notify_status(sm->eapol_ctx, status, parameter);
+}
+
+
 static void eap_deinit_prev_method(struct eap_sm *sm, const char *txt)
 {
 	if (sm->m == NULL || sm->eap_method_priv == NULL)
@@ -213,6 +223,7 @@ SM_STATE(EAP, GET_METHOD)
 {
 	int reinit;
 	EapType method;
+	const struct eap_method *eap_method;
 
 	SM_ENTRY(EAP, GET_METHOD);
 
@@ -221,18 +232,24 @@ SM_STATE(EAP, GET_METHOD)
 	else
 		method = sm->reqMethod;
 
+	eap_method = eap_peer_get_eap_method(sm->reqVendor, method);
+
 	if (!eap_sm_allowMethod(sm, sm->reqVendor, method)) {
 		wpa_printf(MSG_DEBUG, "EAP: vendor %u method %u not allowed",
 			   sm->reqVendor, method);
 		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
 			"vendor=%u method=%u -> NAK",
 			sm->reqVendor, method);
+		eap_notify_status(sm, "refuse proposed method",
+				  eap_method ?  eap_method->name : "unknown");
 		goto nak;
 	}
 
 	wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_PROPOSED_METHOD
 		"vendor=%u method=%u", sm->reqVendor, method);
 
+	eap_notify_status(sm, "accept proposed method",
+			  eap_method ?  eap_method->name : "unknown");
 	/*
 	 * RFC 4137 does not define specific operation for fast
 	 * re-authentication (session resumption). The design here is to allow
@@ -256,7 +273,7 @@ SM_STATE(EAP, GET_METHOD)
 
 	sm->selectedMethod = sm->reqMethod;
 	if (sm->m == NULL)
-		sm->m = eap_peer_get_eap_method(sm->reqVendor, method);
+		sm->m = eap_method;
 	if (!sm->m) {
 		wpa_printf(MSG_DEBUG, "EAP: Could not find selected method: "
 			   "vendor %d method %d",
@@ -1235,10 +1252,12 @@ static void eap_sm_parseEapReq(struct eap_sm *sm, const struct wpabuf *req)
 		break;
 	case EAP_CODE_SUCCESS:
 		wpa_printf(MSG_DEBUG, "EAP: Received EAP-Success");
+		eap_notify_status(sm, "completion", "success");
 		sm->rxSuccess = TRUE;
 		break;
 	case EAP_CODE_FAILURE:
 		wpa_printf(MSG_DEBUG, "EAP: Received EAP-Failure");
+		eap_notify_status(sm, "completion", "failure");
 		sm->rxFailure = TRUE;
 		break;
 	default:
@@ -1256,6 +1275,10 @@ static void eap_peer_sm_tls_event(void *ctx, enum tls_event ev,
 	char *hash_hex = NULL;
 
 	switch (ev) {
+	case TLS_CERT_CHAIN_SUCCESS:
+		eap_notify_status(sm, "remote certificate verification",
+				  "success");
+		break;
 	case TLS_CERT_CHAIN_FAILURE:
 		wpa_msg(sm->msg_ctx, MSG_INFO, WPA_EVENT_EAP_TLS_CERT_ERROR
 			"reason=%d depth=%d subject='%s' err='%s'",
@@ -1263,6 +1286,8 @@ static void eap_peer_sm_tls_event(void *ctx, enum tls_event ev,
 			data->cert_fail.depth,
 			data->cert_fail.subject,
 			data->cert_fail.reason_txt);
+		eap_notify_status(sm, "remote certificate verification",
+				  data->cert_fail.reason_txt);
 		break;
 	case TLS_PEER_CERTIFICATE:
 		if (!sm->eapol_cb->notify_cert)
@@ -1282,6 +1307,14 @@ static void eap_peer_sm_tls_event(void *ctx, enum tls_event ev,
 					  data->peer_cert.depth,
 					  data->peer_cert.subject,
 					  hash_hex, data->peer_cert.cert);
+		break;
+	case TLS_ALERT:
+		if (data->alert.is_local)
+			eap_notify_status(sm, "local TLS alert",
+					  data->alert.description);
+		else
+			eap_notify_status(sm, "remote TLS alert",
+					  data->alert.description);
 		break;
 	}
 

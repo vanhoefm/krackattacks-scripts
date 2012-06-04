@@ -612,3 +612,10 @@ void wpas_notify_preq(struct wpa_supplicant *wpa_s,
 	wpas_dbus_signal_preq(wpa_s, addr, dst, bssid, ie, ie_len, ssi_signal);
 #endif /* CONFIG_AP */
 }
+
+
+void wpas_notify_eap_status(struct wpa_supplicant *wpa_s, const char *status,
+			    const char *parameter)
+{
+	wpas_dbus_signal_eap_status(wpa_s, status, parameter);
+}

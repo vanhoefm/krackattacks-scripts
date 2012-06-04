@@ -224,6 +224,8 @@ void wpas_dbus_signal_certification(struct wpa_supplicant *wpa_s,
 void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
 			   const u8 *addr, const u8 *dst, const u8 *bssid,
 			   const u8 *ie, size_t ie_len, u32 ssi_signal);
+void wpas_dbus_signal_eap_status(struct wpa_supplicant *wpa_s,
+				 const char *status, const char *parameter);
 
 #else /* CONFIG_CTRL_IFACE_DBUS_NEW */
 
@@ -486,6 +488,12 @@ static inline void wpas_dbus_signal_preq(struct wpa_supplicant *wpa_s,
 					 const u8 *bssid,
 					 const u8 *ie, size_t ie_len,
 					 u32 ssi_signal)
+{
+}
+
+static inline void wpas_dbus_signal_eap_status(struct wpa_supplicant *wpa_s,
+					       const char *status,
+					       const char *parameter)
 {
 }
 

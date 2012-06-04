@@ -226,6 +226,15 @@ struct eapol_callbacks {
 	 */
 	void (*notify_cert)(void *ctx, int depth, const char *subject,
 			    const char *cert_hash, const struct wpabuf *cert);
+
+	/**
+	 * notify_status - Notification of the current EAP state
+	 * @ctx: eapol_ctx from eap_peer_sm_init() call
+	 * @status: Step in the process of EAP authentication
+	 * @parameter: Step-specific parameter, e.g., EAP method name
+	 */
+	void (*notify_status)(void *ctx, const char *status,
+			      const char *parameter);
 };
 
 /**

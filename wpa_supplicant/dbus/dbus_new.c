@@ -840,6 +840,41 @@ nomem:
 	dbus_message_unref(msg);
 }
 
+
+void wpas_dbus_signal_eap_status(struct wpa_supplicant *wpa_s,
+				 const char *status, const char *parameter)
+{
+	struct wpas_dbus_priv *iface;
+	DBusMessage *msg;
+	DBusMessageIter iter;
+
+	iface = wpa_s->global->dbus;
+
+	/* Do nothing if the control interface is not turned on */
+	if (iface == NULL)
+		return;
+
+	msg = dbus_message_new_signal(wpa_s->dbus_new_path,
+				      WPAS_DBUS_NEW_IFACE_INTERFACE,
+				      "EAP");
+	if (msg == NULL)
+		return;
+
+	dbus_message_iter_init_append(msg, &iter);
+
+	if (!dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &status)
+	    ||
+	    !dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING,
+					    &parameter))
+		goto nomem;
+
+	dbus_connection_send(iface->con, msg, NULL);
+
+nomem:
+	dbus_message_unref(msg);
+}
+
+
 #ifdef CONFIG_P2P
 
 /**
@@ -2931,6 +2966,13 @@ static const struct wpa_dbus_signal_desc wpas_dbus_interface_signals[] = {
 	{ "Certification", WPAS_DBUS_NEW_IFACE_INTERFACE,
 	  {
 		  { "certification", "a{sv}", ARG_OUT },
+		  END_ARGS
+	  }
+	},
+	{ "EAP", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  {
+		  { "status", "s", ARG_OUT },
+		  { "parameter", "s", ARG_OUT },
 		  END_ARGS
 	  }
 	},

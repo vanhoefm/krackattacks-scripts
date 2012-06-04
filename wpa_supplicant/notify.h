@@ -124,5 +124,7 @@ void wpas_notify_certification(struct wpa_supplicant *wpa_s, int depth,
 void wpas_notify_preq(struct wpa_supplicant *wpa_s,
 		      const u8 *addr, const u8 *dst, const u8 *bssid,
 		      const u8 *ie, size_t ie_len, u32 ssi_signal);
+void wpas_notify_eap_status(struct wpa_supplicant *wpa_s, const char *status,
+			    const char *parameter);
 
 #endif /* NOTIFY_H */

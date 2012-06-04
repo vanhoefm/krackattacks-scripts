@@ -720,6 +720,15 @@ static void wpa_supplicant_cert_cb(void *ctx, int depth, const char *subject,
 
 	wpas_notify_certification(wpa_s, depth, subject, cert_hash, cert);
 }
+
+
+static void wpa_supplicant_status_cb(void *ctx, const char *status,
+				     const char *parameter)
+{
+	struct wpa_supplicant *wpa_s = ctx;
+
+	wpas_notify_eap_status(wpa_s, status, parameter);
+}
 #endif /* IEEE8021X_EAPOL */
 
 
@@ -751,6 +760,7 @@ int wpa_supplicant_init_eapol(struct wpa_supplicant *wpa_s)
 	ctx->port_cb = wpa_supplicant_port_cb;
 	ctx->cb = wpa_supplicant_eapol_cb;
 	ctx->cert_cb = wpa_supplicant_cert_cb;
+	ctx->status_cb = wpa_supplicant_status_cb;
 	ctx->cb_ctx = wpa_s;
 	wpa_s->eapol = eapol_sm_init(ctx);
 	if (wpa_s->eapol == NULL) {

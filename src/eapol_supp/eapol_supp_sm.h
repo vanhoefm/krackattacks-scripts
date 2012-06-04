@@ -230,6 +230,15 @@ struct eapol_ctx {
 	 * cert_in_cb - Include server certificates in callback
 	 */
 	int cert_in_cb;
+
+	/**
+	 * status_cb - Notification of a change in EAP status
+	 * @ctx: Callback context (ctx)
+	 * @status: Step in the process of EAP authentication
+	 * @parameter: Step-specific parameter, e.g., EAP method name
+	 */
+	void (*status_cb)(void *ctx, const char *status,
+			  const char *parameter);
 };
 
 

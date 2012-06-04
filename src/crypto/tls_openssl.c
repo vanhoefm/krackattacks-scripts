@@ -525,6 +525,15 @@ static void ssl_info_cb(const SSL *ssl, int where, int ret)
 			else
 				conn->write_alerts++;
 		}
+		if (tls_global->event_cb != NULL) {
+			union tls_event_data ev;
+			os_memset(&ev, 0, sizeof(ev));
+			ev.alert.is_local = !(where & SSL_CB_READ);
+			ev.alert.type = SSL_alert_type_string_long(ret);
+			ev.alert.description = SSL_alert_desc_string_long(ret);
+			tls_global->event_cb(tls_global->cb_ctx, TLS_ALERT,
+					     &ev);
+		}
 	} else if (where & SSL_CB_EXIT && ret <= 0) {
 		wpa_printf(MSG_DEBUG, "SSL: %s:%s in %s",
 			   str, ret == 0 ? "failed" : "error",
@@ -1264,6 +1273,10 @@ static int tls_verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 				       "Server certificate chain probe",
 				       TLS_FAIL_SERVER_CHAIN_PROBE);
 	}
+
+	if (preverify_ok && tls_global->event_cb != NULL)
+		tls_global->event_cb(tls_global->cb_ctx,
+				     TLS_CERT_CHAIN_SUCCESS, NULL);
 
 	return preverify_ok;
 }

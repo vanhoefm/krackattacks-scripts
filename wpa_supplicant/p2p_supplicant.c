@@ -112,7 +112,6 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 	struct wpabuf *wps_ie, *ies;
 	int social_channels[] = { 2412, 2437, 2462, 0, 0 };
 	size_t ielen;
-	int was_in_p2p_scan;
 
 	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
 		return -1;
@@ -163,19 +162,18 @@ static int wpas_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		break;
 	}
 
-	was_in_p2p_scan = wpa_s->scan_res_handler == wpas_p2p_scan_res_handler;
-	wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
 	ret = wpa_drv_scan(wpa_s, &params);
 
 	wpabuf_free(ies);
 
 	if (ret) {
-		wpa_s->scan_res_handler = NULL;
-		if (wpa_s->scanning || was_in_p2p_scan) {
+		if (wpa_s->scanning ||
+		    wpa_s->scan_res_handler == wpas_p2p_scan_res_handler) {
 			wpa_s->p2p_cb_on_scan_complete = 1;
 			ret = 1;
 		}
-	}
+	} else
+		wpa_s->scan_res_handler = wpas_p2p_scan_res_handler;
 
 	return ret;
 }

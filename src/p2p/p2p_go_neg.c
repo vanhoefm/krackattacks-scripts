@@ -1022,7 +1022,7 @@ fail:
 	else
 		freq = dev->listen_freq;
 	if (p2p_send_action(p2p, freq, sa, p2p->cfg->dev_addr, sa,
-			    wpabuf_head(conf), wpabuf_len(conf), 200) < 0) {
+			    wpabuf_head(conf), wpabuf_len(conf), 0) < 0) {
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
 			"P2P: Failed to send Action frame");
 		p2p_go_neg_failed(p2p, dev, -1);

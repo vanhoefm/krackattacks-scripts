@@ -920,7 +920,8 @@ int wpas_wps_cancel(struct wpa_supplicant *wpa_s)
 	}
 #endif /* CONFIG_AP */
 
-	if (wpa_s->wpa_state == WPA_SCANNING) {
+	if (wpa_s->wpa_state == WPA_SCANNING ||
+	    wpa_s->wpa_state == WPA_DISCONNECTED) {
 		wpa_printf(MSG_DEBUG, "WPS: Cancel operation - cancel scan");
 		wpa_supplicant_cancel_scan(wpa_s);
 		wpas_clear_wps(wpa_s);

@@ -481,6 +481,7 @@ struct wpa_supplicant {
 	u8 pending_join_dev_addr[ETH_ALEN];
 	int pending_join_wps_method;
 	int p2p_join_scan_count;
+	int auto_pd_scan_retry;
 	int force_long_sd;
 	u16 pending_pd_config_methods;
 	enum {

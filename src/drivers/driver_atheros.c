@@ -39,11 +39,11 @@
 
 #ifdef CONFIG_WPS
 #include <netpacket/packet.h>
+#endif /* CONFIG_WPS */
 
 #ifndef ETH_P_80211_RAW
 #define ETH_P_80211_RAW 0x0019
 #endif
-#endif /* CONFIG_WPS */
 
 #include "linux_wext.h"
 

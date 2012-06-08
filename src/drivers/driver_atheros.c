@@ -1572,7 +1572,6 @@ atheros_get_ssid(void *priv, u8 *buf, int len)
 	memset(&iwr, 0, sizeof(iwr));
 	os_strlcpy(iwr.ifr_name, drv->iface, IFNAMSIZ);
 	iwr.u.essid.pointer = (caddr_t) buf;
-	iwr.u.essid.length = len;
 	iwr.u.essid.length = (len > IW_ESSID_MAX_SIZE) ?
 		IW_ESSID_MAX_SIZE : len;
 

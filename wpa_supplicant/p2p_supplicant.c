@@ -4178,8 +4178,10 @@ void wpas_p2p_completed(struct wpa_supplicant *wpa_s)
 	int persistent;
 	int freq;
 
-	eloop_cancel_timeout(wpas_p2p_group_formation_timeout, wpa_s->parent,
-			     NULL);
+	if (ssid == NULL || ssid->mode != WPAS_MODE_P2P_GROUP_FORMATION) {
+		eloop_cancel_timeout(wpas_p2p_group_formation_timeout,
+				     wpa_s->parent, NULL);
+	}
 
 	if (!wpa_s->show_group_started || !ssid)
 		return;

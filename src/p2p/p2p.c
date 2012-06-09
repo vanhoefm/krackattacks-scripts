@@ -2704,11 +2704,13 @@ static void p2p_go_neg_req_cb(struct p2p_data *p2p, int success)
 	}
 
 	if (success) {
-		dev->go_neg_req_sent++;
 		if (dev->flags & P2P_DEV_USER_REJECTED) {
 			p2p_set_state(p2p, P2P_IDLE);
 			return;
 		}
+	} else if (dev->go_neg_req_sent) {
+		/* Cancel the increment from p2p_connect_send() on failure */
+		dev->go_neg_req_sent--;
 	}
 
 	if (!success &&

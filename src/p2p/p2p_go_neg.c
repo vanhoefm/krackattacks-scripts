@@ -227,7 +227,8 @@ int p2p_connect_send(struct p2p_data *p2p, struct p2p_device *dev)
 			"P2P: Failed to send Action frame");
 		/* Use P2P find to recover and retry */
 		p2p_set_timeout(p2p, 0, 0);
-	}
+	} else
+		dev->go_neg_req_sent++;
 
 	wpabuf_free(req);
 

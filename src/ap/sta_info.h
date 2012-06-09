@@ -144,7 +144,6 @@ int ap_for_each_sta(struct hostapd_data *hapd,
 struct sta_info * ap_get_sta(struct hostapd_data *hapd, const u8 *sta);
 void ap_sta_hash_add(struct hostapd_data *hapd, struct sta_info *sta);
 void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta);
-void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta);
 void hostapd_free_stas(struct hostapd_data *hapd);
 void ap_handle_timer(void *eloop_ctx, void *timeout_ctx);
 void ap_sta_session_timeout(struct hostapd_data *hapd, struct sta_info *sta,

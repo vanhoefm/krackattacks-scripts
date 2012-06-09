@@ -672,6 +672,17 @@ fail:
 	if (status == P2P_SC_SUCCESS) {
 		p2p->pending_action_state = P2P_PENDING_GO_NEG_RESPONSE;
 		dev->flags |= P2P_DEV_WAIT_GO_NEG_CONFIRM;
+		if (os_memcmp(sa, p2p->cfg->dev_addr, ETH_ALEN) < 0) {
+			/*
+			 * Peer has smaller address, so the GO Negotiation
+			 * Response from us is expected to complete
+			 * negotiation. Ignore a GO Negotiation Response from
+			 * the peer if it happens to be received after this
+			 * point due to a race condition in GO Negotiation
+			 * Request transmission and processing.
+			 */
+			dev->flags &= ~P2P_DEV_WAIT_GO_NEG_RESPONSE;
+		}
 	} else
 		p2p->pending_action_state =
 			P2P_PENDING_GO_NEG_RESPONSE_FAILURE;

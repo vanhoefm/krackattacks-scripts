@@ -66,11 +66,19 @@
 
 #define  OPT_CAST(x)
 
+#ifdef __x86_64__
+typedef unsigned long mp_digit;
+typedef unsigned long mp_word __attribute__((mode(TI)));
+
+#define DIGIT_BIT 60
+#define MP_64BIT
+#else
 typedef unsigned long mp_digit;
 typedef u64 mp_word;
 
 #define DIGIT_BIT          28
 #define MP_28BIT
+#endif
 
 
 #define XMALLOC  os_malloc

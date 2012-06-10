@@ -3357,3 +3357,13 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 
 	return 0;
 }
+
+
+int wpas_is_p2p_prioritized(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->global->conc_pref == WPA_CONC_PREF_P2P)
+		return 1;
+	if (wpa_s->global->conc_pref == WPA_CONC_PREF_STA)
+		return 0;
+	return -1;
+}

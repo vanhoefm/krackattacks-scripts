@@ -3562,6 +3562,20 @@ static int p2p_ctrl_set(struct wpa_supplicant *wpa_s, char *cmd)
 		return 0;
 	}
 
+	if (os_strcmp(cmd, "conc_pref") == 0) {
+		if (os_strcmp(param, "sta") == 0)
+			wpa_s->global->conc_pref = WPA_CONC_PREF_STA;
+		else if (os_strcmp(param, "p2p") == 0)
+			wpa_s->global->conc_pref = WPA_CONC_PREF_P2P;
+		else {
+			wpa_printf(MSG_INFO, "Invalid conc_pref value");
+			return -1;
+		}
+		wpa_printf(MSG_DEBUG, "Single channel concurrency preference: "
+			   "%s", param);
+		return 0;
+	}
+
 	if (os_strcmp(cmd, "force_long_sd") == 0) {
 		wpa_s->force_long_sd = atoi(param);
 		return 0;

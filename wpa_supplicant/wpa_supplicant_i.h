@@ -234,6 +234,11 @@ struct wpa_global {
 	int cross_connection;
 	struct wpa_freq_range *p2p_disallow_freq;
 	unsigned int num_p2p_disallow_freq;
+	enum wpa_conc_pref {
+		WPA_CONC_PREF_NOT_SET,
+		WPA_CONC_PREF_STA,
+		WPA_CONC_PREF_P2P
+	} conc_pref;
 };
 
 
@@ -642,6 +647,7 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s);
 void wpas_connection_failed(struct wpa_supplicant *wpa_s, const u8 *bssid);
 int wpas_driver_bss_selection(struct wpa_supplicant *wpa_s);
+int wpas_is_p2p_prioritized(struct wpa_supplicant *wpa_s);
 void wpa_supplicant_proc_40mhz_intolerant(struct wpa_supplicant *wpa_s);
 
 /**

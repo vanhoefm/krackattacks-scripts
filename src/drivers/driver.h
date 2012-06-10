@@ -2536,6 +2536,18 @@ struct wpa_driver_ops {
 	 * conditions.
 	 */
 	int (*radio_disable)(void *priv, int disabled);
+
+	/**
+	 * switch_channel - Announce channel switch and migrate the GO to the
+	 * given frequency
+	 * @priv: Private driver interface data
+	 * @freq: Frequency in MHz
+	 * Returns: 0 on success, -1 on failure
+	 *
+	 * This function is used to move the GO to the legacy STA channel to
+	 * avoid frequency conflict in single channel concurrency.
+	 */
+	int (*switch_channel)(void *priv, unsigned int freq);
 };
 
 

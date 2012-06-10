@@ -672,4 +672,12 @@ static inline int wpa_drv_radio_disable(struct wpa_supplicant *wpa_s,
 	return wpa_s->driver->radio_disable(wpa_s->drv_priv, disabled);
 }
 
+static inline int wpa_drv_switch_channel(struct wpa_supplicant *wpa_s,
+					 unsigned int freq)
+{
+	if (!wpa_s->driver->switch_channel)
+		return -1;
+	return wpa_s->driver->switch_channel(wpa_s->drv_priv, freq);
+}
+
 #endif /* DRIVER_I_H */

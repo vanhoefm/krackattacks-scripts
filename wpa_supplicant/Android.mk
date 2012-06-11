@@ -8,13 +8,11 @@
 LOCAL_PATH := $(call my-dir)
 PKG_CONFIG ?= pkg-config
 
-WPA_BUILD_SUPPLICANT := false
 ifneq ($(BOARD_WPA_SUPPLICANT_DRIVER),)
-  WPA_BUILD_SUPPLICANT := true
   CONFIG_DRIVER_$(BOARD_WPA_SUPPLICANT_DRIVER) := y
+else
+  CONFIG_DRIVER_TEST := y
 endif
-
-ifeq ($(WPA_BUILD_SUPPLICANT),true)
 
 include $(LOCAL_PATH)/android.config
 
@@ -1584,8 +1582,6 @@ include $(BUILD_EXECUTABLE)
 #include $(BUILD_PREBUILT)
 #
 ########################
-
-endif # ifeq ($(WPA_BUILD_SUPPLICANT),true)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE = libwpa_client

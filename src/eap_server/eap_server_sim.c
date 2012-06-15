@@ -107,8 +107,17 @@ static struct wpabuf * eap_sim_build_start(struct eap_sm *sm,
 			       EAP_SIM_SUBTYPE_START);
 	if (eap_sim_db_identity_known(sm->eap_sim_db_priv, sm->identity,
 				      sm->identity_len)) {
-		wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
-		eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0, NULL, 0);
+		if (sm->identity_len > 0 &&
+		    sm->identity[0] == EAP_SIM_REAUTH_ID_PREFIX) {
+			/* Reauth id may have expired - try fullauth */
+			wpa_printf(MSG_DEBUG, "   AT_FULLAUTH_ID_REQ");
+			eap_sim_msg_add(msg, EAP_SIM_AT_FULLAUTH_ID_REQ, 0,
+					NULL, 0);
+		} else {
+			wpa_printf(MSG_DEBUG, "   AT_PERMANENT_ID_REQ");
+			eap_sim_msg_add(msg, EAP_SIM_AT_PERMANENT_ID_REQ, 0,
+					NULL, 0);
+		}
 	} else {
 		/*
 		 * RFC 4186, Chap. 4.2.4 recommends that identity from EAP is

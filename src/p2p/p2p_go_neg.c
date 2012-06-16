@@ -155,7 +155,9 @@ static struct wpabuf * p2p_build_go_neg_req(struct p2p_data *p2p,
 		group_capab |= P2P_GROUP_CAPAB_CROSS_CONN;
 	if (p2p->cfg->p2p_intra_bss)
 		group_capab |= P2P_GROUP_CAPAB_INTRA_BSS_DIST;
-	p2p_buf_add_capability(buf, p2p->dev_capab, group_capab);
+	p2p_buf_add_capability(buf, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY,
+			       group_capab);
 	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) |
 			      p2p->next_tie_breaker);
 	p2p->next_tie_breaker = !p2p->next_tie_breaker;
@@ -268,7 +270,9 @@ static struct wpabuf * p2p_build_go_neg_resp(struct p2p_data *p2p,
 		if (p2p->cfg->p2p_intra_bss)
 			group_capab |= P2P_GROUP_CAPAB_INTRA_BSS_DIST;
 	}
-	p2p_buf_add_capability(buf, p2p->dev_capab, group_capab);
+	p2p_buf_add_capability(buf, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY,
+			       group_capab);
 	p2p_buf_add_go_intent(buf, (p2p->go_intent << 1) | tie_breaker);
 	p2p_buf_add_config_timeout(buf, 100, 20);
 	if (peer && peer->go_state == REMOTE_GO) {
@@ -730,7 +734,9 @@ static struct wpabuf * p2p_build_go_neg_conf(struct p2p_data *p2p,
 		if (p2p->cfg->p2p_intra_bss)
 			group_capab |= P2P_GROUP_CAPAB_INTRA_BSS_DIST;
 	}
-	p2p_buf_add_capability(buf, p2p->dev_capab, group_capab);
+	p2p_buf_add_capability(buf, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY,
+			       group_capab);
 	if (go || resp_chan == NULL)
 		p2p_buf_add_operating_channel(buf, p2p->cfg->country,
 					      p2p->op_reg_class,

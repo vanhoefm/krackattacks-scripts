@@ -54,7 +54,8 @@ static struct wpabuf * p2p_build_prov_disc_req(struct p2p_data *p2p,
 	p2p_buf_add_public_action_hdr(buf, P2P_PROV_DISC_REQ, dialog_token);
 
 	len = p2p_buf_add_ie_hdr(buf);
-	p2p_buf_add_capability(buf, p2p->dev_capab, 0);
+	p2p_buf_add_capability(buf, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY, 0);
 	p2p_buf_add_device_info(buf, p2p, NULL);
 	if (go) {
 		p2p_buf_add_group_id(buf, go->info.p2p_device_addr,

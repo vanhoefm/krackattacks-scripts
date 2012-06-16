@@ -1815,7 +1815,8 @@ struct wpabuf * p2p_build_probe_resp_ies(struct p2p_data *p2p)
 
 	/* P2P IE */
 	len = p2p_buf_add_ie_hdr(buf);
-	p2p_buf_add_capability(buf, p2p->dev_capab, 0);
+	p2p_buf_add_capability(buf, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY, 0);
 	if (p2p->ext_listen_interval)
 		p2p_buf_add_ext_listen_timing(buf, p2p->ext_listen_period,
 					      p2p->ext_listen_interval);
@@ -2662,7 +2663,8 @@ void p2p_scan_res_handled(struct p2p_data *p2p)
 void p2p_scan_ie(struct p2p_data *p2p, struct wpabuf *ies, const u8 *dev_id)
 {
 	u8 *len = p2p_buf_add_ie_hdr(ies);
-	p2p_buf_add_capability(ies, p2p->dev_capab, 0);
+	p2p_buf_add_capability(ies, p2p->dev_capab &
+			       ~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY, 0);
 	if (dev_id)
 		p2p_buf_add_device_id(ies, dev_id);
 	if (p2p->cfg->reg_class && p2p->cfg->channel)

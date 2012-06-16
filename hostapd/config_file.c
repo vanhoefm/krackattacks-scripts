@@ -2490,7 +2490,7 @@ int hostapd_set_iface(struct hostapd_config *conf,
 
 	if (hostapd_config_check(conf)) {
 		wpa_printf(MSG_ERROR, "Configuration check failed");
-		errors++;
+		return -1;
 	}
 
 	return 0;

@@ -2475,7 +2475,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 int hostapd_set_iface(struct hostapd_config *conf,
 		      struct hostapd_bss_config *bss, char *field, char *value)
 {
-	int errors = 0;
+	int errors;
 	size_t i;
 
 	errors = hostapd_config_fill(conf, bss, field, value, 0);

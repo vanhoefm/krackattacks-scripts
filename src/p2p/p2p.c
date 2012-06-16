@@ -437,13 +437,25 @@ static int p2p_add_group_clients(struct p2p_data *p2p, const u8 *go_dev_addr,
 			continue; /* ignore our own entry */
 		dev = p2p_get_device(p2p, cli->p2p_device_addr);
 		if (dev) {
-			/*
-			 * Update information only if we have not received this
-			 * directly from the client.
-			 */
 			if (dev->flags & (P2P_DEV_GROUP_CLIENT_ONLY |
-					  P2P_DEV_PROBE_REQ_ONLY))
+					  P2P_DEV_PROBE_REQ_ONLY)) {
+				/*
+				 * Update information since we have not
+				 * received this directly from the client.
+				 */
 				p2p_copy_client_info(dev, cli);
+			} else {
+				/*
+				 * Need to update P2P Client Discoverability
+				 * flag since it is valid only in P2P Group
+				 * Info attribute.
+				 */
+				dev->info.dev_capab &=
+					~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY;
+				dev->info.dev_capab |=
+					cli->dev_capab &
+					P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY;
+			}
 			if (dev->flags & P2P_DEV_PROBE_REQ_ONLY) {
 				dev->flags &= ~P2P_DEV_PROBE_REQ_ONLY;
 			}
@@ -526,7 +538,13 @@ static void p2p_copy_wps_info(struct p2p_device *dev, int probe_req,
 	}
 
 	if (msg->capability) {
-		dev->info.dev_capab = msg->capability[0];
+		/*
+		 * P2P Client Discoverability bit is reserved in all frames
+		 * that use this function, so do not change its value here.
+		 */
+		dev->info.dev_capab &= P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY;
+		dev->info.dev_capab |= msg->capability[0] &
+			~P2P_DEV_CAPAB_CLIENT_DISCOVERABILITY;
 		dev->info.group_capab = msg->capability[1];
 	}
 

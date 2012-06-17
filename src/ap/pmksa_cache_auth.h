@@ -1,6 +1,6 @@
 /*
  * hostapd - PMKSA cache for IEEE 802.11i RSN
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2008, 2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -25,6 +25,7 @@ struct rsn_pmksa_cache_entry {
 
 	u8 *identity;
 	size_t identity_len;
+	struct wpabuf *cui;
 	struct radius_class_data radius_class;
 	u8 eap_type_authsrv;
 	int vlan_id;

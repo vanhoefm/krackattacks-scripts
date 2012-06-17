@@ -845,11 +845,20 @@ void ap_sta_set_authorized(struct hostapd_data *hapd, struct sta_info *sta,
 			   int authorized)
 {
 	const u8 *dev_addr = NULL;
+#ifdef CONFIG_P2P
+	u8 addr[ETH_ALEN];
+#endif /* CONFIG_P2P */
+
 	if (!!authorized == !!(sta->flags & WLAN_STA_AUTHORIZED))
 		return;
 
 #ifdef CONFIG_P2P
-	dev_addr = p2p_group_get_dev_addr(hapd->p2p_group, sta->addr);
+	if (hapd->p2p_group == NULL) {
+		if (sta->p2p_ie != NULL &&
+		    p2p_parse_dev_addr_in_p2p_ie(sta->p2p_ie, addr) == 0)
+			dev_addr = addr;
+	} else
+		dev_addr = p2p_group_get_dev_addr(hapd->p2p_group, sta->addr);
 #endif /* CONFIG_P2P */
 
 	if (authorized) {

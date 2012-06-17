@@ -541,6 +541,17 @@ static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
 		}
 	}
 
+	if (sta == NULL && attr->cui) {
+		for (sta = hapd->sta_list; sta; sta = sta->next) {
+			struct wpabuf *cui;
+			cui = ieee802_1x_get_radius_cui(sta->eapol_sm);
+			if (cui && wpabuf_len(cui) == attr->cui_len &&
+			    os_memcmp(wpabuf_head(cui), attr->cui,
+				      attr->cui_len) == 0)
+				break;
+		}
+	}
+
 	if (sta == NULL && attr->user_name) {
 		for (sta = hapd->sta_list; sta; sta = sta->next) {
 			u8 *identity;

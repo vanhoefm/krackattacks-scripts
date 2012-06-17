@@ -97,6 +97,12 @@ static struct radius_msg * radius_das_disconnect(struct radius_das_data *das,
 		attrs.acct_session_id_len = len;
 	}
 
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+				    &buf, &len, NULL) == 0) {
+		attrs.cui = buf;
+		attrs.cui_len = len;
+	}
+
 	res = das->disconnect(das->ctx, &attrs);
 	switch (res) {
 	case RADIUS_DAS_NAS_MISMATCH:

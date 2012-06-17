@@ -149,6 +149,7 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	struct wpabuf *rbuf;
 	u32 val;
 	int res;
+	struct os_time now;
 
 	fromlen = sizeof(from);
 	len = recvfrom(sock, buf, sizeof(buf), 0,
@@ -185,13 +186,11 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		goto fail;
 	}
 
+	os_get_time(&now);
 	res = radius_msg_get_attr(msg, RADIUS_ATTR_EVENT_TIMESTAMP,
 				  (u8 *) &val, 4);
 	if (res == 4) {
 		u32 timestamp = ntohl(val);
-		struct os_time now;
-
-		os_get_time(&now);
 		if (abs(now.sec - timestamp) > das->time_window) {
 			wpa_printf(MSG_DEBUG, "DAS: Unacceptable "
 				   "Event-Timestamp (%u; local time %u) in "
@@ -230,6 +229,13 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 
 	if (reply) {
 		wpa_printf(MSG_DEBUG, "DAS: Reply to %s:%d", abuf, from_port);
+
+		if (!radius_msg_add_attr_int32(reply,
+					       RADIUS_ATTR_EVENT_TIMESTAMP,
+					       now.sec)) {
+			wpa_printf(MSG_DEBUG, "DAS: Failed to add "
+				   "Event-Timestamp attribute");
+		}
 
 		if (radius_msg_finish_das_resp(reply, das->shared_secret,
 					       das->shared_secret_len, hdr) <

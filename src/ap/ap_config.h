@@ -187,6 +187,8 @@ struct hostapd_bss_config {
 	struct hostapd_radius_attr *radius_auth_req_attr;
 	struct hostapd_radius_attr *radius_acct_req_attr;
 	int radius_das_port;
+	unsigned int radius_das_time_window;
+	int radius_das_require_event_timestamp;
 	struct hostapd_ip_addr radius_das_client_addr;
 	u8 *radius_das_shared_secret;
 	size_t radius_das_shared_secret_len;

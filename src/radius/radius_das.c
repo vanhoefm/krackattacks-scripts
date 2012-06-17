@@ -24,6 +24,8 @@ struct radius_das_data {
 	u8 *shared_secret;
 	size_t shared_secret_len;
 	struct hostapd_ip_addr client_addr;
+	unsigned int time_window;
+	int require_event_timestamp;
 };
 
 
@@ -45,6 +47,8 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	struct radius_msg *msg, *reply = NULL;
 	struct radius_hdr *hdr;
 	struct wpabuf *rbuf;
+	u32 val;
+	int res;
 
 	fromlen = sizeof(from);
 	len = recvfrom(sock, buf, sizeof(buf), 0,
@@ -81,6 +85,27 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 		goto fail;
 	}
 
+	res = radius_msg_get_attr(msg, RADIUS_ATTR_EVENT_TIMESTAMP,
+				  (u8 *) &val, 4);
+	if (res == 4) {
+		u32 timestamp = ntohl(val);
+		struct os_time now;
+
+		os_get_time(&now);
+		if (abs(now.sec - timestamp) > das->time_window) {
+			wpa_printf(MSG_DEBUG, "DAS: Unacceptable "
+				   "Event-Timestamp (%u; local time %u) in "
+				   "packet from %s:%d - drop",
+				   timestamp, (unsigned int) now.sec,
+				   abuf, from_port);
+			goto fail;
+		}
+	} else if (das->require_event_timestamp) {
+		wpa_printf(MSG_DEBUG, "DAS: Missing Event-Timestamp in packet "
+			   "from %s:%d - drop", abuf, from_port);
+		goto fail;
+	}
+
 	hdr = radius_msg_get_hdr(msg);
 
 	switch (hdr->code) {
@@ -110,8 +135,6 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 	}
 
 	if (reply) {
-		int res;
-
 		wpa_printf(MSG_DEBUG, "DAS: Reply to %s:%d", abuf, from_port);
 
 		if (radius_msg_finish_das_resp(reply, das->shared_secret,
@@ -176,6 +199,9 @@ radius_das_init(struct radius_das_conf *conf)
 	das = os_zalloc(sizeof(*das));
 	if (das == NULL)
 		return NULL;
+
+	das->time_window = conf->time_window;
+	das->require_event_timestamp = conf->require_event_timestamp;
 
 	os_memcpy(&das->client_addr, conf->client_addr,
 		  sizeof(das->client_addr));

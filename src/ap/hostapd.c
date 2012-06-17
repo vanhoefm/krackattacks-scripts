@@ -639,6 +639,9 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		das_conf.shared_secret_len =
 			hapd->conf->radius_das_shared_secret_len;
 		das_conf.client_addr = &hapd->conf->radius_das_client_addr;
+		das_conf.time_window = hapd->conf->radius_das_time_window;
+		das_conf.require_event_timestamp =
+			hapd->conf->radius_das_require_event_timestamp;
 		hapd->radius_das = radius_das_init(&das_conf);
 		if (hapd->radius_das == NULL) {
 			wpa_printf(MSG_ERROR, "RADIUS DAS initialization "

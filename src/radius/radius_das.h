@@ -16,6 +16,8 @@ struct radius_das_conf {
 	const u8 *shared_secret;
 	size_t shared_secret_len;
 	const struct hostapd_ip_addr *client_addr;
+	unsigned int time_window;
+	int require_event_timestamp;
 };
 
 struct radius_das_data *

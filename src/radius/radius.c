@@ -1552,3 +1552,24 @@ int radius_copy_class(struct radius_class_data *dst,
 
 	return 0;
 }
+
+
+u8 radius_msg_find_unlisted_attr(struct radius_msg *msg, u8 *attrs)
+{
+	size_t i, j;
+	struct radius_attr_hdr *attr;
+
+	for (i = 0; i < msg->attr_used; i++) {
+		attr = radius_get_attr_hdr(msg, i);
+
+		for (j = 0; attrs[j]; j++) {
+			if (attr->type == attrs[j])
+				break;
+		}
+
+		if (attrs[j] == 0)
+			return attr->type; /* unlisted attr */
+	}
+
+	return 0;
+}

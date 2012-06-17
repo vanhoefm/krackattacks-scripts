@@ -282,4 +282,6 @@ void radius_free_class(struct radius_class_data *c);
 int radius_copy_class(struct radius_class_data *dst,
 		      const struct radius_class_data *src);
 
+u8 radius_msg_find_unlisted_attr(struct radius_msg *msg, u8 *attrs);
+
 #endif /* RADIUS_H */

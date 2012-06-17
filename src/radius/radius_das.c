@@ -29,6 +29,50 @@ struct radius_das_data {
 };
 
 
+static struct radius_msg * radius_das_disconnect(struct radius_das_data *das,
+						 struct radius_msg *msg,
+						 const char *abuf,
+						 int from_port)
+{
+	struct radius_hdr *hdr;
+	struct radius_msg *reply;
+	u8 allowed[] = {
+		RADIUS_ATTR_USER_NAME,
+		RADIUS_ATTR_CALLING_STATION_ID,
+		RADIUS_ATTR_ACCT_SESSION_ID,
+		RADIUS_ATTR_EVENT_TIMESTAMP,
+		RADIUS_ATTR_MESSAGE_AUTHENTICATOR,
+		RADIUS_ATTR_CHARGEABLE_USER_IDENTITY,
+		0
+	};
+	int error = 405;
+	u8 attr;
+
+	hdr = radius_msg_get_hdr(msg);
+
+	attr = radius_msg_find_unlisted_attr(msg, allowed);
+	if (attr) {
+		wpa_printf(MSG_INFO, "DAS: Unsupported attribute %u in "
+			   "Disconnect-Request from %s:%d", attr,
+			   abuf, from_port);
+		error = 401;
+		goto fail;
+	}
+
+	/* TODO */
+
+	goto fail;
+
+fail:
+	reply = radius_msg_new(RADIUS_CODE_DISCONNECT_NAK, hdr->identifier);
+	if (reply == NULL)
+		return NULL;
+
+	radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE, error);
+	return reply;
+}
+
+
 static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 {
 	struct radius_das_data *das = eloop_ctx;
@@ -110,13 +154,7 @@ static void radius_das_receive(int sock, void *eloop_ctx, void *sock_ctx)
 
 	switch (hdr->code) {
 	case RADIUS_CODE_DISCONNECT_REQUEST:
-		/* TODO */
-		reply = radius_msg_new(RADIUS_CODE_DISCONNECT_NAK,
-				       hdr->identifier);
-		if (reply == NULL)
-			break;
-
-		radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE, 405);
+		reply = radius_das_disconnect(das, msg, abuf, from_port);
 		break;
 	case RADIUS_CODE_COA_REQUEST:
 		/* TODO */

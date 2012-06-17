@@ -11,6 +11,20 @@
 
 struct radius_das_data;
 
+enum radius_das_res {
+	RADIUS_DAS_SUCCESS,
+	RADIUS_DAS_NAS_MISMATCH,
+	RADIUS_DAS_SESSION_NOT_FOUND
+};
+
+struct radius_das_attrs {
+	const u8 *sta_addr;
+	const u8 *user_name;
+	size_t user_name_len;
+	const u8 *acct_session_id;
+	size_t acct_session_id_len;
+};
+
 struct radius_das_conf {
 	int port;
 	const u8 *shared_secret;
@@ -18,6 +32,9 @@ struct radius_das_conf {
 	const struct hostapd_ip_addr *client_addr;
 	unsigned int time_window;
 	int require_event_timestamp;
+	void *ctx;
+	enum radius_das_res (*disconnect)(void *ctx,
+					  struct radius_das_attrs *attr);
 };
 
 struct radius_das_data *

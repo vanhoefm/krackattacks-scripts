@@ -26,6 +26,9 @@ struct radius_das_data {
 	struct hostapd_ip_addr client_addr;
 	unsigned int time_window;
 	int require_event_timestamp;
+	void *ctx;
+	enum radius_das_res (*disconnect)(void *ctx,
+					  struct radius_das_attrs *attr);
 };
 
 
@@ -47,6 +50,12 @@ static struct radius_msg * radius_das_disconnect(struct radius_das_data *das,
 	};
 	int error = 405;
 	u8 attr;
+	enum radius_das_res res;
+	struct radius_das_attrs attrs;
+	u8 *buf;
+	size_t len;
+	char tmp[100];
+	u8 sta_addr[ETH_ALEN];
 
 	hdr = radius_msg_get_hdr(msg);
 
@@ -59,16 +68,63 @@ static struct radius_msg * radius_das_disconnect(struct radius_das_data *das,
 		goto fail;
 	}
 
-	/* TODO */
+	os_memset(&attrs, 0, sizeof(attrs));
 
-	goto fail;
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_CALLING_STATION_ID,
+				    &buf, &len, NULL) == 0) {
+		if (len >= sizeof(tmp))
+			len = sizeof(tmp) - 1;
+		os_memcpy(tmp, buf, len);
+		tmp[len] = '\0';
+		if (hwaddr_aton2(tmp, sta_addr) < 0) {
+			wpa_printf(MSG_INFO, "DAS: Invalid Calling-Station-Id "
+				   "'%s' from %s:%d", tmp, abuf, from_port);
+			error = 407;
+			goto fail;
+		}
+		attrs.sta_addr = sta_addr;
+	}
+
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_USER_NAME,
+				    &buf, &len, NULL) == 0) {
+		attrs.user_name = buf;
+		attrs.user_name_len = len;
+	}
+
+	if (radius_msg_get_attr_ptr(msg, RADIUS_ATTR_ACCT_SESSION_ID,
+				    &buf, &len, NULL) == 0) {
+		attrs.acct_session_id = buf;
+		attrs.acct_session_id_len = len;
+	}
+
+	res = das->disconnect(das->ctx, &attrs);
+	switch (res) {
+	case RADIUS_DAS_NAS_MISMATCH:
+		wpa_printf(MSG_INFO, "DAS: NAS mismatch from %s:%d",
+			   abuf, from_port);
+		error = 403;
+		break;
+	case RADIUS_DAS_SESSION_NOT_FOUND:
+		wpa_printf(MSG_INFO, "DAS: Session not found for request from "
+			   "%s:%d", abuf, from_port);
+		error = 503;
+		break;
+	case RADIUS_DAS_SUCCESS:
+		error = 0;
+		break;
+	}
 
 fail:
-	reply = radius_msg_new(RADIUS_CODE_DISCONNECT_NAK, hdr->identifier);
+	reply = radius_msg_new(error ? RADIUS_CODE_DISCONNECT_NAK :
+			       RADIUS_CODE_DISCONNECT_ACK, hdr->identifier);
 	if (reply == NULL)
 		return NULL;
 
-	radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE, error);
+	if (error) {
+		radius_msg_add_attr_int32(reply, RADIUS_ATTR_ERROR_CAUSE,
+					  error);
+	}
+
 	return reply;
 }
 
@@ -240,6 +296,8 @@ radius_das_init(struct radius_das_conf *conf)
 
 	das->time_window = conf->time_window;
 	das->require_event_timestamp = conf->require_event_timestamp;
+	das->ctx = conf->ctx;
+	das->disconnect = conf->disconnect;
 
 	os_memcpy(&das->client_addr, conf->client_addr,
 		  sizeof(das->client_addr));

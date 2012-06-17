@@ -511,6 +511,75 @@ static int mac_in_conf(struct hostapd_config *conf, const void *a)
 }
 
 
+#ifndef CONFIG_NO_RADIUS
+
+static int hostapd_das_nas_mismatch(struct hostapd_data *hapd,
+				    struct radius_das_attrs *attr)
+{
+	/* TODO */
+	return 0;
+}
+
+
+static struct sta_info * hostapd_das_find_sta(struct hostapd_data *hapd,
+					      struct radius_das_attrs *attr)
+{
+	struct sta_info *sta = NULL;
+	char buf[128];
+
+	if (attr->sta_addr)
+		sta = ap_get_sta(hapd, attr->sta_addr);
+
+	if (sta == NULL && attr->acct_session_id &&
+	    attr->acct_session_id_len == 17) {
+		for (sta = hapd->sta_list; sta; sta = sta->next) {
+			os_snprintf(buf, sizeof(buf), "%08X-%08X",
+				    sta->acct_session_id_hi,
+				    sta->acct_session_id_lo);
+			if (os_memcmp(attr->acct_session_id, buf, 17) == 0)
+				break;
+		}
+	}
+
+	if (sta == NULL && attr->user_name) {
+		for (sta = hapd->sta_list; sta; sta = sta->next) {
+			u8 *identity;
+			size_t identity_len;
+			identity = ieee802_1x_get_identity(sta->eapol_sm,
+							   &identity_len);
+			if (identity &&
+			    identity_len == attr->user_name_len &&
+			    os_memcmp(identity, attr->user_name, identity_len)
+			    == 0)
+				break;
+		}
+	}
+
+	return sta;
+}
+
+
+static enum radius_das_res
+hostapd_das_disconnect(void *ctx, struct radius_das_attrs *attr)
+{
+	struct hostapd_data *hapd = ctx;
+	struct sta_info *sta;
+
+	if (hostapd_das_nas_mismatch(hapd, attr))
+		return RADIUS_DAS_NAS_MISMATCH;
+
+	sta = hostapd_das_find_sta(hapd, attr);
+	if (sta == NULL)
+		return RADIUS_DAS_SESSION_NOT_FOUND;
+
+	hostapd_drv_sta_deauth(hapd, sta->addr,
+			       WLAN_REASON_PREV_AUTH_NOT_VALID);
+	ap_sta_deauthenticate(hapd, sta, WLAN_REASON_PREV_AUTH_NOT_VALID);
+
+	return RADIUS_DAS_SUCCESS;
+}
+
+#endif /* CONFIG_NO_RADIUS */
 
 
 /**
@@ -642,6 +711,8 @@ static int hostapd_setup_bss(struct hostapd_data *hapd, int first)
 		das_conf.time_window = hapd->conf->radius_das_time_window;
 		das_conf.require_event_timestamp =
 			hapd->conf->radius_das_require_event_timestamp;
+		das_conf.ctx = hapd;
+		das_conf.disconnect = hostapd_das_disconnect;
 		hapd->radius_das = radius_das_init(&das_conf);
 		if (hapd->radius_das == NULL) {
 			wpa_printf(MSG_ERROR, "RADIUS DAS initialization "

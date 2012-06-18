@@ -345,6 +345,8 @@ static int hapd_wps_cred_cb(struct hostapd_data *hapd, void *ctx)
 	}
 	hapd->wps->wps_state = WPS_STATE_CONFIGURED;
 
+	if (hapd->iface->config_fname == NULL)
+		return 0;
 	len = os_strlen(hapd->iface->config_fname) + 5;
 	tmp_fname = os_malloc(len);
 	if (tmp_fname == NULL)

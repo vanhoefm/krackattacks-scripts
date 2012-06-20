@@ -4879,6 +4879,7 @@ static void wpas_p2p_fallback_to_go_neg(struct wpa_supplicant *wpa_s,
 					int group_added)
 {
 	struct wpa_supplicant *group = wpa_s;
+	eloop_cancel_timeout(wpas_p2p_pd_before_join_timeout, wpa_s, NULL);
 	if (wpa_s->global->p2p_group_formation)
 		group = wpa_s->global->p2p_group_formation;
 	wpa_s = wpa_s->parent;

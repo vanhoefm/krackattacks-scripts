@@ -2826,10 +2826,7 @@ static void wpa_driver_nl80211_handle_eapol_tx_status(int sock,
 	u8 data[2048];
 	struct msghdr msg;
 	struct iovec entry;
-	struct {
-		struct cmsghdr cm;
-		char control[512];
-	} control;
+	u8 control[512];
 	struct cmsghdr *cmsg;
 	int res, found_ee = 0, found_wifi = 0, acked = 0;
 	union wpa_event_data event;

@@ -488,3 +488,15 @@ CONFIG_PEERKEY=y
 
 # Hotspot 2.0
 #CONFIG_HS20=y
+
+# AP mode operations with wpa_supplicant
+# This can be used for controlling AP mode operations with wpa_supplicant. It
+# should be noted that this is mainly aimed at simple cases like
+# WPA2-Personal while more complex configurations like WPA2-Enterprise with an
+# external RADIUS server can be supported with hostapd.
+#CONFIG_AP=y
+
+# P2P (Wi-Fi Direct)
+# This can be used to enable P2P support in wpa_supplicant. See README-P2P for
+# more information on P2P operations.
+#CONFIG_P2P=y

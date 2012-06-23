@@ -1654,16 +1654,12 @@ static int atheros_send_mgmt(void *priv, const u8 *frm, size_t data_len,
 {
 	struct atheros_driver_data *drv = priv;
 	u8 buf[1510];
-	u16 fc;
-	u16 stype;
 	const struct ieee80211_mgmt *mgmt;
 	struct ieee80211req_mgmtbuf *mgmt_frm;
 
 	mgmt = (const struct ieee80211_mgmt *) frm;
 	wpa_printf(MSG_DEBUG, "%s frmlen = %lu " MACSTR, __func__,
 		   (unsigned long) data_len, MAC2STR(mgmt->da));
-	fc = le_to_host16(mgmt->frame_control);
-	stype = WLAN_FC_GET_STYPE(fc);
 	mgmt_frm = (struct ieee80211req_mgmtbuf *) buf;
 	memcpy(mgmt_frm->macaddr, (u8 *)mgmt->da, IEEE80211_ADDR_LEN);
 	mgmt_frm->buflen = data_len;

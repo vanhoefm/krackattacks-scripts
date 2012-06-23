@@ -877,10 +877,12 @@ static int atheros_receive_pkt(struct atheros_driver_data *drv)
 			return ret;
 	}
 
+#if defined(CONFIG_WPS) || defined(CONFIG_IEEE80211R)
 	drv->sock_raw = l2_packet_init(drv->iface, NULL, ETH_P_80211_RAW,
 				       atheros_raw_receive, drv, 1);
 	if (drv->sock_raw == NULL)
 		return -1;
+#endif /* CONFIG_WPS || CONFIG_IEEE80211R */
 	if (l2_packet_get_own_addr(drv->sock_xmit, drv->own_addr))
 		return -1;
 	return ret;

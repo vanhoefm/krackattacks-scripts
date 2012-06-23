@@ -336,7 +336,7 @@ p2p_invite [persistent=<network id>|group=<group ifname>] [peer=address]
 
 Invite a peer to join a group (e.g., group=wlan1) or to reinvoke a
 persistent group (e.g., persistent=4). If the peer device is the GO of
-the persisten group, the peer parameter is not needed. Otherwise it is
+the persistent group, the peer parameter is not needed. Otherwise it is
 used to specify which device to invite. go_dev_addr parameter can be
 used to override the GO device address for Invitation Request should
 it be not known for some reason (this should not be needed in most

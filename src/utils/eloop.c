@@ -350,7 +350,8 @@ static void eloop_sock_table_dispatch(struct eloop_sock_table *readers,
 				      int max_pollfd_map)
 {
 	if (eloop_sock_table_dispatch_table(readers, pollfds_map,
-					    max_pollfd_map, POLLIN))
+					    max_pollfd_map, POLLIN | POLLERR |
+					    POLLHUP))
 		return; /* pollfds may be invalid at this point */
 
 	if (eloop_sock_table_dispatch_table(writers, pollfds_map,

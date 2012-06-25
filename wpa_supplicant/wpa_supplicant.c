@@ -1440,6 +1440,7 @@ void wpa_supplicant_associate(struct wpa_supplicant *wpa_s,
 			 * succeed.
 			 */
 			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 			os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 			return;
 		}

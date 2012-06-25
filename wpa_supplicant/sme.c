@@ -332,6 +332,7 @@ void sme_event_auth(struct wpa_supplicant *wpa_s, union wpa_event_data *data)
 		    wpa_s->sme.auth_alg == data->auth.auth_type ||
 		    wpa_s->current_ssid->auth_alg == WPA_AUTH_ALG_LEAP) {
 			wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+			wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 			return;
 		}
 
@@ -448,6 +449,7 @@ void sme_associate(struct wpa_supplicant *wpa_s, enum wpas_mode mode,
 		wpa_msg(wpa_s, MSG_INFO, "SME: Association request to the "
 			"driver failed");
 		wpas_connection_failed(wpa_s, wpa_s->pending_bssid);
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 		os_memset(wpa_s->pending_bssid, 0, ETH_ALEN);
 		return;
 	}

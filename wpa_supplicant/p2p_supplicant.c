@@ -3885,7 +3885,8 @@ int wpas_p2p_find(struct wpa_supplicant *wpa_s, unsigned int timeout,
 	if (wpa_s->drv_flags & WPA_DRIVER_FLAGS_P2P_MGMT)
 		return wpa_drv_p2p_find(wpa_s, timeout, type);
 
-	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL)
+	if (wpa_s->global->p2p_disabled || wpa_s->global->p2p == NULL ||
+	    wpa_s->p2p_in_provisioning)
 		return -1;
 
 	wpa_supplicant_cancel_sched_scan(wpa_s);

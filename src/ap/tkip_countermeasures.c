@@ -1,6 +1,6 @@
 /*
  * hostapd / TKIP countermeasures
- * Copyright (c) 2002-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2002-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -11,6 +11,7 @@
 #include "utils/common.h"
 #include "utils/eloop.h"
 #include "common/ieee802_11_defs.h"
+#include "radius/radius.h"
 #include "hostapd.h"
 #include "sta_info.h"
 #include "ap_mlme.h"
@@ -44,12 +45,17 @@ static void ieee80211_tkip_countermeasures_start(struct hostapd_data *hapd)
 	eloop_cancel_timeout(ieee80211_tkip_countermeasures_stop, hapd, NULL);
 	eloop_register_timeout(60, 0, ieee80211_tkip_countermeasures_stop,
 			       hapd, NULL);
-	for (sta = hapd->sta_list; sta != NULL; sta = sta->next) {
+	while ((sta = hapd->sta_list)) {
+		sta->acct_terminate_cause =
+			RADIUS_ACCT_TERMINATE_CAUSE_ADMIN_RESET;
+		if (sta->flags & WLAN_STA_AUTH) {
+			mlme_deauthenticate_indication(
+				hapd, sta,
+				WLAN_REASON_MICHAEL_MIC_FAILURE);
+		}
 		hostapd_drv_sta_deauth(hapd, sta->addr,
 				       WLAN_REASON_MICHAEL_MIC_FAILURE);
-		ap_sta_set_authorized(hapd, sta, 0);
-		sta->flags &= ~(WLAN_STA_AUTH | WLAN_STA_ASSOC);
-		hostapd_drv_sta_remove(hapd, sta->addr);
+		ap_free_sta(hapd, sta);
 	}
 }
 

@@ -26,6 +26,7 @@
 #include "wps_hostapd.h"
 #include "ap_drv_ops.h"
 #include "ap_config.h"
+#include "hw_features.h"
 
 
 int hostapd_notif_assoc(struct hostapd_data *hapd, const u8 *addr,
@@ -270,6 +271,31 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 	hostapd_drv_sta_disassoc(hapd, addr, WLAN_REASON_DISASSOC_LOW_ACK);
 	if (sta)
 		ap_sta_disassociate(hapd, sta, WLAN_REASON_DISASSOC_LOW_ACK);
+}
+
+
+void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
+			     int offset)
+{
+	int channel;
+
+	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
+		       HOSTAPD_LEVEL_INFO, "driver had channel switch: "
+		       "freq=%d, ht=%d, offset=%d", freq, ht, offset);
+
+	hapd->iface->freq = freq;
+
+	channel = hostapd_hw_get_channel(hapd, freq);
+	if (!channel) {
+		hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
+			       HOSTAPD_LEVEL_WARNING, "driver switched to "
+			       "bad channel!");
+		return;
+	}
+
+	hapd->iconf->channel = channel;
+	hapd->iconf->ieee80211n = ht;
+	hapd->iconf->secondary_channel = offset;
 }
 
 
@@ -590,6 +616,13 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		hostapd_rx_action(hapd, &data->rx_action);
 		break;
 #endif /* NEED_AP_MLME */
+	case EVENT_CH_SWITCH:
+		if (!data)
+			break;
+		hostapd_event_ch_switch(hapd, data->ch_switch.freq,
+					data->ch_switch.ht_enabled,
+					data->ch_switch.ch_offset);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "Unknown event %d", event);
 		break;

@@ -957,6 +957,17 @@ int wpa_supplicant_ap_update_beacon(struct wpa_supplicant *wpa_s)
 }
 
 
+void wpas_ap_ch_switch(struct wpa_supplicant *wpa_s, int freq, int ht,
+		       int offset)
+{
+	if (!wpa_s->ap_iface)
+		return;
+
+	wpa_s->assoc_freq = freq;
+	hostapd_event_ch_switch(wpa_s->ap_iface->bss[0], freq, ht, offset);
+}
+
+
 int wpa_supplicant_ap_mac_addr_filter(struct wpa_supplicant *wpa_s,
 				      const u8 *addr)
 {

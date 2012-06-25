@@ -2407,6 +2407,21 @@ void wpa_supplicant_event(void *ctx, enum wpa_event_type event,
 		ap_rx_from_unknown_sta(wpa_s, data->rx_from_unknown.addr,
 				       data->rx_from_unknown.wds);
 		break;
+	case EVENT_CH_SWITCH:
+		if (!data)
+			break;
+		if (!wpa_s->ap_iface) {
+			wpa_dbg(wpa_s, MSG_DEBUG, "AP: Ignore channel switch "
+				"event in non-AP mode");
+			break;
+		}
+
+#ifdef CONFIG_AP
+		wpas_ap_ch_switch(wpa_s, data->ch_switch.freq,
+				  data->ch_switch.ht_enabled,
+				  data->ch_switch.ch_offset);
+#endif /* CONFIG_AP */
+		break;
 	case EVENT_RX_MGMT: {
 		u16 fc, stype;
 		const struct ieee80211_mgmt *mgmt;

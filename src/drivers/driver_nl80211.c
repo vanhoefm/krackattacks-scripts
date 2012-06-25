@@ -1196,6 +1196,40 @@ static void mlme_event_disconnect(struct wpa_driver_nl80211_data *drv,
 }
 
 
+static void mlme_event_ch_switch(struct wpa_driver_nl80211_data *drv,
+				 struct nlattr *freq, struct nlattr *type)
+{
+	union wpa_event_data data;
+	int ht_enabled = 1;
+	int chan_offset = 0;
+
+	wpa_printf(MSG_DEBUG, "nl80211: Channel switch event");
+
+	if (!freq || !type)
+		return;
+
+	switch (nla_get_u32(type)) {
+	case NL80211_CHAN_NO_HT:
+		ht_enabled = 0;
+		break;
+	case NL80211_CHAN_HT20:
+		break;
+	case NL80211_CHAN_HT40PLUS:
+		chan_offset = 1;
+		break;
+	case NL80211_CHAN_HT40MINUS:
+		chan_offset = -1;
+		break;
+	}
+
+	data.ch_switch.freq = nla_get_u32(freq);
+	data.ch_switch.ht_enabled = ht_enabled;
+	data.ch_switch.ch_offset = chan_offset;
+
+	wpa_supplicant_event(drv->ctx, EVENT_CH_SWITCH, &data);
+}
+
+
 static void mlme_timeout_event(struct wpa_driver_nl80211_data *drv,
 			       enum nl80211_commands cmd, struct nlattr *addr)
 {
@@ -2115,6 +2149,10 @@ static void do_process_drv_event(struct wpa_driver_nl80211_data *drv,
 				   tb[NL80211_ATTR_MAC],
 				   tb[NL80211_ATTR_REQ_IE],
 				   tb[NL80211_ATTR_RESP_IE]);
+		break;
+	case NL80211_CMD_CH_SWITCH_NOTIFY:
+		mlme_event_ch_switch(drv, tb[NL80211_ATTR_WIPHY_FREQ],
+				     tb[NL80211_ATTR_WIPHY_CHANNEL_TYPE]);
 		break;
 	case NL80211_CMD_DISCONNECT:
 		mlme_event_disconnect(drv, tb[NL80211_ATTR_REASON_CODE],

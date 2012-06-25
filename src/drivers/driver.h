@@ -2978,7 +2978,14 @@ enum wpa_event_type {
 	/**
 	 * EVENT_EAPOL_TX_STATUS - notify of EAPOL TX status
 	 */
-	EVENT_EAPOL_TX_STATUS
+	EVENT_EAPOL_TX_STATUS,
+
+	/**
+	 * EVENT_CH_SWITCH - AP or GO decided to switch channels
+	 *
+	 * Described in wpa_event_data.ch_switch
+	 * */
+	EVENT_CH_SWITCH
 };
 
 
@@ -3573,6 +3580,18 @@ union wpa_event_data {
 		int data_len;
 		int ack;
 	} eapol_tx_status;
+
+	/**
+	 * struct ch_switch
+	 * @freq: Frequency of new channel in MHz
+	 * @ht_enabled: Whether this is an HT channel
+	 * @ch_offset: Secondary channel offset
+	 */
+	struct ch_switch {
+		int freq;
+		int ht_enabled;
+		int ch_offset;
+	} ch_switch;
 };
 
 /**

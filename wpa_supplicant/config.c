@@ -1859,6 +1859,7 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->p2p_ssid_postfix);
 	os_free(config->pssid);
 	os_free(config->p2p_pref_chan);
+	os_free(config->autoscan);
 	os_free(config);
 }
 
@@ -2882,7 +2883,8 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(interworking, 0, 1), 0 },
 	{ FUNC(hessid), 0 },
 	{ INT_RANGE(access_network_type, 0, 15), 0 },
-	{ INT_RANGE(pbc_in_m1, 0, 1), 0 }
+	{ INT_RANGE(pbc_in_m1, 0, 1), 0 },
+	{ STR(autoscan), 0 }
 };
 
 #undef FUNC

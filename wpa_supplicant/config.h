@@ -632,6 +632,15 @@ struct wpa_config {
 	 * a label in the AP).
 	 */
 	int pbc_in_m1;
+
+	/**
+	 * autoscan - Automatic scan parameters or %NULL if none
+	 *
+	 * This is an optional set of parameters for automatic scanning
+	 * within an interface in following format:
+	 * <autoscan module name>:<module parameters>
+	 */
+	char *autoscan;
 };
 
 

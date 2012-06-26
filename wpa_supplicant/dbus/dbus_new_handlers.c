@@ -1842,6 +1842,8 @@ DBusMessage * wpas_dbus_handler_autoscan(DBusMessage *message,
 			wpa_s->conf->autoscan = tmp;
 			if (state == WPA_DISCONNECTED || state == WPA_INACTIVE)
 				autoscan_init(wpa_s, 1);
+			else if (state == WPA_SCANNING)
+				wpa_supplicant_reinit_autoscan(wpa_s);
 		}
 	} else if (arg != NULL && os_strlen(arg) == 0) {
 		os_free(wpa_s->conf->autoscan);

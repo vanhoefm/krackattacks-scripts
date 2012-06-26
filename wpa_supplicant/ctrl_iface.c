@@ -3891,6 +3891,8 @@ static int wpa_supplicant_ctrl_iface_autoscan(struct wpa_supplicant *wpa_s,
 		autoscan_deinit(wpa_s);
 	else if (state == WPA_DISCONNECTED || state == WPA_INACTIVE)
 		autoscan_init(wpa_s, 1);
+	else if (state == WPA_SCANNING)
+		wpa_supplicant_reinit_autoscan(wpa_s);
 
 	return 0;
 }

@@ -1920,6 +1920,15 @@ static const struct wpa_dbus_method_desc wpas_dbus_global_methods[] = {
 		  END_ARGS
 	  }
 	},
+#ifdef CONFIG_AUTOSCAN
+	{ "AutoScan", WPAS_DBUS_NEW_IFACE_INTERFACE,
+	  (WPADBusMethodHandler) &wpas_dbus_handler_autoscan,
+	  {
+		  { "arg", "s", ARG_IN },
+		  END_ARGS
+	  }
+	},
+#endif /* CONFIG_AUTOSCAN */
 	{ NULL, NULL, NULL, { END_ARGS } }
 };
 

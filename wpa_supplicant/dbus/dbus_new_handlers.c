@@ -1811,6 +1811,52 @@ DBusMessage * wpas_dbus_handler_flush_bss(DBusMessage *message,
 }
 
 
+#ifdef CONFIG_AUTOSCAN
+/**
+ * wpas_dbus_handler_autoscan - Set autoscan parameters for the interface
+ * @message: Pointer to incoming dbus message
+ * @wpa_s: wpa_supplicant structure for a network interface
+ * Returns: NULL
+ *
+ * Handler function for "AutoScan" method call of network interface.
+ */
+DBusMessage * wpas_dbus_handler_autoscan(DBusMessage *message,
+					 struct wpa_supplicant *wpa_s)
+{
+	DBusMessage *reply = NULL;
+	enum wpa_states state = wpa_s->wpa_state;
+	char *arg;
+
+	dbus_message_get_args(message, NULL, DBUS_TYPE_STRING, &arg,
+			      DBUS_TYPE_INVALID);
+
+	if (arg != NULL && os_strlen(arg) > 0) {
+		char *tmp;
+		tmp = os_strdup(arg);
+		if (tmp == NULL) {
+			reply = dbus_message_new_error(message,
+						       DBUS_ERROR_NO_MEMORY,
+						       NULL);
+		} else {
+			os_free(wpa_s->conf->autoscan);
+			wpa_s->conf->autoscan = tmp;
+			if (state == WPA_DISCONNECTED || state == WPA_INACTIVE)
+				autoscan_init(wpa_s);
+		}
+	} else if (arg != NULL && os_strlen(arg) == 0) {
+		os_free(wpa_s->conf->autoscan);
+		wpa_s->conf->autoscan = NULL;
+		autoscan_deinit(wpa_s);
+	} else
+		reply = dbus_message_new_error(message,
+					       DBUS_ERROR_INVALID_ARGS,
+					       NULL);
+
+	return reply;
+}
+#endif /* CONFIG_AUTOSCAN */
+
+
 /**
  * wpas_dbus_getter_capabilities - Return interface capabilities
  * @iter: Pointer to incoming dbus message iter

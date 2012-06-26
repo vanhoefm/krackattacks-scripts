@@ -316,6 +316,22 @@ fi.w1.wpa_supplicant1.CreateInterface.
 	  <dd>A blob with the specified name doesn't exist.</dd>
 	</dl>
       </li>
+      <li>
+	<h3>AutoScan ( s : arg ) --> nothing</h3>
+	<p>Set autoscan parameters for the interface.</p>
+	<h4>Arguments</h4>
+	<dl>
+	  <dt>s : arg</dt>
+	  <dd>Autoscan parameter line or empty to unset autoscan.</dd>
+	</dl>
+	<h4>Possible errors</h4>
+	<dl>
+	  <dt>fi.w1.wpa_supplicant1.NoMemory</dt>
+	  <dd>Needed memory was not possible to get allocated.</dd>
+	  <dt>fi.w1.wpa_supplicant1.InvalidArgs</dt>
+	  <dd>Invalid entries were found in the passed argument.</dd>
+	</dl>
+       </li>
     </ul>
 
 \subsection dbus_interface_properties Properties

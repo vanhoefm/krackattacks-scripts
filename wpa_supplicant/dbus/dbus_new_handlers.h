@@ -124,6 +124,9 @@ DBusMessage * wpas_dbus_handler_remove_blob(DBusMessage *message,
 DBusMessage * wpas_dbus_handler_flush_bss(DBusMessage *message,
 					  struct wpa_supplicant *wpa_s);
 
+DBusMessage * wpas_dbus_handler_autoscan(DBusMessage *message,
+					 struct wpa_supplicant *wpa_s);
+
 dbus_bool_t wpas_dbus_getter_capabilities(DBusMessageIter *iter,
 					  DBusError *error, void *user_data);
 

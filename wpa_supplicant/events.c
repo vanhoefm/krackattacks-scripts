@@ -35,6 +35,7 @@
 #include "gas_query.h"
 #include "p2p_supplicant.h"
 #include "bgscan.h"
+#include "autoscan.h"
 #include "ap.h"
 #include "bss.h"
 #include "scan.h"
@@ -1091,6 +1092,11 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 	}
 
 	if ((wpa_s->conf->ap_scan == 2 && !wpas_wps_searching(wpa_s))) {
+		wpa_scan_results_free(scan_res);
+		return 0;
+	}
+
+	if (autoscan_notify_scan(wpa_s, scan_res)) {
 		wpa_scan_results_free(scan_res);
 		return 0;
 	}

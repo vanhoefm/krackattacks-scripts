@@ -1304,6 +1304,11 @@ L_CFLAGS += -DCONFIG_BGSCAN
 OBJS += bgscan.c
 endif
 
+ifdef NEED_AUTOSCAN
+L_CFLAGS += -DCONFIG_AUTOSCAN
+OBJS += autoscan.c
+endif
+
 ifdef NEED_GAS
 OBJS += ../src/common/gas.c
 OBJS += gas_query.c

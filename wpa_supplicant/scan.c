@@ -434,6 +434,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	int scan_req = 0, ret;
 	struct wpabuf *extra_ie;
 	struct wpa_driver_scan_params params;
+	struct wpa_driver_scan_params *scan_params;
 	size_t max_ssids;
 	enum wpa_states prev_state;
 
@@ -498,6 +499,14 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
+
+	/*
+	 * If autoscan has set its own scanning parameters
+	 */
+	if (wpa_s->autoscan_params != NULL) {
+		scan_params = wpa_s->autoscan_params;
+		goto scan;
+	}
 
 	if (scan_req != 2 && wpa_s->connect_without_scan) {
 		for (ssid = wpa_s->conf->ssid; ssid; ssid = ssid->next) {
@@ -659,7 +668,10 @@ ssid_list_set:
 	}
 #endif /* CONFIG_P2P */
 
-	ret = wpa_supplicant_trigger_scan(wpa_s, &params);
+	scan_params = &params;
+
+scan:
+	ret = wpa_supplicant_trigger_scan(wpa_s, scan_params);
 
 	wpabuf_free(extra_ie);
 	os_free(params.freqs);
@@ -748,8 +760,9 @@ int wpa_supplicant_delayed_sched_scan(struct wpa_supplicant *wpa_s,
 int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 {
 	struct wpa_driver_scan_params params;
+	struct wpa_driver_scan_params *scan_params;
 	enum wpa_states prev_state;
-	struct wpa_ssid *ssid;
+	struct wpa_ssid *ssid = NULL;
 	struct wpabuf *wps_ie = NULL;
 	int ret;
 	unsigned int max_sched_scan_ssids;
@@ -825,6 +838,11 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	    wpa_s->wpa_state == WPA_INACTIVE)
 		wpa_supplicant_set_state(wpa_s, WPA_SCANNING);
 
+	if (wpa_s->autoscan_params != NULL) {
+		scan_params = wpa_s->autoscan_params;
+		goto scan;
+	}
+
 	/* Find the starting point from which to continue scanning */
 	ssid = wpa_s->conf->ssid;
 	if (wpa_s->prev_sched_ssid) {
@@ -840,7 +858,8 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	if (!ssid || !wpa_s->prev_sched_ssid) {
 		wpa_dbg(wpa_s, MSG_DEBUG, "Beginning of SSID list");
 
-		wpa_s->sched_scan_interval = 10;
+		if (wpa_s->sched_scan_interval == 0)
+			wpa_s->sched_scan_interval = 10;
 		wpa_s->sched_scan_timeout = max_sched_scan_ssids * 2;
 		wpa_s->first_sched_scan = 1;
 		ssid = wpa_s->conf->ssid;
@@ -909,6 +928,9 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 	if (wpa_s->wps)
 		wps_ie = wpa_supplicant_extra_ies(wpa_s, &params);
 
+	scan_params = &params;
+
+scan:
 	if (ssid || !wpa_s->first_sched_scan) {
 		wpa_dbg(wpa_s, MSG_DEBUG,
 			"Starting sched scan: interval %d timeout %d",
@@ -919,7 +941,7 @@ int wpa_supplicant_req_sched_scan(struct wpa_supplicant *wpa_s)
 			wpa_s->sched_scan_interval);
 	}
 
-	ret = wpa_supplicant_start_sched_scan(wpa_s, &params,
+	ret = wpa_supplicant_start_sched_scan(wpa_s, scan_params,
 					      wpa_s->sched_scan_interval);
 	wpabuf_free(wps_ie);
 	os_free(params.filter_ssids);

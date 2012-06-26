@@ -28,6 +28,7 @@
 #include "../bss.h"
 #include "../scan.h"
 #include "../ctrl_iface.h"
+#include "../autoscan.h"
 #include "dbus_new_helpers.h"
 #include "dbus_new.h"
 #include "dbus_new_handlers.h"
@@ -1287,6 +1288,9 @@ DBusMessage * wpas_dbus_handler_scan(DBusMessage *message,
 			/* Add wildcard ssid */
 			params.num_ssids++;
 		}
+#ifdef CONFIG_AUTOSCAN
+		autoscan_deinit(wpa_s);
+#endif /* CONFIG_AUTOSCAN */
 		wpa_supplicant_trigger_scan(wpa_s, &params);
 	} else {
 		wpa_printf(MSG_DEBUG, "wpas_dbus_handler_scan[dbus]: "

@@ -538,6 +538,10 @@ struct wpa_supplicant {
 	const struct bgscan_ops *bgscan;
 	void *bgscan_priv;
 
+	const struct autoscan_ops *autoscan;
+	struct wpa_driver_scan_params *autoscan_params;
+	void *autoscan_priv;
+
 	struct wpa_ssid *connect_without_scan;
 
 	int after_wps;

@@ -42,6 +42,7 @@
 #include "p2p_supplicant.h"
 #include "notify.h"
 #include "bgscan.h"
+#include "autoscan.h"
 #include "bss.h"
 #include "scan.h"
 #include "offchannel.h"
@@ -368,6 +369,7 @@ void free_hw_features(struct wpa_supplicant *wpa_s)
 static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 {
 	bgscan_deinit(wpa_s);
+	autoscan_deinit(wpa_s);
 	scard_deinit(wpa_s->scard);
 	wpa_s->scard = NULL;
 	wpa_sm_set_scard_ctx(wpa_s->wpa, NULL);
@@ -570,6 +572,19 @@ static void wpa_supplicant_stop_bgscan(struct wpa_supplicant *wpa_s)
 #endif /* CONFIG_BGSCAN */
 
 
+static void wpa_supplicant_start_autoscan(struct wpa_supplicant *wpa_s)
+{
+	if (autoscan_init(wpa_s))
+		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to initialize autoscan");
+}
+
+
+static void wpa_supplicant_stop_autoscan(struct wpa_supplicant *wpa_s)
+{
+	autoscan_deinit(wpa_s);
+}
+
+
 /**
  * wpa_supplicant_set_state - Set current connection state
  * @wpa_s: Pointer to wpa_supplicant data
@@ -629,6 +644,12 @@ void wpa_supplicant_set_state(struct wpa_supplicant *wpa_s,
 	else
 		wpa_supplicant_stop_bgscan(wpa_s);
 #endif /* CONFIG_BGSCAN */
+
+	if (state == WPA_AUTHENTICATING)
+		wpa_supplicant_stop_autoscan(wpa_s);
+
+	if (state == WPA_DISCONNECTED || state == WPA_INACTIVE)
+		wpa_supplicant_start_autoscan(wpa_s);
 
 	if (wpa_s->wpa_state != old_state) {
 		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);

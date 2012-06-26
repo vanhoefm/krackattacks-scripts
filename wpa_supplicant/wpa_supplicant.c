@@ -585,6 +585,16 @@ static void wpa_supplicant_stop_autoscan(struct wpa_supplicant *wpa_s)
 }
 
 
+void wpa_supplicant_reinit_autoscan(struct wpa_supplicant *wpa_s)
+{
+	if (wpa_s->wpa_state == WPA_DISCONNECTED ||
+	    wpa_s->wpa_state == WPA_SCANNING) {
+		autoscan_deinit(wpa_s);
+		wpa_supplicant_start_autoscan(wpa_s);
+	}
+}
+
+
 /**
  * wpa_supplicant_set_state - Set current connection state
  * @wpa_s: Pointer to wpa_supplicant data

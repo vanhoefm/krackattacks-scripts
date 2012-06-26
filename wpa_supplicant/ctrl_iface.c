@@ -3984,6 +3984,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		eapol_sm_notify_logoff(wpa_s->eapol, TRUE);
 	} else if (os_strcmp(buf, "REASSOCIATE") == 0) {
 		wpa_s->normal_scans = 0;
+		wpa_supplicant_reinit_autoscan(wpa_s);
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else {
@@ -3993,6 +3994,7 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 		}
 	} else if (os_strcmp(buf, "RECONNECT") == 0) {
 		wpa_s->normal_scans = 0;
+		wpa_supplicant_reinit_autoscan(wpa_s);
 		if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
 			reply_len = -1;
 		else if (wpa_s->disconnected) {

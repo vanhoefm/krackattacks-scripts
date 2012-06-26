@@ -86,8 +86,11 @@ static int autoscan_exponential_notify_scan(void *priv,
 
 	if (data->interval <= 0)
 		data->interval = data->base;
-	else
+	else {
 		data->interval = data->interval * data->base;
+		if (data->interval > data->limit)
+			return data->limit;
+	}
 
 	return data->interval;
 }

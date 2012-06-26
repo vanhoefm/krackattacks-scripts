@@ -508,3 +508,5 @@ CONFIG_PEERKEY=y
 # Enabling directly a module will enable autoscan support.
 # For exponential module:
 #CONFIG_AUTOSCAN_EXPONENTIAL=y
+# For periodic module:
+#CONFIG_AUTOSCAN_PERIODIC=y

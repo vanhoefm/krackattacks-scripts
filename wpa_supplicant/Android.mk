@@ -1310,6 +1310,12 @@ OBJS += autoscan_exponential.c
 NEED_AUTOSCAN=y
 endif
 
+ifdef CONFIG_AUTOSCAN_PERIODIC
+CFLAGS += -DCONFIG_AUTOSCAN_PERIODIC
+OBJS += autoscan_periodic.c
+NEED_AUTOSCAN=y
+endif
+
 ifdef NEED_AUTOSCAN
 L_CFLAGS += -DCONFIG_AUTOSCAN
 OBJS += autoscan.c

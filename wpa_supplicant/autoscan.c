@@ -19,10 +19,17 @@
 extern const struct autoscan_ops autoscan_exponential_ops;
 #endif /* CONFIG_AUTOSCAN_EXPONENTIAL */
 
+#ifdef CONFIG_AUTOSCAN_PERIODIC
+extern const struct autoscan_ops autoscan_periodic_ops;
+#endif /* CONFIG_AUTOSCAN_PERIODIC */
+
 static const struct autoscan_ops * autoscan_modules[] = {
 #ifdef CONFIG_AUTOSCAN_EXPONENTIAL
 	&autoscan_exponential_ops,
 #endif /* CONFIG_AUTOSCAN_EXPONENTIAL */
+#ifdef CONFIG_AUTOSCAN_PERIODIC
+	&autoscan_periodic_ops,
+#endif /* CONFIG_AUTOSCAN_PERIODIC */
 	NULL
 };
 

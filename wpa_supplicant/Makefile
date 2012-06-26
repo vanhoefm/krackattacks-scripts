@@ -1327,6 +1327,12 @@ OBJS += autoscan_exponential.o
 NEED_AUTOSCAN=y
 endif
 
+ifdef CONFIG_AUTOSCAN_PERIODIC
+CFLAGS += -DCONFIG_AUTOSCAN_PERIODIC
+OBJS += autoscan_periodic.o
+NEED_AUTOSCAN=y
+endif
+
 ifdef NEED_AUTOSCAN
 CFLAGS += -DCONFIG_AUTOSCAN
 OBJS += autoscan.o

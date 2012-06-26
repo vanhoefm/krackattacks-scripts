@@ -36,6 +36,7 @@
 #include "interworking.h"
 #include "blacklist.h"
 #include "wpas_glue.h"
+#include "autoscan.h"
 
 extern struct wpa_driver_ops *wpa_drivers[];
 
@@ -3869,6 +3870,34 @@ static int wpa_supplicant_ctrl_iface_sta_autoconnect(
 }
 
 
+#ifdef CONFIG_AUTOSCAN
+
+static int wpa_supplicant_ctrl_iface_autoscan(struct wpa_supplicant *wpa_s,
+					      char *cmd)
+{
+	enum wpa_states state = wpa_s->wpa_state;
+	char *new_params = NULL;
+
+	if (os_strlen(cmd) > 0) {
+		new_params = os_strdup(cmd);
+		if (new_params == NULL)
+			return -1;
+	}
+
+	os_free(wpa_s->conf->autoscan);
+	wpa_s->conf->autoscan = new_params;
+
+	if (wpa_s->conf->autoscan == NULL)
+		autoscan_deinit(wpa_s);
+	else if (state == WPA_DISCONNECTED || state == WPA_INACTIVE)
+		autoscan_init(wpa_s);
+
+	return 0;
+}
+
+#endif /* CONFIG_AUTOSCAN */
+
+
 static int wpa_supplicant_signal_poll(struct wpa_supplicant *wpa_s, char *buf,
 				      size_t buflen)
 {
@@ -4347,6 +4376,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "SIGNAL_POLL", 11) == 0) {
 		reply_len = wpa_supplicant_signal_poll(wpa_s, reply,
 						       reply_size);
+#ifdef CONFIG_AUTOSCAN
+	} else if (os_strncmp(buf, "AUTOSCAN ", 9) == 0) {
+		if (wpa_supplicant_ctrl_iface_autoscan(wpa_s, buf + 9))
+			reply_len = -1;
+#endif /* CONFIG_AUTOSCAN */
 	} else if (os_strcmp(buf, "REAUTHENTICATE") == 0) {
 		eapol_sm_request_reauth(wpa_s->eapol);
 	} else {

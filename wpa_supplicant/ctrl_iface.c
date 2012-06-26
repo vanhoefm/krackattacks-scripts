@@ -3890,7 +3890,7 @@ static int wpa_supplicant_ctrl_iface_autoscan(struct wpa_supplicant *wpa_s,
 	if (wpa_s->conf->autoscan == NULL)
 		autoscan_deinit(wpa_s);
 	else if (state == WPA_DISCONNECTED || state == WPA_INACTIVE)
-		autoscan_init(wpa_s);
+		autoscan_init(wpa_s, 1);
 
 	return 0;
 }

@@ -22,14 +22,14 @@ struct autoscan_ops {
 
 #ifdef CONFIG_AUTOSCAN
 
-int autoscan_init(struct wpa_supplicant *wpa_s);
+int autoscan_init(struct wpa_supplicant *wpa_s, int req_scan);
 void autoscan_deinit(struct wpa_supplicant *wpa_s);
 int autoscan_notify_scan(struct wpa_supplicant *wpa_s,
 			 struct wpa_scan_results *scan_res);
 
 #else /* CONFIG_AUTOSCAN */
 
-static inline int autoscan_init(struct wpa_supplicant *wpa_s)
+static inline int autoscan_init(struct wpa_supplicant *wpa_s, int req_scan)
 {
 	return 0;
 }

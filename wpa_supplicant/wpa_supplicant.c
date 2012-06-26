@@ -574,7 +574,7 @@ static void wpa_supplicant_stop_bgscan(struct wpa_supplicant *wpa_s)
 
 static void wpa_supplicant_start_autoscan(struct wpa_supplicant *wpa_s)
 {
-	if (autoscan_init(wpa_s))
+	if (autoscan_init(wpa_s, 0))
 		wpa_dbg(wpa_s, MSG_DEBUG, "Failed to initialize autoscan");
 }
 
@@ -694,7 +694,7 @@ void wpa_supplicant_clear_status(struct wpa_supplicant *wpa_s)
 	wpa_s->mgmt_group_cipher = 0;
 	wpa_s->key_mgmt = 0;
 	if (wpa_s->wpa_state != WPA_INTERFACE_DISABLED)
-		wpa_s->wpa_state = WPA_DISCONNECTED;
+		wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 
 	if (wpa_s->wpa_state != old_state)
 		wpas_notify_state_changed(wpa_s, wpa_s->wpa_state, old_state);
@@ -2826,6 +2826,7 @@ struct wpa_supplicant * wpa_supplicant_add_iface(struct wpa_global *global,
 	global->ifaces = wpa_s;
 
 	wpa_dbg(wpa_s, MSG_DEBUG, "Added interface %s", wpa_s->ifname);
+	wpa_supplicant_set_state(wpa_s, WPA_DISCONNECTED);
 
 	return wpa_s;
 }

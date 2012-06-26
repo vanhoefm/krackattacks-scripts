@@ -43,7 +43,7 @@ static void request_scan(struct wpa_supplicant *wpa_s)
 }
 
 
-int autoscan_init(struct wpa_supplicant *wpa_s)
+int autoscan_init(struct wpa_supplicant *wpa_s, int req_scan)
 {
 	const char *name = wpa_s->conf->autoscan;
 	const char *params;
@@ -88,6 +88,8 @@ int autoscan_init(struct wpa_supplicant *wpa_s)
 
 	wpa_printf(MSG_DEBUG, "autoscan: Initialized module '%s' with "
 		   "parameters '%s'", ops->name, params);
+	if (!req_scan)
+		return 0;
 
 	/*
 	 * Cancelling existing scan requests, if any.

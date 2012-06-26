@@ -2811,6 +2811,28 @@ static int wpa_cli_cmd_reauthenticate(struct wpa_ctrl *ctrl, int argc,
 }
 
 
+#ifdef CONFIG_AUTOSCAN
+
+static int wpa_cli_cmd_autoscan(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc == 0)
+		return wpa_ctrl_command(ctrl, "AUTOSCAN ");
+
+	res = os_snprintf(cmd, sizeof(cmd), "AUTOSCAN %s", argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long AUTOSCAN command.\n");
+		return -1;
+	}
+
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+#endif /* CONFIG_AUTOSCAN */
+
+
 enum wpa_cli_cmd_flags {
 	cli_cmd_flag_none		= 0x00,
 	cli_cmd_flag_sensitive		= 0x01
@@ -3181,6 +3203,10 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	  "= get signal parameters" },
 	{ "reauthenticate", wpa_cli_cmd_reauthenticate, cli_cmd_flag_none,
 	  "= trigger IEEE 802.1X/EAPOL reauthentication" },
+#ifdef CONFIG_AUTOSCAN
+	{ "autoscan", wpa_cli_cmd_autoscan, cli_cmd_flag_none,
+	  "[params] = Set or unset (if none) autoscan parameters" },
+#endif /* CONFIG_AUTOSCAN */
 	{ NULL, NULL, cli_cmd_flag_none, NULL }
 };
 

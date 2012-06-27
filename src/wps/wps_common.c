@@ -384,6 +384,7 @@ static int wps_parse_oob_dev_pwd(struct wps_context *wps,
 
 	pos = attr.oob_dev_password;
 
+	wpabuf_free(oob_conf->pubkey_hash);
 	oob_conf->pubkey_hash =
 		wpabuf_alloc_copy(pos, WPS_OOB_PUBKEY_HASH_LEN);
 	if (oob_conf->pubkey_hash == NULL) {

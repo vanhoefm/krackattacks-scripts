@@ -118,6 +118,12 @@ struct wps_data * wps_init(const struct wps_config *cfg)
  */
 void wps_deinit(struct wps_data *data)
 {
+#ifdef CONFIG_WPS_NFC
+	if (data->registrar && data->nfc_pw_token)
+		wps_registrar_remove_nfc_pw_token(data->wps->registrar,
+						  data->nfc_pw_token);
+#endif /* CONFIG_WPS_NFC */
+
 	if (data->wps_pin_revealed) {
 		wpa_printf(MSG_DEBUG, "WPS: Full PIN information revealed and "
 			   "negotiation failed");
@@ -136,6 +142,7 @@ void wps_deinit(struct wps_data *data)
 	wps_device_data_free(&data->peer_dev);
 	os_free(data->new_ap_settings);
 	dh5_free(data->dh_ctx);
+	os_free(data->nfc_pw_token);
 	os_free(data);
 }
 

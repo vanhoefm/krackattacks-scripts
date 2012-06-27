@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - internal definitions
- * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -11,6 +11,8 @@
 
 #include "wps.h"
 #include "wps_attr_parse.h"
+
+struct wps_nfc_pw_token;
 
 /**
  * struct wps_data - WPS registration protocol data
@@ -115,6 +117,8 @@ struct wps_data {
 	u8 p2p_dev_addr[ETH_ALEN]; /* P2P Device Address of the client or
 				    * 00:00:00:00:00:00 if not a P2p client */
 	int pbc_in_m1;
+
+	struct wps_nfc_pw_token *nfc_pw_token;
 };
 
 
@@ -198,5 +202,7 @@ void wps_registrar_selected_registrar_changed(struct wps_registrar *reg);
 const u8 * wps_authorized_macs(struct wps_registrar *reg, size_t *count);
 int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 			      const u8 *addr, const u8 *uuid_e);
+void wps_registrar_remove_nfc_pw_token(struct wps_registrar *reg,
+				       struct wps_nfc_pw_token *token);
 
 #endif /* WPS_I_H */

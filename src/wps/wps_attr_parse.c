@@ -9,7 +9,8 @@
 #include "includes.h"
 
 #include "common.h"
-#include "wps_i.h"
+#include "wps_defs.h"
+#include "wps_attr_parse.h"
 
 #ifndef CONFIG_WPS_STRICT
 #define WPS_WORKAROUNDS

@@ -834,8 +834,8 @@ void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid);
 u16 wps_config_methods_str2bin(const char *str);
 
 /* ndef.c */
-struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);
-struct wpabuf * ndef_build_wifi(struct wpabuf *buf);
+struct wpabuf * ndef_parse_wifi(const struct wpabuf *buf);
+struct wpabuf * ndef_build_wifi(const struct wpabuf *buf);
 
 #ifdef CONFIG_WPS_STRICT
 int wps_validate_beacon(const struct wpabuf *wps_ie);

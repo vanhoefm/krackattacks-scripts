@@ -20,9 +20,9 @@
 #define FLAG_TNF_RFC2046 (0x02)
 
 struct ndef_record {
-	u8 *type;
-	u8 *id;
-	u8 *payload;
+	const u8 *type;
+	const u8 *id;
+	const u8 *payload;
 	u8 type_length;
 	u8 id_length;
 	u32 payload_length;
@@ -31,9 +31,10 @@ struct ndef_record {
 
 static char wifi_handover_type[] = "application/vnd.wfa.wsc";
 
-static int ndef_parse_record(u8 *data, u32 size, struct ndef_record *record)
+static int ndef_parse_record(const u8 *data, u32 size,
+			     struct ndef_record *record)
 {
-	u8 *pos = data + 1;
+	const u8 *pos = data + 1;
 
 	if (size < 2)
 		return -1;
@@ -72,12 +73,12 @@ static int ndef_parse_record(u8 *data, u32 size, struct ndef_record *record)
 }
 
 
-static struct wpabuf * ndef_parse_records(struct wpabuf *buf,
+static struct wpabuf * ndef_parse_records(const struct wpabuf *buf,
 					  int (*filter)(struct ndef_record *))
 {
 	struct ndef_record record;
 	int len = wpabuf_len(buf);
-	u8 *data = wpabuf_mhead(buf);
+	const u8 *data = wpabuf_head(buf);
 
 	while (len > 0) {
 		if (ndef_parse_record(data, len, &record) < 0) {
@@ -155,13 +156,13 @@ static int wifi_filter(struct ndef_record *record)
 }
 
 
-struct wpabuf * ndef_parse_wifi(struct wpabuf *buf)
+struct wpabuf * ndef_parse_wifi(const struct wpabuf *buf)
 {
 	return ndef_parse_records(buf, wifi_filter);
 }
 
 
-struct wpabuf * ndef_build_wifi(struct wpabuf *buf)
+struct wpabuf * ndef_build_wifi(const struct wpabuf *buf)
 {
 	return ndef_build_record(FLAG_MESSAGE_BEGIN | FLAG_MESSAGE_END |
 				 FLAG_TNF_RFC2046, wifi_handover_type,

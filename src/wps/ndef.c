@@ -97,13 +97,14 @@ static struct wpabuf * ndef_parse_records(struct wpabuf *buf,
 
 static struct wpabuf * ndef_build_record(u8 flags, void *type,
 					 u8 type_length, void *id,
-					 u8 id_length, void *payload,
-					 u32 payload_length)
+					 u8 id_length,
+					 const struct wpabuf *payload)
 {
 	struct wpabuf *record;
 	size_t total_len;
 	int short_record;
 	u8 local_flag;
+	size_t payload_length = wpabuf_len(payload);
 
 	short_record = payload_length < 256 ? 1 : 0;
 
@@ -138,7 +139,7 @@ static struct wpabuf * ndef_build_record(u8 flags, void *type,
 		wpabuf_put_u8(record, id_length);
 	wpabuf_put_data(record, type, type_length);
 	wpabuf_put_data(record, id, id_length);
-	wpabuf_put_data(record, payload, payload_length);
+	wpabuf_put_buf(record, payload);
 	return record;
 }
 
@@ -164,6 +165,5 @@ struct wpabuf * ndef_build_wifi(struct wpabuf *buf)
 {
 	return ndef_build_record(FLAG_MESSAGE_BEGIN | FLAG_MESSAGE_END |
 				 FLAG_TNF_RFC2046, wifi_handover_type,
-				 os_strlen(wifi_handover_type), NULL, 0,
-				 wpabuf_mhead(buf), wpabuf_len(buf));
+				 os_strlen(wifi_handover_type), NULL, 0, buf);
 }

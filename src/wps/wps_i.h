@@ -136,8 +136,6 @@ struct wps_parse_attr {
 	const u8 *assoc_state; /* 2 octets */
 	const u8 *config_error; /* 2 octets */
 	const u8 *dev_password_id; /* 2 octets */
-	const u8 *oob_dev_password; /* WPS_OOB_DEVICE_PASSWORD_ATTR_LEN (54)
-				     * octets */
 	const u8 *os_version; /* 4 octets */
 	const u8 *wps_state; /* 1 octet */
 	const u8 *authenticator; /* WPS_AUTHENTICATOR_LEN (8) octets */
@@ -192,6 +190,8 @@ struct wps_parse_attr {
 	size_t authorized_macs_len;
 	const u8 *sec_dev_type_list; /* <= 128 octets */
 	size_t sec_dev_type_list_len;
+	const u8 *oob_dev_password; /* 38..54 octets */
+	size_t oob_dev_password_len;
 
 	/* attributes that can occur multiple times */
 #define MAX_CRED_COUNT 10

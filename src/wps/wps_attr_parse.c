@@ -262,12 +262,16 @@ static int wps_set_attr(struct wps_parse_attr *attr, u16 type,
 		attr->dev_password_id = pos;
 		break;
 	case ATTR_OOB_DEVICE_PASSWORD:
-		if (len != WPS_OOB_DEVICE_PASSWORD_ATTR_LEN) {
+		if (len < WPS_OOB_PUBKEY_HASH_LEN + 2 +
+		    WPS_OOB_DEVICE_PASSWORD_MIN_LEN ||
+		    len > WPS_OOB_PUBKEY_HASH_LEN + 2 +
+		    WPS_OOB_DEVICE_PASSWORD_LEN) {
 			wpa_printf(MSG_DEBUG, "WPS: Invalid OOB Device "
 				   "Password length %u", len);
 			return -1;
 		}
 		attr->oob_dev_password = pos;
+		attr->oob_dev_password_len = len;
 		break;
 	case ATTR_OS_VERSION:
 		if (len != 4) {

@@ -375,6 +375,7 @@ static int wps_parse_oob_dev_pwd(struct wps_context *wps,
 	struct oob_conf_data *oob_conf = &wps->oob_conf;
 	struct wps_parse_attr attr;
 	const u8 *pos;
+	size_t pw_len;
 
 	if (wps_parse_msg(data, &attr) < 0 ||
 	    attr.oob_dev_password == NULL) {
@@ -397,17 +398,16 @@ static int wps_parse_oob_dev_pwd(struct wps_context *wps,
 	wps->oob_dev_pw_id = WPA_GET_BE16(pos);
 	pos += sizeof(wps->oob_dev_pw_id);
 
-	oob_conf->dev_password =
-		wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN * 2 + 1);
+	pw_len = attr.oob_dev_password_len - WPS_OOB_PUBKEY_HASH_LEN - 2;
+	oob_conf->dev_password = wpabuf_alloc(pw_len * 2 + 1);
 	if (oob_conf->dev_password == NULL) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
 			   "device password");
 		return -1;
 	}
 	wpa_snprintf_hex_uppercase(wpabuf_put(oob_conf->dev_password,
-				   wpabuf_size(oob_conf->dev_password)),
-				   wpabuf_size(oob_conf->dev_password), pos,
-				   WPS_OOB_DEVICE_PASSWORD_LEN);
+					      pw_len * 2 + 1),
+				   pw_len * 2 + 1, pos, pw_len);
 
 	return 0;
 }

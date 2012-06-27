@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / wrapper functions for libcrypto
- * Copyright (c) 2004-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -447,6 +447,41 @@ void * dh5_init(struct wpabuf **priv, struct wpabuf **publ)
 err:
 	wpabuf_free(pubkey);
 	wpabuf_free(privkey);
+	DH_free(dh);
+	return NULL;
+}
+
+
+void * dh5_init_fixed(const struct wpabuf *priv, const struct wpabuf *publ)
+{
+	DH *dh;
+
+	dh = DH_new();
+	if (dh == NULL)
+		return NULL;
+
+	dh->g = BN_new();
+	if (dh->g == NULL || BN_set_word(dh->g, 2) != 1)
+		goto err;
+
+	dh->p = get_group5_prime();
+	if (dh->p == NULL)
+		goto err;
+
+	dh->priv_key = BN_bin2bn(wpabuf_head(priv), wpabuf_len(priv), NULL);
+	if (dh->priv_key == NULL)
+		goto err;
+
+	dh->pub_key = BN_bin2bn(wpabuf_head(publ), wpabuf_len(publ), NULL);
+	if (dh->pub_key == NULL)
+		goto err;
+
+	if (DH_generate_key(dh) != 1)
+		goto err;
+
+	return dh;
+
+err:
 	DH_free(dh);
 	return NULL;
 }

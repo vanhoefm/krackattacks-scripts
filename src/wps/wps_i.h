@@ -289,8 +289,4 @@ const u8 * wps_authorized_macs(struct wps_registrar *reg, size_t *count);
 int wps_registrar_pbc_overlap(struct wps_registrar *reg,
 			      const u8 *addr, const u8 *uuid_e);
 
-/* ndef.c */
-struct wpabuf * ndef_parse_wifi(struct wpabuf *buf);
-struct wpabuf * ndef_build_wifi(struct wpabuf *buf);
-
 #endif /* WPS_I_H */

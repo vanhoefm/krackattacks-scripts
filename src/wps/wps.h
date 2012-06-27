@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup
- * Copyright (c) 2007-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2007-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -797,6 +797,9 @@ int wps_registrar_get_info(struct wps_registrar *reg, const u8 *addr,
 			   char *buf, size_t buflen);
 int wps_registrar_config_ap(struct wps_registrar *reg,
 			    struct wps_credential *cred);
+int wps_registrar_add_nfc_password_token(struct wps_registrar *reg,
+					 const u8 *oob_dev_pw,
+					 size_t oob_dev_pw_len);
 
 int wps_build_credential_wrap(struct wpabuf *msg,
 			      const struct wps_credential *cred);

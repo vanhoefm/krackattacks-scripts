@@ -1,6 +1,6 @@
 /*
  * hostapd / UNIX domain socket -based control interface
- * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -272,6 +272,35 @@ static int hostapd_ctrl_iface_wps_oob(struct hostapd_data *hapd, char *txt)
 	return hostapd_wps_start_oob(hapd, txt, path, method, name);
 }
 #endif /* CONFIG_WPS_OOB */
+
+
+#ifdef CONFIG_WPS_NFC
+static int hostapd_ctrl_iface_wps_nfc_tag_read(struct hostapd_data *hapd,
+					       char *pos)
+{
+	size_t len;
+	struct wpabuf *buf;
+	int ret;
+
+	len = os_strlen(pos);
+	if (len & 0x01)
+		return -1;
+	len /= 2;
+
+	buf = wpabuf_alloc(len);
+	if (buf == NULL)
+		return -1;
+	if (hexstr2bin(pos, wpabuf_put(buf, len), len) < 0) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	ret = hostapd_wps_nfc_tag_read(hapd, buf);
+	wpabuf_free(buf);
+
+	return ret;
+}
+#endif /* CONFIG_WPS_NFC */
 
 
 static int hostapd_ctrl_iface_wps_ap_pin(struct hostapd_data *hapd, char *txt,
@@ -769,6 +798,11 @@ static void hostapd_ctrl_iface_receive(int sock, void *eloop_ctx,
 	} else if (os_strncmp(buf, "WPS_CONFIG ", 11) == 0) {
 		if (hostapd_ctrl_iface_wps_config(hapd, buf + 11) < 0)
 			reply_len = -1;
+#ifdef CONFIG_WPS_NFC
+	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ ", 17) == 0) {
+		if (hostapd_ctrl_iface_wps_nfc_tag_read(hapd, buf + 17))
+			reply_len = -1;
+#endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
 	} else if (os_strncmp(buf, "ESS_DISASSOC ", 13) == 0) {
 		if (hostapd_ctrl_iface_ess_disassoc(hapd, buf + 13))

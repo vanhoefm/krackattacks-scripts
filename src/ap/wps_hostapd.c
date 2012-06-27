@@ -1,6 +1,6 @@
 /*
  * hostapd / WPS integration
- * Copyright (c) 2008-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -20,6 +20,7 @@
 #include "wps/wps.h"
 #include "wps/wps_defs.h"
 #include "wps/wps_dev_attr.h"
+#include "wps/wps_attr_parse.h"
 #include "hostapd.h"
 #include "ap_config.h"
 #include "ap_drv_ops.h"
@@ -1497,3 +1498,90 @@ int hostapd_wps_config_ap(struct hostapd_data *hapd, const char *ssid,
 
 	return wps_registrar_config_ap(hapd->wps->registrar, &cred);
 }
+
+
+#ifdef CONFIG_WPS_NFC
+
+struct wps_nfc_password_token_data {
+	const u8 *oob_dev_pw;
+	size_t oob_dev_pw_len;
+	int added;
+};
+
+
+static int wps_add_nfc_password_token(struct hostapd_data *hapd, void *ctx)
+{
+	struct wps_nfc_password_token_data *data = ctx;
+	int ret;
+
+	if (hapd->wps == NULL)
+		return 0;
+	ret = wps_registrar_add_nfc_password_token(hapd->wps->registrar,
+						   data->oob_dev_pw,
+						   data->oob_dev_pw_len);
+	if (ret == 0)
+		data->added++;
+	return ret;
+}
+
+
+static int hostapd_wps_add_nfc_password_token(struct hostapd_data *hapd,
+					      struct wps_parse_attr *attr)
+{
+	struct wps_nfc_password_token_data data;
+
+	data.oob_dev_pw = attr->oob_dev_password;
+	data.oob_dev_pw_len = attr->oob_dev_password_len;
+	data.added = 0;
+	if (hostapd_wps_for_each(hapd, wps_add_nfc_password_token, &data) < 0)
+		return -1;
+	return data.added ? 0 : -1;
+}
+
+
+static int hostapd_wps_nfc_tag_process(struct hostapd_data *hapd,
+				       const struct wpabuf *wps)
+{
+	struct wps_parse_attr attr;
+
+	wpa_hexdump_buf(MSG_DEBUG, "WPS: Received NFC tag payload", wps);
+
+	if (wps_parse_msg(wps, &attr)) {
+		wpa_printf(MSG_DEBUG, "WPS: Ignore invalid data from NFC tag");
+		return -1;
+	}
+
+	if (attr.oob_dev_password)
+		return hostapd_wps_add_nfc_password_token(hapd, &attr);
+
+	wpa_printf(MSG_DEBUG, "WPS: Ignore unrecognized NFC tag");
+	return -1;
+}
+
+
+int hostapd_wps_nfc_tag_read(struct hostapd_data *hapd,
+			     const struct wpabuf *data)
+{
+	const struct wpabuf *wps = data;
+	struct wpabuf *tmp = NULL;
+	int ret;
+
+	if (wpabuf_len(data) < 4)
+		return -1;
+
+	if (*wpabuf_head_u8(data) != 0x10) {
+		/* Assume this contains full NDEF record */
+		tmp = ndef_parse_wifi(data);
+		if (tmp == NULL) {
+			wpa_printf(MSG_DEBUG, "WPS: Could not parse NDEF");
+			return -1;
+		}
+		wps = tmp;
+	}
+
+	ret = hostapd_wps_nfc_tag_process(hapd, wps);
+	wpabuf_free(tmp);
+	return ret;
+}
+
+#endif /* CONFIG_WPS_NFC */

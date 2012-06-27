@@ -1,6 +1,6 @@
 /*
  * hostapd / WPS integration
- * Copyright (c) 2008-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -33,6 +33,8 @@ int hostapd_wps_ap_pin_set(struct hostapd_data *hapd, const char *pin,
 void hostapd_wps_update_ie(struct hostapd_data *hapd);
 int hostapd_wps_config_ap(struct hostapd_data *hapd, const char *ssid,
 			  const char *auth, const char *encr, const char *key);
+int hostapd_wps_nfc_tag_read(struct hostapd_data *hapd,
+			     const struct wpabuf *data);
 
 #else /* CONFIG_WPS */
 

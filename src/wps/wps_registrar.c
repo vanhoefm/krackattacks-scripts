@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - Registrar
- * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -3366,3 +3366,42 @@ int wps_registrar_config_ap(struct wps_registrar *reg,
 
 	return -1;
 }
+
+
+#ifdef CONFIG_WPS_NFC
+int wps_registrar_add_nfc_password_token(struct wps_registrar *reg,
+					 const u8 *oob_dev_pw,
+					 size_t oob_dev_pw_len)
+{
+	const u8 *pos, *hash, *dev_pw;
+	u16 id;
+	size_t dev_pw_len;
+
+	if (oob_dev_pw_len < WPS_OOB_PUBKEY_HASH_LEN + 2 +
+	    WPS_OOB_DEVICE_PASSWORD_MIN_LEN ||
+	    oob_dev_pw_len > WPS_OOB_PUBKEY_HASH_LEN + 2 +
+	    WPS_OOB_DEVICE_PASSWORD_LEN)
+		return -1;
+
+	hash = oob_dev_pw;
+	pos = oob_dev_pw + WPS_OOB_PUBKEY_HASH_LEN;
+	id = WPA_GET_BE16(pos);
+	dev_pw = pos + 2;
+	dev_pw_len = oob_dev_pw + oob_dev_pw_len - dev_pw;
+
+	wpa_printf(MSG_DEBUG, "WPS: Add NFC Password Token for Password ID %u",
+		   id);
+
+	wpa_hexdump(MSG_DEBUG, "WPS: Public Key Hash",
+		    hash, WPS_OOB_PUBKEY_HASH_LEN);
+	wpa_hexdump_key(MSG_DEBUG, "WPS: Device Password", dev_pw, dev_pw_len);
+
+	reg->wps->oob_dev_pw_id = id;
+	wpabuf_free(reg->wps->oob_conf.pubkey_hash);
+	reg->wps->oob_conf.pubkey_hash = wpabuf_alloc_copy(
+		hash, WPS_OOB_PUBKEY_HASH_LEN);
+	if (reg->wps->oob_conf.pubkey_hash == NULL)
+		return -1;
+	return wps_registrar_add_pin(reg, NULL, NULL, dev_pw, dev_pw_len, 300);
+}
+#endif /* CONFIG_WPS_NFC */

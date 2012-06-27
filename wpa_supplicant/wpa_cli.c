@@ -845,6 +845,48 @@ static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
+
+
+static int wpa_cli_cmd_wps_nfc(struct wpa_ctrl *ctrl, int argc, char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc >= 1)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC %s",
+				  argv[0]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC");
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_NFC command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+
+
+static int wpa_cli_cmd_wps_nfc_token(struct wpa_ctrl *ctrl, int argc,
+				     char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid WPS_NFC_TOKEN command: need one argument:\n"
+		       "format: WPS or NDEF\n");
+		return -1;
+	}
+	if (argc >= 1)
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_TOKEN %s",
+				  argv[0]);
+	else
+		res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_TOKEN");
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_NFC_TOKEN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
 #endif /* CONFIG_WPS_OOB */
 
 
@@ -3041,6 +3083,12 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_oob", wpa_cli_cmd_wps_oob,
 	  cli_cmd_flag_sensitive,
 	  "<DEV_TYPE> <PATH> <METHOD> [DEV_NAME] = start WPS OOB" },
+	{ "wps_nfc", wpa_cli_cmd_wps_nfc,
+	  cli_cmd_flag_none,
+	  "[BSSID] = start Wi-Fi Protected Setup: NFC" },
+	{ "wps_nfc_token", wpa_cli_cmd_wps_nfc_token,
+	  cli_cmd_flag_none,
+	  "<WPS|NDEF> = create password token" },
 #endif /* CONFIG_WPS_OOB */
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,

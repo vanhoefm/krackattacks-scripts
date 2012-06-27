@@ -832,6 +832,9 @@ char * wps_dev_type_bin2str(const u8 dev_type[WPS_DEV_TYPE_LEN], char *buf,
 			    size_t buf_len);
 void uuid_gen_mac_addr(const u8 *mac_addr, u8 *uuid);
 u16 wps_config_methods_str2bin(const char *str);
+struct wpabuf * wps_build_nfc_pw_token(u16 dev_pw_id,
+				       const struct wpabuf *pubkey,
+				       const struct wpabuf *dev_pw);
 
 /* ndef.c */
 struct wpabuf * ndef_parse_wifi(const struct wpabuf *buf);

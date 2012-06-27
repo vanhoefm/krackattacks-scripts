@@ -641,6 +641,26 @@ struct wpa_config {
 	 * <autoscan module name>:<module parameters>
 	 */
 	char *autoscan;
+
+	/**
+	 * wps_nfc_dev_pw_id - NFC Device Password ID for password token
+	 */
+	int wps_nfc_dev_pw_id;
+
+	/**
+	 * wps_nfc_dh_pubkey - NFC DH Public Key for password token
+	 */
+	struct wpabuf *wps_nfc_dh_pubkey;
+
+	/**
+	 * wps_nfc_dh_pubkey - NFC DH Private Key for password token
+	 */
+	struct wpabuf *wps_nfc_dh_privkey;
+
+	/**
+	 * wps_nfc_dh_pubkey - NFC Device Password for password token
+	 */
+	struct wpabuf *wps_nfc_dev_pw;
 };
 
 

@@ -335,6 +335,30 @@ static struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 }
 
 
+struct wpabuf * wps_build_nfc_pw_token(u16 dev_pw_id,
+				       const struct wpabuf *pubkey,
+				       const struct wpabuf *dev_pw)
+{
+	struct wpabuf *data;
+
+	data = wpabuf_alloc(200);
+	if (data == NULL)
+		return NULL;
+
+	if (wps_build_version(data) ||
+	    wps_build_oob_dev_pw(data, dev_pw_id, pubkey,
+				 wpabuf_head(dev_pw), wpabuf_len(dev_pw)) ||
+	    wps_build_wfa_ext(data, 0, NULL, 0)) {
+		wpa_printf(MSG_ERROR, "WPS: Failed to build NFC password "
+			   "token");
+		wpabuf_free(data);
+		return NULL;
+	}
+
+	return data;
+}
+
+
 static struct wpabuf * wps_get_oob_dev_pwd(struct wps_context *wps)
 {
 	struct wpabuf *data;

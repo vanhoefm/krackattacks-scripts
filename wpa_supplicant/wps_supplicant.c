@@ -11,6 +11,7 @@
 #include "common.h"
 #include "eloop.h"
 #include "uuid.h"
+#include "crypto/random.h"
 #include "crypto/dh_group5.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
@@ -1760,3 +1761,89 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 		wps->dev.serial_number = wpa_s->conf->serial_number;
 	}
 }
+
+
+#ifdef CONFIG_WPS_NFC
+
+struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
+{
+	struct wpabuf *priv = NULL, *pub = NULL, *pw;
+	void *dh_ctx;
+	struct wpabuf *ret;
+
+	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
+	if (pw == NULL)
+		return NULL;
+
+	if (random_get_bytes(wpabuf_put(pw, WPS_OOB_DEVICE_PASSWORD_LEN),
+			     WPS_OOB_DEVICE_PASSWORD_LEN)) {
+		wpabuf_free(pw);
+		return NULL;
+	}
+
+	dh_ctx = dh5_init(&priv, &pub);
+	if (dh_ctx == NULL) {
+		wpabuf_free(pw);
+		return NULL;
+	}
+	dh5_free(dh_ctx);
+
+	wpa_s->conf->wps_nfc_dev_pw_id = 0x10 + os_random() % 0xfff0;
+	wpabuf_free(wpa_s->conf->wps_nfc_dh_pubkey);
+	wpa_s->conf->wps_nfc_dh_pubkey = pub;
+	wpabuf_free(wpa_s->conf->wps_nfc_dh_privkey);
+	wpa_s->conf->wps_nfc_dh_privkey = priv;
+	wpabuf_free(wpa_s->conf->wps_nfc_dev_pw);
+	wpa_s->conf->wps_nfc_dev_pw = pw;
+
+	ret = wps_build_nfc_pw_token(wpa_s->conf->wps_nfc_dev_pw_id,
+				     wpa_s->conf->wps_nfc_dh_pubkey,
+				     wpa_s->conf->wps_nfc_dev_pw);
+	if (ndef) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+
+
+int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid)
+{
+	struct wps_context *wps = wpa_s->wps;
+	char pw[32 * 2 + 1];
+
+	if (wpa_s->conf->wps_nfc_dh_pubkey == NULL ||
+	    wpa_s->conf->wps_nfc_dh_privkey == NULL ||
+	    wpa_s->conf->wps_nfc_dev_pw == NULL)
+		return -1;
+
+	dh5_free(wps->dh_ctx);
+	wpabuf_free(wps->dh_pubkey);
+	wpabuf_free(wps->dh_privkey);
+	wps->dh_privkey = wpabuf_dup(wpa_s->conf->wps_nfc_dh_privkey);
+	wps->dh_pubkey = wpabuf_dup(wpa_s->conf->wps_nfc_dh_pubkey);
+	if (wps->dh_privkey == NULL || wps->dh_pubkey == NULL) {
+		wps->dh_ctx = NULL;
+		wpabuf_free(wps->dh_pubkey);
+		wps->dh_pubkey = NULL;
+		wpabuf_free(wps->dh_privkey);
+		wps->dh_privkey = NULL;
+		return -1;
+	}
+	wps->dh_ctx = dh5_init_fixed(wps->dh_privkey, wps->dh_pubkey);
+	if (wps->dh_ctx == NULL)
+		return -1;
+
+	wpa_snprintf_hex_uppercase(pw, sizeof(pw),
+				   wpabuf_head(wpa_s->conf->wps_nfc_dev_pw),
+				   wpabuf_len(wpa_s->conf->wps_nfc_dev_pw));
+	return wpas_wps_start_pin(wpa_s, bssid, pw, 0,
+				  wpa_s->conf->wps_nfc_dev_pw_id);
+}
+
+#endif /* CONFIG_WPS_NFC */

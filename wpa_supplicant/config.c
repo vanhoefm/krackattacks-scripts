@@ -1860,6 +1860,9 @@ void wpa_config_free(struct wpa_config *config)
 	os_free(config->pssid);
 	os_free(config->p2p_pref_chan);
 	os_free(config->autoscan);
+	wpabuf_free(config->wps_nfc_dh_pubkey);
+	wpabuf_free(config->wps_nfc_dh_privkey);
+	wpabuf_free(config->wps_nfc_dev_pw);
 	os_free(config);
 }
 
@@ -2607,6 +2610,35 @@ static int wpa_global_config_parse_str(const struct global_parse_data *data,
 }
 
 
+static int wpa_global_config_parse_bin(const struct global_parse_data *data,
+				       struct wpa_config *config, int line,
+				       const char *pos)
+{
+	size_t len;
+	struct wpabuf **dst, *tmp;
+
+	len = os_strlen(pos);
+	if (len & 0x01)
+		return -1;
+
+	tmp = wpabuf_alloc(len / 2);
+	if (tmp == NULL)
+		return -1;
+
+	if (hexstr2bin(pos, wpabuf_put(tmp, len / 2), len / 2)) {
+		wpabuf_free(tmp);
+		return -1;
+	}
+
+	dst = (struct wpabuf **) (((u8 *) config) + (long) data->param1);
+	wpabuf_free(*dst);
+	*dst = tmp;
+	wpa_printf(MSG_DEBUG, "%s", data->name);
+
+	return 0;
+}
+
+
 static int wpa_config_process_country(const struct global_parse_data *data,
 				      struct wpa_config *config, int line,
 				      const char *pos)
@@ -2821,6 +2853,7 @@ static int wpa_config_process_hessid(
 #define _STR(f) #f, wpa_global_config_parse_str, OFFSET(f)
 #define STR(f) _STR(f), NULL, NULL
 #define STR_RANGE(f, min, max) _STR(f), (void *) min, (void *) max
+#define BIN(f) #f, wpa_global_config_parse_bin, OFFSET(f), NULL, NULL
 
 static const struct global_parse_data global_fields[] = {
 #ifdef CONFIG_CTRL_IFACE
@@ -2884,7 +2917,11 @@ static const struct global_parse_data global_fields[] = {
 	{ FUNC(hessid), 0 },
 	{ INT_RANGE(access_network_type, 0, 15), 0 },
 	{ INT_RANGE(pbc_in_m1, 0, 1), 0 },
-	{ STR(autoscan), 0 }
+	{ STR(autoscan), 0 },
+	{ INT_RANGE(wps_nfc_dev_pw_id, 0x10, 0xffff), 0 },
+	{ BIN(wps_nfc_dh_pubkey), 0 },
+	{ BIN(wps_nfc_dh_privkey), 0 },
+	{ BIN(wps_nfc_dev_pw), 0 }
 };
 
 #undef FUNC
@@ -2894,6 +2931,7 @@ static const struct global_parse_data global_fields[] = {
 #undef _STR
 #undef STR
 #undef STR_RANGE
+#undef BIN
 #define NUM_GLOBAL_FIELDS (sizeof(global_fields) / sizeof(global_fields[0]))
 
 

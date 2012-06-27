@@ -320,7 +320,7 @@ static int wpa_config_process_blob(struct wpa_config *config, FILE *f,
 struct wpa_config * wpa_config_read(const char *name)
 {
 	FILE *f;
-	char buf[256], *pos;
+	char buf[512], *pos;
 	int errors = 0, line = 0;
 	struct wpa_ssid *ssid, *tail = NULL, *head = NULL;
 	struct wpa_cred *cred, *cred_tail = NULL, *cred_head = NULL;
@@ -698,6 +698,23 @@ static int wpa_config_write_blob(FILE *f, struct wpa_config_blob *blob)
 #endif /* CONFIG_NO_CONFIG_BLOBS */
 
 
+static void write_global_bin(FILE *f, const char *field,
+			     const struct wpabuf *val)
+{
+	size_t i;
+	const u8 *pos;
+
+	if (val == NULL)
+		return;
+
+	fprintf(f, "%s=", field);
+	pos = wpabuf_head(val);
+	for (i = 0; i < wpabuf_len(val); i++)
+		fprintf(f, "%02X", *pos++);
+	fprintf(f, "\n");
+}
+
+
 static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 {
 #ifdef CONFIG_CTRL_IFACE
@@ -852,6 +869,12 @@ static void wpa_config_write_global(FILE *f, struct wpa_config *config)
 #endif /* CONFIG_INTERWORKING */
 	if (config->pbc_in_m1)
 		fprintf(f, "pbc_in_m1=%u\n", config->pbc_in_m1);
+	if (config->wps_nfc_dev_pw_id)
+		fprintf(f, "wps_nfc_dev_pw_id=%d\n",
+			config->wps_nfc_dev_pw_id);
+	write_global_bin(f, "wps_nfc_dh_pubkey", config->wps_nfc_dh_pubkey);
+	write_global_bin(f, "wps_nfc_dh_privkey", config->wps_nfc_dh_privkey);
+	write_global_bin(f, "wps_nfc_dev_pw", config->wps_nfc_dev_pw);
 }
 
 #endif /* CONFIG_NO_CONFIG_WRITE */

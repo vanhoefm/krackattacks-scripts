@@ -62,6 +62,8 @@ int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 int wpas_wps_terminate_pending(struct wpa_supplicant *wpa_s);
 int wpas_wps_in_progress(struct wpa_supplicant *wpa_s);
 void wpas_wps_update_config(struct wpa_supplicant *wpa_s);
+struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef);
+int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid);
 
 #else /* CONFIG_WPS */
 

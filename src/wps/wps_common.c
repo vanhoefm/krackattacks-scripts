@@ -339,7 +339,7 @@ static struct wpabuf * wps_get_oob_dev_pwd(struct wps_context *wps)
 {
 	struct wpabuf *data;
 
-	data = wpabuf_alloc(9 + WPS_OOB_DEVICE_PASSWORD_ATTR_LEN);
+	data = wpabuf_alloc(200);
 	if (data == NULL) {
 		wpa_printf(MSG_ERROR, "WPS: Failed to allocate memory for OOB "
 			   "device password attribute");

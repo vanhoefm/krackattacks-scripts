@@ -255,6 +255,9 @@ int wps_build_auth_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_encr_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_conn_type_flags(struct wps_data *wps, struct wpabuf *msg);
 int wps_build_assoc_state(struct wps_data *wps, struct wpabuf *msg);
+int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
+			 const struct wpabuf *pubkey, const u8 *dev_pw,
+			 size_t dev_pw_len);
 int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps);
 struct wpabuf * wps_ie_encapsulate(struct wpabuf *data);
 

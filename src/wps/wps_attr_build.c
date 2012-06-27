@@ -340,18 +340,33 @@ int wps_build_encr_settings(struct wps_data *wps, struct wpabuf *msg,
 
 
 #ifdef CONFIG_WPS_OOB
-int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
+int wps_build_oob_dev_pw(struct wpabuf *msg, u16 dev_pw_id,
+			 const struct wpabuf *pubkey, const u8 *dev_pw,
+			 size_t dev_pw_len)
 {
 	size_t hash_len;
 	const u8 *addr[1];
 	u8 pubkey_hash[WPS_HASH_LEN];
+
+	addr[0] = wpabuf_head(pubkey);
+	hash_len = wpabuf_len(pubkey);
+	sha256_vector(1, addr, &hash_len, pubkey_hash);
+
+	wpabuf_put_be16(msg, ATTR_OOB_DEVICE_PASSWORD);
+	wpabuf_put_be16(msg, WPS_OOB_PUBKEY_HASH_LEN + 2 + dev_pw_len);
+	wpabuf_put_data(msg, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
+	wpabuf_put_be16(msg, dev_pw_id);
+	wpabuf_put_data(msg, dev_pw, dev_pw_len);
+
+	return 0;
+}
+
+
+int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
+{
 	u8 dev_password_bin[WPS_OOB_DEVICE_PASSWORD_LEN];
 
 	wpa_printf(MSG_DEBUG, "WPS:  * OOB Device Password");
-
-	addr[0] = wpabuf_head(wps->dh_pubkey);
-	hash_len = wpabuf_len(wps->dh_pubkey);
-	sha256_vector(1, addr, &hash_len, pubkey_hash);
 
 	if (os_get_random((u8 *) &wps->oob_dev_pw_id, sizeof(u16)) < 0) {
 		wpa_printf(MSG_ERROR, "WPS: device password id "
@@ -367,19 +382,15 @@ int wps_build_oob_dev_password(struct wpabuf *msg, struct wps_context *wps)
 		return -1;
 	}
 
-	wpabuf_put_be16(msg, ATTR_OOB_DEVICE_PASSWORD);
-	wpabuf_put_be16(msg, WPS_OOB_DEVICE_PASSWORD_ATTR_LEN);
-	wpabuf_put_data(msg, pubkey_hash, WPS_OOB_PUBKEY_HASH_LEN);
-	wpabuf_put_be16(msg, wps->oob_dev_pw_id);
-	wpabuf_put_data(msg, dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN);
-
 	wpa_snprintf_hex_uppercase(
 		wpabuf_put(wps->oob_conf.dev_password,
 			   wpabuf_size(wps->oob_conf.dev_password)),
 		wpabuf_size(wps->oob_conf.dev_password),
 		dev_password_bin, WPS_OOB_DEVICE_PASSWORD_LEN);
 
-	return 0;
+	return wps_build_oob_dev_pw(msg, wps->oob_dev_pw_id, wps->dh_pubkey,
+				    dev_password_bin,
+				    WPS_OOB_DEVICE_PASSWORD_LEN);
 }
 #endif /* CONFIG_WPS_OOB */
 

@@ -1897,6 +1897,23 @@ static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
 }
 
 
+#ifdef CONFIG_WPS_ER
+static int wpas_wps_add_nfc_password_token(struct wpa_supplicant *wpa_s,
+					   struct wps_parse_attr *attr)
+{
+	if (wpa_s->wps_er == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS: Ignore NFC password token while "
+			   "ER functionality is disabled");
+		return -1;
+	}
+
+	return wps_registrar_add_nfc_password_token(
+		wpa_s->wps->registrar, attr->oob_dev_password,
+		attr->oob_dev_password_len);
+}
+#endif /* CONFIG_WPS_ER */
+
+
 static int wpas_wps_nfc_tag_process(struct wpa_supplicant *wpa_s,
 				    const struct wpabuf *wps)
 {
@@ -1911,6 +1928,11 @@ static int wpas_wps_nfc_tag_process(struct wpa_supplicant *wpa_s,
 
 	if (attr.num_cred)
 		return wpas_wps_use_cred(wpa_s, &attr);
+
+#ifdef CONFIG_WPS_ER
+	if (attr.oob_dev_password)
+		return wpas_wps_add_nfc_password_token(wpa_s, &attr);
+#endif /* CONFIG_WPS_ER */
 
 	wpa_printf(MSG_DEBUG, "WPS: Ignore unrecognized NFC tag");
 	return -1;

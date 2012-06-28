@@ -66,6 +66,10 @@ CONFIG_WPS=y
 CONFIG_WPS2=y
 CONFIG_WPS_UPNP=y
 
+Following parameter can be used to enable support for NFC config method:
+
+CONFIG_WPS_NFC=y
+
 
 Following section shows an example runtime configuration
 (hostapd.conf) that enables WPS:
@@ -289,3 +293,48 @@ For example:
 
 This can be used to update the externally stored AP configuration and
 then update hostapd configuration (followed by restarting of hostapd).
+
+
+WPS with NFC
+------------
+
+WPS can be used with NFC-based configuration method. An NFC tag
+containing a password token from the Enrollee can be used to
+authenticate the connection instead of the PIN. In addition, an NFC tag
+with a configuration token can be used to transfer AP settings without
+going through the WPS protocol.
+
+When the AP acts as an Enrollee, a local NFC tag with a password token
+can be used by touching the NFC interface of an external Registrar. The
+wps_nfc_token command is used to manage use of the NFC password token
+from the AP. "wps_nfc_token enable" enables the use of the AP's NFC
+password token (in place of AP PIN) and "wps_nfc_token disable" disables
+the NFC password token.
+
+The NFC password token that is either pre-configured in the
+configuration file (wps_nfc_dev_pw_id, wps_nfc_dh_pubkey,
+wps_nfc_dh_privkey, wps_nfc_dev_pw) or generated dynamically with
+"wps_nfc_token <WPS|NDEF>" command. The nfc_pw_token tool from
+wpa_supplicant can be used to generate NFC password tokens during
+manufacturing (each AP needs to have its own random keys).
+
+The "wps_nfc_config_token <WPS/NDEF>" command can be used to build an
+NFC configuration token. The output value from this command is a hexdump
+of the current AP configuration (WPS parameter requests this to include
+only the WPS attributes; NDEF parameter requests additional NDEF
+encapsulation to be included). This data needs to be written to an NFC
+tag with an external program. Once written, the NFC configuration token
+can be used to touch an NFC interface on a station to provision the
+credentials needed to access the network.
+
+When the NFC device on the AP reads an NFC tag with a MIME media type
+"application/vnd.wfa.wsc", the NDEF message payload (with or without
+NDEF encapsulation) can be delivered to hostapd using the
+following hostapd_cli command:
+
+wps_nfc_tag_read <hexdump of payload>
+
+If the NFC tag contains a password token, the token is added to the
+internal Registrar. This allows station Enrollee from which the password
+token was received to run through WPS protocol to provision the
+credential.

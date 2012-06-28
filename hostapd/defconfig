@@ -108,6 +108,8 @@ CONFIG_EAP_TTLS=y
 #CONFIG_WPS2=y
 # Enable UPnP support for external WPS Registrars
 #CONFIG_WPS_UPNP=y
+# Enable WPS support with NFC config method
+#CONFIG_WPS_NFC=y
 
 # EAP-IKEv2
 #CONFIG_EAP_IKEV2=y

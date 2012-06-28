@@ -204,6 +204,8 @@ CONFIG_EAP_LEAP=y
 # Disable credentials for an open network by default when acting as a WPS
 # registrar.
 #CONFIG_WPS_REG_DISABLE_OPEN=y
+# Enable WPS support with NFC config method
+#CONFIG_WPS_NFC=y
 
 # EAP-IKEv2
 #CONFIG_EAP_IKEV2=y

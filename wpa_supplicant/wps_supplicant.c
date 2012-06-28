@@ -1799,7 +1799,7 @@ struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 	ret = wps_build_nfc_pw_token(wpa_s->conf->wps_nfc_dev_pw_id,
 				     wpa_s->conf->wps_nfc_dh_pubkey,
 				     wpa_s->conf->wps_nfc_dev_pw);
-	if (ndef) {
+	if (ndef && ret) {
 		struct wpabuf *tmp;
 		tmp = ndef_build_wifi(ret);
 		wpabuf_free(ret);

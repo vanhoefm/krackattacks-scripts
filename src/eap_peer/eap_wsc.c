@@ -138,6 +138,7 @@ static void * eap_wsc_init(struct eap_sm *sm)
 	struct wps_credential new_ap_settings;
 	int res;
 	u8 dev_pw[WPS_OOB_DEVICE_PASSWORD_LEN];
+	int nfc = 0;
 
 	wps = sm->wps;
 	if (wps == NULL) {
@@ -193,13 +194,18 @@ static void * eap_wsc_init(struct eap_sm *sm)
 			cfg.pin = dev_pw;
 			cfg.pin_len /= 2;
 		}
+		if (cfg.pin_len == 6 && os_strncmp(pos, "nfc-pw", 6) == 0) {
+			cfg.pin = NULL;
+			cfg.pin_len = 0;
+			nfc = 1;
+		}
 	} else {
 		pos = os_strstr(phase1, "pbc=1");
 		if (pos)
 			cfg.pbc = 1;
 	}
 
-	if (cfg.pin == NULL && !cfg.pbc) {
+	if (cfg.pin == NULL && !cfg.pbc && !nfc) {
 		wpa_printf(MSG_INFO, "EAP-WSC: PIN or PBC not set in phase1 "
 			   "configuration data");
 		os_free(data);

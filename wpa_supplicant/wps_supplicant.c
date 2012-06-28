@@ -1799,13 +1799,15 @@ struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 	struct wpabuf *priv = NULL, *pub = NULL, *pw;
 	void *dh_ctx;
 	struct wpabuf *ret;
+	u16 val;
 
 	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
 	if (pw == NULL)
 		return NULL;
 
 	if (random_get_bytes(wpabuf_put(pw, WPS_OOB_DEVICE_PASSWORD_LEN),
-			     WPS_OOB_DEVICE_PASSWORD_LEN)) {
+			     WPS_OOB_DEVICE_PASSWORD_LEN) ||
+	    random_get_bytes((u8 *) &val, sizeof(val))) {
 		wpabuf_free(pw);
 		return NULL;
 	}
@@ -1817,7 +1819,7 @@ struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 	}
 	dh5_free(dh_ctx);
 
-	wpa_s->conf->wps_nfc_dev_pw_id = 0x10 + os_random() % 0xfff0;
+	wpa_s->conf->wps_nfc_dev_pw_id = 0x10 + val % 0xfff0;
 	wpabuf_free(wpa_s->conf->wps_nfc_dh_pubkey);
 	wpa_s->conf->wps_nfc_dh_pubkey = pub;
 	wpabuf_free(wpa_s->conf->wps_nfc_dh_privkey);

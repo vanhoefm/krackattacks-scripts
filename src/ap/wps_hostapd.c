@@ -1629,13 +1629,15 @@ struct wpabuf * hostapd_wps_nfc_token_gen(struct hostapd_data *hapd, int ndef)
 	struct wpabuf *priv = NULL, *pub = NULL, *pw;
 	void *dh_ctx;
 	struct wpabuf *ret;
+	u16 val;
 
 	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
 	if (pw == NULL)
 		return NULL;
 
 	if (random_get_bytes(wpabuf_put(pw, WPS_OOB_DEVICE_PASSWORD_LEN),
-			     WPS_OOB_DEVICE_PASSWORD_LEN)) {
+			     WPS_OOB_DEVICE_PASSWORD_LEN) ||
+	    random_get_bytes((u8 *) &val, sizeof(val))) {
 		wpabuf_free(pw);
 		return NULL;
 	}
@@ -1647,7 +1649,7 @@ struct wpabuf * hostapd_wps_nfc_token_gen(struct hostapd_data *hapd, int ndef)
 	}
 	dh5_free(dh_ctx);
 
-	hapd->conf->wps_nfc_dev_pw_id = 0x10 + os_random() % 0xfff0;
+	hapd->conf->wps_nfc_dev_pw_id = 0x10 + val % 0xfff0;
 	wpabuf_free(hapd->conf->wps_nfc_dh_pubkey);
 	hapd->conf->wps_nfc_dh_pubkey = pub;
 	wpabuf_free(hapd->conf->wps_nfc_dh_privkey);

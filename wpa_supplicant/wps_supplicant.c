@@ -1674,6 +1674,34 @@ int wpas_wps_er_config(struct wpa_supplicant *wpa_s, const char *uuid,
 }
 
 
+#ifdef CONFIG_WPS_NFC
+struct wpabuf * wpas_wps_er_nfc_config_token(struct wpa_supplicant *wpa_s,
+					     int ndef, const char *uuid)
+{
+	struct wpabuf *ret;
+	u8 u[UUID_LEN];
+
+	if (!wpa_s->wps_er)
+		return NULL;
+
+	if (uuid_str2bin(uuid, u))
+		return NULL;
+
+	ret = wps_er_nfc_config_token(wpa_s->wps_er, u);
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_WPS_NFC */
+
+
 static int callbacks_pending = 0;
 
 static void wpas_wps_terminate_cb(void *ctx)

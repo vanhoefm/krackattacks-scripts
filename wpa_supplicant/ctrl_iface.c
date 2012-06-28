@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant / Control interface (shared code for all backends)
- * Copyright (c) 2004-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -892,6 +892,43 @@ static int wpa_supplicant_ctrl_iface_wps_er_config(
 	ap.key_hex = new_key;
 	return wpas_wps_er_config(wpa_s, cmd, pin, &ap);
 }
+
+
+#ifdef CONFIG_WPS_NFC
+static int wpa_supplicant_ctrl_iface_wps_er_nfc_config_token(
+	struct wpa_supplicant *wpa_s, char *cmd, char *reply, size_t max_len)
+{
+	int ndef;
+	struct wpabuf *buf;
+	int res;
+	char *uuid;
+
+	uuid = os_strchr(cmd, ' ');
+	if (uuid == NULL)
+		return -1;
+	*uuid++ = '\0';
+
+	if (os_strcmp(cmd, "WPS") == 0)
+		ndef = 0;
+	else if (os_strcmp(cmd, "NDEF") == 0)
+		ndef = 1;
+	else
+		return -1;
+
+	buf = wpas_wps_er_nfc_config_token(wpa_s, ndef, uuid);
+	if (buf == NULL)
+		return -1;
+
+	res = wpa_snprintf_hex_uppercase(reply, max_len, wpabuf_head(buf),
+					 wpabuf_len(buf));
+	reply[res++] = '\n';
+	reply[res] = '\0';
+
+	wpabuf_free(buf);
+
+	return res;
+}
+#endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS_ER */
 
 #endif /* CONFIG_WPS */
@@ -4182,6 +4219,11 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_ER_CONFIG ", 14) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_er_config(wpa_s, buf + 14))
 			reply_len = -1;
+#ifdef CONFIG_WPS_NFC
+	} else if (os_strncmp(buf, "WPS_ER_NFC_CONFIG_TOKEN ", 24) == 0) {
+		reply_len = wpa_supplicant_ctrl_iface_wps_er_nfc_config_token(
+			wpa_s, buf + 24, reply, reply_size);
+#endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS_ER */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_IBSS_RSN

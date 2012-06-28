@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - External Registrar
- * Copyright (c) 2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2009-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1996,3 +1996,41 @@ int wps_er_config(struct wps_er *er, const u8 *uuid, const u8 *pin,
 
 	return 0;
 }
+
+
+#ifdef CONFIG_WPS_NFC
+struct wpabuf * wps_er_nfc_config_token(struct wps_er *er, const u8 *uuid)
+{
+	struct wps_er_ap *ap;
+	struct wpabuf *ret;
+	struct wps_data data;
+
+	if (er == NULL)
+		return NULL;
+
+	ap = wps_er_ap_get(er, NULL, uuid);
+	if (ap == NULL)
+		return NULL;
+	if (ap->ap_settings == NULL) {
+		wpa_printf(MSG_DEBUG, "WPS ER: No settings known for the "
+			   "selected AP");
+		return NULL;
+	}
+
+	ret = wpabuf_alloc(500);
+	if (ret == NULL)
+		return NULL;
+
+	os_memset(&data, 0, sizeof(data));
+	data.wps = er->wps;
+	data.use_cred = ap->ap_settings;
+	if (wps_build_version(ret) ||
+	    wps_build_cred(&data, ret) ||
+	    wps_build_wfa_ext(ret, 0, NULL, 0)) {
+		wpabuf_free(ret);
+		return NULL;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_WPS_NFC */

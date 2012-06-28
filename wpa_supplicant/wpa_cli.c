@@ -1,6 +1,6 @@
 /*
  * WPA Supplicant - command line interface for wpa_supplicant daemon
- * Copyright (c) 2004-2011, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1173,6 +1173,32 @@ static int wpa_cli_cmd_wps_er_config(struct wpa_ctrl *ctrl, int argc,
 	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
+
+
+#ifdef CONFIG_WPS_NFC
+static int wpa_cli_cmd_wps_er_nfc_config_token(struct wpa_ctrl *ctrl, int argc,
+					       char *argv[])
+{
+	char cmd[256];
+	int res;
+
+	if (argc != 2) {
+		printf("Invalid WPS_ER_NFC_CONFIG_TOKEN command: need two "
+		       "arguments:\n"
+		       "- WPS/NDEF: token format\n"
+		       "- UUID: specify which AP to use\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_ER_NFC_CONFIG_TOKEN %s %s",
+			  argv[0], argv[1]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_ER_NFC_CONFIG_TOKEN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
+#endif /* CONFIG_WPS_NFC */
 
 
 static int wpa_cli_cmd_ibss_rsn(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -3152,6 +3178,11 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_er_config", wpa_cli_cmd_wps_er_config,
 	  cli_cmd_flag_sensitive,
 	  "<UUID> <PIN> <SSID> <auth> <encr> <key> = configure AP" },
+#ifdef CONFIG_WPS_NFC
+	{ "wps_er_nfc_config_token", wpa_cli_cmd_wps_er_nfc_config_token,
+	  cli_cmd_flag_none,
+	  "<WPS/NDEF> <UUID> = build NFC configuration token" },
+#endif /* CONFIG_WPS_NFC */
 	{ "ibss_rsn", wpa_cli_cmd_ibss_rsn,
 	  cli_cmd_flag_none,
 	  "<addr> = request RSN authentication with <addr> in IBSS" },

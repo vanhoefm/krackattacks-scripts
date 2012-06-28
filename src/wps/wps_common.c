@@ -437,23 +437,17 @@ static int wps_parse_oob_dev_pwd(struct wps_context *wps,
 }
 
 
-static int wps_parse_oob_cred(struct wps_context *wps, struct wpabuf *data)
+int wps_oob_use_cred(struct wps_context *wps, struct wps_parse_attr *attr)
 {
 	struct wpabuf msg;
-	struct wps_parse_attr attr;
 	size_t i;
 
-	if (wps_parse_msg(data, &attr) < 0 || attr.num_cred <= 0) {
-		wpa_printf(MSG_ERROR, "WPS: OOB credential not found");
-		return -1;
-	}
-
-	for (i = 0; i < attr.num_cred; i++) {
+	for (i = 0; i < attr->num_cred; i++) {
 		struct wps_credential local_cred;
 		struct wps_parse_attr cattr;
 
 		os_memset(&local_cred, 0, sizeof(local_cred));
-		wpabuf_set(&msg, attr.cred[i], attr.cred_len[i]);
+		wpabuf_set(&msg, attr->cred[i], attr->cred_len[i]);
 		if (wps_parse_msg(&msg, &cattr) < 0 ||
 		    wps_process_cred(&cattr, &local_cred)) {
 			wpa_printf(MSG_ERROR, "WPS: Failed to parse OOB "
@@ -464,6 +458,19 @@ static int wps_parse_oob_cred(struct wps_context *wps, struct wpabuf *data)
 	}
 
 	return 0;
+}
+
+
+static int wps_parse_oob_cred(struct wps_context *wps, struct wpabuf *data)
+{
+	struct wps_parse_attr attr;
+
+	if (wps_parse_msg(data, &attr) < 0 || attr.num_cred <= 0) {
+		wpa_printf(MSG_ERROR, "WPS: OOB credential not found");
+		return -1;
+	}
+
+	return wps_oob_use_cred(wps, &attr);
 }
 
 

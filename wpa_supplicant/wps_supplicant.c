@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant / WPS integration
- * Copyright (c) 2008-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -21,6 +21,7 @@
 #include "eap_peer/eap.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "rsn_supp/wpa.h"
+#include "wps/wps_attr_parse.h"
 #include "config.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -1844,6 +1845,73 @@ int wpas_wps_start_nfc(struct wpa_supplicant *wpa_s, const u8 *bssid)
 				   wpabuf_len(wpa_s->conf->wps_nfc_dev_pw));
 	return wpas_wps_start_pin(wpa_s, bssid, pw, 0,
 				  wpa_s->conf->wps_nfc_dev_pw_id);
+}
+
+
+static int wpas_wps_use_cred(struct wpa_supplicant *wpa_s,
+			     struct wps_parse_attr *attr)
+{
+	if (wps_oob_use_cred(wpa_s->wps, attr) < 0)
+		return -1;
+
+	if (wpa_s->wpa_state == WPA_INTERFACE_DISABLED)
+		return 0;
+
+	wpa_printf(MSG_DEBUG, "WPS: Request reconnection with new network "
+		   "based on the received credential added");
+	wpa_s->normal_scans = 0;
+	wpa_supplicant_reinit_autoscan(wpa_s);
+	wpa_s->disconnected = 0;
+	wpa_s->reassociate = 1;
+	wpa_supplicant_req_scan(wpa_s, 0, 0);
+
+	return 0;
+}
+
+
+static int wpas_wps_nfc_tag_process(struct wpa_supplicant *wpa_s,
+				    const struct wpabuf *wps)
+{
+	struct wps_parse_attr attr;
+
+	wpa_hexdump_buf(MSG_DEBUG, "WPS: Received NFC tag payload", wps);
+
+	if (wps_parse_msg(wps, &attr)) {
+		wpa_printf(MSG_DEBUG, "WPS: Ignore invalid data from NFC tag");
+		return -1;
+	}
+
+	if (attr.num_cred)
+		return wpas_wps_use_cred(wpa_s, &attr);
+
+	wpa_printf(MSG_DEBUG, "WPS: Ignore unrecognized NFC tag");
+	return -1;
+}
+
+
+int wpas_wps_nfc_tag_read(struct wpa_supplicant *wpa_s,
+			  const struct wpabuf *data)
+{
+	const struct wpabuf *wps = data;
+	struct wpabuf *tmp = NULL;
+	int ret;
+
+	if (wpabuf_len(data) < 4)
+		return -1;
+
+	if (*wpabuf_head_u8(data) != 0x10) {
+		/* Assume this contains full NDEF record */
+		tmp = ndef_parse_wifi(data);
+		if (tmp == NULL) {
+			wpa_printf(MSG_DEBUG, "WPS: Could not parse NDEF");
+			return -1;
+		}
+		wps = tmp;
+	}
+
+	ret = wpas_wps_nfc_tag_process(wpa_s, wps);
+	wpabuf_free(tmp);
+	return ret;
 }
 
 #endif /* CONFIG_WPS_NFC */

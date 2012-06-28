@@ -887,6 +887,32 @@ static int wpa_cli_cmd_wps_nfc_token(struct wpa_ctrl *ctrl, int argc,
 	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
+
+
+static int wpa_cli_cmd_wps_nfc_tag_read(struct wpa_ctrl *ctrl, int argc,
+					char *argv[])
+{
+	int ret;
+	char *buf;
+	size_t buflen;
+
+	if (argc != 1) {
+		printf("Invalid 'wps_nfc_tag_read' command - one argument "
+		       "is required.\n");
+		return -1;
+	}
+
+	buflen = 18 + os_strlen(argv[0]);
+	buf = os_malloc(buflen);
+	if (buf == NULL)
+		return -1;
+	os_snprintf(buf, buflen, "WPS_NFC_TAG_READ %s", argv[0]);
+
+	ret = wpa_ctrl_command(ctrl, buf);
+	os_free(buf);
+
+	return ret;
+}
 #endif /* CONFIG_WPS_OOB */
 
 
@@ -3089,6 +3115,9 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_nfc_token", wpa_cli_cmd_wps_nfc_token,
 	  cli_cmd_flag_none,
 	  "<WPS|NDEF> = create password token" },
+	{ "wps_nfc_tag_read", wpa_cli_cmd_wps_nfc_tag_read,
+	  cli_cmd_flag_sensitive,
+	  "<hexdump of payload> = report read NFC tag with WPS data" },
 #endif /* CONFIG_WPS_OOB */
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,

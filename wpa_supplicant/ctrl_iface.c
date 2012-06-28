@@ -662,6 +662,33 @@ static int wpa_supplicant_ctrl_iface_wps_nfc_token(
 
 	return res;
 }
+
+
+static int wpa_supplicant_ctrl_iface_wps_nfc_tag_read(
+	struct wpa_supplicant *wpa_s, char *pos)
+{
+	size_t len;
+	struct wpabuf *buf;
+	int ret;
+
+	len = os_strlen(pos);
+	if (len & 0x01)
+		return -1;
+	len /= 2;
+
+	buf = wpabuf_alloc(len);
+	if (buf == NULL)
+		return -1;
+	if (hexstr2bin(pos, wpabuf_put(buf, len), len) < 0) {
+		wpabuf_free(buf);
+		return -1;
+	}
+
+	ret = wpas_wps_nfc_tag_read(wpa_s, buf);
+	wpabuf_free(buf);
+
+	return ret;
+}
 #endif /* CONFIG_WPS_OOB */
 
 
@@ -4100,6 +4127,10 @@ char * wpa_supplicant_ctrl_iface_process(struct wpa_supplicant *wpa_s,
 	} else if (os_strncmp(buf, "WPS_NFC_TOKEN ", 14) == 0) {
 		reply_len = wpa_supplicant_ctrl_iface_wps_nfc_token(
 			wpa_s, buf + 14, reply, reply_size);
+	} else if (os_strncmp(buf, "WPS_NFC_TAG_READ ", 17) == 0) {
+		if (wpa_supplicant_ctrl_iface_wps_nfc_tag_read(wpa_s,
+							       buf + 17))
+			reply_len = -1;
 #endif /* CONFIG_WPS_OOB */
 	} else if (os_strncmp(buf, "WPS_REG ", 8) == 0) {
 		if (wpa_supplicant_ctrl_iface_wps_reg(wpa_s, buf + 8))

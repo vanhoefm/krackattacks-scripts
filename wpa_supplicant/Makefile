@@ -1366,6 +1366,10 @@ ifndef CONFIG_AP
 OBJS_t += ../src/utils/ip_addr.o
 endif
 OBJS_t2 := $(OBJS) $(OBJS_l2) preauth_test.o
+
+OBJS_nfc := $(OBJS) $(OBJS_l2) nfc_pw_token.o
+OBJS_nfc += $(OBJS_d) ../src/drivers/drivers.o
+
 OBJS += $(CONFIG_MAIN).o
 
 ifdef CONFIG_PRIVSEP
@@ -1474,6 +1478,10 @@ test_wpa: $(OBJS_wpa) $(OBJS_h)
 	$(Q)$(LDO) $(LDFLAGS) -o test_wpa $(OBJS_wpa) $(LIBS)
 	@$(E) "  LD " $@
 
+nfc_pw_token: $(OBJS_nfc)
+	$(Q)$(LDO) $(LDFLAGS) -o nfc_pw_token $(OBJS_nfc) $(LIBS)
+	@$(E) "  LD " $@
+
 win_if_list: win_if_list.c
 	$(Q)$(LDO) $(LDFLAGS) -o $@ win_if_list.c $(CFLAGS) $(LIBS_w)
 	@$(E) "  LD " $@
@@ -1556,5 +1564,6 @@ clean:
 	$(MAKE) -C dbus clean
 	rm -f core *~ *.o *.d eap_*.so $(ALL) $(WINALL) eapol_test preauth_test
 	rm -f wpa_priv
+	rm -f nfc_pw_token
 
 -include $(OBJS:%.o=%.d)

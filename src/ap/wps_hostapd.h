@@ -35,6 +35,8 @@ int hostapd_wps_config_ap(struct hostapd_data *hapd, const char *ssid,
 			  const char *auth, const char *encr, const char *key);
 int hostapd_wps_nfc_tag_read(struct hostapd_data *hapd,
 			     const struct wpabuf *data);
+struct wpabuf * hostapd_wps_nfc_config_token(struct hostapd_data *hapd,
+					     int ndef);
 
 #else /* CONFIG_WPS */
 

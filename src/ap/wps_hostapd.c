@@ -1584,4 +1584,26 @@ int hostapd_wps_nfc_tag_read(struct hostapd_data *hapd,
 	return ret;
 }
 
+
+struct wpabuf * hostapd_wps_nfc_config_token(struct hostapd_data *hapd,
+					     int ndef)
+{
+	struct wpabuf *ret;
+
+	if (hapd->wps == NULL)
+		return NULL;
+
+	ret = wps_get_oob_cred(hapd->wps);
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+
 #endif /* CONFIG_WPS_NFC */

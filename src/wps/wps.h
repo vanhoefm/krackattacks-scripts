@@ -817,6 +817,7 @@ struct oob_nfc_device_data * wps_get_oob_nfc_device(char *device_name);
 int wps_get_oob_method(char *method);
 int wps_process_oob(struct wps_context *wps, struct oob_device_data *oob_dev,
 		    int registrar);
+struct wpabuf * wps_get_oob_cred(struct wps_context *wps);
 int wps_attr_text(struct wpabuf *data, char *buf, char *end);
 
 struct wps_er * wps_er_init(struct wps_context *wps, const char *ifname,

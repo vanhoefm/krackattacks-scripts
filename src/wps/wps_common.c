@@ -308,7 +308,7 @@ void wps_pbc_timeout_event(struct wps_context *wps)
 
 #ifdef CONFIG_WPS_OOB
 
-static struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
+struct wpabuf * wps_get_oob_cred(struct wps_context *wps)
 {
 	struct wps_data data;
 	struct wpabuf *plain;

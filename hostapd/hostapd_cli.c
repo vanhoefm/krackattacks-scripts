@@ -76,6 +76,7 @@ static const char *commands_help =
 #endif /* CONFIG_WPS_OOB */
 #ifdef CONFIG_WPS_NFC
 "   wps_nfc_tag_read <hexdump>  report read NFC tag with WPS data\n"
+"   wps_nfc_config_token <WPS/NDEF>  build NFC configuration token\n"
 #endif /* CONFIG_WPS_NFC */
 "   wps_ap_pin <cmd> [params..]  enable/disable AP PIN\n"
 "   wps_config <SSID> <auth> <encr> <key>  configure AP\n"
@@ -461,6 +462,28 @@ static int hostapd_cli_cmd_wps_nfc_tag_read(struct wpa_ctrl *ctrl, int argc,
 
 	return ret;
 }
+
+
+static int hostapd_cli_cmd_wps_nfc_config_token(struct wpa_ctrl *ctrl,
+						int argc, char *argv[])
+{
+	char cmd[64];
+	int res;
+
+	if (argc != 1) {
+		printf("Invalid 'wps_nfc_config_token' command - one argument "
+		       "is required.\n");
+		return -1;
+	}
+
+	res = os_snprintf(cmd, sizeof(cmd), "WPS_NFC_CONFIG_TOKEN %s",
+			  argv[0]);
+	if (res < 0 || (size_t) res >= sizeof(cmd) - 1) {
+		printf("Too long WPS_NFC_CONFIG_TOKEN command.\n");
+		return -1;
+	}
+	return wpa_ctrl_command(ctrl, cmd);
+}
 #endif /* CONFIG_WPS_NFC */
 
 
@@ -763,6 +786,7 @@ static struct hostapd_cli_cmd hostapd_cli_commands[] = {
 #endif /* CONFIG_WPS_OOB */
 #ifdef CONFIG_WPS_NFC
 	{ "wps_nfc_tag_read", hostapd_cli_cmd_wps_nfc_tag_read },
+	{ "wps_nfc_config_token", hostapd_cli_cmd_wps_nfc_config_token },
 #endif /* CONFIG_WPS_NFC */
 	{ "wps_ap_pin", hostapd_cli_cmd_wps_ap_pin },
 	{ "wps_config", hostapd_cli_cmd_wps_config },

@@ -1325,6 +1325,31 @@ fail:
 #endif /* CONFIG_INTERWORKING */
 
 
+#ifdef CONFIG_WPS_NFC
+static struct wpabuf * hostapd_parse_bin(const char *buf)
+{
+	size_t len;
+	struct wpabuf *ret;
+
+	len = os_strlen(buf);
+	if (len & 0x01)
+		return NULL;
+	len /= 2;
+
+	ret = wpabuf_alloc(len);
+	if (ret == NULL)
+		return NULL;
+
+	if (hexstr2bin(buf, wpabuf_put(ret, len), len)) {
+		wpabuf_free(ret);
+		return NULL;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_WPS_NFC */
+
+
 static int hostapd_config_fill(struct hostapd_config *conf,
 			       struct hostapd_bss_config *bss,
 			       char *buf, char *pos, int line)
@@ -2224,6 +2249,25 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			bss->upc = os_strdup(pos);
 		} else if (os_strcmp(buf, "pbc_in_m1") == 0) {
 			bss->pbc_in_m1 = atoi(pos);
+#ifdef CONFIG_WPS_NFC
+		} else if (os_strcmp(buf, "wps_nfc_dev_pw_id") == 0) {
+			bss->wps_nfc_dev_pw_id = atoi(pos);
+			if (bss->wps_nfc_dev_pw_id < 0x10 ||
+			    bss->wps_nfc_dev_pw_id > 0xffff) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "wps_nfc_dev_pw_id value", line);
+				errors++;
+			}
+		} else if (os_strcmp(buf, "wps_nfc_dh_pubkey") == 0) {
+			wpabuf_free(bss->wps_nfc_dh_pubkey);
+			bss->wps_nfc_dh_pubkey = hostapd_parse_bin(pos);
+		} else if (os_strcmp(buf, "wps_nfc_dh_privkey") == 0) {
+			wpabuf_free(bss->wps_nfc_dh_privkey);
+			bss->wps_nfc_dh_privkey = hostapd_parse_bin(pos);
+		} else if (os_strcmp(buf, "wps_nfc_dev_pw") == 0) {
+			wpabuf_free(bss->wps_nfc_dev_pw);
+			bss->wps_nfc_dev_pw = hostapd_parse_bin(pos);
+#endif /* CONFIG_WPS_NFC */
 #endif /* CONFIG_WPS */
 #ifdef CONFIG_P2P_MANAGER
 		} else if (os_strcmp(buf, "manage_p2p") == 0) {
@@ -2398,7 +2442,7 @@ struct hostapd_config * hostapd_config_read(const char *fname)
 	struct hostapd_config *conf;
 	struct hostapd_bss_config *bss;
 	FILE *f;
-	char buf[256], *pos;
+	char buf[512], *pos;
 	int line = 0;
 	int errors = 0;
 	size_t i;

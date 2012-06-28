@@ -757,6 +757,11 @@ struct wps_context {
 
 	/* Pending messages from UPnP PutWLANResponse */
 	struct upnp_pending_message *upnp_msgs;
+
+	u16 ap_nfc_dev_pw_id;
+	struct wpabuf *ap_nfc_dh_pubkey;
+	struct wpabuf *ap_nfc_dh_privkey;
+	struct wpabuf *ap_nfc_dev_pw;
 };
 
 struct oob_device_data {

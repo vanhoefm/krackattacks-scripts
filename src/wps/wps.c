@@ -56,6 +56,23 @@ struct wps_data * wps_init(const struct wps_config *cfg)
 		data->dev_password_len = cfg->pin_len;
 	}
 
+#ifdef CONFIG_WPS_NFC
+	if (cfg->wps->ap && !cfg->registrar && cfg->wps->ap_nfc_dev_pw_id) {
+		data->dev_pw_id = cfg->wps->ap_nfc_dev_pw_id;
+		os_free(data->dev_password);
+		data->dev_password =
+			os_malloc(wpabuf_len(cfg->wps->ap_nfc_dev_pw));
+		if (data->dev_password == NULL) {
+			os_free(data);
+			return NULL;
+		}
+		os_memcpy(data->dev_password,
+			  wpabuf_head(cfg->wps->ap_nfc_dev_pw),
+			  wpabuf_len(cfg->wps->ap_nfc_dev_pw));
+		data->dev_password_len = wpabuf_len(cfg->wps->ap_nfc_dev_pw);
+	}
+#endif /* CONFIG_WPS_NFC */
+
 	data->pbc = cfg->pbc;
 	if (cfg->pbc) {
 		/* Use special PIN '00000000' for PBC */

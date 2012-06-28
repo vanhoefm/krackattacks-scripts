@@ -491,6 +491,9 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->model_description);
 	os_free(conf->model_url);
 	os_free(conf->upc);
+	wpabuf_free(conf->wps_nfc_dh_pubkey);
+	wpabuf_free(conf->wps_nfc_dh_privkey);
+	wpabuf_free(conf->wps_nfc_dev_pw);
 #endif /* CONFIG_WPS */
 
 	os_free(conf->roaming_consortium);

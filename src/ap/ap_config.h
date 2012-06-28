@@ -344,6 +344,10 @@ struct hostapd_bss_config {
 	char *model_url;
 	char *upc;
 	struct wpabuf *wps_vendor_ext[MAX_WPS_VENDOR_EXTENSIONS];
+	int wps_nfc_dev_pw_id;
+	struct wpabuf *wps_nfc_dh_pubkey;
+	struct wpabuf *wps_nfc_dh_privkey;
+	struct wpabuf *wps_nfc_dev_pw;
 #endif /* CONFIG_WPS */
 	int pbc_in_m1;
 

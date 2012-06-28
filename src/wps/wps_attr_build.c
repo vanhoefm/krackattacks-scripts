@@ -30,6 +30,14 @@ int wps_build_public_key(struct wps_data *wps, struct wpabuf *msg)
 		wps->dh_ctx = wps->wps->dh_ctx;
 		wps->wps->dh_ctx = NULL;
 		pubkey = wpabuf_dup(wps->wps->dh_pubkey);
+#ifdef CONFIG_WPS_NFC
+	} else if (wps->dev_pw_id >= 0x10 && wps->wps->ap &&
+		   wps->dev_pw_id == wps->wps->ap_nfc_dev_pw_id) {
+		wpa_printf(MSG_DEBUG, "WPS: Using NFC password token DH keys");
+		wps->dh_privkey = wpabuf_dup(wps->wps->ap_nfc_dh_privkey);
+		pubkey = wpabuf_dup(wps->wps->ap_nfc_dh_pubkey);
+		wps->dh_ctx = dh5_init_fixed(wps->dh_privkey, pubkey);
+#endif /* CONFIG_WPS_NFC */
 	} else {
 		wpa_printf(MSG_DEBUG, "WPS: Generate new DH keys");
 		wps->dh_privkey = NULL;

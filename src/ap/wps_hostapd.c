@@ -12,6 +12,8 @@
 #include "utils/eloop.h"
 #include "utils/uuid.h"
 #include "crypto/dh_groups.h"
+#include "crypto/dh_group5.h"
+#include "crypto/random.h"
 #include "common/wpa_ctrl.h"
 #include "common/ieee802_11_defs.h"
 #include "common/ieee802_11_common.h"
@@ -992,6 +994,20 @@ int hostapd_init_wps_complete(struct hostapd_data *hapd)
 }
 
 
+static void hostapd_wps_nfc_clear(struct wps_context *wps)
+{
+#ifdef CONFIG_WPS_NFC
+	wps->ap_nfc_dev_pw_id = 0;
+	wpabuf_free(wps->ap_nfc_dh_pubkey);
+	wps->ap_nfc_dh_pubkey = NULL;
+	wpabuf_free(wps->ap_nfc_dh_privkey);
+	wps->ap_nfc_dh_privkey = NULL;
+	wpabuf_free(wps->ap_nfc_dev_pw);
+	wps->ap_nfc_dev_pw = NULL;
+#endif /* CONFIG_WPS_NFC */
+}
+
+
 void hostapd_deinit_wps(struct hostapd_data *hapd)
 {
 	eloop_cancel_timeout(hostapd_wps_reenable_ap_pin, hapd, NULL);
@@ -1009,6 +1025,7 @@ void hostapd_deinit_wps(struct hostapd_data *hapd)
 	wpabuf_free(hapd->wps->oob_conf.pubkey_hash);
 	wpabuf_free(hapd->wps->oob_conf.dev_password);
 	wps_free_pending_msgs(hapd->wps->upnp_msgs);
+	hostapd_wps_nfc_clear(hapd->wps);
 	os_free(hapd->wps);
 	hapd->wps = NULL;
 	hostapd_wps_clear_ies(hapd);
@@ -1604,6 +1621,88 @@ struct wpabuf * hostapd_wps_nfc_config_token(struct hostapd_data *hapd,
 	}
 
 	return ret;
+}
+
+
+struct wpabuf * hostapd_wps_nfc_token_gen(struct hostapd_data *hapd, int ndef)
+{
+	struct wpabuf *priv = NULL, *pub = NULL, *pw;
+	void *dh_ctx;
+	struct wpabuf *ret;
+
+	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
+	if (pw == NULL)
+		return NULL;
+
+	if (random_get_bytes(wpabuf_put(pw, WPS_OOB_DEVICE_PASSWORD_LEN),
+			     WPS_OOB_DEVICE_PASSWORD_LEN)) {
+		wpabuf_free(pw);
+		return NULL;
+	}
+
+	dh_ctx = dh5_init(&priv, &pub);
+	if (dh_ctx == NULL) {
+		wpabuf_free(pw);
+		return NULL;
+	}
+	dh5_free(dh_ctx);
+
+	hapd->conf->wps_nfc_dev_pw_id = 0x10 + os_random() % 0xfff0;
+	wpabuf_free(hapd->conf->wps_nfc_dh_pubkey);
+	hapd->conf->wps_nfc_dh_pubkey = pub;
+	wpabuf_free(hapd->conf->wps_nfc_dh_privkey);
+	hapd->conf->wps_nfc_dh_privkey = priv;
+	wpabuf_free(hapd->conf->wps_nfc_dev_pw);
+	hapd->conf->wps_nfc_dev_pw = pw;
+
+	ret = wps_build_nfc_pw_token(hapd->conf->wps_nfc_dev_pw_id,
+				     hapd->conf->wps_nfc_dh_pubkey,
+				     hapd->conf->wps_nfc_dev_pw);
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+
+
+int hostapd_wps_nfc_token_enable(struct hostapd_data *hapd)
+{
+	struct wps_context *wps = hapd->wps;
+
+	if (wps == NULL)
+		return -1;
+
+	if (!hapd->conf->wps_nfc_dh_pubkey ||
+	    !hapd->conf->wps_nfc_dh_privkey ||
+	    !hapd->conf->wps_nfc_dev_pw ||
+	    !hapd->conf->wps_nfc_dev_pw_id)
+		return -1;
+
+	hostapd_wps_nfc_clear(wps);
+	wps->ap_nfc_dev_pw_id = hapd->conf->wps_nfc_dev_pw_id;
+	wps->ap_nfc_dh_pubkey = wpabuf_dup(hapd->conf->wps_nfc_dh_pubkey);
+	wps->ap_nfc_dh_privkey = wpabuf_dup(hapd->conf->wps_nfc_dh_privkey);
+	wps->ap_nfc_dev_pw = wpabuf_dup(hapd->conf->wps_nfc_dev_pw);
+
+	if (!wps->ap_nfc_dh_pubkey || !wps->ap_nfc_dh_privkey ||
+	    !wps->ap_nfc_dev_pw) {
+		hostapd_wps_nfc_clear(wps);
+		return -1;
+	}
+
+	return 0;
+}
+
+
+void hostapd_wps_nfc_token_disable(struct hostapd_data *hapd)
+{
+	hostapd_wps_nfc_clear(hapd->wps);
 }
 
 #endif /* CONFIG_WPS_NFC */

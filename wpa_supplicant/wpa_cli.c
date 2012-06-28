@@ -845,7 +845,10 @@ static int wpa_cli_cmd_wps_oob(struct wpa_ctrl *ctrl, int argc, char *argv[])
 	}
 	return wpa_ctrl_command(ctrl, cmd);
 }
+#endif /* CONFIG_WPS_OOB */
 
+
+#ifdef CONFIG_WPS_NFC
 
 static int wpa_cli_cmd_wps_nfc(struct wpa_ctrl *ctrl, int argc, char *argv[])
 {
@@ -913,7 +916,8 @@ static int wpa_cli_cmd_wps_nfc_tag_read(struct wpa_ctrl *ctrl, int argc,
 
 	return ret;
 }
-#endif /* CONFIG_WPS_OOB */
+
+#endif /* CONFIG_WPS_NFC */
 
 
 static int wpa_cli_cmd_wps_reg(struct wpa_ctrl *ctrl, int argc, char *argv[])
@@ -3109,6 +3113,8 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_oob", wpa_cli_cmd_wps_oob,
 	  cli_cmd_flag_sensitive,
 	  "<DEV_TYPE> <PATH> <METHOD> [DEV_NAME] = start WPS OOB" },
+#endif /* CONFIG_WPS_OOB */
+#ifdef CONFIG_WPS_NFC
 	{ "wps_nfc", wpa_cli_cmd_wps_nfc,
 	  cli_cmd_flag_none,
 	  "[BSSID] = start Wi-Fi Protected Setup: NFC" },
@@ -3118,7 +3124,7 @@ static struct wpa_cli_cmd wpa_cli_commands[] = {
 	{ "wps_nfc_tag_read", wpa_cli_cmd_wps_nfc_tag_read,
 	  cli_cmd_flag_sensitive,
 	  "<hexdump of payload> = report read NFC tag with WPS data" },
-#endif /* CONFIG_WPS_OOB */
+#endif /* CONFIG_WPS_NFC */
 	{ "wps_reg", wpa_cli_cmd_wps_reg,
 	  cli_cmd_flag_sensitive,
 	  "<BSSID> <AP PIN> = start WPS Registrar to configure an AP" },

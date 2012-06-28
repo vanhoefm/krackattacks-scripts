@@ -1796,50 +1796,10 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 
 struct wpabuf * wpas_wps_nfc_token(struct wpa_supplicant *wpa_s, int ndef)
 {
-	struct wpabuf *priv = NULL, *pub = NULL, *pw;
-	void *dh_ctx;
-	struct wpabuf *ret;
-	u16 val;
-
-	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
-	if (pw == NULL)
-		return NULL;
-
-	if (random_get_bytes(wpabuf_put(pw, WPS_OOB_DEVICE_PASSWORD_LEN),
-			     WPS_OOB_DEVICE_PASSWORD_LEN) ||
-	    random_get_bytes((u8 *) &val, sizeof(val))) {
-		wpabuf_free(pw);
-		return NULL;
-	}
-
-	dh_ctx = dh5_init(&priv, &pub);
-	if (dh_ctx == NULL) {
-		wpabuf_free(pw);
-		return NULL;
-	}
-	dh5_free(dh_ctx);
-
-	wpa_s->conf->wps_nfc_dev_pw_id = 0x10 + val % 0xfff0;
-	wpabuf_free(wpa_s->conf->wps_nfc_dh_pubkey);
-	wpa_s->conf->wps_nfc_dh_pubkey = pub;
-	wpabuf_free(wpa_s->conf->wps_nfc_dh_privkey);
-	wpa_s->conf->wps_nfc_dh_privkey = priv;
-	wpabuf_free(wpa_s->conf->wps_nfc_dev_pw);
-	wpa_s->conf->wps_nfc_dev_pw = pw;
-
-	ret = wps_build_nfc_pw_token(wpa_s->conf->wps_nfc_dev_pw_id,
-				     wpa_s->conf->wps_nfc_dh_pubkey,
-				     wpa_s->conf->wps_nfc_dev_pw);
-	if (ndef && ret) {
-		struct wpabuf *tmp;
-		tmp = ndef_build_wifi(ret);
-		wpabuf_free(ret);
-		if (tmp == NULL)
-			return NULL;
-		ret = tmp;
-	}
-
-	return ret;
+	return wps_nfc_token_gen(ndef, &wpa_s->conf->wps_nfc_dev_pw_id,
+				 &wpa_s->conf->wps_nfc_dh_pubkey,
+				 &wpa_s->conf->wps_nfc_dh_privkey,
+				 &wpa_s->conf->wps_nfc_dev_pw);
 }
 
 

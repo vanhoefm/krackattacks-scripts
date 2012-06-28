@@ -1,6 +1,6 @@
 /*
  * Wi-Fi Protected Setup - common functionality
- * Copyright (c) 2008-2009, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2008-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -727,3 +727,53 @@ struct wpabuf * wps_build_wsc_nack(struct wps_data *wps)
 
 	return msg;
 }
+
+
+#ifdef CONFIG_WPS_NFC
+struct wpabuf * wps_nfc_token_gen(int ndef, int *id, struct wpabuf **pubkey,
+				  struct wpabuf **privkey,
+				  struct wpabuf **dev_pw)
+{
+	struct wpabuf *priv = NULL, *pub = NULL, *pw, *ret;
+	void *dh_ctx;
+	u16 val;
+
+	pw = wpabuf_alloc(WPS_OOB_DEVICE_PASSWORD_LEN);
+	if (pw == NULL)
+		return NULL;
+
+	if (random_get_bytes(wpabuf_put(pw, WPS_OOB_DEVICE_PASSWORD_LEN),
+			     WPS_OOB_DEVICE_PASSWORD_LEN) ||
+	    random_get_bytes((u8 *) &val, sizeof(val))) {
+		wpabuf_free(pw);
+		return NULL;
+	}
+
+	dh_ctx = dh5_init(&priv, &pub);
+	if (dh_ctx == NULL) {
+		wpabuf_free(pw);
+		return NULL;
+	}
+	dh5_free(dh_ctx);
+
+	*id = 0x10 + val % 0xfff0;
+	wpabuf_free(*pubkey);
+	*pubkey = pub;
+	wpabuf_free(*privkey);
+	*privkey = priv;
+	wpabuf_free(*dev_pw);
+	*dev_pw = pw;
+
+	ret = wps_build_nfc_pw_token(*id, *pubkey, *dev_pw);
+	if (ndef && ret) {
+		struct wpabuf *tmp;
+		tmp = ndef_build_wifi(ret);
+		wpabuf_free(ret);
+		if (tmp == NULL)
+			return NULL;
+		ret = tmp;
+	}
+
+	return ret;
+}
+#endif /* CONFIG_WPS_NFC */

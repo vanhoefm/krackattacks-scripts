@@ -154,7 +154,7 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 	os_memset(prfbuf, 0, primebytelen);
 	ctr = 0;
 	while (1) {
-		if (ctr > 10) {
+		if (ctr > 30) {
 			wpa_printf(MSG_INFO, "EAP-pwd: unable to find random "
 				   "point on curve for group %d, something's "
 				   "fishy", num);

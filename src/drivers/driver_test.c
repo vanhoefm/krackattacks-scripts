@@ -2962,11 +2962,6 @@ static int test_p2p_scan(void *ctx, enum p2p_scan_type type, int freq,
 		break;
 	case P2P_SCAN_FULL:
 		break;
-	case P2P_SCAN_SPECIFIC:
-		social_channels[0] = freq;
-		social_channels[1] = 0;
-		params.freqs = social_channels;
-		break;
 	case P2P_SCAN_SOCIAL_PLUS_ONE:
 		social_channels[3] = freq;
 		params.freqs = social_channels;

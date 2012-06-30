@@ -97,6 +97,12 @@ void wpas_notify_state_changed(struct wpa_supplicant *wpa_s,
 }
 
 
+void wpas_notify_disconnect_reason(struct wpa_supplicant *wpa_s)
+{
+	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_DISCONNECT_REASON);
+}
+
+
 void wpas_notify_network_changed(struct wpa_supplicant *wpa_s)
 {
 	wpas_dbus_signal_prop_changed(wpa_s, WPAS_DBUS_PROP_CURRENT_NETWORK);

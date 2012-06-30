@@ -2352,6 +2352,27 @@ dbus_bool_t wpas_dbus_setter_fast_reauth(DBusMessageIter *iter,
 
 
 /**
+ * wpas_dbus_getter_disconnect_reason - Get most recent reason for disconnect
+ * @iter: Pointer to incoming dbus message iter
+ * @error: Location to store error on failure
+ * @user_data: Function specific data
+ * Returns: TRUE on success, FALSE on failure
+ *
+ * Getter for "DisconnectReason" property.  The reason is negative if it is
+ * locally generated.
+ */
+dbus_bool_t wpas_dbus_getter_disconnect_reason(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data)
+{
+	struct wpa_supplicant *wpa_s = user_data;
+	dbus_int32_t reason = wpa_s->disconnect_reason;
+	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_INT32,
+						&reason, error);
+}
+
+
+/**
  * wpas_dbus_getter_bss_expire_age - Get BSS entry expiration age
  * @iter: Pointer to incoming dbus message iter
  * @error: Location to store error on failure

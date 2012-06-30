@@ -150,6 +150,10 @@ dbus_bool_t wpas_dbus_setter_fast_reauth(DBusMessageIter *iter,
 					 DBusError *error,
 					 void *user_data);
 
+dbus_bool_t wpas_dbus_getter_disconnect_reason(DBusMessageIter *iter,
+					       DBusError *error,
+					       void *user_data);
+
 dbus_bool_t wpas_dbus_getter_bss_expire_age(DBusMessageIter *iter,
 					    DBusError *error, void *user_data);
 

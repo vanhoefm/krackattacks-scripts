@@ -1001,7 +1001,8 @@ static int wpa_supplicant_need_to_roam(struct wpa_supplicant *wpa_s,
 }
 
 
-/* Return < 0 if no scan results could be fetched. */
+/* Return < 0 if no scan results could be fetched or if scan results should not
+ * be shared with other virtual interfaces. */
 static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 					      union wpa_event_data *data)
 {
@@ -1067,7 +1068,7 @@ static int _wpa_supplicant_event_scan_results(struct wpa_supplicant *wpa_s,
 		scan_res_handler(wpa_s, scan_res);
 
 		wpa_scan_results_free(scan_res);
-		return 0;
+		return -2;
 	}
 
 	if (ap) {

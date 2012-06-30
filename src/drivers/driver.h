@@ -100,6 +100,16 @@ struct hostapd_hw_modes {
 	 */
 	u8 a_mpdu_params;
 
+	/**
+	 * vht_capab - VHT (IEEE 802.11ac) capabilities
+	 */
+	u32 vht_capab;
+
+	/**
+	 * vht_mcs_set - VHT MCS (IEEE 802.11ac) rate parameters
+	 */
+	u8 vht_mcs_set[8];
+
 	unsigned int flags; /* HOSTAPD_MODE_FLAG_* */
 };
 

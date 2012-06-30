@@ -142,6 +142,9 @@ CONFIG_IPV6=y
 # Note: This is experimental and not complete implementation.
 #CONFIG_WNM=y
 
+# IEEE 802.11ac (Very High Throughput) support
+#CONFIG_IEEE80211AC=y
+
 # Remove debugging code that is printing out debug messages to stdout.
 # This can be used to reduce the size of the hostapd considerably if debugging
 # code is not needed.

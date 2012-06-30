@@ -1132,6 +1132,71 @@ static int hostapd_config_ht_capab(struct hostapd_config *conf,
 #endif /* CONFIG_IEEE80211N */
 
 
+#ifdef CONFIG_IEEE80211AC
+static int hostapd_config_vht_capab(struct hostapd_config *conf,
+				    const char *capab)
+{
+	if (os_strstr(capab, "[MAX-MPDU-7991]"))
+		conf->vht_capab |= VHT_CAP_MAX_MPDU_LENGTH_7991;
+	if (os_strstr(capab, "[MAX-MPDU-11454]"))
+		conf->vht_capab |= VHT_CAP_MAX_MPDU_LENGTH_11454;
+	if (os_strstr(capab, "[VHT160]"))
+		conf->vht_capab |= VHT_CAP_SUPP_CHAN_WIDTH_160MHZ;
+	if (os_strstr(capab, "[VHT160-80PLUS80]"))
+		conf->vht_capab |= VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ;
+	if (os_strstr(capab, "[VHT160-80PLUS80]"))
+		conf->vht_capab |= VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ;
+	if (os_strstr(capab, "[RXLDPC]"))
+		conf->vht_capab |= VHT_CAP_RXLDPC;
+	if (os_strstr(capab, "[SHORT-GI-80]"))
+		conf->vht_capab |= VHT_CAP_SHORT_GI_80;
+	if (os_strstr(capab, "[SHORT-GI-160]"))
+		conf->vht_capab |= VHT_CAP_SHORT_GI_160;
+	if (os_strstr(capab, "[TX-STBC-2BY1]"))
+		conf->vht_capab |= VHT_CAP_TXSTBC;
+	if (os_strstr(capab, "[RX-STBC-1]"))
+		conf->vht_capab |= VHT_CAP_RXSTBC_1;
+	if (os_strstr(capab, "[RX-STBC-12]"))
+		conf->vht_capab |= VHT_CAP_RXSTBC_2;
+	if (os_strstr(capab, "[RX-STBC-123]"))
+		conf->vht_capab |= VHT_CAP_RXSTBC_3;
+	if (os_strstr(capab, "[RX-STBC-1234]"))
+		conf->vht_capab |= VHT_CAP_RXSTBC_4;
+	if (os_strstr(capab, "[SU-BEAMFORMER]"))
+		conf->vht_capab |= VHT_CAP_MU_BEAMFORMER_CAPABLE;
+	if (os_strstr(capab, "[SU-BEAMFORMEE]"))
+		conf->vht_capab |= VHT_CAP_MU_BEAMFORMEE_CAPABLE;
+	if (os_strstr(capab, "[BF-ANTENNA-2]") &&
+	    (conf->vht_capab & VHT_CAP_MU_BEAMFORMER_CAPABLE))
+		conf->vht_capab |= VHT_CAP_BEAMFORMER_ANTENNAS_MAX;
+	if (os_strstr(capab, "[SOUNDING-DIMENSION-2]") &&
+	    (conf->vht_capab & VHT_CAP_MU_BEAMFORMER_CAPABLE))
+		conf->vht_capab |= VHT_CAP_SOUNDING_DIMENTION_MAX;
+	if (os_strstr(capab, "[MU-BEAMFORMER]"))
+		conf->vht_capab |= VHT_CAP_MU_BEAMFORMER_CAPABLE;
+	if (os_strstr(capab, "[MU-BEAMFORMEE]"))
+		conf->vht_capab |= VHT_CAP_MU_BEAMFORMEE_CAPABLE;
+	if (os_strstr(capab, "[VHT-TXOP-PS]"))
+		conf->vht_capab |= VHT_CAP_VHT_TXOP_PS;
+	if (os_strstr(capab, "[HTC-VHT]"))
+		conf->vht_capab |= VHT_CAP_HTC_VHT;
+	if (os_strstr(capab, "[MAX-A-MPDU-LEN-EXP0]"))
+		conf->vht_capab |= VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT;
+	if (os_strstr(capab, "[VHT-LINK-ADAPT2]") &&
+	    (conf->vht_capab & VHT_CAP_HTC_VHT))
+		conf->vht_capab |= VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB;
+	if (os_strstr(capab, "[VHT-LINK-ADAPT3]") &&
+	    (conf->vht_capab & VHT_CAP_HTC_VHT))
+		conf->vht_capab |= VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB;
+	if (os_strstr(capab, "[RX-ANTENNA-PATTERN]"))
+		conf->vht_capab |= VHT_CAP_RX_ANTENNA_PATTERN;
+	if (os_strstr(capab, "[TX-ANTENNA-PATTERN]"))
+		conf->vht_capab |= VHT_CAP_TX_ANTENNA_PATTERN;
+	return 0;
+}
+#endif /* CONFIG_IEEE80211AC */
+
+
 static int hostapd_config_check_bss(struct hostapd_bss_config *bss,
 				    struct hostapd_config *conf)
 {
@@ -2126,6 +2191,18 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		} else if (os_strcmp(buf, "require_ht") == 0) {
 			conf->require_ht = atoi(pos);
 #endif /* CONFIG_IEEE80211N */
+#ifdef CONFIG_IEEE80211AC
+		} else if (os_strcmp(buf, "ieee80211ac") == 0) {
+			conf->ieee80211ac = atoi(pos);
+		} else if (os_strcmp(buf, "vht_capab") == 0) {
+			if (hostapd_config_vht_capab(conf, pos) < 0) {
+				wpa_printf(MSG_ERROR, "Line %d: invalid "
+					   "vht_capab", line);
+				errors++;
+			}
+		} else if (os_strcmp(buf, "vht_oper_chwidth") == 0) {
+		    conf->vht_oper_chwidth = atoi(pos);
+#endif /* CONFIG_IEEE80211AC */
 		} else if (os_strcmp(buf, "max_listen_interval") == 0) {
 			bss->max_listen_interval = atoi(pos);
 		} else if (os_strcmp(buf, "disable_pmksa_caching") == 0) {

@@ -238,6 +238,15 @@
 #define WLAN_EID_ADV_PROTO 108
 #define WLAN_EID_ROAMING_CONSORTIUM 111
 #define WLAN_EID_EXT_CAPAB 127
+#define WLAN_EID_VHT_CAP 191
+#define WLAN_EID_VHT_OPERATION 192
+#define WLAN_EID_VHT_EXTENDED_BSS_LOAD 193
+#define WLAN_EID_VHT_WIDE_BW_CHSWITCH  194
+#define WLAN_EID_VHT_TRANSMIT_POWER_ENVELOPE 195
+#define WLAN_EID_VHT_CHANNEL_SWITCH_WRAPPER 196
+#define WLAN_EID_VHT_AID 197
+#define WLAN_EID_VHT_QUIET_CHANNEL 198
+#define WLAN_EID_VHT_OPERATING_MODE_NOTIFICATION 199
 #define WLAN_EID_VENDOR_SPECIFIC 221
 
 
@@ -550,6 +559,19 @@ struct ieee80211_ht_operation {
 	u8 basic_set[16];
 } STRUCT_PACKED;
 
+
+struct ieee80211_vht_capabilities {
+	le32 vht_capabilities_info;
+	u8 vht_supported_mcs_set[8];
+} STRUCT_PACKED;
+
+struct ieee80211_vht_operation {
+	u8 vht_op_info_chwidth;
+	u8 vht_op_info_chan_center_freq_seg0_idx;
+	u8 vht_op_info_chan_center_freq_seg1_idx;
+	le16 vht_basic_mcs_set;
+} STRUCT_PACKED;
+
 #ifdef _MSC_VER
 #pragma pack(pop)
 #endif /* _MSC_VER */
@@ -645,6 +667,33 @@ struct ieee80211_ht_operation {
 #define HT_INFO_STBC_PARAM_PCO_PHASE			((u16) BIT(11))
 
 #define BSS_MEMBERSHIP_SELECTOR_HT_PHY 127
+
+/* VHT Defines */
+#define VHT_CAP_MAX_MPDU_LENGTH_7991                ((u32) BIT(0))
+#define VHT_CAP_MAX_MPDU_LENGTH_11454               ((u32) BIT(1))
+#define VHT_CAP_SUPP_CHAN_WIDTH_160MHZ              ((u32) BIT(2))
+#define VHT_CAP_SUPP_CHAN_WIDTH_160_80PLUS80MHZ     ((u32) BIT(3))
+#define VHT_CAP_RXLDPC                              ((u32) BIT(4))
+#define VHT_CAP_SHORT_GI_80                         ((u32) BIT(5))
+#define VHT_CAP_SHORT_GI_160                        ((u32) BIT(6))
+#define VHT_CAP_TXSTBC                              ((u32) BIT(7))
+#define VHT_CAP_RXSTBC_1                            ((u32) BIT(8))
+#define VHT_CAP_RXSTBC_2                            ((u32) BIT(9))
+#define VHT_CAP_RXSTBC_3                            ((u32) BIT(8) | BIT(9))
+#define VHT_CAP_RXSTBC_4                            ((u32) BIT(10))
+#define VHT_CAP_SU_BEAMFORMER_CAPABLE               ((u32) BIT(11))
+#define VHT_CAP_SU_BEAMFORMEE_CAPABLE               ((u32) BIT(12))
+#define VHT_CAP_BEAMFORMER_ANTENNAS_MAX             ((u32) BIT(13) | BIT(14))
+#define VHT_CAP_SOUNDING_DIMENTION_MAX              ((u32) BIT(16) | BIT(17))
+#define VHT_CAP_MU_BEAMFORMER_CAPABLE               ((u32) BIT(19))
+#define VHT_CAP_MU_BEAMFORMEE_CAPABLE               ((u32) BIT(20))
+#define VHT_CAP_VHT_TXOP_PS                         ((u32) BIT(21))
+#define VHT_CAP_HTC_VHT                             ((u32) BIT(22))
+#define VHT_CAP_MAX_A_MPDU_LENGTH_EXPONENT          ((u32) BIT(23))
+#define VHT_CAP_VHT_LINK_ADAPTATION_VHT_UNSOL_MFB   ((u32) BIT(27))
+#define VHT_CAP_VHT_LINK_ADAPTATION_VHT_MRQ_MFB     ((u32) BIT(26) | BIT(27))
+#define VHT_CAP_RX_ANTENNA_PATTERN                  ((u32) BIT(28))
+#define VHT_CAP_TX_ANTENNA_PATTERN                  ((u32) BIT(29))
 
 #define OUI_MICROSOFT 0x0050f2 /* Microsoft (also used in Wi-Fi specs)
 				* 00:50:F2 */

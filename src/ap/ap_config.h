@@ -365,6 +365,7 @@ struct hostapd_bss_config {
 #define TDLS_PROHIBIT_CHAN_SWITCH BIT(1)
 	int tdls;
 	int disable_11n;
+	int disable_11ac;
 
 	/* IEEE 802.11v */
 	int time_advertisement;
@@ -452,6 +453,9 @@ struct hostapd_config {
 	int ieee80211n;
 	int secondary_channel;
 	int require_ht;
+	u32 vht_capab;
+	int ieee80211ac;
+	u8 vht_oper_chwidth;
 };
 
 

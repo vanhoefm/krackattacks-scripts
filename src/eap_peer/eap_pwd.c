@@ -725,6 +725,7 @@ eap_pwd_process(struct eap_sm *sm, void *priv, struct eap_method_ret *ret,
 		 */
 		if (data->out_frag_pos >= wpabuf_len(data->outbuf)) {
 			wpabuf_free(data->outbuf);
+			data->outbuf = NULL;
 			data->out_frag_pos = 0;
 		}
 		wpa_printf(MSG_DEBUG, "EAP-pwd: Send %s fragment of %d bytes",
@@ -856,8 +857,11 @@ eap_pwd_process(struct eap_sm *sm, void *priv, struct eap_method_ret *ret,
 	/*
 	 * if we're not fragmenting then there's no need to carry this around
 	 */
-	if (data->out_frag_pos == 0)
+	if (data->out_frag_pos == 0) {
 		wpabuf_free(data->outbuf);
+		data->outbuf = NULL;
+		data->out_frag_pos = 0;
+	}
 
 	return resp;
 }

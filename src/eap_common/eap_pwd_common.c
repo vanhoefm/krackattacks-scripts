@@ -252,11 +252,13 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 	if (0) {
  fail:
 		EC_GROUP_free(grp->group);
+		grp->group = NULL;
 		EC_POINT_free(grp->pwe);
+		grp->pwe = NULL;
 		BN_free(grp->order);
+		grp->order = NULL;
 		BN_free(grp->prime);
-		os_free(grp);
-		grp = NULL;
+		grp->prime = NULL;
 		ret = 1;
 	}
 	/* cleanliness and order.... */

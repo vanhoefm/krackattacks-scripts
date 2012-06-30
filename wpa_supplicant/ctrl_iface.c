@@ -2991,9 +2991,6 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 	} else if (os_strncmp(pos, "pbc", 3) == 0) {
 		wps_method = WPS_PBC;
 	} else {
-		char *end;
-		long int val;
-
 		pin = pos;
 		pos = os_strchr(pin, ' ');
 		wps_method = WPS_PIN_KEYPAD;
@@ -3002,9 +2999,7 @@ static int p2p_ctrl_connect(struct wpa_supplicant *wpa_s, char *cmd,
 			if (os_strncmp(pos, "display", 7) == 0)
 				wps_method = WPS_PIN_DISPLAY;
 		}
-		val = strtol(pin, &end, 10);
-		if (val < 0 || (os_strlen(pin) != 4 && os_strlen(pin) != 8) ||
-		    *end != '\0') {
+		if (!wps_pin_str_valid(pin)) {
 			os_memcpy(buf, "FAIL-INVALID-PIN\n", 17);
 			return 17;
 		}

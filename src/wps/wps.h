@@ -816,6 +816,7 @@ int wps_build_credential_wrap(struct wpabuf *msg,
 unsigned int wps_pin_checksum(unsigned int pin);
 unsigned int wps_pin_valid(unsigned int pin);
 unsigned int wps_generate_pin(void);
+int wps_pin_str_valid(const char *pin);
 void wps_free_pending_msgs(struct upnp_pending_message *msgs);
 
 struct oob_device_data * wps_get_oob_device(char *device_type);

@@ -249,6 +249,22 @@ unsigned int wps_generate_pin(void)
 }
 
 
+int wps_pin_str_valid(const char *pin)
+{
+	const char *p;
+	size_t len;
+
+	p = pin;
+	while (*p >= '0' && *p <= '9')
+		p++;
+	if (*p != '\0')
+		return 0;
+
+	len = p - pin;
+	return len == 4 || len == 8;
+}
+
+
 void wps_fail_event(struct wps_context *wps, enum wps_msg_type msg,
 		    u16 config_error, u16 error_indication)
 {

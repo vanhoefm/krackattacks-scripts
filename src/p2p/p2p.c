@@ -808,33 +808,8 @@ static void p2p_search(struct p2p_data *p2p)
 	}
 	p2p->cfg->stop_listen(p2p->cfg->cb_ctx);
 
-	if (p2p->go_neg_peer) {
-		/*
-		 * Only scan the known listen frequency of the peer
-		 * during GO Negotiation start.
-		 */
-		freq = p2p->go_neg_peer->listen_freq;
-		if (freq <= 0)
-			freq = p2p->go_neg_peer->oper_freq;
-		type = P2P_SCAN_SPECIFIC;
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting search "
-			"for freq %u (GO Neg)", freq);
-
-		/* Advertise immediate availability of WPS credential */
-		pw_id = p2p_wps_method_pw_id(p2p->go_neg_peer->wps_method);
-	} else if (p2p->invite_peer) {
-		/*
-		 * Only scan the known listen frequency of the peer
-		 * during Invite start.
-		 */
-		freq = p2p->invite_peer->listen_freq;
-		if (freq <= 0)
-			freq = p2p->invite_peer->oper_freq;
-		type = P2P_SCAN_SPECIFIC;
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting search "
-			"for freq %u (Invite)", freq);
-	} else if (p2p->find_type == P2P_FIND_PROGRESSIVE &&
-		   (freq = p2p_get_next_prog_freq(p2p)) > 0) {
+	if (p2p->find_type == P2P_FIND_PROGRESSIVE &&
+	    (freq = p2p_get_next_prog_freq(p2p)) > 0) {
 		type = P2P_SCAN_SOCIAL_PLUS_ONE;
 		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG, "P2P: Starting search "
 			"(+ freq %u)", freq);
@@ -2652,16 +2627,6 @@ int p2p_scan_res_handler(struct p2p_data *p2p, const u8 *bssid, int freq,
 			 int level, const u8 *ies, size_t ies_len)
 {
 	p2p_add_device(p2p, bssid, freq, level, ies, ies_len, 1);
-
-	if (p2p->go_neg_peer && p2p->state == P2P_SEARCH &&
-	    os_memcmp(p2p->go_neg_peer->info.p2p_device_addr, bssid, ETH_ALEN)
-	    == 0) {
-		wpa_msg(p2p->cfg->msg_ctx, MSG_DEBUG,
-			"P2P: Found GO Negotiation peer - try to start GO "
-			"negotiation");
-		p2p_connect_send(p2p, p2p->go_neg_peer);
-		return 1;
-	}
 
 	return 0;
 }

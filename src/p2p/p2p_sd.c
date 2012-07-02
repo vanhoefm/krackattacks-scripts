@@ -364,9 +364,14 @@ void p2p_sd_response(struct p2p_data *p2p, int freq, const u8 *dst,
 				"previous SD response");
 			wpabuf_free(p2p->sd_resp);
 		}
+		p2p->sd_resp = wpabuf_dup(resp_tlvs);
+		if (p2p->sd_resp == NULL) {
+			wpa_msg(p2p->cfg->msg_ctx, MSG_ERROR, "P2P: Failed to "
+				"allocate SD response fragmentation area");
+			return;
+		}
 		os_memcpy(p2p->sd_resp_addr, dst, ETH_ALEN);
 		p2p->sd_resp_dialog_token = dialog_token;
-		p2p->sd_resp = wpabuf_dup(resp_tlvs);
 		p2p->sd_resp_pos = 0;
 		p2p->sd_frag_id = 0;
 		resp = p2p_build_sd_response(dialog_token, WLAN_STATUS_SUCCESS,

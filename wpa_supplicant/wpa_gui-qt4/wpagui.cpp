@@ -713,17 +713,13 @@ void WpaGui::helpContents()
 void WpaGui::helpAbout()
 {
 	QMessageBox::about(this, "wpa_gui for wpa_supplicant",
-			   "Copyright (c) 2003-2011,\n"
+			   "Copyright (c) 2003-2012,\n"
 			   "Jouni Malinen <j@w1.fi>\n"
 			   "and contributors.\n"
 			   "\n"
-			   "This program is free software. You can\n"
-			   "distribute it and/or modify it under the terms "
-			   "of\n"
-			   "the GNU General Public License version 2.\n"
-			   "\n"
-			   "Alternatively, this software may be distributed\n"
-			   "under the terms of the BSD license.\n"
+			   "This software may be distributed under\n"
+			   "the terms of the BSD license.\n"
+			   "See README for more details.\n"
 			   "\n"
 			   "This product includes software developed\n"
 			   "by the OpenSSL Project for use in the\n"

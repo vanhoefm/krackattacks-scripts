@@ -9,6 +9,7 @@
 #include "includes.h"
 
 #include "common.h"
+#include "crypto/sha256.h"
 #include "eap_peer/eap_i.h"
 #include "eap_common/eap_pwd_common.h"
 
@@ -459,10 +460,10 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 				 const u8 *payload, size_t payload_len)
 {
 	BIGNUM *x = NULL, *y = NULL;
-	HMAC_CTX ctx;
+	struct crypto_hash *hash;
 	u32 cs;
 	u16 grp;
-	u8 conf[SHA256_DIGEST_LENGTH], *cruft = NULL, *ptr;
+	u8 conf[SHA256_MAC_LEN], *cruft = NULL, *ptr;
 	int offset;
 
 	/*
@@ -489,7 +490,9 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	 * server's commit is H(k | server_element | server_scalar |
 	 *			peer_element | peer_scalar | ciphersuite)
 	 */
-	H_Init(&ctx);
+	hash = eap_pwd_h_init();
+	if (hash == NULL)
+		goto fin;
 
 	/*
 	 * zero the memory each time because this is mod prime math and some
@@ -498,7 +501,7 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(data->k);
 	BN_bn2bin(data->k, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 
 	/* server element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
@@ -511,18 +514,18 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
 	BN_bn2bin(x, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
 	BN_bn2bin(y, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 
 	/* server scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->order) -
 		BN_num_bytes(data->server_scalar);
 	BN_bn2bin(data->server_scalar, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->order));
 
 	/* my element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
@@ -536,27 +539,27 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
 	BN_bn2bin(x, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
 	BN_bn2bin(y, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 
 	/* my scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->order) -
 		BN_num_bytes(data->my_scalar);
 	BN_bn2bin(data->my_scalar, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->order));
 
 	/* the ciphersuite */
-	H_Update(&ctx, (u8 *) &cs, sizeof(u32));
+	eap_pwd_h_update(hash, (u8 *) &cs, sizeof(u32));
 
 	/* random function fin */
-	H_Final(&ctx, conf);
+	eap_pwd_h_final(hash, conf);
 
 	ptr = (u8 *) payload;
-	if (os_memcmp(conf, ptr, SHA256_DIGEST_LENGTH)) {
+	if (os_memcmp(conf, ptr, SHA256_MAC_LEN)) {
 		wpa_printf(MSG_INFO, "EAP-PWD (peer): confirm did not verify");
 		goto fin;
 	}
@@ -568,13 +571,15 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	 *  H(k | peer_element | peer_scalar | server_element | server_scalar |
 	 *    ciphersuite)
 	 */
-	H_Init(&ctx);
+	hash = eap_pwd_h_init();
+	if (hash == NULL)
+		goto fin;
 
 	/* k */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(data->k);
 	BN_bn2bin(data->k, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 
 	/* my element */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
@@ -587,18 +592,18 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
 	BN_bn2bin(x, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
 	BN_bn2bin(y, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 
 	/* my scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->order) -
 		BN_num_bytes(data->my_scalar);
 	BN_bn2bin(data->my_scalar, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->order));
 
 	/* server element: x, y */
 	if (!EC_POINT_get_affine_coordinates_GFp(data->grp->group,
@@ -611,24 +616,24 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(x);
 	BN_bn2bin(x, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->prime) - BN_num_bytes(y);
 	BN_bn2bin(y, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->prime));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->prime));
 
 	/* server scalar */
 	os_memset(cruft, 0, BN_num_bytes(data->grp->prime));
 	offset = BN_num_bytes(data->grp->order) -
 		BN_num_bytes(data->server_scalar);
 	BN_bn2bin(data->server_scalar, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(data->grp->order));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(data->grp->order));
 
 	/* the ciphersuite */
-	H_Update(&ctx, (u8 *) &cs, sizeof(u32));
+	eap_pwd_h_update(hash, (u8 *) &cs, sizeof(u32));
 
 	/* all done */
-	H_Final(&ctx, conf);
+	eap_pwd_h_final(hash, conf);
 
 	if (compute_keys(data->grp, data->bnctx, data->k,
 			 data->my_scalar, data->server_scalar, conf, ptr,
@@ -638,11 +643,11 @@ eap_pwd_perform_confirm_exchange(struct eap_sm *sm, struct eap_pwd_data *data,
 		goto fin;
 	}
 
-	data->outbuf = wpabuf_alloc(SHA256_DIGEST_LENGTH);
+	data->outbuf = wpabuf_alloc(SHA256_MAC_LEN);
 	if (data->outbuf == NULL)
 		goto fin;
 
-	wpabuf_put_data(data->outbuf, conf, SHA256_DIGEST_LENGTH);
+	wpabuf_put_data(data->outbuf, conf, SHA256_MAC_LEN);
 
 fin:
 	os_free(cruft);

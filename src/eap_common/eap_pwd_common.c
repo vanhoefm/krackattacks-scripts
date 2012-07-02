@@ -8,70 +8,76 @@
 
 #include "includes.h"
 #include "common.h"
+#include "crypto/sha256.h"
+#include "crypto/crypto.h"
 #include "eap_defs.h"
 #include "eap_pwd_common.h"
 
 /* The random function H(x) = HMAC-SHA256(0^32, x) */
-void H_Init(HMAC_CTX *ctx)
+struct crypto_hash * eap_pwd_h_init(void)
 {
-	u8 allzero[SHA256_DIGEST_LENGTH];
-
-	os_memset(allzero, 0, SHA256_DIGEST_LENGTH);
-	HMAC_Init(ctx, allzero, SHA256_DIGEST_LENGTH, EVP_sha256());
+	u8 allzero[SHA256_MAC_LEN];
+	os_memset(allzero, 0, SHA256_MAC_LEN);
+	return crypto_hash_init(CRYPTO_HASH_ALG_HMAC_SHA256, allzero,
+				SHA256_MAC_LEN);
 }
 
 
-void H_Update(HMAC_CTX *ctx, const u8 *data, int len)
+void eap_pwd_h_update(struct crypto_hash *hash, const u8 *data, size_t len)
 {
-	HMAC_Update(ctx, data, len);
+	crypto_hash_update(hash, data, len);
 }
 
 
-void H_Final(HMAC_CTX *ctx, u8 *digest)
+void eap_pwd_h_final(struct crypto_hash *hash, u8 *digest)
 {
-	unsigned int mdlen = SHA256_DIGEST_LENGTH;
-
-	HMAC_Final(ctx, digest, &mdlen);
-	HMAC_CTX_cleanup(ctx);
+	size_t len = SHA256_MAC_LEN;
+	crypto_hash_finish(hash, digest, &len);
 }
 
 
 /* a counter-based KDF based on NIST SP800-108 */
-void eap_pwd_kdf(u8 *key, int keylen, u8 *label, int labellen,
-		 u8 *result, int resultbitlen)
+static int eap_pwd_kdf(const u8 *key, size_t keylen, const u8 *label,
+		       size_t labellen, u8 *result, size_t resultbitlen)
 {
-	HMAC_CTX hctx;
-	unsigned char digest[SHA256_DIGEST_LENGTH];
+	struct crypto_hash *hash;
+	u8 digest[SHA256_MAC_LEN];
 	u16 i, ctr, L;
-	int resultbytelen, len = 0;
-	unsigned int mdlen = SHA256_DIGEST_LENGTH;
-	unsigned char mask = 0xff;
+	size_t resultbytelen, len = 0, mdlen;
 
-	resultbytelen = (resultbitlen + 7)/8;
+	resultbytelen = (resultbitlen + 7) / 8;
 	ctr = 0;
 	L = htons(resultbitlen);
 	while (len < resultbytelen) {
-		ctr++; i = htons(ctr);
-		HMAC_Init(&hctx, key, keylen, EVP_sha256());
+		ctr++;
+		i = htons(ctr);
+		hash = crypto_hash_init(CRYPTO_HASH_ALG_HMAC_SHA256,
+					key, keylen);
+		if (hash == NULL)
+			return -1;
 		if (ctr > 1)
-			HMAC_Update(&hctx, digest, mdlen);
-		HMAC_Update(&hctx, (u8 *) &i, sizeof(u16));
-		HMAC_Update(&hctx, label, labellen);
-		HMAC_Update(&hctx, (u8 *) &L, sizeof(u16));
-		HMAC_Final(&hctx, digest, &mdlen);
-		if ((len + (int) mdlen) > resultbytelen)
+			crypto_hash_update(hash, digest, SHA256_MAC_LEN);
+		crypto_hash_update(hash, (u8 *) &i, sizeof(u16));
+		crypto_hash_update(hash, label, labellen);
+		crypto_hash_update(hash, (u8 *) &L, sizeof(u16));
+		mdlen = SHA256_MAC_LEN;
+		if (crypto_hash_finish(hash, digest, &mdlen) < 0)
+			return -1;
+		if ((len + mdlen) > resultbytelen)
 			os_memcpy(result + len, digest, resultbytelen - len);
 		else
 			os_memcpy(result + len, digest, mdlen);
 		len += mdlen;
-		HMAC_CTX_cleanup(&hctx);
 	}
 
 	/* since we're expanding to a bit length, mask off the excess */
 	if (resultbitlen % 8) {
+		u8 mask = 0xff;
 		mask <<= (8 - (resultbitlen % 8));
 		result[resultbytelen - 1] &= mask;
 	}
+
+	return 0;
 }
 
 
@@ -85,9 +91,10 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 			     u8 *id_peer, int id_peer_len, u8 *token)
 {
 	BIGNUM *x_candidate = NULL, *rnd = NULL, *cofactor = NULL;
-	HMAC_CTX ctx;
-	unsigned char pwe_digest[SHA256_DIGEST_LENGTH], *prfbuf = NULL, ctr;
-	int nid, is_odd, primebitlen, primebytelen, ret = 0;
+	struct crypto_hash *hash;
+	unsigned char pwe_digest[SHA256_MAC_LEN], *prfbuf = NULL, ctr;
+	int nid, is_odd, ret = 0;
+	size_t primebytelen, primebitlen;
 
 	switch (num) { /* from IANA registry for IKE D-H groups */
         case 19:
@@ -167,20 +174,23 @@ int compute_password_element(EAP_PWD_group *grp, u16 num,
 		 *    pwd-seed = H(token | peer-id | server-id | password |
 		 *		   counter)
 		 */
-		H_Init(&ctx);
-		H_Update(&ctx, token, sizeof(u32));
-		H_Update(&ctx, id_peer, id_peer_len);
-		H_Update(&ctx, id_server, id_server_len);
-		H_Update(&ctx, password, password_len);
-		H_Update(&ctx, &ctr, sizeof(ctr));
-		H_Final(&ctx, pwe_digest);
+		hash = eap_pwd_h_init();
+		if (hash == NULL)
+			goto fail;
+		eap_pwd_h_update(hash, token, sizeof(u32));
+		eap_pwd_h_update(hash, id_peer, id_peer_len);
+		eap_pwd_h_update(hash, id_server, id_server_len);
+		eap_pwd_h_update(hash, password, password_len);
+		eap_pwd_h_update(hash, &ctr, sizeof(ctr));
+		eap_pwd_h_final(hash, pwe_digest);
 
-		BN_bin2bn(pwe_digest, SHA256_DIGEST_LENGTH, rnd);
+		BN_bin2bn(pwe_digest, SHA256_MAC_LEN, rnd);
 
-		eap_pwd_kdf(pwe_digest, SHA256_DIGEST_LENGTH,
-			    (unsigned char *) "EAP-pwd Hunting And Pecking",
-			    os_strlen("EAP-pwd Hunting And Pecking"),
-			    prfbuf, primebitlen);
+		if (eap_pwd_kdf(pwe_digest, SHA256_MAC_LEN,
+				(u8 *) "EAP-pwd Hunting And Pecking",
+				os_strlen("EAP-pwd Hunting And Pecking"),
+				prfbuf, primebitlen) < 0)
+			goto fail;
 
 		BN_bin2bn(prfbuf, primebytelen, x_candidate);
 
@@ -276,9 +286,9 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 		 u8 *confirm_peer, u8 *confirm_server,
 		 u32 *ciphersuite, u8 *msk, u8 *emsk)
 {
-	HMAC_CTX ctx;
-	u8 mk[SHA256_DIGEST_LENGTH], *cruft;
-	u8 session_id[SHA256_DIGEST_LENGTH + 1];
+	struct crypto_hash *hash;
+	u8 mk[SHA256_MAC_LEN], *cruft;
+	u8 session_id[SHA256_MAC_LEN + 1];
 	u8 msk_emsk[EAP_MSK_LEN + EAP_EMSK_LEN];
 	int offset;
 
@@ -290,37 +300,46 @@ int compute_keys(EAP_PWD_group *grp, BN_CTX *bnctx, BIGNUM *k,
 	 *	scal_s)
 	 */
 	session_id[0] = EAP_TYPE_PWD;
-	H_Init(&ctx);
-	H_Update(&ctx, (u8 *)ciphersuite, sizeof(u32));
+	hash = eap_pwd_h_init();
+	if (hash == NULL) {
+		os_free(cruft);
+		return -1;
+	}
+	eap_pwd_h_update(hash, (u8 *) ciphersuite, sizeof(u32));
 	offset = BN_num_bytes(grp->order) - BN_num_bytes(peer_scalar);
 	os_memset(cruft, 0, BN_num_bytes(grp->prime));
 	BN_bn2bin(peer_scalar, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(grp->order));
 	offset = BN_num_bytes(grp->order) - BN_num_bytes(server_scalar);
 	os_memset(cruft, 0, BN_num_bytes(grp->prime));
 	BN_bn2bin(server_scalar, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(grp->order));
-	H_Final(&ctx, &session_id[1]);
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(grp->order));
+	eap_pwd_h_final(hash, &session_id[1]);
 
 	/* then compute MK = H(k | confirm-peer | confirm-server) */
-	H_Init(&ctx);
+	hash = eap_pwd_h_init();
+	if (hash == NULL) {
+		os_free(cruft);
+		return -1;
+	}
 	offset = BN_num_bytes(grp->prime) - BN_num_bytes(k);
 	os_memset(cruft, 0, BN_num_bytes(grp->prime));
 	BN_bn2bin(k, cruft + offset);
-	H_Update(&ctx, cruft, BN_num_bytes(grp->prime));
-	H_Update(&ctx, confirm_peer, SHA256_DIGEST_LENGTH);
-	H_Update(&ctx, confirm_server, SHA256_DIGEST_LENGTH);
-	H_Final(&ctx, mk);
+	eap_pwd_h_update(hash, cruft, BN_num_bytes(grp->prime));
+	os_free(cruft);
+	eap_pwd_h_update(hash, confirm_peer, SHA256_MAC_LEN);
+	eap_pwd_h_update(hash, confirm_server, SHA256_MAC_LEN);
+	eap_pwd_h_final(hash, mk);
 
 	/* stretch the mk with the session-id to get MSK | EMSK */
-	eap_pwd_kdf(mk, SHA256_DIGEST_LENGTH,
-		    session_id, SHA256_DIGEST_LENGTH+1,
-		    msk_emsk, (EAP_MSK_LEN + EAP_EMSK_LEN) * 8);
+	if (eap_pwd_kdf(mk, SHA256_MAC_LEN,
+			session_id, SHA256_MAC_LEN + 1,
+			msk_emsk, (EAP_MSK_LEN + EAP_EMSK_LEN) * 8) < 0) {
+		return -1;
+	}
 
 	os_memcpy(msk, msk_emsk, EAP_MSK_LEN);
 	os_memcpy(emsk, msk_emsk + EAP_MSK_LEN, EAP_EMSK_LEN);
-
-	os_free(cruft);
 
 	return 1;
 }

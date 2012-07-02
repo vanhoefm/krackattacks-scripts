@@ -14,6 +14,7 @@
 #include <openssl/bn.h>
 #include <openssl/evp.h>
 #include <openssl/dh.h>
+#include <openssl/hmac.h>
 
 #include "common.h"
 #include "wpabuf.h"
@@ -531,4 +532,85 @@ void dh5_free(void *ctx)
 		return;
 	dh = ctx;
 	DH_free(dh);
+}
+
+
+struct crypto_hash {
+	HMAC_CTX ctx;
+};
+
+
+struct crypto_hash * crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
+				      size_t key_len)
+{
+	struct crypto_hash *ctx;
+	const EVP_MD *md;
+
+	switch (alg) {
+#ifndef OPENSSL_NO_MD5
+	case CRYPTO_HASH_ALG_HMAC_MD5:
+		md = EVP_md5();
+		break;
+#endif /* OPENSSL_NO_MD5 */
+#ifndef OPENSSL_NO_SHA
+	case CRYPTO_HASH_ALG_HMAC_SHA1:
+		md = EVP_sha1();
+		break;
+#endif /* OPENSSL_NO_SHA */
+#ifndef OPENSSL_NO_SHA256
+#ifdef CONFIG_SHA256
+	case CRYPTO_HASH_ALG_HMAC_SHA256:
+		md = EVP_sha256();
+		break;
+#endif /* CONFIG_SHA256 */
+#endif /* OPENSSL_NO_SHA256 */
+	default:
+		return NULL;
+	}
+
+	ctx = os_zalloc(sizeof(*ctx));
+	if (ctx == NULL)
+		return NULL;
+
+	if (HMAC_Init_ex(&ctx->ctx, key, key_len, md, NULL) != 1) {
+		os_free(ctx);
+		return NULL;
+	}
+
+	return ctx;
+}
+
+
+void crypto_hash_update(struct crypto_hash *ctx, const u8 *data, size_t len)
+{
+	if (ctx == NULL)
+		return;
+	HMAC_Update(&ctx->ctx, data, len);
+}
+
+
+int crypto_hash_finish(struct crypto_hash *ctx, u8 *mac, size_t *len)
+{
+	unsigned int mdlen;
+	int res;
+
+	if (ctx == NULL)
+		return -2;
+
+	if (mac == NULL || len == NULL) {
+		os_free(ctx);
+		return 0;
+	}
+
+	mdlen = *len;
+	res = HMAC_Final(&ctx->ctx, mac, &mdlen);
+	HMAC_CTX_cleanup(&ctx->ctx);
+	os_free(ctx);
+
+	if (res == 1) {
+		*len = mdlen;
+		return 0;
+	}
+
+	return -1;
 }

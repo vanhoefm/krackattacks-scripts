@@ -432,7 +432,7 @@ static void wpa_supplicant_scan(void *eloop_ctx, void *timeout_ctx)
 	struct wpa_supplicant *wpa_s = eloop_ctx;
 	struct wpa_ssid *ssid;
 	int scan_req = 0, ret;
-	struct wpabuf *extra_ie;
+	struct wpabuf *extra_ie = NULL;
 	struct wpa_driver_scan_params params;
 	struct wpa_driver_scan_params *scan_params;
 	size_t max_ssids;

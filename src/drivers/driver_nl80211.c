@@ -4792,6 +4792,18 @@ static int phy_info_handler(struct nl_msg *msg, void *arg)
 			os_memcpy(mode->mcs_set, mcs, 16);
 		}
 
+		if (tb_band[NL80211_BAND_ATTR_VHT_CAPA]) {
+			mode->vht_capab = nla_get_u32(
+				tb_band[NL80211_BAND_ATTR_VHT_CAPA]);
+		}
+
+		if (tb_band[NL80211_BAND_ATTR_VHT_MCS_SET] &&
+		    nla_len(tb_band[NL80211_BAND_ATTR_VHT_MCS_SET])) {
+			u8 *mcs;
+			mcs = nla_data(tb_band[NL80211_BAND_ATTR_VHT_MCS_SET]);
+			os_memcpy(mode->vht_mcs_set, mcs, 8);
+		}
+
 		nla_for_each_nested(nl_freq, tb_band[NL80211_BAND_ATTR_FREQS], rem_freq) {
 			nla_parse(tb_freq, NL80211_FREQUENCY_ATTR_MAX, nla_data(nl_freq),
 				  nla_len(nl_freq), freq_policy);

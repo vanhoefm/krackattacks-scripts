@@ -278,7 +278,7 @@ static int eloop_sock_table_set_fds(struct eloop_sock_table *readers,
 				pollfds_map[fd] = pfd;
 				nxt++;
 			}
-			pfd->events |= POLLIN;
+			pfd->events |= POLLOUT;
 		}
 	}
 

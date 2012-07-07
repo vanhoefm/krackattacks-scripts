@@ -159,8 +159,10 @@ static void * init_ufd(struct wps_context *wps,
 	}
 
 	data = os_zalloc(sizeof(*data));
-	if (data == NULL)
+	if (data == NULL) {
+		close(ufd_fd);
 		return NULL;
+	}
 	data->ufd_fd = ufd_fd;
 	return data;
 }

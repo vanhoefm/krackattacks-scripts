@@ -866,20 +866,24 @@ int ssdp_open_multicast_sock(u32 ip_addr)
 		return -1;
 
 #if 0   /* maybe ok if we sometimes block on writes */
-	if (fcntl(sd, F_SETFL, O_NONBLOCK) != 0)
+	if (fcntl(sd, F_SETFL, O_NONBLOCK) != 0) {
+		close(sd);
 		return -1;
+	}
 #endif
 
 	if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_IF,
 		       &ip_addr, sizeof(ip_addr))) {
 		wpa_printf(MSG_DEBUG, "WPS: setsockopt(IP_MULTICAST_IF) %x: "
 			   "%d (%s)", ip_addr, errno, strerror(errno));
+		close(sd);
 		return -1;
 	}
 	if (setsockopt(sd, IPPROTO_IP, IP_MULTICAST_TTL,
 		       &ttl, sizeof(ttl))) {
 		wpa_printf(MSG_DEBUG, "WPS: setsockopt(IP_MULTICAST_TTL): "
 			   "%d (%s)", errno, strerror(errno));
+		close(sd);
 		return -1;
 	}
 
@@ -898,6 +902,7 @@ int ssdp_open_multicast_sock(u32 ip_addr)
 				   "WPS UPnP: setsockopt "
 				   "IP_ADD_MEMBERSHIP errno %d (%s)",
 				   errno, strerror(errno));
+			close(sd);
 			return -1;
 		}
 	}

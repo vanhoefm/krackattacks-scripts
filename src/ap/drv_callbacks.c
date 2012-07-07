@@ -277,6 +277,7 @@ void hostapd_event_sta_low_ack(struct hostapd_data *hapd, const u8 *addr)
 void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 			     int offset)
 {
+#ifdef NEED_AP_MLME
 	int channel;
 
 	hostapd_logger(hapd, NULL, HOSTAPD_MODULE_IEEE80211,
@@ -296,6 +297,7 @@ void hostapd_event_ch_switch(struct hostapd_data *hapd, int freq, int ht,
 	hapd->iconf->channel = channel;
 	hapd->iconf->ieee80211n = ht;
 	hapd->iconf->secondary_channel = offset;
+#endif /* NEED_AP_MLME */
 }
 
 

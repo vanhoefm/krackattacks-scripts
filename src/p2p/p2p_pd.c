@@ -16,8 +16,8 @@
 
 
 /*
- * Number of retries to attempt for provision discovery requests during IDLE
- * state in case the peer is not listening.
+ * Number of retries to attempt for provision discovery requests
+ * in case the peer is not listening.
  */
 #define MAX_PROV_DISC_REQ_RETRIES 10
 
@@ -347,6 +347,7 @@ int p2p_send_prov_disc_req(struct p2p_data *p2p, struct p2p_device *dev,
 	if (p2p->state != P2P_IDLE)
 		p2p_stop_listen_for_freq(p2p, freq);
 	p2p->pending_action_state = P2P_PENDING_PD;
+	p2p_set_timeout(p2p, 0, 300000);
 	if (p2p_send_action(p2p, freq, dev->info.p2p_device_addr,
 			    p2p->cfg->dev_addr, dev->info.p2p_device_addr,
 			    wpabuf_head(req), wpabuf_len(req), 200) < 0) {
@@ -408,8 +409,7 @@ int p2p_prov_disc_req(struct p2p_data *p2p, const u8 *peer_addr,
 	 */
 	p2p->user_initiated_pd = !join;
 
-	/* Also set some retries to attempt in case of IDLE state */
-	if (p2p->user_initiated_pd && p2p->state == P2P_IDLE)
+	if (p2p->user_initiated_pd)
 		p2p->pd_retries = MAX_PROV_DISC_REQ_RETRIES;
 
 	return p2p_send_prov_disc_req(p2p, dev, join, force_freq);

@@ -2598,7 +2598,13 @@ static void p2p_prov_disc_cb(struct p2p_data *p2p, int success)
 	if (!success) {
 		p2p->pending_action_state = P2P_NO_PENDING_ACTION;
 
-		if (p2p->state != P2P_IDLE)
+		if (p2p->user_initiated_pd &&
+		    (p2p->state == P2P_SEARCH || p2p->state == P2P_LISTEN_ONLY))
+		{
+			/* Retry request from timeout to avoid busy loops */
+			p2p->pending_action_state = P2P_PENDING_PD;
+			p2p_set_timeout(p2p, 0, 50000);
+		} else if (p2p->state != P2P_IDLE)
 			p2p_continue_find(p2p);
 		else if (p2p->user_initiated_pd) {
 			p2p->pending_action_state = P2P_PENDING_PD;

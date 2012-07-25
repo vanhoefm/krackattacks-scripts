@@ -3612,6 +3612,7 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 	struct wpa_driver_nl80211_data *drv = bss->drv;
 	int ret = 0;
 	struct nl_msg *msg, *ssids, *freqs, *match_set_ssid, *match_sets;
+	struct nl_msg *match_set_rssi;
 	size_t i;
 
 #ifdef ANDROID
@@ -3640,8 +3641,9 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 
 	NLA_PUT_U32(msg, NL80211_ATTR_SCHED_SCAN_INTERVAL, interval);
 
-	if (drv->num_filter_ssids &&
-	    (int) drv->num_filter_ssids <= drv->capa.max_match_sets) {
+	if ((drv->num_filter_ssids &&
+	    (int) drv->num_filter_ssids <= drv->capa.max_match_sets) ||
+	    params->filter_rssi) {
 		match_sets = nlmsg_alloc();
 
 		for (i = 0; i < drv->num_filter_ssids; i++) {
@@ -3659,6 +3661,18 @@ static int wpa_driver_nl80211_sched_scan(void *priv,
 			nla_put_nested(match_sets, i + 1, match_set_ssid);
 
 			nlmsg_free(match_set_ssid);
+		}
+
+		if (params->filter_rssi) {
+			match_set_rssi = nlmsg_alloc();
+			NLA_PUT_U32(match_set_rssi,
+				    NL80211_SCHED_SCAN_MATCH_ATTR_RSSI,
+				    params->filter_rssi);
+			wpa_printf(MSG_MSGDUMP,
+				   "nl80211: Sched scan RSSI filter %d dBm",
+				   params->filter_rssi);
+			nla_put_nested(match_sets, 0, match_set_rssi);
+			nlmsg_free(match_set_rssi);
 		}
 
 		nla_put_nested(msg, NL80211_ATTR_SCHED_SCAN_MATCH,

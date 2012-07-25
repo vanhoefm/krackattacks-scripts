@@ -575,6 +575,14 @@ struct wpa_config {
 	int filter_ssids;
 
 	/**
+	 * filter_rssi - RSSI-based scan result filtering
+	 *
+	 * 0 = do not filter scan results
+	 * -n = filter scan results below -n dBm
+	 */
+	int filter_rssi;
+
+	/**
 	 * max_num_sta - Maximum number of STAs in an AP/P2P GO
 	 */
 	unsigned int max_num_sta;

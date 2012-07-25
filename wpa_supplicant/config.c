@@ -2908,6 +2908,7 @@ static const struct global_parse_data global_fields[] = {
 	{ INT(bss_expiration_age), 0 },
 	{ INT(bss_expiration_scan_count), 0 },
 	{ INT_RANGE(filter_ssids, 0, 1), 0 },
+	{ INT_RANGE(filter_rssi, -100, 0), 0 },
 	{ INT(max_num_sta), 0 },
 	{ INT_RANGE(disassoc_low_ack, 0, 1), 0 },
 #ifdef CONFIG_HS20

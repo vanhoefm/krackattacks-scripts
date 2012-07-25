@@ -274,6 +274,15 @@ struct wpa_driver_scan_params {
 	size_t num_filter_ssids;
 
 	/**
+	 * filter_rssi - Filter by RSSI
+	 *
+	 * The driver may filter scan results in firmware to reduce host
+	 * wakeups and thereby save power. Specify the RSSI threshold in s32
+	 * dBm.
+	 */
+	s32 filter_rssi;
+
+	/**
 	 * p2p_probe - Used to disable CCK (802.11b) rates for P2P probes
 	 *
 	 * When set, the driver is expected to remove rates 1, 2, 5.5, and 11

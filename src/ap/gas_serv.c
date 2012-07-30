@@ -128,6 +128,21 @@ static void gas_serv_free_dialogs(struct hostapd_data *hapd,
 }
 
 
+static void anqp_add_hs_capab_list(struct hostapd_data *hapd,
+				   struct wpabuf *buf)
+{
+	u8 *len;
+
+	len = gas_anqp_add_element(buf, ANQP_VENDOR_SPECIFIC);
+	wpabuf_put_be24(buf, OUI_WFA);
+	wpabuf_put_u8(buf, HS20_ANQP_OUI_TYPE);
+	wpabuf_put_u8(buf, HS20_STYPE_CAPABILITY_LIST);
+	wpabuf_put_u8(buf, 0); /* Reserved */
+	wpabuf_put_u8(buf, HS20_STYPE_CAPABILITY_LIST);
+	gas_anqp_set_element_len(buf, len);
+}
+
+
 static void anqp_add_capab_list(struct hostapd_data *hapd,
 				struct wpabuf *buf)
 {
@@ -145,6 +160,7 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
 	if (hapd->conf->domain_name)
 		wpabuf_put_le16(buf, ANQP_DOMAIN_NAME);
+	anqp_add_hs_capab_list(hapd, buf);
 	gas_anqp_set_element_len(buf, len);
 }
 
@@ -244,6 +260,9 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 	if (request & ANQP_REQ_DOMAIN_NAME)
 		anqp_add_domain_name(hapd, buf);
 
+	if (request & ANQP_REQ_HS_CAPABILITY_LIST)
+		anqp_add_hs_capab_list(hapd, buf);
+
 	return buf;
 }
 
@@ -335,6 +354,71 @@ static void rx_anqp_query_list(struct hostapd_data *hapd,
 	while (pos + 2 <= end) {
 		rx_anqp_query_list_id(hapd, WPA_GET_LE16(pos), qi);
 		pos += 2;
+	}
+}
+
+
+static void rx_anqp_hs_query_list(struct hostapd_data *hapd, u8 subtype,
+				  struct anqp_query_info *qi)
+{
+	switch (subtype) {
+	case HS20_STYPE_CAPABILITY_LIST:
+		set_anqp_req(ANQP_REQ_HS_CAPABILITY_LIST, "HS Capability List",
+			     1, 0, 0, qi);
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported HS 2.0 subtype %u",
+			   subtype);
+		break;
+	}
+}
+
+
+static void rx_anqp_vendor_specific(struct hostapd_data *hapd,
+				    const u8 *pos, const u8 *end,
+				    struct anqp_query_info *qi)
+{
+	u32 oui;
+	u8 subtype;
+
+	if (pos + 4 > end) {
+		wpa_printf(MSG_DEBUG, "ANQP: Too short vendor specific ANQP "
+			   "Query element");
+		return;
+	}
+
+	oui = WPA_GET_BE24(pos);
+	pos += 3;
+	if (oui != OUI_WFA) {
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported vendor OUI %06x",
+			   oui);
+		return;
+	}
+
+	if (*pos != HS20_ANQP_OUI_TYPE) {
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported WFA vendor type %u",
+			   *pos);
+		return;
+	}
+	pos++;
+
+	if (pos + 1 >= end)
+		return;
+
+	subtype = *pos++;
+	pos++; /* Reserved */
+	switch (subtype) {
+	case HS20_STYPE_QUERY_LIST:
+		wpa_printf(MSG_DEBUG, "ANQP: HS 2.0 Query List");
+		while (pos < end) {
+			rx_anqp_hs_query_list(hapd, *pos, qi);
+			pos++;
+		}
+		break;
+	default:
+		wpa_printf(MSG_DEBUG, "ANQP: Unsupported HS 2.0 query subtype "
+			   "%u", subtype);
+		break;
 	}
 }
 
@@ -479,6 +563,9 @@ static void gas_serv_rx_gas_initial_req(struct hostapd_data *hapd,
 		switch (info_id) {
 		case ANQP_QUERY_LIST:
 			rx_anqp_query_list(hapd, pos, pos + elen, &qi);
+			break;
+		case ANQP_VENDOR_SPECIFIC:
+			rx_anqp_vendor_specific(hapd, pos, pos + elen, &qi);
 			break;
 		default:
 			wpa_printf(MSG_DEBUG, "ANQP: Unsupported Query "

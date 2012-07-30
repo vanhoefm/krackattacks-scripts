@@ -21,6 +21,8 @@
 	(1 << (ANQP_IP_ADDR_TYPE_AVAILABILITY - ANQP_QUERY_LIST))
 #define ANQP_REQ_DOMAIN_NAME \
 	(1 << (ANQP_DOMAIN_NAME - ANQP_QUERY_LIST))
+#define ANQP_REQ_HS_CAPABILITY_LIST \
+	(0x10000 << HS20_STYPE_CAPABILITY_LIST)
 
 /* To account for latencies between hostapd and external ANQP processor */
 #define GAS_SERV_COMEBACK_DELAY_FUDGE 10

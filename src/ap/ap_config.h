@@ -399,6 +399,10 @@ struct hostapd_bss_config {
 	u8 ipaddr_type_availability;
 	u8 ipaddr_type_configured;
 
+	/* IEEE 802.11u - Domain Name */
+	u8 *domain_name;
+	size_t domain_name_len;
+
 	u16 gas_comeback_delay;
 	int gas_frag_limit;
 

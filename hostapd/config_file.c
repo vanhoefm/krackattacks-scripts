@@ -2468,6 +2468,47 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				return errors;
 			}
 			bss->ipaddr_type_configured = 1;
+		} else if (os_strcmp(buf, "domain_name") == 0) {
+			int j, num_domains, domain_len, domain_list_len = 0;
+			char *tok_start, *tok_prev;
+			u8 *domain_list, *domain_ptr;
+
+			domain_list_len = os_strlen(pos) + 1;
+			domain_list = os_malloc(domain_list_len);
+			if (domain_list == NULL) {
+				errors++;
+				return errors;
+			}
+
+			domain_ptr = domain_list;
+			tok_prev = pos;
+			num_domains = 1;
+			while ((tok_prev = os_strchr(tok_prev, ','))) {
+				num_domains++;
+				tok_prev++;
+			}
+			tok_prev = pos;
+			for (j = 0; j < num_domains; j++) {
+				tok_start = os_strchr(tok_prev, ',');
+				if (tok_start) {
+					domain_len = tok_start - tok_prev;
+					*domain_ptr = domain_len;
+					os_memcpy(domain_ptr + 1, tok_prev,
+						  domain_len);
+					domain_ptr += domain_len + 1;
+					tok_prev = ++tok_start;
+				} else {
+					domain_len = os_strlen(tok_prev);
+					*domain_ptr = domain_len;
+					os_memcpy(domain_ptr + 1, tok_prev,
+						  domain_len);
+					domain_ptr += domain_len + 1;
+				}
+			}
+
+			os_free(bss->domain_name);
+			bss->domain_name = domain_list;
+			bss->domain_name_len = domain_list_len;
 		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 			bss->gas_frag_limit = atoi(pos);
 		} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {

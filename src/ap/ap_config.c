@@ -499,6 +499,7 @@ static void hostapd_config_free_bss(struct hostapd_bss_config *conf)
 	os_free(conf->roaming_consortium);
 	os_free(conf->venue_name);
 	os_free(conf->network_auth_type);
+	os_free(conf->domain_name);
 
 #ifdef CONFIG_RADIUS_TEST
 	os_free(conf->dump_msk_file);

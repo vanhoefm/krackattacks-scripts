@@ -143,6 +143,8 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
 	if (hapd->conf->ipaddr_type_configured)
 		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
+	if (hapd->conf->domain_name)
+		wpabuf_put_le16(buf, ANQP_DOMAIN_NAME);
 	gas_anqp_set_element_len(buf, len);
 }
 
@@ -207,6 +209,17 @@ static void anqp_add_ip_addr_type_availability(struct hostapd_data *hapd,
 }
 
 
+static void anqp_add_domain_name(struct hostapd_data *hapd, struct wpabuf *buf)
+{
+	if (hapd->conf->domain_name) {
+		wpabuf_put_le16(buf, ANQP_DOMAIN_NAME);
+		wpabuf_put_le16(buf, hapd->conf->domain_name_len);
+		wpabuf_put_data(buf, hapd->conf->domain_name,
+				hapd->conf->domain_name_len);
+	}
+}
+
+
 static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 				unsigned int request,
@@ -228,6 +241,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_roaming_consortium(hapd, buf);
 	if (request & ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY)
 		anqp_add_ip_addr_type_availability(hapd, buf);
+	if (request & ANQP_REQ_DOMAIN_NAME)
+		anqp_add_domain_name(hapd, buf);
 
 	return buf;
 }
@@ -297,6 +312,11 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 			     "IP Addr Type Availability",
 			     hapd->conf->ipaddr_type_configured,
 			     0, 0, qi);
+	case ANQP_DOMAIN_NAME:
+		set_anqp_req(ANQP_REQ_DOMAIN_NAME, "Domain Name",
+			     hapd->conf->domain_name != NULL,
+			     0, 0, qi);
+		break;
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported Info Id %u",
 			   info_id);

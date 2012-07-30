@@ -19,6 +19,8 @@
 	(1 << (ANQP_ROAMING_CONSORTIUM - ANQP_QUERY_LIST))
 #define ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY \
 	(1 << (ANQP_IP_ADDR_TYPE_AVAILABILITY - ANQP_QUERY_LIST))
+#define ANQP_REQ_DOMAIN_NAME \
+	(1 << (ANQP_DOMAIN_NAME - ANQP_QUERY_LIST))
 
 /* To account for latencies between hostapd and external ANQP processor */
 #define GAS_SERV_COMEBACK_DELAY_FUDGE 10

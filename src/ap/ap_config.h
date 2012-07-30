@@ -396,6 +396,10 @@ struct hostapd_bss_config {
 	u8 ipaddr_type_availability;
 	u8 ipaddr_type_configured;
 
+	/* IEEE 802.11u - 3GPP Cellular Network */
+	u8 *anqp_3gpp_cell_net;
+	size_t anqp_3gpp_cell_net_len;
+
 	/* IEEE 802.11u - Domain Name */
 	u8 *domain_name;
 	size_t domain_name_len;

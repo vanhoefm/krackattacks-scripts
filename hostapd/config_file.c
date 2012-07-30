@@ -1329,6 +1329,82 @@ fail:
 		   line, pos);
 	return -1;
 }
+
+
+static int parse_3gpp_cell_net(struct hostapd_bss_config *bss, char *buf,
+			       int line)
+{
+	size_t count;
+	char *pos;
+	u8 *info = NULL, *ipos;
+
+	/* format: <MCC1,MNC1>[;<MCC2,MNC2>][;...] */
+
+	count = 1;
+	for (pos = buf; *pos; pos++) {
+		if ((*pos < '0' && *pos > '9') && *pos != ';' && *pos != ',')
+			goto fail;
+		if (*pos == ';')
+			count++;
+	}
+	if (1 + count * 3 > 0x7f)
+		goto fail;
+
+	info = os_zalloc(2 + 3 + count * 3);
+	if (info == NULL)
+		return -1;
+
+	ipos = info;
+	*ipos++ = 0; /* GUD - Version 1 */
+	*ipos++ = 3 + count * 3; /* User Data Header Length (UDHL) */
+	*ipos++ = 0; /* PLMN List IEI */
+	/* ext(b8) | Length of PLMN List value contents(b7..1) */
+	*ipos++ = 1 + count * 3;
+	*ipos++ = count; /* Number of PLMNs */
+
+	pos = buf;
+	while (pos && *pos) {
+		char *mcc, *mnc;
+		size_t mnc_len;
+
+		mcc = pos;
+		mnc = os_strchr(pos, ',');
+		if (mnc == NULL)
+			goto fail;
+		*mnc++ = '\0';
+		pos = os_strchr(mnc, ';');
+		if (pos)
+			*pos++ = '\0';
+
+		mnc_len = os_strlen(mnc);
+		if (os_strlen(mcc) != 3 || (mnc_len != 2 && mnc_len != 3))
+			goto fail;
+
+		/* BC coded MCC,MNC */
+		/* MCC digit 2 | MCC digit 1 */
+		*ipos++ = ((mcc[1] - '0') << 4) | (mcc[0] - '0');
+		/* MNC digit 3 | MCC digit 3 */
+		*ipos++ = (((mnc_len == 2) ? 0xf0 : ((mnc[2] - '0') << 4))) |
+			(mcc[2] - '0');
+		/* MNC digit 2 | MNC digit 1 */
+		*ipos++ = ((mnc[1] - '0') << 4) | (mnc[0] - '0');
+	}
+
+	os_free(bss->anqp_3gpp_cell_net);
+	bss->anqp_3gpp_cell_net = info;
+	bss->anqp_3gpp_cell_net_len = 2 + 3 + 3 * count;
+	wpa_hexdump(MSG_MSGDUMP, "3GPP Cellular Network information",
+		    bss->anqp_3gpp_cell_net, bss->anqp_3gpp_cell_net_len);
+
+	return 0;
+
+fail:
+	wpa_printf(MSG_ERROR, "Line %d: Invalid anqp_3gpp_cell_net: %s",
+		   line, buf);
+	os_free(info);
+	return -1;
+}
+
 #endif /* CONFIG_INTERWORKING */
 
 
@@ -2479,6 +2555,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 			os_free(bss->domain_name);
 			bss->domain_name = domain_list;
 			bss->domain_name_len = domain_list_len;
+		} else if (os_strcmp(buf, "anqp_3gpp_cell_net") == 0) {
+			if (parse_3gpp_cell_net(bss, pos, line) < 0)
+				errors++;
 		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 			bss->gas_frag_limit = atoi(pos);
 		} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {

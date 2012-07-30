@@ -158,6 +158,8 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
 	if (hapd->conf->ipaddr_type_configured)
 		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
+	if (hapd->conf->anqp_3gpp_cell_net)
+		wpabuf_put_le16(buf, ANQP_3GPP_CELLULAR_NETWORK);
 	if (hapd->conf->domain_name)
 		wpabuf_put_le16(buf, ANQP_DOMAIN_NAME);
 	anqp_add_hs_capab_list(hapd, buf);
@@ -225,6 +227,19 @@ static void anqp_add_ip_addr_type_availability(struct hostapd_data *hapd,
 }
 
 
+static void anqp_add_3gpp_cellular_network(struct hostapd_data *hapd,
+					   struct wpabuf *buf)
+{
+	if (hapd->conf->anqp_3gpp_cell_net) {
+		wpabuf_put_le16(buf, ANQP_3GPP_CELLULAR_NETWORK);
+		wpabuf_put_le16(buf,
+				hapd->conf->anqp_3gpp_cell_net_len);
+		wpabuf_put_data(buf, hapd->conf->anqp_3gpp_cell_net,
+				hapd->conf->anqp_3gpp_cell_net_len);
+	}
+}
+
+
 static void anqp_add_domain_name(struct hostapd_data *hapd, struct wpabuf *buf)
 {
 	if (hapd->conf->domain_name) {
@@ -257,6 +272,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_roaming_consortium(hapd, buf);
 	if (request & ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY)
 		anqp_add_ip_addr_type_availability(hapd, buf);
+	if (request & ANQP_REQ_3GPP_CELLULAR_NETWORK)
+		anqp_add_3gpp_cellular_network(hapd, buf);
 	if (request & ANQP_REQ_DOMAIN_NAME)
 		anqp_add_domain_name(hapd, buf);
 
@@ -330,6 +347,12 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 		set_anqp_req(ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY,
 			     "IP Addr Type Availability",
 			     hapd->conf->ipaddr_type_configured,
+			     0, 0, qi);
+		break;
+	case ANQP_3GPP_CELLULAR_NETWORK:
+		set_anqp_req(ANQP_REQ_3GPP_CELLULAR_NETWORK,
+			     "3GPP Cellular Network",
+			     hapd->conf->anqp_3gpp_cell_net != NULL,
 			     0, 0, qi);
 		break;
 	case ANQP_DOMAIN_NAME:

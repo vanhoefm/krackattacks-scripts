@@ -395,6 +395,10 @@ struct hostapd_bss_config {
 	u8 *network_auth_type;
 	size_t network_auth_type_len;
 
+	/* IEEE 802.11u - IP Address Type Availability */
+	u8 ipaddr_type_availability;
+	u8 ipaddr_type_configured;
+
 	u16 gas_comeback_delay;
 	int gas_frag_limit;
 

@@ -2457,6 +2457,17 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 				os_memcpy(bss->network_auth_type + 3,
 					  pos + 2, redirect_url_len);
 			bss->network_auth_type_len = 3 + redirect_url_len;
+		} else if (os_strcmp(buf, "ipaddr_type_availability") == 0) {
+			if (hexstr2bin(pos, &bss->ipaddr_type_availability, 1))
+			{
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "ipaddr_type_availability '%s'",
+					   line, pos);
+				bss->ipaddr_type_configured = 0;
+				errors++;
+				return errors;
+			}
+			bss->ipaddr_type_configured = 1;
 		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 			bss->gas_frag_limit = atoi(pos);
 		} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {

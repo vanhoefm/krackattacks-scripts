@@ -141,6 +141,8 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 		wpabuf_put_le16(buf, ANQP_NETWORK_AUTH_TYPE);
 	if (hapd->conf->roaming_consortium)
 		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
+	if (hapd->conf->ipaddr_type_configured)
+		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
 	gas_anqp_set_element_len(buf, len);
 }
 
@@ -194,6 +196,17 @@ static void anqp_add_roaming_consortium(struct hostapd_data *hapd,
 }
 
 
+static void anqp_add_ip_addr_type_availability(struct hostapd_data *hapd,
+					       struct wpabuf *buf)
+{
+	if (hapd->conf->ipaddr_type_configured) {
+		wpabuf_put_le16(buf, ANQP_IP_ADDR_TYPE_AVAILABILITY);
+		wpabuf_put_le16(buf, 1);
+		wpabuf_put_u8(buf, hapd->conf->ipaddr_type_availability);
+	}
+}
+
+
 static struct wpabuf *
 gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 				unsigned int request,
@@ -213,6 +226,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_network_auth_type(hapd, buf);
 	if (request & ANQP_REQ_ROAMING_CONSORTIUM)
 		anqp_add_roaming_consortium(hapd, buf);
+	if (request & ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY)
+		anqp_add_ip_addr_type_availability(hapd, buf);
 
 	return buf;
 }
@@ -277,6 +292,11 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 		set_anqp_req(ANQP_REQ_ROAMING_CONSORTIUM, "Roaming Consortium",
 			     hapd->conf->roaming_consortium != NULL, 0, 0, qi);
 		break;
+	case ANQP_IP_ADDR_TYPE_AVAILABILITY:
+		set_anqp_req(ANQP_REQ_IP_ADDR_TYPE_AVAILABILITY,
+			     "IP Addr Type Availability",
+			     hapd->conf->ipaddr_type_configured,
+			     0, 0, qi);
 	default:
 		wpa_printf(MSG_DEBUG, "ANQP: Unsupported Info Id %u",
 			   info_id);

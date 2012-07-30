@@ -137,6 +137,8 @@ static void anqp_add_capab_list(struct hostapd_data *hapd,
 	wpabuf_put_le16(buf, ANQP_CAPABILITY_LIST);
 	if (hapd->conf->venue_name)
 		wpabuf_put_le16(buf, ANQP_VENUE_NAME);
+	if (hapd->conf->network_auth_type)
+		wpabuf_put_le16(buf, ANQP_NETWORK_AUTH_TYPE);
 	if (hapd->conf->roaming_consortium)
 		wpabuf_put_le16(buf, ANQP_ROAMING_CONSORTIUM);
 	gas_anqp_set_element_len(buf, len);
@@ -159,6 +161,18 @@ static void anqp_add_venue_name(struct hostapd_data *hapd, struct wpabuf *buf)
 			wpabuf_put_data(buf, vn->name, vn->name_len);
 		}
 		gas_anqp_set_element_len(buf, len);
+	}
+}
+
+
+static void anqp_add_network_auth_type(struct hostapd_data *hapd,
+				       struct wpabuf *buf)
+{
+	if (hapd->conf->network_auth_type) {
+		wpabuf_put_le16(buf, ANQP_NETWORK_AUTH_TYPE);
+		wpabuf_put_le16(buf, hapd->conf->network_auth_type_len);
+		wpabuf_put_data(buf, hapd->conf->network_auth_type,
+				hapd->conf->network_auth_type_len);
 	}
 }
 
@@ -195,6 +209,8 @@ gas_serv_build_gas_resp_payload(struct hostapd_data *hapd,
 		anqp_add_capab_list(hapd, buf);
 	if (request & ANQP_REQ_VENUE_NAME)
 		anqp_add_venue_name(hapd, buf);
+	if (request & ANQP_REQ_NETWORK_AUTH_TYPE)
+		anqp_add_network_auth_type(hapd, buf);
 	if (request & ANQP_REQ_ROAMING_CONSORTIUM)
 		anqp_add_roaming_consortium(hapd, buf);
 
@@ -251,6 +267,11 @@ static void rx_anqp_query_list_id(struct hostapd_data *hapd, u16 info_id,
 	case ANQP_VENUE_NAME:
 		set_anqp_req(ANQP_REQ_VENUE_NAME, "Venue Name",
 			     hapd->conf->venue_name != NULL, 0, 0, qi);
+		break;
+	case ANQP_NETWORK_AUTH_TYPE:
+		set_anqp_req(ANQP_REQ_NETWORK_AUTH_TYPE, "Network Auth Type",
+			     hapd->conf->network_auth_type != NULL,
+			     0, 0, qi);
 		break;
 	case ANQP_ROAMING_CONSORTIUM:
 		set_anqp_req(ANQP_REQ_ROAMING_CONSORTIUM, "Roaming Consortium",

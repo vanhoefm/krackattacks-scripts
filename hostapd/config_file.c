@@ -2429,6 +2429,34 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		} else if (os_strcmp(buf, "venue_name") == 0) {
 			if (parse_venue_name(bss, pos, line) < 0)
 				errors++;
+		} else if (os_strcmp(buf, "network_auth_type") == 0) {
+			u8 auth_type;
+			u16 redirect_url_len;
+			if (hexstr2bin(pos, &auth_type, 1)) {
+				wpa_printf(MSG_ERROR, "Line %d: Invalid "
+					   "network_auth_type '%s'",
+					   line, pos);
+				errors++;
+				return errors;
+			}
+			if (auth_type == 0 || auth_type == 2)
+				redirect_url_len = os_strlen(pos + 2);
+			else
+				redirect_url_len = 0;
+			os_free(bss->network_auth_type);
+			bss->network_auth_type =
+				os_malloc(redirect_url_len + 3 + 1);
+			if (bss->network_auth_type == NULL) {
+				errors++;
+				return errors;
+			}
+			*bss->network_auth_type = auth_type;
+			WPA_PUT_LE16(bss->network_auth_type + 1,
+				     redirect_url_len);
+			if (redirect_url_len)
+				os_memcpy(bss->network_auth_type + 3,
+					  pos + 2, redirect_url_len);
+			bss->network_auth_type_len = 3 + redirect_url_len;
 		} else if (os_strcmp(buf, "gas_frag_limit") == 0) {
 			bss->gas_frag_limit = atoi(pos);
 		} else if (os_strcmp(buf, "gas_comeback_delay") == 0) {

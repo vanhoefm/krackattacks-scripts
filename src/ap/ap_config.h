@@ -391,6 +391,10 @@ struct hostapd_bss_config {
 	unsigned int venue_name_count;
 	struct hostapd_venue_name *venue_name;
 
+	/* IEEE 802.11u - Network Authentication Type */
+	u8 *network_auth_type;
+	size_t network_auth_type_len;
+
 	u16 gas_comeback_delay;
 	int gas_frag_limit;
 

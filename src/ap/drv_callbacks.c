@@ -406,6 +406,8 @@ int hostapd_probe_req_rx(struct hostapd_data *hapd, const u8 *sa, const u8 *da,
 }
 
 
+#ifdef HOSTAPD
+
 #ifdef CONFIG_IEEE80211R
 static void hostapd_notify_auth_ft_finish(void *ctx, const u8 *dst,
 					  const u8 *bssid,
@@ -427,8 +429,6 @@ static void hostapd_notify_auth_ft_finish(void *ctx, const u8 *dst,
 }
 #endif /* CONFIG_IEEE80211R */
 
-
-#ifdef HOSTAPD
 
 static void hostapd_notif_auth(struct hostapd_data *hapd,
 			       struct auth_info *rx_auth)

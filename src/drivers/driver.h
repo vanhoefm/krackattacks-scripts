@@ -831,6 +831,8 @@ struct wpa_driver_capa {
 #define WPA_DRIVER_FLAGS_AP_UAPSD			0x00400000
 /* Driver supports inactivity timer in AP mode */
 #define WPA_DRIVER_FLAGS_INACTIVITY_TIMER		0x00800000
+/* Driver expects user space implementation of MLME in AP mode */
+#define WPA_DRIVER_FLAGS_AP_MLME			0x01000000
 	unsigned int flags;
 
 	int max_scan_ssids;

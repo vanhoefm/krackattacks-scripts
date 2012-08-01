@@ -2631,8 +2631,15 @@ static int wpa_driver_nl80211_capa(struct wpa_driver_nl80211_data *drv)
 	drv->capa.flags |= WPA_DRIVER_FLAGS_SET_KEYS_AFTER_ASSOC_DONE;
 	drv->capa.flags |= WPA_DRIVER_FLAGS_EAPOL_TX_STATUS;
 
-	if (!info.device_ap_sme)
+	if (!info.device_ap_sme) {
 		drv->capa.flags |= WPA_DRIVER_FLAGS_DEAUTH_TX_STATUS;
+
+		/*
+		 * No AP SME is currently assumed to also indicate no AP MLME
+		 * in the driver/firmware.
+		 */
+		drv->capa.flags |= WPA_DRIVER_FLAGS_AP_MLME;
+	}
 
 	drv->device_ap_sme = info.device_ap_sme;
 	drv->poll_command_supported = info.poll_command_supported;

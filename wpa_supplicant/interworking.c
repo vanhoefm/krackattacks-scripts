@@ -730,6 +730,68 @@ fail:
 }
 
 
+static int interworking_set_eap_params(struct wpa_ssid *ssid,
+				       struct wpa_cred *cred, int ttls)
+{
+	if (ttls && cred->username && cred->username[0]) {
+		const char *pos;
+		char *anon;
+		/* Use anonymous NAI in Phase 1 */
+		pos = os_strchr(cred->username, '@');
+		if (pos) {
+			size_t buflen = 9 + os_strlen(pos) + 1;
+			anon = os_malloc(buflen);
+			if (anon == NULL)
+				return -1;
+			os_snprintf(anon, buflen, "anonymous%s", pos);
+		} else if (cred->realm) {
+			size_t buflen = 10 + os_strlen(cred->realm) + 1;
+			anon = os_malloc(buflen);
+			if (anon == NULL)
+				return -1;
+			os_snprintf(anon, buflen, "anonymous@%s", cred->realm);
+		} else {
+			anon = os_strdup("anonymous");
+			if (anon == NULL)
+				return -1;
+		}
+		if (wpa_config_set_quoted(ssid, "anonymous_identity", anon) <
+		    0) {
+			os_free(anon);
+			return -1;
+		}
+		os_free(anon);
+	}
+
+	if (cred->username && cred->username[0] &&
+	    wpa_config_set_quoted(ssid, "identity", cred->username) < 0)
+		return -1;
+
+	if (cred->password && cred->password[0] &&
+	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
+		return -1;
+
+	if (cred->client_cert && cred->client_cert[0] &&
+	    wpa_config_set_quoted(ssid, "client_cert", cred->client_cert) < 0)
+		return -1;
+
+	if (cred->private_key && cred->private_key[0] &&
+	    wpa_config_set_quoted(ssid, "private_key", cred->private_key) < 0)
+		return -1;
+
+	if (cred->private_key_passwd && cred->private_key_passwd[0] &&
+	    wpa_config_set_quoted(ssid, "private_key_passwd",
+				  cred->private_key_passwd) < 0)
+		return -1;
+
+	if (cred->ca_cert && cred->ca_cert[0] &&
+	    wpa_config_set_quoted(ssid, "ca_cert", cred->ca_cert) < 0)
+		return -1;
+
+	return 0;
+}
+
+
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	struct wpa_cred *cred;
@@ -804,58 +866,6 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 						     eap->method), 0) < 0)
 		goto fail;
 
-	if (eap->method == EAP_TYPE_TTLS &&
-	    cred->username && cred->username[0]) {
-		const char *pos;
-		char *anon;
-		/* Use anonymous NAI in Phase 1 */
-		pos = os_strchr(cred->username, '@');
-		if (pos) {
-			size_t buflen = 9 + os_strlen(pos) + 1;
-			anon = os_malloc(buflen);
-			if (anon == NULL)
-				goto fail;
-			os_snprintf(anon, buflen, "anonymous%s", pos);
-		} else if (cred->realm) {
-			size_t buflen = 10 + os_strlen(cred->realm) + 1;
-			anon = os_malloc(buflen);
-			if (anon == NULL)
-				goto fail;
-			os_snprintf(anon, buflen, "anonymous@%s", cred->realm);
-		} else {
-			anon = os_strdup("anonymous");
-			if (anon == NULL)
-				goto fail;
-		}
-		if (wpa_config_set_quoted(ssid, "anonymous_identity", anon) <
-		    0) {
-			os_free(anon);
-			goto fail;
-		}
-		os_free(anon);
-	}
-
-	if (cred->username && cred->username[0] &&
-	    wpa_config_set_quoted(ssid, "identity", cred->username) < 0)
-		goto fail;
-
-	if (cred->password && cred->password[0] &&
-	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
-		goto fail;
-
-	if (cred->client_cert && cred->client_cert[0] &&
-	    wpa_config_set_quoted(ssid, "client_cert", cred->client_cert) < 0)
-		goto fail;
-
-	if (cred->private_key && cred->private_key[0] &&
-	    wpa_config_set_quoted(ssid, "private_key", cred->private_key) < 0)
-		goto fail;
-
-	if (cred->private_key_passwd && cred->private_key_passwd[0] &&
-	    wpa_config_set_quoted(ssid, "private_key_passwd",
-				  cred->private_key_passwd) < 0)
-		goto fail;
-
 	switch (eap->method) {
 	case EAP_TYPE_TTLS:
 		if (eap->inner_method) {
@@ -899,8 +909,8 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		break;
 	}
 
-	if (cred->ca_cert && cred->ca_cert[0] &&
-	    wpa_config_set_quoted(ssid, "ca_cert", cred->ca_cert) < 0)
+	if (interworking_set_eap_params(ssid, cred,
+					eap->method == EAP_TYPE_TTLS) < 0)
 		goto fail;
 
 	nai_realm_free(realm, count);

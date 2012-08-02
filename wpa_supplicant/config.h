@@ -150,6 +150,24 @@ struct wpa_cred {
 	char *domain;
 
 	/**
+	 * roaming_consortium - Roaming Consortium OI
+	 *
+	 * If roaming_consortium_len is non-zero, this field contains the
+	 * Roaming Consortium OI that can be used to determine which access
+	 * points support authentication with this credential. This is an
+	 * alternative to the use of the realm parameter. When using Roaming
+	 * Consortium to match the network, the EAP parameters need to be
+	 * pre-configured with the credential since the NAI Realm information
+	 * may not be available or fetched.
+	 */
+	u8 roaming_consortium[15];
+
+	/**
+	 * roaming_consortium_len - Length of roaming_consortium
+	 */
+	size_t roaming_consortium_len;
+
+	/**
 	 * eap_method - EAP method to use
 	 *
 	 * Pre-configured EAP method to use with this credential or %NULL to

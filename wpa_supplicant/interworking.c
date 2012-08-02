@@ -731,6 +731,114 @@ fail:
 }
 
 
+static int roaming_consortium_element_match(const u8 *ie, const u8 *rc_id,
+					    size_t rc_len)
+{
+	const u8 *pos, *end;
+	u8 lens;
+
+	if (ie == NULL)
+		return 0;
+
+	pos = ie + 2;
+	end = ie + 2 + ie[1];
+
+	/* Roaming Consortium element:
+	 * Number of ANQP OIs
+	 * OI #1 and #2 lengths
+	 * OI #1, [OI #2], [OI #3]
+	 */
+
+	if (pos + 2 > end)
+		return 0;
+
+	pos++; /* skip Number of ANQP OIs */
+	lens = *pos++;
+	if (pos + (lens & 0x0f) + (lens >> 4) > end)
+		return 0;
+
+	if ((lens & 0x0f) == rc_len && os_memcmp(pos, rc_id, rc_len) == 0)
+		return 1;
+	pos += lens & 0x0f;
+
+	if ((lens >> 4) == rc_len && os_memcmp(pos, rc_id, rc_len) == 0)
+		return 1;
+	pos += lens >> 4;
+
+	if (pos < end && (size_t) (end - pos) == rc_len &&
+	    os_memcmp(pos, rc_id, rc_len) == 0)
+		return 1;
+
+	return 0;
+}
+
+
+static int roaming_consortium_anqp_match(const struct wpabuf *anqp,
+					 const u8 *rc_id, size_t rc_len)
+{
+	const u8 *pos, *end;
+	u8 len;
+
+	if (anqp == NULL)
+		return 0;
+
+	pos = wpabuf_head(anqp);
+	end = pos + wpabuf_len(anqp);
+
+	/* Set of <OI Length, OI> duples */
+	while (pos < end) {
+		len = *pos++;
+		if (pos + len > end)
+			break;
+		if (len == rc_len && os_memcmp(pos, rc_id, rc_len) == 0)
+			return 1;
+		pos += len;
+	}
+
+	return 0;
+}
+
+
+static int roaming_consortium_match(const u8 *ie, const struct wpabuf *anqp,
+				    const u8 *rc_id, size_t rc_len)
+{
+	return roaming_consortium_element_match(ie, rc_id, rc_len) ||
+		roaming_consortium_anqp_match(anqp, rc_id, rc_len);
+}
+
+
+static struct wpa_cred * interworking_credentials_available_roaming_consortium(
+	struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
+{
+	struct wpa_cred *cred, *selected = NULL;
+	const u8 *ie;
+
+	ie = wpa_bss_get_ie(bss, WLAN_EID_ROAMING_CONSORTIUM);
+
+	if (ie == NULL && bss->anqp_roaming_consortium == NULL)
+		return NULL;
+
+	if (wpa_s->conf->cred == NULL)
+		return NULL;
+
+	for (cred = wpa_s->conf->cred; cred; cred = cred->next) {
+		if (cred->roaming_consortium_len == 0)
+			continue;
+
+		if (!roaming_consortium_match(ie, bss->anqp_roaming_consortium,
+					      cred->roaming_consortium,
+					      cred->roaming_consortium_len))
+			continue;
+
+		if (selected == NULL ||
+		    selected->priority < cred->priority)
+			selected = cred;
+	}
+
+	return selected;
+}
+
+
 static int interworking_set_eap_params(struct wpa_ssid *ssid,
 				       struct wpa_cred *cred, int ttls)
 {
@@ -817,6 +925,52 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 }
 
 
+static int interworking_connect_roaming_consortium(
+	struct wpa_supplicant *wpa_s, struct wpa_cred *cred,
+	struct wpa_bss *bss, const u8 *ssid_ie)
+{
+	struct wpa_ssid *ssid;
+
+	wpa_printf(MSG_DEBUG, "Interworking: Connect with " MACSTR " based on "
+		   "roaming consortium match", MAC2STR(bss->bssid));
+
+	ssid = wpa_config_add_network(wpa_s->conf);
+	if (ssid == NULL)
+		return -1;
+	wpas_notify_network_added(wpa_s, ssid);
+	wpa_config_set_network_defaults(ssid);
+	ssid->priority = cred->priority;
+	ssid->temporary = 1;
+	ssid->ssid = os_zalloc(ssid_ie[1] + 1);
+	if (ssid->ssid == NULL)
+		goto fail;
+	os_memcpy(ssid->ssid, ssid_ie + 2, ssid_ie[1]);
+	ssid->ssid_len = ssid_ie[1];
+
+	if (cred->eap_method == NULL) {
+		wpa_printf(MSG_DEBUG, "Interworking: No EAP method set for "
+			   "credential using roaming consortium");
+		goto fail;
+	}
+
+	if (interworking_set_eap_params(
+		    ssid, cred,
+		    cred->eap_method->vendor == EAP_VENDOR_IETF &&
+		    cred->eap_method->method == EAP_TYPE_TTLS) < 0)
+		goto fail;
+
+	wpa_config_update_prio_list(wpa_s->conf);
+	interworking_reconnect(wpa_s);
+
+	return 0;
+
+fail:
+	wpas_notify_network_removed(wpa_s, ssid);
+	wpa_config_remove_network(wpa_s->conf, ssid->id);
+	return -1;
+}
+
+
 int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 {
 	struct wpa_cred *cred;
@@ -835,6 +989,12 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 			   MACSTR, MAC2STR(bss->bssid));
 		return -1;
 	}
+
+	cred = interworking_credentials_available_roaming_consortium(wpa_s,
+								     bss);
+	if (cred)
+		return interworking_connect_roaming_consortium(wpa_s, cred,
+							       bss, ie);
 
 	realm = nai_realm_parse(bss->anqp_nai_realm, &count);
 	if (realm == NULL) {
@@ -1057,6 +1217,13 @@ static struct wpa_cred * interworking_credentials_available(
 
 	cred = interworking_credentials_available_realm(wpa_s, bss);
 	cred2 = interworking_credentials_available_3gpp(wpa_s, bss);
+	if (cred && cred2 && cred2->priority >= cred->priority)
+		cred = cred2;
+	if (!cred)
+		cred = cred2;
+
+	cred2 = interworking_credentials_available_roaming_consortium(wpa_s,
+								      bss);
 	if (cred && cred2 && cred2->priority >= cred->priority)
 		cred = cred2;
 	if (!cred)

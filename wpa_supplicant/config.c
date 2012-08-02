@@ -2350,6 +2350,20 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		return 0;
 	}
 
+	if (os_strcmp(var, "roaming_consortium") == 0) {
+		if (len < 3 || len > sizeof(cred->roaming_consortium)) {
+			wpa_printf(MSG_ERROR, "Line %d: invalid "
+				   "roaming_consortium length %d (3..15 "
+				   "expected)", line, (int) len);
+			os_free(val);
+			return -1;
+		}
+		os_memcpy(cred->roaming_consortium, val, len);
+		cred->roaming_consortium_len = len;
+		os_free(val);
+		return 0;
+	}
+
 	if (line) {
 		wpa_printf(MSG_ERROR, "Line %d: unknown cred field '%s'.",
 			   line, var);

@@ -15,6 +15,7 @@
 #include "utils/pcsc_funcs.h"
 #include "drivers/driver.h"
 #include "eap_common/eap_defs.h"
+#include "eap_peer/eap.h"
 #include "eap_peer/eap_methods.h"
 #include "wpa_supplicant_i.h"
 #include "config.h"
@@ -733,6 +734,21 @@ fail:
 static int interworking_set_eap_params(struct wpa_ssid *ssid,
 				       struct wpa_cred *cred, int ttls)
 {
+	if (cred->eap_method) {
+		ttls = cred->eap_method->vendor == EAP_VENDOR_IETF &&
+			cred->eap_method->method == EAP_TYPE_TTLS;
+
+		os_free(ssid->eap.eap_methods);
+		ssid->eap.eap_methods =
+			os_malloc(sizeof(struct eap_method_type) * 2);
+		if (ssid->eap.eap_methods == NULL)
+			return -1;
+		os_memcpy(ssid->eap.eap_methods, cred->eap_method,
+			  sizeof(*cred->eap_method));
+		ssid->eap.eap_methods[1].vendor = EAP_VENDOR_IETF;
+		ssid->eap.eap_methods[1].method = EAP_TYPE_NONE;
+	}
+
 	if (ttls && cred->username && cred->username[0]) {
 		const char *pos;
 		char *anon;
@@ -783,6 +799,15 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 	    wpa_config_set_quoted(ssid, "private_key_passwd",
 				  cred->private_key_passwd) < 0)
 		return -1;
+
+	if (cred->phase1) {
+		os_free(ssid->eap.phase1);
+		ssid->eap.phase1 = os_strdup(cred->phase1);
+	}
+	if (cred->phase2) {
+		os_free(ssid->eap.phase2);
+		ssid->eap.phase2 = os_strdup(cred->phase2);
+	}
 
 	if (cred->ca_cert && cred->ca_cert[0] &&
 	    wpa_config_set_quoted(ssid, "ca_cert", cred->ca_cert) < 0)

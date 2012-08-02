@@ -148,6 +148,29 @@ struct wpa_cred {
 	 * whether the AP is operated by the Home SP.
 	 */
 	char *domain;
+
+	/**
+	 * eap_method - EAP method to use
+	 *
+	 * Pre-configured EAP method to use with this credential or %NULL to
+	 * indicate no EAP method is selected, i.e., the method will be
+	 * selected automatically based on ANQP information.
+	 */
+	struct eap_method_type *eap_method;
+
+	/**
+	 * phase1 - Phase 1 (outer authentication) parameters
+	 *
+	 * Pre-configured EAP parameters or %NULL.
+	 */
+	char *phase1;
+
+	/**
+	 * phase2 - Phase 2 (inner authentication) parameters
+	 *
+	 * Pre-configured EAP parameters or %NULL.
+	 */
+	char *phase2;
 };
 
 

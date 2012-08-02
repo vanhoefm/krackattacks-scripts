@@ -1798,6 +1798,9 @@ void wpa_config_free_cred(struct wpa_cred *cred)
 	os_free(cred->imsi);
 	os_free(cred->milenage);
 	os_free(cred->domain);
+	os_free(cred->eap_method);
+	os_free(cred->phase1);
+	os_free(cred->phase2);
 	os_free(cred);
 }
 
@@ -2251,6 +2254,23 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 		return 0;
 	}
 
+	if (os_strcmp(var, "eap") == 0) {
+		struct eap_method_type method;
+		method.method = eap_peer_get_type(value, &method.vendor);
+		if (method.vendor == EAP_VENDOR_IETF &&
+		    method.method == EAP_TYPE_NONE) {
+			wpa_printf(MSG_ERROR, "Line %d: unknown EAP type '%s' "
+				   "for a credential", line, value);
+			return -1;
+		}
+		os_free(cred->eap_method);
+		cred->eap_method = os_malloc(sizeof(*cred->eap_method));
+		if (cred->eap_method == NULL)
+			return -1;
+		os_memcpy(cred->eap_method, &method, sizeof(method));
+		return 0;
+	}
+
 	val = wpa_config_parse_string(value, &len);
 	if (val == NULL) {
 		wpa_printf(MSG_ERROR, "Line %d: invalid field '%s' string "
@@ -2315,6 +2335,18 @@ int wpa_config_set_cred(struct wpa_cred *cred, const char *var,
 	if (os_strcmp(var, "domain") == 0) {
 		os_free(cred->domain);
 		cred->domain = val;
+		return 0;
+	}
+
+	if (os_strcmp(var, "phase1") == 0) {
+		os_free(cred->phase1);
+		cred->phase1 = val;
+		return 0;
+	}
+
+	if (os_strcmp(var, "phase2") == 0) {
+		os_free(cred->phase2);
+		cred->phase2 = val;
 		return 0;
 	}
 

@@ -1104,6 +1104,63 @@ int wpa_supplicant_set_suites(struct wpa_supplicant *wpa_s,
 			wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
 		}
 #endif /* CONFIG_NO_PBKDF2 */
+#ifdef CONFIG_EXT_PASSWORD
+		if (ssid->ext_psk) {
+			struct wpabuf *pw = ext_password_get(wpa_s->ext_pw,
+							     ssid->ext_psk);
+			char pw_str[64 + 1];
+			u8 psk[PMK_LEN];
+
+			if (pw == NULL) {
+				wpa_msg(wpa_s, MSG_INFO, "EXT PW: No PSK "
+					"found from external storage");
+				return -1;
+			}
+
+			if (wpabuf_len(pw) < 8 || wpabuf_len(pw) > 64) {
+				wpa_msg(wpa_s, MSG_INFO, "EXT PW: Unexpected "
+					"PSK length %d in external storage",
+					(int) wpabuf_len(pw));
+				ext_password_free(pw);
+				return -1;
+			}
+
+			os_memcpy(pw_str, wpabuf_head(pw), wpabuf_len(pw));
+			pw_str[wpabuf_len(pw)] = '\0';
+
+#ifndef CONFIG_NO_PBKDF2
+			if (wpabuf_len(pw) >= 8 && wpabuf_len(pw) < 64 && bss)
+			{
+				pbkdf2_sha1(pw_str, (char *) bss->ssid,
+					    bss->ssid_len, 4096, psk, PMK_LEN);
+				os_memset(pw_str, 0, sizeof(pw_str));
+				wpa_hexdump_key(MSG_MSGDUMP, "PSK (from "
+						"external passphrase)",
+						psk, PMK_LEN);
+				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
+			} else
+#endif /* CONFIG_NO_PBKDF2 */
+			if (wpabuf_len(pw) == 2 * PMK_LEN) {
+				if (hexstr2bin(pw_str, psk, PMK_LEN) < 0) {
+					wpa_msg(wpa_s, MSG_INFO, "EXT PW: "
+						"Invalid PSK hex string");
+					os_memset(pw_str, 0, sizeof(pw_str));
+					ext_password_free(pw);
+					return -1;
+				}
+				wpa_sm_set_pmk(wpa_s->wpa, psk, PMK_LEN);
+			} else {
+				wpa_msg(wpa_s, MSG_INFO, "EXT PW: No suitable "
+					"PSK available");
+				os_memset(pw_str, 0, sizeof(pw_str));
+				ext_password_free(pw);
+				return -1;
+			}
+
+			os_memset(pw_str, 0, sizeof(pw_str));
+			ext_password_free(pw);
+		}
+#endif /* CONFIG_EXT_PASSWORD */
 	} else
 		wpa_sm_set_pmk_from_pmksa(wpa_s->wpa);
 
@@ -3430,7 +3487,8 @@ int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid)
 		return 1; /* invalid WEP key */
 	}
 
-	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt) && !ssid->psk_set)
+	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt) && !ssid->psk_set &&
+	    !ssid->ext_psk)
 		return 1;
 
 	return 0;

@@ -324,6 +324,21 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 				struct wpa_ssid *ssid, int line,
 				const char *value)
 {
+#ifdef CONFIG_EXT_PASSWORD
+	if (os_strncmp(value, "ext:", 4) == 0) {
+		os_free(ssid->passphrase);
+		ssid->passphrase = NULL;
+		ssid->psk_set = 0;
+		os_free(ssid->ext_psk);
+		ssid->ext_psk = os_strdup(value + 4);
+		if (ssid->ext_psk == NULL)
+			return -1;
+		wpa_printf(MSG_DEBUG, "PSK: External password '%s'",
+			   ssid->ext_psk);
+		return 0;
+	}
+#endif /* CONFIG_EXT_PASSWORD */
+
 	if (*value == '"') {
 #ifndef CONFIG_NO_PBKDF2
 		const char *pos;
@@ -381,6 +396,17 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 static char * wpa_config_write_psk(const struct parse_data *data,
 				   struct wpa_ssid *ssid)
 {
+#ifdef CONFIG_EXT_PASSWORD
+	if (ssid->ext_psk) {
+		size_t len = 4 + os_strlen(ssid->ext_psk) + 1;
+		char *buf = os_malloc(len);
+		if (buf == NULL)
+			return NULL;
+		os_snprintf(buf, len, "ext:%s", ssid->ext_psk);
+		return buf;
+	}
+#endif /* CONFIG_EXT_PASSWORD */
+
 	if (ssid->passphrase)
 		return wpa_config_write_string_ascii(
 			(const u8 *) ssid->passphrase,
@@ -1771,6 +1797,7 @@ void wpa_config_free_ssid(struct wpa_ssid *ssid)
 {
 	os_free(ssid->ssid);
 	os_free(ssid->passphrase);
+	os_free(ssid->ext_psk);
 #ifdef IEEE8021X_EAPOL
 	eap_peer_config_free(&ssid->eap);
 #endif /* IEEE8021X_EAPOL */

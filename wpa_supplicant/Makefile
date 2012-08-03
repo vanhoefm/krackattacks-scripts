@@ -1346,6 +1346,17 @@ CFLAGS += -DCONFIG_AUTOSCAN
 OBJS += autoscan.o
 endif
 
+ifdef CONFIG_EXT_PASSWORD_TEST
+OBJS += ../src/utils/ext_password_test.o
+CFLAGS += -DCONFIG_EXT_PASSWORD_TEST
+NEED_EXT_PASSWORD=y
+endif
+
+ifdef NEED_EXT_PASSWORD
+OBJS += ../src/utils/ext_password.o
+CFLAGS += -DCONFIG_EXT_PASSWORD
+endif
+
 ifdef NEED_GAS
 OBJS += ../src/common/gas.o
 OBJS += gas_query.o

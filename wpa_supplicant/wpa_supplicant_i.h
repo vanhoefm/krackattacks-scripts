@@ -1,6 +1,6 @@
 /*
  * wpa_supplicant - Internal definitions
- * Copyright (c) 2003-2010, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2003-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -574,6 +574,8 @@ struct wpa_supplicant {
 
 	/* WLAN_REASON_* reason codes. Negative if locally generated. */
 	int disconnect_reason;
+
+	struct ext_password_data *ext_pw;
 };
 
 
@@ -696,5 +698,7 @@ static inline int network_is_persistent_group(struct wpa_ssid *ssid)
 }
 
 int wpas_network_disabled(struct wpa_supplicant *wpa_s, struct wpa_ssid *ssid);
+
+int wpas_init_ext_pw(struct wpa_supplicant *wpa_s);
 
 #endif /* WPA_SUPPLICANT_I_H */

@@ -512,3 +512,11 @@ CONFIG_PEERKEY=y
 #CONFIG_AUTOSCAN_EXPONENTIAL=y
 # For periodic module:
 #CONFIG_AUTOSCAN_PERIODIC=y
+
+# Password (and passphrase, etc.) backend for external storage
+# These optional mechanisms can be used to add support for storing passwords
+# and other secrets in external (to wpa_supplicant) location. This allows, for
+# example, operating system specific key storage to be used
+#
+# External password backend for testing purposes (developer use)
+#CONFIG_EXT_PASSWORD_TEST=y

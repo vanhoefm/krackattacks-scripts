@@ -141,6 +141,14 @@ struct wpa_ssid {
 	char *passphrase;
 
 	/**
+	 * ext_psk - PSK/passphrase name in external storage
+	 *
+	 * If this is set, PSK/passphrase will be fetched from external storage
+	 * when requesting association with the network.
+	 */
+	char *ext_psk;
+
+	/**
 	 * pairwise_cipher - Bitfield of allowed pairwise ciphers, WPA_CIPHER_*
 	 */
 	int pairwise_cipher;

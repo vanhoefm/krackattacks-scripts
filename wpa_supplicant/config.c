@@ -1866,6 +1866,7 @@ void wpa_config_free(struct wpa_config *config)
 	wpabuf_free(config->wps_nfc_dh_pubkey);
 	wpabuf_free(config->wps_nfc_dh_privkey);
 	wpabuf_free(config->wps_nfc_dev_pw);
+	os_free(config->ext_password_backend);
 	os_free(config);
 }
 
@@ -2968,7 +2969,8 @@ static const struct global_parse_data global_fields[] = {
 	{ INT_RANGE(wps_nfc_dev_pw_id, 0x10, 0xffff), 0 },
 	{ BIN(wps_nfc_dh_pubkey), 0 },
 	{ BIN(wps_nfc_dh_privkey), 0 },
-	{ BIN(wps_nfc_dev_pw), 0 }
+	{ BIN(wps_nfc_dev_pw), 0 },
+	{ STR(ext_password_backend), CFG_CHANGED_EXT_PW_BACKEND }
 };
 
 #undef FUNC

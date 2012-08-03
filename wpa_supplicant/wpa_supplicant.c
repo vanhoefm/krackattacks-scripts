@@ -21,6 +21,7 @@
 #include "rsn_supp/wpa.h"
 #include "eloop.h"
 #include "config.h"
+#include "utils/ext_password.h"
 #include "l2_packet/l2_packet.h"
 #include "wpa_supplicant_i.h"
 #include "driver_i.h"
@@ -453,6 +454,9 @@ static void wpa_supplicant_cleanup(struct wpa_supplicant *wpa_s)
 	wpa_s->bssid_filter = NULL;
 
 	wnm_bss_keep_alive_deinit(wpa_s);
+
+	ext_password_deinit(wpa_s->ext_pw);
+	wpa_s->ext_pw = NULL;
 }
 
 
@@ -2500,6 +2504,38 @@ static int pcsc_reader_init(struct wpa_supplicant *wpa_s)
 }
 
 
+int wpas_init_ext_pw(struct wpa_supplicant *wpa_s)
+{
+	char *val, *pos;
+
+	ext_password_deinit(wpa_s->ext_pw);
+	wpa_s->ext_pw = NULL;
+	eapol_sm_set_ext_pw_ctx(wpa_s->eapol, NULL);
+
+	if (!wpa_s->conf->ext_password_backend)
+		return 0;
+
+	val = os_strdup(wpa_s->conf->ext_password_backend);
+	if (val == NULL)
+		return -1;
+	pos = os_strchr(val, ':');
+	if (pos)
+		*pos++ = '\0';
+
+	wpa_printf(MSG_DEBUG, "EXT PW: Initialize backend '%s'", val);
+
+	wpa_s->ext_pw = ext_password_init(val, pos);
+	os_free(val);
+	if (wpa_s->ext_pw == NULL) {
+		wpa_printf(MSG_DEBUG, "EXT PW: Failed to initialize backend");
+		return -1;
+	}
+	eapol_sm_set_ext_pw_ctx(wpa_s->eapol, wpa_s->ext_pw);
+
+	return 0;
+}
+
+
 static int wpa_supplicant_init_iface(struct wpa_supplicant *wpa_s,
 				     struct wpa_interface *iface)
 {
@@ -2723,6 +2759,9 @@ next_driver:
 		return -1;
 
 	if (pcsc_reader_init(wpa_s) < 0)
+		return -1;
+
+	if (wpas_init_ext_pw(wpa_s) < 0)
 		return -1;
 
 	return 0;
@@ -3152,6 +3191,9 @@ void wpa_supplicant_update_config(struct wpa_supplicant *wpa_s)
 				   "'%s'", country);
 		}
 	}
+
+	if (wpa_s->conf->changed_parameters & CFG_CHANGED_EXT_PW_BACKEND)
+		wpas_init_ext_pw(wpa_s);
 
 #ifdef CONFIG_WPS
 	wpas_wps_update_config(wpa_s);

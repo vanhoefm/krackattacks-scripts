@@ -13,6 +13,7 @@
 #include <assert.h>
 
 #include "common.h"
+#include "utils/ext_password.h"
 #include "config.h"
 #include "eapol_supp/eapol_supp_sm.h"
 #include "eap_peer/eap.h"
@@ -506,6 +507,10 @@ static void test_eapol_clean(struct eapol_test_data *e,
 		wpa_supplicant_ctrl_iface_deinit(wpa_s->ctrl_iface);
 		wpa_s->ctrl_iface = NULL;
 	}
+
+	ext_password_deinit(wpa_s->ext_pw);
+	wpa_s->ext_pw = NULL;
+
 	wpa_config_free(wpa_s->conf);
 
 	p = e->extra_attrs;
@@ -1226,6 +1231,9 @@ int main(int argc, char *argv[])
 		return -1;
 
 	if (test_eapol(&eapol_test, &wpa_s, wpa_s.conf->ssid))
+		return -1;
+
+	if (wpas_init_ext_pw(&wpa_s) < 0)
 		return -1;
 
 	if (wait_for_monitor)

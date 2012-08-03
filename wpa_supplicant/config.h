@@ -206,6 +206,7 @@ struct wpa_cred {
 #define CFG_CHANGED_P2P_LISTEN_CHANNEL BIT(11)
 #define CFG_CHANGED_P2P_OPER_CHANNEL BIT(12)
 #define CFG_CHANGED_P2P_PREF_CHAN BIT(13)
+#define CFG_CHANGED_EXT_PW_BACKEND BIT(14)
 
 /**
  * struct wpa_config - wpa_supplicant configuration data
@@ -710,6 +711,13 @@ struct wpa_config {
 	 * wps_nfc_dh_pubkey - NFC Device Password for password token
 	 */
 	struct wpabuf *wps_nfc_dev_pw;
+
+	/**
+	 * ext_password_backend - External password backend or %NULL if none
+	 *
+	 * format: <backend name>[:<optional backend parameters>]
+	 */
+	char *ext_password_backend;
 };
 
 

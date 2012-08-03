@@ -689,6 +689,9 @@ static int interworking_connect_3gpp(struct wpa_supplicant *wpa_s,
 	os_memcpy(ssid->ssid, ie + 2, ie[1]);
 	ssid->ssid_len = ie[1];
 
+	if (wpa_config_set(ssid, "key_mgmt", "WPA-EAP", 0) < 0)
+		goto fail;
+
 	/* TODO: figure out whether to use EAP-SIM, EAP-AKA, or EAP-AKA' */
 	if (wpa_config_set(ssid, "eap", "SIM", 0) < 0) {
 		wpa_printf(MSG_DEBUG, "EAP-SIM not supported");
@@ -947,6 +950,9 @@ static int interworking_connect_roaming_consortium(
 	os_memcpy(ssid->ssid, ssid_ie + 2, ssid_ie[1]);
 	ssid->ssid_len = ssid_ie[1];
 
+	if (wpa_config_set(ssid, "key_mgmt", "WPA-EAP", 0) < 0)
+		goto fail;
+
 	if (cred->eap_method == NULL) {
 		wpa_printf(MSG_DEBUG, "Interworking: No EAP method set for "
 			   "credential using roaming consortium");
@@ -1046,6 +1052,9 @@ int interworking_connect(struct wpa_supplicant *wpa_s, struct wpa_bss *bss)
 		goto fail;
 	os_memcpy(ssid->ssid, ie + 2, ie[1]);
 	ssid->ssid_len = ie[1];
+
+	if (wpa_config_set(ssid, "key_mgmt", "WPA-EAP", 0) < 0)
+		goto fail;
 
 	if (wpa_config_set(ssid, "eap", eap_get_name(EAP_VENDOR_IETF,
 						     eap->method), 0) < 0)

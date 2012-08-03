@@ -330,6 +330,9 @@ struct eap_sm {
 	struct wps_context *wps;
 
 	int prev_failure;
+
+	struct ext_password_data *ext_pw;
+	struct wpabuf *ext_pw_buf;
 };
 
 const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len);

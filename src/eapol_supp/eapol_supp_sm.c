@@ -1,6 +1,6 @@
 /*
  * EAPOL supplicant state machines
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -1945,4 +1945,12 @@ void eapol_sm_deinit(struct eapol_sm *sm)
 	wpabuf_free(sm->eapReqData);
 	os_free(sm->ctx);
 	os_free(sm);
+}
+
+
+void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
+			     struct ext_password_data *ext)
+{
+	if (sm && sm->eap)
+		eap_sm_set_ext_pw_ctx(sm->eap, ext);
 }

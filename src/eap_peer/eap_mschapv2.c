@@ -304,7 +304,9 @@ static void eap_mschapv2_password_changed(struct eap_sm *sm,
 			"EAP-MSCHAPV2: Password changed successfully");
 		data->prev_error = 0;
 		os_free(config->password);
-		if (config->flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH) {
+		if (config->flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
+			/* TODO: update external storage */
+		} else if (config->flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH) {
 			config->password = os_malloc(16);
 			config->password_len = 16;
 			if (config->password) {

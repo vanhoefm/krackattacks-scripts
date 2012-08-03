@@ -20,6 +20,7 @@
 #include "common.h"
 #include "pcsc_funcs.h"
 #include "state_machine.h"
+#include "ext_password.h"
 #include "crypto/crypto.h"
 #include "crypto/tls.h"
 #include "common/wpa_ctrl.h"
@@ -93,6 +94,9 @@ static void eap_notify_status(struct eap_sm *sm, const char *status,
 
 static void eap_deinit_prev_method(struct eap_sm *sm, const char *txt)
 {
+	ext_password_free(sm->ext_pw_buf);
+	sm->ext_pw_buf = NULL;
+
 	if (sm->m == NULL || sm->eap_method_priv == NULL)
 		return;
 
@@ -1915,6 +1919,27 @@ const u8 * eap_get_config_identity(struct eap_sm *sm, size_t *len)
 }
 
 
+static int eap_get_ext_password(struct eap_sm *sm,
+				struct eap_peer_config *config)
+{
+	char *name;
+
+	if (config->password == NULL)
+		return -1;
+
+	name = os_zalloc(config->password_len + 1);
+	if (name == NULL)
+		return -1;
+	os_memcpy(name, config->password, config->password_len);
+
+	ext_password_free(sm->ext_pw_buf);
+	sm->ext_pw_buf = ext_password_get(sm->ext_pw, name);
+	os_free(name);
+
+	return sm->ext_pw_buf == NULL ? -1 : 0;
+}
+
+
 /**
  * eap_get_config_password - Get password from the network configuration
  * @sm: Pointer to EAP state machine allocated with eap_peer_sm_init()
@@ -1926,6 +1951,14 @@ const u8 * eap_get_config_password(struct eap_sm *sm, size_t *len)
 	struct eap_peer_config *config = eap_get_config(sm);
 	if (config == NULL)
 		return NULL;
+
+	if (config->flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
+		if (eap_get_ext_password(sm, config) < 0)
+			return NULL;
+		*len = wpabuf_len(sm->ext_pw_buf);
+		return wpabuf_head(sm->ext_pw_buf);
+	}
+
 	*len = config->password_len;
 	return config->password;
 }
@@ -1945,6 +1978,14 @@ const u8 * eap_get_config_password2(struct eap_sm *sm, size_t *len, int *hash)
 	struct eap_peer_config *config = eap_get_config(sm);
 	if (config == NULL)
 		return NULL;
+
+	if (config->flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
+		if (eap_get_ext_password(sm, config) < 0)
+			return NULL;
+		*len = wpabuf_len(sm->ext_pw_buf);
+		return wpabuf_head(sm->ext_pw_buf);
+	}
+
 	*len = config->password_len;
 	if (hash)
 		*hash = !!(config->flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH);
@@ -2255,4 +2296,12 @@ int eap_is_wps_pin_enrollee(struct eap_peer_config *conf)
 		return 0; /* Not using PIN */
 
 	return 1;
+}
+
+
+void eap_sm_set_ext_pw_ctx(struct eap_sm *sm, struct ext_password_data *ext)
+{
+	ext_password_free(sm->ext_pw_buf);
+	sm->ext_pw_buf = NULL;
+	sm->ext_pw = ext;
 }

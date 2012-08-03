@@ -1192,6 +1192,20 @@ static int wpa_config_parse_password(const struct parse_data *data,
 		return 0;
 	}
 
+#ifdef CONFIG_EXT_PASSWORD
+	if (os_strncmp(value, "ext:", 4) == 0) {
+		char *name = os_strdup(value + 4);
+		if (name == NULL)
+			return -1;
+		os_free(ssid->eap.password);
+		ssid->eap.password = (u8 *) name;
+		ssid->eap.password_len = os_strlen(name);
+		ssid->eap.flags &= ~EAP_CONFIG_FLAGS_PASSWORD_NTHASH;
+		ssid->eap.flags |= EAP_CONFIG_FLAGS_EXT_PASSWORD;
+		return 0;
+	}
+#endif /* CONFIG_EXT_PASSWORD */
+
 	if (os_strncmp(value, "hash:", 5) != 0) {
 		char *tmp;
 		size_t res_len;
@@ -1209,6 +1223,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 		ssid->eap.password = (u8 *) tmp;
 		ssid->eap.password_len = res_len;
 		ssid->eap.flags &= ~EAP_CONFIG_FLAGS_PASSWORD_NTHASH;
+		ssid->eap.flags &= ~EAP_CONFIG_FLAGS_EXT_PASSWORD;
 
 		return 0;
 	}
@@ -1237,6 +1252,7 @@ static int wpa_config_parse_password(const struct parse_data *data,
 	ssid->eap.password = hash;
 	ssid->eap.password_len = 16;
 	ssid->eap.flags |= EAP_CONFIG_FLAGS_PASSWORD_NTHASH;
+	ssid->eap.flags &= ~EAP_CONFIG_FLAGS_EXT_PASSWORD;
 
 	return 0;
 }
@@ -1249,6 +1265,17 @@ static char * wpa_config_write_password(const struct parse_data *data,
 
 	if (ssid->eap.password == NULL)
 		return NULL;
+
+#ifdef CONFIG_EXT_PASSWORD
+	if (ssid->eap.flags & EAP_CONFIG_FLAGS_EXT_PASSWORD) {
+		buf = os_zalloc(4 + ssid->eap.password_len + 1);
+		if (buf == NULL)
+			return NULL;
+		os_memcpy(buf, "ext:", 4);
+		os_memcpy(buf + 4, ssid->eap.password, ssid->eap.password_len);
+		return buf;
+	}
+#endif /* CONFIG_EXT_PASSWORD */
 
 	if (!(ssid->eap.flags & EAP_CONFIG_FLAGS_PASSWORD_NTHASH)) {
 		return wpa_config_write_string(

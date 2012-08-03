@@ -1,6 +1,6 @@
 /*
  * EAPOL supplicant state machines
- * Copyright (c) 2004-2008, Jouni Malinen <j@w1.fi>
+ * Copyright (c) 2004-2012, Jouni Malinen <j@w1.fi>
  *
  * This software may be distributed under the terms of the BSD license.
  * See README for more details.
@@ -243,6 +243,7 @@ struct eapol_ctx {
 
 
 struct eap_peer_config;
+struct ext_password_data;
 
 #ifdef IEEE8021X_EAPOL
 struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx);
@@ -275,6 +276,8 @@ void eapol_sm_request_reauth(struct eapol_sm *sm);
 void eapol_sm_notify_lower_layer_success(struct eapol_sm *sm, int in_eapol_sm);
 void eapol_sm_invalidate_cached_session(struct eapol_sm *sm);
 const char * eapol_sm_get_method_name(struct eapol_sm *sm);
+void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
+			     struct ext_password_data *ext);
 #else /* IEEE8021X_EAPOL */
 static inline struct eapol_sm *eapol_sm_init(struct eapol_ctx *ctx)
 {
@@ -365,6 +368,10 @@ static inline void eapol_sm_invalidate_cached_session(struct eapol_sm *sm)
 static inline const char * eapol_sm_get_method_name(struct eapol_sm *sm)
 {
 	return NULL;
+}
+static inline void eapol_sm_set_ext_pw_ctx(struct eapol_sm *sm,
+					   struct ext_password_data *ext)
+{
 }
 #endif /* IEEE8021X_EAPOL */
 

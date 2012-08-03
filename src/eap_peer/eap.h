@@ -306,6 +306,9 @@ void eap_invalidate_cached_session(struct eap_sm *sm);
 int eap_is_wps_pbc_enrollee(struct eap_peer_config *conf);
 int eap_is_wps_pin_enrollee(struct eap_peer_config *conf);
 
+struct ext_password_data;
+void eap_sm_set_ext_pw_ctx(struct eap_sm *sm, struct ext_password_data *ext);
+
 #endif /* IEEE8021X_EAPOL */
 
 #endif /* EAP_H */

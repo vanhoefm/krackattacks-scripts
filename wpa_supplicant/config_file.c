@@ -99,12 +99,6 @@ static int wpa_config_validate_network(struct wpa_ssid *ssid, int line)
 		wpa_config_update_psk(ssid);
 	}
 
-	if (wpa_key_mgmt_wpa_psk(ssid->key_mgmt) && !ssid->psk_set) {
-		wpa_printf(MSG_ERROR, "Line %d: WPA-PSK accepted for key "
-			   "management, but no PSK configured.", line);
-		errors++;
-	}
-
 	if ((ssid->group_cipher & WPA_CIPHER_CCMP) &&
 	    !(ssid->pairwise_cipher & WPA_CIPHER_CCMP) &&
 	    !(ssid->pairwise_cipher & WPA_CIPHER_NONE)) {

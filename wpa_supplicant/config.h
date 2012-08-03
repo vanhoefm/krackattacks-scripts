@@ -81,6 +81,11 @@ struct wpa_cred {
 	char *password;
 
 	/**
+	 * ext_password - Whether password is a name for external storage
+	 */
+	int ext_password;
+
+	/**
 	 * ca_cert - CA certificate for Interworking network selection
 	 */
 	char *ca_cert;

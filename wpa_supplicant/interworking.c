@@ -894,9 +894,15 @@ static int interworking_set_eap_params(struct wpa_ssid *ssid,
 	    wpa_config_set_quoted(ssid, "identity", cred->username) < 0)
 		return -1;
 
-	if (cred->password && cred->password[0] &&
-	    wpa_config_set_quoted(ssid, "password", cred->password) < 0)
-		return -1;
+	if (cred->password && cred->password[0]) {
+		if (cred->ext_password &&
+		    wpa_config_set(ssid, "password", cred->password, 0) < 0)
+			return -1;
+		if (!cred->ext_password &&
+		    wpa_config_set_quoted(ssid, "password", cred->password) <
+		    0)
+			return -1;
+	}
 
 	if (cred->client_cert && cred->client_cert[0] &&
 	    wpa_config_set_quoted(ssid, "client_cert", cred->client_cert) < 0)

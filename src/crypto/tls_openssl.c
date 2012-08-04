@@ -2087,7 +2087,7 @@ static int tls_connection_private_key(void *_ssl_ctx,
 	ERR_clear_error();
 	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
 	os_free(passwd);
-	
+
 	if (!SSL_check_private_key(conn->ssl)) {
 		tls_show_errors(MSG_INFO, __func__, "Private key failed "
 				"verification");
@@ -2133,7 +2133,7 @@ static int tls_global_private_key(SSL_CTX *ssl_ctx, const char *private_key,
 	os_free(passwd);
 	ERR_clear_error();
 	SSL_CTX_set_default_passwd_cb(ssl_ctx, NULL);
-	
+
 	if (!SSL_CTX_check_private_key(ssl_ctx)) {
 		tls_show_errors(MSG_INFO, __func__,
 				"Private key failed verification");

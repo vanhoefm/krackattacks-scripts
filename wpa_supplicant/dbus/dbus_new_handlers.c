@@ -609,6 +609,7 @@ DBusMessage * wpas_dbus_handler_create_interface(DBusMessage *message,
 out:
 	os_free(driver);
 	os_free(ifname);
+	os_free(confname);
 	os_free(bridge_ifname);
 	return reply;
 

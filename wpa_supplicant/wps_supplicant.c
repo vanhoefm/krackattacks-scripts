@@ -1761,6 +1761,7 @@ void wpas_wps_update_config(struct wpa_supplicant *wpa_s)
 		}
 	}
 	wps->config_methods = wps_fix_config_methods(wps->config_methods);
+	wps->dev.config_methods = wps->config_methods;
 
 	if (wpa_s->conf->changed_parameters & CFG_CHANGED_DEVICE_TYPE)
 		os_memcpy(wps->dev.pri_dev_type, wpa_s->conf->device_type,

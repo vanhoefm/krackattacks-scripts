@@ -12,6 +12,8 @@
 
 #ifdef CONFIG_CTRL_IFACE_UNIX
 #include <sys/un.h>
+#include <unistd.h>
+#include <fcntl.h>
 #endif /* CONFIG_CTRL_IFACE_UNIX */
 
 #ifdef ANDROID
@@ -73,6 +75,7 @@ struct wpa_ctrl * wpa_ctrl_open(const char *ctrl_path)
 	int ret;
 	size_t res;
 	int tries = 0;
+	int flags;
 
 	ctrl = os_malloc(sizeof(*ctrl));
 	if (ctrl == NULL)
@@ -154,6 +157,19 @@ try_again:
 		unlink(ctrl->local.sun_path);
 		os_free(ctrl);
 		return NULL;
+	}
+
+	/*
+	 * Make socket non-blocking so that we don't hang forever if
+	 * target dies unexpectedly.
+	 */
+	flags = fcntl(ctrl->s, F_GETFL);
+	if (flags >= 0) {
+		flags |= O_NONBLOCK;
+		if (fcntl(ctrl->s, F_SETFL, flags) < 0) {
+			perror("fcntl(ctrl->s, O_NONBLOCK)");
+			/* Not fatal, continue on.*/
+		}
 	}
 
 	return ctrl;
@@ -289,6 +305,7 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 		     void (*msg_cb)(char *msg, size_t len))
 {
 	struct timeval tv;
+	struct os_time started_at;
 	int res;
 	fd_set rfds;
 	const char *_cmd;
@@ -315,7 +332,30 @@ int wpa_ctrl_request(struct wpa_ctrl *ctrl, const char *cmd, size_t cmd_len,
 		_cmd_len = cmd_len;
 	}
 
+	errno = 0;
+	started_at.sec = 0;
+	started_at.usec = 0;
+retry_send:
 	if (send(ctrl->s, _cmd, _cmd_len, 0) < 0) {
+		if (errno == EAGAIN || errno == EBUSY || errno == EWOULDBLOCK)
+		{
+			/*
+			 * Must be a non-blocking socket... Try for a bit
+			 * longer before giving up.
+			 */
+			if (started_at.sec == 0)
+				os_get_time(&started_at);
+			else {
+				struct os_time n;
+				os_get_time(&n);
+				/* Try for a few seconds. */
+				if (n.sec > started_at.sec + 5)
+					goto send_err;
+			}
+			os_sleep(1, 0);
+			goto retry_send;
+		}
+	send_err:
 		os_free(cmd_buf);
 		return -1;
 	}

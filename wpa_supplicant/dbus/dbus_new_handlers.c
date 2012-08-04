@@ -2431,7 +2431,7 @@ dbus_bool_t wpas_dbus_getter_bss_expire_count(DBusMessageIter *iter,
 					      void *user_data)
 {
 	struct wpa_supplicant *wpa_s = user_data;
-	dbus_uint32_t expire_count = wpa_s->conf->bss_expiration_age;
+	dbus_uint32_t expire_count = wpa_s->conf->bss_expiration_scan_count;
 
 	return wpas_dbus_simple_property_getter(iter, DBUS_TYPE_UINT32,
 						&expire_count, error);
